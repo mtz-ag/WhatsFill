@@ -94,6 +94,9 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   um clique só, o atendimento fica em andamento e nada acusa — `hasOpenDialog()` não vê menu.
   Confirme pelo **"Reiniciar"** no rodapé: o sumiço do "Concluir" não serve, porque o item do
   menu tem o mesmo texto.
+- **A pergunta da rodada cobre o painel inteiro** (`position: fixed`), então tudo que ele precisa
+  no meio da rodada tem que estar DENTRO dela: as respostas prontas são a lista de
+  `montarRespostasRapidas`, e enviar dali não fecha a pergunta.
 - **Bloqueio de variável nunca pode virar saída de rodada.** Faltou `{{primeiro_nome}}`? Isso
   tira a OPÇÃO da pergunta, com o motivo na tela — nunca o contato da fila. Já entrou por duas
   portas diferentes (sem conteúdo, sem nome) e as duas viraram pulo silencioso.
@@ -111,6 +114,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   dentro, e o casamento procura o município em qualquer lugar do texto — quem escrevia "sou do
   Rio Grande do Sul" era gravado em Rio Grande, com o COREDE errado junto. A frase inteira é
   apagada antes de casar (`NOME_DO_ESTADO` em `cities.js`).
+- **O vocabulário da campanha também casa com município.** **Capitão** é cidade do RS e é a
+  patente do candidato: toda mensagem de aceite do anúncio virava cidade Capitão, com confiança
+  `exata` — a que grava sem clique. Duas travas em `cities.js`: a expressão
+  ("capitao martim") é apagada antes de casar, e o município está em `cidadesIgnoradas`.
+  Nome de gente novo na campanha, confira se colide com a lista do IBGE.
+- **Etiqueta que o contato JÁ tem é invisível para `suggest()`.** Ele só devolve o que as regras
+  acham nas mensagens; etiqueta aplicada à mão (ou por nós numa passada anterior, quando a
+  campanha do anúncio ainda casava) não aparecia, e o fecho com conteúdo travava dizendo "nenhum
+  conteúdo reconhecido". Ver `tags.conteudosJaAplicados`.
 - **Aba escondida é aba CONGELADA, não lenta.** Medido: `setInterval(120ms)` deu **zero**
   disparos em mais de um minuto. Congela junto o JavaScript da plataforma, então mover só as
   nossas esperas para fora da aba não resolveria — o Angular também para. O que descongela é

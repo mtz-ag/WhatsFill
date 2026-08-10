@@ -123,6 +123,34 @@ grupo('applyTags SOMA às etiquetas existentes');
   check(corpo.tagsId.length === 3, `sem duplicar = ${JSON.stringify(corpo.tagsId)}`);
 }
 
+grupo('conteúdo que já está no contato conta como identificado');
+{
+  // Relato: "Etiqueta de conteúdo do Flávio marcada e a mensagem rápida não reconhece e trava o
+  // botão". `suggest()` só enxerga o que as REGRAS acham nas mensagens — etiqueta aplicada à
+  // mão (ou aplicada por nós numa passada anterior, quando a campanha do anúncio ainda casava)
+  // era invisível, e o botão de fechar com conteúdo contava zero.
+  mem.tagRules = [{ padrao: 'zucco', etiqueta: 'Conteúdo Zucco' }, { padrao: 'fl[áa]vio', etiqueta: 'Conteúdo Flávio' }];
+
+  const comFlavio = await tags.conteudosJaAplicados({ id: 'c-1', tagsId: ['t-flavio', 't-metro', 't-outra'] });
+  check(comFlavio.length === 1, `achou um conteúdo = ${JSON.stringify(comFlavio.map((c) => c.nome))}`);
+  check(comFlavio[0].nome === 'Conteúdo Flávio' && comFlavio[0].tag.id === 't-flavio', 'e é o do Flávio');
+  check(comFlavio[0].origem === 'conteúdo', 'entra como conteúdo');
+
+  // O que NÃO pode entrar: região e etiqueta de fluxo não são conteúdo.
+  check(
+    !comFlavio.some((c) => ['Metropolitano Delta do Jacuí', 'Interesse em Apoiar'].includes(c.nome)),
+    'região e etiqueta solta ficam de fora'
+  );
+
+  // A tabela "Modelo por conteúdo" também identifica conteúdo, mesmo sem regra de texto.
+  mem.tagRules = [];
+  const porMapa = await tags.conteudosJaAplicados({ id: 'c-1', tagsId: ['t-zucco'] }, { 'conteúdo zucco': 'Modelo Zucco' });
+  check(porMapa.length === 1 && porMapa[0].nome === 'Conteúdo Zucco', `pelo mapeamento = ${porMapa[0]?.nome}`);
+
+  check((await tags.conteudosJaAplicados({ id: 'c-1', tagsId: [] })).length === 0, 'contato sem etiqueta devolve vazio');
+  check((await tags.conteudosJaAplicados(null)).length === 0, 'sem contato não estoura');
+}
+
 grupo('troca de região: a etiqueta do COREDE antigo SAI');
 {
   // A pessoa informou outra cidade. Duas etiquetas de região no mesmo contato é informação

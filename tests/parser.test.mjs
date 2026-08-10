@@ -239,6 +239,51 @@ grupo('o estado não é a cidade');
   check((await cities.matchCity('Rio Grande - RS'))?.city === 'Rio Grande', '"Rio Grande - RS" é a cidade');
 }
 
+grupo('"Capitão Martim" não é a cidade Capitão');
+{
+  // O pior dos bugs desta leva: Capitão É município do RS e é a patente do candidato. Toda
+  // mensagem de aceite do anúncio casava com a cidade, e com confiança EXATA — que é a que
+  // grava sozinha, sem clique. Cidade errada + COREDE errado em cima de quem só repetiu o nome.
+  const aceite = 'Olá! Eu aceito receber conteúdos do Capitão Martim e do Zucco.';
+  check((await cities.matchCity(aceite)) === null, 'a mensagem do anúncio não casa com cidade nenhuma');
+  check((await cities.matchCity('Capitão Martim é o cara')) === null, 'nem com o nome no meio da frase');
+  check((await cities.matchCity('sou fã do cap martim')) === null, '"cap martim" também não');
+
+  // A segunda trava: "Capitão" solto está na lista de ignorados (aba Config).
+  check((await cities.matchCity('Maria / Capitão')) === null, '"Capitão" sozinho também não vira cidade');
+
+  // E a lista de ignorados é só isso — não pode ter levado vizinho junto.
+  check((await cities.matchCity('Capão da Canoa'))?.city === 'Capão da Canoa', 'Capão da Canoa continua valendo');
+  check((await cities.matchCity('Capela de Santana'))?.city === 'Capela de Santana', 'Capela de Santana também');
+}
+
+grupo('nome de cidade encurtado (não precisa estar perfeito)');
+{
+  // "Nomes de cidade não sendo pegos se não estiverem perfeitamente escritos": o casamento por
+  // prefixo exigia duas palavras, então o encurtamento mais comum de todos não era reconhecido.
+  const hit = async (t) => cities.matchCity(t);
+
+  check((await hit('palmares'))?.city === 'Palmares do Sul', 'Palmares → Palmares do Sul');
+  check((await hit('sentinela'))?.city === 'Sentinela do Sul', 'Sentinela → Sentinela do Sul');
+  check((await hit('trindade'))?.city === 'Trindade do Sul', 'Trindade → Trindade do Sul');
+  check((await hit('livramento'))?.city === 'Santana do Livramento', 'Livramento → Santana do Livramento');
+
+  // Uma palavra NUNCA é exata: espera clique, nunca é gravada sozinha em contato real.
+  check((await hit('palmares'))?.confidence === 'aproximada', 'uma palavra só é sempre aproximada');
+  check((await hit('Palmares do Sul'))?.confidence === 'exata', 'o nome inteiro continua exato');
+
+  // O que a abertura NÃO pode ter deixado passar.
+  check((await hit('Carlos')) === null, 'primeiro nome não vira "Carlos Barbosa"');
+  check((await hit('Bento')) === null, 'nem "Bento" vira "Bento Gonçalves"');
+  check((await hit('Salvador')) === null, 'prefixo de dois municípios continua ambíguo');
+  check((await hit('Fernanda')) === null, 'nome de pessoa não vira cidade');
+  check((await hit('Cristiano')) === null, 'nem nome mais longo');
+  check((await hit('Passo')) === null, 'pedaço com menos de 6 letras não conta');
+
+  // Palavra comum de 4 letras não pode casar com município curto por tolerância de digitação.
+  check((await hit('o cara')) === null, '"cara" não vira Caraá');
+}
+
 grupo('sigla não é nome de gente');
 {
   // Dois relatos do mesmo dia: "Pegou srn como nome" e "ignorar siglas no nome".

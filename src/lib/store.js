@@ -223,6 +223,16 @@ const DEFAULTS = {
   etiquetasInteresse: [],
 
   /**
+   * Municípios que o casamento de cidade ignora.
+   *
+   * "Capitão" é município do RS e é a patente do candidato: toda mensagem de aceite do anúncio
+   * ("aceito receber conteúdos do Capitão Martim") casava com a cidade, com confiança exata —
+   * que é a que grava sozinha. A expressão "Capitão Martim" já é apagada antes de casar; esta
+   * lista é a segunda trava, para "Capitão" solto no meio de uma frase também não virar cidade.
+   */
+  cidadesIgnoradas: ['Capitão'],
+
+  /**
    * Apelidos: nome do COREDE (ou qualquer rótulo) → nome exato da etiqueta no CRM. Só é
    * preciso quando o nome não casa nem ignorando acento e pontuação. O painel grava aqui
    * sozinho quando você escolhe a etiqueta à mão.

@@ -109,11 +109,60 @@ function tolerance(name) {
  */
 const NOME_DO_ESTADO = /\brio grande do sul\b/g;
 
-export async function matchCity(text) {
+/**
+ * Expressões que contêm nome de município mas não são endereço de ninguém.
+ *
+ * A campanha inteira fala em "Capitão Martim" — e **Capitão é município do RS**. Toda mensagem
+ * de aceite do anúncio ("aceito receber conteúdos do Capitão Martim e do Zucco") casava com a
+ * cidade Capitão, com confiança `exata`, que é a que grava **sozinha, sem clique**. Era cidade
+ * errada e COREDE errado em cima de quem só repetiu o nome do candidato.
+ *
+ * Apagar a expressão inteira antes de casar resolve sem tirar o município da lista: quem mora
+ * lá escreve "Capitão" sem "Martim" atrás.
+ */
+const EXPRESSOES_QUE_NAO_SAO_CIDADE = [
+  /\bcapitao martim\b/g,
+  /\bcap martim\b/g,
+  /\bcapitao martins\b/g,
+];
+
+/**
+ * Encurtamentos que nenhuma regra genérica alcança, porque não são prefixo do nome oficial.
+ *
+ * Ficam aqui, e **não** em `ALIASES`: `normalize()` roda também sobre o nome do município, e
+ * "Santana do Livramento" viraria "santana do santana do livramento" — o casamento exato
+ * quebrava e a cidade caía em "Santana da Boa Vista". Aqui só o texto do contato passa.
+ */
+const ENCURTAMENTOS = [[/\blivramento\b/g, 'santana do livramento']];
+
+/** Texto pronto para casar: sem o nome do estado e sem as expressões da campanha. */
+function prepararTexto(text) {
+  let norm = normalize(text).replace(NOME_DO_ESTADO, ' ');
+  for (const re of EXPRESSOES_QUE_NAO_SAO_CIDADE) norm = norm.replace(re, ' ');
+  for (const [re, to] of ENCURTAMENTOS) norm = norm.replace(re, to);
+  return norm.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Municípios que a extensão ignora, por decisão do Thiago (aba Config).
+ *
+ * Nasceu de "Capitão", que colide com a patente do candidato em toda mensagem. Fica
+ * configurável em vez de fixo no código porque a próxima campanha muda o nome — e porque
+ * apagar um município da lista é decisão dele, não minha.
+ */
+async function municipiosValidos() {
   const municipios = await loadMunicipios();
+  const ignoradas = await store.get('cidadesIgnoradas');
+  if (!ignoradas?.length) return municipios;
+  const fora = new Set(ignoradas.map((c) => normalize(c)));
+  return municipios.filter((c) => !fora.has(normalize(c)));
+}
+
+export async function matchCity(text) {
+  const municipios = await municipiosValidos();
   if (!municipios.length) return null;
 
-  const norm = normalize(text).replace(NOME_DO_ESTADO, ' ').replace(/\s+/g, ' ').trim();
+  const norm = prepararTexto(text);
   if (!norm) return null;
 
   // 1) Nome inteiro aparece no texto. Preferimos o mais longo ("Santo Ângelo" antes de "Ângelo").
@@ -136,7 +185,10 @@ export async function matchCity(text) {
   let melhor = null;
   for (const m of lista) {
     if (m.n.length < 4) continue;
-    const tol = tolerance(m.n);
+    // Município de nome curto exige grafia exata (o passo 1 já pega essa). Com tolerância, uma
+    // palavra comum de quatro letras virava cidade: "o cara" casava com **Caraá** a distância 1,
+    // e o painel oferecia etiqueta de região para quem só elogiou o candidato.
+    const tol = m.n.length <= 5 ? 0 : tolerance(m.n);
     for (let size = 1; size <= 4; size++) {
       for (let i = 0; i + size <= words.length; i++) {
         const gram = words.slice(i, i + size).join(' ');
@@ -161,9 +213,13 @@ export async function matchCity(text) {
  *
  * Três travas, cada uma tirada de um jeito real de errar:
  *
- * - **Mínimo de duas palavras.** Com uma só, o primeiro nome de alguém viraria cidade:
- *   "Carlos" casaria com "Carlos Barbosa". Nome de uma palavra continua sendo pego pela
- *   comparação com o nome inteiro (passo 2), que é segura.
+ * - **Uma palavra só é aceita, mas nunca como valor exato.** Era o mínimo de duas, e por isso
+ *   "Palmares" (Palmares do Sul) e "Sentinela" (Sentinela do Sul) não eram reconhecidos — o
+ *   jeito mais comum de encurtar. Quem protege contra "Carlos" virar "Carlos Barbosa" não é a
+ *   contagem de palavras, é a trava da preposição logo abaixo: "Barbosa" não é preposição, então
+ *   "Carlos" continua não casando. As duas travas que sobram para o pedaço de uma palavra são
+ *   o tamanho mínimo de 6 letras (tira "Passo", "Porto", "Santa") e a confiança **aproximada**,
+ *   que espera clique e nunca é gravada sozinha.
  * - **O texto não pode estar continuando o nome.** Em "Vila Nova do Nada", o pedaço
  *   "vila nova" é prefixo de "Vila Nova do Sul", mas a palavra seguinte no texto ("do") é
  *   também a próxima do município: a pessoa está escrevendo um nome mais longo, que não é esse.
@@ -181,7 +237,7 @@ function prefixoDeMunicipio(words, lista) {
   let melhor = null;
 
   for (let i = 0; i < words.length; i++) {
-    for (let size = Math.min(4, words.length - i); size >= 2; size--) {
+    for (let size = Math.min(4, words.length - i); size >= 1; size--) {
       const gram = words.slice(i, i + size).join(' ');
       if (gram.length < 6) continue;
       const seguinte = words[i + size] || null;
@@ -210,8 +266,17 @@ function prefixoDeMunicipio(words, lista) {
   }
 
   if (!melhor) return null;
-  // Prefixo escrito certo identifica o município sem margem; com erro de digitação, espera clique.
-  return { city: melhor.city, confidence: melhor.d === 0 ? 'exata' : 'aproximada', matched: melhor.gram };
+
+  // Prefixo de DUAS palavras escrito certo identifica o município sem margem ("Santa Cruz" só
+  // pode ser Santa Cruz do Sul). De uma palavra só, nunca: "Palmares" é quase certamente
+  // Palmares do Sul, mas "quase" não grava sozinho em contato real — vira palpite e espera o
+  // seu clique.
+  const umaPalavra = melhor.gram.split(' ').length === 1;
+  return {
+    city: melhor.city,
+    confidence: melhor.d === 0 && !umaPalavra ? 'exata' : 'aproximada',
+    matched: melhor.gram,
+  };
 }
 
 /**

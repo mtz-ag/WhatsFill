@@ -40,6 +40,8 @@ classificação automática gravando cidade, COREDE, etiquetas e data e **confer
 
 ### Fila de trabalho, em ordem de valor
 
+0. **Rever os contatos com cidade "Capitão"** (10/08): a patente do candidato casava com o
+   município, com confiança exata, então foram gravados sozinhos — cidade e COREDE errados.
 1. **Tabela "Modelo por conteúdo" está vazia.** Sem ela a tecla 1 nunca aparece — é o
    pré-requisito do fluxo inteiro de resposta. Aba Config, `Etiqueta = Nome do modelo`.
 2. **"Meus" acumulou ~60 contatos** enquanto o Concluir estava quebrado (ver 09/08). Parte já
@@ -59,6 +61,94 @@ classificação automática gravando cidade, COREDE, etiquetas e data e **confer
 **Risco permanente:** toda escrita é em produção, com dados reais de eleitores. O contrato de
 escrita mora no `chrome.storage.local` e já sumiu uma vez sem causa identificada — exportar
 backup pela aba Config evita refazer o aprendizado.
+
+---
+
+## 2026-08-10 — Cidade do candidato, cidade encurtada, marca amarela e respostas na rodada
+
+**Pedido (Thiago):** segunda leva da lista do WhatsApp, cinco itens do fim da tarde de 09/08.
+
+### 1. "Retirar cidade Capitão pois está confundindo com Capitão martim" — o mais grave
+
+**Capitão é município do RS** (Vale do Taquari) e é a patente do candidato. Medido aqui: a
+mensagem de aceite do anúncio — *"aceito receber conteúdos do Capitão Martim e do Zucco"* —
+casava com a cidade Capitão e com confiança **`exata`**, que é exatamente a que o automático
+grava **sem clique**. Ou seja: cidade errada + COREDE errado gravados sozinhos em cima de todo
+mundo que veio do anúncio.
+
+Duas travas em `cities.js`: a expressão "capitao martim" / "cap martim" é apagada do texto antes
+de casar (mesmo mecanismo do nome do estado), e o município entrou em `cidadesIgnoradas`
+(padrão `['Capitão']`, editável na aba Config). A primeira sozinha não bastava — ele pediu que
+"Capitão" solto também não valha.
+
+**Vale conferir na base:** contatos do anúncio classificados com cidade Capitão provavelmente
+estão errados, e levaram a etiqueta do COREDE Vale do Taquari junto.
+
+### 2. "Nomes de cidade não sendo pegos se não estiverem perfeitamente escritos"
+
+**Causa raiz:** o casamento por prefixo exigia **duas palavras**, e o encurtamento mais comum
+tem uma só. "Palmares" (Palmares do Sul), "Sentinela", "Trindade" não eram reconhecidos.
+
+O mínimo de duas palavras existia para "Carlos" não virar "Carlos Barbosa" — mas quem protege
+disso é a trava da preposição, que já estava lá: "Barbosa" não é preposição, então "Carlos"
+continua não casando. Abri para uma palavra mantendo as outras travas (mínimo de 6 letras, sufixo
+começando em preposição, empate recusa) e mais uma: **uma palavra nunca vale como `exata`** —
+vira palpite e espera clique, nunca grava sozinha.
+
+Dois achados no caminho:
+
+- **"Livramento" caía em "Santana da Boa Vista".** Pus o encurtamento em `ALIASES` primeiro, e
+  `normalize()` roda também sobre o nome do município: "Santana do Livramento" virava "santana do
+  santana do livramento". Agora está em `ENCURTAMENTOS`, aplicado só ao texto do contato.
+- **"o cara" casava com Caraá** (distância 1). Município de até 5 letras agora exige grafia
+  exata — o passo 1 já pega essas, então não se perde nada, e palavra comum de quatro letras
+  para de virar cidade.
+
+### 3. "Etiqueta de conteúdo do Flávio marcada e a mensagem rápida não reconhece e trava o botão"
+
+`suggest()` só devolve o que as **regras acham nas mensagens**. Etiqueta aplicada à mão era
+invisível, e o botão "Enviar conteúdo + agradecer + concluir" exige exatamente um conteúdo
+identificado — contava zero e travava.
+
+Acontece também sem ninguém marcar nada: a regra casa contra a campanha do anúncio, o contato é
+etiquetado na primeira passada e, na reabertura, as mensagens dele sozinhas não casam mais.
+
+`tags.conteudosJaAplicados()` soma as etiquetas de conteúdo que o contato já carrega no CRM —
+só as reconhecidas como conteúdo (aparecem nas regras ou na tabela "Modelo por conteúdo").
+Região e etiqueta de fluxo continuam de fora. Como entra em `state.tagSuggestions`, vale para os
+três consumidores de uma vez: botão da aba Respostas, macro de fechar e a rodada.
+
+### 4. "Liberar a caixa de respostas rápidas — no momento ela está fixa no modo automatizado"
+
+A pergunta da rodada é `position: fixed; inset: 0`: uma cortina sobre o painel inteiro. Durante a
+rodada não havia como mandar uma resposta pronta — só parando a rodada ou indo de tecla 6.
+
+As respostas prontas agora vão **dentro da caixa de pergunta**, num `<details>` fechado (a
+pergunta é decisão de um toque; oito botões abertos atrapalhariam o caso comum). Enviar dali
+**não fecha a pergunta**: manda e você continua decidindo o que fazer com o atendimento.
+Resposta bloqueada por variável aparece desabilitada com o motivo no `title`, nunca sumindo.
+
+### 5. "Faça uma marcação em amarelo na cidade que está pegando"
+
+Marca-texto amarelo (`.wf-marca`) na cidade **quando ela veio do parser** — sem marca quando veio
+do CRM ou foi digitada por ele. Aparece no cabeçalho, na aba Dados e na linha da pergunta da
+rodada, sempre com o trecho que gerou o valor: `Capitão ← de "Capitão Martim"` mostra o erro na
+hora, sem abrir a conversa. Cor fixa nos dois temas, com o texto travado em escuro — marca-texto
+que muda de cor com o tema deixa de ser marca-texto.
+
+De quebra, a linha de aviso da pergunta (⚠ já enviado hoje) saiu do cinza e ganhou fundo: ela
+existe para ser notada antes da tecla, e cinza-claro como as outras passava batido.
+
+### Arquivos alterados
+
+`src/lib/cities.js`, `src/lib/tags.js`, `src/lib/store.js`, `src/panel/panel.js`,
+`src/panel/panel.css`, `tests/parser.test.mjs`, `tests/tags.test.mjs`, `CLAUDE.md`, `README.md`.
+
+### Pendências
+
+- **Rever na base os contatos com cidade "Capitão"** — vieram do anúncio, não moram lá.
+- Continua aberto da leva anterior: confirmar em uso o conserto da figura, preencher "Etiquetas
+  quando responder sim" e a tabela "Modelo por conteúdo".
 
 ---
 

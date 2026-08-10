@@ -240,6 +240,21 @@
 }
 
 .wf-guess { border-color: var(--wf-warn) !important; background: var(--wf-warn-bg); }
+
+/**
+ * Marca-texto amarelo no valor que o parser extraiu (hoje: a cidade).
+ *
+ * Serve para conferir de relance se o que ele pegou está certo. Cor fixa, e não variável de
+ * tema: marca-texto que muda de cor com o tema deixa de ser marca-texto. O contraste é
+ * garantido fixando também o texto em escuro, senão no tema escuro ela some.
+ */
+.wf-marca {
+  background: #fde68a;
+  color: #111827;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}
 .wf-origin { color: var(--wf-muted); font-size: 11px; margin-top: 3px; font-weight: 400; }
 
 .wf-chips { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -299,11 +314,27 @@
 .wf-pergunta-linha { color: var(--wf-muted); font-size: 12px; }
 .wf-pergunta-corpo { margin: 10px 0 12px; font-size: 13px; white-space: pre-wrap; }
 
+/* Aviso dentro da pergunta (já enviei hoje, cidade trocada): precisa saltar aos olhos. */
+.wf-pergunta-aviso {
+  color: var(--wf-warn);
+  background: var(--wf-warn-bg);
+  border-radius: 4px;
+  padding: 4px 6px;
+  margin: 4px 0;
+  font-weight: 600;
+}
+
 .wf-pergunta-botoes { display: flex; flex-direction: column; gap: 6px; }
 /* Alinhados à esquerda para o número do atalho ficar na frente, fácil de mirar. */
 .wf-pergunta-botoes .wf-btn { text-align: left; }
 
 .wf-pergunta-dica { color: var(--wf-muted); font-size: 11px; margin-top: 10px; }
+
+/* Respostas prontas dentro da pergunta da rodada: fechadas por padrão, uma por linha. */
+.wf-rapidas { margin-top: 10px; border-top: 1px solid var(--wf-border); padding-top: 8px; }
+.wf-rapidas summary { cursor: pointer; font-size: 12px; color: var(--wf-muted); }
+.wf-rapidas .wf-btn { display: block; width: 100%; text-align: left; margin-top: 4px; }
+.wf-rapidas .wf-pergunta-dica { margin-top: 6px; }
 
 .wf-hint { color: var(--wf-muted); font-size: 12px; margin: 0 0 8px; }
 .wf-mono { font-family: ui-monospace, Consolas, monospace; font-size: 11px; word-break: break-all; white-space: pre-wrap; }

@@ -246,9 +246,20 @@ você manda antes de saber o nome.
 A precisão vem do **formato da pergunta**, não de adivinhação. O template `pedir-dados` pede
 `Nome completo / Cidade`, e o template de tema pede um número. Sobre isso rodam:
 
-- **Cidade** — casa contra os 497 municípios do RS (lista do IBGE, baixada uma vez e
-  cacheada), sem acento, com abreviação comum (`Sto`, `POA`, `Cxs`) e tolerância a erro de
-  digitação. Não achou? Oferece as 3 mais próximas como botão, em vez de inventar.
+- **Cidade** — casa contra os 497 municípios do RS (lista oficial, já embutida no repositório),
+  sem acento, com abreviação comum (`Sto`, `POA`, `Cxs`), tolerância a erro de digitação e
+  encurtamento (`Palmares` → Palmares do Sul, `Livramento` → Santana do Livramento). Não achou?
+  Oferece as 3 mais próximas como botão, em vez de inventar.
+
+  Duas coisas **não** são cidade, por mais que contenham nome de município: o nome do estado
+  ("sou do Rio Grande do Sul" não é a cidade Rio Grande) e o vocabulário da campanha — **Capitão
+  é município do RS e é a patente do candidato**, então toda mensagem de aceite do anúncio virava
+  cidade Capitão, com a confiança que grava sem clique. A lista de municípios ignorados fica na
+  aba Config.
+
+  **A cidade extraída aparece em marca-texto amarelo** no cabeçalho, na aba Dados e na pergunta
+  da rodada, com o trecho que a gerou (`Capitão ← de "Capitão Martim"`). Sem marca = veio do CRM
+  ou você digitou. É o que deixa conferir de relance se o que ele pegou está certo.
 - **Nome** — na prática o contato responde do jeito dele: `Maria / Santo Ângelo / voluntária`,
   ou em três linhas, ou simplesmente `Thiago kellermann, porto alegre`. Aceitar vírgula sem
   critério transformaria "boa tarde, sou de Pelotas" em nome "Boa Tarde", então o que valida a

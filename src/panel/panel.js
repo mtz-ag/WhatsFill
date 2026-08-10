@@ -351,7 +351,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         extra: [state.session?.utm?.campaign, state.session?.utm?.headline].filter(Boolean).join(' '),
         interesse: { perguntado: !!perguntado, etiquetas: etiquetasInteresse },
       });
-      state.tagSuggestions = sugeridas.map((s) => ({
+
+      // O conteúdo que o contato JÁ carrega no CRM entra na conta junto com o que as regras
+      // acharam. Sem isto, etiqueta aplicada à mão (ou aplicada por nós na passada anterior,
+      // quando a campanha do anúncio ainda casava) era invisível — e o botão de fechar com
+      // conteúdo ficava travado dizendo "nenhum conteúdo reconhecido".
+      const jaNoCrm = await tagsLib.conteudosJaAplicados(state.contact, await store.get('contentTemplates'));
+      const nomesVistos = new Set(sugeridas.map((s) => cities.normalize(s.nome || '')));
+      const completas = [...sugeridas, ...jaNoCrm.filter((c) => !nomesVistos.has(cities.normalize(c.nome)))];
+
+      state.tagSuggestions = completas.map((s) => ({
         ...s,
         jaTem: !!s.tag && jaAplicadas.has(s.tag.id),
         marcada: !!s.tag && !jaAplicadas.has(s.tag.id) && state.settings.autoTags,
@@ -470,9 +479,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     header.append(h('div', { class: 'wf-sub' }, phone + (campaign ? ` · ${campaign}` : '')));
 
     const cidade = valueNamed('Cidade');
-    if (cidade) {
-      header.append(h('div', { class: 'wf-sub' }, [document.createTextNode('Cidade: '), h('b', {}, cidade)]));
-    }
+    if (cidade) header.append(h('div', { class: 'wf-sub' }, [document.createTextNode('Cidade: '), ...cidadeMarcada()]));
+  }
+
+  /**
+   * A cidade no cabeçalho, em marca-texto amarelo quando foi o PARSER que a extraiu — com o
+   * trecho que gerou o valor logo depois.
+   *
+   * Pedido dele, e o motivo é bom: cidade extraída é a informação que mais erra e a mais cara
+   * de errar (leva o COREDE e o link do grupo junto). Amarelo = veio da conversa, confira.
+   * Sem marca = veio do CRM ou foi você que digitou. O trecho é o que fecha o diagnóstico:
+   * "Capitão ← de 'Capitão Martim'" mostra o erro na hora, sem abrir a conversa.
+   */
+  function cidadeMarcada() {
+    const campo = fieldNamed('Cidade');
+    const entrada = campo && state.draft[campo.id];
+    const cidade = valueNamed('Cidade');
+    if (!entrada || entrada.from !== 'palpite') return [h('b', {}, cidade)];
+
+    const trecho =
+      entrada.source && cities.normalize(entrada.source) !== cities.normalize(cidade)
+        ? ` ← de “${truncate(entrada.source, 30)}”`
+        : '';
+    const nivel = entrada.confidence === 'exata' ? '' : ` (${entrada.confidence || 'palpite'})`;
+    return [h('span', { class: 'wf-marca' }, cidade), h('span', {}, `${nivel}${trecho}`)];
   }
 
   // ---- aba Respostas ------------------------------------------------------
@@ -2017,7 +2047,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const escolha = await perguntarNaRodada({
         titulo: nome,
         linhas: [
-          `Cidade: ${valueNamed('Cidade') || '(vazia)'}${cidadeSubstituida()}`,
+          valueNamed('Cidade')
+            ? ['Cidade: ', ...cidadeMarcada(), cidadeSubstituida()]
+            : 'Cidade: (vazia)',
           `Etiquetas: ${etiquetas.join(', ') || '(nenhuma)'}`,
           modelo
             ? `Conteúdo pedido: ${conteudoEscolhido.nome}` +
@@ -2039,6 +2071,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
               '"Etiquetas quando responder sim" na aba Config.'
             : '',
         ].filter(Boolean),
+        // As respostas prontas viajam junto: elas são o que faltava para resolver um contato
+        // sem sair da rodada.
+        respostas: state.templates.map((t) => {
+          const { missing, reasons } = vars.render(t.text, contexto);
+          return {
+            nome: t.name,
+            bloqueio: missing.length ? vars.explainMissing(missing, reasons) : '',
+            enviar: () => sendTemplate(t, { send: true, jaConfirmado: true }),
+          };
+        }),
         pergunta: podeEnviar
           ? `Enviar o modelo "${modelo.name}" + agradecimento e concluir?`
           : modeloTravado
@@ -2156,15 +2198,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * e sem isso teclar "1" escreveria "1" na conversa do contato. Pelo mesmo motivo as teclas
    * tratadas são capturadas e param aqui.
    *
+   * `respostas` são as respostas prontas, disponíveis **sem sair da pergunta**. Antes elas só
+   * existiam na aba Respostas, e a pergunta é uma cortina `position: fixed` por cima do painel
+   * inteiro: durante a rodada não havia como mandar uma resposta pronta — o jeito era parar a
+   * rodada ou ir de tecla 6 e escrever à mão. Mandar uma resposta daqui **não fecha a
+   * pergunta**: você manda e continua decidindo o que fazer com o atendimento.
+   *
    * @returns {Promise<string>} o `valor` da opção escolhida, ou 'parar' no Esc
    */
-  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes }) {
+  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [] }) {
     return new Promise((resolve) => {
       const caixa = h('div', { class: 'wf-pergunta' });
       const fundo = h('div', { class: 'wf-pergunta-fundo' }, [caixa]);
 
       caixa.append(h('div', { class: 'wf-pergunta-titulo' }, titulo));
-      for (const linha of linhas) caixa.append(h('div', { class: 'wf-pergunta-linha' }, linha));
+      // Linha pode ser texto ou lista de nós — é o que deixa a cidade sair em marca-texto.
+      // Linha de aviso (começa com ⚠) sai destacada: ela existe justamente para ser notada
+      // antes de a tecla ser apertada, e cinza-claro como as outras ela passa batido.
+      for (const linha of linhas) {
+        const aviso = typeof linha === 'string' && linha.startsWith('⚠');
+        caixa.append(h('div', { class: `wf-pergunta-linha${aviso ? ' wf-pergunta-aviso' : ''}` }, linha));
+      }
       if (pergunta) caixa.append(h('div', { class: 'wf-pergunta-corpo' }, pergunta));
 
       const botoes = [];
@@ -2180,6 +2234,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         linhaBotoes.append(btn);
       }
       caixa.append(linhaBotoes);
+      if (respostas.length) caixa.append(montarRespostasRapidas(respostas));
       caixa.append(h('div', { class: 'wf-pergunta-dica' }, 'Esc para parar a rodada'));
 
       function aoTeclar(ev) {
@@ -2201,6 +2256,57 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       root.append(fundo);
       botoes[0]?.focus();
     });
+  }
+
+  /**
+   * As respostas prontas dentro da caixa de pergunta, fechadas por padrão.
+   *
+   * Fechadas porque a pergunta é uma decisão de um toque, e uma lista de oito botões no meio
+   * dela atrapalharia o caso comum. `<details>` guarda o estado de aberto enquanto a pergunta
+   * existe, e é nativo — sem estado nosso para sincronizar.
+   *
+   * Resposta bloqueada por variável aparece **desabilitada com o motivo**, nunca sumindo: já
+   * aconteceu duas vezes de a opção sumir e ninguém entender por quê.
+   */
+  function montarRespostasRapidas(respostas) {
+    const bloco = h('details', { class: 'wf-rapidas' });
+    bloco.append(h('summary', {}, `Respostas rápidas (${respostas.length})`));
+
+    const aviso = h('div', { class: 'wf-pergunta-dica' }, 'Enviar daqui não fecha a pergunta.');
+    bloco.append(aviso);
+
+    // Par botão↔resposta guardado aqui: reabilitar depois do envio tem que devolver cada botão
+    // ao estado dele, e quem estava bloqueado por variável continua bloqueado.
+    const pares = respostas.map((resposta) => {
+      const btn = h('button', { class: 'wf-btn wf-mini', type: 'button' }, resposta.nome);
+      btn.disabled = !!resposta.bloqueio;
+      if (resposta.bloqueio) btn.title = resposta.bloqueio;
+      bloco.append(btn);
+      return { resposta, btn };
+    });
+
+    const soltar = () => pares.forEach(({ resposta, btn }) => (btn.disabled = !!resposta.bloqueio));
+
+    for (const { resposta, btn } of pares) {
+      if (resposta.bloqueio) continue;
+      btn.addEventListener('click', async () => {
+        // Trava todos durante o envio: dois cliques seguidos mandariam duas mensagens para
+        // gente real, e o envio leva segundos (espera o composer esvaziar).
+        pares.forEach(({ btn: b }) => (b.disabled = true));
+        aviso.textContent = `Enviando "${resposta.nome}"…`;
+        try {
+          const foi = await resposta.enviar();
+          aviso.textContent = foi
+            ? `Enviado: ${resposta.nome}. A pergunta continua aberta.`
+            : `Não saiu: ${resposta.nome}. Veja o status do painel.`;
+        } catch (err) {
+          aviso.textContent = `Erro ao enviar: ${err?.message || err}`;
+        } finally {
+          soltar();
+        }
+      });
+    }
+    return bloco;
   }
 
   /**
@@ -2563,6 +2669,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         placeholder: field.type === 'DATE' ? 'aaaa-mm-dd' : '',
       });
       if (entry.from === 'palpite') input.classList.add('wf-guess');
+      // A cidade extraída também vem marcada aqui, onde você a corrige.
+      if (field.name === 'Cidade' && entry.from === 'palpite' && entry.value) {
+        wrap.append(h('div', {}, [h('span', { class: 'wf-marca' }, String(entry.value))]));
+      }
       input.addEventListener('input', () => {
         state.draft[field.id] = { value: input.value, from: 'manual' };
         input.classList.remove('wf-guess');
@@ -2993,6 +3103,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         h('div', { class: 'wf-origin' },
           'Quando a conversa casa com mais de uma regra, este é o modelo que vai. As etiquetas ' +
             'continuam sendo aplicadas todas — isto decide só o envio.'),
+      ])
+    );
+
+    // Municípios que colidem com o vocabulário da campanha. Nasceu de "Capitão", que é
+    // município do RS e patente do candidato: toda mensagem de aceite do anúncio virava cidade.
+    const ignoradasInput = h('input', { type: 'text', placeholder: 'ex.: Capitão' });
+    store.get('cidadesIgnoradas').then((lista) => (ignoradasInput.value = (lista || []).join(', ')));
+    ignoradasInput.addEventListener('change', () =>
+      withBusy(async () => {
+        const lista = ignoradasInput.value.split(',').map((s) => s.trim()).filter(Boolean);
+        await store.set('cidadesIgnoradas', lista);
+        setStatus(
+          lista.length ? `Não vou mais reconhecer como cidade: ${lista.join(', ')}.` : 'Nenhum município ignorado.',
+          'ok'
+        );
+      })
+    );
+    body.append(
+      h('label', { class: 'wf-field' }, [
+        h('span', {}, 'Municípios que NÃO são cidade aqui'),
+        ignoradasInput,
+        h('div', { class: 'wf-origin' },
+          '"Capitão" é município do RS e é a patente do candidato: sem isto, toda mensagem que ' +
+            'cita "Capitão Martim" gravava a cidade Capitão. Separe por vírgula.'),
       ])
     );
 

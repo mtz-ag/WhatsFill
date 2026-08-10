@@ -194,6 +194,48 @@ export async function suggest({ city, texts = [], extra = '', interesse = null }
   });
 }
 
+/**
+ * Etiquetas de conteúdo que o contato **já tem no CRM**, mesmo que nenhuma regra de texto case.
+ *
+ * Sem isto, a etiqueta que ele aplicou à mão era invisível para o painel: `suggest()` só olha o
+ * que as regras acham nas mensagens. O sintoma foi "etiqueta de conteúdo do Flávio marcada e a
+ * mensagem rápida não reconhece e trava o botão" — o botão de fechar com conteúdo exigia
+ * exatamente um conteúdo identificado, e contava zero.
+ *
+ * Também acontece sem ninguém marcar nada: a regra casa contra a campanha do anúncio, o
+ * contato é etiquetado na primeira passada, e na reabertura as mensagens dele sozinhas não
+ * casam mais com nada.
+ *
+ * Só entram etiquetas **reconhecidas como conteúdo**: as que aparecem nas regras ou na tabela
+ * "Modelo por conteúdo". Etiqueta de região e de fluxo continuam de fora.
+ *
+ * @param {object} contact contato do CRM (usa `tagsId`)
+ * @param {object} [mapaModelos] tabela "Modelo por conteúdo" (chaves já achatadas)
+ */
+export async function conteudosJaAplicados(contact, mapaModelos = {}) {
+  const ids = new Set(contact?.tagsId || []);
+  if (!ids.size) return [];
+
+  const [todas, regras] = await Promise.all([loadTags(), store.get('tagRules')]);
+  const conhecidos = new Set(
+    [
+      ...(regras || []).map((r) => r.etiqueta),
+      ...Object.keys(mapaModelos || {}),
+    ]
+      .filter(Boolean)
+      .map((nome) => normalize(nome))
+  );
+
+  return todas
+    .filter((t) => ids.has(t.id) && conhecidos.has(normalize(t.label)))
+    .map((t) => ({
+      origem: 'conteúdo',
+      nome: t.label,
+      tag: t,
+      motivo: 'etiqueta de conteúdo já aplicada no contato',
+    }));
+}
+
 // ---------------------------------------------------------------------------
 // Escrita
 // ---------------------------------------------------------------------------
