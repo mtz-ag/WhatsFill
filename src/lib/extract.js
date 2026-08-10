@@ -118,9 +118,15 @@ export async function extract(texts, { temaField } = {}) {
   return guesses;
 }
 
-/** Aberturas e verbos que descartam um pedaço como candidato a nome de pessoa. */
+/**
+ * Aberturas e verbos que descartam um pedaço como candidato a nome de pessoa.
+ *
+ * O "sim"/"não" entrou quando a pergunta de interesse passou a pedir os dados junto: a resposta
+ * vem como "Sim / Maria Silva / Palmares do Sul", e sem isto o **Sim** vira o nome do eleitor
+ * sempre que ele escrever a cidade antes do nome.
+ */
 const NAO_E_NOME =
-  /\b(oi|ol[aá]|bom dia|boa tarde|boa noite|obrigad|quero|queria|sou|moro|resido|aceito|gostaria|pode|tenho|preciso|meu|minha|aqui|somos)\b/i;
+  /\b(oi|ol[aá]|bom dia|boa tarde|boa noite|obrigad|quero|queria|sou|moro|resido|aceito|gostaria|pode|tenho|preciso|meu|minha|aqui|somos|sim|n[aã]o|claro|isso|ok|beleza|positivo|afirmativo)\b/i;
 
 /**
  * Siglas que vêm coladas no nome e nunca são nome de gente.

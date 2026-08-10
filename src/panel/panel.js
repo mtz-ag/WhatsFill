@@ -2039,7 +2039,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         opcoes.push({
           tecla: '7',
           valor: 'interesse',
-          rotulo: 'Perguntar interesse no conteúdo e concluir',
+          rotulo: 'Perguntar interesse + pedir nome e cidade, e concluir',
           primaria: !podeEnviar,
         });
       }

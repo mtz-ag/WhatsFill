@@ -94,18 +94,26 @@ export async function saveAlias(name, tagLabel) {
 // ---------------------------------------------------------------------------
 
 /**
- * "Sim" a uma pergunta fechada, medido só na ÚLTIMA mensagem do contato.
+ * "Sim" à pergunta de interesse, medido só na ÚLTIMA mensagem do contato.
  *
- * Olhar a conversa inteira acharia "sim" em qualquer lugar ("sim, moro em Pelotas") e aplicaria
- * etiqueta de conteúdo a quem nunca foi perguntado. A negação vence sempre: "sim, mas não quero"
- * não é aceite.
+ * Olhar a conversa inteira acharia "sim" em qualquer lugar e aplicaria etiqueta a quem nunca
+ * foi perguntado — por isso quem chama também exige que a pergunta tenha SAÍDO para o contato.
  *
- * Puro e exportado para ter teste — é ele que decide gravar etiqueta em eleitor real.
+ * **A decisão sai da CABEÇA da mensagem, não da mensagem inteira.** Desde que a pergunta passou
+ * a pedir nome e cidade junto (10/08), a resposta esperada é "Sim / Maria Silva / Palmares do
+ * Sul" — longa, e frequentemente com um "não" legítimo mais à frente ("não faço parte de nenhum
+ * grupo político", que é resposta à outra pergunta do formulário). A regra anterior — limite de
+ * seis palavras e negação em qualquer lugar — transformava esses dois casos em recusa.
+ *
+ * Puro e exportado para ter teste: é ele que decide gravar etiqueta em eleitor real.
  */
 const AFIRMATIVAS =
-  /^(s|sim+|claro|quero|aceito|pode|manda|mande|positivo|afirmativo|isso|ok|okay|blz|beleza|com certeza|certeza|gostaria|por favor|pf|please|bora|adoraria|quero sim|sim quero|pode sim|pode mandar|pode enviar|quero receber)\b/;
+  /^(s|sim+|claro|quero|aceito|pode|manda|mande|positivo|afirmativo|isso|ok|okay|blz|beleza|certeza|gostaria|bora|adoraria)\b/;
 
-const NEGATIVAS = /\bnao\b|\bnem\b|\bnunca\b|\bdispenso\b|\bobrigado nao\b/;
+const NEGATIVAS = /\bnao\b|\bnunca\b|\bdispenso\b/;
+
+/** As primeiras palavras — onde mora a resposta a uma pergunta fechada. */
+const PALAVRAS_DA_CABECA = 4;
 
 export function respostaAfirmativa(texts = []) {
   const ultima = [...texts].reverse().find((t) => String(t || '').trim());
@@ -113,10 +121,11 @@ export function respostaAfirmativa(texts = []) {
 
   const norm = normalize(ultima).replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
   if (!norm) return false;
-  // Resposta a pergunta fechada é curta. Texto longo é outra conversa, não um "sim".
-  if (norm.split(' ').length > 6) return false;
-  if (NEGATIVAS.test(norm)) return false;
-  return AFIRMATIVAS.test(norm);
+
+  const cabeca = norm.split(' ').slice(0, PALAVRAS_DA_CABECA).join(' ');
+  // "sim, mas não quero" continua sendo recusa: a negação está na própria resposta.
+  if (NEGATIVAS.test(cabeca)) return false;
+  return AFIRMATIVAS.test(cabeca);
 }
 
 /**

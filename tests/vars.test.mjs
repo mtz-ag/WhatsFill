@@ -177,6 +177,31 @@ grupo('a migração tira o nome do que já está salvo no navegador');
   check(mem.templates[0].text === 'Obrigado, {{primeiro_nome}}!', 'e não desfaz a escolha dele');
 }
 
+grupo('a pergunta de interesse passa a pedir nome e cidade');
+{
+  const templates = await lib('templates.js');
+  const store = await lib('store.js');
+
+  mem.migracoes = {};
+  mem.templates = [
+    { id: 'interesse-conteudo', name: 'Perguntar interesse no conteúdo', text: store.INTERESSE_CONTEUDO_ANTIGO },
+  ];
+  check((await templates.migrarInteressePedeDados()) === true, 'atualizou o texto anterior');
+  check(/Nome completo \/ Cidade/.test(mem.templates[0].text), 'a nova versão pede os dados');
+  check(/\(e pedir os dados\)/.test(mem.templates[0].name), `o nome acompanhou = ${mem.templates[0].name}`);
+
+  // Texto que ele reescreveu não pode ser atropelado.
+  mem.migracoes = {};
+  mem.templates = [{ id: 'interesse-conteudo', name: 'Minha pergunta', text: 'Oi! Quer receber nossos conteúdos?' }];
+  check((await templates.migrarInteressePedeDados()) === false, 'pergunta editada por ele fica intacta');
+  check(mem.templates[0].text === 'Oi! Quer receber nossos conteúdos?', 'o texto dele continua lá');
+
+  // Uma vez só.
+  mem.migracoes = { interessePedeDados: true };
+  mem.templates = [{ id: 'interesse-conteudo', name: 'x', text: store.INTERESSE_CONTEUDO_ANTIGO }];
+  check((await templates.migrarInteressePedeDados()) === false, 'não roda de novo');
+}
+
 grupo('saudação por horário');
 check(vars.saudacao(new Date(2026, 7, 5, 9)) === 'Bom dia', 'manhã');
 check(vars.saudacao(new Date(2026, 7, 5, 15)) === 'Boa tarde', 'tarde');

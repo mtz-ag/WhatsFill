@@ -195,12 +195,20 @@ grupo('"sim" à pergunta de interesse');
 
   check(!sim('não'), '"não" não é sim');
   check(!sim('nao quero'), '"nao quero" também não');
-  check(!sim('sim, mas não quero receber nada'), 'negação no meio vence o "sim"');
+  check(!sim('sim, mas não quero receber nada'), 'negação na própria resposta vence o "sim"');
   check(!sim('bom dia, tudo bem com vocês?'), 'saudação não é resposta');
+
+  // Desde que a pergunta pede nome e cidade junto, a resposta esperada é LONGA — e muitas
+  // vezes traz um "não" legítimo mais à frente, respondendo a outra parte do formulário.
+  // A decisão sai da cabeça da mensagem, por isso estes dois são aceite.
+  check(sim('Sim / Maria Silva / Palmares do Sul'), 'sim com nome e cidade no formato pedido');
+  check(sim('Sim, Maria Silva, Palmares do Sul'), 'o mesmo com vírgula');
   check(
-    !sim('sim eu moro em Pelotas e trabalho na prefeitura desde 2019'),
-    'texto longo é outra conversa, não a resposta à pergunta'
+    sim('Sim\nMaria Silva\nPalmares do Sul\nNão faço parte de nenhum grupo político'),
+    'o "não" de outra pergunta não derruba o aceite'
   );
+  check(sim('sim eu moro em Pelotas e trabalho na prefeitura desde 2019'), 'resposta comprida ainda é sim');
+  check(!sim('não, obrigado. já recebo pelo grupo da minha cidade'), 'e a recusa comprida continua recusa');
 
   // Só a ÚLTIMA mensagem conta: "sim" dito lá atrás não autoriza etiqueta nenhuma.
   check(tags.respostaAfirmativa(['sim', 'na verdade não, obrigado']) === false, 'a última mensagem é que vale');

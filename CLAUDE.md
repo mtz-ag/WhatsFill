@@ -106,6 +106,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   evento vindo de campo de texto** — senão o "2" digitado na conversa conclui o atendimento.
   O que ele precisar no meio da rodada tem que estar DENTRO da caixa: as respostas prontas são
   `montarRespostasRapidas`, e enviar dali não fecha a pergunta.
+- **Mudou o texto de uma pergunta? O parser da resposta muda junto.** A pergunta de interesse
+  passou a pedir "Sim / Nome / Cidade" e, de repente, `respostaAfirmativa` (limite de palavras +
+  negação em qualquer lugar) recusava a resposta certa, e o "Sim" virava o nome do eleitor. Toda
+  pergunta nova: confira `tags.respostaAfirmativa` e `NAO_E_NOME` em `extract.js`.
 - **Bloqueio de variável nunca pode virar saída de rodada.** Faltou `{{primeiro_nome}}`? Isso
   tira a OPÇÃO da pergunta, com o motivo na tela — nunca o contato da fila. Já entrou por duas
   portas diferentes (sem conteúdo, sem nome) e as duas viraram pulo silencioso.

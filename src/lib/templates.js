@@ -17,6 +17,7 @@ export async function list() {
     await migrarSaudacaoSemConvite();
     await migrarRespostaInteresse();
     await migrarRespostasSemNome();
+    await migrarInteressePedeDados();
   }
   return store.get('templates');
 }
@@ -86,6 +87,37 @@ export const migrarRespostaAgradecerInfo = () =>
 /** A pergunta de interesse no conteúdo, para quem já tinha a lista de respostas salva. */
 export const migrarRespostaInteresse = () =>
   garantirRespostas(['interesse-conteudo'], 'respostaInteresseConteudo');
+
+/**
+ * A pergunta de interesse passa a pedir nome e cidade junto.
+ *
+ * Só troca o texto se ele estiver **literalmente** na versão anterior: quem editou a pergunta
+ * fica com a dele. É a mesma disciplina do `migrarPerguntaGrupos` — migração que reescreve
+ * texto editável tem que reconhecer o que está reescrevendo.
+ *
+ * O nome da resposta também muda, e por isso é comparado antes: nome que ele tenha trocado
+ * também é edição.
+ */
+export async function migrarInteressePedeDados() {
+  const migracoes = await store.get('migracoes');
+  if (migracoes.interessePedeDados) return false;
+
+  const templates = await store.get('templates');
+  const alvo = templates.find((t) => t.id === 'interesse-conteudo');
+  let mexeu = false;
+
+  if (alvo && alvo.text.trim() === store.INTERESSE_CONTEUDO_ANTIGO.trim()) {
+    alvo.text = store.INTERESSE_CONTEUDO;
+    if (alvo.name === 'Perguntar interesse no conteúdo') {
+      alvo.name = 'Perguntar interesse no conteúdo (e pedir os dados)';
+    }
+    await store.set('templates', templates);
+    mexeu = true;
+  }
+
+  await store.set('migracoes', { ...migracoes, interessePedeDados: true });
+  return mexeu;
+}
 
 /**
  * Tira o nome do contato das respostas já salvas no navegador.

@@ -64,6 +64,49 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
+## 2026-08-10 — A pergunta de interesse já pede nome e cidade
+
+**Pedido (Thiago):** "ao perguntar se a pessoa quer conteúdos já peça nome e cidade também para
+caso positivo."
+
+Motivo dele, e é o certo: quem recebe essa pergunta é justamente quem está em "Meus" sem
+etiqueta de conteúdo — e, na maioria, sem nome e sem cidade no CRM. Uma segunda mensagem para
+pedir os dados custa outro atendimento inteiro: mais um dia de espera e mais uma chance de a
+pessoa não responder.
+
+A pergunta agora pede no formato fixo, como o `pedir-dados`: **`Sim / Nome completo / Cidade`**.
+O formato não é enfeite — é dele que sai a precisão do parser.
+
+### O que a mudança de formato quebrou (e que era o trabalho de verdade)
+
+Trocar o texto foi a parte pequena. A resposta esperada mudou de forma, e **duas regras do
+parser estavam calibradas para a forma antiga**:
+
+- **`respostaAfirmativa` recusava a resposta certa.** Ela exigia no máximo seis palavras e
+  rejeitava qualquer negação na mensagem. Só que agora a resposta legítima é longa
+  ("Sim / Maria Silva / Palmares do Sul") e frequentemente traz um "não" que responde **outra**
+  pergunta do formulário — "Não faço parte de nenhum grupo político" apareceu numa conversa
+  real. As duas regras juntas transformavam aceite em recusa.
+  Agora a decisão sai da **cabeça da mensagem** (primeiras 4 palavras): "sim, mas não quero"
+  continua sendo recusa, porque a negação está na própria resposta.
+- **"Sim" viraria o nome do eleitor.** Quando a pessoa escreve a cidade antes do nome
+  ("Sim / Palmares do Sul / Maria Silva"), o pedaço anterior à cidade é o "Sim" — e
+  `plausivelNome` o aceitava (tem vogal, três letras, só letras). Entrou na lista de aberturas
+  descartadas, junto com "não", "claro", "isso", "ok", "beleza".
+
+### Migração
+
+`migrarInteressePedeDados` troca o texto **só se ele estiver literalmente na versão anterior**
+(`INTERESSE_CONTEUDO_ANTIGO`), e o nome da resposta idem. Pergunta que ele tenha reescrito fica
+como está. Mesma disciplina do `migrarPerguntaGrupos`.
+
+### Arquivos alterados
+
+`src/lib/store.js`, `src/lib/templates.js`, `src/lib/tags.js`, `src/lib/extract.js`,
+`src/panel/panel.js`, `tests/parser.test.mjs`, `tests/tags.test.mjs`, `tests/vars.test.mjs`.
+
+---
+
 ## 2026-08-10 — As respostas param de chamar o contato pelo nome
 
 **Pedido (Thiago):** "o uso de nomes para responder tem dado problemas, vamos alterar para não

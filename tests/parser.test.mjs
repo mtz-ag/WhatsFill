@@ -305,6 +305,27 @@ grupo('sigla não é nome de gente');
   check(semNome.cidade?.value === 'Pelotas', 'e a cidade da mesma linha continua sendo lida');
 }
 
+grupo('resposta à pergunta de interesse: "Sim / Nome / Cidade"');
+{
+  // A pergunta de interesse passou a pedir os dados junto, então esta é a forma mais comum de
+  // resposta do fluxo. O "Sim" na frente não pode virar o nome do eleitor.
+  const g = await extract(['Sim / Maria Silva / Palmares do Sul'], { temaField });
+  check(g.nome?.value === 'Maria Silva', `nome = ${g.nome?.value ?? '(nada)'} [esperado Maria Silva]`);
+  check(g.cidade?.value === 'Palmares do Sul', `cidade = ${g.cidade?.value}`);
+
+  const virgula = await extract(['Sim, Maria Silva, Palmares do Sul'], { temaField });
+  check(virgula.nome?.value === 'Maria Silva', `com vírgula, nome = ${virgula.nome?.value ?? '(nada)'}`);
+
+  // Cidade antes do nome: é aqui que o "Sim" viraria nome se ele não estivesse na lista de
+  // aberturas descartadas.
+  const invertido = await extract(['Sim / Palmares do Sul / Maria Silva'], { temaField });
+  check(invertido.nome?.value !== 'Sim', `"Sim" não vira nome = ${invertido.nome?.value ?? '(nada)'}`);
+  check(invertido.cidade?.value === 'Palmares do Sul', 'e a cidade continua sendo lida');
+
+  const recusa = await extract(['Não, obrigado'], { temaField });
+  check(!recusa.nome, '"Não" também não vira nome');
+}
+
 grupo('cidade informada pela pessoa pode substituir a do CRM');
 {
   // A marca `informada` é o que autoriza a substituição no painel: só resposta estruturada

@@ -15,6 +15,26 @@ export const PERGUNTA_GRUPOS =
   'Se sim, me manda o nome ou o link — assim consigo somar por lá também. 🇧🇷';
 
 /**
+ * A pergunta de interesse no conteúdo, que **já pede nome e cidade** para o caso de sim.
+ *
+ * Fica em constante própria porque a migração (`templates.migrarInteressePedeDados`) precisa do
+ * mesmo texto para atualizar quem já tinha a versão anterior salva no navegador.
+ */
+export const INTERESSE_CONTEUDO =
+  '{{saudacao}}! Aqui é da equipe do Capitão Martim e do Zucco. 🇧🇷\n\n' +
+  'Posso te mandar por aqui os conteúdos e as novidades deles?\n\n' +
+  'Se sim, me responde nesta ordem, em uma única mensagem:\n\n' +
+  'Sim / Nome completo / Cidade\n\n' +
+  '(exemplo: Sim / Maria Silva / Santo Ângelo)\n\n' +
+  'Se preferir não receber, é só me dizer não — eu respeito e não incomodo mais.';
+
+/** O texto anterior, sem o pedido de dados. Só a migração usa — não mande esta versão. */
+export const INTERESSE_CONTEUDO_ANTIGO =
+  '{{saudacao}}! Aqui é da equipe do Capitão Martim e do Zucco. 🇧🇷\n\n' +
+  'Posso te mandar por aqui os conteúdos e as novidades deles?\n\n' +
+  'Me responde só *sim* ou *não* — do jeito que você preferir, eu respeito.';
+
+/**
  * As respostas prontas.
  *
  * **Nenhuma chama o contato pelo nome, e isso é regra do projeto** (decisão do Thiago,
@@ -125,13 +145,18 @@ export const DEFAULT_TEMPLATES = [
      * então nenhuma regra casa e não há modelo a enviar. Esta pergunta transforma o silêncio em
      * um sim ou um não.
      *
+     * **Pede nome e cidade na mesma mensagem** (decisão do Thiago, 10/08): quem responde "sim"
+     * quase sempre é gente que ainda está sem nome e sem cidade no CRM, e uma segunda mensagem
+     * para pedir os dados custa outro atendimento inteiro — mais um dia de espera, e mais uma
+     * chance de a pessoa não responder.
+     *
+     * O formato pedido ("Sim / Nome / Cidade") não é enfeite: é dele que sai a precisão do
+     * parser. Resposta estruturada é o que separa "está respondendo o formulário" de "está
+     * conversando" — a mesma razão do `pedir-dados`.
      */
     id: 'interesse-conteudo',
-    name: 'Perguntar interesse no conteúdo',
-    text:
-      '{{saudacao}}! Aqui é da equipe do Capitão Martim e do Zucco. 🇧🇷\n\n' +
-      'Posso te mandar por aqui os conteúdos e as novidades deles?\n\n' +
-      'Me responde só *sim* ou *não* — do jeito que você preferir, eu respeito.',
+    name: 'Perguntar interesse no conteúdo (e pedir os dados)',
+    text: INTERESSE_CONTEUDO,
   },
   {
     id: 'sem-interesse',
