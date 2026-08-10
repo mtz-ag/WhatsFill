@@ -98,11 +98,22 @@ function tolerance(name) {
  * Procura um município dentro de um texto qualquer.
  * @returns {{city:string, confidence:'exata'|'aproximada', matched:string}|null}
  */
+/**
+ * O nome do ESTADO contém o nome de um município: "Rio Grande do Sul" tem "Rio Grande" dentro.
+ *
+ * Como o passo 1 procura o nome do município em qualquer lugar do texto, quem escrevia "sou do
+ * Rio Grande do Sul" era gravado como morador de Rio Grande — cidade errada, e o COREDE errado
+ * junto, porque a etiqueta de região sai da cidade. Nenhum município do RS se chama "Rio Grande
+ * do Sul", então apagar a frase inteira antes de casar não custa nenhum acerto: quem quis dizer
+ * a cidade escreve "Rio Grande", que continua casando.
+ */
+const NOME_DO_ESTADO = /\brio grande do sul\b/g;
+
 export async function matchCity(text) {
   const municipios = await loadMunicipios();
   if (!municipios.length) return null;
 
-  const norm = normalize(text);
+  const norm = normalize(text).replace(NOME_DO_ESTADO, ' ').replace(/\s+/g, ' ').trim();
   if (!norm) return null;
 
   // 1) Nome inteiro aparece no texto. Preferimos o mais longo ("Santo Ângelo" antes de "Ângelo").

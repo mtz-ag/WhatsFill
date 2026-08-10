@@ -120,6 +120,13 @@ Duas garantias sustentam isso: valor que já está no CRM **nunca** é sobrescri
 só preenche buraco), e toda gravação é **conferida relendo o contato** — o status só diz
 "Aplicado sozinho: …" depois que o servidor confirmou.
 
+**A única exceção ao "nunca sobrescrever" é a cidade que a pessoa informou.** Se ela responde o
+formulário com uma cidade diferente da que está no CRM, a nova entra no lugar — e a etiqueta de
+COREDE antiga sai junto, porque duas regiões no mesmo contato é informação errada. As travas:
+casamento **exato** com o IBGE, só em resposta estruturada ("Nome / Cidade"), e nunca por cima
+de uma correção que você fez à mão. Cidade citada solta no meio da conversa continua sendo
+palpite que não sobrescreve nada.
+
 Palpite aproximado nunca entra sozinho. Errar aqui grava dado errado em contato real, e a
 extensão não sabe desfazer. Desligável na aba Config.
 
@@ -275,7 +282,15 @@ node tests/tags.test.mjs
 node tests/hsm.test.mjs
 ```
 
-`parser.test.mjs` baixa a lista do IBGE na primeira execução, então precisa de internet.
+```bash
+node tests/conversa.test.mjs
+```
+
+Todas rodam **offline**: a lista de municípios do `parser.test.mjs` sai de
+`src/data/coredes-rs.json` (os mesmos 497), plantada no storage antes do import — buscar no IBGE
+deixava doze asserções falhando juntas onde a rede é bloqueada, por um motivo que não tinha nada
+a ver com o parser. `conversa.test.mjs` cobre a leitura que autoriza a rodada a concluir sozinha
+quem já foi respondido — inclusive figura, que não tem texto e sumia da conta.
 `contract.test.mjs` cobre o caminho que escreve em dados reais, incluindo o guarda-corpo que
 **recusa** aprender um formato de escrita que sobrescreveria o contato inteiro.
 `tags.test.mjs` cobre o COREDE, as regras de conteúdo, os apelidos e a união ao aplicar

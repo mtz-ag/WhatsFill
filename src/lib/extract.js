@@ -42,6 +42,9 @@ export async function extract(texts, { temaField } = {}) {
       value: structured.cidade,
       confidence: 'exata',
       source: structured.cidadeInformada,
+      // A pessoa respondeu o formulário: esta cidade veio DELA, não de um trecho solto da
+      // conversa. É o único caso em que o painel troca uma cidade que já estava no CRM.
+      informada: true,
     };
   } else {
     const hit = await cities.matchCity(joined);
@@ -63,11 +66,18 @@ export async function extract(texts, { temaField } = {}) {
   }
 
   // --- Nome ---------------------------------------------------------------
+  //
+  // A limpeza de siglas roda de novo aqui, agora com o dicionário de partidos: `findStructured`
+  // só conhece a lista fixa, e partido novo entra pela Config sem passar por código.
   const nomeMatch = /\bmeu nome (?:é|e)\s+([\p{L}][\p{L}\s'.-]{2,60})/iu.exec(joined);
-  if (structured?.nome) {
-    guesses.nome = { value: titleCase(structured.nome), confidence: 'aproximada', source: structured.nome };
-  } else if (nomeMatch) {
-    guesses.nome = { value: titleCase(nomeMatch[1].trim()), confidence: 'aproximada', source: nomeMatch[0] };
+  const nomeCru = structured?.nome || (nomeMatch ? nomeMatch[1].trim() : '');
+  const nomeLimpo = limparSiglas(nomeCru, dicts.partido);
+  if (nomeLimpo) {
+    guesses.nome = {
+      value: titleCase(nomeLimpo),
+      confidence: 'aproximada',
+      source: structured?.nome ? structured.nome : nomeMatch[0],
+    };
   }
 
   // --- Função -------------------------------------------------------------
@@ -113,6 +123,59 @@ const NAO_E_NOME =
   /\b(oi|ol[aá]|bom dia|boa tarde|boa noite|obrigad|quero|queria|sou|moro|resido|aceito|gostaria|pode|tenho|preciso|meu|minha|aqui|somos)\b/i;
 
 /**
+ * Siglas que vêm coladas no nome e nunca são nome de gente.
+ *
+ * Duas entradas reais: "Jeane do PL" gravava o partido dentro do Nome, e "srn" (abreviação
+ * digitada na posição do nome) virava o nome do eleitor — o agradecimento saía "Obrigado pela
+ * atenção, Srn!". Partido tem campo próprio; aqui ele só atrapalha.
+ */
+const SIGLAS_FIXAS = new Set([
+  'pl', 'pp', 'mdb', 'psdb', 'pt', 'pdt', 'psd', 'pv', 'psol', 'psb', 'prd', 'dc', 'prtb',
+  'pcdob', 'rs', 'br', 'cac', 'mst', 'ong', 'cnpj', 'cpf',
+]);
+
+/** Partículas de nome composto, que sobram penduradas quando a sigla sai ("Jeane do ~~PL~~"). */
+const PARTICULAS = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
+
+/**
+ * Nome de gente em português sempre tem vogal. É o que separa "srn", "jrn" e "kkk" de um nome
+ * curto de verdade ("Ana", "Ivo") sem precisar de lista.
+ */
+function semVogal(texto) {
+  return !/[aeiouáàâãéêíóôõúüy]/i.test(String(texto || ''));
+}
+
+function ehSigla(token, conhecidas) {
+  const t = String(token || '').toLowerCase().replace(/[.'-]/g, '');
+  if (!t) return true;
+  if (conhecidas.has(t)) return true;
+  // Curta e sem vogal: "PL", "srn", "MDB". Nome de gente com 5 letras sempre tem vogal.
+  return t.length <= 5 && semVogal(t);
+}
+
+/**
+ * Tira as siglas de um nome e devolve o que sobrou de nome de verdade.
+ *
+ * Devolve string vazia quando NADA sobra — é o que impede "srn" e "PL" de virarem o Nome do
+ * eleitor no CRM. Quem chama trata vazio como "não achei nome", não como nome em branco.
+ *
+ * @param {string} nome
+ * @param {string[]} [siglas] siglas extras (o dicionário de partidos, na prática)
+ */
+export function limparSiglas(nome, siglas = []) {
+  const conhecidas = new Set([...SIGLAS_FIXAS, ...(siglas || []).map((s) => String(s).toLowerCase())]);
+  const tokens = String(nome || '').trim().split(/\s+/).filter(Boolean);
+  const limpos = tokens.filter((t) => !ehSigla(t, conhecidas));
+
+  // "Jeane do PL" vira "Jeane do": a partícula pendurada sai junto.
+  while (limpos.length && PARTICULAS.has(limpos[limpos.length - 1].toLowerCase())) limpos.pop();
+  while (limpos.length && PARTICULAS.has(limpos[0].toLowerCase())) limpos.shift();
+
+  const saida = limpos.join(' ').trim();
+  return semVogal(saida) ? '' : saida;
+}
+
+/**
  * Resposta ao template "Nome / Cidade / Função".
  *
  * Na prática o contato responde do jeito dele: com barra, com vírgula, em linhas separadas, e
@@ -150,7 +213,7 @@ export async function findStructured(texts, isCity) {
       const posterior = idx + 1 < partes.length ? partes[idx + 1] : null;
 
       return {
-        nome: plausivelNome(anterior) ? anterior : null,
+        nome: plausivelNome(anterior) ? limparSiglas(anterior) : null,
         cidade,
         cidadeInformada: partes[idx],
         funcao: posterior || null,
@@ -203,7 +266,9 @@ function plausivelNome(parte) {
   if (NAO_E_NOME.test(s)) return false;
   if (!/^[\p{L}][\p{L}\s'.-]*$/u.test(s)) return false; // só letras, espaço e pontuação de nome
   const palavras = s.split(/\s+/);
-  return palavras.length >= 1 && palavras.length <= 4;
+  if (palavras.length < 1 || palavras.length > 4) return false;
+  // Só sigla ("PL", "srn") não é nome: se depois da limpeza não sobra nada, não era nome.
+  return !!limparSiglas(s);
 }
 
 function matchDict(text, terms) {

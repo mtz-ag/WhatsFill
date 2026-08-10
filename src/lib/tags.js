@@ -94,15 +94,44 @@ export async function saveAlias(name, tagLabel) {
 // ---------------------------------------------------------------------------
 
 /**
+ * "Sim" a uma pergunta fechada, medido só na ÚLTIMA mensagem do contato.
+ *
+ * Olhar a conversa inteira acharia "sim" em qualquer lugar ("sim, moro em Pelotas") e aplicaria
+ * etiqueta de conteúdo a quem nunca foi perguntado. A negação vence sempre: "sim, mas não quero"
+ * não é aceite.
+ *
+ * Puro e exportado para ter teste — é ele que decide gravar etiqueta em eleitor real.
+ */
+const AFIRMATIVAS =
+  /^(s|sim+|claro|quero|aceito|pode|manda|mande|positivo|afirmativo|isso|ok|okay|blz|beleza|com certeza|certeza|gostaria|por favor|pf|please|bora|adoraria|quero sim|sim quero|pode sim|pode mandar|pode enviar|quero receber)\b/;
+
+const NEGATIVAS = /\bnao\b|\bnem\b|\bnunca\b|\bdispenso\b|\bobrigado nao\b/;
+
+export function respostaAfirmativa(texts = []) {
+  const ultima = [...texts].reverse().find((t) => String(t || '').trim());
+  if (!ultima) return false;
+
+  const norm = normalize(ultima).replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!norm) return false;
+  // Resposta a pergunta fechada é curta. Texto longo é outra conversa, não um "sim".
+  if (norm.split(' ').length > 6) return false;
+  if (NEGATIVAS.test(norm)) return false;
+  return AFIRMATIVAS.test(norm);
+}
+
+/**
  * Etiquetas sugeridas para o contato.
  *
  * @param {object} ctx
  * @param {string} ctx.city    cidade já classificada
  * @param {string[]} ctx.texts mensagens recebidas do contato
  * @param {string} [ctx.extra] texto adicional para casar as regras (ex.: campanha do anúncio)
+ * @param {object} [ctx.interesse] `{ perguntado:boolean, etiquetas:string[] }` — o aceite à
+ *   pergunta de interesse no conteúdo. Só vira etiqueta quando a pergunta SAIU para este
+ *   contato: sem isso, qualquer "sim" solto da conversa viraria aceite.
  * @returns {Promise<Array<{origem:string, nome:string, tag:object|null, motivo:string}>>}
  */
-export async function suggest({ city, texts = [], extra = '' }) {
+export async function suggest({ city, texts = [], extra = '', interesse = null }) {
   const out = [];
 
   const corede = await coredeFor(city);
@@ -140,6 +169,21 @@ export async function suggest({ city, texts = [], extra = '' }) {
     });
   }
 
+  // Aceite à pergunta de interesse: a pessoa não descreveu conteúdo nenhum, só respondeu "sim",
+  // então nenhuma regra de texto casaria. Quem autoriza a etiqueta é o par pergunta-enviada +
+  // resposta afirmativa.
+  if (interesse?.perguntado && respostaAfirmativa(texts)) {
+    for (const nome of interesse.etiquetas || []) {
+      if (!nome) continue;
+      out.push({
+        origem: 'conteúdo',
+        nome,
+        tag: await resolveTag(nome),
+        motivo: 'respondeu que sim à pergunta de interesse no conteúdo',
+      });
+    }
+  }
+
   // Uma etiqueta só, mesmo que duas regras apontem para ela.
   const vistas = new Set();
   return out.filter((s) => {
@@ -158,22 +202,48 @@ export const NO_TAG_CONTRACT =
   'Para gravar etiquetas, primeiro use "Aprender etiquetas" na aba Config.';
 
 /**
+ * Ids das etiquetas do CRM que correspondem a um COREDE.
+ *
+ * Serve para trocar a etiqueta de região quando a cidade muda: só uma região pode estar certa,
+ * e a antiga tem que sair. A lista sai da planilha oficial, então nunca inclui etiqueta de
+ * conteúdo nem etiqueta de fluxo ("1 SEM RETORNO") por engano.
+ */
+export async function regionTagIds() {
+  const mapa = await loadCoredes();
+  const nomes = [...new Set(Object.values(mapa))];
+  const ids = new Set();
+  for (const nome of nomes) {
+    const tag = await resolveTag(nome);
+    if (tag) ids.add(tag.id);
+  }
+  return ids;
+}
+
+/**
  * Aplica etiquetas ao contato SOMANDO às que ele já tem.
  *
  * A união é essencial: a plataforma grava a lista inteira de etiquetas do contato, então
  * mandar só as novas apagaria as antigas.
+ *
+ * `remover` é a exceção, e existe por um motivo só: quando a pessoa informa a cidade e ela
+ * muda, o COREDE antigo passa a ser informação errada sobre o contato. Quem chama decide o
+ * que sai — aqui nada é removido por conta própria.
  */
-export async function applyTags(contact, tagIds) {
+export async function applyTags(contact, tagIds, { remover = [] } = {}) {
   const novas = tagIds.filter(Boolean);
-  if (!novas.length) return { ok: true, applied: [], skipped: true };
+  const saem = new Set((remover || []).filter(Boolean));
+  if (!novas.length && !saem.size) return { ok: true, applied: [], skipped: true };
 
   const contract = await store.get('writeContract');
   const entry = contract?.entries?.find((e) => e.type === 'TAGS');
   if (!entry) return { ok: false, error: NO_TAG_CONTRACT };
 
   const atuais = Array.isArray(contact.tagsId) ? contact.tagsId : [];
-  const uniao = [...new Set([...atuais, ...novas])];
-  if (uniao.length === atuais.length) return { ok: true, applied: [], skipped: true };
+  const mantidas = atuais.filter((id) => !saem.has(id) || novas.includes(id));
+  const uniao = [...new Set([...mantidas, ...novas])];
+  if (uniao.length === atuais.length && atuais.every((id) => uniao.includes(id))) {
+    return { ok: true, applied: [], skipped: true };
+  }
 
   const { url, body } = buildRequest(entry, { contactId: contact.id, value: uniao });
   try {

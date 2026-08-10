@@ -1,14 +1,29 @@
 /**
  * Testa o parser determinístico (extract.js) e o casamento de cidades (cities.js).
- * A lista de municípios vem do IBGE de verdade — precisa de internet na primeira execução.
+ *
+ * A lista de municípios sai de `src/data/coredes-rs.json` (planilha oficial da SPGG-RS, os
+ * mesmos 497 municípios do IBGE) e é plantada no storage de mentira ANTES de importar o
+ * `cities.js` — `loadMunicipios` lê o cache primeiro e nem chega a buscar na rede.
+ *
+ * Era um download do IBGE a cada máquina nova. Quando a rede não deixa (proxy, CI, firewall
+ * corporativo), a lista voltava vazia e **doze asserções falhavam de uma vez** por um motivo
+ * que não tem nada a ver com o parser — meia hora procurando bug onde não havia. Fixture local
+ * também torna o resultado igual em qualquer máquina: lista do IBGE muda, teste não pode mudar
+ * junto sem alguém mandar.
  *
  * Rode: node tests/parser.test.mjs
  */
 
+import { readFileSync } from 'node:fs';
 import { check, grupo, fim, lib, mem } from './_harness.mjs';
 
+const coredes = JSON.parse(
+  readFileSync(new URL('../src/data/coredes-rs.json', import.meta.url), 'utf8')
+);
+mem.municipios = Object.keys(coredes.municipios).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
 const cities = await lib('cities.js');
-const { extract, findStructured } = await lib('extract.js');
+const { extract, findStructured, limparSiglas } = await lib('extract.js');
 
 const municipios = await cities.loadMunicipios();
 console.log(`municípios carregados: ${municipios.length}`);
@@ -205,6 +220,56 @@ grupo('cadastro no formato "Cidade - Nome"');
   check((await split('Marines')) === null, 'sem separador não há o que separar');
   check((await split('Canoas - 51999999999')) === null, 'telefone do outro lado não é nome');
   check((await split('Sao lourenso - Ana')) === null, 'cidade só aproximada não separa');
+}
+
+grupo('o estado não é a cidade');
+{
+  // Bug ao vivo: "sou do Rio Grande do Sul" gravava a cidade Rio Grande — e o COREDE dela
+  // junto, porque a etiqueta de região sai da cidade. O nome do estado contém o nome do
+  // município, e o passo 1 procura o município em qualquer lugar do texto.
+  check((await cities.matchCity('sou do Rio Grande do Sul')) === null, 'o estado inteiro não casa com Rio Grande');
+  check((await cities.matchCity('moro no rio grande do sul')) === null, 'minúsculo e sem acento também não');
+  check(
+    (await cities.matchCity('Rio Grande do Sul, cidade de Pelotas'))?.city === 'Pelotas',
+    'a cidade de verdade continua sendo achada com o estado na frente'
+  );
+
+  // A cidade Rio Grande existe e não pode ter sido levada junto.
+  check((await cities.matchCity('moro em Rio Grande'))?.city === 'Rio Grande', 'a cidade Rio Grande continua casando');
+  check((await cities.matchCity('Rio Grande - RS'))?.city === 'Rio Grande', '"Rio Grande - RS" é a cidade');
+}
+
+grupo('sigla não é nome de gente');
+{
+  // Dois relatos do mesmo dia: "Pegou srn como nome" e "ignorar siglas no nome".
+  check(limparSiglas('srn') === '', '"srn" (sem vogal) não é nome');
+  check(limparSiglas('PL') === '', 'sigla de partido sozinha não é nome');
+  check(limparSiglas('Jeane do PL') === 'Jeane', 'a sigla sai e a partícula pendurada vai junto');
+  check(limparSiglas('Maria Silva - PT') === 'Maria Silva', 'sigla no fim do nome sai');
+  check(limparSiglas('Luís Antônio dos Santos') === 'Luís Antônio dos Santos', 'nome de verdade fica intacto');
+  check(limparSiglas('Ana') === 'Ana', 'nome curto com vogal continua valendo');
+  check(limparSiglas('Ivo de Souza') === 'Ivo de Souza', 'partícula no meio do nome não é mexida');
+
+  // E o caminho inteiro: a resposta ao formulário com o partido colado no nome.
+  const g = await extract(['Jeane do PL / Palmares do Sul'], { temaField });
+  check(g.nome?.value === 'Jeane', `nome = ${g.nome?.value} [esperado Jeane]`);
+  check(g.cidade?.value === 'Palmares do Sul', `cidade = ${g.cidade?.value}`);
+
+  const semNome = await extract(['srn / Pelotas'], { temaField });
+  check(!semNome.nome, 'sigla na posição do nome não vira nome (fica vazio para você preencher)');
+  check(semNome.cidade?.value === 'Pelotas', 'e a cidade da mesma linha continua sendo lida');
+}
+
+grupo('cidade informada pela pessoa pode substituir a do CRM');
+{
+  // A marca `informada` é o que autoriza a substituição no painel: só resposta estruturada
+  // ("Nome / Cidade") a recebe. Cidade citada no meio da conversa continua sendo só palpite.
+  const formulario = await extract(['Luís Antônio dos Santos / Palmares do Sul'], { temaField });
+  check(formulario.cidade?.informada === true, 'resposta ao formulário marca a cidade como informada');
+  check(formulario.cidade?.confidence === 'exata', 'e ela é exata');
+
+  const conversa = await extract(['oi, tudo bem? sou de Pelotas e quero ajudar'], { temaField });
+  check(!conversa.cidade?.informada, 'cidade citada na conversa NÃO é informada — não substitui nada');
 }
 
 grupo('cidade → link do grupo');

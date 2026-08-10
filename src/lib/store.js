@@ -112,6 +112,24 @@ export const DEFAULT_TEMPLATES = [
       'Seguimos juntos. Que Deus abençoe você e sua família! 🙏',
   },
   {
+    /**
+     * Para quem está em "Meus" sem nenhuma etiqueta de conteúdo: nunca disse o que quer receber,
+     * então nenhuma regra casa e não há modelo a enviar. Esta pergunta transforma o silêncio em
+     * um sim ou um não.
+     *
+     * Sem `{{primeiro_nome}}` de propósito. Metade destes contatos ainda está cadastrada com o
+     * apelido do anúncio, e variável que não resolve tira a opção da pergunta da rodada — foi
+     * assim que o fluxo já travou duas vezes. Uma pergunta que sempre pode sair vale mais aqui
+     * do que o nome no vocativo.
+     */
+    id: 'interesse-conteudo',
+    name: 'Perguntar interesse no conteúdo',
+    text:
+      '{{saudacao}}! Aqui é da equipe do Capitão Martim e do Zucco. 🇧🇷\n\n' +
+      'Posso te mandar por aqui os conteúdos e as novidades deles?\n\n' +
+      'Me responde só *sim* ou *não* — do jeito que você preferir, eu respeito.',
+  },
+  {
     id: 'sem-interesse',
     name: 'Sem interesse / encerrar com respeito',
     text:
@@ -193,6 +211,16 @@ const DEFAULTS = {
    * continuam sendo aplicadas todas — isto decide só qual modelo enviar.
    */
   conteudoPreferido: 'Conteúdo Flávio',
+
+  /**
+   * Etiquetas aplicadas quando o contato responde SIM à pergunta de interesse no conteúdo
+   * (resposta "interesse-conteudo", tecla 7 da rodada).
+   *
+   * Vazio de propósito: o rótulo tem que ser o nome exato da etiqueta no CRM, e chutar aqui
+   * grava etiqueta errada em eleitor real. Enquanto estiver vazio, a rodada envia a pergunta
+   * normalmente e diz na tela que o "sim" não vai virar etiqueta até isto ser preenchido.
+   */
+  etiquetasInteresse: [],
 
   /**
    * Apelidos: nome do COREDE (ou qualquer rótulo) → nome exato da etiqueta no CRM. Só é

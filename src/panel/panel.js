@@ -24,6 +24,7 @@ const THANKS_TEMPLATE_ID = 'agradecimento';
 /** Agradece a mensagem e fecha, sem abrir demanda. É a saída da tecla 4. */
 const THANKS_INFO_TEMPLATE_ID = 'agradecer-info';
 const ASK_TEMPLATE_ID = 'pedir-dados';
+const INTEREST_TEMPLATE_ID = 'interesse-conteudo';
 
 /**
  * @param {object} opts
@@ -61,6 +62,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       log: [], // { nome, resultado, motivo } de cada contato da rodada
     },
     incoming: [],
+    /** A última mensagem da conversa, de qualquer lado — { doContato, at, texto } ou null. */
+    ultimaMensagem: null,
     busy: false,
     lastSendAt: 0,
     error: null,
@@ -185,7 +188,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     reexaminando = true;
     try {
       const antes = state.incoming.length;
-      state.incoming = await api.getIncomingText(state.pageState.sessionId);
+      const conversa = await api.getConversation(state.pageState.sessionId);
+      state.incoming = conversa.incoming;
+      state.ultimaMensagem = conversa.ultima;
 
       // Sinal disparado por mensagem NOSSA (ou mídia): nada novo do contato para analisar.
       if (state.incoming.length <= antes) return;
@@ -213,6 +218,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.draft = {};
     state.tagSuggestions = [];
     state.incoming = [];
+    state.ultimaMensagem = null;
     state.hsmTemplates = [];
     state.error = null;
     state.hasContract = !!(await store.get('writeContract'))?.entries?.length;
@@ -250,7 +256,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         state.draft[nomeField.id] = { value: contact.name, from: 'crm' };
       }
 
-      state.incoming = await api.getIncomingText(sessionId);
+      const conversa = await api.getConversation(sessionId);
+      state.incoming = conversa.incoming;
+      state.ultimaMensagem = conversa.ultima;
       const temaField = classify.find((f) => f.name === 'Tema de Interesse');
       const palpites = await extract(state.incoming, { temaField });
       applyGuesses(palpites, classify);
@@ -330,10 +338,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!state.contact) return;
     const jaAplicadas = new Set(state.contact.tagsId || []);
     try {
+      // O "sim" só vira etiqueta se a pergunta de interesse tiver saído para ESTE contato —
+      // senão qualquer "sim, moro em Pelotas" viraria aceite de conteúdo.
+      const [perguntado, etiquetasInteresse] = await Promise.all([
+        templatesLib.wasSent(state.contact.id, INTEREST_TEMPLATE_ID),
+        store.get('etiquetasInteresse'),
+      ]);
+
       const sugeridas = await tagsLib.suggest({
         city: valueNamed('Cidade'),
         texts: state.incoming,
         extra: [state.session?.utm?.campaign, state.session?.utm?.headline].filter(Boolean).join(' '),
+        interesse: { perguntado: !!perguntado, etiquetas: etiquetasInteresse },
       });
       state.tagSuggestions = sugeridas.map((s) => ({
         ...s,
@@ -346,7 +362,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
   }
 
-  /** Valor que já está no CRM sempre ganha do palpite: o palpite só preenche o vazio. */
+  /**
+   * Valor que já está no CRM ganha do palpite: o palpite só preenche o vazio.
+   *
+   * **Uma exceção, e só uma:** a cidade que a própria pessoa informou respondendo o formulário
+   * ("Luís Antônio / Palmares do Sul"). Ela substitui o que estiver lá.
+   *
+   * O motivo é que a cidade do CRM vem, em boa parte da base, de importação e de palpite antigo
+   * — e uma delas estava errada justamente quando a pessoa acabou de dizer a certa. Continuar
+   * respeitando o valor velho mandava o link do grupo errado e etiquetava a região errada. As
+   * travas que sustentam a exceção: só casamento **exato** com a lista do IBGE, só quando veio
+   * de resposta **estruturada** (nome/cidade), e a etiqueta de região antiga sai junto — meia
+   * substituição deixaria o contato com dois COREDEs.
+   */
   function applyGuesses(guesses, classify) {
     const pairs = [
       ['Nome', guesses.nome],
@@ -357,15 +385,45 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     ];
     for (const [name, guess] of pairs) {
       const field = classify.find((f) => f.name === name);
-      if (!field || !guess || state.draft[field.id]) continue;
+      if (!field || !guess) continue;
+
+      const atual = state.draft[field.id];
+      if (atual) {
+        if (!podeSubstituirCidade(name, guess, atual)) continue;
+        setStatus(`A pessoa informou outra cidade: ${atual.value} → ${guess.value}.`);
+      }
+
       state.draft[field.id] = {
         value: guess.value,
         from: 'palpite',
         confidence: guess.confidence,
         source: guess.source,
         suggestions: guess.suggestions,
+        // Marca a substituição para a gravação trocar também a etiqueta de região.
+        substituiu: atual ? atual.value : null,
       };
     }
+  }
+
+  /**
+   * O aviso de troca de cidade, para a pergunta da rodada. Vazio quando não houve troca.
+   *
+   * Substituir cidade é a única coisa que a extensão reescreve por cima do CRM — então ela
+   * aparece na tela no momento da decisão, e não só no log depois.
+   */
+  function cidadeSubstituida() {
+    const campo = fieldNamed('Cidade');
+    const entrada = campo && state.draft[campo.id];
+    return entrada?.substituiu ? ` (a pessoa informou; estava "${entrada.substituiu}")` : '';
+  }
+
+  /** A exceção acima, isolada para ficar legível — e para não valer para nenhum outro campo. */
+  function podeSubstituirCidade(name, guess, atual) {
+    if (name !== 'Cidade') return false;
+    if (!guess.informada || guess.confidence !== 'exata') return false;
+    // Correção sua à mão vence o parser: você viu a conversa inteira, ele viu uma linha.
+    if (atual.from === 'manual') return false;
+    return cities.normalize(atual.value) !== cities.normalize(guess.value);
   }
 
   function fieldNamed(name) {
@@ -592,13 +650,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return card;
   }
 
-  async function enviarModelo(modelo, { send }) {
+  /**
+   * @param {object} opts
+   * @param {boolean} opts.send envia de verdade (respeitando o "Enviar automático")
+   * @param {boolean} [opts.jaConfirmado] a duplicata já foi mostrada e aceita por quem chamou.
+   *   É o caso da rodada: o aviso vira linha da pergunta, e o `confirm()` nativo aqui abriria
+   *   um segundo diálogo, depois da decisão, travando o laço.
+   */
+  async function enviarModelo(modelo, { send, jaConfirmado = false }) {
     // Mesmas travas do envio comum: automático desligado só prepara, e avisa duplicata.
     const vaiEnviar = send && state.settings.autoSend;
     // Contato capturado ANTES do envio: ver o comentário em sendTemplate.
     const alvo = state.contact;
 
-    if (vaiEnviar && state.settings.antiDup) {
+    if (vaiEnviar && state.settings.antiDup && !jaConfirmado) {
       const already = await templatesLib.wasSent(alvo.id, hsmKey(modelo));
       if (
         already &&
@@ -755,7 +820,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     });
   }
 
-  async function sendTemplate(template, { send }) {
+  async function sendTemplate(template, { send, jaConfirmado = false }) {
     /**
      * Contato capturado ANTES de qualquer await.
      *
@@ -789,7 +854,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return false;
     }
 
-    if (state.settings.antiDup) {
+    if (state.settings.antiDup && !jaConfirmado) {
       const already = await templatesLib.wasSent(alvo.id, template.id);
       if (
         already &&
@@ -1322,6 +1387,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
   }
 
+  /**
+   * Espera a tela ficar sem diálogo aberto, para o próximo clique na fila valer.
+   *
+   * Não fecha nada por conta própria: o diálogo aberto no meio de uma rodada costuma ser o seu
+   * (anexo de figura, preview de mídia), e fechar seria descartar o que você estava mandando.
+   */
+  async function esperarTelaLivre(timeoutMs = 3 * 60 * 1000) {
+    const limite = Date.now() + timeoutMs;
+    let avisou = false;
+
+    while (Date.now() < limite) {
+      if (state.auto.parar) return { ok: false, motivo: 'você parou a rodada' };
+      const estado = await page.getState();
+      if (!estado.hasDialog) return { ok: true };
+      if (!avisou) {
+        avisou = true;
+        setStatus('Tem um diálogo aberto na plataforma. Termino o que você está fazendo e sigo.');
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    return {
+      ok: false,
+      motivo: 'a plataforma ficou com um diálogo aberto por 3 min — feche o diálogo e recomece a rodada',
+    };
+  }
+
   async function percorrerFila({ aba = null, limite, pausaMs, processar }) {
     const visitados = new Set();
     let posicao = 0;
@@ -1330,6 +1421,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     let interrompida = '';
 
     while (enviados < limite && !state.auto.parar) {
+      // Diálogo do Material é MODAL: com ele aberto, o clique no item da fila não chega ao item
+      // e a rodada terminava dizendo "a fila acabou". Acontecia toda vez que você anexava uma
+      // figura no meio da resposta à mão. Esperar é melhor que fechar — o diálogo é seu.
+      const livre = await esperarTelaLivre();
+      if (!livre.ok) {
+        interrompida = livre.motivo;
+        break;
+      }
+
       let aberto = await page.openQueueSession(posicao, { aba });
 
       // A fila mostra 50 por vez e só traz o resto no "Ver mais". Acabar o carregado não é
@@ -1797,6 +1897,71 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         : null;
       const momentoTrava = momento ? vars.render(momento.text, contexto).missing.length > 0 : true;
 
+      // A pergunta de interesse (tecla 7): só faz sentido para quem NÃO tem etiqueta de
+      // conteúdo. Quem já pediu conteúdo tem modelo para receber, não pergunta.
+      const interesse = state.templates.find((t) => t.id === INTEREST_TEMPLATE_ID);
+      const interesseTrava = interesse
+        ? vars.render(interesse.text, contexto).missing.length > 0
+        : true;
+      const etiquetasInteresse = await store.get('etiquetasInteresse');
+      const podePerguntarInteresse = !interesseTrava && !conteudos.length;
+
+      // Contato já respondido: a última mensagem da conversa é nossa.
+      //
+      // São os ~60 que ficaram em "Meus" enquanto o Concluir estava quebrado — receberam tudo e
+      // só faltou fechar. Perguntar um a um seria teclar sessenta vezes para não decidir nada.
+      // É a ÚNICA saída automática desta rodada, e ela não envia nada: só fecha o que já foi
+      // respondido.
+      //
+      // **Menos quem ainda dá para perguntar o interesse.** Sem etiqueta de conteúdo, o
+      // atendimento não está terminado — falta justamente descobrir o que mandar para essa
+      // pessoa. Concluir aqui seria tirá-la do fluxo para sempre em silêncio, que é o pulo
+      // silencioso que este projeto já consertou três vezes. Nesse caso a pergunta aparece,
+      // com a tecla 7 em destaque.
+      //
+      // `ultimaMensagem` vem do `load()` acima, da mesma leitura que trouxe as mensagens do
+      // contato: uma chamada, não duas.
+      const ultima = state.ultimaMensagem;
+      if (ultima && !ultima.doContato && !podePerguntarInteresse) {
+        await saveClassification({ withCompletionDate: true, quiet: true });
+        const fechouRespondido = await page.clickConcluir();
+        if (!fechouRespondido.ok) {
+          return { nome, resultado: 'pulado', motivo: `já respondido, mas ${fechouRespondido.reason}` };
+        }
+        if (fechouRespondido.dialogOpen) {
+          return {
+            nome,
+            resultado: 'concluido',
+            parar: true,
+            motivo: 'já respondido, mas a plataforma pediu um motivo de conclusão — responda o diálogo',
+          };
+        }
+        return {
+          nome,
+          resultado: 'concluido',
+          motivo: `a última mensagem já era minha (${formatarQuando(ultima.at)}) — concluí e segui`,
+        };
+      }
+
+      // Já mandei este mesmo modelo hoje?
+      //
+      // O aviso de duplicata existia, mas era um `confirm()` do navegador disparado lá dentro do
+      // envio — no meio da rodada ele aparece DEPOIS da decisão, fora do lugar onde você está
+      // olhando. Aqui ele vira uma linha da própria pergunta, e o modelo perde o destaque de
+      // opção primária: mandar de novo passa a ser uma escolha consciente.
+      const jaEnviado = modelo ? await templatesLib.wasSent(state.contact.id, hsmKey(modelo)) : null;
+      const enviadoHoje = !!jaEnviado && ehHoje(jaEnviado.at);
+
+      // Mesma conferência para as respostas de texto. Todas elas passariam pelo `confirm()` do
+      // navegador dentro do envio — que no meio da rodada abre DEPOIS da sua decisão e trava o
+      // laço num diálogo nativo. Aqui o aviso vem antes, na pergunta, e o envio segue sem
+      // confirm: a pergunta da rodada é a confirmação.
+      const textosDeHoje = [];
+      for (const t of [agradecerInfo, momento, interesse].filter(Boolean)) {
+        const envio = await templatesLib.wasSent(state.contact.id, t.id);
+        if (envio && ehHoje(envio.at)) textosDeHoje.push(`"${t.name}" às ${formatarHora(envio.at)}`);
+      }
+
       // Nome errado — o apelido automático do anúncio ("[NOVO] (51) 9…") ou qualquer cadastro
       // que o `looksLikePlaceholder` recuse — deixa o {{primeiro_nome}} do agradecimento sem
       // valor. Isto aqui devolvia 'pulado' ANTES da pergunta, e o contato saía da rodada sem o
@@ -1817,29 +1982,62 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         .map((s) => s.tag.label);
       const opcoes = [];
       if (podeEnviar) {
-        opcoes.push({ tecla: '1', valor: 'enviar', rotulo: `Mandar modelo "${modelo.name}"`, primaria: true });
+        opcoes.push({
+          tecla: '1',
+          valor: 'enviar',
+          rotulo: enviadoHoje ? `Mandar de novo "${modelo.name}"` : `Mandar modelo "${modelo.name}"`,
+          // Enviado hoje deixa de ser a opção destacada: repetir tem que ser decisão, não inércia.
+          primaria: !enviadoHoje,
+        });
       }
       opcoes.push({ tecla: '2', valor: 'pular', rotulo: 'Pular (deixa aberto)' });
       opcoes.push({ tecla: '3', valor: 'concluir', rotulo: 'Concluir sem enviar' });
       if (!infoTrava) {
         // Primária quando não há modelo: em "Outros" é a saída esperada.
-        opcoes.push({ tecla: '4', valor: 'agradecer', rotulo: 'Agradecer e concluir', primaria: !podeEnviar });
+        opcoes.push({
+          tecla: '4',
+          valor: 'agradecer',
+          rotulo: 'Agradecer e concluir',
+          primaria: !podeEnviar && !podePerguntarInteresse,
+        });
       }
       if (!momentoTrava) {
         opcoes.push({ tecla: '5', valor: 'momento', rotulo: 'Mensagem do momento e concluir' });
       }
       opcoes.push({ tecla: '6', valor: 'responder', rotulo: 'Responder à mão (retomo quando você concluir)' });
+      if (podePerguntarInteresse) {
+        opcoes.push({
+          tecla: '7',
+          valor: 'interesse',
+          rotulo: 'Perguntar interesse no conteúdo e concluir',
+          primaria: !podeEnviar,
+        });
+      }
 
       const escolha = await perguntarNaRodada({
         titulo: nome,
         linhas: [
-          `Cidade: ${valueNamed('Cidade') || '(vazia)'}`,
+          `Cidade: ${valueNamed('Cidade') || '(vazia)'}${cidadeSubstituida()}`,
           `Etiquetas: ${etiquetas.join(', ') || '(nenhuma)'}`,
           modelo
             ? `Conteúdo pedido: ${conteudoEscolhido.nome}` +
               (desempatado ? ` (casou com ${conteudos.length}, escolhi o preferido)` : '')
             : `Sem modelo: ${semModelo}`,
           modeloTravado ? `Modelo "${modelo.name}" travado: ${modeloTravado}` : '',
+          enviadoHoje
+            ? `⚠ "${modelo.name}" JÁ FOI ENVIADO hoje, às ${formatarHora(jaEnviado.at)}` +
+              (jaEnviado.nome ? ` (para ${jaEnviado.nome})` : '') +
+              '. Confirme antes de mandar de novo.'
+            : '',
+          textosDeHoje.length ? `⚠ Hoje este contato já recebeu: ${textosDeHoje.join(', ')}.` : '',
+          ultima && !ultima.doContato
+            ? `A última mensagem já é minha (${formatarQuando(ultima.at)}), mas ele ainda não tem ` +
+              'etiqueta de conteúdo — por isso perguntei em vez de concluir.'
+            : '',
+          podePerguntarInteresse && !etiquetasInteresse.length
+            ? 'A tecla 7 pergunta o interesse, mas o "sim" ainda não vira etiqueta: preencha ' +
+              '"Etiquetas quando responder sim" na aba Config.'
+            : '',
         ].filter(Boolean),
         pergunta: podeEnviar
           ? `Enviar o modelo "${modelo.name}" + agradecimento e concluir?`
@@ -1867,12 +2065,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // Um texto só e fecha. Conta como envio: é mensagem para gente real, então entra no
       // limite e na pausa da rodada como qualquer outra.
-      if (escolha === 'agradecer' || escolha === 'momento') {
-        const texto = escolha === 'agradecer' ? agradecerInfo : momento;
-        const rotulo = escolha === 'agradecer' ? 'agradecido' : 'mensagem do momento enviada';
+      //
+      // A pergunta de interesse entra aqui pelo mesmo caminho: concluir tira da fila, e quando
+      // a pessoa responder a plataforma devolve o atendimento para "Meus" sozinha — é lá que o
+      // "sim" vira etiqueta, na passada seguinte.
+      if (escolha === 'agradecer' || escolha === 'momento' || escolha === 'interesse') {
+        const texto =
+          escolha === 'agradecer' ? agradecerInfo : escolha === 'momento' ? momento : interesse;
+        const rotulo =
+          escolha === 'agradecer'
+            ? 'agradecido'
+            : escolha === 'momento'
+              ? 'mensagem do momento enviada'
+              : 'perguntei o interesse no conteúdo';
 
         await saveClassification({ withCompletionDate: true, quiet: true });
-        if (!(await sendTemplate(texto, { send: true }))) {
+        if (!(await sendTemplate(texto, { send: true, jaConfirmado: true }))) {
           return { nome, resultado: 'erro', motivo: `${texto.name} não saiu` };
         }
         const fechouTexto = await page.clickConcluir();
@@ -1911,10 +2119,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return { nome, resultado: 'erro', motivo: 'a classificação não gravou; não enviei nada' };
       }
 
-      if (!(await enviarModelo(modelo, { send: true }))) {
+      if (!(await enviarModelo(modelo, { send: true, jaConfirmado: true }))) {
         return { nome, resultado: 'erro', motivo: `o modelo "${modelo.name}" não saiu` };
       }
-      if (agradecimento && !(await sendTemplate(agradecimento, { send: true }))) {
+      if (agradecimento && !(await sendTemplate(agradecimento, { send: true, jaConfirmado: true }))) {
         return { nome, resultado: 'erro', motivo: 'o modelo saiu mas o agradecimento não' };
       }
 
@@ -2004,10 +2212,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *
    * Saídas: você concluiu (retoma), você abriu outro atendimento (segue adiante), você clicou
    * em "Parar a rodada", ou meia hora sem nada acontecer.
+   *
+   * **Mandar uma figura não é trocar de atendimento.** Anexar mídia abre um diálogo do Material
+   * por cima da conversa, e enquanto ele está aberto a URL deixa de ter o id da sessão. A
+   * versão anterior lia isso como "você abriu outro atendimento", devolvia o contato e mandava
+   * a rodada seguir — só que o diálogo continuava aberto, modal, e o clique no próximo item da
+   * fila não acontecia: a rodada morria ali. Daí as duas travas abaixo, que só custam segundos:
+   * diálogo aberto (ou URL sem sessão) não vale julgamento, e a troca de atendimento precisa
+   * se confirmar em três leituras seguidas.
    */
+  const LEITURAS_PARA_TROCA = 3;
+
   async function esperarVoceConcluir(sessionId, nome) {
     const limite = Date.now() + 30 * 60 * 1000;
     setStatus(`Responda ${nome} à mão. Quando você concluir, eu retomo daqui.`, 'ok');
+    let foraDaSessao = 0;
 
     while (Date.now() < limite) {
       await new Promise((r) => setTimeout(r, 1000));
@@ -2019,9 +2238,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (estado.concluded && estado.sessionId === sessionId) {
         return { nome, resultado: 'concluido', motivo: 'você respondeu e concluiu' };
       }
+
+      // Você está no meio de alguma coisa (anexando figura, preview de mídia, diálogo aberto):
+      // a tela não está em estado de ser lida. Espera.
+      if (estado.hasDialog || !estado.sessionId) {
+        foraDaSessao = 0;
+        continue;
+      }
+
       if (estado.sessionId !== sessionId) {
+        if (++foraDaSessao < LEITURAS_PARA_TROCA) continue;
         return { nome, resultado: 'pulado', motivo: 'você abriu outro atendimento — segui daqui' };
       }
+      foraDaSessao = 0;
     }
     return { nome, resultado: 'pulado', motivo: 'esperei 30 min e o atendimento seguiu aberto' };
   }
@@ -2037,6 +2266,40 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const s = String(texto);
     for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
     return Math.abs(h).toString(36);
+  }
+
+  /**
+   * Mesmo dia no calendário local — não "nas últimas 24 horas".
+   *
+   * A pergunta que o Thiago faz é "já mandei isso hoje?": mensagem de ontem às 23h e de hoje às
+   * 8h são dois dias de trabalho diferentes, mesmo separadas por nove horas.
+   */
+  function ehHoje(quando) {
+    if (!quando) return false;
+    const d = new Date(quando);
+    if (Number.isNaN(d.getTime())) return false;
+    const hoje = new Date();
+    return (
+      d.getFullYear() === hoje.getFullYear() &&
+      d.getMonth() === hoje.getMonth() &&
+      d.getDate() === hoje.getDate()
+    );
+  }
+
+  function formatarHora(quando) {
+    const d = new Date(quando);
+    return Number.isNaN(d.getTime())
+      ? '?'
+      : d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  /** "hoje às 14:03" / "05/08 às 09:12" — o dia só aparece quando não é hoje. */
+  function formatarQuando(quando) {
+    const d = new Date(quando);
+    if (Number.isNaN(d.getTime())) return 'em data desconhecida';
+    return ehHoje(quando)
+      ? `hoje às ${formatarHora(quando)}`
+      : `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} às ${formatarHora(quando)}`;
   }
 
   /** Comparação de texto sem acento e sem diferença de caixa. */
@@ -2423,6 +2686,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return entry?.from === 'crm' || entry?.confidence === 'exata';
   }
 
+  /**
+   * As etiquetas de COREDE que precisam sair porque a cidade mudou.
+   *
+   * Devolve lista vazia no caso normal (cidade não foi substituída), e nesse caso nem carrega a
+   * lista de regiões — resolver COREDE contra as etiquetas do CRM custa uma passada por 28
+   * nomes e não vale rodar a cada gravação.
+   */
+  async function etiquetasDeRegiaoASair() {
+    const campo = fieldNamed('Cidade');
+    const entrada = campo && state.draft[campo.id];
+    if (!entrada?.substituiu) return [];
+
+    const regioes = await tagsLib.regionTagIds();
+    const novaRegiao = state.tagSuggestions.find((s) => s.origem === 'região' && s.tag)?.tag || null;
+    const todas = await tagsLib.allTags();
+
+    return (state.contact.tagsId || [])
+      .filter((id) => regioes.has(id) && id !== novaRegiao?.id)
+      .map((id) => todas.find((t) => t.id === id))
+      .filter(Boolean);
+  }
+
   async function saveClassification({
     withCompletionDate = false,
     quiet = false,
@@ -2449,7 +2734,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       .filter((s) => s.marcada && s.tag && (!somenteExatos || etiquetaConfiavel(s)))
       .map((s) => s.tag);
 
-    if (!Object.keys(changes).length && !etiquetas.length) {
+    // Cidade trocada pela própria pessoa: o COREDE antigo vira informação errada e tem que sair.
+    // Só saem etiquetas que são COREDE (lista oficial) — etiqueta de conteúdo e de fluxo
+    // ("1 SEM RETORNO") nunca entram nesta conta.
+    const remover = await etiquetasDeRegiaoASair();
+
+    if (!Object.keys(changes).length && !etiquetas.length && !remover.length) {
       if (!quiet) setStatus('Nada novo para gravar.');
       return true;
     }
@@ -2470,12 +2760,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     // As etiquetas são tentadas mesmo se algum campo falhou: melhor gravar o que dá do que
     // perder tudo por causa de um campo.
-    if (etiquetas.length) {
-      const resultado = await tagsLib.applyTags(state.contact, etiquetas.map((t) => t.id));
+    if (etiquetas.length || remover.length) {
+      const resultado = await tagsLib.applyTags(
+        state.contact,
+        etiquetas.map((t) => t.id),
+        { remover: remover.map((t) => t.id) }
+      );
       if (!resultado.ok) {
         problemas.push(`etiquetas: ${resultado.error}`);
       } else if (!resultado.skipped) {
         gravados.push(...etiquetas.map((t) => t.label));
+        if (remover.length) gravados.push(...remover.map((t) => `−${t.label}`));
       }
     }
 
@@ -2698,6 +2993,43 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         h('div', { class: 'wf-origin' },
           'Quando a conversa casa com mais de uma regra, este é o modelo que vai. As etiquetas ' +
             'continuam sendo aplicadas todas — isto decide só o envio.'),
+      ])
+    );
+
+    // Etiquetas do "sim" — a contrapartida da tecla 7 da rodada. Vazio de propósito no padrão:
+    // o rótulo tem que ser o nome exato da etiqueta no CRM, e chutar aqui grava etiqueta errada
+    // em eleitor real.
+    const interesseInput = h('input', { type: 'text', placeholder: 'ex.: Conteúdo Martim, Conteúdo Zucco' });
+    store.get('etiquetasInteresse').then((lista) => (interesseInput.value = (lista || []).join(', ')));
+    interesseInput.addEventListener('change', () =>
+      withBusy(async () => {
+        const lista = interesseInput.value
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        await store.set('etiquetasInteresse', lista);
+
+        // Confere contra o CRM na hora: etiqueta que não existe aqui é etiqueta que nunca vai
+        // ser aplicada, e descobrir isso só no meio da rodada custa a passada inteira.
+        const todas = await tagsLib.allTags().catch(() => []);
+        const semTag = lista.filter((nome) => !todas.some((t) => cities.normalize(t.label) === cities.normalize(nome)));
+        setStatus(
+          lista.length
+            ? `Quem responder "sim" recebe: ${lista.join(', ')}.` +
+                (semTag.length ? ` Não existe etiqueta no CRM com o nome: ${semTag.join(', ')}` : '')
+            : 'Sem etiquetas: a pergunta de interesse continua saindo, mas o "sim" não vira etiqueta.',
+          semTag.length ? 'err' : 'ok'
+        );
+      })
+    );
+    body.append(
+      h('label', { class: 'wf-field' }, [
+        h('span', {}, 'Etiquetas quando responder sim'),
+        interesseInput,
+        h('div', { class: 'wf-origin' },
+          'Aplicadas quando o contato responde "sim" à pergunta de interesse (tecla 7 da rodada). ' +
+            'Só vale para quem RECEBEU a pergunta: um "sim" solto na conversa não etiqueta ninguém. ' +
+            'Separe por vírgula, com o nome exato da etiqueta no CRM.'),
       ])
     );
 

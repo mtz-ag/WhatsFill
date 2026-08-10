@@ -235,6 +235,10 @@ export function pageStateLocal() {
     conversation: dom.getConversationSignal(),
     // O atendimento aberto já foi fechado? É o que a tecla 6 fica esperando para retomar.
     concluded: dom.isConcluded(),
+    // Diálogo do Material aberto (anexar figura, preview de mídia, motivo de conclusão). A
+    // espera da tecla 6 usa isto para não confundir "você está mandando uma imagem" com "você
+    // abriu outro atendimento".
+    hasDialog: dom.hasOpenDialog(),
   };
 }
 

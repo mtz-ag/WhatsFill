@@ -123,6 +123,88 @@ grupo('applyTags SOMA às etiquetas existentes');
   check(corpo.tagsId.length === 3, `sem duplicar = ${JSON.stringify(corpo.tagsId)}`);
 }
 
+grupo('troca de região: a etiqueta do COREDE antigo SAI');
+{
+  // A pessoa informou outra cidade. Duas etiquetas de região no mesmo contato é informação
+  // errada — só uma pode estar certa. Só saem etiquetas que são COREDE de verdade.
+  chamadas.length = 0;
+  const contato = { id: 'c-1', tagsId: ['t-missoes', 't-zucco', 't-outra'] };
+  const r = await tags.applyTags(contato, ['t-metro'], { remover: ['t-missoes'] });
+  const corpo = JSON.parse(chamadas.find((c) => c.method === 'PUT').body);
+
+  check(r.ok, 'gravou');
+  check(!corpo.tagsId.includes('t-missoes'), 'o COREDE antigo saiu');
+  check(corpo.tagsId.includes('t-metro'), 'o COREDE novo entrou');
+  check(corpo.tagsId.includes('t-zucco') && corpo.tagsId.includes('t-outra'), 'conteúdo e o resto ficaram');
+
+  // A trava que impede a remoção de engolir a etiqueta que também está entrando.
+  chamadas.length = 0;
+  const igual = await tags.applyTags(
+    { id: 'c-2', tagsId: ['t-metro', 't-zucco'] },
+    ['t-metro'],
+    { remover: ['t-metro', 't-missoes'] }
+  );
+  check(igual.ok && igual.skipped, 'remover e aplicar a MESMA etiqueta não mexe em nada');
+}
+
+grupo('regionTagIds só devolve COREDE');
+{
+  const ids = await tags.regionTagIds();
+  check(ids.has('t-missoes') && ids.has('t-metro'), 'os COREDEs estão lá');
+  check(ids.has('t-paranhana'), 'COREDE que só casa pelo apelido também entra');
+  check(!ids.has('t-zucco') && !ids.has('t-outra'), 'etiqueta de conteúdo e de fluxo ficam de fora');
+}
+
+grupo('"sim" à pergunta de interesse');
+{
+  const sim = (t) => tags.respostaAfirmativa([t]);
+
+  check(sim('sim'), '"sim"');
+  check(sim('Sim!'), 'com pontuação e maiúscula');
+  check(sim('quero sim'), '"quero sim"');
+  check(sim('pode mandar'), '"pode mandar"');
+  check(sim('Claro'), '"claro"');
+
+  check(!sim('não'), '"não" não é sim');
+  check(!sim('nao quero'), '"nao quero" também não');
+  check(!sim('sim, mas não quero receber nada'), 'negação no meio vence o "sim"');
+  check(!sim('bom dia, tudo bem com vocês?'), 'saudação não é resposta');
+  check(
+    !sim('sim eu moro em Pelotas e trabalho na prefeitura desde 2019'),
+    'texto longo é outra conversa, não a resposta à pergunta'
+  );
+
+  // Só a ÚLTIMA mensagem conta: "sim" dito lá atrás não autoriza etiqueta nenhuma.
+  check(tags.respostaAfirmativa(['sim', 'na verdade não, obrigado']) === false, 'a última mensagem é que vale');
+  check(tags.respostaAfirmativa(['bom dia', 'sim']) === true, 'e ela pode ser a resposta');
+  check(!tags.respostaAfirmativa([]), 'sem mensagem não há sim');
+}
+
+grupo('a etiqueta do "sim" só sai se a pergunta tiver sido feita');
+{
+  mem.tagRules = [];
+  const etiquetas = ['Conteúdo Zucco'];
+
+  const semPergunta = await tags.suggest({
+    texts: ['sim'],
+    interesse: { perguntado: false, etiquetas },
+  });
+  check(!semPergunta.length, 'sem a pergunta enviada, "sim" não etiqueta ninguém');
+
+  const comPergunta = await tags.suggest({
+    texts: ['sim'],
+    interesse: { perguntado: true, etiquetas },
+  });
+  check(comPergunta.length === 1 && comPergunta[0].tag?.id === 't-zucco', `etiquetou = ${comPergunta[0]?.nome}`);
+  check(comPergunta[0].origem === 'conteúdo', 'entra como conteúdo, então vira modelo na próxima passada');
+
+  const recusou = await tags.suggest({
+    texts: ['não, obrigado'],
+    interesse: { perguntado: true, etiquetas },
+  });
+  check(!recusou.length, 'quem disse não não é etiquetado');
+}
+
 grupo('applyTags não faz requisição quando não há o que somar');
 {
   chamadas.length = 0;

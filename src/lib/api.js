@@ -141,11 +141,39 @@ export async function getMessages(sessionId, pageSize = 50) {
   return data?.items || [];
 }
 
+/** Mensagem do operador e do bot são as duas "nossas": as duas dizem que o contato foi atendido. */
+function doContato(m) {
+  return m.direction === DIRECTION_IN && !m.userId && !m.botId;
+}
+
+/**
+ * A conversa em uma requisição só: o que o contato escreveu **e** quem falou por último.
+ *
+ * Existe junta de propósito. A rodada precisa das duas coisas por contato, e cada contato já
+ * custa uma sessão na plataforma mais três chamadas nossas — foi rajada de requisição que
+ * derrubou a API (e a plataforma junto) uma vez. Duas leituras da mesma lista não podem virar
+ * duas idas ao servidor.
+ *
+ * `ultima` **não** filtra mensagem sem texto: figura, áudio e sticker também são a última
+ * mensagem da conversa. Filtrar faria uma figura nossa desaparecer e a rodada leria a mensagem
+ * anterior como se ainda fosse a vez do contato.
+ *
+ * @returns {Promise<{incoming:string[], ultima:{doContato:boolean, at:string, texto:string}|null}>}
+ */
+export async function getConversation(sessionId, pageSize = 50) {
+  const items = await getMessages(sessionId, pageSize);
+  const ordenadas = [...items].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  const ultima = ordenadas[ordenadas.length - 1] || null;
+
+  return {
+    incoming: ordenadas.filter((m) => doContato(m) && m.text).map((m) => m.text),
+    ultima: ultima
+      ? { doContato: doContato(ultima), at: ultima.createdAt, texto: ultima.text || '' }
+      : null,
+  };
+}
+
 /** Só o que o contato escreveu, do mais antigo para o mais novo. Base do parser. */
 export async function getIncomingText(sessionId, pageSize = 50) {
-  const items = await getMessages(sessionId, pageSize);
-  return items
-    .filter((m) => m.direction === DIRECTION_IN && !m.userId && !m.botId && m.text)
-    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-    .map((m) => m.text);
+  return (await getConversation(sessionId, pageSize)).incoming;
 }

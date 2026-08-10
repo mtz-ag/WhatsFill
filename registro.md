@@ -23,7 +23,10 @@ Atendimento assíncrono, em três rodadas na aba **Automatizado**:
 2. **Conferir e responder a fila** (botões "Meus" e "Outros") — classifica e **pergunta contato a
    contato**, com atalhos: `1` mandar modelo do conteúdo pedido, `2` pular, `3` concluir sem
    enviar, `4` agradecer e concluir, `5` mensagem do momento, `6` responder à mão (retoma quando
-   você concluir), `Esc` parar. Nada sai da fila sem decisão humana.
+   você concluir), `7` perguntar interesse no conteúdo e concluir (só para quem ainda não tem
+   etiqueta de conteúdo), `Esc` parar. Nada sai da fila sem decisão humana — **com uma exceção,
+   decidida em 10/08:** contato cuja última mensagem já é nossa é concluído sozinho, porque não
+   há o que enviar a quem já foi respondido.
 3. **Sem retorno: modelo aprovado** — janela de 24h vencida, HSM é o único envio que chega.
 
 Quem responde depois de concluído reaparece em **"Meus"** — a plataforma faz essa triagem
@@ -56,6 +59,133 @@ classificação automática gravando cidade, COREDE, etiquetas e data e **confer
 **Risco permanente:** toda escrita é em produção, com dados reais de eleitores. O contrato de
 escrita mora no `chrome.storage.local` e já sumiu uma vez sem causa identificada — exportar
 backup pela aba Config evita refazer o aprendizado.
+
+---
+
+## 2026-08-10 — Os dez itens da lista de bugs do WhatsApp
+
+**Pedido (Thiago):** print da conversa com dez linhas anotadas ao longo do dia 09/08.
+
+### 1. "Pegou srn como nome" + "Ignorar siglas no nome"
+
+`plausivelNome` só exigia 3 letras, então "srn" (que é abreviação, não nome) virava o Nome do
+eleitor e o agradecimento saía "Obrigado pela atenção, Srn!". E "Jeane do PL" gravava o partido
+dentro do nome — partido tem campo próprio.
+
+**Conserto:** `limparSiglas()` em `extract.js`, exportada e testada. Sigla é (a) nome de partido
+do dicionário, (b) da lista fixa, ou (c) token de até 5 letras **sem vogal** — nome de gente em
+português sempre tem vogal, o que resolve "srn" sem precisar de lista. A partícula que fica
+pendurada sai junto ("Jeane do ~~PL~~" → "Jeane"). Sobrou vazio? Não era nome: o campo fica
+vazio para o Thiago preencher, em vez de gravar lixo.
+
+### 2. "Marcando rio grande do sul como rio grande"
+
+**Causa raiz:** o nome do ESTADO contém o nome de um município, e o passo 1 do `matchCity`
+procura o município em qualquer lugar do texto. "Sou do Rio Grande do Sul" casava com a cidade
+Rio Grande — e o COREDE saía errado junto, porque a etiqueta de região é derivada da cidade.
+
+**Conserto:** a frase "rio grande do sul" é apagada do texto antes de casar. Não custa nenhum
+acerto: nenhum município se chama assim, e quem quis dizer a cidade escreve "Rio Grande", que
+continua casando (tem teste dos dois lados).
+
+### 3. "Automação está parando quando mando uma figura ao pausar para responder manualmente"
+
+Duas travas, porque a cadeia tem dois elos:
+
+- `esperarVoceConcluir` lia "URL sem id de sessão" como "você abriu outro atendimento" e
+  devolvia o contato. Agora diálogo aberto (ou URL sem sessão) **não vale julgamento**, e a
+  troca de atendimento precisa se confirmar em três leituras seguidas.
+- `percorrerFila` seguia em frente e clicava no próximo item da fila com o diálogo do anexo
+  ainda aberto. Diálogo do Material é **modal**: o clique não chega ao item, e a rodada
+  terminava dizendo "a fila acabou". Agora ela espera a tela ficar livre (até 3 min) antes de
+  abrir o próximo. **Não fecha** o diálogo: ele é dele, e fechar descartaria a figura.
+
+`page.getState()` ganhou `hasDialog` para isso.
+
+**Sem reprodução ao vivo** — não tenho a plataforma aqui. O mecanismo do modal está confirmado
+no código; o "URL perde o id" é hipótese. As duas travas são baratas e não quebram nada se a
+hipótese estiver errada, mas **confirme em uso**.
+
+### 4. "Identificar se a mensagem já foi mandada no mesmo dia e confirmar se quer mandar"
+
+O aviso de duplicata existia, mas era `confirm()` do navegador disparado lá dentro do envio —
+no meio da rodada ele abre **depois** da decisão e trava o laço num diálogo nativo. Agora o
+aviso é linha da própria pergunta (`⚠ "X" JÁ FOI ENVIADO hoje, às 14:03`), o modelo perde o
+destaque de opção primária, e o envio segue sem `confirm` (`jaConfirmado: true`). Mesmo dia é
+dia do calendário, não 24 horas: mensagem de ontem 23h e de hoje 8h são dois dias de trabalho.
+
+### 5. "Quando a última mensagem for minha no automatizado, concluir e ir pro próximo"
+
+São os ~60 de "Meus" que ficaram abertos enquanto o Concluir estava quebrado: receberam tudo e
+só faltou fechar. Perguntar um a um seria teclar sessenta vezes para não decidir nada.
+
+**Decisão registrada:** esta é a primeira saída automática da rodada 2 — a regra "nada sai da
+fila sem decisão humana" passa a ter esta exceção, a pedido dele. Ela só fecha o que **já foi
+respondido**; não envia nada.
+
+**Conflito resolvido com o item 6/7:** contato sem etiqueta de conteúdo **não** é concluído
+sozinho, mesmo com a última mensagem sendo nossa — é exatamente a população que ele quer
+perguntar. O atendimento não está terminado: falta descobrir o que mandar para essa pessoa, e
+concluir aqui seria tirá-la do fluxo para sempre em silêncio (o mesmo pulo silencioso já
+consertado três vezes neste projeto). Nesse caso a pergunta aparece, com a tecla 7 em destaque e
+uma linha explicando por que ela apareceu.
+
+`api.getConversation()` devolve numa requisição só o que o contato escreveu **e** quem falou por
+último. Junto de propósito: cada contato já custa uma sessão na plataforma + três chamadas
+nossas, e foi rajada de requisição que derrubou a API uma vez. Mídia entra na conta (figura
+nossa é resposta; figura dele é a vez dele) — `getIncomingText` descarta mensagem sem texto e
+por isso não servia. Mensagem do bot conta como nossa. Suíte nova: `tests/conversa.test.mjs`.
+
+### 6 e 7. Pergunta de interesse e a etiqueta do "sim"
+
+Resposta nova `interesse-conteudo` (tecla **7** da rodada), oferecida **só** para quem ainda não
+tem etiqueta de conteúdo — quem já pediu conteúdo tem modelo para receber, não pergunta. Envia e
+conclui, como a rodada dos Novos: quando a pessoa responder, a plataforma devolve o atendimento
+para "Meus" sozinha.
+
+Sem `{{primeiro_nome}}` **de propósito**: metade destes contatos ainda está com o apelido do
+anúncio, e variável que não resolve tira a opção da pergunta — foi assim que o fluxo travou duas
+vezes (06/08 e 09/08).
+
+O "sim" vira etiqueta com duas travas: a pergunta tem que ter **saído para aquele contato**
+(`wasSent`), e o afirmativo é medido só na **última** mensagem, curta e sem negação — senão
+"sim, moro em Pelotas" etiquetaria quem nunca foi perguntado. `respostaAfirmativa()` é pura e
+testada. As etiquetas são configuráveis (aba Config, "Etiquetas quando responder sim") e vêm
+**vazias**: chutar o rótulo grava etiqueta errada em eleitor real. Vazio não bloqueia a pergunta
+— ela sai, e a tela diz que o "sim" ainda não vira etiqueta.
+
+### 8. "Substituir cidade e etiqueta da cidade quando for fornecido pela pessoa"
+
+Muda uma regra de projeto, então ficou estreita: substitui **só** a cidade, **só** com casamento
+exato do IBGE, **só** quando veio de resposta estruturada ("Nome / Cidade") — cidade citada no
+meio da conversa continua sendo palpite que não sobrescreve — e **nunca** por cima de correção
+feita à mão por ele.
+
+A etiqueta de região antiga sai junto (`applyTags(..., { remover })` + `regionTagIds()`): duas
+regiões no mesmo contato é informação errada, e meia substituição seria pior que nenhuma. Só
+saem etiquetas que são COREDE na planilha oficial — conteúdo e etiqueta de fluxo ("1 SEM
+RETORNO") nunca entram na conta. A troca aparece na pergunta da rodada: `Cidade: Palmares do Sul
+(a pessoa informou; estava "Porto Alegre")`.
+
+### Teste que não depende mais da internet
+
+`parser.test.mjs` baixava a lista do IBGE. Onde a rede é bloqueada (proxy, CI), a lista voltava
+vazia e **12 asserções falhavam de uma vez** por motivo que não tem nada a ver com o parser.
+Agora a lista sai de `src/data/coredes-rs.json` — os mesmos 497 municípios — plantada no storage
+antes do import. Resultado igual em qualquer máquina.
+
+### Arquivos alterados
+
+`src/lib/extract.js`, `src/lib/cities.js`, `src/lib/tags.js`, `src/lib/api.js`,
+`src/lib/store.js`, `src/lib/templates.js`, `src/lib/page.js`, `src/panel/panel.js`,
+`tests/parser.test.mjs`, `tests/tags.test.mjs`, `tests/conversa.test.mjs` (nova), `CLAUDE.md`.
+
+### Pendências
+
+- **Confirmar em uso** o item 3 (figura), que não teve reprodução ao vivo.
+- **Preencher "Etiquetas quando responder sim"** na aba Config — sem isso a tecla 7 pergunta mas
+  não etiqueta.
+- A tabela "Modelo por conteúdo" continua vazia: é o pré-requisito da tecla 1.
 
 ---
 

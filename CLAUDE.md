@@ -100,6 +100,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 - **Na ponte de mensagens, argumento omitido chega como `null`.** O padrão `= {}` só cobre
   `undefined`: desestruturar dá TypeError e `slice(0, null)` devolve vazio. Use `opts || {}`.
   Pelo mesmo motivo, método de `page.js` que alguém chama com `.catch()` tem que ser `async`.
+- **Diálogo do Material é MODAL e mata a rodada em silêncio.** Anexar figura no meio da
+  resposta à mão deixa um diálogo por cima; o clique no próximo item da fila não chega ao item e
+  a rodada terminava dizendo "a fila acabou". Antes de abrir o próximo contato, espere a tela
+  ficar livre — **não feche**: o diálogo é dele, e fechar descarta o que ele estava mandando.
+- **`confirm()` nativo não pode aparecer dentro da rodada.** Ele abre DEPOIS da decisão, fora do
+  lugar onde ele está olhando, e trava o laço num diálogo do navegador. Aviso de duplicata vira
+  linha da pergunta da rodada; quem chama passa `jaConfirmado: true`.
+- **O nome do ESTADO contém o nome de um município.** "Rio Grande do Sul" tem "Rio Grande"
+  dentro, e o casamento procura o município em qualquer lugar do texto — quem escrevia "sou do
+  Rio Grande do Sul" era gravado em Rio Grande, com o COREDE errado junto. A frase inteira é
+  apagada antes de casar (`NOME_DO_ESTADO` em `cities.js`).
 - **Aba escondida é aba CONGELADA, não lenta.** Medido: `setInterval(120ms)` deu **zero**
   disparos em mais de um minuto. Congela junto o JavaScript da plataforma, então mover só as
   nossas esperas para fora da aba não resolveria — o Angular também para. O que descongela é
@@ -113,7 +124,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   uma vez e copia. Sem contrato aprendido, a extensão **recusa** em vez de tentar.
 - **Automático só grava o determinístico:** cidade que casou exato com o IBGE, o COREDE dela e
   as etiquetas de conteúdo. Palpite aproximado sempre espera clique.
-- **Nunca sobrescrever o que já está no CRM.** O automático só preenche buraco.
+- **Nunca sobrescrever o que já está no CRM.** O automático só preenche buraco. **Uma exceção,
+  e só uma:** a cidade que a própria pessoa informou respondendo o formulário substitui a do
+  CRM — com casamento exato do IBGE, e levando a etiqueta de COREDE antiga junto. Cidade citada
+  no meio da conversa não substitui nada.
 - **Na dúvida, recusar com o motivo na tela.** Vale para modelo ambíguo, etiqueta não
   encontrada, variável não resolvida e conteúdo que casou com duas regras.
 - **Se a plataforma mudar de layout**, o conserto é em `dom.js` (seletores) e `dock.js` (o
@@ -133,13 +147,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Testes
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as cinco suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as seis suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs
 ```
 
-`parser.test.mjs` baixa a lista do IBGE na primeira execução (precisa de internet).
+Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,
+plantada no storage antes do import. Buscar no IBGE deixava **12 asserções falhando juntas**
+onde a rede é bloqueada, por um motivo que não tem nada a ver com o parser.
 Lógica que grava em dado real tem teste. Bug encontrado ao vivo vira teste de regressão.
 
 ## Git

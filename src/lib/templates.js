@@ -14,6 +14,7 @@ export async function list() {
     await migrarRespostasNovas();
     await migrarRespostaAgradecerInfo();
     await migrarSaudacaoSemConvite();
+    await migrarRespostaInteresse();
   }
   return store.get('templates');
 }
@@ -79,6 +80,10 @@ export const migrarRespostasNovas = () =>
  */
 export const migrarRespostaAgradecerInfo = () =>
   garantirRespostas(['agradecer-info'], 'respostaAgradecerInfo');
+
+/** A pergunta de interesse no conteúdo, para quem já tinha a lista de respostas salva. */
+export const migrarRespostaInteresse = () =>
+  garantirRespostas(['interesse-conteudo'], 'respostaInteresseConteudo');
 
 /**
  * Acrescenta a pergunta sobre grupos políticos ao "Pedir dados" que já está salvo no navegador.
