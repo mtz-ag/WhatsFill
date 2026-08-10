@@ -239,6 +239,9 @@ export function pageStateLocal() {
     // espera da tecla 6 usa isto para não confundir "você está mandando uma imagem" com "você
     // abriu outro atendimento".
     hasDialog: dom.hasOpenDialog(),
+    // Rede de segurança da espera da tecla 6: atendimento sem composer, sem Concluir e sem
+    // Iniciar está fechado, mesmo que o rótulo da tela mude de nome na próxima versão.
+    semControles: dom.semControlesDeAtendimento(),
   };
 }
 

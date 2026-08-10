@@ -102,14 +102,51 @@ export function getMenuConcluirItem() {
   return document.querySelector('[data-cy="menu-button-session-finish"]');
 }
 
+/** Está fora de overlay e fora da fila da esquerda? (a fila repete texto do atendimento) */
+function noAtendimento(el) {
+  return !el.closest('.cdk-overlay-container') && !el.closest('sessions-list-item');
+}
+
 /**
- * Concluído de verdade? A plataforma troca o rodapé por "Reiniciar" — esse é o sinal, não o
- * sumiço do "Concluir" (que sobrevive como item de menu enquanto o menu estiver aberto).
+ * Concluído de verdade?
+ *
+ * **Dois sinais, porque a plataforma tem dois estados de "fechado"** — descoberto ao vivo,
+ * depois de a rodada ficar meia hora esperando um atendimento que já estava concluído:
+ *
+ * 1. **"Reiniciar" no rodapé.** Foi o primeiro que apareceu, e continua valendo.
+ * 2. **"Concluído" no cabeçalho**, no lugar de "Em andamento". Neste estado **não existe
+ *    Reiniciar nenhum** — o rodapé vira "Nenhuma classificação definida". Era o caso do
+ *    atendimento fechado logo depois de mandar uma figura à mão: a tela dizia Concluído, o
+ *    `isConcluded()` dizia que não, e a rodada seguia esperando.
+ *
+ * O sumiço do "Concluir" continua NÃO servindo como sinal: o item do menu tem o mesmo texto e
+ * sobrevive enquanto o menu estiver aberto.
  */
 export function isConcluded() {
-  return [...document.querySelectorAll('button')].some(
-    (b) => /reiniciar/i.test(b.textContent) && !b.closest('.cdk-overlay-container')
+  const botoes = [...document.querySelectorAll('button')].filter(noAtendimento);
+  if (botoes.some((b) => /reiniciar/i.test(b.textContent))) return true;
+  if (botoes.some((b) => /^conclu[íi]d[oa]$/i.test(b.textContent.trim()))) return true;
+
+  // Reserva: a plataforma pode mostrar o estado como chip/rótulo em vez de botão. Busca só
+  // folhas (sem filhos) e só dentro da conversa — varrer o documento inteiro seria caro, e a
+  // fila da esquerda repete texto de atendimento.
+  const escopo = document.querySelector('sessions-conversation') || document;
+  return [...escopo.querySelectorAll('button, [role="button"], mat-chip, span, div')].some(
+    (el) => el.children.length === 0 && noAtendimento(el) && /^conclu[íi]d[oa]$/i.test(el.textContent.trim())
   );
+}
+
+/**
+ * O atendimento aberto não tem mais NENHUM controle: nem campo de mensagem, nem Concluir, nem
+ * Iniciar. É o retrato de um atendimento fechado visto pela estrutura, e não pelo texto.
+ *
+ * Existe como rede de segurança da espera da tecla 6: se a plataforma trocar o rótulo de novo,
+ * a rodada percebe pela ausência dos controles em vez de ficar meia hora parada. Não entra no
+ * `isConcluded()` porque durante a troca de tela os três somem por um instante — quem usa isto
+ * exige leituras seguidas.
+ */
+export function semControlesDeAtendimento() {
+  return !getComposer() && !getConcluirButton() && !getIniciarButton();
 }
 
 /**

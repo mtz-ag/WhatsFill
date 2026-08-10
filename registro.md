@@ -64,6 +64,71 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
+## 2026-08-10 — A rodada não retomava depois da conclusão à mão (a figura era inocente)
+
+**Relato dele:** "enviei a figura e não resumiu a automatização", com print da tela inteira.
+
+### O que a print mostrou, e a correção do diagnóstico anterior
+
+A print desmentiu a hipótese que eu tinha registrado hoje mais cedo. **Nada a ver com a figura**:
+
+- a URL continuava com o id da sessão (dava para ler na barra de endereço), então a espera
+  **não** estava confundindo mídia com troca de atendimento;
+- o atendimento estava **concluído** ("Thiago concluiu o atendimento em 10/08/2026 às 20:09"),
+  e a barra do painel ainda dizia *"Responda Santa Cruz - Serlei à mão. Quando você concluir, eu
+  retomo daqui."* — ou seja, a espera estava viva e simplesmente não reconheceu a conclusão.
+
+### Causa raiz
+
+`dom.isConcluded()` procurava **um sinal só**: um botão "Reiniciar" no rodapé. Na print, o
+atendimento concluído mostra o rótulo **"Concluído"** no cabeçalho (onde estava "Em andamento") e
+o rodapé vira "Nenhuma classificação definida" — **não existe Reiniciar nenhum**.
+
+Então a espera da tecla 6 rodava até o teto de 30 minutos e devolvia "esperei 30 min e o
+atendimento seguiu aberto". A rodada não morria: ficava parada.
+
+O sinal "Reiniciar" não era invenção — ele foi conferido ao vivo quando entrou. São dois estados
+diferentes de fechado, e a versão anterior só conhecia um.
+
+### O conserto
+
+`isConcluded()` passa a aceitar três sinais: "Reiniciar", o rótulo "Concluído" (botão ou chip) e,
+como reserva de escopo estreito, uma varredura de folhas dentro de `sessions-conversation`.
+Fora de overlay e **fora da fila da esquerda** — a fila repete texto de atendimento, e sem essa
+trava qualquer contato concluído na lista daria o atendimento aberto por fechado.
+
+Rede de segurança separada: `semControlesDeAtendimento()` (sem composer, sem Concluir, sem
+Iniciar) entra no `page.getState()` e a espera aceita depois de **três leituras seguidas**. Fica
+fora do `isConcluded()` de propósito — durante a troca de tela os três somem por um instante, e
+o `clickConcluir()` daria a conclusão por certa cedo demais.
+
+### Conferido no navegador, não no chute
+
+`tools/checar-dom.mjs` (novo) monta sete recortes reais de tela e confere as duas funções contra
+cada um. Os dois casos que protegem contra o conserto errado: **menu do Concluir aberto** (tem
+item com o mesmo texto — não pode contar como concluído) e **"Concluído" na fila da esquerda**.
+
+Rodei os mesmos sete recortes contra o `dom.js` anterior: falha exatamente em um, o da print.
+É a prova do diagnóstico.
+
+Fica **fora das seis suítes** de propósito — precisa de navegador (Playwright), e o compromisso
+do projeto é `node tests/*.mjs` em Node puro. É ferramenta para quando mexer em `dom.js` ou a
+plataforma mudar de cara. Sem Playwright na máquina, ele avisa e sai com 0.
+
+### Arquivos alterados
+
+`src/lib/dom.js`, `src/lib/page.js`, `src/panel/panel.js`, `tools/checar-dom.mjs` (novo),
+`CLAUDE.md`.
+
+### Nota sobre a print
+
+O painel mostrava `Cidade: Santa Cruz` e "Sem grupo cadastrado para Santa Cruz" — é a versão
+**antiga** rodando no navegador dele. Com o casamento por prefixo desta leva, "Santa Cruz" (do
+cadastro "Santa Cruz - Serlei") passa a resolver para **Santa Cruz do Sul**, e o link do grupo
+volta a ser encontrado. Precisa recarregar a extensão + F5 na aba.
+
+---
+
 ## 2026-08-10 — Cidade do candidato, cidade encurtada, marca amarela e respostas na rodada
 
 **Pedido (Thiago):** segunda leva da lista do WhatsApp, cinco itens do fim da tarde de 09/08.
@@ -192,9 +257,11 @@ Duas travas, porque a cadeia tem dois elos:
 
 `page.getState()` ganhou `hasDialog` para isso.
 
-**Sem reprodução ao vivo** — não tenho a plataforma aqui. O mecanismo do modal está confirmado
-no código; o "URL perde o id" é hipótese. As duas travas são baratas e não quebram nada se a
-hipótese estiver errada, mas **confirme em uso**.
+**Correção (mesmo dia, com a print em mãos):** a hipótese do "URL perde o id" estava
+**errada** — a URL continuava com o id da sessão. A causa real era outra e está na entrada do
+topo: `isConcluded()` só conhecia o sinal "Reiniciar", e o atendimento concluído mostra
+"Concluído" sem Reiniciar nenhum. As duas travas descritas aqui **ficam** (o modal engolir o
+clique é mecanismo real e confirmado no código), mas não eram o que ele estava vendo.
 
 ### 4. "Identificar se a mensagem já foi mandada no mesmo dia e confirmar se quer mandar"
 
@@ -272,7 +339,8 @@ antes do import. Resultado igual em qualquer máquina.
 
 ### Pendências
 
-- **Confirmar em uso** o item 3 (figura), que não teve reprodução ao vivo.
+- ~~Confirmar em uso o item 3 (figura)~~ — reproduzido no mesmo dia: a causa era o sinal de
+  "Concluído", não a figura. Ver a entrada do topo.
 - **Preencher "Etiquetas quando responder sim"** na aba Config — sem isso a tecla 7 pergunta mas
   não etiqueta.
 - A tabela "Modelo por conteúdo" continua vazia: é o pré-requisito da tecla 1.

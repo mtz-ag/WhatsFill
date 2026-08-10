@@ -2333,6 +2333,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const limite = Date.now() + 30 * 60 * 1000;
     setStatus(`Responda ${nome} à mão. Quando você concluir, eu retomo daqui.`, 'ok');
     let foraDaSessao = 0;
+    let semControles = 0;
 
     while (Date.now() < limite) {
       await new Promise((r) => setTimeout(r, 1000));
@@ -2344,6 +2345,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (estado.concluded && estado.sessionId === sessionId) {
         return { nome, resultado: 'concluido', motivo: 'você respondeu e concluiu' };
       }
+
+      // Rede de segurança: o atendimento ficou sem composer, sem Concluir e sem Iniciar. Isso é
+      // um atendimento fechado, mesmo que o rótulo da tela não seja nenhum dos que conhecemos.
+      // Três leituras seguidas porque durante a troca de tela os controles somem por um
+      // instante — e retomar cedo demais abriria o próximo contato por cima deste.
+      if (estado.semControles && estado.sessionId === sessionId && !estado.hasDialog) {
+        if (++semControles >= 3) {
+          return { nome, resultado: 'concluido', motivo: 'o atendimento ficou sem controles — dei por concluído' };
+        }
+        continue;
+      }
+      semControles = 0;
 
       // Você está no meio de alguma coisa (anexando figura, preview de mídia, diálogo aberto):
       // a tela não está em estado de ser lida. Espera.

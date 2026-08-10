@@ -92,8 +92,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 - **Concluir são DOIS cliques.** O botão do rodapé abre um menu ("Classificar e concluir" /
   "Concluir"); quem fecha o atendimento é o item (`[data-cy="menu-button-session-finish"]`). Com
   um clique só, o atendimento fica em andamento e nada acusa — `hasOpenDialog()` não vê menu.
-  Confirme pelo **"Reiniciar"** no rodapé: o sumiço do "Concluir" não serve, porque o item do
-  menu tem o mesmo texto.
+  O sumiço do "Concluir" não serve como confirmação, porque o item do menu tem o mesmo texto.
+- **"Concluído" tem DOIS retratos de tela, e um deles não tem "Reiniciar".** Medido ao vivo: o
+  atendimento fechado mostra o rótulo **"Concluído"** no cabeçalho e o rodapé vira "Nenhuma
+  classificação definida" — nenhum botão Reiniciar em lugar nenhum. Procurar só por "Reiniciar"
+  deixou a rodada esperando 30 min por um atendimento já concluído. Mexeu em sinal de tela?
+  Rode `node tools/checar-dom.mjs`, que confere os dois retratos (precisa de Playwright; fora
+  das seis suítes de propósito).
 - **A pergunta da rodada cobre o painel inteiro** (`position: fixed`), então tudo que ele precisa
   no meio da rodada tem que estar DENTRO dela: as respostas prontas são a lista de
   `montarRespostasRapidas`, e enviar dali não fecha a pergunta.
