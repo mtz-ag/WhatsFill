@@ -14,10 +14,21 @@ export const PERGUNTA_GRUPOS =
   'Ah, e me conta: você já faz parte de algum grupo político no WhatsApp? ' +
   'Se sim, me manda o nome ou o link — assim consigo somar por lá também. 🇧🇷';
 
+/**
+ * As respostas prontas.
+ *
+ * **Nenhuma chama o contato pelo nome, e isso é regra do projeto** (decisão do Thiago,
+ * 10/08/2026). O nome do cadastro erra com frequência alta demais para ir num texto que a
+ * pessoa lê: apelido do perfil no lugar do nome ("Zane" por "Rosane Requia"), cidade no campo
+ * do nome ("Santa Cruz - Serlei"), sigla colada ("Jeane do PL"), abreviação ("srn"), o apelido
+ * automático do anúncio ("[NOVO] (51) 9…"). Errar o nome de alguém é erro que o contato percebe
+ * na hora, e acertar não vale nada perto disso. De quebra some o bloqueio por variável sem
+ * valor, que já tirou opção da pergunta da rodada duas vezes.
+ *
+ * Quem mexer aqui: `{{cidade}}` e `{{link_grupo}}` continuam valendo — o que saiu foi o nome.
+ */
 export const DEFAULT_TEMPLATES = [
   {
-    // Sem {{primeiro_nome}} de propósito: esta é justamente a mensagem que você manda ANTES
-    // de saber o nome, quando o contato ainda está cadastrado como "[NOVO] (51) 9...".
     id: 'pedir-dados',
     name: 'Pedir dados (formato fixo)',
     text:
@@ -31,7 +42,7 @@ export const DEFAULT_TEMPLATES = [
     id: 'tema-opcoes',
     name: 'Perguntar o tema (opções numeradas)',
     text:
-      'Só mais uma, {{primeiro_nome}}: responda com o número que mais combina com você.\n\n' +
+      'Só mais uma: responda com o número que mais combina com você.\n\n' +
       '1 - Quero receber material impresso\n' +
       '2 - Sou apoiador e quero ajudar bastante\n' +
       '3 - Sou apoiador e ajudo quando posso\n' +
@@ -41,7 +52,7 @@ export const DEFAULT_TEMPLATES = [
     id: 'link-grupo',
     name: 'Enviar link do grupo',
     text:
-      'Prontinho, {{primeiro_nome}}! Este é o grupo de {{cidade}}:\n\n' +
+      'Prontinho! Este é o grupo de {{cidade}}:\n\n' +
       '{{link_grupo}}\n\n' +
       'É lá que a gente avisa das agendas e manda os conteúdos primeiro. Te espero! 🇧🇷',
   },
@@ -49,15 +60,12 @@ export const DEFAULT_TEMPLATES = [
     id: 'agradecimento',
     name: 'Agradecer e encerrar',
     text:
-      'Obrigado pela atenção, {{primeiro_nome}}! Qualquer coisa, é só chamar por aqui. ' +
+      'Obrigado pela atenção! Qualquer coisa, é só chamar por aqui. ' +
       'Um abraço e conte com a gente. 🇧🇷',
   },
   {
     /**
      * Pedido de dinheiro, cesta, remédio, passagem.
-     *
-     * Sem `{{primeiro_nome}}` de propósito: quem pede ajuda muitas vezes escreve antes de dizer
-     * o nome, e este é o texto que NÃO pode ficar bloqueado esperando variável.
      *
      * A recusa se apoia na lei em vez de na vontade do gabinete — é verdade e tira o peso
      * pessoal do não. Base: Lei 9.504/97, art. 41-A (captação ilícita de sufrágio, que cita
@@ -93,7 +101,7 @@ export const DEFAULT_TEMPLATES = [
     id: 'saudacao-fe',
     name: 'Saudação com mensagem de fé',
     text:
-      '{{saudacao}}, {{primeiro_nome}}! Que Deus abençoe o seu dia e a sua família. 🙏\n\n' +
+      '{{saudacao}}! Que Deus abençoe o seu dia e a sua família. 🙏\n\n' +
       'Que Nossa Senhora interceda por você e por quem você ama.',
   },
   {
@@ -107,7 +115,7 @@ export const DEFAULT_TEMPLATES = [
     id: 'agradecer-info',
     name: 'Agradecer a mensagem e encerrar',
     text:
-      '{{saudacao}}, {{primeiro_nome}}! Obrigado pela mensagem e pelas informações — ' +
+      '{{saudacao}}! Obrigado pela mensagem e pelas informações — ' +
       'recebemos tudo por aqui.\n\n' +
       'Seguimos juntos. Que Deus abençoe você e sua família! 🙏',
   },
@@ -117,10 +125,6 @@ export const DEFAULT_TEMPLATES = [
      * então nenhuma regra casa e não há modelo a enviar. Esta pergunta transforma o silêncio em
      * um sim ou um não.
      *
-     * Sem `{{primeiro_nome}}` de propósito. Metade destes contatos ainda está cadastrada com o
-     * apelido do anúncio, e variável que não resolve tira a opção da pergunta da rodada — foi
-     * assim que o fluxo já travou duas vezes. Uma pergunta que sempre pode sair vale mais aqui
-     * do que o nome no vocativo.
      */
     id: 'interesse-conteudo',
     name: 'Perguntar interesse no conteúdo',
@@ -133,7 +137,7 @@ export const DEFAULT_TEMPLATES = [
     id: 'sem-interesse',
     name: 'Sem interesse / encerrar com respeito',
     text:
-      'Sem problema, {{primeiro_nome}}! Agradeço o retorno e não vou mais te incomodar. ' +
+      'Sem problema! Agradeço o retorno e não vou mais te incomodar. ' +
       'Se mudar de ideia, é só mandar uma mensagem aqui. Um abraço!',
   },
 ];

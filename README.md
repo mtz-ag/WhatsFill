@@ -182,8 +182,10 @@ primeiro aparecer, o painel **recusa e explica**, em vez de enviar com parâmetr
 
 ### Variáveis dos templates
 
-`{{saudacao}}` `{{nome}}` `{{primeiro_nome}}` `{{cidade}}` `{{link_grupo}}` `{{telefone}}`
-`{{funcao}}` `{{partido}}`
+`{{saudacao}}` `{{cidade}}` `{{link_grupo}}` `{{telefone}}` `{{funcao}}` `{{partido}}`
+
+`{{nome}}` e `{{primeiro_nome}}` continuam existindo, mas **nenhuma resposta padrão usa** — ver
+"Por que as respostas não chamam pelo nome", abaixo. O editor avisa quando você escreve uma.
 
 ### Etiquetas
 
@@ -230,16 +232,31 @@ painel oferece escolher da lista do CRM, gravando a escolha como apelido para n�
 Ao gravar, as etiquetas são **somadas** às que o contato já tem. Isso é proposital e testado: a
 plataforma grava a lista inteira, então mandar só as novas apagaria as antigas.
 
-### Nome do contato
+### Por que as respostas não chamam pelo nome
 
-O contato que chega do anúncio é cadastrado como `[NOVO] (51) 99999-9999`. A extensão reconhece
-esses apelidos automáticos e trata como **sem nome**: `{{primeiro_nome}}` fica pendente e o
-envio é bloqueado, em vez de sair "Boa noite, [NOVO]!". Quando o contato informa o nome, o
-parser preenche o campo **Nome** na aba Dados, o Salvar grava no cadastro, e as mensagens
-seguintes passam a usar o nome de verdade.
+**Nenhuma resposta pronta usa o nome do contato.** Não é esquecimento: é regra, e vale para as
+que você criar.
 
-Por isso o template `pedir-dados` **não** usa `{{primeiro_nome}}` — é justamente a mensagem que
-você manda antes de saber o nome.
+O nome que está no CRM erra com frequência alta demais para ir num texto que a pessoa lê. Os
+casos que aconteceram de verdade:
+
+| No cadastro | Quem é | O que sairia |
+|---|---|---|
+| `[NOVO] (51) 99999-9999` | contato recém-chegado do anúncio | "Boa noite, [NOVO]!" |
+| `Zane` | apelido do perfil do WhatsApp de Rosane Requia | "Obrigado pela atenção, Zane!" |
+| `Santa Cruz - Serlei` | cidade digitada antes do nome | "Boa noite, Santa Cruz!" |
+| `Jeane do PL` | sigla do partido colada no nome | "Boa noite, Jeane do PL!" |
+| `srn` | abreviação digitada na posição do nome | "Obrigado, Srn!" |
+
+Errar o nome de alguém é o tipo de erro que o contato percebe na hora — e acertar não compra
+nada perto disso.
+
+Tem um segundo motivo, mais silencioso: variável sem valor **bloqueia o envio**. Quando o nome
+não resolvia, a opção sumia da pergunta da rodada, e isso já travou o fluxo duas vezes.
+
+A extensão **continua extraindo e gravando o Nome** no CRM — o dado é útil no cadastro. O que
+mudou é que ele não vai mais no texto enviado. Se você quiser o nome em alguma resposta
+específica, é só escrever `{{primeiro_nome}}`: o editor avisa do risco e não impede.
 
 ### Como o parser acerta
 

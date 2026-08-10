@@ -10,14 +10,53 @@ import * as cities from './cities.js';
 
 export const KNOWN_VARS = [
   ['{{saudacao}}', 'Bom dia / Boa tarde / Boa noite, conforme a hora'],
-  ['{{nome}}', 'Nome completo do contato'],
-  ['{{primeiro_nome}}', 'Só o primeiro nome'],
+  // As duas do nome continuam funcionando, mas saíram das respostas: ver `semVocativo`.
+  ['{{nome}}', 'Nome completo do contato (evite: o cadastro erra, e sem valor trava o envio)'],
+  ['{{primeiro_nome}}', 'Só o primeiro nome (evite, mesmo motivo)'],
   ['{{cidade}}', 'Cidade classificada do contato'],
   ['{{link_grupo}}', 'Link do grupo da cidade (tabela em Config)'],
   ['{{telefone}}', 'Telefone formatado'],
   ['{{funcao}}', 'Função classificada'],
   ['{{partido}}', 'Partido classificado'],
 ];
+
+/**
+ * Tira o vocativo de nome de um texto de resposta — "Obrigado, {{primeiro_nome}}!" vira
+ * "Obrigado!".
+ *
+ * Chamar o contato pelo nome saiu do fluxo por decisão do Thiago (10/08), e o motivo é o
+ * cadastro: o nome que está no CRM erra com frequência alta demais para ir num texto que a
+ * pessoa lê. Já vimos apelido do perfil no lugar do nome ("Zane" por "Rosane Requia"), cidade
+ * no campo do nome ("Santa Cruz - Serlei"), sigla de partido colada ("Jeane do PL"), abreviação
+ * ("srn") e o apelido automático do anúncio ("[NOVO] (51) 9…"). Errar o nome de alguém é o tipo
+ * de erro que o contato percebe na hora — e o acerto não vale nada perto disso.
+ *
+ * De quebra some o outro lado do problema: `{{primeiro_nome}} `sem valor **bloqueia o envio**, e
+ * esse bloqueio já tirou opção da pergunta da rodada duas vezes.
+ *
+ * Puro e exportado para ter teste: ele reescreve texto que vai para eleitor real.
+ */
+const VAR_NOME = String.raw`\{\{\s*(?:primeiro_nome|nome)\s*\}\}`;
+
+export function semVocativo(texto) {
+  return String(texto || '')
+    // "…, {{primeiro_nome}}!" / "…, {{nome}}:" — o vocativo entre vírgula e pontuação.
+    .replace(new RegExp(String.raw`,\s*${VAR_NOME}\s*(?=[!?.,:;])`, 'gi'), '')
+    // "Olá {{primeiro_nome}}, tudo bem?" — a vírgula é do resto da frase, então fica.
+    .replace(new RegExp(String.raw`\s+${VAR_NOME}\s*(?=,)`, 'gi'), '')
+    // "{{primeiro_nome}}, agradeço…" — começo de frase.
+    .replace(new RegExp(String.raw`^${VAR_NOME}\s*,\s*`, 'gim'), '')
+    // Qualquer sobra solta.
+    .replace(new RegExp(String.raw`\s*${VAR_NOME}`, 'gi'), '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/[ \t]+([!?.,:;])/g, '$1')
+    .replace(/[ \t]+$/gm, '');
+}
+
+/** O texto ainda chama o contato pelo nome? Usado para avisar no editor de respostas. */
+export function usaNome(texto) {
+  return new RegExp(VAR_NOME, 'i').test(String(texto || ''));
+}
 
 export function saudacao(date = new Date()) {
   const h = date.getHours();

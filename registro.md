@@ -64,6 +64,59 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
+## 2026-08-10 — As respostas param de chamar o contato pelo nome
+
+**Pedido (Thiago):** "o uso de nomes para responder tem dado problemas, vamos alterar para não
+mandar nomes."
+
+### Por que ele está certo, e o quanto isso já custou
+
+O nome do cadastro erra com frequência alta demais para ir num texto que a pessoa lê. Todos
+estes são casos reais, e quase todos viraram entrada neste registro em algum momento:
+
+| No cadastro | Quem é | O que saía |
+|---|---|---|
+| `[NOVO] (51) 9…` | contato recém-chegado do anúncio | "Boa noite, [NOVO]!" |
+| `Zane` | apelido do perfil de Rosane Requia | "Obrigado pela atenção, Zane!" |
+| `Santa Cruz - Serlei` | cidade digitada antes do nome | "Boa noite, Santa Cruz!" |
+| `Jeane do PL` | sigla do partido colada | "Boa noite, Jeane do PL!" |
+| `srn` | abreviação na posição do nome | "Obrigado, Srn!" |
+
+Cada conserto anterior atacou **uma** dessas portas: `looksLikePlaceholder`, `nomeVeioDoPerfil`,
+`splitCidadeNome`, `limparSiglas`, a regra da vogal. Tirar o nome do texto fecha a classe
+inteira de uma vez — e o acerto, quando acertava, não comprava quase nada.
+
+O segundo motivo é mais silencioso: variável sem valor **bloqueia o envio**. Foi assim que a
+opção sumiu da pergunta da rodada duas vezes (06/08 e 09/08). Sem nome no texto, esse ramo
+inteiro de bloqueio deixa de existir.
+
+**O que NÃO mudou:** a extensão continua extraindo e gravando o Nome no CRM. O dado é útil no
+cadastro; ele só não vai mais na mensagem.
+
+### O que foi feito
+
+- As cinco respostas que usavam vocativo perderam o nome: `tema-opcoes`, `link-grupo`,
+  `agradecimento`, `saudacao-fe`, `agradecer-info`, `sem-interesse`.
+- **Migração `migrarRespostasSemNome`.** Mudar o padrão não bastaria: as respostas dele estão
+  no `chrome.storage`, algumas editadas à mão. Esta migração **reescreve** — as outras só
+  acrescentam — e por isso é estreita: apaga o marcador e a pontuação do vocativo em volta, e
+  não toca no resto da frase. `auto.mensagemMomento` entra junto, porque com nome ela travaria
+  a tecla 5 do mesmo jeito. Roda uma vez: se ele puser o nome de volta de propósito, fica.
+- `vars.semVocativo()` é a regra, pura e testada — ela reescreve texto que vai para eleitor
+  real. `vars.usaNome()` alimenta o aviso no editor.
+- **Aviso, não bloqueio**, no editor de respostas: escrever `{{primeiro_nome}}` continua
+  possível, com o risco na tela. A decisão é dele; o que não pode é o nome voltar sem ninguém
+  perceber.
+- Teste novo que confere a lista **inteira** de respostas padrão: nenhuma pode usar nome. É o
+  que impede o vocativo voltar numa edição futura.
+
+### Arquivos alterados
+
+`src/lib/vars.js`, `src/lib/store.js`, `src/lib/templates.js`, `src/panel/panel.js`,
+`tests/vars.test.mjs`, `CLAUDE.md`, `README.md`.
+
+---
+
 ## 2026-08-10 — A pergunta da rodada sai do lugar (e para de bloquear a conversa)
 
 **Pedido (Thiago):** "atualmente as perguntas e respostas estão presas, eu queria poder mover

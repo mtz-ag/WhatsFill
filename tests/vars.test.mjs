@@ -97,6 +97,86 @@ grupo('nome do perfil do WhatsApp não vence o nome que a pessoa escreveu');
   check(!nomeVeioDoPerfil({}), 'contato sem nome nenhum não quebra');
 }
 
+grupo('tirar o nome das respostas (semVocativo)');
+{
+  const sem = vars.semVocativo;
+
+  // Os vocativos que existiam de verdade nas respostas prontas.
+  check(sem('Obrigado pela atenção, {{primeiro_nome}}!') === 'Obrigado pela atenção!', 'vírgula + exclamação');
+  check(sem('{{saudacao}}, {{primeiro_nome}}! Que Deus abençoe') === '{{saudacao}}! Que Deus abençoe', 'depois da saudação');
+  check(sem('Só mais uma, {{primeiro_nome}}: responda') === 'Só mais uma: responda', 'vocativo antes de dois-pontos');
+  check(sem('Prontinho, {{primeiro_nome}}! Este é o grupo') === 'Prontinho! Este é o grupo', 'no meio da abertura');
+  check(sem('Sem problema, {{primeiro_nome}}! Agradeço') === 'Sem problema! Agradeço', 'sem problema');
+
+  // Outras formas de escrever o vocativo.
+  check(sem('Olá {{primeiro_nome}}, tudo bem?') === 'Olá, tudo bem?', 'nome antes da vírgula da frase');
+  check(sem('{{primeiro_nome}}, agradeço o retorno.') === 'agradeço o retorno.', 'nome abrindo a frase');
+  check(sem('Recebi sua mensagem {{primeiro_nome}}') === 'Recebi sua mensagem', 'nome solto no fim');
+  check(sem('Obrigado, {{nome}}!') === 'Obrigado!', '{{nome}} completo também sai');
+
+  // O que NÃO pode ser tocado: as outras variáveis e o texto do Thiago.
+  const grupo1 = 'Prontinho! Este é o grupo de {{cidade}}:\n\n{{link_grupo}}\n\nTe espero! 🇧🇷';
+  check(sem(grupo1) === grupo1, 'texto sem nome fica idêntico');
+  check(sem('Grupo de {{cidade}}, {{primeiro_nome}}!') === 'Grupo de {{cidade}}!', '{{cidade}} sobrevive ao lado');
+  check(sem('') === '' && sem(null) === '', 'vazio e nulo não quebram');
+
+  // E o resultado tem que passar pelo render sem sobrar variável — é o ponto de tudo isto.
+  const ctx = { values: { saudacao: 'Boa noite' }, reasons: {} };
+  const r = vars.render(sem('{{saudacao}}, {{primeiro_nome}}! Obrigado pela mensagem.'), ctx);
+  check(r.missing.length === 0, `nada bloqueia mais o envio = ${JSON.stringify(r.missing)}`);
+  check(r.text === 'Boa noite! Obrigado pela mensagem.', `texto final = ${JSON.stringify(r.text)}`);
+}
+
+grupo('usaNome');
+{
+  check(vars.usaNome('Oi {{primeiro_nome}}'), 'acha {{primeiro_nome}}');
+  check(vars.usaNome('Oi {{ nome }}'), 'acha {{nome}} com espaço');
+  check(!vars.usaNome('Grupo de {{cidade}}'), 'não confunde com outra variável');
+  check(!vars.usaNome(''), 'texto vazio não usa nome');
+}
+
+grupo('nenhuma resposta padrão chama o contato pelo nome');
+{
+  // A regra do projeto, conferida na lista inteira: é o que impede o vocativo voltar sem
+  // ninguém notar numa edição futura.
+  const store = await lib('store.js');
+  const comNome = store.DEFAULT_TEMPLATES.filter((t) => vars.usaNome(t.text)).map((t) => t.id);
+  check(comNome.length === 0, `respostas com nome = ${JSON.stringify(comNome)}`);
+}
+
+grupo('a migração tira o nome do que já está salvo no navegador');
+{
+  // Mora nesta suíte, e não numa nova, porque é a mesma mudança: `semVocativo` é a regra e a
+  // migração é o único lugar que a aplica. Ela REESCREVE resposta salva — inclusive as que o
+  // Thiago editou à mão —, então precisa de teste.
+  const templates = await lib('templates.js');
+
+  mem.migracoes = {};
+  mem.templates = [
+    { id: 'agradecimento', name: 'Agradecer e encerrar', text: 'Obrigado pela atenção, {{primeiro_nome}}! Um abraço.' },
+    { id: 'meu-texto', name: 'Texto do Thiago', text: '{{saudacao}}, {{primeiro_nome}}! Anotei aqui e te retorno.' },
+    { id: 'link-grupo', name: 'Enviar link do grupo', text: 'Prontinho! Grupo de {{cidade}}: {{link_grupo}}' },
+  ];
+  mem.auto = { mensagemMomento: 'Feliz Dia dos Pais, {{primeiro_nome}}! 🇧🇷' };
+
+  const mexidos = await templates.migrarRespostasSemNome();
+
+  check(mem.templates[0].text === 'Obrigado pela atenção! Um abraço.', `padrão = ${JSON.stringify(mem.templates[0].text)}`);
+  check(
+    mem.templates[1].text === '{{saudacao}}! Anotei aqui e te retorno.',
+    `texto editado por ele preserva o resto = ${JSON.stringify(mem.templates[1].text)}`
+  );
+  check(mem.templates[2].text === 'Prontinho! Grupo de {{cidade}}: {{link_grupo}}', 'resposta sem nome não é tocada');
+  check(mem.auto.mensagemMomento === 'Feliz Dia dos Pais! 🇧🇷', `mensagem do momento = ${JSON.stringify(mem.auto.mensagemMomento)}`);
+  check(mexidos.length === 3, `relatou o que mexeu = ${JSON.stringify(mexidos)}`);
+
+  // Roda uma vez só: se ele puser o nome de volta de propósito, a migração não desfaz.
+  mem.templates[0].text = 'Obrigado, {{primeiro_nome}}!';
+  const segunda = await templates.migrarRespostasSemNome();
+  check(segunda === false, 'segunda execução não faz nada');
+  check(mem.templates[0].text === 'Obrigado, {{primeiro_nome}}!', 'e não desfaz a escolha dele');
+}
+
 grupo('saudação por horário');
 check(vars.saudacao(new Date(2026, 7, 5, 9)) === 'Bom dia', 'manhã');
 check(vars.saudacao(new Date(2026, 7, 5, 15)) === 'Boa tarde', 'tarde');

@@ -3,6 +3,7 @@
  */
 
 import * as store from './store.js';
+import { semVocativo, usaNome } from './vars.js';
 
 let migrado = false;
 
@@ -15,6 +16,7 @@ export async function list() {
     await migrarRespostaAgradecerInfo();
     await migrarSaudacaoSemConvite();
     await migrarRespostaInteresse();
+    await migrarRespostasSemNome();
   }
   return store.get('templates');
 }
@@ -84,6 +86,46 @@ export const migrarRespostaAgradecerInfo = () =>
 /** A pergunta de interesse no conteúdo, para quem já tinha a lista de respostas salva. */
 export const migrarRespostaInteresse = () =>
   garantirRespostas(['interesse-conteudo'], 'respostaInteresseConteudo');
+
+/**
+ * Tira o nome do contato das respostas já salvas no navegador.
+ *
+ * Mudar `DEFAULT_TEMPLATES` só vale para quem nunca gravou nada — as respostas dele estão no
+ * `chrome.storage`, algumas editadas à mão. Por isso a migração **reescreve**, em vez de só
+ * acrescentar como as outras.
+ *
+ * Ela é segura porque não reescreve texto: só apaga o marcador `{{primeiro_nome}}`/`{{nome}}` e
+ * a pontuação do vocativo em volta (ver `vars.semVocativo`, que é puro e testado). O resto da
+ * frase, inclusive o que o Thiago tenha escrito, fica intacto.
+ *
+ * Roda **uma vez só**: se ele quiser o nome de volta em alguma resposta, é só escrever e a
+ * migração não desfaz.
+ *
+ * A mensagem do momento (`auto.mensagemMomento`) entra junto: é texto que vai para o contato
+ * pelo mesmo caminho, e com nome ela travaria a tecla 5 do mesmo jeito.
+ */
+export async function migrarRespostasSemNome() {
+  const migracoes = await store.get('migracoes');
+  if (migracoes.respostasSemNome) return false;
+
+  const templates = await store.get('templates');
+  const mexidos = [];
+  for (const template of templates) {
+    if (!usaNome(template.text)) continue;
+    template.text = semVocativo(template.text);
+    mexidos.push(template.name);
+  }
+  if (mexidos.length) await store.set('templates', templates);
+
+  const auto = await store.get('auto');
+  if (usaNome(auto.mensagemMomento)) {
+    await store.set('auto', { ...auto, mensagemMomento: semVocativo(auto.mensagemMomento) });
+    mexidos.push('Mensagem do momento');
+  }
+
+  await store.set('migracoes', { ...migracoes, respostasSemNome: true });
+  return mexidos;
+}
 
 /**
  * Acrescenta a pergunta sobre grupos políticos ao "Pedir dados" que já está salvo no navegador.

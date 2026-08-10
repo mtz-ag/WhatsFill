@@ -3316,6 +3316,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const textArea = h('textarea', { rows: '5' });
     textArea.value = template.text;
 
+    // Aviso, não bloqueio: a decisão de não chamar pelo nome é dele, e ele pode desfazer numa
+    // resposta específica. O que não pode é o nome voltar sem ninguém perceber — foi ele que
+    // mandou "Boa noite, Zane!" para a Rosane e "Boa noite, Santa Cruz!" para a Serlei.
+    const avisoNome = h('div', { class: 'wf-block' },
+      'Esta resposta chama o contato pelo nome. O nome do cadastro erra bastante (apelido do ' +
+        'perfil, cidade no campo do nome, "[NOVO] …") e, sem valor, ele BLOQUEIA o envio.');
+    const conferirNome = () => {
+      avisoNome.style.display = vars.usaNome(textArea.value) ? '' : 'none';
+    };
+    textArea.addEventListener('input', conferirNome);
+
     const saveBtn = h('button', { class: 'wf-btn wf-mini wf-primary', type: 'button' }, 'Salvar');
     saveBtn.addEventListener('click', async () => {
       state.templates = await templatesLib.save({ id: template.id, name: nameInput.value, text: textArea.value });
@@ -3338,8 +3349,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       renderAll();
     });
 
-    card.append(nameInput, textArea, h('div', { class: 'wf-row' }, [saveBtn, upBtn, downBtn, delBtn]));
+    card.append(nameInput, textArea, avisoNome, h('div', { class: 'wf-row' }, [saveBtn, upBtn, downBtn, delBtn]));
     card.append(h('div', { class: 'wf-origin' }, 'id: ' + template.id));
+    conferirNome();
     return card;
   }
 
