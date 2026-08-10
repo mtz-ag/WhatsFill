@@ -1,0 +1,15 @@
+# Pacotes gerados para a Chrome Web Store
+dist/
+
+# Nunca versionar backup exportado do painel: leva contrato aprendido e, se você exportar com
+# o registro de envios, referência a contato real.
+*backup*.json
+
+node_modules/
+
+# Sistema operacional / editor
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/

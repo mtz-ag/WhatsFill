@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>WhatsFill — ajustes</title>
+    <style>
+      body {
+        font: 14px/1.6 -apple-system, "Segoe UI", Roboto, sans-serif;
+        max-width: 780px;
+        margin: 32px auto;
+        padding: 0 20px 60px;
+        color: #1f2937;
+      }
+      h1 { font-size: 20px; margin-bottom: 4px; }
+      h2 { font-size: 15px; margin: 26px 0 6px; }
+      p { color: #4b5563; }
+      textarea {
+        width: 100%;
+        min-height: 220px;
+        font-family: ui-monospace, Consolas, monospace;
+        font-size: 12px;
+        padding: 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+      }
+      button {
+        padding: 7px 14px;
+        margin-right: 8px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+      button.primary { background: #4f46e5; border-color: #4f46e5; color: #fff; font-weight: 600; }
+      #msg { margin-top: 10px; min-height: 20px; color: #059669; }
+      #msg.err { color: #dc2626; }
+      code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <h1>WhatsFill</h1>
+    <p>
+      O painel de trabalho fica <strong>dentro do mobiliza.app</strong>, na borda direita da tela —
+      é lá que ficam as respostas prontas, a classificação e a aba Config. Esta página serve para
+      backup e para editar tudo de uma vez com mais espaço.
+    </p>
+
+    <h2>Backup completo</h2>
+    <p>
+      Exporta respostas, tabela de grupos por cidade, dicionários do parser, ajustes e o contrato de
+      escrita aprendido. Não inclui o histórico de envios nem o cache de municípios (esses se
+      refazem sozinhos).
+    </p>
+    <textarea id="data" spellcheck="false"></textarea>
+    <p>
+      <button id="export" class="primary">Exportar</button>
+      <button id="import">Importar o que está na caixa</button>
+      <button id="download">Baixar como arquivo</button>
+    </p>
+    <div id="msg"></div>
+
+    <h2>Onde ficam as coisas</h2>
+    <p>
+      Respostas prontas, grupos por cidade e o aprendizado da gravação de campos: aba
+      <code>Config</code> do painel, dentro do mobiliza.app. A classificação do contato aberto fica
+      na aba <code>Dados</code>.
+    </p>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

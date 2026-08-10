@@ -1,0 +1,313 @@
+/* panel.css — serve os dois modos do painel:
+   - .wf-dock: encaixado na aba do mobiliza (dentro de um Shadow DOM), fixo na borda direita;
+     a página é empurrada por dock.js, então isto não cobre a conversa;
+   - .wf-window: ocupando uma janela própria do Chrome.
+
+   As variáveis ficam no .wf-root (e não em :root/:host) exatamente para funcionar igual nos
+   dois contextos. */
+
+.wf-root {
+  --wf-bg: #ffffff;
+  --wf-fg: #1f2937;
+  --wf-muted: #6b7280;
+  --wf-border: #e5e7eb;
+  --wf-accent: #4f46e5;
+  --wf-accent-fg: #ffffff;
+  --wf-ok: #059669;
+  --wf-warn: #b45309;
+  --wf-warn-bg: #fffbeb;
+  --wf-err: #dc2626;
+  --wf-chip: #f3f4f6;
+
+  display: flex;
+  flex-direction: column;
+  background: var(--wf-bg);
+  color: var(--wf-fg);
+  font: 13px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+/* Segue o tema da própria plataforma, informado a cada atualização de estado. */
+.wf-root.wf-dark {
+  --wf-bg: #111827;
+  --wf-fg: #e5e7eb;
+  --wf-muted: #9ca3af;
+  --wf-border: #374151;
+  --wf-chip: #1f2937;
+  --wf-warn-bg: #2b2410;
+}
+
+.wf-root *,
+.wf-root *::before,
+.wf-root *::after { box-sizing: border-box; }
+
+/* ---- modo encaixado ------------------------------------------------------ */
+
+/*
+  z-index 998 é escolhido, não arbitrário. Medido na plataforma:
+    conteúdo da página ....... até 50 (core-dialog-list, cabeçalho em 49)
+    fuse-loading-bar ......... 999
+    .cdk-overlay-container ... 1000  ← menus, diálogos, selects, tooltips do Material
+    fuse-splash-screen ....... 999999 (tela de carregamento, cobre tudo por definição)
+
+  Ficar em 998 deixa o painel acima de todo o conteúdo da página, mas ABAIXO dos overlays do
+  Material: assim o diálogo de Etiquetas, o menu do Concluir, o seletor de anexo e afins abrem
+  por cima do painel, como devem. Usar um z-index máximo faria o painel engolir todos eles.
+
+  Verificado na plataforma com elementsFromPoint: em 2147483000 o painel vencia um overlay de
+  z 1000; em 998 o overlay vence. (A plataforma ainda aplica zoom 0.9 no documento, então
+  compare sempre por getBoundingClientRect, não pelos valores do CSS.)
+
+  Efeito colateral aceito: a barra de carregamento (999) pinta uma linha de 6px no topo do
+  painel durante os carregamentos.
+*/
+.wf-root.wf-dock {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: var(--wf-width, 380px);
+  z-index: 998;
+  border-left: 1px solid var(--wf-border);
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.06);
+}
+
+.wf-root.wf-dock.wf-collapsed {
+  transform: translateX(100%);
+}
+
+/* Aba para mostrar/esconder. Fica fora da largura do painel, colada nele. */
+.wf-handle {
+  position: absolute;
+  left: -26px;
+  top: 96px;
+  width: 26px;
+  padding: 12px 0;
+  border: 1px solid var(--wf-border);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  background: var(--wf-accent);
+  color: var(--wf-accent-fg);
+  cursor: pointer;
+  writing-mode: vertical-rl;
+  text-align: center;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  user-select: none;
+}
+
+/* Puxador de largura na borda esquerda. */
+.wf-resizer {
+  position: absolute;
+  left: -3px;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+}
+.wf-resizer:hover { background: var(--wf-accent); opacity: 0.35; }
+
+/* ---- modo janela --------------------------------------------------------- */
+
+.wf-root.wf-window {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+}
+
+/* ---- conteúdo (igual nos dois modos) ------------------------------------- */
+
+.wf-root header {
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--wf-border);
+  flex: none;
+}
+
+.wf-conn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--wf-muted);
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.wf-who { font-weight: 600; font-size: 15px; }
+.wf-sub { color: var(--wf-muted); font-size: 12px; margin-top: 2px; }
+.wf-sub b { color: var(--wf-fg); font-weight: 600; }
+
+.wf-root nav {
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px 0;
+  border-bottom: 1px solid var(--wf-border);
+  flex: none;
+}
+
+.wf-root nav button {
+  /* min-width 0 + ellipsis: com quatro abas, "Automatizado" não cabe inteiro no painel mais
+     estreito (300px). Melhor cortar o rótulo do que estourar a barra. */
+  flex: 1;
+  min-width: 0;
+  padding: 7px 3px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--wf-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.wf-root nav button.wf-active { color: var(--wf-accent); border-bottom-color: var(--wf-accent); }
+
+.wf-body { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; padding: 10px 12px 20px; }
+
+.wf-card {
+  border: 1px solid var(--wf-border);
+  border-radius: 8px;
+  padding: 9px 10px;
+  margin-bottom: 8px;
+}
+.wf-card h4 { margin: 0 0 4px; font-size: 13px; }
+
+.wf-preview {
+  color: var(--wf-muted);
+  font-size: 12px;
+  white-space: pre-wrap;
+  max-height: 5.5em;
+  overflow: hidden;
+  margin-bottom: 7px;
+}
+
+.wf-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+.wf-root button.wf-btn {
+  padding: 6px 11px;
+  border-radius: 6px;
+  border: 1px solid var(--wf-border);
+  background: var(--wf-bg);
+  color: var(--wf-fg);
+  font: inherit;
+  cursor: pointer;
+}
+.wf-root button.wf-btn:hover:not(:disabled) { border-color: var(--wf-accent); }
+.wf-root button.wf-primary {
+  background: var(--wf-accent);
+  border-color: var(--wf-accent);
+  color: var(--wf-accent-fg);
+  font-weight: 600;
+}
+.wf-root button.wf-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.wf-root button.wf-danger { color: var(--wf-err); }
+.wf-root button.wf-mini { padding: 3px 7px; font-size: 12px; }
+
+.wf-block {
+  color: var(--wf-warn);
+  background: var(--wf-warn-bg);
+  border: 1px solid var(--wf-warn);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.wf-root label.wf-field { display: block; margin-bottom: 10px; }
+.wf-root label.wf-field > span { display: block; font-weight: 600; margin-bottom: 3px; }
+
+.wf-root input[type='text'],
+.wf-root select,
+.wf-root textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--wf-border);
+  border-radius: 6px;
+  background: var(--wf-bg);
+  color: var(--wf-fg);
+  font: inherit;
+}
+.wf-root textarea {
+  resize: vertical;
+  min-height: 70px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+}
+
+.wf-guess { border-color: var(--wf-warn) !important; background: var(--wf-warn-bg); }
+.wf-origin { color: var(--wf-muted); font-size: 11px; margin-top: 3px; font-weight: 400; }
+
+.wf-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.wf-chip {
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--wf-border);
+  background: var(--wf-chip);
+  color: var(--wf-fg);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.wf-chip.wf-on { background: var(--wf-accent); border-color: var(--wf-accent); color: var(--wf-accent-fg); }
+
+.wf-status {
+  flex: none;
+  padding: 8px 12px;
+  border-top: 1px solid var(--wf-border);
+  font-size: 12px;
+  min-height: 34px;
+  max-height: 6em;
+  overflow-y: auto;
+}
+.wf-status.wf-is-err { color: var(--wf-err); }
+.wf-status.wf-is-ok { color: var(--wf-ok); }
+
+/* ---- pergunta da rodada (três saídas + Esc) ------------------------------ */
+
+/*
+  Cobre o viewport inteiro de propósito: é decisão que não pode passar batida, e o clique fora
+  não deve cair na conversa por acidente. Fica abaixo dos overlays do Material (1000), como todo
+  o resto do painel — durante a pergunta nenhum overlay da plataforma está aberto.
+*/
+.wf-pergunta-fundo {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.wf-pergunta {
+  background: var(--wf-bg);
+  color: var(--wf-fg);
+  border: 1px solid var(--wf-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.wf-pergunta-titulo { font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+.wf-pergunta-linha { color: var(--wf-muted); font-size: 12px; }
+.wf-pergunta-corpo { margin: 10px 0 12px; font-size: 13px; white-space: pre-wrap; }
+
+.wf-pergunta-botoes { display: flex; flex-direction: column; gap: 6px; }
+/* Alinhados à esquerda para o número do atalho ficar na frente, fácil de mirar. */
+.wf-pergunta-botoes .wf-btn { text-align: left; }
+
+.wf-pergunta-dica { color: var(--wf-muted); font-size: 11px; margin-top: 10px; }
+
+.wf-hint { color: var(--wf-muted); font-size: 12px; margin: 0 0 8px; }
+.wf-mono { font-family: ui-monospace, Consolas, monospace; font-size: 11px; word-break: break-all; white-space: pre-wrap; }
+.wf-sep { border: none; border-top: 1px solid var(--wf-border); margin: 14px 0 10px; }
+.wf-root h3.wf-h { margin: 0 0 6px; font-size: 13px; }
+.wf-switch { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.wf-switch input { width: auto; }

@@ -1,0 +1,160 @@
+/**
+ * Modelos de mensagem: a escolha da linha no diálogo.
+ *
+ * É o ponto onde errar significa mandar o modelo errado para um contato real, e a conta tem
+ * modelos de nome repetido ("A" e "A", "Flávio" e "Flávio"), então a regra é: na dúvida,
+ * recusa.
+ */
+import { check, grupo, fim, lib, mem } from './_harness.mjs';
+
+const { pickRow, PARAMS_NAO_APRENDIDOS, templateParaConteudo, parseContentTemplates, formatContentTemplates, escolherConteudo } =
+  await lib('hsm.js');
+
+// Linhas como o diálogo as mostra: nome + começo do texto (line-clamp de uma linha).
+const LINHAS = [
+  { name: 'A', preview: 'Bom dia! Agora é oficial: aprovado na convenção, sou candidato' },
+  { name: 'A', preview: 'Boa tarde! Agora é oficial: aprovado na convenção, sou candidato' },
+  { name: 'Bolsonaro 03/08', preview: 'Ele avisou desde o início…' },
+  { name: 'Flávio', preview: 'Sintonizado com o Trabalho de Verdade! Você acaba de garantir' },
+  { name: 'Flávio', preview: 'Sintonizado com o Trabalho de Verdade! A partir de agora, você' },
+];
+
+grupo('nome único casa direto');
+{
+  const r = pickRow(LINHAS, { name: 'Bolsonaro 03/08', text: 'Ele avisou desde o início…' });
+  check(r && r.name === 'Bolsonaro 03/08', 'achou o modelo de nome único');
+}
+
+grupo('candidato único ainda assim confere o texto');
+{
+  // Regressão de um bug pego ao vivo: enquanto a busca repinta, a lista passa por um estado
+  // com UM só "Flávio" na tela — e era o Flávio errado. Aceitar pelo nome mandou o modelo
+  // trocado para a tela de envio. Nome nunca basta quando existe texto para conferir.
+  const soUmaLinha = [{ name: 'Flávio', preview: 'Sintonizado com o Trabalho de Verdade! Você acaba de garantir' }];
+
+  const errado = pickRow(soUmaLinha, { name: 'Flávio', text: 'Sintonizado com o Trabalho de Verdade!\n\nA partir de agora, você está conectado' });
+  check(errado === null, 'recusou o candidato único cujo texto diverge');
+
+  const certo = pickRow(soUmaLinha, { name: 'Flávio', text: 'Sintonizado com o Trabalho de Verdade!\n\nVocê acaba de garantir sua entrada' });
+  check(certo === soUmaLinha[0], 'aceitou o candidato único cujo texto bate');
+}
+
+grupo('nome repetido desempata pelo começo do texto');
+{
+  const manha = pickRow(LINHAS, { name: 'A', text: 'Bom dia! \n\nAgora é oficial: aprovado na convenção' });
+  check(manha && manha.preview.startsWith('Bom dia'), 'pegou a versão "Bom dia"');
+
+  const tarde = pickRow(LINHAS, { name: 'A', text: 'Boa tarde! \n\nAgora é oficial: aprovado na convenção' });
+  check(tarde && tarde.preview.startsWith('Boa tarde'), 'pegou a versão "Boa tarde"');
+}
+
+grupo('quebra de linha no texto da API não atrapalha o casamento');
+{
+  const r = pickRow(LINHAS, { name: 'Flávio', text: 'Sintonizado com o Trabalho de Verdade!\n\nVocê acaba de garantir sua entrada' });
+  check(r && /Você acaba/.test(r.preview), 'achatou os espaços e casou a linha certa');
+}
+
+grupo('ambiguidade recusa em vez de chutar');
+{
+  // Os dois "Flávio" começam igual: 16 primeiros caracteres não separam.
+  const r = pickRow(LINHAS, { name: 'Flávio', text: 'Sintonizado com o Trabalho de Verdade!' });
+  check(r === null, 'devolveu null quando o prefixo não desempata');
+
+  const semTexto = pickRow(LINHAS, { name: 'A', text: '' });
+  check(semTexto === null, 'modelo sem texto e nome repetido não é escolhido');
+}
+
+grupo('nome que não está na tela');
+{
+  check(pickRow(LINHAS, { name: 'Pampa', text: 'qualquer' }) === null, 'devolveu null');
+  check(pickRow([], { name: 'A', text: 'Bom dia' }) === null, 'lista vazia devolve null');
+}
+
+grupo('modelo com parâmetro tem recusa explicada');
+{
+  check(/parâmetro/i.test(PARAMS_NAO_APRENDIDOS), 'a mensagem diz o motivo');
+  check(/plataforma/i.test(PARAMS_NAO_APRENDIDOS), 'e diz o que fazer no lugar');
+}
+
+grupo('conteúdo pedido → modelo a enviar');
+{
+  const modelos = [
+    { id: 'm1', name: 'Zucco, Capitão', text: 'conteúdo do Zucco' },
+    { id: 'm2', name: 'Flávio', text: 'primeira versão' },
+    { id: 'm3', name: 'Flávio', text: 'segunda versão' },
+  ];
+  const mapa = parseContentTemplates('Conteúdo Zucco = Zucco, Capitão\nConteúdo Flávio = Flávio\nConteúdo Sumido = Não Existe');
+
+  const ok = templateParaConteudo('Conteúdo Zucco', mapa, modelos);
+  check(ok.modelo?.id === 'm1', 'achou o modelo mapeado');
+
+  // Nome do modelo que não existe na plataforma: recusa em vez de mandar outro parecido.
+  const inexistente = templateParaConteudo('Conteúdo Sumido', mapa, modelos);
+  check(!inexistente.modelo && /não está na lista/.test(inexistente.erro), 'modelo inexistente vira erro explicado');
+
+  // Dois modelos com o mesmo nome: não dá para saber qual, então não envia nenhum.
+  const ambiguo = templateParaConteudo('Conteúdo Flávio', mapa, modelos);
+  check(!ambiguo.modelo && /2 modelos/.test(ambiguo.erro), 'nome ambíguo recusa em vez de chutar');
+
+  const semMapa = templateParaConteudo('Conteúdo Novo', mapa, modelos);
+  check(!semMapa.modelo && /Config/.test(semMapa.erro), 'sem mapeamento, manda cadastrar na Config');
+
+  check(templateParaConteudo('Conteúdo Zucco', {}, modelos).erro != null, 'mapa vazio não inventa modelo');
+}
+
+grupo('empate entre conteúdos: vence o preferido');
+{
+  const zucco = { nome: 'Conteúdo Zucco' };
+  const flavio = { nome: 'Conteúdo Flávio' };
+
+  // Empate é comum porque as regras também casam contra a campanha do anúncio: anúncio que
+  // cita dois nomes faz o contato casar com os dois sem ter pedido nada.
+  const dois = escolherConteudo([zucco, flavio], 'Conteúdo Flávio');
+  check(dois.conteudo === flavio && dois.desempatado, 'com dois, escolheu o preferido');
+
+  const um = escolherConteudo([zucco], 'Conteúdo Flávio');
+  check(um.conteudo === zucco && !um.desempatado, 'com um só, não desempata nem troca');
+
+  check(escolherConteudo([zucco, flavio], 'conteúdo flávio').conteudo === flavio, 'caixa não engana');
+  check(escolherConteudo([zucco, flavio], 'Conteudo Flavio').conteudo === flavio, 'acento não engana');
+
+  // Preferido ausente da disputa: não dá para inventar um vencedor.
+  const semPreferido = escolherConteudo([zucco, { nome: 'Conteúdo Outro' }], 'Conteúdo Flávio');
+  check(!semPreferido.conteudo && /nenhum deles o preferido/.test(semPreferido.erro), 'preferido fora da disputa recusa');
+
+  const semConfig = escolherConteudo([zucco, flavio], '');
+  check(!semConfig.conteudo && /preferido definido/.test(semConfig.erro), 'sem preferido configurado, recusa');
+
+  check(escolherConteudo([], 'Conteúdo Flávio').erro === 'nenhum conteúdo reconhecido', 'lista vazia');
+}
+
+grupo('editor do mapeamento em texto');
+{
+  const mapa = parseContentTemplates('  Conteúdo Zucco = Zucco, Capitão \n# comentário\nlinha sem igual\n = sem etiqueta\nX =\n');
+  check(Object.keys(mapa).length === 1, 'ignorou comentário, linha sem "=", etiqueta vazia e modelo vazio');
+  check(formatContentTemplates(mapa).includes('Zucco, Capitão'), 'ida e volta preserva o nome do modelo');
+  // Vírgula no nome do modelo não pode quebrar o parse (só o primeiro "=" separa).
+  check(Object.values(mapa)[0] === 'Zucco, Capitão', 'nome com vírgula sobrevive');
+}
+
+grupo('registro anti-duplicata: por contato, com o nome de quem recebeu');
+{
+  // O aviso "já enviei esta resposta" apareceu em contato que não tinha recebido. O registro
+  // agora guarda o nome, e é ele que diz se o aviso é do contato certo.
+  const { wasSent, markSent } = await lib('templates.js');
+
+  mem.sentLog = {};
+  await markSent('c-1', 'pedir-dados', { nome: 'Marines' });
+
+  const entrada = await wasSent('c-1', 'pedir-dados');
+  check(entrada?.nome === 'Marines' && entrada.at > 0, `guardou nome e data = ${JSON.stringify(entrada)}`);
+  check((await wasSent('c-2', 'pedir-dados')) === null, 'outro contato não herda o registro');
+  check((await wasSent('c-1', 'agradecimento')) === null, 'outro template do mesmo contato também não');
+
+  // Registro gravado por versão anterior era só o timestamp.
+  mem.sentLog = { 'c-9|pedir-dados': 1754000000000 };
+  const antigo = await wasSent('c-9', 'pedir-dados');
+  check(antigo?.at === 1754000000000 && antigo.nome === '', 'registro antigo (só timestamp) continua valendo');
+}
+
+fim();

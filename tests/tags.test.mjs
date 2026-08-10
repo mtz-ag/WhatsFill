@@ -1,0 +1,141 @@
+/**
+ * Testa as etiquetas: região pelo COREDE, conteúdo pelas regras de texto, apelidos e — o mais
+ * importante — a união ao aplicar, que é o que impede apagar etiquetas que o contato já tinha.
+ *
+ * Rode: node tests/tags.test.mjs
+ */
+
+import { readFileSync } from 'node:fs';
+import { check, grupo, fim, lib, mem } from './_harness.mjs';
+
+const tags = await lib('tags.js');
+const api = await lib('api.js');
+
+/** Etiquetas reais do CRM (rótulo vem em `message`), reduzidas ao que interessa aqui. */
+const TAGS_CRM = [
+  { id: 't-zucco', message: 'Conteúdo Zucco', active: true },
+  { id: 't-flavio', message: 'Conteúdo Flávio', active: true },
+  { id: 't-metro', message: 'Metropolitano Delta do Jacuí', active: true },
+  { id: 't-missoes', message: 'Missões', active: true },
+  { id: 't-centrosul', message: 'Centro Sul', active: true },
+  { id: 't-paranhana', message: 'Vale do Paranhana', active: true },
+  { id: 't-inativa', message: 'Etiqueta desativada', active: false },
+  { id: 't-outra', message: 'Interesse em Apoiar', active: true },
+];
+
+const chamadas = [];
+
+globalThis.fetch = async (url, init = {}) => {
+  const u = String(url);
+  chamadas.push({ url: u, method: init.method || 'GET', body: init.body });
+  if (u.includes('/core/v1/tag')) {
+    return { ok: true, status: 200, text: async () => JSON.stringify(TAGS_CRM) };
+  }
+  return { ok: true, status: 200, text: async () => '{}' };
+};
+
+// O transporte real (fetch) é o que roda dentro da aba do mobiliza; aqui o fetch está stubado
+// acima, então testamos exatamente o caminho que a aba executa.
+api.setTransport(api.createFetchTransport(() => 'Bearer fake'));
+
+const dados = JSON.parse(
+  readFileSync(new URL('../src/data/coredes-rs.json', import.meta.url), 'utf8')
+);
+tags.setCoredeLoader(async () => dados);
+
+grupo('dados oficiais de COREDE');
+check(dados._municipios === 497, `municípios na tabela = ${dados._municipios}`);
+check((await tags.coredeFor('Porto Alegre')) === 'Metropolitano Delta do Jacuí', 'Porto Alegre → Metropolitano Delta do Jacuí');
+check((await tags.coredeFor('Santo Ângelo')) === 'Missões', 'Santo Ângelo → Missões');
+check((await tags.coredeFor('sto angelo')) === 'Missões', 'abreviação e falta de acento também acham o COREDE');
+check((await tags.coredeFor('Curitiba')) === null, 'município de fora do RS não inventa COREDE');
+
+grupo('resolução do nome contra as etiquetas reais do CRM');
+check((await tags.resolveTag('Metropolitano Delta do Jacuí'))?.id === 't-metro', 'nome exato');
+check((await tags.resolveTag('Centro-Sul'))?.id === 't-centrosul', 'planilha diz "Centro-Sul", CRM diz "Centro Sul"');
+check((await tags.resolveTag('Paranhana Encosta da Serra'))?.id === 't-paranhana', 'apelido padrão resolve Paranhana');
+check((await tags.resolveTag('Etiqueta desativada')) === null, 'etiqueta inativa é ignorada');
+check((await tags.resolveTag('Região Inexistente')) === null, 'nome sem etiqueta devolve null, não chuta');
+
+grupo('sugestão para o caso do print');
+{
+  const sug = await tags.suggest({
+    city: 'Porto Alegre',
+    texts: ['Olá! Eu aceito receber conteúdos do Zucco e do Cap Martim.'],
+  });
+  const regiao = sug.find((s) => s.origem === 'região');
+  const conteudo = sug.find((s) => s.origem === 'conteúdo');
+  check(regiao?.tag?.id === 't-metro', `região = ${regiao?.nome} (${regiao?.tag?.label})`);
+  check(conteudo?.tag?.id === 't-zucco', `conteúdo = ${conteudo?.nome}`);
+  check(sug.length === 2, `duas sugestões, nada além = ${sug.length}`);
+}
+
+grupo('sugestão para conteúdo do Flávio');
+{
+  const sug = await tags.suggest({
+    city: 'Santo Ângelo',
+    texts: ['Aceito receber conteúdo do Flávio Bolsonaro'],
+  });
+  check(sug.find((s) => s.origem === 'conteúdo')?.tag?.id === 't-flavio', 'etiqueta Conteúdo Flávio');
+  check(sug.find((s) => s.origem === 'região')?.tag?.id === 't-missoes', 'etiqueta Missões');
+}
+
+grupo('cidade fora da tabela avisa em vez de etiquetar errado');
+{
+  const sug = await tags.suggest({ city: 'Cidade Que Não Existe', texts: ['zucco'] });
+  const regiao = sug.find((s) => s.origem === 'região');
+  check(regiao && regiao.tag === null && /não está na tabela oficial/.test(regiao.motivo), `motivo = ${regiao?.motivo}`);
+}
+
+grupo('regra com regex inválida não derruba a sugestão');
+{
+  mem.tagRules = [{ padrao: '[', etiqueta: 'Qualquer' }, { padrao: 'zucco', etiqueta: 'Conteúdo Zucco' }];
+  const sug = await tags.suggest({ city: '', texts: ['zucco'] });
+  check(sug.length === 1 && sug[0].tag?.id === 't-zucco', 'ignorou a regra inválida e manteve a boa');
+  delete mem.tagRules;
+}
+
+grupo('applyTags SOMA às etiquetas existentes');
+{
+  mem.writeContract = {
+    entries: [
+      {
+        type: 'TAGS',
+        method: 'PUT',
+        url: 'https://api.mobiliza.app/core/v1/contact/{{contactId}}/tag',
+        bodyShape: { tagsId: ['t-outra'] },
+        paths: { value: 'tagsId[0]', valueIsArrayItem: true, contactId: null, fieldId: null },
+        learnedFieldId: 'campo-etiquetas',
+      },
+    ],
+  };
+
+  chamadas.length = 0;
+  const contato = { id: 'c-1', tagsId: ['t-outra'] };
+  const r = await tags.applyTags(contato, ['t-metro', 't-zucco']);
+  const enviada = chamadas.find((c) => c.method === 'PUT');
+  const corpo = JSON.parse(enviada.body);
+
+  check(r.ok, 'gravou');
+  check(enviada.url.includes('c-1'), `contato certo na URL = ${enviada.url}`);
+  check(corpo.tagsId.includes('t-outra'), 'etiqueta que o contato já tinha foi preservada');
+  check(corpo.tagsId.includes('t-metro') && corpo.tagsId.includes('t-zucco'), 'novas etiquetas entraram');
+  check(corpo.tagsId.length === 3, `sem duplicar = ${JSON.stringify(corpo.tagsId)}`);
+}
+
+grupo('applyTags não faz requisição quando não há o que somar');
+{
+  chamadas.length = 0;
+  const r = await tags.applyTags({ id: 'c-1', tagsId: ['t-metro'] }, ['t-metro']);
+  check(r.ok && r.skipped, 'marcou como skipped');
+  check(!chamadas.some((c) => c.method === 'PUT'), 'nenhuma escrita disparada');
+}
+
+grupo('sem contrato aprendido, recusa em vez de tentar');
+{
+  delete mem.writeContract;
+  const r = await tags.applyTags({ id: 'c-1', tagsId: [] }, ['t-metro']);
+  check(!r.ok && /Aprender etiquetas/.test(r.error), `erro = ${r.error}`);
+}
+
+fim();

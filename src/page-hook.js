@@ -1,0 +1,114 @@
+/**
+ * page-hook.js — roda no mundo MAIN (mesmo contexto JS do Angular).
+ *
+ * Existe por um motivo só: o access token do mobiliza.app vive na memória do app
+ * (só o refresh-token fica no localStorage) e é anexado como header em XHR. Um content
+ * script no mundo ISOLATED não consegue ler isso, então interceptamos aqui e mandamos
+ * o token para o mundo ISOLATED por postMessage.
+ *
+ * O segundo papel é o gravador (Fase 0): capturar método/URL/body das requisições que a
+ * própria plataforma faz quando você altera um campo pela interface, para a extensão
+ * aprender o contrato de escrita em vez de adivinhá-lo.
+ *
+ * Nada é enviado para fora da página. Script clássico (sem import/export) de propósito.
+ */
+(() => {
+  'use strict';
+
+  if (window.__whatsfillHooked) return;
+  window.__whatsfillHooked = true;
+
+  const API = 'https://api.mobiliza.app';
+  const ORIGIN = window.location.origin;
+  let recording = false;
+  let lastToken = null;
+
+  function send(type, payload) {
+    try {
+      window.postMessage({ __whatsfill: 'page', type, payload }, ORIGIN);
+    } catch (_) {
+      /* payload não serializável — ignora */
+    }
+  }
+
+  window.addEventListener('message', (ev) => {
+    if (ev.source !== window || ev.origin !== ORIGIN) return;
+    const msg = ev.data;
+    if (!msg || msg.__whatsfill !== 'cs') return;
+    if (msg.type === 'recorder') recording = !!msg.payload?.enabled;
+    if (msg.type === 'ping' && lastToken) send('token', { token: lastToken });
+  });
+
+  // ---- XHR -----------------------------------------------------------------
+  const origOpen = XMLHttpRequest.prototype.open;
+  const origSend = XMLHttpRequest.prototype.send;
+  const origSetHeader = XMLHttpRequest.prototype.setRequestHeader;
+
+  XMLHttpRequest.prototype.open = function (method, url) {
+    try {
+      this.__wf = { method: String(method || '').toUpperCase(), url: String(url || '') };
+    } catch (_) {}
+    return origOpen.apply(this, arguments);
+  };
+
+  XMLHttpRequest.prototype.setRequestHeader = function (name, value) {
+    try {
+      if (/^authorization$/i.test(name) && value && value !== lastToken) {
+        lastToken = value;
+        send('token', { token: value });
+      }
+    } catch (_) {}
+    return origSetHeader.apply(this, arguments);
+  };
+
+  XMLHttpRequest.prototype.send = function (body) {
+    try {
+      const info = this.__wf;
+      if (recording && info && info.url.startsWith(API) && info.method !== 'GET') {
+        send('request', {
+          method: info.method,
+          url: info.url,
+          body: serializeBody(body),
+          at: Date.now(),
+        });
+      }
+    } catch (_) {}
+    return origSend.apply(this, arguments);
+  };
+
+  // ---- fetch (a plataforma usa XHR, mas cobrimos os dois) -------------------
+  const origFetch = window.fetch;
+  window.fetch = function (input, init) {
+    try {
+      const url = typeof input === 'string' ? input : input && input.url;
+      const method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+      if (init && init.headers) {
+        const auth = new Headers(init.headers).get('authorization');
+        if (auth && auth !== lastToken) {
+          lastToken = auth;
+          send('token', { token: auth });
+        }
+      }
+      if (recording && url && String(url).startsWith(API) && method !== 'GET') {
+        send('request', { method, url: String(url), body: serializeBody(init && init.body), at: Date.now() });
+      }
+    } catch (_) {}
+    return origFetch.apply(this, arguments);
+  };
+
+  function serializeBody(body) {
+    if (body == null) return null;
+    if (typeof body === 'string') return body;
+    if (body instanceof URLSearchParams) return body.toString();
+    if (body instanceof FormData) {
+      const out = {};
+      for (const [k, v] of body.entries()) out[k] = typeof v === 'string' ? v : '[arquivo]';
+      return JSON.stringify(out);
+    }
+    try {
+      return JSON.stringify(body);
+    } catch (_) {
+      return '[body não serializável]';
+    }
+  }
+})();
