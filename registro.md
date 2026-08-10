@@ -64,6 +64,59 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
+## 2026-08-10 — A pergunta da rodada sai do lugar (e para de bloquear a conversa)
+
+**Pedido (Thiago):** "atualmente as perguntas e respostas estão presas, eu queria poder mover
+para ver o chat atrás", com print da pergunta bem em cima da conversa.
+
+### O problema era maior do que "não dá para mover"
+
+A caixa era um diálogo modal clássico: `position: fixed; inset: 0` com fundo escurecido. Duas
+consequências, e a segunda ninguém tinha nomeado:
+
+1. a conversa ficava **escurecida** atrás da caixa;
+2. a camada **comia o clique** — não dava nem para rolar o histórico.
+
+E a decisão que a pergunta pede (mandar modelo? agradecer? pular?) depende exatamente de ler o
+que a pessoa escreveu. A caixa cobria a informação necessária para responder a própria caixa.
+
+### O conserto
+
+A camada virou trilho invisível (`pointer-events: none`, sem fundo); quem recebe clique é só a
+caixa. A caixa arrasta pelo **título**, que ganhou `cursor: grab` e um pontilhado de alça. A
+posição fica em `settings.perguntaPos`, então arrastar uma vez vale para os próximos contatos e
+para as próximas rodadas.
+
+- **`setPointerCapture`, não listener no documento.** Arrastando por cima da conversa da
+  plataforma, um listener no documento perde o `pointermove` e a caixa gruda no meio do arrasto.
+- **Posição contida na janela.** Monitor desconectado ou arrasto até a borda deixariam a
+  pergunta fora da vista — e ela é modal para a rodada: pergunta invisível trava o trabalho sem
+  dizer por quê. Mesma lição do `sanitize()` das janelas em `background.js`.
+
+### A consequência que quase passou batida
+
+Com a página clicável, ele pode focar o campo de mensagem da plataforma — e o atalho da rodada é
+escutado no documento, em captura. Digitar "2" numa resposta à mão **concluiria o atendimento**.
+Agora `aoTeclar` ignora evento cujo alvo é campo de texto (`composedPath()[0]`, por causa do
+shadow root).
+
+### Conferido no navegador
+
+`tools/checar-pergunta.mjs` (novo) monta a caixa com o `panel.css` de verdade e confere o
+contrato: camada transparente, camada atravessável, caixa clicável, **clique na conversa atrás
+chegando ao destino**, título com cursor de alça e a caixa obedecendo a `left`/`top` quando
+solta. São as linhas de CSS que qualquer refatoração desfaz sem querer.
+
+O arrasto em si eu exercitei com mouse de verdade (`pointerdown` → `move` → `up`): move, grava a
+posição, e para na borda quando arrastado para fora — nos dois sentidos.
+
+### Arquivos alterados
+
+`src/panel/panel.css`, `src/panel/panel.js`, `src/lib/store.js`, `tools/checar-pergunta.mjs`
+(novo), `CLAUDE.md`.
+
+---
+
 ## 2026-08-10 — A rodada não retomava depois da conclusão à mão (a figura era inocente)
 
 **Relato dele:** "enviei a figura e não resumiu a automatização", com print da tela inteira.

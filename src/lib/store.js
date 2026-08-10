@@ -156,6 +156,12 @@ const DEFAULTS = {
     autoApply: true,
     panelOpen: true, // painel encaixado visível
     dockWidth: 380, // largura do painel encaixado, ajustável pelo puxador
+    /**
+     * Onde a caixa de pergunta da rodada foi largada, em pixels da janela. `null` = centro.
+     * Fica aqui, e não em `auto`, porque é preferência de tela como a largura do painel — vale
+     * para todas as rodadas, não para uma configuração de rodada.
+     */
+    perguntaPos: null,
   },
 
   /**

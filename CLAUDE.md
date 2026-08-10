@@ -99,8 +99,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   deixou a rodada esperando 30 min por um atendimento já concluído. Mexeu em sinal de tela?
   Rode `node tools/checar-dom.mjs`, que confere os dois retratos (precisa de Playwright; fora
   das seis suítes de propósito).
-- **A pergunta da rodada cobre o painel inteiro** (`position: fixed`), então tudo que ele precisa
-  no meio da rodada tem que estar DENTRO dela: as respostas prontas são a lista de
+- **A pergunta da rodada não pode escurecer nem bloquear a conversa.** A decisão que ela pede
+  depende de ler o que a pessoa escreveu: a camada é `pointer-events: none` e sem fundo, a caixa
+  é arrastável pelo título e a posição fica no `settings`. Mexeu no CSS dela? Rode
+  `node tools/checar-pergunta.mjs`. Como a página ficou clicável, atalho de tecla **ignora
+  evento vindo de campo de texto** — senão o "2" digitado na conversa conclui o atendimento.
+  O que ele precisar no meio da rodada tem que estar DENTRO da caixa: as respostas prontas são
   `montarRespostasRapidas`, e enviar dali não fecha a pergunta.
 - **Bloqueio de variável nunca pode virar saída de rodada.** Faltou `{{primeiro_nome}}`? Isso
   tira a OPÇÃO da pergunta, com o motivo na tela — nunca o contato da fila. Já entrou por duas

@@ -2211,7 +2211,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const caixa = h('div', { class: 'wf-pergunta' });
       const fundo = h('div', { class: 'wf-pergunta-fundo' }, [caixa]);
 
-      caixa.append(h('div', { class: 'wf-pergunta-titulo' }, titulo));
+      const barra = h('div', { class: 'wf-pergunta-titulo' }, titulo);
+      caixa.append(barra);
+      tornarArrastavel(caixa, barra);
       // Linha pode ser texto ou lista de nós — é o que deixa a cidade sair em marca-texto.
       // Linha de aviso (começa com ⚠) sai destacada: ela existe justamente para ser notada
       // antes de a tecla ser apertada, e cinza-claro como as outras ela passa batido.
@@ -2238,6 +2240,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       caixa.append(h('div', { class: 'wf-pergunta-dica' }, 'Esc para parar a rodada'));
 
       function aoTeclar(ev) {
+        // Você está digitando na conversa: o "2" é um dois, não a tecla Pular.
+        //
+        // Antes a camada da pergunta bloqueava a página inteira e não havia como estar
+        // digitando em lugar nenhum. Agora que a conversa é clicável (para você ler e responder
+        // sem parar a rodada), o atalho tem que sair da frente de quem está escrevendo — senão
+        // o número vai para a decisão e o atendimento fecha no meio de uma frase.
+        if (ehCampoDeTexto(ev.composedPath?.()[0] || ev.target)) return;
+
         const opcao = opcoes.find((o) => o.tecla === ev.key);
         if (!opcao && ev.key !== 'Escape') return;
         ev.preventDefault();
@@ -2254,8 +2264,88 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // Captura no documento: o shadow root não recebe tecla quando o foco está na página.
       document.addEventListener('keydown', aoTeclar, true);
       root.append(fundo);
+      // De novo agora que a caixa está na tela: fora do DOM ela não tem altura, e o limite de
+      // "não sair da janela" sairia calculado por estimativa.
+      aplicarPosicao(caixa, state.settings.perguntaPos);
       botoes[0]?.focus();
     });
+  }
+
+  /** Campo onde alguém digita: input, textarea ou qualquer coisa editável (o composer é um). */
+  function ehCampoDeTexto(el) {
+    if (!el || el.nodeType !== 1) return false;
+    const tag = String(el.tagName || '').toLowerCase();
+    return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable === true;
+  }
+
+  /**
+   * Deixa a caixa de pergunta ser arrastada pelo título, e lembra onde você a largou.
+   *
+   * A pergunta nasceu presa no centro da tela, em cima da conversa — e a decisão que ela pede
+   * (mandar modelo? agradecer? pular?) depende de ler o que a pessoa escreveu. Arrastar uma vez
+   * resolve para a rodada inteira: a posição fica no `settings`, então vale também para os
+   * próximos contatos e para as próximas rodadas.
+   *
+   * `setPointerCapture` em vez de ouvir o documento: o ponteiro continua sendo desta alça mesmo
+   * quando o cursor passa por cima do iframe/conversa da plataforma, que é onde um listener no
+   * documento perderia o `pointermove` e a caixa "grudaria" no meio do arrasto.
+   */
+  function tornarArrastavel(caixa, alca) {
+    aplicarPosicao(caixa, state.settings.perguntaPos);
+
+    let arrasto = null;
+
+    alca.addEventListener('pointerdown', (ev) => {
+      if (ev.button !== 0) return;
+      const r = caixa.getBoundingClientRect();
+      // Fixa a posição atual ANTES de mexer: até aqui ela vinha do flex, sem left/top nenhum.
+      arrasto = { dx: ev.clientX - r.left, dy: ev.clientY - r.top };
+      aplicarPosicao(caixa, { left: r.left, top: r.top });
+      alca.setPointerCapture(ev.pointerId);
+      ev.preventDefault();
+    });
+
+    alca.addEventListener('pointermove', (ev) => {
+      if (!arrasto) return;
+      aplicarPosicao(caixa, { left: ev.clientX - arrasto.dx, top: ev.clientY - arrasto.dy });
+    });
+
+    const soltar = (ev) => {
+      if (!arrasto) return;
+      arrasto = null;
+      if (alca.hasPointerCapture?.(ev.pointerId)) alca.releasePointerCapture(ev.pointerId);
+      const r = caixa.getBoundingClientRect();
+      const pos = { left: Math.round(r.left), top: Math.round(r.top) };
+      state.settings.perguntaPos = pos;
+      // Grava relendo o storage: a Config mexe no mesmo objeto por outro caminho.
+      salvarAjuste({ perguntaPos: pos }).catch(() => {});
+    };
+    alca.addEventListener('pointerup', soltar);
+    alca.addEventListener('pointercancel', soltar);
+  }
+
+  /**
+   * Posiciona a caixa, sempre dentro da tela.
+   *
+   * O limite não é enfeite: monitor desconectado, janela redimensionada ou um arrasto até a
+   * borda deixariam a pergunta fora da vista — e ela é modal para a rodada, então uma pergunta
+   * invisível trava o trabalho sem dizer por quê. Mesma lição do `sanitize()` das janelas.
+   */
+  function aplicarPosicao(caixa, pos) {
+    if (!pos || !Number.isFinite(pos.left) || !Number.isFinite(pos.top)) {
+      caixa.classList.remove('wf-pergunta-solta');
+      caixa.style.left = '';
+      caixa.style.top = '';
+      return;
+    }
+    caixa.classList.add('wf-pergunta-solta');
+    const largura = caixa.offsetWidth || 460;
+    const altura = caixa.offsetHeight || 200;
+    // Deixa sempre uma faixa visível, mesmo que a caixa seja mais alta que a janela.
+    const maxLeft = Math.max(0, window.innerWidth - largura);
+    const maxTop = Math.max(0, window.innerHeight - Math.min(altura, window.innerHeight - 40));
+    caixa.style.left = `${Math.min(Math.max(0, pos.left), maxLeft)}px`;
+    caixa.style.top = `${Math.min(Math.max(0, pos.top), maxTop)}px`;
   }
 
   /**
