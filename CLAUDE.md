@@ -106,6 +106,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   evento vindo de campo de texto** — senão o "2" digitado na conversa conclui o atendimento.
   O que ele precisar no meio da rodada tem que estar DENTRO da caixa: as respostas prontas são
   `montarRespostasRapidas`, e enviar dali não fecha a pergunta.
+- **Regra da rodada que depende de estado invisível parece defeito.** A conclusão automática
+  ("última mensagem minha") ganhou uma exceção para quem não tinha etiqueta de conteúdo, e o
+  relato foi "alguns concluem e outros não". Funcionava como projetado — e mesmo assim estava
+  errado. Se a rodada tratar dois contatos de forma diferente, o motivo tem que estar na tela.
 - **Mudou o texto de uma pergunta? O parser da resposta muda junto.** A pergunta de interesse
   passou a pedir "Sim / Nome / Cidade" e, de repente, `respostaAfirmativa` (limite de palavras +
   negação em qualquer lugar) recusava a resposta certa, e o "Sim" virava o nome do eleitor. Toda

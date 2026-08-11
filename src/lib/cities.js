@@ -267,16 +267,23 @@ function prefixoDeMunicipio(words, lista) {
 
   if (!melhor) return null;
 
-  // Prefixo de DUAS palavras escrito certo identifica o município sem margem ("Santa Cruz" só
-  // pode ser Santa Cruz do Sul). De uma palavra só, nunca: "Palmares" é quase certamente
-  // Palmares do Sul, mas "quase" não grava sozinho em contato real — vira palpite e espera o
-  // seu clique.
+  /**
+   * Quando o prefixo vale como EXATO — que é o que grava sem clique.
+   *
+   * Escrito certo (`d === 0`) e com duas palavras ou mais, sempre: "Santa Cruz" só pode ser
+   * Santa Cruz do Sul.
+   *
+   * Com uma palavra só, vale quando ela é a resposta INTEIRA. "Caxias", sozinho no campo da
+   * cidade, é Caxias do Sul e não havia por que esperar clique — foi o relato dele. Já
+   * "trabalhei em Caxias uns anos" é menção no meio de uma frase: continua palpite, porque a
+   * palavra solta pode ser nome de gente ("Vitória", "Esperança", "Rosário" também são começo
+   * de município) e aí gravar sozinho trocaria a cidade de um eleitor.
+   */
   const umaPalavra = melhor.gram.split(' ').length === 1;
-  return {
-    city: melhor.city,
-    confidence: melhor.d === 0 && !umaPalavra ? 'exata' : 'aproximada',
-    matched: melhor.gram,
-  };
+  const respostaInteira = melhor.gram === words.join(' ');
+  const exato = melhor.d === 0 && (!umaPalavra || respostaInteira);
+
+  return { city: melhor.city, confidence: exato ? 'exata' : 'aproximada', matched: melhor.gram };
 }
 
 /**

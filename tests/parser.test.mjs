@@ -268,9 +268,17 @@ grupo('nome de cidade encurtado (não precisa estar perfeito)');
   check((await hit('trindade'))?.city === 'Trindade do Sul', 'Trindade → Trindade do Sul');
   check((await hit('livramento'))?.city === 'Santana do Livramento', 'Livramento → Santana do Livramento');
 
-  // Uma palavra NUNCA é exata: espera clique, nunca é gravada sozinha em contato real.
-  check((await hit('palmares'))?.confidence === 'aproximada', 'uma palavra só é sempre aproximada');
+  // Uma palavra vale como EXATA quando é a resposta inteira — "Caxias", sozinho no campo da
+  // cidade, é Caxias do Sul e não havia por que esperar clique (relato dele, 11/08).
+  check((await hit('Caxias'))?.city === 'Caxias do Sul', 'Caxias → Caxias do Sul');
+  check((await hit('Caxias'))?.confidence === 'exata', 'resposta de uma palavra só é exata');
   check((await hit('Palmares do Sul'))?.confidence === 'exata', 'o nome inteiro continua exato');
+
+  // Mas menção no meio de uma frase continua esperando clique: a palavra solta pode ser nome de
+  // gente ("Vitória", "Esperança" e "Rosário" também são começo de município), e aí gravar
+  // sozinho trocaria a cidade de um eleitor.
+  check((await hit('trabalhei em Caxias uns anos'))?.confidence === 'aproximada', 'menção no meio da frase espera clique');
+  check((await hit('moro em Vitória'))?.confidence === 'aproximada', 'nome de gente no meio da frase também');
 
   // O que a abertura NÃO pode ter deixado passar.
   check((await hit('Carlos')) === null, 'primeiro nome não vira "Carlos Barbosa"');

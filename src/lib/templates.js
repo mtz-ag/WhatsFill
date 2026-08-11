@@ -18,6 +18,7 @@ export async function list() {
     await migrarRespostaInteresse();
     await migrarRespostasSemNome();
     await migrarInteressePedeDados();
+    await migrarGruposPedeLink();
   }
   return store.get('templates');
 }
@@ -87,6 +88,30 @@ export const migrarRespostaAgradecerInfo = () =>
 /** A pergunta de interesse no conteúdo, para quem já tinha a lista de respostas salva. */
 export const migrarRespostaInteresse = () =>
   garantirRespostas(['interesse-conteudo'], 'respostaInteresseConteudo');
+
+/**
+ * A pergunta dos grupos passa a pedir o LINK de convite, e não o nome.
+ *
+ * Nome de grupo não serve para nada: é o link que permite entrar. Como a frase vive dentro de
+ * outras respostas (hoje o `pedir-dados`), a troca é feita **em qualquer resposta que a
+ * contenha literalmente** — quem reescreveu a frase fica com a dele.
+ */
+export async function migrarGruposPedeLink() {
+  const migracoes = await store.get('migracoes');
+  if (migracoes.gruposPedeLink) return false;
+
+  const templates = await store.get('templates');
+  const mexidos = [];
+  for (const template of templates) {
+    if (!String(template.text || '').includes(store.PERGUNTA_GRUPOS_ANTIGA)) continue;
+    template.text = template.text.replace(store.PERGUNTA_GRUPOS_ANTIGA, store.PERGUNTA_GRUPOS);
+    mexidos.push(template.name);
+  }
+  if (mexidos.length) await store.set('templates', templates);
+
+  await store.set('migracoes', { ...migracoes, gruposPedeLink: true });
+  return mexidos;
+}
 
 /**
  * A pergunta de interesse passa a pedir nome e cidade junto.

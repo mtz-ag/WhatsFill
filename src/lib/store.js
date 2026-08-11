@@ -10,7 +10,22 @@
  * (`templates.migrarPerguntaGrupos`) precisa do mesmo texto para acrescentar ao template que
  * já estava salvo no navegador.
  */
+/**
+ * Pergunta sobre grupos que a pessoa já participa.
+ *
+ * **Pede o LINK, não o nome** (decisão do Thiago, 11/08): o nome do grupo não serve para nada —
+ * é o link de convite que permite entrar. Pedir "o nome ou o link" fazia quase todo mundo
+ * mandar só o nome, e aí a informação chegava inútil e ainda dava trabalho de ler.
+ *
+ * O caminho no WhatsApp vai escrito na mensagem porque a maioria não sabe onde fica.
+ */
 export const PERGUNTA_GRUPOS =
+  'Ah, e me conta: você já faz parte de algum grupo político no WhatsApp? ' +
+  'Se sim, me manda o *link de convite* dele — é por ele que eu consigo entrar e somar com ' +
+  'vocês. (No grupo: toque no nome dele em cima → Convidar via link → Copiar link.) 🇧🇷';
+
+/** A versão anterior, que pedia "o nome ou o link". Só a migração usa. */
+export const PERGUNTA_GRUPOS_ANTIGA =
   'Ah, e me conta: você já faz parte de algum grupo político no WhatsApp? ' +
   'Se sim, me manda o nome ou o link — assim consigo somar por lá também. 🇧🇷';
 

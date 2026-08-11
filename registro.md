@@ -64,6 +64,68 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
+## 2026-08-11 — Quatro itens da lista da manhã
+
+**Pedido (Thiago):** prints do WhatsApp e da tela.
+
+### 1. "Mudar a mensagem que pede grupos para pedir link e não o nome"
+
+Nome de grupo não serve para nada — é o link de convite que permite entrar. Pedir "o nome ou o
+link" fazia quase todo mundo mandar só o nome. A frase agora pede o link e **ensina o caminho**
+(tocar no nome do grupo → Convidar via link → Copiar link), porque a maioria não sabe onde fica.
+
+`migrarGruposPedeLink` troca por substring: a frase mora **dentro** do `pedir-dados`, e pode
+morar em outras respostas. Só troca onde ela aparece literalmente.
+
+### 2. "Caxias não pegou como cidade, seria caxias do sul"
+
+Meia verdade — e o "meia" é o que interessa. Na versão que ele está rodando, "Caxias" não casava
+nada (o prefixo de uma palavra é da leva de ontem). Na versão nova ele **já casava**, mas como
+`aproximada`, que é o palpite que **espera clique** e nunca grava sozinho. Do lado dele, o efeito
+é o mesmo: a cidade não entra.
+
+Prefixo de uma palavra agora vale como **exata quando é a resposta inteira**. "Caxias", sozinho
+no campo da cidade, é Caxias do Sul. Já "trabalhei em Caxias uns anos" continua palpite: em
+frase, a palavra solta pode ser nome de gente — **Vitória**, **Esperança** e **Rosário** também
+são começo de município do RS, e gravar sozinho ali trocaria a cidade de um eleitor.
+
+Levantei as 48 palavras que passam a gravar sozinhas para conferir a lista antes de mexer.
+
+### 3. "Alguns estão concluindo quando a minha é a última mensagem e outros não"
+
+**Causa raiz: uma exceção que eu mesmo criei ontem.** A regra dele era "última mensagem minha →
+concluir", sem ressalva; eu abri uma exceção para quem ainda não tinha etiqueta de conteúdo, com
+a ideia de oferecer a pergunta de interesse antes de fechar.
+
+Funcionava como projetado, e mesmo assim é defeito: a diferença depende de um estado que não
+está na tela. Regra que parece aleatória para quem usa **é** uma regra ruim, e a instrução
+original não tinha ressalva. Voltou a ser sem exceção.
+
+Quem fica sem etiqueta de conteúdo agora aparece no Andamento com essa observação —
+`… — concluí e segui (ainda sem etiqueta de conteúdo)` —, que é a lista de quem vale uma rodada
+de pergunta de interesse depois. A fila da plataforma filtra por etiqueta.
+
+### 4. "Agradecer e concluir ficou confuso, mude para agradecer informações e concluir"
+
+Rótulo da tecla 4. O nome antigo colidia com a tecla 1, que também agradece no fim.
+
+### Extra, visto no print da Beti
+
+Ela respondeu **"Sim."** à pergunta de interesse, e a rodada ofereceu a tecla 7 — perguntar de
+novo — **em destaque**. Quem já respondeu está esperando o conteúdo, não outra pergunta igual.
+Agora, quando a pergunta já saiu para aquele contato, a tecla 7 vira "Perguntar interesse DE
+NOVO", perde o destaque, e uma linha diz quando foi perguntado.
+
+(O "Sim." dela não virou etiqueta porque **"Etiquetas quando responder sim" continua vazio** na
+aba Config. O painel avisa na própria pergunta. É o passo que falta do lado dele.)
+
+### Arquivos alterados
+
+`src/lib/store.js`, `src/lib/templates.js`, `src/lib/cities.js`, `src/panel/panel.js`,
+`tests/parser.test.mjs`, `tests/vars.test.mjs`, `CLAUDE.md`.
+
+---
+
 ## 2026-08-10 — A pergunta de interesse já pede nome e cidade
 
 **Pedido (Thiago):** "ao perguntar se a pessoa quer conteúdos já peça nome e cidade também para

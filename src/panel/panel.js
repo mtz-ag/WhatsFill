@@ -1935,24 +1935,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         : true;
       const etiquetasInteresse = await store.get('etiquetasInteresse');
       const podePerguntarInteresse = !interesseTrava && !conteudos.length;
+      // Já perguntei antes? Então a tecla 7 vira "perguntar de novo" e perde o destaque: a
+      // pessoa que respondeu "Sim." e continua sem etiqueta está esperando o conteúdo, não
+      // outra pergunta igual. (Visto ao vivo com a Beti, 10/08.)
+      const interessePerguntado = interesse
+        ? await templatesLib.wasSent(state.contact.id, interesse.id)
+        : null;
 
-      // Contato já respondido: a última mensagem da conversa é nossa.
+      // Contato já respondido: a última mensagem da conversa é nossa. Classifica, conclui e
+      // segue — não há o que enviar a quem já foi respondido.
       //
-      // São os ~60 que ficaram em "Meus" enquanto o Concluir estava quebrado — receberam tudo e
-      // só faltou fechar. Perguntar um a um seria teclar sessenta vezes para não decidir nada.
-      // É a ÚNICA saída automática desta rodada, e ela não envia nada: só fecha o que já foi
-      // respondido.
-      //
-      // **Menos quem ainda dá para perguntar o interesse.** Sem etiqueta de conteúdo, o
-      // atendimento não está terminado — falta justamente descobrir o que mandar para essa
-      // pessoa. Concluir aqui seria tirá-la do fluxo para sempre em silêncio, que é o pulo
-      // silencioso que este projeto já consertou três vezes. Nesse caso a pergunta aparece,
-      // com a tecla 7 em destaque.
+      // **Vale para todos, sem exceção.** A primeira versão abria uma exceção para quem ainda
+      // não tinha etiqueta de conteúdo (a ideia era oferecer a pergunta de interesse antes de
+      // fechar), e o efeito prático foi o relato dele: *"alguns estão concluindo quando a minha
+      // é a última mensagem e outros não"*. Regra que depende de um estado invisível na tela
+      // parece defeito, mesmo funcionando como projetado — e a instrução original era sem
+      // ressalva. Quem fica sem etiqueta de conteúdo aparece no Andamento com essa observação,
+      // e a fila da plataforma filtra por etiqueta quando ele quiser rodar a pergunta neles.
       //
       // `ultimaMensagem` vem do `load()` acima, da mesma leitura que trouxe as mensagens do
       // contato: uma chamada, não duas.
       const ultima = state.ultimaMensagem;
-      if (ultima && !ultima.doContato && !podePerguntarInteresse) {
+      if (ultima && !ultima.doContato) {
         await saveClassification({ withCompletionDate: true, quiet: true });
         const fechouRespondido = await page.clickConcluir();
         if (!fechouRespondido.ok) {
@@ -1969,7 +1973,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return {
           nome,
           resultado: 'concluido',
-          motivo: `a última mensagem já era minha (${formatarQuando(ultima.at)}) — concluí e segui`,
+          motivo:
+            `a última mensagem já era minha (${formatarQuando(ultima.at)}) — concluí e segui` +
+            // Visível no Andamento: é a lista de quem vale uma rodada de pergunta de interesse.
+            (conteudos.length ? '' : ' (ainda sem etiqueta de conteúdo)'),
         };
       }
 
@@ -2024,10 +2031,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       opcoes.push({ tecla: '3', valor: 'concluir', rotulo: 'Concluir sem enviar' });
       if (!infoTrava) {
         // Primária quando não há modelo: em "Outros" é a saída esperada.
+        // "Agradecer e concluir" ficava confuso ao lado da tecla 1, que também agradece. O
+        // rótulo diz o que esta resposta é: o agradecimento de quem mandou informação e não
+        // pediu nada (vídeo, link, "bom dia").
         opcoes.push({
           tecla: '4',
           valor: 'agradecer',
-          rotulo: 'Agradecer e concluir',
+          rotulo: 'Agradecer informações e concluir',
           primaria: !podeEnviar && !podePerguntarInteresse,
         });
       }
@@ -2039,8 +2049,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         opcoes.push({
           tecla: '7',
           valor: 'interesse',
-          rotulo: 'Perguntar interesse + pedir nome e cidade, e concluir',
-          primaria: !podeEnviar,
+          rotulo: interessePerguntado
+            ? 'Perguntar interesse DE NOVO (já perguntei antes)'
+            : 'Perguntar interesse + pedir nome e cidade, e concluir',
+          primaria: !podeEnviar && !interessePerguntado,
         });
       }
 
@@ -2065,6 +2077,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           ultima && !ultima.doContato
             ? `A última mensagem já é minha (${formatarQuando(ultima.at)}), mas ele ainda não tem ` +
               'etiqueta de conteúdo — por isso perguntei em vez de concluir.'
+            : '',
+          interessePerguntado
+            ? `Já perguntei o interesse ${formatarQuando(interessePerguntado.at)}.` +
+              (etiquetasInteresse.length ? ' A resposta não foi reconhecida como "sim".' : '')
             : '',
           podePerguntarInteresse && !etiquetasInteresse.length
             ? 'A tecla 7 pergunta o interesse, mas o "sim" ainda não vira etiqueta: preencha ' +

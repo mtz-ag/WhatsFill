@@ -202,6 +202,31 @@ grupo('a pergunta de interesse passa a pedir nome e cidade');
   check((await templates.migrarInteressePedeDados()) === false, 'não roda de novo');
 }
 
+grupo('a pergunta dos grupos passa a pedir o link');
+{
+  const templates = await lib('templates.js');
+  const store = await lib('store.js');
+
+  // A frase vive DENTRO de outra resposta (o pedir-dados), então a troca é por substring.
+  mem.migracoes = {};
+  mem.templates = [
+    { id: 'pedir-dados', name: 'Pedir dados', text: 'Nome completo / Cidade\n\n' + store.PERGUNTA_GRUPOS_ANTIGA },
+    { id: 'agradecimento', name: 'Agradecer', text: 'Obrigado pela atenção!' },
+  ];
+  const mexidos = await templates.migrarGruposPedeLink();
+
+  check(mexidos.length === 1 && mexidos[0] === 'Pedir dados', `mexeu só no que tinha a frase = ${JSON.stringify(mexidos)}`);
+  check(/link de convite/.test(mem.templates[0].text), 'a nova versão pede o link');
+  check(!/o nome ou o link/.test(mem.templates[0].text), 'e a antiga saiu');
+  check(mem.templates[0].text.startsWith('Nome completo / Cidade'), 'o resto da resposta ficou intacto');
+  check(mem.templates[1].text === 'Obrigado pela atenção!', 'resposta sem a frase não é tocada');
+
+  // Frase reescrita por ele não é atropelada.
+  mem.migracoes = {};
+  mem.templates = [{ id: 'pedir-dados', name: 'Pedir dados', text: 'Você está em algum grupo? Manda aí.' }];
+  check((await templates.migrarGruposPedeLink()).length === 0, 'texto dele fica como está');
+}
+
 grupo('saudação por horário');
 check(vars.saudacao(new Date(2026, 7, 5, 9)) === 'Bom dia', 'manhã');
 check(vars.saudacao(new Date(2026, 7, 5, 15)) === 'Boa tarde', 'tarde');
