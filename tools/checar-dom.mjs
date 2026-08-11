@@ -105,6 +105,74 @@ const CASOS = [
   },
 ];
 
+/** A barra da fila, para os casos da lista de concluídos. */
+const BARRA_DA_FILA = `
+  <div>
+    <span data-cy="button-new-sessions" class="rounded-full"><span>Novos</span></span>
+    <span data-cy="button-my-sessions" class="rounded-full bg-gray-300"><span>Meus</span></span>
+    <span data-cy="button-other-sessions" class="rounded-full"><span>Outros</span></span>
+    <button aria-label="Atendimentos arquivados"><mat-icon data-mat-icon-name="archive-box"></mat-icon></button>
+  </div>
+  <sessions-list-online-content></sessions-list-online-content>`;
+
+/** Estado da fila → o que a troca para a lista de concluídos deve responder. */
+const CASOS_FILA = [
+  {
+    nome: 'acha a lista de concluídos pelo ícone de caixa',
+    html: BARRA_DA_FILA,
+    achaConcluidos: true,
+    // "Meus" está ativa, então NÃO estamos nos concluídos.
+    concluidosAtiva: false,
+  },
+  {
+    nome: 'nenhuma aba de texto ativa = estamos nos concluídos',
+    html: BARRA_DA_FILA.replace(' bg-gray-300', ''),
+    achaConcluidos: true,
+    concluidosAtiva: true,
+  },
+  {
+    nome: 'acha pelo data-cy quando a plataforma tiver um',
+    html: `<div>
+      <span data-cy="button-my-sessions" class="rounded-full bg-gray-300"><span>Meus</span></span>
+      <button data-cy="button-archived-sessions">arquivados</button>
+    </div>`,
+    achaConcluidos: true,
+    concluidosAtiva: false,
+  },
+  {
+    nome: 'barra sem nada que pareça arquivo: recusa em vez de chutar',
+    html: `<div>
+      <span data-cy="button-my-sessions" class="rounded-full bg-gray-300"><span>Meus</span></span>
+      <button><mat-icon data-mat-icon-name="paper-airplane"></mat-icon></button>
+    </div>`,
+    achaConcluidos: false,
+    concluidosAtiva: false,
+  },
+];
+
+/** Estado do rodapé → o botão Reiniciar está disponível? */
+const CASOS_REINICIAR = [
+  {
+    nome: 'concluído: o Reiniciar está lá para reabrir',
+    html: '<sessions-conversation><div><button>Reiniciar</button></div></sessions-conversation>',
+    temReiniciar: true,
+  },
+  {
+    nome: 'em andamento: não há o que reiniciar',
+    html:
+      '<sessions-conversation><div><button>Concluir</button></div>' +
+      '<div class="flex flex-col border-t"><textarea class="mat-input-element"></textarea></div></sessions-conversation>',
+    temReiniciar: false,
+  },
+  {
+    nome: 'Reiniciar dentro de overlay não conta',
+    html:
+      '<sessions-conversation><div><button>Concluir</button></div></sessions-conversation>' +
+      '<div class="cdk-overlay-container"><button>Reiniciar</button></div>',
+    temReiniciar: false,
+  },
+];
+
 function carregarPlaywright() {
   const require = createRequire(import.meta.url);
   for (const caminho of ['playwright', '/opt/node22/lib/node_modules/playwright/index.mjs']) {
@@ -145,6 +213,40 @@ for (const caso of CASOS) {
     console.log(`        isConcluded=${r.concluido} (esperado ${caso.concluido}), ` +
       `semControles=${r.semControles} (esperado ${caso.semControles})`);
   }
+}
+
+for (const caso of CASOS_FILA) {
+  await page.setContent(`<body>${caso.html}</body>`);
+  const r = await page.evaluate(async (src) => {
+    const url = 'data:text/javascript;base64,' + btoa(unescape(encodeURIComponent(src)));
+    const dom = await import(url);
+    return {
+      achou: !!dom.getQueueTab(dom.ABA_CONCLUIDOS),
+      ativa: dom.isQueueTabActive(dom.ABA_CONCLUIDOS),
+    };
+  }, fonte);
+
+  const ok = r.achou === caso.achaConcluidos && r.ativa === caso.concluidosAtiva;
+  if (!ok) falhas++;
+  console.log(`${ok ? '  ok  ' : ' FALHA'} ${caso.nome}`);
+  if (!ok) {
+    console.log(`        achou=${r.achou} (esperado ${caso.achaConcluidos}), ` +
+      `ativa=${r.ativa} (esperado ${caso.concluidosAtiva})`);
+  }
+}
+
+for (const caso of CASOS_REINICIAR) {
+  await page.setContent(`<body>${caso.html}</body>`);
+  const r = await page.evaluate(async (src) => {
+    const url = 'data:text/javascript;base64,' + btoa(unescape(encodeURIComponent(src)));
+    const dom = await import(url);
+    return !!dom.getReiniciarButton();
+  }, fonte);
+
+  const ok = r === caso.temReiniciar;
+  if (!ok) falhas++;
+  console.log(`${ok ? '  ok  ' : ' FALHA'} ${caso.nome}`);
+  if (!ok) console.log(`        getReiniciarButton=${r} (esperado ${caso.temReiniciar})`);
 }
 
 await browser.close();

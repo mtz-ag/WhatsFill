@@ -234,6 +234,14 @@ const DEFAULTS = {
      * Vazia = a tecla 5 não aparece.
      */
     mensagemMomento: '',
+    /**
+     * Modelo aprovado da rodada dos CONCLUÍDOS sem retorno — a que reabre a conversa e pergunta
+     * se a pessoa realmente não tem interesse.
+     *
+     * Separado do `templateId` de propósito: o texto é outro, e um seletor só para as duas
+     * rodadas seria o jeito mais fácil de mandar a mensagem errada.
+     */
+    templateIdReinicio: '',
   },
 
   /**

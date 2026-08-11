@@ -17,6 +17,9 @@ mantidos no repositório, mas nenhuma tarefa nasce deles.
 
 Atendimento assíncrono, em três rodadas na aba **Automatizado**:
 
+0. **Concluídos sem retorno: reabrir e perguntar** — sobre a lista de concluídos (o ícone de
+   caixa), filtrada por ele: Reiniciar, modelo aprovado, concluir de novo, próximo. Reabrir não
+   reabre a janela de 24h, então só modelo aprovado sai daqui.
 1. **Novos: pedir os dados** — assume, manda o formulário (nome/cidade/grupos), conclui, volta
    para "Novos". Quem não tem o aceite do anúncio, ou já respondeu nome/cidade, é **assumido sem
    receber nada** e vai para "Meus" como triagem. A fila drena.
@@ -61,6 +64,63 @@ classificação automática gravando cidade, COREDE, etiquetas e data e **confer
 **Risco permanente:** toda escrita é em produção, com dados reais de eleitores. O contrato de
 escrita mora no `chrome.storage.local` e já sumiu uma vez sem causa identificada — exportar
 backup pela aba Config evita refazer o aprendizado.
+
+---
+
+## 2026-08-11 — Rodada 4: os concluídos sem retorno (reabrir, perguntar, fechar)
+
+**Pedido (Thiago):** "a conversa vai ter que reiniciar, mandar uma mensagem perguntando se a
+pessoa realmente não tem interesse e, se for o caso, não incomodaremos mais, e ir pro próximo
+sem retorno. Ao reiniciar vai me mandar para a aba Meus, então teria que retornar para
+concluídos para continuar."
+
+### A rodada
+
+Primeira que trabalha sobre atendimento **fechado**, e por isso tem um passo a mais: concluído
+não tem campo de mensagem. Por contato: **Reiniciar → modelo aprovado → Concluir → voltar para
+a lista de concluídos → próximo**.
+
+Card próprio, com **seletor de modelo próprio** (`templateIdReinicio`). Um seletor só para as
+duas rodadas de "sem retorno" seria o jeito mais fácil de mandar o texto errado — e aqui o texto
+é outro (a pergunta de "você realmente não tem interesse", com a saída de não incomodar mais).
+
+### Por que só modelo aprovado, mesmo depois do Reiniciar
+
+Reabrir o atendimento **não reabre a janela de 24h**: ela é regra do WhatsApp, não da
+plataforma. Quem está sem retorno há dias tem a janela vencida, então texto livre não chegaria —
+sairia do painel, a plataforma aceitaria, e a mensagem morreria no caminho. Modelo aprovado é o
+único envio que sai daqui, como na rodada 3.
+
+### Duas coisas que a fila dos concluídos tem de diferente
+
+- **O contato VOLTA para a lista.** Nas outras rodadas o atendimento sai da fila ao ser tratado;
+  aqui concluir devolve ele para os concluídos, e no topo (acabou de ser concluído). Sem andar
+  uma casa, a rodada reabriria o mesmo. Daí o `continuaNaFila` no retorno do processar —
+  `visitados` até protegeria, mas ao custo de uma abertura extra por contato, e abertura é o que
+  derruba a API.
+- **Reabrir troca a aba sozinho.** A plataforma joga para "Meus" no Reiniciar. Quem resolve é o
+  `aba` do `openQueueSession`, que já garante a lista certa a cada item — foi só ensinar a nova.
+
+### O gancho da lista de concluídos NÃO foi conferido ao vivo
+
+As três abas de texto têm `data-cy` conferido (`button-new-sessions` e irmãs). A lista de
+concluídos é o ícone de caixa, e desse eu não tenho o markup. Então:
+
+- `getAbaConcluidos()` tenta, nesta ordem: cinco `data-cy` plausíveis, cinco nomes de ícone
+  (o tema usa heroicons) e, por último, `aria-label`/`title` casando com arquiv/conclu/encerr.
+- **Não achou, a rodada para e diz o que fazer** — não percorre a fila errada.
+- A confirmação de que a troca funcionou é por eliminação: estar nos concluídos significa que
+  **nenhuma** das três abas de texto está com `bg-gray-300`. Não depende da classe do ícone.
+- Botão **"Achar a lista de concluídos"** no card despeja os `data-cy`, ícones e rótulos que
+  existem na barra da fila dele. Uma passada e o gancho certo entra no código sem chute.
+
+`tools/checar-dom.mjs` ganhou sete casos novos, incluindo os dois que protegem contra o conserto
+errado: barra sem nada de arquivo (tem que recusar) e "Reiniciar" dentro de overlay (não conta).
+
+### Pendência
+
+**Rodar o "Achar a lista de concluídos" e me mandar o resultado.** Enquanto o gancho não for
+confirmado, esta rodada pode parar logo no começo dizendo que não achou a lista.
 
 ---
 

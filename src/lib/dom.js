@@ -228,10 +228,91 @@ export const ABA_NOVOS = 'Novos';
 /** Quem respondeu depois de concluído reaparece aqui: o atendimento já é seu. */
 export const ABA_MEUS = 'Meus';
 
+/**
+ * A lista dos **concluídos/arquivados** — o ícone de caixa ao lado das três abas de texto.
+ *
+ * É onde mora a fila de "sem retorno": atendimento fechado, com a etiqueta que ele filtra. Sem
+ * ela não dá para percorrer essa fila, porque `Novos/Meus/Outros` não mostram concluído.
+ *
+ * **O `data-cy` desta não foi conferido ao vivo** (as outras três foram). Por isso aqui vai uma
+ * lista de candidatos, mais reserva por ícone e por rótulo de acessibilidade — e, se nada
+ * casar, a rodada **para e diz** em vez de percorrer a fila errada. `diagnosticarAbasDaFila()`
+ * existe para descobrir o nome certo em uma passada.
+ */
+export const ABA_CONCLUIDOS = 'Concluídos';
+
+const CY_CONCLUIDOS = [
+  'button-archived-sessions',
+  'button-finished-sessions',
+  'button-closed-sessions',
+  'button-archive-sessions',
+  'button-concluded-sessions',
+];
+
+/** Nomes de ícone plausíveis para a caixa de arquivo (o tema usa heroicons). */
+const ICONES_CONCLUIDOS = ['archive-box', 'archive-box-arrow-down', 'archive', 'inbox-stack', 'inbox-arrow-down'];
+
+/** Rótulo de acessibilidade / tooltip, em português e inglês. */
+const RE_ROTULO_CONCLUIDOS = /arquiv|conclu[íi]d|encerrad|finalizad|archiv|closed|finished/i;
+
+function getAbaConcluidos() {
+  for (const cy of CY_CONCLUIDOS) {
+    const el = document.querySelector(`[data-cy="${cy}"]`);
+    if (el) return el;
+  }
+
+  const escopo = document.querySelector('sessions-list-online-content')?.parentElement || document;
+
+  for (const nome of ICONES_CONCLUIDOS) {
+    const icone = escopo.querySelector(`mat-icon[data-mat-icon-name="${nome}"]`);
+    if (icone) return icone.closest('button, [data-cy], span, div') || icone;
+  }
+
+  const porRotulo = [...escopo.querySelectorAll('button, [role="button"], [aria-label], [title]')].find((el) => {
+    const rotulo = `${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''}`;
+    return RE_ROTULO_CONCLUIDOS.test(rotulo);
+  });
+  return porRotulo || null;
+}
+
+/**
+ * O que existe na barra da fila, para descobrir o gancho da aba de concluídos sem chutar.
+ *
+ * Devolve os `data-cy`, nomes de ícone e rótulos que estão na tela agora. É uma passada de
+ * diagnóstico — o painel mostra o resultado e o seletor certo entra em `CY_CONCLUIDOS`.
+ */
+export function diagnosticarAbasDaFila() {
+  const escopo = document.querySelector('sessions-list-online-content')?.parentElement || document.body;
+  const perto = [...escopo.querySelectorAll('[data-cy], mat-icon, button, [role="button"]')].slice(0, 80);
+
+  return {
+    dataCy: [...new Set(perto.map((el) => el.getAttribute('data-cy')).filter(Boolean))],
+    icones: [...new Set([...escopo.querySelectorAll('mat-icon')].map((el) => el.getAttribute('data-mat-icon-name')).filter(Boolean))],
+    rotulos: [...new Set(perto.map((el) => el.getAttribute('aria-label') || el.getAttribute('title')).filter(Boolean))],
+    achou: !!getAbaConcluidos(),
+  };
+}
+
+/**
+ * O botão "Reiniciar" do rodapé, que reabre um atendimento concluído.
+ *
+ * É o mesmo texto que `isConcluded()` procura — e não é coincidência: só existe quando o
+ * atendimento está fechado. Aqui ele é o alvo do clique, lá é só sinal.
+ */
+export function getReiniciarButton() {
+  return (
+    [...document.querySelectorAll('button')].find(
+      (b) => /^reiniciar$/i.test(b.textContent.trim()) && !b.disabled && !b.closest('.cdk-overlay-container')
+    ) || null
+  );
+}
+
 /** A classe que a plataforma põe na aba ativa. */
 const ABA_ATIVA = 'bg-gray-300';
 
 export function getQueueTab(label) {
+  if (label === ABA_CONCLUIDOS) return getAbaConcluidos();
+
   const cy = ABAS_DA_FILA[label];
   const porCy = cy ? document.querySelector(`[data-cy="${cy}"]`) : null;
   if (porCy) return porCy;
@@ -245,6 +326,16 @@ export function getQueueTab(label) {
 }
 
 export function isQueueTabActive(label) {
+  // A lista de concluídos é um ícone, e o tema não marca ele com `bg-gray-300` como faz nas
+  // três abas de texto. O sinal que funciona é por eliminação: estar nos concluídos significa
+  // que NENHUMA das três está ativa. É verificável sem depender da classe do ícone.
+  if (label === ABA_CONCLUIDOS) {
+    return !Object.keys(ABAS_DA_FILA).some((nome) => {
+      const el = getQueueTab(nome);
+      return !!el && el.classList.contains(ABA_ATIVA);
+    });
+  }
+
   const alvo = getQueueTab(label);
   return !!alvo && alvo.classList.contains(ABA_ATIVA);
 }
@@ -259,7 +350,17 @@ export async function selectQueueTab(label, opts) {
   // junto). Timeout curto aqui não erra o alvo: só faz a rodada seguir sem confirmação.
   const { timeoutMs = 6000 } = opts || {};
   const alvo = getQueueTab(label);
-  if (!alvo) return { ok: false, reason: `Não achei a aba "${label}" na fila.` };
+  if (!alvo) {
+    if (label === ABA_CONCLUIDOS) {
+      return {
+        ok: false,
+        reason:
+          'Não achei a lista de concluídos (o ícone de caixa ao lado de "Outros"). Clique em ' +
+          '"Achar a lista de concluídos" na aba Automatizado e me mande o que aparecer.',
+      };
+    }
+    return { ok: false, reason: `Não achei a aba "${label}" na fila.` };
+  }
 
   if (alvo.classList.contains(ABA_ATIVA)) return { ok: true, confirmado: true };
   alvo.click();

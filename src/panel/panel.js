@@ -27,6 +27,13 @@ const ASK_TEMPLATE_ID = 'pedir-dados';
 const INTEREST_TEMPLATE_ID = 'interesse-conteudo';
 
 /**
+ * Rótulo da lista de concluídos/arquivados. Texto, e não import do `dom.js`, porque o painel em
+ * janela própria não tem o DOM da plataforma: isto atravessa a ponte de mensagens. Tem que ser
+ * igual ao `ABA_CONCLUIDOS` de `src/lib/dom.js`.
+ */
+const ABA_CONCLUIDOS = 'Concluídos';
+
+/**
  * @param {object} opts
  * @param {'dock'|'window'} [opts.mode] 'dock' = encaixado na aba (padrão do dia a dia)
  * @param {number} [opts.initialWidth] largura inicial no modo encaixado
@@ -1062,6 +1069,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(renderCartaoMomento(cfg));
     body.append(renderCartaoRespondidos());
     body.append(renderCartaoSemRetorno(cfg, modeloDaRodada()));
+    body.append(renderCartaoConcluidos(cfg));
 
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Andamento'));
     logNode = h('div', {});
@@ -1260,6 +1268,83 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     comecar.disabled = state.auto.rodando || impedimentos.length > 0;
     for (const motivo of impedimentos) card.append(h('div', { class: 'wf-block' }, motivo));
+    return card;
+  }
+
+  /**
+   * Rodada 4: os CONCLUÍDOS sem retorno — reabre, pergunta e fecha de novo.
+   *
+   * Card próprio, e não uma opção do card anterior, porque o texto é outro: aqui a pergunta é
+   * "você realmente não tem interesse?", com a saída de não incomodar mais. Misturar os dois
+   * modelos num seletor só seria o jeito mais fácil de mandar o texto errado.
+   */
+  function renderCartaoConcluidos(cfg) {
+    const card = h('div', { class: 'wf-card' }, [
+      h('h4', {}, 'Concluídos sem retorno: reabrir e perguntar'),
+      h('div', { class: 'wf-preview' },
+        'Percorre a lista de CONCLUÍDOS (o ícone de caixa, ao lado de "Outros"), do jeito que ' +
+          'você filtrou — a etiqueta "1 SEM RETORNO", por exemplo. Em cada um: reabre com o ' +
+          'Reiniciar, manda o modelo aprovado e conclui de novo. Reabrir joga o atendimento para ' +
+          '"Meus"; concluir devolve ele para os concluídos, e a rodada volta sozinha para a lista.'),
+    ]);
+
+    if (!state.hsmTemplates.length) {
+      card.append(h('div', { class: 'wf-block' }, 'Nenhum modelo aprovado carregado. Abra um atendimento e clique em Recarregar.'));
+      return card;
+    }
+
+    const select = h('select', {});
+    select.append(h('option', { value: '' }, '(escolha o modelo da pergunta)'));
+    for (const m of state.hsmTemplates) select.append(h('option', { value: m.id }, m.name));
+    select.value = cfg.templateIdReinicio || '';
+    select.addEventListener('change', () =>
+      salvarAuto({ templateIdReinicio: select.value }).then(renderAll)
+    );
+    card.append(select);
+
+    const modelo = state.hsmTemplates.find((m) => m.id === cfg.templateIdReinicio) || null;
+    if (modelo) card.append(h('div', { class: 'wf-preview' }, modelo.text || '(modelo sem texto)'));
+
+    const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Começar pelos concluídos');
+    comecar.addEventListener('click', () => withBusy(runLoteSemRetorno));
+
+    // A lista de concluídos é a única aba sem `data-cy` conferido ao vivo. Este botão mostra o
+    // que existe na barra da fila, para o gancho certo entrar no código sem chute.
+    const achar = h('button', { class: 'wf-btn', type: 'button' }, 'Achar a lista de concluídos');
+    achar.addEventListener('click', () =>
+      withBusy(async () => {
+        const d = await page.diagnosticarAbas();
+        const linhas = [
+          d.achou ? '✓ Achei a lista de concluídos.' : '× NÃO achei a lista de concluídos.',
+          `data-cy na barra: ${d.dataCy.join(', ') || '(nenhum)'}`,
+          `ícones: ${d.icones.join(', ') || '(nenhum)'}`,
+          `rótulos: ${d.rotulos.join(' | ') || '(nenhum)'}`,
+        ];
+        caixaDiagnostico.textContent = linhas.join('\n');
+        setStatus(d.achou ? 'Lista de concluídos encontrada.' : 'Não achei — me mande o texto abaixo.', d.achou ? 'ok' : 'err');
+      })
+    );
+    card.append(h('div', { class: 'wf-row' }, [comecar, achar]));
+
+    const caixaDiagnostico = h('div', { class: 'wf-mono' }, '');
+    card.append(caixaDiagnostico);
+
+    const impedimentos = [];
+    if (!modelo) impedimentos.push('Escolha o modelo aprovado desta rodada.');
+    if (modelo?.params?.length) {
+      impedimentos.push('O modelo escolhido pede parâmetro, e a tela de parâmetros ainda não foi aprendida.');
+    }
+    if (!state.settings.autoSend) impedimentos.push('Precisa do "Enviar automático" ligado (acima).');
+
+    comecar.disabled = state.auto.rodando || impedimentos.length > 0;
+    for (const motivo of impedimentos) card.append(h('div', { class: 'wf-block' }, motivo));
+
+    card.append(
+      h('div', { class: 'wf-origin' },
+        'Reabrir uma conversa concluída aparece para o contato como conversa retomada. E a ' +
+          'janela de 24h continua vencida mesmo depois do Reiniciar — ela é regra do WhatsApp, ' +
+          'não da plataforma —, por isso aqui só sai modelo aprovado.')
+    );
     return card;
   }
 
@@ -1530,6 +1615,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         interrompida = r.motivo;
         break;
       }
+
+      // Contato que CONTINUA na lista depois de tratado (rodada dos concluídos: reiniciar e
+      // concluir devolve ele para a mesma fila, agora no topo). Sem andar uma casa, a rodada
+      // reabriria o mesmo atendimento — `visitados` até protege, mas ao custo de uma abertura
+      // extra por contato, e abertura é o que derruba a API.
+      if (r.resultado === 'enviado' && r.continuaNaFila) posicao++;
 
       if (r.resultado !== 'enviado') {
         // Saiu da fila (assumido ou concluído): o próximo escorrega para esta mesma posição.
@@ -2608,6 +2699,130 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       await page.closeOverlay().catch(() => {});
       return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
     }
+  }
+
+  /**
+   * Rodada 4: a fila dos CONCLUÍDOS sem retorno — reabre, pergunta e fecha de novo.
+   *
+   * É a única rodada que trabalha sobre atendimento **fechado**, e por isso tem um passo a mais:
+   * concluído não tem campo de mensagem, então é preciso **Reiniciar** antes de enviar.
+   *
+   * A ordem, e o porquê de cada passo:
+   *
+   * 1. **Reiniciar.** Reabre a conversa. A plataforma, ao reabrir, joga o atendimento para
+   *    "Meus" e troca de aba sozinha — daí o passo 4.
+   * 2. **Modelo aprovado.** Quem está sem retorno há dias tem a janela de 24h vencida, e
+   *    reabrir o atendimento **não** reabre a janela: ela é regra do WhatsApp, não da
+   *    plataforma. Texto livre não chegaria. Modelo aprovado é o único envio que sai daqui.
+   * 3. **Concluir.** Devolve o contato para a lista de concluídos. Se ele responder, a
+   *    plataforma o traz de volta para "Meus" sozinha — que é exatamente o que se quer.
+   * 4. **Voltar para a lista de concluídos** antes do próximo. Isso é feito pelo `aba` do
+   *    `openQueueSession`, que garante a lista certa a cada item.
+   *
+   * `continuaNaFila` existe por causa do passo 3: diferente das outras rodadas, o contato
+   * **volta** para a mesma lista (agora no topo, porque acabou de ser concluído). Sem andar uma
+   * casa, a rodada reabriria o mesmo atendimento.
+   */
+  async function processarSemRetornoConcluido(sessionId, modelo) {
+    let nome = 'contato';
+    try {
+      const sessao = await api.getSession(sessionId);
+      const contato = await api.getContact(sessao.contactId);
+      nome = contato.name || contato.nameWhatsapp || 'sem nome';
+
+      if (state.settings.antiDup) {
+        const quando = await templatesLib.wasSent(contato.id, hsmKey(modelo));
+        if (quando) {
+          return {
+            nome,
+            resultado: 'pulado',
+            continuaNaFila: true,
+            motivo: `já recebeu este modelo em ${new Date(quando.at).toLocaleDateString('pt-BR')}`,
+          };
+        }
+      }
+
+      let estado = await page.getState();
+      if (estado.sessionId !== sessionId) {
+        return { nome, resultado: 'erro', motivo: 'a aba trocou de atendimento no meio do caminho' };
+      }
+
+      // Reabrir só quando precisa: item da lista de concluídos que já esteja aberto (ou que a
+      // plataforma tenha reaberto sozinha) não deve levar um clique à toa.
+      if (!estado.hasComposer) {
+        setStatus(`Reabrindo o atendimento de ${nome}…`);
+        const reaberto = await page.clickReiniciar();
+        if (!reaberto.ok) {
+          return {
+            nome,
+            resultado: 'erro',
+            continuaNaFila: true,
+            motivo: reaberto.reason || 'não consegui reabrir o atendimento',
+          };
+        }
+        estado = reaberto.state || (await page.getState());
+      }
+
+      if (!estado.hasComposer) {
+        return { nome, resultado: 'erro', continuaNaFila: true, motivo: 'o campo de mensagem não apareceu depois do Reiniciar' };
+      }
+
+      setStatus(`Enviando "${modelo.name}" para ${nome}…`);
+      const envio = await page.sendMessageTemplate(modelo, { send: true });
+      if (!envio?.sent) {
+        // Reaberto e sem enviar: o atendimento ficou em "Meus". Parar é o certo — seguir
+        // deixaria um rastro de conversas reabertas sem mensagem.
+        return { nome, resultado: 'erro', parar: true, motivo: 'reabri o atendimento mas o diálogo não confirmou o envio' };
+      }
+      await templatesLib.markSent(contato.id, hsmKey(modelo), { nome });
+
+      const concluido = await page.clickConcluir();
+      if (!concluido.ok) {
+        return { nome, resultado: 'enviado', parar: true, continuaNaFila: true, motivo: concluido.reason };
+      }
+      if (concluido.dialogOpen) {
+        return {
+          nome,
+          resultado: 'enviado',
+          parar: true,
+          continuaNaFila: true,
+          motivo: 'enviado, mas a plataforma pediu motivo de conclusão — responda o diálogo na aba',
+        };
+      }
+      return { nome, resultado: 'enviado', continuaNaFila: true, motivo: 'reaberto, perguntado e concluído' };
+    } catch (err) {
+      await page.closeOverlay().catch(() => {});
+      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
+    }
+  }
+
+  async function runLoteSemRetorno() {
+    const modelo = state.hsmTemplates.find((m) => m.id === state.auto.cfg.templateIdReinicio) || null;
+    if (!modelo) return setStatus('Escolha o modelo aprovado da rodada dos concluídos.', 'err');
+    if (!state.settings.autoSend) {
+      return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
+    }
+
+    const limite = clampInt(state.auto.cfg.limite, 1, 200);
+    const pausaSeg = clampInt(state.auto.cfg.pausaSeg, 3, 300);
+
+    if (
+      !confirm(
+        `Vou REABRIR até ${limite} atendimento(s) concluído(s) da lista filtrada, enviar o modelo ` +
+          `"${modelo.name}" e concluir cada um de novo, com ${pausaSeg}s entre os envios.\n\n` +
+          'Reabrir aparece para o contato como conversa retomada. Quem já recebeu este modelo é pulado.\n\n' +
+          'Confira que a lista da esquerda está nos CONCLUÍDOS e filtrada por quem não respondeu. Confirma?'
+      )
+    ) {
+      return setStatus('Rodada cancelada.');
+    }
+
+    // O rótulo viaja como texto pela ponte de mensagens (o painel em janela própria não tem o
+    // DOM da plataforma). Tem que ser igual ao `ABA_CONCLUIDOS` do dom.js.
+    await rodar({
+      aba: ABA_CONCLUIDOS,
+      processar: (sessionId) => processarSemRetornoConcluido(sessionId, modelo),
+    });
   }
 
   /** Pausa fatiada, para o Parar não ter que esperar o intervalo inteiro. */

@@ -107,6 +107,38 @@ export const clickIniciar = IS_IN_PAGE
     })
   : () => call('clickIniciar');
 
+/**
+ * Reabre um atendimento concluído e espera o campo de mensagem aparecer.
+ *
+ * Espera o COMPOSER, não o sumiço do "Reiniciar" — mesma lição do `clickIniciar`: o botão some
+ * no instante do clique, e quem chama precisa do campo de texto, não do botão ausente. Sem a
+ * espera, a rodada tentava enviar antes de a plataforma liberar a conversa.
+ *
+ * Reabrir joga o atendimento para "Meus" (a plataforma troca de aba sozinha) — quem chama
+ * precisa voltar para a lista de concluídos antes do próximo.
+ */
+export const clickReiniciar = IS_IN_PAGE
+  ? local(async () => {
+      const btn = dom.getReiniciarButton();
+      if (!btn) return { ok: false, reason: 'o botão Reiniciar não está na tela' };
+      btn.click();
+
+      for (let i = 0; i < 60 && !dom.getComposer(); i++) await sleep(200);
+      if (dom.hasOpenDialog()) {
+        return { ok: false, dialogOpen: true, reason: 'a plataforma abriu um diálogo ao reiniciar' };
+      }
+      if (!dom.getComposer()) {
+        return { ok: false, reason: 'cliquei em Reiniciar e o campo de mensagem não apareceu' };
+      }
+      return { ok: true, state: pageStateLocal() };
+    })
+  : () => call('clickReiniciar');
+
+/** Diagnóstico da barra da fila, para achar o gancho da lista de concluídos. */
+export const diagnosticarAbas = IS_IN_PAGE
+  ? local(async () => dom.diagnosticarAbasDaFila())
+  : () => call('diagnosticarAbas');
+
 export const clickConcluir = IS_IN_PAGE
   ? local(async () => {
       const btn = dom.getConcluirButton();
