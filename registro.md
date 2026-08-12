@@ -19,13 +19,27 @@ cidade era escrita no CRM sem clique nenhum, só por causa do FORMATO do cadastr
 pessoa disse. O parsing é determinístico; o dado por trás (por que o cadastro foi digitado
 assim) não é.
 
-**Fix:** mudei para `confidence: 'aproximada'`. Continua aparecendo marcada no campo Cidade, mas
-agora espera confirmação (clique ou Salvar) antes de ir para o CRM — nunca mais sozinha pelo
-`aplicarAutomatico`. Mesmo tratamento que qualquer outro palpite aproximado já tinha.
+**Fix, primeira volta:** mudei para `confidence: 'aproximada'` — tirou do `aplicarAutomatico`
+(silencioso), mas o Thiago apontou o furo que sobrou: o Salvar/Concluir manual grava QUALQUER
+palpite não vazio, sem perguntar nada. Confiança marcada como "aproximada" não é confirmação,
+é só deixar de esconder — continuava indo pro CRM no primeiro clique em Concluir.
 
-**Arquivo:** [src/panel/panel.js](src/panel/panel.js:320) (`corrigirNomeComCidade`). Seis
-suítes de teste passando — panel.js não é coberto por elas (arquivo grande, sem teste próprio),
-então não havia asserção prévia travando esse comportamento.
+**Fix de verdade:** popup de verdade, perguntando antes de gravar. `corrigirNomeComCidade` marca
+a entrada com `pendente: true`; `saveClassification` (o ÚNICO lugar que escreve no CRM, manual ou
+da rodada) chama `confirmarCidadeDoCadastroSePendente` ANTES de montar `changes` — pergunta com a
+mesma caixa não-bloqueante da rodada (`perguntarNaRodada`: sem fundo escuro, arrastável, não
+trava a conversa) "está correta?", com três saídas: **1 Aceitar** grava; **2 Corrigir** descarta
+e some do rascunho para você preencher na aba Dados; **3 Sem cidade** marca o campo como `manual`
+vazio — não grava nada E não deixa `corrigirNomeComCidade` voltar a sugerir a mesma cidade
+enquanto o contato estiver aberto (a checagem é `!state.draft[cidadeField.id]`, e uma entrada
+vazia ainda é uma entrada). Só roda em gravação disparada por você — a automática
+(`automatico: true`) já nem inclui este palpite no `changes` (não é `exata`), perguntar ali seria
+popup surgindo sem clique nenhum que o justifique.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js:320) (`corrigirNomeComCidade`,
+`confirmarCidadeDoCadastroSePendente`, chamada em `saveClassification`). Seis suítes de teste
+passando — panel.js não é coberto por elas (arquivo grande, sem teste próprio), então não havia
+asserção prévia travando esse comportamento.
 
 ---
 

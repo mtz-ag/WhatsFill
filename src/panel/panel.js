@@ -318,9 +318,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * — é o parsing que é determinístico, não o dado. Entrou como `exata` (grava sozinho) até um
    * contato ("Lourdes" / "Cerrito") pegar cidade sem nunca ter mencionado nenhuma: alguém
    * digitou o cadastro nesse formato por outro motivo (ou errado) e a extensão gravou por cima
-   * do silêncio, sem clique nenhum. Por isso `aproximada`: some cidade, marcada como palpite, e
-   * só sai daqui pro CRM se você confirmar (clique ou Salvar) — nunca em `aplicarAutomatico`.
+   * do silêncio, sem clique nenhum. Por isso `aproximada` e `pendente`: fica marcada como
+   * palpite e só sai daqui pro CRM depois que `confirmarCidadeDoCadastroSePendente` perguntar.
    */
+  const FONTE_CIDADE_CADASTRO = 'cidade escrita antes do nome no cadastro';
+
   async function corrigirNomeComCidade(nomeField) {
     const entrada = nomeField && state.draft[nomeField.id];
     if (!entrada?.value) return;
@@ -336,9 +338,54 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         value: separado.cidade,
         from: 'palpite',
         confidence: 'aproximada',
-        source: 'cidade escrita antes do nome no cadastro — confirme antes de gravar',
+        source: FONTE_CIDADE_CADASTRO,
+        pendente: true,
       };
     }
+  }
+
+  /**
+   * Pergunta, com popup não-bloqueante (a mesma caixa da rodada), se a cidade tirada do FORMATO
+   * do cadastro ("Cidade - Nome") está correta — antes de ela ir para o CRM.
+   *
+   * Só existe por causa do caso "Lourdes"/"Cerrito": marcar como `aproximada` já tirava do
+   * `aplicarAutomatico` (silencioso), mas o Salvar/Concluir manual grava QUALQUER palpite não
+   * vazio, sem perguntar nada — o mesmo furo, só que a um clique de distância. Roda em toda
+   * gravação **exceto** a automática (`automatico: true`), que já nem inclui este palpite no
+   * `changes` por não ser `exata`; perguntar ali seria popup surgindo do nada, sem o clique que
+   * a justifique.
+   */
+  async function confirmarCidadeDoCadastroSePendente() {
+    const campo = fieldNamed('Cidade');
+    const entry = campo && state.draft[campo.id];
+    if (!entry?.pendente || entry.source !== FONTE_CIDADE_CADASTRO) return;
+
+    const escolha = await perguntarNaRodada({
+      titulo: 'Cidade do cadastro',
+      linhas: [
+        `O cadastro está no formato "Cidade - Nome": encontrei "${entry.value}" como cidade.`,
+        '⚠ A pessoa não disse isso na conversa — veio só do formato do cadastro.',
+      ],
+      pergunta: 'Está correta?',
+      opcoes: [
+        { tecla: '1', rotulo: 'Aceitar', valor: 'aceitar', primaria: true },
+        { tecla: '2', rotulo: 'Corrigir', valor: 'corrigir' },
+        { tecla: '3', rotulo: 'Sem cidade', valor: 'semcidade' },
+      ],
+    });
+
+    if (escolha === 'aceitar') {
+      state.draft[campo.id] = { ...entry, pendente: false };
+    } else if (escolha === 'semcidade') {
+      // Marcado como 'manual' (não 'palpite'): `corrigirNomeComCidade` só repopula quando o
+      // campo está vazio de verdade, e aqui ele NÃO está — é uma resposta, "não tem cidade".
+      state.draft[campo.id] = { value: '', from: 'manual' };
+      setStatus('Sem cidade — nada vai ser gravado nesse campo.');
+    } else {
+      delete state.draft[campo.id];
+      setStatus('Cidade do cadastro descartada — preencha na aba Dados.', 'err');
+    }
+    renderAll();
   }
 
   /**
@@ -3171,6 +3218,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     somenteExatos = false,
     automatico = false,
   } = {}) {
+    // A automática nunca inclui este palpite no `changes` (confidence não é `exata`) — perguntar
+    // aqui seria popup sem clique nenhum que o justifique. Toda gravação disparada por você,
+    // mesmo dentro da rodada, passa por aqui primeiro.
+    if (!automatico) await confirmarCidadeDoCadastroSePendente();
+
     const changes = {};
     for (const field of state.classify) {
       const entry = state.draft[field.id];
