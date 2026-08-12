@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-08-12 — Cidade gravada sem a pessoa ter dito nada ("Lourdes" → "Cerrito")
+
+**Relato (Thiago, print):** contato "Lourdes" ficou com Cidade "Cerrito" na conversa inteira sem
+ninguém ter mencionado nenhuma cidade — só a mensagem do anúncio e um desabafo sobre política.
+
+**Causa raiz:** não é `matchCity` (conferido: nem a mensagem do anúncio nem o desabafo casam com
+"Cerrito", distância de Levenshtein bem acima da tolerância). É `corrigirNomeComCidade` em
+[panel.js](src/panel/panel.js:320): quando o Nome no CRM está no formato "Cidade - Nome"
+("Cerrito - Lourdes"), `splitCidadeNome` separa os dois, e a cidade entrava como palpite
+`confidence: 'exata'`. `aplicarAutomatico` grava sozinho qualquer palpite `exata` — então essa
+cidade era escrita no CRM sem clique nenhum, só por causa do FORMATO do cadastro, não porque a
+pessoa disse. O parsing é determinístico; o dado por trás (por que o cadastro foi digitado
+assim) não é.
+
+**Fix:** mudei para `confidence: 'aproximada'`. Continua aparecendo marcada no campo Cidade, mas
+agora espera confirmação (clique ou Salvar) antes de ir para o CRM — nunca mais sozinha pelo
+`aplicarAutomatico`. Mesmo tratamento que qualquer outro palpite aproximado já tinha.
+
+**Arquivo:** [src/panel/panel.js](src/panel/panel.js:320) (`corrigirNomeComCidade`). Seis
+suítes de teste passando — panel.js não é coberto por elas (arquivo grande, sem teste próprio),
+então não havia asserção prévia travando esse comportamento.
+
+---
+
 ## Estado atual — leia primeiro
 
 **Onde o projeto está:** funcionando em produção no dia a dia do Thiago. Repositório privado em
@@ -58,8 +82,8 @@ classificação automática gravando cidade, COREDE, etiquetas e data e **confer
    como aprendê-la. O painel recusa e explica.
 5. **Respostas prontas que sobraram sem uso**: `link-grupo`, `tema-opcoes`, `sem-interesse`. Não
    apaguei — apagar `link-grupo` quebra a macro "Enviar grupo + salvar + concluir". Decisão do
-   Thiago. Candidata a próxima resposta nova: **pedido de emprego** (mesmo risco jurídico do
-   pedido de ajuda, volume alto).
+   Thiago. A candidata que estava aqui, **pedido de emprego**, foi escrita em 12/08 — falta usar
+   uma vez e ver se o texto segura a conversa.
 
 **Risco permanente:** toda escrita é em produção, com dados reais de eleitores. O contrato de
 escrita mora no `chrome.storage.local` e já sumiu uma vez sem causa identificada — exportar
@@ -67,53 +91,51 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
-## 2026-08-12 — Mandou de novo para quem já tinha recebido
+## 2026-08-12 — Resposta nova: pedido de emprego (a lei cita "emprego" com todas as letras)
 
-**Relato dele:** "falhou e mandou mensagem novamente", com a print do Vicente recebendo o modelo
-às **14:37** depois de ter recebido a resposta pronta às **14:05**.
+**Pedido:** "continue do projeto". A fila de trabalho estava com os itens 0 a 3 dependendo da
+sessão ao vivo dele (rever os "Capitão", preencher a tabela Modelo por conteúdo, rodar "Meus",
+confirmar em uso) e o 4 bloqueado por não existir HSM com parâmetro para aprender. O item 5
+nomeava a próxima resposta a escrever, e é código: **pedido de emprego**.
 
-### Causa raiz: o anti-duplicata era por MODELO, e a pergunta certa é outra
+### Por que ela é irmã da `pedido-ajuda`, e não uma resposta qualquer
 
-O registro guarda "contato X recebeu o modelo Y". Às 14:05 o Vicente recebeu a resposta pronta
-`sem-retorno-interesse`; às 14:37, o modelo aprovado. **Chaves diferentes, nenhuma duplicata
-detectada** — e duas mensagens na cara da pessoa em 32 minutos.
+O risco jurídico é o mesmo — na verdade um pouco maior. A Lei 9.504/97, art. 41-A, define
+captação ilícita de sufrágio como oferecer ou prometer ao eleitor vantagem de qualquer natureza,
+**"inclusive emprego ou função pública"**: é o único caso em que a coisa pedida está escrita na
+lei. O art. 73, V ainda proíbe nomear, contratar ou admitir servidor nos três meses anteriores ao
+pleito. Então a recusa se apoia na lei, como a do pedido de ajuda: é verdade e tira o peso pessoal
+do não.
 
-E não foi azar: quem acaba de ser concluído volta para o **topo** da lista de concluídos, então
-a rodada seguinte começa justamente por ele. Anti-duplicata por modelo + fila que devolve o
-último ao topo = máquina de repetir.
+### A decisão que importa no texto
 
-### O conserto
+Ela **não oferece encaminhar currículo** nem "passar adiante" para empresa nenhuma, e isso é de
+propósito: intermediar contratação é exatamente o que a regra proíbe, e promessa de repassar
+currículo é promessa que ninguém cumpre — vira a mesma frustração, só que mais tarde. O teste
+tranca isso: qualquer reescrita que fale em currículo derruba a suíte.
 
-A pergunta deixou de ser "já mandei ESTE texto?" e passou a ser **"já falei com esta pessoa
-agora há pouco?"**. Quem responde é a **conversa**, não o nosso registro — assim conta também o
-que ele mandou à mão, por outra rodada ou por outro operador.
+O caminho indicado é o do trabalho, não o da assistência: no RS as agências do **SINE são
+operadas pela FGTAS**, e as mesmas vagas estão no **Emprega Brasil** (gov.br). O CRAS entra
+depois, para qualificação e para o que sustenta a pessoa enquanto o trabalho não vem. O fecho é o
+mesmo da `pedido-ajuda` — "procurou e não foi atendido? aí sim é trabalho nosso" —, que é a parte
+que o mandato pode fazer de verdade.
 
-Janela de horas (48h por padrão, editável no cartão), e não "nunca repetir": esta fila é de quem
-**não responde**, então "a última mensagem é nossa" é a regra, não a exceção. Bloquear para
-sempre esvaziaria a rodada. Quem recebeu há três dias é alvo legítimo de segunda tentativa; quem
-recebeu há trinta minutos, não.
+Sem vocativo, como todas as outras (regra do projeto).
 
-`hsm.decidirReenvio` é puro e testado, com o caso real (32 min) entre as asserções. Custa uma
-leitura de conversa a mais por contato — é o preço de não mandar duas vezes.
+### Chega a quem já usa o painel
 
-### O que a print também mostrou, e não é defeito
-
-- `Atenção: percorri 1 de 50 da lista — 49 não chegaram a ser abertos` — o aviso de ontem
-  funcionando. A rodada parou no primeiro contato porque a plataforma **pediu motivo de
-  conclusão** (`enviado, mas a plataforma pediu motivo — responda o diálogo`). Enquanto esse
-  diálogo aparecer, toda rodada vai parar no primeiro: é decisão dele, e a rodada não responde
-  diálogo por ele.
-
-### Sobre "use o Claude do Chrome"
-
-Procurei em três lugares nesta sessão — ferramentas de navegador, conectores e plugins: **não
-há nada que alcance o Chrome dele**. A sessão roda em container remoto; a extensão conversa com
-o Claude Code instalado na máquina dele. Diagnóstico daqui é print + código, e nos dois últimos
-casos isso bastou (o "Santiago" e este) porque a causa estava no código, não na tela.
+`DEFAULT_TEMPLATES` só vale para quem nunca gravou nada, e a lista dele está no
+`chrome.storage`. Migração própria (`migrarRespostaPedidoEmprego`, flag `respostaPedidoEmprego`),
+com as travas de sempre: só acrescenta, nunca reescreve, roda uma vez só — apagar a resposta de
+propósito não a faz voltar.
 
 ### Arquivos alterados
 
-`src/lib/hsm.js`, `src/lib/store.js`, `src/panel/panel.js`, `tests/hsm.test.mjs`.
+`src/lib/store.js`, `src/lib/templates.js`, `tests/vars.test.mjs`.
+
+**Nota desta sessão:** a pasta em que trabalhei **não é repositório git** (não existe `.git`), então
+não houve commit nem push. Ao levar estes arquivos para o clone de verdade, o commit é
+`feat(templates): resposta pronta para pedido de emprego`.
 
 ---
 

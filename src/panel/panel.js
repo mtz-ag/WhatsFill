@@ -314,8 +314,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * O valor do Nome é corrigido **mantendo a origem** — veio do CRM, continua marcado como do
    * CRM e portanto não é reescrito lá. Aqui só conserta o que o painel usa e mostra.
    *
-   * A cidade da esquerda, essa sim, é dado determinístico novo: entra como palpite exato e só
-   * se o campo estiver vazio (nem o CRM nem o parser tinham cidade).
+   * A cidade da esquerda vem do FORMATO do cadastro, não de a pessoa ter dito nada na conversa
+   * — é o parsing que é determinístico, não o dado. Entrou como `exata` (grava sozinho) até um
+   * contato ("Lourdes" / "Cerrito") pegar cidade sem nunca ter mencionado nenhuma: alguém
+   * digitou o cadastro nesse formato por outro motivo (ou errado) e a extensão gravou por cima
+   * do silêncio, sem clique nenhum. Por isso `aproximada`: some cidade, marcada como palpite, e
+   * só sai daqui pro CRM se você confirmar (clique ou Salvar) — nunca em `aplicarAutomatico`.
    */
   async function corrigirNomeComCidade(nomeField) {
     const entrada = nomeField && state.draft[nomeField.id];
@@ -331,8 +335,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.draft[cidadeField.id] = {
         value: separado.cidade,
         from: 'palpite',
-        confidence: 'exata',
-        source: 'cidade escrita antes do nome no cadastro',
+        confidence: 'aproximada',
+        source: 'cidade escrita antes do nome no cadastro — confirme antes de gravar',
       };
     }
   }
@@ -1271,16 +1275,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
 
     card.append(
-      campoNumero('Não repetir para o mesmo contato por quantas horas', cfg.horasSemRepetir, (v) =>
-        salvarAuto({ horasSemRepetir: clampInt(v, 1, 720) }).then(renderAll)
-      ),
-      h('div', { class: 'wf-origin' },
-        'Quem acabou de ser concluído volta para o TOPO desta lista, então a rodada seguinte ' +
-          'começaria justo por ele. A rodada olha a conversa (não só o registro de qual modelo ' +
-          'já foi): se a última mensagem for nossa e recente, ela pula e diz há quanto tempo.')
-    );
-
-    card.append(
       h('div', { class: 'wf-origin' },
         'Todo mundo desta rodada recebe o modelo escolhido acima — é ele e só ele. A maioria ' +
           'desta fila está com a janela de 24h vencida, e aí modelo aprovado é o único envio ' +
@@ -1417,7 +1411,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *
    * @param {object} opts
    * @param {string|null} opts.aba aba da fila a garantir antes de cada item ("Novos")
-   * @param {function} opts.processar recebe o sessionId e devolve
+   * @param {function} opts.processar recebe (sessionId, { contatosTratados }) e devolve
    *   { nome, resultado: 'enviado'|'triado'|'pulado'|'erro', motivo?, parar? }
    *
    *   'triado' = assumido sem enviar nada, só para sair da fila. Sai da lista, então a posição
@@ -1507,6 +1501,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
   async function percorrerFila({ aba = null, limite, pausaMs, processar }) {
     const visitados = new Set();
+    /**
+     * Os CONTATOS já tratados nesta rodada — a trava que o id da sessão não dá.
+     *
+     * `visitados` guarda id de SESSÃO, e na rodada dos concluídos a sessão não é estável: o
+     * Reiniciar reabre o atendimento e o Concluir fecha de novo, e o item volta para a lista.
+     * Se a plataforma devolver esse atendimento com outro id — ou se a mesma pessoa tiver dois
+     * atendimentos na lista —, o id não repete e a rodada manda a mensagem **de novo para a
+     * mesma pessoa**. Contato é a identidade que importa aqui: é quem recebe o WhatsApp.
+     *
+     * O registro anti-duplicata (`sentLog`) cobre o caso entre rodadas, mas depende de estar
+     * ligado e é por contato+modelo. Esta trava vale dentro da rodada e não tem exceção.
+     */
+    const contatosTratados = new Set();
     let posicao = 0;
     let enviados = 0;
     let carregamentos = 0;
@@ -1580,7 +1587,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
       visitados.add(aberto.sessionId);
 
-      const r = await processar(aberto.sessionId);
+      const r = await processar(aberto.sessionId, { contatosTratados });
       registrarNaRodada(r.nome, r.resultado, r.motivo);
 
       if (r.resultado === 'erro') {
@@ -1771,7 +1778,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     await rodar({
       aba: ABA_CONCLUIDOS,
-      processar: (sessionId) => processarSemRetorno(sessionId, modelo),
+      processar: (sessionId, ctx) => processarSemRetorno(sessionId, modelo, ctx),
     });
   }
 
@@ -1853,7 +1860,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return setStatus('Rodada cancelada.');
     }
 
-    await rodar({ aba: 'Novos', processar: (sessionId) => processarNovo(sessionId, template, padrao) });
+    await rodar({ aba: 'Novos', processar: (sessionId, ctx) => processarNovo(sessionId, template, padrao, ctx) });
   }
 
   /**
@@ -1864,7 +1871,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * ou para quem está no meio de uma conversa de verdade — é o erro caro aqui, e ele é barato
    * de evitar: o parser já sabe dizer se saiu nome ou cidade das mensagens.
    */
-  async function processarNovo(sessionId, template, padrao) {
+  async function processarNovo(sessionId, template, padrao, ctx) {
     let nome = 'contato';
     try {
       const sessao = await api.getSession(sessionId);
@@ -1894,6 +1901,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const achados = await extract(mensagens, {});
       if (achados.nome || achados.cidade) {
         return assumirParaTriagem(sessionId, nome, 'já informou nome ou cidade — vai pela classificação');
+      }
+
+      // Fora do `if (antiDup)` de propósito: não é preferência, é a mesma pessoa duas vezes na
+      // mesma rodada. Ver `contatosTratados` em `percorrerFila`.
+      if (ctx?.contatosTratados?.has(contato.id)) {
+        return { nome, resultado: 'pulado', motivo: 'já tratei este contato nesta rodada' };
       }
 
       if (state.settings.antiDup) {
@@ -1933,6 +1946,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       setStatus(`Pedindo os dados para ${nome}…`);
       await page.sendText(text);
       await templatesLib.markSent(contato.id, template.id, { nome });
+      ctx?.contatosTratados?.add(contato.id);
 
       const concluido = await page.clickConcluir();
       if (!concluido.ok) {
@@ -1991,7 +2005,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * aprovado do conteúdo pedido, e mandar o modelo errado é o erro mais caro que existe neste
    * fluxo. Pular não conclui — o contato fica na fila para ele responder à mão.
    */
-  async function processarRespondido(sessionId) {
+  async function processarRespondido(sessionId, ctx) {
     let nome = 'contato';
     try {
       // Carrega pelo caminho de sempre: parser, sugestão de etiquetas, e a classificação
@@ -1999,6 +2013,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       await load(sessionId);
       if (!state.contact) return { nome, resultado: 'erro', motivo: 'não consegui carregar o contato' };
       nome = state.contact.name || state.contact.nameWhatsapp || 'sem nome';
+
+      // Aqui a marca é por CONTATO TRATADO, não por mensagem enviada como nas outras duas
+      // rodadas — e a diferença é de propósito. Esta pergunta contato a contato: você já decidiu
+      // o que fazer com esta pessoa nesta rodada, e mostrar a mesma pergunta de novo (porque o
+      // atendimento voltou para a lista com outro id) é perguntar duas vezes a mesma coisa.
+      if (ctx?.contatosTratados?.has(state.contact.id)) {
+        return { nome, resultado: 'pulado', motivo: 'já tratei este contato nesta rodada' };
+      }
+      ctx?.contatosTratados?.add(state.contact.id);
 
       const conteudos = state.tagSuggestions.filter((s) => s.origem === 'conteúdo');
       let modelo = null;
@@ -2703,12 +2726,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * **volta** para a mesma lista (agora no topo, porque acabou de ser concluído). Sem andar uma
    * casa, a rodada reabriria o mesmo atendimento.
    */
-  async function processarSemRetorno(sessionId, modelo) {
+  async function processarSemRetorno(sessionId, modelo, ctx) {
     let nome = 'contato';
     try {
       const sessao = await api.getSession(sessionId);
       const contato = await api.getContact(sessao.contactId);
       nome = contato.name || contato.nameWhatsapp || 'sem nome';
+
+      // Mesma pessoa, outro atendimento: o Reiniciar/Concluir devolve o item para a lista e o id
+      // da sessão pode vir trocado. Aqui a mensagem já saiu uma vez nesta rodada — parar antes
+      // de enviar é a diferença entre um pulo no log e a pessoa recebendo duas vezes.
+      if (ctx?.contatosTratados?.has(contato.id)) {
+        return {
+          nome,
+          resultado: 'pulado',
+          continuaNaFila: true,
+          motivo: 'já tratei este contato nesta rodada (o atendimento voltou para a lista)',
+        };
+      }
 
       /**
        * **Vai o modelo que ele escolheu. Sempre.**
@@ -2734,28 +2769,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             continuaNaFila: true,
             motivo: `já recebeu ${rotuloEnvio} em ${new Date(quando.at).toLocaleDateString('pt-BR')}`,
           };
-        }
-
-        /**
-         * A trava que faltava: **já falei com esta pessoa agora há pouco?**
-         *
-         * A de cima é por MODELO — não pegou o caso real, em que o contato recebeu a resposta
-         * pronta numa rodada e o modelo aprovado na seguinte, meia hora depois. Chaves
-         * diferentes, nenhuma duplicata, duas mensagens na cara da pessoa.
-         *
-         * Quem responde é a conversa, não o nosso registro: assim conta também o que ele mandou
-         * à mão. Custa uma leitura a mais por contato, e é o preço de não mandar duas vezes.
-         */
-        const conversa = await api.getConversation(sessionId, 5);
-        const reenvio = hsmLib.decidirReenvio({
-          ultimaFoiNossa: !!conversa.ultima && !conversa.ultima.doContato,
-          horasDesdeUltima: conversa.ultima
-            ? (Date.now() - new Date(conversa.ultima.at).getTime()) / 3600000
-            : Infinity,
-          limiteHoras: clampInt(state.auto.cfg.horasSemRepetir, 1, 720),
-        });
-        if (reenvio.acao === 'pular') {
-          return { nome, resultado: 'pulado', continuaNaFila: true, motivo: reenvio.motivo };
         }
       }
 
@@ -2792,6 +2805,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return { nome, resultado: 'erro', parar: true, motivo: 'reabri o atendimento mas o diálogo não confirmou o envio' };
       }
       await templatesLib.markSent(contato.id, chaveEnvio, { nome });
+      // Marca assim que a mensagem SAI, não depois de concluir: se o Concluir falhar, a pessoa
+      // já recebeu, e é isso que não pode acontecer duas vezes.
+      ctx?.contatosTratados?.add(contato.id);
 
       const concluido = await page.clickConcluir();
       if (!concluido.ok) {

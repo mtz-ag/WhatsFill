@@ -163,6 +163,78 @@ export function getSessionListItems() {
 }
 
 /**
+ * A fila está buscando os itens no servidor AGORA?
+ *
+ * Medido ao vivo (12/08/2026): a lista tem spinner próprio, um `mat-progress-spinner` **dentro
+ * de `sessions-list-online-content`**. É esse, e não o `fuse-loading-bar` do topo — o de cima
+ * sobe em qualquer requisição do app, inclusive nas nossas, e daria falso positivo o tempo todo.
+ */
+function filaCarregando() {
+  const escopo = document.querySelector('sessions-list-online-content');
+  if (!escopo) return false;
+  return !!escopo.querySelector('mat-progress-spinner, mat-spinner, [role="progressbar"]');
+}
+
+/**
+ * Espera a fila da esquerda TERMINAR de carregar, e devolve quantos itens vieram.
+ *
+ * **É o conserto da rodada dos concluídos, e o número diz por quê.** Medido na máquina dele:
+ * clicar na lista de arquivados tira o `bg-gray-300` das três abas em **1,0 s**, mas os itens
+ * só aparecem em **13,0 s**. O código antigo confirmava a troca pela classe, esperava 400 ms
+ * fixos e olhava a lista — que naquele instante tinha **zero** itens.
+ *
+ * Isso estragava as duas pontas:
+ *  - a lista de concluídos era **recusada como candidata errada** ("a lista veio vazia, então
+ *    não era este botão"), e a rodada saía clicando nos outros ícones da barra até desistir
+ *    com "Tentei 3 botão(ões) e nenhum abriu a lista de concluídos" — mentira, o primeiro
+ *    clique estava certo;
+ *  - quando passava, `openQueueSession` lia a lista ainda vazia e dizia **"a fila carregada
+ *    acabou (0 itens)"**, que é a mesma mentira com outro nome.
+ *
+ * Ordem: dá um tempo para o spinner APARECER (medido: ~400 ms), espera enquanto ele estiver na
+ * tela, e então aguarda os itens pintarem. Lista que termina de carregar vazia é resposta
+ * legítima — quem chama decide o que fazer com `itens: 0`.
+ *
+ * **O limite é 60 s, e não é exagero.** Medido na máquina dele em duas passadas do mesmo dia:
+ * a lista dos arquivados levou **13 s** numa e **mais de 25 s** noutra. Quem chama tem que
+ * distinguir os dois "zero" possíveis — por isso o retorno traz `estourou`: sem ele, "ainda
+ * está carregando" vira "a lista está vazia", que é a mesma mentira que este conserto tirou
+ * da rodada.
+ */
+export async function esperarFilaCarregar(opts) {
+  const { timeoutMs = 60000, esperaDoSpinnerMs = 1200 } = opts || {};
+  const fim = Date.now() + timeoutMs;
+
+  // 1) o spinner pode demorar um pouco para subir; sem esta janela, uma leitura logo depois do
+  //    clique acharia "não está carregando" quando a requisição nem tinha saído.
+  const limiteSpinner = Math.min(fim, Date.now() + esperaDoSpinnerMs);
+  while (Date.now() < limiteSpinner && !filaCarregando()) {
+    await new Promise((r) => setTimeout(r, 100));
+  }
+
+  // 2) enquanto estiver buscando, esperar é a única coisa certa a fazer.
+  while (Date.now() < fim && filaCarregando()) {
+    await new Promise((r) => setTimeout(r, 150));
+  }
+
+  // 3) o spinner sai um instante ANTES de a lista pintar, então vai uma folga curta. Passada a
+  //    folga sem item nenhum, a lista terminou vazia de verdade — e vazio é resposta, não erro.
+  //    Se outra busca começar no meio (paginação, filtro), volta a esperar por ela.
+  let folga = Date.now() + 800;
+  while (Date.now() < fim && Date.now() < folga && !getSessionListItems().length) {
+    await new Promise((r) => setTimeout(r, 100));
+    if (!filaCarregando()) continue;
+    while (Date.now() < fim && filaCarregando()) {
+      await new Promise((r) => setTimeout(r, 150));
+    }
+    folga = Date.now() + 800;
+  }
+
+  const itens = getSessionListItems().length;
+  return { ok: !filaCarregando(), itens, estourou: Date.now() >= fim };
+}
+
+/**
  * O "Ver mais" da fila. A plataforma carrega 50 por vez e só traz o resto quando você clica —
  * a rodada enxerga só o que já veio, e é por isso que ela terminava em "A fila carregada
  * acabou" com o contador da aba ainda na casa das centenas.
@@ -234,14 +306,19 @@ export const ABA_MEUS = 'Meus';
  * É onde mora a fila de "sem retorno": atendimento fechado, com a etiqueta que ele filtra. Sem
  * ela não dá para percorrer essa fila, porque `Novos/Meus/Outros` não mostram concluído.
  *
- * **O `data-cy` desta não foi conferido ao vivo** (as outras três foram). Por isso aqui vai uma
- * lista de candidatos, mais reserva por ícone e por rótulo de acessibilidade — e, se nada
- * casar, a rodada **para e diz** em vez de percorrer a fila errada. `diagnosticarAbasDaFila()`
- * existe para descobrir o nome certo em uma passada.
+ * **Conferido ao vivo na máquina dele em 12/08/2026:** é
+ * `[data-cy="icon-chat-sessions-archive"]`, e o elemento do `data-cy` **é o próprio
+ * `<mat-icon data-mat-icon-name="archive">`** — não um botão em volta. Ele ganha `bg-gray-300`
+ * quando está ativo, igual às três abas de texto, o que dá sinal DIRETO em vez de dedução.
+ *
+ * Os outros nomes ficam como reserva para o dia em que a plataforma renomear, junto com a
+ * reserva por ícone e por rótulo. Se nada casar, a rodada **para e diz** em vez de percorrer a
+ * fila errada. `diagnosticarAbasDaFila()` continua existindo para redescobrir em uma passada.
  */
 export const ABA_CONCLUIDOS = 'Concluídos';
 
 const CY_CONCLUIDOS = [
+  'icon-chat-sessions-archive',
   'button-archived-sessions',
   'button-finished-sessions',
   'button-closed-sessions',
@@ -258,13 +335,26 @@ const RE_ROTULO_CONCLUIDOS = /arquiv|conclu[íi]d|encerrad|finalizad|archiv|clos
 /** O que a rodada descobriu sozinha, para não reprobar a cada volta do laço. */
 let concluidosAprendido = null;
 
-function getAbaConcluidos() {
-  if (concluidosAprendido?.isConnected) return concluidosAprendido;
-
+/**
+ * A lista de concluídos achada por `data-cy` — o caminho CONFIÁVEL.
+ *
+ * Separado do resto porque a diferença importa na hora de decidir: quem veio daqui é gancho de
+ * teste da plataforma e não precisa provar nada. Quem vem de palpite (ícone, rótulo, tentativa
+ * na barra) precisa — e é essa distinção que evita exigir prova de quem já é certo.
+ */
+function abaConcluidosPorCy() {
   for (const cy of CY_CONCLUIDOS) {
     const el = document.querySelector(`[data-cy="${cy}"]`);
     if (el) return el;
   }
+  return null;
+}
+
+function getAbaConcluidos() {
+  if (concluidosAprendido?.isConnected) return concluidosAprendido;
+
+  const porCy = abaConcluidosPorCy();
+  if (porCy) return porCy;
 
   const escopo = barraDaFila();
 
@@ -394,10 +484,16 @@ export function getQueueTab(label) {
 }
 
 export function isQueueTabActive(label) {
-  // A lista de concluídos é um ícone, e o tema não marca ele com `bg-gray-300` como faz nas
-  // três abas de texto. O sinal que funciona é por eliminação: estar nos concluídos significa
-  // que NENHUMA das três está ativa. É verificável sem depender da classe do ícone.
+  // A lista de concluídos tem sinal DIRETO: medido ao vivo, o `mat-icon` da caixa de arquivo
+  // ganha o mesmo `bg-gray-300` das três abas de texto quando está ativo. Preferir o sinal
+  // direto importa porque a eliminação também dá "true" no instante em que a plataforma está
+  // trocando de aba e nenhuma das três está marcada ainda.
+  //
+  // A eliminação fica como reserva, para quando o gancho da lista não for encontrado.
   if (label === ABA_CONCLUIDOS) {
+    const alvo = getAbaConcluidos();
+    if (alvo?.classList?.contains(ABA_ATIVA)) return true;
+
     return !Object.keys(ABAS_DA_FILA).some((nome) => {
       const el = getQueueTab(nome);
       return !!el && el.classList.contains(ABA_ATIVA);
@@ -440,25 +536,40 @@ async function selecionarConcluidos(timeoutMs) {
   }
 
   const antes = Object.keys(ABAS_DA_FILA).find((nome) => isQueueTabActive(nome)) || null;
+  const conhecido = abaConcluidosPorCy();
 
   for (const candidato of candidatos) {
     candidato.click();
 
-    const jaAprendido = candidato === concluidosAprendido;
+    // Quem já foi aprendido nesta sessão, e quem veio do `data-cy` da plataforma, **não precisa
+    // provar nada**. Foi exigir prova do candidato certo que quebrou esta rodada: a lista dos
+    // arquivados leva 13 s para chegar, a prova era cobrada em 400 ms, e o clique certo era
+    // descartado como errado — com a rodada saindo a clicar nos outros ícones da barra.
+    const confiavel = candidato === concluidosAprendido || candidato === conhecido;
     const deadline = Date.now() + Math.max(1500, Math.floor(timeoutMs / candidatos.length));
     while (Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 120));
       if (!isQueueTabActive(ABA_CONCLUIDOS)) continue;
 
-      await new Promise((r) => setTimeout(r, 400)); // a lista ainda está repintando
-      // Segunda trava para candidato ainda não aprendido: a lista tem que ter vindo com algo.
-      // Ícone que abre uma visão vazia também deixa as três abas apagadas, e sem isto a rodada
-      // daria a fila errada por boa. Do já aprendido não se exige: no fim da rodada a lista de
-      // concluídos legitimamente esvazia.
-      if (!jaAprendido && !getSessionListItems().length) break;
+      // Agora a espera é pela LISTA, não por um tempo fixo. Palpite continua tendo que provar
+      // que abriu algo — é o que separa a caixa de arquivo de um ícone que abre visão vazia —,
+      // só que com o tempo que a plataforma realmente leva.
+      const carregou = await esperarFilaCarregar();
+
+      // Estourou o tempo com um palpite na mão: não dá para dizer se o botão era o certo. Sair
+      // clicando nos outros por causa de lentidão da plataforma é mexer na fila dele à toa.
+      if (!confiavel && carregou.estourou) {
+        return {
+          ok: false,
+          reason:
+            'Cliquei no que parecia ser a lista de concluídos e a plataforma não terminou de ' +
+            'carregar a fila em 60s. Não sei dizer se era o botão certo, então parei aqui.',
+        };
+      }
+      if (!confiavel && !carregou.itens) break;
 
       concluidosAprendido = candidato;
-      return { ok: true, confirmado: true, aprendido: descrever(candidato) };
+      return { ok: true, confirmado: true, aprendido: descrever(candidato), itens: carregou.itens };
     }
 
     // Não era. Fecha o que o clique possa ter aberto (o "⋮" abre menu, e menu do Material é
@@ -508,8 +619,10 @@ export async function selectQueueTab(label, opts) {
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 120));
     if (isQueueTabActive(label)) {
-      await new Promise((r) => setTimeout(r, 400)); // a lista ainda está repintando
-      return { ok: true, confirmado: true };
+      // Esperar a LISTA, não um tempo fixo: a aba fica ativa em ~1s e os itens chegam bem
+      // depois. Era daqui que saía "a fila carregada acabou" com a lista ainda em branco.
+      const carga = await esperarFilaCarregar();
+      return { ok: true, confirmado: true, itens: carga.itens };
     }
   }
   // Clicou e não deu para confirmar: segue, mas sem afirmar que trocou.
@@ -532,6 +645,8 @@ export async function openNextSession(opts) {
     const trocou = await selectQueueTab(aba);
     if (!trocou.ok) avisoAba = trocou.reason;
   }
+
+  await esperarFilaCarregar(); // mesma razão do openQueueSession: a lista chega depois da aba
 
   const currentId = getSessionId();
   const target = getSessionListItems()
@@ -616,9 +731,28 @@ export async function openQueueSession(index, opts) {
     avisoAba = trocou.confirmado ? null : `Cliquei na aba "${aba}" mas não deu para confirmar a troca.`;
   }
 
+  // A lista vem do servidor e demora: medida entre 13 s e mais de 25 s na lista dos arquivados.
+  // Ler antes disso era afirmar "a fila acabou" sobre uma lista que ainda nem tinha chegado —
+  // e, pior, clicar numa posição que ainda ia mudar de dono quando os itens pintassem.
+  // `esperaDoSpinnerMs: 0` porque aqui NÃO houve clique nosso: ou o `selectQueueTab` acima já
+  // esperou a lista da aba que ele trocou, ou a aba já era a certa e não há requisição a nascer.
+  // Sem isso, cada item da rodada pagaria 1,2s de espera por um spinner que não vem.
+  const carga = await esperarFilaCarregar({ esperaDoSpinnerMs: 0 });
+
   const itens = getSessionListItems();
   if (index >= itens.length) {
-    return { ok: false, avisoAba, total: itens.length, reason: `A fila carregada acabou (${itens.length} item(ns)).` };
+    // Os dois "zero" NÃO são a mesma coisa, e dizer o nome certo é o que evita o próximo
+    // diagnóstico perdido: lista vazia é filtro; lista que não chegou é lentidão da plataforma.
+    const motivoVazio = carga.estourou
+      ? 'A lista da fila NÃO terminou de carregar (a plataforma passou de 60s). Nada foi aberto — tente de novo daqui a pouco.'
+      : 'A lista terminou de carregar e veio VAZIA — confira o filtro da fila na plataforma.';
+
+    return {
+      ok: false,
+      avisoAba,
+      total: itens.length,
+      reason: itens.length ? `A fila carregada acabou (${itens.length} item(ns)).` : motivoVazio,
+    };
   }
 
   const antes = getSessionId();

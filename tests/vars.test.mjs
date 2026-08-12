@@ -227,6 +227,36 @@ grupo('a pergunta dos grupos passa a pedir o link');
   check((await templates.migrarGruposPedeLink()).length === 0, 'texto dele fica como está');
 }
 
+grupo('a recusa de pedido de emprego chega a quem já tem a lista salva');
+{
+  const templates = await lib('templates.js');
+  const store = await lib('store.js');
+
+  const padrao = store.DEFAULT_TEMPLATES.find((t) => t.id === 'pedido-emprego');
+  check(!!padrao, 'a resposta "pedido-emprego" existe no padrão');
+  check(/não pode arrumar emprego/.test(padrao.text), 'diz que o mandato não pode — é o ponto dela');
+  check(/SINE/.test(padrao.text), 'e aponta o caminho que existe (SINE/FGTAS)');
+  // Intermediar contratação é justamente o que a lei proíbe: nada de prometer levar currículo.
+  check(!/curr[ií]culo/i.test(padrao.text), 'não promete encaminhar currículo a empresa nenhuma');
+
+  mem.migracoes = {};
+  mem.templates = [{ id: 'agradecimento', name: 'Agradecer', text: 'Obrigado pela atenção!' }];
+  check((await templates.migrarRespostaPedidoEmprego()) === true, 'acrescentou a quem não tinha');
+  check(mem.templates.some((t) => t.id === 'pedido-emprego'), 'a resposta entrou na lista salva');
+  check(mem.templates[0].text === 'Obrigado pela atenção!', 'e não mexeu no que já estava lá');
+
+  // Roda uma vez só: apagar de propósito não pode fazer a resposta voltar sozinha.
+  mem.templates = mem.templates.filter((t) => t.id !== 'pedido-emprego');
+  check((await templates.migrarRespostaPedidoEmprego()) === false, 'não roda de novo');
+  check(!mem.templates.some((t) => t.id === 'pedido-emprego'), 'resposta apagada por ele não volta');
+
+  // Quem já tem a resposta não ganha uma cópia.
+  mem.migracoes = {};
+  mem.templates = [{ id: 'pedido-emprego', name: 'A minha versão', text: 'Texto do Thiago.' }];
+  check((await templates.migrarRespostaPedidoEmprego()) === false, 'não duplica o que já existe');
+  check(mem.templates.length === 1 && mem.templates[0].text === 'Texto do Thiago.', 'a versão dele fica intacta');
+}
+
 grupo('as perguntas pedem os dados no formato que o parser entende');
 {
   // O parser acerta porque a PERGUNTA impõe o formato. Se alguém reescrever uma dessas

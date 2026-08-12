@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"---exit:$?\")",
+      "Bash(node tests/parser.test.mjs)",
+      "Bash(node tests/contract.test.mjs)",
+      "Bash(node tests/vars.test.mjs)",
+      "Bash(node tests/tags.test.mjs)",
+      "Bash(node tests/hsm.test.mjs)",
+      "Bash(node tests/conversa.test.mjs)",
+      "Bash(ls \"C:/Users/thiag/Downloads\" | head -50)",
+      "Bash(cd \"C:/Users/thiag\" && ls Desktop Documents 2>/dev/null | head -60)",
+      "mcp__claude-in-chrome__list_connected_browsers",
+      "mcp__claude-in-chrome__select_browser",
+      "mcp__claude-in-chrome__tabs_context_mcp",
+      "mcp__claude-in-chrome__navigate",
+      "mcp__claude-in-chrome__computer",
+      "mcp__claude-in-chrome__javascript_tool",
+      "Bash(node --check src/lib/dom.js)",
+      "Bash(node --check src/panel/panel.js)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"console.log\\('no package.json or cat failed'\\)\")",
+      "Bash(node \"C:\\\\Users\\\\thiag\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-thiag-Downloads-WhatsFill-claude-extensao-claude-analise-i9spxw-WhatsFill-claude-extensao-claude-analise-i9spxw\\\\343414ff-4c76-469d-9959-e3b13239b9ba\\\\scratchpad\\\\debug-cerrito.mjs\")"
+    ]
+  }
+}

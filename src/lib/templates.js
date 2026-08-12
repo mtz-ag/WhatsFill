@@ -20,6 +20,7 @@ export async function list() {
     await migrarInteressePedeDados();
     await migrarGruposPedeLink();
     await migrarRespostaSemRetorno();
+    await migrarRespostaPedidoEmprego();
   }
   return store.get('templates');
 }
@@ -93,6 +94,15 @@ export const migrarRespostaInteresse = () =>
 /** A pergunta dos sem retorno, usada pela rodada dos concluídos quando a janela está aberta. */
 export const migrarRespostaSemRetorno = () =>
   garantirRespostas(['sem-retorno-interesse'], 'respostaSemRetorno');
+
+/**
+ * A recusa de pedido de emprego — irmã da `pedido-ajuda`, mesmo risco jurídico e volume alto.
+ *
+ * Flag própria pelo mesmo motivo das outras: reaproveitar flag antiga faria voltar resposta que
+ * ele apagou de propósito.
+ */
+export const migrarRespostaPedidoEmprego = () =>
+  garantirRespostas(['pedido-emprego'], 'respostaPedidoEmprego');
 
 /**
  * A pergunta dos grupos passa a pedir o LINK de convite, e não o nome.

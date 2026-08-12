@@ -125,6 +125,44 @@ export const DEFAULT_TEMPLATES = [
   },
   {
     /**
+     * Pedido de emprego, indicação para vaga, "arruma um serviço para mim".
+     *
+     * Volume alto e o MESMO risco jurídico do `pedido-ajuda` — na verdade um pouco pior, porque
+     * a lei cita **emprego** com todas as letras: Lei 9.504/97, art. 41-A, define captação
+     * ilícita de sufrágio como oferecer ou prometer ao eleitor vantagem de qualquer natureza,
+     * "inclusive emprego ou função pública". O art. 73, V ainda proíbe nomear, contratar ou
+     * admitir servidor nos três meses anteriores ao pleito. Por isso a recusa se apoia na lei,
+     * como a do `pedido-ajuda`: é verdade e tira o peso pessoal do não.
+     *
+     * O caminho indicado é o do trabalho, não o da assistência: no RS as agências do SINE são
+     * operadas pela FGTAS, e as mesmas vagas estão no Emprega Brasil (gov.br). O CRAS entra
+     * depois, para qualificação e para o que sustenta a pessoa enquanto o trabalho não vem.
+     *
+     * Não oferece encaminhar currículo a empresa nenhuma **de propósito**: intermediar contratação
+     * é exatamente o que a regra proíbe, e "eu passo adiante" vira promessa que ninguém cumpre.
+     */
+    id: 'pedido-emprego',
+    name: 'Pedido de emprego (negar com respeito)',
+    text:
+      '{{saudacao}}! Obrigado por confiar na gente para falar disso. ' +
+      'Procurar trabalho cansa, e eu li a sua mensagem com atenção.\n\n' +
+      'Preciso te responder com sinceridade: um mandato não pode arrumar emprego, indicar para ' +
+      'vaga nem prometer contratação a eleitor. A lei eleitoral proíbe isso expressamente, e ' +
+      'vale para todos os gabinetes, o ano inteiro — não é falta de vontade.\n\n' +
+      'O caminho certo, e que é gratuito, é este:\n\n' +
+      '• Agência do SINE/FGTAS da sua cidade — encaminha para as vagas abertas e resolve o ' +
+      'seguro-desemprego (leve os documentos e a Carteira de Trabalho Digital)\n' +
+      '• App ou site *Emprega Brasil* (gov.br) — as mesmas vagas do SINE, direto do celular\n' +
+      '• CRAS do seu bairro — Cadastro Único, cursos gratuitos de qualificação e o apoio ' +
+      'previsto em lei enquanto o trabalho não vem\n' +
+      '• Concursos e seleções da prefeitura e do Estado saem sempre no site oficial — ali ' +
+      'ninguém depende da indicação de ninguém\n\n' +
+      'Se você já procurou o SINE ou a prefeitura e não foi atendido, me conta o que aconteceu. ' +
+      'Aí sim é trabalho nosso: cobrar o poder público e encaminhar a sua situação a quem tem o ' +
+      'dever de resolver.',
+  },
+  {
+    /**
      * Saudação de abertura. Teor católico a pedido do Thiago — o Capitão Martim é religioso.
      *
      * Termina sem pergunta de propósito: convite a responder vira atendimento, e o gabinete não
@@ -264,16 +302,6 @@ const DEFAULTS = {
      * mandar continua sendo ele. Ver `hsm.decidirSemResposta`.
      */
     horasSemResposta: 12,
-    /**
-     * Janela em que a rodada **não repete** mensagem para o mesmo contato, olhando a conversa
-     * (não o nosso registro por modelo).
-     *
-     * 48h é o meio-termo: quem acabou de ser concluído volta para o topo da lista de
-     * concluídos, então a rodada seguinte começa por ele — e sem isto ele recebe de novo em
-     * minutos. Ao mesmo tempo, esta fila é de quem não responde, então "a última mensagem é
-     * nossa" é a regra; bloquear para sempre esvaziaria a rodada. Ver `hsm.decidirReenvio`.
-     */
-    horasSemRepetir: 48,
   },
 
   /**
