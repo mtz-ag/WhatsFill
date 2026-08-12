@@ -346,6 +346,51 @@ grupo('cidade informada pela pessoa pode substituir a do CRM');
   check(!conversa.cidade?.informada, 'cidade citada na conversa NÃO é informada — não substitui nada');
 }
 
+grupo('mensagem que é SÓ a cidade conta como informada pela pessoa');
+{
+  // Caso da print (12/08): o cadastro estava com "Santiago" — dado velho e errado — e o contato
+  // mandou uma única mensagem, "PORTO ALEGRE". Como só resposta com separador contava como
+  // informada, a cidade errada ficava no lugar, levando o COREDE errado junto.
+  const g = await extract(
+    ['Olá! Eu aceito receber conteúdos do Flávio Bolsonaro e do Cap Martim.', 'Meus parentes', 'PORTO ALEGRE'],
+    { temaField }
+  );
+  check(g.cidade?.value === 'Porto Alegre', `cidade = ${g.cidade?.value ?? '(nada)'}`);
+  check(g.cidade?.informada === true, 'marcada como informada — é o que substitui a cidade do CRM');
+
+  // Correção vale mais que a primeira resposta.
+  const corrigiu = await extract(['Canoas', 'Porto Alegre'], { temaField });
+  check(corrigiu.cidade?.value === 'Porto Alegre', `a última cidade mandada é que vale = ${corrigiu.cidade?.value}`);
+
+  // Cidade no meio de uma frase continua sendo palpite: não substitui nada.
+  const naFrase = await extract(['boa tarde, sou de Pelotas e quero ajudar'], { temaField });
+  check(naFrase.cidade?.value === 'Pelotas' && !naFrase.cidade.informada, 'no meio da frase NÃO é informada');
+
+  // Encurtamento de uma palavra não autoriza troca: pode ser nome de gente.
+  const curta = await extract(['Vitória'], { temaField });
+  check(!curta.cidade?.informada, '"Vitória" sozinho não substitui a cidade do CRM');
+}
+
+grupo('cadastro "Nome - Cidade" (a cidade vem depois)');
+{
+  // "Luci - Porto Alegre": metade da base foi digitada assim. Sem este ramo, a cidade escrita no
+  // próprio cadastro ficava invisível.
+  const split = (t) => cities.splitCidadeNome(t);
+
+  const luci = await split('Luci - Porto Alegre');
+  check(luci?.cidade === 'Porto Alegre' && luci?.nome === 'Luci', `separou = ${JSON.stringify(luci)}`);
+  check((await split('Maria - Santa Cruz'))?.cidade === 'Santa Cruz do Sul', 'encurtamento de duas palavras vale');
+
+  // O sentido antigo continua valendo.
+  check((await split('Canoas - Marines'))?.nome === 'Marines', '"Cidade - Nome" não quebrou');
+
+  // A trava: nome de gente que também começa município não pode virar cidade dos dois lados.
+  check((await split('Ana - Vitória')) === null, '"Ana - Vitória" não vira Vitória das Missões');
+  check((await split('Vitória - Ana')) === null, 'nem no sentido inverso');
+  check((await split('Maria - Silva')) === null, 'dois nomes de gente continuam sem separação');
+  check((await split('Luci - 51999999999')) === null, 'telefone do outro lado não é cidade nem nome');
+}
+
 grupo('cidade → link do grupo');
 mem.cityLinks = { 'santo angelo': { label: 'Santo Ângelo', link: 'https://chat.whatsapp.com/AAA' } };
 mem.defaultGroupLink = '';

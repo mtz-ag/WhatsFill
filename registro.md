@@ -67,6 +67,53 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
+## 2026-08-12 — "Pegou Santiago em vez de Porto Alegre" — o parser estava certo, a regra é que não
+
+**Relato dele:** print do contato "Luci - Porto Alegre" com `Cidade: Santiago` no CRM e a
+etiqueta **Vale do Jaguari** (COREDE de Santiago) aplicada. "É um erro antigo."
+
+### Reproduzi antes de mexer — e o parser não era o culpado
+
+Rodei as mensagens dele pelo parser atual: `Olá! Eu aceito receber conteúdos…` + `Meus parentes`
++ `PORTO ALEGRE` devolve **Porto Alegre, exata**. Nunca Santiago. Ele estava certo ao dizer que
+é erro **antigo**: o "Santiago" é dado velho gravado no CRM em alguma passada anterior.
+
+O defeito de hoje é outro, e é o que interessa: **a extensão via o certo e mantinha o errado.**
+
+### Causa raiz 1 — só resposta com separador contava como "informada"
+
+A regra de substituição exigia resposta estruturada ("Nome / Cidade"). O contato mandou uma
+mensagem inteira escrita `PORTO ALEGRE` — que é a pessoa dizendo a cidade dela de forma **mais**
+clara, não menos —, e isso não contava. Resultado: "nunca sobrescrever o CRM" preservava o
+Santiago errado, e o COREDE errado junto.
+
+Agora **mensagem que é, sozinha, o nome completo de um município** conta como informada. As
+travas são as mesmas: casamento exato e **nome completo, nunca prefixo** — "Vitória", "Esperança"
+e "Rosário" começam município do RS e são nome de gente. Vale a mensagem mais recente: quem
+mandou "Canoas" e corrigiu para "Porto Alegre" tem a correção respeitada.
+
+### Causa raiz 2 — o cadastro é "Nome - Cidade", e a extensão só lia "Cidade - Nome"
+
+`splitCidadeNome` nasceu para "Canoas - Marines". O cadastro dele é **"Luci - Porto Alegre"** —
+a cidade vem depois. Metade da base foi digitada assim, e a cidade escrita no próprio cadastro
+era invisível para o painel.
+
+Os dois sentidos agora funcionam, com uma trava nova nos dois: o encurtamento de **uma palavra
+só** deixa de separar. "Ana - Vitória" não pode virar Vitória das Missões — aqui o erro não
+deixa a cidade errada, deixa o **eleitor com o nome errado**.
+
+### Efeito prático na tela dele
+
+Ao reabrir a Luci: a cidade vira Porto Alegre por substituição, a etiqueta **Vale do Jaguari sai**
+e a **Metropolitano Delta do Jacuí entra** (a troca de COREDE já existia desde 10/08), e a
+pergunta da rodada mostra `Cidade: Porto Alegre (a pessoa informou; estava "Santiago")`.
+
+### Arquivos alterados
+
+`src/lib/extract.js`, `src/lib/cities.js`, `tests/parser.test.mjs`.
+
+---
+
 ## 2026-08-12 — "O contato voltou para o topo, vai pegar o mesmo de novo?" — simulado, não achado
 
 **Pergunta dele:** "após a mensagem o contato voltou para o topo da lista, verifique se vai pegar

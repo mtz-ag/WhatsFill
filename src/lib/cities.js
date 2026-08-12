@@ -304,16 +304,48 @@ export async function splitCidadeNome(texto) {
 
   const esquerda = m[1].trim();
   const direita = m[2].trim();
-  // Do lado do nome tem que sobrar nome, não telefone nem pontuação.
-  if (!esquerda || !/\p{L}{2}/u.test(direita)) return null;
+  if (!esquerda || !direita) return null;
 
-  const casou = await matchCity(esquerda);
-  if (!casou || casou.confidence !== 'exata') return null;
+  // "Canoas - Marines": a cidade vem primeiro.
+  if (/\p{L}{2}/u.test(direita) && (await ehExatamenteCidade(esquerda))) {
+    return { cidade: (await matchCity(esquerda)).city, nome: direita };
+  }
 
-  const alvo = normalize(esquerda);
-  if (normalize(casou.city) !== alvo && normalize(casou.matched) !== alvo) return null;
+  /**
+   * "Luci - Porto Alegre": a cidade vem DEPOIS do nome.
+   *
+   * Metade da base foi digitada assim, e sem este ramo a cidade que está no próprio cadastro
+   * ficava invisível — o contato aparecia sem cidade (ou com a cidade velha e errada do CRM)
+   * mesmo tendo "Porto Alegre" escrito no nome.
+   *
+   * Exige o nome COMPLETO do município, nunca prefixo: "Ana - Vitória" não pode virar Vitória
+   * das Missões, porque "Vitória" ali é quase certamente gente.
+   */
+  if (/\p{L}{2}/u.test(esquerda) && (await ehExatamenteCidade(direita))) {
+    return { cidade: (await matchCity(direita)).city, nome: esquerda };
+  }
 
-  return { cidade: casou.city, nome: direita };
+  return null;
+}
+
+/**
+ * O texto é, inteiro, o nome de um município — com certeza suficiente para trocar o nome de um
+ * eleitor?
+ *
+ * Aceita o nome completo ("Porto Alegre", "Sto Angelo" pelo apelido) e o encurtamento de **duas
+ * palavras ou mais** ("Santa Cruz" → Santa Cruz do Sul), que não tem como ser outra coisa.
+ *
+ * Recusa encurtamento de uma palavra só. "Vitória", "Esperança" e "Rosário" são começo de
+ * município do RS **e** nome de gente — e aqui um erro não deixa a cidade errada, deixa o
+ * eleitor com o nome errado.
+ */
+async function ehExatamenteCidade(texto) {
+  const casou = await matchCity(texto);
+  if (!casou || casou.confidence !== 'exata') return false;
+
+  const alvo = normalize(texto);
+  if (normalize(casou.city) === alvo) return true;
+  return normalize(casou.matched) === alvo && alvo.split(' ').length >= 2;
 }
 
 /** As N cidades mais parecidas, para o painel oferecer como botão quando erra. */

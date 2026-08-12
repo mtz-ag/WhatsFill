@@ -166,10 +166,11 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   uma vez e copia. Sem contrato aprendido, a extensão **recusa** em vez de tentar.
 - **Automático só grava o determinístico:** cidade que casou exato com o IBGE, o COREDE dela e
   as etiquetas de conteúdo. Palpite aproximado sempre espera clique.
-- **Nunca sobrescrever o que já está no CRM.** O automático só preenche buraco. **Uma exceção,
-  e só uma:** a cidade que a própria pessoa informou respondendo o formulário substitui a do
-  CRM — com casamento exato do IBGE, e levando a etiqueta de COREDE antiga junto. Cidade citada
-  no meio da conversa não substitui nada.
+- **Nunca sobrescrever o que já está no CRM.** O automático só preenche buraco. **Uma exceção:**
+  a cidade que a própria pessoa informou — respondendo o formulário **ou** mandando uma mensagem
+  que é só o nome do município — substitui a do CRM, com casamento exato e nome COMPLETO (nunca
+  prefixo), levando a etiqueta de COREDE antiga junto. Cidade citada no meio de uma frase não
+  substitui nada.
 - **Resposta não chama o contato pelo nome.** Decisão do Thiago (10/08), e vale para resposta
   nova: o nome do CRM erra demais para ir num texto que a pessoa lê (apelido do perfil, cidade
   no campo do nome, sigla colada, `[NOVO] …`), e sem valor ele **bloqueia o envio**. Continuamos

@@ -47,8 +47,29 @@ export async function extract(texts, { temaField } = {}) {
       informada: true,
     };
   } else {
-    const hit = await cities.matchCity(joined);
-    if (hit) guesses.cidade = { value: hit.city, confidence: hit.confidence, source: hit.matched };
+    /**
+     * Mensagem que é **só o nome de um município** também é a pessoa informando a cidade.
+     *
+     * Caso real: o contato mandou uma única mensagem, `PORTO ALEGRE`. O cadastro dele estava
+     * com "Santiago" — dado velho e errado —, e a regra "nunca sobrescrever o CRM" mantinha o
+     * errado, porque só resposta com separador ("Nome / Cidade") contava como informada. Só que
+     * uma mensagem inteira com o nome da cidade é a pessoa dizendo a cidade dela de forma **mais**
+     * clara, não menos.
+     *
+     * As travas são as mesmas do resto: casamento exato e o nome COMPLETO do município. Prefixo
+     * não vale — "Vitória" sozinho pode ser nome de gente, e trocar a cidade de um eleitor por
+     * causa disso é pior do que deixar o campo como está.
+     */
+    const soCidade = await cidadeSozinha(list);
+    const hit = soCidade || (await cities.matchCity(joined));
+    if (hit) {
+      guesses.cidade = {
+        value: hit.city,
+        confidence: hit.confidence,
+        source: hit.matched,
+        informada: !!soCidade,
+      };
+    }
   }
 
   if (!guesses.cidade) {
@@ -225,6 +246,26 @@ export async function findStructured(texts, isCity) {
         funcao: posterior || null,
         raw: text,
       };
+    }
+  }
+  return null;
+}
+
+/**
+ * A mensagem mais recente que é, sozinha, o nome completo de um município.
+ *
+ * Da mais nova para a mais antiga: se a pessoa mandou "Canoas" e depois corrigiu para "Porto
+ * Alegre", vale a correção.
+ */
+async function cidadeSozinha(textos) {
+  for (const texto of [...textos].reverse()) {
+    const t = String(texto || '').trim();
+    if (!t || t.length > 40) continue;
+
+    const hit = await cities.matchCity(t);
+    // Nome COMPLETO, não prefixo: "Vitória" pode ser gente, "Vitória das Missões" não.
+    if (hit?.confidence === 'exata' && cities.normalize(t) === cities.normalize(hit.city)) {
+      return { city: hit.city, confidence: 'exata', matched: t };
     }
   }
   return null;
