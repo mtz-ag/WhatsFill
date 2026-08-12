@@ -1071,7 +1071,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(renderCartaoMomento(cfg));
     body.append(renderCartaoRespondidos());
     body.append(renderCartaoSemRetorno(cfg, modeloDaRodada()));
-    body.append(renderCartaoConcluidos(cfg));
 
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Andamento'));
     logNode = h('div', {});
@@ -1223,13 +1222,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return card;
   }
 
-  /** Rodada 2: modelo aprovado para quem não respondeu. */
+  /**
+   * Rodada 2: quem não respondeu. **Um cartão só** — ver o comentário do `runLote`.
+   */
   function renderCartaoSemRetorno(cfg, modelo) {
     const card = h('div', { class: 'wf-card' }, [
-      h('h4', {}, 'Sem retorno: enviar modelo aprovado'),
+      h('h4', {}, 'Sem retorno: reabrir e perguntar'),
       h('div', { class: 'wf-preview' },
-        'Para a fila filtrada por quem não respondeu. Com a janela de 24h vencida, modelo ' +
-          'aprovado é o único envio que chega.'),
+        'Percorre a lista que você filtrou — normalmente a dos CONCLUÍDOS (o ícone de caixa ao ' +
+          'lado de "Outros"), com a etiqueta "1 SEM RETORNO". Em cada um: reabre com o Reiniciar ' +
+          'se estiver concluído, manda a mensagem e conclui de novo. Reabrir joga o atendimento ' +
+          'para "Meus"; a rodada volta sozinha para a lista antes do próximo.'),
     ]);
 
     if (!state.hsmTemplates.length) {
@@ -1269,9 +1272,45 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
     }
 
+    // Qual dos dois textos sai é decidido POR CONTATO, pela janela de 24h dele.
+    const respostaLivre = state.templates.find((t) => t.id === SEM_RETORNO_TEMPLATE_ID);
+    card.append(
+      h('div', { class: 'wf-origin' },
+        'Cada contato recebe UM dos dois: janela de 24h vencida (o normal desta fila) recebe o ' +
+          'modelo acima, que é o único que chega; ainda aberta, recebe a resposta pronta ' +
+          `"${respostaLivre?.name || SEM_RETORNO_TEMPLATE_ID}", que você edita na aba Config. ` +
+          'Não é trava da extensão: texto livre fora da janela sai do painel, a plataforma ' +
+          'aceita, e a mensagem não chega. O Andamento diz qual foi em cada um.')
+    );
+    if (!respostaLivre) {
+      card.append(
+        h('div', { class: 'wf-block' },
+          `Não achei a resposta "${SEM_RETORNO_TEMPLATE_ID}" na aba Config. Sem ela, todo mundo ` +
+            'recebe o modelo aprovado — inclusive quem ainda está dentro das 24h.')
+      );
+    }
+
     const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Começar pelos sem retorno');
     comecar.addEventListener('click', () => withBusy(runLote));
-    card.append(h('div', { class: 'wf-row' }, [comecar]));
+
+    // A lista de concluídos é o único gancho de fila sem `data-cy` conhecido. A rodada tenta
+    // descobrir sozinha (clicando e conferindo); este botão é o caminho para o conserto
+    // definitivo quando nem isso resolver.
+    const achar = h('button', { class: 'wf-btn', type: 'button' }, 'Achar a lista de concluídos');
+    const caixaDiagnostico = h('div', { class: 'wf-mono' }, '');
+    achar.addEventListener('click', () =>
+      withBusy(async () => {
+        const d = await page.diagnosticarAbas();
+        caixaDiagnostico.textContent = [
+          d.achou ? '✓ Achei um candidato direto.' : '× Nenhum candidato direto — a rodada vai tentar por eliminação.',
+          `data-cy na barra: ${d.dataCy.join(', ') || '(nenhum)'}`,
+          `ícones: ${d.icones.join(', ') || '(nenhum)'}`,
+          `rótulos: ${d.rotulos.join(' | ') || '(nenhum)'}`,
+        ].join('\n');
+        setStatus('Me mande o texto que apareceu no cartão.', 'ok');
+      })
+    );
+    card.append(h('div', { class: 'wf-row' }, [comecar, achar]), caixaDiagnostico);
 
     // Cada impedimento é um jeito conhecido de a rodada sair errada — melhor travar o botão e
     // dizer o porquê do que descobrir no meio de trinta envios.
@@ -1284,95 +1323,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     comecar.disabled = state.auto.rodando || impedimentos.length > 0;
     for (const motivo of impedimentos) card.append(h('div', { class: 'wf-block' }, motivo));
-    return card;
-  }
-
-  /**
-   * Rodada 4: os CONCLUÍDOS sem retorno — reabre, pergunta e fecha de novo.
-   *
-   * Card próprio, e não uma opção do card anterior, porque o texto é outro: aqui a pergunta é
-   * "você realmente não tem interesse?", com a saída de não incomodar mais. Misturar os dois
-   * modelos num seletor só seria o jeito mais fácil de mandar o texto errado.
-   */
-  function renderCartaoConcluidos(cfg) {
-    const card = h('div', { class: 'wf-card' }, [
-      h('h4', {}, 'Concluídos sem retorno: reabrir e perguntar'),
-      h('div', { class: 'wf-preview' },
-        'Percorre a lista de CONCLUÍDOS (o ícone de caixa, ao lado de "Outros"), do jeito que ' +
-          'você filtrou — a etiqueta "1 SEM RETORNO", por exemplo. Em cada um: reabre com o ' +
-          'Reiniciar, manda o modelo aprovado e conclui de novo. Reabrir joga o atendimento para ' +
-          '"Meus"; concluir devolve ele para os concluídos, e a rodada volta sozinha para a lista.'),
-    ]);
-
-    if (!state.hsmTemplates.length) {
-      card.append(h('div', { class: 'wf-block' }, 'Nenhum modelo aprovado carregado. Abra um atendimento e clique em Recarregar.'));
-      return card;
-    }
-
-    const select = h('select', {});
-    select.append(h('option', { value: '' }, '(escolha o modelo da pergunta)'));
-    for (const m of state.hsmTemplates) select.append(h('option', { value: m.id }, m.name));
-    select.value = cfg.templateIdReinicio || '';
-    select.addEventListener('change', () =>
-      salvarAuto({ templateIdReinicio: select.value }).then(renderAll)
-    );
-    card.append(select);
-
-    const modelo = state.hsmTemplates.find((m) => m.id === cfg.templateIdReinicio) || null;
-    if (modelo) card.append(h('div', { class: 'wf-preview' }, modelo.text || '(modelo sem texto)'));
-
-    const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Começar pelos concluídos');
-    comecar.addEventListener('click', () => withBusy(runLoteSemRetorno));
-
-    // A lista de concluídos é a única aba sem `data-cy` conferido ao vivo. Este botão mostra o
-    // que existe na barra da fila, para o gancho certo entrar no código sem chute.
-    const achar = h('button', { class: 'wf-btn', type: 'button' }, 'Achar a lista de concluídos');
-    achar.addEventListener('click', () =>
-      withBusy(async () => {
-        const d = await page.diagnosticarAbas();
-        const linhas = [
-          d.achou ? '✓ Achei a lista de concluídos.' : '× NÃO achei a lista de concluídos.',
-          `data-cy na barra: ${d.dataCy.join(', ') || '(nenhum)'}`,
-          `ícones: ${d.icones.join(', ') || '(nenhum)'}`,
-          `rótulos: ${d.rotulos.join(' | ') || '(nenhum)'}`,
-        ];
-        caixaDiagnostico.textContent = linhas.join('\n');
-        setStatus(d.achou ? 'Lista de concluídos encontrada.' : 'Não achei — me mande o texto abaixo.', d.achou ? 'ok' : 'err');
-      })
-    );
-    card.append(h('div', { class: 'wf-row' }, [comecar, achar]));
-
-    const caixaDiagnostico = h('div', { class: 'wf-mono' }, '');
-    card.append(caixaDiagnostico);
-
-    const impedimentos = [];
-    if (!modelo) impedimentos.push('Escolha o modelo aprovado desta rodada.');
-    if (modelo?.params?.length) {
-      impedimentos.push('O modelo escolhido pede parâmetro, e a tela de parâmetros ainda não foi aprendida.');
-    }
-    if (!state.settings.autoSend) impedimentos.push('Precisa do "Enviar automático" ligado (acima).');
-
-    comecar.disabled = state.auto.rodando || impedimentos.length > 0;
-    for (const motivo of impedimentos) card.append(h('div', { class: 'wf-block' }, motivo));
-
-    const respostaLivre = state.templates.find((t) => t.id === SEM_RETORNO_TEMPLATE_ID);
-    card.append(
-      h('div', { class: 'wf-origin' },
-        'Cada contato recebe UM dos dois, e quem decide é a janela de 24h dele: vencida (o ' +
-          'normal desta fila), vai o modelo aprovado, que é o único que chega; ainda aberta, vai ' +
-          `a resposta pronta "${respostaLivre?.name || SEM_RETORNO_TEMPLATE_ID}", que você edita ` +
-          'na aba Config. Não é trava da extensão — texto livre fora da janela sai do painel, a ' +
-          'plataforma aceita, e a mensagem não chega. O Andamento diz qual foi em cada um.')
-    );
-    if (respostaLivre) {
-      card.append(h('div', { class: 'wf-preview' }, respostaLivre.text.replace('{{saudacao}}', 'Boa tarde')));
-    } else {
-      card.append(
-        h('div', { class: 'wf-block' },
-          `Não achei a resposta "${SEM_RETORNO_TEMPLATE_ID}" na aba Config. Sem ela, todo mundo ` +
-            'recebe o modelo aprovado — inclusive quem ainda está dentro das 24h.')
-      );
-    }
     return card;
   }
 
@@ -1759,7 +1709,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     await refresh();
   }
 
-  /** Rodada 2: modelo aprovado para a fila de quem não respondeu. */
+  /**
+   * Rodada 2: quem não respondeu — **uma rodada só**, não duas.
+   *
+   * Havia dois cartões para isto: um para a fila aberta e outro para os concluídos. Ele
+   * apontou o óbvio que eu não tinha visto: *"os sem retorno sempre estão nos concluídos, só
+   * preciso de um e não dois"*. O fluxo dele conclui todo atendimento, então a fila aberta de
+   * sem retorno nunca tem ninguém — o primeiro cartão era um seletor de modelo a mais para
+   * errar, e nada além disso.
+   *
+   * A rodada que sobrou é a que reabre: `processarSemRetorno` só clica em Reiniciar quando o
+   * atendimento está fechado, então ela também dá conta de um sem retorno que por acaso esteja
+   * aberto. Uma rodada, um modelo, os dois casos.
+   */
   async function runLote() {
     const modelo = modeloDaRodada();
     if (!modelo) return setStatus('Escolha o modelo aprovado da rodada.', 'err');
@@ -1773,15 +1735,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // Última porta antes de a mensagem sair para gente real, com os números na frente.
     if (
       !confirm(
-        `Vou enviar o modelo "${modelo.name}" para até ${limite} contato(s) da fila filtrada, ` +
-          `concluindo cada atendimento, com ${pausaSeg}s entre um envio e outro.\n\n` +
-          'Quem já recebeu este modelo é pulado. Confirma?'
+        `Vou percorrer até ${limite} atendimento(s) da lista que você filtrou, com ${pausaSeg}s ` +
+          'entre um envio e outro. Em cada um: reabro se estiver concluído, mando ' +
+          `"${modelo.name}" (ou a resposta pronta, se a janela de 24h ainda estiver aberta) e ` +
+          'concluo de novo.\n\n' +
+          'Reabrir aparece para o contato como conversa retomada. Quem já recebeu é pulado.\n\n' +
+          'Confira que a lista da esquerda é a que você quer percorrer. Confirma?'
       )
     ) {
       return setStatus('Rodada cancelada.');
     }
 
-    await rodar({ aba: null, processar: (sessionId) => processarContato(sessionId, modelo) });
+    await rodar({
+      aba: ABA_CONCLUIDOS,
+      processar: (sessionId) => processarSemRetorno(sessionId, modelo),
+    });
   }
 
   /**
@@ -2690,73 +2658,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Não checa `session.expired` de propósito — janela vencida é exatamente o caso desta aba, e
    * é o que o modelo aprovado resolve.
    */
-  async function processarContato(sessionId, modelo) {
-    let nome = 'contato';
-    try {
-      const sessao = await api.getSession(sessionId);
-      const contato = await api.getContact(sessao.contactId);
-      nome = contato.name || contato.nameWhatsapp || 'sem nome';
-
-      if (state.settings.antiDup) {
-        const quando = await templatesLib.wasSent(contato.id, hsmKey(modelo));
-        if (quando) {
-          return {
-            nome,
-            resultado: 'pulado',
-            motivo: `já recebeu este modelo em ${new Date(quando.at).toLocaleDateString('pt-BR')}`,
-          };
-        }
-      }
-
-      let estado = await page.getState();
-      if (estado.sessionId !== sessionId) {
-        return { nome, resultado: 'erro', motivo: 'a aba trocou de atendimento no meio do caminho' };
-      }
-      if (estado.isPending) {
-        setStatus(`Assumindo o atendimento de ${nome}…`);
-        estado = await page.clickIniciar();
-      }
-      if (estado.isPending || !estado.hasComposer) {
-        // As duas causas pedem conserto diferente, então não vale colapsar numa frase só.
-        return {
-          nome,
-          resultado: 'erro',
-          motivo: estado.isPending
-            ? 'a plataforma não assumiu o atendimento (o botão Iniciar continua na tela)'
-            : 'o campo de mensagem não apareceu depois de assumir o atendimento',
-        };
-      }
-
-      setStatus(`Enviando "${modelo.name}" para ${nome}…`);
-      const envio = await page.sendMessageTemplate(modelo, { send: true });
-      if (!envio?.sent) {
-        return { nome, resultado: 'erro', motivo: 'o diálogo não confirmou o envio' };
-      }
-      await templatesLib.markSent(contato.id, hsmKey(modelo), { nome });
-
-      const concluido = await page.clickConcluir();
-      if (!concluido.ok) {
-        // Enviado mas nao fechou: parar e dizer. Contar como concluido faria a fila crescer
-        // em silencio, que foi o sintoma de "Meus" so aumentando.
-        return { nome, resultado: "enviado", parar: true, motivo: concluido.reason };
-      }
-      if (concluido.dialogOpen) {
-        return {
-          nome,
-          resultado: 'enviado',
-          parar: true,
-          motivo: 'enviado, mas a plataforma pediu motivo de conclusão — responda o diálogo na aba',
-        };
-      }
-      return { nome, resultado: 'enviado' };
-    } catch (err) {
-      // Fluxo morto no meio costuma deixar overlay do Material aberto — e overlay aberto é modal,
-      // trava o painel inteiro. Limpa antes de devolver o erro.
-      await page.closeOverlay().catch(() => {});
-      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
-    }
-  }
-
   /**
    * Rodada 4: a fila dos CONCLUÍDOS sem retorno — reabre, pergunta e fecha de novo.
    *
@@ -2779,7 +2680,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * **volta** para a mesma lista (agora no topo, porque acabou de ser concluído). Sem andar uma
    * casa, a rodada reabriria o mesmo atendimento.
    */
-  async function processarSemRetornoConcluido(sessionId, modelo) {
+  async function processarSemRetorno(sessionId, modelo) {
     let nome = 'contato';
     try {
       const sessao = await api.getSession(sessionId);
@@ -2889,35 +2790,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       await page.closeOverlay().catch(() => {});
       return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
     }
-  }
-
-  async function runLoteSemRetorno() {
-    const modelo = state.hsmTemplates.find((m) => m.id === state.auto.cfg.templateIdReinicio) || null;
-    if (!modelo) return setStatus('Escolha o modelo aprovado da rodada dos concluídos.', 'err');
-    if (!state.settings.autoSend) {
-      return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
-    }
-
-    const limite = clampInt(state.auto.cfg.limite, 1, 200);
-    const pausaSeg = clampInt(state.auto.cfg.pausaSeg, 3, 300);
-
-    if (
-      !confirm(
-        `Vou REABRIR até ${limite} atendimento(s) concluído(s) da lista filtrada, enviar o modelo ` +
-          `"${modelo.name}" e concluir cada um de novo, com ${pausaSeg}s entre os envios.\n\n` +
-          'Reabrir aparece para o contato como conversa retomada. Quem já recebeu este modelo é pulado.\n\n' +
-          'Confira que a lista da esquerda está nos CONCLUÍDOS e filtrada por quem não respondeu. Confirma?'
-      )
-    ) {
-      return setStatus('Rodada cancelada.');
-    }
-
-    // O rótulo viaja como texto pela ponte de mensagens (o painel em janela própria não tem o
-    // DOM da plataforma). Tem que ser igual ao `ABA_CONCLUIDOS` do dom.js.
-    await rodar({
-      aba: ABA_CONCLUIDOS,
-      processar: (sessionId) => processarSemRetornoConcluido(sessionId, modelo),
-    });
   }
 
   /** Pausa fatiada, para o Parar não ter que esperar o intervalo inteiro. */

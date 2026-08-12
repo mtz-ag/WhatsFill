@@ -80,10 +80,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 - **Reabrir o atendimento NÃO reabre a janela de 24h.** Ela é regra do WhatsApp, não da
   plataforma: depois do Reiniciar, texto livre continua não chegando em quem está sem retorno há
   dias. Na rodada dos concluídos só sai modelo aprovado.
-- **A lista de concluídos é o ÚNICO gancho de fila sem `data-cy` conferido ao vivo.** É o ícone
-  de caixa ao lado de "Outros". `getAbaConcluidos()` tenta `data-cy`, nome de ícone e rótulo,
-  nessa ordem, e **recusa** se não achar. Confirmar a troca é por eliminação: estar nos
-  concluídos = nenhuma das três abas de texto com `bg-gray-300`.
+- **A lista de concluídos é o ÚNICO gancho de fila sem `data-cy` conhecido.** É o ícone de caixa
+  ao lado de "Outros", e adivinhar nome de `data-cy`/ícone **falhou na máquina dele**. A rodada
+  agora **clica e confere**: candidatos são os clicáveis da barra que não são as três abas nem
+  busca; a confirmação é por eliminação (estar nos concluídos = nenhuma aba de texto com
+  `bg-gray-300`); errou, desfaz e tenta o próximo. Achou o `data-cy` de verdade? Ponha em
+  `CY_CONCLUIDOS` e a tentativa nem roda.
 - **A fila carrega 50 por vez.** O resto só vem no "Ver mais", que é manual e é o único gancho
   da fila sem `data-cy`. Sem clicar nele, a rodada enxerga uma fatia e acha que acabou.
 

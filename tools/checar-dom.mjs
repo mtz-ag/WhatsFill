@@ -150,6 +150,39 @@ const CASOS_FILA = [
   },
 ];
 
+/**
+ * Os candidatos que a rodada experimenta quando o ícone não é reconhecido pelo nome.
+ *
+ * É o caminho que salvou a rodada na máquina dele: adivinhar `data-cy` e nome de ícone falhou,
+ * e ficar chutando mais nomes só adiaria o problema. O que não pode acontecer é a lista de
+ * candidatos incluir as próprias abas de texto (clicar nelas mudaria de fila em silêncio).
+ */
+const CASOS_CANDIDATOS = [
+  {
+    nome: 'candidatos: pega os ícones vizinhos e NUNCA as três abas',
+    html: `<div id="barra">
+      <span data-cy="button-new-sessions" class="rounded-full"><span>Novos</span><span>2</span></span>
+      <span data-cy="button-my-sessions" class="rounded-full bg-gray-300"><span>Meus</span><span>5</span></span>
+      <span data-cy="button-other-sessions" class="rounded-full"><span>Outros</span></span>
+      <button id="grupos"><mat-icon data-mat-icon-name="user-group"></mat-icon></button>
+      <button id="caixa"><mat-icon data-mat-icon-name="inbox"></mat-icon></button>
+      <button id="menu"><mat-icon data-mat-icon-name="ellipsis-vertical"></mat-icon></button>
+    </div>`,
+    esperados: ['grupos', 'caixa', 'menu'],
+  },
+  {
+    nome: 'candidatos: campo de busca fica de fora (não troca de lista)',
+    html: `<div id="barra">
+      <span data-cy="button-new-sessions" class="rounded-full"><span>Novos</span></span>
+      <span data-cy="button-my-sessions" class="rounded-full bg-gray-300"><span>Meus</span></span>
+      <span data-cy="button-other-sessions" class="rounded-full"><span>Outros</span></span>
+      <button id="busca"><input type="text"></button>
+      <button id="caixa"><mat-icon data-mat-icon-name="inbox"></mat-icon></button>
+    </div>`,
+    esperados: ['caixa'],
+  },
+];
+
 /** Estado do rodapé → o botão Reiniciar está disponível? */
 const CASOS_REINICIAR = [
   {
@@ -233,6 +266,20 @@ for (const caso of CASOS_FILA) {
     console.log(`        achou=${r.achou} (esperado ${caso.achaConcluidos}), ` +
       `ativa=${r.ativa} (esperado ${caso.concluidosAtiva})`);
   }
+}
+
+for (const caso of CASOS_CANDIDATOS) {
+  await page.setContent(`<body>${caso.html}</body>`);
+  const ids = await page.evaluate(async (src) => {
+    const url = 'data:text/javascript;base64,' + btoa(unescape(encodeURIComponent(src)));
+    const dom = await import(url);
+    return dom.candidatosDeConcluidos().map((el) => el.id || el.tagName.toLowerCase());
+  }, fonte);
+
+  const ok = JSON.stringify(ids) === JSON.stringify(caso.esperados);
+  if (!ok) falhas++;
+  console.log(`${ok ? '  ok  ' : ' FALHA'} ${caso.nome}`);
+  if (!ok) console.log(`        candidatos=${JSON.stringify(ids)} (esperado ${JSON.stringify(caso.esperados)})`);
 }
 
 for (const caso of CASOS_REINICIAR) {

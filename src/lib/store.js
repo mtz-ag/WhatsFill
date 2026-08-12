@@ -5,13 +5,10 @@
  */
 
 /**
- * Pergunta acrescentada ao pedido de dados: saber de quais grupos políticos a pessoa já
- * participa é o que abre acesso a eles. Fica separada porque a migração
- * (`templates.migrarPerguntaGrupos`) precisa do mesmo texto para acrescentar ao template que
- * já estava salvo no navegador.
- */
-/**
- * Pergunta sobre grupos que a pessoa já participa.
+ * Pergunta sobre grupos que a pessoa já participa, acrescentada ao pedido de dados.
+ *
+ * Fica em constante própria porque as migrações (`migrarPerguntaGrupos`, `migrarGruposPedeLink`)
+ * precisam do mesmo texto para mexer no template que já está salvo no navegador.
  *
  * **Pede o LINK, não o nome** (decisão do Thiago, 11/08): o nome do grupo não serve para nada —
  * é o link de convite que permite entrar. Pedir "o nome ou o link" fazia quase todo mundo
@@ -258,14 +255,6 @@ const DEFAULTS = {
      * Vazia = a tecla 5 não aparece.
      */
     mensagemMomento: '',
-    /**
-     * Modelo aprovado da rodada dos CONCLUÍDOS sem retorno — a que reabre a conversa e pergunta
-     * se a pessoa realmente não tem interesse.
-     *
-     * Separado do `templateId` de propósito: o texto é outro, e um seletor só para as duas
-     * rodadas seria o jeito mais fácil de mandar a mensagem errada.
-     */
-    templateIdReinicio: '',
     /**
      * A partir de quantas horas de silêncio a rodada **pergunta** em vez de concluir sozinha,
      * quando a última mensagem da conversa é nossa.

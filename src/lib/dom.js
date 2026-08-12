@@ -255,13 +255,18 @@ const ICONES_CONCLUIDOS = ['archive-box', 'archive-box-arrow-down', 'archive', '
 /** Rótulo de acessibilidade / tooltip, em português e inglês. */
 const RE_ROTULO_CONCLUIDOS = /arquiv|conclu[íi]d|encerrad|finalizad|archiv|closed|finished/i;
 
+/** O que a rodada descobriu sozinha, para não reprobar a cada volta do laço. */
+let concluidosAprendido = null;
+
 function getAbaConcluidos() {
+  if (concluidosAprendido?.isConnected) return concluidosAprendido;
+
   for (const cy of CY_CONCLUIDOS) {
     const el = document.querySelector(`[data-cy="${cy}"]`);
     if (el) return el;
   }
 
-  const escopo = document.querySelector('sessions-list-online-content')?.parentElement || document;
+  const escopo = barraDaFila();
 
   for (const nome of ICONES_CONCLUIDOS) {
     const icone = escopo.querySelector(`mat-icon[data-mat-icon-name="${nome}"]`);
@@ -273,6 +278,44 @@ function getAbaConcluidos() {
     return RE_ROTULO_CONCLUIDOS.test(rotulo);
   });
   return porRotulo || null;
+}
+
+/** O pedaço da tela que contém as três abas de texto — e, com elas, os ícones vizinhos. */
+function barraDaFila() {
+  const tab = document.querySelector('[data-cy="button-new-sessions"], [data-cy="button-my-sessions"]');
+  // Sobe até um ancestral que contenha as três: é a barra, sem pegar a página inteira.
+  let no = tab?.parentElement || null;
+  for (let i = 0; i < 6 && no; i++) {
+    if (no.querySelector('[data-cy="button-other-sessions"]')) return no;
+    no = no.parentElement;
+  }
+  return document.querySelector('sessions-list-online-content')?.parentElement || document.body;
+}
+
+/**
+ * Os candidatos a "ícone da lista de concluídos": tudo que é clicável na barra da fila e **não**
+ * é uma das três abas de texto.
+ *
+ * Existe porque o gancho dessa lista não tem `data-cy` conhecido, e adivinhar nome de ícone
+ * falhou na máquina dele. Em vez de continuar chutando, a rodada **experimenta**: clica um
+ * candidato e confere pelo sinal que já é confiável — estar nos concluídos significa que
+ * nenhuma das três abas de texto está ativa. O que funcionar fica guardado para o resto da
+ * rodada.
+ */
+export function candidatosDeConcluidos() {
+  const barra = barraDaFila();
+  const tabs = Object.keys(ABAS_DA_FILA).map((nome) => getQueueTab(nome)).filter(Boolean);
+
+  return [...barra.querySelectorAll('button, [role="button"], [data-cy], mat-icon')]
+    .map((el) => (el.tagName === 'MAT-ICON' ? el.closest('button, [role="button"], [data-cy]') || el : el))
+    .filter((el, i, todos) => {
+      if (!el || todos.indexOf(el) !== i) return false;
+      // Fora as três abas (e qualquer coisa dentro delas: o rótulo e o contador).
+      if (tabs.some((t) => t === el || t.contains(el) || el.contains(t))) return false;
+      // Fora o que abre menu/entrada de texto: busca, filtro e o "⋮" não trocam de lista.
+      if (el.querySelector('input') || el.tagName === 'INPUT') return false;
+      return true;
+    });
 }
 
 /**
@@ -345,22 +388,84 @@ export function isQueueTabActive(label) {
  * Não achar a aba é o único caso que devolve `ok: false` — é o que faz a rodada parar em vez de
  * percorrer a fila errada.
  */
+/**
+ * Volta para a lista de concluídos **experimentando**, em vez de adivinhando o seletor.
+ *
+ * Adivinhar `data-cy` e nome de ícone falhou na máquina dele — a rodada parou logo no começo
+ * dizendo que não achou a lista. Aqui a ordem é outra: clica um candidato da barra e confere
+ * pelo sinal que já é confiável (nenhuma das três abas de texto ativa). Deu certo, guarda o
+ * elemento e as próximas voltas são diretas; deu errado, desfaz e tenta o próximo.
+ *
+ * Desfazer importa: clicar em "Grupos" ou num filtro deixaria a rodada percorrendo outra fila.
+ * Por isso, quando o palpite não leva aos concluídos, a aba de antes é restaurada.
+ */
+async function selecionarConcluidos(timeoutMs) {
+  const preferido = getAbaConcluidos();
+  const candidatos = [preferido, ...candidatosDeConcluidos()].filter(
+    (el, i, todos) => el && todos.indexOf(el) === i
+  );
+
+  if (!candidatos.length) {
+    return {
+      ok: false,
+      reason:
+        'Não achei nenhum botão na barra da fila que pudesse ser a lista de concluídos. ' +
+        'Clique em "Achar a lista de concluídos" na aba Automatizado e me mande o que aparecer.',
+    };
+  }
+
+  const antes = Object.keys(ABAS_DA_FILA).find((nome) => isQueueTabActive(nome)) || null;
+
+  for (const candidato of candidatos) {
+    candidato.click();
+
+    const deadline = Date.now() + Math.max(1500, Math.floor(timeoutMs / candidatos.length));
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 120));
+      if (isQueueTabActive(ABA_CONCLUIDOS)) {
+        await new Promise((r) => setTimeout(r, 400)); // a lista ainda está repintando
+        concluidosAprendido = candidato;
+        return { ok: true, confirmado: true, aprendido: descrever(candidato) };
+      }
+    }
+
+    // Não era: devolve a fila para onde estava antes de tentar o próximo.
+    if (antes) getQueueTab(antes)?.click();
+    await new Promise((r) => setTimeout(r, 200));
+  }
+
+  return {
+    ok: false,
+    reason:
+      `Tentei ${candidatos.length} botão(ões) da barra e nenhum abriu a lista de concluídos. ` +
+      'Clique em "Achar a lista de concluídos" na aba Automatizado e me mande o que aparecer.',
+  };
+}
+
+/** Descrição curta de um elemento, para o log dizer o que a rodada aprendeu. */
+function descrever(el) {
+  if (!el) return '(nada)';
+  const cy = el.getAttribute?.('data-cy');
+  if (cy) return `[data-cy="${cy}"]`;
+  const icone = el.querySelector?.('mat-icon')?.getAttribute('data-mat-icon-name');
+  if (icone) return `ícone "${icone}"`;
+  const rotulo = el.getAttribute?.('aria-label') || el.getAttribute?.('title');
+  if (rotulo) return `rótulo "${rotulo}"`;
+  return `<${el.tagName.toLowerCase()}> sem identificação`;
+}
+
 export async function selectQueueTab(label, opts) {
   // 6s porque a troca medida ao vivo levou ~1,6s para a aba ficar ativa (a lista recarrega
   // junto). Timeout curto aqui não erra o alvo: só faz a rodada seguir sem confirmação.
   const { timeoutMs = 6000 } = opts || {};
+
+  // Já estamos nela? Não custa nada e evita clique à toa.
+  if (isQueueTabActive(label)) return { ok: true, confirmado: true };
+
+  if (label === ABA_CONCLUIDOS) return selecionarConcluidos(timeoutMs);
+
   const alvo = getQueueTab(label);
-  if (!alvo) {
-    if (label === ABA_CONCLUIDOS) {
-      return {
-        ok: false,
-        reason:
-          'Não achei a lista de concluídos (o ícone de caixa ao lado de "Outros"). Clique em ' +
-          '"Achar a lista de concluídos" na aba Automatizado e me mande o que aparecer.',
-      };
-    }
-    return { ok: false, reason: `Não achei a aba "${label}" na fila.` };
-  }
+  if (!alvo) return { ok: false, reason: `Não achei a aba "${label}" na fila.` };
 
   if (alvo.classList.contains(ABA_ATIVA)) return { ok: true, confirmado: true };
   alvo.click();

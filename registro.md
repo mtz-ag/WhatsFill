@@ -67,6 +67,51 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
+## 2026-08-12 — Uma rodada de sem retorno, não duas; e a lista de concluídos por tentativa
+
+**Relato dele:** a rodada dos concluídos parou no começo ("Não achei a lista de concluídos") e,
+junto, o apontamento que resolveu o desenho: *"tem um erro lógico também, os sem retorno sempre
+estão nos concluídos, só preciso de um e não dois."*
+
+### O erro lógico — e ele estava certo
+
+Eu tinha deixado **dois cartões**: "Sem retorno: enviar modelo aprovado" (fila aberta) e
+"Concluídos sem retorno: reabrir e perguntar". Mas o fluxo dele conclui todo atendimento, então
+**a fila aberta de sem retorno nunca tem ninguém**. O primeiro cartão era um seletor de modelo a
+mais para errar, e nada além disso — na print os dois estavam com o mesmo modelo escolhido.
+
+Sobrou uma rodada. A que ficou é a que reabre, e ela cobre os dois casos de graça:
+`processarSemRetorno` só clica em Reiniciar **quando o atendimento está fechado**, então um sem
+retorno que por acaso esteja aberto passa direto para o envio. Uma rodada, um modelo, os dois
+casos. `processarContato` e o cartão duplicado saíram do código.
+
+### A lista de concluídos: parar de adivinhar e passar a experimentar
+
+O gancho daquele ícone não tem `data-cy` conhecido. Eu tinha escrito cinco `data-cy` plausíveis,
+cinco nomes de ícone e um casamento por rótulo — **e nenhum acertou na máquina dele**. Mais
+chutes só adiariam o problema.
+
+A ordem agora é outra: a rodada **clica e confere**. Pega os candidatos da barra da fila (tudo
+que é clicável e não é uma das três abas de texto nem campo de busca), clica um, e confirma pelo
+sinal que já era confiável — estar nos concluídos significa que **nenhuma** das três abas está
+com `bg-gray-300`. Acertou, guarda o elemento e as próximas voltas são diretas. Errou, **desfaz**
+(volta para a aba de antes) e tenta o próximo.
+
+Desfazer não é detalhe: sem isso, um clique em "Grupos" deixaria a rodada percorrendo outra fila
+inteira sem ninguém perceber.
+
+O botão "Achar a lista de concluídos" continua, agora como caminho para o conserto definitivo —
+com o `data-cy` na mão, ele entra em `CY_CONCLUIDOS` e a tentativa nem chega a rodar.
+
+`tools/checar-dom.mjs` ganhou os dois casos que protegem a lista de candidatos: ela não pode
+incluir as próprias abas de texto (clicar nelas troca de fila em silêncio) nem o campo de busca.
+
+### Arquivos alterados
+
+`src/lib/dom.js`, `src/lib/store.js`, `src/panel/panel.js`, `tools/checar-dom.mjs`.
+
+---
+
 ## 2026-08-11 — Texto livre na rodada dos concluídos, decidido por contato
 
 **Pedido (Thiago):** "ok então mandar mensagem de texto em vez de modelo pronto não teria
