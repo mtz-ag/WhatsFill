@@ -174,6 +174,30 @@ export const DEFAULT_TEMPLATES = [
     text: INTERESSE_CONTEUDO,
   },
   {
+    /**
+     * Para quem parou de responder há dias — a fila dos concluídos "sem retorno".
+     *
+     * Texto livre, então **só chega dentro da janela de 24h**. Na fila dos sem retorno a maioria
+     * está com a janela vencida e recebe o modelo aprovado; esta resposta é para os que ainda
+     * dá, e para quando ele quiser perguntar à mão. A rodada escolhe entre as duas sozinha.
+     *
+     * Dá a saída de sair da lista de propósito: quem não tem interesse dizendo "não" custa
+     * muito menos que quem bloqueia o número — e número bloqueado derruba a entrega de todo o
+     * resto da campanha.
+     */
+    id: 'sem-retorno-interesse',
+    name: 'Sem retorno: ainda tem interesse?',
+    text:
+      '{{saudacao}}! Faz um tempo que a gente se falou por aqui e você não retornou — ' +
+      'sem problema nenhum, a vida corre. 🇧🇷\n\n' +
+      'Só preciso saber de uma coisa, para não te incomodar à toa: você ainda quer receber ' +
+      'os conteúdos do Capitão Martim e do Zucco?\n\n' +
+      'Se sim, me responde nesta ordem, em uma única mensagem:\n\n' +
+      'Sim / Nome completo / Cidade\n\n' +
+      'Se não quiser, é só responder *não* — eu tiro você da lista e não te chamo mais. ' +
+      'Fica tudo bem do mesmo jeito. 🙏',
+  },
+  {
     id: 'sem-interesse',
     name: 'Sem interesse / encerrar com respeito',
     text:

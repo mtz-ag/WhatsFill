@@ -67,6 +67,56 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
+## 2026-08-11 — Texto livre na rodada dos concluídos, decidido por contato
+
+**Pedido (Thiago):** "ok então mandar mensagem de texto em vez de modelo pronto não teria
+problema, se não tiver problemas faça uma mensagem pronta para enviar para todos."
+
+### A premissa estava errada, e a correção importa
+
+"Para todos" não dá: texto livre **só chega dentro da janela de 24h**, e na fila dos sem retorno
+a janela está vencida em praticamente todo mundo — é o que define aquela fila. Mandar texto para
+todos ali seria mandar mensagem que não chega para dezenas de pessoas, **sem nada acusar**: a
+plataforma aceita, o painel diz "enviado", e o contato nunca vê.
+
+O que ele leu como "então texto serve" era, na entrada anterior, "texto serve **quando a janela
+está aberta**".
+
+### O que foi feito
+
+Resposta pronta nova (`sem-retorno-interesse`), editável na Config, e a rodada 4 escolhendo
+**por contato**:
+
+- janela **vencida** → modelo aprovado (o único que chega);
+- janela **aberta** → a resposta pronta, que fala como gente, não gasta modelo e ele edita.
+
+O Andamento diz qual foi em cada um. Variável sem valor derruba para o modelo, em vez de mandar
+texto pela metade.
+
+### Detalhe de implementação que não é detalhe
+
+O envio do texto usa `page.sendText` direto, **não** `sendTemplate`. Esta rodada não chama
+`load()` — como as outras rodadas em lote, ela busca sessão e contato direto da API para ficar
+leve. Só que `sendTemplate` lê `state.contact`, que nesse momento é o contato de **outro**
+atendimento: o registro anti-duplicata cairia na pessoa errada. É a mesma armadilha que já
+gerou o aviso "já enviei esta resposta" em quem nunca recebeu.
+
+### O texto
+
+Sem nome (regra do projeto), pede no formato `Sim / Nome completo / Cidade` — o mesmo que o
+parser entende — e **oferece a saída de sair da lista**. Isso é de propósito: quem responde
+"não" custa muito menos que quem bloqueia o número, e número bloqueado derruba a entrega de
+toda a campanha.
+
+Teste novo confere que as três respostas que pedem dados carregam a linha do formato. Se alguém
+reescrever uma delas e tirar essa linha, o parser perde o acerto sem nada quebrar.
+
+### Arquivos alterados
+
+`src/lib/store.js`, `src/lib/templates.js`, `src/panel/panel.js`, `tests/vars.test.mjs`.
+
+---
+
 ## 2026-08-11 — "Reiniciada só aceita modelo?" — o que é regra do WhatsApp e o que era escolha minha
 
 **Pergunta dele:** "para as conversas reiniciadas só libera modelos prontos, não tem como mandar

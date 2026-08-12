@@ -227,6 +227,27 @@ grupo('a pergunta dos grupos passa a pedir o link');
   check((await templates.migrarGruposPedeLink()).length === 0, 'texto dele fica como está');
 }
 
+grupo('as perguntas pedem os dados no formato que o parser entende');
+{
+  // O parser acerta porque a PERGUNTA impõe o formato. Se alguém reescrever uma dessas
+  // respostas e tirar a linha do formato, o acerto cai sem nada quebrar — daí este teste.
+  const store = await lib('store.js');
+  const pedem = ['pedir-dados', 'interesse-conteudo', 'sem-retorno-interesse'];
+
+  for (const id of pedem) {
+    const t = store.DEFAULT_TEMPLATES.find((x) => x.id === id);
+    check(!!t, `a resposta "${id}" existe`);
+    check(/Nome completo \/ Cidade/.test(t?.text || ''), `"${id}" pede no formato "Nome completo / Cidade"`);
+  }
+
+  // As duas que perguntam interesse pedem o "Sim" na frente — é o que o parser usa para saber
+  // que a pessoa aceitou, e o que `NAO_E_NOME` impede de virar nome.
+  for (const id of ['interesse-conteudo', 'sem-retorno-interesse']) {
+    const t = store.DEFAULT_TEMPLATES.find((x) => x.id === id);
+    check(/Sim \/ Nome completo \/ Cidade/.test(t.text), `"${id}" pede "Sim / Nome / Cidade"`);
+  }
+}
+
 grupo('saudação por horário');
 check(vars.saudacao(new Date(2026, 7, 5, 9)) === 'Bom dia', 'manhã');
 check(vars.saudacao(new Date(2026, 7, 5, 15)) === 'Boa tarde', 'tarde');

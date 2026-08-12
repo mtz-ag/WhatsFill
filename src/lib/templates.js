@@ -19,6 +19,7 @@ export async function list() {
     await migrarRespostasSemNome();
     await migrarInteressePedeDados();
     await migrarGruposPedeLink();
+    await migrarRespostaSemRetorno();
   }
   return store.get('templates');
 }
@@ -88,6 +89,10 @@ export const migrarRespostaAgradecerInfo = () =>
 /** A pergunta de interesse no conteúdo, para quem já tinha a lista de respostas salva. */
 export const migrarRespostaInteresse = () =>
   garantirRespostas(['interesse-conteudo'], 'respostaInteresseConteudo');
+
+/** A pergunta dos sem retorno, usada pela rodada dos concluídos quando a janela está aberta. */
+export const migrarRespostaSemRetorno = () =>
+  garantirRespostas(['sem-retorno-interesse'], 'respostaSemRetorno');
 
 /**
  * A pergunta dos grupos passa a pedir o LINK de convite, e não o nome.
