@@ -24,7 +24,7 @@ volta quando a pessoa responde. Na reabertura a classificação já tem que esta
 ### Estrutura
 
 ```
-manifest.json           MV3, permissões mínimas (só "storage" + host_permissions)
+manifest.json           MV3, permissões mínimas ("storage" + "power" + host_permissions)
 src/background.js       clique no ícone: encaixa na aba ou abre janela separada
 src/page-hook.js        mundo MAIN: captura o Bearer e grava requisições
 src/content.js          carregador (content script clássico -> import dinâmico)
@@ -147,6 +147,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   acham nas mensagens; etiqueta aplicada à mão (ou por nós numa passada anterior, quando a
   campanha do anúncio ainda casava) não aparecia, e o fecho com conteúdo travava dizendo "nenhum
   conteúdo reconhecido". Ver `tags.conteudosJaAplicados`.
+- **Aba acordada e computador acordado são problemas DIFERENTES.** O áudio do `keepalive`
+  impede o Chrome de congelar a aba; ele não impede o Windows de suspender por inatividade, e
+  rodada longa não toca em teclado nem mouse. A segunda trava é `chrome.power` (`'display'`, no
+  service worker — content script não alcança), pedida no começo da rodada e solta no `finally`.
 - **Aba escondida é aba CONGELADA, não lenta.** Medido: `setInterval(120ms)` deu **zero**
   disparos em mais de um minuto. Congela junto o JavaScript da plataforma, então mover só as
   nossas esperas para fora da aba não resolveria — o Angular também para. O que descongela é

@@ -52,20 +52,53 @@ function gerarWav() {
 }
 
 /**
- * @returns {Promise<{ok:boolean, motivo?:string}>} `ok:false` traz o motivo para a tela.
+ * O segundo problema, e é outro: **o COMPUTADOR entrando em modo de espera**.
+ *
+ * O áudio acima resolve a aba congelada, mas não impede a máquina de suspender por inatividade —
+ * e uma rodada de trinta envios com 8s de pausa passa longe de qualquer gesto de teclado ou
+ * mouse. Do ponto de vista do Windows, ele está ausente; a máquina dorme e a rodada morre no
+ * meio, com contatos abertos e sem saber onde parou.
+ *
+ * Quem resolve é a API `chrome.power`, que só existe no service worker (content script não
+ * alcança) — daí a mensagem para o background. `display` em vez de `system`: manter só o sistema
+ * acordado deixa a tela apagar, e tela apagada é candidata a congelar a aba de novo, que é
+ * exatamente o que o áudio está ali para evitar. O par tem que puxar para o mesmo lado.
+ *
+ * Solto no fim da rodada, sempre — inclusive quando ela morre com erro (o `finally` de `rodar`).
+ * Trava de energia esquecida ligada é bateria consumida a noite inteira sem ninguém entender.
+ */
+export const MSG_ENERGIA = 'whatsfill-energia';
+
+async function pedirEnergia(manterAcordado) {
+  try {
+    const r = await chrome.runtime.sendMessage({ type: MSG_ENERGIA, manterAcordado });
+    return r?.ok ? { ok: true } : { ok: false, motivo: r?.motivo || 'o service worker não respondeu' };
+  } catch (err) {
+    // Extensão recarregada deixa a aba órfã: aqui isso não é fatal, a rodada segue sem a trava.
+    return { ok: false, motivo: err?.message || String(err) };
+  }
+}
+
+/**
+ * @returns {Promise<{ok:boolean, motivo?:string, energia?:object}>} `ok:false` traz o motivo
+ *   para a tela. `energia` conta em separado se a trava de modo de espera subiu — ela pode
+ *   falhar sem o áudio falhar, e vice-versa.
  */
 export async function ligar() {
-  if (audio && !audio.paused) return { ok: true };
+  const energia = await pedirEnergia(true);
+
+  if (audio && !audio.paused) return { ok: true, energia };
   try {
     audio = new Audio(gerarWav());
     audio.loop = true;
     audio.volume = 0.01;
     await audio.play();
-    return { ok: true };
+    return { ok: true, energia };
   } catch (err) {
     audio = null;
     return {
       ok: false,
+      energia,
       motivo:
         err?.name === 'NotAllowedError'
           ? 'o Chrome bloqueou o áudio que mantém a aba acordada (é preciso iniciar a rodada por um clique na página)'
@@ -75,6 +108,8 @@ export async function ligar() {
 }
 
 export function desligar() {
+  pedirEnergia(false);
+
   if (!audio) return;
   try {
     audio.pause();

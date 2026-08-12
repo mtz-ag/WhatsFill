@@ -1688,6 +1688,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!acordada.ok) {
       registrarNaRodada('rodada', 'pulado', `${acordada.motivo}. Deixe esta aba visível.`);
     }
+    // A trava de modo de espera falha em separado do áudio (permissão "power" ausente, por
+    // exemplo). Sem aviso, a rodada morreria no meio da madrugada sem explicação.
+    if (acordada.energia && !acordada.energia.ok) {
+      registrarNaRodada(
+        'rodada',
+        'pulado',
+        `Não consegui impedir o computador de suspender (${acordada.energia.motivo}). ` +
+          'Se a máquina dormir, a rodada para no meio.'
+      );
+    }
 
     let resultado = { enviados: 0, interrompida: '' };
     let aindaTocando = false;

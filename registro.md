@@ -67,6 +67,70 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
+## 2026-08-11 — Modo de espera, e auditoria de envios fora da rodada
+
+**Pedido (Thiago):** "o computador está entrando em modo de espera ao automatizar, evite que
+entre. Verifique se alguma mensagem automática está sendo enviada fora da automação."
+
+### O computador dormindo
+
+Problema **diferente** do que o `keepalive.js` já resolvia. O áudio impede o Chrome de congelar
+a aba; ele não impede o Windows de suspender por inatividade — e uma rodada de trinta envios com
+8s de pausa passa longe de qualquer toque em teclado ou mouse. Para o sistema, ele está ausente:
+a máquina dorme e a rodada morre no meio, com contatos abertos e sem saber onde parou.
+
+`chrome.power.requestKeepAwake('display')`, pedido no começo da rodada e solto no `finally`.
+Três decisões:
+
+- **`display`, não `system`.** Manter só o sistema acordado deixa a tela apagar, e tela apagada
+  volta a ser candidata a congelar a aba — que é justamente o que o áudio está ali para evitar.
+  As duas travas têm que puxar para o mesmo lado.
+- **Mora no service worker.** `chrome.power` não existe em content script; a aba pede por
+  mensagem. Permissão `"power"` no manifest (a segunda da extensão, ao lado de `storage`).
+- **Contagem de quem pediu.** O estado é global do navegador, não por aba: duas rodadas
+  simultâneas e a primeira a terminar soltaria a trava da outra.
+
+Falhar aqui **não derruba a rodada** — ela só perde a trava —, mas vira linha no Andamento. Sem
+aviso, ela morreria de madrugada sem explicação.
+
+Conferido no navegador de verdade: `chrome.power` disponível, contagem sobe e desce e não vai
+para negativo com solturas a mais.
+
+### A auditoria: nenhuma mensagem sai fora da rodada
+
+Levantei **todos** os pontos do código que fazem a plataforma enviar (`page.sendText` e
+`page.sendMessageTemplate`) e de onde cada um é chamado:
+
+| Onde envia | Quem dispara |
+|---|---|
+| `renderModeloCard`, `renderTemplateCard` | `addEventListener('click')` |
+| `runPedirDados`, `runMacro`, `runFecharComConteudo` | botão da aba Respostas |
+| `processarNovo`, `processarRespondido`, `processarContato`, `processarSemRetornoConcluido` | rodada, iniciada por botão + `confirm()` |
+| respostas rápidas da pergunta | clique dentro da caixa da rodada |
+
+**Não há timer, observador ou caminho automático que envie.** Os dois únicos temporizadores da
+extensão são a gravação da largura do painel (`main.js`) e o observador de estado da página
+(`rpc-host.js`), que só lê e avisa.
+
+O caminho automático de verdade — observador → `load()`/`reexaminarMensagens()` →
+`aplicarAutomatico()` → `saveClassification()` — toca **só a API do CRM** (campos e etiquetas).
+Nenhuma função de envio é alcançável a partir dele. Isso é por projeto e continua valendo.
+
+**O que existe e pode ter parecido envio:** com o "Enviar automático" desligado, `sendTemplate`
+**insere o texto no campo de mensagem** da plataforma em vez de enviar. O texto aparece lá sem
+ele ter digitado — e um Enter depois manda. É o único lugar onde texto nosso chega ao composer
+sem envio.
+
+**Uma coisa que quase entrou e não entrou:** a versão inicial do conserto de "silêncio longo"
+mandava a mensagem do momento sozinha. Ele reconsiderou antes de eu comitar, e o código de envio
+automático foi removido — não chegou a rodar em produção.
+
+### Arquivos alterados
+
+`manifest.json`, `src/background.js`, `src/lib/keepalive.js`, `src/panel/panel.js`, `CLAUDE.md`.
+
+---
+
 ## 2026-08-11 — Silêncio longo para de virar conclusão automática
 
 **Relato dele:** "está pulando pessoas que estão sem responder por mais de um dia".

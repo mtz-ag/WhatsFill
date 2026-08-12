@@ -11,11 +11,44 @@
  */
 
 import { RPC } from './lib/rpc.js';
+import { MSG_ENERGIA } from './lib/keepalive.js';
 
 const BOUNDS_KEY = 'windowBounds';
 const DEFAULT_BOUNDS = { width: 430, height: 760, left: 40, top: 60 };
 
 let panelWindowId = null;
+
+/**
+ * Trava de modo de espera, pedida pela aba durante a rodada.
+ *
+ * Mora aqui porque `chrome.power` só existe em contexto de extensão — content script não
+ * alcança. `display` mantém tela e sistema acordados: manter só o sistema deixaria a tela
+ * apagar, e tela apagada volta a ser candidata a congelar a aba, que é o que o áudio do
+ * `keepalive` está ali para evitar.
+ *
+ * O estado é global do navegador, não por aba: duas rodadas ao mesmo tempo pedindo a trava e
+ * uma delas terminando soltaria a da outra. Por isso a contagem de quem pediu.
+ */
+let travasDeEnergia = 0;
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (!msg || msg.type !== MSG_ENERGIA) return undefined;
+
+  try {
+    if (msg.manterAcordado) {
+      travasDeEnergia++;
+      chrome.power.requestKeepAwake('display');
+    } else {
+      travasDeEnergia = Math.max(0, travasDeEnergia - 1);
+      if (travasDeEnergia === 0) chrome.power.releaseKeepAwake();
+    }
+    sendResponse({ ok: true, travas: travasDeEnergia });
+  } catch (err) {
+    // Sem a permissão "power" (ou API indisponível) a rodada continua: ela só perde a trava.
+    sendResponse({ ok: false, motivo: err?.message || String(err) });
+  }
+  return undefined;
+});
 
 chrome.action.onClicked.addListener(async (tab) => {
   if (tab?.url?.startsWith('https://mobiliza.app/')) {

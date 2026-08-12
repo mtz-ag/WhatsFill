@@ -3,7 +3,7 @@
   "name": "WhatsFill",
   "version": "0.5.0",
   "description": "Respostas prontas, variáveis e classificação em 1 clique para o atendimento no mobiliza.app.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "power"],
   "host_permissions": [
     "https://mobiliza.app/*",
     "https://api.mobiliza.app/*"
