@@ -12,12 +12,16 @@ painel para mudar a largura — a página se reajusta junto.
 
 1. Abra `chrome://extensions`
 2. Ligue o **Modo do desenvolvedor** (canto superior direito)
-3. **Carregar sem compactação** → escolha a pasta `C:\Users\T-GAMER\Desktop\APPS\WhatsFill`
+3. **Carregar sem compactação** → escolha a pasta do repositório (a que tem o `manifest.json`)
 4. Abra `https://mobiliza.app`
 5. Clique no **ícone da extensão** → o painel encaixa na direita
 
 A aba "WhatsFill" na borda esquerda do painel mostra/esconde (o ícone da extensão faz o mesmo).
 Largura e estado (aberto/fechado) ficam salvos.
+
+**Esqueceu onde a pasta está?** `chrome://extensions` mostra o caminho embaixo do nome da
+extensão, em "Carregado de" / "Loaded from". É a fonte confiável — caminho anotado em documento
+envelhece quando a máquina muda.
 
 **Duas formas de ver o painel:**
 
