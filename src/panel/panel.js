@@ -1501,6 +1501,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     let enviados = 0;
     let carregamentos = 0;
     let interrompida = '';
+    // Quantos itens a lista tinha da última vez que olhamos. Serve para o veredito saber se a
+    // rodada percorreu a fila inteira ou parou no meio dela — ver o `restaram` lá embaixo.
+    let totalDaLista = 0;
 
     while (enviados < limite && !state.auto.parar) {
       // Diálogo do Material é MODAL: com ele aberto, o clique no item da fila não chega ao item
@@ -1550,6 +1553,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         interrompida = 'Nenhum atendimento abriu — a fila pode ter recarregado.';
         break;
       }
+      if (aberto.total) totalDaLista = aberto.total;
       if (visitados.has(aberto.sessionId)) {
         // Cai aqui quando o item não saiu da fila como esperado (assumir falhou, por exemplo).
         // Sem respiro isto vira rajada de aberturas, que é o que derruba a API.
@@ -1625,7 +1629,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
     }
 
-    return { enviados, interrompida };
+    /**
+     * Contato da lista que a rodada nunca chegou a abrir.
+     *
+     * A posição anda supondo que o item tratado sai da fila ou volta para o TOPO — que é o que a
+     * plataforma faz, e foi simulado. Se ela reordenar de outro jeito, `visitados` impede
+     * repetir o mesmo contato, mas alguém pode ficar para trás **em silêncio**, com a rodada
+     * dizendo "a fila acabou". Contar é barato e transforma isso numa linha em vez de um sumiço.
+     */
+    const restaram = Math.max(0, totalDaLista - visitados.size);
+    return { enviados, interrompida, visitados: visitados.size, restaram };
   }
 
   /** Abre a rodada, roda o percurso e fecha o status. Comum às duas. */
@@ -1655,7 +1668,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
     }
 
-    let resultado = { enviados: 0, interrompida: '' };
+    let resultado = { enviados: 0, interrompida: '', visitados: 0, restaram: 0 };
     let aindaTocando = false;
     try {
       resultado = await percorrerFila({ aba, limite, pausaMs, processar });
@@ -1675,6 +1688,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       (concluidos ? `, ${concluidos} concluído(s) sem enviar` : '') +
       (triados ? `, ${triados} assumido(s) para triagem em "Meus"` : '') + '.';
 
+    // Alguém da lista ficou para trás sem ninguém abrir. Não é o caso normal — a posição
+    // acompanha a reordenação da plataforma —, mas quando acontece tem que aparecer, senão o
+    // contato some do trabalho com a rodada dizendo que terminou.
+    const sobra = resultado.restaram
+      ? ` Atenção: percorri ${resultado.visitados} de ${resultado.visitados + resultado.restaram} da lista — ` +
+        `${resultado.restaram} não chegaram a ser abertos. Rode de novo para pegar o resto.`
+      : '';
+
     // Sem `interrompida` só há duas saídas possíveis do laço, e as duas merecem ser ditas:
     // ninguém deveria ter que adivinhar se a rodada acabou ou desistiu.
     const motivo =
@@ -1692,9 +1713,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // O log ANTES do status: `refresh()` logo abaixo carrega o contato aberto e sobrescreve a
     // barra de status, então o veredito da rodada só sobrevive aqui. Era por isso que a rodada
     // parecia parar sem explicação.
-    registrarNaRodada('rodada', 'fim', `${resumo} ${motivo} ${audio}`);
+    registrarNaRodada('rodada', 'fim', `${resumo}${sobra} ${motivo} ${audio}`);
 
-    setStatus(`${resumo} ${motivo}`, resultado.interrompida ? 'err' : 'ok');
+    setStatus(`${resumo}${sobra} ${motivo}`, resultado.interrompida || sobra ? 'err' : 'ok');
 
     // A rodada trocou de atendimento várias vezes com o observador desligado: resincroniza o
     // painel com o que ficou aberto na tela.

@@ -67,6 +67,43 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
+## 2026-08-12 — "O contato voltou para o topo, vai pegar o mesmo de novo?" — simulado, não achado
+
+**Pergunta dele:** "após a mensagem o contato voltou para o topo da lista, verifique se vai pegar
+novamente o mesmo."
+
+Pergunta certa, e a resposta não estava óbvia no código: a posição anda por conta própria e a
+lista muda embaixo dela. Responder de memória seria chute sobre envio para gente real, então
+simulei o laço (`tools/simular-fila.mjs`, novo).
+
+### A resposta: não repete — e o caso dele é o que funciona melhor
+
+Quando o contato tratado volta ao **topo**, os itens que estavam acima dele descem uma casa e os
+de baixo **não se mexem**. O `posicao++` cai exatamente no próximo não visitado. Simulado com 6
+contatos: `A → B → C → D → E → F`, nenhum repetido, nenhum pulado, **6 aberturas para 6
+contatos** — nem uma sobrando.
+
+São três camadas, e bastaria a primeira:
+
+1. a posição anda a cada contato tratado (`continuaNaFila`);
+2. `visitados` guarda o id da sessão: se a mesma abrir de novo, pula e anda;
+3. o anti-duplicata por contato+modelo devolve "já recebeu" antes de qualquer envio.
+
+### O que a simulação achou de errado — e não era o que ele perguntou
+
+No pior caso (lista reordenando de um jeito imprevisto), ninguém é repetido, mas **alguém fica
+para trás** — e a rodada terminava dizendo "a fila acabou", como se tivesse percorrido tudo. É o
+mesmo tipo de mentira do log de ontem, e o contato sumia do trabalho sem ninguém saber.
+
+Agora o veredito conta: `percorri 12 de 15 da lista — 3 não chegaram a ser abertos. Rode de novo
+para pegar o resto`, com o status em vermelho. Não é o caso normal; é o caso que precisava de voz.
+
+### Arquivos alterados
+
+`src/panel/panel.js`, `tools/simular-fila.mjs` (novo).
+
+---
+
 ## 2026-08-12 — A rodada volta a mandar o modelo escolhido, e só ele
 
 **Relato dele:** "outro erro é que não utilizou o modelo escolhido e mandou texto".
