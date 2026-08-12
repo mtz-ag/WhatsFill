@@ -67,6 +67,42 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
+## 2026-08-11 — "Reiniciada só aceita modelo?" — o que é regra do WhatsApp e o que era escolha minha
+
+**Pergunta dele:** "para as conversas reiniciadas só libera modelos prontos, não tem como mandar
+mensagem normalmente?"
+
+### Duas coisas diferentes estavam misturadas
+
+**1. A janela de 24h é regra do WhatsApp, e não tem como contornar.** Ela abre quando o
+**contato** escreve, e reabrir o atendimento na plataforma não encosta nesse relógio. Fora da
+janela, texto livre sai do painel, a plataforma aceita e a mensagem **não chega** — silêncio, o
+pior dos resultados. Modelo aprovado é o único que atravessa. Quando a pessoa responde ao
+modelo, a janela reabre por 24h e tudo volta ao normal: é exatamente para isso que ele serve.
+
+**2. "Reiniciada = só modelo" era escolha minha, e estava errada como regra geral.** O painel
+inteiro já decide isso **por contato**, pelo `expired` que a própria plataforma calcula: com a
+janela aberta, texto livre é enviado normalmente — inclusive em conversa reiniciada. Quem
+bloqueia não é o Reiniciar, é a janela vencida.
+
+Onde eu fixei "sempre modelo" foi na rodada 4, porque aquela fila é, por definição, quem não
+responde. Mas nem todo item dela está com a janela vencida.
+
+### O que mudou
+
+A rodada 4 agora **diz no Andamento** qual era o estado da janela em cada contato:
+`… concluído (janela de 24h vencida)` ou `… — ATENÇÃO: a janela estava aberta, dava para
+responder à mão`. Depois de uma rodada ele sabe a proporção real, em vez de supor — e se a
+segunda linha aparecer muito, vale trocar o desenho.
+
+O texto do card passou a explicar que a trava não é da extensão.
+
+### Arquivos alterados
+
+`src/panel/panel.js`.
+
+---
+
 ## 2026-08-11 — Modo de espera, e auditoria de envios fora da rodada
 
 **Pedido (Thiago):** "o computador está entrando em modo de espera ao automatizar, evite que

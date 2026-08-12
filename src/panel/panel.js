@@ -1357,7 +1357,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       h('div', { class: 'wf-origin' },
         'Reabrir uma conversa concluída aparece para o contato como conversa retomada. E a ' +
           'janela de 24h continua vencida mesmo depois do Reiniciar — ela é regra do WhatsApp, ' +
-          'não da plataforma —, por isso aqui só sai modelo aprovado.')
+          'não da plataforma —, por isso aqui só sai modelo aprovado. Não é trava da extensão: ' +
+          'texto livre sairia do painel, a plataforma aceitaria, e a mensagem não chegaria. ' +
+          'Quando o contato responder, a janela reabre por 24h e tudo volta a funcionar normal — ' +
+          'é justamente para isso que o modelo serve. O Andamento avisa se algum contato estava ' +
+          'com a janela aberta.')
     );
     return card;
   }
@@ -2831,7 +2835,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           motivo: 'enviado, mas a plataforma pediu motivo de conclusão — responda o diálogo na aba',
         };
       }
-      return { nome, resultado: 'enviado', continuaNaFila: true, motivo: 'reaberto, perguntado e concluído' };
+      // A janela entra no log de propósito: é o dado que diz se valeria a pena responder à mão.
+      // Vencida (o caso normal desta fila), só modelo aprovado chega; aberta, texto livre
+      // chegaria — e aí dá para responder à mão em vez de gastar um modelo.
+      return {
+        nome,
+        resultado: 'enviado',
+        continuaNaFila: true,
+        motivo: sessao.expired
+          ? 'reaberto, modelo enviado e concluído (janela de 24h vencida)'
+          : 'reaberto, modelo enviado e concluído — ATENÇÃO: a janela estava aberta, dava para responder à mão',
+      };
     } catch (err) {
       await page.closeOverlay().catch(() => {});
       return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
