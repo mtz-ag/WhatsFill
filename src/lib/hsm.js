@@ -128,6 +128,43 @@ export function decidirSemResposta({ horasDesdeMinha = 0, limiteHoras = 12 } = {
   return { acao: 'perguntar', motivo: `${silencio} desde a minha última mensagem` };
 }
 
+/**
+ * Já mandamos alguma coisa para este contato agora há pouco?
+ *
+ * O anti-duplicata por MODELO guarda "contato X recebeu o modelo Y" e não pegou o caso real: o
+ * contato recebeu a resposta pronta numa rodada e o modelo aprovado na seguinte, 32 min depois.
+ * Chaves diferentes, nenhuma duplicata, duas mensagens na cara da pessoa.
+ *
+ * A trava de "contato já tratado" que existe no laço também não pega: ela é um `Set` que nasce
+ * vazio a cada rodada, e o caso real são DUAS rodadas. Uma cobre o mesmo item voltando ao topo
+ * da lista; esta cobre a próxima rodada começando justo por ele. As duas juntas, não uma no
+ * lugar da outra.
+ *
+ * A pergunta certa não é "já mandei ESTE texto?", é **"já falei com esta pessoa agora há
+ * pouco?"** — e quem responde isso é a conversa, não o nosso registro: ela inclui o que foi
+ * mandado à mão, por outra rodada, ou por outro operador.
+ *
+ * O limite é de horas, e não "nunca repetir", porque esta fila é de quem **não responde**: a
+ * última mensagem ser nossa é a regra, não a exceção. Quem recebeu há três dias é alvo legítimo
+ * de uma segunda tentativa; quem recebeu há trinta minutos, não.
+ *
+ * @param {object} ctx
+ * @param {boolean} ctx.ultimaFoiNossa a última mensagem da conversa é nossa?
+ * @param {number} ctx.horasDesdeUltima horas desde essa mensagem
+ * @param {number} ctx.limiteHoras      janela em que não se repete
+ * @returns {{acao:'enviar'|'pular', motivo:string}}
+ */
+export function decidirReenvio({ ultimaFoiNossa = false, horasDesdeUltima = Infinity, limiteHoras = 48 } = {}) {
+  if (!ultimaFoiNossa) return { acao: 'enviar', motivo: '' };
+  if (!(horasDesdeUltima < limiteHoras)) return { acao: 'enviar', motivo: '' };
+
+  const quando =
+    horasDesdeUltima < 1
+      ? `${Math.max(1, Math.round(horasDesdeUltima * 60))} min`
+      : `${Math.floor(horasDesdeUltima)}h`;
+  return { acao: 'pular', motivo: `já recebeu mensagem nossa há ${quando} — não vou mandar de novo` };
+}
+
 export function escolherConteudo(conteudos, preferido) {
   const lista = conteudos || [];
   if (!lista.length) return { erro: 'nenhum conteúdo reconhecido' };

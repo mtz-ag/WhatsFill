@@ -69,6 +69,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       log: [], // { nome, resultado, motivo } de cada contato da rodada
     },
     incoming: [],
+    /**
+     * Cidades que você recusou no popup, enquanto este contato estiver aberto (normalizadas).
+     *
+     * Sem isto, recusar não adianta: `applyGuesses` só preenche buraco, recusar esvazia o campo,
+     * e a próxima releitura da conversa (que roda sozinha quando o contato responde) devolve o
+     * mesmo palpite e pergunta de novo. Some com a rodada e vira popup em laço.
+     */
+    cidadeRecusada: new Set(),
     /** A última mensagem da conversa, de qualquer lado — { doContato, at, texto } ou null. */
     ultimaMensagem: null,
     busy: false,
@@ -225,6 +233,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.draft = {};
     state.tagSuggestions = [];
     state.incoming = [];
+    state.cidadeRecusada = new Set();
     state.ultimaMensagem = null;
     state.hsmTemplates = [];
     state.error = null;
@@ -319,7 +328,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * contato ("Lourdes" / "Cerrito") pegar cidade sem nunca ter mencionado nenhuma: alguém
    * digitou o cadastro nesse formato por outro motivo (ou errado) e a extensão gravou por cima
    * do silêncio, sem clique nenhum. Por isso `aproximada` e `pendente`: fica marcada como
-   * palpite e só sai daqui pro CRM depois que `confirmarCidadeDoCadastroSePendente` perguntar.
+   * palpite e só sai daqui pro CRM depois que `confirmarCidadeSePendente` perguntar.
    */
   const FONTE_CIDADE_CADASTRO = 'cidade escrita antes do nome no cadastro';
 
@@ -345,46 +354,76 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /**
-   * Pergunta, com popup não-bloqueante (a mesma caixa da rodada), se a cidade tirada do FORMATO
-   * do cadastro ("Cidade - Nome") está correta — antes de ela ir para o CRM.
+   * **Nenhuma cidade de palpite vai para o CRM sem passar por aqui.** Popup não-bloqueante (a
+   * mesma caixa da rodada), antes da escrita.
    *
-   * Só existe por causa do caso "Lourdes"/"Cerrito": marcar como `aproximada` já tirava do
-   * `aplicarAutomatico` (silencioso), mas o Salvar/Concluir manual grava QUALQUER palpite não
-   * vazio, sem perguntar nada — o mesmo furo, só que a um clique de distância. Roda em toda
-   * gravação **exceto** a automática (`automatico: true`), que já nem inclui este palpite no
-   * `changes` por não ser `exata`; perguntar ali seria popup surgindo do nada, sem o clique que
-   * a justifique.
+   * Começou cobrindo só a cidade tirada do FORMATO do cadastro ("Cidade - Nome", caso
+   * "Lourdes"/"Cerrito"). Ficou de fora justamente a mais comum: a cidade tirada das MENSAGENS,
+   * que casa exato com o IBGE e por isso é gravada por `aplicarAutomatico` no instante em que o
+   * contato é aberto — sem clique nenhum. O relato foi *"eu pedi para me mostrar um popup antes
+   * de registrar a cidade mas continua registrando automaticamente"*, e estava certo: a metade
+   * silenciosa era a que ele via.
+   *
+   * Isto abre exceção à regra "automático grava o determinístico" do CLAUDE.md, e de propósito:
+   * casar exato com a lista do IBGE prova que o texto é o nome de um município, não que seja a
+   * cidade DELE — "meu genro mora em Santiago" casa igualzinho. Instrução dele vence a regra.
+   *
+   * Só pergunta quando a cidade **entraria mesmo** nesta gravação: palpite `aproximada` na
+   * rodada automática já é filtrado pelo `somenteExatos`, e perguntar ali seria popup por um
+   * valor que não ia ser gravado de qualquer jeito.
+   *
+   * @param {boolean} somenteExatos a gravação em curso só leva palpite exato (a automática)
    */
-  async function confirmarCidadeDoCadastroSePendente() {
+  async function confirmarCidadeSePendente(somenteExatos) {
     const campo = fieldNamed('Cidade');
     const entry = campo && state.draft[campo.id];
-    if (!entry?.pendente || entry.source !== FONTE_CIDADE_CADASTRO) return;
+    if (!entry?.pendente || entry.from !== 'palpite') return;
+    if (entry.value == null || entry.value === '') return;
+    if (somenteExatos && entry.confidence !== 'exata') return;
+
+    const doCadastro = entry.source === FONTE_CIDADE_CADASTRO;
+    const linhas = [`Encontrei "${entry.value}" como cidade.`];
+    if (doCadastro) {
+      linhas.push('⚠ A pessoa não disse isso na conversa — veio só do formato "Cidade - Nome" do cadastro.');
+    } else {
+      linhas.push(`De onde saiu: ${entry.source || 'mensagem do contato'}`);
+      if (entry.confidence !== 'exata') linhas.push('⚠ Não casou exato com a lista do IBGE — é palpite.');
+    }
+    if (entry.substituiu) linhas.push(`⚠ Vai SUBSTITUIR a cidade que está no CRM ("${entry.substituiu}").`);
 
     const escolha = await perguntarNaRodada({
-      titulo: 'Cidade do cadastro',
-      linhas: [
-        `O cadastro está no formato "Cidade - Nome": encontrei "${entry.value}" como cidade.`,
-        '⚠ A pessoa não disse isso na conversa — veio só do formato do cadastro.',
-      ],
+      titulo: doCadastro ? 'Cidade do cadastro' : 'Cidade a gravar',
+      linhas,
       pergunta: 'Está correta?',
       opcoes: [
         { tecla: '1', rotulo: 'Aceitar', valor: 'aceitar', primaria: true },
         { tecla: '2', rotulo: 'Corrigir', valor: 'corrigir' },
         { tecla: '3', rotulo: 'Sem cidade', valor: 'semcidade' },
       ],
+      // Esta caixa não decide o atendimento, decide um campo: Esc aqui é "não grava esta
+      // cidade", não "para a rodada" — e dizer o contrário na tela é o tipo de mentira que faz
+      // ele teclar Esc esperando outra coisa.
+      dica: 'Esc descarta a cidade e segue',
     });
 
     if (escolha === 'aceitar') {
       state.draft[campo.id] = { ...entry, pendente: false };
     } else if (escolha === 'semcidade') {
-      // Marcado como 'manual' (não 'palpite'): `corrigirNomeComCidade` só repopula quando o
-      // campo está vazio de verdade, e aqui ele NÃO está — é uma resposta, "não tem cidade".
+      // Marcado como 'manual' (não 'palpite'): `corrigirNomeComCidade` e `applyGuesses` só
+      // preenchem campo vazio de verdade, e aqui ele NÃO está — é uma resposta, "não tem cidade".
+      state.cidadeRecusada.add(cities.normalize(entry.value));
       state.draft[campo.id] = { value: '', from: 'manual' };
       setStatus('Sem cidade — nada vai ser gravado nesse campo.');
     } else {
+      // Esc também cai aqui: na dúvida não grava. Vale para a rodada — parar a rodada não pode
+      // significar "então grava a cidade que eu não confirmei".
+      state.cidadeRecusada.add(cities.normalize(entry.value));
       delete state.draft[campo.id];
-      setStatus('Cidade do cadastro descartada — preencha na aba Dados.', 'err');
+      setStatus(`Cidade "${entry.value}" descartada — preencha na aba Dados.`, 'err');
     }
+    // A etiqueta de COREDE sai da cidade: recusada a cidade, a região tem que sair junto, senão
+    // o contato fica com o COREDE de uma cidade que você acabou de recusar.
+    await refreshTagSuggestions();
     renderAll();
   }
 
@@ -454,6 +493,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const field = classify.find((f) => f.name === name);
       if (!field || !guess) continue;
 
+      // Cidade que você já recusou no popup não volta enquanto o contato estiver aberto.
+      if (name === 'Cidade' && state.cidadeRecusada.has(cities.normalize(guess.value))) continue;
+
       const atual = state.draft[field.id];
       if (atual) {
         if (!podeSubstituirCidade(name, guess, atual)) continue;
@@ -468,6 +510,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         suggestions: guess.suggestions,
         // Marca a substituição para a gravação trocar também a etiqueta de região.
         substituiu: atual ? atual.value : null,
+        // Cidade nenhuma vai para o CRM sem você ver antes. Ver `confirmarCidadeSePendente`.
+        pendente: name === 'Cidade',
       };
     }
   }
@@ -1320,6 +1364,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           `O modelo salvo ("${cfg.templateName || cfg.templateId}") não está na lista deste canal. Escolha de novo.`)
       );
     }
+
+    card.append(
+      campoNumero('Não repetir para o mesmo contato por quantas horas', cfg.horasSemRepetir, (v) =>
+        salvarAuto({ horasSemRepetir: clampInt(v, 1, 720) }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Quem acabou de ser concluído volta para o TOPO desta lista, então a rodada seguinte ' +
+          'começaria justo por ele. A rodada olha a conversa (não só o registro de qual modelo ' +
+          'já foi): se a última mensagem for nossa e recente, ela pula e diz há quanto tempo.')
+    );
 
     card.append(
       h('div', { class: 'wf-origin' },
@@ -2430,7 +2484,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *
    * @returns {Promise<string>} o `valor` da opção escolhida, ou 'parar' no Esc
    */
-  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [] }) {
+  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [], dica = 'Esc para parar a rodada' }) {
     return new Promise((resolve) => {
       const caixa = h('div', { class: 'wf-pergunta' });
       const fundo = h('div', { class: 'wf-pergunta-fundo' }, [caixa]);
@@ -2461,7 +2515,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
       caixa.append(linhaBotoes);
       if (respostas.length) caixa.append(montarRespostasRapidas(respostas));
-      caixa.append(h('div', { class: 'wf-pergunta-dica' }, 'Esc para parar a rodada'));
+      caixa.append(h('div', { class: 'wf-pergunta-dica' }, dica));
 
       function aoTeclar(ev) {
         // Você está digitando na conversa: o "2" é um dois, não a tecla Pular.
@@ -2816,6 +2870,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             continuaNaFila: true,
             motivo: `já recebeu ${rotuloEnvio} em ${new Date(quando.at).toLocaleDateString('pt-BR')}`,
           };
+        }
+
+        /**
+         * A trava que o `contatosTratados` acima **não** dá: ele é um `Set` que nasce vazio a
+         * cada rodada, e o caso real foram DUAS rodadas — resposta pronta numa, modelo aprovado
+         * na seguinte, 32 min depois. Chaves diferentes no registro, `Set` novo no laço, duas
+         * mensagens na cara da pessoa.
+         *
+         * Quem responde "já falei com esta pessoa agora há pouco?" é a conversa, não o nosso
+         * registro: assim conta também o que foi mandado à mão. Custa uma leitura por contato.
+         */
+        const conversa = await api.getConversation(sessionId, 5);
+        const reenvio = hsmLib.decidirReenvio({
+          ultimaFoiNossa: !!conversa.ultima && !conversa.ultima.doContato,
+          horasDesdeUltima: conversa.ultima
+            ? (Date.now() - new Date(conversa.ultima.at).getTime()) / 3600000
+            : Infinity,
+          limiteHoras: clampInt(state.auto.cfg.horasSemRepetir, 1, 720),
+        });
+        if (reenvio.acao === 'pular') {
+          return { nome, resultado: 'pulado', continuaNaFila: true, motivo: reenvio.motivo };
         }
       }
 
@@ -3218,10 +3293,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     somenteExatos = false,
     automatico = false,
   } = {}) {
-    // A automática nunca inclui este palpite no `changes` (confidence não é `exata`) — perguntar
-    // aqui seria popup sem clique nenhum que o justifique. Toda gravação disparada por você,
-    // mesmo dentro da rodada, passa por aqui primeiro.
-    if (!automatico) await confirmarCidadeDoCadastroSePendente();
+    // Único lugar que escreve no CRM, então é aqui que a cidade é confirmada — inclusive na
+    // gravação automática, que era justamente a que passava batido.
+    await confirmarCidadeSePendente(somenteExatos);
 
     const changes = {};
     for (const field of state.classify) {

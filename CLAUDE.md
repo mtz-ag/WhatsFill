@@ -115,6 +115,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   evento vindo de campo de texto** — senão o "2" digitado na conversa conclui o atendimento.
   O que ele precisar no meio da rodada tem que estar DENTRO da caixa: as respostas prontas são
   `montarRespostasRapidas`, e enviar dali não fecha a pergunta.
+- **Anti-duplicata por MODELO não impede mandar duas vezes — e "contato já tratado" também não.**
+  O contato recebeu a resposta pronta numa rodada e o modelo aprovado na seguinte, 32 min depois:
+  chaves diferentes, e o `Set` de contatos tratados nasce vazio a cada rodada. Some com a fila que
+  devolve o concluído ao TOPO (a rodada seguinte começa por ele) e vira máquina de repetir. São
+  **duas travas, não uma**: `contatosTratados` dentro da rodada e `hsm.decidirReenvio` entre
+  rodadas — este pergunta à **conversa**, que inclui o que ele mandou à mão. Já foi apagado uma
+  vez trocado pelo `Set`; não troque de novo.
 - **Regra da rodada que depende de estado invisível parece defeito.** A conclusão automática
   ("última mensagem minha") ganhou uma exceção para quem não tinha etiqueta de conteúdo, e o
   relato foi "alguns concluem e outros não". Funcionava como projetado — e mesmo assim estava
@@ -164,8 +171,11 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   referência (IBGE, COREDEs) e confirmação humana em 1 clique.
 - **Não adivinhar formato de escrita.** O gravador (`recorder.js`) observa a plataforma fazendo
   uma vez e copia. Sem contrato aprendido, a extensão **recusa** em vez de tentar.
-- **Automático só grava o determinístico:** cidade que casou exato com o IBGE, o COREDE dela e
-  as etiquetas de conteúdo. Palpite aproximado sempre espera clique.
+- **Automático só grava o determinístico:** o COREDE e as etiquetas de conteúdo. Palpite
+  aproximado sempre espera clique. **Cidade está FORA do automático por pedido dele:** casar
+  exato com o IBGE prova que o texto é nome de município, não que seja a cidade dele ("meu genro
+  mora em Santiago" casa igual). Toda cidade de palpite passa por `confirmarCidadeSePendente`
+  antes de ir pro CRM — inclusive na gravação automática, que era a metade que ele via.
 - **Nunca sobrescrever o que já está no CRM.** O automático só preenche buraco. **Uma exceção:**
   a cidade que a própria pessoa informou — respondendo o formulário **ou** mandando uma mensagem
   que é só o nome do município — substitui a do CRM, com casamento exato e nome COMPLETO (nunca

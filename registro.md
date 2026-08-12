@@ -5,6 +5,59 @@
 
 ---
 
+## 2026-08-12 — O popup da cidade cobria só metade (e a outra metade era a que ele via)
+
+**Relato (Thiago):** *"eu pedi para me mostrar um popup antes de registrar a cidade mas continua
+registrando automaticamente"*.
+
+**Causa raiz:** a entrada de baixo (mesmo dia) resolveu a cidade tirada do FORMATO do cadastro
+("Cidade - Nome"), e só ela. A cidade tirada das MENSAGENS entra por outro caminho —
+`applyGuesses`, com `confidence: 'exata'` quando casa com a lista do IBGE — e `aplicarAutomatico`
+grava todo palpite `exata` no instante em que o contato é aberto, sem clique nenhum. Essa é a
+comum: o caminho do cadastro é raro, o das mensagens acontece em todo contato que escreve o nome
+de um município. O popup existia, ele nunca o via, e o CRM continuava sendo escrito sozinho.
+
+**Fix:** a confirmação virou regra do CAMPO, não da origem. `applyGuesses` marca toda entrada de
+Cidade com `pendente: true`, e `saveClassification` — único lugar que escreve no CRM — chama
+`confirmarCidadeSePendente` antes de montar `changes`, **inclusive na gravação automática**, que
+era justamente a que passava batido. A caixa é a mesma da rodada (`perguntarNaRodada`: sem fundo
+escuro, arrastável, não trava a conversa) e diz de onde a cidade saiu, se é palpite não-exato e
+se vai substituir a que está no CRM. Três saídas: **1 Aceitar** grava; **2 Corrigir** descarta;
+**3 Sem cidade** grava vazio. Esc = descarta (na dúvida não grava), e a dica da caixa passou a
+dizer isso em vez de "Esc para parar a rodada" — esta caixa decide um campo, não o atendimento.
+
+**Decisão consciente:** isto abre exceção à regra *"automático só grava o determinístico"* do
+CLAUDE.md. Casar exato com o IBGE prova que o texto é o nome de um município, **não** que seja a
+cidade dele — *"meu genro mora em Santiago"* casa igualzinho. Instrução dele vence a regra.
+
+**Trava junto:** recusar não adiantava sozinho. `applyGuesses` só preenche buraco, recusar
+esvazia o campo, e a releitura da conversa (que roda sozinha quando o contato responde) devolvia
+o mesmo palpite e perguntava de novo — popup em laço dentro da rodada. Agora `state.cidadeRecusada`
+guarda o que foi recusado enquanto o contato estiver aberto. A etiqueta de COREDE sai junto:
+recusada a cidade, `refreshTagSuggestions` roda de novo, senão o contato ficava com o COREDE de
+uma cidade que ele acabou de recusar.
+
+### Junto: o anti-repetição por conversa tinha sido removido
+
+O commit `0e4cc6a` ("atualizado") apagou `hsm.decidirReenvio`, o teste dele, o
+`auto.horasSemRepetir` do `store.js` e o campo dele na aba Automatizado — trocados pelo
+`contatosTratados`, um `Set` de contatos já tratados dentro da rodada.
+
+**Não é a mesma trava.** `contatosTratados` nasce vazio a cada rodada e cobre o item que volta ao
+TOPO da lista dentro da MESMA rodada. O caso relatado ao vivo (*"falhou e mandou mensagem
+novamente"*) foram DUAS rodadas: resposta pronta às 14:05, modelo aprovado às 14:37 — `Set` novo,
+chaves diferentes no registro, duas mensagens em 32 minutos. Restaurado, e as duas travas
+convivem: `contatosTratados` dentro da rodada, `decidirReenvio` (que pergunta à CONVERSA, então
+conta também o que foi mandado à mão) entre rodadas.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`confirmarCidadeSePendente`,
+`applyGuesses`, `state.cidadeRecusada`, `perguntarNaRodada` com `dica`, `processarSemRetorno`,
+cartão da rodada), [src/lib/hsm.js](src/lib/hsm.js) (`decidirReenvio`),
+[src/lib/store.js](src/lib/store.js) (`auto.horasSemRepetir`),
+[tests/hsm.test.mjs](tests/hsm.test.mjs). Seis suítes passando.
+
+---
+
 ## 2026-08-12 — Cidade gravada sem a pessoa ter dito nada ("Lourdes" → "Cerrito")
 
 **Relato (Thiago, print):** contato "Lourdes" ficou com Cidade "Cerrito" na conversa inteira sem

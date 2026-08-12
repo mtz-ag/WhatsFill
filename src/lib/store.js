@@ -302,6 +302,15 @@ const DEFAULTS = {
      * mandar continua sendo ele. Ver `hsm.decidirSemResposta`.
      */
     horasSemResposta: 12,
+    /**
+     * Janela em que a rodada NÃO manda de novo para quem já recebeu mensagem nossa.
+     *
+     * Quem acabou de ser concluído volta para o TOPO da lista de concluídos, então a rodada
+     * seguinte começaria justo por ele — e foi assim que um contato recebeu duas mensagens em
+     * 32 minutos. 48h porque esta fila é de quem não responde: a última mensagem ser nossa é a
+     * regra, e bloquear para sempre esvaziaria a rodada. Ver `hsm.decidirReenvio`.
+     */
+    horasSemRepetir: 48,
   },
 
   /**
