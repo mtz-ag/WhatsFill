@@ -165,10 +165,40 @@ const CASOS_CANDIDATOS = [
       <span data-cy="button-my-sessions" class="rounded-full bg-gray-300"><span>Meus</span><span>5</span></span>
       <span data-cy="button-other-sessions" class="rounded-full"><span>Outros</span></span>
       <button id="grupos"><mat-icon data-mat-icon-name="user-group"></mat-icon></button>
-      <button id="caixa"><mat-icon data-mat-icon-name="inbox"></mat-icon></button>
+      <button id="caixa"><mat-icon data-mat-icon-name="archive-box"></mat-icon></button>
       <button id="menu"><mat-icon data-mat-icon-name="ellipsis-vertical"></mat-icon></button>
     </div>`,
-    esperados: ['grupos', 'caixa', 'menu'],
+    esperados: ['caixa', 'grupos', 'menu'],
+  },
+  {
+    // O caso que quebrou ao vivo: os icones ficam num IRMAO do invólucro das abas, e subir só
+    // até o primeiro ancestral com as três devolvia lista vazia — a rodada parava na volta.
+    nome: 'candidatos: acha os ícones mesmo quando eles estão fora do invólucro das abas',
+    html: `<div id="barra">
+      <div id="so-abas">
+        <span data-cy="button-new-sessions" class="rounded-full"><span>Novos</span></span>
+        <span data-cy="button-my-sessions" class="rounded-full bg-gray-300"><span>Meus</span></span>
+        <span data-cy="button-other-sessions" class="rounded-full"><span>Outros</span></span>
+      </div>
+      <div id="so-icones">
+        <button id="pessoas"><mat-icon data-mat-icon-name="user-group"></mat-icon></button>
+        <button id="caixa"><mat-icon data-mat-icon-name="archive-box"></mat-icon></button>
+      </div>
+    </div>`,
+    // O de nome parecido com arquivo vem primeiro: menos clique a esmo na barra dele.
+    esperados: ['caixa', 'pessoas'],
+  },
+  {
+    nome: 'candidatos: filtro com texto fica de fora (clicar estragaria a fila)',
+    html: `<div id="barra">
+      <span data-cy="button-new-sessions" class="rounded-full"><span>Novos</span></span>
+      <span data-cy="button-my-sessions" class="rounded-full bg-gray-300"><span>Meus</span></span>
+      <span data-cy="button-other-sessions" class="rounded-full"><span>Outros</span></span>
+      <button id="grupos"><mat-icon data-mat-icon-name="users"></mat-icon>Grupos</button>
+      <button id="naolidas"><mat-icon data-mat-icon-name="eye"></mat-icon>Apenas não lidas</button>
+      <button id="caixa"><mat-icon data-mat-icon-name="inbox"></mat-icon></button>
+    </div>`,
+    esperados: ['caixa'],
   },
   {
     nome: 'candidatos: campo de busca fica de fora (não troca de lista)',
@@ -176,7 +206,7 @@ const CASOS_CANDIDATOS = [
       <span data-cy="button-new-sessions" class="rounded-full"><span>Novos</span></span>
       <span data-cy="button-my-sessions" class="rounded-full bg-gray-300"><span>Meus</span></span>
       <span data-cy="button-other-sessions" class="rounded-full"><span>Outros</span></span>
-      <button id="busca"><input type="text"></button>
+      <button id="busca"><mat-icon data-mat-icon-name="search"></mat-icon><input type="text"></button>
       <button id="caixa"><mat-icon data-mat-icon-name="inbox"></mat-icon></button>
     </div>`,
     esperados: ['caixa'],

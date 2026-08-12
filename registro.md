@@ -67,6 +67,62 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
+## 2026-08-12 — A volta para os concluídos (e o log que mentia sobre o motivo)
+
+**Relato dele:** "faltou retornar para os concluídos e seguir pro próximo contato", com a print
+do Andamento.
+
+### O que a print entregou
+
+A rodada **funcionou**: reabriu o Vicente, mandou a resposta livre (janela aberta, então texto —
+a escolha por contato fez o que devia) e concluiu. Ela parou na volta, dizendo:
+
+> `Rodada encerrada: 1 enviado(s), 0 pulado(s). A fila carregada acabou (1 item(ns)).`
+
+E a fila da esquerda, na print, está em **"Meus"** — com exatamente 1 item. Ou seja: a rodada
+contou a lista errada. O Reiniciar joga o atendimento para "Meus" e a plataforma troca de aba
+junto; a volta para os concluídos não aconteceu.
+
+### Causa raiz: a barra que eu media era só a das abas
+
+`barraDaFila()` subia até o **primeiro** ancestral que continha as três abas de texto. Na tela
+dele esse ancestral é o invólucro **só das abas** — os ícones (pessoas, caixa, "⋮") ficam num
+irmão. Resultado: lista de candidatos **vazia**, nada para experimentar, e a troca falhando.
+
+Agora ela continua subindo enquanto não houver nenhum ícone junto das três abas, e para antes de
+chegar na lista de atendimentos.
+
+### O segundo defeito, que é pior: o log mentia
+
+Com a troca de aba falhando, `openQueueSession` **seguia em frente e olhava a lista mesmo
+assim** — e reportava "a fila carregada acabou", que é uma afirmação sobre a fila errada. O
+motivo verdadeiro (não consegui voltar para os concluídos) ficava guardado num campo que só era
+lido quando dava certo.
+
+Agora falha de aba **para na hora, com o nome certo**. Erro de aba é erro de aba: dizer "a fila
+acabou" mandou o diagnóstico para o lado oposto, e é o tipo de mentira que custa uma hora.
+Junto: "Ver mais" não é mais tentado quando a falha foi de aba — seria paginar a fila errada.
+
+### Duas travas novas na tentativa
+
+Experimentar cliques na barra dele exige cuidado: "Grupos", "Todas" e "Apenas não lidas" trocam
+o filtro que ele montou.
+
+- **Só ícone puro entra na lista de candidatos.** A caixa de arquivo é ícone; os filtros que
+  estragariam a fila têm rótulo escrito. Ícone com texto ao lado está fora.
+- **Candidato não aprendido só é aceito se a lista vier com algo.** Um ícone que abre uma visão
+  vazia também deixa as três abas apagadas, e sem isso a rodada daria a fila errada por boa. Do
+  já aprendido não se exige, porque no fim da rodada a lista de concluídos legitimamente esvazia.
+
+E o Escape passou a ser dado entre tentativas: o "⋮" abre menu, e menu do Material é modal —
+deixá-lo aberto travaria o clique seguinte.
+
+### Arquivos alterados
+
+`src/lib/dom.js`, `src/panel/panel.js`, `tools/checar-dom.mjs`.
+
+---
+
 ## 2026-08-12 — Uma rodada de sem retorno, não duas; e a lista de concluídos por tentativa
 
 **Relato dele:** a rodada dos concluídos parou no começo ("Não achei a lista de concluídos") e,

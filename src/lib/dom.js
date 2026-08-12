@@ -280,42 +280,67 @@ function getAbaConcluidos() {
   return porRotulo || null;
 }
 
-/** O pedaço da tela que contém as três abas de texto — e, com elas, os ícones vizinhos. */
+/**
+ * O pedaço da tela que contém as três abas de texto **e os ícones vizinhos**.
+ *
+ * Subir só até o primeiro ancestral que contém as três não bastava: na máquina dele esse
+ * ancestral é o invólucro **só das abas**, e os ícones (pessoas, caixa, "⋮") ficam num irmão.
+ * O resultado foi lista de candidatos vazia e a rodada parando na volta do primeiro contato.
+ * Por isso continua subindo enquanto não houver nenhum clicável além das abas.
+ */
 function barraDaFila() {
   const tab = document.querySelector('[data-cy="button-new-sessions"], [data-cy="button-my-sessions"]');
-  // Sobe até um ancestral que contenha as três: é a barra, sem pegar a página inteira.
   let no = tab?.parentElement || null;
-  for (let i = 0; i < 6 && no; i++) {
-    if (no.querySelector('[data-cy="button-other-sessions"]')) return no;
+  let comAsTres = null;
+
+  for (let i = 0; i < 8 && no; i++) {
+    if (!comAsTres && no.querySelector('[data-cy="button-other-sessions"]')) comAsTres = no;
+    // Achou as três E já tem ícone vizinho: é a barra inteira.
+    if (comAsTres && no.querySelector('mat-icon')) return no;
+    // Não passa da lista: item de fila não é controle de barra.
+    if (no.querySelector('sessions-list-item')) return comAsTres || no;
     no = no.parentElement;
   }
-  return document.querySelector('sessions-list-online-content')?.parentElement || document.body;
+  return comAsTres || document.querySelector('sessions-list-online-content')?.parentElement || document.body;
 }
 
+/** Ícone cujo nome cheira a arquivo/caixa vai na frente da fila de tentativas. */
+const RE_ICONE_ARQUIVO = /arch|box|inbox|folder|caix|arquiv/i;
+
 /**
- * Os candidatos a "ícone da lista de concluídos": tudo que é clicável na barra da fila e **não**
- * é uma das três abas de texto.
+ * Os candidatos a "ícone da lista de concluídos".
  *
- * Existe porque o gancho dessa lista não tem `data-cy` conhecido, e adivinhar nome de ícone
- * falhou na máquina dele. Em vez de continuar chutando, a rodada **experimenta**: clica um
- * candidato e confere pelo sinal que já é confiável — estar nos concluídos significa que
- * nenhuma das três abas de texto está ativa. O que funcionar fica guardado para o resto da
- * rodada.
+ * O gancho dessa lista não tem `data-cy` conhecido e adivinhar nome de ícone falhou. Em vez de
+ * continuar chutando, a rodada **experimenta**. Mas experimentar clicando em qualquer coisa da
+ * barra é perigoso: "Grupos", "Todas" e "Apenas não lidas" trocam o filtro que ele montou.
+ *
+ * A trava que separa um do outro: **só entram controles de ícone puro, sem texto visível**. A
+ * caixa de arquivo é ícone; os filtros que estragariam a fila têm rótulo escrito. Os poucos que
+ * sobram (pessoas, "⋮") são inofensivos e reversíveis — e os de nome parecido com arquivo são
+ * tentados primeiro.
  */
 export function candidatosDeConcluidos() {
   const barra = barraDaFila();
   const tabs = Object.keys(ABAS_DA_FILA).map((nome) => getQueueTab(nome)).filter(Boolean);
 
-  return [...barra.querySelectorAll('button, [role="button"], [data-cy], mat-icon')]
-    .map((el) => (el.tagName === 'MAT-ICON' ? el.closest('button, [role="button"], [data-cy]') || el : el))
-    .filter((el, i, todos) => {
-      if (!el || todos.indexOf(el) !== i) return false;
-      // Fora as três abas (e qualquer coisa dentro delas: o rótulo e o contador).
-      if (tabs.some((t) => t === el || t.contains(el) || el.contains(t))) return false;
-      // Fora o que abre menu/entrada de texto: busca, filtro e o "⋮" não trocam de lista.
-      if (el.querySelector('input') || el.tagName === 'INPUT') return false;
+  const achados = [...barra.querySelectorAll('mat-icon')]
+    .map((icone) => ({ icone, alvo: icone.closest('button, [role="button"], [data-cy]') || icone.parentElement }))
+    .filter(({ alvo }, i, todos) => {
+      if (!alvo || todos.findIndex((o) => o.alvo === alvo) !== i) return false;
+      if (tabs.some((t) => t === alvo || t.contains(alvo) || alvo.contains(t))) return false;
+      // Ícone PURO: com texto visível é filtro ("Grupos", "Todas"), e clicar estraga a fila.
+      if (alvo.textContent.replace(/\s+/g, '')) return false;
+      if (alvo.querySelector('input') || alvo.closest('sessions-list-item')) return false;
       return true;
     });
+
+  // Nome parecido com arquivo primeiro: reduz o número de cliques a esmo na barra dele.
+  achados.sort((a, b) => {
+    const pa = RE_ICONE_ARQUIVO.test(a.icone.getAttribute('data-mat-icon-name') || '') ? 0 : 1;
+    const pb = RE_ICONE_ARQUIVO.test(b.icone.getAttribute('data-mat-icon-name') || '') ? 0 : 1;
+    return pa - pb;
+  });
+  return achados.map(({ alvo }) => alvo);
 }
 
 /**
@@ -419,19 +444,28 @@ async function selecionarConcluidos(timeoutMs) {
   for (const candidato of candidatos) {
     candidato.click();
 
+    const jaAprendido = candidato === concluidosAprendido;
     const deadline = Date.now() + Math.max(1500, Math.floor(timeoutMs / candidatos.length));
     while (Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 120));
-      if (isQueueTabActive(ABA_CONCLUIDOS)) {
-        await new Promise((r) => setTimeout(r, 400)); // a lista ainda está repintando
-        concluidosAprendido = candidato;
-        return { ok: true, confirmado: true, aprendido: descrever(candidato) };
-      }
+      if (!isQueueTabActive(ABA_CONCLUIDOS)) continue;
+
+      await new Promise((r) => setTimeout(r, 400)); // a lista ainda está repintando
+      // Segunda trava para candidato ainda não aprendido: a lista tem que ter vindo com algo.
+      // Ícone que abre uma visão vazia também deixa as três abas apagadas, e sem isto a rodada
+      // daria a fila errada por boa. Do já aprendido não se exige: no fim da rodada a lista de
+      // concluídos legitimamente esvazia.
+      if (!jaAprendido && !getSessionListItems().length) break;
+
+      concluidosAprendido = candidato;
+      return { ok: true, confirmado: true, aprendido: descrever(candidato) };
     }
 
-    // Não era: devolve a fila para onde estava antes de tentar o próximo.
+    // Não era. Fecha o que o clique possa ter aberto (o "⋮" abre menu, e menu do Material é
+    // modal: deixar aberto trava o clique seguinte) e devolve a fila para onde estava.
+    closeOverlay();
     if (antes) getQueueTab(antes)?.click();
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 250));
   }
 
   return {
@@ -572,7 +606,14 @@ export async function openQueueSession(index, opts) {
   let avisoAba = null;
   if (aba) {
     const trocou = await selectQueueTab(aba);
-    if (!trocou.ok) avisoAba = trocou.reason;
+    if (!trocou.ok) {
+      // **Para aqui, sem olhar a lista.** Falhou a troca, a lista na tela é OUTRA — e o que a
+      // rodada diria olhando para ela ("a fila carregada acabou") seria mentira: aconteceu ao
+      // vivo, com a rodada parando depois do primeiro contato e culpando o tamanho da fila de
+      // "Meus". Erro de aba é erro de aba, e tem que aparecer com esse nome.
+      return { ok: false, avisoAba: trocou.reason, reason: trocou.reason };
+    }
+    avisoAba = trocou.confirmado ? null : `Cliquei na aba "${aba}" mas não deu para confirmar a troca.`;
   }
 
   const itens = getSessionListItems();

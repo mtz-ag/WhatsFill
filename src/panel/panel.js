@@ -1527,7 +1527,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // A fila mostra 50 por vez e só traz o resto no "Ver mais". Acabar o carregado não é
       // acabar a fila: pede a próxima página e tenta a MESMA posição de novo.
-      if (!aberto.ok && carregamentos < MAX_CARREGAMENTOS) {
+      //
+      // Não vale quando a falha foi de ABA: aí a lista na tela é outra, e clicar em "Ver mais"
+      // seria paginar a fila errada.
+      if (!aberto.ok && !aberto.avisoAba && carregamentos < MAX_CARREGAMENTOS) {
         const mais = await page.carregarMaisDaFila();
         if (mais.ok) {
           carregamentos++;
