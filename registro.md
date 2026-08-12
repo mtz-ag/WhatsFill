@@ -67,6 +67,56 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
+## 2026-08-12 — Mandou de novo para quem já tinha recebido
+
+**Relato dele:** "falhou e mandou mensagem novamente", com a print do Vicente recebendo o modelo
+às **14:37** depois de ter recebido a resposta pronta às **14:05**.
+
+### Causa raiz: o anti-duplicata era por MODELO, e a pergunta certa é outra
+
+O registro guarda "contato X recebeu o modelo Y". Às 14:05 o Vicente recebeu a resposta pronta
+`sem-retorno-interesse`; às 14:37, o modelo aprovado. **Chaves diferentes, nenhuma duplicata
+detectada** — e duas mensagens na cara da pessoa em 32 minutos.
+
+E não foi azar: quem acaba de ser concluído volta para o **topo** da lista de concluídos, então
+a rodada seguinte começa justamente por ele. Anti-duplicata por modelo + fila que devolve o
+último ao topo = máquina de repetir.
+
+### O conserto
+
+A pergunta deixou de ser "já mandei ESTE texto?" e passou a ser **"já falei com esta pessoa
+agora há pouco?"**. Quem responde é a **conversa**, não o nosso registro — assim conta também o
+que ele mandou à mão, por outra rodada ou por outro operador.
+
+Janela de horas (48h por padrão, editável no cartão), e não "nunca repetir": esta fila é de quem
+**não responde**, então "a última mensagem é nossa" é a regra, não a exceção. Bloquear para
+sempre esvaziaria a rodada. Quem recebeu há três dias é alvo legítimo de segunda tentativa; quem
+recebeu há trinta minutos, não.
+
+`hsm.decidirReenvio` é puro e testado, com o caso real (32 min) entre as asserções. Custa uma
+leitura de conversa a mais por contato — é o preço de não mandar duas vezes.
+
+### O que a print também mostrou, e não é defeito
+
+- `Atenção: percorri 1 de 50 da lista — 49 não chegaram a ser abertos` — o aviso de ontem
+  funcionando. A rodada parou no primeiro contato porque a plataforma **pediu motivo de
+  conclusão** (`enviado, mas a plataforma pediu motivo — responda o diálogo`). Enquanto esse
+  diálogo aparecer, toda rodada vai parar no primeiro: é decisão dele, e a rodada não responde
+  diálogo por ele.
+
+### Sobre "use o Claude do Chrome"
+
+Procurei em três lugares nesta sessão — ferramentas de navegador, conectores e plugins: **não
+há nada que alcance o Chrome dele**. A sessão roda em container remoto; a extensão conversa com
+o Claude Code instalado na máquina dele. Diagnóstico daqui é print + código, e nos dois últimos
+casos isso bastou (o "Santiago" e este) porque a causa estava no código, não na tela.
+
+### Arquivos alterados
+
+`src/lib/hsm.js`, `src/lib/store.js`, `src/panel/panel.js`, `tests/hsm.test.mjs`.
+
+---
+
 ## 2026-08-12 — "Pegou Santiago em vez de Porto Alegre" — o parser estava certo, a regra é que não
 
 **Relato dele:** print do contato "Luci - Porto Alegre" com `Cidade: Santiago` no CRM e a

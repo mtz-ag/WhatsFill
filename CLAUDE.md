@@ -115,6 +115,11 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   evento vindo de campo de texto** — senão o "2" digitado na conversa conclui o atendimento.
   O que ele precisar no meio da rodada tem que estar DENTRO da caixa: as respostas prontas são
   `montarRespostasRapidas`, e enviar dali não fecha a pergunta.
+- **Anti-duplicata por MODELO não impede mandar duas vezes.** O contato recebeu a resposta
+  pronta numa rodada e o modelo aprovado na seguinte, 32 min depois: chaves diferentes, nenhuma
+  duplicata. Some com a fila que devolve o concluído ao TOPO (a rodada seguinte começa por ele) e
+  vira máquina de repetir. A pergunta certa é "já falei com esta pessoa agora há pouco?", e quem
+  responde é a **conversa** — que inclui o que ele mandou à mão. Ver `hsm.decidirReenvio`.
 - **Regra da rodada que depende de estado invisível parece defeito.** A conclusão automática
   ("última mensagem minha") ganhou uma exceção para quem não tinha etiqueta de conteúdo, e o
   relato foi "alguns concluem e outros não". Funcionava como projetado — e mesmo assim estava

@@ -1271,6 +1271,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
 
     card.append(
+      campoNumero('Não repetir para o mesmo contato por quantas horas', cfg.horasSemRepetir, (v) =>
+        salvarAuto({ horasSemRepetir: clampInt(v, 1, 720) }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Quem acabou de ser concluído volta para o TOPO desta lista, então a rodada seguinte ' +
+          'começaria justo por ele. A rodada olha a conversa (não só o registro de qual modelo ' +
+          'já foi): se a última mensagem for nossa e recente, ela pula e diz há quanto tempo.')
+    );
+
+    card.append(
       h('div', { class: 'wf-origin' },
         'Todo mundo desta rodada recebe o modelo escolhido acima — é ele e só ele. A maioria ' +
           'desta fila está com a janela de 24h vencida, e aí modelo aprovado é o único envio ' +
@@ -2724,6 +2734,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             continuaNaFila: true,
             motivo: `já recebeu ${rotuloEnvio} em ${new Date(quando.at).toLocaleDateString('pt-BR')}`,
           };
+        }
+
+        /**
+         * A trava que faltava: **já falei com esta pessoa agora há pouco?**
+         *
+         * A de cima é por MODELO — não pegou o caso real, em que o contato recebeu a resposta
+         * pronta numa rodada e o modelo aprovado na seguinte, meia hora depois. Chaves
+         * diferentes, nenhuma duplicata, duas mensagens na cara da pessoa.
+         *
+         * Quem responde é a conversa, não o nosso registro: assim conta também o que ele mandou
+         * à mão. Custa uma leitura a mais por contato, e é o preço de não mandar duas vezes.
+         */
+        const conversa = await api.getConversation(sessionId, 5);
+        const reenvio = hsmLib.decidirReenvio({
+          ultimaFoiNossa: !!conversa.ultima && !conversa.ultima.doContato,
+          horasDesdeUltima: conversa.ultima
+            ? (Date.now() - new Date(conversa.ultima.at).getTime()) / 3600000
+            : Infinity,
+          limiteHoras: clampInt(state.auto.cfg.horasSemRepetir, 1, 720),
+        });
+        if (reenvio.acao === 'pular') {
+          return { nome, resultado: 'pulado', continuaNaFila: true, motivo: reenvio.motivo };
         }
       }
 

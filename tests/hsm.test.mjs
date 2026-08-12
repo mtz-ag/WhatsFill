@@ -7,7 +7,7 @@
  */
 import { check, grupo, fim, lib, mem } from './_harness.mjs';
 
-const { pickRow, PARAMS_NAO_APRENDIDOS, templateParaConteudo, parseContentTemplates, formatContentTemplates, escolherConteudo, decidirSemResposta } =
+const { pickRow, PARAMS_NAO_APRENDIDOS, templateParaConteudo, parseContentTemplates, formatContentTemplates, escolherConteudo, decidirSemResposta, decidirReenvio } =
   await lib('hsm.js');
 
 // Linhas como o diálogo as mostra: nome + começo do texto (line-clamp de uma linha).
@@ -177,6 +177,26 @@ grupo('quando a rodada pode concluir sozinha, e quando tem que perguntar');
   check(decidir({ horasDesdeMinha: 20, limiteHoras: 48 }).acao === 'concluir', 'limite maior segura mais tempo');
   check(decidir({ horasDesdeMinha: 13 }).acao === 'perguntar', 'sem limite informado, vale o padrão de 12h');
   check(decidir({}).acao === 'concluir', 'sem dado nenhum não inventa pergunta');
+}
+
+grupo('não mandar duas vezes para o mesmo contato');
+{
+  const decidir = decidirReenvio;
+
+  // O caso ao vivo: o contato recebeu a resposta pronta às 14:05 e o modelo às 14:37. Chaves
+  // diferentes, então o anti-duplicata POR MODELO não viu nada — duas mensagens em 32 minutos.
+  check(decidir({ ultimaFoiNossa: true, horasDesdeUltima: 0.53, limiteHoras: 48 }).acao === 'pular', '32 min depois: pula');
+  check(/32 min/.test(decidir({ ultimaFoiNossa: true, horasDesdeUltima: 0.53 }).motivo), `motivo em minutos = ${decidir({ ultimaFoiNossa: true, horasDesdeUltima: 0.53 }).motivo}`);
+  check(decidir({ ultimaFoiNossa: true, horasDesdeUltima: 20, limiteHoras: 48 }).acao === 'pular', 'no dia seguinte ainda pula');
+
+  // Mas esta fila é de quem NÃO responde: bloquear para sempre a esvaziaria.
+  check(decidir({ ultimaFoiNossa: true, horasDesdeUltima: 72, limiteHoras: 48 }).acao === 'enviar', 'passados 3 dias, segunda tentativa vale');
+  check(decidir({ ultimaFoiNossa: true, horasDesdeUltima: 48, limiteHoras: 48 }).acao === 'enviar', 'no limite exato, envia');
+
+  // Quem escreveu por último foi o contato: não é repetição, é resposta.
+  check(decidir({ ultimaFoiNossa: false, horasDesdeUltima: 0.1 }).acao === 'enviar', 'se a última é dele, envia');
+  check(decidir({}).acao === 'enviar', 'conversa vazia não bloqueia');
+  check(decidir({ ultimaFoiNossa: true }).acao === 'enviar', 'sem saber quando foi, não inventa bloqueio');
 }
 
 fim();

@@ -264,6 +264,16 @@ const DEFAULTS = {
      * mandar continua sendo ele. Ver `hsm.decidirSemResposta`.
      */
     horasSemResposta: 12,
+    /**
+     * Janela em que a rodada **não repete** mensagem para o mesmo contato, olhando a conversa
+     * (não o nosso registro por modelo).
+     *
+     * 48h é o meio-termo: quem acabou de ser concluído volta para o topo da lista de
+     * concluídos, então a rodada seguinte começa por ele — e sem isto ele recebe de novo em
+     * minutos. Ao mesmo tempo, esta fila é de quem não responde, então "a última mensagem é
+     * nossa" é a regra; bloquear para sempre esvaziaria a rodada. Ver `hsm.decidirReenvio`.
+     */
+    horasSemRepetir: 48,
   },
 
   /**
