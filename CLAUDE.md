@@ -174,6 +174,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   nova: o nome do CRM erra demais para ir num texto que a pessoa lê (apelido do perfil, cidade
   no campo do nome, sigla colada, `[NOVO] …`), e sem valor ele **bloqueia o envio**. Continuamos
   extraindo e gravando o Nome — ele só não sai na mensagem. `vars.semVocativo` é a regra.
+- **Escolha explícita dele não se substitui por dedução, nem quando a dedução está certa.** A
+  rodada trocava o modelo escolhido por uma resposta de texto quando a janela de 24h estava
+  aberta — dedução correta, e mesmo assim defeito: ele escolheu no seletor e saiu outra coisa.
+  Ser esperto não compra o direito de contrariar o que está escrito na tela.
 - **Na dúvida, recusar com o motivo na tela.** Vale para modelo ambíguo, etiqueta não
   encontrada, variável não resolvida e conteúdo que casou com duas regras.
 - **Se a plataforma mudar de layout**, o conserto é em `dom.js` (seletores) e `dock.js` (o

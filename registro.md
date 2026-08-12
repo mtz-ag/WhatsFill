@@ -67,6 +67,38 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
+## 2026-08-12 — A rodada volta a mandar o modelo escolhido, e só ele
+
+**Relato dele:** "outro erro é que não utilizou o modelo escolhido e mandou texto".
+
+### Erro de desenho meu, e ele está certo
+
+Ontem eu tinha feito a rodada escolher **por contato**: janela de 24h vencida → modelo aprovado;
+janela aberta → resposta de texto, mais barata e editável. Tecnicamente a dedução estava certa —
+o Vicente da print tinha escrito 1h16 antes, a janela estava mesmo aberta, e o texto chegou.
+
+E ainda assim é defeito: **ele escolheu um modelo no seletor e saiu outra coisa.** Substituir
+escolha explícita por dedução é exatamente o que este projeto não faz em nenhum outro lugar —
+é a mesma regra que faz o painel recusar em vez de chutar modelo, etiqueta ou cidade. Ser esperto
+não compra o direito de contrariar o que está escrito na tela.
+
+Voltou a ser: **vai o modelo escolhido, sempre.**
+
+### O que sobrou da ideia
+
+A resposta pronta `sem-retorno-interesse` continua na aba Respostas — ele manda à mão, ou pelas
+respostas rápidas dentro da pergunta da rodada. Não virou lixo, virou opção dele.
+
+E o Andamento continua marcando quem estava com a **janela aberta**: `… e concluí — a janela dele
+estava ABERTA, dava para responder à mão`. A informação que motivou a ideia continua na tela;
+o que saiu foi a decisão automática em cima dela.
+
+### Arquivos alterados
+
+`src/panel/panel.js`.
+
+---
+
 ## 2026-08-12 — A volta para os concluídos (e o log que mentia sobre o motivo)
 
 **Relato dele:** "faltou retornar para os concluídos e seguir pro próximo contato", com a print

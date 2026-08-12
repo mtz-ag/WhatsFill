@@ -25,8 +25,6 @@ const THANKS_TEMPLATE_ID = 'agradecimento';
 const THANKS_INFO_TEMPLATE_ID = 'agradecer-info';
 const ASK_TEMPLATE_ID = 'pedir-dados';
 const INTEREST_TEMPLATE_ID = 'interesse-conteudo';
-/** Texto livre da rodada dos concluídos, para os contatos que ainda estão dentro das 24h. */
-const SEM_RETORNO_TEMPLATE_ID = 'sem-retorno-interesse';
 
 /**
  * Rótulo da lista de concluídos/arquivados. Texto, e não import do `dom.js`, porque o painel em
@@ -1272,23 +1270,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
     }
 
-    // Qual dos dois textos sai é decidido POR CONTATO, pela janela de 24h dele.
-    const respostaLivre = state.templates.find((t) => t.id === SEM_RETORNO_TEMPLATE_ID);
     card.append(
       h('div', { class: 'wf-origin' },
-        'Cada contato recebe UM dos dois: janela de 24h vencida (o normal desta fila) recebe o ' +
-          'modelo acima, que é o único que chega; ainda aberta, recebe a resposta pronta ' +
-          `"${respostaLivre?.name || SEM_RETORNO_TEMPLATE_ID}", que você edita na aba Config. ` +
-          'Não é trava da extensão: texto livre fora da janela sai do painel, a plataforma ' +
-          'aceita, e a mensagem não chega. O Andamento diz qual foi em cada um.')
+        'Todo mundo desta rodada recebe o modelo escolhido acima — é ele e só ele. A maioria ' +
+          'desta fila está com a janela de 24h vencida, e aí modelo aprovado é o único envio ' +
+          'que chega. Quem por acaso ainda estiver dentro da janela aparece marcado no ' +
+          'Andamento: nesses dá para responder à mão, com a resposta pronta "Sem retorno: ainda ' +
+          'tem interesse?" da aba Respostas.')
     );
-    if (!respostaLivre) {
-      card.append(
-        h('div', { class: 'wf-block' },
-          `Não achei a resposta "${SEM_RETORNO_TEMPLATE_ID}" na aba Config. Sem ela, todo mundo ` +
-            'recebe o modelo aprovado — inclusive quem ainda está dentro das 24h.')
-      );
-    }
 
     const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Começar pelos sem retorno');
     comecar.addEventListener('click', () => withBusy(runLote));
@@ -2691,27 +2680,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       nome = contato.name || contato.nameWhatsapp || 'sem nome';
 
       /**
-       * Texto livre ou modelo aprovado? Quem decide é a **janela de 24h deste contato**, não a
-       * rodada.
+       * **Vai o modelo que ele escolheu. Sempre.**
        *
-       * Ela abre quando o contato escreve e reabrir o atendimento não a toca. Vencida, texto
-       * livre sai do painel, a plataforma aceita e a mensagem não chega — silêncio, o pior
-       * resultado. Aberta, o texto livre é melhor: fala como gente, não gasta modelo e pode
-       * ser editado por ele na aba Config.
+       * Isto já foi mais esperto: com a janela de 24h aberta, a rodada trocava o modelo por uma
+       * resposta de texto — mais barata e editável. Ele reportou como defeito, e está certo:
+       * *"não utilizou o modelo escolhido e mandou texto"*. Escolha explícita não se
+       * substitui por dedução, ainda que a dedução esteja tecnicamente certa — é a mesma regra
+       * que faz o painel recusar em vez de chutar em todo o resto.
        *
-       * O contato desta fila é, por definição, quem não responde — então o normal aqui é o
-       * modelo. O texto é o caso feliz de quem escreveu há pouco e mesmo assim ficou na fila.
+       * A resposta pronta "Sem retorno: ainda tem interesse?" continua na aba Respostas, para
+       * ele mandar à mão ou pelas respostas rápidas da pergunta da rodada.
        */
-      const respostaLivre = state.templates.find((t) => t.id === SEM_RETORNO_TEMPLATE_ID);
-      let texto = null;
-      if (!sessao.expired && respostaLivre) {
-        const render = vars.render(respostaLivre.text, await vars.buildContext({ contact: contato }));
-        // Variável sem valor não vira envio pela metade: cai no modelo, que sempre resolve.
-        if (!render.missing.length) texto = { id: respostaLivre.id, nome: respostaLivre.name, corpo: render.text };
-      }
-
-      const chaveEnvio = texto ? texto.id : hsmKey(modelo);
-      const rotuloEnvio = texto ? `resposta "${texto.nome}"` : `modelo "${modelo.name}"`;
+      const chaveEnvio = hsmKey(modelo);
+      const rotuloEnvio = `modelo "${modelo.name}"`;
 
       if (state.settings.antiDup) {
         const quando = await templatesLib.wasSent(contato.id, chaveEnvio);
@@ -2751,18 +2732,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       setStatus(`Enviando ${rotuloEnvio} para ${nome}…`);
-      if (texto) {
-        // `page.sendText` e não `sendTemplate`: esta rodada não chama `load()`, então
-        // `state.contact` é de outro atendimento — o registro anti-duplicata cairia na pessoa
-        // errada. Aqui o contato é o que acabei de buscar, explícito.
-        await page.sendText(texto.corpo);
-      } else {
-        const envio = await page.sendMessageTemplate(modelo, { send: true });
-        if (!envio?.sent) {
-          // Reaberto e sem enviar: o atendimento ficou em "Meus". Parar é o certo — seguir
-          // deixaria um rastro de conversas reabertas sem mensagem.
-          return { nome, resultado: 'erro', parar: true, motivo: 'reabri o atendimento mas o diálogo não confirmou o envio' };
-        }
+      const envio = await page.sendMessageTemplate(modelo, { send: true });
+      if (!envio?.sent) {
+        // Reaberto e sem enviar: o atendimento ficou em "Meus". Parar é o certo — seguir
+        // deixaria um rastro de conversas reabertas sem mensagem.
+        return { nome, resultado: 'erro', parar: true, motivo: 'reabri o atendimento mas o diálogo não confirmou o envio' };
       }
       await templatesLib.markSent(contato.id, chaveEnvio, { nome });
 
@@ -2779,15 +2753,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           motivo: 'enviado, mas a plataforma pediu motivo de conclusão — responda o diálogo na aba',
         };
       }
-      // O que saiu, e por quê, no log: é o que deixa a diferença entre um contato e outro
-      // visível — nesta fila dois contatos recebem coisas diferentes por causa da janela.
+      // A janela vai no log mesmo sem mudar o que é enviado: contato com a janela ABERTA é
+      // quem daria para responder à mão, e essa informação some se ninguém escrever.
       return {
         nome,
         resultado: 'enviado',
         continuaNaFila: true,
-        motivo: texto
-          ? `reaberto, mandei a ${rotuloEnvio} (janela aberta) e concluí`
-          : `reaberto, mandei o ${rotuloEnvio} (janela de 24h vencida) e concluí`,
+        motivo:
+          `reaberto, mandei o ${rotuloEnvio} e concluí` +
+          (sessao.expired ? '' : ' — a janela dele estava ABERTA, dava para responder à mão'),
       };
     } catch (err) {
       await page.closeOverlay().catch(() => {});
