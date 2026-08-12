@@ -7,7 +7,7 @@
  */
 import { check, grupo, fim, lib, mem } from './_harness.mjs';
 
-const { pickRow, PARAMS_NAO_APRENDIDOS, templateParaConteudo, parseContentTemplates, formatContentTemplates, escolherConteudo } =
+const { pickRow, PARAMS_NAO_APRENDIDOS, templateParaConteudo, parseContentTemplates, formatContentTemplates, escolherConteudo, decidirSemResposta } =
   await lib('hsm.js');
 
 // Linhas como o diálogo as mostra: nome + começo do texto (line-clamp de uma linha).
@@ -155,6 +155,28 @@ grupo('registro anti-duplicata: por contato, com o nome de quem recebeu');
   mem.sentLog = { 'c-9|pedir-dados': 1754000000000 };
   const antigo = await wasSent('c-9', 'pedir-dados');
   check(antigo?.at === 1754000000000 && antigo.nome === '', 'registro antigo (só timestamp) continua valendo');
+}
+
+grupo('quando a rodada pode concluir sozinha, e quando tem que perguntar');
+{
+  const decidir = decidirSemResposta;
+
+  // Respondido há pouco: a conversa está viva, fechar é o certo e perguntar seria teclar à toa.
+  check(decidir({ horasDesdeMinha: 0.5, limiteHoras: 12 }).acao === 'concluir', 'meia hora → conclui sozinho');
+  check(decidir({ horasDesdeMinha: 11.9, limiteHoras: 12 }).acao === 'concluir', 'pouco antes do limite → conclui');
+
+  // Calado desde ontem: este é o que sumia da fila sem nunca ter mandado os dados.
+  check(decidir({ horasDesdeMinha: 12, limiteHoras: 12 }).acao === 'perguntar', 'no limite exato → pergunta');
+  check(decidir({ horasDesdeMinha: 30, limiteHoras: 12 }).acao === 'perguntar', 'mais de um dia → pergunta');
+
+  // O motivo vai para a tela: é o que impede virar "alguns concluem e outros não".
+  check(/14h sem resposta/.test(decidir({ horasDesdeMinha: 14.7, limiteHoras: 12 }).motivo), `motivo em horas = ${decidir({ horasDesdeMinha: 14.7 }).motivo}`);
+  check(/3 dias sem resposta/.test(decidir({ horasDesdeMinha: 75, limiteHoras: 12 }).motivo), `motivo em dias = ${decidir({ horasDesdeMinha: 75 }).motivo}`);
+
+  // O limite é configurável, e o padrão não pode sumir se alguém chamar sem nada.
+  check(decidir({ horasDesdeMinha: 20, limiteHoras: 48 }).acao === 'concluir', 'limite maior segura mais tempo');
+  check(decidir({ horasDesdeMinha: 13 }).acao === 'perguntar', 'sem limite informado, vale o padrão de 12h');
+  check(decidir({}).acao === 'concluir', 'sem dado nenhum não inventa pergunta');
 }
 
 fim();

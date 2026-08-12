@@ -242,6 +242,15 @@ const DEFAULTS = {
      * rodadas seria o jeito mais fácil de mandar a mensagem errada.
      */
     templateIdReinicio: '',
+    /**
+     * A partir de quantas horas de silêncio a rodada **pergunta** em vez de concluir sozinha,
+     * quando a última mensagem da conversa é nossa.
+     *
+     * 12h é o que ele pediu: abaixo disso a conversa ainda está viva e perguntar seria teclar à
+     * toa; acima, o contato nunca voltou e fechar em silêncio é perdê-lo. Quem decide o que
+     * mandar continua sendo ele. Ver `hsm.decidirSemResposta`.
+     */
+    horasSemResposta: 12,
   },
 
   /**

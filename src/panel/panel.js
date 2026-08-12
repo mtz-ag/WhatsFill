@@ -1102,6 +1102,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     card.append(h('div', { class: 'wf-row' }, [btn, btnOutros]));
 
     card.append(
+      campoNumero('Perguntar (em vez de concluir) após quantas horas de silêncio', state.auto.cfg.horasSemResposta, (v) =>
+        salvarAuto({ horasSemResposta: clampInt(v, 1, 240) }).then(renderAll)
+      )
+    );
+    card.append(
+      h('div', { class: 'wf-origin' },
+        'Contato cuja última mensagem é minha some da fila sozinho — mas só se eu tiver ' +
+          'respondido há POUCO. Passou dessas horas sem ele voltar, a rodada para e pergunta: ' +
+          'é a chance de mandar a mensagem do momento (tecla 5) ou um modelo, em vez de fechar ' +
+          'quem nunca mandou os dados.')
+    );
+
+    card.append(
       h('div', { class: 'wf-origin' },
         '"Meus" é quem respondeu os dados; "Outros" é a aba de vídeo e "bom dia". Nas duas nada ' +
           'sai da fila sem você decidir.')
@@ -1129,10 +1142,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'na pergunta da rodada, envia e conclui. Deixe vazio para a tecla 5 não aparecer.'),
     ]);
 
-    const area = h('textarea', { rows: '4', placeholder: 'Ex.: {{saudacao}}, {{primeiro_nome}}! Feliz Dia dos Pais…' });
+    const area = h('textarea', { rows: '4', placeholder: 'Ex.: {{saudacao}}! Feliz Dia dos Pais…' });
     area.value = cfg.mensagemMomento || '';
     area.addEventListener('change', () => salvarAuto({ mensagemMomento: area.value }).then(renderAll));
     card.append(area);
+
 
     if (cfg.mensagemMomento) {
       card.append(h('div', { class: 'wf-hint' }, 'Variáveis: ' + vars.KNOWN_VARS.map(([v]) => v).join(' ')));
@@ -2033,21 +2047,31 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         ? await templatesLib.wasSent(state.contact.id, interesse.id)
         : null;
 
-      // Contato já respondido: a última mensagem da conversa é nossa. Classifica, conclui e
-      // segue — não há o que enviar a quem já foi respondido.
+      // Contato já respondido — a última mensagem da conversa é nossa.
       //
-      // **Vale para todos, sem exceção.** A primeira versão abria uma exceção para quem ainda
-      // não tinha etiqueta de conteúdo (a ideia era oferecer a pergunta de interesse antes de
-      // fechar), e o efeito prático foi o relato dele: *"alguns estão concluindo quando a minha
-      // é a última mensagem e outros não"*. Regra que depende de um estado invisível na tela
-      // parece defeito, mesmo funcionando como projetado — e a instrução original era sem
-      // ressalva. Quem fica sem etiqueta de conteúdo aparece no Andamento com essa observação,
-      // e a fila da plataforma filtra por etiqueta quando ele quiser rodar a pergunta neles.
+      // Conclui sozinho **só quem foi respondido há pouco**: a conversa está viva, a pessoa
+      // ainda pode voltar, e não há o que enviar. Quem está calado desde ontem NÃO: esse saía
+      // da fila em silêncio sem nunca ter mandado os dados, que foi o relato dele. Passou do
+      // limite, a rodada pergunta como faz com todo mundo — e quem decide se manda alguma coisa
+      // é ele.
+      //
+      // A primeira versão disto tinha outra exceção (não concluir quem estava sem etiqueta de
+      // conteúdo) e virou *"alguns concluem e outros não"*: regra que depende de estado
+      // invisível parece defeito. Esta aqui aparece na tela, na linha do silêncio.
       //
       // `ultimaMensagem` vem do `load()` acima, da mesma leitura que trouxe as mensagens do
       // contato: uma chamada, não duas.
       const ultima = state.ultimaMensagem;
-      if (ultima && !ultima.doContato) {
+      const decisao = ultima && !ultima.doContato
+        ? hsmLib.decidirSemResposta({
+            horasDesdeMinha: (Date.now() - new Date(ultima.at).getTime()) / 3600000,
+            limiteHoras: clampInt(state.auto.cfg.horasSemResposta, 1, 240),
+          })
+        : null;
+
+      // Conclui sozinho só quem eu respondi HÁ POUCO. Quem está calado desde ontem cai na
+      // pergunta como todo mundo — a regra e o porquê moram em `hsm.decidirSemResposta`.
+      if (decisao?.acao === 'concluir') {
         await saveClassification({ withCompletionDate: true, quiet: true });
         const fechouRespondido = await page.clickConcluir();
         if (!fechouRespondido.ok) {
@@ -2064,8 +2088,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return {
           nome,
           resultado: 'concluido',
+          // O motivo vem de `decidirSemResposta`: é ele que sabe se foi "respondi agora há
+          // pouco", "a janela venceu" ou "já mandei o momento". Sem isso a rodada trataria
+          // contatos de forma diferente sem o porquê aparecer na tela.
           motivo:
-            `a última mensagem já era minha (${formatarQuando(ultima.at)}) — concluí e segui` +
+            `${decisao.motivo} (${formatarQuando(ultima.at)}) — concluí e segui` +
             // Visível no Andamento: é a lista de quem vale uma rodada de pergunta de interesse.
             (conteudos.length ? '' : ' (ainda sem etiqueta de conteúdo)'),
         };
@@ -2165,9 +2192,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
               '. Confirme antes de mandar de novo.'
             : '',
           textosDeHoje.length ? `⚠ Hoje este contato já recebeu: ${textosDeHoje.join(', ')}.` : '',
-          ultima && !ultima.doContato
-            ? `A última mensagem já é minha (${formatarQuando(ultima.at)}), mas ele ainda não tem ` +
-              'etiqueta de conteúdo — por isso perguntei em vez de concluir.'
+          // Por que este contato parou a rodada em vez de ser concluído: é a diferença que ele
+          // precisa ver na tela, senão vira "alguns concluem e outros não" de novo.
+          decisao?.acao === 'perguntar'
+            ? `⚠ ${decisao.motivo} (${formatarQuando(ultima.at)}). Ele nunca voltou — por isso ` +
+              'parei aqui em vez de concluir.'
+            : '',
+          decisao?.acao === 'perguntar' && state.session?.expired
+            ? 'A janela de 24h venceu: texto livre não chega mais neste contato, só modelo aprovado.'
             : '',
           interessePerguntado
             ? `Já perguntei o interesse ${formatarQuando(interessePerguntado.at)}.` +

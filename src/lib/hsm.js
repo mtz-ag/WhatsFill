@@ -93,6 +93,41 @@ export function templateParaConteudo(etiqueta, mapa, modelos) {
  * @param {Array<{nome:string}>} conteudos sugestões de origem "conteúdo"
  * @param {string} preferido rótulo a preferir no empate
  */
+/**
+ * A rodada pode fechar este contato sozinha, ou tem que parar e perguntar?
+ *
+ * Vale só para quem tem a **última mensagem nossa** — ou seja, já foi respondido. A rodada
+ * concluía todos esses sem perguntar, e isso tratava igual dois casos bem diferentes:
+ *
+ * - respondi **há uma hora**: a pessoa ainda está com a conversa aberta, pode responder a
+ *   qualquer momento. Fechar é o certo, e perguntar seria teclar à toa;
+ * - respondi **anteontem** e ela nunca voltou: essa saía da fila em silêncio sem nunca ter
+ *   mandado os dados. Foi o relato — *"está pulando pessoas que estão sem responder há mais de
+ *   um dia"*.
+ *
+ * Passou do limite, a rodada **pergunta**. Quem decide o que mandar (a mensagem do momento, um
+ * modelo, ou nada) é ele, na caixa da rodada: mensagem automática para quem está calado há dias
+ * é justamente o envio que não pode sair sem autorização.
+ *
+ * Puro e testado: decide se um atendimento de gente real fecha sem ninguém olhar.
+ *
+ * @param {object} ctx
+ * @param {number} ctx.horasDesdeMinha horas desde a última mensagem NOSSA
+ * @param {number} ctx.limiteHoras     a partir de quantas horas a rodada para e pergunta
+ * @returns {{acao:'perguntar'|'concluir', motivo:string}}
+ */
+export function decidirSemResposta({ horasDesdeMinha = 0, limiteHoras = 12 } = {}) {
+  if (!(horasDesdeMinha >= limiteHoras)) {
+    return { acao: 'concluir', motivo: 'a última mensagem já era minha' };
+  }
+
+  const silencio =
+    horasDesdeMinha >= 48
+      ? `${Math.floor(horasDesdeMinha / 24)} dias sem resposta`
+      : `${Math.floor(horasDesdeMinha)}h sem resposta`;
+  return { acao: 'perguntar', motivo: `${silencio} desde a minha última mensagem` };
+}
+
 export function escolherConteudo(conteudos, preferido) {
   const lista = conteudos || [];
   if (!lista.length) return { erro: 'nenhum conteúdo reconhecido' };

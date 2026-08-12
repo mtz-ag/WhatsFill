@@ -67,6 +67,51 @@ backup pela aba Config evita refazer o aprendizado.
 
 ---
 
+## 2026-08-11 — Silêncio longo para de virar conclusão automática
+
+**Relato dele:** "está pulando pessoas que estão sem responder por mais de um dia".
+
+### Causa raiz
+
+A conclusão automática ("a última mensagem é minha") tratava igual dois casos bem diferentes:
+
+- respondi **há uma hora**: a conversa está viva, a pessoa ainda pode voltar. Fechar é o certo,
+  e perguntar seria teclar à toa;
+- respondi **anteontem** e ela nunca voltou: esse saía da fila **em silêncio, sem nunca ter
+  mandado os dados**. É o que ele viu.
+
+Agora só o primeiro conclui sozinho. Passou do limite de horas (12h, editável no card
+"Conferir e responder a fila"), a rodada **para e pergunta** como faz com todo mundo.
+
+### A ideia que ele descartou, e por que a descartada era pior
+
+A primeira versão que escrevi mandava a **mensagem do momento sozinha** nesses contatos. Ele
+reconsiderou — *"pensando melhor eu mando a mensagem, só evite de pular"* — e está certo:
+mensagem automática para quem está calado há dias é justamente o envio que precisa de
+autorização. O código de envio automático foi removido; sobrou a decisão de parar.
+
+Isso também deixou a regra **muito** menor: `decidirSemResposta` só compara horas contra o
+limite. A versão anterior tinha que pesar janela de 24h, existência da mensagem do momento e
+anti-duplicata — três coisas que agora são problema da tela de pergunta, onde ele decide.
+
+### O que aparece na tela
+
+A linha do silêncio entra na pergunta, com destaque de aviso:
+`⚠ 3 dias sem resposta desde a minha última mensagem (09/08 às 14:03). Ele nunca voltou — por
+isso parei aqui em vez de concluir.`
+
+E, quando for o caso, a linha seguinte: `A janela de 24h venceu: texto livre não chega mais
+neste contato, só modelo aprovado.` Sem ela, a tecla 5 pareceria simplesmente não funcionar.
+
+Isso é a lição da entrada anterior aplicada: quando a rodada trata dois contatos de forma
+diferente, **o motivo tem que estar na tela**.
+
+### Arquivos alterados
+
+`src/lib/hsm.js`, `src/lib/store.js`, `src/panel/panel.js`, `tests/hsm.test.mjs`.
+
+---
+
 ## 2026-08-11 — Rodada 4: os concluídos sem retorno (reabrir, perguntar, fechar)
 
 **Pedido (Thiago):** "a conversa vai ter que reiniciar, mandar uma mensagem perguntando se a
@@ -164,6 +209,10 @@ original não tinha ressalva. Voltou a ser sem exceção.
 Quem fica sem etiqueta de conteúdo agora aparece no Andamento com essa observação —
 `… — concluí e segui (ainda sem etiqueta de conteúdo)` —, que é a lista de quem vale uma rodada
 de pergunta de interesse depois. A fila da plataforma filtra por etiqueta.
+
+**Ajustado no mesmo dia** (ver a entrada do topo): conclui sozinho só quem foi respondido há
+POUCO. Quem está calado há mais de 12h volta a parar a rodada, agora com o tempo de silêncio
+escrito na pergunta — a diferença ficou na tela, que era o que faltava na versão anterior.
 
 ### 4. "Agradecer e concluir ficou confuso, mude para agradecer informações e concluir"
 
