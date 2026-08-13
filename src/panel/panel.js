@@ -45,6 +45,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
   /** Trava contra reanálises sobrepostas: o estado da página é consultado a cada 500 ms. */
   let reexaminando = false;
+  /** A pergunta de cidade em curso, quando há uma. Impede duas caixas iguais na tela. */
+  let perguntaDeCidade = null;
 
   const state = {
     tab: 'respostas',
@@ -259,6 +261,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.classify = classify;
       state.schema = await fieldsLib.loadSchema();
 
+      // Antes de qualquer palpite: o que você já recusou para este contato não volta a perguntar.
+      // Tem que vir aqui, e não depois do `extract`, senão `applyGuesses` repõe a cidade recusada
+      // no rascunho e a pergunta aparece de novo antes de alguém consultar a memória.
+      state.cidadeRecusada = new Set(await store.cidadesRecusadas(contact.id));
+
       const current = fieldsLib.readValues(contact);
       for (const field of classify) {
         const value = current[field.id];
@@ -342,7 +349,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.draft[nomeField.id] = { ...entrada, value: separado.nome };
 
     const cidadeField = fieldNamed('Cidade');
-    if (cidadeField && !state.draft[cidadeField.id]) {
+    const jaRecusada = state.cidadeRecusada.has(cities.normalize(separado.cidade));
+    if (cidadeField && !state.draft[cidadeField.id] && !jaRecusada) {
       state.draft[cidadeField.id] = {
         value: separado.cidade,
         from: 'palpite',
@@ -375,6 +383,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * @param {boolean} somenteExatos a gravação em curso só leva palpite exato (a automática)
    */
   async function confirmarCidadeSePendente(somenteExatos) {
+    // DUAS caixas iguais na tela ao mesmo tempo, medido ao vivo. Nada impede `load()` e
+    // `reexaminarMensagens()` de estarem no ar juntos — `load()` não roda dentro de `withBusy`,
+    // então `state.busy` não segura o segundo —, e cada um chama a gravação automática. Enquanto
+    // o primeiro espera a resposta, o segundo abre a sua própria caixa; responder uma deixa a
+    // outra na tela perguntando o mesmo, e foi isso que virou "pede novamente".
+    //
+    // Quem chegar depois espera a MESMA pergunta em vez de abrir outra: quando ela responder, o
+    // rascunho já está decidido e a segunda gravação segue com a decisão tomada.
+    if (perguntaDeCidade) {
+      await perguntaDeCidade;
+      return;
+    }
+
     const campo = fieldNamed('Cidade');
     const entry = campo && state.draft[campo.id];
     if (!entry?.pendente || entry.from !== 'palpite') return;
@@ -391,7 +412,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
     if (entry.substituiu) linhas.push(`⚠ Vai SUBSTITUIR a cidade que está no CRM ("${entry.substituiu}").`);
 
-    const escolha = await perguntarNaRodada({
+    perguntaDeCidade = perguntarNaRodada({
       titulo: doCadastro ? 'Cidade do cadastro' : 'Cidade a gravar',
       linhas,
       pergunta: 'Está correta?',
@@ -406,18 +427,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       dica: 'Esc descarta a cidade e segue',
     });
 
+    let escolha;
+    try {
+      escolha = await perguntaDeCidade;
+    } finally {
+      perguntaDeCidade = null;
+    }
+
     if (escolha === 'aceitar') {
       state.draft[campo.id] = { ...entry, pendente: false };
     } else if (escolha === 'semcidade') {
       // Marcado como 'manual' (não 'palpite'): `corrigirNomeComCidade` e `applyGuesses` só
       // preenchem campo vazio de verdade, e aqui ele NÃO está — é uma resposta, "não tem cidade".
-      state.cidadeRecusada.add(cities.normalize(entry.value));
+      await recusarCidade(entry.value);
       state.draft[campo.id] = { value: '', from: 'manual' };
       setStatus('Sem cidade — nada vai ser gravado nesse campo.');
     } else {
       // Esc também cai aqui: na dúvida não grava. Vale para a rodada — parar a rodada não pode
       // significar "então grava a cidade que eu não confirmei".
-      state.cidadeRecusada.add(cities.normalize(entry.value));
+      await recusarCidade(entry.value);
       delete state.draft[campo.id];
       setStatus(`Cidade "${entry.value}" descartada — preencha na aba Dados.`, 'err');
     }
@@ -425,6 +453,31 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // o contato fica com o COREDE de uma cidade que você acabou de recusar.
     await refreshTagSuggestions();
     renderAll();
+  }
+
+  /**
+   * Anota a recusa — na memória do contato aberto **e no armazenamento**.
+   *
+   * O `Set` sozinho não bastava: ele nasce vazio a cada `load()`, então bastava fechar e reabrir
+   * o contato para a mesma pergunta voltar. Foi o relato *"estou botando sem cidade e pede
+   * novamente"*.
+   *
+   * Guarda por CIDADE, não um "não perguntar mais" por contato, porque é isso que atende a outra
+   * metade do pedido — *"faça disparar novamente só se tiver chat novo com provável cidade"*:
+   * mensagem nova que traga uma cidade **diferente** volta a perguntar (é informação nova, e é
+   * justamente o caso de quem escreve a cidade depois); a mesma cidade já recusada, nunca mais.
+   */
+  async function recusarCidade(valor) {
+    const chave = cities.normalize(valor);
+    if (!chave) return;
+    state.cidadeRecusada.add(chave);
+    try {
+      await store.lembrarCidadeRecusada(state.contact?.id, chave);
+    } catch (err) {
+      // Não conseguir gravar a recusa não pode derrubar a gravação: a decisão desta abertura já
+      // está valendo pelo `Set`, o que se perde é a memória para a próxima.
+      console.warn('[WhatsFill] não consegui guardar a recusa de cidade:', err.message);
+    }
   }
 
   /**

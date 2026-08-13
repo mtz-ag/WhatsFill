@@ -372,6 +372,16 @@ const DEFAULTS = {
   /** { "<contactId>|<templateId>": timestamp } para o aviso de duplicata. */
   sentLog: {},
   /**
+   * Cidades que você recusou no popup, por contato:
+   * `{ "<contactId>": { cidades: ["quarai"], at: <timestamp> } }` (nomes normalizados).
+   *
+   * Precisa sobreviver ao fechar/reabrir o contato, senão a pergunta volta toda vez que ele
+   * abre — foi o relato *"estou botando sem cidade e pede novamente"*. Guardar por CIDADE (e não
+   * um "não perguntar mais" por contato) é o que atende a outra metade do pedido: mensagem nova
+   * com uma cidade **diferente** volta a perguntar; a mesma cidade recusada, nunca mais.
+   */
+  cidadeRecusada: {},
+  /**
    * Migrações já aplicadas, uma vez cada. Sem isto, uma migração que mexe em texto editável
    * desfaria a sua edição toda vez que o painel subisse.
    */
@@ -446,11 +456,51 @@ export async function getAll() {
   return out;
 }
 
+/**
+ * Quantos contatos guardam recusa de cidade antes de o registro começar a esquecer os antigos.
+ *
+ * A base é de milhares de contatos e isto vive no `chrome.storage.local`, que não é infinito.
+ * Esquecer o mais antigo custa uma pergunta repetida daqui a meses; não esquecer nada custa a
+ * gravação inteira estourar um dia, no meio de uma rodada.
+ */
+export const MAX_CONTATOS_RECUSA = 2000;
+
+/** As cidades (normalizadas) que você recusou para este contato. */
+export async function cidadesRecusadas(contactId) {
+  if (!contactId) return [];
+  const mapa = await get('cidadeRecusada');
+  return mapa[contactId]?.cidades || [];
+}
+
+/**
+ * Guarda que você recusou esta cidade para este contato. Idempotente.
+ *
+ * Poda pelo mais antigo (`at`) quando passa de `MAX_CONTATOS_RECUSA` — e o `at` é renovado a cada
+ * recusa, então contato ativo não é esquecido por ser velho, e sim por estar parado.
+ */
+export async function lembrarCidadeRecusada(contactId, cidadeNormalizada) {
+  if (!contactId || !cidadeNormalizada) return;
+  const mapa = { ...(await get('cidadeRecusada')) };
+  const atual = mapa[contactId]?.cidades || [];
+  const cidades = atual.includes(cidadeNormalizada) ? atual : [...atual, cidadeNormalizada];
+  mapa[contactId] = { cidades, at: Date.now() };
+
+  const ids = Object.keys(mapa);
+  if (ids.length > MAX_CONTATOS_RECUSA) {
+    ids
+      .sort((a, b) => (mapa[a].at || 0) - (mapa[b].at || 0))
+      .slice(0, ids.length - MAX_CONTATOS_RECUSA)
+      .forEach((id) => delete mapa[id]);
+  }
+  await set('cidadeRecusada', mapa);
+}
+
 /** Export/import para você não perder os templates ao trocar de máquina. */
 export async function exportJson() {
   const data = await getAll();
   delete data.municipios; // cache, se refaz sozinho
   delete data.sentLog;
+  delete data.cidadeRecusada; // referência a contato real, e é memória de trabalho
   return JSON.stringify(data, null, 2);
 }
 

@@ -5,6 +5,48 @@
 
 ---
 
+## 2026-08-12 — Duas caixas de cidade na tela, e a recusa que não durava
+
+**Relato (Thiago, print com a v0.6.0 rodando):** *"duplicado, e faça disparar novamente só se
+tiver chat novo com provável cidade, estou botando sem cidade e pede novamente"*. Duas caixas
+"Cidade a gravar" abertas ao mesmo tempo, as duas perguntando a mesma coisa ("Quaraí").
+
+**Causa raiz da duplicata:** `load()` **não roda dentro de `withBusy`**, então `state.busy`
+continua falso enquanto ele carrega. Chegou mensagem nova (a figura das 18:56) → `applyPageState`
+viu `conversaMudou` → `reexaminarMensagens` → segunda `aplicarAutomatico`, com a primeira ainda
+parada esperando a resposta da caixa. Cada uma abriu a sua. Responder uma deixava a outra na tela
+perguntando o mesmo — é daí que veio o "pede novamente".
+
+**Fix:** `perguntaDeCidade` guarda a promessa da pergunta em curso. Quem chega depois **espera a
+mesma pergunta** em vez de abrir outra; quando ela responde, o rascunho já está decidido e a
+segunda gravação segue com a decisão tomada. Não é debounce nem lock com timeout: é a mesma
+resposta servindo os dois caminhos.
+
+**Causa raiz da recusa que não durava:** `state.cidadeRecusada` era um `Set` em memória, zerado
+no começo de todo `load()`. Fechar e reabrir o contato — ou a rodada passar por ele de novo — e a
+mesma pergunta voltava.
+
+**Fix:** a recusa vai para o `chrome.storage.local`, por contato e **por cidade**
+(`store.cidadeRecusada`, com `lembrarCidadeRecusada`/`cidadesRecusadas`). Guardar a cidade, e não
+um "não perguntar mais" no contato, é o que atende a outra metade do pedido — *"disparar
+novamente só se tiver chat novo com provável cidade"*: mensagem nova que traga cidade
+**diferente** volta a perguntar (é informação nova, e é justamente o caso de quem escreve a
+cidade depois); a mesma cidade já recusada, nunca mais. A leitura entra no `load()` **antes** do
+`extract`, senão `applyGuesses` repõe a cidade recusada no rascunho e a caixa aparece antes de
+alguém consultar a memória.
+
+**Poda:** `MAX_CONTATOS_RECUSA = 2000`, descartando o mais **parado** (`at` é renovado a cada
+recusa, então contato ativo não é esquecido por ser antigo). A base é de milhares de contatos e o
+storage não é infinito — estourar a gravação no meio de uma rodada custa mais que uma pergunta
+repetida daqui a meses. Fora do `exportJson`: é referência a contato real.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`perguntaDeCidade`, `recusarCidade`,
+semeadura no `load`, guarda em `corrigirNomeComCidade`), [src/lib/store.js](src/lib/store.js)
+(`cidadeRecusada`, `lembrarCidadeRecusada`, `cidadesRecusadas`, `MAX_CONTATOS_RECUSA`),
+[tests/parser.test.mjs](tests/parser.test.mjs) (10 asserções novas). Manifesto 0.6.0 → **0.6.1**.
+
+---
+
 ## 2026-08-12 — "Tem extensão dentro da extensão": os fixes nunca chegaram ao Chrome
 
 **Relato (Thiago):** *"o erro está na pasta, tem extensão dentro da extensão"*.

@@ -129,6 +129,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   **duas travas, não uma**: `contatosTratados` dentro da rodada e `hsm.decidirReenvio` entre
   rodadas — este pergunta à **conversa**, que inclui o que ele mandou à mão. Já foi apagado uma
   vez trocado pelo `Set`; não troque de novo.
+- **`load()` NÃO roda dentro de `withBusy`** — `state.busy` é falso enquanto ele carrega, então
+  ele e `reexaminarMensagens` podem estar no ar juntos. Pergunta aberta dentro de um deles ganha
+  uma gêmea quando chega mensagem nova; responder uma deixa a outra na tela. Toda pergunta que
+  nasce de gravação precisa de guarda de instância única (ver `perguntaDeCidade`).
 - **Regra da rodada que depende de estado invisível parece defeito.** A conclusão automática
   ("última mensagem minha") ganhou uma exceção para quem não tinha etiqueta de conteúdo, e o
   relato foi "alguns concluem e outros não". Funcionava como projetado — e mesmo assim estava
