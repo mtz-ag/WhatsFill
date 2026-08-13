@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-08-12 — O rótulo da opção prometia gravar a cidade sozinho
+
+**Pergunta dele:** *"se eu remover a cidade e as etiquetas vai automaticamente pegar sem minha
+permissão?"* — perguntada sobre o teste que eu propus (apagar o campo e reabrir).
+
+Com a versão que estava na máquina dele, **sim**: é o defeito. Com o código novo, não — mas o
+rótulo da opção na aba Config ainda dizia *"Gravar sozinho, ao abrir o contato, o que bate exato
+(cidade do IBGE, COREDE, etiquetas de conteúdo)"*. Prometia exatamente o que tinha deixado de
+fazer. Rótulo mentindo é pior que rótulo faltando: ele foi conferir na tela e a tela confirmou o
+medo dele. Corrigido, junto com o comentário de `aplicarAutomatico`, que dizia o mesmo.
+
+**O que entra sozinho, hoje, campo a campo** (para não ter que reler o código da próxima vez):
+
+- **Cidade** — nunca. `confirmarCidadeSePendente` pergunta antes, inclusive na gravação automática.
+- **COREDE** — só junto com a resposta da cidade. Recusada a cidade, `refreshTagSuggestions` roda
+  de novo e a sugestão de região some antes da gravação.
+- **Etiqueta de conteúdo** — sim, sozinha. É regex que ele escreveu na Config casada contra o
+  texto: ou a palavra está na mensagem ou não está, não tem palpite no meio.
+- **Data de conclusão** — sim, e só quando o campo está vazio.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (rótulo do `checkbox` de `autoApply`,
+cabeçalho de `aplicarAutomatico`).
+
+---
+
 ## 2026-08-12 — "Pegou novamente sem eu confirmar": não pegou, e o print prova
 
 **Relato (Thiago, print do contato "Nice Gomes"):** *"pegou novamente sem eu confirmar não rodei

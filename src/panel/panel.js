@@ -3212,10 +3212,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * volta quando a pessoa respondeu. É na REABERTURA que a classificação precisa já estar
    * feita — clicar Salvar oito mil vezes é o trabalho que a extensão existe para eliminar.
    *
-   * O que entra: cidade que casou EXATO com a lista do IBGE, o COREDE dela e as etiquetas de
-   * conteúdo (regex que você mesmo escreveu). Palpite aproximado, cidade não reconhecida e
-   * nome continuam em amarelo esperando seu clique — errar aqui grava dado errado em contato
-   * real, e a extensão não sabe desfazer.
+   * O que entra sem perguntar: o COREDE e as etiquetas de conteúdo (regex que você mesmo
+   * escreveu — ou a palavra está na mensagem ou não está). Palpite aproximado, cidade não
+   * reconhecida e nome continuam em amarelo esperando seu clique — errar aqui grava dado errado
+   * em contato real, e a extensão não sabe desfazer.
+   *
+   * **A cidade NÃO entra sem perguntar**, mesmo casando exato com o IBGE: casar exato prova que
+   * o texto é nome de município, não que seja a cidade dele. Ver `confirmarCidadeSePendente`, que
+   * roda dentro de `saveClassification` inclusive nesta chamada automática. O COREDE vai junto
+   * com a resposta dela: recusada a cidade, a sugestão de região some antes da gravação.
    *
    * Nada é sobrescrito: valor que já veio do CRM é sempre pulado.
    */
@@ -3485,7 +3490,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         await refreshTagSuggestions();
       }),
       checkbox(
-        'Gravar sozinho, ao abrir o contato, o que bate exato (cidade do IBGE, COREDE, etiquetas de conteúdo)',
+        'Gravar sozinho, ao abrir o contato, o que bate exato (COREDE e etiquetas de conteúdo). ' +
+          'A cidade pergunta antes, sempre.',
         state.settings.autoApply,
         (v) => salvarAjuste({ autoApply: v })
       )
