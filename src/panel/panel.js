@@ -3266,19 +3266,39 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /**
-   * As etiquetas de COREDE que precisam sair porque a cidade mudou.
+   * As etiquetas de COREDE que precisam sair — as que não são a da cidade deste contato.
    *
-   * Devolve lista vazia no caso normal (cidade não foi substituída), e nesse caso nem carrega a
-   * lista de regiões — resolver COREDE contra as etiquetas do CRM custa uma passada por 28
-   * nomes e não vale rodar a cada gravação.
+   * Duas portas levam aqui, e a segunda demorou a aparecer:
+   *
+   * 1. a cidade foi **substituída** (a pessoa informou outra): o COREDE antigo vira informação
+   *    errada. Meia substituição deixaria o contato com dois COREDEs;
+   * 2. a cidade **preencheu um buraco** e o contato já carregava um COREDE de antes. Visto ao
+   *    vivo: contato com Cidade "Caçapava do Sul" (COREDE Campanha) e a etiqueta "Médio Alto
+   *    Uruguai" pendurada junto. Como `substituiu` era nulo, nada saía — e dois COREDEs num
+   *    contato é o mesmo dado errado da porta 1, só que por outro caminho.
+   *
+   * Só sai a antiga quando a certa **fica**: ou vai ser aplicada agora, ou o contato já a tem.
+   * Tirar a antiga sem pôr a nova deixa o contato sem COREDE nenhum, que é pior que os dois. E é
+   * o caso comum na porta 2: a etiqueta certa já está aplicada, então ela nem aparece em
+   * `aplicaveis` (`marcada` é falso justamente para não reaplicar o que já está lá).
+   *
+   * @param {Array} aplicaveis as sugestões que esta gravação vai aplicar (já filtradas)
    */
-  async function etiquetasDeRegiaoASair() {
+  async function etiquetasDeRegiaoASair(aplicaveis) {
     const campo = fieldNamed('Cidade');
     const entrada = campo && state.draft[campo.id];
-    if (!entrada?.substituiu) return [];
+
+    // A região da cidade deste contato, aplicada agora ou já aplicada antes. `etiquetaConfiavel`
+    // é a mesma trava do resto: cidade de palpite não-exato não manda tirar etiqueta nenhuma.
+    const regiao = state.tagSuggestions.find((s) => s.origem === 'região' && s.tag) || null;
+    const fica = regiao && (aplicaveis.includes(regiao) || etiquetaConfiavel(regiao));
+    const novaRegiao = fica ? regiao.tag : null;
+
+    // Sem nada a trocar e sem região que fique: nem carrega a lista de COREDEs — resolver isso
+    // contra as etiquetas do CRM custa uma passada por 28 nomes e não vale a cada gravação.
+    if (!entrada?.substituiu && !novaRegiao) return [];
 
     const regioes = await tagsLib.regionTagIds();
-    const novaRegiao = state.tagSuggestions.find((s) => s.origem === 'região' && s.tag)?.tag || null;
     const todas = await tagsLib.allTags();
 
     return (state.contact.tagsId || [])
@@ -3313,14 +3333,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (completion) changes[completion.id] = fieldsLib.hojeLocal();
     }
 
-    const etiquetas = state.tagSuggestions
-      .filter((s) => s.marcada && s.tag && (!somenteExatos || etiquetaConfiavel(s)))
-      .map((s) => s.tag);
+    const aplicaveis = state.tagSuggestions.filter(
+      (s) => s.marcada && s.tag && (!somenteExatos || etiquetaConfiavel(s))
+    );
+    const etiquetas = aplicaveis.map((s) => s.tag);
 
-    // Cidade trocada pela própria pessoa: o COREDE antigo vira informação errada e tem que sair.
-    // Só saem etiquetas que são COREDE (lista oficial) — etiqueta de conteúdo e de fluxo
-    // ("1 SEM RETORNO") nunca entram nesta conta.
-    const remover = await etiquetasDeRegiaoASair();
+    // COREDE que não é o da cidade deste contato tem que sair. Só saem etiquetas que são COREDE
+    // (lista oficial) — etiqueta de conteúdo e de fluxo ("1 SEM RETORNO") nunca entram nesta
+    // conta. A lista das aplicáveis vai junto: tirar a antiga sem pôr a nova é pior que as duas.
+    const remover = await etiquetasDeRegiaoASair(aplicaveis);
 
     if (!Object.keys(changes).length && !etiquetas.length && !remover.length) {
       if (!quiet) setStatus('Nada novo para gravar.');

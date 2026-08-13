@@ -5,6 +5,52 @@
 
 ---
 
+## 2026-08-12 — "Pegou novamente sem eu confirmar": não pegou, e o print prova
+
+**Relato (Thiago, print do contato "Nice Gomes"):** *"pegou novamente sem eu confirmar não rodei
+nada só abri o contato"*. Cidade "Caçapava do Sul" no CRM e no cabeçalho do painel.
+
+**O que o print mostra, medido:** a linha de status da própria extensão diz **"Gravado: nada —
+PROBLEMA: Data de conclusão do contato: Falta aprender o contrato de DATE"**. `aplicarAutomatico`
+rodou (a data está vazia) e não gravou campo nenhum. Se a cidade fosse palpite novo, ela estaria
+em `changes` e o status seria "Aplicado sozinho: Cidade". Ela não estava — a entrada era
+`from: 'crm'`, ou seja **a cidade já estava no CRM antes de ele abrir**.
+
+Quando foi escrita: o atendimento foi assumido às 15:00 e o print é das 21:14 ("há 6 horas"). Foi
+gravada às 15:00, pelo código antigo, antes do popup existir. Reproduzido offline: `extract` sobre
+as duas mensagens reais devolve `{cidade: 'Caçapava do Sul', confidence: 'exata', informada:
+false}` — exatamente o palpite que a versão antiga gravava sozinha.
+
+**Conclusão:** o fix da entrada anterior não estava no navegador dele (Desktop não tinha puxado /
+extensão não recarregada). Nada a corrigir no popup. Para conferir de verdade: apagar a Cidade de
+um contato de teste e abrir — a caixa tem que aparecer antes de qualquer escrita.
+
+### Achado de verdade no mesmo print: dois COREDEs no mesmo contato
+
+O contato está com as etiquetas **CAMPANHA** e **MÉDIO ALTO URUGUAI**. Caçapava do Sul é COREDE
+**Campanha** (conferido em `coredes-rs.json`) — então "Médio Alto Uruguai" é COREDE errado
+pendurado no contato.
+
+**Causa raiz:** `etiquetasDeRegiaoASair` só devolvia algo quando a cidade tinha sido
+**substituída** (`entrada.substituiu`). Aqui a cidade **preencheu um buraco** (o campo estava
+vazio), então `substituiu` era nulo e o COREDE antigo nunca saía. Dois COREDEs num contato é o
+mesmo dado errado que a função existe para evitar, só que por outra porta.
+
+Segunda armadilha, que quase fez o fix não funcionar: a etiqueta CERTA já estava aplicada, e
+`marcada` é falso justamente para não reaplicar o que já está lá — então procurar a região nova
+na lista das que vão ser aplicadas devolvia nada. Agora a região é buscada em `tagSuggestions`
+inteira, e a antiga só sai se a certa **fica** (vai ser aplicada agora ou o contato já a tem):
+tirar a antiga sem pôr a nova deixa o contato sem COREDE nenhum, que é pior que os dois.
+`etiquetaConfiavel` continua sendo a trava — cidade de palpite não-exato não manda tirar nada.
+
+Contatos já sujos se consertam sozinhos na próxima gravação (abrir com data de conclusão vazia
+já dispara), não precisa de mutirão.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`etiquetasDeRegiaoASair`,
+`saveClassification` passando as sugestões aplicáveis). Seis suítes passando.
+
+---
+
 ## 2026-08-12 — O popup da cidade cobria só metade (e a outra metade era a que ele via)
 
 **Relato (Thiago):** *"eu pedi para me mostrar um popup antes de registrar a cidade mas continua

@@ -156,6 +156,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   acham nas mensagens; etiqueta aplicada à mão (ou por nós numa passada anterior, quando a
   campanha do anúncio ainda casava) não aparecia, e o fecho com conteúdo travava dizendo "nenhum
   conteúdo reconhecido". Ver `tags.conteudosJaAplicados`.
+- **Etiqueta que o contato já tem também tem `marcada: false`** — é o que impede reaplicar o que
+  já está lá. Quem procurar a etiqueta certa só entre as que vão ser gravadas não a acha
+  justamente quando ela já está certa. Foi o que quase furou a limpeza de COREDE duplicado
+  (`etiquetasDeRegiaoASair`): procure em `tagSuggestions` inteira, decida com `marcada` depois.
+- **COREDE errado sobra quando a cidade preenche BURACO, não quando substitui.** A limpeza olhava
+  só `entrada.substituiu`; contato com campo Cidade vazio ganhava o COREDE novo e ficava com o
+  velho junto (visto ao vivo: "Caçapava do Sul" com Campanha **e** Médio Alto Uruguai). Regra:
+  COREDE que não é o da cidade sai — mas só se o certo ficar, senão o contato fica sem nenhum.
 - **Aba acordada e computador acordado são problemas DIFERENTES.** O áudio do `keepalive`
   impede o Chrome de congelar a aba; ele não impede o Windows de suspender por inatividade, e
   rodada longa não toca em teclado nem mouse. A segunda trava é `chrome.power` (`'display'`, no
