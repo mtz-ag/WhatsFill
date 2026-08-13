@@ -559,12 +559,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     else renderConfig();
   }
 
+  /**
+   * A versão do `manifest.json` que o Chrome carregou de verdade, no cabeçalho do painel.
+   *
+   * Existe por causa de uma tarde inteira gasta: os fixes iam pro repositório, ele recarregava a
+   * extensão, e o defeito continuava — a pasta que o Chrome estava carregando não era a pasta
+   * que o GitHub Desktop atualizava (**"tem extensão dentro da extensão"**). Sem número na tela
+   * não há como distinguir "o fix não funcionou" de "o fix não chegou", e as duas hipóteses
+   * levam a caminhos opostos. Agora dá para conferir de relance, antes de qualquer diagnóstico.
+   */
+  function versaoCarregada() {
+    try {
+      return chrome.runtime.getManifest().version;
+    } catch {
+      // Extensão recarregada com a aba aberta: o contexto morre e nem o manifesto responde.
+      return '?';
+    }
+  }
+
   function renderHeader() {
     header.replaceChildren();
 
     const reload = h('button', { class: 'wf-btn wf-mini', type: 'button' }, 'Recarregar');
     reload.addEventListener('click', () => withBusy(refresh));
-    header.append(h('div', { class: 'wf-conn' }, [h('span', {}, state.connection), reload]));
+    header.append(
+      h('div', { class: 'wf-conn' }, [h('span', {}, `${state.connection} · v${versaoCarregada()}`), reload])
+    );
 
     if (!state.contact) {
       header.append(h('div', { class: 'wf-who' }, 'WhatsFill'));

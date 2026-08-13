@@ -73,6 +73,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   Não use ele para verificar nada.
 - **Recarregar a extensão órfã as abas abertas** (`Extension context invalidated`): o painel
   falha em silêncio até dar F5. Já causou diagnóstico errado duas vezes.
+- **"O fix não funcionou" pode ser "o fix não chegou".** A pasta que o Chrome carrega não é
+  necessariamente a que o GitHub Desktop atualiza — cópia da extensão DENTRO da pasta da
+  extensão (zip descompactado, `dist/`, que é gitignorado) fica congelada para sempre. Custou uma
+  tarde de correção em cima de código que nunca rodou. **Antes de qualquer diagnóstico, confira a
+  versão no cabeçalho do painel** (`versaoCarregada`) contra a do `manifest.json`, e o "Carregado
+  de" em `chrome://extensions` contra o caminho do repositório. Mudou comportamento visível?
+  **Suba a `version` do manifesto no mesmo commit** — é o que torna a conferência possível.
 - **Rajada de requisições derruba a API — e a plataforma junto.** `Failed to fetch` não é erro
   HTTP: é o preflight CORS recusado, o que um limitador de taxa devolve. Cada contato aberto
   custa uma sessão na plataforma + 3 chamadas nossas, então **toda volta de laço precisa de

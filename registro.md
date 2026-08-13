@@ -5,6 +5,33 @@
 
 ---
 
+## 2026-08-12 — "Tem extensão dentro da extensão": os fixes nunca chegaram ao Chrome
+
+**Relato (Thiago):** *"o erro está na pasta, tem extensão dentro da extensão"*.
+
+Isso fecha a tarde inteira. A cidade continuava sendo gravada sozinha depois de dois commits que
+justamente impediam isso — e a explicação não era o código: **a pasta que o Chrome carrega não é
+a que o GitHub Desktop atualiza.** Uma cópia da extensão dentro da pasta da extensão (zip
+descompactado, ou `dist/`, que é *gitignorado* e por isso nunca é tocado pelo Desktop) fica
+congelada para sempre. Toda correção ia para a pasta certa e o Chrome lia a errada.
+
+Conferido: o repositório está limpo — **um** `manifest.json`, na raiz, nenhuma cópia versionada.
+A cópia é local, na máquina dele.
+
+**O que ficou no código, para isso não custar outra tarde:** a versão do manifesto passa a
+aparecer no cabeçalho do painel, ao lado de "encaixado na aba" (`versaoCarregada`). Sem número na
+tela não há como distinguir *"o fix não funcionou"* de *"o fix não chegou"* — e as duas hipóteses
+levam a caminhos opostos. Eu passei a tarde na primeira; era a segunda. Manifesto subiu para
+**0.6.0**, para o número da tela ser diferente do que estava rodando.
+
+**Regra nova no CLAUDE.md:** mudou comportamento visível, sobe a `version` do manifesto no mesmo
+commit — é o que torna a conferência possível.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`versaoCarregada`, cabeçalho),
+[manifest.json](manifest.json) (0.5.0 → 0.6.0), [CLAUDE.md](CLAUDE.md).
+
+---
+
 ## 2026-08-12 — O rótulo da opção prometia gravar a cidade sozinho
 
 **Pergunta dele:** *"se eu remover a cidade e as etiquetas vai automaticamente pegar sem minha
