@@ -47,6 +47,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   let reexaminando = false;
   /** A pergunta de cidade em curso, quando há uma. Impede duas caixas iguais na tela. */
   let perguntaDeCidade = null;
+  /** Resposta que não é resposta: a caixa foi tirada da tela porque o contato mudou. */
+  const CANCELADA = '__cidade-cancelada__';
 
   const state = {
     tab: 'respostas',
@@ -230,6 +232,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   async function load(sessionId) {
+    // A caixa da cidade pertence ao contato que estava aberto. Trocou de contato, ela é
+    // restolho — e restolho aqui não é sujeira de tela, é risco de gravar na pessoa errada:
+    // visto ao vivo, painel dizendo "Abra um atendimento" com uma caixa perguntando por
+    // "Estrela Velha" por cima da conversa de outro contato. Um "1 Aceitar" ali gravaria a
+    // cidade de um em outro.
+    cancelarPerguntaDeCidade();
+
     state.session = null;
     state.contact = null;
     state.draft = {};
@@ -434,6 +443,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       perguntaDeCidade = null;
     }
 
+    // Cancelada porque o contato mudou: não mexe em rascunho nenhum. O rascunho que está aí
+    // agora é de OUTRA pessoa, e escrever nele é como responder a pergunta pelo contato errado.
+    if (escolha === CANCELADA) return;
+
     if (escolha === 'aceitar') {
       state.draft[campo.id] = { ...entry, pendente: false };
     } else if (escolha === 'semcidade') {
@@ -453,6 +466,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // o contato fica com o COREDE de uma cidade que você acabou de recusar.
     await refreshTagSuggestions();
     renderAll();
+  }
+
+  /**
+   * Tira da tela a pergunta de cidade que ficou de um contato anterior.
+   *
+   * `CANCELADA` não é resposta: não aceita, não recusa e não vira memória. Só desfaz a pergunta,
+   * porque quem ia respondê-la já não está olhando aquele contato.
+   */
+  function cancelarPerguntaDeCidade() {
+    perguntaDeCidade?.cancelar(CANCELADA);
   }
 
   /**
@@ -2558,7 +2581,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * @returns {Promise<string>} o `valor` da opção escolhida, ou 'parar' no Esc
    */
   function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [], dica = 'Esc para parar a rodada' }) {
-    return new Promise((resolve) => {
+    // `fechar` sai daqui de dentro para virar `promessa.cancelar`: caixa que ficou na tela
+    // depois de o contato mudar tem que poder ser tirada de fora. Ver `cancelarPerguntaDeCidade`.
+    let fecharDeFora = null;
+    const promessa = new Promise((resolve) => {
       const caixa = h('div', { class: 'wf-pergunta' });
       const fundo = h('div', { class: 'wf-pergunta-fundo' }, [caixa]);
 
@@ -2611,6 +2637,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         fundo.remove();
         resolve(valor);
       }
+      fecharDeFora = fechar;
 
       // Captura no documento: o shadow root não recebe tecla quando o foco está na página.
       document.addEventListener('keydown', aoTeclar, true);
@@ -2620,6 +2647,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       aplicarPosicao(caixa, state.settings.perguntaPos);
       botoes[0]?.focus();
     });
+
+    promessa.cancelar = (valor) => fecharDeFora?.(valor);
+    return promessa;
   }
 
   /** Campo onde alguém digita: input, textarea ou qualquer coisa editável (o composer é um). */
@@ -3393,7 +3423,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   } = {}) {
     // Único lugar que escreve no CRM, então é aqui que a cidade é confirmada — inclusive na
     // gravação automática, que era justamente a que passava batido.
+    const alvo = state.contact?.id || null;
     await confirmarCidadeSePendente(somenteExatos);
+
+    /**
+     * A pergunta é a única espera longa que existe no meio de uma gravação — e ela é
+     * **não-bloqueante de propósito**, para você poder ler a conversa e trocar de atendimento
+     * enquanto decide. Ou seja: quando ela responde, o contato aberto pode ser outro.
+     *
+     * O `changes` abaixo é montado do `state.draft`, e o `writeValues` manda para
+     * `state.contact.id` — os dois já apontam para a pessoa nova. Gravar aqui é gravar dado de
+     * um em outro, e é escrita em produção, em base de eleitor real. Na dúvida, não grava:
+     * a próxima abertura do contato certo refaz tudo do zero, sem custo nenhum.
+     */
+    if ((state.contact?.id || null) !== alvo) {
+      if (!quiet) setStatus('Você trocou de atendimento no meio — não gravei nada.', 'err');
+      return false;
+    }
 
     const changes = {};
     for (const field of state.classify) {

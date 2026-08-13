@@ -5,6 +5,44 @@
 
 ---
 
+## 2026-08-12 — A caixa da cidade sobrevivia à troca de contato (gravaria na pessoa errada)
+
+**Relato (Thiago):** *"saí e voltei e deu duas sugestões de cidade sem chat novo"* — e o print
+mostrou muito mais que duplicata.
+
+**O que o print mostra:** painel com **"Abra um atendimento na plataforma para começar"** (nenhum
+contato carregado), conversa aberta a do **Odir**, e uma caixa por cima perguntando por **"Estrela
+Velha"** — cidade que não aparece em lugar nenhum daquela conversa. A caixa era restolho de um
+contato anterior.
+
+**Causa raiz:** `perguntarNaRodada` pendura a caixa no `root` do painel, e `renderAll` só troca
+os filhos de `header` e `body`. Trocar de atendimento nunca a tirava da tela. E como a caixa é
+**não-bloqueante de propósito** (para ele poder ler a conversa e trocar de atendimento enquanto
+decide), o intervalo entre a pergunta e a resposta é justamente quando o contato muda.
+
+**Por que isso é grave, e não cosmético:** quem responde a caixa mexe em `state.draft` e a
+gravação vai para `state.contact.id` — os dois já apontando para a pessoa NOVA. Um "1 Aceitar"
+naquele print gravaria "Estrela Velha" em quem estivesse aberto. Escrita em produção, base de
+eleitor real. Ninguém veria: o painel diria "Aplicado sozinho: Cidade" e estaria falando a
+verdade sobre o contato errado.
+
+**Fix, duas travas independentes:**
+
+1. `load()` chama `cancelarPerguntaDeCidade()` logo na primeira linha. A promessa da pergunta
+   passou a expor `.cancelar(valor)`, e a resposta `CANCELADA` **não é resposta**: não aceita,
+   não recusa, não vira memória de recusa — só desfaz.
+2. `saveClassification` guarda o id do contato **antes** da pergunta e desiste da gravação
+   inteira se ele mudou, dizendo "você trocou de atendimento no meio — não gravei nada". Essa
+   segunda trava pega qualquer variante da corrida, inclusive as que eu não enxergo daqui.
+
+Na dúvida, não grava: a próxima abertura do contato certo refaz tudo do zero, sem custo nenhum.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`perguntarNaRodada` com `.cancelar`,
+`cancelarPerguntaDeCidade`, `CANCELADA`, guarda de contato em `saveClassification`),
+[CLAUDE.md](CLAUDE.md). Manifesto 0.6.1 → **0.6.2**. Seis suítes passando.
+
+---
+
 ## 2026-08-12 — Duas caixas de cidade na tela, e a recusa que não durava
 
 **Relato (Thiago, print com a v0.6.0 rodando):** *"duplicado, e faça disparar novamente só se

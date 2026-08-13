@@ -133,6 +133,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   ele e `reexaminarMensagens` podem estar no ar juntos. Pergunta aberta dentro de um deles ganha
   uma gêmea quando chega mensagem nova; responder uma deixa a outra na tela. Toda pergunta que
   nasce de gravação precisa de guarda de instância única (ver `perguntaDeCidade`).
+- **Pergunta não-bloqueante sobrevive à troca de contato — e vira gravação na pessoa errada.**
+  Medido ao vivo: painel dizendo "Abra um atendimento" com uma caixa perguntando por "Estrela
+  Velha" sobre a conversa de outro. A caixa é filha do `root`, e `renderAll` só troca `header` e
+  `body`; ela fica. Pior que a tela suja: `state.draft` e `state.contact` já são do contato novo,
+  então responder gravava a cidade de um em outro. Duas travas: `load()` cancela a caixa aberta
+  (`cancelarPerguntaDeCidade`), e `saveClassification` guarda o id do contato ANTES da pergunta e
+  desiste da gravação inteira se ele mudou.
 - **Regra da rodada que depende de estado invisível parece defeito.** A conclusão automática
   ("última mensagem minha") ganhou uma exceção para quem não tinha etiqueta de conteúdo, e o
   relato foi "alguns concluem e outros não". Funcionava como projetado — e mesmo assim estava
