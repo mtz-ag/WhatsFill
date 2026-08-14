@@ -5,6 +5,45 @@
 
 ---
 
+## 2026-08-12 — Rodada 6: os reabertos, trabalhados em "Meus"
+
+**Escolha dele**, à pergunta de quem manda a mensagem depois do reabrir em lote: *"uma rodada em
+Meus"*, com pergunta a cada contato. É a segunda metade do fluxo que a rodada 5 abriu.
+
+**`processarSemRetornoEmMeus`.** O atendimento já está aberto (foi a rodada 5 que reabriu), então
+não há Reiniciar: abre, pergunta, manda, tira a etiqueta e conclui. Cinco saídas — modelo
+aprovado, a resposta "Sem retorno: ainda tem interesse?" (**só com a janela de 24h aberta**),
+pular, concluir sem enviar, responder à mão.
+
+**A trava que decide quem entra:** "Meus" não é uma fila só — tem quem veio dos Novos, quem
+respondeu, e quem foi reaberto aqui. A rodada confere se o contato tem a etiqueta configurada e
+pula com o motivo na tela quando não tem. O contato já está carregado, então a conferência é de
+graça, e sem ela a pergunta de sem retorno iria para quem está no meio de outra conversa.
+
+**Ordem de propósito: grava e tira a etiqueta ANTES de enviar.** Se o envio falhar, o contato
+continua na lista e volta amanhã. O inverso — etiqueta fora, mensagem não enviada — o tiraria do
+trabalho em silêncio, que é o modo de falhar que este projeto já teve várias vezes.
+
+**Pular mantém a etiqueta**, e isso é dito no rótulo da tecla ("Pular (mantém a etiqueta)" ×
+"Concluir sem enviar (tira a etiqueta)"): a diferença entre as duas saídas é justamente essa, e
+esconder isso faria contato sumir da lista sem ter sido atendido.
+
+**Anti-duplicata vira LINHA da pergunta, não pulo.** `wasSent` e `decidirReenvio` continuam
+consultados, mas o resultado aparece com "⚠" e tira o destaque da opção de enviar, em vez de
+pular sozinho. Pulo silencioso já foi defeito duas vezes aqui.
+
+**Sem `confirm()` de abertura**, diferente das outras rodadas: esta pergunta contato a contato, e
+uma confirmação em massa no começo seria só mais uma porta para atravessar sem decidir nada.
+
+Os dois passos ficam **no mesmo cartão** — são um movimento só, feito em dois momentos; separá-los
+em cartões distantes é o que faz esquecer o segundo.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`processarSemRetornoEmMeus`,
+`fecharSemRetorno`, `runLoteEmMeus`, segunda metade do `renderCartaoReabrir`,
+`NO_REPLY_TEMPLATE_ID`). Manifesto 0.7.0 → **0.8.0**. Seis suítes passando.
+
+---
+
 ## 2026-08-12 — Rodada dos concluídos desmontada em duas: reabrir em lote, trabalhar depois
 
 **Pedido dele:** *"em vez de reiniciar ir para os meus e mandar mensagem, irá somente reiniciar as
@@ -46,8 +85,7 @@ duas falhas possíveis: contato sem a etiqueta × etiqueta que não existe com a
 **O cartão antigo continua lá.** "Sem retorno: reabrir e perguntar" não foi apagado — o fluxo novo
 é o de cima, e o antigo fica para quando ele quiser tudo num contato só.
 
-**Pendente, e depende dele:** se o envio em "Meus" também deve virar rodada, ou fica à mão.
-Ele escreveu "irei mandar a mensagem", que pode ser as duas coisas. Perguntado.
+**Perguntado e respondido:** o envio em "Meus" **vira rodada** — ver a entrada acima.
 
 **Aviso que vale repetir:** reabrir **não** reabre a janela de 24h do WhatsApp. Em "Meus", texto
 livre continua não chegando em quem está sem retorno há dias — só modelo aprovado chega.

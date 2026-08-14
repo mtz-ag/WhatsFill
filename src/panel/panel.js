@@ -25,6 +25,8 @@ const THANKS_TEMPLATE_ID = 'agradecimento';
 const THANKS_INFO_TEMPLATE_ID = 'agradecer-info';
 const ASK_TEMPLATE_ID = 'pedir-dados';
 const INTEREST_TEMPLATE_ID = 'interesse-conteudo';
+/** A pergunta dos sem retorno, em texto livre. Só chega dentro da janela de 24h. */
+const NO_REPLY_TEMPLATE_ID = 'sem-retorno-interesse';
 
 /**
  * Rótulo da lista de concluídos/arquivados. Texto, e não import do `dom.js`, porque o painel em
@@ -1454,6 +1456,36 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       h('p', { class: 'wf-hint' },
         `Vai reabrir até ${clampInt(cfg.limite, 1, 200)} — o mesmo limite do cartão de ritmo, lá em cima.`)
     );
+
+    // A segunda metade do fluxo mora no mesmo cartão de propósito: são um passo só, feitos em
+    // dois momentos. Separar em dois cartões distantes é o que faz esquecer o segundo.
+    card.append(h('hr', { class: 'wf-sep' }));
+    card.append(
+      h('h4', {}, 'Depois: trabalhar os reabertos em "Meus"'),
+      h('div', { class: 'wf-preview' },
+        'Percorre a aba "Meus" FILTRADA pela etiqueta acima e para em cada contato com a ' +
+          'pergunta: mandar o modelo, mandar a pergunta de interesse (só se a janela de 24h ' +
+          'estiver aberta), pular, concluir ou responder à mão. O que enviar e concluir tira a ' +
+          'etiqueta junto; pular a mantém.'),
+      h('div', { class: 'wf-origin' },
+        'Usa o modelo aprovado escolhido no cartão de baixo. Reabrir NÃO reabre a janela de 24h ' +
+          '(ela é regra do WhatsApp, não da plataforma): para quem está calado há dias, só o ' +
+          'modelo aprovado chega. A tela diz, contato a contato, de que lado cada um está.')
+    );
+
+    const emMeus = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Trabalhar os reabertos em "Meus"');
+    emMeus.addEventListener('click', () => withBusy(runLoteEmMeus));
+    card.append(h('div', { class: 'wf-row' }, [emMeus]));
+
+    const trava = [];
+    if (!modeloDaRodada()) trava.push('Escolha o modelo aprovado no cartão abaixo.');
+    if (!state.settings.autoSend) trava.push('Precisa do "Enviar automático" ligado (aba Config).');
+    if (!cfg.etiquetaSemRetorno) {
+      trava.push('Sem a etiqueta acima, a rodada não sabe quem é sem retorno dentro de "Meus".');
+    }
+    emMeus.disabled = state.auto.rodando || trava.length > 0;
+    for (const motivo of trava) card.append(h('div', { class: 'wf-block' }, motivo));
+
     return card;
   }
 
@@ -2002,6 +2034,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * atendimento está fechado, então ela também dá conta de um sem retorno que por acaso esteja
    * aberto. Uma rodada, um modelo, os dois casos.
    */
+  /**
+   * Rodada 6: os reabertos, agora em "Meus". Ver `processarSemRetornoEmMeus`.
+   *
+   * Sem `confirm()` de abertura, diferente das outras: esta pergunta contato a contato, então a
+   * confirmação em massa no começo seria uma porta a mais para atravessar sem decidir nada.
+   */
+  async function runLoteEmMeus() {
+    const modelo = modeloDaRodada();
+    if (!modelo) return setStatus('Escolha o modelo aprovado da rodada (cartão abaixo).', 'err');
+    if (!state.settings.autoSend) {
+      return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
+    }
+    await rodar({ aba: 'Meus', processar: (sessionId, ctx) => processarSemRetornoEmMeus(sessionId, modelo, ctx) });
+  }
+
   /** Rodada 5: percorre os concluídos e só reabre. Ver `processarReabrir`. */
   async function runLoteReabrir() {
     const limite = clampInt(state.auto.cfg.limite, 1, 200);
@@ -3069,6 +3116,176 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       await page.closeOverlay().catch(() => {});
       return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
     }
+  }
+
+  /**
+   * Rodada 6, um contato: os sem retorno **já reabertos**, agora em "Meus".
+   *
+   * É a segunda metade do fluxo que a rodada 5 abriu. Aqui o atendimento já está aberto (foi ela
+   * que reabriu), então não há Reiniciar: é abrir, decidir, mandar, tirar a etiqueta e concluir.
+   *
+   * **A etiqueta sai junto com o Concluir, e é isso que fecha o ciclo.** Sem tirá-la, o contato
+   * volta ao topo da lista filtrada por ela e vira trabalho de novo amanhã, já tendo sido
+   * trabalhado hoje — que é o problema que ele identificou ao pedir esta separação.
+   *
+   * Pergunta a cada contato, como a rodada 3: aqui a decisão depende de ler a conversa (a pessoa
+   * pode ter voltado a falar entre o reabrir e o trabalhar), e essa leitura é dele.
+   */
+  async function processarSemRetornoEmMeus(sessionId, modelo, ctx) {
+    let nome = 'contato';
+    try {
+      await load(sessionId);
+      if (!state.contact) return { nome, resultado: 'erro', motivo: 'não consegui carregar o contato' };
+      nome = state.contact.name || state.contact.nameWhatsapp || 'sem nome';
+
+      if (ctx?.contatosTratados?.has(state.contact.id)) {
+        return { nome, resultado: 'pulado', motivo: 'já tratei este contato nesta rodada' };
+      }
+
+      /**
+       * "Meus" não é uma fila só: tem quem veio da rodada dos Novos, quem respondeu, e quem foi
+       * reaberto aqui. Quem separa é o filtro que ele aplicou — e a etiqueta é o que esse filtro
+       * usa. Conferir custa nada (o contato já está carregado) e é a diferença entre a rodada
+       * mandar a pergunta de sem retorno para quem está no meio de outra conversa e não mandar.
+       */
+      const nomeEtiqueta = String(state.auto.cfg.etiquetaSemRetorno || '').trim();
+      if (nomeEtiqueta) {
+        const etiqueta = await etiquetaSemRetornoDoContato();
+        if (!etiqueta) {
+          return {
+            nome,
+            resultado: 'pulado',
+            motivo: `não tem a etiqueta "${nomeEtiqueta}" — filtre a lista por ela antes de rodar`,
+          };
+        }
+      }
+
+      const contexto = await currentVarContext();
+      const pergunta = state.templates.find((t) => t.id === NO_REPLY_TEMPLATE_ID);
+      const faltando = pergunta ? vars.render(pergunta.text, contexto) : null;
+      const perguntaTrava = faltando ? faltando.missing.length > 0 : true;
+
+      // Janela de 24h: quem manda é o WhatsApp, não a plataforma, e reabrir o atendimento não a
+      // reabre. Fechada, texto livre não chega — a opção nem aparece, com o motivo na tela.
+      const janelaAberta = !state.session?.expired;
+      const podeTexto = !!pergunta && !perguntaTrava && janelaAberta;
+
+      const ultima = state.ultimaMensagem;
+      const respondeu = !!ultima?.doContato;
+
+      // Anti-duplicata, as duas travas: por modelo (nosso registro) e por conversa (que conta
+      // também o que foi mandado à mão). Aqui elas viram LINHA da pergunta, não pulo: quem
+      // decide repetir é ele, olhando. Pulo silencioso já foi defeito duas vezes neste projeto.
+      const jaEnviado = modelo ? await templatesLib.wasSent(state.contact.id, hsmKey(modelo)) : null;
+      const reenvio = hsmLib.decidirReenvio({
+        ultimaFoiNossa: !!ultima && !ultima.doContato,
+        horasDesdeUltima: ultima ? (Date.now() - new Date(ultima.at).getTime()) / 3600000 : Infinity,
+        limiteHoras: clampInt(state.auto.cfg.horasSemRepetir, 1, 720),
+      });
+
+      const opcoes = [];
+      if (modelo) {
+        opcoes.push({
+          tecla: '1',
+          valor: 'modelo',
+          rotulo: jaEnviado ? `Mandar de novo "${modelo.name}"` : `Mandar modelo "${modelo.name}"`,
+          primaria: !jaEnviado && reenvio.acao === 'enviar',
+        });
+      }
+      if (podeTexto) {
+        opcoes.push({ tecla: '2', valor: 'texto', rotulo: `Mandar "${pergunta.name}"`, primaria: !modelo });
+      }
+      opcoes.push({ tecla: '3', valor: 'pular', rotulo: 'Pular (mantém a etiqueta)' });
+      opcoes.push({ tecla: '4', valor: 'concluir', rotulo: 'Concluir sem enviar (tira a etiqueta)' });
+      opcoes.push({ tecla: '5', valor: 'responder', rotulo: 'Responder à mão (retomo quando você concluir)' });
+
+      const escolha = await perguntarNaRodada({
+        titulo: nome,
+        linhas: [
+          `Última mensagem: ${ultima ? `${respondeu ? 'dele' : 'nossa'}, ${formatarQuando(ultima.at)}` : '(nenhuma)'}`,
+          valueNamed('Cidade') ? ['Cidade: ', ...cidadeMarcada(), cidadeSubstituida()] : 'Cidade: (vazia)',
+          respondeu ? '⚠ ELE VOLTOU A FALAR depois da nossa última mensagem — leia antes de decidir.' : '',
+          janelaAberta
+            ? 'A janela de 24h está ABERTA: texto livre chega neste contato.'
+            : 'A janela de 24h venceu: só modelo aprovado chega. Texto livre não sai.',
+          !pergunta ? `Não achei a resposta "${NO_REPLY_TEMPLATE_ID}" na aba Config.` : '',
+          pergunta && perguntaTrava && janelaAberta
+            ? `A resposta "${pergunta.name}" está travada: ${vars.explainMissing(faltando.missing, faltando.reasons)}`
+            : '',
+          jaEnviado ? `⚠ "${modelo.name}" já foi enviado ${formatarQuando(jaEnviado.at)}.` : '',
+          reenvio.acao === 'pular' ? `⚠ ${reenvio.motivo}.` : '',
+        ].filter(Boolean),
+        pergunta: 'O que fazer com este contato?',
+        respostas: state.templates.map((t) => {
+          const { missing, reasons } = vars.render(t.text, contexto);
+          return {
+            nome: t.name,
+            bloqueio: missing.length ? vars.explainMissing(missing, reasons) : '',
+            enviar: () => sendTemplate(t, { send: true, jaConfirmado: true }),
+          };
+        }),
+        opcoes,
+      });
+
+      if (escolha === 'parar') return { nome, resultado: 'pulado', parar: true, motivo: 'você parou a rodada' };
+
+      // Pular NÃO tira a etiqueta: o contato tem que continuar na lista filtrada, senão ele
+      // some do trabalho sem nunca ter sido atendido.
+      if (escolha === 'pular') {
+        await saveClassification({ withCompletionDate: true, quiet: true });
+        return { nome, resultado: 'pulado', motivo: 'você pulou — etiqueta mantida, atendimento aberto' };
+      }
+
+      // A rodada sai da frente e fica de vigia. Ele responde à mão; quando concluir, ela segue.
+      // A etiqueta fica com ele: quem conclui é a plataforma, e o botão da aba Dados é o gancho.
+      if (escolha === 'responder') {
+        await saveClassification({ withCompletionDate: true, quiet: true });
+        return esperarVoceConcluir(sessionId, nome);
+      }
+
+      ctx?.contatosTratados?.add(state.contact.id);
+
+      if (escolha === 'concluir') {
+        if (!(await saveClassification({ withCompletionDate: true, quiet: true, tirarSemRetorno: true }))) {
+          return { nome, resultado: 'erro', motivo: 'a classificação não gravou; não concluí' };
+        }
+        return await fecharSemRetorno(nome, 'concluído sem enviar, a seu pedido', 'concluido');
+      }
+
+      const texto = escolha === 'texto' ? pergunta : null;
+      const rotulo = texto ? `"${texto.name}"` : `modelo "${modelo.name}"`;
+
+      // Grava e tira a etiqueta ANTES de enviar: se o envio falhar, o contato continua na lista
+      // — o inverso (etiqueta fora, mensagem não enviada) o tiraria do trabalho em silêncio.
+      if (!(await saveClassification({ withCompletionDate: true, quiet: true, tirarSemRetorno: true }))) {
+        return { nome, resultado: 'erro', motivo: 'a classificação não gravou; não enviei nada' };
+      }
+
+      const enviou = texto
+        ? await sendTemplate(texto, { send: true, jaConfirmado: true })
+        : await enviarModelo(modelo, { send: true, jaConfirmado: true });
+      if (!enviou) return { nome, resultado: 'erro', motivo: `${rotulo} não saiu` };
+
+      return await fecharSemRetorno(nome, `mandei ${rotulo}, tirei a etiqueta e concluí`, 'enviado');
+    } catch (err) {
+      await page.closeOverlay().catch(() => {});
+      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
+    }
+  }
+
+  /** O Concluir das saídas acima, com os dois tropeços conhecidos separados. */
+  async function fecharSemRetorno(nome, motivo, resultado) {
+    const fechou = await page.clickConcluir();
+    if (!fechou.ok) return { nome, resultado, parar: true, motivo: `${motivo}, mas ${fechou.reason}` };
+    if (fechou.dialogOpen) {
+      return {
+        nome,
+        resultado,
+        parar: true,
+        motivo: `${motivo}, mas a plataforma pediu um motivo de conclusão — responda o diálogo`,
+      };
+    }
+    return { nome, resultado, motivo };
   }
 
   async function processarSemRetorno(sessionId, modelo, ctx) {
