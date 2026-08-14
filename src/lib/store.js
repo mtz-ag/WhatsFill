@@ -311,6 +311,17 @@ const DEFAULTS = {
      * regra, e bloquear para sempre esvaziaria a rodada. Ver `hsm.decidirReenvio`.
      */
     horasSemRepetir: 48,
+    /**
+     * A etiqueta de fluxo que marca a fila dos sem retorno.
+     *
+     * Ela sai do contato quando o atendimento é concluído pelo painel — senão, concluído de
+     * novo, ele reaparece no TOPO da lista filtrada por ela e volta a ser trabalho amanhã. É a
+     * única etiqueta que a extensão tira sem ser COREDE, e por isso o nome fica aqui, editável:
+     * chutar nome de etiqueta é jeito conhecido de tirar a errada.
+     *
+     * Vazio = não tira nada.
+     */
+    etiquetaSemRetorno: '1 SEM RETORNO',
   },
 
   /**

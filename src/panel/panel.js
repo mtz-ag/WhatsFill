@@ -975,7 +975,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       setStatus('1/4 gravando classificação…');
-      if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) return;
+      if (!(await saveClassification({ withCompletionDate: true, quiet: true, tirarSemRetorno: true }))) return;
 
       setStatus(`2/4 enviando o modelo "${modelo.name}"…`);
       if (!(await enviarModelo(modelo, { send: true }))) return;
@@ -1189,7 +1189,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       setStatus('1/3 gravando classificação…');
-      if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) return;
+      if (!(await saveClassification({ withCompletionDate: true, quiet: true, tirarSemRetorno: true }))) return;
 
       setStatus('2/3 concluindo o atendimento…');
       await concluirEAbrirProximo('Classificado');
@@ -1209,7 +1209,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       setStatus('1/4 gravando classificação…');
-      if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) return;
+      if (!(await saveClassification({ withCompletionDate: true, quiet: true, tirarSemRetorno: true }))) return;
 
       setStatus('2/4 enviando o link do grupo…');
       if (!(await sendTemplate(template, { send: true }))) return;
@@ -1259,6 +1259,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(renderCartaoNovos(cfg));
     body.append(renderCartaoMomento(cfg));
     body.append(renderCartaoRespondidos());
+    body.append(renderCartaoReabrir(cfg));
     body.append(renderCartaoSemRetorno(cfg, modeloDaRodada()));
 
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Andamento'));
@@ -1412,6 +1413,51 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /**
+   * Rodada 5: reabrir em lote, sem enviar nada. Ver `processarReabrir`.
+   *
+   * Fica ANTES do cartão de "reabrir e mandar" de propósito: é o caminho novo, e o de baixo
+   * continua existindo só para quando ele quiser o fluxo antigo, tudo num contato só.
+   */
+  function renderCartaoReabrir(cfg) {
+    const card = h('div', { class: 'wf-card' }, [
+      h('h4', {}, 'Sem retorno: só reabrir (em lote)'),
+      h('div', { class: 'wf-preview' },
+        'Percorre a lista dos CONCLUÍDOS (o ícone de caixa ao lado de "Outros") e clica em ' +
+          'Reiniciar em cada um, até o limite acima. **Não manda mensagem nenhuma.** Cada ' +
+          'atendimento reaberto sai dos concluídos e passa para "Meus", onde você manda a ' +
+          'mensagem e conclui com calma.'),
+      h('div', { class: 'wf-origin' },
+        'Reabrir tira o atendimento da lista de concluídos de vez — ele não volta ao topo nem ' +
+          'é tratado duas vezes, que era o problema de fazer tudo num contato só. Como nada é ' +
+          'enviado, esta rodada não precisa de modelo, não depende da janela de 24h e não pode ' +
+          'incomodar ninguém: a pausa entre um e outro é a curta, só para não sobrecarregar o ' +
+          'servidor.'),
+    ]);
+
+    card.append(
+      campoTexto('Etiqueta que marca esta fila (some ao concluir pelo painel)', cfg.etiquetaSemRetorno, (v) =>
+        salvarAuto({ etiquetaSemRetorno: v.trim() }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Concluir sem tirar esta etiqueta devolve o contato ao topo da lista filtrada por ela — ' +
+          'ele vira trabalho de novo amanhã, já tendo sido trabalhado hoje. O Concluir do painel ' +
+          'tira sozinho; para quando você conclui pela plataforma, tem o botão na aba Dados. ' +
+          'Vazio = não tira nada.')
+    );
+
+    const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Reabrir em lote');
+    comecar.addEventListener('click', () => withBusy(runLoteReabrir));
+    comecar.disabled = state.auto.rodando;
+    card.append(h('div', { class: 'wf-row' }, [comecar]));
+
+    card.append(
+      h('p', { class: 'wf-hint' },
+        `Vai reabrir até ${clampInt(cfg.limite, 1, 200)} — o mesmo limite do cartão de ritmo, lá em cima.`)
+    );
+    return card;
+  }
+
+  /**
    * Rodada 2: quem não respondeu. **Um cartão só** — ver o comentário do `runLote`.
    */
   function renderCartaoSemRetorno(cfg, modelo) {
@@ -1550,10 +1596,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return card;
   }
 
-  const SINAL_RODADA = { enviado: '✓', concluido: '▪', pulado: '–', triado: '→', erro: '×', fim: '■' };
+  const SINAL_RODADA = { enviado: '✓', concluido: '▪', pulado: '–', triado: '→', reiniciado: '↻', erro: '×', fim: '■' };
 
   /** Resultados em que o contato deixa a lista: a posição não pode avançar junto. */
-  const SAI_DA_FILA = new Set(['triado', 'concluido']);
+  const SAI_DA_FILA = new Set(['triado', 'concluido', 'reiniciado']);
+
+  /**
+   * Resultados que contam para o limite da rodada.
+   *
+   * Era só 'enviado', e por isso a rodada de **só reiniciar** rodaria até a fila acabar — o
+   * limite que ele digita ("reiniciar determinado número de conversas") nunca seria atingido,
+   * porque nela nada é enviado.
+   */
+  const CONTA_NO_LIMITE = new Set(['enviado', 'reiniciado']);
   let logNode = null;
 
   /** Só o log é redesenhado durante a rodada: renderAll roubaria o foco dos campos. */
@@ -1792,10 +1847,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         break;
       }
 
-      if (r.resultado === 'enviado') {
-        enviados++;
-        state.lastSendAt = Date.now();
-      }
+      const contou = CONTA_NO_LIMITE.has(r.resultado);
+      if (contou) enviados++;
+      // Só envio de verdade conta para o intervalo do WhatsApp: reabrir não manda mensagem.
+      if (r.resultado === 'enviado') state.lastSendAt = Date.now();
 
       // `parar` vale para qualquer resultado, não só para envio: o Esc da pergunta e o diálogo
       // de motivo de conclusão podem cair em qualquer um deles.
@@ -1804,41 +1859,37 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         break;
       }
 
-      // Contato que CONTINUA na lista depois de tratado (rodada dos concluídos: reiniciar e
-      // concluir devolve ele para a mesma fila, agora no topo). Sem andar uma casa, a rodada
-      // reabriria o mesmo atendimento — `visitados` até protege, mas ao custo de uma abertura
-      // extra por contato, e abertura é o que derruba a API.
-      if (r.resultado === 'enviado' && r.continuaNaFila) posicao++;
+      /**
+       * Andar uma casa ou não é a única decisão de posição que existe aqui, e ela tem uma
+       * pergunta só: **o contato continua na lista depois de tratado?**
+       *
+       * - saiu (assumido, concluído, reaberto): o próximo escorrega para esta mesma posição;
+       * - continua (pulado, ou concluído que volta ao TOPO dos concluídos): precisa andar,
+       *   senão a rodada reabre o mesmo — `visitados` protege, mas ao custo de uma abertura
+       *   extra por contato, e abertura é o que derruba a API.
+       */
+      const saiuDaLista = SAI_DA_FILA.has(r.resultado) || (contou && !r.continuaNaFila);
+      if (!saiuDaLista) posicao++;
 
-      if (r.resultado !== 'enviado') {
-        // Saiu da fila (assumido ou concluído): o próximo escorrega para esta mesma posição.
-        // "pulado" continua na lista, então precisa andar uma casa para não repetir.
-        if (!SAI_DA_FILA.has(r.resultado)) posicao++;
+      if (enviados >= limite || state.auto.parar) continue;
 
-        // Pulo custa à API o mesmo que envio: abre a sessão na plataforma e faz três chamadas
-        // nossas. Vinte pulos seguidos sem respiro derrubaram a API (o preflight passou a ser
-        // recusado, e "Failed to fetch" é o que o navegador mostra nesse caso) — e derrubaram a
-        // plataforma junto. A pausa longa protege o número no WhatsApp; esta protege o servidor.
-        const respiro = await pausarRodada(Math.min(pausaMs, PAUSA_PULO_MS));
-        if (respiro.congelou) {
-          const gelo = await lidarComCongelamento(PAUSA_PULO_MS, respiro.gasto);
-          if (gelo.parar) {
-            interrompida = gelo.motivo;
-            break;
-          }
-        }
-        continue;
-      }
+      /**
+       * A pausa longa protege o NÚMERO no WhatsApp; a curta protege o SERVIDOR.
+       *
+       * Só quem manda mensagem precisa da longa. Pulo e reabertura não mandam nada — mas custam
+       * à API o mesmo que um envio (abrem a sessão na plataforma e fazem três chamadas nossas),
+       * e vinte seguidos sem respiro já derrubaram a API e a plataforma junto.
+       */
+      const enviou = r.resultado === 'enviado';
+      const ms = enviou ? pausaMs : Math.min(pausaMs, PAUSA_PULO_MS);
+      if (contou) setStatus(`${enviados}/${limite}. Pausa de ${ms / 1000}s…`);
 
-      if (enviados < limite && !state.auto.parar) {
-        setStatus(`${enviados}/${limite} enviado(s). Pausa de ${pausaMs / 1000}s…`);
-        const pausa = await pausarRodada(pausaMs);
-        if (pausa.congelou) {
-          const gelo = await lidarComCongelamento(pausaMs, pausa.gasto);
-          if (gelo.parar) {
-            interrompida = gelo.motivo;
-            break;
-          }
+      const pausa = await pausarRodada(ms);
+      if (pausa.congelou) {
+        const gelo = await lidarComCongelamento(ms, pausa.gasto);
+        if (gelo.parar) {
+          interrompida = gelo.motivo;
+          break;
         }
       }
     }
@@ -1897,8 +1948,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const conta = (tipo) => state.auto.log.filter((l) => l.resultado === tipo).length;
     const triados = conta('triado');
     const concluidos = conta('concluido');
+    const reabertos = conta('reiniciado');
     const resumo =
-      `Rodada encerrada: ${resultado.enviados} enviado(s), ${conta('pulado')} pulado(s)` +
+      `Rodada encerrada: ${conta('enviado')} enviado(s), ${conta('pulado')} pulado(s)` +
+      (reabertos ? `, ${reabertos} reaberto(s) em "Meus"` : '') +
       (concluidos ? `, ${concluidos} concluído(s) sem enviar` : '') +
       (triados ? `, ${triados} assumido(s) para triagem em "Meus"` : '') + '.';
 
@@ -1914,7 +1967,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // ninguém deveria ter que adivinhar se a rodada acabou ou desistiu.
     const motivo =
       resultado.interrompida ||
-      (state.auto.parar ? 'Parada por você.' : `Limite de ${limite} envio(s) atingido.`);
+      (state.auto.parar ? 'Parada por você.' : `Limite de ${limite} atingido.`);
 
     // Estado do keepalive no veredito, não só no topo do log: numa rodada longa a linha de
     // início fica fora da vista, e é justamente ela que explica um congelamento.
@@ -1949,6 +2002,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * atendimento está fechado, então ela também dá conta de um sem retorno que por acaso esteja
    * aberto. Uma rodada, um modelo, os dois casos.
    */
+  /** Rodada 5: percorre os concluídos e só reabre. Ver `processarReabrir`. */
+  async function runLoteReabrir() {
+    const limite = clampInt(state.auto.cfg.limite, 1, 200);
+
+    if (
+      !confirm(
+        `Vou percorrer a lista que você filtrou e REABRIR até ${limite} atendimento(s).\n\n` +
+          'Nenhuma mensagem é enviada. Cada um que reabrir sai dos concluídos e passa para ' +
+          '"Meus", onde você manda a mensagem e conclui.\n\n' +
+          'Confira que a lista da esquerda é a que você quer percorrer. Confirma?'
+      )
+    ) {
+      return setStatus('Rodada cancelada.');
+    }
+
+    await rodar({ aba: ABA_CONCLUIDOS, processar: processarReabrir });
+  }
+
   async function runLote() {
     const modelo = modeloDaRodada();
     if (!modelo) return setStatus('Escolha o modelo aprovado da rodada.', 'err');
@@ -2930,6 +3001,76 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * **volta** para a mesma lista (agora no topo, porque acabou de ser concluído). Sem andar uma
    * casa, a rodada reabriria o mesmo atendimento.
    */
+  /**
+   * Rodada 5: **só reabrir**, em lote, sem mandar nada.
+   *
+   * O fluxo antigo fazia tudo num contato só — reabrir, mandar e concluir — e o Concluir devolvia
+   * o contato ao TOPO dos concluídos, o que obrigou trava sobre trava para não tratar a mesma
+   * pessoa duas vezes. Ele desmontou o problema por outro lado, e é melhor: *"em vez de reiniciar
+   * ir para os meus e mandar mensagem, irá somente reiniciar as conversas"*. Reabrir tira o
+   * atendimento da lista de concluídos **de vez** — não volta, não sobe ao topo, não se repete.
+   * A rodada vira um movimento só, e o trabalho de mandar acontece depois, na aba "Meus", com
+   * ele olhando.
+   *
+   * Nada é enviado aqui, então não há modelo para escolher, janela de 24h para respeitar nem
+   * anti-duplicata para consultar. É por isso que ela é a rodada mais barata que existe no
+   * painel — e a única que não pode causar dano a contato nenhum.
+   */
+  async function processarReabrir(sessionId, ctx) {
+    let nome = 'contato';
+    try {
+      const sessao = await api.getSession(sessionId);
+      const contato = await api.getContact(sessao.contactId);
+      nome = contato.name || contato.nameWhatsapp || 'sem nome';
+
+      // Mesma pessoa com dois atendimentos na lista: reabrir os dois é ruído em "Meus", e é
+      // trabalho a mais para ele depois. Continua na fila porque este item não saiu de lá.
+      if (ctx?.contatosTratados?.has(contato.id)) {
+        return { nome, resultado: 'pulado', continuaNaFila: true, motivo: 'já reabri esta pessoa nesta rodada' };
+      }
+
+      const estado = await page.getState();
+      if (estado.sessionId !== sessionId) {
+        return { nome, resultado: 'erro', motivo: 'a aba trocou de atendimento no meio do caminho' };
+      }
+
+      // Já aberto: nada a fazer, e não é erro. Sai da lista de concluídos sozinho.
+      if (estado.hasComposer) {
+        ctx?.contatosTratados?.add(contato.id);
+        return { nome, resultado: 'reiniciado', motivo: 'já estava aberto — deixei em "Meus"' };
+      }
+
+      setStatus(`Reabrindo o atendimento de ${nome}…`);
+      const reaberto = await page.clickReiniciar();
+      if (!reaberto.ok) {
+        return {
+          nome,
+          resultado: 'erro',
+          continuaNaFila: true,
+          motivo: reaberto.reason || 'não consegui reabrir o atendimento',
+        };
+      }
+
+      // Confere em vez de acreditar no clique: sem campo de mensagem o atendimento não reabriu,
+      // e contar como reaberto deixaria a pessoa fora do trabalho em "Meus" sem ninguém saber.
+      const depois = reaberto.state || (await page.getState());
+      if (!depois.hasComposer) {
+        return {
+          nome,
+          resultado: 'erro',
+          continuaNaFila: true,
+          motivo: 'cliquei em Reiniciar mas o campo de mensagem não apareceu',
+        };
+      }
+
+      ctx?.contatosTratados?.add(contato.id);
+      return { nome, resultado: 'reiniciado', motivo: 'reaberto — está em "Meus" esperando você' };
+    } catch (err) {
+      await page.closeOverlay().catch(() => {});
+      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
+    }
+  }
+
   async function processarSemRetorno(sessionId, modelo, ctx) {
     let nome = 'contato';
     try {
@@ -3141,7 +3282,61 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const saveBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Salvar no CRM');
     saveBtn.disabled = !state.hasContract;
     saveBtn.addEventListener('click', () => withBusy(() => saveClassification({ withCompletionDate: true })));
-    body.append(h('div', { class: 'wf-row' }, [saveBtn]));
+
+    const linha = [saveBtn];
+
+    /**
+     * Quando ele conclui pela plataforma (que é o que vai acontecer trabalhando em "Meus"), a
+     * extensão não tem gancho nenhum para tirar a etiqueta sozinha — o Concluir é dela, não
+     * nosso. Este botão é esse gancho, num clique, sem passar pelo diálogo de Etiquetas.
+     */
+    const nomeSemRetorno = String(state.auto.cfg.etiquetaSemRetorno || '').trim();
+    if (nomeSemRetorno) {
+      const tirar = h('button', { class: 'wf-btn', type: 'button' }, `Tirar "${nomeSemRetorno}"`);
+      tirar.addEventListener('click', () => withBusy(tirarSemRetornoDoContato));
+      linha.push(tirar);
+    }
+
+    body.append(h('div', { class: 'wf-row' }, linha));
+    if (nomeSemRetorno) {
+      body.append(
+        h('div', { class: 'wf-origin' },
+          `Concluir sem tirar "${nomeSemRetorno}" devolve o contato ao topo da lista filtrada ` +
+            'por ela, e ele vira trabalho de novo amanhã. O Concluir do painel já tira sozinho; ' +
+            'este botão é para quando você conclui pela plataforma.')
+      );
+    }
+  }
+
+  /** O botão acima: tira a etiqueta de fluxo do contato aberto, e diz o que aconteceu. */
+  async function tirarSemRetornoDoContato() {
+    if (!state.contact) return setStatus('Abra um atendimento primeiro.', 'err');
+
+    const nome = String(state.auto.cfg.etiquetaSemRetorno || '').trim();
+    const tag = await etiquetaSemRetornoDoContato();
+    if (!tag) {
+      // Duas causas bem diferentes, e confundi-las manda ele procurar no lugar errado.
+      const existe = await tagsLib.resolveTag(nome);
+      return setStatus(
+        existe
+          ? `Este contato não tem a etiqueta "${nome}" — nada a tirar.`
+          : `Não achei nenhuma etiqueta chamada "${nome}" na plataforma. Confira o nome na aba Automatizado.`,
+        'err'
+      );
+    }
+
+    const resultado = await tagsLib.applyTags(state.contact, [], { remover: [tag.id] });
+    if (!resultado.ok) return setStatus(`Não consegui tirar a etiqueta: ${resultado.error}`, 'err');
+
+    // Relê em vez de acreditar no 2xx — é a regra desta API, e aqui vale igual.
+    state.contact = await api.getContact(state.contact.id);
+    const saiu = !(state.contact.tagsId || []).includes(tag.id);
+    setStatus(
+      saiu ? `Etiqueta "${tag.label}" retirada.` : `A API aceitou mas "${tag.label}" continua no contato.`,
+      saiu ? 'ok' : 'err'
+    );
+    await refreshTagSuggestions();
+    renderAll();
   }
 
   function renderTagsSection() {
@@ -3415,11 +3610,31 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       .filter(Boolean);
   }
 
+  /**
+   * A etiqueta de fluxo dos sem retorno, quando o contato aberto a tem. `null` fora disso.
+   *
+   * Ela é a razão de o contato aparecer na lista filtrada: concluir sem tirá-la devolve a pessoa
+   * ao TOPO dessa lista, e ela vira trabalho de novo amanhã, já tendo sido trabalhada hoje.
+   * Foi o que ele pediu — *"retirar a etiqueta de sem retorno para quando concluir ela não
+   * voltar pro topo dos concluídos"*.
+   *
+   * É a única etiqueta que a extensão tira sem ser COREDE. Resolvida pelo NOME configurado, e
+   * só sai se estiver mesmo aplicada — na dúvida, não mexe em etiqueta de ninguém.
+   */
+  async function etiquetaSemRetornoDoContato() {
+    const nome = String(state.auto.cfg.etiquetaSemRetorno || '').trim();
+    if (!nome || !state.contact) return null;
+    const tag = await tagsLib.resolveTag(nome);
+    if (!tag) return null;
+    return (state.contact.tagsId || []).includes(tag.id) ? tag : null;
+  }
+
   async function saveClassification({
     withCompletionDate = false,
     quiet = false,
     somenteExatos = false,
     automatico = false,
+    tirarSemRetorno = false,
   } = {}) {
     // Único lugar que escreve no CRM, então é aqui que a cidade é confirmada — inclusive na
     // gravação automática, que era justamente a que passava batido.
@@ -3466,6 +3681,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // (lista oficial) — etiqueta de conteúdo e de fluxo ("1 SEM RETORNO") nunca entram nesta
     // conta. A lista das aplicáveis vai junto: tirar a antiga sem pôr a nova é pior que as duas.
     const remover = await etiquetasDeRegiaoASair(aplicaveis);
+
+    // Só quando quem chamou está CONCLUINDO. Um Salvar no meio do trabalho não pode tirar a
+    // etiqueta: o contato sumiria da lista filtrada ainda faltando ser atendido.
+    if (tirarSemRetorno) {
+      const semRetorno = await etiquetaSemRetornoDoContato();
+      if (semRetorno) remover.push(semRetorno);
+    }
 
     if (!Object.keys(changes).length && !etiquetas.length && !remover.length) {
       if (!quiet) setStatus('Nada novo para gravar.');

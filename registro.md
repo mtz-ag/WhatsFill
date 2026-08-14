@@ -5,6 +5,61 @@
 
 ---
 
+## 2026-08-12 — Rodada dos concluídos desmontada em duas: reabrir em lote, trabalhar depois
+
+**Pedido dele:** *"em vez de reiniciar ir para os meus e mandar mensagem, irá somente reiniciar as
+conversas, após reiniciar determinado número de conversas irei trabalhar diretamente na aba meus
+onde irei mandar a mensagem para ver interesse e retirar a etiqueta de sem retorno para quando
+concluir ela não voltar pro topo dos concluídos"*.
+
+**Por que o desenho novo é melhor, e não só diferente:** o fluxo antigo fazia tudo num contato só
+— reabrir, mandar, concluir — e o Concluir devolvia a pessoa ao **topo** dos concluídos. Foi daí
+que saíram, uma a uma, `contatosTratados`, `decidirReenvio`, `continuaNaFila` e o avanço de
+posição: trava sobre trava para não tratar a mesma pessoa duas vezes numa lista que se reordena
+embaixo da rodada. Reabrir **tira o atendimento da lista de concluídos de vez**. Some o problema
+inteiro, não o sintoma.
+
+**Rodada 5, `processarReabrir`:** percorre a lista filtrada e só clica em Reiniciar, até o limite.
+Nada é enviado — então não tem modelo para escolher, janela de 24h para respeitar, anti-duplicata
+para consultar nem dano possível a contato nenhum. Confere `hasComposer` depois do clique em vez
+de acreditar nele: sem campo de mensagem o atendimento não reabriu, e contar como reaberto
+deixaria a pessoa fora do trabalho em "Meus" sem ninguém saber.
+
+**Duas mudanças no laço que a rodada nova exigiu:**
+
+- `CONTA_NO_LIMITE` (`enviado` + `reiniciado`). O limite contava só envios, então uma rodada que
+  não envia nada rodaria até a fila acabar — o número que ele digita nunca seria atingido.
+- A pausa passou a depender do que aconteceu: **longa só quando saiu mensagem**. A longa protege
+  o número no WhatsApp; reabrir não manda nada e precisa só da curta, que protege o servidor.
+  Na prática é a diferença entre reabrir 50 em 1 minuto e em 7.
+
+`reiniciado` entra em `SAI_DA_FILA` (o item deixa os concluídos, então a posição não avança).
+
+**A etiqueta:** `auto.etiquetaSemRetorno` (padrão `1 SEM RETORNO`), e ela sai do contato quando o
+atendimento é concluído **pelo painel** — `tirarSemRetorno`, passado só pelos fluxos que concluem,
+nunca pelo Salvar solto: um Salvar no meio do trabalho tirando a etiqueta faria o contato sumir da
+lista filtrada ainda faltando ser atendido. Como em "Meus" quem conclui é ele, pela plataforma, a
+aba Dados ganhou o botão **Tirar "1 SEM RETORNO"** — o Concluir é da plataforma, não temos gancho
+nele. O botão relê o contato depois de gravar (a API responde 200 ignorando o valor) e separa as
+duas falhas possíveis: contato sem a etiqueta × etiqueta que não existe com aquele nome.
+
+**O cartão antigo continua lá.** "Sem retorno: reabrir e perguntar" não foi apagado — o fluxo novo
+é o de cima, e o antigo fica para quando ele quiser tudo num contato só.
+
+**Pendente, e depende dele:** se o envio em "Meus" também deve virar rodada, ou fica à mão.
+Ele escreveu "irei mandar a mensagem", que pode ser as duas coisas. Perguntado.
+
+**Aviso que vale repetir:** reabrir **não** reabre a janela de 24h do WhatsApp. Em "Meus", texto
+livre continua não chegando em quem está sem retorno há dias — só modelo aprovado chega.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`processarReabrir`, `runLoteReabrir`,
+`renderCartaoReabrir`, `CONTA_NO_LIMITE`, pausa por tipo de resultado, `tirarSemRetorno`,
+`etiquetaSemRetornoDoContato`, `tirarSemRetornoDoContato`),
+[src/lib/store.js](src/lib/store.js) (`auto.etiquetaSemRetorno`). Manifesto 0.6.2 → **0.7.0**.
+Seis suítes passando.
+
+---
+
 ## 2026-08-12 — A caixa da cidade sobrevivia à troca de contato (gravaria na pessoa errada)
 
 **Relato (Thiago):** *"saí e voltei e deu duas sugestões de cidade sem chat novo"* — e o print
