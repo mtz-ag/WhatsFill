@@ -782,6 +782,95 @@ export async function openQueueSession(index, opts) {
  * Contagem E texto do fim juntos: a contagem sozinha muda ao rolar para trás (carrega mensagens
  * antigas), e o texto do fim sozinho não distingue duas mensagens iguais seguidas.
  */
+/**
+ * O canal (o número do WhatsApp) caiu?
+ *
+ * A plataforma põe uma tarja no topo: *"O WhatsApp (51) 9xxxx-xxxx foi **desconectado da
+ * Z-API**. Solicite ao administrador da conta que realize a reconexão."* Com o canal fora,
+ * mensagem nenhuma sai daquele número — e a plataforma **aceita** o envio: o balão aparece na
+ * conversa e fica lá, sem entregar. A rodada contaria como enviado, marcaria no anti-duplicata
+ * e concluiria o atendimento. O contato sumiria do trabalho sem nunca ter recebido nada.
+ *
+ * A conta tem mais de uma instância, e cai uma por vez — daí devolver os NÚMEROS, não um
+ * "está fora" geral: quem decide se este atendimento é dos afetados é quem compara.
+ *
+ * Busca por TEXTO, não por classe: a tarja é do tema da plataforma e o texto é o que ela
+ * promete ao usuário. Achado o pedaço "desconectad…", sobe até o bloco que contém o número —
+ * o negrito parte a frase em vários nós, então o nó do texto sozinho não traz o telefone.
+ */
+export function canalDesconectado() {
+  for (const no of textosDaPagina(/desconectad[oa]/i)) {
+    let el = no.parentElement;
+    // Até três níveis: o suficiente para juntar a frase quebrada pelo negrito, e pouco o
+    // bastante para não subir até um contêiner que engloba a conversa inteira.
+    for (let i = 0; i < 3 && el; i++, el = el.parentElement) {
+      const texto = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!TELEFONE.test(texto)) continue;
+
+      /**
+       * A palavra "desconectado" sozinha NÃO basta, e este é o caso que o fixture pegou: um
+       * contato escrevendo *"fiquei desconectado uns dias, desculpa a demora"* casava, o bloco
+       * três níveis acima trazia o telefone do cabeçalho, e a rodada recusava enviar para uma
+       * pessoa que não tinha nada a ver com isso. Falso positivo aqui é trabalho travado.
+       *
+       * A tarja promete duas coisas que a conversa não tem: o provedor e o que fazer a
+       * respeito. Uma das duas é o que a distingue.
+       */
+      if (!/z-?api|reconex|solicite ao administrador/i.test(texto)) break;
+
+      const numeros = [...new Set((texto.match(new RegExp(TELEFONE, 'g')) || []).map(soDigitos))];
+      return { desconectado: true, numeros, texto: texto.slice(0, 200) };
+    }
+  }
+  return { desconectado: false, numeros: [], texto: '' };
+}
+
+/**
+ * O número da instância que atende a conversa aberta — o "(51) 9xxxx-xxxx" ao lado de
+ * "Instância f68546" no cabeçalho.
+ *
+ * É ele que diz se a tarja de canal caído fala DESTE atendimento ou de outro. Sem isso, tarja
+ * na tela viraria "não envie para ninguém", e a conta tem instância boa junto com a ruim.
+ */
+export function numeroDaConversa() {
+  for (const no of textosDaPagina(/inst[âa]ncia/i)) {
+    let el = no.parentElement;
+    for (let i = 0; i < 4 && el; i++, el = el.parentElement) {
+      const texto = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      const achado = texto.match(TELEFONE);
+      if (achado) return soDigitos(achado[0]);
+    }
+  }
+  return '';
+}
+
+/** (51) 99511-0122, 51 99511-0122, 5199511-0122 — os formatos que a tela usa. */
+const TELEFONE = /\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}/;
+
+/** Só os dígitos, para comparar número escrito de jeitos diferentes. */
+function soDigitos(texto) {
+  return String(texto || '').replace(/\D/g, '');
+}
+
+/**
+ * Os nós de texto da página que casam com o padrão, um a um.
+ *
+ * `TreeWalker` em vez de `querySelectorAll('div,span')`: percorre só nós de texto e não depende
+ * de nome de classe nenhum. Trechos muito longos são pulados — texto de conversa inteira nunca
+ * é a tarja que estamos procurando.
+ *
+ * Devolve TODOS os acertos, e não o primeiro: a palavra procurada pode aparecer antes numa
+ * mensagem do contato, e parar ali faria a tarja de verdade passar despercebida.
+ */
+function* textosDaPagina(padrao, maxLen = 300) {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let no = walker.nextNode(); no; no = walker.nextNode()) {
+    const texto = no.nodeValue;
+    if (!texto || texto.length > maxLen) continue;
+    if (padrao.test(texto)) yield no;
+  }
+}
+
 export function getConversationSignal() {
   const conv = document.querySelector('sessions-conversation');
   if (!conv) return '';

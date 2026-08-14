@@ -34,6 +34,7 @@ const methods = {
   clickReiniciar: () => page.clickReiniciar(),
   clickConcluir: () => page.clickConcluir(),
   diagnosticarAbas: () => page.diagnosticarAbas(),
+  canalForaDoAr: () => page.canalForaDoAr(),
   openNextSession: (opts) => page.openNextSession(opts),
   queuePreview: (max) => page.queuePreview(max),
   openQueueSession: (index, opts) => page.openQueueSession(index, opts),

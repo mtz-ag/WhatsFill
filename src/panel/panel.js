@@ -2258,6 +2258,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         };
       }
 
+      // Esta rodada não pergunta nada, então a trava aqui é pular e seguir: a fila pode
+      // misturar instâncias, e parar tudo tiraria do trabalho quem está num número que funciona.
+      const canalFora = await canalDesteContatoFora();
+      if (canalFora) {
+        return { nome, resultado: 'pulado', motivo: 'o número deste atendimento está fora do ar — não enviei nada' };
+      }
+
       setStatus(`Pedindo os dados para ${nome}…`);
       await page.sendText(text);
       await templatesLib.markSent(contato.id, template.id, { nome });
@@ -2488,6 +2495,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const etiquetas = state.tagSuggestions
         .filter((s) => s.tag && (s.marcada || s.jaTem))
         .map((s) => s.tag.label);
+
+      // Canal fora do ar: some TODA saída que envia, e sobra pular. Ver `canalDesteContatoFora`.
+      const canalFora = await canalDesteContatoFora();
+      if (canalFora) {
+        await saveClassification({ withCompletionDate: true, quiet: true });
+        const escolhaFora = await perguntarNaRodada({
+          titulo: nome,
+          linhas: [linhaCanalFora(canalFora), canalFora.texto].filter(Boolean),
+          pergunta: 'Nada pode ser enviado por este número agora. O que fazer?',
+          opcoes: [
+            { tecla: '1', valor: 'pular', rotulo: 'Pular este contato', primaria: true },
+            { tecla: '2', valor: 'parar', rotulo: 'Parar a rodada' },
+          ],
+        });
+        return {
+          nome,
+          resultado: 'pulado',
+          parar: escolhaFora !== 'pular',
+          motivo: 'o número deste atendimento está fora do ar — classificação gravada, nada enviado',
+        };
+      }
+
       const opcoes = [];
       if (podeEnviar) {
         opcoes.push({
@@ -3183,6 +3212,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         limiteHoras: clampInt(state.auto.cfg.horasSemRepetir, 1, 720),
       });
 
+      // Canal fora do ar: some tudo que envia. Ver `canalDesteContatoFora`. Aqui a etiqueta
+      // NÃO sai e o atendimento NÃO fecha — o contato tem que continuar na fila para quando o
+      // número voltar, que é a razão inteira de esta rodada existir.
+      const canalFora = await canalDesteContatoFora();
+      if (canalFora) {
+        const escolhaFora = await perguntarNaRodada({
+          titulo: nome,
+          linhas: [linhaCanalFora(canalFora), canalFora.texto].filter(Boolean),
+          pergunta: 'Nada pode ser enviado por este número agora. O que fazer?',
+          opcoes: [
+            { tecla: '1', valor: 'pular', rotulo: 'Pular (mantém a etiqueta)', primaria: true },
+            { tecla: '2', valor: 'parar', rotulo: 'Parar a rodada' },
+          ],
+        });
+        return {
+          nome,
+          resultado: 'pulado',
+          parar: escolhaFora !== 'pular',
+          motivo: 'o número deste atendimento está fora do ar — etiqueta mantida, nada enviado',
+        };
+      }
+
       const opcoes = [];
       if (modelo) {
         opcoes.push({
@@ -3380,6 +3431,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return { nome, resultado: 'erro', continuaNaFila: true, motivo: 'o campo de mensagem não apareceu depois do Reiniciar' };
       }
 
+      // Reaberto e com o canal fora: pular deixa o atendimento aberto em "Meus", que é melhor
+      // que concluí-lo sem ter enviado nada — ele fica visível esperando o número voltar.
+      const canalFora = await canalDesteContatoFora();
+      if (canalFora) {
+        return { nome, resultado: 'pulado', motivo: 'o número deste atendimento está fora do ar — não enviei nada' };
+      }
+
       setStatus(`Enviando ${rotuloEnvio} para ${nome}…`);
       const envio = await page.sendMessageTemplate(modelo, { send: true });
       if (!envio?.sent) {
@@ -3523,6 +3581,41 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             'este botão é para quando você conclui pela plataforma.')
       );
     }
+  }
+
+  /**
+   * O canal deste atendimento caiu? Se caiu, a rodada só oferece Pular.
+   *
+   * Pedido dele com a tarja na tela: *"o número está fora do ar para alguns contatos, até voltar
+   * esse número só tem a opção de pular"*.
+   *
+   * O que torna isso obrigatório, e não um capricho: com o canal fora a plataforma **aceita** o
+   * envio. O balão aparece na conversa e fica lá sem entregar. A rodada contaria como enviado,
+   * marcaria no anti-duplicata (que depois recusaria mandar de novo) e concluiria o atendimento
+   * — o contato sairia do trabalho sem nunca ter recebido nada, e ninguém saberia. É a pior
+   * falha possível aqui: silenciosa e com a tela dizendo que deu certo.
+   *
+   * Falha para o lado seguro: se der erro ao ler a tela, devolve "não está fora". Uma tarja não
+   * lida custa um envio que talvez não saia; um falso positivo trava a rodada inteira à toa.
+   */
+  async function canalDesteContatoFora() {
+    try {
+      const aviso = await page.canalForaDoAr();
+      return aviso?.fora ? aviso : null;
+    } catch (err) {
+      console.warn('[WhatsFill] não consegui ler o aviso de canal desconectado:', err.message);
+      return null;
+    }
+  }
+
+  /** A linha que explica a trava, na caixa da rodada. */
+  function linhaCanalFora(aviso) {
+    if (!aviso) return '';
+    const numero = aviso.numero ? ` (${aviso.numero})` : '';
+    return (
+      `⚠ O NÚMERO DESTE ATENDIMENTO${numero} ESTÁ FORA DO AR. A plataforma aceita o envio e a ` +
+      'mensagem não chega. Só dá para pular até o número voltar.'
+    );
   }
 
   /** O botão acima: tira a etiqueta de fluxo do contato aberto, e diz o que aconteceu. */

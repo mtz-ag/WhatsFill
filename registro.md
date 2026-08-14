@@ -5,6 +5,55 @@
 
 ---
 
+## 2026-08-13 — Número fora do ar: a rodada só pode pular
+
+**Relato (Thiago, print):** tarja no topo da plataforma — *"O WhatsApp (51) 99511-0122 foi
+**desconectado da Z-API**. Solicite ao administrador da conta que realize a reconexão."* — e o
+atendimento aberto era justamente dessa instância. Pedido: *"o número está fora do ar para alguns
+contatos, até voltar esse número só tem a opção de pular"*.
+
+**Por que isso é obrigatório e não capricho:** com o canal fora, a plataforma **aceita** o envio.
+O balão aparece na conversa e fica lá sem entregar. A rodada contaria como enviado, marcaria no
+anti-duplicata (que depois recusaria mandar de novo) e concluiria o atendimento — o contato sairia
+do trabalho sem nunca ter recebido nada. É a pior falha possível aqui: silenciosa, e com a tela
+dizendo que deu certo.
+
+**A leitura é por TEXTO, não por classe** (`dom.canalDesconectado`): a tarja é do tema da
+plataforma, e o texto é o que ela promete ao usuário. O negrito parte a frase em vários nós, então
+o nó que casa com "desconectado" não traz o telefone — sobe até três níveis até achar o número.
+
+**A conta tem VÁRIAS instâncias e cai uma por vez.** Por isso a trava não é "tem tarja, não envia":
+compara o número da tarja com o do cabeçalho da conversa (`dom.numeroDaConversa`, o telefone ao
+lado de "Instância f68546"). Trabalho em número bom continua andando.
+
+**Falso positivo que o fixture pegou antes de virar defeito:** um contato escrevendo *"fiquei
+desconectado uns dias, desculpa a demora"* casava com o padrão, e o bloco três níveis acima trazia
+o telefone do cabeçalho — a rodada recusaria enviar para quem não tinha nada a ver com isso. A
+tarja promete duas coisas que a conversa não tem (o provedor e o que fazer a respeito); agora é
+exigida uma delas: `z-api|reconex|solicite ao administrador`. Quatro casos novos em
+`tools/checar-dom.mjs`, 22 no total, todos passando.
+
+**Onde a trava age:**
+
+- **rodadas que perguntam** (3 e 6): some TODA saída que envia; sobram "Pular" e "Parar a rodada",
+  com o motivo em destaque. Na rodada 6 a etiqueta **não** sai e o atendimento **não** fecha — o
+  contato tem que continuar na fila para quando o número voltar;
+- **rodadas que não perguntam** (Novos e a antiga de sem retorno): pula o contato e segue, porque
+  a fila pode misturar instâncias e parar tudo tiraria do trabalho quem está num número bom;
+- **reabrir em lote (rodada 5): não é afetada.** Reiniciar não manda mensagem, então ela funciona
+  normalmente com o canal caído — dá para adiantar todo o reabrir enquanto o número não volta.
+
+Falha para o lado seguro: erro ao ler a tela devolve "não está fora". Tarja não lida custa um
+envio que talvez não saia; falso positivo trava a rodada inteira à toa.
+
+**Arquivos:** [src/lib/dom.js](src/lib/dom.js) (`canalDesconectado`, `numeroDaConversa`,
+`textosDaPagina`), [src/lib/page.js](src/lib/page.js) (`canalForaDoAr`, fora da `pageStateLocal`
+de propósito — aquilo é lido a cada 400 ms), [src/lib/rpc-host.js](src/lib/rpc-host.js),
+[src/panel/panel.js](src/panel/panel.js) (`canalDesteContatoFora`, `linhaCanalFora`, as quatro
+rodadas), [tools/checar-dom.mjs](tools/checar-dom.mjs). Manifesto 0.8.0 → **0.8.1**.
+
+---
+
 ## 2026-08-12 — Rodada 6: os reabertos, trabalhados em "Meus"
 
 **Escolha dele**, à pergunta de quem manda a mensagem depois do reabrir em lote: *"uma rodada em

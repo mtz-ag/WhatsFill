@@ -133,6 +133,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   ele e `reexaminarMensagens` podem estar no ar juntos. Pergunta aberta dentro de um deles ganha
   uma gêmea quando chega mensagem nova; responder uma deixa a outra na tela. Toda pergunta que
   nasce de gravação precisa de guarda de instância única (ver `perguntaDeCidade`).
+- **Canal (número) fora do ar: a plataforma ACEITA o envio e a mensagem não chega.** A tarja do
+  topo diz *"O WhatsApp (51) 9…-… foi desconectado da Z-API"*. O balão aparece na conversa e
+  fica lá sem entregar — a rodada contaria como enviado, marcaria no anti-duplicata e
+  concluiria. Falha silenciosa com a tela dizendo que deu certo. A conta tem VÁRIAS instâncias e
+  cai uma por vez, então a trava compara o número da tarja com o do cabeçalho da conversa
+  (`dom.canalDesconectado` + `dom.numeroDaConversa`). "Desconectado" sozinho não basta: contato
+  escreve isso na conversa — exija também Z-API/reconexão.
 - **Pergunta não-bloqueante sobrevive à troca de contato — e vira gravação na pessoa errada.**
   Medido ao vivo: painel dizendo "Abra um atendimento" com uma caixa perguntando por "Estrela
   Velha" sobre a conversa de outro. A caixa é filha do `root`, e `renderAll` só troca `header` e
