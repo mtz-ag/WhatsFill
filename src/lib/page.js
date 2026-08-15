@@ -256,6 +256,28 @@ export const learnStart = IS_IN_PAGE
 
 export const learnStatus = IS_IN_PAGE ? local(() => learnLocal) : () => call('learnStatus');
 
+/**
+ * O canal deste atendimento está fora do ar?
+ *
+ * Junta as duas leituras da tela — a tarja de desconexão e o número da instância da conversa —
+ * e responde a pergunta que a rodada precisa fazer: **manda ou não manda para ESTE contato?**
+ *
+ * Fora da `pageStateLocal` de propósito: aquilo é lido a cada 400 ms, e isto varre os nós de
+ * texto da página. Uma vez por contato é barato; quatro vezes por segundo, não.
+ */
+export const canalForaDoAr = IS_IN_PAGE
+  ? local(() => {
+      const aviso = dom.canalDesconectado();
+      if (!aviso.desconectado) return { fora: false, texto: '', numero: '' };
+
+      const numero = dom.numeroDaConversa();
+      // Sem saber de quem é a conversa não dá para dizer que ela está fora — mas também não dá
+      // para dizer que está boa. Devolve o aviso com `numero` vazio e quem chama decide.
+      const fora = !numero || aviso.numeros.length === 0 || aviso.numeros.includes(numero);
+      return { fora, texto: aviso.texto, numero, numeros: aviso.numeros };
+    })
+  : () => call('canalForaDoAr');
+
 export function pageStateLocal() {
   return {
     sessionId: dom.getSessionId(),

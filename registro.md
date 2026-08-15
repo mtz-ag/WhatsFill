@@ -5,6 +5,55 @@
 
 ---
 
+## 2026-08-13 — Número fora do ar: a rodada só pode pular
+
+**Relato (Thiago, print):** tarja no topo da plataforma — *"O WhatsApp (51) 99511-0122 foi
+**desconectado da Z-API**. Solicite ao administrador da conta que realize a reconexão."* — e o
+atendimento aberto era justamente dessa instância. Pedido: *"o número está fora do ar para alguns
+contatos, até voltar esse número só tem a opção de pular"*.
+
+**Por que isso é obrigatório e não capricho:** com o canal fora, a plataforma **aceita** o envio.
+O balão aparece na conversa e fica lá sem entregar. A rodada contaria como enviado, marcaria no
+anti-duplicata (que depois recusaria mandar de novo) e concluiria o atendimento — o contato sairia
+do trabalho sem nunca ter recebido nada. É a pior falha possível aqui: silenciosa, e com a tela
+dizendo que deu certo.
+
+**A leitura é por TEXTO, não por classe** (`dom.canalDesconectado`): a tarja é do tema da
+plataforma, e o texto é o que ela promete ao usuário. O negrito parte a frase em vários nós, então
+o nó que casa com "desconectado" não traz o telefone — sobe até três níveis até achar o número.
+
+**A conta tem VÁRIAS instâncias e cai uma por vez.** Por isso a trava não é "tem tarja, não envia":
+compara o número da tarja com o do cabeçalho da conversa (`dom.numeroDaConversa`, o telefone ao
+lado de "Instância f68546"). Trabalho em número bom continua andando.
+
+**Falso positivo que o fixture pegou antes de virar defeito:** um contato escrevendo *"fiquei
+desconectado uns dias, desculpa a demora"* casava com o padrão, e o bloco três níveis acima trazia
+o telefone do cabeçalho — a rodada recusaria enviar para quem não tinha nada a ver com isso. A
+tarja promete duas coisas que a conversa não tem (o provedor e o que fazer a respeito); agora é
+exigida uma delas: `z-api|reconex|solicite ao administrador`. Quatro casos novos em
+`tools/checar-dom.mjs`, 22 no total, todos passando.
+
+**Onde a trava age:**
+
+- **rodadas que perguntam** (3 e 6): some TODA saída que envia; sobram "Pular" e "Parar a rodada",
+  com o motivo em destaque. Na rodada 6 a etiqueta **não** sai e o atendimento **não** fecha — o
+  contato tem que continuar na fila para quando o número voltar;
+- **rodadas que não perguntam** (Novos e a antiga de sem retorno): pula o contato e segue, porque
+  a fila pode misturar instâncias e parar tudo tiraria do trabalho quem está num número bom;
+- **reabrir em lote (rodada 5): não é afetada.** Reiniciar não manda mensagem, então ela funciona
+  normalmente com o canal caído — dá para adiantar todo o reabrir enquanto o número não volta.
+
+Falha para o lado seguro: erro ao ler a tela devolve "não está fora". Tarja não lida custa um
+envio que talvez não saia; falso positivo trava a rodada inteira à toa.
+
+**Arquivos:** [src/lib/dom.js](src/lib/dom.js) (`canalDesconectado`, `numeroDaConversa`,
+`textosDaPagina`), [src/lib/page.js](src/lib/page.js) (`canalForaDoAr`, fora da `pageStateLocal`
+de propósito — aquilo é lido a cada 400 ms), [src/lib/rpc-host.js](src/lib/rpc-host.js),
+[src/panel/panel.js](src/panel/panel.js) (`canalDesteContatoFora`, `linhaCanalFora`, as quatro
+rodadas), [tools/checar-dom.mjs](tools/checar-dom.mjs). Manifesto 0.8.0 → **0.8.1**.
+
+---
+
 ## 2026-08-12 — Número caindo: diagnóstico, e variação de texto para não parecer disparo repetido
 
 **Relato:** o número derrubou depois de reabrir poucos (~10) atendimentos "sem retorno" e
@@ -15,11 +64,11 @@ responder à mão — suspeita de ter sido pego por spam.
 ~10 mensagens, a teoria de "penalização por volume" (que pesa em milhares numa janela) não bate.
 Suspeito mais provável: o PADRÃO da automação (reabrir concluído → mandar → concluir de novo,
 em sequência, com o mesmo texto repetido) parece disparo em massa aos olhos do WhatsApp,
-independente da quantidade. Também confirmado nesta conversa: **a trava de canal desconectado
-que o CLAUDE.md descreve como resolvida não existe no código** (`grep` por `canalDesconectado`/
-`numeroDaConversa` não acha nada em `src/`) — se o número cai no meio de uma rodada, ela não
-percebe e segue agindo contra canal morto. Ainda não implementada — Thiago pediu para focar no
-diagnóstico primeiro.
+independente da quantidade. Também confirmado nesta conversa, no momento do diagnóstico: **a
+trava de canal desconectado que o CLAUDE.md descrevia como resolvida ainda não existia no
+código** (`grep` por `canalDesconectado`/`numeroDaConversa` não achava nada em `src/`) — foi
+implementada em paralelo, nove commits à frente deste, e chegou aqui pelo merge: ver a entrada
+de 2026-08-13 logo acima.
 
 **Ideia descartada:** adicionar os ~7.500 contatos sem retorno a grupos, em vez de mandar
 mensagem direta. Não reduz o risco (adicionar sem consentimento é padrão de abuso monitorado
@@ -56,12 +105,338 @@ nos defaults), [src/lib/templates.js](src/lib/templates.js) (`varianteAtual`, `a
 `migrarVariantesDeTexto`), [src/panel/panel.js](src/panel/panel.js) (`sendTemplate`,
 `renderTemplateCard`, `processarNovo`, aviso no editor da aba Respostas). Suíte nova:
 [tests/templates.test.mjs](tests/templates.test.mjs) — sete suítes agora, `CLAUDE.md` atualizado.
+Manifesto 0.8.1 → **0.8.2** (não tinha subido no commit original — comportamento visível novo).
 
-**Pendente, ainda sem decisão do Thiago:** implementar a trava de canal desconectado; reduzir
-limite/pausa específicos da rodada "Sem retorno"; variação do **modelo aprovado (HSM)** da
-rodada 4 — hoje é um só (`auto.cfg.templateId`, seletor único); rotação aí só é possível se
-houver mais de um modelo aprovado registrado na plataforma com conteúdo parecido, o que não foi
-confirmado.
+**Pendente, ainda sem decisão do Thiago:** reduzir limite/pausa específicos da rodada "Sem
+retorno"; variação do **modelo aprovado (HSM)** da rodada 4 — hoje é um só
+(`auto.cfg.templateId`, seletor único); rotação aí só é possível se houver mais de um modelo
+aprovado registrado na plataforma com conteúdo parecido, o que não foi confirmado. (A trava de
+canal desconectado, também pendente neste ponto do diagnóstico, foi implementada em paralelo —
+ver a entrada de 2026-08-13 acima.)
+
+---
+
+## 2026-08-12 — Rodada 6: os reabertos, trabalhados em "Meus"
+
+**Escolha dele**, à pergunta de quem manda a mensagem depois do reabrir em lote: *"uma rodada em
+Meus"*, com pergunta a cada contato. É a segunda metade do fluxo que a rodada 5 abriu.
+
+**`processarSemRetornoEmMeus`.** O atendimento já está aberto (foi a rodada 5 que reabriu), então
+não há Reiniciar: abre, pergunta, manda, tira a etiqueta e conclui. Cinco saídas — modelo
+aprovado, a resposta "Sem retorno: ainda tem interesse?" (**só com a janela de 24h aberta**),
+pular, concluir sem enviar, responder à mão.
+
+**A trava que decide quem entra:** "Meus" não é uma fila só — tem quem veio dos Novos, quem
+respondeu, e quem foi reaberto aqui. A rodada confere se o contato tem a etiqueta configurada e
+pula com o motivo na tela quando não tem. O contato já está carregado, então a conferência é de
+graça, e sem ela a pergunta de sem retorno iria para quem está no meio de outra conversa.
+
+**Ordem de propósito: grava e tira a etiqueta ANTES de enviar.** Se o envio falhar, o contato
+continua na lista e volta amanhã. O inverso — etiqueta fora, mensagem não enviada — o tiraria do
+trabalho em silêncio, que é o modo de falhar que este projeto já teve várias vezes.
+
+**Pular mantém a etiqueta**, e isso é dito no rótulo da tecla ("Pular (mantém a etiqueta)" ×
+"Concluir sem enviar (tira a etiqueta)"): a diferença entre as duas saídas é justamente essa, e
+esconder isso faria contato sumir da lista sem ter sido atendido.
+
+**Anti-duplicata vira LINHA da pergunta, não pulo.** `wasSent` e `decidirReenvio` continuam
+consultados, mas o resultado aparece com "⚠" e tira o destaque da opção de enviar, em vez de
+pular sozinho. Pulo silencioso já foi defeito duas vezes aqui.
+
+**Sem `confirm()` de abertura**, diferente das outras rodadas: esta pergunta contato a contato, e
+uma confirmação em massa no começo seria só mais uma porta para atravessar sem decidir nada.
+
+Os dois passos ficam **no mesmo cartão** — são um movimento só, feito em dois momentos; separá-los
+em cartões distantes é o que faz esquecer o segundo.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`processarSemRetornoEmMeus`,
+`fecharSemRetorno`, `runLoteEmMeus`, segunda metade do `renderCartaoReabrir`,
+`NO_REPLY_TEMPLATE_ID`). Manifesto 0.7.0 → **0.8.0**. Seis suítes passando.
+
+---
+
+## 2026-08-12 — Rodada dos concluídos desmontada em duas: reabrir em lote, trabalhar depois
+
+**Pedido dele:** *"em vez de reiniciar ir para os meus e mandar mensagem, irá somente reiniciar as
+conversas, após reiniciar determinado número de conversas irei trabalhar diretamente na aba meus
+onde irei mandar a mensagem para ver interesse e retirar a etiqueta de sem retorno para quando
+concluir ela não voltar pro topo dos concluídos"*.
+
+**Por que o desenho novo é melhor, e não só diferente:** o fluxo antigo fazia tudo num contato só
+— reabrir, mandar, concluir — e o Concluir devolvia a pessoa ao **topo** dos concluídos. Foi daí
+que saíram, uma a uma, `contatosTratados`, `decidirReenvio`, `continuaNaFila` e o avanço de
+posição: trava sobre trava para não tratar a mesma pessoa duas vezes numa lista que se reordena
+embaixo da rodada. Reabrir **tira o atendimento da lista de concluídos de vez**. Some o problema
+inteiro, não o sintoma.
+
+**Rodada 5, `processarReabrir`:** percorre a lista filtrada e só clica em Reiniciar, até o limite.
+Nada é enviado — então não tem modelo para escolher, janela de 24h para respeitar, anti-duplicata
+para consultar nem dano possível a contato nenhum. Confere `hasComposer` depois do clique em vez
+de acreditar nele: sem campo de mensagem o atendimento não reabriu, e contar como reaberto
+deixaria a pessoa fora do trabalho em "Meus" sem ninguém saber.
+
+**Duas mudanças no laço que a rodada nova exigiu:**
+
+- `CONTA_NO_LIMITE` (`enviado` + `reiniciado`). O limite contava só envios, então uma rodada que
+  não envia nada rodaria até a fila acabar — o número que ele digita nunca seria atingido.
+- A pausa passou a depender do que aconteceu: **longa só quando saiu mensagem**. A longa protege
+  o número no WhatsApp; reabrir não manda nada e precisa só da curta, que protege o servidor.
+  Na prática é a diferença entre reabrir 50 em 1 minuto e em 7.
+
+`reiniciado` entra em `SAI_DA_FILA` (o item deixa os concluídos, então a posição não avança).
+
+**A etiqueta:** `auto.etiquetaSemRetorno` (padrão `1 SEM RETORNO`), e ela sai do contato quando o
+atendimento é concluído **pelo painel** — `tirarSemRetorno`, passado só pelos fluxos que concluem,
+nunca pelo Salvar solto: um Salvar no meio do trabalho tirando a etiqueta faria o contato sumir da
+lista filtrada ainda faltando ser atendido. Como em "Meus" quem conclui é ele, pela plataforma, a
+aba Dados ganhou o botão **Tirar "1 SEM RETORNO"** — o Concluir é da plataforma, não temos gancho
+nele. O botão relê o contato depois de gravar (a API responde 200 ignorando o valor) e separa as
+duas falhas possíveis: contato sem a etiqueta × etiqueta que não existe com aquele nome.
+
+**O cartão antigo continua lá.** "Sem retorno: reabrir e perguntar" não foi apagado — o fluxo novo
+é o de cima, e o antigo fica para quando ele quiser tudo num contato só.
+
+**Perguntado e respondido:** o envio em "Meus" **vira rodada** — ver a entrada acima.
+
+**Aviso que vale repetir:** reabrir **não** reabre a janela de 24h do WhatsApp. Em "Meus", texto
+livre continua não chegando em quem está sem retorno há dias — só modelo aprovado chega.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`processarReabrir`, `runLoteReabrir`,
+`renderCartaoReabrir`, `CONTA_NO_LIMITE`, pausa por tipo de resultado, `tirarSemRetorno`,
+`etiquetaSemRetornoDoContato`, `tirarSemRetornoDoContato`),
+[src/lib/store.js](src/lib/store.js) (`auto.etiquetaSemRetorno`). Manifesto 0.6.2 → **0.7.0**.
+Seis suítes passando.
+
+---
+
+## 2026-08-12 — A caixa da cidade sobrevivia à troca de contato (gravaria na pessoa errada)
+
+**Relato (Thiago):** *"saí e voltei e deu duas sugestões de cidade sem chat novo"* — e o print
+mostrou muito mais que duplicata.
+
+**O que o print mostra:** painel com **"Abra um atendimento na plataforma para começar"** (nenhum
+contato carregado), conversa aberta a do **Odir**, e uma caixa por cima perguntando por **"Estrela
+Velha"** — cidade que não aparece em lugar nenhum daquela conversa. A caixa era restolho de um
+contato anterior.
+
+**Causa raiz:** `perguntarNaRodada` pendura a caixa no `root` do painel, e `renderAll` só troca
+os filhos de `header` e `body`. Trocar de atendimento nunca a tirava da tela. E como a caixa é
+**não-bloqueante de propósito** (para ele poder ler a conversa e trocar de atendimento enquanto
+decide), o intervalo entre a pergunta e a resposta é justamente quando o contato muda.
+
+**Por que isso é grave, e não cosmético:** quem responde a caixa mexe em `state.draft` e a
+gravação vai para `state.contact.id` — os dois já apontando para a pessoa NOVA. Um "1 Aceitar"
+naquele print gravaria "Estrela Velha" em quem estivesse aberto. Escrita em produção, base de
+eleitor real. Ninguém veria: o painel diria "Aplicado sozinho: Cidade" e estaria falando a
+verdade sobre o contato errado.
+
+**Fix, duas travas independentes:**
+
+1. `load()` chama `cancelarPerguntaDeCidade()` logo na primeira linha. A promessa da pergunta
+   passou a expor `.cancelar(valor)`, e a resposta `CANCELADA` **não é resposta**: não aceita,
+   não recusa, não vira memória de recusa — só desfaz.
+2. `saveClassification` guarda o id do contato **antes** da pergunta e desiste da gravação
+   inteira se ele mudou, dizendo "você trocou de atendimento no meio — não gravei nada". Essa
+   segunda trava pega qualquer variante da corrida, inclusive as que eu não enxergo daqui.
+
+Na dúvida, não grava: a próxima abertura do contato certo refaz tudo do zero, sem custo nenhum.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`perguntarNaRodada` com `.cancelar`,
+`cancelarPerguntaDeCidade`, `CANCELADA`, guarda de contato em `saveClassification`),
+[CLAUDE.md](CLAUDE.md). Manifesto 0.6.1 → **0.6.2**. Seis suítes passando.
+
+---
+
+## 2026-08-12 — Duas caixas de cidade na tela, e a recusa que não durava
+
+**Relato (Thiago, print com a v0.6.0 rodando):** *"duplicado, e faça disparar novamente só se
+tiver chat novo com provável cidade, estou botando sem cidade e pede novamente"*. Duas caixas
+"Cidade a gravar" abertas ao mesmo tempo, as duas perguntando a mesma coisa ("Quaraí").
+
+**Causa raiz da duplicata:** `load()` **não roda dentro de `withBusy`**, então `state.busy`
+continua falso enquanto ele carrega. Chegou mensagem nova (a figura das 18:56) → `applyPageState`
+viu `conversaMudou` → `reexaminarMensagens` → segunda `aplicarAutomatico`, com a primeira ainda
+parada esperando a resposta da caixa. Cada uma abriu a sua. Responder uma deixava a outra na tela
+perguntando o mesmo — é daí que veio o "pede novamente".
+
+**Fix:** `perguntaDeCidade` guarda a promessa da pergunta em curso. Quem chega depois **espera a
+mesma pergunta** em vez de abrir outra; quando ela responde, o rascunho já está decidido e a
+segunda gravação segue com a decisão tomada. Não é debounce nem lock com timeout: é a mesma
+resposta servindo os dois caminhos.
+
+**Causa raiz da recusa que não durava:** `state.cidadeRecusada` era um `Set` em memória, zerado
+no começo de todo `load()`. Fechar e reabrir o contato — ou a rodada passar por ele de novo — e a
+mesma pergunta voltava.
+
+**Fix:** a recusa vai para o `chrome.storage.local`, por contato e **por cidade**
+(`store.cidadeRecusada`, com `lembrarCidadeRecusada`/`cidadesRecusadas`). Guardar a cidade, e não
+um "não perguntar mais" no contato, é o que atende a outra metade do pedido — *"disparar
+novamente só se tiver chat novo com provável cidade"*: mensagem nova que traga cidade
+**diferente** volta a perguntar (é informação nova, e é justamente o caso de quem escreve a
+cidade depois); a mesma cidade já recusada, nunca mais. A leitura entra no `load()` **antes** do
+`extract`, senão `applyGuesses` repõe a cidade recusada no rascunho e a caixa aparece antes de
+alguém consultar a memória.
+
+**Poda:** `MAX_CONTATOS_RECUSA = 2000`, descartando o mais **parado** (`at` é renovado a cada
+recusa, então contato ativo não é esquecido por ser antigo). A base é de milhares de contatos e o
+storage não é infinito — estourar a gravação no meio de uma rodada custa mais que uma pergunta
+repetida daqui a meses. Fora do `exportJson`: é referência a contato real.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`perguntaDeCidade`, `recusarCidade`,
+semeadura no `load`, guarda em `corrigirNomeComCidade`), [src/lib/store.js](src/lib/store.js)
+(`cidadeRecusada`, `lembrarCidadeRecusada`, `cidadesRecusadas`, `MAX_CONTATOS_RECUSA`),
+[tests/parser.test.mjs](tests/parser.test.mjs) (10 asserções novas). Manifesto 0.6.0 → **0.6.1**.
+
+---
+
+## 2026-08-12 — "Tem extensão dentro da extensão": os fixes nunca chegaram ao Chrome
+
+**Relato (Thiago):** *"o erro está na pasta, tem extensão dentro da extensão"*.
+
+Isso fecha a tarde inteira. A cidade continuava sendo gravada sozinha depois de dois commits que
+justamente impediam isso — e a explicação não era o código: **a pasta que o Chrome carrega não é
+a que o GitHub Desktop atualiza.** Uma cópia da extensão dentro da pasta da extensão (zip
+descompactado, ou `dist/`, que é *gitignorado* e por isso nunca é tocado pelo Desktop) fica
+congelada para sempre. Toda correção ia para a pasta certa e o Chrome lia a errada.
+
+Conferido: o repositório está limpo — **um** `manifest.json`, na raiz, nenhuma cópia versionada.
+A cópia é local, na máquina dele.
+
+**O que ficou no código, para isso não custar outra tarde:** a versão do manifesto passa a
+aparecer no cabeçalho do painel, ao lado de "encaixado na aba" (`versaoCarregada`). Sem número na
+tela não há como distinguir *"o fix não funcionou"* de *"o fix não chegou"* — e as duas hipóteses
+levam a caminhos opostos. Eu passei a tarde na primeira; era a segunda. Manifesto subiu para
+**0.6.0**, para o número da tela ser diferente do que estava rodando.
+
+**Regra nova no CLAUDE.md:** mudou comportamento visível, sobe a `version` do manifesto no mesmo
+commit — é o que torna a conferência possível.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`versaoCarregada`, cabeçalho),
+[manifest.json](manifest.json) (0.5.0 → 0.6.0), [CLAUDE.md](CLAUDE.md).
+
+---
+
+## 2026-08-12 — O rótulo da opção prometia gravar a cidade sozinho
+
+**Pergunta dele:** *"se eu remover a cidade e as etiquetas vai automaticamente pegar sem minha
+permissão?"* — perguntada sobre o teste que eu propus (apagar o campo e reabrir).
+
+Com a versão que estava na máquina dele, **sim**: é o defeito. Com o código novo, não — mas o
+rótulo da opção na aba Config ainda dizia *"Gravar sozinho, ao abrir o contato, o que bate exato
+(cidade do IBGE, COREDE, etiquetas de conteúdo)"*. Prometia exatamente o que tinha deixado de
+fazer. Rótulo mentindo é pior que rótulo faltando: ele foi conferir na tela e a tela confirmou o
+medo dele. Corrigido, junto com o comentário de `aplicarAutomatico`, que dizia o mesmo.
+
+**O que entra sozinho, hoje, campo a campo** (para não ter que reler o código da próxima vez):
+
+- **Cidade** — nunca. `confirmarCidadeSePendente` pergunta antes, inclusive na gravação automática.
+- **COREDE** — só junto com a resposta da cidade. Recusada a cidade, `refreshTagSuggestions` roda
+  de novo e a sugestão de região some antes da gravação.
+- **Etiqueta de conteúdo** — sim, sozinha. É regex que ele escreveu na Config casada contra o
+  texto: ou a palavra está na mensagem ou não está, não tem palpite no meio.
+- **Data de conclusão** — sim, e só quando o campo está vazio.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (rótulo do `checkbox` de `autoApply`,
+cabeçalho de `aplicarAutomatico`).
+
+---
+
+## 2026-08-12 — "Pegou novamente sem eu confirmar": não pegou, e o print prova
+
+**Relato (Thiago, print do contato "Nice Gomes"):** *"pegou novamente sem eu confirmar não rodei
+nada só abri o contato"*. Cidade "Caçapava do Sul" no CRM e no cabeçalho do painel.
+
+**O que o print mostra, medido:** a linha de status da própria extensão diz **"Gravado: nada —
+PROBLEMA: Data de conclusão do contato: Falta aprender o contrato de DATE"**. `aplicarAutomatico`
+rodou (a data está vazia) e não gravou campo nenhum. Se a cidade fosse palpite novo, ela estaria
+em `changes` e o status seria "Aplicado sozinho: Cidade". Ela não estava — a entrada era
+`from: 'crm'`, ou seja **a cidade já estava no CRM antes de ele abrir**.
+
+Quando foi escrita: o atendimento foi assumido às 15:00 e o print é das 21:14 ("há 6 horas"). Foi
+gravada às 15:00, pelo código antigo, antes do popup existir. Reproduzido offline: `extract` sobre
+as duas mensagens reais devolve `{cidade: 'Caçapava do Sul', confidence: 'exata', informada:
+false}` — exatamente o palpite que a versão antiga gravava sozinha.
+
+**Conclusão:** o fix da entrada anterior não estava no navegador dele (Desktop não tinha puxado /
+extensão não recarregada). Nada a corrigir no popup. Para conferir de verdade: apagar a Cidade de
+um contato de teste e abrir — a caixa tem que aparecer antes de qualquer escrita.
+
+### Achado de verdade no mesmo print: dois COREDEs no mesmo contato
+
+O contato está com as etiquetas **CAMPANHA** e **MÉDIO ALTO URUGUAI**. Caçapava do Sul é COREDE
+**Campanha** (conferido em `coredes-rs.json`) — então "Médio Alto Uruguai" é COREDE errado
+pendurado no contato.
+
+**Causa raiz:** `etiquetasDeRegiaoASair` só devolvia algo quando a cidade tinha sido
+**substituída** (`entrada.substituiu`). Aqui a cidade **preencheu um buraco** (o campo estava
+vazio), então `substituiu` era nulo e o COREDE antigo nunca saía. Dois COREDEs num contato é o
+mesmo dado errado que a função existe para evitar, só que por outra porta.
+
+Segunda armadilha, que quase fez o fix não funcionar: a etiqueta CERTA já estava aplicada, e
+`marcada` é falso justamente para não reaplicar o que já está lá — então procurar a região nova
+na lista das que vão ser aplicadas devolvia nada. Agora a região é buscada em `tagSuggestions`
+inteira, e a antiga só sai se a certa **fica** (vai ser aplicada agora ou o contato já a tem):
+tirar a antiga sem pôr a nova deixa o contato sem COREDE nenhum, que é pior que os dois.
+`etiquetaConfiavel` continua sendo a trava — cidade de palpite não-exato não manda tirar nada.
+
+Contatos já sujos se consertam sozinhos na próxima gravação (abrir com data de conclusão vazia
+já dispara), não precisa de mutirão.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`etiquetasDeRegiaoASair`,
+`saveClassification` passando as sugestões aplicáveis). Seis suítes passando.
+
+---
+
+## 2026-08-12 — O popup da cidade cobria só metade (e a outra metade era a que ele via)
+
+**Relato (Thiago):** *"eu pedi para me mostrar um popup antes de registrar a cidade mas continua
+registrando automaticamente"*.
+
+**Causa raiz:** a entrada de baixo (mesmo dia) resolveu a cidade tirada do FORMATO do cadastro
+("Cidade - Nome"), e só ela. A cidade tirada das MENSAGENS entra por outro caminho —
+`applyGuesses`, com `confidence: 'exata'` quando casa com a lista do IBGE — e `aplicarAutomatico`
+grava todo palpite `exata` no instante em que o contato é aberto, sem clique nenhum. Essa é a
+comum: o caminho do cadastro é raro, o das mensagens acontece em todo contato que escreve o nome
+de um município. O popup existia, ele nunca o via, e o CRM continuava sendo escrito sozinho.
+
+**Fix:** a confirmação virou regra do CAMPO, não da origem. `applyGuesses` marca toda entrada de
+Cidade com `pendente: true`, e `saveClassification` — único lugar que escreve no CRM — chama
+`confirmarCidadeSePendente` antes de montar `changes`, **inclusive na gravação automática**, que
+era justamente a que passava batido. A caixa é a mesma da rodada (`perguntarNaRodada`: sem fundo
+escuro, arrastável, não trava a conversa) e diz de onde a cidade saiu, se é palpite não-exato e
+se vai substituir a que está no CRM. Três saídas: **1 Aceitar** grava; **2 Corrigir** descarta;
+**3 Sem cidade** grava vazio. Esc = descarta (na dúvida não grava), e a dica da caixa passou a
+dizer isso em vez de "Esc para parar a rodada" — esta caixa decide um campo, não o atendimento.
+
+**Decisão consciente:** isto abre exceção à regra *"automático só grava o determinístico"* do
+CLAUDE.md. Casar exato com o IBGE prova que o texto é o nome de um município, **não** que seja a
+cidade dele — *"meu genro mora em Santiago"* casa igualzinho. Instrução dele vence a regra.
+
+**Trava junto:** recusar não adiantava sozinho. `applyGuesses` só preenche buraco, recusar
+esvazia o campo, e a releitura da conversa (que roda sozinha quando o contato responde) devolvia
+o mesmo palpite e perguntava de novo — popup em laço dentro da rodada. Agora `state.cidadeRecusada`
+guarda o que foi recusado enquanto o contato estiver aberto. A etiqueta de COREDE sai junto:
+recusada a cidade, `refreshTagSuggestions` roda de novo, senão o contato ficava com o COREDE de
+uma cidade que ele acabou de recusar.
+
+### Junto: o anti-repetição por conversa tinha sido removido
+
+O commit `0e4cc6a` ("atualizado") apagou `hsm.decidirReenvio`, o teste dele, o
+`auto.horasSemRepetir` do `store.js` e o campo dele na aba Automatizado — trocados pelo
+`contatosTratados`, um `Set` de contatos já tratados dentro da rodada.
+
+**Não é a mesma trava.** `contatosTratados` nasce vazio a cada rodada e cobre o item que volta ao
+TOPO da lista dentro da MESMA rodada. O caso relatado ao vivo (*"falhou e mandou mensagem
+novamente"*) foram DUAS rodadas: resposta pronta às 14:05, modelo aprovado às 14:37 — `Set` novo,
+chaves diferentes no registro, duas mensagens em 32 minutos. Restaurado, e as duas travas
+convivem: `contatosTratados` dentro da rodada, `decidirReenvio` (que pergunta à CONVERSA, então
+conta também o que foi mandado à mão) entre rodadas.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`confirmarCidadeSePendente`,
+`applyGuesses`, `state.cidadeRecusada`, `perguntarNaRodada` com `dica`, `processarSemRetorno`,
+cartão da rodada), [src/lib/hsm.js](src/lib/hsm.js) (`decidirReenvio`),
+[src/lib/store.js](src/lib/store.js) (`auto.horasSemRepetir`),
+[tests/hsm.test.mjs](tests/hsm.test.mjs). Seis suítes passando.
 
 ---
 

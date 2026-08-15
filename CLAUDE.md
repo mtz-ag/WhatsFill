@@ -73,6 +73,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   Não use ele para verificar nada.
 - **Recarregar a extensão órfã as abas abertas** (`Extension context invalidated`): o painel
   falha em silêncio até dar F5. Já causou diagnóstico errado duas vezes.
+- **"O fix não funcionou" pode ser "o fix não chegou".** A pasta que o Chrome carrega não é
+  necessariamente a que o GitHub Desktop atualiza — cópia da extensão DENTRO da pasta da
+  extensão (zip descompactado, `dist/`, que é gitignorado) fica congelada para sempre. Custou uma
+  tarde de correção em cima de código que nunca rodou. **Antes de qualquer diagnóstico, confira a
+  versão no cabeçalho do painel** (`versaoCarregada`) contra a do `manifest.json`, e o "Carregado
+  de" em `chrome://extensions` contra o caminho do repositório. Mudou comportamento visível?
+  **Suba a `version` do manifesto no mesmo commit** — é o que torna a conferência possível.
 - **Rajada de requisições derruba a API — e a plataforma junto.** `Failed to fetch` não é erro
   HTTP: é o preflight CORS recusado, o que um limitador de taxa devolve. Cada contato aberto
   custa uma sessão na plataforma + 3 chamadas nossas, então **toda volta de laço precisa de
@@ -115,6 +122,31 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   evento vindo de campo de texto** — senão o "2" digitado na conversa conclui o atendimento.
   O que ele precisar no meio da rodada tem que estar DENTRO da caixa: as respostas prontas são
   `montarRespostasRapidas`, e enviar dali não fecha a pergunta.
+- **Anti-duplicata por MODELO não impede mandar duas vezes — e "contato já tratado" também não.**
+  O contato recebeu a resposta pronta numa rodada e o modelo aprovado na seguinte, 32 min depois:
+  chaves diferentes, e o `Set` de contatos tratados nasce vazio a cada rodada. Some com a fila que
+  devolve o concluído ao TOPO (a rodada seguinte começa por ele) e vira máquina de repetir. São
+  **duas travas, não uma**: `contatosTratados` dentro da rodada e `hsm.decidirReenvio` entre
+  rodadas — este pergunta à **conversa**, que inclui o que ele mandou à mão. Já foi apagado uma
+  vez trocado pelo `Set`; não troque de novo.
+- **`load()` NÃO roda dentro de `withBusy`** — `state.busy` é falso enquanto ele carrega, então
+  ele e `reexaminarMensagens` podem estar no ar juntos. Pergunta aberta dentro de um deles ganha
+  uma gêmea quando chega mensagem nova; responder uma deixa a outra na tela. Toda pergunta que
+  nasce de gravação precisa de guarda de instância única (ver `perguntaDeCidade`).
+- **Canal (número) fora do ar: a plataforma ACEITA o envio e a mensagem não chega.** A tarja do
+  topo diz *"O WhatsApp (51) 9…-… foi desconectado da Z-API"*. O balão aparece na conversa e
+  fica lá sem entregar — a rodada contaria como enviado, marcaria no anti-duplicata e
+  concluiria. Falha silenciosa com a tela dizendo que deu certo. A conta tem VÁRIAS instâncias e
+  cai uma por vez, então a trava compara o número da tarja com o do cabeçalho da conversa
+  (`dom.canalDesconectado` + `dom.numeroDaConversa`). "Desconectado" sozinho não basta: contato
+  escreve isso na conversa — exija também Z-API/reconexão.
+- **Pergunta não-bloqueante sobrevive à troca de contato — e vira gravação na pessoa errada.**
+  Medido ao vivo: painel dizendo "Abra um atendimento" com uma caixa perguntando por "Estrela
+  Velha" sobre a conversa de outro. A caixa é filha do `root`, e `renderAll` só troca `header` e
+  `body`; ela fica. Pior que a tela suja: `state.draft` e `state.contact` já são do contato novo,
+  então responder gravava a cidade de um em outro. Duas travas: `load()` cancela a caixa aberta
+  (`cancelarPerguntaDeCidade`), e `saveClassification` guarda o id do contato ANTES da pergunta e
+  desiste da gravação inteira se ele mudou.
 - **Regra da rodada que depende de estado invisível parece defeito.** A conclusão automática
   ("última mensagem minha") ganhou uma exceção para quem não tinha etiqueta de conteúdo, e o
   relato foi "alguns concluem e outros não". Funcionava como projetado — e mesmo assim estava
@@ -149,6 +181,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   acham nas mensagens; etiqueta aplicada à mão (ou por nós numa passada anterior, quando a
   campanha do anúncio ainda casava) não aparecia, e o fecho com conteúdo travava dizendo "nenhum
   conteúdo reconhecido". Ver `tags.conteudosJaAplicados`.
+- **Etiqueta que o contato já tem também tem `marcada: false`** — é o que impede reaplicar o que
+  já está lá. Quem procurar a etiqueta certa só entre as que vão ser gravadas não a acha
+  justamente quando ela já está certa. Foi o que quase furou a limpeza de COREDE duplicado
+  (`etiquetasDeRegiaoASair`): procure em `tagSuggestions` inteira, decida com `marcada` depois.
+- **COREDE errado sobra quando a cidade preenche BURACO, não quando substitui.** A limpeza olhava
+  só `entrada.substituiu`; contato com campo Cidade vazio ganhava o COREDE novo e ficava com o
+  velho junto (visto ao vivo: "Caçapava do Sul" com Campanha **e** Médio Alto Uruguai). Regra:
+  COREDE que não é o da cidade sai — mas só se o certo ficar, senão o contato fica sem nenhum.
 - **Aba acordada e computador acordado são problemas DIFERENTES.** O áudio do `keepalive`
   impede o Chrome de congelar a aba; ele não impede o Windows de suspender por inatividade, e
   rodada longa não toca em teclado nem mouse. A segunda trava é `chrome.power` (`'display'`, no
@@ -164,8 +204,11 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   referência (IBGE, COREDEs) e confirmação humana em 1 clique.
 - **Não adivinhar formato de escrita.** O gravador (`recorder.js`) observa a plataforma fazendo
   uma vez e copia. Sem contrato aprendido, a extensão **recusa** em vez de tentar.
-- **Automático só grava o determinístico:** cidade que casou exato com o IBGE, o COREDE dela e
-  as etiquetas de conteúdo. Palpite aproximado sempre espera clique.
+- **Automático só grava o determinístico:** o COREDE e as etiquetas de conteúdo. Palpite
+  aproximado sempre espera clique. **Cidade está FORA do automático por pedido dele:** casar
+  exato com o IBGE prova que o texto é nome de município, não que seja a cidade dele ("meu genro
+  mora em Santiago" casa igual). Toda cidade de palpite passa por `confirmarCidadeSePendente`
+  antes de ir pro CRM — inclusive na gravação automática, que era a metade que ele via.
 - **Nunca sobrescrever o que já está no CRM.** O automático só preenche buraco. **Uma exceção:**
   a cidade que a própria pessoa informou — respondendo o formulário **ou** mandando uma mensagem
   que é só o nome do município — substitui a do CRM, com casamento exato e nome COMPLETO (nunca

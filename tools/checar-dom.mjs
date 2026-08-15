@@ -213,6 +213,70 @@ const CASOS_CANDIDATOS = [
   },
 ];
 
+/**
+ * A tarja de canal desconectado, transcrita da tela real (13/08/2026).
+ *
+ * O negrito parte a frase em vários nós de texto, então o nó que contém "desconectado" NÃO tem
+ * o telefone — é por isso que `canalDesconectado` sobe até o bloco. E o número da instância vem
+ * do cabeçalho da conversa, ao lado de "Instância f68546": é ele que diz se a tarja fala DESTE
+ * atendimento ou de outro número da conta.
+ */
+const CASOS_CANAL = [
+  {
+    nome: 'tarja na tela e a conversa é do número caído → fora do ar',
+    html: `
+      <div class="bg-blue-700 text-white">
+        <span>O WhatsApp (51) 99511-0122 foi <b>desconectado da Z-API</b>.
+        Solicite ao administrador da conta que realize a reconexão.</span>
+      </div>
+      <sessions-conversation>
+        <div><span>Instância f68546</span><span>(51) 99511-0122</span></div>
+      </sessions-conversation>`,
+    desconectado: true,
+    numeroDaConversa: '5199511 0122'.replace(/\D/g, ''),
+    mesmoNumero: true,
+  },
+  {
+    // A conta tem várias instâncias e cai uma por vez. Travar tudo pararia trabalho bom.
+    nome: 'tarja na tela mas a conversa é de OUTRO número → segue enviando',
+    html: `
+      <div class="bg-blue-700 text-white">
+        <span>O WhatsApp (51) 99511-0122 foi <b>desconectado da Z-API</b>.
+        Solicite ao administrador da conta que realize a reconexão.</span>
+      </div>
+      <sessions-conversation>
+        <div><span>Instância cccad9</span><span>(51) 98051-0122</span></div>
+      </sessions-conversation>`,
+    desconectado: true,
+    numeroDaConversa: '5198051 0122'.replace(/\D/g, ''),
+    mesmoNumero: false,
+  },
+  {
+    nome: 'sem tarja nenhuma → nada a travar',
+    html: `
+      <sessions-conversation>
+        <div><span>Instância f68546</span><span>(51) 99511-0122</span></div>
+        <div><span>Em andamento</span></div>
+      </sessions-conversation>`,
+    desconectado: false,
+    numeroDaConversa: '5199511 0122'.replace(/\D/g, ''),
+    mesmoNumero: false,
+  },
+  {
+    // A conversa inteira é texto, e sempre vai ter alguém escrevendo "desconectado". O corte de
+    // tamanho e a exigência do telefone é o que impede a mensagem do contato virar tarja.
+    nome: 'contato escreveu "desconectado" na conversa → não é tarja',
+    html: `
+      <sessions-conversation>
+        <div><span>Instância f68546</span><span>(51) 99511-0122</span></div>
+        <div class="message-text">Bom dia! Fiquei desconectado uns dias, desculpa a demora</div>
+      </sessions-conversation>`,
+    desconectado: false, // a mensagem não fala em Z-API nem em reconexão
+    numeroDaConversa: '5199511 0122'.replace(/\D/g, ''),
+    mesmoNumero: false,
+  },
+];
+
 /** Estado do rodapé → o botão Reiniciar está disponível? */
 const CASOS_REINICIAR = [
   {
@@ -324,6 +388,34 @@ for (const caso of CASOS_REINICIAR) {
   if (!ok) falhas++;
   console.log(`${ok ? '  ok  ' : ' FALHA'} ${caso.nome}`);
   if (!ok) console.log(`        getReiniciarButton=${r} (esperado ${caso.temReiniciar})`);
+}
+
+for (const caso of CASOS_CANAL) {
+  await page.setContent(`<body>${caso.html}</body>`);
+  const r = await page.evaluate(async (src) => {
+    const url = 'data:text/javascript;base64,' + btoa(unescape(encodeURIComponent(src)));
+    const dom = await import(url);
+    const aviso = dom.canalDesconectado();
+    const numero = dom.numeroDaConversa();
+    return {
+      desconectado: aviso.desconectado,
+      numeros: aviso.numeros,
+      numero,
+      mesmoNumero: aviso.desconectado && !!numero && aviso.numeros.includes(numero),
+    };
+  }, fonte);
+
+  const ok =
+    r.desconectado === caso.desconectado &&
+    r.numero === caso.numeroDaConversa &&
+    r.mesmoNumero === caso.mesmoNumero;
+  if (!ok) falhas++;
+  console.log(`${ok ? '  ok  ' : ' FALHA'} ${caso.nome}`);
+  if (!ok) {
+    console.log(`        desconectado=${r.desconectado} (esperado ${caso.desconectado}), ` +
+      `numeroDaConversa=${r.numero} (esperado ${caso.numeroDaConversa}), ` +
+      `mesmoNumero=${r.mesmoNumero} (esperado ${caso.mesmoNumero}), tarja=${JSON.stringify(r.numeros)}`);
+  }
 }
 
 await browser.close();

@@ -399,4 +399,43 @@ check((await cities.linkFor('Pelotas')).link === null, 'cidade sem grupo e sem p
 mem.defaultGroupLink = 'https://chat.whatsapp.com/PADRAO';
 check((await cities.linkFor('Pelotas')).source === 'padrão', 'cai para o link padrão quando existe');
 
+grupo('memória das cidades recusadas no popup');
+{
+  // O relato: "estou botando sem cidade e pede novamente". A recusa vivia num Set que nascia
+  // vazio a cada load(), então fechar e reabrir o contato trazia a mesma pergunta de volta.
+  const store = await lib('store.js');
+  mem.cidadeRecusada = {};
+
+  check((await store.cidadesRecusadas('c-1')).length === 0, 'contato sem recusa devolve lista vazia');
+  check((await store.cidadesRecusadas(null)).length === 0, 'sem contato não explode');
+
+  await store.lembrarCidadeRecusada('c-1', 'quarai');
+  check((await store.cidadesRecusadas('c-1')).includes('quarai'), 'guardou a recusa');
+  check((await store.cidadesRecusadas('c-2')).length === 0, 'outro contato não herda a recusa');
+
+  // Recusar duas vezes a mesma não pode duplicar; recusar outra cidade soma.
+  await store.lembrarCidadeRecusada('c-1', 'quarai');
+  await store.lembrarCidadeRecusada('c-1', 'santiago');
+  const c1 = await store.cidadesRecusadas('c-1');
+  check(c1.length === 2 && c1.includes('santiago'), `sem duplicata e somando = ${JSON.stringify(c1)}`);
+
+  await store.lembrarCidadeRecusada('c-3', '');
+  check((await store.cidadesRecusadas('c-3')).length === 0, 'cidade vazia não vira recusa');
+
+  // A base é de milhares de contatos e o storage não é infinito: poda o mais PARADO, e `at` é
+  // renovado a cada recusa, então contato ativo não some por ser antigo.
+  mem.cidadeRecusada = {};
+  for (let i = 0; i < store.MAX_CONTATOS_RECUSA + 5; i++) {
+    await store.lembrarCidadeRecusada(`c-${i}`, 'quarai');
+  }
+  const guardados = Object.keys(mem.cidadeRecusada).length;
+  check(guardados === store.MAX_CONTATOS_RECUSA, `podou no limite = ${guardados}`);
+  check((await store.cidadesRecusadas('c-0')).length === 0, 'o mais antigo saiu');
+  check((await store.cidadesRecusadas(`c-${store.MAX_CONTATOS_RECUSA + 4}`)).includes('quarai'), 'o mais novo ficou');
+
+  // Backup não leva referência a contato real.
+  mem.cidadeRecusada = { 'c-1': { cidades: ['quarai'], at: 1 } };
+  check(!JSON.parse(await store.exportJson()).cidadeRecusada, 'exportJson não leva as recusas');
+}
+
 fim();

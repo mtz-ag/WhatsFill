@@ -404,6 +404,26 @@ const DEFAULTS = {
      * mandar continua sendo ele. Ver `hsm.decidirSemResposta`.
      */
     horasSemResposta: 12,
+    /**
+     * Janela em que a rodada NÃO manda de novo para quem já recebeu mensagem nossa.
+     *
+     * Quem acabou de ser concluído volta para o TOPO da lista de concluídos, então a rodada
+     * seguinte começaria justo por ele — e foi assim que um contato recebeu duas mensagens em
+     * 32 minutos. 48h porque esta fila é de quem não responde: a última mensagem ser nossa é a
+     * regra, e bloquear para sempre esvaziaria a rodada. Ver `hsm.decidirReenvio`.
+     */
+    horasSemRepetir: 48,
+    /**
+     * A etiqueta de fluxo que marca a fila dos sem retorno.
+     *
+     * Ela sai do contato quando o atendimento é concluído pelo painel — senão, concluído de
+     * novo, ele reaparece no TOPO da lista filtrada por ela e volta a ser trabalho amanhã. É a
+     * única etiqueta que a extensão tira sem ser COREDE, e por isso o nome fica aqui, editável:
+     * chutar nome de etiqueta é jeito conhecido de tirar a errada.
+     *
+     * Vazio = não tira nada.
+     */
+    etiquetaSemRetorno: '1 SEM RETORNO',
   },
 
   /**
@@ -469,6 +489,16 @@ const DEFAULTS = {
    * Só avança em envio de verdade (`templates.avancarVariante`) — preview não mexe aqui.
    */
   varianteIndex: {},
+  /**
+   * Cidades que você recusou no popup, por contato:
+   * `{ "<contactId>": { cidades: ["quarai"], at: <timestamp> } }` (nomes normalizados).
+   *
+   * Precisa sobreviver ao fechar/reabrir o contato, senão a pergunta volta toda vez que ele
+   * abre — foi o relato *"estou botando sem cidade e pede novamente"*. Guardar por CIDADE (e não
+   * um "não perguntar mais" por contato) é o que atende a outra metade do pedido: mensagem nova
+   * com uma cidade **diferente** volta a perguntar; a mesma cidade recusada, nunca mais.
+   */
+  cidadeRecusada: {},
   /**
    * Migrações já aplicadas, uma vez cada. Sem isto, uma migração que mexe em texto editável
    * desfaria a sua edição toda vez que o painel subisse.
@@ -544,12 +574,52 @@ export async function getAll() {
   return out;
 }
 
+/**
+ * Quantos contatos guardam recusa de cidade antes de o registro começar a esquecer os antigos.
+ *
+ * A base é de milhares de contatos e isto vive no `chrome.storage.local`, que não é infinito.
+ * Esquecer o mais antigo custa uma pergunta repetida daqui a meses; não esquecer nada custa a
+ * gravação inteira estourar um dia, no meio de uma rodada.
+ */
+export const MAX_CONTATOS_RECUSA = 2000;
+
+/** As cidades (normalizadas) que você recusou para este contato. */
+export async function cidadesRecusadas(contactId) {
+  if (!contactId) return [];
+  const mapa = await get('cidadeRecusada');
+  return mapa[contactId]?.cidades || [];
+}
+
+/**
+ * Guarda que você recusou esta cidade para este contato. Idempotente.
+ *
+ * Poda pelo mais antigo (`at`) quando passa de `MAX_CONTATOS_RECUSA` — e o `at` é renovado a cada
+ * recusa, então contato ativo não é esquecido por ser velho, e sim por estar parado.
+ */
+export async function lembrarCidadeRecusada(contactId, cidadeNormalizada) {
+  if (!contactId || !cidadeNormalizada) return;
+  const mapa = { ...(await get('cidadeRecusada')) };
+  const atual = mapa[contactId]?.cidades || [];
+  const cidades = atual.includes(cidadeNormalizada) ? atual : [...atual, cidadeNormalizada];
+  mapa[contactId] = { cidades, at: Date.now() };
+
+  const ids = Object.keys(mapa);
+  if (ids.length > MAX_CONTATOS_RECUSA) {
+    ids
+      .sort((a, b) => (mapa[a].at || 0) - (mapa[b].at || 0))
+      .slice(0, ids.length - MAX_CONTATOS_RECUSA)
+      .forEach((id) => delete mapa[id]);
+  }
+  await set('cidadeRecusada', mapa);
+}
+
 /** Export/import para você não perder os templates ao trocar de máquina. */
 export async function exportJson() {
   const data = await getAll();
   delete data.municipios; // cache, se refaz sozinho
   delete data.sentLog;
   delete data.varianteIndex; // ponteiro de rotação, não é configuração
+  delete data.cidadeRecusada; // referência a contato real, e é memória de trabalho
   return JSON.stringify(data, null, 2);
 }
 
