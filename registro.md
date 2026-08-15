@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-08-15 — Aba "Sem retorno" escondida: risco de derrubar o número
+
+**Pedido:** *"a parte sem retorno pode ser escondida não será utilizado devido ao risco grande de
+cair o número"* — decisão que fecha o diagnóstico de mais cedo no mesmo dia (Z-API é API não
+oficial, reabrir contato frio em sequência é o padrão que mais se parece com disparo em massa).
+
+**O que saiu da tela:** os dois cartões da aba Automatizado sobre contato **concluído sem
+retorno** — "Sem retorno: reabrir e perguntar" (fluxo antigo, um contato só) e "Reabrir em lote" +
+a segunda metade dela, trabalhar em "Meus" (fluxo novo, dividido em duas rodadas). Ritmo, Novos,
+Mensagem do momento e Conferir/responder a fila continuam — são sobre conversa VIVA, não sobre
+reabrir quem parou de responder.
+
+**Escondido, não apagado.** `renderCartaoReabrir`, `renderCartaoSemRetorno` e tudo que elas
+chamam (`processarReabrir`, `processarSemRetornoEmMeus`, `processarSemRetorno`, `runLoteReabrir`,
+`runLoteEmMeus`, `runLote`) continuam no arquivo — só as duas linhas que colocavam os cartões na
+tela saíram, comentadas com o motivo. Reverter é só devolvê-las.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`renderAutomatizado`). Manifesto 0.8.6 →
+**0.8.7**. Sete suítes passando.
+
+---
+
 ## 2026-08-15 — "Modelo por conteúdo" virou padrão de fábrica
 
 **Pedido, com print da tela:** *"deixe os da print como padrão já para que eu não tenha que bota

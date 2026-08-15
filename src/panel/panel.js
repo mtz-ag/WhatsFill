@@ -1267,8 +1267,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(renderCartaoNovos(cfg));
     body.append(renderCartaoMomento(cfg));
     body.append(renderCartaoRespondidos());
-    body.append(renderCartaoReabrir(cfg));
-    body.append(renderCartaoSemRetorno(cfg, modeloDaRodada()));
+    // "Sem retorno" (reabrir em lote + trabalhar em Meus) escondida por decisão do Thiago
+    // (15/08): risco de derrubar o número é grande demais para o uso que ela teria — reabrir
+    // gente fria em sequência é o padrão que mais se parece com disparo em massa para o
+    // WhatsApp. Não apaguei as funções (`renderCartaoReabrir`, `renderCartaoSemRetorno` e o que
+    // elas chamam) — só as duas linhas que as colocavam na tela. Reverter é só devolvê-las aqui.
+    // body.append(renderCartaoReabrir(cfg));
+    // body.append(renderCartaoSemRetorno(cfg, modeloDaRodada()));
 
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Andamento'));
     logNode = h('div', {});
