@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-08-15 — "Modelo por conteúdo" virou padrão de fábrica
+
+**Pedido, com print da tela:** *"deixe os da print como padrão já para que eu não tenha que bota
+toda vez que atualizo a extensão"*. O print mostrava a caixa "Modelo por conteúdo" (aba Config)
+com duas linhas: `Conteúdo Zucco = Zucco, Capitão` e `Conteúdo Flávio = Flávio2`. Confirmado com
+ele o texto exato antes de gravar — isto decide para qual modelo aprovado a mensagem sai
+**sozinha**, então acento e vírgula errados aqui mandam o modelo errado para gente real.
+
+**Por que "atualizar a extensão" zerava isto:** não é o código puxado do git que apaga
+`chrome.storage` — é a descoberta da conversa anterior (pasta duplicada, `Downloads` ×
+`OneDrive\Documents\GitHub`). Carregar a extensão de uma pasta NOVA no Chrome é instalação nova,
+com storage vazio: o mapeamento sempre teria que ser digitado de novo nessa troca.
+
+**Fix:** `store.DEFAULTS.contentTemplates` deixou de ser `{}` e ganhou as duas entradas, já na
+chave normalizada que `hsm.achatar` produz (minúsculo, acento mantido). Só vale para quem NUNCA
+gravou nada — `contentTemplates` não entra na lista de merge de default do `store.get`, e a
+leitura devolve o valor salvo assim que ele existe. Quem já tem o mapeamento configurado (a
+maioria, hoje) não muda em nada.
+
+**Arquivos:** [src/lib/store.js](src/lib/store.js) (`contentTemplates`). Manifesto 0.8.5 →
+**0.8.6**. Sete suítes passando.
+
+---
+
 ## 2026-08-15 — Mesma rotação de variações para a mensagem do momento
 
 **Pedido:** *"faça a mesma coisa para saudação do momento"* — a mensagem da ocasião (tecla 5,

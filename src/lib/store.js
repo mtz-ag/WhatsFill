@@ -443,11 +443,22 @@ const DEFAULTS = {
 
   /**
    * Etiqueta de conteúdo → nome do MODELO DE MENSAGEM aprovado que atende aquele pedido.
-   * Chave normalizada. É o que fecha o atendimento: o contato pediu conteúdo do Zucco, a
-   * etiqueta "Conteúdo Zucco" casou, e daqui sai qual modelo enviar.
-   * Editável na aba Config; vazio = o painel não adivinha e pede para você escolher.
+   * Chave normalizada (ver `hsm.achatar`: minúsculo, espaço colapsado, acento mantido). É o que
+   * fecha o atendimento: o contato pediu conteúdo do Zucco, a etiqueta "Conteúdo Zucco" casou, e
+   * daqui sai qual modelo enviar. Editável na aba Config ("Modelo por conteúdo").
+   *
+   * Valor de campanha do Thiago, gravado aqui de propósito (pedido dele, 15/08): sem isto, toda
+   * extensão carregada do zero (ou depois de "Restaurar padrão") volta com o mapa vazio e a
+   * tecla 1 não aparece até ele digitar de novo — o que aconteceria de novo a cada vez que uma
+   * pasta nova da extensão fosse carregada no Chrome. Só vale para quem NUNCA gravou nada: quem
+   * já tem `contentTemplates` no storage (a maioria, hoje) não é tocado — este objeto não entra
+   * na lista de merge de default do `get()`, e a leitura ignora o default assim que existe valor
+   * salvo.
    */
-  contentTemplates: {},
+  contentTemplates: {
+    'conteúdo zucco': 'Zucco, Capitão',
+    'conteúdo flávio': 'Flávio2',
+  },
 
   /**
    * Qual conteúdo vence quando a mensagem casa com mais de uma regra.
