@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-08-15 — Lista enxuta: só o resumo, edição (texto e variações) no popup
+
+**Relato (print):** o popup anterior separava "editar texto" (na lista, sempre aberto) de
+"editar variações" (só no popup) — dois lugares para a mesma resposta, e a lista continuava
+grande com um textarea inteiro por card. Pedido: *"na lista só bote sobre o que é a mensagem e
+um botão para abrir e configurar as variações e também a opção de adicionar mais variações"*.
+
+**Lista:** cada resposta virou uma linha compacta — nome, começo do texto (uma linha, truncado)
+e quantas variações tem, se houver. Editar (nome, texto E variações) saiu inteiro da lista e foi
+para dentro de um só popup, aberto pelo botão "Editar".
+
+**Variações deixaram de ter número fixo.** Eram exatamente duas (variação 2 e 3); virou lista —
+"+ Adicionar variação" cria uma caixa vazia, "×" remove qualquer uma. Continua não gravando
+variação vazia (`Salvar` filtra strings vazias) e continua revezando com `varianteAtual`/
+`avancarVariante`, que já tratavam a lista como tamanho variável, sem mudança nenhuma lá.
+
+**"+ Nova resposta" abre o popup direto** depois de criar o rascunho — sem isso você criaria a
+linha vazia e precisaria de mais um clique em "Editar" para escrever o texto pela primeira vez.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`renderTemplateEditor` virou a linha
+compacta; `abrirEditorDeResposta` substitui `abrirEditorDeVariantes`, agora edita nome + texto +
+variações juntos, com lista dinâmica). Manifesto 0.8.3 → **0.8.4**. Sete suítes passando.
+
+---
+
 ## 2026-08-15 — Popup para editar as variações 2 e 3 de cada resposta
 
 **Pedido:** as variações de texto (ver 12/08) só existiam em `store.DEFAULT_TEMPLATES` — sem

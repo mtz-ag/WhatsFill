@@ -4355,6 +4355,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (!name) return;
       state.templates = await templatesLib.save({ name, text: '' });
       renderAll();
+      // Abre o popup direto: sem isto você criaria a linha vazia e precisaria de mais um
+      // clique em "Editar" para escrever o texto pela primeira vez.
+      const criada = state.templates.find((t) => t.name === name && !t.text);
+      if (criada) abrirEditorDeResposta(criada);
     });
     const resetBtn = h('button', { class: 'wf-btn', type: 'button' }, 'Restaurar padrão');
     resetBtn.addEventListener('click', async () => {
@@ -4368,27 +4372,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     renderBackupSection();
   }
 
+  /**
+   * Linha compacta na lista: só o que a resposta É (nome + começo do texto), e um botão que
+   * abre o popup de edição de verdade. Antes cada card vinha com um textarea grande sempre
+   * aberto — pedido dele foi enxugar a lista e deixar edição (nome, texto, variações) só no
+   * popup, que abre sob demanda.
+   */
   function renderTemplateEditor(template) {
     const card = h('div', { class: 'wf-card' });
-    const nameInput = h('input', { type: 'text', value: template.name });
-    const textArea = h('textarea', { rows: '5' });
-    textArea.value = template.text;
 
-    // Aviso, não bloqueio: a decisão de não chamar pelo nome é dele, e ele pode desfazer numa
-    // resposta específica. O que não pode é o nome voltar sem ninguém perceber — foi ele que
-    // mandou "Boa noite, Zane!" para a Rosane e "Boa noite, Santa Cruz!" para a Serlei.
-    const avisoNome = h('div', { class: 'wf-block' },
-      'Esta resposta chama o contato pelo nome. O nome do cadastro erra bastante (apelido do ' +
-        'perfil, cidade no campo do nome, "[NOVO] …") e, sem valor, ele BLOQUEIA o envio.');
-    const conferirNome = () => {
-      avisoNome.style.display = vars.usaNome(textArea.value) ? '' : 'none';
-    };
-    textArea.addEventListener('input', conferirNome);
-
-    const saveBtn = h('button', { class: 'wf-btn wf-mini wf-primary', type: 'button' }, 'Salvar');
-    saveBtn.addEventListener('click', async () => {
-      state.templates = await templatesLib.save({ id: template.id, name: nameInput.value, text: textArea.value });
-      setStatus(`"${nameInput.value}" salvo.`, 'ok');
+    const editBtn = h('button', { class: 'wf-btn wf-mini wf-primary', type: 'button' }, 'Editar');
+    editBtn.addEventListener('click', () => {
+      // Pega o template FRESCO do state, não o capturado no fechamento: se você editou e voltou
+      // sem recarregar a aba, a próxima abertura tem que ver o que acabou de ser salvo.
+      const atual = state.templates.find((t) => t.id === template.id) || template;
+      abrirEditorDeResposta(atual);
     });
     const upBtn = h('button', { class: 'wf-btn wf-mini', type: 'button' }, '↑');
     upBtn.addEventListener('click', async () => {
@@ -4406,69 +4404,102 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.templates = await templatesLib.remove(template.id);
       renderAll();
     });
-    const variantesBtn = h('button', { class: 'wf-btn wf-mini', type: 'button' },
-      template.variantes?.length ? `Variações (${template.variantes.length + 1})` : 'Variações');
-    variantesBtn.addEventListener('click', () => {
-      // Pega o template FRESCO do state, não o `template` capturado no fechamento: se você abriu
-      // duas vezes sem recarregar, a segunda tem que ver o que a primeira acabou de salvar.
-      const atual = state.templates.find((t) => t.id === template.id) || template;
-      abrirEditorDeVariantes(atual);
-    });
 
-    card.append(nameInput, textArea, avisoNome, h('div', { class: 'wf-row' }, [saveBtn, upBtn, downBtn, delBtn, variantesBtn]));
-    // Reescrever a caixa acima só troca ESTA variante — as outras (2, 3) ficam do jeito que
-    // estão, com o texto antigo. Não escondo isso: editar sem saber deixaria a rotação mandando
-    // uma frase reescrita ao lado de duas que ninguém tocou. O botão "Variações" é onde as outras
-    // duas se editam de verdade.
+    card.append(
+      h('div', {}, [h('b', {}, template.name)]),
+      h('div', { class: 'wf-hint' }, truncate(template.text, 90) || '(sem texto ainda)'),
+      h('div', { class: 'wf-row' }, [editBtn, upBtn, downBtn, delBtn])
+    );
     if (template.variantes?.length) {
       card.append(
-        h('div', { class: 'wf-origin' },
-          `Reveza entre ${template.variantes.length + 1} variações a cada envio (evitar texto repetido). ` +
-            'Salvar aqui muda só esta — as outras se editam no botão "Variações".')
+        h('div', { class: 'wf-origin' }, `Reveza entre ${template.variantes.length + 1} variações a cada envio.`)
       );
     }
     card.append(h('div', { class: 'wf-origin' }, 'id: ' + template.id));
-    conferirNome();
     return card;
   }
 
   /**
-   * Popup para ver e editar as até duas variações extras de uma resposta pronta — a mesma caixa
-   * não-bloqueante da pergunta da rodada (`wf-pergunta`/`wf-pergunta-fundo`: sem fundo escuro,
-   * arrastável), só que com campos de texto em vez de botões de decisão.
+   * Popup de edição: nome, texto principal e as variações — tudo num lugar só. A mesma caixa
+   * não-bloqueante e arrastável da pergunta da rodada (`wf-pergunta`/`wf-pergunta-fundo`), com
+   * campos de texto em vez de botões de decisão.
    *
-   * O texto PRINCIPAL não se edita aqui — é o mesmo textarea de sempre, na aba Respostas. Aqui
-   * só as variações 2 e 3, que hoje só existiam no código-fonte (`store.DEFAULT_TEMPLATES`).
-   * Campo deixado em branco = essa posição da rotação some (nunca grava variação vazia: mandar
-   * mensagem em branco para um contato é pior que não ter variação nenhuma).
+   * **Variações não têm mais número fixo.** Começou com exatamente duas (variação 2 e 3, revezando
+   * com o texto principal); ele pediu para poder acrescentar mais, então virou lista: "+
+   * Adicionar variação" cria uma nova caixa vazia, "×" remove. Campo deixado em branco não é
+   * gravado — nunca sai variação vazia, porque mandar mensagem em branco para um contato é pior
+   * que não ter variação nenhuma.
    */
-  function abrirEditorDeVariantes(template) {
+  function abrirEditorDeResposta(template) {
     const fundo = h('div', { class: 'wf-pergunta-fundo' });
     const caixa = h('div', { class: 'wf-pergunta' });
     fundo.append(caixa);
 
-    const barra = h('div', { class: 'wf-pergunta-titulo' }, `Variações — ${template.name}`);
+    const barra = h('div', { class: 'wf-pergunta-titulo' }, 'Editar resposta');
     caixa.append(barra);
     tornarArrastavel(caixa, barra);
 
+    caixa.append(h('div', { class: 'wf-pergunta-linha' }, 'Nome:'));
+    const nameInput = h('input', { type: 'text', value: template.name, style: 'width:100%;box-sizing:border-box' });
+    caixa.append(nameInput);
+
+    caixa.append(h('div', { class: 'wf-pergunta-linha' }, 'Texto principal:'));
+    const textArea = h('textarea', { rows: '5', style: 'width:100%;box-sizing:border-box' });
+    textArea.value = template.text;
+    caixa.append(textArea);
+
+    // Aviso, não bloqueio: a decisão de não chamar pelo nome é dele, e ele pode desfazer numa
+    // resposta específica. O que não pode é o nome voltar sem ninguém perceber — foi ele que
+    // mandou "Boa noite, Zane!" para a Rosane e "Boa noite, Santa Cruz!" para a Serlei.
+    const avisoNome = h('div', { class: 'wf-block' },
+      'Esta resposta chama o contato pelo nome. O nome do cadastro erra bastante (apelido do ' +
+        'perfil, cidade no campo do nome, "[NOVO] …") e, sem valor, ele BLOQUEIA o envio.');
+    const conferirNome = () => {
+      avisoNome.style.display = vars.usaNome(textArea.value) ? '' : 'none';
+    };
+    textArea.addEventListener('input', conferirNome);
+    caixa.append(avisoNome);
+    conferirNome();
+
     caixa.append(
       h('div', { class: 'wf-pergunta-linha' },
-        'Reveza entre estas a cada envio de verdade, para não repetir a mesma frase. O texto ' +
-          'PRINCIPAL (variação 1) se edita na aba Respostas, não aqui.')
+        'Variações: reveza entre estas e o texto principal a cada envio de verdade, para não repetir a mesma frase.')
     );
-    caixa.append(h('div', { class: 'wf-pergunta-corpo' }, truncate(template.text, 160)));
+    const variantesBox = h('div', {});
+    caixa.append(variantesBox);
 
-    const existentes = template.variantes || [];
-    const textareas = [0, 1].map((i) => {
-      caixa.append(h('div', { class: 'wf-pergunta-linha' }, `Variação ${i + 2}:`));
-      const ta = h('textarea', { rows: '4', style: 'width:100%;box-sizing:border-box' });
-      ta.value = existentes[i] || '';
-      caixa.append(ta);
-      return ta;
+    // Lista mutável em memória; só vira `template.variantes` de verdade ao Salvar.
+    const variantesState = [...(template.variantes || [])];
+
+    function renderVariantesBox() {
+      while (variantesBox.firstChild) variantesBox.removeChild(variantesBox.firstChild);
+      variantesState.forEach((valor, i) => {
+        const linha = h('div', { class: 'wf-row', style: 'align-items:flex-start;margin-top:6px' });
+        const ta = h('textarea', { rows: '3', style: 'width:100%;box-sizing:border-box' });
+        ta.value = valor;
+        ta.addEventListener('input', () => {
+          variantesState[i] = ta.value;
+        });
+        const rmBtn = h('button', { class: 'wf-btn wf-mini wf-danger', type: 'button' }, '×');
+        rmBtn.addEventListener('click', () => {
+          variantesState.splice(i, 1);
+          renderVariantesBox();
+        });
+        linha.append(ta, rmBtn);
+        variantesBox.append(linha);
+      });
+    }
+    renderVariantesBox();
+
+    const addVarianteBtn = h('button', { class: 'wf-btn wf-mini', type: 'button' }, '+ Adicionar variação');
+    addVarianteBtn.addEventListener('click', () => {
+      variantesState.push('');
+      renderVariantesBox();
     });
+    caixa.append(addVarianteBtn);
 
     const linhaBotoes = h('div', { class: 'wf-pergunta-botoes' });
-    const salvarBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Salvar variações');
+    const salvarBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Salvar');
     const fecharBtn = h('button', { class: 'wf-btn', type: 'button' }, 'Fechar sem salvar');
     linhaBotoes.append(salvarBtn, fecharBtn);
     caixa.append(linhaBotoes);
@@ -4487,24 +4518,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     salvarBtn.addEventListener('click', () =>
       withBusy(async () => {
-        const variantes = textareas.map((ta) => ta.value.trim()).filter(Boolean);
-        state.templates = await templatesLib.save({ id: template.id, name: template.name, text: template.text, variantes });
+        const variantes = variantesState.map((v) => v.trim()).filter(Boolean);
+        state.templates = await templatesLib.save({
+          id: template.id,
+          name: nameInput.value,
+          text: textArea.value,
+          variantes,
+        });
         setStatus(
           variantes.length
-            ? `"${template.name}": ${variantes.length + 1} variações salvas.`
-            : `"${template.name}": variações removidas — sempre manda o texto principal.`,
+            ? `"${nameInput.value}" salvo, revezando entre ${variantes.length + 1} variações.`
+            : `"${nameInput.value}" salvo — sem variações, sempre manda o texto principal.`,
           'ok'
         );
         fechar();
-        // `withBusy` redesenha no `finally` — é o que faz o botão "Variações (N)" do card
-        // mostrar a contagem nova sem precisar reabrir a aba.
+        // `withBusy` redesenha no `finally` — é o que faz a linha da lista mostrar o nome, o
+        // texto e a contagem de variações novos sem precisar reabrir a aba.
       })
     );
     fecharBtn.addEventListener('click', fechar);
 
     root.append(fundo);
     aplicarPosicao(caixa, null);
-    textareas[0].focus();
+    nameInput.focus();
   }
 
   function renderRecorderSection() {
