@@ -58,6 +58,18 @@ export const INTERESSE_CONTEUDO_ANTIGO =
  * valor, que já tirou opção da pergunta da rodada duas vezes.
  *
  * Quem mexer aqui: `{{cidade}}` e `{{link_grupo}}` continuam valendo — o que saiu foi o nome.
+ *
+ * **`variantes`**: até duas reescritas alternativas do mesmo `text`, para `templates.js`
+ * revezar entre as três a cada envio de verdade (ver `varianteAtual`/`avancarVariante`) — nasceu
+ * do relato de que reabrir e mandar o MESMO texto repetido para muita gente parece ter pesado
+ * no número. Regra ao escrever uma: muda só a superfície (abertura, conectivo, fechamento).
+ * O que o parser ou a lei dependem fica **idêntico** nas três:
+ *  - "Nome completo / Cidade" e "Sim / Nome completo / Cidade" são casadas literalmente por
+ *    `extract.findStructured` — mexer aí quebra a resposta de quem responder pela variante 2 ou 3;
+ *  - as mesmas `{{variáveis}}` do original, nunca uma nova;
+ *  - `pedido-ajuda` e `pedido-emprego` ficam de fora de propósito: risco jurídico (Lei 9.504/97)
+ *    é alto demais para reescrever por variedade, e são resposta a pedido individual, não
+ *    disparo em massa — não é onde o problema de "parecer spam" mora.
  */
 export const DEFAULT_TEMPLATES = [
   {
@@ -69,6 +81,18 @@ export const DEFAULT_TEMPLATES = [
       'Nome completo / Cidade\n\n' +
       '(exemplo: Maria Silva / Santo Ângelo)\n\n' +
       PERGUNTA_GRUPOS,
+    variantes: [
+      '{{saudacao}}! Fico feliz que você esteja com a gente. 🇧🇷\n\n' +
+        'Para eu te colocar no grupo certo da sua região, preciso de dois dados — me manda numa única mensagem, nesta ordem:\n\n' +
+        'Nome completo / Cidade\n\n' +
+        '(exemplo: Maria Silva / Santo Ângelo)\n\n' +
+        PERGUNTA_GRUPOS,
+      '{{saudacao}}! Que bom te ter por aqui. 🇧🇷\n\n' +
+        'Pra te incluir no grupo certo da sua região, só preciso de dois dados seus, numa mensagem só, nesta ordem:\n\n' +
+        'Nome completo / Cidade\n\n' +
+        '(exemplo: Maria Silva / Santo Ângelo)\n\n' +
+        PERGUNTA_GRUPOS,
+    ],
   },
   {
     id: 'tema-opcoes',
@@ -79,6 +103,18 @@ export const DEFAULT_TEMPLATES = [
       '2 - Sou apoiador e quero ajudar bastante\n' +
       '3 - Sou apoiador e ajudo quando posso\n' +
       '4 - Só quero acompanhar de longe',
+    variantes: [
+      'Só mais uma coisa: me diz o número que mais tem a ver com você.\n\n' +
+        '1 - Quero receber material impresso\n' +
+        '2 - Sou apoiador e quero ajudar bastante\n' +
+        '3 - Sou apoiador e ajudo quando posso\n' +
+        '4 - Só quero acompanhar de longe',
+      'Falta só mais um dado: responda com o número que melhor te descreve.\n\n' +
+        '1 - Quero receber material impresso\n' +
+        '2 - Sou apoiador e quero ajudar bastante\n' +
+        '3 - Sou apoiador e ajudo quando posso\n' +
+        '4 - Só quero acompanhar de longe',
+    ],
   },
   {
     id: 'link-grupo',
@@ -87,6 +123,14 @@ export const DEFAULT_TEMPLATES = [
       'Prontinho! Este é o grupo de {{cidade}}:\n\n' +
       '{{link_grupo}}\n\n' +
       'É lá que a gente avisa das agendas e manda os conteúdos primeiro. Te espero! 🇧🇷',
+    variantes: [
+      'Aqui está! Esse é o grupo de {{cidade}}:\n\n' +
+        '{{link_grupo}}\n\n' +
+        'As agendas e os conteúdos saem primeiro por lá. Vem com a gente! 🇧🇷',
+      'Segue o grupo de {{cidade}}:\n\n' +
+        '{{link_grupo}}\n\n' +
+        'É por ali que avisamos as agendas e mandamos os conteúdos em primeira mão. Esperamos você! 🇧🇷',
+    ],
   },
   {
     id: 'agradecimento',
@@ -94,6 +138,12 @@ export const DEFAULT_TEMPLATES = [
     text:
       'Obrigado pela atenção! Qualquer coisa, é só chamar por aqui. ' +
       'Um abraço e conte com a gente. 🇧🇷',
+    variantes: [
+      'Agradecemos a atenção! Qualquer necessidade, é só nos chamar por aqui. ' +
+        'Um abraço e pode contar com a gente. 🇧🇷',
+      'Muito obrigado pelo contato! Sempre que precisar, é só falar por aqui. ' +
+        'Um abraço, e conte com a gente. 🇧🇷',
+    ],
   },
   {
     /**
@@ -173,6 +223,12 @@ export const DEFAULT_TEMPLATES = [
     text:
       '{{saudacao}}! Que Deus abençoe o seu dia e a sua família. 🙏\n\n' +
       'Que Nossa Senhora interceda por você e por quem você ama.',
+    variantes: [
+      '{{saudacao}}! Que Deus abençoe a sua vida e a sua família. 🙏\n\n' +
+        'Que Nossa Senhora interceda sempre por você e pelos seus.',
+      '{{saudacao}}! Que a bênção de Deus esteja com você e sua família. 🙏\n\n' +
+        'Que Nossa Senhora ilumine o seu caminho e o de quem você ama.',
+    ],
   },
   {
     /**
@@ -188,6 +244,14 @@ export const DEFAULT_TEMPLATES = [
       '{{saudacao}}! Obrigado pela mensagem e pelas informações — ' +
       'recebemos tudo por aqui.\n\n' +
       'Seguimos juntos. Que Deus abençoe você e sua família! 🙏',
+    variantes: [
+      '{{saudacao}}! Obrigado pela mensagem — ' +
+        'recebemos tudo certinho por aqui.\n\n' +
+        'Seguimos juntos nessa caminhada. Que Deus abençoe você e os seus! 🙏',
+      '{{saudacao}}! Agradeço a mensagem e as informações — ' +
+        'chegou tudo por aqui.\n\n' +
+        'Vamos seguindo juntos. Que Deus abençoe você e sua família! 🙏',
+    ],
   },
   {
     /**
@@ -207,6 +271,20 @@ export const DEFAULT_TEMPLATES = [
     id: 'interesse-conteudo',
     name: 'Perguntar interesse no conteúdo (e pedir os dados)',
     text: INTERESSE_CONTEUDO,
+    variantes: [
+      '{{saudacao}}! Aqui é da equipe do Capitão Martim e do Zucco. 🇧🇷\n\n' +
+        'Posso te enviar por aqui os conteúdos e novidades deles?\n\n' +
+        'Se sim, me responde numa única mensagem, nesta ordem:\n\n' +
+        'Sim / Nome completo / Cidade\n\n' +
+        '(exemplo: Sim / Maria Silva / Santo Ângelo)\n\n' +
+        'Se preferir não receber, é só dizer não — eu respeito e não insisto.',
+      '{{saudacao}}! Falo daqui da equipe do Capitão Martim e do Zucco. 🇧🇷\n\n' +
+        'Posso mandar pra você os conteúdos e as novidades deles por aqui?\n\n' +
+        'Se sim, me responde nesta ordem, numa mensagem só:\n\n' +
+        'Sim / Nome completo / Cidade\n\n' +
+        '(exemplo: Sim / Maria Silva / Santo Ângelo)\n\n' +
+        'Se preferir não receber, só me avisar que não — eu respeito e não incomodo mais.',
+    ],
   },
   {
     /**
@@ -231,6 +309,24 @@ export const DEFAULT_TEMPLATES = [
       'Sim / Nome completo / Cidade\n\n' +
       'Se não quiser, é só responder *não* — eu tiro você da lista e não te chamo mais. ' +
       'Fica tudo bem do mesmo jeito. 🙏',
+    variantes: [
+      '{{saudacao}}! Faz um tempinho que trocamos mensagem por aqui e você não voltou a responder — ' +
+        'sem problema, a correria da vida é assim mesmo. 🇧🇷\n\n' +
+        'Só preciso confirmar uma coisa, pra não te incomodar à toa: você ainda tem interesse em ' +
+        'receber os conteúdos do Capitão Martim e do Zucco?\n\n' +
+        'Se sim, me responde nesta ordem, numa única mensagem:\n\n' +
+        'Sim / Nome completo / Cidade\n\n' +
+        'Se não quiser mais, é só responder *não* — eu tiro você da lista e não chamo de novo. ' +
+        'Fica tudo bem do mesmo jeito. 🙏',
+      '{{saudacao}}! Já faz um tempo desde a nossa última conversa por aqui e você não retornou — ' +
+        'tudo bem, a vida é corrida mesmo. 🇧🇷\n\n' +
+        'Só para não te incomodar à toa, preciso confirmar uma coisa: você continua com interesse ' +
+        'em receber os conteúdos do Capitão Martim e do Zucco?\n\n' +
+        'Se sim, me responde nesta ordem, em uma mensagem só:\n\n' +
+        'Sim / Nome completo / Cidade\n\n' +
+        'Se preferir não continuar, é só responder *não* — eu retiro você da lista e não chamo ' +
+        'mais. Fica tudo certo do mesmo jeito. 🙏',
+    ],
   },
   {
     id: 'sem-interesse',
@@ -238,6 +334,12 @@ export const DEFAULT_TEMPLATES = [
     text:
       'Sem problema! Agradeço o retorno e não vou mais te incomodar. ' +
       'Se mudar de ideia, é só mandar uma mensagem aqui. Um abraço!',
+    variantes: [
+      'Tudo bem! Agradeço a resposta e não vou mais incomodar. ' +
+        'Se um dia mudar de ideia, é só me chamar por aqui. Um abraço!',
+      'Sem problema nenhum! Obrigado pelo retorno, não vou mais te incomodar. ' +
+        'Se mudar de ideia depois, é só mandar mensagem por aqui. Um abraço!',
+    ],
   },
 ];
 
@@ -363,6 +465,11 @@ const DEFAULTS = {
   /** { "<contactId>|<templateId>": timestamp } para o aviso de duplicata. */
   sentLog: {},
   /**
+   * Ponteiro de rotação por resposta: { "<templateId>": índice da PRÓXIMA variante a usar }.
+   * Só avança em envio de verdade (`templates.avancarVariante`) — preview não mexe aqui.
+   */
+  varianteIndex: {},
+  /**
    * Migrações já aplicadas, uma vez cada. Sem isto, uma migração que mexe em texto editável
    * desfaria a sua edição toda vez que o painel subisse.
    */
@@ -442,6 +549,7 @@ export async function exportJson() {
   const data = await getAll();
   delete data.municipios; // cache, se refaz sozinho
   delete data.sentLog;
+  delete data.varianteIndex; // ponteiro de rotação, não é configuração
   return JSON.stringify(data, null, 2);
 }
 

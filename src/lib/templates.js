@@ -21,6 +21,7 @@ export async function list() {
     await migrarGruposPedeLink();
     await migrarRespostaSemRetorno();
     await migrarRespostaPedidoEmprego();
+    await migrarVariantesDeTexto();
   }
   return store.get('templates');
 }
@@ -224,6 +225,66 @@ export async function migrarPerguntaGrupos() {
 
   await store.set('migracoes', { ...migracoes, perguntaGrupos: true });
   return mexeu;
+}
+
+/**
+ * Acrescenta `variantes` às respostas que já estão salvas no navegador — mudar
+ * `DEFAULT_TEMPLATES` só vale para quem nunca gravou nada, mesmo problema de sempre.
+ *
+ * Só entra quando: (1) o id ainda não tem nenhuma variante (rodou de novo não duplica, e
+ * variante que o Thiago tenha apagado de propósito não volta); (2) o TEXTO-BASE continua
+ * IDÊNTICO ao padrão — se ele reescreveu a resposta, misturar a variante do texto original
+ * com a base editada dele mandaria conteúdo inconsistente. Nesse caso fica de fora, em
+ * silêncio: sem variante é o comportamento de sempre (só o texto que ele escreveu), nunca erro.
+ */
+export async function migrarVariantesDeTexto() {
+  const migracoes = await store.get('migracoes');
+  if (migracoes.variantesDeTexto) return false;
+
+  const templates = await store.get('templates');
+  const mexidos = [];
+  for (const template of templates) {
+    if (template.variantes?.length) continue;
+    const padrao = store.DEFAULT_TEMPLATES.find((t) => t.id === template.id);
+    if (!padrao?.variantes?.length) continue;
+    if (String(template.text || '').trim() !== String(padrao.text || '').trim()) continue;
+    template.variantes = structuredClone(padrao.variantes);
+    mexidos.push(template.name);
+  }
+  if (mexidos.length) await store.set('templates', templates);
+
+  await store.set('migracoes', { ...migracoes, variantesDeTexto: true });
+  return mexidos;
+}
+
+/**
+ * O texto a usar AGORA — a variante corrente do ponteiro de rotação, sem avançar nada.
+ *
+ * Preview (aba Respostas, card de cada resposta) e o começo de um envio de verdade chamam
+ * esta função e têm que ver a MESMA coisa; só `avancarVariante`, chamada depois que a
+ * mensagem sai de verdade, muda o que a próxima chamada devolve.
+ */
+export async function varianteAtual(template) {
+  const variantes = [template.text, ...(template.variantes || [])];
+  if (variantes.length <= 1) return template.text;
+
+  const indices = await store.get('varianteIndex');
+  const i = (indices[template.id] || 0) % variantes.length;
+  return variantes[i];
+}
+
+/**
+ * Avança o ponteiro de rotação — só depois que a mensagem SAIU de verdade (não a cada
+ * preview, não em "Só inserir": ali o envio de fato ainda depende de você, ou de mais uma
+ * ação sua, e queimar a rotação sem nada ter saído faria a próxima variante pular sozinha).
+ */
+export async function avancarVariante(template) {
+  const variantes = [template.text, ...(template.variantes || [])];
+  if (variantes.length <= 1) return;
+
+  const indices = await store.get('varianteIndex');
+  const atual = indices[template.id] || 0;
+  await store.set('varianteIndex', { ...indices, [template.id]: (atual + 1) % variantes.length });
 }
 
 export async function save(template) {

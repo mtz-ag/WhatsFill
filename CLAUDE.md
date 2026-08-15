@@ -198,10 +198,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Testes
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as seis suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as sete suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

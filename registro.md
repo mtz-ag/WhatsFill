@@ -5,6 +5,66 @@
 
 ---
 
+## 2026-08-12 — Número caindo: diagnóstico, e variação de texto para não parecer disparo repetido
+
+**Relato:** o número derrubou depois de reabrir poucos (~10) atendimentos "sem retorno" e
+responder à mão — suspeita de ter sido pego por spam.
+
+**Diagnóstico (não é volume):** `mobiliza.app` conecta por **Z-API**, que é API NÃO oficial
+(WhatsApp Web via QR Code, simula uso humano) — não é a Cloud API homologada da Meta. Com só
+~10 mensagens, a teoria de "penalização por volume" (que pesa em milhares numa janela) não bate.
+Suspeito mais provável: o PADRÃO da automação (reabrir concluído → mandar → concluir de novo,
+em sequência, com o mesmo texto repetido) parece disparo em massa aos olhos do WhatsApp,
+independente da quantidade. Também confirmado nesta conversa: **a trava de canal desconectado
+que o CLAUDE.md descreve como resolvida não existe no código** (`grep` por `canalDesconectado`/
+`numeroDaConversa` não acha nada em `src/`) — se o número cai no meio de uma rodada, ela não
+percebe e segue agindo contra canal morto. Ainda não implementada — Thiago pediu para focar no
+diagnóstico primeiro.
+
+**Ideia descartada:** adicionar os ~7.500 contatos sem retorno a grupos, em vez de mandar
+mensagem direta. Não reduz o risco (adicionar sem consentimento é padrão de abuso monitorado
+com mais peso, e falha sozinho para quem tem "quem pode me adicionar" ≠ Qualquer um) e cria um
+problema NOVO de LGPD (expõe telefone/nome/foto a todo o grupo sem consentimento). Mandar o
+LINK do grupo por DM foi cogitado como alternativa e **descartado pelo próprio Thiago**: é o
+mesmo mecanismo de risco (reabrir 1:1 e mandar mensagem em sequência para gente fria) — só muda
+o conteúdo, não o padrão que aparentemente pesa.
+
+**Implementado — variação de texto por rotação.** Pedido: 3 variações de cada resposta pronta,
+alternando a cada envio, para não repetir a mesma frase exata. `store.DEFAULT_TEMPLATES` ganhou
+`variantes: [texto2, texto3]` em 9 das 11 respostas (as 2 de risco jurídico, `pedido-ajuda` e
+`pedido-emprego`, ficam de fora de propósito — variedade não vale reescrever texto que se apoia
+em lei, e são resposta a pedido individual, não disparo em massa). Cada variante muda só a
+superfície (abertura/conectivo/fechamento); o que o parser exige **fica idêntico** nas três —
+"Nome completo / Cidade" e "Sim / Nome completo / Cidade" são casadas literalmente por
+`extract.findStructured`, mexer aí quebraria a resposta de quem caiu na variante 2 ou 3.
+
+`templates.varianteAtual(template)` lê o ponteiro de rotação (`store.varianteIndex`, novo) sem
+avançar — preview e o começo de um envio veem a MESMA coisa. `templates.avancarVariante` só
+roda depois que a mensagem **sai de verdade** (`page.sendText` bem-sucedido), nunca em preview
+nem em "Só inserir": queimar a rotação sem nada ter saído faria a próxima pular sozinha. Havia
+DOIS pontos de envio de texto, não um: `sendTemplate` (manual + respostas rápidas da rodada) e
+`processarNovo` (rodada 1, "Novos: pedir dados" — reimplementa o envio por fora do
+`sendTemplate`) — os dois foram ligados à rotação.
+
+`templates.migrarVariantesDeTexto` acrescenta `variantes` a quem já tem a resposta salva no
+navegador, e só quando o texto-base bate **exatamente** com o padrão — resposta que o Thiago já
+reescreveu fica de fora (em silêncio, sem variante nenhuma) para não misturar a variante do
+texto original com a base editada dele.
+
+**Arquivos:** [src/lib/store.js](src/lib/store.js) (`variantes` nos templates, `varianteIndex`
+nos defaults), [src/lib/templates.js](src/lib/templates.js) (`varianteAtual`, `avancarVariante`,
+`migrarVariantesDeTexto`), [src/panel/panel.js](src/panel/panel.js) (`sendTemplate`,
+`renderTemplateCard`, `processarNovo`, aviso no editor da aba Respostas). Suíte nova:
+[tests/templates.test.mjs](tests/templates.test.mjs) — sete suítes agora, `CLAUDE.md` atualizado.
+
+**Pendente, ainda sem decisão do Thiago:** implementar a trava de canal desconectado; reduzir
+limite/pausa específicos da rodada "Sem retorno"; variação do **modelo aprovado (HSM)** da
+rodada 4 — hoje é um só (`auto.cfg.templateId`, seletor único); rotação aí só é possível se
+houver mais de um modelo aprovado registrado na plataforma com conteúdo parecido, o que não foi
+confirmado.
+
+---
+
 ## 2026-08-12 — Cidade gravada sem a pessoa ter dito nada ("Lourdes" → "Cerrito")
 
 **Relato (Thiago, print):** contato "Lourdes" ficou com Cidade "Cerrito" na conversa inteira sem

@@ -865,7 +865,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     async function renderPreview() {
       const ctx = await currentVarContext();
-      const { text, missing, reasons } = vars.render(template.text, ctx);
+      // A variante MOSTRADA é a que `sendTemplate` vai usar se você clicar Enviar agora — só
+      // avança depois que a mensagem sai de verdade, então reabrir esta aba não muda nada.
+      const textoVariante = await templatesLib.varianteAtual(template);
+      const { text, missing, reasons } = vars.render(textoVariante, ctx);
       preview.textContent = text;
 
       const pending = state.pageState.isPending;
@@ -918,7 +921,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * acabou de abrir, e o aviso "já enviei esta resposta" aparecia para quem nunca recebeu.
      */
     const alvo = state.contact;
-    const { text, missing, reasons } = vars.render(template.text, await currentVarContext());
+    // Peek, não avança: só o envio de verdade lá embaixo (`page.sendText`) avança o ponteiro.
+    const textoVariante = await templatesLib.varianteAtual(template);
+    const { text, missing, reasons } = vars.render(textoVariante, await currentVarContext());
 
     if (missing.length) {
       setStatus('Bloqueado: ' + vars.explainMissing(missing, reasons), 'err');
@@ -960,6 +965,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     await page.sendText(text);
     state.lastSendAt = Date.now();
     await templatesLib.markSent(alvo.id, template.id, { nome: alvo.name });
+    await templatesLib.avancarVariante(template);
     setStatus(`Enviado: ${template.name}`, 'ok');
     return true;
   }
@@ -1968,7 +1974,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       // O contexto é montado para ESTE contato: a rodada não passa pelo `load()` do painel.
-      const { text, missing, reasons } = vars.render(template.text, await vars.buildContext({ contact: contato }));
+      // A variante vem do MESMO ponteiro de rotação do envio manual: reabrir o painel não
+      // adianta nada e mandar por esta rodada não pula nenhuma — é uma fila só.
+      const textoVariante = await templatesLib.varianteAtual(template);
+      const { text, missing, reasons } = vars.render(textoVariante, await vars.buildContext({ contact: contato }));
       if (missing.length) return { nome, resultado: 'erro', motivo: vars.explainMissing(missing, reasons) };
 
       let estado = await page.getState();
@@ -1993,6 +2002,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       setStatus(`Pedindo os dados para ${nome}…`);
       await page.sendText(text);
       await templatesLib.markSent(contato.id, template.id, { nome });
+      await templatesLib.avancarVariante(template);
       ctx?.contatosTratados?.add(contato.id);
 
       const concluido = await page.clickConcluir();
@@ -3646,6 +3656,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     });
 
     card.append(nameInput, textArea, avisoNome, h('div', { class: 'wf-row' }, [saveBtn, upBtn, downBtn, delBtn]));
+    // Reescrever a caixa acima só troca ESTA variante — as outras (2, 3) ficam do jeito que
+    // estão, com o texto antigo. Não escondo isso: editar sem saber deixaria a rotação mandando
+    // uma frase reescrita ao lado de duas que ninguém tocou.
+    if (template.variantes?.length) {
+      card.append(
+        h('div', { class: 'wf-origin' },
+          `Reveza entre ${template.variantes.length + 1} variações a cada envio (evitar texto repetido). ` +
+            'Salvar aqui muda só esta — as outras continuam como estão.')
+      );
+    }
     card.append(h('div', { class: 'wf-origin' }, 'id: ' + template.id));
     conferirNome();
     return card;
