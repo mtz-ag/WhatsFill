@@ -396,6 +396,12 @@ const DEFAULTS = {
      */
     mensagemMomento: '',
     /**
+     * Reescritas alternativas de `mensagemMomento`, mesmo mecanismo de `templates.variantes`:
+     * `sendTemplate` reveza entre o texto principal e estas a cada envio de verdade, para não
+     * repetir a mesma frase mandada em massa. Editável no popup do cartão da mensagem do momento.
+     */
+    mensagemMomentoVariantes: [],
+    /**
      * A partir de quantas horas de silêncio a rodada **pergunta** em vez de concluir sozinha,
      * quando a última mensagem da conversa é nossa.
      *

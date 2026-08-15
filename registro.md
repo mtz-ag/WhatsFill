@@ -5,6 +5,33 @@
 
 ---
 
+## 2026-08-15 — Mesma rotação de variações para a mensagem do momento
+
+**Pedido:** *"faça a mesma coisa para saudação do momento"* — a mensagem da ocasião (tecla 5,
+`auto.mensagemMomento`) não vive na lista de respostas prontas (muda toda semana), então não
+ganhou variantes quando as respostas ganharam.
+
+**Reaproveitado, não duplicado:** `sendTemplate` já reveza sozinho qualquer objeto com
+`{id, text, variantes}` — a mensagem do momento entra nesse molde numa linha só, dando
+`variantes: state.auto.cfg.mensagemMomentoVariantes` ao template de mentira que a rodada monta
+(`momento = {id: ..., text: textoMomento, variantes: ...}`). Nada mudou em `templates.js` nem em
+`varianteAtual`/`avancarVariante` — já tratavam lista de tamanho variável.
+
+A lógica de lista dinâmica de variações (adicionar/remover) foi tirada de dentro de
+`abrirEditorDeResposta` e virou `montarListaDeVariantes(container, iniciais)`, compartilhada
+pelos dois popups — sem isso a próxima variação (e a próxima) duplicaria o mesmo código de novo.
+
+**Armazenamento:** `auto.mensagemMomentoVariantes` (novo), `[]` por padrão — `auto` já está na
+lista de chaves com merge de default no `store.get`, então quem já tinha configuração salva
+ganha o campo novo sem migração nenhuma.
+
+**Arquivos:** [src/lib/store.js](src/lib/store.js) (`auto.mensagemMomentoVariantes`),
+[src/panel/panel.js](src/panel/panel.js) (`montarListaDeVariantes` extraída,
+`abrirEditorDeVariantesDoMomento`, botão no `renderCartaoMomento`, `variantes` no `momento`).
+Manifesto 0.8.4 → **0.8.5**. Sete suítes passando.
+
+---
+
 ## 2026-08-15 — Lista enxuta: só o resumo, edição (texto e variações) no popup
 
 **Relato (print):** o popup anterior separava "editar texto" (na lista, sempre aberto) de

@@ -1350,7 +1350,82 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (cfg.mensagemMomento) {
       card.append(h('div', { class: 'wf-hint' }, 'Variáveis: ' + vars.KNOWN_VARS.map(([v]) => v).join(' ')));
     }
+
+    // Mesmo tratamento das respostas prontas: reveza entre variações a cada envio de verdade,
+    // para não repetir a mesma frase mandada em massa para quem recebe a mensagem do momento.
+    const variantesBtn = h('button', { class: 'wf-btn wf-mini', type: 'button' },
+      cfg.mensagemMomentoVariantes?.length ? `Variações (${cfg.mensagemMomentoVariantes.length + 1})` : 'Variações');
+    variantesBtn.addEventListener('click', () => abrirEditorDeVariantesDoMomento(state.auto.cfg));
+    card.append(h('div', { class: 'wf-row' }, [variantesBtn]));
+
     return card;
+  }
+
+  /**
+   * Popup das variações da mensagem do momento — mesmo mecanismo das respostas prontas
+   * (`montarListaDeVariantes`), só que salva em `auto.mensagemMomentoVariantes` (via
+   * `salvarAuto`) em vez de `templates.save`: a mensagem do momento não mora na lista de
+   * respostas, mora na config da rodada, porque muda toda semana.
+   */
+  function abrirEditorDeVariantesDoMomento(cfg) {
+    const fundo = h('div', { class: 'wf-pergunta-fundo' });
+    const caixa = h('div', { class: 'wf-pergunta' });
+    fundo.append(caixa);
+
+    const barra = h('div', { class: 'wf-pergunta-titulo' }, 'Variações — Mensagem do momento');
+    caixa.append(barra);
+    tornarArrastavel(caixa, barra);
+
+    caixa.append(
+      h('div', { class: 'wf-pergunta-linha' },
+        'Reveza entre estas e o texto principal a cada envio de verdade. O texto principal se ' +
+          'edita no campo de cima, não aqui.')
+    );
+    caixa.append(h('div', { class: 'wf-pergunta-corpo' }, truncate(cfg.mensagemMomento || '(vazio)', 160)));
+
+    const variantesBox = h('div', {});
+    caixa.append(variantesBox);
+    const listaDeVariantes = montarListaDeVariantes(variantesBox, cfg.mensagemMomentoVariantes);
+
+    const addVarianteBtn = h('button', { class: 'wf-btn wf-mini', type: 'button' }, '+ Adicionar variação');
+    addVarianteBtn.addEventListener('click', () => listaDeVariantes.adicionar());
+    caixa.append(addVarianteBtn);
+
+    const linhaBotoes = h('div', { class: 'wf-pergunta-botoes' });
+    const salvarBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Salvar');
+    const fecharBtn = h('button', { class: 'wf-btn', type: 'button' }, 'Fechar sem salvar');
+    linhaBotoes.append(salvarBtn, fecharBtn);
+    caixa.append(linhaBotoes);
+    caixa.append(h('div', { class: 'wf-pergunta-dica' }, 'Esc fecha sem salvar'));
+
+    function fechar() {
+      document.removeEventListener('keydown', aoTeclar, true);
+      fundo.remove();
+    }
+    function aoTeclar(ev) {
+      if (ev.key !== 'Escape') return;
+      ev.preventDefault();
+      fechar();
+    }
+    document.addEventListener('keydown', aoTeclar, true);
+
+    salvarBtn.addEventListener('click', () =>
+      withBusy(async () => {
+        const mensagemMomentoVariantes = listaDeVariantes.valores();
+        await salvarAuto({ mensagemMomentoVariantes });
+        setStatus(
+          mensagemMomentoVariantes.length
+            ? `Mensagem do momento revezando entre ${mensagemMomentoVariantes.length + 1} variações.`
+            : 'Mensagem do momento sem variações — sempre manda o texto principal.',
+          'ok'
+        );
+        fechar();
+      })
+    );
+    fecharBtn.addEventListener('click', fechar);
+
+    root.append(fundo);
+    aplicarPosicao(caixa, null);
   }
 
   /** Limite, pausa e o Parar — valem para qualquer rodada. */
@@ -2398,7 +2473,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // trocar de data (Dia dos Pais -> Natal) seria barrado pelo anti-duplicata da anterior.
       const textoMomento = String(state.auto.cfg.mensagemMomento || '').trim();
       const momento = textoMomento
-        ? { id: `momento:${chaveDoTexto(textoMomento)}`, name: 'Mensagem do momento', text: textoMomento }
+        ? {
+            id: `momento:${chaveDoTexto(textoMomento)}`,
+            name: 'Mensagem do momento',
+            text: textoMomento,
+            // Mesmo mecanismo das respostas prontas: `sendTemplate` reveza sozinho.
+            variantes: state.auto.cfg.mensagemMomentoVariantes,
+          }
         : null;
       const momentoTrava = momento ? vars.render(momento.text, contexto).missing.length > 0 : true;
 
@@ -4420,6 +4501,49 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /**
+   * A lista dinâmica de variações, compartilhada pelo popup das respostas prontas e pelo da
+   * mensagem do momento: "+ Adicionar variação" cria uma caixa vazia, "×" remove qualquer uma.
+   *
+   * Devolve `{ adicionar, valores }` em vez de mexer em estado externo: quem chama nem precisa
+   * saber que existe um array por trás, só lê `valores()` na hora de salvar. `valores()` já
+   * filtra vazio — nunca sai variação em branco, porque mandar mensagem vazia para um contato é
+   * pior que não ter variação nenhuma.
+   */
+  function montarListaDeVariantes(container, iniciais) {
+    const variantesState = [...(iniciais || [])];
+
+    function redesenhar() {
+      while (container.firstChild) container.removeChild(container.firstChild);
+      variantesState.forEach((valor, i) => {
+        const linha = h('div', { class: 'wf-row', style: 'align-items:flex-start;margin-top:6px' });
+        const ta = h('textarea', { rows: '3', style: 'width:100%;box-sizing:border-box' });
+        ta.value = valor;
+        ta.addEventListener('input', () => {
+          variantesState[i] = ta.value;
+        });
+        const rmBtn = h('button', { class: 'wf-btn wf-mini wf-danger', type: 'button' }, '×');
+        rmBtn.addEventListener('click', () => {
+          variantesState.splice(i, 1);
+          redesenhar();
+        });
+        linha.append(ta, rmBtn);
+        container.append(linha);
+      });
+    }
+    redesenhar();
+
+    return {
+      adicionar() {
+        variantesState.push('');
+        redesenhar();
+      },
+      valores() {
+        return variantesState.map((v) => v.trim()).filter(Boolean);
+      },
+    };
+  }
+
+  /**
    * Popup de edição: nome, texto principal e as variações — tudo num lugar só. A mesma caixa
    * não-bloqueante e arrastável da pergunta da rodada (`wf-pergunta`/`wf-pergunta-fundo`), com
    * campos de texto em vez de botões de decisão.
@@ -4467,35 +4591,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
     const variantesBox = h('div', {});
     caixa.append(variantesBox);
-
-    // Lista mutável em memória; só vira `template.variantes` de verdade ao Salvar.
-    const variantesState = [...(template.variantes || [])];
-
-    function renderVariantesBox() {
-      while (variantesBox.firstChild) variantesBox.removeChild(variantesBox.firstChild);
-      variantesState.forEach((valor, i) => {
-        const linha = h('div', { class: 'wf-row', style: 'align-items:flex-start;margin-top:6px' });
-        const ta = h('textarea', { rows: '3', style: 'width:100%;box-sizing:border-box' });
-        ta.value = valor;
-        ta.addEventListener('input', () => {
-          variantesState[i] = ta.value;
-        });
-        const rmBtn = h('button', { class: 'wf-btn wf-mini wf-danger', type: 'button' }, '×');
-        rmBtn.addEventListener('click', () => {
-          variantesState.splice(i, 1);
-          renderVariantesBox();
-        });
-        linha.append(ta, rmBtn);
-        variantesBox.append(linha);
-      });
-    }
-    renderVariantesBox();
+    const listaDeVariantes = montarListaDeVariantes(variantesBox, template.variantes);
 
     const addVarianteBtn = h('button', { class: 'wf-btn wf-mini', type: 'button' }, '+ Adicionar variação');
-    addVarianteBtn.addEventListener('click', () => {
-      variantesState.push('');
-      renderVariantesBox();
-    });
+    addVarianteBtn.addEventListener('click', () => listaDeVariantes.adicionar());
     caixa.append(addVarianteBtn);
 
     const linhaBotoes = h('div', { class: 'wf-pergunta-botoes' });
@@ -4518,7 +4617,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     salvarBtn.addEventListener('click', () =>
       withBusy(async () => {
-        const variantes = variantesState.map((v) => v.trim()).filter(Boolean);
+        const variantes = listaDeVariantes.valores();
         state.templates = await templatesLib.save({
           id: template.id,
           name: nameInput.value,
