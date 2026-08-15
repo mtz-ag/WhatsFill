@@ -4406,21 +4406,105 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.templates = await templatesLib.remove(template.id);
       renderAll();
     });
+    const variantesBtn = h('button', { class: 'wf-btn wf-mini', type: 'button' },
+      template.variantes?.length ? `Variações (${template.variantes.length + 1})` : 'Variações');
+    variantesBtn.addEventListener('click', () => {
+      // Pega o template FRESCO do state, não o `template` capturado no fechamento: se você abriu
+      // duas vezes sem recarregar, a segunda tem que ver o que a primeira acabou de salvar.
+      const atual = state.templates.find((t) => t.id === template.id) || template;
+      abrirEditorDeVariantes(atual);
+    });
 
-    card.append(nameInput, textArea, avisoNome, h('div', { class: 'wf-row' }, [saveBtn, upBtn, downBtn, delBtn]));
+    card.append(nameInput, textArea, avisoNome, h('div', { class: 'wf-row' }, [saveBtn, upBtn, downBtn, delBtn, variantesBtn]));
     // Reescrever a caixa acima só troca ESTA variante — as outras (2, 3) ficam do jeito que
     // estão, com o texto antigo. Não escondo isso: editar sem saber deixaria a rotação mandando
-    // uma frase reescrita ao lado de duas que ninguém tocou.
+    // uma frase reescrita ao lado de duas que ninguém tocou. O botão "Variações" é onde as outras
+    // duas se editam de verdade.
     if (template.variantes?.length) {
       card.append(
         h('div', { class: 'wf-origin' },
           `Reveza entre ${template.variantes.length + 1} variações a cada envio (evitar texto repetido). ` +
-            'Salvar aqui muda só esta — as outras continuam como estão.')
+            'Salvar aqui muda só esta — as outras se editam no botão "Variações".')
       );
     }
     card.append(h('div', { class: 'wf-origin' }, 'id: ' + template.id));
     conferirNome();
     return card;
+  }
+
+  /**
+   * Popup para ver e editar as até duas variações extras de uma resposta pronta — a mesma caixa
+   * não-bloqueante da pergunta da rodada (`wf-pergunta`/`wf-pergunta-fundo`: sem fundo escuro,
+   * arrastável), só que com campos de texto em vez de botões de decisão.
+   *
+   * O texto PRINCIPAL não se edita aqui — é o mesmo textarea de sempre, na aba Respostas. Aqui
+   * só as variações 2 e 3, que hoje só existiam no código-fonte (`store.DEFAULT_TEMPLATES`).
+   * Campo deixado em branco = essa posição da rotação some (nunca grava variação vazia: mandar
+   * mensagem em branco para um contato é pior que não ter variação nenhuma).
+   */
+  function abrirEditorDeVariantes(template) {
+    const fundo = h('div', { class: 'wf-pergunta-fundo' });
+    const caixa = h('div', { class: 'wf-pergunta' });
+    fundo.append(caixa);
+
+    const barra = h('div', { class: 'wf-pergunta-titulo' }, `Variações — ${template.name}`);
+    caixa.append(barra);
+    tornarArrastavel(caixa, barra);
+
+    caixa.append(
+      h('div', { class: 'wf-pergunta-linha' },
+        'Reveza entre estas a cada envio de verdade, para não repetir a mesma frase. O texto ' +
+          'PRINCIPAL (variação 1) se edita na aba Respostas, não aqui.')
+    );
+    caixa.append(h('div', { class: 'wf-pergunta-corpo' }, truncate(template.text, 160)));
+
+    const existentes = template.variantes || [];
+    const textareas = [0, 1].map((i) => {
+      caixa.append(h('div', { class: 'wf-pergunta-linha' }, `Variação ${i + 2}:`));
+      const ta = h('textarea', { rows: '4', style: 'width:100%;box-sizing:border-box' });
+      ta.value = existentes[i] || '';
+      caixa.append(ta);
+      return ta;
+    });
+
+    const linhaBotoes = h('div', { class: 'wf-pergunta-botoes' });
+    const salvarBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Salvar variações');
+    const fecharBtn = h('button', { class: 'wf-btn', type: 'button' }, 'Fechar sem salvar');
+    linhaBotoes.append(salvarBtn, fecharBtn);
+    caixa.append(linhaBotoes);
+    caixa.append(h('div', { class: 'wf-pergunta-dica' }, 'Esc fecha sem salvar'));
+
+    function fechar() {
+      document.removeEventListener('keydown', aoTeclar, true);
+      fundo.remove();
+    }
+    function aoTeclar(ev) {
+      if (ev.key !== 'Escape') return;
+      ev.preventDefault();
+      fechar();
+    }
+    document.addEventListener('keydown', aoTeclar, true);
+
+    salvarBtn.addEventListener('click', () =>
+      withBusy(async () => {
+        const variantes = textareas.map((ta) => ta.value.trim()).filter(Boolean);
+        state.templates = await templatesLib.save({ id: template.id, name: template.name, text: template.text, variantes });
+        setStatus(
+          variantes.length
+            ? `"${template.name}": ${variantes.length + 1} variações salvas.`
+            : `"${template.name}": variações removidas — sempre manda o texto principal.`,
+          'ok'
+        );
+        fechar();
+        // `withBusy` redesenha no `finally` — é o que faz o botão "Variações (N)" do card
+        // mostrar a contagem nova sem precisar reabrir a aba.
+      })
+    );
+    fecharBtn.addEventListener('click', fechar);
+
+    root.append(fundo);
+    aplicarPosicao(caixa, null);
+    textareas[0].focus();
   }
 
   function renderRecorderSection() {

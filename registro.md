@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-08-15 — Popup para editar as variações 2 e 3 de cada resposta
+
+**Pedido:** as variações de texto (ver 12/08) só existiam em `store.DEFAULT_TEMPLATES` — sem
+jeito de ver ou mudar pela interface. Perguntado, ele confirmou querer isso: um popup para ver e
+editar as variações.
+
+**`abrirEditorDeVariantes(template)`:** reusa a mesma caixa não-bloqueante e arrastável da
+pergunta da rodada (`wf-pergunta`/`wf-pergunta-fundo`), mas com dois `textarea` (variação 2 e 3)
+em vez de botões de decisão. O texto PRINCIPAL continua editado só na aba Respostas — aqui é
+só o que faltava. Botão "Variações" novo no card de cada resposta, com a contagem
+(`Variações (3)`) quando já existem.
+
+**Campo vazio = aquela posição da rotação some.** `Salvar` filtra strings vazias antes de gravar
+— nunca grava variação em branco, porque mandar mensagem vazia para um contato é pior que não
+ter variação nenhuma. Zerar os dois campos volta a resposta a mandar sempre o texto principal
+(`varianteAtual` já trata `variantes: []` como "sem rotação").
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`abrirEditorDeVariantes`, botão
+"Variações" em `renderTemplateEditor`). Manifesto 0.8.2 → **0.8.3**. Sete suítes passando.
+
+---
+
 ## 2026-08-13 — Número fora do ar: a rodada só pode pular
 
 **Relato (Thiago, print):** tarja no topo da plataforma — *"O WhatsApp (51) 99511-0122 foi
