@@ -15,6 +15,7 @@ import * as cities from '../lib/cities.js';
 import * as tagsLib from '../lib/tags.js';
 import * as hsmLib from '../lib/hsm.js';
 import * as keepalive from '../lib/keepalive.js';
+import * as categorizar from '../lib/categorizar.js';
 import { extract } from '../lib/extract.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil } from '../lib/vars.js';
@@ -85,6 +86,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     cidadeRecusada: new Set(),
     /** A última mensagem da conversa, de qualquer lado — { doContato, at, texto } ou null. */
     ultimaMensagem: null,
+    /**
+     * Aba Cidades: a categorização da base por etiqueta de cidade.
+     *
+     * `analise` é o retrato da última varredura, e mora em memória de propósito — o dado de 57
+     * mil contatos não cabe confortavelmente no `chrome.storage` e envelhece rápido (etiqueta
+     * aplicada à mão, cidade corrigida). Recarregar o painel obriga a varrer de novo, e varrer é
+     * barato; o que **é** persistido é o que já foi gravado, para os lotes não repetirem trabalho.
+     */
+    cidades: {
+      lendo: false,
+      gravando: false,
+      parar: false,
+      lidos: 0,
+      total: null,
+      analise: null,
+      log: [],
+      /** Tamanho do lote que o botão grava de uma vez. Lote pequeno é a decisão dele (15/08). */
+      lote: 200,
+    },
     busy: false,
     lastSendAt: 0,
     error: null,
@@ -155,6 +175,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     ['respostas', 'Respostas'],
     ['automatizado', 'Automatizado'],
     ['dados', 'Dados'],
+    ['cidades', 'Cidades'],
     ['config', 'Config'],
   ]) {
     const btn = h('button', { type: 'button' }, label);
@@ -634,6 +655,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (state.tab === 'respostas') renderRespostas();
     else if (state.tab === 'automatizado') renderAutomatizado();
     else if (state.tab === 'dados') renderDados();
+    else if (state.tab === 'cidades') renderCidades();
     else renderConfig();
   }
 
@@ -4220,6 +4242,427 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const atual = await store.get('settings');
     state.settings = { ...atual, ...mudancas };
     await store.set('settings', state.settings);
+  }
+
+  // ---- aba Cidades -------------------------------------------------------
+
+  /**
+   * Categorização da base por etiqueta de cidade.
+   *
+   * **O problema:** a API da plataforma só filtra por etiqueta, e a etiqueta de região (COREDE)
+   * agrupa dezenas de municípios. Sem uma etiqueta por cidade não existe "todos de Santo Ângelo".
+   *
+   * **A forma:** varre a base lendo, mostra o que pretende fazer, e só grava quando você aperta —
+   * em lotes do tamanho que você escolher. Nada de rodada longa disparando sozinha: foi decisão
+   * dele (15/08), depois de a rajada derrubar a API e a plataforma junto.
+   */
+  function renderCidades() {
+    const c = state.cidades;
+
+    body.append(
+      h('p', { class: 'wf-hint' },
+        'A API da plataforma só filtra por etiqueta, e o COREDE agrupa dezenas de municípios. ' +
+          'Esta aba dá a cada contato a etiqueta da própria cidade, somada às que ele já tem.')
+    );
+
+    // --- passo 1: varrer -------------------------------------------------
+    const cardLer = h('div', { class: 'wf-card' }, [
+      h('h4', {}, '1. Ler a base'),
+      h('div', { class: 'wf-preview' },
+        'Percorre os contatos e monta o retrato do que falta. Só leitura — nada é gravado neste ' +
+          'passo. Precisa ser refeito se você recarregar o painel.'),
+    ]);
+    const btnLer = h('button', { class: 'wf-btn wf-primary', type: 'button' },
+      c.lendo ? `Lendo… ${c.lidos}${c.total ? ` de ${c.total}` : ''}` : 'Ler a base');
+    btnLer.disabled = c.lendo || c.gravando;
+    btnLer.addEventListener('click', () => withBusy(lerBaseParaCidades));
+    cardLer.append(h('div', { class: 'wf-row' }, [btnLer, botaoParar()]));
+    body.append(cardLer);
+
+    if (!c.analise) {
+      if (c.log.length) renderLogCidades();
+      return;
+    }
+
+    const a = c.analise;
+
+    // --- o retrato -------------------------------------------------------
+    const resumo = h('div', { class: 'wf-card' }, [h('h4', {}, 'O que a leitura encontrou')]);
+    for (const [rotulo, valor] of [
+      ['Contatos lidos', c.lidos],
+      ['Já com a etiqueta da cidade', a.jaOk],
+      ['**Prontos para gravar**', a.paraGravar.length],
+      ['Cidades sem etiqueta no CRM', a.faltamCriar.length],
+      ['Sem etiqueta nenhuma (não entram)', a.semEtiqueta],
+      ['Sem cidade preenchida', a.semCidade],
+      ['Cidade a revisar (não é município do RS)', a.revisar.reduce((s, x) => s + x.quantos, 0)],
+    ]) {
+      const forte = rotulo.startsWith('**');
+      resumo.append(
+        h('div', { class: forte ? '' : 'wf-origin' },
+          `${forte ? rotulo.replace(/\*\*/g, '') : rotulo}: ${valor}`)
+      );
+    }
+    body.append(resumo);
+
+    // --- passo 2: criar as etiquetas que faltam --------------------------
+    if (a.faltamCriar.length) {
+      const cardCriar = h('div', { class: 'wf-card' }, [
+        h('h4', {}, `2. Criar ${a.faltamCriar.length} etiqueta(s) de cidade`),
+        h('div', { class: 'wf-preview' },
+          'Estas cidades existem na base e ainda não têm etiqueta no CRM. Sem elas, os contatos ' +
+            'dessas cidades não podem ser gravados — o painel não inventa id de etiqueta.'),
+        h('div', { class: 'wf-block' },
+          'A rota de criar etiqueta é a ÚNICA deste projeto que nunca foi conferida ao vivo. ' +
+            'Por isso a primeira é criada sozinha, como teste: se ela falhar, nenhuma outra é ' +
+            'tentada e o motivo aparece aqui.'),
+      ]);
+      cardCriar.append(
+        h('div', { class: 'wf-origin' },
+          'As mais frequentes: ' +
+            a.faltamCriar.slice(0, 12).map((x) => `${x.nome} (${x.quantos})`).join(' · ') +
+            (a.faltamCriar.length > 12 ? ` … e ${a.faltamCriar.length - 12} outras` : ''))
+      );
+      const btnCriar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Criar as etiquetas');
+      btnCriar.disabled = c.lendo || c.gravando;
+      btnCriar.addEventListener('click', () => withBusy(criarEtiquetasDeCidade));
+      cardCriar.append(h('div', { class: 'wf-row' }, [btnCriar]));
+      body.append(cardCriar);
+    }
+
+    // --- passo 3: gravar em lotes ----------------------------------------
+    if (a.paraGravar.length) {
+      const cardGravar = h('div', { class: 'wf-card' }, [
+        h('h4', {}, `3. Gravar (${a.paraGravar.length} restantes)`),
+        h('div', { class: 'wf-preview' },
+          'Grava em lote, somando a etiqueta da cidade às que o contato já tem. O ritmo se ajusta: ' +
+            'acelera enquanto a API responde bem e recua na primeira recusa. Pode parar no meio — ' +
+            'o que já foi gravado não é refeito.'),
+      ]);
+      const inputLote = campoNumero('Quantos gravar agora', c.lote, (v) => {
+        c.lote = clampInt(v, 1, 2000);
+        renderAll();
+      });
+      cardGravar.append(inputLote);
+
+      const btnGravar = h('button', { class: 'wf-btn wf-primary', type: 'button' },
+        c.gravando ? 'Gravando…' : `Gravar ${Math.min(c.lote, a.paraGravar.length)} agora`);
+      btnGravar.disabled = c.lendo || c.gravando;
+      btnGravar.addEventListener('click', () => withBusy(() => gravarLoteDeCidades(c.lote)));
+      cardGravar.append(h('div', { class: 'wf-row' }, [btnGravar, botaoParar()]));
+      body.append(cardGravar);
+    }
+
+    // --- o que precisa de olho humano ------------------------------------
+    if (a.revisar.length) {
+      const cardRevisar = h('div', { class: 'wf-card' }, [
+        h('h4', {}, `Cidades a revisar (${a.revisar.length})`),
+        h('div', { class: 'wf-preview' },
+          'O campo Cidade é texto livre, e isto não casou com nenhum dos 497 municípios do RS. ' +
+            'Nenhuma etiqueta é criada a partir daqui — corrigir o campo no CRM e ler de novo é o ' +
+            'caminho. Erro de digitação e cidade de outro estado caem os dois aqui.'),
+      ]);
+      cardRevisar.append(
+        h('div', { class: 'wf-origin' },
+          a.revisar.slice(0, 30).map((x) => `"${x.cidade}" (${x.quantos})`).join(' · ') +
+            (a.revisar.length > 30 ? ` … e ${a.revisar.length - 30} outras` : ''))
+      );
+      body.append(cardRevisar);
+    }
+
+    renderLogCidades();
+  }
+
+  function botaoParar() {
+    const c = state.cidades;
+    const btn = h('button', { class: 'wf-btn wf-danger', type: 'button' }, 'Parar');
+    btn.disabled = !c.lendo && !c.gravando;
+    btn.addEventListener('click', () => {
+      c.parar = true;
+      setStatus('Parando… termino o contato atual e paro.');
+    });
+    return btn;
+  }
+
+  function renderLogCidades() {
+    const c = state.cidades;
+    if (!c.log.length) return;
+    body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Andamento'));
+    // Mais recente primeiro: numa passada longa é o fim da lista que interessa.
+    for (const linha of [...c.log].reverse().slice(0, 60)) {
+      body.append(h('div', { class: linha.erro ? 'wf-block' : 'wf-origin' }, linha.texto));
+    }
+  }
+
+  function logCidades(texto, erro = false) {
+    state.cidades.log.push({ texto, erro });
+    // Teto no log: uma passada de 15 mil contatos encheria a memória do painel com texto.
+    if (state.cidades.log.length > 400) state.cidades.log.splice(0, 200);
+  }
+
+  /**
+   * Varre a base e monta o retrato.
+   *
+   * Lê **só** o que precisa e para de página em página, com respiro entre elas: mesmo leitura é
+   * requisição, e a armadilha da rajada não distingue leitura de escrita.
+   */
+  async function lerBaseParaCidades() {
+    const c = state.cidades;
+    c.lendo = true;
+    c.parar = false;
+    c.lidos = 0;
+    c.total = null;
+    c.analise = null;
+    c.log = [];
+    renderAll();
+
+    const ritmo = new categorizar.Ritmo({ inicialMs: 250, minMs: 120, maxMs: 5000 });
+
+    // Esta aba não depende de contato aberto, mas o schema só é carregado quando um contato
+    // carrega. Buscar aqui evita mandar você abrir um atendimento à toa só para varrer a base.
+    if (!state.schema.length) {
+      try {
+        state.schema = await fieldsLib.loadSchema();
+      } catch (err) {
+        c.lendo = false;
+        return setStatus(`Não consegui carregar o schema dos campos: ${err.message}`, 'err');
+      }
+    }
+
+    const campoCidade = state.schema.find((f) => f.name === 'Cidade');
+    if (!campoCidade) {
+      c.lendo = false;
+      return setStatus('Não achei o campo "Cidade" no schema da plataforma.', 'err');
+    }
+
+    const contatos = [];
+    let pagina = 1;
+    try {
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        if (c.parar) {
+          logCidades(`Parado por você na página ${pagina}.`);
+          break;
+        }
+
+        let resposta;
+        try {
+          resposta = await api.listContacts({ page: pagina, pageSize: 100 });
+          ritmo.sucesso();
+        } catch (err) {
+          if (categorizar.ehLimiteDeTaxa(err.message) && !ritmo.desistir()) {
+            const nova = ritmo.recuar();
+            logCidades(`A API recusou a página ${pagina} — esperando ${nova}ms e tentando de novo.`, true);
+            await esperar(nova);
+            continue; // mesma página
+          }
+          throw err;
+        }
+
+        if (resposta.total != null) c.total = resposta.total;
+        if (!resposta.itens.length) break;
+
+        for (const bruto of resposta.itens) {
+          const valores = fieldsLib.readValues(bruto);
+          contatos.push({
+            id: bruto.id,
+            tagsId: Array.isArray(bruto.tagsId) ? bruto.tagsId : (bruto.tags || []).map((t) => t.id).filter(Boolean),
+            cidade: valores[campoCidade.id] || '',
+          });
+        }
+        c.lidos = contatos.length;
+        setStatus(`Lendo… ${c.lidos}${c.total ? ` de ${c.total}` : ''}`);
+        renderAll();
+
+        // Última página: a API devolveu menos que o pedido.
+        if (resposta.itens.length < 100) break;
+        pagina++;
+        await esperar(ritmo.pausaMs);
+      }
+
+      c.analise = await analisarParaCidades(contatos);
+      logCidades(
+        `Leitura terminada: ${c.lidos} contato(s). ` +
+          `${c.analise.paraGravar.length} para gravar, ${c.analise.faltamCriar.length} etiqueta(s) a criar.`
+      );
+      setStatus(`Leitura terminada: ${c.analise.paraGravar.length} contato(s) para gravar.`, 'ok');
+    } catch (err) {
+      logCidades(`Leitura interrompida: ${err.message}`, true);
+      setStatus(err.message, 'err');
+    } finally {
+      c.lendo = false;
+      renderAll();
+    }
+  }
+
+  /** O retrato, com as etiquetas reais do CRM e a lista oficial de municípios. */
+  async function analisarParaCidades(contatos) {
+    const [todas, coredes] = await Promise.all([tagsLib.allTags(), tagsLib.loadCoredes()]);
+    const etiquetasPorNome = new Map(todas.map((t) => [cities.normalize(t.label), t]));
+    // As chaves de `loadCoredes` já são os municípios normalizados — a mesma fonte oficial que a
+    // etiqueta de região usa, então cidade e COREDE nunca discordam sobre o que é município.
+    const municipios = new Set(Object.keys(coredes));
+    return categorizar.analisar(contatos, {
+      etiquetasPorNome,
+      municipios,
+      prefixo: categorizar.PREFIXO_PADRAO,
+    });
+  }
+
+  /**
+   * Cria as etiquetas de cidade que faltam.
+   *
+   * A primeira vai sozinha, como sonda: a rota de criação nunca foi conferida ao vivo, e mandar
+   * 300 requisições contra uma rota que talvez não exista é a definição de rajada inútil.
+   */
+  async function criarEtiquetasDeCidade() {
+    const c = state.cidades;
+    const faltam = c.analise?.faltamCriar || [];
+    if (!faltam.length) return;
+
+    if (!confirm(`Vou criar ${faltam.length} etiqueta(s) de cidade no CRM. A primeira vai como teste. Confirma?`)) {
+      return setStatus('Criação cancelada.');
+    }
+
+    c.gravando = true;
+    c.parar = false;
+    renderAll();
+
+    const ritmo = new categorizar.Ritmo({ inicialMs: 400, minMs: 200, maxMs: 8000 });
+    let criadas = 0;
+    try {
+      for (const [i, alvo] of faltam.entries()) {
+        if (c.parar) {
+          logCidades(`Parado por você depois de ${criadas} etiqueta(s).`);
+          break;
+        }
+        try {
+          await api.createTag(alvo.nome);
+          criadas++;
+          ritmo.sucesso();
+          logCidades(`Criada: ${alvo.nome}`);
+        } catch (err) {
+          if (i === 0) {
+            // A sonda falhou: não insiste em mais nenhuma.
+            logCidades(`A criação de etiqueta falhou na primeira tentativa: ${err.message}`, true);
+            setStatus(
+              `Não consegui criar etiqueta pela API (${err.message.slice(0, 160)}). ` +
+                'Crie uma à mão no CRM e me diga — pode ser que precise passar pelo gravador, como os outros contratos.',
+              'err'
+            );
+            return;
+          }
+          if (categorizar.ehLimiteDeTaxa(err.message) && !ritmo.desistir()) {
+            const nova = ritmo.recuar();
+            logCidades(`A API recusou "${alvo.nome}" — esperando ${nova}ms.`, true);
+            await esperar(nova);
+          } else {
+            logCidades(`Falhou "${alvo.nome}": ${err.message}`, true);
+          }
+        }
+        setStatus(`Criando etiquetas… ${criadas}/${faltam.length}`);
+        renderAll();
+        await esperar(ritmo.pausaMs);
+      }
+
+      // Reler o retrato: as etiquetas novas mudam quem pode ser gravado agora.
+      tagsLib.invalidateTags();
+      logCidades(`${criadas} etiqueta(s) criada(s). Leia a base de novo para atualizar o retrato.`);
+      setStatus(`${criadas} etiqueta(s) criada(s). Clique em "Ler a base" para atualizar.`, 'ok');
+    } finally {
+      c.gravando = false;
+      renderAll();
+    }
+  }
+
+  /**
+   * Grava um lote, com ritmo adaptativo.
+   *
+   * Cada item gravado sai de `paraGravar`, então parar no meio e voltar depois continua de onde
+   * ficou sem repetir ninguém — e o contato que falha **fica** na lista, para a próxima tentativa.
+   */
+  async function gravarLoteDeCidades(quantos) {
+    const c = state.cidades;
+    const fila = c.analise?.paraGravar || [];
+    if (!fila.length) return;
+
+    const lote = Math.min(quantos, fila.length);
+    if (!confirm(`Vou gravar a etiqueta de cidade em ${lote} contato(s), somando às que já têm. Confirma?`)) {
+      return setStatus('Gravação cancelada.');
+    }
+
+    c.gravando = true;
+    c.parar = false;
+    renderAll();
+
+    const ritmo = new categorizar.Ritmo({ inicialMs: 400, minMs: 150, maxMs: 8000 });
+    let gravados = 0;
+    let falhas = 0;
+
+    try {
+      while (gravados + falhas < lote && fila.length) {
+        if (c.parar) {
+          logCidades(`Parado por você: ${gravados} gravado(s) neste lote.`);
+          break;
+        }
+
+        const alvo = fila[0];
+        // `applyTags` faz a UNIÃO com o que o contato já tem — é o que garante somar em vez de
+        // substituir. O objeto sintético carrega as etiquetas atuais lidas na varredura.
+        const resultado = await tagsLib.applyTags(
+          { id: alvo.contactId, tagsId: alvo.tagsId },
+          [alvo.etiqueta.id]
+        );
+
+        if (resultado.ok) {
+          fila.shift();
+          gravados++;
+          ritmo.sucesso();
+        } else if (categorizar.ehLimiteDeTaxa(resultado.error) && !ritmo.desistir()) {
+          const nova = ritmo.recuar();
+          logCidades(`A API recusou — esperando ${nova}ms e tentando o mesmo contato de novo.`, true);
+          await esperar(nova);
+          continue; // não consome do lote: é a mesma tentativa
+        } else if (categorizar.ehLimiteDeTaxa(resultado.error)) {
+          logCidades('A API continua recusando no teto de espera. Parei para não castigar a plataforma.', true);
+          break;
+        } else {
+          // Erro do próprio contato: sai da fila para não travar o lote, e vai para o log.
+          fila.shift();
+          falhas++;
+          logCidades(`Falhou ${alvo.cidade} (${alvo.contactId}): ${resultado.error}`, true);
+        }
+
+        if ((gravados + falhas) % 10 === 0) {
+          setStatus(`Gravando… ${gravados}/${lote} (pausa ${ritmo.pausaMs}ms, ${fila.length} na fila)`);
+          renderAll();
+        }
+        await esperar(ritmo.pausaMs);
+      }
+
+      c.analise.jaOk += gravados;
+      logCidades(
+        `Lote encerrado: ${gravados} gravado(s)${falhas ? `, ${falhas} com erro` : ''}. ` +
+          `${fila.length} ainda na fila.`
+      );
+      setStatus(
+        `${gravados} contato(s) etiquetado(s)${falhas ? `, ${falhas} com erro` : ''}. ` +
+          `${fila.length} restantes.`,
+        falhas ? 'err' : 'ok'
+      );
+    } finally {
+      c.gravando = false;
+      renderAll();
+    }
+  }
+
+  /** Espera fatiada, para o Parar não ter que aguardar o intervalo inteiro. */
+  async function esperar(ms) {
+    const fim = Date.now() + ms;
+    while (Date.now() < fim) {
+      if (state.cidades.parar) return;
+      await new Promise((r) => setTimeout(r, Math.min(150, fim - Date.now())));
+    }
   }
 
   // ---- aba Config --------------------------------------------------------

@@ -43,6 +43,7 @@ src/lib/fields.js       schema, leitura e escrita de campos personalizados
 src/lib/extract.js      parser determinístico
 src/lib/cities.js       municípios do IBGE, normalização, cidade -> link
 src/lib/tags.js         etiquetas: COREDE, regras de conteúdo
+src/lib/categorizar.js  etiqueta de CIDADE para a base inteira (puro, testado)
 src/lib/hsm.js          modelos de mensagem aprovados
 src/lib/vars.js         variáveis dos templates e bloqueio por variável faltante
 src/data/coredes-rs.json  município -> COREDE (planilha oficial da SPGG-RS)
@@ -95,6 +96,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `CY_CONCLUIDOS` e a tentativa nem roda.
 - **A fila carrega 50 por vez.** O resto só vem no "Ver mais", que é manual e é o único gancho
   da fila sem `data-cy`. Sem clicar nele, a rodada enxerga uma fatia e acha que acabou.
+- **A rota de LISTAGEM de contatos e a de CRIAR etiqueta são as duas únicas não conferidas ao
+  vivo.** Foram escritas numa sessão em que os domínios do mobiliza estavam bloqueados pela
+  política de navegação. Por isso `api.descobrirRotaDeListagem()` **testa** as candidatas com
+  `pageSize=1` e memoriza a que responder, em vez de escolher uma — e `api.createTag` é usada
+  primeiro numa etiqueta só, como sonda: se a primeira falhar, a aba Cidades não tenta nenhuma
+  outra. Conferiu de verdade? Fixe a rota e apague a descoberta.
+- **A etiqueta de CIDADE é o que permite filtrar por município.** A API só filtra por etiqueta, e
+  o COREDE agrupa dezenas de municípios — daí a aba Cidades. Ela **nunca** cria etiqueta a partir
+  do que está escrito no campo Cidade sem casar com os 497 municípios da planilha oficial: o campo
+  é texto livre, e "não sei"/"aaa"/cidade de outro estado viraria etiqueta permanente no CRM.
+  O que não casa vai para a lista de revisão na tela. Ver `categorizar.analisar`.
 
 ## Armadilhas do próprio painel
 
@@ -241,10 +253,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Testes
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as sete suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as oito suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

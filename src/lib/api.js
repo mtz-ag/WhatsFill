@@ -100,6 +100,85 @@ export function getCustomFields() {
 }
 
 /**
+ * A rota de LISTAGEM de contatos, descoberta na primeira chamada e memorizada.
+ *
+ * As outras rotas deste arquivo foram conferidas ao vivo, uma a uma. Esta não deu: os domínios do
+ * mobiliza estão bloqueados pela política de navegação da sessão em que ela foi escrita. Como a
+ * regra do projeto é **não chutar rota**, o código não escolhe uma: ele testa as candidatas com
+ * `pageSize=1` (leitura mínima, nada de puxar base durante a descoberta) e fica com a que
+ * responder no formato certo.
+ *
+ * A ordem tenta primeiro a versão COM os campos personalizados, porque é ela que decide o custo
+ * da categorização inteira: com a cidade vindo na listagem, ler 57 mil contatos custa ~580
+ * requisições; sem ela, custaria uma por contato — o que é exatamente a rajada que já derrubou a
+ * API uma vez.
+ */
+let rotaDeListagem = null;
+
+const CANDIDATAS_LISTAGEM = [
+  (q) => `/core/v1/contact?${q}&isToIncludeCustomFields=true&isToIncludeTags=true`,
+  (q) => `/core/v1/contact?${q}&isToIncludeCustomFields=true`,
+  (q) => `/core/v1/contact?${q}`,
+];
+
+function pareceListagem(corpo) {
+  return Array.isArray(corpo) || Array.isArray(corpo?.items);
+}
+
+export async function descobrirRotaDeListagem() {
+  if (rotaDeListagem) return rotaDeListagem;
+
+  const erros = [];
+  for (const montar of CANDIDATAS_LISTAGEM) {
+    const rota = montar('page=1&pageSize=1');
+    try {
+      const corpo = await apiFetch(rota);
+      if (pareceListagem(corpo)) {
+        rotaDeListagem = montar;
+        return rotaDeListagem;
+      }
+      erros.push(`${rota} → respondeu, mas não é lista`);
+    } catch (err) {
+      erros.push(`${rota} → ${err.message.slice(0, 120)}`);
+    }
+  }
+
+  throw new Error(
+    'Não achei a rota de listagem de contatos. Tentei:\n' +
+      erros.join('\n') +
+      '\n\nAbra o F12 → Network na tela de Contatos, filtre por "contact" e me diga a URL real.'
+  );
+}
+
+/**
+ * Uma página da base de contatos.
+ *
+ * @returns {Promise<{itens: Array, total: number|null}>}
+ */
+export async function listContacts({ page = 1, pageSize = 100 } = {}) {
+  const montar = await descobrirRotaDeListagem();
+  const corpo = await apiFetch(montar(`page=${page}&pageSize=${pageSize}`));
+  const itens = Array.isArray(corpo) ? corpo : corpo?.items || [];
+  const total = Array.isArray(corpo) ? null : corpo?.totalItems ?? corpo?.total ?? null;
+  return { itens, total };
+}
+
+/**
+ * Cria uma etiqueta.
+ *
+ * O rótulo vai em `message` porque é de lá que a leitura o tira (ver `getTags`) — a plataforma
+ * chama de "message" o que a tela mostra como nome da etiqueta.
+ *
+ * **Esta rota não foi conferida ao vivo.** Diferente de tudo o mais aqui, ela ESCREVE, e escrita
+ * não verificada é o que este projeto evita por regra. Por isso quem chama tem que tratar a
+ * falha com o motivo na tela, e a aba Categorizar cria **uma** etiqueta de teste antes de criar
+ * as outras — se a primeira não passar, nenhuma outra é tentada.
+ */
+export function createTag(nome) {
+  return apiFetch('/core/v1/tag', { method: 'POST', body: { message: String(nome).trim() } });
+}
+
+/**
  * Etiquetas cadastradas. Atenção: o rótulo vem no campo `message` (não em `name`), e a
  * resposta é um array puro.
  */

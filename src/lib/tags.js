@@ -309,3 +309,14 @@ export async function applyTags(contact, tagIds, { remover = [] } = {}) {
 export async function allTags() {
   return loadTags();
 }
+
+/**
+ * Descarta o cache da lista de etiquetas.
+ *
+ * Existe para a aba Cidades: ela CRIA etiquetas, e sem invalidar o cache a leitura seguinte
+ * continuaria com a lista de antes — o painel diria que as etiquetas ainda faltam criar e
+ * ofereceria criar as mesmas de novo, com nome duplicado no CRM.
+ */
+export function invalidateTags() {
+  tagsCache = null;
+}

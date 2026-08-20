@@ -5,6 +5,92 @@
 
 ---
 
+## 2026-08-20 — Aba Cidades: etiqueta de município para a base inteira
+
+**Pedido:** *"no crm em contatos vamos ter que criar uma aba que vai categorizar eles, todos que
+tiverem etiqueta e cidade terão que ter uma etiqueta de cidade adicionada para ser usado nos
+filtros depois, o api só filtra por etiquetas e eu preciso da cidade não só região, automatize pra
+categorizar tudo o mais rapido possivel"*. Base com **57.855 contatos** (visto no print).
+
+### O conflito no "mais rápido possível", e como foi resolvido
+
+A leitura é barata (~580 requisições em pageSize 100). A escrita é o custo: um `PUT` por contato.
+Com pausa fixa, ou se desperdiçam horas ou se derruba a API — **e a plataforma junto**, que é onde
+ele atende (armadilha já registrada). Então o ritmo não é escolhido, é medido:
+`categorizar.Ritmo` acelera 20% depois de 12 sucessos seguidos e **dobra** a pausa em cada recusa,
+com piso de 150 ms e teto de 8 s. Errar para o lado lento custa minutos; para o lado rápido custa
+a plataforma fora do ar no meio do atendimento — daí a assimetria.
+
+O sinal de limite é `Failed to fetch`, **não** status HTTP: um limitador recusa o preflight CORS e
+o navegador entrega isso como falha de rede. `ehLimiteDeTaxa` distingue isso de 400/404, onde
+esperar mais não conserta nada.
+
+**Escolhas dele, perguntadas antes de escrever código:** ir pela API (em vez de testar
+exportar/importar CSV, que eu levantei como possivelmente mais rápido e sem risco) e **em lotes
+pequenos, disparados por ele** — nada de rodada longa automática.
+
+### As quatro travas que protegem a base
+
+1. **Cidade tem que casar com os 497 municípios da planilha oficial.** O campo é texto livre e a
+   base tem coisa digitada à mão: sem isto, "não sei", "aaa" e cidade de outro estado virariam
+   etiqueta **permanente** no CRM, e apagar 300 etiquetas de lixo é trabalho que ninguém faz. O que
+   não casa vai para a lista de revisão na tela. Usa as chaves de `tags.loadCoredes` — a mesma
+   fonte da etiqueta de região, então cidade e COREDE nunca discordam sobre o que é município.
+2. **Nome de etiqueta nunca é inventado.** O id sai da lista real do CRM; cidade sem etiqueta
+   correspondente entra em `faltamCriar` e nada é gravado no escuro.
+3. **Idempotente.** Quem já tem a etiqueta é contado como pronto e não gera requisição. Rodar de
+   novo não reescreve, e retomar em lotes é o caso normal.
+4. **Soma, nunca substitui.** Quem grava é o `tags.applyTags` que já existia, que faz a união com
+   as etiquetas atuais. A varredura carrega o `tagsId` de cada contato justamente para isso.
+
+### As duas rotas que NÃO foram conferidas ao vivo
+
+`mobiliza.app` e `api.mobiliza.app` estão bloqueados pela política de navegação desta sessão, e a
+regra do projeto é não chutar rota. Duas consequências no código, em vez de um chute silencioso:
+
+- **`api.descobrirRotaDeListagem()`** testa as candidatas com `pageSize=1` (leitura mínima) e
+  memoriza a que responder no formato certo. A ordem tenta primeiro a versão com
+  `isToIncludeCustomFields=true`, porque é ela que decide o custo da tarefa inteira: com a cidade
+  vindo na listagem são ~580 requisições, sem ela seriam 57.855 — exatamente a rajada que já
+  derrubou a API. Se nenhuma responder, a mensagem manda abrir o F12 → Network e dizer a URL real.
+- **`api.createTag`** é a única rota de ESCRITA não verificada do projeto. A aba cria **uma**
+  etiqueta como sonda: se a primeira falhar, nenhuma outra é tentada e o motivo aparece na tela,
+  com a sugestão de passar pelo gravador como os outros contratos.
+
+Escrevi também `tools/descobrir-listagem.js` (só leitura, para colar no console) para ele
+confirmar as rotas e o custo real — entregue na conversa, ainda sem retorno.
+
+### O fluxo na tela
+
+Três passos explícitos, nessa ordem: **1. Ler a base** (só leitura, com respiro entre páginas — a
+armadilha da rajada não distingue leitura de escrita) → **2. Criar as etiquetas que faltam** (com
+a sonda) → **3. Gravar N agora**, com o tamanho do lote editável. O botão **Parar** age no
+contato atual, e a espera é fatiada para não ter que aguardar o intervalo inteiro. Contato que
+falha por erro próprio sai da fila e vai para o log; contato recusado por limite **fica** e é
+tentado de novo.
+
+O retrato da varredura mora em memória, não no storage: 57 mil contatos não caberiam bem lá e o
+dado envelhece rápido (etiqueta aplicada à mão, cidade corrigida). Varrer de novo é barato.
+
+### Também
+
+`tags.invalidateTags()` — sem ela, criar etiquetas deixava o cache velho e o painel oferecia
+criar as mesmas de novo, com nome duplicado no CRM. E a varredura carrega o schema sozinha se
+estiver vazio, em vez de mandar abrir um atendimento à toa.
+
+**Arquivos:** [src/lib/categorizar.js](src/lib/categorizar.js) (novo, puro),
+[src/lib/api.js](src/lib/api.js) (`descobrirRotaDeListagem`, `listContacts`, `createTag`),
+[src/lib/tags.js](src/lib/tags.js) (`invalidateTags`), [src/panel/panel.js](src/panel/panel.js)
+(aba Cidades), [tests/categorizar.test.mjs](tests/categorizar.test.mjs) (novo),
+[tools/descobrir-listagem.js](tools/descobrir-listagem.js) (novo). Manifesto 0.8.7 → **0.9.0**.
+Oito suítes passando.
+
+**Pendências:** as duas rotas acima precisam de confirmação ao vivo; o prefixo da etiqueta é
+`CIDADE: ` (constante `PREFIXO_PADRAO`, ainda não exposto na tela); e nada disto rodou contra a
+base de verdade — o primeiro lote tem que ser pequeno, com ele olhando o resultado no CRM.
+
+---
+
 ## 2026-08-15 — Aba "Sem retorno" escondida: risco de derrubar o número
 
 **Pedido:** *"a parte sem retorno pode ser escondida não será utilizado devido ao risco grande de
