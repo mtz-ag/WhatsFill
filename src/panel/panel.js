@@ -3821,7 +3821,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
 
     if (!state.tagSuggestions.length) {
-      body.append(h('p', { class: 'wf-hint' }, 'Nada a sugerir ainda — preencha a Cidade para a etiqueta de região.'));
+      body.append(h('p', { class: 'wf-hint' }, 'Nada a sugerir ainda — preencha a Cidade para as etiquetas de cidade e de região.'));
       return;
     }
 
@@ -3838,6 +3838,35 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         linha.append(h('div', { class: 'wf-chips' }, [chip]));
       } else if (sug.tag && sug.jaTem) {
         linha.append(h('div', { class: 'wf-chips' }, [h('span', { class: 'wf-chip' }, `${titulo} ✓ já aplicada`)]));
+      } else if (sug.origem === 'cidade' && sug.nome) {
+        /**
+         * Etiqueta de CIDADE que não existe: o caminho é CRIAR, não apontar para outra.
+         *
+         * Para COREDE, "escolha a correspondente" faz sentido — o nome da planilha pode divergir
+         * do rótulo do CRM ("Paranhana Encosta da Serra" → "Vale do Paranhana"), e o apelido
+         * resolve. Para cidade não existe correspondente: se "PELOTAS" não está lá, é porque
+         * nenhum contato de Pelotas foi etiquetado ainda. Oferecer o seletor de apelido aqui
+         * convidaria a apontar Pelotas para outra etiqueta qualquer — exatamente o erro que a
+         * etiqueta de cidade existe para evitar.
+         */
+        linha.append(
+          h('div', { class: 'wf-block' },
+            `A etiqueta "${sug.nome}" ainda não existe no CRM. Sem ela, este contato fica sem ` +
+              'etiqueta de cidade e não aparece no filtro por município.')
+        );
+        const criar = h('button', { class: 'wf-btn wf-primary wf-mini', type: 'button' }, `Criar "${sug.nome}"`);
+        criar.disabled = state.busy;
+        criar.addEventListener('click', () =>
+          withBusy(async () => {
+            await api.createTag(sug.nome);
+            // O cache tem que cair, senão a releitura devolve a lista velha e a etiqueta recém
+            // criada continua "não encontrada".
+            tagsLib.invalidateTags();
+            await refreshTagSuggestions();
+            setStatus(`Etiqueta "${sug.nome}" criada. Agora ela pode ser aplicada.`, 'ok');
+          })
+        );
+        linha.append(h('div', { class: 'wf-row' }, [criar]));
       } else {
         // Nome não existe (ou não casa) na lista de etiquetas do CRM: escolha manual, e a
         // escolha fica salva como apelido para não precisar repetir.
@@ -4033,7 +4062,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * dúvida e não pode ser gravado sozinho. Regra de conteúdo é literal e não tem esse problema.
    */
   function etiquetaConfiavel(sugestao) {
-    if (sugestao.origem !== 'região') return true;
+    // 'cidade' entra junto com 'região': as duas SAEM da cidade, então herdam a dúvida dela.
+    // Sem isto, palpite aproximado gravaria a etiqueta da cidade sozinho — e a etiqueta é o que
+    // ele usa para filtrar, então errar aqui suja o filtro, não só o campo.
+    if (sugestao.origem !== 'região' && sugestao.origem !== 'cidade') return true;
     const campo = fieldNamed('Cidade');
     const entry = campo && state.draft[campo.id];
     return entry?.from === 'crm' || entry?.confidence === 'exata';
@@ -4062,23 +4094,45 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const campo = fieldNamed('Cidade');
     const entrada = campo && state.draft[campo.id];
 
-    // A região da cidade deste contato, aplicada agora ou já aplicada antes. `etiquetaConfiavel`
-    // é a mesma trava do resto: cidade de palpite não-exato não manda tirar etiqueta nenhuma.
-    const regiao = state.tagSuggestions.find((s) => s.origem === 'região' && s.tag) || null;
-    const fica = regiao && (aplicaveis.includes(regiao) || etiquetaConfiavel(regiao));
-    const novaRegiao = fica ? regiao.tag : null;
+    /**
+     * Duas famílias saem por cidade trocada: a REGIÃO e a CIDADE.
+     *
+     * A de região existe desde sempre. A de cidade entrou em 20/08/2026, junto com a etiqueta de
+     * cidade no fluxo normal — e sem ela o defeito é pior que o do COREDE: trocar de cidade
+     * deixaria o contato com "CAXIAS DO SUL" **e** "PELOTAS", aparecendo nos dois filtros de
+     * cidade. Era exatamente o que a limpeza de COREDE existe para evitar, um nível abaixo.
+     *
+     * `etiquetaConfiavel` é a mesma trava para as duas: cidade de palpite não-exato não manda
+     * tirar etiqueta nenhuma.
+     */
+    const familias = ['região', 'cidade'].map((origem) => {
+      const nova = state.tagSuggestions.find((s) => s.origem === origem && s.tag) || null;
+      const fica = nova && (aplicaveis.includes(nova) || etiquetaConfiavel(nova));
+      return { origem, fica: fica ? nova.tag : null };
+    });
 
-    // Sem nada a trocar e sem região que fique: nem carrega a lista de COREDEs — resolver isso
-    // contra as etiquetas do CRM custa uma passada por 28 nomes e não vale a cada gravação.
-    if (!entrada?.substituiu && !novaRegiao) return [];
+    // Sem troca de cidade e sem nada que fique: nem carrega as listas — resolver isso contra as
+    // etiquetas do CRM custa passadas que não valem a cada gravação.
+    if (!entrada?.substituiu && !familias.some((f) => f.fica)) return [];
 
-    const regioes = await tagsLib.regionTagIds();
-    const todas = await tagsLib.allTags();
+    const [regioes, cidades, todas] = await Promise.all([
+      tagsLib.regionTagIds(),
+      tagsLib.cityTagIds(),
+      tagsLib.allTags(),
+    ]);
+    const conjunto = { 'região': regioes, cidade: cidades };
 
-    return (state.contact.tagsId || [])
-      .filter((id) => regioes.has(id) && id !== novaRegiao?.id)
-      .map((id) => todas.find((t) => t.id === id))
-      .filter(Boolean);
+    const sair = new Set();
+    for (const { origem, fica } of familias) {
+      // Nada que fique nesta família = não mexe nela. Tirar a antiga sem pôr a nova deixaria o
+      // contato sem etiqueta de lugar nenhuma, que é pior que a antiga errada.
+      if (!fica) continue;
+      for (const id of state.contact.tagsId || []) {
+        if (conjunto[origem].has(id) && id !== fica.id) sair.add(id);
+      }
+    }
+
+    return [...sair].map((id) => todas.find((t) => t.id === id)).filter(Boolean);
   }
 
   /**

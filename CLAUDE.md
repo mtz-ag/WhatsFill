@@ -154,6 +154,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `POST /core/v1/tag/{id}` (sim: `POST` atualiza, `PUT` cria) muda o rótulo, e todos que a têm
   passam a mostrar o nome novo — uma requisição, em vez de duas por contato, e sem janela em que o
   contato fica sem etiqueta. Passe as cores ATUAIS no body: omitir reseta a cor sem querer.
+- **Etiqueta de cidade entra por DOIS caminhos, e o nome tem uma fonte só.** No fluxo normal via
+  `tags.suggest` (`origem: 'cidade'`) e em massa pela aba Cidades. Os dois pegam o nome de
+  `categorizar.nomeDaEtiqueta` — duas fontes criariam duas etiquetas para a mesma cidade e
+  partiriam o filtro dele em duas.
+- **Cidade trocada tira a etiqueta de cidade E a de região.** `etiquetasDeRegiaoASair` trata as
+  duas famílias (`tags.cityTagIds` + `tags.regionTagIds`), e só tira a antiga **se a nova ficar** —
+  senão o contato acaba sem etiqueta de lugar nenhuma. Sem a metade da cidade, trocar de município
+  deixava o contato em dois filtros de cidade ao mesmo tempo.
 - **A etiqueta de CIDADE é o que permite filtrar por município.** A API só filtra por etiqueta, e
   o COREDE agrupa dezenas de municípios — daí a aba Cidades. Ela **nunca** cria etiqueta a partir
   do que está escrito no campo Cidade sem casar com os 497 municípios da planilha oficial: o campo

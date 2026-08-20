@@ -18,6 +18,14 @@ import * as api from './api.js';
 import * as store from './store.js';
 import { normalize } from './cities.js';
 import { buildRequest } from './contract.js';
+/**
+ * O nome da etiqueta de cidade vem de `categorizar.js`, e de lá só.
+ *
+ * Duas fontes para o mesmo nome seria a receita para o fluxo normal criar "CAXIAS DO SUL" e a
+ * varredura criar outra coisa — duas etiquetas para a mesma cidade, e o filtro dele partido em
+ * duas. `categorizar` não importa `tags`, então não há ciclo.
+ */
+import { nomeDaEtiqueta as nomeDaEtiquetaDeCidade } from './categorizar.js';
 
 const COREDES_PATH = 'src/data/coredes-rs.json';
 
@@ -152,6 +160,26 @@ export async function suggest({ city, texts = [], extra = '', interesse = null }
 
   const corede = await coredeFor(city);
   if (corede) {
+    /**
+     * A etiqueta da CIDADE, ao lado da de região.
+     *
+     * Pedido dele em 20/08/2026: *"a extensão agora também tem que adicionar a etiqueta de cidade
+     * em contatos novos"*. Até aqui a etiqueta de cidade só entrava pela varredura em massa (aba
+     * Cidades), então todo contato novo nascia sem ela e a base voltava a ficar desalinhada no dia
+     * seguinte à passada.
+     *
+     * Só entra quando o COREDE existe — ou seja, quando a cidade casou com a planilha oficial. O
+     * nome vem de `categorizar.nomeDaEtiqueta`, o mesmo que a aba Cidades usa: duas fontes para o
+     * nome da mesma etiqueta seria a receita para criar duas etiquetas parecidas.
+     */
+    const nomeCidade = nomeDaEtiquetaDeCidade(city);
+    out.push({
+      origem: 'cidade',
+      nome: nomeCidade,
+      tag: await resolveTag(nomeCidade),
+      motivo: `a cidade do contato é ${city}`,
+    });
+
     out.push({
       origem: 'região',
       nome: corede,
@@ -266,6 +294,26 @@ export const NO_TAG_CONTRACT =
  * e a antiga tem que sair. A lista sai da planilha oficial, então nunca inclui etiqueta de
  * conteúdo nem etiqueta de fluxo ("1 SEM RETORNO") por engano.
  */
+/**
+ * Os ids das etiquetas que são **nome de município do RS**.
+ *
+ * Serve para a mesma coisa que `regionTagIds` serve ao COREDE: quando a cidade do contato muda, a
+ * etiqueta da cidade ANTIGA tem que sair, senão ele fica com duas cidades e aparece nos dois
+ * filtros. É o mesmo defeito que já aconteceu com COREDE duplicado.
+ *
+ * O casamento é contra a planilha oficial (as chaves de `loadCoredes` já são municípios
+ * normalizados), então etiqueta que não é nome de município nunca entra — e portanto nunca é
+ * candidata a ser removida por este caminho.
+ */
+export async function cityTagIds() {
+  const municipios = await loadCoredes();
+  const ids = new Set();
+  for (const tag of await loadTags()) {
+    if (municipios[normalize(tag.label)]) ids.add(tag.id);
+  }
+  return ids;
+}
+
 export async function regionTagIds() {
   const mapa = await loadCoredes();
   const nomes = [...new Set(Object.values(mapa))];

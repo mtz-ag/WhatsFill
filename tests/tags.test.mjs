@@ -65,9 +65,14 @@ grupo('sugestão para o caso do print');
   });
   const regiao = sug.find((s) => s.origem === 'região');
   const conteudo = sug.find((s) => s.origem === 'conteúdo');
+  const cidadeSug = sug.find((s) => s.origem === 'cidade');
   check(regiao?.tag?.id === 't-metro', `região = ${regiao?.nome} (${regiao?.tag?.label})`);
   check(conteudo?.tag?.id === 't-zucco', `conteúdo = ${conteudo?.nome}`);
-  check(sug.length === 2, `duas sugestões, nada além = ${sug.length}`);
+  // A etiqueta de CIDADE entrou em 20/08/2026: até então só a varredura em massa a aplicava, e
+  // todo contato novo nascia sem ela.
+  check(!!cidadeSug, 'a etiqueta de cidade também é sugerida');
+  check(cidadeSug?.nome === 'PORTO ALEGRE', `nome da etiqueta de cidade = ${cidadeSug?.nome}`);
+  check(sug.length === 3, `três sugestões: cidade, região e conteúdo = ${sug.length}`);
 }
 
 grupo('sugestão para conteúdo do Flávio');
@@ -78,6 +83,23 @@ grupo('sugestão para conteúdo do Flávio');
   });
   check(sug.find((s) => s.origem === 'conteúdo')?.tag?.id === 't-flavio', 'etiqueta Conteúdo Flávio');
   check(sug.find((s) => s.origem === 'região')?.tag?.id === 't-missoes', 'etiqueta Missões');
+}
+
+grupo('cidade nao reconhecida NAO gera etiqueta de cidade');
+{
+  // A trava aqui é a mesma da varredura: cidade que não casa com a planilha não vira etiqueta,
+  // porque o campo é texto livre e "não sei" viraria etiqueta permanente no CRM.
+  const sug = await tags.suggest({ city: 'Cidade Que Não Existe', texts: [] });
+  check(!sug.some((s) => s.origem === 'cidade'), 'nenhuma sugestão de cidade');
+}
+
+grupo('cityTagIds: so etiqueta que e nome de municipio');
+{
+  const ids = await tags.cityTagIds();
+  // O CRM de teste tem etiquetas de COREDE e de conteúdo, nenhuma com nome de município.
+  check(ids.size === 0, `nenhuma etiqueta de cidade no CRM de teste = ${ids.size}`);
+  check(!ids.has('t-metro'), 'COREDE não é confundido com cidade');
+  check(!ids.has('t-zucco'), 'etiqueta de conteúdo também não');
 }
 
 grupo('cidade fora da tabela avisa em vez de etiquetar errado');

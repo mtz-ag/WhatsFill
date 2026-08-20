@@ -5,6 +5,53 @@
 
 ---
 
+## 2026-08-20 (noite) — Etiqueta de cidade também no fluxo normal, não só na varredura
+
+**Pedido:** *"a extensão agora também tem que adicionar a etiqueta de cidade em contatos novos"*.
+
+Até aqui a etiqueta de cidade só entrava pela aba Cidades (varredura em massa). Todo contato novo
+nascia sem ela — então a base voltava a ficar desalinhada no dia seguinte à passada, e a varredura
+teria que ser refeita para sempre.
+
+**`tags.suggest` passou a devolver a etiqueta de cidade** ao lado da de região, com `origem:
+'cidade'`. Só quando o COREDE existe, ou seja, quando a cidade casou com a planilha oficial — a
+mesma trava da varredura, pelo mesmo motivo (campo é texto livre, "não sei" viraria etiqueta
+permanente).
+
+**O nome vem de `categorizar.nomeDaEtiqueta`, importado.** Duas fontes para o nome da mesma
+etiqueta seria a receita para o fluxo normal criar uma coisa e a varredura criar outra — duas
+etiquetas para a mesma cidade, e o filtro dele partido em duas. `categorizar` não importa `tags`,
+então não há ciclo.
+
+### As duas travas que tiveram que acompanhar
+
+1. **`etiquetaConfiavel` agora cobre 'cidade' junto com 'região'.** As duas SAEM da cidade, então
+   herdam a dúvida dela: palpite aproximado não grava sozinho. Sem isso, a etiqueta — que é o que
+   ele usa para FILTRAR — seria gravada a partir de um chute.
+2. **A etiqueta de cidade ANTIGA sai quando a cidade muda.** `etiquetasDeRegiaoASair` tratava só
+   COREDE; agora trata as duas famílias, com `tags.cityTagIds()` novo (etiquetas cujo rótulo é nome
+   de município, casado contra a planilha). Sem isso o defeito é pior que o do COREDE duplicado:
+   trocar de cidade deixaria o contato com "CAXIAS DO SUL" **e** "PELOTAS", nos dois filtros. A
+   trava do "só sai se a nova ficar" vale para as duas — tirar a antiga sem pôr a nova deixaria o
+   contato sem etiqueta de lugar nenhuma.
+
+### Etiqueta de cidade que não existe: criar, não apelidar
+
+Para COREDE, "escolha a etiqueta correspondente" faz sentido (o nome da planilha pode divergir do
+rótulo do CRM, e o apelido resolve). Para cidade **não existe correspondente**: se "PELOTAS" não
+está lá, é porque nenhum contato de Pelotas foi etiquetado ainda. Oferecer o seletor de apelido
+convidaria a apontar Pelotas para outra etiqueta qualquer — o erro que a etiqueta de cidade existe
+para evitar. Então a sugestão de cidade sem etiqueta mostra um botão **"Criar «PELOTAS»"**, que
+cria e invalida o cache (sem invalidar, a releitura devolve a lista velha e a etiqueta recém-criada
+continua "não encontrada").
+
+**Arquivos:** [src/lib/tags.js](src/lib/tags.js) (`suggest` com `origem: 'cidade'`, `cityTagIds`,
+import de `categorizar`), [src/panel/panel.js](src/panel/panel.js) (`etiquetaConfiavel`,
+`etiquetasDeRegiaoASair` com duas famílias, botão de criar etiqueta),
+[tests/tags.test.mjs](tests/tags.test.mjs). Manifesto 0.10.5 → **0.11.0**. Oito suítes passando.
+
+---
+
 ## 2026-08-20 (noite) — A aba Cidades rodava sem keepalive, e congelava em segundo plano
 
 **Relato:** *"eu quero saber se os 2000 foram etiquetados mas pelo visto não foram, eu não abri a
