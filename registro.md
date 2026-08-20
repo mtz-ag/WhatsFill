@@ -94,6 +94,40 @@ por texto. Varrer 57 mil são ~580 requisições e vários minutos — caro para
 cidade está vindo. Com o teto, a primeira passada é curta e prova a leitura antes de gastar a
 varredura toda. `api.filterContacts` entrou para isso.
 
+### O filtro por etiqueta existia — eu tinha procurado no lugar errado
+
+**Pergunta dele, com print:** *"os 586 tem cidade porque 43 etiquetas?"* — a tela filtrada em
+`Etiquetas: SERRA` (586 contatos) e o painel dizendo "Contatos lidos: 600 / Cidades sem etiqueta no
+CRM: 43 / Sem etiqueta nenhuma: 398".
+
+**Dois defeitos no mesmo print.**
+
+1. **A lista misturava unidades.** `43` era contagem de CIDADES distintas, no meio de contagens de
+   CONTATOS, sem dizer qual era qual — daí a pergunta. A conta real era 600 − 398 − 95 − 5 = 102
+   contatos espalhados por 43 cidades. Agora cada linha diz a unidade ("102 contato(s), em 43
+   cidade(s)") e existe uma conferência: se a soma não fechar com os lidos, a tela acusa bug de
+   contagem em vez de deixar o número estranho passar.
+2. **A leitura ignorava o filtro da tela.** Ele filtrou SERRA; a aba leu 600 contatos gerais da
+   base, e os 398 "sem etiqueta" eram justamente contatos que o filtro dele teria excluído.
+
+**A correção de fundo é uma conclusão minha que estava errada.** Eu tinha registrado, no commit
+anterior, que *"não existe filtro por etiqueta no servidor"* — procurei no `main.js`, achei só
+`textSearch` e `tagsIdBySearchText`, e concluí. `tagsIdBySearchText` é de **sessões de chat** e
+significa outra coisa (procurar texto entre as etiquetas); e a tela de Contatos é **rota lazy**, com
+o filtro dela num chunk próprio. Pegando a lista de chunks no `runtime.*.js` e varrendo os 86
+(estáticos, custo zero), o componente `contacts-filter` apareceu no `2647.*.js` com o body inteiro:
+`tagsId` + `tagsOperator`, **`exceptTagsId`**, `origins`, `importedAt`, `portfolioIds`,
+`customFieldValuesFilters`.
+
+Então agora a aba tem **"Só quem tem a etiqueta"**, populado com as etiquetas do CRM: escolher
+SERRA lê 586 em vez de 57 mil. `exceptTagsId` fica anotado como o próximo ganho (pedir ao servidor
+quem ainda não tem a etiqueta de cidade), e `customFieldValuesFilters` não foi decifrado — o
+formato vem de outro componente —, então "quem tem cidade preenchida" continua sendo peneirado do
+nosso lado.
+
+**Lição que vale mais que o conserto:** ausência de evidência no `main.js` não é evidência de
+ausência. Rota de tela lazy mora em chunk próprio, e a lista deles está no `runtime.*.js`.
+
 ### O fluxo na tela
 
 Três passos explícitos, nessa ordem: **1. Ler a base** (só leitura, com respiro entre páginas — a

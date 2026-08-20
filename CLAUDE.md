@@ -108,8 +108,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 - **Ler o código do app ≠ ter executado a rota.** `listContacts` e `createTag` foram lidas, não
   chamadas. Por isso a aba Cidades cria **uma** etiqueta como sonda antes das outras: se a primeira
   falhar, nenhuma outra é tentada.
-- **`/core/v1/contact/filter` só filtra por telefone e e-mail**, não por etiqueta nem por campo
-  personalizado. Não serve para "me dê só quem tem cidade" — daí a categorização ler a base inteira.
+- **`POST /core/v1/contact/filter` filtra POR ETIQUETA — e o campo mora num chunk lazy.** Procurar
+  o filtro no `main.js` leva à conclusão errada (foi o que aconteceu): lá só existe `textSearch` e
+  `tagsIdBySearchText`, que é de sessões de chat e significa "procurar texto entre as etiquetas".
+  O filtro da tela de Contatos está no chunk próprio dela (`2647.*.js`, componente
+  `contacts-filter`, método `submitFilter`) e aceita: `name`, `phonenumber`, `instagram`, `email`,
+  **`tagsId` + `tagsOperator`** ('OR'), **`exceptTagsId` + `exceptTagsOperator`**, `origins`,
+  `importedAt`, `portfolioIds`, `customFieldValuesFilters`. `exceptTagsId` é o que permite pedir
+  "tem SERRA e ainda NÃO tem a etiqueta de cidade" sem baixar a base.
+  **Lição:** rota de tela lazy não está no `main.js` — pegue a lista de chunks no `runtime.*.js`
+  e varra todos (são estáticos, não a API: varrer não tem custo de rate limit).
 - **A etiqueta de CIDADE é o que permite filtrar por município.** A API só filtra por etiqueta, e
   o COREDE agrupa dezenas de municípios — daí a aba Cidades. Ela **nunca** cria etiqueta a partir
   do que está escrito no campo Cidade sem casar com os 497 municípios da planilha oficial: o campo

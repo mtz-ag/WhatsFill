@@ -143,30 +143,62 @@ export async function listContacts({ page = 1, pageSize = 100, status = 'ACTIVE'
 }
 
 /**
- * Listagem COM busca por texto — `POST /core/v1/contact/filter`.
+ * Listagem FILTRADA — `POST /core/v1/contact/filter`.
  *
- * É o que a tela de Contatos usa quando você digita no campo Pesquisar (método `filterList` do
- * app). Body: `{textSearch, isToIncludeCustomFieldValues, page, pageSize, orderBy}`.
+ * É o que a tela de Contatos usa quando você aplica um filtro (`filterList` no serviço,
+ * `submitFilter` no componente `contacts-filter`). O body completo que a tela monta, lido do
+ * chunk `2647.*.js` em 20/08/2026:
  *
- * **O que o filtro NÃO faz:** não existe "só quem tem a etiqueta X" nem "só quem tem cidade". Os
- * campos aceitos são `textSearch`, `statuses`, `tagsIdBySearchText` e
- * `isToIncludeCustomFieldValues` — conferidos no bundle. `tagsIdBySearchText` é o resultado de
- * procurar TEXTO entre as etiquetas, não um filtro por etiqueta escolhida. Por isso a
- * categorização por cidade lê a base e filtra do nosso lado: não há como o servidor fazer isso.
+ * ```
+ * { name, phonenumber, instagram, email,
+ *   tagsId: [], tagsOperator: 'OR',          // filtrar POR etiqueta
+ *   exceptTagsId: [], exceptTagsOperator,    // EXCLUIR quem tem a etiqueta
+ *   origins: [], importedAt: [], portfolioIds: [],
+ *   customFieldValuesFilters: [] }
+ * ```
+ *
+ * **Isto corrige uma conclusão errada que eu tinha escrito aqui**: eu havia procurado o filtro no
+ * `main.js`, achado só `textSearch`/`tagsIdBySearchText` e concluído que não existia filtro por
+ * etiqueta. Não existia *ali* — a tela de Contatos é uma rota lazy, e o filtro dela mora no chunk
+ * próprio. `tagsIdBySearchText`, que parecia ser o campo, é de sessões de chat e significa outra
+ * coisa (o resultado de procurar TEXTO entre as etiquetas).
+ *
+ * `exceptTagsId` é o que permite pedir ao servidor "quem tem SERRA e ainda **não** tem a etiqueta
+ * de cidade" — idempotência sem baixar a base. `customFieldValuesFilters` existe mas o formato
+ * vem de outro componente e não foi decifrado; por isso "quem tem cidade preenchida" continua
+ * sendo peneirado do nosso lado.
  *
  * Mesmo envelope da listagem.
  */
-export async function filterContacts({ textSearch = '', page = 1, pageSize = 100 } = {}) {
-  const corpo = await apiFetch('/core/v1/contact/filter', {
-    method: 'POST',
-    body: {
-      textSearch: String(textSearch || '').trim(),
-      isToIncludeCustomFieldValues: true,
-      page,
-      pageSize,
-      orderBy: 'name',
-    },
-  });
+export async function filterContacts({
+  textSearch = '',
+  tagsId = [],
+  exceptTagsId = [],
+  page = 1,
+  pageSize = 100,
+  status = 'ACTIVE',
+} = {}) {
+  const body = {
+    isToIncludeCustomFieldValues: true,
+    page,
+    pageSize,
+    orderBy: 'name',
+    status,
+  };
+  // Só manda o que foi pedido: campo vazio num filtro de terceiro é aposta — pode ser ignorado
+  // ou pode significar "nenhum", e as duas leituras dão resultados opostos.
+  const texto = String(textSearch || '').trim();
+  if (texto) body.textSearch = texto;
+  if (tagsId.length) {
+    body.tagsId = tagsId;
+    body.tagsOperator = 'OR';
+  }
+  if (exceptTagsId.length) {
+    body.exceptTagsId = exceptTagsId;
+    body.exceptTagsOperator = 'OR';
+  }
+
+  const corpo = await apiFetch('/core/v1/contact/filter', { method: 'POST', body });
   const itens = Array.isArray(corpo) ? corpo : corpo?.items || [];
   return {
     itens,

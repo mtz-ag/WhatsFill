@@ -121,6 +121,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * etiqueta" continua sendo trabalho nosso, depois de ler.
        */
       busca: '',
+      /** Id da etiqueta pela qual filtrar no servidor. Vazio = base inteira. */
+      etiquetaFiltro: '',
+      /** As etiquetas do CRM, para o seletor. Carregadas junto com a aba. */
+      etiquetasDisponiveis: [],
     },
     busy: false,
     lastSendAt: 0,
@@ -4276,6 +4280,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   function renderCidades() {
     const c = state.cidades;
 
+    // O seletor de etiqueta precisa da lista do CRM. Carrega uma vez, sem travar o desenho.
+    if (!c.etiquetasDisponiveis.length) {
+      tagsLib
+        .allTags()
+        .then((todas) => {
+          if (c.etiquetasDisponiveis.length) return; // outra passada já carregou
+          c.etiquetasDisponiveis = [...todas].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+          if (state.tab === 'cidades') renderAll();
+        })
+        .catch((err) => console.warn('[WhatsFill] não consegui listar as etiquetas:', err.message));
+    }
+
     body.append(
       h('p', { class: 'wf-hint' },
         'A API da plataforma só filtra por etiqueta, e o COREDE agrupa dezenas de municípios. ' +
@@ -4298,9 +4314,26 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       })
     );
 
-    // Busca opcional: o mesmo campo "Pesquisar" da tela de Contatos. Não há filtro por etiqueta
-    // no servidor, então "quem tem etiqueta" continua sendo peneirado do nosso lado.
-    const inputBusca = h('input', { type: 'text', value: c.busca, placeholder: 'deixe vazio para a base inteira' });
+    // Filtro por ETIQUETA, no servidor. É o que evita ler 57 mil para trabalhar 586: escolha
+    // "SERRA" e a API devolve só os de SERRA. Mesmo filtro da tela de Contatos.
+    const selEtiqueta = h('select', {});
+    selEtiqueta.append(h('option', { value: '' }, '— todos os contatos —'));
+    for (const t of state.cidades.etiquetasDisponiveis || []) {
+      const opt = h('option', { value: t.id }, t.label);
+      if (t.id === c.etiquetaFiltro) opt.selected = true;
+      selEtiqueta.append(opt);
+    }
+    selEtiqueta.addEventListener('change', () => {
+      c.etiquetaFiltro = selEtiqueta.value;
+    });
+    cardLer.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Só quem tem a etiqueta'), selEtiqueta]));
+    if (!(state.cidades.etiquetasDisponiveis || []).length) {
+      cardLer.append(
+        h('div', { class: 'wf-origin' }, 'Carregando a lista de etiquetas… se não aparecer, abra um contato uma vez.')
+      );
+    }
+
+    const inputBusca = h('input', { type: 'text', value: c.busca, placeholder: 'deixe vazio para não filtrar por texto' });
     inputBusca.addEventListener('change', () => {
       c.busca = inputBusca.value.trim();
     });
@@ -4321,23 +4354,42 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const a = c.analise;
 
     // --- o retrato -------------------------------------------------------
+    // Todo número aqui é CONTATO, e as linhas que também contam cidades dizem as duas coisas.
+    // A primeira versão misturava as unidades — mostrava "Cidades sem etiqueta no CRM: 43" ao
+    // lado de contagens de contato, e a pergunta que veio foi exatamente "os 586 têm cidade
+    // porque 43 etiquetas?". Número sem unidade na mesma lista é armadilha, não economia.
+    const contatosFaltamCriar = a.faltamCriar.reduce((s, x) => s + x.quantos, 0);
+    const contatosRevisar = a.revisar.reduce((s, x) => s + x.quantos, 0);
+
     const resumo = h('div', { class: 'wf-card' }, [h('h4', {}, 'O que a leitura encontrou')]);
-    for (const [rotulo, valor] of [
-      ['Contatos lidos', c.lidos],
-      ['Já com a etiqueta da cidade', a.jaOk],
-      ['**Prontos para gravar**', a.paraGravar.length],
-      ['Cidades sem etiqueta no CRM', a.faltamCriar.length],
-      ['Sem etiqueta nenhuma (não entram)', a.semEtiqueta],
-      ['Sem cidade preenchida', a.semCidade],
-      ['Cidade a revisar (não é município do RS)', a.revisar.reduce((s, x) => s + x.quantos, 0)],
+    for (const [rotulo, valor, forte] of [
+      ['Contatos lidos', `${c.lidos}`, false],
+      ['Já com a etiqueta da cidade', `${a.jaOk} contato(s)`, false],
+      ['Prontos para gravar', `${a.paraGravar.length} contato(s)`, true],
+      [
+        'Esperando etiqueta ser criada',
+        `${contatosFaltamCriar} contato(s), em ${a.faltamCriar.length} cidade(s)`,
+        contatosFaltamCriar > 0,
+      ],
+      ['Sem etiqueta nenhuma (não entram)', `${a.semEtiqueta} contato(s)`, false],
+      ['Sem cidade preenchida', `${a.semCidade} contato(s)`, false],
+      ['Cidade a revisar (não é município do RS)', `${contatosRevisar} contato(s), em ${a.revisar.length} grafia(s)`, false],
     ]) {
-      const forte = rotulo.startsWith('**');
-      resumo.append(
-        h('div', { class: forte ? '' : 'wf-origin' },
-          `${forte ? rotulo.replace(/\*\*/g, '') : rotulo}: ${valor}`)
-      );
+      resumo.append(h('div', { class: forte ? '' : 'wf-origin' }, `${rotulo}: ${valor}`));
+    }
+
+    // A soma tem que fechar com os lidos. Se não fechar, é bug de contagem — e é melhor a tela
+    // acusar do que eu descobrir por um número estranho num print.
+    const soma = a.paraGravar.length + a.jaOk + a.semEtiqueta + a.semCidade + contatosFaltamCriar + contatosRevisar;
+    if (soma !== c.lidos) {
+      resumo.append(h('div', { class: 'wf-block' }, `Atenção: a soma dá ${soma} e foram lidos ${c.lidos}. Isso é bug de contagem — me avise.`));
     }
     body.append(resumo);
+
+    if (c.etiquetaFiltro) {
+      const nome = (c.etiquetasDisponiveis.find((t) => t.id === c.etiquetaFiltro) || {}).label || c.etiquetaFiltro;
+      body.append(h('div', { class: 'wf-origin' }, `Filtrado por etiqueta: ${nome}.`));
+    }
 
     // --- passo 2: criar as etiquetas que faltam --------------------------
     if (a.faltamCriar.length) {
@@ -4481,10 +4533,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
         let resposta;
         try {
-          // Com busca vai por `POST /core/v1/contact/filter` (o campo Pesquisar da tela); sem
-          // busca, pela listagem simples. As duas devolvem o mesmo envelope.
-          resposta = c.busca
-            ? await api.filterContacts({ textSearch: c.busca, page: pagina, pageSize: 100 })
+          // Com etiqueta ou busca, vai pelo filtro (`POST /core/v1/contact/filter`), que é o que
+          // a tela usa; sem nada, pela listagem simples. As duas devolvem o mesmo envelope.
+          resposta = c.etiquetaFiltro || c.busca
+            ? await api.filterContacts({
+                textSearch: c.busca,
+                tagsId: c.etiquetaFiltro ? [c.etiquetaFiltro] : [],
+                page: pagina,
+                pageSize: 100,
+              })
             : await api.listContacts({ page: pagina, pageSize: 100 });
           ritmo.sucesso();
         } catch (err) {
