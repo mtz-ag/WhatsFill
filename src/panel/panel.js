@@ -105,14 +105,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       /** Tamanho do lote que o botão grava de uma vez. Lote pequeno é a decisão dele (15/08). */
       lote: 200,
       /**
-       * Quantos contatos LER antes de parar. 0 = a base inteira.
+       * Quantos contatos LER antes de parar. **0 = a base inteira, e é o padrão.**
        *
-       * Nasce em 500, e não em 0, por causa do relato: *"estou filtrando para não pegar todos os
-       * contatos mas ele quer ler os 57.000"*. Varrer 57 mil são ~580 requisições e vários
-       * minutos — caro para descobrir só se a leitura está funcionando. Com o teto, a primeira
-       * passada é curta e confirma se a cidade está vindo antes de gastar a varredura inteira.
+       * Nasceu em 500, para a primeira passada ser curta e provar que a cidade estava vindo antes
+       * de gastar a varredura toda. Provou, e o teto virou estorvo: *"está parando e esperando eu
+       * mandar a próxima página, faça isso sozinho"*. O campo fica, para quando ele quiser uma
+       * amostra de propósito; o padrão é ir até o fim.
        */
-      limiteLeitura: 500,
+      limiteLeitura: 0,
+      /**
+       * Onde a leitura parou, para CONTINUAR em vez de recomeçar.
+       *
+       * Sem isto, clicar de novo depois de uma parada relia da página 1 — o teto interrompia e o
+       * botão refazia o mesmo trabalho, então a base nunca terminava de ser lida por mais que ele
+       * clicasse. Era o defeito por baixo do relato, e o mais caro dos dois.
+       */
+      proximaPagina: 1,
+      /** Os contatos já lidos, preservados entre paradas. */
+      acumulados: [],
       /**
        * Busca por texto, opcional — o mesmo campo "Pesquisar" da tela de Contatos.
        *
@@ -4304,11 +4314,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       h('div', { class: 'wf-preview' },
         'Percorre os contatos e monta o retrato do que falta. Só leitura — nada é gravado neste ' +
           'passo. Precisa ser refeito se você recarregar o painel.\n\n' +
-          'A base tem ~57 mil contatos: comece com o teto baixo para confirmar que a cidade está ' +
-          'vindo, e só depois ponha 0 para varrer tudo.'),
+          'Vai até o fim sozinho, página por página, com respiro entre elas. Se você parar (ou se ' +
+          'o teto interromper), o botão vira "Continuar" e retoma de onde ficou — não relê o que ' +
+          'já leu.'),
     ]);
     cardLer.append(
-      campoNumero('Ler no máximo (0 = todos os contatos)', c.limiteLeitura, (v) => {
+      campoNumero('Ler no máximo — 0 = tudo (recomendado)', c.limiteLeitura, (v) => {
         c.limiteLeitura = clampInt(v, 0, 200000);
         renderAll();
       })
@@ -4325,6 +4336,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
     selEtiqueta.addEventListener('change', () => {
       c.etiquetaFiltro = selEtiqueta.value;
+      // Trocar o filtro invalida a continuação: retomar a página 7 de outra consulta juntaria
+      // contatos de duas listas diferentes.
+      reiniciarLeituraDeCidades();
+      renderAll();
     });
     cardLer.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Só quem tem a etiqueta'), selEtiqueta]));
     if (!(state.cidades.etiquetasDisponiveis || []).length) {
@@ -4335,15 +4350,35 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     const inputBusca = h('input', { type: 'text', value: c.busca, placeholder: 'deixe vazio para não filtrar por texto' });
     inputBusca.addEventListener('change', () => {
+      if (c.busca === inputBusca.value.trim()) return;
       c.busca = inputBusca.value.trim();
+      reiniciarLeituraDeCidades();
+      renderAll();
     });
     cardLer.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Filtrar por texto (opcional)'), inputBusca]));
 
+    // Parou no meio? O botão vira Continuar e diz de onde — clicar não pode refazer o já lido.
+    const pausada = !c.lendo && c.proximaPagina > 1;
     const btnLer = h('button', { class: 'wf-btn wf-primary', type: 'button' },
-      c.lendo ? `Lendo… ${c.lidos}${c.total ? ` de ${c.total}` : ''}` : 'Ler a base');
+      c.lendo
+        ? `Lendo… ${c.lidos}${c.total ? ` de ${c.total}` : ''}`
+        : pausada
+          ? `Continuar da página ${c.proximaPagina} (${c.lidos} lidos)`
+          : 'Ler a base');
     btnLer.disabled = c.lendo || c.gravando;
-    btnLer.addEventListener('click', () => withBusy(lerBaseParaCidades));
-    cardLer.append(h('div', { class: 'wf-row' }, [btnLer, botaoParar()]));
+    btnLer.addEventListener('click', () => withBusy(() => lerBaseParaCidades({ continuar: pausada })));
+
+    const linha = [btnLer, botaoParar()];
+    if (pausada) {
+      const btnZerar = h('button', { class: 'wf-btn', type: 'button' }, 'Recomeçar do zero');
+      btnZerar.addEventListener('click', () => {
+        reiniciarLeituraDeCidades();
+        setStatus('Leitura zerada. O próximo "Ler a base" começa da página 1.');
+        renderAll();
+      });
+      linha.push(btnZerar);
+    }
+    cardLer.append(h('div', { class: 'wf-row' }, linha));
     body.append(cardLer);
 
     // Conserto do prefixo antigo. Aparece sozinho, antes de qualquer varredura, porque quem já
@@ -4511,14 +4546,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Lê **só** o que precisa e para de página em página, com respiro entre elas: mesmo leitura é
    * requisição, e a armadilha da rajada não distingue leitura de escrita.
    */
-  async function lerBaseParaCidades() {
+  /**
+   * Zera a leitura, para a próxima começar do início.
+   *
+   * Chamado quando o FILTRO muda: continuar de onde parou só faz sentido sobre a mesma consulta —
+   * retomar a página 7 depois de trocar a etiqueta juntaria contatos de duas listas diferentes.
+   */
+  function reiniciarLeituraDeCidades() {
     const c = state.cidades;
-    c.lendo = true;
-    c.parar = false;
+    c.proximaPagina = 1;
+    c.acumulados = [];
     c.lidos = 0;
     c.total = null;
     c.analise = null;
-    c.log = [];
+  }
+
+  async function lerBaseParaCidades({ continuar = false } = {}) {
+    const c = state.cidades;
+    if (!continuar) reiniciarLeituraDeCidades();
+
+    c.lendo = true;
+    c.parar = false;
+    if (!continuar) c.log = [];
     renderAll();
 
     const ritmo = new categorizar.Ritmo({ inicialMs: 250, minMs: 120, maxMs: 5000 });
@@ -4540,13 +4589,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return setStatus('Não achei o campo "Cidade" no schema da plataforma.', 'err');
     }
 
-    const contatos = [];
-    let pagina = 1;
+    // Continua do que já foi lido, em vez de recomeçar. É o que faz a base terminar de ser lida
+    // mesmo com paradas no meio.
+    const contatos = c.acumulados;
+    let pagina = c.proximaPagina;
+    let acabou = false;
+
     try {
       // eslint-disable-next-line no-constant-condition
       while (true) {
         if (c.parar) {
-          logCidades(`Parado por você na página ${pagina}.`);
+          logCidades(`Parado por você na página ${pagina} — clique em Continuar para retomar daqui.`);
           break;
         }
 
@@ -4574,7 +4627,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         }
 
         if (resposta.total != null) c.total = resposta.total;
-        if (!resposta.itens.length) break;
+        if (!resposta.itens.length) {
+          acabou = true;
+          break;
+        }
         // `countPages` vem no envelope do app: é sinal melhor que "veio menos que o pedido",
         // porque a última página cheia daria falso negativo e pediria uma página vazia à toa.
         const ultimaPagina = resposta.paginas != null && pagina >= resposta.paginas;
@@ -4588,26 +4644,47 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           });
         }
         c.lidos = contatos.length;
-        setStatus(`Lendo… ${c.lidos}${c.total ? ` de ${c.total}` : ''}`);
+        // A página vira a PRÓXIMA logo depois de consumir esta: se a parada vier agora, o
+        // ponteiro já aponta para o lugar certo e nada é lido duas vezes.
+        pagina++;
+        c.proximaPagina = pagina;
+        setStatus(
+          `Lendo… ${c.lidos}${c.total ? ` de ${c.total}` : ''}` +
+            (resposta.paginas ? ` (página ${pagina - 1} de ${resposta.paginas})` : '')
+        );
         renderAll();
 
-        // O teto que ele pediu: para de ler quando junta o suficiente, em vez de varrer 57 mil
-        // só para descobrir se a leitura está funcionando.
-        if (c.limiteLeitura && contatos.length >= c.limiteLeitura) {
-          logCidades(`Parei no teto de ${c.limiteLeitura} contato(s) lidos. Aumente o teto (ou ponha 0) para ir além.`);
+        if (ultimaPagina || resposta.itens.length < 100) {
+          acabou = true;
           break;
         }
-        if (ultimaPagina || resposta.itens.length < 100) break;
-        pagina++;
+        // Teto opcional: só quando você pediu uma amostra de propósito. O padrão é 0 — vai até o
+        // fim sozinho, sem esperar clique nenhum.
+        if (c.limiteLeitura && contatos.length >= c.limiteLeitura) {
+          logCidades(`Parei no teto de ${c.limiteLeitura} lidos. Clique em Continuar (ou ponha 0 no teto) para seguir.`);
+          break;
+        }
         await esperar(ritmo.pausaMs);
       }
 
       c.analise = await analisarParaCidades(contatos);
+      const restam = c.total ? Math.max(0, c.total - c.lidos) : 0;
       logCidades(
-        `Leitura terminada: ${c.lidos} contato(s). ` +
+        (acabou ? 'Leitura COMPLETA' : 'Leitura pausada') +
+          `: ${c.lidos} contato(s)${restam ? `, faltam ${restam}` : ''}. ` +
           `${c.analise.paraGravar.length} para gravar, ${c.analise.faltamCriar.length} etiqueta(s) a criar.`
       );
-      setStatus(`Leitura terminada: ${c.analise.paraGravar.length} contato(s) para gravar.`, 'ok');
+      setStatus(
+        (acabou ? 'Leitura completa. ' : `Leitura pausada (faltam ~${restam}). `) +
+          `${c.analise.paraGravar.length} contato(s) para gravar.`,
+        'ok'
+      );
+      if (acabou) {
+        // Terminou de verdade: a próxima leitura recomeça, senão ela partiria de uma página que
+        // já não existe e voltaria vazia.
+        c.proximaPagina = 1;
+        c.acumulados = [];
+      }
     } catch (err) {
       logCidades(`Leitura interrompida: ${err.message}`, true);
       setStatus(err.message, 'err');

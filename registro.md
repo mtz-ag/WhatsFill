@@ -5,6 +5,35 @@
 
 ---
 
+## 2026-08-20 (tarde) — A leitura recomeçava do zero a cada clique
+
+**Relato:** *"está parando e esperando eu mandar a próxima página faça isso sozinho"*.
+
+**Eram dois defeitos, e o segundo era o grave.** O teto de leitura (500, para a primeira passada
+ser curta) interrompia — isso era por projeto. Mas clicar em "Ler a base" de novo **recomeçava da
+página 1**: `pagina` nascia em `1` e a lista de contatos era zerada em toda chamada. Então o teto
+interrompia e o botão refazia o mesmo trabalho — a base **nunca terminaria** de ser lida, por mais
+que ele clicasse. O relato descreve o sintoma; a causa era não existir continuação nenhuma.
+
+**Consertado:**
+
+- **O teto padrão virou `0`** (base inteira). O campo fica para quando ele quiser uma amostra de
+  propósito, mas o normal é ir até o fim sozinho, página por página, com respiro entre elas.
+- **A leitura continua de onde parou.** `proximaPagina` e `acumulados` vivem no estado; o ponteiro
+  avança **depois** de consumir a página, então uma parada no meio não relê nem perde nada. O botão
+  vira "Continuar da página N (X lidos)", e um "Recomeçar do zero" fica ao lado para quando ele
+  quiser mesmo refazer.
+- **Trocar o filtro zera a continuação.** Retomar a página 7 depois de mudar a etiqueta juntaria
+  contatos de duas consultas diferentes.
+- **Terminou de verdade → zera sozinho**, senão a leitura seguinte partiria de uma página que já
+  não existe e voltaria vazia.
+- O status agora diz "página N de M" e, quando pausa, quantos faltam.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`lerBaseParaCidades({continuar})`,
+`reiniciarLeituraDeCidades`, botão e estado). Manifesto 0.9.4 → **0.9.5**. Oito suítes passando.
+
+---
+
 ## 2026-08-20 (tarde) — Etiqueta de cidade sem prefixo, e o conserto dos 20 já gravados
 
 **Pedido:** *"marcou como cidade: caxias do sul, deixe somente caxias do sul, arrume os que ja
