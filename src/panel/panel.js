@@ -25,6 +25,13 @@ const THANKS_TEMPLATE_ID = 'agradecimento';
 /** Agradece a mensagem e fecha, sem abrir demanda. É a saída da tecla 4. */
 const THANKS_INFO_TEMPLATE_ID = 'agradecer-info';
 const ASK_TEMPLATE_ID = 'pedir-dados';
+/**
+ * Valor especial do seletor da aba Cidades: filtrar por QUALQUER etiqueta de COREDE.
+ *
+ * Não é id de etiqueta nenhuma — é sentinela. Começa com `__` para nunca colidir com um id real
+ * do CRM, que são uuid.
+ */
+const TODOS_OS_COREDES = '__todos_os_coredes__';
 const INTEREST_TEMPLATE_ID = 'interesse-conteudo';
 /** A pergunta dos sem retorno, em texto livre. Só chega dentro da janela de 24h. */
 const NO_REPLY_TEMPLATE_ID = 'sem-retorno-interesse';
@@ -131,10 +138,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * etiqueta" continua sendo trabalho nosso, depois de ler.
        */
       busca: '',
-      /** Id da etiqueta pela qual filtrar no servidor. Vazio = base inteira. */
+      /**
+       * Id da etiqueta pela qual filtrar no servidor. Vazio = base inteira.
+       * `TODOS_OS_COREDES` é o valor especial que manda todos os ids de região de uma vez.
+       */
       etiquetaFiltro: '',
       /** As etiquetas do CRM, para o seletor. Carregadas junto com a aba. */
       etiquetasDisponiveis: [],
+      /** Os ids das etiquetas que são COREDE, para a opção "todos os COREDEs". */
+      idsDeCorede: [],
     },
     busy: false,
     lastSendAt: 0,
@@ -4290,13 +4302,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   function renderCidades() {
     const c = state.cidades;
 
-    // O seletor de etiqueta precisa da lista do CRM. Carrega uma vez, sem travar o desenho.
+    // O seletor precisa da lista do CRM e de saber quais delas são COREDE. Carrega uma vez, sem
+    // travar o desenho.
     if (!c.etiquetasDisponiveis.length) {
-      tagsLib
-        .allTags()
-        .then((todas) => {
+      Promise.all([tagsLib.allTags(), tagsLib.regionTagIds()])
+        .then(([todas, regioes]) => {
           if (c.etiquetasDisponiveis.length) return; // outra passada já carregou
           c.etiquetasDisponiveis = [...todas].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+          c.idsDeCorede = [...regioes];
           if (state.tab === 'cidades') renderAll();
         })
         .catch((err) => console.warn('[WhatsFill] não consegui listar as etiquetas:', err.message));
@@ -4325,14 +4338,43 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       })
     );
 
-    // Filtro por ETIQUETA, no servidor. É o que evita ler 57 mil para trabalhar 586: escolha
-    // "SERRA" e a API devolve só os de SERRA. Mesmo filtro da tela de Contatos.
+    /**
+     * Filtro por ETIQUETA, no servidor. É o que evita ler 57 mil para trabalhar 586.
+     *
+     * Três tipos de escolha, e a do meio é a que ele pediu:
+     *  - todos os contatos (sem filtro);
+     *  - **todos os COREDEs de uma vez** — o filtro aceita vários ids com `tagsOperator: 'OR'`,
+     *    então dá para pedir "quem tem QUALQUER etiqueta de região" numa consulta só. É a fatia
+     *    que interessa para esta aba: quem tem COREDE já passou pela classificação;
+     *  - uma etiqueta específica.
+     *
+     * As opções vão em `optgroup` porque a lista do CRM é longa e misturada — no print dele,
+     * COREDEs apareciam entre "Procura emprego ou dinheiro" e "Amigos do Capitão…". Separar as
+     * regiões do resto é o que torna a lista utilizável.
+     */
     const selEtiqueta = h('select', {});
     selEtiqueta.append(h('option', { value: '' }, '— todos os contatos —'));
-    for (const t of state.cidades.etiquetasDisponiveis || []) {
-      const opt = h('option', { value: t.id }, t.label);
-      if (t.id === c.etiquetaFiltro) opt.selected = true;
-      selEtiqueta.append(opt);
+
+    const idsCorede = new Set(c.idsDeCorede || []);
+    const todas = c.etiquetasDisponiveis || [];
+    const regioes = todas.filter((t) => idsCorede.has(t.id));
+    const outras = todas.filter((t) => !idsCorede.has(t.id));
+
+    if (regioes.length) {
+      const optTodos = h('option', { value: TODOS_OS_COREDES }, `— todos os COREDEs (${regioes.length}) —`);
+      if (c.etiquetaFiltro === TODOS_OS_COREDES) optTodos.selected = true;
+      selEtiqueta.append(optTodos);
+    }
+
+    for (const [rotulo, lista] of [['COREDEs (região)', regioes], ['Outras etiquetas', outras]]) {
+      if (!lista.length) continue;
+      const grupo = h('optgroup', { label: rotulo });
+      for (const t of lista) {
+        const opt = h('option', { value: t.id }, t.label);
+        if (t.id === c.etiquetaFiltro) opt.selected = true;
+        grupo.append(opt);
+      }
+      selEtiqueta.append(grupo);
     }
     selEtiqueta.addEventListener('change', () => {
       c.etiquetaFiltro = selEtiqueta.value;
@@ -4446,8 +4488,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(resumo);
 
     if (c.etiquetaFiltro) {
-      const nome = (c.etiquetasDisponiveis.find((t) => t.id === c.etiquetaFiltro) || {}).label || c.etiquetaFiltro;
-      body.append(h('div', { class: 'wf-origin' }, `Filtrado por etiqueta: ${nome}.`));
+      body.append(h('div', { class: 'wf-origin' }, `Filtrado por etiqueta: ${rotuloDoFiltroDeEtiqueta()}.`));
     }
 
     // --- passo 2: criar as etiquetas que faltam --------------------------
@@ -4558,6 +4599,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Chamado quando o FILTRO muda: continuar de onde parou só faz sentido sobre a mesma consulta —
    * retomar a página 7 depois de trocar a etiqueta juntaria contatos de duas listas diferentes.
    */
+  /**
+   * Os ids que vão no filtro, expandindo a sentinela de "todos os COREDEs".
+   *
+   * O filtro da plataforma usa `tagsOperator: 'OR'`, então uma lista de 28 ids significa "tem
+   * qualquer uma delas" — é uma consulta, não 28.
+   */
+  function idsDoFiltroDeEtiqueta() {
+    const c = state.cidades;
+    if (!c.etiquetaFiltro) return [];
+    if (c.etiquetaFiltro !== TODOS_OS_COREDES) return [c.etiquetaFiltro];
+    return c.idsDeCorede || [];
+  }
+
+  /** O que está escrito no seletor agora, para o log e para o rodapé do retrato. */
+  function rotuloDoFiltroDeEtiqueta() {
+    const c = state.cidades;
+    if (!c.etiquetaFiltro) return '';
+    if (c.etiquetaFiltro === TODOS_OS_COREDES) return `todos os COREDEs (${(c.idsDeCorede || []).length})`;
+    return (c.etiquetasDisponiveis.find((t) => t.id === c.etiquetaFiltro) || {}).label || c.etiquetaFiltro;
+  }
+
   function reiniciarLeituraDeCidades() {
     const c = state.cidades;
     c.proximaPagina = 1;
@@ -4573,7 +4635,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     c.lendo = true;
     c.parar = false;
-    if (!continuar) c.log = [];
+    if (!continuar) {
+      c.log = [];
+      // Qual consulta produziu este retrato fica no log: sem isso, dois retratos com números
+      // diferentes parecem contradição em vez de filtros diferentes.
+      const filtro = rotuloDoFiltroDeEtiqueta();
+      logCidades(
+        `Lendo ${filtro ? `só quem tem: ${filtro}` : 'todos os contatos'}` +
+          (c.busca ? ` · texto "${c.busca}"` : '') +
+          (c.limiteLeitura ? ` · teto ${c.limiteLeitura}` : '')
+      );
+    }
     renderAll();
 
     const ritmo = new categorizar.Ritmo({ inicialMs: 250, minMs: 120, maxMs: 5000 });
@@ -4616,7 +4688,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           resposta = c.etiquetaFiltro || c.busca
             ? await api.filterContacts({
                 textSearch: c.busca,
-                tagsId: c.etiquetaFiltro ? [c.etiquetaFiltro] : [],
+                tagsId: idsDoFiltroDeEtiqueta(),
                 page: pagina,
                 pageSize: 100,
               })

@@ -5,6 +5,36 @@
 
 ---
 
+## 2026-08-20 (tarde) — Seletor com "todos os COREDEs", e agrupado
+
+**Pedido, com print do seletor aberto:** *"eu queria aqui, ele me da a opção somente todos contatos
+ou um por um, quero a opção todos os coredes"*.
+
+**Sai barato porque o filtro aceita lista.** `POST /core/v1/contact/filter` usa
+`tagsOperator: 'OR'`, então mandar os 28 ids de COREDE de uma vez significa "quem tem qualquer
+etiqueta de região" — **uma** consulta, não 28. Os ids vêm de `tags.regionTagIds()`, que já
+existia e já resolve apelido (então "Vale do Paranhana" entra mesmo a planilha dizendo "Paranhana
+Encosta da Serra").
+
+É a fatia que interessa para esta aba: quem tem COREDE já passou pela classificação, então é quem
+tem cidade preenchida com mais frequência — e sai muito menor que os 57 mil.
+
+**O seletor também estava difícil de usar.** No print dele, os COREDEs apareciam misturados entre
+"Procura emprego ou dinheiro" e "Amigos do Capitão Martim & Covatti Filho", em ordem alfabética
+sobre uma lista longa. Agora vai em `optgroup`: **COREDEs (região)** e **Outras etiquetas**, com a
+opção "todos os COREDEs (N)" no topo.
+
+A sentinela é `__todos_os_coredes__` — começa com `__` para nunca colidir com id real do CRM, que
+são uuid. `idsDoFiltroDeEtiqueta()` a expande na hora da consulta e `rotuloDoFiltroDeEtiqueta()`
+dá o nome para a tela e para o log. O log agora registra **qual consulta** produziu o retrato:
+sem isso, dois retratos com números diferentes parecem contradição em vez de filtros diferentes.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`TODOS_OS_COREDES`,
+`idsDoFiltroDeEtiqueta`, `rotuloDoFiltroDeEtiqueta`, seletor com `optgroup`, log do filtro).
+Manifesto 0.10.0 → **0.10.1**. Oito suítes passando.
+
+---
+
 ## 2026-08-20 (tarde) — Cidade E COREDE na mesma escrita
 
 **Pedido:** *"preciso que extensão marque todas as etiquetas que tenham corede vou mandar etiquetar
