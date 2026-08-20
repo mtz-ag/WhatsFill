@@ -4335,9 +4335,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const conferencia = await confirmarNoCrm(changes, etiquetas);
     problemas.push(...conferencia.naoGravou.map((n) => `${n}: a API aceitou mas não gravou`));
 
-    // Só bloqueia o fluxo o que é essencial: cidade, data de conclusão e etiquetas. Nome no
-    // cadastro e o resto viram aviso.
-    const essenciais = ['Cidade', fieldsLib.COMPLETION_FIELD, 'etiquetas'];
+    /**
+     * O que bloqueia o FLUXO: campos do contato. **Etiqueta não bloqueia mais.**
+     *
+     * `etiquetas` estava aqui, e em 20/08/2026 isso parou o envio de modelos. A cadeia: a etiqueta
+     * de CIDADE passou a ser sugerida no fluxo normal (nova para quase todo contato), a
+     * conferência via que ela não entrou no CRM, o problema entrava como bloqueante, e
+     * `saveClassification` devolvia `false` — então a rodada retornava *"a classificação não
+     * gravou; não enviei nada"* e **o modelo aprovado não saía**.
+     *
+     * A prioridade estava invertida: etiqueta é organização interna, a mensagem é o que o contato
+     * recebe. Etiqueta que não entrou continua aparecendo no status e no log — dá para reprocessar
+     * pela aba Cidades a qualquer momento —, mas não impede mais alguém de ser atendido.
+     *
+     * Cidade e data de conclusão **continuam** bloqueando: são campos do próprio contato, e
+     * seguir com eles errados é classificar errado.
+     */
+    const essenciais = ['Cidade', fieldsLib.COMPLETION_FIELD];
     const bloqueantes = problemas.filter((p) => essenciais.some((e) => p.startsWith(e)));
 
     const prefixo = automatico ? 'Aplicado sozinho' : 'Confirmado no CRM';
@@ -4348,6 +4362,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         (problemas.length ? ` — PROBLEMA: ${problemas.join(' | ')}` : ''),
       problemas.length ? 'err' : 'ok'
     );
+
+    /**
+     * Problema não-bloqueante dentro de uma rodada some da tela.
+     *
+     * O status é sobrescrito pela linha seguinte da rodada, então uma etiqueta que não entrou —
+     * que agora **não** para o envio, de propósito — passaria sem registro. Vai para o log da
+     * rodada, que é onde ele olha depois, senão o conserto de hoje trocaria um envio travado por
+     * uma falha silenciosa.
+     */
+    if (problemas.length && state.auto.rodando) {
+      // 'aviso' de propósito, e não 'pulado': o contato NÃO foi pulado — ele foi atendido, só
+      // ficou um problema de gravação para trás. 'pulado' inflaria a contagem do resumo e faria
+      // a rodada parecer que deixou gente sem atender.
+      registrarNaRodada(state.contact?.name || 'contato', 'aviso', `atendido, mas: ${problemas.join(' | ')}`);
+    }
+
     renderAll();
     return bloqueantes.length === 0;
   }

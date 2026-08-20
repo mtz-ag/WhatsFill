@@ -283,6 +283,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   laço novo que percorre base? Ligue `keepalive` e, no `finally`, registre se `ativo()` ficou falso
   — é o dado que distingue "acabou" de "congelou".
 
+- **Falha de ETIQUETA nunca bloqueia o envio da mensagem.** Em 20/08/2026 a etiqueta de cidade
+  (nova em quase todo contato) não entrou no CRM, `confirmarNoCrm` acusou, `'etiquetas'` estava nos
+  bloqueantes, `saveClassification` devolveu `false` e a rodada **parou de enviar modelo**.
+  Prioridade invertida: etiqueta é organização interna, a mensagem é o que o contato recebe. Hoje
+  `essenciais` tem só `Cidade` e a data de conclusão — campos do próprio contato. Problema de
+  etiqueta vai para o status **e para o log da rodada** (o status é sobrescrito pela linha
+  seguinte, e sem o log o conserto viraria falha silenciosa).
+
 ## Regras do projeto
 
 - **Sem IA na extração.** Custo por contato. Parser determinístico: regex, dicionário, lista de

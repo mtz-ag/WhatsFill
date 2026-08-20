@@ -5,6 +5,49 @@
 
 ---
 
+## 2026-08-20 (noite) — O envio de modelos parou: etiqueta bloqueando mensagem
+
+**Relato:** *"o envio de modelos está parando, veja qual o problema"*.
+
+### A cadeia, e a regressão é minha
+
+1. hoje `tags.suggest` passou a devolver a etiqueta de **cidade** — nova para quase todo contato;
+2. ela é marcada por `autoTags` e entra em `etiquetas` na gravação;
+3. `confirmarNoCrm` relê o contato e, se ela não entrou, registra
+   `etiquetas (CAXIAS DO SUL): a API aceitou mas não gravou`;
+4. **`'etiquetas'` estava na lista de bloqueantes** → `saveClassification` devolve `false`;
+5. na rodada: `if (!(await saveClassification(...))) return { erro: 'a classificação não gravou;
+   não enviei nada' }` → **o modelo aprovado não sai.**
+
+O bloqueio já existia; o que mudou foi a superfície. Antes as etiquetas eram COREDE (que o contato
+já tinha, então `applyTags` devolvia `skipped`) e conteúdo. A de cidade é nova em quase todo
+contato — então é a que falha, e passou a travar o envio.
+
+### O conserto: a prioridade estava invertida
+
+**Etiqueta é organização interna; a mensagem é o que o contato recebe.** Etiqueta que não entrou
+saiu dos bloqueantes: continua aparecendo no status e agora **também no log da rodada**, e dá para
+reprocessar pela aba Cidades a qualquer momento — mas não impede mais alguém de ser atendido.
+
+**Cidade e data de conclusão continuam bloqueando**, e isso é de propósito: são campos do próprio
+contato, e seguir com eles errados é classificar errado.
+
+O registro no log da rodada não é enfeite: o status é sobrescrito pela linha seguinte da rodada,
+então sem ele o conserto trocaria um envio travado por uma **falha silenciosa** — que é o modo de
+falhar que este projeto mais combate. Entra como `'aviso'`, não `'pulado'`: o contato foi atendido,
+e `'pulado'` inflaria a contagem do resumo, fazendo a rodada parecer que deixou gente sem atender.
+
+### O que este conserto NÃO resolve
+
+**Por que a etiqueta de cidade não está entrando** continua aberto — é o mesmo fio do relato
+*"não estou achando os que foram feitos"*. O conserto de hoje garante que isso não impeça mais o
+atendimento; a causa da escrita falhar precisa da sonda da aba Cidades para ser vista.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`essenciais` sem `'etiquetas'`, registro
+no log da rodada). Manifesto 0.12.0 → **0.12.1**. Oito suítes passando.
+
+---
+
 ## 2026-08-20 (noite) — Confirmar a cidade libera as etiquetas, e aviso de grafia errada
 
 **Dois pedidos na mesma mensagem:** *"quando eu aceito na confirmação de cidade eu tenho certeza
