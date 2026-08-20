@@ -227,6 +227,26 @@ export function createTag(nome, { bgColor = '#EFEFEF', textColor = '#4F4F4F' } =
 }
 
 /**
+ * Renomeia (atualiza) uma etiqueta. **`POST /core/v1/tag/{id}`** — sim, `POST` para atualizar e
+ * `PUT` para criar, ao contrário do que a convenção REST sugeriria. Lido do serviço de etiquetas
+ * do app: `post(.../core/v1/tag/${id}, {id, message, textColor, bgColor})`.
+ *
+ * É o caminho para consertar etiqueta com nome errado **sem tocar nos contatos**: a etiqueta é a
+ * mesma, muda o rótulo, e todos que a têm passam a mostrar o nome novo. O alternativo (remover de
+ * cada contato e aplicar outra) custa duas escritas por contato e abre uma janela em que o contato
+ * fica sem etiqueta.
+ *
+ * As cores vão no body porque o app as manda sempre — e quem chama deve passar as ATUAIS, senão
+ * renomear reseta a cor da etiqueta sem querer.
+ */
+export function updateTag(id, nome, { bgColor = '#EFEFEF', textColor = '#4F4F4F' } = {}) {
+  return apiFetch(`/core/v1/tag/${id}`, {
+    method: 'POST',
+    body: { id, message: String(nome).trim(), textColor, bgColor },
+  });
+}
+
+/**
  * Etiquetas cadastradas. Atenção: o rótulo vem no campo `message` (não em `name`), e a
  * resposta é um array puro.
  */

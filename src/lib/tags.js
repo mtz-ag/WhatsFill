@@ -32,9 +32,16 @@ export async function loadTags({ force = false } = {}) {
   if (tagsCache && !force) return tagsCache;
   const raw = await api.getTags();
   const arr = Array.isArray(raw) ? raw : raw?.items || [];
+  // As cores entram porque renomear (`api.updateTag`) exige mandá-las de volta: sem elas, o
+  // conserto de um rótulo resetaria a cor da etiqueta como efeito colateral.
   tagsCache = arr
     .filter((t) => t.active !== false && t.message)
-    .map((t) => ({ id: t.id, label: String(t.message).trim() }));
+    .map((t) => ({
+      id: t.id,
+      label: String(t.message).trim(),
+      bgColor: t.bgColor || undefined,
+      textColor: t.textColor || undefined,
+    }));
   return tagsCache;
 }
 

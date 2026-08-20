@@ -15,7 +15,8 @@ import { check, grupo, fim, lib, mem } from './_harness.mjs';
 const coredes = JSON.parse(readFileSync(new URL('../src/data/coredes-rs.json', import.meta.url), 'utf8'));
 mem.municipios = Object.keys(coredes.municipios).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
-const { nomeDaEtiqueta, analisar, Ritmo, ehLimiteDeTaxa, PREFIXO_PADRAO } = await lib('categorizar.js');
+const { nomeDaEtiqueta, analisar, Ritmo, ehLimiteDeTaxa, PREFIXO_PADRAO, PREFIXO_ANTIGO, etiquetasComPrefixoAntigo } =
+  await lib('categorizar.js');
 const { normalize } = await lib('cities.js');
 
 /** Os 497 municípios do RS, normalizados — a mesma fonte que o painel usa. */
@@ -30,17 +31,52 @@ function etiquetas(...nomes) {
 
 const ctx = (mapa) => ({ etiquetasPorNome: mapa, municipios, prefixo: PREFIXO_PADRAO });
 
-grupo('nomeDaEtiqueta');
+grupo('nomeDaEtiqueta: sem prefixo, so o nome da cidade');
 {
-  check(nomeDaEtiqueta('Santo Ângelo') === 'CIDADE: SANTO ÂNGELO', 'maiúsculas, acento mantido');
-  check(nomeDaEtiqueta('  Pelotas  ') === 'CIDADE: PELOTAS', 'apara o espaço');
+  // Pedido dele depois de ver a primeira gravada: "deixe somente caxias do sul".
+  check(PREFIXO_PADRAO === '', 'o padrão não tem prefixo');
+  check(nomeDaEtiqueta('Santo Ângelo') === 'SANTO ÂNGELO', 'maiúsculas, acento mantido');
+  check(nomeDaEtiqueta('  Pelotas  ') === 'PELOTAS', 'apara o espaço');
   check(nomeDaEtiqueta('') === '', 'vazio não vira etiqueta');
-  check(nomeDaEtiqueta('Pelotas', '') === 'PELOTAS', 'prefixo vazio é respeitado');
+  check(nomeDaEtiqueta('Pelotas', 'CIDADE: ') === 'CIDADE: PELOTAS', 'prefixo ainda é respeitado se pedido');
+}
+
+grupo('nenhum município do RS colide com nome de COREDE');
+{
+  // É esta conferência que torna seguro tirar o prefixo: com colisão, a etiqueta de cidade e a
+  // de região teriam o mesmo nome e o filtro dele ficaria ambíguo.
+  const nomesDeCorede = new Set(Object.values(coredes.municipios).map(normalize));
+  const colidem = Object.keys(coredes.municipios).filter((m) => nomesDeCorede.has(normalize(m)));
+  check(colidem.length === 0, `nenhuma colisão cidade × COREDE (${colidem.join(', ') || 'nenhuma'})`);
+}
+
+grupo('etiquetasComPrefixoAntigo: acha o que precisa renomear');
+{
+  const lista = [
+    { id: 't1', label: 'CIDADE: CAXIAS DO SUL' },
+    { id: 't2', label: 'SERRA' },
+    { id: 't3', label: 'CIDADE: PELOTAS' },
+  ];
+  const fora = etiquetasComPrefixoAntigo(lista, PREFIXO_ANTIGO);
+  check(fora.length === 2, `achou as duas com prefixo = ${fora.length}`);
+  check(fora[0].de === 'CIDADE: CAXIAS DO SUL' && fora[0].para === 'CAXIAS DO SUL', 'monta o nome novo');
+  check(fora[0].id === 't1', 'leva o id, que é o que a renomeação usa');
+  check(!fora.some((x) => x.de === 'SERRA'), 'etiqueta sem prefixo não é mexida');
+}
+
+grupo('etiquetasComPrefixoAntigo: NÃO renomeia se o nome novo já existe');
+{
+  // Renomear criaria dois rótulos iguais no CRM. Quem decide nesse caso é ele, não o código.
+  const lista = [
+    { id: 't1', label: 'CIDADE: CAXIAS DO SUL' },
+    { id: 't2', label: 'CAXIAS DO SUL' },
+  ];
+  check(etiquetasComPrefixoAntigo(lista, PREFIXO_ANTIGO).length === 0, 'recusa em vez de duplicar rótulo');
 }
 
 grupo('contato sem etiqueta NÃO entra — ainda não foi trabalhado');
 {
-  const r = analisar([{ id: 'c1', tagsId: [], cidade: 'Pelotas' }], ctx(etiquetas('CIDADE: PELOTAS')));
+  const r = analisar([{ id: 'c1', tagsId: [], cidade: 'Pelotas' }], ctx(etiquetas('PELOTAS')));
   check(r.paraGravar.length === 0, 'não grava');
   check(r.semEtiqueta === 1, 'contado como sem etiqueta');
 }
@@ -82,13 +118,13 @@ grupo('cidade válida sem etiqueta no CRM: entra na fila de criar, não é inven
   check(r.faltamCriar.length === 2, 'duas cidades a criar');
   check(r.faltamCriar[0].cidade === 'Pelotas' && r.faltamCriar[0].quantos === 2,
     `a mais frequente vem primeiro = ${r.faltamCriar[0].cidade} (${r.faltamCriar[0].quantos})`);
-  check(r.faltamCriar[0].nome === 'CIDADE: PELOTAS', 'já traz o nome a criar');
+  check(r.faltamCriar[0].nome === 'PELOTAS', 'já traz o nome a criar');
 }
 
 grupo('IDEMPOTENTE: quem já tem a etiqueta não gasta requisição');
 {
-  const mapa = etiquetas('CIDADE: PELOTAS');
-  const id = mapa.get(normalize('CIDADE: PELOTAS')).id;
+  const mapa = etiquetas('PELOTAS');
+  const id = mapa.get(normalize('PELOTAS')).id;
   const r = analisar([{ id: 'c1', tagsId: ['outra', id], cidade: 'Pelotas' }], ctx(mapa));
   check(r.paraGravar.length === 0, 'não regrava');
   check(r.jaOk === 1, 'contado como pronto');
@@ -96,13 +132,13 @@ grupo('IDEMPOTENTE: quem já tem a etiqueta não gasta requisição');
 
 grupo('o caso que importa: grava, e leva as etiquetas atuais para somar');
 {
-  const mapa = etiquetas('CIDADE: SANTO ÂNGELO');
+  const mapa = etiquetas('SANTO ÂNGELO');
   const r = analisar([{ id: 'c1', tagsId: ['t-corede', 't-conteudo'], cidade: 'Santo Ângelo' }], ctx(mapa));
   check(r.paraGravar.length === 1, 'entrou para gravar');
 
   const item = r.paraGravar[0];
   check(item.contactId === 'c1', 'contato certo');
-  check(item.etiqueta.label === 'CIDADE: SANTO ÂNGELO', 'etiqueta certa');
+  check(item.etiqueta.label === 'SANTO ÂNGELO', 'etiqueta certa');
   check(
     item.tagsId.includes('t-corede') && item.tagsId.includes('t-conteudo'),
     'leva as etiquetas atuais — é o que permite somar em vez de substituir'
@@ -115,7 +151,7 @@ grupo('casamento com o CRM ignora acento e caixa');
   // etiqueta duplicada só por isso.
   const r = analisar(
     [{ id: 'c1', tagsId: ['x'], cidade: 'Santo Ângelo' }],
-    ctx(etiquetas('cidade: santo angelo'))
+    ctx(etiquetas('santo angelo'))
   );
   check(r.paraGravar.length === 1, 'casou mesmo escrita diferente');
   check(r.faltamCriar.length === 0, 'e não pediu para criar uma segunda');
@@ -171,8 +207,8 @@ grupo('ehLimiteDeTaxa: o sinal é de rede, não só HTTP');
 
 grupo('contagens fecham com o total');
 {
-  const mapa = etiquetas('CIDADE: PELOTAS');
-  const id = mapa.get(normalize('CIDADE: PELOTAS')).id;
+  const mapa = etiquetas('PELOTAS');
+  const id = mapa.get(normalize('PELOTAS')).id;
   const entrada = [
     { id: 'a', tagsId: [], cidade: 'Pelotas' },          // sem etiqueta
     { id: 'b', tagsId: ['x'], cidade: '' },              // sem cidade

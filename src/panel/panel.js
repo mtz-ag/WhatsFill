@@ -4346,6 +4346,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     cardLer.append(h('div', { class: 'wf-row' }, [btnLer, botaoParar()]));
     body.append(cardLer);
 
+    // Conserto do prefixo antigo. Aparece sozinho, antes de qualquer varredura, porque quem já
+    // gravou com o nome errado precisa disto ANTES de gravar mais.
+    const comPrefixo = categorizar.etiquetasComPrefixoAntigo(c.etiquetasDisponiveis);
+    if (comPrefixo.length) {
+      const cardFix = h('div', { class: 'wf-card' }, [
+        h('h4', {}, `Corrigir ${comPrefixo.length} etiqueta(s) com "CIDADE: "`),
+        h('div', { class: 'wf-preview' },
+          'A primeira versão criava a etiqueta como "CIDADE: CAXIAS DO SUL". Renomear no CRM ' +
+            'conserta TODOS os contatos que já a receberam de uma vez — a etiqueta é a mesma, ' +
+            'muda só o nome. Nenhum contato é tocado.'),
+        h('div', { class: 'wf-origin' }, comPrefixo.slice(0, 10).map((x) => `${x.de} → ${x.para}`).join(' · ')),
+      ]);
+      const btnFix = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Renomear agora');
+      btnFix.disabled = c.lendo || c.gravando;
+      btnFix.addEventListener('click', () => withBusy(() => corrigirPrefixoDasEtiquetas(comPrefixo)));
+      cardFix.append(h('div', { class: 'wf-row' }, [btnFix]));
+      body.append(cardFix);
+    }
+
     if (!c.analise) {
       if (c.log.length) renderLogCidades();
       return;
@@ -4610,6 +4629,62 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       municipios,
       prefixo: categorizar.PREFIXO_PADRAO,
     });
+  }
+
+  /**
+   * Renomeia as etiquetas que ficaram com o prefixo antigo.
+   *
+   * Conserta os contatos já gravados sem tocar em nenhum: a etiqueta é a mesma, muda o rótulo.
+   * As cores atuais vão de volta no body porque a rota as exige — omitir resetaria a cor.
+   */
+  async function corrigirPrefixoDasEtiquetas(lista) {
+    const c = state.cidades;
+    if (!confirm(
+      `Vou renomear ${lista.length} etiqueta(s) no CRM (ex.: "${lista[0].de}" → "${lista[0].para}").\n\n` +
+        'Os contatos que já receberam essas etiquetas passam a mostrar o nome novo — nenhum contato é alterado. Confirma?'
+    )) {
+      return setStatus('Renomeação cancelada.');
+    }
+
+    c.gravando = true;
+    renderAll();
+    const ritmo = new categorizar.Ritmo({ inicialMs: 400, minMs: 200, maxMs: 8000 });
+    let feitas = 0;
+
+    try {
+      for (const alvo of lista) {
+        if (c.parar) break;
+        const atual = c.etiquetasDisponiveis.find((t) => t.id === alvo.id) || {};
+        try {
+          await api.updateTag(alvo.id, alvo.para, { bgColor: atual.bgColor, textColor: atual.textColor });
+          feitas++;
+          ritmo.sucesso();
+          logCidades(`Renomeada: ${alvo.de} → ${alvo.para}`);
+        } catch (err) {
+          if (categorizar.ehLimiteDeTaxa(err.message) && !ritmo.desistir()) {
+            const nova = ritmo.recuar();
+            logCidades(`A API recusou — esperando ${nova}ms.`, true);
+            await esperar(nova);
+          } else {
+            logCidades(`Falhou renomear "${alvo.de}": ${err.message}`, true);
+          }
+        }
+        await esperar(ritmo.pausaMs);
+      }
+
+      // O cache e o retrato ficaram velhos: os nomes mudaram.
+      tagsLib.invalidateTags();
+      c.etiquetasDisponiveis = [];
+      c.analise = null;
+      setStatus(
+        `${feitas} etiqueta(s) renomeada(s). Os contatos que já as tinham estão corrigidos — ` +
+          'clique em "Ler a base" para atualizar o retrato.',
+        'ok'
+      );
+    } finally {
+      c.gravando = false;
+      renderAll();
+    }
   }
 
   /**

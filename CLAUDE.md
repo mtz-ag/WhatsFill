@@ -118,6 +118,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   "tem SERRA e ainda NÃO tem a etiqueta de cidade" sem baixar a base.
   **Lição:** rota de tela lazy não está no `main.js` — pegue a lista de chunks no `runtime.*.js`
   e varra todos (são estáticos, não a API: varrer não tem custo de rate limit).
+- **Etiqueta de cidade é o nome do município e nada mais** — sem prefixo (decisão dele, 20/08:
+  *"deixe somente caxias do sul"*). É seguro porque **nenhum dos 497 municípios do RS tem o mesmo
+  nome de um dos 28 COREDEs** (conferido, e há teste travando isso): cidade e região não colidem.
+- **Etiqueta com nome errado se conserta RENOMEANDO, não mexendo nos contatos.**
+  `POST /core/v1/tag/{id}` (sim: `POST` atualiza, `PUT` cria) muda o rótulo, e todos que a têm
+  passam a mostrar o nome novo — uma requisição, em vez de duas por contato, e sem janela em que o
+  contato fica sem etiqueta. Passe as cores ATUAIS no body: omitir reseta a cor sem querer.
 - **A etiqueta de CIDADE é o que permite filtrar por município.** A API só filtra por etiqueta, e
   o COREDE agrupa dezenas de municípios — daí a aba Cidades. Ela **nunca** cria etiqueta a partir
   do que está escrito no campo Cidade sem casar com os 497 municípios da planilha oficial: o campo

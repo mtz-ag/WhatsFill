@@ -32,8 +32,22 @@
 
 import { normalize } from './cities.js';
 
-/** Prefixo padrão. Configurável, mas o padrão agrupa as etiquetas de cidade na lista do CRM. */
-export const PREFIXO_PADRAO = 'CIDADE: ';
+/**
+ * Sem prefixo: a etiqueta é o nome da cidade, e nada mais.
+ *
+ * Começou como `'CIDADE: '`, para agrupar as etiquetas na lista do CRM. Ele viu a primeira
+ * gravada e pediu o contrário — *"deixe somente caxias do sul"* —, e está certo: a etiqueta
+ * aparece no cartão do contato e na coluna da tela de Contatos, onde o prefixo repetido em toda
+ * linha só rouba espaço de leitura. As etiquetas dele já são assim (`SERRA`, `SEM INTERESSE`).
+ *
+ * **Conferido antes de tirar:** nenhum dos 497 municípios do RS tem o mesmo nome de um dos 28
+ * COREDEs, então cidade e região não colidem sem o prefixo — o filtro continua sem ambiguidade.
+ * Município novo no país? Reconfira, porque é o prefixo que estaria protegendo disso.
+ */
+export const PREFIXO_PADRAO = '';
+
+/** O prefixo da primeira versão, para achar e renomear o que já foi criado com ele. */
+export const PREFIXO_ANTIGO = 'CIDADE: ';
 
 /**
  * O nome da etiqueta de uma cidade.
@@ -46,6 +60,40 @@ export function nomeDaEtiqueta(cidade, prefixo = PREFIXO_PADRAO) {
   const limpa = String(cidade || '').trim();
   if (!limpa) return '';
   return `${prefixo}${limpa.toLocaleUpperCase('pt-BR')}`;
+}
+
+/**
+ * As etiquetas que ficaram com o prefixo antigo, e o nome que cada uma deveria ter.
+ *
+ * Renomear no CRM é o que conserta os contatos **sem tocar em nenhum deles**: a etiqueta é a
+ * mesma, muda só o rótulo, e todo mundo que a tem passa a mostrar o nome novo. Uma requisição por
+ * etiqueta, em vez de duas por contato (remover a antiga, aplicar a nova) — e sem janela em que o
+ * contato fica sem etiqueta nenhuma.
+ *
+ * Só devolve quando o nome novo **não existe ainda**: se as duas versões estiverem no CRM,
+ * renomear criaria duplicata de rótulo, e aí quem decide o que fazer é você, não este código.
+ *
+ * @param {Array<{id, label}>} etiquetas as etiquetas reais do CRM
+ * @returns {Array<{id, de: string, para: string}>}
+ */
+export function etiquetasComPrefixoAntigo(etiquetas, prefixo = PREFIXO_ANTIGO) {
+  const alvo = normalize(prefixo);
+  if (!alvo) return [];
+
+  const existentes = new Set((etiquetas || []).map((t) => normalize(t.label)));
+  const fora = [];
+
+  for (const t of etiquetas || []) {
+    const rotulo = String(t.label || '');
+    if (normalize(rotulo).indexOf(alvo) !== 0) continue;
+
+    const semPrefixo = rotulo.slice(prefixo.length).trim();
+    if (!semPrefixo) continue;
+    if (existentes.has(normalize(semPrefixo))) continue; // já existe: não cria duplicata
+
+    fora.push({ id: t.id, de: rotulo, para: semPrefixo });
+  }
+  return fora;
 }
 
 /**

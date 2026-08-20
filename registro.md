@@ -5,6 +5,42 @@
 
 ---
 
+## 2026-08-20 (tarde) — Etiqueta de cidade sem prefixo, e o conserto dos 20 já gravados
+
+**Pedido:** *"marcou como cidade: caxias do sul, deixe somente caxias do sul, arrume os que ja
+foram mandei 20"*. A primeira versão criava a etiqueta como `CIDADE: CAXIAS DO SUL`; ele viu na
+tela e pediu só o nome do município. E 20 contatos já tinham recebido a errada.
+
+**O prefixo saiu** (`PREFIXO_PADRAO = ''`). Ele está certo: a etiqueta aparece no cartão do
+contato e na coluna da tela de Contatos, onde `CIDADE: ` repetido em toda linha só rouba espaço —
+e as etiquetas dele já são assim (`SERRA`, `SEM INTERESSE`).
+
+**Conferido antes de tirar:** nenhum dos 497 municípios do RS tem o mesmo nome de um dos 28
+COREDEs, então cidade e região não colidem sem o prefixo e o filtro continua sem ambiguidade. Tem
+teste travando isso — se um dia colidir, a suíte acusa antes de a etiqueta ambígua nascer.
+
+**O conserto dos 20: renomear, não remexer.** `POST /core/v1/tag/{id}` (achado no bundle: `POST`
+atualiza, `PUT` cria) muda o rótulo da etiqueta — e todo contato que a tem passa a mostrar o nome
+novo. Uma requisição por etiqueta, contra duas por contato no caminho óbvio (remover a antiga,
+aplicar a nova), e **sem a janela** em que o contato ficaria sem etiqueta nenhuma no meio.
+
+`etiquetasComPrefixoAntigo` acha o que renomear e **recusa quando o nome novo já existe** — as
+duas versões no CRM viraria rótulo duplicado, e essa decisão é dele. O card só aparece quando há
+o que consertar, e aparece **antes** da varredura: quem gravou errado precisa disto antes de
+gravar mais.
+
+`tags.loadTags` passou a guardar `bgColor`/`textColor`, porque a rota de renomear exige as cores
+de volta — omitir resetaria a cor da etiqueta como efeito colateral.
+
+**Arquivos:** [src/lib/categorizar.js](src/lib/categorizar.js) (`PREFIXO_PADRAO`,
+`PREFIXO_ANTIGO`, `etiquetasComPrefixoAntigo`), [src/lib/api.js](src/lib/api.js) (`updateTag`),
+[src/lib/tags.js](src/lib/tags.js) (cores no cache),
+[src/panel/panel.js](src/panel/panel.js) (`corrigirPrefixoDasEtiquetas` + card),
+[tests/categorizar.test.mjs](tests/categorizar.test.mjs). Manifesto 0.9.3 → **0.9.4**. Oito
+suítes passando.
+
+---
+
 ## 2026-08-20 — Aba Cidades: etiqueta de município para a base inteira
 
 **Pedido:** *"no crm em contatos vamos ter que criar uma aba que vai categorizar eles, todos que
