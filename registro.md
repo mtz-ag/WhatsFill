@@ -78,6 +78,22 @@ manda **uma** como sonda antes das outras.
 `tools/descobrir-listagem.js` (só leitura, para colar no console) fica no repositório: ele confirma
 as rotas contra a API de verdade, que é o passo que falta.
 
+### Ler 57 mil para testar a leitura era caro demais
+
+**Relato, na mesma sessão:** *"estou filtrando para não pegar todos os contatos mas ele quer ler os
+57.000"*. A aba chamava a API direto e ignorava o filtro aplicado na tela.
+
+Investigado no bundle: a tela de Contatos filtra por **`POST /core/v1/contact/filter`**
+(`filterList`), e os campos que ele aceita são `textSearch`, `statuses`, `tagsIdBySearchText` e
+`isToIncludeCustomFieldValues`. **Não existe filtro por etiqueta escolhida** — `tagsIdBySearchText`
+é resultado de procurar TEXTO entre as etiquetas, não "só quem tem a etiqueta X". Então peneirar
+"quem tem etiqueta e cidade" continua sendo trabalho nosso, depois de ler; o servidor não faz.
+
+O que deu para resolver: **teto de leitura** (padrão 500, `0` = base inteira) e o campo de busca
+por texto. Varrer 57 mil são ~580 requisições e vários minutos — caro para descobrir só se a
+cidade está vindo. Com o teto, a primeira passada é curta e prova a leitura antes de gastar a
+varredura toda. `api.filterContacts` entrou para isso.
+
 ### O fluxo na tela
 
 Três passos explícitos, nessa ordem: **1. Ler a base** (só leitura, com respiro entre páginas — a

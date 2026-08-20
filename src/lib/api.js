@@ -143,6 +143,39 @@ export async function listContacts({ page = 1, pageSize = 100, status = 'ACTIVE'
 }
 
 /**
+ * Listagem COM busca por texto — `POST /core/v1/contact/filter`.
+ *
+ * É o que a tela de Contatos usa quando você digita no campo Pesquisar (método `filterList` do
+ * app). Body: `{textSearch, isToIncludeCustomFieldValues, page, pageSize, orderBy}`.
+ *
+ * **O que o filtro NÃO faz:** não existe "só quem tem a etiqueta X" nem "só quem tem cidade". Os
+ * campos aceitos são `textSearch`, `statuses`, `tagsIdBySearchText` e
+ * `isToIncludeCustomFieldValues` — conferidos no bundle. `tagsIdBySearchText` é o resultado de
+ * procurar TEXTO entre as etiquetas, não um filtro por etiqueta escolhida. Por isso a
+ * categorização por cidade lê a base e filtra do nosso lado: não há como o servidor fazer isso.
+ *
+ * Mesmo envelope da listagem.
+ */
+export async function filterContacts({ textSearch = '', page = 1, pageSize = 100 } = {}) {
+  const corpo = await apiFetch('/core/v1/contact/filter', {
+    method: 'POST',
+    body: {
+      textSearch: String(textSearch || '').trim(),
+      isToIncludeCustomFieldValues: true,
+      page,
+      pageSize,
+      orderBy: 'name',
+    },
+  });
+  const itens = Array.isArray(corpo) ? corpo : corpo?.items || [];
+  return {
+    itens,
+    total: Array.isArray(corpo) ? null : corpo?.totalItems ?? null,
+    paginas: Array.isArray(corpo) ? null : corpo?.countPages ?? null,
+  };
+}
+
+/**
  * Cria uma etiqueta.
  *
  * **É `PUT`, não `POST`** — lido do serviço de etiquetas do app (`save(message, textColor,

@@ -104,6 +104,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       log: [],
       /** Tamanho do lote que o botão grava de uma vez. Lote pequeno é a decisão dele (15/08). */
       lote: 200,
+      /**
+       * Quantos contatos LER antes de parar. 0 = a base inteira.
+       *
+       * Nasce em 500, e não em 0, por causa do relato: *"estou filtrando para não pegar todos os
+       * contatos mas ele quer ler os 57.000"*. Varrer 57 mil são ~580 requisições e vários
+       * minutos — caro para descobrir só se a leitura está funcionando. Com o teto, a primeira
+       * passada é curta e confirma se a cidade está vindo antes de gastar a varredura inteira.
+       */
+      limiteLeitura: 500,
+      /**
+       * Busca por texto, opcional — o mesmo campo "Pesquisar" da tela de Contatos.
+       *
+       * Vazio usa a listagem simples. Com texto, usa `POST /core/v1/contact/filter`. Não existe
+       * filtro por etiqueta no servidor (conferido no bundle), então filtrar por "quem tem
+       * etiqueta" continua sendo trabalho nosso, depois de ler.
+       */
+      busca: '',
     },
     busy: false,
     lastSendAt: 0,
@@ -4270,8 +4287,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       h('h4', {}, '1. Ler a base'),
       h('div', { class: 'wf-preview' },
         'Percorre os contatos e monta o retrato do que falta. Só leitura — nada é gravado neste ' +
-          'passo. Precisa ser refeito se você recarregar o painel.'),
+          'passo. Precisa ser refeito se você recarregar o painel.\n\n' +
+          'A base tem ~57 mil contatos: comece com o teto baixo para confirmar que a cidade está ' +
+          'vindo, e só depois ponha 0 para varrer tudo.'),
     ]);
+    cardLer.append(
+      campoNumero('Ler no máximo (0 = todos os contatos)', c.limiteLeitura, (v) => {
+        c.limiteLeitura = clampInt(v, 0, 200000);
+        renderAll();
+      })
+    );
+
+    // Busca opcional: o mesmo campo "Pesquisar" da tela de Contatos. Não há filtro por etiqueta
+    // no servidor, então "quem tem etiqueta" continua sendo peneirado do nosso lado.
+    const inputBusca = h('input', { type: 'text', value: c.busca, placeholder: 'deixe vazio para a base inteira' });
+    inputBusca.addEventListener('change', () => {
+      c.busca = inputBusca.value.trim();
+    });
+    cardLer.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Filtrar por texto (opcional)'), inputBusca]));
+
     const btnLer = h('button', { class: 'wf-btn wf-primary', type: 'button' },
       c.lendo ? `Lendo… ${c.lidos}${c.total ? ` de ${c.total}` : ''}` : 'Ler a base');
     btnLer.disabled = c.lendo || c.gravando;
@@ -4447,7 +4481,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
         let resposta;
         try {
-          resposta = await api.listContacts({ page: pagina, pageSize: 100 });
+          // Com busca vai por `POST /core/v1/contact/filter` (o campo Pesquisar da tela); sem
+          // busca, pela listagem simples. As duas devolvem o mesmo envelope.
+          resposta = c.busca
+            ? await api.filterContacts({ textSearch: c.busca, page: pagina, pageSize: 100 })
+            : await api.listContacts({ page: pagina, pageSize: 100 });
           ritmo.sucesso();
         } catch (err) {
           if (categorizar.ehLimiteDeTaxa(err.message) && !ritmo.desistir()) {
@@ -4477,6 +4515,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         setStatus(`Lendo… ${c.lidos}${c.total ? ` de ${c.total}` : ''}`);
         renderAll();
 
+        // O teto que ele pediu: para de ler quando junta o suficiente, em vez de varrer 57 mil
+        // só para descobrir se a leitura está funcionando.
+        if (c.limiteLeitura && contatos.length >= c.limiteLeitura) {
+          logCidades(`Parei no teto de ${c.limiteLeitura} contato(s) lidos. Aumente o teto (ou ponha 0) para ir além.`);
+          break;
+        }
         if (ultimaPagina || resposta.itens.length < 100) break;
         pagina++;
         await esperar(ritmo.pausaMs);
