@@ -5,6 +5,52 @@
 
 ---
 
+## 2026-08-20 (noite) — A aba Cidades rodava sem keepalive, e congelava em segundo plano
+
+**Relato:** *"eu quero saber se os 2000 foram etiquetados mas pelo visto não foram, eu não abri a
+página para ele trabalhar deixando rodando sozinho, se eu não filtrar ele não faz"*.
+
+### Causa raiz: armadilha já documentada, e eu não a apliquei no código novo
+
+O `CLAUDE.md` registra, medido: **"aba escondida é aba CONGELADA, não lenta"** —
+`setInterval(120ms)` deu **zero** disparos em mais de um minuto. As rodadas do Automatizado ligam
+`keepalive` desde sempre por causa disso. **A aba Cidades nasceu sem ele.**
+
+Então ele deixou a gravação rodando, tirou a aba da frente, e o Chrome congelou o laço. Sem erro,
+sem log, sem nada na tela — a passada simplesmente parou onde estava. É por isso que os 2000 não
+foram etiquetados.
+
+Consertado: `acordarParaCidades()` liga o áudio nas **quatro** passadas (leitura, criação de
+etiqueta, renomeação, gravação) e relata quando não consegue — áudio exige gesto do usuário, e
+aqui sempre há um, porque toda passada começa por um clique. No `finally`, se o áudio **não estava
+mais ativo**, o log avisa: é o dado que distingue "acabou" de "congelou no meio", e sem ele a
+próxima investigação começaria do zero.
+
+E um aviso no topo da aba, em destaque, porque nenhum conserto de código impede minimizar a janela
+ou o computador suspender.
+
+### "Se eu não filtrar ele não faz"
+
+Não reproduzi, mas havia um jeito de isso passar em silêncio: primeira página vazia caía no mesmo
+`break` de "acabou", e a tela mostrava **"Leitura completa: 0 contatos"** como se estivesse tudo
+certo. Agora, quando a PRIMEIRA página volta vazia, o log diz isso explicitamente e manda avisar —
+consulta que não devolve nada é diferente de base sem contatos.
+
+Continua **em aberto** se `listContacts` (sem filtro) tem outro problema. Se acontecer de novo, a
+linha nova no log é o que vai dizer.
+
+### Como saber se os 2000 foram etiquetados
+
+Ler de novo com o mesmo filtro e olhar **"já completos"** — é a resposta, e vem do CRM, não da
+nossa contagem. Junto com a sonda da entrada anterior (que relê o primeiro gravado de cada lote),
+é o que fecha o ciclo: agora dá para confiar no número.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`acordarParaCidades`, `keepalive` nas
+quatro passadas, aviso de aba visível, log de página vazia). Manifesto 0.10.4 → **0.10.5**. Oito
+suítes passando.
+
+---
+
 ## 2026-08-20 (tarde) — "Não estou achando os que foram feitos": faltava conferir a escrita
 
 **Relato, com print:** *"não estou achando os que foram feitos somente corede da serra aparece como

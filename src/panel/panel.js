@@ -4321,6 +4321,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'Esta aba dá a cada contato a etiqueta da própria cidade, somada às que ele já tem.')
     );
 
+    // O aviso mais importante da aba, e ele vem primeiro por um motivo: foi assim que uma passada
+    // inteira se perdeu em silêncio.
+    body.append(
+      h('div', { class: 'wf-block' },
+        'DEIXE ESTA ABA VISÍVEL enquanto roda. O Chrome CONGELA aba em segundo plano — o laço ' +
+          'para no meio sem erro nenhum. A extensão toca um áudio inaudível para evitar isso, mas ' +
+          'ele não sobrevive a tudo: minimizar a janela ou o computador suspender ainda param a ' +
+          'passada. O log avisa se o áudio cair.')
+    );
+
     // --- passo 1: varrer -------------------------------------------------
     const cardLer = h('div', { class: 'wf-card' }, [
       h('h4', {}, '1. Ler a base'),
@@ -4691,6 +4701,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     c.analise = null;
   }
 
+  /**
+   * Mantém a aba acordada enquanto a passada roda, e avisa quando não consegue.
+   *
+   * **Aba escondida é aba CONGELADA, não lenta** — medido neste projeto: `setInterval(120ms)` deu
+   * ZERO disparos em mais de um minuto. As rodadas do Automatizado ligam keepalive desde sempre;
+   * a aba Cidades nasceu **sem** ele, e o resultado foi o relato: *"eu não abri a página para ele
+   * trabalhar, deixando rodando sozinho"* — a leitura e a gravação simplesmente pararam quando a
+   * aba saiu da frente, sem erro nenhum na tela.
+   *
+   * O áudio exige gesto do usuário, e aqui sempre há um: a passada começa por um clique no botão.
+   */
+  async function acordarParaCidades(oQue) {
+    const acordada = await keepalive.ligar();
+    if (!acordada.ok) {
+      logCidades(`${acordada.motivo}. Deixe esta aba VISÍVEL durante ${oQue}.`, true);
+    }
+    if (acordada.energia && !acordada.energia.ok) {
+      logCidades(
+        `Não consegui impedir o computador de suspender (${acordada.energia.motivo}). ` +
+          'Se a máquina dormir, a passada para no meio.',
+        true
+      );
+    }
+    return acordada;
+  }
+
   async function lerBaseParaCidades({ continuar = false } = {}) {
     const c = state.cidades;
     if (!continuar) reiniciarLeituraDeCidades();
@@ -4734,6 +4770,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const contatos = c.acumulados;
     let pagina = c.proximaPagina;
     let acabou = false;
+    await acordarParaCidades('a leitura');
 
     try {
       // eslint-disable-next-line no-constant-condition
@@ -4768,6 +4805,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
         if (resposta.total != null) c.total = resposta.total;
         if (!resposta.itens.length) {
+          // Primeira página vazia não é "acabou", é "não veio nada" — e sem dizer isso a tela
+          // mostra "Leitura completa: 0 contatos" como se estivesse tudo certo. Foi o relato
+          // *"se eu não filtrar ele não faz"*: a consulta voltou vazia e nada explicou por quê.
+          if (pagina === c.proximaPagina && !contatos.length) {
+            logCidades(
+              `A consulta não devolveu NENHUM contato na primeira página (${c.busca || c.etiquetaFiltro ? 'com filtro' : 'sem filtro'}). ` +
+                'Se a tela de Contatos mostra contatos, é a consulta da extensão que está errada — me avise.',
+              true
+            );
+          }
           acabou = true;
           break;
         }
@@ -4829,6 +4876,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       logCidades(`Leitura interrompida: ${err.message}`, true);
       setStatus(err.message, 'err');
     } finally {
+      // Se o áudio caiu no meio, a aba pode ter congelado — e isso explica passada curta demais.
+      if (!keepalive.ativo()) logCidades('Atenção: o áudio que mantém a aba acordada não estava mais ativo no fim.', true);
+      keepalive.desligar();
       c.lendo = false;
       renderAll();
     }
@@ -4894,6 +4944,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     c.gravando = true;
     renderAll();
+    await acordarParaCidades('a renomeação');
     const ritmo = new categorizar.Ritmo({ inicialMs: 400, minMs: 200, maxMs: 8000 });
     let feitas = 0;
 
@@ -4928,6 +4979,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         'ok'
       );
     } finally {
+      if (!keepalive.ativo()) logCidades('Atenção: o áudio que mantém a aba acordada não estava mais ativo no fim.', true);
+      keepalive.desligar();
       c.gravando = false;
       renderAll();
     }
@@ -4951,6 +5004,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     c.gravando = true;
     c.parar = false;
     renderAll();
+    await acordarParaCidades('a criação das etiquetas');
 
     const ritmo = new categorizar.Ritmo({ inicialMs: 400, minMs: 200, maxMs: 8000 });
     let criadas = 0;
@@ -4994,6 +5048,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       logCidades(`${criadas} etiqueta(s) criada(s). Leia a base de novo para atualizar o retrato.`);
       setStatus(`${criadas} etiqueta(s) criada(s). Clique em "Ler a base" para atualizar.`, 'ok');
     } finally {
+      if (!keepalive.ativo()) logCidades('Atenção: o áudio que mantém a aba acordada não estava mais ativo no fim.', true);
+      keepalive.desligar();
       c.gravando = false;
       renderAll();
     }
@@ -5018,6 +5074,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     c.gravando = true;
     c.parar = false;
     renderAll();
+    await acordarParaCidades('a gravação');
 
     const ritmo = new categorizar.Ritmo({ inicialMs: 400, minMs: 150, maxMs: 8000 });
     let gravados = 0;
@@ -5103,6 +5160,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         falhas ? 'err' : 'ok'
       );
     } finally {
+      if (!keepalive.ativo()) logCidades('Atenção: o áudio que mantém a aba acordada não estava mais ativo no fim.', true);
+      keepalive.desligar();
       c.gravando = false;
       renderAll();
     }

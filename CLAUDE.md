@@ -261,6 +261,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   disparos em mais de um minuto. Congela junto o JavaScript da plataforma, então mover só as
   nossas esperas para fora da aba não resolveria — o Angular também para. O que descongela é
   áudio tocando (`keepalive.js`), e áudio exige gesto: ligar sempre a partir de um clique.
+  **TODO laço longo precisa disso, não só as rodadas.** A aba Cidades nasceu sem keepalive e uma
+  gravação de 2000 contatos parou no meio, em silêncio, quando ele tirou a aba da frente. Escreveu
+  laço novo que percorre base? Ligue `keepalive` e, no `finally`, registre se `ativo()` ficou falso
+  — é o dado que distingue "acabou" de "congelou".
 
 ## Regras do projeto
 
