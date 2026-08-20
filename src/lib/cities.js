@@ -27,15 +27,75 @@ const ALIASES = [
 ];
 
 export function normalize(value) {
-  let s = String(value || '')
+  let s = semAcentoNemCaixa(value);
+  for (const [re, to] of ALIASES) s = s.replace(re, to);
+  return s.replace(/\./g, '').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * S\u00f3 tira acento, caixa e pontua\u00e7\u00e3o \u2014 **sem** expandir abrevia\u00e7\u00e3o.
+ *
+ * `normalize` aplica os ALIASES ("sto" \u2192 "santo", "poa" \u2192 "porto alegre"), e \u00e9 isso que faz o
+ * casamento tolerante funcionar. Mas para conferir GRAFIA isso apaga justamente o que se quer
+ * ver: com os aliases, "Sto Angelo" e "Santo \u00c2ngelo" ficam id\u00eanticos, e o campo escrito abreviado
+ * passaria por correto. Aqui a compara\u00e7\u00e3o \u00e9 do que est\u00e1 escrito, n\u00e3o do que se entende.
+ */
+export function semAcentoNemCaixa(value) {
+  return String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // tira acento (marcas combinantes)
     .toLowerCase()
     .replace(/[^a-z0-9\s.]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  for (const [re, to] of ALIASES) s = s.replace(re, to);
-  return s.replace(/\./g, '').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * A cidade escrita no campo confere com o nome oficial do munic\u00edpio?
+ *
+ * Pedido dele (20/08/2026): *"o que voc\u00ea pode arrumar \u00e9 se est\u00e1 escrita corretamente e me falar se
+ * est\u00e1 errada tamb\u00e9m quando eu iniciar o atendimento, tem casos de cidade escritas erradas"*. A
+ * base tem cidade digitada \u00e0 m\u00e3o h\u00e1 anos, e o campo \u00e9 texto livre.
+ *
+ * **Diferen\u00e7a s\u00f3 de acento ou caixa N\u00c3O \u00e9 erro** \u2014 "porto alegre" e "Porto Alegre" resolvem para o
+ * mesmo munic\u00edpio, geram a mesma etiqueta e n\u00e3o confundem ningu\u00e9m. Avisar disso seria ru\u00eddo que
+ * treina a ignorar o aviso. O que importa:
+ *
+ *  - **abrevia\u00e7\u00e3o** ("Sto Angelo", "POA", "Cxs"): entende-se, mas o campo fica fora do padr\u00e3o e
+ *    duas grafias da mesma cidade convivem na base;
+ *  - **erro de digita\u00e7\u00e3o** ("Caxias do Sull", "Erechin"): casou por dist\u00e2ncia, n\u00e3o por igualdade;
+ *  - **n\u00e3o \u00e9 munic\u00edpio do RS** ("n\u00e3o sei", "Curitiba"): n\u00e3o h\u00e1 grafia certa a sugerir.
+ *
+ * @returns {Promise<{ok:boolean, oficial:string|null, confianca:string|null, motivo:string}>}
+ */
+export async function conferirGrafia(valor) {
+  const bruto = String(valor || '').trim();
+  if (!bruto) return { ok: true, oficial: null, confianca: null, motivo: '' };
+
+  const casou = await matchCity(bruto);
+  if (!casou) {
+    return {
+      ok: false,
+      oficial: null,
+      confianca: null,
+      motivo: `"${bruto}" n\u00e3o casa com nenhum dos 497 munic\u00edpios do RS.`,
+    };
+  }
+
+  if (semAcentoNemCaixa(bruto) === semAcentoNemCaixa(casou.city)) {
+    // S\u00f3 acento/caixa: resolve para o mesmo munic\u00edpio e gera a mesma etiqueta. N\u00e3o \u00e9 erro.
+    return { ok: true, oficial: casou.city, confianca: casou.confidence, motivo: '' };
+  }
+
+  return {
+    ok: false,
+    oficial: casou.city,
+    confianca: casou.confidence,
+    motivo:
+      casou.confidence === 'exata'
+        ? `est\u00e1 escrito "${bruto}", e o nome oficial \u00e9 "${casou.city}".`
+        : `est\u00e1 escrito "${bruto}" \u2014 o mais parecido \u00e9 "${casou.city}", mas n\u00e3o \u00e9 igual.`,
+  };
 }
 
 let municipiosCache = null;

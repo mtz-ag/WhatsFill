@@ -94,6 +94,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     /** A última mensagem da conversa, de qualquer lado — { doContato, at, texto } ou null. */
     ultimaMensagem: null,
     /**
+     * Conferência de GRAFIA da cidade do contato aberto — `{ok, oficial, motivo}` ou null.
+     *
+     * Pedido dele: avisar ao INICIAR o atendimento quando a cidade está escrita errada, porque a
+     * base tem cidade digitada à mão há anos. Fica no estado (e não recalculada no desenho) porque
+     * `conferirGrafia` é assíncrona: chamada no render, o aviso piscaria a cada redesenho.
+     */
+    grafiaDaCidade: null,
+    /**
      * Aba Cidades: a categorização da base por etiqueta de cidade.
      *
      * `analise` é o retrato da última varredura, e mora em memória de propósito — o dado de 57
@@ -468,6 +476,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // rascunho já está decidido e a segunda gravação segue com a decisão tomada.
     if (perguntaDeCidade) {
       await perguntaDeCidade;
+      /**
+       * Espera as ETIQUETAS também, não só a resposta da cidade.
+       *
+       * Quem abriu a pergunta atualiza `state.tagSuggestions` depois de resolver o rascunho — mas
+       * isso acontece **depois** desta promessa resolver. Sem o refresh aqui, esta gravação
+       * seguiria com as etiquetas da cidade ANTIGA: `applyTags` faz união, então aplicaria a
+       * etiqueta de uma cidade que acabou de ser trocada ou recusada, e ela ficaria no contato
+       * para sempre.
+       *
+       * O gatilho é a cidade: nada de etiqueta sai daqui antes de ela estar decidida. Refresh
+       * extra custa uma leitura com cache — bem menos que uma etiqueta errada em produção.
+       */
+      await refreshTagSuggestions();
       return;
     }
 
@@ -514,7 +535,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (escolha === CANCELADA) return;
 
     if (escolha === 'aceitar') {
-      state.draft[campo.id] = { ...entry, pendente: false };
+      /**
+       * `confirmada: true` é o que libera as etiquetas que saem da cidade.
+       *
+       * Sem esta marca, aceitar no popup gravava a cidade e **não** aplicava a etiqueta:
+       * `etiquetaConfiavel` exige `from === 'crm'` ou `confidence === 'exata'`, e o palpite
+       * aproximado continuava aproximado depois do aceite. O resultado era o contrário do
+       * combinado — a cidade é o gatilho, e confirmar o gatilho tem que liberar o que vem dele.
+       *
+       * Confirmação sua vale tanto quanto valor do CRM: foi você que olhou a conversa e decidiu.
+       */
+      state.draft[campo.id] = { ...entry, pendente: false, confirmada: true };
     } else if (escolha === 'semcidade') {
       // Marcado como 'manual' (não 'palpite'): `corrigirNomeComCidade` e `applyGuesses` só
       // preenchem campo vazio de verdade, e aqui ele NÃO está — é uma resposta, "não tem cidade".
@@ -607,6 +638,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     } catch (err) {
       state.tagSuggestions = [];
       console.warn('[WhatsFill] não consegui sugerir etiquetas:', err.message);
+    }
+
+    /**
+     * A conferência de grafia mora aqui, e não no desenho, por dois motivos.
+     *
+     * É assíncrona: chamada no render, o aviso piscaria a cada redesenho. E esta função já roda em
+     * TODOS os pontos em que a cidade muda — carregar o contato, responder o popup, digitar na aba
+     * Dados —, então o aviso acompanha sozinho, sem eu ter que lembrar de chamá-la em cada um.
+     */
+    try {
+      const cidade = valueNamed('Cidade');
+      state.grafiaDaCidade = cidade ? await cities.conferirGrafia(cidade) : null;
+    } catch (err) {
+      state.grafiaDaCidade = null;
+      console.warn('[WhatsFill] não consegui conferir a grafia da cidade:', err.message);
     }
   }
 
@@ -745,6 +791,38 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     const cidade = valueNamed('Cidade');
     if (cidade) header.append(h('div', { class: 'wf-sub' }, [document.createTextNode('Cidade: '), ...cidadeMarcada()]));
+
+    /**
+     * Aviso de grafia, no cabeçalho — que é onde ele olha ao abrir o atendimento.
+     *
+     * Pedido dele: *"me falar se está errada também quando eu iniciar o atendimento, tem casos de
+     * cidade escritas erradas"*. Fica no cabeçalho, e não na aba Dados, porque o cabeçalho aparece
+     * em TODAS as abas: um aviso escondido atrás de um clique não é aviso.
+     *
+     * Só grafia diferente do nome oficial entra aqui. Acento e caixa não — resolvem para o mesmo
+     * município e avisar disso treinaria a ignorar o aviso (ver `cities.conferirGrafia`).
+     */
+    const grafia = state.grafiaDaCidade;
+    if (grafia && !grafia.ok) {
+      const aviso = h('div', { class: 'wf-block' }, `Cidade escrita fora do padrão: ${grafia.motivo}`);
+      if (grafia.oficial) {
+        const corrigir = h('button', { class: 'wf-btn wf-mini wf-primary', type: 'button' }, `Corrigir para "${grafia.oficial}"`);
+        corrigir.disabled = state.busy;
+        corrigir.addEventListener('click', () =>
+          withBusy(async () => {
+            const campo = fieldNamed('Cidade');
+            if (!campo) return;
+            // `manual` e `confirmada`: foi você que mandou corrigir, então vale como valor seu —
+            // e as etiquetas que saem da cidade ficam liberadas, sem outro popup.
+            state.draft[campo.id] = { value: grafia.oficial, from: 'manual', confirmada: true };
+            await refreshTagSuggestions();
+            setStatus(`Cidade corrigida para "${grafia.oficial}". Salve para gravar no CRM.`, 'ok');
+          })
+        );
+        aviso.append(h('div', { class: 'wf-row', style: 'margin-top:5px' }, [corrigir]));
+      }
+      header.append(aviso);
+    }
   }
 
   /**
@@ -4068,7 +4146,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (sugestao.origem !== 'região' && sugestao.origem !== 'cidade') return true;
     const campo = fieldNamed('Cidade');
     const entry = campo && state.draft[campo.id];
-    return entry?.from === 'crm' || entry?.confidence === 'exata';
+    // `confirmada` = você respondeu "Aceitar" no popup. Vale tanto quanto valor do CRM: foi você
+    // que olhou a conversa e decidiu. Sem isso, aceitar a cidade gravava o campo e deixava as
+    // etiquetas de fora — o oposto de "o gatilho é a cidade".
+    return entry?.from === 'crm' || entry?.confidence === 'exata' || entry?.confirmada === true;
   }
 
   /**

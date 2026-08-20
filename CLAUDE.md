@@ -154,6 +154,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `POST /core/v1/tag/{id}` (sim: `POST` atualiza, `PUT` cria) muda o rótulo, e todos que a têm
   passam a mostrar o nome novo — uma requisição, em vez de duas por contato, e sem janela em que o
   contato fica sem etiqueta. Passe as cores ATUAIS no body: omitir reseta a cor sem querer.
+- **`normalize` NÃO serve para conferir grafia** — ela aplica os ALIASES ("sto" → "santo", "poa" →
+  "porto alegre"), então "Sto Angelo" e "Santo Ângelo" ficam idênticos e o campo abreviado passa
+  por correto. Para comparar o que está ESCRITO use `cities.semAcentoNemCaixa`.
+  `cities.conferirGrafia` é quem decide, e a regra que a mantém útil é: **acento e caixa não são
+  erro** (resolvem para o mesmo município e geram a mesma etiqueta) — avisar disso treinaria a
+  ignorar o aviso.
+- **Aceitar a cidade no popup marca `confirmada: true`, e é isso que libera as etiquetas.** Sem a
+  marca, o aceite gravava a cidade e deixava cidade/COREDE de fora, porque `etiquetaConfiavel` só
+  olhava `crm`/`exata`. Confirmação dele vale como valor do CRM: foi ele que olhou a conversa.
 - **Etiqueta de cidade entra por DOIS caminhos, e o nome tem uma fonte só.** No fluxo normal via
   `tags.suggest` (`origem: 'cidade'`) e em massa pela aba Cidades. Os dois pegam o nome de
   `categorizar.nomeDaEtiqueta` — duas fontes criariam duas etiquetas para a mesma cidade e

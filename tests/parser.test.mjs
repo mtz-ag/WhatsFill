@@ -391,6 +391,48 @@ grupo('cadastro "Nome - Cidade" (a cidade vem depois)');
   check((await split('Luci - 51999999999')) === null, 'telefone do outro lado não é cidade nem nome');
 }
 
+grupo('conferirGrafia: avisa cidade escrita errada, sem reclamar de acento');
+{
+  /**
+   * Pedido dele (20/08/2026): "me falar se está errada também quando eu iniciar o atendimento,
+   * tem casos de cidade escritas erradas". A base tem cidade digitada à mão há anos.
+   *
+   * A regra que evita virar ruído: acento e caixa NÃO são erro — resolvem para o mesmo município
+   * e geram a mesma etiqueta. Avisar disso treinaria a ignorar o aviso.
+   */
+  const ok = async (v) => (await cities.conferirGrafia(v)).ok;
+
+  check(await ok('Porto Alegre'), 'nome oficial passa');
+  check(await ok('porto alegre'), 'só caixa não é erro');
+  check(await ok('PORTO ALEGRE'), 'maiúsculas não é erro');
+  check(await ok('Santo Angelo'), 'só acento faltando não é erro');
+  check(await ok(''), 'vazio não é erro de grafia');
+
+  const abrev = await cities.conferirGrafia('Sto Angelo');
+  check(!abrev.ok && abrev.oficial === 'Santo Ângelo', `abreviação é apontada = ${abrev.oficial}`);
+
+  const poa = await cities.conferirGrafia('POA');
+  check(!poa.ok && poa.oficial === 'Porto Alegre', 'apelido também é apontado');
+
+  const digito = await cities.conferirGrafia('Caxias do Sull');
+  check(!digito.ok && digito.oficial === 'Caxias do Sul', `erro de digitação é apontado = ${digito.oficial}`);
+  check(/nome oficial/.test(digito.motivo), 'o motivo diz qual é o certo');
+
+  const fora = await cities.conferirGrafia('não sei');
+  check(!fora.ok && fora.oficial === null, 'texto que não é cidade não tem grafia a sugerir');
+  const outroEstado = await cities.conferirGrafia('Curitiba');
+  check(!outroEstado.ok && outroEstado.oficial === null, 'município de outro estado idem');
+}
+
+grupo('semAcentoNemCaixa NAO expande abreviacao');
+{
+  // É o que separa conferir GRAFIA de casar CIDADE: com os aliases, "Sto Angelo" e "Santo Ângelo"
+  // ficariam idênticos e o campo abreviado passaria por correto.
+  check(cities.semAcentoNemCaixa('Sto Angelo') === 'sto angelo', 'mantém a abreviação');
+  check(cities.normalize('Sto Angelo') === 'santo angelo', 'já normalize expande, e é por isso que ela não serve aqui');
+  check(cities.semAcentoNemCaixa('Santo Ângelo') === 'santo angelo', 'tira acento e caixa');
+}
+
 grupo('cidade → link do grupo');
 mem.cityLinks = { 'santo angelo': { label: 'Santo Ângelo', link: 'https://chat.whatsapp.com/AAA' } };
 mem.defaultGroupLink = '';

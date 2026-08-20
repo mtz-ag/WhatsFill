@@ -5,6 +5,61 @@
 
 ---
 
+## 2026-08-20 (noite) — Confirmar a cidade libera as etiquetas, e aviso de grafia errada
+
+**Dois pedidos na mesma mensagem:** *"quando eu aceito na confirmação de cidade eu tenho certeza
+que a cidade está correta"* e *"o que você pode arrumar é se está escrita corretamente e me falar
+se está errada também quando eu iniciar o atendimento, tem casos de cidade escritas erradas"*.
+
+### O aceite passou a valer como certeza
+
+Havia um furo que contradizia o combinado: aceitar no popup gravava a cidade e **não** aplicava as
+etiquetas. `etiquetaConfiavel` exige `from === 'crm'` ou `confidence === 'exata'`, e o palpite
+aproximado continuava aproximado depois do aceite — então a cidade entrava no CRM sem a etiqueta
+dela. Agora o aceite marca `confirmada: true`, e isso libera cidade e COREDE: confirmação dele vale
+tanto quanto valor do CRM, porque foi ele que olhou a conversa e decidiu.
+
+**Junto, um furo de corrida na mesma função:** quando duas gravações concorriam (`load()` e
+`reexaminarMensagens()` podem estar no ar juntos), a segunda esperava a resposta da pergunta mas
+**não** o `refreshTagSuggestions` de quem abriu — e seguia com as etiquetas da cidade ANTIGA.
+`applyTags` faz união, então aplicaria a etiqueta de uma cidade recém-trocada, e ela ficaria no
+contato para sempre. Agora a segunda também espera o refresh.
+
+### Aviso de grafia: `cities.conferirGrafia`
+
+**A regra que evita virar ruído: acento e caixa NÃO são erro.** "porto alegre" e "Porto Alegre"
+resolvem para o mesmo município e geram a mesma etiqueta; avisar disso treinaria a ignorar o
+aviso. O que é apontado:
+
+| No campo | Veredito |
+|---|---|
+| `Porto Alegre`, `porto alegre`, `Santo Angelo` | ok — só acento/caixa |
+| `Sto Angelo`, `POA` | abreviação → sugere `Santo Ângelo` / `Porto Alegre` |
+| `Caxias do Sull`, `Erechin` | erro de digitação → sugere o nome oficial |
+| `não sei`, `Curitiba` | não é município do RS — não há grafia a sugerir |
+
+Isso exigiu **`cities.semAcentoNemCaixa`**, separada de `normalize`: a `normalize` aplica os
+ALIASES ("sto" → "santo", "poa" → "porto alegre"), que é o que faz o casamento tolerante
+funcionar — e é exatamente o que apagaria o que se quer ver. Com os aliases, "Sto Angelo" e
+"Santo Ângelo" ficam idênticos e o campo abreviado passaria por correto.
+
+**Onde aparece:** no **cabeçalho**, não na aba Dados. O cabeçalho está em todas as abas, e aviso
+escondido atrás de um clique não é aviso. Com botão **"Corrigir para «Santo Ângelo»"**, que marca
+`manual` + `confirmada` — foi ele que mandou corrigir, então não precisa de outro popup para
+liberar as etiquetas.
+
+**A conferência mora em `refreshTagSuggestions`**, não no desenho: é assíncrona (piscaria a cada
+redesenho) e aquela função já roda em todos os pontos em que a cidade muda — carregar o contato,
+responder o popup, digitar na aba Dados. O aviso acompanha sozinho.
+
+**Arquivos:** [src/lib/cities.js](src/lib/cities.js) (`semAcentoNemCaixa`, `conferirGrafia`),
+[src/panel/panel.js](src/panel/panel.js) (`confirmada` no aceite, `etiquetaConfiavel`, refresh na
+corrida, aviso no cabeçalho, `state.grafiaDaCidade`),
+[tests/parser.test.mjs](tests/parser.test.mjs) (2 grupos novos). Manifesto 0.11.0 → **0.12.0**.
+Oito suítes passando.
+
+---
+
 ## 2026-08-20 (noite) — Etiqueta de cidade também no fluxo normal, não só na varredura
 
 **Pedido:** *"a extensão agora também tem que adicionar a etiqueta de cidade em contatos novos"*.
