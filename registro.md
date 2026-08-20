@@ -5,6 +5,33 @@
 
 ---
 
+## 2026-08-20 (tarde) — A tela não mostrava o total elegível
+
+**Pergunta dele:** *"são 7474 contatos com corede correto? então todos deviam receber a etiqueta de
+cidade"*. Estava certo, e a tela escondia isso.
+
+O resumo listava os baldes sem mostrar o **total elegível**, então "1358 prontos para gravar"
+parecia ser o universo inteiro em vez de a fatia que dá para fazer agora. A conta que ele queria
+ver — lidos menos as exclusões — não estava em lugar nenhum.
+
+Agora o resumo é uma conta de cima para baixo: **lidos** → menos sem cidade, menos a revisar, menos
+sem etiqueta → **DEVEM receber etiqueta de cidade** → e esse total se abre em três, indentados:
+já completos, prontos agora, e **travados por falta de criar a etiqueta**.
+
+E o aviso que faltava: os travados **não estão de fora**, só esperam as etiquetas do passo 2. Sem
+essa frase, "travados: 6002" lê como perda, quando é fila com desbloqueio conhecido.
+
+**Nota para a próxima sessão:** o `esperandoCriacao: 0` do print dele **não** informava nada. Com o
+código antigo, ele só contava quando NEM cidade NEM COREDE existiam — e como o filtro era "todos os
+COREDEs", `alvos` nunca era vazio, então aquele contador era zero por construção. Só depois do
+conserto da entrada anterior a tela passa a distinguir "já completo" de "travado", e é ela que vai
+dizer se os 6002 eram bug de rótulo ou contatos legitimamente prontos de antes.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (resumo em forma de conta, aviso dos
+travados). Manifesto 0.10.2 → **0.10.3**. Oito suítes passando.
+
+---
+
 ## 2026-08-20 (tarde) — "Por que os números não batem?" — o rótulo estava mentindo
 
 **Pergunta dele, com print:** `Contatos lidos: 7474 · Já com cidade e COREDE: 6002 · Prontos para

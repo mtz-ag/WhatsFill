@@ -4460,15 +4460,26 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // Quantas ETIQUETAS vão ser gravadas: um contato pode receber cidade e COREDE de uma vez.
     const etiquetasAGravar = a.paraGravar.reduce((s, x) => s + x.etiquetas.length, 0);
 
+    /**
+     * O total que DEVE receber etiqueta de cidade, mostrado explicitamente.
+     *
+     * Ele perguntou olhando a tela: *"são 7474 contatos com corede correto? então todos deviam
+     * receber a etiqueta de cidade"*. Estava certo, e a tela não deixava isso visível: mostrava
+     * os baldes sem mostrar o total elegível, então "1358 prontos" parecia ser o universo todo
+     * em vez de a fatia que dá para fazer agora.
+     */
+    const elegiveis = a.paraGravar.length + a.jaOk + a.esperandoCriacao;
+
     const resumo = h('div', { class: 'wf-card' }, [h('h4', {}, 'O que a leitura encontrou')]);
     for (const [rotulo, valor, forte] of [
       ['Contatos lidos', `${c.lidos}`, false],
-      ['Já com cidade e COREDE', `${a.jaOk} contato(s)`, false],
-      ['Prontos para gravar', `${a.paraGravar.length} contato(s) · ${etiquetasAGravar} etiqueta(s)`, true],
-      ['Esperando etiqueta ser criada', `${a.esperandoCriacao} contato(s)`, a.esperandoCriacao > 0],
-      ['Sem etiqueta nenhuma (não entram)', `${a.semEtiqueta} contato(s)`, false],
-      ['Sem cidade preenchida', `${a.semCidade} contato(s)`, false],
-      ['Cidade a revisar (não é município do RS)', `${contatosRevisar} contato(s), em ${a.revisar.length} grafia(s)`, false],
+      ['— sem cidade preenchida', `${a.semCidade}`, false],
+      ['— cidade a revisar (não é município do RS)', `${contatosRevisar}, em ${a.revisar.length} grafia(s)`, false],
+      ['— sem etiqueta nenhuma (não entram)', `${a.semEtiqueta}`, false],
+      ['DEVEM receber etiqueta de cidade', `${elegiveis} contato(s)`, true],
+      ['   · já completos', `${a.jaOk}`, false],
+      ['   · prontos para gravar AGORA', `${a.paraGravar.length} contato(s) · ${etiquetasAGravar} etiqueta(s)`, true],
+      ['   · travados: falta criar a etiqueta', `${a.esperandoCriacao}`, a.esperandoCriacao > 0],
     ]) {
       resumo.append(h('div', { class: forte ? '' : 'wf-origin' }, `${rotulo}: ${valor}`));
     }
@@ -4485,6 +4496,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         'Cada contato recebe DUAS etiquetas: a da cidade e a do COREDE dela (planilha oficial da ' +
           'SPGG-RS). As duas vão na mesma requisição — o COREDE não custa escrita a mais.')
     );
+
+    // O "travados" não é uma exclusão: é fila de espera com desbloqueio conhecido. Dizer isso
+    // aqui evita a leitura de que só os "prontos agora" vão ser etiquetados algum dia.
+    if (a.esperandoCriacao) {
+      resumo.append(
+        h('div', { class: 'wf-block' },
+          `Os ${a.esperandoCriacao} travados NÃO estão de fora: eles só esperam as ` +
+            `${a.faltamCriar.length} etiqueta(s) do passo 2 serem criadas. Crie e leia de novo — ` +
+            `aí os ${elegiveis} elegíveis ficam todos gravaveis.`)
+      );
+    }
     body.append(resumo);
 
     // Contato com COREDE que não é o da cidade dele. Gravar deixa os DOIS, e aí o filtro por
