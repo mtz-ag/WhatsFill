@@ -96,12 +96,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `CY_CONCLUIDOS` e a tentativa nem roda.
 - **A fila carrega 50 por vez.** O resto só vem no "Ver mais", que é manual e é o único gancho
   da fila sem `data-cy`. Sem clicar nele, a rodada enxerga uma fatia e acha que acabou.
-- **A rota de LISTAGEM de contatos e a de CRIAR etiqueta são as duas únicas não conferidas ao
-  vivo.** Foram escritas numa sessão em que os domínios do mobiliza estavam bloqueados pela
-  política de navegação. Por isso `api.descobrirRotaDeListagem()` **testa** as candidatas com
-  `pageSize=1` e memoriza a que responder, em vez de escolher uma — e `api.createTag` é usada
-  primeiro numa etiqueta só, como sonda: se a primeira falhar, a aba Cidades não tenta nenhuma
-  outra. Conferiu de verdade? Fixe a rota e apague a descoberta.
+- **Rota nova? Leia o bundle do app em vez de chutar.** Quando a navegação está bloqueada e não dá
+  para inspecionar a rede, o `main.*.js` do mobiliza é a fonte da verdade e está a um `fetch` de
+  distância — as URLs, os métodos e os parâmetros estão como texto no código Angular. Foi assim que
+  saíram `listContacts` e `createTag` (20/08/2026), e foi assim que dois chutes meus caíram:
+  **`isToIncludeCustomFieldValues`** (a listagem) é parâmetro DIFERENTE de
+  `isToIncludeCustomFields` (o `GET` individual) — com o nome errado a API responde 200 e ignora,
+  e a categorização teria concluído "nenhum contato tem cidade"; e **criar etiqueta é `PUT`, não
+  `POST`**, com body `{message, textColor, bgColor}`. Receita:
+  `fetch('/main.<hash>.js').then(r=>r.text())` e procure `core/v\d+/<recurso>`.
+- **Ler o código do app ≠ ter executado a rota.** `listContacts` e `createTag` foram lidas, não
+  chamadas. Por isso a aba Cidades cria **uma** etiqueta como sonda antes das outras: se a primeira
+  falhar, nenhuma outra é tentada.
+- **`/core/v1/contact/filter` só filtra por telefone e e-mail**, não por etiqueta nem por campo
+  personalizado. Não serve para "me dê só quem tem cidade" — daí a categorização ler a base inteira.
 - **A etiqueta de CIDADE é o que permite filtrar por município.** A API só filtra por etiqueta, e
   o COREDE agrupa dezenas de municípios — daí a aba Cidades. Ela **nunca** cria etiqueta a partir
   do que está escrito no campo Cidade sem casar com os 497 municípios da planilha oficial: o campo

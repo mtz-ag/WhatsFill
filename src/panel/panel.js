@@ -4313,9 +4313,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'Estas cidades existem na base e ainda não têm etiqueta no CRM. Sem elas, os contatos ' +
             'dessas cidades não podem ser gravados — o painel não inventa id de etiqueta.'),
         h('div', { class: 'wf-block' },
-          'A rota de criar etiqueta é a ÚNICA deste projeto que nunca foi conferida ao vivo. ' +
-            'Por isso a primeira é criada sozinha, como teste: se ela falhar, nenhuma outra é ' +
-            'tentada e o motivo aparece aqui.'),
+          'A rota de criar etiqueta foi lida do código do app (PUT /core/v1/tag), mas nunca foi ' +
+            'executada de verdade. Por isso a primeira é criada sozinha, como sonda: se ela ' +
+            'falhar, nenhuma outra é tentada e o motivo aparece aqui.'),
       ]);
       cardCriar.append(
         h('div', { class: 'wf-origin' },
@@ -4461,6 +4461,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
         if (resposta.total != null) c.total = resposta.total;
         if (!resposta.itens.length) break;
+        // `countPages` vem no envelope do app: é sinal melhor que "veio menos que o pedido",
+        // porque a última página cheia daria falso negativo e pediria uma página vazia à toa.
+        const ultimaPagina = resposta.paginas != null && pagina >= resposta.paginas;
 
         for (const bruto of resposta.itens) {
           const valores = fieldsLib.readValues(bruto);
@@ -4474,8 +4477,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         setStatus(`Lendo… ${c.lidos}${c.total ? ` de ${c.total}` : ''}`);
         renderAll();
 
-        // Última página: a API devolveu menos que o pedido.
-        if (resposta.itens.length < 100) break;
+        if (ultimaPagina || resposta.itens.length < 100) break;
         pagina++;
         await esperar(ritmo.pausaMs);
       }

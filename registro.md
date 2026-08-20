@@ -43,22 +43,40 @@ pequenos, disparados por ele** — nada de rodada longa automática.
 4. **Soma, nunca substitui.** Quem grava é o `tags.applyTags` que já existia, que faz a união com
    as etiquetas atuais. A varredura carrega o `tagsId` de cada contato justamente para isso.
 
-### As duas rotas que NÃO foram conferidas ao vivo
+### As rotas: chutadas primeiro, depois lidas do bundle do app
 
-`mobiliza.app` e `api.mobiliza.app` estão bloqueados pela política de navegação desta sessão, e a
-regra do projeto é não chutar rota. Duas consequências no código, em vez de um chute silencioso:
+A primeira versão desta aba chutou os parâmetros da listagem, porque `mobiliza.app` e
+`api.mobiliza.app` estão bloqueados pela política de navegação — e chute foi o que a regra do
+projeto proíbe. Ele pediu *"tente ver pela extensão claude no chrome"*; a extensão também recusou
+(`example.com` inclusive, então é allowlist geral, não bloqueio do mobiliza).
 
-- **`api.descobrirRotaDeListagem()`** testa as candidatas com `pageSize=1` (leitura mínima) e
-  memoriza a que responder no formato certo. A ordem tenta primeiro a versão com
-  `isToIncludeCustomFields=true`, porque é ela que decide o custo da tarefa inteira: com a cidade
-  vindo na listagem são ~580 requisições, sem ela seriam 57.855 — exatamente a rajada que já
-  derrubou a API. Se nenhuma responder, a mensagem manda abrir o F12 → Network e dizer a URL real.
-- **`api.createTag`** é a única rota de ESCRITA não verificada do projeto. A aba cria **uma**
-  etiqueta como sonda: se a primeira falhar, nenhuma outra é tentada e o motivo aparece na tela,
-  com a sugestão de passar pelo gravador como os outros contratos.
+O caminho que funcionou: o **Browser pane** abre `mobiliza.app`, e o `main.11167927f02cae35.js` é
+a fonte da verdade — as rotas, os métodos e os parâmetros estão como texto no código Angular, a um
+`fetch` de distância. Sem login, sem sessão nova, sem tocar em dado de eleitor.
 
-Escrevi também `tools/descobrir-listagem.js` (só leitura, para colar no console) para ele
-confirmar as rotas e o custo real — entregue na conversa, ainda sem retorno.
+**Dois chutes caíram, e os dois eram do tipo que falha em silêncio:**
+
+1. **O parâmetro é `isToIncludeCustomFieldValues`, não `isToIncludeCustomFields`.** O nome parecido
+   é do `GET /core/v1/contact/{id}`, que usa o outro. Com o nome errado a API responde **200 e
+   ignora** — o mesmo modo de falhar que já custou dias aqui com a data de conclusão. A
+   categorização teria lido a base inteira e concluído "nenhum contato tem cidade", sem erro
+   nenhum na tela.
+2. **Criar etiqueta é `PUT /core/v1/tag`, não `POST`**, com body `{message, textColor, bgColor}` —
+   não só `message`. Método errado e body incompleto.
+
+Também confirmado: `status=ACTIVE` e `orderBy=name` fazem parte do que o app manda (sem `status`
+não se sabe se vem arquivado e bloqueado junto, e etiquetar arquivado é trabalho jogado fora); o
+envelope é `{items, page, countPages, totalItems, pageSize}`; `/core/v1/contact/filter` **só**
+filtra por telefone e e-mail, então não serve para "me dê só quem tem cidade" — daí ler a base
+inteira; e `tagsId` é campo próprio do contato, que a tela de Contatos usa direto, então a
+listagem já deve trazê-lo (`isToIncludeTags` vai como reforço, não como aposta).
+
+Com isso a descoberta por tentativa saiu: a rota é fixa e verificada. O que **não** foi verificado
+é a execução — ler o código não é o mesmo que receber um 2xx —, e por isso a criação de etiqueta
+manda **uma** como sonda antes das outras.
+
+`tools/descobrir-listagem.js` (só leitura, para colar no console) fica no repositório: ele confirma
+as rotas contra a API de verdade, que é o passo que falta.
 
 ### O fluxo na tela
 
@@ -85,9 +103,10 @@ estiver vazio, em vez de mandar abrir um atendimento à toa.
 [tools/descobrir-listagem.js](tools/descobrir-listagem.js) (novo). Manifesto 0.8.7 → **0.9.0**.
 Oito suítes passando.
 
-**Pendências:** as duas rotas acima precisam de confirmação ao vivo; o prefixo da etiqueta é
-`CIDADE: ` (constante `PREFIXO_PADRAO`, ainda não exposto na tela); e nada disto rodou contra a
-base de verdade — o primeiro lote tem que ser pequeno, com ele olhando o resultado no CRM.
+**Pendências:** as rotas foram lidas do código do app, não executadas — a criação de etiqueta é a
+primeira a provar (a sonda serve para isso); o prefixo da etiqueta é `CIDADE: ` (constante
+`PREFIXO_PADRAO`, ainda não exposto na tela); e nada disto rodou contra a base de verdade — o
+primeiro lote tem que ser pequeno, com ele olhando o resultado no CRM.
 
 ---
 

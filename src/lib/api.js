@@ -100,82 +100,65 @@ export function getCustomFields() {
 }
 
 /**
- * A rota de LISTAGEM de contatos, descoberta na primeira chamada e memorizada.
+ * Listagem paginada de contatos.
  *
- * As outras rotas deste arquivo foram conferidas ao vivo, uma a uma. Esta não deu: os domínios do
- * mobiliza estão bloqueados pela política de navegação da sessão em que ela foi escrita. Como a
- * regra do projeto é **não chutar rota**, o código não escolhe uma: ele testa as candidatas com
- * `pageSize=1` (leitura mínima, nada de puxar base durante a descoberta) e fica com a que
- * responder no formato certo.
+ * **Rota e parâmetros lidos do código do próprio app** (`main.*.js`, método `list()` do serviço
+ * de contatos), em 20/08/2026. A primeira versão disto chutava os parâmetros e chutou errado em
+ * dois pontos que valem registro:
  *
- * A ordem tenta primeiro a versão COM os campos personalizados, porque é ela que decide o custo
- * da categorização inteira: com a cidade vindo na listagem, ler 57 mil contatos custa ~580
- * requisições; sem ela, custaria uma por contato — o que é exatamente a rajada que já derrubou a
- * API uma vez.
+ * - o parâmetro é **`isToIncludeCustomFieldValues`**, não `isToIncludeCustomFields`. O nome
+ *   parecido é do `GET /core/v1/contact/{id}`, que usa o OUTRO. Com o nome errado a API responde
+ *   200 e ignora — o mesmo modo de falhar que já custou dias neste projeto com a data de
+ *   conclusão: resposta boa, valor ausente. Aqui teria dado "nenhum contato tem cidade";
+ * - `status=ACTIVE` e `orderBy=name` fazem parte do que o app manda. Sem `status`, não se sabe se
+ *   a API devolve arquivado e bloqueado junto — e etiquetar contato arquivado é trabalho jogado
+ *   fora.
+ *
+ * `isToIncludeTags` vai como reforço: o app **não** o manda aqui e a tela de Contatos mostra as
+ * etiquetas de qualquer forma (`contact.tagsId` é campo próprio do contato), então ele
+ * provavelmente é redundante. Se a API o ignorar, não custa nada; se respeitar, garante.
+ *
+ * Envelope, também lido do app (`_pageControl.update`):
+ * `{ items, page, countPages, totalItems, pageSize, lastTimestamp }`.
+ *
+ * @returns {Promise<{itens: Array, total: number|null, paginas: number|null}>}
  */
-let rotaDeListagem = null;
+export async function listContacts({ page = 1, pageSize = 100, status = 'ACTIVE' } = {}) {
+  const q = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+    orderBy: 'name',
+    status,
+    isToIncludeCustomFieldValues: 'true',
+    isToIncludeTags: 'true',
+  });
 
-const CANDIDATAS_LISTAGEM = [
-  (q) => `/core/v1/contact?${q}&isToIncludeCustomFields=true&isToIncludeTags=true`,
-  (q) => `/core/v1/contact?${q}&isToIncludeCustomFields=true`,
-  (q) => `/core/v1/contact?${q}`,
-];
-
-function pareceListagem(corpo) {
-  return Array.isArray(corpo) || Array.isArray(corpo?.items);
-}
-
-export async function descobrirRotaDeListagem() {
-  if (rotaDeListagem) return rotaDeListagem;
-
-  const erros = [];
-  for (const montar of CANDIDATAS_LISTAGEM) {
-    const rota = montar('page=1&pageSize=1');
-    try {
-      const corpo = await apiFetch(rota);
-      if (pareceListagem(corpo)) {
-        rotaDeListagem = montar;
-        return rotaDeListagem;
-      }
-      erros.push(`${rota} → respondeu, mas não é lista`);
-    } catch (err) {
-      erros.push(`${rota} → ${err.message.slice(0, 120)}`);
-    }
-  }
-
-  throw new Error(
-    'Não achei a rota de listagem de contatos. Tentei:\n' +
-      erros.join('\n') +
-      '\n\nAbra o F12 → Network na tela de Contatos, filtre por "contact" e me diga a URL real.'
-  );
-}
-
-/**
- * Uma página da base de contatos.
- *
- * @returns {Promise<{itens: Array, total: number|null}>}
- */
-export async function listContacts({ page = 1, pageSize = 100 } = {}) {
-  const montar = await descobrirRotaDeListagem();
-  const corpo = await apiFetch(montar(`page=${page}&pageSize=${pageSize}`));
+  const corpo = await apiFetch(`/core/v1/contact?${q}`);
   const itens = Array.isArray(corpo) ? corpo : corpo?.items || [];
-  const total = Array.isArray(corpo) ? null : corpo?.totalItems ?? corpo?.total ?? null;
-  return { itens, total };
+  return {
+    itens,
+    total: Array.isArray(corpo) ? null : corpo?.totalItems ?? null,
+    paginas: Array.isArray(corpo) ? null : corpo?.countPages ?? null,
+  };
 }
 
 /**
  * Cria uma etiqueta.
  *
- * O rótulo vai em `message` porque é de lá que a leitura o tira (ver `getTags`) — a plataforma
- * chama de "message" o que a tela mostra como nome da etiqueta.
+ * **É `PUT`, não `POST`** — lido do serviço de etiquetas do app (`save(message, textColor,
+ * bgColor)`), 20/08/2026. A primeira versão disto usava `POST` com só `{message}`: método errado
+ * e body incompleto.
  *
- * **Esta rota não foi conferida ao vivo.** Diferente de tudo o mais aqui, ela ESCREVE, e escrita
- * não verificada é o que este projeto evita por regra. Por isso quem chama tem que tratar a
- * falha com o motivo na tela, e a aba Categorizar cria **uma** etiqueta de teste antes de criar
- * as outras — se a primeira não passar, nenhuma outra é tentada.
+ * As cores são passadas porque o app as passa sempre, juntas, na tela de etiquetas. O par padrão
+ * (`#EFEFEF` no fundo, `#4F4F4F` no texto) são as duas cores neutras mais usadas no próprio app —
+ * etiqueta de cidade é organização interna, não precisa competir por atenção com "1 SEM RETORNO",
+ * que é vermelha.
  */
-export function createTag(nome) {
-  return apiFetch('/core/v1/tag', { method: 'POST', body: { message: String(nome).trim() } });
+export function createTag(nome, { bgColor = '#EFEFEF', textColor = '#4F4F4F' } = {}) {
+  return apiFetch('/core/v1/tag', {
+    method: 'PUT',
+    body: { message: String(nome).trim(), textColor, bgColor },
+  });
 }
 
 /**
