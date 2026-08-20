@@ -4412,19 +4412,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // A primeira versão misturava as unidades — mostrava "Cidades sem etiqueta no CRM: 43" ao
     // lado de contagens de contato, e a pergunta que veio foi exatamente "os 586 têm cidade
     // porque 43 etiquetas?". Número sem unidade na mesma lista é armadilha, não economia.
-    const contatosFaltamCriar = a.faltamCriar.reduce((s, x) => s + x.quantos, 0);
     const contatosRevisar = a.revisar.reduce((s, x) => s + x.quantos, 0);
+    const cidadesACriar = a.faltamCriar.filter((x) => x.tipo === 'cidade').length;
+    const coredesACriar = a.faltamCriar.filter((x) => x.tipo === 'corede').length;
+    // Quantas ETIQUETAS vão ser gravadas: um contato pode receber cidade e COREDE de uma vez.
+    const etiquetasAGravar = a.paraGravar.reduce((s, x) => s + x.etiquetas.length, 0);
 
     const resumo = h('div', { class: 'wf-card' }, [h('h4', {}, 'O que a leitura encontrou')]);
     for (const [rotulo, valor, forte] of [
       ['Contatos lidos', `${c.lidos}`, false],
-      ['Já com a etiqueta da cidade', `${a.jaOk} contato(s)`, false],
-      ['Prontos para gravar', `${a.paraGravar.length} contato(s)`, true],
-      [
-        'Esperando etiqueta ser criada',
-        `${contatosFaltamCriar} contato(s), em ${a.faltamCriar.length} cidade(s)`,
-        contatosFaltamCriar > 0,
-      ],
+      ['Já com cidade e COREDE', `${a.jaOk} contato(s)`, false],
+      ['Prontos para gravar', `${a.paraGravar.length} contato(s) · ${etiquetasAGravar} etiqueta(s)`, true],
+      ['Esperando etiqueta ser criada', `${a.esperandoCriacao} contato(s)`, a.esperandoCriacao > 0],
       ['Sem etiqueta nenhuma (não entram)', `${a.semEtiqueta} contato(s)`, false],
       ['Sem cidade preenchida', `${a.semCidade} contato(s)`, false],
       ['Cidade a revisar (não é município do RS)', `${contatosRevisar} contato(s), em ${a.revisar.length} grafia(s)`, false],
@@ -4434,10 +4433,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     // A soma tem que fechar com os lidos. Se não fechar, é bug de contagem — e é melhor a tela
     // acusar do que eu descobrir por um número estranho num print.
-    const soma = a.paraGravar.length + a.jaOk + a.semEtiqueta + a.semCidade + contatosFaltamCriar + contatosRevisar;
+    const soma =
+      a.paraGravar.length + a.jaOk + a.semEtiqueta + a.semCidade + a.esperandoCriacao + contatosRevisar;
     if (soma !== c.lidos) {
       resumo.append(h('div', { class: 'wf-block' }, `Atenção: a soma dá ${soma} e foram lidos ${c.lidos}. Isso é bug de contagem — me avise.`));
     }
+    resumo.append(
+      h('div', { class: 'wf-origin' },
+        'Cada contato recebe DUAS etiquetas: a da cidade e a do COREDE dela (planilha oficial da ' +
+          'SPGG-RS). As duas vão na mesma requisição — o COREDE não custa escrita a mais.')
+    );
     body.append(resumo);
 
     if (c.etiquetaFiltro) {
@@ -4448,7 +4453,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // --- passo 2: criar as etiquetas que faltam --------------------------
     if (a.faltamCriar.length) {
       const cardCriar = h('div', { class: 'wf-card' }, [
-        h('h4', {}, `2. Criar ${a.faltamCriar.length} etiqueta(s) de cidade`),
+        h('h4', {}, `2. Criar ${a.faltamCriar.length} etiqueta(s)` +
+          (coredesACriar ? ` (${cidadesACriar} de cidade, ${coredesACriar} de COREDE)` : ' de cidade')),
         h('div', { class: 'wf-preview' },
           'Estas cidades existem na base e ainda não têm etiqueta no CRM. Sem elas, os contatos ' +
             'dessas cidades não podem ser gravados — o painel não inventa id de etiqueta.'),
@@ -4694,16 +4700,40 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
   }
 
-  /** O retrato, com as etiquetas reais do CRM e a lista oficial de municípios. */
+  /** O retrato, com as etiquetas reais do CRM, a lista oficial de municípios e os COREDEs. */
   async function analisarParaCidades(contatos) {
-    const [todas, coredes] = await Promise.all([tagsLib.allTags(), tagsLib.loadCoredes()]);
+    const [todas, coredes, aliases] = await Promise.all([
+      tagsLib.allTags(),
+      tagsLib.loadCoredes(),
+      store.get('tagAliases'),
+    ]);
+
     const etiquetasPorNome = new Map(todas.map((t) => [cities.normalize(t.label), t]));
+
+    /**
+     * Os apelidos entram como chaves extras do mesmo mapa.
+     *
+     * O nome do COREDE na planilha oficial não é sempre o nome da etiqueta no CRM — "Paranhana
+     * Encosta da Serra" está lá como "Vale do Paranhana", "Centro-Sul" como "Centro Sul". A
+     * resolução por apelido já existe em `tags.resolveTag`, mas ela é assíncrona e por nome; aqui
+     * o mapa é consultado dezenas de milhares de vezes, então os apelidos são achatados uma vez
+     * em vez de resolvidos um a um. Sem isto, COREDE existente entraria como "falta criar" e
+     * viraria etiqueta duplicada com outro nome.
+     */
+    for (const [apelido, rotulo] of Object.entries(aliases || {})) {
+      const etiqueta = etiquetasPorNome.get(cities.normalize(rotulo));
+      if (etiqueta) etiquetasPorNome.set(cities.normalize(apelido), etiqueta);
+    }
+
     // As chaves de `loadCoredes` já são os municípios normalizados — a mesma fonte oficial que a
     // etiqueta de região usa, então cidade e COREDE nunca discordam sobre o que é município.
     const municipios = new Set(Object.keys(coredes));
+    const coredePorMunicipio = new Map(Object.entries(coredes));
+
     return categorizar.analisar(contatos, {
       etiquetasPorNome,
       municipios,
+      coredePorMunicipio,
       prefixo: categorizar.PREFIXO_PADRAO,
     });
   }
@@ -4864,9 +4894,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         const alvo = fila[0];
         // `applyTags` faz a UNIÃO com o que o contato já tem — é o que garante somar em vez de
         // substituir. O objeto sintético carrega as etiquetas atuais lidas na varredura.
+        //
+        // Cidade e COREDE vão na MESMA requisição: são duas etiquetas, uma escrita. Mandar
+        // separado dobraria o custo da passada inteira sem ganhar nada.
         const resultado = await tagsLib.applyTags(
           { id: alvo.contactId, tagsId: alvo.tagsId },
-          [alvo.etiqueta.id]
+          alvo.etiquetas.map((t) => t.id)
         );
 
         if (resultado.ok) {

@@ -29,7 +29,18 @@ function etiquetas(...nomes) {
   return mapa;
 }
 
-const ctx = (mapa) => ({ etiquetasPorNome: mapa, municipios, prefixo: PREFIXO_PADRAO });
+/** Município normalizado → COREDE, da mesma planilha oficial que o painel usa. */
+const coredePorMunicipio = new Map(Object.entries(coredes.municipios).map(([m, c]) => [normalize(m), c]));
+
+const ctx = (mapa) => ({
+  etiquetasPorNome: mapa,
+  municipios,
+  coredePorMunicipio,
+  prefixo: PREFIXO_PADRAO,
+});
+
+/** Sem o mapa de COREDEs: isola o comportamento da etiqueta de cidade. */
+const ctxSoCidade = (mapa) => ({ etiquetasPorNome: mapa, municipios, prefixo: PREFIXO_PADRAO });
 
 grupo('nomeDaEtiqueta: sem prefixo, so o nome da cidade');
 {
@@ -76,7 +87,7 @@ grupo('etiquetasComPrefixoAntigo: NÃO renomeia se o nome novo já existe');
 
 grupo('contato sem etiqueta NÃO entra — ainda não foi trabalhado');
 {
-  const r = analisar([{ id: 'c1', tagsId: [], cidade: 'Pelotas' }], ctx(etiquetas('PELOTAS')));
+  const r = analisar([{ id: 'c1', tagsId: [], cidade: 'Pelotas' }], ctxSoCidade(etiquetas('PELOTAS')));
   check(r.paraGravar.length === 0, 'não grava');
   check(r.semEtiqueta === 1, 'contado como sem etiqueta');
 }
@@ -112,7 +123,7 @@ grupo('cidade válida sem etiqueta no CRM: entra na fila de criar, não é inven
       { id: 'c2', tagsId: ['x'], cidade: 'Pelotas' },
       { id: 'c3', tagsId: ['x'], cidade: 'Bagé' },
     ],
-    ctx(etiquetas()) // CRM sem nenhuma etiqueta de cidade
+    ctxSoCidade(etiquetas()) // CRM sem nenhuma etiqueta de cidade
   );
   check(r.paraGravar.length === 0, 'não grava sem id de verdade');
   check(r.faltamCriar.length === 2, 'duas cidades a criar');
@@ -125,24 +136,69 @@ grupo('IDEMPOTENTE: quem já tem a etiqueta não gasta requisição');
 {
   const mapa = etiquetas('PELOTAS');
   const id = mapa.get(normalize('PELOTAS')).id;
-  const r = analisar([{ id: 'c1', tagsId: ['outra', id], cidade: 'Pelotas' }], ctx(mapa));
+  const r = analisar([{ id: 'c1', tagsId: ['outra', id], cidade: 'Pelotas' }], ctxSoCidade(mapa));
   check(r.paraGravar.length === 0, 'não regrava');
   check(r.jaOk === 1, 'contado como pronto');
 }
 
-grupo('o caso que importa: grava, e leva as etiquetas atuais para somar');
+grupo('o caso que importa: grava cidade E COREDE, na mesma requisicao');
 {
-  const mapa = etiquetas('SANTO ÂNGELO');
-  const r = analisar([{ id: 'c1', tagsId: ['t-corede', 't-conteudo'], cidade: 'Santo Ângelo' }], ctx(mapa));
+  // Pedido dele: "preciso que extensao marque todas as etiquetas que tenham corede".
+  const mapa = etiquetas('SANTO ÂNGELO', 'Missões');
+  const r = analisar([{ id: 'c1', tagsId: ['t-conteudo'], cidade: 'Santo Ângelo' }], ctx(mapa));
   check(r.paraGravar.length === 1, 'entrou para gravar');
 
   const item = r.paraGravar[0];
   check(item.contactId === 'c1', 'contato certo');
-  check(item.etiqueta.label === 'SANTO ÂNGELO', 'etiqueta certa');
+  check(item.etiquetas.length === 2, `duas etiquetas de uma vez = ${item.etiquetas.length}`);
+  const rotulos = item.etiquetas.map((t) => t.label);
+  check(rotulos.includes('SANTO ÂNGELO'), 'a da cidade');
+  check(rotulos.includes('Missões'), 'a do COREDE, derivada da cidade pela planilha oficial');
+  check(item.corede === 'Missões', 'o COREDE fica no item, para o log');
   check(
-    item.tagsId.includes('t-corede') && item.tagsId.includes('t-conteudo'),
+    item.tagsId.includes('t-conteudo'),
     'leva as etiquetas atuais — é o que permite somar em vez de substituir'
   );
+}
+
+grupo('COREDE que o contato JA tem nao volta a ser gravado');
+{
+  const mapa = etiquetas('SANTO ÂNGELO', 'Missões');
+  const idCorede = mapa.get(normalize('Missões')).id;
+  const r = analisar([{ id: 'c1', tagsId: [idCorede], cidade: 'Santo Ângelo' }], ctx(mapa));
+  check(r.paraGravar.length === 1, 'ainda grava (falta a cidade)');
+  check(r.paraGravar[0].etiquetas.length === 1, 'mas só a cidade');
+  check(r.paraGravar[0].etiquetas[0].label === 'SANTO ÂNGELO', 'e é a da cidade');
+}
+
+grupo('cidade e COREDE ja aplicados: nada a fazer');
+{
+  const mapa = etiquetas('SANTO ÂNGELO', 'Missões');
+  const ids = [mapa.get(normalize('SANTO ÂNGELO')).id, mapa.get(normalize('Missões')).id];
+  const r = analisar([{ id: 'c1', tagsId: ids, cidade: 'Santo Ângelo' }], ctx(mapa));
+  check(r.paraGravar.length === 0, 'não gera requisição');
+  check(r.jaOk === 1, 'contado como pronto');
+}
+
+grupo('COREDE sem etiqueta no CRM entra na fila de criar, marcado como corede');
+{
+  const mapa = etiquetas('SANTO ÂNGELO'); // CRM tem a cidade, não tem o COREDE
+  const r = analisar([{ id: 'c1', tagsId: ['x'], cidade: 'Santo Ângelo' }], ctx(mapa));
+  check(r.paraGravar.length === 1 && r.paraGravar[0].etiquetas.length === 1, 'grava a cidade agora');
+  check(r.faltamCriar.length === 1, 'e anota o COREDE a criar');
+  check(r.faltamCriar[0].nome === 'Missões' && r.faltamCriar[0].tipo === 'corede',
+    `marcado como corede = ${r.faltamCriar[0].nome} (${r.faltamCriar[0].tipo})`);
+}
+
+grupo('nada aplicavel agora conta como esperandoCriacao, nao como pronto');
+{
+  // Sem etiqueta nenhuma no CRM: não há o que gravar, mas também não está pronto. Contar como
+  // "já ok" esconderia o trabalho de criação pendente.
+  const r = analisar([{ id: 'c1', tagsId: ['x'], cidade: 'Santo Ângelo' }], ctx(etiquetas()));
+  check(r.paraGravar.length === 0, 'não grava');
+  check(r.jaOk === 0, 'NÃO conta como pronto');
+  check(r.esperandoCriacao === 1, 'conta como esperando criação');
+  check(r.faltamCriar.length === 2, 'as duas etiquetas entram na fila de criar');
 }
 
 grupo('casamento com o CRM ignora acento e caixa');
@@ -151,7 +207,7 @@ grupo('casamento com o CRM ignora acento e caixa');
   // etiqueta duplicada só por isso.
   const r = analisar(
     [{ id: 'c1', tagsId: ['x'], cidade: 'Santo Ângelo' }],
-    ctx(etiquetas('santo angelo'))
+    ctxSoCidade(etiquetas('santo angelo'))
   );
   check(r.paraGravar.length === 1, 'casou mesmo escrita diferente');
   check(r.faltamCriar.length === 0, 'e não pediu para criar uma segunda');
@@ -219,8 +275,9 @@ grupo('contagens fecham com o total');
   ];
   const r = analisar(entrada, ctx(mapa));
   const somaRevisar = r.revisar.reduce((s, x) => s + x.quantos, 0);
-  const somaFaltam = r.faltamCriar.reduce((s, x) => s + x.quantos, 0);
-  const total = r.paraGravar.length + r.jaOk + r.semCidade + r.semEtiqueta + somaRevisar + somaFaltam;
+  // `faltamCriar` conta OCORRÊNCIAS de etiqueta faltante (um contato pode gerar duas), então a
+  // conta de CONTATOS usa `esperandoCriacao`. Confundir os dois foi o defeito da tela em 20/08.
+  const total = r.paraGravar.length + r.jaOk + r.semCidade + r.semEtiqueta + somaRevisar + r.esperandoCriacao;
   check(total === entrada.length, `nenhum contato some da conta = ${total}/${entrada.length}`);
 }
 

@@ -5,6 +5,43 @@
 
 ---
 
+## 2026-08-20 (tarde) — Cidade E COREDE na mesma escrita
+
+**Pedido:** *"preciso que extensão marque todas as etiquetas que tenham corede vou mandar etiquetar
+todas agora"*.
+
+**Por que sai de graça:** o COREDE é **derivado** da cidade (planilha oficial da SPGG-RS, nunca
+chute), e `applyTags` aplica um array de etiquetas numa requisição só. Então mandar cidade +
+COREDE junto **não custa escrita a mais** — mandar separado dobraria o custo da passada inteira
+sem ganhar nada. E como o fluxo normal já aplica COREDE, a maioria dos contatos cai no "já tem" e
+não gera requisição nenhuma.
+
+**A armadilha do apelido, e por que ela precisava de tratamento.** O nome do COREDE na planilha
+não é sempre o nome da etiqueta no CRM: "Paranhana Encosta da Serra" está lá como "Vale do
+Paranhana", "Centro-Sul" como "Centro Sul". `tags.resolveTag` já resolve isso, mas é assíncrona e
+por nome — aqui o mapa é consultado dezenas de milhares de vezes. Então os apelidos
+(`store.tagAliases`) são **achatados uma vez** como chaves extras do mapa de etiquetas. Sem isso,
+COREDE existente entraria como "falta criar" e viraria etiqueta duplicada com outro nome.
+
+**Contagem que mudou de significado, e a tela junto.** Um contato agora pode contribuir para DUAS
+faltas (a cidade e o COREDE), então `faltamCriar` conta **ocorrências de etiqueta**, não contatos.
+A contagem de contatos passou a ser `esperandoCriacao` — que também separa dois casos que antes
+se confundiam: "já tem tudo" (`jaOk`) e "não há o que gravar porque a etiqueta ainda não existe".
+Contar o segundo como pronto esconderia o trabalho de criação pendente. A conferência de soma na
+tela foi ajustada para usar a contagem certa; é a mesma confusão de unidades que gerou o
+*"os 586 tem cidade porque 43 etiquetas?"* mais cedo hoje.
+
+O resumo agora mostra "N contato(s) · M etiqueta(s)" no que vai ser gravado, e o card de criação
+separa quantas são de cidade e quantas de COREDE.
+
+**Arquivos:** [src/lib/categorizar.js](src/lib/categorizar.js) (`analisar` com
+`coredePorMunicipio`, `etiquetas[]` por contato, `esperandoCriacao`),
+[src/panel/panel.js](src/panel/panel.js) (`analisarParaCidades` achatando apelidos, gravação com
+array, resumo), [tests/categorizar.test.mjs](tests/categorizar.test.mjs) (5 grupos novos).
+Manifesto 0.9.5 → **0.10.0**. Oito suítes passando.
+
+---
+
 ## 2026-08-20 (tarde) — A leitura recomeçava do zero a cada clique
 
 **Relato:** *"está parando e esperando eu mandar a próxima página faça isso sozinho"*.

@@ -111,13 +111,25 @@ export function etiquetasComPrefixoAntigo(etiquetas, prefixo = PREFIXO_ANTIGO) {
  *   jaOk: number, semCidade: number, semEtiqueta: number
  * }}
  */
-export function analisar(contatos, { etiquetasPorNome, municipios, prefixo = PREFIXO_PADRAO } = {}) {
+export function analisar(
+  contatos,
+  { etiquetasPorNome, municipios, coredePorMunicipio = new Map(), prefixo = PREFIXO_PADRAO } = {}
+) {
   const paraGravar = [];
   const faltam = new Map();
   const revisar = new Map();
   let jaOk = 0;
   let semCidade = 0;
   let semEtiqueta = 0;
+  let esperandoCriacao = 0;
+
+  /** Anota uma etiqueta que precisa ser criada no CRM antes de poder ser aplicada. */
+  function anotarFalta(nome, tipo, origem) {
+    const chave = normalize(nome);
+    const atual = faltam.get(chave) || { nome, tipo, cidade: origem, quantos: 0 };
+    atual.quantos++;
+    faltam.set(chave, atual);
+  }
 
   for (const contato of contatos || []) {
     const cidade = String(contato.cidade || '').trim();
@@ -143,25 +155,50 @@ export function analisar(contatos, { etiquetasPorNome, municipios, prefixo = PRE
       continue;
     }
 
-    const nome = nomeDaEtiqueta(cidade, prefixo);
-    const etiqueta = etiquetasPorNome.get(normalize(nome));
+    /**
+     * DUAS etiquetas por contato: a da cidade e a do COREDE dela.
+     *
+     * O COREDE entrou a pedido dele — *"preciso que extensão marque todas as etiquetas que tenham
+     * corede"*. Vale a pena ir junto porque é **derivado** da cidade (planilha oficial da SPGG,
+     * nunca chute) e porque `applyTags` aplica as duas na MESMA requisição: somar o COREDE aqui
+     * não custa nem uma escrita a mais.
+     *
+     * Nada de reinventar o COREDE: o fluxo normal já o aplica, então a maioria dos contatos vai
+     * cair no "já tem" e não gerar requisição nenhuma.
+     */
+    const alvos = [];
 
-    // Trava 2: sem etiqueta no CRM, não inventa id — a cidade entra na lista do que falta criar.
-    if (!etiqueta) {
-      const chave = normalize(nome);
-      const atual = faltam.get(chave) || { cidade, nome, quantos: 0 };
-      atual.quantos++;
-      faltam.set(chave, atual);
+    const nomeCidade = nomeDaEtiqueta(cidade, prefixo);
+    const etiquetaCidade = etiquetasPorNome.get(normalize(nomeCidade));
+    if (etiquetaCidade) alvos.push(etiquetaCidade);
+    else anotarFalta(nomeCidade, 'cidade', cidade);
+
+    const corede = coredePorMunicipio.get(normalize(cidade));
+    if (corede) {
+      const etiquetaCorede = etiquetasPorNome.get(normalize(corede));
+      if (etiquetaCorede) alvos.push(etiquetaCorede);
+      else anotarFalta(corede, 'corede', cidade);
+    }
+
+    // Trava 2 (id nunca inventado) + trava 3 (idempotência): só entra o que existe no CRM e o
+    // contato ainda não tem.
+    const faltando = alvos.filter((t) => !tagsId.includes(t.id));
+
+    if (!faltando.length) {
+      // Ou já tem as duas, ou o que falta é etiqueta que ainda não existe no CRM. Os dois casos
+      // são "nada a fazer AGORA", mas contá-los junto esconderia o trabalho pendente de criação.
+      if (alvos.length) jaOk++;
+      else esperandoCriacao++;
       continue;
     }
 
-    // Trava 3: já tem? Não gasta requisição.
-    if (tagsId.includes(etiqueta.id)) {
-      jaOk++;
-      continue;
-    }
-
-    paraGravar.push({ contactId: contato.id, cidade, etiqueta, tagsId });
+    paraGravar.push({
+      contactId: contato.id,
+      cidade,
+      corede: corede || null,
+      etiquetas: faltando,
+      tagsId,
+    });
   }
 
   const porQuantidade = (a, b) => b.quantos - a.quantos;
@@ -172,6 +209,7 @@ export function analisar(contatos, { etiquetasPorNome, municipios, prefixo = PRE
     jaOk,
     semCidade,
     semEtiqueta,
+    esperandoCriacao,
   };
 }
 

@@ -118,6 +118,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   "tem SERRA e ainda NÃO tem a etiqueta de cidade" sem baixar a base.
   **Lição:** rota de tela lazy não está no `main.js` — pegue a lista de chunks no `runtime.*.js`
   e varra todos (são estáticos, não a API: varrer não tem custo de rate limit).
+- **A aba Cidades grava cidade E COREDE na mesma requisição.** O COREDE é derivado da cidade e
+  `applyTags` aceita array, então somar não custa escrita a mais. **Cuidado com o apelido:** o nome
+  do COREDE na planilha não é sempre o da etiqueta no CRM ("Paranhana Encosta da Serra" está como
+  "Vale do Paranhana"), e `store.tagAliases` é o que resolve — em `analisarParaCidades` os apelidos
+  são achatados como chaves extras do mapa. Sem isso, COREDE existente vira "falta criar" e
+  duplica a etiqueta com outro nome.
+- **`faltamCriar` conta ETIQUETAS, `esperandoCriacao` conta CONTATOS.** Um contato pode faltar as
+  duas (cidade e COREDE). Misturar as duas unidades na tela já gerou a pergunta *"os 586 tem cidade
+  porque 43 etiquetas?"* — toda contagem exibida diz a unidade, e a tela confere a soma.
 - **Etiqueta de cidade é o nome do município e nada mais** — sem prefixo (decisão dele, 20/08:
   *"deixe somente caxias do sul"*). É seguro porque **nenhum dos 497 municípios do RS tem o mesmo
   nome de um dos 28 COREDEs** (conferido, e há teste travando isso): cidade e região não colidem.
