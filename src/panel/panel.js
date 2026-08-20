@@ -4487,6 +4487,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
     body.append(resumo);
 
+    // Contato com COREDE que não é o da cidade dele. Gravar deixa os DOIS, e aí o filtro por
+    // região devolve o contato em duas regiões. Só avisa — remover etiqueta é destrutivo, e pode
+    // ser a cidade que está errada, não a etiqueta.
+    if (a.coredeDivergente?.length) {
+      const exemplos = a.coredeDivergente.slice(0, 6).map((x) => {
+        const nomes = x.outros
+          .map((id) => (c.etiquetasDisponiveis.find((t) => t.id === id) || {}).label || id)
+          .join(', ');
+        return `${x.cidade} → ${x.corede} (tem: ${nomes})`;
+      });
+      body.append(
+        h('div', { class: 'wf-card' }, [
+          h('h4', {}, `⚠ ${a.coredeDivergente.length} contato(s) com COREDE de outra região`),
+          h('div', { class: 'wf-preview' },
+            'A cidade destes contatos pertence a um COREDE, mas eles têm a etiqueta de OUTRO. ' +
+              'Gravar vai somar o certo e deixar o errado — o contato passa a aparecer no filtro ' +
+              'das duas regiões. Não removo nada sozinho: pode ser a cidade que está errada, e ' +
+              'não a etiqueta. Confira alguns antes de gravar.'),
+          h('div', { class: 'wf-origin' }, exemplos.join(' · ')),
+        ])
+      );
+    }
+
     if (c.etiquetaFiltro) {
       body.append(h('div', { class: 'wf-origin' }, `Filtrado por etiqueta: ${rotuloDoFiltroDeEtiqueta()}.`));
     }
@@ -4806,6 +4829,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       etiquetasPorNome,
       municipios,
       coredePorMunicipio,
+      // Para detectar contato com COREDE que não é o da cidade dele.
+      idsDeCorede: await tagsLib.regionTagIds(),
       prefixo: categorizar.PREFIXO_PADRAO,
     });
   }

@@ -190,6 +190,66 @@ grupo('COREDE sem etiqueta no CRM entra na fila de criar, marcado como corede');
     `marcado como corede = ${r.faltamCriar[0].nome} (${r.faltamCriar[0].tipo})`);
 }
 
+grupo('REGRESSAO: ter o COREDE nao faz o contato passar por pronto');
+{
+  /**
+   * O bug que ele pegou na tela, em 20/08/2026: "20 gravados" ao lado de "6002 já com cidade e
+   * COREDE". Contato de Caxias do Sul que TEM o COREDE (Serra, do fluxo normal) mas cuja etiqueta
+   * de CIDADE ainda não existe no CRM era contado como pronto — nada faltava aplicar, então a
+   * versão antiga olhava `alvos.length` e concluía "completo". Quase seis mil contatos esperando
+   * criação, escondidos no número de prontos.
+   */
+  const mapa = etiquetas('Serra'); // o COREDE existe; a etiqueta de CAXIAS DO SUL nao
+  const idSerra = mapa.get(normalize('Serra')).id;
+  const r = analisar([{ id: 'c1', tagsId: [idSerra], cidade: 'Caxias do Sul' }], ctx(mapa));
+
+  check(r.jaOk === 0, 'NAO conta como pronto — falta a etiqueta de cidade');
+  check(r.esperandoCriacao === 1, 'conta como esperando criação');
+  check(r.paraGravar.length === 0, 'e não há o que gravar agora');
+  check(
+    r.faltamCriar.length === 1 && r.faltamCriar[0].nome === 'CAXIAS DO SUL',
+    `a cidade entra na fila de criar = ${r.faltamCriar.map((x) => x.nome).join(',')}`
+  );
+}
+
+grupo('COREDE divergente: detecta, e nao remove nada');
+{
+  // Contato cuja cidade e de um COREDE mas que carrega a etiqueta de OUTRO. Gravar soma o certo e
+  // deixa o errado -- o contato passa a aparecer no filtro das duas regioes.
+  const mapa = etiquetas('CAXIAS DO SUL', 'Serra', 'Missões');
+  const idMissoes = mapa.get(normalize('Missões')).id;
+  const idsDeCorede = new Set([mapa.get(normalize('Serra')).id, idMissoes]);
+
+  const r = analisar([{ id: 'c1', tagsId: [idMissoes], cidade: 'Caxias do Sul' }], {
+    etiquetasPorNome: mapa,
+    municipios,
+    coredePorMunicipio,
+    idsDeCorede,
+    prefixo: PREFIXO_PADRAO,
+  });
+
+  check(r.coredeDivergente.length === 1, 'detectou a divergência');
+  check(r.coredeDivergente[0].corede === 'Serra', 'sabe qual é o certo');
+  check(r.coredeDivergente[0].outros.includes(idMissoes), 'e qual está sobrando');
+  // Detectar não é agir: nada é removido, e o certo continua sendo aplicado.
+  check(r.paraGravar.length === 1, 'ainda grava o que falta');
+  check(r.paraGravar[0].etiquetas.length === 2, 'cidade + COREDE certo');
+}
+
+grupo('COREDE igual ao da cidade nao e divergencia');
+{
+  const mapa = etiquetas('CAXIAS DO SUL', 'Serra');
+  const idSerra = mapa.get(normalize('Serra')).id;
+  const r = analisar([{ id: 'c1', tagsId: [idSerra], cidade: 'Caxias do Sul' }], {
+    etiquetasPorNome: mapa,
+    municipios,
+    coredePorMunicipio,
+    idsDeCorede: new Set([idSerra]),
+    prefixo: PREFIXO_PADRAO,
+  });
+  check(r.coredeDivergente.length === 0, 'sem falso positivo');
+}
+
 grupo('nada aplicavel agora conta como esperandoCriacao, nao como pronto');
 {
   // Sem etiqueta nenhuma no CRM: não há o que gravar, mas também não está pronto. Contar como

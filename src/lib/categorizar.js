@@ -113,11 +113,18 @@ export function etiquetasComPrefixoAntigo(etiquetas, prefixo = PREFIXO_ANTIGO) {
  */
 export function analisar(
   contatos,
-  { etiquetasPorNome, municipios, coredePorMunicipio = new Map(), prefixo = PREFIXO_PADRAO } = {}
+  {
+    etiquetasPorNome,
+    municipios,
+    coredePorMunicipio = new Map(),
+    idsDeCorede = new Set(),
+    prefixo = PREFIXO_PADRAO,
+  } = {}
 ) {
   const paraGravar = [];
   const faltam = new Map();
   const revisar = new Map();
+  const coredeDivergente = [];
   let jaOk = 0;
   let semCidade = 0;
   let semEtiqueta = 0;
@@ -167,28 +174,67 @@ export function analisar(
      * cair no "já tem" e não gerar requisição nenhuma.
      */
     const alvos = [];
+    // Alguma das etiquetas que este contato DEVERIA ter ainda não existe no CRM?
+    let precisaCriar = false;
 
     const nomeCidade = nomeDaEtiqueta(cidade, prefixo);
     const etiquetaCidade = etiquetasPorNome.get(normalize(nomeCidade));
-    if (etiquetaCidade) alvos.push(etiquetaCidade);
-    else anotarFalta(nomeCidade, 'cidade', cidade);
+    if (etiquetaCidade) {
+      alvos.push(etiquetaCidade);
+    } else {
+      anotarFalta(nomeCidade, 'cidade', cidade);
+      precisaCriar = true;
+    }
 
     const corede = coredePorMunicipio.get(normalize(cidade));
     if (corede) {
       const etiquetaCorede = etiquetasPorNome.get(normalize(corede));
-      if (etiquetaCorede) alvos.push(etiquetaCorede);
-      else anotarFalta(corede, 'corede', cidade);
+      if (etiquetaCorede) {
+        alvos.push(etiquetaCorede);
+
+        /**
+         * O contato tem um COREDE que NÃO é o da cidade dele?
+         *
+         * Aplicar o certo sem tirar o errado deixa o contato com **dois** COREDEs — e o filtro por
+         * região passa a devolvê-lo nas duas. É um defeito que este projeto já teve por outro
+         * caminho (ver CLAUDE.md: "COREDE errado sobra quando a cidade preenche BURACO").
+         *
+         * Aqui só **detecta e relata**. Remover é destrutivo e a decisão é dele: o COREDE
+         * divergente pode ser a cidade que está errada, não a etiqueta.
+         */
+        const outros = tagsId.filter((id) => idsDeCorede.has(id) && id !== etiquetaCorede.id);
+        if (outros.length) {
+          coredeDivergente.push({ contactId: contato.id, cidade, corede, outros });
+        }
+      } else {
+        anotarFalta(corede, 'corede', cidade);
+        precisaCriar = true;
+      }
     }
 
     // Trava 2 (id nunca inventado) + trava 3 (idempotência): só entra o que existe no CRM e o
     // contato ainda não tem.
     const faltando = alvos.filter((t) => !tagsId.includes(t.id));
 
+    /**
+     * Cada contato cai em **exatamente um** balde, e a ORDEM importa.
+     *
+     * A versão anterior perguntava só "falta aplicar algo?" e, se não faltava, olhava
+     * `alvos.length` para decidir entre pronto e esperando. Isso contava como **pronto** o
+     * contato de Caxias do Sul que tem o COREDE (Serra, do fluxo normal) mas cuja etiqueta de
+     * cidade **ainda não existe no CRM**: `alvos` tinha o COREDE, nada faltava aplicar, e ele
+     * virava "já com cidade e COREDE" — sem ter a etiqueta de cidade.
+     *
+     * Foi o que produziu, na base real, "20 gravados" ao lado de "6002 já com cidade e COREDE":
+     * quase seis mil contatos esperando criação, escondidos no número de prontos. Quem perguntou
+     * foi ele, olhando a tela — o número não estava errado, o RÓTULO estava mentindo.
+     *
+     * A ordem certa é por urgência: o que dá para fazer agora, o que depende de criar etiqueta, e
+     * só então o que está completo de verdade.
+     */
     if (!faltando.length) {
-      // Ou já tem as duas, ou o que falta é etiqueta que ainda não existe no CRM. Os dois casos
-      // são "nada a fazer AGORA", mas contá-los junto esconderia o trabalho pendente de criação.
-      if (alvos.length) jaOk++;
-      else esperandoCriacao++;
+      if (precisaCriar) esperandoCriacao++;
+      else jaOk++;
       continue;
     }
 
@@ -206,6 +252,7 @@ export function analisar(
     paraGravar,
     faltamCriar: [...faltam.values()].sort(porQuantidade),
     revisar: [...revisar.values()].sort(porQuantidade),
+    coredeDivergente,
     jaOk,
     semCidade,
     semEtiqueta,

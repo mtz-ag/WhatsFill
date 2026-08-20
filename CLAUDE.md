@@ -124,6 +124,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   "Vale do Paranhana"), e `store.tagAliases` é o que resolve — em `analisarParaCidades` os apelidos
   são achatados como chaves extras do mapa. Sem isso, COREDE existente vira "falta criar" e
   duplica a etiqueta com outro nome.
+- **"Nada falta aplicar" NÃO significa "está pronto".** Se a etiqueta que o contato deveria ter
+  ainda não existe no CRM, ela nem entra na lista de alvos — e a conta ingênua conclui que o
+  contato está completo. Foi assim que 6002 apareceram como "já com cidade e COREDE" no dia em que
+  só 20 tinham sido gravados: contatos com o COREDE aplicado e a etiqueta de cidade inexistente.
+  Em `categorizar.analisar` a ordem dos baldes é por urgência (`paraGravar` → `esperandoCriacao` →
+  `jaOk`) e `precisaCriar` é o que separa os dois últimos. Tem teste de regressão.
+- **Aplicar o COREDE certo não tira o errado.** Contato cuja cidade é de um COREDE mas que carrega
+  a etiqueta de outro fica com os DOIS, e passa a aparecer no filtro das duas regiões.
+  `coredeDivergente` detecta e a tela avisa — **não remove**, porque pode ser a cidade que está
+  errada, e remover etiqueta é destrutivo.
 - **`faltamCriar` conta ETIQUETAS, `esperandoCriacao` conta CONTATOS.** Um contato pode faltar as
   duas (cidade e COREDE). Misturar as duas unidades na tela já gerou a pergunta *"os 586 tem cidade
   porque 43 etiquetas?"* — toda contagem exibida diz a unidade, e a tela confere a soma.

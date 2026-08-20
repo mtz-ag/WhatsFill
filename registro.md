@@ -5,6 +5,50 @@
 
 ---
 
+## 2026-08-20 (tarde) — "Por que os números não batem?" — o rótulo estava mentindo
+
+**Pergunta dele, com print:** `Contatos lidos: 7474 · Já com cidade e COREDE: 6002 · Prontos para
+gravar: 1358 (1366 etiquetas) · Esperando etiqueta: 0 · Sem cidade: 49 · A revisar: 65`.
+
+**A soma fechava** (6002+1358+49+65 = 7474). O que não batia era o **significado** de uma linha —
+e ele viu na hora, porque tinha gravado só **20** contatos e a tela dizia 6002 prontos.
+
+### Causa raiz
+
+`analisar` perguntava só "falta aplicar algo?" e, quando não faltava, olhava `alvos.length` para
+escolher entre pronto e esperando. Contato de Caxias do Sul que **tem** o COREDE (Serra, aplicado
+pelo fluxo normal) mas cuja etiqueta de **cidade ainda não existe no CRM** caía assim:
+
+- a etiqueta de cidade não existe → `anotarFalta`, e ela **não entra** em `alvos`;
+- o COREDE existe e ele já tem → entra em `alvos`, mas não em `faltando`;
+- `faltando` vazio + `alvos.length > 0` → **contado como "já com cidade e COREDE"**.
+
+Ou seja: ~5980 contatos esperando criação de etiqueta, escondidos no número de prontos.
+`esperandoCriacao` só pegava o caso em que **nada** existia — daí o `0` na tela.
+
+**Conserto:** cada contato cai em exatamente um balde, e a ordem é por urgência — o que dá para
+fazer agora (`paraGravar`), o que depende de criar etiqueta (`esperandoCriacao`), e só então o que
+está completo (`jaOk`). A flag `precisaCriar` é o que separa os dois últimos. Tem teste de
+regressão com o cenário exato.
+
+### O segundo achado, nos mesmos números
+
+**1358 contatos → 1366 etiquetas.** Como o filtro era "todos os COREDEs", todo contato lido já tem
+um COREDE — então os 8 que recebem DUAS etiquetas têm um COREDE **diferente** do da cidade deles.
+Gravar somaria o certo e deixaria o errado: o contato passaria a aparecer no filtro de duas
+regiões. É o defeito que o `CLAUDE.md` já registra por outro caminho ("COREDE errado sobra quando a
+cidade preenche BURACO").
+
+`coredeDivergente` detecta e a tela avisa, com exemplos. **Não remove nada**, de propósito: pode
+ser a cidade que está errada e não a etiqueta, e remover é destrutivo. A decisão é dele.
+
+**Arquivos:** [src/lib/categorizar.js](src/lib/categorizar.js) (`precisaCriar`, ordem dos baldes,
+`coredeDivergente`, `idsDeCorede`), [src/panel/panel.js](src/panel/panel.js) (passa
+`regionTagIds`, card de aviso), [tests/categorizar.test.mjs](tests/categorizar.test.mjs) (3 grupos
+novos, um deles de regressão). Manifesto 0.10.1 → **0.10.2**. Oito suítes passando.
+
+---
+
 ## 2026-08-20 (tarde) — Seletor com "todos os COREDEs", e agrupado
 
 **Pedido, com print do seletor aberto:** *"eu queria aqui, ele me da a opção somente todos contatos
