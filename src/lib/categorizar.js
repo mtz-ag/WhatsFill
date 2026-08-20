@@ -76,6 +76,30 @@ export function nomeDaEtiqueta(cidade, prefixo = PREFIXO_PADRAO) {
  * @param {Array<{id, label}>} etiquetas as etiquetas reais do CRM
  * @returns {Array<{id, de: string, para: string}>}
  */
+/**
+ * Etiquetas com o MESMO rótulo e ids diferentes.
+ *
+ * O CRM permite isso (ele tem "1 Sem Retorno" e "2 Sem Retorno", e apareceu "Serra" repetida), e
+ * a consequência é real: `etiquetasPorNome` guarda uma, o contato pode carregar a outra, e
+ * qualquer comparação por id passa a mentir. Foi a raiz do falso positivo de COREDE divergente em
+ * 1293 contatos.
+ *
+ * Detectar e mostrar é melhor que tratar em silêncio: rótulo repetido no CRM é sujeira que
+ * atrapalha o filtro dele também, não só a extensão.
+ *
+ * @returns {Array<{rotulo: string, ids: string[]}>}
+ */
+export function etiquetasComRotuloRepetido(etiquetas) {
+  const porRotulo = new Map();
+  for (const t of etiquetas || []) {
+    const chave = normalize(t.label);
+    if (!chave) continue;
+    if (!porRotulo.has(chave)) porRotulo.set(chave, { rotulo: t.label, ids: [] });
+    porRotulo.get(chave).ids.push(t.id);
+  }
+  return [...porRotulo.values()].filter((x) => x.ids.length > 1);
+}
+
 export function etiquetasComPrefixoAntigo(etiquetas, prefixo = PREFIXO_ANTIGO) {
   const alvo = normalize(prefixo);
   if (!alvo) return [];
@@ -118,6 +142,8 @@ export function analisar(
     municipios,
     coredePorMunicipio = new Map(),
     idsDeCorede = new Set(),
+    /** id → rótulo de TODAS as etiquetas do CRM. Necessário para comparar por nome. */
+    rotuloPorId = new Map(),
     prefixo = PREFIXO_PADRAO,
   } = {}
 ) {
@@ -199,10 +225,23 @@ export function analisar(
          * região passa a devolvê-lo nas duas. É um defeito que este projeto já teve por outro
          * caminho (ver CLAUDE.md: "COREDE errado sobra quando a cidade preenche BURACO").
          *
+         * **A comparação é por NOME, não por id**, e isso não é preciosismo: a primeira versão
+         * comparava id e produziu `Caxias do Sul → Serra (tem: Serra)` na base real — falso
+         * positivo em 1293 contatos. O CRM tem etiquetas de **nome repetido** (ele mesmo tem
+         * "1 Sem Retorno" e "2 Sem Retorno"), então `etiquetasPorNome` guarda uma e o contato
+         * pode carregar a outra: dois ids, mesmo rótulo, e o filtro por região trata as duas
+         * igual. Divergência é o rótulo ser outro, não o id.
+         *
          * Aqui só **detecta e relata**. Remover é destrutivo e a decisão é dele: o COREDE
          * divergente pode ser a cidade que está errada, não a etiqueta.
          */
-        const outros = tagsId.filter((id) => idsDeCorede.has(id) && id !== etiquetaCorede.id);
+        const alvoCorede = normalize(corede);
+        const outros = tagsId.filter((id) => {
+          if (!idsDeCorede.has(id)) return false;
+          const rotulo = rotuloPorId.get(id);
+          // Sem rótulo conhecido não dá para afirmar que é outro: na dúvida, não acusa.
+          return rotulo ? normalize(rotulo) !== alvoCorede : false;
+        });
         if (outros.length) {
           coredeDivergente.push({ contactId: contato.id, cidade, corede, outros });
         }

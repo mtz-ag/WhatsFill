@@ -5,6 +5,55 @@
 
 ---
 
+## 2026-08-20 (tarde) — "Não estou achando os que foram feitos": faltava conferir a escrita
+
+**Relato, com print:** *"não estou achando os que foram feitos somente corede da serra aparece como
+feito"* — e no card de divergência, a linha `Caxias do Sul → Serra (tem: Serra)`, repetida, em
+**1293 contatos**.
+
+### Defeito 1: falso positivo por comparar ID em vez de nome
+
+`Caxias do Sul → Serra (tem: Serra)` é absurdo na cara: o COREDE certo é Serra e o contato tem
+Serra. A causa: **o CRM tem etiquetas de rótulo repetido** (ele mesmo tem "1 Sem Retorno" e
+"2 Sem Retorno", e apareceu "Serra" duas vezes). `etiquetasPorNome` guarda uma delas; o contato
+carrega a outra. Comparando `id`, viram etiquetas diferentes — comparando **nome**, são a mesma
+coisa, e é o nome que o filtro por região usa.
+
+Consertado: a divergência compara rótulo normalizado, com `rotuloPorId` novo. Id sem rótulo
+conhecido **não acusa** — na dúvida, não acusa. Dois testes de regressão.
+
+E como rótulo repetido é sujeira que atrapalha o filtro **dele** também (um contato pode "ter
+SERRA" e não aparecer no filtro de SERRA, porque são duas SERRAs), a aba passou a avisar:
+`etiquetasComRotuloRepetido`. Só avisa — a extensão não apaga etiqueta.
+
+### Defeito 2, o que explica o relato: a aba nunca conferiu se gravou
+
+A regra mais antiga deste projeto é *"a API responde 200 e IGNORA o valor quando o formato não
+serve — nunca confie no 2xx"*, e é por isso que `saveClassification` relê o contato desde sempre
+(`confirmarNoCrm`). **A aba Cidades não conferia nada:** mandava o `POST`, recebia 200, e contava
+como gravado. Podia relatar 5 mil gravados sem uma única etiqueta ter entrado — e o erro só
+apareceria quando alguém fosse procurar os contatos no CRM e não achasse. Foi o que aconteceu.
+
+Agora há **sonda por lote**: o primeiro contato gravado é relido e conferido. Se as etiquetas não
+entraram, o lote **para na hora**, com o motivo na tela ("o contato de Caxias do Sul continua sem
+CAXIAS DO SUL depois da gravação"). Uma leitura por lote, não por contato: pegar formato errado
+exige um exemplo, não uma auditoria — auditar 5 mil dobraria as requisições da passada.
+
+Falha ao **conferir** (rede) não trava o lote: não conseguir reler é diferente de ter falhado a
+gravação.
+
+**Ainda não sei qual dos dois defeitos produziu o relato dele** — a sonda é o que vai dizer, na
+próxima gravação. Se ela falhar, o problema é a escrita (formato/contrato); se passar, as
+etiquetas estavam entrando e o que enganava era o card de divergência.
+
+**Arquivos:** [src/lib/categorizar.js](src/lib/categorizar.js) (divergência por nome,
+`rotuloPorId`, `etiquetasComRotuloRepetido`), [src/panel/panel.js](src/panel/panel.js)
+(`conferirEtiquetasGravadas` + sonda no lote, card de rótulo repetido, `rotuloPorId`),
+[tests/categorizar.test.mjs](tests/categorizar.test.mjs) (4 grupos novos, dois de regressão).
+Manifesto 0.10.3 → **0.10.4**. Oito suítes passando.
+
+---
+
 ## 2026-08-20 (tarde) — A tela não mostrava o total elegível
 
 **Pergunta dele:** *"são 7474 contatos com corede correto? então todos deviam receber a etiqueta de

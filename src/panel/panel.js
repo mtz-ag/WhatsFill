@@ -4423,6 +4423,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     cardLer.append(h('div', { class: 'wf-row' }, linha));
     body.append(cardLer);
 
+    // Rótulo repetido no CRM: sujeira que atrapalha o filtro dele e faz qualquer comparação por
+    // id mentir. Só avisa — apagar etiqueta é decisão dele, e a extensão não apaga etiqueta.
+    const repetidas = categorizar.etiquetasComRotuloRepetido(c.etiquetasDisponiveis);
+    if (repetidas.length) {
+      body.append(
+        h('div', { class: 'wf-card' }, [
+          h('h4', {}, `⚠ ${repetidas.length} etiqueta(s) com nome repetido no CRM`),
+          h('div', { class: 'wf-preview' },
+            'Existem etiquetas diferentes com o MESMO nome. O filtro por etiqueta trata as duas ' +
+              'como coisas distintas, então um contato pode "ter SERRA" e não aparecer no filtro ' +
+              'de SERRA. Vale limpar no CRM — a extensão não apaga etiqueta.'),
+          h('div', { class: 'wf-origin' },
+            repetidas.slice(0, 10).map((x) => `"${x.rotulo}" (${x.ids.length}×)`).join(' · ')),
+        ])
+      );
+    }
+
     // Conserto do prefixo antigo. Aparece sozinho, antes de qualquer varredura, porque quem já
     // gravou com o nome errado precisa disto ANTES de gravar mais.
     const comPrefixo = categorizar.etiquetasComPrefixoAntigo(c.etiquetasDisponiveis);
@@ -4853,6 +4870,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       coredePorMunicipio,
       // Para detectar contato com COREDE que não é o da cidade dele.
       idsDeCorede: await tagsLib.regionTagIds(),
+      // A comparação de divergência é por NOME: o CRM tem etiquetas de rótulo repetido, e
+      // comparar id produzia "Caxias do Sul → Serra (tem: Serra)" em 1293 contatos.
+      rotuloPorId: new Map(todas.map((t) => [t.id, t.label])),
       prefixo: categorizar.PREFIXO_PADRAO,
     });
   }
@@ -5025,6 +5045,31 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           fila.shift();
           gravados++;
           ritmo.sucesso();
+
+          /**
+           * SONDA: confere o primeiro gravado do lote relendo o contato.
+           *
+           * A regra mais antiga deste projeto é "a API responde 200 e IGNORA o valor quando o
+           * formato não serve — nunca confie no 2xx". `saveClassification` sempre conferiu; esta
+           * aba não conferia nada, e por isso podia contar 5 mil como gravados sem uma única
+           * etiqueta ter entrado. Foi o relato: *"não estou achando os que foram feitos"*.
+           *
+           * Uma leitura por lote, não por contato: pegar o formato errado exige um exemplo, não
+           * uma auditoria — e auditar 5 mil dobraria as requisições da passada inteira.
+           */
+          if (gravados === 1) {
+            const conferida = await conferirEtiquetasGravadas(alvo);
+            if (!conferida.ok) {
+              logCidades(`SONDA FALHOU: ${conferida.motivo}`, true);
+              setStatus(
+                `Parei no primeiro contato: ${conferida.motivo} ` +
+                  'A API aceitou e não gravou — nada mais foi tentado.',
+                'err'
+              );
+              break;
+            }
+            logCidades(`Sonda ok: as etiquetas entraram de verdade no primeiro contato.`);
+          }
         } else if (categorizar.ehLimiteDeTaxa(resultado.error) && !ritmo.desistir()) {
           const nova = ritmo.recuar();
           logCidades(`A API recusou — esperando ${nova}ms e tentando o mesmo contato de novo.`, true);
@@ -5061,6 +5106,34 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       c.gravando = false;
       renderAll();
     }
+  }
+
+  /**
+   * Relê o contato e confirma que as etiquetas entraram de verdade.
+   *
+   * Existe porque esta API responde **200 ignorando o valor** quando algo não serve — a armadilha
+   * mais antiga do projeto. Sem isto, a aba conta como gravado o que a plataforma descartou, e o
+   * erro só aparece quando alguém vai procurar os contatos no CRM e não acha.
+   */
+  async function conferirEtiquetasGravadas(alvo) {
+    let contato;
+    try {
+      contato = await api.getContact(alvo.contactId);
+    } catch (err) {
+      // Não conseguir CONFERIR é diferente de ter falhado a gravação: não trava o lote por isso.
+      return { ok: true, motivo: `não consegui reler para conferir (${err.message})` };
+    }
+
+    const agora = new Set(Array.isArray(contato?.tagsId) ? contato.tagsId : []);
+    const faltando = alvo.etiquetas.filter((t) => !agora.has(t.id));
+    if (!faltando.length) return { ok: true };
+
+    return {
+      ok: false,
+      motivo:
+        `o contato de ${alvo.cidade} continua sem ${faltando.map((t) => `"${t.label}"`).join(' e ')} ` +
+        'depois da gravação.',
+    };
   }
 
   /** Espera fatiada, para o Parar não ter que aguardar o intervalo inteiro. */

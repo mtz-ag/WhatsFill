@@ -212,21 +212,23 @@ grupo('REGRESSAO: ter o COREDE nao faz o contato passar por pronto');
   );
 }
 
+/** Contexto completo, do jeito que o painel monta. */
+function ctxCheio(mapa, { idsDeCorede = new Set(), rotuloPorId = new Map() } = {}) {
+  return { etiquetasPorNome: mapa, municipios, coredePorMunicipio, idsDeCorede, rotuloPorId, prefixo: PREFIXO_PADRAO };
+}
+
 grupo('COREDE divergente: detecta, e nao remove nada');
 {
   // Contato cuja cidade e de um COREDE mas que carrega a etiqueta de OUTRO. Gravar soma o certo e
   // deixa o errado -- o contato passa a aparecer no filtro das duas regioes.
   const mapa = etiquetas('CAXIAS DO SUL', 'Serra', 'Missões');
   const idMissoes = mapa.get(normalize('Missões')).id;
-  const idsDeCorede = new Set([mapa.get(normalize('Serra')).id, idMissoes]);
+  const idSerra = mapa.get(normalize('Serra')).id;
 
-  const r = analisar([{ id: 'c1', tagsId: [idMissoes], cidade: 'Caxias do Sul' }], {
-    etiquetasPorNome: mapa,
-    municipios,
-    coredePorMunicipio,
-    idsDeCorede,
-    prefixo: PREFIXO_PADRAO,
-  });
+  const r = analisar([{ id: 'c1', tagsId: [idMissoes], cidade: 'Caxias do Sul' }], ctxCheio(mapa, {
+    idsDeCorede: new Set([idSerra, idMissoes]),
+    rotuloPorId: new Map([[idSerra, 'Serra'], [idMissoes, 'Missões']]),
+  }));
 
   check(r.coredeDivergente.length === 1, 'detectou a divergência');
   check(r.coredeDivergente[0].corede === 'Serra', 'sabe qual é o certo');
@@ -240,14 +242,58 @@ grupo('COREDE igual ao da cidade nao e divergencia');
 {
   const mapa = etiquetas('CAXIAS DO SUL', 'Serra');
   const idSerra = mapa.get(normalize('Serra')).id;
-  const r = analisar([{ id: 'c1', tagsId: [idSerra], cidade: 'Caxias do Sul' }], {
-    etiquetasPorNome: mapa,
-    municipios,
-    coredePorMunicipio,
+  const r = analisar([{ id: 'c1', tagsId: [idSerra], cidade: 'Caxias do Sul' }], ctxCheio(mapa, {
     idsDeCorede: new Set([idSerra]),
-    prefixo: PREFIXO_PADRAO,
-  });
+    rotuloPorId: new Map([[idSerra, 'Serra']]),
+  }));
   check(r.coredeDivergente.length === 0, 'sem falso positivo');
+}
+
+grupo('REGRESSAO: etiqueta de nome REPETIDO nao vira divergencia falsa');
+{
+  /**
+   * O falso positivo que ele viu na base real: "Caxias do Sul → Serra (tem: Serra)", em 1293
+   * contatos. O CRM tem duas etiquetas chamadas "Serra" (ids diferentes); `etiquetasPorNome`
+   * guarda uma e o contato carrega a outra. Comparar ID acusava divergência onde o rótulo é o
+   * mesmo — e o filtro por região trata as duas igual.
+   */
+  const mapa = etiquetas('CAXIAS DO SUL', 'Serra');
+  const idSerraDoMapa = mapa.get(normalize('Serra')).id;
+  const idSerraDuplicada = 'outro-id-mesmo-rotulo';
+
+  const r = analisar([{ id: 'c1', tagsId: [idSerraDuplicada], cidade: 'Caxias do Sul' }], ctxCheio(mapa, {
+    idsDeCorede: new Set([idSerraDoMapa, idSerraDuplicada]),
+    rotuloPorId: new Map([[idSerraDoMapa, 'Serra'], [idSerraDuplicada, 'Serra']]),
+  }));
+  check(r.coredeDivergente.length === 0, 'mesmo rótulo, ids diferentes: NAO e divergencia');
+}
+
+grupo('divergencia: id sem rotulo conhecido nao acusa');
+{
+  // Na dúvida não acusa: id de etiqueta que não veio na lista pode ser qualquer coisa.
+  const mapa = etiquetas('CAXIAS DO SUL', 'Serra');
+  const idSerra = mapa.get(normalize('Serra')).id;
+  const r = analisar([{ id: 'c1', tagsId: ['id-desconhecido'], cidade: 'Caxias do Sul' }], ctxCheio(mapa, {
+    idsDeCorede: new Set([idSerra, 'id-desconhecido']),
+    rotuloPorId: new Map([[idSerra, 'Serra']]),
+  }));
+  check(r.coredeDivergente.length === 0, 'sem rótulo, sem acusação');
+}
+
+grupo('etiquetasComRotuloRepetido');
+{
+  const { etiquetasComRotuloRepetido } = await lib('categorizar.js');
+  const lista = [
+    { id: 'a', label: 'Serra' },
+    { id: 'b', label: 'SERRA' },
+    { id: 'c', label: 'Missões' },
+    { id: 'd', label: '1 Sem Retorno' },
+  ];
+  const rep = etiquetasComRotuloRepetido(lista);
+  check(rep.length === 1, `achou uma repetição = ${rep.length}`);
+  check(rep[0].ids.length === 2 && rep[0].ids.includes('a') && rep[0].ids.includes('b'),
+    'com os dois ids');
+  check(!rep.some((x) => normalize(x.rotulo) === normalize('Missões')), 'rótulo único não entra');
 }
 
 grupo('nada aplicavel agora conta como esperandoCriacao, nao como pronto');

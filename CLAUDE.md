@@ -124,6 +124,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   "Vale do Paranhana"), e `store.tagAliases` é o que resolve — em `analisarParaCidades` os apelidos
   são achatados como chaves extras do mapa. Sem isso, COREDE existente vira "falta criar" e
   duplica a etiqueta com outro nome.
+- **O CRM tem etiquetas de RÓTULO REPETIDO, então nunca compare etiqueta por id.** Ele tem
+  "1 Sem Retorno"/"2 Sem Retorno", e apareceu "Serra" duas vezes com ids diferentes: um mapa
+  `nome → etiqueta` guarda uma e o contato carrega a outra. Comparar id produziu
+  `Caxias do Sul → Serra (tem: Serra)` em 1293 contatos. Compare **rótulo normalizado** — é o que
+  o filtro da plataforma usa. `categorizar.etiquetasComRotuloRepetido` detecta e a aba avisa.
+- **Toda escrita em massa precisa de SONDA que relê.** "A API responde 200 e ignora" vale igual na
+  aba Cidades: ela contava como gravado sem conferir, e podia relatar 5 mil sucessos com zero
+  etiqueta aplicada — descoberto só quando alguém foi procurar os contatos no CRM. Hoje o primeiro
+  gravado de cada lote é relido (`conferirEtiquetasGravadas`) e o lote para se não entrou. Uma
+  leitura por lote basta: pegar formato errado exige um exemplo, não auditoria.
 - **"Nada falta aplicar" NÃO significa "está pronto".** Se a etiqueta que o contato deveria ter
   ainda não existe no CRM, ela nem entra na lista de alvos — e a conta ingênua conclui que o
   contato está completo. Foi assim que 6002 apareceram como "já com cidade e COREDE" no dia em que
