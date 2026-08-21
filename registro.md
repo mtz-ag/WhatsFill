@@ -5,6 +5,43 @@
 
 ---
 
+## 2026-08-20 — Tecla 4 vira "Pedir dados e concluir"
+
+**Pedido dele:** *"troque o botão 4 por pedir dados e concluir e faça mais duas variações dele —
+só tem um modelo de mensagem no momento"*.
+
+A tecla 4 da rodada 3 era "Agradecer informações e concluir". Virou o pedido de dados, que é o
+que falta na maioria dessa fila: sem nome e sem cidade não há o que classificar, e o contato fica
+dando voltas. O agradecimento **não sumiu** — continua nas respostas rápidas da própria caixa, a
+um clique, só sem ocupar uma tecla.
+
+**As "mais duas variações" já existiam.** `pedir-dados` carrega três textos (`text` + duas
+`variantes`) desde a rotação de variantes, e elas se revezam a cada envio. Uma tecla, três
+redações — que é exatamente o ponto, já que repetir o mesmo texto em sequência é o que se suspeita
+ter derrubado o número. Não criei variação nova: teria virado um segundo sistema paralelo ao que
+já funciona, e a suíte `templates.test.mjs` já garante que toda variante preserva
+`Nome completo / Cidade` (o formato que `extract.findStructured` casa por texto).
+
+**Detalhe que evita trava na hora do envio:** a conferência de variável é feita na variante **que
+vai sair** (`varianteAtual`), não no texto-base. Se a corrente travar por variável faltando, a
+tecla some com o motivo na tela, em vez de a rodada descobrir isso no meio do envio.
+
+**Aviso próprio, não uma linha na lista dos "já recebeu hoje":** o pedido de dados é a opção
+destacada e a que mais tenta ser repetida, então ele ganha a hora na cara e o rótulo vira "Pedir
+dados DE NOVO", perdendo o destaque. A linha diz que o texto muda mas o pedido não — é o pedido
+repetido que incomoda, não a redação.
+
+**Nota de processo:** este trabalho foi feito duas vezes. A primeira versão criava duas respostas
+prontas novas (`pedir-dados-curto`, `pedir-dados-reforco`) nas teclas 8 e 9 — foi escrita sem ver
+que outra sessão já tinha empurrado a rotação de variantes, e foi descartada antes de subir. A
+regra do CLAUDE.md (`git fetch` antes de começar) existe justamente para isso.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`pedirDados`, `textoPedirDados`,
+`pedirTrava`, `pedidoHoje`, tecla 4 e a saída `pedirdados`). Manifesto 0.12.1 → **0.12.2**.
+Oito suítes passando.
+
+---
+
 ## 2026-08-20 (noite) — O envio de modelos parou: etiqueta bloqueando mensagem
 
 **Relato:** *"o envio de modelos está parando, veja qual o problema"*.

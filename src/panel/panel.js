@@ -2612,9 +2612,26 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         : false;
 
       const agradecerInfo = state.templates.find((t) => t.id === THANKS_INFO_TEMPLATE_ID);
-      const infoTrava = agradecerInfo
-        ? vars.render(agradecerInfo.text, contexto).missing.length > 0
-        : true;
+
+      /**
+       * O pedido de dados, que passou a ser a tecla 4 no lugar do "Agradecer informações".
+       *
+       * É o que falta na maioria desta fila: sem nome e sem cidade não há o que classificar, e o
+       * contato fica dando voltas. O agradecimento não sumiu — continua nas respostas rápidas da
+       * própria caixa, a um clique, só sem ocupar uma tecla.
+       *
+       * As "mais duas variações" que ele pediu **já existem**: `pedir-dados` carrega três textos
+       * (`text` + duas `variantes`) e a rotação as reveza a cada envio. Uma tecla, três redações
+       * diferentes — que é o ponto, já que repetir o mesmo texto em sequência é o que se suspeita
+       * ter derrubado o número.
+       *
+       * A conferência de variável é feita na variante QUE VAI SAIR, não no texto-base: se a
+       * corrente travar por variável faltando, a tecla some com o motivo na tela, em vez de
+       * travar na hora do envio.
+       */
+      const pedirDados = state.templates.find((t) => t.id === ASK_TEMPLATE_ID);
+      const textoPedirDados = pedirDados ? await templatesLib.varianteAtual(pedirDados) : '';
+      const pedirTrava = pedirDados ? vars.render(textoPedirDados, contexto).missing.length > 0 : true;
 
       // A mensagem da ocasião vira um template de mentira, para reaproveitar o caminho de envio
       // inteiro: variáveis, anti-duplicata e registro. A chave inclui um resumo do texto, senão
@@ -2716,6 +2733,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         if (envio && ehHoje(envio.at)) textosDeHoje.push(`"${t.name}" às ${formatarHora(envio.at)}`);
       }
 
+      // O pedido de dados tem aviso PRÓPRIO, e não uma linha na lista acima: ele é a tecla 4, a
+      // opção destacada, e é a que mais tenta ser repetida. Merece a hora na cara.
+      const pedidoDeHoje = pedirDados ? await templatesLib.wasSent(state.contact.id, pedirDados.id) : null;
+      const pedidoHoje = !!pedidoDeHoje && ehHoje(pedidoDeHoje.at);
+
       // Nome errado — o apelido automático do anúncio ("[NOVO] (51) 9…") ou qualquer cadastro
       // que o `looksLikePlaceholder` recuse — deixa o {{primeiro_nome}} do agradecimento sem
       // valor. Isto aqui devolvia 'pulado' ANTES da pergunta, e o contato saía da rodada sem o
@@ -2768,16 +2790,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
       opcoes.push({ tecla: '2', valor: 'pular', rotulo: 'Pular (deixa aberto)' });
       opcoes.push({ tecla: '3', valor: 'concluir', rotulo: 'Concluir sem enviar' });
-      if (!infoTrava) {
-        // Primária quando não há modelo: em "Outros" é a saída esperada.
-        // "Agradecer e concluir" ficava confuso ao lado da tecla 1, que também agradece. O
-        // rótulo diz o que esta resposta é: o agradecimento de quem mandou informação e não
-        // pediu nada (vídeo, link, "bom dia").
+      if (!pedirTrava) {
+        // Primária quando não há modelo a enviar: sem nome e sem cidade não há o que
+        // classificar, então pedir os dados é a saída que faz o contato andar. Já pedido hoje
+        // perde o destaque — repetir tem que ser decisão, não inércia.
         opcoes.push({
           tecla: '4',
-          valor: 'agradecer',
-          rotulo: 'Agradecer informações e concluir',
-          primaria: !podeEnviar && !podePerguntarInteresse,
+          valor: 'pedirdados',
+          rotulo: pedidoHoje ? 'Pedir dados DE NOVO e concluir' : 'Pedir dados e concluir',
+          primaria: !podeEnviar && !podePerguntarInteresse && !pedidoHoje,
         });
       }
       if (!momentoTrava) {
@@ -2813,6 +2834,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
               '. Confirme antes de mandar de novo.'
             : '',
           textosDeHoje.length ? `⚠ Hoje este contato já recebeu: ${textosDeHoje.join(', ')}.` : '',
+          pedidoHoje
+            ? `⚠ Já pedi os dados hoje, às ${formatarHora(pedidoDeHoje.at)}. Pedir de novo no ` +
+              'mesmo dia soa a robô — o texto muda (são três variações que se revezam), o pedido não.'
+            : '',
           // Por que este contato parou a rodada em vez de ser concluído: é a diferença que ele
           // precisa ver na tela, senão vira "alguns concluem e outros não" de novo.
           decisao?.acao === 'perguntar'
@@ -2871,12 +2896,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // A pergunta de interesse entra aqui pelo mesmo caminho: concluir tira da fila, e quando
       // a pessoa responder a plataforma devolve o atendimento para "Meus" sozinha — é lá que o
       // "sim" vira etiqueta, na passada seguinte.
-      if (escolha === 'agradecer' || escolha === 'momento' || escolha === 'interesse') {
+      if (escolha === 'pedirdados' || escolha === 'momento' || escolha === 'interesse') {
         const texto =
-          escolha === 'agradecer' ? agradecerInfo : escolha === 'momento' ? momento : interesse;
+          escolha === 'pedirdados' ? pedirDados : escolha === 'momento' ? momento : interesse;
         const rotulo =
-          escolha === 'agradecer'
-            ? 'agradecido'
+          escolha === 'pedirdados'
+            ? 'pedi os dados'
             : escolha === 'momento'
               ? 'mensagem do momento enviada'
               : 'perguntei o interesse no conteúdo';
