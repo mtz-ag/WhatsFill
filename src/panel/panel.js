@@ -181,8 +181,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * `TODOS_OS_COREDES` é o valor especial que manda todos os ids de região de uma vez.
        */
       etiquetaFiltro: '',
-      /** As etiquetas do CRM, para o seletor. Carregadas junto com a aba. */
+      /**
+       * As etiquetas do CRM, para o seletor.
+       *
+       * Carregadas **no clique na aba** (`prepararCidades`), não no desenho: a aba não pode
+       * gastar rede só porque o painel redesenhou por outro motivo.
+       */
       etiquetasDisponiveis: [],
+      /** O que impediu a lista de carregar, para a tela poder dizer em vez de ficar "carregando". */
+      erroEtiquetas: '',
       /** Os ids das etiquetas que são COREDE, para a opção "todos os COREDEs". */
       idsDeCorede: [],
     },
@@ -263,6 +270,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     btn.dataset.tab = id;
     btn.addEventListener('click', () => {
       state.tab = id;
+      // A Cidades é a única aba que precisa de rede só para se desenhar, e o carregamento nasce
+      // AQUI, do clique — não do desenho. Ver `prepararCidades`.
+      if (id === 'cidades') prepararCidades();
       renderAll();
     });
     nav.append(btn);
@@ -4556,21 +4566,43 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * em lotes do tamanho que você escolher. Nada de rodada longa disparando sozinha: foi decisão
    * dele (15/08), depois de a rajada derrubar a API e a plataforma junto.
    */
+  /**
+   * Carrega o que a aba Cidades precisa — **e só quando você clica nela**.
+   *
+   * Isto morava dentro do `renderCidades()`, e ali era desenho, não escolha: `renderAll()` roda
+   * o tempo todo (troca de atendimento, mensagem nova, cada `setStatus`), então a aba refazia a
+   * tentativa a cada redesenho enquanto estivesse aberta — e, quando a listagem falhava, virava
+   * uma tentativa por redesenho, sem ninguém ter pedido nada. Pedido dele: *"faça com que a aba
+   * cidades não abra junto, somente quando eu realmente clicar nela"*.
+   *
+   * `preparando` guarda as duas pontas: não dispara duas vezes se você clicar rápido na aba, e
+   * **não tenta de novo sozinho** se falhar — quem decide repetir é o botão "Tentar de novo".
+   */
+  let cidadesPreparando = false;
+
+  async function prepararCidades() {
+    const c = state.cidades;
+    if (c.etiquetasDisponiveis.length || cidadesPreparando) return;
+
+    cidadesPreparando = true;
+    c.erroEtiquetas = '';
+    try {
+      const [todas, regioes] = await Promise.all([tagsLib.allTags(), tagsLib.regionTagIds()]);
+      c.etiquetasDisponiveis = [...todas].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+      c.idsDeCorede = [...regioes];
+    } catch (err) {
+      // O erro vai para a TELA, não só para o console: sem isso o seletor ficava eternamente em
+      // "Carregando a lista de etiquetas…" e não havia como saber que a busca tinha falhado.
+      c.erroEtiquetas = err.message;
+      console.warn('[WhatsFill] não consegui listar as etiquetas:', err.message);
+    } finally {
+      cidadesPreparando = false;
+      if (state.tab === 'cidades') renderAll();
+    }
+  }
+
   function renderCidades() {
     const c = state.cidades;
-
-    // O seletor precisa da lista do CRM e de saber quais delas são COREDE. Carrega uma vez, sem
-    // travar o desenho.
-    if (!c.etiquetasDisponiveis.length) {
-      Promise.all([tagsLib.allTags(), tagsLib.regionTagIds()])
-        .then(([todas, regioes]) => {
-          if (c.etiquetasDisponiveis.length) return; // outra passada já carregou
-          c.etiquetasDisponiveis = [...todas].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
-          c.idsDeCorede = [...regioes];
-          if (state.tab === 'cidades') renderAll();
-        })
-        .catch((err) => console.warn('[WhatsFill] não consegui listar as etiquetas:', err.message));
-    }
 
     body.append(
       h('p', { class: 'wf-hint' },
@@ -4651,10 +4683,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       renderAll();
     });
     cardLer.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Só quem tem a etiqueta'), selEtiqueta]));
-    if (!(state.cidades.etiquetasDisponiveis || []).length) {
-      cardLer.append(
-        h('div', { class: 'wf-origin' }, 'Carregando a lista de etiquetas… se não aparecer, abra um contato uma vez.')
-      );
+    if (!(c.etiquetasDisponiveis || []).length) {
+      if (cidadesPreparando) {
+        cardLer.append(h('div', { class: 'wf-origin' }, 'Carregando a lista de etiquetas do CRM…'));
+      } else {
+        // Falhou (ou nem chegou a rodar): botão explícito, e nenhuma tentativa automática. Uma
+        // listagem que falha costuma ser limite de requisições — repetir sozinho piora.
+        const tentar = h('button', { class: 'wf-btn', type: 'button' }, 'Carregar a lista de etiquetas');
+        tentar.addEventListener('click', () => prepararCidades());
+        cardLer.append(
+          h('div', { class: 'wf-block' },
+            c.erroEtiquetas
+              ? `Não consegui listar as etiquetas: ${c.erroEtiquetas}`
+              : 'A lista de etiquetas ainda não foi carregada.'),
+          h('div', { class: 'wf-row' }, [tentar])
+        );
+      }
     }
 
     const inputBusca = h('input', { type: 'text', value: c.busca, placeholder: 'deixe vazio para não filtrar por texto' });

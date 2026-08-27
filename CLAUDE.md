@@ -92,6 +92,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   com o cache de modelos guardando um canal só (a conta alterna instâncias) — 10 a 14 requisições
   por contato aberto. Hoje: `ESPERA_LOAD_MS`/`ESPERA_REEXAME_MS` e cache por canal. **Reação de
   tela é imediata; só a rede espera** — o contrário parece painel travado.
+- **Desenho não é escolha: `renderAll()` roda o tempo todo.** Rede disparada de dentro de um
+  `render*` vira uma requisição por redesenho (troca de atendimento, mensagem nova, cada
+  `setStatus`) — e a guarda "só se ainda não carregou" só segura depois do SUCESSO, então a
+  listagem que falha repete justo quando o certo era parar. Carregamento de aba nasce do
+  **clique** (ver `prepararCidades`), e falha vira botão de tentar de novo, nunca nova tentativa
+  automática.
 - **Antes de culpar o laço de 500ms, meça.** `pageStateLocal` parece caro (`isConcluded` varre
   `span, div` lendo `textContent`) e não é: 2,9 ms com 800 mensagens na tela, medido com
   Playwright. Um "conserto" ali teria custado uma tarde sem tocar no problema real, que era rede.

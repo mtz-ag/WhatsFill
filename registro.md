@@ -5,6 +5,42 @@
 
 ---
 
+## 2026-08-20 — A aba Cidades só gasta rede quando ele clica nela
+
+**Pedido dele:** *"faça com que a aba cidades não abra junto, somente quando eu realmente clicar
+nela"*.
+
+**Primeiro, o que já era verdade:** a aba nunca se abre sozinha. O painel nasce em "Respostas"
+(`state.tab: 'respostas'`), a aba escolhida não é guardada entre sessões, e `renderAll` desenha só
+o ramo da aba ativa. Conferido antes de mexer, para não "consertar" o que não estava quebrado.
+
+**O que realmente rodava sem ele pedir:** `renderCidades()` disparava
+`tagsLib.allTags()` + `tagsLib.regionTagIds()` **no desenho**. E desenho não é escolha —
+`renderAll()` roda o tempo todo: troca de atendimento, mensagem nova, cada `setStatus`. Enquanto a
+aba estivesse aberta, cada redesenho refazia a tentativa. A guarda era
+`if (!c.etiquetasDisponiveis.length)`, que só segura depois do **sucesso**: com a listagem
+falhando — e ela falha justamente quando o servidor está limitando —, virava uma tentativa de
+listar até 500 etiquetas por redesenho, exatamente no momento em que o certo era parar.
+
+**O conserto:** o carregamento nasce do **clique na aba** (`prepararCidades`, chamado do handler
+do botão de navegação), não do desenho. `renderCidades()` ficou sem efeito colateral nenhum — só
+DOM e duas funções puras do `categorizar.js`. `cidadesPreparando` segura as duas pontas: não
+dispara duas vezes se ele clicar rápido, e **não tenta de novo sozinho** se falhar.
+
+**Falha agora aparece.** Antes o erro ia só para o console e o seletor ficava eternamente em
+"Carregando a lista de etiquetas…" — sem jeito de saber que tinha falhado. Agora `erroEtiquetas`
+vai para a tela, com um botão "Carregar a lista de etiquetas" para tentar de novo. Repetir é
+decisão dele: listagem que falha costuma ser limite de requisições, e insistir sozinho piora.
+
+Continua valendo o de sempre: **ler a base e gravar lotes só saem no botão.** Isso nunca foi
+automático.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`prepararCidades`, `cidadesPreparando`,
+`cidades.erroEtiquetas`, handler da navegação, `renderCidades` sem efeito colateral).
+Manifesto 0.12.3 → **0.12.4**. Oito suítes passando.
+
+---
+
 ## 2026-08-20 — "Erro de carregamento ao iniciar o atendimento": era a extensão disputando a rede
 
 **Relato dele:** *"veja se a extensão está dando problema para a plataforma, quando estou iniciando
