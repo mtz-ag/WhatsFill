@@ -55,6 +55,36 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
   /** Trava contra reanálises sobrepostas: o estado da página é consultado a cada 500 ms. */
   let reexaminando = false;
+
+  /**
+   * Espera antes de carregar o contato que acabou de abrir.
+   *
+   * O `load()` disparava no instante em que a URL mudava — ou seja, **junto** com a plataforma
+   * carregando aquele mesmo atendimento. Três requisições nossas (sessão, contato, conversa)
+   * mais a rajada dela, no mesmo décimo de segundo, e o limitador de taxa do servidor recusa o
+   * preflight: é o `Failed to fetch` que o CLAUDE.md já registra como capaz de derrubar a
+   * plataforma junto. Passar a fila clicando de contato em contato multiplicava isso por item.
+   *
+   * 400 ms sai da frente do carregamento dela e junta os cliques rápidos num só — imperceptível
+   * para quem está lendo a conversa, e é a diferença entre acompanhar a plataforma e disputar
+   * com ela.
+   */
+  const ESPERA_LOAD_MS = 400;
+
+  /**
+   * Espera antes de reanalisar a conversa. Maior porque não há pressa nenhuma: é resposta do
+   * contato chegando, e um segundo a mais não muda nada para quem está olhando.
+   *
+   * O sinal de conversa é `quantidade:último texto`, e ele muda VÁRIAS vezes enquanto a
+   * plataforma renderiza a lista de mensagens. Cada mudança valia uma leitura da conversa — e,
+   * se houvesse o que aplicar, uma GRAVAÇÃO com releitura junto. Abrir um contato com conversa
+   * longa custava várias idas ao servidor que ninguém pediu.
+   */
+  const ESPERA_REEXAME_MS = 1200;
+
+  let timerLoad = null;
+  let timerReexame = null;
+
   /** A pergunta de cidade em curso, quando há uma. Impede duas caixas iguais na tela. */
   let perguntaDeCidade = null;
   /** Resposta que não é resposta: a caixa foi tirada da tela porque o contato mudou. */
@@ -258,7 +288,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     root.classList.toggle('wf-dark', !!next.dark);
 
     if (sessionChanged) {
-      await load(next.sessionId);
+      agendarLoad(next.sessionId);
       return;
     }
 
@@ -266,7 +296,44 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     // Mesmo atendimento, mensagem nova: o contato respondeu enquanto você olhava a conversa.
     // Sem isto o painel só reanalisaria quando você saísse do atendimento e voltasse.
-    if (conversaMudou) await reexaminarMensagens();
+    if (conversaMudou) agendarReexame();
+  }
+
+  /**
+   * Carrega o contato **depois** de a plataforma respirar. Ver `ESPERA_LOAD_MS`.
+   *
+   * Cancelar o anterior é o que faz passar a fila rápido custar UM carregamento em vez de um por
+   * contato: só o último clique vira requisição. A caixa de cidade some na hora, junto com o
+   * estado do contato antigo — deixá-la na tela enquanto o novo carrega é como responder a
+   * pergunta pela pessoa errada, que já aconteceu aqui.
+   */
+  function agendarLoad(sessionId) {
+    clearTimeout(timerLoad);
+    clearTimeout(timerReexame);
+    cancelarPerguntaDeCidade();
+
+    // A tela reage na hora, mesmo que a rede espere: sem isto o painel fica mostrando o contato
+    // anterior e parece travado.
+    state.contact = null;
+    state.error = null;
+    setStatus(sessionId ? 'Carregando contato…' : 'Abra um atendimento na plataforma para começar.');
+    renderAll();
+
+    timerLoad = setTimeout(() => {
+      // A rodada pode ter começado no meio da espera: quem troca de atendimento ali é ela, e
+      // um `load()` por fora carregaria o contato duas vezes e gravaria no meio de um envio.
+      if (state.auto.rodando) return;
+      load(sessionId);
+    }, ESPERA_LOAD_MS);
+  }
+
+  /** Reanalisa a conversa depois que ela parar de mudar. Ver `ESPERA_REEXAME_MS`. */
+  function agendarReexame() {
+    clearTimeout(timerReexame);
+    timerReexame = setTimeout(() => {
+      if (state.auto.rodando) return;
+      reexaminarMensagens();
+    }, ESPERA_REEXAME_MS);
   }
 
   /**

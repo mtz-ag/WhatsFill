@@ -85,6 +85,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   HTTP: é o preflight CORS recusado, o que um limitador de taxa devolve. Cada contato aberto
   custa uma sessão na plataforma + 3 chamadas nossas, então **toda volta de laço precisa de
   respiro**, não só as que enviam.
+- **O pior instante para gastar rede é o que a extensão escolhia sozinha.** "Erro de carregamento
+  ao iniciar o atendimento" foi isso: `load()` disparava no instante da troca de URL, junto com a
+  rajada da própria plataforma para o MESMO atendimento. Some com `reexaminarMensagens` refazendo
+  a leitura a cada mudança do sinal de conversa (que muda várias vezes durante a renderização) e
+  com o cache de modelos guardando um canal só (a conta alterna instâncias) — 10 a 14 requisições
+  por contato aberto. Hoje: `ESPERA_LOAD_MS`/`ESPERA_REEXAME_MS` e cache por canal. **Reação de
+  tela é imediata; só a rede espera** — o contrário parece painel travado.
+- **Antes de culpar o laço de 500ms, meça.** `pageStateLocal` parece caro (`isConcluded` varre
+  `span, div` lendo `textContent`) e não é: 2,9 ms com 800 mensagens na tela, medido com
+  Playwright. Um "conserto" ali teria custado uma tarde sem tocar no problema real, que era rede.
 - **Reabrir o atendimento NÃO reabre a janela de 24h.** Ela é regra do WhatsApp, não da
   plataforma: depois do Reiniciar, texto livre continua não chegando em quem está sem retorno há
   dias. Na rodada dos concluídos só sai modelo aprovado.

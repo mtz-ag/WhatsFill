@@ -5,6 +5,75 @@
 
 ---
 
+## 2026-08-20 — "Erro de carregamento ao iniciar o atendimento": era a extensão disputando a rede
+
+**Relato dele:** *"veja se a extensão está dando problema para a plataforma, quando estou iniciando
+o atendimento tem dado erro de carregamento"*.
+
+### O que foi DESCARTADO, com medição
+
+- **O gancho do `fetch`/`XHR` (`page-hook.js`).** Lido inteiro: só observa. Todo intercepto está
+  em `try/catch`, delega ao original e **não toca no corpo da resposta** — o modo clássico de uma
+  extensão quebrar um app (consumir o stream) não acontece aqui.
+- **O laço de 500 ms (`watchPageState` → `pageStateLocal`).** Era o meu principal suspeito, porque
+  `isConcluded()` varre `button, [role=button], mat-chip, span, div` dentro da conversa lendo
+  `textContent` de cada um. **Medido** com Playwright, fila de 50 itens + conversa crescendo:
+
+  | mensagens | elementos na página | `pageStateLocal()` |
+  | --- | --- | --- |
+  | 20 | 481 | 0,20 ms |
+  | 100 | 961 | 0,50 ms |
+  | 300 | 2161 | 0,90 ms |
+  | 800 | 5161 | 2,90 ms |
+
+  2,9 ms a cada 500 ms é 0,6% da thread principal no pior caso. **Não é o problema** — e sem medir
+  eu teria "consertado" isso e o erro dele continuaria.
+
+### O que É o problema: volume de requisições no pior instante
+
+O `CLAUDE.md` já registra o mecanismo — *"rajada de requisições derruba a API e a plataforma
+junto; `Failed to fetch` é o preflight recusado pelo limitador de taxa"*. O que faltava era ver
+**quantas** a extensão gasta, e **quando**. Três amplificadores, todos no momento em que ele abre
+ou inicia um atendimento — exatamente quando a plataforma também está carregando:
+
+1. **`load()` disparava no instante da troca de URL**, sem espera nenhuma: sessão, contato e
+   conversa saindo junto com a rajada da própria plataforma para o mesmo atendimento. Passar a
+   fila clicando de contato em contato multiplicava isso por item, e nenhuma dessas leituras era
+   aproveitada.
+2. **`reexaminarMensagens` refazia a leitura a cada mudança do sinal de conversa** — e o sinal é
+   `quantidade:último texto`, que muda VÁRIAS vezes enquanto a plataforma renderiza a lista. Cada
+   mudança valia uma leitura da conversa e, se houvesse o que aplicar, uma **gravação com
+   releitura** junto.
+3. **`hsm.list` guardava UM canal** (`cache` + `cacheKey`). A conta tem várias instâncias e a fila
+   se alterna entre elas, então cada contato de canal diferente do anterior rebuscava **100
+   modelos aprovados**. Ir e voltar entre duas instâncias = essa busca em todo contato aberto.
+
+**Conta por contato aberto** (canal alternado, conversa renderizando em três passos, com algo a
+gravar): ~10 a 14 requisições nossas, amontoadas no mesmo segundo da carga dela. Depois: ~4, e
+**fora** do momento crítico.
+
+### O conserto
+
+- `ESPERA_LOAD_MS = 400` — `agendarLoad` sai da frente do carregamento da plataforma e junta os
+  cliques rápidos num só: passar a fila inteira custa **um** carregamento, o do contato onde ele
+  parou. A tela reage na hora ("Carregando contato…"), só a rede espera.
+- `ESPERA_REEXAME_MS = 1200` — `agendarReexame` espera a conversa parar de mudar. Não há pressa:
+  é resposta do contato chegando, e um segundo não muda nada para quem está lendo.
+- `hsm.js` passa a ter um **cache por canal** (`Map`), não uma vaga só.
+
+Os dois timers são cancelados quando a rodada começa (`state.auto.rodando`): ali quem troca de
+atendimento é ela, e um `load()` por fora carregaria o contato duas vezes e gravaria no meio de um
+envio. `agendarLoad` também cancela a caixa de cidade aberta, pela mesma razão de sempre.
+
+**Ainda pesado, e é dele a decisão:** a aba Cidades varre a base inteira. Rodá-la enquanto atende
+soma o tráfego dos dois. Melhor deixar para quando não estiver na fila.
+
+**Arquivos:** [src/panel/panel.js](src/panel/panel.js) (`agendarLoad`, `agendarReexame`,
+`ESPERA_LOAD_MS`, `ESPERA_REEXAME_MS`), [src/lib/hsm.js](src/lib/hsm.js) (`cachePorCanal`),
+[CLAUDE.md](CLAUDE.md). Manifesto 0.12.2 → **0.12.3**. Oito suítes e o `checar-dom` passando.
+
+---
+
 ## 2026-08-20 — Tecla 4 vira "Pedir dados e concluir"
 
 **Pedido dele:** *"troque o botão 4 por pedir dados e concluir e faça mais duas variações dele —

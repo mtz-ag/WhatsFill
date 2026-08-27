@@ -19,8 +19,19 @@
 import * as dom from './dom.js';
 import { getMessageTemplates } from './api.js';
 
-let cache = null;
-let cacheKey = null;
+/**
+ * Um cache POR CANAL, não uma vaga só.
+ *
+ * Era `cache` + `cacheKey`: um canal de cada vez. A conta tem várias instâncias (números de
+ * WhatsApp), e os atendimentos da fila se alternam entre elas — então cada contato aberto num
+ * canal diferente do anterior descartava o cache e rebuscava **100 modelos aprovados**. Ir e
+ * voltar entre duas instâncias significava essa busca em TODO contato aberto, que é volume de
+ * rede em cima da plataforma sem nada em troca: os modelos de um canal não mudam entre um
+ * clique e outro.
+ *
+ * `Map` porque a conta tem um punhado de instâncias, não milhares — não precisa de poda.
+ */
+const cachePorCanal = new Map();
 
 /**
  * Modelos disponíveis, em forma enxuta e serializável (atravessa a ponte de mensagens no
@@ -28,10 +39,10 @@ let cacheKey = null;
  */
 export async function list({ channelId, force = false } = {}) {
   const key = channelId || '(sem canal)';
-  if (cache && cacheKey === key && !force) return cache;
+  if (!force && cachePorCanal.has(key)) return cachePorCanal.get(key);
 
   const itens = await getMessageTemplates({ channelId });
-  cache = itens.map((t) => ({
+  const lista = itens.map((t) => ({
     id: t.id,
     name: t.name,
     text: t.text || '',
@@ -41,13 +52,12 @@ export async function list({ channelId, force = false } = {}) {
     status: t.status,
     params: Array.isArray(t.params) ? t.params : [],
   }));
-  cacheKey = key;
-  return cache;
+  cachePorCanal.set(key, lista);
+  return lista;
 }
 
 export function invalidate() {
-  cache = null;
-  cacheKey = null;
+  cachePorCanal.clear();
 }
 
 /**
