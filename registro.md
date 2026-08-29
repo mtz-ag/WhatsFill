@@ -5,6 +5,67 @@
 
 ---
 
+## 2026-08-29 — Haiku como padrão, e o alarme falso de cache que vinha junto
+
+**Pedido:** *"vou testar com o haiku somente os outros tem custo alto"*.
+
+Trocado o padrão para `claude-haiku-4-5` em três lugares (`MODELO_PADRAO`, `store.ia.modelo`, o
+fallback do seletor). Padrão importa mais do que parece: quem liga a IA sem abrir o seletor roda
+no padrão, e deixar o Opus 5 ali custaria ~4× o que ele escolheu.
+
+### O que a medição derrubou
+
+Ao conferir se o Haiku aguentava o que a extensão manda, medi o prompt de sistema de verdade
+(função pura, dá para medir offline): **~1.300 tokens** com as 11 respostas de fábrica. O
+`CLAUDE.md` afirmava **~3.700**, e foi esse número que me fez estimar o custo 3× alto na entrega
+anterior. Corrigido nos dois lugares.
+
+### O alarme falso que isso ia criar
+
+O mínimo de prefixo para o `cache_control` valer **não cresce com a geração**: 512 no Opus 5,
+1.024 no Sonnet 5, **4.096 no Haiku 4.5**. Com ~1.300 tokens, o Haiku fica a um terço do mínimo —
+o cache **não pega, e não pega em silêncio**: `cacheLido: 0`, sem erro nenhum.
+
+O problema não é o custo (com prompt pequeno, perder o cache dói pouco). O problema é que o painel
+**ensina que "SEM CACHE" em chamadas seguidas é sinal de problema**, e no Haiku isso apareceria em
+100% das chamadas estando tudo certo. Ele veria o alarme na primeira rodada e concluiria que a IA
+está quebrada — ou, pior, aprenderia a ignorar o alarme, que aí não toca no dia em que é de
+verdade. `CACHE_MINIMO_TOKENS` + `vaiCachear` existem para a tela dizer a verdade: no Haiku o log
+mostra `sem cache (esperado)` e o aviso do seletor explica por quê, com o número.
+
+### Custo remedido, por mil contatos AVALIADOS
+
+Não por contato da base: a regex roda antes e a IA só vê o que sobrou.
+
+| Modelo | Cacheia? | Custo/mil | Teto de US$ 20 compra |
+|---|---|---|---|
+| Haiku 4.5 | não (mín. 4.096) | ~US$ 2,50 | ~8.000 |
+| Sonnet 5 | sim | ~US$ 4,50 | ~4.400 |
+| Opus 5 | sim | ~US$ 11 | ~1.800 |
+
+O Haiku segue sendo o mais barato com folga **mesmo sem cache** — justamente porque o prompt é
+pequeno. Se um dia o catálogo dele passar de 4.096 tokens, o cache do Haiku liga sozinho e a conta
+cai para ~US$ 1,20/mil; não vale forçar isso agora.
+
+Confirmado também que o Haiku 4.5 **suporta structured outputs** (`output_config.format`), que é o
+que garante o JSON da decisão. Sem isso, toda decisão viraria `incerto` e o teste seria inútil.
+
+### Testes acoplados ao padrão
+
+Dois testes de `effort` montavam a requisição **sem** nomear o modelo, herdando o padrão. Com o
+padrão virando Haiku (que não recebe `effort`) eles quebraram — e teriam parado de testar o que
+dizem testar se eu tivesse só ajustado a asserção. Agora nomeiam `claude-opus-5` explicitamente.
+Lição: teste que herda o padrão testa o padrão, não o comportamento.
+
+**Arquivos:** `src/lib/ia.js`, `src/lib/store.js`, `src/panel/panel.js`, `tests/ia.test.mjs`,
+`CLAUDE.md`, `manifest.json` (0.15.0 → **0.16.0**).
+
+**Pendências:** segue sem nenhuma chamada real. O primeiro teste no "Thiago Tim" confirma três
+coisas de uma vez: JSON inteiro de volta, contador subindo, e o log dizendo
+`sem cache (esperado)` em vez de `SEM CACHE`.
+
+---
+
 ## 2026-08-29 — Teto de gasto da API, e o mal-entendido que o motivou
 
 **Pedido:** *"a ligação de api eu usaria meu plano aqui então teria que ver a questão de gasto,

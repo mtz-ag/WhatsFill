@@ -24,8 +24,17 @@
  * está na página a plataforma lê).
  */
 
-/** O modelo padrão. Trocável na Config — quem decide custo é ele, não este arquivo. */
-export const MODELO_PADRAO = 'claude-opus-5';
+/**
+ * O modelo padrão.
+ *
+ * **Haiku 4.5 por escolha dele** (29/08: *"vou testar com o haiku somente, os outros tem custo
+ * alto"*). Padrão importa mais do que parece: ligar a IA com o Opus 5 embaixo custaria ~4× o
+ * que ele escolheu, e o padrão é o que roda em quem nunca abriu o seletor.
+ *
+ * Consequência a lembrar: o Haiku **não cacheia** este prompt (ver `CACHE_MINIMO_TOKENS`), então
+ * "SEM CACHE" no log é o esperado aqui, não defeito.
+ */
+export const MODELO_PADRAO = 'claude-haiku-4-5';
 
 /** Abaixo disto a decisão não é recomendada: vira "incerto" e ele decide como antes. */
 export const CONFIANCA_MINIMA = 0.7;
@@ -170,6 +179,40 @@ export function montarContato({ mensagens = [], campos = {}, etiquetas = [] } = 
  * sem `effort` — que é o padrão do modelo, não uma degradação.
  */
 const MODELOS_COM_ESFORCO = new Set(['claude-opus-5', 'claude-sonnet-5', 'claude-fable-5']);
+
+/**
+ * Prefixo mínimo, em tokens, para o `cache_control` valer alguma coisa em cada modelo.
+ *
+ * **Abaixo do mínimo o cache não dá erro: ele simplesmente não acontece**, e `cacheLido` volta
+ * zero para sempre. Como o painel ensina que "SEM CACHE em chamadas seguidas" é sinal de
+ * problema, o Haiku produziria esse alarme em 100% das chamadas sendo que está tudo certo — o
+ * prompt de sistema tem ~1.300 tokens (medido em 29/08, com as 11 respostas de fábrica) e o
+ * mínimo do Haiku 4.5 é 4.096. Ele nem chega perto.
+ *
+ * O mínimo **não cresce com a geração**: 512 no Opus 5, 1.024 no Sonnet 5, 4.096 no Haiku 4.5.
+ * Por isso é tabela, e não uma regra do tipo "modelo novo cacheia".
+ */
+export const CACHE_MINIMO_TOKENS = {
+  'claude-opus-5': 512,
+  'claude-sonnet-5': 1024,
+  'claude-haiku-4-5': 4096,
+};
+
+/** Tamanho aproximado do prompt de sistema hoje, em tokens. Português: ~3,5 chars por token. */
+export function tokensAproximados(texto) {
+  return Math.round(String(texto || '').length / 3.5);
+}
+
+/**
+ * O `cache_control` deste prompt vai pegar neste modelo?
+ *
+ * Serve para a tela poder dizer a verdade em vez de alarme falso. Modelo fora da tabela: assume
+ * que sim — o alarme existe para o caso conhecido, e alarme por desconhecimento treina a ignorar.
+ */
+export function vaiCachear(modelo, tokensDoSistema) {
+  const min = CACHE_MINIMO_TOKENS[modelo];
+  return min === undefined ? true : tokensDoSistema >= min;
+}
 
 /** `output_config` com `effort` só onde ele é aceito. */
 function saida(modelo, esforco, format) {

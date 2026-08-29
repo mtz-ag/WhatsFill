@@ -4329,7 +4329,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // custando" vira palpite — e foi palpite que quase manteve a IA fora do projeto.
     if (decisao?.custo) {
       const c = decisao.custo;
-      const cacheOk = c.cacheLido > 0 ? `cache ${c.cacheLido}` : 'SEM CACHE';
+      // "SEM CACHE" só é alarme onde o cache PODERIA ter pego. No Haiku 4.5 o prompt não
+      // alcança o mínimo de 4.096 tokens, então o zero é o normal — e alarme que toca sempre
+      // é alarme que se aprende a ignorar.
+      const podia = iaLib.vaiCachear(
+        cfg.modelo || iaLib.MODELO_PADRAO,
+        iaLib.tokensAproximados(iaLib.montarSistema({ templates: state.templates, regras: cfg.regras }))
+      );
+      const cacheOk = c.cacheLido > 0 ? `cache ${c.cacheLido}` : podia ? 'SEM CACHE' : 'sem cache (esperado)';
       // O dólar vem junto do token: token é diagnóstico (o cache está pegando?), dólar é a
       // pergunta que ele realmente faz. Sem o acumulado do mês, cada linha parece barata e a
       // soma só aparece na fatura.
@@ -6038,23 +6045,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     const selModelo = h('select', {});
     for (const [id, rotulo] of [
-      ['claude-opus-5', 'Opus 5 — o mais capaz (~US$ 12 por mil contatos)'],
-      ['claude-sonnet-5', 'Sonnet 5 — meio-termo (~US$ 5 por mil)'],
-      ['claude-haiku-4-5', 'Haiku 4.5 — o mais barato (~US$ 1,60 por mil)'],
+      ['claude-haiku-4-5', 'Haiku 4.5 — o mais barato (~US$ 2,50 por mil contatos)'],
+      ['claude-sonnet-5', 'Sonnet 5 — meio-termo (~US$ 4,50 por mil)'],
+      ['claude-opus-5', 'Opus 5 — o mais capaz (~US$ 11 por mil)'],
     ]) {
       const opt = h('option', { value: id }, rotulo);
-      if (id === (cfg.modelo || 'claude-opus-5')) opt.selected = true;
+      if (id === (cfg.modelo || iaLib.MODELO_PADRAO)) opt.selected = true;
       selModelo.append(opt);
     }
     selModelo.addEventListener('change', () => salvarIA({ modelo: selModelo.value }).then(renderAll));
     body.append(
       h('label', { class: 'wf-field' }, [h('span', {}, 'Modelo'), selModelo]),
       h('div', { class: 'wf-origin' },
-        'Estimativa com cache ligado, sobre o tamanho real das suas respostas prontas — e já ' +
-          'contando o raciocínio do modelo, que é cobrado como saída. Os valores subiram em ' +
-          '20/08 porque a estimativa anterior não contava com ele. Quem vale é o contador ' +
-          'abaixo, que soma o que a API realmente cobrou. No log da rodada, "SEM CACHE" em ' +
-          'chamadas seguidas significa conta 3,5× maior: alguma coisa no prompt passou a variar.')
+        avisoDoModelo(cfg))
     );
     montarTetoDeGasto(cfg);
 
@@ -6099,6 +6102,33 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * decorativo — precisando de mais, ele levanta o teto, que é uma escolha visível e fica salva.
    * O contador vira sozinho na mudança de mês.
    */
+  /**
+   * O aviso embaixo do seletor de modelo.
+   *
+   * Ele muda com o modelo por um motivo específico: o painel ensina que "SEM CACHE" em chamadas
+   * seguidas é sinal de problema, e **no Haiku 4.5 isso aparece em toda chamada estando tudo
+   * certo** — o prompt tem ~1.300 tokens e o mínimo dele para cachear é 4.096. Alarme que toca
+   * sempre é alarme que se aprende a ignorar, e aí ele não toca no dia em que é de verdade.
+   */
+  function avisoDoModelo(cfg) {
+    const modelo = cfg.modelo || iaLib.MODELO_PADRAO;
+    const tks = iaLib.tokensAproximados(iaLib.montarSistema({ templates: state.templates, regras: cfg.regras }));
+    const cacheia = iaLib.vaiCachear(modelo, tks);
+    const base =
+      'Estimativa por mil contatos AVALIADOS, não por contato da base: a detecção por texto ' +
+      'roda antes e a IA só vê o que sobrou. Já conta o raciocínio do modelo, cobrado como ' +
+      'saída. Quem vale é o contador abaixo, que soma o que a API realmente cobrou. ';
+    return (
+      base +
+      (cacheia
+        ? 'Neste modelo o cache pega: "SEM CACHE" no log em chamadas seguidas significa conta ' +
+          'bem maior, e que alguma coisa no prompt passou a variar.'
+        : `Neste modelo o cache NÃO pega e isso é esperado: seu prompt tem ~${tks} tokens e o ` +
+          `mínimo para cachear é ${iaLib.CACHE_MINIMO_TOKENS[modelo]}. O log vai dizer "SEM CACHE" ` +
+          'em toda chamada — aqui não é defeito, e já está embutido na estimativa acima.')
+    );
+  }
+
   function montarTetoDeGasto(cfg) {
     const gasto = cfg.gasto || {};
     const mes = iaLib.mesDe();

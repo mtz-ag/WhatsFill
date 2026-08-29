@@ -15,6 +15,9 @@ import {
   revisarRascunho,
   validarRascunho,
   podeEnviarSozinho,
+  vaiCachear,
+  tokensAproximados,
+  CACHE_MINIMO_TOKENS,
   custoEmDolares,
   acumularGasto,
   podeGastar,
@@ -118,8 +121,10 @@ grupo('o bloco do contato não vaza nem estoura');
 
 grupo('a requisição pede cache e formato — é o que segura o custo e a forma');
 {
-  const req = montarRequisicao({ sistema: 'S', contato: 'C', ids: IDS });
-  check(req.model === MODELO_PADRAO, `modelo padrão = ${req.model}`);
+  // O modelo vai EXPLÍCITO: o padrão é o Haiku, que não recebe `effort`, e um teste que herda
+  // o padrão para de testar o que diz testar no dia em que o padrão muda.
+  const req = montarRequisicao({ sistema: 'S', contato: 'C', ids: IDS, modelo: 'claude-opus-5' });
+  check(req.model === 'claude-opus-5', `o modelo pedido é o que vai no corpo (${req.model})`);
   check(req.system[0].cache_control?.type === 'ephemeral', 'o sistema é cacheado (10% do preço a partir da 2ª)');
   check(req.output_config?.format?.type === 'json_schema', 'formato garantido por esquema');
   // O teto era 512 e virou 2048 quando o Opus 5 entrou: ele PENSA por padrão, e o pensamento
@@ -171,7 +176,7 @@ grupo('rascunho: a conversa longa entra inteira — é o caso de uso');
   check(bloco.length > 2500, `transcrição não é cortada cedo = ${bloco.length} caracteres`);
   check(/Pelotas/.test(bloco), 'a cidade vai junto');
 
-  const req = montarRequisicaoRascunho({ sistema: 'S', contato: 'C' });
+  const req = montarRequisicaoRascunho({ sistema: 'S', contato: 'C', modelo: 'claude-opus-5' });
   check(req.system[0].cache_control?.type === 'ephemeral', 'o sistema do rascunho também é cacheado');
   // Passou a ter esquema em 20/08/2026: sem um numero devolvido pela IA nao ha como aplicar
   // limiar, e sem limiar nao ha envio automatico. Ver podeEnviarSozinho.
@@ -355,6 +360,38 @@ grupo('teto: config antiga sem tetoUsd nao pode virar gasto sem limite');
   // sem que alguem tenha escolhido. O comportamento e documentado, entao fica travado por teste.
   const r = podeGastar({ gasto: { mes: mesDe(), usd: 100 }, tetoUsd: undefined });
   check(r.pode && r.teto === 0, 'sem teto definido, nao barra — por isso o default precisa mesclar');
+}
+
+
+grupo('cache: o minimo nao cresce com a geracao, entao e tabela e nao regra');
+{
+  // Medido em 29/08: ~1.300 tokens com as 11 respostas de fabrica. O CLAUDE.md dizia 3.700.
+  const real = 1300;
+
+  check(vaiCachear('claude-opus-5', real), 'Opus 5 (min 512) cacheia');
+  check(vaiCachear('claude-sonnet-5', real), 'Sonnet 5 (min 1024) cacheia');
+  check(!vaiCachear('claude-haiku-4-5', real), 'Haiku 4.5 (min 4096) NAO cacheia');
+
+  // Regressao do alarme falso: o painel ensina que "SEM CACHE" e sinal de problema. Se este
+  // teste passar a falhar porque o prompt cresceu, o alarme do Haiku volta a fazer sentido —
+  // e o texto da tela precisa mudar junto.
+  check(CACHE_MINIMO_TOKENS['claude-haiku-4-5'] > CACHE_MINIMO_TOKENS['claude-opus-5'],
+    'o modelo mais novo tem o MENOR minimo: nao da para deduzir pela geracao');
+
+  // Modelo fora da tabela assume que cacheia: alarme por desconhecimento treina a ignorar.
+  check(vaiCachear('modelo-futuro', 10), 'modelo desconhecido nao dispara alarme');
+}
+
+grupo('padrao: o modelo que roda em quem nunca abriu o seletor');
+{
+  // Escolha dele em 29/08. Padrao caro e o que transforma "vou testar" em fatura.
+  check(MODELO_PADRAO === 'claude-haiku-4-5', 'padrao e o Haiku, o mais barato');
+
+  // E o padrao precisa ser um modelo que a extensao sabe precificar, senao o teto conta errado.
+  check(!!PRECOS_USD_POR_MTOK[MODELO_PADRAO], 'o padrao esta na tabela de precos');
+
+  check(tokensAproximados('a'.repeat(3500)) === 1000, 'estimativa de token: ~3,5 chars por token');
+  check(tokensAproximados('') === 0, 'texto vazio, zero tokens');
 }
 
 fim();

@@ -534,7 +534,7 @@ const DEFAULTS = {
    */
   ia: {
     ligada: false,
-    modelo: 'claude-opus-5',
+    modelo: 'claude-haiku-4-5',
     /**
      * Instruções extras dele, somadas ao prompt de sistema.
      *

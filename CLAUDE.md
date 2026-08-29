@@ -367,10 +367,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   está no prompt cacheado, e é a amostra mais fiel da voz dele que existe. `revisarRascunho`
   levanta a mão (marcador esquecido, promessa de bem ou benefício, texto longo) mas **nunca
   esconde o texto**: esconder tiraria a decisão dele.
-- **`cache_control` no prompt de sistema é o que segura o custo.** O catálogo + regras são
-  ~3.700 tokens idênticos em toda chamada; sem cache a conta é 3,5× maior. O log da rodada
-  mostra `cacheLido` de cada chamada — zero nele em chamadas seguidas significa que algo no
-  prompt passou a variar, e nada acusa isso além do número.
+- **`cache_control` no prompt de sistema segura o custo — QUANDO o modelo cacheia.** O catálogo
+  + regras são **~1.300 tokens** com as 11 respostas de fábrica (medido 29/08; o número antigo
+  aqui, 3.700, estava errado e foi ele que fez a estimativa de custo sair 3× alta). O mínimo para
+  cachear **não cresce com a geração**: 512 no Opus 5, 1.024 no Sonnet 5, **4.096 no Haiku 4.5** —
+  ou seja, no padrão atual o cache **não pega**, e não pega em silêncio (`cacheLido: 0`, sem erro).
+  Por isso `CACHE_MINIMO_TOKENS` + `vaiCachear` existem: o painel ensinava que "SEM CACHE" é sinal
+  de problema, e no Haiku isso apareceria em 100% das chamadas estando tudo certo. **Alarme que
+  toca sempre é alarme que se aprende a ignorar** — e aí não toca no dia em que é de verdade.
+  Mexeu no tamanho do prompt ou no modelo? O teste de `vaiCachear` trava os dois lados.
 - **A assinatura Claude Pro/Max NÃO cobre a API.** São faturas separadas: a assinatura é do
   claude.ai e do Claude Code; a chave `sk-ant-…` é pré-paga por token no console. "Uso meu plano"
   foi a suposição dele em 29/08 e não existe — cada avaliação é despesa NOVA em cima do plano.
