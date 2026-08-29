@@ -1715,7 +1715,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'conclui esses contatos. Ela marca com a etiqueta abaixo e segue. No fim, você filtra a ' +
           'fila por ela e responde todos de uma vez.'),
       h('div', { class: 'wf-origin' },
-        'A detecção é por texto, sem IA — e ela sabe a diferença entre quem PEDE ajuda e o ' +
+        'A detecção é por texto, e ela sabe a diferença entre quem PEDE ajuda e o ' +
           'apoiador que OFERECE ("quero ajudar" não marca ninguém). Contato marcado também ' +
           'aparece com aviso no cabeçalho quando você o abre à mão.'),
     ]);

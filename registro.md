@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-08-29 — Tira a menção a IA do texto do painel
+
+**Pedido:** print do cartão "Responder pessoalmente" — *"resquícios que falei pra retirar"*. Eram
+os **textos da tela**, não os arquivos (aqueles eram outro problema, na entrada acima).
+
+A frase dizia *"A detecção é por texto, sem IA — e ela sabe a diferença entre quem PEDE ajuda e o
+apoiador que OFERECE"*. Na versão de produção não existe IA para contrastar, então o "sem IA"
+levanta uma pergunta que a tela não responde. A distinção PEDE/OFERECE, que é a informação que
+importa, ficou intacta.
+
+Varri a interface inteira depois (`panel.js`, `window.html`, `main.js`, `content.js`, o CSS):
+**era a única**. A outra correspondência do grep, *"soa a robô"*, é sobre mensagem repetida parecer
+spam — não tem relação.
+
+**O que NÃO tirei, e por quê.** Fora da tela sobram menções que não são resquício:
+`CLAUDE.md` ("Sem IA na extração") é regra de projeto ativa; os comentários de `extract.js` e
+`triagem.js` explicam **por que** o código é determinístico, que é justificativa de arquitetura;
+`README.md`/`STORE.md` descrevem o produto e a afirmação é verdadeira nesta versão; `registro.md`
+é histórico e não se reescreve. Nenhuma delas aparece para quem usa o painel.
+
+**Arquivos:** `src/panel/panel.js`, `manifest.json` (0.13.0 → **0.13.1**).
+
+---
+
 ## 2026-08-29 — Os arquivos de IA dentro da versão de produção: a pasta, não o branch
 
 **Relato:** *"remova o que tiver de ai na versão atual essa era pra ser separada"* — ele viu
