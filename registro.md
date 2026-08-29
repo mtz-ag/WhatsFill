@@ -5,6 +5,41 @@
 
 ---
 
+## 2026-08-29 — Removida a função "Responder pessoalmente" (triagem)
+
+**Pedido:** *"continua lá a função também não foi retirada, isso foi feito hoje quero que retire
+essas mudanças"*.
+
+Eu tinha entendido errado duas vezes: primeiro procurei **arquivos** de IA, depois tirei a
+**menção** a IA do texto. O que ele queria era a **função inteira** — o cartão "Responder
+pessoalmente" da print, feito hoje às 14:44 no commit `0ca18fd`.
+
+**Revertido com `git revert`**, não apagado à mão: o histórico fica, e um `git revert` do revert
+traz tudo de volta se ele mudar de ideia. Saiu:
+
+- `src/lib/triagem.js` e `tests/triagem.test.mjs` (arquivos inteiros)
+- o cartão "Responder pessoalmente" no cartão de Ritmo
+- `precisaDeVoce` / `separarParaVoce` e o aviso "⚠ RESPONDA VOCÊ" no cabeçalho do contato
+- os campos `etiquetaTriagem` e `padroesTriagem` do `store`
+- as armadilhas de triagem no `CLAUDE.md`
+
+Junto saiu o `03bc7db` de hoje, que só editava uma linha **dentro** desse cartão — sem o cartão,
+não sobrava o que editar.
+
+**O `registro.md` foi preservado inteiro** ao resolver o conflito: registro é histórico e não se
+reescreve, mesmo quando a mudança que ele descreve é desfeita. As entradas de hoje continuam lá.
+
+**O que NÃO saiu, e não é resquício:** as menções a "triagem" que sobram no `panel.js` são do
+conceito anterior — assumir o contato para "Meus", que já existia antes do `0ca18fd` e não veio
+com ele.
+
+**Versão:** manifesto voltaria a 0.12.4 pelo revert; subi para **0.13.2** de propósito. Ele tem
+0.13.1 carregada, e número que desce não serve para conferir se a mudança chegou.
+
+Oito suítes passando (eram nove; a de triagem saiu junto).
+
+---
+
 ## 2026-08-29 — Tira a menção a IA do texto do painel
 
 **Pedido:** print do cartão "Responder pessoalmente" — *"resquícios que falei pra retirar"*. Eram

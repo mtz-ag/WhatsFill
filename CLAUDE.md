@@ -46,7 +46,6 @@ src/lib/tags.js         etiquetas: COREDE, regras de conteúdo
 src/lib/categorizar.js  etiqueta de CIDADE para a base inteira (puro, testado)
 src/lib/hsm.js          modelos de mensagem aprovados
 src/lib/vars.js         variáveis dos templates e bloqueio por variável faltante
-src/lib/triagem.js      quem a rodada NÃO trata: pedido de ajuda/dinheiro (puro, testado)
 src/data/coredes-rs.json  município -> COREDE (planilha oficial da SPGG-RS)
 tools/make-icons.mjs    desenha os ícones
 tests/*.test.mjs        Node puro, sem dependência
@@ -114,12 +113,6 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 - **Antes de culpar o laço de 500ms, meça.** `pageStateLocal` parece caro (`isConcluded` varre
   `span, div` lendo `textContent`) e não é: 2,9 ms com 800 mensagens na tela, medido com
   Playwright. Um "conserto" ali teria custado uma tarde sem tocar no problema real, que era rede.
-- **"Ajuda" é a mesma palavra dos dois lados da campanha.** *"Quero ajudar"* é apoiador se
-  oferecendo — o público principal, já classificado como "Apoiador Muito engajado" no
-  `extract.js`. *"Preciso de ajuda"* é o oposto, e é o caso que NUNCA pode receber resposta
-  automática (Lei 9.504/97). Um padrão com `/ajuda/` põe metade da base na fila de revisão dele e
-  o trabalho para. Em `triagem.js` a oferta desarma a mensagem inteira ANTES de qualquer teste de
-  pedido, e há teste para cada lado.
 - **Reabrir o atendimento NÃO reabre a janela de 24h.** Ela é regra do WhatsApp, não da
   plataforma: depois do Reiniciar, texto livre continua não chegando em quem está sem retorno há
   dias. Na rodada dos concluídos só sai modelo aprovado.
@@ -369,10 +362,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Testes
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as nove suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as oito suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/triagem.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,
