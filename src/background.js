@@ -13,6 +13,8 @@
 import { RPC } from './lib/rpc.js';
 import { MSG_ENERGIA } from './lib/keepalive.js';
 import { MSG_IA, atender } from './lib/ia-cliente.js';
+import { podeGastar, acumularGasto, custoEmDolares, MODELO_PADRAO } from './lib/ia.js';
+import * as store from './lib/store.js';
 
 const BOUNDS_KEY = 'windowBounds';
 const DEFAULT_BOUNDS = { width: 430, height: 760, left: 40, top: 60 };
@@ -49,7 +51,32 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   (async () => {
     try {
       const { iaChave } = await chrome.storage.local.get('iaChave');
-      sendResponse(await atender(msg, iaChave));
+
+      // O teto ANTES da chamada. Este é o único ponto por onde sai dinheiro, e é por isso que a
+      // trava mora aqui e não no painel: nenhum caminho novo lá consegue passar por fora.
+      const conf = (await store.get('ia')) || {};
+      const veredito = podeGastar({ gasto: conf.gasto, tetoUsd: conf.tetoUsd });
+      if (!veredito.pode) {
+        sendResponse({ ok: false, motivo: veredito.motivo, tetoAtingido: true });
+        return;
+      }
+
+      const r = await atender(msg, iaChave);
+
+      // Contabiliza o que a chamada custou, mesmo que a decisão tenha vindo inútil: a API cobra
+      // pela chamada, não pelo acerto. Gasto que só conta o que deu certo subestima a fatura.
+      if (r?.custo) {
+        const modelo = msg.modelo || MODELO_PADRAO;
+        const usd = custoEmDolares(r.custo, modelo);
+        const tokens =
+          (r.custo.entrada || 0) + (r.custo.cacheEscrito || 0) + (r.custo.cacheLido || 0) + (r.custo.saida || 0);
+        const gasto = acumularGasto(conf.gasto, usd, Date.now(), tokens);
+        await store.set('ia', { ...conf, gasto });
+        r.gastoMes = gasto;
+        r.custoUsd = usd;
+      }
+
+      sendResponse(r);
     } catch (err) {
       // Falha aqui nunca pode derrubar a rodada: vira "incerto" do outro lado.
       sendResponse({ ok: false, motivo: err?.message || String(err) });

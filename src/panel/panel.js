@@ -4330,9 +4330,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (decisao?.custo) {
       const c = decisao.custo;
       const cacheOk = c.cacheLido > 0 ? `cache ${c.cacheLido}` : 'SEM CACHE';
-      registrarNaRodada('IA', 'pulado', `${decisao.acao} · ${cacheOk} · entrada ${c.entrada} · saída ${c.saida}`);
+      // O dólar vem junto do token: token é diagnóstico (o cache está pegando?), dólar é a
+      // pergunta que ele realmente faz. Sem o acumulado do mês, cada linha parece barata e a
+      // soma só aparece na fatura.
+      const usd = decisao.custoUsd ? ` · US$ ${decisao.custoUsd.toFixed(4)}` : '';
+      const mes = decisao.gastoMes ? ` · mês US$ ${(decisao.gastoMes.usd || 0).toFixed(2)}` : '';
+      registrarNaRodada('IA', 'pulado', `${decisao.acao} · ${cacheOk} · entrada ${c.entrada} · saída ${c.saida}${usd}${mes}`);
     }
-    if (decisao?.aviso) registrarNaRodada('IA', 'pulado', `avaliação não usada: ${decisao.aviso}`);
+    if (decisao?.aviso) {
+      // Teto atingido não é "a IA não decidiu": é uma decisão dele, tomada antes, chegando
+      // agora. Vai como aviso para não se perder entre as linhas normais do log.
+      const teto = /teto de gasto/i.test(decisao.aviso);
+      registrarNaRodada('IA', teto ? 'aviso' : 'pulado', teto ? decisao.aviso : `avaliação não usada: ${decisao.aviso}`);
+    }
     return decisao;
   }
 
@@ -6028,9 +6038,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     const selModelo = h('select', {});
     for (const [id, rotulo] of [
-      ['claude-opus-5', 'Opus 5 — o mais capaz (~US$ 7 por mil contatos)'],
-      ['claude-sonnet-5', 'Sonnet 5 — meio-termo (~US$ 2,70 por mil)'],
-      ['claude-haiku-4-5', 'Haiku 4.5 — o mais barato (~US$ 1,35 por mil)'],
+      ['claude-opus-5', 'Opus 5 — o mais capaz (~US$ 12 por mil contatos)'],
+      ['claude-sonnet-5', 'Sonnet 5 — meio-termo (~US$ 5 por mil)'],
+      ['claude-haiku-4-5', 'Haiku 4.5 — o mais barato (~US$ 1,60 por mil)'],
     ]) {
       const opt = h('option', { value: id }, rotulo);
       if (id === (cfg.modelo || 'claude-opus-5')) opt.selected = true;
@@ -6040,11 +6050,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(
       h('label', { class: 'wf-field' }, [h('span', {}, 'Modelo'), selModelo]),
       h('div', { class: 'wf-origin' },
-        'Os valores são estimativa com cache ligado, medidos sobre o tamanho real das suas ' +
-          'respostas prontas. O log da rodada mostra o custo de cada chamada — se aparecer ' +
-          '"SEM CACHE" em chamadas seguidas, a conta está 3,5× maior e alguma coisa no prompt ' +
-          'passou a variar.')
+        'Estimativa com cache ligado, sobre o tamanho real das suas respostas prontas — e já ' +
+          'contando o raciocínio do modelo, que é cobrado como saída. Os valores subiram em ' +
+          '20/08 porque a estimativa anterior não contava com ele. Quem vale é o contador ' +
+          'abaixo, que soma o que a API realmente cobrou. No log da rodada, "SEM CACHE" em ' +
+          'chamadas seguidas significa conta 3,5× maior: alguma coisa no prompt passou a variar.')
     );
+    montarTetoDeGasto(cfg);
 
     const areaRegras = h('textarea', { rows: '4', placeholder: 'ex.: quem falar em agenda de Caxias esta semana é para mim' });
     areaRegras.value = cfg.regras || '';
@@ -6076,6 +6088,75 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(h('hr', { class: 'wf-sep' }));
   }
 
+  /**
+   * O teto de gasto da API.
+   *
+   * Existe por um mal-entendido que valia dinheiro: a assinatura Claude Pro/Max **não** cobre a
+   * API. São faturas separadas, e cada avaliação daqui é despesa nova em cima do plano. Por isso
+   * a primeira linha deste bloco é essa frase, e não o campo.
+   *
+   * **Não há botão de zerar o contador de propósito.** Zerar é o único controle que torna o teto
+   * decorativo — precisando de mais, ele levanta o teto, que é uma escolha visível e fica salva.
+   * O contador vira sozinho na mudança de mês.
+   */
+  function montarTetoDeGasto(cfg) {
+    const gasto = cfg.gasto || {};
+    const mes = iaLib.mesDe();
+    const usado = gasto.mes === mes ? Number(gasto.usd) || 0 : 0;
+    const chamadas = gasto.mes === mes ? Number(gasto.chamadas) || 0 : 0;
+    const teto = Number(cfg.tetoUsd) || 0;
+
+    body.append(
+      h('div', { class: 'wf-block' },
+        'A chave da API NÃO usa a sua assinatura do Claude (Pro/Max). São duas cobranças ' +
+          'diferentes: a assinatura é do claude.ai e do Claude Code; a API é pré-paga por token, ' +
+          'com fatura própria no console.anthropic.com. Ligar a IA aqui gera gasto NOVO em cima ' +
+          'do que você já paga — o teto abaixo é o que impede esse gasto de surpreender.')
+    );
+
+    const linha = teto > 0
+      ? `US$ ${usado.toFixed(2)} de US$ ${teto.toFixed(2)} em ${mes} · ${chamadas} chamada(s)`
+      : `US$ ${usado.toFixed(2)} em ${mes} · ${chamadas} chamada(s) · SEM TETO`;
+    const estourou = teto > 0 && usado >= teto;
+    const perto = teto > 0 && !estourou && usado >= teto * 0.8;
+
+    body.append(
+      h('div', { class: estourou || perto ? 'wf-block' : 'wf-preview' },
+        estourou
+          ? `TETO ATINGIDO — ${linha}. A IA está parada até você levantar o teto ou virar o mês. ` +
+            'O resto da extensão segue funcionando normalmente.'
+          : perto
+            ? `${linha} — passou de 80% do teto.`
+            : linha)
+    );
+
+    const campoTeto = h('input', { type: 'number', min: '0', step: '1' });
+    campoTeto.value = String(teto);
+    campoTeto.addEventListener('change', () =>
+      withBusy(async () => {
+        const v = Math.max(0, Number(campoTeto.value) || 0);
+        await salvarIA({ tetoUsd: v });
+        setStatus(
+          v > 0
+            ? `Teto de US$ ${v.toFixed(2)} por mês. A IA para sozinha ao atingir.`
+            : 'Teto REMOVIDO — nada limita o gasto da API a partir de agora.',
+          v > 0 ? 'ok' : 'err'
+        );
+        renderAll();
+      })
+    );
+
+    body.append(
+      h('label', { class: 'wf-field' }, [h('span', {}, 'Teto de gasto (US$ por mês, 0 = sem teto)'), campoTeto]),
+      h('div', { class: 'wf-origin' },
+        'Quem obriga o teto é o service worker, no mesmo lugar onde a chave é usada — não o ' +
+          'painel. Atingido, toda chamada vira "incerto" e o painel volta a se comportar como ' +
+          'antes da IA existir: a rodada pergunta, você decide. Não há botão de zerar o ' +
+          'contador; precisando de mais, levante o teto — assim a decisão fica registrada. ' +
+          'O valor é estimado pelos tokens que a API devolve, para decidir parar; a fatura de ' +
+          'verdade é a do console.')
+    );
+  }
   async function salvarIA(mudanca) {
     state.ia = { ...(await store.get('ia')), ...mudanca };
     await store.set('ia', state.ia);

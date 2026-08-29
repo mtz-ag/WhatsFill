@@ -555,6 +555,20 @@ const DEFAULTS = {
      * de quatro travas, não a única.
      */
     enviarRascunhoAuto: false,
+    /**
+     * Teto de gasto da API, em DÓLARES por mês. `0` desliga o teto.
+     *
+     * **A assinatura Claude Pro/Max não cobre a API** — são faturas separadas, e cada chamada
+     * daqui é despesa nova em cima do plano. Por isso o padrão nasce COM limite: teto que se
+     * descobre pela fatura não é teto. US$ 20 é ponto de partida, não recomendação — a conta
+     * real depende do volume dele, e a aba Config mostra quanto já foi.
+     *
+     * Quem obriga é o `background.js`, não o painel: caminho novo no painel não pode furar a
+     * trava por esquecimento (mesma razão de a chave da API morar lá).
+     */
+    tetoUsd: 20,
+    /** Gasto do mês corrente: `{ mes, usd, chamadas, tokens }`. Zera sozinho na virada. */
+    gasto: { mes: '', usd: 0, chamadas: 0, tokens: 0 },
   },
   /** { "<contactId>|<templateId>": timestamp } para o aviso de duplicata. */
   sentLog: {},
@@ -626,8 +640,18 @@ export async function get(key) {
     throw traduzErro(err);
   }
   if (stored[key] === undefined) return structuredClone(DEFAULTS[key]);
-  // Mescla settings/dicts para que chaves novas de versões futuras não fiquem faltando.
-  if (key === 'settings' || key === 'dicts' || key === 'temaByNumber' || key === 'tagAliases' || key === 'auto') {
+  // Mescla para que chaves novas de versões futuras não fiquem faltando em quem já salvou.
+  // `ia` está na lista porque o teto de gasto entrou depois: sem a mescla, quem já tinha a IA
+  // configurada leria `tetoUsd: undefined` e ficaria SEM teto — um limite que nasce desligado
+  // justamente em quem mais usa.
+  if (
+    key === 'settings' ||
+    key === 'dicts' ||
+    key === 'temaByNumber' ||
+    key === 'tagAliases' ||
+    key === 'auto' ||
+    key === 'ia'
+  ) {
     return { ...structuredClone(DEFAULTS[key]), ...stored[key] };
   }
   return stored[key];

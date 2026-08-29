@@ -211,6 +211,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **`store.get` só mescla defaults em ALGUMAS chaves.** Chave nova dentro de um objeto já salvo
+  (`settings`, `auto`, `ia`, …) chega como `undefined` em quem já usava, e o default nunca o
+  alcança. Custou um teto de gasto que nasceria desligado justamente em quem mais usa. Campo novo
+  em objeto existente? Confira se a chave está na lista de mescla do `get`.
 - **z-index do painel é 998, e é de propósito.** Os overlays do Material (menu, diálogo,
   select, tooltip) vivem em 1000 e precisam abrir POR CIMA. Conteúdo da página não passa de 50.
   Subir o painel para o máximo faz ele engolir o diálogo de Etiquetas e o menu do Concluir.
@@ -367,6 +371,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   ~3.700 tokens idênticos em toda chamada; sem cache a conta é 3,5× maior. O log da rodada
   mostra `cacheLido` de cada chamada — zero nele em chamadas seguidas significa que algo no
   prompt passou a variar, e nada acusa isso além do número.
+- **A assinatura Claude Pro/Max NÃO cobre a API.** São faturas separadas: a assinatura é do
+  claude.ai e do Claude Code; a chave `sk-ant-…` é pré-paga por token no console. "Uso meu plano"
+  foi a suposição dele em 29/08 e não existe — cada avaliação é despesa NOVA em cima do plano.
+  Daí `ia.tetoUsd` (padrão US$ 20/mês), obrigado no **`background.js`**, o único ponto por onde o
+  dinheiro sai. Teto no painel é teto que um caminho novo esquece de chamar. Sem botão de zerar
+  o contador **de propósito**: zerar é o único controle que torna o teto decorativo — precisa de
+  mais, levanta o teto, que fica salvo e visível.
+- **O Opus 5 PENSA por padrão, e o pensamento cabe dentro do `max_tokens`.** Diferente do 4.8/4.7.
+  Ele é cobrado como saída (US$ 25/MTok), então teto apertado não economiza: trunca. Com os 512
+  que estavam na decisão, o raciocínio comia a cota e o JSON saía cortado — **chamada paga que
+  vira `incerto`, sem nada na tela dizendo por quê**. Quem segura custo é `output_config.effort`,
+  não `max_tokens`. Mexeu em modelo? Confira as duas coisas juntas.
+- **`effort` não vale para todo modelo — e o Haiku 4.5 está no seletor.** Ele recusa o parâmetro
+  com 400, ou seja: a opção mais barata do menu, a que se escolhe justamente quando o gasto
+  preocupa, é a que quebraria. `MODELOS_COM_ESFORCO` é **lista de permissão**, nunca de bloqueio —
+  a inversa faz todo modelo futuro nascer quebrado até alguém notar.
 
 ## Regras do projeto
 

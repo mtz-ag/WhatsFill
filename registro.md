@@ -5,6 +5,75 @@
 
 ---
 
+## 2026-08-29 — Teto de gasto da API, e o mal-entendido que o motivou
+
+**Pedido:** *"a ligação de api eu usaria meu plano aqui então teria que ver a questão de gasto,
+não deve passar dos valores já acertados do plano"*.
+
+### A correção que vem antes do código
+
+**A assinatura Claude Pro/Max não cobre a API.** São duas cobranças diferentes: a assinatura é do
+claude.ai e do Claude Code; a chave `sk-ant-…` é pré-paga por token, com fatura própria no
+`console.anthropic.com`. Não existe "usar meu plano" na extensão — cada avaliação gera despesa
+**nova em cima** do que ele já paga. O pedido era, na prática, "não me dê uma fatura que eu não
+esperava", e é isso que o teto atende.
+
+A frase está agora no topo do bloco de gasto na Config, antes do campo — quem lê de cima para
+baixo encontra o fato antes do interruptor.
+
+### O teto
+
+`ia.tetoUsd` (padrão **US$ 20/mês**, `0` = sem teto) e `ia.gasto` (`{mes, usd, chamadas, tokens}`).
+
+- **A trava mora no `background.js`**, não no painel: é o único ponto por onde o dinheiro sai, o
+  mesmo lugar onde a chave é usada. Trava no painel é trava que um caminho novo esquece de chamar.
+- Atingido, toda chamada vira `incerto` — o painel se comporta como antes da IA existir, que é a
+  mesma disciplina de canal caído e falha de rede.
+- **Vira o mês zerando sozinho**, sem agendador nenhum: o mês muda no primeiro uso do mês seguinte.
+  Agendador de virada de mês é mais uma coisa para falhar em silêncio.
+- **Não há botão de zerar o contador, de propósito.** Zerar é o único controle que torna o teto
+  decorativo. Precisando de mais, ele levanta o teto — decisão visível e que fica salva.
+- O log da rodada passou a mostrar **dólares por chamada e o acumulado do mês** ao lado dos tokens.
+  Token é diagnóstico (o cache está pegando?); dólar é a pergunta que ele faz.
+
+`custoEmDolares`, `acumularGasto`, `podeGastar` e `mesDe` são puros e testados. Modelo fora da
+tabela de preços é cobrado pelo **mais caro** — preço desconhecido não pode virar gasto invisível,
+e superestimar só faz o teto chegar mais cedo, que é o lado seguro de errar.
+
+### Causa raiz de dois defeitos achados no caminho — nenhum dos dois tinha rodado ainda
+
+**1. `max_tokens: 512` truncava a decisão no Opus 5.** O Opus 5 **pensa por padrão** (adaptativo,
+ao contrário do 4.8/4.7), o pensamento é cobrado como saída (US$ 25/MTok) e cabe **dentro** do
+`max_tokens`. Com 512 o raciocínio consumia a cota e o JSON saía cortado: chamada paga que vira
+`incerto`, sem nada na tela dizendo por quê. Hoje: `max_tokens` 2048 (decisão) / 4096 (rascunho),
+e quem segura o custo é `output_config.effort` — `low` na decisão (escolher entre respostas prontas
+é classificação) e `medium` no rascunho (único caminho em que uma frase gerada chega a um eleitor
+sem ninguém ler; economizar esforço ali é economizar no lugar errado).
+
+**2. `effort` quebraria o Haiku 4.5, que está no seletor.** Ele recusa o parâmetro com 400 — ou
+seja, a opção mais barata do menu, justamente a que se escolhe quando o gasto preocupa, ia parar
+de funcionar. `MODELOS_COM_ESFORCO` é **lista de permissão e não de bloqueio**: a lista inversa
+faria todo modelo futuro nascer quebrado até alguém notar. Tem teste de regressão.
+
+**3. `store.get('ia')` não mesclava defaults.** Só `settings`/`dicts`/`temaByNumber`/`tagAliases`/
+`auto` mesclavam. Quem já tinha a IA configurada leria `tetoUsd: undefined` e ficaria **sem teto** —
+um limite que nasce desligado justamente em quem mais usa. `'ia'` entrou na lista.
+
+### Estimativas do seletor corrigidas
+
+Os valores antigos (`~US$ 7 por mil` no Opus 5) foram calculados sem o pensamento. Hoje: Opus 5
+~US$ 12/mil, Sonnet 5 ~US$ 5/mil, Haiku 4.5 ~US$ 1,60/mil. São estimativa para escolher; quem vale
+é o contador, que soma o que a API devolveu.
+
+**Arquivos:** `src/lib/ia.js`, `src/lib/ia-cliente.js`, `src/background.js`, `src/lib/store.js`,
+`src/panel/panel.js`, `tests/ia.test.mjs`, `manifest.json` (0.14.0 → **0.15.0**).
+
+**Pendências:** o teto e o `effort` **nunca rodaram contra a API real** — a primeira avaliação de
+verdade (no "Thiago Tim") é o que confirma que a decisão volta em JSON inteiro e que o contador
+sobe. Se o contador ficar em zero com chamadas acontecendo, `usage` mudou de forma.
+
+---
+
 ## 2026-08-20 — A IA passa a poder ENVIAR o rascunho sozinha
 
 **Pedido:** *"a intenção é enviar quando necessário, mas em geral utilizar as mensagens prontas e

@@ -34,6 +34,10 @@ const VERSAO_API = '2023-06-01';
 /**
  * Pede ao service worker que avalie este contato.
  *
+ * O **teto de gasto** é conferido do outro lado, no service worker, antes da chamada sair: é
+ * o único ponto por onde o dinheiro passa, e trava que mora no painel é trava que um caminho
+ * novo esquece de chamar. Teto atingido chega aqui como qualquer outra falha — `incerto`.
+ *
  * Nunca lança: falha de IA não pode derrubar rodada. Sem resposta, sem rede, sem chave, sem
  * crédito — tudo vira `{acao: 'incerto'}`, que é o painel se comportando como antes da IA
  * existir. É a mesma disciplina do resto: na dúvida, quem decide é ele.
@@ -55,7 +59,7 @@ export async function avaliar({ templates, regras, mensagens, campos, etiquetas,
     if (!r?.ok) {
       return { acao: 'incerto', templateId: '', motivo: '', confianca: 0, aviso: r?.motivo || 'a IA não respondeu' };
     }
-    return { ...validarDecisao(r.decisao, ids), custo: r.custo };
+    return { ...validarDecisao(r.decisao, ids), custo: r.custo, custoUsd: r.custoUsd, gastoMes: r.gastoMes };
   } catch (err) {
     return { acao: 'incerto', templateId: '', motivo: '', confianca: 0, aviso: err?.message || String(err) };
   }
@@ -83,7 +87,7 @@ export async function rascunhar({ templates, regras, mensagens, campos, modelo }
     // `validarRascunho` e não `revisarRascunho`: o rascunho passou a vir com esquema (texto +
     // confianca + precisaDeRevisao), e é a confiança que o envio automático precisa. Resposta
     // sem esquema ainda vira rascunho, só nunca automático — ver `podeEnviarSozinho`.
-    return { ...validarRascunho(r.decisao), custo: r.custo };
+    return { ...validarRascunho(r.decisao), custo: r.custo, custoUsd: r.custoUsd, gastoMes: r.gastoMes };
   } catch (err) {
     return { texto: '', avisos: [err?.message || String(err)], custo: null };
   }

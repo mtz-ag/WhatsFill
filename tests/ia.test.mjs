@@ -15,6 +15,11 @@ import {
   revisarRascunho,
   validarRascunho,
   podeEnviarSozinho,
+  custoEmDolares,
+  acumularGasto,
+  podeGastar,
+  mesDe,
+  PRECOS_USD_POR_MTOK,
   CONFIANCA_RASCUNHO_AUTO,
   montarSistema,
   montarContato,
@@ -117,7 +122,18 @@ grupo('a requisição pede cache e formato — é o que segura o custo e a forma
   check(req.model === MODELO_PADRAO, `modelo padrão = ${req.model}`);
   check(req.system[0].cache_control?.type === 'ephemeral', 'o sistema é cacheado (10% do preço a partir da 2ª)');
   check(req.output_config?.format?.type === 'json_schema', 'formato garantido por esquema');
-  check(req.max_tokens <= 512, 'saída curta: é decisão, não texto');
+  // O teto era 512 e virou 2048 quando o Opus 5 entrou: ele PENSA por padrão, e o pensamento
+  // cabe dentro do `max_tokens`. Com 512 o raciocínio consumia a cota e o JSON saía truncado —
+  // chamada paga que vira "incerto". Quem segura o custo aqui é o `effort`, não o teto.
+  check(req.output_config.effort === 'low', 'decisão é classificação: esforço baixo');
+
+  // Regressão: o Haiku 4.5 RECUSA `effort` com 400. Ele está no seletor de modelo da Config,
+  // então mandar o parâmetro para todo mundo quebraria a opção mais barata — justamente a que
+  // alguém escolhe quando está preocupado com gasto.
+  const haiku = montarRequisicao({ sistema: 's', contato: 'c', ids: ['a'], modelo: 'claude-haiku-4-5' });
+  check(haiku.output_config.effort === undefined, 'Haiku não recebe effort');
+  check(!!haiku.output_config.format, 'mas continua com esquema de saída');
+  check(req.max_tokens >= 1024, 'com folga para o pensamento caber antes do JSON');
   check(req.output_config.format.schema.properties.templateId.enum.length === IDS.length,
     'o esquema só admite ids que existem');
 
@@ -160,7 +176,10 @@ grupo('rascunho: a conversa longa entra inteira — é o caso de uso');
   // Passou a ter esquema em 20/08/2026: sem um numero devolvido pela IA nao ha como aplicar
   // limiar, e sem limiar nao ha envio automatico. Ver podeEnviarSozinho.
   check(!!req.output_config, 'rascunho agora vem com esquema, para ter confiança');
-  check(req.max_tokens <= 1024, 'teto baixo: resposta de WhatsApp, não redação');
+  check(req.max_tokens >= 2048, 'folga para o pensamento do Opus 5 caber antes do texto');
+  // Único caminho em que uma frase gerada chega a um eleitor sem ninguém ler: aqui não se
+  // economiza esforço. O texto continua curto pelo prompt, não pelo teto.
+  check(req.output_config.effort === 'medium', 'rascunho não usa o esforço mais barato');
 }
 
 grupo('rascunho: a revisão levanta a mão, mas nunca esconde o texto');
@@ -262,6 +281,80 @@ grupo('validarRascunho: resposta ilegivel nunca vira envio automatico');
   check(r.confianca === 0, 'sem esquema, confianca zero');
   check(!podeEnviarSozinho({ rascunho: r, ligado: true }).pode, 'entao nao sai sozinho');
   check(r.texto === 'isto nao e json', 'mas o texto continua servindo de rascunho para ele ler');
+}
+
+
+grupo('custo: o que a chamada custou em dolares');
+{
+  // 1 milhao de tokens de entrada no Opus 5 = US$ 5, por definicao da tabela.
+  const so = custoEmDolares({ entrada: 1e6, cacheEscrito: 0, cacheLido: 0, saida: 0 }, 'claude-opus-5');
+  check(Math.abs(so - 5) < 1e-9, 'entrada pura bate com a tabela');
+
+  const saida = custoEmDolares({ saida: 1e6 }, 'claude-opus-5');
+  check(Math.abs(saida - 25) < 1e-9, 'saida custa 5x a entrada');
+
+  // O numero que justifica o cache_control: ler do cache custa 10% do preco da entrada.
+  const lido = custoEmDolares({ cacheLido: 1e6 }, 'claude-opus-5');
+  check(Math.abs(lido - 0.5) < 1e-9, 'leitura de cache custa 10% da entrada');
+  const escrito = custoEmDolares({ cacheEscrito: 1e6 }, 'claude-opus-5');
+  check(Math.abs(escrito - 6.25) < 1e-9, 'escrita de cache custa 1,25x');
+  check(lido < so && escrito > so, 'ler e mais barato que a entrada crua, escrever e mais caro');
+
+  check(custoEmDolares(null) === 0, 'sem uso, custo zero');
+}
+
+grupo('custo: modelo desconhecido cobra pelo mais caro');
+{
+  // Preco que a extensao nao conhece nao pode virar gasto invisivel: superestimar so faz o
+  // teto chegar mais cedo, que e o lado seguro de errar.
+  const caro = Math.max(...Object.values(PRECOS_USD_POR_MTOK).map((p) => p.saida));
+  const r = custoEmDolares({ saida: 1e6 }, 'modelo-que-nao-existe');
+  check(Math.abs(r - caro) < 1e-9, 'cobra pelo mais caro da tabela');
+}
+
+grupo('gasto: acumula e vira o mes sozinho');
+{
+  const jan = new Date(2026, 0, 15).getTime();
+  const fev = new Date(2026, 1, 2).getTime();
+
+  let g = acumularGasto(null, 1.5, jan, 1000);
+  check(g.mes === mesDe(jan) && g.usd === 1.5 && g.chamadas === 1, 'primeira chamada abre o mes');
+
+  g = acumularGasto(g, 2.5, jan, 500);
+  check(g.usd === 4 && g.chamadas === 2 && g.tokens === 1500, 'segunda chamada soma');
+
+  // A virada de mes nao depende de nenhum agendador: o mes muda no primeiro uso do mes novo.
+  g = acumularGasto(g, 1, fev, 10);
+  check(g.mes === mesDe(fev) && g.usd === 1 && g.chamadas === 1, 'mes novo comeca do zero');
+}
+
+grupo('teto: para de gastar quando estoura, e nao antes');
+{
+  const agora = new Date(2026, 5, 10).getTime();
+  const mes = mesDe(agora);
+
+  check(podeGastar({ gasto: { mes, usd: 19.99 }, tetoUsd: 20, ts: agora }).pode, 'abaixo do teto passa');
+
+  const barrado = podeGastar({ gasto: { mes, usd: 20 }, tetoUsd: 20, ts: agora });
+  check(!barrado.pode, 'no teto, barra');
+  check(/Config/.test(barrado.motivo), 'e o motivo diz onde mudar');
+
+  // Teto zero e escolha explicita dele na Config, nao ausencia de configuracao.
+  check(podeGastar({ gasto: { mes, usd: 9999 }, tetoUsd: 0, ts: agora }).pode, 'teto 0 = sem teto');
+
+  // Regressao: gasto do mes PASSADO nao pode barrar o mes novo.
+  const passado = podeGastar({ gasto: { mes: '2026-05', usd: 500 }, tetoUsd: 20, ts: agora });
+  check(passado.pode && passado.usado === 0, 'gasto do mes passado nao conta no mes novo');
+}
+
+grupo('teto: config antiga sem tetoUsd nao pode virar gasto sem limite');
+{
+  // Quem ja tinha a IA configurada antes do teto existir le `tetoUsd: undefined`. O `store.get`
+  // mescla os defaults justamente por isso; aqui travamos o outro lado: se a mescla falhar, o
+  // que passa e `undefined`, e `podeGastar` NAO pode tratar isso como "pode gastar a vontade"
+  // sem que alguem tenha escolhido. O comportamento e documentado, entao fica travado por teste.
+  const r = podeGastar({ gasto: { mes: mesDe(), usd: 100 }, tetoUsd: undefined });
+  check(r.pode && r.teto === 0, 'sem teto definido, nao barra — por isso o default precisa mesclar');
 }
 
 fim();

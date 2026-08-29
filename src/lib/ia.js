@@ -156,16 +156,32 @@ export function montarContato({ mensagens = [], campos = {}, etiquetas = [] } = 
  * chamada (~3.700 tokens medidos), e a partir da segunda custam 10% do preço. Sem isso a conta
  * é 3,5× maior — é a diferença entre trocados e uma despesa que se discute.
  *
- * `max_tokens` baixo de propósito: a saída é um JSON de decisão, não texto. Efeito colateral
- * bom — nenhuma resposta longa pode ser gerada por acidente.
+ * `effort: 'low'` e `max_tokens` com folga por causa do Opus 5: **ele pensa por padrão**, o
+ * pensamento é cobrado como saída (US$ 25/MTok) e cabe DENTRO do `max_tokens`. Com o teto de 512
+ * que estava aqui, o raciocínio consumia a cota e o JSON saía truncado — chamada paga que vira
+ * `incerto`, sem nada na tela dizendo por quê. Escolher entre respostas prontas é classificação,
+ * e classificação não precisa de esforço alto: `low` é o que corta a maior parte da conta.
  */
+/**
+ * Modelos que aceitam `output_config.effort`.
+ *
+ * **Lista de permissão, não de bloqueio**: o Haiku 4.5 RECUSA o parâmetro com 400, e a lista
+ * inversa faria todo modelo futuro nascer quebrado até alguém notar. Quem não está aqui roda
+ * sem `effort` — que é o padrão do modelo, não uma degradação.
+ */
+const MODELOS_COM_ESFORCO = new Set(['claude-opus-5', 'claude-sonnet-5', 'claude-fable-5']);
+
+/** `output_config` com `effort` só onde ele é aceito. */
+function saida(modelo, esforco, format) {
+  return MODELOS_COM_ESFORCO.has(modelo) ? { effort: esforco, format } : { format };
+}
 export function montarRequisicao({ sistema, contato, ids, modelo = MODELO_PADRAO }) {
   return {
     model: modelo,
-    max_tokens: 512,
+    max_tokens: 2048,
     system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: contato }],
-    output_config: { format: { type: 'json_schema', schema: esquemaDaDecisao(ids) } },
+    output_config: saida(modelo, 'low', { type: 'json_schema', schema: esquemaDaDecisao(ids) }),
   };
 }
 
@@ -296,8 +312,11 @@ export function montarSistemaRascunho({ templates = [], regras = '' } = {}) {
 /**
  * O corpo da requisição do rascunho.
  *
- * `max_tokens` maior que o da decisão porque aqui a saída é texto — mas ainda curto: resposta de
- * WhatsApp não tem mil tokens, e teto baixo é o que impede uma transcrição de virar redação.
+ * `max_tokens` maior que o da decisão porque aqui a saída é texto E o pensamento do Opus 5 cabe
+ * dentro dele (ver `montarRequisicao`). O texto continua curto pelo prompt, não pelo teto.
+ *
+ * `effort: 'medium'` e não `'low'`: este é o único caminho em que uma frase gerada pode chegar a
+ * um eleitor sem ninguém ler. Economizar esforço aqui é economizar no lugar errado.
  *
  * A conversa entra INTEIRA (até o teto de `montarConversa`): o caso de uso é justamente o texto
  * longo, e cortar o começo é como se perde o que a pessoa realmente perguntou.
@@ -343,10 +362,10 @@ export function esquemaDoRascunho() {
 export function montarRequisicaoRascunho({ sistema, contato, modelo = MODELO_PADRAO }) {
   return {
     model: modelo,
-    max_tokens: 1024,
+    max_tokens: 4096,
     system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: contato }],
-    output_config: { format: { type: 'json_schema', schema: esquemaDoRascunho() } },
+    output_config: saida(modelo, 'medium', { type: 'json_schema', schema: esquemaDoRascunho() }),
   };
 }
 
@@ -494,4 +513,109 @@ export function podeEnviarSozinho({ rascunho, ligado = false, limiar = CONFIANCA
   }
 
   return { pode: true, motivo: `confiança ${(confianca * 100).toFixed(0)}%, sem avisos` };
+}
+
+// ---------------------------------------------------------------------------
+// Custo
+// ---------------------------------------------------------------------------
+
+/**
+ * Preço da API, em dólares por milhão de tokens.
+ *
+ * **A assinatura Claude Pro/Max NÃO cobre isto.** São duas cobranças diferentes: a assinatura é
+ * do claude.ai e do Claude Code; a API é pré-paga por token no `console.anthropic.com`, com
+ * fatura própria. Ligar a IA aqui gera despesa NOVA em cima do plano — nunca sai de dentro dele.
+ * Foi a confusão dele em 20/08/2026 ("eu usaria meu plano"), e é a razão de o teto existir.
+ *
+ * Preço muda; confira em `anthropic.com/pricing` antes de tratar o número da tela como fatura.
+ * Ele serve para **decidir parar**, não para conferir cobrança.
+ */
+export const PRECOS_USD_POR_MTOK = {
+  'claude-opus-5': { entrada: 5, saida: 25 },
+  'claude-sonnet-5': { entrada: 2, saida: 10 },
+  'claude-haiku-4-5': { entrada: 1, saida: 5 },
+};
+
+/** Leitura de cache custa 10% da entrada; escrita custa 1,25× (TTL de 5 min). */
+export const FATOR_CACHE_LEITURA = 0.1;
+export const FATOR_CACHE_ESCRITA = 1.25;
+
+/**
+ * O que uma chamada custou, em dólares, a partir do `usage` que a API devolveu.
+ *
+ * Modelo desconhecido cobra pelo mais CARO da tabela de propósito: preço que a extensão não
+ * conhece não pode virar gasto invisível, e superestimar só faz o teto chegar mais cedo.
+ *
+ * @param {{entrada:number, cacheEscrito:number, cacheLido:number, saida:number}} uso
+ * @returns {number} dólares
+ */
+export function custoEmDolares(uso, modelo = MODELO_PADRAO) {
+  if (!uso) return 0;
+  const p =
+    PRECOS_USD_POR_MTOK[modelo] ||
+    Object.values(PRECOS_USD_POR_MTOK).reduce((a, b) => (b.saida > a.saida ? b : a));
+
+  const M = 1e6;
+  const entrada = (Number(uso.entrada) || 0) * p.entrada;
+  const escrito = (Number(uso.cacheEscrito) || 0) * p.entrada * FATOR_CACHE_ESCRITA;
+  const lido = (Number(uso.cacheLido) || 0) * p.entrada * FATOR_CACHE_LEITURA;
+  const saida = (Number(uso.saida) || 0) * p.saida;
+
+  return (entrada + escrito + lido + saida) / M;
+}
+
+/** `2026-08` a partir de um timestamp. Quem passa o instante é o chamador (testável). */
+export function mesDe(ts = Date.now()) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/**
+ * Soma uma chamada ao gasto do mês.
+ *
+ * **Vira o mês zerando**, e é isso que faz o teto ser mensal sem nenhum agendador: não há tarefa
+ * de virada de mês para falhar em silêncio — o mês muda no primeiro uso do mês seguinte.
+ *
+ * @returns {{mes:string, usd:number, chamadas:number, tokens:number}} gasto novo (não muta)
+ */
+export function acumularGasto(gasto, custoUsd, ts = Date.now(), tokens = 0) {
+  const mes = mesDe(ts);
+  const base = gasto && gasto.mes === mes ? gasto : { mes, usd: 0, chamadas: 0, tokens: 0 };
+  return {
+    mes,
+    usd: (Number(base.usd) || 0) + (Number(custoUsd) || 0),
+    chamadas: (Number(base.chamadas) || 0) + 1,
+    tokens: (Number(base.tokens) || 0) + (Number(tokens) || 0),
+  };
+}
+
+/**
+ * O teto. Chamado ANTES de gastar, no service worker — o único lugar por onde o dinheiro sai.
+ *
+ * Mora ali, e não no painel, pela mesma razão da chave da API: caminho novo no painel não pode
+ * conseguir furar a trava por esquecimento. É a diferença entre um teto e uma boa intenção.
+ *
+ * Teto `0` significa **sem teto**, e é escolha explícita dele na Config — o padrão nasce com
+ * limite. Nascer sem limite é como se descobre o valor pela fatura.
+ *
+ * @returns {{pode:boolean, motivo:string, usado:number, teto:number, fracao:number}}
+ */
+export function podeGastar({ gasto, tetoUsd = 0, ts = Date.now() } = {}) {
+  const teto = Number(tetoUsd) || 0;
+  const mes = mesDe(ts);
+  const usado = gasto && gasto.mes === mes ? Number(gasto.usd) || 0 : 0;
+  const fracao = teto > 0 ? usado / teto : 0;
+
+  if (teto > 0 && usado >= teto) {
+    return {
+      pode: false,
+      motivo:
+        `teto de gasto da IA atingido: US$ ${usado.toFixed(2)} de US$ ${teto.toFixed(2)} em ${mes}. ` +
+        'A extensão segue funcionando sem IA — mude o teto na aba Config.',
+      usado,
+      teto,
+      fracao,
+    };
+  }
+  return { pode: true, motivo: '', usado, teto, fracao };
 }
