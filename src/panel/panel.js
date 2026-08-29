@@ -16,6 +16,7 @@ import * as tagsLib from '../lib/tags.js';
 import * as hsmLib from '../lib/hsm.js';
 import * as keepalive from '../lib/keepalive.js';
 import * as categorizar from '../lib/categorizar.js';
+import { precisaDeVoce } from '../lib/triagem.js';
 import { extract } from '../lib/extract.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil } from '../lib/vars.js';
@@ -870,6 +871,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (cidade) header.append(h('div', { class: 'wf-sub' }, [document.createTextNode('Cidade: '), ...cidadeMarcada()]));
 
     /**
+     * Contato que pediu ajuda, dinheiro ou emprego: o aviso vem no cabeçalho, antes de qualquer
+     * botão de enviar.
+     *
+     * A rodada já põe esses de lado sozinha. Este aviso é para quando você abre um à mão — a
+     * conversa pode ter vinte mensagens e o pedido estar na terceira, fora da tela. O trecho que
+     * casou vai junto, para você decidir sem rolar a conversa inteira.
+     */
+    const triagem = precisaDeVoce(state.incoming, state.auto.cfg.padroesTriagem);
+    if (triagem) {
+      header.append(
+        h('div', { class: 'wf-block' },
+          `⚠ RESPONDA VOCÊ: ${triagem.motivo}. "${triagem.trecho}" — a rodada não trata este contato.`)
+      );
+    }
+
+    /**
      * Aviso de grafia, no cabeçalho — que é onde ele olha ao abrir o atendimento.
      *
      * Pedido dele: *"me falar se está errada também quando eu iniciar o atendimento, tem casos de
@@ -1483,6 +1500,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
 
     body.append(renderCartaoRitmo(cfg));
+    body.append(renderCartaoTriagem(cfg));
     body.append(renderCartaoFila());
     body.append(renderCartaoNovos(cfg));
     body.append(renderCartaoMomento(cfg));
@@ -1680,6 +1698,53 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             'concluir depois disso fecharia o atendimento sem a mensagem ter saído.')
       );
     }
+    return card;
+  }
+
+  /**
+   * Quem a rodada põe de lado para ele responder em pessoa.
+   *
+   * Fica no cartão de Ritmo, e não no de uma rodada só, porque vale para **todas**: é regra de
+   * quem pode receber resposta automática, não configuração de uma fila.
+   */
+  function renderCartaoTriagem(cfg) {
+    const card = h('div', { class: 'wf-card' }, [
+      h('h4', {}, 'Responder pessoalmente'),
+      h('div', { class: 'wf-preview' },
+        'Pedido de dinheiro, cesta, remédio, conta atrasada ou emprego: nenhuma rodada envia nem ' +
+          'conclui esses contatos. Ela marca com a etiqueta abaixo e segue. No fim, você filtra a ' +
+          'fila por ela e responde todos de uma vez.'),
+      h('div', { class: 'wf-origin' },
+        'A detecção é por texto, sem IA — e ela sabe a diferença entre quem PEDE ajuda e o ' +
+          'apoiador que OFERECE ("quero ajudar" não marca ninguém). Contato marcado também ' +
+          'aparece com aviso no cabeçalho quando você o abre à mão.'),
+    ]);
+
+    card.append(
+      campoTexto('Etiqueta de "responder pessoalmente"', cfg.etiquetaTriagem, (v) =>
+        salvarAuto({ etiquetaTriagem: v.trim() }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Precisa existir no CRM — a extensão não cria etiqueta sozinha (erro de digitação aqui ' +
+          'viraria rótulo permanente). Vazio = a rodada ainda pula, mas o contato só aparece no ' +
+          'log da rodada, que some quando você fecha o painel.')
+    );
+
+    const area = h('textarea', { rows: '4', placeholder: 'um padrão por linha — ex.: creche\nposto de saúde' });
+    area.value = (cfg.padroesTriagem || []).join('\n');
+    area.addEventListener('change', () => {
+      const padroes = area.value.split('\n').map((p) => p.trim()).filter(Boolean);
+      salvarAuto({ padroesTriagem: padroes }).then(() => {
+        setStatus(padroes.length ? `${padroes.length} padrão(ões) seu(s) somado(s) aos de fábrica.` : 'Só os padrões de fábrica.');
+        renderAll();
+      });
+    });
+    card.append(
+      h('label', { class: 'wf-field' }, [h('span', {}, 'Meus padrões (somam aos de fábrica)'), area]),
+      h('div', { class: 'wf-origin' },
+        'Um por linha. A campanha muda: assunto raro vira enxurrada na semana da agenda. ' +
+          'Padrão que não for expressão válida é ignorado, nunca derruba a rodada.')
+    );
     return card;
   }
 
@@ -2287,11 +2352,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const triados = conta('triado');
     const concluidos = conta('concluido');
     const reabertos = conta('reiniciado');
+
+    // Os que ficaram para ele responder em pessoa saem em linha PRÓPRIA, não escondidos no
+    // total de pulados: é a pilha de trabalho que a rodada acabou de montar para ele, e ele
+    // precisa saber que ela existe e por onde achá-la.
+    const separados = state.auto.log.filter((l) => /^você responde este:/.test(l.motivo || '')).length;
+    const ondeAchar = String(state.auto.cfg.etiquetaTriagem || '').trim();
+
     const resumo =
       `Rodada encerrada: ${conta('enviado')} enviado(s), ${conta('pulado')} pulado(s)` +
       (reabertos ? `, ${reabertos} reaberto(s) em "Meus"` : '') +
       (concluidos ? `, ${concluidos} concluído(s) sem enviar` : '') +
-      (triados ? `, ${triados} assumido(s) para triagem em "Meus"` : '') + '.';
+      (triados ? `, ${triados} assumido(s) para triagem em "Meus"` : '') + '.' +
+      (separados
+        ? ` ${separados} para VOCÊ responder` +
+          (ondeAchar ? ` — filtre a fila por "${ondeAchar}".` : ' (etiqueta de triagem não configurada).')
+        : '');
 
     // Alguém da lista ficou para trás sem ninguém abrir. Não é o caso normal — a posição
     // acompanha a reordenação da plataforma —, mas quando acontece tem que aparecer, senão o
@@ -2516,6 +2592,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return assumirParaTriagem(sessionId, nome, 'sem o aceite do anúncio');
       }
 
+      // Pedido de ajuda, dinheiro ou emprego: assume (para sair de "Novos" e não voltar toda
+      // rodada), marca, e NÃO manda o formulário. Pedir nome e cidade a quem acabou de contar
+      // que está sem comida é o erro mais feio que esta rodada pode cometer.
+      const triagem = await separarParaVoce(contato, mensagens);
+      if (triagem) return assumirParaTriagem(sessionId, nome, motivoDaTriagem(triagem));
+
       // Quem já respondeu nome ou cidade não precisa do formulário: precisa da classificação,
       // que é manual. Deixar em "Novos" o prendia na fila para sempre — ocupando posição em toda
       // rodada futura. Assumido, ele espera em "Meus" junto com o resto da triagem.
@@ -2654,6 +2736,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return { nome, resultado: 'pulado', motivo: 'já tratei este contato nesta rodada' };
       }
       ctx?.contatosTratados?.add(state.contact.id);
+
+      /**
+       * Pedido de ajuda, dinheiro ou emprego: sai da rodada antes da pergunta.
+       *
+       * Antes da pergunta de propósito. A caixa oferece "mandar o modelo", "agradecer", "pedir os
+       * dados" — e nenhuma dessas é resposta para quem contou um problema. Oferecer a escolha
+       * errada no meio de trinta contatos é como ela acaba sendo tomada.
+       *
+       * **Não conclui.** O atendimento fica aberto, marcado, esperando você.
+       */
+      const triagem = await separarParaVoce(state.contact, state.incoming);
+      if (triagem) return { nome, resultado: 'pulado', motivo: motivoDaTriagem(triagem) };
 
       const conteudos = state.tagSuggestions.filter((s) => s.origem === 'conteúdo');
       let modelo = null;
@@ -3446,6 +3540,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return { nome, resultado: 'pulado', continuaNaFila: true, motivo: 'já reabri esta pessoa nesta rodada' };
       }
 
+      // Aqui a rodada não envia nada, mas reabrir também não é neutro: jogaria o contato para
+      // "Meus", no meio da pilha de quem vai receber mensagem. Marcado e deixado onde está, ele
+      // fica achável pela etiqueta de triagem sem entrar na fila de envio.
+      const triagem = await separarParaVoce(contato, (await api.getConversation(sessionId, 20)).incoming);
+      if (triagem) {
+        return { nome, resultado: 'pulado', continuaNaFila: true, motivo: motivoDaTriagem(triagem) };
+      }
+
       const estado = await page.getState();
       if (estado.sessionId !== sessionId) {
         return { nome, resultado: 'erro', motivo: 'a aba trocou de atendimento no meio do caminho' };
@@ -3529,6 +3631,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           };
         }
       }
+
+      // Pediu ajuda em algum momento da conversa: sai daqui sem envio e sem conclusão. Vale
+      // mesmo tendo sido reaberto pela rodada 5 — reabrir não muda o que a pessoa escreveu.
+      const triagem = await separarParaVoce(state.contact, state.incoming);
+      if (triagem) return { nome, resultado: 'pulado', motivo: motivoDaTriagem(triagem) };
 
       const contexto = await currentVarContext();
       const pergunta = state.templates.find((t) => t.id === NO_REPLY_TEMPLATE_ID);
@@ -3697,6 +3804,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           continuaNaFila: true,
           motivo: 'já tratei este contato nesta rodada (o atendimento voltou para a lista)',
         };
+      }
+
+      // Pediu ajuda: sai sem envio e sem conclusão. Custa uma leitura da conversa a mais, e é a
+      // que impede um modelo aprovado de sair para quem contou um problema.
+      const triagem = await separarParaVoce(contato, (await api.getConversation(sessionId, 20)).incoming);
+      if (triagem) {
+        return { nome, resultado: 'pulado', continuaNaFila: true, motivo: motivoDaTriagem(triagem) };
       }
 
       /**
@@ -3922,6 +4036,64 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             'este botão é para quando você conclui pela plataforma.')
       );
     }
+  }
+
+  /**
+   * Este contato é dos que **você** responde em pessoa? Se for, a rodada põe de lado.
+   *
+   * Pedido dele: *"o pedido de ajuda e dinheiro poderia ser pulado e deixar tudo por último pra
+   * eu ver pessoalmente"*. A rodada não envia, **não conclui** e não tira etiqueta nenhuma — o
+   * contato fica exatamente onde está. O que ela faz é marcar com a etiqueta de triagem, que é o
+   * que permite você filtrar a fila por ela depois e trabalhar todos de uma vez.
+   *
+   * Aplicar a etiqueta é a única escrita, e é a que transforma "pulado no log de uma rodada que
+   * já fechou" em trabalho que você acha amanhã. Log some; etiqueta fica.
+   *
+   * Falha ao marcar **não** cancela o pulo: a decisão de não enviar vale de qualquer jeito, e o
+   * motivo vai para o log. É a mesma prioridade do resto do painel — etiqueta é organização
+   * interna, mensagem é o que o contato recebe.
+   *
+   * @param {object} contato contato do CRM (usa `tagsId`)
+   * @param {string[]} mensagens as mensagens recebidas dele
+   * @returns {Promise<{motivo:string, trecho:string, marcada:boolean, erro:string}|null>}
+   */
+  async function separarParaVoce(contato, mensagens) {
+    const achado = precisaDeVoce(mensagens, state.auto.cfg.padroesTriagem);
+    if (!achado) return null;
+
+    const resultado = { ...achado, marcada: false, erro: '' };
+    const nomeEtiqueta = String(state.auto.cfg.etiquetaTriagem || '').trim();
+    if (!nomeEtiqueta) return resultado;
+
+    try {
+      const tag = await tagsLib.resolveTag(nomeEtiqueta);
+      if (!tag) {
+        // Não cria etiqueta sozinha: criar rótulo no CRM é decisão dele, e um erro de digitação
+        // na Config viraria etiqueta permanente. Avisa e segue.
+        resultado.erro = `a etiqueta "${nomeEtiqueta}" não existe no CRM — crie-a para eu poder marcar`;
+        return resultado;
+      }
+      if ((contato.tagsId || []).includes(tag.id)) {
+        resultado.marcada = true; // já estava marcado de uma rodada anterior
+        return resultado;
+      }
+      const r = await tagsLib.applyTags(contato, [tag.id]);
+      resultado.marcada = !!r.ok;
+      if (!r.ok) resultado.erro = r.error;
+    } catch (err) {
+      resultado.erro = err.message;
+    }
+    return resultado;
+  }
+
+  /** A linha de log/tela quando um contato é separado. */
+  function motivoDaTriagem(triagem) {
+    const marca = triagem.marcada
+      ? ` — marcado com "${state.auto.cfg.etiquetaTriagem}"`
+      : triagem.erro
+        ? ` — NÃO consegui marcar: ${triagem.erro}`
+        : '';
+    return `você responde este: ${triagem.motivo} ("${triagem.trecho}")${marca}`;
   }
 
   /**

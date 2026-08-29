@@ -5,6 +5,69 @@
 
 ---
 
+## 2026-08-20 — Pedido de ajuda e dinheiro sai da rodada e espera por ele
+
+**Pedido dele:** *"o pedido de ajuda e dinheiro poderia ser pulado e deixar tudo por último pra eu
+ver pessoalmente"*.
+
+Veio no meio da conversa sobre pôr IA para responder. **Não precisou de IA** — e é melhor assim:
+regex é auditável, roda de graça, e não muda de opinião entre um contato e outro. O caso com risco
+jurídico (Lei 9.504/97) é justamente o que não pode depender de um modelo estar num bom dia.
+
+**`src/lib/triagem.js`** (puro, testado): `precisaDeVoce(mensagens, extras)` devolve o motivo e o
+trecho que casou. Detecta pedido de dinheiro (pix, valor, empréstimo), ajuda material (cesta,
+remédio, aluguel, conta de luz, fome), pedido genérico de ajuda, e emprego (desempregado,
+currículo, vaga).
+
+**A armadilha central, e a razão de o arquivo ter suíte própria:** *"ajuda"* é a mesma palavra dos
+dois lados da campanha. *"Quero ajudar"* é **apoiador se oferecendo** — o público principal, que o
+`extract.js` já classifica como "Apoiador Muito engajado". *"Preciso de ajuda"* é o oposto. Um
+padrão ingênuo com `/ajuda/` poria metade da base na fila de revisão dele e o trabalho pararia. A
+regra tem duas metades e a ordem importa: **a oferta desarma a mensagem inteira ANTES de qualquer
+teste de pedido** — *"quero ajudar de qualquer forma, nem que seja com dinheiro"* é apoiador,
+mesmo citando dinheiro. Metade das asserções cobre esse lado.
+
+**Três defeitos que o teste pegou antes de virarem comportamento:**
+
+1. *"não tenho o que comer em casa"* não casava (os padrões pediam "sem comida"/"sem ter o que
+   comer");
+2. *"preciso arrumar um trabalho"* não casava — a regra exigia o verbo depois do substantivo, e
+   as pessoas escrevem ao contrário;
+3. o motivo devolvido para *"ajuda com o aluguel"* era o genérico, não "pediu ajuda com contas".
+   Esse era o **teste** errado, não o código: o motivo específico é o que ele lê na caixa para
+   decidir sem abrir a conversa. Corrigi a expectativa e escrevi o porquê.
+
+**O que a rodada faz com esses contatos:** não envia, **não conclui**, não tira etiqueta nenhuma —
+fica exatamente onde está. Marca com `auto.etiquetaTriagem` (padrão `0 RESPONDER PESSOALMENTE`) e
+segue. A etiqueta é o mecanismo de "deixar por último": ele filtra a fila por ela e trabalha todos
+de uma vez. **Log some quando o painel fecha; etiqueta fica** — sem ela, "pulado" seria trabalho
+perdido.
+
+Vale nas **cinco** rodadas, com a diferença certa em cada uma: nos Novos assume (para não voltar
+toda rodada) sem mandar o formulário; na 3 sai **antes da pergunta**, porque oferecer "mandar o
+modelo" para quem contou um problema é como a escolha errada acaba sendo feita; no reabrir em
+lote não reabre — reabrir jogaria a pessoa para "Meus", no meio da pilha de envio.
+
+**Falha ao marcar não cancela o pulo.** A decisão de não enviar vale de qualquer jeito, e o motivo
+vai para o log — mesma prioridade do resto do painel: etiqueta é organização interna, mensagem é o
+que o contato recebe. E a extensão **não cria** a etiqueta sozinha: erro de digitação na Config
+viraria rótulo permanente no CRM.
+
+**Também aparece no trabalho à mão:** contato aberto que casa mostra aviso no cabeçalho, com o
+trecho. A conversa pode ter vinte mensagens e o pedido estar na terceira, fora da tela.
+
+O veredito da rodada ganha linha própria: *"N para VOCÊ responder — filtre a fila por …"*. Ficar
+escondido no total de pulados esconderia a pilha que a rodada acabou de montar para ele.
+
+**Arquivos:** [src/lib/triagem.js](src/lib/triagem.js) (novo),
+[tests/triagem.test.mjs](tests/triagem.test.mjs) (novo, 9ª suíte),
+[src/lib/store.js](src/lib/store.js) (`auto.etiquetaTriagem`, `auto.padroesTriagem`),
+[src/panel/panel.js](src/panel/panel.js) (`separarParaVoce`, `motivoDaTriagem`,
+`renderCartaoTriagem`, aviso no cabeçalho, as cinco rodadas),
+[CLAUDE.md](CLAUDE.md). Manifesto 0.12.4 → **0.13.0**. Nove suítes passando.
+
+---
+
 ## 2026-08-20 — A aba Cidades só gasta rede quando ele clica nela
 
 **Pedido dele:** *"faça com que a aba cidades não abra junto, somente quando eu realmente clicar

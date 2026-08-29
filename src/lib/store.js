@@ -430,6 +430,24 @@ const DEFAULTS = {
      * Vazio = não tira nada.
      */
     etiquetaSemRetorno: '1 SEM RETORNO',
+    /**
+     * A etiqueta que separa quem **você** vai responder em pessoa.
+     *
+     * Pedido de dinheiro, de cesta, de remédio, de emprego: a rodada põe de lado, marca com esta
+     * etiqueta e segue. Depois você filtra a fila por ela e trabalha todos de uma vez, com calma.
+     * É o mesmo mecanismo do resto do painel — quem escolhe quem entra na rodada é o filtro da
+     * plataforma, e a etiqueta é o que o filtro enxerga.
+     *
+     * Vazio = a rodada ainda pula, mas não marca nada (e aí o contato só aparece no log).
+     */
+    etiquetaTriagem: '0 RESPONDER PESSOALMENTE',
+    /**
+     * Padrões seus, somados aos que o `triagem.js` já conhece. Um por linha, regex sem barras.
+     *
+     * Existe porque a campanha muda: um assunto que hoje é raro vira enxurrada na semana da
+     * agenda. Padrão inválido é ignorado, nunca derruba a rodada.
+     */
+    padroesTriagem: [],
   },
 
   /**
