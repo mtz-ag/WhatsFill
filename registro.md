@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-08-29 — Os arquivos de IA dentro da versão de produção: a pasta, não o branch
+
+**Relato:** *"remova o que tiver de ai na versão atual essa era pra ser separada"* — ele viu
+`src/lib/ia.js`, `src/lib/ia-cliente.js` e `tests/ia.test.mjs` dentro da extensão normal.
+
+**Estava certo no sintoma e a causa era outra.** Varri o branch de produção: zero código de IA.
+Todas as ocorrências de "IA" são frases dizendo *"sem IA"*, e o "rascunho" que aparece no
+`panel.js` é o rascunho de classificação, não o da IA.
+
+### Causa raiz
+
+A pasta que o Chrome carrega (`OneDrive/Documents/GitHub/WhatsFill`, confirmado no
+`Secure Preferences`) estava com **duas árvores misturadas**: os arquivos eram os do branch de
+produção — 17 deles, byte a byte idênticos — enquanto o `HEAD` do git continuava em
+`claude/whatsfill-ia`. Os três arquivos que **só** o branch da IA tem ficaram órfãos no meio,
+porque não havia nada em produção para sobrescrevê-los.
+
+O sinal que denuncia isso: `git status` acusando arquivo que ninguém editou (`dom.js`, `hsm.js`,
+`page.js`, `rpc-host.js`, `triagem.js`…). Provável origem: zip de um branch descompactado por cima
+da pasta do outro.
+
+### Por que não bastava apagar os três
+
+Eles são **rastreados** pelo branch da IA. Apagados à mão: voltam no próximo checkout, e um commit
+descuidado no branch da IA apagaria o trabalho de três dias. O conserto foi `git restore .` +
+`git checkout claude/extensao-claude-analise-i9spxw` — a árvore voltou a ser coerente, os três
+sumiram sozinhos e o trabalho da IA seguiu intacto em `a4d03bd`.
+
+**Estado agora:** pasta = produção pura, `WhatsFill` 0.13.0, nove suítes passando, `git status`
+limpo, zero ocorrências de IA em código. O branch `claude/whatsfill-ia` está em 0.16.0 com o teto
+de gasto e o Haiku como padrão, sem nada perdido.
+
+**Resquício que sobra e é inofensivo:** o objeto `ia` continua gravado no `chrome.storage`
+(`ligada:true`, `tetoUsd`, modelo). Em produção nenhum código o lê — fica órfão e ignorado. Não
+apaguei porque mexer no storage dele é destrutivo e não muda comportamento nenhum.
+
+**Armadilha registrada no `CLAUDE.md`:** uma pasta, um branch. Para usar as duas versões ao mesmo
+tempo, `git worktree` em pasta separada — nunca duas árvores na mesma pasta.
+
+**Pendência:** a pasta `Downloads/WhatsFill-claude-extensao-claude-analise-i9spxw/` tem nome de
+produção e manifesto **`WhatsFill+IA`** dentro. O Chrome não carrega dela hoje, mas carregar dali
+um dia acreditando ser produção roda a IA sem querer. Vale apagar.
+
+---
+
 ## 2026-08-20 — Pedido de ajuda e dinheiro sai da rodada e espera por ele
 
 **Pedido dele:** *"o pedido de ajuda e dinheiro poderia ser pulado e deixar tudo por último pra eu

@@ -82,6 +82,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   versão no cabeçalho do painel** (`versaoCarregada`) contra a do `manifest.json`, e o "Carregado
   de" em `chrome://extensions` contra o caminho do repositório. Mudou comportamento visível?
   **Suba a `version` do manifesto no mesmo commit** — é o que torna a conferência possível.
+- **Uma pasta, um branch — descompactar zip por cima MISTURA os dois.** O Chrome carrega de
+  `OneDrive/Documents/GitHub/WhatsFill`, que é o repositório. Extrair o zip de um branch por
+  cima dele deixa o pior estado possível: os arquivos viram os de um branch enquanto o `HEAD` do
+  git continua no outro, e os arquivos que **só** o branch antigo tinha ficam órfãos no meio.
+  Foi assim que `src/lib/ia.js` apareceu dentro da extensão de produção em 29/08 — a IA parecia
+  ter vazado para a versão normal, e não tinha: nenhum branch estava errado, a PASTA é que tinha
+  duas árvores misturadas. O sintoma é `git status` acusando arquivo que ninguém editou (aqui
+  foram 17, todos idênticos ao outro branch). **Antes de apagar qualquer coisa, rode
+  `git status` e compare com o outro branch** — apagar o arquivo órfão à mão é o conserto errado:
+  ele volta no próximo checkout, e um commit descuidado apaga o trabalho do branch dele. O
+  conserto é `git restore .` e `git checkout <branch certo>`. Para usar as duas versões ao mesmo
+  tempo, `git worktree` em pasta separada — nunca duas árvores na mesma pasta.
 - **Rajada de requisições derruba a API — e a plataforma junto.** `Failed to fetch` não é erro
   HTTP: é o preflight CORS recusado, o que um limitador de taxa devolve. Cada contato aberto
   custa uma sessão na plataforma + 3 chamadas nossas, então **toda volta de laço precisa de
