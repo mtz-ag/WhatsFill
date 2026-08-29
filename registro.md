@@ -5,6 +5,55 @@
 
 ---
 
+## ONDE PAROU — 20/08/2026, fim do dia
+
+> Esta seção fica **no topo** de propósito. A antiga "Estado atual — leia primeiro" foi empurrada
+> para a linha ~1500 pelas entradas novas, então "leia primeiro" e "está primeiro" tinham
+> divergido. Atualize **esta** ao fechar o dia.
+
+**Árvore limpa, manifesto 0.13.0, dez suítes passando.** A extensão irmã
+[WebWhatsFill](../WebWhatsFill) está em 0.3.0, também limpa e com quatro suítes passando (tinha
+~700 linhas fora do git; foram commitadas hoje).
+
+### O que foi feito hoje, em uma linha cada
+
+- **Aba Cidades** (nova): etiqueta de município para a base inteira, com ritmo adaptativo, lotes
+  disparados por você, e as travas de sempre (só município da planilha oficial, id nunca inventado,
+  idempotente, soma em vez de substituir).
+- **Rotas descobertas lendo o bundle do app**, não chutadas — e dois chutes meus caíram no caminho
+  (`isToIncludeCustomFieldValues`, e criar etiqueta é `PUT`).
+- **Etiqueta de cidade no fluxo normal**, não só na varredura, com a antiga saindo quando a cidade
+  muda.
+- **Aviso de grafia** da cidade no cabeçalho, com botão de corrigir.
+- Aceitar a cidade no popup passou a **liberar as etiquetas** (`confirmada: true`).
+
+### O que está EM ABERTO, em ordem de risco
+
+1. **A etiqueta de cidade não está entrando no CRM** — é o fio solto de *"não estou achando os que
+   foram feitos"*. O conserto de hoje garantiu que isso **não trave mais o envio de modelos**
+   (etiqueta saiu dos bloqueantes), mas a causa da escrita falhar continua desconhecida.
+   **Como descobrir:** aba Cidades → lote de 20, **com a aba visível** → o log diz `Sonda ok` ou
+   `SONDA FALHOU: …`. Essa linha é a resposta.
+2. **Etiquetas de rótulo REPETIDO no CRM** (apareceu "Serra" duas vezes). Um contato pode "ter
+   SERRA" e não aparecer no filtro de SERRA, porque são duas etiquetas distintas. A aba Cidades
+   lista quais estão repetidas — limpar é no CRM, a extensão não apaga etiqueta.
+3. **1293 contatos com COREDE de outra região.** Gravar soma o certo e deixa o errado, e o contato
+   passa a aparecer em dois filtros. A tela avisa e **não remove** — pode ser a cidade que está
+   errada, e a decisão é sua.
+4. **`createTag` e `listContacts` nunca foram executadas de verdade** — foram lidas do bundle. A
+   sonda da criação de etiqueta é o que prova.
+5. **"Se eu não filtrar ele não faz"** — não reproduzido. Se voltar, o log agora diz quando a
+   primeira página volta vazia.
+
+### Duas coisas que valem lembrar antes de mexer
+
+- **Deixe a aba VISÍVEL** durante qualquer passada longa. O Chrome congela aba em segundo plano; a
+  aba Cidades nasceu sem `keepalive` e uma gravação de 2000 contatos parou no meio, em silêncio.
+- **Confira a versão no cabeçalho do painel** contra o `manifest.json` antes de qualquer
+  diagnóstico. "O fix não funcionou" já foi "o fix não chegou" uma vez, e custou uma tarde.
+
+---
+
 ## 2026-08-20 — Rascunho: o único lugar onde a IA escreve, e ela não envia
 
 **Relato dele:** *"tem casos que irá ter que responder, como textos enormes de transcrição etc.
@@ -1520,7 +1569,7 @@ asserção prévia travando esse comportamento.
 
 ---
 
-## Estado atual — leia primeiro
+## Estado atual (histórico — ver "ONDE PAROU" no topo)
 
 **Onde o projeto está:** funcionando em produção no dia a dia do Thiago. Repositório privado em
 `github.com/thiagokcw-coder/WhatsFill`, `main` sincronizada. **Publicação na Chrome Web Store
