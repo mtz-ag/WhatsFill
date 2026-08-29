@@ -517,6 +517,32 @@ const DEFAULTS = {
   },
   /** Contrato de escrita aprendido pelo gravador (Fase 0). Null = ainda não aprendido. */
   writeContract: null,
+
+  /**
+   * A chave da API da Anthropic. **Fica só aqui e só é lida pelo service worker.**
+   *
+   * Nunca vai para o painel: o painel roda dentro da aba do mobiliza, e o `page-hook.js` está no
+   * mesmo contexto JS do Angular deles — o que está na página, a plataforma lê. Por isso a
+   * chamada sai do `background.js`, que lê esta chave e devolve só a decisão.
+   *
+   * Fora do `exportJson` pelo mesmo motivo que o `sentLog`: backup é arquivo que circula.
+   */
+  iaChave: '',
+  /**
+   * A avaliação por IA. Desligada por padrão — ligar é decisão dele, e custa dinheiro por
+   * contato avaliado.
+   */
+  ia: {
+    ligada: false,
+    modelo: 'claude-opus-5',
+    /**
+     * Instruções extras dele, somadas ao prompt de sistema.
+     *
+     * Existe porque a campanha muda mais rápido que o código: "esta semana quem falar em agenda
+     * de Caxias é para mim" não deveria exigir um commit.
+     */
+    regras: '',
+  },
   /** { "<contactId>|<templateId>": timestamp } para o aviso de duplicata. */
   sentLog: {},
   /**
@@ -655,6 +681,7 @@ export async function exportJson() {
   delete data.sentLog;
   delete data.varianteIndex; // ponteiro de rotação, não é configuração
   delete data.cidadeRecusada; // referência a contato real, e é memória de trabalho
+  delete data.iaChave; // credencial: backup é arquivo que circula
   return JSON.stringify(data, null, 2);
 }
 

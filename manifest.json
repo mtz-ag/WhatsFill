@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "WhatsFill",
+  "name": "WhatsFill+IA",
   "version": "0.13.0",
-  "description": "Respostas prontas, variáveis e classificação em 1 clique para o atendimento no mobiliza.app.",
+  "description": "WhatsFill com avaliação de contexto por IA: a IA escolhe entre as respostas prontas, nunca escreve para o eleitor.",
   "permissions": ["storage", "power"],
   "host_permissions": [
     "https://mobiliza.app/*",
-    "https://api.mobiliza.app/*"
+    "https://api.mobiliza.app/*",
+    "https://api.anthropic.com/*"
   ],
   "background": {
     "service_worker": "src/background.js",
@@ -35,7 +36,7 @@
     }
   ],
   "action": {
-    "default_title": "WhatsFill — mostrar/esconder o painel",
+    "default_title": "WhatsFill+IA — mostrar/esconder o painel",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

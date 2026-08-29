@@ -12,6 +12,7 @@
 
 import { RPC } from './lib/rpc.js';
 import { MSG_ENERGIA } from './lib/keepalive.js';
+import { MSG_IA, atender } from './lib/ia-cliente.js';
 
 const BOUNDS_KEY = 'windowBounds';
 const DEFAULT_BOUNDS = { width: 430, height: 760, left: 40, top: 60 };
@@ -30,6 +31,32 @@ let panelWindowId = null;
  * uma delas terminando soltaria a da outra. Por isso a contagem de quem pediu.
  */
 let travasDeEnergia = 0;
+
+/**
+ * A avaliação por IA sai DAQUI, e não do painel — é o que mantém a chave fora da página.
+ *
+ * O painel vive dentro da aba do mobiliza, e o `page-hook.js` roda no mesmo contexto JS do
+ * Angular deles. Chave de API na página é chave publicada. Aqui ela é lida do armazenamento da
+ * extensão, usada, e não atravessa nenhuma fronteira: o painel manda o pedido e recebe a
+ * decisão, nunca a credencial.
+ *
+ * `return true` mantém o canal aberto para a resposta assíncrona — sem ele o painel recebe
+ * `undefined` e a rodada acha que a IA não respondeu.
+ */
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (!msg || msg.type !== MSG_IA) return undefined;
+
+  (async () => {
+    try {
+      const { iaChave } = await chrome.storage.local.get('iaChave');
+      sendResponse(await atender(msg, iaChave));
+    } catch (err) {
+      // Falha aqui nunca pode derrubar a rodada: vira "incerto" do outro lado.
+      sendResponse({ ok: false, motivo: err?.message || String(err) });
+    }
+  })();
+  return true;
+});
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || msg.type !== MSG_ENERGIA) return undefined;

@@ -17,6 +17,7 @@ import * as hsmLib from '../lib/hsm.js';
 import * as keepalive from '../lib/keepalive.js';
 import * as categorizar from '../lib/categorizar.js';
 import { precisaDeVoce } from '../lib/triagem.js';
+import * as iaCliente from '../lib/ia-cliente.js';
 import { extract } from '../lib/extract.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil } from '../lib/vars.js';
@@ -194,6 +195,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       /** Os ids das etiquetas que são COREDE, para a opção "todos os COREDEs". */
       idsDeCorede: [],
     },
+    /** Configuração da avaliação por IA. Ver `renderConfigIA`. */
+    ia: { ligada: false, modelo: 'claude-opus-5', regras: '' },
+    /** Só se EXISTE chave, nunca a chave: chave visível no painel é chave que aparece em print. */
+    iaTemChave: false,
     busy: false,
     lastSendAt: 0,
     error: null,
@@ -403,6 +408,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.hasContract = !!(await store.get('writeContract'))?.entries?.length;
     state.settings = await store.get('settings');
     state.auto.cfg = await store.get('auto');
+    state.ia = await store.get('ia');
+    state.iaTemChave = !!(await store.get('iaChave'));
     state.templates = await templatesLib.list();
     renderAll();
 
@@ -2749,6 +2756,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const triagem = await separarParaVoce(state.contact, state.incoming);
       if (triagem) return { nome, resultado: 'pulado', motivo: motivoDaTriagem(triagem) };
 
+      /**
+       * A avaliação de contexto — a segunda camada, e só depois da primeira.
+       *
+       * A ordem é a mais barata E a mais segura: a regex já tirou os casos conhecidos de graça,
+       * então a IA só é chamada (e só é paga) para o que sobrou. E o que a regex pegou não
+       * depende de a IA estar ligada, com crédito ou de bom humor.
+       *
+       * Ela decide entre TRÊS saídas, e nenhuma delas envia sozinha:
+       *  - `escalar` → sai da rodada como a triagem, com a etiqueta e o motivo;
+       *  - `responder` → vira a tecla 0 da caixa, em destaque, com o texto que ela escolheu;
+       *  - `incerto` → a caixa aparece exatamente como aparecia antes da IA existir.
+       */
+      const decisaoIA = await avaliarComIA();
+      if (decisaoIA?.acao === 'escalar') {
+        const marca = await separarParaVoce(state.contact, state.incoming, {
+          motivo: decisaoIA.motivo || 'a IA achou que este é para você',
+          trecho: decisaoIA.templateId ? `sugestão dela: "${decisaoIA.templateId}"` : 'avaliação de contexto',
+        });
+        return { nome, resultado: 'pulado', motivo: motivoDaTriagem(marca) };
+      }
+
       const conteudos = state.tagSuggestions.filter((s) => s.origem === 'conteúdo');
       let modelo = null;
       let semModelo = '';
@@ -2959,6 +2987,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           primaria: !enviadoHoje,
         });
       }
+      /**
+       * A recomendação da IA entra como tecla **0**, e não substituindo outra.
+       *
+       * Substituir o significado de uma tecla que ele já tem no dedo é como o "2" digitado na
+       * conversa acabou concluindo atendimento. Tecla nova, posição nova, e as antigas seguem
+       * fazendo o que sempre fizeram — com ou sem IA ligada.
+       */
+      const recomendada = decisaoIA?.acao === 'responder'
+        ? state.templates.find((t) => t.id === decisaoIA.templateId)
+        : null;
+      const recomendadaTrava = recomendada
+        ? vars.render(await templatesLib.varianteAtual(recomendada), contexto).missing.length > 0
+        : false;
+
+      if (recomendada && !recomendadaTrava) {
+        opcoes.push({
+          tecla: '0',
+          valor: `ia:${recomendada.id}`,
+          rotulo: `Mandar "${recomendada.name}" e concluir (IA)`,
+          primaria: true,
+        });
+      }
+
       opcoes.push({ tecla: '2', valor: 'pular', rotulo: 'Pular (deixa aberto)' });
       opcoes.push({ tecla: '3', valor: 'concluir', rotulo: 'Concluir sem enviar' });
       if (!pedirTrava) {
@@ -3005,6 +3056,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
               '. Confirme antes de mandar de novo.'
             : '',
           textosDeHoje.length ? `⚠ Hoje este contato já recebeu: ${textosDeHoje.join(', ')}.` : '',
+          // O que a IA achou, e com quanta certeza. Vai para a tela SEMPRE que ela opinou —
+          // recomendação sem o porquê é ordem, e quem responde pelo envio é ele.
+          recomendada && !recomendadaTrava
+            ? `IA (${Math.round((decisaoIA.confianca || 0) * 100)}%): ${decisaoIA.motivo || 'sem motivo dado'}`
+            : '',
+          recomendada && recomendadaTrava
+            ? `A IA sugeriu "${recomendada.name}", mas essa resposta está travada por variável faltando.`
+            : '',
+          decisaoIA?.acao === 'incerto' && decisaoIA.aviso ? `IA não opinou: ${decisaoIA.aviso}` : '',
           pedidoHoje
             ? `⚠ Já pedi os dados hoje, às ${formatarHora(pedidoDeHoje.at)}. Pedir de novo no ` +
               'mesmo dia soa a robô — o texto muda (são três variações que se revezam), o pedido não.'
@@ -4057,8 +4117,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * @param {string[]} mensagens as mensagens recebidas dele
    * @returns {Promise<{motivo:string, trecho:string, marcada:boolean, erro:string}|null>}
    */
-  async function separarParaVoce(contato, mensagens) {
-    const achado = precisaDeVoce(mensagens, state.auto.cfg.padroesTriagem);
+  async function separarParaVoce(contato, mensagens, forcado = null) {
+    // `forcado` é a IA dizendo "este é para você": mesma saída, mesma etiqueta, mesmo log. Ter
+    // um caminho só para separar contato é o que impede as duas camadas divergirem no que fazem.
+    const achado = forcado || precisaDeVoce(mensagens, state.auto.cfg.padroesTriagem);
     if (!achado) return null;
 
     const resultado = { ...achado, marcada: false, erro: '' };
@@ -4084,6 +4146,39 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       resultado.erro = err.message;
     }
     return resultado;
+  }
+
+  /**
+   * Chama a avaliação de contexto para o contato carregado. Devolve `null` se a IA está
+   * desligada, sem chave, ou se falhou — e nesses casos a rodada segue como sempre seguiu.
+   *
+   * Nunca lança: IA fora do ar não pode parar o atendimento. É a mesma regra do canal caído e da
+   * etiqueta que não grava — o que o contato recebe vem primeiro.
+   */
+  async function avaliarComIA() {
+    const cfg = state.ia || {};
+    if (!cfg.ligada || !state.contact) return null;
+
+    const decisao = await iaCliente.avaliar({
+      templates: state.templates,
+      regras: cfg.regras,
+      modelo: cfg.modelo,
+      mensagens: state.incoming,
+      campos: Object.fromEntries(
+        state.classify.map((f) => [f.name, valueNamed(f.name)]).filter(([, v]) => v)
+      ),
+      etiquetas: state.tagSuggestions.filter((sg) => sg.tag && sg.jaTem).map((sg) => sg.tag.label),
+    });
+
+    // O custo de cada chamada vai para o log da rodada: sem número na tela, "quanto isso está
+    // custando" vira palpite — e foi palpite que quase manteve a IA fora do projeto.
+    if (decisao?.custo) {
+      const c = decisao.custo;
+      const cacheOk = c.cacheLido > 0 ? `cache ${c.cacheLido}` : 'SEM CACHE';
+      registrarNaRodada('IA', 'pulado', `${decisao.acao} · ${cacheOk} · entrada ${c.entrada} · saída ${c.saida}`);
+    }
+    if (decisao?.aviso) registrarNaRodada('IA', 'pulado', `avaliação não usada: ${decisao.aviso}`);
+    return decisao;
   }
 
   /** A linha de log/tela quando um contato é separado. */
@@ -5678,7 +5773,126 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   // ---- aba Config --------------------------------------------------------
+  /**
+   * A avaliação de contexto por IA — o que separa esta versão do WhatsFill normal.
+   *
+   * Fica no TOPO da Config de propósito: é o que muda o comportamento do painel de forma menos
+   * óbvia, e a primeira pergunta de quem abre esta aba é "isto está ligado?".
+   */
+  function renderConfigIA() {
+    const cfg = state.ia || {};
+    body.append(h('h3', { class: 'wf-h' }, 'Avaliação por IA'));
+
+    body.append(
+      h('div', { class: 'wf-preview' },
+        'A IA lê a conversa e ESCOLHE entre as suas respostas prontas — ela nunca escreve texto ' +
+          'para o eleitor. O que sai continua sendo, palavra por palavra, um texto que você ' +
+          'escreveu. Ela também pode dizer "este é para você", e aí o contato sai da rodada com ' +
+          'a etiqueta de triagem, igualzinho ao que a detecção por texto já faz.'),
+      h('div', { class: 'wf-origin' },
+        'Ela roda DEPOIS da detecção por texto, e só no que sobrou: o caso conhecido é pego de ' +
+          'graça e não depende de a IA estar no ar. Pedido de ajuda e de emprego nunca são ' +
+          'enviados por ela — se ela escolher um desses, vira escalada com a sugestão junto.')
+    );
+
+    body.append(
+      checkbox('Ligar a avaliação por IA (custa por contato avaliado)', !!cfg.ligada, async (v) => {
+        await salvarIA({ ligada: v });
+        renderAll();
+      })
+    );
+
+    // A chave fica no armazenamento e NUNCA é relida para a tela: campo de senha, e o que se
+    // mostra é se existe ou não. Chave visível no painel é chave que aparece em print.
+    const campoChave = h('input', { type: 'password', placeholder: state.iaTemChave ? '•••••• (já salva)' : 'sk-ant-…' });
+    const salvarChave = h('button', { class: 'wf-btn', type: 'button' }, 'Salvar chave');
+    salvarChave.addEventListener('click', () =>
+      withBusy(async () => {
+        const valor = campoChave.value.trim();
+        if (!valor) return setStatus('Cole a chave antes de salvar.', 'err');
+        await store.set('iaChave', valor);
+        state.iaTemChave = true;
+        campoChave.value = '';
+        setStatus('Chave salva. Ela fica só no armazenamento da extensão e não passa pela página.');
+        renderAll();
+      })
+    );
+    const apagarChave = h('button', { class: 'wf-btn', type: 'button' }, 'Apagar chave');
+    apagarChave.addEventListener('click', () =>
+      withBusy(async () => {
+        await store.set('iaChave', '');
+        state.iaTemChave = false;
+        setStatus('Chave apagada.');
+        renderAll();
+      })
+    );
+    body.append(
+      h('label', { class: 'wf-field' }, [h('span', {}, 'Chave da API (Anthropic)'), campoChave]),
+      h('div', { class: 'wf-row' }, [salvarChave, apagarChave]),
+      h('div', { class: 'wf-origin' },
+        'A chave fica no armazenamento da extensão e a chamada sai do service worker — ela NÃO ' +
+          'entra na página do mobiliza. Isso importa: o gancho da extensão roda no mesmo ' +
+          'contexto do código deles, e o que está na página, a plataforma lê. Ela também fica ' +
+          'fora do backup exportado.')
+    );
+
+    const selModelo = h('select', {});
+    for (const [id, rotulo] of [
+      ['claude-opus-5', 'Opus 5 — o mais capaz (~US$ 7 por mil contatos)'],
+      ['claude-sonnet-5', 'Sonnet 5 — meio-termo (~US$ 2,70 por mil)'],
+      ['claude-haiku-4-5', 'Haiku 4.5 — o mais barato (~US$ 1,35 por mil)'],
+    ]) {
+      const opt = h('option', { value: id }, rotulo);
+      if (id === (cfg.modelo || 'claude-opus-5')) opt.selected = true;
+      selModelo.append(opt);
+    }
+    selModelo.addEventListener('change', () => salvarIA({ modelo: selModelo.value }).then(renderAll));
+    body.append(
+      h('label', { class: 'wf-field' }, [h('span', {}, 'Modelo'), selModelo]),
+      h('div', { class: 'wf-origin' },
+        'Os valores são estimativa com cache ligado, medidos sobre o tamanho real das suas ' +
+          'respostas prontas. O log da rodada mostra o custo de cada chamada — se aparecer ' +
+          '"SEM CACHE" em chamadas seguidas, a conta está 3,5× maior e alguma coisa no prompt ' +
+          'passou a variar.')
+    );
+
+    const areaRegras = h('textarea', { rows: '4', placeholder: 'ex.: quem falar em agenda de Caxias esta semana é para mim' });
+    areaRegras.value = cfg.regras || '';
+    areaRegras.addEventListener('change', () =>
+      salvarIA({ regras: areaRegras.value.trim() }).then(() => setStatus('Instruções salvas.'))
+    );
+    body.append(
+      h('label', { class: 'wf-field' }, [h('span', {}, 'Instruções extras para a IA'), areaRegras]),
+      h('div', { class: 'wf-origin' },
+        'Somam-se às regras de fábrica, nunca as substituem: a de não escrever texto e a de ' +
+          'escalar pedido de ajuda ficam de pé mesmo que você escreva o contrário aqui.')
+    );
+
+    const testar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Avaliar o contato aberto');
+    testar.disabled = !cfg.ligada || !state.contact;
+    testar.addEventListener('click', () =>
+      withBusy(async () => {
+        const d = await avaliarComIA();
+        if (!d) return setStatus('A IA está desligada ou não há contato aberto.', 'err');
+        if (d.aviso) return setStatus(`A IA não decidiu: ${d.aviso}`, 'err');
+        const alvo = d.templateId ? ` → "${d.templateId}"` : '';
+        setStatus(`IA: ${d.acao}${alvo} (${Math.round((d.confianca || 0) * 100)}%) — ${d.motivo}`);
+      })
+    );
+    body.append(h('div', { class: 'wf-row' }, [testar]));
+    if (!state.contact) {
+      body.append(h('div', { class: 'wf-origin' }, 'Abra um atendimento para poder testar sem gastar uma rodada.'));
+    }
+    body.append(h('hr', { class: 'wf-sep' }));
+  }
+
+  async function salvarIA(mudanca) {
+    state.ia = { ...(await store.get('ia')), ...mudanca };
+    await store.set('ia', state.ia);
+  }
+
   function renderConfig() {
+    renderConfigIA();
     body.append(h('h3', { class: 'wf-h' }, 'Envio'));
     body.append(
       checkbox('Enviar automático (um clique manda a mensagem)', state.settings.autoSend, (v) =>
@@ -6349,6 +6563,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.connection = text;
     renderHeader();
   }
+
+  /**
+   * A configuração da IA é lida no boot, e não só quando um contato abre.
+   *
+   * A aba Config é o primeiro lugar onde alguém vai olhar para saber se a IA está ligada, e ela
+   * abre sem contato nenhum. Sem isto, a tela mostrava os padrões — "desligada" mesmo estando
+   * ligada, que é o pior sentido possível para essa mentira.
+   */
+  (async () => {
+    try {
+      state.ia = await store.get('ia');
+      state.iaTemChave = !!(await store.get('iaChave'));
+      renderAll();
+    } catch (err) {
+      console.warn('[WhatsFill+IA] não consegui ler a configuração da IA:', err.message);
+    }
+  })();
 
   return {
     root,

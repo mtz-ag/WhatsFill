@@ -5,6 +5,80 @@
 
 ---
 
+## 2026-08-20 — WhatsFill+IA nasce em branch separado
+
+**Pedido dele:** *"a IA precisa avaliar ainda, muito arriscado só pelo determinístico, tem que
+avaliar o contexto e utilizar a mensagem pronta"* e, em seguida, *"antes de tudo crie um
+whatsfill+IA, deixe essa versão separada"*.
+
+Ele está certo sobre o risco: a regex pega o previsível, não o pedido de ajuda escrito de um
+jeito que ninguém antecipou. As duas camadas se somam.
+
+**A separação:** branch `claude/whatsfill-ia`, escolhido por ele entre três opções. Duplicar a
+pasta foi descartado — `panel.js` tem 5.000+ linhas e carrega meses de correções; duas cópias
+divergem em uma semana e todo conserto vira trabalho dobrado. O manifesto muda **nome**
+(`WhatsFill+IA`), não versão: é o nome que separa as duas em `chrome://extensions` e no painel.
+Conserto que vale para os dois se faz no branch normal e vem para cá por merge.
+
+### O desenho, e o que ele exclui
+
+**A IA escolhe, não escreve.** Devolve o id de uma resposta pronta, ou "escalar". O que sai
+continua sendo, byte a byte, um texto que ele escreveu e revisou. Essa fronteira é o que torna o
+erro recuperável: o pior caso é a resposta pronta errada, não uma frase inventada num mandato.
+
+**A ordem: regex primeiro, IA no resto.** É a mais barata E a mais segura ao mesmo tempo — o caso
+conhecido é pego de graça e **não depende** de a IA estar no ar, com crédito ou de bom humor.
+
+**As travas moram em `validarDecisao`, não no prompt.** Prompt é pedido; validação é regra:
+
+- id que não existe → `incerto`;
+- confiança abaixo de 0,7 → `incerto`;
+- escolheu `pedido-ajuda` ou `pedido-emprego` → **vira escalada**, com a sugestão junto, nunca
+  envio. São os de risco jurídico (Lei 9.504/97), e a IA escolher um deles é ela dizendo "isto é
+  sensível", não "mande isto";
+- resposta ilegível, sem rede, sem chave, sem crédito → `incerto`.
+
+`incerto` significa **o painel se comportando exatamente como antes da IA existir**. Não há
+caminho daqui que envie sem ele ver: a recomendação vira a **tecla 0** da caixa da rodada, com o
+motivo e o percentual de certeza na tela.
+
+**Tecla 0, e não uma tecla existente:** trocar o significado de tecla que ele já tem no dedo é
+como o "2" digitado na conversa acabou concluindo atendimento.
+
+### A chave da API não entra na página
+
+`page-hook.js` roda no mundo MAIN — o mesmo contexto JS do Angular do mobiliza. **O que está na
+página, a plataforma lê.** Por isso a chamada sai do `background.js` (service worker), que lê
+`store.iaChave` e devolve só a decisão; o painel nunca vê a credencial. Ela também fica fora do
+`exportJson`, pelo mesmo motivo do `sentLog`: backup é arquivo que circula. Na tela, campo de
+senha e só o fato de existir — chave visível é chave que aparece em print.
+
+`anthropic-dangerous-direct-browser-access` é necessário porque a origem é a da extensão. O nome
+é um aviso legítimo e vale só porque isto é interno, carregado descompactado; não valeria para
+nada distribuído.
+
+### Custo, medido e visível
+
+`cache_control` no prompt de sistema: o catálogo de respostas + regras são ~3.700 tokens
+idênticos em toda chamada, e a partir da segunda custam 10%. Sem isso a conta é **3,5× maior**.
+Com cache: ~US$ 6,80 por mil contatos no Opus 5, ~US$ 1,35 no Haiku 4.5. O log da rodada mostra o
+custo de cada chamada — **"SEM CACHE" em chamadas seguidas** é o único sinal de que algo no
+prompt passou a variar, e nada mais acusaria isso.
+
+### O que ficou de fora, de propósito
+
+Envio automático sem confirmação. A caixa pergunta em todo contato, como sempre. Isso vira uma
+chave quando ele confiar no acerto — e o dado para decidir vai estar no log.
+
+**Arquivos:** [src/lib/ia.js](src/lib/ia.js) e [src/lib/ia-cliente.js](src/lib/ia-cliente.js)
+(novos), [tests/ia.test.mjs](tests/ia.test.mjs) (nova, 10ª suíte),
+[src/background.js](src/background.js) (o transporte),
+[src/lib/store.js](src/lib/store.js) (`iaChave`, `ia`), [manifest.json](manifest.json) (nome +
+`api.anthropic.com`), [src/panel/panel.js](src/panel/panel.js) (`avaliarComIA`,
+`renderConfigIA`, tecla 0), [CLAUDE.md](CLAUDE.md). Dez suítes passando.
+
+---
+
 ## 2026-08-20 — Pedido de ajuda e dinheiro sai da rodada e espera por ele
 
 **Pedido dele:** *"o pedido de ajuda e dinheiro poderia ser pulado e deixar tudo por último pra eu

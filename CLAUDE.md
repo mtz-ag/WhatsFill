@@ -1,4 +1,11 @@
-# WhatsFill — Guia para Claude Code
+# WhatsFill+IA — Guia para Claude Code
+
+> **Este é o branch `claude/whatsfill-ia`.** O WhatsFill normal vive em
+> `claude/extensao-claude-analise-i9spxw` e continua sendo a ferramenta de produção dele. Tudo
+> abaixo vale para os dois; o que é exclusivo daqui está na seção **Avaliação por IA**.
+>
+> Conserto que vale para os dois: faça no branch normal e traga para cá com merge. Duplicar
+> `panel.js` (5.000+ linhas) é como as duas versões divergem em uma semana.
 
 ## PROTOCOLO OBRIGATÓRIO ANTES DE QUALQUER EXECUÇÃO
 
@@ -47,6 +54,8 @@ src/lib/categorizar.js  etiqueta de CIDADE para a base inteira (puro, testado)
 src/lib/hsm.js          modelos de mensagem aprovados
 src/lib/vars.js         variáveis dos templates e bloqueio por variável faltante
 src/lib/triagem.js      quem a rodada NÃO trata: pedido de ajuda/dinheiro (puro, testado)
+src/lib/ia.js           prompt, esquema e TRAVAS da decisão por IA (puro, testado)
+src/lib/ia-cliente.js   ponte painel <-> service worker (a chave nunca entra na página)
 src/data/coredes-rs.json  município -> COREDE (planilha oficial da SPGG-RS)
 tools/make-icons.mjs    desenha os ícones
 tests/*.test.mjs        Node puro, sem dependência
@@ -314,6 +323,31 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   etiqueta vai para o status **e para o log da rodada** (o status é sobrescrito pela linha
   seguinte, e sem o log o conserto viraria falha silenciosa).
 
+## Avaliação por IA (só neste branch)
+
+- **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto
+  que sai é, byte a byte, um que ele escreveu. Essa fronteira é o que torna o erro recuperável:
+  o pior caso é a resposta pronta errada, não uma frase inventada num mandato.
+- **A chave da API NUNCA entra na página.** `page-hook.js` roda no mundo MAIN, o mesmo contexto
+  JS do Angular do mobiliza — chave ali é chave publicada. A chamada sai do `background.js`
+  (service worker), que lê `store.iaChave` e devolve só a decisão. Também fica fora do
+  `exportJson`.
+- **As travas moram em `validarDecisao`, não no prompt.** Prompt é pedido; validação é regra. Id
+  inventado vira `incerto`; confiança abaixo de `CONFIANCA_MINIMA` vira `incerto`; e escolher
+  `pedido-ajuda`/`pedido-emprego` (`RESTRITOS`) **vira escalada**, nunca envio — são os de risco
+  jurídico (Lei 9.504/97). `incerto` = o painel se comporta como antes da IA existir.
+- **A regex roda ANTES e a IA só vê o que sobrou.** Ordem mais barata e mais segura ao mesmo
+  tempo: o caso conhecido é pego de graça e não depende de a IA estar no ar, com crédito ou de
+  bom humor.
+- **Falha de IA nunca para a rodada.** Sem chave, sem rede, sem crédito, resposta ilegível: tudo
+  vira `incerto`. Mesma prioridade do canal caído — o que o contato recebe vem primeiro.
+- **A recomendação é tecla 0, e não substitui tecla existente.** Trocar o significado de uma
+  tecla que ele já tem no dedo é como o "2" digitado na conversa acabou concluindo atendimento.
+- **`cache_control` no prompt de sistema é o que segura o custo.** O catálogo + regras são
+  ~3.700 tokens idênticos em toda chamada; sem cache a conta é 3,5× maior. O log da rodada
+  mostra `cacheLido` de cada chamada — zero nele em chamadas seguidas significa que algo no
+  prompt passou a variar, e nada acusa isso além do número.
+
 ## Regras do projeto
 
 - **Sem IA na extração.** Custo por contato. Parser determinístico: regex, dicionário, lista de
@@ -357,10 +391,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Testes
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as nove suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as dez suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/triagem.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/triagem.test.mjs && node tests/ia.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,
