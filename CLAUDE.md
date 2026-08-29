@@ -343,6 +343,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   vira `incerto`. Mesma prioridade do canal caído — o que o contato recebe vem primeiro.
 - **A recomendação é tecla 0, e não substitui tecla existente.** Trocar o significado de uma
   tecla que ele já tem no dedo é como o "2" digitado na conversa acabou concluindo atendimento.
+- **O rascunho é o ÚNICO lugar onde a IA escreve — e ele nunca envia.** O texto cai no campo de
+  mensagem (`setComposerText`, nunca `sendText`) e quem aperta enviar é ele. É o laço que ele já
+  fazia à mão (copiar para uma IA, editar, mandar) sem o copiar e colar, e sem mudar a última
+  parte. O prompt usa as **respostas prontas dele como exemplo de estilo** — sai de graça, já
+  está no prompt cacheado, e é a amostra mais fiel da voz dele que existe. `revisarRascunho`
+  levanta a mão (marcador esquecido, promessa de bem ou benefício, texto longo) mas **nunca
+  esconde o texto**: esconder tiraria a decisão dele.
 - **`cache_control` no prompt de sistema é o que segura o custo.** O catálogo + regras são
   ~3.700 tokens idênticos em toda chamada; sem cache a conta é 3,5× maior. O log da rodada
   mostra `cacheLido` de cada chamada — zero nele em chamadas seguidas significa que algo no

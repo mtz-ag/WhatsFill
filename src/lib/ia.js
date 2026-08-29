@@ -219,6 +219,138 @@ export function validarDecisao(bruto, idsPermitidos = []) {
   return { acao: 'responder', templateId, motivo, confianca, aviso: '' };
 }
 
+// ---------------------------------------------------------------------------
+// Rascunho — o único lugar onde a IA escreve, e ela NUNCA envia
+// ---------------------------------------------------------------------------
+
+/**
+ * O caso que a escolha entre respostas prontas não cobre: transcrição longa, relato comprido,
+ * pergunta específica. Hoje ele copia para uma IA, ela responde, ele edita "para parecer mais
+ * humano" e manda. Isto é esse laço, sem o copiar e colar — e sem a última parte mudar: **o
+ * rascunho vai para o campo de mensagem, nunca para o envio.**
+ *
+ * A diferença entre isto e "IA respondendo eleitor" é uma só, e é a que importa: ele lê, edita e
+ * aperta enviar. O que sai continua passando pelos olhos dele.
+ *
+ * **O truque que faz soar como ele:** as respostas prontas vão no prompt como EXEMPLOS DE ESTILO,
+ * não como opções. Elas foram escritas por ele — é a amostra mais fiel do jeito dele que existe,
+ * e sai de graça porque já está no prompt cacheado. "Editar para parecer mais humano" é trabalho
+ * que o modelo pode adiantar se souber com que voz escrever.
+ */
+export function montarSistemaRascunho({ templates = [], regras = '' } = {}) {
+  const exemplos = templates
+    .slice(0, 8)
+    .map((t) => `— ${umaLinha(t.text, 500)}`)
+    .join('\n');
+
+  return [
+    'Você redige um RASCUNHO de resposta para o WhatsApp de um mandato parlamentar no Rio Grande',
+    'do Sul. Uma pessoa da equipe vai ler, editar e só então enviar. Você nunca envia nada.',
+    '',
+    'Como escrever:',
+    '',
+    '1. Em português do Brasil, no tom das mensagens de exemplo mais abaixo — elas foram escritas',
+    '   pela própria equipe e são a referência de voz. Frases curtas, diretas, calorosas sem ser',
+    '   piegas. Nada de "espero que esteja bem", "venho por meio desta" ou floreio de atendimento.',
+    '2. NÃO chame a pessoa pelo nome. É regra do mandato: o cadastro erra o nome com frequência',
+    '   alta demais, e errar o nome de alguém é pior do que não usar nenhum.',
+    '3. Responda o que foi perguntado. Se o texto é longo, mostre que leu — cite o ponto concreto,',
+    '   não faça resumo genérico.',
+    '4. Tamanho de WhatsApp: no máximo uns 4 parágrafos curtos. Se não couber, priorize.',
+    '',
+    'O que você NÃO pode escrever, em nenhuma hipótese:',
+    '',
+    '- prometer dinheiro, cesta, remédio, passagem, emprego, vaga ou qualquer bem ou benefício.',
+    '  A lei eleitoral (9.504/97) proíbe, e vale o ano inteiro. Se a pessoa pediu isso, escreva um',
+    '  rascunho que encaminhe para a assistência social do município (CRAS, Secretaria de',
+    '  Assistência Social) e ofereça cobrar o poder público — nunca prometa entregar;',
+    '- prometer resolver, garantir resultado, ou marcar compromisso em nome do parlamentar;',
+    '- inventar dado, número, agenda, lei ou posição que não esteja na conversa;',
+    '- usar {{variáveis}} ou qualquer marcador: escreva o texto final.',
+    '',
+    'Responda SÓ com o texto do rascunho. Sem aspas, sem título, sem explicação.',
+    '',
+    regras ? `Instruções adicionais da equipe:\n${regras}\n` : '',
+    'Exemplos do jeito de escrever da equipe:',
+    '',
+    exemplos,
+  ]
+    .filter((l) => l !== null)
+    .join('\n');
+}
+
+/**
+ * O corpo da requisição do rascunho.
+ *
+ * `max_tokens` maior que o da decisão porque aqui a saída é texto — mas ainda curto: resposta de
+ * WhatsApp não tem mil tokens, e teto baixo é o que impede uma transcrição de virar redação.
+ *
+ * A conversa entra INTEIRA (até o teto de `montarConversa`): o caso de uso é justamente o texto
+ * longo, e cortar o começo é como se perde o que a pessoa realmente perguntou.
+ */
+export function montarRequisicaoRascunho({ sistema, contato, modelo = MODELO_PADRAO }) {
+  return {
+    model: modelo,
+    max_tokens: 1024,
+    system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
+    messages: [{ role: 'user', content: contato }],
+  };
+}
+
+/** O bloco do contato para o rascunho: a conversa com folga, porque é dela que ele precisa. */
+export function montarContatoRascunho({ mensagens = [], campos = {} } = {}) {
+  const conversa = (mensagens || [])
+    .map((m, i) => `[${i + 1}] ${umaLinha(m, 4000)}`)
+    .join('\n\n');
+
+  const cidade = campos?.Cidade ? `A pessoa é de ${campos.Cidade}.` : '';
+  return [
+    'Mensagens recebidas desta pessoa, da mais antiga para a mais recente:',
+    '',
+    conversa || '(nada)',
+    '',
+    cidade,
+    'Escreva o rascunho da resposta.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+/**
+ * O rascunho que voltou está em condições de ir para o campo de mensagem?
+ *
+ * Não é censura de conteúdo — isso o prompt tenta e não garante. É a rede que pega as falhas
+ * VERIFICÁVEIS, mais os avisos que fazem ele olhar duas vezes antes de mandar. O rascunho nunca é
+ * recusado por causa de um aviso: quem decide é ele, e esconder o texto tiraria essa decisão.
+ *
+ * @returns {{texto:string, avisos:string[]}}
+ */
+export function revisarRascunho(bruto) {
+  const texto = String(bruto || '').trim();
+  const avisos = [];
+  if (!texto) return { texto: '', avisos: ['a IA não devolveu texto'] };
+
+  // Marcador esquecido: iria como está para o eleitor e apareceria literalmente na conversa.
+  if (/\{\{|\[nome\]|\[cidade\]|xxx+/i.test(texto)) {
+    avisos.push('sobrou marcador no texto — troque antes de mandar');
+  }
+
+  /**
+   * Promessa de bem ou benefício. A lista é grosseira de propósito: ela não julga a frase, só
+   * levanta a mão para ele ler. Falso positivo aqui custa uma olhada; falso negativo custa um
+   * mandato prometendo o que a lei proíbe.
+   */
+  if (/\b(vou|vamos|posso|podemos|consigo|conseguimos)\b[^.!?]{0,40}\b(mandar|enviar|dar|arrumar|conseguir|providenciar)\b/i.test(texto)) {
+    avisos.push('parece prometer entregar alguma coisa — confira antes de mandar');
+  }
+  if (/\b(cesta|rem[ée]dio|dinheiro|pix|emprego|vaga|passagem)\b/i.test(texto)) {
+    avisos.push('cita bem ou benefício (cesta, remédio, dinheiro, emprego) — a lei eleitoral proíbe prometer');
+  }
+  if (texto.length > 1500) avisos.push('ficou longo para WhatsApp — vale cortar');
+
+  return { texto, avisos };
+}
+
 /** Achata para uma linha e corta: conversa longa não pode dominar o prompt nem o custo. */
 function umaLinha(texto, limite = 400) {
   const t = String(texto || '').replace(/\s+/g, ' ').trim();

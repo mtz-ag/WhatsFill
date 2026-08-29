@@ -10,7 +10,17 @@
  * O painel usa `avaliar()`. O service worker usa `atender()`. As duas metades da mesma conversa.
  */
 
-import { montarSistema, montarContato, montarRequisicao, validarDecisao, MODELO_PADRAO } from './ia.js';
+import {
+  montarSistema,
+  montarContato,
+  montarRequisicao,
+  validarDecisao,
+  montarSistemaRascunho,
+  montarContatoRascunho,
+  montarRequisicaoRascunho,
+  revisarRascunho,
+  MODELO_PADRAO,
+} from './ia.js';
 
 export const MSG_IA = 'whatsfill-ia';
 
@@ -51,6 +61,31 @@ export async function avaliar({ templates, regras, mensagens, campos, etiquetas,
   }
 }
 
+/**
+ * Pede um RASCUNHO de resposta para este contato — o caso da transcrição longa, do relato
+ * comprido, da pergunta específica que nenhuma resposta pronta cobre.
+ *
+ * O que volta vai para o **campo de mensagem**, para ele editar e mandar. Nunca é enviado daqui.
+ *
+ * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
+ */
+export async function rascunhar({ templates, regras, mensagens, campos, modelo }) {
+  try {
+    const r = await chrome.runtime.sendMessage({
+      type: MSG_IA,
+      modo: 'rascunho',
+      sistema: montarSistemaRascunho({ templates, regras }),
+      contato: montarContatoRascunho({ mensagens, campos }),
+      modelo: modelo || MODELO_PADRAO,
+    });
+
+    if (!r?.ok) return { texto: '', avisos: [r?.motivo || 'a IA não respondeu'], custo: null };
+    return { ...revisarRascunho(r.decisao), custo: r.custo };
+  } catch (err) {
+    return { texto: '', avisos: [err?.message || String(err)], custo: null };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Lado do service worker
 // ---------------------------------------------------------------------------
@@ -71,12 +106,16 @@ export async function avaliar({ templates, regras, mensagens, campos, etiquetas,
 export async function atender(pedido, chave) {
   if (!chave) return { ok: false, motivo: 'sem chave da API — preencha na aba Config' };
 
-  const corpo = montarRequisicao({
-    sistema: pedido.sistema,
-    contato: pedido.contato,
-    ids: pedido.ids,
-    modelo: pedido.modelo,
-  });
+  // Duas formas de pedido pelo mesmo canal: decisão (JSON com esquema) e rascunho (texto).
+  const corpo =
+    pedido.modo === 'rascunho'
+      ? montarRequisicaoRascunho({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
+      : montarRequisicao({
+          sistema: pedido.sistema,
+          contato: pedido.contato,
+          ids: pedido.ids,
+          modelo: pedido.modelo,
+        });
 
   let resposta;
   try {

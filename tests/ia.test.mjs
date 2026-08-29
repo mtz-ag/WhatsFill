@@ -9,6 +9,10 @@
  */
 import { check, grupo, fim } from './_harness.mjs';
 import {
+  montarSistemaRascunho,
+  montarContatoRascunho,
+  montarRequisicaoRascunho,
+  revisarRascunho,
   montarSistema,
   montarContato,
   montarRequisicao,
@@ -123,6 +127,53 @@ grupo('o esquema fecha a porta para campo extra');
   const e = esquemaDaDecisao(IDS);
   check(e.additionalProperties === false, 'nada além do previsto');
   check(e.required.includes('acao') && e.required.includes('confianca'), 'ação e confiança são obrigatórias');
+}
+
+grupo('rascunho: o prompt proíbe o que a lei proíbe, e ensina o tom pelos textos dele');
+{
+  const sistema = montarSistemaRascunho({
+    templates: [{ id: 'agradecimento', name: 'Agradecer', text: 'Obrigado pela atenção! Um abraço.' }],
+    regras: 'Cite a agenda de terça quando fizer sentido.',
+  });
+  check(/nunca envia/i.test(sistema), 'deixa claro que ela não envia');
+  check(/9\.504/.test(sistema), 'cita a lei eleitoral');
+  check(/cesta|rem[ée]dio|emprego/i.test(sistema), 'proíbe prometer bem ou benefício');
+  check(/CRAS|assist[êe]ncia social/i.test(sistema), 'e diz para onde encaminhar em vez de prometer');
+  check(/N[ÃA]O chame a pessoa pelo nome/i.test(sistema), 'mantém a regra do projeto de não usar nome');
+  check(/Obrigado pela atenção/.test(sistema), 'as respostas DELE entram como exemplo de estilo');
+  check(/agenda de terça/.test(sistema), 'as instruções dele entram');
+  check(/inventar dado/i.test(sistema), 'proíbe inventar dado');
+}
+
+grupo('rascunho: a conversa longa entra inteira — é o caso de uso');
+{
+  const longa = 'a'.repeat(3000);
+  const bloco = montarContatoRascunho({ mensagens: [longa], campos: { Cidade: 'Pelotas' } });
+  check(bloco.length > 2500, `transcrição não é cortada cedo = ${bloco.length} caracteres`);
+  check(/Pelotas/.test(bloco), 'a cidade vai junto');
+
+  const req = montarRequisicaoRascunho({ sistema: 'S', contato: 'C' });
+  check(req.system[0].cache_control?.type === 'ephemeral', 'o sistema do rascunho também é cacheado');
+  check(!req.output_config, 'rascunho é texto, não JSON com esquema');
+  check(req.max_tokens <= 1024, 'teto baixo: resposta de WhatsApp, não redação');
+}
+
+grupo('rascunho: a revisão levanta a mão, mas nunca esconde o texto');
+{
+  const limpo = revisarRascunho('Recebi seu áudio e entendi o ponto. Vou levar ao gabinete.');
+  check(limpo.texto.length > 0 && limpo.avisos.length === 0, 'texto normal passa sem aviso');
+
+  const marcador = revisarRascunho('Olá {{primeiro_nome}}, tudo bem?');
+  check(marcador.avisos.some((a) => /marcador/.test(a)), 'marcador esquecido é avisado');
+  check(marcador.texto.length > 0, 'e o texto continua disponível — quem decide é ele');
+
+  const promessa = revisarRascunho('Vou conseguir a cesta para você esta semana.');
+  check(promessa.avisos.length >= 2, `promessa levanta a mão duas vezes = ${JSON.stringify(promessa.avisos)}`);
+  check(promessa.texto.length > 0, 'mesmo assim o texto aparece — esconder tiraria a decisão dele');
+
+  check(revisarRascunho('').avisos.length === 1, 'vazio vira aviso');
+  check(revisarRascunho(null).texto === '', 'nulo não explode');
+  check(revisarRascunho('x'.repeat(2000)).avisos.some((a) => /longo/.test(a)), 'texto longo demais é avisado');
 }
 
 fim();

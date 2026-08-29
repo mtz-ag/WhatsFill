@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-08-20 — Rascunho: o único lugar onde a IA escreve, e ela não envia
+
+**Relato dele:** *"tem casos que irá ter que responder, como textos enormes de transcrição etc.
+Normalmente eu copio e colo para uma IA, ela responde e eu edito para parecer mais humano."*
+
+É o caso que a escolha entre respostas prontas não cobre, e é o que mais consome o tempo dele.
+Isto é o laço que ele já faz — sem o copiar e colar, e **sem mudar a última parte**.
+
+**A fronteira, escrita no código e não só na intenção:** o rascunho vai para o campo de mensagem
+com `setComposerText`, **nunca** `sendText`. A diferença entre isto e "IA respondendo eleitor" é
+uma só, e é toda ela: ele lê, edita e aperta enviar. O texto continua passando pelos olhos dele.
+
+**O que faz soar como ele:** as respostas prontas entram no prompt como **exemplos de estilo**,
+não como opções. Foram escritas por ele, são a amostra mais fiel da voz dele que existe, e saem de
+graça — já estão no prompt cacheado. "Editar para parecer mais humano" é trabalho que o modelo
+adianta se souber com que voz escrever.
+
+**As proibições são de lei, não de gosto.** O prompt proíbe prometer dinheiro, cesta, remédio,
+passagem, emprego ou qualquer bem (Lei 9.504/97), prometer resolver ou garantir resultado, marcar
+compromisso em nome do parlamentar, e inventar dado, agenda ou posição. Quando a pessoa pediu
+ajuda material, o rascunho **encaminha** para o CRAS e a assistência social — é o mesmo caminho da
+resposta pronta `pedido-ajuda`, que ele já escreveu.
+
+**`revisarRascunho` levanta a mão, mas nunca esconde o texto.** Marcador esquecido (`{{…}}`),
+frase que parece prometer entregar alguma coisa, menção a bem ou benefício, texto longo demais
+para WhatsApp — tudo vira aviso ao lado do rascunho, não em barra de status que a próxima ação
+apaga. E o texto aparece de qualquer jeito: esconder tiraria dele a decisão, que é justamente o
+que este desenho existe para preservar.
+
+**Onde fica:** topo da aba Respostas, que é onde ele está quando o caso aparece — contato aberto,
+conversa longa na tela, nenhuma resposta pronta servindo. Só aparece com a IA ligada.
+
+A conversa entra **inteira** no prompt do rascunho (até 4.000 caracteres por mensagem), diferente
+do prompt de decisão, que corta em 400: aqui o texto longo É o caso de uso, e cortar o começo é
+como se perde o que a pessoa realmente perguntou.
+
+**Arquivos:** [src/lib/ia.js](src/lib/ia.js) (`montarSistemaRascunho`, `montarContatoRascunho`,
+`montarRequisicaoRascunho`, `revisarRascunho`),
+[src/lib/ia-cliente.js](src/lib/ia-cliente.js) (`rascunhar`, e o mesmo canal servindo os dois
+modos), [src/panel/panel.js](src/panel/panel.js) (`renderRascunho`),
+[tests/ia.test.mjs](tests/ia.test.mjs) (18 asserções novas), [CLAUDE.md](CLAUDE.md).
+Dez suítes passando.
+
+---
+
 ## 2026-08-20 — WhatsFill+IA nasce em branch separado
 
 **Pedido dele:** *"a IA precisa avaliar ainda, muito arriscado só pelo determinístico, tem que

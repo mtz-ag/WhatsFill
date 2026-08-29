@@ -950,6 +950,80 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   // ---- aba Respostas ------------------------------------------------------
+  /**
+   * O rascunho para os casos que nenhuma resposta pronta cobre: transcrição longa, relato
+   * comprido, pergunta específica.
+   *
+   * É o laço que ele já faz à mão — copiar para uma IA, ela responder, ele editar "para parecer
+   * mais humano" e mandar — sem o copiar e colar, e **sem mudar a última parte**: o texto cai no
+   * campo de mensagem da plataforma, e quem aperta enviar é ele.
+   *
+   * Fica no TOPO da aba Respostas porque é onde ele está quando o caso aparece: contato aberto,
+   * conversa longa na tela, e nenhuma das respostas prontas servindo.
+   */
+  function renderRascunho() {
+    if (!state.ia?.ligada) return;
+
+    const card = h('div', { class: 'wf-card' }, [h('h4', {}, 'Rascunho para este contato')]);
+    const botao = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Rascunhar resposta');
+    const saida = h('textarea', { rows: '8', placeholder: 'O rascunho aparece aqui para você editar.' });
+    const avisos = h('div', {});
+
+    botao.addEventListener('click', () =>
+      withBusy(async () => {
+        avisos.replaceChildren();
+        if (!state.incoming.length) return setStatus('Este contato ainda não escreveu nada.', 'err');
+
+        setStatus('Escrevendo o rascunho…');
+        const r = await iaCliente.rascunhar({
+          templates: state.templates,
+          regras: state.ia.regras,
+          modelo: state.ia.modelo,
+          mensagens: state.incoming,
+          campos: { Cidade: valueNamed('Cidade') },
+        });
+
+        if (!r.texto) {
+          setStatus(`Não saiu rascunho: ${r.avisos.join(' · ')}`, 'err');
+          return;
+        }
+        saida.value = r.texto;
+        // Os avisos ficam ao lado do texto, não numa barra de status que a próxima ação apaga:
+        // são o que ele precisa reler ANTES de mandar, não enquanto o rascunho chega.
+        for (const a of r.avisos) avisos.append(h('div', { class: 'wf-block' }, `⚠ ${a}`));
+        setStatus(
+          r.custo
+            ? `Rascunho pronto (${r.custo.saida} tokens de saída${r.custo.cacheLido ? ', cache usado' : ', SEM CACHE'}).`
+            : 'Rascunho pronto. Edite antes de mandar.'
+        );
+      })
+    );
+
+    const inserir = h('button', { class: 'wf-btn', type: 'button' }, 'Colocar no campo de mensagem');
+    inserir.addEventListener('click', () =>
+      withBusy(async () => {
+        const texto = saida.value.trim();
+        if (!texto) return setStatus('Não há rascunho para inserir.', 'err');
+        // `setComposerText`, nunca `sendText`. A diferença entre isto e a IA respondendo eleitor
+        // é uma só, e é toda ela: quem aperta enviar é ele.
+        await page.setComposerText(texto);
+        setStatus('No campo de mensagem. Leia, ajuste e mande você mesmo.');
+      })
+    );
+
+    card.append(
+      h('div', { class: 'wf-preview' },
+        'Para transcrição longa, relato comprido, pergunta específica — o que nenhuma resposta ' +
+          'pronta cobre. A IA escreve no seu tom (ela usa as suas respostas prontas como ' +
+          'referência de estilo) e o texto vem para cá. **Ela não envia nada**: você edita e ' +
+          'manda pela plataforma.'),
+      h('div', { class: 'wf-row' }, [botao, inserir]),
+      saida,
+      avisos
+    );
+    body.append(card);
+  }
+
   function renderRespostas() {
     if (!state.contact) {
       body.append(h('p', { class: 'wf-hint' }, state.error || 'Abra um atendimento na plataforma.'));
@@ -961,6 +1035,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         h('div', { class: 'wf-block' }, 'Janela de atendimento expirada — resposta livre está bloqueada. Os modelos de mensagem aprovados, no fim desta aba, continuam funcionando.')
       );
     }
+
+    renderRascunho();
 
     // A fila de contatos novos chega toda como Pendente, e Pendente não tem campo de texto.
     if (state.pageState.isPending) {
