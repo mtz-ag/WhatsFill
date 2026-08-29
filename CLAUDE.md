@@ -343,7 +343,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   vira `incerto`. Mesma prioridade do canal caído — o que o contato recebe vem primeiro.
 - **A recomendação é tecla 0, e não substitui tecla existente.** Trocar o significado de uma
   tecla que ele já tem no dedo é como o "2" digitado na conversa acabou concluindo atendimento.
-- **O rascunho é o ÚNICO lugar onde a IA escreve — e ele nunca envia.** O texto cai no campo de
+- **O rascunho pode ENVIAR sozinho, e é a única coisa do projeto que faz isso.** Decisão dele
+  (20/08/2026), tomada depois de eu apontar o risco: é o único caminho em que texto **gerado** por
+  IA chega a um eleitor sem revisão humana, em nome de um mandato, e mensagem de WhatsApp não
+  volta. Só acontece quando a IA **escala** (nenhuma resposta pronta serve) — as prontas continuam
+  sendo o caminho normal. Quem decide é `ia.podeEnviarSozinho`, puro e testado, e ele exige as
+  **quatro travas juntas**: (1) `ia.enviarRascunhoAuto` ligado na Config, que nasce desligado;
+  (2) **zero avisos** de `revisarRascunho` — marcador, promessa de entrega, menção a
+  cesta/remédio/dinheiro/emprego (Lei 9.504/97), texto longo; (3) a IA não ter marcado
+  `precisaDeRevisao` (ausente conta como SIM); (4) confiança ≥ `CONFIANCA_RASCUNHO_AUTO` (0,9,
+  maior que o 0,7 da decisão). A trava (2) é a mais valiosa porque **não depende de a IA ser
+  honesta sobre si mesma**; a (4) é a mais fraca e por isso nunca é a única. Qualquer falha de
+  rede ou formato também vira "não envia". **O texto enviado vai inteiro para o log da rodada** —
+  é a única forma de auditar depois o que a IA falou em nome do mandato.
+- **Com o automático DESLIGADO, o rascunho continua só aparecendo para ele.** O texto cai no campo de
   mensagem (`setComposerText`, nunca `sendText`) e quem aperta enviar é ele. É o laço que ele já
   fazia à mão (copiar para uma IA, editar, mandar) sem o copiar e colar, e sem mudar a última
   parte. O prompt usa as **respostas prontas dele como exemplo de estilo** — sai de graça, já

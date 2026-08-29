@@ -18,6 +18,7 @@ import * as keepalive from '../lib/keepalive.js';
 import * as categorizar from '../lib/categorizar.js';
 import { precisaDeVoce } from '../lib/triagem.js';
 import * as iaCliente from '../lib/ia-cliente.js';
+import * as iaLib from '../lib/ia.js';
 import { extract } from '../lib/extract.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil } from '../lib/vars.js';
@@ -2846,11 +2847,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       const decisaoIA = await avaliarComIA();
       if (decisaoIA?.acao === 'escalar') {
+        /**
+         * A IA escalou: nenhuma resposta pronta serve. É AQUI, e só aqui, que o rascunho pode
+         * sair sozinho — decisão dele (20/08/2026), com o padrão sendo as respostas prontas e o
+         * rascunho como exceção.
+         *
+         * `tentarRascunhoAutomatico` devolve `enviado: false` em tudo que não passa pelas quatro
+         * travas, e nesse caso o contato segue para a triagem exatamente como seguia antes: o
+         * caminho de falha é o comportamento antigo, não um caminho novo.
+         */
+        const auto = await tentarRascunhoAutomatico();
+        if (auto.enviado) {
+          const fechou = await page.clickConcluir();
+          if (!fechou.ok) {
+            return { nome, resultado: 'enviado', parar: true, motivo: `rascunho da IA enviado, mas ${fechou.reason}` };
+          }
+          return { nome, resultado: 'enviado', motivo: `rascunho da IA enviado sozinho (${auto.motivo})` };
+        }
+
         const marca = await separarParaVoce(state.contact, state.incoming, {
           motivo: decisaoIA.motivo || 'a IA achou que este é para você',
           trecho: decisaoIA.templateId ? `sugestão dela: "${decisaoIA.templateId}"` : 'avaliação de contexto',
         });
-        return { nome, resultado: 'pulado', motivo: motivoDaTriagem(marca) };
+        // O motivo de NÃO ter saído sozinho entra no log: sem isso, "o automático não usou" vira
+        // pergunta sem resposta, e a trava que atuou fica invisível.
+        const porque = auto.motivo ? ` · rascunho automático não saiu: ${auto.motivo}` : '';
+        return { nome, resultado: 'pulado', motivo: motivoDaTriagem(marca) + porque };
       }
 
       const conteudos = state.tagSuggestions.filter((s) => s.origem === 'conteúdo');
@@ -4231,6 +4253,63 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Nunca lança: IA fora do ar não pode parar o atendimento. É a mesma regra do canal caído e da
    * etiqueta que não grava — o que o contato recebe vem primeiro.
    */
+  /**
+   * Tenta mandar o rascunho da IA **sem ele ler antes** — e recusa em quase tudo.
+   *
+   * Só é chamada quando a IA escalou, ou seja, quando nenhuma resposta pronta serve. As prontas
+   * continuam sendo o caminho normal (decisão dele: *"em geral utilizar as mensagens prontas e
+   * suas variações"*).
+   *
+   * **Este é o único ponto do projeto em que texto gerado por IA chega a um eleitor sem revisão
+   * humana**, e mensagem de WhatsApp não volta. Por isso tudo aqui é escrito para dizer NÃO:
+   * quem decide é `ia.podeEnviarSozinho` (puro e testado), que exige as quatro travas juntas —
+   * ligado na Config, zero avisos da revisão, a IA não ter pedido revisão, e confiança acima do
+   * limiar. Qualquer erro de rede ou formato também cai em não.
+   *
+   * @returns {Promise<{enviado:boolean, motivo:string}>}
+   */
+  async function tentarRascunhoAutomatico() {
+    if (!state.ia?.ligada || !state.ia?.enviarRascunhoAuto) {
+      return { enviado: false, motivo: '' }; // desligado: nem gasta chamada de IA
+    }
+    if (!state.incoming.length) return { enviado: false, motivo: 'o contato não escreveu nada' };
+    if (state.session?.expired) return { enviado: false, motivo: 'janela de 24h vencida' };
+
+    let rascunho;
+    try {
+      rascunho = await iaCliente.rascunhar({
+        templates: state.templates,
+        regras: state.ia.regras,
+        modelo: state.ia.modelo,
+        mensagens: state.incoming,
+        campos: { Cidade: valueNamed('Cidade') },
+      });
+    } catch (err) {
+      return { enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };
+    }
+
+    const veredito = iaLib.podeEnviarSozinho({ rascunho, ligado: true });
+    if (!veredito.pode) return { enviado: false, motivo: veredito.motivo };
+
+    // Passou nas quatro travas. Daqui para baixo é envio de verdade, para gente de verdade.
+    try {
+      await page.sendText(rascunho.texto);
+    } catch (err) {
+      return { enviado: false, motivo: `o envio falhou: ${err?.message || err}` };
+    }
+    state.lastSendAt = Date.now();
+
+    /**
+     * O texto ENVIADO vai inteiro para o log da rodada.
+     *
+     * Não é enfeite: é a única forma de ele auditar depois o que a IA falou em nome do mandato.
+     * Registro parcial aqui seria pior que nenhum — daria a impressão de auditoria sem permitir
+     * auditar.
+     */
+    registrarNaRodada(state.contact?.name || 'contato', 'aviso', `IA enviou sozinha: "${rascunho.texto}"`);
+    return { enviado: true, motivo: veredito.motivo };
+  }
+
   async function avaliarComIA() {
     const cfg = state.ia || {};
     if (!cfg.ligada || !state.contact) return null;
@@ -5861,10 +5940,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     body.append(
       h('div', { class: 'wf-preview' },
-        'A IA lê a conversa e ESCOLHE entre as suas respostas prontas — ela nunca escreve texto ' +
-          'para o eleitor. O que sai continua sendo, palavra por palavra, um texto que você ' +
-          'escreveu. Ela também pode dizer "este é para você", e aí o contato sai da rodada com ' +
-          'a etiqueta de triagem, igualzinho ao que a detecção por texto já faz.'),
+        'A IA lê a conversa e ESCOLHE entre as suas respostas prontas. No caminho normal o que ' +
+          'sai é, palavra por palavra, um texto que você escreveu. Ela também pode dizer "este é ' +
+          'para você", e aí o contato sai da rodada com a etiqueta de triagem, igualzinho ao que ' +
+          'a detecção por texto já faz.'),
       h('div', { class: 'wf-origin' },
         'Ela roda DEPOIS da detecção por texto, e só no que sobrou: o caso conhecido é pego de ' +
           'graça e não depende de a IA estar no ar. Pedido de ajuda e de emprego nunca são ' +
@@ -5877,6 +5956,41 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         renderAll();
       })
     );
+
+    /**
+     * O envio automático do rascunho — a única opção do painel que deixa a IA falar em nome dele.
+     *
+     * Só aparece com a IA ligada, e o aviso vem ANTES do controle: quem lê de cima para baixo
+     * encontra o risco antes do interruptor, não depois.
+     */
+    if (cfg.ligada) {
+      body.append(
+        h('div', { class: 'wf-block' },
+          'ATENÇÃO — o que segue é diferente de tudo o mais nesta extensão. Ligado, a IA ESCREVE ' +
+            'uma resposta e ENVIA sozinha, sem você ler antes. Só acontece quando nenhuma ' +
+            'resposta pronta serve, e só se passar em quatro travas: a revisão não pode levantar ' +
+            'nada (marcador, promessa, menção a cesta/remédio/dinheiro/emprego), a própria IA não ' +
+            'pode ter pedido revisão, e a confiança dela precisa ficar acima de ' +
+            `${Math.round(iaLib.CONFIANCA_RASCUNHO_AUTO * 100)}%. Mensagem de WhatsApp não volta — ` +
+            'e o texto enviado fica no log da rodada para você conferir depois.')
+      );
+      body.append(
+        checkbox(
+          'Deixar a IA ESCREVER E ENVIAR quando nenhuma resposta pronta servir',
+          !!cfg.enviarRascunhoAuto,
+          async (v) => {
+            await salvarIA({ enviarRascunhoAuto: v });
+            setStatus(
+              v
+                ? 'Envio automático de rascunho LIGADO. O texto de cada envio fica no log da rodada.'
+                : 'Envio automático de rascunho desligado — o rascunho volta a só aparecer para você.',
+              v ? 'err' : 'ok'
+            );
+            renderAll();
+          }
+        )
+      );
+    }
 
     // A chave fica no armazenamento e NUNCA é relida para a tela: campo de senha, e o que se
     // mostra é se existe ou não. Chave visível no painel é chave que aparece em print.

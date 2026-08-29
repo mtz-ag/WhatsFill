@@ -5,6 +5,60 @@
 
 ---
 
+## 2026-08-20 — A IA passa a poder ENVIAR o rascunho sozinha
+
+**Pedido:** *"a intenção é enviar quando necessário, mas em geral utilizar as mensagens prontas e
+suas variações"*. Perguntei quem aperta o gatilho, oferecendo três caminhos e marcando o terceiro
+como o único em que uma frase inventada chega ao eleitor sem revisão. **Ele escolheu esse**, ciente
+do risco, e escolheu também que o rascunho só entra **quando a IA não achar resposta pronta boa**.
+
+Isto reverte a fronteira que o `CLAUDE.md` registrava como deliberada ("o rascunho nunca envia").
+A decisão é dele; o que eu podia fazer era tornar esse envio o mais estreito possível.
+
+### As quatro travas, e por que nessa ordem
+
+`ia.podeEnviarSozinho` é pura e testada, e responde **não** por padrão. Para sair sozinho, tudo
+junto:
+
+1. **`ia.enviarRascunhoAuto` ligado** — nasce desligado, e instalação nova nunca envia sozinha.
+2. **Zero avisos de `revisarRascunho`** — marcador esquecido, promessa de entrega, menção a
+   cesta/remédio/dinheiro/emprego (Lei 9.504/97), texto longo. Antes eram avisos ao lado do texto;
+   aqui viram **veto**. É a trava mais valiosa: **não depende de a IA ser honesta sobre si mesma**.
+3. **A IA não ter pedido revisão** — `precisaDeRevisao` novo no esquema, e **ausente conta como
+   SIM**: campo faltando nunca vira permissão.
+4. **Confiança ≥ 0,9** (`CONFIANCA_RASCUNHO_AUTO`), separada e maior que o 0,7 da decisão. É a
+   mais fraca das quatro — autoavaliação de modelo não é medida confiável — e por isso a última,
+   nunca a única.
+
+Falha de rede, formato ilegível, janela de 24h vencida, contato que não escreveu nada: tudo cai
+em "não envia", e o contato segue para a triagem **exatamente como seguia antes**. O caminho de
+falha é o comportamento antigo, não um caminho novo.
+
+### O que mudou em volta
+
+- **O rascunho passou a vir com esquema** (`esquemaDoRascunho`): sem um número devolvido pela IA
+  não há como aplicar limiar nenhum. `validarRascunho` lê isso e junta com a revisão heurística;
+  resposta **sem** esquema ainda vira rascunho para ele ler, só nunca automático (confiança zero).
+- **O texto enviado vai INTEIRO para o log da rodada.** É a única forma de auditar depois o que a
+  IA falou em nome do mandato — registro parcial daria impressão de auditoria sem permitir auditar.
+- **O motivo de NÃO ter saído sozinho também vai para o log.** Sem isso, "o automático não usou"
+  vira pergunta sem resposta e a trava que atuou fica invisível.
+- **A descrição na Config foi corrigida**: ela dizia "a IA nunca escreve texto para o eleitor", o
+  que passaria a ser mentira. O aviso novo vem **antes** do interruptor, para quem lê de cima para
+  baixo encontrar o risco antes do controle.
+
+**Arquivos:** [src/lib/ia.js](src/lib/ia.js) (`CONFIANCA_RASCUNHO_AUTO`, `esquemaDoRascunho`,
+`validarRascunho`, `podeEnviarSozinho`), [src/lib/ia-cliente.js](src/lib/ia-cliente.js),
+[src/lib/store.js](src/lib/store.js) (`ia.enviarRascunhoAuto`),
+[src/panel/panel.js](src/panel/panel.js) (`tentarRascunhoAutomatico`, gatilho na escalada,
+controle na Config), [tests/ia.test.mjs](tests/ia.test.mjs) (7 grupos novos, um por jeito de uma
+frase inventada escapar). Dez suítes passando.
+
+**Ainda não rodou contra a API de verdade.** O primeiro teste tem que ser no contato "Thiago Tim",
+com o automático ligado, olhando o log — é lá que aparece o texto exato que a IA mandou.
+
+---
+
 ## ONDE PAROU — 20/08/2026, fim do dia
 
 > Esta seção fica **no topo** de propósito. A antiga "Estado atual — leia primeiro" foi empurrada

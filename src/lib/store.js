@@ -542,6 +542,19 @@ const DEFAULTS = {
      * de Caxias é para mim" não deveria exigir um commit.
      */
     regras: '',
+    /**
+     * O rascunho escrito pela IA pode ser ENVIADO sem ele ler antes.
+     *
+     * **Nasce desligado, e a decisão de ligar é dele** (20/08/2026, ciente do risco). É o único
+     * caminho do projeto em que texto gerado por IA chega a um eleitor sem revisão humana — e
+     * mensagem de WhatsApp não volta.
+     *
+     * Ligar isto **não** basta para uma frase sair sozinha: `ia.podeEnviarSozinho` ainda exige
+     * zero avisos da revisão (marcador, promessa, bem/benefício — Lei 9.504/97), a própria IA não
+     * ter pedido revisão, e confiança acima de `CONFIANCA_RASCUNHO_AUTO`. Este campo é a primeira
+     * de quatro travas, não a única.
+     */
+    enviarRascunhoAuto: false,
   },
   /** { "<contactId>|<templateId>": timestamp } para o aviso de duplicata. */
   sentLog: {},

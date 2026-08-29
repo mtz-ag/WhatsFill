@@ -13,6 +13,9 @@ import {
   montarContatoRascunho,
   montarRequisicaoRascunho,
   revisarRascunho,
+  validarRascunho,
+  podeEnviarSozinho,
+  CONFIANCA_RASCUNHO_AUTO,
   montarSistema,
   montarContato,
   montarRequisicao,
@@ -154,7 +157,9 @@ grupo('rascunho: a conversa longa entra inteira — é o caso de uso');
 
   const req = montarRequisicaoRascunho({ sistema: 'S', contato: 'C' });
   check(req.system[0].cache_control?.type === 'ephemeral', 'o sistema do rascunho também é cacheado');
-  check(!req.output_config, 'rascunho é texto, não JSON com esquema');
+  // Passou a ter esquema em 20/08/2026: sem um numero devolvido pela IA nao ha como aplicar
+  // limiar, e sem limiar nao ha envio automatico. Ver podeEnviarSozinho.
+  check(!!req.output_config, 'rascunho agora vem com esquema, para ter confiança');
   check(req.max_tokens <= 1024, 'teto baixo: resposta de WhatsApp, não redação');
 }
 
@@ -174,6 +179,89 @@ grupo('rascunho: a revisão levanta a mão, mas nunca esconde o texto');
   check(revisarRascunho('').avisos.length === 1, 'vazio vira aviso');
   check(revisarRascunho(null).texto === '', 'nulo não explode');
   check(revisarRascunho('x'.repeat(2000)).avisos.some((a) => /longo/.test(a)), 'texto longo demais é avisado');
+}
+
+
+
+// ---------------------------------------------------------------------------
+// A trava do envio automatico de rascunho
+//
+// Este e o unico ponto do projeto em que texto GERADO por IA chega a um eleitor sem revisao
+// humana. Decisao do Thiago (20/08/2026), tomada depois de eu apontar o risco. Cada assercao aqui
+// e uma trava contra um jeito especifico de uma frase inventada sair em nome do mandato.
+// ---------------------------------------------------------------------------
+
+grupo('podeEnviarSozinho: desligado por padrao');
+{
+  const bom = { texto: 'Obrigado pela mensagem!', confianca: 1, avisos: [] };
+  check(!podeEnviarSozinho({ rascunho: bom }).pode, 'sem `ligado`, nao envia');
+  check(!podeEnviarSozinho({ rascunho: bom, ligado: false }).pode, 'ligado:false idem');
+  check(podeEnviarSozinho({ rascunho: bom, ligado: true }).pode, 'com tudo ok e ligado, envia');
+}
+
+grupo('podeEnviarSozinho: QUALQUER aviso veta');
+{
+  // A trava mais valiosa: nao depende de a IA ser honesta sobre si mesma.
+  const base = { texto: 'Oi', confianca: 1 };
+  for (const aviso of [
+    'sobrou marcador no texto — troque antes de mandar',
+    'parece prometer entregar alguma coisa — confira antes de mandar',
+    'cita bem ou benefício (cesta, remédio, dinheiro, emprego) — a lei eleitoral proíbe prometer',
+    'a própria IA pediu revisão humana',
+  ]) {
+    const r = podeEnviarSozinho({ rascunho: { ...base, avisos: [aviso] }, ligado: true });
+    check(!r.pode, `vetado por: ${aviso.slice(0, 40)}…`);
+  }
+}
+
+grupo('podeEnviarSozinho: confianca abaixo do limiar veta');
+{
+  const r = (c) => podeEnviarSozinho({ rascunho: { texto: 'Oi', confianca: c, avisos: [] }, ligado: true });
+  check(!r(0.5).pode, '50% nao passa');
+  check(!r(0.89).pode, '89% nao passa (limiar e 0,9)');
+  check(r(0.9).pode, '90% passa');
+  check(CONFIANCA_RASCUNHO_AUTO > 0.7, 'o limiar do envio automatico e MAIOR que o da decisao');
+}
+
+grupo('podeEnviarSozinho: texto vazio nunca sai');
+{
+  check(!podeEnviarSozinho({ rascunho: { texto: '', confianca: 1, avisos: [] }, ligado: true }).pode, 'vazio');
+  check(!podeEnviarSozinho({ rascunho: { texto: '   ', confianca: 1, avisos: [] }, ligado: true }).pode, 'so espaco');
+  check(!podeEnviarSozinho({ ligado: true }).pode, 'sem rascunho nenhum');
+}
+
+grupo('validarRascunho: a IA pedindo revisao vira aviso');
+{
+  const r = validarRascunho({ texto: 'Boa tarde! Recebemos sua mensagem.', confianca: 0.95, precisaDeRevisao: true });
+  check(r.avisos.some((a) => /revisão humana/.test(a)), 'entra em avisos');
+  check(!podeEnviarSozinho({ rascunho: r, ligado: true }).pode, 'e por isso nao envia sozinho');
+}
+
+grupo('validarRascunho: precisaDeRevisao ausente = SIM, por seguranca');
+{
+  const r = validarRascunho({ texto: 'Oi', confianca: 1 });
+  check(r.precisaDeRevisao === true, 'campo ausente nao vira permissao');
+  check(!podeEnviarSozinho({ rascunho: r, ligado: true }).pode, 'nao envia');
+}
+
+grupo('validarRascunho: promessa proibida bloqueia mesmo com confianca 1');
+{
+  // O caso que mais importa: a IA convencida de que pode prometer uma cesta.
+  const r = validarRascunho({
+    texto: 'Boa tarde! Vou mandar uma cesta básica para você essa semana.',
+    confianca: 1,
+    precisaDeRevisao: false,
+  });
+  check(r.avisos.length > 0, 'a revisao pegou');
+  check(!podeEnviarSozinho({ rascunho: r, ligado: true }).pode, 'e o envio automatico foi vetado');
+}
+
+grupo('validarRascunho: resposta ilegivel nunca vira envio automatico');
+{
+  const r = validarRascunho('isto nao e json');
+  check(r.confianca === 0, 'sem esquema, confianca zero');
+  check(!podeEnviarSozinho({ rascunho: r, ligado: true }).pode, 'entao nao sai sozinho');
+  check(r.texto === 'isto nao e json', 'mas o texto continua servindo de rascunho para ele ler');
 }
 
 fim();

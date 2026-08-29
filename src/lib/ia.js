@@ -31,6 +31,20 @@ export const MODELO_PADRAO = 'claude-opus-5';
 export const CONFIANCA_MINIMA = 0.7;
 
 /**
+ * O limiar para o rascunho sair **sozinho**, sem ele ler antes.
+ *
+ * Alto e separado do `CONFIANCA_MINIMA` de propósito. Os dois números respondem perguntas
+ * diferentes e têm consequências diferentes: errar a escolha entre respostas prontas manda um
+ * texto que ELE escreveu para a pessoa errada — chato, recuperável. Errar aqui manda uma frase
+ * **inventada** em nome de um mandato, e mensagem de WhatsApp não volta.
+ *
+ * Decidido pelo Thiago em 20/08/2026, ciente do risco, depois de eu apontá-lo. O desenho anterior
+ * era "a IA nunca envia o que ela escreveu"; a autoavaliação da IA sozinha é garantia fraca, então
+ * ela é a MENOS importante das travas em `podeEnviarSozinho` — as duras estão lá embaixo.
+ */
+export const CONFIANCA_RASCUNHO_AUTO = 0.9;
+
+/**
  * Respostas que a IA pode SUGERIR mas nunca disparar sozinha.
  *
  * São as de risco jurídico (Lei 9.504/97): negar ajuda financeira e negar pedido de emprego.
@@ -288,12 +302,51 @@ export function montarSistemaRascunho({ templates = [], regras = '' } = {}) {
  * A conversa entra INTEIRA (até o teto de `montarConversa`): o caso de uso é justamente o texto
  * longo, e cortar o começo é como se perde o que a pessoa realmente perguntou.
  */
+/**
+ * O esquema do rascunho.
+ *
+ * Passou a ter `confianca` e `motivo` quando o envio automático entrou (20/08/2026): sem um
+ * número devolvido pela própria IA não há como aplicar limiar nenhum. `precisaDeRevisao` é o
+ * canal para ela **se autodenunciar** — é barato perguntar, e uma IA que hesita é exatamente o
+ * caso que não pode sair sozinho.
+ */
+export function esquemaDoRascunho() {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['texto', 'confianca', 'precisaDeRevisao'],
+    properties: {
+      texto: {
+        type: 'string',
+        description: 'A resposta pronta para enviar, no tom do Thiago. Sem marcador, sem colchete.',
+      },
+      confianca: {
+        type: 'number',
+        description:
+          'De 0 a 1. Quão seguro você está de que este texto pode ser enviado SEM revisão humana. ' +
+          'Abaixo de 0,9 alguém lê antes. Na dúvida, baixe.',
+      },
+      precisaDeRevisao: {
+        type: 'boolean',
+        description:
+          'true se um humano precisa ler antes de enviar: assunto sensível, dado que você não ' +
+          'tem certeza, promessa, qualquer coisa que possa comprometer o mandato.',
+      },
+      motivo: {
+        type: 'string',
+        description: 'Uma frase curta dizendo por que escolheu esse tom/conteúdo. Aparece na tela.',
+      },
+    },
+  };
+}
+
 export function montarRequisicaoRascunho({ sistema, contato, modelo = MODELO_PADRAO }) {
   return {
     model: modelo,
     max_tokens: 1024,
     system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: contato }],
+    output_config: { format: { type: 'json_schema', schema: esquemaDoRascunho() } },
   };
 }
 
@@ -355,4 +408,90 @@ export function revisarRascunho(bruto) {
 function umaLinha(texto, limite = 400) {
   const t = String(texto || '').replace(/\s+/g, ' ').trim();
   return t.length > limite ? `${t.slice(0, limite)}…` : t;
+}
+
+/**
+ * Lê o que a IA devolveu no rascunho e junta com a revisão heurística.
+ *
+ * O esquema garante JSON válido; quem decide se dá para usar é isto e `podeEnviarSozinho`.
+ * `avisos` sai de `revisarRascunho` (texto) mais `precisaDeRevisao` (a própria IA levantando a
+ * mão) — os dois no mesmo lugar, porque quem chama trata os dois igual: qualquer aviso, humano lê.
+ *
+ * @returns {{texto:string, confianca:number, motivo:string, avisos:string[], precisaDeRevisao:boolean}}
+ */
+export function validarRascunho(bruto) {
+  const vazio = { texto: '', confianca: 0, motivo: '', avisos: ['a IA não devolveu rascunho'], precisaDeRevisao: true };
+
+  let d = bruto;
+  if (typeof d === 'string') {
+    try {
+      d = JSON.parse(d);
+    } catch (_) {
+      // Formato ilegível: trata como texto puro, que é o que a versão anterior devolvia. Assim
+      // um modelo que ignore o esquema ainda produz rascunho — só nunca automático, porque sem
+      // `confianca` ele não passa do limiar.
+      const cru = revisarRascunho(bruto);
+      return { texto: cru.texto, confianca: 0, motivo: '', avisos: cru.avisos, precisaDeRevisao: true };
+    }
+  }
+  if (!d || typeof d !== 'object') return vazio;
+
+  const revisao = revisarRascunho(d.texto);
+  const precisaDeRevisao = d.precisaDeRevisao !== false; // ausente = sim, por segurança
+  const avisos = [...revisao.avisos];
+  if (precisaDeRevisao) avisos.push('a própria IA pediu revisão humana');
+
+  return {
+    texto: revisao.texto,
+    confianca: Number.isFinite(d.confianca) ? Math.min(1, Math.max(0, d.confianca)) : 0,
+    motivo: String(d.motivo || '').trim().slice(0, 300),
+    avisos,
+    precisaDeRevisao,
+  };
+}
+
+/**
+ * O rascunho pode sair **sem ninguém ler antes**?
+ *
+ * Esta é a função mais perigosa do projeto: é o único ponto em que texto **gerado por IA** chega a
+ * um eleitor em nome de um mandato sem revisão humana. Mensagem de WhatsApp não volta.
+ *
+ * Por isso a resposta padrão é **não**, e cada `true` exige uma razão. As travas, da mais forte
+ * para a mais fraca:
+ *
+ * 1. **Desligado por padrão.** Sem `ligado` explícito na Config, nada sai sozinho — e é assim que
+ *    a extensão se comporta em qualquer instalação nova.
+ * 2. **Qualquer aviso bloqueia.** `revisarRascunho` já levantava a mão para marcador esquecido,
+ *    promessa de entrega, menção a bem/benefício (Lei 9.504/97) e texto longo. Ali eram avisos
+ *    ao lado do texto; aqui viram **veto**. É a trava mais valiosa, porque não depende de a IA
+ *    ser honesta sobre si mesma.
+ * 3. **A IA pedindo revisão bloqueia** (entra em `avisos` por `validarRascunho`).
+ * 4. **Confiança acima do limiar.** A mais fraca das quatro — autoavaliação de modelo não é
+ *    medida confiável — e por isso a última, nunca a única.
+ *
+ * Pura e testada de propósito: é a linha entre "a IA sugere" e "a IA fala pelo parlamentar".
+ *
+ * @returns {{pode:boolean, motivo:string}}
+ */
+export function podeEnviarSozinho({ rascunho, ligado = false, limiar = CONFIANCA_RASCUNHO_AUTO } = {}) {
+  if (!ligado) return { pode: false, motivo: 'envio automático de rascunho está desligado' };
+  if (!rascunho) return { pode: false, motivo: 'não há rascunho' };
+
+  const texto = String(rascunho.texto || '').trim();
+  if (!texto) return { pode: false, motivo: 'o rascunho veio vazio' };
+
+  const avisos = rascunho.avisos || [];
+  if (avisos.length) {
+    return { pode: false, motivo: `a revisão levantou: ${avisos.join(' · ')}` };
+  }
+
+  const confianca = Number(rascunho.confianca) || 0;
+  if (confianca < limiar) {
+    return {
+      pode: false,
+      motivo: `confiança ${(confianca * 100).toFixed(0)}% abaixo do mínimo de ${(limiar * 100).toFixed(0)}%`,
+    };
+  }
+
+  return { pode: true, motivo: `confiança ${(confianca * 100).toFixed(0)}%, sem avisos` };
 }

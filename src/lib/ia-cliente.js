@@ -18,7 +18,7 @@ import {
   montarSistemaRascunho,
   montarContatoRascunho,
   montarRequisicaoRascunho,
-  revisarRascunho,
+  validarRascunho,
   MODELO_PADRAO,
 } from './ia.js';
 
@@ -80,7 +80,10 @@ export async function rascunhar({ templates, regras, mensagens, campos, modelo }
     });
 
     if (!r?.ok) return { texto: '', avisos: [r?.motivo || 'a IA não respondeu'], custo: null };
-    return { ...revisarRascunho(r.decisao), custo: r.custo };
+    // `validarRascunho` e não `revisarRascunho`: o rascunho passou a vir com esquema (texto +
+    // confianca + precisaDeRevisao), e é a confiança que o envio automático precisa. Resposta
+    // sem esquema ainda vira rascunho, só nunca automático — ver `podeEnviarSozinho`.
+    return { ...validarRascunho(r.decisao), custo: r.custo };
   } catch (err) {
     return { texto: '', avisos: [err?.message || String(err)], custo: null };
   }
