@@ -126,6 +126,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `skipCount=false` e `pageSize=1` (só o `totalItems` interessa). O `userId` sai de
   `GET /core/v1/agent/me` (campo `userId`) — descobrir por ali, e não decodificando o Bearer, é
   o que faz funcionar também no modo janela, onde o token nunca chega ao painel.
+- **Progresso do dia é `COMPLETED` + `timestampFilter`, NÃO a queda dos abertos.** O total de
+  abertos sobe quando chega gente nova: medido ao vivo, foi de 353 a 359 enquanto se conversava.
+  Quem usa "abertos" como medida de progresso vê o número CRESCER num dia de trabalho bom. Os
+  status válidos de `/chat/v6/session` são `IN_PROGRESS`, `COMPLETED` e `PENDING` — qualquer
+  outro nome devolve 400 (sondados: RESOLVED, DONE, CLOSED, FINISHED, ARCHIVED, NEW, OPEN).
+  `timestampFilter` com a meia-noite LOCAL filtra pela ATUALIZAÇÃO (quando foi concluído); com
+  `timestampField=createdat` o número é outro — 82 contra 38, conferidos lado a lado.
 - **Rota nova? Leia o bundle do app em vez de chutar.** Quando a navegação está bloqueada e não dá
   para inspecionar a rede, o `main.*.js` do mobiliza é a fonte da verdade e está a um `fetch` de
   distância — as URLs, os métodos e os parâmetros estão como texto no código Angular. Foi assim que

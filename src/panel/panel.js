@@ -1361,7 +1361,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   async function concluirEAbrirProximo(jaFeito, opts) {
     let concluido;
     try {
-      concluido = await page.clickConcluir();
+      concluido = await concluirPeloPainel();
     } catch (err) {
       setStatus(`${jaFeito}, mas não consegui concluir (${err.message}). Conclua na aba.`, 'err');
       return false;
@@ -1966,6 +1966,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * requisição por clique numa API que já caiu por rajada — e o número nem teria mudado ainda,
    * porque a plataforma leva um instante para registrar a conclusão.
    */
+  /**
+   * Concluir pelo painel — e recontar logo depois.
+   *
+   * Pedido dele: *"o gatilho deve ser quando manda concluir e atualizar"*. Os gatilhos de tela
+   * (trocou de atendimento, o campo de mensagem sumiu) cobrem quem conclui PELA PLATAFORMA;
+   * este cobre o caminho do painel, que é o que ele usa nas rodadas e nos botões.
+   *
+   * Só reconta quando a conclusão deu certo: contar depois de um Concluir que falhou traria o
+   * mesmo número e daria a impressão de que o contador é que está quebrado.
+   */
+  async function concluirPeloPainel() {
+    const r = await page.clickConcluir();
+    if (r?.ok) agendarContagem();
+    return r;
+  }
+
   function agendarContagem() {
     if (!contadorFlutuante) return;
     if (contadorTimer) clearTimeout(contadorTimer);
@@ -2000,29 +2016,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     linhaBotoes.append(atualizar, fechar);
     caixa.append(linhaBotoes);
 
-    let inicial = null;
     let timer = null;
 
     async function medir() {
       try {
-        const { total } = await api.contarMeusAbertos();
-        if (inicial === null) inicial = total;
+        const { abertos, concluidosHoje } = await api.contarMeuDia();
+        const total = abertos;
         state.auto.meusAbertos = { total, erro: '', quando: Date.now() };
 
-        numero.textContent = `${total} aberto(s)`;
-        const feitos = inicial - total;
+        // O DESTAQUE é o que ele fez, não o que sobrou. "Abertos" sobe quando chega gente nova,
+        // então usá-lo como medida de progresso mostra o número crescendo num dia de trabalho
+        // bom — foi o relato dele, "continua sem diminuir". Concluídos hoje só sobe, e sobe por
+        // causa dele.
+        numero.textContent = concluidosHoje + ' concluídos hoje';
+        const feitos = concluidosHoje;
 
-        // Sem teto a barra ficaria negativa quando chega mais gente do que saiu, e passaria de
-        // 100% se o total caísse abaixo de zero. Nos dois casos ela mentiria.
-        const fatia = inicial > 0 ? Math.min(100, Math.max(0, (feitos / inicial) * 100)) : 0;
+        // A barra é a fatia do dia que já saiu da sua mão: concluídos sobre tudo que passou por
+        // ela hoje. Com teto e piso, porque um denominador zero (dia recém-começado) e um total
+        // que oscila fariam a barra saltar ou ficar negativa.
+        const doDia = feitos + total;
+        const fatia = doDia > 0 ? Math.min(100, Math.max(0, (feitos / doDia) * 100)) : 0;
         preenchida.style.width = fatia + '%';
-        trilho.title = Math.max(0, feitos) + ' de ' + inicial;
-        progresso.textContent =
-          feitos > 0
-            ? `${feitos} a menos desde que você abriu (eram ${inicial})`
-            : feitos < 0
-              ? `${-feitos} a mais desde que você abriu (eram ${inicial}) — chegou gente nova`
-              : `sem mudança desde que você abriu (${inicial})`;
+        trilho.title = feitos + ' de ' + doDia + ' que passaram pela sua mão hoje';
+        progresso.textContent = total + ' ainda abertos em "Meus"';
         carimbo.textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR')} — sozinho a cada atendimento.`;
       } catch (err) {
         // Erro não fecha a janelinha nem apaga o último número bom: some com o dado justamente
@@ -2806,7 +2822,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       await templatesLib.avancarVariante(template);
       ctx?.contatosTratados?.add(contato.id);
 
-      const concluido = await page.clickConcluir();
+      const concluido = await concluirPeloPainel();
       if (!concluido.ok) {
         // Enviado mas nao fechou: parar e dizer. Contar como concluido faria a fila crescer
         // em silencio, que foi o sintoma de "Meus" so aumentando.
@@ -2907,7 +2923,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     await templatesLib.avancarVariante(momento);
     ctx?.contatosTratados?.add(contato.id);
 
-    const concluido = await page.clickConcluir();
+    const concluido = await concluirPeloPainel();
     if (!concluido.ok) {
       return { nome, resultado: 'enviado', parar: true, motivo: concluido.reason };
     }
@@ -3087,7 +3103,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // pergunta como todo mundo — a regra e o porquê moram em `hsm.decidirSemResposta`.
       if (decisao?.acao === 'concluir') {
         await saveClassification({ withCompletionDate: true, quiet: true });
-        const fechouRespondido = await page.clickConcluir();
+        const fechouRespondido = await concluirPeloPainel();
         if (!fechouRespondido.ok) {
           return { nome, resultado: 'pulado', motivo: `já respondido, mas ${fechouRespondido.reason}` };
         }
@@ -3308,7 +3324,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         if (!(await sendTemplate(texto, { send: true, jaConfirmado: true }))) {
           return { nome, resultado: 'erro', motivo: `${texto.name} não saiu` };
         }
-        const fechouTexto = await page.clickConcluir();
+        const fechouTexto = await concluirPeloPainel();
         if (!fechouTexto.ok) {
           return { nome, resultado: 'enviado', parar: true, motivo: `${rotulo}, mas ${fechouTexto.reason}` };
         }
@@ -3325,7 +3341,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       if (escolha === 'concluir') {
         await saveClassification({ withCompletionDate: true, quiet: true });
-        const fechou = await page.clickConcluir();
+        const fechou = await concluirPeloPainel();
         if (!fechou.ok) {
           return { nome, resultado: 'pulado', motivo: `você mandou concluir, mas ${fechou.reason}` };
         }
@@ -3351,7 +3367,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return { nome, resultado: 'erro', motivo: 'o modelo saiu mas o agradecimento não' };
       }
 
-      const concluido = await page.clickConcluir();
+      const concluido = await concluirPeloPainel();
       if (!concluido.ok) {
         // Enviado mas nao fechou: parar e dizer. Contar como concluido faria a fila crescer
         // em silencio, que foi o sintoma de "Meus" so aumentando.
@@ -3988,7 +4004,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
   /** O Concluir das saídas acima, com os dois tropeços conhecidos separados. */
   async function fecharSemRetorno(nome, motivo, resultado) {
-    const fechou = await page.clickConcluir();
+    const fechou = await concluirPeloPainel();
     if (!fechou.ok) return { nome, resultado, parar: true, motivo: `${motivo}, mas ${fechou.reason}` };
     if (fechou.dialogOpen) {
       return {
@@ -4112,7 +4128,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // já recebeu, e é isso que não pode acontecer duas vezes.
       ctx?.contatosTratados?.add(contato.id);
 
-      const concluido = await page.clickConcluir();
+      const concluido = await concluirPeloPainel();
       if (!concluido.ok) {
         return { nome, resultado: 'enviado', parar: true, continuaNaFila: true, motivo: concluido.reason };
       }

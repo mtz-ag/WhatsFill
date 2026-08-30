@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-08-30 — "Continua sem diminuir": o número não estava travado, era o número errado
+
+**Relato dele:** *"continua sem diminuir o número o gatilho deve ser quando manda concluir e
+atualizar"*.
+
+### Fiz o gatilho que ele pediu — e antes disso descobri que ele não bastaria
+
+Toda conclusão feita pelo painel agora reconta (`concluirPeloPainel`, nas 9 chamadas de
+`clickConcluir`), e só quando a conclusão dá certo: recontar depois de um Concluir que falhou
+traria o mesmo número e faria parecer que o contador é que está quebrado.
+
+**Mas o gatilho não era a causa.** Antes de mexer, medi o total duas vezes com alguns minutos de
+diferença: **353 → 359**. Ele estava SUBINDO. Chega gente nova mais rápido do que ele conclui,
+então "abertos" nunca ia diminuir — e ele estava certo ao dizer que não diminuía, só que o defeito
+não era atualização, era **a escolha do número**.
+
+Um contador de progresso feito de "o que sobrou" mostra o número crescendo justamente num dia de
+trabalho bom.
+
+### O número certo
+
+`statuses=COMPLETED` + `userId` + `timestampFilter` na meia-noite local = **quantos você
+concluiu hoje**. Só sobe, e sobe por causa do trabalho dele. Medido: 82 hoje, contra 4159 na vida
+inteira sem o filtro.
+
+Os status válidos foram descobertos sondando a API, não adivinhados: `IN_PROGRESS`, `COMPLETED`
+e `PENDING` respondem; RESOLVED, DONE, CLOSED, FINISHED, ARCHIVED, ENDED, NEW, WAITING e OPEN
+devolvem **400**. E `timestampFilter` sem `timestampField` filtra pela atualização (a conclusão);
+com `createdat` daria 38 em vez de 82 — conferidos lado a lado.
+
+### A janelinha agora
+
+- **Destaque: "82 concluídos hoje"** — o que ele fez.
+- Abaixo: "356 ainda abertos em Meus" — o que falta.
+- Barra: a fatia do dia que já saiu da mão dele (concluídos sobre tudo que passou por ela hoje),
+  com teto e piso porque o denominador oscila e um dia recém-começado divide por zero.
+
+### Arquivos
+
+`src/lib/api.js` (`contarConcluidosHoje`, `contarMeuDia`, `STATUS_CONCLUIDO`),
+`src/panel/panel.js` (`concluirPeloPainel` e o novo destaque), `CLAUDE.md`,
+`manifest.json` (0.16.0 → 0.17.0). Nove suítes passando.
+
+---
+
 ## 2026-08-30 — "Atendi e não atualizou": o contador passa a reagir ao trabalho, não ao relógio
 
 **Relato dele:** *"atendi e não atualizou, deve atualizar sozinho, faça uma barra de progresso e

@@ -389,6 +389,55 @@ export async function contarMeusAbertos() {
   return { total: Number(corpo?.totalItems ?? 0), userId };
 }
 
+/** Status de atendimento concluído. Descoberto sondando a API: os outros nomes dão 400. */
+export const STATUS_CONCLUIDO = 'COMPLETED';
+
+/**
+ * Quantos atendimentos VOCÊ concluiu hoje.
+ *
+ * **É este o número de progresso, e não a queda dos abertos.** Medido ao vivo em 30/08/2026: o
+ * total de abertos SUBIU de 353 para 359 no meio da conversa, porque chega gente nova mais
+ * rápido do que se conclui. Quem olha "abertos" para saber se andou vê o número crescer num dia
+ * de trabalho bom — foi exatamente o relato dele, *"continua sem diminuir"*. Concluídos hoje só
+ * sobe, e sobe por causa do trabalho dele.
+ *
+ * `timestampFilter` com a meia-noite LOCAL (não UTC): o dia é o de quem atende. Sem
+ * `timestampField`, a API filtra pela atualização — que é quando o atendimento foi concluído.
+ * Com `createdat` o número é outro (as sessões CRIADAS hoje), e foi conferido lado a lado:
+ * 82 pelo padrão, 38 por `createdat`.
+ *
+ * @returns {Promise<number>}
+ */
+export async function contarConcluidosHoje() {
+  const agente = await getAgente();
+  const userId = agente?.userId;
+  if (!userId) throw new Error('não consegui descobrir o seu usuário em /core/v1/agent/me');
+
+  const meiaNoite = new Date();
+  meiaNoite.setHours(0, 0, 0, 0);
+
+  const q = new URLSearchParams({
+    skipCount: 'false',
+    page: '1',
+    pageSize: '1',
+    includeDetails: 'All',
+    statuses: STATUS_CONCLUIDO,
+    userId,
+    sessionType: 'INDIVIDUAL',
+    orderBy: 'createdat',
+    timestampFilter: meiaNoite.toISOString(),
+  });
+
+  const corpo = await apiFetch(`/chat/v6/session?${q}`);
+  return Number(corpo?.totalItems ?? 0);
+}
+
+/** Os dois números do dia numa chamada só de quem chama. */
+export async function contarMeuDia() {
+  const [abertos, concluidosHoje] = await Promise.all([contarMeusAbertos(), contarConcluidosHoje()]);
+  return { abertos: abertos.total, concluidosHoje };
+}
+
 /** Só o que o contato escreveu, do mais antigo para o mais novo. Base do parser. */
 export async function getIncomingText(sessionId, pageSize = 50) {
   return (await getConversation(sessionId, pageSize)).incoming;
