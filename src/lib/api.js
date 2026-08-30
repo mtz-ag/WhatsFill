@@ -341,8 +341,15 @@ export async function getConversation(sessionId, pageSize = 50) {
  * Descobrir por aqui, e não decodificando o Bearer, é o que faz isto funcionar também no modo
  * janela — lá a chamada é executada pela aba e o token nunca chega ao painel.
  */
-export function getAgente() {
-  return apiFetch('/core/v1/agent/me');
+let agenteCache = null;
+
+export async function getAgente() {
+  // Guardado por carregamento: quem está logado não muda no meio da sessão, e o contador passou
+  // a atualizar a cada atendimento — sem isto, cada atualização custaria DUAS requisições numa
+  // API onde rajada já derrubou a plataforma.
+  if (agenteCache) return agenteCache;
+  agenteCache = await apiFetch('/core/v1/agent/me');
+  return agenteCache;
 }
 
 /** Status de atendimento em andamento, que é o que "aberto" quer dizer na fila. */

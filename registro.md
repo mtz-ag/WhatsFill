@@ -5,6 +5,56 @@
 
 ---
 
+## 2026-08-30 — "Atendi e não atualizou": o contador passa a reagir ao trabalho, não ao relógio
+
+**Relato dele:** *"atendi e não atualizou, deve atualizar sozinho, faça uma barra de progresso e
+um pouco menor a caixa"*.
+
+### O erro: eu tinha ligado o contador no relógio, não no trabalho
+
+A janelinha atualizava a cada 60s e nada mais. Concluir um atendimento é o instante EXATO em que
+o número muda, e era justamente o momento em que ela não fazia nada — ele olhava logo depois de
+atender, via o número velho, e concluía que estava quebrada. Estava: um contador de progresso que
+não se mexe quando você progride não conta nada.
+
+### Agora são três gatilhos, e os dois primeiros são o trabalho
+
+1. **Trocou de atendimento** (`sessionChanged`) — concluiu e foi para o próximo.
+2. **Concluiu e ficou na mesma conversa** — o campo de mensagem some quando o atendimento fecha,
+   e é esse o sinal (`anterior.hasComposer && !next.hasComposer`).
+3. **Relógio de 45s**, agora só como rede de segurança.
+
+**`conversaMudou` foi descartado como gatilho de propósito:** ele dispara a cada mensagem que
+chega, e viraria uma requisição a cada poucos segundos numa conversa movimentada.
+
+### As duas travas que impedem isso de virar rajada
+
+- **Junta os pedidos colados** (`CONTADOR_ESPERA_MS`, 2,5s): passar a fila rápido dispara uma
+  troca por clique, e sem juntar seria uma requisição por clique numa API que já derrubou a
+  plataforma. O atraso ainda ajuda por outro motivo: a plataforma leva um instante para registrar
+  a conclusão, e contar na hora traria o número velho de qualquer jeito.
+- **O agente ficou em cache** (`api.getAgente`): quem está logado não muda no meio da sessão.
+  Sem isso, cada atualização custaria DUAS requisições em vez de uma.
+
+### Barra e tamanho
+
+Barra de progresso enchendo conforme os atendimentos saem, com teto e piso: sem eles ela ficaria
+**negativa** quando chega mais gente do que saiu, e passaria de 100% se o total caísse abaixo de
+zero — nos dois casos mentiria. O denominador é quanto havia quando ele abriu: é o dia de trabalho
+dele que ela mede, não a fila inteira do CRM.
+
+A caixa encolheu (230px, menos padding, título e número menores). Razão registrada no CSS: ela
+fica **aberta o tempo todo** por cima da conversa, enquanto a pergunta da rodada aparece, é
+respondida e some — o que é permanente na tela tem que ocupar menos.
+
+### Arquivos
+
+`src/panel/panel.js` (`agendarContagem` e os dois gatilhos), `src/lib/api.js` (cache do agente),
+`src/panel/panel.css` (`.wf-contador*`), `manifest.json` (0.15.0 → 0.16.0).
+Nove suítes passando.
+
+---
+
 ## 2026-08-30 — O contador vira janelinha arrastável, para acompanhar sem trocar de aba
 
 **Relato dele:** *"eu quero uma contagem para eu acompanhar pode ficar em um popup arrastavel, da

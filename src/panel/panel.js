@@ -300,11 +300,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     root.classList.toggle('wf-dark', !!next.dark);
 
     if (sessionChanged) {
+      // Concluiu e foi para o próximo: é AQUI que o número muda. Só relógio não serve — ele
+      // pediu justamente isso ("atendi e não atualizou"). Vai adiado e juntado: passar a fila
+      // rápido não pode virar uma requisição por clique.
+      agendarContagem();
       agendarLoad(next.sessionId);
       return;
     }
 
     renderAll();
+
+    // Concluiu e FICOU na mesma conversa: o campo de mensagem some quando o atendimento fecha,
+    // e é esse o sinal. Sem ele o contador só se mexeria ao abrir o próximo contato — e ele
+    // relatou exatamente isso ("atendi e não atualizou").
+    //
+    // Não uso `conversaMudou` como gatilho: ele dispara a cada mensagem que chega, e viraria
+    // uma requisição a cada poucos segundos numa conversa movimentada.
+    if (anterior.hasComposer && !next.hasComposer) agendarContagem();
 
     // Mesmo atendimento, mensagem nova: o contato respondeu enquanto você olhava a conversa.
     // Sem isto o painel só reanalisaria quando você saísse do atendimento e voltasse.
@@ -1940,20 +1952,47 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * plataforma, e um contador não vale um pedido por segundo. O botão atualiza na hora quando
    * você quiser.
    */
-  const CONTADOR_INTERVALO_MS = 60000;
+  const CONTADOR_INTERVALO_MS = 45000;
+
+  /** Espera antes de recontar depois de trocar de atendimento. */
+  const CONTADOR_ESPERA_MS = 2500;
+
+  let contadorTimer = null;
+
+  /**
+   * Pede uma recontagem, juntando as que chegarem coladas.
+   *
+   * Passar a fila rápido dispara uma troca de atendimento por clique. Sem juntar, isso vira uma
+   * requisição por clique numa API que já caiu por rajada — e o número nem teria mudado ainda,
+   * porque a plataforma leva um instante para registrar a conclusão.
+   */
+  function agendarContagem() {
+    if (!contadorFlutuante) return;
+    if (contadorTimer) clearTimeout(contadorTimer);
+    contadorTimer = setTimeout(() => {
+      contadorTimer = null;
+      contadorFlutuante?.medir();
+    }, CONTADOR_ESPERA_MS);
+  }
 
   async function abrirContadorFlutuante() {
     if (contadorFlutuante) return; // uma só: duas janelinhas contando dão dois números
 
-    const caixa = h('div', { class: 'wf-pergunta' });
+    const caixa = h('div', { class: 'wf-pergunta wf-contador' });
     const fundo = h('div', { class: 'wf-pergunta-fundo' }, [caixa]);
     const barra = h('div', { class: 'wf-pergunta-titulo' }, 'Meus abertos');
     caixa.append(barra);
 
     const numero = h('div', { class: 'wf-contador-numero' }, '…');
+    // Barra: enche conforme os atendimentos saem. O denominador é quanto havia quando você
+    // abriu — é o "dia de trabalho" que ela mede, não a fila inteira do CRM.
+    const trilho = h('div', { class: 'wf-contador-trilho' });
+    const preenchida = h('div', { class: 'wf-contador-barra' });
+    trilho.append(preenchida);
+
     const progresso = h('div', { class: 'wf-pergunta-linha' }, 'contando…');
     const carimbo = h('div', { class: 'wf-pergunta-dica' }, '');
-    caixa.append(numero, progresso, carimbo);
+    caixa.append(numero, trilho, progresso, carimbo);
 
     const linhaBotoes = h('div', { class: 'wf-pergunta-botoes' });
     const atualizar = h('button', { class: 'wf-btn', type: 'button' }, 'Atualizar');
@@ -1972,13 +2011,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
         numero.textContent = `${total} aberto(s)`;
         const feitos = inicial - total;
+
+        // Sem teto a barra ficaria negativa quando chega mais gente do que saiu, e passaria de
+        // 100% se o total caísse abaixo de zero. Nos dois casos ela mentiria.
+        const fatia = inicial > 0 ? Math.min(100, Math.max(0, (feitos / inicial) * 100)) : 0;
+        preenchida.style.width = fatia + '%';
+        trilho.title = Math.max(0, feitos) + ' de ' + inicial;
         progresso.textContent =
           feitos > 0
             ? `${feitos} a menos desde que você abriu (eram ${inicial})`
             : feitos < 0
               ? `${-feitos} a mais desde que você abriu (eram ${inicial}) — chegou gente nova`
               : `sem mudança desde que você abriu (${inicial})`;
-        carimbo.textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR')}. Sozinho a cada 60s.`;
+        carimbo.textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR')} — sozinho a cada atendimento.`;
       } catch (err) {
         // Erro não fecha a janelinha nem apaga o último número bom: some com o dado justamente
         // quando a rede está ruim, que é quando você mais quer saber onde estava.
@@ -1988,7 +2033,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     function encerrar() {
       if (timer) clearInterval(timer);
+      if (contadorTimer) clearTimeout(contadorTimer);
       timer = null;
+      contadorTimer = null;
       fundo.remove();
       contadorFlutuante = null;
       renderAll();

@@ -342,7 +342,31 @@
 
 /* O número do contador flutuante: ele existe para ser lido de relance, no meio do atendimento,
    sem parar o que se está fazendo. Em 13px ele vira mais uma linha de texto na tela. */
-.wf-contador-numero { margin: 6px 0 4px; font-size: 26px; font-weight: 700; line-height: 1.1; }
+.wf-contador-numero { margin: 6px 0 4px; font-size: 22px; font-weight: 700; line-height: 1.1; }
+
+/* A janelinha do contador é mais estreita que a caixa da rodada de propósito: ela fica ABERTA o
+   tempo todo por cima da conversa, enquanto a pergunta aparece, é respondida e some. O que é
+   permanente na tela tem que ocupar menos. */
+.wf-contador.wf-pergunta { padding: 10px 12px; }
+.wf-contador.wf-pergunta-solta { width: min(230px, calc(100vw - 32px)); }
+.wf-contador .wf-pergunta-titulo { font-size: 13px; margin-bottom: 2px; }
+.wf-contador .wf-pergunta-botoes { margin-top: 8px; }
+
+/* Barra de progresso: enche conforme os atendimentos saem. */
+.wf-contador-trilho {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(127, 127, 127, 0.25);
+  overflow: hidden;
+  margin: 8px 0 6px;
+}
+.wf-contador-barra {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: var(--wf-accent, #16a34a);
+  transition: width 0.4s ease;
+}
 
 /* Aviso dentro da pergunta (já enviei hoje, cidade trocada): precisa saltar aos olhos. */
 .wf-pergunta-aviso {
