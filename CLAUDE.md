@@ -119,6 +119,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `TO_HUB`/`FROM_HUB`) — conferido no bundle em 29/08/2026. Quem precisa enxergar mídia usa
   `getConversation().entrantes`, que traz `{texto, tipo}` **sem** filtrar; `incoming` continua
   sendo só texto, porque é a base do parser e parser não lê figura.
+- **O contador de "Meus" da plataforma NÃO é o total — ela pede para a API não contar.** Ao abrir
+  a aba, o app chama `GET /chat/v6/session?skipCount=true&…&statuses=IN_PROGRESS&userId=…`, e com
+  `skipCount=true` a resposta vem com `totalItems: 0`. Medido lado a lado em 30/08/2026: badge
+  **76**, total real **353**. Para saber o número de verdade é a mesma rota com
+  `skipCount=false` e `pageSize=1` (só o `totalItems` interessa). O `userId` sai de
+  `GET /core/v1/agent/me` (campo `userId`) — descobrir por ali, e não decodificando o Bearer, é
+  o que faz funcionar também no modo janela, onde o token nunca chega ao painel.
 - **Rota nova? Leia o bundle do app em vez de chutar.** Quando a navegação está bloqueada e não dá
   para inspecionar a rede, o `main.*.js` do mobiliza é a fonte da verdade e está a um `fetch` de
   distância — as URLs, os métodos e os parâmetros estão como texto no código Angular. Foi assim que

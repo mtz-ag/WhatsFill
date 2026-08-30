@@ -111,6 +111,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       rodando: false,
       parar: false,
       fila: [], // retrato da fila da plataforma, só para conferência
+      meusAbertos: { total: null, erro: '', quando: 0 },
       log: [], // { nome, resultado, motivo } de cada contato da rodada
     },
     incoming: [],
@@ -1483,6 +1484,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'plataforma, de cima para baixo. Uma rodada por vez.')
     );
 
+    body.append(renderCartaoMeusAbertos());
     body.append(renderCartaoRitmo(cfg));
     body.append(renderCartaoFila());
     body.append(renderCartaoNovos(cfg));
@@ -1902,6 +1904,59 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /** Retrato da fila para você conferir antes de disparar. Nenhum envio depende deste texto. */
+  /**
+   * Quantos atendimentos abertos estão com você de verdade.
+   *
+   * **Existe porque a plataforma não mostra esse número.** Ela pede a lista com
+   * `skipCount=true`, que diz à API para não contar — o badge ao lado de "Meus" é outra coisa.
+   * Medido lado a lado em 30/08/2026: badge **76**, total real **353**.
+   *
+   * A contagem nasce do CLIQUE, nunca do desenho: `renderAll()` roda o tempo todo (troca de
+   * atendimento, mensagem nova, cada `setStatus`), e rede disparada de dentro de um `render*`
+   * vira uma requisição por redesenho. Falha vira botão de tentar de novo com o motivo na tela,
+   * nunca nova tentativa automática.
+   */
+  function renderCartaoMeusAbertos() {
+    const estado = state.auto.meusAbertos;
+    const card = h('div', { class: 'wf-card' }, [h('h4', {}, 'Meus atendimentos abertos')]);
+
+    const botao = h('button', { class: 'wf-btn', type: 'button' },
+      estado.total === null ? 'Contar' : 'Contar de novo');
+    botao.disabled = state.auto.rodando;
+    botao.addEventListener('click', () =>
+      withBusy(async () => {
+        try {
+          const { total } = await api.contarMeusAbertos();
+          state.auto.meusAbertos = { total, erro: '', quando: Date.now() };
+          setStatus(`Você tem ${total} atendimento(s) aberto(s) em "Meus".`);
+        } catch (err) {
+          state.auto.meusAbertos = { total: null, erro: traduzirErroDeRede(err.message), quando: 0 };
+          setStatus('Não consegui contar os seus atendimentos.', 'err');
+        }
+        renderAll();
+      })
+    );
+
+    card.append(
+      h('div', { class: 'wf-preview' },
+        'O número ao lado de "Meus" na plataforma não é o total: ela pede a lista sem mandar ' +
+          'contar. Este aqui é o total de verdade, em andamento e atribuídos a você.'),
+      botao
+    );
+
+    if (estado.total !== null) {
+      card.append(h('p', { class: 'wf-h' }, `${estado.total} aberto(s) em "Meus"`));
+      card.append(
+        h('p', { class: 'wf-hint' },
+          `Contado às ${new Date(estado.quando).toLocaleTimeString('pt-BR')}. A fila da esquerda ` +
+            'carrega 50 por vez, então ela quase nunca mostra tudo.')
+      );
+    }
+    if (estado.erro) card.append(h('div', { class: 'wf-block' }, estado.erro));
+
+    return card;
+  }
+
   function renderCartaoFila() {
     const card = h('div', { class: 'wf-card' }, [h('h4', {}, 'Quem vai receber')]);
     const ver = h('button', { class: 'wf-btn', type: 'button' }, 'Ver a fila');

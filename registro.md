@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-08-30 — O número de "Meus" que a plataforma não mostra: 76 na tela, 353 de verdade
+
+**Pedido dele:** *"faça a extensão pegar o número de atendimentos abertos nos meus - todos, quero
+visualizar, a plataforma não exibe corretamente"*.
+
+### Ele estava certo, e a causa é explícita
+
+Ao abrir "Meus", o app chama:
+
+```
+GET /chat/v6/session?skipCount=true&page=1&pageSize=50&includeDetails=All
+    &statuses=IN_PROGRESS&userId=<meu>&sessionType=INDIVIDUAL&orderBy=createdat
+```
+
+**`skipCount=true` manda a API não calcular o total.** A resposta volta com `totalItems: 0` — o
+número do badge é outra coisa. Medido lado a lado, na mesma tela e no mesmo minuto: badge **76**,
+total real **353**.
+
+Não foi deduzido do bundle: a requisição foi **observada na rede** ao clicar na aba. O bundle deu
+os nomes dos parâmetros, a rede deu os valores que a plataforma realmente usa.
+
+### Como a extensão descobre quem é você
+
+`GET /core/v1/agent/me` → o campo `userId` é exatamente o que a fila manda em `?userId=`.
+Isso importa mais do que parece: o `userId` também está dentro do Bearer, mas o token vive fechado
+no transporte e **nunca chega ao painel no modo janela**. Perguntar à API funciona nos dois
+contextos; decodificar o token só funcionaria num.
+
+`pageSize=1` de propósito — só o `totalItems` interessa, e trazer 50 sessões para contar uma
+seria gastar rede numa API que já caiu por rajada.
+
+### Na tela
+
+Cartão novo no topo da aba Automatizado, com botão **Contar**. A contagem nasce do **clique**:
+`renderAll()` roda o tempo todo, e rede disparada de dentro de um `render*` vira uma requisição
+por redesenho. Falha vira o motivo na tela e o botão de novo, nunca nova tentativa automática.
+
+### Arquivos
+
+`src/lib/api.js` (`getAgente`, `contarMeusAbertos`), `src/panel/panel.js`
+(`renderCartaoMeusAbertos`), `CLAUDE.md`, `manifest.json` (0.13.0 → 0.14.0).
+Nove suítes passando.
+
+---
+
 ## 2026-08-30 — "Abre a conversa e não manda nada": quem cumprimentou passa a ser respondido
 
 **Relato dele:** *"está falhando em pedir dados ao iniciar atendimento"*, e o sintoma exato,

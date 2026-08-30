@@ -333,6 +333,55 @@ export async function getConversation(sessionId, pageSize = 50) {
   };
 }
 
+/**
+ * Quem está logado — e, principalmente, o `userId` que a fila usa para dizer o que é "Meus".
+ *
+ * A rota foi conferida ao vivo (30/08/2026): `GET /core/v1/agent/me` devolve o agente, e o
+ * campo `userId` dele é exatamente o que a plataforma manda em `?userId=` ao abrir "Meus".
+ * Descobrir por aqui, e não decodificando o Bearer, é o que faz isto funcionar também no modo
+ * janela — lá a chamada é executada pela aba e o token nunca chega ao painel.
+ */
+export function getAgente() {
+  return apiFetch('/core/v1/agent/me');
+}
+
+/** Status de atendimento em andamento, que é o que "aberto" quer dizer na fila. */
+export const STATUS_EM_ANDAMENTO = 'IN_PROGRESS';
+
+/**
+ * Quantos atendimentos EM ANDAMENTO estão com você — o número que a plataforma não mostra.
+ *
+ * **Por que ele não aparece na tela dela:** ao abrir "Meus", o app pede
+ * `/chat/v6/session?...&skipCount=true`, que manda a API **não calcular o total**. A resposta
+ * volta com `totalItems: 0`, e o número do badge é outra coisa. Medido lado a lado em
+ * 30/08/2026: badge dizia **76**, o total real era **353**.
+ *
+ * Aqui é a mesma rota com `skipCount=false`. `pageSize=1` de propósito: só interessa o
+ * `totalItems`, e trazer 50 sessões para contar uma seria gastar rede à toa — nesta API rajada
+ * de requisição já derrubou a plataforma.
+ *
+ * @returns {Promise<{total:number, userId:string}>}
+ */
+export async function contarMeusAbertos() {
+  const agente = await getAgente();
+  const userId = agente?.userId;
+  if (!userId) throw new Error('não consegui descobrir o seu usuário em /core/v1/agent/me');
+
+  const q = new URLSearchParams({
+    skipCount: 'false',
+    page: '1',
+    pageSize: '1',
+    includeDetails: 'All',
+    statuses: STATUS_EM_ANDAMENTO,
+    userId,
+    sessionType: 'INDIVIDUAL',
+    orderBy: 'createdat',
+  });
+
+  const corpo = await apiFetch(`/chat/v6/session?${q}`);
+  return { total: Number(corpo?.totalItems ?? 0), userId };
+}
+
 /** Só o que o contato escreveu, do mais antigo para o mais novo. Base do parser. */
 export async function getIncomingText(sessionId, pageSize = 50) {
   return (await getConversation(sessionId, pageSize)).incoming;
