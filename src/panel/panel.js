@@ -1916,6 +1916,97 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * vira uma requisição por redesenho. Falha vira botão de tentar de novo com o motivo na tela,
    * nunca nova tentativa automática.
    */
+  /** A janelinha do contador, enquanto estiver aberta. Fora do `state` porque não é desenho. */
+  let contadorFlutuante = null;
+
+  /**
+   * Janelinha arrastável com o total de "Meus" abertos, para acompanhar o progresso trabalhando.
+   *
+   * **Por que flutuante e não dentro da aba:** o número dentro do painel só é visto quando você
+   * está na aba Automatizado, e o trabalho acontece na conversa. Ele pediu para acompanhar o
+   * progresso enquanto atende — um número que exige trocar de aba para consultar não acompanha
+   * nada.
+   *
+   * Segue as regras da caixa da rodada, e não é coincidência: a camada é `pointer-events: none`
+   * e sem fundo, então **a conversa continua legível e clicável por baixo**; a caixa é arrastada
+   * pelo título e a posição fica no `settings` (chave própria, senão ela e a pergunta da rodada
+   * disputariam o mesmo canto). Ver `tools/checar-pergunta.mjs`.
+   *
+   * **O progresso é a diferença, não o total.** Guardo quanto havia quando você abriu e mostro
+   * quantos saíram desde então — é isso que responde "estou andando?". O total sozinho sobe
+   * quando chega gente nova e daria a impressão de que você andou para trás.
+   *
+   * A atualização automática é de 60s de propósito. Nesta API rajada de requisição já derrubou a
+   * plataforma, e um contador não vale um pedido por segundo. O botão atualiza na hora quando
+   * você quiser.
+   */
+  const CONTADOR_INTERVALO_MS = 60000;
+
+  async function abrirContadorFlutuante() {
+    if (contadorFlutuante) return; // uma só: duas janelinhas contando dão dois números
+
+    const caixa = h('div', { class: 'wf-pergunta' });
+    const fundo = h('div', { class: 'wf-pergunta-fundo' }, [caixa]);
+    const barra = h('div', { class: 'wf-pergunta-titulo' }, 'Meus abertos');
+    caixa.append(barra);
+
+    const numero = h('div', { class: 'wf-contador-numero' }, '…');
+    const progresso = h('div', { class: 'wf-pergunta-linha' }, 'contando…');
+    const carimbo = h('div', { class: 'wf-pergunta-dica' }, '');
+    caixa.append(numero, progresso, carimbo);
+
+    const linhaBotoes = h('div', { class: 'wf-pergunta-botoes' });
+    const atualizar = h('button', { class: 'wf-btn', type: 'button' }, 'Atualizar');
+    const fechar = h('button', { class: 'wf-btn', type: 'button' }, 'Fechar');
+    linhaBotoes.append(atualizar, fechar);
+    caixa.append(linhaBotoes);
+
+    let inicial = null;
+    let timer = null;
+
+    async function medir() {
+      try {
+        const { total } = await api.contarMeusAbertos();
+        if (inicial === null) inicial = total;
+        state.auto.meusAbertos = { total, erro: '', quando: Date.now() };
+
+        numero.textContent = `${total} aberto(s)`;
+        const feitos = inicial - total;
+        progresso.textContent =
+          feitos > 0
+            ? `${feitos} a menos desde que você abriu (eram ${inicial})`
+            : feitos < 0
+              ? `${-feitos} a mais desde que você abriu (eram ${inicial}) — chegou gente nova`
+              : `sem mudança desde que você abriu (${inicial})`;
+        carimbo.textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR')}. Sozinho a cada 60s.`;
+      } catch (err) {
+        // Erro não fecha a janelinha nem apaga o último número bom: some com o dado justamente
+        // quando a rede está ruim, que é quando você mais quer saber onde estava.
+        carimbo.textContent = `Falhou às ${new Date().toLocaleTimeString('pt-BR')}: ${traduzirErroDeRede(err.message)}`;
+      }
+    }
+
+    function encerrar() {
+      if (timer) clearInterval(timer);
+      timer = null;
+      fundo.remove();
+      contadorFlutuante = null;
+      renderAll();
+    }
+
+    atualizar.addEventListener('click', () => medir());
+    fechar.addEventListener('click', encerrar);
+
+    contadorFlutuante = { encerrar, medir };
+    tornarArrastavel(caixa, barra, 'contadorPos');
+    root.append(fundo);
+    aplicarPosicao(caixa, state.settings.contadorPos);
+
+    await medir();
+    timer = setInterval(medir, CONTADOR_INTERVALO_MS);
+    renderAll();
+  }
+
   function renderCartaoMeusAbertos() {
     const estado = state.auto.meusAbertos;
     const card = h('div', { class: 'wf-card' }, [h('h4', {}, 'Meus atendimentos abertos')]);
@@ -1942,6 +2033,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         'O número ao lado de "Meus" na plataforma não é o total: ela pede a lista sem mandar ' +
           'contar. Este aqui é o total de verdade, em andamento e atribuídos a você.'),
       botao
+    );
+
+    // Para acompanhar enquanto atende: o número dentro da aba só aparece quando você está NELA,
+    // e o trabalho acontece na conversa.
+    const flutuar = h('button', { class: 'wf-btn wf-primary', type: 'button' },
+      contadorFlutuante ? 'Fechar a janelinha' : 'Acompanhar em janelinha');
+    flutuar.addEventListener('click', () =>
+      contadorFlutuante ? contadorFlutuante.encerrar() : abrirContadorFlutuante()
+    );
+    card.append(flutuar);
+    card.append(
+      h('p', { class: 'wf-hint' },
+        'A janelinha fica por cima da plataforma, arrasta pelo título e mostra quantos saíram ' +
+          'desde que você a abriu. Ela não bloqueia a conversa.')
     );
 
     if (estado.total !== null) {
@@ -3328,8 +3433,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * quando o cursor passa por cima do iframe/conversa da plataforma, que é onde um listener no
    * documento perderia o `pointermove` e a caixa "grudaria" no meio do arrasto.
    */
-  function tornarArrastavel(caixa, alca) {
-    aplicarPosicao(caixa, state.settings.perguntaPos);
+  function tornarArrastavel(caixa, alca, chavePos = 'perguntaPos') {
+    aplicarPosicao(caixa, state.settings[chavePos]);
 
     let arrasto = null;
 
@@ -3354,9 +3459,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (alca.hasPointerCapture?.(ev.pointerId)) alca.releasePointerCapture(ev.pointerId);
       const r = caixa.getBoundingClientRect();
       const pos = { left: Math.round(r.left), top: Math.round(r.top) };
-      state.settings.perguntaPos = pos;
+      state.settings[chavePos] = pos;
       // Grava relendo o storage: a Config mexe no mesmo objeto por outro caminho.
-      salvarAjuste({ perguntaPos: pos }).catch(() => {});
+      salvarAjuste({ [chavePos]: pos }).catch(() => {});
     };
     alca.addEventListener('pointerup', soltar);
     alca.addEventListener('pointercancel', soltar);

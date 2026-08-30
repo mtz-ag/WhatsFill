@@ -340,6 +340,10 @@
 .wf-pergunta-linha { color: var(--wf-muted); font-size: 12px; }
 .wf-pergunta-corpo { margin: 10px 0 12px; font-size: 13px; white-space: pre-wrap; }
 
+/* O número do contador flutuante: ele existe para ser lido de relance, no meio do atendimento,
+   sem parar o que se está fazendo. Em 13px ele vira mais uma linha de texto na tela. */
+.wf-contador-numero { margin: 6px 0 4px; font-size: 26px; font-weight: 700; line-height: 1.1; }
+
 /* Aviso dentro da pergunta (já enviei hoje, cidade trocada): precisa saltar aos olhos. */
 .wf-pergunta-aviso {
   color: var(--wf-warn);

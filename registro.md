@@ -5,6 +5,53 @@
 
 ---
 
+## 2026-08-30 — O contador vira janelinha arrastável, para acompanhar sem trocar de aba
+
+**Relato dele:** *"eu quero uma contagem para eu acompanhar pode ficar em um popup arrastavel, da
+maneira que está não posso ver meu progresso"*.
+
+Ele está certo e o defeito é de desenho meu: pus o número **dentro da aba Automatizado**, e o
+trabalho acontece na conversa. Número que exige trocar de aba para consultar não acompanha nada.
+
+### O que mudou
+
+Janelinha flutuante, aberta pelo botão do cartão. Ela segue as regras da caixa da rodada — e não
+por estética: a camada é `pointer-events: none` e sem fundo, então **a conversa continua legível
+e clicável por baixo**; arrasta pelo título; a posição fica no `settings`.
+
+**Chave de posição própria (`contadorPos`).** Reaproveitar `perguntaPos` faria a janelinha e a
+pergunta da rodada disputarem o mesmo canto da tela — arrastar uma moveria a outra. `tornarArrastavel`
+passou a receber qual posição lembrar, com `perguntaPos` como padrão, então as três caixas que já
+existiam não mudaram de comportamento.
+
+### O progresso é a DIFERENÇA, não o total
+
+Guardo quanto havia quando você abriu e mostro quantos saíram desde então. O total sozinho **sobe**
+quando chega gente nova, e você teria a impressão de estar andando para trás justamente num dia de
+muito movimento. A linha diz as duas coisas: quantos saíram e quantos eram.
+
+Erro de rede **não fecha a janelinha nem apaga o último número bom** — some com o dado justamente
+quando a rede está ruim, que é quando mais se quer saber onde se estava. O motivo vai no rodapé.
+
+### 60 segundos, e não menos
+
+Nesta API rajada de requisição já derrubou a plataforma. Um contador não vale um pedido por
+segundo; o botão atualiza na hora quando ele quiser.
+
+### Não conferido aqui
+
+`tools/checar-pergunta.mjs` (que prova que a caixa não bloqueia a conversa) precisa de Playwright,
+que não está instalado nesta máquina. A janelinha reusa as MESMAS classes da caixa da rodada e o
+CSS da camada não foi tocado — a regra nova é só o tamanho do número.
+
+### Arquivos
+
+`src/panel/panel.js` (`abrirContadorFlutuante`, `tornarArrastavel` com chave de posição),
+`src/panel/panel.css` (`.wf-contador-numero`), `src/lib/store.js` (`contadorPos`),
+`manifest.json` (0.14.0 → 0.15.0). Nove suítes passando.
+
+---
+
 ## 2026-08-30 — O número de "Meus" que a plataforma não mostra: 76 na tela, 353 de verdade
 
 **Pedido dele:** *"faça a extensão pegar o número de atendimentos abertos nos meus - todos, quero

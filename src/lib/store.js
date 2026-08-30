@@ -367,6 +367,8 @@ const DEFAULTS = {
      * para todas as rodadas, não para uma configuração de rodada.
      */
     perguntaPos: null,
+    /** Posição da janelinha do contador. Própria, senão ela e a pergunta se empurram. */
+    contadorPos: null,
   },
 
   /**
