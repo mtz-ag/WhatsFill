@@ -1203,10 +1203,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * ele serve de padrão quando não casa com nenhum. É a única escolha defensável: continua
        * sendo um modelo que ELE configurou, e não um chute do painel entre os 19 aprovados.
        *
-       * **O que NÃO acontece:** a etiqueta de conteúdo não é aplicada. Mandar o modelo é decisão
-       * dele, agora, olhando a conversa; gravar no CRM que a pessoa PEDIU esse conteúdo seria
-       * inventar uma classificação que ninguém leu na mensagem — e ela ficaria lá para sempre,
-       * mudando as próximas rodadas deste contato.
+       * **A etiqueta vai junto** (pedido dele, depois de eu ter deixado de fora). O motivo dele é
+       * o que resolve a minha objeção: o conteúdo com frequência FOI pedido, só que numa mensagem
+       * de outro dia que a extensão não enxerga. Então a etiqueta não está sendo inventada — está
+       * sendo posta por quem leu a conversa inteira na tela, que é ele. A origem fica registrada
+       * no motivo, para depois dar para saber que veio do fecho e não do parser.
        */
       const nomeDoConteudo = conteudos.length === 1
         ? conteudos[0].nome
@@ -1223,6 +1224,31 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const mapa = await store.get('contentTemplates');
       const { modelo, erro } = hsmLib.templateParaConteudo(nomeDoConteudo, mapa, state.hsmTemplates);
       if (erro) return setStatus(erro, 'err');
+
+      // Nada reconhecido: a etiqueta do preferido entra junto com o modelo.
+      //
+      // Não é criada no CRM se não existir — criar rótulo é decisão dele, e um erro de digitação
+      // na Config viraria etiqueta permanente. Falhar aqui também não cancela o envio: etiqueta é
+      // organização interna, a mensagem é o que o contato recebe. O aviso vai no fim, e não em
+      // `setStatus` agora, porque a linha seguinte ("1/4 gravando…") o apagaria.
+      let avisoEtiqueta = '';
+      if (!conteudos.length) {
+        const tag = await tagsLib.resolveTag(nomeDoConteudo);
+        if (tag) {
+          state.tagSuggestions = [
+            ...state.tagSuggestions,
+            {
+              origem: 'conteúdo',
+              nome: nomeDoConteudo,
+              tag,
+              motivo: 'posta por você no fecho (o parser não reconheceu)',
+              marcada: true,
+            },
+          ];
+        } else {
+          avisoEtiqueta = ` — mas a etiqueta "${nomeDoConteudo}" não existe no CRM e não foi aplicada`;
+        }
+      }
 
       if (!state.settings.autoSend) {
         setStatus('Este fluxo manda duas mensagens seguidas, então precisa do "Enviar automático" ligado (aba Config).', 'err');
@@ -1252,7 +1278,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       setStatus('4/4 concluindo…');
-      await concluirEAbrirProximo('Enviado e classificado');
+      await concluirEAbrirProximo('Enviado e classificado' + avisoEtiqueta);
     });
   }
 

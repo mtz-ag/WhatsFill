@@ -283,9 +283,48 @@ export async function getMessageTemplates({ channelId, search = '', pageSize = 1
 }
 
 /** Mensagens da sessão, mais recentes primeiro. Envelope: { items, totalItems, ... } */
-export async function getMessages(sessionId, pageSize = 50) {
-  const data = await apiFetch(`/chat/v1/message?sessionId=${sessionId}&page=1&pageSize=${pageSize}`);
-  return data?.items || [];
+/**
+ * Quantas mensagens ler por página.
+ *
+ * **Era 50, e 50 estava cegando o painel.** Medido ao vivo em 30/08/2026, num atendimento comum:
+ * a sessão tinha **168 mensagens em 4 páginas**, e a página 1 cobria só os últimos 20 dias — as
+ * outras **118 eram invisíveis**. Sessão aqui não é "a conversa de hoje": a que eu medi foi
+ * criada em 20/07 e continuava aberta em 30/08, 41 dias depois.
+ *
+ * Era esta a causa do *"a extensão não reconhece o conteúdo quando é do dia anterior"*: o pedido
+ * estava lá, numa mensagem que a extensão nunca leu.
+ *
+ * **Subir isto não custa requisição nenhuma** — é a MESMA chamada, com resposta maior. Foi o que
+ * fez a escolha ser fácil: nesta API o que derruba a plataforma é número de requisições, não
+ * tamanho de resposta.
+ */
+const MENSAGENS_POR_PAGINA = 200;
+
+/** Teto de páginas por sessão. Duas cobrem 400 mensagens; além disso, história antiga demais. */
+const MAX_PAGINAS_DE_MENSAGEM = 2;
+
+/**
+ * As mensagens da sessão, da página 1 em diante enquanto houver e couber no teto.
+ *
+ * A ordem que a API devolve é da mais nova para a mais velha, então a página 2 é história mais
+ * antiga. Quem chama ordena por `createdAt` de qualquer jeito.
+ */
+export async function getMessages(sessionId, pageSize = MENSAGENS_POR_PAGINA) {
+  const todas = [];
+
+  for (let pagina = 1; pagina <= MAX_PAGINAS_DE_MENSAGEM; pagina++) {
+    const data = await apiFetch(
+      `/chat/v1/message?sessionId=${sessionId}&page=${pagina}&pageSize=${pageSize}`
+    );
+    const itens = data?.items || [];
+    todas.push(...itens);
+
+    // `isLastPage` é da própria API. Sem ele, a única saída seria pedir mais uma página "por via
+    // das dúvidas" — uma requisição a mais por contato, em toda rodada.
+    if (data?.isLastPage !== false || !itens.length) break;
+  }
+
+  return todas;
 }
 
 /** Mensagem do operador e do bot são as duas "nossas": as duas dizem que o contato foi atendido. */

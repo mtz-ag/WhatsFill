@@ -133,6 +133,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   outro nome devolve 400 (sondados: RESOLVED, DONE, CLOSED, FINISHED, ARCHIVED, NEW, OPEN).
   `timestampFilter` com a meia-noite LOCAL filtra pela ATUALIZAÇÃO (quando foi concluído); com
   `timestampField=createdat` o número é outro — 82 contra 38, conferidos lado a lado.
+- **A sessão NÃO é "a conversa de hoje", e 50 mensagens cegavam o painel.** Medido em
+  30/08/2026 num atendimento comum: sessão criada em **20/07**, ainda aberta em **30/08** (41
+  dias), com **168 mensagens em 4 páginas**. `getMessages` lia só a página 1 — os últimos 20
+  dias —, então **118 mensagens eram invisíveis**. Era esta a causa de "não reconhece o conteúdo
+  quando é do dia anterior": o pedido estava lá, numa mensagem que ninguém leu. Hoje são 200 por
+  página, com segunda página quando `isLastPage` for `false`. **Subir o `pageSize` não custa
+  requisição** — é a mesma chamada com resposta maior, e nesta API o que derruba é número de
+  requisições, não tamanho de resposta.
 - **Rota nova? Leia o bundle do app em vez de chutar.** Quando a navegação está bloqueada e não dá
   para inspecionar a rede, o `main.*.js` do mobiliza é a fonte da verdade e está a um `fetch` de
   distância — as URLs, os métodos e os parâmetros estão como texto no código Angular. Foi assim que

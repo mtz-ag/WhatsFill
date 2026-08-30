@@ -5,6 +5,63 @@
 
 ---
 
+## 2026-08-30 — 118 mensagens invisíveis: por que o conteúdo "do dia anterior" nunca era reconhecido
+
+**Relato dele:** *"bote a etiqueta também, a extensão não reconhece o conteúdo quando é do dia
+anterior e ter que abrir o restante da conversa"*.
+
+A segunda metade da frase é o achado do dia, e vale muito mais que a primeira.
+
+### A medição
+
+Peguei um atendimento qualquer da fila dele e olhei a paginação:
+
+- sessão criada em **20/07/2026**, ainda aberta em **30/08** — **41 dias**;
+- **168 mensagens**, em **4 páginas** de 50;
+- a página 1 cobria de **10/08 a 30/08**.
+
+`getMessages` lia só a página 1. **118 mensagens eram invisíveis para a extensão** — e é nelas
+que mora o pedido de conteúdo de "outro dia". O parser não estava errando: ele nunca tinha visto
+a mensagem.
+
+Isso também derruba a hipótese que eu teria seguido por conta própria (sessão nova a cada dia).
+Sessão aqui dura semanas.
+
+### O conserto, e por que ele é barato
+
+200 por página, e uma segunda página quando `isLastPage` vier `false` (teto de 2 páginas / 400
+mensagens).
+
+**Subir o `pageSize` não custa requisição nenhuma**: é a MESMA chamada, com resposta maior. Nesta
+API o que derruba a plataforma é **número de requisições**, não tamanho de resposta — foi o que
+tornou a decisão fácil. O teto de 2 páginas existe para a cauda longa não virar 4 requisições por
+contato numa rodada.
+
+### O que isso muda além do conteúdo
+
+Tudo que lê `incoming` passa a enxergar semanas em vez de dias: parser de nome e cidade,
+etiquetas de conteúdo e **`precisaDeVoce`**. O último merece atenção — um "preciso de ajuda"
+escrito há três semanas agora separa o contato para revisão dele. É o comportamento certo (o
+pedido foi real e continua sem resposta), mas é mudança de volume, e é onde olhar se a fila de
+revisão crescer de repente.
+
+### A etiqueta no fecho sem reconhecimento
+
+Ele mandou botar, e o argumento dele resolve a objeção que eu tinha levantado: o conteúdo
+**foi** pedido, só que numa mensagem que a extensão não lia. A etiqueta não está sendo inventada
+— está sendo posta por quem leu a conversa inteira na tela. Fica com o motivo *"posta por você no
+fecho (o parser não reconheceu)"*, para depois dar para distinguir do que veio do parser.
+
+Etiqueta que não existe no CRM **não é criada**, e a falha não cancela o envio: o aviso vai no
+status final, junto do "Enviado e classificado".
+
+### Arquivos
+
+`src/lib/api.js` (`getMessages` paginado), `src/panel/panel.js` (`runFecharComConteudo`),
+`CLAUDE.md`, `manifest.json` (0.18.0 → 0.19.0). Nove suítes passando.
+
+---
+
 ## 2026-08-30 — "Libere o botão mesmo sem reconhecer": vai o conteúdo preferido
 
 **Pedido dele**, com print do cartão "Atender o pedido e encerrar" travado e a tarja *"Nenhum
