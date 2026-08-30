@@ -112,6 +112,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `CY_CONCLUIDOS` e a tentativa nem roda.
 - **A fila carrega 50 por vez.** O resto só vem no "Ver mais", que é manual e é o único gancho
   da fila sem `data-cy`. Sem clicar nele, a rodada enxerga uma fatia e acha que acabou.
+- **`getIncomingText` só devolve mensagem COM TEXTO — figura é invisível para a rodada.** Quem
+  manda só uma imagem (o "bom dia" ilustrado, comum nesta base) chegava como *"não escreveu
+  nada"* e era assumido sem receber resposta. O tipo vem no campo `type` de
+  `/chat/v1/message` (`TEXT`, `IMAGE`, `STICKER`, `AUDIO`, `VIDEO`, `DOCUMENT`; direção é
+  `TO_HUB`/`FROM_HUB`) — conferido no bundle em 29/08/2026. Quem precisa enxergar mídia usa
+  `getConversation().entrantes`, que traz `{texto, tipo}` **sem** filtrar; `incoming` continua
+  sendo só texto, porque é a base do parser e parser não lê figura.
 - **Rota nova? Leia o bundle do app em vez de chutar.** Quando a navegação está bloqueada e não dá
   para inspecionar a rede, o `main.*.js` do mobiliza é a fonte da verdade e está a um `fetch` de
   distância — as URLs, os métodos e os parâmetros estão como texto no código Angular. Foi assim que
@@ -353,7 +360,7 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 Node 18+, sem dependência. Antes de dar tarefa por concluída, as oito suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

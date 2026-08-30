@@ -17,6 +17,7 @@ import * as hsmLib from '../lib/hsm.js';
 import * as keepalive from '../lib/keepalive.js';
 import * as categorizar from '../lib/categorizar.js';
 import { extract } from '../lib/extract.js';
+import { soCortesia } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil } from '../lib/vars.js';
 
@@ -2508,12 +2509,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // "Novos" faz toda rodada futura abrir o contato de novo, e é justamente isso que
       // sobrecarrega a API. Assumir tira da fila sem mandar nada: vira pilha de triagem manual
       // em "Meus". Nenhuma mensagem sai daqui.
-      const mensagens = await api.getIncomingText(sessionId);
-      if (!mensagens.length) {
-        return assumirParaTriagem(sessionId, nome, 'não escreveu nada');
-      }
-      if (!mensagens.some((m) => achatarTexto(m).includes(achatarTexto(padrao)))) {
-        return assumirParaTriagem(sessionId, nome, 'sem o aceite do anúncio');
+      // A conversa inteira numa leitura só, agora COM o tipo de cada mensagem: sem isso a figura
+      // não existe para a rodada (`incoming` filtra mensagem sem texto) e quem manda só uma
+      // imagem chegava aqui como "não escreveu nada".
+      const conversa = await api.getConversation(sessionId);
+      const mensagens = conversa.incoming;
+      const temAceite = mensagens.some((m) => achatarTexto(m).includes(achatarTexto(padrao)));
+
+      if (!temAceite) {
+        /**
+         * Só cumprimentou, mandou um link ou mandou uma figura.
+         *
+         * Estas pessoas eram assumidas sem receber nada — a rodada abria a conversa e não
+         * mandava coisa nenhuma. Elas falaram com o gabinete: o silêncio é a pior resposta
+         * possível, e o formulário de nome/cidade não é resposta a "bom dia". A mensagem do
+         * momento é.
+         */
+        const cortesia = soCortesia(conversa.entrantes);
+        if (cortesia) return responderComMomento(sessionId, contato, nome, cortesia, ctx);
+
+        return assumirParaTriagem(
+          sessionId,
+          nome,
+          mensagens.length || conversa.entrantes.length ? 'sem o aceite do anúncio' : 'não escreveu nada'
+        );
       }
 
       // Quem já respondeu nome ou cidade não precisa do formulário: precisa da classificação,
@@ -2599,6 +2618,101 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       await page.closeOverlay().catch(() => {});
       return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
     }
+  }
+
+  /**
+   * Responde a mensagem do momento a quem só cumprimentou, mandou link ou figura, e conclui.
+   *
+   * Passa pelas MESMAS travas do envio do formulário — variável faltando, canal fora do ar,
+   * anti-duplicata, contato já tratado nesta rodada. Envio é envio: quem cumprimentou merece a
+   * mesma disciplina de quem responde ao anúncio, e o caminho curto é como se manda mensagem
+   * quebrada para gente real.
+   *
+   * A mensagem do momento vira um template de mentira, igual à tecla 5: reaproveita variáveis,
+   * variantes e registro de envio. A chave carrega um resumo do texto para que trocar a
+   * mensagem (Dia dos Pais → Natal) não seja barrada pelo anti-duplicata da anterior.
+   */
+  async function responderComMomento(sessionId, contato, nome, cortesia, ctx) {
+    const textoMomento = String(state.auto.cfg.mensagemMomento || '').trim();
+
+    // Sem mensagem do momento configurada não há o que enviar. Volta ao comportamento de antes,
+    // mas dizendo o que faltou — senão isto vira "às vezes manda, às vezes não".
+    if (!textoMomento) {
+      return assumirParaTriagem(
+        sessionId,
+        nome,
+        `${cortesia.motivo}, mas a "Mensagem do momento" está vazia na aba Automatizado — não tinha o que responder`
+      );
+    }
+
+    const momento = {
+      id: `momento:${chaveDoTexto(textoMomento)}`,
+      name: 'Mensagem do momento',
+      text: textoMomento,
+      variantes: state.auto.cfg.mensagemMomentoVariantes,
+    };
+
+    if (ctx?.contatosTratados?.has(contato.id)) {
+      return { nome, resultado: 'pulado', motivo: 'já tratei este contato nesta rodada' };
+    }
+
+    if (state.settings.antiDup) {
+      const quando = await templatesLib.wasSent(contato.id, momento.id);
+      if (quando) {
+        return {
+          nome,
+          resultado: 'pulado',
+          motivo: `${cortesia.motivo}, mas já recebeu esta mensagem do momento em ${new Date(quando.at).toLocaleDateString('pt-BR')}`,
+        };
+      }
+    }
+
+    const textoVariante = await templatesLib.varianteAtual(momento);
+    const { text, missing, reasons } = vars.render(textoVariante, await vars.buildContext({ contact: contato }));
+    if (missing.length) return { nome, resultado: 'erro', motivo: vars.explainMissing(missing, reasons) };
+
+    let estado = await page.getState();
+    if (estado.sessionId !== sessionId) {
+      return { nome, resultado: 'erro', motivo: 'a aba trocou de atendimento no meio do caminho' };
+    }
+    if (estado.isPending) {
+      setStatus(`Assumindo o atendimento de ${nome}…`);
+      estado = await page.clickIniciar();
+    }
+    if (estado.isPending || !estado.hasComposer) {
+      return {
+        nome,
+        resultado: 'erro',
+        motivo: estado.isPending
+          ? 'a plataforma não assumiu o atendimento (o botão Iniciar continua na tela)'
+          : 'o campo de mensagem não apareceu depois de assumir o atendimento',
+      };
+    }
+
+    const canalFora = await canalDesteContatoFora();
+    if (canalFora) {
+      return { nome, resultado: 'pulado', motivo: 'o número deste atendimento está fora do ar — não enviei nada' };
+    }
+
+    setStatus(`Respondendo ${nome} com a mensagem do momento…`);
+    await page.sendText(text);
+    await templatesLib.markSent(contato.id, momento.id, { nome });
+    await templatesLib.avancarVariante(momento);
+    ctx?.contatosTratados?.add(contato.id);
+
+    const concluido = await page.clickConcluir();
+    if (!concluido.ok) {
+      return { nome, resultado: 'enviado', parar: true, motivo: concluido.reason };
+    }
+    if (concluido.dialogOpen) {
+      return {
+        nome,
+        resultado: 'enviado',
+        parar: true,
+        motivo: 'enviado, mas a plataforma pediu motivo de conclusão — responda o diálogo na aba',
+      };
+    }
+    return { nome, resultado: 'enviado', motivo: `${cortesia.motivo} — mandei a mensagem do momento` };
   }
 
   /**

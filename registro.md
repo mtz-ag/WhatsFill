@@ -5,6 +5,67 @@
 
 ---
 
+## 2026-08-30 — "Abre a conversa e não manda nada": quem cumprimentou passa a ser respondido
+
+**Relato dele:** *"está falhando em pedir dados ao iniciar atendimento"*, e o sintoma exato,
+perguntado antes de mexer: **"somente abre a conversa e não manda nada"**. Junto, o pedido: quem
+deu bom dia / boa tarde / boa noite, ou mandou link ou imagem nas últimas 3 mensagens, deve
+receber **a mensagem do momento** ao iniciar.
+
+### O sintoma não era defeito, era o desenho — e ele tem razão de reclamar
+
+"Abre e não manda nada" é exatamente o que `assumirParaTriagem` faz: assume o atendimento para
+tirar da fila, e não envia. Quem não trazia a frase do aceite do anúncio caía ali. Funcionava
+como projetado e mesmo assim está errado: **a pessoa falou com o gabinete e não teve resposta.**
+
+### E havia um caso pior, que ninguém tinha visto
+
+`api.getIncomingText` filtra `m.text`. Quem manda **só uma figura** — o "bom dia" ilustrado, que
+nesta base é comum — chegava à rodada como *"não escreveu nada"*: a conversa parecia vazia porque
+a única mensagem não tinha texto. Agora `getConversation` devolve também `entrantes`, com
+`{texto, tipo}` e **sem** filtrar. `incoming` fica como estava, porque é a base do parser e
+parser não lê figura.
+
+Os valores de `type` foram conferidos no bundle do app, não chutados: `TEXT`, `IMAGE`,
+`STICKER`, `AUDIO`, `VIDEO`, `DOCUMENT`, e direção `TO_HUB`/`FROM_HUB`.
+
+### A regra (`cortesia.soCortesia`), e por que é conservadora
+
+Cumprimento, link ou figura nas últimas 3 mensagens → mensagem do momento, e conclui.
+
+**Exige que TODAS as mensagens da janela sejam cortesia.** Aqui o erro caro é o falso positivo:
+*"Bom dia, preciso falar com o deputado"* tem substância, e responder "Feliz Dia dos Pais" a isso
+é responder ao lado. Sobrando qualquer substância, o contato segue o caminho de antes. Errar para
+o silêncio custa um contato na pilha dele; errar para o outro lado é resposta fora de contexto
+saindo de um mandato.
+
+**Áudio ficou de fora de propósito:** foi figura que ele pediu, e áudio pede outra resposta.
+
+### Módulo próprio, e não dentro do `triagem.js`
+
+`triagem.js` está neste branch **sem uso** — o "Responder pessoalmente" foi revertido (`5a43b77`,
+`bd12e46`) e o `panel.js` nem o importa. Pendurar a cortesia nele ressuscitaria código tirado de
+propósito, e faria o envio depender de arquivo não commitado. Daí `src/lib/cortesia.js`, que é
+puro, sem dependência e igual nos dois branches.
+
+**Consequência a registrar:** neste branch não há `precisaDeVoce` rodando antes, então a única
+proteção contra "bom dia, preciso de remédio" é a regra ser conservadora — e ela é: essa frase
+tem substância e não casa. No branch +IA a triagem roda antes, como segunda camada.
+
+### O envio passa pelas mesmas travas do formulário
+
+Variável faltando, canal fora do ar, anti-duplicata, `contatosTratados`, variantes e registro de
+envio. Envio é envio. Sem "Mensagem do momento" configurada, volta ao comportamento antigo —
+**dizendo que foi por isso**, senão vira "às vezes manda, às vezes não".
+
+### Arquivos
+
+`src/lib/cortesia.js` (novo), `src/lib/api.js` (`entrantes`), `src/panel/panel.js`
+(`processarNovo`, `responderComMomento`), `tests/cortesia.test.mjs` (novo, 23 asserções),
+`CLAUDE.md`, `manifest.json` (0.12.4 → 0.13.0). Onze suítes passando.
+
+---
+
 ## 2026-08-20 — A aba Cidades só gasta rede quando ele clica nela
 
 **Pedido dele:** *"faça com que a aba cidades não abra junto, somente quando eu realmente clicar

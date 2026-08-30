@@ -314,6 +314,19 @@ export async function getConversation(sessionId, pageSize = 50) {
 
   return {
     incoming: ordenadas.filter((m) => doContato(m) && m.text).map((m) => m.text),
+    /**
+     * O que o contato mandou **com o tipo junto, inclusive o que não tem texto**.
+     *
+     * Existe porque `incoming` filtra `m.text` — e isso apagava a figura: quem mandava só uma
+     * imagem (o "bom dia" ilustrado, comum nesta base) chegava à rodada como *"não escreveu
+     * nada"* e era assumido sem receber resposta nenhuma. O `type` vem da própria plataforma
+     * (`TEXT`, `IMAGE`, `STICKER`, `AUDIO`, `VIDEO`, `DOCUMENT`), conferido no bundle do app.
+     *
+     * `incoming` continua exatamente como era: é a base do parser, e parser não lê figura.
+     */
+    entrantes: ordenadas
+      .filter(doContato)
+      .map((m) => ({ texto: m.text || '', tipo: String(m.type || 'TEXT').toUpperCase() })),
     ultima: ultima
       ? { doContato: doContato(ultima), at: ultima.createdAt, texto: ultima.text || '' }
       : null,
