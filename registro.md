@@ -5,6 +5,50 @@
 
 ---
 
+## 2026-08-30 — "Libere o botão mesmo sem reconhecer": vai o conteúdo preferido
+
+**Pedido dele**, com print do cartão "Atender o pedido e encerrar" travado e a tarja *"Nenhum
+conteúdo reconhecido nas mensagens deste contato"*: *"libere o botão mesmo sem reconhecer"*.
+
+### O que eu não podia fazer, e o que fiz no lugar
+
+Liberar o botão sem mais nada deixaria uma pergunta sem resposta: **qual modelo ele enviaria?** O
+fluxo pega o modelo pelo NOME do conteúdo reconhecido; sem conteúdo não há nome, e escolher um
+entre os 19 aprovados seria o painel chutando — o erro mais caro deste fluxo.
+
+A saída já existia no projeto: **o "conteúdo preferido" da Config** (`conteudoPreferido`, hoje
+"Conteúdo Flávio"). Ele nasceu para desempatar quando o contato casa com dois conteúdos; agora
+serve também de padrão quando não casa com nenhum. Continua sendo um modelo que **ele** escolheu,
+não um chute.
+
+Se o preferido estiver vazio, o botão dispara e explica que não há modelo — em vez de mandar
+qualquer coisa.
+
+### O que deliberadamente NÃO acontece
+
+**A etiqueta de conteúdo não é aplicada** nesse caminho. Mandar o modelo é decisão dele, agora,
+olhando a conversa. Gravar no CRM que a pessoa PEDIU aquele conteúdo seria inventar uma
+classificação que ninguém leu na mensagem — e ela ficaria lá para sempre, mudando as próximas
+rodadas deste contato. Enviar é reversível pela conversa; etiqueta errada em produção não é.
+
+### Mais de um conteúdo continua travado
+
+Ali o caso é outro: o painel sabe que existem DOIS caminhos certos, e escolher entre modelos que a
+pessoa realmente pediu é diferente de ter um padrão para quando ela não pediu nada. A tarja
+continua mandando escolher à mão.
+
+### Na tela
+
+A tarja vermelha de bloqueio virou dica: *"Nenhum conteúdo reconhecido — vai o preferido da
+Config. Confira a conversa antes: o modelo sai como se ele tivesse pedido esse conteúdo."*
+
+### Arquivos
+
+`src/panel/panel.js` (cartão "Atender o pedido e encerrar" e `runFecharComConteudo`),
+`manifest.json` (0.17.0 → 0.18.0). Nove suítes passando.
+
+---
+
 ## 2026-08-30 — "Continua sem diminuir": o número não estava travado, era o número errado
 
 **Relato dele:** *"continua sem diminuir o número o gatilho deve ser quando manda concluir e

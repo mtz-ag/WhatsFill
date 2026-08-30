@@ -992,16 +992,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const conteudos = state.tagSuggestions.filter((s) => s.origem === 'conteúdo');
     const fechar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Enviar conteúdo + agradecer + concluir');
     fechar.addEventListener('click', runFecharComConteudo);
-    fechar.disabled = conteudos.length !== 1;
+    // Nada reconhecido NÃO trava mais: vai o conteúdo preferido da Config (pedido dele).
+    // Mais de um conteúdo continua travando — ali o painel sabe que existem dois caminhos certos
+    // e escolher por você seria chutar entre modelos que a pessoa realmente pediu.
+    fechar.disabled = conteudos.length > 1;
     const cartaoFechar = h('div', { class: 'wf-card' }, [
       h('h4', {}, 'Atender o pedido e encerrar'),
       h('div', { class: 'wf-preview' }, conteudos.length === 1
         ? `Envia o modelo de "${conteudos[0].nome}", agradece, grava a classificação e conclui.`
-        : 'Envia o modelo do conteúdo pedido, agradece, grava a classificação e conclui.'),
+        : conteudos.length === 0
+          ? 'Nada foi reconhecido: vai o modelo do CONTEÚDO PREFERIDO da aba Config, agradece e conclui.'
+          : 'Envia o modelo do conteúdo pedido, agradece, grava a classificação e conclui.'),
       fechar,
     ]);
     if (!conteudos.length) {
-      cartaoFechar.append(h('div', { class: 'wf-block' }, 'Nenhum conteúdo reconhecido nas mensagens deste contato.'));
+      cartaoFechar.append(
+        h('div', { class: 'wf-hint' },
+          'Nenhum conteúdo reconhecido nas mensagens deste contato — vai o preferido da Config. ' +
+            'Confira a conversa antes: o modelo sai como se ele tivesse pedido esse conteúdo.')
+      );
     } else if (conteudos.length > 1) {
       cartaoFechar.append(
         h('div', { class: 'wf-block' }, `Casou com ${conteudos.length} conteúdos (${conteudos.map((c) => c.nome).join(', ')}) — escolha o modelo à mão.`)
@@ -1177,10 +1186,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       const conteudos = state.tagSuggestions.filter((s) => s.origem === 'conteúdo');
-      if (!conteudos.length) {
-        setStatus('Nenhum conteúdo reconhecido nas mensagens deste contato. Envie o modelo à mão.', 'err');
-        return;
-      }
       if (conteudos.length > 1) {
         setStatus(
           `O contato casou com ${conteudos.length} conteúdos (${conteudos.map((c) => c.nome).join(', ')}). ` +
@@ -1190,8 +1195,33 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return;
       }
 
+      /**
+       * Sem conteúdo reconhecido, vale o preferido da Config — pedido dele: *"libere o botão
+       * mesmo sem reconhecer"*.
+       *
+       * O preferido já existia para desempatar quando o contato casa com dois conteúdos; aqui
+       * ele serve de padrão quando não casa com nenhum. É a única escolha defensável: continua
+       * sendo um modelo que ELE configurou, e não um chute do painel entre os 19 aprovados.
+       *
+       * **O que NÃO acontece:** a etiqueta de conteúdo não é aplicada. Mandar o modelo é decisão
+       * dele, agora, olhando a conversa; gravar no CRM que a pessoa PEDIU esse conteúdo seria
+       * inventar uma classificação que ninguém leu na mensagem — e ela ficaria lá para sempre,
+       * mudando as próximas rodadas deste contato.
+       */
+      const nomeDoConteudo = conteudos.length === 1
+        ? conteudos[0].nome
+        : String(await store.get('conteudoPreferido') || '').trim();
+
+      if (!nomeDoConteudo) {
+        setStatus(
+          'Nada foi reconhecido e não há "conteúdo preferido" na aba Config — não tenho modelo para enviar.',
+          'err'
+        );
+        return;
+      }
+
       const mapa = await store.get('contentTemplates');
-      const { modelo, erro } = hsmLib.templateParaConteudo(conteudos[0].nome, mapa, state.hsmTemplates);
+      const { modelo, erro } = hsmLib.templateParaConteudo(nomeDoConteudo, mapa, state.hsmTemplates);
       if (erro) return setStatus(erro, 'err');
 
       if (!state.settings.autoSend) {
