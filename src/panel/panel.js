@@ -19,7 +19,7 @@ import * as categorizar from '../lib/categorizar.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
-import { ultimaEhSoReacao, ultimaPedeRespostaPessoal } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, ultimaPedeRespostaPessoal, ultimaEhDespedida } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil } from '../lib/vars.js';
 
@@ -3350,6 +3350,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         achatarTexto(ultimaDoContato).includes(achatarTexto(padraoAnuncio));
 
       const sugestao = sugerirAcao({
+        ultimaEhDespedida: ultimaEhDespedida(state.entrantes),
         voltouPorOutroAnuncio,
         momentoHoje,
         pedeRespostaPessoal: ultimaPedeRespostaPessoal(state.entrantes),

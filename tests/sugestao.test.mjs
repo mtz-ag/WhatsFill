@@ -12,6 +12,7 @@ import { sugerirAcao, REGRAS } from '../src/lib/sugestao.js';
 
 /** Retrato de um contato "sem nada": nenhuma regra deveria casar por acidente. */
 const base = {
+  ultimaEhDespedida: false,
   voltouPorOutroAnuncio: false,
   momentoHoje: false,
   pedeRespostaPessoal: null,
@@ -171,6 +172,23 @@ grupo('ignorou o pedido de dados e voltou por outro anuncio');
   // E audio continua ganhando: quem falou merece resposta.
   check(com({ voltouPorOutroAnuncio: true, temEtiquetaDeCidade: false, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6',
     'audio vence o retorno por anuncio');
+}
+
+
+grupo('so se despediu: concluir');
+{
+  const r = com({ ultimaEhDespedida: true });
+  check(r?.tecla === '3', 'recomendou concluir = ' + JSON.stringify(r));
+
+  // O caso da print: ela JA tinha recebido o conteudo e escreveu "É nós" horas depois. Mandar o
+  // modelo de novo ali e responder despedida com propaganda.
+  check(com({ ultimaEhDespedida: true, podeEnviar: true, conteudoPedido: 'ADS' })?.tecla === '3',
+    'vence o modelo a enviar');
+  check(com({ ultimaEhDespedida: true, temEtiquetaDeCidade: false })?.tecla === '3', 'vence pedir dados');
+
+  // Mas audio continua ganhando: "valeu" falado num audio de um minuto e outra coisa.
+  check(com({ ultimaEhDespedida: true, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6',
+    'audio vence a despedida');
 }
 
 fim();

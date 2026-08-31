@@ -45,6 +45,25 @@ export const REGRAS = [
     motivo: (c) => `${c.pedeRespostaPessoal.motivo}. Responda à mão.`,
   },
   {
+    id: 'ultima-e-despedida',
+    tecla: '3',
+    /**
+     * A pessoa só fechou a conversa: "É nós", "tamo junto", "abraço", "valeu".
+     *
+     * Pedido dele, com a print de quem escreveu apenas *"É nós."* e recebeu "mande o modelo":
+     * *"a pessoa só fechou a conversa… eu concluo a conversa"*.
+     *
+     * **Fica acima de "conteúdo pedido", e é esse o ponto.** Ela já tinha recebido o conteúdo às
+     * 10:46 e escreveu "É nós" às 14:30 — a mensagem era o agradecimento, não um novo pedido.
+     * Mandar o modelo de novo ali é responder a uma despedida com propaganda.
+     *
+     * Concluir e não pular: a conversa acabou de verdade, e o contato volta sozinho para "Meus"
+     * se escrever de novo. Pular deixaria a fila cheia de conversas encerradas.
+     */
+    quando: (c) => !!c.ultimaEhDespedida,
+    motivo: () => 'ela só se despediu ("é nós", "abraço") — a conversa acabou. Conclua.',
+  },
+  {
     id: 'etiqueta-dispensa-da-fila',
     tecla: '2',
     /**

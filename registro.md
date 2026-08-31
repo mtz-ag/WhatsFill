@@ -5,6 +5,53 @@
 
 ---
 
+## 2026-08-31 — "É nós": quem só se despede recebe concluir, não modelo
+
+**Relato dele**, com a print do Jesus Ceneri: ele já tinha mandado o conteúdo às 10:46, a pessoa
+escreveu **"É nós."** às 14:30, e a caixa sugeriu *"Sugiro a 1: pediu ADS e há modelo mapeado —
+mande."*
+
+> *"a pessoa só fechou a conversa com (é nós, abraço, tamo junto, estamos juntos, entre outros
+> termos) eu concluo a conversa"*
+
+Mandar o modelo ali é **responder a uma despedida com propaganda** — e o modelo já tinha ido
+quatro horas antes.
+
+### O vocabulário é o do lugar
+
+"é nós", "é nóis", "tamo junto", "estamos juntos", "tmj", "abraço", "forte abraço", "valeu",
+"vlw", "obrigado/obrigada", "amém", "que Deus abençoe", "boa sorte", "sucesso".
+
+**Exige que não sobre nada além da despedida.** *"Valeu, me manda o material"* tem pedido dentro,
+e concluir ali seria fechar a porta na cara de quem pediu algo. Mesma disciplina do resto do
+arquivo: sobrando substância, a regra não casa. Tem teste para os dois lados.
+
+### A armadilha que quase deixou a print dele passar
+
+A primeira versão **não pegava "É nós."** — justamente o caso que ele mandou.
+
+`` é fronteira de `w`, e `é` não é `w`. Então `/é nós/` **nunca** casa no começo da
+string. Só apareceu porque testei a frase dele literalmente antes de commitar; um teste com
+"e nos" sem acento teria passado e escondido o defeito. Virou armadilha no `CLAUDE.md`, porque o
+vocabulário deste projeto é cheio de acento no começo: "é nós", "ótimo", "amém".
+
+### Prioridade
+
+Segunda, logo abaixo de "pede resposta pessoal". Um "valeu" dito dentro de um áudio de um minuto
+continua pedindo resposta à mão — o áudio pode ter outra coisa junto.
+
+Concluir e não pular: a conversa acabou de verdade, e o contato volta sozinho para "Meus" se
+escrever de novo. Pular deixaria a fila cheia de conversa encerrada.
+
+### Arquivos
+
+`src/lib/cortesia.js` (`ehDespedida`, `ultimaEhDespedida`), `src/lib/sugestao.js` (regra),
+`src/panel/panel.js` (contexto), `tests/cortesia.test.mjs` (22 asserções novas),
+`tests/sugestao.test.mjs` (4), `CLAUDE.md`, `manifest.json` (0.27.0 → 0.28.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-31 — Conteúdo pedido passa a vencer "sem cidade" (ele mudou de ideia, e está certo)
 
 **Relato dele**, com a print da Janete — sem cidade, etiqueta ADS, modelo "Campanha Martim2"

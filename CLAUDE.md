@@ -151,6 +151,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   está no CRM, porque substituir exige a pessoa ter ESCRITO). Roda depois da passada normal,
   então o que foi digitado sempre ganha do que foi falado. Tem teste; se ele cair, transcrição
   volta a poder ser gravada sozinha em eleitor real.
+- **`` NÃO funciona antes de palavra acentuada.** `` é fronteira de `w`, e `é` não é `w`:
+  `/é nós/` **nunca** casa no começo da string. Foi assim que "É nós." — a frase exata que ele
+  mandou de exemplo — passou batido na primeira versão do detector de despedida. Em padrão que
+  começa com acento use `(^|s)`. Vale para todo o vocabulário daqui: "é nós", "ótimo", "amém".
 - **Rota nova? Leia o bundle do app em vez de chutar.** Quando a navegação está bloqueada e não dá
   para inspecionar a rede, o `main.*.js` do mobiliza é a fonte da verdade e está a um `fetch` de
   distância — as URLs, os métodos e os parâmetros estão como texto no código Angular. Foi assim que

@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
 
 const texto = (t) => ({ texto: t, tipo: 'TEXT' });
 
@@ -115,6 +115,46 @@ grupo('mensagem que pede resposta escrita por voce');
   check(!!ultimaPedeRespostaPessoal([t2('oi'), t2('', 'AUDIO')]), 'olha a última');
   check(!ultimaPedeRespostaPessoal([t2('', 'AUDIO'), t2('oi')]), 'a última é curta');
   check(!ultimaPedeRespostaPessoal([]), 'vazio');
+}
+
+
+grupo('despedida: a pessoa so fechou a conversa');
+{
+  const t = (x) => ({ texto: x, tipo: 'TEXT' });
+
+  // A frase exata da print dele. A primeira versao NAO pegava:  antes de "é" nunca casa no
+  // comeco da string, porque acento nao e caractere de palavra.
+  check(ehDespedida(t('É nós.')), 'É nós. — a frase da print');
+  check(ehDespedida(t('É NÓS')), 'em caixa alta');
+  check(ehDespedida(t('é nois')), 'escrito como se fala');
+
+  check(ehDespedida(t('Tamo junto!')), 'tamo junto');
+  check(ehDespedida(t('estamos juntos 🙏')), 'estamos juntos com emoji');
+  check(ehDespedida(t('Abraço')), 'abraço');
+  check(ehDespedida(t('forte abraço')), 'forte abraço');
+  check(ehDespedida(t('Valeu')), 'valeu');
+  check(ehDespedida(t('vlw')), 'vlw');
+  check(ehDespedida(t('tmj')), 'tmj');
+  check(ehDespedida(t('Obrigada')), 'obrigada');
+  check(ehDespedida(t('Que Deus abençoe')), 'bencao tambem fecha conversa');
+  check(ehDespedida(t('Valeu, abraço!')), 'duas despedidas juntas');
+}
+
+grupo('despedida: o que NAO pode virar concluir');
+{
+  const t = (x) => ({ texto: x, tipo: 'TEXT' });
+
+  // Concluir aqui seria fechar a porta na cara de quem pediu alguma coisa.
+  check(!ehDespedida(t('É nós, me manda o material')), 'despedida com pedido junto');
+  check(!ehDespedida(t('Valeu, mas preciso de ajuda')), 'valeu com pedido de ajuda');
+  check(!ehDespedida(t('quero o conteudo')), 'pedido puro');
+  check(!ehDespedida(t('bom dia')), 'cumprimento nao e despedida');
+  check(!ehDespedida(t('')), 'vazia');
+  check(!ehDespedida(null), 'nulo nao explode');
+
+  check(ultimaEhDespedida([t('quero conteudo'), t('É nós')]), 'olha a ultima');
+  check(!ultimaEhDespedida([t('É nós'), t('me manda o material')]), 'a ultima tem pedido');
+  check(!ultimaEhDespedida([]), 'vazio');
 }
 
 fim();

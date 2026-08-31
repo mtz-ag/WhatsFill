@@ -47,7 +47,7 @@ function restoDaMensagem(texto) {
     .replace(LINK, ' ')
     .replace(SAUDACAO, ' ')
     .replace(
-      /\b(a|as|o|os|para|pra|pro|todos|todas|voce|vocês|voces|amigos?|amigas?|amado|amada|deputado|obrigad[oa]|abraç?o|abracos?|abraços?|tudo|bem|tenha[m]?|um|uma|otim[oa]|ótim[oa]|excelente|feliz|semana|final|fds|deus|abenç?oe|abencoe)\b/gi,
+      /\b(a|as|o|os|que|para|pra|pro|todos|todas|voce|vocês|voces|amigos?|amigas?|amado|amada|deputado|obrigad[oa]|abraç?o|abracos?|abraços?|tudo|bem|tenha[m]?|um|uma|otim[oa]|ótim[oa]|excelente|feliz|semana|final|fds|deus|abenç?oe|abencoe)\b/gi,
       ' '
     )
     .replace(/[\p{P}\p{S}\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, ' ')
@@ -101,6 +101,52 @@ export function ehSoReacao(msg) {
   // Só conta se REALMENTE havia emoji: "..." ou "!!!" sozinho é outra coisa, e não merece a
   // mensagem do momento.
   return !semEmoji && TEM_EMOJI.test(texto);
+}
+
+/**
+ * Como a pessoa fecha a conversa por aqui.
+ *
+ * Vocabulário do lugar, não de manual: *"é nós"*, *"tamo junto"*, *"estamos juntos"*, *"abraço"*,
+ * *"valeu"*, *"tmj"*. É despedida de apoiador, e a resposta certa a ela é fechar o atendimento —
+ * não mandar mais uma mensagem.
+ */
+/**
+ * `(^|\s)` em vez de `\b` antes de palavra acentuada.
+ *
+ * `\b` é fronteira de `\w`, e `é` não é `\w`: `/\bé nós/` **nunca** casa no começo da string.
+ * Foi assim que "É nós." — a frase exata da print dele — passou batido na primeira versão.
+ */
+const DESPEDIDA =
+  /(^|\s)(e|é)\s*n(ó|o)(s|is)\b|\b(tamo|tamos|estamos|seguimos|segue|to|tô|estou)\s*(junto|juntos)\b|\btmj\b|\b(forte\s*)?abra(ç|c)o(s)?\b|\bvaleu\b|\bvlw\b|\bobrigad[oa]\b|\bbrigad[oa]\b|(^|\s)am(é|e)m\b|\bboa\s*sorte\b|\bdeus\s*(te\s*)?aben(ç|c)oe\b|\bfica\s*com\s*deus\b|\bsucesso\b/i;
+
+/**
+ * A mensagem é SÓ uma despedida?
+ *
+ * Pedido dele (31/08), com a print de quem escreveu apenas *"É nós."* e recebeu a sugestão de
+ * mandar o modelo: *"a pessoa só fechou a conversa… eu concluo a conversa"*.
+ *
+ * **Exige que não sobre nada além da despedida.** *"Valeu, me manda o material"* tem pedido
+ * dentro, e concluir ali seria fechar a porta na cara de quem pediu algo. É a mesma disciplina
+ * do resto deste arquivo: sobrando substância, a resposta é `false`.
+ *
+ * @param {{texto?:string, tipo?:string}} msg
+ * @returns {boolean}
+ */
+export function ehDespedida(msg) {
+  const texto = String(msg?.texto || '');
+  if (!texto.trim()) return false;
+  if (!DESPEDIDA.test(texto)) return false;
+
+  // Tira a despedida (todas as ocorrências) e vê o que sobrou de conteúdo.
+  const resto = restoDaMensagem(texto.replace(new RegExp(DESPEDIDA.source, 'gi'), ' '));
+  return !resto;
+}
+
+/** A última mensagem do contato é só uma despedida? */
+export function ultimaEhDespedida(entrantes) {
+  const lista = Array.isArray(entrantes) ? entrantes : [];
+  if (!lista.length) return false;
+  return ehDespedida(lista[lista.length - 1]);
 }
 
 /** Tipos que sempre pedem você em pessoa: não dá para responder sem ouvir. */
