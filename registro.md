@@ -5,6 +5,55 @@
 
 ---
 
+## 2026-08-31 — A pergunta que ELE fez também é contexto
+
+**Relato dele:** *"caiu porque lhe falei para utilizar meu contexto também. Se eu perguntei qual
+sua cidade e ela respondeu (maria cachoeirinha), terá que identificar esse tipo de resposta"*.
+
+Ele está certo e eu tinha implementado metade: na rodada anterior fiz as pistas da PESSOA ("moro
+em", "sou de") e a barra do formulário, mas deixei de fora o contexto mais forte que existe —
+**nós termos acabado de perguntar**.
+
+Quem responde uma pergunta não escreve "moro em" nem põe separador. Escreve *"maria
+cachoeirinha"*.
+
+### Como funciona
+
+O painel olha a **última mensagem NOSSA**: se ela é o pedido de dados, passa
+`respostaAoPedido: true`. Aí o parser casa o município sem pista e sem limite de tamanho, e o que
+sobra do texto vira o nome.
+
+```
+maria cachoeirinha           → nome Maria,          cidade Cachoeirinha
+Maria da Silva Cachoeirinha  → nome Maria da Silva, cidade Cachoeirinha
+cachoeirinha                 → cidade Cachoeirinha, sem nome (não inventa)
+```
+
+### A trava, e ela apareceu no primeiro teste
+
+Sem ela, *"Vamos juntos mudar o Rio Grande"* respondido ao formulário virava cidade **Rio Grande**
+e nome **"Vamos Juntos Mudar O"** — o pior dos dois mundos, e num campo que vai para o CRM.
+
+A regra que resolve é a própria pergunta: você pediu **nome e cidade**. Se veio um município e o
+resto **não é nome de gente**, aquilo não era uma resposta. Vocabulário de slogan (vamos, juntos,
+mudar, apoio, escolho, voto, luta, firme, lado) entrou no `NAO_E_NOME`.
+
+### Também
+
+`CONTEXTO.md` reescrito do zero, a pedido dele, para abrir outra aba com o estado de hoje: a
+tabela de regras e sua ordem, as armadilhas do dia, as decisões de negócio que não devem ser
+reinventadas, e o viés que eu repeti três vezes — trava contra falso positivo derrubando o caso
+verdadeiro.
+
+### Arquivos
+
+`src/lib/extract.js` (`respostaAoPedido`, `sobraDaResposta`, `NAO_E_NOME`),
+`src/panel/panel.js` (detecta a nossa última mensagem), `tests/parser.test.mjs` (9 asserções
+novas), `CONTEXTO.md`, `CLAUDE.md`, `manifest.json` (0.37.0 → 0.38.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-31 — A cidade passa a exigir contexto: "Rio Grande" de slogan não é município
 
 **Relato dele**, print do Dirceu com o popup *"Encontrei 'Rio Grande' como cidade"*:

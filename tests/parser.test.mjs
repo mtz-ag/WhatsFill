@@ -548,4 +548,36 @@ grupo('cidade precisa de CONTEXTO, nao basta o nome aparecer');
   check((await cidadeDe('PORTO ALEGRE')) === 'Porto Alegre', 'mensagem que e so a cidade');
 }
 
+
+grupo('resposta a UMA PERGUNTA NOSSA: nome e cidade sem separador');
+{
+  // Pedido dele (31/08): "se eu perguntei qual sua cidade e ela respondeu (maria cachoeirinha),
+  // tera que identificar esse tipo de resposta". Quem responde uma pergunta nao escreve "moro em"
+  // nem poe barra -- escreve o nome e a cidade, colados.
+  const resp = async (t) => await extract([t], { respostaAoPedido: true });
+
+  const maria = await resp('maria cachoeirinha');
+  check(maria.cidade?.value === 'Cachoeirinha', 'a cidade sai da resposta = ' + maria.cidade?.value);
+  check(maria.nome?.value === 'Maria', 'e o que sobra vira o nome = ' + maria.nome?.value);
+
+  const completo = await resp('Maria da Silva Cachoeirinha');
+  check(completo.nome?.value === 'Maria da Silva', 'nome completo = ' + completo.nome?.value);
+
+  const soCidade = await resp('cachoeirinha');
+  check(soCidade.cidade?.value === 'Cachoeirinha', 'so a cidade continua valendo');
+  check(!soCidade.nome, 'sem nome, nao inventa nome');
+
+  // A trava: se o que sobra NAO e nome, aquilo nao era uma resposta.
+  const slogan = await resp('Vamos juntos mudar o Rio Grande');
+  check(!slogan.cidade, 'slogan respondido a pergunta nao vira cidade');
+  check(!slogan.nome, 'nem vira nome');
+
+  const anuncio = await resp('Olá! Eu apoio o Flávio, Zucco, Hiago e Capitão Martim');
+  check(!anuncio.cidade, 'a mensagem do anuncio tambem nao');
+
+  // Sem a pergunta feita, a menção solta continua exigindo contexto.
+  const semPergunta = await extract(['Vamos juntos mudar o Rio Grande'], {});
+  check(!semPergunta.cidade, 'sem pergunta, o slogan segue fora');
+}
+
 fim();

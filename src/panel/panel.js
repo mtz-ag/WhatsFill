@@ -471,7 +471,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.nossas = conversa.nossas || [];
       state.ultimaMensagem = conversa.ultima;
       const temaField = classify.find((f) => f.name === 'Tema de Interesse');
-      const palpites = await extract(state.incoming, { temaField });
+      /**
+       * A nossa ÚLTIMA mensagem foi o pedido de dados?
+       *
+       * É o contexto dele: perguntou, então o que veio depois é a resposta — mesmo sem "moro em"
+       * e sem separador. Compara um trecho do meio do formulário com a última coisa que saiu,
+       * pelo mesmo método usado no modelo e no "já pediram dados".
+       */
+      const respostaAoPedido = (() => {
+        const nossaUltima = state.nossas[state.nossas.length - 1]?.texto || '';
+        const modelo = state.templates.find((t) => t.id === ASK_TEMPLATE_ID);
+        const corpo = achatarTexto(modelo?.text || '');
+        if (!nossaUltima || corpo.length < 100) return false;
+        return achatarTexto(nossaUltima).includes(corpo.slice(40, 100));
+      })();
+
+      const palpites = await extract(state.incoming, { temaField, respostaAoPedido });
       applyGuesses(palpites, classify);
 
       /**

@@ -324,6 +324,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 - **`confirm()` nativo não pode aparecer dentro da rodada.** Ele abre DEPOIS da decisão, fora do
   lugar onde ele está olhando, e trava o laço num diálogo do navegador. Aviso de duplicata vira
   linha da pergunta da rodada; quem chama passa `jaConfirmado: true`.
+- **A pergunta que VOCÊ fez também é contexto.** Quando a nossa última mensagem foi o pedido de
+  dados, o que vem depois é a resposta: `extract(..., { respostaAoPedido: true })` casa o
+  município sem pista e sem limite de tamanho, e o que sobra vira o nome — é assim que
+  "maria cachoeirinha" dá nome Maria e cidade Cachoeirinha, sem separador nenhum. **A trava:** se
+  a sobra não for nome de gente, nada é aceito — senão o slogan do anúncio respondido ao
+  formulário viraria cidade "Rio Grande" e nome "Vamos Juntos Mudar O".
 - **A cidade só sai de CONTEXTO, nunca de menção solta** (decisão dele, 31/08). O gatilho foi
   *"Vamos juntos mudar o Rio Grande"* — o estado na forma curta, que a guarda `NOME_DO_ESTADO`
   não pegava porque ela só apaga "Rio Grande do Sul" por extenso. Hoje valem três caminhos, e só

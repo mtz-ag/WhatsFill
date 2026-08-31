@@ -28,13 +28,46 @@ const TEMA_KEYWORDS = [
  * @param {object} [opts.temaField] campo "Tema de Interesse" do schema (para virar id de opção)
  * @returns {Promise<object>} palpites por campo
  */
-export async function extract(texts, { temaField } = {}) {
+export async function extract(texts, { temaField, respostaAoPedido = false } = {}) {
   const dicts = await store.get('dicts');
   const list = (texts || []).filter(Boolean);
   const joined = list.join('\n');
 
   const structured = await findStructured(list, isCityAlone);
   const guesses = {};
+
+  /**
+   * **Você acabou de perguntar, então o que veio é a resposta.**
+   *
+   * Pedido dele (31/08): *"se eu perguntei qual sua cidade e ela respondeu (maria cachoeirinha),
+   * terá que identificar esse tipo de resposta"*. A pessoa não escreve "moro em" quando está
+   * respondendo a uma pergunta — ela escreve o nome e a cidade, sem separador nenhum.
+   *
+   * É o contexto mais forte que existe aqui, e é NOSSO: quem chama sabe que a última mensagem
+   * enviada foi o pedido de dados. Por isso dispensa pista e dispensa limite de tamanho.
+   *
+   * Fica FORA do `else` porque a seção do Nome também usa: é dela que sai o "maria" de
+   * "maria cachoeirinha".
+   */
+  const naRespostaBruta = !structured && respostaAoPedido ? await cities.matchCity(joined) : null;
+
+  /** O que sobra da resposta depois de tirar o município — deveria ser o nome, e só ele. */
+  const sobraDaResposta = naRespostaBruta
+    ? joined
+        .replace(new RegExp(escapeRe(naRespostaBruta.matched || ''), 'i'), ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+    : '';
+
+  /**
+   * A resposta só conta se o que sobrou for **nome ou nada**.
+   *
+   * Você pediu "Nome / Cidade". Se veio um município e o resto não é nome de gente, aquilo não
+   * é uma resposta — é outra coisa que por acaso cita um município. O caso real: quem responde
+   * o formulário com o slogan do anúncio, *"Vamos juntos mudar o Rio Grande"*, que traria a
+   * cidade Rio Grande e o "nome" Vamos Juntos Mudar O.
+   */
+  const naResposta = naRespostaBruta && (!sobraDaResposta || plausivelNome(sobraDaResposta)) ? naRespostaBruta : null;
 
   // --- Cidade -------------------------------------------------------------
   if (structured) {
@@ -72,7 +105,8 @@ export async function extract(texts, { temaField } = {}) {
      * "sou de", "aqui em"…).
      */
     const soCidade = await cidadeSozinha(list);
-    const hit = soCidade || (await cities.matchCityComContexto(joined));
+
+    const hit = soCidade || naResposta || (await cities.matchCityComContexto(joined));
     if (hit) {
       guesses.cidade = {
         value: hit.city,
@@ -104,13 +138,23 @@ export async function extract(texts, { temaField } = {}) {
   // A limpeza de siglas roda de novo aqui, agora com o dicionário de partidos: `findStructured`
   // só conhece a lista fixa, e partido novo entra pela Config sem passar por código.
   const nomeMatch = /\bmeu nome (?:é|e)\s+([\p{L}][\p{L}\s'.-]{2,60})/iu.exec(joined);
-  const nomeCru = structured?.nome || (nomeMatch ? nomeMatch[1].trim() : '');
+  /**
+   * Resposta ao pedido sem separador: o que sobra depois de tirar a cidade é o nome.
+   *
+   * "maria cachoeirinha" é o formato real da resposta — sem barra, sem vírgula. Tirar o trecho
+   * que casou com o município deixa "maria", e `plausivelNome` decide se aquilo é nome de gente.
+   */
+  const nomeDaResposta = naResposta && plausivelNome(sobraDaResposta) ? sobraDaResposta : '';
+
+  const nomeCru = structured?.nome || nomeDaResposta || (nomeMatch ? nomeMatch[1].trim() : '');
   const nomeLimpo = limparSiglas(nomeCru, dicts.partido);
   if (nomeLimpo) {
     guesses.nome = {
       value: titleCase(nomeLimpo),
       confidence: 'aproximada',
-      source: structured?.nome ? structured.nome : nomeMatch[0],
+      // A origem é o trecho que gerou o valor, e são três caminhos possíveis agora. Sem isto,
+      // nome vindo da resposta estourava em `nomeMatch[0]` — `nomeMatch` é null nesse caso.
+      source: structured?.nome || nomeDaResposta || (nomeMatch ? nomeMatch[0] : nomeCru),
     };
   }
 
@@ -160,7 +204,7 @@ export async function extract(texts, { temaField } = {}) {
  * sempre que ele escrever a cidade antes do nome.
  */
 const NAO_E_NOME =
-  /\b(oi|ol[aá]|bom dia|boa tarde|boa noite|obrigad|quero|queria|sou|moro|resido|aceito|gostaria|pode|tenho|preciso|meu|minha|aqui|somos|sim|n[aã]o|claro|isso|ok|beleza|positivo|afirmativo)\b/i;
+  /\b(oi|ol[aá]|bom dia|boa tarde|boa noite|obrigad|quero|queria|sou|moro|resido|aceito|gostaria|pode|tenho|preciso|meu|minha|aqui|somos|sim|n[aã]o|claro|isso|ok|beleza|positivo|afirmativo|vamos|juntos|mudar|apoio|apoiar|escolho|voto|vote|luta|firme|lado)\b/i;
 
 /**
  * Siglas que vêm coladas no nome e nunca são nome de gente.
