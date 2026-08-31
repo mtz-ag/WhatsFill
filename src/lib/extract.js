@@ -371,3 +371,40 @@ function titleCase(s) {
     .join(' ')
     .trim();
 }
+
+/**
+ * Rebaixa todo palpite para "espera clique", e diz de onde veio.
+ *
+ * **Existe para uma coisa só: o que sai de TRANSCRIÇÃO de áudio.** Nesta base muita gente
+ * responde falando, e o painel dizia "Cidade: (vazia)" para quem tinha dito a cidade em voz.
+ * Ler a transcrição resolve — e cria um risco novo, porque ninguém DIGITOU aquilo: é fala
+ * passada por reconhecimento automático, com os erros disso.
+ *
+ * As duas marcas são o que tornam isso seguro, e cada uma fecha um caminho diferente:
+ *
+ *  - `confidence: 'aproximada'` mantém o valor **fora da gravação automática** — só `crm` e
+ *    `exata` são gravados sozinhos;
+ *  - `informada: false` impede **substituir o que já está no CRM** — a regra de "a pessoa
+ *    informou outra cidade" exige texto escrito, e áudio ouvido por máquina não é isso.
+ *
+ * A origem sai na tela dizendo que veio do áudio, para dar para conferir antes de aceitar.
+ *
+ * @param {object} guesses o que `extract` devolveu
+ * @returns {object} os mesmos palpites, rebaixados
+ */
+export function rebaixarParaPalpite(guesses) {
+  const saida = {};
+  for (const [chave, guess] of Object.entries(guesses || {})) {
+    if (!guess || typeof guess !== 'object' || !guess.value) {
+      saida[chave] = guess;
+      continue;
+    }
+    saida[chave] = {
+      ...guess,
+      confidence: 'aproximada',
+      informada: false,
+      source: `${guess.source || guess.value} — ouvido no áudio`,
+    };
+  }
+  return saida;
+}

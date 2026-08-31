@@ -23,7 +23,7 @@ const coredes = JSON.parse(
 mem.municipios = Object.keys(coredes.municipios).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
 const cities = await lib('cities.js');
-const { extract, findStructured, limparSiglas } = await lib('extract.js');
+const { extract, findStructured, limparSiglas, rebaixarParaPalpite } = await lib('extract.js');
 
 const municipios = await cities.loadMunicipios();
 console.log(`municípios carregados: ${municipios.length}`);
@@ -478,6 +478,28 @@ grupo('memória das cidades recusadas no popup');
   // Backup não leva referência a contato real.
   mem.cidadeRecusada = { 'c-1': { cidades: ['quarai'], at: 1 } };
   check(!JSON.parse(await store.exportJson()).cidadeRecusada, 'exportJson não leva as recusas');
+}
+
+
+grupo('transcricao de audio entra como palpite, nunca como gravacao automatica');
+{
+  // Esta e a trava que permitiu ler audio: ninguem DIGITOU aquilo, e o valor vai para o CRM de
+  // eleitor real. Se estas asseroes cairem, transcricao volta a poder ser gravada sozinha.
+  const cru = {
+    cidade: { value: 'Pelotas', confidence: 'exata', source: 'PELOTAS', informada: true },
+    nome: { value: 'Maria Silva', confidence: 'exata', source: 'Maria Silva' },
+  };
+  const r = rebaixarParaPalpite(cru);
+
+  check(r.cidade.confidence === 'aproximada', 'cidade exata vira aproximada (fica fora do automatico)');
+  check(r.nome.confidence === 'aproximada', 'nome tambem');
+  check(r.cidade.informada === false, 'informada vira falso: nao substitui o que ja esta no CRM');
+  check(r.cidade.value === 'Pelotas', 'o valor em si nao e mexido');
+  check(/ouvido no/.test(r.cidade.source), 'a origem diz que veio do audio = ' + r.cidade.source);
+
+  check(JSON.stringify(rebaixarParaPalpite({})) === '{}', 'vazio devolve vazio');
+  check(JSON.stringify(rebaixarParaPalpite(null)) === '{}', 'nulo nao explode');
+  check(rebaixarParaPalpite({ cidade: null }).cidade === null, 'palpite nulo passa intacto');
 }
 
 fim();

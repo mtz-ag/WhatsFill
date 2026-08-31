@@ -5,6 +5,52 @@
 
 ---
 
+## 2026-08-31 — O parser passa a ouvir o áudio, com a trava que torna isso aceitável
+
+**Pedido dele:** *"sim aplique falta adicionar quando for assim"* — em resposta à decisão que eu
+tinha deixado em aberto: alimentar o parser com transcrição de áudio.
+
+### O ganho, e o risco que vem junto
+
+Nesta base muita gente responde **falando**. O painel dizia "Cidade: (vazia)" para quem tinha dito
+a cidade em voz alta — a informação estava lá e ninguém lia.
+
+O risco é que **ninguém digitou aquilo**: é fala passada por reconhecimento automático, com os
+erros disso, e o que sai daqui vai para o CRM de eleitor real, onde etiqueta fica para sempre.
+
+### A trava, e por que são DUAS marcas
+
+`extract.rebaixarParaPalpite` rebaixa tudo que vem de transcrição:
+
+- **`confidence: 'aproximada'`** — mantém o valor fora da gravação automática, porque só `crm` e
+  `exata` são gravados sozinhos;
+- **`informada: false`** — impede substituir o que já está no CRM, porque a regra de "a pessoa
+  informou outra cidade" exige texto ESCRITO, e áudio ouvido por máquina não é isso.
+
+Cada uma fecha um caminho diferente, e nenhuma cobre a outra: sem a primeira, a cidade entra
+sozinha; sem a segunda, ela sobrescreve a que já estava lá.
+
+A origem sai na tela dizendo **"— ouvido no áudio"**, para dar para conferir antes de aceitar.
+
+### A ordem também é trava
+
+A passada da transcrição roda **depois** da normal, e `applyGuesses` não sobrescreve o que já
+está no rascunho. Então **o que a pessoa escreveu sempre ganha do que ela falou**.
+
+### Onde mora, e por quê
+
+Em `src/lib/extract.js` (puro, testado), não solto no `panel.js`. É a regra do projeto: lógica que
+decide o que vai para dado real tem teste. São 8 asserções, e o comentário delas diz o que
+acontece se caírem — transcrição voltaria a poder ser gravada sozinha.
+
+### Arquivos
+
+`src/lib/extract.js` (`rebaixarParaPalpite`), `src/panel/panel.js` (segunda passada no `load`),
+`tests/parser.test.mjs` (8 asserções novas), `CLAUDE.md`, `manifest.json` (0.23.0 → 0.24.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-31 — "O copiar falhou": copiava cinco [audio] e nada mais
 
 **Relato dele**, com print do que ele colou na IA:

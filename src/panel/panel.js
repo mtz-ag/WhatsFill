@@ -16,7 +16,7 @@ import * as tagsLib from '../lib/tags.js';
 import * as hsmLib from '../lib/hsm.js';
 import * as keepalive from '../lib/keepalive.js';
 import * as categorizar from '../lib/categorizar.js';
-import { extract } from '../lib/extract.js';
+import { extract, rebaixarParaPalpite } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
 import { ultimaEhSoReacao, ultimaPedeRespostaPessoal } from '../lib/cortesia.js';
@@ -465,6 +465,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const temaField = classify.find((f) => f.name === 'Tema de Interesse');
       const palpites = await extract(state.incoming, { temaField });
       applyGuesses(palpites, classify);
+
+      /**
+       * Segunda passada, só nas TRANSCRIÇÕES de áudio — e sempre como palpite que espera clique.
+       *
+       * Pedido dele, depois de ver o painel dizer "Cidade: (vazia)" para quem tinha falado a
+       * cidade num áudio. O ganho é real: nesta base muita gente responde falando.
+       *
+       * **A trava é o que torna isto aceitável.** Transcrição é fala passada por reconhecimento
+       * automático — ninguém DIGITOU aquilo. Então tudo que sai daqui vem rebaixado:
+       *
+       *  - `confidence: 'aproximada'`, que é o que mantém o valor fora da gravação automática
+       *    (só `crm`/`exata` são gravados sozinhos);
+       *  - `informada: false`, que impede substituir o que já está no CRM — a regra de "a pessoa
+       *    informou outra cidade" exige texto escrito, não áudio ouvido por máquina;
+       *  - a origem sai na tela dizendo que veio do áudio, para ele conferir antes de aceitar.
+       *
+       * E roda DEPOIS da passada normal, então o que a pessoa escreveu sempre ganha do que ela
+       * falou: `applyGuesses` não sobrescreve o que já está no rascunho.
+       */
+      const transcricoes = state.entrantes.filter((m) => m.transcrito && m.texto).map((m) => m.texto);
+      if (transcricoes.length) {
+        applyGuesses(rebaixarParaPalpite(await extract(transcricoes, { temaField })), classify);
+      }
 
       // O nome que a pessoa ESCREVEU no formulário ganha do apelido do perfil do WhatsApp.
       // "Zane" (perfil) x "Rosane Requia" (resposta dela): sem isto o agradecimento sairia
