@@ -53,7 +53,6 @@ src/lib/tags.js         etiquetas: COREDE, regras de conteúdo
 src/lib/categorizar.js  etiqueta de CIDADE para a base inteira (puro, testado)
 src/lib/hsm.js          modelos de mensagem aprovados
 src/lib/vars.js         variáveis dos templates e bloqueio por variável faltante
-src/lib/triagem.js      quem a rodada NÃO trata: pedido de ajuda/dinheiro (puro, testado)
 src/lib/ia.js           prompt, esquema e TRAVAS da decisão por IA (puro, testado)
 src/lib/ia-cliente.js   ponte painel <-> service worker (a chave nunca entra na página)
 src/data/coredes-rs.json  município -> COREDE (planilha oficial da SPGG-RS)
@@ -111,12 +110,6 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 - **Antes de culpar o laço de 500ms, meça.** `pageStateLocal` parece caro (`isConcluded` varre
   `span, div` lendo `textContent`) e não é: 2,9 ms com 800 mensagens na tela, medido com
   Playwright. Um "conserto" ali teria custado uma tarde sem tocar no problema real, que era rede.
-- **"Ajuda" é a mesma palavra dos dois lados da campanha.** *"Quero ajudar"* é apoiador se
-  oferecendo — o público principal, já classificado como "Apoiador Muito engajado" no
-  `extract.js`. *"Preciso de ajuda"* é o oposto, e é o caso que NUNCA pode receber resposta
-  automática (Lei 9.504/97). Um padrão com `/ajuda/` põe metade da base na fila de revisão dele e
-  o trabalho para. Em `triagem.js` a oferta desarma a mensagem inteira ANTES de qualquer teste de
-  pedido, e há teste para cada lado.
 - **Reabrir o atendimento NÃO reabre a janela de 24h.** Ela é regra do WhatsApp, não da
   plataforma: depois do Reiniciar, texto livre continua não chegando em quem está sem retorno há
   dias. Na rodada dos concluídos só sai modelo aprovado.
@@ -128,6 +121,65 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `CY_CONCLUIDOS` e a tentativa nem roda.
 - **A fila carrega 50 por vez.** O resto só vem no "Ver mais", que é manual e é o único gancho
   da fila sem `data-cy`. Sem clicar nele, a rodada enxerga uma fatia e acha que acabou.
+- **`getIncomingText` só devolve mensagem COM TEXTO — figura é invisível para a rodada.** Quem
+  manda só uma imagem (o "bom dia" ilustrado, comum nesta base) chegava como *"não escreveu
+  nada"* e era assumido sem receber resposta. O tipo vem no campo `type` de
+  `/chat/v1/message` (`TEXT`, `IMAGE`, `STICKER`, `AUDIO`, `VIDEO`, `DOCUMENT`; direção é
+  `TO_HUB`/`FROM_HUB`) — conferido no bundle em 29/08/2026. Quem precisa enxergar mídia usa
+  `getConversation().entrantes`, que traz `{texto, tipo}` **sem** filtrar; `incoming` continua
+  sendo só texto, porque é a base do parser e parser não lê figura.
+- **O contador de "Meus" da plataforma NÃO é o total — ela pede para a API não contar.** Ao abrir
+  a aba, o app chama `GET /chat/v6/session?skipCount=true&…&statuses=IN_PROGRESS&userId=…`, e com
+  `skipCount=true` a resposta vem com `totalItems: 0`. Medido lado a lado em 30/08/2026: badge
+  **76**, total real **353**. Para saber o número de verdade é a mesma rota com
+  `skipCount=false` e `pageSize=1` (só o `totalItems` interessa). O `userId` sai de
+  `GET /core/v1/agent/me` (campo `userId`) — descobrir por ali, e não decodificando o Bearer, é
+  o que faz funcionar também no modo janela, onde o token nunca chega ao painel.
+- **Progresso do dia é `COMPLETED` + `timestampFilter`, NÃO a queda dos abertos.** O total de
+  abertos sobe quando chega gente nova: medido ao vivo, foi de 353 a 359 enquanto se conversava.
+  Quem usa "abertos" como medida de progresso vê o número CRESCER num dia de trabalho bom. Os
+  status válidos de `/chat/v6/session` são `IN_PROGRESS`, `COMPLETED` e `PENDING` — qualquer
+  outro nome devolve 400 (sondados: RESOLVED, DONE, CLOSED, FINISHED, ARCHIVED, NEW, OPEN).
+  `timestampFilter` com a meia-noite LOCAL filtra pela ATUALIZAÇÃO (quando foi concluído); com
+  `timestampField=createdat` o número é outro — 82 contra 38, conferidos lado a lado.
+- **A sessão NÃO é "a conversa de hoje", e 50 mensagens cegavam o painel.** Medido em
+  30/08/2026 num atendimento comum: sessão criada em **20/07**, ainda aberta em **30/08** (41
+  dias), com **168 mensagens em 4 páginas**. `getMessages` lia só a página 1 — os últimos 20
+  dias —, então **118 mensagens eram invisíveis**. Era esta a causa de "não reconhece o conteúdo
+  quando é do dia anterior": o pedido estava lá, numa mensagem que ninguém leu. Hoje são 200 por
+  página, com segunda página quando `isLastPage` for `false`. **Subir o `pageSize` não custa
+  requisição** — é a mesma chamada com resposta maior, e nesta API o que derruba é número de
+  requisições, não tamanho de resposta.
+- **O áudio traz a TRANSCRIÇÃO na própria mensagem: `details.transcription.text`.** Conferido ao
+  vivo em 31/08/2026: de 12 mídias, 9 tinham transcrição (uma com 2838 caracteres). É o que a
+  plataforma mostra na tela como "Transcrição". Sem ler esse campo, áudio chega como mensagem
+  VAZIA — o botão de copiar a conversa copiava cinco `[audio]` e mais nada. `getConversation`
+  devolve isso em `entrantes[].texto` com a marca `transcrito: true`. **O parser LÊ a transcrição, mas sempre rebaixada** (decisão dele, 31/08): passa por
+  `extract.rebaixarParaPalpite`, que força `confidence: 'aproximada'` (fica fora da gravação
+  automática — só `crm`/`exata` gravam sozinhos) e `informada: false` (não substitui o que já
+  está no CRM, porque substituir exige a pessoa ter ESCRITO). Roda depois da passada normal,
+  então o que foi digitado sempre ganha do que foi falado. Tem teste; se ele cair, transcrição
+  volta a poder ser gravada sozinha em eleitor real.
+- **`` NÃO funciona antes de palavra acentuada.** `` é fronteira de `w`, e `é` não é `w`:
+  `/é nós/` **nunca** casa no começo da string. Foi assim que "É nós." — a frase exata que ele
+  mandou de exemplo — passou batido na primeira versão do detector de despedida. Em padrão que
+  começa com acento use `(^|s)`. Vale para todo o vocabulário daqui: "é nós", "ótimo", "amém".
+- **A lista de etiquetas da caixa da rodada NÃO é a do contato.** Ela vem de `tagSuggestions` —
+  só o que a rodada sugere ou reconhece. No contato da print (31/08) a caixa mostrava 3 etiquetas
+  e o cabeçalho da plataforma mostrava 5, e a que faltava era justamente a que deveria dispensar
+  o contato da fila. Regra que decide por etiqueta tem que ler `state.contact.tagsId` cruzado
+  com `tagsLib.allTags()`, nunca a lista da tela.
+- **`templatesLib.wasSent` só enxerga o que saiu PELO PAINEL.** Modelo disparado pela automação
+  da plataforma, pelo chatbot do anúncio ou à mão por outra pessoa não deixa rastro ali — e a
+  rodada sugeria "mande o modelo" para quem estava com o modelo na tela algumas mensagens acima
+  (31/08). Quem precisa saber o que JÁ FOI usa `getConversation().nossas` (o que mandamos, com
+  texto) ou `nossaUltimaAt` (quando). O registro de envios continua valendo para anti-duplicata
+  do próprio painel; ele só não é a verdade sobre a conversa.
+- **A origem do anúncio é DADO, não texto.** O bloco "ANÚNCIO | FACEBOOK" com o link `fb.me` que
+  aparece no topo da conversa vem da sessão: `utm.source` ("FACEBOOK"), `utm.campaign`,
+  `utm.referralUrl` e `utm.sourceId` (conferidos ao vivo em 31/08/2026). Casar isso por regra de
+  texto é adivinhar o que já está dito num campo. O painel manda os quatro para o texto das
+  regras e usa `utm.source`/`utm.referralUrl` para a etiqueta de anúncio.
 - **Rota nova? Leia o bundle do app em vez de chutar.** Quando a navegação está bloqueada e não dá
   para inspecionar a rede, o `main.*.js` do mobiliza é a fonte da verdade e está a um `fetch` de
   distância — as URLs, os métodos e os parâmetros estão como texto no código Angular. Foi assim que
@@ -285,6 +337,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 - **`confirm()` nativo não pode aparecer dentro da rodada.** Ele abre DEPOIS da decisão, fora do
   lugar onde ele está olhando, e trava o laço num diálogo do navegador. Aviso de duplicata vira
   linha da pergunta da rodada; quem chama passa `jaConfirmado: true`.
+- **A pergunta que VOCÊ fez também é contexto.** Quando a nossa última mensagem foi o pedido de
+  dados, o que vem depois é a resposta: `extract(..., { respostaAoPedido: true })` casa o
+  município sem pista e sem limite de tamanho, e o que sobra vira o nome — é assim que
+  "maria cachoeirinha" dá nome Maria e cidade Cachoeirinha, sem separador nenhum. **A trava:** se
+  a sobra não for nome de gente, nada é aceito — senão o slogan do anúncio respondido ao
+  formulário viraria cidade "Rio Grande" e nome "Vamos Juntos Mudar O".
+- **A cidade só sai de CONTEXTO, nunca de menção solta** (decisão dele, 31/08). O gatilho foi
+  *"Vamos juntos mudar o Rio Grande"* — o estado na forma curta, que a guarda `NOME_DO_ESTADO`
+  não pegava porque ela só apaga "Rio Grande do Sul" por extenso. Hoje valem três caminhos, e só
+  eles: resposta ao formulário, mensagem **curta** que é a própria cidade, e menção precedida de
+  pista (`PISTAS_DE_CIDADE`: "moro em", "sou de", "aqui em", "minha cidade é", "em"…). Nome de
+  município no meio de uma frase prova que o texto contém um nome de município, não que a pessoa
+  more lá.
 - **O nome do ESTADO contém o nome de um município.** "Rio Grande do Sul" tem "Rio Grande"
   dentro, e o casamento procura o município em qualquer lugar do texto — quem escrevia "sou do
   Rio Grande do Sul" era gravado em Rio Grande, com o COREDE errado junto. A frase inteira é
@@ -436,10 +501,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Testes
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as dez suítes passando:
+> **`node --check` NÃO basta, e já derrubou a extensão.** Ele analisa `.js` como **CommonJS**
+> (modo solto); o Chrome carrega como **ES module**, que é sempre strict. Em 30/08/2026 um
+> `.join('
+
+')` virou string com quebra de linha CRUA, o `--check` disse OK e o painel parou
+> de carregar — sem erro visível na aba, porque o content script morre antes de desenhar.
+> Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
+> `src/` e reclama só de `SyntaxError`.
+
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as onze suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/triagem.test.mjs && node tests/ia.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

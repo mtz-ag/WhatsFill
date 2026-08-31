@@ -283,9 +283,48 @@ export async function getMessageTemplates({ channelId, search = '', pageSize = 1
 }
 
 /** Mensagens da sessão, mais recentes primeiro. Envelope: { items, totalItems, ... } */
-export async function getMessages(sessionId, pageSize = 50) {
-  const data = await apiFetch(`/chat/v1/message?sessionId=${sessionId}&page=1&pageSize=${pageSize}`);
-  return data?.items || [];
+/**
+ * Quantas mensagens ler por página.
+ *
+ * **Era 50, e 50 estava cegando o painel.** Medido ao vivo em 30/08/2026, num atendimento comum:
+ * a sessão tinha **168 mensagens em 4 páginas**, e a página 1 cobria só os últimos 20 dias — as
+ * outras **118 eram invisíveis**. Sessão aqui não é "a conversa de hoje": a que eu medi foi
+ * criada em 20/07 e continuava aberta em 30/08, 41 dias depois.
+ *
+ * Era esta a causa do *"a extensão não reconhece o conteúdo quando é do dia anterior"*: o pedido
+ * estava lá, numa mensagem que a extensão nunca leu.
+ *
+ * **Subir isto não custa requisição nenhuma** — é a MESMA chamada, com resposta maior. Foi o que
+ * fez a escolha ser fácil: nesta API o que derruba a plataforma é número de requisições, não
+ * tamanho de resposta.
+ */
+const MENSAGENS_POR_PAGINA = 200;
+
+/** Teto de páginas por sessão. Duas cobrem 400 mensagens; além disso, história antiga demais. */
+const MAX_PAGINAS_DE_MENSAGEM = 2;
+
+/**
+ * As mensagens da sessão, da página 1 em diante enquanto houver e couber no teto.
+ *
+ * A ordem que a API devolve é da mais nova para a mais velha, então a página 2 é história mais
+ * antiga. Quem chama ordena por `createdAt` de qualquer jeito.
+ */
+export async function getMessages(sessionId, pageSize = MENSAGENS_POR_PAGINA) {
+  const todas = [];
+
+  for (let pagina = 1; pagina <= MAX_PAGINAS_DE_MENSAGEM; pagina++) {
+    const data = await apiFetch(
+      `/chat/v1/message?sessionId=${sessionId}&page=${pagina}&pageSize=${pageSize}`
+    );
+    const itens = data?.items || [];
+    todas.push(...itens);
+
+    // `isLastPage` é da própria API. Sem ele, a única saída seria pedir mais uma página "por via
+    // das dúvidas" — uma requisição a mais por contato, em toda rodada.
+    if (data?.isLastPage !== false || !itens.length) break;
+  }
+
+  return todas;
 }
 
 /** Mensagem do operador e do bot são as duas "nossas": as duas dizem que o contato foi atendido. */
@@ -314,10 +353,164 @@ export async function getConversation(sessionId, pageSize = 50) {
 
   return {
     incoming: ordenadas.filter((m) => doContato(m) && m.text).map((m) => m.text),
+    /**
+     * O que o contato mandou **com o tipo junto, inclusive o que não tem texto**.
+     *
+     * Existe porque `incoming` filtra `m.text` — e isso apagava a figura: quem mandava só uma
+     * imagem (o "bom dia" ilustrado, comum nesta base) chegava à rodada como *"não escreveu
+     * nada"* e era assumido sem receber resposta nenhuma. O `type` vem da própria plataforma
+     * (`TEXT`, `IMAGE`, `STICKER`, `AUDIO`, `VIDEO`, `DOCUMENT`), conferido no bundle do app.
+     *
+     * **O áudio traz a TRANSCRIÇÃO junto**, em `details.transcription.text` — conferido ao vivo
+     * em 31/08/2026: de 12 mídias olhadas, 9 tinham transcrição, uma delas com 2838 caracteres.
+     * É o que a plataforma mostra na tela como "Transcrição", e sem ela o áudio chegava aqui como
+     * mensagem vazia: o botão "Copiar a conversa" copiava cinco `[audio]` e mais nada, que foi o
+     * relato dele.
+     *
+     * `transcrito` marca de onde o texto veio. Importa para quem lê depois: transcrição é fala
+     * passada por reconhecimento automático, com os erros disso — não é o que a pessoa escreveu.
+     *
+     * `incoming` continua exatamente como era: é a base do parser, e alimentar o parser com
+     * transcrição é decisão à parte (nome e cidade sairiam de texto que a máquina ouviu).
+     */
+    entrantes: ordenadas.filter(doContato).map((m) => {
+      const transcricao = String(m.details?.transcription?.text || '').trim();
+      const texto = m.text || transcricao;
+      return {
+        texto,
+        tipo: String(m.type || 'TEXT').toUpperCase(),
+        transcrito: !m.text && !!transcricao,
+      };
+    }),
     ultima: ultima
       ? { doContato: doContato(ultima), at: ultima.createdAt, texto: ultima.text || '' }
       : null,
+    /**
+     * O que NÓS mandamos, com texto e tipo.
+     *
+     * Existe porque `templatesLib.wasSent` só enxerga o que saiu **pelo painel**: modelo mandado
+     * pela automação da plataforma, pelo chatbot do anúncio ou à mão por outra pessoa não deixa
+     * rastro nenhum ali. Foi assim que a rodada sugeriu "mande o modelo" para quem já estava com
+     * o modelo na tela, algumas mensagens acima (print dele, 31/08).
+     */
+    nossas: ordenadas
+      .filter((m) => !doContato(m))
+      .map((m) => ({ texto: m.text || '', tipo: String(m.type || 'TEXT').toUpperCase() })),
+    /**
+     * Quando saiu a NOSSA última mensagem, de qualquer tipo.
+     *
+     * Existe para a rodada saber que o contato **já foi respondido**. \`ultima\` não serve: quando
+     * a pessoa escreve depois de nós — que é o caso comum — a última é dela, e a nossa some da
+     * conta. E `templatesLib.wasSent` também não, porque só enxerga o que saiu por template:
+     * resposta escrita à mão, que é a maioria das respostas de verdade, não deixa rastro ali.
+     */
+    nossaUltimaAt: [...ordenadas].reverse().find((m) => !doContato(m))?.createdAt || null,
   };
+}
+
+/**
+ * Quem está logado — e, principalmente, o `userId` que a fila usa para dizer o que é "Meus".
+ *
+ * A rota foi conferida ao vivo (30/08/2026): `GET /core/v1/agent/me` devolve o agente, e o
+ * campo `userId` dele é exatamente o que a plataforma manda em `?userId=` ao abrir "Meus".
+ * Descobrir por aqui, e não decodificando o Bearer, é o que faz isto funcionar também no modo
+ * janela — lá a chamada é executada pela aba e o token nunca chega ao painel.
+ */
+let agenteCache = null;
+
+export async function getAgente() {
+  // Guardado por carregamento: quem está logado não muda no meio da sessão, e o contador passou
+  // a atualizar a cada atendimento — sem isto, cada atualização custaria DUAS requisições numa
+  // API onde rajada já derrubou a plataforma.
+  if (agenteCache) return agenteCache;
+  agenteCache = await apiFetch('/core/v1/agent/me');
+  return agenteCache;
+}
+
+/** Status de atendimento em andamento, que é o que "aberto" quer dizer na fila. */
+export const STATUS_EM_ANDAMENTO = 'IN_PROGRESS';
+
+/**
+ * Quantos atendimentos EM ANDAMENTO estão com você — o número que a plataforma não mostra.
+ *
+ * **Por que ele não aparece na tela dela:** ao abrir "Meus", o app pede
+ * `/chat/v6/session?...&skipCount=true`, que manda a API **não calcular o total**. A resposta
+ * volta com `totalItems: 0`, e o número do badge é outra coisa. Medido lado a lado em
+ * 30/08/2026: badge dizia **76**, o total real era **353**.
+ *
+ * Aqui é a mesma rota com `skipCount=false`. `pageSize=1` de propósito: só interessa o
+ * `totalItems`, e trazer 50 sessões para contar uma seria gastar rede à toa — nesta API rajada
+ * de requisição já derrubou a plataforma.
+ *
+ * @returns {Promise<{total:number, userId:string}>}
+ */
+export async function contarMeusAbertos() {
+  const agente = await getAgente();
+  const userId = agente?.userId;
+  if (!userId) throw new Error('não consegui descobrir o seu usuário em /core/v1/agent/me');
+
+  const q = new URLSearchParams({
+    skipCount: 'false',
+    page: '1',
+    pageSize: '1',
+    includeDetails: 'All',
+    statuses: STATUS_EM_ANDAMENTO,
+    userId,
+    sessionType: 'INDIVIDUAL',
+    orderBy: 'createdat',
+  });
+
+  const corpo = await apiFetch(`/chat/v6/session?${q}`);
+  return { total: Number(corpo?.totalItems ?? 0), userId };
+}
+
+/** Status de atendimento concluído. Descoberto sondando a API: os outros nomes dão 400. */
+export const STATUS_CONCLUIDO = 'COMPLETED';
+
+/**
+ * Quantos atendimentos VOCÊ concluiu hoje.
+ *
+ * **É este o número de progresso, e não a queda dos abertos.** Medido ao vivo em 30/08/2026: o
+ * total de abertos SUBIU de 353 para 359 no meio da conversa, porque chega gente nova mais
+ * rápido do que se conclui. Quem olha "abertos" para saber se andou vê o número crescer num dia
+ * de trabalho bom — foi exatamente o relato dele, *"continua sem diminuir"*. Concluídos hoje só
+ * sobe, e sobe por causa do trabalho dele.
+ *
+ * `timestampFilter` com a meia-noite LOCAL (não UTC): o dia é o de quem atende. Sem
+ * `timestampField`, a API filtra pela atualização — que é quando o atendimento foi concluído.
+ * Com `createdat` o número é outro (as sessões CRIADAS hoje), e foi conferido lado a lado:
+ * 82 pelo padrão, 38 por `createdat`.
+ *
+ * @returns {Promise<number>}
+ */
+export async function contarConcluidosHoje() {
+  const agente = await getAgente();
+  const userId = agente?.userId;
+  if (!userId) throw new Error('não consegui descobrir o seu usuário em /core/v1/agent/me');
+
+  const meiaNoite = new Date();
+  meiaNoite.setHours(0, 0, 0, 0);
+
+  const q = new URLSearchParams({
+    skipCount: 'false',
+    page: '1',
+    pageSize: '1',
+    includeDetails: 'All',
+    statuses: STATUS_CONCLUIDO,
+    userId,
+    sessionType: 'INDIVIDUAL',
+    orderBy: 'createdat',
+    timestampFilter: meiaNoite.toISOString(),
+  });
+
+  const corpo = await apiFetch(`/chat/v6/session?${q}`);
+  return Number(corpo?.totalItems ?? 0);
+}
+
+/** Os dois números do dia numa chamada só de quem chama. */
+export async function contarMeuDia() {
+  const [abertos, concluidosHoje] = await Promise.all([contarMeusAbertos(), contarConcluidosHoje()]);
+  return { abertos: abertos.total, concluidosHoje };
 }
 
 /** Só o que o contato escreveu, do mais antigo para o mais novo. Base do parser. */

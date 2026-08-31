@@ -5,6 +5,60 @@
 
 ---
 
+## 2026-08-31 — Produção entra no branch da IA: 31 commits de atraso, zerados
+
+**Pedido dele:** *"resolva"* — as duas coisas que eu tinha levantado: o branch da IA estava
+congelado em 29/08 e nenhum dos dois arquivos de contexto dizia que ele existe.
+
+### O merge
+
+Base comum: `0ca18fd`. O branch da IA tinha 6 commits próprios; produção havia andado **31**.
+Merge de `claude/extensao-claude-analise-i9spxw` para cá, e o resultado foi melhor do que o
+tamanho sugeria: `store.js` e `background.js` fizeram **auto-merge**, e só 4 arquivos conflitaram.
+
+**Zero linhas de produção se perderam** — conferido arquivo por arquivo (`git diff` contra o
+branch de produção, contando as linhas `-`): `panel.js`, `background.js`, `tags.js`, `extract.js`
+e `cities.js` deram 0. As duas únicas remoções em `store.js` são a minha própria mudança na mescla
+de defaults, que substituiu a linha antiga.
+
+### Os quatro conflitos, e a decisão em cada um
+
+| arquivo | decisão |
+|---|---|
+| `panel.js` (imports) | tudo de produção + os dois imports da IA; o de `triagem.js` **saiu** |
+| `panel.js` (bloco da triagem) | lado de produção — a triagem foi removida a pedido dele em 29/08 |
+| `manifest.json` | nome `WhatsFill+IA`, versão **0.39.0** (acima da 0.38.0 de produção) |
+| `CLAUDE.md` | lado de produção, que traz o aviso do `node --check`; somei `ia.test.mjs` |
+| `registro.md` | **os dois** históricos, em ordem cronológica |
+
+**A versão é 0.39.0 de propósito.** As duas extensões carregam da mesma pasta, então o número no
+cabeçalho do painel é o que diz qual das duas está no ar. Número menor aqui do que em produção
+faria a conferência mentir justamente quando ele trocasse de branch.
+
+### O que a remoção da triagem custou aqui, e está documentado no código
+
+A IA, ao **escalar**, aplicava a etiqueta de triagem — era ela que deixava o contato achável no
+filtro do CRM depois. Sem a triagem, escalar deixa rastro só no log da rodada, que some quando o
+painel fecha. Está comentado no ponto exato (`panel.js`, caminho do `escalar`), dizendo que é
+consequência da remoção e não esquecimento, e onde a etiqueta entra se ele voltar a querer.
+
+### A outra metade: os branches agora estão escritos
+
+O `CONTEXTO.md` de produção afirmava que o repositório tem **um branch só**. Uma sessão futura
+leria isso e refaria a IA do zero — ou pior, a implementaria de novo em produção, que é
+exatamente o que ele não quer. O `CLAUDE.md` daqui já trazia o cabeçalho certo e sobreviveu ao
+merge; a correção do lado de produção vai em commit separado, no branch dele.
+
+**Estado:** 31 módulos sem erro de sintaxe, **onze suítes** passando (as dez de produção mais a
+da IA), `triagem.js` ausente nos dois branches.
+
+**Pendência que continua de pé:** a IA nunca fez uma chamada real. Sem chave salva, `iaChave`
+não existe no storage e o contador está em `{chamadas: 0}`. O teto de US$ 20/mês e o `effort`
+seguem sem prova ao vivo.
+
+---
+
+## 2026-08-31 — A pergunta que ELE fez também é contexto
 ## 2026-08-29 — Haiku como padrão, e o alarme falso de cache que vinha junto
 
 **Pedido:** *"vou testar com o haiku somente os outros tem custo alto"*.
@@ -358,65 +412,1310 @@ chave quando ele confiar no acerto — e o dado para decidir vai estar no log.
 ---
 
 ## 2026-08-20 — Pedido de ajuda e dinheiro sai da rodada e espera por ele
+**Relato dele:** *"caiu porque lhe falei para utilizar meu contexto também. Se eu perguntei qual
+sua cidade e ela respondeu (maria cachoeirinha), terá que identificar esse tipo de resposta"*.
 
-**Pedido dele:** *"o pedido de ajuda e dinheiro poderia ser pulado e deixar tudo por último pra eu
-ver pessoalmente"*.
+Ele está certo e eu tinha implementado metade: na rodada anterior fiz as pistas da PESSOA ("moro
+em", "sou de") e a barra do formulário, mas deixei de fora o contexto mais forte que existe —
+**nós termos acabado de perguntar**.
 
-Veio no meio da conversa sobre pôr IA para responder. **Não precisou de IA** — e é melhor assim:
-regex é auditável, roda de graça, e não muda de opinião entre um contato e outro. O caso com risco
-jurídico (Lei 9.504/97) é justamente o que não pode depender de um modelo estar num bom dia.
+Quem responde uma pergunta não escreve "moro em" nem põe separador. Escreve *"maria
+cachoeirinha"*.
 
-**`src/lib/triagem.js`** (puro, testado): `precisaDeVoce(mensagens, extras)` devolve o motivo e o
-trecho que casou. Detecta pedido de dinheiro (pix, valor, empréstimo), ajuda material (cesta,
-remédio, aluguel, conta de luz, fome), pedido genérico de ajuda, e emprego (desempregado,
-currículo, vaga).
+### Como funciona
 
-**A armadilha central, e a razão de o arquivo ter suíte própria:** *"ajuda"* é a mesma palavra dos
-dois lados da campanha. *"Quero ajudar"* é **apoiador se oferecendo** — o público principal, que o
-`extract.js` já classifica como "Apoiador Muito engajado". *"Preciso de ajuda"* é o oposto. Um
-padrão ingênuo com `/ajuda/` poria metade da base na fila de revisão dele e o trabalho pararia. A
-regra tem duas metades e a ordem importa: **a oferta desarma a mensagem inteira ANTES de qualquer
-teste de pedido** — *"quero ajudar de qualquer forma, nem que seja com dinheiro"* é apoiador,
-mesmo citando dinheiro. Metade das asserções cobre esse lado.
+O painel olha a **última mensagem NOSSA**: se ela é o pedido de dados, passa
+`respostaAoPedido: true`. Aí o parser casa o município sem pista e sem limite de tamanho, e o que
+sobra do texto vira o nome.
 
-**Três defeitos que o teste pegou antes de virarem comportamento:**
+```
+maria cachoeirinha           → nome Maria,          cidade Cachoeirinha
+Maria da Silva Cachoeirinha  → nome Maria da Silva, cidade Cachoeirinha
+cachoeirinha                 → cidade Cachoeirinha, sem nome (não inventa)
+```
 
-1. *"não tenho o que comer em casa"* não casava (os padrões pediam "sem comida"/"sem ter o que
-   comer");
-2. *"preciso arrumar um trabalho"* não casava — a regra exigia o verbo depois do substantivo, e
-   as pessoas escrevem ao contrário;
-3. o motivo devolvido para *"ajuda com o aluguel"* era o genérico, não "pediu ajuda com contas".
-   Esse era o **teste** errado, não o código: o motivo específico é o que ele lê na caixa para
-   decidir sem abrir a conversa. Corrigi a expectativa e escrevi o porquê.
+### A trava, e ela apareceu no primeiro teste
 
-**O que a rodada faz com esses contatos:** não envia, **não conclui**, não tira etiqueta nenhuma —
-fica exatamente onde está. Marca com `auto.etiquetaTriagem` (padrão `0 RESPONDER PESSOALMENTE`) e
-segue. A etiqueta é o mecanismo de "deixar por último": ele filtra a fila por ela e trabalha todos
-de uma vez. **Log some quando o painel fecha; etiqueta fica** — sem ela, "pulado" seria trabalho
-perdido.
+Sem ela, *"Vamos juntos mudar o Rio Grande"* respondido ao formulário virava cidade **Rio Grande**
+e nome **"Vamos Juntos Mudar O"** — o pior dos dois mundos, e num campo que vai para o CRM.
 
-Vale nas **cinco** rodadas, com a diferença certa em cada uma: nos Novos assume (para não voltar
-toda rodada) sem mandar o formulário; na 3 sai **antes da pergunta**, porque oferecer "mandar o
-modelo" para quem contou um problema é como a escolha errada acaba sendo feita; no reabrir em
-lote não reabre — reabrir jogaria a pessoa para "Meus", no meio da pilha de envio.
+A regra que resolve é a própria pergunta: você pediu **nome e cidade**. Se veio um município e o
+resto **não é nome de gente**, aquilo não era uma resposta. Vocabulário de slogan (vamos, juntos,
+mudar, apoio, escolho, voto, luta, firme, lado) entrou no `NAO_E_NOME`.
 
-**Falha ao marcar não cancela o pulo.** A decisão de não enviar vale de qualquer jeito, e o motivo
-vai para o log — mesma prioridade do resto do painel: etiqueta é organização interna, mensagem é o
-que o contato recebe. E a extensão **não cria** a etiqueta sozinha: erro de digitação na Config
-viraria rótulo permanente no CRM.
+### Também
 
-**Também aparece no trabalho à mão:** contato aberto que casa mostra aviso no cabeçalho, com o
-trecho. A conversa pode ter vinte mensagens e o pedido estar na terceira, fora da tela.
+`CONTEXTO.md` reescrito do zero, a pedido dele, para abrir outra aba com o estado de hoje: a
+tabela de regras e sua ordem, as armadilhas do dia, as decisões de negócio que não devem ser
+reinventadas, e o viés que eu repeti três vezes — trava contra falso positivo derrubando o caso
+verdadeiro.
 
-O veredito da rodada ganha linha própria: *"N para VOCÊ responder — filtre a fila por …"*. Ficar
-escondido no total de pulados esconderia a pilha que a rodada acabou de montar para ele.
+### Arquivos
 
-**Arquivos:** [src/lib/triagem.js](src/lib/triagem.js) (novo),
-[tests/triagem.test.mjs](tests/triagem.test.mjs) (novo, 9ª suíte),
-[src/lib/store.js](src/lib/store.js) (`auto.etiquetaTriagem`, `auto.padroesTriagem`),
-[src/panel/panel.js](src/panel/panel.js) (`separarParaVoce`, `motivoDaTriagem`,
-`renderCartaoTriagem`, aviso no cabeçalho, as cinco rodadas),
-[CLAUDE.md](CLAUDE.md). Manifesto 0.12.4 → **0.13.0**. Nove suítes passando.
+`src/lib/extract.js` (`respostaAoPedido`, `sobraDaResposta`, `NAO_E_NOME`),
+`src/panel/panel.js` (detecta a nossa última mensagem), `tests/parser.test.mjs` (9 asserções
+novas), `CONTEXTO.md`, `CLAUDE.md`, `manifest.json` (0.37.0 → 0.38.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-31 — A cidade passa a exigir contexto: "Rio Grande" de slogan não é município
+
+**Relato dele**, print do Dirceu com o popup *"Encontrei 'Rio Grande' como cidade"*:
+
+> *"a cidade deve sair de um contexto, resposta a minha pergunta, ou a pessoa falar (eu moro em
+> (cidade), eu sou de (cidade)) — resumindo, veja outros contextos também que se aplicam a
+> cidade; na print está se referindo ao Rio Grande do Sul"*
+
+A mensagem era *"Olá! Vamos juntos mudar o **Rio Grande**"*, do anúncio. A guarda que existia
+(`NOME_DO_ESTADO`) só apaga **"Rio Grande do Sul" por extenso** — a forma curta passava, e
+"Rio Grande" é município do RS.
+
+### A regra nova
+
+Sem resposta ao formulário, a cidade agora precisa de **pista de moradia**: "moro em", "morando
+em", "resido em", "sou de", "venho de", "aqui em", "minha cidade é", "estou em", "fica em",
+"região de", "em", e a barra do formulário. O município é casado **só no trecho depois da pista**
+— é isso que separa "moro em Rio Grande" de "vamos mudar o Rio Grande".
+
+Continuam valendo sem pista: a resposta estruturada e a **mensagem curta** que é a própria cidade
+(o "PORTO ALEGRE" sozinho, e o "Sao lourenso" com erro de digitação).
+
+### O que a primeira versão quebrou, e por que isso importa
+
+Exigi pista para tudo e **três testes caíram** — "Maria / Sao Lourenço", "Sao lourenso" e
+"material impresso em Pelotas". Os três eram casos verdadeiros que a suíte já protegia: a barra do
+formulário, o texto curto e a preposição "em". Sem eles, a mudança teria trocado um falso positivo
+por três falsos negativos.
+
+**A suíte pagou o próprio custo aqui.** Foi ela que mostrou que "contexto" era mais largo do que
+as duas frases do exemplo dele.
+
+### O limite que fica
+
+*"meu genro mora em Santiago"* continua propondo Santiago — tem pista, e a pista está certa; quem
+mora lá é outra pessoa. É a razão de a cidade **nunca** ser gravada sem clique, e já estava no
+`CLAUDE.md` antes disto.
+
+### Arquivos
+
+`src/lib/cities.js` (`PISTAS_DE_CIDADE`, `matchCityComContexto`), `src/lib/extract.js`,
+`tests/parser.test.mjs` (11 asserções novas), `CLAUDE.md`, `manifest.json` (0.36.0 → 0.37.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-31 — "Voltou diversas vezes por anúncios": a regra existia e duas condições minhas a impediam
+
+**Relato dele**, print do Telmo: *"voltou diversas vezes por anúncios, já mandei mensagem do
+momento = concluir"*.
+
+Na tela: cidade **Viamão**, modelo enviado às **10:28**, e às **18:24** ele voltou por outro
+anúncio ("ANÚNCIO | FACEBOOK" + *"Olá! Eu escolho o lado da Liberdade"*). A caixa sugeria **mandar
+o modelo de novo**.
+
+### A regra já existia. Eu é que a tinha amarrado errado
+
+`voltou-por-outro-anuncio` foi escrita hoje de manhã, e não pegou o Telmo por **duas condições
+que eu pus e ele nunca pediu**:
+
+1. **`!temEtiquetaDeCidade`** — eu tinha usado a falta de cidade como trava contra falso
+   positivo, porque a frase do aceite ("Olá!") é curta e genérica. Só que voltar por anúncio é
+   sobre **o que a pessoa acabou de fazer**; ter cidade não muda isso. O Telmo tem Viamão.
+2. **`pedidoDeHoje`** — o sinal de "voltou" era o formulário ter saído. Mas quem recebeu o
+   MODELO também já foi atendido, e voltar depois disso é o mesmo caso.
+
+O sinal certo é mais simples e mais amplo: **já existe mensagem NOSSA na conversa**. É isso que
+separa "voltou" de "chegou agora", e vale para quem recebeu formulário e para quem recebeu modelo.
+
+### E "já mandei" não é "hoje"
+
+A regra olhava `momentoHoje`. Ele disse *"já mandei mensagem do momento"* — sem recorte de dia. A
+conta passou a ser sobre a mensagem do momento **atual**, o que a chave de envio já permitia (ela
+inclui um resumo do texto, então trocar de campanha zera a conta sozinho).
+
+### O padrão, de novo
+
+É a terceira vez hoje que uma trava minha contra falso positivo derruba o caso verdadeiro:
+o `` antes de "É nós", a lista de etiquetas da caixa em vez das do contato, e agora estas duas
+condições. Todas nasceram de "melhor não errar para o lado de fazer demais" — e o custo real foi
+não fazer nada no caso que importava.
+
+### Arquivos
+
+`src/lib/sugestao.js` (a regra), `src/panel/panel.js` (`voltouPorOutroAnuncio`,
+`momentoJaEnviado`), `tests/sugestao.test.mjs`, `manifest.json` (0.35.0 → 0.36.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-31 — A origem do anúncio é dado, não texto
+
+**Relato dele**, com a print do bloco "ANÚNCIO | FACEBOOK" e o link `fb.me`: *"se reconhecer o
+que está na print e adicionar a etiqueta ADS resolve tudo"*.
+
+### Fui olhar antes de escrever regra, e ainda bem
+
+O bloco não é uma mensagem: é a sessão. Conferido ao vivo:
+
+```
+utm.source      = "FACEBOOK"
+utm.campaign    = "CLICK AQUI 👉"
+utm.referralUrl = "https://fb.me/lwwIb9Lo2"
+utm.sourceId    = "120248742363290543"
+```
+
+Dava para resolver com uma regra de texto — e teria sido pior: dependeria de ele escrever a regex
+certa, e casaria por acidente com qualquer mensagem que citasse "facebook". **O campo é a fonte, e
+ler campo não erra.**
+
+### Duas coisas, e a segunda explica um mistério
+
+1. **Etiqueta de anúncio automática.** Campo novo na Config, padrão `ADS`, vazio desliga. Entra
+   como **conteúdo** de propósito: é isso que a liga à tabela "Modelo por conteúdo" e faz virar o
+   modelo a enviar — o "resolve tudo" da frase dele.
+
+2. **O painel só passava `utm.campaign` para as regras.** `source` e `referralUrl` ficavam de
+   fora, então uma regra com "facebook" ou com o link do anúncio **nunca poderia casar**. Isso é
+   metade da resposta à pergunta dele de mais cedo, *"está com dificuldade pra pegar se for por
+   alguma palavra chave"*: parte do texto que ele esperava que estivesse lá não estava.
+
+### Arquivos
+
+`src/lib/store.js` (`etiquetaAnuncio`), `src/lib/tags.js` (`veioDeAnuncio`),
+`src/panel/panel.js` (campo na Config + os quatro campos de utm),
+`tests/tags.test.mjs` (5 asserções novas), `CLAUDE.md`, `manifest.json` (0.34.0 → 0.35.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-31 — "Vieram do anúncio sem pedir dados": faltava separar ignorou de nunca-recebeu
+
+**Relato dele**, minutos depois da mudança anterior: *"bastante contatos que vieram de anúncio sem
+pedir dados ao iniciar"*, com a print da Sônia.
+
+### A tensão entre os dois pedidos dele, e como ela se resolve
+
+Poucas horas antes ele tinha dito duas coisas que pareciam brigar:
+
+- *"ela ignorou totalmente o pedido da cidade, eu mando o modelo mesmo assim"* → não insista;
+- *"está pedindo dados pra quem já tem etiquetas"* → não peça a quem já está classificado.
+
+Eu tinha resolvido as duas trocando o critério para o NOME. A Sônia mostra o que ficou de fora:
+nome de verdade (a regra do nome não pega), conteúdo pedido (a regra do modelo pega e manda), sem
+cidade — e **o formulário nunca tinha saído para ela**.
+
+**A distinção que faltava é entre "ignorou o formulário" e "nunca recebeu o formulário".** Não
+insistir vale para quem já teve a chance. Quem nunca foi perguntado não ignorou nada, e perguntar
+uma vez é o trabalho que a rodada existe para fazer.
+
+### A regra
+
+`nunca-pediram-dados`, **acima** de "conteúdo pedido": veio do anúncio, sem cidade, formulário
+nunca enviado → peça esta vez. A do nome continua abaixo. O laço fica: pede-se **uma** vez;
+ignorado, manda-se o conteúdo e não se insiste.
+
+### "Nunca enviado" tem duas fontes, e já era esperado
+
+`wasSent` só enxerga o que o painel mandou — a lição que apareceu três vezes hoje. Então
+`jaPediramDados` também procura o texto do formulário dentro das nossas mensagens, pelo mesmo
+método usado no modelo: um trecho do meio, que sobrevive a variável interpolada.
+
+### Ordem hoje
+
+engajado → resposta pessoal → despedida → voltou por anúncio → reação → **nunca pediram dados** →
+conteúdo pedido → nome sem sentido → nunca perguntaram interesse → já pedi hoje.
+
+### Arquivos
+
+`src/lib/sugestao.js` (regra), `src/panel/panel.js` (`jaPediramDados`),
+`tests/sugestao.test.mjs` (7 asserções novas), `manifest.json` (0.33.0 → 0.34.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-31 — "Dificuldade pra pegar por palavra chave": eram três coisas, consertei uma
+
+**Pergunta dele:** *"a extensão está com dificuldade pra pegar se for por alguma palavra chave, se
+eu botar anunciou não pega pra etiquetar?"*
+
+Fui olhar como a regra de conteúdo casa, e são **três limitações diferentes**. Registro as três
+porque só uma tem conserto óbvio.
+
+### 1. Acento — consertado
+
+A regra vira `new RegExp(padrao, 'i')` e é testada no texto cru. `/anuncio/i` **não** casa com
+"anúncio", e `/anúncio/i` **não** casa com "anuncio". Quem escreve no WhatsApp acentua quando dá;
+quem escreve a regra na Config acentua quando lembra. Exigir que os dois combinem é garantir que
+parte das mensagens escape.
+
+Agora são três tentativas (`tags.casa`): a regra no texto cru, a regra no texto sem acento, e a
+regra sem acento no texto sem acento. **Testar nas duas versões em vez de trocar** — regra que já
+funcionava com acento continua funcionando, e nenhuma regex com classe de caractere ou `` é
+reescrita por mim. A terceira tentativa vem por último e dentro de `try`, porque
+`semAcentoNemCaixa` apaga metacaractere.
+
+### 2. A palavra é literal, não é raiz — NÃO consertado
+
+`anunciou` casa só com "anunciou". Não pega "anúncio", "anunciar", "anunciaram". Para pegar a
+família inteira a regra precisa ser `anunci` (que é o que eu recomendaria) ou `anunci(o|ou|ar|aram)`.
+
+Não mexi nisso porque **é regex de propósito**: cortar palavra sozinho transformaria "sim" em
+"assim" e etiquetaria meio mundo. A tela da Config é que devia dizer isso, e hoje não diz.
+
+### 3. Áudio não entra na conta — decisão pendente dele
+
+A regra olha `state.incoming`, que é **só o que foi digitado**. A transcrição do áudio ficou de
+fora quando a liguei ao parser (30/08), e ali eu a rebaixei a palpite justamente por ser fala
+ouvida por máquina.
+
+Aqui o caso é diferente e mais delicado: **etiqueta de conteúdo é gravada automaticamente** neste
+projeto. Ligar a transcrição significaria escrever etiqueta em eleitor real a partir de palavra
+que ninguém digitou. Não fiz por conta própria; está na mesa para ele decidir, e a saída provável
+é a mesma de antes — sugerir sem gravar sozinho.
+
+### Arquivos
+
+`src/lib/tags.js` (`casa`), `tests/tags.test.mjs` (5 asserções novas),
+`manifest.json` (0.32.0 → 0.33.0). Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-31 — "Pedir dados" passa a ser sobre o NOME, não sobre a cidade
+
+**Relato dele:** *"ao abrir conversas está pedindo dados pra quem já tem etiquetas, uma exceção
+pra pedir é somente quando o nome da pessoa estiver totalmente sem sentido ou em falta"*.
+
+É a **segunda correção dele nesta mesma regra em dois dias**, e as três versões contam a história:
+
+1. **30/08** — *"quando a pessoa não tiver etiqueta de cidade, sempre pedir dados"*. Eu pus a
+   regra acima de tudo.
+2. **31/08, manhã** — *"ela ignorou totalmente o pedido da cidade, eu mando o modelo mesmo
+   assim"*. Desceu para abaixo de "conteúdo pedido".
+3. **31/08, tarde** — o critério inteiro estava errado.
+
+### Por que ele está certo
+
+O argumento é sobre o que cada falta CUSTA.
+
+**Cidade faltando é comum e não impede trabalhar o contato:** ele tem etiqueta, tem conteúdo,
+aparece nos filtros que importam, e a cidade ainda pode vir em qualquer conversa. Pedir o
+formulário a quem já está classificado é exatamente o incômodo que ele descreveu.
+
+**Nome vazio ou impronunciável é o que quebra:** bloqueia o vocativo, deixa o cadastro inútil no
+CRM, e **nenhuma outra conversa conserta sozinha** — ninguém manda o nome espontaneamente.
+
+### `vars.nomeSemSentido`
+
+Função nova, e separada do `looksLikePlaceholder` de propósito: aquele decide se o **vocativo**
+pode sair numa mensagem, e alargá-lo mudaria o bloqueio de envio em todo o painel.
+
+Ela soma o "em falta" (vazio, "[NOVO] …", telefone no lugar do nome) ao "sem sentido" que faltava:
+cadastro **sem vogal nenhuma** — "srn", "kkk", iniciais soltas.
+
+**Uma herança que aceitei e registrei no teste:** "Zé" conta como falta, porque
+`looksLikePlaceholder` trata menos de 3 letras como telefone. É pedir o nome completo a quem está
+cadastrado com dois caracteres — conservador, e do lado certo.
+
+### Ordem hoje
+
+engajado → resposta pessoal → despedida → voltou por anúncio → reação → conteúdo pedido →
+**nome sem sentido** → nunca perguntaram interesse → já pedi hoje.
+
+### Arquivos
+
+`src/lib/vars.js` (`nomeSemSentido`), `src/lib/sugestao.js` (a regra e o porquê da mudança),
+`src/panel/panel.js` (contexto), `tests/vars.test.mjs` (10 asserções novas),
+`tests/sugestao.test.mjs` (ajustadas ao critério novo), `manifest.json` (0.31.0 → 0.32.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-31 — "Zucco" como cidade, e a caixa de pular engajado sozinho
+
+### 1. O anúncio propunha o nome do candidato como cidade
+
+Print dele: popup *"Encontrei 'Zucco' como cidade. De onde saiu: Zucco. Não casou exato com a
+lista do IBGE — é palpite."*
+
+Reproduzi offline. A causa **não** é casamento de município: `matchCity('Zucco')` devolve nada. É
+a mensagem do anúncio:
+
+> Olá! Eu apoio o Flávio, **Zucco**, Hiago e Capitão Martim
+
+As vírgulas fazem o parser achar que está lendo "Nome / Cidade", e o que cai na posição da cidade
+vira **candidato não reconhecido** — que é justamente o caminho que oferece popup com sugestões.
+A trava do "Capitão Martim" não pegava: ela apaga expressões antes de casar município, e aqui
+nunca houve casamento de município.
+
+Agora `cities.naoPodeSerCidade` decide antes de oferecer, juntando duas fontes: o vocabulário da
+campanha (Zucco, Bolsonaro, Hiago, Capitão Martim…) e **a lista que ele edita na Config**
+("Municípios que NÃO são cidade aqui"), que passou a valer também para candidato não reconhecido
+— antes ela só tirava município da lista oficial, então "Zucco", que não é município, escapava.
+
+**Detalhe que virou teste:** as expressões são regex **globais**, e regex global guarda
+`lastIndex` entre chamadas — `test` alternaria entre verdadeiro e falso. Há `lastIndex = 0` antes
+de cada teste e uma asserção que chama duas vezes seguidas. É o mesmo defeito que peguei ontem no
+detector de emoji.
+
+### 2. Caixa: pular engajado sozinho
+
+Pedido dele. Nasce **desmarcada**, e marcada é a única coisa desta rodada que tira contato da fila
+sem perguntar.
+
+O que torna isso aceitável, e está escrito no código: **é ele quem marca**, o critério é uma
+etiqueta que ele mesmo escolheu, e o pulo vai para o Andamento **com o nome da etiqueta que
+causou**. Regra que tira contato da fila sem dizer por quê é exatamente o *"alguns concluem e
+outros não"* que este projeto já pagou caro.
+
+Pular não envia nada e não conclui: o atendimento fica aberto, onde estava.
+
+### Arquivos
+
+`src/lib/cities.js` (`naoPodeSerCidade`), `src/lib/extract.js` (guarda no candidato),
+`src/lib/store.js` (`pularEtiquetasSozinho`), `src/panel/panel.js` (caixa + pulo),
+`tests/parser.test.mjs` (8 asserções novas), `manifest.json` (0.30.0 → 0.31.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-31 — Duas prints, e as duas apontam para o mesmo tipo de cegueira
+
+### 1. "Amém mestre" não era despedida
+
+Print do Carlos Pedroso: última mensagem **"Amém mestre"**, e a caixa sugerindo *"Sugiro a 7:
+pergunta de interesse"*.
+
+A regra de despedida pegava o "Amém" e então checava o que sobrava — e sobrava **"mestre"**. O
+vocativo derrubava a regra inteira.
+
+O vocabulário de vocativo daqui entrou na lista que é limpa antes da conferência: *mestre, chefe,
+guerreiro, campeão, parceiro, irmão, meu, minha, nobre, querido*. E a trava continua: *"Amém, mas
+preciso de ajuda"* e *"mestre, me manda o material"* continuam **não** sendo despedida — tem
+teste para os dois.
+
+### 2. Sugeriu mandar o modelo que já estava na conversa
+
+Print da Jana: o modelo "Campanha Martim2" está na tela, com imagem e texto completo, e a caixa
+sugere *"Sugiro a 1: pediu ADS e há modelo mapeado — mande."*
+
+**A causa é a mesma de ontem, com outra roupa:** `templatesLib.wasSent` só enxerga o que saiu
+**pelo painel**. Aquele modelo foi disparado pela automação do anúncio, então para o registro de
+envios ele nunca existiu.
+
+Agora `getConversation` devolve `nossas` — o que **nós** mandamos, com texto — e a rodada compara
+um trecho do MEIO do modelo (o começo é saudação igual em todos, e o meio sobrevive a variável
+interpolada) com o que já saiu. Casou, a regra do conteúdo não sugere mais.
+
+### O padrão que já apareceu três vezes hoje
+
+Em todas, o painel decidia com base no que **ele mesmo** tinha feito, e não no que está na
+conversa:
+
+- `nossaUltimaAt` — para saber que o contato já foi respondido (resposta à mão não deixa rastro);
+- `nossas` — para saber que o modelo já foi enviado (automação não deixa rastro);
+- as etiquetas reais do contato, e não a lista da caixa.
+
+Virou armadilha no `CLAUDE.md`: **o registro de envios é anti-duplicata do painel, não a verdade
+sobre a conversa.**
+
+### Arquivos
+
+`src/lib/cortesia.js` (vocativos), `src/lib/api.js` (`nossas`), `src/lib/sugestao.js`
+(`modeloJaNaConversa`), `src/panel/panel.js` (comparação), `tests/cortesia.test.mjs` (7),
+`tests/sugestao.test.mjs` (3), `CLAUDE.md`, `manifest.json` (0.29.0 → 0.30.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-31 — "Não pulou o engajado": a regra nunca viu a etiqueta
+
+Duas coisas no mesmo relato dele, e a primeira é um defeito meu.
+
+### O defeito: a caixa mostra uma lista de etiquetas que NÃO é a do contato
+
+Print do Deoclecio: o cabeçalho da plataforma mostra **ADS, CACHOEIRINHA, CONTATO-ASSES,
+CONTEÚDO FLÁV, ENGAJADO/BIZA**. A caixa da rodada mostra **CACHOEIRINHA, Metropolitano Delta do
+Jacuí, ADS**. Três de cinco — e `ENGAJADO/BIZA` era uma das que faltavam.
+
+A lista da caixa vem de `tagSuggestions`, que só carrega o que a rodada **sugere ou reconhece**.
+Eu liguei a regra nova nessa lista, então ela nunca via a etiqueta que deveria dispensar o
+contato. A regra estava certa e cega.
+
+Agora `etiquetaQueDispensaDaFila` lê `state.contact.tagsId` cruzado com `tagsLib.allTags()` —
+as etiquetas de verdade, do CRM. Virou armadilha no `CLAUDE.md`: **regra que decide por etiqueta
+não pode ler a lista da tela.**
+
+### A decisão: engajado passa na frente até do áudio
+
+Com a etiqueta finalmente visível, o Deoclecio ainda cairia em "responder à mão", porque ele
+mandou um vídeo e essa regra estava acima.
+
+Ele quer pular. Eu tinha argumentado o contrário em 30/08 — *"engajado que mandou áudio é quem
+mais merece resposta"* — e o trabalho dele desmente: **o que o engajado manda, na prática, é vídeo
+e link de política o dia inteiro.** Responder a cada um não é atenção, é não conseguir sair da
+fila. A tecla 6 continua a um toque para quando o vídeo merecer.
+
+`etiqueta-dispensa-da-fila` foi para o topo da lista.
+
+### E o caso do Paulo Quevedo, do relato anterior
+
+*"a pessoa já foi respondida e mandou link — concluo e próximo"*. Resposta longa dele às 09:29,
+link do TikTok dela às 14:43, e a caixa sugerindo a mensagem do momento — ou seja, empilhar uma
+segunda mensagem nossa em cima da que ela ainda nem comentou.
+
+A regra da reação passou a olhar se **já respondemos hoje**: se sim, conclui; se não, mensagem do
+momento como antes. Para isso a conversa passou a devolver `nossaUltimaAt`, a hora da nossa
+última mensagem — `ultima` não servia (quando a pessoa escreve depois de nós, a nossa some da
+conta) e `wasSent` também não, porque só enxerga o que saiu por template: **resposta escrita à
+mão, que é a maioria das respostas de verdade, não deixa rastro ali.**
+
+### Ordem hoje
+
+1. etiqueta que dispensa da fila (engajado) ← subiu ao topo
+2. pede resposta pessoal (áudio, vídeo, texto longo)
+3. despedida ("é nós", "abraço")
+4. voltou por outro anúncio
+5. última é só reação — agora **conclui** se já respondemos hoje
+6. conteúdo pedido
+7. sem etiqueta de cidade
+8. nunca perguntaram interesse
+9. já pedi hoje e não veio nada
+
+### Arquivos
+
+`src/lib/api.js` (`nossaUltimaAt`), `src/lib/sugestao.js` (ordem, regra da reação),
+`src/panel/panel.js` (etiquetas reais, `respondidoHoje`), `tests/sugestao.test.mjs`,
+`CLAUDE.md`, `manifest.json` (0.28.0 → 0.29.0). Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-31 — "É nós": quem só se despede recebe concluir, não modelo
+
+**Relato dele**, com a print do Jesus Ceneri: ele já tinha mandado o conteúdo às 10:46, a pessoa
+escreveu **"É nós."** às 14:30, e a caixa sugeriu *"Sugiro a 1: pediu ADS e há modelo mapeado —
+mande."*
+
+> *"a pessoa só fechou a conversa com (é nós, abraço, tamo junto, estamos juntos, entre outros
+> termos) eu concluo a conversa"*
+
+Mandar o modelo ali é **responder a uma despedida com propaganda** — e o modelo já tinha ido
+quatro horas antes.
+
+### O vocabulário é o do lugar
+
+"é nós", "é nóis", "tamo junto", "estamos juntos", "tmj", "abraço", "forte abraço", "valeu",
+"vlw", "obrigado/obrigada", "amém", "que Deus abençoe", "boa sorte", "sucesso".
+
+**Exige que não sobre nada além da despedida.** *"Valeu, me manda o material"* tem pedido dentro,
+e concluir ali seria fechar a porta na cara de quem pediu algo. Mesma disciplina do resto do
+arquivo: sobrando substância, a regra não casa. Tem teste para os dois lados.
+
+### A armadilha que quase deixou a print dele passar
+
+A primeira versão **não pegava "É nós."** — justamente o caso que ele mandou.
+
+`` é fronteira de `w`, e `é` não é `w`. Então `/é nós/` **nunca** casa no começo da
+string. Só apareceu porque testei a frase dele literalmente antes de commitar; um teste com
+"e nos" sem acento teria passado e escondido o defeito. Virou armadilha no `CLAUDE.md`, porque o
+vocabulário deste projeto é cheio de acento no começo: "é nós", "ótimo", "amém".
+
+### Prioridade
+
+Segunda, logo abaixo de "pede resposta pessoal". Um "valeu" dito dentro de um áudio de um minuto
+continua pedindo resposta à mão — o áudio pode ter outra coisa junto.
+
+Concluir e não pular: a conversa acabou de verdade, e o contato volta sozinho para "Meus" se
+escrever de novo. Pular deixaria a fila cheia de conversa encerrada.
+
+### Arquivos
+
+`src/lib/cortesia.js` (`ehDespedida`, `ultimaEhDespedida`), `src/lib/sugestao.js` (regra),
+`src/panel/panel.js` (contexto), `tests/cortesia.test.mjs` (22 asserções novas),
+`tests/sugestao.test.mjs` (4), `CLAUDE.md`, `manifest.json` (0.27.0 → 0.28.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-31 — Conteúdo pedido passa a vencer "sem cidade" (ele mudou de ideia, e está certo)
+
+**Relato dele**, com a print da Janete — sem cidade, etiqueta ADS, modelo "Campanha Martim2"
+mapeado, e a caixa sugerindo *"Sugiro a 4: peça os dados"*:
+
+> *"ela ignorou totalmente o pedido da cidade, eu mando o modelo mesmo assim, talvez em outra
+> hora ela forneça"*
+
+### É uma reversão da regra que ele mesmo pediu, e o argumento dele é melhor
+
+Em 30/08 ele tinha pedido: *"quando a pessoa não tiver etiqueta de cidade, sempre pedir dados"*, e
+eu pus a regra acima até do conteúdo pedido.
+
+O caso da Janete mostra o furo: ela **já ignorou** o pedido da cidade uma vez. Mandar o formulário
+de novo não a aproxima de fornecer — mandar o que ela pediu, sim, porque a conversa continua viva
+e a cidade pode vir depois. Pedir dados é a saída de quem não tem **nada** a receber, não a de
+quem está esperando conteúdo.
+
+### O que mudou
+
+As duas regras trocaram de lugar. Nada mais: nenhuma condição foi reescrita, nenhum código do
+painel foi tocado. **Era exatamente para isso que a tabela existe** — em 30/08 esse mesmo pedido
+teria sido uma expressão booleana no meio do montador da pergunta, e mudar de ideia custaria uma
+releitura do fluxo inteiro.
+
+Ordem hoje:
+
+1. pede resposta pessoal (áudio, vídeo, texto longo)
+2. etiqueta que dispensa da fila (engajado)
+3. voltou por outro anúncio
+4. última é só reação (figura, emoji, link)
+5. **conteúdo pedido** ← subiu
+6. **sem etiqueta de cidade** ← desceu
+7. nunca perguntaram interesse
+8. já pedi hoje e não veio nada
+
+O comentário da regra de cidade agora registra a reversão e o motivo dela, com as palavras dele —
+senão daqui a um mês alguém "conserta" a ordem de volta.
+
+### Arquivos
+
+`src/lib/sugestao.js` (ordem + comentário), `tests/sugestao.test.mjs` (a asserção que fixava a
+prioridade antiga passou a fixar a nova, e ganhou o caso de "sem nada a enviar"),
+`manifest.json` (0.26.0 → 0.27.0). Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-31 — Voltou por outro anúncio sem responder o formulário
+
+**Relato dele:** *"uma situação frequente é a pessoa ignorar o pedido de dados e retornar por
+outro anúncio; quando isso acontece ou eu concluo e vou pra próxima ou mando mensagem do
+momento"*.
+
+### O que a regra impede
+
+**Pedir os dados de novo** — que é exatamente o que a rodada sugeria, porque a regra "sem
+etiqueta de cidade" casava. A pessoa já viu o formulário e escolheu não responder; repetir vira a
+terceira mensagem igual. Por isso esta regra fica ACIMA daquela.
+
+### Dois desfechos, escolhidos pelo que já saiu hoje
+
+Ele descreveu duas saídas, e a regra escolhe entre elas em vez de fixar uma:
+
+- mensagem do momento ainda não foi hoje → **tecla 5** (a pessoa recebe alguma coisa);
+- já foi, ou não há mensagem do momento configurada → **tecla 3**, só concluir.
+
+Mandar duas mensagens do momento no mesmo dia é o que faz a conta parecer robô — a mesma razão
+que já tirava o destaque do "pedir dados" repetido.
+
+Para isso a tabela passou a aceitar **`tecla` como função**, além de string. É a primeira
+situação que precisa disso, e é uma linha em `sugerirAcao`.
+
+### A trava do falso positivo
+
+O sinal é a última mensagem casar com a frase do aceite do anúncio — que na configuração dele é
+**"Olá!"**. Sozinha, ela casaria com meio mundo.
+
+Por isso a regra exige **duas** coisas juntas: o formulário já ter saído alguma vez, **e** o
+contato continuar SEM etiqueta de cidade. É isso que separa "ignorou o formulário" de "respondeu
+começando com Olá" — quem respondeu tem cidade, e a regra não casa. Tem teste para os dois lados.
+
+E áudio continua vencendo: quem voltou por anúncio mas mandou um áudio junto recebe "responder à
+mão", não "concluir".
+
+### Arquivos
+
+`src/lib/sugestao.js` (regra + tecla dinâmica), `src/panel/panel.js` (`voltouPorOutroAnuncio`,
+`momentoHoje`), `tests/sugestao.test.mjs` (7 asserções novas),
+`manifest.json` (0.25.0 → 0.26.0). Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-31 — Etiqueta que dispensa da fila: "engajado" vem com Pular sugerido
+
+**Pedido dele:** *"etiqueta engajado, quando estiver no automatizado pode ser pulado"*.
+
+Faz sentido pelo próprio objetivo da rodada: o trabalho dela é transformar desconhecido em
+engajado. Quem já chegou lá não precisa de formulário nem de pergunta de interesse.
+
+### Configurável, e não fixo no código
+
+Campo novo na aba Automatizado — **"Etiquetas que a rodada pode pular"**, padrão `engajado`,
+separadas por vírgula. Casa por **pedaço do rótulo, sem acento e sem caixa**: `engajado` pega
+"ENGAJADO/BIZA" (a da print dele) e "Apoiador Muito engajado". Vazio não pula ninguém.
+
+Fixar "engajado" no código obrigaria ele a me pedir toda vez que quisesse acrescentar uma —
+e ele avisou desde o começo que ia acrescentar situações conforme aparecem.
+
+A comparação é por **rótulo normalizado, nunca por id**: o CRM tem rótulos repetidos com ids
+diferentes, armadilha que já produziu 1293 contatos errados neste projeto.
+
+### A prioridade que importa, e ela veio da própria print dele
+
+A regra fica **abaixo** de "pede resposta pessoal". O contato da print é os dois ao mesmo tempo:
+tem `ENGAJADO/BIZA` **e** acabou de mandar um áudio de 24s sobre perseguição religiosa.
+
+Pular ali calaria justamente o apoiador mais próximo — o que mais merece resposta. Então a
+sugestão que aparece continua sendo a **6, responder à mão**, e há teste fixando exatamente isso.
+
+### Sugere PULAR, não CONCLUIR
+
+Pular deixa o atendimento aberto. Fechar quem está engajado sem dizer nada é decisão maior do que
+uma sugestão deve tomar — e continua a um toque de distância, na tecla 3, se ele quiser.
+
+### Arquivos
+
+`src/lib/store.js` (`etiquetasQuePulam`), `src/lib/sugestao.js` (regra),
+`src/panel/panel.js` (`etiquetaQueDispensaDaFila` + campo na Config),
+`tests/sugestao.test.mjs` (6 asserções novas), `manifest.json` (0.24.0 → 0.25.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-31 — O parser passa a ouvir o áudio, com a trava que torna isso aceitável
+
+**Pedido dele:** *"sim aplique falta adicionar quando for assim"* — em resposta à decisão que eu
+tinha deixado em aberto: alimentar o parser com transcrição de áudio.
+
+### O ganho, e o risco que vem junto
+
+Nesta base muita gente responde **falando**. O painel dizia "Cidade: (vazia)" para quem tinha dito
+a cidade em voz alta — a informação estava lá e ninguém lia.
+
+O risco é que **ninguém digitou aquilo**: é fala passada por reconhecimento automático, com os
+erros disso, e o que sai daqui vai para o CRM de eleitor real, onde etiqueta fica para sempre.
+
+### A trava, e por que são DUAS marcas
+
+`extract.rebaixarParaPalpite` rebaixa tudo que vem de transcrição:
+
+- **`confidence: 'aproximada'`** — mantém o valor fora da gravação automática, porque só `crm` e
+  `exata` são gravados sozinhos;
+- **`informada: false`** — impede substituir o que já está no CRM, porque a regra de "a pessoa
+  informou outra cidade" exige texto ESCRITO, e áudio ouvido por máquina não é isso.
+
+Cada uma fecha um caminho diferente, e nenhuma cobre a outra: sem a primeira, a cidade entra
+sozinha; sem a segunda, ela sobrescreve a que já estava lá.
+
+A origem sai na tela dizendo **"— ouvido no áudio"**, para dar para conferir antes de aceitar.
+
+### A ordem também é trava
+
+A passada da transcrição roda **depois** da normal, e `applyGuesses` não sobrescreve o que já
+está no rascunho. Então **o que a pessoa escreveu sempre ganha do que ela falou**.
+
+### Onde mora, e por quê
+
+Em `src/lib/extract.js` (puro, testado), não solto no `panel.js`. É a regra do projeto: lógica que
+decide o que vai para dado real tem teste. São 8 asserções, e o comentário delas diz o que
+acontece se caírem — transcrição voltaria a poder ser gravada sozinha.
+
+### Arquivos
+
+`src/lib/extract.js` (`rebaixarParaPalpite`), `src/panel/panel.js` (segunda passada no `load`),
+`tests/parser.test.mjs` (8 asserções novas), `CLAUDE.md`, `manifest.json` (0.23.0 → 0.24.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-31 — "O copiar falhou": copiava cinco [audio] e nada mais
+
+**Relato dele**, com print do que ele colou na IA:
+
+```
+responda -- Mensagens de Janete da Silva:
+Olá! Eu apoio o Flávio, Zucco, Hiago e Capitão Martim
+[audio]
+[audio]
+[audio]
+[audio]
+[audio]
+```
+
+O botão **funcionou** — copiou. O que estava errado era o conteúdo: cinco marcações e nenhuma
+palavra do que ela disse. Inútil justamente no caso que o botão existe para servir.
+
+### A transcrição estava na mensagem o tempo todo
+
+`details.transcription.text`. Conferido ao vivo: de 12 mídias olhadas, **9 tinham transcrição**,
+uma delas com 2838 caracteres. É exatamente o texto que a plataforma mostra na tela sob
+"Transcrição" — e que ele já usava lendo com os olhos.
+
+A extensão nunca leu esse campo. `entrantes` pegava só `m.text`, que em áudio vem vazio.
+
+### Agora
+
+`getConversation` devolve o texto da transcrição em `entrantes[].texto`, com a marca
+`transcrito: true`. O copiar sai assim:
+
+```
+[audio transcrito] Obrigada, eu já estou falando de você para meus filhos…
+```
+
+**A marca não é enfeite.** Quem for ler — a IA ou ele — precisa saber que aquilo é fala passada
+por reconhecimento automático, com os erros disso, e não o que a pessoa escreveu. Mídia que
+realmente não tem transcrição passou a dizer `[audio, sem transcrição]`, que é diferente de "não
+consegui ler".
+
+### O que NÃO mudou, e é decisão a tomar
+
+`incoming` — a base do parser — continua sem transcrição. Alimentar o parser com fala
+reconhecida por máquina faria **nome e cidade saírem de texto que ninguém escreveu**, e este
+projeto grava isso no CRM de eleitor real. É ganho grande (a Janete disse a cidade no áudio) e
+risco novo na mesma medida; fica para ele decidir, não para eu decidir sozinho.
+
+### Arquivos
+
+`src/lib/api.js` (`entrantes` com transcrição), `src/panel/panel.js` (o copiar),
+`CLAUDE.md`, `manifest.json` (0.22.1 → 0.23.0). Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-30 — A extensão parou de carregar: uma quebra de linha dentro de uma string
+
+**Relato dele:** *"a extensão não está carregando"* — e depois o print do `src/content.js`, o
+carregador, apontando para o `console.error('[WhatsFill] falha ao carregar o painel:', err)`.
+
+### O erro, e a minha conclusão errada no meio do caminho
+
+Eu tinha olhado o console pela ferramenta de navegador, achado zero erros e concluído que **não
+era o meu código** — que era estado do Chrome (extensão desligada ou painel escondido). Estava
+errado: a ferramenta não capturava o console do content script, que roda em mundo isolado. O
+print dele apontou para o lugar certo.
+
+**A causa:** no botão "Copiar a conversa" de ontem, um `.join('
+
+')` virou
+
+```js
+.join('
+
+');
+```
+
+— uma string com quebra de linha **crua**, que é erro de sintaxe. Acidente de escape ao gerar o
+patch por script: o `
+` foi interpretado antes de chegar ao arquivo. O mesmo acidente comeu as
+barras do `s` e do `p{...}` numa regex mais cedo, e ali eu peguei porque o teste falhou.
+
+### Por que passou por mim
+
+Eu conferia com `node --check`, que analisa `.js` como **CommonJS** — modo solto. O Chrome carrega
+como **ES module**, que é sempre strict. O `--check` disse "SINTAXE OK" e o navegador disse
+"Invalid or unexpected token".
+
+E o defeito era **invisível na aba**: o content script morre antes de desenhar qualquer coisa,
+então não há painel, não há erro na tela, não há nada. O único rastro é o `console.error` do
+carregador — que é justamente o que ele fotografou.
+
+### O que impede a repetição
+
+`tools/checar-modulos.mjs` (novo): importa todo arquivo de `src/` como ES module e reclama **só de
+`SyntaxError`** — erro de execução fora do navegador (`window is not defined`) é esperado e
+ignorado. Roda em 29 arquivos e teria pego este em um segundo. Entrou no `CLAUDE.md` como passo
+obrigatório antes de dar tarefa por concluída.
+
+### Arquivos
+
+`src/panel/panel.js` (o `join` e o template consertados), `tools/checar-modulos.mjs` (novo),
+`CLAUDE.md`, `manifest.json` (0.22.0 → 0.22.1). Dez suítes passando, 29 módulos parseando.
+
+---
+
+## 2026-08-30 — Áudio e texto longo pedem você, não modelo — e o copiar que ele fazia à mão
+
+**Relato dele**, com print: *"já com etiquetas, nesse caso ela mandou um audio que resultou em um
+texto gigante que vou mandar pra uma IA ler e fazer a resposta para eu copiar e mandar"*.
+
+### O caso mostra um limite do desenho anterior
+
+Contato **já classificado** — etiquetas FORMIGUEIRO, Central, ADS; cidade Formigueiro; conteúdo
+pedido ADS; modelo mapeado. A caixa sugeria, corretamente pelas regras de ontem, *"Sugiro a 1:
+pediu ADS e há modelo mapeado — mande."*
+
+E estava errado. Ela tinha mandado um **áudio de 1min13** contando dos três filhos, da igreja, do
+convite para almoçar na casa dela. Mandar modelo aprovado para quem acabou de dizer isso parece
+deboche.
+
+**A lição, que vale além desta regra:** ter etiqueta não quer dizer que a conversa acabou. O que a
+pessoa acabou de dizer manda mais do que o que ela pediu semana passada.
+
+### A regra
+
+Áudio, vídeo, documento, ou texto com **400+ caracteres** → *responder à mão* (tecla 6). Vai em
+**primeiro**, acima de todas as outras.
+
+400 e não 200: mensagem de apoiador animado passa fácil de 200 e ainda é caso normal da rodada. A
+transcrição de um áudio de um minuto passa de 600 — é essa a fronteira que interessa. Mídia entra
+pelo TIPO, então funciona mesmo quando a plataforma não devolve transcrição no texto.
+
+### E o passo manual virou um clique
+
+Botão **"Copiar a conversa"** dentro da caixa da rodada. Copia só as mensagens DO CONTATO (é o que
+a IA precisa ler; as nossas já são respostas prontas dele), com a mídia sem texto marcada como
+`[audio]` para a IA saber que houve algo ali.
+
+Não fecha a pergunta, não para a rodada e **não manda nada para lugar nenhum** — o texto vai para
+a área de transferência da máquina dele, e quem escolhe onde colar é ele. Se o navegador recusar a
+área de transferência, ele diz isso em vez de fingir que copiou.
+
+### Arquivos
+
+`src/lib/cortesia.js` (`pedeRespostaPessoal`, `ultimaPedeRespostaPessoal`),
+`src/lib/sugestao.js` (regra em primeiro), `src/panel/panel.js` (`montarCopiarConversa` +
+contexto), `tests/cortesia.test.mjs` e `tests/sugestao.test.mjs`,
+`manifest.json` (0.21.0 → 0.22.0). Dez suítes passando.
+
+---
+
+## 2026-08-30 — Regra nova: última mensagem é figura, emoji ou link → mensagem do momento
+
+**Pedido dele:** *"ultima mensagem é imagem, sticker, emoticon, link, mandar mensagem do momento,
+adicione essa sugestão"*. Primeira situação acrescentada depois que a tabela de regras existiu — e
+o custo foi o previsto: uma entrada na lista, uma função pura e os testes.
+
+### O caso, e por que ele é diferente da cortesia
+
+`soCortesia` olha a janela de 3 mensagens e exige que TODAS sejam cumprimento/link/figura — é a
+regra da rodada dos Novos. `ehSoReacao` olha UMA mensagem, a última, e **"bom dia" escrito não
+conta**: o caso aqui é a pessoa que manda um 👍, uma figurinha ou um link e fica esperando. Não há
+o que responder ao conteúdo, e ignorar também não serve.
+
+Emoji com **tom de pele** e seletor de variação entram na conta (👍🏽 é um emoji só). E só
+pontuação NÃO conta: "..." ou "!!!" sozinho não merece a mensagem do momento.
+
+### Ela vem em PRIMEIRO, acima da regra de cidade
+
+Decisão que vale registrar porque contraria o "sempre" da regra anterior: responder um 👍 com "me
+manda seu nome e cidade" lê como robô que não olhou a tela. O sinal mais recente é o que a pessoa
+acabou de fazer. **Se ele preferir o contrário, é trocar as duas de lugar na lista** — e é só isso
+mesmo, que era o objetivo do desenho de ontem.
+
+### Um bug que os testes pegaram antes de ir para o ar
+
+A regex de emoji tinha a flag `g`, e `RegExp` com `g` guarda o `lastIndex` entre chamadas:
+`test()` na mesma instância devolvia resultado diferente na SEGUNDA vez com o mesmo texto. Só
+apareceria no segundo contato da rodada, como "às vezes sugere e às vezes não" — o tipo de defeito
+que este projeto já pagou caro. São duas instâncias agora: uma com `g` para apagar, uma sem para
+testar. Há teste chamando três vezes seguidas.
+
+### Também
+
+O painel passou a guardar `state.entrantes` (mensagens com o tipo junto), nos dois pontos em que
+carrega a conversa. Sem isso a figura continuava invisível para a decisão.
+
+### Arquivos
+
+`src/lib/cortesia.js` (`ehSoReacao`, `ultimaEhSoReacao`), `src/lib/sugestao.js` (regra nova em
+primeiro), `src/panel/panel.js` (`state.entrantes` + contexto), `tests/cortesia.test.mjs` e
+`tests/sugestao.test.mjs`, `manifest.json` (0.20.0 → 0.21.0). Dez suítes passando.
+
+---
+
+## 2026-08-30 — A recomendação sai de dentro do código e vira tabela de regras
+
+**Pedido dele:** *"vamos trabalhar nas sugestões de mensagem… deixe destacado em cima das
+mensagens, quando a pessoa não tiver etiqueta de cidade, sempre pedir dados, vou adicionando
+situações e sugestões conforme aparecer"*.
+
+A última frase é a que definiu o desenho: se ele vai acrescentar situações, o custo de
+acrescentar uma tem que ser uma linha.
+
+### Como era, e por que não dava para crescer
+
+O destaque nascia de **três expressões `primaria:` independentes**, no meio do montador da
+pergunta:
+
+```
+primaria: !enviadoHoje
+primaria: !podeEnviar && !podePerguntarInteresse && !pedidoHoje
+primaria: !podeEnviar && !interessePerguntado
+```
+
+Três problemas: acrescentar uma situação exigia mexer em condição booleana no meio do código;
+não dava para dizer, olhando, qual tinha vencido; e **duas podiam acender ao mesmo tempo** num
+contato que casasse com as duas condições.
+
+### Agora
+
+`src/lib/sugestao.js`, puro e testado: uma **lista ordenada** onde a primeira regra que casa
+vence. Acrescentar uma situação é acrescentar uma entrada com `quando` e `motivo`, na posição da
+prioridade dela. O painel lê a lista inteira e um lugar só decide o destaque.
+
+### A regra que ele pediu vem em PRIMEIRO
+
+*Sem etiqueta de cidade → pedir dados*, acima até de mandar o conteúdo pedido. A razão é o
+trabalho todo: a API só filtra por etiqueta, então contato sem etiqueta de cidade **não entra em
+lista nenhuma** — mandar o conteúdo resolve hoje e perde a pessoa amanhã.
+
+**A exceção que mantive:** já pedido hoje não é recomendado de novo. Pedir duas vezes no mesmo
+dia soa a robô, e a própria caixa já avisava isso. A opção continua na tela; ela só deixa de ser
+a sugerida.
+
+### O que torna uma regra agressiva segura
+
+**Ela só recomenda, nunca decide.** Todas as opções continuam na tela e todas as teclas continuam
+valendo. O pior caso de uma regra errada é um destaque no lugar errado — não uma mensagem enviada
+errada. Foi isso que me deixou implementar "sempre" sem hesitar.
+
+### Em cima das mensagens
+
+A recomendação virou uma faixa no topo da caixa, antes dos dados do contato e das opções, com o
+**motivo escrito**. O destaque na tecla dizia QUAL era a sugerida e nunca POR QUÊ — e o porquê é
+o que permite discordar dela.
+
+### Arquivos
+
+`src/lib/sugestao.js` (novo), `tests/sugestao.test.mjs` (novo, 19 asserções),
+`src/panel/panel.js`, `src/panel/panel.css`, `CLAUDE.md`, `manifest.json` (0.19.0 → 0.20.0).
+Dez suítes passando.
+
+---
+
+## 2026-08-30 — 118 mensagens invisíveis: por que o conteúdo "do dia anterior" nunca era reconhecido
+
+**Relato dele:** *"bote a etiqueta também, a extensão não reconhece o conteúdo quando é do dia
+anterior e ter que abrir o restante da conversa"*.
+
+A segunda metade da frase é o achado do dia, e vale muito mais que a primeira.
+
+### A medição
+
+Peguei um atendimento qualquer da fila dele e olhei a paginação:
+
+- sessão criada em **20/07/2026**, ainda aberta em **30/08** — **41 dias**;
+- **168 mensagens**, em **4 páginas** de 50;
+- a página 1 cobria de **10/08 a 30/08**.
+
+`getMessages` lia só a página 1. **118 mensagens eram invisíveis para a extensão** — e é nelas
+que mora o pedido de conteúdo de "outro dia". O parser não estava errando: ele nunca tinha visto
+a mensagem.
+
+Isso também derruba a hipótese que eu teria seguido por conta própria (sessão nova a cada dia).
+Sessão aqui dura semanas.
+
+### O conserto, e por que ele é barato
+
+200 por página, e uma segunda página quando `isLastPage` vier `false` (teto de 2 páginas / 400
+mensagens).
+
+**Subir o `pageSize` não custa requisição nenhuma**: é a MESMA chamada, com resposta maior. Nesta
+API o que derruba a plataforma é **número de requisições**, não tamanho de resposta — foi o que
+tornou a decisão fácil. O teto de 2 páginas existe para a cauda longa não virar 4 requisições por
+contato numa rodada.
+
+### O que isso muda além do conteúdo
+
+Tudo que lê `incoming` passa a enxergar semanas em vez de dias: parser de nome e cidade,
+etiquetas de conteúdo e **`precisaDeVoce`**. O último merece atenção — um "preciso de ajuda"
+escrito há três semanas agora separa o contato para revisão dele. É o comportamento certo (o
+pedido foi real e continua sem resposta), mas é mudança de volume, e é onde olhar se a fila de
+revisão crescer de repente.
+
+### A etiqueta no fecho sem reconhecimento
+
+Ele mandou botar, e o argumento dele resolve a objeção que eu tinha levantado: o conteúdo
+**foi** pedido, só que numa mensagem que a extensão não lia. A etiqueta não está sendo inventada
+— está sendo posta por quem leu a conversa inteira na tela. Fica com o motivo *"posta por você no
+fecho (o parser não reconheceu)"*, para depois dar para distinguir do que veio do parser.
+
+Etiqueta que não existe no CRM **não é criada**, e a falha não cancela o envio: o aviso vai no
+status final, junto do "Enviado e classificado".
+
+### Arquivos
+
+`src/lib/api.js` (`getMessages` paginado), `src/panel/panel.js` (`runFecharComConteudo`),
+`CLAUDE.md`, `manifest.json` (0.18.0 → 0.19.0). Nove suítes passando.
+
+---
+
+## 2026-08-30 — "Libere o botão mesmo sem reconhecer": vai o conteúdo preferido
+
+**Pedido dele**, com print do cartão "Atender o pedido e encerrar" travado e a tarja *"Nenhum
+conteúdo reconhecido nas mensagens deste contato"*: *"libere o botão mesmo sem reconhecer"*.
+
+### O que eu não podia fazer, e o que fiz no lugar
+
+Liberar o botão sem mais nada deixaria uma pergunta sem resposta: **qual modelo ele enviaria?** O
+fluxo pega o modelo pelo NOME do conteúdo reconhecido; sem conteúdo não há nome, e escolher um
+entre os 19 aprovados seria o painel chutando — o erro mais caro deste fluxo.
+
+A saída já existia no projeto: **o "conteúdo preferido" da Config** (`conteudoPreferido`, hoje
+"Conteúdo Flávio"). Ele nasceu para desempatar quando o contato casa com dois conteúdos; agora
+serve também de padrão quando não casa com nenhum. Continua sendo um modelo que **ele** escolheu,
+não um chute.
+
+Se o preferido estiver vazio, o botão dispara e explica que não há modelo — em vez de mandar
+qualquer coisa.
+
+### O que deliberadamente NÃO acontece
+
+**A etiqueta de conteúdo não é aplicada** nesse caminho. Mandar o modelo é decisão dele, agora,
+olhando a conversa. Gravar no CRM que a pessoa PEDIU aquele conteúdo seria inventar uma
+classificação que ninguém leu na mensagem — e ela ficaria lá para sempre, mudando as próximas
+rodadas deste contato. Enviar é reversível pela conversa; etiqueta errada em produção não é.
+
+### Mais de um conteúdo continua travado
+
+Ali o caso é outro: o painel sabe que existem DOIS caminhos certos, e escolher entre modelos que a
+pessoa realmente pediu é diferente de ter um padrão para quando ela não pediu nada. A tarja
+continua mandando escolher à mão.
+
+### Na tela
+
+A tarja vermelha de bloqueio virou dica: *"Nenhum conteúdo reconhecido — vai o preferido da
+Config. Confira a conversa antes: o modelo sai como se ele tivesse pedido esse conteúdo."*
+
+### Arquivos
+
+`src/panel/panel.js` (cartão "Atender o pedido e encerrar" e `runFecharComConteudo`),
+`manifest.json` (0.17.0 → 0.18.0). Nove suítes passando.
+
+---
+
+## 2026-08-30 — "Continua sem diminuir": o número não estava travado, era o número errado
+
+**Relato dele:** *"continua sem diminuir o número o gatilho deve ser quando manda concluir e
+atualizar"*.
+
+### Fiz o gatilho que ele pediu — e antes disso descobri que ele não bastaria
+
+Toda conclusão feita pelo painel agora reconta (`concluirPeloPainel`, nas 9 chamadas de
+`clickConcluir`), e só quando a conclusão dá certo: recontar depois de um Concluir que falhou
+traria o mesmo número e faria parecer que o contador é que está quebrado.
+
+**Mas o gatilho não era a causa.** Antes de mexer, medi o total duas vezes com alguns minutos de
+diferença: **353 → 359**. Ele estava SUBINDO. Chega gente nova mais rápido do que ele conclui,
+então "abertos" nunca ia diminuir — e ele estava certo ao dizer que não diminuía, só que o defeito
+não era atualização, era **a escolha do número**.
+
+Um contador de progresso feito de "o que sobrou" mostra o número crescendo justamente num dia de
+trabalho bom.
+
+### O número certo
+
+`statuses=COMPLETED` + `userId` + `timestampFilter` na meia-noite local = **quantos você
+concluiu hoje**. Só sobe, e sobe por causa do trabalho dele. Medido: 82 hoje, contra 4159 na vida
+inteira sem o filtro.
+
+Os status válidos foram descobertos sondando a API, não adivinhados: `IN_PROGRESS`, `COMPLETED`
+e `PENDING` respondem; RESOLVED, DONE, CLOSED, FINISHED, ARCHIVED, ENDED, NEW, WAITING e OPEN
+devolvem **400**. E `timestampFilter` sem `timestampField` filtra pela atualização (a conclusão);
+com `createdat` daria 38 em vez de 82 — conferidos lado a lado.
+
+### A janelinha agora
+
+- **Destaque: "82 concluídos hoje"** — o que ele fez.
+- Abaixo: "356 ainda abertos em Meus" — o que falta.
+- Barra: a fatia do dia que já saiu da mão dele (concluídos sobre tudo que passou por ela hoje),
+  com teto e piso porque o denominador oscila e um dia recém-começado divide por zero.
+
+### Arquivos
+
+`src/lib/api.js` (`contarConcluidosHoje`, `contarMeuDia`, `STATUS_CONCLUIDO`),
+`src/panel/panel.js` (`concluirPeloPainel` e o novo destaque), `CLAUDE.md`,
+`manifest.json` (0.16.0 → 0.17.0). Nove suítes passando.
+
+---
+
+## 2026-08-30 — "Atendi e não atualizou": o contador passa a reagir ao trabalho, não ao relógio
+
+**Relato dele:** *"atendi e não atualizou, deve atualizar sozinho, faça uma barra de progresso e
+um pouco menor a caixa"*.
+
+### O erro: eu tinha ligado o contador no relógio, não no trabalho
+
+A janelinha atualizava a cada 60s e nada mais. Concluir um atendimento é o instante EXATO em que
+o número muda, e era justamente o momento em que ela não fazia nada — ele olhava logo depois de
+atender, via o número velho, e concluía que estava quebrada. Estava: um contador de progresso que
+não se mexe quando você progride não conta nada.
+
+### Agora são três gatilhos, e os dois primeiros são o trabalho
+
+1. **Trocou de atendimento** (`sessionChanged`) — concluiu e foi para o próximo.
+2. **Concluiu e ficou na mesma conversa** — o campo de mensagem some quando o atendimento fecha,
+   e é esse o sinal (`anterior.hasComposer && !next.hasComposer`).
+3. **Relógio de 45s**, agora só como rede de segurança.
+
+**`conversaMudou` foi descartado como gatilho de propósito:** ele dispara a cada mensagem que
+chega, e viraria uma requisição a cada poucos segundos numa conversa movimentada.
+
+### As duas travas que impedem isso de virar rajada
+
+- **Junta os pedidos colados** (`CONTADOR_ESPERA_MS`, 2,5s): passar a fila rápido dispara uma
+  troca por clique, e sem juntar seria uma requisição por clique numa API que já derrubou a
+  plataforma. O atraso ainda ajuda por outro motivo: a plataforma leva um instante para registrar
+  a conclusão, e contar na hora traria o número velho de qualquer jeito.
+- **O agente ficou em cache** (`api.getAgente`): quem está logado não muda no meio da sessão.
+  Sem isso, cada atualização custaria DUAS requisições em vez de uma.
+
+### Barra e tamanho
+
+Barra de progresso enchendo conforme os atendimentos saem, com teto e piso: sem eles ela ficaria
+**negativa** quando chega mais gente do que saiu, e passaria de 100% se o total caísse abaixo de
+zero — nos dois casos mentiria. O denominador é quanto havia quando ele abriu: é o dia de trabalho
+dele que ela mede, não a fila inteira do CRM.
+
+A caixa encolheu (230px, menos padding, título e número menores). Razão registrada no CSS: ela
+fica **aberta o tempo todo** por cima da conversa, enquanto a pergunta da rodada aparece, é
+respondida e some — o que é permanente na tela tem que ocupar menos.
+
+### Arquivos
+
+`src/panel/panel.js` (`agendarContagem` e os dois gatilhos), `src/lib/api.js` (cache do agente),
+`src/panel/panel.css` (`.wf-contador*`), `manifest.json` (0.15.0 → 0.16.0).
+Nove suítes passando.
+
+---
+
+## 2026-08-30 — O contador vira janelinha arrastável, para acompanhar sem trocar de aba
+
+**Relato dele:** *"eu quero uma contagem para eu acompanhar pode ficar em um popup arrastavel, da
+maneira que está não posso ver meu progresso"*.
+
+Ele está certo e o defeito é de desenho meu: pus o número **dentro da aba Automatizado**, e o
+trabalho acontece na conversa. Número que exige trocar de aba para consultar não acompanha nada.
+
+### O que mudou
+
+Janelinha flutuante, aberta pelo botão do cartão. Ela segue as regras da caixa da rodada — e não
+por estética: a camada é `pointer-events: none` e sem fundo, então **a conversa continua legível
+e clicável por baixo**; arrasta pelo título; a posição fica no `settings`.
+
+**Chave de posição própria (`contadorPos`).** Reaproveitar `perguntaPos` faria a janelinha e a
+pergunta da rodada disputarem o mesmo canto da tela — arrastar uma moveria a outra. `tornarArrastavel`
+passou a receber qual posição lembrar, com `perguntaPos` como padrão, então as três caixas que já
+existiam não mudaram de comportamento.
+
+### O progresso é a DIFERENÇA, não o total
+
+Guardo quanto havia quando você abriu e mostro quantos saíram desde então. O total sozinho **sobe**
+quando chega gente nova, e você teria a impressão de estar andando para trás justamente num dia de
+muito movimento. A linha diz as duas coisas: quantos saíram e quantos eram.
+
+Erro de rede **não fecha a janelinha nem apaga o último número bom** — some com o dado justamente
+quando a rede está ruim, que é quando mais se quer saber onde se estava. O motivo vai no rodapé.
+
+### 60 segundos, e não menos
+
+Nesta API rajada de requisição já derrubou a plataforma. Um contador não vale um pedido por
+segundo; o botão atualiza na hora quando ele quiser.
+
+### Não conferido aqui
+
+`tools/checar-pergunta.mjs` (que prova que a caixa não bloqueia a conversa) precisa de Playwright,
+que não está instalado nesta máquina. A janelinha reusa as MESMAS classes da caixa da rodada e o
+CSS da camada não foi tocado — a regra nova é só o tamanho do número.
+
+### Arquivos
+
+`src/panel/panel.js` (`abrirContadorFlutuante`, `tornarArrastavel` com chave de posição),
+`src/panel/panel.css` (`.wf-contador-numero`), `src/lib/store.js` (`contadorPos`),
+`manifest.json` (0.14.0 → 0.15.0). Nove suítes passando.
+
+---
+
+## 2026-08-30 — O número de "Meus" que a plataforma não mostra: 76 na tela, 353 de verdade
+
+**Pedido dele:** *"faça a extensão pegar o número de atendimentos abertos nos meus - todos, quero
+visualizar, a plataforma não exibe corretamente"*.
+
+### Ele estava certo, e a causa é explícita
+
+Ao abrir "Meus", o app chama:
+
+```
+GET /chat/v6/session?skipCount=true&page=1&pageSize=50&includeDetails=All
+    &statuses=IN_PROGRESS&userId=<meu>&sessionType=INDIVIDUAL&orderBy=createdat
+```
+
+**`skipCount=true` manda a API não calcular o total.** A resposta volta com `totalItems: 0` — o
+número do badge é outra coisa. Medido lado a lado, na mesma tela e no mesmo minuto: badge **76**,
+total real **353**.
+
+Não foi deduzido do bundle: a requisição foi **observada na rede** ao clicar na aba. O bundle deu
+os nomes dos parâmetros, a rede deu os valores que a plataforma realmente usa.
+
+### Como a extensão descobre quem é você
+
+`GET /core/v1/agent/me` → o campo `userId` é exatamente o que a fila manda em `?userId=`.
+Isso importa mais do que parece: o `userId` também está dentro do Bearer, mas o token vive fechado
+no transporte e **nunca chega ao painel no modo janela**. Perguntar à API funciona nos dois
+contextos; decodificar o token só funcionaria num.
+
+`pageSize=1` de propósito — só o `totalItems` interessa, e trazer 50 sessões para contar uma
+seria gastar rede numa API que já caiu por rajada.
+
+### Na tela
+
+Cartão novo no topo da aba Automatizado, com botão **Contar**. A contagem nasce do **clique**:
+`renderAll()` roda o tempo todo, e rede disparada de dentro de um `render*` vira uma requisição
+por redesenho. Falha vira o motivo na tela e o botão de novo, nunca nova tentativa automática.
+
+### Arquivos
+
+`src/lib/api.js` (`getAgente`, `contarMeusAbertos`), `src/panel/panel.js`
+(`renderCartaoMeusAbertos`), `CLAUDE.md`, `manifest.json` (0.13.0 → 0.14.0).
+Nove suítes passando.
+
+---
+
+## 2026-08-30 — "Abre a conversa e não manda nada": quem cumprimentou passa a ser respondido
+
+**Relato dele:** *"está falhando em pedir dados ao iniciar atendimento"*, e o sintoma exato,
+perguntado antes de mexer: **"somente abre a conversa e não manda nada"**. Junto, o pedido: quem
+deu bom dia / boa tarde / boa noite, ou mandou link ou imagem nas últimas 3 mensagens, deve
+receber **a mensagem do momento** ao iniciar.
+
+### O sintoma não era defeito, era o desenho — e ele tem razão de reclamar
+
+"Abre e não manda nada" é exatamente o que `assumirParaTriagem` faz: assume o atendimento para
+tirar da fila, e não envia. Quem não trazia a frase do aceite do anúncio caía ali. Funcionava
+como projetado e mesmo assim está errado: **a pessoa falou com o gabinete e não teve resposta.**
+
+### E havia um caso pior, que ninguém tinha visto
+
+`api.getIncomingText` filtra `m.text`. Quem manda **só uma figura** — o "bom dia" ilustrado, que
+nesta base é comum — chegava à rodada como *"não escreveu nada"*: a conversa parecia vazia porque
+a única mensagem não tinha texto. Agora `getConversation` devolve também `entrantes`, com
+`{texto, tipo}` e **sem** filtrar. `incoming` fica como estava, porque é a base do parser e
+parser não lê figura.
+
+Os valores de `type` foram conferidos no bundle do app, não chutados: `TEXT`, `IMAGE`,
+`STICKER`, `AUDIO`, `VIDEO`, `DOCUMENT`, e direção `TO_HUB`/`FROM_HUB`.
+
+### A regra (`cortesia.soCortesia`), e por que é conservadora
+
+Cumprimento, link ou figura nas últimas 3 mensagens → mensagem do momento, e conclui.
+
+**Exige que TODAS as mensagens da janela sejam cortesia.** Aqui o erro caro é o falso positivo:
+*"Bom dia, preciso falar com o deputado"* tem substância, e responder "Feliz Dia dos Pais" a isso
+é responder ao lado. Sobrando qualquer substância, o contato segue o caminho de antes. Errar para
+o silêncio custa um contato na pilha dele; errar para o outro lado é resposta fora de contexto
+saindo de um mandato.
+
+**Áudio ficou de fora de propósito:** foi figura que ele pediu, e áudio pede outra resposta.
+
+### Módulo próprio, e não dentro do `triagem.js`
+
+`triagem.js` está neste branch **sem uso** — o "Responder pessoalmente" foi revertido (`5a43b77`,
+`bd12e46`) e o `panel.js` nem o importa. Pendurar a cortesia nele ressuscitaria código tirado de
+propósito, e faria o envio depender de arquivo não commitado. Daí `src/lib/cortesia.js`, que é
+puro, sem dependência e igual nos dois branches.
+
+**Consequência a registrar:** neste branch não há `precisaDeVoce` rodando antes, então a única
+proteção contra "bom dia, preciso de remédio" é a regra ser conservadora — e ela é: essa frase
+tem substância e não casa. No branch +IA a triagem roda antes, como segunda camada.
+
+### O envio passa pelas mesmas travas do formulário
+
+Variável faltando, canal fora do ar, anti-duplicata, `contatosTratados`, variantes e registro de
+envio. Envio é envio. Sem "Mensagem do momento" configurada, volta ao comportamento antigo —
+**dizendo que foi por isso**, senão vira "às vezes manda, às vezes não".
+
+### Arquivos
+
+`src/lib/cortesia.js` (novo), `src/lib/api.js` (`entrantes`), `src/panel/panel.js`
+(`processarNovo`, `responderComMomento`), `tests/cortesia.test.mjs` (novo, 23 asserções),
+`CLAUDE.md`, `manifest.json` (0.12.4 → 0.13.0). Onze suítes passando.
 
 ---
 

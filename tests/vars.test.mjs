@@ -283,4 +283,26 @@ check(vars.saudacao(new Date(2026, 7, 5, 9)) === 'Bom dia', 'manhã');
 check(vars.saudacao(new Date(2026, 7, 5, 15)) === 'Boa tarde', 'tarde');
 check(vars.saudacao(new Date(2026, 7, 5, 21)) === 'Boa noite', 'noite');
 
+
+grupo('nome sem sentido: o unico caso que ainda pede os dados');
+{
+  // Pedido dele (31/08): "uma excecao pra pedir e somente quando o nome da pessoa estiver
+  // totalmente sem sentido ou em falta". Antes a rodada pedia dados a quem so estava sem cidade.
+  check(vars.nomeSemSentido(''), 'vazio');
+  check(vars.nomeSemSentido('[NOVO] (51) 99999-9999'), 'apelido automatico do anuncio');
+  check(vars.nomeSemSentido('NOVO'), 'NOVO');
+  check(vars.nomeSemSentido('(51) 98765-4321'), 'telefone no lugar do nome');
+  check(vars.nomeSemSentido('srn'), 'sem vogal nenhuma');
+  check(vars.nomeSemSentido('kkk'), 'kkk');
+
+  check(!vars.nomeSemSentido('Maria Mattos'), 'nome de verdade');
+  check(!vars.nomeSemSentido('Thiago Tim'), 'o contato de teste');
+  check(!vars.nomeSemSentido('Ana'), 'nome curto com vogal');
+
+  // Herdado do looksLikePlaceholder: menos de 3 letras conta como falta. "Ze" cai aqui, e fica
+  // assim de proposito -- alargar o looksLikePlaceholder mudaria o bloqueio de vocativo em todo
+  // o painel, que e outra decisao.
+  check(vars.nomeSemSentido('Zé'), 'duas letras contam como falta (herdado, e aceito)');
+}
+
 fim();

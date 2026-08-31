@@ -23,7 +23,7 @@ const coredes = JSON.parse(
 mem.municipios = Object.keys(coredes.municipios).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
 const cities = await lib('cities.js');
-const { extract, findStructured, limparSiglas } = await lib('extract.js');
+const { extract, findStructured, limparSiglas, rebaixarParaPalpite } = await lib('extract.js');
 
 const municipios = await cities.loadMunicipios();
 console.log(`municípios carregados: ${municipios.length}`);
@@ -478,6 +478,106 @@ grupo('memória das cidades recusadas no popup');
   // Backup não leva referência a contato real.
   mem.cidadeRecusada = { 'c-1': { cidades: ['quarai'], at: 1 } };
   check(!JSON.parse(await store.exportJson()).cidadeRecusada, 'exportJson não leva as recusas');
+}
+
+
+grupo('transcricao de audio entra como palpite, nunca como gravacao automatica');
+{
+  // Esta e a trava que permitiu ler audio: ninguem DIGITOU aquilo, e o valor vai para o CRM de
+  // eleitor real. Se estas asseroes cairem, transcricao volta a poder ser gravada sozinha.
+  const cru = {
+    cidade: { value: 'Pelotas', confidence: 'exata', source: 'PELOTAS', informada: true },
+    nome: { value: 'Maria Silva', confidence: 'exata', source: 'Maria Silva' },
+  };
+  const r = rebaixarParaPalpite(cru);
+
+  check(r.cidade.confidence === 'aproximada', 'cidade exata vira aproximada (fica fora do automatico)');
+  check(r.nome.confidence === 'aproximada', 'nome tambem');
+  check(r.cidade.informada === false, 'informada vira falso: nao substitui o que ja esta no CRM');
+  check(r.cidade.value === 'Pelotas', 'o valor em si nao e mexido');
+  check(/ouvido no/.test(r.cidade.source), 'a origem diz que veio do audio = ' + r.cidade.source);
+
+  check(JSON.stringify(rebaixarParaPalpite({})) === '{}', 'vazio devolve vazio');
+  check(JSON.stringify(rebaixarParaPalpite(null)) === '{}', 'nulo nao explode');
+  check(rebaixarParaPalpite({ cidade: null }).cidade === null, 'palpite nulo passa intacto');
+}
+
+
+grupo('vocabulario da campanha nunca vira cidade');
+{
+  // Print dele (31/08): popup "Encontrei 'Zucco' como cidade". A mensagem do anuncio lista os
+  // nomes separados por virgula, e virgula e o que faz o parser achar que le "Nome / Cidade".
+  const anuncio = await extract(['Olá! Eu apoio o Flávio, Zucco, Hiago e Capitão Martim'], {});
+  check(!anuncio.cidade, 'a mensagem do anuncio nao propoe cidade nenhuma = ' + JSON.stringify(anuncio.cidade));
+
+  check(!(await extract(['Maria Mattos / Zucco'], {})).cidade, 'Zucco na posicao da cidade tambem nao');
+  check(await cities.naoPodeSerCidade('Zucco'), 'Zucco e vocabulario da campanha');
+  check(await cities.naoPodeSerCidade('Bolsonaro'), 'Bolsonaro tambem');
+  check(await cities.naoPodeSerCidade('capitao martim'), 'e o que ja existia continua');
+
+  // Chamar duas vezes tem que dar o mesmo: as expressoes sao regex globais, e regex global guarda
+  // lastIndex entre chamadas.
+  check(await cities.naoPodeSerCidade('Zucco'), 'de novo, o mesmo resultado (regex global nao pode guardar estado)');
+
+  // E o que E cidade continua passando.
+  check(!(await cities.naoPodeSerCidade('Porto Alegre')), 'Porto Alegre pode ser cidade');
+  check(!(await cities.naoPodeSerCidade('Santo Ângelo')), 'Santo Ângelo tambem');
+}
+
+
+grupo('cidade precisa de CONTEXTO, nao basta o nome aparecer');
+{
+  const cidadeDe = async (t) => (await extract([t], {})).cidade?.value || null;
+
+  // O caso da print (31/08, Dirceu): "Rio Grande" na mensagem do anuncio e o ESTADO. A guarda
+  // NOME_DO_ESTADO so apagava "Rio Grande do Sul" por inteiro, entao a forma curta virava popup.
+  check((await cidadeDe('Olá! Vamos juntos mudar o Rio Grande')) === null, 'slogan com "Rio Grande" nao vira cidade');
+  check((await cidadeDe('Pelo Rio Grande. E pelo Brasil!')) === null, 'headline do anuncio tambem nao');
+  check((await cidadeDe('quero mudar o Rio Grande do Sul')) === null, 'o estado por extenso continua fora');
+
+  // As pistas que ele citou, e as vizinhas.
+  check((await cidadeDe('eu moro em Rio Grande')) === 'Rio Grande', 'moro em');
+  check((await cidadeDe('sou de Pelotas')) === 'Pelotas', 'sou de');
+  check((await cidadeDe('aqui em Caxias do Sul o pessoal apoia')) === 'Caxias do Sul', 'aqui em');
+  check((await cidadeDe('minha cidade é Bagé')) === 'Bagé', 'minha cidade e');
+  check((await cidadeDe('resido em Santa Maria')) === 'Santa Maria', 'resido em');
+  check((await cidadeDe('estou em Erechim hoje')) === 'Erechim', 'estou em');
+
+  // A resposta ao formulario e a mensagem curta continuam valendo sem pista nenhuma.
+  check((await cidadeDe('Maria Silva / Santo Ângelo')) === 'Santo Ângelo', 'resposta ao formulario');
+  check((await cidadeDe('PORTO ALEGRE')) === 'Porto Alegre', 'mensagem que e so a cidade');
+}
+
+
+grupo('resposta a UMA PERGUNTA NOSSA: nome e cidade sem separador');
+{
+  // Pedido dele (31/08): "se eu perguntei qual sua cidade e ela respondeu (maria cachoeirinha),
+  // tera que identificar esse tipo de resposta". Quem responde uma pergunta nao escreve "moro em"
+  // nem poe barra -- escreve o nome e a cidade, colados.
+  const resp = async (t) => await extract([t], { respostaAoPedido: true });
+
+  const maria = await resp('maria cachoeirinha');
+  check(maria.cidade?.value === 'Cachoeirinha', 'a cidade sai da resposta = ' + maria.cidade?.value);
+  check(maria.nome?.value === 'Maria', 'e o que sobra vira o nome = ' + maria.nome?.value);
+
+  const completo = await resp('Maria da Silva Cachoeirinha');
+  check(completo.nome?.value === 'Maria da Silva', 'nome completo = ' + completo.nome?.value);
+
+  const soCidade = await resp('cachoeirinha');
+  check(soCidade.cidade?.value === 'Cachoeirinha', 'so a cidade continua valendo');
+  check(!soCidade.nome, 'sem nome, nao inventa nome');
+
+  // A trava: se o que sobra NAO e nome, aquilo nao era uma resposta.
+  const slogan = await resp('Vamos juntos mudar o Rio Grande');
+  check(!slogan.cidade, 'slogan respondido a pergunta nao vira cidade');
+  check(!slogan.nome, 'nem vira nome');
+
+  const anuncio = await resp('Olá! Eu apoio o Flávio, Zucco, Hiago e Capitão Martim');
+  check(!anuncio.cidade, 'a mensagem do anuncio tambem nao');
+
+  // Sem a pergunta feita, a menção solta continua exigindo contexto.
+  const semPergunta = await extract(['Vamos juntos mudar o Rio Grande'], {});
+  check(!semPergunta.cidade, 'sem pergunta, o slogan segue fora');
 }
 
 fim();

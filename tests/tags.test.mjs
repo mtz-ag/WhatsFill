@@ -278,4 +278,61 @@ grupo('sem contrato aprendido, recusa em vez de tentar');
   check(!r.ok && /Aprender etiquetas/.test(r.error), `erro = ${r.error}`);
 }
 
+
+grupo('regra de conteudo casa com e sem acento');
+{
+  // Relato dele (31/08): "a extensao esta com dificuldade pra pegar se for por alguma palavra
+  // chave". Metade do motivo era o acento: /anuncio/i nao casa com "anuncio" acentuado, e
+  // /anúncio/i nao casa com o sem acento. Quem escreve no WhatsApp acentua quando da.
+  mem.tagRules = [{ padrao: 'anuncio', etiqueta: 'Conteúdo Zucco' }];
+  const semAcentoNaRegra = await tags.suggest({ texts: ['vi o anúncio de voces'] });
+  check(semAcentoNaRegra.some((s) => s.origem === 'conteúdo'), 'regra sem acento pega texto COM acento');
+
+  mem.tagRules = [{ padrao: 'anúncio', etiqueta: 'Conteúdo Zucco' }];
+  const comAcentoNaRegra = await tags.suggest({ texts: ['vi o anuncio de voces'] });
+  check(comAcentoNaRegra.some((s) => s.origem === 'conteúdo'), 'regra COM acento pega texto sem acento');
+
+  // Maiuscula ja funcionava e continua.
+  mem.tagRules = [{ padrao: 'anuncio', etiqueta: 'Conteúdo Zucco' }];
+  const caixa = await tags.suggest({ texts: ['VI O ANÚNCIO'] });
+  check(caixa.some((s) => s.origem === 'conteúdo'), 'caixa alta tambem');
+
+  // E o que NAO tem a palavra continua de fora.
+  const nada = await tags.suggest({ texts: ['bom dia, tudo bem?'] });
+  check(!nada.some((s) => s.origem === 'conteúdo'), 'texto sem a palavra nao etiqueta');
+
+  // Regex de verdade continua funcionando como regex.
+  mem.tagRules = [{ padrao: 'fl[áa]vio', etiqueta: 'Conteúdo Flávio' }];
+  const regex = await tags.suggest({ texts: ['quero o conteudo do Flavio'] });
+  check(regex.some((s) => s.origem === 'conteúdo'), 'regex com classe de caractere continua valendo');
+
+  mem.tagRules = [];
+}
+
+
+grupo('quem chega por anuncio ganha a etiqueta de anuncio');
+{
+  // Pedido dele (31/08), com a print do bloco "ANUNCIO | FACEBOOK": "se reconhecer o que esta na
+  // print e adicionar a etiqueta ADS resolve tudo". A plataforma diz isso em dado estruturado --
+  // utm.source e utm.referralUrl na sessao -- entao nao ha texto a adivinhar.
+  mem.etiquetaAnuncio = 'ADS';
+  mem.tagRules = [];
+
+  const doAnuncio = await tags.suggest({ texts: ['Olá!'], veioDeAnuncio: true });
+  const ads = doAnuncio.find((x) => x.nome === 'ADS');
+  check(!!ads, 'sugeriu a etiqueta do anuncio');
+  check(ads?.origem === 'conteúdo', 'entra como conteudo, para virar modelo na tabela dele');
+  check(/an[úu]ncio/.test(ads?.motivo || ''), 'o motivo diz de onde veio = ' + ads?.motivo);
+
+  const semAnuncio = await tags.suggest({ texts: ['Olá!'], veioDeAnuncio: false });
+  check(!semAnuncio.some((x) => x.nome === 'ADS'), 'quem nao veio de anuncio nao recebe');
+
+  // Vazio na Config = nao etiqueta ninguem por essa via.
+  mem.etiquetaAnuncio = '';
+  const desligado = await tags.suggest({ texts: ['Olá!'], veioDeAnuncio: true });
+  check(!desligado.some((x) => x.origem === 'conteúdo'), 'campo vazio nao etiqueta');
+
+  mem.etiquetaAnuncio = 'ADS';
+}
+
 fim();

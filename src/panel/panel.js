@@ -16,12 +16,14 @@ import * as tagsLib from '../lib/tags.js';
 import * as hsmLib from '../lib/hsm.js';
 import * as keepalive from '../lib/keepalive.js';
 import * as categorizar from '../lib/categorizar.js';
-import { precisaDeVoce } from '../lib/triagem.js';
 import * as iaCliente from '../lib/ia-cliente.js';
 import * as iaLib from '../lib/ia.js';
-import { extract } from '../lib/extract.js';
+import { extract, rebaixarParaPalpite } from '../lib/extract.js';
+import { soCortesia } from '../lib/cortesia.js';
+import { sugerirAcao } from '../lib/sugestao.js';
+import { ultimaEhSoReacao, ultimaPedeRespostaPessoal, ultimaEhDespedida } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
-import { looksLikePlaceholder, nomeVeioDoPerfil } from '../lib/vars.js';
+import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido } from '../lib/vars.js';
 
 const GROUP_TEMPLATE_ID = 'link-grupo';
 const THANKS_TEMPLATE_ID = 'agradecimento';
@@ -113,9 +115,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       rodando: false,
       parar: false,
       fila: [], // retrato da fila da plataforma, só para conferência
+      meusAbertos: { total: null, erro: '', quando: 0 },
       log: [], // { nome, resultado, motivo } de cada contato da rodada
     },
     incoming: [],
+    /** O que o contato mandou, com o tipo junto — é o que enxerga figura e figurinha. */
+    entrantes: [],
+    /** Quando saiu a NOSSA última mensagem — o sinal de "este contato já foi respondido". */
+    nossaUltimaAt: null,
+    /** O que NÓS mandamos nesta conversa — para saber o que já foi, mesmo fora do painel. */
+    nossas: [],
     /**
      * Cidades que você recusou no popup, enquanto este contato estiver aberto (normalizadas).
      *
@@ -305,11 +314,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     root.classList.toggle('wf-dark', !!next.dark);
 
     if (sessionChanged) {
+      // Concluiu e foi para o próximo: é AQUI que o número muda. Só relógio não serve — ele
+      // pediu justamente isso ("atendi e não atualizou"). Vai adiado e juntado: passar a fila
+      // rápido não pode virar uma requisição por clique.
+      agendarContagem();
       agendarLoad(next.sessionId);
       return;
     }
 
     renderAll();
+
+    // Concluiu e FICOU na mesma conversa: o campo de mensagem some quando o atendimento fecha,
+    // e é esse o sinal. Sem ele o contador só se mexeria ao abrir o próximo contato — e ele
+    // relatou exatamente isso ("atendi e não atualizou").
+    //
+    // Não uso `conversaMudou` como gatilho: ele dispara a cada mensagem que chega, e viraria
+    // uma requisição a cada poucos segundos numa conversa movimentada.
+    if (anterior.hasComposer && !next.hasComposer) agendarContagem();
 
     // Mesmo atendimento, mensagem nova: o contato respondeu enquanto você olhava a conversa.
     // Sem isto o painel só reanalisaria quando você saísse do atendimento e voltasse.
@@ -367,6 +388,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const antes = state.incoming.length;
       const conversa = await api.getConversation(state.pageState.sessionId);
       state.incoming = conversa.incoming;
+      state.entrantes = conversa.entrantes || [];
+      state.nossaUltimaAt = conversa.nossaUltimaAt || null;
+      state.nossas = conversa.nossas || [];
       state.ultimaMensagem = conversa.ultima;
 
       // Sinal disparado por mensagem NOSSA (ou mídia): nada novo do contato para analisar.
@@ -450,10 +474,51 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       const conversa = await api.getConversation(sessionId);
       state.incoming = conversa.incoming;
+      state.entrantes = conversa.entrantes || [];
+      state.nossaUltimaAt = conversa.nossaUltimaAt || null;
+      state.nossas = conversa.nossas || [];
       state.ultimaMensagem = conversa.ultima;
       const temaField = classify.find((f) => f.name === 'Tema de Interesse');
-      const palpites = await extract(state.incoming, { temaField });
+      /**
+       * A nossa ÚLTIMA mensagem foi o pedido de dados?
+       *
+       * É o contexto dele: perguntou, então o que veio depois é a resposta — mesmo sem "moro em"
+       * e sem separador. Compara um trecho do meio do formulário com a última coisa que saiu,
+       * pelo mesmo método usado no modelo e no "já pediram dados".
+       */
+      const respostaAoPedido = (() => {
+        const nossaUltima = state.nossas[state.nossas.length - 1]?.texto || '';
+        const modelo = state.templates.find((t) => t.id === ASK_TEMPLATE_ID);
+        const corpo = achatarTexto(modelo?.text || '');
+        if (!nossaUltima || corpo.length < 100) return false;
+        return achatarTexto(nossaUltima).includes(corpo.slice(40, 100));
+      })();
+
+      const palpites = await extract(state.incoming, { temaField, respostaAoPedido });
       applyGuesses(palpites, classify);
+
+      /**
+       * Segunda passada, só nas TRANSCRIÇÕES de áudio — e sempre como palpite que espera clique.
+       *
+       * Pedido dele, depois de ver o painel dizer "Cidade: (vazia)" para quem tinha falado a
+       * cidade num áudio. O ganho é real: nesta base muita gente responde falando.
+       *
+       * **A trava é o que torna isto aceitável.** Transcrição é fala passada por reconhecimento
+       * automático — ninguém DIGITOU aquilo. Então tudo que sai daqui vem rebaixado:
+       *
+       *  - `confidence: 'aproximada'`, que é o que mantém o valor fora da gravação automática
+       *    (só `crm`/`exata` são gravados sozinhos);
+       *  - `informada: false`, que impede substituir o que já está no CRM — a regra de "a pessoa
+       *    informou outra cidade" exige texto escrito, não áudio ouvido por máquina;
+       *  - a origem sai na tela dizendo que veio do áudio, para ele conferir antes de aceitar.
+       *
+       * E roda DEPOIS da passada normal, então o que a pessoa escreveu sempre ganha do que ela
+       * falou: `applyGuesses` não sobrescreve o que já está no rascunho.
+       */
+      const transcricoes = state.entrantes.filter((m) => m.transcrito && m.texto).map((m) => m.texto);
+      if (transcricoes.length) {
+        applyGuesses(rebaixarParaPalpite(await extract(transcricoes, { temaField })), classify);
+      }
 
       // O nome que a pessoa ESCREVEU no formulário ganha do apelido do perfil do WhatsApp.
       // "Zane" (perfil) x "Rosane Requia" (resposta dela): sem isto o agradecimento sairia
@@ -704,7 +769,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const sugeridas = await tagsLib.suggest({
         city: valueNamed('Cidade'),
         texts: state.incoming,
-        extra: [state.session?.utm?.campaign, state.session?.utm?.headline].filter(Boolean).join(' '),
+        // Tudo que a plataforma conta sobre a origem entra no texto das regras dele: antes só
+        // `campaign` ia, então uma regra com "facebook" ou com o link do anúncio nunca casava.
+        extra: [
+          state.session?.utm?.campaign,
+          state.session?.utm?.headline,
+          state.session?.utm?.source,
+          state.session?.utm?.referralUrl,
+        ]
+          .filter(Boolean)
+          .join(' '),
+        veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
         interesse: { perguntado: !!perguntado, etiquetas: etiquetasInteresse },
       });
 
@@ -877,22 +952,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     const cidade = valueNamed('Cidade');
     if (cidade) header.append(h('div', { class: 'wf-sub' }, [document.createTextNode('Cidade: '), ...cidadeMarcada()]));
-
-    /**
-     * Contato que pediu ajuda, dinheiro ou emprego: o aviso vem no cabeçalho, antes de qualquer
-     * botão de enviar.
-     *
-     * A rodada já põe esses de lado sozinha. Este aviso é para quando você abre um à mão — a
-     * conversa pode ter vinte mensagens e o pedido estar na terceira, fora da tela. O trecho que
-     * casou vai junto, para você decidir sem rolar a conversa inteira.
-     */
-    const triagem = precisaDeVoce(state.incoming, state.auto.cfg.padroesTriagem);
-    if (triagem) {
-      header.append(
-        h('div', { class: 'wf-block' },
-          `⚠ RESPONDA VOCÊ: ${triagem.motivo}. "${triagem.trecho}" — a rodada não trata este contato.`)
-      );
-    }
 
     /**
      * Aviso de grafia, no cabeçalho — que é onde ele olha ao abrir o atendimento.
@@ -1079,16 +1138,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const conteudos = state.tagSuggestions.filter((s) => s.origem === 'conteúdo');
     const fechar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Enviar conteúdo + agradecer + concluir');
     fechar.addEventListener('click', runFecharComConteudo);
-    fechar.disabled = conteudos.length !== 1;
+    // Nada reconhecido NÃO trava mais: vai o conteúdo preferido da Config (pedido dele).
+    // Mais de um conteúdo continua travando — ali o painel sabe que existem dois caminhos certos
+    // e escolher por você seria chutar entre modelos que a pessoa realmente pediu.
+    fechar.disabled = conteudos.length > 1;
     const cartaoFechar = h('div', { class: 'wf-card' }, [
       h('h4', {}, 'Atender o pedido e encerrar'),
       h('div', { class: 'wf-preview' }, conteudos.length === 1
         ? `Envia o modelo de "${conteudos[0].nome}", agradece, grava a classificação e conclui.`
-        : 'Envia o modelo do conteúdo pedido, agradece, grava a classificação e conclui.'),
+        : conteudos.length === 0
+          ? 'Nada foi reconhecido: vai o modelo do CONTEÚDO PREFERIDO da aba Config, agradece e conclui.'
+          : 'Envia o modelo do conteúdo pedido, agradece, grava a classificação e conclui.'),
       fechar,
     ]);
     if (!conteudos.length) {
-      cartaoFechar.append(h('div', { class: 'wf-block' }, 'Nenhum conteúdo reconhecido nas mensagens deste contato.'));
+      cartaoFechar.append(
+        h('div', { class: 'wf-hint' },
+          'Nenhum conteúdo reconhecido nas mensagens deste contato — vai o preferido da Config. ' +
+            'Confira a conversa antes: o modelo sai como se ele tivesse pedido esse conteúdo.')
+      );
     } else if (conteudos.length > 1) {
       cartaoFechar.append(
         h('div', { class: 'wf-block' }, `Casou com ${conteudos.length} conteúdos (${conteudos.map((c) => c.nome).join(', ')}) — escolha o modelo à mão.`)
@@ -1264,10 +1332,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       const conteudos = state.tagSuggestions.filter((s) => s.origem === 'conteúdo');
-      if (!conteudos.length) {
-        setStatus('Nenhum conteúdo reconhecido nas mensagens deste contato. Envie o modelo à mão.', 'err');
-        return;
-      }
       if (conteudos.length > 1) {
         setStatus(
           `O contato casou com ${conteudos.length} conteúdos (${conteudos.map((c) => c.nome).join(', ')}). ` +
@@ -1277,9 +1341,60 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return;
       }
 
+      /**
+       * Sem conteúdo reconhecido, vale o preferido da Config — pedido dele: *"libere o botão
+       * mesmo sem reconhecer"*.
+       *
+       * O preferido já existia para desempatar quando o contato casa com dois conteúdos; aqui
+       * ele serve de padrão quando não casa com nenhum. É a única escolha defensável: continua
+       * sendo um modelo que ELE configurou, e não um chute do painel entre os 19 aprovados.
+       *
+       * **A etiqueta vai junto** (pedido dele, depois de eu ter deixado de fora). O motivo dele é
+       * o que resolve a minha objeção: o conteúdo com frequência FOI pedido, só que numa mensagem
+       * de outro dia que a extensão não enxerga. Então a etiqueta não está sendo inventada — está
+       * sendo posta por quem leu a conversa inteira na tela, que é ele. A origem fica registrada
+       * no motivo, para depois dar para saber que veio do fecho e não do parser.
+       */
+      const nomeDoConteudo = conteudos.length === 1
+        ? conteudos[0].nome
+        : String(await store.get('conteudoPreferido') || '').trim();
+
+      if (!nomeDoConteudo) {
+        setStatus(
+          'Nada foi reconhecido e não há "conteúdo preferido" na aba Config — não tenho modelo para enviar.',
+          'err'
+        );
+        return;
+      }
+
       const mapa = await store.get('contentTemplates');
-      const { modelo, erro } = hsmLib.templateParaConteudo(conteudos[0].nome, mapa, state.hsmTemplates);
+      const { modelo, erro } = hsmLib.templateParaConteudo(nomeDoConteudo, mapa, state.hsmTemplates);
       if (erro) return setStatus(erro, 'err');
+
+      // Nada reconhecido: a etiqueta do preferido entra junto com o modelo.
+      //
+      // Não é criada no CRM se não existir — criar rótulo é decisão dele, e um erro de digitação
+      // na Config viraria etiqueta permanente. Falhar aqui também não cancela o envio: etiqueta é
+      // organização interna, a mensagem é o que o contato recebe. O aviso vai no fim, e não em
+      // `setStatus` agora, porque a linha seguinte ("1/4 gravando…") o apagaria.
+      let avisoEtiqueta = '';
+      if (!conteudos.length) {
+        const tag = await tagsLib.resolveTag(nomeDoConteudo);
+        if (tag) {
+          state.tagSuggestions = [
+            ...state.tagSuggestions,
+            {
+              origem: 'conteúdo',
+              nome: nomeDoConteudo,
+              tag,
+              motivo: 'posta por você no fecho (o parser não reconheceu)',
+              marcada: true,
+            },
+          ];
+        } else {
+          avisoEtiqueta = ` — mas a etiqueta "${nomeDoConteudo}" não existe no CRM e não foi aplicada`;
+        }
+      }
 
       if (!state.settings.autoSend) {
         setStatus('Este fluxo manda duas mensagens seguidas, então precisa do "Enviar automático" ligado (aba Config).', 'err');
@@ -1309,7 +1424,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       setStatus('4/4 concluindo…');
-      await concluirEAbrirProximo('Enviado e classificado');
+      await concluirEAbrirProximo('Enviado e classificado' + avisoEtiqueta);
     });
   }
 
@@ -1448,7 +1563,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   async function concluirEAbrirProximo(jaFeito, opts) {
     let concluido;
     try {
-      concluido = await page.clickConcluir();
+      concluido = await concluirPeloPainel();
     } catch (err) {
       setStatus(`${jaFeito}, mas não consegui concluir (${err.message}). Conclua na aba.`, 'err');
       return false;
@@ -1583,8 +1698,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'plataforma, de cima para baixo. Uma rodada por vez.')
     );
 
+    body.append(renderCartaoMeusAbertos());
     body.append(renderCartaoRitmo(cfg));
-    body.append(renderCartaoTriagem(cfg));
     body.append(renderCartaoFila());
     body.append(renderCartaoNovos(cfg));
     body.append(renderCartaoMomento(cfg));
@@ -1609,6 +1724,44 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * A confirmação é por contato, não uma só no começo: o que sai daqui é o modelo aprovado do
    * conteúdo que a pessoa pediu, e enviar o modelo errado é o erro mais caro deste fluxo.
    */
+  /**
+   * O contato tem alguma etiqueta que o dispensa da rodada?
+   *
+   * Compara por PEDAÇO do rótulo, sem acento e sem caixa: "engajado" casa com "ENGAJADO/BIZA" e
+   * com "Apoiador Muito engajado". É o mesmo tipo de comparação que o resto do projeto usa para
+   * etiqueta — rótulo normalizado, nunca id, porque o CRM tem rótulos repetidos com ids
+   * diferentes.
+   *
+   * @param {string[]} etiquetas rótulos que o contato tem (ou vai receber)
+   * @returns {string|null} o rótulo que casou, para a sugestão poder nomeá-lo
+   */
+  async function etiquetaQueDispensaDaFila() {
+    const pedacos = String(state.auto.cfg.etiquetasQuePulam || '')
+      .split(',')
+      .map((p) => cities.semAcentoNemCaixa(p.trim()))
+      .filter(Boolean);
+    if (!pedacos.length) return null;
+
+    /**
+     * Lê as etiquetas REAIS do contato, e não a lista que a caixa mostra.
+     *
+     * **Este era o defeito** (relato dele: *"não pulou o engajado"*): a lista da caixa vem de
+     * `tagSuggestions`, que só tem o que a rodada sugere ou reconhece — no contato da print ela
+     * mostrava 3 etiquetas enquanto o cabeçalho da plataforma mostrava 5, e `ENGAJADO/BIZA` era
+     * justamente uma das que faltavam. A regra nunca via a etiqueta que deveria dispensar.
+     */
+    const doCrm = new Set(state.contact?.tagsId || []);
+    const rotulos = (await tagsLib.allTags().catch(() => []))
+      .filter((t) => doCrm.has(t.id))
+      .map((t) => t.label);
+
+    for (const rotulo of rotulos) {
+      const alvo = cities.semAcentoNemCaixa(rotulo);
+      if (pedacos.some((p) => alvo.includes(p))) return rotulo;
+    }
+    return null;
+  }
+
   function renderCartaoRespondidos() {
     const card = h('div', { class: 'wf-card' }, [
       h('h4', {}, 'Conferir e responder a fila'),
@@ -1638,6 +1791,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'respondido há POUCO. Passou dessas horas sem ele voltar, a rodada para e pergunta: ' +
           'é a chance de mandar a mensagem do momento (tecla 5) ou um modelo, em vez de fechar ' +
           'quem nunca mandou os dados.')
+    );
+
+    card.append(
+      campoTexto('Etiquetas que a rodada pode pular (separe por vírgula)', state.auto.cfg.etiquetasQuePulam, (v) =>
+        salvarAuto({ etiquetasQuePulam: v.trim() }).then(renderAll)
+      )
+    );
+    card.append(
+      checkbox('Pular sozinho, sem perguntar', state.auto.cfg.pularEtiquetasSozinho, (v) =>
+        salvarAuto({ pularEtiquetasSozinho: v }).then(renderAll)
+      )
+    );
+    card.append(
+      h('div', { class: 'wf-origin' },
+        'Marcado, a rodada NÃO pergunta nesses contatos: pula e vai para o próximo, e o pulo ' +
+          'aparece no Andamento com o nome da etiqueta que causou. Pular não envia nada e não ' +
+          'conclui — o atendimento fica aberto onde estava. Desmarcado, ela só sugere a tecla 2.')
+    );
+    card.append(
+      h('div', { class: 'wf-origin' },
+        'Quem tem uma destas vem com "Pular" sugerido: o trabalho da rodada é transformar ' +
+          'desconhecido em engajado, e quem já chegou lá não precisa de formulário. Casa por ' +
+          'pedaço do rótulo, sem acento e sem caixa — "engajado" pega "ENGAJADO/BIZA" e ' +
+          '"Apoiador Muito engajado". Vazio = não pula ninguém. **A sugestão continua sendo só ' +
+          'sugestão:** quem mandou áudio ou texto longo continua vindo com "Responder à mão", ' +
+          'mesmo engajado.')
     );
 
     card.append(
@@ -1782,53 +1961,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             'concluir depois disso fecharia o atendimento sem a mensagem ter saído.')
       );
     }
-    return card;
-  }
-
-  /**
-   * Quem a rodada põe de lado para ele responder em pessoa.
-   *
-   * Fica no cartão de Ritmo, e não no de uma rodada só, porque vale para **todas**: é regra de
-   * quem pode receber resposta automática, não configuração de uma fila.
-   */
-  function renderCartaoTriagem(cfg) {
-    const card = h('div', { class: 'wf-card' }, [
-      h('h4', {}, 'Responder pessoalmente'),
-      h('div', { class: 'wf-preview' },
-        'Pedido de dinheiro, cesta, remédio, conta atrasada ou emprego: nenhuma rodada envia nem ' +
-          'conclui esses contatos. Ela marca com a etiqueta abaixo e segue. No fim, você filtra a ' +
-          'fila por ela e responde todos de uma vez.'),
-      h('div', { class: 'wf-origin' },
-        'A detecção é por texto, sem IA — e ela sabe a diferença entre quem PEDE ajuda e o ' +
-          'apoiador que OFERECE ("quero ajudar" não marca ninguém). Contato marcado também ' +
-          'aparece com aviso no cabeçalho quando você o abre à mão.'),
-    ]);
-
-    card.append(
-      campoTexto('Etiqueta de "responder pessoalmente"', cfg.etiquetaTriagem, (v) =>
-        salvarAuto({ etiquetaTriagem: v.trim() }).then(renderAll)
-      ),
-      h('div', { class: 'wf-origin' },
-        'Precisa existir no CRM — a extensão não cria etiqueta sozinha (erro de digitação aqui ' +
-          'viraria rótulo permanente). Vazio = a rodada ainda pula, mas o contato só aparece no ' +
-          'log da rodada, que some quando você fecha o painel.')
-    );
-
-    const area = h('textarea', { rows: '4', placeholder: 'um padrão por linha — ex.: creche\nposto de saúde' });
-    area.value = (cfg.padroesTriagem || []).join('\n');
-    area.addEventListener('change', () => {
-      const padroes = area.value.split('\n').map((p) => p.trim()).filter(Boolean);
-      salvarAuto({ padroesTriagem: padroes }).then(() => {
-        setStatus(padroes.length ? `${padroes.length} padrão(ões) seu(s) somado(s) aos de fábrica.` : 'Só os padrões de fábrica.');
-        renderAll();
-      });
-    });
-    card.append(
-      h('label', { class: 'wf-field' }, [h('span', {}, 'Meus padrões (somam aos de fábrica)'), area]),
-      h('div', { class: 'wf-origin' },
-        'Um por linha. A campanha muda: assunto raro vira enxurrada na semana da agenda. ' +
-          'Padrão que não for expressão válida é ignorado, nunca derruba a rodada.')
-    );
     return card;
   }
 
@@ -2050,6 +2182,215 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /** Retrato da fila para você conferir antes de disparar. Nenhum envio depende deste texto. */
+  /**
+   * Quantos atendimentos abertos estão com você de verdade.
+   *
+   * **Existe porque a plataforma não mostra esse número.** Ela pede a lista com
+   * `skipCount=true`, que diz à API para não contar — o badge ao lado de "Meus" é outra coisa.
+   * Medido lado a lado em 30/08/2026: badge **76**, total real **353**.
+   *
+   * A contagem nasce do CLIQUE, nunca do desenho: `renderAll()` roda o tempo todo (troca de
+   * atendimento, mensagem nova, cada `setStatus`), e rede disparada de dentro de um `render*`
+   * vira uma requisição por redesenho. Falha vira botão de tentar de novo com o motivo na tela,
+   * nunca nova tentativa automática.
+   */
+  /** A janelinha do contador, enquanto estiver aberta. Fora do `state` porque não é desenho. */
+  let contadorFlutuante = null;
+
+  /**
+   * Janelinha arrastável com o total de "Meus" abertos, para acompanhar o progresso trabalhando.
+   *
+   * **Por que flutuante e não dentro da aba:** o número dentro do painel só é visto quando você
+   * está na aba Automatizado, e o trabalho acontece na conversa. Ele pediu para acompanhar o
+   * progresso enquanto atende — um número que exige trocar de aba para consultar não acompanha
+   * nada.
+   *
+   * Segue as regras da caixa da rodada, e não é coincidência: a camada é `pointer-events: none`
+   * e sem fundo, então **a conversa continua legível e clicável por baixo**; a caixa é arrastada
+   * pelo título e a posição fica no `settings` (chave própria, senão ela e a pergunta da rodada
+   * disputariam o mesmo canto). Ver `tools/checar-pergunta.mjs`.
+   *
+   * **O progresso é a diferença, não o total.** Guardo quanto havia quando você abriu e mostro
+   * quantos saíram desde então — é isso que responde "estou andando?". O total sozinho sobe
+   * quando chega gente nova e daria a impressão de que você andou para trás.
+   *
+   * A atualização automática é de 60s de propósito. Nesta API rajada de requisição já derrubou a
+   * plataforma, e um contador não vale um pedido por segundo. O botão atualiza na hora quando
+   * você quiser.
+   */
+  const CONTADOR_INTERVALO_MS = 45000;
+
+  /** Espera antes de recontar depois de trocar de atendimento. */
+  const CONTADOR_ESPERA_MS = 2500;
+
+  let contadorTimer = null;
+
+  /**
+   * Pede uma recontagem, juntando as que chegarem coladas.
+   *
+   * Passar a fila rápido dispara uma troca de atendimento por clique. Sem juntar, isso vira uma
+   * requisição por clique numa API que já caiu por rajada — e o número nem teria mudado ainda,
+   * porque a plataforma leva um instante para registrar a conclusão.
+   */
+  /**
+   * Concluir pelo painel — e recontar logo depois.
+   *
+   * Pedido dele: *"o gatilho deve ser quando manda concluir e atualizar"*. Os gatilhos de tela
+   * (trocou de atendimento, o campo de mensagem sumiu) cobrem quem conclui PELA PLATAFORMA;
+   * este cobre o caminho do painel, que é o que ele usa nas rodadas e nos botões.
+   *
+   * Só reconta quando a conclusão deu certo: contar depois de um Concluir que falhou traria o
+   * mesmo número e daria a impressão de que o contador é que está quebrado.
+   */
+  async function concluirPeloPainel() {
+    const r = await page.clickConcluir();
+    if (r?.ok) agendarContagem();
+    return r;
+  }
+
+  function agendarContagem() {
+    if (!contadorFlutuante) return;
+    if (contadorTimer) clearTimeout(contadorTimer);
+    contadorTimer = setTimeout(() => {
+      contadorTimer = null;
+      contadorFlutuante?.medir();
+    }, CONTADOR_ESPERA_MS);
+  }
+
+  async function abrirContadorFlutuante() {
+    if (contadorFlutuante) return; // uma só: duas janelinhas contando dão dois números
+
+    const caixa = h('div', { class: 'wf-pergunta wf-contador' });
+    const fundo = h('div', { class: 'wf-pergunta-fundo' }, [caixa]);
+    const barra = h('div', { class: 'wf-pergunta-titulo' }, 'Meus abertos');
+    caixa.append(barra);
+
+    const numero = h('div', { class: 'wf-contador-numero' }, '…');
+    // Barra: enche conforme os atendimentos saem. O denominador é quanto havia quando você
+    // abriu — é o "dia de trabalho" que ela mede, não a fila inteira do CRM.
+    const trilho = h('div', { class: 'wf-contador-trilho' });
+    const preenchida = h('div', { class: 'wf-contador-barra' });
+    trilho.append(preenchida);
+
+    const progresso = h('div', { class: 'wf-pergunta-linha' }, 'contando…');
+    const carimbo = h('div', { class: 'wf-pergunta-dica' }, '');
+    caixa.append(numero, trilho, progresso, carimbo);
+
+    const linhaBotoes = h('div', { class: 'wf-pergunta-botoes' });
+    const atualizar = h('button', { class: 'wf-btn', type: 'button' }, 'Atualizar');
+    const fechar = h('button', { class: 'wf-btn', type: 'button' }, 'Fechar');
+    linhaBotoes.append(atualizar, fechar);
+    caixa.append(linhaBotoes);
+
+    let timer = null;
+
+    async function medir() {
+      try {
+        const { abertos, concluidosHoje } = await api.contarMeuDia();
+        const total = abertos;
+        state.auto.meusAbertos = { total, erro: '', quando: Date.now() };
+
+        // O DESTAQUE é o que ele fez, não o que sobrou. "Abertos" sobe quando chega gente nova,
+        // então usá-lo como medida de progresso mostra o número crescendo num dia de trabalho
+        // bom — foi o relato dele, "continua sem diminuir". Concluídos hoje só sobe, e sobe por
+        // causa dele.
+        numero.textContent = concluidosHoje + ' concluídos hoje';
+        const feitos = concluidosHoje;
+
+        // A barra é a fatia do dia que já saiu da sua mão: concluídos sobre tudo que passou por
+        // ela hoje. Com teto e piso, porque um denominador zero (dia recém-começado) e um total
+        // que oscila fariam a barra saltar ou ficar negativa.
+        const doDia = feitos + total;
+        const fatia = doDia > 0 ? Math.min(100, Math.max(0, (feitos / doDia) * 100)) : 0;
+        preenchida.style.width = fatia + '%';
+        trilho.title = feitos + ' de ' + doDia + ' que passaram pela sua mão hoje';
+        progresso.textContent = total + ' ainda abertos em "Meus"';
+        carimbo.textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR')} — sozinho a cada atendimento.`;
+      } catch (err) {
+        // Erro não fecha a janelinha nem apaga o último número bom: some com o dado justamente
+        // quando a rede está ruim, que é quando você mais quer saber onde estava.
+        carimbo.textContent = `Falhou às ${new Date().toLocaleTimeString('pt-BR')}: ${traduzirErroDeRede(err.message)}`;
+      }
+    }
+
+    function encerrar() {
+      if (timer) clearInterval(timer);
+      if (contadorTimer) clearTimeout(contadorTimer);
+      timer = null;
+      contadorTimer = null;
+      fundo.remove();
+      contadorFlutuante = null;
+      renderAll();
+    }
+
+    atualizar.addEventListener('click', () => medir());
+    fechar.addEventListener('click', encerrar);
+
+    contadorFlutuante = { encerrar, medir };
+    tornarArrastavel(caixa, barra, 'contadorPos');
+    root.append(fundo);
+    aplicarPosicao(caixa, state.settings.contadorPos);
+
+    await medir();
+    timer = setInterval(medir, CONTADOR_INTERVALO_MS);
+    renderAll();
+  }
+
+  function renderCartaoMeusAbertos() {
+    const estado = state.auto.meusAbertos;
+    const card = h('div', { class: 'wf-card' }, [h('h4', {}, 'Meus atendimentos abertos')]);
+
+    const botao = h('button', { class: 'wf-btn', type: 'button' },
+      estado.total === null ? 'Contar' : 'Contar de novo');
+    botao.disabled = state.auto.rodando;
+    botao.addEventListener('click', () =>
+      withBusy(async () => {
+        try {
+          const { total } = await api.contarMeusAbertos();
+          state.auto.meusAbertos = { total, erro: '', quando: Date.now() };
+          setStatus(`Você tem ${total} atendimento(s) aberto(s) em "Meus".`);
+        } catch (err) {
+          state.auto.meusAbertos = { total: null, erro: traduzirErroDeRede(err.message), quando: 0 };
+          setStatus('Não consegui contar os seus atendimentos.', 'err');
+        }
+        renderAll();
+      })
+    );
+
+    card.append(
+      h('div', { class: 'wf-preview' },
+        'O número ao lado de "Meus" na plataforma não é o total: ela pede a lista sem mandar ' +
+          'contar. Este aqui é o total de verdade, em andamento e atribuídos a você.'),
+      botao
+    );
+
+    // Para acompanhar enquanto atende: o número dentro da aba só aparece quando você está NELA,
+    // e o trabalho acontece na conversa.
+    const flutuar = h('button', { class: 'wf-btn wf-primary', type: 'button' },
+      contadorFlutuante ? 'Fechar a janelinha' : 'Acompanhar em janelinha');
+    flutuar.addEventListener('click', () =>
+      contadorFlutuante ? contadorFlutuante.encerrar() : abrirContadorFlutuante()
+    );
+    card.append(flutuar);
+    card.append(
+      h('p', { class: 'wf-hint' },
+        'A janelinha fica por cima da plataforma, arrasta pelo título e mostra quantos saíram ' +
+          'desde que você a abriu. Ela não bloqueia a conversa.')
+    );
+
+    if (estado.total !== null) {
+      card.append(h('p', { class: 'wf-h' }, `${estado.total} aberto(s) em "Meus"`));
+      card.append(
+        h('p', { class: 'wf-hint' },
+          `Contado às ${new Date(estado.quando).toLocaleTimeString('pt-BR')}. A fila da esquerda ` +
+            'carrega 50 por vez, então ela quase nunca mostra tudo.')
+      );
+    }
+    if (estado.erro) card.append(h('div', { class: 'wf-block' }, estado.erro));
+
+    return card;
+  }
+
   function renderCartaoFila() {
     const card = h('div', { class: 'wf-card' }, [h('h4', {}, 'Quem vai receber')]);
     const ver = h('button', { class: 'wf-btn', type: 'button' }, 'Ver a fila');
@@ -2436,22 +2777,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const triados = conta('triado');
     const concluidos = conta('concluido');
     const reabertos = conta('reiniciado');
-
-    // Os que ficaram para ele responder em pessoa saem em linha PRÓPRIA, não escondidos no
-    // total de pulados: é a pilha de trabalho que a rodada acabou de montar para ele, e ele
-    // precisa saber que ela existe e por onde achá-la.
-    const separados = state.auto.log.filter((l) => /^você responde este:/.test(l.motivo || '')).length;
-    const ondeAchar = String(state.auto.cfg.etiquetaTriagem || '').trim();
-
     const resumo =
       `Rodada encerrada: ${conta('enviado')} enviado(s), ${conta('pulado')} pulado(s)` +
       (reabertos ? `, ${reabertos} reaberto(s) em "Meus"` : '') +
       (concluidos ? `, ${concluidos} concluído(s) sem enviar` : '') +
-      (triados ? `, ${triados} assumido(s) para triagem em "Meus"` : '') + '.' +
-      (separados
-        ? ` ${separados} para VOCÊ responder` +
-          (ondeAchar ? ` — filtre a fila por "${ondeAchar}".` : ' (etiqueta de triagem não configurada).')
-        : '');
+      (triados ? `, ${triados} assumido(s) para triagem em "Meus"` : '') + '.';
 
     // Alguém da lista ficou para trás sem ninguém abrir. Não é o caso normal — a posição
     // acompanha a reordenação da plataforma —, mas quando acontece tem que aparecer, senão o
@@ -2668,19 +2998,31 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // "Novos" faz toda rodada futura abrir o contato de novo, e é justamente isso que
       // sobrecarrega a API. Assumir tira da fila sem mandar nada: vira pilha de triagem manual
       // em "Meus". Nenhuma mensagem sai daqui.
-      const mensagens = await api.getIncomingText(sessionId);
-      if (!mensagens.length) {
-        return assumirParaTriagem(sessionId, nome, 'não escreveu nada');
-      }
-      if (!mensagens.some((m) => achatarTexto(m).includes(achatarTexto(padrao)))) {
-        return assumirParaTriagem(sessionId, nome, 'sem o aceite do anúncio');
-      }
+      // A conversa inteira numa leitura só, agora COM o tipo de cada mensagem: sem isso a figura
+      // não existe para a rodada (`incoming` filtra mensagem sem texto) e quem manda só uma
+      // imagem chegava aqui como "não escreveu nada".
+      const conversa = await api.getConversation(sessionId);
+      const mensagens = conversa.incoming;
+      const temAceite = mensagens.some((m) => achatarTexto(m).includes(achatarTexto(padrao)));
 
-      // Pedido de ajuda, dinheiro ou emprego: assume (para sair de "Novos" e não voltar toda
-      // rodada), marca, e NÃO manda o formulário. Pedir nome e cidade a quem acabou de contar
-      // que está sem comida é o erro mais feio que esta rodada pode cometer.
-      const triagem = await separarParaVoce(contato, mensagens);
-      if (triagem) return assumirParaTriagem(sessionId, nome, motivoDaTriagem(triagem));
+      if (!temAceite) {
+        /**
+         * Só cumprimentou, mandou um link ou mandou uma figura.
+         *
+         * Estas pessoas eram assumidas sem receber nada — a rodada abria a conversa e não
+         * mandava coisa nenhuma. Elas falaram com o gabinete: o silêncio é a pior resposta
+         * possível, e o formulário de nome/cidade não é resposta a "bom dia". A mensagem do
+         * momento é.
+         */
+        const cortesia = soCortesia(conversa.entrantes);
+        if (cortesia) return responderComMomento(sessionId, contato, nome, cortesia, ctx);
+
+        return assumirParaTriagem(
+          sessionId,
+          nome,
+          mensagens.length || conversa.entrantes.length ? 'sem o aceite do anúncio' : 'não escreveu nada'
+        );
+      }
 
       // Quem já respondeu nome ou cidade não precisa do formulário: precisa da classificação,
       // que é manual. Deixar em "Novos" o prendia na fila para sempre — ocupando posição em toda
@@ -2746,7 +3088,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       await templatesLib.avancarVariante(template);
       ctx?.contatosTratados?.add(contato.id);
 
-      const concluido = await page.clickConcluir();
+      const concluido = await concluirPeloPainel();
       if (!concluido.ok) {
         // Enviado mas nao fechou: parar e dizer. Contar como concluido faria a fila crescer
         // em silencio, que foi o sintoma de "Meus" so aumentando.
@@ -2765,6 +3107,101 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       await page.closeOverlay().catch(() => {});
       return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
     }
+  }
+
+  /**
+   * Responde a mensagem do momento a quem só cumprimentou, mandou link ou figura, e conclui.
+   *
+   * Passa pelas MESMAS travas do envio do formulário — variável faltando, canal fora do ar,
+   * anti-duplicata, contato já tratado nesta rodada. Envio é envio: quem cumprimentou merece a
+   * mesma disciplina de quem responde ao anúncio, e o caminho curto é como se manda mensagem
+   * quebrada para gente real.
+   *
+   * A mensagem do momento vira um template de mentira, igual à tecla 5: reaproveita variáveis,
+   * variantes e registro de envio. A chave carrega um resumo do texto para que trocar a
+   * mensagem (Dia dos Pais → Natal) não seja barrada pelo anti-duplicata da anterior.
+   */
+  async function responderComMomento(sessionId, contato, nome, cortesia, ctx) {
+    const textoMomento = String(state.auto.cfg.mensagemMomento || '').trim();
+
+    // Sem mensagem do momento configurada não há o que enviar. Volta ao comportamento de antes,
+    // mas dizendo o que faltou — senão isto vira "às vezes manda, às vezes não".
+    if (!textoMomento) {
+      return assumirParaTriagem(
+        sessionId,
+        nome,
+        `${cortesia.motivo}, mas a "Mensagem do momento" está vazia na aba Automatizado — não tinha o que responder`
+      );
+    }
+
+    const momento = {
+      id: `momento:${chaveDoTexto(textoMomento)}`,
+      name: 'Mensagem do momento',
+      text: textoMomento,
+      variantes: state.auto.cfg.mensagemMomentoVariantes,
+    };
+
+    if (ctx?.contatosTratados?.has(contato.id)) {
+      return { nome, resultado: 'pulado', motivo: 'já tratei este contato nesta rodada' };
+    }
+
+    if (state.settings.antiDup) {
+      const quando = await templatesLib.wasSent(contato.id, momento.id);
+      if (quando) {
+        return {
+          nome,
+          resultado: 'pulado',
+          motivo: `${cortesia.motivo}, mas já recebeu esta mensagem do momento em ${new Date(quando.at).toLocaleDateString('pt-BR')}`,
+        };
+      }
+    }
+
+    const textoVariante = await templatesLib.varianteAtual(momento);
+    const { text, missing, reasons } = vars.render(textoVariante, await vars.buildContext({ contact: contato }));
+    if (missing.length) return { nome, resultado: 'erro', motivo: vars.explainMissing(missing, reasons) };
+
+    let estado = await page.getState();
+    if (estado.sessionId !== sessionId) {
+      return { nome, resultado: 'erro', motivo: 'a aba trocou de atendimento no meio do caminho' };
+    }
+    if (estado.isPending) {
+      setStatus(`Assumindo o atendimento de ${nome}…`);
+      estado = await page.clickIniciar();
+    }
+    if (estado.isPending || !estado.hasComposer) {
+      return {
+        nome,
+        resultado: 'erro',
+        motivo: estado.isPending
+          ? 'a plataforma não assumiu o atendimento (o botão Iniciar continua na tela)'
+          : 'o campo de mensagem não apareceu depois de assumir o atendimento',
+      };
+    }
+
+    const canalFora = await canalDesteContatoFora();
+    if (canalFora) {
+      return { nome, resultado: 'pulado', motivo: 'o número deste atendimento está fora do ar — não enviei nada' };
+    }
+
+    setStatus(`Respondendo ${nome} com a mensagem do momento…`);
+    await page.sendText(text);
+    await templatesLib.markSent(contato.id, momento.id, { nome });
+    await templatesLib.avancarVariante(momento);
+    ctx?.contatosTratados?.add(contato.id);
+
+    const concluido = await concluirPeloPainel();
+    if (!concluido.ok) {
+      return { nome, resultado: 'enviado', parar: true, motivo: concluido.reason };
+    }
+    if (concluido.dialogOpen) {
+      return {
+        nome,
+        resultado: 'enviado',
+        parar: true,
+        motivo: 'enviado, mas a plataforma pediu motivo de conclusão — responda o diálogo na aba',
+      };
+    }
+    return { nome, resultado: 'enviado', motivo: `${cortesia.motivo} — mandei a mensagem do momento` };
   }
 
   /**
@@ -2822,16 +3259,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       ctx?.contatosTratados?.add(state.contact.id);
 
       /**
-       * Pedido de ajuda, dinheiro ou emprego: sai da rodada antes da pergunta.
+       * Pulo automático por etiqueta — a única coisa nesta rodada que sai da fila sem pergunta.
        *
-       * Antes da pergunta de propósito. A caixa oferece "mandar o modelo", "agradecer", "pedir os
-       * dados" — e nenhuma dessas é resposta para quem contou um problema. Oferecer a escolha
-       * errada no meio de trinta contatos é como ela acaba sendo tomada.
+       * Só acontece com a caixa marcada por ele, e o motivo vai para o Andamento **com o nome da
+       * etiqueta que causou**: regra que tira contato da fila sem dizer por quê é exatamente o
+       * "alguns concluem e outros não" que este projeto já pagou caro.
        *
-       * **Não conclui.** O atendimento fica aberto, marcado, esperando você.
+       * Nada é enviado e nada é concluído: o atendimento fica aberto, onde estava.
        */
-      const triagem = await separarParaVoce(state.contact, state.incoming);
-      if (triagem) return { nome, resultado: 'pulado', motivo: motivoDaTriagem(triagem) };
+      if (state.auto.cfg.pularEtiquetasSozinho) {
+        const dispensa = await etiquetaQueDispensaDaFila();
+        if (dispensa) {
+          return { nome, resultado: 'pulado', motivo: `etiqueta "${dispensa}" — pulado sem perguntar` };
+        }
+      }
 
       /**
        * A avaliação de contexto — a segunda camada, e só depois da primeira.
@@ -2865,14 +3306,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           return { nome, resultado: 'enviado', motivo: `rascunho da IA enviado sozinho (${auto.motivo})` };
         }
 
-        const marca = await separarParaVoce(state.contact, state.incoming, {
-          motivo: decisaoIA.motivo || 'a IA achou que este é para você',
-          trecho: decisaoIA.templateId ? `sugestão dela: "${decisaoIA.templateId}"` : 'avaliação de contexto',
-        });
-        // O motivo de NÃO ter saído sozinho entra no log: sem isso, "o automático não usou" vira
-        // pergunta sem resposta, e a trava que atuou fica invisível.
+        /**
+         * Escalar = sair da rodada sem enviar nada.
+         *
+         * Antes isto aplicava a etiqueta de triagem, que deixava o contato achável no filtro do
+         * CRM depois. A triagem foi **removida a pedido dele** (29/08), e a etiqueta foi junto —
+         * então hoje escalar deixa rastro só no log da rodada, que some quando o painel fecha.
+         * É consequência direta da remoção, não esquecimento: se um dia a etiqueta voltar a ser
+         * desejada, é aqui que ela entra.
+         */
         const porque = auto.motivo ? ` · rascunho automático não saiu: ${auto.motivo}` : '';
-        return { nome, resultado: 'pulado', motivo: motivoDaTriagem(marca) + porque };
+        const motivoIA = decisaoIA.motivo || 'a IA achou que este é para você';
+        const sugestao = decisaoIA.templateId ? ` (sugestão dela: "${decisaoIA.templateId}")` : '';
+        return {
+          nome,
+          resultado: 'pulado',
+          motivo: `você responde este: ${motivoIA}${sugestao}${porque}`,
+        };
       }
 
       const conteudos = state.tagSuggestions.filter((s) => s.origem === 'conteúdo');
@@ -2986,7 +3436,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // pergunta como todo mundo — a regra e o porquê moram em `hsm.decidirSemResposta`.
       if (decisao?.acao === 'concluir') {
         await saveClassification({ withCompletionDate: true, quiet: true });
-        const fechouRespondido = await page.clickConcluir();
+        const fechouRespondido = await concluirPeloPainel();
         if (!fechouRespondido.ok) {
           return { nome, resultado: 'pulado', motivo: `já respondido, mas ${fechouRespondido.reason}` };
         }
@@ -3025,15 +3475,37 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // laço num diálogo nativo. Aqui o aviso vem antes, na pergunta, e o envio segue sem
       // confirm: a pergunta da rodada é a confirmação.
       const textosDeHoje = [];
+      let momentoHoje = false;
+      // "Já mandei a mensagem do momento" no relato dele não quer dizer hoje — a chave do envio
+      // inclui um resumo do texto, então isto é sobre a mensagem do momento ATUAL.
+      const momentoJaEnviado = momento ? !!(await templatesLib.wasSent(state.contact.id, momento.id)) : false;
       for (const t of [agradecerInfo, momento, interesse].filter(Boolean)) {
         const envio = await templatesLib.wasSent(state.contact.id, t.id);
-        if (envio && ehHoje(envio.at)) textosDeHoje.push(`"${t.name}" às ${formatarHora(envio.at)}`);
+        if (envio && ehHoje(envio.at)) {
+          textosDeHoje.push(`"${t.name}" às ${formatarHora(envio.at)}`);
+          if (momento && t.id === momento.id) momentoHoje = true;
+        }
       }
 
       // O pedido de dados tem aviso PRÓPRIO, e não uma linha na lista acima: ele é a tecla 4, a
       // opção destacada, e é a que mais tenta ser repetida. Merece a hora na cara.
       const pedidoDeHoje = pedirDados ? await templatesLib.wasSent(state.contact.id, pedirDados.id) : null;
       const pedidoHoje = !!pedidoDeHoje && ehHoje(pedidoDeHoje.at);
+
+      /**
+       * O formulário já saiu para este contato ALGUMA VEZ?
+       *
+       * Duas fontes, pela mesma razão de sempre: `wasSent` só enxerga o que o painel mandou, e
+       * o formulário também pode ter saído pela plataforma ou pela mão de outra pessoa. A
+       * segunda fonte é a conversa — um trecho do meio do texto contra o que já mandamos.
+       */
+      const jaPediramDados = (() => {
+        if (pedidoDeHoje) return true;
+        const corpo = achatarTexto(textoPedirDados || '');
+        if (corpo.length < 100) return false;
+        const trecho = corpo.slice(40, 100);
+        return state.nossas.some((m) => achatarTexto(m.texto).includes(trecho));
+      })();
 
       // Nome errado — o apelido automático do anúncio ("[NOVO] (51) 9…") ou qualquer cadastro
       // que o `looksLikePlaceholder` recuse — deixa o {{primeiro_nome}} do agradecimento sem
@@ -3075,14 +3547,93 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         };
       }
 
+      /**
+       * A etiqueta de CIDADE é o que faz o contato existir para o trabalho: a API só filtra por
+       * etiqueta, e sem ela a pessoa não entra em lista nenhuma. Conta tanto a que já está no CRM
+       * quanto a que esta rodada vai gravar agora.
+       */
+      const idsDeCidade = await tagsLib.cityTagIds().catch(() => new Set());
+      const temEtiquetaDeCidade =
+        (state.contact?.tagsId || []).some((id) => idsDeCidade.has(id)) ||
+        state.tagSuggestions.some((sug) => sug.origem === 'cidade' && sug.tag && (sug.marcada || sug.jaTem));
+
+      // O destaque vem da tabela de regras (`sugestao.js`), não de condições espalhadas aqui.
+      // Ela só RECOMENDA: todas as opções continuam na tela e todas as teclas continuam valendo.
+      /**
+       * Voltou clicando em OUTRO anúncio, sem responder o pedido de dados.
+       *
+       * O sinal é a última mensagem dele ser de novo o aceite do anúncio, tendo o formulário já
+       * saído alguma vez. A frase do aceite é curta e genérica ("Olá!"), então sozinha ela casaria
+       * com meio mundo — por isso a regra em `sugestao.js` exige, junto, que o contato continue
+       * SEM etiqueta de cidade: é isso que separa "ignorou o formulário" de "respondeu começando
+       * com Olá".
+       */
+      const ultimaDoContato = state.entrantes[state.entrantes.length - 1]?.texto || '';
+      const padraoAnuncio = String(state.auto.cfg.padraoNovos || '').trim();
+      /**
+       * O sinal de "voltou" é **já termos falado antes**, não o formulário ter saído.
+       *
+       * A primeira versão exigia `pedidoDeHoje` e que o contato não tivesse cidade — e por isso
+       * não pegou o Telmo (print de 31/08): cidade Viamão, modelo enviado às 10:28, e às 18:24 ele
+       * voltou por outro anúncio. A rodada sugeriu mandar o modelo de novo.
+       *
+       * Ter alguma mensagem NOSSA na conversa é o que separa "voltou" de "chegou agora", e é
+       * verdade tanto para quem recebeu formulário quanto para quem recebeu modelo.
+       */
+      const voltouPorOutroAnuncio =
+        state.nossas.length > 0 &&
+        !!padraoAnuncio &&
+        achatarTexto(ultimaDoContato).includes(achatarTexto(padraoAnuncio));
+
+      /**
+       * Este modelo já está na conversa?
+       *
+       * `wasSent` só sabe do que o painel mandou. Modelo disparado pela automação da plataforma,
+       * pelo chatbot do anúncio ou à mão por outra pessoa é invisível para ele — e a rodada
+       * sugeria mandar de novo o que já estava na tela.
+       *
+       * Compara um trecho do MEIO do modelo com o que já saiu: o começo costuma ser saudação
+       * igual em todos, e um trecho curto sobrevive a variável interpolada no caminho.
+       */
+      const modeloJaNaConversa = (() => {
+        const corpo = achatarTexto(modelo?.text || '');
+        if (corpo.length < 100) return false;
+        const trecho = corpo.slice(40, 100);
+        return state.nossas.some((m) => achatarTexto(m.texto).includes(trecho));
+      })();
+
+      const sugestao = sugerirAcao({
+        modeloJaNaConversa,
+        ultimaEhDespedida: ultimaEhDespedida(state.entrantes),
+        // "Já foi respondida": nossa última mensagem saiu hoje. Serve para a reação (figura,
+        // emoji, link) virar "concluir" em vez de "mais uma mensagem".
+        respondidoHoje: !!state.nossaUltimaAt && ehHoje(state.nossaUltimaAt),
+        voltouPorOutroAnuncio,
+        momentoHoje,
+        momentoJaEnviado,
+        pedeRespostaPessoal: ultimaPedeRespostaPessoal(state.entrantes),
+        etiquetaQueDispensa: await etiquetaQueDispensaDaFila(),
+        ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
+        podeMandarMomento: !momentoTrava,
+        temEtiquetaDeCidade,
+        // O critério de "pedir dados" é o NOME, não a cidade (decisão dele, 31/08).
+        nomeSemSentido: nomeSemSentido(state.contact?.name),
+        jaPediramDados,
+        podePedirDados: !pedirTrava,
+        pedidoHoje,
+        podeEnviar,
+        enviadoHoje,
+        conteudoPedido: conteudoEscolhido?.nome || '',
+        podePerguntarInteresse,
+        interessePerguntado: !!interessePerguntado,
+      });
+
       const opcoes = [];
       if (podeEnviar) {
         opcoes.push({
           tecla: '1',
           valor: 'enviar',
           rotulo: enviadoHoje ? `Mandar de novo "${modelo.name}"` : `Mandar modelo "${modelo.name}"`,
-          // Enviado hoje deixa de ser a opção destacada: repetir tem que ser decisão, não inércia.
-          primaria: !enviadoHoje,
         });
       }
       /**
@@ -3118,7 +3669,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           tecla: '4',
           valor: 'pedirdados',
           rotulo: pedidoHoje ? 'Pedir dados DE NOVO e concluir' : 'Pedir dados e concluir',
-          primaria: !podeEnviar && !podePerguntarInteresse && !pedidoHoje,
         });
       }
       if (!momentoTrava) {
@@ -3132,12 +3682,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           rotulo: interessePerguntado
             ? 'Perguntar interesse DE NOVO (já perguntei antes)'
             : 'Perguntar interesse + pedir nome e cidade, e concluir',
-          primaria: !podeEnviar && !interessePerguntado,
         });
       }
 
+      // Um lugar só decide o destaque. Antes eram três expressões independentes, e duas podiam
+      // acender ao mesmo tempo num contato que casasse com as duas condições.
+      for (const opcao of opcoes) opcao.primaria = !!sugestao && opcao.tecla === sugestao.tecla;
+
       const escolha = await perguntarNaRodada({
         titulo: nome,
+        recomendacao: sugestao,
+        // O passo manual dele quando a resposta tem que ser escrita: copiar a conversa e colar
+        // numa IA. Aqui vira um clique — sem sair da caixa e sem parar a rodada.
+        copiarConversa: state.entrantes,
         linhas: [
           valueNamed('Cidade')
             ? ['Cidade: ', ...cidadeMarcada(), cidadeSubstituida()]
@@ -3239,7 +3796,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         if (!(await sendTemplate(texto, { send: true, jaConfirmado: true }))) {
           return { nome, resultado: 'erro', motivo: `${texto.name} não saiu` };
         }
-        const fechouTexto = await page.clickConcluir();
+        const fechouTexto = await concluirPeloPainel();
         if (!fechouTexto.ok) {
           return { nome, resultado: 'enviado', parar: true, motivo: `${rotulo}, mas ${fechouTexto.reason}` };
         }
@@ -3256,7 +3813,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       if (escolha === 'concluir') {
         await saveClassification({ withCompletionDate: true, quiet: true });
-        const fechou = await page.clickConcluir();
+        const fechou = await concluirPeloPainel();
         if (!fechou.ok) {
           return { nome, resultado: 'pulado', motivo: `você mandou concluir, mas ${fechou.reason}` };
         }
@@ -3282,7 +3839,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return { nome, resultado: 'erro', motivo: 'o modelo saiu mas o agradecimento não' };
       }
 
-      const concluido = await page.clickConcluir();
+      const concluido = await concluirPeloPainel();
       if (!concluido.ok) {
         // Enviado mas nao fechou: parar e dizer. Contar como concluido faria a fila crescer
         // em silencio, que foi o sintoma de "Meus" so aumentando.
@@ -3320,7 +3877,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *
    * @returns {Promise<string>} o `valor` da opção escolhida, ou 'parar' no Esc
    */
-  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [], dica = 'Esc para parar a rodada' }) {
+  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [], recomendacao = null, copiarConversa = null, dica = 'Esc para parar a rodada' }) {
     // `fechar` sai daqui de dentro para virar `promessa.cancelar`: caixa que ficou na tela
     // depois de o contato mudar tem que poder ser tirada de fora. Ver `cancelarPerguntaDeCidade`.
     let fecharDeFora = null;
@@ -3331,6 +3888,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const barra = h('div', { class: 'wf-pergunta-titulo' }, titulo);
       caixa.append(barra);
       tornarArrastavel(caixa, barra);
+
+      // A recomendação vai EM CIMA de tudo (pedido dele): é a primeira coisa a ser lida, antes
+      // dos dados do contato e das opções. O destaque na tecla continua, mas sozinho ele não
+      // dizia POR QUE aquela era a sugerida — e o porquê é o que deixa discordar dela.
+      if (recomendacao) {
+        caixa.append(
+          h('div', { class: 'wf-pergunta-recomendada' }, `Sugiro a ${recomendacao.tecla}: ${recomendacao.motivo}`)
+        );
+      }
       // Linha pode ser texto ou lista de nós — é o que deixa a cidade sair em marca-texto.
       // Linha de aviso (começa com ⚠) sai destacada: ela existe justamente para ser notada
       // antes de a tecla ser apertada, e cinza-claro como as outras ela passa batido.
@@ -3353,6 +3919,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         linhaBotoes.append(btn);
       }
       caixa.append(linhaBotoes);
+      if (copiarConversa?.length) caixa.append(montarCopiarConversa(copiarConversa, titulo));
       if (respostas.length) caixa.append(montarRespostasRapidas(respostas));
       caixa.append(h('div', { class: 'wf-pergunta-dica' }, dica));
 
@@ -3411,8 +3978,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * quando o cursor passa por cima do iframe/conversa da plataforma, que é onde um listener no
    * documento perderia o `pointermove` e a caixa "grudaria" no meio do arrasto.
    */
-  function tornarArrastavel(caixa, alca) {
-    aplicarPosicao(caixa, state.settings.perguntaPos);
+  function tornarArrastavel(caixa, alca, chavePos = 'perguntaPos') {
+    aplicarPosicao(caixa, state.settings[chavePos]);
 
     let arrasto = null;
 
@@ -3437,9 +4004,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (alca.hasPointerCapture?.(ev.pointerId)) alca.releasePointerCapture(ev.pointerId);
       const r = caixa.getBoundingClientRect();
       const pos = { left: Math.round(r.left), top: Math.round(r.top) };
-      state.settings.perguntaPos = pos;
+      state.settings[chavePos] = pos;
       // Grava relendo o storage: a Config mexe no mesmo objeto por outro caminho.
-      salvarAjuste({ perguntaPos: pos }).catch(() => {});
+      salvarAjuste({ [chavePos]: pos }).catch(() => {});
     };
     alca.addEventListener('pointerup', soltar);
     alca.addEventListener('pointercancel', soltar);
@@ -3479,6 +4046,51 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Resposta bloqueada por variável aparece **desabilitada com o motivo**, nunca sumindo: já
    * aconteceu duas vezes de a opção sumir e ninguém entender por quê.
    */
+  /**
+   * Copia o que o contato escreveu, para colar numa IA e escrever a resposta.
+   *
+   * É o passo manual que ele já faz — *"vou mandar pra uma IA ler e fazer a resposta para eu
+   * copiar e mandar"* —, sem o selecionar-e-arrastar por cima da conversa. Copia só as mensagens
+   * DO CONTATO: é o que a IA precisa ler, e as nossas já são respostas prontas dele.
+   *
+   * Não fecha a pergunta nem para a rodada. E não manda nada para lugar nenhum: o texto vai para
+   * a área de transferência da máquina dele, e quem escolhe onde colar é ele.
+   */
+  function montarCopiarConversa(entrantes, quem) {
+    const linha = h('div', { class: 'wf-pergunta-botoes' });
+    const botao = h('button', { class: 'wf-btn wf-mini', type: 'button' }, 'Copiar a conversa');
+    const aviso = h('span', { class: 'wf-pergunta-dica' }, '');
+
+    botao.addEventListener('click', async () => {
+      const texto = entrantes
+        .map((m) => {
+          const t = String(m?.texto || '').trim();
+          const tipo = String(m?.tipo || '').toUpperCase();
+
+          // Transcrição vai marcada: quem for ler precisa saber que é fala passada por
+          // reconhecimento automático, com os erros disso, e não o que a pessoa escreveu.
+          if (t && m?.transcrito) return `[${tipo.toLowerCase()} transcrito] ${t}`;
+          if (t) return t;
+
+          // Mídia sem texto e sem transcrição: marcação, para a IA saber que houve algo ali.
+          return tipo && tipo !== 'TEXT' ? `[${tipo.toLowerCase()}, sem transcrição]` : '';
+        })
+        .filter(Boolean)
+        .join('\n\n');
+
+      try {
+        await navigator.clipboard.writeText(`Mensagens de ${quem}:\n\n${texto}`);
+        aviso.textContent = 'Copiado.';
+      } catch (_) {
+        // Sem permissão de área de transferência: dizer é melhor que fingir que copiou.
+        aviso.textContent = 'O navegador não deixou copiar — selecione na conversa.';
+      }
+    });
+
+    linha.append(botao, aviso);
+    return linha;
+  }
+
   function montarRespostasRapidas(respostas) {
     const bloco = h('details', { class: 'wf-rapidas' });
     bloco.append(h('summary', {}, `Respostas rápidas (${respostas.length})`));
@@ -3698,14 +4310,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return { nome, resultado: 'pulado', continuaNaFila: true, motivo: 'já reabri esta pessoa nesta rodada' };
       }
 
-      // Aqui a rodada não envia nada, mas reabrir também não é neutro: jogaria o contato para
-      // "Meus", no meio da pilha de quem vai receber mensagem. Marcado e deixado onde está, ele
-      // fica achável pela etiqueta de triagem sem entrar na fila de envio.
-      const triagem = await separarParaVoce(contato, (await api.getConversation(sessionId, 20)).incoming);
-      if (triagem) {
-        return { nome, resultado: 'pulado', continuaNaFila: true, motivo: motivoDaTriagem(triagem) };
-      }
-
       const estado = await page.getState();
       if (estado.sessionId !== sessionId) {
         return { nome, resultado: 'erro', motivo: 'a aba trocou de atendimento no meio do caminho' };
@@ -3789,11 +4393,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           };
         }
       }
-
-      // Pediu ajuda em algum momento da conversa: sai daqui sem envio e sem conclusão. Vale
-      // mesmo tendo sido reaberto pela rodada 5 — reabrir não muda o que a pessoa escreveu.
-      const triagem = await separarParaVoce(state.contact, state.incoming);
-      if (triagem) return { nome, resultado: 'pulado', motivo: motivoDaTriagem(triagem) };
 
       const contexto = await currentVarContext();
       const pergunta = state.templates.find((t) => t.id === NO_REPLY_TEMPLATE_ID);
@@ -3932,7 +4531,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
   /** O Concluir das saídas acima, com os dois tropeços conhecidos separados. */
   async function fecharSemRetorno(nome, motivo, resultado) {
-    const fechou = await page.clickConcluir();
+    const fechou = await concluirPeloPainel();
     if (!fechou.ok) return { nome, resultado, parar: true, motivo: `${motivo}, mas ${fechou.reason}` };
     if (fechou.dialogOpen) {
       return {
@@ -3962,13 +4561,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           continuaNaFila: true,
           motivo: 'já tratei este contato nesta rodada (o atendimento voltou para a lista)',
         };
-      }
-
-      // Pediu ajuda: sai sem envio e sem conclusão. Custa uma leitura da conversa a mais, e é a
-      // que impede um modelo aprovado de sair para quem contou um problema.
-      const triagem = await separarParaVoce(contato, (await api.getConversation(sessionId, 20)).incoming);
-      if (triagem) {
-        return { nome, resultado: 'pulado', continuaNaFila: true, motivo: motivoDaTriagem(triagem) };
       }
 
       /**
@@ -4063,7 +4655,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // já recebeu, e é isso que não pode acontecer duas vezes.
       ctx?.contatosTratados?.add(contato.id);
 
-      const concluido = await page.clickConcluir();
+      const concluido = await concluirPeloPainel();
       if (!concluido.ok) {
         return { nome, resultado: 'enviado', parar: true, continuaNaFila: true, motivo: concluido.reason };
       }
@@ -4194,173 +4786,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             'este botão é para quando você conclui pela plataforma.')
       );
     }
-  }
-
-  /**
-   * Este contato é dos que **você** responde em pessoa? Se for, a rodada põe de lado.
-   *
-   * Pedido dele: *"o pedido de ajuda e dinheiro poderia ser pulado e deixar tudo por último pra
-   * eu ver pessoalmente"*. A rodada não envia, **não conclui** e não tira etiqueta nenhuma — o
-   * contato fica exatamente onde está. O que ela faz é marcar com a etiqueta de triagem, que é o
-   * que permite você filtrar a fila por ela depois e trabalhar todos de uma vez.
-   *
-   * Aplicar a etiqueta é a única escrita, e é a que transforma "pulado no log de uma rodada que
-   * já fechou" em trabalho que você acha amanhã. Log some; etiqueta fica.
-   *
-   * Falha ao marcar **não** cancela o pulo: a decisão de não enviar vale de qualquer jeito, e o
-   * motivo vai para o log. É a mesma prioridade do resto do painel — etiqueta é organização
-   * interna, mensagem é o que o contato recebe.
-   *
-   * @param {object} contato contato do CRM (usa `tagsId`)
-   * @param {string[]} mensagens as mensagens recebidas dele
-   * @returns {Promise<{motivo:string, trecho:string, marcada:boolean, erro:string}|null>}
-   */
-  async function separarParaVoce(contato, mensagens, forcado = null) {
-    // `forcado` é a IA dizendo "este é para você": mesma saída, mesma etiqueta, mesmo log. Ter
-    // um caminho só para separar contato é o que impede as duas camadas divergirem no que fazem.
-    const achado = forcado || precisaDeVoce(mensagens, state.auto.cfg.padroesTriagem);
-    if (!achado) return null;
-
-    const resultado = { ...achado, marcada: false, erro: '' };
-    const nomeEtiqueta = String(state.auto.cfg.etiquetaTriagem || '').trim();
-    if (!nomeEtiqueta) return resultado;
-
-    try {
-      const tag = await tagsLib.resolveTag(nomeEtiqueta);
-      if (!tag) {
-        // Não cria etiqueta sozinha: criar rótulo no CRM é decisão dele, e um erro de digitação
-        // na Config viraria etiqueta permanente. Avisa e segue.
-        resultado.erro = `a etiqueta "${nomeEtiqueta}" não existe no CRM — crie-a para eu poder marcar`;
-        return resultado;
-      }
-      if ((contato.tagsId || []).includes(tag.id)) {
-        resultado.marcada = true; // já estava marcado de uma rodada anterior
-        return resultado;
-      }
-      const r = await tagsLib.applyTags(contato, [tag.id]);
-      resultado.marcada = !!r.ok;
-      if (!r.ok) resultado.erro = r.error;
-    } catch (err) {
-      resultado.erro = err.message;
-    }
-    return resultado;
-  }
-
-  /**
-   * Chama a avaliação de contexto para o contato carregado. Devolve `null` se a IA está
-   * desligada, sem chave, ou se falhou — e nesses casos a rodada segue como sempre seguiu.
-   *
-   * Nunca lança: IA fora do ar não pode parar o atendimento. É a mesma regra do canal caído e da
-   * etiqueta que não grava — o que o contato recebe vem primeiro.
-   */
-  /**
-   * Tenta mandar o rascunho da IA **sem ele ler antes** — e recusa em quase tudo.
-   *
-   * Só é chamada quando a IA escalou, ou seja, quando nenhuma resposta pronta serve. As prontas
-   * continuam sendo o caminho normal (decisão dele: *"em geral utilizar as mensagens prontas e
-   * suas variações"*).
-   *
-   * **Este é o único ponto do projeto em que texto gerado por IA chega a um eleitor sem revisão
-   * humana**, e mensagem de WhatsApp não volta. Por isso tudo aqui é escrito para dizer NÃO:
-   * quem decide é `ia.podeEnviarSozinho` (puro e testado), que exige as quatro travas juntas —
-   * ligado na Config, zero avisos da revisão, a IA não ter pedido revisão, e confiança acima do
-   * limiar. Qualquer erro de rede ou formato também cai em não.
-   *
-   * @returns {Promise<{enviado:boolean, motivo:string}>}
-   */
-  async function tentarRascunhoAutomatico() {
-    if (!state.ia?.ligada || !state.ia?.enviarRascunhoAuto) {
-      return { enviado: false, motivo: '' }; // desligado: nem gasta chamada de IA
-    }
-    if (!state.incoming.length) return { enviado: false, motivo: 'o contato não escreveu nada' };
-    if (state.session?.expired) return { enviado: false, motivo: 'janela de 24h vencida' };
-
-    let rascunho;
-    try {
-      rascunho = await iaCliente.rascunhar({
-        templates: state.templates,
-        regras: state.ia.regras,
-        modelo: state.ia.modelo,
-        mensagens: state.incoming,
-        campos: { Cidade: valueNamed('Cidade') },
-      });
-    } catch (err) {
-      return { enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };
-    }
-
-    const veredito = iaLib.podeEnviarSozinho({ rascunho, ligado: true });
-    if (!veredito.pode) return { enviado: false, motivo: veredito.motivo };
-
-    // Passou nas quatro travas. Daqui para baixo é envio de verdade, para gente de verdade.
-    try {
-      await page.sendText(rascunho.texto);
-    } catch (err) {
-      return { enviado: false, motivo: `o envio falhou: ${err?.message || err}` };
-    }
-    state.lastSendAt = Date.now();
-
-    /**
-     * O texto ENVIADO vai inteiro para o log da rodada.
-     *
-     * Não é enfeite: é a única forma de ele auditar depois o que a IA falou em nome do mandato.
-     * Registro parcial aqui seria pior que nenhum — daria a impressão de auditoria sem permitir
-     * auditar.
-     */
-    registrarNaRodada(state.contact?.name || 'contato', 'aviso', `IA enviou sozinha: "${rascunho.texto}"`);
-    return { enviado: true, motivo: veredito.motivo };
-  }
-
-  async function avaliarComIA() {
-    const cfg = state.ia || {};
-    if (!cfg.ligada || !state.contact) return null;
-
-    const decisao = await iaCliente.avaliar({
-      templates: state.templates,
-      regras: cfg.regras,
-      modelo: cfg.modelo,
-      mensagens: state.incoming,
-      campos: Object.fromEntries(
-        state.classify.map((f) => [f.name, valueNamed(f.name)]).filter(([, v]) => v)
-      ),
-      etiquetas: state.tagSuggestions.filter((sg) => sg.tag && sg.jaTem).map((sg) => sg.tag.label),
-    });
-
-    // O custo de cada chamada vai para o log da rodada: sem número na tela, "quanto isso está
-    // custando" vira palpite — e foi palpite que quase manteve a IA fora do projeto.
-    if (decisao?.custo) {
-      const c = decisao.custo;
-      // "SEM CACHE" só é alarme onde o cache PODERIA ter pego. No Haiku 4.5 o prompt não
-      // alcança o mínimo de 4.096 tokens, então o zero é o normal — e alarme que toca sempre
-      // é alarme que se aprende a ignorar.
-      const podia = iaLib.vaiCachear(
-        cfg.modelo || iaLib.MODELO_PADRAO,
-        iaLib.tokensAproximados(iaLib.montarSistema({ templates: state.templates, regras: cfg.regras }))
-      );
-      const cacheOk = c.cacheLido > 0 ? `cache ${c.cacheLido}` : podia ? 'SEM CACHE' : 'sem cache (esperado)';
-      // O dólar vem junto do token: token é diagnóstico (o cache está pegando?), dólar é a
-      // pergunta que ele realmente faz. Sem o acumulado do mês, cada linha parece barata e a
-      // soma só aparece na fatura.
-      const usd = decisao.custoUsd ? ` · US$ ${decisao.custoUsd.toFixed(4)}` : '';
-      const mes = decisao.gastoMes ? ` · mês US$ ${(decisao.gastoMes.usd || 0).toFixed(2)}` : '';
-      registrarNaRodada('IA', 'pulado', `${decisao.acao} · ${cacheOk} · entrada ${c.entrada} · saída ${c.saida}${usd}${mes}`);
-    }
-    if (decisao?.aviso) {
-      // Teto atingido não é "a IA não decidiu": é uma decisão dele, tomada antes, chegando
-      // agora. Vai como aviso para não se perder entre as linhas normais do log.
-      const teto = /teto de gasto/i.test(decisao.aviso);
-      registrarNaRodada('IA', teto ? 'aviso' : 'pulado', teto ? decisao.aviso : `avaliação não usada: ${decisao.aviso}`);
-    }
-    return decisao;
-  }
-
-  /** A linha de log/tela quando um contato é separado. */
-  function motivoDaTriagem(triagem) {
-    const marca = triagem.marcada
-      ? ` — marcado com "${state.auto.cfg.etiquetaTriagem}"`
-      : triagem.erro
-        ? ` — NÃO consegui marcar: ${triagem.erro}`
-        : '';
-    return `você responde este: ${triagem.motivo} ("${triagem.trecho}")${marca}`;
   }
 
   /**
@@ -6344,6 +6769,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         h('div', { class: 'wf-origin' },
           '"Capitão" é município do RS e é a patente do candidato: sem isto, toda mensagem que ' +
             'cita "Capitão Martim" gravava a cidade Capitão. Separe por vírgula.'),
+      ])
+    );
+
+    // Etiqueta de quem chega por anúncio. A plataforma diz a origem em dado estruturado
+    // (`utm.source`, `utm.referralUrl`), então aqui não há texto a adivinhar.
+    const anuncioInput = h('input', { type: 'text' });
+    store.get('etiquetaAnuncio').then((v) => {
+      anuncioInput.value = v || '';
+    });
+    anuncioInput.addEventListener('change', async () => {
+      await store.set('etiquetaAnuncio', anuncioInput.value.trim());
+      setStatus(
+        anuncioInput.value.trim()
+          ? `Quem chegar por anúncio recebe a etiqueta "${anuncioInput.value.trim()}".`
+          : 'Ninguém será etiquetado por vir de anúncio.'
+      );
+    });
+    body.append(
+      h('label', { class: 'wf-field' }, [
+        h('span', {}, 'Etiqueta de quem chega por anúncio'),
+        anuncioInput,
+        h('div', { class: 'wf-origin' },
+          'O bloco "ANÚNCIO | FACEBOOK" no topo da conversa vem de um campo da sessão, não de ' +
+            'texto — então isto não depende de regra nem de acerto de regex. A etiqueta entra ' +
+            'como CONTEÚDO, que é o que a liga à tabela "Modelo por conteúdo" logo acima. ' +
+            'Vazio = não etiqueta ninguém por essa via.'),
       ])
     );
 

@@ -86,6 +86,27 @@ export function looksLikePlaceholder(name) {
 }
 
 /**
+ * O nome do cadastro está SEM SENTIDO ou em falta?
+ *
+ * Pedido dele (31/08): *"uma exceção pra pedir [os dados] é somente quando o nome da pessoa
+ * estiver totalmente sem sentido ou em falta"*. Antes a rodada sugeria pedir dados a quem não
+ * tinha etiqueta de cidade — e isso pegava gente já classificada, com etiqueta, só porque a
+ * cidade ainda não tinha entrado.
+ *
+ * Vai além do `looksLikePlaceholder`, que resolve o "em falta" (vazio, "[NOVO] …", telefone no
+ * lugar do nome). O "sem sentido" que sobra é o cadastro **sem vogal nenhuma** — "srn", "kkk",
+ * iniciais soltas —, que não é nome de gente e não serve para nada no CRM.
+ *
+ * Separado do `looksLikePlaceholder` de propósito: aquele decide se o **vocativo** pode sair numa
+ * mensagem, e alargá-lo mudaria o bloqueio de envio em toda parte.
+ */
+export function nomeSemSentido(name) {
+  if (looksLikePlaceholder(name)) return true;
+  const letras = String(name || '').replace(/[^\p{L}]/gu, '');
+  return !/[aeiouáàâãéêíóôõúü]/i.test(letras);
+}
+
+/**
  * O nome do cadastro é só o apelido do perfil do WhatsApp?
  *
  * Caso real: o cadastro dizia "Zane" (nome do perfil) e a pessoa respondeu "Rosane Requia" no

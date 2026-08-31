@@ -345,6 +345,15 @@ export const DEFAULT_TEMPLATES = [
 
 const DEFAULTS = {
   templates: DEFAULT_TEMPLATES,
+  /**
+   * Etiqueta de quem chegou por anúncio. Vazio = não etiqueta ninguém por essa via.
+   *
+   * A plataforma diz isso em dado estruturado, não em texto: a sessão traz `utm.source`
+   * ("FACEBOOK"), `utm.campaign` e `utm.referralUrl` ("https://fb.me/…") — é o bloco
+   * "ANÚNCIO | FACEBOOK" que aparece no topo da conversa. Casar por regra de texto funcionaria,
+   * mas depende de ele escrever a regex certa; o campo é a fonte, e não custa nada ler.
+   */
+  etiquetaAnuncio: 'ADS',
   /** { "santo angelo": "https://chat.whatsapp.com/..." } — chave sempre normalizada. */
   cityLinks: {},
   /** Usado quando a cidade não tem grupo próprio. Vazio = bloqueia o envio. */
@@ -367,6 +376,8 @@ const DEFAULTS = {
      * para todas as rodadas, não para uma configuração de rodada.
      */
     perguntaPos: null,
+    /** Posição da janelinha do contador. Própria, senão ela e a pergunta se empurram. */
+    contadorPos: null,
   },
 
   /**
@@ -411,6 +422,29 @@ const DEFAULTS = {
      */
     horasSemResposta: 12,
     /**
+     * Etiquetas que dispensam o contato da rodada — a sugestão vira "pular".
+     *
+     * Pedido dele (31/08): *"etiqueta engajado, quando estiver no automatizado pode ser pulado"*.
+     * Quem já está engajado não precisa de formulário nem de pergunta de interesse: o trabalho da
+     * rodada é justamente transformar desconhecido em engajado.
+     *
+     * Casa por PEDAÇO do rótulo, sem acento e sem caixa: "engajado" pega "ENGAJADO/BIZA",
+     * "Apoiador Muito engajado" e o que mais vier com essa palavra. Separe por vírgula para
+     * acrescentar outras — é para ele mexer aqui sem precisar de mim.
+     */
+    etiquetasQuePulam: 'engajado',
+    /**
+     * Pular esses contatos SOZINHO, sem perguntar.
+     *
+     * Nasce desligado de propósito. Com ele ligado a rodada deixa de perguntar em alguém — e a
+     * regra deste projeto é que nada sai da fila sem decisão humana. A exceção é aceitável aqui
+     * porque **é ele quem marca a caixa**, o critério é uma etiqueta que ele mesmo escolheu, e o
+     * pulo aparece no log da rodada com o nome da etiqueta que causou.
+     *
+     * Pular não envia nada e não conclui: o atendimento fica aberto, exatamente onde estava.
+     */
+    pularEtiquetasSozinho: false,
+    /**
      * Janela em que a rodada NÃO manda de novo para quem já recebeu mensagem nossa.
      *
      * Quem acabou de ser concluído volta para o TOPO da lista de concluídos, então a rodada
@@ -430,24 +464,6 @@ const DEFAULTS = {
      * Vazio = não tira nada.
      */
     etiquetaSemRetorno: '1 SEM RETORNO',
-    /**
-     * A etiqueta que separa quem **você** vai responder em pessoa.
-     *
-     * Pedido de dinheiro, de cesta, de remédio, de emprego: a rodada põe de lado, marca com esta
-     * etiqueta e segue. Depois você filtra a fila por ela e trabalha todos de uma vez, com calma.
-     * É o mesmo mecanismo do resto do painel — quem escolhe quem entra na rodada é o filtro da
-     * plataforma, e a etiqueta é o que o filtro enxerga.
-     *
-     * Vazio = a rodada ainda pula, mas não marca nada (e aí o contato só aparece no log).
-     */
-    etiquetaTriagem: '0 RESPONDER PESSOALMENTE',
-    /**
-     * Padrões seus, somados aos que o `triagem.js` já conhece. Um por linha, regex sem barras.
-     *
-     * Existe porque a campanha muda: um assunto que hoje é raro vira enxurrada na semana da
-     * agenda. Padrão inválido é ignorado, nunca derruba a rodada.
-     */
-    padroesTriagem: [],
   },
 
   /**

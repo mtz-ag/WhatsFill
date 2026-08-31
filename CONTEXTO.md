@@ -1,146 +1,167 @@
 # Contexto para outra sessão — WhatsFill
 
-Cole isto (ou aponte para este arquivo) numa aba nova do Claude. Ele existe para a próxima
-sessão não redescobrir o que já foi decidido, nem "consertar" o que já está consertado.
+Cole isto (ou aponte para este arquivo) numa aba nova do Claude. Ele existe para a próxima sessão
+não redescobrir o que já foi decidido, nem "consertar" o que já está consertado.
+
+Atualizado em **31/08/2026**, ao fim de um dia longo de trabalho ao vivo com o Thiago.
 
 ---
 
 ## 1. Antes de qualquer coisa: você está olhando o código certo?
 
-O trabalho de 09 a 12/08/2026 está em:
-
 - repositório **`github.com/mtz-ag/WhatsFill`**
-- branch **`claude/extensao-claude-analise-i9spxw`** (é o único branch; **não existe `main`**)
+- branch **`claude/extensao-claude-analise-i9spxw`** (é o único deste repo)
+- clone local dele: **`C:\Users\thiag\OneDrive\Documents\GitHub\WhatsFill`**
 
-**A pasta local do Thiago pode estar desatualizada.** Confira antes de mexer — dois marcadores
-que só existem na versão nova:
+**Confira a versão antes de diagnosticar qualquer coisa.** O cabeçalho do painel mostra a versão
+carregada; ela tem que bater com o `manifest.json`. Hoje isso já enganou duas vezes: numa, o Chrome
+estava com uma extensão de nome diferente (`WhatsFill` x `WhatsFill+IA`); noutra, a pasta que eu
+editava era uma cópia solta em `Downloads`, sem `.git`.
 
 ```bash
-ls tools/simular-fila.mjs          # existe? então a pasta está atualizada
-grep -c "primeiro_nome" src/lib/store.js   # tem que dar 0
+node tools/checar-modulos.mjs   # 29 módulos, 0 erros de sintaxe
+grep '"version"' manifest.json
 ```
-
-Se der errado, é código velho: qualquer análise vai apontar bugs já corrigidos.
-
-> Nota: o `registro.md` menciona `github.com/thiagokcw-coder/WhatsFill`, que é o repositório
-> original dele. O trabalho recente está no `mtz-ag`, acima.
 
 ---
 
 ## 2. O que é a extensão, em cinco linhas
 
-Extensão Chrome (MV3, JavaScript puro, **sem build step**) que acelera o atendimento político
-no **mobiliza.app**: lê o que o contato escreveu, classifica (nome, cidade, COREDE, etiquetas),
-grava no CRM e envia respostas prontas ou modelos aprovados. Painel encaixado na borda direita.
+Extensão Chrome (MV3, JavaScript puro, **sem build step**) que acelera o atendimento político no
+**mobiliza.app**: lê o que o contato escreveu, classifica (nome, cidade, COREDE, etiquetas), grava
+no CRM e envia respostas prontas ou modelos aprovados. Painel encaixado na borda direita.
 
-**Leia, nesta ordem, antes de implementar qualquer coisa:** `registro.md` (log de decisões, o
-mais recente no topo), `CLAUDE.md` (regras e armadilhas — é curto de propósito) e `README.md`.
-
----
-
-## 3. O laço de trabalho hoje — três rodadas na aba Automatizado
-
-1. **Novos: pedir os dados** — assume, manda o formulário (nome/cidade/link de grupo), conclui.
-2. **Conferir e responder a fila** ("Meus" e "Outros") — classifica e **pergunta contato a
-   contato**. Teclas: `1` modelo do conteúdo, `2` pular, `3` concluir, `4` agradecer
-   informações, `5` mensagem do momento, `6` responder à mão, `7` perguntar interesse + pedir
-   dados, `Esc` parar. Conclui sozinho **só** quem foi respondido há menos de 12h.
-3. **Sem retorno: reabrir e perguntar** — sobre a lista de **concluídos** filtrada por ele:
-   Reiniciar → modelo aprovado → concluir → volta para a lista → próximo.
+**Leia, nesta ordem, antes de implementar:** `registro.md` (log de decisões, o mais recente no
+topo), `CLAUDE.md` (regras e armadilhas — é curto de propósito) e `README.md`.
 
 ---
 
-## 4. O que mudou nesta leva (20 commits) — em uma linha cada
+## 3. A peça central de hoje: `src/lib/sugestao.js`
 
-**Parser e cidade**
-- "Capitão Martim" casava com o município **Capitão**, com confiança `exata` (a que grava sem
-  clique). Duas travas em `cities.js`. **Contatos já gravados com cidade Capitão estão errados.**
-- "Rio Grande do Sul" casava com a cidade **Rio Grande**.
-- Encurtamento de uma palavra passa a valer ("Caxias" → Caxias do Sul), exata só quando é a
-  resposta inteira.
-- Sigla sai do nome ("Jeane do PL" → "Jeane"); "srn" (sem vogal) deixa de virar nome.
-- Mensagem que é **só** o nome do município conta como informada e **substitui** a cidade do
-  CRM, trocando a etiqueta de COREDE junto.
-- Cadastro "Nome - Cidade" passa a ser lido (antes só "Cidade - Nome").
+A caixa da rodada agora **recomenda uma tecla e escreve o porquê em cima**. As regras são uma
+**lista ordenada** — a primeira que casa vence — e acrescentar uma situação é acrescentar uma
+entrada. **Ele vai pedir situações novas; é lá que elas entram.**
 
-**Respostas**
-- **Nenhuma resposta chama o contato pelo nome.** Regra do projeto, com migração que reescreve
-  as já salvas. O nome do CRM erra demais e ainda bloqueia o envio quando falta.
-- Pergunta dos grupos pede o **link de convite**, não o nome.
-- Pergunta de interesse pede **"Sim / Nome completo / Cidade"** na mesma mensagem.
+Ordem em 31/08 (de cima para baixo):
 
-**Rodada**
-- Pergunta **arrastável**, sem escurecer nem bloquear a conversa; respostas rápidas dentro dela.
-- Atalho de tecla ignora evento vindo de campo de texto (senão o "2" digitado conclui alguém).
-- `chrome.power` impede o **computador** de suspender (o áudio só impedia a aba de congelar).
-- Anti-duplicata passou a ser **por contato** (olhando a conversa), não por modelo — era o que
-  deixava a mesma pessoa receber resposta pronta e modelo em 32 minutos.
-- Conclusão automática só para quem foi respondido há pouco; silêncio longo **para e pergunta**.
+1. `etiqueta-dispensa-da-fila` — tem "engajado" → **2, pular**
+2. `ultima-pede-resposta-pessoal` — áudio, vídeo, texto 400+ → **6, à mão**
+3. `ultima-e-despedida` — "é nós", "abraço", "amém mestre" → **3, concluir**
+4. `voltou-por-outro-anuncio` → **5** ou **3** (se já recebeu a mensagem do momento)
+5. `ultima-e-so-reacao` — figura, emoji, link → **5**, ou **3** se já respondemos hoje
+6. `nunca-pediram-dados` — veio do anúncio, sem cidade, formulário nunca saiu → **4**
+7. `conteudo-pedido` → **1, mandar o modelo**
+8. `nome-sem-sentido` → **4, pedir dados**
+9. `nunca-perguntaram-interesse` → **7**
+10. `pedido-hoje-sem-resposta` → **3**
 
-**Sinais de tela (`dom.js`)**
-- "Concluído" tem **dois** retratos, e um deles não tem botão "Reiniciar".
-- A lista de concluídos é o único gancho de fila **sem `data-cy` conhecido** — a rodada
-  descobre por tentativa verificada.
+**A regra só recomenda, nunca decide.** Todas as opções continuam na tela. É essa fronteira que
+permite uma regra agressiva sem risco — o pior caso é um destaque no lugar errado.
+
+**A única exceção** é a caixa "Pular sozinho, sem perguntar" (aba Automatizado, desmarcada por
+padrão), e mesmo ela registra no Andamento o nome da etiqueta que causou o pulo.
 
 ---
 
-## 5. Pendências que dependem do Thiago (nenhuma é código)
+## 4. As armadilhas que custaram tempo HOJE
 
-1. **`data-cy` da lista de concluídos.** Aba Automatizado → botão **"Achar a lista de
-   concluídos"** → mandar o texto que aparece. Com ele, `CY_CONCLUIDOS` em `dom.js` deixa de
-   depender de tentativa.
-2. **"Etiquetas quando responder sim"** (aba Config) está **vazio**. Enquanto estiver, quem
-   responde "sim" à pergunta de interesse não recebe etiqueta nenhuma.
-3. **Tabela "Modelo por conteúdo"** (aba Config) está vazia — é o pré-requisito da tecla 1.
-4. **Rever na base os contatos com cidade "Capitão"** — vieram do anúncio, não moram lá.
-5. **Diálogo de "motivo de conclusão"** da plataforma trava a rodada no primeiro contato. Ou
-   desliga na plataforma, ou ele decide um motivo padrão para a rodada escolher.
+Todas estão no `CLAUDE.md`; estas são as que mais provavelmente vão morder de novo.
+
+- **`node --check` NÃO basta.** Ele analisa `.js` como CommonJS (modo solto); o Chrome carrega como
+  ES module (strict). Um `.join('\n')` virou string com quebra de linha crua, o `--check` disse OK
+  e **a extensão parou de carregar** — sem erro visível na aba, porque o content script morre antes
+  de desenhar. Rode `node tools/checar-modulos.mjs`.
+- **O registro de envios (`templatesLib.wasSent`) só enxerga o que o PAINEL mandou.** Modelo
+  disparado pela automação, ou resposta escrita à mão, não deixam rastro. Quem precisa saber o que
+  já foi usa `getConversation().nossas` / `.nossaUltimaAt`.
+- **A lista de etiquetas da caixa da rodada não é a do contato** — vem de `tagSuggestions`. Regra
+  que decide por etiqueta lê `state.contact.tagsId` cruzado com `tagsLib.allTags()`.
+- **`\b` não funciona antes de palavra acentuada.** `/\bé nós/` nunca casa no começo da string.
+  Use `(^|\s)`.
+- **Regex com flag `g` guarda `lastIndex` entre chamadas.** `test()` alterna resultado. Já mordeu
+  duas vezes hoje (emoji e vocabulário da campanha).
+- **A sessão dura semanas e a conversa é paginada.** 50 mensagens por página deixava 118
+  invisíveis. Hoje são 200, com segunda página.
+- **Áudio traz transcrição** em `details.transcription.text`.
+- **A origem do anúncio é dado, não texto:** `utm.source`, `utm.campaign`, `utm.referralUrl`.
+
+### O viés que eu repeti três vezes hoje
+
+Trava minha contra falso positivo derrubando o caso verdadeiro: o `\b` do "É nós", a lista de
+etiquetas errada, e duas condições que eu inventei na regra do retorno por anúncio. Todas nasceram
+de "melhor não errar fazendo demais", e o custo real foi **não fazer nada no caso que importava**.
+Quando criar uma trava, teste o caso dele literalmente.
 
 ---
 
-## 6. O que fazer primeiro se esta sessão tiver acesso ao navegador
+## 5. Regras de negócio que ele decidiu (não as reinvente)
 
-Isto é o que a sessão remota **não** consegue fazer, e é onde ela mais ajuda:
+- **Cidade só sai de contexto**: resposta ao formulário, mensagem curta que é a cidade, menção com
+  pista ("moro em", "sou de", "aqui em", "em"), ou **resposta a uma pergunta nossa** — neste último
+  caso "maria cachoeirinha" vira nome Maria + cidade Cachoeirinha, sem separador.
+- **Cidade nunca é gravada sem clique.** "meu genro mora em Santiago" tem pista e está errado.
+- **Transcrição de áudio alimenta o parser, mas sempre rebaixada** (`rebaixarParaPalpite`):
+  `aproximada` + `informada: false`. Nunca grava sozinha, nunca substitui o CRM.
+- **Pedir dados** é para quem tem nome sem sentido, ou para quem veio do anúncio e **nunca**
+  recebeu o formulário. Quem ignorou o formulário recebe o conteúdo — *"talvez em outra hora ela
+  forneça"*.
+- **Nenhuma resposta chama o contato pelo nome** (o cadastro erra demais).
+- **Vocabulário da campanha nunca vira cidade** (Zucco, Bolsonaro, Capitão Martim…).
 
-1. Abrir o mobiliza com a extensão carregada, aba Automatizado → **"Achar a lista de
-   concluídos"** e anotar o `data-cy` do ícone de caixa ao lado de "Outros".
-2. Rodar a rodada "Sem retorno" com **limite 2** e relatar em que passo ela para.
-3. Conferir os sinais de tela: `node tools/checar-dom.mjs` (precisa de Playwright).
+---
+
+## 6. Pendências dele (nenhuma é código)
+
+1. **Tabela "Modelo por conteúdo"**: ele havia posto `ADS = Campanha Martim` no campo errado
+   ("Conteúdo preferido no empate"). O mapeamento vai na tabela; o preferido leva só o nome da
+   etiqueta.
+2. **`data-cy` da lista de concluídos** — resolvido em 30/08 (`icon-chat-sessions-archive`), mas o
+   botão "Achar a lista de concluídos" continua na aba Automatizado.
+3. **Diálogo de "motivo de conclusão"** da plataforma trava a rodada no primeiro contato. Ou ele
+   desliga na plataforma, ou decide um motivo padrão.
+4. **Transcrição alimentar as REGRAS de etiqueta** (hoje só alimenta o parser). Etiqueta de
+   conteúdo é gravada automaticamente, então isso escreveria no CRM a partir de fala ouvida por
+   máquina. Decisão dele, ainda não tomada.
 
 ---
 
 ## 7. Como saber que não quebrou nada
 
 ```bash
+node tools/checar-modulos.mjs && \
 node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && \
-node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs
+node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && \
+node tests/templates.test.mjs && node tests/categorizar.test.mjs && \
+node tests/cortesia.test.mjs && node tests/sugestao.test.mjs
 ```
 
-Seis suítes, Node puro, sem dependência, **offline**. Fora delas (precisam de navegador):
-`tools/checar-dom.mjs` (sinais de tela), `tools/checar-pergunta.mjs` (a caixa da rodada não
-pode voltar a bloquear a conversa), `tools/simular-fila.mjs` (o laço de posição da fila).
+Dez suítes, Node puro, sem dependência, **offline**. Fora delas (precisam de navegador):
+`tools/checar-dom.mjs`, `tools/checar-pergunta.mjs`, `tools/simular-fila.mjs`.
+
+**A suíte pagou o próprio custo hoje:** ao endurecer a regra da cidade, três testes caíram e
+mostraram que "contexto" era mais largo do que os dois exemplos que ele tinha dado. Sem eles, eu
+teria trocado um falso positivo por três falsos negativos.
 
 ---
 
 ## 8. As regras que não se negociam
 
-Estão inteiras no `CLAUDE.md`. As que mais custaram:
-
 - **Dados reais de eleitores; toda escrita é em produção.** Contato de teste: "Thiago Tim".
 - **Sem IA na extração.** Parser determinístico. Na dúvida, **recusar com o motivo na tela**.
-- **Nunca sobrescrever o CRM**, com uma exceção: a cidade que a própria pessoa informou.
-- **Escolha explícita dele não se substitui por dedução**, nem quando a dedução está certa.
-- **Regra que trata dois contatos de forma diferente tem que dizer o porquê na tela** — senão
-  vira "alguns funcionam e outros não".
+- **Nunca sobrescrever o CRM**, com uma exceção: a cidade que a própria pessoa ESCREVEU.
+- **Escolha explícita dele não se substitui por dedução.**
 - **Nunca escrever telefone ou nome real de eleitor** em arquivo do repositório.
-- Commits em português sem acentos, `tipo(escopo): resumo`, e **todo commit leva o
-  `registro.md` junto**.
+- Commits em português sem acentos, `tipo(escopo): resumo`, e **todo commit leva o `registro.md`
+  junto**. Suba a `version` do manifesto quando o comportamento visível mudar.
 
 ---
 
-## 9. O que a sessão remota não alcança
+## 9. Como ele trabalha, e o que isso pede de você
 
-Container na nuvem: sem acesso ao Chrome dele, sem `mobiliza.app` (bloqueado pela rede) e sem
-`servicodados.ibge.gov.br`. Por isso os testes rodam offline e o diagnóstico de tela depende de
-print ou de uma sessão local. Isso **não** impede ler código, achar causa raiz e corrigir — foi
-assim que saíram os 20 commits desta leva.
+Ele manda **print da tela com uma frase curta**. A frase costuma ser o pedido, e a print costuma
+conter a causa — leia as duas. Várias vezes hoje a print mostrou algo que a frase não dizia (a
+etiqueta que faltava na caixa, o modelo que já estava na conversa, o horário da mensagem anterior).
+
+Ele **muda de ideia com bons argumentos** — a regra de "pedir dados" trocou de critério duas vezes
+em dois dias, e nas duas ele estava certo. Quando isso acontecer, registre a reversão **com as
+palavras dele** no comentário da regra: sem isso, alguém "conserta" a ordem de volta em um mês.
