@@ -18,6 +18,7 @@ import * as keepalive from '../lib/keepalive.js';
 import * as categorizar from '../lib/categorizar.js';
 import { extract } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
+import { sugerirAcao } from '../lib/sugestao.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil } from '../lib/vars.js';
 
@@ -3248,14 +3249,35 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         };
       }
 
+      /**
+       * A etiqueta de CIDADE é o que faz o contato existir para o trabalho: a API só filtra por
+       * etiqueta, e sem ela a pessoa não entra em lista nenhuma. Conta tanto a que já está no CRM
+       * quanto a que esta rodada vai gravar agora.
+       */
+      const idsDeCidade = await tagsLib.cityTagIds().catch(() => new Set());
+      const temEtiquetaDeCidade =
+        (state.contact?.tagsId || []).some((id) => idsDeCidade.has(id)) ||
+        state.tagSuggestions.some((sug) => sug.origem === 'cidade' && sug.tag && (sug.marcada || sug.jaTem));
+
+      // O destaque vem da tabela de regras (`sugestao.js`), não de condições espalhadas aqui.
+      // Ela só RECOMENDA: todas as opções continuam na tela e todas as teclas continuam valendo.
+      const sugestao = sugerirAcao({
+        temEtiquetaDeCidade,
+        podePedirDados: !pedirTrava,
+        pedidoHoje,
+        podeEnviar,
+        enviadoHoje,
+        conteudoPedido: conteudoEscolhido?.nome || '',
+        podePerguntarInteresse,
+        interessePerguntado: !!interessePerguntado,
+      });
+
       const opcoes = [];
       if (podeEnviar) {
         opcoes.push({
           tecla: '1',
           valor: 'enviar',
           rotulo: enviadoHoje ? `Mandar de novo "${modelo.name}"` : `Mandar modelo "${modelo.name}"`,
-          // Enviado hoje deixa de ser a opção destacada: repetir tem que ser decisão, não inércia.
-          primaria: !enviadoHoje,
         });
       }
       opcoes.push({ tecla: '2', valor: 'pular', rotulo: 'Pular (deixa aberto)' });
@@ -3268,7 +3290,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           tecla: '4',
           valor: 'pedirdados',
           rotulo: pedidoHoje ? 'Pedir dados DE NOVO e concluir' : 'Pedir dados e concluir',
-          primaria: !podeEnviar && !podePerguntarInteresse && !pedidoHoje,
         });
       }
       if (!momentoTrava) {
@@ -3282,12 +3303,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           rotulo: interessePerguntado
             ? 'Perguntar interesse DE NOVO (já perguntei antes)'
             : 'Perguntar interesse + pedir nome e cidade, e concluir',
-          primaria: !podeEnviar && !interessePerguntado,
         });
       }
 
+      // Um lugar só decide o destaque. Antes eram três expressões independentes, e duas podiam
+      // acender ao mesmo tempo num contato que casasse com as duas condições.
+      for (const opcao of opcoes) opcao.primaria = !!sugestao && opcao.tecla === sugestao.tecla;
+
       const escolha = await perguntarNaRodada({
         titulo: nome,
+        recomendacao: sugestao,
         linhas: [
           valueNamed('Cidade')
             ? ['Cidade: ', ...cidadeMarcada(), cidadeSubstituida()]
@@ -3461,7 +3486,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *
    * @returns {Promise<string>} o `valor` da opção escolhida, ou 'parar' no Esc
    */
-  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [], dica = 'Esc para parar a rodada' }) {
+  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [], recomendacao = null, dica = 'Esc para parar a rodada' }) {
     // `fechar` sai daqui de dentro para virar `promessa.cancelar`: caixa que ficou na tela
     // depois de o contato mudar tem que poder ser tirada de fora. Ver `cancelarPerguntaDeCidade`.
     let fecharDeFora = null;
@@ -3472,6 +3497,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const barra = h('div', { class: 'wf-pergunta-titulo' }, titulo);
       caixa.append(barra);
       tornarArrastavel(caixa, barra);
+
+      // A recomendação vai EM CIMA de tudo (pedido dele): é a primeira coisa a ser lida, antes
+      // dos dados do contato e das opções. O destaque na tecla continua, mas sozinho ele não
+      // dizia POR QUE aquela era a sugerida — e o porquê é o que deixa discordar dela.
+      if (recomendacao) {
+        caixa.append(
+          h('div', { class: 'wf-pergunta-recomendada' }, `Sugiro a ${recomendacao.tecla}: ${recomendacao.motivo}`)
+        );
+      }
       // Linha pode ser texto ou lista de nós — é o que deixa a cidade sair em marca-texto.
       // Linha de aviso (começa com ⚠) sai destacada: ela existe justamente para ser notada
       // antes de a tecla ser apertada, e cinza-claro como as outras ela passa batido.

@@ -338,6 +338,18 @@
 .wf-pergunta-titulo:active { cursor: grabbing; }
 .wf-pergunta-titulo::before { content: '⠿ '; color: var(--wf-muted); font-weight: 400; }
 .wf-pergunta-linha { color: var(--wf-muted); font-size: 12px; }
+
+/* A recomendação, em cima de tudo. Ela tem que ser lida ANTES dos dados e das opções: o destaque
+   na tecla dizia QUAL era a sugerida, nunca POR QUÊ — e o porquê é o que permite discordar. */
+.wf-pergunta-recomendada {
+  margin: 6px 0 8px;
+  padding: 7px 9px;
+  border-radius: 6px;
+  border-left: 3px solid var(--wf-accent, #6366f1);
+  background: rgba(99, 102, 241, 0.12);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
 .wf-pergunta-corpo { margin: 10px 0 12px; font-size: 13px; white-space: pre-wrap; }
 
 /* O número do contador flutuante: ele existe para ser lido de relance, no meio do atendimento,

@@ -5,6 +5,66 @@
 
 ---
 
+## 2026-08-30 — A recomendação sai de dentro do código e vira tabela de regras
+
+**Pedido dele:** *"vamos trabalhar nas sugestões de mensagem… deixe destacado em cima das
+mensagens, quando a pessoa não tiver etiqueta de cidade, sempre pedir dados, vou adicionando
+situações e sugestões conforme aparecer"*.
+
+A última frase é a que definiu o desenho: se ele vai acrescentar situações, o custo de
+acrescentar uma tem que ser uma linha.
+
+### Como era, e por que não dava para crescer
+
+O destaque nascia de **três expressões `primaria:` independentes**, no meio do montador da
+pergunta:
+
+```
+primaria: !enviadoHoje
+primaria: !podeEnviar && !podePerguntarInteresse && !pedidoHoje
+primaria: !podeEnviar && !interessePerguntado
+```
+
+Três problemas: acrescentar uma situação exigia mexer em condição booleana no meio do código;
+não dava para dizer, olhando, qual tinha vencido; e **duas podiam acender ao mesmo tempo** num
+contato que casasse com as duas condições.
+
+### Agora
+
+`src/lib/sugestao.js`, puro e testado: uma **lista ordenada** onde a primeira regra que casa
+vence. Acrescentar uma situação é acrescentar uma entrada com `quando` e `motivo`, na posição da
+prioridade dela. O painel lê a lista inteira e um lugar só decide o destaque.
+
+### A regra que ele pediu vem em PRIMEIRO
+
+*Sem etiqueta de cidade → pedir dados*, acima até de mandar o conteúdo pedido. A razão é o
+trabalho todo: a API só filtra por etiqueta, então contato sem etiqueta de cidade **não entra em
+lista nenhuma** — mandar o conteúdo resolve hoje e perde a pessoa amanhã.
+
+**A exceção que mantive:** já pedido hoje não é recomendado de novo. Pedir duas vezes no mesmo
+dia soa a robô, e a própria caixa já avisava isso. A opção continua na tela; ela só deixa de ser
+a sugerida.
+
+### O que torna uma regra agressiva segura
+
+**Ela só recomenda, nunca decide.** Todas as opções continuam na tela e todas as teclas continuam
+valendo. O pior caso de uma regra errada é um destaque no lugar errado — não uma mensagem enviada
+errada. Foi isso que me deixou implementar "sempre" sem hesitar.
+
+### Em cima das mensagens
+
+A recomendação virou uma faixa no topo da caixa, antes dos dados do contato e das opções, com o
+**motivo escrito**. O destaque na tecla dizia QUAL era a sugerida e nunca POR QUÊ — e o porquê é
+o que permite discordar dela.
+
+### Arquivos
+
+`src/lib/sugestao.js` (novo), `tests/sugestao.test.mjs` (novo, 19 asserções),
+`src/panel/panel.js`, `src/panel/panel.css`, `CLAUDE.md`, `manifest.json` (0.19.0 → 0.20.0).
+Dez suítes passando.
+
+---
+
 ## 2026-08-30 — 118 mensagens invisíveis: por que o conteúdo "do dia anterior" nunca era reconhecido
 
 **Relato dele:** *"bote a etiqueta também, a extensão não reconhece o conteúdo quando é do dia
