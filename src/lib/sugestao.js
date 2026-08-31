@@ -154,27 +154,30 @@ export const REGRAS = [
     motivo: (c) => `pediu "${c.conteudoPedido || 'conteúdo'}" e há modelo mapeado — mande.`,
   },
   {
-    id: 'sem-etiqueta-de-cidade',
+    id: 'nome-sem-sentido',
     tecla: '4',
     /**
-     * Pedido do Thiago: *"quando a pessoa não tiver etiqueta de cidade, sempre pedir dados"*.
+     * **O critério é o NOME, não a cidade** — e esta é a segunda correção dele nesta regra.
      *
-     * Sem etiqueta de cidade o contato não entra em filtro nenhum: a API só filtra por etiqueta,
-     * então ele existe no CRM e não aparece em nenhuma lista de trabalho.
+     * Ela nasceu em 30/08 como *"quando a pessoa não tiver etiqueta de cidade, sempre pedir
+     * dados"*. Em 31/08 ele a pôs abaixo de "conteúdo pedido" (*"ela ignorou totalmente o pedido
+     * da cidade, eu mando o modelo mesmo assim"*), e no mesmo dia apontou o que ainda sobrava:
      *
-     * **Mas ficou ABAIXO de "conteúdo pedido", e a mudança é dele** (31/08, com a print da
-     * Janete): *"ela ignorou totalmente o pedido da cidade, eu mando o modelo mesmo assim,
-     * talvez em outra hora ela forneça"*. É a leitura certa — quem pediu conteúdo e não deu a
-     * cidade não fica mais perto de dar a cidade recebendo o formulário de novo; fica mais perto
-     * recebendo o que pediu. A cidade vira o caminho de quem não tem NADA a receber.
+     * > *"ao abrir conversas está pedindo dados pra quem já tem etiquetas; uma exceção pra pedir
+     * > é somente quando o nome da pessoa estiver totalmente sem sentido ou em falta"*
+     *
+     * Ele está certo, e o argumento é sobre o que cada falta CUSTA. Cidade faltando é comum e
+     * não impede trabalhar o contato: ele tem etiqueta, tem conteúdo, aparece nos filtros que
+     * importam, e a cidade ainda pode vir numa conversa qualquer. **Nome vazio ou impronunciável
+     * é o que quebra** — bloqueia o vocativo, deixa o cadastro inútil no CRM, e nenhuma outra
+     * conversa conserta sozinha.
      *
      * **A exceção que fica:** já pedido hoje não é recomendado de novo. Pedir duas vezes no
-     * mesmo dia soa a robô — é a mesma razão pela qual o destaque já saía da tecla 4 nesse caso.
-     * A opção continua na tela; ela só deixa de ser a sugerida.
+     * mesmo dia soa a robô. A opção continua na tela; ela só deixa de ser a sugerida.
      */
-    quando: (c) => !c.temEtiquetaDeCidade && c.podePedirDados && !c.pedidoHoje,
+    quando: (c) => c.nomeSemSentido && c.podePedirDados && !c.pedidoHoje,
     motivo: () =>
-      'sem etiqueta de cidade — sem ela este contato não entra em filtro nenhum. Peça os dados.',
+      'o nome do cadastro está vazio ou sem sentido — é o que nenhuma outra conversa conserta. Peça os dados.',
   },
   {
     id: 'nunca-perguntaram-interesse',

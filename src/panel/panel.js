@@ -21,7 +21,7 @@ import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
 import { ultimaEhSoReacao, ultimaPedeRespostaPessoal, ultimaEhDespedida } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
-import { looksLikePlaceholder, nomeVeioDoPerfil } from '../lib/vars.js';
+import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido } from '../lib/vars.js';
 
 const GROUP_TEMPLATE_ID = 'link-grupo';
 const THANKS_TEMPLATE_ID = 'agradecimento';
@@ -3427,6 +3427,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
         podeMandarMomento: !momentoTrava,
         temEtiquetaDeCidade,
+        // O critério de "pedir dados" é o NOME, não a cidade (decisão dele, 31/08).
+        nomeSemSentido: nomeSemSentido(state.contact?.name),
         podePedirDados: !pedirTrava,
         pedidoHoje,
         podeEnviar,

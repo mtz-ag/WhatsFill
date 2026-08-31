@@ -5,6 +5,56 @@
 
 ---
 
+## 2026-08-31 — "Pedir dados" passa a ser sobre o NOME, não sobre a cidade
+
+**Relato dele:** *"ao abrir conversas está pedindo dados pra quem já tem etiquetas, uma exceção
+pra pedir é somente quando o nome da pessoa estiver totalmente sem sentido ou em falta"*.
+
+É a **segunda correção dele nesta mesma regra em dois dias**, e as três versões contam a história:
+
+1. **30/08** — *"quando a pessoa não tiver etiqueta de cidade, sempre pedir dados"*. Eu pus a
+   regra acima de tudo.
+2. **31/08, manhã** — *"ela ignorou totalmente o pedido da cidade, eu mando o modelo mesmo
+   assim"*. Desceu para abaixo de "conteúdo pedido".
+3. **31/08, tarde** — o critério inteiro estava errado.
+
+### Por que ele está certo
+
+O argumento é sobre o que cada falta CUSTA.
+
+**Cidade faltando é comum e não impede trabalhar o contato:** ele tem etiqueta, tem conteúdo,
+aparece nos filtros que importam, e a cidade ainda pode vir em qualquer conversa. Pedir o
+formulário a quem já está classificado é exatamente o incômodo que ele descreveu.
+
+**Nome vazio ou impronunciável é o que quebra:** bloqueia o vocativo, deixa o cadastro inútil no
+CRM, e **nenhuma outra conversa conserta sozinha** — ninguém manda o nome espontaneamente.
+
+### `vars.nomeSemSentido`
+
+Função nova, e separada do `looksLikePlaceholder` de propósito: aquele decide se o **vocativo**
+pode sair numa mensagem, e alargá-lo mudaria o bloqueio de envio em todo o painel.
+
+Ela soma o "em falta" (vazio, "[NOVO] …", telefone no lugar do nome) ao "sem sentido" que faltava:
+cadastro **sem vogal nenhuma** — "srn", "kkk", iniciais soltas.
+
+**Uma herança que aceitei e registrei no teste:** "Zé" conta como falta, porque
+`looksLikePlaceholder` trata menos de 3 letras como telefone. É pedir o nome completo a quem está
+cadastrado com dois caracteres — conservador, e do lado certo.
+
+### Ordem hoje
+
+engajado → resposta pessoal → despedida → voltou por anúncio → reação → conteúdo pedido →
+**nome sem sentido** → nunca perguntaram interesse → já pedi hoje.
+
+### Arquivos
+
+`src/lib/vars.js` (`nomeSemSentido`), `src/lib/sugestao.js` (a regra e o porquê da mudança),
+`src/panel/panel.js` (contexto), `tests/vars.test.mjs` (10 asserções novas),
+`tests/sugestao.test.mjs` (ajustadas ao critério novo), `manifest.json` (0.31.0 → 0.32.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-31 — "Zucco" como cidade, e a caixa de pular engajado sozinho
 
 ### 1. O anúncio propunha o nome do candidato como cidade

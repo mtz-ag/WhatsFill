@@ -12,6 +12,7 @@ import { sugerirAcao, REGRAS } from '../src/lib/sugestao.js';
 
 /** Retrato de um contato "sem nada": nenhuma regra deveria casar por acidente. */
 const base = {
+  nomeSemSentido: false,
   modeloJaNaConversa: false,
   respondidoHoje: false,
   ultimaEhDespedida: false,
@@ -32,27 +33,32 @@ const base = {
 };
 const com = (mudanca) => sugerirAcao({ ...base, ...mudanca });
 
-grupo('sem etiqueta de cidade: pedir dados, e na frente de tudo');
+grupo('nome sem sentido: pedir dados');
 {
-  const r = com({ temEtiquetaDeCidade: false });
+  const r = com({ nomeSemSentido: true });
   check(r?.tecla === '4', `recomendou a tecla 4 = ${JSON.stringify(r)}`);
-  check(/filtro/.test(r?.motivo || ''), `o motivo diz por que importa = ${r?.motivo}`);
+  check(/nome/.test(r?.motivo || ''), `o motivo fala do nome = ${r?.motivo}`);
+
+  // O que ele corrigiu: SO faltar cidade nao pede mais nada. "ao abrir conversas esta pedindo
+  // dados pra quem ja tem etiquetas".
+  check(com({ temEtiquetaDeCidade: false })?.id !== 'nome-sem-sentido',
+    'so faltar cidade nao pede dados');
 
   // A prioridade MUDOU em 31/08, com a print da Janete: quem pediu conteúdo e não deu a cidade
   // recebe o conteúdo. "Talvez em outra hora ela forneça" — e o formulário repetido não aproxima
   // ninguém de fornecer. A regra de cidade e a de conteúdo trocaram de lugar na lista.
-  const comConteudo = com({ temEtiquetaDeCidade: false, podeEnviar: true, conteudoPedido: 'Conteúdo Flávio' });
-  check(comConteudo?.tecla === '1', 'com modelo a enviar, o modelo vence — mesmo sem cidade');
+  const comConteudo = com({ nomeSemSentido: true, podeEnviar: true, conteudoPedido: 'Conteúdo Flávio' });
+  check(comConteudo?.tecla === '1', 'com modelo a enviar, o modelo vence — mesmo sem nome');
 
   // E sem nada a enviar, pedir dados continua sendo a saída.
-  check(com({ temEtiquetaDeCidade: false })?.tecla === '4', 'sem nada a enviar, pede os dados');
+  check(com({ nomeSemSentido: true })?.tecla === '4', 'sem nada a enviar, pede os dados');
 
   // Mas não recomenda pedir DE NOVO no mesmo dia.
-  const jaPedi = com({ temEtiquetaDeCidade: false, pedidoHoje: true });
+  const jaPedi = com({ nomeSemSentido: true, pedidoHoje: true });
   check(jaPedi?.tecla !== '4', `já pedido hoje não recomenda pedir de novo = ${JSON.stringify(jaPedi)}`);
 
   // Sem a opção na tela (texto travado por variável), não adianta recomendá-la.
-  check(com({ temEtiquetaDeCidade: false, podePedirDados: false })?.tecla !== '4', 'opção indisponível não é recomendada');
+  check(com({ nomeSemSentido: true, podePedirDados: false })?.tecla !== '4', 'opção indisponível não é recomendada');
 }
 
 grupo('com cidade: manda o conteúdo pedido');
@@ -139,7 +145,7 @@ grupo('etiqueta que dispensa da fila: sugere pular');
   check(String(r?.motivo || '').includes('ENGAJADO/BIZA'), 'o motivo nomeia a etiqueta = ' + r?.motivo);
 
   // Vence o resto do trabalho de fila: engajado nao precisa de formulario nem de interesse.
-  check(com({ etiquetaQueDispensa: 'engajado', temEtiquetaDeCidade: false })?.tecla === '2', 'vence pedir dados');
+  check(com({ etiquetaQueDispensa: 'engajado', nomeSemSentido: true })?.tecla === '2', 'vence pedir dados');
   check(com({ etiquetaQueDispensa: 'engajado', podeEnviar: true })?.tecla === '2', 'vence o modelo');
   check(com({ etiquetaQueDispensa: 'engajado', ultimaEhSoReacao: true })?.tecla === '2', 'vence a reacao');
 
@@ -188,7 +194,7 @@ grupo('so se despediu: concluir');
   // modelo de novo ali e responder despedida com propaganda.
   check(com({ ultimaEhDespedida: true, podeEnviar: true, conteudoPedido: 'ADS' })?.tecla === '3',
     'vence o modelo a enviar');
-  check(com({ ultimaEhDespedida: true, temEtiquetaDeCidade: false })?.tecla === '3', 'vence pedir dados');
+  check(com({ ultimaEhDespedida: true, nomeSemSentido: true })?.tecla === '3', 'vence pedir dados');
 
   // Mas audio continua ganhando: "valeu" falado num audio de um minuto e outra coisa.
   check(com({ ultimaEhDespedida: true, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6',
@@ -222,7 +228,7 @@ grupo('modelo ja esta na conversa: nao sugere mandar de novo');
     'ja na conversa, nao sugere mandar de novo');
 
   // E sem cidade, o que sobra e pedir os dados — nao mandar o modelo duas vezes.
-  check(com({ ...enviavel, modeloJaNaConversa: true, temEtiquetaDeCidade: false })?.tecla === '4',
+  check(com({ ...enviavel, modeloJaNaConversa: true, nomeSemSentido: true })?.tecla === '4',
     'cai para pedir dados');
 }
 
