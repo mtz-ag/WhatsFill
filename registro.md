@@ -5,6 +5,54 @@
 
 ---
 
+## 2026-08-31 — "Zucco" como cidade, e a caixa de pular engajado sozinho
+
+### 1. O anúncio propunha o nome do candidato como cidade
+
+Print dele: popup *"Encontrei 'Zucco' como cidade. De onde saiu: Zucco. Não casou exato com a
+lista do IBGE — é palpite."*
+
+Reproduzi offline. A causa **não** é casamento de município: `matchCity('Zucco')` devolve nada. É
+a mensagem do anúncio:
+
+> Olá! Eu apoio o Flávio, **Zucco**, Hiago e Capitão Martim
+
+As vírgulas fazem o parser achar que está lendo "Nome / Cidade", e o que cai na posição da cidade
+vira **candidato não reconhecido** — que é justamente o caminho que oferece popup com sugestões.
+A trava do "Capitão Martim" não pegava: ela apaga expressões antes de casar município, e aqui
+nunca houve casamento de município.
+
+Agora `cities.naoPodeSerCidade` decide antes de oferecer, juntando duas fontes: o vocabulário da
+campanha (Zucco, Bolsonaro, Hiago, Capitão Martim…) e **a lista que ele edita na Config**
+("Municípios que NÃO são cidade aqui"), que passou a valer também para candidato não reconhecido
+— antes ela só tirava município da lista oficial, então "Zucco", que não é município, escapava.
+
+**Detalhe que virou teste:** as expressões são regex **globais**, e regex global guarda
+`lastIndex` entre chamadas — `test` alternaria entre verdadeiro e falso. Há `lastIndex = 0` antes
+de cada teste e uma asserção que chama duas vezes seguidas. É o mesmo defeito que peguei ontem no
+detector de emoji.
+
+### 2. Caixa: pular engajado sozinho
+
+Pedido dele. Nasce **desmarcada**, e marcada é a única coisa desta rodada que tira contato da fila
+sem perguntar.
+
+O que torna isso aceitável, e está escrito no código: **é ele quem marca**, o critério é uma
+etiqueta que ele mesmo escolheu, e o pulo vai para o Andamento **com o nome da etiqueta que
+causou**. Regra que tira contato da fila sem dizer por quê é exatamente o *"alguns concluem e
+outros não"* que este projeto já pagou caro.
+
+Pular não envia nada e não conclui: o atendimento fica aberto, onde estava.
+
+### Arquivos
+
+`src/lib/cities.js` (`naoPodeSerCidade`), `src/lib/extract.js` (guarda no candidato),
+`src/lib/store.js` (`pularEtiquetasSozinho`), `src/panel/panel.js` (caixa + pulo),
+`tests/parser.test.mjs` (8 asserções novas), `manifest.json` (0.30.0 → 0.31.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-31 — Duas prints, e as duas apontam para o mesmo tipo de cegueira
 
 ### 1. "Amém mestre" não era despedida

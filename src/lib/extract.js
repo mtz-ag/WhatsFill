@@ -76,7 +76,9 @@ export async function extract(texts, { temaField } = {}) {
     // Nenhum município reconhecido. Se a pessoa respondeu algo curto na posição da cidade,
     // mostramos como não reconhecido com sugestões — melhor pedir confirmação que ignorar.
     const naPosicao = cityPositionGuess(list);
-    if (naPosicao) {
+    // Vocabulário da campanha nunca é oferecido como cidade, nem como palpite: "Zucco" virava
+    // popup em toda mensagem de anúncio, porque os nomes vêm separados por vírgula.
+    if (naPosicao && !(await cities.naoPodeSerCidade(naPosicao))) {
       guesses.cidade = {
         value: naPosicao,
         confidence: 'nao-reconhecida',

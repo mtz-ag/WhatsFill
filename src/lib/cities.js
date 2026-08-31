@@ -184,7 +184,40 @@ const EXPRESSOES_QUE_NAO_SAO_CIDADE = [
   /\bcapitao martim\b/g,
   /\bcap martim\b/g,
   /\bcapitao martins\b/g,
+  // Os outros nomes da campanha. Nenhum é município, mas todos aparecem na mensagem do anúncio
+  // separados por vírgula — e vírgula é o que faz o parser achar que está lendo "Nome / Cidade".
+  /\bzucco\b/g,
+  /\bzuco\b/g,
+  /\bflavio bolsonaro\b/g,
+  /\bbolsonaro\b/g,
+  /\bhiago\b/g,
 ];
+
+/**
+ * Este texto pode ser oferecido como cidade?
+ *
+ * Existe para o candidato NÃO RECONHECIDO — o que o parser encontra na posição da cidade e não
+ * casa com município nenhum. Antes ele virava popup ("Encontrei 'Zucco' como cidade"), porque a
+ * mensagem do anúncio lista os nomes separados por vírgula, e vírgula é o que faz o parser achar
+ * que está lendo "Nome / Cidade".
+ *
+ * Junta as duas fontes: o vocabulário da campanha, fixo aqui, e a lista **que ele edita** na
+ * Config ("Municípios que NÃO são cidade aqui"). A segunda passou a valer também para candidato
+ * não reconhecido — antes ela só tirava município da lista oficial, então "Zucco", que não é
+ * município, escapava por ela.
+ */
+export async function naoPodeSerCidade(texto) {
+  const norm = normalize(texto);
+  if (!norm) return true;
+
+  for (const re of EXPRESSOES_QUE_NAO_SAO_CIDADE) {
+    re.lastIndex = 0; // são globais: sem zerar, `test` alterna entre true e false a cada chamada
+    if (re.test(norm)) return true;
+  }
+
+  const ignoradas = await store.get('cidadesIgnoradas');
+  return (ignoradas || []).some((c) => normalize(c) === norm);
+}
 
 /**
  * Encurtamentos que nenhuma regra genérica alcança, porque não são prefixo do nome oficial.

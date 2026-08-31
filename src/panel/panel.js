@@ -1690,6 +1690,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       )
     );
     card.append(
+      checkbox('Pular sozinho, sem perguntar', state.auto.cfg.pularEtiquetasSozinho, (v) =>
+        salvarAuto({ pularEtiquetasSozinho: v }).then(renderAll)
+      )
+    );
+    card.append(
+      h('div', { class: 'wf-origin' },
+        'Marcado, a rodada NÃO pergunta nesses contatos: pula e vai para o próximo, e o pulo ' +
+          'aparece no Andamento com o nome da etiqueta que causou. Pular não envia nada e não ' +
+          'conclui — o atendimento fica aberto onde estava. Desmarcado, ela só sugere a tecla 2.')
+    );
+    card.append(
       h('div', { class: 'wf-origin' },
         'Quem tem uma destas vem com "Pular" sugerido: o trabalho da rodada é transformar ' +
           'desconhecido em engajado, e quem já chegou lá não precisa de formulário. Casa por ' +
@@ -3137,6 +3148,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return { nome, resultado: 'pulado', motivo: 'já tratei este contato nesta rodada' };
       }
       ctx?.contatosTratados?.add(state.contact.id);
+
+      /**
+       * Pulo automático por etiqueta — a única coisa nesta rodada que sai da fila sem pergunta.
+       *
+       * Só acontece com a caixa marcada por ele, e o motivo vai para o Andamento **com o nome da
+       * etiqueta que causou**: regra que tira contato da fila sem dizer por quê é exatamente o
+       * "alguns concluem e outros não" que este projeto já pagou caro.
+       *
+       * Nada é enviado e nada é concluído: o atendimento fica aberto, onde estava.
+       */
+      if (state.auto.cfg.pularEtiquetasSozinho) {
+        const dispensa = await etiquetaQueDispensaDaFila();
+        if (dispensa) {
+          return { nome, resultado: 'pulado', motivo: `etiqueta "${dispensa}" — pulado sem perguntar` };
+        }
+      }
 
       const conteudos = state.tagSuggestions.filter((s) => s.origem === 'conteúdo');
       let modelo = null;

@@ -425,6 +425,17 @@ const DEFAULTS = {
      */
     etiquetasQuePulam: 'engajado',
     /**
+     * Pular esses contatos SOZINHO, sem perguntar.
+     *
+     * Nasce desligado de propósito. Com ele ligado a rodada deixa de perguntar em alguém — e a
+     * regra deste projeto é que nada sai da fila sem decisão humana. A exceção é aceitável aqui
+     * porque **é ele quem marca a caixa**, o critério é uma etiqueta que ele mesmo escolheu, e o
+     * pulo aparece no log da rodada com o nome da etiqueta que causou.
+     *
+     * Pular não envia nada e não conclui: o atendimento fica aberto, exatamente onde estava.
+     */
+    pularEtiquetasSozinho: false,
+    /**
      * Janela em que a rodada NÃO manda de novo para quem já recebeu mensagem nossa.
      *
      * Quem acabou de ser concluído volta para o TOPO da lista de concluídos, então a rodada

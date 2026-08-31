@@ -502,4 +502,26 @@ grupo('transcricao de audio entra como palpite, nunca como gravacao automatica')
   check(rebaixarParaPalpite({ cidade: null }).cidade === null, 'palpite nulo passa intacto');
 }
 
+
+grupo('vocabulario da campanha nunca vira cidade');
+{
+  // Print dele (31/08): popup "Encontrei 'Zucco' como cidade". A mensagem do anuncio lista os
+  // nomes separados por virgula, e virgula e o que faz o parser achar que le "Nome / Cidade".
+  const anuncio = await extract(['Olá! Eu apoio o Flávio, Zucco, Hiago e Capitão Martim'], {});
+  check(!anuncio.cidade, 'a mensagem do anuncio nao propoe cidade nenhuma = ' + JSON.stringify(anuncio.cidade));
+
+  check(!(await extract(['Maria Mattos / Zucco'], {})).cidade, 'Zucco na posicao da cidade tambem nao');
+  check(await cities.naoPodeSerCidade('Zucco'), 'Zucco e vocabulario da campanha');
+  check(await cities.naoPodeSerCidade('Bolsonaro'), 'Bolsonaro tambem');
+  check(await cities.naoPodeSerCidade('capitao martim'), 'e o que ja existia continua');
+
+  // Chamar duas vezes tem que dar o mesmo: as expressoes sao regex globais, e regex global guarda
+  // lastIndex entre chamadas.
+  check(await cities.naoPodeSerCidade('Zucco'), 'de novo, o mesmo resultado (regex global nao pode guardar estado)');
+
+  // E o que E cidade continua passando.
+  check(!(await cities.naoPodeSerCidade('Porto Alegre')), 'Porto Alegre pode ser cidade');
+  check(!(await cities.naoPodeSerCidade('Santo Ângelo')), 'Santo Ângelo tambem');
+}
+
 fim();
