@@ -54,12 +54,16 @@ Ordem em 31/08 (de cima para baixo):
 2. `ultima-pede-resposta-pessoal` — áudio, vídeo, texto 400+ → **6, à mão**
 3. `ultima-e-despedida` — "é nós", "abraço", "amém mestre" → **3, concluir**
 4. `voltou-por-outro-anuncio` → **5** ou **3** (se já recebeu a mensagem do momento)
-5. `ultima-e-so-reacao` — figura, emoji, link → **5**, ou **3** se já respondemos hoje
-6. `nunca-pediram-dados` — veio do anúncio, sem cidade, formulário nunca saiu → **4**
+5. `nunca-pediram-dados` — veio do anúncio, sem cidade, formulário nunca saiu → **4**
+6. `ultima-e-so-reacao` — figura, emoji, link → **5**, ou **3** se já respondemos hoje
 7. `conteudo-pedido` → **1, mandar o modelo**
 8. `nome-sem-sentido` → **4, pedir dados**
 9. `nunca-perguntaram-interesse` → **7**
 10. `pedido-hoje-sem-resposta` → **3**
+
+**5 e 6 trocaram de lugar em 31/08** (print da Marta: emoji como única mensagem de quem veio do
+anúncio). Quem já recebeu o formulário ou já tem cidade não casa na 5 e continua caindo na 6 —
+é a condição da 5 que impede a inversão de estragar o caso que criou a 6.
 
 **A regra só recomenda, nunca decide.** Todas as opções continuam na tela. É essa fronteira que
 permite uma regra agressiva sem risco — o pior caso é um destaque no lugar errado.

@@ -264,4 +264,44 @@ grupo('veio do anuncio e o formulario NUNCA saiu');
   check(com({ ...nunca, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6', 'audio vence');
 }
 
+
+grupo('emoji como PRIMEIRA mensagem de quem veio do anuncio: pedir dados vence a reacao');
+{
+  /**
+   * Print da Marta (31/08): veio do anuncio, mandou so um emoji, sem cidade e sem nunca ter
+   * recebido o formulario. A caixa sugeria a mensagem do momento — *"nesse caso a pessoa
+   * respondeu o anuncio com um emoji, eu tenho que pedir os dados"*.
+   */
+  const marta = com({
+    ultimaEhSoReacao: true,
+    jaPediramDados: false,
+    temEtiquetaDeCidade: false,
+    podeEnviar: true,
+    conteudoPedido: 'ADS',
+  });
+  check(marta?.tecla === '4', 'pedir dados vence o emoji: ' + JSON.stringify(marta));
+  check(marta?.id === 'nunca-pediram-dados', 'e e a regra do formulario que casa');
+
+  /**
+   * O contra-teste, que e o que impede a troca de ordem de estragar o caso original.
+   *
+   * Quem JA recebeu o formulario tem conversa, e responder emoji dele com "me manda seu nome e
+   * cidade" e o robo que a regra de baixo existe para evitar. Continua caindo na reacao.
+   */
+  check(com({ ultimaEhSoReacao: true, jaPediramDados: true, temEtiquetaDeCidade: false })?.tecla === '5',
+    'ja pediram: o emoji continua indo para a mensagem do momento');
+
+  // Ter cidade tambem basta para nao cair no pedido de dados.
+  check(com({ ultimaEhSoReacao: true, jaPediramDados: false, temEtiquetaDeCidade: true })?.tecla === '5',
+    'com cidade, o emoji vai para a mensagem do momento');
+
+  // Pedido hoje nao se repete, mesmo com emoji e sem cidade.
+  check(com({ ultimaEhSoReacao: true, jaPediramDados: false, temEtiquetaDeCidade: false, pedidoHoje: true })?.tecla === '5',
+    'ja pedido hoje: nao insiste, cai na reacao');
+
+  // Audio continua vencendo tudo menos a etiqueta que dispensa.
+  check(com({ ultimaEhSoReacao: true, jaPediramDados: false, temEtiquetaDeCidade: false, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6',
+    'audio vence o pedido de dados');
+}
+
 fim();

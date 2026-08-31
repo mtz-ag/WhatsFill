@@ -5,6 +5,52 @@
 
 ---
 
+## 2026-08-31 — Emoji como única mensagem de quem veio do anúncio: pedir dados vence
+
+**Relato dele**, print da Marta: contato do anúncio, etiqueta ADS, **cidade vazia**, uma única
+mensagem — 🙏, às 18:24. A caixa sugeria *"5: a última mensagem foi só uma figura, emoji ou link"*.
+*"nesse caso a pessoa respondeu o anuncio com um emoji, eu tenho que pedir os dados"*.
+
+### Causa
+
+`ultima-e-so-reacao` estava na posição 5 e `nunca-pediram-dados` na 6. A primeira que casa vence,
+e o emoji casou antes.
+
+A ordem antiga tinha razão escrita no comentário: *"responder um 👍 com 'me manda seu nome e
+cidade' lê como robô que não olhou a tela"*. **Continua verdade — para quem já tem conversa.**
+
+### O conserto, e por que trocar a ordem é seguro
+
+As duas trocaram de lugar. O que impede isso de estragar o caso que criou a regra da reação é a
+**condição** da regra que subiu:
+
+```js
+!c.jaPediramDados && !c.temEtiquetaDeCidade && c.podePedirDados && !c.pedidoHoje
+```
+
+Quem já recebeu o formulário, ou já tem cidade, ou já foi perguntado hoje **não casa nela** e
+continua caindo na reação, exatamente como antes. O que muda é só o caso da print: alguém que
+acabou de chegar do anúncio, sem cidade, que nunca foi perguntado. Ali não há conversa para o robô
+estragar — perguntar é o primeiro passo, e a tela não tem mais nada a olhar.
+
+### Os quatro contra-testes
+
+O teste que importa não é o da print, é o que trava a inversão de ir longe demais. Todos passando:
+
+| situação | antes | agora |
+|---|---|---|
+| emoji, do anúncio, sem cidade, **nunca** pediram | 5 | **4** |
+| emoji, **já** pediram dados | 5 | 5 |
+| emoji, **já tem** cidade | 5 | 5 |
+| emoji, pedido **hoje** | 5 | 5 |
+| áudio no meio | 6 | 6 |
+
+**Arquivos:** `src/lib/sugestao.js` (ordem e os dois comentários),
+`tests/sugestao.test.mjs` (6 asserções), `CONTEXTO.md` (a lista de ordem estava desatualizada),
+`manifest.json` (0.40.0 → **0.41.0**). 29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — Nome errado no CRM: separar para ele arrumar, sem trocar nada
 
 **Relato dele**, print do "viver a vida": o cadastro tinha nome de perfil, a pessoa respondeu

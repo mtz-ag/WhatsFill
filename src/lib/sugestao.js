@@ -126,29 +126,6 @@ export const REGRAS = [
         : 'voltou por outro anúncio — não mande o mesmo conteúdo de novo; a mensagem do momento serve.',
   },
   {
-    id: 'ultima-e-so-reacao',
-    /**
-     * Última mensagem é imagem, figurinha, emoticon ou link.
-     *
-     * Vem ANTES de "sem etiqueta de cidade" porque é sobre o que a pessoa **acabou de fazer**,
-     * que é o sinal mais recente que existe. Responder um 👍 com "me manda seu nome e cidade"
-     * lê como robô que não olhou a tela.
-     *
-     * **Se você já respondeu hoje, o desfecho é CONCLUIR e não a mensagem do momento** — pedido
-     * dele, com a print do Paulo Quevedo: ele tinha escrito uma resposta longa às 09:29 e a
-     * pessoa mandou um link do TikTok às 14:43. Mandar a mensagem do momento ali é empilhar uma
-     * segunda mensagem nossa em cima da que ela ainda nem comentou.
-     */
-    tecla: (c) => (c.respondidoHoje || !c.podeMandarMomento ? '3' : '5'),
-    quando: (c) => c.ultimaEhSoReacao,
-    motivo: (c) =>
-      c.respondidoHoje
-        ? 'você já respondeu hoje e ela mandou só uma figura, emoji ou link — pode concluir.'
-        : !c.podeMandarMomento
-          ? 'a última mensagem foi só uma figura, emoji ou link, e não há mensagem do momento — conclua.'
-          : 'a última mensagem foi só uma figura, emoji ou link — a mensagem do momento responde ao gesto.',
-  },
-  {
     id: 'nunca-pediram-dados',
     tecla: '4',
     /**
@@ -165,9 +142,47 @@ export const REGRAS = [
      *
      * Por isso fica ACIMA de "conteúdo pedido", e a do nome continua abaixo: pede-se uma vez;
      * ignorado, manda-se o conteúdo e não se insiste.
+     *
+     * **Subiu também acima de "só uma reação" em 31/08**, com a print da Marta: ela veio do
+     * anúncio, mandou 🙏 como ÚNICA mensagem, sem cidade e sem nunca ter recebido o formulário —
+     * e a caixa sugeria a mensagem do momento. *"nesse caso a pessoa respondeu o anuncio com um
+     * emoji, eu tenho que pedir os dados"*.
+     *
+     * Isso não contradiz o "parece robô" da regra de baixo, e é a condição desta que garante
+     * isso: quem já recebeu o formulário, ou já tem cidade, não casa aqui e continua caindo lá.
+     * Responder emoji com pedido de dados só é robô com quem já tem conversa — para quem acabou
+     * de chegar do anúncio, perguntar é o primeiro passo, e a tela não tem mais nada a olhar.
      */
     quando: (c) => !c.jaPediramDados && !c.temEtiquetaDeCidade && c.podePedirDados && !c.pedidoHoje,
     motivo: () => 'veio do anúncio e o formulário nunca saiu para ele — peça os dados esta vez.',
+  },
+  {
+    id: 'ultima-e-so-reacao',
+    /**
+     * Última mensagem é imagem, figurinha, emoticon ou link.
+     *
+     * É sobre o que a pessoa **acabou de fazer**, que é o sinal mais recente que existe:
+     * responder um 👍 com "me manda seu nome e cidade" lê como robô que não olhou a tela.
+     *
+     * **Mas só a partir de quem já tem conversa.** Em 31/08 esta regra passou para BAIXO de
+     * "nunca pediram dados": quem chegou pelo anúncio, mandou só um emoji e nunca recebeu o
+     * formulário não tem conversa para o robô estragar — ali perguntar é o primeiro passo.
+     * Quem já recebeu o formulário ou já tem cidade não casa lá em cima e continua chegando
+     * aqui, que era o caso que motivou esta regra.
+     *
+     * **Se você já respondeu hoje, o desfecho é CONCLUIR e não a mensagem do momento** — pedido
+     * dele, com a print do Paulo Quevedo: ele tinha escrito uma resposta longa às 09:29 e a
+     * pessoa mandou um link do TikTok às 14:43. Mandar a mensagem do momento ali é empilhar uma
+     * segunda mensagem nossa em cima da que ela ainda nem comentou.
+     */
+    tecla: (c) => (c.respondidoHoje || !c.podeMandarMomento ? '3' : '5'),
+    quando: (c) => c.ultimaEhSoReacao,
+    motivo: (c) =>
+      c.respondidoHoje
+        ? 'você já respondeu hoje e ela mandou só uma figura, emoji ou link — pode concluir.'
+        : !c.podeMandarMomento
+          ? 'a última mensagem foi só uma figura, emoji ou link, e não há mensagem do momento — conclua.'
+          : 'a última mensagem foi só uma figura, emoji ou link — a mensagem do momento responde ao gesto.',
   },
   {
     id: 'conteudo-pedido',
