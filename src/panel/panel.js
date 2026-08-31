@@ -119,6 +119,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     incoming: [],
     /** O que o contato mandou, com o tipo junto — é o que enxerga figura e figurinha. */
     entrantes: [],
+    /** Quando saiu a NOSSA última mensagem — o sinal de "este contato já foi respondido". */
+    nossaUltimaAt: null,
     /**
      * Cidades que você recusou no popup, enquanto este contato estiver aberto (normalizadas).
      *
@@ -379,6 +381,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const conversa = await api.getConversation(state.pageState.sessionId);
       state.incoming = conversa.incoming;
       state.entrantes = conversa.entrantes || [];
+      state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.ultimaMensagem = conversa.ultima;
 
       // Sinal disparado por mensagem NOSSA (ou mídia): nada novo do contato para analisar.
@@ -461,6 +464,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const conversa = await api.getConversation(sessionId);
       state.incoming = conversa.incoming;
       state.entrantes = conversa.entrantes || [];
+      state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.ultimaMensagem = conversa.ultima;
       const temaField = classify.find((f) => f.name === 'Tema de Interesse');
       const palpites = await extract(state.incoming, { temaField });
@@ -1618,14 +1622,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * @param {string[]} etiquetas rótulos que o contato tem (ou vai receber)
    * @returns {string|null} o rótulo que casou, para a sugestão poder nomeá-lo
    */
-  function etiquetaQueDispensaDaFila(etiquetas) {
+  async function etiquetaQueDispensaDaFila() {
     const pedacos = String(state.auto.cfg.etiquetasQuePulam || '')
       .split(',')
       .map((p) => cities.semAcentoNemCaixa(p.trim()))
       .filter(Boolean);
     if (!pedacos.length) return null;
 
-    for (const rotulo of etiquetas || []) {
+    /**
+     * Lê as etiquetas REAIS do contato, e não a lista que a caixa mostra.
+     *
+     * **Este era o defeito** (relato dele: *"não pulou o engajado"*): a lista da caixa vem de
+     * `tagSuggestions`, que só tem o que a rodada sugere ou reconhece — no contato da print ela
+     * mostrava 3 etiquetas enquanto o cabeçalho da plataforma mostrava 5, e `ENGAJADO/BIZA` era
+     * justamente uma das que faltavam. A regra nunca via a etiqueta que deveria dispensar.
+     */
+    const doCrm = new Set(state.contact?.tagsId || []);
+    const rotulos = (await tagsLib.allTags().catch(() => []))
+      .filter((t) => doCrm.has(t.id))
+      .map((t) => t.label);
+
+    for (const rotulo of rotulos) {
       const alvo = cities.semAcentoNemCaixa(rotulo);
       if (pedacos.some((p) => alvo.includes(p))) return rotulo;
     }
@@ -3351,10 +3368,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       const sugestao = sugerirAcao({
         ultimaEhDespedida: ultimaEhDespedida(state.entrantes),
+        // "Já foi respondida": nossa última mensagem saiu hoje. Serve para a reação (figura,
+        // emoji, link) virar "concluir" em vez de "mais uma mensagem".
+        respondidoHoje: !!state.nossaUltimaAt && ehHoje(state.nossaUltimaAt),
         voltouPorOutroAnuncio,
         momentoHoje,
         pedeRespostaPessoal: ultimaPedeRespostaPessoal(state.entrantes),
-        etiquetaQueDispensa: etiquetaQueDispensaDaFila(etiquetas),
+        etiquetaQueDispensa: await etiquetaQueDispensaDaFila(),
         ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
         podeMandarMomento: !momentoTrava,
         temEtiquetaDeCidade,

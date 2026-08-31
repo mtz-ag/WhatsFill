@@ -385,6 +385,15 @@ export async function getConversation(sessionId, pageSize = 50) {
     ultima: ultima
       ? { doContato: doContato(ultima), at: ultima.createdAt, texto: ultima.text || '' }
       : null,
+    /**
+     * Quando saiu a NOSSA última mensagem, de qualquer tipo.
+     *
+     * Existe para a rodada saber que o contato **já foi respondido**. \`ultima\` não serve: quando
+     * a pessoa escreve depois de nós — que é o caso comum — a última é dela, e a nossa some da
+     * conta. E `templatesLib.wasSent` também não, porque só enxerga o que saiu por template:
+     * resposta escrita à mão, que é a maioria das respostas de verdade, não deixa rastro ali.
+     */
+    nossaUltimaAt: [...ordenadas].reverse().find((m) => !doContato(m))?.createdAt || null,
   };
 }
 

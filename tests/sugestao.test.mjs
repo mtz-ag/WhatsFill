@@ -12,6 +12,7 @@ import { sugerirAcao, REGRAS } from '../src/lib/sugestao.js';
 
 /** Retrato de um contato "sem nada": nenhuma regra deveria casar por acidente. */
 const base = {
+  respondidoHoje: false,
   ultimaEhDespedida: false,
   voltouPorOutroAnuncio: false,
   momentoHoje: false,
@@ -141,10 +142,12 @@ grupo('etiqueta que dispensa da fila: sugere pular');
   check(com({ etiquetaQueDispensa: 'engajado', podeEnviar: true })?.tecla === '2', 'vence o modelo');
   check(com({ etiquetaQueDispensa: 'engajado', ultimaEhSoReacao: true })?.tecla === '2', 'vence a reacao');
 
-  // MAS nao vence quem acabou de mandar audio: pular ali calaria o apoiador mais proximo.
-  const pede = { motivo: 'mandou um audio' };
-  check(com({ etiquetaQueDispensa: 'engajado', pedeRespostaPessoal: pede })?.tecla === '6',
-    'audio de engajado continua pedindo resposta a mao');
+  // A prioridade INVERTEU em 31/08, por decisao dele (print do Deoclecio, engajado com video):
+  // "veja isso tambem que nao pulou o engajado". Engajado manda video e link o dia inteiro, e
+  // responder a cada um e nao sair da fila. A tecla 6 continua a um toque quando merecer.
+  const pede = { motivo: 'mandou um video' };
+  check(com({ etiquetaQueDispensa: 'engajado', pedeRespostaPessoal: pede })?.tecla === '2',
+    'engajado com video e pulado — a etiqueta vence tudo');
 }
 
 
@@ -189,6 +192,22 @@ grupo('so se despediu: concluir');
   // Mas audio continua ganhando: "valeu" falado num audio de um minuto e outra coisa.
   check(com({ ultimaEhDespedida: true, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6',
     'audio vence a despedida');
+}
+
+
+grupo('ja respondida e mandou so um link: concluir');
+{
+  // Print do Paulo Quevedo: resposta longa dele as 09:29, link do TikTok dela as 14:43. Mandar a
+  // mensagem do momento ali e empilhar uma segunda mensagem nossa em cima da que ela nem comentou.
+  const r = com({ ultimaEhSoReacao: true, respondidoHoje: true });
+  check(r?.tecla === '3', 'ja respondida hoje, sugere concluir = ' + JSON.stringify(r));
+  check(String(r?.motivo).includes('respondeu hoje'), 'o motivo diz que voce ja respondeu');
+
+  // Sem ter respondido hoje, continua sendo a mensagem do momento.
+  check(com({ ultimaEhSoReacao: true })?.tecla === '5', 'sem resposta hoje, manda o momento');
+
+  // Sem mensagem do momento configurada tambem conclui, em vez de nao sugerir nada.
+  check(com({ ultimaEhSoReacao: true, podeMandarMomento: false })?.tecla === '3', 'sem momento, conclui');
 }
 
 fim();

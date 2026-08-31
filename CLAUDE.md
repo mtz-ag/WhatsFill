@@ -155,6 +155,11 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `/é nós/` **nunca** casa no começo da string. Foi assim que "É nós." — a frase exata que ele
   mandou de exemplo — passou batido na primeira versão do detector de despedida. Em padrão que
   começa com acento use `(^|s)`. Vale para todo o vocabulário daqui: "é nós", "ótimo", "amém".
+- **A lista de etiquetas da caixa da rodada NÃO é a do contato.** Ela vem de `tagSuggestions` —
+  só o que a rodada sugere ou reconhece. No contato da print (31/08) a caixa mostrava 3 etiquetas
+  e o cabeçalho da plataforma mostrava 5, e a que faltava era justamente a que deveria dispensar
+  o contato da fila. Regra que decide por etiqueta tem que ler `state.contact.tagsId` cruzado
+  com `tagsLib.allTags()`, nunca a lista da tela.
 - **Rota nova? Leia o bundle do app em vez de chutar.** Quando a navegação está bloqueada e não dá
   para inspecionar a rede, o `main.*.js` do mobiliza é a fonte da verdade e está a um `fetch` de
   distância — as URLs, os métodos e os parâmetros estão como texto no código Angular. Foi assim que

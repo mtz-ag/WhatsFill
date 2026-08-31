@@ -28,15 +28,45 @@
  */
 export const REGRAS = [
   {
+    id: 'etiqueta-dispensa-da-fila',
+    tecla: '2',
+    /**
+     * Etiqueta que dispensa o contato da rodada (configurável na aba Automatizado).
+     *
+     * Pedido dele: quem tem "engajado" pode ser pulado. Faz sentido — o trabalho da rodada é
+     * transformar desconhecido em engajado; quem já chegou lá não precisa de formulário nem de
+     * pergunta de interesse.
+     *
+     * **Fica em PRIMEIRO — e isto é uma reversão minha, decidida por ele** (31/08, print do
+     * Deoclecio): *"veja isso também que não pulou o engajado"*, num contato engajado que tinha
+     * mandado um vídeo.
+     *
+     * Eu tinha posto esta regra abaixo de "pede resposta pessoal" argumentando que engajado com
+     * áudio é quem mais merece resposta. O argumento é bonito e o trabalho dele desmente: o que
+     * o engajado manda, na prática, é vídeo e link de política o dia inteiro. Responder a cada um
+     * não é atenção, é não conseguir sair da fila.
+     *
+     * Continua sendo só sugestão: a tecla 6 está lá, a um toque, para quando o vídeo merecer.
+     *
+     * Sugere PULAR e não CONCLUIR: pular deixa o atendimento aberto, e fechar quem está engajado
+     * sem dizer nada é decisão maior do que uma sugestão deve tomar.
+     */
+    quando: (c) => !!c.etiquetaQueDispensa,
+    motivo: (c) => `tem a etiqueta "${c.etiquetaQueDispensa}" — já está engajado, a rodada não precisa dele.`,
+  },
+  {
     id: 'ultima-pede-resposta-pessoal',
     tecla: '6',
     /**
      * Áudio, vídeo, documento ou texto longo → responder à mão.
      *
-     * **Vem antes de tudo, inclusive de "pediu conteúdo e há modelo".** Foi o caso que ele
-     * trouxe: contato JÁ classificado, com etiqueta e conteúdo pedido, que mandou um áudio de
-     * 1min13 contando da família, da igreja e do convite para almoçar. A caixa sugeria mandar o
-     * modelo aprovado — e mandar modelo para quem acabou de falar isso parece deboche.
+     * **Vence tudo menos a etiqueta que dispensa da fila.** Foi o caso que ele trouxe: contato
+     * JÁ classificado, com etiqueta e conteúdo pedido, que mandou um áudio de 1min13 contando da
+     * família, da igreja e do convite para almoçar. A caixa sugeria mandar o modelo aprovado — e
+     * mandar modelo para quem acabou de falar isso parece deboche.
+     *
+     * Só o "engajado" passa na frente, e por decisão dele: engajado manda vídeo e link o dia
+     * inteiro, e responder a cada um é não sair da fila.
      *
      * Ter etiqueta não quer dizer que a conversa acabou. O que a pessoa acabou de dizer manda
      * mais do que o que ela pediu semana passada.
@@ -64,27 +94,6 @@ export const REGRAS = [
     motivo: () => 'ela só se despediu ("é nós", "abraço") — a conversa acabou. Conclua.',
   },
   {
-    id: 'etiqueta-dispensa-da-fila',
-    tecla: '2',
-    /**
-     * Etiqueta que dispensa o contato da rodada (configurável na aba Automatizado).
-     *
-     * Pedido dele: quem tem "engajado" pode ser pulado. Faz sentido — o trabalho da rodada é
-     * transformar desconhecido em engajado; quem já chegou lá não precisa de formulário nem de
-     * pergunta de interesse.
-     *
-     * **Fica ABAIXO de "pede resposta pessoal", e isso é de propósito.** Engajado que acabou de
-     * mandar um áudio é exatamente quem mais merece resposta — pular ali seria calar justamente
-     * o apoiador mais próximo. O caso da print era esse: engajado E com áudio, e a sugestão que
-     * apareceu foi a 6.
-     *
-     * Sugere PULAR e não CONCLUIR: pular deixa o atendimento aberto, e fechar quem está engajado
-     * sem dizer nada é decisão maior do que uma sugestão deve tomar.
-     */
-    quando: (c) => !!c.etiquetaQueDispensa,
-    motivo: (c) => `tem a etiqueta "${c.etiquetaQueDispensa}" — já está engajado, a rodada não precisa dele.`,
-  },
-  {
     id: 'voltou-por-outro-anuncio',
     /**
      * Ignorou o pedido de dados e voltou clicando em OUTRO anúncio.
@@ -110,18 +119,26 @@ export const REGRAS = [
   },
   {
     id: 'ultima-e-so-reacao',
-    tecla: '5',
     /**
-     * Pedido dele: última mensagem é imagem, figurinha, emoticon ou link → mensagem do momento.
+     * Última mensagem é imagem, figurinha, emoticon ou link.
      *
      * Vem ANTES de "sem etiqueta de cidade" porque é sobre o que a pessoa **acabou de fazer**,
      * que é o sinal mais recente que existe. Responder um 👍 com "me manda seu nome e cidade"
-     * lê como robô que não olhou a tela; a mensagem do momento responde ao gesto.
+     * lê como robô que não olhou a tela.
      *
-     * Se ele preferir o contrário, é trocar as duas de lugar nesta lista — nada mais.
+     * **Se você já respondeu hoje, o desfecho é CONCLUIR e não a mensagem do momento** — pedido
+     * dele, com a print do Paulo Quevedo: ele tinha escrito uma resposta longa às 09:29 e a
+     * pessoa mandou um link do TikTok às 14:43. Mandar a mensagem do momento ali é empilhar uma
+     * segunda mensagem nossa em cima da que ela ainda nem comentou.
      */
-    quando: (c) => c.ultimaEhSoReacao && c.podeMandarMomento,
-    motivo: () => 'a última mensagem foi só uma figura, emoji ou link — a mensagem do momento responde ao gesto.',
+    tecla: (c) => (c.respondidoHoje || !c.podeMandarMomento ? '3' : '5'),
+    quando: (c) => c.ultimaEhSoReacao,
+    motivo: (c) =>
+      c.respondidoHoje
+        ? 'você já respondeu hoje e ela mandou só uma figura, emoji ou link — pode concluir.'
+        : !c.podeMandarMomento
+          ? 'a última mensagem foi só uma figura, emoji ou link, e não há mensagem do momento — conclua.'
+          : 'a última mensagem foi só uma figura, emoji ou link — a mensagem do momento responde ao gesto.',
   },
   {
     id: 'conteudo-pedido',

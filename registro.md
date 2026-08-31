@@ -5,6 +5,68 @@
 
 ---
 
+## 2026-08-31 — "Não pulou o engajado": a regra nunca viu a etiqueta
+
+Duas coisas no mesmo relato dele, e a primeira é um defeito meu.
+
+### O defeito: a caixa mostra uma lista de etiquetas que NÃO é a do contato
+
+Print do Deoclecio: o cabeçalho da plataforma mostra **ADS, CACHOEIRINHA, CONTATO-ASSES,
+CONTEÚDO FLÁV, ENGAJADO/BIZA**. A caixa da rodada mostra **CACHOEIRINHA, Metropolitano Delta do
+Jacuí, ADS**. Três de cinco — e `ENGAJADO/BIZA` era uma das que faltavam.
+
+A lista da caixa vem de `tagSuggestions`, que só carrega o que a rodada **sugere ou reconhece**.
+Eu liguei a regra nova nessa lista, então ela nunca via a etiqueta que deveria dispensar o
+contato. A regra estava certa e cega.
+
+Agora `etiquetaQueDispensaDaFila` lê `state.contact.tagsId` cruzado com `tagsLib.allTags()` —
+as etiquetas de verdade, do CRM. Virou armadilha no `CLAUDE.md`: **regra que decide por etiqueta
+não pode ler a lista da tela.**
+
+### A decisão: engajado passa na frente até do áudio
+
+Com a etiqueta finalmente visível, o Deoclecio ainda cairia em "responder à mão", porque ele
+mandou um vídeo e essa regra estava acima.
+
+Ele quer pular. Eu tinha argumentado o contrário em 30/08 — *"engajado que mandou áudio é quem
+mais merece resposta"* — e o trabalho dele desmente: **o que o engajado manda, na prática, é vídeo
+e link de política o dia inteiro.** Responder a cada um não é atenção, é não conseguir sair da
+fila. A tecla 6 continua a um toque para quando o vídeo merecer.
+
+`etiqueta-dispensa-da-fila` foi para o topo da lista.
+
+### E o caso do Paulo Quevedo, do relato anterior
+
+*"a pessoa já foi respondida e mandou link — concluo e próximo"*. Resposta longa dele às 09:29,
+link do TikTok dela às 14:43, e a caixa sugerindo a mensagem do momento — ou seja, empilhar uma
+segunda mensagem nossa em cima da que ela ainda nem comentou.
+
+A regra da reação passou a olhar se **já respondemos hoje**: se sim, conclui; se não, mensagem do
+momento como antes. Para isso a conversa passou a devolver `nossaUltimaAt`, a hora da nossa
+última mensagem — `ultima` não servia (quando a pessoa escreve depois de nós, a nossa some da
+conta) e `wasSent` também não, porque só enxerga o que saiu por template: **resposta escrita à
+mão, que é a maioria das respostas de verdade, não deixa rastro ali.**
+
+### Ordem hoje
+
+1. etiqueta que dispensa da fila (engajado) ← subiu ao topo
+2. pede resposta pessoal (áudio, vídeo, texto longo)
+3. despedida ("é nós", "abraço")
+4. voltou por outro anúncio
+5. última é só reação — agora **conclui** se já respondemos hoje
+6. conteúdo pedido
+7. sem etiqueta de cidade
+8. nunca perguntaram interesse
+9. já pedi hoje e não veio nada
+
+### Arquivos
+
+`src/lib/api.js` (`nossaUltimaAt`), `src/lib/sugestao.js` (ordem, regra da reação),
+`src/panel/panel.js` (etiquetas reais, `respondidoHoje`), `tests/sugestao.test.mjs`,
+`CLAUDE.md`, `manifest.json` (0.28.0 → 0.29.0). Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-31 — "É nós": quem só se despede recebe concluir, não modelo
 
 **Relato dele**, com a print do Jesus Ceneri: ele já tinha mandado o conteúdo às 10:46, a pessoa
