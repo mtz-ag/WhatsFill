@@ -5,6 +5,50 @@
 
 ---
 
+## 2026-08-31 — "Voltou diversas vezes por anúncios": a regra existia e duas condições minhas a impediam
+
+**Relato dele**, print do Telmo: *"voltou diversas vezes por anúncios, já mandei mensagem do
+momento = concluir"*.
+
+Na tela: cidade **Viamão**, modelo enviado às **10:28**, e às **18:24** ele voltou por outro
+anúncio ("ANÚNCIO | FACEBOOK" + *"Olá! Eu escolho o lado da Liberdade"*). A caixa sugeria **mandar
+o modelo de novo**.
+
+### A regra já existia. Eu é que a tinha amarrado errado
+
+`voltou-por-outro-anuncio` foi escrita hoje de manhã, e não pegou o Telmo por **duas condições
+que eu pus e ele nunca pediu**:
+
+1. **`!temEtiquetaDeCidade`** — eu tinha usado a falta de cidade como trava contra falso
+   positivo, porque a frase do aceite ("Olá!") é curta e genérica. Só que voltar por anúncio é
+   sobre **o que a pessoa acabou de fazer**; ter cidade não muda isso. O Telmo tem Viamão.
+2. **`pedidoDeHoje`** — o sinal de "voltou" era o formulário ter saído. Mas quem recebeu o
+   MODELO também já foi atendido, e voltar depois disso é o mesmo caso.
+
+O sinal certo é mais simples e mais amplo: **já existe mensagem NOSSA na conversa**. É isso que
+separa "voltou" de "chegou agora", e vale para quem recebeu formulário e para quem recebeu modelo.
+
+### E "já mandei" não é "hoje"
+
+A regra olhava `momentoHoje`. Ele disse *"já mandei mensagem do momento"* — sem recorte de dia. A
+conta passou a ser sobre a mensagem do momento **atual**, o que a chave de envio já permitia (ela
+inclui um resumo do texto, então trocar de campanha zera a conta sozinho).
+
+### O padrão, de novo
+
+É a terceira vez hoje que uma trava minha contra falso positivo derruba o caso verdadeiro:
+o `` antes de "É nós", a lista de etiquetas da caixa em vez das do contato, e agora estas duas
+condições. Todas nasceram de "melhor não errar para o lado de fazer demais" — e o custo real foi
+não fazer nada no caso que importava.
+
+### Arquivos
+
+`src/lib/sugestao.js` (a regra), `src/panel/panel.js` (`voltouPorOutroAnuncio`,
+`momentoJaEnviado`), `tests/sugestao.test.mjs`, `manifest.json` (0.35.0 → 0.36.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-31 — A origem do anúncio é dado, não texto
 
 **Relato dele**, com a print do bloco "ANÚNCIO | FACEBOOK" e o link `fb.me`: *"se reconhecer o

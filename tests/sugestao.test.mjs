@@ -12,6 +12,7 @@ import { sugerirAcao, REGRAS } from '../src/lib/sugestao.js';
 
 /** Retrato de um contato "sem nada": nenhuma regra deveria casar por acidente. */
 const base = {
+  momentoJaEnviado: false,
   jaPediramDados: true,
   nomeSemSentido: false,
   modeloJaNaConversa: false,
@@ -159,29 +160,31 @@ grupo('etiqueta que dispensa da fila: sugere pular');
 }
 
 
-grupo('ignorou o pedido de dados e voltou por outro anuncio');
+grupo('voltou por outro anuncio');
 {
-  // Os dois desfechos que ele descreveu, escolhidos pelo que ja saiu hoje.
-  const r = com({ voltouPorOutroAnuncio: true, temEtiquetaDeCidade: false });
-  check(r?.tecla === '5', 'sem momento hoje, sugere a mensagem do momento = ' + JSON.stringify(r));
-  check(String(r?.motivo).includes('nao peca de novo') || String(r?.motivo).includes('não peça de novo'),
-    'o motivo diz para NAO pedir de novo');
+  // Os dois desfechos que ele descreveu, escolhidos pelo que ja saiu.
+  const r = com({ voltouPorOutroAnuncio: true });
+  check(r?.tecla === '5', 'momento ainda nao enviado, sugere a mensagem do momento = ' + JSON.stringify(r));
+  check(String(r?.motivo).includes('outro an'), 'o motivo diz que voltou por anuncio = ' + r?.motivo);
 
-  const jaFoi = com({ voltouPorOutroAnuncio: true, temEtiquetaDeCidade: false, momentoHoje: true });
-  check(jaFoi?.tecla === '3', 'momento ja enviado hoje, sugere concluir = ' + JSON.stringify(jaFoi));
+  const jaFoi = com({ voltouPorOutroAnuncio: true, momentoJaEnviado: true });
+  check(jaFoi?.tecla === '3', 'momento ja enviado, sugere concluir = ' + JSON.stringify(jaFoi));
 
-  const semMomento = com({ voltouPorOutroAnuncio: true, temEtiquetaDeCidade: false, podeMandarMomento: false });
+  const semMomento = com({ voltouPorOutroAnuncio: true, podeMandarMomento: false });
   check(semMomento?.tecla === '3', 'sem mensagem do momento configurada, sugere concluir');
 
   // Vence "sem etiqueta de cidade", que sugeriria justamente pedir dados de novo.
   check(r?.tecla !== '4', 'nao sugere pedir dados de novo');
 
-  // Quem JA tem cidade nao e este caso: respondeu, so voltou pelo anuncio.
-  check(com({ voltouPorOutroAnuncio: true, temEtiquetaDeCidade: true })?.id !== 'voltou-por-outro-anuncio',
-    'com cidade ja preenchida a regra nao casa');
+  // Print do Telmo: cidade Viamao, modelo enviado as 10:28, voltou por anuncio as 18:24 -- e a
+  // rodada sugeria mandar o modelo de novo. Ter cidade nao muda o que a pessoa acabou de fazer.
+  check(com({ voltouPorOutroAnuncio: true, temEtiquetaDeCidade: true })?.id === 'voltou-por-outro-anuncio',
+    'com cidade a regra casa igual');
+  check(com({ voltouPorOutroAnuncio: true, momentoJaEnviado: true, podeEnviar: true, conteudoPedido: 'ADS' })?.tecla === '3',
+    'vence o modelo: nao manda o mesmo conteudo de novo');
 
   // E audio continua ganhando: quem falou merece resposta.
-  check(com({ voltouPorOutroAnuncio: true, temEtiquetaDeCidade: false, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6',
+  check(com({ voltouPorOutroAnuncio: true, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6',
     'audio vence o retorno por anuncio');
 }
 

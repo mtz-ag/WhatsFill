@@ -106,16 +106,24 @@ export const REGRAS = [
      * etiqueta de cidade" sugeriria, por isso esta vem antes dela. A pessoa já viu o formulário e
      * escolheu não responder; repetir vira a terceira mensagem igual.
      *
-     * A tecla é os dois desfechos que ele descreveu, escolhidos pelo que já saiu hoje: se a
-     * mensagem do momento ainda não foi, ela vai (alguma coisa a pessoa recebe); se já foi, só
-     * concluir — mandar duas no mesmo dia é o que faz a conta parecer robô.
+     * A tecla é os dois desfechos que ele descreveu, escolhidos pelo que já saiu: se a mensagem
+     * do momento ainda não foi, ela vai (alguma coisa a pessoa recebe); se já foi, só concluir.
+     *
+     * **Sem a condição de "não tem cidade", que era minha e estava errada** (31/08, print do
+     * Telmo): cidade Viamão, modelo enviado às 10:28, e às 18:24 ele voltou por outro anúncio. A
+     * rodada sugeria mandar o modelo de novo. Ele: *"voltou diversas vezes por anúncios, já
+     * mandei mensagem do momento = concluir"*. Voltar por anúncio é sobre o que a pessoa acabou
+     * de fazer; ter cidade não muda isso.
+     *
+     * E "já mandei" não é "hoje": a chave do envio inclui um resumo do texto, então a conta é
+     * sobre a mensagem do momento ATUAL.
      */
-    tecla: (c) => (c.momentoHoje || !c.podeMandarMomento ? '3' : '5'),
-    quando: (c) => c.voltouPorOutroAnuncio && !c.temEtiquetaDeCidade,
+    tecla: (c) => (c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5'),
+    quando: (c) => c.voltouPorOutroAnuncio,
     motivo: (c) =>
-      c.momentoHoje || !c.podeMandarMomento
-        ? 'ignorou o pedido de dados e voltou por outro anúncio — não peça de novo, só conclua.'
-        : 'ignorou o pedido de dados e voltou por outro anúncio — não peça de novo; mande a mensagem do momento.',
+      c.momentoJaEnviado || !c.podeMandarMomento
+        ? 'voltou por outro anúncio e já recebeu a mensagem do momento — conclua e siga.'
+        : 'voltou por outro anúncio — não mande o mesmo conteúdo de novo; a mensagem do momento serve.',
   },
   {
     id: 'ultima-e-so-reacao',

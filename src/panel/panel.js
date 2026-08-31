@@ -3326,6 +3326,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // confirm: a pergunta da rodada é a confirmação.
       const textosDeHoje = [];
       let momentoHoje = false;
+      // "Já mandei a mensagem do momento" no relato dele não quer dizer hoje — a chave do envio
+      // inclui um resumo do texto, então isto é sobre a mensagem do momento ATUAL.
+      const momentoJaEnviado = momento ? !!(await templatesLib.wasSent(state.contact.id, momento.id)) : false;
       for (const t of [agradecerInfo, momento, interesse].filter(Boolean)) {
         const envio = await templatesLib.wasSent(state.contact.id, t.id);
         if (envio && ehHoje(envio.at)) {
@@ -3417,8 +3420,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       const ultimaDoContato = state.entrantes[state.entrantes.length - 1]?.texto || '';
       const padraoAnuncio = String(state.auto.cfg.padraoNovos || '').trim();
+      /**
+       * O sinal de "voltou" é **já termos falado antes**, não o formulário ter saído.
+       *
+       * A primeira versão exigia `pedidoDeHoje` e que o contato não tivesse cidade — e por isso
+       * não pegou o Telmo (print de 31/08): cidade Viamão, modelo enviado às 10:28, e às 18:24 ele
+       * voltou por outro anúncio. A rodada sugeriu mandar o modelo de novo.
+       *
+       * Ter alguma mensagem NOSSA na conversa é o que separa "voltou" de "chegou agora", e é
+       * verdade tanto para quem recebeu formulário quanto para quem recebeu modelo.
+       */
       const voltouPorOutroAnuncio =
-        !!pedidoDeHoje &&
+        state.nossas.length > 0 &&
         !!padraoAnuncio &&
         achatarTexto(ultimaDoContato).includes(achatarTexto(padraoAnuncio));
 
@@ -3447,6 +3460,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         respondidoHoje: !!state.nossaUltimaAt && ehHoje(state.nossaUltimaAt),
         voltouPorOutroAnuncio,
         momentoHoje,
+        momentoJaEnviado,
         pedeRespostaPessoal: ultimaPedeRespostaPessoal(state.entrantes),
         etiquetaQueDispensa: await etiquetaQueDispensaDaFila(),
         ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
