@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-08-31 — Os dois branches passam a estar escritos, e a armadilha da pasta única
+
+**Pedido dele:** *"resolva"*. A outra metade do trabalho — o merge está registrado no
+`registro.md` do branch `claude/whatsfill-ia`.
+
+### O que estava errado
+
+O `CONTEXTO.md` afirmava: *"branch `claude/extensao-claude-analise-i9spxw` (é o único deste
+repo)"*. Não é — existe `claude/whatsfill-ia`, com a avaliação por IA. E o `CLAUDE.md` não
+mencionava branch nenhum.
+
+**Por que isso paga o próprio custo:** o `CONTEXTO.md` existe justamente para abrir uma aba nova
+sem redescobrir nada. Uma sessão que lesse "é o único" e recebesse um pedido de IA faria uma de
+duas coisas ruins — refazer do zero o que já existe, ou **implementar a IA neste branch**, que é
+exatamente o que ele não quer (a regra "Sem IA na extração" é deste branch).
+
+### A armadilha que veio junto
+
+As duas extensões carregam da **mesma pasta** (`OneDrive/Documents/GitHub/WhatsFill`, confirmado
+no `Secure Preferences` do Chrome). Dar checkout no branch da IA troca a extensão de produção pela
+da IA sem avisar ninguém. Em 29/08 isso aconteceu e pareceu que a IA tinha vazado para produção;
+o diagnóstico correto levou uma varredura nos dois branches para descobrir que **nenhum estava
+errado — a pasta tinha duas árvores misturadas**.
+
+Os dois sinais que dizem qual está no ar, e por isso são mantidos de propósito:
+
+- o **nome**: `WhatsFill` aqui, `WhatsFill+IA` lá
+- a **versão**: sempre maior no branch da IA (hoje 0.39.0 contra 0.38.0 daqui)
+
+O sintoma da árvore misturada é `git status` acusando arquivo que ninguém editou (foram 17). E o
+conserto **não** é apagar o arquivo órfão à mão: ele volta no próximo checkout, e um commit
+descuidado apaga o trabalho do outro branch. É `git restore .` + checkout do branch certo.
+
+**Arquivos:** `CLAUDE.md` (cabeçalho dos branches + a armadilha), `CONTEXTO.md` (a afirmação
+corrigida), `manifest.json` (0.38.0 → **0.38.1**).
+
+Onze suítes não se aplicam aqui — este branch tem dez, e as dez passam. 29 módulos sem erro.
+
+---
+
 ## 2026-08-31 — A pergunta que ELE fez também é contexto
 
 **Relato dele:** *"caiu porque lhe falei para utilizar meu contexto também. Se eu perguntei qual

@@ -1,5 +1,13 @@
 # WhatsFill — Guia para Claude Code
 
+> **Este é o branch `claude/extensao-claude-analise-i9spxw`** — a ferramenta de produção dele, e
+> onde o trabalho normal acontece.
+>
+> **Existe um segundo branch: `claude/whatsfill-ia`** (WhatsFill+IA), que soma uma avaliação de
+> contexto por IA. Ele não vai para produção e **nada de IA entra aqui** — a regra "Sem IA na
+> extração" continua valendo neste branch. Conserto que vale para os dois: faça AQUI e leve para
+> lá com merge. Duplicar `panel.js` (6.000+ linhas) é como as duas versões divergem em uma semana.
+
 ## PROTOCOLO OBRIGATÓRIO ANTES DE QUALQUER EXECUÇÃO
 
 > Antes de implementar, refatorar ou executar qualquer tarefa, SEMPRE verifique:
@@ -74,6 +82,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   Não use ele para verificar nada.
 - **Recarregar a extensão órfã as abas abertas** (`Extension context invalidated`): o painel
   falha em silêncio até dar F5. Já causou diagnóstico errado duas vezes.
+- **Uma pasta, DUAS extensões — e trocar de branch troca o que o Chrome carrega.** O Chrome
+  carrega de `OneDrive/Documents/GitHub/WhatsFill`, que é o repositório: dar checkout no
+  `claude/whatsfill-ia` troca a extensão em produção pela da IA, sem avisar ninguém. É por isso
+  que a versão do manifesto é **sempre maior no branch da IA** (0.39.0 contra 0.38.0 daqui) e o
+  nome muda (`WhatsFill+IA`): são os dois sinais que dizem qual está no ar. Em 29/08 isto
+  aconteceu ao contrário e pareceu que a IA tinha vazado para produção — o sintoma foi
+  `git status` acusando 17 arquivos que ninguém editou, todos idênticos ao outro branch.
+  **Antes de apagar arquivo que não deveria estar aí, rode `git status` e compare com o outro
+  branch**: apagar o órfão à mão é o conserto errado (ele volta no checkout, e um commit
+  descuidado apaga o trabalho do outro branch). O certo é `git restore .` + checkout do branch
+  certo. Para usar as duas ao mesmo tempo, `git worktree` em pasta separada.
 - **"O fix não funcionou" pode ser "o fix não chegou".** A pasta que o Chrome carrega não é
   necessariamente a que o GitHub Desktop atualiza — cópia da extensão DENTRO da pasta da
   extensão (zip descompactado, `dist/`, que é gitignorado) fica congelada para sempre. Custou uma

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WhatsFill",
-  "version": "0.38.0",
+  "version": "0.38.1",
   "description": "Respostas prontas, variáveis e classificação em 1 clique para o atendimento no mobiliza.app.",
   "permissions": ["storage", "power"],
   "host_permissions": [

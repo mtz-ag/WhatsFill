@@ -10,7 +10,12 @@ Atualizado em **31/08/2026**, ao fim de um dia longo de trabalho ao vivo com o T
 ## 1. Antes de qualquer coisa: você está olhando o código certo?
 
 - repositório **`github.com/mtz-ag/WhatsFill`**
-- branch **`claude/extensao-claude-analise-i9spxw`** (é o único deste repo)
+- branch **`claude/extensao-claude-analise-i9spxw`** — é ONDE VOCÊ TRABALHA, e é o de produção
+- **existe um segundo branch: `claude/whatsfill-ia`.** É o WhatsFill+IA: mesma extensão mais uma
+  avaliação de contexto que ESCOLHE entre as respostas prontas (nunca escreve para o eleitor),
+  com chave da Anthropic e teto de gasto mensal. Ele não vai para produção. **Conserto que vale
+  para os dois se faz AQUI e vai para lá por merge** — duplicar `panel.js` (6.000+ linhas) é como
+  as duas versões divergem em uma semana. Nunca implemente a IA neste branch.
 - clone local dele: **`C:\Users\thiag\OneDrive\Documents\GitHub\WhatsFill`**
 
 **Confira a versão antes de diagnosticar qualquer coisa.** O cabeçalho do painel mostra a versão
