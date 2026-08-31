@@ -413,6 +413,18 @@ const DEFAULTS = {
      */
     horasSemResposta: 12,
     /**
+     * Etiquetas que dispensam o contato da rodada — a sugestão vira "pular".
+     *
+     * Pedido dele (31/08): *"etiqueta engajado, quando estiver no automatizado pode ser pulado"*.
+     * Quem já está engajado não precisa de formulário nem de pergunta de interesse: o trabalho da
+     * rodada é justamente transformar desconhecido em engajado.
+     *
+     * Casa por PEDAÇO do rótulo, sem acento e sem caixa: "engajado" pega "ENGAJADO/BIZA",
+     * "Apoiador Muito engajado" e o que mais vier com essa palavra. Separe por vírgula para
+     * acrescentar outras — é para ele mexer aqui sem precisar de mim.
+     */
+    etiquetasQuePulam: 'engajado',
+    /**
      * Janela em que a rodada NÃO manda de novo para quem já recebeu mensagem nossa.
      *
      * Quem acabou de ser concluído volta para o TOPO da lista de concluídos, então a rodada

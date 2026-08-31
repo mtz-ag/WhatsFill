@@ -5,6 +5,47 @@
 
 ---
 
+## 2026-08-31 — Etiqueta que dispensa da fila: "engajado" vem com Pular sugerido
+
+**Pedido dele:** *"etiqueta engajado, quando estiver no automatizado pode ser pulado"*.
+
+Faz sentido pelo próprio objetivo da rodada: o trabalho dela é transformar desconhecido em
+engajado. Quem já chegou lá não precisa de formulário nem de pergunta de interesse.
+
+### Configurável, e não fixo no código
+
+Campo novo na aba Automatizado — **"Etiquetas que a rodada pode pular"**, padrão `engajado`,
+separadas por vírgula. Casa por **pedaço do rótulo, sem acento e sem caixa**: `engajado` pega
+"ENGAJADO/BIZA" (a da print dele) e "Apoiador Muito engajado". Vazio não pula ninguém.
+
+Fixar "engajado" no código obrigaria ele a me pedir toda vez que quisesse acrescentar uma —
+e ele avisou desde o começo que ia acrescentar situações conforme aparecem.
+
+A comparação é por **rótulo normalizado, nunca por id**: o CRM tem rótulos repetidos com ids
+diferentes, armadilha que já produziu 1293 contatos errados neste projeto.
+
+### A prioridade que importa, e ela veio da própria print dele
+
+A regra fica **abaixo** de "pede resposta pessoal". O contato da print é os dois ao mesmo tempo:
+tem `ENGAJADO/BIZA` **e** acabou de mandar um áudio de 24s sobre perseguição religiosa.
+
+Pular ali calaria justamente o apoiador mais próximo — o que mais merece resposta. Então a
+sugestão que aparece continua sendo a **6, responder à mão**, e há teste fixando exatamente isso.
+
+### Sugere PULAR, não CONCLUIR
+
+Pular deixa o atendimento aberto. Fechar quem está engajado sem dizer nada é decisão maior do que
+uma sugestão deve tomar — e continua a um toque de distância, na tecla 3, se ele quiser.
+
+### Arquivos
+
+`src/lib/store.js` (`etiquetasQuePulam`), `src/lib/sugestao.js` (regra),
+`src/panel/panel.js` (`etiquetaQueDispensaDaFila` + campo na Config),
+`tests/sugestao.test.mjs` (6 asserções novas), `manifest.json` (0.24.0 → 0.25.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-31 — O parser passa a ouvir o áudio, com a trava que torna isso aceitável
 
 **Pedido dele:** *"sim aplique falta adicionar quando for assim"* — em resposta à decisão que eu

@@ -13,6 +13,7 @@ import { sugerirAcao, REGRAS } from '../src/lib/sugestao.js';
 /** Retrato de um contato "sem nada": nenhuma regra deveria casar por acidente. */
 const base = {
   pedeRespostaPessoal: null,
+  etiquetaQueDispensa: null,
   ultimaEhSoReacao: false,
   podeMandarMomento: true,
   temEtiquetaDeCidade: true,
@@ -118,6 +119,24 @@ grupo('audio ou texto longo: responder a mao, e na frente de tudo');
     'vence o modelo a enviar — ter etiqueta não quer dizer que a conversa acabou');
   check(com({ pedeRespostaPessoal: pede, ultimaEhSoReacao: true })?.tecla === '6', 'vence a reação');
   check(com({ pedeRespostaPessoal: pede, temEtiquetaDeCidade: false })?.tecla === '6', 'vence a regra de cidade');
+}
+
+
+grupo('etiqueta que dispensa da fila: sugere pular');
+{
+  const r = com({ etiquetaQueDispensa: 'ENGAJADO/BIZA' });
+  check(r?.tecla === '2', 'recomendou pular = ' + JSON.stringify(r));
+  check(String(r?.motivo || '').includes('ENGAJADO/BIZA'), 'o motivo nomeia a etiqueta = ' + r?.motivo);
+
+  // Vence o resto do trabalho de fila: engajado nao precisa de formulario nem de interesse.
+  check(com({ etiquetaQueDispensa: 'engajado', temEtiquetaDeCidade: false })?.tecla === '2', 'vence pedir dados');
+  check(com({ etiquetaQueDispensa: 'engajado', podeEnviar: true })?.tecla === '2', 'vence o modelo');
+  check(com({ etiquetaQueDispensa: 'engajado', ultimaEhSoReacao: true })?.tecla === '2', 'vence a reacao');
+
+  // MAS nao vence quem acabou de mandar audio: pular ali calaria o apoiador mais proximo.
+  const pede = { motivo: 'mandou um audio' };
+  check(com({ etiquetaQueDispensa: 'engajado', pedeRespostaPessoal: pede })?.tecla === '6',
+    'audio de engajado continua pedindo resposta a mao');
 }
 
 fim();

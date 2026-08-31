@@ -43,6 +43,27 @@ export const REGRAS = [
     motivo: (c) => `${c.pedeRespostaPessoal.motivo}. Responda à mão.`,
   },
   {
+    id: 'etiqueta-dispensa-da-fila',
+    tecla: '2',
+    /**
+     * Etiqueta que dispensa o contato da rodada (configurável na aba Automatizado).
+     *
+     * Pedido dele: quem tem "engajado" pode ser pulado. Faz sentido — o trabalho da rodada é
+     * transformar desconhecido em engajado; quem já chegou lá não precisa de formulário nem de
+     * pergunta de interesse.
+     *
+     * **Fica ABAIXO de "pede resposta pessoal", e isso é de propósito.** Engajado que acabou de
+     * mandar um áudio é exatamente quem mais merece resposta — pular ali seria calar justamente
+     * o apoiador mais próximo. O caso da print era esse: engajado E com áudio, e a sugestão que
+     * apareceu foi a 6.
+     *
+     * Sugere PULAR e não CONCLUIR: pular deixa o atendimento aberto, e fechar quem está engajado
+     * sem dizer nada é decisão maior do que uma sugestão deve tomar.
+     */
+    quando: (c) => !!c.etiquetaQueDispensa,
+    motivo: (c) => `tem a etiqueta "${c.etiquetaQueDispensa}" — já está engajado, a rodada não precisa dele.`,
+  },
+  {
     id: 'ultima-e-so-reacao',
     tecla: '5',
     /**

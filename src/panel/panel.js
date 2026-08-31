@@ -1607,6 +1607,31 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * A confirmação é por contato, não uma só no começo: o que sai daqui é o modelo aprovado do
    * conteúdo que a pessoa pediu, e enviar o modelo errado é o erro mais caro deste fluxo.
    */
+  /**
+   * O contato tem alguma etiqueta que o dispensa da rodada?
+   *
+   * Compara por PEDAÇO do rótulo, sem acento e sem caixa: "engajado" casa com "ENGAJADO/BIZA" e
+   * com "Apoiador Muito engajado". É o mesmo tipo de comparação que o resto do projeto usa para
+   * etiqueta — rótulo normalizado, nunca id, porque o CRM tem rótulos repetidos com ids
+   * diferentes.
+   *
+   * @param {string[]} etiquetas rótulos que o contato tem (ou vai receber)
+   * @returns {string|null} o rótulo que casou, para a sugestão poder nomeá-lo
+   */
+  function etiquetaQueDispensaDaFila(etiquetas) {
+    const pedacos = String(state.auto.cfg.etiquetasQuePulam || '')
+      .split(',')
+      .map((p) => cities.semAcentoNemCaixa(p.trim()))
+      .filter(Boolean);
+    if (!pedacos.length) return null;
+
+    for (const rotulo of etiquetas || []) {
+      const alvo = cities.semAcentoNemCaixa(rotulo);
+      if (pedacos.some((p) => alvo.includes(p))) return rotulo;
+    }
+    return null;
+  }
+
   function renderCartaoRespondidos() {
     const card = h('div', { class: 'wf-card' }, [
       h('h4', {}, 'Conferir e responder a fila'),
@@ -1636,6 +1661,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'respondido há POUCO. Passou dessas horas sem ele voltar, a rodada para e pergunta: ' +
           'é a chance de mandar a mensagem do momento (tecla 5) ou um modelo, em vez de fechar ' +
           'quem nunca mandou os dados.')
+    );
+
+    card.append(
+      campoTexto('Etiquetas que a rodada pode pular (separe por vírgula)', state.auto.cfg.etiquetasQuePulam, (v) =>
+        salvarAuto({ etiquetasQuePulam: v.trim() }).then(renderAll)
+      )
+    );
+    card.append(
+      h('div', { class: 'wf-origin' },
+        'Quem tem uma destas vem com "Pular" sugerido: o trabalho da rodada é transformar ' +
+          'desconhecido em engajado, e quem já chegou lá não precisa de formulário. Casa por ' +
+          'pedaço do rótulo, sem acento e sem caixa — "engajado" pega "ENGAJADO/BIZA" e ' +
+          '"Apoiador Muito engajado". Vazio = não pula ninguém. **A sugestão continua sendo só ' +
+          'sugestão:** quem mandou áudio ou texto longo continua vindo com "Responder à mão", ' +
+          'mesmo engajado.')
     );
 
     card.append(
@@ -3291,6 +3331,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // Ela só RECOMENDA: todas as opções continuam na tela e todas as teclas continuam valendo.
       const sugestao = sugerirAcao({
         pedeRespostaPessoal: ultimaPedeRespostaPessoal(state.entrantes),
+        etiquetaQueDispensa: etiquetaQueDispensaDaFila(etiquetas),
         ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
         podeMandarMomento: !momentoTrava,
         temEtiquetaDeCidade,
