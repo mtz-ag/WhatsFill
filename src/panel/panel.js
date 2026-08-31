@@ -19,7 +19,7 @@ import * as categorizar from '../lib/categorizar.js';
 import { extract } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
-import { ultimaEhSoReacao } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, ultimaPedeRespostaPessoal } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil } from '../lib/vars.js';
 
@@ -3267,6 +3267,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // O destaque vem da tabela de regras (`sugestao.js`), não de condições espalhadas aqui.
       // Ela só RECOMENDA: todas as opções continuam na tela e todas as teclas continuam valendo.
       const sugestao = sugerirAcao({
+        pedeRespostaPessoal: ultimaPedeRespostaPessoal(state.entrantes),
         ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
         podeMandarMomento: !momentoTrava,
         temEtiquetaDeCidade,
@@ -3320,6 +3321,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const escolha = await perguntarNaRodada({
         titulo: nome,
         recomendacao: sugestao,
+        // O passo manual dele quando a resposta tem que ser escrita: copiar a conversa e colar
+        // numa IA. Aqui vira um clique — sem sair da caixa e sem parar a rodada.
+        copiarConversa: state.entrantes,
         linhas: [
           valueNamed('Cidade')
             ? ['Cidade: ', ...cidadeMarcada(), cidadeSubstituida()]
@@ -3493,7 +3497,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *
    * @returns {Promise<string>} o `valor` da opção escolhida, ou 'parar' no Esc
    */
-  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [], recomendacao = null, dica = 'Esc para parar a rodada' }) {
+  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [], recomendacao = null, copiarConversa = null, dica = 'Esc para parar a rodada' }) {
     // `fechar` sai daqui de dentro para virar `promessa.cancelar`: caixa que ficou na tela
     // depois de o contato mudar tem que poder ser tirada de fora. Ver `cancelarPerguntaDeCidade`.
     let fecharDeFora = null;
@@ -3535,6 +3539,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         linhaBotoes.append(btn);
       }
       caixa.append(linhaBotoes);
+      if (copiarConversa?.length) caixa.append(montarCopiarConversa(copiarConversa, titulo));
       if (respostas.length) caixa.append(montarRespostasRapidas(respostas));
       caixa.append(h('div', { class: 'wf-pergunta-dica' }, dica));
 
@@ -3661,6 +3666,50 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Resposta bloqueada por variável aparece **desabilitada com o motivo**, nunca sumindo: já
    * aconteceu duas vezes de a opção sumir e ninguém entender por quê.
    */
+  /**
+   * Copia o que o contato escreveu, para colar numa IA e escrever a resposta.
+   *
+   * É o passo manual que ele já faz — *"vou mandar pra uma IA ler e fazer a resposta para eu
+   * copiar e mandar"* —, sem o selecionar-e-arrastar por cima da conversa. Copia só as mensagens
+   * DO CONTATO: é o que a IA precisa ler, e as nossas já são respostas prontas dele.
+   *
+   * Não fecha a pergunta nem para a rodada. E não manda nada para lugar nenhum: o texto vai para
+   * a área de transferência da máquina dele, e quem escolhe onde colar é ele.
+   */
+  function montarCopiarConversa(entrantes, quem) {
+    const linha = h('div', { class: 'wf-pergunta-botoes' });
+    const botao = h('button', { class: 'wf-btn wf-mini', type: 'button' }, 'Copiar a conversa');
+    const aviso = h('span', { class: 'wf-pergunta-dica' }, '');
+
+    botao.addEventListener('click', async () => {
+      const texto = entrantes
+        .map((m) => {
+          const t = String(m?.texto || '').trim();
+          if (t) return t;
+          // Mídia sem texto vira marcação: a IA precisa saber que houve algo ali.
+          const tipo = String(m?.tipo || '').toUpperCase();
+          return tipo && tipo !== 'TEXT' ? `[${tipo.toLowerCase()}]` : '';
+        })
+        .filter(Boolean)
+        .join('
+
+');
+
+      try {
+        await navigator.clipboard.writeText(`Mensagens de ${quem}:
+
+${texto}`);
+        aviso.textContent = 'Copiado.';
+      } catch (_) {
+        // Sem permissão de área de transferência: dizer é melhor que fingir que copiou.
+        aviso.textContent = 'O navegador não deixou copiar — selecione na conversa.';
+      }
+    });
+
+    linha.append(botao, aviso);
+    return linha;
+  }
+
   function montarRespostasRapidas(respostas) {
     const bloco = h('details', { class: 'wf-rapidas' });
     bloco.append(h('summary', {}, `Respostas rápidas (${respostas.length})`));

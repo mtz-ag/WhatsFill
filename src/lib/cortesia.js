@@ -103,6 +103,51 @@ export function ehSoReacao(msg) {
   return !semEmoji && TEM_EMOJI.test(texto);
 }
 
+/** Tipos que sempre pedem você em pessoa: não dá para responder sem ouvir. */
+const TIPOS_QUE_PEDEM_VOCE = new Set(['AUDIO', 'VIDEO', 'DOCUMENT', 'CONTACT', 'LOCATION']);
+
+/**
+ * A partir de quantos caracteres uma mensagem deixa de caber numa resposta pronta.
+ *
+ * 400 e não 200: mensagem de apoiador animado passa fácil de 200 e ainda é o caso normal da
+ * rodada. A transcrição de um áudio de 1 minuto passa de 600 — é essa a fronteira que interessa.
+ */
+const TEXTO_LONGO = 400;
+
+/**
+ * Esta mensagem pede uma resposta ESCRITA POR VOCÊ?
+ *
+ * Áudio, vídeo e documento entram sempre: não dá para responder sem abrir. Texto entra por
+ * tamanho — quem escreveu (ou falou) três parágrafos contando da família e da igreja não recebe
+ * modelo aprovado sem que isso pareça deboche.
+ *
+ * A transcrição do áudio, quando a plataforma a devolve no texto da mensagem, cai no mesmo laço
+ * pelo tamanho. Quando não devolve, o tipo já resolve.
+ *
+ * @param {{texto?:string, tipo?:string}} msg
+ * @returns {{motivo:string}|null}
+ */
+export function pedeRespostaPessoal(msg) {
+  const tipo = String(msg?.tipo || 'TEXT').toUpperCase();
+  const texto = String(msg?.texto || '');
+
+  if (TIPOS_QUE_PEDEM_VOCE.has(tipo)) {
+    const comoChama = tipo === 'AUDIO' ? 'um áudio' : tipo === 'VIDEO' ? 'um vídeo' : 'um arquivo';
+    return { motivo: `mandou ${comoChama} — só dá para responder depois de abrir` };
+  }
+  if (texto.trim().length >= TEXTO_LONGO) {
+    return { motivo: `escreveu ${texto.trim().length} caracteres — é conversa, não é caso de modelo` };
+  }
+  return null;
+}
+
+/** A última mensagem do contato pede resposta escrita por você? */
+export function ultimaPedeRespostaPessoal(entrantes) {
+  const lista = Array.isArray(entrantes) ? entrantes : [];
+  if (!lista.length) return null;
+  return pedeRespostaPessoal(lista[lista.length - 1]);
+}
+
 /** A última mensagem do contato é só uma reação? */
 export function ultimaEhSoReacao(entrantes) {
   const lista = Array.isArray(entrantes) ? entrantes : [];

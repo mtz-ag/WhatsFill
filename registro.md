@@ -5,6 +5,52 @@
 
 ---
 
+## 2026-08-30 — Áudio e texto longo pedem você, não modelo — e o copiar que ele fazia à mão
+
+**Relato dele**, com print: *"já com etiquetas, nesse caso ela mandou um audio que resultou em um
+texto gigante que vou mandar pra uma IA ler e fazer a resposta para eu copiar e mandar"*.
+
+### O caso mostra um limite do desenho anterior
+
+Contato **já classificado** — etiquetas FORMIGUEIRO, Central, ADS; cidade Formigueiro; conteúdo
+pedido ADS; modelo mapeado. A caixa sugeria, corretamente pelas regras de ontem, *"Sugiro a 1:
+pediu ADS e há modelo mapeado — mande."*
+
+E estava errado. Ela tinha mandado um **áudio de 1min13** contando dos três filhos, da igreja, do
+convite para almoçar na casa dela. Mandar modelo aprovado para quem acabou de dizer isso parece
+deboche.
+
+**A lição, que vale além desta regra:** ter etiqueta não quer dizer que a conversa acabou. O que a
+pessoa acabou de dizer manda mais do que o que ela pediu semana passada.
+
+### A regra
+
+Áudio, vídeo, documento, ou texto com **400+ caracteres** → *responder à mão* (tecla 6). Vai em
+**primeiro**, acima de todas as outras.
+
+400 e não 200: mensagem de apoiador animado passa fácil de 200 e ainda é caso normal da rodada. A
+transcrição de um áudio de um minuto passa de 600 — é essa a fronteira que interessa. Mídia entra
+pelo TIPO, então funciona mesmo quando a plataforma não devolve transcrição no texto.
+
+### E o passo manual virou um clique
+
+Botão **"Copiar a conversa"** dentro da caixa da rodada. Copia só as mensagens DO CONTATO (é o que
+a IA precisa ler; as nossas já são respostas prontas dele), com a mídia sem texto marcada como
+`[audio]` para a IA saber que houve algo ali.
+
+Não fecha a pergunta, não para a rodada e **não manda nada para lugar nenhum** — o texto vai para
+a área de transferência da máquina dele, e quem escolhe onde colar é ele. Se o navegador recusar a
+área de transferência, ele diz isso em vez de fingir que copiou.
+
+### Arquivos
+
+`src/lib/cortesia.js` (`pedeRespostaPessoal`, `ultimaPedeRespostaPessoal`),
+`src/lib/sugestao.js` (regra em primeiro), `src/panel/panel.js` (`montarCopiarConversa` +
+contexto), `tests/cortesia.test.mjs` e `tests/sugestao.test.mjs`,
+`manifest.json` (0.21.0 → 0.22.0). Dez suítes passando.
+
+---
+
 ## 2026-08-30 — Regra nova: última mensagem é figura, emoji ou link → mensagem do momento
 
 **Pedido dele:** *"ultima mensagem é imagem, sticker, emoticon, link, mandar mensagem do momento,

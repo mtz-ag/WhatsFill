@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal } from '../src/lib/cortesia.js';
 
 const texto = (t) => ({ texto: t, tipo: 'TEXT' });
 
@@ -91,6 +91,30 @@ grupo('ultimaEhSoReacao olha so a ultima');
   check(!ultimaEhSoReacao([{ texto: '', tipo: 'IMAGE' }, t('quero o conteudo')]), 'a última tem substância');
   check(!ultimaEhSoReacao([]), 'conversa vazia');
   check(!ultimaEhSoReacao(null), 'nulo não explode');
+}
+
+grupo('mensagem que pede resposta escrita por voce');
+{
+  check(!!pedeRespostaPessoal({ texto: '', tipo: 'AUDIO' }), 'áudio pede sempre');
+  check(/áudio/.test(pedeRespostaPessoal({ texto: '', tipo: 'AUDIO' }).motivo), 'o motivo diz que foi áudio');
+  check(!!pedeRespostaPessoal({ texto: '', tipo: 'VIDEO' }), 'vídeo também');
+  check(!!pedeRespostaPessoal({ texto: '', tipo: 'DOCUMENT' }), 'documento também');
+
+  // O caso da Janete: áudio de 1min13 que a plataforma transcreveu num texto enorme.
+  const transcricao = 'Obrigada, eu já estou falando de você para meus filhos, eu tenho três filhos. '.repeat(8);
+  const r = pedeRespostaPessoal({ texto: transcricao, tipo: 'TEXT' });
+  check(!!r, 'transcrição longa pede resposta pessoal mesmo vindo como TEXT');
+  check(/caracteres/.test(r.motivo), `o motivo diz o tamanho = ${r.motivo}`);
+
+  check(!pedeRespostaPessoal({ texto: 'quero receber o conteúdo', tipo: 'TEXT' }), 'mensagem curta não pede');
+  check(!pedeRespostaPessoal({ texto: '', tipo: 'IMAGE' }), 'figura não é caso disto (é reação)');
+  check(!pedeRespostaPessoal({ texto: '', tipo: 'TEXT' }), 'vazia não pede');
+  check(!pedeRespostaPessoal(null), 'nulo não explode');
+
+  const t2 = (x, tipo) => ({ texto: x, tipo: tipo || 'TEXT' });
+  check(!!ultimaPedeRespostaPessoal([t2('oi'), t2('', 'AUDIO')]), 'olha a última');
+  check(!ultimaPedeRespostaPessoal([t2('', 'AUDIO'), t2('oi')]), 'a última é curta');
+  check(!ultimaPedeRespostaPessoal([]), 'vazio');
 }
 
 fim();

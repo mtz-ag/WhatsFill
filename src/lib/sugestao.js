@@ -26,6 +26,23 @@
  */
 export const REGRAS = [
   {
+    id: 'ultima-pede-resposta-pessoal',
+    tecla: '6',
+    /**
+     * Áudio, vídeo, documento ou texto longo → responder à mão.
+     *
+     * **Vem antes de tudo, inclusive de "pediu conteúdo e há modelo".** Foi o caso que ele
+     * trouxe: contato JÁ classificado, com etiqueta e conteúdo pedido, que mandou um áudio de
+     * 1min13 contando da família, da igreja e do convite para almoçar. A caixa sugeria mandar o
+     * modelo aprovado — e mandar modelo para quem acabou de falar isso parece deboche.
+     *
+     * Ter etiqueta não quer dizer que a conversa acabou. O que a pessoa acabou de dizer manda
+     * mais do que o que ela pediu semana passada.
+     */
+    quando: (c) => !!c.pedeRespostaPessoal,
+    motivo: (c) => `${c.pedeRespostaPessoal.motivo}. Responda à mão.`,
+  },
+  {
     id: 'ultima-e-so-reacao',
     tecla: '5',
     /**

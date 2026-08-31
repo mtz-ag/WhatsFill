@@ -12,6 +12,7 @@ import { sugerirAcao, REGRAS } from '../src/lib/sugestao.js';
 
 /** Retrato de um contato "sem nada": nenhuma regra deveria casar por acidente. */
 const base = {
+  pedeRespostaPessoal: null,
   ultimaEhSoReacao: false,
   podeMandarMomento: true,
   temEtiquetaDeCidade: true,
@@ -102,6 +103,21 @@ grupo('ultima mensagem e so reacao: mensagem do momento, e na frente');
 
   // Sem mensagem do momento configurada, a opção nem está na tela.
   check(com({ ultimaEhSoReacao: true, podeMandarMomento: false })?.tecla !== '5', 'sem momento configurado não recomenda');
+}
+
+grupo('audio ou texto longo: responder a mao, e na frente de tudo');
+{
+  const pede = { motivo: 'mandou um áudio — só dá para responder depois de abrir' };
+  const r = com({ pedeRespostaPessoal: pede });
+  check(r?.tecla === '6', `recomendou a tecla 6 = ${JSON.stringify(r)}`);
+  check(/áudio/.test(r?.motivo || ''), 'o motivo vem da detecção');
+
+  // O caso que ele trouxe: contato JA classificado, com conteudo pedido e modelo mapeado, que
+  // mandou um audio. Mandar modelo para quem acabou de falar 1min13 parece deboche.
+  check(com({ pedeRespostaPessoal: pede, podeEnviar: true, conteudoPedido: 'ADS' })?.tecla === '6',
+    'vence o modelo a enviar — ter etiqueta não quer dizer que a conversa acabou');
+  check(com({ pedeRespostaPessoal: pede, ultimaEhSoReacao: true })?.tecla === '6', 'vence a reação');
+  check(com({ pedeRespostaPessoal: pede, temEtiquetaDeCidade: false })?.tecla === '6', 'vence a regra de cidade');
 }
 
 fim();
