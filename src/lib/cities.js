@@ -251,6 +251,78 @@ async function municipiosValidos() {
   return municipios.filter((c) => !fora.has(normalize(c)));
 }
 
+/**
+ * O que, numa frase, indica que o município citado é a cidade DA PESSOA.
+ *
+ * Pedido dele (31/08), com a print do Dirceu: *"a cidade deve sair de um contexto, resposta a
+ * minha pergunta, ou a pessoa falar (eu moro em (cidade), eu sou de (cidade))"*.
+ *
+ * O caso que motivou: a mensagem do anúncio diz *"Vamos juntos mudar o **Rio Grande**"* — que é
+ * o estado — e "Rio Grande" é município do RS. A guarda `NOME_DO_ESTADO` só apaga "Rio Grande do
+ * Sul" escrito por inteiro, então a forma curta passava e virava popup de cidade.
+ *
+ * Menção solta deixou de valer. É a mesma lógica que já governa o resto do parser: nome de
+ * município no meio de uma frase **prova que o texto contém um nome de município**, não que a
+ * pessoa more lá — "meu genro mora em Santiago" é o exemplo que já estava no `CLAUDE.md`.
+ */
+const PISTAS_DE_CIDADE = [
+  /\bmoro\s+(em|no|na|nos|nas)\s+/gi,
+  /\bmorando\s+(em|no|na)\s+/gi,
+  /\bmoramos\s+(em|no|na)\s+/gi,
+  /\bresido\s+(em|no|na)\s+/gi,
+  /\bsou\s+(de|do|da|dos|das)\s+/gi,
+  /\bsomos\s+(de|do|da)\s+/gi,
+  /\b(venho|vim)\s+de\s+/gi,
+  /\baqui\s+(em|no|na|de|do|da)\s+/gi,
+  /\b(minha|nossa)\s+cidade\s+(é|e)\s+/gi,
+  /\bcidade\s*[:\-]\s*/gi,
+  /\b(estou|to|tô)\s+(em|no|na)\s+/gi,
+  /\bfica\s+(em|no|na)\s+/gi,
+  /\bregi[ãa]o\s+(de|do|da)\s+/gi,
+  /\bem\s+/gi, // "material impresso em Pelotas" — preposição de lugar, e a mais comum
+  /\/\s*/g, // a resposta ao formulário: "Maria / Santo Ângelo"
+];
+
+/**
+ * Mensagem curta o bastante para ser, ela mesma, a resposta da cidade.
+ *
+ * "Sao lourenso" — errado de digitação e sem pista nenhuma — continua sendo a pessoa dizendo onde
+ * mora. `cidadeSozinha` exige o nome exato e completo; isto cobre o resto, e só em texto curto:
+ * numa frase inteira, nome de município prova que há um nome de município, não onde a pessoa está.
+ */
+const TEXTO_CURTO = 30;
+
+/** Quanto texto depois da pista ainda pode conter o nome da cidade. */
+const ALCANCE_DA_PISTA = 40;
+
+/**
+ * O município citado vem depois de uma pista de moradia?
+ *
+ * Procura a pista e casa o município **só no trecho seguinte a ela**. É o que separa "moro em
+ * Rio Grande" de "vamos mudar o Rio Grande".
+ */
+export async function matchCityComContexto(text) {
+  const bruto = String(text || '');
+  if (!bruto.trim()) return null;
+
+  // Texto curto é a própria resposta: vale sem pista.
+  if (bruto.trim().length <= TEXTO_CURTO) {
+    const curto = await matchCity(bruto);
+    if (curto) return curto;
+  }
+
+  for (const pista of PISTAS_DE_CIDADE) {
+    pista.lastIndex = 0; // regex global guarda posição entre chamadas
+    let m;
+    while ((m = pista.exec(bruto)) !== null) {
+      const inicio = m.index + m[0].length;
+      const hit = await matchCity(bruto.slice(inicio, inicio + ALCANCE_DA_PISTA));
+      if (hit) return { ...hit, pista: m[0].trim() };
+    }
+  }
+  return null;
+}
+
 export async function matchCity(text) {
   const municipios = await municipiosValidos();
   if (!municipios.length) return null;

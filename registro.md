@@ -5,6 +5,52 @@
 
 ---
 
+## 2026-08-31 — A cidade passa a exigir contexto: "Rio Grande" de slogan não é município
+
+**Relato dele**, print do Dirceu com o popup *"Encontrei 'Rio Grande' como cidade"*:
+
+> *"a cidade deve sair de um contexto, resposta a minha pergunta, ou a pessoa falar (eu moro em
+> (cidade), eu sou de (cidade)) — resumindo, veja outros contextos também que se aplicam a
+> cidade; na print está se referindo ao Rio Grande do Sul"*
+
+A mensagem era *"Olá! Vamos juntos mudar o **Rio Grande**"*, do anúncio. A guarda que existia
+(`NOME_DO_ESTADO`) só apaga **"Rio Grande do Sul" por extenso** — a forma curta passava, e
+"Rio Grande" é município do RS.
+
+### A regra nova
+
+Sem resposta ao formulário, a cidade agora precisa de **pista de moradia**: "moro em", "morando
+em", "resido em", "sou de", "venho de", "aqui em", "minha cidade é", "estou em", "fica em",
+"região de", "em", e a barra do formulário. O município é casado **só no trecho depois da pista**
+— é isso que separa "moro em Rio Grande" de "vamos mudar o Rio Grande".
+
+Continuam valendo sem pista: a resposta estruturada e a **mensagem curta** que é a própria cidade
+(o "PORTO ALEGRE" sozinho, e o "Sao lourenso" com erro de digitação).
+
+### O que a primeira versão quebrou, e por que isso importa
+
+Exigi pista para tudo e **três testes caíram** — "Maria / Sao Lourenço", "Sao lourenso" e
+"material impresso em Pelotas". Os três eram casos verdadeiros que a suíte já protegia: a barra do
+formulário, o texto curto e a preposição "em". Sem eles, a mudança teria trocado um falso positivo
+por três falsos negativos.
+
+**A suíte pagou o próprio custo aqui.** Foi ela que mostrou que "contexto" era mais largo do que
+as duas frases do exemplo dele.
+
+### O limite que fica
+
+*"meu genro mora em Santiago"* continua propondo Santiago — tem pista, e a pista está certa; quem
+mora lá é outra pessoa. É a razão de a cidade **nunca** ser gravada sem clique, e já estava no
+`CLAUDE.md` antes disto.
+
+### Arquivos
+
+`src/lib/cities.js` (`PISTAS_DE_CIDADE`, `matchCityComContexto`), `src/lib/extract.js`,
+`tests/parser.test.mjs` (11 asserções novas), `CLAUDE.md`, `manifest.json` (0.36.0 → 0.37.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-31 — "Voltou diversas vezes por anúncios": a regra existia e duas condições minhas a impediam
 
 **Relato dele**, print do Telmo: *"voltou diversas vezes por anúncios, já mandei mensagem do

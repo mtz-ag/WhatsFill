@@ -524,4 +524,28 @@ grupo('vocabulario da campanha nunca vira cidade');
   check(!(await cities.naoPodeSerCidade('Santo Ângelo')), 'Santo Ângelo tambem');
 }
 
+
+grupo('cidade precisa de CONTEXTO, nao basta o nome aparecer');
+{
+  const cidadeDe = async (t) => (await extract([t], {})).cidade?.value || null;
+
+  // O caso da print (31/08, Dirceu): "Rio Grande" na mensagem do anuncio e o ESTADO. A guarda
+  // NOME_DO_ESTADO so apagava "Rio Grande do Sul" por inteiro, entao a forma curta virava popup.
+  check((await cidadeDe('Olá! Vamos juntos mudar o Rio Grande')) === null, 'slogan com "Rio Grande" nao vira cidade');
+  check((await cidadeDe('Pelo Rio Grande. E pelo Brasil!')) === null, 'headline do anuncio tambem nao');
+  check((await cidadeDe('quero mudar o Rio Grande do Sul')) === null, 'o estado por extenso continua fora');
+
+  // As pistas que ele citou, e as vizinhas.
+  check((await cidadeDe('eu moro em Rio Grande')) === 'Rio Grande', 'moro em');
+  check((await cidadeDe('sou de Pelotas')) === 'Pelotas', 'sou de');
+  check((await cidadeDe('aqui em Caxias do Sul o pessoal apoia')) === 'Caxias do Sul', 'aqui em');
+  check((await cidadeDe('minha cidade é Bagé')) === 'Bagé', 'minha cidade e');
+  check((await cidadeDe('resido em Santa Maria')) === 'Santa Maria', 'resido em');
+  check((await cidadeDe('estou em Erechim hoje')) === 'Erechim', 'estou em');
+
+  // A resposta ao formulario e a mensagem curta continuam valendo sem pista nenhuma.
+  check((await cidadeDe('Maria Silva / Santo Ângelo')) === 'Santo Ângelo', 'resposta ao formulario');
+  check((await cidadeDe('PORTO ALEGRE')) === 'Porto Alegre', 'mensagem que e so a cidade');
+}
+
 fim();

@@ -60,8 +60,19 @@ export async function extract(texts, { temaField } = {}) {
      * não vale — "Vitória" sozinho pode ser nome de gente, e trocar a cidade de um eleitor por
      * causa disso é pior do que deixar o campo como está.
      */
+    /**
+     * Sem resposta ao formulário, a cidade precisa de CONTEXTO — não basta o nome aparecer.
+     *
+     * Pedido dele (31/08): *"a cidade deve sair de um contexto, resposta a minha pergunta, ou a
+     * pessoa falar (eu moro em (cidade), eu sou de (cidade))"*. O caso da print: a mensagem do
+     * anúncio dizia *"Vamos juntos mudar o Rio Grande"* — o estado — e "Rio Grande" é município.
+     *
+     * Sobram então os três caminhos que são a pessoa dizendo onde mora: a resposta estruturada
+     * (acima), a mensagem que é só o nome da cidade, e a menção precedida de pista ("moro em",
+     * "sou de", "aqui em"…).
+     */
     const soCidade = await cidadeSozinha(list);
-    const hit = soCidade || (await cities.matchCity(joined));
+    const hit = soCidade || (await cities.matchCityComContexto(joined));
     if (hit) {
       guesses.cidade = {
         value: hit.city,

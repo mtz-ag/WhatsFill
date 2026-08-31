@@ -324,6 +324,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 - **`confirm()` nativo não pode aparecer dentro da rodada.** Ele abre DEPOIS da decisão, fora do
   lugar onde ele está olhando, e trava o laço num diálogo do navegador. Aviso de duplicata vira
   linha da pergunta da rodada; quem chama passa `jaConfirmado: true`.
+- **A cidade só sai de CONTEXTO, nunca de menção solta** (decisão dele, 31/08). O gatilho foi
+  *"Vamos juntos mudar o Rio Grande"* — o estado na forma curta, que a guarda `NOME_DO_ESTADO`
+  não pegava porque ela só apaga "Rio Grande do Sul" por extenso. Hoje valem três caminhos, e só
+  eles: resposta ao formulário, mensagem **curta** que é a própria cidade, e menção precedida de
+  pista (`PISTAS_DE_CIDADE`: "moro em", "sou de", "aqui em", "minha cidade é", "em"…). Nome de
+  município no meio de uma frase prova que o texto contém um nome de município, não que a pessoa
+  more lá.
 - **O nome do ESTADO contém o nome de um município.** "Rio Grande do Sul" tem "Rio Grande"
   dentro, e o casamento procura o município em qualquer lugar do texto — quem escrevia "sou do
   Rio Grande do Sul" era gravado em Rio Grande, com o COREDE errado junto. A frase inteira é
