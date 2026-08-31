@@ -29,6 +29,16 @@ const SAUDACAO = /\b(bom\s*dia|boa\s*(tarde|noite|madrugada))\b/i;
 const LINK = /(https?:\/\/\S+|www\.\S+|\b[a-z0-9-]+\.(com|br|net|org|me|tv|app|io)(\/\S*)?\b)/i;
 
 /**
+ * Só emoji (e o modificador de tom de pele / seletor de variação que costuma vir junto).
+ *
+ * São DUAS: a com `g` serve para apagar, a sem `g` para testar. `RegExp` com `g` guarda o
+ * `lastIndex` entre chamadas, então `test()` na mesma instância global devolve resultado
+ * diferente na segunda vez com o mesmo texto — bug que só aparece no segundo contato da rodada.
+ */
+const EMOJI_TODOS = /[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{1F3FB}-\u{1F3FF}\u{FE0F}\u{200D}]/gu;
+const TEM_EMOJI = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u;
+
+/**
  * O que sobra depois de tirar saudação, link, pontuação, emoji e o vocabulário de cortesia.
  * Não sobrou nada? Então a mensagem era só cortesia.
  */
@@ -59,6 +69,45 @@ function mensagemDeCortesia(msg) {
 
   // "bom dia, preciso falar com o deputado" tem substância: não é cortesia.
   return !restoDaMensagem(texto);
+}
+
+/**
+ * A mensagem é só uma REAÇÃO — figura, figurinha, emoji solto ou link?
+ *
+ * Diferente de `soCortesia`, que olha a janela inteira e exige cumprimento/link/figura em todas:
+ * aqui a pergunta é sobre UMA mensagem, e "bom dia" **escrito** não conta. O caso é a pessoa que
+ * manda um 👍, uma figurinha ou um link e fica esperando — não há o que responder ao conteúdo,
+ * mas ignorar também não serve.
+ *
+ * @param {{texto?:string, tipo?:string}} msg
+ * @returns {boolean}
+ */
+export function ehSoReacao(msg) {
+  const tipo = String(msg?.tipo || 'TEXT').toUpperCase();
+  const texto = String(msg?.texto || '');
+
+  if (TIPOS_DE_IMAGEM.has(tipo)) return !texto.trim() || !restoDaMensagem(texto);
+  if (!texto.trim()) return false;
+
+  // Link e nada mais.
+  if (LINK.test(texto) && !texto.replace(LINK, ' ').replace(/\s+/g, ' ').trim()) return true;
+
+  // Emoji, pontuação e espaço — e nada além disso: o "👍" e o "🙏🙏🙏".
+  const semEmoji = texto
+    .replace(EMOJI_TODOS, '')
+    .replace(/[\p{P}\p{S}\s]/gu, '')
+    .trim();
+
+  // Só conta se REALMENTE havia emoji: "..." ou "!!!" sozinho é outra coisa, e não merece a
+  // mensagem do momento.
+  return !semEmoji && TEM_EMOJI.test(texto);
+}
+
+/** A última mensagem do contato é só uma reação? */
+export function ultimaEhSoReacao(entrantes) {
+  const lista = Array.isArray(entrantes) ? entrantes : [];
+  if (!lista.length) return false;
+  return ehSoReacao(lista[lista.length - 1]);
 }
 
 /**

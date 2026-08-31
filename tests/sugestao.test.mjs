@@ -12,6 +12,8 @@ import { sugerirAcao, REGRAS } from '../src/lib/sugestao.js';
 
 /** Retrato de um contato "sem nada": nenhuma regra deveria casar por acidente. */
 const base = {
+  ultimaEhSoReacao: false,
+  podeMandarMomento: true,
   temEtiquetaDeCidade: true,
   podePedirDados: true,
   pedidoHoje: false,
@@ -86,6 +88,20 @@ grupo('a lista de regras se mantém sã');
   REGRAS[0].quando = () => { throw new Error('regra quebrada'); };
   check(sugerirAcao({ ...base, podeEnviar: true })?.tecla === '1', 'regra quebrada é pulada, a seguinte vale');
   REGRAS[0].quando = original;
+}
+
+grupo('ultima mensagem e so reacao: mensagem do momento, e na frente');
+{
+  const r = com({ ultimaEhSoReacao: true });
+  check(r?.tecla === '5', `recomendou a tecla 5 = ${JSON.stringify(r)}`);
+  check(/figura|emoji|link/.test(r?.motivo || ''), `o motivo diz o que ela mandou = ${r?.motivo}`);
+
+  // Vence até a regra de cidade: responder um 👍 pedindo nome e cidade lê como robô.
+  check(com({ ultimaEhSoReacao: true, temEtiquetaDeCidade: false })?.tecla === '5', 'vence a regra de cidade');
+  check(com({ ultimaEhSoReacao: true, podeEnviar: true })?.tecla === '5', 'vence o modelo a enviar');
+
+  // Sem mensagem do momento configurada, a opção nem está na tela.
+  check(com({ ultimaEhSoReacao: true, podeMandarMomento: false })?.tecla !== '5', 'sem momento configurado não recomenda');
 }
 
 fim();

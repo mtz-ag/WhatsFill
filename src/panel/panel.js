@@ -19,6 +19,7 @@ import * as categorizar from '../lib/categorizar.js';
 import { extract } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
+import { ultimaEhSoReacao } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil } from '../lib/vars.js';
 
@@ -116,6 +117,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       log: [], // { nome, resultado, motivo } de cada contato da rodada
     },
     incoming: [],
+    /** O que o contato mandou, com o tipo junto — é o que enxerga figura e figurinha. */
+    entrantes: [],
     /**
      * Cidades que você recusou no popup, enquanto este contato estiver aberto (normalizadas).
      *
@@ -375,6 +378,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const antes = state.incoming.length;
       const conversa = await api.getConversation(state.pageState.sessionId);
       state.incoming = conversa.incoming;
+      state.entrantes = conversa.entrantes || [];
       state.ultimaMensagem = conversa.ultima;
 
       // Sinal disparado por mensagem NOSSA (ou mídia): nada novo do contato para analisar.
@@ -456,6 +460,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       const conversa = await api.getConversation(sessionId);
       state.incoming = conversa.incoming;
+      state.entrantes = conversa.entrantes || [];
       state.ultimaMensagem = conversa.ultima;
       const temaField = classify.find((f) => f.name === 'Tema de Interesse');
       const palpites = await extract(state.incoming, { temaField });
@@ -3262,6 +3267,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // O destaque vem da tabela de regras (`sugestao.js`), não de condições espalhadas aqui.
       // Ela só RECOMENDA: todas as opções continuam na tela e todas as teclas continuam valendo.
       const sugestao = sugerirAcao({
+        ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
+        podeMandarMomento: !momentoTrava,
         temEtiquetaDeCidade,
         podePedirDados: !pedirTrava,
         pedidoHoje,

@@ -26,6 +26,21 @@
  */
 export const REGRAS = [
   {
+    id: 'ultima-e-so-reacao',
+    tecla: '5',
+    /**
+     * Pedido dele: última mensagem é imagem, figurinha, emoticon ou link → mensagem do momento.
+     *
+     * Vem ANTES de "sem etiqueta de cidade" porque é sobre o que a pessoa **acabou de fazer**,
+     * que é o sinal mais recente que existe. Responder um 👍 com "me manda seu nome e cidade"
+     * lê como robô que não olhou a tela; a mensagem do momento responde ao gesto.
+     *
+     * Se ele preferir o contrário, é trocar as duas de lugar nesta lista — nada mais.
+     */
+    quando: (c) => c.ultimaEhSoReacao && c.podeMandarMomento,
+    motivo: () => 'a última mensagem foi só uma figura, emoji ou link — a mensagem do momento responde ao gesto.',
+  },
+  {
     id: 'sem-etiqueta-de-cidade',
     tecla: '4',
     /**

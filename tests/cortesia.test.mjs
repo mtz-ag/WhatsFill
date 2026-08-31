@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim } from './_harness.mjs';
-import { soCortesia } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao } from '../src/lib/cortesia.js';
 
 const texto = (t) => ({ texto: t, tipo: 'TEXT' });
 
@@ -54,6 +54,43 @@ grupo('cortesia: o que NÃO pode virar mensagem do momento');
   check(soCortesia([texto('bom dia'), texto('preciso de ajuda')]) === null, 'uma com substância derruba o conjunto');
   check(soCortesia([{ texto: 'olha esse absurdo aqui na minha rua', tipo: 'IMAGE' }]) === null, 'figura com legenda de peso');
   check(soCortesia(null) === null, 'entrada inválida não explode');
+}
+
+grupo('ultima mensagem e so uma reacao: figura, figurinha, emoji ou link');
+{
+  check(ehSoReacao({ texto: '', tipo: 'IMAGE' }), 'figura sem legenda');
+  check(ehSoReacao({ texto: '', tipo: 'STICKER' }), 'figurinha');
+  check(ehSoReacao({ texto: '👍', tipo: 'TEXT' }), 'emoji sozinho');
+  check(ehSoReacao({ texto: '🙏🙏🙏', tipo: 'TEXT' }), 'emoji repetido');
+  check(ehSoReacao({ texto: '👍🏽', tipo: 'TEXT' }), 'emoji com tom de pele');
+  check(ehSoReacao({ texto: 'https://youtu.be/abc', tipo: 'TEXT' }), 'link sozinho');
+  check(ehSoReacao({ texto: 'www.jornal.com.br/x', tipo: 'TEXT' }), 'link sem http');
+
+  // A instância de regex com `g` guardava posição entre chamadas: o mesmo texto dava resultado
+  // diferente na segunda vez, e isso só apareceria no segundo contato da rodada.
+  check(ehSoReacao({ texto: '👍', tipo: 'TEXT' }), 'o mesmo emoji de novo (regex não pode guardar estado)');
+  check(ehSoReacao({ texto: '👍', tipo: 'TEXT' }), 'e uma terceira vez');
+}
+
+grupo('reacao: o que NAO conta');
+{
+  check(!ehSoReacao({ texto: 'bom dia', tipo: 'TEXT' }), 'cumprimento escrito não é reação (é caso da cortesia)');
+  check(!ehSoReacao({ texto: 'quero o conteúdo', tipo: 'TEXT' }), 'texto com substância');
+  check(!ehSoReacao({ texto: '...', tipo: 'TEXT' }), 'só pontuação não merece mensagem do momento');
+  check(!ehSoReacao({ texto: '!!!', tipo: 'TEXT' }), 'só exclamação também não');
+  check(!ehSoReacao({ texto: '', tipo: 'AUDIO' }), 'áudio não é figura');
+  check(!ehSoReacao({ texto: 'olha isso aqui https://site.com', tipo: 'TEXT' }), 'link com comentário junto');
+  check(!ehSoReacao({ texto: 'olha esse absurdo', tipo: 'IMAGE' }), 'figura com legenda de peso');
+  check(!ehSoReacao(null), 'nulo não explode');
+}
+
+grupo('ultimaEhSoReacao olha so a ultima');
+{
+  const t = (x) => ({ texto: x, tipo: 'TEXT' });
+  check(ultimaEhSoReacao([t('quero o conteudo'), { texto: '', tipo: 'IMAGE' }]), 'a última é figura');
+  check(!ultimaEhSoReacao([{ texto: '', tipo: 'IMAGE' }, t('quero o conteudo')]), 'a última tem substância');
+  check(!ultimaEhSoReacao([]), 'conversa vazia');
+  check(!ultimaEhSoReacao(null), 'nulo não explode');
 }
 
 fim();

@@ -5,6 +5,50 @@
 
 ---
 
+## 2026-08-30 — Regra nova: última mensagem é figura, emoji ou link → mensagem do momento
+
+**Pedido dele:** *"ultima mensagem é imagem, sticker, emoticon, link, mandar mensagem do momento,
+adicione essa sugestão"*. Primeira situação acrescentada depois que a tabela de regras existiu — e
+o custo foi o previsto: uma entrada na lista, uma função pura e os testes.
+
+### O caso, e por que ele é diferente da cortesia
+
+`soCortesia` olha a janela de 3 mensagens e exige que TODAS sejam cumprimento/link/figura — é a
+regra da rodada dos Novos. `ehSoReacao` olha UMA mensagem, a última, e **"bom dia" escrito não
+conta**: o caso aqui é a pessoa que manda um 👍, uma figurinha ou um link e fica esperando. Não há
+o que responder ao conteúdo, e ignorar também não serve.
+
+Emoji com **tom de pele** e seletor de variação entram na conta (👍🏽 é um emoji só). E só
+pontuação NÃO conta: "..." ou "!!!" sozinho não merece a mensagem do momento.
+
+### Ela vem em PRIMEIRO, acima da regra de cidade
+
+Decisão que vale registrar porque contraria o "sempre" da regra anterior: responder um 👍 com "me
+manda seu nome e cidade" lê como robô que não olhou a tela. O sinal mais recente é o que a pessoa
+acabou de fazer. **Se ele preferir o contrário, é trocar as duas de lugar na lista** — e é só isso
+mesmo, que era o objetivo do desenho de ontem.
+
+### Um bug que os testes pegaram antes de ir para o ar
+
+A regex de emoji tinha a flag `g`, e `RegExp` com `g` guarda o `lastIndex` entre chamadas:
+`test()` na mesma instância devolvia resultado diferente na SEGUNDA vez com o mesmo texto. Só
+apareceria no segundo contato da rodada, como "às vezes sugere e às vezes não" — o tipo de defeito
+que este projeto já pagou caro. São duas instâncias agora: uma com `g` para apagar, uma sem para
+testar. Há teste chamando três vezes seguidas.
+
+### Também
+
+O painel passou a guardar `state.entrantes` (mensagens com o tipo junto), nos dois pontos em que
+carrega a conversa. Sem isso a figura continuava invisível para a decisão.
+
+### Arquivos
+
+`src/lib/cortesia.js` (`ehSoReacao`, `ultimaEhSoReacao`), `src/lib/sugestao.js` (regra nova em
+primeiro), `src/panel/panel.js` (`state.entrantes` + contexto), `tests/cortesia.test.mjs` e
+`tests/sugestao.test.mjs`, `manifest.json` (0.20.0 → 0.21.0). Dez suítes passando.
+
+---
+
 ## 2026-08-30 — A recomendação sai de dentro do código e vira tabela de regras
 
 **Pedido dele:** *"vamos trabalhar nas sugestões de mensagem… deixe destacado em cima das
