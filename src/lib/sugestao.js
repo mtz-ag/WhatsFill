@@ -22,6 +22,8 @@
  * As regras, EM ORDEM DE PRIORIDADE. A primeira que casa vence.
  *
  * `tecla` é a mesma tecla que a caixa da rodada já usa, para o destaque cair na opção certa.
+ * Pode ser uma FUNÇÃO quando a mesma situação pede teclas diferentes conforme o contexto — é o
+ * caso de quem volta por outro anúncio, que ora merece a mensagem do momento, ora só concluir.
  * `quando(ctx)` recebe o retrato do contato; `motivo(ctx)` escreve a frase que aparece em cima.
  */
 export const REGRAS = [
@@ -62,6 +64,30 @@ export const REGRAS = [
      */
     quando: (c) => !!c.etiquetaQueDispensa,
     motivo: (c) => `tem a etiqueta "${c.etiquetaQueDispensa}" — já está engajado, a rodada não precisa dele.`,
+  },
+  {
+    id: 'voltou-por-outro-anuncio',
+    /**
+     * Ignorou o pedido de dados e voltou clicando em OUTRO anúncio.
+     *
+     * Relato dele: *"uma situação frequente é a pessoa ignorar o pedido de dados e retornar por
+     * outro anúncio; quando isso acontece ou eu concluo e vou pra próxima ou mando mensagem do
+     * momento"*.
+     *
+     * **Pedir os dados de novo é o que NÃO serve aqui** — e é justamente o que a regra de "sem
+     * etiqueta de cidade" sugeriria, por isso esta vem antes dela. A pessoa já viu o formulário e
+     * escolheu não responder; repetir vira a terceira mensagem igual.
+     *
+     * A tecla é os dois desfechos que ele descreveu, escolhidos pelo que já saiu hoje: se a
+     * mensagem do momento ainda não foi, ela vai (alguma coisa a pessoa recebe); se já foi, só
+     * concluir — mandar duas no mesmo dia é o que faz a conta parecer robô.
+     */
+    tecla: (c) => (c.momentoHoje || !c.podeMandarMomento ? '3' : '5'),
+    quando: (c) => c.voltouPorOutroAnuncio && !c.temEtiquetaDeCidade,
+    motivo: (c) =>
+      c.momentoHoje || !c.podeMandarMomento
+        ? 'ignorou o pedido de dados e voltou por outro anúncio — não peça de novo, só conclua.'
+        : 'ignorou o pedido de dados e voltou por outro anúncio — não peça de novo; mande a mensagem do momento.',
   },
   {
     id: 'ultima-e-so-reacao',
@@ -145,7 +171,10 @@ export function sugerirAcao(ctx) {
       // Regra quebrada não pode derrubar a rodada: ela simplesmente não sugere nada.
       casa = false;
     }
-    if (casa) return { id: regra.id, tecla: regra.tecla, motivo: regra.motivo(c) };
+    if (!casa) continue;
+    const tecla = typeof regra.tecla === 'function' ? regra.tecla(c) : regra.tecla;
+    if (!tecla) continue; // a regra casou mas não há tecla para ela agora
+    return { id: regra.id, tecla, motivo: regra.motivo(c) };
   }
   return null;
 }

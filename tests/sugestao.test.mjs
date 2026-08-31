@@ -12,6 +12,8 @@ import { sugerirAcao, REGRAS } from '../src/lib/sugestao.js';
 
 /** Retrato de um contato "sem nada": nenhuma regra deveria casar por acidente. */
 const base = {
+  voltouPorOutroAnuncio: false,
+  momentoHoje: false,
   pedeRespostaPessoal: null,
   etiquetaQueDispensa: null,
   ultimaEhSoReacao: false,
@@ -81,7 +83,7 @@ grupo('nenhuma regra casa: nenhum destaque');
 grupo('a lista de regras se mantém sã');
 {
   check(REGRAS.length > 0, `tem regra = ${REGRAS.length}`);
-  check(REGRAS.every((r) => r.id && r.tecla && typeof r.quando === 'function' && typeof r.motivo === 'function'),
+  check(REGRAS.every((r) => r.id && (typeof r.tecla === 'string' || typeof r.tecla === 'function') && typeof r.quando === 'function' && typeof r.motivo === 'function'),
     'toda regra tem id, tecla, quando e motivo');
   check(new Set(REGRAS.map((r) => r.id)).size === REGRAS.length, 'nenhum id repetido');
 
@@ -137,6 +139,33 @@ grupo('etiqueta que dispensa da fila: sugere pular');
   const pede = { motivo: 'mandou um audio' };
   check(com({ etiquetaQueDispensa: 'engajado', pedeRespostaPessoal: pede })?.tecla === '6',
     'audio de engajado continua pedindo resposta a mao');
+}
+
+
+grupo('ignorou o pedido de dados e voltou por outro anuncio');
+{
+  // Os dois desfechos que ele descreveu, escolhidos pelo que ja saiu hoje.
+  const r = com({ voltouPorOutroAnuncio: true, temEtiquetaDeCidade: false });
+  check(r?.tecla === '5', 'sem momento hoje, sugere a mensagem do momento = ' + JSON.stringify(r));
+  check(String(r?.motivo).includes('nao peca de novo') || String(r?.motivo).includes('não peça de novo'),
+    'o motivo diz para NAO pedir de novo');
+
+  const jaFoi = com({ voltouPorOutroAnuncio: true, temEtiquetaDeCidade: false, momentoHoje: true });
+  check(jaFoi?.tecla === '3', 'momento ja enviado hoje, sugere concluir = ' + JSON.stringify(jaFoi));
+
+  const semMomento = com({ voltouPorOutroAnuncio: true, temEtiquetaDeCidade: false, podeMandarMomento: false });
+  check(semMomento?.tecla === '3', 'sem mensagem do momento configurada, sugere concluir');
+
+  // Vence "sem etiqueta de cidade", que sugeriria justamente pedir dados de novo.
+  check(r?.tecla !== '4', 'nao sugere pedir dados de novo');
+
+  // Quem JA tem cidade nao e este caso: respondeu, so voltou pelo anuncio.
+  check(com({ voltouPorOutroAnuncio: true, temEtiquetaDeCidade: true })?.id !== 'voltou-por-outro-anuncio',
+    'com cidade ja preenchida a regra nao casa');
+
+  // E audio continua ganhando: quem falou merece resposta.
+  check(com({ voltouPorOutroAnuncio: true, temEtiquetaDeCidade: false, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6',
+    'audio vence o retorno por anuncio');
 }
 
 fim();

@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-08-31 — Voltou por outro anúncio sem responder o formulário
+
+**Relato dele:** *"uma situação frequente é a pessoa ignorar o pedido de dados e retornar por
+outro anúncio; quando isso acontece ou eu concluo e vou pra próxima ou mando mensagem do
+momento"*.
+
+### O que a regra impede
+
+**Pedir os dados de novo** — que é exatamente o que a rodada sugeria, porque a regra "sem
+etiqueta de cidade" casava. A pessoa já viu o formulário e escolheu não responder; repetir vira a
+terceira mensagem igual. Por isso esta regra fica ACIMA daquela.
+
+### Dois desfechos, escolhidos pelo que já saiu hoje
+
+Ele descreveu duas saídas, e a regra escolhe entre elas em vez de fixar uma:
+
+- mensagem do momento ainda não foi hoje → **tecla 5** (a pessoa recebe alguma coisa);
+- já foi, ou não há mensagem do momento configurada → **tecla 3**, só concluir.
+
+Mandar duas mensagens do momento no mesmo dia é o que faz a conta parecer robô — a mesma razão
+que já tirava o destaque do "pedir dados" repetido.
+
+Para isso a tabela passou a aceitar **`tecla` como função**, além de string. É a primeira
+situação que precisa disso, e é uma linha em `sugerirAcao`.
+
+### A trava do falso positivo
+
+O sinal é a última mensagem casar com a frase do aceite do anúncio — que na configuração dele é
+**"Olá!"**. Sozinha, ela casaria com meio mundo.
+
+Por isso a regra exige **duas** coisas juntas: o formulário já ter saído alguma vez, **e** o
+contato continuar SEM etiqueta de cidade. É isso que separa "ignorou o formulário" de "respondeu
+começando com Olá" — quem respondeu tem cidade, e a regra não casa. Tem teste para os dois lados.
+
+E áudio continua vencendo: quem voltou por anúncio mas mandou um áudio junto recebe "responder à
+mão", não "concluir".
+
+### Arquivos
+
+`src/lib/sugestao.js` (regra + tecla dinâmica), `src/panel/panel.js` (`voltouPorOutroAnuncio`,
+`momentoHoje`), `tests/sugestao.test.mjs` (7 asserções novas),
+`manifest.json` (0.25.0 → 0.26.0). Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-31 — Etiqueta que dispensa da fila: "engajado" vem com Pular sugerido
 
 **Pedido dele:** *"etiqueta engajado, quando estiver no automatizado pode ser pulado"*.

@@ -3267,9 +3267,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // laço num diálogo nativo. Aqui o aviso vem antes, na pergunta, e o envio segue sem
       // confirm: a pergunta da rodada é a confirmação.
       const textosDeHoje = [];
+      let momentoHoje = false;
       for (const t of [agradecerInfo, momento, interesse].filter(Boolean)) {
         const envio = await templatesLib.wasSent(state.contact.id, t.id);
-        if (envio && ehHoje(envio.at)) textosDeHoje.push(`"${t.name}" às ${formatarHora(envio.at)}`);
+        if (envio && ehHoje(envio.at)) {
+          textosDeHoje.push(`"${t.name}" às ${formatarHora(envio.at)}`);
+          if (momento && t.id === momento.id) momentoHoje = true;
+        }
       }
 
       // O pedido de dados tem aviso PRÓPRIO, e não uma linha na lista acima: ele é a tecla 4, a
@@ -3329,7 +3333,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // O destaque vem da tabela de regras (`sugestao.js`), não de condições espalhadas aqui.
       // Ela só RECOMENDA: todas as opções continuam na tela e todas as teclas continuam valendo.
+      /**
+       * Voltou clicando em OUTRO anúncio, sem responder o pedido de dados.
+       *
+       * O sinal é a última mensagem dele ser de novo o aceite do anúncio, tendo o formulário já
+       * saído alguma vez. A frase do aceite é curta e genérica ("Olá!"), então sozinha ela casaria
+       * com meio mundo — por isso a regra em `sugestao.js` exige, junto, que o contato continue
+       * SEM etiqueta de cidade: é isso que separa "ignorou o formulário" de "respondeu começando
+       * com Olá".
+       */
+      const ultimaDoContato = state.entrantes[state.entrantes.length - 1]?.texto || '';
+      const padraoAnuncio = String(state.auto.cfg.padraoNovos || '').trim();
+      const voltouPorOutroAnuncio =
+        !!pedidoDeHoje &&
+        !!padraoAnuncio &&
+        achatarTexto(ultimaDoContato).includes(achatarTexto(padraoAnuncio));
+
       const sugestao = sugerirAcao({
+        voltouPorOutroAnuncio,
+        momentoHoje,
         pedeRespostaPessoal: ultimaPedeRespostaPessoal(state.entrantes),
         etiquetaQueDispensa: etiquetaQueDispensaDaFila(etiquetas),
         ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
