@@ -5,6 +5,74 @@
 
 ---
 
+## 2026-08-31 — Nome errado no CRM: separar para ele arrumar, sem trocar nada
+
+**Relato dele**, print do "viver a vida": o cadastro tinha nome de perfil, a pessoa respondeu
+*"Daniel Ribeiro/Canoas"* logo depois de o atendimento ser concluído. *"tem duas opções ou trocar o
+nome pela extensão ou separar esse contato deixando para o final e eu mesmo arrumar"*.
+
+**Ele escolheu separar.** O nome nativo do contato não é tocado em lugar nenhum.
+
+### O que a investigação mudou na pergunta
+
+Antes de propor, três coisas apareceram e nenhuma era óbvia:
+
+1. **São dois campos "nome" diferentes.** O que aparece no topo do CRM é `contact.name`, nativo,
+   vindo do WhatsApp. Separado dele existe um campo personalizado **"Nome"**, que é o que a
+   extensão grava e usa em variáveis e etiquetas.
+2. **Corrigir o nativo exige rota que a extensão nunca executou** — não há escrita de contato em
+   `api.js`, só de etiqueta. Seria descobrir no bundle do Angular, com as duas armadilhas já
+   registradas sobre isso.
+3. **O parser já resolve a leitura.** `extract(['Daniel Ribeiro/Canoas'], {respostaAoPedido:true})`
+   devolve cidade Canoas (exata) e nome Daniel Ribeiro. Nada a fazer ali.
+
+### A regra
+
+`vars.nomeDivergeDoInformado(cadastro, informado)`, pura e testada. **Divergir não é ser
+diferente** — três casos que não contam, e cada um encheria a fila de revisão de contato certo:
+
+- **um contém o outro** — "Daniel" x "Daniel Ribeiro" é a mesma pessoa dando o nome completo;
+- **acento e caixa** — "JOSE" x "José" resolvem para a mesma pessoa;
+- **cadastro de anúncio ou vazio** (`looksLikePlaceholder`) — é buraco, não contradição, e buraco o
+  parser preenche sozinho como sempre fez.
+
+`nomeSemSentido` **não serve aqui**, e é o detalhe que muda o desenho: "viver a vida" tem vogais e
+não é placeholder, então passa nele. É a DIVERGÊNCIA que denuncia, não a forma do cadastro.
+
+### Onde ela se liga
+
+Sai por `tags.suggest` como as outras, com **`origem: 'revisão'`** e não `'conteúdo'`: conteúdo
+alimenta a tabela "Modelo por conteúdo" e viraria modelo a enviar — mandar a campanha para quem
+está na fila de conserto de cadastro é o tipo de coisa que ninguém percebe até acontecer.
+
+A comparação usa **o palpite do parser** (`state.nomeInformado`), não o rascunho. O rascunho não
+serve: quando o campo "Nome" está vazio ele é semeado com o próprio `contact.name`, então comparar
+os dois daria "igual" justamente no caso que interessa. `state.nomeInformado` é limpo na troca de
+contato — sem isso a etiqueta cairia na pessoa errada, que é a armadilha já registrada da pergunta
+de cidade.
+
+Etiqueta configurável na aba Automatizado, **vazia por padrão**: precisa existir no CRM, e a
+extensão não cria etiqueta sozinha.
+
+### Um bug meu, achado pelo teste que eu quase não escrevi
+
+`achatarNome` saiu do meu script com as barras invertidas comidas: `\s` virou a letra **s**
+literal, e `.replace(/s+/g, ' ')` apagava todo "s" dos nomes. "Maria Souza" virava "maria ouza".
+Nove das dez asserções passavam assim — só o caso de pontuação ("Daniel R. Ribeiro" x "Daniel R
+Ribeiro") acusou. Sem ele, isto teria ido para produção comparando nomes mutilados.
+
+### Arquivos
+
+`src/lib/vars.js` (`nomeDivergeDoInformado`, `achatarNome`), `src/lib/tags.js` (a sugestão),
+`src/lib/store.js` (`etiquetaNomeDivergente`), `src/panel/panel.js` (detecção, estado e Config),
+`tests/vars.test.mjs` (10 asserções), `manifest.json` (0.39.0 → **0.40.0**).
+29 módulos sem erro, dez suítes passando.
+
+**Para funcionar, ele precisa criar a etiqueta no CRM e escrever o nome dela na aba Automatizado.**
+Vazio, a extensão não marca ninguém.
+
+---
+
 ## 2026-08-31 — "A sugestão está totalmente errada aqui": três mensagens curtas são uma conversa
 
 **Relato dele**, print do Ipê: a caixa sugeria *"1: pediu 'ADS' e há modelo mapeado — mande"* para

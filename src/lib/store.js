@@ -354,6 +354,16 @@ const DEFAULTS = {
    * mas depende de ele escrever a regex certa; o campo é a fonte, e não custa nada ler.
    */
   etiquetaAnuncio: 'ADS',
+  /**
+   * Etiqueta de "o nome do cadastro não bate com o que a pessoa informou".
+   *
+   * Vazia = a extensão não marca ninguém. Precisa existir no CRM: a extensão não cria etiqueta
+   * sozinha, porque erro de digitação aqui vira rótulo permanente na base.
+   *
+   * Serve para ELE corrigir depois, filtrando a fila por ela. **O nome nativo do contato nunca é
+   * sobrescrito** — escolha dele em 31/08, entre trocar sozinho e separar.
+   */
+  etiquetaNomeDivergente: '',
   /** { "santo angelo": "https://chat.whatsapp.com/..." } — chave sempre normalizada. */
   cityLinks: {},
   /** Usado quando a cidade não tem grupo próprio. Vazio = bloqueia o envio. */

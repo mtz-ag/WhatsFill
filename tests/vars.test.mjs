@@ -305,4 +305,33 @@ grupo('nome sem sentido: o unico caso que ainda pede os dados');
   check(vars.nomeSemSentido('Zé'), 'duas letras contam como falta (herdado, e aceito)');
 }
 
+
+grupo('nomeDivergeDoInformado: separa para ele conferir, sem trocar nada');
+{
+  const { nomeDivergeDoInformado } = await lib('vars.js');
+
+  /**
+   * O caso REAL da print de 31/08: cadastro com nome de perfil, pessoa respondendo o nome dela.
+   * A extensao NAO troca o nome — marca, e ele corrige a mao. Escolha dele entre as duas opcoes.
+   */
+  check(nomeDivergeDoInformado('viver a vida', 'Daniel Ribeiro'), 'cadastro de perfil x nome informado');
+
+  // Os tres falsos positivos que fariam a fila de revisao encher de contato certo:
+  check(!nomeDivergeDoInformado('Daniel', 'Daniel Ribeiro'), 'nome completo sobre o curto nao diverge');
+  check(!nomeDivergeDoInformado('Daniel Ribeiro', 'Daniel'), 'e o contrario tambem nao');
+  check(!nomeDivergeDoInformado('JOSE DA SILVA', 'José da Silva'), 'acento e caixa nao contam');
+  check(!nomeDivergeDoInformado('[NOVO] (51) 99999-9999', 'Daniel'), 'cadastro de anuncio e buraco, nao contradicao');
+
+  // Sem um dos dois lados nao ha o que comparar.
+  check(!nomeDivergeDoInformado('', 'Daniel'), 'cadastro vazio nao diverge');
+  check(!nomeDivergeDoInformado('Daniel', ''), 'sem nome informado nao diverge');
+  check(!nomeDivergeDoInformado(null, null), 'nulo nao quebra');
+
+  // Pontuacao no meio nao inventa divergencia.
+  check(!nomeDivergeDoInformado('Daniel R. Ribeiro', 'Daniel R Ribeiro'), 'ponto nao conta');
+
+  // E o caso que TEM que marcar: dois nomes de gente, diferentes.
+  check(nomeDivergeDoInformado('Maria Souza', 'Joana Prado'), 'nomes diferentes divergem');
+}
+
 fim();

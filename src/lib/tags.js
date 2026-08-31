@@ -178,7 +178,7 @@ function casa(re, padrao, haystack, haystackSemAcento) {
  *   contato: sem isso, qualquer "sim" solto da conversa viraria aceite.
  * @returns {Promise<Array<{origem:string, nome:string, tag:object|null, motivo:string}>>}
  */
-export async function suggest({ city, texts = [], extra = '', interesse = null, veioDeAnuncio = false }) {
+export async function suggest({ city, texts = [], extra = '', interesse = null, veioDeAnuncio = false, nomeDivergente = false }) {
   const out = [];
 
   /**
@@ -198,6 +198,27 @@ export async function suggest({ city, texts = [], extra = '', interesse = null, 
       nome: etiquetaAnuncio,
       tag: await resolveTag(etiquetaAnuncio),
       motivo: 'a conversa começou por um anúncio (a plataforma informa a origem)',
+    });
+  }
+
+  /**
+   * O cadastro diz um nome e a pessoa disse outro → etiqueta para ELE arrumar depois.
+   *
+   * Escolha dele (31/08) entre trocar o nome sozinho e separar: separar. O nome nativo do
+   * contato não é tocado em lugar nenhum — esta etiqueta é o meio de achar a pilha no filtro do
+   * CRM e resolver tudo de uma vez.
+   *
+   * Vai como **`origem: 'revisão'`** e não como conteúdo: conteúdo alimenta a tabela "Modelo
+   * por conteúdo" e viraria modelo a enviar — mandar a campanha para quem está na fila de
+   * conserto de cadastro é o tipo de coisa que ninguém percebe até acontecer.
+   */
+  const etiquetaNome = String(await store.get('etiquetaNomeDivergente') || '').trim();
+  if (nomeDivergente && etiquetaNome) {
+    out.push({
+      origem: 'revisão',
+      nome: etiquetaNome,
+      tag: await resolveTag(etiquetaNome),
+      motivo: 'o nome do cadastro não bate com o que a pessoa informou — confira à mão',
     });
   }
 

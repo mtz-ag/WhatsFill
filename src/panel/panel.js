@@ -21,7 +21,7 @@ import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
 import { ultimaEhSoReacao, conversaPedeRespostaPessoal, ultimaEhDespedida } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
-import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido } from '../lib/vars.js';
+import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
 const GROUP_TEMPLATE_ID = 'link-grupo';
 const THANKS_TEMPLATE_ID = 'agradecimento';
@@ -121,6 +121,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     entrantes: [],
     /** Quando saiu a NOSSA última mensagem — o sinal de "este contato já foi respondido". */
     nossaUltimaAt: null,
+    /** O nome que a pessoa escreveu nesta conversa (palpite do parser), não o do cadastro. */
+    nomeInformado: '',
     /** O que NÓS mandamos nesta conversa — para saber o que já foi, mesmo fora do painel. */
     nossas: [],
     /**
@@ -420,6 +422,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.draft = {};
     state.tagSuggestions = [];
     state.incoming = [];
+    // Sobreviver à troca de contato faria a etiqueta de nome divergente cair na pessoa errada —
+    // é a mesma armadilha da pergunta de cidade, registrada no CLAUDE.md.
+    state.nomeInformado = '';
     state.cidadeRecusada = new Set();
     state.ultimaMensagem = null;
     state.hsmTemplates = [];
@@ -487,6 +492,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       })();
 
       const palpites = await extract(state.incoming, { temaField, respostaAoPedido });
+      /**
+       * O nome que a PESSOA escreveu, guardado à parte do rascunho.
+       *
+       * O rascunho não serve para detectar cadastro errado: quando o campo "Nome" está vazio ele
+       * é semeado com o próprio `contact.name`, então comparar os dois daria "igual" justamente
+       * no caso que interessa. O palpite do parser é a única fonte que diz o que ela informou.
+       */
+      state.nomeInformado = palpites.nome?.value || '';
       applyGuesses(palpites, classify);
 
       /**
@@ -772,6 +785,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           .filter(Boolean)
           .join(' '),
         veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
+        /**
+         * O cadastro contradiz o que a pessoa informou → etiqueta para ele conferir depois.
+         *
+         * Compara o cadastro (`contact.name`) com o que está na aba Dados, que é onde o parser
+         * põe o nome que a pessoa escreveu. Não mexe em nome nenhum: separar foi a escolha dele
+         * (31/08) entre isso e a extensão trocar sozinha.
+         */
+        nomeDivergente: nomeDivergeDoInformado(state.contact?.name, state.nomeInformado),
         interesse: { perguntado: !!perguntado, etiquetas: etiquetasInteresse },
       });
 
@@ -6382,6 +6403,36 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             'texto — então isto não depende de regra nem de acerto de regex. A etiqueta entra ' +
             'como CONTEÚDO, que é o que a liga à tabela "Modelo por conteúdo" logo acima. ' +
             'Vazio = não etiqueta ninguém por essa via.'),
+      ])
+    );
+
+    // O cadastro diz um nome e a pessoa disse outro. A extensão NÃO troca o nome: marca, e ele
+    // corrige à mão depois. Escolha dele em 31/08, entre trocar sozinho e separar.
+    const nomeDivInput = h('input', { type: 'text', placeholder: 'ex.: Conferir nome' });
+    store.get('etiquetaNomeDivergente').then((v) => {
+      nomeDivInput.value = v || '';
+    });
+    nomeDivInput.addEventListener('change', async () => {
+      const v = nomeDivInput.value.trim();
+      await store.set('etiquetaNomeDivergente', v);
+      tagsLib.invalidateTags();
+      setStatus(
+        v
+          ? `Cadastro que não bate com o nome informado recebe a etiqueta "${v}".`
+          : 'Ninguém será marcado por nome divergente.'
+      );
+    });
+    body.append(
+      h('label', { class: 'wf-field' }, [
+        h('span', {}, 'Etiqueta de "o nome do cadastro não bate"'),
+        nomeDivInput,
+        h('div', { class: 'wf-origin' },
+          'Quando a pessoa informa um nome diferente do que está no cadastro (o caso do ' +
+            'cadastro "viver a vida" com a pessoa respondendo "Daniel Ribeiro"), a extensão ' +
+            'marca com esta etiqueta e NÃO mexe no nome. Você filtra a fila por ela e corrige ' +
+            'todos de uma vez. Nome completo sobre nome curto ("Daniel" → "Daniel Ribeiro"), ' +
+            'acento e caixa não contam como divergência. A etiqueta precisa existir no CRM. ' +
+            'Vazio = não marca ninguém.'),
       ])
     );
 
