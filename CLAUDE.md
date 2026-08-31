@@ -5,7 +5,13 @@
 > abaixo vale para os dois; o que é exclusivo daqui está na seção **Avaliação por IA**.
 >
 > Conserto que vale para os dois: faça no branch normal e traga para cá com merge. Duplicar
-> `panel.js` (5.000+ linhas) é como as duas versões divergem em uma semana.
+> `panel.js` (6.000+ linhas) é como as duas versões divergem em uma semana.
+>
+> **A série da versão diz qual das duas está carregada: produção é `0.x`, este branch é `1.x`.**
+> As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
+> avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
+> "versão sempre maior na IA" e quebrou no primeiro dia em que as duas subiram (31/08): regra que
+> exige alguém lembrar não é regra.
 
 ## PROTOCOLO OBRIGATÓRIO ANTES DE QUALQUER EXECUÇÃO
 

@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-08-31 — Este branch passa para a série 1.x
+
+A versão daqui tinha subido para 0.39.0 no merge, e no mesmo dia produção chegou a 0.39.0 também —
+as duas colidiram. A convenção era *"versão sempre maior no branch da IA"*, e ela durou algumas
+horas: **regra que exige alguém lembrar não é regra**.
+
+Agora a **série** separa os dois, e não há nada a lembrar:
+
+| branch | nome | versão |
+|---|---|---|
+| `claude/extensao-claude-analise-i9spxw` | `WhatsFill` | **0.x** |
+| `claude/whatsfill-ia` | `WhatsFill+IA` | **1.x** |
+
+Isto importa porque as duas extensões carregam da **mesma pasta**: dar checkout aqui troca a
+extensão de produção sem avisar ninguém, e o nome mais a série são os únicos sinais no cabeçalho do
+painel que dizem qual está no ar.
+
+`manifest.json` 0.39.0 → **1.0.0**. Nada de código mudou.
+
+---
+
 ## 2026-08-31 — Produção entra no branch da IA: 31 commits de atraso, zerados
 
 **Pedido dele:** *"resolva"* — as duas coisas que eu tinha levantado: o branch da IA estava
