@@ -361,11 +361,27 @@ export async function getConversation(sessionId, pageSize = 50) {
      * nada"* e era assumido sem receber resposta nenhuma. O `type` vem da própria plataforma
      * (`TEXT`, `IMAGE`, `STICKER`, `AUDIO`, `VIDEO`, `DOCUMENT`), conferido no bundle do app.
      *
-     * `incoming` continua exatamente como era: é a base do parser, e parser não lê figura.
+     * **O áudio traz a TRANSCRIÇÃO junto**, em `details.transcription.text` — conferido ao vivo
+     * em 31/08/2026: de 12 mídias olhadas, 9 tinham transcrição, uma delas com 2838 caracteres.
+     * É o que a plataforma mostra na tela como "Transcrição", e sem ela o áudio chegava aqui como
+     * mensagem vazia: o botão "Copiar a conversa" copiava cinco `[audio]` e mais nada, que foi o
+     * relato dele.
+     *
+     * `transcrito` marca de onde o texto veio. Importa para quem lê depois: transcrição é fala
+     * passada por reconhecimento automático, com os erros disso — não é o que a pessoa escreveu.
+     *
+     * `incoming` continua exatamente como era: é a base do parser, e alimentar o parser com
+     * transcrição é decisão à parte (nome e cidade sairiam de texto que a máquina ouviu).
      */
-    entrantes: ordenadas
-      .filter(doContato)
-      .map((m) => ({ texto: m.text || '', tipo: String(m.type || 'TEXT').toUpperCase() })),
+    entrantes: ordenadas.filter(doContato).map((m) => {
+      const transcricao = String(m.details?.transcription?.text || '').trim();
+      const texto = m.text || transcricao;
+      return {
+        texto,
+        tipo: String(m.type || 'TEXT').toUpperCase(),
+        transcrito: !m.text && !!transcricao,
+      };
+    }),
     ultima: ultima
       ? { doContato: doContato(ultima), at: ultima.createdAt, texto: ultima.text || '' }
       : null,

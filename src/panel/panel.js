@@ -3685,10 +3685,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const texto = entrantes
         .map((m) => {
           const t = String(m?.texto || '').trim();
-          if (t) return t;
-          // Mídia sem texto vira marcação: a IA precisa saber que houve algo ali.
           const tipo = String(m?.tipo || '').toUpperCase();
-          return tipo && tipo !== 'TEXT' ? `[${tipo.toLowerCase()}]` : '';
+
+          // Transcrição vai marcada: quem for ler precisa saber que é fala passada por
+          // reconhecimento automático, com os erros disso, e não o que a pessoa escreveu.
+          if (t && m?.transcrito) return `[${tipo.toLowerCase()} transcrito] ${t}`;
+          if (t) return t;
+
+          // Mídia sem texto e sem transcrição: marcação, para a IA saber que houve algo ali.
+          return tipo && tipo !== 'TEXT' ? `[${tipo.toLowerCase()}, sem transcrição]` : '';
         })
         .filter(Boolean)
         .join('\n\n');

@@ -141,6 +141,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   página, com segunda página quando `isLastPage` for `false`. **Subir o `pageSize` não custa
   requisição** — é a mesma chamada com resposta maior, e nesta API o que derruba é número de
   requisições, não tamanho de resposta.
+- **O áudio traz a TRANSCRIÇÃO na própria mensagem: `details.transcription.text`.** Conferido ao
+  vivo em 31/08/2026: de 12 mídias, 9 tinham transcrição (uma com 2838 caracteres). É o que a
+  plataforma mostra na tela como "Transcrição". Sem ler esse campo, áudio chega como mensagem
+  VAZIA — o botão de copiar a conversa copiava cinco `[audio]` e mais nada. `getConversation`
+  devolve isso em `entrantes[].texto` com a marca `transcrito: true`. **`incoming` continua sem
+  transcrição de propósito:** alimentar o parser com fala reconhecida por máquina faria nome e
+  cidade saírem de texto que ninguém escreveu — é decisão à parte, ainda não tomada.
 - **Rota nova? Leia o bundle do app em vez de chutar.** Quando a navegação está bloqueada e não dá
   para inspecionar a rede, o `main.*.js` do mobiliza é a fonte da verdade e está a um `fetch` de
   distância — as URLs, os métodos e os parâmetros estão como texto no código Angular. Foi assim que

@@ -5,6 +5,59 @@
 
 ---
 
+## 2026-08-31 — "O copiar falhou": copiava cinco [audio] e nada mais
+
+**Relato dele**, com print do que ele colou na IA:
+
+```
+responda -- Mensagens de Janete da Silva:
+Olá! Eu apoio o Flávio, Zucco, Hiago e Capitão Martim
+[audio]
+[audio]
+[audio]
+[audio]
+[audio]
+```
+
+O botão **funcionou** — copiou. O que estava errado era o conteúdo: cinco marcações e nenhuma
+palavra do que ela disse. Inútil justamente no caso que o botão existe para servir.
+
+### A transcrição estava na mensagem o tempo todo
+
+`details.transcription.text`. Conferido ao vivo: de 12 mídias olhadas, **9 tinham transcrição**,
+uma delas com 2838 caracteres. É exatamente o texto que a plataforma mostra na tela sob
+"Transcrição" — e que ele já usava lendo com os olhos.
+
+A extensão nunca leu esse campo. `entrantes` pegava só `m.text`, que em áudio vem vazio.
+
+### Agora
+
+`getConversation` devolve o texto da transcrição em `entrantes[].texto`, com a marca
+`transcrito: true`. O copiar sai assim:
+
+```
+[audio transcrito] Obrigada, eu já estou falando de você para meus filhos…
+```
+
+**A marca não é enfeite.** Quem for ler — a IA ou ele — precisa saber que aquilo é fala passada
+por reconhecimento automático, com os erros disso, e não o que a pessoa escreveu. Mídia que
+realmente não tem transcrição passou a dizer `[audio, sem transcrição]`, que é diferente de "não
+consegui ler".
+
+### O que NÃO mudou, e é decisão a tomar
+
+`incoming` — a base do parser — continua sem transcrição. Alimentar o parser com fala
+reconhecida por máquina faria **nome e cidade saírem de texto que ninguém escreveu**, e este
+projeto grava isso no CRM de eleitor real. É ganho grande (a Janete disse a cidade no áudio) e
+risco novo na mesma medida; fica para ele decidir, não para eu decidir sozinho.
+
+### Arquivos
+
+`src/lib/api.js` (`entrantes` com transcrição), `src/panel/panel.js` (o copiar),
+`CLAUDE.md`, `manifest.json` (0.22.1 → 0.23.0). Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-30 — A extensão parou de carregar: uma quebra de linha dentro de uma string
 
 **Relato dele:** *"a extensão não está carregando"* — e depois o print do `src/content.js`, o
