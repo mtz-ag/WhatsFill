@@ -16,7 +16,7 @@
 
 import * as api from './api.js';
 import * as store from './store.js';
-import { normalize } from './cities.js';
+import { normalize, semAcentoNemCaixa } from './cities.js';
 import { buildRequest } from './contract.js';
 /**
  * O nome da etiqueta de cidade vem de `categorizar.js`, e de lá só.
@@ -144,6 +144,29 @@ export function respostaAfirmativa(texts = []) {
 }
 
 /**
+ * A regra de conteúdo casou, com ou sem acento?
+ *
+ * Três tentativas, e cada uma cobre um jeito de o acento atrapalhar:
+ *  1. a regra como ele escreveu, no texto como a pessoa escreveu (o comportamento de sempre);
+ *  2. a mesma regra no texto sem acento — pega a regra `anuncio` contra "anúncio";
+ *  3. a regra sem acento no texto sem acento — pega a regra `anúncio` contra "anuncio".
+ *
+ * A terceira passa o padrão por `semAcentoNemCaixa`, que também apaga metacaractere. Por isso é a
+ * ÚLTIMA e vem dentro de `try`: para regra que é palavra simples ela é o que resolve, e para
+ * regex de verdade as duas primeiras já responderam.
+ */
+function casa(re, padrao, haystack, haystackSemAcento) {
+  if (re.test(haystack)) return true;
+  if (re.test(haystackSemAcento)) return true;
+  try {
+    const simples = semAcentoNemCaixa(padrao);
+    return !!simples && new RegExp(simples, 'i').test(haystackSemAcento);
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
  * Etiquetas sugeridas para o contato.
  *
  * @param {object} ctx
@@ -196,6 +219,21 @@ export async function suggest({ city, texts = [], extra = '', interesse = null }
   }
 
   const haystack = [...texts, extra].filter(Boolean).join('\n');
+
+  /**
+   * A mesma pilha de texto **sem acento**, para a regra dele não depender de til.
+   *
+   * Relato dele (31/08): *"a extensão está com dificuldade pra pegar se for por alguma palavra
+   * chave"*. Aqui estava metade do motivo: a regra é testada como regex, e `/anuncio/i` não casa
+   * com "anúncio" — nem `/anúncio/i` com "anuncio". Quem escreve no WhatsApp acentua quando dá,
+   * e quem escreve a regra na Config acentua quando lembra; exigir que os dois combinem é
+   * garantir que uma parte das mensagens escape.
+   *
+   * Testar nas DUAS versões, em vez de trocar: regra que já funciona com acento continua
+   * funcionando, e nenhuma regex com classe de caractere ou `\b` é reescrita por mim.
+   */
+  const haystackSemAcento = semAcentoNemCaixa(haystack);
+
   for (const regra of await store.get('tagRules')) {
     if (!regra.padrao || !regra.etiqueta) continue;
     let re;
@@ -204,7 +242,7 @@ export async function suggest({ city, texts = [], extra = '', interesse = null }
     } catch (_) {
       continue; // regex inválida na configuração: ignora em vez de explodir
     }
-    if (!re.test(haystack)) continue;
+    if (!casa(re, regra.padrao, haystack, haystackSemAcento)) continue;
     out.push({
       origem: 'conteúdo',
       nome: regra.etiqueta,

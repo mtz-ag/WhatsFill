@@ -5,6 +5,53 @@
 
 ---
 
+## 2026-08-31 — "Dificuldade pra pegar por palavra chave": eram três coisas, consertei uma
+
+**Pergunta dele:** *"a extensão está com dificuldade pra pegar se for por alguma palavra chave, se
+eu botar anunciou não pega pra etiquetar?"*
+
+Fui olhar como a regra de conteúdo casa, e são **três limitações diferentes**. Registro as três
+porque só uma tem conserto óbvio.
+
+### 1. Acento — consertado
+
+A regra vira `new RegExp(padrao, 'i')` e é testada no texto cru. `/anuncio/i` **não** casa com
+"anúncio", e `/anúncio/i` **não** casa com "anuncio". Quem escreve no WhatsApp acentua quando dá;
+quem escreve a regra na Config acentua quando lembra. Exigir que os dois combinem é garantir que
+parte das mensagens escape.
+
+Agora são três tentativas (`tags.casa`): a regra no texto cru, a regra no texto sem acento, e a
+regra sem acento no texto sem acento. **Testar nas duas versões em vez de trocar** — regra que já
+funcionava com acento continua funcionando, e nenhuma regex com classe de caractere ou `` é
+reescrita por mim. A terceira tentativa vem por último e dentro de `try`, porque
+`semAcentoNemCaixa` apaga metacaractere.
+
+### 2. A palavra é literal, não é raiz — NÃO consertado
+
+`anunciou` casa só com "anunciou". Não pega "anúncio", "anunciar", "anunciaram". Para pegar a
+família inteira a regra precisa ser `anunci` (que é o que eu recomendaria) ou `anunci(o|ou|ar|aram)`.
+
+Não mexi nisso porque **é regex de propósito**: cortar palavra sozinho transformaria "sim" em
+"assim" e etiquetaria meio mundo. A tela da Config é que devia dizer isso, e hoje não diz.
+
+### 3. Áudio não entra na conta — decisão pendente dele
+
+A regra olha `state.incoming`, que é **só o que foi digitado**. A transcrição do áudio ficou de
+fora quando a liguei ao parser (30/08), e ali eu a rebaixei a palpite justamente por ser fala
+ouvida por máquina.
+
+Aqui o caso é diferente e mais delicado: **etiqueta de conteúdo é gravada automaticamente** neste
+projeto. Ligar a transcrição significaria escrever etiqueta em eleitor real a partir de palavra
+que ninguém digitou. Não fiz por conta própria; está na mesa para ele decidir, e a saída provável
+é a mesma de antes — sugerir sem gravar sozinho.
+
+### Arquivos
+
+`src/lib/tags.js` (`casa`), `tests/tags.test.mjs` (5 asserções novas),
+`manifest.json` (0.32.0 → 0.33.0). Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-31 — "Pedir dados" passa a ser sobre o NOME, não sobre a cidade
 
 **Relato dele:** *"ao abrir conversas está pedindo dados pra quem já tem etiquetas, uma exceção
