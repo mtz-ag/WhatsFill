@@ -345,6 +345,15 @@ export const DEFAULT_TEMPLATES = [
 
 const DEFAULTS = {
   templates: DEFAULT_TEMPLATES,
+  /**
+   * Etiqueta de quem chegou por anúncio. Vazio = não etiqueta ninguém por essa via.
+   *
+   * A plataforma diz isso em dado estruturado, não em texto: a sessão traz `utm.source`
+   * ("FACEBOOK"), `utm.campaign` e `utm.referralUrl` ("https://fb.me/…") — é o bloco
+   * "ANÚNCIO | FACEBOOK" que aparece no topo da conversa. Casar por regra de texto funcionaria,
+   * mas depende de ele escrever a regex certa; o campo é a fonte, e não custa nada ler.
+   */
+  etiquetaAnuncio: 'ADS',
   /** { "santo angelo": "https://chat.whatsapp.com/..." } — chave sempre normalizada. */
   cityLinks: {},
   /** Usado quando a cidade não tem grupo próprio. Vazio = bloqueia o envio. */

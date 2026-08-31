@@ -178,8 +178,28 @@ function casa(re, padrao, haystack, haystackSemAcento) {
  *   contato: sem isso, qualquer "sim" solto da conversa viraria aceite.
  * @returns {Promise<Array<{origem:string, nome:string, tag:object|null, motivo:string}>>}
  */
-export async function suggest({ city, texts = [], extra = '', interesse = null }) {
+export async function suggest({ city, texts = [], extra = '', interesse = null, veioDeAnuncio = false }) {
   const out = [];
+
+  /**
+   * Chegou por anúncio → etiqueta de anúncio, direto do dado da plataforma.
+   *
+   * Pedido dele (31/08): *"se reconhecer o que está na print e adicionar a etiqueta ADS resolve
+   * tudo"*, com a print do bloco "ANÚNCIO | FACEBOOK". A sessão traz `utm.source` e
+   * `utm.referralUrl` — é dado estruturado, não texto a adivinhar.
+   *
+   * Entra como **conteúdo** de propósito: é assim que ela alimenta a tabela "Modelo por
+   * conteúdo" e vira o modelo a enviar, que é o "resolve tudo" da frase dele.
+   */
+  const etiquetaAnuncio = String(await store.get('etiquetaAnuncio') || '').trim();
+  if (veioDeAnuncio && etiquetaAnuncio) {
+    out.push({
+      origem: 'conteúdo',
+      nome: etiquetaAnuncio,
+      tag: await resolveTag(etiquetaAnuncio),
+      motivo: 'a conversa começou por um anúncio (a plataforma informa a origem)',
+    });
+  }
 
   const corede = await coredeFor(city);
   if (corede) {

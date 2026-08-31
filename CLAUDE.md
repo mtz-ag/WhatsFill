@@ -166,6 +166,11 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   (31/08). Quem precisa saber o que JÁ FOI usa `getConversation().nossas` (o que mandamos, com
   texto) ou `nossaUltimaAt` (quando). O registro de envios continua valendo para anti-duplicata
   do próprio painel; ele só não é a verdade sobre a conversa.
+- **A origem do anúncio é DADO, não texto.** O bloco "ANÚNCIO | FACEBOOK" com o link `fb.me` que
+  aparece no topo da conversa vem da sessão: `utm.source` ("FACEBOOK"), `utm.campaign`,
+  `utm.referralUrl` e `utm.sourceId` (conferidos ao vivo em 31/08/2026). Casar isso por regra de
+  texto é adivinhar o que já está dito num campo. O painel manda os quatro para o texto das
+  regras e usa `utm.source`/`utm.referralUrl` para a etiqueta de anúncio.
 - **Rota nova? Leia o bundle do app em vez de chutar.** Quando a navegação está bloqueada e não dá
   para inspecionar a rede, o `main.*.js` do mobiliza é a fonte da verdade e está a um `fetch` de
   distância — as URLs, os métodos e os parâmetros estão como texto no código Angular. Foi assim que

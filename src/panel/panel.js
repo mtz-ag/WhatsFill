@@ -746,7 +746,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const sugeridas = await tagsLib.suggest({
         city: valueNamed('Cidade'),
         texts: state.incoming,
-        extra: [state.session?.utm?.campaign, state.session?.utm?.headline].filter(Boolean).join(' '),
+        // Tudo que a plataforma conta sobre a origem entra no texto das regras dele: antes só
+        // `campaign` ia, então uma regra com "facebook" ou com o link do anúncio nunca casava.
+        extra: [
+          state.session?.utm?.campaign,
+          state.session?.utm?.headline,
+          state.session?.utm?.source,
+          state.session?.utm?.referralUrl,
+        ]
+          .filter(Boolean)
+          .join(' '),
+        veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
         interesse: { perguntado: !!perguntado, etiquetas: etiquetasInteresse },
       });
 
@@ -6315,6 +6325,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         h('div', { class: 'wf-origin' },
           '"Capitão" é município do RS e é a patente do candidato: sem isto, toda mensagem que ' +
             'cita "Capitão Martim" gravava a cidade Capitão. Separe por vírgula.'),
+      ])
+    );
+
+    // Etiqueta de quem chega por anúncio. A plataforma diz a origem em dado estruturado
+    // (`utm.source`, `utm.referralUrl`), então aqui não há texto a adivinhar.
+    const anuncioInput = h('input', { type: 'text' });
+    store.get('etiquetaAnuncio').then((v) => {
+      anuncioInput.value = v || '';
+    });
+    anuncioInput.addEventListener('change', async () => {
+      await store.set('etiquetaAnuncio', anuncioInput.value.trim());
+      setStatus(
+        anuncioInput.value.trim()
+          ? `Quem chegar por anúncio recebe a etiqueta "${anuncioInput.value.trim()}".`
+          : 'Ninguém será etiquetado por vir de anúncio.'
+      );
+    });
+    body.append(
+      h('label', { class: 'wf-field' }, [
+        h('span', {}, 'Etiqueta de quem chega por anúncio'),
+        anuncioInput,
+        h('div', { class: 'wf-origin' },
+          'O bloco "ANÚNCIO | FACEBOOK" no topo da conversa vem de um campo da sessão, não de ' +
+            'texto — então isto não depende de regra nem de acerto de regex. A etiqueta entra ' +
+            'como CONTEÚDO, que é o que a liga à tabela "Modelo por conteúdo" logo acima. ' +
+            'Vazio = não etiqueta ninguém por essa via.'),
       ])
     );
 

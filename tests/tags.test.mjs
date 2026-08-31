@@ -309,4 +309,30 @@ grupo('regra de conteudo casa com e sem acento');
   mem.tagRules = [];
 }
 
+
+grupo('quem chega por anuncio ganha a etiqueta de anuncio');
+{
+  // Pedido dele (31/08), com a print do bloco "ANUNCIO | FACEBOOK": "se reconhecer o que esta na
+  // print e adicionar a etiqueta ADS resolve tudo". A plataforma diz isso em dado estruturado --
+  // utm.source e utm.referralUrl na sessao -- entao nao ha texto a adivinhar.
+  mem.etiquetaAnuncio = 'ADS';
+  mem.tagRules = [];
+
+  const doAnuncio = await tags.suggest({ texts: ['Olá!'], veioDeAnuncio: true });
+  const ads = doAnuncio.find((x) => x.nome === 'ADS');
+  check(!!ads, 'sugeriu a etiqueta do anuncio');
+  check(ads?.origem === 'conteúdo', 'entra como conteudo, para virar modelo na tabela dele');
+  check(/an[úu]ncio/.test(ads?.motivo || ''), 'o motivo diz de onde veio = ' + ads?.motivo);
+
+  const semAnuncio = await tags.suggest({ texts: ['Olá!'], veioDeAnuncio: false });
+  check(!semAnuncio.some((x) => x.nome === 'ADS'), 'quem nao veio de anuncio nao recebe');
+
+  // Vazio na Config = nao etiqueta ninguem por essa via.
+  mem.etiquetaAnuncio = '';
+  const desligado = await tags.suggest({ texts: ['Olá!'], veioDeAnuncio: true });
+  check(!desligado.some((x) => x.origem === 'conteúdo'), 'campo vazio nao etiqueta');
+
+  mem.etiquetaAnuncio = 'ADS';
+}
+
 fim();

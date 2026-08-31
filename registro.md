@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-08-31 — A origem do anúncio é dado, não texto
+
+**Relato dele**, com a print do bloco "ANÚNCIO | FACEBOOK" e o link `fb.me`: *"se reconhecer o
+que está na print e adicionar a etiqueta ADS resolve tudo"*.
+
+### Fui olhar antes de escrever regra, e ainda bem
+
+O bloco não é uma mensagem: é a sessão. Conferido ao vivo:
+
+```
+utm.source      = "FACEBOOK"
+utm.campaign    = "CLICK AQUI 👉"
+utm.referralUrl = "https://fb.me/lwwIb9Lo2"
+utm.sourceId    = "120248742363290543"
+```
+
+Dava para resolver com uma regra de texto — e teria sido pior: dependeria de ele escrever a regex
+certa, e casaria por acidente com qualquer mensagem que citasse "facebook". **O campo é a fonte, e
+ler campo não erra.**
+
+### Duas coisas, e a segunda explica um mistério
+
+1. **Etiqueta de anúncio automática.** Campo novo na Config, padrão `ADS`, vazio desliga. Entra
+   como **conteúdo** de propósito: é isso que a liga à tabela "Modelo por conteúdo" e faz virar o
+   modelo a enviar — o "resolve tudo" da frase dele.
+
+2. **O painel só passava `utm.campaign` para as regras.** `source` e `referralUrl` ficavam de
+   fora, então uma regra com "facebook" ou com o link do anúncio **nunca poderia casar**. Isso é
+   metade da resposta à pergunta dele de mais cedo, *"está com dificuldade pra pegar se for por
+   alguma palavra chave"*: parte do texto que ele esperava que estivesse lá não estava.
+
+### Arquivos
+
+`src/lib/store.js` (`etiquetaAnuncio`), `src/lib/tags.js` (`veioDeAnuncio`),
+`src/panel/panel.js` (campo na Config + os quatro campos de utm),
+`tests/tags.test.mjs` (5 asserções novas), `CLAUDE.md`, `manifest.json` (0.34.0 → 0.35.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-31 — "Vieram do anúncio sem pedir dados": faltava separar ignorou de nunca-recebeu
 
 **Relato dele**, minutos depois da mudança anterior: *"bastante contatos que vieram de anúncio sem
