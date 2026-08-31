@@ -379,6 +379,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Testes
 
+> **`node --check` NÃO basta, e já derrubou a extensão.** Ele analisa `.js` como **CommonJS**
+> (modo solto); o Chrome carrega como **ES module**, que é sempre strict. Em 30/08/2026 um
+> `.join('
+
+')` virou string com quebra de linha CRUA, o `--check` disse OK e o painel parou
+> de carregar — sem erro visível na aba, porque o content script morre antes de desenhar.
+> Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
+> `src/` e reclama só de `SyntaxError`.
+
 Node 18+, sem dependência. Antes de dar tarefa por concluída, as oito suítes passando:
 
 ```bash

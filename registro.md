@@ -5,6 +5,57 @@
 
 ---
 
+## 2026-08-30 — A extensão parou de carregar: uma quebra de linha dentro de uma string
+
+**Relato dele:** *"a extensão não está carregando"* — e depois o print do `src/content.js`, o
+carregador, apontando para o `console.error('[WhatsFill] falha ao carregar o painel:', err)`.
+
+### O erro, e a minha conclusão errada no meio do caminho
+
+Eu tinha olhado o console pela ferramenta de navegador, achado zero erros e concluído que **não
+era o meu código** — que era estado do Chrome (extensão desligada ou painel escondido). Estava
+errado: a ferramenta não capturava o console do content script, que roda em mundo isolado. O
+print dele apontou para o lugar certo.
+
+**A causa:** no botão "Copiar a conversa" de ontem, um `.join('
+
+')` virou
+
+```js
+.join('
+
+');
+```
+
+— uma string com quebra de linha **crua**, que é erro de sintaxe. Acidente de escape ao gerar o
+patch por script: o `
+` foi interpretado antes de chegar ao arquivo. O mesmo acidente comeu as
+barras do `s` e do `p{...}` numa regex mais cedo, e ali eu peguei porque o teste falhou.
+
+### Por que passou por mim
+
+Eu conferia com `node --check`, que analisa `.js` como **CommonJS** — modo solto. O Chrome carrega
+como **ES module**, que é sempre strict. O `--check` disse "SINTAXE OK" e o navegador disse
+"Invalid or unexpected token".
+
+E o defeito era **invisível na aba**: o content script morre antes de desenhar qualquer coisa,
+então não há painel, não há erro na tela, não há nada. O único rastro é o `console.error` do
+carregador — que é justamente o que ele fotografou.
+
+### O que impede a repetição
+
+`tools/checar-modulos.mjs` (novo): importa todo arquivo de `src/` como ES module e reclama **só de
+`SyntaxError`** — erro de execução fora do navegador (`window is not defined`) é esperado e
+ignorado. Roda em 29 arquivos e teria pego este em um segundo. Entrou no `CLAUDE.md` como passo
+obrigatório antes de dar tarefa por concluída.
+
+### Arquivos
+
+`src/panel/panel.js` (o `join` e o template consertados), `tools/checar-modulos.mjs` (novo),
+`CLAUDE.md`, `manifest.json` (0.22.0 → 0.22.1). Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-30 — Áudio e texto longo pedem você, não modelo — e o copiar que ele fazia à mão
 
 **Relato dele**, com print: *"já com etiquetas, nesse caso ela mandou um audio que resultou em um

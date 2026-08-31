@@ -3691,14 +3691,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           return tipo && tipo !== 'TEXT' ? `[${tipo.toLowerCase()}]` : '';
         })
         .filter(Boolean)
-        .join('
-
-');
+        .join('\n\n');
 
       try {
-        await navigator.clipboard.writeText(`Mensagens de ${quem}:
-
-${texto}`);
+        await navigator.clipboard.writeText(`Mensagens de ${quem}:\n\n${texto}`);
         aviso.textContent = 'Copiado.';
       } catch (_) {
         // Sem permissão de área de transferência: dizer é melhor que fingir que copiou.
