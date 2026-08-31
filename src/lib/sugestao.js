@@ -185,6 +185,31 @@ export const REGRAS = [
           : 'a última mensagem foi só uma figura, emoji ou link — a mensagem do momento responde ao gesto.',
   },
   {
+    id: 'pergunta-aberta',
+    tecla: '6',
+    /**
+     * Ela fez uma pergunta de razão ou de posição → responder à mão.
+     *
+     * Print da Clair (31/08): respondeu o formulário e depois escreveu *"tem muita propaganda aqui
+     * em santa Maria, mas não do capitão Martins."* e *"Porque?"*. A caixa sugeria **mandar o
+     * modelo da campanha** — material de campanha como resposta a uma pergunta sobre a falta de
+     * material de campanha. *"pergunta especifica, caso para IA"*.
+     *
+     * Nenhuma regra pegava: a rajada tinha 126 caracteres (longe dos 400 da regra de texto longo),
+     * não era reação, não era despedida, e havia conteúdo mapeado — então `conteudo-pedido` venceu.
+     *
+     * **Fica logo ACIMA de `conteudo-pedido` e não mais alto, de propósito.** É o mínimo para
+     * resolver o caso: quem pede dados, quem se despede, quem manda áudio continua sendo tratado
+     * pelas regras de cima, que já estavam certas. Subir mais tiraria contato da automação sem
+     * necessidade, e o objetivo dele é 90% resolvido sem IA.
+     *
+     * A lista de padrões (`cortesia.conversaTemPerguntaAberta`) é curta pela mesma razão, e
+     * pergunta que pede material está fora dela: o modelo responde bem a "pode me mandar?".
+     */
+    quando: (c) => !!c.perguntaAberta,
+    motivo: () => 'fez uma pergunta que nenhuma resposta pronta responde — escreva você.',
+  },
+  {
     id: 'conteudo-pedido',
     tecla: '1',
     /**

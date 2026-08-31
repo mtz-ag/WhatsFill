@@ -23,6 +23,7 @@ const base = {
   pedeRespostaPessoal: null,
   etiquetaQueDispensa: null,
   ultimaEhSoReacao: false,
+  perguntaAberta: null,
   podeMandarMomento: true,
   temEtiquetaDeCidade: true,
   podePedirDados: true,
@@ -302,6 +303,26 @@ grupo('emoji como PRIMEIRA mensagem de quem veio do anuncio: pedir dados vence a
   // Audio continua vencendo tudo menos a etiqueta que dispensa.
   check(com({ ultimaEhSoReacao: true, jaPediramDados: false, temEtiquetaDeCidade: false, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6',
     'audio vence o pedido de dados');
+}
+
+
+grupo('pergunta-aberta: vence o modelo, perde para as regras de cima');
+{
+  const P = { motivo: 'pergunta' };
+
+  // Print da Clair: tinha conteudo mapeado, e o modelo vencia.
+  const clair = com({ perguntaAberta: P, podeEnviar: true, conteudoPedido: 'ADS' });
+  check(clair?.tecla === '6', 'a pergunta vence o modelo: ' + JSON.stringify(clair));
+  check(clair?.id === 'pergunta-aberta', 'e e a regra da pergunta');
+
+  // Perde para tudo que ja estava certo acima dela.
+  check(com({ perguntaAberta: P, etiquetaQueDispensa: 'engajado' })?.tecla === '2', 'etiqueta dispensa vence');
+  check(com({ perguntaAberta: P, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6', 'audio tambem manda para 6');
+  check(com({ perguntaAberta: P, ultimaEhDespedida: true })?.tecla === '3', 'despedida vence');
+  check(com({ perguntaAberta: P, jaPediramDados: false, temEtiquetaDeCidade: false })?.tecla === '4', 'pedir dados vence');
+
+  // Sem pergunta, nada muda.
+  check(com({ podeEnviar: true, conteudoPedido: 'ADS' })?.id === 'conteudo-pedido', 'sem pergunta o modelo continua indo');
 }
 
 fim();

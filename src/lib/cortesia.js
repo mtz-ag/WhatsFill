@@ -251,6 +251,75 @@ export function conversaPedeRespostaPessoal(entrantes, nossaUltimaAt) {
 }
 
 /**
+ * Perguntas que NENHUMA resposta pronta responde.
+ *
+ * A lista é curta de propósito. Toda entrada aqui tira um contato da automação, e o objetivo dele
+ * é o contrário — chegar a 90% resolvido sem IA. Então só entra o que é claramente pergunta de
+ * **razão** ou de **posição**: essas dependem do que ele pensa, e não existe texto pronto para
+ * elas. "Pode me mandar o material?" também é pergunta, e o modelo responde perfeitamente.
+ *
+ * `(^|\s)` e não `\b` porque `\b` não funciona antes de palavra acentuada — armadilha já
+ * registrada no `CLAUDE.md` ("é nós" nunca casava no começo da string).
+ */
+const PERGUNTAS_QUE_PEDEM_VOCE = [
+  // Razão: "por que não tem propaganda aqui?"
+  /(^|\s)(por\s?qu[eê]|pq|pk)(\s|\?|$)/i,
+  // Posição e opinião: dependem do que ELE pensa
+  /(^|\s)qual\s+(a\s+)?(posi[çc][aã]o|opini[aã]o|proposta|ideia)/i,
+  /(^|\s)o\s+que\s+(ele|voc[eê]s?|o\s+candidato|o\s+deputado)\s+(acha|acham|pensa|pensam|vai|v[aã]o|pretende|pretendem|faria|fariam|far[aá]|far[aã]o)/i,
+  /(^|\s)como\s+(ele|voc[eê]s?)\s+(vai|v[aã]o|pretende|pretendem|pensa|pensam)/i,
+  // Pedido explícito de explicação
+  /(^|\s)(me\s+)?explica(r|\s|$)/i,
+  /(^|\s)n[aã]o\s+entendi(\s|$|\.)/i,
+];
+
+/** Pede material/conteúdo — aí a pergunta TEM resposta pronta e não é caso de resposta à mão. */
+const PEDIDO_DE_MATERIAL = /(^|\s)(manda|mande|envia|envie|me\s+passa|quero\s+receber|receber)(\s|$)/i;
+
+/**
+ * A conversa pendente traz uma pergunta que só ELE pode responder?
+ *
+ * Nasceu da print da Clair (31/08): ela respondeu o formulário, e depois escreveu *"tem muita
+ * propaganda aqui em santa Maria, mas não do capitão Martins."* seguido de *"Porque?"*. A rodada
+ * sugeria **mandar o modelo da campanha** — material de campanha como resposta a uma pergunta
+ * sobre a falta de material de campanha. *"pergunta especifica, caso para IA"*.
+ *
+ * Nenhuma regra pegava: a rajada tinha 126 caracteres (longe dos 400), não era reação, não era
+ * despedida, e havia conteúdo mapeado. Então `conteudo-pedido` venceu.
+ *
+ * **Por que a lista é curta.** O objetivo dele é resolver 90% sem IA; cada entrada aqui tira um
+ * contato da automação. O que ganha lugar é só pergunta de razão ou de posição — as que dependem
+ * do que ele pensa. Pergunta que pede material continua indo para o modelo, que a responde bem.
+ *
+ * **Onde isto acaba e a IA começa:** aqui a rodada só acerta a TECLA (6, à mão). Reconhecer que a
+ * pergunta é sobre distribuição de material em Santa Maria, e propor o que responder, é da IA.
+ *
+ * @param {Array<{texto?:string, tipo?:string, at?:string}>} entrantes
+ * @param {string|null} nossaUltimaAt
+ * @returns {{motivo:string}|null}
+ */
+export function conversaTemPerguntaAberta(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  if (!rajada.length) return null;
+
+  const texto = rajada
+    .map((m) => String(m?.texto || ''))
+    .join(' ')
+    .trim();
+  if (!texto) return null;
+
+  // Pedido de material vem primeiro: a pergunta dele tem resposta pronta.
+  if (PEDIDO_DE_MATERIAL.test(texto)) return null;
+
+  for (const padrao of PERGUNTAS_QUE_PEDEM_VOCE) {
+    if (padrao.test(texto)) {
+      return { motivo: 'fez uma pergunta que nenhuma resposta pronta responde' };
+    }
+  }
+  return null;
+}
+
+/**
  * A última mensagem do contato pede resposta escrita por você?
  *
  * Mantida porque é pura e testada, e porque `conversaPedeRespostaPessoal` a usa por dentro para

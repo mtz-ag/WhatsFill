@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, rajadaFinal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, rajadaFinal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
 
 const texto = (t) => ({ texto: t, tipo: 'TEXT' });
 
@@ -233,6 +233,43 @@ grupo('conversaPedeRespostaPessoal: tres mensagens curtas somam como uma longa')
   check(!!r2 && !/mensagens/.test(r2.motivo), 'uma so nao fala em varias mensagens');
 
   check(!conversaPedeRespostaPessoal([], NOSSA), 'sem rajada, nao ha o que responder');
+}
+
+
+grupo('conversaTemPerguntaAberta: so razao e posicao, nao toda pergunta');
+{
+  const E = (...t) => t.map((texto, i) => ({ texto, tipo: 'TEXT', at: `2026-08-31T23:2${i}:00Z` }));
+  const q = (...t) => conversaTemPerguntaAberta(E(...t), null);
+
+  // O caso REAL da print da Clair (31/08).
+  check(!!q('tem muita propaganda aqui em santa Maria, mas não do capitão Martins.', 'Porque?'),
+    'a pergunta da Clair pede resposta a mao');
+
+  // Razao, nas grafias que aparecem no WhatsApp.
+  check(!!q('por que ele nao veio aqui?'), 'por que separado');
+  check(!!q('pq nao tem material aqui'), 'pq abreviado');
+  check(!!q('por quê?'), 'com acento circunflexo');
+
+  // Posicao: depende do que ELE pensa, e nenhum texto pronto cobre.
+  check(!!q('qual a posição dele sobre a reforma?'), 'qual a posicao');
+  check(!!q('o que ele acha disso?'), 'o que ele acha');
+  check(!!q('o que vocês vão fazer sobre isso?'), 'o que voces vao fazer');
+  check(!!q('me explica melhor'), 'pedido de explicacao');
+
+  /**
+   * Os falsos positivos que importam: cada um destes tiraria um contato da automacao, e a meta
+   * dele e 90% resolvido SEM IA. Pergunta que pede material tem resposta pronta e continua indo
+   * para o modelo.
+   */
+  check(!q('pode me mandar o material?'), 'pedido de material nao vira resposta a mao');
+  check(!q('me manda o link do grupo?'), 'pedido de link tambem nao');
+  check(!q('quero receber as novidades'), 'querer receber nao e pergunta aberta');
+  check(!q('Tudo bem?'), 'cortesia com interrogacao nao conta');
+  check(!q('quero ajudar na campanha'), 'oferta de ajuda nao conta');
+  check(!q('Bom dia!'), 'cumprimento nao conta');
+  check(!q(''), 'texto vazio nao conta');
+
+  check(!conversaTemPerguntaAberta([], null), 'sem rajada nao ha pergunta');
 }
 
 fim();

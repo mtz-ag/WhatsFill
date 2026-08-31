@@ -19,7 +19,7 @@ import * as categorizar from '../lib/categorizar.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, ultimaEhDespedida } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, ultimaEhDespedida } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -3500,6 +3500,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // A RAJADA, não só a última: três mensagens curtas somando 450 caracteres são conversa
         // igual a uma longa de 450 (print dele, 31/08).
         pedeRespostaPessoal: conversaPedeRespostaPessoal(state.entrantes, state.nossaUltimaAt),
+        // Pergunta de razão ou de posição: nenhuma resposta pronta responde, e mandar o modelo
+        // vira material de campanha em cima da pergunta dela (print da Clair, 31/08).
+        perguntaAberta: conversaTemPerguntaAberta(state.entrantes, state.nossaUltimaAt),
         etiquetaQueDispensa: await etiquetaQueDispensaDaFila(),
         ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
         podeMandarMomento: !momentoTrava,

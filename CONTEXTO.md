@@ -56,10 +56,11 @@ Ordem em 31/08 (de cima para baixo):
 4. `voltou-por-outro-anuncio` → **5** ou **3** (se já recebeu a mensagem do momento)
 5. `nunca-pediram-dados` — veio do anúncio, sem cidade, formulário nunca saiu → **4**
 6. `ultima-e-so-reacao` — figura, emoji, link → **5**, ou **3** se já respondemos hoje
-7. `conteudo-pedido` → **1, mandar o modelo**
-8. `nome-sem-sentido` → **4, pedir dados**
-9. `nunca-perguntaram-interesse` → **7**
-10. `pedido-hoje-sem-resposta` → **3**
+7. `pergunta-aberta` — "por que", "qual a posição", "o que ele acha" → **6, à mão**
+8. `conteudo-pedido` → **1, mandar o modelo**
+9. `nome-sem-sentido` → **4, pedir dados**
+10. `nunca-perguntaram-interesse` → **7**
+11. `pedido-hoje-sem-resposta` → **3**
 
 **5 e 6 trocaram de lugar em 31/08** (print da Marta: emoji como única mensagem de quem veio do
 anúncio). Quem já recebeu o formulário ou já tem cidade não casa na 5 e continua caindo na 6 —

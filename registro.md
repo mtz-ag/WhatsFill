@@ -5,6 +5,59 @@
 
 ---
 
+## 2026-08-31 — Pergunta específica: a rodada parava de mandar modelo em cima dela
+
+**Relato dele**, print da Clair: *"pergunta especifica, caso para IA"*. Ela respondeu o formulário
+("Clair portella, Santa Maria") e depois escreveu *"Quero dar uma opinião, tem muita propaganda
+aqui em santa Maria, mas não do capitão Martins."* seguido de *"Porque?"*.
+
+Simulei antes de mexer: a rodada sugeria **tecla 1, mandar o modelo "Campanha Martim2"** — material
+de campanha como resposta a uma pergunta sobre a falta de material de campanha.
+
+### Por que nenhuma regra pegava
+
+- rajada de **126 caracteres**, longe dos 400 da regra de texto longo
+- não é reação, não é despedida
+- já pediram dados, já tem cidade
+- há conteúdo mapeado (ADS) → `conteudo-pedido` venceu
+
+### A regra, e por que ela é curta
+
+`cortesia.conversaTemPerguntaAberta` casa **só razão e posição**: "por que"/"pq"/"por quê", "qual a
+posição/opinião", "o que ele acha/pensa/vai fazer", "me explica", "não entendi". São as que
+dependem do que ele pensa, e para as quais não existe texto pronto.
+
+**Toda entrada nessa lista tira um contato da automação**, e a meta dele é 90% resolvido sem IA —
+por isso ela é curta, e por isso *pedido de material sai antes de tudo*: "pode me mandar o
+material?" também é pergunta, e o modelo a responde bem.
+
+Os testes que importam são os sete falsos positivos, não o caso da print: "tudo bem?", "quero
+ajudar", "me manda o link", "quero receber", "bom dia". Todos continuam indo para onde iam.
+
+`pergunta-aberta` entra na **posição 7**, logo acima de `conteudo-pedido` e não mais alto de
+propósito: é o mínimo para resolver o caso. Etiqueta que dispensa, áudio, despedida e pedido de
+dados continuam vencendo — todas já estavam certas.
+
+### Onde isto acaba e a IA começa
+
+Igual ao caso do alerta político mais cedo: **a rodada acerta a TECLA** (6, à mão) e para de mandar
+a mensagem errada. Reconhecer que a pergunta é sobre distribuição de material em Santa Maria, e
+propor o que responder, continua sendo da IA. Ele está certo em chamar de "caso para IA" — o que o
+determinístico faz aqui é impedir o dano, não resolver.
+
+### Um bug do meu regex, pego pelo teste
+
+`o que vocês **vão** fazer` não casava: eu tinha "vai" e esqueci "vão". Corrigido junto com
+"pretendem", "acham", "pensam", "farão".
+
+**Arquivos:** `src/lib/cortesia.js` (`conversaTemPerguntaAberta`, `PERGUNTAS_QUE_PEDEM_VOCE`,
+`PEDIDO_DE_MATERIAL`), `src/lib/sugestao.js` (a regra), `src/panel/panel.js`,
+`tests/cortesia.test.mjs` (16 asserções), `tests/sugestao.test.mjs` (7),
+`CONTEXTO.md`, `manifest.json` (0.41.0 → **0.42.0**).
+29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — Emoji como única mensagem de quem veio do anúncio: pedir dados vence
 
 **Relato dele**, print da Marta: contato do anúncio, etiqueta ADS, **cidade vazia**, uma única
