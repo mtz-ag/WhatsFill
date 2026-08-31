@@ -143,8 +143,14 @@ export const REGRAS = [
   {
     id: 'conteudo-pedido',
     tecla: '1',
-    // Ele pediu um conteúdo e há modelo mapeado: mandar é o que fecha o atendimento.
-    quando: (c) => c.podeEnviar && !c.enviadoHoje,
+    /**
+     * Ele pediu um conteúdo e há modelo mapeado: mandar é o que fecha o atendimento.
+     *
+     * `modeloJaNaConversa` cobre o que o registro de envios não vê — modelo disparado pela
+     * automação da plataforma ou à mão por outra pessoa. Sem isso a rodada sugeria mandar de novo
+     * o que estava na tela algumas mensagens acima (print dele, 31/08).
+     */
+    quando: (c) => c.podeEnviar && !c.enviadoHoje && !c.modeloJaNaConversa,
     motivo: (c) => `pediu "${c.conteudoPedido || 'conteúdo'}" e há modelo mapeado — mande.`,
   },
   {

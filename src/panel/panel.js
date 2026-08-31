@@ -121,6 +121,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     entrantes: [],
     /** Quando saiu a NOSSA última mensagem — o sinal de "este contato já foi respondido". */
     nossaUltimaAt: null,
+    /** O que NÓS mandamos nesta conversa — para saber o que já foi, mesmo fora do painel. */
+    nossas: [],
     /**
      * Cidades que você recusou no popup, enquanto este contato estiver aberto (normalizadas).
      *
@@ -382,6 +384,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.incoming = conversa.incoming;
       state.entrantes = conversa.entrantes || [];
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
+      state.nossas = conversa.nossas || [];
       state.ultimaMensagem = conversa.ultima;
 
       // Sinal disparado por mensagem NOSSA (ou mídia): nada novo do contato para analisar.
@@ -465,6 +468,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.incoming = conversa.incoming;
       state.entrantes = conversa.entrantes || [];
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
+      state.nossas = conversa.nossas || [];
       state.ultimaMensagem = conversa.ultima;
       const temaField = classify.find((f) => f.name === 'Tema de Interesse');
       const palpites = await extract(state.incoming, { temaField });
@@ -3366,7 +3370,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         !!padraoAnuncio &&
         achatarTexto(ultimaDoContato).includes(achatarTexto(padraoAnuncio));
 
+      /**
+       * Este modelo já está na conversa?
+       *
+       * `wasSent` só sabe do que o painel mandou. Modelo disparado pela automação da plataforma,
+       * pelo chatbot do anúncio ou à mão por outra pessoa é invisível para ele — e a rodada
+       * sugeria mandar de novo o que já estava na tela.
+       *
+       * Compara um trecho do MEIO do modelo com o que já saiu: o começo costuma ser saudação
+       * igual em todos, e um trecho curto sobrevive a variável interpolada no caminho.
+       */
+      const modeloJaNaConversa = (() => {
+        const corpo = achatarTexto(modelo?.text || '');
+        if (corpo.length < 100) return false;
+        const trecho = corpo.slice(40, 100);
+        return state.nossas.some((m) => achatarTexto(m.texto).includes(trecho));
+      })();
+
       const sugestao = sugerirAcao({
+        modeloJaNaConversa,
         ultimaEhDespedida: ultimaEhDespedida(state.entrantes),
         // "Já foi respondida": nossa última mensagem saiu hoje. Serve para a reação (figura,
         // emoji, link) virar "concluir" em vez de "mais uma mensagem".

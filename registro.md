@@ -5,6 +5,55 @@
 
 ---
 
+## 2026-08-31 — Duas prints, e as duas apontam para o mesmo tipo de cegueira
+
+### 1. "Amém mestre" não era despedida
+
+Print do Carlos Pedroso: última mensagem **"Amém mestre"**, e a caixa sugerindo *"Sugiro a 7:
+pergunta de interesse"*.
+
+A regra de despedida pegava o "Amém" e então checava o que sobrava — e sobrava **"mestre"**. O
+vocativo derrubava a regra inteira.
+
+O vocabulário de vocativo daqui entrou na lista que é limpa antes da conferência: *mestre, chefe,
+guerreiro, campeão, parceiro, irmão, meu, minha, nobre, querido*. E a trava continua: *"Amém, mas
+preciso de ajuda"* e *"mestre, me manda o material"* continuam **não** sendo despedida — tem
+teste para os dois.
+
+### 2. Sugeriu mandar o modelo que já estava na conversa
+
+Print da Jana: o modelo "Campanha Martim2" está na tela, com imagem e texto completo, e a caixa
+sugere *"Sugiro a 1: pediu ADS e há modelo mapeado — mande."*
+
+**A causa é a mesma de ontem, com outra roupa:** `templatesLib.wasSent` só enxerga o que saiu
+**pelo painel**. Aquele modelo foi disparado pela automação do anúncio, então para o registro de
+envios ele nunca existiu.
+
+Agora `getConversation` devolve `nossas` — o que **nós** mandamos, com texto — e a rodada compara
+um trecho do MEIO do modelo (o começo é saudação igual em todos, e o meio sobrevive a variável
+interpolada) com o que já saiu. Casou, a regra do conteúdo não sugere mais.
+
+### O padrão que já apareceu três vezes hoje
+
+Em todas, o painel decidia com base no que **ele mesmo** tinha feito, e não no que está na
+conversa:
+
+- `nossaUltimaAt` — para saber que o contato já foi respondido (resposta à mão não deixa rastro);
+- `nossas` — para saber que o modelo já foi enviado (automação não deixa rastro);
+- as etiquetas reais do contato, e não a lista da caixa.
+
+Virou armadilha no `CLAUDE.md`: **o registro de envios é anti-duplicata do painel, não a verdade
+sobre a conversa.**
+
+### Arquivos
+
+`src/lib/cortesia.js` (vocativos), `src/lib/api.js` (`nossas`), `src/lib/sugestao.js`
+(`modeloJaNaConversa`), `src/panel/panel.js` (comparação), `tests/cortesia.test.mjs` (7),
+`tests/sugestao.test.mjs` (3), `CLAUDE.md`, `manifest.json` (0.29.0 → 0.30.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-31 — "Não pulou o engajado": a regra nunca viu a etiqueta
 
 Duas coisas no mesmo relato dele, e a primeira é um defeito meu.

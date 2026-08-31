@@ -160,6 +160,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   e o cabeçalho da plataforma mostrava 5, e a que faltava era justamente a que deveria dispensar
   o contato da fila. Regra que decide por etiqueta tem que ler `state.contact.tagsId` cruzado
   com `tagsLib.allTags()`, nunca a lista da tela.
+- **`templatesLib.wasSent` só enxerga o que saiu PELO PAINEL.** Modelo disparado pela automação
+  da plataforma, pelo chatbot do anúncio ou à mão por outra pessoa não deixa rastro ali — e a
+  rodada sugeria "mande o modelo" para quem estava com o modelo na tela algumas mensagens acima
+  (31/08). Quem precisa saber o que JÁ FOI usa `getConversation().nossas` (o que mandamos, com
+  texto) ou `nossaUltimaAt` (quando). O registro de envios continua valendo para anti-duplicata
+  do próprio painel; ele só não é a verdade sobre a conversa.
 - **Rota nova? Leia o bundle do app em vez de chutar.** Quando a navegação está bloqueada e não dá
   para inspecionar a rede, o `main.*.js` do mobiliza é a fonte da verdade e está a um `fetch` de
   distância — as URLs, os métodos e os parâmetros estão como texto no código Angular. Foi assim que

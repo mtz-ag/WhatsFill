@@ -157,4 +157,21 @@ grupo('despedida: o que NAO pode virar concluir');
   check(!ultimaEhDespedida([]), 'vazio');
 }
 
+
+grupo('despedida com vocativo: "Amem mestre"');
+{
+  const t = (x) => ({ texto: x, tipo: 'TEXT' });
+  // Print dele: a pessoa escreveu "Amem mestre" e a caixa sugeriu perguntar interesse. O
+  // vocativo sobrava e derrubava a regra.
+  check(ehDespedida(t('Amém mestre')), 'Amém mestre — o caso da print');
+  check(ehDespedida(t('Amem chefe')), 'amem chefe');
+  check(ehDespedida(t('É nós guerreiro')), 'é nós guerreiro');
+  check(ehDespedida(t('Valeu parceiro')), 'valeu parceiro');
+  check(ehDespedida(t('Obrigado meu irmão')), 'obrigado meu irmão');
+
+  // O vocativo nao pode engolir pedido de verdade.
+  check(!ehDespedida(t('Amém, mas preciso de ajuda')), 'amém com pedido junto');
+  check(!ehDespedida(t('mestre, me manda o material')), 'vocativo com pedido');
+}
+
 fim();

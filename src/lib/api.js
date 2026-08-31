@@ -386,6 +386,17 @@ export async function getConversation(sessionId, pageSize = 50) {
       ? { doContato: doContato(ultima), at: ultima.createdAt, texto: ultima.text || '' }
       : null,
     /**
+     * O que NÓS mandamos, com texto e tipo.
+     *
+     * Existe porque `templatesLib.wasSent` só enxerga o que saiu **pelo painel**: modelo mandado
+     * pela automação da plataforma, pelo chatbot do anúncio ou à mão por outra pessoa não deixa
+     * rastro nenhum ali. Foi assim que a rodada sugeriu "mande o modelo" para quem já estava com
+     * o modelo na tela, algumas mensagens acima (print dele, 31/08).
+     */
+    nossas: ordenadas
+      .filter((m) => !doContato(m))
+      .map((m) => ({ texto: m.text || '', tipo: String(m.type || 'TEXT').toUpperCase() })),
+    /**
      * Quando saiu a NOSSA última mensagem, de qualquer tipo.
      *
      * Existe para a rodada saber que o contato **já foi respondido**. \`ultima\` não serve: quando

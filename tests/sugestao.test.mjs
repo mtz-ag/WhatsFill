@@ -12,6 +12,7 @@ import { sugerirAcao, REGRAS } from '../src/lib/sugestao.js';
 
 /** Retrato de um contato "sem nada": nenhuma regra deveria casar por acidente. */
 const base = {
+  modeloJaNaConversa: false,
   respondidoHoje: false,
   ultimaEhDespedida: false,
   voltouPorOutroAnuncio: false,
@@ -208,6 +209,21 @@ grupo('ja respondida e mandou so um link: concluir');
 
   // Sem mensagem do momento configurada tambem conclui, em vez de nao sugerir nada.
   check(com({ ultimaEhSoReacao: true, podeMandarMomento: false })?.tecla === '3', 'sem momento, conclui');
+}
+
+
+grupo('modelo ja esta na conversa: nao sugere mandar de novo');
+{
+  // Print dele: o modelo estava na tela algumas mensagens acima, e a caixa sugeria mandar. O
+  // registro de envios nao viu porque quem mandou foi a automacao da plataforma, nao o painel.
+  const enviavel = { podeEnviar: true, conteudoPedido: 'ADS' };
+  check(com(enviavel)?.tecla === '1', 'sem estar na conversa, sugere mandar');
+  check(com({ ...enviavel, modeloJaNaConversa: true })?.id !== 'conteudo-pedido',
+    'ja na conversa, nao sugere mandar de novo');
+
+  // E sem cidade, o que sobra e pedir os dados — nao mandar o modelo duas vezes.
+  check(com({ ...enviavel, modeloJaNaConversa: true, temEtiquetaDeCidade: false })?.tecla === '4',
+    'cai para pedir dados');
 }
 
 fim();
