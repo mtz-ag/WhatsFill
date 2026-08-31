@@ -3329,6 +3329,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const pedidoDeHoje = pedirDados ? await templatesLib.wasSent(state.contact.id, pedirDados.id) : null;
       const pedidoHoje = !!pedidoDeHoje && ehHoje(pedidoDeHoje.at);
 
+      /**
+       * O formulário já saiu para este contato ALGUMA VEZ?
+       *
+       * Duas fontes, pela mesma razão de sempre: `wasSent` só enxerga o que o painel mandou, e
+       * o formulário também pode ter saído pela plataforma ou pela mão de outra pessoa. A
+       * segunda fonte é a conversa — um trecho do meio do texto contra o que já mandamos.
+       */
+      const jaPediramDados = (() => {
+        if (pedidoDeHoje) return true;
+        const corpo = achatarTexto(textoPedirDados || '');
+        if (corpo.length < 100) return false;
+        const trecho = corpo.slice(40, 100);
+        return state.nossas.some((m) => achatarTexto(m.texto).includes(trecho));
+      })();
+
       // Nome errado — o apelido automático do anúncio ("[NOVO] (51) 9…") ou qualquer cadastro
       // que o `looksLikePlaceholder` recuse — deixa o {{primeiro_nome}} do agradecimento sem
       // valor. Isto aqui devolvia 'pulado' ANTES da pergunta, e o contato saía da rodada sem o
@@ -3429,6 +3444,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         temEtiquetaDeCidade,
         // O critério de "pedir dados" é o NOME, não a cidade (decisão dele, 31/08).
         nomeSemSentido: nomeSemSentido(state.contact?.name),
+        jaPediramDados,
         podePedirDados: !pedirTrava,
         pedidoHoje,
         podeEnviar,

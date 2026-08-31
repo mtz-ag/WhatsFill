@@ -12,6 +12,7 @@ import { sugerirAcao, REGRAS } from '../src/lib/sugestao.js';
 
 /** Retrato de um contato "sem nada": nenhuma regra deveria casar por acidente. */
 const base = {
+  jaPediramDados: true,
   nomeSemSentido: false,
   modeloJaNaConversa: false,
   respondidoHoje: false,
@@ -230,6 +231,34 @@ grupo('modelo ja esta na conversa: nao sugere mandar de novo');
   // E sem cidade, o que sobra e pedir os dados — nao mandar o modelo duas vezes.
   check(com({ ...enviavel, modeloJaNaConversa: true, nomeSemSentido: true })?.tecla === '4',
     'cai para pedir dados');
+}
+
+
+grupo('veio do anuncio e o formulario NUNCA saiu');
+{
+  // Print da Sonia: nome de verdade (a regra do nome nao pega), conteudo pedido (a regra do
+  // modelo pega e manda), e o formulario nunca tinha saido. "bastante contatos que vieram de
+  // anuncio sem pedir dados ao iniciar".
+  const nunca = { jaPediramDados: false, temEtiquetaDeCidade: false };
+  const r = com(nunca);
+  check(r?.tecla === '4', 'recomendou pedir os dados = ' + JSON.stringify(r));
+  check(String(r?.motivo).includes('nunca saiu'), 'o motivo diz que nunca saiu');
+
+  // A distincao que faltava: pedir vence o modelo SO para quem nunca foi perguntado.
+  check(com({ ...nunca, podeEnviar: true, conteudoPedido: 'ADS' })?.tecla === '4',
+    'nunca perguntado: pedir vence o modelo');
+  check(com({ jaPediramDados: true, temEtiquetaDeCidade: false, podeEnviar: true, conteudoPedido: 'ADS' })?.tecla === '1',
+    'ja perguntado e ignorou: manda o modelo, nao insiste');
+
+  // Ja tem cidade: nao precisa do formulario mesmo que nunca tenha saido.
+  check(com({ jaPediramDados: false, temEtiquetaDeCidade: true })?.id !== 'nunca-pediram-dados',
+    'com cidade nao precisa pedir');
+
+  // Pedido hoje nao repete.
+  check(com({ ...nunca, pedidoHoje: true })?.id !== 'nunca-pediram-dados', 'ja pedido hoje nao repete');
+
+  // Audio continua ganhando.
+  check(com({ ...nunca, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6', 'audio vence');
 }
 
 fim();

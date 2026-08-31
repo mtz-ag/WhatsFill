@@ -141,6 +141,27 @@ export const REGRAS = [
           : 'a última mensagem foi só uma figura, emoji ou link — a mensagem do momento responde ao gesto.',
   },
   {
+    id: 'nunca-pediram-dados',
+    tecla: '4',
+    /**
+     * Veio do anúncio, não tem cidade, e **o formulário nunca saiu para ele**.
+     *
+     * Relato dele (31/08, print da Sônia): *"bastante contatos que vieram de anúncio sem pedir
+     * dados ao iniciar"*. Ela tem nome de verdade, então a regra do nome não pegava; tem
+     * conteúdo pedido, então a regra do modelo pegava e mandava.
+     *
+     * **A distinção que faltava é entre "ignorou o formulário" e "nunca recebeu o formulário".**
+     * Ele decidiu de manhã que quem ignora o pedido recebe o conteúdo mesmo assim — *"talvez em
+     * outra hora ela forneça"*. Isso vale para quem já teve a chance. Quem nunca foi perguntado
+     * não ignorou nada: perguntar uma vez é o trabalho que a rodada existe para fazer.
+     *
+     * Por isso fica ACIMA de "conteúdo pedido", e a do nome continua abaixo: pede-se uma vez;
+     * ignorado, manda-se o conteúdo e não se insiste.
+     */
+    quando: (c) => !c.jaPediramDados && !c.temEtiquetaDeCidade && c.podePedirDados && !c.pedidoHoje,
+    motivo: () => 'veio do anúncio e o formulário nunca saiu para ele — peça os dados esta vez.',
+  },
+  {
     id: 'conteudo-pedido',
     tecla: '1',
     /**

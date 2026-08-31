@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-08-31 — "Vieram do anúncio sem pedir dados": faltava separar ignorou de nunca-recebeu
+
+**Relato dele**, minutos depois da mudança anterior: *"bastante contatos que vieram de anúncio sem
+pedir dados ao iniciar"*, com a print da Sônia.
+
+### A tensão entre os dois pedidos dele, e como ela se resolve
+
+Poucas horas antes ele tinha dito duas coisas que pareciam brigar:
+
+- *"ela ignorou totalmente o pedido da cidade, eu mando o modelo mesmo assim"* → não insista;
+- *"está pedindo dados pra quem já tem etiquetas"* → não peça a quem já está classificado.
+
+Eu tinha resolvido as duas trocando o critério para o NOME. A Sônia mostra o que ficou de fora:
+nome de verdade (a regra do nome não pega), conteúdo pedido (a regra do modelo pega e manda), sem
+cidade — e **o formulário nunca tinha saído para ela**.
+
+**A distinção que faltava é entre "ignorou o formulário" e "nunca recebeu o formulário".** Não
+insistir vale para quem já teve a chance. Quem nunca foi perguntado não ignorou nada, e perguntar
+uma vez é o trabalho que a rodada existe para fazer.
+
+### A regra
+
+`nunca-pediram-dados`, **acima** de "conteúdo pedido": veio do anúncio, sem cidade, formulário
+nunca enviado → peça esta vez. A do nome continua abaixo. O laço fica: pede-se **uma** vez;
+ignorado, manda-se o conteúdo e não se insiste.
+
+### "Nunca enviado" tem duas fontes, e já era esperado
+
+`wasSent` só enxerga o que o painel mandou — a lição que apareceu três vezes hoje. Então
+`jaPediramDados` também procura o texto do formulário dentro das nossas mensagens, pelo mesmo
+método usado no modelo: um trecho do meio, que sobrevive a variável interpolada.
+
+### Ordem hoje
+
+engajado → resposta pessoal → despedida → voltou por anúncio → reação → **nunca pediram dados** →
+conteúdo pedido → nome sem sentido → nunca perguntaram interesse → já pedi hoje.
+
+### Arquivos
+
+`src/lib/sugestao.js` (regra), `src/panel/panel.js` (`jaPediramDados`),
+`tests/sugestao.test.mjs` (7 asserções novas), `manifest.json` (0.33.0 → 0.34.0).
+Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-31 — "Dificuldade pra pegar por palavra chave": eram três coisas, consertei uma
 
 **Pergunta dele:** *"a extensão está com dificuldade pra pegar se for por alguma palavra chave, se
