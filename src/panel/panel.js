@@ -3553,6 +3553,26 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         });
       }
 
+      /**
+       * Tecla 8 — "isto é para a IA".
+       *
+       * Pedido dele (31/08): *"teria que ter uma nova opção de incerto passar para IA"*. Nasce
+       * dos três casos do dia em que a regra acertava a TECLA mas não resolvia nada: o alerta
+       * político, a pergunta sobre propaganda em Santa Maria, o nome errado no cadastro.
+       *
+       * **Funciona hoje, com a IA desligada** — e é esse o ponto. Ela só marca e pula: o contato
+       * fica aberto, nada é enviado, nada é concluído. A pilha vai se formando no CRM enquanto
+       * ele refina o determinístico, e quando a IA entrar é só filtrar a fila pela etiqueta.
+       *
+       * Aparece sempre, sem depender de a IA estar ligada: ele decide o que é caso dela olhando
+       * a conversa, e essa decisão não devia esperar por configuração nenhuma.
+       */
+      opcoes.push({
+        tecla: '8',
+        valor: 'paraia',
+        rotulo: 'Marcar para a IA (deixa aberto)',
+      });
+
       // Um lugar só decide o destaque. Antes eram três expressões independentes, e duas podiam
       // acender ao mesmo tempo num contato que casasse com as duas condições.
       for (const opcao of opcoes) opcao.primaria = !!sugestao && opcao.tecla === sugestao.tecla;
@@ -3626,6 +3646,50 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (escolha === 'pular') {
         await saveClassification({ withCompletionDate: true, quiet: true });
         return { nome, resultado: 'pulado', motivo: 'você pulou — classificação gravada, atendimento aberto' };
+      }
+
+      /**
+       * Tecla 8: marca com a etiqueta da IA e pula. Não envia, não conclui.
+       *
+       * **Falha de etiqueta não vira falha de rodada**, pela mesma prioridade do resto do
+       * painel: o contato sai da vez de qualquer jeito, e o problema vai para o log. Etiqueta é
+       * organização interna — em 20/08 uma etiqueta que não gravava chegou a travar o envio de
+       * modelo, e a lição está no `CLAUDE.md`.
+       *
+       * Sem etiqueta configurada o contato ainda é pulado, e o log diz o que falta: assim a
+       * tecla nunca "não faz nada" em silêncio.
+       */
+      if (escolha === 'paraia') {
+        await saveClassification({ withCompletionDate: true, quiet: true });
+
+        const nomeEtiqueta = String((await store.get('etiquetaParaIA')) || '').trim();
+        if (!nomeEtiqueta) {
+          return {
+            nome,
+            resultado: 'pulado',
+            motivo: 'marcado para a IA, mas a etiqueta não está configurada (aba Automatizado) — só o log registra',
+          };
+        }
+
+        const etiqueta = (await tagsLib.allTags()).find(
+          (t) => cities.normalize(t.label) === cities.normalize(nomeEtiqueta)
+        );
+        if (!etiqueta) {
+          return {
+            nome,
+            resultado: 'pulado',
+            motivo: `marcado para a IA, mas a etiqueta "${nomeEtiqueta}" não existe no CRM — crie-a`,
+          };
+        }
+
+        const r = await tagsLib.applyTags(state.contact, [etiqueta.id]);
+        return {
+          nome,
+          resultado: 'pulado',
+          motivo: r.ok
+            ? `marcado com "${nomeEtiqueta}" para a IA — atendimento segue aberto`
+            : `para a IA, mas a etiqueta NÃO gravou: ${r.error || 'motivo desconhecido'}`,
+        };
       }
 
       // Tecla 6: a rodada sai da frente e fica de vigia. Você responde à mão no atendimento que
@@ -6436,6 +6500,34 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             'todos de uma vez. Nome completo sobre nome curto ("Daniel" → "Daniel Ribeiro"), ' +
             'acento e caixa não contam como divergência. A etiqueta precisa existir no CRM. ' +
             'Vazio = não marca ninguém.'),
+      ])
+    );
+
+    // Tecla 8 da rodada: "isto é para a IA". Marca e pula; a pilha fica achável no CRM.
+    const paraIaInput = h('input', { type: 'text', placeholder: 'ex.: Para a IA' });
+    store.get('etiquetaParaIA').then((v) => {
+      paraIaInput.value = v || '';
+    });
+    paraIaInput.addEventListener('change', async () => {
+      const v = paraIaInput.value.trim();
+      await store.set('etiquetaParaIA', v);
+      tagsLib.invalidateTags();
+      setStatus(
+        v
+          ? `A tecla 8 da rodada vai marcar com "${v}".`
+          : 'A tecla 8 continua pulando, mas sem marcar — só o log da rodada registra.'
+      );
+    });
+    body.append(
+      h('label', { class: 'wf-field' }, [
+        h('span', {}, 'Etiqueta da tecla 8 ("isto é para a IA")'),
+        paraIaInput,
+        h('div', { class: 'wf-origin' },
+          'Na caixa da rodada, a tecla 8 marca o contato com esta etiqueta e PULA — não envia ' +
+            'nada e não conclui. Serve para juntar, enquanto você refina as regras, os casos que ' +
+            'nenhuma resposta pronta resolve: depois você filtra a fila por ela. A contagem ' +
+            'também diz quanto ainda falta para a rodada se virar sozinha. A etiqueta precisa ' +
+            'existir no CRM; vazia, a tecla ainda pula, mas só o log registra.'),
       ])
     );
 

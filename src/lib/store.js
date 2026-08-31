@@ -364,6 +364,21 @@ const DEFAULTS = {
    * sobrescrito** — escolha dele em 31/08, entre trocar sozinho e separar.
    */
   etiquetaNomeDivergente: '',
+  /**
+   * Etiqueta da tecla 8, "isto é para a IA".
+   *
+   * Pedido dele (31/08): *"teria que ter uma nova opção de incerto passar para IA"*. A tecla
+   * marca e pula — não envia, não conclui, não mexe em mais nada.
+   *
+   * **Serve com a IA desligada, e é para isso que ela existe agora:** enquanto ele refina o
+   * determinístico, a pilha de casos que nenhuma regra resolve vai se formando no CRM. Quando
+   * a IA entrar, é filtrar a fila por esta etiqueta. E a contagem dela é a medida de quanto
+   * ainda falta para os 90% resolvidos sem IA.
+   *
+   * Vazia = a tecla ainda aparece e ainda pula, mas só o log da rodada registra — e o log some
+   * quando o painel fecha. Precisa existir no CRM: a extensão não cria etiqueta sozinha.
+   */
+  etiquetaParaIA: '',
   /** { "santo angelo": "https://chat.whatsapp.com/..." } — chave sempre normalizada. */
   cityLinks: {},
   /** Usado quando a cidade não tem grupo próprio. Vazio = bloqueia o envio. */

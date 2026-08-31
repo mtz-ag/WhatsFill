@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-08-31 — Tecla 8: "isto é para a IA"
+
+**Pedido dele:** *"teria que ter uma nova opção de incerto passar para IA"*.
+
+Nasce dos três casos de hoje em que a regra acertava a **tecla** e não resolvia nada: o alerta
+político em três mensagens, a pergunta da Clair sobre propaganda em Santa Maria, o cadastro com
+nome errado. Nos três a rodada parou de fazer a coisa errada — e ele continuou tendo que escrever
+a resposta.
+
+### O que ela faz
+
+Marca com uma etiqueta e **pula**. Não envia, não conclui, não mexe em mais nada: o atendimento
+fica exatamente onde estava.
+
+**Funciona com a IA desligada, e é esse o ponto.** Enquanto ele refina o determinístico, a pilha
+dos casos que nenhuma regra resolve vai se formando no CRM. Quando a IA entrar, é filtrar a fila
+pela etiqueta — ela já vem com o trabalho separado, que era o plano dele: *"passar pra a IA para
+que a ia já tenha 90% do trabalho feito e gastar pouco token"*.
+
+**A contagem da etiqueta é a medida que faltava.** Cada marca é um contato que o determinístico não
+resolveu; a etiqueta encolhendo, rodada após rodada, é o refinamento funcionando.
+
+### Decisões
+
+- **Aparece sempre**, sem depender de a IA estar ligada ou de ter chave. Quem decide o que é caso
+  da IA é ele, olhando a conversa, e essa decisão não devia esperar por configuração nenhuma.
+- **Não é recomendada automaticamente.** `sugerirAcao` devolvendo `null` continua significando
+  "sem destaque, você decide" — destacar a tecla 8 em todo caso desconhecido empurraria a fila
+  inteira para a pilha da IA, que é o contrário do que ele quer.
+- **Falha de etiqueta não vira falha de rodada.** O contato sai da vez de qualquer jeito e o
+  problema vai para o log; em 20/08 uma etiqueta que não gravava chegou a travar o envio de modelo,
+  e a lição está no `CLAUDE.md`.
+- **Sem etiqueta configurada, a tecla ainda pula** e o log diz o que falta — assim ela nunca "não
+  faz nada" em silêncio. Se a etiqueta não existe no CRM, o log também diz isso pelo nome.
+
+O atalho de teclado sai de graça: o tratador procura a tecla na lista de opções, então qualquer
+opção nova já responde ao número.
+
+**Arquivos:** `src/panel/panel.js` (opção e tratamento), `src/lib/store.js` (`etiquetaParaIA`),
+`manifest.json` (0.42.0 → **0.43.0**). 29 módulos sem erro, dez suítes passando.
+
+**Para usar:** criar a etiqueta no CRM e escrever o nome dela na aba Automatizado.
+
+---
+
 ## 2026-08-31 — Pergunta específica: a rodada parava de mandar modelo em cima dela
 
 **Relato dele**, print da Clair: *"pergunta especifica, caso para IA"*. Ela respondeu o formulário
