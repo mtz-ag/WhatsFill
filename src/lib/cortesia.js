@@ -187,7 +187,75 @@ export function pedeRespostaPessoal(msg) {
   return null;
 }
 
-/** A última mensagem do contato pede resposta escrita por você? */
+/**
+ * As mensagens que chegaram DEPOIS da nossa última — a conversa que está pendente.
+ *
+ * Sem `nossaUltimaAt` (nunca respondemos este contato), a rajada é tudo o que ele escreveu:
+ * está certo, porque nada foi respondido ainda.
+ *
+ * Mensagem sem `at` entra na rajada. É o lado seguro de errar aqui — pôr de fora faria a soma
+ * baixar e o modelo voltar a ser sugerido, que é exatamente o defeito que isto conserta.
+ */
+export function rajadaFinal(entrantes, nossaUltimaAt) {
+  const lista = Array.isArray(entrantes) ? entrantes : [];
+  if (!nossaUltimaAt) return lista;
+  const corte = new Date(nossaUltimaAt).getTime();
+  if (!Number.isFinite(corte)) return lista;
+
+  const depois = [];
+  for (let i = lista.length - 1; i >= 0; i--) {
+    const at = lista[i]?.at ? new Date(lista[i].at).getTime() : NaN;
+    if (Number.isFinite(at) && at <= corte) break;
+    depois.unshift(lista[i]);
+  }
+  return depois;
+}
+
+/**
+ * A conversa pendente deste contato pede resposta escrita por você?
+ *
+ * **Olha a RAJADA, não só a última mensagem** — e essa é a correção de 31/08. Um apoiador
+ * escreveu três mensagens em dois minutos (~450 caracteres somados) alertando que gente paga
+ * podia estar se passando por apoiador. Cada mensagem sozinha ficava abaixo do limite, o
+ * conjunto passava, e a rodada caiu na regra de baixo e sugeriu **mandar o modelo da campanha**
+ * para quem tinha acabado de dizer aquilo.
+ *
+ * Quem escreve três vezes seguidas está conversando, não pedindo conteúdo. Que os parágrafos
+ * venham numa mensagem ou em três é jeito de digitar, não intenção — e era só isso que
+ * separava este caso do áudio de 1min13 que a regra já pegava.
+ *
+ * Tipo (áudio, vídeo, arquivo) continua valendo por mensagem: um áudio no meio da rajada pede
+ * você mesmo que o resto seja curto.
+ *
+ * @param {Array<{texto?:string, tipo?:string, at?:string}>} entrantes
+ * @param {string|null} nossaUltimaAt quando saiu a nossa última mensagem
+ * @returns {{motivo:string}|null}
+ */
+export function conversaPedeRespostaPessoal(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  if (!rajada.length) return null;
+
+  // Tipo vence tamanho: não dá para responder um áudio sem abrir, venha ele sozinho ou não.
+  for (const msg of rajada) {
+    const porTipo = pedeRespostaPessoal({ tipo: msg?.tipo });
+    if (porTipo) return porTipo;
+  }
+
+  const total = rajada.reduce((n, m) => n + String(m?.texto || '').trim().length, 0);
+  if (total >= TEXTO_LONGO) {
+    return rajada.length > 1
+      ? { motivo: `escreveu ${rajada.length} mensagens somando ${total} caracteres — é conversa, não é caso de modelo` }
+      : { motivo: `escreveu ${total} caracteres — é conversa, não é caso de modelo` };
+  }
+  return null;
+}
+
+/**
+ * A última mensagem do contato pede resposta escrita por você?
+ *
+ * Mantida porque é pura e testada, e porque `conversaPedeRespostaPessoal` a usa por dentro para
+ * o teste de TIPO. Para decidir a rodada, use a outra: esta não vê a rajada.
+ */
 export function ultimaPedeRespostaPessoal(entrantes) {
   const lista = Array.isArray(entrantes) ? entrantes : [];
   if (!lista.length) return null;

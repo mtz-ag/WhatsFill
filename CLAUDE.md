@@ -85,8 +85,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 - **Uma pasta, DUAS extensões — e trocar de branch troca o que o Chrome carrega.** O Chrome
   carrega de `OneDrive/Documents/GitHub/WhatsFill`, que é o repositório: dar checkout no
   `claude/whatsfill-ia` troca a extensão em produção pela da IA, sem avisar ninguém. É por isso
-  que a versão do manifesto é **sempre maior no branch da IA** (0.39.0 contra 0.38.0 daqui) e o
-  nome muda (`WhatsFill+IA`): são os dois sinais que dizem qual está no ar. Em 29/08 isto
+  que os dois sinais existem: o **nome** (`WhatsFill` aqui, `WhatsFill+IA` lá) e a **série da
+  versão** — produção é **0.x**, o branch da IA é **1.x**. A série é o que não precisa de
+  manutenção: "sempre maior na IA" quebra na primeira vez que os dois sobem no mesmo dia, e
+  quebrou (31/08). Em 29/08 isto
   aconteceu ao contrário e pareceu que a IA tinha vazado para produção — o sintoma foi
   `git status` acusando 17 arquivos que ninguém editou, todos idênticos ao outro branch.
   **Antes de apagar arquivo que não deveria estar aí, rode `git status` e compare com o outro
@@ -397,6 +399,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `essenciais` tem só `Cidade` e a data de conclusão — campos do próprio contato. Problema de
   etiqueta vai para o status **e para o log da rodada** (o status é sobrescrito pela linha
   seguinte, e sem o log o conserto viraria falha silenciosa).
+
+- **Regra que olha "a última mensagem" está olhando o jeito de digitar, não a intenção.** Um
+  apoiador escreveu três mensagens em dois minutos (~450 caracteres somados) avisando que gente
+  paga podia estar se passando por apoiador; cada uma ficou abaixo do limite de 400, o conjunto
+  passou, e a rodada caiu na regra de baixo e sugeriu **mandar o modelo da campanha**. Quem
+  escreve três vezes seguidas está conversando. Hoje quem decide é
+  `cortesia.conversaPedeRespostaPessoal`, que soma a **rajada** — as entrantes com `at` posterior
+  a `nossaUltimaAt`. Regra nova que dependa do que a pessoa acabou de dizer: pense na rajada,
+  não na última.
 
 ## Regras do projeto
 

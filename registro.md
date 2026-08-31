@@ -5,6 +5,73 @@
 
 ---
 
+## 2026-08-31 — "A sugestão está totalmente errada aqui": três mensagens curtas são uma conversa
+
+**Relato dele**, print do Ipê: a caixa sugeria *"1: pediu 'ADS' e há modelo mapeado — mande"* para
+um apoiador que tinha acabado de escrever, em três mensagens, um alerta político — que gente paga
+poderia estar se passando por apoiador do candidato, e que tomassem cuidado.
+
+*"isso seria um exemplo onde a ia teria que assumir pra responder"*.
+
+### O que eu quase consertei errado
+
+Meu primeiro palpite foi que a etiqueta **ADS** estava mal classificada: ela é origem de anúncio, e
+`tags.js` a emite como `origem: 'conteúdo'`. Fui ler o comentário antes de mexer, e ele diz que é
+**pedido dele de 31/08** (*"adicionar a etiqueta ADS resolve tudo"*), de propósito, para alimentar a
+tabela "Modelo por conteúdo". Não era bug — e "consertar" ali teria quebrado o que ele pediu de
+manhã.
+
+### A causa raiz
+
+A regra que **deveria** ter vencido existe e está acima: `ultima-pede-resposta-pessoal` (tecla 6),
+que pega áudio, vídeo e texto de 400+ caracteres. Ela não casou porque olhava
+`lista[lista.length - 1]` — **só a última mensagem**.
+
+O contato escreveu três, em dois minutos: ~250 + ~55 + ~145 caracteres. Cada uma abaixo de 400, o
+conjunto em ~450. A rodada desceu a lista e caiu em `conteudo-pedido`.
+
+**Que os parágrafos venham numa mensagem ou em três é jeito de digitar, não intenção** — e era só
+isso que separava este caso do áudio de 1min13 que a mesma regra já pegava.
+
+### O conserto
+
+`cortesia.conversaPedeRespostaPessoal(entrantes, nossaUltimaAt)` soma a **rajada**: as entrantes que
+chegaram depois da nossa última mensagem. Para isso, `api.js` passou a devolver `at` em cada
+entrante — sem horário, `entrantes` era uma lista sem antes e depois.
+
+Decisões dentro dele:
+
+- **Tipo vence tamanho, em qualquer posição da rajada.** Áudio no meio pede você mesmo que o resto
+  seja curto.
+- **Sem `nossaUltimaAt`, a rajada é tudo.** Nunca respondemos, nada foi respondido: está certo.
+- **Mensagem sem `at` entra na rajada.** Pôr de fora baixaria a soma e traria o modelo de volta —
+  que é o defeito que isto conserta.
+- O motivo na tela diz quantas mensagens foram, porque *"escreveu 3 mensagens somando 450
+  caracteres"* explica a recomendação de um jeito que *"escreveu 145 caracteres"* não explicaria.
+
+`ultimaPedeRespostaPessoal` fica: é pura, testada, e a nova a usa por dentro para o teste de tipo.
+
+### Onde ele está certo sobre a IA
+
+O determinístico acerta a **tecla** — para de sugerir o modelo e manda responder à mão. O que ele
+não faz é entender que aquilo é um alerta e não uma reclamação, nem propor o que responder. Essa
+metade é da IA, e é o caso de uso dela: não é escolher entre respostas prontas, é reconhecer que
+nenhuma serve. A tecla 6 já era o destino certo; a IA vai mudar o que acontece **depois** dela.
+
+### Arquivos
+
+`src/lib/cortesia.js` (`rajadaFinal`, `conversaPedeRespostaPessoal`), `src/lib/api.js` (`at` em cada
+entrante), `src/panel/panel.js`, `tests/cortesia.test.mjs` (10 asserções novas, com o caso da print
+como regressão), `CLAUDE.md`, `CONTEXTO.md`, `manifest.json` (0.38.1 → **0.39.0**).
+
+**Convenção de versão corrigida no mesmo commit.** Eu havia documentado "versão sempre maior no
+branch da IA" e a quebrei em seguida: subi produção para 0.39.0, que é onde a IA já estava. Regra
+que exige alguém lembrar não é regra. Agora a **série** separa os dois — produção **0.x**, IA
+**1.x** — e não há nada a lembrar.
+29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — Os dois branches passam a estar escritos, e a armadilha da pasta única
 
 **Pedido dele:** *"resolva"*. A outra metade do trabalho — o merge está registrado no

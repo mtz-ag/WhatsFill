@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, rajadaFinal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
 
 const texto = (t) => ({ texto: t, tipo: 'TEXT' });
 
@@ -172,6 +172,67 @@ grupo('despedida com vocativo: "Amem mestre"');
   // O vocativo nao pode engolir pedido de verdade.
   check(!ehDespedida(t('Amém, mas preciso de ajuda')), 'amém com pedido junto');
   check(!ehDespedida(t('mestre, me manda o material')), 'vocativo com pedido');
+}
+
+
+grupo('rajadaFinal: o que chegou depois da nossa ultima mensagem');
+{
+  const m = (texto, at) => ({ texto, tipo: 'TEXT', at });
+  const lista = [
+    m('antiga', '2026-08-31T10:00:00Z'),
+    m('depois 1', '2026-08-31T18:17:00Z'),
+    m('depois 2', '2026-08-31T18:19:00Z'),
+  ];
+
+  const r = rajadaFinal(lista, '2026-08-31T15:55:00Z');
+  check(r.length === 2 && r[0].texto === 'depois 1', 'pega so as posteriores a nossa');
+
+  // Nunca respondemos: tudo esta pendente, e isso e o correto.
+  check(rajadaFinal(lista, null).length === 3, 'sem nossa mensagem, a rajada e tudo');
+
+  // Mensagem sem `at` entra: por fora, a soma baixa e o modelo volta a ser sugerido — que e
+  // exatamente o defeito que isto conserta.
+  check(rajadaFinal([m('sem hora', null)], '2026-08-31T15:55:00Z').length === 1, 'sem hora, entra');
+}
+
+grupo('conversaPedeRespostaPessoal: tres mensagens curtas somam como uma longa');
+{
+  const NOSSA = '2026-08-31T15:55:00Z';
+  const m = (texto, at, tipo) => ({ texto, tipo: tipo || 'TEXT', at });
+
+  /**
+   * O caso REAL da print de 31/08 (texto encurtado, sem dado de eleitor).
+   *
+   * Tres mensagens em dois minutos, cada uma abaixo do limite de 400, o conjunto acima. Antes
+   * disto a rodada sugeria MANDAR O MODELO DA CAMPANHA para quem tinha acabado de avisar que
+   * gente paga podia estar se passando por apoiador.
+   */
+  const rajada = [
+    m('a'.repeat(250), '2026-08-31T18:17:00Z'),
+    m('b'.repeat(55), '2026-08-31T18:18:00Z'),
+    m('c'.repeat(145), '2026-08-31T18:19:00Z'),
+  ];
+  const r = conversaPedeRespostaPessoal(rajada, NOSSA);
+  check(!!r, 'a rajada de 450 caracteres pede resposta pessoal');
+  check(/3 mensagens/.test(r.motivo), 'e o motivo diz que foram varias: ' + (r && r.motivo));
+
+  // A regra antiga NAO pegava: e a regressao que este teste tranca.
+  check(!ultimaPedeRespostaPessoal(rajada), 'olhando so a ultima, passava batido');
+
+  // Rajada curta continua sendo caso de resposta pronta.
+  const curta = [m('oi', '2026-08-31T18:17:00Z'), m('tudo bem?', '2026-08-31T18:18:00Z')];
+  check(!conversaPedeRespostaPessoal(curta, NOSSA), 'duas mensagens curtas nao viram conversa');
+
+  // Tipo vence tamanho, e em qualquer posicao da rajada.
+  const comAudio = [m('', '2026-08-31T18:17:00Z', 'AUDIO'), m('oi', '2026-08-31T18:18:00Z')];
+  check(!!conversaPedeRespostaPessoal(comAudio, NOSSA), 'audio no meio da rajada pede voce');
+
+  // Uma mensagem longa sozinha mantem o motivo antigo, sem contagem de mensagens.
+  const umaLonga = [m('x'.repeat(500), '2026-08-31T18:17:00Z')];
+  const r2 = conversaPedeRespostaPessoal(umaLonga, NOSSA);
+  check(!!r2 && !/mensagens/.test(r2.motivo), 'uma so nao fala em varias mensagens');
+
+  check(!conversaPedeRespostaPessoal([], NOSSA), 'sem rajada, nao ha o que responder');
 }
 
 fim();
