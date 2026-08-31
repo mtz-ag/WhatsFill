@@ -35,9 +35,14 @@ grupo('sem etiqueta de cidade: pedir dados, e na frente de tudo');
   check(r?.tecla === '4', `recomendou a tecla 4 = ${JSON.stringify(r)}`);
   check(/filtro/.test(r?.motivo || ''), `o motivo diz por que importa = ${r?.motivo}`);
 
-  // A prioridade que ele pediu: "sempre pedir dados" vence até o conteúdo pedido.
+  // A prioridade MUDOU em 31/08, com a print da Janete: quem pediu conteúdo e não deu a cidade
+  // recebe o conteúdo. "Talvez em outra hora ela forneça" — e o formulário repetido não aproxima
+  // ninguém de fornecer. A regra de cidade e a de conteúdo trocaram de lugar na lista.
   const comConteudo = com({ temEtiquetaDeCidade: false, podeEnviar: true, conteudoPedido: 'Conteúdo Flávio' });
-  check(comConteudo?.tecla === '4', 'sem cidade vence o modelo a enviar');
+  check(comConteudo?.tecla === '1', 'com modelo a enviar, o modelo vence — mesmo sem cidade');
+
+  // E sem nada a enviar, pedir dados continua sendo a saída.
+  check(com({ temEtiquetaDeCidade: false })?.tecla === '4', 'sem nada a enviar, pede os dados');
 
   // Mas não recomenda pedir DE NOVO no mesmo dia.
   const jaPedi = com({ temEtiquetaDeCidade: false, pedidoHoje: true });

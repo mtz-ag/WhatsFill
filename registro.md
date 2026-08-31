@@ -5,6 +5,53 @@
 
 ---
 
+## 2026-08-31 — Conteúdo pedido passa a vencer "sem cidade" (ele mudou de ideia, e está certo)
+
+**Relato dele**, com a print da Janete — sem cidade, etiqueta ADS, modelo "Campanha Martim2"
+mapeado, e a caixa sugerindo *"Sugiro a 4: peça os dados"*:
+
+> *"ela ignorou totalmente o pedido da cidade, eu mando o modelo mesmo assim, talvez em outra
+> hora ela forneça"*
+
+### É uma reversão da regra que ele mesmo pediu, e o argumento dele é melhor
+
+Em 30/08 ele tinha pedido: *"quando a pessoa não tiver etiqueta de cidade, sempre pedir dados"*, e
+eu pus a regra acima até do conteúdo pedido.
+
+O caso da Janete mostra o furo: ela **já ignorou** o pedido da cidade uma vez. Mandar o formulário
+de novo não a aproxima de fornecer — mandar o que ela pediu, sim, porque a conversa continua viva
+e a cidade pode vir depois. Pedir dados é a saída de quem não tem **nada** a receber, não a de
+quem está esperando conteúdo.
+
+### O que mudou
+
+As duas regras trocaram de lugar. Nada mais: nenhuma condição foi reescrita, nenhum código do
+painel foi tocado. **Era exatamente para isso que a tabela existe** — em 30/08 esse mesmo pedido
+teria sido uma expressão booleana no meio do montador da pergunta, e mudar de ideia custaria uma
+releitura do fluxo inteiro.
+
+Ordem hoje:
+
+1. pede resposta pessoal (áudio, vídeo, texto longo)
+2. etiqueta que dispensa da fila (engajado)
+3. voltou por outro anúncio
+4. última é só reação (figura, emoji, link)
+5. **conteúdo pedido** ← subiu
+6. **sem etiqueta de cidade** ← desceu
+7. nunca perguntaram interesse
+8. já pedi hoje e não veio nada
+
+O comentário da regra de cidade agora registra a reversão e o motivo dela, com as palavras dele —
+senão daqui a um mês alguém "conserta" a ordem de volta.
+
+### Arquivos
+
+`src/lib/sugestao.js` (ordem + comentário), `tests/sugestao.test.mjs` (a asserção que fixava a
+prioridade antiga passou a fixar a nova, e ganhou o caso de "sem nada a enviar"),
+`manifest.json` (0.26.0 → 0.27.0). Dez suítes passando, 29 módulos parseando.
+
+---
+
 ## 2026-08-31 — Voltou por outro anúncio sem responder o formulário
 
 **Relato dele:** *"uma situação frequente é a pessoa ignorar o pedido de dados e retornar por

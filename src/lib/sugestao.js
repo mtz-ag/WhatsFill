@@ -105,15 +105,26 @@ export const REGRAS = [
     motivo: () => 'a última mensagem foi só uma figura, emoji ou link — a mensagem do momento responde ao gesto.',
   },
   {
+    id: 'conteudo-pedido',
+    tecla: '1',
+    // Ele pediu um conteúdo e há modelo mapeado: mandar é o que fecha o atendimento.
+    quando: (c) => c.podeEnviar && !c.enviadoHoje,
+    motivo: (c) => `pediu "${c.conteudoPedido || 'conteúdo'}" e há modelo mapeado — mande.`,
+  },
+  {
     id: 'sem-etiqueta-de-cidade',
     tecla: '4',
     /**
      * Pedido do Thiago: *"quando a pessoa não tiver etiqueta de cidade, sempre pedir dados"*.
      *
-     * Vem em PRIMEIRO, acima até de mandar o conteúdo pedido, e é decisão dele. A razão é o
-     * trabalho todo: a API só filtra por etiqueta, então contato sem etiqueta de cidade não
-     * entra em filtro nenhum — ele existe no CRM e não aparece em nenhuma lista de trabalho.
-     * Mandar o conteúdo para alguém assim resolve hoje e perde a pessoa amanhã.
+     * Sem etiqueta de cidade o contato não entra em filtro nenhum: a API só filtra por etiqueta,
+     * então ele existe no CRM e não aparece em nenhuma lista de trabalho.
+     *
+     * **Mas ficou ABAIXO de "conteúdo pedido", e a mudança é dele** (31/08, com a print da
+     * Janete): *"ela ignorou totalmente o pedido da cidade, eu mando o modelo mesmo assim,
+     * talvez em outra hora ela forneça"*. É a leitura certa — quem pediu conteúdo e não deu a
+     * cidade não fica mais perto de dar a cidade recebendo o formulário de novo; fica mais perto
+     * recebendo o que pediu. A cidade vira o caminho de quem não tem NADA a receber.
      *
      * **A exceção que fica:** já pedido hoje não é recomendado de novo. Pedir duas vezes no
      * mesmo dia soa a robô — é a mesma razão pela qual o destaque já saía da tecla 4 nesse caso.
@@ -122,13 +133,6 @@ export const REGRAS = [
     quando: (c) => !c.temEtiquetaDeCidade && c.podePedirDados && !c.pedidoHoje,
     motivo: () =>
       'sem etiqueta de cidade — sem ela este contato não entra em filtro nenhum. Peça os dados.',
-  },
-  {
-    id: 'conteudo-pedido',
-    tecla: '1',
-    // Ele pediu um conteúdo e há modelo mapeado: mandar é o que fecha o atendimento.
-    quando: (c) => c.podeEnviar && !c.enviadoHoje,
-    motivo: (c) => `pediu "${c.conteudoPedido || 'conteúdo'}" e há modelo mapeado — mande.`,
   },
   {
     id: 'nunca-perguntaram-interesse',
