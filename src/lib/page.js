@@ -163,15 +163,46 @@ export const clickConcluir = IS_IN_PAGE
       item.click();
 
       const deadline = Date.now() + 8000;
+      let confirmacoes = 0;
+      let avisoDaConfirmacao = '';
+
       while (Date.now() < deadline) {
         await sleep(200);
-        // Diálogo de motivo de conclusão: quem decide é o humano, então devolve para o painel.
-        if (dom.hasOpenDialog()) return { ok: true, dialogOpen: true };
+
+        /**
+         * Diálogo aberto: **confirmação a rodada resolve; formulário devolve para ele.**
+         *
+         * Print dele (01/09): *"Uma mensagem está aguardando resposta do contato… Tem certeza de
+         * que deseja concluir o atendimento?"* com Cancelar/Concluir. A rodada parava em todo
+         * contato assim — *"é para concluir e continuar mas está parando tudo"*.
+         *
+         * Confirmar aqui não decide nada novo: a conclusão foi pedida por ele, dois cliques atrás.
+         * O diálogo de MOTIVO, que pede um dado que só ele tem, continua devolvendo — a distinção
+         * é feita em `dom.getConfirmacaoDeConclusao`, que recusa qualquer diálogo com campo.
+         *
+         * `confirmacoes` limita a duas: se a plataforma reabrir o mesmo diálogo sem fechar o
+         * atendimento, clicar em laço até o prazo seria bater na mesma porta 40 vezes. Duas cobrem
+         * o encadeado ("tem certeza?" → "confirma?") e param antes de virar teimosia.
+         */
+        const confirmacao = dom.getConfirmacaoDeConclusao();
+        if (confirmacao && confirmacoes < 2) {
+          confirmacoes++;
+          // O texto vai para o painel: ele precisa saber o que foi aceito em nome dele — e este
+          // diálogo avisa que mensagens pendentes serão canceladas.
+          if (!avisoDaConfirmacao) avisoDaConfirmacao = confirmacao.texto.slice(0, 200);
+          confirmacao.botao.click();
+          continue;
+        }
+
+        // Formulário (ex.: motivo de conclusão), ou confirmação que insistiu: quem decide é ele.
+        if (dom.hasOpenDialog()) {
+          return { ok: true, dialogOpen: true, avisoDaConfirmacao };
+        }
         // "Reiniciar" no rodapé é o sinal de que fechou. O sumiço do "Concluir" não serve: o
         // item do menu tem o mesmo texto e sobrevive enquanto o menu estiver aberto.
         if (dom.isConcluded()) {
           await fecharOverlay(); // menu que a extensão abriu, a extensão fecha
-          return { ok: true, dialogOpen: false, confirmado: true };
+          return { ok: true, dialogOpen: false, confirmado: true, avisoDaConfirmacao };
         }
       }
 

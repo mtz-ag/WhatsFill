@@ -666,6 +666,65 @@ export async function openNextSession(opts) {
   return { changed: false, avisoAba, reason: 'O topo da fila ainda é este mesmo atendimento.' };
 }
 
+/**
+ * O diálogo aberto é uma CONFIRMAÇÃO da conclusão — daquelas de "tem certeza?"?
+ *
+ * Print dele (01/09): *"Uma mensagem está aguardando resposta do contato. Se você prosseguir com a
+ * conclusão do atendimento, essas mensagens serão canceladas. Tem certeza de que deseja concluir o
+ * atendimento?"*, com **Cancelar** e **Concluir**. A rodada parava em todo contato assim —
+ * *"é para concluir e continuar mas está parando tudo"*.
+ *
+ * **A distinção que importa, e é ela que torna seguro clicar:**
+ *
+ *  - *confirmação* — só pergunta se pode seguir com o que a rodada JÁ pediu. Nada a decidir que a
+ *    rodada não tenha decidido; ela confirma.
+ *  - *formulário* (o diálogo de "motivo de conclusão") — pede um dado que só ele tem. Aqui a rodada
+ *    devolve para o painel, como sempre fez.
+ *
+ * O teste do formulário vem PRIMEIRO e é o que segura a mão: qualquer campo dentro do diálogo
+ * (`input`, `select`, `mat-select`, `textarea`, `mat-radio-group`) faz esta função devolver `null`,
+ * mesmo que haja um botão "Concluir" ao lado. Errar para o lado de não clicar custa uma rodada
+ * parada; errar para o outro grava decisão que ninguém tomou.
+ *
+ * Também exige que o TEXTO fale de concluir/encerrar: diálogo de outra coisa com um botão de nome
+ * parecido não entra.
+ *
+ * @returns {{botao: HTMLElement, texto: string}|null}
+ */
+export function getConfirmacaoDeConclusao() {
+  const dialogo = document.querySelector('.cdk-overlay-container mat-dialog-container');
+  if (!dialogo) return null;
+
+  // Formulário: quem decide é ele. Vem primeiro de propósito.
+  if (dialogo.querySelector('input, select, textarea, mat-select, mat-radio-group')) return null;
+
+  const texto = (dialogo.textContent || '').replace(/\s+/g, ' ').trim();
+  const semAcento = texto
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+
+  // O diálogo tem de falar de concluir/encerrar o atendimento.
+  if (!/conclu|encerra|finaliza/.test(semAcento)) return null;
+
+  // O botão de confirmar, entre os do diálogo. "Cancelar" e "Voltar" nunca entram.
+  const botoes = [...dialogo.querySelectorAll('button')];
+  const botao = botoes.find((b) => {
+    const t = (b.textContent || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase();
+    if (!t) return false;
+    if (/cancel|voltar|fechar|nao|sair/.test(t)) return false;
+    return /conclu|confirm|^sim$|prosseguir|continuar/.test(t);
+  });
+  if (!botao || botao.disabled) return null;
+
+  return { botao, texto };
+}
+
 /** Detecta diálogo do Material aberto (ex.: motivo de conclusão) para não atropelar o fluxo. */
 export function hasOpenDialog() {
   return !!document.querySelector('.cdk-overlay-container mat-dialog-container');
