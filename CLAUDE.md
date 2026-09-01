@@ -561,6 +561,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 - **Leia cada arquivo uma vez.**
 - **Instrução do Thiago sempre vence estas regras.**
 
+> **"Nossa mensagem foi X?" nunca se responde comparando com UM texto.** Toda resposta tem
+> variantes, e o pedido de dados tem três formas (`pedir-dados` e os dois de evento). Comparar
+> com o texto base fazia a resposta do contato deixar de ser lida como resposta — *"deu a cidade
+> e não pegou"*, 01/09. Case pelo **invariante** (a linha `Nome / Cidade`), que é o que os testes
+> já protegem em cada texto.
+
 ## Testes
 
 > **`node --check` NÃO basta, e já derrubou a extensão.** Ele analisa `.js` como **CommonJS**

@@ -510,16 +510,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * A nossa ÚLTIMA mensagem foi o pedido de dados?
        *
        * É o contexto dele: perguntou, então o que veio depois é a resposta — mesmo sem "moro em"
-       * e sem separador. Compara um trecho do meio do formulário com a última coisa que saiu,
-       * pelo mesmo método usado no modelo e no "já pediram dados".
+       * e sem separador.
        */
-      const respostaAoPedido = (() => {
-        const nossaUltima = state.nossas[state.nossas.length - 1]?.texto || '';
-        const modelo = state.templates.find((t) => t.id === ASK_TEMPLATE_ID);
-        const corpo = achatarTexto(modelo?.text || '');
-        if (!nossaUltima || corpo.length < 100) return false;
-        return achatarTexto(nossaUltima).includes(corpo.slice(40, 100));
-      })();
+      const respostaAoPedido = pediuNomeECidade(state.nossas[state.nossas.length - 1]?.texto);
 
       const palpites = await extract(state.incoming, { temaField, respostaAoPedido });
       /**
@@ -4615,6 +4608,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /** Comparação de texto sem acento e sem diferença de caixa. */
+  /**
+   * A linha do formato que TODO pedido de dados carrega.
+   *
+   * `Nome completo / Cidade` no `pedir-dados`, `*Nome / Cidade*` nos dois textos de evento, e a
+   * mesma linha em toda variante — porque é dela que sai a precisão do parser, e há teste em cada
+   * um dos textos travando isso.
+   */
+  const PEDIU_NOME_E_CIDADE = /nome(\s+completo)?\s*\/\s*cidade/i;
+
+  /**
+   * Esta mensagem NOSSA é um pedido de nome e cidade?
+   *
+   * **Substitui uma comparação minha que estava furada** (relato dele, 01/09: *"deu a cidade e não
+   * pegou"*). Eu comparava um trecho do meio do texto base do `pedir-dados` — então bastava a
+   * mensagem ter saído como **variante**, ou ser um dos **textos de evento**, para a resposta do
+   * contato deixar de ser lida como resposta. Eram três formas de pedir e eu reconhecia uma.
+   *
+   * A linha do formato é o que todas têm em comum, é o que o parser depende, e é o que os testes
+   * já protegem em cada texto. Casar por ela vale inclusive para texto novo que ele escrever.
+   */
+  function pediuNomeECidade(texto) {
+    return PEDIU_NOME_E_CIDADE.test(achatarTexto(texto));
+  }
+
   function achatarTexto(texto) {
     return String(texto || '')
       .normalize('NFD')
