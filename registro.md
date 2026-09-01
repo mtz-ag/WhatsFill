@@ -5,6 +5,64 @@
 
 ---
 
+## 2026-09-01 (noite, 18) — Salvar versões do fluxo, carregar, exportar e importar
+
+**Pedido:** *"falta a opção de salvar fluxo, carregar, exportar"*.
+
+### A distinção que a tela precisava deixar clara
+
+O quadro **já gravava sozinho** a cada mexida (`fluxo.arvore`). O que faltava é outra coisa:
+guardar **versões**, para poder experimentar e voltar. O cartão novo diz isso na primeira linha,
+porque a dúvida "será que meu trabalho está sendo salvo?" é a mais cara de todas.
+
+### O que existe agora
+
+Um cartão "Salvar e carregar" no lado: campo de nome + **Salvar**; a lista das versões, cada uma
+com a data e **quantos ramos, quantos enviam**, e os botões **Carregar** e **Apagar**; e
+**Exportar arquivo** / **Importar arquivo**.
+
+- **Carregar pergunta dizendo o TAMANHO da troca** — *"substituído por 20 ramos, 8 deles enviando
+  mensagem"*. Ver o número é a diferença entre uma confirmação que se lê e uma que se aperta no
+  automático, e o que está sendo trocado é o que decide mensagem para eleitor.
+- **Nome repetido sobrescreve, perguntando.** Ter duas versões "teste" e não saber qual é qual é
+  pior que perder a antiga sabendo.
+- **As contagens de vitória não vão no arquivo**: são medição desta máquina, não o fluxo.
+
+### O arquivo importado é entrada não confiável
+
+Um arquivo de fluxo decide o que a rodada manda para eleitor. `JSON.parse` e usar seria aceitar que
+qualquer coisa num campo vire comportamento — e um arquivo exportado hoje, importado depois de eu
+renomear uma regra, viraria ramo morto e silencioso.
+
+`arvore.sanitizar` peneira campo a campo e **descarta com aviso**: regra que não existe mais, sinal
+desconhecido, tecla inventada, campo estranho, id repetido (ganha id novo), texto sem aparar,
+posição não numérica. Tem teto de 400 nós e de 8 níveis de fundura. `deArquivo` recusa cedo o que
+não tem a marca do formato, o que é de versão mais nova e o que não tem ramo — devolvendo
+`{ok:false, erro}` em vez de lançar, porque quem chama é a tela. Vinte e quatro asserções.
+
+### Um defeito que peguei na tela
+
+Os avisos do que a conferência descartou eram **apagados pela linha de sucesso**, um instante
+depois. Ou seja: a informação que justifica a peneira existir sumia justo quando ele passaria a
+olhar o quadro novo e a estranhar um ramo faltando. Hoje carregar com problema mostra os dois
+juntos, em vermelho.
+
+**Arquivos:** `src/lib/arvore.js` (`sanitizar`, `paraArquivo`, `deArquivo`, `quantosEnviam`,
+`FORMATO`), `src/lib/store.js` (`fluxosSalvos`, e `fluxo.arvore` documentado no default),
+`src/fluxo.js`, `src/fluxo.html`, `src/fluxo.css`, `tests/arvore.test.mjs`, `manifest.json`
+(1.26.0 → 1.27.0), `registro.md`, `CLAUDE.md`.
+
+**Conferido no navegador:** salvar lista "20 ramos, 8 enviam" com a data; trocar o quadro pelo
+preset e voltar pela versão salva devolve os ramos certos (2 → 20 → 2); exportar produz
+`meu-fluxo-de-teste.json` com a marca do formato, as teclas e **sem** as vitórias; importar um
+arquivo com um ramo bom e um estragado carrega o bom e mostra os dois avisos do que foi descartado.
+Treze suítes, `checar-modulos` e `checar-referencias` passando.
+
+**Não testado:** o download real no Chrome com a extensão carregada (aqui o clique no link foi
+interceptado para ler o conteúdo do arquivo).
+
+---
+
 ## 2026-09-01 (noite, 17) — "A IA assume" virou desfecho, e as caixas ganharam pino de ligação
 
 **Pedido:** *"está faltando a opção de IA assume e responde, e como faço para linkar as caixas?"*

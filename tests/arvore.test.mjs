@@ -407,4 +407,90 @@ grupo('o desfecho "a IA assume e responde"');
   check(arv.problemas(semNada).some((p) => p.includes('vazio')), 'e acao vazia continua sendo acusada');
 }
 
+grupo('salvar, carregar e levar para fora');
+{
+  const fluxo = { teclas: { 'ultima-e-despedida': '2', 'nao-existe': '9' }, arvore: arv.arrumar(arv.arvoreDoQuadro()), vitorias: { x: 5 } };
+  const arquivo = arv.paraArquivo(fluxo, 'semana do evento');
+
+  check(arquivo.formato === arv.FORMATO && arquivo.versao === arv.FORMATO_VERSAO, 'o arquivo leva a marca do formato');
+  check(arquivo.nome === 'semana do evento', 'e o nome que ele deu');
+  check(!('vitorias' in arquivo), 'as contagens NAO vao junto: sao medicao desta maquina, nao o fluxo');
+
+  const volta = arv.deArquivo(JSON.stringify(arquivo));
+  check(volta.ok === true, `o que sai volta (${volta.erro || ''})`);
+  check(arv.todosOsNos(volta.arvore).length === arv.todosOsNos(fluxo.arvore).length, 'com todos os ramos');
+  check(volta.teclas['ultima-e-despedida'] === '2', 'e com as teclas fixadas');
+  check(!('nao-existe' in volta.teclas), 'tecla de regra inexistente e descartada, nao vira lixo invisivel');
+
+  // O que sai e o que volta decidem IGUAL -- e a unica prova que importa.
+  const ctx = { jaRespondemosAntes: true, ultimoTexto: 'Bom dia!' };
+  const antes = arv.decidir(ctx, fluxo.arvore, fluxo);
+  const depois = arv.decidir(ctx, volta.arvore, { teclas: volta.teclas });
+  check(antes?.tecla === depois?.tecla, `a decisao sobrevive a ida e volta (${antes?.tecla} = ${depois?.tecla})`);
+}
+
+grupo('arquivo de fora e entrada NAO confiavel');
+{
+  /**
+   * Um arquivo de fluxo decide o que a rodada manda para eleitor real. JSON.parse e usar seria
+   * aceitar que qualquer coisa num campo vire comportamento -- e arquivo velho, depois de eu
+   * renomear uma regra, viraria ramo morto e silencioso.
+   */
+  check(arv.deArquivo('{{{').ok === false, 'JSON quebrado e recusado');
+  check(arv.deArquivo('{}').ok === false, 'objeto sem a marca do formato e recusado');
+  check(arv.deArquivo(JSON.stringify({ formato: arv.FORMATO, versao: 1, arvore: [] })).ok === false, 'arquivo sem ramo e recusado');
+  const doFuturo = arv.deArquivo(JSON.stringify({ formato: arv.FORMATO, versao: 99, arvore: [{ id: 'a' }] }));
+  check(doFuturo.ok === false && /vers/i.test(doFuturo.erro), `versao mais nova e recusada com o motivo (${doFuturo.erro})`);
+
+  const sujo = {
+    id: 'a',
+    rotulo: '   nome com espaco   ',
+    regra: 'regra-que-sumiu',
+    condicao: { sinal: 'sinalInventado', negar: 'sim', palavras: ['  oi  ', '', 42], onde: 'seila' },
+    acao: { tecla: 'Z' },
+    desligado: 'talvez',
+    x: 'muito',
+    y: 10,
+    naoDeveriaExistir: 'apaga isso',
+    filhos: [{ id: 'a', rotulo: 'id repetido', acao: { ia: true } }],
+  };
+  const { arvore, avisos } = arv.sanitizar([sujo]);
+  const no = arvore[0];
+  check(no.rotulo === 'nome com espaco', 'o texto vem aparado');
+  check(no.regra === null && avisos.some((a) => a.includes('regra-que-sumiu')), 'regra que sumiu do codigo e descartada COM aviso');
+  check(no.condicao.sinal === '' && avisos.some((a) => a.includes('sinalInventado')), 'sinal inventado e descartado COM aviso');
+  check(no.acao === null && avisos.some((a) => a.includes('"Z"')), 'tecla inventada e descartada COM aviso');
+  check(no.condicao.palavras.length === 1 && no.condicao.palavras[0] === 'oi', 'palavras vazias e nao-texto saem');
+  check(no.condicao.onde === 'ultima', 'onde invalido cai no padrao');
+  check(no.condicao.negar === false && no.desligado === false, 'booleano so e verdadeiro quando E true');
+  check(no.x === 0 && no.y === 10, 'posicao nao numerica vira zero');
+  check(!('naoDeveriaExistir' in no), 'campo desconhecido nao passa');
+  check(no.filhos[0].id !== 'a' && avisos.some((a) => a.includes('id repetido')), 'id repetido ganha id novo COM aviso');
+  check(no.filhos[0].acao.ia === true, 'e o desfecho da IA sobrevive');
+
+  // Aninhamento absurdo tem teto -- arquivo nao pode gerar arvore que a tela nao desenha.
+  let fundo = { id: 'f0', rotulo: 'f0', acao: { tecla: '3' }, filhos: [] };
+  for (let i = 1; i < 20; i++) fundo = { id: `f${i}`, rotulo: `f${i}`, filhos: [fundo] };
+  const limitado = arv.sanitizar([fundo]);
+  const profundidade = Math.max(...arv.todosOsNos(limitado.arvore).map((n) => n.nivel));
+  check(profundidade <= 8, `o aninhamento tem teto (${profundidade})`);
+  check(limitado.avisos.some((a) => a.includes('nivel'.replace('ni', 'ní'))), 'e avisa que cortou');
+
+  check(arv.sanitizar(null).arvore.length === 0, 'entrada que nao e lista devolve vazio, sem explodir');
+  check(arv.sanitizar([null, 'texto', 42]).arvore.length === 0, 'e lixo dentro da lista tambem');
+}
+
+grupo('quantosEnviam: o numero que ele ve antes de trocar o fluxo');
+{
+  const arvore = [
+    { id: 'a', rotulo: 'a', condicao: {}, acao: { tecla: '4' }, filhos: [] },
+    { id: 'b', rotulo: 'b', condicao: {}, acao: { tecla: '3' }, filhos: [] },
+    { id: 'c', rotulo: 'c', condicao: {}, acao: { resposta: 'pedido-ajuda' }, filhos: [] },
+    { id: 'd', rotulo: 'd', condicao: {}, acao: { tecla: '4' }, desligado: true, filhos: [] },
+    { id: 'e', rotulo: 'e', condicao: {}, acao: { ia: true }, filhos: [] },
+  ];
+  check(arv.quantosEnviam(arvore) === 2, `conta so o que ENVIA e esta ligado (${arv.quantosEnviam(arvore)})`);
+  check(arv.quantosEnviam(arv.arvorePadrao()) > 0, 'e a arvore padrao tem ramos que enviam');
+}
+
 fim();

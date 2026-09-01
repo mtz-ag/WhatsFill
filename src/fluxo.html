@@ -46,6 +46,22 @@
         </div>
 
         <div class="cartao">
+          <h2>Salvar e carregar</h2>
+          <p class="ajuda">O quadro grava sozinho a cada mexida. Isto aqui é para guardar <b>versões</b>: salve com um nome, mexa à vontade, e volte quando quiser.</p>
+          <div class="linha-campo">
+            <input type="text" id="nome-fluxo" placeholder="nome desta versão" maxlength="80" />
+            <button type="button" id="salvar" class="btn btn-primario">Salvar</button>
+          </div>
+          <div id="salvos" class="salvos"></div>
+          <div class="botoes">
+            <button type="button" id="exportar" class="btn">Exportar arquivo</button>
+            <button type="button" id="importar" class="btn">Importar arquivo</button>
+            <input type="file" id="arquivo" accept="application/json,.json" hidden />
+          </div>
+          <div id="aviso-arquivo" class="aviso-arquivo"></div>
+        </div>
+
+        <div class="cartao">
           <h2>Testar uma conversa</h2>
           <p class="ajuda">Cole o que o contato escreveu — uma mensagem por linha, a última embaixo. O caminho que vencer acende no quadro.</p>
           <textarea id="conversa" rows="4" placeholder="Bom dia!"></textarea>

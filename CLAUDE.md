@@ -376,6 +376,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   outra, escrito no cabecalho da janela, e ele perguntou *"como faco para linkar as caixas?"*. O
   mesmo tinha acontecido com o arrastar, que eu havia trocado por botoes. Recurso de quadro precisa
   de alca visivel (o `.pino` na borda direita), nao de instrucao em texto.
+- **Arquivo de fluxo e ENTRADA NAO CONFIAVEL, e `JSON.parse` nao basta.** O que vem no arquivo
+  decide o que a rodada manda para eleitor real. `arvore.sanitizar` peneira campo a campo: regra
+  que sumiu do codigo, sinal desconhecido e tecla inventada sao DESCARTADOS com aviso — nunca
+  aceitos como ramo que nunca casa e ninguem entende. Tem teto de nos (400) e de fundura (8), id
+  repetido ganha id novo, e campo desconhecido nao passa. `deArquivo` devolve `{ok:false, erro}`
+  em vez de lancar, porque quem chama e a tela. **O aviso do que foi descartado tem que sobreviver
+  ao carregamento**: eu apagava com a linha de sucesso, e ela sumia justo quando ele iria olhar o
+  quadro novo e estranhar o ramo faltando.
+- **O quadro grava sozinho; `fluxosSalvos` e outra coisa.** `fluxo.arvore` e o quadro de trabalho e
+  e gravado a cada mexida. Os salvos com nome sao VERSOES dele (poder experimentar e voltar), e
+  ficam numa chave propria — nao na lista de mescla do `store.get`, porque mesclar array daria o
+  resultado errado. As contagens de vitoria NAO vao no arquivo exportado: sao medicao desta
+  maquina, nao o fluxo.
 - **No QUADRO, a prioridade entre irmaos e a ALTURA na tela** — `arvore.ordenarPorPosicao`, chamada
   depois de todo arrasto. E a unica regra honesta num quadro livre: guardar uma ordem invisivel ao
   lado da posicao faria a tela mostrar um ramo acima do outro e a rodada obedecer o contrario, e

@@ -831,7 +831,23 @@ const DEFAULTS = {
     teclas: {},
     /** id → quantas vezes venceu. Mostra qual regra decide a fila de verdade. */
     vitorias: {},
+    /**
+     * O QUADRO: a árvore de ramos, com posição. `null` até ele abrir a janela do fluxo.
+     *
+     * Enquanto for `null`, a rodada usa a tabela de regras como sempre usou. Ao abrir a janela ela
+     * é semeada com a tabela achatada, e há teste exigindo que as duas decidam igual — ligar não
+     * muda nada. Ver `lib/arvore.js`.
+     */
+    arvore: null,
   },
+  /**
+   * Os quadros que ele salvou com nome — as versões dele, não um histórico automático.
+   *
+   * O quadro de trabalho grava sozinho a cada edição (é `fluxo.arvore`); isto aqui é outra coisa:
+   * poder guardar "o fluxo da semana do evento", mexer à vontade e voltar. Sem isto, experimentar
+   * custa desfazer tudo à mão.
+   */
+  fluxosSalvos: [],
   /** Cache da lista de municípios do RS (IBGE). */
   municipios: null,
   /**

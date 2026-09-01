@@ -724,6 +724,177 @@ function desenharEditor() {
   caixa.append(botoes);
 }
 
+// ---- salvar, carregar e levar para fora -------------------------------------
+
+/** As versões que ele guardou. Vive fora de `fluxo` para não crescer o objeto do quadro. */
+let salvos = [];
+
+function escreverAviso(linhas, tipo) {
+  const caixa = el('aviso-arquivo');
+  caixa.replaceChildren();
+  caixa.className = `aviso-arquivo ${tipo || ''}`.trim();
+  for (const linha of [].concat(linhas || [])) caixa.append(span('', linha));
+}
+
+function quandoFoi(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function desenharSalvos() {
+  const caixa = el('salvos');
+  caixa.replaceChildren();
+  if (!salvos.length) {
+    caixa.append(span('vazio', 'Nenhuma versão salva ainda.'));
+    return;
+  }
+  for (const s of salvos) {
+    const linha = document.createElement('div');
+    linha.className = 'salvo';
+
+    const nome = document.createElement('div');
+    nome.className = 'salvo-nome';
+    nome.append(document.createTextNode(s.nome));
+    // Quantos ramos, e quantos ENVIAM: é o número que diz o tamanho da troca antes de fazê-la.
+    nome.append(span('salvo-sub', `${quandoFoi(s.salvoEm)} · ${arvoreLib.todosOsNos(s.arvore).length} ramos, ${arvoreLib.quantosEnviam(s.arvore)} enviam`));
+
+    const botoes = document.createElement('div');
+    botoes.className = 'salvo-botoes';
+
+    const carregar = document.createElement('button');
+    carregar.type = 'button';
+    carregar.className = 'btn';
+    carregar.textContent = 'Carregar';
+    carregar.addEventListener('click', () => aplicarFluxo(s.arvore, s.teclas, `a versão "${s.nome}"`));
+
+    const apagar = document.createElement('button');
+    apagar.type = 'button';
+    apagar.className = 'btn btn-perigo';
+    apagar.textContent = 'Apagar';
+    apagar.addEventListener('click', async () => {
+      if (!confirm(`Apagar a versão salva "${s.nome}"? O quadro de agora não muda.`)) return;
+      salvos = salvos.filter((x) => x.id !== s.id);
+      await store.set('fluxosSalvos', salvos);
+      desenharSalvos();
+    });
+
+    botoes.append(carregar, apagar);
+    linha.append(nome, botoes);
+    caixa.append(linha);
+  }
+}
+
+/**
+ * Troca o quadro de trabalho por outro — de uma versão salva ou de um arquivo.
+ *
+ * **Pergunta antes, dizendo o tamanho da troca.** Carregar substitui o que decide as mensagens da
+ * rodada; ver "23 ramos, 6 enviam" no lugar de "vai trocar?" é a diferença entre uma confirmação
+ * que se lê e uma que se aperta no automático.
+ */
+async function aplicarFluxo(arvore, teclas, deOnde, avisos) {
+  const nos = arvoreLib.todosOsNos(arvore).length;
+  if (!confirm(`Carregar ${deOnde}? O quadro de agora é substituído por ${nos} ramos, ${arvoreLib.quantosEnviam(arvore)} deles enviando mensagem.`)) {
+    return;
+  }
+  selecionado = null;
+  caminhoDoTeste = [];
+  fluxo = { ...fluxo, teclas: { ...(teclas || {}) } };
+  let nova = arvoreLib.ordenarPorPosicao(arvore);
+  if (arvoreLib.precisaArrumar(nova)) nova = arvoreLib.arrumar(nova);
+  await gravar(nova);
+  caberNaTela();
+
+  /**
+   * **Os avisos do arquivo continuam na tela DEPOIS de carregar.**
+   *
+   * Eles diziam o que a conferência descartou — regra que sumiu do código, sinal desconhecido,
+   * tecla inventada —, e a linha de sucesso os apagava um instante depois. Ou seja: a informação
+   * que justifica a peneira existir sumia justo quando ele passaria a olhar o quadro novo e a
+   * estranhar um ramo faltando. Carregado com problema mostra os dois, em vermelho.
+   */
+  const lista = [].concat(avisos || []);
+  if (lista.length) escreverAviso([`Carregado ${deOnde}, com o que a conferência descartou:`, ...lista], 'ruim');
+  else escreverAviso(`Carregado: ${deOnde}.`, 'bom');
+}
+
+el('salvar').addEventListener('click', async () => {
+  const nome = el('nome-fluxo').value.trim();
+  if (!nome) {
+    escreverAviso('Dê um nome para esta versão antes de salvar.', 'ruim');
+    el('nome-fluxo').focus();
+    return;
+  }
+  // Mesmo nome sobrescreve, e a pergunta é explícita: salvar duas "teste" e não saber qual é qual
+  // é pior que perder a antiga sabendo.
+  const existente = salvos.find((s) => s.nome.toLowerCase() === nome.toLowerCase());
+  if (existente && !confirm(`Já existe uma versão chamada "${existente.nome}". Substituir?`)) return;
+
+  const registro = {
+    id: existente?.id || `s${Date.now().toString(36)}`,
+    nome,
+    salvoEm: new Date().toISOString(),
+    teclas: { ...(fluxo.teclas || {}) },
+    arvore: structuredClone(fluxo.arvore || []),
+  };
+  salvos = [registro, ...salvos.filter((s) => s.id !== registro.id)];
+  await store.set('fluxosSalvos', salvos);
+  el('nome-fluxo').value = '';
+  desenharSalvos();
+  escreverAviso(`Salvo: "${nome}".`, 'bom');
+});
+
+/**
+ * Leva o fluxo para fora, num arquivo.
+ *
+ * `URL.createObjectURL` + link com `download`: a janela é uma página da própria extensão, então o
+ * navegador salva sem pedir permissão nenhuma. As contagens de vitória ficam de fora — são medição
+ * desta máquina, não o fluxo.
+ */
+el('exportar').addEventListener('click', () => {
+  const nome = el('nome-fluxo').value.trim() || 'fluxo-whatsfill';
+  const dados = arvoreLib.paraArquivo(fluxo, nome);
+  const url = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${nome.replace(/[^\w\-]+/g, '-').toLowerCase()}.json`;
+  a.click();
+  // Sem o revoke, cada exportação segura o conteúdo do arquivo na memória até a janela fechar.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  escreverAviso(`Exportado ${arvoreLib.todosOsNos(fluxo.arvore || []).length} ramos em ${a.download}.`, 'bom');
+});
+
+el('importar').addEventListener('click', () => el('arquivo').click());
+
+el('arquivo').addEventListener('change', async (ev) => {
+  const arquivo = ev.target.files?.[0];
+  ev.target.value = ''; // permite reimportar o MESMO arquivo depois de corrigi-lo fora
+  if (!arquivo) return;
+
+  let conteudo = '';
+  try {
+    conteudo = await arquivo.text();
+  } catch (err) {
+    escreverAviso(`Não consegui ler o arquivo: ${err?.message || err}`, 'ruim');
+    return;
+  }
+
+  const lido = arvoreLib.deArquivo(conteudo);
+  if (!lido.ok) {
+    escreverAviso(`Não deu para importar: ${lido.erro}.`, 'ruim');
+    return;
+  }
+  /**
+   * **Os avisos aparecem ANTES de perguntar, e continuam depois.** Eles dizem o que o arquivo
+   * perdeu na conferência; mostrá-los só depois de trocar o fluxo seria contar o que aconteceu em
+   * vez de deixar ele decidir, e apagá-los ao carregar tira a explicação do ramo que vai faltar.
+   */
+  if (lido.avisos?.length) escreverAviso(['O arquivo tem problemas, e a conferência vai descartar:', ...lido.avisos], 'ruim');
+  else escreverAviso([], '');
+
+  await aplicarFluxo(lido.arvore, lido.teclas, `o arquivo "${arquivo.name}"`, lido.avisos);
+});
+
 /** A legenda das teclas. */
 function desenharTeclas() {
   const dl = el('teclas');
@@ -879,6 +1050,8 @@ chrome.storage.onChanged.addListener((mudancas, area) => {
   fluxo = { ...fluxo, arvore };
   await store.set('fluxo', fluxo);
 
+  salvos = (await store.get('fluxosSalvos')) || [];
+  desenharSalvos();
   desenharTeclas();
   ligarArrasto();
   ligarPanoramica();

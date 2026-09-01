@@ -609,6 +609,173 @@ export function precisaArrumar(arvore) {
   return todosOsNos(arvore).some(({ no }) => typeof no.x !== 'number' || typeof no.y !== 'number');
 }
 
+// ---- guardar, carregar e levar para fora ------------------------------------
+
+/** O que um arquivo de fluxo é. A marca existe para recusar cedo o JSON que não é daqui. */
+export const FORMATO = 'whatsfill-fluxo';
+export const FORMATO_VERSAO = 1;
+
+/** Limites de sanidade do que vem de arquivo. Não são regras de negócio: são o teto do absurdo. */
+const LIMITES = { nos: 400, fundo: 8, palavras: 60, texto: 200 };
+
+const texto = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max || LIMITES.texto) : '');
+
+/**
+ * Passa uma árvore vinda de FORA por uma peneira, campo a campo.
+ *
+ * **Isto é entrada não confiável.** Um arquivo de fluxo decide o que a rodada manda para eleitor
+ * real; `JSON.parse` e usar seria aceitar que qualquer coisa num campo vire comportamento. A
+ * peneira mantém só o que existe: regra que sumiu do código, sinal desconhecido e tecla inventada
+ * são DESCARTADOS com aviso, em vez de virarem um ramo que nunca casa e ninguém entende.
+ *
+ * Também é o que protege de arquivo velho: exportar hoje e importar depois de eu renomear uma
+ * regra dá um aviso na tela, e não um ramo morto e silencioso.
+ *
+ * @returns {{arvore: Array, avisos: string[]}}
+ */
+export function sanitizar(bruto) {
+  const avisos = [];
+  const usados = new Set();
+  let quantos = 0;
+
+  const limparNo = (cru, fundura) => {
+    if (!cru || typeof cru !== 'object') return null;
+    if (quantos >= LIMITES.nos) return null;
+    quantos += 1;
+
+    const nome = texto(cru.rotulo) || 'ramo sem nome';
+
+    let id = texto(cru.id, 60);
+    if (!id || usados.has(id)) {
+      const antigo = id;
+      id = novoId();
+      if (antigo) avisos.push(`"${nome}": id repetido (${antigo}) — recebeu um id novo`);
+    }
+    usados.add(id);
+
+    const no = {
+      id,
+      rotulo: nome,
+      regra: null,
+      condicao: { sinal: '', negar: false, palavras: [], onde: 'ultima' },
+      acao: null,
+      desligado: cru.desligado === true,
+      x: Number.isFinite(cru.x) ? Math.round(cru.x) : 0,
+      y: Number.isFinite(cru.y) ? Math.round(cru.y) : 0,
+      filhos: [],
+    };
+
+    const regra = texto(cru.regra, 60);
+    if (regra) {
+      if (REGRAS.some((r) => r.id === regra)) no.regra = regra;
+      else avisos.push(`"${nome}": a regra "${regra}" não existe mais no código — o ramo virou um agrupamento`);
+    }
+
+    const cond = cru.condicao && typeof cru.condicao === 'object' ? cru.condicao : {};
+    const sinal = texto(cond.sinal, 60);
+    if (sinal) {
+      if (sinalConhecido(sinal)) no.condicao.sinal = sinal;
+      else avisos.push(`"${nome}": o sinal "${sinal}" não existe — a condição dele foi descartada`);
+    }
+    no.condicao.negar = cond.negar === true;
+    no.condicao.onde = cond.onde === 'qualquer' ? 'qualquer' : 'ultima';
+    if (Array.isArray(cond.palavras)) {
+      no.condicao.palavras = cond.palavras.map((p) => texto(p, 80)).filter(Boolean).slice(0, LIMITES.palavras);
+    }
+
+    const acao = cru.acao && typeof cru.acao === 'object' ? cru.acao : {};
+    if (acao.ia === true) {
+      no.acao = { tecla: null, resposta: null, ia: true };
+    } else if (texto(acao.resposta, 60)) {
+      no.acao = { tecla: null, resposta: texto(acao.resposta, 60) };
+    } else if (texto(acao.tecla, 4)) {
+      const t = texto(acao.tecla, 4);
+      if (TECLAS[t]) no.acao = { tecla: t, resposta: null };
+      else avisos.push(`"${nome}": a tecla "${t}" não existe — o desfecho foi descartado`);
+    }
+
+    if (Array.isArray(cru.filhos) && cru.filhos.length) {
+      if (fundura >= LIMITES.fundo) {
+        avisos.push(`"${nome}": os ramos de dentro passaram do nível ${LIMITES.fundo} e foram descartados`);
+      } else {
+        no.filhos = cru.filhos.map((f) => limparNo(f, fundura + 1)).filter(Boolean);
+      }
+    }
+    return no;
+  };
+
+  const lista = Array.isArray(bruto) ? bruto : [];
+  const arvore = lista.map((n) => limparNo(n, 0)).filter(Boolean);
+  if (quantos >= LIMITES.nos) avisos.push(`o arquivo passou de ${LIMITES.nos} ramos — o excedente foi descartado`);
+  return { arvore, avisos };
+}
+
+/** O conteúdo do arquivo que ele leva para fora. */
+export function paraArquivo(fluxo, nome) {
+  return {
+    formato: FORMATO,
+    versao: FORMATO_VERSAO,
+    nome: texto(nome, 80) || 'fluxo',
+    salvoEm: new Date().toISOString(),
+    // As contagens de vitória ficam de fora: são medição desta máquina, não o fluxo.
+    teclas: { ...(fluxo?.teclas || {}) },
+    arvore: fluxo?.arvore || [],
+  };
+}
+
+/**
+ * Lê o texto de um arquivo de fluxo.
+ *
+ * Devolve o erro em vez de lançar: quem chama é a tela, e "não deu" com o motivo escrito é melhor
+ * que uma exceção que vira janela em branco.
+ *
+ * @returns {{ok: boolean, erro?: string, nome?: string, arvore?: Array, teclas?: object, avisos?: string[]}}
+ */
+export function deArquivo(conteudo) {
+  let dados;
+  try {
+    dados = JSON.parse(String(conteudo || ''));
+  } catch (_) {
+    return { ok: false, erro: 'o arquivo não é um JSON válido' };
+  }
+  if (!dados || typeof dados !== 'object') return { ok: false, erro: 'o arquivo está vazio' };
+  if (dados.formato !== FORMATO) {
+    return { ok: false, erro: 'este arquivo não é um fluxo do WhatsFill (falta a marca do formato)' };
+  }
+  if (Number(dados.versao) > FORMATO_VERSAO) {
+    return { ok: false, erro: `o arquivo é de uma versão mais nova (${dados.versao}) — atualize a extensão` };
+  }
+  if (!Array.isArray(dados.arvore) || !dados.arvore.length) {
+    return { ok: false, erro: 'o arquivo não tem nenhum ramo' };
+  }
+
+  const { arvore, avisos } = sanitizar(dados.arvore);
+  if (!arvore.length) return { ok: false, erro: 'nenhum ramo do arquivo sobreviveu à conferência' };
+
+  // As teclas fixadas só valem para regras que existem, senão viram lixo que ninguém vê.
+  const teclas = {};
+  for (const [id, tecla] of Object.entries(dados.teclas || {})) {
+    if (REGRAS.some((r) => r.id === id) && TECLAS[tecla]) teclas[id] = tecla;
+  }
+
+  return { ok: true, nome: texto(dados.nome, 80) || 'fluxo importado', arvore, teclas, avisos };
+}
+
+/** Quantos ramos ENVIAM mensagem — o número que ele precisa ver antes de trocar o fluxo. */
+export function quantosEnviam(arvore) {
+  let conta = 0;
+  for (const { no } of todosOsNos(arvore)) {
+    if (no.desligado) continue;
+    if (no.regra) {
+      if (SOBRE[no.regra]?.efeito === 'envia') conta += 1;
+      continue;
+    }
+    if (no.acao?.resposta) conta += 1;
+    else if (no.acao?.tecla && TECLAS[no.acao.tecla]?.efeito === 'envia') conta += 1;
+  }
+  return conta;
+}
+
 // ---- conferência ------------------------------------------------------------
 
 /**
