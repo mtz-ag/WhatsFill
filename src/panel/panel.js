@@ -1817,6 +1817,40 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     btnOutros.addEventListener('click', runLoteOutros);
     card.append(h('div', { class: 'wf-row' }, [btn, btnOutros]));
 
+    /**
+     * A caixa que faz a IA ASSUMIR a rodada — pedido dele (01/09).
+     *
+     * Fica logo abaixo dos botões de começar porque é o que muda o que a rodada faz: com ela
+     * marcada, a caixa de pergunta não abre nos contatos em que a IA escolheu uma resposta.
+     *
+     * Ela **depende** da avaliação por IA estar ligada na Config, e a linha abaixo diz isso em
+     * vez de a caixa ficar marcada sem efeito nenhum — caixa marcada que não faz nada é a
+     * armadilha que este painel já pagou com o botão "Avaliar o contato aberto".
+     */
+    card.append(
+      checkbox('Automatizar com IA (a rodada envia a escolha dela sem perguntar)', state.auto.cfg.automatizarComIA, (v) =>
+        salvarAuto({ automatizarComIA: v }).then(renderAll)
+      )
+    );
+    card.append(
+      h('div', { class: 'wf-origin' },
+        'Marcado, quando a IA escolhe uma das SUAS respostas prontas com confiança suficiente, a ' +
+          'rodada manda e conclui sozinha — sem abrir a caixa. O que sai continua sendo, palavra ' +
+          'por palavra, um texto que você escreveu: isto automatiza o clique, não a escrita. ' +
+          'Cada envio vai para o Andamento com o motivo e a confiança dela.'),
+      h('div', { class: 'wf-origin' },
+        'A caixa volta a abrir sempre que a IA não decide: "este é para você", confiança baixa, ' +
+          'resposta travada por variável, contato que já recebeu essa mesma resposta hoje, IA sem ' +
+          'chave ou sem rede. O caminho de falha é a rodada de sempre.')
+    );
+    if (state.auto.cfg.automatizarComIA && !state.ia?.ligada) {
+      card.append(
+        h('div', { class: 'wf-block' },
+          'Esta caixa não faz nada enquanto "Ligar a avaliação por IA" estiver desmarcada na aba ' +
+            'Config — sem avaliação não há escolha para automatizar.')
+      );
+    }
+
     card.append(
       campoNumero('Perguntar (em vez de concluir) após quantas horas de silêncio', state.auto.cfg.horasSemResposta, (v) =>
         salvarAuto({ horasSemResposta: clampInt(v, 1, 240) }).then(renderAll)
@@ -3984,6 +4018,72 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         });
       }
 
+      /**
+       * Manda a resposta que a IA escolheu e conclui — o corpo da tecla 0.
+       *
+       * **Isto faltava.** A tecla 0 existia, aparecia em destaque na caixa e devolvia
+       * `ia:<id>`... que nenhum ramo tratava. A escolha caía no fim da função e mandava o
+       * `modelo` do conteúdo, não a resposta que a IA escolheu — e quando não havia modelo,
+       * quebrava. Bug de merge, do mesmo tipo que apagou `avaliarComIA`: a opção foi criada e o
+       * ramo que a executa não veio junto.
+       *
+       * Envia com `sendTemplate`, não `enviarModelo`: a recomendação sai de `state.templates`,
+       * que são as respostas prontas dele.
+       */
+      const enviarEscolhaDaIA = async (porQue) => {
+        if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) {
+          return { nome, resultado: 'erro', motivo: 'a classificação não gravou; não enviei nada' };
+        }
+        if (!(await sendTemplate(recomendada, { send: true, jaConfirmado: true }))) {
+          return { nome, resultado: 'erro', motivo: `"${recomendada.name}" (escolha da IA) não saiu` };
+        }
+        const fechouIA = await concluirPeloPainel();
+        if (!fechouIA.ok) {
+          return { nome, resultado: 'enviado', parar: true, motivo: `${porQue}, mas ${fechouIA.reason}` };
+        }
+        if (fechouIA.dialogOpen) {
+          return {
+            nome,
+            resultado: 'enviado',
+            parar: true,
+            motivo: `${porQue}, mas a plataforma pediu um motivo de conclusão — responda o diálogo`,
+          };
+        }
+        return { nome, resultado: 'enviado', motivo: porQue };
+      };
+
+      /**
+       * A IA ASSUME a rodada — só com a caixa "Automatizar com IA" marcada por ele.
+       *
+       * Aqui a caixa de pergunta não chega a abrir: é a tecla 0 sendo apertada sozinha. A
+       * fronteira do branch não se move — o que sai é uma resposta pronta que ele escreveu, e a
+       * IA continua só escolhendo entre elas.
+       *
+       * **Três travas antes de enviar**, e as duas primeiras já vieram de graça:
+       *  - `acao === 'responder'` (escalar e incerto nunca chegam aqui, e `validarDecisao` já
+       *    rebaixou a confiança baixa e os RESTRITOS a `incerto`/escalada);
+       *  - `!recomendadaTrava` — resposta com variável faltando não sai nem no manual;
+       *  - a mesma resposta não pode ter saído HOJE para este contato. Esta é a que importa: a
+       *    caixa de pergunta mostrava o aviso de duplicata e deixava ELE decidir; sem ninguém
+       *    para ler o aviso, a decisão vira "não manda e pergunta".
+       */
+      if (state.auto.cfg.automatizarComIA && recomendada && !recomendadaTrava) {
+        const jaSaiu = await templatesLib.wasSent(state.contact.id, recomendada.id);
+        if (jaSaiu && ehHoje(jaSaiu.at)) {
+          registrarNaRodada(
+            nome,
+            'aviso',
+            `automático não assumiu: "${recomendada.name}" já saiu hoje às ${formatarHora(jaSaiu.at)} — decida você`
+          );
+        } else {
+          const confianca = Math.round((decisaoIA.confianca || 0) * 100);
+          return enviarEscolhaDaIA(
+            `IA assumiu (${confianca}%): mandei "${recomendada.name}" e concluí — ` +
+              (decisaoIA.motivo || 'sem motivo dado')
+          );
+        }
+      }
+
       const escolha = await perguntarNaRodada({
         titulo: nome,
         recomendacao: sugestao,
@@ -4114,6 +4214,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           resultado: 'enviado',
           motivo: 'perguntei em que posso ajudar — atendimento aberto, esperando a resposta dela',
         };
+      }
+
+      // Tecla 0 apertada à mão: mesmo caminho do automático, sem o automático.
+      if (typeof escolha === 'string' && escolha.startsWith('ia:') && recomendada) {
+        return enviarEscolhaDaIA(`mandei "${recomendada.name}" (escolha da IA) e concluí`);
       }
 
       if (escolha === 'pedirdados' || escolha === 'momento' || escolha === 'interesse' || escolha === 'apoio') {

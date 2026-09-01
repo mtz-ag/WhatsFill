@@ -561,6 +561,23 @@ const DEFAULTS = {
      */
     pularEtiquetasSozinho: false,
     /**
+     * A rodada EXECUTA a escolha da IA em vez de perguntar.
+     *
+     * Pedido dele (01/09): *"no automatizado deve ter um box para marcar escrito automatiza com
+     * IA, agora está iniciando normalmente e IA não assume"*. Sem isto a IA opinava e a caixa
+     * abria do mesmo jeito — a tecla 0 aparecia em destaque e ele apertava. Com a caixa marcada,
+     * a tecla 0 é apertada sozinha.
+     *
+     * **A fronteira do branch continua onde estava:** o que sai é uma resposta pronta que ele
+     * escreveu, escolhida pela IA. Isto automatiza o CLIQUE, não o texto. Rascunho gerado pela
+     * IA segue fora daqui — quem o libera é `iaEnviarRascunhoAuto`, que é outra caixa.
+     *
+     * Nasce desligado, como `pularEtiquetasSozinho`, e pelo mesmo motivo: nada sai da fila sem
+     * decisão dele, e a marca na caixa é essa decisão. Cada envio automático vai para o log da
+     * rodada com o motivo e a confiança da IA.
+     */
+    automatizarComIA: false,
+    /**
      * Janela em que a rodada NÃO manda de novo para quem já recebeu mensagem nossa.
      *
      * Quem acabou de ser concluído volta para o TOPO da lista de concluídos, então a rodada

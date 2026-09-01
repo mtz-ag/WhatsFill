@@ -5,6 +5,58 @@
 
 ---
 
+## 2026-09-01 — "Automatizar com IA": a tecla 0 nunca foi apertada, nem à mão
+
+**Pedido dele:** *"no automatizado deve ter um box para marcar escrito automatiza com IA, agora
+está iniciando normalmente e IA não assume"*.
+
+Ele estava certo por dois motivos, e o segundo eu não sabia.
+
+### 1. Faltava a caixa (o que ele pediu)
+
+A IA opinava e a rodada perguntava do mesmo jeito: a tecla 0 nascia em destaque e ele apertava.
+Agora a aba Automatizado tem **"Automatizar com IA (a rodada envia a escolha dela sem
+perguntar)"**, logo abaixo dos botões de começar. Marcada, a caixa de pergunta nem abre quando a
+IA escolheu uma resposta — é a tecla 0 sendo apertada sozinha.
+
+Nasce desligada, como `pularEtiquetasSozinho`, e pelo mesmo motivo: nada sai da fila sem decisão
+dele, e a marca na caixa é essa decisão. Cada envio vai para o Andamento com o motivo e a
+confiança. Marcada com a avaliação por IA desligada, a tela avisa em vez de a caixa ficar
+marcada sem efeito.
+
+**A fronteira do branch não se moveu:** o que sai é uma resposta pronta que ele escreveu,
+escolhida pela IA. Isto automatiza o **clique**, não a escrita. Rascunho gerado pela IA continua
+noutra caixa (`iaEnviarRascunhoAuto`), com as quatro travas de `podeEnviarSozinho`.
+
+### 2. A tecla 0 mandava a mensagem ERRADA (o que eu achei no caminho)
+
+A opção existia, aparecia em destaque e devolvia `ia:<id>`. **Nenhum ramo tratava esse valor.**
+A escolha caía no fim de `tratarContato` e mandava o `modelo` do conteúdo — outra mensagem, para
+gente de verdade — e, quando não havia modelo (`podeEnviar` falso), quebrava no `enviarModelo`.
+
+Na tela dele hoje: recomendação da IA era *"Agradecer o apoio e encerrar"*, e a tecla 0 teria
+mandado *"Campanha Cívico-Militar"*.
+
+**Causa raiz:** o mesmo tipo de merge que apagou `avaliarComIA` — a opção veio, o ramo que a
+executa não. `checar-modulos.mjs` não pega isto: o arquivo é sintaticamente válido, e o valor
+simplesmente cai num `if` que não existe. Hoje os dois caminhos (a tecla à mão e o automático)
+passam por **uma função só**, `enviarEscolhaDaIA`, que envia com `sendTemplate` — a recomendação
+sai de `state.templates`, que são as respostas prontas, não de `enviarModelo`.
+
+### As três travas antes de enviar sozinho
+
+`acao === 'responder'` (escalar e incerto não chegam lá, e `validarDecisao` já rebaixou confiança
+baixa e os RESTRITOS); resposta sem variável faltando; e **a mesma resposta não pode ter saído
+hoje** para o contato. Esta última é a que muda de natureza no automático: a caixa mostrava o
+aviso de duplicata e deixava ELE decidir — sem ninguém para ler o aviso, a decisão vira "não
+manda, pergunta".
+
+**Arquivos:** `src/lib/store.js` (`auto.automatizarComIA`, já na lista de mescla), `src/panel/panel.js`
+(a caixa, `enviarEscolhaDaIA`, o ramo `ia:`), `manifest.json` (1.6.0 → **1.7.0**). 31 módulos sem
+erro, onze suítes passando.
+
+---
+
 ## 2026-09-01 — "Diminuir a necessidade de pesquisa", não impedir a pesquisa
 
 **Correção dele:** *"a regra não é impedir de pesquisar e sim diminuir a necessidade de pesquisa"*.
