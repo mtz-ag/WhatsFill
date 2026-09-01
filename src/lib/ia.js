@@ -103,7 +103,7 @@ export function esquemaDaDecisao(idsPermitidos) {
  * Ordem importa para o cache: o que é estável vem primeiro e o que varia fica no `messages`.
  * Ver `montarRequisicao`.
  */
-export function montarSistema({ templates = [], regras = '' } = {}) {
+export function montarSistema({ templates = [], regras = '', gabinete = '' } = {}) {
   const catalogo = templates
     .map((t) => `- id: ${t.id}\n  nome: ${t.name}\n  texto: ${umaLinha(t.text)}`)
     .join('\n');
@@ -128,6 +128,16 @@ export function montarSistema({ templates = [], regras = '' } = {}) {
     '   agradeceu, escolha a resposta pronta que corresponde — não escale por ser simples.',
     '6. Se duas respostas servirem, escolha a mais específica. Se nenhuma servir, escale.',
     '',
+    /**
+     * Quem é quem, antes das instruções: é contexto, não ordem.
+     *
+     * Vem do `store.ia.gabinete` e existe para a IA **não precisar adivinhar** sobre nomes da
+     * chapa, números de urna e pautas do mandato. Sem isto ela decide sobre pessoas que não
+     * conhece — e decidir sobre nome desconhecido é onde uma escolha errada nasce.
+     *
+     * Está no prompt de sistema, que é o cacheado: custa uma vez e 10% nas seguintes.
+     */
+    gabinete ? `Quem é quem neste mandato (informação do gabinete, não pesquise nem invente):\n${gabinete}\n` : '',
     regras ? `Instruções adicionais do Thiago:\n${regras}\n` : '',
     'Respostas prontas disponíveis:',
     '',
@@ -310,7 +320,7 @@ export function validarDecisao(bruto, idsPermitidos = []) {
  * e sai de graça porque já está no prompt cacheado. "Editar para parecer mais humano" é trabalho
  * que o modelo pode adiantar se souber com que voz escrever.
  */
-export function montarSistemaRascunho({ templates = [], regras = '' } = {}) {
+export function montarSistemaRascunho({ templates = [], regras = '', gabinete = '' } = {}) {
   const exemplos = templates
     .slice(0, 8)
     .map((t) => `— ${umaLinha(t.text, 500)}`)
@@ -338,11 +348,22 @@ export function montarSistemaRascunho({ templates = [], regras = '' } = {}) {
     '  rascunho que encaminhe para a assistência social do município (CRAS, Secretaria de',
     '  Assistência Social) e ofereça cobrar o poder público — nunca prometa entregar;',
     '- prometer resolver, garantir resultado, ou marcar compromisso em nome do parlamentar;',
-    '- inventar dado, número, agenda, lei ou posição que não esteja na conversa;',
+    '- inventar dado, número, agenda, lei ou posição. Você pode usar o que está na conversa e o',
+    '  que está no bloco "Quem é quem" acima — e NADA além. Não sabe? Escreva sem o dado, ou diga',
+    '  que vai confirmar;',
     '- usar {{variáveis}} ou qualquer marcador: escreva o texto final.',
     '',
     'Responda SÓ com o texto do rascunho. Sem aspas, sem título, sem explicação.',
     '',
+    /**
+     * Quem é quem — a mesma informação da decisão, e aqui ela pesa mais.
+     *
+     * No rascunho a IA ESCREVE, e a regra de "não inventar dado" acima ficaria impossível de
+     * cumprir sem isto: perguntada sobre o número de urna ou sobre quem é da chapa, ela só
+     * poderia calar. Com o bloco, ela responde com o que o gabinete informou — e a regra passa a
+     * dizer exatamente isso: conversa e este bloco, nada além.
+     */
+    gabinete ? `Quem é quem neste mandato (informação do gabinete, não pesquise nem invente):\n${gabinete}\n` : '',
     regras ? `Instruções adicionais da equipe:\n${regras}\n` : '',
     'Exemplos do jeito de escrever da equipe:',
     '',

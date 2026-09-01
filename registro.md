@@ -5,6 +5,83 @@
 
 ---
 
+## 2026-09-01 — Quem é quem: a chapa entra no prompt cacheado (e duas funções voltam do merge)
+
+**Pedido dele:** *"a extensão deve ter salva informações dos cadidatos relacionados ao gabinete do
+capitão martim e sua chapa para a ia não pesquisar toda vez"*.
+
+### O que foi feito
+
+Campo novo em Config, **"Quem é quem (chapa, números, pautas)"**, guardado em `store.ia.gabinete`.
+O texto entra no prompt de **sistema** — a parte com `cache_control` —, dentro do bloco
+`Quem é quem neste mandato (informação do gabinete, não pesquise nem invente):`, tanto na decisão
+(`montarSistema`) quanto no rascunho (`montarSistemaRascunho`).
+
+Três consequências que valem registro:
+
+1. **A IA não pesquisa nada, e é bom que não pesquise.** Sem este campo ela decide sobre nomes que
+   não conhece: alguém escreve "vou votar no Marcel para senador" e ela não tem como saber se é
+   aliado, adversário ou outro cargo. Antes disso o desconhecido virava `incerto`; agora vira
+   decisão informada — e continua virando `incerto` quando o campo está vazio.
+2. **Detalhe aqui é barato.** Está na parte cacheada: custa uma vez e 10% do preço nas chamadas
+   seguintes. O aviso na tela diz isso, porque a reação natural é economizar palavra justamente
+   onde não precisa.
+3. **A regra do rascunho mudou de redação.** Ela dizia "não invente nenhum dado"; virou *"você pode
+   usar o que está na conversa e o que está no bloco Quem é quem acima — e NADA além"*. Sem isso a
+   própria regra proibiria usar o bloco que acabamos de dar a ela.
+
+O `tokensAproximados` do estimador de cache passou a incluir o gabinete: ele engorda o prompt e
+pode ser o que empurra o Haiku para cima do mínimo de 4.096 tokens de cache.
+
+**O campo nasce VAZIO de propósito** e continua vazio: os dados são dele. Inventar número de urna
+ou cargo de candidato é o tipo de erro que sai daqui e chega no eleitor.
+
+### Causa raiz de um bug MEU que estava no ar desde ontem
+
+Ao ligar o gabinete no `panel.js` descobri que **`avaliarComIA` era chamada nas linhas 3407 e 6913 e
+não existia mais**. Junto com ela `tentarRascunhoAutomatico`. As duas foram apagadas pelo merge
+`c7a6d59` (31/08) — e no relato daquele merge eu escrevi que conferi que nada de produção tinha se
+perdido. Conferi um lado só. **Merge tem dois.**
+
+Por que nada acusou:
+
+- o arquivo continuou **sintaticamente válido** (chamada para função inexistente é erro de
+  execução, não de sintaxe), então `node --check` não vê;
+- `checar-modulos.mjs` só olha `SyntaxError`;
+- **nenhuma suíte importa o `panel.js`** — ele precisa de `window`.
+
+O erro apareceria como `avaliarComIA is not defined`, no meio de uma rodada, matando o laço em
+silêncio. As duas funções voltaram do commit `a4d03bd`, agora passando `gabinete`.
+
+### `tools/checar-referencias.mjs` — a ferramenta que faltava
+
+Nova, para esta classe de bug: toda função chamada dentro de um arquivo existe nele? Ela coleta os
+nomes declarados (funções, arrow, classes, métodos, parâmetros, importados) e reclama do que é
+chamado sem estar em nenhum. Não resolve escopo e ignora tudo com ponto antes — é detector de
+função-que-sumiu, não analisador.
+
+**A prova de que serve:** removendo `avaliarComIA` de propósito, `checar-modulos.mjs` diz
+*"31 arquivos, 0 com erro de sintaxe"* e o conferidor novo aponta a linha 3407. Sem a prova, era só
+mais um script que ninguém sabe se funciona.
+
+O caminho até calar os falsos positivos, porque ferramenta que grita ninguém roda duas vezes:
+
+| falsos | causa |
+|---|---|
+| 503 | palavra dentro de **comentário em português** seguida de parêntese ("a rodada (que já fechou)") |
+| 57 | **parâmetros** chamados dentro da própria função (`fn`, `onResize`, `resolve`) |
+| 30 | **regex literal** (`/(sempre|junto) com/` tem parêntese), métodos de objeto, globais de buffer |
+| 1 | `import()` dinâmico do `content.js` — legítimo, entrou nas globais |
+
+Hoje: 31 arquivos, zero. Onde a dúvida aparece, ela **cala** de propósito (a coleta de parâmetros é
+grosseira): o alvo é função que sumiu, e função que sumiu não aparece em declaração nenhuma.
+
+**Arquivos:** `src/lib/ia.js`, `src/lib/ia-cliente.js`, `src/lib/store.js`, `src/panel/panel.js`,
+`tools/checar-referencias.mjs` (novo), `CLAUDE.md`, `manifest.json` (1.3.0 → 1.4.0).
+
+**Pendência dele:** preencher o campo. Sem texto lá, a IA continua decidindo sem saber quem é quem.
+---
+
 ## 2026-09-01 — Convite de evento: a tecla 4 escolhe entre três textos
 
 **Pedido dele:** um anúncio novo pergunta se a pessoa vai ao evento, e ele responde de dois jeitos —

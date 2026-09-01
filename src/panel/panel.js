@@ -1081,6 +1081,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         const r = await iaCliente.rascunhar({
           templates: state.templates,
           regras: state.ia.regras,
+          gabinete: state.ia.gabinete,
           modelo: state.ia.modelo,
           mensagens: state.incoming,
           campos: { Cidade: valueNamed('Cidade') },
@@ -6745,6 +6746,118 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Fica no TOPO da Config de propósito: é o que muda o comportamento do painel de forma menos
    * óbvia, e a primeira pergunta de quem abre esta aba é "isto está ligado?".
    */
+  /**
+   * Tenta mandar o rascunho da IA **sem ele ler antes** — e recusa em quase tudo.
+   *
+   * Só é chamada quando a IA escalou, ou seja, quando nenhuma resposta pronta serve. As prontas
+   * continuam sendo o caminho normal (decisão dele: *"em geral utilizar as mensagens prontas e
+   * suas variações"*).
+   *
+   * **Este é o único ponto do projeto em que texto gerado por IA chega a um eleitor sem revisão
+   * humana**, e mensagem de WhatsApp não volta. Por isso tudo aqui é escrito para dizer NÃO:
+   * quem decide é `ia.podeEnviarSozinho` (puro e testado), que exige as quatro travas juntas —
+   * ligado na Config, zero avisos da revisão, a IA não ter pedido revisão, e confiança acima do
+   * limiar. Qualquer erro de rede ou formato também cai em não.
+   *
+   * @returns {Promise<{enviado:boolean, motivo:string}>}
+   */
+  async function tentarRascunhoAutomatico() {
+    if (!state.ia?.ligada || !state.ia?.enviarRascunhoAuto) {
+      return { enviado: false, motivo: '' }; // desligado: nem gasta chamada de IA
+    }
+    if (!state.incoming.length) return { enviado: false, motivo: 'o contato não escreveu nada' };
+    if (state.session?.expired) return { enviado: false, motivo: 'janela de 24h vencida' };
+
+    let rascunho;
+    try {
+      rascunho = await iaCliente.rascunhar({
+        templates: state.templates,
+        regras: state.ia.regras,
+        gabinete: state.ia.gabinete,
+        modelo: state.ia.modelo,
+        mensagens: state.incoming,
+        campos: { Cidade: valueNamed('Cidade') },
+      });
+    } catch (err) {
+      return { enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };
+    }
+
+    const veredito = iaLib.podeEnviarSozinho({ rascunho, ligado: true });
+    if (!veredito.pode) return { enviado: false, motivo: veredito.motivo };
+
+    // Passou nas quatro travas. Daqui para baixo é envio de verdade, para gente de verdade.
+    try {
+      await page.sendText(rascunho.texto);
+    } catch (err) {
+      return { enviado: false, motivo: `o envio falhou: ${err?.message || err}` };
+    }
+    state.lastSendAt = Date.now();
+
+    /**
+     * O texto ENVIADO vai inteiro para o log da rodada.
+     *
+     * Não é enfeite: é a única forma de ele auditar depois o que a IA falou em nome do mandato.
+     * Registro parcial aqui seria pior que nenhum — daria a impressão de auditoria sem permitir
+     * auditar.
+     */
+    registrarNaRodada(state.contact?.name || 'contato', 'aviso', `IA enviou sozinha: "${rascunho.texto}"`);
+    return { enviado: true, motivo: veredito.motivo };
+  }
+
+  /**
+   * A avaliação por IA deste contato.
+   *
+   * **Esta função foi PERDIDA no merge `c7a6d59` e restaurada em 01/09.** O auto-merge do git a
+   * removeu junto com `tentarRascunhoAutomatico`, e ninguém notou porque `checar-modulos.mjs` só
+   * vê sintaxe: o arquivo continuava válido, com duas chamadas para funções que não existiam.
+   *
+   * A lição virou armadilha no `CLAUDE.md`: naquele merge eu conferi que nada de PRODUÇÃO se
+   * perdeu e não conferi o outro lado. Merge tem dois lados.
+   */
+  async function avaliarComIA() {
+    const cfg = state.ia || {};
+    if (!cfg.ligada || !state.contact) return null;
+
+    const decisao = await iaCliente.avaliar({
+      templates: state.templates,
+      regras: cfg.regras,
+      gabinete: cfg.gabinete,
+      modelo: cfg.modelo,
+      mensagens: state.incoming,
+      campos: Object.fromEntries(
+        state.classify.map((f) => [f.name, valueNamed(f.name)]).filter(([, v]) => v)
+      ),
+      etiquetas: state.tagSuggestions.filter((sg) => sg.tag && sg.jaTem).map((sg) => sg.tag.label),
+    });
+
+    // O custo de cada chamada vai para o log da rodada: sem número na tela, "quanto isso está
+    // custando" vira palpite — e foi palpite que quase manteve a IA fora do projeto.
+    if (decisao?.custo) {
+      const c = decisao.custo;
+      // "SEM CACHE" só é alarme onde o cache PODERIA ter pego. No Haiku 4.5 o prompt não
+      // alcança o mínimo de 4.096 tokens, então o zero é o normal — e alarme que toca sempre
+      // é alarme que se aprende a ignorar.
+      const podia = iaLib.vaiCachear(
+        cfg.modelo || iaLib.MODELO_PADRAO,
+        iaLib.tokensAproximados(iaLib.montarSistema({ templates: state.templates, regras: cfg.regras, gabinete: cfg.gabinete }))
+      );
+      const cacheOk = c.cacheLido > 0 ? `cache ${c.cacheLido}` : podia ? 'SEM CACHE' : 'sem cache (esperado)';
+      // O dólar vem junto do token: token é diagnóstico (o cache está pegando?), dólar é a
+      // pergunta que ele realmente faz. Sem o acumulado do mês, cada linha parece barata e a
+      // soma só aparece na fatura.
+      const usd = decisao.custoUsd ? ` · US$ ${decisao.custoUsd.toFixed(4)}` : '';
+      const mes = decisao.gastoMes ? ` · mês US$ ${(decisao.gastoMes.usd || 0).toFixed(2)}` : '';
+      registrarNaRodada('IA', 'pulado', `${decisao.acao} · ${cacheOk} · entrada ${c.entrada} · saída ${c.saida}${usd}${mes}`);
+    }
+    if (decisao?.aviso) {
+      // Teto atingido não é "a IA não decidiu": é uma decisão dele, tomada antes, chegando
+      // agora. Vai como aviso para não se perder entre as linhas normais do log.
+      const teto = /teto de gasto/i.test(decisao.aviso);
+      registrarNaRodada('IA', teto ? 'aviso' : 'pulado', teto ? decisao.aviso : `avaliação não usada: ${decisao.aviso}`);
+    }
+    return decisao;
+  }
+
   function renderConfigIA() {
     const cfg = state.ia || {};
     body.append(h('h3', { class: 'wf-h' }, 'Avaliação por IA'));
@@ -6865,6 +6978,44 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       h('div', { class: 'wf-origin' },
         'Somam-se às regras de fábrica, nunca as substituem: a de não escrever texto e a de ' +
           'escalar pedido de ajuda ficam de pé mesmo que você escreva o contrário aqui.')
+    );
+
+    /**
+     * Quem é quem: a chapa, os números, as pautas.
+     *
+     * Pedido dele (01/09): *"a extensão deve ter salva informações dos candidatos relacionados ao
+     * gabinete do capitão martim e sua chapa para a ia não pesquisar toda vez"*.
+     *
+     * Fica no prompt de SISTEMA, que é a parte cacheada — encher de detalhe custa 10% do preço a
+     * partir da segunda chamada. O texto avisa disso, porque a reação natural é economizar palavra
+     * onde justamente não precisa.
+     */
+    const areaGabinete = h('textarea', {
+      rows: '6',
+      placeholder:
+        'Capitão Martim — deputado estadual, número 10122, PL.\n' +
+        'Fulano — candidato a senador, número XX.\n' +
+        'Pautas do mandato: segurança, escolas cívico-militares…',
+    });
+    areaGabinete.value = cfg.gabinete || '';
+    areaGabinete.addEventListener('change', () =>
+      salvarIA({ gabinete: areaGabinete.value.trim() }).then(() =>
+        setStatus(
+          areaGabinete.value.trim()
+            ? 'Salvei. A IA passa a decidir sabendo quem é quem, sem pesquisar.'
+            : 'Vazio: a IA volta a decidir sem saber nada da chapa.'
+        )
+      )
+    );
+    body.append(
+      h('label', { class: 'wf-field' }, [h('span', {}, 'Quem é quem (chapa, números, pautas)'), areaGabinete]),
+      h('div', { class: 'wf-origin' },
+        'A IA não pesquisa nada — e é bom que não pesquise. Sem isto ela decide sobre nomes que não ' +
+          'conhece: alguém escreve "vou votar no Marcel para senador" e ela não tem como saber se é ' +
+          'aliado, adversário ou outro cargo. Escreva o que a equipe sabe: nome, cargo, número de ' +
+          'urna, partido, quem é da chapa, as pautas do mandato. Isto entra na parte CACHEADA do ' +
+          'prompt, então custa uma vez e 10% do preço nas chamadas seguintes — detalhe aqui é ' +
+          'barato, e é a falta dele que sai caro em decisão errada.')
     );
 
     const testar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Avaliar o contato aberto');

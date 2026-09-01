@@ -709,6 +709,25 @@ const DEFAULTS = {
      * Existe porque a campanha muda mais rápido que o código: "esta semana quem falar em agenda
      * de Caxias é para mim" não deveria exigir um commit.
      */
+    /**
+     * Quem é quem: o mandato, a chapa, os números, as pautas. Vai NO PROMPT, cacheado.
+     *
+     * Pedido dele (01/09): *"a extensão deve ter salva informações dos candidatos relacionados ao
+     * gabinete do capitão martim e sua chapa para a ia não pesquisar toda vez"*.
+     *
+     * **A IA não pesquisa nada, e é bom que não pesquise.** Sem isto ela decide sobre nomes que
+     * não conhece: um contato escreve "vou votar no Marcel para senador" e ela não tem como saber
+     * se isso é aliado, adversário ou outro cargo. Aqui a informação é dele — não é a IA
+     * lembrando, é o gabinete contando.
+     *
+     * Fica no prompt de SISTEMA, que é a parte cacheada: entra uma vez e custa 10% do preço nas
+     * chamadas seguintes. Encher isto de detalhe é barato; deixar vazio é que custa, em decisão
+     * errada.
+     *
+     * **Nasce vazio de propósito.** Número de urna, cargo e nome de aliado são dados que, errados,
+     * saem numa escolha que chega a eleitor real. Quem preenche é ele.
+     */
+    gabinete: '',
     regras: '',
     /**
      * O rascunho escrito pela IA pode ser ENVIADO sem ele ler antes.

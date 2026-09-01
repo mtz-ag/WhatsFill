@@ -511,6 +511,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   preocupa, é a que quebraria. `MODELOS_COM_ESFORCO` é **lista de permissão**, nunca de bloqueio —
   a inversa faz todo modelo futuro nascer quebrado até alguém notar.
 
+- **MERGE TEM DOIS LADOS — e eu conferi um só.** No merge `c7a6d59` (31/08) o git removeu duas
+  funções inteiras do `panel.js` (`avaliarComIA` e `tentarRascunhoAutomatico`) e eu não vi: conferi
+  que nada de PRODUÇÃO tinha se perdido e não conferi o lado da IA. **Nada acusou**: o arquivo
+  ficou sintaticamente válido, com duas chamadas para funções inexistentes; `node --check` não vê,
+  `checar-modulos.mjs` não vê (só olha `SyntaxError`) e nenhuma suíte importa o `panel.js`, que
+  precisa de `window`. Ia estourar `avaliarComIA is not defined` no meio de uma rodada. Depois de
+  merge, rode **`node tools/checar-referencias.mjs`** e confira os DOIS lados com `git diff` contra
+  cada branch.
+
 ## Regras do projeto
 
 - **Sem IA na extração.** Custo por contato. Parser determinístico: regex, dicionário, lista de

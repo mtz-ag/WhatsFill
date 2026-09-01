@@ -45,12 +45,12 @@ const VERSAO_API = '2023-06-01';
  * @returns {Promise<{acao:string, templateId:string, motivo:string, confianca:number,
  *                    aviso:string, custo?:object}>}
  */
-export async function avaliar({ templates, regras, mensagens, campos, etiquetas, modelo }) {
+export async function avaliar({ templates, regras, gabinete, mensagens, campos, etiquetas, modelo }) {
   const ids = (templates || []).map((t) => t.id);
   try {
     const r = await chrome.runtime.sendMessage({
       type: MSG_IA,
-      sistema: montarSistema({ templates, regras }),
+      sistema: montarSistema({ templates, regras, gabinete }),
       contato: montarContato({ mensagens, campos, etiquetas }),
       ids,
       modelo: modelo || MODELO_PADRAO,
@@ -73,12 +73,12 @@ export async function avaliar({ templates, regras, mensagens, campos, etiquetas,
  *
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
-export async function rascunhar({ templates, regras, mensagens, campos, modelo }) {
+export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo }) {
   try {
     const r = await chrome.runtime.sendMessage({
       type: MSG_IA,
       modo: 'rascunho',
-      sistema: montarSistemaRascunho({ templates, regras }),
+      sistema: montarSistemaRascunho({ templates, regras, gabinete }),
       contato: montarContatoRascunho({ mensagens, campos }),
       modelo: modelo || MODELO_PADRAO,
     });
