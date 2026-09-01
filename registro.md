@@ -5,6 +5,39 @@
 
 ---
 
+## 2026-09-01 — "Diminuir a necessidade de pesquisa", não impedir a pesquisa
+
+**Correção dele:** *"a regra não é impedir de pesquisar e sim diminuir a necessidade de pesquisa"*.
+
+Eu tinha escrito o contrário em dois lugares, e a diferença não é de estilo:
+
+- no **prompt**, o bloco saía como *"informação do gabinete, não pesquise nem invente"*;
+- na **tela**, a explicação abria com *"A IA não pesquisa nada — e é bom que não pesquise"*.
+
+### Por que ele está certo
+
+"Não pesquise" é uma ordem sobre o **comportamento** do modelo; o campo existe para resolver um
+problema de **informação**. São coisas diferentes, e a minha formulação trocava uma pela outra:
+sugeria que a ignorância é desejável, quando o que se quer é que a informação certa já esteja ali
+— e que o modelo não **invente** o que faltar.
+
+A trava que importa continua inteira, e é a segunda metade da frase: **não inventar**. Essa não
+mudou.
+
+Hoje o prompt diz *"informação do gabinete — use-a como fonte e não invente o que não estiver
+aqui"*, e a tela abre com *"serve para DIMINUIR a necessidade de a IA buscar contexto, não para
+proibi-la de buscar"*. Corrigi também a frase equivalente na entrada de ontem.
+
+**Arquivos:** `src/lib/ia.js` (as duas montagens de prompt), `src/panel/panel.js` (o texto da
+Config), `registro.md`, `manifest.json` (1.5.0 → **1.6.0**). 31 módulos sem erro, onze suítes
+passando.
+
+**Nota de processo:** o commit anterior (`d525b0a`) subiu sem esta entrada porque o script que a
+escreveria quebrou e eu não conferi antes de empurrar. Commit sem registro é conserto que ninguém
+consegue explicar depois — é a regra que este arquivo existe para sustentar.
+
+---
+
 ## 2026-09-01 — "Deu a cidade e não pegou": eu reconhecia uma das três formas de pedir
 
 **Relato dele**, testando a versão IA: *"deu a cidade e não pegou primeiro, a tela de confirmação
