@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fluxo de atendimento — WhatsFill+IA</title>
+    <link rel="stylesheet" href="fluxo.css" />
+  </head>
+  <body>
+    <header class="topo">
+      <div class="titulo">
+        <h1>Fluxo de atendimento</h1>
+        <p>Cada regra é uma bifurcação: <b>casou →</b> o desfecho que sai para a pessoa, <b>não casou ↓</b> a regra de baixo. A rodada desce até a primeira que casa. Arraste um passo para mudar a prioridade.</p>
+      </div>
+      <div class="contagem" id="contagem"></div>
+      <div class="acoes">
+        <button type="button" id="padrao" class="btn">Voltar ao padrão</button>
+        <button type="button" id="zerar" class="btn">Zerar contagens</button>
+      </div>
+    </header>
+
+    <main class="tela">
+      <section class="mapa" aria-label="O fluxo, de cima para baixo">
+        <div class="entrada">
+          <div class="no no-entrada">
+            <span class="rot">Mensagem do contato chega</span>
+            <span class="sub">a plataforma devolve o atendimento para as não lidas</span>
+          </div>
+          <div class="seta"><span>sempre</span></div>
+          <div class="no no-entrada">
+            <span class="rot">Parser lê nome e cidade</span>
+            <span class="sub">determinístico, sem custo</span>
+          </div>
+          <div class="seta"><span>sempre</span></div>
+        </div>
+
+        <div id="cascata" class="cascata"></div>
+
+        <div class="saida">
+          <div class="seta"><span>nenhuma regra casou — ou a que casou pede a tecla 6</span></div>
+
+          <div class="passo passo-fixo">
+            <div class="no no-ia">
+              <span class="rot">A IA opina</span>
+              <span class="sub">ela ESCOLHE entre as suas respostas prontas; não escreve texto novo, salvo no rascunho</span>
+            </div>
+            <div class="ramo">
+              <span class="casou">ela decide · e aí</span>
+              <div class="folhas bifurca">
+                <div class="folha envia">
+                  <div class="folha-topo">
+                    <span class="folha-tecla">responder</span>
+                    <span class="selo envia">sai mensagem</span>
+                  </div>
+                  <span class="folha-rot">Manda a resposta pronta que ela escolheu</span>
+                  <span class="folha-se">se a automação estiver ligada; senão a caixa destaca a tecla 0 e você decide</span>
+                </div>
+                <div class="folha gente">
+                  <div class="folha-topo">
+                    <span class="folha-tecla">escalar</span>
+                    <span class="selo gente">precisa de você</span>
+                  </div>
+                  <span class="folha-rot">Rascunho no campo de mensagem</span>
+                  <span class="folha-se">só sai sozinho com as quatro travas juntas; sem elas, espera você apertar enviar</span>
+                </div>
+                <div class="folha depende">
+                  <div class="folha-topo">
+                    <span class="folha-tecla">incerto</span>
+                    <span class="selo depende">como antes da IA</span>
+                  </div>
+                  <span class="folha-rot">Nada muda: a caixa pergunta e você decide</span>
+                  <span class="folha-se">sem chave, sem rede, sem crédito, confiança baixa ou resposta ilegível</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="seta"><span>decidido</span></div>
+          <div class="no no-fim">
+            <span class="rot">A rodada executa e segue para o próximo</span>
+            <span class="sub">com a automação desligada, ela para aqui e espera a sua tecla</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="lado">
+        <div class="cartao">
+          <h2>Testar uma conversa</h2>
+          <p class="ajuda">Cole o que o contato escreveu — uma mensagem por linha, a última embaixo. O fluxo de agora é usado, e o galho que vence fica marcado no mapa.</p>
+          <textarea id="conversa" rows="5" placeholder="Não conseguirei ir!"></textarea>
+          <button type="button" id="testar" class="btn btn-primario">Testar</button>
+          <div id="resultado" class="resultado"></div>
+          <p class="ajuda ajuda-fraca">Fora da conta: etiqueta que dispensa, modelo mapeado, pedido de dados feito hoje e histórico de envios — dependem do contato, não do texto.</p>
+        </div>
+
+        <div class="cartao">
+          <h2>O que cada tecla faz</h2>
+          <dl class="teclas" id="teclas"></dl>
+        </div>
+      </aside>
+    </main>
+
+    <script type="module" src="fluxo.js"></script>
+  </body>
+</html>

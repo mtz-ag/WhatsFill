@@ -1,9 +1,12 @@
 {
   "manifest_version": 3,
   "name": "WhatsFill+IA",
-  "version": "1.8.0",
+  "version": "1.22.0",
   "description": "WhatsFill com avaliação de contexto por IA: a IA escolhe entre as respostas prontas, nunca escreve para o eleitor.",
-  "permissions": ["storage", "power"],
+  "permissions": [
+    "storage",
+    "power"
+  ],
   "host_permissions": [
     "https://mobiliza.app/*",
     "https://api.mobiliza.app/*",
@@ -15,15 +18,23 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://mobiliza.app/*"],
-      "js": ["src/page-hook.js"],
+      "matches": [
+        "https://mobiliza.app/*"
+      ],
+      "js": [
+        "src/page-hook.js"
+      ],
       "world": "MAIN",
       "run_at": "document_start",
       "all_frames": false
     },
     {
-      "matches": ["https://mobiliza.app/*"],
-      "js": ["src/content.js"],
+      "matches": [
+        "https://mobiliza.app/*"
+      ],
+      "js": [
+        "src/content.js"
+      ],
       "run_at": "document_idle",
       "all_frames": false
     }
@@ -31,8 +42,18 @@
   "options_page": "options.html",
   "web_accessible_resources": [
     {
-      "resources": ["src/main.js", "src/lib/*", "src/panel/*", "src/data/*"],
-      "matches": ["https://mobiliza.app/*"]
+      "resources": [
+        "src/main.js",
+        "src/lib/*",
+        "src/panel/*",
+        "src/data/*",
+        "src/fluxo.html",
+        "src/fluxo.js",
+        "src/fluxo.css"
+      ],
+      "matches": [
+        "https://mobiliza.app/*"
+      ]
     }
   ],
   "action": {

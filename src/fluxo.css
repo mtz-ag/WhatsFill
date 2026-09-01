@@ -1,0 +1,401 @@
+/*
+ * fluxo.css — a janela do fluxo de atendimento.
+ *
+ * CSS próprio e não o do painel de propósito: o painel é uma coluna de 380px encaixada na borda,
+ * e aqui o espaço é o ponto — fluxo visual em coluna larga com as ações do lado. Reusar
+ * `panel.css` traria as regras de largura estreita que existem justamente para o outro caso.
+ *
+ * ## O desenho da ramificação
+ *
+ * Cada passo é uma linha de duas colunas: a CONDIÇÃO à esquerda (o cartão da regra, com os
+ * controles) e o DESFECHO à direita (as folhas do galho "casou"). O tronco vertical corre em
+ * `left: 26px`, alinhado com o número da posição — é ele que carrega o "não casou ↓" de um passo
+ * ao próximo. O galho sai do meio do cartão para a direita.
+ *
+ * Regra que se ganha de graça: **o galho é o único lugar da tela que fala do eleitor**, então ele
+ * carrega a cor do efeito e o selo. O cartão fala da condição, que é assunto interno.
+ */
+
+:root {
+  --bg: #eef1f5;
+  --superficie: #fafbfc;
+  --afundado: #e4e9ef;
+  --tinta: #141d28;
+  --tinta-media: #4a5766;
+  --tinta-fraca: #7a879a;
+  --borda: #ccd5df;
+  --trilha: #24486e;
+  --envia: #9c3d18;
+  --envia-bg: #f6e7e0;
+  --silencio: #1f5f4d;
+  --silencio-bg: #dcebe6;
+  --gente: #5b3f80;
+  --gente-bg: #e8e1f1;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1319;
+    --superficie: #161e27;
+    --afundado: #1e2831;
+    --tinta: #e6ecf2;
+    --tinta-media: #a4b2c1;
+    --tinta-fraca: #75848f;
+    --borda: #2d3a46;
+    --trilha: #7aa6d4;
+    --envia: #e5936a;
+    --envia-bg: #34221a;
+    --silencio: #6cc0a4;
+    --silencio-bg: #16302a;
+    --gente: #b195d8;
+    --gente-bg: #251e34;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ---- topo ---- */
+.topo {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 18px 24px 16px;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borda);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.titulo { flex: 1 1 380px; min-width: 0; }
+.titulo h1 { margin: 0 0 4px; font-size: 19px; letter-spacing: -0.01em; }
+.titulo p { margin: 0; font-size: 12.5px; color: var(--tinta-media); max-width: 78ch; }
+
+.contagem { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.contagem span {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.c-envia { color: var(--envia); background: var(--envia-bg); }
+.c-silencio { color: var(--silencio); background: var(--silencio-bg); }
+.c-gente { color: var(--gente); background: var(--gente-bg); }
+.c-depende, .c-off { color: var(--tinta-fraca); }
+
+.acoes { display: flex; gap: 8px; }
+
+.btn {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 6px 12px;
+  border: 1px solid var(--borda);
+  background: var(--superficie);
+  color: var(--tinta);
+  border-radius: 5px;
+  cursor: pointer;
+}
+.btn:hover { background: var(--afundado); }
+.btn:focus-visible { outline: 2px solid var(--trilha); outline-offset: 1px; }
+.btn-primario { background: var(--trilha); border-color: var(--trilha); color: #fff; font-weight: 600; }
+.btn-primario:hover { filter: brightness(1.08); background: var(--trilha); }
+
+/* ---- corpo ---- */
+.tela {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 28px;
+  align-items: start;
+  padding: 24px;
+  max-width: 1560px;
+  margin: 0 auto;
+}
+@media (max-width: 1100px) { .tela { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---- o mapa: nós ligados por setas ---- */
+.mapa { display: flex; flex-direction: column; }
+.entrada, .saida, .cascata { display: flex; flex-direction: column; }
+
+.no {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.no .rot { font-weight: 600; font-size: 13px; }
+.no .sub { font-size: 11.5px; color: var(--tinta-fraca); }
+.no-ia { border-color: var(--gente); border-width: 1.5px; }
+.no-ia .rot { color: var(--gente); }
+.no-fim { border-color: var(--envia); border-width: 1.5px; }
+.no-fim .rot { color: var(--envia); }
+
+/* A seta É a informação: o rótulo dela diz por que o fluxo desceu. */
+.seta {
+  height: 32px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.seta::before {
+  content: "";
+  position: absolute;
+  left: 26px;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  background: var(--borda);
+}
+.seta::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  bottom: -1px;
+  border: 5px solid transparent;
+  border-top-color: var(--borda);
+}
+.seta span {
+  position: absolute;
+  left: 40px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--tinta-fraca);
+  background: var(--bg);
+  padding: 0 5px;
+}
+
+/* ---- o passo: condição à esquerda, desfecho à direita ---- */
+.passo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: stretch;
+  cursor: grab;
+}
+.passo:active { cursor: grabbing; }
+.passo.arrastando { opacity: 0.35; }
+.passo.off { opacity: 0.55; }
+.passo-fixo { cursor: default; }
+@media (max-width: 1100px) { .passo { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---- cartão da condição ---- */
+.regra {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  align-items: start;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-left: 3px solid var(--borda);
+  border-radius: 6px;
+  padding: 10px 14px 11px;
+}
+.regra.off { border-style: dashed; }
+.regra.envia { border-left-color: var(--envia); }
+.regra.silencio { border-left-color: var(--silencio); }
+.regra.gente { border-left-color: var(--gente); }
+.regra.depende { border-left-color: var(--tinta-fraca); }
+.regra.venceu-no-teste { box-shadow: 0 0 0 2px var(--trilha); }
+
+.pos {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tinta-fraca);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  padding-top: 1px;
+}
+.corpo { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.linha1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.linha1 b { font-size: 13.5px; }
+.ident { font-family: var(--mono); font-size: 10.5px; color: var(--tinta-fraca); }
+.quando { font-size: 12px; color: var(--tinta-media); line-height: 1.45; }
+
+.controles { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.controles select { font: inherit; font-size: 11.5px; padding: 3px 5px; border: 1px solid var(--borda); border-radius: 4px; background: var(--superficie); color: var(--tinta); max-width: 210px; }
+.liga { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--tinta-media); cursor: pointer; }
+.venceu { font-family: var(--mono); font-size: 10.5px; color: var(--tinta-fraca); white-space: nowrap; }
+
+/* ---- o galho do "casou" ---- */
+.ramo {
+  position: relative;
+  padding-left: 46px;
+  display: flex;
+  align-items: center;
+}
+/* A horizontal que sai do cartão. Ela para na espinha, e cada folha completa o caminho. */
+.ramo::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 46px;
+  height: 1.5px;
+  background: var(--borda);
+}
+.ramo .casou {
+  position: absolute;
+  left: 4px;
+  top: calc(50% - 17px);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--tinta-fraca);
+  white-space: nowrap;
+}
+
+.folhas { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+/* A espinha vertical só existe quando há mais de um desfecho — é ela que desenha a bifurcação. */
+.folhas.bifurca::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  background: var(--borda);
+}
+
+.folha {
+  position: relative;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-left: 3px solid var(--tinta-fraca);
+  border-radius: 6px;
+  padding: 8px 11px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.folha::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: calc(50% - 0.75px);
+  width: 16px;
+  height: 1.5px;
+  background: var(--borda);
+}
+.folha::after {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: calc(50% - 4px);
+  border: 4px solid transparent;
+  border-left-color: var(--borda);
+}
+.folha.envia { border-left-color: var(--envia); }
+.folha.silencio { border-left-color: var(--silencio); }
+.folha.gente { border-left-color: var(--gente); }
+.folha.depende { border-left-color: var(--tinta-fraca); }
+.folha-venceu { box-shadow: 0 0 0 2px var(--trilha); }
+
+.folha-topo { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.folha-tecla { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--trilha); }
+.folha-rot { font-size: 12.5px; font-weight: 600; }
+.folha-se { font-size: 11px; color: var(--tinta-media); line-height: 1.4; }
+.folha-fixada { font-size: 10.5px; font-weight: 600; color: var(--trilha); }
+.folha-ia { font-size: 10.5px; color: var(--gente); }
+
+/*
+ * Janela estreita: o galho desce em vez de sair para o lado.
+ *
+ * Sem isto a horizontal do "casou" continuava saindo para a esquerda e terminava no vazio, porque
+ * o cartão passou a estar ACIMA e não ao lado. Aqui ela vira uma descida que corre por toda a
+ * altura do galho — assim ela encontra o toco de cada folha, seja uma ou duas.
+ */
+@media (max-width: 1100px) {
+  .ramo { padding-top: 20px; align-items: stretch; }
+  .ramo::before { left: 30px; top: 0; bottom: 0; width: 1.5px; height: auto; }
+  .ramo .casou { left: 40px; top: 2px; }
+}
+
+.selo {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.selo.envia { color: var(--envia); background: var(--envia-bg); }
+.selo.silencio { color: var(--silencio); background: var(--silencio-bg); }
+.selo.gente { color: var(--gente); background: var(--gente-bg); }
+.selo.depende { color: var(--tinta-fraca); }
+
+/* Entre um passo e o próximo: a seta do "não casou". Fina, para não competir com os cartões. */
+.entre {
+  height: 24px;
+  position: relative;
+}
+.entre::before {
+  content: "";
+  position: absolute;
+  left: 26px;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  background: var(--borda);
+}
+.entre span {
+  position: absolute;
+  left: 40px;
+  top: 2px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--tinta-fraca);
+}
+
+/* ---- lado ---- */
+.lado { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 108px; }
+.cartao {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.cartao h2 { margin: 0; font-size: 14px; }
+.ajuda { margin: 0; font-size: 11.5px; color: var(--tinta-media); }
+.ajuda-fraca { color: var(--tinta-fraca); }
+.cartao textarea {
+  font: inherit;
+  font-size: 12.5px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--borda);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--tinta);
+  resize: vertical;
+}
+
+.resultado { font-family: var(--mono); font-size: 11.5px; display: none; flex-direction: column; gap: 4px; }
+.resultado.tem { display: flex; }
+.resultado .venceu-linha { font-weight: 600; color: var(--trilha); }
+.resultado .nada { font-weight: 600; color: var(--gente); }
+.resultado .fraco { color: var(--tinta-fraca); word-break: break-word; }
+
+.teclas { margin: 0; display: grid; grid-template-columns: 1.6em 1fr; gap: 5px 9px; align-items: baseline; }
+.teclas dt { font-family: var(--mono); font-weight: 700; font-size: 12.5px; color: var(--trilha); text-align: center; }
+.teclas dd { margin: 0; font-size: 12px; }

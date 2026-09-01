@@ -5,6 +5,1050 @@
 
 ---
 
+## 2026-09-01 (noite, 13) — O mapa do fluxo virou RAMIFICADO: cada regra mostra os dois caminhos
+
+**Pedido:** *"veja a janela nova de fluxo de atendimento, quero que seja ramificado"*.
+
+### O que faltava
+
+A janela desenhava um caminho só: cartão, seta do *"não casou ↓"*, cartão. Mas **regra não é linha,
+é bifurcação** — e o galho que faltava era justamente o que chega no eleitor. O que a regra faz
+quando CASA estava reduzido a um selo de três palavras no canto do cartão ("sai mensagem"), então
+para saber SE sai e O QUE sai era preciso abrir o `sugestao.js`.
+
+### O que existe agora
+
+Cada passo é uma linha de duas colunas: a **condição** à esquerda (o cartão, com os controles) e o
+**desfecho** à direita — a folha do galho `casou →`, com a tecla, o rótulo dela e o selo do efeito.
+O tronco do `não casou ↓` continua descendo pela esquerda. Três coisas que só se descobriam lendo
+o código apareceram na tela:
+
+- **Três regras têm DOIS desfechos** (`voltou-por-outro-anuncio`, `ultima-e-so-reacao`,
+  `ja-respondemos-antes`): o `tecla` delas é função. O selo "depende" não dizia que os dois lados
+  eram "manda a mensagem do momento" e "conclui calado" — agora a bifurcação está desenhada, com a
+  condição de cada lado escrita na folha.
+- **Fixar a tecla na janela colapsa a bifurcação e MUDA O EFEITO.** Quem fixasse a tecla `s` numa
+  regra rotulada "envia" ficava com o cartão prometendo o contrário do que ia acontecer, porque a
+  cor e o selo saíam do verbete (que é o do código). Hoje saem de `efeitoDaRegra(id, fluxo)`, e a
+  contagem do topo também — é ela que responde "quantas dessas mandam mensagem para gente real".
+- **A tecla 6 volta para a IA.** No painel a condição é `!sugestao || sugestao.tecla === '6'`, o
+  contrário do que a leitura de cima para baixo sugeria. A folha da tecla 6 diz isso.
+
+A **saída também ramificou**: a IA não é um nó com uma seta, são três — `responder` (sai a resposta
+pronta), `escalar` (rascunho, que só sai sozinho com as quatro travas) e `incerto` (tudo como antes
+da IA existir). Esse último é o caminho da falha de rede, de chave e de crédito, e ele estava
+invisível.
+
+### O que ficou travado por teste, e por quê
+
+`TECLAS` (o que cada tecla faz) **saiu da janela e foi para o `sugestao.js`**, ao lado das regras.
+Enquanto morava na tela, nada impedia uma regra apontar para tecla sem verbete e nenhum teste
+alcançava. Com ela lá, `regrasComDesfechoIncoerente()` confere três coisas de uma vez e o teste
+exige zero:
+
+1. toda tecla usada tem verbete;
+2. toda regra de tecla-função escreve os dois lados **e exatamente os que a função devolve** — o
+   teste roda a função nas 8 combinações de `respondidoHoje` × `momentoJaEnviado` ×
+   `podeMandarMomento` e compara com a lista escrita. É isto que impede o mapa envelhecer calado:
+   mexer na função sem mexer no verbete deixaria a janela prometendo um desfecho que não existe;
+3. o selo do cartão concorda com o que a tecla faz — cartão dizendo "sai mensagem" numa regra que
+   conclui em silêncio seria mapa mentiroso, e é olhando esse mapa que ele decide a ORDEM.
+
+### Um defeito que peguei relendo
+
+O destaque do simulador marcava a folha **por tecla**, então acendia a mesma tecla em todas as
+regras que a usam — a tecla 3 aparece em três. O destaque é da regra vencedora: hoje é
+`venceuNoTeste === id && teclaNoTeste === ramo.tecla`.
+
+### Decisões
+
+- **A folha é o único lugar da tela que fala do ELEITOR**, e por isso é ela que carrega a cor do
+  efeito e o selo. O cartão fala da condição, que é assunto interno.
+- **O passo inteiro é o que se arrasta**, não o cartão: arrastar a condição deixando o desfecho
+  para trás separaria as duas metades da mesma regra.
+- **Janela estreita (≤1100px) põe o galho embaixo**, com a horizontal virando descida. Sem isso a
+  linha do "casou" apontava para a esquerda e terminava no vazio, porque o cartão passou a estar
+  acima e não ao lado.
+- A janela abre com **1400** de largura (era 1180): duas colunas precisam do espaço.
+
+**Arquivos:** `src/lib/sugestao.js` (`TECLAS`, `ramos` nos três verbetes, `ramosDaRegra`,
+`efeitoDaRegra`, `regrasComDesfechoIncoerente`), `src/fluxo.js`, `src/fluxo.html`, `src/fluxo.css`,
+`src/background.js` (largura), `tests/sugestao.test.mjs` (grupo novo), `manifest.json`
+(1.21.0 → 1.22.0), `registro.md`, `CLAUDE.md`.
+
+**Conferido:** doze suítes, `checar-modulos` e `checar-referencias` passando. O desenho foi medido
+num servidor de rascunho FORA do repositório, com `chrome.storage` fingido: cartão em 24..513,
+folhas em x=559, espinha da bifurcação presente, e as três folhas da IA empilhadas no mesmo x.
+
+**Não testado na tela:** arrastar um passo com o galho junto e a janela real do Chrome — arrasto e
+`chrome.windows` só se conferem no navegador com a extensão carregada.
+
+---
+
+## 2026-09-01 (noite, 12) — O fluxo virou JANELA, com o mapa visual (a aba foi erro meu)
+
+**Pedido:** *"eu não pedi uma aba eu pedi uma janela inteira pra abrir e trabalhar, com fluxos
+visuais"* — depois de eu ter entregado uma lista arrastável numa aba do painel.
+
+### Ele está certo, e o motivo é de espaço
+
+O painel é uma coluna de 380px encaixada na borda da página. Um fluxo de dezesseis passos, cada um
+com condição, tecla, efeito e contagem, não cabe ali sem virar lista — e **lista não mostra que a
+decisão é uma cascata**. A mecânica de verdade é "a primeira que casa vence, as de baixo nem são
+olhadas", e isso só aparece quando existe a seta do *"não casou ↓"* entre um cartão e o próximo.
+
+### O que existe agora
+
+- **`src/fluxo.html` + `fluxo.css` + `fluxo.js`** — janela própria, 1180×900, aberta em `popup`
+  (sem barra de endereço), como a janela do painel já fazia.
+- **O mapa desce a coluna**: entrada (mensagem → parser), os 16 cartões ligados pela seta do
+  "não casou", e a saída (a IA → executa ou pergunta). Cada cartão tem borda esquerda na cor do
+  efeito, o selo, a condição em português, o seletor de tecla, o interruptor e a contagem.
+- **Arrastar reordena** e grava ao soltar. **Testar uma conversa** fica fixo no lado, e a regra que
+  vence no teste ganha contorno no mapa — dá para ver ONDE ela está na cascata.
+- A aba Fluxo saiu, e com ela ~13.600 caracteres de código que só servia a ela. O acesso virou um
+  botão **logo abaixo do Recarregar**, no cabeçalho: o fluxo vale para todas as abas, e escondê-lo
+  dentro de uma foi exatamente o erro apontado.
+
+### O defeito que peguei antes de acontecer
+
+**`chrome.windows` não existe em content script**, e o painel encaixado roda dentro da página do
+mobiliza — `chrome.windows.create` ali seria `undefined`. É a MESMA armadilha do `chrome.power` da
+rodada, já registrada no `CLAUDE.md`, e eu escrevi a primeira versão com a chamada direta no painel.
+Hoje o painel manda `MSG_FLUXO` e quem abre é o `background.js`.
+
+A constante ficou em `src/lib/fluxo-msg.js` porque os dois lados a importam: duplicar nas duas pontas
+é como elas divergem numa renomeação.
+
+### Decisões que valem registro
+
+- **Uma janela por vez**: se já está aberta, foca em vez de abrir a segunda. Duas janelas do mesmo
+  fluxo gravando na mesma chave seria a última a salvar ganhando, sem ninguém entender por quê.
+- **A janela NÃO fala com a plataforma.** Só lê e grava `store.fluxo`. Por isso abre a qualquer
+  momento, sem aba do mobiliza e sem token — é para arrumar o fluxo ANTES da rodada, não durante.
+- **`chrome.storage.onChanged` nos dois lados**: a rodada conta as vitórias no painel, e a janela
+  aberta se atualiza sem ninguém recarregar.
+- **CSS próprio, não o `panel.css`.** O do painel tem as regras de coluna estreita que existem
+  justamente para o outro caso; reusar traria a estreiteza de volta.
+- **Regra desligada continua na tela**, com "—" no lugar do número e borda tracejada. Sumir tiraria
+  o caminho de religar.
+
+**Arquivos:** `src/fluxo.html`, `src/fluxo.css`, `src/fluxo.js`, `src/lib/fluxo-msg.js` (novos),
+`src/background.js` (abre a janela), `src/panel/panel.js` (botão no cabeçalho, aba removida, o
+contador de vitórias ficou), `src/panel/panel.css`, `manifest.json` (1.20.0 → 1.21.0), `registro.md`.
+Doze suítes, `checar-modulos` e `checar-referencias` passando.
+
+**Não testado na tela:** abrir a janela, arrastar, salvar e reabrir. `chrome.windows` e o `popup` só
+se conferem no navegador — as suítes não os alcançam.
+
+---
+
+
+## 2026-09-01 (noite, 11) — Aba Fluxo: a ordem das regras passou a ser dele
+
+**Pedido:** *"vamos montar uma janela que ficara abaixo do botão de recarregar que será o fluxo de
+atendimento, lá será editado todo o fluxo que a extensão seguira"*, e *"já adicione o fluxo atual
+para eu editar"*.
+
+### Por que existe
+
+Dois erros do mesmo dia **não eram de lógica, eram de ORDEM**: `ja-respondemos-antes` acima de
+`conteudo-pedido` (mandou a mensagem do momento onde devia ir o modelo) e a `sem-interesse` no topo
+engolindo a confirmação de presença (etiquetou como sem interesse quem só disse que não podia ir ao
+evento). Os dois ele resolveria arrastando uma linha. Esperar por mim era o gargalo.
+
+### Escopo, decidido por ele
+
+Edita **ordem, tecla e ligar/desligar**. As **condições ficam no código** — elas decidem o que sai
+para eleitor, e uma expressão mal montada na tela viraria mensagem errada. A condição aparece em
+português, só para leitura, para dar base à ordem sem abrir o código.
+
+### O que a janela mostra por regra
+
+Posição, rótulo, id, a condição em português, **o selo do efeito** (sai mensagem / não sai nada /
+precisa de você / depende), o seletor de tecla, o interruptor e **quantas vezes a regra venceu**.
+No topo, a conta das ligadas por efeito — é o que deixa visível que 9 das 16 enviam.
+
+### Decisões que valem registro
+
+- **Regra nova do código entra na POSIÇÃO DO CÓDIGO, não no fim.** `sugestao.ordenar` herda a
+  posição do vizinho de cima que a ordem salva conhece. Sem isso, a `respondeu-nossa-pergunta` —
+  criada horas antes para impedir propaganda em cima de denúncia — nasceria em último lugar em quem
+  já tivesse ordem salva, e o defeito voltaria **calado na atualização**. Tem teste.
+- **Id repetido na ordem vale pela PRIMEIRA aparição.** Peguei na primeira verificação: o `Map` por
+  índice dava a posição da última, e na tela isso apareceria como *"arrastei e não mudou nada"*.
+- **Regra desligada continua na tela**, com número trocado por "—" e borda tracejada. Sumir da lista
+  tiraria o caminho de religar.
+- **`fluxo` entrou na lista de mescla do `store.get`** — sem isso, campo novo dentro do objeto
+  chegaria `undefined` em quem já usa (armadilha registrada no CLAUDE.md, que eu já tinha errado
+  hoje com `etiquetaSemInteresse`).
+- **O contador grava com atraso de 800 ms**, agrupando a rajada da rodada. É estatística, não dado
+  de eleitor: perder a última contagem não custa nada.
+- **O simulador diz o que NÃO sabe.** Os sinais de conversa saem do texto colado; etiqueta, modelo
+  mapeado e "pedimos hoje" dependem do contato e ficam de fora, escrito na tela. Simulador que
+  fingisse conhecer o CRM daria confiança falsa numa mudança de ordem.
+- **Aba própria, não uma seção.** "Abaixo do Recarregar" é onde ficam as abas — o Recarregar vive no
+  cabeçalho. Entrou entre Automatizado e Dados.
+
+**Arquivos:** `src/lib/sugestao.js` (`sugerirAcao(ctx, fluxo)`, `ordenar`, `SOBRE`,
+`regrasSemVerbete`), `src/lib/store.js` (chave `fluxo` + mescla + export), `src/panel/panel.js` (aba,
+`renderFluxo`, simulador, `sugerirAcaoComFluxo` com o contador), `src/panel/panel.css`,
+`tests/sugestao.test.mjs` (+13), `manifest.json` (1.19.0 → 1.20.0), `registro.md`. Doze suítes,
+`checar-modulos` e `checar-referencias` passando.
+
+### Retrocessos e o que NÃO está testado
+
+- **A janela em si não tem teste automatizado** — nenhuma suíte importa `panel.js`. O que está
+  coberto é a base: `ordenar`, a mescla do store e `sugerirAcao` com configuração (13 asserções).
+  O arrastar, o seletor e o simulador só se conferem na tela.
+- **Ordem errada agora é erro dele, não meu.** É o ponto da janela, mas muda a natureza do risco:
+  arrastar `conteudo-pedido` para o topo, por exemplo, passa a mandar modelo para quem já recebeu.
+  O selo de efeito e a contagem no topo existem para isso ficar visível antes.
+- **Desligar regra alta não é neutro:** as de baixo passam a decidir. Desligar `sem-interesse` faz
+  quem recusou cair em `nunca-pediram-dados`, que **envia**.
+
+**Pendência:** conferir na tela (arrastar, salvar, recarregar o painel e ver se a ordem voltou).
+
+---
+
+
+## 2026-09-01 (noite, 10) — Ponto como separador: a terceira forma de "a pessoa escreveu diferente"
+
+**Pedido:** *"mesmo caso novamente"* — print da Nilza, que veio do anúncio, respondeu o formulário
+como `Nilza krumenauer . rolante RGS :` e recebeu a **mensagem do momento**.
+
+### Causa
+
+`findStructured` separava por quebra de linha, barra, ponto-e-vírgula e vírgula. **Ponto não estava
+na lista.** Medido:
+
+| escrito | cidade | informada | nome |
+|---|---|---|---|
+| `Nilza krumenauer / rolante RGS` | Rolante | ✓ | Nilza Krumenauer |
+| `Nilza krumenauer, rolante RGS` | Rolante | ✓ | Nilza Krumenauer |
+| `Nilza krumenauer . rolante RGS` | Rolante | **✗** | — |
+| `Nilza krumenauer . rolante RGS :` | **nada** | — | — |
+
+Sem nome e sem cidade, a rodada concluiu que faltavam dados.
+
+**É a terceira vez no mesmo dia** com a mesma forma de defeito: `S.do Livramento.RS` (ponto colado),
+`Canoas RS` / `Erechim rgds` (sigla do estado), e agora o ponto como separador. Em todas, a pessoa
+respondeu certo de um jeito que o código não previu, e o sintoma é idêntico — a rodada acha que
+faltam dados e manda outra coisa.
+
+### O conserto
+
+Ponto (`\s\.|\.\s`) e hífen cercado de espaço (`\s-\s`) entraram na lista, **por último**. O que os
+torna seguros são as travas que já existiam em `findStructured`: de 2 a 4 pedaços, cada um com no
+máximo 60 caracteres, e **um deles tem que ser exatamente um município**. Frase comum quebrada no
+ponto não passa nesse teste. O ponto exige espaço de um lado, então "Sto. Angelo" continua inteiro.
+
+### O que eu apliquei e desfiz
+
+Coloquei os separadores novos nos DOIS lugares que os usavam e reverti o segundo: `cityPositionGuess`
+não tem a trava do "exatamente um município" — o que sair dali vira palpite "não-reconhecida" com
+sugestões, ou seja, **popup pedindo confirmação**. Medido: com o ponto,
+*"Vamos juntos mudar o Rio Grande. Conto contigo"* passava a oferecer **"Conto contigo"** como cidade
+a confirmar. Alarme que toca à toa é alarme que se aprende a ignorar.
+
+10 asserções novas, com os dois lados: as quatro formas que passam a funcionar e as quatro frases
+comuns que não podem virar formulário.
+
+**Arquivos:** `src/lib/extract.js`, `tests/parser.test.mjs` (+10), `manifest.json`
+(1.18.1 → 1.19.0), `registro.md`. Doze suítes, `checar-modulos` e `checar-referencias` passando.
+
+**Retrocesso:** nenhum encontrado; nenhuma asserção existente foi alterada.
+
+---
+
+
+## 2026-09-01 (noite, 9) — REGRESSÃO MINHA: recusar o evento virou "sem interesse"
+
+**Pedido:** *"concluiu uma resposta de anuncio do evento, era pra mandar mensagem dizendo que não
+tinha problema e pedir dados"* — print do Ze, que veio do anúncio do evento e escreveu
+*"Não conseguirei ir!"*.
+
+### Foi a regra que eu criei horas antes
+
+`cortesia.semInteresse` (versão 1.15.0) tem um caminho que dispara na **negativa de abertura**, e
+`sem-interesse` é a **primeira** regra da tabela. *"Não conseguirei ir!"* começa negando → etiquetado
+sem interesse → **concluído em silêncio**.
+
+`confirmaPresenca` acertava o tempo todo, devolvendo `nao`. Ela só nunca foi consultada, porque a
+minha regra vence antes.
+
+O contraste, medido:
+
+| | regra vencedora | tecla |
+|---|---|---|
+| antes do conserto | `sem-interesse` | `s` (conclui calado) |
+| depois | `nunca-pediram-dados` | **4** |
+
+E com `presenca: "nao"`, a tecla 4 é exatamente *"Não vai ao evento + pedir dados e concluir"* — o
+que ele descreveu.
+
+### Por que este erro é dos piores
+
+O Ze é a pessoa **mais engajada possível**: veio pelo anúncio E se deu o trabalho de responder ao
+convite. Foi tratado como quem pediu para não ser mais chamado, com rótulo permanente errado no CRM
+e nenhuma resposta.
+
+### O conserto
+
+`RECUSA_DE_PRESENCA` — negativa perto de verbo de ir/comparecer/estar presente → `semInteresse`
+devolve `null` e sai da frente. Vem **depois** da recusa explícita de propósito: *"não vou mais
+receber isso, me tira da lista"* tem verbo de ir dentro e continua sendo recusa de contato (testado).
+
+10 asserções novas: as 7 formas de recusar presença que não podem marcar, e as 3 recusas de verdade
+que não podiam regredir.
+
+### A lição, que é maior que o conserto
+
+**Regra nova no TOPO da tabela precisa ser conferida contra as regras que ela passou a vencer.** Eu
+escrevi `sem-interesse` testando 19 casos — 12 deles falso positivo — e nenhum era resposta a
+convite de evento, porque eu estava pensando em hostilidade, não em RSVP. A tabela tem 16 regras; pôr
+algo em primeiro lugar significa dizer "isto vence as outras 15", e eu não olhei quais.
+
+Checklist para a próxima regra em posição alta: liste as regras que ela passa a vencer e escreva um
+teste para cada uma que ainda deve ganhar dela.
+
+**Arquivos:** `src/lib/cortesia.js` (`RECUSA_DE_PRESENCA`), `tests/cortesia.test.mjs` (+10),
+`manifest.json` (1.18.0 → 1.18.1), `CLAUDE.md`, `registro.md`. Doze suítes, `checar-modulos` e
+`checar-referencias` passando.
+
+**Pendência:** o Ze continua sem resposta e com a etiqueta errada, se ela foi gravada. Vale abrir a
+conversa dele à mão.
+
+---
+
+
+## 2026-09-01 (noite, 8) — O envio mais simples do painel era o único inalcançável
+
+**Pedido:** *"tendo problemas para enviar novamente, só preciso enviar o modelo, não tem necessidade
+de ter nada atrelado"*, com o erro **"Nenhum modelo mapeado para 'Campanha Martim2'"** na tela.
+
+### O envio avulso sempre existiu
+
+`renderModeloCard` dá dois botões por modelo: **"Enviar"** (manda só o modelo) e **"Só preparar"**
+(escreve no campo e não manda). Nada acoplado — sem concluir, sem agradecer, sem próximo, sem
+depender de etiqueta de conteúdo nem da tabela de mapeamento.
+
+### Por que ele não estava à mão
+
+A lista "Modelos de mensagem" nasce vazia (`state.hsmTemplates` = []), e **o único
+"Carregar modelos" morava na aba Automatizado**. O texto na aba Respostas dizia *"Clique em
+Recarregar se acabou de cadastrar um"* — sem dizer onde ficava esse Recarregar.
+
+Então o caminho mais simples do painel era o único que exigia saber de outra aba. E o atalho que ele
+tentou usar (`Enviar conteúdo + agradecer + concluir`) depende da tabela "Modelo por conteúdo", que
+não tinha entrada para a etiqueta nova `Campanha Martim2`.
+
+### Os dois consertos
+
+1. **Botão "Carregar modelos" na própria aba Respostas**, com o texto dizendo o que vem depois:
+   *"depois cada modelo tem 'Enviar', que manda só o modelo e mais nada"*. Nasce de **clique**, não
+   do desenho — regra do projeto: `renderAll` roda o tempo todo, e rede dentro de um `render*` vira
+   uma requisição por redesenho.
+2. **A mensagem de erro passou a dizer as DUAS saídas, e a de agora primeiro.** Antes ela só mandava
+   cadastrar a tabela — o que resolve da próxima vez e deixa ele parado agora, com o contato aberto
+   na tela. Hoje aponta o envio avulso e depois o cadastro.
+
+### O que NÃO fiz, e por quê
+
+Não criei um cartão novo de "enviar só o modelo" no topo. O botão já existe; o problema era acesso,
+não ausência. Cartão novo somaria uma quarta forma de enviar a mesma coisa — e a confusão entre os
+atalhos foi parte do problema.
+
+Também não mapeei `Campanha Martim2` na tabela: o nome e o modelo certo são decisão dele, e chutar
+mapeamento manda o modelo errado para eleitor.
+
+**Arquivos:** `src/panel/panel.js` (botão na aba Respostas), `src/lib/hsm.js` (mensagem de erro),
+`manifest.json` (1.17.0 → 1.18.0), `registro.md`. Doze suítes, `checar-modulos` e
+`checar-referencias` passando.
+
+**Retrocesso:** nenhum. As duas mudanças são de acesso e de texto; nenhum caminho de envio mudou de
+comportamento.
+
+---
+
+
+## 2026-09-01 (noite, 7) — Propaganda em cima de uma denúncia
+
+**Pedido:** *"nem sei o que dizer"* — print de uma contato que respondeu à nossa pergunta relatando
+**irregularidades no programa de compra assistida em Eldorado do Sul** e recebeu **material de
+campanha**.
+
+### O que aconteceu, na ordem
+
+1. 14:22 — a rodada mandou *"em que você precisa de ajuda? Me conta com suas palavras o que está
+   acontecendo."* A regra `pediu-algo-sem-dizer-o-que` **funcionou**: foi ela que decidiu perguntar
+   em vez de responder.
+2. 16:19 — ela respondeu: *"é sobre as irregularidades sobre compra assistida em eldorado do sul"*.
+3. Em seguida saiu o material de campanha do Capitão Martim.
+
+### Causa raiz: o "depois" que não existia
+
+A docstring de `pediu-algo-sem-dizer-o-que` já dizia que *"a recusa só cabe **depois** de ela dizer
+o que quer"*. Esse depois não estava implementado em lugar nenhum: **nenhuma regra reconhecia a
+resposta a uma pergunta nossa.** Sem sinal, o caso descia a tabela inteira até `conteudo-pedido`,
+que ENVIA o modelo.
+
+O teste novo trava justamente o contraste: com o mesmo contexto e sem o sinal, a regra vencedora
+volta a ser `conteudo-pedido`.
+
+### E a minha reordenação de 1.12.0 piorou este caso
+
+Antes dela, a IA era consultada em TODO contato. Aqui ela provavelmente teria escalado — uma
+denúncia não casa com resposta pronta nenhuma, e a regra 2 do prompt é "na dúvida, escale". Depois
+da reordenação a IA só é chamada quando nenhuma regra casa ou quando a regra é tecla 6; aqui uma
+regra casou (tecla 1) e a IA não foi ouvida.
+
+**A lição, que vale mais que o conserto:** a tabela de regras é mais estreita que a IA. Para os
+casos em que ela **não sabe**, pular a IA economiza. Para os casos em que ela **erra**, pular a IA
+tira a rede de segurança. Foi o segundo tipo.
+
+### Os dois consertos
+
+1. **Regra nova `respondeu-nossa-pergunta`, tecla 6**, acima de `pediu-algo-sem-dizer-o-que` (para
+   não perguntar de novo o que ela acabou de responder) e abaixo do áudio (ouvir vem antes de
+   qualquer decisão). O sinal sai de `templates.ehPerguntaComoAjudar` + a HORA das mensagens
+   (`getConversation` traz `at` nos dois lados justamente para intercalar). Sem hora, cai no
+   fallback "ela escreveu alguma coisa": **errar para o lado de chamar gente é barato; errar para o
+   outro manda propaganda em cima de uma denúncia.**
+2. **Regra nova no prompt da IA (a nº 4):** escalar quando o contato RELATA UM PROBLEMA —
+   irregularidade, denúncia, obra parada, fila, atendimento negado, programa público que não
+   funcionou. Com o texto explícito de que *"material de campanha em cima de uma denúncia é o pior
+   que pode sair daqui"*. A regra 1 segura o contato; esta é para quando a IA for consultada
+   (tecla 6 consulta).
+
+### Retrocessos
+
+- **Contato que respondeu à pergunta fica preso na tecla 6 até alguém tratar à mão.** É o desenho
+  (quem abre um caso perguntando tem que ler a resposta), mas significa fila que não anda sozinha
+  nesses casos. Se acumular, o conserto NÃO é automatizar a resposta — é ele responder.
+- **A regra não olha o conteúdo da resposta.** Qualquer coisa que ela escreva depois da pergunta vai
+  para gente, inclusive um "obrigado". Preferi assim: filtrar por conteúdo aqui é onde o erro custa
+  caro, e a tecla 6 consulta a IA, que pode sugerir o agradecimento.
+- **Nada disto tem teste de ponta a ponta.** As 7 asserções novas cobrem a tabela de regras; o sinal
+  em `panel.js` (a comparação por hora) não tem suíte que o importe.
+
+**Arquivos:** `src/lib/templates.js` (`ehPerguntaComoAjudar`), `src/lib/sugestao.js` (regra nova),
+`src/lib/ia.js` (regra 4 do prompt, as seguintes renumeradas), `src/panel/panel.js` (o sinal),
+`tests/sugestao.test.mjs` (+7), `manifest.json` (1.16.0 → 1.17.0), `CLAUDE.md`, `registro.md`.
+Doze suítes, `checar-modulos` e `checar-referencias` passando.
+
+---
+
+
+## 2026-09-01 (noite, 6) — Redação antiga do pedido de dados fazia a rodada pular o modelo
+
+**Pedido:** *"no caso o modelo não tinha sido enviado, em vez de mandar modelo pronto mandou
+mensagem do momento"* — sobre o print da Loreta.
+
+### Causa raiz: comparar com o texto ATUAL do template
+
+`jaRespondemosAntes` responde *"já ENTREGAMOS algo a este contato, ou só perguntamos?"*. Ele
+reconhece uma mensagem nossa como **pergunta** procurando trechos literais de 30+ caracteres dos
+textos de `pedir-dados`, `interesse-conteudo` e `perguntar-como-ajudar` — os textos **de hoje**.
+
+A Loreta recebeu, em 31/08:
+
+> "Para eu poder salvar seu contato me passe seu: **Nome / Cidade**"
+
+O template de hoje diz:
+
+> "Para eu te incluir no grupo certo da sua região, me responde nesta ordem… **Nome completo /
+> Cidade**"
+
+**Redações diferentes.** Nenhum trecho literal casou, então a mensagem dela foi lida como
+*entrega*, `jaRespondemosAntes` virou `true`, e a regra `ja-respondemos-antes` (posição 11, tecla 5)
+venceu `conteudo-pedido` (posição 12, tecla 1) — mandando a mensagem do momento **em vez do modelo
+que ela nunca recebeu**.
+
+O `CLAUDE.md` já registrava exatamente isso, para o outro lado: *"'Nossa mensagem foi X?' nunca se
+responde comparando com UM texto… Case pelo invariante (a linha `Nome / Cidade`)"*. A nota falava da
+leitura da RESPOSTA; o mesmo defeito estava em reconhecer a PERGUNTA.
+
+### O conserto
+
+Novo `templates.ehPedidoDeDados(texto)` — puro e testado: reconhece o pedido pela linha
+`Nome / Cidade`, que **não muda** entre as três formas do pedido, entre as variantes, nem entre
+redações de épocas diferentes. É o que os testes já protegem em cada texto e o que o parser depende
+para ler a resposta.
+
+Em `ehPergunta` o invariante vem PRIMEIRO; o casamento por trecho literal fica como segunda camada,
+cobrindo as outras duas perguntas (interesse e "como posso ajudar"), que não têm essa linha.
+
+Não mexi na ordem da tabela de regras. A prioridade `ja-respondemos-antes` acima de
+`conteudo-pedido` é decisão dele (31/08, print do Cris): quem já foi atendido e volta não quer o
+material de novo. O defeito era o sinal, não a prioridade — e trocar a ordem teria "consertado" a
+Loreta quebrando o caso do Cris.
+
+### Por que isto vai acontecer de novo se ninguém cuidar
+
+**Todo contato atendido antes de uma reescrita de template carrega no histórico um texto que o
+código atual não reconhece.** Este projeto reescreve resposta com frequência (as variantes, o
+pedido de grupos, a pergunta de interesse), e cada reescrita deixa uma safra de conversas
+"invisíveis". A regra que ficou: **reconhecer mensagem nossa por invariante, nunca por redação.**
+Está no `CLAUDE.md`.
+
+**Arquivos:** `src/lib/templates.js` (`ehPedidoDeDados`), `src/panel/panel.js` (`ehPergunta` usa o
+invariante), `tests/templates.test.mjs` (+10), `manifest.json` (1.15.0 → 1.16.0), `CLAUDE.md`,
+`registro.md`. Doze suítes, `checar-modulos` e `checar-referencias` passando.
+
+**Retrocesso:** nenhum encontrado. O invariante foi testado contra os seis textos que importam — as
+três formas do pedido (reconhecidas) e modelo de conteúdo, agradecimento e mensagem do momento (não
+reconhecidas). Confundir uma entrega com pergunta faria o contato deixar de receber o modelo, que é
+o erro oposto e igualmente ruim.
+
+---
+
+
+## 2026-09-01 (noite, 5) — "Sem interesse": etiqueta e conclui sem responder
+
+**Pedidos:** *"falando mal do bolsonaro e martim é aliado do bolsonaro, esse tipo nós botamos
+etiqueta sem interesse e concluímos sem responder, aconteceu duas vezes de pedir dados pra dois sem
+interesse"*, mais dois prints (*"outro caso"*, *"dois boas tarde"*).
+
+### O detector, e por que ele é conservador
+
+`cortesia.semInteresse(entrantes)` — pura e testada. Olha só a **última** mensagem: quem xingou
+ontem e hoje voltou pedindo conteúdo mudou de ideia.
+
+Dois caminhos, os dois exigindo sinal forte:
+
+1. **Recusa** — pedido explícito ("não quero receber", "me tira da lista", "para de mandar"), ou
+   **negativa na abertura** da mensagem. A negativa de abertura vale sozinha porque a pergunta que
+   fizemos era fechada ("posso te mandar os conteúdos?").
+2. **Hostilidade dirigida a nós** — insulto **junto** de fala em segunda pessoa.
+
+**As duas condições do caminho 2 são obrigatórias, e é aí que a regra vive ou morre.** Apoiador
+xinga o adversário em terceira pessoa o tempo todo — *"o Lula é um ladrão safado, golpista"* é o tipo
+de mensagem mais comum desta base. Detector que olhasse só o insulto tiraria da fila justamente
+quem mais apoia, e deixaria um rótulo permanente no CRM.
+
+A trava mais importante é a lista de **negativas benignas**: o pedido de dados termina perguntando
+sobre grupos, e *"Não faço parte de nenhum grupo político"* é resposta de **apoiadora** — está no
+teste do parser, na resposta real da Rosane. Junto com "não sei" (cidade), "não moro mais",
+"não consigo abrir o link". Um detector de "começa com não" marcaria todas.
+
+19 asserções, e **12 delas são falso positivo** — a proporção diz onde está o risco.
+
+### A ligação
+
+- **Regra `sem-interesse` em PRIMEIRO na tabela**, acima até da etiqueta que dispensa da fila: quem
+  pediu para não ser chamado não pode receber mais nada, e é a única regra em que continuar mandando
+  gera **denúncia**, que é o sinal que derruba número.
+- **Tecla `s`, não um dígito.** Os dez dígitos já têm significado no dedo dele; trocar o sentido de
+  um é como o "2" digitado na conversa acabou concluindo atendimento. A opção aparece **sempre**,
+  não só quando a regra dispara — ele pode ver o que a regra não viu.
+- **`auto.etiquetaSemInteresse`, nascendo vazia.** O nome tem que ser digitado igual ao do CRM: a
+  extensão não cria etiqueta sozinha. Vazia, a regra ainda conclui sem responder e diz isso no log.
+  Fica dentro de `auto` porque é chave que o `store.get` mescla — fora dela chegaria `undefined`
+  para quem já usa (armadilha registrada no CLAUDE.md; eu errei isso na primeira tentativa e o
+  campo era lido de `state.auto.cfg`).
+- **Falha de etiqueta não impede a conclusão.** Etiqueta é organização interna; o que o contato
+  deixa de receber vem primeiro. Etiqueta inexistente no CRM → conclui igual, com o aviso no log.
+
+### O template órfão que apareceu
+
+`sem-interesse` ("Sem interesse / encerrar com respeito") existe em `DEFAULT_TEMPLATES` desde sempre
+e **nenhum código o usava**. Continua sem uso: ele pediu para concluir **sem responder**, e mandar
+"não vou mais te incomodar" para quem veio hostilizar é dar a última palavra a quem não quer
+conversa. O texto fica disponível na aba Respostas para ele mandar à mão quando fizer sentido.
+
+### O caso "dois boas tarde" já estava resolvido
+
+Print da Loreta: ela respondeu `Loreta Graebner / Agudo RS` e recebeu a mensagem do momento no dia
+seguinte. Era o **mesmo bug do sufixo do estado** — "Agudo RS" não contava como cidade informada,
+então o nome não era extraído e a rodada achava que faltavam dados. Conferido depois do conserto de
+1.13.0: `cidade: Agudo | informada: true | nome: Loreta Graebner`. Nada novo a fazer.
+
+Fica de fora, como observação: **todos os nossos textos começam com `{{saudacao}}`**, então duas
+mensagens seguidas repetem "Boa tarde!". Não mexi — é decisão de texto, não defeito.
+
+### Retrocessos
+
+- **A tecla `s` é a primeira opção com letra.** O atalho já ignora evento vindo de campo de texto,
+  então digitar "s" na conversa não dispara. Mas é um padrão novo na caixa.
+- **A regra é a mais alta da tabela**, então ela vence todas as outras — inclusive "etiqueta
+  dispensa da fila". Se um contato engajado escrever algo que casa com o detector, ele será marcado
+  como sem interesse. Achei certo (recusa é recusa), mas é uma inversão de prioridade nova.
+- **Não há teste de ponta a ponta**: as suítes cobrem o detector, não o ramo em `panel.js`.
+
+**Arquivos:** `src/lib/cortesia.js` (`semInteresse` + os quatro padrões), `src/lib/sugestao.js`
+(regra em primeiro), `src/lib/store.js` (`auto.etiquetaSemInteresse`), `src/panel/panel.js` (opção,
+ramo, campo na Config), `tests/cortesia.test.mjs` (+19), `manifest.json` (1.14.0 → 1.15.0),
+`registro.md`. Doze suítes, `checar-modulos` e `checar-referencias` passando.
+
+---
+
+
+## 2026-09-01 (noite, 4) — A IA voltou a ser consultada na tecla 6; áudio transcrito deixou de "precisar abrir"
+
+**Pedido:** *"esse caso a ia deveria assumir, ela parou de ver praticamente tudo e está passando pra
+mim"* — print de um contato que mandou áudio de 2min22 **com a transcrição na tela**, e a caixa
+sugerindo a tecla 6 ("Responda à mão").
+
+### Causa: efeito colateral da reordenação de mais cedo, previsto e subestimado
+
+A reordenação (regra antes da IA) foi registrada com o retrocesso nº 2: *"a tecla 0 da IA some dos
+casos com regra"*. Na prática isso foi muito mais largo do que a nota sugeria — a maioria dos
+contatos casa alguma regra, então a IA quase parou de ser chamada.
+
+### Conserto 1: a tecla 6 chama a IA
+
+**"Responda à mão" quer dizer, por definição, que nenhuma regra sabe o que mandar ali** — que é
+exatamente o buraco que a avaliação de contexto existe para tapar. Deixar a IA de fora justamente
+nesse caso fazia a rodada parar em todo áudio e em todo texto longo.
+
+Hoje: `if (!sugestao || sugestao.tecla === '6')`. As outras teclas continuam decidindo sozinhas e de
+graça — a regra que manda **concluir** (3) ou **mandar o modelo** (1) já sabe o que fazer, e pagar
+por uma segunda opinião ali não muda o resultado. Foi o excesso oposto que mandou mensagem para quem
+só disse "Amém".
+
+Como o auto-envio da IA (`recomendada`) roda ANTES da execução automática por regra, o caminho fica:
+regra pede gente → IA opina → se ela escolher uma resposta pronta, a automação manda; se escalar,
+pode sair rascunho; se ficar incerta, a caixa abre com a tecla 6 como antes.
+
+### Conserto 2: áudio transcrito não alega mais que precisa ser aberto
+
+O motivo *"mandou um áudio — só dá para responder depois de abrir"* nasceu quando áudio chegava
+vazio. Hoje a plataforma manda a transcrição na própria mensagem, o painel a exibe e o parser a lê —
+e a caixa aparecia com a transcrição inteira do lado ainda afirmando que era preciso abrir.
+
+Não era só cosmético: a regra da tecla 6 vencia **pelo formato**, sem ninguém olhar o conteúdo.
+Agora, com `transcrito: true` e texto presente, o áudio segue o caminho de um texto:
+
+| mensagem | antes | depois |
+|---|---|---|
+| áudio sem transcrição | precisa abrir | precisa abrir (igual) |
+| áudio transcrito CURTO | precisa abrir | **as outras regras decidem pelo conteúdo** |
+| áudio transcrito LONGO | precisa abrir | "**falou** N caracteres — é conversa" |
+| texto longo | "escreveu N caracteres" | igual |
+
+O verbo mudou de propósito: dizer que a pessoa "escreveu" 791 caracteres que ela falou faz quem lê
+procurar uma mensagem de texto que não existe.
+
+### Retrocessos
+
+- **A IA volta a custar nos casos de tecla 6.** É a metade do gasto que a reordenação havia
+  economizado — e é o gasto que ele pediu de volta.
+- **Áudio transcrito curto passa a poder ser tratado por outra regra**, inclusive alguma que envia.
+  Antes todo áudio parava na tecla 6. É a mudança de comportamento mais visível deste commit: o
+  conteúdo passa a mandar mais que o formato, que é o certo, mas é mudança.
+- Nada disto tem teste de ponta a ponta: as suítes cobrem `pedeRespostaPessoal` (7 asserções novas),
+  não o caminho da rodada em `panel.js`.
+
+**Arquivos:** `src/lib/cortesia.js`, `src/panel/panel.js`, `tests/cortesia.test.mjs` (+7),
+`manifest.json` (1.13.0 → 1.14.0), `registro.md`. Doze suítes, `checar-modulos` e
+`checar-referencias` passando.
+
+---
+
+
+## 2026-09-01 (noite, 3) — Cidade abreviada impedia o NOME, e a rodada pedia os dados de novo
+
+**Pedido:** *"ja deu os dados e perguntou novamente"* — print do contato que respondeu
+`Ulises Sanchez / S.do Livramento.RS` às 18:19 de 31/08 e recebeu o **mesmo pedido de dados** no dia
+seguinte.
+
+### Causa raiz
+
+A cidade já havia sido consertada mais cedo (o ponto colado). O que faltava era o **nome**:
+`findStructured` só separa nome de cidade quando algum pedaço é **exatamente** o município, e
+`isCityAlone("S.do Livramento.RS")` dizia que não. Sem nome, a regra concluía que faltavam dados e
+mandava o pedido outra vez.
+
+Dois bloqueios, e o primeiro era um palpite antigo errado:
+
+1. **O alias `s.` → `sao`.** "S.do Livramento" virava "sao do livramento", e **"São do …" não é
+   nome de município nenhum** — "São" sempre precede nome de santo. Ali o "S." é "Sant'Ana". Agora
+   `s.` seguido de partícula (`do`/`da`/`de`) sai **inteiro, com a partícula**: sobra "livramento",
+   que o encurtamento resolve. Perder informação aqui é seguro — o que sobra ambíguo ("S.do Palma"
+   → "palma") não casa com nada, e não casar é o lado certo de errar.
+2. **A comparação.** `normalize` não sabe que "Livramento" é "Santana do Livramento" (isso é
+   `ENCURTAMENTOS`) nem que "RS" no fim é o estado. Nova `cities.formaCanonica`: sigla do estado
+   fora, encurtamentos aplicados, **nessa ordem** — o inverso deixa "rs" pendurado e a igualdade
+   falha de novo. É ela que `isCityAlone` e `cidadeSozinha` usam agora.
+
+Resultado no caso real: `cidade: Santana do Livramento | nome: Ulises Sanchez | informada: true`.
+
+### Retrocesso: nenhum encontrado, e foi procurado
+
+Isto afrouxa uma trava documentada ("só separa quando o pedaço é exatamente o município"), então o
+lado perigoso foi testado à mão antes de fechar. **Nada do que não podia virar "cidade informada"
+virou** — informada é o que substitui o CRM:
+
+| escrito | resultado |
+|---|---|
+| `Vamos juntos mudar o Rio Grande` | nada |
+| `boa tarde, sou de Pelotas e quero ajudar` | Pelotas, **não** informada (palpite) |
+| `Maria, moro em Canoas e trabalho muito` | Canoas, **não** informada |
+| `aceito receber conteudos do Capitao Martim e do Zucco` | nada |
+| `S.do meu coracao` | nada |
+| `sou do Rio Grande do Sul` | nada |
+| `Ana / Vitoria` | Vitória das Missões **aproximada** (espera clique) |
+
+As doze suítes passaram sem alteração, e 11 asserções novas travam os dois lados: o caso do print e
+os adversariais acima.
+
+**Arquivos:** `src/lib/cities.js` (alias de `s.` + `formaCanonica`), `src/lib/extract.js` (as duas
+comparações), `tests/parser.test.mjs` (+11), `manifest.json` (1.12.0 → 1.13.0), `registro.md`.
+
+**Continua pendente:** nome mandado em mensagem SEPARADA (sem separador na mesma mensagem) ainda não
+é extraído — *"Erechim rgds"* seguido de *"Maria da Glória flores"*. Aqui o formulário foi respondido
+numa linha só, que é o caso deste conserto.
+
+---
+
+
+## 2026-09-01 (noite, 2) — A regex voltou a decidir ANTES da IA
+
+**Pedido:** *"se for arrumar esse erro faça me avise se tiver algum retrocesso"*.
+
+### O conserto
+
+Em `processarRespondido`, `avaliarComIA()` era chamada **antes** de `sugerirAcao`. O comentário logo
+acima afirmava que a regex já havia filtrado os casos conhecidos — não havia. Com "Automatizar com
+IA" ligado, a escolha da IA era executada direto, e regra determinística nenhuma chegava a ser
+consultada: o contato que só escreveu *"Amém"* recebeu mais uma mensagem 36 min depois, porque
+`ultima-e-despedida` (que manda concluir sem responder) nunca foi olhada.
+
+Agora é o que o desenho sempre disse: **`sugestao === null` é o gatilho da IA**. O bloco inteiro foi
+movido para depois do `sugerirAcao` e envolvido em `if (!sugestao)`. `decisaoIA` virou `let`, porque
+continua sendo lido lá embaixo para montar a tecla 0.
+
+Renomeado junto: dentro do ramo de `escalar` havia um `const sugestao` que agora **sombrearia** a
+recomendação determinística. Virou `sugestaoDela`.
+
+### A metade que o conserto exigia (senão vira defeito pior)
+
+Com a regra decidindo antes, a IA deixa de ser chamada nos casos conhecidos → `recomendada` fica
+nula → **a caixa abriria esperando clique em todo contato com regra**. A rodada automatizada pararia
+em quase todos. Trocar "manda a mensagem errada" por "não anda" não é conserto.
+
+Então a automação passou a executar a **recomendação determinística**: pega a tecla que a caixa
+mostraria em destaque e usa o `valor` da opção correspondente, reusando os ramos que já existem
+(`escolha` continua sendo a mesma string). Nenhuma decisão nova — são as regras que ele escreveu.
+
+- **Tecla 6 fica de fora**, e é a única exceção: "Responder à mão" quer dizer que alguém precisa
+  escrever. Automatizar seria concluir sem responder.
+- Tecla recomendada que não está na lista (travada por variável) cai na caixa **com o motivo no
+  log** — silêncio ali viraria "a rodada ignorou a regra" sem ninguém saber por quê.
+- Toda execução automática vai para o Andamento com o **id da regra** e a tecla.
+
+### RETROCESSOS — o que muda para pior ou de forma inesperada
+
+1. **A automação passa a enviar por conta própria em mais casos.** Antes só a escolha da IA era
+   auto-executada; agora as regras determinísticas também são, e **a maioria delas envia** (tecla 1
+   modelo, 4 pedir dados, 5 momento, 7 interesse, 8 agradecer, 9 perguntar). Antes, regra + IA
+   `incerto` abria a caixa e esperava. É mais throughput e menos supervisão — e é a mudança de
+   comportamento mais importante deste commit.
+2. **A tecla 0 da IA some dos casos com regra.** Se ele gostava de ver a opinião da IA ao lado da
+   recomendação determinística, isso acabou: agora a IA só é consultada quando nenhuma regra casou.
+3. **Não há trava de duplicata na execução automática por regra.** A do caminho da IA
+   (`wasSent` + `ehHoje`) não foi replicada, porque as regras já tratam repetição por dentro
+   (`pedidoHoje` troca o rótulo para "DE NOVO" e perde o destaque, `ja-respondemos-antes` existe).
+   **É uma suposição, não uma verificação** — se aparecer repetição vinda de regra, é aqui.
+4. **Nada disto tem teste automatizado.** As doze suítes não importam `panel.js` (precisa de
+   `window`), então o que cobre a mudança é `checar-referencias` (toda opção tem ramo) e leitura.
+   A validação de verdade é a primeira rodada com a caixa ligada.
+
+### Custo, de lado bom
+
+A IA deixa de ser chamada em todo contato com regra conhecida — que é a maioria da fila. O gasto por
+rodada cai junto, sem nenhuma trava nova.
+
+**Arquivos:** `src/panel/panel.js`, `manifest.json` (1.11.0 → 1.12.0), `CLAUDE.md`, `registro.md`.
+Doze suítes, `checar-modulos` e `checar-referencias` passando.
+
+---
+
+
+## 2026-09-01 (noite) — Sigla do estado matava o "informada"; dossiê passou a ser sob demanda
+
+**Pedidos:** *"duas mensagens parecidas em pouco espaço de tempo"*, *"o dossiê deve ser consultado
+somente quando for necessário"*, *"não pegou canoas pela segunda vez"* e *"mesmo caso"* (Erechim).
+
+### 1. Sigla do estado no fim: a cidade era reconhecida e mesmo assim não valia
+
+Dois prints seguidos: `Canoas RS` e `Erechim rgds`, os dois com **Cidade: (vazia)** no painel.
+
+O casamento **nunca falhou** — `matchCity("Canoas RS")` sempre devolveu Canoas, confiança exata. O
+que falhava era a igualdade que decide se a pessoa **INFORMOU** a cidade, em `cidadeSozinha` e
+`isCityAlone`: `"canoas rs" !== "canoas"`. Resultado: `informada: false`, a cidade não substituía o
+CRM e ficava esperando um clique que, na rodada automatizada, ninguém dá.
+
+**Duas rodadas de conserto, e a segunda é a lição.** A primeira cobriu só `rs` — e o print seguinte
+trouxe `rgds` (Rio Grande do Sul abreviado), que passou batido. Lista incompleta produz *"às vezes
+pega a cidade, às vezes não"*, que é o pior sintoma possível: parece defeito aleatório. Hoje
+`SUFIXO_DO_ESTADO` cobre `rs`, `rgs`, `rgds`, `r s` e o estado por extenso, com os separadores
+espaço, vírgula, ponto, hífen e barra.
+
+**A guarda que não podia cair junto:** `rio grande` **sozinho é município** e não entra na lista —
+só o estado por extenso. Tem teste dos dois lados.
+
+Novo: `cities.semSufixoDeEstado`, exportada e testada. 16 asserções de regressão com as strings
+exatas dos dois prints.
+
+### 2. O dossiê agora é consultado só quando faz falta
+
+`gabinete.precisaDoDossie(mensagens)` — pura e testada — decide se a conversa toca em voto, urna,
+número, partido, cargo, eleição ou nos nomes da chapa. Se não tocar, o dossiê não entra e a chamada
+custa o de sempre.
+
+É a mesma ordem que já vale para a IA inteira: **a regex decide antes, de graça**. Aqui ela decide
+se vale pagar pelo contexto, não o que responder. E **erra para o lado de incluir**: sem dossiê a IA
+decide sobre nome que não conhece, que é o problema que ele existe para resolver; incluir à toa
+custa meio centavo.
+
+Efeito: numa fila típica ("Amém", "obrigado", nome e cidade), o dossiê fica fora de quase todas as
+chamadas — os +46% por chamada viram quase nada no total do mês.
+
+### 3. As duas mensagens parecidas — DIAGNOSTICADO, NÃO consertado
+
+Print: às 14:22 saiu uma bênção; o contato respondeu *"Amém 🙏 🙏"* às 14:37; às 14:58 saiu outra
+mensagem, também terminando em bênção. 36 minutos, dois textos parecidos.
+
+A camada determinística **acertou**: `ultimaEhDespedida("Amém 🙏 🙏")` devolve `true`, e a regra
+`ultima-e-despedida` de `sugestao.js` manda concluir sem responder. Ela só nunca foi consultada.
+
+**Causa raiz:** em `processarRespondido`, `avaliarComIA()` é chamada na linha ~3537, **antes** de
+`sugerirAcao`, que só roda por volta da 3989 ao montar a caixa. O comentário logo acima da chamada
+afirma que *"a regex já tirou os casos conhecidos… a IA só é chamada para o que sobrou"* — e isso
+**não é verdade nesse caminho**. O desenho pretendido está escrito em outro lugar do arquivo
+(*"`sugestao === null` é o gatilho da avaliação"*), e o código não o cumpre.
+
+Com `automatizarComIA` ligado, a escolha da IA é executada direto. Ou seja: **a automação inverte a
+prioridade documentada** e a camada de regex vira decorativa. A trava de duplicata não pega porque
+compara por MODELO, e os dois textos eram modelos diferentes — exatamente a armadilha já registrada
+no `CLAUDE.md`.
+
+**Não consertei por conta própria** porque o conserto certo é reordenar: calcular `sugerirAcao`
+antes e só chamar a IA quando ele devolver `null`. Isso exige extrair o construtor de contexto da
+sugestão (~25 campos, montado inline dentro da função da caixa) e mover o tratamento do `escalar`
+junto. É mexer no meio da rodada que está rodando em produção hoje, e a decisão de quando fazer isso
+é dele. **Enquanto não for feito, "Automatizar com IA" pode responder a quem só se despediu.**
+
+**Arquivos:** `src/lib/cities.js` (`semSufixoDeEstado`, `SUFIXO_DO_ESTADO`), `src/lib/extract.js`
+(as duas comparações), `src/lib/gabinete.js` (`precisaDoDossie`), `src/panel/panel.js` (as quatro
+chamadas passam as mensagens), `tests/parser.test.mjs` (+16), `tests/gabinete.test.mjs` (novo, 19),
+`manifest.json` (1.10.0 → 1.11.0). **Doze** suítes, `checar-modulos` e `checar-referencias`
+passando.
+
+**Pendências:** (1) a reordenação regex-antes-da-IA acima; (2) nome numa mensagem separada não é
+extraído (*"Maria da Glória flores"* depois de *"Erechim rgds"*) — mesma família do `isCityAlone`
+já registrado.
+
+---
+
+
+## 2026-09-01 — Dossiê "quem é quem" virou arquivo, com pesquisa e trava de revisão
+
+**Pedido:** *"seria muita informação pra botar no espaço da extensão, teria que ser um arquivo tipo
+claude.md que a ia leia e pegue de lá, crie esse arquivo pra extensão já, faça a pesquisa na
+internet e ponha os dados lá (…) depois me passe os dados que encontrou que vou revisar para não
+mandar algo errado pra ia da extensão"*.
+
+### O que já existia
+
+O dossiê **não** era novo: `store.ia.gabinete` é uma textarea na Config que já ia para o prompt de
+sistema, e `montarSistema`/`montarSistemaRascunho` já recebiam o parâmetro `gabinete`. O que faltava
+era o meio de escrever muito texto — textarea é ruim de escrever, pior de revisar, e não tem
+histórico. Em arquivo tem `git diff`, que para dado que chega a eleitor é o que importa.
+
+### O que foi feito
+
+- **`src/data/gabinete.md`** — o dossiê, preenchido com pesquisa de 01/09/2026, com fonte por bloco
+  e **confiança marcada linha a linha**: `[CONFIRMADO]` tem fonte independente, `[CONFERIR]` não
+  tem e não pode ser afirmado a um contato.
+- **`src/lib/gabinete.js`** — carrega o arquivo, corta o que é recado para humano (o aviso de
+  status, as fontes, o espaço em branco dele) e junta com a textarea. Falha de leitura devolve
+  string vazia em vez de estourar: sem dossiê a IA escala mais, que é o lado seguro.
+- **`ia.dossieAtivo`, nascendo `false`** — a trava. O conteúdo veio da internet e ele pediu para
+  revisar antes. A textarea continua valendo com o dossiê desligado: o que ELE escreveu já foi
+  revisado por definição.
+- Interruptor na Config, com o motivo escrito na tela em vez de um checkbox mudo.
+
+### O que a pesquisa achou, e o que ela NÃO achou
+
+Confirmado com fonte: Capitão Martim é **Martim Todesco Adreani (Republicanos)**, deputado estadual,
+29.040 votos em 2022, candidato à **reeleição** em 2026 (convenção de 26/07/2026). Zucco é
+**Luciano Lorenzini Zucco (PL)**, candidato a **governador**, **número 22**, vice **Silvana Covatti
+(PP)**, coligação **"O Rio Grande pode Mais"** (PL, Republicanos, Novo, Podemos).
+
+**Não achou:** o número de urna de 2026 do Capitão Martim. O `10122` é de **2022** — a fonte que
+parecia confirmá-lo para 2026 era uma página da eleição passada, e o mesmo resultado dizia "35
+anos", que bate com 2022 e não com 2026. Ficou `[CONFERIR]`.
+
+### A armadilha que a pesquisa expôs: existem DOIS Zuccos
+
+**Luciano Zucco** (PL, governador, nº 22) e **Delegado Zucco** (Republicanos, deputado estadual,
+reeleição) — irmãos, mesmo campo, mesma eleição, mesmo estado. Confundir os dois é o erro mais
+provável deste dossiê, e ele tem seção própria no arquivo com a regra: "Zucco" sozinho é o
+candidato a governador; se o contexto puder ser o Delegado, **escale**.
+
+De quebra, o placeholder da textarea na Config dizia *"Capitão Martim — deputado estadual, número
+10122, **PL**"*. Ele é **Republicanos**. Corrigido — era desinformação plantada na própria tela.
+
+### Custo: medido, e com um efeito contraintuitivo
+
+O dossiê acrescenta **~1.284 tokens** ao prompt de sistema (4.621 caracteres depois do corte).
+
+| | entrada/chamada | custo/chamada |
+|---|---|---|
+| hoje | ~2.349 | US$ 0,0028 |
+| com o dossiê | ~3.633 | ~US$ 0,0041 (+46%) |
+
+**Mas:** o mínimo de cache do Haiku 4.5 é **4.096 tokens**, e o sistema com dossiê fica em ~2.584 —
+ainda **fora**. Se o prompt crescer mais ~1.500 tokens (o "Espaço do Thiago" preenchido), ele
+**passa a cachear**, e aí a leitura custa 10%: a chamada cairia para **~US$ 0,0015**, mais barata
+que hoje. É o raro caso em que escrever MAIS sai mais barato — vale quando as chamadas vêm em
+rajada, como na rodada, por causa do TTL de 5 minutos do cache.
+
+**Arquivos:** `src/data/gabinete.md` (novo), `src/lib/gabinete.js` (novo), `src/lib/store.js`
+(`dossieAtivo`), `src/panel/panel.js` (interruptor, placeholder corrigido, as três chamadas de IA e
+a estimativa de cache agora usando a mesma fonte), `manifest.json` (1.9.0 → 1.10.0), `registro.md`.
+Onze suítes, `checar-modulos` e `checar-referencias` passando.
+
+**Pendência:** a revisão dele. Enquanto `dossieAtivo` for `false`, nada do arquivo chega à IA.
+
+---
+
+
+## 2026-09-01 — Tema de Interesse, Função e Partido saíram; COREDE de Canoas conferido
+
+**Pedido:** *"remova qualquer coisa relacionada a tema de interesse, partido, função, não preciso
+preencher isso e veja se o corede de canoas está correto, aparentemente está errado"*.
+
+### O COREDE de Canoas está CERTO — e a confusão tem nome
+
+`Canoas → Vale do Rio dos Sinos`. Conferido contra as duas listas do `coredes-rs.json`, que batem
+exatamente com a composição oficial da SPGG:
+
+- **Vale do Rio dos Sinos (14):** Araricá, Campo Bom, **Canoas**, Dois Irmãos, Estância Velha,
+  Esteio, Ivoti, Nova Hartz, Nova Santa Rita, Novo Hamburgo, Portão, São Leopoldo, Sapiranga,
+  Sapucaia do Sul.
+- **Metropolitano Delta do Jacuí (10):** Alvorada, Cachoeirinha, Eldorado do Sul, Glorinha,
+  Gravataí, Guaíba, Porto Alegre, Santo Antônio da Patrulha, Triunfo, Viamão.
+
+Canoas está na **Região Metropolitana de Porto Alegre**, e é daí que vem a impressão de erro — mas
+RMPA e COREDE são divisões diferentes, com recortes diferentes. Nada a corrigir. O arquivo tem os
+28 COREDEs.
+
+**Se ainda aparecer errado na tela**, o suspeito não é o dado e sim o rótulo: se a etiqueta no CRM
+não se chamar exatamente "Vale do Rio dos Sinos", ela precisa de entrada em `store.tagAliases`
+(hoje só "Paranhana Encosta da Serra" → "Vale do Paranhana").
+
+### A remoção
+
+Saíram **"Tema de Interesse", "Temas de Interesse", "Função" e "Partido"**: do que a extensão grava,
+do que o parser extrai, das variáveis de resposta e da tela.
+
+Não foram só escondidos. Parser que extrai o que ninguém grava custa processamento por mensagem e
+deixa `guesses.partido` e companhia atravessando o painel esperando um consumidor que não existe —
+é assim que campo removido volta sozinho no primeiro caminho novo.
+
+| onde | o que saiu |
+|---|---|
+| `fields.js` | `CLASSIFY_FIELDS` caiu para `['Nome', 'Cidade', 'Responsável']` |
+| `extract.js` | blocos de Função/Partido/Tema, `TEMA_KEYWORDS`, `matchDict`, `matchPartido`, `matchTema`, o parâmetro `temaField` e o `funcao` de `findStructured` |
+| `store.js` | resposta "tema-opcoes", `temaByNumber`, `dicts.funcao` |
+| `vars.js` | `{{funcao}}` e `{{partido}}` |
+| `panel.js` | linhas de palpite, contexto de variáveis, botão "Aprender múltipla escolha (Tema)" |
+
+### O que NÃO saiu, e por quê
+
+- **A lista de siglas de partido ficou.** Ela tem uma segunda função, que agora é a única:
+  `extract.limparSiglas` a usa para tirar a sigla de dentro do NOME ("Jeane do PL" → "Jeane").
+  Apagá-la faria o nome do contato ser gravado com a sigla colada. Tem teste.
+- **O suporte a MULTISELECT em `contract.js` ficou**, com teste. Não há mais campo usando, mas o
+  construtor de requisição continua correto para o dia em que houver.
+- **Nada foi apagado no CRM.** A remoção é da extensão; o que já está gravado nesses campos
+  continua lá.
+- **`CLASSIFY_FIELDS` é o único ponto por onde a extensão escreve campo de contato** — tirar dali é
+  o que garante que nenhum caminho novo volte a preencher os quatro por engano.
+
+### Duas coisas que você vai notar na tela
+
+1. **A resposta "Perguntar o tema (opções numeradas)" continua aparecendo** para quem já usava: o
+   que foi removido é o DEFAULT, e a sua cópia está salva no `chrome.storage`. Apague na aba
+   Respostas quando quiser.
+2. **Resposta salva que use `{{funcao}}` ou `{{partido}}` passa a bloquear o envio**, com o motivo
+   na tela. É o comportamento certo — melhor recusar do que mandar o marcador cru para o eleitor.
+
+**Arquivos:** `src/lib/fields.js`, `src/lib/extract.js`, `src/lib/store.js`, `src/lib/vars.js`,
+`src/panel/panel.js`, `tests/parser.test.mjs`, `manifest.json` (1.8.1 → 1.9.0), `CLAUDE.md`,
+`registro.md`. Onze suítes, `checar-modulos` e `checar-referencias` passando.
+
+---
+
+
+## 2026-09-01 — Ponto colado matava o casamento de cidade
+
+**Pedido:** *"está falhando em pegar cidade"*, com print de um contato que escreveu
+`Ulises Sanchez / S.do Livramento.RS` e caiu como **"Cidade escrita fora do padrão"**.
+
+### Causa raiz
+
+`cities.normalize` **apagava** o ponto (`.replace(/\./g, '')`) em vez de trocá-lo por espaço.
+Apagar cola as palavras vizinhas e destrói a fronteira de palavra:
+
+```
+"Livramento.RS"  →  "livramento.rs"  →  apaga o ponto  →  "livramentors"
+```
+
+E aí o encurtamento `/\blivramento\b/` não casava mais. Isolado por variante, o defeito era só a
+forma colada — as outras sempre funcionaram:
+
+| escrito | antes | depois |
+|---|---|---|
+| `Livramento RS` | ✓ | ✓ |
+| `Livramento - RS` | ✓ | ✓ |
+| `S.do Livramento` | ✓ | ✓ |
+| `Livramento.RS` | **✗** | ✓ |
+| `S.do Livramento.RS` | **✗** | ✓ |
+
+A abreviação `S.` nunca foi o problema: o alias `/\bs\.\s*/ → 'sao '` já a resolvia, e o
+encurtamento de "livramento" salvava o resto por casamento de trecho.
+
+### O estrago não parava na cidade
+
+Sem cidade reconhecida, a rodada sugeriu **"4 Pedir dados e concluir"** para quem tinha acabado de
+mandar nome e cidade. Falha de parser vira pergunta errada na tela — e o contato receberia um
+pedido de dados que ele já respondeu.
+
+### Conserto
+
+Uma linha: o ponto vira espaço. Mexe no normalizador que **tudo** usa, então as onze suítes foram
+rodadas antes e depois — todas passando. Teste de regressão novo em `parser.test.mjs` com a string
+exata do contato, mais as travas do que não pode regredir junto (espaço, hífen, abreviação colada,
+e "texto que não é município continua sem casar").
+
+### Defeito VIZINHO, não consertado — decisão do Thiago
+
+Mesmo com a cidade certa, **o nome não é extraído** quando a cidade casa por encurtamento:
+
+```
+"Ulises Sanchez / Santana do Livramento"  →  nome: Ulises Sanchez  ✓
+"Ulises Sanchez / Livramento"             →  nome: (nada)          ✗
+"Ulises Sanchez / S.do Livramento.RS"     →  nome: (nada)          ✗
+```
+
+`extract.isCityAlone` exige que o pedaço seja **exatamente** o nome oficial do município para
+separar nome de cidade. `Livramento` não é, então `findStructured` não dispara.
+
+Não foi afrouxado de propósito: essa é a trava que impede o slogan do anúncio de virar nome
+("Vamos Juntos Mudar O"), e ela tem teste. Afrouxar exige uma regra nova que aceite o encurtamento
+sem aceitar frase solta — e isso é decisão dele, porque o erro cai em dado de eleitor real.
+
+**Arquivos:** `src/lib/cities.js` (uma linha + o porquê), `tests/parser.test.mjs` (grupo novo),
+`manifest.json` (1.8.0 → 1.8.1), `CLAUDE.md`, `registro.md`. Onze suítes passando.
+
+---
+
+
 ## 2026-09-01 - A IA responde a caixa da cidade (a rodada parava ali)
 
 **Relato dele:** *"falta a IA aceitar a cidade e arrumar caso esteja errado, esta parando o

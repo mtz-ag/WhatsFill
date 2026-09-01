@@ -28,6 +28,34 @@
  */
 export const REGRAS = [
   {
+    id: 'sem-interesse',
+    tecla: 's',
+    /**
+     * Recusou ou veio hostilizar → etiqueta e conclui, **sem responder**.
+     *
+     * Pedido dele (01/09/2026): *"falando mal do bolsonaro e martim é aliado do bolsonaro, esse
+     * tipo nós botamos etiqueta sem interesse e concluímos sem responder"*, depois de a rodada
+     * pedir os dados a dois contatos sem interesse — um deles respondendo *"Não porque vocês
+     * pensam que os gaúchos são burros…"*.
+     *
+     * **Fica em PRIMEIRO, acima até da etiqueta que dispensa da fila.** Quem pediu para não ser
+     * chamado não pode receber mais nada, e é a única regra aqui em que continuar mandando
+     * mensagem gera denúncia — o sinal que derruba número. Nenhuma outra decisão faz sentido
+     * depois desta.
+     *
+     * **Tecla `s`, não um dígito.** As dez teclas numéricas já têm significado no dedo dele, e
+     * trocar o sentido de uma é como o "2" digitado na conversa acabou concluindo atendimento.
+     *
+     * Quem detecta é `cortesia.semInteresse`, e ela exige sinal forte: recusa explícita, negativa
+     * na abertura que não seja uma das benignas ("não faço parte de nenhum grupo" é resposta de
+     * apoiador), ou insulto **junto** de fala em segunda pessoa. Insulto ao adversário em terceira
+     * pessoa é o que mais aparece nesta base e não conta — tratar isso como recusa tiraria da fila
+     * justamente quem mais apoia.
+     */
+    quando: (c) => !!c.semInteresse,
+    motivo: (c) => `${c.semInteresse.motivo} — marque "sem interesse" e conclua sem responder.`,
+  },
+  {
     id: 'etiqueta-dispensa-da-fila',
     tecla: '2',
     /**
@@ -73,6 +101,32 @@ export const REGRAS = [
      */
     quando: (c) => !!c.pedeRespostaPessoal,
     motivo: (c) => `${c.pedeRespostaPessoal.motivo}. Responda à mão.`,
+  },
+  {
+    id: 'respondeu-nossa-pergunta',
+    tecla: '6',
+    /**
+     * **Nós perguntamos, ela respondeu. Isso precisa de gente.**
+     *
+     * Print de 01/09/2026, e o pior caso que este projeto já produziu: a rodada perguntou às 14:22
+     * *"em que você precisa de ajuda?"*, a contato respondeu às 16:19 *"é sobre as irregularidades
+     * sobre compra assistida em eldorado do sul"* — denúncia sobre programa público, que é
+     * literalmente o trabalho de um mandato — e recebeu **material de campanha**.
+     *
+     * A regra `pediu-algo-sem-dizer-o-que` funcionou: ela é que mandou a pergunta. O que faltava
+     * era o passo seguinte. A própria docstring dela dizia que *"a recusa só cabe depois de ela
+     * dizer o que quer"* — e esse "depois" não existia em lugar nenhum, então a resposta caía até
+     * `conteudo-pedido`, que ENVIA propaganda.
+     *
+     * **Fica acima de `pediu-algo-sem-dizer-o-que`** para não perguntar de novo o que ela acabou
+     * de responder.
+     *
+     * Não tem desfecho automático de propósito: quem abriu um caso perguntando tem que ler a
+     * resposta. Tecla 6 segura o contato até alguém tratar — e como a tecla 6 consulta a IA, ela
+     * ainda pode sugerir uma resposta pronta, mas nenhuma regra decide isso sozinha.
+     */
+    quando: (c) => !!c.respondeuComoAjudar,
+    motivo: (c) => `você perguntou em que podia ajudar e ela respondeu: "${c.respondeuComoAjudar.trecho}". Leia e responda.`,
   },
   {
     id: 'pediu-algo-sem-dizer-o-que',
@@ -373,9 +427,9 @@ export const REGRAS = [
  * @param {object} ctx retrato do contato — ver `REGRAS`
  * @returns {{id:string, tecla:string, motivo:string}|null}
  */
-export function sugerirAcao(ctx) {
+export function sugerirAcao(ctx, fluxo) {
   const c = ctx || {};
-  for (const regra of REGRAS) {
+  for (const regra of ordenar(fluxo)) {
     let casa = false;
     try {
       casa = !!regra.quando(c);
@@ -384,9 +438,283 @@ export function sugerirAcao(ctx) {
       casa = false;
     }
     if (!casa) continue;
-    const tecla = typeof regra.tecla === 'function' ? regra.tecla(c) : regra.tecla;
+
+    // A tecla que ELE escolheu na janela do fluxo vence a do código. Se ele não escolheu nenhuma,
+    // vale a do código — que pode ser função (a mesma situação pedindo teclas diferentes).
+    const daConfig = fluxo?.teclas?.[regra.id];
+    const tecla = daConfig || (typeof regra.tecla === 'function' ? regra.tecla(c) : regra.tecla);
     if (!tecla) continue; // a regra casou mas não há tecla para ela agora
     return { id: regra.id, tecla, motivo: regra.motivo(c) };
   }
   return null;
+}
+
+/**
+ * As regras na ordem que ELE definiu, sem as que ele desligou.
+ *
+ * **Regra nova do código entra na posição do código, não no fim.** Se a `ordem` salva não menciona
+ * um id, ele não é ignorado nem jogado para o fundo: é inserido onde o código o colocou, relativo
+ * às regras vizinhas que ele conhece. Sem isso, a regra `respondeu-nossa-pergunta` — criada em
+ * 01/09 para impedir propaganda em cima de denúncia — nasceria em último lugar em quem já tinha
+ * ordem salva, e o defeito voltaria calado na atualização.
+ *
+ * Configuração ausente ou vazia devolve o código puro, então a janela nascer em branco não muda
+ * comportamento nenhum.
+ */
+export function ordenar(fluxo) {
+  const desligadas = new Set(fluxo?.desligadas || []);
+  const ativas = REGRAS.filter((r) => !desligadas.has(r.id));
+
+  /**
+   * Só ids que existem, **sem repetição, valendo a PRIMEIRA aparição**.
+   *
+   * O `Map` abaixo é construído por índice, e sem a deduplicação um id repetido ficava com a
+   * posição da ÚLTIMA ocorrência — ou seja, arrastar uma regra para o topo não a movia se ela
+   * também aparecesse embaixo. Peguei isso na primeira verificação; é o tipo de defeito que na
+   * tela pareceria "arrastei e não mudou nada".
+   */
+  const vistos = new Set();
+  const salva = (fluxo?.ordem || []).filter(
+    (id) => REGRAS.some((r) => r.id === id) && !vistos.has(id) && vistos.add(id)
+  );
+  if (!salva.length) return ativas;
+
+  const pos = new Map(salva.map((id, i) => [id, i]));
+
+  // Para id que a ordem salva não conhece, herda a posição do vizinho de CIMA que ela conhece —
+  // é o que mantém a regra nova onde o código a pôs.
+  let herdada = -1;
+  const chave = new Map();
+  REGRAS.forEach((r, iCodigo) => {
+    if (pos.has(r.id)) herdada = pos.get(r.id);
+    // `+0.001 * iCodigo` desempata as novas entre si, preservando a ordem do código.
+    chave.set(r.id, pos.has(r.id) ? pos.get(r.id) : herdada + 0.001 * (iCodigo + 1));
+  });
+
+  return ativas.slice().sort((a, b) => chave.get(a.id) - chave.get(b.id));
+}
+
+/**
+ * O que a janela do Fluxo mostra de cada regra.
+ *
+ * Fica AQUI e não no painel de propósito: rótulo e descrição ao lado da regra que descrevem é o
+ * que mantém os dois em sincronia. Descrição que mora em outro arquivo envelhece na primeira
+ * mudança de condição — e a janela passaria a explicar uma regra que já mudou.
+ *
+ * `efeito` é o que o eleitor recebe, e é a informação mais importante da tela:
+ *  - `envia`    — sai mensagem para ele;
+ *  - `silencio` — não sai nada (conclui ou pula);
+ *  - `gente`    — precisa de uma pessoa escrever;
+ *  - `depende`  — a tecla varia com o contexto (manda a do momento, ou só conclui).
+ */
+/**
+ * O que cada tecla da caixa da rodada FAZ, e o que o eleitor recebe por ela.
+ *
+ * Mora aqui, junto das regras, porque e o que fecha a ramificacao: a regra e a CONDICAO, a
+ * tecla e o DESFECHO, e a janela do fluxo desenha a seta entre as duas. Enquanto a lista viveu
+ * so dentro da janela, nada impedia uma regra apontar para tecla sem verbete, e nenhum teste
+ * alcancava isso.
+ *
+ * `efeito` e o mesmo vocabulario de `SOBRE`, e e por isso que o teste consegue exigir que os
+ * dois concordem: regra de tecla fixa rotulada "envia" cuja tecla nao manda nada e cartao
+ * mentindo na tela.
+ */
+export const TECLAS = {
+  '1': { rotulo: 'Manda o modelo aprovado do conteúdo', efeito: 'envia' },
+  '2': { rotulo: 'Pula, deixa o atendimento aberto', efeito: 'silencio' },
+  '3': { rotulo: 'Conclui sem enviar nada', efeito: 'silencio' },
+  '4': { rotulo: 'Pede nome e cidade, e conclui', efeito: 'envia' },
+  '5': { rotulo: 'Mensagem do momento, e conclui', efeito: 'envia' },
+  '6': { rotulo: 'Você responde à mão', efeito: 'gente' },
+  '7': { rotulo: 'Pergunta interesse + pede dados', efeito: 'envia' },
+  '8': { rotulo: 'Agradece o apoio, e conclui', efeito: 'envia' },
+  '9': { rotulo: 'Pergunta em que pode ajudar (deixa aberto)', efeito: 'envia' },
+  s: { rotulo: 'Marca sem interesse, conclui sem responder', efeito: 'silencio' },
+};
+
+export const SOBRE = {
+  'sem-interesse': {
+    rotulo: 'Recusou ou veio hostilizar',
+    efeito: 'silencio',
+    quando:
+      'Pediu para não receber mais, respondeu "não" seco, ou xingou em segunda pessoa. Marca a ' +
+      'etiqueta de sem interesse e conclui sem responder. Xingar o adversário em terceira pessoa ' +
+      'NÃO conta — isso é apoiador.',
+  },
+  'etiqueta-dispensa-da-fila': {
+    rotulo: 'Tem a etiqueta que dispensa da fila',
+    efeito: 'silencio',
+    quando: 'Já está engajado. Pula e deixa o atendimento aberto onde estava.',
+  },
+  'ultima-pede-resposta-pessoal': {
+    rotulo: 'Áudio sem transcrição, arquivo, ou texto longo',
+    efeito: 'gente',
+    quando:
+      'Só dá para responder depois de abrir. Áudio TRANSCRITO curto não cai mais aqui: o conteúdo ' +
+      'passa a decidir, não o formato.',
+  },
+  'respondeu-nossa-pergunta': {
+    rotulo: 'Você perguntou em que podia ajudar e ela respondeu',
+    efeito: 'gente',
+    quando:
+      'Quem abre um caso perguntando tem que ler a resposta. Segura o contato até alguém tratar — ' +
+      'foi criada porque uma denúncia sobre programa público recebeu material de campanha.',
+  },
+  'pediu-algo-sem-dizer-o-que': {
+    rotulo: 'Pediu algo e não disse o quê',
+    efeito: 'envia',
+    quando:
+      '"Preciso da sua força." Pergunta em que pode ajudar e deixa aberto. Negar ou responder ' +
+      'antes de saber ofende quem só queria apoio político (Lei 9.504/97).',
+  },
+  'ultima-e-despedida': {
+    rotulo: 'Só se despediu',
+    efeito: 'silencio',
+    quando: '"Amém", "é nós", "abraço". A conversa acabou: conclui sem mandar mais nada.',
+  },
+  'voltou-por-outro-anuncio': {
+    rotulo: 'Ignorou o pedido e voltou por outro anúncio',
+    efeito: 'depende',
+    quando: 'Manda a mensagem do momento; se ela já saiu, só conclui.',
+    ramos: [
+      { tecla: '5', se: 'a mensagem do momento ainda não saiu para ela' },
+      { tecla: '3', se: 'ela já recebeu a do momento, ou não há uma configurada' },
+    ],
+  },
+  'nunca-pediram-dados': {
+    rotulo: 'Veio do anúncio e o formulário nunca saiu',
+    efeito: 'envia',
+    quando:
+      'Pede nome e cidade e conclui. Quem respondeu que não vai ao evento cai aqui: sai "não tem ' +
+      'problema" junto com o pedido.',
+  },
+  'ultima-e-so-reacao': {
+    rotulo: 'Só figura, emoji ou link',
+    efeito: 'depende',
+    ramos: [
+      { tecla: '5', se: 'você ainda não respondeu hoje' },
+      { tecla: '3', se: 'você já respondeu hoje, ou não há mensagem do momento' },
+    ],
+    quando:
+      'Não há conteúdo para responder, e ignorar também não serve. Mensagem do momento, ou conclui ' +
+      'se já respondemos hoje.',
+  },
+  'pergunta-aberta': {
+    rotulo: 'Fez uma pergunta de razão ou de posição',
+    efeito: 'gente',
+    quando:
+      'Nenhuma resposta pronta responde, e o modelo em cima da pergunta dela vira material de ' +
+      'campanha.',
+  },
+  'so-expressa-apoio': {
+    rotulo: 'Só apoio, sem pergunta e sem pedido',
+    efeito: 'envia',
+    quando: 'Agradece o apoio e conclui. É o desfecho de quem só apareceu para dizer que está com vocês.',
+  },
+  'ja-respondemos-antes': {
+    rotulo: 'Já entregamos algo antes',
+    efeito: 'depende',
+    ramos: [
+      { tecla: '5', se: 'nada saiu hoje e a do momento ainda não foi' },
+      { tecla: '3', se: 'já respondemos hoje, ou a do momento já saiu' },
+    ],
+    quando:
+      'O modelo é a entrega inicial; quem já foi atendido e volta está aparecendo, não pedindo de ' +
+      'novo. Pedido de dados NÃO conta como entrega. Esta regra está acima de "conteúdo pedido" ' +
+      'por decisão sua (31/08) — se ela mandar a do momento onde devia mandar o modelo, é a ordem ' +
+      'que vale rediscutir.',
+  },
+  'conteudo-pedido': {
+    rotulo: 'Conteúdo reconhecido, com modelo mapeado',
+    efeito: 'envia',
+    quando:
+      'Manda o modelo aprovado do conteúdo que ela pediu. Sem mapeamento em Config → "Modelo por ' +
+      'conteúdo", esta regra não dispara.',
+  },
+  'nome-sem-sentido': {
+    rotulo: 'O nome do cadastro não serve',
+    efeito: 'envia',
+    quando:
+      'Apelido automático do anúncio, sigla colada, cidade no campo do nome. Pede os dados e conclui.',
+  },
+  'nunca-perguntaram-interesse': {
+    rotulo: 'Nunca perguntamos se ela quer conteúdo',
+    efeito: 'envia',
+    quando: 'Pergunta o interesse e pede nome e cidade na mesma mensagem, e conclui.',
+  },
+  'pedido-hoje-sem-resposta': {
+    rotulo: 'Pedimos hoje e nada voltou',
+    efeito: 'silencio',
+    quando: 'Repetir o pedido no mesmo dia é insistir. Conclui e espera.',
+  },
+};
+
+/**
+ * Os DESFECHOS de uma regra que casou — o galho do "casou" no mapa da janela.
+ *
+ * Uma regra não é uma linha, é uma bifurcação: **casou** leva ao desfecho (a tecla, e o que o
+ * eleitor recebe por ela) e **não casou** leva à regra de baixo. Enquanto o mapa desenhava só a
+ * segunda, o que sai para a pessoa ficava resumido a um selo de três palavras.
+ *
+ * Devolve mais de um ramo quando a MESMA situação pede teclas diferentes conforme o contexto —
+ * é a `tecla` que é função, em três regras. Tecla fixada por ele na janela colapsa a bifurcação:
+ * a escolha dele vence a do código em `sugerirAcao`, e o mapa tem que mostrar isso, senão a tela
+ * promete dois caminhos onde só existe um.
+ *
+ * @returns {Array<{tecla:string, se:string, rotulo?:string, efeito?:string, fixada?:boolean}>}
+ */
+export function ramosDaRegra(id, fluxo) {
+  const regra = REGRAS.find((r) => r.id === id);
+  if (!regra) return [];
+  const fixada = fluxo?.teclas?.[id];
+  if (fixada) return [{ tecla: fixada, se: '', fixada: true, ...(TECLAS[fixada] || {}) }];
+  if (typeof regra.tecla === 'function') {
+    return (SOBRE[id]?.ramos || []).map((r) => ({ ...r, ...(TECLAS[r.tecla] || {}) }));
+  }
+  return [{ tecla: regra.tecla, se: '', ...(TECLAS[regra.tecla] || {}) }];
+}
+
+/**
+ * O que o eleitor recebe por esta regra, JÁ CONTANDO a tecla que ele fixou.
+ *
+ * O `efeito` do verbete é o do código. Fixar a tecla 's' numa regra rotulada "envia" deixava o
+ * cartão com a borda de "sai mensagem" prometendo o contrário do que ia acontecer.
+ */
+export function efeitoDaRegra(id, fluxo) {
+  const ramos = ramosDaRegra(id, fluxo);
+  if (!ramos.length) return SOBRE[id]?.efeito || 'depende';
+  const efeitos = new Set(ramos.map((r) => r.efeito).filter(Boolean));
+  return efeitos.size === 1 ? [...efeitos][0] : 'depende';
+}
+
+/**
+ * Regra cujo desfecho não fecha — o que o mapa desenharia errado.
+ *
+ * Três coisas de uma vez: tecla sem verbete em `TECLAS` (galho apontando para lugar nenhum),
+ * regra de tecla-função sem `ramos` (bifurcação sem os dois lados escritos) e selo que discorda
+ * da tecla (cartão dizendo "sai mensagem" numa regra que conclui em silêncio).
+ */
+export function regrasComDesfechoIncoerente() {
+  const problemas = [];
+  for (const r of REGRAS) {
+    const ramos = ramosDaRegra(r.id, null);
+    if (!ramos.length) {
+      problemas.push(r.id + ': a tecla e funcao e falta a lista "ramos" no verbete');
+      continue;
+    }
+    for (const ramo of ramos) {
+      if (!TECLAS[ramo.tecla]) problemas.push(r.id + ': tecla "' + ramo.tecla + '" sem verbete em TECLAS');
+    }
+    const declarado = SOBRE[r.id]?.efeito;
+    const real = efeitoDaRegra(r.id, null);
+    if (declarado && declarado !== real) {
+      problemas.push(r.id + ': verbete diz "' + declarado + '" e a tecla faz "' + real + '"');
+    }
+  }
+  return problemas;
+}
+
+/** Toda regra do código tem verbete? A janela mostraria linha muda se faltasse. */
+export function regrasSemVerbete() {
+  return REGRAS.filter((r) => !SOBRE[r.id]).map((r) => r.id);
 }

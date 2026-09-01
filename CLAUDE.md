@@ -69,6 +69,9 @@ src/lib/hsm.js          modelos de mensagem aprovados
 src/lib/vars.js         variáveis dos templates e bloqueio por variável faltante
 src/lib/ia.js           prompt, esquema e TRAVAS da decisão por IA (puro, testado)
 src/lib/ia-cliente.js   ponte painel <-> service worker (a chave nunca entra na página)
+src/lib/sugestao.js     tabela de regras da rodada + o fluxo editavel (puro, testado)
+src/fluxo.html/.css/.js JANELA do fluxo: o mapa visual da cascata, editavel
+src/lib/fluxo-msg.js    a mensagem que pede ao service worker para abrir a janela
 src/data/coredes-rs.json  município -> COREDE (planilha oficial da SPGG-RS)
 tools/make-icons.mjs    desenha os ícones
 tests/*.test.mjs        Node puro, sem dependência
@@ -95,6 +98,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 - **A API valida `Origin`.** Requisição fora da aba do mobiliza volta `500 Origin not allowed`.
 - **O painel nativo "Dados do contato" não se atualiza** após escrita externa; só relê no F5.
   Não use ele para verificar nada.
+- **A PASTA DO REPOSITORIO E A EXTENSAO, entao arquivo temporario ali quebra o carregamento.**
+  Nome comecando com `_` e reservado pelo Chrome: um `_s.cjs` que eu deixei na raiz derrubou a
+  extensao inteira com *"Cannot load extension with file or directory name _s.cjs"* e
+  *"Nao foi possivel carregar manifesto"* (01/09/2026). O erro nao aponta para o codigo, aponta
+  para o manifesto — da a impressao de que o manifesto quebrou.
+  **Script de apoio vai para a pasta de rascunho fora do repositorio, nunca para a raiz.** Se for
+  inevitavel criar na raiz, apague no mesmo comando. `tests/_harness.mjs` e do projeto e nao
+  incomoda: o Chrome reclama do que esta na RAIZ.
 - **Recarregar a extensão órfã as abas abertas** (`Extension context invalidated`): o painel
   falha em silêncio até dar F5. Já causou diagnóstico errado duas vezes.
 - **Uma pasta, DUAS extensões — e trocar de branch troca o que o Chrome carrega.** O Chrome
@@ -235,6 +246,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   "Vale do Paranhana"), e `store.tagAliases` é o que resolve — em `analisarParaCidades` os apelidos
   são achatados como chaves extras do mapa. Sem isso, COREDE existente vira "falta criar" e
   duplica a etiqueta com outro nome.
+- **COREDE não é Região Metropolitana, e a diferença parece bug.** Canoas está na RMPA e o COREDE
+  dela é **Vale do Rio dos Sinos**, não Metropolitano Delta do Jacuí — junto de Esteio, Sapucaia e
+  São Leopoldo. Foi conferido em 01/09/2026 contra a composição oficial: as duas listas do
+  `coredes-rs.json` batem município a município. **Antes de "corrigir" um COREDE que parece errado,
+  confira o arquivo contra a planilha da SPGG** — mudar o mapa por intuição de proximidade
+  geográfica erra a etiqueta de milhares de contatos de uma vez, e o filtro dele passa a mentir.
+  Se o COREDE certo aparecer errado na TELA, o suspeito é o rótulo (ver `store.tagAliases` acima),
+  não o dado.
 - **O CRM tem etiquetas de RÓTULO REPETIDO, então nunca compare etiqueta por id.** Ele tem
   "1 Sem Retorno"/"2 Sem Retorno", e apareceu "Serra" duas vezes com ids diferentes: um mapa
   `nome → etiqueta` guarda uma e o contato carrega a outra. Comparar id produziu
@@ -271,6 +290,100 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `cities.conferirGrafia` é quem decide, e a regra que a mantém útil é: **acento e caixa não são
   erro** (resolvem para o mesmo município e geram a mesma etiqueta) — avisar disso treinaria a
   ignorar o aviso.
+- **A cidade pode ser RECONHECIDA e mesmo assim não valer.** `matchCity("Canoas RS")` sempre achou
+  Canoas; o que falhava era a igualdade que decide se a pessoa **informou** a cidade
+  (`cidadeSozinha`, `isCityAlone`), porque `"canoas rs" !== "canoas"`. O sintoma na tela é
+  **Cidade: (vazia)** com a cidade escrita na conversa, e o efeito é `informada: false`: não
+  substitui o CRM e fica esperando um clique que a rodada automatizada nunca dá. Quem compara
+  "isto é exatamente o município?" usa `cities.semSufixoDeEstado`, nunca `normalize` cru.
+  **A lista de siglas precisa ser completa ou o defeito parece aleatório:** o primeiro conserto
+  cobriu só `rs` e o print seguinte trouxe `rgds` — hoje são `rs`, `rgs`, `rgds`, `r s` e o estado
+  por extenso. **`rio grande` sozinho nunca entra: é município.**
+- **Comentário que descreve a ordem não é a ordem.** Em `processarRespondido` a IA era chamada
+  **antes** de `sugerirAcao`, com um comentário logo acima afirmando que a regex já havia filtrado
+  os casos conhecidos. Não havia. Com "Automatizar com IA" ligado, a escolha da IA era executada
+  direto e regra nenhuma era consultada: quem só escreveu *"Amém"* recebeu mais uma mensagem 36 min
+  depois, porque `ultima-e-despedida` nunca foi olhada. A trava de duplicata não pegou porque
+  compara por MODELO, e eram modelos diferentes. **Consertado em 01/09/2026** — hoje
+  `sugestao === null` é o gatilho da IA, como o desenho sempre disse. Se for mexer nessa ordem de
+  novo: o teste é ler o CÓDIGO, não o comentário.
+- **Pergunta que a rodada faz precisa de regra para a RESPOSTA — senão o caso desce a tabela até
+  quem ENVIA.** A regra que manda perguntar *"em que você precisa de ajuda?"* existia e funcionava;
+  o passo seguinte não existia. A contato respondeu *"é sobre as irregularidades sobre compra
+  assistida em Eldorado do Sul"* — denúncia sobre programa público, o trabalho do mandato — e
+  recebeu **material de campanha**, porque sem sinal o caso caiu em `conteudo-pedido` (01/09/2026).
+  Criou opção que faz pergunta? A regra que reconhece a resposta entra no mesmo commit, e ela é
+  `respondeu-nossa-pergunta` (tecla 6). O reconhecimento é por **invariante da nossa pergunta**
+  (`templates.ehPerguntaComoAjudar`) mais a HORA das mensagens.
+- **A tabela de regras é mais ESTREITA que a IA, e isso muda o cálculo de quando pular a IA.** Para
+  o que as regras **não sabem**, pular a IA economiza. Para o que elas **erram**, pular a IA tira a
+  rede de segurança — e foi o que a reordenação de 01/09 fez neste caso: uma regra casou (tecla 1,
+  enviar modelo), a IA não foi ouvida, e a propaganda saiu. Antes da reordenação ela provavelmente
+  teria escalado.
+- **A ORDEM das regras agora e dele, na JANELA do fluxo (src/fluxo.html) — e regra nova do codigo entra na POSICAO DO
+  CODIGO.** `sugestao.ordenar` herda a posicao do vizinho de cima que a ordem salva conhece. Sem
+  isso, regra nova nasceria em ultimo lugar em quem ja tem ordem salva, e um conserto viraria
+  defeito calado na atualizacao — foi o risco concreto da `respondeu-nossa-pergunta`, criada para
+  impedir propaganda em cima de denuncia. Tem teste. Duas consequencias a lembrar: **ordem errada
+  agora e decisao dele**, e **desligar regra alta nao e neutro** (as de baixo passam a decidir, e
+  varias ENVIAM). Condicao continua no codigo de proposito: e ela que decide o que sai para eleitor.
+
+- **A janela do fluxo desenha o DESFECHO, e desfecho que envelhece vira mapa mentiroso.** O
+  verbete (`SOBRE`) descreve a condicao; o que sai para o eleitor vem de `TECLAS` + `ramos`, e as
+  tres regras cuja `tecla` e FUNCAO precisam dos dois lados escritos. `regrasComDesfechoIncoerente`
+  exige as tres coisas (tecla com verbete, funcao com os dois ramos, selo concordando com a tecla)
+  e o teste roda a funcao nas 8 combinacoes de `respondidoHoje` x `momentoJaEnviado` x
+  `podeMandarMomento` para comparar com a lista escrita. **Mexeu na funcao `tecla`? O `ramos` do
+  verbete entra no mesmo commit** — senao a janela promete um desfecho que o codigo nao produz
+  mais, e e olhando essa janela que ele decide a ORDEM. Lembrar tambem que **fixar a tecla na
+  janela muda o efeito da regra**: o `efeito` do verbete e o do codigo, e quem le a cor do cartao
+  tem que ler `efeitoDaRegra(id, fluxo)`, nunca `SOBRE[id].efeito` cru.
+
+- **Regra nova no TOPO da tabela tem que ser conferida contra as regras que ela passou a vencer.**
+  Pôr algo em primeiro lugar é dizer "isto vence as outras quinze", e em 01/09/2026 eu não olhei
+  quais: `sem-interesse` passou a engolir `confirmaPresenca`, e quem respondeu ao convite do evento
+  com *"Não conseguirei ir!"* foi etiquetado sem interesse e **concluído em silêncio** — a pessoa
+  mais engajada possível (veio pelo anúncio E respondeu) tratada como quem pediu para não ser mais
+  chamada. Eu havia testado 19 casos, 12 deles falso positivo, e nenhum era RSVP, porque eu estava
+  pensando em hostilidade. **Checklist:** liste as regras que a nova passa a vencer e escreva um
+  teste para cada uma que ainda deve ganhar dela.
+- **Recusar o EVENTO não é recusar o CONTATO.** `RECUSA_DE_PRESENCA` em `cortesia.js` tira
+  `semInteresse` da frente quando a negativa é sobre ir/comparecer/estar presente — aí
+  `confirmaPresenca` decide e a tecla 4 manda "não tem problema" + pede os dados. A ordem interna
+  importa: a recusa explícita vem ANTES, porque *"não vou mais receber isso, me tira da lista"* tem
+  verbo de ir dentro e é recusa de contato.
+- **Detector de "sem interesse" vive ou morre pelo FALSO POSITIVO.** Apoiador xinga o adversário em
+  terceira pessoa o tempo todo (*"o Lula é um ladrão safado, golpista"*) — é o tipo de mensagem mais
+  comum desta base. Regra que olhasse só o insulto tiraria da fila justamente quem mais apoia e
+  deixaria rótulo permanente no CRM. Por isso `cortesia.semInteresse` exige insulto **junto** de
+  fala em segunda pessoa, e mantém uma lista de **negativas benignas**: *"Não faço parte de nenhum
+  grupo político"* é resposta de apoiadora (está no teste do parser), e "não sei" é resposta à
+  cidade. Das 19 asserções da regra, 12 são falso positivo — é onde está o risco.
+- **A tecla 6 ("Responder à mão") é justamente onde a IA tem que ser chamada.** Ela significa, por
+  definição, que nenhuma regra sabe o que mandar — o buraco que a avaliação de contexto existe para
+  tapar. Ao reordenar regra-antes-da-IA eu deixei a tecla 6 sem IA, e a rodada passou a parar em
+  todo áudio e todo texto longo: *"ela parou de ver praticamente tudo e está passando pra mim"*
+  (01/09). Hoje a condição é `!sugestao || sugestao.tecla === '6'`. As outras teclas seguem sem IA
+  de propósito: quem manda concluir (3) ou mandar o modelo (1) já sabe o que fazer.
+- **Áudio TRANSCRITO não "precisa ser aberto" — e alegar isso na tela é mentira visível.** O motivo
+  nasceu quando áudio chegava vazio; hoje a transcrição vem na mensagem, o painel a mostra e o
+  parser a lê. A caixa aparecia com a transcrição inteira do lado dizendo que era preciso abrir, e o
+  estrago não era cosmético: a regra da tecla 6 vencia **pelo formato**, sem ninguém olhar o
+  conteúdo. Regra que decide por tipo de mídia precisa perguntar antes se há texto disponível.
+- **Automatizar a rodada é executar as REGRAS, não só a IA.** A metade que o conserto acima exigiu:
+  com a regra decidindo antes, a IA não é chamada nos casos conhecidos, `recomendada` fica nula e a
+  caixa abriria esperando clique em todo contato com regra — a rodada pararia em quase todos.
+  Trocar "manda mensagem errada" por "não anda" não é conserto. Hoje a automação usa a tecla que a
+  caixa mostraria em destaque. **Exceção única: a tecla 6** ("Responder à mão"), que por definição
+  precisa de gente. Consequência a lembrar: **a maioria das regras ENVIA**, então automação ligada
+  manda mensagem sem perguntar em muito mais casos do que antes.
+- **Pontuação que some COLA as palavras — troque por espaço, nunca apague.** `normalize` apagava o
+  ponto, então "Livramento.RS" virava "livramentors" e o encurtamento `/\blivramento\b/` deixava de
+  casar: a fronteira de palavra ia embora junto com o ponto. As formas com espaço e com hífen
+  sempre funcionaram, o que faz o defeito parecer "às vezes não pega cidade" — e o contato real que
+  escreveu `S.do Livramento.RS` (01/09/2026) recebeu sugestão de **pedir os dados que ele acabara
+  de mandar**. Vale para qualquer separador que você for limpar num normalizador: espaço preserva
+  a fronteira, sumiço destrói. Tem teste de regressão com a string exata.
 - **Aceitar a cidade no popup marca `confirmada: true`, e é isso que libera as etiquetas.** Sem a
   marca, o aceite gravava a cidade e deixava cidade/COREDE de fora, porque `etiquetaConfiavel` só
   olhava `crm`/`exata`. Confirmação dele vale como valor do CRM: foi ele que olhou a conversa.
@@ -424,6 +537,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   só `entrada.substituiu`; contato com campo Cidade vazio ganhava o COREDE novo e ficava com o
   velho junto (visto ao vivo: "Caçapava do Sul" com Campanha **e** Médio Alto Uruguai). Regra:
   COREDE que não é o da cidade sai — mas só se o certo ficar, senão o contato fica sem nenhum.
+- **`chrome.windows` NAO existe em content script — como `chrome.power`.** O painel encaixado roda
+  dentro da pagina do mobiliza, e `chrome.windows.create` ali e `undefined`. Eu escrevi a primeira
+  versao do botao do fluxo com a chamada direta no painel e peguei antes de rodar; a lista de APIs
+  que so o service worker alcanca ja tinha `power` e agora tem `windows`. Abertura de janela vira
+  mensagem para o `background.js`, e a constante da mensagem fica em arquivo proprio
+  (`lib/fluxo-msg.js`) porque os dois lados a importam.
 - **Aba acordada e computador acordado são problemas DIFERENTES.** O áudio do `keepalive`
   impede o Chrome de congelar a aba; ele não impede o Windows de suspender por inatividade, e
   rodada longa não toca em teclado nem mouse. A segunda trava é `chrome.power` (`'display'`, no
@@ -584,6 +703,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > com o texto base fazia a resposta do contato deixar de ser lida como resposta — *"deu a cidade
 > e não pegou"*, 01/09. Case pelo **invariante** (a linha `Nome / Cidade`), que é o que os testes
 > já protegem em cada texto.
+>
+> **E vale para os DOIS lados: reconhecer a nossa PERGUNTA tem o mesmo problema.** Comparar com o
+> texto atual do template só enxerga o que saiu com a redação de hoje — e este projeto reescreve
+> resposta com frequência, então **cada reescrita deixa uma safra de conversas invisíveis**. A
+> Loreta recebeu *"Para eu poder salvar seu contato me passe seu: Nome / Cidade"* em 31/08, redação
+> que já não existia; nenhum trecho literal casou, `jaRespondemosAntes` concluiu que já havíamos
+> ENTREGADO algo a ela, e a rodada mandou a mensagem do momento **em vez do modelo que ela nunca
+> recebeu**. Quem precisa saber "esta mensagem nossa era o pedido de dados?" usa
+> `templates.ehPedidoDeDados`, nunca o texto do template.
 
 ## Testes
 
@@ -596,10 +724,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
 > `src/` e reclama só de `SyntaxError`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as onze suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as doze suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

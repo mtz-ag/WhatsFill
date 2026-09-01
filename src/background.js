@@ -12,6 +12,7 @@
 
 import { RPC } from './lib/rpc.js';
 import { MSG_ENERGIA } from './lib/keepalive.js';
+import { MSG_FLUXO } from './lib/fluxo-msg.js';
 import { MSG_IA, atender } from './lib/ia-cliente.js';
 import { podeGastar, acumularGasto, custoEmDolares, MODELO_PADRAO } from './lib/ia.js';
 import * as store from './lib/store.js';
@@ -190,3 +191,52 @@ function sanitize(bounds) {
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
+
+/**
+ * A JANELA DO FLUXO — aberta daqui, e não do painel.
+ *
+ * `chrome.windows` **não existe em content script**, e o painel encaixado roda dentro da página do
+ * mobiliza: chamar `chrome.windows.create` lá daria `undefined`. É a mesma armadilha do
+ * `chrome.power` da rodada, registrada no CLAUDE.md — e eu quase repeti.
+ *
+ * Uma janela por vez: se ela já está aberta, foca em vez de abrir a segunda. Duas janelas do mesmo
+ * fluxo gravando na mesma chave seria a última a salvar ganhando, sem ninguém entender por quê.
+ */
+let janelaDoFluxoId = null;
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (!msg || msg.type !== MSG_FLUXO) return undefined;
+
+  (async () => {
+    try {
+      if (janelaDoFluxoId !== null) {
+        const existe = await chrome.windows.get(janelaDoFluxoId).catch(() => null);
+        if (existe) {
+          await chrome.windows.update(janelaDoFluxoId, { focused: true });
+          sendResponse({ ok: true, focada: true });
+          return;
+        }
+        janelaDoFluxoId = null;
+      }
+
+      const win = await chrome.windows.create({
+        url: chrome.runtime.getURL('src/fluxo.html'),
+        type: 'popup',
+        focused: true,
+        // Larga porque o mapa e ramificado: condicao a esquerda, desfecho a direita.
+        width: 1400,
+        height: 900,
+      });
+      janelaDoFluxoId = win.id;
+      sendResponse({ ok: true });
+    } catch (err) {
+      sendResponse({ ok: false, motivo: String(err?.message || err) });
+    }
+  })();
+
+  return true; // resposta assíncrona
+});
+
+chrome.windows.onRemoved.addListener((id) => {
+  if (id === janelaDoFluxoId) janelaDoFluxoId = null;
+});

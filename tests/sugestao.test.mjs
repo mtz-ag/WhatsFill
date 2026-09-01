@@ -9,6 +9,7 @@
  */
 import { check, grupo, fim } from './_harness.mjs';
 import { sugerirAcao, REGRAS } from '../src/lib/sugestao.js';
+import * as sugestaoLib from '../src/lib/sugestao.js';
 
 /** Retrato de um contato "sem nada": nenhuma regra deveria casar por acidente. */
 const base = {
@@ -462,6 +463,146 @@ grupo('ja-respondemos-antes: o modelo e a entrega INICIAL');
   check(com({ jaRespondemosAntes: true, perguntaAberta: { motivo: 'p' } })?.tecla === '6', 'pergunta vence');
   check(com({ jaRespondemosAntes: true, pedeRespostaPessoal: { motivo: 'a' } })?.tecla === '6', 'audio vence');
   check(com({ jaRespondemosAntes: true, ultimaEhDespedida: true })?.tecla === '3', 'despedida vence');
+}
+
+grupo('respondeu-nossa-pergunta: propaganda em cima de denuncia (01/09/2026)');
+{
+  /**
+   * O pior caso que este projeto produziu. A rodada perguntou "em que voce precisa de ajuda?" as
+   * 14:22; a contato respondeu as 16:19 que era "sobre as irregularidades sobre compra assistida
+   * em eldorado do sul", e recebeu MATERIAL DE CAMPANHA -- porque nenhuma regra reconhecia a
+   * resposta a uma pergunta nossa, e o caso caia ate `conteudo-pedido`, que ENVIA.
+   */
+  const denuncia = { trecho: 'e sobre as irregularidades sobre compra assistida em eldorado do sul' };
+
+  // O contexto REAL do print: veio de anuncio, logo tem conteudo mapeado e modelo a enviar.
+  const r = sugerirAcao({ respondeuComoAjudar: denuncia, podeEnviar: true, conteudoPedido: 'ADS', podePerguntarAjuda: true });
+  check(r?.id === 'respondeu-nossa-pergunta', `venceu a regra certa: ${r?.id}`);
+  check(r?.tecla === '6', 'tecla 6: responder a mao');
+  check(/irregularidades/.test(r?.motivo || ''), 'o motivo mostra o que ela escreveu');
+
+  // O contraste que importa: sem o sinal, o MESMO contexto volta a mandar o modelo.
+  const semSinal = sugerirAcao({ podeEnviar: true, conteudoPedido: 'ADS', podePerguntarAjuda: true });
+  check(semSinal?.id === 'conteudo-pedido', `sem o sinal ainda seria: ${semSinal?.id}`);
+
+  // Nao pode perguntar DE NOVO o que ela acabou de responder.
+  const ambos = sugerirAcao({ respondeuComoAjudar: denuncia, pedeAlgoIndefinido: { trecho: 'preciso de ajuda' }, podePerguntarAjuda: true });
+  check(ambos?.id === 'respondeu-nossa-pergunta', 'vence pediu-algo-sem-dizer-o-que');
+
+  // Audio continua na frente: ouvir vem antes de qualquer decisao.
+  const comAudio = sugerirAcao({ respondeuComoAjudar: denuncia, pedeRespostaPessoal: { motivo: 'mandou um audio' } });
+  check(comAudio?.id === 'ultima-pede-resposta-pessoal', 'o audio continua vencendo');
+
+  // E a recusa continua acima de tudo.
+  const comRecusa = sugerirAcao({ respondeuComoAjudar: denuncia, semInteresse: { motivo: 'pediu para nao receber mais' } });
+  check(comRecusa?.id === 'sem-interesse', 'sem interesse continua em primeiro');
+}
+
+grupo('o FLUXO editavel: ordem, tecla e ligar/desligar (01/09/2026)');
+{
+  const { REGRAS, SOBRE, ordenar, regrasSemVerbete } = sugestaoLib;
+  const todas = REGRAS.map((r) => r.id);
+  const ctx = { jaRespondemosAntes: true, podeEnviar: true, enviadoHoje: false, modeloJaNaConversa: false };
+
+  // Sem configuracao, nada muda: a janela nascer em branco nao altera comportamento.
+  check(ordenar().length === REGRAS.length, 'sem config, devolve o codigo puro');
+  check(ordenar({}).map((r) => r.id).join() === todas.join(), 'config vazia mantem a ordem do codigo');
+  check(sugerirAcao(ctx)?.id === 'ja-respondemos-antes', 'e a regra vencedora e a do codigo');
+
+  // REORDENAR: e o caso que motivou a janela -- "mandou a do momento onde devia mandar o modelo".
+  const conteudoPrimeiro = ['conteudo-pedido', ...todas.filter((i) => i !== 'conteudo-pedido')];
+  check(sugerirAcao(ctx, { ordem: conteudoPrimeiro })?.id === 'conteudo-pedido', 'arrastar conteudo-pedido para o topo muda quem vence');
+
+  /**
+   * Id REPETIDO na ordem salva tem que valer pela PRIMEIRA aparicao. Sem a deduplicacao, o Map
+   * por indice dava a posicao da ULTIMA -- e na tela isso apareceria como "arrastei e nao mudou".
+   */
+  check(sugerirAcao(ctx, { ordem: ['conteudo-pedido', ...todas] })?.id === 'conteudo-pedido', 'id repetido vale pela primeira aparicao');
+
+  // DESLIGAR: a regra some e as de baixo passam a ser olhadas.
+  check(sugerirAcao({ ultimaEhDespedida: true })?.id === 'ultima-e-despedida', 'ligada, a despedida vence');
+  check(sugerirAcao({ ultimaEhDespedida: true }, { desligadas: ['ultima-e-despedida'] }) === null, 'desligada, ela nao vence mais');
+
+  // TROCAR A TECLA: a escolha dele vence a do codigo.
+  const t = sugerirAcao({ ultimaEhDespedida: true }, { teclas: { 'ultima-e-despedida': '2' } });
+  check(t?.tecla === '2', `tecla trocada: ${t?.tecla}`);
+  check(t?.id === 'ultima-e-despedida', 'e a regra continua sendo a mesma');
+
+  /**
+   * **REGRA NOVA DO CODIGO ENTRA NA POSICAO DO CODIGO, NAO NO FIM.**
+   *
+   * Esta e a assercao que protege contra um defeito silencioso na atualizacao: quem ja tem ordem
+   * salva receberia a regra nova em ultimo lugar. A `respondeu-nossa-pergunta` nasceu para impedir
+   * propaganda em cima de denuncia; no fim da fila ela nunca venceria, e o defeito voltaria calado.
+   */
+  const semANova = todas.filter((i) => i !== 'respondeu-nossa-pergunta');
+  const reordenada = ordenar({ ordem: semANova }).map((r) => r.id);
+  check(reordenada.length === REGRAS.length, 'a regra que a ordem salva nao conhece nao desaparece');
+  check(
+    reordenada.indexOf('respondeu-nossa-pergunta') === REGRAS.findIndex((r) => r.id === 'respondeu-nossa-pergunta'),
+    `entra na posicao do codigo (${reordenada.indexOf('respondeu-nossa-pergunta')})`
+  );
+
+  // Toda regra precisa de verbete, senao a janela mostra linha muda.
+  check(regrasSemVerbete().length === 0, `toda regra tem verbete (faltando: ${JSON.stringify(regrasSemVerbete())})`);
+  const efeitos = new Set(Object.values(SOBRE).map((s) => s.efeito));
+  check([...efeitos].every((e) => ['envia', 'silencio', 'gente', 'depende'].includes(e)), `efeitos validos: ${[...efeitos].join()}`);
+}
+
+grupo('o mapa RAMIFICADO da janela: cada regra tem os dois galhos (01/09/2026)');
+{
+  const { REGRAS, SOBRE, TECLAS, ramosDaRegra, efeitoDaRegra, regrasComDesfechoIncoerente } = sugestaoLib;
+
+  /**
+   * O mapa da janela desenha, ao lado de cada regra, o DESFECHO dela -- a tecla e o que o eleitor
+   * recebe por ela. Isto exige tres coisas fecharem, e as tres sao conferidas aqui: toda tecla
+   * usada tem verbete, toda regra de tecla-funcao escreve os dois lados, e o selo do cartao
+   * concorda com o que a tecla faz. Sem esta assercao, um cartao pode dizer "sai mensagem" numa
+   * regra que conclui em silencio, e ele decidiria a ORDEM olhando um mapa mentiroso.
+   */
+  check(regrasComDesfechoIncoerente().length === 0, `desfechos coerentes (${JSON.stringify(regrasComDesfechoIncoerente())})`);
+
+  const efeitosDeTecla = new Set(Object.values(TECLAS).map((t) => t.efeito));
+  check([...efeitosDeTecla].every((e) => ['envia', 'silencio', 'gente', 'depende'].includes(e)), 'as teclas usam o mesmo vocabulario de efeito');
+
+  // Regra de tecla fixa: um galho so, e ele e a tecla do codigo.
+  const um = ramosDaRegra('conteudo-pedido');
+  check(um.length === 1 && um[0].tecla === '1', `conteudo-pedido tem um desfecho so (${JSON.stringify(um.map((r) => r.tecla))})`);
+
+  /**
+   * **Regra de tecla-funcao tem que ter os dois lados ESCRITOS, e exatamente os que a funcao
+   * devolve.** Este e o teste que impede o mapa envelhecer calado: mexer na funcao sem mexer no
+   * verbete deixa a janela prometendo um desfecho que o codigo nao produz mais.
+   */
+  for (const r of REGRAS.filter((x) => typeof x.tecla === 'function')) {
+    const daFuncao = new Set();
+    for (let m = 0; m < 8; m++) {
+      daFuncao.add(r.tecla({
+        respondidoHoje: !!(m & 1),
+        momentoJaEnviado: !!(m & 2),
+        podeMandarMomento: !!(m & 4),
+      }));
+    }
+    const noMapa = new Set(ramosDaRegra(r.id).map((x) => x.tecla));
+    check([...daFuncao].every((t) => noMapa.has(t)), `${r.id}: o mapa cobre todo desfecho da funcao (funcao: ${[...daFuncao].join()}, mapa: ${[...noMapa].join()})`);
+    check([...noMapa].every((t) => daFuncao.has(t)), `${r.id}: e nao inventa desfecho que a funcao nao produz`);
+    check(ramosDaRegra(r.id).every((x) => x.se), `${r.id}: cada galho diz em que caso ele vale`);
+  }
+
+  /**
+   * **Fixar a tecla colapsa a bifurcacao E muda o efeito.** O `efeito` do verbete e o do codigo;
+   * quem fixa a tecla 's' numa regra rotulada "envia" faz o cartao prometer o contrario do que
+   * vai acontecer. O mapa mostra a tecla efetiva, e `sugerirAcao` confirma que e ela que sai.
+   */
+  const fixada = { teclas: { 'conteudo-pedido': 's' } };
+  const colapsado = ramosDaRegra('conteudo-pedido', fixada);
+  check(colapsado.length === 1 && colapsado[0].fixada === true, 'tecla fixada colapsa a bifurcacao num galho so');
+  check(SOBRE['conteudo-pedido'].efeito === 'envia', 'o verbete do codigo diz "envia"');
+  check(efeitoDaRegra('conteudo-pedido', fixada) === 'silencio', 'e com a tecla fixada o cartao passa a dizer "silencio"');
+  check(sugerirAcao({ ...base, podeEnviar: true }, fixada)?.tecla === 's', 'que e o que a rodada realmente faria');
+
+  // Regra desconhecida nao explode: a janela desenha o que existe, nao o que ela imagina.
+  check(ramosDaRegra('nao-existe').length === 0, 'id inexistente devolve lista vazia');
 }
 
 fim();
