@@ -5,6 +5,54 @@
 
 ---
 
+## 2026-08-31 — "O atendimento foi perguntar os dados": pergunta não é entrega
+
+**Relato dele**, print da Ivone: a caixa dizia *"5: já foi atendida antes (o modelo provavelmente já
+saiu) — mande a mensagem do momento"*. Não tinha saído nada. A nossa única mensagem foi o **pedido de
+dados**, e ela respondeu *"Ivone trentim Borges passo fundo"* dois minutos depois.
+
+> *"o atendimento foi perguntar os dados"*
+
+**Defeito da regra que eu fiz uma hora antes.**
+
+### A causa
+
+`jaRespondemosAntes` era `state.nossas.length > 0` — **qualquer** mensagem nossa. E o pedido de dados
+é uma mensagem nossa.
+
+O erro conceitual: **"já respondemos" não é "já entregamos".** Pergunta não é entrega, e quem só foi
+perguntado é exatamente quem está esperando o material — o oposto de quem já recebeu.
+
+Pior: a Ivone tinha **respondido** o formulário (nome e cidade), então o momento de mandar o modelo
+era justo aquele.
+
+### O conserto
+
+`jaRespondemosAntes` passou a ignorar as nossas mensagens que são PERGUNTA: `pedir-dados`,
+`interesse-conteudo` e `perguntar-como-ajudar`.
+
+A comparação usa o maior pedaço literal de cada texto **e de cada variante** — as respostas prontas
+revezam três textos, e comparar só o base deixaria duas de fora. Conferido nas três variantes do
+pedido de dados.
+
+### Prova nos dois lados
+
+| nossas mensagens | já entregamos? |
+|---|---|
+| só o pedido de dados (base) | não |
+| só o pedido de dados (variante 1 e 2) | não |
+| só a pergunta de interesse | não |
+| um modelo de verdade | **sim** |
+| pedido de dados **e depois** um modelo | **sim** |
+
+**Regra que fica:** resposta pronta nova que seja pergunta tem de entrar nessa lista, senão volta a
+contar como entrega.
+
+**Arquivos:** `src/panel/panel.js`, `CLAUDE.md`, `manifest.json` (0.56.0 → **0.57.0**).
+29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — ADS é origem, não conteúdo: o tema do anúncio passa a vencer
 
 **Relato dele**, print da Seura: ela clicou no anúncio das Escolas Cívico-Militares e escreveu *"Olá!

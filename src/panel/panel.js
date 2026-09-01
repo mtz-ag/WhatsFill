@@ -3580,17 +3580,49 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       })();
 
       /**
-       * Já mandamos alguma mensagem para este contato, em algum momento?
+       * Já **ENTREGAMOS** algo a este contato — e não apenas perguntado algo a ele?
        *
        * Escolha dele (31/08), print do Cris: *"histórico de conversa grande provavelmente já
-       * recebeu modelo de mensagem, vou mandar mensagem do momento"*. O modelo é a entrega
-       * INICIAL; depois dela, quem volta recebe a mensagem da ocasião.
+       * recebeu modelo de mensagem, vou mandar mensagem do momento"*.
        *
-       * `nossas` inclui o que saiu à mão e o que a automação da plataforma mandou — é o mesmo
-       * campo que já resolvia o "modelo já na conversa", e por isso enxerga mais que o registro de
-       * envios do painel.
+       * **A primeira versão contava QUALQUER mensagem nossa, e estava errada.** Print da Ivone,
+       * uma hora depois: a nossa única mensagem tinha sido o **pedido de dados**, ela respondeu
+       * *"Ivone trentim Borges passo fundo"* — e a caixa dizia *"já foi atendida antes (o modelo
+       * provavelmente já saiu)"*. Não tinha saído nada. *"o atendimento foi perguntar os dados"*.
+       *
+       * **Pergunta não é entrega.** Quem só foi perguntado não recebeu nada ainda, e é exatamente
+       * quem está esperando o material. Por isso as nossas mensagens que são PERGUNTA saem da
+       * conta: o pedido de dados, a pergunta de interesse e a de "em que posso ajudar".
+       *
+       * A comparação usa o maior pedaço literal de cada texto, como o `modeloJaNaConversa` — é o
+       * que sobrevive às variáveis substituídas e às três variantes de cada resposta.
        */
-      const jaRespondemosAntes = state.nossas.length > 0;
+      const jaRespondemosAntes = (() => {
+        if (!state.nossas.length) return false;
+
+        const perguntas = ['pedir-dados', 'interesse-conteudo', 'perguntar-como-ajudar']
+          .map((id) => state.templates.find((t) => t.id === id))
+          .filter(Boolean);
+
+        // Todos os textos possíveis de cada pergunta: o base e as variantes.
+        const pedacosDePergunta = [];
+        for (const t of perguntas) {
+          for (const texto of [t.text, ...(t.variantes || [])]) {
+            const literais = String(texto || '')
+              .split(/\{\{[^}]*\}\}/g)
+              .map((x) => achatarTexto(x))
+              .filter((x) => x.length >= 30);
+            if (literais.length) pedacosDePergunta.push(literais.sort((a, b) => b.length - a.length)[0]);
+          }
+        }
+
+        const ehPergunta = (m) => {
+          const texto = achatarTexto(m.texto);
+          return pedacosDePergunta.some((pedaco) => texto.includes(pedaco));
+        };
+
+        return state.nossas.some((m) => !ehPergunta(m));
+      })();
 
       const sugestao = sugerirAcao({
         modeloJaNaConversa,

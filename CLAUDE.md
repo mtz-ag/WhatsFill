@@ -409,6 +409,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   a `nossaUltimaAt`. Regra nova que dependa do que a pessoa acabou de dizer: pense na rajada,
   não na última.
 
+- **"Já respondemos" NÃO é "já entregamos" — pergunta não é entrega.** A regra que manda a mensagem
+  do momento para quem já foi atendido contava QUALQUER mensagem nossa, e o pedido de dados entrava
+  na conta: print da Ivone (31/08), nossa única mensagem foi o formulário, ela respondeu, e a caixa
+  dizia *"o modelo provavelmente já saiu"* — não tinha saído nada. *"o atendimento foi perguntar os
+  dados"*. Quem só foi perguntado é exatamente quem está esperando o material. Hoje
+  `jaRespondemosAntes` tira da conta as nossas mensagens que são PERGUNTA (`pedir-dados`,
+  `interesse-conteudo`, `perguntar-como-ajudar`), comparando o maior pedaço literal de cada texto E
+  de cada variante. **Resposta pronta nova que seja pergunta entra nessa lista.**
 - **ADS é ORIGEM, não conteúdo — e por isso é `fallback`.** Ela diz que a pessoa veio de anúncio,
   não de QUAL anúncio: *"eu tenho um modelo pra escolas civico militares mas a etiqueta ads não faz
   distinção"* (31/08). `hsm.escolherConteudo` ignora os `fallback` quando existe conteúdo
