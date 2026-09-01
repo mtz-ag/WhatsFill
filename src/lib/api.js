@@ -380,6 +380,10 @@ export async function getConversation(sessionId, pageSize = 50) {
         texto,
         tipo: String(m.type || 'TEXT').toUpperCase(),
         transcrito: !m.text && !!transcricao,
+        // `at` existe para separar a RAJADA do resto: as mensagens que chegaram depois da
+        // nossa última são uma conversa pendente, e é o conjunto delas que decide se cabe
+        // resposta pronta. Sem o horário, `entrantes` é uma lista sem antes e depois.
+        at: m.createdAt || null,
       };
     }),
     ultima: ultima

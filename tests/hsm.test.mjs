@@ -7,7 +7,7 @@
  */
 import { check, grupo, fim, lib, mem } from './_harness.mjs';
 
-const { pickRow, PARAMS_NAO_APRENDIDOS, templateParaConteudo, parseContentTemplates, formatContentTemplates, escolherConteudo, decidirSemResposta, decidirReenvio } =
+const { pickRow, PARAMS_NAO_APRENDIDOS, templateParaConteudo, parseContentTemplates, formatContentTemplates, modeloPorTexto, parseModeloPorTexto, formatModeloPorTexto, escolherConteudo, decidirSemResposta, decidirReenvio } =
   await lib('hsm.js');
 
 // Linhas como o diálogo as mostra: nome + começo do texto (line-clamp de uma linha).
@@ -198,6 +198,130 @@ grupo('não mandar duas vezes para o mesmo contato');
   check(decidir({ ultimaFoiNossa: false, horasDesdeUltima: 0.1 }).acao === 'enviar', 'se a última é dele, envia');
   check(decidir({}).acao === 'enviar', 'conversa vazia não bloqueia');
   check(decidir({ ultimaFoiNossa: true }).acao === 'enviar', 'sem saber quando foi, não inventa bloqueio');
+}
+
+
+grupo('escolherConteudo: origem (ADS) e ULTIMO RECURSO, nao desempata com tema');
+{
+  const ADS = { nome: 'ADS', fallback: true };
+  const ESCOLAS = { nome: 'CONTEUDO ESCOLAS' };
+  const FLAVIO = { nome: 'CONTEUDO FLAVIO' };
+
+  /**
+   * Print da Seura (31/08): ela clicou no anuncio das Escolas Civico-Militares e escreveu "Eu
+   * apoio as Escolas Civico-Militares". O modelo que saia era o genarico.
+   *
+   * *"eu tenho um modelo pra escolas civico militares mas a etiqueta ads nao faz distincao"*.
+   *
+   * ADS diz que ela veio de anuncio, nao de QUAL anuncio — e origem, e origem so serve de
+   * conteudo enquanto nada melhor aparecer.
+   */
+  check(escolherConteudo([ADS, ESCOLAS], 'ads').conteudo?.nome === 'CONTEUDO ESCOLAS',
+    'o tema vence o ADS mesmo com ADS como preferido');
+
+  /**
+   * **E vence sem depender do preferido**, que e o que resolve de verdade: antes, dois conteudos
+   * sem preferido eram um ERRO, e a rodada ficava sem modelo.
+   */
+  check(escolherConteudo([ADS, ESCOLAS], '').conteudo?.nome === 'CONTEUDO ESCOLAS',
+    'o tema vence sem preferido configurado');
+
+  /**
+   * Isto ja valia antes do caso das Escolas: com ADS como preferido, ele vencia "CONTEUDO FLAV" e
+   * "CONTEUDO ZUC", que sao temas de verdade e ja existem na base dele.
+   */
+  check(escolherConteudo([ADS, FLAVIO], 'ads').conteudo?.nome === 'CONTEUDO FLAVIO',
+    'o ADS nao vence mais os conteudos que ele ja tinha');
+
+  // So ADS: ele continua sendo a resposta de quem veio do anuncio e nao disse mais nada.
+  check(escolherConteudo([ADS], 'ads').conteudo?.nome === 'ADS', 'so ADS: o ADS vale');
+  check(!escolherConteudo([ADS], '').erro, 'e nem precisa de preferido quando e o unico');
+
+  /**
+   * O desempate por preferido continua existindo **entre iguais** — dois temas de verdade sem
+   * preferido seguem sendo erro, com o motivo na tela. E a regra do projeto: na duvida, recusar.
+   */
+  check(escolherConteudo([FLAVIO, ESCOLAS], '').erro, 'dois temas sem preferido: erro, como antes');
+  check(escolherConteudo([FLAVIO, ESCOLAS], 'conteudo escolas').conteudo?.nome === 'CONTEUDO ESCOLAS',
+    'e o preferido desempata entre temas');
+
+  check(escolherConteudo([], 'ads').erro, 'sem conteudo nenhum: erro');
+}
+
+
+grupo('modeloPorTexto: o TEXTO do anuncio escolhe o modelo, sem etiqueta nova');
+{
+  const modelos = [{ name: 'Campanha Martim2' }, { name: 'Escolas CM' }];
+  const mapa = { 'Olá! Eu apoio as Escolas Cívico-Militares': 'Escolas CM' };
+
+  /**
+   * Pedido dele (01/09): *"nao sera feito etiqueta a etiqueta para os anuncios, agora e so ads; o
+   * padrao para casar o modelo deve ser o texto (Ola! Eu apoio as Escolas Civico-Militares =
+   * modelo)"*.
+   *
+   * A mensagem real vem com emoji e com o que a pessoa acrescentou depois — casar por igualdade
+   * nunca funcionaria.
+   */
+  const real = ['Olá! Eu apoio as Escolas Cívico-Militares 🤙 olá Capitão Martins será a segunda vez'];
+  check(modeloPorTexto(real, mapa, modelos)?.modelo?.name === 'Escolas CM',
+    'casa com emoji e texto extra depois');
+
+  /**
+   * Ele digita a tabela a mao: "Civico" sem acento tem de casar com "Cívico" da mensagem. E o
+   * proprio hsm.js reserva `semAcento` para exatamente este caso.
+   */
+  check(modeloPorTexto(real, { 'Ola! Eu apoio as Escolas Civico-Militares': 'Escolas CM' }, modelos)?.modelo?.name === 'Escolas CM',
+    'acento e caixa nao impedem o casamento');
+
+  /**
+   * **A entrada mais especifica ganha.** Sem isto, "eu apoio" cadastrado para o modelo generico
+   * venceria "eu apoio as escolas" pela ordem de digitacao — e ordem de digitacao nao e decisao.
+   */
+  const dois = { 'eu apoio': 'Campanha Martim2', 'eu apoio as Escolas Cívico-Militares': 'Escolas CM' };
+  check(modeloPorTexto(real, dois, modelos)?.modelo?.name === 'Escolas CM', 'o trecho mais longo ganha');
+
+  // Outro anuncio: nada casa, e a rodada cai no caminho antigo (etiqueta -> modelo).
+  check(modeloPorTexto(['Olá! Eu apoio o Flávio, Zucco e Capitão Martim'], mapa, modelos) === null,
+    'texto que nao esta na tabela devolve null');
+  check(modeloPorTexto(real, {}, modelos) === null, 'tabela vazia devolve null');
+  check(modeloPorTexto([], mapa, modelos) === null, 'sem mensagem devolve null');
+
+  /**
+   * Nome de modelo que a plataforma nao tem vira ERRO, nao null: null faria a rodada cair no
+   * caminho da etiqueta como se nada tivesse acontecido, e o erro de configuracao dele
+   * desapareceria em silencio.
+   */
+  const errado = modeloPorTexto(real, { 'escolas': 'Nao Existe' }, modelos);
+  check(!!errado?.erro, 'modelo inexistente vira erro, nao null');
+  check(/Nao Existe/.test(errado.erro), 'e o erro diz qual nome nao foi achado');
+
+  // Nome repetido na plataforma: nao arrisca escolher.
+  const repetido = modeloPorTexto(real, { 'escolas': 'Igual' }, [{ name: 'Igual' }, { name: 'Igual' }]);
+  check(!!repetido?.erro && /2 modelos/.test(repetido.erro), 'dois modelos com o mesmo nome: recusa');
+}
+
+grupo('parseModeloPorTexto: o trecho NAO e achatado na gravacao');
+{
+  const p = parseModeloPorTexto('Olá! Eu apoio as Escolas Cívico-Militares = Escolas CM\n# comentario\n\nsem igual');
+  check(Object.keys(p).length === 1, 'uma linha valida, comentario e linha sem = ignorados');
+
+  /**
+   * A chave fica como ele digitou. Achatar na gravacao faria a tela mostrar de volta em minusculas
+   * e sem acento — ou seja, mostrar outra coisa. O achatamento acontece so na COMPARACAO.
+   */
+  check(Object.keys(p)[0] === 'Olá! Eu apoio as Escolas Cívico-Militares', 'o trecho fica como digitado');
+  check(p['Olá! Eu apoio as Escolas Cívico-Militares'] === 'Escolas CM', 'e o modelo tambem');
+
+  // O primeiro = separa: nome de modelo pode ter =.
+  const comIgual = parseModeloPorTexto('trecho = Modelo A = B');
+  check(comIgual['trecho'] === 'Modelo A = B', 'o primeiro = separa, o resto e o nome');
+
+  // Ida e volta.
+  const mapa = { 'Olá! Eu apoio X': 'Modelo X' };
+  check(
+    JSON.stringify(parseModeloPorTexto(formatModeloPorTexto(mapa))) === JSON.stringify(mapa),
+    'formatar e reler devolve o mesmo mapa'
+  );
 }
 
 fim();

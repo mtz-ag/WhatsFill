@@ -10,7 +10,13 @@ Atualizado em **31/08/2026**, ao fim de um dia longo de trabalho ao vivo com o T
 ## 1. Antes de qualquer coisa: você está olhando o código certo?
 
 - repositório **`github.com/mtz-ag/WhatsFill`**
-- branch **`claude/extensao-claude-analise-i9spxw`** (é o único deste repo)
+- branch **`claude/extensao-claude-analise-i9spxw`** — é ONDE VOCÊ TRABALHA, e é o de produção
+- **existe um segundo branch: `claude/whatsfill-ia`.** É o WhatsFill+IA: mesma extensão mais uma
+  avaliação de contexto que ESCOLHE entre as respostas prontas (nunca escreve para o eleitor),
+  com chave da Anthropic e teto de gasto mensal. Ele não vai para produção, e a **série da versão**
+  separa os dois: produção é **0.x**, a IA é **1.x**. **Conserto que vale
+  para os dois se faz AQUI e vai para lá por merge** — duplicar `panel.js` (6.000+ linhas) é como
+  as duas versões divergem em uma semana. Nunca implemente a IA neste branch.
 - clone local dele: **`C:\Users\thiag\OneDrive\Documents\GitHub\WhatsFill`**
 
 **Confira a versão antes de diagnosticar qualquer coisa.** O cabeçalho do painel mostra a versão
@@ -45,15 +51,22 @@ entrada. **Ele vai pedir situações novas; é lá que elas entram.**
 Ordem em 31/08 (de cima para baixo):
 
 1. `etiqueta-dispensa-da-fila` — tem "engajado" → **2, pular**
-2. `ultima-pede-resposta-pessoal` — áudio, vídeo, texto 400+ → **6, à mão**
-3. `ultima-e-despedida` — "é nós", "abraço", "amém mestre" → **3, concluir**
-4. `voltou-por-outro-anuncio` → **5** ou **3** (se já recebeu a mensagem do momento)
-5. `ultima-e-so-reacao` — figura, emoji, link → **5**, ou **3** se já respondemos hoje
+2. `ultima-pede-resposta-pessoal` — áudio, arquivo, texto 400+ → **6, à mão**
+3. `pediu-algo-sem-dizer-o-que` — "preciso da sua força", "me ajuda" → **9, perguntar** ⚠ maior risco
+4. `ultima-e-despedida` — "é nós", "abraço", "amém" → **3, concluir**
+5. `voltou-por-outro-anuncio` → **5** ou **3** (se já recebeu a mensagem do momento)
 6. `nunca-pediram-dados` — veio do anúncio, sem cidade, formulário nunca saiu → **4**
-7. `conteudo-pedido` → **1, mandar o modelo**
-8. `nome-sem-sentido` → **4, pedir dados**
-9. `nunca-perguntaram-interesse` → **7**
-10. `pedido-hoje-sem-resposta` → **3**
+7. `ultima-e-so-reacao` — figura, emoji, link, **vídeo** → **5**, ou **3** se já respondemos hoje
+8. `pergunta-aberta` — "por que", "qual a posição", "o que ele acha" → **6, à mão**
+9. `so-expressa-apoio` — apoio em mensagem PRÓPRIA (ela escreveu mais de uma vez) → **8**
+10. `conteudo-pedido` → **1, mandar o modelo + agradecer a atenção**
+11. `nome-sem-sentido` → **4, pedir dados**
+12. `nunca-perguntaram-interesse` → **7**
+13. `pedido-hoje-sem-resposta` → **3**
+
+**6 e 7 trocaram de lugar em 31/08** (print da Marta: emoji como única mensagem de quem veio do
+anúncio). Quem já recebeu o formulário ou já tem cidade não casa na 6 e continua caindo na 7 —
+é a condição da 5 que impede a inversão de estragar o caso que criou a 6.
 
 **A regra só recomenda, nunca decide.** Todas as opções continuam na tela. É essa fronteira que
 permite uma regra agressiva sem risco — o pior caso é um destaque no lugar errado.

@@ -4,9 +4,22 @@
    - .wf-window: ocupando uma janela própria do Chrome.
 
    As variáveis ficam no .wf-root (e não em :root/:host) exatamente para funcionar igual nos
-   dois contextos. */
+   dois contextos.
 
-.wf-root {
+   .wf-pergunta-fundo entra no MESMO seletor porque a caixa da rodada vive FORA do .wf-root
+   (31/08): esconder o painel é um transform, e transform arrasta os filhos — a caixa deslizava
+   para fora da tela junto. Como irmã, ela não herdaria variável nenhuma e ficaria sem cor.
+   Um seletor compartilhado em vez de duas listas: duas listas divergem na primeira cor nova. */
+
+/*
+  SÓ as variáveis aqui, e a separação é deliberada: a caixa da rodada precisa das cores, mas NÃO
+  pode receber o `background` nem o `display` do painel. A camada dela é transparente e
+  `pointer-events: none` de propósito — é o que mantém a conversa legível e clicável por baixo
+  (armadilha registrada no CLAUDE.md). Um `background: var(--wf-bg)` aqui cobriria a tela toda de
+  branco.
+*/
+.wf-root,
+.wf-pergunta-fundo {
   --wf-bg: #ffffff;
   --wf-fg: #1f2937;
   --wf-muted: #6b7280;
@@ -18,7 +31,10 @@
   --wf-warn-bg: #fffbeb;
   --wf-err: #dc2626;
   --wf-chip: #f3f4f6;
+}
 
+/* O corpo do painel. Fica só nele, e não na caixa flutuante. */
+.wf-root {
   display: flex;
   flex-direction: column;
   background: var(--wf-bg);
@@ -27,8 +43,21 @@
   box-sizing: border-box;
 }
 
-/* Segue o tema da própria plataforma, informado a cada atualização de estado. */
-.wf-root.wf-dark {
+/* A caixa herda a fonte do painel sem herdar o fundo. */
+.wf-pergunta-fundo {
+  font: 13px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+/*
+  Segue o tema da própria plataforma, informado a cada atualização de estado.
+
+  O `~ .wf-pergunta-fundo` existe porque a caixa da rodada é IRMÃ do painel, não filha (ver o
+  cabeçalho): sem ele, a plataforma no escuro deixava a caixa branca. A caixa é sempre anexada
+  depois do painel, e `~` pega irmão posterior.
+*/
+.wf-root.wf-dark,
+.wf-root.wf-dark ~ .wf-pergunta-fundo {
   --wf-bg: #111827;
   --wf-fg: #e5e7eb;
   --wf-muted: #9ca3af;
@@ -297,10 +326,20 @@
  * justamente de ler o que a pessoa escreveu. Agora a camada é só um trilho invisível
  * (`pointer-events: none`); quem recebe clique é a caixa.
  */
+/*
+  A caixa vive fora do .wf-root, então precisa do z-index por conta própria — antes ela herdava
+  o 998 do painel. Mesmo valor, e pela mesma razão: os overlays do Material (menu, diálogo,
+  select) vivem em 1000 e têm de abrir POR CIMA.
+
+  `flex-direction: row` explícito e não herdado: o `column` do painel não chega aqui (as
+  variáveis são compartilhadas, o layout não), e deixar isto escrito evita a dúvida na próxima vez.
+*/
 .wf-pergunta-fundo {
   position: fixed;
   inset: 0;
+  z-index: 998;
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   padding: 16px;
@@ -341,6 +380,15 @@
 
 /* A recomendação, em cima de tudo. Ela tem que ser lida ANTES dos dados e das opções: o destaque
    na tecla dizia QUAL era a sugerida, nunca POR QUÊ — e o porquê é o que permite discordar. */
+/**
+ * Nenhuma regra reconheceu o caso. Cor própria e não a do destaque: a faixa azul quer dizer
+ * "aperte esta tecla", e usar a mesma para "não sei" ensinaria a ignorar as duas.
+ */
+.wf-pergunta-semregra {
+  border-left-color: #a1a1aa;
+  background: rgba(161, 161, 170, 0.14);
+}
+
 .wf-pergunta-recomendada {
   margin: 6px 0 8px;
   padding: 7px 9px;

@@ -23,6 +23,12 @@ const base = {
   pedeRespostaPessoal: null,
   etiquetaQueDispensa: null,
   ultimaEhSoReacao: false,
+  perguntaAberta: null,
+  soExpressaApoio: null,
+  rajadaEhSoRepasse: false,
+  pedeAlgoIndefinido: null,
+  podePerguntarAjuda: true,
+  jaRespondemosAntes: false,
   podeMandarMomento: true,
   temEtiquetaDeCidade: true,
   podePedirDados: true,
@@ -262,6 +268,200 @@ grupo('veio do anuncio e o formulario NUNCA saiu');
 
   // Audio continua ganhando.
   check(com({ ...nunca, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6', 'audio vence');
+}
+
+
+grupo('emoji como PRIMEIRA mensagem de quem veio do anuncio: pedir dados vence a reacao');
+{
+  /**
+   * Print da Marta (31/08): veio do anuncio, mandou so um emoji, sem cidade e sem nunca ter
+   * recebido o formulario. A caixa sugeria a mensagem do momento — *"nesse caso a pessoa
+   * respondeu o anuncio com um emoji, eu tenho que pedir os dados"*.
+   */
+  const marta = com({
+    ultimaEhSoReacao: true,
+    jaPediramDados: false,
+    temEtiquetaDeCidade: false,
+    podeEnviar: true,
+    conteudoPedido: 'ADS',
+  });
+  check(marta?.tecla === '4', 'pedir dados vence o emoji: ' + JSON.stringify(marta));
+  check(marta?.id === 'nunca-pediram-dados', 'e e a regra do formulario que casa');
+
+  /**
+   * O contra-teste, que e o que impede a troca de ordem de estragar o caso original.
+   *
+   * Quem JA recebeu o formulario tem conversa, e responder emoji dele com "me manda seu nome e
+   * cidade" e o robo que a regra de baixo existe para evitar. Continua caindo na reacao.
+   */
+  check(com({ ultimaEhSoReacao: true, jaPediramDados: true, temEtiquetaDeCidade: false })?.tecla === '5',
+    'ja pediram: o emoji continua indo para a mensagem do momento');
+
+  // Ter cidade tambem basta para nao cair no pedido de dados.
+  check(com({ ultimaEhSoReacao: true, jaPediramDados: false, temEtiquetaDeCidade: true })?.tecla === '5',
+    'com cidade, o emoji vai para a mensagem do momento');
+
+  // Pedido hoje nao se repete, mesmo com emoji e sem cidade.
+  check(com({ ultimaEhSoReacao: true, jaPediramDados: false, temEtiquetaDeCidade: false, pedidoHoje: true })?.tecla === '5',
+    'ja pedido hoje: nao insiste, cai na reacao');
+
+  // Audio continua vencendo tudo menos a etiqueta que dispensa.
+  check(com({ ultimaEhSoReacao: true, jaPediramDados: false, temEtiquetaDeCidade: false, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6',
+    'audio vence o pedido de dados');
+}
+
+
+grupo('pergunta-aberta: vence o modelo, perde para as regras de cima');
+{
+  const P = { motivo: 'pergunta' };
+
+  // Print da Clair: tinha conteudo mapeado, e o modelo vencia.
+  const clair = com({ perguntaAberta: P, podeEnviar: true, conteudoPedido: 'ADS' });
+  check(clair?.tecla === '6', 'a pergunta vence o modelo: ' + JSON.stringify(clair));
+  check(clair?.id === 'pergunta-aberta', 'e e a regra da pergunta');
+
+  // Perde para tudo que ja estava certo acima dela.
+  check(com({ perguntaAberta: P, etiquetaQueDispensa: 'engajado' })?.tecla === '2', 'etiqueta dispensa vence');
+  check(com({ perguntaAberta: P, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6', 'audio tambem manda para 6');
+  check(com({ perguntaAberta: P, ultimaEhDespedida: true })?.tecla === '3', 'despedida vence');
+  check(com({ perguntaAberta: P, jaPediramDados: false, temEtiquetaDeCidade: false })?.tecla === '4', 'pedir dados vence');
+
+  // Sem pergunta, nada muda.
+  check(com({ podeEnviar: true, conteudoPedido: 'ADS' })?.id === 'conteudo-pedido', 'sem pergunta o modelo continua indo');
+}
+
+
+grupo('so-expressa-apoio: e a EXCECAO, e vence o modelo quando casa');
+{
+  const A = { motivo: 'apoio' };
+
+  /**
+   * Print do Ciro (31/08), e uma reversao do mesmo dia.
+   *
+   * De manha eu pus esta regra ABAIXO de `conteudo-pedido`, argumentando que agradecer antes de
+   * entregar engoliria o pedido. Ele desfez: *"a prioridade e responder o que foi falado, depois
+   * mandar modelo"*. Quem escreveu uma mensagem propria espera resposta aquilo; o material vai na
+   * rodada seguinte.
+   */
+  const ciro = com({ soExpressaApoio: A, podeEnviar: true, conteudoPedido: 'ADS' });
+  check(ciro?.tecla === '8', 'o apoio VENCE o modelo: ' + JSON.stringify(ciro));
+  check(ciro?.id === 'so-expressa-apoio', 'e e a regra do apoio');
+
+  /**
+   * **O que impede isto de engolir o pedido e o TAMANHO, nao a ordem.**
+   *
+   * Ele explicou: *"sao dois tipos de agradecimento… agradecer o apoio e um adicional, uma
+   * excecao a regra; se nao tivesse o texto de baixo eu mandaria o modelo, agradeceria a atencao
+   * e encerraria"*. Apoio curto nao chega em `soExpressaApoio` (ver `APOIO_ELABORADO`), entao
+   * `soExpressaApoio` vem nulo e a tecla 1 continua sendo o desfecho — com o agradecimento pela
+   * ATENCAO, que ja sai junto do modelo.
+   */
+  check(com({ soExpressaApoio: null, podeEnviar: true, conteudoPedido: 'ADS' })?.id === 'conteudo-pedido',
+    'apoio curto (nulo aqui) segue recebendo modelo + agradecimento pela atencao');
+
+  // Perde para tudo que ja estava certo acima dela.
+  check(com({ soExpressaApoio: A, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6', 'audio vence');
+  check(com({ soExpressaApoio: A, ultimaEhDespedida: true })?.tecla === '3', 'despedida vence');
+  check(com({ soExpressaApoio: A, jaPediramDados: false, temEtiquetaDeCidade: false })?.tecla === '4', 'pedir dados vence');
+  check(com({ soExpressaApoio: A, etiquetaQueDispensa: 'engajado' })?.tecla === '2', 'etiqueta dispensa vence');
+  check(com({ soExpressaApoio: A, perguntaAberta: { motivo: 'p' } })?.tecla === '6', 'pergunta vence: responder a pergunta e mais urgente que agradecer');
+}
+
+grupo('repasse nao pede formulario, mas reacao continua pedindo');
+{
+  /**
+   * Print do Odone (31/08): 76 links de video em semanas, sem cidade e sem formulario enviado.
+   * A rodada oferecia o formulario a cada passada, e ele nunca ia responder — nao esta
+   * conversando, esta repassando. *"links em geral devem ser ignorados"*.
+   */
+  const odone = com({ rajadaEhSoRepasse: true, jaPediramDados: false, temEtiquetaDeCidade: false, ultimaEhSoReacao: true });
+  check(odone?.id !== 'nunca-pediram-dados', 'repasse NAO pede o formulario: ' + JSON.stringify(odone));
+
+  /**
+   * O contra-teste, e e ele que impede a mudanca de ir longe demais: a Marta respondeu o anuncio
+   * com um emoji, sem cidade e sem formulario — e ali pedir os dados continua sendo o certo.
+   */
+  const marta = com({ rajadaEhSoRepasse: false, jaPediramDados: false, temEtiquetaDeCidade: false, ultimaEhSoReacao: true });
+  check(marta?.tecla === '4', 'reacao dirigida a ele continua pedindo os dados');
+
+  // Quem tem texto de verdade tambem continua.
+  check(com({ rajadaEhSoRepasse: false, jaPediramDados: false, temEtiquetaDeCidade: false })?.tecla === '4',
+    'sem repasse, o formulario segue como antes');
+}
+
+
+grupo('pediu-algo-sem-dizer-o-que: a regra de maior risco, e fica no alto');
+{
+  const P = { motivo: 'pediu algo', trecho: 'Preciso da forca do senhor' };
+
+  // Print da Mari: tinha conteudo mapeado, e o modelo vencia.
+  const mari = com({ pedeAlgoIndefinido: P, podeEnviar: true, conteudoPedido: 'ADS' });
+  check(mari?.tecla === '9', 'pergunta em que pode ajudar: ' + JSON.stringify(mari));
+  check(/Preciso da forca/.test(mari?.motivo), 'e o motivo mostra o trecho, para ele conferir');
+
+  /**
+   * **Vence a despedida de proposito.** "Preciso da sua forca, abraco" tem despedida dentro, e
+   * concluir ali e fechar a porta na cara de um pedido.
+   */
+  check(com({ pedeAlgoIndefinido: P, ultimaEhDespedida: true })?.tecla === '9', 'vence a despedida');
+  check(com({ pedeAlgoIndefinido: P, ultimaEhSoReacao: true })?.tecla === '9', 'vence a reacao');
+  check(com({ pedeAlgoIndefinido: P, soExpressaApoio: { motivo: 'a' } })?.tecla === '9', 'vence o apoio');
+  check(com({ pedeAlgoIndefinido: P, jaPediramDados: false, temEtiquetaDeCidade: false })?.tecla === '9', 'vence pedir dados');
+
+  /**
+   * So duas coisas passam na frente, e as duas por boa razao: a etiqueta que dispensa da fila
+   * (decisao explicita dele) e o audio, que precisa ser ouvido antes de qualquer decisao.
+   */
+  check(com({ pedeAlgoIndefinido: P, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6', 'audio vence: ouca primeiro');
+  check(com({ pedeAlgoIndefinido: P, etiquetaQueDispensa: 'engajado' })?.tecla === '2', 'etiqueta dispensa vence');
+
+  /**
+   * Sem o texto da pergunta (variavel faltando, ou a resposta apagada), a tecla nao pode ser
+   * recomendada — senao a caixa aponta para uma opcao que nao esta na tela.
+   */
+  check(com({ pedeAlgoIndefinido: P, podePerguntarAjuda: false })?.tecla !== '9', 'sem o texto, nao recomenda a 9');
+
+  // Sem pedido, nada muda.
+  check(com({ podeEnviar: true, conteudoPedido: 'ADS' })?.id === 'conteudo-pedido', 'sem pedido o modelo continua indo');
+}
+
+
+grupo('ja-respondemos-antes: o modelo e a entrega INICIAL');
+{
+  /**
+   * Print do Cris (31/08): historico grande, etiquetas de conteudo, e a caixa sugerindo mandar o
+   * modelo. *"historico de conversa grande provavelmente ja recebeu modelo de mensagem, vou mandar
+   * mensagem do momento"*.
+   *
+   * Quem ja foi atendido e volta dizendo que apoia nao esta pedindo o material de novo — esta
+   * aparecendo. Modelo repetido parece que ninguem olhou o historico.
+   */
+  const cris = com({ jaRespondemosAntes: true, podeEnviar: true, conteudoPedido: 'ADS' });
+  check(cris?.tecla === '5', 'manda a mensagem do momento: ' + JSON.stringify(cris));
+  check(cris?.id === 'ja-respondemos-antes', 'e e a regra nova');
+
+  /**
+   * **O contra-teste que preserva o proposito do modelo:** na PRIMEIRA vez, ele vai. E a entrega
+   * que a pessoa pediu ao clicar no anuncio.
+   */
+  check(com({ jaRespondemosAntes: false, podeEnviar: true, conteudoPedido: 'ADS' })?.id === 'conteudo-pedido',
+    'primeira vez: o modelo vai');
+
+  /**
+   * O desfecho vira CONCLUIR nos tres casos em que mais uma mensagem nossa seria empilhar em cima
+   * do que ela ainda nao comentou. Mesmo desenho da regra da reacao.
+   */
+  check(com({ jaRespondemosAntes: true, respondidoHoje: true })?.tecla === '3', 'ja respondemos hoje: conclui');
+  check(com({ jaRespondemosAntes: true, momentoJaEnviado: true })?.tecla === '3', 'momento ja enviado: conclui');
+  check(com({ jaRespondemosAntes: true, podeMandarMomento: false })?.tecla === '3', 'sem momento configurado: conclui');
+
+  // Perde para tudo que fala do que ela acabou de dizer.
+  check(com({ jaRespondemosAntes: true, soExpressaApoio: { motivo: 'a' } })?.tecla === '8',
+    'apoio proprio vence: responder a ela e melhor que a mensagem da semana');
+  check(com({ jaRespondemosAntes: true, pedeAlgoIndefinido: { trecho: 'x' } })?.tecla === '9', 'pedido indefinido vence');
+  check(com({ jaRespondemosAntes: true, perguntaAberta: { motivo: 'p' } })?.tecla === '6', 'pergunta vence');
+  check(com({ jaRespondemosAntes: true, pedeRespostaPessoal: { motivo: 'a' } })?.tecla === '6', 'audio vence');
+  check(com({ jaRespondemosAntes: true, ultimaEhDespedida: true })?.tecla === '3', 'despedida vence');
 }
 
 fim();

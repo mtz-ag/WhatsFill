@@ -13,6 +13,14 @@
 > "versão sempre maior na IA" e quebrou no primeiro dia em que as duas subiram (31/08): regra que
 > exige alguém lembrar não é regra.
 
+> **Este é o branch `claude/extensao-claude-analise-i9spxw`** — a ferramenta de produção dele, e
+> onde o trabalho normal acontece.
+>
+> **Existe um segundo branch: `claude/whatsfill-ia`** (WhatsFill+IA), que soma uma avaliação de
+> contexto por IA. Ele não vai para produção e **nada de IA entra aqui** — a regra "Sem IA na
+> extração" continua valendo neste branch. Conserto que vale para os dois: faça AQUI e leve para
+> lá com merge. Duplicar `panel.js` (6.000+ linhas) é como as duas versões divergem em uma semana.
+
 ## PROTOCOLO OBRIGATÓRIO ANTES DE QUALQUER EXECUÇÃO
 
 > Antes de implementar, refatorar ou executar qualquer tarefa, SEMPRE verifique:
@@ -89,6 +97,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   Não use ele para verificar nada.
 - **Recarregar a extensão órfã as abas abertas** (`Extension context invalidated`): o painel
   falha em silêncio até dar F5. Já causou diagnóstico errado duas vezes.
+- **Uma pasta, DUAS extensões — e trocar de branch troca o que o Chrome carrega.** O Chrome
+  carrega de `OneDrive/Documents/GitHub/WhatsFill`, que é o repositório: dar checkout no
+  `claude/whatsfill-ia` troca a extensão em produção pela da IA, sem avisar ninguém. É por isso
+  que os dois sinais existem: o **nome** (`WhatsFill` aqui, `WhatsFill+IA` lá) e a **série da
+  versão** — produção é **0.x**, o branch da IA é **1.x**. A série é o que não precisa de
+  manutenção: "sempre maior na IA" quebra na primeira vez que os dois sobem no mesmo dia, e
+  quebrou (31/08). Em 29/08 isto
+  aconteceu ao contrário e pareceu que a IA tinha vazado para produção — o sintoma foi
+  `git status` acusando 17 arquivos que ninguém editou, todos idênticos ao outro branch.
+  **Antes de apagar arquivo que não deveria estar aí, rode `git status` e compare com o outro
+  branch**: apagar o órfão à mão é o conserto errado (ele volta no checkout, e um commit
+  descuidado apaga o trabalho do outro branch). O certo é `git restore .` + checkout do branch
+  certo. Para usar as duas ao mesmo tempo, `git worktree` em pasta separada.
 - **"O fix não funcionou" pode ser "o fix não chegou".** A pasta que o Chrome carrega não é
   necessariamente a que o GitHub Desktop atualiza — cópia da extensão DENTRO da pasta da
   extensão (zip descompactado, `dist/`, que é gitignorado) fica congelada para sempre. Custou uma
@@ -273,6 +294,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   (`settings`, `auto`, `ia`, …) chega como `undefined` em quem já usava, e o default nunca o
   alcança. Custou um teto de gasto que nasceria desligado justamente em quem mais usa. Campo novo
   em objeto existente? Confira se a chave está na lista de mescla do `get`.
+- **A caixa da rodada vive FORA do `.wf-root`, e não pode voltar para dentro.** Esconder o painel
+  é `transform: translateX(100%)` (classe `wf-collapsed`), e **transform arrasta os filhos**: a
+  caixa deslizava para fora da tela junto, e ele precisa dela justamente com o painel escondido
+  (*"preciso de espaço na area de trabalho"*, 31/08). Como irmã, ela precisa de três coisas por
+  conta própria, e as três estão no CSS: o **z-index 998** (herdava do painel), as **variáveis de
+  cor** (seletor compartilhado — e SÓ as variáveis: o `background` do `.wf-root` cobriria a tela
+  de branco e mataria a transparência) e o **tema escuro** via `~ .wf-pergunta-fundo`, porque
+  `.wf-root.wf-dark` não alcança irmão. Medido no navegador: painel `805..1185` → `1185..1565`,
+  caixa `346..840` nos dois estados.
 - **z-index do painel é 998, e é de propósito.** Os overlays do Material (menu, diálogo,
   select, tooltip) vivem em 1000 e precisam abrir POR CIMA. Conteúdo da página não passa de 50.
   Subir o painel para o máximo faz ele engolir o diálogo de Etiquetas e o menu do Concluir.

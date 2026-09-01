@@ -75,6 +75,31 @@ export const REGRAS = [
     motivo: (c) => `${c.pedeRespostaPessoal.motivo}. Responda à mão.`,
   },
   {
+    id: 'pediu-algo-sem-dizer-o-que',
+    tecla: '9',
+    /**
+     * Ela pediu algo e não disse o quê → **perguntar**, nunca responder.
+     *
+     * Print da Mari (31/08): *"Preciso da forca do senhor"*, e a caixa sugeria **mandar o modelo
+     * da campanha**. Ele: *"provável pedido financeiro ou trabalho, vou perguntar em que posso
+     * ajudar? para ter certeza"*.
+     *
+     * **É a regra de maior risco do arquivo, e por isso fica no alto.** Pedido de dinheiro ou de
+     * emprego não pode receber resposta automática (Lei 9.504/97), e material de campanha em cima
+     * de quem está pedindo ajuda é pior do que não responder. Só perdem para ela a etiqueta que
+     * dispensa da fila e o áudio — que precisa ser ouvido antes de qualquer decisão.
+     *
+     * **Vence a despedida de propósito.** "Preciso da sua força, abraço" tem despedida dentro, e
+     * concluir ali é fechar a porta na cara de um pedido.
+     *
+     * Perguntar não promete e não nega: a recusa (`pedido-ajuda`, `pedido-emprego`) só cabe
+     * depois de ela dizer o que quer, e negar antes disso ofende quem só queria apoio político.
+     */
+    quando: (c) => !!c.pedeAlgoIndefinido && c.podePerguntarAjuda,
+    motivo: (c) =>
+      `"${c.pedeAlgoIndefinido.trecho}" — pediu algo sem dizer o quê. Pergunte antes de responder.`,
+  },
+  {
     id: 'ultima-e-despedida',
     tecla: '3',
     /**
@@ -126,29 +151,6 @@ export const REGRAS = [
         : 'voltou por outro anúncio — não mande o mesmo conteúdo de novo; a mensagem do momento serve.',
   },
   {
-    id: 'ultima-e-so-reacao',
-    /**
-     * Última mensagem é imagem, figurinha, emoticon ou link.
-     *
-     * Vem ANTES de "sem etiqueta de cidade" porque é sobre o que a pessoa **acabou de fazer**,
-     * que é o sinal mais recente que existe. Responder um 👍 com "me manda seu nome e cidade"
-     * lê como robô que não olhou a tela.
-     *
-     * **Se você já respondeu hoje, o desfecho é CONCLUIR e não a mensagem do momento** — pedido
-     * dele, com a print do Paulo Quevedo: ele tinha escrito uma resposta longa às 09:29 e a
-     * pessoa mandou um link do TikTok às 14:43. Mandar a mensagem do momento ali é empilhar uma
-     * segunda mensagem nossa em cima da que ela ainda nem comentou.
-     */
-    tecla: (c) => (c.respondidoHoje || !c.podeMandarMomento ? '3' : '5'),
-    quando: (c) => c.ultimaEhSoReacao,
-    motivo: (c) =>
-      c.respondidoHoje
-        ? 'você já respondeu hoje e ela mandou só uma figura, emoji ou link — pode concluir.'
-        : !c.podeMandarMomento
-          ? 'a última mensagem foi só uma figura, emoji ou link, e não há mensagem do momento — conclua.'
-          : 'a última mensagem foi só uma figura, emoji ou link — a mensagem do momento responde ao gesto.',
-  },
-  {
     id: 'nunca-pediram-dados',
     tecla: '4',
     /**
@@ -165,9 +167,141 @@ export const REGRAS = [
      *
      * Por isso fica ACIMA de "conteúdo pedido", e a do nome continua abaixo: pede-se uma vez;
      * ignorado, manda-se o conteúdo e não se insiste.
+     *
+     * **Subiu também acima de "só uma reação" em 31/08**, com a print da Marta: ela veio do
+     * anúncio, mandou 🙏 como ÚNICA mensagem, sem cidade e sem nunca ter recebido o formulário —
+     * e a caixa sugeria a mensagem do momento. *"nesse caso a pessoa respondeu o anuncio com um
+     * emoji, eu tenho que pedir os dados"*.
+     *
+     * Isso não contradiz o "parece robô" da regra de baixo, e é a condição desta que garante
+     * isso: quem já recebeu o formulário, ou já tem cidade, não casa aqui e continua caindo lá.
+     * Responder emoji com pedido de dados só é robô com quem já tem conversa — para quem acabou
+     * de chegar do anúncio, perguntar é o primeiro passo, e a tela não tem mais nada a olhar.
      */
-    quando: (c) => !c.jaPediramDados && !c.temEtiquetaDeCidade && c.podePedirDados && !c.pedidoHoje,
+    /**
+     * **Repasse não conta como chegada.** Acrescentado em 31/08 com a print do Odone: 76 links
+     * de vídeo em semanas, sem cidade e sem formulário enviado — a rodada oferecia o formulário
+     * a cada rodada, e ele nunca ia responder. *"links em geral devem ser ignorados"*.
+     *
+     * A reação continua contando (o 🙏 da Marta pede o formulário): um emoji é dirigido a ele,
+     * um link do Facebook é conteúdo de outra pessoa passando adiante.
+     */
+    quando: (c) =>
+      !c.rajadaEhSoRepasse &&
+      !c.jaPediramDados &&
+      !c.temEtiquetaDeCidade &&
+      c.podePedirDados &&
+      !c.pedidoHoje,
     motivo: () => 'veio do anúncio e o formulário nunca saiu para ele — peça os dados esta vez.',
+  },
+  {
+    id: 'ultima-e-so-reacao',
+    /**
+     * Última mensagem é imagem, figurinha, emoticon ou link.
+     *
+     * É sobre o que a pessoa **acabou de fazer**, que é o sinal mais recente que existe:
+     * responder um 👍 com "me manda seu nome e cidade" lê como robô que não olhou a tela.
+     *
+     * **Mas só a partir de quem já tem conversa.** Em 31/08 esta regra passou para BAIXO de
+     * "nunca pediram dados": quem chegou pelo anúncio, mandou só um emoji e nunca recebeu o
+     * formulário não tem conversa para o robô estragar — ali perguntar é o primeiro passo.
+     * Quem já recebeu o formulário ou já tem cidade não casa lá em cima e continua chegando
+     * aqui, que era o caso que motivou esta regra.
+     *
+     * **Se você já respondeu hoje, o desfecho é CONCLUIR e não a mensagem do momento** — pedido
+     * dele, com a print do Paulo Quevedo: ele tinha escrito uma resposta longa às 09:29 e a
+     * pessoa mandou um link do TikTok às 14:43. Mandar a mensagem do momento ali é empilhar uma
+     * segunda mensagem nossa em cima da que ela ainda nem comentou.
+     */
+    tecla: (c) => (c.respondidoHoje || !c.podeMandarMomento ? '3' : '5'),
+    quando: (c) => c.ultimaEhSoReacao,
+    motivo: (c) =>
+      c.respondidoHoje
+        ? 'você já respondeu hoje e ela mandou só uma figura, emoji ou link — pode concluir.'
+        : !c.podeMandarMomento
+          ? 'a última mensagem foi só uma figura, emoji ou link, e não há mensagem do momento — conclua.'
+          : 'a última mensagem foi só uma figura, emoji ou link — a mensagem do momento responde ao gesto.',
+  },
+  {
+    id: 'pergunta-aberta',
+    tecla: '6',
+    /**
+     * Ela fez uma pergunta de razão ou de posição → responder à mão.
+     *
+     * Print da Clair (31/08): respondeu o formulário e depois escreveu *"tem muita propaganda aqui
+     * em santa Maria, mas não do capitão Martins."* e *"Porque?"*. A caixa sugeria **mandar o
+     * modelo da campanha** — material de campanha como resposta a uma pergunta sobre a falta de
+     * material de campanha. *"pergunta especifica, caso para IA"*.
+     *
+     * Nenhuma regra pegava: a rajada tinha 126 caracteres (longe dos 400 da regra de texto longo),
+     * não era reação, não era despedida, e havia conteúdo mapeado — então `conteudo-pedido` venceu.
+     *
+     * **Fica logo ACIMA de `conteudo-pedido` e não mais alto, de propósito.** É o mínimo para
+     * resolver o caso: quem pede dados, quem se despede, quem manda áudio continua sendo tratado
+     * pelas regras de cima, que já estavam certas. Subir mais tiraria contato da automação sem
+     * necessidade, e o objetivo dele é 90% resolvido sem IA.
+     *
+     * A lista de padrões (`cortesia.conversaTemPerguntaAberta`) é curta pela mesma razão, e
+     * pergunta que pede material está fora dela: o modelo responde bem a "pode me mandar?".
+     */
+    quando: (c) => !!c.perguntaAberta,
+    motivo: () => 'fez uma pergunta que nenhuma resposta pronta responde — escreva você.',
+  },
+  {
+    id: 'so-expressa-apoio',
+    tecla: '8',
+    /**
+     * A pessoa só disse que está com você, e já está classificada → agradecer e encerrar.
+     *
+     * Pedido dele (31/08, print do Ciro): *"esse é um caso comum até onde a pessoa só expressa o
+     * apoio, ja tem as etiquetas, então é só uma questão de agradecer o apoio e carinho"*.
+     *
+     * **Fica ACIMA de `conteudo-pedido` — e isto é uma reversão, de propósito.**
+     *
+     * Eu a tinha posto abaixo hoje de manhã, argumentando que "agradecer antes de entregar
+     * responderia o carinho e engoliria o pedido". Ele desfez: *"a prioridade é responder o que
+     * foi falado, depois mandar modelo"*.
+     *
+     * Ele está certo, e a razão é de atendimento e não de código: quem escreveu uma mensagem
+     * própria espera resposta àquilo. O material continua indo — na rodada seguinte, quando não
+     * houver mais nada a responder.
+     *
+     * O que impede isto de engolir o pedido é o **tamanho** (`APOIO_ELABORADO`), não a ordem:
+     * apoio curto ("apoio!", "conte comigo") não casa aqui e continua recebendo modelo mais
+     * agradecimento pela atenção, que é o desfecho normal.
+     */
+    quando: (c) => !!c.soExpressaApoio,
+    motivo: () => 'escreveu apoio em mensagem própria — responda a ela; o material fica para depois.',
+  },
+  {
+    id: 'ja-respondemos-antes',
+    /**
+     * Já mandamos algo para este contato antes → o modelo não é a entrega desta vez.
+     *
+     * Escolha dele (31/08), print do Cris: *"histórico de conversa grande provavelmente já recebeu
+     * modelo de mensagem, vou mandar mensagem do momento"*.
+     *
+     * **O modelo é a entrega INICIAL.** Quem já foi atendido e volta dizendo que apoia não está
+     * pedindo o material de novo — está aparecendo. A mensagem da ocasião responde a isso; o
+     * modelo repetido parece que ninguém olhou o histórico.
+     *
+     * Fica **abaixo de `so-expressa-apoio`**: quem escreveu mensagem própria merece resposta
+     * àquilo, não a mensagem da semana.
+     *
+     * O desfecho segue o mesmo desenho da regra da reação: sem mensagem do momento configurada,
+     * ou já tendo respondido hoje, ou já tendo mandado a do momento, o certo é **concluir** — mais
+     * uma mensagem nossa em cima da que ela ainda não comentou é empilhar.
+     */
+    tecla: (c) => (c.respondidoHoje || c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5'),
+    quando: (c) => !!c.jaRespondemosAntes,
+    motivo: (c) =>
+      c.respondidoHoje
+        ? 'já respondemos hoje e ela voltou — pode concluir.'
+        : c.momentoJaEnviado
+          ? 'já foi atendida antes e a mensagem do momento já saiu — pode concluir.'
+          : !c.podeMandarMomento
+            ? 'já foi atendida antes, e não há mensagem do momento configurada — conclua.'
+            : 'já foi atendida antes (o modelo provavelmente já saiu) — mande a mensagem do momento.',
   },
   {
     id: 'conteudo-pedido',

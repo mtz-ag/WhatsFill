@@ -232,6 +232,72 @@ export const DEFAULT_TEMPLATES = [
   },
   {
     /**
+     * Ela pediu algo e não disse o quê. **Perguntar é a única resposta segura.**
+     *
+     * Print da Mari (31/08): *"Preciso da forca do senhor"*, e a caixa sugeria mandar o modelo da
+     * campanha. Ele: *"provável pedido financeiro ou trabalho, vou perguntar em que posso ajudar?
+     * para ter certeza"*.
+     *
+     * **O que este texto NÃO faz é o que importa:**
+     *
+     *  - não promete nada — nem ajuda, nem encaminhamento, nem "vou ver o que posso fazer";
+     *  - não nega nada — a recusa (`pedido-ajuda`, `pedido-emprego`) só cabe depois de ela dizer
+     *    o que quer, e negar antes disso ofende quem só queria apoio político;
+     *  - não manda material de campanha, que é o que a rodada fazia.
+     *
+     * Promessa em ano eleitoral é o risco que a Lei 9.504/97 trata (art. 41-A, captação ilícita;
+     * art. 73, §10, distribuição de bens). Uma pergunta não é promessa.
+     *
+     * Sem vocativo, como todo o resto (`vars.semVocativo`): o cadastro erra demais para ir num
+     * texto que a pessoa lê — e neste, em que ela está pedindo ajuda, errar o nome é pior.
+     */
+    id: 'perguntar-como-ajudar',
+    name: 'Perguntar em que pode ajudar (pedido sem detalhe)',
+    text:
+      '{{saudacao}}! Obrigado por escrever e por confiar na gente.\n\n' +
+      'Para eu entender direito e te responder com sinceridade: em que você precisa de ajuda? ' +
+      'Me conta com suas palavras o que está acontecendo.',
+    variantes: [
+      '{{saudacao}}! Obrigado pela mensagem e pela confiança.\n\n' +
+        'Me explica um pouco melhor em que você precisa de ajuda? Assim eu consigo te responder ' +
+        'com sinceridade sobre o que está no meu alcance.',
+      '{{saudacao}}! Recebi sua mensagem, obrigado por procurar a gente.\n\n' +
+        'Para eu te ajudar direito, me conta o que está acontecendo e em que você precisa de ajuda?',
+    ],
+  },
+  {
+    /**
+     * A pessoa só expressou apoio, e já está classificada. Não há o que pedir nem o que mandar.
+     *
+     * Pedido dele (31/08), print do Ciro: *"esse é um caso comum até onde a pessoa só expressa o
+     * apoio, ja tem as etiquetas, então é só uma questão de agradecer o apoio e carinho"*.
+     *
+     * Separado do `agradecer-info` de propósito: aquele agradece **informações** ("recebemos
+     * tudo por aqui"), e usá-lo em quem escreveu *"sou Bolsonaro desde sempre"* responde outra
+     * conversa. Aqui o que se reconhece é o apoio e a torcida, que é o que a pessoa ofereceu.
+     *
+     * **Não promete nada e não pede nada** — nem grupo, nem material, nem dados. Quem só quis
+     * dizer que está com você não pediu tarefa; mandar uma vira cobrança em cima de um agrado.
+     *
+     * Sem `{{primeiro_nome}}` como todo o resto: o cadastro erra demais para ir num texto que a
+     * pessoa lê (decisão dele, 10/08 — ver `vars.semVocativo`).
+     */
+    id: 'agradecer-apoio',
+    name: 'Agradecer o apoio e encerrar',
+    text:
+      '{{saudacao}}! Muito obrigado pelo apoio e pelo carinho — palavra como a sua dá força ' +
+      'para seguir.\n\n' +
+      'Seguimos juntos nessa caminhada. Que Deus abençoe você e sua família! 🙏',
+    variantes: [
+      '{{saudacao}}! Obrigado de coração pelo apoio e pela confiança — é isso que sustenta o ' +
+        'trabalho.\n\n' +
+        'Estamos juntos. Que Deus abençoe você e os seus! 🙏',
+      '{{saudacao}}! Que bom ler isso, obrigado pelo apoio e pelo carinho de sempre.\n\n' +
+        'Seguimos lado a lado. Que Deus abençoe você e sua família! 🇧🇷',
+    ],
+  },
+  {
+    /**
      * Para quem mandou vídeo, link, "bom dia" — mensagem que merece resposta mas não abre
      * demanda. Agradece e fecha.
      *
@@ -354,6 +420,16 @@ const DEFAULTS = {
    * mas depende de ele escrever a regex certa; o campo é a fonte, e não custa nada ler.
    */
   etiquetaAnuncio: 'ADS',
+  /**
+   * Etiqueta de "o nome do cadastro não bate com o que a pessoa informou".
+   *
+   * Vazia = a extensão não marca ninguém. Precisa existir no CRM: a extensão não cria etiqueta
+   * sozinha, porque erro de digitação aqui vira rótulo permanente na base.
+   *
+   * Serve para ELE corrigir depois, filtrando a fila por ela. **O nome nativo do contato nunca é
+   * sobrescrito** — escolha dele em 31/08, entre trocar sozinho e separar.
+   */
+  etiquetaNomeDivergente: '',
   /** { "santo angelo": "https://chat.whatsapp.com/..." } — chave sempre normalizada. */
   cityLinks: {},
   /** Usado quando a cidade não tem grupo próprio. Vazio = bloqueia o envio. */
@@ -470,6 +546,42 @@ const DEFAULTS = {
    * Regras de etiqueta por conteúdo: padrão (regex, sem diferenciar maiúscula) casado contra
    * as mensagens do contato e a campanha do anúncio. Editável na aba Config.
    */
+  /**
+   * Como reconhecer que a mensagem foi **gerada pelo anúncio**, e não escrita pela pessoa.
+   *
+   * O Instagram e o Facebook mandam um texto pronto quando alguém clica no botão do anúncio:
+   * *"Olá! Eu apoio as Escolas Cívico-Militares"*, *"Olá! Eu apoio o Flávio, Zucco e Capitão
+   * Martim"*. **Ela não escolheu essas palavras — clicou num botão.**
+   *
+   * Pedido dele (01/09): *"preciso que identifique o modelo pelo texto (Olá! Eu apoio as Escolas
+   * Cívico-Militares)"*. A primeira versão presumia que a mensagem do anúncio era a PRIMEIRA da
+   * conversa, e a print da Erenita derrubou isso: ela mandou uma figura antes, o texto do anúncio
+   * virou a segunda, e a regra passou a tratar o texto do anúncio como apoio escrito por ela.
+   *
+   * **Posição não serve; texto serve.** Configurável porque o texto do anúncio muda quando a
+   * campanha muda, e isso não deveria exigir um commit. Uma expressão por linha, sem barras.
+   */
+  /**
+   * TEXTO da mensagem → nome do MODELO aprovado. `{ "trecho": "Modelo" }`.
+   *
+   * Pedido dele (01/09): *"não será feito etiqueta a etiqueta para os anúncios, agora é só ads;
+   * o padrão para casar o modelo deve ser o texto (Olá! Eu apoio as Escolas Cívico-Militares =
+   * modelo)"*.
+   *
+   * A etiqueta ADS diz que veio de anúncio, não de QUAL anúncio — e criar uma etiqueta por
+   * anúncio seria pôr rótulo permanente na base de eleitores para transportar o que já está
+   * escrito na mensagem.
+   *
+   * **Vence a tabela por etiqueta** (`contentTemplates`) quando casa: é a informação mais
+   * específica que existe sobre o que a pessoa quer. Nada casando, o caminho antigo segue igual.
+   *
+   * Nasce VAZIA de propósito: o nome do modelo tem de ser o exato da plataforma, e chutar aqui
+   * manda o modelo errado para eleitor real. Editável na aba Config.
+   */
+  modeloPorTexto: {},
+
+  padroesDeAnuncio: ['^ol[áa]!?\\s+eu\\s+apoio'],
+
   tagRules: [
     { padrao: 'zucco', etiqueta: 'Conteúdo Zucco' },
     { padrao: 'fl[áa]vio', etiqueta: 'Conteúdo Flávio' },
@@ -740,9 +852,19 @@ export async function exportJson() {
 
 export async function importJson(text) {
   const data = JSON.parse(text);
+  /**
+   * O que o backup restaura.
+   *
+   * `modeloPorTexto` e `padroesDeAnuncio` entraram em 01/09 junto com as próprias funções: são
+   * tabelas que ele preenche à mão, e ficar fora daqui significaria perdê-las na restauração —
+   * um trabalho que só se descobre perdido quando o modelo errado sai para um eleitor.
+   *
+   * `conteudoPreferido` estava faltando desde antes, pelo mesmo motivo e com o mesmo efeito.
+   */
   const allowed = [
     'templates', 'cityLinks', 'defaultGroupLink', 'settings', 'writeContract', 'dicts',
     'temaByNumber', 'tagRules', 'tagAliases', 'contentTemplates', 'auto',
+    'modeloPorTexto', 'padroesDeAnuncio', 'conteudoPreferido',
   ];
   for (const key of allowed) {
     if (data[key] !== undefined) await set(key, data[key]);

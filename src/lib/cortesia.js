@@ -20,7 +20,21 @@
  */
 
 /** Tipos que a plataforma usa para figura. Conferidos no bundle do app (29/08/2026). */
-const TIPOS_DE_IMAGEM = new Set(['IMAGE', 'STICKER']);
+/**
+ * Mídia que a pessoa **repassa**, e não produz: figura, figurinha e vídeo.
+ *
+ * O vídeo entrou aqui em 31/08, a pedido dele, com a print do Odone — que mandou um reel do
+ * Instagram e um vídeo do Facebook de 631 mil visualizações. A caixa sugeria *"mandou um vídeo
+ * — só dá para responder depois de abrir. Responda à mão"*, e a resposta dele foi:
+ * *"são centenas de mensagens e crescendo, não existe essa de parar pra ver vídeos e responder,
+ * é ignorar dando bom dia ou enrolar com outro assunto"*.
+ *
+ * **O áudio continua fora desta lista, e a diferença é quem está falando.** Áudio é a pessoa
+ * gravando para ele — o caso que criou a regra foi 1min13 sobre a família e a igreja, e mandar
+ * modelo ali parece deboche. Vídeo compartilhado é conteúdo de terceiro chegando pela décima
+ * vez no dia; abrir cada um não escala, e não abrir não ofende ninguém.
+ */
+const TIPOS_COMPARTILHADOS = new Set(['IMAGE', 'STICKER', 'VIDEO']);
 
 /** "bom dia", "boa tarde", "boa noite", "boa madrugada" — com ou sem acento, com ou sem espaço. */
 const SAUDACAO = /\b(bom\s*dia|boa\s*(tarde|noite|madrugada))\b/i;
@@ -61,8 +75,8 @@ function mensagemDeCortesia(msg) {
   const texto = String(msg?.texto || '');
 
   // Figura sem legenda é o caso que sumia da conta.
-  if (TIPOS_DE_IMAGEM.has(tipo) && !texto.trim()) return true;
-  if (TIPOS_DE_IMAGEM.has(tipo)) return !restoDaMensagem(texto);
+  if (TIPOS_COMPARTILHADOS.has(tipo) && !texto.trim()) return true;
+  if (TIPOS_COMPARTILHADOS.has(tipo)) return !restoDaMensagem(texto);
 
   if (!texto.trim()) return false;
   if (!SAUDACAO.test(texto) && !LINK.test(texto)) return false;
@@ -86,7 +100,7 @@ export function ehSoReacao(msg) {
   const tipo = String(msg?.tipo || 'TEXT').toUpperCase();
   const texto = String(msg?.texto || '');
 
-  if (TIPOS_DE_IMAGEM.has(tipo)) return !texto.trim() || !restoDaMensagem(texto);
+  if (TIPOS_COMPARTILHADOS.has(tipo)) return !texto.trim() || !restoDaMensagem(texto);
   if (!texto.trim()) return false;
 
   // Link e nada mais.
@@ -106,18 +120,38 @@ export function ehSoReacao(msg) {
 /**
  * Como a pessoa fecha a conversa por aqui.
  *
- * Vocabulário do lugar, não de manual: *"é nós"*, *"tamo junto"*, *"estamos juntos"*, *"abraço"*,
- * *"valeu"*, *"tmj"*. É despedida de apoiador, e a resposta certa a ela é fechar o atendimento —
- * não mandar mais uma mensagem.
+ * Vocabulário do lugar, não de manual: *"é nós"*, *"abraço"*, *"valeu"*, *"amém"*. É despedida de
+ * apoiador, e a resposta certa a ela é fechar o atendimento — não mandar mais uma mensagem.
+ *
+ * **Só "tamo junto", "tmj" e "estamos juntos" saíram daqui em 31/08** — estavam também em
+ * `EXPRESSOES_DE_APOIO`, e como esta regra vem antes, o apoio nunca era alcançado. Print do
+ * Izaak: última mensagem *"Tamojuntos"*, e a caixa sugeriu concluir. *"nesse caso vou usar a
+ * mensagem 8, a última mensagem foi tamojuntos, seria estamos juntos"*.
+ *
+ * A linha: **fecho é fecho; solidariedade é apoio.** "Valeu, abraço" encerra a conversa;
+ * "tamo junto" afirma que a pessoa está com ele, e isso pede reconhecimento.
+ *
+ * `sucesso`, `boa sorte` e a bênção **ficaram aqui**: ele não pediu para mexer nelas, e
+ * "Que Deus abençoe" sozinho é fecho. Mexer no que não foi apontado é como se perde o que já
+ * estava certo.
  */
 /**
- * `(^|\s)` em vez de `\b` antes de palavra acentuada.
+ * `(^|[^\p{L}])` em vez de `\b`, e em vez de `(^|\s)`.
  *
- * `\b` é fronteira de `\w`, e `é` não é `\w`: `/\bé nós/` **nunca** casa no começo da string.
- * Foi assim que "É nós." — a frase exata da print dele — passou batido na primeira versão.
+ * **Duas armadilhas, uma em cima da outra:**
+ *
+ * 1. `\b` é fronteira de `\w`, e `é` não é `\w`: `/\bé nós/` **nunca** casa no começo da
+ *    string. Foi assim que "É nós." — a frase exata da print dele — passou batido.
+ * 2. `(^|\s)`, que foi o conserto da primeira, **não casa depois de pontuação**. Print da
+ *    Gessi (31/08): *"Itaqui Rs...sempre com vocês capitão"* — o "sempre" vem depois de três
+ *    pontos, sem espaço, e nenhum padrão pegava. No WhatsApp se escreve assim o tempo todo.
+ *
+ * `[^\p{L}]` é "qualquer coisa que não seja letra": espaço, ponto, vírgula, emoji, quebra de
+ * linha. Exige a flag `u`. Não casa dentro de palavra ("desempre" continua fora), que é o
+ * ponto de ter uma fronteira.
  */
 const DESPEDIDA =
-  /(^|\s)(e|é)\s*n(ó|o)(s|is)\b|\b(tamo|tamos|estamos|seguimos|segue|to|tô|estou)\s*(junto|juntos)\b|\btmj\b|\b(forte\s*)?abra(ç|c)o(s)?\b|\bvaleu\b|\bvlw\b|\bobrigad[oa]\b|\bbrigad[oa]\b|(^|\s)am(é|e)m\b|\bboa\s*sorte\b|\bdeus\s*(te\s*)?aben(ç|c)oe\b|\bfica\s*com\s*deus\b|\bsucesso\b/i;
+  /(^|[^\p{L}])(e|é)\s*n(ó|o)(s|is)\b|\b(forte\s*)?abra(ç|c)o(s)?\b|\bvaleu\b|\bvlw\b|\bobrigad[oa]\b|\bbrigad[oa]\b|(^|[^\p{L}])am(é|e)m\b|\bboa\s*sorte\b|\bdeus\s*(te\s*)?aben(ç|c)oe\b|\bfica\s*com\s*deus\b|\bsucesso\b/iu;
 
 /**
  * A mensagem é SÓ uma despedida?
@@ -149,8 +183,22 @@ export function ultimaEhDespedida(entrantes) {
   return ehDespedida(lista[lista.length - 1]);
 }
 
-/** Tipos que sempre pedem você em pessoa: não dá para responder sem ouvir. */
-const TIPOS_QUE_PEDEM_VOCE = new Set(['AUDIO', 'VIDEO', 'DOCUMENT', 'CONTACT', 'LOCATION']);
+/**
+ * Tipos que sempre pedem você em pessoa: não dá para responder sem abrir.
+ *
+ * **`VIDEO` saiu daqui em 31/08** e foi para `TIPOS_COMPARTILHADOS` — ver o comentário de lá.
+ * O que sobrou é o que a pessoa produziu ou endereçou a ele: a voz dela, um arquivo que ela
+ * anexou, um contato que ela passou, o lugar onde ela está.
+ */
+const TIPOS_QUE_PEDEM_VOCE = new Set(['AUDIO', 'DOCUMENT', 'CONTACT', 'LOCATION']);
+
+/** Como cada um desses tipos se chama na frase que aparece na caixa. */
+const NOME_DO_TIPO = {
+  AUDIO: 'um áudio',
+  DOCUMENT: 'um arquivo',
+  CONTACT: 'um contato',
+  LOCATION: 'uma localização',
+};
 
 /**
  * A partir de quantos caracteres uma mensagem deixa de caber numa resposta pronta.
@@ -178,7 +226,7 @@ export function pedeRespostaPessoal(msg) {
   const texto = String(msg?.texto || '');
 
   if (TIPOS_QUE_PEDEM_VOCE.has(tipo)) {
-    const comoChama = tipo === 'AUDIO' ? 'um áudio' : tipo === 'VIDEO' ? 'um vídeo' : 'um arquivo';
+    const comoChama = NOME_DO_TIPO[tipo] || 'um arquivo';
     return { motivo: `mandou ${comoChama} — só dá para responder depois de abrir` };
   }
   if (texto.trim().length >= TEXTO_LONGO) {
@@ -187,7 +235,431 @@ export function pedeRespostaPessoal(msg) {
   return null;
 }
 
-/** A última mensagem do contato pede resposta escrita por você? */
+/**
+ * Quanto tempo entre duas mensagens ainda é a MESMA rajada.
+ *
+ * Rajada é a pessoa digitando de uma vez — o caso que criou isto foram três mensagens em dois
+ * minutos. Meia hora é folga larga para quem escreve devagar, e ainda separa isso de quem manda
+ * uma coisa hoje e outra amanhã.
+ */
+const INTERVALO_DA_RAJADA_MS = 30 * 60 * 1000;
+
+/**
+ * A última rajada do contato: mensagens seguidas, próximas no tempo, sem resposta nossa depois.
+ *
+ * **Duas paradas, e a segunda foi aprendida caro** (31/08, print do Odone):
+ *
+ *  1. **a nossa última mensagem** — o que veio antes dela já foi respondido;
+ *  2. **um buraco de mais de 30 minutos** entre duas mensagens dela.
+ *
+ * Sem a segunda, quem nunca foi respondido tinha como "rajada" o histórico INTEIRO. O Odone
+ * compartilha vídeo o dia todo: 76 mensagens ao longo de semanas, 3.254 caracteres somados — e
+ * a caixa anunciou *"escreveu 76 mensagens somando 3254 caracteres — é conversa"*. Não era
+ * conversa: era **43 caracteres por mensagem**, links e repasses, acumulados porque ninguém
+ * respondeu.
+ *
+ * O erro foi de definição, não de número: eu tratei "tudo que não respondemos" como se fosse
+ * "tudo que ela escreveu de uma vez". São coisas diferentes, e a diferença é o relógio.
+ *
+ * Mensagem sem `at` não quebra a corrente: sem horário não dá para afirmar que houve buraco, e
+ * o lado seguro de errar aqui é manter na rajada (ver `conversaPedeRespostaPessoal`).
+ */
+export function rajadaFinal(entrantes, nossaUltimaAt) {
+  const lista = Array.isArray(entrantes) ? entrantes : [];
+  if (!lista.length) return [];
+
+  const corte = nossaUltimaAt ? new Date(nossaUltimaAt).getTime() : NaN;
+  const temCorte = Number.isFinite(corte);
+
+  const quando = (m) => {
+    const t = m?.at ? new Date(m.at).getTime() : NaN;
+    return Number.isFinite(t) ? t : null;
+  };
+
+  const depois = [];
+  let seguinte = null; // horário da mensagem à direita desta, para medir o buraco
+
+  for (let i = lista.length - 1; i >= 0; i--) {
+    const at = quando(lista[i]);
+
+    // Já foi respondida: daqui para trás não interessa.
+    if (temCorte && at !== null && at <= corte) break;
+
+    // Buraco grande até a mensagem seguinte: a rajada começa depois dele.
+    if (at !== null && seguinte !== null && seguinte - at > INTERVALO_DA_RAJADA_MS) break;
+
+    depois.unshift(lista[i]);
+    if (at !== null) seguinte = at;
+  }
+  return depois;
+}
+
+/**
+ * A conversa pendente deste contato pede resposta escrita por você?
+ *
+ * **Olha a RAJADA, não só a última mensagem** — e essa é a correção de 31/08. Um apoiador
+ * escreveu três mensagens em dois minutos (~450 caracteres somados) alertando que gente paga
+ * podia estar se passando por apoiador. Cada mensagem sozinha ficava abaixo do limite, o
+ * conjunto passava, e a rodada caiu na regra de baixo e sugeriu **mandar o modelo da campanha**
+ * para quem tinha acabado de dizer aquilo.
+ *
+ * Quem escreve três vezes seguidas está conversando, não pedindo conteúdo. Que os parágrafos
+ * venham numa mensagem ou em três é jeito de digitar, não intenção — e era só isso que
+ * separava este caso do áudio de 1min13 que a regra já pegava.
+ *
+ * Tipo (áudio, vídeo, arquivo) continua valendo por mensagem: um áudio no meio da rajada pede
+ * você mesmo que o resto seja curto.
+ *
+ * @param {Array<{texto?:string, tipo?:string, at?:string}>} entrantes
+ * @param {string|null} nossaUltimaAt quando saiu a nossa última mensagem
+ * @returns {{motivo:string}|null}
+ */
+export function conversaPedeRespostaPessoal(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  if (!rajada.length) return null;
+
+  // Tipo vence tamanho: não dá para responder um áudio sem abrir, venha ele sozinho ou não.
+  for (const msg of rajada) {
+    const porTipo = pedeRespostaPessoal({ tipo: msg?.tipo });
+    if (porTipo) return porTipo;
+  }
+
+  const total = rajada.reduce((n, m) => n + String(m?.texto || '').trim().length, 0);
+  if (total >= TEXTO_LONGO) {
+    return rajada.length > 1
+      ? { motivo: `escreveu ${rajada.length} mensagens somando ${total} caracteres — é conversa, não é caso de modelo` }
+      : { motivo: `escreveu ${total} caracteres — é conversa, não é caso de modelo` };
+  }
+  return null;
+}
+
+/**
+ * Perguntas que NENHUMA resposta pronta responde.
+ *
+ * A lista é curta de propósito. Toda entrada aqui tira um contato da automação, e o objetivo dele
+ * é o contrário — chegar a 90% resolvido sem IA. Então só entra o que é claramente pergunta de
+ * **razão** ou de **posição**: essas dependem do que ele pensa, e não existe texto pronto para
+ * elas. "Pode me mandar o material?" também é pergunta, e o modelo responde perfeitamente.
+ *
+ * `(^|\s)` e não `\b` porque `\b` não funciona antes de palavra acentuada — armadilha já
+ * registrada no `CLAUDE.md` ("é nós" nunca casava no começo da string).
+ */
+const PERGUNTAS_QUE_PEDEM_VOCE = [
+  // Razão: "por que não tem propaganda aqui?"
+  /(^|[^\p{L}])(por\s?qu[eê]|pq|pk)(\s|\?|$)/iu,
+  // Posição e opinião: dependem do que ELE pensa
+  /(^|[^\p{L}])qual\s+(a\s+)?(posi[çc][aã]o|opini[aã]o|proposta|ideia)/iu,
+  /(^|[^\p{L}])o\s+que\s+(ele|voc[eê]s?|o\s+candidato|o\s+deputado)\s+(acha|acham|pensa|pensam|vai|v[aã]o|pretende|pretendem|faria|fariam|far[aá]|far[aã]o)/iu,
+  /(^|[^\p{L}])como\s+(ele|voc[eê]s?)\s+(vai|v[aã]o|pretende|pretendem|pensa|pensam)/iu,
+  // Pedido explícito de explicação
+  /(^|[^\p{L}])(me\s+)?explica(r|\s|$)/iu,
+  /(^|[^\p{L}])n[aã]o\s+entendi(\s|$|\.)/iu,
+];
+
+/** Pede material/conteúdo — aí a pergunta TEM resposta pronta e não é caso de resposta à mão. */
+const PEDIDO_DE_MATERIAL = /(^|[^\p{L}])(manda|mande|envia|envie|me\s+passa|quero\s+receber|receber)(\s|$)/iu;
+
+/**
+ * Jeitos de dizer "estou com você". Lista de reconhecimento, não de julgamento: o que ela
+ * decide é se cabe um agradecimento, e agradecer errado custa pouco.
+ */
+const EXPRESSOES_DE_APOIO = [
+  /(^|[^\p{L}])(eu\s+)?apoio(\s|$|,|!|\.)/iu
+,
+  // `\s*` e não `\s+`: "Tamojuntos" vem colado, e foi assim que ele apareceu na print.
+  /(^|[^\p{L}])(tamo|tamos|t[oô]|estou|estamos|seguimos|segue)\s*(com|junto|juntos)\b/iu,
+  /(^|[^\p{L}])tmj\b/iu,
+  /**
+   * "sempre com vocês", "junto com o senhor" — apoio sem o verbo na frente.
+   *
+   * Print da Gessi (31/08): *"Itaqui Rs...sempre com vocês capitão"*, e a regra não pegou porque
+   * exigia "estou"/"tamo" antes do "com". *"vou agradecer apoio e concluir"*.
+   *
+   * **"com vocês" sozinho ficou de fora de propósito**: "preciso falar com vocês" é pedido, não
+   * apoio. O que qualifica é o advérbio de permanência ("sempre", "junto", "aqui"), e é ele que
+   * separa quem está declarando lealdade de quem está pedindo contato.
+   */
+  /(^|[^\p{L}])(sempre|junto|juntos|aqui)\s+com\s+(voc[eê]s?|vcs?|o\s+senhor|a\s+senhora|a\s+gente|nois|n[óo]s)/iu,
+  /(^|[^\p{L}])conte?\s+comigo(\s|$|!|\.)/iu,
+  /(^|[^\p{L}])(vou|vamos)\s+votar(\s|$)/iu,
+  /(^|[^\p{L}])sou\s+(seu\s+)?(eleitor|eleitora|f[aã]|bolsonarist[ao]|bolsonaro)(\s|$)/iu,
+  /(^|[^\p{L}])(parab[eé]ns|sucesso|for[çc]a|felicidades)(\s|$|!|,|\.)/iu,
+  /(^|[^\p{L}])(deus|jesus)\s+(te|o|a|lhe)\s+(aben[çc]oe|guarde|proteja)/iu,
+  /(^|[^\p{L}])torcendo(\s|$)/iu,
+];
+
+/**
+ * Alguém pedindo algo, sem dizer o quê.
+ *
+ * Print da Mari (31/08): *"Preciso da forca do senhor"* — e a caixa sugeria **mandar o modelo da
+ * campanha**. Ele leu como *"provável pedido financeiro ou trabalho, vou perguntar em que posso
+ * ajudar? para ter certeza"*.
+ *
+ * **É o caso de maior risco do projeto inteiro.** Pedido de dinheiro ou de emprego não pode
+ * receber resposta automática (Lei 9.504/97, art. 41-A e 73), e material de campanha em cima de
+ * quem está pedindo ajuda é pior do que não responder. Só que a frase não diz o que ela quer —
+ * pode ser dinheiro, emprego, ou força política na luta dela.
+ *
+ * Como não se sabe, **não se responde: pergunta-se.** Perguntar não promete nada, não nega nada,
+ * e é o que transforma uma frase ambígua em decisão informada dele.
+ */
+const PRECISA_DE_ALGO = [
+  // "preciso da sua força", "preciso da forca do senhor", "preciso de uma ajuda"
+  /(^|[^\p{L}])(preciso|precisava|precisando|necessito)\s+(de\s+|da\s+|do\s+|duma\s+|dum\s+)/iu,
+  // "conto com o senhor", "conto com sua ajuda"
+  /(^|[^\p{L}])cont(o|ando)\s+com\s+(o\s+senhor|a\s+senhora|voc[eê]|sua|seu)/iu,
+  // "o senhor pode me ajudar?", "vocês podem me ajudar"
+  /(^|[^\p{L}])(pode|podem|poderia|poderiam|consegue|conseguem)\s+(me\s+)?ajudar/iu,
+  // "me ajuda", "me ajude", "queria uma ajuda"
+  /(^|[^\p{L}])me\s+ajud(a|e|ar)/iu,
+  /(^|[^\p{L}])(queria|quero|gostaria\s+de)\s+(uma\s+|um\s+)?ajuda/iu,
+  // "estou passando por", "estou numa situação", "estou desempregado"
+  /(^|[^\p{L}])(t[oô]|estou|estamos)\s+(passando|numa|em\s+uma|desempregad)/iu,
+];
+
+/**
+ * **A oferta desarma a mensagem inteira, e vem ANTES de qualquer teste de pedido.**
+ *
+ * Armadilha já registrada no `CLAUDE.md`: *"ajuda" é a mesma palavra dos dois lados da campanha*.
+ * *"Quero ajudar"* é apoiador se oferecendo — o público principal. Um padrão que confunda os dois
+ * põe metade da base na fila de revisão dele e o trabalho para.
+ */
+const OFERECE_AJUDA =
+  /(^|[^\p{L}])(quero|queria|posso|gostaria\s+de|vou|estou\s+aqui\s+para|to\s+aqui\s+para)\s+(te\s+|lhe\s+|)?(ajudar|colaborar|contribuir|apoiar)/iu;
+
+/**
+ * A conversa pendente traz pedido de algo que ela não nomeou?
+ *
+ * @returns {{motivo:string, trecho:string}|null}
+ */
+export function pedeAlgoIndefinido(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  if (!rajada.length) return null;
+
+  for (const msg of rajada) {
+    const texto = String(msg?.texto || '').trim();
+    if (!texto) continue;
+
+    // A oferta desarma a mensagem inteira, antes de qualquer teste de pedido.
+    if (OFERECE_AJUDA.test(texto)) continue;
+
+    for (const padrao of PRECISA_DE_ALGO) {
+      if (padrao.test(texto)) {
+        return {
+          motivo: 'pediu algo sem dizer o quê — pergunte antes de responder',
+          trecho: texto.slice(0, 120),
+        };
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Esta mensagem é **repasse** — conteúdo de terceiro que a pessoa encaminhou?
+ *
+ * Link sozinho e vídeo. É o que ele chamou de ruído em 31/08: *"está confuso quando é rajada de
+ * links, links em geral devem ser ignorados, não lembro de exceções"*.
+ *
+ * **Repasse não é o mesmo que reação, e a diferença é para quem o gesto aponta.** Um 🙏 é
+ * dirigido a ele — a Marta respondeu o anúncio assim, e ali pedir os dados é o certo. Um link do
+ * Facebook é conteúdo de outra pessoa passando adiante; não diz nada sobre este contato, e
+ * responder a ele com um formulário é responder a coisa errada.
+ */
+export function ehRepasse(msg) {
+  const tipo = String(msg?.tipo || 'TEXT').toUpperCase();
+  if (tipo === 'VIDEO') return true;
+
+  const texto = String(msg?.texto || '');
+  if (!texto.trim()) return false;
+
+  // Link e nada mais: tirando os links, não sobra nada escrito por ela.
+  return LINK.test(texto) && !texto.replace(LINK, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * A rajada inteira é repasse — links e vídeos, e nada que a pessoa tenha escrito?
+ *
+ * Serve para as regras **não reagirem ao ruído**. O Odone é o retrato: 76 mensagens em semanas,
+ * todas link de vídeo, e a rodada oferecendo o formulário porque ele "veio do anúncio e nunca
+ * recebeu os dados". Nunca vai receber — ele não está conversando, está repassando.
+ *
+ * Rajada vazia devolve `false`: sem mensagem não há ruído a ignorar, e é a regra de baixo que
+ * decide.
+ */
+export function rajadaEhSoRepasse(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  if (!rajada.length) return false;
+  return rajada.every((m) => ehRepasse(m));
+}
+
+
+/**
+ * Esta mensagem foi **gerada pelo anúncio**, e não escrita pela pessoa?
+ *
+ * O Instagram manda um texto pronto quando alguém clica no botão: *"Olá! Eu apoio as Escolas
+ * Cívico-Militares"*. Ela não escolheu as palavras — clicou.
+ *
+ * Os padrões vêm de `store.padroesDeAnuncio`, e quem chama passa: este módulo é puro e sem
+ * dependência, que é o que permite testar tudo offline.
+ *
+ * Padrão inválido é ignorado em silêncio, um por um: expressão mal digitada na Config não pode
+ * derrubar a leitura da conversa inteira.
+ */
+export function ehMensagemDeAnuncio(msg, padroes = []) {
+  const texto = String(msg?.texto || '').trim();
+  if (!texto) return false;
+
+  for (const bruto of padroes) {
+    try {
+      if (new RegExp(String(bruto), 'i').test(texto)) return true;
+    } catch (_) {
+      // expressão inválida: ignora só ela
+    }
+  }
+  return false;
+}
+
+/**
+ * A conversa pendente é SÓ expressão de apoio, sem nada a resolver?
+ *
+ * Pedido dele (31/08, print do Ciro): *"esse é um caso comum até onde a pessoa só expressa o
+ * apoio, ja tem as etiquetas, então é só uma questão de agradecer o apoio e carinho"*.
+ *
+ * **Quem decide é o que NÃO está na mensagem.** Expressão de apoio junto com pergunta é
+ * pergunta; junto com pedido de material é pedido. O agradecimento só cabe quando o apoio é a
+ * mensagem inteira — senão ele responde a metade fácil e ignora a que importa, que é o defeito
+ * mais caro que uma resposta automática pode ter.
+ *
+ * `conversaTemPerguntaAberta` e `PEDIDO_DE_MATERIAL` são reusados aqui de propósito: duas
+ * listas para a mesma pergunta divergiriam na primeira vez que uma fosse ajustada sozinha.
+ *
+ * @returns {{motivo:string}|null}
+ */
+export function soExpressaApoio(entrantes, nossaUltimaAt, padroesDeAnuncio = []) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  if (!rajada.length) return null;
+
+  /**
+   * Ela precisa ter escrito algo que **não** seja o texto do anúncio.
+   *
+   * É o critério que ele descreveu: *"se não tivesse o texto de baixo eu mandaria o modelo,
+   * agradeceria a atenção e encerraria"*. Só o clique no anúncio não é exceção — é o caso normal,
+   * e o caso normal já tem resposta (modelo + agradecimento pela atenção).
+   */
+  const todas = Array.isArray(entrantes) ? entrantes : [];
+  const escreveuAlgoDela = todas.some(
+    (m) => String(m?.texto || '').trim() && !ehMensagemDeAnuncio(m, padroesDeAnuncio)
+  );
+  if (!escreveuAlgoDela) return null;
+
+  // Tipo que pede ele em pessoa (áudio, vídeo, arquivo) nunca é "só apoio".
+  for (const msg of rajada) {
+    if (pedeRespostaPessoal({ tipo: msg?.tipo })) return null;
+  }
+
+  if (conversaTemPerguntaAberta(entrantes, nossaUltimaAt)) return null;
+
+  const texto = rajada.map((m) => String(m?.texto || '')).join(' ').trim();
+  if (!texto) return null;
+  if (PEDIDO_DE_MATERIAL.test(texto)) return null;
+
+  /**
+   * O apoio tem de estar no que ELA escreveu — **as mensagens do ANÚNCIO saem da conta.**
+   *
+   * A primeira versão excluía a primeira mensagem da conversa, presumindo que ela era a do
+   * anúncio. Print da Erenita (01/09) derrubou: ela mandou uma **figura antes**, o texto do anúncio
+   * virou a segunda mensagem, e a regra passou a ler *"Eu apoio as Escolas Cívico-Militares"* como
+   * apoio escrito por ela. *"preciso que identifique o modelo pelo texto"*.
+   *
+   * Posição é frágil (basta ela mandar um "bom dia" antes); texto não é.
+   */
+  const dela = rajada
+    .filter((m) => !ehMensagemDeAnuncio(m, padroesDeAnuncio))
+    .map((m) => String(m?.texto || ''))
+    .join(' ')
+    .trim();
+  if (!dela) return null;
+  if (PEDIDO_DE_MATERIAL.test(dela)) return null;
+
+  for (const padrao of EXPRESSOES_DE_APOIO) {
+    if (padrao.test(dela)) {
+      return { motivo: 'escreveu apoio em mensagem própria — responda a ela antes do material' };
+    }
+  }
+  return null;
+}
+
+/**
+ * A conversa pendente traz uma pergunta que só ELE pode responder?
+ *
+ * Nasceu da print da Clair (31/08): ela respondeu o formulário, e depois escreveu *"tem muita
+ * propaganda aqui em santa Maria, mas não do capitão Martins."* seguido de *"Porque?"*. A rodada
+ * sugeria **mandar o modelo da campanha** — material de campanha como resposta a uma pergunta
+ * sobre a falta de material de campanha. *"pergunta especifica, caso para IA"*.
+ *
+ * Nenhuma regra pegava: a rajada tinha 126 caracteres (longe dos 400), não era reação, não era
+ * despedida, e havia conteúdo mapeado. Então `conteudo-pedido` venceu.
+ *
+ * **Por que a lista é curta.** O objetivo dele é resolver 90% sem IA; cada entrada aqui tira um
+ * contato da automação. O que ganha lugar é só pergunta de razão ou de posição — as que dependem
+ * do que ele pensa. Pergunta que pede material continua indo para o modelo, que a responde bem.
+ *
+ * **Onde isto acaba e a IA começa:** aqui a rodada só acerta a TECLA (6, à mão). Reconhecer que a
+ * pergunta é sobre distribuição de material em Santa Maria, e propor o que responder, é da IA.
+ *
+ * @param {Array<{texto?:string, tipo?:string, at?:string}>} entrantes
+ * @param {string|null} nossaUltimaAt
+ * @returns {{motivo:string}|null}
+ */
+export function conversaTemPerguntaAberta(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  if (!rajada.length) return null;
+
+  /**
+   * Uma mensagem por vez, e **não** o texto colado da rajada.
+   *
+   * Colado, o começo de uma mensagem virava o meio de uma frase gigante, e aí o teste de
+   * posição abaixo não valia nada.
+   */
+  for (const msg of rajada) {
+    const texto = String(msg?.texto || '').trim();
+    if (!texto) continue;
+    if (PEDIDO_DE_MATERIAL.test(texto)) continue;
+
+    /**
+     * A trava que faltava: **"pq"/"porque" no MEIO de uma frase é conjunção, não pergunta.**
+     *
+     * Print do Ciro (31/08): *"ficou muito grato pq sou Bolsonaro desde sempre"* virava
+     * "fez uma pergunta" e ia para resposta à mão. "pq" explicativo é dos usos mais comuns do
+     * português de WhatsApp — a regra estava tirando da automação justamente quem só agradecia.
+     *
+     * Vale como pergunta quando a mensagem **tem interrogação** ("Porque?") ou quando o padrão
+     * está no **começo** dela ("pq nao tem material aqui"). Quem pergunta abre a mensagem com a
+     * pergunta ou a marca com "?"; quem explica põe o "pq" no meio do que está contando.
+     */
+    const temInterrogacao = texto.includes('?');
+
+    for (const padrao of PERGUNTAS_QUE_PEDEM_VOCE) {
+      const achou = texto.match(padrao);
+      if (!achou) continue;
+
+      // `index` do casamento: 0 (ou 1, quando o padrão consome o espaço à esquerda) = começo.
+      const noComeco = achou.index <= 1;
+      if (temInterrogacao || noComeco) {
+        return { motivo: 'fez uma pergunta que nenhuma resposta pronta responde' };
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * A última mensagem do contato pede resposta escrita por você?
+ *
+ * Mantida porque é pura e testada, e porque `conversaPedeRespostaPessoal` a usa por dentro para
+ * o teste de TIPO. Para decidir a rodada, use a outra: esta não vê a rajada.
+ */
 export function ultimaPedeRespostaPessoal(entrantes) {
   const lista = Array.isArray(entrantes) ? entrantes : [];
   if (!lista.length) return null;
@@ -217,7 +689,7 @@ export function soCortesia(entrantes, quantas = 3) {
   if (!lista.length) return null;
   if (!lista.every(mensagemDeCortesia)) return null;
 
-  const temImagem = lista.some((m) => TIPOS_DE_IMAGEM.has(String(m?.tipo || '').toUpperCase()));
+  const temImagem = lista.some((m) => TIPOS_COMPARTILHADOS.has(String(m?.tipo || '').toUpperCase()));
   const temLink = lista.some((m) => LINK.test(String(m?.texto || '')));
   const temSaudacao = lista.some((m) => SAUDACAO.test(String(m?.texto || '')));
 

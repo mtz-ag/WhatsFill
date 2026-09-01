@@ -21,9 +21,9 @@ import * as iaLib from '../lib/ia.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
-import { ultimaEhSoReacao, ultimaPedeRespostaPessoal, ultimaEhDespedida } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, ultimaEhDespedida } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
-import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido } from '../lib/vars.js';
+import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
 const GROUP_TEMPLATE_ID = 'link-grupo';
 const THANKS_TEMPLATE_ID = 'agradecimento';
@@ -117,12 +117,33 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       fila: [], // retrato da fila da plataforma, só para conferência
       meusAbertos: { total: null, erro: '', quando: 0 },
       log: [], // { nome, resultado, motivo } de cada contato da rodada
+      /**
+       * Contatos desta rodada em que NENHUMA regra recomendou nada, por id de atendimento.
+       *
+       * Escrito num ponto só — logo depois de `sugerirAcao` —, e não em cada saída: são vinte
+       * caminhos de `return` no tratamento de um contato, e marcar em cada um é o tipo de coisa
+       * que fica errada no dia em que alguém acrescenta o vigésimo primeiro.
+       *
+       * Um mapa por id de atendimento (e não um contador) porque o mesmo contato pode passar
+       * duas vezes na rodada — a fila devolve o concluído ao topo, está no `CLAUDE.md` — e
+       * contar duas vezes inflaria a medida justamente no caso que já dá trabalho.
+       *
+       * Guarda `{ nome, texto }` e não só a contagem: o número diz QUANTO sobrou, e para
+       * escrever a regra seguinte ele precisa saber O QUÊ. Dez casos lidos de uma vez mostram
+       * que seis são a mesma situação — é assim que "refinar até sobrar pouca indecisão" deixa
+       * de ser tentativa e erro.
+       */
+      semRegra: new Map(),
     },
     incoming: [],
     /** O que o contato mandou, com o tipo junto — é o que enxerga figura e figurinha. */
     entrantes: [],
     /** Quando saiu a NOSSA última mensagem — o sinal de "este contato já foi respondido". */
     nossaUltimaAt: null,
+    /** O nome que a pessoa escreveu nesta conversa (palpite do parser), não o do cadastro. */
+    nomeInformado: '',
+    /** Expressões que identificam a mensagem gerada pelo anúncio (Config). */
+    padroesDeAnuncio: [],
     /** O que NÓS mandamos nesta conversa — para saber o que já foi, mesmo fora do painel. */
     nossas: [],
     /**
@@ -426,12 +447,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.draft = {};
     state.tagSuggestions = [];
     state.incoming = [];
+    // Sobreviver à troca de contato faria a etiqueta de nome divergente cair na pessoa errada —
+    // é a mesma armadilha da pergunta de cidade, registrada no CLAUDE.md.
+    state.nomeInformado = '';
     state.cidadeRecusada = new Set();
     state.ultimaMensagem = null;
     state.hsmTemplates = [];
     state.error = null;
     state.hasContract = !!(await store.get('writeContract'))?.entries?.length;
     state.settings = await store.get('settings');
+    state.padroesDeAnuncio = await store.get('padroesDeAnuncio');
     state.auto.cfg = await store.get('auto');
     state.ia = await store.get('ia');
     state.iaTemChave = !!(await store.get('iaChave'));
@@ -495,6 +520,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       })();
 
       const palpites = await extract(state.incoming, { temaField, respostaAoPedido });
+      /**
+       * O nome que a PESSOA escreveu, guardado à parte do rascunho.
+       *
+       * O rascunho não serve para detectar cadastro errado: quando o campo "Nome" está vazio ele
+       * é semeado com o próprio `contact.name`, então comparar os dois daria "igual" justamente
+       * no caso que interessa. O palpite do parser é a única fonte que diz o que ela informou.
+       */
+      state.nomeInformado = palpites.nome?.value || '';
       applyGuesses(palpites, classify);
 
       /**
@@ -780,6 +813,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           .filter(Boolean)
           .join(' '),
         veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
+        /**
+         * O cadastro contradiz o que a pessoa informou → etiqueta para ele conferir depois.
+         *
+         * Compara o cadastro (`contact.name`) com o que está na aba Dados, que é onde o parser
+         * põe o nome que a pessoa escreveu. Não mexe em nome nenhum: separar foi a escolha dele
+         * (31/08) entre isso e a extensão trocar sozinha.
+         */
+        nomeDivergente: nomeDivergeDoInformado(state.contact?.name, state.nomeInformado),
         interesse: { perguntado: !!perguntado, etiquetas: etiquetasInteresse },
       });
 
@@ -1873,6 +1914,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * `salvarAuto`) em vez de `templates.save`: a mensagem do momento não mora na lista de
    * respostas, mora na config da rodada, porque muda toda semana.
    */
+  /**
+   * Onde as caixas flutuantes moram: **fora do `root`**, e essa é a razão de existir.
+   *
+   * Pedido dele (31/08): *"ao eu mandar o whatsfill ocultar ele oculta o popup da automatização,
+   * faça com que fique o popup mesmo ocultando, preciso de espaço na area de trabalho"*.
+   *
+   * Esconder o painel é `transform: translateX(100%)` no `.wf-root` (classe `wf-collapsed`), e
+   * **transform arrasta os filhos**: a caixa da rodada era filha do `root` e deslizava para fora
+   * da tela junto. Como irmã dele, dentro do mesmo shadow, ela fica onde está — e o painel sai da
+   * frente devolvendo a largura da tela para a conversa.
+   *
+   * O shadow é o mesmo, então o CSS do painel continua valendo. Sem ele (caso o `root` ainda não
+   * esteja anexado), cai no próprio `root`: melhor a caixa aparecer no lugar antigo do que não
+   * aparecer.
+   */
+  function destinoDaCaixa() {
+    return root.parentNode || root;
+  }
   function abrirEditorDeVariantesDoMomento(cfg) {
     const fundo = h('div', { class: 'wf-pergunta-fundo' });
     const caixa = h('div', { class: 'wf-pergunta' });
@@ -1930,7 +1989,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
     fecharBtn.addEventListener('click', fechar);
 
-    root.append(fundo);
+    destinoDaCaixa().append(fundo);
     aplicarPosicao(caixa, null);
   }
 
@@ -2328,7 +2387,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     contadorFlutuante = { encerrar, medir };
     tornarArrastavel(caixa, barra, 'contadorPos');
-    root.append(fundo);
+    destinoDaCaixa().append(fundo);
     aplicarPosicao(caixa, state.settings.contadorPos);
 
     await medir();
@@ -2424,7 +2483,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return card;
   }
 
-  const SINAL_RODADA = { enviado: '✓', concluido: '▪', pulado: '–', triado: '→', reiniciado: '↻', erro: '×', fim: '■' };
+  /**
+   * O sinal de cada linha do log.
+   *
+   * `refinar` é resultado PRÓPRIO e não 'pulado' de propósito: as linhas da lista de casos sem
+   * regra entram depois de o resumo estar montado, e reusar um resultado que o resumo conta
+   * deixaria uma bomba armada para quem mover a ordem dessas duas coisas um dia.
+   */
+  const SINAL_RODADA = { enviado: '✓', concluido: '▪', pulado: '–', triado: '→', reiniciado: '↻', erro: '×', fim: '■', aviso: '⚠', refinar: '?' };
 
   /** Resultados em que o contato deixa a lista: a posição não pode avançar junto. */
   const SAI_DA_FILA = new Set(['triado', 'concluido', 'reiniciado']);
@@ -2742,6 +2808,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.auto.rodando = true;
     state.auto.parar = false;
     state.auto.log = [];
+    state.auto.semRegra = new Map();
     renderAll();
 
     // Aba escondida é aba CONGELADA — timer nenhum roda, nem o da plataforma. Sem isto, a
@@ -2777,11 +2844,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const triados = conta('triado');
     const concluidos = conta('concluido');
     const reabertos = conta('reiniciado');
+    /**
+     * Quantos a rodada NÃO soube recomendar.
+     *
+     * É a medida que ele pediu sem pedir: *"terá que reconhecer isso pela falta de opções"*.
+     * Cada um destes é um contato que o determinístico não resolveu — a conta encolhendo,
+     * rodada após rodada, é o refinamento das regras funcionando, e ela diz quando vale a pena
+     * ligar a IA (que custa por contato avaliado).
+     *
+     * Sai da própria rodada, sem etiqueta nenhuma no CRM: rótulo novo na base para dizer o que
+     * o painel já sabe seria trabalho a mais para a mesma informação.
+     */
+    const semRegra = state.auto.semRegra.size;
     const resumo =
       `Rodada encerrada: ${conta('enviado')} enviado(s), ${conta('pulado')} pulado(s)` +
       (reabertos ? `, ${reabertos} reaberto(s) em "Meus"` : '') +
       (concluidos ? `, ${concluidos} concluído(s) sem enviar` : '') +
-      (triados ? `, ${triados} assumido(s) para triagem em "Meus"` : '') + '.';
+      (triados ? `, ${triados} assumido(s) para triagem em "Meus"` : '') +
+      (semRegra ? `, ${semRegra} que nenhuma regra reconheceu` : '') + '.';
 
     // Alguém da lista ficou para trás sem ninguém abrir. Não é o caso normal — a posição
     // acompanha a reordenação da plataforma —, mas quando acontece tem que aparecer, senão o
@@ -2808,6 +2888,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // O log ANTES do status: `refresh()` logo abaixo carrega o contato aberto e sobrescreve a
     // barra de status, então o veredito da rodada só sobrevive aqui. Era por isso que a rodada
     // parecia parar sem explicação.
+    /**
+     * Os casos que nenhuma regra reconheceu, listados no fim para serem lidos JUNTOS.
+     *
+     * Separados no meio do log eles são vinte linhas perdidas entre cem; juntos, o padrão
+     * aparece — e o padrão é a próxima regra a escrever. É o instrumento do plano dele:
+     * refinar até sobrar pouca indecisão, e só então ligar a IA para o que sobrou.
+     */
+    if (state.auto.semRegra.size) {
+      registrarNaRodada('— a refinar —', 'refinar',
+        `${state.auto.semRegra.size} caso(s) que nenhuma regra reconheceu. Vários iguais = uma regra nova:`);
+      for (const caso of state.auto.semRegra.values()) {
+        const oQue = caso.texto ? `"${caso.texto}"` : `(${caso.tipo || 'sem texto'})`;
+        registrarNaRodada(caso.nome, 'refinar', `última mensagem: ${oQue}`);
+      }
+    }
+
     registrarNaRodada('rodada', 'fim', `${resumo}${sobra} ${motivo} ${audio}`);
 
     setStatus(`${resumo}${sobra} ${motivo}`, resultado.interrompida || sobra ? 'err' : 'ok');
@@ -3331,16 +3427,46 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       let conteudoEscolhido = null;
       let desempatado = false;
 
-      const escolha0 = hsmLib.escolherConteudo(conteudos, await store.get('conteudoPreferido'));
-      if (escolha0.erro) {
-        semModelo = escolha0.erro;
+      /**
+       * **O TEXTO decide primeiro.**
+       *
+       * Pedido dele (01/09): *"o padrão para casar o modelo deve ser o texto (Olá! Eu apoio as
+       * Escolas Cívico-Militares = modelo)"*, e *"não será feito etiqueta a etiqueta para os
+       * anúncios, agora é só ads"*.
+       *
+       * A etiqueta ADS não distingue de QUAL anúncio a pessoa veio; o texto que ela mandou
+       * distingue. Quando a tabela casa, o modelo sai daí — a etiqueta nem é consultada.
+       *
+       * Nada casando, o caminho antigo (etiqueta → modelo) segue exatamente como era: é o que
+       * atende quem chega por outra via e quem já tem "Conteúdo Zucco"/"Conteúdo Flávio".
+       */
+      const porTexto = hsmLib.modeloPorTexto(
+        state.incoming,
+        await store.get('modeloPorTexto'),
+        state.hsmTemplates
+      );
+
+      if (porTexto?.modelo) {
+        modelo = porTexto.modelo;
+        // Vira o "conteúdo escolhido" para a tela dizer POR QUE este modelo: sem isso a caixa
+        // mostraria "Sem modelo" enquanto oferece a tecla 1, que é pior que não explicar.
+        conteudoEscolhido = { nome: `texto: "${porTexto.trecho}"` };
+      } else if (porTexto?.erro) {
+        // Casou o texto e o modelo não existe: isto é erro de configuração DELE, e some no
+        // silêncio se a rodada cair no caminho da etiqueta como se nada tivesse acontecido.
+        semModelo = porTexto.erro;
       } else {
-        conteudoEscolhido = escolha0.conteudo;
-        desempatado = !!escolha0.desempatado;
-        const mapa = await store.get('contentTemplates');
-        const achado = hsmLib.templateParaConteudo(conteudoEscolhido.nome, mapa, state.hsmTemplates);
-        modelo = achado.modelo || null;
-        semModelo = achado.erro || '';
+        const escolha0 = hsmLib.escolherConteudo(conteudos, await store.get('conteudoPreferido'));
+        if (escolha0.erro) {
+          semModelo = escolha0.erro;
+        } else {
+          conteudoEscolhido = escolha0.conteudo;
+          desempatado = !!escolha0.desempatado;
+          const mapa = await store.get('contentTemplates');
+          const achado = hsmLib.templateParaConteudo(conteudoEscolhido.nome, mapa, state.hsmTemplates);
+          modelo = achado.modelo || null;
+          semModelo = achado.erro || '';
+        }
       }
 
       // Sem conteúdo identificado a pergunta aparece do mesmo jeito, só sem a tecla 1.
@@ -3397,6 +3523,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // A pergunta de interesse (tecla 7): só faz sentido para quem NÃO tem etiqueta de
       // conteúdo. Quem já pediu conteúdo tem modelo para receber, não pergunta.
+      /**
+       * Tecla 8: a pessoa só expressou apoio e já está classificada — agradecer é o desfecho.
+       *
+       * Pedido dele (31/08, print do Ciro): *"esse é um caso comum até onde a pessoa só expressa
+       * o apoio, ja tem as etiquetas, então é só uma questão de agradecer o apoio e carinho"*.
+       *
+       * A trava por variável segue a mesma disciplina das outras teclas: falta variável, a tecla
+       * SOME com o motivo na tela, em vez de travar na hora do envio.
+       */
+      const apoio = state.templates.find((t) => t.id === 'agradecer-apoio');
+      const perguntarAjuda = state.templates.find((t) => t.id === 'perguntar-como-ajudar');
+      const textoPerguntarAjuda = perguntarAjuda ? await templatesLib.varianteAtual(perguntarAjuda) : '';
+      const perguntarAjudaTrava = perguntarAjuda
+        ? vars.render(textoPerguntarAjuda, contexto).missing.length > 0
+        : true;
+      const textoApoio = apoio ? await templatesLib.varianteAtual(apoio) : '';
+      const apoioTrava = apoio ? vars.render(textoApoio, contexto).missing.length > 0 : true;
+
       const interesse = state.templates.find((t) => t.id === INTEREST_TEMPLATE_ID);
       const interesseTrava = interesse
         ? vars.render(interesse.text, contexto).missing.length > 0
@@ -3529,7 +3673,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // Canal fora do ar: some TODA saída que envia, e sobra pular. Ver `canalDesteContatoFora`.
       const canalFora = await canalDesteContatoFora();
       if (canalFora) {
-        await saveClassification({ withCompletionDate: true, quiet: true });
+        // Não grava ANTES de perguntar: as duas saídas daqui são pular (que não grava) e
+        // concluir (que grava na hora). Gravar aqui pagava o custo mesmo quando ele ia pular.
         const escolhaFora = await perguntarNaRodada({
           titulo: nome,
           linhas: [linhaCanalFora(canalFora), canalFora.texto].filter(Boolean),
@@ -3543,7 +3688,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           nome,
           resultado: 'pulado',
           parar: escolhaFora !== 'pular',
-          motivo: 'o número deste atendimento está fora do ar — classificação gravada, nada enviado',
+          motivo: 'o número deste atendimento está fora do ar — nada gravado, nada enviado',
         };
       }
 
@@ -3595,15 +3740,79 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * Compara um trecho do MEIO do modelo com o que já saiu: o começo costuma ser saudação
        * igual em todos, e um trecho curto sobrevive a variável interpolada no caminho.
        */
+      /**
+       * O modelo já está na conversa?
+       *
+       * **Compara o maior pedaço LITERAL do modelo, e não uma fatia fixa.** A versão anterior
+       * pegava os caracteres 40 a 100 — e modelo aprovado tem variáveis (`{{1}}`, nome, cidade).
+       * Variável caindo nessa fatia fazia a comparação nunca casar, porque o que saiu tem o VALOR
+       * no lugar do marcador. Print do Cris (31/08): histórico grande, modelo provavelmente já
+       * entregue, e a caixa sugerindo mandar de novo.
+       *
+       * 30 caracteres literais é pouco para dar falso positivo (é meia frase específica) e curto
+       * o bastante para sobrar mesmo em modelo cheio de variável.
+       */
       const modeloJaNaConversa = (() => {
-        const corpo = achatarTexto(modelo?.text || '');
-        if (corpo.length < 100) return false;
-        const trecho = corpo.slice(40, 100);
-        return state.nossas.some((m) => achatarTexto(m.texto).includes(trecho));
+        const bruto = String(modelo?.text || '');
+        // Quebra nos marcadores de variável: sobra o que o modelo tem de fixo.
+        const pedacos = bruto
+          .split(/\{\{[^}]*\}\}|\{\{?\d+\}?\}/g)
+          .map((t) => achatarTexto(t))
+          .filter((t) => t.length >= 30);
+        if (!pedacos.length) return false;
+
+        const maior = pedacos.sort((a, b) => b.length - a.length)[0];
+        return state.nossas.some((m) => achatarTexto(m.texto).includes(maior));
+      })();
+
+      /**
+       * Já **ENTREGAMOS** algo a este contato — e não apenas perguntado algo a ele?
+       *
+       * Escolha dele (31/08), print do Cris: *"histórico de conversa grande provavelmente já
+       * recebeu modelo de mensagem, vou mandar mensagem do momento"*.
+       *
+       * **A primeira versão contava QUALQUER mensagem nossa, e estava errada.** Print da Ivone,
+       * uma hora depois: a nossa única mensagem tinha sido o **pedido de dados**, ela respondeu
+       * *"Ivone trentim Borges passo fundo"* — e a caixa dizia *"já foi atendida antes (o modelo
+       * provavelmente já saiu)"*. Não tinha saído nada. *"o atendimento foi perguntar os dados"*.
+       *
+       * **Pergunta não é entrega.** Quem só foi perguntado não recebeu nada ainda, e é exatamente
+       * quem está esperando o material. Por isso as nossas mensagens que são PERGUNTA saem da
+       * conta: o pedido de dados, a pergunta de interesse e a de "em que posso ajudar".
+       *
+       * A comparação usa o maior pedaço literal de cada texto, como o `modeloJaNaConversa` — é o
+       * que sobrevive às variáveis substituídas e às três variantes de cada resposta.
+       */
+      const jaRespondemosAntes = (() => {
+        if (!state.nossas.length) return false;
+
+        const perguntas = ['pedir-dados', 'interesse-conteudo', 'perguntar-como-ajudar']
+          .map((id) => state.templates.find((t) => t.id === id))
+          .filter(Boolean);
+
+        // Todos os textos possíveis de cada pergunta: o base e as variantes.
+        const pedacosDePergunta = [];
+        for (const t of perguntas) {
+          for (const texto of [t.text, ...(t.variantes || [])]) {
+            const literais = String(texto || '')
+              .split(/\{\{[^}]*\}\}/g)
+              .map((x) => achatarTexto(x))
+              .filter((x) => x.length >= 30);
+            if (literais.length) pedacosDePergunta.push(literais.sort((a, b) => b.length - a.length)[0]);
+          }
+        }
+
+        const ehPergunta = (m) => {
+          const texto = achatarTexto(m.texto);
+          return pedacosDePergunta.some((pedaco) => texto.includes(pedaco));
+        };
+
+        return state.nossas.some((m) => !ehPergunta(m));
       })();
 
       const sugestao = sugerirAcao({
         modeloJaNaConversa,
+        jaRespondemosAntes,
         ultimaEhDespedida: ultimaEhDespedida(state.entrantes),
         // "Já foi respondida": nossa última mensagem saiu hoje. Serve para a reação (figura,
         // emoji, link) virar "concluir" em vez de "mais uma mensagem".
@@ -3611,9 +3820,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         voltouPorOutroAnuncio,
         momentoHoje,
         momentoJaEnviado,
-        pedeRespostaPessoal: ultimaPedeRespostaPessoal(state.entrantes),
+        // A RAJADA, não só a última: três mensagens curtas somando 450 caracteres são conversa
+        // igual a uma longa de 450 (print dele, 31/08).
+        pedeRespostaPessoal: conversaPedeRespostaPessoal(state.entrantes, state.nossaUltimaAt),
+        // Pergunta de razão ou de posição: nenhuma resposta pronta responde, e mandar o modelo
+        // vira material de campanha em cima da pergunta dela (print da Clair, 31/08).
+        perguntaAberta: conversaTemPerguntaAberta(state.entrantes, state.nossaUltimaAt),
+        // Só apoio, sem pergunta e sem pedido: agradecer é o desfecho (print do Ciro, 31/08).
+        // A tecla só é oferecida se o texto do agradecimento não estiver travado por variável.
+        // Os padrões do anúncio vêm da Config: é por eles que a mensagem gerada pelo anúncio
+        // ("Olá! Eu apoio as Escolas Cívico-Militares") deixa de contar como apoio escrito por
+        // ela. Por TEXTO e não por posição — a figura que a Erenita mandou antes derrubou a
+        // versão posicional (01/09).
+        soExpressaApoio: apoioTrava
+          ? null
+          : soExpressaApoio(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
         etiquetaQueDispensa: await etiquetaQueDispensaDaFila(),
         ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
+        // Só links e vídeos repassados: é ruído, e ruído não pede formulário (print do Odone).
+        rajadaEhSoRepasse: rajadaEhSoRepasse(state.entrantes, state.nossaUltimaAt),
+        // Pediu algo sem dizer o quê: material de campanha em cima disso é o pior caso do
+        // projeto (print da Mari, 31/08). Perguntar é a única resposta segura.
+        pedeAlgoIndefinido: pedeAlgoIndefinido(state.entrantes, state.nossaUltimaAt),
+        podePerguntarAjuda: !perguntarAjudaTrava,
         podeMandarMomento: !momentoTrava,
         temEtiquetaDeCidade,
         // O critério de "pedir dados" é o NOME, não a cidade (decisão dele, 31/08).
@@ -3684,14 +3913,40 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             : 'Perguntar interesse + pedir nome e cidade, e concluir',
         });
       }
+      if (!apoioTrava) {
+        opcoes.push({ tecla: '8', valor: 'apoio', rotulo: 'Agradecer o apoio e concluir' });
+      }
+      /**
+       * Tecla 9 — perguntar em que pode ajudar.
+       *
+       * **Não conclui**, ao contrário das outras que enviam texto: a resposta dela é o que decide
+       * o caso, e concluir tiraria o contato da fila justamente antes de ela responder.
+       */
+      if (!perguntarAjudaTrava) {
+        opcoes.push({ tecla: '9', valor: 'perguntarajuda', rotulo: 'Perguntar em que pode ajudar (deixa aberto)' });
+      }
 
       // Um lugar só decide o destaque. Antes eram três expressões independentes, e duas podiam
       // acender ao mesmo tempo num contato que casasse com as duas condições.
       for (const opcao of opcoes) opcao.primaria = !!sugestao && opcao.tecla === sugestao.tecla;
 
+      // Nenhuma regra reconheceu: o caso é para ele decidir hoje, e é o gatilho da IA no outro
+      // branch. Marcado AQUI, onde a informação existe — não em cada `return` lá embaixo.
+      if (!sugestao) {
+        const ultimaDela = [...state.entrantes].reverse().find((m) => String(m?.texto || '').trim());
+        state.auto.semRegra.set(sessionId, {
+          nome,
+          texto: String(ultimaDela?.texto || '').replace(/\s+/g, ' ').trim().slice(0, 120),
+          tipo: ultimaDela?.tipo || '',
+        });
+      }
+
       const escolha = await perguntarNaRodada({
         titulo: nome,
         recomendacao: sugestao,
+        // A falta de recomendação é o sinal de "isto é para a IA" (pedido dele, 31/08): sem
+        // etiqueta nova, sem tecla nova — a própria ausência de regra é o que marca o caso.
+        semRegra: !sugestao,
         // O passo manual dele quando a resposta tem que ser escrita: copiar a conversa e colar
         // numa IA. Aqui vira um clique — sem sair da caixa e sem parar a rodada.
         copiarConversa: state.entrantes,
@@ -3764,9 +4019,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return { nome, resultado: 'pulado', parar: true, motivo: 'você parou a rodada' };
       }
 
+      /**
+       * Pular **não escreve nada no CRM**, e essa é a razão de ele existir.
+       *
+       * Pedido dele (31/08): *"ao pular tem gravado dados no crm o que faz eu perder tempo com
+       * esses contatos que eram pra ser pulados rapidamente"*. Está certo — gravar custava, por
+       * contato pulado, uma escrita por campo mais uma de etiquetas, e podia abrir a pergunta de
+       * cidade, que é a espera mais longa que existe no meio de uma gravação.
+       *
+       * **E gravava a "Data de conclusão do contato" num atendimento que fica ABERTO** — marcava
+       * como tratado quem foi deixado para depois, que é o oposto do que pular quer dizer.
+       *
+       * Nada se perde: o parser reconstrói tudo na próxima vez que o contato abrir. O que ele
+       * gravava era palpite que ninguém tinha confirmado ainda.
+       */
       if (escolha === 'pular') {
-        await saveClassification({ withCompletionDate: true, quiet: true });
-        return { nome, resultado: 'pulado', motivo: 'você pulou — classificação gravada, atendimento aberto' };
+        return { nome, resultado: 'pulado', motivo: 'você pulou — nada gravado, atendimento aberto' };
       }
 
       // Tecla 6: a rodada sai da frente e fica de vigia. Você responde à mão no atendimento que
@@ -3782,15 +4050,41 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // A pergunta de interesse entra aqui pelo mesmo caminho: concluir tira da fila, e quando
       // a pessoa responder a plataforma devolve o atendimento para "Meus" sozinha — é lá que o
       // "sim" vira etiqueta, na passada seguinte.
-      if (escolha === 'pedirdados' || escolha === 'momento' || escolha === 'interesse') {
+      /**
+       * Tecla 9: manda a pergunta e **deixa o atendimento aberto**.
+       *
+       * Todas as outras teclas que enviam texto concluem. Esta não: o caso só se resolve com a
+       * resposta dela, e concluir tiraria o contato da fila exatamente antes disso.
+       */
+      if (escolha === 'perguntarajuda') {
+        await saveClassification({ withCompletionDate: true, quiet: true });
+        if (!(await sendTemplate(perguntarAjuda, { send: true, jaConfirmado: true }))) {
+          return { nome, resultado: 'erro', motivo: 'a pergunta não saiu' };
+        }
+        return {
+          nome,
+          resultado: 'enviado',
+          motivo: 'perguntei em que posso ajudar — atendimento aberto, esperando a resposta dela',
+        };
+      }
+
+      if (escolha === 'pedirdados' || escolha === 'momento' || escolha === 'interesse' || escolha === 'apoio') {
         const texto =
-          escolha === 'pedirdados' ? pedirDados : escolha === 'momento' ? momento : interesse;
+          escolha === 'pedirdados'
+            ? pedirDados
+            : escolha === 'momento'
+              ? momento
+              : escolha === 'apoio'
+                ? apoio
+                : interesse;
         const rotulo =
           escolha === 'pedirdados'
             ? 'pedi os dados'
             : escolha === 'momento'
               ? 'mensagem do momento enviada'
-              : 'perguntei o interesse no conteúdo';
+              : escolha === 'apoio'
+                ? 'agradeci o apoio'
+                : 'perguntei o interesse no conteúdo';
 
         await saveClassification({ withCompletionDate: true, quiet: true });
         if (!(await sendTemplate(texto, { send: true, jaConfirmado: true }))) {
@@ -3877,7 +4171,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *
    * @returns {Promise<string>} o `valor` da opção escolhida, ou 'parar' no Esc
    */
-  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [], recomendacao = null, copiarConversa = null, dica = 'Esc para parar a rodada' }) {
+  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [], recomendacao = null, semRegra = false, copiarConversa = null, dica = 'Esc para parar a rodada' }) {
     // `fechar` sai daqui de dentro para virar `promessa.cancelar`: caixa que ficou na tela
     // depois de o contato mudar tem que poder ser tirada de fora. Ver `cancelarPerguntaDeCidade`.
     let fecharDeFora = null;
@@ -3895,6 +4189,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (recomendacao) {
         caixa.append(
           h('div', { class: 'wf-pergunta-recomendada' }, `Sugiro a ${recomendacao.tecla}: ${recomendacao.motivo}`)
+        );
+      } else if (semRegra) {
+        /**
+         * Nenhuma regra reconheceu este caso — e isso é INFORMAÇÃO, não ausência dela.
+         *
+         * Pedido dele (31/08): *"terá que reconhecer isso pela falta de opções"*, recusando a
+         * ideia anterior de marcar esses contatos com uma etiqueta. Está certo: a falta de
+         * recomendação já é o sinal, e etiqueta nova seria um rótulo a mais na base para dizer
+         * o que o próprio painel já sabe.
+         *
+         * Antes disto a caixa ficava calada nesses casos, e "a rodada não sugeriu nada" não se
+         * distinguia de "a rodada não olhou". É exatamente esta faixa que a IA vai substituir:
+         * no branch `claude/whatsfill-ia`, `sugestao === null` é o gatilho da avaliação, e o
+         * lugar dela na tela é aqui.
+         */
+        caixa.append(
+          h(
+            'div',
+            { class: 'wf-pergunta-recomendada wf-pergunta-semregra' },
+            'Nenhuma regra reconheceu este caso — a decisão é sua.'
+          )
         );
       }
       // Linha pode ser texto ou lista de nós — é o que deixa a cidade sair em marca-texto.
@@ -3948,7 +4263,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // Captura no documento: o shadow root não recebe tecla quando o foco está na página.
       document.addEventListener('keydown', aoTeclar, true);
-      root.append(fundo);
+      destinoDaCaixa().append(fundo);
       // De novo agora que a caixa está na tela: fora do DOM ela não tem altura, e o limite de
       // "não sair da janela" sairia calculado por estimativa.
       aplicarPosicao(caixa, state.settings.perguntaPos);
@@ -4487,9 +4802,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // Pular NÃO tira a etiqueta: o contato tem que continuar na lista filtrada, senão ele
       // some do trabalho sem nunca ter sido atendido.
+      // Pular não escreve no CRM — ver o comentário do outro `pular`, na rodada principal.
       if (escolha === 'pular') {
-        await saveClassification({ withCompletionDate: true, quiet: true });
-        return { nome, resultado: 'pulado', motivo: 'você pulou — etiqueta mantida, atendimento aberto' };
+        return { nome, resultado: 'pulado', motivo: 'você pulou — nada gravado, atendimento aberto' };
       }
 
       // A rodada sai da frente e fica de vigia. Ele responde à mão; quando concluir, ela segue.
@@ -6711,6 +7026,73 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
     body.append(rulesArea, rulesBtn);
 
+    /**
+     * A tabela TEXTO → modelo. Vem ANTES da tabela por etiqueta na tela porque vem antes na
+     * decisão: quando um trecho casa, o modelo sai daqui e a etiqueta nem é consultada.
+     */
+    body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Modelo por TEXTO da mensagem'));
+    body.append(
+      h('p', { class: 'wf-hint' },
+        'Uma linha por anúncio, no formato "trecho do texto = Nome do modelo". Serve para o caso em ' +
+          'que a etiqueta ADS não distingue de qual anúncio a pessoa veio: o texto que ela manda ' +
+          'distingue. Casa por trecho CONTIDO e sem diferenciar acento ou maiúscula, então não ' +
+          'precisa copiar a mensagem inteira nem se preocupar com o emoji. Havendo dois trechos que ' +
+          'casam, ganha o mais específico (o maior).')
+    );
+
+    const textoArea = h('textarea', { rows: '4', placeholder: 'Olá! Eu apoio as Escolas Cívico-Militares = Escolas CM' });
+    store.get('modeloPorTexto').then((m) => (textoArea.value = hsmLib.formatModeloPorTexto(m)));
+
+    const textoBtn = h('button', { class: 'wf-btn', type: 'button' }, 'Salvar modelo por texto');
+    textoBtn.addEventListener('click', () =>
+      withBusy(async () => {
+        const parsed = hsmLib.parseModeloPorTexto(textoArea.value);
+        const pares = Object.entries(parsed);
+
+        /**
+         * Confere os nomes contra os modelos aprovados ANTES de gravar.
+         *
+         * Nome errado aqui não dá erro na hora de salvar — dá na hora de enviar, no meio de uma
+         * rodada, com o contato aberto. Avisar agora é a diferença entre corrigir uma linha e
+         * descobrir o problema com trinta contatos na fila.
+         */
+        const nomesAprovados = state.hsmTemplates.map((m) => m.name.trim().toLowerCase());
+        const desconhecidos = state.hsmTemplates.length
+          ? pares.filter(([, nome]) => !nomesAprovados.includes(nome.trim().toLowerCase()))
+          : [];
+
+        await store.set('modeloPorTexto', parsed);
+        textoArea.value = hsmLib.formatModeloPorTexto(parsed);
+
+        if (desconhecidos.length) {
+          setStatus(
+            `Salvei ${pares.length} linha(s), mas ${desconhecidos.length} apontam para modelo que a ` +
+              `plataforma não tem: ${desconhecidos.map(([, n]) => `"${n}"`).join(", ")}. ` +
+              'Confira os nomes na lista abaixo.',
+            'err'
+          );
+          return;
+        }
+        setStatus(
+          pares.length
+            ? `${pares.length} texto(s) mapeado(s) para modelo. O texto decide antes da etiqueta.`
+            : 'Tabela vazia: o modelo volta a sair só da etiqueta de conteúdo.'
+        );
+      })
+    );
+    body.append(textoArea, textoBtn);
+    if (state.hsmTemplates.length) {
+      body.append(
+        h('div', { class: 'wf-origin' }, 'Modelos aprovados: ' + state.hsmTemplates.map((m) => m.name).join(' · '))
+      );
+    } else {
+      body.append(
+        h('div', { class: 'wf-origin' },
+          'A lista de modelos aprovados não está carregada, então não consigo conferir os nomes ' +
+            'agora. Abra um atendimento e volte aqui para eu avisar se algum nome estiver errado.')
+      );
+    }
+
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Modelo por conteúdo'));
     body.append(
       h('p', { class: 'wf-hint' }, 'Uma linha por conteúdo, no formato "Etiqueta = Nome do modelo". É o que o botão "Enviar conteúdo + agradecer + concluir" usa: a regra acima diz o que o contato pediu, e esta tabela diz qual modelo aprovado responde. Sem mapeamento, o painel não adivinha.')
@@ -6795,6 +7177,36 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             'texto — então isto não depende de regra nem de acerto de regex. A etiqueta entra ' +
             'como CONTEÚDO, que é o que a liga à tabela "Modelo por conteúdo" logo acima. ' +
             'Vazio = não etiqueta ninguém por essa via.'),
+      ])
+    );
+
+    // O cadastro diz um nome e a pessoa disse outro. A extensão NÃO troca o nome: marca, e ele
+    // corrige à mão depois. Escolha dele em 31/08, entre trocar sozinho e separar.
+    const nomeDivInput = h('input', { type: 'text', placeholder: 'ex.: Conferir nome' });
+    store.get('etiquetaNomeDivergente').then((v) => {
+      nomeDivInput.value = v || '';
+    });
+    nomeDivInput.addEventListener('change', async () => {
+      const v = nomeDivInput.value.trim();
+      await store.set('etiquetaNomeDivergente', v);
+      tagsLib.invalidateTags();
+      setStatus(
+        v
+          ? `Cadastro que não bate com o nome informado recebe a etiqueta "${v}".`
+          : 'Ninguém será marcado por nome divergente.'
+      );
+    });
+    body.append(
+      h('label', { class: 'wf-field' }, [
+        h('span', {}, 'Etiqueta de "o nome do cadastro não bate"'),
+        nomeDivInput,
+        h('div', { class: 'wf-origin' },
+          'Quando a pessoa informa um nome diferente do que está no cadastro (o caso do ' +
+            'cadastro "viver a vida" com a pessoa respondendo "Daniel Ribeiro"), a extensão ' +
+            'marca com esta etiqueta e NÃO mexe no nome. Você filtra a fila por ela e corrige ' +
+            'todos de uma vez. Nome completo sobre nome curto ("Daniel" → "Daniel Ribeiro"), ' +
+            'acento e caixa não contam como divergência. A etiqueta precisa existir no CRM. ' +
+            'Vazio = não marca ninguém.'),
       ])
     );
 
@@ -7063,7 +7475,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
     fecharBtn.addEventListener('click', fechar);
 
-    root.append(fundo);
+    destinoDaCaixa().append(fundo);
     aplicarPosicao(caixa, null);
     nameInput.focus();
   }

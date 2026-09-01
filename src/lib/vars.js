@@ -106,6 +106,50 @@ export function nomeSemSentido(name) {
   return !/[aeiouáàâãéêíóôõúü]/i.test(letras);
 }
 
+/** Sem acento e sem caixa, para comparar o que está ESCRITO em dois nomes. */
+function achatarNome(v) {
+  return String(v || '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/**
+ * O nome do cadastro contradiz o que a pessoa acabou de informar?
+ *
+ * Existe para SEPARAR o contato, não para corrigi-lo. Decisão dele (31/08), diante do caso do
+ * cadastro "viver a vida" com a pessoa respondendo "Daniel Ribeiro/Canoas": *"ou trocar o nome
+ * pela extensão ou separar esse contato deixando para o final e eu mesmo arrumar"* — e ele
+ * escolheu separar. O nome nativo do contato **nunca** é sobrescrito por aqui.
+ *
+ * **Divergir não é ser diferente.** Três casos que NÃO contam, e cada um viraria uma fila de
+ * revisão inútil:
+ *
+ *  - **um contém o outro** — "Daniel" x "Daniel Ribeiro" é a mesma pessoa dando o nome completo;
+ *  - **acento e caixa** — "JOSE" x "José" resolvem para a mesma pessoa;
+ *  - **cadastro vazio ou de anúncio** (`looksLikePlaceholder`) — aí não há contradição, há
+ *    buraco, e buraco o parser preenche sozinho como sempre fez.
+ *
+ * O que sobra é o caso dele: o cadastro diz uma coisa e a pessoa diz outra, e alguém precisa
+ * olhar. Note que `nomeSemSentido` não serve aqui — "viver a vida" tem vogais e não é
+ * placeholder, então passa nele. É a DIVERGÊNCIA que denuncia, não a forma do cadastro.
+ *
+ * @param {string} cadastro o que está no CRM
+ * @param {string} informado o que a pessoa escreveu
+ * @returns {boolean}
+ */
+export function nomeDivergeDoInformado(cadastro, informado) {
+  const dado = achatarNome(informado);
+  const crm = achatarNome(cadastro);
+  if (!dado || !crm) return false;
+  if (looksLikePlaceholder(cadastro)) return false;
+  if (crm === dado) return false;
+  if (crm.includes(dado) || dado.includes(crm)) return false;
+  return true;
+}
+
 /**
  * O nome do cadastro é só o apelido do perfil do WhatsApp?
  *

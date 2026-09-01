@@ -21,6 +21,8 @@ export async function list() {
     await migrarGruposPedeLink();
     await migrarRespostaSemRetorno();
     await migrarRespostaPedidoEmprego();
+    await migrarRespostaAgradecerApoio();
+    await migrarRespostaPerguntarAjuda();
     await migrarVariantesDeTexto();
   }
   return store.get('templates');
@@ -104,6 +106,31 @@ export const migrarRespostaSemRetorno = () =>
  */
 export const migrarRespostaPedidoEmprego = () =>
   garantirRespostas(['pedido-emprego'], 'respostaPedidoEmprego');
+
+/**
+ * O agradecimento pelo APOIO, para quem já tinha a lista de respostas salva.
+ *
+ * Sem isto ela não chega a ninguém que já usa a extensão — e a tecla 8 da rodada, que depende
+ * dela, some junto. Foi o que aconteceu em 31/08: ele atualizou para a 0.48.0 e a opção
+ * "Agradecer o apoio e concluir" não apareceu. **A tecla não estava faltando; o texto é que
+ * nunca tinha chegado.**
+ *
+ * Flag própria pelo mesmo motivo das outras: reaproveitar flag antiga faria voltar resposta que
+ * ele apagou de propósito.
+ */
+export const migrarRespostaAgradecerApoio = () =>
+  garantirRespostas(['agradecer-apoio'], 'respostaAgradecerApoio');
+
+/**
+ * A pergunta "em que posso ajudar?", para quem já tinha a lista salva.
+ *
+ * É a resposta de maior risco jurídico do conjunto — não pela promessa que faz, mas pela que
+ * ela EVITA: sem esta, a rodada mandava material de campanha para quem escreveu "preciso da
+ * força do senhor" (31/08). Se a migração não roda, a tecla não aparece e o caso volta a cair
+ * na tecla 1.
+ */
+export const migrarRespostaPerguntarAjuda = () =>
+  garantirRespostas(['perguntar-como-ajudar'], 'respostaPerguntarAjuda');
 
 /**
  * A pergunta dos grupos passa a pedir o LINK de convite, e não o nome.

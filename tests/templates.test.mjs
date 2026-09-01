@@ -107,4 +107,63 @@ grupo('todos os templates padrão que têm variantes preservam o que o parser/le
   check(!store.DEFAULT_TEMPLATES.find((t) => t.id === 'pedido-emprego').variantes, 'pedido-emprego sem variantes');
 }
 
+
+grupo('o agradecimento pelo APOIO chega a quem ja tem a lista salva');
+{
+  const templates = await lib('templates.js');
+  const store = await lib('store.js');
+
+  const padrao = store.DEFAULT_TEMPLATES.find((t) => t.id === 'agradecer-apoio');
+  check(!!padrao, 'a resposta "agradecer-apoio" existe no padrao');
+  check(/apoio/i.test(padrao.text), 'ela agradece o APOIO, e nao as informacoes');
+  check(padrao.variantes.length >= 2, 'e tem variantes, como as outras');
+
+  /**
+   * Print dele (31/08): atualizou para a 0.48.0 e a tecla 8 nao apareceu. A tecla nao estava
+   * faltando — o TEXTO e que nunca tinha chegado. Mudar DEFAULT_TEMPLATES so vale para quem
+   * nunca gravou nada; quem ja usa a extensao precisa da migracao.
+   */
+  mem.migracoes = {};
+  mem.templates = [{ id: 'agradecimento', name: 'Agradecer', text: 'Obrigado pela atencao!' }];
+  check((await templates.migrarRespostaAgradecerApoio()) === true, 'acrescentou a quem nao tinha');
+  check(mem.templates.some((t) => t.id === 'agradecer-apoio'), 'a resposta entrou na lista salva');
+  check(mem.templates.length === 2, 'e nao trouxe as outras junto');
+
+  // Roda uma vez so: resposta que ele apagar de proposito nao volta.
+  check((await templates.migrarRespostaAgradecerApoio()) === false, 'nao repete na segunda vez');
+
+  // Quem ja tem, nao ganha duplicata.
+  mem.migracoes = {};
+  mem.templates = [{ id: 'agradecer-apoio', name: 'meu', text: 'MEU TEXTO' }];
+  await templates.migrarRespostaAgradecerApoio();
+  check(mem.templates.length === 1, 'nao duplica quem ja tem');
+  check(mem.templates[0].text === 'MEU TEXTO', 'e nao sobrescreve o texto dele');
+}
+
+
+grupo('a pergunta "em que posso ajudar" chega a quem ja tem a lista salva');
+{
+  const templates = await lib('templates.js');
+  const store = await lib('store.js');
+
+  const padrao = store.DEFAULT_TEMPLATES.find((t) => t.id === 'perguntar-como-ajudar');
+  check(!!padrao, 'a resposta existe no padrao');
+
+  /**
+   * **O que este texto NAO faz e o que importa.** Promessa em ano eleitoral e o risco que a Lei
+   * 9.504/97 trata (art. 41-A, art. 73 §10). Uma pergunta nao e promessa — mas se o texto
+   * escorregar para "vou ver o que posso fazer", passa a ser.
+   */
+  check(!/vou (ver|tentar|providenciar|conseguir)/i.test(padrao.text), 'nao promete providenciar nada');
+  check(!/(cesta|dinheiro|emprego|vaga|curr[ií]culo)/i.test(padrao.text), 'nao cita bem nem emprego');
+  check(/em que voc[eê] precisa de ajuda/i.test(padrao.text), 'e pergunta o que ela precisa');
+  check(!/\{\{primeiro_nome\}\}|\{\{nome\}\}/.test(padrao.text), 'sem vocativo, como todo o resto');
+
+  mem.migracoes = {};
+  mem.templates = [{ id: 'agradecimento', name: 'Agradecer', text: 'Obrigado!' }];
+  check((await templates.migrarRespostaPerguntarAjuda()) === true, 'acrescentou a quem nao tinha');
+  check(mem.templates.some((t) => t.id === 'perguntar-como-ajudar'), 'entrou na lista salva');
+  check((await templates.migrarRespostaPerguntarAjuda()) === false, 'nao repete na segunda vez');
+}
+
 fim();
