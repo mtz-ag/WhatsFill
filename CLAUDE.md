@@ -409,6 +409,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   a `nossaUltimaAt`. Regra nova que dependa do que a pessoa acabou de dizer: pense na rajada,
   não na última.
 
+- **Fronteira de palavra: `` falha com acento, e `(^|s)` falha com PONTUAÇÃO.** Duas armadilhas
+  na mesma linha, descobertas com um dia de diferença. `` é fronteira de `w` e `é` não é `w`,
+  então `/é nós/` nunca casa ("É nós." passou batido). O conserto foi `(^|s)` — que exige espaço
+  ou início, e por isso não pegou *"Itaqui Rs...sempre com vocês"* (print da Gessi, 31/08): no
+  WhatsApp se escreve com pontuação colada o tempo todo. Hoje é **`(^|[^p{L}])` com flag `u`** nos
+  26 padrões do `cortesia.js`. `[^p{L}]` é "não-letra": espaço, ponto, vírgula, emoji, quebra de
+  linha — e **continua não casando dentro de palavra**, que é o propósito de haver uma fronteira.
 - **Pedido SEM detalhe se responde com PERGUNTA, nunca com modelo.** *"Preciso da forca do senhor"*
   (print da Mari, 31/08) recebia a sugestão de mandar material de campanha — o pior caso do
   projeto: pedido de dinheiro ou emprego não pode ter resposta automática (Lei 9.504/97), e não se

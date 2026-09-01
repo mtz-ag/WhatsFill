@@ -5,6 +5,45 @@
 
 ---
 
+## 2026-08-31 — `(^|\s)` não casa depois de pontuação: 26 padrões estavam cegos
+
+**Relato dele**, print da Gessi na 0.54.0: *"vou agradecer apoio e concluir"*. A mensagem dela era
+*"Boa noite. Gessi cremontti de medeiros. Itaqui Rs...sempre com vocês capitão. Com sIos zuccos 🙏"*,
+e a caixa sugeria a tecla 5.
+
+### Duas causas, e a segunda é grande
+
+**1. O dicionário.** *"sempre com vocês"* não casava: o padrão exigia um verbo antes do "com"
+(`estou`/`tamo`/`to`). Acrescentado `(sempre|junto|juntos|aqui) com (vocês|vc|o senhor|a gente)`.
+**"com vocês" sozinho ficou de fora de propósito** — *"preciso falar com vocês"* é pedido, não apoio;
+o que qualifica é o advérbio de permanência.
+
+**2. A fronteira de palavra, e esta valia para o arquivo inteiro.** O texto é *"Itaqui Rs**...**sempre
+com vocês"*: o "sempre" vem depois de três pontos, **sem espaço**. `(^|\s)` exige espaço ou início de
+string, então nenhum padrão pegava.
+
+**É a segunda armadilha em cima da mesma linha de código, com um dia de diferença:**
+
+| | problema | conserto |
+|---|---|---|
+| 30/08 | `\b` é fronteira de `\w`, e `é` não é `\w` → `/\bé nós/` nunca casava | virou `(^|\s)` |
+| 31/08 | `(^|\s)` não casa depois de pontuação → *"Rs...sempre"* invisível | virou `(^|[^\p{L}])` |
+
+Trocado em **26 padrões** do `cortesia.js`, com a flag `u` onde faltava. `[^\p{L}]` é "qualquer coisa
+que não seja letra": espaço, ponto, vírgula, emoji, quebra de linha.
+
+### O que o teste tranca dos dois lados
+
+Não é só que agora casa depois de pontuação — é que **continua não casando dentro de palavra**, que é
+o propósito de haver uma fronteira. `desempre`, `imprecisao` e o `pq` explicativo no meio da frase
+seguem fora, e há asserção para cada um. Sem isso, o "conserto" mais rápido (tirar a exigência) teria
+transformado todos os dicionários em busca de substring.
+
+**Arquivos:** `src/lib/cortesia.js` (o dicionário e os 26 padrões), `tests/cortesia.test.mjs` (+12),
+`CLAUDE.md`, `manifest.json` (0.54.0 → **0.55.0**). 29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — O modelo é a entrega INICIAL; quem volta recebe a mensagem do momento
 
 **Relato dele**, print do Cris: *"histórico de conversa grande provavelmente já recebeu modelo de

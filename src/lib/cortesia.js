@@ -136,13 +136,22 @@ export function ehSoReacao(msg) {
  * estava certo.
  */
 /**
- * `(^|\s)` em vez de `\b` antes de palavra acentuada.
+ * `(^|[^\p{L}])` em vez de `\b`, e em vez de `(^|\s)`.
  *
- * `\b` é fronteira de `\w`, e `é` não é `\w`: `/\bé nós/` **nunca** casa no começo da string.
- * Foi assim que "É nós." — a frase exata da print dele — passou batido na primeira versão.
+ * **Duas armadilhas, uma em cima da outra:**
+ *
+ * 1. `\b` é fronteira de `\w`, e `é` não é `\w`: `/\bé nós/` **nunca** casa no começo da
+ *    string. Foi assim que "É nós." — a frase exata da print dele — passou batido.
+ * 2. `(^|\s)`, que foi o conserto da primeira, **não casa depois de pontuação**. Print da
+ *    Gessi (31/08): *"Itaqui Rs...sempre com vocês capitão"* — o "sempre" vem depois de três
+ *    pontos, sem espaço, e nenhum padrão pegava. No WhatsApp se escreve assim o tempo todo.
+ *
+ * `[^\p{L}]` é "qualquer coisa que não seja letra": espaço, ponto, vírgula, emoji, quebra de
+ * linha. Exige a flag `u`. Não casa dentro de palavra ("desempre" continua fora), que é o
+ * ponto de ter uma fronteira.
  */
 const DESPEDIDA =
-  /(^|\s)(e|é)\s*n(ó|o)(s|is)\b|\b(forte\s*)?abra(ç|c)o(s)?\b|\bvaleu\b|\bvlw\b|\bobrigad[oa]\b|\bbrigad[oa]\b|(^|\s)am(é|e)m\b|\bboa\s*sorte\b|\bdeus\s*(te\s*)?aben(ç|c)oe\b|\bfica\s*com\s*deus\b|\bsucesso\b/i;
+  /(^|[^\p{L}])(e|é)\s*n(ó|o)(s|is)\b|\b(forte\s*)?abra(ç|c)o(s)?\b|\bvaleu\b|\bvlw\b|\bobrigad[oa]\b|\bbrigad[oa]\b|(^|[^\p{L}])am(é|e)m\b|\bboa\s*sorte\b|\bdeus\s*(te\s*)?aben(ç|c)oe\b|\bfica\s*com\s*deus\b|\bsucesso\b/iu;
 
 /**
  * A mensagem é SÓ uma despedida?
@@ -337,35 +346,46 @@ export function conversaPedeRespostaPessoal(entrantes, nossaUltimaAt) {
  */
 const PERGUNTAS_QUE_PEDEM_VOCE = [
   // Razão: "por que não tem propaganda aqui?"
-  /(^|\s)(por\s?qu[eê]|pq|pk)(\s|\?|$)/i,
+  /(^|[^\p{L}])(por\s?qu[eê]|pq|pk)(\s|\?|$)/iu,
   // Posição e opinião: dependem do que ELE pensa
-  /(^|\s)qual\s+(a\s+)?(posi[çc][aã]o|opini[aã]o|proposta|ideia)/i,
-  /(^|\s)o\s+que\s+(ele|voc[eê]s?|o\s+candidato|o\s+deputado)\s+(acha|acham|pensa|pensam|vai|v[aã]o|pretende|pretendem|faria|fariam|far[aá]|far[aã]o)/i,
-  /(^|\s)como\s+(ele|voc[eê]s?)\s+(vai|v[aã]o|pretende|pretendem|pensa|pensam)/i,
+  /(^|[^\p{L}])qual\s+(a\s+)?(posi[çc][aã]o|opini[aã]o|proposta|ideia)/iu,
+  /(^|[^\p{L}])o\s+que\s+(ele|voc[eê]s?|o\s+candidato|o\s+deputado)\s+(acha|acham|pensa|pensam|vai|v[aã]o|pretende|pretendem|faria|fariam|far[aá]|far[aã]o)/iu,
+  /(^|[^\p{L}])como\s+(ele|voc[eê]s?)\s+(vai|v[aã]o|pretende|pretendem|pensa|pensam)/iu,
   // Pedido explícito de explicação
-  /(^|\s)(me\s+)?explica(r|\s|$)/i,
-  /(^|\s)n[aã]o\s+entendi(\s|$|\.)/i,
+  /(^|[^\p{L}])(me\s+)?explica(r|\s|$)/iu,
+  /(^|[^\p{L}])n[aã]o\s+entendi(\s|$|\.)/iu,
 ];
 
 /** Pede material/conteúdo — aí a pergunta TEM resposta pronta e não é caso de resposta à mão. */
-const PEDIDO_DE_MATERIAL = /(^|\s)(manda|mande|envia|envie|me\s+passa|quero\s+receber|receber)(\s|$)/i;
+const PEDIDO_DE_MATERIAL = /(^|[^\p{L}])(manda|mande|envia|envie|me\s+passa|quero\s+receber|receber)(\s|$)/iu;
 
 /**
  * Jeitos de dizer "estou com você". Lista de reconhecimento, não de julgamento: o que ela
  * decide é se cabe um agradecimento, e agradecer errado custa pouco.
  */
 const EXPRESSOES_DE_APOIO = [
-  /(^|\s)(eu\s+)?apoio(\s|$|,|!|\.)/i
+  /(^|[^\p{L}])(eu\s+)?apoio(\s|$|,|!|\.)/iu
 ,
   // `\s*` e não `\s+`: "Tamojuntos" vem colado, e foi assim que ele apareceu na print.
-  /(^|\s)(tamo|tamos|t[oô]|estou|estamos|seguimos|segue)\s*(com|junto|juntos)\b/i,
-  /(^|\s)tmj\b/i,
-  /(^|\s)conte?\s+comigo(\s|$|!|\.)/i,
-  /(^|\s)(vou|vamos)\s+votar(\s|$)/i,
-  /(^|\s)sou\s+(seu\s+)?(eleitor|eleitora|f[aã]|bolsonarist[ao]|bolsonaro)(\s|$)/i,
-  /(^|\s)(parab[eé]ns|sucesso|for[çc]a|felicidades)(\s|$|!|,|\.)/i,
-  /(^|\s)(deus|jesus)\s+(te|o|a|lhe)\s+(aben[çc]oe|guarde|proteja)/i,
-  /(^|\s)torcendo(\s|$)/i,
+  /(^|[^\p{L}])(tamo|tamos|t[oô]|estou|estamos|seguimos|segue)\s*(com|junto|juntos)\b/iu,
+  /(^|[^\p{L}])tmj\b/iu,
+  /**
+   * "sempre com vocês", "junto com o senhor" — apoio sem o verbo na frente.
+   *
+   * Print da Gessi (31/08): *"Itaqui Rs...sempre com vocês capitão"*, e a regra não pegou porque
+   * exigia "estou"/"tamo" antes do "com". *"vou agradecer apoio e concluir"*.
+   *
+   * **"com vocês" sozinho ficou de fora de propósito**: "preciso falar com vocês" é pedido, não
+   * apoio. O que qualifica é o advérbio de permanência ("sempre", "junto", "aqui"), e é ele que
+   * separa quem está declarando lealdade de quem está pedindo contato.
+   */
+  /(^|[^\p{L}])(sempre|junto|juntos|aqui)\s+com\s+(voc[eê]s?|vcs?|o\s+senhor|a\s+senhora|a\s+gente|nois|n[óo]s)/iu,
+  /(^|[^\p{L}])conte?\s+comigo(\s|$|!|\.)/iu,
+  /(^|[^\p{L}])(vou|vamos)\s+votar(\s|$)/iu,
+  /(^|[^\p{L}])sou\s+(seu\s+)?(eleitor|eleitora|f[aã]|bolsonarist[ao]|bolsonaro)(\s|$)/iu,
+  /(^|[^\p{L}])(parab[eé]ns|sucesso|for[çc]a|felicidades)(\s|$|!|,|\.)/iu,
+  /(^|[^\p{L}])(deus|jesus)\s+(te|o|a|lhe)\s+(aben[çc]oe|guarde|proteja)/iu,
+  /(^|[^\p{L}])torcendo(\s|$)/iu,
 ];
 
 /**
@@ -385,16 +405,16 @@ const EXPRESSOES_DE_APOIO = [
  */
 const PRECISA_DE_ALGO = [
   // "preciso da sua força", "preciso da forca do senhor", "preciso de uma ajuda"
-  /(^|\s)(preciso|precisava|precisando|necessito)\s+(de\s+|da\s+|do\s+|duma\s+|dum\s+)/i,
+  /(^|[^\p{L}])(preciso|precisava|precisando|necessito)\s+(de\s+|da\s+|do\s+|duma\s+|dum\s+)/iu,
   // "conto com o senhor", "conto com sua ajuda"
-  /(^|\s)cont(o|ando)\s+com\s+(o\s+senhor|a\s+senhora|voc[eê]|sua|seu)/i,
+  /(^|[^\p{L}])cont(o|ando)\s+com\s+(o\s+senhor|a\s+senhora|voc[eê]|sua|seu)/iu,
   // "o senhor pode me ajudar?", "vocês podem me ajudar"
-  /(^|\s)(pode|podem|poderia|poderiam|consegue|conseguem)\s+(me\s+)?ajudar/i,
+  /(^|[^\p{L}])(pode|podem|poderia|poderiam|consegue|conseguem)\s+(me\s+)?ajudar/iu,
   // "me ajuda", "me ajude", "queria uma ajuda"
-  /(^|\s)me\s+ajud(a|e|ar)/i,
-  /(^|\s)(queria|quero|gostaria\s+de)\s+(uma\s+|um\s+)?ajuda/i,
+  /(^|[^\p{L}])me\s+ajud(a|e|ar)/iu,
+  /(^|[^\p{L}])(queria|quero|gostaria\s+de)\s+(uma\s+|um\s+)?ajuda/iu,
   // "estou passando por", "estou numa situação", "estou desempregado"
-  /(^|\s)(t[oô]|estou|estamos)\s+(passando|numa|em\s+uma|desempregad)/i,
+  /(^|[^\p{L}])(t[oô]|estou|estamos)\s+(passando|numa|em\s+uma|desempregad)/iu,
 ];
 
 /**
@@ -405,7 +425,7 @@ const PRECISA_DE_ALGO = [
  * põe metade da base na fila de revisão dele e o trabalho para.
  */
 const OFERECE_AJUDA =
-  /(^|\s)(quero|queria|posso|gostaria\s+de|vou|estou\s+aqui\s+para|to\s+aqui\s+para)\s+(te\s+|lhe\s+|)?(ajudar|colaborar|contribuir|apoiar)/i;
+  /(^|[^\p{L}])(quero|queria|posso|gostaria\s+de|vou|estou\s+aqui\s+para|to\s+aqui\s+para)\s+(te\s+|lhe\s+|)?(ajudar|colaborar|contribuir|apoiar)/iu;
 
 /**
  * A conversa pendente traz pedido de algo que ela não nomeou?

@@ -536,4 +536,56 @@ grupo('pedeAlgoIndefinido: pediu algo sem dizer o que — o caso de maior risco'
   check(!pedeAlgoIndefinido([], null), 'sem rajada nao ha pedido');
 }
 
+
+grupo('fronteira de palavra: (^|\\s) nao casa depois de PONTUACAO');
+{
+  const M = (texto, at) => ({ texto, tipo: 'TEXT', at: at || '2026-08-31T19:30:00Z' });
+  const A = (t) =>
+    !!soExpressaApoio([M('Olá! Eu apoio X'), M(t, '2026-08-31T19:35:00Z')], null);
+  const P = (t) => !!pedeAlgoIndefinido([M(t)], null);
+  const Q = (t) => !!conversaTemPerguntaAberta([M(t)], null);
+
+  /**
+   * Print da Gessi (31/08): *"Itaqui Rs...sempre com vocês capitão"*. O "sempre" vem depois de
+   * TRES PONTOS, sem espaco, e nenhum padrao pegava — `(^|\s)` exige espaco ou inicio de string.
+   *
+   * Foi a segunda armadilha em cima da mesma linha de codigo: `(^|\s)` era o conserto do `\b`,
+   * que nao funciona antes de palavra acentuada ("E nos."). Agora e `(^|[^\p{L}])` com flag `u`.
+   *
+   * No WhatsApp se escreve com pontuacao colada o tempo todo, entao isto valia para os 26 padroes
+   * do arquivo, nao so para este.
+   */
+  check(A('Itaqui Rs...sempre com vocês capitão'), 'apoio depois de tres pontos');
+  check(Q('oi.Porque?'), 'pergunta depois de ponto colado');
+  check(P('bom dia,preciso de ajuda'), 'pedido depois de virgula colada');
+
+  /**
+   * **E o que a fronteira nao pode fazer:** casar DENTRO de palavra. E o proposito de ter uma
+   * fronteira, e `[^\p{L}]` preserva isso — ao contrario de simplesmente tirar a exigencia.
+   */
+  check(!A('desempre com voces'), 'nao casa no meio de palavra (desempre)');
+  check(!P('imprecisao total'), 'nao casa no meio de palavra (imprecisao)');
+  check(!Q('vou votar pq confio'), 'pq explicativo no meio continua fora');
+}
+
+grupo('apoio: "sempre com voces" e as formas sem verbo na frente');
+{
+  const M = (texto, at) => ({ texto, tipo: 'TEXT', at: at || '2026-08-31T19:30:00Z' });
+  const A = (t) =>
+    !!soExpressaApoio([M('Olá! Eu apoio X'), M(t, '2026-08-31T19:35:00Z')], null);
+
+  check(A('sempre com voces capitao'), 'sempre com voces');
+  check(A('junto com o senhor'), 'junto com o senhor');
+  check(A('sempre com vc'), 'sempre com vc');
+  check(A('aqui com voces'), 'aqui com voces');
+
+  /**
+   * **"com voces" sozinho ficou de fora de proposito:** "preciso falar com voces" e pedido, nao
+   * apoio. O que qualifica e o adverbio de permanencia — e e ele que separa quem declara lealdade
+   * de quem pede contato.
+   */
+  check(!A('preciso falar com voces'), 'preciso falar com voces NAO e apoio');
+  check(!A('vou conversar com vocês amanha'), 'conversar com voces tambem nao');
+}
+
 fim();
