@@ -402,20 +402,51 @@ function ligarPanoramica() {
     await gravar(arvoreLib.ordenarPorPosicao(arvoreLib.acrescentar(fluxo.arvore, null, novo)));
   });
 
+  /**
+   * A roda do mouse é o zoom — sem Ctrl, sem modificador nenhum (pedido dele, 01/09).
+   *
+   * `preventDefault` com `passive: false` porque o navegador rola a página por padrão; sem isso a
+   * página inteira andaria junto. O lado direito não é afetado: o ouvinte vive no quadro, e a
+   * coluna da direita continua rolando com a roda como qualquer painel.
+   */
   area.addEventListener(
     'wheel',
     (ev) => {
-      if (!ev.ctrlKey) return;
       ev.preventDefault();
-      aproximar(ev.deltaY < 0 ? 0.1 : -0.1);
+      aproximarNoPonto(ev.deltaY < 0 ? 1.1 : 1 / 1.1, ev.clientX, ev.clientY);
     },
     { passive: false }
   );
 }
 
-function aproximar(passo) {
-  vista.z = Math.min(1.6, Math.max(0.35, Math.round((vista.z + passo) * 100) / 100));
+/**
+ * Aproxima ou afasta **ancorado num ponto** — o que estiver sob o ponteiro continua sob o ponteiro.
+ *
+ * Sem a âncora, o zoom cresce a partir do canto do palco: você aponta para uma caixa, gira a roda,
+ * e ela foge da tela — num quadro grande isso obriga a arrastar o fundo atrás dela a cada passo.
+ *
+ * O fator é multiplicativo e não somado: passo fixo de 0,1 é 29% do caminho quando se está em 0,35
+ * e 6% quando se está em 1,6, então afastar fica brusco e aproximar fica lento. Multiplicando, o
+ * passo é o mesmo em qualquer nível.
+ */
+function aproximarNoPonto(fator, clienteX, clienteY) {
+  const area = el('quadro-area').getBoundingClientRect();
+  const antes = vista.z;
+  const depois = Math.min(1.6, Math.max(0.35, Math.round(antes * fator * 100) / 100));
+  if (depois === antes) return;
+
+  const px = clienteX - area.left;
+  const py = clienteY - area.top;
+  vista.x = px - ((px - vista.x) / antes) * depois;
+  vista.y = py - ((py - vista.y) / antes) * depois;
+  vista.z = depois;
   aplicarVista();
+}
+
+/** Os botões de zoom: mesma conta, ancorada no meio da área visível. */
+function aproximar(fator) {
+  const area = el('quadro-area').getBoundingClientRect();
+  aproximarNoPonto(fator, area.left + area.width / 2, area.top + area.height / 2);
 }
 
 /** Enquadra o quadro inteiro na área visível. */
@@ -702,8 +733,8 @@ function testar() {
 // ---- ligação da tela --------------------------------------------------------
 
 el('testar').addEventListener('click', testar);
-el('mais').addEventListener('click', () => aproximar(0.1));
-el('menos').addEventListener('click', () => aproximar(-0.1));
+el('mais').addEventListener('click', () => aproximar(1.1));
+el('menos').addEventListener('click', () => aproximar(1 / 1.1));
 el('ajustar').addEventListener('click', caberNaTela);
 el('arrumar').addEventListener('click', () => gravar(arvoreLib.arrumar(fluxo.arvore)));
 

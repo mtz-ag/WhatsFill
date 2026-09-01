@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-09-01 (noite, 16) — A roda do mouse virou o zoom do quadro
+
+**Pedido:** *"faça com que o scroll do mouse aumente ou diminua o zoom"*.
+
+Estava atrás de `Ctrl`, que é o padrão de aplicativo de desenho mas exige saber que existe. Agora é
+a roda sozinha, com `preventDefault` (e `passive: false`, senão o navegador rola a página junto).
+
+### Duas coisas que não eram o pedido e vieram junto
+
+1. **O zoom ancora no ponteiro.** Sem isso ele cresce a partir do canto do palco: você aponta para
+   uma caixa, gira a roda e ela foge da tela — num quadro grande, obriga a arrastar o fundo atrás
+   dela a cada passo. Medido: a caixa sob o ponteiro andou 1px ao passar de 35% para 39%.
+2. **O passo virou multiplicativo** (×1,1) em vez de somar 0,1. Somado, o mesmo passo é 29% do
+   caminho em 0,35 e 6% em 1,6 — afastar fica brusco e aproximar fica lento. Os botões `+` e `−`
+   passaram a usar a mesma conta, ancorada no meio da área.
+
+**A coluna da direita continua rolando com a roda**: o ouvinte vive no quadro, e o evento no lado
+não é cancelado. Conferido, junto com os limites (35% e 160%).
+
+**Arquivos:** `src/fluxo.js`, `src/fluxo.html` (a dica), `manifest.json` (1.24.0 → 1.25.0),
+`registro.md`.
+
+---
+
 ## 2026-09-01 (noite, 15) — O quadro de verdade: caixas soltas, fios curvos, arrastar e editar
 
 **Pedido:** *"a visualização continua sem ter nenhuma referência com o que mandei, não posso
