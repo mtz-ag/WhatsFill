@@ -23,6 +23,7 @@ export async function list() {
     await migrarRespostaPedidoEmprego();
     await migrarRespostaAgradecerApoio();
     await migrarRespostaPerguntarAjuda();
+    await migrarRespostasDeEvento();
     await migrarVariantesDeTexto();
   }
   return store.get('templates');
@@ -131,6 +132,15 @@ export const migrarRespostaAgradecerApoio = () =>
  */
 export const migrarRespostaPerguntarAjuda = () =>
   garantirRespostas(['perguntar-como-ajudar'], 'respostaPerguntarAjuda');
+
+/**
+ * Os dois textos do convite de evento, para quem já tinha a lista salva.
+ *
+ * Sem esta migração eles não chegam a ninguém que já usa a extensão, e a tecla 4 continua
+ * mandando o pedido de dados seco — que é o defeito que os dois consertam.
+ */
+export const migrarRespostasDeEvento = () =>
+  garantirRespostas(['pedir-dados-evento-nao', 'pedir-dados-evento-sim'], 'respostasDeEvento');
 
 /**
  * A pergunta dos grupos passa a pedir o LINK de convite, e não o nome.

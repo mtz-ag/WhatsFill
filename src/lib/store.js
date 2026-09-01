@@ -267,6 +267,46 @@ export const DEFAULT_TEMPLATES = [
   },
   {
     /**
+     * Convite de evento, resposta NEGATIVA — e depois o pedido de dados.
+     *
+     * Texto dele, palavra por palavra (01/09). Anúncio novo: o convite pergunta se a pessoa vai,
+     * e quem não pode merece consolo antes do formulário — mandar só "me passe nome e cidade" a
+     * quem acabou de dizer que gostaria de ir e não tem condições lê como se ninguém tivesse lido.
+     *
+     * **É o `pedir-dados` com um prefixo**, e é por isso que não gastou tecla nova: a tecla 4
+     * escolhe entre os três textos conforme `cortesia.confirmaPresenca`.
+     *
+     * O pedido no fim é IGUAL ao do `pedir-dados`, incluindo o exemplo: é dele que sai a precisão
+     * do parser (`respostaAoPedido`), e mudar o formato aqui quebraria a leitura do nome e da
+     * cidade sem avisar.
+     */
+    id: 'pedir-dados-evento-nao',
+    name: 'Não vai ao evento + pedir dados',
+    text:
+      'Sem problema! O mais importante é saber que você está conosco e apoiando essa caminhada. ' +
+      'Muito obrigado pelo carinho e pelo apoio!\n\n' +
+      'Para eu poder salvar seu contato me passe seu:\n\n' +
+      '*Nome / Cidade*\n\n' +
+      '(exemplo: Maria Silva / Santo Ângelo)',
+  },
+  {
+    /**
+     * Convite de evento, resposta POSITIVA — e depois o pedido de dados.
+     *
+     * Texto dele, palavra por palavra (01/09). Mesma estrutura da irmã negativa: prefixo próprio,
+     * pedido de dados idêntico ao do `pedir-dados` no fim.
+     */
+    id: 'pedir-dados-evento-sim',
+    name: 'Vai ao evento + pedir dados',
+    text:
+      'Que bom! Será uma grande satisfação contar com você! 🇧🇷🙌 ' +
+      'Sua presença é muito importante para nós.\n\n' +
+      'Para eu poder salvar seu contato me passe seu:\n\n' +
+      '*Nome / Cidade*\n\n' +
+      '(exemplo: Maria Silva / Santo Ângelo)',
+  },
+  {
+    /**
      * A pessoa só expressou apoio, e já está classificada. Não há o que pedir nem o que mandar.
      *
      * Pedido dele (31/08), print do Ciro: *"esse é um caso comum até onde a pessoa só expressa o

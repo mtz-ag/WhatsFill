@@ -356,6 +356,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   ("última mensagem minha") ganhou uma exceção para quem não tinha etiqueta de conteúdo, e o
   relato foi "alguns concluem e outros não". Funcionava como projetado — e mesmo assim estava
   errado. Se a rodada tratar dois contatos de forma diferente, o motivo tem que estar na tela.
+- **Pergunta diferente pede parser diferente — `respostaAfirmativa` NÃO serve para presença.** Ele
+  foi escrito para *"quer receber conteúdo?"*, onde "gostaria" é um sim, e contra as respostas do
+  convite de evento erra os DOIS lados: *"Gostaria de estar mas sem condições"* virava sim, *"vou
+  sim"* virava não. Presença tem `cortesia.confirmaPresenca`, com duas diferenças de desenho: a
+  **negativa vence** e olha a **mensagem inteira** (quem não pode ir começa dizendo que queria — a
+  intenção está na ressalva, não na abertura, e por isso não há "primeiras quatro palavras" aqui).
+  E **"sim" solto não conta**: pode ser resposta a outra pergunta.
 - **Mudou o texto de uma pergunta? O parser da resposta muda junto.** A pergunta de interesse
   passou a pedir "Sim / Nome / Cidade" e, de repente, `respostaAfirmativa` (limite de palavras +
   negação em qualquer lugar) recusava a resposta certa, e o "Sim" virava o nome do eleitor. Toda

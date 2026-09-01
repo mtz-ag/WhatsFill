@@ -21,7 +21,7 @@ import * as iaLib from '../lib/ia.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, ultimaEhDespedida } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, confirmaPresenca, ultimaEhDespedida } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -3523,9 +3523,33 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * corrente travar por variável faltando, a tecla some com o motivo na tela, em vez de
        * travar na hora do envio.
        */
-      const pedirDados = state.templates.find((t) => t.id === ASK_TEMPLATE_ID);
+      /**
+       * A tecla 4 escolhe entre TRÊS textos, conforme ela ter dito que vai ao evento.
+       *
+       * Anúncio novo (01/09): o convite pergunta se a pessoa vai. Ele responde de dois jeitos —
+       * consolo para quem não pode, comemoração para quem vai — e **os dois terminam pedindo nome
+       * e cidade**. São o `pedir-dados` com um prefixo, então não precisaram de tecla nova: a 4
+       * troca o texto e o rótulo diz qual vai sair.
+       *
+       * Sem resposta clara sobre presença, sai o `pedir-dados` de sempre. Aqui a dúvida não custa
+       * nada: o texto seco continua servindo, só é mais frio.
+       */
+      const presenca = confirmaPresenca(state.entrantes, state.nossaUltimaAt);
+      const idDoPedido =
+        presenca === 'nao'
+          ? 'pedir-dados-evento-nao'
+          : presenca === 'sim'
+            ? 'pedir-dados-evento-sim'
+            : ASK_TEMPLATE_ID;
+
+      // Se o texto do evento não estiver na lista (migração ainda não rodou, ou ele apagou),
+      // cai no pedido de sempre em vez de sumir com a tecla 4.
+      const pedirDados =
+        state.templates.find((t) => t.id === idDoPedido) ||
+        state.templates.find((t) => t.id === ASK_TEMPLATE_ID);
       const textoPedirDados = pedirDados ? await templatesLib.varianteAtual(pedirDados) : '';
       const pedirTrava = pedirDados ? vars.render(textoPedirDados, contexto).missing.length > 0 : true;
+      const pedidoDeEvento = !!pedirDados && pedirDados.id !== ASK_TEMPLATE_ID;
 
       // A mensagem da ocasião vira um template de mentira, para reaproveitar o caminho de envio
       // inteiro: variáveis, anti-duplicata e registro. A chave inclui um resumo do texto, senão
@@ -3918,7 +3942,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         opcoes.push({
           tecla: '4',
           valor: 'pedirdados',
-          rotulo: pedidoHoje ? 'Pedir dados DE NOVO e concluir' : 'Pedir dados e concluir',
+          rotulo: pedidoHoje
+            ? 'Pedir dados DE NOVO e concluir'
+            : pedidoDeEvento
+              ? `${presenca === 'nao' ? 'Não vai ao evento' : 'Vai ao evento'} + pedir dados e concluir`
+              : 'Pedir dados e concluir',
         });
       }
       if (!momentoTrava) {
@@ -3976,6 +4004,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             ? ['Cidade: ', ...cidadeMarcada(), cidadeSubstituida()]
             : 'Cidade: (vazia)',
           `Etiquetas: ${etiquetas.join(', ') || '(nenhuma)'}`,
+          // O que ela respondeu sobre o evento, quando respondeu: é o que explica por que a
+          // tecla 4 mudou de nome, e sem isso a troca de texto seria invisível.
+          presenca
+            ? `Sobre o evento: ela disse que ${presenca === 'nao' ? 'NÃO vai' : 'VAI'}`
+            : '',
           modelo
             ? `Conteúdo pedido: ${conteudoEscolhido.nome}` +
               (desempatado ? ` (casou com ${conteudos.length}, escolhi o preferido)` : '')

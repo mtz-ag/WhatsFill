@@ -166,4 +166,43 @@ grupo('a pergunta "em que posso ajudar" chega a quem ja tem a lista salva');
   check((await templates.migrarRespostaPerguntarAjuda()) === false, 'nao repete na segunda vez');
 }
 
+
+grupo('as duas respostas do convite de evento');
+{
+  const templates = await lib('templates.js');
+  const store = await lib('store.js');
+
+  const nao = store.DEFAULT_TEMPLATES.find((x) => x.id === 'pedir-dados-evento-nao');
+  const sim = store.DEFAULT_TEMPLATES.find((x) => x.id === 'pedir-dados-evento-sim');
+  check(!!nao && !!sim, 'as duas existem no padrao');
+
+  // Os textos sao dele, palavra por palavra (01/09).
+  check(/Sem problema!/.test(nao.text), 'a negativa comeca com Sem problema');
+  check(/carinho e pelo apoio/.test(nao.text), 'e agradece o carinho');
+  check(/Que bom!/.test(sim.text), 'a positiva comeca com Que bom');
+  check(/presença é muito importante/.test(sim.text), 'e diz que a presenca importa');
+
+  /**
+   * **O que o PARSER precisa e o separador e o exemplo**, nao a frase inteira.
+   *
+   * O `pedir-dados` de FABRICA usa "Nome completo / Cidade" e ainda pede link de grupo — ele
+   * editou o dele para "Para eu poder salvar seu contato me passe seu: *Nome / Cidade*", que e o
+   * que aparece nas prints. Os dois textos do evento seguem o DELE.
+   *
+   * O que nao pode mudar e o formato "X / Y" com o exemplo: e dele que sai a precisao do
+   * `respostaAoPedido`, e trocar isso quebraria a leitura do nome e da cidade sem avisar.
+   */
+  for (const [rotulo, txt] of [['negativa', nao.text], ['positiva', sim.text]]) {
+    check(txt.includes('Nome / Cidade'), rotulo + ': pede no formato "Nome / Cidade"');
+    check(txt.includes('exemplo: Maria Silva / Santo'), rotulo + ': traz o exemplo que o parser espera');
+  }
+
+  // A migracao leva as duas a quem ja tem a lista salva.
+  mem.migracoes = {};
+  mem.templates = [{ id: 'agradecimento', name: 'x', text: 'y' }];
+  check((await templates.migrarRespostasDeEvento()) === true, 'acrescentou a quem nao tinha');
+  check(mem.templates.filter((x) => x.id.startsWith('pedir-dados-evento')).length === 2, 'as duas entraram');
+  check((await templates.migrarRespostasDeEvento()) === false, 'nao repete na segunda vez');
+}
+
 fim();

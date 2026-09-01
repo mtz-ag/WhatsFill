@@ -5,6 +5,63 @@
 
 ---
 
+## 2026-09-01 — Convite de evento: a tecla 4 escolhe entre três textos
+
+**Pedido dele:** um anúncio novo pergunta se a pessoa vai ao evento, e ele responde de dois jeitos —
+consolo para quem não pode, comemoração para quem vai. Passou os dois textos, palavra por palavra.
+
+### O que a leitura dos textos dele mostrou
+
+Os dois **terminam pedindo nome e cidade**. São o `pedir-dados` com um prefixo — e é isso que faz o
+desenho ficar simples: **nenhuma tecla nova**. A tecla 4 escolhe entre três textos conforme
+`cortesia.confirmaPresenca`, e o rótulo dela passa a dizer qual vai sair
+("Não vai ao evento + pedir dados e concluir").
+
+Sem resposta clara sobre presença, sai o `pedir-dados` de sempre — aqui a dúvida não custa nada, o
+texto seco continua servindo, só é mais frio.
+
+### `respostaAfirmativa` não servia, e testar mostrou
+
+Ele existe e lê sim/não, mas foi escrito para *"quer receber conteúdo?"*, onde "gostaria" é um sim.
+Contra as respostas de presença erra os dois lados:
+
+| resposta | `respostaAfirmativa` | verdade |
+|---|---|---|
+| *"Gostaria de estar mas sem condições 22 certamente"* | **sim** | não vai |
+| *"vou sim"* | **não** | vai |
+| *"estarei lá"* | **não** | vai |
+
+Duas diferenças de desenho no `confirmaPresenca`:
+
+- **A negativa vence, e olha a mensagem INTEIRA.** A frase real da print tem "gostaria" E
+  "certamente" — duas marcas positivas — e é uma recusa. Quem não pode ir quase sempre começa dizendo
+  que queria: a intenção está na ressalva. Por isso aqui não há "primeiras quatro palavras" como no
+  `respostaAfirmativa`.
+- **"sim" solto não conta.** Pode ser resposta a outra pergunta, e o texto de comemoração mandado a
+  quem não falou de evento nenhum lê como confusão.
+
+19 casos conferidos, incluindo a frase exata da print.
+
+### O que não podia mudar nos textos
+
+Os dois terminam com o formato `Nome / Cidade` e o exemplo `(exemplo: Maria Silva / Santo Ângelo)`.
+**É dele que sai a precisão do parser** (`respostaAoPedido`), e mudar o formato quebraria a leitura do
+nome e da cidade sem avisar ninguém. Há teste nos dois textos.
+
+**Descoberto de passagem:** o `pedir-dados` de FÁBRICA está desatualizado em relação ao que ele usa —
+o de fábrica diz "Nome completo / Cidade" e ainda pede o link de grupo. O dele, salvo no storage, é a
+versão curta das prints. Não é problema hoje (o salvo vence), mas quem instalar do zero recebe o
+texto antigo.
+
+**Arquivos:** `src/lib/cortesia.js` (`confirmaPresenca`), `src/lib/store.js` (os dois textos),
+`src/lib/templates.js` (migração), `src/panel/panel.js` (a tecla 4 e a linha da caixa),
+`tests/cortesia.test.mjs` (+21), `tests/templates.test.mjs` (+11), `CLAUDE.md`,
+`manifest.json` (0.61.0 → **0.62.0**). 29 módulos sem erro, dez suítes passando.
+
+**Vale para os dois branches:** feito aqui, a levar para a IA por merge.
+
+---
+
 ## 2026-09-01 — O diálogo "tem certeza que deseja concluir?" parava a rodada inteira
 
 **Relato dele**, print do diálogo da plataforma: *"essa mensagem está quebrando a automação, é para
