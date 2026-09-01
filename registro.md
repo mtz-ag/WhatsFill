@@ -73,7 +73,8 @@ O texto entra no prompt de **sistema** — a parte com `cache_control` —, dent
 
 Três consequências que valem registro:
 
-1. **A IA não pesquisa nada, e é bom que não pesquise.** Sem este campo ela decide sobre nomes que
+1. **Diminui a necessidade de a IA buscar contexto — não a proíbe de buscar** (correção dele,
+   01/09). Sem este campo ela decide sobre nomes que
    não conhece: alguém escreve "vou votar no Marcel para senador" e ela não tem como saber se é
    aliado, adversário ou outro cargo. Antes disso o desconhecido virava `incerto`; agora vira
    decisão informada — e continua virando `incerto` quando o campo está vazio.

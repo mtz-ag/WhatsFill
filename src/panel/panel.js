@@ -7027,12 +7027,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(
       h('label', { class: 'wf-field' }, [h('span', {}, 'Quem é quem (chapa, números, pautas)'), areaGabinete]),
       h('div', { class: 'wf-origin' },
-        'A IA não pesquisa nada — e é bom que não pesquise. Sem isto ela decide sobre nomes que não ' +
-          'conhece: alguém escreve "vou votar no Marcel para senador" e ela não tem como saber se é ' +
-          'aliado, adversário ou outro cargo. Escreva o que a equipe sabe: nome, cargo, número de ' +
-          'urna, partido, quem é da chapa, as pautas do mandato. Isto entra na parte CACHEADA do ' +
-          'prompt, então custa uma vez e 10% do preço nas chamadas seguintes — detalhe aqui é ' +
-          'barato, e é a falta dele que sai caro em decisão errada.')
+        'Serve para DIMINUIR a necessidade de a IA buscar contexto, não para proibi-la de buscar. ' +
+          'Sem isto ela decide sobre nomes que não conhece: alguém escreve "vou votar no Marcel ' +
+          'para senador" e ela não tem como saber se é aliado, adversário ou outro cargo. Escreva o ' +
+          'que a equipe sabe: nome, cargo, número de urna, partido, quem é da chapa, as pautas do ' +
+          'mandato. Isto entra na parte CACHEADA do prompt, então custa uma vez e 10% do preço nas ' +
+          'chamadas seguintes — detalhe aqui é barato, e é a falta dele que sai caro em decisão ' +
+          'errada.')
     );
 
     const testar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Avaliar o contato aberto');

@@ -137,7 +137,7 @@ export function montarSistema({ templates = [], regras = '', gabinete = '' } = {
      *
      * Está no prompt de sistema, que é o cacheado: custa uma vez e 10% nas seguintes.
      */
-    gabinete ? `Quem é quem neste mandato (informação do gabinete, não pesquise nem invente):\n${gabinete}\n` : '',
+    gabinete ? `Quem é quem neste mandato (informação do gabinete — use-a como fonte e não invente o que não estiver aqui):\n${gabinete}\n` : '',
     regras ? `Instruções adicionais do Thiago:\n${regras}\n` : '',
     'Respostas prontas disponíveis:',
     '',
@@ -363,7 +363,7 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * poderia calar. Com o bloco, ela responde com o que o gabinete informou — e a regra passa a
      * dizer exatamente isso: conversa e este bloco, nada além.
      */
-    gabinete ? `Quem é quem neste mandato (informação do gabinete, não pesquise nem invente):\n${gabinete}\n` : '',
+    gabinete ? `Quem é quem neste mandato (informação do gabinete — use-a como fonte e não invente o que não estiver aqui):\n${gabinete}\n` : '',
     regras ? `Instruções adicionais da equipe:\n${regras}\n` : '',
     'Exemplos do jeito de escrever da equipe:',
     '',
