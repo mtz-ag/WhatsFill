@@ -198,6 +198,22 @@ export async function suggest({ city, texts = [], extra = '', interesse = null, 
       nome: etiquetaAnuncio,
       tag: await resolveTag(etiquetaAnuncio),
       motivo: 'a conversa começou por um anúncio (a plataforma informa a origem)',
+      /**
+       * **Último recurso na hora de escolher o modelo.**
+       *
+       * Print da Seura (31/08): ela clicou no anúncio das Escolas Cívico-Militares e escreveu
+       * *"Eu apoio as Escolas Cívico-Militares"*. Ele: *"eu tenho um modelo pra escolas civico
+       * militares mas a etiqueta ads não faz distinção"*.
+       *
+       * ADS diz que ela **veio de anúncio**, não de QUAL anúncio — é origem, e uma origem só
+       * serve de conteúdo enquanto nada melhor aparecer. Com `fallback`, qualquer etiqueta de
+       * conteúdo de verdade (as que as regras de texto acham) vence, e o ADS volta a ser o que
+       * ele é: a resposta para quem veio do anúncio e não disse mais nada.
+       *
+       * Isto já valia sem o caso das Escolas: com ADS como preferido na Config, ele vencia até
+       * "CONTEÚDO FLÁV" e "CONTEÚDO ZUC", que são específicos e já existem na base dele.
+       */
+      fallback: true,
     });
   }
 

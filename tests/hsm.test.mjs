@@ -200,4 +200,52 @@ grupo('não mandar duas vezes para o mesmo contato');
   check(decidir({ ultimaFoiNossa: true }).acao === 'enviar', 'sem saber quando foi, não inventa bloqueio');
 }
 
+
+grupo('escolherConteudo: origem (ADS) e ULTIMO RECURSO, nao desempata com tema');
+{
+  const ADS = { nome: 'ADS', fallback: true };
+  const ESCOLAS = { nome: 'CONTEUDO ESCOLAS' };
+  const FLAVIO = { nome: 'CONTEUDO FLAVIO' };
+
+  /**
+   * Print da Seura (31/08): ela clicou no anuncio das Escolas Civico-Militares e escreveu "Eu
+   * apoio as Escolas Civico-Militares". O modelo que saia era o genarico.
+   *
+   * *"eu tenho um modelo pra escolas civico militares mas a etiqueta ads nao faz distincao"*.
+   *
+   * ADS diz que ela veio de anuncio, nao de QUAL anuncio — e origem, e origem so serve de
+   * conteudo enquanto nada melhor aparecer.
+   */
+  check(escolherConteudo([ADS, ESCOLAS], 'ads').conteudo?.nome === 'CONTEUDO ESCOLAS',
+    'o tema vence o ADS mesmo com ADS como preferido');
+
+  /**
+   * **E vence sem depender do preferido**, que e o que resolve de verdade: antes, dois conteudos
+   * sem preferido eram um ERRO, e a rodada ficava sem modelo.
+   */
+  check(escolherConteudo([ADS, ESCOLAS], '').conteudo?.nome === 'CONTEUDO ESCOLAS',
+    'o tema vence sem preferido configurado');
+
+  /**
+   * Isto ja valia antes do caso das Escolas: com ADS como preferido, ele vencia "CONTEUDO FLAV" e
+   * "CONTEUDO ZUC", que sao temas de verdade e ja existem na base dele.
+   */
+  check(escolherConteudo([ADS, FLAVIO], 'ads').conteudo?.nome === 'CONTEUDO FLAVIO',
+    'o ADS nao vence mais os conteudos que ele ja tinha');
+
+  // So ADS: ele continua sendo a resposta de quem veio do anuncio e nao disse mais nada.
+  check(escolherConteudo([ADS], 'ads').conteudo?.nome === 'ADS', 'so ADS: o ADS vale');
+  check(!escolherConteudo([ADS], '').erro, 'e nem precisa de preferido quando e o unico');
+
+  /**
+   * O desempate por preferido continua existindo **entre iguais** — dois temas de verdade sem
+   * preferido seguem sendo erro, com o motivo na tela. E a regra do projeto: na duvida, recusar.
+   */
+  check(escolherConteudo([FLAVIO, ESCOLAS], '').erro, 'dois temas sem preferido: erro, como antes');
+  check(escolherConteudo([FLAVIO, ESCOLAS], 'conteudo escolas').conteudo?.nome === 'CONTEUDO ESCOLAS',
+    'e o preferido desempata entre temas');
+
+  check(escolherConteudo([], 'ads').erro, 'sem conteudo nenhum: erro');
+}
+
 fim();

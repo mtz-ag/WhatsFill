@@ -5,6 +5,50 @@
 
 ---
 
+## 2026-08-31 — ADS é origem, não conteúdo: o tema do anúncio passa a vencer
+
+**Relato dele**, print da Seura: ela clicou no anúncio das Escolas Cívico-Militares e escreveu *"Olá!
+Eu apoio as Escolas Cívico-Militares 🤙 olá Capitão Martins será a segunda vez que você vota em ti sou
+de viamão"*. A caixa sugeria o modelo genérico.
+
+> *"nesse caso eu tenho um modelo pra escolas civico militares mas a etiqueta ads não faz distinção"*
+
+### A causa, e ela era maior que o caso
+
+**ADS diz que a pessoa veio de anúncio, não de QUAL anúncio.** É origem — e origem só serve de
+conteúdo enquanto nada melhor aparecer. Mas ela entrava como `origem: 'conteúdo'` em pé de igualdade
+com os temas, e o desempate era pelo **preferido** da Config, onde está `ads`.
+
+Ou seja: **ADS já vencia "CONTEÚDO FLÁV" e "CONTEÚDO ZUC"**, que são temas de verdade e já existem na
+base dele. O caso das Escolas só tornou isso visível.
+
+### O conserto
+
+A etiqueta de anúncio passou a sair de `tags.suggest` com `fallback: true`, e `escolherConteudo`
+ignora os `fallback` quando existe conteúdo específico — **sem passar pelo preferido**.
+
+Efeito colateral bom: antes, dois conteúdos sem preferido configurado eram **erro** e a rodada ficava
+sem modelo. Agora, se um deles é o ADS, o específico ganha sozinho.
+
+O desempate por preferido continua existindo, mas só **entre iguais**: dois temas de verdade sem
+preferido seguem dando erro com o motivo na tela — que é a regra do projeto (na dúvida, recusar).
+
+### O que ele precisa fazer para o modelo das Escolas sair
+
+Nada disso cria a etiqueta do tema. Para o modelo específico ir:
+
+1. criar a etiqueta no CRM (ex.: `Conteúdo Escolas`);
+2. na aba Config, uma **regra de conteúdo** casando o texto que a pessoa manda —
+   `escolas cívico-militares` → `Conteúdo Escolas`;
+3. na tabela **Modelo por conteúdo**, mapear `Conteúdo Escolas = <o modelo dele>`.
+
+A partir daí o ADS volta a ser o que é: a resposta de quem veio do anúncio e não disse mais nada.
+
+**Arquivos:** `src/lib/tags.js`, `src/lib/hsm.js`, `tests/hsm.test.mjs` (+8), `CLAUDE.md`,
+`manifest.json` (0.55.0 → **0.56.0**). 29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — `(^|\s)` não casa depois de pontuação: 26 padrões estavam cegos
 
 **Relato dele**, print da Gessi na 0.54.0: *"vou agradecer apoio e concluir"*. A mensagem dela era

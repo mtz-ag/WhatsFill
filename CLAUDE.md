@@ -409,6 +409,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   a `nossaUltimaAt`. Regra nova que dependa do que a pessoa acabou de dizer: pense na rajada,
   não na última.
 
+- **ADS é ORIGEM, não conteúdo — e por isso é `fallback`.** Ela diz que a pessoa veio de anúncio,
+  não de QUAL anúncio: *"eu tenho um modelo pra escolas civico militares mas a etiqueta ads não faz
+  distinção"* (31/08). `hsm.escolherConteudo` ignora os `fallback` quando existe conteúdo
+  específico, **sem passar pelo preferido** — antes, com `ads` como preferido na Config, ele vencia
+  até "CONTEÚDO FLÁV" e "CONTEÚDO ZUC", que são temas de verdade. O desempate por preferido
+  continua, mas só **entre iguais**. Para ter modelo por tema de anúncio, a regra de conteúdo casa
+  o texto que a pessoa manda ("Eu apoio as Escolas Cívico-Militares") — é configuração, não código.
 - **Fronteira de palavra: `` falha com acento, e `(^|s)` falha com PONTUAÇÃO.** Duas armadilhas
   na mesma linha, descobertas com um dia de diferença. `` é fronteira de `w` e `é` não é `w`,
   então `/é nós/` nunca casa ("É nós." passou batido). O conserto foi `(^|s)` — que exige espaço

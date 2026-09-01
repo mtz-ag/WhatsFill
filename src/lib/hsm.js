@@ -176,9 +176,25 @@ export function decidirReenvio({ ultimaFoiNossa = false, horasDesdeUltima = Infi
 }
 
 export function escolherConteudo(conteudos, preferido) {
-  const lista = conteudos || [];
-  if (!lista.length) return { erro: 'nenhum conteúdo reconhecido' };
-  if (lista.length === 1) return { conteudo: lista[0] };
+  const todos = conteudos || [];
+  if (!todos.length) return { erro: 'nenhum conteúdo reconhecido' };
+
+  /**
+   * **Conteúdo específico vence o de ÚLTIMO RECURSO, e isso não passa pelo preferido.**
+   *
+   * A etiqueta de anúncio (`fallback: true`) diz que a pessoa veio de anúncio, não de QUAL
+   * anúncio. Print da Seura (31/08): ela clicou no anúncio das Escolas Cívico-Militares, e o
+   * modelo que saía era o genérico — *"eu tenho um modelo pra escolas civico militares mas a
+   * etiqueta ads não faz distinção"*.
+   *
+   * O desempate por `preferido` continua existindo, mas só **entre iguais**: com ADS na Config
+   * como preferido, ele vencia até "CONTEÚDO FLÁV" e "CONTEÚDO ZUC", que são temas de verdade.
+   * Origem não desempata com tema; origem espera que nenhum tema apareça.
+   */
+  const especificos = todos.filter((c) => !c.fallback);
+  const lista = especificos.length ? especificos : todos;
+
+  if (lista.length === 1) return { conteudo: lista[0], desempatado: lista.length !== todos.length };
 
   // Sem acento aqui, diferente do resto do módulo: este valor é **digitado à mão** na Config,
   // e "Conteudo Flavio" não pode deixar de desempatar por causa de um til.
