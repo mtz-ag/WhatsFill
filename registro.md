@@ -5,6 +5,19 @@
 
 ---
 
+## 2026-09-01 - `nossas` ganhou o horario de cada mensagem
+
+Uma linha, e o motivo dela e do outro branch: la a conferencia de cidade por IA precisa
+intercalar os dois lados da conversa - "Maria / Cachoeirinha" so se explica depois da nossa
+pergunta - e sem `at` nas nossas mensagens nao ha como ordenar. `entrantes` ja tinha.
+
+Feito **aqui**, no branch normal, e nao la: `api.js` e dos dois, e duplicar e como as duas
+versoes divergem em uma semana. Campo novo e aditivo - nada que existe hoje le ele.
+
+**Arquivos:** `src/lib/api.js`.
+
+---
+
 ## 2026-09-01 — "Deu a cidade e não pegou": eu reconhecia uma das três formas de pedir
 
 **Relato dele**, testando a versão IA: *"deu a cidade e não pegou primeiro, a tela de confirmação
