@@ -275,6 +275,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **A caixa da rodada vive FORA do `.wf-root`, e não pode voltar para dentro.** Esconder o painel
+  é `transform: translateX(100%)` (classe `wf-collapsed`), e **transform arrasta os filhos**: a
+  caixa deslizava para fora da tela junto, e ele precisa dela justamente com o painel escondido
+  (*"preciso de espaço na area de trabalho"*, 31/08). Como irmã, ela precisa de três coisas por
+  conta própria, e as três estão no CSS: o **z-index 998** (herdava do painel), as **variáveis de
+  cor** (seletor compartilhado — e SÓ as variáveis: o `background` do `.wf-root` cobriria a tela
+  de branco e mataria a transparência) e o **tema escuro** via `~ .wf-pergunta-fundo`, porque
+  `.wf-root.wf-dark` não alcança irmão. Medido no navegador: painel `805..1185` → `1185..1565`,
+  caixa `346..840` nos dois estados.
 - **z-index do painel é 998, e é de propósito.** Os overlays do Material (menu, diálogo,
   select, tooltip) vivem em 1000 e precisam abrir POR CIMA. Conteúdo da página não passa de 50.
   Subir o painel para o máximo faz ele engolir o diálogo de Etiquetas e o menu do Concluir.

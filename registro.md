@@ -5,6 +5,54 @@
 
 ---
 
+## 2026-09-01 — A caixa da rodada fica na tela com o painel escondido
+
+**Pedido dele:** *"ao eu mandar o whatsfill ocultar ele oculta o popup da automatização, faça com que
+fique o popup mesmo ocultando, preciso de espaço na area de trabalho"*.
+
+### A causa
+
+Esconder o painel é `transform: translateX(100%)` no `.wf-root` (classe `wf-collapsed`). **Transform
+arrasta os filhos** — e a caixa era filha do `root`, então deslizava para fora da tela junto.
+
+A caixa passou a ser **irmã** do painel, dentro do mesmo shadow: `destinoDaCaixa()` devolve
+`root.parentNode`, e os quatro pontos que criavam caixa passaram a usá-la.
+
+### Três coisas que a caixa herdava e precisou receber
+
+Sair do `root` custa mais do que parece, e cada uma destas apareceu na verificação:
+
+1. **z-index 998** — herdava do painel; sem ele, a caixa ficaria atrás de qualquer coisa da página.
+2. **As variáveis de cor** — definidas em `.wf-root`. O seletor virou compartilhado, mas **só para as
+   variáveis**: o mesmo bloco tinha `background: var(--wf-bg)`, e herdar isso cobriria a tela inteira
+   de branco, matando a transparência que mantém a conversa legível (armadilha já registrada).
+3. **O tema escuro** — `.wf-root.wf-dark` não alcança irmão. Resolvido com
+   `.wf-root.wf-dark ~ .wf-pergunta-fundo`; sem isso, a plataforma no escuro deixaria a caixa branca.
+
+### Medido, não presumido
+
+`tools/checar-pergunta.mjs` precisa de Playwright, que não está instalado aqui. Montei a prova no
+Browser pane com o `panel.css` real:
+
+| | painel aberto | painel escondido |
+|---|---|---|
+| **painel** | `805..1185` | `1185..1565` (saiu inteiro da área útil) |
+| **caixa** | `346..840` | `346..840` — **deslocou 0** |
+
+E as quatro que importam sobre o CSS: camada com `pointer-events: none`, `background` transparente
+(`rgba(0,0,0,0)`), `z-index: 998` próprio, tema escuro chegando (`rgb(17,24,39)`). O clique no meio da
+tela continua chegando na conversa com o painel aberto **e** escondido.
+
+**Uma armadilha do próprio projeto apareceu na verificação:** o primeiro teste deu timeout porque usei
+`requestAnimationFrame`, e o Browser pane estava escondido — aba escondida é aba congelada, o mesmo
+que está registrado para as rodadas. Refeito com leitura síncrona, que força o cálculo sem esperar
+frame.
+
+**Arquivos:** `src/panel/panel.js` (`destinoDaCaixa`), `src/panel/panel.css`, `CLAUDE.md`,
+`manifest.json` (0.57.0 → **0.58.0**). 29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — "O atendimento foi perguntar os dados": pergunta não é entrega
 
 **Relato dele**, print da Ivone: a caixa dizia *"5: já foi atendida antes (o modelo provavelmente já

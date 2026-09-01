@@ -1827,6 +1827,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * `salvarAuto`) em vez de `templates.save`: a mensagem do momento não mora na lista de
    * respostas, mora na config da rodada, porque muda toda semana.
    */
+  /**
+   * Onde as caixas flutuantes moram: **fora do `root`**, e essa é a razão de existir.
+   *
+   * Pedido dele (31/08): *"ao eu mandar o whatsfill ocultar ele oculta o popup da automatização,
+   * faça com que fique o popup mesmo ocultando, preciso de espaço na area de trabalho"*.
+   *
+   * Esconder o painel é `transform: translateX(100%)` no `.wf-root` (classe `wf-collapsed`), e
+   * **transform arrasta os filhos**: a caixa da rodada era filha do `root` e deslizava para fora
+   * da tela junto. Como irmã dele, dentro do mesmo shadow, ela fica onde está — e o painel sai da
+   * frente devolvendo a largura da tela para a conversa.
+   *
+   * O shadow é o mesmo, então o CSS do painel continua valendo. Sem ele (caso o `root` ainda não
+   * esteja anexado), cai no próprio `root`: melhor a caixa aparecer no lugar antigo do que não
+   * aparecer.
+   */
+  function destinoDaCaixa() {
+    return root.parentNode || root;
+  }
   function abrirEditorDeVariantesDoMomento(cfg) {
     const fundo = h('div', { class: 'wf-pergunta-fundo' });
     const caixa = h('div', { class: 'wf-pergunta' });
@@ -1884,7 +1902,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
     fecharBtn.addEventListener('click', fechar);
 
-    root.append(fundo);
+    destinoDaCaixa().append(fundo);
     aplicarPosicao(caixa, null);
   }
 
@@ -2282,7 +2300,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     contadorFlutuante = { encerrar, medir };
     tornarArrastavel(caixa, barra, 'contadorPos');
-    root.append(fundo);
+    destinoDaCaixa().append(fundo);
     aplicarPosicao(caixa, state.settings.contadorPos);
 
     await medir();
@@ -4039,7 +4057,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // Captura no documento: o shadow root não recebe tecla quando o foco está na página.
       document.addEventListener('keydown', aoTeclar, true);
-      root.append(fundo);
+      destinoDaCaixa().append(fundo);
       // De novo agora que a caixa está na tela: fora do DOM ela não tem altura, e o limite de
       // "não sair da janela" sairia calculado por estimativa.
       aplicarPosicao(caixa, state.settings.perguntaPos);
@@ -6936,7 +6954,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
     fecharBtn.addEventListener('click', fechar);
 
-    root.append(fundo);
+    destinoDaCaixa().append(fundo);
     aplicarPosicao(caixa, null);
     nameInput.focus();
   }
