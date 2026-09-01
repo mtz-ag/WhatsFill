@@ -366,6 +366,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   este caminho, decisao dele (01/09):** o texto NEGA o pedido, e o risco da Lei 9.504/97 e prometer
   beneficio. A trava da IA (`ia.RESTRITOS`) continua de pe — a IA segue sem poder escolher esse
   texto; o que pode e um ramo que ELE escreveu.
+- **Um ramo tambem pode ENTREGAR o caso para a IA** (`acao.ia`, pedido dele 01/09) — e ai a tecla
+  vem nula do mesmo jeito. Ate entao a IA so entrava onde NENHUM ramo resolvia: ela era o resto.
+  Agora e tambem uma escolha. Quem le `sugestao` tem que testar `sugestao.ia` **antes** de procurar
+  a tecla, e a automacao das regras tem que PULAR esses casos: quem os executa e a automacao da IA,
+  que ja existia. As travas dela nao mudaram (`validarDecisao`, `RESTRITOS`, teto no service
+  worker) — nao ha caminho novo para o dinheiro nem para o eleitor.
+- **Gesto invisivel e gesto que nao existe.** Ligar duas caixas so dava arrastando uma em cima da
+  outra, escrito no cabecalho da janela, e ele perguntou *"como faco para linkar as caixas?"*. O
+  mesmo tinha acontecido com o arrastar, que eu havia trocado por botoes. Recurso de quadro precisa
+  de alca visivel (o `.pino` na borda direita), nao de instrucao em texto.
 - **No QUADRO, a prioridade entre irmaos e a ALTURA na tela** — `arvore.ordenarPorPosicao`, chamada
   depois de todo arrasto. E a unica regra honesta num quadro livre: guardar uma ordem invisivel ao
   lado da posicao faria a tela mostrar um ramo acima do outro e a rodada obedecer o contrario, e

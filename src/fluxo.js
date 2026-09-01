@@ -50,6 +50,7 @@ import {
 const TECLAS = Object.entries(sugestaoLib.TECLAS).map(([k, v]) => [k, v.rotulo]);
 
 const SELO = {
+  ia: 'a IA decide',
   envia: 'sai mensagem',
   silencio: 'não sai nada',
   gente: 'precisa de você',
@@ -84,6 +85,7 @@ function span(classe, texto) {
 
 function efeitoDoNo(no) {
   if (no.regra) return sugestaoLib.efeitoDaRegra(no.regra, fluxo);
+  if (no.acao?.ia) return 'ia';
   if (no.acao?.resposta) return 'envia';
   if (no.acao?.tecla) return sugestaoLib.TECLAS[no.acao.tecla]?.efeito || 'depende';
   return null;
@@ -107,6 +109,7 @@ function acaoEmPortugues(no) {
     if (!ramos.length) return 'sem desfecho';
     return ramos.map((r) => `tecla ${r.tecla} · ${r.rotulo}`).join('  ou  ');
   }
+  if (no.acao?.ia) return 'a IA assume: escolhe uma resposta pronta sua, ou escala para você';
   if (no.acao?.resposta) {
     const t = respostas.find((r) => r.id === no.acao.resposta);
     return `manda "${t?.name || no.acao.resposta}" e conclui`;
@@ -165,6 +168,21 @@ function caixaDoNo(no) {
   const vitorias = Number(fluxo.vitorias?.[no.id] || fluxo.vitorias?.[no.regra] || 0);
   if (vitorias) rodape.append(span('venceu', `${vitorias}×`));
   d.append(rodape);
+
+  /**
+   * O PINO de ligação, na borda direita.
+   *
+   * Ligar duas caixas só existia arrastando uma em cima da outra, e ele perguntou *"como faço para
+   * linkar as caixas?"* — ou seja, o gesto existia e era invisível. Um pino que se puxa é como
+   * todo editor de diagrama faz, e ele fica do lado de onde o fio sai, que é o mesmo lugar de onde
+   * os fios já saem. O outro gesto continua valendo: quem descobrir arrastar a caixa em cima da
+   * outra também liga.
+   */
+  const pino = document.createElement('span');
+  pino.className = 'pino';
+  pino.dataset.pino = no.id;
+  pino.title = 'Puxe daqui até outra caixa para pôr aquela dentro desta';
+  d.append(pino);
 
   return d;
 }
@@ -237,7 +255,7 @@ function desenharProblemas() {
 function desenharResumo() {
   const caixa = el('contagem');
   caixa.replaceChildren();
-  const c = { envia: 0, silencio: 0, gente: 0, depende: 0, porta: 0, off: 0 };
+  const c = { envia: 0, silencio: 0, gente: 0, depende: 0, ia: 0, porta: 0, off: 0 };
   for (const { no } of arvoreLib.todosOsNos(fluxo.arvore || [])) {
     if (no.desligado) c.off++;
     else c[efeitoDoNo(no) || 'porta']++;
@@ -246,6 +264,7 @@ function desenharResumo() {
   par('c-envia', `${c.envia} enviam`);
   par('c-silencio', `${c.silencio} não enviam`);
   par('c-gente', `${c.gente} pedem você`);
+  if (c.ia) par('c-ia', `${c.ia} a IA decide`);
   if (c.depende) par('c-depende', `${c.depende} com dois desfechos`);
   if (c.porta) par('c-off', `${c.porta} só agrupam`);
   if (c.off) par('c-off', `${c.off} desligados`);
@@ -278,11 +297,50 @@ function desenhar() {
 function ligarArrasto() {
   const caixas = el('caixas');
   let arrastando = null;
+  /** A ligação sendo puxada de um pino até outra caixa. */
+  let ligando = null;
+
+  /** Onde o ponteiro está, em coordenadas do palco (o palco é movido e escalado). */
+  const noPalco = (clienteX, clienteY) => {
+    const area = el('quadro-area').getBoundingClientRect();
+    return {
+      x: (clienteX - area.left - vista.x) / vista.z,
+      y: (clienteY - area.top - vista.y) / vista.z,
+    };
+  };
+
+  /** O fio provisório, enquanto ele puxa do pino. Some ao soltar. */
+  const desenharFioProvisorio = (de, para) => {
+    let p = el('fios').querySelector('.fio-novo');
+    if (!p) {
+      p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('class', 'fio-novo');
+      el('fios').append(p);
+    }
+    const meio = Math.max(30, (para.x - de.x) / 2);
+    p.setAttribute('d', `M ${de.x} ${de.y} C ${de.x + meio} ${de.y}, ${para.x - meio} ${para.y}, ${para.x} ${para.y}`);
+  };
+
+  const limparFioProvisorio = () => el('fios').querySelector('.fio-novo')?.remove();
 
   caixas.addEventListener('pointerdown', (ev) => {
     const caixa = ev.target.closest('.caixa');
     if (!caixa || ev.button !== 0) return;
     ev.stopPropagation();
+
+    // O pino ganha do arrasto: puxar dele é ligar, não mover.
+    if (ev.target.closest('.pino')) {
+      const achado = arvoreLib.localizar(fluxo.arvore, caixa.dataset.no);
+      if (!achado) return;
+      ligando = { origem: caixa.dataset.no, alvo: null, de: { x: (achado.no.x || 0) + caixa.offsetWidth, y: (achado.no.y || 0) + caixa.offsetHeight / 2 } };
+      caixa.classList.add('ligando');
+      try {
+        caixa.setPointerCapture(ev.pointerId);
+      } catch (_) {
+        // Ver a nota do arrasto: a exceção aqui deixaria o gesto preso.
+      }
+      return;
+    }
     const achado = arvoreLib.localizar(fluxo.arvore, caixa.dataset.no);
     if (!achado) return;
 
@@ -312,6 +370,20 @@ function ligarArrasto() {
   });
 
   caixas.addEventListener('pointermove', (ev) => {
+    if (ligando) {
+      desenharFioProvisorio(ligando.de, noPalco(ev.clientX, ev.clientY));
+      const embaixo = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.caixa');
+      const novo = embaixo && embaixo.dataset.no !== ligando.origem ? embaixo : null;
+      if (novo !== ligando.alvo) {
+        ligando.alvo?.classList.remove('alvo');
+        // Só acende quem aceita: pôr a origem dentro de um filho dela criaria um ciclo, e a
+        // ligação seria recusada — acender ali prometeria um movimento que não vai acontecer.
+        const aceita = novo && !arvoreLib.ehDescendente(fluxo.arvore, novo.dataset.no, ligando.origem);
+        ligando.alvo = aceita ? novo : null;
+        ligando.alvo?.classList.add('alvo');
+      }
+      return;
+    }
     if (!arrastando) return;
     const dx = (ev.clientX - arrastando.partiuX) / vista.z;
     const dy = (ev.clientY - arrastando.partiuY) / vista.z;
@@ -339,6 +411,17 @@ function ligarArrasto() {
   });
 
   const soltar = async (ev) => {
+    if (ligando) {
+      const { origem, alvo } = ligando;
+      limparFioProvisorio();
+      caixas.querySelector('.ligando')?.classList.remove('ligando');
+      alvo?.classList.remove('alvo');
+      ligando = null;
+      // Puxou o pino de A até B: B passa a ser um ramo DENTRO de A. É o sentido em que o fio já
+      // corre no quadro (pai à esquerda, filho à direita), então o gesto lê o que ele vê.
+      if (alvo) await gravar(arvoreLib.ordenarPorPosicao(arvoreLib.reparentar(fluxo.arvore, alvo.dataset.no, origem)));
+      return;
+    }
     if (!arrastando) return;
     const { id, elemento, origemX, origemY, dx = 0, dy = 0, alvo, andou } = arrastando;
     elemento.classList.remove('arrastando');
@@ -576,16 +659,19 @@ function desenharEditor() {
       seletor(
         [
           ['', '— nada: este ramo só agrupa outros —'],
+          ['ia', 'a IA assume e responde'],
           ...TECLAS.map(([k, t]) => [`t:${k}`, `tecla ${k} · ${t}`]),
           ...respostas.map((r) => [`r:${r.id}`, `mandar "${r.name}" e concluir`]),
         ],
-        acao.resposta ? `r:${acao.resposta}` : acao.tecla ? `t:${acao.tecla}` : '',
+        acao.ia ? 'ia' : acao.resposta ? `r:${acao.resposta}` : acao.tecla ? `t:${acao.tecla}` : '',
         (valor) => {
           const nova = !valor
             ? null
-            : valor.startsWith('r:')
-              ? { tecla: null, resposta: valor.slice(2) }
-              : { tecla: valor.slice(2), resposta: null };
+            : valor === 'ia'
+              ? { tecla: null, resposta: null, ia: true }
+              : valor.startsWith('r:')
+                ? { tecla: null, resposta: valor.slice(2) }
+                : { tecla: valor.slice(2), resposta: null };
           gravar(arvoreLib.editar(fluxo.arvore, no.id, { acao: nova }));
         }
       )
@@ -712,9 +798,11 @@ function testar() {
     escreve('venceu-linha', nomes);
     escreve(
       'fraco',
-      r.resposta
-        ? `desfecho: manda "${respostas.find((t) => t.id === r.resposta)?.name || r.resposta}" e conclui`
-        : `desfecho: tecla ${r.tecla} · ${sugestaoLib.TECLAS[r.tecla]?.rotulo || '?'}`
+      r.ia
+        ? 'desfecho: a IA assume — escolhe uma resposta pronta, ou escala para você'
+        : r.resposta
+          ? `desfecho: manda "${respostas.find((t) => t.id === r.resposta)?.name || r.resposta}" e conclui`
+          : `desfecho: tecla ${r.tecla} · ${sugestaoLib.TECLAS[r.tecla]?.rotulo || '?'}`
     );
     escreve('fraco', `motivo na tela: ${r.motivo}`);
   } else {

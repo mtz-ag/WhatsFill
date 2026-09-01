@@ -4199,8 +4199,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       const regraPedeGente = sugestao?.tecla === '6';
 
+      /**
+       * **Um ramo do fluxo pode ENTREGAR o caso para a IA** (pedido dele, 01/09/2026).
+       *
+       * Até aqui a IA só entrava onde nenhuma regra resolvia — ela era o desfecho do que ninguém
+       * previu. Ele quis o contrário também: apontar uma situação e dizer *"esta eu confio nela"*.
+       * São coisas diferentes, e a segunda é uma escolha, não um resto.
+       *
+       * O caso segue exatamente o caminho da IA que já existia, com as mesmas travas: id inventado
+       * vira `incerto`, `RESTRITOS` vira escalada, sem chave ou sem crédito vira `incerto`, e o
+       * teto de gasto continua obrigado no service worker. Nada aqui é caminho novo para o
+       * dinheiro nem para o que chega ao eleitor.
+       */
+      const ramoChamaIA = !!sugestao?.ia;
+
       let decisaoIA = null;
-      if (!sugestao || regraPedeGente) {
+      if (!sugestao || regraPedeGente || ramoChamaIA) {
         decisaoIA = await avaliarComIA();
         if (decisaoIA?.acao === 'escalar') {
           /**
@@ -4360,7 +4374,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // Um lugar só decide o destaque, e ele conta os dois jeitos de uma regra apontar: pela
       // tecla (a tabela) e pela resposta pronta (um ramo da árvore, que traz `tecla` nula).
       for (const opcao of opcoes) {
-        opcao.primaria = !!sugestao && (sugestao.resposta ? opcao.tecla === 'f' && !!doFluxo : opcao.tecla === sugestao.tecla);
+        opcao.primaria =
+          !!sugestao &&
+          (ramoChamaIA
+            ? opcao.tecla === '0'
+            : sugestao.resposta
+              ? opcao.tecla === 'f' && !!doFluxo
+              : opcao.tecla === sugestao.tecla);
       }
 
       // Nenhuma regra reconheceu: o caso é para ele decidir hoje, e é o gatilho da IA no outro
@@ -4456,7 +4476,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * definição, que alguém precisa escrever. Automatizá-la seria concluir sem responder.
        */
       let escolhaAutomatica = null;
-      if (state.auto.cfg.automatizarComIA && sugestao) {
+      // Ramo que entregou o caso para a IA não passa por aqui: a tecla dele vem nula, e esta
+      // automação diria "tecla não disponível" e pararia a rodada em todo contato desses. Quem o
+      // executa é a automação da IA, algumas linhas acima — a mesma de sempre.
+      if (state.auto.cfg.automatizarComIA && sugestao && !ramoChamaIA) {
         // Ramo da árvore com resposta pronta aponta para a tecla `f`, que não é a `sugestao.tecla`
         // (essa vem nula). Sem esta linha o automático diria "tecla não disponível" e pararia em
         // todo contato que caísse num ramo desses — o mesmo "trocar mensagem errada por não anda".

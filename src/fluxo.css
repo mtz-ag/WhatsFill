@@ -287,3 +287,32 @@ body {
 .teclas { margin: 0; display: grid; grid-template-columns: 1.6em 1fr; gap: 4px 9px; align-items: baseline; }
 .teclas dt { font-family: var(--mono); font-weight: 700; font-size: 12.5px; color: var(--trilha); text-align: center; }
 .teclas dd { margin: 0; font-size: 12px; }
+
+/*
+ * O PINO de ligação e o fio provisório.
+ *
+ * Ele perguntou *"como faço para linkar as caixas?"*: o gesto de arrastar uma caixa em cima da
+ * outra existia e era invisível. O pino fica na borda DIREITA porque é de lá que os fios saem —
+ * o gesto passa a ler o que já está desenhado.
+ */
+.pino {
+  position: absolute;
+  right: -7px;
+  top: 50%;
+  margin-top: -6px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--superficie);
+  border: 2px solid var(--tinta-fraca);
+  cursor: crosshair;
+}
+.pino:hover { border-color: var(--trilha); background: var(--trilha); }
+.caixa:hover .pino { border-color: var(--trilha); }
+.caixa.ligando .pino { border-color: var(--trilha); background: var(--trilha); }
+.fio-novo { fill: none; stroke: var(--trilha); stroke-width: 2.4; stroke-dasharray: 6 4; }
+
+/* O desfecho "a IA assume": mesma cor do que precisa de gente, porque é o que ela pode virar. */
+.caixa.ia { border-left-color: var(--gente); }
+.selo.ia { color: var(--gente); background: var(--gente-bg); }
+.c-ia { color: var(--gente); background: var(--gente-bg); }

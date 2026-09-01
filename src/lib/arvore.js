@@ -184,6 +184,17 @@ export function acaoDoNo(no, ctx, fixadas) {
   }
 
   const acao = no.acao || {};
+  /**
+   * **"A IA assume e responde"** — pedido dele (01/09/2026).
+   *
+   * Até aqui a IA só entrava onde NENHUM ramo resolvia, o que a tornava o desfecho do que ninguém
+   * previu. Ele quer o contrário também: apontar uma situação e dizer *"esta aqui eu confio nela"*.
+   * São coisas diferentes — uma é o resto, a outra é uma escolha.
+   *
+   * O que sai daqui é só a marca; quem chama a IA é o painel, com as mesmas travas de sempre
+   * (`validarDecisao`, os `RESTRITOS`, o teto de gasto). A árvore não fala com a API.
+   */
+  if (acao.ia) return { tecla: null, resposta: null, ia: true, motivo: motivoDele(no, ctx) };
   if (acao.resposta) return { tecla: null, resposta: acao.resposta, motivo: motivoDele(no, ctx) };
   if (acao.tecla) return { tecla: acao.tecla, resposta: null, motivo: motivoDele(no, ctx) };
   return null;
@@ -226,7 +237,7 @@ export function decidir(ctx, arvore, fluxo) {
 
       const acao = acaoDoNo(no, c, fixadas);
       if (acao) {
-        return { id: no.id, tecla: acao.tecla, resposta: acao.resposta, motivo: acao.motivo, caminho: daqui };
+        return { id: no.id, tecla: acao.tecla, resposta: acao.resposta, ia: !!acao.ia, motivo: acao.motivo, caminho: daqui };
       }
       // Casou e não resolveu: continua nos irmãos. Ver o cabeçalho — parar aqui seria um buraco.
     }
@@ -630,7 +641,7 @@ export function problemas(arvore) {
     if (acao.tecla && !TECLAS[acao.tecla]) achados.push(`"${nome}": a tecla "${acao.tecla}" não existe`);
 
     const semCondicao = !cond.sinal && !(cond.palavras || []).length;
-    const semAcao = !acao.tecla && !acao.resposta;
+    const semAcao = !acao.tecla && !acao.resposta && !acao.ia;
     const semFilhos = !(no.filhos || []).length;
     if (semCondicao && semAcao && semFilhos) {
       achados.push(`"${nome}": sem condição, sem ação e sem ramo dentro — não faz nada`);

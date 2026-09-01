@@ -381,4 +381,30 @@ grupo('o QUADRO: arrastar para mover e para religar');
   check(arv.precisaArrumar(arv.arrumar(arv.arvoreDoQuadro())) === false, 'o preset do quadro arruma inteiro');
 }
 
+grupo('o desfecho "a IA assume e responde"');
+{
+  /**
+   * Pedido dele (01/09). Ate aqui a IA so entrava onde NENHUM ramo resolvia -- era o desfecho do
+   * que ninguem previu. Agora ele pode apontar uma situacao e entregar aquela para ela, que e
+   * outra coisa: uma escolha, nao um resto.
+   */
+  const arvore = [
+    { id: 'd', rotulo: 'falou de denuncia', condicao: { palavras: ['irregularidade'] }, acao: { ia: true }, filhos: [] },
+    { id: 'z', rotulo: 'o resto', condicao: {}, acao: { tecla: '4' }, filhos: [] },
+  ];
+  const r = arv.decidir({ ultimoTexto: 'quero falar de uma irregularidade' }, arvore);
+  check(r?.ia === true, 'a decisao vem marcada para a IA');
+  check(r?.tecla === null && r?.resposta === null, 'e sem tecla e sem resposta pronta: quem escolhe e ela');
+  check(r?.id === 'd', 'e o ramo certo venceu');
+
+  // Quem nao casa segue para o irmao, como qualquer outro desfecho.
+  check(arv.decidir({ ultimoTexto: 'oi' }, arvore)?.tecla === '4', 'o irmao de baixo continua decidindo o resto');
+
+  // E o ramo NAO e acusado de "nao faz nada" -- entregar para a IA e fazer algo.
+  check(arv.problemas(arvore).length === 0, `entregar para a IA conta como acao (${JSON.stringify(arv.problemas(arvore))})`);
+
+  const semNada = [{ id: 'x', rotulo: 'vazio', condicao: { palavras: ['oi'] }, acao: {}, filhos: [] }];
+  check(arv.problemas(semNada).some((p) => p.includes('vazio')), 'e acao vazia continua sendo acusada');
+}
+
 fim();

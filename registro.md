@@ -5,6 +5,56 @@
 
 ---
 
+## 2026-09-01 (noite, 17) — "A IA assume" virou desfecho, e as caixas ganharam pino de ligação
+
+**Pedido:** *"está faltando a opção de IA assume e responde, e como faço para linkar as caixas?"*
+
+### A IA como ESCOLHA, e não como resto
+
+Até aqui a IA só era chamada onde **nenhum** ramo resolvia — ela era o desfecho do que ninguém
+previu. Ele quis o contrário também: apontar uma situação e dizer *"esta aqui eu confio nela"*. São
+coisas diferentes, e a segunda faltava mesmo.
+
+Agora o menu "Então…" tem **"a IA assume e responde"** ao lado das teclas e das respostas prontas.
+O caso segue exatamente o caminho da IA que já existia, com as mesmas travas: id inventado vira
+`incerto`, `RESTRITOS` vira escalada, sem chave ou sem crédito vira `incerto`, e o teto de gasto
+continua obrigado no service worker. **Não há caminho novo para o dinheiro nem para o eleitor.**
+
+A armadilha que isso repete: a `sugestao.tecla` vem **nula**, como já vinha no ramo de resposta
+pronta. Quem lê `sugestao` para achar a opção — o destaque e a automação — tem que testar
+`sugestao.ia` antes. A automação das regras **pula** esses casos; quem os executa é a automação da
+IA, que já existia. Sem isso a rodada diria "tecla não disponível" e pararia em todos eles.
+
+### O segundo pedido é um defeito meu de desenho
+
+Ligar duas caixas só existia arrastando uma **em cima** da outra. Estava escrito no cabeçalho da
+janela, e mesmo assim ele perguntou como se fazia — ou seja, **o gesto existia e era invisível**. É
+o mesmo erro do arrastar, que eu tinha trocado por botões na versão anterior. Recurso de quadro
+precisa de alça visível, não de instrução em texto.
+
+Cada caixa ganhou um **pino** na borda direita: puxa dele até outra caixa e aquela vira um ramo
+dentro desta. Fio pontilhado acompanha o ponteiro, o destino acende, e só acende quem aceita — pôr
+uma caixa dentro de um filho dela criaria ciclo e seria recusado. **O gesto antigo continua
+valendo**: quem arrastar a caixa inteira em cima da outra também liga. O pino fica à direita porque
+é de lá que os fios já saem — o gesto passa a ler o que está desenhado.
+
+Para desligar, o botão **"Soltar na raiz"** no editor do lado.
+
+**Arquivos:** `src/lib/arvore.js` (`acao.ia` em `acaoDoNo`, `decidir` e `problemas`), `src/fluxo.js`
+(o pino, o fio provisório, a ação no menu, o selo), `src/fluxo.html`, `src/fluxo.css`,
+`src/panel/panel.js` (`ramoChamaIA`: chama a IA, acende a tecla 0, e a automação das regras pula),
+`tests/arvore.test.mjs`, `manifest.json` (1.25.0 → 1.26.0), `registro.md`, `CLAUDE.md`.
+
+**Conferido no navegador**, no servidor de rascunho: puxar o pino desenha o fio pontilhado, acende
+o destino e move o ramo na árvore gravada (16 → 15 raízes, um fio novo); escolher "a IA assume" no
+menu grava `{ia: true}`, a caixa passa a mostrar "a IA decide" e o resumo do topo conta "1 a IA
+decide". Treze suítes, `checar-modulos` e `checar-referencias` passando.
+
+**Não testado:** a rodada real executando um ramo de IA num contato. Depende do Chrome com a
+extensão e de chave da API.
+
+---
+
 ## 2026-09-01 (noite, 16) — A roda do mouse virou o zoom do quadro
 
 **Pedido:** *"faça com que o scroll do mouse aumente ou diminua o zoom"*.
