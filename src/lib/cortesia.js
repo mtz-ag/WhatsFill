@@ -120,9 +120,20 @@ export function ehSoReacao(msg) {
 /**
  * Como a pessoa fecha a conversa por aqui.
  *
- * Vocabulário do lugar, não de manual: *"é nós"*, *"tamo junto"*, *"estamos juntos"*, *"abraço"*,
- * *"valeu"*, *"tmj"*. É despedida de apoiador, e a resposta certa a ela é fechar o atendimento —
- * não mandar mais uma mensagem.
+ * Vocabulário do lugar, não de manual: *"é nós"*, *"abraço"*, *"valeu"*, *"amém"*. É despedida de
+ * apoiador, e a resposta certa a ela é fechar o atendimento — não mandar mais uma mensagem.
+ *
+ * **Só "tamo junto", "tmj" e "estamos juntos" saíram daqui em 31/08** — estavam também em
+ * `EXPRESSOES_DE_APOIO`, e como esta regra vem antes, o apoio nunca era alcançado. Print do
+ * Izaak: última mensagem *"Tamojuntos"*, e a caixa sugeriu concluir. *"nesse caso vou usar a
+ * mensagem 8, a última mensagem foi tamojuntos, seria estamos juntos"*.
+ *
+ * A linha: **fecho é fecho; solidariedade é apoio.** "Valeu, abraço" encerra a conversa;
+ * "tamo junto" afirma que a pessoa está com ele, e isso pede reconhecimento.
+ *
+ * `sucesso`, `boa sorte` e a bênção **ficaram aqui**: ele não pediu para mexer nelas, e
+ * "Que Deus abençoe" sozinho é fecho. Mexer no que não foi apontado é como se perde o que já
+ * estava certo.
  */
 /**
  * `(^|\s)` em vez de `\b` antes de palavra acentuada.
@@ -131,7 +142,7 @@ export function ehSoReacao(msg) {
  * Foi assim que "É nós." — a frase exata da print dele — passou batido na primeira versão.
  */
 const DESPEDIDA =
-  /(^|\s)(e|é)\s*n(ó|o)(s|is)\b|\b(tamo|tamos|estamos|seguimos|segue|to|tô|estou)\s*(junto|juntos)\b|\btmj\b|\b(forte\s*)?abra(ç|c)o(s)?\b|\bvaleu\b|\bvlw\b|\bobrigad[oa]\b|\bbrigad[oa]\b|(^|\s)am(é|e)m\b|\bboa\s*sorte\b|\bdeus\s*(te\s*)?aben(ç|c)oe\b|\bfica\s*com\s*deus\b|\bsucesso\b/i;
+  /(^|\s)(e|é)\s*n(ó|o)(s|is)\b|\b(forte\s*)?abra(ç|c)o(s)?\b|\bvaleu\b|\bvlw\b|\bobrigad[oa]\b|\bbrigad[oa]\b|(^|\s)am(é|e)m\b|\bboa\s*sorte\b|\bdeus\s*(te\s*)?aben(ç|c)oe\b|\bfica\s*com\s*deus\b|\bsucesso\b/i;
 
 /**
  * A mensagem é SÓ uma despedida?
@@ -346,7 +357,9 @@ const PEDIDO_DE_MATERIAL = /(^|\s)(manda|mande|envia|envie|me\s+passa|quero\s+re
 const EXPRESSOES_DE_APOIO = [
   /(^|\s)(eu\s+)?apoio(\s|$|,|!|\.)/i
 ,
-  /(^|\s)(t[oô]|estou|estamos|seguimos)\s+(com|junto|juntos)(\s|$)/i,
+  // `\s*` e não `\s+`: "Tamojuntos" vem colado, e foi assim que ele apareceu na print.
+  /(^|\s)(tamo|tamos|t[oô]|estou|estamos|seguimos|segue)\s*(com|junto|juntos)\b/i,
+  /(^|\s)tmj\b/i,
   /(^|\s)conte?\s+comigo(\s|$|!|\.)/i,
   /(^|\s)(vou|vamos)\s+votar(\s|$)/i,
   /(^|\s)sou\s+(seu\s+)?(eleitor|eleitora|f[aã]|bolsonarist[ao]|bolsonaro)(\s|$)/i,
@@ -393,15 +406,6 @@ export function rajadaEhSoRepasse(entrantes, nossaUltimaAt) {
   return rajada.every((m) => ehRepasse(m));
 }
 
-/**
- * A partir de quantos caracteres o apoio deixa de ser gesto e vira mensagem.
- *
- * Medido nas duas mensagens do Ciro (31/08): *"Olá! Eu apoio o Flávio, Zucco e Capitão Martim"*
- * tem 49 caracteres; o "texto de baixo", em que ele conta que é bolsonarista de sempre e em quem
- * vai votar para senador, tem 144. Os apoios genéricos ficam todos abaixo de 50 ("apoio!" tem 6,
- * "conte comigo" tem 12) — 100 cai no vazio entre os dois grupos e sobra margem dos dois lados.
- */
-const APOIO_ELABORADO = 100;
 
 /**
  * A conversa pendente é SÓ expressão de apoio, sem nada a resolver?
@@ -435,20 +439,40 @@ export function soExpressaApoio(entrantes, nossaUltimaAt) {
   if (PEDIDO_DE_MATERIAL.test(texto)) return null;
 
   /**
-   * **Apoio curto não é exceção — é o caso normal, e o caso normal já tem resposta.**
+   * **O critério é ela ter escrito MAIS DE UMA VEZ — não o tamanho do texto.**
    *
-   * Ele explicou a diferença em 31/08: *"são dois tipos de agradecimento… agradecer o apoio é um
-   * adicional, uma exceção à regra; se não tivesse o texto de baixo eu mandaria o modelo,
-   * agradeceria a atenção e encerraria"*.
+   * A primeira versão usava 100 caracteres, e ele derrubou na hora: *"se basear em caracteres vai
+   * dar só erro, é um valor totalmente aleatório e será trocado toda hora"*. Estava certo.
    *
-   * O agradecimento pela ATENÇÃO já sai junto com o modelo (a tecla 1 é "modelo + agradecimento
-   * e concluir"). O agradecimento pelo APOIO existe para quando a pessoa escreveu algo dela —
-   * e aí responder ao que ela disse vem antes de entregar o material.
+   * O que separa os dois casos dele é estrutural, e as duas prints mostram a mesma coisa: a
+   * PRIMEIRA mensagem é o texto pronto do anúncio (*"Olá! Eu apoio as Escolas Cívico-Militares"*,
+   * *"Olá! Eu apoio o Flávio, Zucco e Capitão Martim"*) — ela não escolheu as palavras, clicou num
+   * botão. Qualquer mensagem depois dessa é ela escrevendo: o *"texto de baixo"* do Ciro, o
+   * *"Tamojuntos"* do Izaak.
+   *
+   * Foi o que ele descreveu: *"se não tivesse o texto de baixo eu mandaria o modelo, agradeceria a
+   * atenção e encerraria"*. Uma mensagem só = clique no anúncio = caso normal, tecla 1.
    */
-  if (texto.length < APOIO_ELABORADO) return null;
+  const lista = Array.isArray(entrantes) ? entrantes : [];
+  if (lista.length < 2) return null;
+
+  /**
+   * O apoio tem de estar no que ELA escreveu — **a primeira mensagem sai da conta.**
+   *
+   * Pego por teste: com a rajada colada, *"Olá! Eu apoio as Escolas"* + *"bom dia"* casava, porque
+   * o "apoio" estava no texto do ANÚNCIO. A regra ficaria valendo para qualquer um que clicasse no
+   * anúncio e depois escrevesse qualquer coisa — o oposto do critério.
+   */
+  const dela = rajada
+    .filter((m) => m !== lista[0])
+    .map((m) => String(m?.texto || ''))
+    .join(' ')
+    .trim();
+  if (!dela) return null;
+  if (PEDIDO_DE_MATERIAL.test(dela)) return null;
 
   for (const padrao of EXPRESSOES_DE_APOIO) {
-    if (padrao.test(texto)) {
+    if (padrao.test(dela)) {
       return { motivo: 'escreveu apoio em mensagem própria — responda a ela antes do material' };
     }
   }

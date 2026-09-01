@@ -5,6 +5,59 @@
 
 ---
 
+## 2026-08-31 — "Tamojuntos" é apoio, e o critério do apoio deixa de ser tamanho
+
+**Relato dele**, print do Izaak: última mensagem *"Tamojuntos"*, e a caixa sugeriu **concluir**.
+*"nesse caso vou usar a mensagem 8, a última mensagem foi tamojuntos, seria estamos juntos"*.
+
+E sobre o limite de 100 caracteres que eu tinha calibrado com ele minutos antes:
+
+> *"se basear em caracteres vai dar só erro é um valor totalmente aleatório e será trocado toda hora"*
+
+Ele está certo, e a crítica é melhor que a minha implementação.
+
+### Duas causas
+
+**1. Conflito de vocabulário.** `"tamo junto"`, `"tmj"` e `"estamos juntos"` estavam **nas duas
+listas** — `DESPEDIDA` e `EXPRESSOES_DE_APOIO`. Como despedida é a regra 3 e apoio a 8, o apoio
+nunca era alcançado. Saíram da despedida. A linha que ficou: **fecho é fecho; solidariedade é
+apoio** — "valeu, abraço" encerra a conversa, "tamo junto" afirma que a pessoa está com ele.
+
+`sucesso`, `boa sorte` e a bênção **ficaram na despedida**: ele não pediu para mexer nelas, e "Que
+Deus abençoe" sozinho é fecho. Mexer no que não foi apontado é como se perde o que já estava certo.
+
+**2. `"Tamojuntos"` vem colado**, e o padrão exigia `\s+`. Agora é `\s*`, com `tamo`/`tamos`/`segue`
+somados às formas que já havia.
+
+### O critério novo, estrutural
+
+Fora o tamanho. **Vale quando ela escreveu mais de uma vez.**
+
+As duas prints mostram a mesma coisa: a **primeira** mensagem é o texto pronto do anúncio (*"Olá! Eu
+apoio as Escolas Cívico-Militares"*, *"Olá! Eu apoio o Flávio, Zucco e Capitão Martim"*) — ela não
+escolheu as palavras, clicou num botão. Qualquer mensagem depois é ela escrevendo: o "texto de
+baixo" do Ciro, o "Tamojuntos" do Izaak.
+
+É literalmente o que ele descreveu: *"se não tivesse o texto de baixo eu mandaria o modelo,
+agradeceria a atenção e encerraria"*.
+
+### Um furo que só o teste pegou
+
+Com a rajada colada, *"Olá! Eu apoio as Escolas"* + *"bom dia"* casava — o "apoio" estava no texto do
+**anúncio**. A regra passaria a valer para qualquer um que clicasse no anúncio e escrevesse qualquer
+coisa depois, que é o oposto do critério. **A primeira mensagem saiu da conta**: o apoio tem de estar
+no que ela escreveu.
+
+### Testes
+
+Cinco asserções antigas **trocadas e não apagadas**, com o motivo: três de despedida (`tamo junto`,
+`estamos juntos`, `tmj`) e duas do apoio por tamanho. Lidas sozinhas, todas soavam corretas.
+
+**Arquivos:** `src/lib/cortesia.js`, `tests/cortesia.test.mjs`, `manifest.json`
+(0.51.0 → **0.52.0**). 29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — São dois agradecimentos, e o do apoio é exceção que vence o modelo
 
 **Dele, em duas mensagens:** *"a prioridade é responder o que foi falado depois mandar modelo"* e

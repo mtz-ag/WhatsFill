@@ -133,13 +133,20 @@ grupo('despedida: a pessoa so fechou a conversa');
   check(ehDespedida(t('É NÓS')), 'em caixa alta');
   check(ehDespedida(t('é nois')), 'escrito como se fala');
 
-  check(ehDespedida(t('Tamo junto!')), 'tamo junto');
-  check(ehDespedida(t('estamos juntos 🙏')), 'estamos juntos com emoji');
+  /**
+   * Estas duas diziam `ehDespedida(...)` e viraram a negacao em 31/08, por decisao dele:
+   * *"a ultima mensagem foi tamojuntos, seria estamos juntos"*. Solidariedade nao e fecho — quem
+   * diz que esta junto esta afirmando apoio, e a resposta e reconhecer, nao encerrar.
+   *
+   * Trocadas e nao apagadas: lidas sozinhas, as antigas soavam corretas.
+   */
+  check(!ehDespedida(t('Tamo junto!')), 'tamo junto e APOIO, nao despedida');
+  check(!ehDespedida(t('estamos juntos 🙏')), 'estamos juntos tambem');
   check(ehDespedida(t('Abraço')), 'abraço');
   check(ehDespedida(t('forte abraço')), 'forte abraço');
   check(ehDespedida(t('Valeu')), 'valeu');
   check(ehDespedida(t('vlw')), 'vlw');
-  check(ehDespedida(t('tmj')), 'tmj');
+  check(!ehDespedida(t('tmj')), 'tmj e a abreviacao de tamo junto: apoio');
   check(ehDespedida(t('Obrigada')), 'obrigada');
   check(ehDespedida(t('Que Deus abençoe')), 'bencao tambem fecha conversa');
   check(ehDespedida(t('Valeu, abraço!')), 'duas despedidas juntas');
@@ -307,46 +314,57 @@ grupo('pergunta: "pq" no MEIO da frase e conjuncao, nao pergunta');
   check(q('por que ele nao veio aqui?'), 'por que separado com interrogacao');
 }
 
-grupo('soExpressaApoio: so o apoio ELABORADO e excecao; o curto e o caso normal');
+grupo('soExpressaApoio: vale quando ela escreveu MAIS DE UMA VEZ');
 {
-  const E = (...t) => t.map((texto, i) => ({ texto, tipo: 'TEXT', at: `2026-08-31T23:2${i}:00Z` }));
-  const a = (...t) => !!soExpressaApoio(E(...t), null);
+  const M = (texto, at) => ({ texto, tipo: 'TEXT', at: at || '2026-08-31T11:40:00Z' });
 
   /**
-   * O caso REAL da print do Ciro: o "texto de baixo", 144 caracteres.
+   * O criterio nao e tamanho. A primeira versao usava 100 caracteres e ele derrubou na hora:
+   * *"se basear em caracteres vai dar so erro, e um valor totalmente aleatorio e sera trocado
+   * toda hora"*.
+   *
+   * O que separa os casos e estrutural, e as duas prints mostram o mesmo: a PRIMEIRA mensagem e
+   * o texto pronto do anuncio ("Ola! Eu apoio ..."), em que ela clicou num botao. Qualquer
+   * mensagem depois dessa e ela escrevendo.
    */
-  check(a('Pode e desde já ficou muito grato pq sou Bolsonaro desde sempre e vou votar no PL mas para senador um no PL e o outro para marcel von Hatten 300'),
-    'o texto de baixo do Ciro (144 chars) e apoio elaborado');
+  const izaak = [
+    M('Olá! Eu apoio as Escolas Cívico-Militares 🤙', '2026-08-31T11:44:00Z'),
+    M('Tamojuntos', '2026-08-31T11:44:30Z'),
+  ];
+  check(!!soExpressaApoio(izaak, null), 'Izaak: 2 mensagens, a 2a e dela (54 caracteres no total)');
+
+  const ciro = [
+    M('Olá! Eu apoio o Flávio, Zucco e Capitão Martim', '2026-08-30T17:34:00Z'),
+    M('Pode e desde já ficou muito grato pq sou Bolsonaro desde sempre e vou votar no PL mas para senador um no PL e o outro para marcel von Hatten 300', '2026-08-31T00:03:00Z'),
+  ];
+  check(!!soExpressaApoio(ciro, null), 'Ciro: 2 mensagens, e a 2a esta 6h30 depois');
 
   /**
-   * **E o contra-teste que e a regra inteira**, nas palavras dele: *"se nao tivesse o texto de
-   * baixo eu mandaria o modelo, agradeceria a atencao e encerraria"*. A primeira mensagem dele
-   * tem 49 caracteres.
+   * **O contra-teste que e a regra**, nas palavras dele: *"se nao tivesse o texto de baixo eu
+   * mandaria o modelo, agradeceria a atencao e encerraria"*. Uma mensagem so = clique no anuncio.
    */
-  check(!a('Olá! Eu apoio o Flávio, Zucco e Capitão Martim'), 'a 1a mensagem do Ciro (49 chars) NAO e excecao');
-  check(!a('apoio!'), 'apoio solto e o caso normal');
-  check(!a('conte comigo!'), 'conte comigo tambem');
-  check(!a('Parabéns! Sucesso na caminhada'), 'parabens curto tambem');
+  check(!soExpressaApoio([M('Olá! Eu apoio as Escolas Cívico-Militares 🤙')], null),
+    'so o clique no anuncio NAO e excecao: vai para o modelo');
+  check(!soExpressaApoio([M('apoio!')], null), 'apoio solto, uma mensagem, e o caso normal');
 
-  // Apoio longo com outras formas de dizer.
-  check(a('Muito obrigado por tudo que voces fazem, eu sou eleitor de longa data e vou votar em todos de novo, conte comigo sempre nessa caminhada'),
-    'apoio longo em outra forma tambem casa');
+  // As formas de "tamo junto" que faltavam no dicionario.
+  for (const forma of ['Tamojuntos', 'tamo junto', 'tamos juntos', 'tmj', 'estamos juntos', 'to junto']) {
+    check(!!soExpressaApoio([M('Olá! Eu apoio X'), M(forma)], null), 'reconhece: ' + forma);
+  }
 
   /**
-   * O que NAO pode virar agradecimento, mesmo longo: apoio junto com pergunta e pergunta; junto
-   * com pedido e pedido. Responder a metade facil e engolir a que importa e o defeito mais caro
-   * que uma resposta automatica pode ter.
+   * O que NAO pode virar agradecimento: apoio junto com pergunta e pergunta; junto com pedido e
+   * pedido. Responder a metade facil e engolir a que importa e o defeito mais caro que uma
+   * resposta automatica pode ter.
    */
-  check(!a('eu apoio muito voces desde sempre e vou votar em todos, mas por que nao vem fazer campanha aqui na nossa cidade?'),
-    'apoio longo + pergunta e pergunta');
-  check(!a('apoio voces demais, sou eleitor de sempre, me manda o material da campanha para eu divulgar aqui na cidade?'),
-    'apoio longo + pedido e pedido');
+  check(!soExpressaApoio([M('Olá! Eu apoio X'), M('apoio voces, mas por que nao vem aqui?')], null),
+    'apoio + pergunta e pergunta');
+  check(!soExpressaApoio([M('Olá! Eu apoio X'), M('apoio, me manda o material?')], null),
+    'apoio + pedido e pedido');
+  check(!soExpressaApoio([M('Olá! Eu apoio X'), M('bom dia')], null), 'cumprimento nao e apoio');
 
-  check(!a('bom dia'), 'cumprimento nao e apoio');
-  check(!a(''), 'vazio nao e apoio');
-
-  // Audio nunca e "so apoio": nao da para responder sem abrir.
-  check(!soExpressaApoio([{ texto: 'a'.repeat(150), tipo: 'AUDIO', at: '2026-08-31T23:20:00Z' }], null),
+  // Audio nunca e "so apoio".
+  check(!soExpressaApoio([M('Olá! Eu apoio X'), { texto: 'tamo junto', tipo: 'AUDIO', at: '2026-08-31T11:45:00Z' }], null),
     'audio pede ele em pessoa');
 
   check(!soExpressaApoio([], null), 'sem rajada nao ha o que agradecer');
