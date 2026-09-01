@@ -307,40 +307,50 @@ grupo('pergunta: "pq" no MEIO da frase e conjuncao, nao pergunta');
   check(q('por que ele nao veio aqui?'), 'por que separado com interrogacao');
 }
 
-grupo('soExpressaApoio: agradecer cabe quando o apoio e a mensagem INTEIRA');
+grupo('soExpressaApoio: so o apoio ELABORADO e excecao; o curto e o caso normal');
 {
   const E = (...t) => t.map((texto, i) => ({ texto, tipo: 'TEXT', at: `2026-08-31T23:2${i}:00Z` }));
   const a = (...t) => !!soExpressaApoio(E(...t), null);
 
-  // O caso REAL da print do Ciro.
-  check(a('Olá! Eu apoio o Flávio, Zucco e Capitão Martim', 'Pode e desde ja ficou muito grato pq sou Bolsonaro desde sempre e vou votar no PL'),
-    'o caso do Ciro: so apoio');
-
-  check(a('conte comigo!'), 'conte comigo');
-  check(a('Parabéns! Sucesso na caminhada'), 'parabens e sucesso');
-  check(a('estamos juntos'), 'estamos juntos');
-  check(a('Deus te abençoe'), 'bencao');
-  check(a('sou seu eleitor'), 'sou seu eleitor');
+  /**
+   * O caso REAL da print do Ciro: o "texto de baixo", 144 caracteres.
+   */
+  check(a('Pode e desde já ficou muito grato pq sou Bolsonaro desde sempre e vou votar no PL mas para senador um no PL e o outro para marcel von Hatten 300'),
+    'o texto de baixo do Ciro (144 chars) e apoio elaborado');
 
   /**
-   * O que NAO pode virar agradecimento — e e aqui que a regra se paga.
-   *
-   * Apoio junto com pergunta e pergunta; junto com pedido e pedido. Agradecer nesses casos
-   * responde a metade facil e engole a que importa, que e o defeito mais caro que uma resposta
-   * automatica pode ter.
+   * **E o contra-teste que e a regra inteira**, nas palavras dele: *"se nao tivesse o texto de
+   * baixo eu mandaria o modelo, agradeceria a atencao e encerraria"*. A primeira mensagem dele
+   * tem 49 caracteres.
    */
-  check(!a('eu apoio muito, mas por que nao vem aqui?'), 'apoio + pergunta e pergunta');
-  check(!a('apoio voces, me manda o material?'), 'apoio + pedido e pedido');
+  check(!a('Olá! Eu apoio o Flávio, Zucco e Capitão Martim'), 'a 1a mensagem do Ciro (49 chars) NAO e excecao');
+  check(!a('apoio!'), 'apoio solto e o caso normal');
+  check(!a('conte comigo!'), 'conte comigo tambem');
+  check(!a('Parabéns! Sucesso na caminhada'), 'parabens curto tambem');
+
+  // Apoio longo com outras formas de dizer.
+  check(a('Muito obrigado por tudo que voces fazem, eu sou eleitor de longa data e vou votar em todos de novo, conte comigo sempre nessa caminhada'),
+    'apoio longo em outra forma tambem casa');
+
+  /**
+   * O que NAO pode virar agradecimento, mesmo longo: apoio junto com pergunta e pergunta; junto
+   * com pedido e pedido. Responder a metade facil e engolir a que importa e o defeito mais caro
+   * que uma resposta automatica pode ter.
+   */
+  check(!a('eu apoio muito voces desde sempre e vou votar em todos, mas por que nao vem fazer campanha aqui na nossa cidade?'),
+    'apoio longo + pergunta e pergunta');
+  check(!a('apoio voces demais, sou eleitor de sempre, me manda o material da campanha para eu divulgar aqui na cidade?'),
+    'apoio longo + pedido e pedido');
+
   check(!a('bom dia'), 'cumprimento nao e apoio');
   check(!a(''), 'vazio nao e apoio');
 
   // Audio nunca e "so apoio": nao da para responder sem abrir.
-  check(!soExpressaApoio([{ texto: 'apoio', tipo: 'AUDIO', at: '2026-08-31T23:20:00Z' }], null),
+  check(!soExpressaApoio([{ texto: 'a'.repeat(150), tipo: 'AUDIO', at: '2026-08-31T23:20:00Z' }], null),
     'audio pede ele em pessoa');
 
   check(!soExpressaApoio([], null), 'sem rajada nao ha o que agradecer');
 }
-
 
 grupo('video compartilhado NAO para a fila; audio sim');
 {

@@ -5,6 +5,52 @@
 
 ---
 
+## 2026-08-31 — São dois agradecimentos, e o do apoio é exceção que vence o modelo
+
+**Dele, em duas mensagens:** *"a prioridade é responder o que foi falado depois mandar modelo"* e
+*"são dois tipos de agradecimento, aqui está agradecendo o apoio é um adicional uma exceção a regra,
+se não tivesse o texto de baixo eu mandaria o modelo agradeceria a atenção e encerraria"*.
+
+### A distinção que eu não tinha entendido
+
+Existem **dois** agradecimentos, e eu tratei como um:
+
+| | quando | como |
+|---|---|---|
+| **pela ATENÇÃO** | caso normal | já sai junto com o modelo — a tecla 1 é *"modelo + agradecimento e concluir"* |
+| **pelo APOIO** | exceção | tecla 8, e só quando a pessoa escreveu mensagem própria |
+
+### Duas mudanças, e a segunda é o que torna a primeira segura
+
+**1. A regra subiu acima de `conteudo-pedido`** — reversão do que eu fiz hoje de manhã, quando a pus
+abaixo argumentando que *"agradecer antes de entregar responderia o carinho e engoliria o pedido"*.
+Ele desfez, e está certo por uma razão de atendimento: quem escreveu uma mensagem própria espera
+resposta àquilo. O material vai na rodada seguinte, quando não houver mais nada a responder.
+
+**2. `soExpressaApoio` passou a exigir 100+ caracteres** (`APOIO_ELABORADO`). É isto, e não a ordem,
+que impede o apoio de engolir o pedido.
+
+Medido nas duas mensagens do Ciro: a primeira (*"Olá! Eu apoio o Flávio, Zucco e Capitão Martim"*)
+tem **49** caracteres; o "texto de baixo", em que ele conta que é bolsonarista de sempre e em quem
+vai votar para senador, tem **144**. Os apoios genéricos ficam todos abaixo de 50 — "apoio!" tem 6,
+"conte comigo" tem 12. **100 cai no vazio entre os dois grupos**, com margem dos dois lados.
+
+Conferido nos dois cenários: com o texto de baixo → tecla 8; sem ele → tecla 1.
+
+### Os contra-testes
+
+O que garante que a subida não estragou nada: **apoio longo + pergunta é pergunta**, e **apoio longo
++ pedido de material é pedido**. Responder a metade fácil e engolir a que importa é o defeito mais
+caro que uma resposta automática pode ter. Áudio, despedida, pedir dados e a etiqueta que dispensa
+continuam vencendo.
+
+**Arquivos:** `src/lib/cortesia.js` (`APOIO_ELABORADO`), `src/lib/sugestao.js` (ordem e o comentário
+da reversão), `tests/cortesia.test.mjs` e `tests/sugestao.test.mjs` (grupos reescritos),
+`CLAUDE.md`, `CONTEXTO.md`, `manifest.json` (0.50.0 → **0.51.0**).
+29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — A tecla 8 não apareceu: o texto é que nunca chegou
 
 **Relato dele**, print da 0.48.0: *"a mensagem de agradecimento pelo apoio não foi adicionada as

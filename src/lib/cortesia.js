@@ -394,6 +394,16 @@ export function rajadaEhSoRepasse(entrantes, nossaUltimaAt) {
 }
 
 /**
+ * A partir de quantos caracteres o apoio deixa de ser gesto e vira mensagem.
+ *
+ * Medido nas duas mensagens do Ciro (31/08): *"Olá! Eu apoio o Flávio, Zucco e Capitão Martim"*
+ * tem 49 caracteres; o "texto de baixo", em que ele conta que é bolsonarista de sempre e em quem
+ * vai votar para senador, tem 144. Os apoios genéricos ficam todos abaixo de 50 ("apoio!" tem 6,
+ * "conte comigo" tem 12) — 100 cai no vazio entre os dois grupos e sobra margem dos dois lados.
+ */
+const APOIO_ELABORADO = 100;
+
+/**
  * A conversa pendente é SÓ expressão de apoio, sem nada a resolver?
  *
  * Pedido dele (31/08, print do Ciro): *"esse é um caso comum até onde a pessoa só expressa o
@@ -424,9 +434,22 @@ export function soExpressaApoio(entrantes, nossaUltimaAt) {
   if (!texto) return null;
   if (PEDIDO_DE_MATERIAL.test(texto)) return null;
 
+  /**
+   * **Apoio curto não é exceção — é o caso normal, e o caso normal já tem resposta.**
+   *
+   * Ele explicou a diferença em 31/08: *"são dois tipos de agradecimento… agradecer o apoio é um
+   * adicional, uma exceção à regra; se não tivesse o texto de baixo eu mandaria o modelo,
+   * agradeceria a atenção e encerraria"*.
+   *
+   * O agradecimento pela ATENÇÃO já sai junto com o modelo (a tecla 1 é "modelo + agradecimento
+   * e concluir"). O agradecimento pelo APOIO existe para quando a pessoa escreveu algo dela —
+   * e aí responder ao que ela disse vem antes de entregar o material.
+   */
+  if (texto.length < APOIO_ELABORADO) return null;
+
   for (const padrao of EXPRESSOES_DE_APOIO) {
     if (padrao.test(texto)) {
-      return { motivo: 'só expressou apoio — reconheça e encerre' };
+      return { motivo: 'escreveu apoio em mensagem própria — responda a ela antes do material' };
     }
   }
   return null;

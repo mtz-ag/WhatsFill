@@ -328,35 +328,41 @@ grupo('pergunta-aberta: vence o modelo, perde para as regras de cima');
 }
 
 
-grupo('so-expressa-apoio: agradece, mas nunca ANTES de entregar o material');
+grupo('so-expressa-apoio: e a EXCECAO, e vence o modelo quando casa');
 {
   const A = { motivo: 'apoio' };
 
-  // Print do Ciro: ja classificado, e o modelo nao esta pendente.
-  const ciro = com({ soExpressaApoio: A, podeEnviar: false });
-  check(ciro?.tecla === '8', 'agradece o apoio: ' + JSON.stringify(ciro));
+  /**
+   * Print do Ciro (31/08), e uma reversao do mesmo dia.
+   *
+   * De manha eu pus esta regra ABAIXO de `conteudo-pedido`, argumentando que agradecer antes de
+   * entregar engoliria o pedido. Ele desfez: *"a prioridade e responder o que foi falado, depois
+   * mandar modelo"*. Quem escreveu uma mensagem propria espera resposta aquilo; o material vai na
+   * rodada seguinte.
+   */
+  const ciro = com({ soExpressaApoio: A, podeEnviar: true, conteudoPedido: 'ADS' });
+  check(ciro?.tecla === '8', 'o apoio VENCE o modelo: ' + JSON.stringify(ciro));
   check(ciro?.id === 'so-expressa-apoio', 'e e a regra do apoio');
 
   /**
-   * A regra inteira esta nesta asserção: quem clicou no anuncio e ainda NAO recebeu o material
-   * recebe o material. Agradecer antes de entregar responderia o carinho e engoliria o pedido.
+   * **O que impede isto de engolir o pedido e o TAMANHO, nao a ordem.**
+   *
+   * Ele explicou: *"sao dois tipos de agradecimento… agradecer o apoio e um adicional, uma
+   * excecao a regra; se nao tivesse o texto de baixo eu mandaria o modelo, agradeceria a atencao
+   * e encerraria"*. Apoio curto nao chega em `soExpressaApoio` (ver `APOIO_ELABORADO`), entao
+   * `soExpressaApoio` vem nulo e a tecla 1 continua sendo o desfecho — com o agradecimento pela
+   * ATENCAO, que ja sai junto do modelo.
    */
-  check(com({ soExpressaApoio: A, podeEnviar: true, conteudoPedido: 'ADS' })?.id === 'conteudo-pedido',
-    'com material pendente, o material vem primeiro');
+  check(com({ soExpressaApoio: null, podeEnviar: true, conteudoPedido: 'ADS' })?.id === 'conteudo-pedido',
+    'apoio curto (nulo aqui) segue recebendo modelo + agradecimento pela atencao');
 
-  // Depois de entregue, o apoio vira agradecimento.
-  check(com({ soExpressaApoio: A, podeEnviar: true, modeloJaNaConversa: true })?.tecla === '8',
-    'modelo ja na conversa: agradece');
-  check(com({ soExpressaApoio: A, podeEnviar: true, enviadoHoje: true })?.tecla === '8',
-    'modelo enviado hoje: agradece');
-
-  // Perde para tudo que ja estava certo acima.
+  // Perde para tudo que ja estava certo acima dela.
   check(com({ soExpressaApoio: A, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6', 'audio vence');
   check(com({ soExpressaApoio: A, ultimaEhDespedida: true })?.tecla === '3', 'despedida vence');
   check(com({ soExpressaApoio: A, jaPediramDados: false, temEtiquetaDeCidade: false })?.tecla === '4', 'pedir dados vence');
   check(com({ soExpressaApoio: A, etiquetaQueDispensa: 'engajado' })?.tecla === '2', 'etiqueta dispensa vence');
+  check(com({ soExpressaApoio: A, perguntaAberta: { motivo: 'p' } })?.tecla === '6', 'pergunta vence: responder a pergunta e mais urgente que agradecer');
 }
-
 
 grupo('repasse nao pede formulario, mas reacao continua pedindo');
 {

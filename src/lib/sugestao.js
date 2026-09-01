@@ -223,6 +223,32 @@ export const REGRAS = [
     motivo: () => 'fez uma pergunta que nenhuma resposta pronta responde — escreva você.',
   },
   {
+    id: 'so-expressa-apoio',
+    tecla: '8',
+    /**
+     * A pessoa só disse que está com você, e já está classificada → agradecer e encerrar.
+     *
+     * Pedido dele (31/08, print do Ciro): *"esse é um caso comum até onde a pessoa só expressa o
+     * apoio, ja tem as etiquetas, então é só uma questão de agradecer o apoio e carinho"*.
+     *
+     * **Fica ACIMA de `conteudo-pedido` — e isto é uma reversão, de propósito.**
+     *
+     * Eu a tinha posto abaixo hoje de manhã, argumentando que "agradecer antes de entregar
+     * responderia o carinho e engoliria o pedido". Ele desfez: *"a prioridade é responder o que
+     * foi falado, depois mandar modelo"*.
+     *
+     * Ele está certo, e a razão é de atendimento e não de código: quem escreveu uma mensagem
+     * própria espera resposta àquilo. O material continua indo — na rodada seguinte, quando não
+     * houver mais nada a responder.
+     *
+     * O que impede isto de engolir o pedido é o **tamanho** (`APOIO_ELABORADO`), não a ordem:
+     * apoio curto ("apoio!", "conte comigo") não casa aqui e continua recebendo modelo mais
+     * agradecimento pela atenção, que é o desfecho normal.
+     */
+    quando: (c) => !!c.soExpressaApoio,
+    motivo: () => 'escreveu apoio em mensagem própria — responda a ela; o material fica para depois.',
+  },
+  {
     id: 'conteudo-pedido',
     tecla: '1',
     /**
@@ -234,25 +260,6 @@ export const REGRAS = [
      */
     quando: (c) => c.podeEnviar && !c.enviadoHoje && !c.modeloJaNaConversa,
     motivo: (c) => `pediu "${c.conteudoPedido || 'conteúdo'}" e há modelo mapeado — mande.`,
-  },
-  {
-    id: 'so-expressa-apoio',
-    tecla: '8',
-    /**
-     * A pessoa só disse que está com você, e já está classificada → agradecer e encerrar.
-     *
-     * Pedido dele (31/08, print do Ciro): *"esse é um caso comum até onde a pessoa só expressa o
-     * apoio, ja tem as etiquetas, então é só uma questão de agradecer o apoio e carinho"*.
-     *
-     * **Fica ABAIXO de `conteudo-pedido`, e isso é a regra inteira.** Quem clicou no anúncio e
-     * ainda não recebeu o material recebe o material — foi o que ela pediu. Só depois de o
-     * modelo já ter saído (ou de não haver modelo) é que "obrigado pelo apoio" é o desfecho, e
-     * `conteudo-pedido` já testa `enviadoHoje` e `modeloJaNaConversa` por conta própria.
-     *
-     * Agradecer antes de entregar seria responder o carinho e engolir o pedido.
-     */
-    quando: (c) => !!c.soExpressaApoio,
-    motivo: () => 'só expressou apoio e já está classificada — agradeça e encerre.',
   },
   {
     id: 'nome-sem-sentido',

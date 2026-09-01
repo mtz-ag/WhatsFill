@@ -409,6 +409,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   a `nossaUltimaAt`. Regra nova que dependa do que a pessoa acabou de dizer: pense na rajada,
   não na última.
 
+- **São DOIS agradecimentos, e confundi-los troca o desfecho.** *Agradecer a ATENÇÃO* já sai junto
+  com o modelo (a tecla 1 é "modelo + agradecimento e concluir") e é o caso normal. *Agradecer o
+  APOIO* (tecla 8) é **exceção**, e só vale quando a pessoa escreveu mensagem própria — 100+
+  caracteres (`cortesia.APOIO_ELABORADO`). Nas palavras dele: *"se não tivesse o texto de baixo eu
+  mandaria o modelo, agradeceria a atenção e encerraria"* (31/08). E quando ela casa, **vence o
+  modelo**: *"a prioridade é responder o que foi falado, depois mandar modelo"*. Eu tinha posto o
+  contrário na mesma manhã — o que impede o apoio de engolir o pedido é o TAMANHO, não a ordem.
 - **Resposta pronta nova em `DEFAULT_TEMPLATES` NÃO chega em quem já usa a extensão** — e a tecla
   que depende dela some junto, sem erro nenhum. `store.get('templates')` devolve o array salvo
   inteiro; array não se mescla por espalhamento como `settings`. Em 31/08 a tecla 8 ("Agradecer o

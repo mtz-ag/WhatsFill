@@ -57,8 +57,8 @@ Ordem em 31/08 (de cima para baixo):
 5. `nunca-pediram-dados` — veio do anúncio, sem cidade, formulário nunca saiu → **4**
 6. `ultima-e-so-reacao` — figura, emoji, link → **5**, ou **3** se já respondemos hoje
 7. `pergunta-aberta` — "por que", "qual a posição", "o que ele acha" → **6, à mão**
-8. `conteudo-pedido` → **1, mandar o modelo**
-9. `so-expressa-apoio` — "apoio", "conte comigo", "parabéns" → **8, agradecer o apoio**
+8. `so-expressa-apoio` — apoio em mensagem PRÓPRIA (100+ caracteres) → **8, agradecer o apoio**
+9. `conteudo-pedido` → **1, mandar o modelo + agradecer a atenção**
 10. `nome-sem-sentido` → **4, pedir dados**
 11. `nunca-perguntaram-interesse` → **7**
 12. `pedido-hoje-sem-resposta` → **3**
