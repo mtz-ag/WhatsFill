@@ -232,6 +232,37 @@ export const DEFAULT_TEMPLATES = [
   },
   {
     /**
+     * A pessoa só expressou apoio, e já está classificada. Não há o que pedir nem o que mandar.
+     *
+     * Pedido dele (31/08), print do Ciro: *"esse é um caso comum até onde a pessoa só expressa o
+     * apoio, ja tem as etiquetas, então é só uma questão de agradecer o apoio e carinho"*.
+     *
+     * Separado do `agradecer-info` de propósito: aquele agradece **informações** ("recebemos
+     * tudo por aqui"), e usá-lo em quem escreveu *"sou Bolsonaro desde sempre"* responde outra
+     * conversa. Aqui o que se reconhece é o apoio e a torcida, que é o que a pessoa ofereceu.
+     *
+     * **Não promete nada e não pede nada** — nem grupo, nem material, nem dados. Quem só quis
+     * dizer que está com você não pediu tarefa; mandar uma vira cobrança em cima de um agrado.
+     *
+     * Sem `{{primeiro_nome}}` como todo o resto: o cadastro erra demais para ir num texto que a
+     * pessoa lê (decisão dele, 10/08 — ver `vars.semVocativo`).
+     */
+    id: 'agradecer-apoio',
+    name: 'Agradecer o apoio e encerrar',
+    text:
+      '{{saudacao}}! Muito obrigado pelo apoio e pelo carinho — palavra como a sua dá força ' +
+      'para seguir.\n\n' +
+      'Seguimos juntos nessa caminhada. Que Deus abençoe você e sua família! 🙏',
+    variantes: [
+      '{{saudacao}}! Obrigado de coração pelo apoio e pela confiança — é isso que sustenta o ' +
+        'trabalho.\n\n' +
+        'Estamos juntos. Que Deus abençoe você e os seus! 🙏',
+      '{{saudacao}}! Que bom ler isso, obrigado pelo apoio e pelo carinho de sempre.\n\n' +
+        'Seguimos lado a lado. Que Deus abençoe você e sua família! 🇧🇷',
+    ],
+  },
+  {
+    /**
      * Para quem mandou vídeo, link, "bom dia" — mensagem que merece resposta mas não abre
      * demanda. Agradece e fecha.
      *

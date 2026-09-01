@@ -5,6 +5,58 @@
 
 ---
 
+## 2026-08-31 — Tecla 8: agradecer o apoio. E o "pq" que eu tinha quebrado
+
+**Relato dele**, print do Ciro: *"esse é um caso comum até onde a pessoa só expressa o apoio, ja tem
+as etiquetas, então é só uma questão de agradecer o apoio e carinho, teria que ter mais um botão pra
+isso"*.
+
+### Primeiro, o bug que a print revelou
+
+A faixa da caixa dizia *"fez uma pergunta que nenhuma resposta pronta responde"* — e não havia
+pergunta nenhuma. O casamento foi no **"pq"** de *"ficou muito grato pq sou Bolsonaro desde
+sempre"*: conjunção explicativa, um dos usos mais comuns do português de WhatsApp.
+
+**Regressão minha, de uma hora antes.** A regra `pergunta-aberta` estava tirando da automação
+justamente quem só agradecia — o oposto do que ela existe para fazer.
+
+O conserto: a avaliação passou a ser **mensagem por mensagem** (colado, o começo de uma virava o
+meio de uma frase gigante), e o padrão só conta como pergunta se a mensagem **tem interrogação** ou
+se ele está no **começo** dela. Quem pergunta abre com a pergunta ou marca com "?"; quem explica põe
+o "pq" no meio do que está contando. Sete asserções travam os dois lados.
+
+### O botão
+
+Template de fábrica novo, `agradecer-apoio` ("Agradecer o apoio e encerrar"), com duas variações
+como os outros. **Separado do `agradecer-info`** de propósito: aquele agradece *informações*
+("recebemos tudo por aqui"), e usá-lo em quem escreveu "sou Bolsonaro desde sempre" responde outra
+conversa.
+
+Ele **não pede nada e não promete nada** — nem grupo, nem material, nem dados. Quem só quis dizer
+que está com você não pediu tarefa; mandar uma vira cobrança em cima de um agrado.
+
+### A regra, e a asserção que é a regra inteira
+
+`cortesia.soExpressaApoio` reconhece "apoio", "conte comigo", "vou votar", "sou seu eleitor",
+"parabéns/sucesso/força", bênção, "torcendo".
+
+**Quem decide é o que NÃO está na mensagem.** Apoio junto com pergunta é pergunta; junto com pedido
+de material é pedido. Reusa `conversaTemPerguntaAberta` e `PEDIDO_DE_MATERIAL` em vez de repetir as
+listas — duas listas para a mesma pergunta divergem na primeira vez que uma é ajustada sozinha.
+
+**A regra fica ABAIXO de `conteudo-pedido`, e isso é o desenho todo:** quem clicou no anúncio e
+ainda não recebeu o material recebe o material. Só depois de entregue (ou não havendo modelo) é que
+"obrigado pelo apoio" é o desfecho — e `conteudo-pedido` já testa `enviadoHoje` e
+`modeloJaNaConversa` sozinho. **Agradecer antes de entregar responderia o carinho e engoliria o
+pedido.**
+
+**Arquivos:** `src/lib/cortesia.js` (conserto do `pq` + `soExpressaApoio`), `src/lib/sugestao.js`,
+`src/lib/store.js` (o template), `src/panel/panel.js` (tecla e envio),
+`tests/cortesia.test.mjs` (+18), `tests/sugestao.test.mjs` (+9), `CONTEXTO.md`,
+`manifest.json` (0.44.0 → **0.45.0**). 29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — A lista dos casos sem regra, que é a lista das regras a escrever
 
 **Dele:** *"refinar até sobrar pouca indecisão"*.

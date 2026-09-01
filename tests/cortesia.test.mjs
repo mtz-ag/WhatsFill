@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, rajadaFinal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaFinal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
 
 const texto = (t) => ({ texto: t, tipo: 'TEXT' });
 
@@ -270,6 +270,63 @@ grupo('conversaTemPerguntaAberta: so razao e posicao, nao toda pergunta');
   check(!q(''), 'texto vazio nao conta');
 
   check(!conversaTemPerguntaAberta([], null), 'sem rajada nao ha pergunta');
+}
+
+
+grupo('pergunta: "pq" no MEIO da frase e conjuncao, nao pergunta');
+{
+  const E = (...t) => t.map((texto, i) => ({ texto, tipo: 'TEXT', at: `2026-08-31T23:2${i}:00Z` }));
+  const q = (...t) => !!conversaTemPerguntaAberta(E(...t), null);
+
+  /**
+   * Regressao da print do Ciro (31/08): *"ficou muito grato pq sou Bolsonaro desde sempre"*
+   * virava "fez uma pergunta" e ia para resposta a mao. "pq" explicativo e dos usos mais
+   * comuns do portugues de WhatsApp — a regra tirava da automacao justamente quem agradecia.
+   */
+  check(!q('Pode e desde ja ficou muito grato pq sou Bolsonaro desde sempre e vou votar no PL'),
+    'pq explicativo no meio da frase NAO e pergunta');
+  check(!q('vou votar nele pq confio'), 'outro pq explicativo');
+  check(!q('eu apoio ele porque acredito no trabalho'), 'porque explicativo por extenso');
+
+  // E o que continua valendo: interrogacao, ou o padrao no comeco da mensagem.
+  check(q('Porque?'), 'com interrogacao vale');
+  check(q('pq nao tem material aqui'), 'no comeco da mensagem vale');
+  check(q('tem muita propaganda aqui, mas nao do capitao.', 'Porque?'), 'a pergunta na 2a mensagem vale');
+  check(q('por que ele nao veio aqui?'), 'por que separado com interrogacao');
+}
+
+grupo('soExpressaApoio: agradecer cabe quando o apoio e a mensagem INTEIRA');
+{
+  const E = (...t) => t.map((texto, i) => ({ texto, tipo: 'TEXT', at: `2026-08-31T23:2${i}:00Z` }));
+  const a = (...t) => !!soExpressaApoio(E(...t), null);
+
+  // O caso REAL da print do Ciro.
+  check(a('Olá! Eu apoio o Flávio, Zucco e Capitão Martim', 'Pode e desde ja ficou muito grato pq sou Bolsonaro desde sempre e vou votar no PL'),
+    'o caso do Ciro: so apoio');
+
+  check(a('conte comigo!'), 'conte comigo');
+  check(a('Parabéns! Sucesso na caminhada'), 'parabens e sucesso');
+  check(a('estamos juntos'), 'estamos juntos');
+  check(a('Deus te abençoe'), 'bencao');
+  check(a('sou seu eleitor'), 'sou seu eleitor');
+
+  /**
+   * O que NAO pode virar agradecimento — e e aqui que a regra se paga.
+   *
+   * Apoio junto com pergunta e pergunta; junto com pedido e pedido. Agradecer nesses casos
+   * responde a metade facil e engole a que importa, que e o defeito mais caro que uma resposta
+   * automatica pode ter.
+   */
+  check(!a('eu apoio muito, mas por que nao vem aqui?'), 'apoio + pergunta e pergunta');
+  check(!a('apoio voces, me manda o material?'), 'apoio + pedido e pedido');
+  check(!a('bom dia'), 'cumprimento nao e apoio');
+  check(!a(''), 'vazio nao e apoio');
+
+  // Audio nunca e "so apoio": nao da para responder sem abrir.
+  check(!soExpressaApoio([{ texto: 'apoio', tipo: 'AUDIO', at: '2026-08-31T23:20:00Z' }], null),
+    'audio pede ele em pessoa');
+
+  check(!soExpressaApoio([], null), 'sem rajada nao ha o que agradecer');
 }
 
 fim();

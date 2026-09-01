@@ -277,6 +277,61 @@ const PERGUNTAS_QUE_PEDEM_VOCE = [
 const PEDIDO_DE_MATERIAL = /(^|\s)(manda|mande|envia|envie|me\s+passa|quero\s+receber|receber)(\s|$)/i;
 
 /**
+ * Jeitos de dizer "estou com você". Lista de reconhecimento, não de julgamento: o que ela
+ * decide é se cabe um agradecimento, e agradecer errado custa pouco.
+ */
+const EXPRESSOES_DE_APOIO = [
+  /(^|\s)(eu\s+)?apoio(\s|$|,|!|\.)/i
+,
+  /(^|\s)(t[oô]|estou|estamos|seguimos)\s+(com|junto|juntos)(\s|$)/i,
+  /(^|\s)conte?\s+comigo(\s|$|!|\.)/i,
+  /(^|\s)(vou|vamos)\s+votar(\s|$)/i,
+  /(^|\s)sou\s+(seu\s+)?(eleitor|eleitora|f[aã]|bolsonarist[ao]|bolsonaro)(\s|$)/i,
+  /(^|\s)(parab[eé]ns|sucesso|for[çc]a|felicidades)(\s|$|!|,|\.)/i,
+  /(^|\s)(deus|jesus)\s+(te|o|a|lhe)\s+(aben[çc]oe|guarde|proteja)/i,
+  /(^|\s)torcendo(\s|$)/i,
+];
+
+/**
+ * A conversa pendente é SÓ expressão de apoio, sem nada a resolver?
+ *
+ * Pedido dele (31/08, print do Ciro): *"esse é um caso comum até onde a pessoa só expressa o
+ * apoio, ja tem as etiquetas, então é só uma questão de agradecer o apoio e carinho"*.
+ *
+ * **Quem decide é o que NÃO está na mensagem.** Expressão de apoio junto com pergunta é
+ * pergunta; junto com pedido de material é pedido. O agradecimento só cabe quando o apoio é a
+ * mensagem inteira — senão ele responde a metade fácil e ignora a que importa, que é o defeito
+ * mais caro que uma resposta automática pode ter.
+ *
+ * `conversaTemPerguntaAberta` e `PEDIDO_DE_MATERIAL` são reusados aqui de propósito: duas
+ * listas para a mesma pergunta divergiriam na primeira vez que uma fosse ajustada sozinha.
+ *
+ * @returns {{motivo:string}|null}
+ */
+export function soExpressaApoio(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  if (!rajada.length) return null;
+
+  // Tipo que pede ele em pessoa (áudio, vídeo, arquivo) nunca é "só apoio".
+  for (const msg of rajada) {
+    if (pedeRespostaPessoal({ tipo: msg?.tipo })) return null;
+  }
+
+  if (conversaTemPerguntaAberta(entrantes, nossaUltimaAt)) return null;
+
+  const texto = rajada.map((m) => String(m?.texto || '')).join(' ').trim();
+  if (!texto) return null;
+  if (PEDIDO_DE_MATERIAL.test(texto)) return null;
+
+  for (const padrao of EXPRESSOES_DE_APOIO) {
+    if (padrao.test(texto)) {
+      return { motivo: 'só expressou apoio — reconheça e encerre' };
+    }
+  }
+  return null;
+}
+
+/**
  * A conversa pendente traz uma pergunta que só ELE pode responder?
  *
  * Nasceu da print da Clair (31/08): ela respondeu o formulário, e depois escreveu *"tem muita
@@ -302,18 +357,39 @@ export function conversaTemPerguntaAberta(entrantes, nossaUltimaAt) {
   const rajada = rajadaFinal(entrantes, nossaUltimaAt);
   if (!rajada.length) return null;
 
-  const texto = rajada
-    .map((m) => String(m?.texto || ''))
-    .join(' ')
-    .trim();
-  if (!texto) return null;
+  /**
+   * Uma mensagem por vez, e **não** o texto colado da rajada.
+   *
+   * Colado, o começo de uma mensagem virava o meio de uma frase gigante, e aí o teste de
+   * posição abaixo não valia nada.
+   */
+  for (const msg of rajada) {
+    const texto = String(msg?.texto || '').trim();
+    if (!texto) continue;
+    if (PEDIDO_DE_MATERIAL.test(texto)) continue;
 
-  // Pedido de material vem primeiro: a pergunta dele tem resposta pronta.
-  if (PEDIDO_DE_MATERIAL.test(texto)) return null;
+    /**
+     * A trava que faltava: **"pq"/"porque" no MEIO de uma frase é conjunção, não pergunta.**
+     *
+     * Print do Ciro (31/08): *"ficou muito grato pq sou Bolsonaro desde sempre"* virava
+     * "fez uma pergunta" e ia para resposta à mão. "pq" explicativo é dos usos mais comuns do
+     * português de WhatsApp — a regra estava tirando da automação justamente quem só agradecia.
+     *
+     * Vale como pergunta quando a mensagem **tem interrogação** ("Porque?") ou quando o padrão
+     * está no **começo** dela ("pq nao tem material aqui"). Quem pergunta abre a mensagem com a
+     * pergunta ou a marca com "?"; quem explica põe o "pq" no meio do que está contando.
+     */
+    const temInterrogacao = texto.includes('?');
 
-  for (const padrao of PERGUNTAS_QUE_PEDEM_VOCE) {
-    if (padrao.test(texto)) {
-      return { motivo: 'fez uma pergunta que nenhuma resposta pronta responde' };
+    for (const padrao of PERGUNTAS_QUE_PEDEM_VOCE) {
+      const achou = texto.match(padrao);
+      if (!achou) continue;
+
+      // `index` do casamento: 0 (ou 1, quando o padrão consome o espaço à esquerda) = começo.
+      const noComeco = achou.index <= 1;
+      if (temInterrogacao || noComeco) {
+        return { motivo: 'fez uma pergunta que nenhuma resposta pronta responde' };
+      }
     }
   }
   return null;

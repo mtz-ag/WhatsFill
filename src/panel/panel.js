@@ -19,7 +19,7 @@ import * as categorizar from '../lib/categorizar.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, ultimaEhDespedida } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ultimaEhDespedida } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -3337,6 +3337,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // A pergunta de interesse (tecla 7): só faz sentido para quem NÃO tem etiqueta de
       // conteúdo. Quem já pediu conteúdo tem modelo para receber, não pergunta.
+      /**
+       * Tecla 8: a pessoa só expressou apoio e já está classificada — agradecer é o desfecho.
+       *
+       * Pedido dele (31/08, print do Ciro): *"esse é um caso comum até onde a pessoa só expressa
+       * o apoio, ja tem as etiquetas, então é só uma questão de agradecer o apoio e carinho"*.
+       *
+       * A trava por variável segue a mesma disciplina das outras teclas: falta variável, a tecla
+       * SOME com o motivo na tela, em vez de travar na hora do envio.
+       */
+      const apoio = state.templates.find((t) => t.id === 'agradecer-apoio');
+      const textoApoio = apoio ? await templatesLib.varianteAtual(apoio) : '';
+      const apoioTrava = apoio ? vars.render(textoApoio, contexto).missing.length > 0 : true;
+
       const interesse = state.templates.find((t) => t.id === INTEREST_TEMPLATE_ID);
       const interesseTrava = interesse
         ? vars.render(interesse.text, contexto).missing.length > 0
@@ -3557,6 +3570,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // Pergunta de razão ou de posição: nenhuma resposta pronta responde, e mandar o modelo
         // vira material de campanha em cima da pergunta dela (print da Clair, 31/08).
         perguntaAberta: conversaTemPerguntaAberta(state.entrantes, state.nossaUltimaAt),
+        // Só apoio, sem pergunta e sem pedido: agradecer é o desfecho (print do Ciro, 31/08).
+        // A tecla só é oferecida se o texto do agradecimento não estiver travado por variável.
+        soExpressaApoio: apoioTrava ? null : soExpressaApoio(state.entrantes, state.nossaUltimaAt),
         etiquetaQueDispensa: await etiquetaQueDispensaDaFila(),
         ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
         podeMandarMomento: !momentoTrava,
@@ -3605,6 +3621,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             ? 'Perguntar interesse DE NOVO (já perguntei antes)'
             : 'Perguntar interesse + pedir nome e cidade, e concluir',
         });
+      }
+      if (!apoioTrava) {
+        opcoes.push({ tecla: '8', valor: 'apoio', rotulo: 'Agradecer o apoio e concluir' });
       }
 
       // Um lugar só decide o destaque. Antes eram três expressões independentes, e duas podiam
@@ -3709,15 +3728,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // A pergunta de interesse entra aqui pelo mesmo caminho: concluir tira da fila, e quando
       // a pessoa responder a plataforma devolve o atendimento para "Meus" sozinha — é lá que o
       // "sim" vira etiqueta, na passada seguinte.
-      if (escolha === 'pedirdados' || escolha === 'momento' || escolha === 'interesse') {
+      if (escolha === 'pedirdados' || escolha === 'momento' || escolha === 'interesse' || escolha === 'apoio') {
         const texto =
-          escolha === 'pedirdados' ? pedirDados : escolha === 'momento' ? momento : interesse;
+          escolha === 'pedirdados'
+            ? pedirDados
+            : escolha === 'momento'
+              ? momento
+              : escolha === 'apoio'
+                ? apoio
+                : interesse;
         const rotulo =
           escolha === 'pedirdados'
             ? 'pedi os dados'
             : escolha === 'momento'
               ? 'mensagem do momento enviada'
-              : 'perguntei o interesse no conteúdo';
+              : escolha === 'apoio'
+                ? 'agradeci o apoio'
+                : 'perguntei o interesse no conteúdo';
 
         await saveClassification({ withCompletionDate: true, quiet: true });
         if (!(await sendTemplate(texto, { send: true, jaConfirmado: true }))) {

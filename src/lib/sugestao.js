@@ -223,6 +223,25 @@ export const REGRAS = [
     motivo: (c) => `pediu "${c.conteudoPedido || 'conteúdo'}" e há modelo mapeado — mande.`,
   },
   {
+    id: 'so-expressa-apoio',
+    tecla: '8',
+    /**
+     * A pessoa só disse que está com você, e já está classificada → agradecer e encerrar.
+     *
+     * Pedido dele (31/08, print do Ciro): *"esse é um caso comum até onde a pessoa só expressa o
+     * apoio, ja tem as etiquetas, então é só uma questão de agradecer o apoio e carinho"*.
+     *
+     * **Fica ABAIXO de `conteudo-pedido`, e isso é a regra inteira.** Quem clicou no anúncio e
+     * ainda não recebeu o material recebe o material — foi o que ela pediu. Só depois de o
+     * modelo já ter saído (ou de não haver modelo) é que "obrigado pelo apoio" é o desfecho, e
+     * `conteudo-pedido` já testa `enviadoHoje` e `modeloJaNaConversa` por conta própria.
+     *
+     * Agradecer antes de entregar seria responder o carinho e engolir o pedido.
+     */
+    quando: (c) => !!c.soExpressaApoio,
+    motivo: () => 'só expressou apoio e já está classificada — agradeça e encerre.',
+  },
+  {
     id: 'nome-sem-sentido',
     tecla: '4',
     /**

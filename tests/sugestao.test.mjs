@@ -24,6 +24,7 @@ const base = {
   etiquetaQueDispensa: null,
   ultimaEhSoReacao: false,
   perguntaAberta: null,
+  soExpressaApoio: null,
   podeMandarMomento: true,
   temEtiquetaDeCidade: true,
   podePedirDados: true,
@@ -323,6 +324,36 @@ grupo('pergunta-aberta: vence o modelo, perde para as regras de cima');
 
   // Sem pergunta, nada muda.
   check(com({ podeEnviar: true, conteudoPedido: 'ADS' })?.id === 'conteudo-pedido', 'sem pergunta o modelo continua indo');
+}
+
+
+grupo('so-expressa-apoio: agradece, mas nunca ANTES de entregar o material');
+{
+  const A = { motivo: 'apoio' };
+
+  // Print do Ciro: ja classificado, e o modelo nao esta pendente.
+  const ciro = com({ soExpressaApoio: A, podeEnviar: false });
+  check(ciro?.tecla === '8', 'agradece o apoio: ' + JSON.stringify(ciro));
+  check(ciro?.id === 'so-expressa-apoio', 'e e a regra do apoio');
+
+  /**
+   * A regra inteira esta nesta asserção: quem clicou no anuncio e ainda NAO recebeu o material
+   * recebe o material. Agradecer antes de entregar responderia o carinho e engoliria o pedido.
+   */
+  check(com({ soExpressaApoio: A, podeEnviar: true, conteudoPedido: 'ADS' })?.id === 'conteudo-pedido',
+    'com material pendente, o material vem primeiro');
+
+  // Depois de entregue, o apoio vira agradecimento.
+  check(com({ soExpressaApoio: A, podeEnviar: true, modeloJaNaConversa: true })?.tecla === '8',
+    'modelo ja na conversa: agradece');
+  check(com({ soExpressaApoio: A, podeEnviar: true, enviadoHoje: true })?.tecla === '8',
+    'modelo enviado hoje: agradece');
+
+  // Perde para tudo que ja estava certo acima.
+  check(com({ soExpressaApoio: A, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6', 'audio vence');
+  check(com({ soExpressaApoio: A, ultimaEhDespedida: true })?.tecla === '3', 'despedida vence');
+  check(com({ soExpressaApoio: A, jaPediramDados: false, temEtiquetaDeCidade: false })?.tecla === '4', 'pedir dados vence');
+  check(com({ soExpressaApoio: A, etiquetaQueDispensa: 'engajado' })?.tecla === '2', 'etiqueta dispensa vence');
 }
 
 fim();
