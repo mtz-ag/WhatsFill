@@ -32,6 +32,10 @@ import {
   RESTRITOS,
   CONFIANCA_MINIMA,
   MODELO_PADRAO,
+  validarCidade,
+  montarContatoCidade,
+  montarSistemaCidade,
+  montarRequisicaoCidade,
 } from '../src/lib/ia.js';
 
 const IDS = ['pedir-dados', 'link-grupo', 'agradecimento', 'pedido-ajuda', 'pedido-emprego'];
@@ -392,6 +396,111 @@ grupo('padrao: o modelo que roda em quem nunca abriu o seletor');
 
   check(tokensAproximados('a'.repeat(3500)) === 1000, 'estimativa de token: ~3,5 chars por token');
   check(tokensAproximados('') === 0, 'texto vazio, zero tokens');
+}
+
+// ---------------------------------------------------------------------------
+// Cidade — a IA confere o palpite, e nao pode inventar municipio
+// ---------------------------------------------------------------------------
+
+const MUNICIPIOS = ['Canoas', 'Cachoeirinha', 'Santo Angelo', 'Porto Alegre', 'Rio Grande'];
+const conferir = (d) => validarCidade(d, { municipios: MUNICIPIOS });
+
+grupo('cidade: a conferencia boa passa');
+{
+  const ok = conferir({ acao: 'aceitar', motivo: 'ela respondeu o formulario', confianca: 0.95 });
+  check(ok.acao === 'aceitar', 'aceitar com confianca alta passa');
+  check(ok.cidade === '', 'aceitar nao mexe no nome: quem grava usa o palpite que ja estava la');
+
+  const corr = conferir({ acao: 'corrigir', cidade: 'Cachoeirinha', motivo: 'ela disse', confianca: 0.9 });
+  check(corr.acao === 'corrigir' && corr.cidade === 'Cachoeirinha', 'corrigir para municipio que existe passa');
+}
+
+grupo('cidade: o nome que sai e o OFICIAL, nao o que a IA digitou');
+{
+  // A etiqueta de cidade nasce daqui. Duas grafias virariam duas etiquetas para o mesmo
+  // municipio, e o filtro dele partido em dois -- e o CRM ja tem rotulo repetido demais.
+  const r = conferir({ acao: 'corrigir', cidade: 'santo angelo', motivo: 'x', confianca: 0.9 });
+  check(r.cidade === 'Santo Angelo', 'sem acento e sem caixa casa, e volta a grafia da lista');
+}
+
+grupo('cidade: municipio inventado NAO passa');
+{
+  // A trava principal. Prompt e pedido; isto e regra.
+  const r = conferir({ acao: 'corrigir', cidade: 'Curitiba', motivo: 'x', confianca: 0.99 });
+  check(r.acao === 'incerto', 'cidade fora da lista vira incerto, mesmo com 99% de certeza');
+  check(/nao e municipio do RS/.test(r.aviso.normalize('NFD').replace(/[̀-ͯ]/g, '')),
+    'e o aviso diz por que');
+
+  const vazia = conferir({ acao: 'corrigir', motivo: 'x', confianca: 0.9 });
+  check(vazia.acao === 'incerto', 'mandar corrigir sem dizer para qual cidade vira incerto');
+
+  // Sem a lista, correcao nenhuma passa: conferencia sem trava e pior que nao ter.
+  const semLista = validarCidade({ acao: 'corrigir', cidade: 'Canoas', motivo: 'x', confianca: 0.9 }, {});
+  check(semLista.acao === 'incerto', 'sem lista de municipios, corrigir nao passa');
+}
+
+grupo('cidade: confianca baixa nao grava');
+{
+  const r = conferir({ acao: 'aceitar', motivo: 'acho que sim', confianca: 0.5 });
+  check(r.acao === 'incerto', 'aceitar abaixo do limiar vira incerto');
+  check(conferir({ acao: 'corrigir', cidade: 'Canoas', motivo: 'x', confianca: 0.69 }).acao === 'incerto',
+    'corrigir abaixo do limiar tambem');
+  check(conferir({ acao: 'aceitar', motivo: 'x', confianca: CONFIANCA_MINIMA }).acao === 'aceitar',
+    'exatamente no limiar passa');
+}
+
+grupo('cidade: "nao tem cidade aqui" e resposta, nao duvida');
+{
+  // Nao precisa de confianca alta porque nao grava nada. Exigi-la faria a saida mais segura
+  // ser a mais dificil de dar -- e a saida segura tem que ser a facil.
+  const r = conferir({ acao: 'semcidade', motivo: 'ela so mandou bom dia', confianca: 0.4 });
+  check(r.acao === 'semcidade', 'semcidade passa mesmo com confianca baixa');
+  check(r.cidade === '', 'e nao traz cidade nenhuma junto');
+}
+
+grupo('cidade: lixo vira incerto, como todo o resto');
+{
+  check(conferir('isto nao e json').acao === 'incerto', 'texto solto vira incerto');
+  check(conferir(null).acao === 'incerto', 'nulo vira incerto');
+  check(conferir({ acao: 'apagar', motivo: 'x', confianca: 1 }).acao === 'incerto', 'acao desconhecida vira incerto');
+  check(conferir({ acao: 'aceitar', motivo: 'x' }).acao === 'incerto', 'sem confianca vira incerto');
+  check(conferir('{"acao":"aceitar","motivo":"x","confianca":0.9}').acao === 'aceitar', 'JSON em texto e lido');
+}
+
+grupo('cidade: a conversa vai dos DOIS lados');
+{
+  // "Maria / Cachoeirinha" sozinha e ambigua: nome de gente e nome de municipio, sem nada
+  // dizendo qual e qual. Com a nossa pergunta na frente, a frase se explica.
+  const bloco = montarContatoCidade({
+    mensagens: [
+      { de: 'nos', texto: 'Para eu salvar seu contato me passe seu Nome / Cidade' },
+      { de: 'contato', texto: 'Maria / Cachoeirinha' },
+    ],
+    candidato: 'Cachoeirinha',
+    origem: 'mensagem do contato',
+  });
+  check(/Atendimento: Para eu salvar/.test(bloco), 'a nossa pergunta entra marcada como Atendimento');
+  check(/Contato: Maria \/ Cachoeirinha/.test(bloco), 'e a resposta dela como Contato');
+
+  // String solta continua sendo do contato: e o formato antigo, e quebrar chamador silencioso
+  // e o tipo de coisa que so aparece em producao.
+  check(/Contato: oi/.test(montarContatoCidade({ mensagens: ['oi'] })), 'string solta e do contato');
+
+  const vazio = montarContatoCidade({ candidato: 'Canoas' });
+  check(/nao escreveu nada/.test(vazio.normalize('NFD').replace(/[̀-ͯ]/g, '')),
+    'conversa vazia é dita, nao omitida');
+
+  // Substituir e mais grave que preencher: o que esta no CRM alguem ja pos la.
+  const troca = montarContatoCidade({ candidato: 'Canoas', substituiria: 'Gravatai' });
+  check(/SUBSTITUIR/.test(troca), 'substituicao e avisada no bloco');
+}
+
+grupo('cidade: a requisicao e barata e cacheavel');
+{
+  const req = montarRequisicaoCidade({ sistema: montarSistemaCidade({}), contato: 'x' });
+  check(req.max_tokens <= 512, 'teto de saida baixo: a resposta sao tres palavras e uma frase');
+  check(req.system[0].cache_control?.type === 'ephemeral', 'o sistema vai marcado para cache');
+  check(req.output_config.format.schema.properties.acao.enum.length === 3, 'tres acoes, nao mais');
 }
 
 fim();

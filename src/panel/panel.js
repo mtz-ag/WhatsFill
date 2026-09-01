@@ -677,6 +677,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (entry.value == null || entry.value === '') return;
     if (somenteExatos && entry.confidence !== 'exata') return;
 
+    /**
+     * Com a rodada automatizada, quem responde esta caixa é a IA — e ela responde ANTES de a
+     * caixa existir.
+     *
+     * Relato dele (01/09): *"falta a IA aceitar a cidade e arrumar caso esteja errado, está
+     * parando o processo"*. Estava travando mesmo: a rodada abre a caixa e fica esperando um
+     * clique que, por definição, ninguém vai dar — automatizar tudo menos isto é não automatizar.
+     *
+     * A regra dele não muda: **nenhuma cidade de palpite vai para o CRM sem confirmação.** Muda
+     * quem confirma quando ele não está olhando. E o que a IA pode fazer aqui é estreito: aceitar
+     * o que o parser achou, trocar por outro município **da lista do IBGE**, ou não gravar nada.
+     * Nome inventado não passa por `validarCidade`.
+     */
+    if (await cidadeConferidaPelaIA(campo, entry)) return;
+
     const doCadastro = entry.source === FONTE_CIDADE_CADASTRO;
     const linhas = [`Encontrei "${entry.value}" como cidade.`];
     if (doCadastro) {
@@ -742,6 +757,95 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // o contato fica com o COREDE de uma cidade que você acabou de recusar.
     await refreshTagSuggestions();
     renderAll();
+  }
+
+  /**
+   * A IA responde a caixa da cidade no lugar dele — só na rodada automatizada.
+   *
+   * @returns {Promise<boolean>} `true` = já resolvi, não abra a caixa. `false` = pergunte a ele.
+   *
+   * **As três saídas, e o que cada uma escreve:**
+   *  - `aceitar`  → grava o palpite, com `confirmada: true` (é o que libera as etiquetas);
+   *  - `corrigir` → grava OUTRO município, e só um que exista na lista do IBGE;
+   *  - `semcidade` e `incerto` → **não escreve nada, e não recusa nada.**
+   *
+   * A última merece explicação, porque ela difere da caixa: quando ELE responde "Sem cidade",
+   * a recusa fica guardada (`recusarCidade`) para a cidade não voltar a ser sugerida. Aqui não.
+   * A recusa dele é uma decisão sobre o contato; a da IA é a falta de uma. Guardar "não é
+   * Canoas" porque o modelo ficou em 60% de certeza é transformar dúvida em fato, e é o tipo de
+   * memória que ninguém revisa depois. O palpite volta a aparecer na próxima vez, para ele.
+   *
+   * Nada aqui roda fora da rodada automatizada: no dia a dia quem confere a cidade é ele, e
+   * continua sendo.
+   */
+  async function cidadeConferidaPelaIA(campo, entry) {
+    if (!state.auto?.rodando || !state.auto?.cfg?.automatizarComIA || !state.ia?.ligada) return false;
+
+    const municipios = await cities.loadMunicipios();
+    if (!municipios?.length) {
+      // Sem a lista não há como conferir invenção, e conferência sem trava é pior que não ter.
+      registrarNaRodada('IA', 'aviso', 'cidade não conferida: a lista de municípios não carregou');
+      return false;
+    }
+
+    /**
+     * A conversa dos dois lados, na ordem.
+     *
+     * `state.entrantes` traz áudio transcrito junto, e é de propósito: a cidade dita num áudio é
+     * exatamente o caso que o parser não enxerga e que a IA resolve. Ela grava só o que casa com
+     * o IBGE, então transcrição errada vira `incerto`, não cidade errada.
+     */
+    const conversa = [
+      ...state.entrantes.map((m) => ({ de: 'contato', texto: m.texto, at: m.at })),
+      ...(state.nossas || []).map((m) => ({ de: 'nos', texto: m.texto, at: m.at })),
+    ]
+      .filter((m) => String(m.texto || '').trim())
+      .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0))
+      .slice(-30);
+
+    const r = await iaCliente.conferirCidade({
+      regras: state.ia.regras,
+      mensagens: conversa,
+      candidato: entry.value,
+      origem: entry.source === FONTE_CIDADE_CADASTRO
+        ? 'o formato "Cidade - Nome" do cadastro — a pessoa NÃO disse isso na conversa'
+        : entry.source || 'mensagem do contato',
+      substituiria: entry.substituiu || '',
+      municipios,
+      normalizar: cities.semAcentoNemCaixa,
+      modelo: state.ia.modelo,
+    });
+
+    if (r?.custoUsd) {
+      registrarNaRodada('IA', 'pulado', `cidade · ${r.acao} · US$ ${r.custoUsd.toFixed(4)}`);
+    }
+
+    const nome = state.contact?.name || 'contato';
+    if (r.acao === 'aceitar') {
+      state.draft[campo.id] = { ...entry, pendente: false, confirmada: true };
+      registrarNaRodada(nome, 'aviso', `IA confirmou a cidade "${entry.value}": ${r.motivo || 'sem motivo dado'}`);
+    } else if (r.acao === 'corrigir') {
+      // `substituiu` continua: o que estava no CRM vai ser trocado do mesmo jeito, e é ele que
+      // faz a etiqueta de cidade e de COREDE antigas saírem junto (`etiquetasDeRegiaoASair`).
+      state.draft[campo.id] = {
+        ...entry,
+        value: r.cidade,
+        pendente: false,
+        confirmada: true,
+        source: `corrigido pela IA (o parser tinha achado "${entry.value}")`,
+      };
+      registrarNaRodada(nome, 'aviso', `IA corrigiu a cidade: "${entry.value}" → "${r.cidade}" — ${r.motivo || 'sem motivo dado'}`);
+    } else {
+      delete state.draft[campo.id];
+      const porque = r.acao === 'semcidade' ? r.motivo || 'a conversa não diz onde a pessoa mora' : r.aviso || 'sem certeza';
+      registrarNaRodada(nome, 'aviso', `cidade "${entry.value}" NÃO gravada: ${porque}`);
+    }
+
+    // A etiqueta de cidade e a de COREDE saem daqui: mudou a cidade, as sugestões têm que ser
+    // refeitas antes de `applyTags` — senão aplica a etiqueta da cidade que acabou de mudar.
+    await refreshTagSuggestions();
+    renderAll();
+    return true;
   }
 
   /**
@@ -1841,7 +1945,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       h('div', { class: 'wf-origin' },
         'A caixa volta a abrir sempre que a IA não decide: "este é para você", confiança baixa, ' +
           'resposta travada por variável, contato que já recebeu essa mesma resposta hoje, IA sem ' +
-          'chave ou sem rede. O caminho de falha é a rodada de sempre.')
+          'chave ou sem rede. O caminho de falha é a rodada de sempre.'),
+      h('div', { class: 'wf-origin' },
+        'Marcado, a IA também responde a caixa "Cidade a gravar", que era o outro ponto onde a ' +
+          'rodada parava esperando clique. Ela aceita o que o parser achou, troca por outro ' +
+          'município — e só um que exista na lista do IBGE — ou não grava nada. Município que ela ' +
+          'invente não passa. O que ela decidir sobre a cidade vai para o Andamento, linha a linha.')
     );
     if (state.auto.cfg.automatizarComIA && !state.ia?.ligada) {
       card.append(

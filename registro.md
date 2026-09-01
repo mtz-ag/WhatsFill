@@ -5,6 +5,65 @@
 
 ---
 
+## 2026-09-01 - A IA responde a caixa da cidade (a rodada parava ali)
+
+**Relato dele:** *"falta a IA aceitar a cidade e arrumar caso esteja errado, esta parando o
+processo"*, com o print da caixa "Cidade a gravar - Encontrei Canoas como cidade. Esta correta?"
+aberta no meio da rodada automatizada.
+
+### O que estava acontecendo
+
+Automatizei o envio e nao a pergunta da cidade. A rodada abria a caixa e **esperava um clique
+que, por definicao, ninguem ia dar** - automatizar tudo menos uma pergunta e nao automatizar.
+
+A licao e mais larga que o conserto, e virou armadilha no `CLAUDE.md`: **toda pergunta que pode
+abrir dentro da rodada precisa de resposta automatica ou de um jeito de nao abrir.** Pergunta sem
+dono trava a fila inteira, em silencio.
+
+### O que a IA pode fazer aqui - que e menos do que parece
+
+A regra dele nao mudou: nenhuma cidade de palpite vai para o CRM sem confirmacao. Mudou **quem
+confirma quando ele nao esta olhando**. Tres saidas, e so na rodada automatizada:
+
+- `aceitar`  - grava o palpite, com `confirmada: true` (e o que libera as etiquetas de cidade e
+  COREDE);
+- `corrigir` - grava OUTRO municipio, e so um que exista na lista do IBGE;
+- `semcidade` / `incerto` - **nao grava nada e nao recusa nada.**
+
+A ultima difere da caixa de proposito. Quando ELE responde "Sem cidade", a recusa fica guardada
+para a cidade nao voltar a ser sugerida. A recusa dele e uma decisao sobre o contato; a da IA e a
+falta de uma. Guardar "nao e Canoas" porque o modelo ficou em 60% de certeza e transformar duvida
+em fato, e e o tipo de memoria que ninguem revisa depois.
+
+### A trava, que mora em `validarCidade` e nao no prompt
+
+Municipio inventado nao passa: a correcao tem que casar com a lista do IBGE, e o que sai e o nome
+**oficial** da lista, nao o que a IA digitou - duas grafias virariam duas etiquetas para o mesmo
+municipio, e o filtro dele partido em dois. Sem lista carregada, correcao nenhuma passa.
+Confianca abaixo de `CONFIANCA_MINIMA`, JSON ilegivel, acao desconhecida: `incerto`.
+
+### A conversa vai dos DOIS lados
+
+`montarContatoCidade` intercala o que nos perguntamos com o que ela respondeu. Sem isso,
+*"Maria / Cachoeirinha"* e ambigua - nome de gente e nome de municipio, sem nada dizendo qual e
+qual. Com o nosso *"me passe seu Nome / Cidade"* na frente, a frase se explica. E o caso que ele
+apontou em 31/08. Foi por isso que `nossas` ganhou `at` no branch normal (commit `3569ad3`),
+trazido para ca por merge.
+
+`state.entrantes` leva o audio transcrito junto: cidade dita em audio e justamente o que o parser
+nao enxerga. Transcricao errada vira `incerto`, nao cidade errada - a lista do IBGE fica no meio.
+
+**Custo:** uma chamada curta por contato com cidade pendente (teto de 512 tokens de saida, tres
+palavras e uma frase de resposta). Vai para o Andamento com o dolar, como as outras.
+
+**Arquivos:** `src/lib/ia.js` (`esquemaDaCidade`, `montarSistemaCidade`, `montarContatoCidade`,
+`montarRequisicaoCidade`, `validarCidade`), `src/lib/ia-cliente.js` (`conferirCidade` e o terceiro
+modo do `atender`), `src/panel/panel.js` (`cidadeConferidaPelaIA`, chamada no topo de
+`confirmarCidadeSePendente`), `tests/ia.test.mjs` (24 asserções novas), `CLAUDE.md`,
+`manifest.json` (1.7.0 -> **1.8.0**). 31 modulos sem erro, onze suites passando, referencias ok.
+
+---
+
 ## 2026-09-01 — "Automatizar com IA": a tecla 0 nunca foi apertada, nem à mão
 
 **Pedido dele:** *"no automatizado deve ter um box para marcar escrito automatiza com IA, agora

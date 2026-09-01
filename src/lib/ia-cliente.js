@@ -19,6 +19,10 @@ import {
   montarContatoRascunho,
   montarRequisicaoRascunho,
   validarRascunho,
+  montarSistemaCidade,
+  montarContatoCidade,
+  montarRequisicaoCidade,
+  validarCidade,
   MODELO_PADRAO,
 } from './ia.js';
 
@@ -93,6 +97,35 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
   }
 }
 
+/**
+ * Pede à IA que confira a cidade que o parser achou — o popup "Está correta?" sem o clique.
+ *
+ * Só a rodada automatizada chama isto. No dia a dia quem confere é ele, e continua sendo.
+ *
+ * `municipios` é a lista oficial do IBGE, e vai daqui: `validarCidade` é pura de propósito, e a
+ * lista vive no `cities.js`, que precisa de armazenamento. Sem ela, correção nenhuma passa.
+ *
+ * Nunca lança. Falha vira `incerto`, e `incerto` não grava nada — o campo fica como estava.
+ */
+export async function conferirCidade({ regras, mensagens, candidato, origem, substituiria, municipios, normalizar, modelo }) {
+  try {
+    const r = await chrome.runtime.sendMessage({
+      type: MSG_IA,
+      modo: 'cidade',
+      sistema: montarSistemaCidade({ regras }),
+      contato: montarContatoCidade({ mensagens, candidato, origem, substituiria }),
+      modelo: modelo || MODELO_PADRAO,
+    });
+
+    if (!r?.ok) {
+      return { acao: 'incerto', cidade: '', motivo: '', confianca: 0, aviso: r?.motivo || 'a IA não respondeu' };
+    }
+    return { ...validarCidade(r.decisao, { municipios, normalizar }), custo: r.custo, custoUsd: r.custoUsd, gastoMes: r.gastoMes };
+  } catch (err) {
+    return { acao: 'incerto', cidade: '', motivo: '', confianca: 0, aviso: err?.message || String(err) };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Lado do service worker
 // ---------------------------------------------------------------------------
@@ -113,10 +146,13 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
 export async function atender(pedido, chave) {
   if (!chave) return { ok: false, motivo: 'sem chave da API — preencha na aba Config' };
 
-  // Duas formas de pedido pelo mesmo canal: decisão (JSON com esquema) e rascunho (texto).
+  // Três formas de pedido pelo mesmo canal: decisão (JSON com esquema), rascunho (texto) e
+  // conferência de cidade (JSON, esquema próprio e teto de saída baixo).
   const corpo =
     pedido.modo === 'rascunho'
       ? montarRequisicaoRascunho({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
+      : pedido.modo === 'cidade'
+      ? montarRequisicaoCidade({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
       : montarRequisicao({
           sistema: pedido.sistema,
           contato: pedido.contato,

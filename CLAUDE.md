@@ -465,6 +465,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   vira `incerto`. Mesma prioridade do canal caído — o que o contato recebe vem primeiro.
 - **A recomendação é tecla 0, e não substitui tecla existente.** Trocar o significado de uma
   tecla que ele já tem no dedo é como o "2" digitado na conversa acabou concluindo atendimento.
+- **Automatizar a rodada é automatizar TODA pergunta dela, inclusive a da cidade.** A caixa
+  "Automatizar com IA" nasceu mandando a resposta escolhida — e a rodada continuou parando, porque
+  o popup "Cidade a gravar" esperava um clique que ninguém ia dar. Regra que vale para toda
+  pergunta nova: **se ela pode abrir dentro da rodada, ela precisa de resposta automática ou de um
+  jeito de não abrir.** Uma pergunta sem dono trava a fila inteira em silêncio.
+- **A IA pode confirmar cidade; inventar município, não.** `validarCidade` só aceita correção que
+  case com a lista do IBGE, e o que vai para o CRM é o nome **oficial** da lista, não o que ela
+  digitou (duas grafias = duas etiquetas para o mesmo município). Confiança baixa, JSON ilegível e
+  nome de fora viram `incerto`, que **não grava e não recusa**: recusa é decisão dele, e guardar
+  "não é Canoas" porque o modelo ficou em 60% seria transformar dúvida em fato.
 - **O rascunho pode ENVIAR sozinho, e é a única coisa do projeto que faz isso.** Decisão dele
   (20/08/2026), tomada depois de eu apontar o risco: é o único caminho em que texto **gerado** por
   IA chega a um eleitor sem revisão humana, em nome de um mandato, e mensagem de WhatsApp não

@@ -303,6 +303,211 @@ export function validarDecisao(bruto, idsPermitidos = []) {
 }
 
 // ---------------------------------------------------------------------------
+// Cidade — a IA confere o palpite do parser, e não pode inventar município
+// ---------------------------------------------------------------------------
+
+/**
+ * A conferência da cidade, para a rodada automática não parar num popup.
+ *
+ * **Por que isto existe.** Nenhuma cidade de palpite vai para o CRM sem confirmação — regra dele,
+ * e ela continua de pé. O que muda é QUEM confirma quando ele não está olhando: com a rodada
+ * automatizada, a caixa "Está correta?" travava a fila esperando um clique que ninguém ia dar.
+ *
+ * **O que a IA pode fazer aqui é menos do que parece.** Ela não escolhe resposta, não escreve e
+ * não fala com ninguém: confere um campo. E o nome que ela devolve não vai para o CRM como ela
+ * escreveu — `validarCidade` o troca pelo nome OFICIAL do IBGE ou recusa. Município inventado não
+ * tem como passar: ele não está na lista.
+ */
+export function esquemaDaCidade() {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['acao', 'motivo', 'confianca'],
+    properties: {
+      acao: {
+        type: 'string',
+        enum: ['aceitar', 'corrigir', 'semcidade'],
+        description:
+          'aceitar = a cidade encontrada está certa; corrigir = a conversa diz outra; ' +
+          'semcidade = a conversa não diz onde a pessoa mora',
+      },
+      cidade: {
+        type: 'string',
+        description: 'Só quando acao = corrigir. O nome do município do RS, sozinho, sem estado.',
+      },
+      motivo: {
+        type: 'string',
+        description: 'Uma frase curta, em português, dizendo por quê. Vai para o log da rodada.',
+      },
+      confianca: { type: 'number', description: 'De 0 a 1. Abaixo de 0,7 o painel não grava nada.' },
+    },
+  };
+}
+
+/**
+ * O prompt de sistema da conferência — estável entre contatos, como o da decisão.
+ *
+ * As regras aqui são as mesmas que o `cities.js` aplica na marra, escritas em português: cidade
+ * citada de passagem não é a cidade da pessoa, nome de estado não é município, e na dúvida não
+ * grava. Elas estão no prompt para a IA ACERTAR mais; quem impede o erro é `validarCidade`.
+ */
+export function montarSistemaCidade({ regras = '' } = {}) {
+  return [
+    'Você confere um dado de cadastro no atendimento de WhatsApp de um mandato parlamentar no',
+    'Rio Grande do Sul.',
+    '',
+    'Um programa leu a conversa e achou que a cidade do contato é a que vai abaixo. Sua tarefa é',
+    'dizer se ele acertou. Você não escolhe resposta, não escreve mensagem e não fala com',
+    'ninguém: só confere um campo.',
+    '',
+    'Regras que valem sempre:',
+    '',
+    '1. Só existe município do Rio Grande do Sul, e só serve nome que você LEU na conversa.',
+    '   Nome que você deduziu de outra coisa é invenção — nesse caso responda "semcidade".',
+    '2. Cidade citada de passagem NÃO é a cidade da pessoa: "meu genro mora em Santiago", "vou a',
+    '   Gramado no domingo", "tenho parentes em Pelotas". Isso é "semcidade".',
+    '3. É a cidade dela quando ela diz "sou de X", "moro em X", "aqui em X", quando responde ao',
+    '   pedido "Nome / Cidade" com o nome de um município, ou quando manda só o nome da cidade.',
+    '   Leia a nossa pergunta antes de julgar a resposta: "Maria / Cachoeirinha" logo depois de',
+    '   "me passe seu Nome / Cidade" é o nome dela e a cidade dela, nessa ordem.',
+    '4. Nome de estado não é cidade: "sou do Rio Grande do Sul" não é a cidade Rio Grande.',
+    '5. Nome de gente, de bairro, de rua e de outro estado não são município do RS.',
+    '6. Na dúvida, "semcidade". Cidade errada no cadastro vira etiqueta errada e filtro errado, e',
+    '   ninguém revisa isso depois. Não gravar nada custa uma linha no log; gravar errado custa o',
+    '   contato aparecendo na região errada para sempre.',
+    '',
+    regras ? `Instruções adicionais do Thiago:\n${regras}\n` : '',
+  ]
+    .filter((l) => l !== null)
+    .join('\n');
+}
+
+/**
+ * O bloco que descreve ESTA conferência — a parte que muda a cada contato.
+ *
+ * **A conversa vai dos DOIS lados, e isso não é enfeite.** A resposta mais comum ao pedido de
+ * dados é *"Maria / Cachoeirinha"*, e sozinha ela é ambígua: nome de gente e nome de município,
+ * sem nada dizendo qual é qual. Com a nossa pergunta na frente ("me passe seu Nome / Cidade") a
+ * frase se explica. Foi exatamente o caso que ele apontou em 31/08.
+ *
+ * `mensagens` aceita `{de: 'nos'|'contato', texto}`, e também string solta — string é do contato,
+ * que é o formato antigo.
+ */
+export function montarContatoCidade({ mensagens = [], candidato = '', origem = '', substituiria = '' } = {}) {
+  const conversa = mensagens.length
+    ? mensagens
+        .map((m) => {
+          const texto = umaLinha(typeof m === 'string' ? m : m?.texto || '');
+          const nos = typeof m !== 'string' && m?.de === 'nos';
+          return texto ? `${nos ? 'Atendimento' : 'Contato'}: ${texto}` : '';
+        })
+        .filter(Boolean)
+        .join('\n')
+    : '(o contato não escreveu nada)';
+
+  return [
+    `Cidade encontrada pelo programa: ${candidato || '(nenhuma)'}`,
+    origem ? `De onde ela saiu: ${origem}` : '',
+    // Substituir é mais grave que preencher: o que está no CRM alguém já pôs lá. A IA precisa
+    // saber disso, porque a régua muda — só a própria pessoa dizendo onde mora justifica trocar.
+    substituiria
+      ? `⚠ Gravar isto vai SUBSTITUIR o que já está no CRM ("${substituiria}"). Só aceite ou ` +
+        'corrija se a PRÓPRIA PESSOA disser onde mora nesta conversa; do contrário, "semcidade".'
+      : '',
+    '',
+    'A conversa, na ordem (o "Atendimento" somos nós):',
+    conversa,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+export function montarRequisicaoCidade({ sistema, contato, modelo = MODELO_PADRAO }) {
+  return {
+    model: modelo,
+    // Conferência de um campo: a saída são três palavras e uma frase. Teto baixo é economia real
+    // quando isto roda uma vez por contato da fila.
+    max_tokens: 512,
+    system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
+    messages: [{ role: 'user', content: contato }],
+    output_config: saida(modelo, 'low', { type: 'json_schema', schema: esquemaDaCidade() }),
+  };
+}
+
+/** Sem acento e sem caixa — o fallback de `validarCidade` quando ninguém passa o do `cities.js`. */
+function soLetras(valor) {
+  return String(valor || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // tira acento (marcas combinantes)
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * A resposta do modelo virando decisão sobre o campo Cidade — **com as travas**.
+ *
+ * Espelha `validarDecisao`, e pelo mesmo motivo: prompt é pedido, validação é regra.
+ *
+ *  - `corrigir` só passa se o nome casar com a lista de municípios, e o que sai é o nome
+ *    **oficial** da lista, não o que a IA digitou (a etiqueta de cidade nasce daqui — duas
+ *    grafias seriam duas etiquetas para o mesmo município, e o filtro dele partido em dois);
+ *  - confiança abaixo de `CONFIANCA_MINIMA` vira `incerto`;
+ *  - qualquer outra coisa — JSON ilegível, ação desconhecida, cidade que não existe — vira
+ *    `incerto`.
+ *
+ * `incerto` aqui **não grava nada e não recusa nada**: o palpite fica onde estava, e o campo do
+ * CRM continua como estava. É a saída sem consequência, que é o que "na dúvida" tem que custar.
+ *
+ * @param {object|string} bruto
+ * @param {{municipios?: string[], normalizar?: function}} opcoes
+ * @returns {{acao:'aceitar'|'corrigir'|'semcidade'|'incerto', cidade:string, motivo:string,
+ *            confianca:number, aviso:string}}
+ */
+export function validarCidade(bruto, { municipios = [], normalizar = soLetras } = {}) {
+  const vazio = { acao: 'incerto', cidade: '', motivo: '', confianca: 0, aviso: '' };
+
+  let d = bruto;
+  if (typeof d === 'string') {
+    try {
+      d = JSON.parse(d);
+    } catch (_) {
+      return { ...vazio, aviso: 'a IA respondeu num formato que não deu para ler' };
+    }
+  }
+  if (!d || typeof d !== 'object') return { ...vazio, aviso: 'a IA não devolveu conferência' };
+
+  const motivo = String(d.motivo || '').trim().slice(0, 300);
+  const confianca = Number.isFinite(d.confianca) ? Math.min(1, Math.max(0, d.confianca)) : 0;
+
+  if (!['aceitar', 'corrigir', 'semcidade'].includes(d.acao)) {
+    return { ...vazio, motivo, aviso: 'a IA não disse o que fazer com a cidade' };
+  }
+
+  // "Não tem cidade nesta conversa" é uma resposta, não uma dúvida: não precisa de confiança
+  // alta porque não grava nada. Exigi-la faria a saída mais segura ser a mais difícil de dar.
+  if (d.acao === 'semcidade') return { acao: 'semcidade', cidade: '', motivo, confianca, aviso: '' };
+
+  if (confianca < CONFIANCA_MINIMA) {
+    return { ...vazio, motivo, confianca, aviso: `a IA ficou em ${Math.round(confianca * 100)}% de certeza` };
+  }
+
+  if (d.acao === 'aceitar') return { acao: 'aceitar', cidade: '', motivo, confianca, aviso: '' };
+
+  const pedida = String(d.cidade || '').trim();
+  if (!pedida) return { ...vazio, motivo, confianca, aviso: 'a IA mandou corrigir e não disse para qual cidade' };
+
+  const oficial = municipios.find((m) => normalizar(m) === normalizar(pedida));
+  if (!oficial) {
+    // Município inventado. É o erro que esta função existe para conter, e o único caminho por
+    // onde um nome escrito pela IA chegaria ao CRM.
+    return { ...vazio, motivo, confianca, aviso: `"${pedida}" não é município do RS` };
+  }
+
+  return { acao: 'corrigir', cidade: oficial, motivo, confianca, aviso: '' };
+}
+
+// ---------------------------------------------------------------------------
 // Rascunho — o único lugar onde a IA escreve, e ela NUNCA envia
 // ---------------------------------------------------------------------------
 
