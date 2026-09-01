@@ -5,6 +5,67 @@
 
 ---
 
+## 2026-09-01 (noite, 19) — Observações em cada caixa, reset para o padrão, e o fluxo em texto
+
+**Pedido:** *"preciso que cada caixa tenha um input para botar observações que vou escrever para
+você modificar depois, principalmente as com código não editáveis (…) preciso de um reset para o
+padrão do fluxo atual, quando eu mandar aqui você atualiza o padrão"*.
+
+### O laço que isto fecha
+
+O quadro tem um lugar que ele **não pode** mexer: a condição dos ramos respaldados por regra, que
+fica no código porque é ela que decide o que sai para eleitor. Até agora, apontar um erro ali
+significava ele lembrar de me contar depois, de memória. O campo de observação inverte isso: ele
+escreve na própria caixa, na hora, e o texto espera por mim.
+
+O laço inteiro: **ele anota → aperta "Copiar o fluxo" → cola na conversa → eu edito o
+`arvore.fluxoPadrao()` → ele aperta "Resetar para o padrão"**.
+
+### Uma correção dele no meio do caminho
+
+Eu ia fazer o botão copiando **só as observações**. Ele cortou na hora: *"não faz sentido eu colar
+para você sem você ter a visão do fluxo"*. Está certo — *"essa aqui está pegando gente demais"* não
+diz nada sem o ramo, a condição, o desfecho e a posição na árvore; eu responderia adivinhando.
+
+Então `arvore.paraTexto` despeja o fluxo inteiro: hierarquia numerada (`2.1` é o primeiro filho do
+segundo ramo, e serve para nós dois apontarmos para o mesmo lugar), condição por extenso, desfecho,
+o que está desligado, a tecla que ele fixou marcada como dele, a resposta pronta pelo NOME (o id
+`pedido-ajuda` não diz o que é), e a observação no ramo a que pertence. Vale como regra geral para
+qualquer relatório que eu criar: **contexto junto do comentário, ou o comentário não serve.**
+
+### O padrão virou um documento
+
+`arvoreDoQuadro` virou **`fluxoPadrao`**, e o botão virou **"Resetar para o padrão"**. A função
+deixou de ser "o desenho do quadro dele" e passou a ser o estado mantido por mim a partir do que
+ele escreve. Está escrito lá e no `CLAUDE.md`: **não mexer nela sem ele pedir** — é para onde ele
+volta quando o quadro ficou confuso, e é justamente aí que ele não vai conferir ramo por ramo.
+O botão antigo "Voltar às regras do código" continua, renomeado para "Só as regras do código", como
+saída de emergência para a tabela achatada.
+
+### Decisões
+
+- **A observação não muda comportamento nenhum**, de propósito: se mudasse, deixaria de ser recado
+  e viraria condição sem teste — exatamente o que a fronteira do projeto proíbe.
+- **A caixa mostra uma marca "obs."** quando tem texto, para ele ver o que já anotou sem abrir uma
+  por uma.
+- **A observação vai no arquivo exportado** e passa pela peneira com teto de 4000 caracteres. Se
+  ele exportar em vez de copiar, o recado chega do mesmo jeito.
+- **Resetar avisa que as observações se perdem junto**, porque se perdem mesmo.
+
+**Arquivos:** `src/lib/arvore.js` (`nota` no nó e na peneira, `paraTexto`, `fluxoPadrao`),
+`src/fluxo.js`, `src/fluxo.html`, `src/fluxo.css`, `tests/arvore.test.mjs`, `manifest.json`
+(1.27.0 → 1.28.0), `registro.md`, `CLAUDE.md`.
+
+**Conferido no navegador:** clicar numa caixa de regra abre o editor com "Observações para o
+Claude" (a condição continua sem edição, como tem que ser); escrever grava e a caixa passa a
+mostrar "obs."; "Copiar o fluxo" produz 20 ramos com a observação na linha do ramo dela. Treze
+suítes passando.
+
+**Não testado:** a área de transferência no Chrome real (aqui ela foi substituída para ler o que
+seria copiado). Se ela for negada, o texto aparece num campo selecionado para Ctrl+C.
+
+---
+
 ## 2026-09-01 (noite, 18) — Salvar versões do fluxo, carregar, exportar e importar
 
 **Pedido:** *"falta a opção de salvar fluxo, carregar, exportar"*.

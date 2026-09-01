@@ -165,6 +165,7 @@ function caixaDoNo(no) {
   rodape.className = 'caixa-rodape';
   if (efeito) rodape.append(span(`selo ${efeito}`, SELO[efeito]));
   else rodape.append(span('selo porta', 'só agrupa'));
+  if (no.nota) rodape.append(span('tem-nota', 'obs.'));
   const vitorias = Number(fluxo.vitorias?.[no.id] || fluxo.vitorias?.[no.regra] || 0);
   if (vitorias) rodape.append(span('venceu', `${vitorias}×`));
   d.append(rodape);
@@ -678,6 +679,27 @@ function desenharEditor() {
     );
   }
 
+  /**
+   * As OBSERVAÇÕES — o campo que ele escreve para MIM, não para a extensão.
+   *
+   * Pedido dele (01/09/2026): *"cada caixa tenha um input para botar observações que vou escrever
+   * para você modificar depois, principalmente as com código não editáveis"*. É a saída para o
+   * único lugar do quadro que ele não pode mexer: a condição dos ramos de regra, que fica no
+   * código porque decide o que sai para eleitor. Em vez de descrever de memória qual regra estava
+   * errada, ele escreve na caixa e manda o fluxo inteiro depois.
+   *
+   * **Nada aqui muda a rodada**, de propósito: observação que mudasse comportamento sozinha
+   * deixaria de ser recado e viraria condição sem teste.
+   */
+  const obs = document.createElement('textarea');
+  obs.rows = 3;
+  obs.value = no.nota || '';
+  obs.placeholder = no.regra
+    ? 'Ex.: essa regra está pegando quem só xingou o adversário — deveria ignorar terceira pessoa'
+    : 'O que você quer que eu mude neste ramo';
+  obs.addEventListener('change', () => gravar(arvoreLib.editar(fluxo.arvore, no.id, { nota: obs.value.trim() })));
+  linha('Observações para o Claude', obs);
+
   const ligado = document.createElement('label');
   ligado.className = 'chk';
   const chk = document.createElement('input');
@@ -864,6 +886,34 @@ el('exportar').addEventListener('click', () => {
   escreverAviso(`Exportado ${arvoreLib.todosOsNos(fluxo.arvore || []).length} ramos em ${a.download}.`, 'bom');
 });
 
+/**
+ * Copia o fluxo INTEIRO em texto, para ele colar numa conversa comigo.
+ *
+ * Eu ia fazer um botão que copiava só as observações, e ele cortou na hora — *"não faz sentido eu
+ * colar para você sem você ter a visão do fluxo"*. Está certo: *"essa aqui está pegando gente
+ * demais"* não diz nada sem o ramo, a condição, o desfecho e a posição na árvore.
+ *
+ * A área de transferência precisa de gesto do usuário e pode ser negada; quando falha, o texto
+ * aparece num campo pronto para selecionar. Botão que não faz nada e não explica é pior que um
+ * passo a mais.
+ */
+el('copiar').addEventListener('click', async () => {
+  const texto = arvoreLib.paraTexto(fluxo.arvore || [], { teclas: fluxo.teclas, respostas });
+  const campo = el('saida-texto');
+  const aviso = el('aviso-copia');
+  try {
+    await navigator.clipboard.writeText(texto);
+    campo.hidden = true;
+    aviso.textContent = `Copiado: ${arvoreLib.todosOsNos(fluxo.arvore || []).length} ramos. Cole na conversa com o Claude.`;
+  } catch (_) {
+    campo.value = texto;
+    campo.hidden = false;
+    campo.focus();
+    campo.select();
+    aviso.textContent = 'O navegador não deixou copiar sozinho — o texto está aí embaixo, selecionado. Use Ctrl+C.';
+  }
+});
+
 el('importar').addEventListener('click', () => el('arquivo').click());
 
 el('arquivo').addEventListener('change', async (ev) => {
@@ -1006,15 +1056,15 @@ el('novo').addEventListener('click', async () => {
 });
 
 el('quadro').addEventListener('click', async () => {
-  if (confirm('Substituir o quadro de agora pelo desenho do quadro? As protecões (hater, denúncia, despedida, pergunta aberta) entram na frente da bifurcação.')) {
+  if (confirm('Resetar para o fluxo PADRÃO? O quadro de agora é substituído, e as suas observações nos ramos se perdem junto — exporte antes se quiser guardá-las.')) {
     selecionado = null;
-    await gravar(arvoreLib.arrumar(arvoreLib.arvoreDoQuadro()));
+    await gravar(arvoreLib.arrumar(arvoreLib.fluxoPadrao()));
     caberNaTela();
   }
 });
 
 el('padrao').addEventListener('click', async () => {
-  if (confirm('Voltar às regras do código, como elas estão hoje? Os ramos que você criou se perdem.')) {
+  if (confirm('Deixar SÓ as regras do código, sem o padrão montado? Os ramos que você criou e as observações se perdem.')) {
     selecionado = null;
     fluxo = { ...fluxo, teclas: {} };
     await gravar(arvoreLib.arrumar(arvoreLib.arvorePadrao({})));

@@ -353,3 +353,27 @@ body {
 .aviso-arquivo:not(:empty) { display: flex; }
 .aviso-arquivo.bom { color: var(--silencio); }
 .aviso-arquivo.ruim { color: var(--alerta); font-weight: 600; }
+
+/* A marca de que a caixa tem observação escrita — para ele ver o que já anotou sem abrir uma a uma. */
+.tem-nota {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 5px;
+  border-radius: 3px;
+  color: var(--trilha);
+  border: 1px solid currentColor;
+}
+#editor textarea, #saida-texto {
+  font: inherit;
+  font-size: 12px;
+  width: 100%;
+  padding: 6px 7px;
+  border: 1px solid var(--borda);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--tinta);
+  resize: vertical;
+}
+#saida-texto { font-family: var(--mono); font-size: 11px; }

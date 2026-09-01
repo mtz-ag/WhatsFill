@@ -15,8 +15,8 @@
       <div class="acoes">
         <button type="button" id="novo" class="btn btn-primario">+ Ramo novo</button>
         <button type="button" id="arrumar" class="btn">Arrumar o quadro</button>
-        <button type="button" id="quadro" class="btn">Carregar o desenho do quadro</button>
-        <button type="button" id="padrao" class="btn">Voltar às regras do código</button>
+        <button type="button" id="quadro" class="btn">Resetar para o padrão</button>
+        <button type="button" id="padrao" class="btn">Só as regras do código</button>
         <span class="zoom">
           <button type="button" id="menos" class="btn btn-quadrado" title="Afastar">−</button>
           <span id="nivelzoom">100%</span>
@@ -59,6 +59,14 @@
             <input type="file" id="arquivo" accept="application/json,.json" hidden />
           </div>
           <div id="aviso-arquivo" class="aviso-arquivo"></div>
+        </div>
+
+        <div class="cartao">
+          <h2>Mandar o fluxo para o Claude</h2>
+          <p class="ajuda">Copia o fluxo <b>inteiro</b> em texto — a estrutura, as condições, os desfechos e as suas observações no ramo a que pertencem. Cole na conversa e eu mexo no que você pediu.</p>
+          <button type="button" id="copiar" class="btn btn-primario">Copiar o fluxo</button>
+          <textarea id="saida-texto" rows="6" readonly hidden></textarea>
+          <p class="ajuda ajuda-fraca" id="aviso-copia"></p>
         </div>
 
         <div class="cartao">

@@ -264,6 +264,19 @@ export function noVazio(rotulo) {
     regra: null,
     condicao: { sinal: '', negar: false, palavras: [], onde: 'ultima' },
     acao: null,
+    /**
+     * O que ele quer que MUDE neste ramo — escrito para mim, não para a extensão.
+     *
+     * Pedido dele (01/09/2026): *"preciso que cada caixa tenha um input para botar observações que
+     * vou escrever para você modificar depois, principalmente as com código não editáveis"*. É a
+     * saída para o único lugar do quadro que ele não pode mexer: a condição dos ramos respaldados
+     * por regra, que fica no código porque decide o que sai para eleitor. Em vez de me descrever
+     * de memória qual regra estava errada, ele escreve na própria caixa.
+     *
+     * **Nada aqui muda o comportamento da rodada.** É texto, e é de propósito: se a observação
+     * mudasse alguma coisa sozinha, ela deixaria de ser um recado e viraria uma condição sem teste.
+     */
+    nota: '',
     desligado: false,
     filhos: [],
   };
@@ -276,6 +289,7 @@ function noDeRegra(id) {
     regra: id,
     condicao: null,
     acao: null,
+    nota: '',
     desligado: false,
     filhos: [],
   };
@@ -314,7 +328,19 @@ export function arvorePadrao(fluxo) {
 }
 
 /**
- * O desenho do quadro dele, virado árvore.
+ * **O FLUXO PADRAO — o que o botao "Resetar para o padrao" devolve.**
+ *
+ * Combinado com ele em 01/09/2026: *"preciso de um reset para o padrao do fluxo atual, quando eu
+ * mandar aqui voce atualiza o padrao"*. Ou seja, esta funcao e um DOCUMENTO mantido por mim a
+ * partir do que ele escreve nas observacoes das caixas. Ele mexe no quadro a vontade sabendo que
+ * o caminho de volta existe; quando quiser que o padrao mude, manda as observacoes e eu edito
+ * aqui.
+ *
+ * **Nao mexa nisto por conta propria.** O padrao e o estado ao qual ele volta quando o quadro
+ * ficou confuso — se eu o alterar sem ele pedir, o "volta ao que funcionava" devolve outra coisa,
+ * e e justamente nesse momento que ele nao vai conferir ramo por ramo.
+ *
+ * Nasceu do desenho do quadro dele, virado arvore.
  *
  * Duas coisas que o desenho não tinha e que entram aqui de propósito:
  *
@@ -327,7 +353,7 @@ export function arvorePadrao(fluxo) {
  * 2. **Os dois ramos que ele desenhou e o código não tinha**: saudação escrita ("bom dia") de quem
  *    está voltando, e o pedido de ajuda financeira com a resposta pronta.
  */
-export function arvoreDoQuadro() {
+export function fluxoPadrao() {
   const protecoes = [
     'sem-interesse',
     'etiqueta-dispensa-da-fila',
@@ -616,7 +642,7 @@ export const FORMATO = 'whatsfill-fluxo';
 export const FORMATO_VERSAO = 1;
 
 /** Limites de sanidade do que vem de arquivo. Não são regras de negócio: são o teto do absurdo. */
-const LIMITES = { nos: 400, fundo: 8, palavras: 60, texto: 200 };
+const LIMITES = { nos: 400, fundo: 8, palavras: 60, texto: 200, nota: 4000 };
 
 const texto = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max || LIMITES.texto) : '');
 
@@ -644,6 +670,8 @@ export function sanitizar(bruto) {
     quantos += 1;
 
     const nome = texto(cru.rotulo) || 'ramo sem nome';
+    // A observacao e recado para mim, entao pode ser longa -- mas nao infinita.
+    const nota = typeof cru.nota === 'string' ? cru.nota.trim().slice(0, LIMITES.nota) : '';
 
     let id = texto(cru.id, 60);
     if (!id || usados.has(id)) {
@@ -659,6 +687,7 @@ export function sanitizar(bruto) {
       regra: null,
       condicao: { sinal: '', negar: false, palavras: [], onde: 'ultima' },
       acao: null,
+      nota,
       desligado: cru.desligado === true,
       x: Number.isFinite(cru.x) ? Math.round(cru.x) : 0,
       y: Number.isFinite(cru.y) ? Math.round(cru.y) : 0,
@@ -759,6 +788,87 @@ export function deArquivo(conteudo) {
   }
 
   return { ok: true, nome: texto(dados.nome, 80) || 'fluxo importado', arvore, teclas, avisos };
+}
+
+/**
+ * O fluxo inteiro em TEXTO, para ele colar numa conversa comigo.
+ *
+ * Nasceu torto: eu ia fazer um botão que copiava só as observações, e ele cortou na hora —
+ * *"não faz sentido eu colar para você sem você ter a visão do fluxo"*. Está certo. A observação
+ * *"essa aqui está pegando gente demais"* não diz nada sem o ramo, a condição, o desfecho e a
+ * posição dele na árvore; eu responderia adivinhando.
+ *
+ * Então sai tudo: a hierarquia com numeração (`2.1.` é o primeiro filho do segundo ramo, e serve
+ * para nós dois apontarmos para o mesmo lugar), a condição, o desfecho, o que está desligado, e a
+ * observação no ramo a que ela pertence. É a mesma informação da tela, na forma que atravessa uma
+ * caixa de texto.
+ *
+ * `opcoes.respostas` é a lista de respostas prontas, só para o desfecho sair pelo NOME em vez do
+ * id — `pedido-ajuda` não diz o que é para quem lê de fora.
+ */
+export function paraTexto(arvore, opcoes) {
+  const teclas = opcoes?.teclas || {};
+  const respostas = opcoes?.respostas || [];
+  const linhas = [];
+
+  const nomeDaResposta = (id) => respostas.find((r) => r.id === id)?.name || id;
+
+  const desfecho = (no) => {
+    if (no.regra) {
+      const regra = REGRAS.find((r) => r.id === no.regra);
+      const fixa = teclas[no.regra];
+      if (fixa) return `tecla ${fixa} · ${TECLAS[fixa]?.rotulo || '?'}  (VOCÊ FIXOU; o código escolheria sozinho)`;
+      if (typeof regra?.tecla === 'function') {
+        const ramos = SOBRE[no.regra]?.ramos || [];
+        return ramos.length
+          ? ramos.map((r) => `tecla ${r.tecla} · ${TECLAS[r.tecla]?.rotulo || '?'} (se ${r.se})`).join('  OU  ')
+          : 'dois desfechos, conforme o contexto';
+      }
+      return `tecla ${regra?.tecla} · ${TECLAS[regra?.tecla]?.rotulo || '?'}`;
+    }
+    if (no.acao?.ia) return 'a IA assume e responde';
+    if (no.acao?.resposta) return `manda "${nomeDaResposta(no.acao.resposta)}" e conclui`;
+    if (no.acao?.tecla) return `tecla ${no.acao.tecla} · ${TECLAS[no.acao.tecla]?.rotulo || '?'}`;
+    return (no.filhos || []).length ? '(só agrupa — quem decide são os ramos de dentro)' : '(NADA — este ramo não faz nada ainda)';
+  };
+
+  const condicao = (no) => {
+    if (no.regra) return SOBRE[no.regra]?.quando || '(a condição está no código)';
+    const cond = no.condicao || {};
+    const partes = [];
+    const sinal = SINAIS.find((s) => s.id === cond.sinal);
+    if (sinal) partes.push(cond.negar ? sinal.nao : sinal.rotulo);
+    if ((cond.palavras || []).length) {
+      partes.push(`escreveu "${cond.palavras.join('", "')}"${cond.onde === 'qualquer' ? ' (em qualquer mensagem)' : ' (na última mensagem)'}`);
+    }
+    return partes.length ? partes.join(' E ') : 'qualquer contato que chegar aqui';
+  };
+
+  const anda = (nos, prefixo, recuo) => {
+    (nos || []).forEach((no, i) => {
+      const numero = prefixo ? `${prefixo}.${i + 1}` : String(i + 1);
+      const pad = ' '.repeat(recuo);
+      linhas.push('');
+      linhas.push(`${pad}${numero}. ${no.rotulo || '(sem nome)'}${no.regra ? `   [regra do código: ${no.regra}]` : ''}${no.desligado ? '   *** DESLIGADO ***' : ''}`);
+      linhas.push(`${pad}    quando: ${condicao(no)}`);
+      linhas.push(`${pad}    então:  ${desfecho(no)}`);
+      // A observação é o motivo de tudo isto existir: ela vem por último e marcada, para saltar aos
+      // olhos numa colagem de cem linhas.
+      if (no.nota) {
+        for (const l of String(no.nota).split('\n')) linhas.push(`${pad}    >> OBSERVAÇÃO: ${l}`);
+      }
+      anda(no.filhos, numero, recuo + 4);
+    });
+  };
+
+  const total = todosOsNos(arvore).length;
+  linhas.push('FLUXO DE ATENDIMENTO — WhatsFill+IA');
+  linhas.push(`${total} ramos, ${quantosEnviam(arvore)} enviam mensagem. Gerado em ${new Date().toLocaleString('pt-BR')}.`);
+  linhas.push('A rodada segue o PRIMEIRO ramo que descreve o contato; dentro dele, o primeiro filho que descreve.');
+  linhas.push('Entre irmãos, a ordem abaixo é a prioridade.');
+  anda(arvore, '', 0);
+  linhas.push('');
+  return linhas.join('\n');
 }
 
 /** Quantos ramos ENVIAM mensagem — o número que ele precisa ver antes de trocar o fluxo. */

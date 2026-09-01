@@ -262,7 +262,7 @@ grupo('problemas: o que a janela precisa mostrar em vermelho');
 
 grupo('o desenho do QUADRO dele: as protecoes ficam acima da bifurcacao');
 {
-  const quadro = arv.arvoreDoQuadro();
+  const quadro = arv.fluxoPadrao();
   check(arv.problemas(quadro).length === 0, `o preset nasce sem problema (${JSON.stringify(arv.problemas(quadro))})`);
 
   /**
@@ -378,7 +378,7 @@ grupo('o QUADRO: arrastar para mover e para religar');
 
   check(arv.precisaArrumar(base) === true, 'arvore sem posicao pede arrumacao');
   check(arv.precisaArrumar(arrumada) === false, 'e arrumada nao pede mais');
-  check(arv.precisaArrumar(arv.arrumar(arv.arvoreDoQuadro())) === false, 'o preset do quadro arruma inteiro');
+  check(arv.precisaArrumar(arv.arrumar(arv.fluxoPadrao())) === false, 'o preset do quadro arruma inteiro');
 }
 
 grupo('o desfecho "a IA assume e responde"');
@@ -409,7 +409,7 @@ grupo('o desfecho "a IA assume e responde"');
 
 grupo('salvar, carregar e levar para fora');
 {
-  const fluxo = { teclas: { 'ultima-e-despedida': '2', 'nao-existe': '9' }, arvore: arv.arrumar(arv.arvoreDoQuadro()), vitorias: { x: 5 } };
+  const fluxo = { teclas: { 'ultima-e-despedida': '2', 'nao-existe': '9' }, arvore: arv.arrumar(arv.fluxoPadrao()), vitorias: { x: 5 } };
   const arquivo = arv.paraArquivo(fluxo, 'semana do evento');
 
   check(arquivo.formato === arv.FORMATO && arquivo.versao === arv.FORMATO_VERSAO, 'o arquivo leva a marca do formato');
@@ -491,6 +491,55 @@ grupo('quantosEnviam: o numero que ele ve antes de trocar o fluxo');
   ];
   check(arv.quantosEnviam(arvore) === 2, `conta so o que ENVIA e esta ligado (${arv.quantosEnviam(arvore)})`);
   check(arv.quantosEnviam(arv.arvorePadrao()) > 0, 'e a arvore padrao tem ramos que enviam');
+}
+
+grupo('observacoes: o recado dele para mim, e o fluxo em texto');
+{
+  /**
+   * Pedido dele (01/09): campo de observacao em cada caixa, "principalmente as com codigo nao
+   * editaveis". E, quando eu ia fazer um botao que copiava so as observacoes, ele cortou: "nao faz
+   * sentido eu colar para voce sem voce ter a visao do fluxo". Entao o texto leva TUDO.
+   */
+  check(arv.noVazio().nota === '', 'ramo novo nasce com observacao vazia');
+  check(arv.arvorePadrao()[0].nota === '', 'ramo de regra tambem tem o campo');
+
+  let t = [
+    { id: 'a', rotulo: 'hater', regra: 'sem-interesse', nota: 'esta pegando quem so xingou o adversario', filhos: [] },
+    { id: 'b', rotulo: 'retornando', condicao: {}, acao: null, filhos: [
+      { id: 'b1', rotulo: 'bom dia', condicao: { palavras: ['bom dia'] }, acao: { tecla: '5' }, nota: 'linha 1\nlinha 2', filhos: [] },
+    ] },
+  ];
+  const texto = arv.paraTexto(t, { teclas: {}, respostas: [] });
+
+  check(texto.includes('1. hater'), 'numera os ramos da raiz');
+  check(texto.includes('2.1. bom dia'), `numera os de dentro com o caminho (2.1) para nos dois apontarmos para o mesmo lugar`);
+  check(texto.includes('[regra do código: sem-interesse]'), 'diz quando a condicao vem do codigo');
+  check(texto.includes('OBSERVAÇÃO: esta pegando quem so xingou'), 'a observacao aparece no ramo dela');
+  check((texto.match(/OBSERVAÇÃO/g) || []).length === 3, 'observacao de varias linhas sai linha a linha, sem se perder');
+  check(texto.includes('escreveu "bom dia"'), 'a condicao dele aparece por extenso');
+  check(texto.includes('tecla 5'), 'e o desfecho tambem');
+  check(texto.includes('só agrupa'), 'ramo que so agrupa e dito como tal');
+
+  // Ramo desligado tem que gritar: ele pode estar perguntando por que algo nao acontece.
+  const desligado = arv.paraTexto([{ id: 'x', rotulo: 'apagado', condicao: {}, acao: { tecla: '3' }, desligado: true, filhos: [] }], {});
+  check(desligado.includes('DESLIGADO'), 'ramo desligado e marcado no texto');
+
+  // Tecla fixada por ele nao pode passar por escolha do codigo.
+  const fixada = arv.paraTexto(arv.arvorePadrao(), { teclas: { 'ultima-e-despedida': '2' } });
+  check(/VOCÊ FIXOU/.test(fixada), 'tecla fixada por ele e marcada como dele');
+
+  // A resposta pronta sai pelo NOME: "pedido-ajuda" nao diz o que e para quem le de fora.
+  const comNome = arv.paraTexto([{ id: 'r', rotulo: 'ajuda', condicao: {}, acao: { resposta: 'pedido-ajuda' }, filhos: [] }], {
+    respostas: [{ id: 'pedido-ajuda', name: 'Pedido de ajuda financeira (negar com respeito)' }],
+  });
+  check(comNome.includes('Pedido de ajuda financeira'), 'a resposta pronta sai pelo nome');
+
+  // A observacao sobrevive ao arquivo -- e o unico caminho dela ate mim se ele exportar.
+  const volta = arv.deArquivo(JSON.stringify(arv.paraArquivo({ arvore: t, teclas: {} }, 'x')));
+  check(volta.arvore[0].nota.includes('xingou'), 'a observacao vai e volta no arquivo');
+  const longa = arv.sanitizar([{ id: 'z', rotulo: 'z', nota: 'x'.repeat(9000) }]);
+  check(longa.arvore[0].nota.length === 4000, `observacao gigante e cortada no teto (${longa.arvore[0].nota.length})`);
+  check(arv.sanitizar([{ id: 'z', rotulo: 'z', nota: { nao: 'e texto' } }]).arvore[0].nota === '', 'observacao que nao e texto vira vazia');
 }
 
 fim();

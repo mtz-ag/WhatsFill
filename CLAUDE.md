@@ -389,6 +389,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   ficam numa chave propria — nao na lista de mescla do `store.get`, porque mesclar array daria o
   resultado errado. As contagens de vitoria NAO vao no arquivo exportado: sao medicao desta
   maquina, nao o fluxo.
+- **`arvore.fluxoPadrao()` e um DOCUMENTO mantido a partir do que ele escreve, nao codigo meu.**
+  Combinado em 01/09: *"preciso de um reset para o padrao do fluxo atual, quando eu mandar aqui
+  voce atualiza o padrao"*. Ele escreve nas OBSERVACOES de cada caixa (`no.nota`, texto que nao
+  muda comportamento nenhum), aperta "Copiar o fluxo", cola aqui, e eu edito o `fluxoPadrao`.
+  **Nao altere essa funcao sem ele pedir**: e o estado ao qual ele volta quando o quadro ficou
+  confuso, e e justamente nesse momento que ele nao vai conferir ramo por ramo.
+- **O que sai da janela para mim e o FLUXO INTEIRO, nunca so as observacoes.** Eu ia fazer o botao
+  copiando so as notas e ele cortou: *"nao faz sentido eu colar para voce sem voce ter a visao do
+  fluxo"*. Certo — *"essa aqui esta pegando gente demais"* nao diz nada sem o ramo, a condicao, o
+  desfecho e a posicao na arvore, e eu responderia adivinhando. `arvore.paraTexto` numera os ramos
+  (`2.1` e o primeiro filho do segundo) para nos dois apontarmos para o mesmo lugar. Vale para
+  qualquer relatorio que eu criar depois: **contexto junto do comentario, ou o comentario nao serve.**
 - **No QUADRO, a prioridade entre irmaos e a ALTURA na tela** — `arvore.ordenarPorPosicao`, chamada
   depois de todo arrasto. E a unica regra honesta num quadro livre: guardar uma ordem invisivel ao
   lado da posicao faria a tela mostrar um ramo acima do outro e a rodada obedecer o contrario, e
