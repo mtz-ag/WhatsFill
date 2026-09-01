@@ -153,7 +153,20 @@ export const REGRAS = [
      * Responder emoji com pedido de dados só é robô com quem já tem conversa — para quem acabou
      * de chegar do anúncio, perguntar é o primeiro passo, e a tela não tem mais nada a olhar.
      */
-    quando: (c) => !c.jaPediramDados && !c.temEtiquetaDeCidade && c.podePedirDados && !c.pedidoHoje,
+    /**
+     * **Repasse não conta como chegada.** Acrescentado em 31/08 com a print do Odone: 76 links
+     * de vídeo em semanas, sem cidade e sem formulário enviado — a rodada oferecia o formulário
+     * a cada rodada, e ele nunca ia responder. *"links em geral devem ser ignorados"*.
+     *
+     * A reação continua contando (o 🙏 da Marta pede o formulário): um emoji é dirigido a ele,
+     * um link do Facebook é conteúdo de outra pessoa passando adiante.
+     */
+    quando: (c) =>
+      !c.rajadaEhSoRepasse &&
+      !c.jaPediramDados &&
+      !c.temEtiquetaDeCidade &&
+      c.podePedirDados &&
+      !c.pedidoHoje,
     motivo: () => 'veio do anúncio e o formulário nunca saiu para ele — peça os dados esta vez.',
   },
   {

@@ -356,6 +356,44 @@ const EXPRESSOES_DE_APOIO = [
 ];
 
 /**
+ * Esta mensagem é **repasse** — conteúdo de terceiro que a pessoa encaminhou?
+ *
+ * Link sozinho e vídeo. É o que ele chamou de ruído em 31/08: *"está confuso quando é rajada de
+ * links, links em geral devem ser ignorados, não lembro de exceções"*.
+ *
+ * **Repasse não é o mesmo que reação, e a diferença é para quem o gesto aponta.** Um 🙏 é
+ * dirigido a ele — a Marta respondeu o anúncio assim, e ali pedir os dados é o certo. Um link do
+ * Facebook é conteúdo de outra pessoa passando adiante; não diz nada sobre este contato, e
+ * responder a ele com um formulário é responder a coisa errada.
+ */
+export function ehRepasse(msg) {
+  const tipo = String(msg?.tipo || 'TEXT').toUpperCase();
+  if (tipo === 'VIDEO') return true;
+
+  const texto = String(msg?.texto || '');
+  if (!texto.trim()) return false;
+
+  // Link e nada mais: tirando os links, não sobra nada escrito por ela.
+  return LINK.test(texto) && !texto.replace(LINK, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * A rajada inteira é repasse — links e vídeos, e nada que a pessoa tenha escrito?
+ *
+ * Serve para as regras **não reagirem ao ruído**. O Odone é o retrato: 76 mensagens em semanas,
+ * todas link de vídeo, e a rodada oferecendo o formulário porque ele "veio do anúncio e nunca
+ * recebeu os dados". Nunca vai receber — ele não está conversando, está repassando.
+ *
+ * Rajada vazia devolve `false`: sem mensagem não há ruído a ignorar, e é a regra de baixo que
+ * decide.
+ */
+export function rajadaEhSoRepasse(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  if (!rajada.length) return false;
+  return rajada.every((m) => ehRepasse(m));
+}
+
+/**
  * A conversa pendente é SÓ expressão de apoio, sem nada a resolver?
  *
  * Pedido dele (31/08, print do Ciro): *"esse é um caso comum até onde a pessoa só expressa o

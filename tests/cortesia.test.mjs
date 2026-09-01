@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaFinal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
 
 const texto = (t) => ({ texto: t, tipo: 'TEXT' });
 
@@ -436,6 +436,35 @@ grupo('rajada: para no buraco de tempo, senao o historico inteiro vira "conversa
     { texto: 'b'.repeat(300), tipo: 'TEXT' },
   ];
   check(rajadaFinal(semHora, null).length === 2, 'sem hora, a corrente nao quebra');
+}
+
+
+grupo('repasse: link e video sao ruido; emoji nao e');
+{
+  const M = (t, tipo, at) => ({ texto: t, tipo: tipo || 'TEXT', at: at || '2026-08-31T21:30:00Z' });
+
+  check(ehRepasse(M('https://www.facebook.com/share/v/1Kr4Cdw')), 'link sozinho e repasse');
+  check(ehRepasse(M('', 'VIDEO')), 'video e repasse');
+
+  /**
+   * A distincao inteira esta aqui: **para quem o gesto aponta.**
+   *
+   * Um emoji e dirigido a ELE — a Marta respondeu o anuncio com 🙏 e ali pedir os dados e o
+   * certo (31/08). Um link do Facebook e conteudo de outra pessoa passando adiante, e nao diz
+   * nada sobre este contato.
+   */
+  check(!ehRepasse(M('🙏🙏')), 'emoji NAO e repasse: e gesto dirigido a ele');
+  check(!ehRepasse(M('olha isso https://x.com/a')), 'link COM texto nao e repasse: ela escreveu algo');
+  check(!ehRepasse(M('bom dia')), 'texto puro nao e repasse');
+  check(!ehRepasse(M('', 'AUDIO')), 'audio nunca e repasse: e a voz dela');
+
+  // A rajada inteira.
+  check(rajadaEhSoRepasse([M('https://a.com/1', 'TEXT', '2026-08-31T21:30:00Z'), M('https://b.com/2', 'VIDEO', '2026-08-31T21:33:00Z')], null),
+    'rajada so de links e video e so repasse');
+  check(!rajadaEhSoRepasse([M('🙏🙏')], null), 'rajada com emoji nao e so repasse');
+  check(!rajadaEhSoRepasse([M('https://a.com/1', 'TEXT', '2026-08-31T21:30:00Z'), M('bom dia', 'TEXT', '2026-08-31T21:33:00Z')], null),
+    'um link e um bom dia: ela escreveu algo');
+  check(!rajadaEhSoRepasse([], null), 'sem rajada nao ha ruido a ignorar');
 }
 
 fim();

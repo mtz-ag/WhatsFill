@@ -25,6 +25,7 @@ const base = {
   ultimaEhSoReacao: false,
   perguntaAberta: null,
   soExpressaApoio: null,
+  rajadaEhSoRepasse: false,
   podeMandarMomento: true,
   temEtiquetaDeCidade: true,
   podePedirDados: true,
@@ -354,6 +355,29 @@ grupo('so-expressa-apoio: agradece, mas nunca ANTES de entregar o material');
   check(com({ soExpressaApoio: A, ultimaEhDespedida: true })?.tecla === '3', 'despedida vence');
   check(com({ soExpressaApoio: A, jaPediramDados: false, temEtiquetaDeCidade: false })?.tecla === '4', 'pedir dados vence');
   check(com({ soExpressaApoio: A, etiquetaQueDispensa: 'engajado' })?.tecla === '2', 'etiqueta dispensa vence');
+}
+
+
+grupo('repasse nao pede formulario, mas reacao continua pedindo');
+{
+  /**
+   * Print do Odone (31/08): 76 links de video em semanas, sem cidade e sem formulario enviado.
+   * A rodada oferecia o formulario a cada passada, e ele nunca ia responder — nao esta
+   * conversando, esta repassando. *"links em geral devem ser ignorados"*.
+   */
+  const odone = com({ rajadaEhSoRepasse: true, jaPediramDados: false, temEtiquetaDeCidade: false, ultimaEhSoReacao: true });
+  check(odone?.id !== 'nunca-pediram-dados', 'repasse NAO pede o formulario: ' + JSON.stringify(odone));
+
+  /**
+   * O contra-teste, e e ele que impede a mudanca de ir longe demais: a Marta respondeu o anuncio
+   * com um emoji, sem cidade e sem formulario — e ali pedir os dados continua sendo o certo.
+   */
+  const marta = com({ rajadaEhSoRepasse: false, jaPediramDados: false, temEtiquetaDeCidade: false, ultimaEhSoReacao: true });
+  check(marta?.tecla === '4', 'reacao dirigida a ele continua pedindo os dados');
+
+  // Quem tem texto de verdade tambem continua.
+  check(com({ rajadaEhSoRepasse: false, jaPediramDados: false, temEtiquetaDeCidade: false })?.tecla === '4',
+    'sem repasse, o formulario segue como antes');
 }
 
 fim();

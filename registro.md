@@ -5,6 +5,48 @@
 
 ---
 
+## 2026-08-31 — Rajada de links não pede formulário
+
+**Relato dele**, print do Odone na 0.47.0 (agora sugerindo *"4: veio do anúncio e o formulário nunca
+saiu para ele"*): *"eu vejo que está confuso quando é rajada de links, links em geral devem ser
+ignorados, não lembro de exceções"*.
+
+### A distinção que faltava: para quem o gesto aponta
+
+`ultima-e-so-reacao` já tratava link como reação, mas `nunca-pediram-dados` está acima dela (subiu
+hoje, com a print da Marta) e vencia. E as duas situações são opostas:
+
+- **Emoji** é dirigido **a ele**. A Marta respondeu o anúncio com 🙏 — ali pedir os dados é o certo,
+  e foi ele quem pediu isso hoje de manhã.
+- **Link** é conteúdo de **outra pessoa**, passando adiante. Não diz nada sobre este contato, e
+  responder a ele com um formulário é responder a coisa errada.
+
+`cortesia.ehRepasse` separa os dois: link sozinho e vídeo são repasse; emoji, texto e áudio não.
+Link **com** texto junto também não é — ela escreveu algo.
+
+`nunca-pediram-dados` passou a exigir `!rajadaEhSoRepasse`. O Odone cai de volta na tecla 5
+(mensagem do momento), e a Marta continua na 4 — há teste para os dois.
+
+### O outro problema, que a mesma print mostra e o código não resolve
+
+O Odone tem **Cidade: Santa Catarina**, e o painel já avisa: *"não casa com nenhum dos 497
+municípios do RS"*. Como as etiquetas de cidade só existem para municípios do RS,
+`temEtiquetaDeCidade` é **falso para sempre** nele — e seria assim em todo contato de fora do
+estado.
+
+Sem o conserto acima, ele apareceria pedindo formulário em **toda** rodada, para sempre.
+
+**Isso ele resolve sem código:** o contato já carrega a etiqueta **FORA DO RS**, e a aba
+Automatizado tem *"Etiquetas que a rodada pode pular"* (hoje com "engajado"). Somar `fora do rs` ali
+tira esses contatos da fila de uma vez. Não fiz por conta própria porque é decisão de negócio —
+pode haver razão para continuar falando com quem mora fora e vota aqui.
+
+**Arquivos:** `src/lib/cortesia.js` (`ehRepasse`, `rajadaEhSoRepasse`), `src/lib/sugestao.js`,
+`src/panel/panel.js`, `tests/cortesia.test.mjs` (+10), `tests/sugestao.test.mjs` (+3),
+`manifest.json` (0.47.0 → **0.48.0**). 29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — "76 mensagens somando 3254 caracteres": a rajada somava o arquivo morto
 
 **Relato dele**, print do Odone na 0.46.0: *"não fez sentido nenhum a sugestão, explique"*. A caixa

@@ -19,7 +19,7 @@ import * as categorizar from '../lib/categorizar.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ultimaEhDespedida } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, ultimaEhDespedida } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -3575,6 +3575,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         soExpressaApoio: apoioTrava ? null : soExpressaApoio(state.entrantes, state.nossaUltimaAt),
         etiquetaQueDispensa: await etiquetaQueDispensaDaFila(),
         ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
+        // Só links e vídeos repassados: é ruído, e ruído não pede formulário (print do Odone).
+        rajadaEhSoRepasse: rajadaEhSoRepasse(state.entrantes, state.nossaUltimaAt),
         podeMandarMomento: !momentoTrava,
         temEtiquetaDeCidade,
         // O critério de "pedir dados" é o NOME, não a cidade (decisão dele, 31/08).
