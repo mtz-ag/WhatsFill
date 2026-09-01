@@ -115,6 +115,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       fila: [], // retrato da fila da plataforma, só para conferência
       meusAbertos: { total: null, erro: '', quando: 0 },
       log: [], // { nome, resultado, motivo } de cada contato da rodada
+      /**
+       * Contatos desta rodada em que NENHUMA regra recomendou nada, por id de atendimento.
+       *
+       * Escrito num ponto só — logo depois de `sugerirAcao` —, e não em cada saída: são vinte
+       * caminhos de `return` no tratamento de um contato, e marcar em cada um é o tipo de coisa
+       * que fica errada no dia em que alguém acrescenta o vigésimo primeiro.
+       *
+       * Um `Set` e não um contador porque o mesmo contato pode passar duas vezes na rodada
+       * (a fila devolve o concluído ao topo — está no `CLAUDE.md`), e contar duas vezes
+       * inflaria a medida justamente no caso que já dá trabalho.
+       */
+      semRegra: new Set(),
     },
     incoming: [],
     /** O que o contato mandou, com o tipo junto — é o que enxerga figura e figurinha. */
@@ -2679,6 +2691,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.auto.rodando = true;
     state.auto.parar = false;
     state.auto.log = [];
+    state.auto.semRegra = new Set();
     renderAll();
 
     // Aba escondida é aba CONGELADA — timer nenhum roda, nem o da plataforma. Sem isto, a
@@ -2714,11 +2727,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const triados = conta('triado');
     const concluidos = conta('concluido');
     const reabertos = conta('reiniciado');
+    /**
+     * Quantos a rodada NÃO soube recomendar.
+     *
+     * É a medida que ele pediu sem pedir: *"terá que reconhecer isso pela falta de opções"*.
+     * Cada um destes é um contato que o determinístico não resolveu — a conta encolhendo,
+     * rodada após rodada, é o refinamento das regras funcionando, e ela diz quando vale a pena
+     * ligar a IA (que custa por contato avaliado).
+     *
+     * Sai da própria rodada, sem etiqueta nenhuma no CRM: rótulo novo na base para dizer o que
+     * o painel já sabe seria trabalho a mais para a mesma informação.
+     */
+    const semRegra = state.auto.semRegra.size;
     const resumo =
       `Rodada encerrada: ${conta('enviado')} enviado(s), ${conta('pulado')} pulado(s)` +
       (reabertos ? `, ${reabertos} reaberto(s) em "Meus"` : '') +
       (concluidos ? `, ${concluidos} concluído(s) sem enviar` : '') +
-      (triados ? `, ${triados} assumido(s) para triagem em "Meus"` : '') + '.';
+      (triados ? `, ${triados} assumido(s) para triagem em "Meus"` : '') +
+      (semRegra ? `, ${semRegra} que nenhuma regra reconheceu` : '') + '.';
 
     // Alguém da lista ficou para trás sem ninguém abrir. Não é o caso normal — a posição
     // acompanha a reordenação da plataforma —, mas quando acontece tem que aparecer, senão o
@@ -3553,33 +3579,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         });
       }
 
-      /**
-       * Tecla 8 — "isto é para a IA".
-       *
-       * Pedido dele (31/08): *"teria que ter uma nova opção de incerto passar para IA"*. Nasce
-       * dos três casos do dia em que a regra acertava a TECLA mas não resolvia nada: o alerta
-       * político, a pergunta sobre propaganda em Santa Maria, o nome errado no cadastro.
-       *
-       * **Funciona hoje, com a IA desligada** — e é esse o ponto. Ela só marca e pula: o contato
-       * fica aberto, nada é enviado, nada é concluído. A pilha vai se formando no CRM enquanto
-       * ele refina o determinístico, e quando a IA entrar é só filtrar a fila pela etiqueta.
-       *
-       * Aparece sempre, sem depender de a IA estar ligada: ele decide o que é caso dela olhando
-       * a conversa, e essa decisão não devia esperar por configuração nenhuma.
-       */
-      opcoes.push({
-        tecla: '8',
-        valor: 'paraia',
-        rotulo: 'Marcar para a IA (deixa aberto)',
-      });
-
       // Um lugar só decide o destaque. Antes eram três expressões independentes, e duas podiam
       // acender ao mesmo tempo num contato que casasse com as duas condições.
       for (const opcao of opcoes) opcao.primaria = !!sugestao && opcao.tecla === sugestao.tecla;
 
+      // Nenhuma regra reconheceu: o caso é para ele decidir hoje, e é o gatilho da IA no outro
+      // branch. Marcado AQUI, onde a informação existe — não em cada `return` lá embaixo.
+      if (!sugestao) state.auto.semRegra.add(sessionId);
+
       const escolha = await perguntarNaRodada({
         titulo: nome,
         recomendacao: sugestao,
+        // A falta de recomendação é o sinal de "isto é para a IA" (pedido dele, 31/08): sem
+        // etiqueta nova, sem tecla nova — a própria ausência de regra é o que marca o caso.
+        semRegra: !sugestao,
         // O passo manual dele quando a resposta tem que ser escrita: copiar a conversa e colar
         // numa IA. Aqui vira um clique — sem sair da caixa e sem parar a rodada.
         copiarConversa: state.entrantes,
@@ -3646,50 +3659,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (escolha === 'pular') {
         await saveClassification({ withCompletionDate: true, quiet: true });
         return { nome, resultado: 'pulado', motivo: 'você pulou — classificação gravada, atendimento aberto' };
-      }
-
-      /**
-       * Tecla 8: marca com a etiqueta da IA e pula. Não envia, não conclui.
-       *
-       * **Falha de etiqueta não vira falha de rodada**, pela mesma prioridade do resto do
-       * painel: o contato sai da vez de qualquer jeito, e o problema vai para o log. Etiqueta é
-       * organização interna — em 20/08 uma etiqueta que não gravava chegou a travar o envio de
-       * modelo, e a lição está no `CLAUDE.md`.
-       *
-       * Sem etiqueta configurada o contato ainda é pulado, e o log diz o que falta: assim a
-       * tecla nunca "não faz nada" em silêncio.
-       */
-      if (escolha === 'paraia') {
-        await saveClassification({ withCompletionDate: true, quiet: true });
-
-        const nomeEtiqueta = String((await store.get('etiquetaParaIA')) || '').trim();
-        if (!nomeEtiqueta) {
-          return {
-            nome,
-            resultado: 'pulado',
-            motivo: 'marcado para a IA, mas a etiqueta não está configurada (aba Automatizado) — só o log registra',
-          };
-        }
-
-        const etiqueta = (await tagsLib.allTags()).find(
-          (t) => cities.normalize(t.label) === cities.normalize(nomeEtiqueta)
-        );
-        if (!etiqueta) {
-          return {
-            nome,
-            resultado: 'pulado',
-            motivo: `marcado para a IA, mas a etiqueta "${nomeEtiqueta}" não existe no CRM — crie-a`,
-          };
-        }
-
-        const r = await tagsLib.applyTags(state.contact, [etiqueta.id]);
-        return {
-          nome,
-          resultado: 'pulado',
-          motivo: r.ok
-            ? `marcado com "${nomeEtiqueta}" para a IA — atendimento segue aberto`
-            : `para a IA, mas a etiqueta NÃO gravou: ${r.error || 'motivo desconhecido'}`,
-        };
       }
 
       // Tecla 6: a rodada sai da frente e fica de vigia. Você responde à mão no atendimento que
@@ -3800,7 +3769,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *
    * @returns {Promise<string>} o `valor` da opção escolhida, ou 'parar' no Esc
    */
-  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [], recomendacao = null, copiarConversa = null, dica = 'Esc para parar a rodada' }) {
+  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [], recomendacao = null, semRegra = false, copiarConversa = null, dica = 'Esc para parar a rodada' }) {
     // `fechar` sai daqui de dentro para virar `promessa.cancelar`: caixa que ficou na tela
     // depois de o contato mudar tem que poder ser tirada de fora. Ver `cancelarPerguntaDeCidade`.
     let fecharDeFora = null;
@@ -3818,6 +3787,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (recomendacao) {
         caixa.append(
           h('div', { class: 'wf-pergunta-recomendada' }, `Sugiro a ${recomendacao.tecla}: ${recomendacao.motivo}`)
+        );
+      } else if (semRegra) {
+        /**
+         * Nenhuma regra reconheceu este caso — e isso é INFORMAÇÃO, não ausência dela.
+         *
+         * Pedido dele (31/08): *"terá que reconhecer isso pela falta de opções"*, recusando a
+         * ideia anterior de marcar esses contatos com uma etiqueta. Está certo: a falta de
+         * recomendação já é o sinal, e etiqueta nova seria um rótulo a mais na base para dizer
+         * o que o próprio painel já sabe.
+         *
+         * Antes disto a caixa ficava calada nesses casos, e "a rodada não sugeriu nada" não se
+         * distinguia de "a rodada não olhou". É exatamente esta faixa que a IA vai substituir:
+         * no branch `claude/whatsfill-ia`, `sugestao === null` é o gatilho da avaliação, e o
+         * lugar dela na tela é aqui.
+         */
+        caixa.append(
+          h(
+            'div',
+            { class: 'wf-pergunta-recomendada wf-pergunta-semregra' },
+            'Nenhuma regra reconheceu este caso — a decisão é sua.'
+          )
         );
       }
       // Linha pode ser texto ou lista de nós — é o que deixa a cidade sair em marca-texto.
@@ -6500,34 +6490,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             'todos de uma vez. Nome completo sobre nome curto ("Daniel" → "Daniel Ribeiro"), ' +
             'acento e caixa não contam como divergência. A etiqueta precisa existir no CRM. ' +
             'Vazio = não marca ninguém.'),
-      ])
-    );
-
-    // Tecla 8 da rodada: "isto é para a IA". Marca e pula; a pilha fica achável no CRM.
-    const paraIaInput = h('input', { type: 'text', placeholder: 'ex.: Para a IA' });
-    store.get('etiquetaParaIA').then((v) => {
-      paraIaInput.value = v || '';
-    });
-    paraIaInput.addEventListener('change', async () => {
-      const v = paraIaInput.value.trim();
-      await store.set('etiquetaParaIA', v);
-      tagsLib.invalidateTags();
-      setStatus(
-        v
-          ? `A tecla 8 da rodada vai marcar com "${v}".`
-          : 'A tecla 8 continua pulando, mas sem marcar — só o log da rodada registra.'
-      );
-    });
-    body.append(
-      h('label', { class: 'wf-field' }, [
-        h('span', {}, 'Etiqueta da tecla 8 ("isto é para a IA")'),
-        paraIaInput,
-        h('div', { class: 'wf-origin' },
-          'Na caixa da rodada, a tecla 8 marca o contato com esta etiqueta e PULA — não envia ' +
-            'nada e não conclui. Serve para juntar, enquanto você refina as regras, os casos que ' +
-            'nenhuma resposta pronta resolve: depois você filtra a fila por ela. A contagem ' +
-            'também diz quanto ainda falta para a rodada se virar sozinha. A etiqueta precisa ' +
-            'existir no CRM; vazia, a tecla ainda pula, mas só o log registra.'),
       ])
     );
 

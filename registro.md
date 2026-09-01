@@ -5,48 +5,50 @@
 
 ---
 
-## 2026-08-31 — Tecla 8: "isto é para a IA"
+## 2026-08-31 — "Reconhecer pela falta de opções": o sinal já existia e a tela o escondia
 
-**Pedido dele:** *"teria que ter uma nova opção de incerto passar para IA"*.
+**Pedido dele:** *"não sera criado etiqueta pra isso terá que reconhecer isso pela falta de
+opções"* — recusando a tecla 8 com etiqueta que eu tinha feito meia hora antes, e que foi
+**revertida**.
 
-Nasce dos três casos de hoje em que a regra acertava a **tecla** e não resolvia nada: o alerta
-político em três mensagens, a pergunta da Clair sobre propaganda em Santa Maria, o cadastro com
-nome errado. Nos três a rodada parou de fazer a coisa errada — e ele continuou tendo que escrever
-a resposta.
+Ele está certo, e por uma razão que eu tinha na frente: `sugerirAcao` já devolve `null` quando
+nenhuma regra casa, e o próprio comentário da função chama isso de *"resposta legítima e comum"*.
+O sinal existia. Criar etiqueta seria pôr um rótulo permanente na base de eleitores para registrar
+o que o painel **já sabe** no instante em que desenha a caixa.
 
-### O que ela faz
+### O que mudou
 
-Marca com uma etiqueta e **pula**. Não envia, não conclui, não mexe em mais nada: o atendimento
-fica exatamente onde estava.
+**A caixa deixa de ficar calada.** Sem recomendação, ela agora mostra *"Nenhuma regra reconheceu
+este caso — a decisão é sua."*, numa faixa **cinza** e não na azul do destaque: azul quer dizer
+"aperte esta tecla", e usar a mesma cor para "não sei" ensinaria a ignorar as duas.
 
-**Funciona com a IA desligada, e é esse o ponto.** Enquanto ele refina o determinístico, a pilha
-dos casos que nenhuma regra resolve vai se formando no CRM. Quando a IA entrar, é filtrar a fila
-pela etiqueta — ela já vem com o trabalho separado, que era o plano dele: *"passar pra a IA para
-que a ia já tenha 90% do trabalho feito e gastar pouco token"*.
+Antes disto, "a rodada não sugeriu nada" era visualmente idêntico a "a rodada não olhou".
 
-**A contagem da etiqueta é a medida que faltava.** Cada marca é um contato que o determinístico não
-resolveu; a etiqueta encolhendo, rodada após rodada, é o refinamento funcionando.
+**O resumo da rodada passa a contar**: *"…, 7 que nenhuma regra reconheceu"*. É a medida de
+cobertura, de graça e sem tocar no CRM — cada um desses é um contato que o determinístico não
+resolveu. A conta encolhendo, rodada após rodada, é o refinamento funcionando, e é ela que diz
+quando vale ligar a IA, que custa por contato avaliado.
 
-### Decisões
+### A decisão de implementação que importa
 
-- **Aparece sempre**, sem depender de a IA estar ligada ou de ter chave. Quem decide o que é caso
-  da IA é ele, olhando a conversa, e essa decisão não devia esperar por configuração nenhuma.
-- **Não é recomendada automaticamente.** `sugerirAcao` devolvendo `null` continua significando
-  "sem destaque, você decide" — destacar a tecla 8 em todo caso desconhecido empurraria a fila
-  inteira para a pilha da IA, que é o contrário do que ele quer.
-- **Falha de etiqueta não vira falha de rodada.** O contato sai da vez de qualquer jeito e o
-  problema vai para o log; em 20/08 uma etiqueta que não gravava chegou a travar o envio de modelo,
-  e a lição está no `CLAUDE.md`.
-- **Sem etiqueta configurada, a tecla ainda pula** e o log diz o que falta — assim ela nunca "não
-  faz nada" em silêncio. Se a etiqueta não existe no CRM, o log também diz isso pelo nome.
+A marca é escrita num **ponto só**, logo depois de `sugerirAcao`, em `state.auto.semRegra`. Minha
+primeira versão propagava um campo `semRegra` pelo `return` — e cobria **um** caminho de saída
+entre os vinte que o tratamento de um contato tem. Ficaria errada no dia em que alguém
+acrescentasse o vigésimo primeiro, e errada em silêncio.
 
-O atalho de teclado sai de graça: o tratador procura a tecla na lista de opções, então qualquer
-opção nova já responde ao número.
+É um `Set` por id de atendimento, não um contador: a fila devolve o concluído ao topo (está no
+`CLAUDE.md`), o mesmo contato pode passar duas vezes, e contar duas vezes inflaria a medida
+justamente no caso que já dá trabalho.
 
-**Arquivos:** `src/panel/panel.js` (opção e tratamento), `src/lib/store.js` (`etiquetaParaIA`),
-`manifest.json` (0.42.0 → **0.43.0**). 29 módulos sem erro, dez suítes passando.
+### É aqui que a IA entra
 
-**Para usar:** criar a etiqueta no CRM e escrever o nome dela na aba Automatizado.
+No branch `claude/whatsfill-ia`, `sugestao === null` é o gatilho da avaliação, e **o lugar dela na
+tela é exatamente esta faixa cinza** — a IA substitui "nenhuma regra reconheceu" por uma
+recomendação de verdade. Que é o plano dele: refinar o determinístico até sobrar pouco, e só o que
+sobrar custar token.
+
+**Arquivos:** `src/panel/panel.js`, `src/panel/panel.css`, `manifest.json` (0.42.0 → **0.43.0**).
+29 módulos sem erro, dez suítes passando. A tecla 8 e `etiquetaParaIA` não existem mais.
 
 ---
 
