@@ -5,6 +5,62 @@
 
 ---
 
+## 2026-09-01 — "Deu a cidade e não pegou": eu reconhecia uma das três formas de pedir
+
+**Relato dele**, testando a versão IA: *"deu a cidade e não pegou primeiro, a tela de confirmação
+não apareceu"*.
+
+### A causa é minha, de 31/08
+
+Quando implementei *"a pergunta que você fez também é contexto"* (`respostaAoPedido`), decidi se a
+nossa última mensagem era o formulário assim:
+
+```js
+const corpo = achatarTexto(modelo?.text || '');       // SÓ o texto base do pedir-dados
+return achatarTexto(nossaUltima).includes(corpo.slice(40, 100));
+```
+
+Naquele dia havia **um** texto. Hoje há três formas de pedir os dados, e todas falhavam nessa
+comparação menos a primeira:
+
+| texto | linha do formato |
+|---|---|
+| `pedir-dados` | `Nome completo / Cidade` |
+| `pedir-dados-evento-sim` / `-nao` (0.62.0) | `*Nome / Cidade*` |
+| **variantes** de qualquer um | reescritas do mesmo texto |
+
+Bastava a mensagem ter saído como variante — e ela sai, porque o revezamento é automático — para
+o painel achar que não tinha perguntado nada. Aí *"maria cachoeirinha"* deixa de ser resposta,
+a cidade não é reconhecida e o popup de confirmação não aparece.
+
+### O conserto
+
+`pediuNomeECidade` casa pela **linha do formato** (`nome( completo)? / cidade`), que é:
+
+- o que todos os textos têm em comum, hoje e nas variantes;
+- o que o parser realmente depende;
+- o que os testes **já protegiam** texto a texto desde 10/08.
+
+Provado contra os textos reais do `store`: **11 pegam** (base, duas variantes de cada, os dois de
+evento e os dois de interesse) e os que não pedem dados continuam fora — agradecimento, sem
+interesse, link do grupo. Se fossem confundidos, qualquer conversa viraria "resposta ao
+formulário" e o parser leria cidade onde não há.
+
+### A lição, que virou armadilha no `CLAUDE.md`
+
+**"Nossa mensagem foi X?" nunca se responde comparando com UM texto.** Case pelo invariante. Eu já
+tinha usado a mesma técnica frágil em outros dois lugares (`modeloJaNaConversa`,
+`jaPediramDados`) — lá o alvo é um modelo específico e a comparação por trecho se sustenta, mas
+vale reler quando aparecerem variantes de modelo.
+
+**Arquivos:** `src/panel/panel.js` (`pediuNomeECidade`), `tests/vars.test.mjs` (+14, cobrindo
+variantes e os textos de evento), `CLAUDE.md`, `manifest.json` (0.62.0 → **0.63.0**).
+29 módulos sem erro, dez suítes passando.
+
+**Vale para os dois branches:** feito aqui, a levar para `claude/whatsfill-ia` por merge.
+
+---
+
 ## 2026-09-01 — Convite de evento: a tecla 4 escolhe entre três textos
 
 **Pedido dele:** um anúncio novo pergunta se a pessoa vai ao evento, e ele responde de dois jeitos —

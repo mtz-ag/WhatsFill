@@ -276,6 +276,40 @@ grupo('as perguntas pedem os dados no formato que o parser entende');
     const t = store.DEFAULT_TEMPLATES.find((x) => x.id === id);
     check(/Sim \/ Nome completo \/ Cidade/.test(t.text), `"${id}" pede "Sim / Nome / Cidade"`);
   }
+
+  /**
+   * TODO texto que pede dados — inclusive VARIANTES e os dois de evento — carrega a linha do
+   * formato, na forma que o painel reconhece.
+   *
+   * É o contrato que faz a resposta do contato ser lida como resposta: o painel decide
+   * `respostaAoPedido` por esta linha, e é assim que "maria cachoeirinha" vira nome e cidade.
+   *
+   * **Relato dele (01/09): *"deu a cidade e não pegou"*.** A versão anterior do painel comparava
+   * um trecho do texto BASE do `pedir-dados`, então variante e texto de evento não eram
+   * reconhecidos e a resposta passava batido. Se alguém reescrever um destes textos e tirar a
+   * linha, o acerto cai de novo — em silêncio.
+   */
+  const PEDIU_NOME_E_CIDADE = /nome(\s+completo)?\s*\/\s*cidade/i;
+  const achatar = (t) =>
+    String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+  const pedemDados = ['pedir-dados', 'pedir-dados-evento-sim', 'pedir-dados-evento-nao', 'interesse-conteudo', 'sem-retorno-interesse'];
+  for (const id of pedemDados) {
+    const t = store.DEFAULT_TEMPLATES.find((x) => x.id === id);
+    check(!!t, `"${id}" existe`);
+    check(PEDIU_NOME_E_CIDADE.test(achatar(t?.text)), `"${id}" é reconhecido como pedido de dados`);
+    for (const [i, v] of (t?.variantes || []).entries()) {
+      check(PEDIU_NOME_E_CIDADE.test(achatar(v)), `variante ${i + 1} de "${id}" também é reconhecida`);
+    }
+  }
+
+  // E o que NÃO pede dados não pode ser confundido com pedido — senão qualquer conversa viraria
+  // "resposta ao formulário" e o parser leria cidade onde não há.
+  for (const id of ['agradecimento', 'sem-interesse', 'link-grupo']) {
+    const t = store.DEFAULT_TEMPLATES.find((x) => x.id === id);
+    if (!t) continue;
+    check(!PEDIU_NOME_E_CIDADE.test(achatar(t.text)), `"${id}" não é pedido de dados`);
+  }
 }
 
 grupo('saudação por horário');
