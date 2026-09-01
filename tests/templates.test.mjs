@@ -107,4 +107,37 @@ grupo('todos os templates padrão que têm variantes preservam o que o parser/le
   check(!store.DEFAULT_TEMPLATES.find((t) => t.id === 'pedido-emprego').variantes, 'pedido-emprego sem variantes');
 }
 
+
+grupo('o agradecimento pelo APOIO chega a quem ja tem a lista salva');
+{
+  const templates = await lib('templates.js');
+  const store = await lib('store.js');
+
+  const padrao = store.DEFAULT_TEMPLATES.find((t) => t.id === 'agradecer-apoio');
+  check(!!padrao, 'a resposta "agradecer-apoio" existe no padrao');
+  check(/apoio/i.test(padrao.text), 'ela agradece o APOIO, e nao as informacoes');
+  check(padrao.variantes.length >= 2, 'e tem variantes, como as outras');
+
+  /**
+   * Print dele (31/08): atualizou para a 0.48.0 e a tecla 8 nao apareceu. A tecla nao estava
+   * faltando — o TEXTO e que nunca tinha chegado. Mudar DEFAULT_TEMPLATES so vale para quem
+   * nunca gravou nada; quem ja usa a extensao precisa da migracao.
+   */
+  mem.migracoes = {};
+  mem.templates = [{ id: 'agradecimento', name: 'Agradecer', text: 'Obrigado pela atencao!' }];
+  check((await templates.migrarRespostaAgradecerApoio()) === true, 'acrescentou a quem nao tinha');
+  check(mem.templates.some((t) => t.id === 'agradecer-apoio'), 'a resposta entrou na lista salva');
+  check(mem.templates.length === 2, 'e nao trouxe as outras junto');
+
+  // Roda uma vez so: resposta que ele apagar de proposito nao volta.
+  check((await templates.migrarRespostaAgradecerApoio()) === false, 'nao repete na segunda vez');
+
+  // Quem ja tem, nao ganha duplicata.
+  mem.migracoes = {};
+  mem.templates = [{ id: 'agradecer-apoio', name: 'meu', text: 'MEU TEXTO' }];
+  await templates.migrarRespostaAgradecerApoio();
+  check(mem.templates.length === 1, 'nao duplica quem ja tem');
+  check(mem.templates[0].text === 'MEU TEXTO', 'e nao sobrescreve o texto dele');
+}
+
 fim();

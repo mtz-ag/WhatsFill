@@ -5,6 +5,53 @@
 
 ---
 
+## 2026-08-31 — A tecla 8 não apareceu: o texto é que nunca chegou
+
+**Relato dele**, print da 0.48.0: *"a mensagem de agradecimento pelo apoio não foi adicionada as
+opções"*, e depois *"deve ser um novo e com a tecla de acordo agradecer apoio + concluir"*.
+
+### A causa
+
+A tecla 8 só aparece se o texto dela existir e resolver as variáveis:
+
+```js
+if (!apoioTrava) opcoes.push({ tecla: '8', valor: 'apoio', ... });
+```
+
+Eu acrescentei `agradecer-apoio` a `DEFAULT_TEMPLATES` e paramei aí. Mas
+`store.get('templates')` devolve o **array salvo inteiro** — array não se mescla por espalhamento
+como `settings`. Ele já tem a lista salva (mexeu nas variações hoje), então o texto novo nunca
+chegou, e a tecla desapareceu sem erro nenhum.
+
+**A tecla não estava faltando. O texto é que nunca tinha chegado.**
+
+### O caminho errado que eu tentei primeiro
+
+Comecei mesclando dentro do `store.get`, por id. Funcionava — e **quebrou dois testes das
+migrações que já existem**. Foi assim que descobri que o projeto já tinha resolvido isto:
+`templates.garantirRespostas([ids], 'flag')`, chamada em `list()`, que *"só acrescenta o que falta,
+nunca altera nem apaga o que existe"* e roda uma vez só.
+
+Revertida a mescla; feita a migração. Uma solução por problema é melhor que duas concorrendo, e a
+que estava lá tem uma propriedade que a minha não tinha: **grava**, então ele pode editar o texto
+novo como qualquer outro.
+
+### `migrarRespostaAgradecerApoio`
+
+Flag própria (`respostaAgradecerApoio`), pelo motivo que os comentários das outras já explicavam:
+reaproveitar flag antiga faria voltar resposta que ele apagou de propósito.
+
+Nove asserções, incluindo as três que importam: não duplica quem já tem, não sobrescreve o texto
+dele, e não repete na segunda chamada.
+
+**Arquivos:** `src/lib/templates.js`, `tests/templates.test.mjs`, `CLAUDE.md`,
+`manifest.json` (0.49.0 → **0.50.0**). 29 módulos sem erro, dez suítes passando.
+
+**Ao recarregar:** a migração roda no primeiro `list()`, então a tecla 8 aparece já na primeira
+abertura do painel — sem ele precisar mexer em nada.
+
+---
+
 ## 2026-08-31 — Pular deixa de escrever no CRM
 
 **Pedido dele:** *"ao pular tem gravado dados no crm o que faz eu perder tempo com esses contatos

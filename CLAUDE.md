@@ -409,6 +409,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   a `nossaUltimaAt`. Regra nova que dependa do que a pessoa acabou de dizer: pense na rajada,
   não na última.
 
+- **Resposta pronta nova em `DEFAULT_TEMPLATES` NÃO chega em quem já usa a extensão** — e a tecla
+  que depende dela some junto, sem erro nenhum. `store.get('templates')` devolve o array salvo
+  inteiro; array não se mescla por espalhamento como `settings`. Em 31/08 a tecla 8 ("Agradecer o
+  apoio") não apareceu no painel dele por isso: **a tecla não estava faltando, o texto é que nunca
+  tinha chegado.** O caminho é `templates.garantirRespostas([ids], 'flagPropria')` chamado em
+  `list()`, com **flag nova** — reaproveitar flag antiga faz voltar resposta que ele apagou de
+  propósito. Resposta de fábrica nova sem migração é resposta que só o próximo instalador vê.
 - **Pular NÃO escreve no CRM — e o que ele escrevia estava errado duas vezes.** Custava uma
   requisição por campo mais uma de etiquetas por contato pulado, podia abrir a pergunta de cidade
   (a espera mais longa dentro de uma gravação), e gravava a **"Data de conclusão do contato" num
