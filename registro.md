@@ -94,6 +94,16 @@ passando.
 **Nota de processo:** o commit anterior (`d525b0a`) subiu sem esta entrada porque o script que a
 escreveria quebrou e eu não conferi antes de empurrar. Commit sem registro é conserto que ninguém
 consegue explicar depois — é a regra que este arquivo existe para sustentar.
+## 2026-09-01 - `nossas` ganhou o horario de cada mensagem
+
+Uma linha, e o motivo dela e do outro branch: la a conferencia de cidade por IA precisa
+intercalar os dois lados da conversa - "Maria / Cachoeirinha" so se explica depois da nossa
+pergunta - e sem `at` nas nossas mensagens nao ha como ordenar. `entrantes` ja tinha.
+
+Feito **aqui**, no branch normal, e nao la: `api.js` e dos dois, e duplicar e como as duas
+versoes divergem em uma semana. Campo novo e aditivo - nada que existe hoje le ele.
+
+**Arquivos:** `src/lib/api.js`.
 
 ---
 

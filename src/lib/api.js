@@ -399,7 +399,9 @@ export async function getConversation(sessionId, pageSize = 50) {
      */
     nossas: ordenadas
       .filter((m) => !doContato(m))
-      .map((m) => ({ texto: m.text || '', tipo: String(m.type || 'TEXT').toUpperCase() })),
+      // `at` pelo mesmo motivo que em `entrantes`: sem hora nao da para intercalar os dois lados,
+      // e "o que ela respondeu DEPOIS da nossa pergunta" e uma pergunta sobre ordem.
+      .map((m) => ({ texto: m.text || '', tipo: String(m.type || 'TEXT').toUpperCase(), at: m.createdAt || null })),
     /**
      * Quando saiu a NOSSA última mensagem, de qualquer tipo.
      *
