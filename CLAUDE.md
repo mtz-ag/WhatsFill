@@ -69,8 +69,9 @@ src/lib/hsm.js          modelos de mensagem aprovados
 src/lib/vars.js         variáveis dos templates e bloqueio por variável faltante
 src/lib/ia.js           prompt, esquema e TRAVAS da decisão por IA (puro, testado)
 src/lib/ia-cliente.js   ponte painel <-> service worker (a chave nunca entra na página)
-src/lib/sugestao.js     tabela de regras da rodada + o fluxo editavel (puro, testado)
-src/fluxo.html/.css/.js JANELA do fluxo: o mapa visual da cascata, editavel
+src/lib/sugestao.js     tabela de regras da rodada, e os verbetes dela (puro, testado)
+src/lib/arvore.js       o fluxo como ARVORE: sinais, ramos dele, decisao (puro, testado)
+src/fluxo.html/.css/.js JANELA do fluxo: a ARVORE editavel (ramo, condicao, desfecho)
 src/lib/fluxo-msg.js    a mensagem que pede ao service worker para abrir a janela
 src/data/coredes-rs.json  município -> COREDE (planilha oficial da SPGG-RS)
 tools/make-icons.mjs    desenha os ícones
@@ -338,6 +339,33 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   mais, e e olhando essa janela que ele decide a ORDEM. Lembrar tambem que **fixar a tecla na
   janela muda o efeito da regra**: o `efeito` do verbete e o do codigo, e quem le a cor do cartao
   tem que ler `efeitoDaRegra(id, fluxo)`, nunca `SOBRE[id].efeito` cru.
+
+- **A ARVORE do fluxo e o motor quando ela existe, e ela nasce IGUAL a tabela.** `store.fluxo.arvore`
+  so passa a existir depois de ele abrir a janela; ai `panel.sugerirAcaoComFluxo` chama
+  `arvore.decidir` em vez de `sugerirAcao`. A semeadura e `arvorePadrao(fluxo)` — as dezesseis
+  regras achatadas, **carregando a ordem e as desligadas da versao de lista** —, e o teste exige que
+  as duas decidam igual em 400 contextos sorteados com semente fixa. **Se essa assercao cair, abrir
+  a janela passa a mudar a rodada sem ninguem ter pedido.** Duas consequencias praticas: nunca faca
+  a arvore nascer agrupada (agrupar ja e decisao, e decisao e dele), e regra nova do codigo so
+  aparece para quem ja tem arvore se alguem a acrescentar — a heranca de posicao do `ordenar` vale
+  na semeadura, nao depois.
+- **No que casa e nao resolve NAO para a busca — de proposito.** A arvore cresce "de acordo com a
+  demanda", entao ramo pela metade vai existir (ele cria a condicao hoje e escolhe a acao amanha).
+  Se a busca parasse ali, o contato sairia da rodada sem nada acontecer e sem nada na tela dizendo
+  por que — buraco silencioso, o pior tipo de defeito deste projeto. Hoje ela segue para os irmaos
+  e `arvore.problemas` acusa o no na faixa vermelha da janela.
+- **Condicao de ramo e SINAL da lista mais palavras, nunca texto livre** (escolha dele, 01/09). Os
+  sinais de `arvore.SINAIS` sao chaves que o painel POE NO CONTEXTO: acrescentar um sinal la exige
+  alguem calcular a coisa aqui, com teste, senao o ramo nunca casa e nao acusa. Foi por isso que
+  `textos`, `ultimoTexto` e `veioDeAnuncio` entraram no ctx de `sugerirAcaoComFluxo` — sem o texto,
+  todo ramo de palavra falharia calado.
+- **Um ramo pode mandar uma RESPOSTA PRONTA, e ai a `sugestao.tecla` vem NULA.** E a tecla `f`
+  (letra, como o `s`, porque os digitos ja tem significado no dedo dele). Quem ler `sugestao.tecla`
+  para achar a opcao — o destaque, a automacao — tem que tratar `sugestao.resposta` junto, senao a
+  rodada diz "tecla nao disponivel" e para em todo contato desses. **`pedido-ajuda` sai sozinho por
+  este caminho, decisao dele (01/09):** o texto NEGA o pedido, e o risco da Lei 9.504/97 e prometer
+  beneficio. A trava da IA (`ia.RESTRITOS`) continua de pe — a IA segue sem poder escolher esse
+  texto; o que pode e um ramo que ELE escreveu.
 
 - **Regra nova no TOPO da tabela tem que ser conferida contra as regras que ela passou a vencer.**
   Pôr algo em primeiro lugar é dizer "isto vence as outras quinze", e em 01/09/2026 eu não olhei
@@ -724,10 +752,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
 > `src/` e reclama só de `SyntaxError`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as doze suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as treze suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

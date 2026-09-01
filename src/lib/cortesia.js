@@ -225,12 +225,29 @@ export function pedeRespostaPessoal(msg) {
   const tipo = String(msg?.tipo || 'TEXT').toUpperCase();
   const texto = String(msg?.texto || '');
 
-  if (TIPOS_QUE_PEDEM_VOCE.has(tipo)) {
+  /**
+   * **Áudio TRANSCRITO já é legível, e dizer o contrário é mentir na tela.**
+   *
+   * O motivo "só dá para responder depois de abrir" nasceu quando áudio chegava vazio. Hoje a
+   * plataforma manda a transcrição na própria mensagem (`transcrito: true`), o painel a exibe, e
+   * o parser a lê — então a caixa aparecia com a transcrição inteira do lado e ainda afirmando
+   * que era preciso abrir para saber o conteúdo (print de 01/09/2026).
+   *
+   * Transcrição existindo, o áudio segue pelo mesmo caminho de um texto: se for longo, é conversa
+   * e continua pedindo você; se for curto, as outras regras decidem. O que muda é que a decisão
+   * passa a considerar o CONTEÚDO em vez de parar no formato.
+   */
+  const temTranscricao = !!msg?.transcrito && !!texto.trim();
+
+  if (TIPOS_QUE_PEDEM_VOCE.has(tipo) && !temTranscricao) {
     const comoChama = NOME_DO_TIPO[tipo] || 'um arquivo';
     return { motivo: `mandou ${comoChama} — só dá para responder depois de abrir` };
   }
   if (texto.trim().length >= TEXTO_LONGO) {
-    return { motivo: `escreveu ${texto.trim().length} caracteres — é conversa, não é caso de modelo` };
+    // "Falou" quando veio de áudio: o motivo aparece na tela, e dizer que a pessoa "escreveu"
+    // 700 caracteres que ela falou faz quem lê procurar uma mensagem de texto que não existe.
+    const verbo = temTranscricao ? 'falou' : 'escreveu';
+    return { motivo: `${verbo} ${texto.trim().length} caracteres — é conversa, não é caso de modelo` };
   }
   return null;
 }
@@ -773,4 +790,134 @@ export function soCortesia(entrantes, quantas = 3) {
   if (temImagem) partes.push('mandou uma figura');
 
   return { motivo: partes.join(' e ') || 'só cortesia' };
+}
+
+// ---------------------------------------------------------------------------
+// Sem interesse: quem recusou ou quem veio hostilizar
+// ---------------------------------------------------------------------------
+
+/**
+ * Recusas EXPLÍCITAS, em qualquer lugar da mensagem.
+ *
+ * Estas não dependem de contexto nenhum: quem escreve isso está pedindo para não ser mais
+ * chamado, e continuar mandando mensagem depois é o que gera denúncia — o sinal que derruba
+ * número.
+ */
+const RECUSA_EXPLICITA =
+  /\bnao (quero|tenho|desejo|preciso|me interess)/i.source +
+  '|' +
+  /\b(sem|nenhum) interesse\b|\bme (tira|tire|retira|retire|remove|remova)\b|\b(tirar|sair|me tirem?) da lista\b|\bdescadastr|\bpara de (mandar|enviar|me chamar)\b|\bnao me (mande|manda|envie|chame|perturbe|encha)\b|\bnao insista\b/i
+    .source;
+
+const RECUSA = new RegExp(RECUSA_EXPLICITA, 'i');
+
+/**
+ * Negativas que **não** são recusa — são resposta a OUTRA pergunta.
+ *
+ * Esta lista é a trava mais importante da regra inteira. O pedido de dados termina perguntando
+ * sobre grupos, e *"Não faço parte de nenhum grupo político"* é resposta de **apoiador** — está
+ * até no teste do parser, na resposta real da Rosane. Um detector ingênuo de "começa com não"
+ * etiquetaria essa pessoa como sem interesse e a tiraria da fila.
+ *
+ * Mesma coisa com *"não sei"* na posição da cidade e *"não moro mais lá"*.
+ */
+const NEGATIVA_BENIGNA =
+  /\bnao (sei|lembro|faco parte|participo|estou em|tenho grupo|tenho whats|moro|sou de|consigo|entendi)\b|\bnenhum grupo\b|\bnao tenho nenhum\b/i;
+
+/**
+ * Negativa sobre IR ao evento — resposta ao convite, nunca recusa de contato.
+ *
+ * Quem responde ao anúncio do evento para dizer que não pode ir é apoiador: veio pelo anúncio e
+ * ainda gastou tempo respondendo. `confirmaPresenca` já trata isso, e a tecla 4 já manda "não tem
+ * problema" + pede os dados. O que faltava era esta regra sair da frente.
+ */
+const RECUSA_DE_PRESENCA =
+  /\bnao\b[^.!?]{0,40}\b(ir|vou|voy|comparecer|participar|estar (la|presente)|conseguirei|poderei|consigo|posso|da pra mim|vai dar)\b/i;
+
+/** Começa negando? É onde mora a resposta a uma pergunta fechada. */
+const COMECA_NEGANDO = /^\s*(nao|nunca|jamais|nada|negativo|dispenso)\b/i;
+
+/**
+ * Palavras que ninguém usa para falar COM quem apoia.
+ *
+ * Não entram sozinhas: insulto solto é ambíguo de direção. Apoiador chama o adversário de ladrão
+ * e de golpista o dia inteiro, e isso não é hostilidade **contra nós**.
+ */
+// O `s?` no fim é obrigatório: sem ele "vocês são uns idiotas mentirosos" passava batido, porque
+// `\b` depois de "idiota" não casa com "idiotas". Xingamento vem no plural com frequência.
+const AGRESSAO =
+  /\b(mentiros[oa]|idiota|imbecil|burr[oa]|lesma|otari[oa]|vagabund[oa]|corrupt[oa]|ladr(ao|a|oes)|safad[oa]|nojent[oa]|palhac[oa]|lixo|verme|fascista|golpista|presidiari[oa]|genocida|cretin[oa]|babaca)s?\b/i;
+
+/**
+ * Fala dirigida a NÓS. É o que separa "vocês são mentirosos" de "o adversário é mentiroso".
+ *
+ * A direção é tudo aqui. Sem ela, a mensagem de um apoiador xingando o adversário — que é o tipo
+ * mais comum de mensagem nesta base — seria etiquetada como sem interesse e sairia da fila.
+ */
+const DIRIGIDA_A_NOS = /\b(voces|voce|vocês|tu|es igual|teu|tua|seu candidato|sua campanha|de voces)\b/i;
+
+/**
+ * O contato não tem interesse — ou recusou, ou veio hostilizar.
+ *
+ * Pedido dele (01/09/2026): *"falando mal do bolsonaro e martim é aliado do bolsonaro, esse tipo
+ * nós botamos etiqueta sem interesse e concluímos sem responder"*, depois de a rodada pedir dados
+ * a dois contatos sem interesse.
+ *
+ * **Dois caminhos, e os dois exigem sinal forte:**
+ *
+ * 1. **Recusa** — pedido explícito de não ser mais chamado, ou negativa na abertura da mensagem
+ *    que não seja uma das benignas. A negativa de abertura só vale sozinha porque a pergunta que
+ *    fizemos era fechada ("posso te mandar os conteúdos?").
+ * 2. **Hostilidade dirigida a nós** — insulto **junto** de fala em segunda pessoa. As duas
+ *    condições são obrigatórias: apoiador insulta o adversário em terceira pessoa toda hora, e
+ *    tratar isso como recusa tiraria da fila justamente quem mais apoia.
+ *
+ * Olha só a ÚLTIMA mensagem: quem recusou depois de conversar recusou agora, e quem xingou ontem
+ * e voltou hoje pedindo conteúdo mudou de ideia.
+ *
+ * @param {Array<{texto?:string, tipo?:string}>} entrantes
+ * @returns {{motivo:string}|null}
+ */
+export function semInteresse(entrantes) {
+  const lista = Array.isArray(entrantes) ? entrantes : [];
+  const ultima = [...lista].reverse().find((m) => String(m?.texto || '').trim());
+  if (!ultima) return null;
+
+  const texto = String(ultima.texto || '');
+  const norm = texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!norm) return null;
+
+  if (RECUSA.test(norm) && !NEGATIVA_BENIGNA.test(norm)) {
+    return { motivo: 'pediu para não receber mais' };
+  }
+
+  /**
+   * **Recusar o EVENTO não é recusar o contato** — e confundir os dois foi regressão minha,
+   * no mesmo dia (01/09/2026).
+   *
+   * Print do Ze: veio do anúncio do evento e respondeu *"Não conseguirei ir!"*. Como esta regra é
+   * a primeira da tabela, ela venceu `confirmaPresenca` (que acertava, devolvendo `nao`), etiquetou
+   * como sem interesse e concluiu **em silêncio**. Era a pessoa mais engajada possível — veio do
+   * anúncio E se deu o trabalho de responder — e o certo era dizer que não tem problema e pedir os
+   * dados (tecla 4, que já existe para isso).
+   *
+   * Vem DEPOIS da recusa explícita de propósito: *"não vou mais receber isso, me tira da lista"*
+   * tem verbo de ir dentro e continua sendo recusa de contato.
+   */
+  if (RECUSA_DE_PRESENCA.test(norm)) return null;
+
+  const agride = AGRESSAO.test(norm) && DIRIGIDA_A_NOS.test(norm);
+  if (agride) return { motivo: 'veio hostilizar, não é público do mandato' };
+
+  if (COMECA_NEGANDO.test(norm) && !NEGATIVA_BENIGNA.test(norm)) {
+    // A negativa de abertura vale porque a pergunta era fechada. Se ela vier junto de agressão, o
+    // motivo é o mais forte dos dois — é o que aparece na tela e no log.
+    return { motivo: AGRESSAO.test(norm) ? 'respondeu que não e veio hostilizar' : 'respondeu que não tem interesse' };
+  }
+
+  return null;
 }

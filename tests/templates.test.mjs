@@ -205,4 +205,34 @@ grupo('as duas respostas do convite de evento');
   check((await templates.migrarRespostasDeEvento()) === false, 'nao repete na segunda vez');
 }
 
+grupo('ehPedidoDeDados — reconhece pelo INVARIANTE, não pela redação (01/09/2026)');
+{
+  /**
+   * Print da Loreta: ela recebeu o pedido de dados numa redação ANTIGA em 31/08, respondeu com
+   * nome e cidade, e recebeu a mensagem do momento em vez do modelo que nunca tinha recebido.
+   * O painel decidia "isso foi uma pergunta?" comparando com o texto ATUAL do template — e a
+   * redação dela já não existia.
+   */
+  const { ehPedidoDeDados } = templates;
+  const storeLib = store;
+  const antiga =
+    'Boa tarde! Que bom ter você com a gente. Para eu poder salvar seu contato me passe seu: ' +
+    'Nome / Cidade (exemplo: Maria Silva / Santo Ângelo)';
+  check(ehPedidoDeDados(antiga), 'a redação ANTIGA que a Loreta recebeu é reconhecida');
+
+  const atual = storeLib.DEFAULT_TEMPLATES.find((t) => t.id === 'pedir-dados');
+  check(ehPedidoDeDados(atual.text), 'o texto atual do pedir-dados');
+  (atual.variantes || []).forEach((v, i) => {
+    check(ehPedidoDeDados(v), `a variante ${i + 1} do pedir-dados`);
+  });
+  check(ehPedidoDeDados(storeLib.INTERESSE_CONTEUDO), 'a pergunta de interesse (Sim / Nome completo / Cidade)');
+
+  // O que NÃO pode ser confundido com pergunta: se virar, o contato deixa de receber o modelo.
+  check(!ehPedidoDeDados("O RIO GRANDE VAI MOSTRAR A SUA FORCA! No dia 2 tem carreata"), "modelo de conteúdo não é pergunta");
+  check(!ehPedidoDeDados("Obrigado pela atenção! Qualquer coisa é só chamar por aqui."), "agradecimento não é pergunta");
+  check(!ehPedidoDeDados("Boa tarde! Que Deus abençoe o seu dia e a sua família."), "mensagem do momento não é pergunta");
+  check(!ehPedidoDeDados(""), "vazio");
+  check(!ehPedidoDeDados(null), "nulo não explode");
+}
+
 fim();

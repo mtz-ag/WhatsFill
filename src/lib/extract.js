@@ -12,23 +12,19 @@
 import * as cities from './cities.js';
 import * as store from './store.js';
 
-/** Palavra-chave → nome da opção real de "Tema de Interesse". */
-const TEMA_KEYWORDS = [
-  [/\bimpress[oa]s?\b|\bpanfleto|\badesivo|\bmaterial\b/i, 'Aceitou receber material impresso'],
-  [/\bmuito engajad|\bquero ajudar\b|\bajudar bastante\b|\bvoluntari|\bmilitar em favor/i, 'Apoiador Muito engajado'],
-  [/\bapoiador\b|\bapoio\b|\bsou apoiador/i, 'Apoiador Engajado'],
-  [/\bde longe\b|\bacompanh(o|ar) de longe\b|\bsó acompanho\b/i, 'Apoiador não engajado'],
-  [/\bresolvi\b|\bresolvido\b|\bresolveu\b|\bdeu certo\b/i, 'Resolvemos problema'],
-  [/\bnão resolv|\bnao resolv|\bcontinua o problema\b/i, 'Não resolvemos o problema'],
-];
-
 /**
+ * O parser extrai **Nome e Cidade**, e mais nada.
+ *
+ * "Tema de Interesse", "Função" e "Partido" saíram em 01/09/2026 por pedido dele (*"não preciso
+ * preencher isso"*). `temaField` era o segundo parâmetro daqui e sumiu junto — quem ainda passar
+ * o objeto de opções não quebra, só é ignorado.
+ *
  * @param {string[]} texts mensagens recebidas do contato, da mais antiga para a mais nova
- * @param {object} opts
- * @param {object} [opts.temaField] campo "Tema de Interesse" do schema (para virar id de opção)
+ * @param {object} [opts]
+ * @param {boolean} [opts.respostaAoPedido] a nossa última mensagem foi o pedido de dados
  * @returns {Promise<object>} palpites por campo
  */
-export async function extract(texts, { temaField, respostaAoPedido = false } = {}) {
+export async function extract(texts, { respostaAoPedido = false } = {}) {
   const dicts = await store.get('dicts');
   const list = (texts || []).filter(Boolean);
   const joined = list.join('\n');
@@ -158,40 +154,15 @@ export async function extract(texts, { temaField, respostaAoPedido = false } = {
     };
   }
 
-  // --- Função -------------------------------------------------------------
-  const funcaoHay = structured?.funcao || joined;
-  const funcao = matchDict(funcaoHay, dicts.funcao) || matchDict(joined, dicts.funcao);
-  if (funcao) {
-    guesses.funcao = {
-      value: titleCase(funcao.term),
-      confidence: structured?.funcao ? 'exata' : 'aproximada',
-      source: funcao.snippet,
-    };
-  } else if (structured?.funcao) {
-    guesses.funcao = { value: titleCase(structured.funcao), confidence: 'nao-reconhecida', source: structured.funcao };
-  }
-
-  // --- Partido ------------------------------------------------------------
-  const partido = matchPartido(joined, dicts.partido);
-  if (partido) {
-    guesses.partido = { value: partido.term, confidence: 'aproximada', source: partido.snippet };
-  }
-
-  // --- Tema de Interesse --------------------------------------------------
-  const temaNames = await matchTema(list, joined);
-  if (temaNames.length && temaField) {
-    const ids = temaNames
-      .map((name) => temaField.options.find((o) => o.name === name)?.id)
-      .filter(Boolean);
-    if (ids.length) {
-      guesses.tema = {
-        value: ids,
-        labels: temaNames,
-        confidence: 'aproximada',
-        source: temaNames.join(', '),
-      };
-    }
-  }
+  // Função, Partido e Tema de Interesse SAÍRAM em 01/09/2026, a pedido dele (*"não preciso
+  // preencher isso"*). Não foram só desligados na tela: deixar o parser extraindo o que ninguém
+  // grava custa processamento a cada mensagem e, pior, deixa `guesses.partido` e companhia
+  // atravessando o painel esperando um consumidor que não existe mais — é assim que campo removido
+  // volta sozinho no primeiro caminho novo.
+  //
+  // A lista de siglas de partido CONTINUA existindo, e é usada logo acima: `limparSiglas` tira
+  // "PL"/"PP" de dentro do nome ("Jeane do PL" → "Jeane"). Ela virou dicionário de limpeza de
+  // nome, não fonte de um campo.
 
   return guesses;
 }
@@ -275,7 +246,22 @@ export function limparSiglas(nome, siglas = []) {
  */
 export async function findStructured(texts, isCity) {
   for (const text of [...texts].reverse()) {
-    for (const separador of [/\n/, /\//, /[;|]/, /,/]) {
+    /**
+     * A ordem é a prioridade: quebra de linha, barra, ponto-e-vírgula, vírgula — e só então
+     * **ponto** e **hífen cercado de espaço**.
+     *
+     * O ponto entrou em 01/09/2026, com o print da Nilza: ela respondeu o formulário como
+     * `Nilza krumenauer . rolante RGS :` e **nada** foi extraído, porque ponto não separava. Com
+     * barra ou vírgula a mesma frase sempre funcionou — foi a terceira vez no mesmo dia em que o
+     * defeito era "a pessoa usou um separador que a gente não previu", e o sintoma é sempre o
+     * mesmo: a rodada conclui que faltam dados e manda outra coisa.
+     *
+     * **Vêm por último de propósito**, e as travas de `findStructured` são o que os tornam
+     * seguros: de 2 a 4 pedaços, cada um com no máximo 60 caracteres, e **um deles tem que ser
+     * exatamente um município**. Frase comum quebrada no ponto não passa nesse último teste.
+     * O ponto exige espaço de um dos lados para não partir abreviação — "Sto. Angelo" fica inteiro.
+     */
+    for (const separador of [/\n/, /\//, /[;|]/, /,/, /\s\.|\.\s/, /\s-\s/]) {
       const partes = text.split(separador).map((p) => p.trim()).filter(Boolean);
       if (partes.length < 2 || partes.length > 4) continue;
       if (partes.some((p) => p.length > 60)) continue;
@@ -294,13 +280,13 @@ export async function findStructured(texts, isCity) {
       if (idx < 0) continue;
 
       const anterior = idx > 0 ? partes[idx - 1] : null;
-      const posterior = idx + 1 < partes.length ? partes[idx + 1] : null;
 
+      // O pedaço DEPOIS da cidade continua sendo tolerado (a resposta em três partes ainda casa a
+      // cidade), só não vira mais campo: era o "Função", removido em 01/09/2026.
       return {
         nome: plausivelNome(anterior) ? limparSiglas(anterior) : null,
         cidade,
         cidadeInformada: partes[idx],
-        funcao: posterior || null,
         raw: text,
       };
     }
@@ -321,7 +307,9 @@ async function cidadeSozinha(textos) {
 
     const hit = await cities.matchCity(t);
     // Nome COMPLETO, não prefixo: "Vitória" pode ser gente, "Vitória das Missões" não.
-    if (hit?.confidence === 'exata' && cities.normalize(t) === cities.normalize(hit.city)) {
+    // A sigla do estado no fim sai antes de comparar: "Canoas RS" é a pessoa informando Canoas,
+    // e sem isto a igualdade falhava e a cidade não contava como informada (01/09/2026).
+    if (hit?.confidence === 'exata' && cities.formaCanonica(t) === cities.normalize(hit.city)) {
       return { city: hit.city, confidence: 'exata', matched: t };
     }
   }
@@ -336,7 +324,7 @@ async function cidadeSozinha(textos) {
 async function isCityAlone(parte) {
   const hit = await cities.matchCity(parte);
   if (!hit) return null;
-  const p = cities.normalize(parte);
+  const p = cities.formaCanonica(parte);
   if (p === cities.normalize(hit.city)) return hit.city;
   // Erro de digitação: aceita quando o pedaço INTEIRO foi o que casou, não um trecho dele.
   if (hit.confidence === 'aproximada' && cities.normalize(hit.matched || '') === p) return hit.city;
@@ -350,6 +338,17 @@ async function isCityAlone(parte) {
  */
 function cityPositionGuess(texts) {
   for (const text of [...texts].reverse()) {
+    /**
+     * **Ponto e hífen NÃO entram aqui**, ao contrário de `findStructured`.
+     *
+     * Lá o pedaço precisa ser **exatamente** um município para virar valor, e é essa trava que
+     * torna seguro quebrar no ponto. Aqui não há trava nenhuma: o que sair vira palpite
+     * "não-reconhecida" com sugestões, ou seja, **um popup pedindo confirmação**. Medido em
+     * 01/09/2026: com o ponto, *"Vamos juntos mudar o Rio Grande. Conto contigo"* passava a
+     * oferecer "Conto contigo" como cidade a confirmar.
+     *
+     * Alarme que toca à toa é alarme que se aprende a ignorar — a lista curta fica.
+     */
     for (const separador of [/\n/, /\//, /[;|]/, /,/]) {
       const partes = text.split(separador).map((p) => p.trim()).filter(Boolean);
       if (partes.length < 2 || partes.length > 4) continue;
@@ -373,46 +372,6 @@ function plausivelNome(parte) {
   if (palavras.length < 1 || palavras.length > 4) return false;
   // Só sigla ("PL", "srn") não é nome: se depois da limpeza não sobra nada, não era nome.
   return !!limparSiglas(s);
-}
-
-function matchDict(text, terms) {
-  const norm = cities.normalize(text);
-  let best = null;
-  for (const term of terms || []) {
-    const t = cities.normalize(term);
-    if (!t) continue;
-    const re = new RegExp(`(^|\\s)${escapeRe(t)}(\\s|$)`);
-    if (re.test(norm) && (!best || t.length > cities.normalize(best.term).length)) {
-      best = { term, snippet: term };
-    }
-  }
-  return best;
-}
-
-/** Sigla de partido: exige token isolado, no texto original, para não pegar "PT" dentro de palavra. */
-function matchPartido(text, siglas) {
-  for (const sigla of siglas || []) {
-    const re = new RegExp(`(^|[^\\p{L}])${escapeRe(sigla)}([^\\p{L}]|$)`, 'u');
-    if (re.test(text)) return { term: sigla.toUpperCase(), snippet: sigla };
-  }
-  return null;
-}
-
-async function matchTema(texts, joined) {
-  const numberMap = await store.get('temaByNumber');
-  const found = new Set();
-
-  // Resposta que é só um número (ou "opção 2", "2)") → mapa numérico do template.
-  for (const text of texts) {
-    const m = /^\s*(?:op(?:ç|c)(?:ão|ao)\s*)?([1-9])\s*[).\-]?\s*$/i.exec(text);
-    if (m && numberMap[m[1]]) found.add(numberMap[m[1]]);
-  }
-
-  for (const [re, name] of TEMA_KEYWORDS) {
-    if (re.test(joined)) found.add(name);
-  }
-
-  return [...found];
 }
 
 function escapeRe(s) {

@@ -28,26 +28,11 @@ const { extract, findStructured, limparSiglas, rebaixarParaPalpite } = await lib
 const municipios = await cities.loadMunicipios();
 console.log(`municípios carregados: ${municipios.length}`);
 
-/** Campo "Tema de Interesse" como está no schema real do cliente. */
-const temaField = {
-  name: 'Tema de Interesse',
-  type: 'MULTISELECT',
-  isSelect: true,
-  options: [
-    { id: 'opt-impresso', name: 'Aceitou receber material impresso' },
-    { id: 'opt-muito', name: 'Apoiador Muito engajado' },
-    { id: 'opt-eng', name: 'Apoiador Engajado' },
-    { id: 'opt-nao', name: 'Apoiador não engajado' },
-    { id: 'opt-resolv', name: 'Resolvemos problema' },
-    { id: 'opt-naoresolv', name: 'Não resolvemos o problema' },
-  ],
-};
-
 const casos = [
   {
     titulo: 'resposta no formato pedido',
     msgs: ['Olá! Eu aceito receber conteúdos do Zucco e do Cap Martim.', 'Maria Silva / Santo Ângelo / voluntária'],
-    esperado: { cidade: 'Santo Ângelo', funcao: /Volunt/i, nome: 'Maria Silva' },
+    esperado: { cidade: 'Santo Ângelo', nome: 'Maria Silva' },
   },
   {
     // Caso real: a pessoa respondeu com vírgula e só dois campos, minúsculo.
@@ -66,9 +51,11 @@ const casos = [
     esperado: { cidade: 'Erechim', semNome: true },
   },
   {
-    titulo: 'formato pedido, com abreviação e partido',
+    // O "PP" e o "vereador" já não viram campo (removidos em 01/09/2026). O que este caso ainda
+    // trava é o que importa: abreviação de município casa, e o terceiro pedaço não atrapalha.
+    titulo: 'formato pedido com abreviação, e o terceiro pedaço ignorado',
     msgs: ['João Pedro / Sto Angelo / vereador pelo PP'],
-    esperado: { cidade: 'Santo Ângelo', partido: 'PP' },
+    esperado: { cidade: 'Santo Ângelo', nome: 'João Pedro' },
   },
   {
     titulo: 'texto solto, cidade no meio da frase',
@@ -100,14 +87,11 @@ const casos = [
     esperado: { cidade: 'São Lourenço do Sul' },
   },
   {
-    titulo: 'resposta numerada para o tema',
+    // Era "resposta numerada para o tema". O campo saiu; o que sobra de valor é que uma mensagem
+    // solta com um número NÃO estraga a cidade lida na mensagem anterior.
+    titulo: 'número solto depois não apaga a cidade',
     msgs: ['Ana / Bagé / apoiadora', '2'],
-    esperado: { cidade: 'Bagé', tema: ['Apoiador Muito engajado'] },
-  },
-  {
-    titulo: 'material impresso por palavra-chave',
-    msgs: ['quero receber material impresso em Pelotas'],
-    esperado: { cidade: 'Pelotas', tema: ['Aceitou receber material impresso'] },
+    esperado: { cidade: 'Bagé', nome: 'Ana' },
   },
   {
     titulo: 'cidade inexistente vira sugestão, não invenção',
@@ -115,14 +99,14 @@ const casos = [
     esperado: { cidadeNaoReconhecida: true },
   },
   {
-    titulo: 'sigla de partido não casa dentro de palavra',
+    titulo: 'sigla dentro de palavra não estraga a leitura',
     msgs: ['Sou de Erechim e trabalho no transporte'],
-    esperado: { cidade: 'Erechim', semPartido: true },
+    esperado: { cidade: 'Erechim' },
   },
   {
     titulo: 'três linhas em vez de barras',
     msgs: ['Fernanda Santos\nSanta Maria\nprofessora'],
-    esperado: { cidade: 'Santa Maria', funcao: /Professor/i },
+    esperado: { cidade: 'Santa Maria', nome: 'Fernanda Santos' },
   },
   {
     // Resposta real, com saudação antes e a pergunta dos grupos depois: quatro pedaços.
@@ -140,7 +124,7 @@ const casos = [
 ];
 
 for (const caso of casos) {
-  const g = await extract(caso.msgs, { temaField });
+  const g = await extract(caso.msgs);
   grupo(caso.titulo);
   const e = caso.esperado;
 
@@ -155,14 +139,7 @@ for (const caso of casos) {
   }
   if (e.nome) check(g.nome?.value === e.nome, `nome = ${g.nome?.value ?? '(nada)'} [esperado ${e.nome}]`);
   if (e.semNome) check(!g.nome, `nenhum nome extraído = ${g.nome?.value ?? '(nada)'}`);
-  if (e.funcao) check(e.funcao.test(g.funcao?.value || ''), `função = ${g.funcao?.value ?? '(nada)'}`);
-  if (e.partido) check(g.partido?.value === e.partido, `partido = ${g.partido?.value ?? '(nada)'}`);
-  if (e.semPartido) check(!g.partido, `nenhum partido = ${g.partido?.value ?? '(nada)'}`);
-  if (e.tema) {
-    const labels = g.tema?.labels || [];
-    check(e.tema.every((t) => labels.includes(t)), `tema = ${JSON.stringify(labels)}`);
-  }
-  if (e.vazio) check(!g.cidade && !g.funcao && !g.partido, `nada extraído = ${JSON.stringify(Object.keys(g))}`);
+  if (e.vazio) check(!g.cidade && !g.nome, `nada extraído = ${JSON.stringify(Object.keys(g))}`);
 }
 
 grupo('findStructured');
@@ -172,7 +149,10 @@ grupo('findStructured');
     return hit && cities.normalize(p) === cities.normalize(hit.city) ? hit.city : null;
   };
   const ok = await findStructured(['Maria / Santo Ângelo / voluntária'], isCity);
-  check(ok?.cidade === 'Santo Ângelo' && ok.nome === 'Maria' && ok.funcao === 'voluntária', `casou = ${JSON.stringify(ok)}`);
+  // O terceiro pedaço ("voluntária") continua sendo TOLERADO — a resposta em três partes ainda
+  // casa a cidade. Ele só não vira mais campo: "Função" saiu em 01/09/2026.
+  check(ok?.cidade === 'Santo Ângelo' && ok.nome === 'Maria', `casou = ${JSON.stringify(ok)}`);
+  check(ok?.funcao === undefined, 'e não devolve mais função');
   check((await findStructured(['e/ou isso aqui não é formulário'], isCity)) === null, 'não casa frase solta com barra');
   check((await findStructured(['achei ótimo, obrigado'], isCity)) === null, 'não casa frase sem cidade');
 }
@@ -257,6 +237,102 @@ grupo('"Capitão Martim" não é a cidade Capitão');
   check((await cities.matchCity('Capela de Santana'))?.city === 'Capela de Santana', 'Capela de Santana também');
 }
 
+grupo('cidade abreviada NÃO pode impedir o NOME de ser extraído (01/09/2026)');
+{
+  // Print dele: o contato respondeu "Ulises Sanchez / S.do Livramento.RS" às 18:19 e recebeu o
+  // MESMO pedido de dados no dia seguinte. A cidade já tinha sido consertada; o que faltava era o
+  // nome — `findStructured` desiste quando nenhum pedaço é "exatamente" o município, e
+  // "S.do Livramento.RS" não era, então não havia como separar nome de cidade. Sem nome, a regra
+  // pedia os dados de novo.
+  //
+  // Dois consertos, e o primeiro é um palpite antigo que estava errado: o alias `s.` → "sao"
+  // transformava "S.do Livramento" em "São do Livramento", e **"São do ..." não é município
+  // nenhum** — "São" sempre precede nome de santo.
+  const r = async (...m) => await extract(m);
+
+  const caso = await r('Ulises Sanchez / S.do Livramento.RS');
+  check(caso.cidade?.value === 'Santana do Livramento', `cidade = ${caso.cidade?.value ?? '(nada)'}`);
+  check(caso.nome?.value === 'Ulises Sanchez', `nome = ${caso.nome?.value ?? '(nada)'} — é o que impede pedir os dados de novo`);
+  check(caso.cidade?.informada === true, 'e conta como informada pela pessoa');
+
+  check(cities.formaCanonica('S.do Livramento.RS') === 'santana do livramento', 'formaCanonica resolve abreviação + encurtamento + sigla');
+  check(cities.formaCanonica('Livramento') === 'santana do livramento', 'e o encurtamento sozinho');
+  check(cities.formaCanonica('Canoas RS') === 'canoas', 'e a sigla sozinha');
+
+  // O lado perigoso do afrouxamento: frase não pode virar cidade INFORMADA, porque informada
+  // substitui o que está no CRM.
+  const naoInformada = async (m) => (await extract([m])).cidade?.informada !== true;
+  check(await naoInformada('Vamos juntos mudar o Rio Grande'), 'o slogan não vira cidade informada');
+  check(await naoInformada('boa tarde, sou de Pelotas e quero ajudar'), 'frase com pista não é informada (só palpite)');
+  check(await naoInformada('Maria, moro em Canoas e trabalho muito'), 'frase com nome e pista também não');
+  check(await naoInformada('S.do meu coracao'), 'abreviação em frase qualquer não casa nada');
+  check(await naoInformada('Ana / Vitoria'), '"Vitoria" solto continua esperando clique');
+}
+
+grupo('sigla do estado no fim não pode impedir a cidade de contar como INFORMADA (01/09/2026)');
+{
+  // Print dele: o contato mandou o nome numa mensagem e "Canoas RS" na seguinte, e a cidade não
+  // foi assumida. O casamento nunca falhou — "Canoas RS" sempre achou Canoas. O que falhava era a
+  // igualdade que decide se a pessoa INFORMOU a cidade: `"canoas rs" !== "canoas"`.
+  //
+  // O efeito era silencioso e grave: cidade reconhecida, mas `informada: false` — não substituía o
+  // CRM e ficava esperando um clique que, na rodada automatizada, ninguém dá.
+  const informada = async (...msgs) => (await extract(msgs)).cidade?.informada === true;
+  const valor = async (...msgs) => (await extract(msgs))?.cidade?.value ?? null;
+
+  check(await informada('Canoas RS'), '"Canoas RS" conta como informada pela pessoa');
+  check((await valor('Canoas RS')) === 'Canoas', 'e o valor é o nome oficial, sem a sigla');
+  check(await informada('Inês Dedea Cardoso', 'Canoas RS'), 'nome numa mensagem e "Canoas RS" na outra: informada');
+  check(await informada('Canoas - RS'), 'com hífen também');
+  check(await informada('Canoas/RS'), 'com barra também');
+  check(await informada('Porto Alegre RS'), 'município de duas palavras também');
+  check(await informada('Canoas'), 'sem sufixo continua valendo (não regrediu)');
+
+  // Segundo print do mesmo dia, com a sigla ABREVIADA: "Erechim rgds". A primeira versão do
+  // conserto só cobria "rs" e este passou batido — "às vezes pega a cidade, às vezes não" é o pior
+  // sintoma possível, porque parece defeito aleatório em vez de lista incompleta.
+  check(await informada('Erechim rgds'), '"Erechim rgds" (RGDS = Rio Grande do Sul) conta como informada');
+  check(await informada('Erechim rgs'), '"rgs" também');
+  check((await valor('Erechim rgds')) === 'Erechim', 'e o valor é o município, sem a sigla');
+
+  // A guarda que não pode cair junto: "Rio Grande" é MUNICÍPIO, o estado por extenso não é cidade.
+  check((await valor('Rio Grande')) === 'Rio Grande', 'o município Rio Grande continua sendo cidade');
+  check((await valor('Rio Grande RS')) === 'Rio Grande', 'e com a sigla junto também');
+  check((await valor('sou do Rio Grande do Sul')) === null, 'o estado por extenso continua não sendo cidade');
+
+  // O sufixo só sai do FIM. "RS" no meio pode ser outra coisa, e nenhum município do RS termina
+  // em " RS" — por isso tirar do fim é seguro e tirar do meio não seria.
+  check(cities.semSufixoDeEstado('Canoas RS') === 'canoas', 'semSufixoDeEstado tira do fim');
+  check(cities.semSufixoDeEstado('Canoas') === 'canoas', 'sem sufixo não muda nada');
+  check(cities.semSufixoDeEstado('Rio Grande') === 'rio grande', 'o município Rio Grande não é confundido com o estado');
+}
+
+grupo('ponto colado não pode colar as palavras (bug de 01/09/2026)');
+{
+  // Contato real escreveu "Ulises Sanchez / S.do Livramento.RS" e a cidade caiu como
+  // não-reconhecida. `normalize` APAGAVA o ponto em vez de trocar por espaço, então
+  // "Livramento.RS" virava "livramentors" e o encurtamento /\blivramento\b/ não casava mais —
+  // a fronteira de palavra tinha sumido junto com o ponto. Com espaço ou hífen sempre funcionou;
+  // era só a forma colada que ficava de fora.
+  //
+  // O estrago não parava na cidade: sem cidade reconhecida a rodada sugeriu "peça os dados" a
+  // quem já tinha mandado nome e cidade.
+  const hit = async (t) => cities.matchCity(t);
+
+  check((await hit('Livramento.RS'))?.city === 'Santana do Livramento', '"Livramento.RS" casa');
+  check((await hit('S.do Livramento.RS'))?.city === 'Santana do Livramento', 'a forma exata do contato casa');
+  check((await hit('Canoas.RS'))?.city === 'Canoas', 'sufixo colado não atrapalha município de uma palavra');
+  check((await hit('P.Alegre'))?.city === 'Porto Alegre', 'abreviação colada continua valendo');
+
+  // O ponto vira espaço, e espaço já era o caso que funcionava — estes travam o que não pode
+  // regredir junto.
+  check((await hit('Livramento RS'))?.city === 'Santana do Livramento', 'com espaço continua casando');
+  check((await hit('Livramento - RS'))?.city === 'Santana do Livramento', 'com hífen continua casando');
+
+  // Trocar ponto por espaço não pode transformar texto que NÃO é cidade em cidade.
+  check((await hit('não sei.RS')) === null, 'texto que não é município continua sem casar');
+}
+
 grupo('nome de cidade encurtado (não precisa estar perfeito)');
 {
   // "Nomes de cidade não sendo pegos se não estiverem perfeitamente escritos": o casamento por
@@ -304,11 +380,11 @@ grupo('sigla não é nome de gente');
   check(limparSiglas('Ivo de Souza') === 'Ivo de Souza', 'partícula no meio do nome não é mexida');
 
   // E o caminho inteiro: a resposta ao formulário com o partido colado no nome.
-  const g = await extract(['Jeane do PL / Palmares do Sul'], { temaField });
+  const g = await extract(['Jeane do PL / Palmares do Sul']);
   check(g.nome?.value === 'Jeane', `nome = ${g.nome?.value} [esperado Jeane]`);
   check(g.cidade?.value === 'Palmares do Sul', `cidade = ${g.cidade?.value}`);
 
-  const semNome = await extract(['srn / Pelotas'], { temaField });
+  const semNome = await extract(['srn / Pelotas']);
   check(!semNome.nome, 'sigla na posição do nome não vira nome (fica vazio para você preencher)');
   check(semNome.cidade?.value === 'Pelotas', 'e a cidade da mesma linha continua sendo lida');
 }
@@ -317,20 +393,20 @@ grupo('resposta à pergunta de interesse: "Sim / Nome / Cidade"');
 {
   // A pergunta de interesse passou a pedir os dados junto, então esta é a forma mais comum de
   // resposta do fluxo. O "Sim" na frente não pode virar o nome do eleitor.
-  const g = await extract(['Sim / Maria Silva / Palmares do Sul'], { temaField });
+  const g = await extract(['Sim / Maria Silva / Palmares do Sul']);
   check(g.nome?.value === 'Maria Silva', `nome = ${g.nome?.value ?? '(nada)'} [esperado Maria Silva]`);
   check(g.cidade?.value === 'Palmares do Sul', `cidade = ${g.cidade?.value}`);
 
-  const virgula = await extract(['Sim, Maria Silva, Palmares do Sul'], { temaField });
+  const virgula = await extract(['Sim, Maria Silva, Palmares do Sul']);
   check(virgula.nome?.value === 'Maria Silva', `com vírgula, nome = ${virgula.nome?.value ?? '(nada)'}`);
 
   // Cidade antes do nome: é aqui que o "Sim" viraria nome se ele não estivesse na lista de
   // aberturas descartadas.
-  const invertido = await extract(['Sim / Palmares do Sul / Maria Silva'], { temaField });
+  const invertido = await extract(['Sim / Palmares do Sul / Maria Silva']);
   check(invertido.nome?.value !== 'Sim', `"Sim" não vira nome = ${invertido.nome?.value ?? '(nada)'}`);
   check(invertido.cidade?.value === 'Palmares do Sul', 'e a cidade continua sendo lida');
 
-  const recusa = await extract(['Não, obrigado'], { temaField });
+  const recusa = await extract(['Não, obrigado']);
   check(!recusa.nome, '"Não" também não vira nome');
 }
 
@@ -338,11 +414,11 @@ grupo('cidade informada pela pessoa pode substituir a do CRM');
 {
   // A marca `informada` é o que autoriza a substituição no painel: só resposta estruturada
   // ("Nome / Cidade") a recebe. Cidade citada no meio da conversa continua sendo só palpite.
-  const formulario = await extract(['Luís Antônio dos Santos / Palmares do Sul'], { temaField });
+  const formulario = await extract(['Luís Antônio dos Santos / Palmares do Sul']);
   check(formulario.cidade?.informada === true, 'resposta ao formulário marca a cidade como informada');
   check(formulario.cidade?.confidence === 'exata', 'e ela é exata');
 
-  const conversa = await extract(['oi, tudo bem? sou de Pelotas e quero ajudar'], { temaField });
+  const conversa = await extract(['oi, tudo bem? sou de Pelotas e quero ajudar']);
   check(!conversa.cidade?.informada, 'cidade citada na conversa NÃO é informada — não substitui nada');
 }
 
@@ -352,22 +428,21 @@ grupo('mensagem que é SÓ a cidade conta como informada pela pessoa');
   // mandou uma única mensagem, "PORTO ALEGRE". Como só resposta com separador contava como
   // informada, a cidade errada ficava no lugar, levando o COREDE errado junto.
   const g = await extract(
-    ['Olá! Eu aceito receber conteúdos do Flávio Bolsonaro e do Cap Martim.', 'Meus parentes', 'PORTO ALEGRE'],
-    { temaField }
+    ['Olá! Eu aceito receber conteúdos do Flávio Bolsonaro e do Cap Martim.', 'Meus parentes', 'PORTO ALEGRE']
   );
   check(g.cidade?.value === 'Porto Alegre', `cidade = ${g.cidade?.value ?? '(nada)'}`);
   check(g.cidade?.informada === true, 'marcada como informada — é o que substitui a cidade do CRM');
 
   // Correção vale mais que a primeira resposta.
-  const corrigiu = await extract(['Canoas', 'Porto Alegre'], { temaField });
+  const corrigiu = await extract(['Canoas', 'Porto Alegre']);
   check(corrigiu.cidade?.value === 'Porto Alegre', `a última cidade mandada é que vale = ${corrigiu.cidade?.value}`);
 
   // Cidade no meio de uma frase continua sendo palpite: não substitui nada.
-  const naFrase = await extract(['boa tarde, sou de Pelotas e quero ajudar'], { temaField });
+  const naFrase = await extract(['boa tarde, sou de Pelotas e quero ajudar']);
   check(naFrase.cidade?.value === 'Pelotas' && !naFrase.cidade.informada, 'no meio da frase NÃO é informada');
 
   // Encurtamento de uma palavra não autoriza troca: pode ser nome de gente.
-  const curta = await extract(['Vitória'], { temaField });
+  const curta = await extract(['Vitória']);
   check(!curta.cidade?.informada, '"Vitória" sozinho não substitui a cidade do CRM');
 }
 
@@ -578,6 +653,42 @@ grupo('resposta a UMA PERGUNTA NOSSA: nome e cidade sem separador');
   // Sem a pergunta feita, a menção solta continua exigindo contexto.
   const semPergunta = await extract(['Vamos juntos mudar o Rio Grande'], {});
   check(!semPergunta.cidade, 'sem pergunta, o slogan segue fora');
+}
+
+grupo('separador que a pessoa escolheu: ponto e hifen (print da Nilza, 01/09/2026)');
+{
+  /**
+   * Ela respondeu o formulario como "Nilza krumenauer . rolante RGS :" e NADA foi extraido --
+   * ponto nao separava. Com barra ou virgula a mesma frase sempre funcionou, o que faz o defeito
+   * parecer aleatorio. Sem nome e sem cidade, a rodada concluiu que faltavam dados e mandou a
+   * mensagem do momento.
+   */
+  const g = async (m) => await extract([m]);
+
+  const nilza = await g('Nilza krumenauer . rolante RGS :');
+  check(nilza.cidade?.value === 'Rolante', `cidade = ${nilza.cidade?.value ?? '(nada)'}`);
+  check(nilza.nome?.value === 'Nilza Krumenauer', `nome = ${nilza.nome?.value ?? '(nada)'}`);
+  check(nilza.cidade?.informada === true, 'conta como informada pela pessoa');
+
+  const hifen = await g('Maria Silva - Canoas');
+  check(hifen.cidade?.value === 'Canoas' && hifen.nome?.value === 'Maria Silva', 'hifen cercado de espaco tambem separa');
+
+  const semEspaco = await g('Maria Silva. Canoas');
+  check(semEspaco.cidade?.value === 'Canoas', 'ponto com espaco de um lado so');
+
+  // Abreviacao NAO pode ser partida pelo ponto.
+  const abrev = await g('Sto. Angelo');
+  check(abrev.cidade?.value === 'Santo Ângelo', `"Sto. Angelo" fica inteiro: ${abrev.cidade?.value ?? '(nada)'}`);
+
+  /**
+   * O lado perigoso: frase comum quebrada no ponto nao pode virar formulario. A trava e a de
+   * sempre -- um pedaco tem que ser EXATAMENTE um municipio.
+   */
+  const naoInformada = async (m) => (await extract([m])).cidade?.informada !== true;
+  check(await naoInformada('Boa tarde. Sou de Pelotas e quero ajudar'), 'frase com ponto nao vira formulario');
+  check(await naoInformada('moro em Canoas - trabalho de motorista'), 'frase com hifen tambem nao');
+  check(await naoInformada('Vamos juntos mudar o Rio Grande. Conto contigo'), 'o slogan com ponto continua fora');
+  check(await naoInformada('Ola! Eu apoio o Flavio, Zucco e Capitao Martim'), 'o aceite do anuncio continua sem cidade');
 }
 
 fim();

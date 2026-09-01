@@ -9,84 +9,41 @@
     <header class="topo">
       <div class="titulo">
         <h1>Fluxo de atendimento</h1>
-        <p>Cada regra é uma bifurcação: <b>casou →</b> o desfecho que sai para a pessoa, <b>não casou ↓</b> a regra de baixo. A rodada desce até a primeira que casa. Arraste um passo para mudar a prioridade.</p>
+        <p>A rodada desce a árvore e segue o <b>primeiro ramo que descreve o contato</b>; dentro dele, o primeiro filho que descreve. Ramo mais fundo é mais específico e vence o de cima. Use <b>⇥</b> para pôr um ramo dentro do outro.</p>
       </div>
       <div class="contagem" id="contagem"></div>
       <div class="acoes">
-        <button type="button" id="padrao" class="btn">Voltar ao padrão</button>
+        <button type="button" id="novo" class="btn btn-primario">+ Ramo novo</button>
+        <button type="button" id="quadro" class="btn">Carregar o desenho do quadro</button>
+        <button type="button" id="padrao" class="btn">Voltar às regras do código</button>
         <button type="button" id="zerar" class="btn">Zerar contagens</button>
       </div>
     </header>
 
+    <div id="problemas" class="problemas"></div>
+
     <main class="tela">
-      <section class="mapa" aria-label="O fluxo, de cima para baixo">
-        <div class="entrada">
-          <div class="no no-entrada">
-            <span class="rot">Mensagem do contato chega</span>
-            <span class="sub">a plataforma devolve o atendimento para as não lidas</span>
-          </div>
-          <div class="seta"><span>sempre</span></div>
-          <div class="no no-entrada">
-            <span class="rot">Parser lê nome e cidade</span>
-            <span class="sub">determinístico, sem custo</span>
-          </div>
-          <div class="seta"><span>sempre</span></div>
+      <section class="mapa" aria-label="A árvore do fluxo">
+        <div class="no-raiz">
+          <span class="rot">Mensagem do contato chega</span>
+          <span class="sub">a plataforma devolve o atendimento para as não lidas, o parser lê nome e cidade, e aí a árvore decide</span>
         </div>
 
-        <div id="cascata" class="cascata"></div>
+        <div id="arvore" class="arvore"></div>
 
-        <div class="saida">
-          <div class="seta"><span>nenhuma regra casou — ou a que casou pede a tecla 6</span></div>
-
-          <div class="passo passo-fixo">
-            <div class="no no-ia">
-              <span class="rot">A IA opina</span>
-              <span class="sub">ela ESCOLHE entre as suas respostas prontas; não escreve texto novo, salvo no rascunho</span>
-            </div>
-            <div class="ramo">
-              <span class="casou">ela decide · e aí</span>
-              <div class="folhas bifurca">
-                <div class="folha envia">
-                  <div class="folha-topo">
-                    <span class="folha-tecla">responder</span>
-                    <span class="selo envia">sai mensagem</span>
-                  </div>
-                  <span class="folha-rot">Manda a resposta pronta que ela escolheu</span>
-                  <span class="folha-se">se a automação estiver ligada; senão a caixa destaca a tecla 0 e você decide</span>
-                </div>
-                <div class="folha gente">
-                  <div class="folha-topo">
-                    <span class="folha-tecla">escalar</span>
-                    <span class="selo gente">precisa de você</span>
-                  </div>
-                  <span class="folha-rot">Rascunho no campo de mensagem</span>
-                  <span class="folha-se">só sai sozinho com as quatro travas juntas; sem elas, espera você apertar enviar</span>
-                </div>
-                <div class="folha depende">
-                  <div class="folha-topo">
-                    <span class="folha-tecla">incerto</span>
-                    <span class="selo depende">como antes da IA</span>
-                  </div>
-                  <span class="folha-rot">Nada muda: a caixa pergunta e você decide</span>
-                  <span class="folha-se">sem chave, sem rede, sem crédito, confiança baixa ou resposta ilegível</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="seta"><span>decidido</span></div>
-          <div class="no no-fim">
-            <span class="rot">A rodada executa e segue para o próximo</span>
-            <span class="sub">com a automação desligada, ela para aqui e espera a sua tecla</span>
-          </div>
+        <div class="no-raiz no-fim">
+          <span class="rot">Nenhum ramo resolveu → a IA opina</span>
+          <span class="sub">responder (manda a resposta pronta que ela escolheu) · escalar (rascunho) · incerto (tudo como antes da IA). A tecla 6 também passa por ela.</span>
         </div>
       </section>
 
       <aside class="lado">
         <div class="cartao">
           <h2>Testar uma conversa</h2>
-          <p class="ajuda">Cole o que o contato escreveu — uma mensagem por linha, a última embaixo. O fluxo de agora é usado, e o galho que vence fica marcado no mapa.</p>
-          <textarea id="conversa" rows="5" placeholder="Não conseguirei ir!"></textarea>
+          <p class="ajuda">Cole o que o contato escreveu — uma mensagem por linha, a última embaixo. O caminho que vencer fica aceso na árvore.</p>
+          <textarea id="conversa" rows="5" placeholder="Bom dia!"></textarea>
+          <label class="chk"><input type="checkbox" id="retornando" checked /> <span>é pessoa retornando (já entregamos algo antes)</span></label>
+          <label class="chk"><input type="checkbox" id="deanuncio" /> <span>veio de um anúncio</span></label>
           <button type="button" id="testar" class="btn btn-primario">Testar</button>
           <div id="resultado" class="resultado"></div>
           <p class="ajuda ajuda-fraca">Fora da conta: etiqueta que dispensa, modelo mapeado, pedido de dados feito hoje e histórico de envios — dependem do contato, não do texto.</p>
@@ -95,6 +52,17 @@
         <div class="cartao">
           <h2>O que cada tecla faz</h2>
           <dl class="teclas" id="teclas"></dl>
+        </div>
+
+        <div class="cartao">
+          <h2>Como crescer a árvore</h2>
+          <ol class="passos">
+            <li><b>+ Ramo novo</b> cria na raiz; o <b>+</b> de um ramo cria dentro dele.</li>
+            <li>No <b>✎</b>, escolha a condição: um sinal da lista, palavras que ela escreveu, ou os dois juntos.</li>
+            <li>Escolha o desfecho: uma tecla, ou uma resposta pronta sua.</li>
+            <li><b>↑ ↓</b> mudam a prioridade entre irmãos. O de cima é olhado primeiro.</li>
+          </ol>
+          <p class="ajuda ajuda-fraca">Ramo sem desfecho e sem filhos não faz nada — o fluxo segue para os de baixo, e o aviso aparece no topo.</p>
         </div>
       </aside>
     </main>

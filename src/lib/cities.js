@@ -17,6 +17,18 @@ const IBGE_RS = 'https://servicodados.ibge.gov.br/api/v1/localidades/estados/RS/
 const ALIASES = [
   [/\bsto\.?\b/g, 'santo'],
   [/\bsta\.?\b/g, 'santa'],
+  /**
+   * `S.` seguido de partícula sai INTEIRO, com a partícula.
+   *
+   * Tem que vir antes da regra do `S.` genérico, senão "S.do Livramento" viraria
+   * "sao do livramento" — e **"São do ..." não é nome de município nenhum**: "São" sempre precede
+   * nome de santo. Ali o "S." é "Sant'Ana", e adivinhar errado destruía o casamento.
+   *
+   * Tirando os dois, sobra "livramento", que o encurtamento resolve para "Santana do Livramento".
+   * Perder informação aqui é seguro: o que sobra ambíguo ("S.do Palma" → "palma") não casa com
+   * nada, e não casar é o lado certo de errar.
+   */
+  [/\bs\.\s*d[eoa]\s+/g, ''],
   [/\bs\.\s*/g, 'sao '],
   [/\bpto\.?\b/g, 'porto'],
   [/\bp\.\s*alegre\b/g, 'porto alegre'],
@@ -29,7 +41,13 @@ const ALIASES = [
 export function normalize(value) {
   let s = semAcentoNemCaixa(value);
   for (const [re, to] of ALIASES) s = s.replace(re, to);
-  return s.replace(/\./g, '').replace(/\s+/g, ' ').trim();
+  // O ponto vira ESPAÇO, nunca sumiço. Apagar cola as palavras vizinhas e destrói a fronteira de
+  // palavra: "Livramento.RS" virava "livramentors", e o encurtamento /\blivramento\b/ deixava de
+  // casar. Com espaço, hífen ou vírgula no lugar do ponto o mesmo texto sempre funcionou — era só
+  // o ponto colado que ficava de fora. Medido em 01/09/2026 num contato real que escreveu
+  // "S.do Livramento.RS": a cidade caiu como não-reconhecida e a rodada sugeriu pedir os dados a
+  // quem já tinha respondido nome e cidade.
+  return s.replace(/\./g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -170,6 +188,42 @@ function tolerance(name) {
 const NOME_DO_ESTADO = /\brio grande do sul\b/g;
 
 /**
+ * A sigla do estado pendurada no fim do que a pessoa escreveu: "Canoas RS", "Canoas - RS",
+ * "Canoas/RS".
+ *
+ * Existe para as comparações que exigem a mensagem INTEIRA ser o nome do município — as que
+ * decidem se a pessoa **informou** a cidade (`cidadeSozinha`) ou se um pedaço da resposta é só a
+ * cidade (`isCityAlone`). O casamento em si nunca precisou disto: "Canoas RS" já achava Canoas.
+ * O que quebrava era a igualdade, `"canoas rs" !== "canoas"` — e o efeito era silencioso e
+ * grave: a cidade era reconhecida, mas **não contava como informada pela pessoa**, então não
+ * substituía o CRM e ficava esperando um clique que, na rodada automatizada, ninguém dá.
+ *
+ * Visto ao vivo em 01/09/2026: contato mandou o nome numa mensagem e "Canoas RS" na seguinte.
+ *
+ * Só o SUFIXO: nenhum dos 497 municípios do RS termina em alguma destas siglas, então tirar do
+ * fim é seguro. No meio da frase não se mexe — "RS" ali pode ser outra coisa.
+ *
+ * **As formas abreviadas não são teoria.** Em 01/09/2026, dois contatos seguidos: `Canoas RS` e
+ * `Erechim rgds`. A segunda passou batido porque a lista tinha só `rs` — e "às vezes pega a
+ * cidade, às vezes não" é o pior sintoma possível, porque parece defeito aleatório. Achou forma
+ * nova? Acrescente aqui, não num `if` novo em outro arquivo.
+ *
+ * **`rio grande` sozinho NÃO entra**, e nunca pode entrar: é município do RS. Só o estado por
+ * extenso.
+ */
+const SUFIXO_DO_ESTADO = /[\s,.\/-]+(rs|rgs|rgds|r\s*s|rio grande do sul)\s*$/;
+
+/**
+ * O que a pessoa escreveu, sem a sigla do estado no fim. Já normalizado.
+ *
+ * Exportada porque quem compara "isto é exatamente o município?" precisa dos dois lados no mesmo
+ * formato — e porque a regra tem teste.
+ */
+export function semSufixoDeEstado(valor) {
+  return normalize(valor).replace(SUFIXO_DO_ESTADO, '').trim();
+}
+
+/**
  * Expressões que contêm nome de município mas não são endereço de ninguém.
  *
  * A campanha inteira fala em "Capitão Martim" — e **Capitão é município do RS**. Toda mensagem
@@ -232,6 +286,29 @@ const ENCURTAMENTOS = [[/\blivramento\b/g, 'santana do livramento']];
 function prepararTexto(text) {
   let norm = normalize(text).replace(NOME_DO_ESTADO, ' ');
   for (const re of EXPRESSOES_QUE_NAO_SAO_CIDADE) norm = norm.replace(re, ' ');
+  for (const [re, to] of ENCURTAMENTOS) norm = norm.replace(re, to);
+  return norm.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * O que a pessoa escreveu, reduzido à mesma forma que o nome oficial do município.
+ *
+ * Serve **só** para as comparações que perguntam "este pedaço é exatamente o município?" —
+ * `extract.isCityAlone` e `extract.cidadeSozinha`, as duas que decidem se a pessoa INFORMOU a
+ * cidade (e portanto se o valor pode substituir o do CRM).
+ *
+ * Por que `normalize` sozinho não bastava: ele não sabe que "Livramento" é "Santana do
+ * Livramento" (isso é `ENCURTAMENTOS`) nem que "RS" no fim é o estado. A comparação falhava e o
+ * efeito era o pior possível — a cidade era reconhecida, o nome NÃO era extraído (porque
+ * `findStructured` desiste quando nenhum pedaço é "exatamente" cidade), e a rodada pedia os dados
+ * a quem acabara de mandar. Visto ao vivo com `Ulises Sanchez / S.do Livramento.RS` (01/09/2026):
+ * o contato respondeu o formulário e recebeu o mesmo pedido no dia seguinte.
+ *
+ * Ordem importa: a sigla do estado sai ANTES dos encurtamentos, senão "rs" pendurado sobra no fim
+ * e a igualdade falha de novo.
+ */
+export function formaCanonica(valor) {
+  let norm = semSufixoDeEstado(valor);
   for (const [re, to] of ENCURTAMENTOS) norm = norm.replace(re, to);
   return norm.replace(/\s+/g, ' ').trim();
 }

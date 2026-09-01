@@ -18,10 +18,14 @@ import * as keepalive from '../lib/keepalive.js';
 import * as categorizar from '../lib/categorizar.js';
 import * as iaCliente from '../lib/ia-cliente.js';
 import * as iaLib from '../lib/ia.js';
+import * as gabineteLib from '../lib/gabinete.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, confirmaPresenca, ultimaEhDespedida } from '../lib/cortesia.js';
+import * as sugestaoLib from '../lib/sugestao.js';
+import * as arvoreLib from '../lib/arvore.js';
+import { MSG_FLUXO } from '../lib/fluxo-msg.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, confirmaPresenca, ultimaEhDespedida, semInteresse } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -104,6 +108,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     classify: [],
     draft: {}, // fieldId -> { value, from, confidence, source, suggestions }
     tagSuggestions: [], // [{ origem, nome, tag, motivo, marcada }]
+    /** A ordem/teclas/desligadas que ele editou na aba Fluxo. Vazio = ordem do codigo. */
+    fluxo: { ordem: [], desligadas: [], teclas: {}, vitorias: {} },
     templates: [],
     hsmTemplates: [], // modelos aprovados da plataforma
     hsmFilter: '',
@@ -419,9 +425,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // Sinal disparado por mensagem NOSSA (ou mídia): nada novo do contato para analisar.
       if (state.incoming.length <= antes) return;
 
-      const temaField = state.classify.find((f) => f.name === 'Tema de Interesse');
       // applyGuesses só preenche buraco: valor do CRM e correção sua nunca são sobrescritos.
-      applyGuesses(await extract(state.incoming, { temaField }), state.classify);
+      applyGuesses(await extract(state.incoming), state.classify);
       await refreshTagSuggestions();
       renderAll();
 
@@ -461,6 +466,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.padroesDeAnuncio = await store.get('padroesDeAnuncio');
     state.auto.cfg = await store.get('auto');
     state.ia = await store.get('ia');
+    state.fluxo = await store.get('fluxo');
     state.iaTemChave = !!(await store.get('iaChave'));
     state.templates = await templatesLib.list();
     renderAll();
@@ -505,7 +511,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.nossas = conversa.nossas || [];
       state.ultimaMensagem = conversa.ultima;
-      const temaField = classify.find((f) => f.name === 'Tema de Interesse');
       /**
        * A nossa ÚLTIMA mensagem foi o pedido de dados?
        *
@@ -514,7 +519,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       const respostaAoPedido = pediuNomeECidade(state.nossas[state.nossas.length - 1]?.texto);
 
-      const palpites = await extract(state.incoming, { temaField, respostaAoPedido });
+      const palpites = await extract(state.incoming, { respostaAoPedido });
       /**
        * O nome que a PESSOA escreveu, guardado à parte do rascunho.
        *
@@ -545,7 +550,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       const transcricoes = state.entrantes.filter((m) => m.transcrito && m.texto).map((m) => m.texto);
       if (transcricoes.length) {
-        applyGuesses(rebaixarParaPalpite(await extract(transcricoes, { temaField })), classify);
+        applyGuesses(rebaixarParaPalpite(await extract(transcricoes)), classify);
       }
 
       // O nome que a pessoa ESCREVEU no formulário ganha do apelido do perfil do WhatsApp.
@@ -974,9 +979,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const pairs = [
       ['Nome', guesses.nome],
       ['Cidade', guesses.cidade],
-      ['Função', guesses.funcao],
-      ['Partido', guesses.partido],
-      ['Tema de Interesse', guesses.tema],
     ];
     for (const [name, guess] of pairs) {
       const field = classify.find((f) => f.name === name);
@@ -1075,6 +1077,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     header.append(
       h('div', { class: 'wf-conn' }, [h('span', {}, `${state.connection} · v${versaoCarregada()}`), reload])
     );
+
+    /**
+     * O acesso à janela do fluxo fica **logo abaixo do Recarregar**, no lugar que ele pediu, e no
+     * cabeçalho de propósito: o fluxo vale para todas as abas, e escondê-lo dentro de uma delas foi
+     * exatamente o erro que ele apontou.
+     *
+     * Não depende de atendimento aberto: a janela só lê e grava a configuração, então serve para
+     * ele arrumar o fluxo ANTES de começar a rodada.
+     */
+    const abrirFluxo = h('button', { class: 'wf-btn wf-mini wf-fluxo-abrir', type: 'button' }, 'Fluxo de atendimento ↗');
+    abrirFluxo.addEventListener('click', () => abrirJanelaDoFluxo());
+    header.append(abrirFluxo);
 
     if (!state.contact) {
       header.append(h('div', { class: 'wf-who' }, 'WhatsFill'));
@@ -1178,7 +1192,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         const r = await iaCliente.rascunhar({
           templates: state.templates,
           regras: state.ia.regras,
-          gabinete: state.ia.gabinete,
+          gabinete: await gabineteLib.paraOPrompt(state.incoming),
           modelo: state.ia.modelo,
           mensagens: state.incoming,
           campos: { Cidade: valueNamed('Cidade') },
@@ -1329,6 +1343,86 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     renderModelos();
   }
 
+  // ---- o fluxo editável (a janela é src/fluxo.html; aqui só se USA e se conta) --------------
+
+  /**
+   * A tabela de regras com o fluxo que ELE editou — e contando quem venceu.
+   *
+   * A EDIÇÃO mora em `src/fluxo.html`, uma janela separada: pedido dele (01/09/2026), depois de eu
+   * ter tentado enfiar isso numa aba do painel. Um fluxo de dezesseis passos não cabe numa coluna
+   * de 380px sem virar lista, e lista não mostra que a decisão é uma cascata.
+   *
+   * O contador responde a pergunta que nem eu sei responder olhando o código: **quais regras
+   * decidem a fila dele de verdade.** Na janela ele vê que poucas resolvem a maioria dos contatos e
+   * que várias nunca disparam — e regra que nunca dispara é candidata a sair da frente de outra.
+   */
+  /**
+   * A ÁRVORE vence a tabela quando ela existe.
+   *
+   * `state.fluxo.arvore` só existe depois de ele abrir a janela do fluxo, e a árvore que nasce lá
+   * é a tabela de hoje achatada — há teste exigindo que as duas decidam igual em 400 contextos.
+   * Ou seja: ligar não muda nada; o que muda é o que ELE montar depois.
+   *
+   * Sem árvore, o caminho é o de sempre. Isso importa mais do que parece: quem nunca abriu a
+   * janela continua rodando o motor testado desde agosto, sem depender de nada novo dar certo.
+   */
+  function sugerirAcaoComFluxo(ctx) {
+    const arvore = state.fluxo?.arvore;
+    const r = Array.isArray(arvore) && arvore.length ? arvoreLib.decidir(ctx, arvore, state.fluxo) : sugerirAcao(ctx, state.fluxo);
+    if (r?.id) {
+      const v = { ...(state.fluxo?.vitorias || {}) };
+      v[r.id] = (Number(v[r.id]) || 0) + 1;
+      state.fluxo = { ...state.fluxo, vitorias: v };
+      agendarGravacaoDoFluxo();
+    }
+    return r;
+  }
+
+  let timerFluxo = null;
+
+  /**
+   * Grava o contador com atraso, agrupando a rajada.
+   *
+   * A rodada trata dezenas de contatos seguidos, e gravar a cada decisão é escrita à toa. É
+   * armazenamento local, não rede, então o custo é baixo — mas o padrão do projeto é não gastar por
+   * hábito. Perder a última contagem se o painel fechar no meio não custa nada: isto é
+   * estatística, não dado de eleitor.
+   */
+  function agendarGravacaoDoFluxo() {
+    clearTimeout(timerFluxo);
+    timerFluxo = setTimeout(async () => {
+      try {
+        const atual = await store.get('fluxo');
+        await store.set('fluxo', { ...atual, vitorias: state.fluxo.vitorias });
+      } catch (_) {
+        // Extensão recarregada com a aba aberta: o contexto morre. Contagem não vale um erro.
+      }
+    }, 800);
+  }
+
+  /**
+   * Abre a JANELA do fluxo — pedindo ao service worker.
+   *
+   * **`chrome.windows` não existe em content script**, e o painel encaixado roda dentro da página
+   * do mobiliza. Chamar `chrome.windows.create` daqui daria `undefined` — mesma armadilha do
+   * `chrome.power` da rodada, que já está registrada no CLAUDE.md. Quem tem a API é o
+   * `background.js`, então a abertura vira mensagem.
+   *
+   * A janela não fala com a plataforma: só lê e grava a configuração do fluxo. Por isso abre a
+   * qualquer momento, com ou sem atendimento na tela — é para arrumar o fluxo ANTES da rodada.
+   */
+  async function abrirJanelaDoFluxo() {
+    try {
+      const r = await chrome.runtime.sendMessage({ type: MSG_FLUXO });
+      if (r?.ok) setStatus(r.focada ? 'A janela do fluxo já estava aberta.' : 'Janela do fluxo aberta.', 'ok');
+      else setStatus('Não consegui abrir a janela do fluxo: ' + (r?.motivo || 'sem motivo'), 'err');
+    } catch (err) {
+      // Extensão recarregada com a aba aberta: o service worker não responde até o F5.
+      setStatus('Não consegui falar com a extensão (dê F5 na aba): ' + (err?.message || err), 'err');
+    }
+  }
+
+
   // ---- modelos de mensagem (templates aprovados da plataforma) ------------
 
   /**
@@ -1340,8 +1434,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Modelos de mensagem'));
 
     if (!state.hsmTemplates.length) {
+      /**
+       * **O botão fica AQUI, não em outra aba.**
+       *
+       * O envio simples de um modelo — sem concluir, sem agradecer, sem próximo — sempre existiu
+       * nesta lista (`renderModeloCard`: "Enviar" e "Só preparar"). Só que a lista nasce vazia e o
+       * único "Carregar modelos" morava na aba Automatizado, com o texto daqui dizendo *"clique em
+       * Recarregar"* sem dizer onde. Resultado: o caminho mais simples do painel era o único
+       * inalcançável — *"tendo problemas para enviar novamente, só preciso enviar o modelo"*
+       * (01/09/2026).
+       *
+       * Nasce de CLIQUE e não do desenho, pela regra do projeto: `renderAll` roda o tempo todo, e
+       * rede disparada de dentro de um `render*` vira uma requisição por redesenho.
+       */
+      const carregar = h('button', { class: 'wf-btn', type: 'button' }, 'Carregar modelos');
+      carregar.addEventListener('click', () => withBusy(carregarModelos));
       body.append(
-        h('p', { class: 'wf-hint' }, 'Nenhum modelo aprovado encontrado para este canal. Clique em Recarregar se acabou de cadastrar um.')
+        h('p', { class: 'wf-hint' },
+          'Nenhum modelo aprovado carregado ainda. Com um atendimento aberto (é dele que sai o ' +
+            'canal), clique abaixo — depois cada modelo tem "Enviar", que manda só o modelo e ' +
+            'mais nada.'),
+        carregar
       );
       return;
     }
@@ -1625,8 +1738,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       contact: state.contact,
       nome: valueNamed('Nome'),
       cidade: valueNamed('Cidade'),
-      funcao: valueNamed('Função'),
-      partido: valueNamed('Partido'),
     });
   }
 
@@ -2225,6 +2336,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       campoTexto('Etiqueta que marca esta fila (some ao concluir pelo painel)', cfg.etiquetaSemRetorno, (v) =>
         salvarAuto({ etiquetaSemRetorno: v.trim() }).then(renderAll)
       ),
+      campoTexto('Etiqueta de SEM INTERESSE (recusou ou hostilizou)', cfg.etiquetaSemInteresse, (v) =>
+        salvarAuto({ etiquetaSemInteresse: v.trim() }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Quem pede para não receber mais, ou vem hostilizar, é marcado com esta etiqueta e ' +
+          'concluído SEM resposta (tecla "s" na caixa da rodada). Digite o nome exatamente como ' +
+          'está no CRM — a extensão não cria etiqueta sozinha. Vazio: a rodada conclui sem ' +
+          'responder e não marca ninguém. A detecção exige sinal forte: pedido explícito de sair, ' +
+          '"não" na abertura da resposta, ou xingamento dirigido a nós. Xingar o adversário em ' +
+          'terceira pessoa NÃO conta — isso é apoiador, e tirá-lo da fila seria o pior erro aqui.'),
       h('div', { class: 'wf-origin' },
         'Concluir sem tirar esta etiqueta devolve o contato ao topo da lista filtrada por ela — ' +
           'ele vira trabalho de novo amanhã, já tendo sido trabalhado hoje. O Concluir do painel ' +
@@ -3528,57 +3649,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         }
       }
 
-      /**
-       * A avaliação de contexto — a segunda camada, e só depois da primeira.
-       *
-       * A ordem é a mais barata E a mais segura: a regex já tirou os casos conhecidos de graça,
-       * então a IA só é chamada (e só é paga) para o que sobrou. E o que a regex pegou não
-       * depende de a IA estar ligada, com crédito ou de bom humor.
-       *
-       * Ela decide entre TRÊS saídas, e nenhuma delas envia sozinha:
-       *  - `escalar` → sai da rodada como a triagem, com a etiqueta e o motivo;
-       *  - `responder` → vira a tecla 0 da caixa, em destaque, com o texto que ela escolheu;
-       *  - `incerto` → a caixa aparece exatamente como aparecia antes da IA existir.
-       */
-      const decisaoIA = await avaliarComIA();
-      if (decisaoIA?.acao === 'escalar') {
-        /**
-         * A IA escalou: nenhuma resposta pronta serve. É AQUI, e só aqui, que o rascunho pode
-         * sair sozinho — decisão dele (20/08/2026), com o padrão sendo as respostas prontas e o
-         * rascunho como exceção.
-         *
-         * `tentarRascunhoAutomatico` devolve `enviado: false` em tudo que não passa pelas quatro
-         * travas, e nesse caso o contato segue para a triagem exatamente como seguia antes: o
-         * caminho de falha é o comportamento antigo, não um caminho novo.
-         */
-        const auto = await tentarRascunhoAutomatico();
-        if (auto.enviado) {
-          const fechou = await page.clickConcluir();
-          if (!fechou.ok) {
-            return { nome, resultado: 'enviado', parar: true, motivo: `rascunho da IA enviado, mas ${fechou.reason}` };
-          }
-          return { nome, resultado: 'enviado', motivo: `rascunho da IA enviado sozinho (${auto.motivo})` };
-        }
-
-        /**
-         * Escalar = sair da rodada sem enviar nada.
-         *
-         * Antes isto aplicava a etiqueta de triagem, que deixava o contato achável no filtro do
-         * CRM depois. A triagem foi **removida a pedido dele** (29/08), e a etiqueta foi junto —
-         * então hoje escalar deixa rastro só no log da rodada, que some quando o painel fecha.
-         * É consequência direta da remoção, não esquecimento: se um dia a etiqueta voltar a ser
-         * desejada, é aqui que ela entra.
-         */
-        const porque = auto.motivo ? ` · rascunho automático não saiu: ${auto.motivo}` : '';
-        const motivoIA = decisaoIA.motivo || 'a IA achou que este é para você';
-        const sugestao = decisaoIA.templateId ? ` (sugestão dela: "${decisaoIA.templateId}")` : '';
-        return {
-          nome,
-          resultado: 'pulado',
-          motivo: `você responde este: ${motivoIA}${sugestao}${porque}`,
-        };
-      }
-
       const conteudos = state.tagSuggestions.filter((s) => s.origem === 'conteúdo');
       let modelo = null;
       let semModelo = '';
@@ -3984,7 +4054,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           }
         }
 
+        /**
+         * **O INVARIANTE vem primeiro, e o texto literal só depois.**
+         *
+         * `templatesLib.ehPedidoDeDados` reconhece o pedido pela linha `Nome / Cidade`, que não
+         * muda entre redações nem entre variantes — ver o porquê lá, com o caso da Loreta. O
+         * casamento por trecho literal fica como segunda camada: ele cobre as outras duas
+         * perguntas (interesse e "como posso ajudar"), que não têm essa linha.
+         */
         const ehPergunta = (m) => {
+          if (templatesLib.ehPedidoDeDados(m.texto)) return true;
           const texto = achatarTexto(m.texto);
           return pedacosDePergunta.some((pedaco) => texto.includes(pedaco));
         };
@@ -3992,7 +4071,44 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return state.nossas.some((m) => !ehPergunta(m));
       })();
 
-      const sugestao = sugerirAcao({
+      /**
+       * Nós perguntamos "em que você precisa de ajuda?" e ela RESPONDEU.
+       *
+       * A pergunta é reconhecida pelo invariante (`ehPerguntaComoAjudar`), não pela redação — a
+       * lição da Loreta: comparar com o texto atual do template só enxerga o que saiu hoje.
+       *
+       * A ordem é por HORA, que é o que `getConversation` traz nos dois lados justamente para
+       * poder intercalar. Sem hora nos dois, cai no fallback "ela escreveu alguma coisa": quem
+       * abriu um caso respondendo à nossa pergunta tem que ir para uma pessoa, e **errar para o
+       * lado de chamar gente é barato** — errar para o outro manda propaganda em cima de uma
+       * denúncia, que foi o que aconteceu.
+       */
+      const respondeuComoAjudar = (() => {
+        const pergunta = [...state.nossas].reverse().find((m) => templatesLib.ehPerguntaComoAjudar(m.texto));
+        if (!pergunta) return null;
+
+        const comTexto = state.entrantes.filter((m) => String(m?.texto || '').trim());
+        if (!comTexto.length) return null;
+
+        const depois = pergunta.at
+          ? comTexto.filter((m) => m.at && new Date(m.at) > new Date(pergunta.at))
+          : comTexto;
+        const alvo = depois.length ? depois : pergunta.at ? [] : comTexto;
+        if (!alvo.length) return null;
+
+        const ultima = alvo[alvo.length - 1];
+        return { trecho: String(ultima.texto || '').replace(/s+/g, ' ').trim().slice(0, 90) };
+      })();
+
+      // Lida aqui, antes das opções e da regra, porque as duas usam.
+      const etiquetaSemInteresse = String(state.auto.cfg.etiquetaSemInteresse || '').trim();
+
+      const sugestao = sugerirAcaoComFluxo({
+        // Recusou ou veio hostilizar: a regra mais alta da tabela, porque continuar mandando
+        // mensagem para quem pediu para parar é o que gera denúncia.
+        semInteresse: semInteresse(state.entrantes),
+        // Perguntamos e ela respondeu: a resposta precisa de gente, nunca de modelo.
+        respondeuComoAjudar,
         modeloJaNaConversa,
         jaRespondemosAntes,
         ultimaEhDespedida: ultimaEhDespedida(state.entrantes),
@@ -4037,7 +4153,96 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         conteudoPedido: conteudoEscolhido?.nome || '',
         podePerguntarInteresse,
         interessePerguntado: !!interessePerguntado,
+        /**
+         * O TEXTO, para os ramos que ele monta por palavra na janela do fluxo.
+         *
+         * A tabela de regras nunca precisou disto: as dezesseis leem sinais ja calculados. A
+         * arvore precisa, porque a condicao dele pode ser "escreveu bom dia" -- e sem o texto no
+         * contexto esse ramo nunca casaria, em silencio.
+         */
+        textos: (state.entrantes || []).map((e) => e?.texto || ''),
+        ultimoTexto: (state.entrantes || []).slice(-1)[0]?.texto || '',
+        // A origem e DADO, nao texto (utm.source/referralUrl) -- ver o CLAUDE.md.
+        veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
       });
+
+      /**
+       * A avaliação de contexto — a SEGUNDA camada, e só do que a primeira não resolveu.
+       *
+       * **A ordem estava invertida até 01/09/2026, e isso mandou mensagem errada para eleitor.**
+       * A chamada ficava lá em cima, antes de `sugerirAcao`, e o comentário aqui afirmava que a
+       * regex já havia filtrado — não havia. Com "Automatizar com IA" ligado, a escolha da IA era
+       * executada direto, então regra determinística nenhuma era consultada: um contato que só
+       * escreveu "Amém" recebeu mais uma mensagem 36 min depois da anterior, porque
+       * `ultima-e-despedida` (que manda concluir sem responder) nunca chegou a ser olhada.
+       *
+       * Agora é o que sempre esteve escrito no desenho: **`sugestao === null` é o gatilho**. Regra
+       * conhecida decide de graça e não depende de a IA estar no ar; a IA só vê o que sobrou.
+       *
+       * Ela decide entre TRÊS saídas:
+       *  - `escalar` → sai da rodada, com o motivo (e só aqui o rascunho pode sair sozinho);
+       *  - `responder` → vira a tecla 0 da caixa, com o texto que ela escolheu;
+       *  - `incerto` → a caixa aparece exatamente como aparecia antes da IA existir.
+       */
+      /**
+       * **A tecla 6 também chama a IA, e é o ponto todo dela.**
+       *
+       * "Responda à mão" quer dizer, por definição, *nenhuma regra sabe o que mandar aqui* — que é
+       * exatamente o buraco que a avaliação de contexto existe para tapar. Deixar a IA de fora
+       * justamente aí fazia a rodada parar em todo áudio e em todo texto longo, e foi o relato
+       * dele: *"ela parou de ver praticamente tudo e está passando pra mim"* (01/09/2026).
+       *
+       * As outras teclas continuam decidindo sozinhas e de graça: a regra que manda **concluir**
+       * (tecla 3) ou **mandar o modelo** (tecla 1) já sabe o que fazer, e pagar por uma segunda
+       * opinião ali não muda o resultado — foi o excesso oposto, o que mandou mensagem para quem
+       * só disse "Amém".
+       */
+      const regraPedeGente = sugestao?.tecla === '6';
+
+      let decisaoIA = null;
+      if (!sugestao || regraPedeGente) {
+        decisaoIA = await avaliarComIA();
+        if (decisaoIA?.acao === 'escalar') {
+          /**
+           * A IA escalou: nenhuma resposta pronta serve. É AQUI, e só aqui, que o rascunho pode
+           * sair sozinho — decisão dele (20/08/2026), com o padrão sendo as respostas prontas e o
+           * rascunho como exceção.
+           *
+           * `tentarRascunhoAutomatico` devolve `enviado: false` em tudo que não passa pelas quatro
+           * travas, e nesse caso o contato segue para a triagem exatamente como seguia antes: o
+           * caminho de falha é o comportamento antigo, não um caminho novo.
+           */
+          const auto = await tentarRascunhoAutomatico();
+          if (auto.enviado) {
+            const fechou = await page.clickConcluir();
+            if (!fechou.ok) {
+              return { nome, resultado: 'enviado', parar: true, motivo: `rascunho da IA enviado, mas ${fechou.reason}` };
+            }
+            return { nome, resultado: 'enviado', motivo: `rascunho da IA enviado sozinho (${auto.motivo})` };
+          }
+
+          /**
+           * Escalar = sair da rodada sem enviar nada.
+           *
+           * Antes isto aplicava a etiqueta de triagem, que deixava o contato achável no filtro do
+           * CRM depois. A triagem foi **removida a pedido dele** (29/08), e a etiqueta foi junto —
+           * então hoje escalar deixa rastro só no log da rodada, que some quando o painel fecha.
+           * É consequência direta da remoção, não esquecimento: se um dia a etiqueta voltar a ser
+           * desejada, é aqui que ela entra.
+           */
+          const porque = auto.motivo ? ` · rascunho automático não saiu: ${auto.motivo}` : '';
+          const motivoIA = decisaoIA.motivo || 'a IA achou que este é para você';
+          // Nome diferente do `sugestao` de fora DE PROPÓSITO: este bloco vive dentro do
+          // `if (!sugestao)`, e sombrear a recomendação determinística aqui dentro é armadilha
+          // esperando quem vier depois.
+          const sugestaoDela = decisaoIA.templateId ? ` (sugestão dela: "${decisaoIA.templateId}")` : '';
+          return {
+            nome,
+            resultado: 'pulado',
+            motivo: `você responde este: ${motivoIA}${sugestaoDela}${porque}`,
+          };
+        }
+      }
 
       const opcoes = [];
       if (podeEnviar) {
@@ -4070,8 +4275,46 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         });
       }
 
+      /**
+       * **Tecla `f` — o desfecho que um ramo da ÁRVORE escolheu.**
+       *
+       * A tabela de regras só sabia apontar para uma das teclas fixas. A árvore que ele monta na
+       * janela do fluxo pode dizer "neste caso manda ESTA resposta pronta" — foi o que o diagrama
+       * dele pediu em "pediu ajuda financeira → mensagem pronta + concluir".
+       *
+       * Letra e não dígito, pelo mesmo motivo do `s`: os dez dígitos já têm significado no dedo
+       * dele, e trocar o sentido de um é como o "2" digitado na conversa acabou concluindo
+       * atendimento.
+       */
+      const doFluxo = sugestao?.resposta ? state.templates.find((tpl) => tpl.id === sugestao.resposta) : null;
+      const doFluxoTrava = doFluxo
+        ? vars.render(await templatesLib.varianteAtual(doFluxo), contexto).missing.length > 0
+        : false;
+      if (doFluxo && !doFluxoTrava) {
+        opcoes.push({
+          tecla: 'f',
+          valor: `arvore:${doFluxo.id}`,
+          rotulo: `Mandar "${doFluxo.name}" e concluir (fluxo)`,
+        });
+      }
+
       opcoes.push({ tecla: '2', valor: 'pular', rotulo: 'Pular (deixa aberto)' });
       opcoes.push({ tecla: '3', valor: 'concluir', rotulo: 'Concluir sem enviar' });
+      /**
+       * Tecla `s` — sem interesse. **Letra, não dígito**, porque os dez dígitos já têm significado
+       * no dedo dele e trocar o sentido de um é como o "2" digitado na conversa acabou concluindo
+       * atendimento.
+       *
+       * Existe sempre, não só quando a regra dispara: ele pode ver algo que a regra não viu, e a
+       * opção precisa estar na lista para ele poder apertar.
+       */
+      opcoes.push({
+        tecla: 's',
+        valor: 'seminteresse',
+        rotulo: etiquetaSemInteresse
+          ? `Marcar "${etiquetaSemInteresse}" e concluir sem responder`
+          : 'Concluir sem responder (etiqueta de sem interesse não configurada)',
+      });
       if (!pedirTrava) {
         // Primária quando não há modelo a enviar: sem nome e sem cidade não há o que
         // classificar, então pedir os dados é a saída que faz o contato andar. Já pedido hoje
@@ -4114,7 +4357,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // Um lugar só decide o destaque. Antes eram três expressões independentes, e duas podiam
       // acender ao mesmo tempo num contato que casasse com as duas condições.
-      for (const opcao of opcoes) opcao.primaria = !!sugestao && opcao.tecla === sugestao.tecla;
+      // Um lugar só decide o destaque, e ele conta os dois jeitos de uma regra apontar: pela
+      // tecla (a tabela) e pela resposta pronta (um ramo da árvore, que traz `tecla` nula).
+      for (const opcao of opcoes) {
+        opcao.primaria = !!sugestao && (sugestao.resposta ? opcao.tecla === 'f' && !!doFluxo : opcao.tecla === sugestao.tecla);
+      }
 
       // Nenhuma regra reconheceu: o caso é para ele decidir hoje, e é o gatilho da IA no outro
       // branch. Marcado AQUI, onde a informação existe — não em cada `return` lá embaixo.
@@ -4193,7 +4440,43 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         }
       }
 
-      const escolha = await perguntarNaRodada({
+      /**
+       * A automação executa a RECOMENDAÇÃO DETERMINÍSTICA quando existe uma.
+       *
+       * Esta metade nasceu junto com a reordenação acima, e sem ela o conserto viraria um defeito
+       * pior: com a regra decidindo antes, a IA deixa de ser chamada nos casos conhecidos, então
+       * `recomendada` fica nula e a caixa abriria esperando um clique **em todo contato com
+       * regra** — a rodada automatizada pararia em quase todos. Trocar "manda a mensagem errada"
+       * por "não anda" não é conserto.
+       *
+       * O que sai daqui é a tecla que a caixa mostraria em destaque, escolhida pelas regras que
+       * ele escreveu — não uma decisão nova. É o que "automatizar a rodada" sempre significou.
+       *
+       * **A tecla 6 fica de fora, e é a única exceção:** "Responder à mão" quer dizer, por
+       * definição, que alguém precisa escrever. Automatizá-la seria concluir sem responder.
+       */
+      let escolhaAutomatica = null;
+      if (state.auto.cfg.automatizarComIA && sugestao) {
+        // Ramo da árvore com resposta pronta aponta para a tecla `f`, que não é a `sugestao.tecla`
+        // (essa vem nula). Sem esta linha o automático diria "tecla não disponível" e pararia em
+        // todo contato que caísse num ramo desses — o mesmo "trocar mensagem errada por não anda".
+        const alvo = opcoes.find((o) => (sugestao.resposta ? o.tecla === 'f' : o.tecla === sugestao.tecla));
+        if (!alvo) {
+          // A regra recomendou uma tecla que não está na lista (travada por variável faltando,
+          // por exemplo). Cai na caixa, com o motivo no log — silêncio aqui viraria "a rodada
+          // ignorou a regra" sem ninguém conseguir dizer por quê.
+          registrarNaRodada(nome, 'aviso', `o fluxo pediu ${sugestao.resposta ? `a resposta "${sugestao.resposta}"` : `a tecla ${sugestao.tecla}`} ("${sugestao.id}"), que não está disponível agora — decida você`);
+        } else if (sugestao.tecla === '6') {
+          registrarNaRodada(nome, 'aviso', `regra "${sugestao.id}": ${sugestao.motivo} — precisa de você`);
+        } else {
+          registrarNaRodada(nome, 'aviso', `automático pelo fluxo ("${sugestao.id}"${sugestao.caminho ? `, caminho ${sugestao.caminho.join(' > ')}` : ''}): ${alvo.rotulo}`);
+          escolhaAutomatica = alvo.valor;
+        }
+      }
+
+      // `??` e não `||`: a escolha automática é sempre uma string não vazia, mas usar `||` aqui
+      // ensinaria o padrão errado para a próxima opção cujo valor possa ser falsy.
+      const escolha = escolhaAutomatica ?? await perguntarNaRodada({
         titulo: nome,
         recomendacao: sugestao,
         // A falta de recomendação é o sinal de "isto é para a IA" (pedido dele, 31/08): sem
@@ -4325,6 +4608,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         };
       }
 
+      /**
+       * **Tecla `f`: manda a resposta pronta que o ramo da árvore escolheu, e conclui.**
+       *
+       * O ramo entra no MESMO commit da opção, de propósito — foi assim que a tecla 0 mandou o
+       * modelo errado para eleitor: a opção existia, devolvia um valor e nenhum `if` o tratava,
+       * então a escolha caía no fim da função e enviava outra coisa.
+       */
+      if (typeof escolha === 'string' && escolha.startsWith('arvore:') && doFluxo) {
+        if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) {
+          return { nome, resultado: 'erro', motivo: 'a classificação não gravou; não enviei nada' };
+        }
+        if (!(await sendTemplate(doFluxo, { send: true, jaConfirmado: true }))) {
+          return { nome, resultado: 'erro', motivo: `"${doFluxo.name}" (ramo do fluxo) não saiu` };
+        }
+        const fechouFluxo = await concluirPeloPainel();
+        if (!fechouFluxo.ok) {
+          return { nome, resultado: 'enviado', parar: true, motivo: `"${doFluxo.name}" saiu, mas ${fechouFluxo.reason}` };
+        }
+        return { nome, resultado: 'enviado', motivo: `mandei "${doFluxo.name}" (ramo do fluxo) e concluí` };
+      }
+
       // Tecla 0 apertada à mão: mesmo caminho do automático, sem o automático.
       if (typeof escolha === 'string' && escolha.startsWith('ia:') && recomendada) {
         return enviarEscolhaDaIA(`mandei "${recomendada.name}" (escolha da IA) e concluí`);
@@ -4365,6 +4669,51 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           };
         }
         return { nome, resultado: 'enviado', motivo: `${rotulo} e concluído` };
+      }
+
+      /**
+       * Sem interesse: marca a etiqueta e conclui **sem enviar nada**.
+       *
+       * Pedido dele (01/09/2026). A ordem importa: a etiqueta entra na lista de gravação ANTES do
+       * `saveClassification`, senão ela não é escrita — quem grava é ele, a partir de
+       * `state.tagSuggestions`.
+       *
+       * **Falha de etiqueta não impede a conclusão**, que é a regra do projeto (etiqueta é
+       * organização interna; o que o contato recebe — ou deixa de receber — vem primeiro). Se a
+       * etiqueta não existir no CRM, o contato é concluído do mesmo jeito e o motivo vai para o
+       * log, onde dá para conferir depois.
+       */
+      if (escolha === 'seminteresse') {
+        let avisoEtiqueta = '';
+        if (etiquetaSemInteresse) {
+          const tag = await tagsLib.resolveTag(etiquetaSemInteresse);
+          if (tag) {
+            const jaTem = (state.contact.tagsId || []).includes(tag.id);
+            if (!jaTem) {
+              state.tagSuggestions.push({
+                origem: 'revisão',
+                nome: etiquetaSemInteresse,
+                tag,
+                motivo: 'recusou ou veio hostilizar — marcado como sem interesse',
+                marcada: true,
+              });
+            }
+          } else {
+            avisoEtiqueta = ` (a etiqueta "${etiquetaSemInteresse}" não existe no CRM — não marquei)`;
+          }
+        } else {
+          avisoEtiqueta = ' (sem etiqueta configurada na aba Automatizado)';
+        }
+
+        await saveClassification({ withCompletionDate: true, quiet: true });
+        const fechouSI = await concluirPeloPainel();
+        if (!fechouSI.ok) {
+          return { nome, resultado: 'pulado', motivo: `marquei sem interesse, mas ${fechouSI.reason}` };
+        }
+        if (fechouSI.dialogOpen) {
+          return { nome, resultado: 'concluido', parar: true, motivo: 'a plataforma pediu um motivo de conclusão — responda o diálogo' };
+        }
+        return { nome, resultado: 'concluido', motivo: `sem interesse: concluí sem responder${avisoEtiqueta}` };
       }
 
       if (escolha === 'concluir') {
@@ -7004,7 +7353,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       rascunho = await iaCliente.rascunhar({
         templates: state.templates,
         regras: state.ia.regras,
-        gabinete: state.ia.gabinete,
+        gabinete: await gabineteLib.paraOPrompt(state.incoming),
         modelo: state.ia.modelo,
         mensagens: state.incoming,
         campos: { Cidade: valueNamed('Cidade') },
@@ -7052,7 +7401,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const decisao = await iaCliente.avaliar({
       templates: state.templates,
       regras: cfg.regras,
-      gabinete: cfg.gabinete,
+      gabinete: await gabineteLib.paraOPrompt(state.incoming),
       modelo: cfg.modelo,
       mensagens: state.incoming,
       campos: Object.fromEntries(
@@ -7070,7 +7419,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // é alarme que se aprende a ignorar.
       const podia = iaLib.vaiCachear(
         cfg.modelo || iaLib.MODELO_PADRAO,
-        iaLib.tokensAproximados(iaLib.montarSistema({ templates: state.templates, regras: cfg.regras, gabinete: cfg.gabinete }))
+        // O MESMO gabinete que foi mandado, não o da textarea: com o dossiê ligado o prompt é
+        // maior, e estimar com a fonte errada faria o painel dizer "SEM CACHE" (ou o contrário)
+        // sobre um prompt que não é o que saiu.
+        iaLib.tokensAproximados(
+          iaLib.montarSistema({ templates: state.templates, regras: cfg.regras, gabinete: await gabineteLib.paraOPrompt(state.incoming) })
+        )
       );
       const cacheOk = c.cacheLido > 0 ? `cache ${c.cacheLido}` : podia ? 'SEM CACHE' : 'sem cache (esperado)';
       // O dólar vem junto do token: token é diagnóstico (o cache está pegando?), dólar é a
@@ -7224,7 +7578,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const areaGabinete = h('textarea', {
       rows: '6',
       placeholder:
-        'Capitão Martim — deputado estadual, número 10122, PL.\n' +
+        'Capitão Martim — deputado estadual, Republicanos.\n' +
         'Fulano — candidato a senador, número XX.\n' +
         'Pautas do mandato: segurança, escolas cívico-militares…',
     });
@@ -7249,6 +7603,50 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'chamadas seguintes — detalhe aqui é barato, e é a falta dele que sai caro em decisão ' +
           'errada.')
     );
+
+    /**
+     * O dossiê de arquivo (src/data/gabinete.md).
+     *
+     * Nasce DESLIGADO porque o conteúdo veio de pesquisa na internet, e número de urna errado manda
+     * eleitor votar em outra pessoa. Ligar é ato dele, depois de conferir — e a tela diz o porquê
+     * em vez de deixar o interruptor mudo.
+     */
+    const avisoDossie = h('div', { class: 'wf-block' }, 'Conferindo o arquivo do dossiê…');
+    const checkDossie = h('input', { type: 'checkbox' });
+    checkDossie.checked = !!cfg.dossieAtivo;
+    checkDossie.addEventListener('change', () =>
+      withBusy(async () => {
+        await salvarIA({ dossieAtivo: checkDossie.checked });
+        setStatus(
+          checkDossie.checked
+            ? 'Dossiê LIGADO: o arquivo entra no prompt da IA.'
+            : 'Dossiê desligado: só o texto que você escreveu acima vai para a IA.',
+          'ok'
+        );
+      })
+    );
+    body.append(
+      h('label', { class: 'wf-field' }, [
+        h('span', {}, 'Usar o dossiê do arquivo (src/data/gabinete.md)'),
+        checkDossie,
+      ]),
+      avisoDossie
+    );
+
+    // `renderConfigIA` é SÍNCRONA de propósito (render que espera rede vira tela em branco), então
+    // o tamanho do arquivo chega depois e preenche o aviso. Enquanto não chega, o texto já diz o
+    // que importa — que está desligado e por quê.
+    gabineteLib.estado().then((e) => {
+      checkDossie.disabled = !e.temArquivo;
+      avisoDossie.className = e.ativo ? 'wf-origin' : 'wf-block';
+      avisoDossie.textContent = !e.temArquivo
+        ? 'Nenhum arquivo de dossiê encontrado em src/data/gabinete.md.'
+        : `O arquivo tem ${e.caracteresArquivo} caracteres e a caixa acima, ${e.caracteresTextarea}. ` +
+          'Os dois vão juntos, o arquivo primeiro. ' +
+          (e.ativo
+            ? 'CONFIRA os números de urna marcados [CONFERIR] no arquivo antes de confiar neles.'
+            : 'Está DESLIGADO: o arquivo veio de pesquisa na internet e precisa da sua revisão. Número de urna errado manda eleitor votar em outra pessoa.');
+    });
 
     const testar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Avaliar o contato aberto');
     testar.disabled = !cfg.ligada || !state.contact;
@@ -7955,16 +8353,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       )
     );
 
-    const learnMulti = h('button', { class: 'wf-btn', type: 'button' }, 'Aprender múltipla escolha (Tema)');
-    learnMulti.addEventListener('click', () =>
-      withBusy(() =>
-        learn(
-          'Tema de Interesse',
-          null,
-          'Gravando. Agora, no painel "Dados do contato" DA PLATAFORMA (não aqui), clique em "Alterar" ao lado de "Tema de Interesse", marque qualquer opção e salve.'
-        )
-      )
-    );
+    // "Aprender múltipla escolha (Tema)" saiu em 01/09/2026 com o campo "Tema de Interesse": era o
+    // único MULTISELECT que a extensão gravava, então não há mais contrato desse tipo a aprender.
+    // O suporte a MULTISELECT continua em contract.js (com teste) — só não há campo usando.
 
     const learnTags = h('button', { class: 'wf-btn', type: 'button' }, 'Aprender etiquetas');
     learnTags.addEventListener('click', () => withBusy(learnTagContract));
@@ -7972,7 +8363,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const learnDate = h('button', { class: 'wf-btn', type: 'button' }, 'Aprender data (conclusão)');
     learnDate.addEventListener('click', () => withBusy(learnDateContract));
 
-    body.append(h('div', { class: 'wf-row' }, [learnText, learnMulti, learnTags, learnDate]));
+    body.append(h('div', { class: 'wf-row' }, [learnText, learnTags, learnDate]));
 
     const logBox = h('div', { class: 'wf-mono' }, '');
     const showLog = h('button', { class: 'wf-btn wf-mini', type: 'button' }, 'Ver requisições capturadas');

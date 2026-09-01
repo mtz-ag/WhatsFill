@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -114,6 +114,27 @@ grupo('mensagem que pede resposta escrita por voce');
    */
   check(!pedeRespostaPessoal({ texto: '', tipo: 'VIDEO' }), 'vídeo NÃO pede — é conteúdo repassado');
   check(!!pedeRespostaPessoal({ texto: '', tipo: 'DOCUMENT' }), 'documento também');
+
+  /**
+   * Áudio TRANSCRITO não pode alegar que precisa ser aberto (01/09/2026).
+   *
+   * O motivo "só dá para responder depois de abrir" nasceu quando áudio chegava vazio. Com a
+   * transcrição na tela, a caixa aparecia com o texto inteiro do lado e ainda dizia isso — e o
+   * efeito não era só cosmético: a regra da tecla 6 vencia pelo FORMATO, sem ninguém olhar o
+   * conteúdo, e a rodada parava em todo áudio.
+   */
+  const curto = { texto: 'bom dia, tudo bem?', tipo: 'AUDIO', transcrito: true };
+  check(!pedeRespostaPessoal(curto), 'áudio transcrito CURTO não pede: as outras regras decidem pelo conteúdo');
+
+  const falado = { texto: 'Oi, tudo bem. Queria falar contigo sobre uma coisa importante. '.repeat(12), tipo: 'AUDIO', transcrito: true };
+  const rFalado = pedeRespostaPessoal(falado);
+  check(!!rFalado, 'áudio transcrito LONGO continua pedendo você — é conversa');
+  check(/falou/.test(rFalado.motivo), 'e o motivo diz "falou", não "escreveu" — quem lê não vai procurar um texto que não existe');
+  check(!/depois de abrir/.test(rFalado.motivo), 'e não afirma mais que precisa abrir');
+
+  // Sem a marca de transcrição, nada muda: áudio vazio continua exigindo abrir.
+  check(/depois de abrir/.test(pedeRespostaPessoal({ texto: '', tipo: 'AUDIO' }).motivo), 'áudio sem transcrição não regrediu');
+  check(/depois de abrir/.test(pedeRespostaPessoal({ texto: 'x', tipo: 'AUDIO', transcrito: false }).motivo), 'texto sem a marca também não conta como transcrição');
 
   // O caso da Janete: áudio de 1min13 que a plataforma transcreveu num texto enorme.
   const transcricao = 'Obrigada, eu já estou falando de você para meus filhos, eu tenho três filhos. '.repeat(8);
@@ -675,6 +696,73 @@ grupo('confirmaPresenca: quem NAO vai comeca dizendo que queria — a ressalva d
   check(p('obrigado') === null, 'agradecimento tambem nao');
   check(p('') === null, 'vazio devolve null');
   check(confirmaPresenca([], null) === null, 'sem rajada devolve null');
+}
+
+grupo('semInteresse — recusa e hostilidade (01/09/2026)');
+{
+  const si = (t) => semInteresse([{ texto: t, tipo: 'TEXT' }]);
+
+  // O print real: contato do anúncio que respondeu hostilizando. Começa com "Não" e xinga em
+  // segunda pessoa — os dois caminhos da regra apontam para o mesmo lugar.
+  const hostil = 'Não porque vocês pensam que os gaúchos são burros um grande mentiroso desses que nem as perguntas da dabatina sou a responder és igual o golpista presidiário do pai dele que culpar os outros sem projeto de governo uma grande lesma idiota';
+  check(!!si(hostil), 'o print real é reconhecido como sem interesse');
+
+  check(!!si('Não quero receber nada'), 'recusa explícita');
+  check(!!si('me tira da lista'), 'pedido de sair da lista');
+  check(!!si('para de mandar mensagem'), 'pedido de parar');
+  check(!!si('Não tenho interesse'), 'sem interesse dito com essas palavras');
+  check(!!si('nao'), 'só "não" — a pergunta era fechada');
+  check(!!si('vocês são uns idiotas mentirosos'), 'xingamento no plural dirigido a nós');
+
+  /**
+   * **Os falsos positivos são o que decide se esta regra pode existir.**
+   *
+   * Marcar apoiador como sem interesse o tira da fila e deixa um rótulo permanente no CRM. Os dois
+   * primeiros são os perigosos de verdade: apoiador xingando o adversário em TERCEIRA pessoa é o
+   * tipo de mensagem mais comum nesta base.
+   */
+  check(!si('O Lula é um ladrão safado, golpista mesmo'), 'xingar o adversário em 3ª pessoa NÃO é recusa');
+  check(!si('esse presidiário do Lula é um genocida'), 'nem com três palavras da lista');
+  check(
+    !si('Boa noite.\nRosane Requia\nCaxias do Sul\nNão faço parte de nenhum grupo político.'),
+    'resposta real de apoiadora que contém "Não faço parte"'
+  );
+  check(!si('não sei minha cidade direito'), '"não sei" é resposta à cidade');
+  check(!si('não tenho grupo mas quero ajudar'), '"não tenho grupo" é resposta aos grupos');
+  check(!si('não moro mais em Canoas, agora é Pelotas'), 'correção de cidade não é recusa');
+  check(!si('nao consigo abrir o link'), 'dificuldade técnica não é recusa');
+  check(!si('vocês são demais, parabéns pelo trabalho'), 'elogio em segunda pessoa não é hostilidade');
+  check(!si('Sim / Maria Silva / Canoas'), 'resposta ao formulário');
+  check(!si(''), 'vazio');
+  check(!semInteresse([]), 'sem mensagem');
+
+  // Olha a ÚLTIMA: quem xingou ontem e hoje voltou pedindo conteúdo mudou de ideia.
+  check(!semInteresse([{ texto: hostil, tipo: 'TEXT' }, { texto: 'me manda os conteudos por favor', tipo: 'TEXT' }]), 'a última mensagem é que vale');
+}
+
+grupo('recusar o EVENTO nao e recusar o contato (regressao de 01/09/2026)');
+{
+  const si = (t) => semInteresse([{ texto: t, tipo: 'TEXT' }]);
+
+  /**
+   * Print do Ze: veio do anuncio do evento e respondeu "Nao conseguirei ir!". A regra
+   * `sem-interesse`, criada horas antes e primeira da tabela, venceu `confirmaPresenca` (que
+   * acertava), etiquetou como sem interesse e concluiu EM SILENCIO.
+   *
+   * Era a pessoa mais engajada possivel -- veio pelo anuncio E se deu o trabalho de responder.
+   */
+  check(!si('Não conseguirei ir!'), 'a frase exata do print nao e sem interesse');
+  check(!si('Nao vou poder ir'), 'nao vou poder ir');
+  check(!si('Não posso ir dessa vez'), 'nao posso ir dessa vez');
+  check(!si('não vou'), 'nao vou (curto)');
+  check(!si('Não dá pra mim ir'), 'nao da pra mim ir');
+  check(!si('Não conseguirei comparecer'), 'comparecer tambem conta como presenca');
+  check(!si('Não poderei estar presente'), 'estar presente tambem');
+
+  // A recusa EXPLICITA vem antes e continua vencendo, mesmo com verbo de ir dentro.
+  check(!!si('nao vou mais receber isso, me tira da lista'), 'pedido de sair da lista vence o verbo de ir');
+  check(!!si('Não quero receber nada'), 'recusa explicita nao regrediu');
+  check(!!si('nao'), 'negativa seca nao regrediu');
 }
 
 fim();

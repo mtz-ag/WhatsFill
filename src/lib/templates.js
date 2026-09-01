@@ -404,3 +404,53 @@ function slug(name) {
     .slice(0, 40);
   return base || `template-${Math.random().toString(36).slice(2, 8)}`;
 }
+
+/**
+ * Esta mensagem NOSSA é o pedido de dados? (em qualquer redação, de qualquer época)
+ *
+ * **Reconhece pelo INVARIANTE, não pelo texto.** Comparar com o texto atual do template só
+ * enxerga o que saiu com a redação de hoje — e a redação muda. Print da Loreta (01/09/2026): ela
+ * recebeu *"Para eu poder salvar seu contato me passe seu: Nome / Cidade"* em 31/08, uma redação
+ * que já não existe. O trecho literal não casou, o painel concluiu que já havíamos ENTREGADO algo
+ * a ela, e a rodada mandou a mensagem do momento **em vez do modelo que ela nunca recebeu**.
+ *
+ * A linha `Nome / Cidade` é o que nunca muda entre as três formas do pedido (`pedir-dados`, a
+ * pergunta de interesse e as de evento) nem entre as variantes: os testes a protegem em cada texto,
+ * e o parser depende dela para ler a resposta. O `CLAUDE.md` já registrava isso para a leitura da
+ * RESPOSTA — vale igual para reconhecer a PERGUNTA.
+ *
+ * @param {string} texto uma mensagem que NÓS mandamos
+ * @returns {boolean}
+ */
+export function ehPedidoDeDados(texto) {
+  const plano = String(texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+  return /\bnome( completo)?\s*\/\s*cidade\b/.test(plano);
+}
+
+/**
+ * Esta mensagem NOSSA é a pergunta "em que você precisa de ajuda?"
+ *
+ * Mesmo princípio de `ehPedidoDeDados`: reconhece pelo **invariante**, não pela redação. A frase
+ * `em que você precisa de ajuda` já é travada por teste no texto do template — é ela que não muda.
+ *
+ * Existe porque a pergunta abre um caso e **a resposta dela precisa de gente**. Print de
+ * 01/09/2026: a rodada perguntou às 14:22, a contato respondeu às 16:19 *"é sobre as irregularidades
+ * sobre compra assistida em eldorado do sul"* — uma denúncia sobre programa público, que é o
+ * trabalho de um mandato — e recebeu **material de campanha**, porque nenhuma regra reconhecia que
+ * aquilo era a resposta a uma pergunta nossa.
+ *
+ * @param {string} texto uma mensagem que NÓS mandamos
+ * @returns {boolean}
+ */
+export function ehPerguntaComoAjudar(texto) {
+  const plano = String(texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  return /em que voce precisa de ajuda/.test(plano);
+}

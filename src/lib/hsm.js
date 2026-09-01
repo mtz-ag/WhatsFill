@@ -164,7 +164,20 @@ export function formatModeloPorTexto(mapa) {
 export function templateParaConteudo(etiqueta, mapa, modelos) {
   const nome = mapa?.[achatar(etiqueta)];
   if (!nome) {
-    return { erro: `Nenhum modelo mapeado para "${etiqueta}". Cadastre na aba Config → "Modelo por conteúdo".` };
+    /**
+     * A mensagem diz as DUAS saídas, e a de agora vem primeiro.
+     *
+     * A versão anterior só mandava cadastrar a tabela — o que resolve da próxima vez e deixa ele
+     * parado agora, com o contato aberto na tela. *"tendo problemas para enviar novamente, só
+     * preciso enviar o modelo, não tem necessidade de ter nada atrelado"* (01/09/2026): o envio
+     * avulso já existia na lista "Modelos de mensagem", e a mensagem de erro não contava.
+     */
+    return {
+      erro:
+        `Nenhum modelo mapeado para "${etiqueta}". Para mandar AGORA: use "Modelos de mensagem" ` +
+        'logo abaixo — o "Enviar" de cada modelo manda só o modelo, sem concluir nem agradecer. ' +
+        'Para o atalho voltar a funcionar, cadastre em Config → "Modelo por conteúdo".',
+    };
   }
 
   const casam = (modelos || []).filter((m) => achatar(m.name) === achatar(nome));

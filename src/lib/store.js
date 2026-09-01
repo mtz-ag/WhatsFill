@@ -94,28 +94,11 @@ export const DEFAULT_TEMPLATES = [
         PERGUNTA_GRUPOS,
     ],
   },
-  {
-    id: 'tema-opcoes',
-    name: 'Perguntar o tema (opções numeradas)',
-    text:
-      'Só mais uma: responda com o número que mais combina com você.\n\n' +
-      '1 - Quero receber material impresso\n' +
-      '2 - Sou apoiador e quero ajudar bastante\n' +
-      '3 - Sou apoiador e ajudo quando posso\n' +
-      '4 - Só quero acompanhar de longe',
-    variantes: [
-      'Só mais uma coisa: me diz o número que mais tem a ver com você.\n\n' +
-        '1 - Quero receber material impresso\n' +
-        '2 - Sou apoiador e quero ajudar bastante\n' +
-        '3 - Sou apoiador e ajudo quando posso\n' +
-        '4 - Só quero acompanhar de longe',
-      'Falta só mais um dado: responda com o número que melhor te descreve.\n\n' +
-        '1 - Quero receber material impresso\n' +
-        '2 - Sou apoiador e quero ajudar bastante\n' +
-        '3 - Sou apoiador e ajudo quando posso\n' +
-        '4 - Só quero acompanhar de longe',
-    ],
-  },
+  // A resposta "Perguntar o tema (opções numeradas)" saiu em 01/09/2026 junto com o campo "Tema de
+  // Interesse": perguntar o que ninguém vai gravar é fazer o contato responder à toa.
+  //
+  // **Isto é o DEFAULT, não o que está salvo.** Quem já usava a extensão tem a resposta guardada no
+  // `chrome.storage` e ela continua aparecendo na lista até ser apagada à mão na aba Respostas.
   {
     id: 'link-grupo',
     name: 'Enviar link do grupo',
@@ -597,7 +580,24 @@ const DEFAULTS = {
      * Vazio = não tira nada.
      */
     etiquetaSemRetorno: '1 SEM RETORNO',
+
+    /**
+     * Etiqueta de quem recusou ou veio hostilizar. **Vazia = a rodada não marca ninguém.**
+     *
+     * Pedido dele (01/09/2026): *"falando mal do bolsonaro e martim é aliado do bolsonaro, esse
+     * tipo nós botamos etiqueta sem interesse e concluímos sem responder"*, depois de a rodada
+     * pedir dados a dois contatos sem interesse.
+     *
+     * Nasce **vazia** e o nome tem que ser digitado igual ao do CRM, pela mesma razão das outras:
+     * a extensão não cria etiqueta sozinha, e erro de digitação aqui vira rótulo permanente na
+     * base. Sem ela a regra continua valendo — só conclui sem marcar, e diz isso no log.
+     *
+     * Fica DENTRO de `auto` de propósito: é a chave que o `get` mescla com o default, então quem
+     * já usa a extensão recebe o campo em vez de `undefined`.
+     */
+    etiquetaSemInteresse: '',
   },
+
 
   /**
    * Regras de etiqueta por conteúdo: padrão (regex, sem diferenciar maiúscula) casado contra
@@ -745,6 +745,16 @@ const DEFAULTS = {
      * saem numa escolha que chega a eleitor real. Quem preenche é ele.
      */
     gabinete: '',
+    /**
+     * O dossiê de `src/data/gabinete.md` entra no prompt?
+     *
+     * **Nasce false, e não é zelo decorativo.** O arquivo foi montado a partir de pesquisa na
+     * internet, e número de urna errado manda eleitor votar em outra pessoa. Ele pediu para revisar
+     * antes (*"vou revisar para não mandar algo errado pra ia da extensão"*), então o mecanismo fica
+     * pronto e desligado. A textarea acima continua valendo desligada — o que ELE escreveu já foi
+     * revisado por definição.
+     */
+    dossieAtivo: false,
     regras: '',
     /**
      * O rascunho escrito pela IA pode ser ENVIADO sem ele ler antes.
@@ -796,28 +806,47 @@ const DEFAULTS = {
    * desfaria a sua edição toda vez que o painel subisse.
    */
   migracoes: {},
+  /**
+   * O FLUXO: a ordem das regras, as teclas e as desligadas — editado na aba Automatizado.
+   *
+   * Pedido dele (01/09/2026): *"vamos montar uma janela (…) que será o fluxo de atendimento, lá
+   * será editado todo o fluxo que a extensão seguira"*. Nasceu de dois erros do mesmo dia que não
+   * eram de lógica e sim de ORDEM: `ja-respondemos-antes` acima de `conteudo-pedido`, e a regra de
+   * sem interesse no topo engolindo a confirmação de presença. Ordem ele resolve arrastando; me
+   * chamar para isso era o gargalo.
+   *
+   * **Vazio = a ordem do código.** A janela nascer em branco não muda comportamento nenhum, e
+   * `sugestao.ordenar` trata id novo do código inserindo-o na posição do código — não no fim.
+   *
+   * As CONDIÇÕES continuam no código de propósito: elas decidem o que sai para eleitor, e uma
+   * expressão mal montada aqui viraria mensagem errada. Aqui só se mexe em prioridade, tecla e
+   * ligar/desligar — o pior caso é um destaque no lugar errado.
+   */
+  fluxo: {
+    /** ids na ordem que ele quer. Vazio = ordem do código. */
+    ordem: [],
+    /** ids que ele desligou. Regra desligada nunca vence — as de baixo passam a ser olhadas. */
+    desligadas: [],
+    /** id → tecla, quando ele quer outra que não a do código. */
+    teclas: {},
+    /** id → quantas vezes venceu. Mostra qual regra decide a fila de verdade. */
+    vitorias: {},
+  },
   /** Cache da lista de municípios do RS (IBGE). */
   municipios: null,
   /**
-   * Número que o contato responde → nome da opção real de "Tema de Interesse".
-   * Precisa casar com a numeração do template "tema-opcoes": se você mexer no texto do
-   * template, ajuste aqui também.
+   * Dicionário do parser, editável.
+   *
+   * **Só sobrou `partido`, e ele não preenche campo nenhum.** O campo "Partido" saiu em
+   * 01/09/2026 junto com "Função" e "Tema de Interesse"; esta lista continua porque tem uma
+   * segunda função, que é a única agora: `extract.limparSiglas` a usa para tirar a sigla de dentro
+   * do NOME ("Jeane do PL" → "Jeane"). Apagá-la faria o nome do contato ser gravado com a sigla
+   * colada — por isso ela ficou, e por isso a aba Config a chama de "siglas removidas do nome".
+   *
+   * `temaByNumber` e `dicts.funcao` saíram junto: sem campo para gravar, o mapa numérico da
+   * pergunta de tema e a lista de cargos não tinham mais consumidor.
    */
-  temaByNumber: {
-    1: 'Aceitou receber material impresso',
-    2: 'Apoiador Muito engajado',
-    3: 'Apoiador Engajado',
-    4: 'Apoiador não engajado',
-  },
-  /** Dicionários do parser, editáveis. */
   dicts: {
-    funcao: [
-      'vereador', 'vereadora', 'prefeito', 'prefeita', 'vice-prefeito', 'deputado', 'deputada',
-      'presidente de bairro', 'presidente', 'secretário', 'secretaria', 'assessor', 'assessora',
-      'voluntário', 'voluntária', 'apoiador', 'apoiadora', 'coordenador', 'coordenadora',
-      'militar', 'veterano', 'policial', 'bombeiro', 'agricultor', 'produtor rural',
-      'empresário', 'empresária', 'professor', 'professora', 'caminhoneiro', 'CAC',
-    ],
     partido: ['PL', 'PP', 'MDB', 'PSDB', 'PT', 'PDT', 'PSD', 'REPUBLICANOS', 'NOVO', 'PODE', 'UNIÃO', 'PRD', 'PSB', 'PCdoB', 'PV', 'PSOL', 'AVANTE', 'SOLIDARIEDADE', 'CIDADANIA', 'AGIR', 'MOBILIZA', 'DC', 'PRTB'],
   },
 };
@@ -851,7 +880,7 @@ export async function get(key) {
   if (
     key === 'settings' ||
     key === 'dicts' ||
-    key === 'temaByNumber' ||
+    key === 'fluxo' ||
     key === 'tagAliases' ||
     key === 'auto' ||
     key === 'ia'
@@ -939,7 +968,7 @@ export async function importJson(text) {
    */
   const allowed = [
     'templates', 'cityLinks', 'defaultGroupLink', 'settings', 'writeContract', 'dicts',
-    'temaByNumber', 'tagRules', 'tagAliases', 'contentTemplates', 'auto',
+    'tagRules', 'tagAliases', 'contentTemplates', 'auto', 'fluxo',
     'modeloPorTexto', 'padroesDeAnuncio', 'conteudoPreferido',
   ];
   for (const key of allowed) {

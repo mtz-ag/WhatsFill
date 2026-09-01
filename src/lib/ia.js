@@ -122,11 +122,15 @@ export function montarSistema({ templates = [], regras = '', gabinete = '' } = {
     '3. ESCALE SEMPRE, sem exceção, quando a pessoa pede dinheiro, cesta básica, remédio, ajuda',
     '   com contas, passagem, emprego, ou relata dificuldade pessoal. Um mandato não pode doar, e',
     '   essa conversa precisa de cuidado humano.',
-    '4. Cuidado com "ajuda": quem diz "quero ajudar", "posso ajudar", "conte comigo" é APOIADOR se',
+    '4. ESCALE quando o contato RELATA UM PROBLEMA: irregularidade, denúncia, obra parada, fila,',
+    '   atendimento negado, programa público que não funcionou. Isso é o trabalho do mandato e',
+    '   precisa de uma pessoa lendo. Nenhuma resposta pronta serve, e material de campanha em cima',
+    '   de uma denúncia é o pior que pode sair daqui.',
+    '5. Cuidado com "ajuda": quem diz "quero ajudar", "posso ajudar", "conte comigo" é APOIADOR se',
     '   oferecendo, e é o público principal. Não é pedido de ajuda.',
-    '5. Se o contato só respondeu o formulário (nome e cidade), ou só mandou uma saudação, ou',
+    '6. Se o contato só respondeu o formulário (nome e cidade), ou só mandou uma saudação, ou',
     '   agradeceu, escolha a resposta pronta que corresponde — não escale por ser simples.',
-    '6. Se duas respostas servirem, escolha a mais específica. Se nenhuma servir, escale.',
+    '7. Se duas respostas servirem, escolha a mais específica. Se nenhuma servir, escale.',
     '',
     /**
      * Quem é quem, antes das instruções: é contexto, não ordem.

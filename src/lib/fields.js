@@ -18,16 +18,14 @@ import { buildRequest } from './contract.js';
  * Os campos que o painel classifica, na ordem em que aparecem. Nomes exatos do schema.
  * "Nome" entra aqui porque o contato vindo do anúncio chega como "[NOVO] (51) 9...": assim o
  * nome que o contato informou é gravado no cadastro em vez de ficar só na mensagem.
+ *
+ * **Saíram em 01/09/2026, por pedido dele** (*"não preciso preencher isso"*): "Tema de Interesse",
+ * "Temas de Interesse", "Função" e "Partido". A remoção é da EXTENSÃO, não do CRM — o que já foi
+ * gravado nesses campos continua lá, intocado. Esta lista é o único ponto por onde a extensão
+ * escreve campo de contato, então tirar daqui é o que garante que nenhum caminho novo volte a
+ * preencher os quatro por engano.
  */
-export const CLASSIFY_FIELDS = [
-  'Nome',
-  'Cidade',
-  'Tema de Interesse',
-  'Função',
-  'Partido',
-  'Responsável',
-  'Temas de Interesse',
-];
+export const CLASSIFY_FIELDS = ['Nome', 'Cidade', 'Responsável'];
 
 export const COMPLETION_FIELD = 'Data de conclusão do contato';
 

@@ -16,8 +16,10 @@ export const KNOWN_VARS = [
   ['{{cidade}}', 'Cidade classificada do contato'],
   ['{{link_grupo}}', 'Link do grupo da cidade (tabela em Config)'],
   ['{{telefone}}', 'Telefone formatado'],
-  ['{{funcao}}', 'Função classificada'],
-  ['{{partido}}', 'Partido classificado'],
+  // `{{funcao}}` e `{{partido}}` saíram em 01/09/2026 com os campos que os alimentavam. Resposta
+  // salva que ainda use uma delas passa a bloquear o envio com o motivo na tela ("variável
+  // desconhecida"), que é o comportamento certo: melhor recusar do que mandar o texto com o
+  // marcador cru para o eleitor.
 ];
 
 /**
@@ -196,8 +198,6 @@ export async function buildContext(ctx = {}) {
       cidade,
       link_grupo: linkGrupo,
       telefone: ctx.contact?.phonenumberFormatted || ctx.contact?.phonenumber || '',
-      funcao: ctx.funcao || '',
-      partido: ctx.partido || '',
     },
     reasons: {
       link_grupo: linkReason,

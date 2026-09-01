@@ -5,6 +5,89 @@
 
 ---
 
+## 2026-09-01 (noite, 14) — O fluxo virou ÁRVORE de verdade, e ele passa a montá-la sozinho
+
+**Pedido:** a foto do quadro dele, com o fluxo desenhado, e *"esse é o exemplo que eu estava
+pensando, está incompleto ainda o fluxo, ele precisa ser incrementado de acordo com a demanda"*.
+
+### O que o desenho dele mostrou que o meu não era
+
+Eu tinha entregado, horas antes, uma cascata onde cada REGRA ramificava em "casou / não casou". O
+desenho dele ramifica por **situação**: `mensagem chega` → `anúncio, pessoa nova` **ou** `pessoa
+retornando` → tipo de mensagem → ação. É outra coisa: no meu, a estrutura é a da tabela de regras;
+no dele, a estrutura é a do ATENDIMENTO. E a segunda frase é a que decidiu o resto: **o fluxo
+cresce**, e quem tem que fazê-lo crescer é ele.
+
+### As duas decisões que pedi antes de construir
+
+1. **Quem escreve a condição de um ramo novo** → *"lista de sinais + palavras"*. A condição é um
+   sinal de `arvore.SINAIS` (coisa que o código já reconhece, com teste) e/ou palavras que ele
+   digita; a ação é uma tecla ou uma resposta pronta. Ele monta sozinho, e o que decide o que sai
+   para eleitor continua sendo código testado.
+2. **`pedido-ajuda` pode sair sozinho** → sim, como no desenho. O texto **nega** o pedido com
+   respeito, e o risco da Lei 9.504/97 é PROMETER benefício, não recusar. **A trava da IA continua
+   de pé**: `ia.RESTRITOS` segue impedindo a IA de escolher esse texto. O que mudou é que um ramo
+   escrito por ELE pode.
+
+### O que existe agora
+
+- **`src/lib/arvore.js`** (novo, puro, testado): o modelo do nó, `decidir`, os `SINAIS`,
+  `arvorePadrao`, `arvoreDoQuadro` e as edições (`mover`, `aninhar`, `desaninhar`, `acrescentar`,
+  `apagar`, `editar`), todas puras — a árvore original nunca é tocada.
+- **A janela** virou editor de árvore: esquema indentado com cotovelo, um nó por linha, cor pelo
+  que o eleitor recebe. Por nó: `✎` editar, `+` criar dentro, `↑ ↓` prioridade entre irmãos,
+  `⇥ ⇤` aninhar e desaninhar, ligar/desligar e apagar. Em cima, os problemas em vermelho e o
+  estado "igual às regras do código" / "árvore sua, diferente do código".
+- **Botão "Carregar o desenho do quadro"**: o preset com a estrutura dele.
+- **Tecla `f`**: o desfecho "manda ESTA resposta pronta e conclui", que a tabela não sabia
+  expressar. Letra e não dígito, pelo mesmo motivo do `s`.
+- O simulador acende o CAMINHO inteiro na árvore e ganhou duas chaves ("é retorno", "veio de
+  anúncio"), porque agora elas mudam por qual porta o caso entra.
+
+### As travas, que são o que torna isto seguro de ligar
+
+- **Ligar não muda nada.** A árvore nasce sendo a tabela de hoje achatada, e o teste exige que as
+  duas decidam **igual em 400 contextos** sorteados com semente fixa. Por isso ela nasce plana:
+  agrupar já é uma decisão, e decisão é dele. A ordem e as desligadas da versão de lista vêm junto
+  na semeadura — sem isso, abrir a janela jogaria fora em silêncio o que ele já tinha arrastado.
+- **Nó que casa e não resolve NÃO para a busca.** A árvore vai crescer, então ramo pela metade vai
+  existir (condição hoje, ação amanhã). Parar ali faria o contato sair da rodada sem nada
+  acontecer e sem nada na tela dizendo por quê — buraco silencioso, o pior defeito deste projeto.
+  Ele segue para os irmãos, e `problemas()` acusa o nó na faixa vermelha.
+- **O preset do quadro põe as protecões ACIMA da bifurcação.** O desenho dele não tinha denúncia,
+  despedida, pergunta aberta nem a etiqueta que dispensa; carregá-lo como estava apagaria a regra
+  criada em 01/09 para impedir material de campanha em cima de denúncia. Como o próprio desenho
+  repete "hater xingando" nos dois lados, pôr as cinco acima da bifurcação é dizer a mesma coisa
+  uma vez só. Tem teste exigindo que a denúncia continue vencendo.
+- **Condição de nó respaldado por regra não se edita na janela** — é o que preserva os testes das
+  dezesseis. Ele troca o desfecho, desliga, move e pendura ramos mais específicos dentro.
+
+### Um defeito que peguei na tela
+
+O motivo listava **todas** as palavras que o ramo procura (*"escreveu ajuda financeira, cesta
+basica, remedio…"*) em vez da que a pessoa escreveu. Essa frase aparece na caixa da rodada, em
+cima da decisão, e é o que ele lê antes de apertar a tecla: dizer o que o ramo procura não diz
+nada sobre o contato. Hoje `palavraQueCasou` nomeia a que bateu, com teste.
+
+**Arquivos:** `src/lib/arvore.js`, `tests/arvore.test.mjs` (novos), `src/fluxo.js`, `src/fluxo.html`,
+`src/fluxo.css` (reescritos), `src/panel/panel.js` (a árvore vence a tabela; `textos`,
+`ultimoTexto` e `veioDeAnuncio` no contexto; tecla `f` com o ramo que a executa e a automação que
+a entende), `manifest.json` (1.22.0 → 1.23.0), `registro.md`, `CLAUDE.md`.
+
+**Conferido:** treze suítes, `checar-modulos` e `checar-referencias` passando. A janela foi medida
+num servidor de rascunho FORA do repositório, com `chrome.storage` fingido: semeia 16 nós sem
+problemas, o preset do quadro dá 20 nós em dois níveis, "bom dia" cai em `pessoa retornando → só
+mandou bom dia` (tecla 5) e o pedido financeiro cai na resposta pronta; o cotovelo do nível 1
+mede vertical em 13px e horizontal de 15px, e o do nível 0 fica escondido.
+
+**Não testado na tela:** a janela real do Chrome (a extensão carregada), e a tecla `f` chegando ao
+eleitor. As duas dependem do navegador com a extensão e de um contato de teste.
+
+**Pendência conhecida:** o desenho dele tem *"mandar modelo de mensagem + agradecer e concluir"* —
+duas mensagens num desfecho só. Hoje um ramo manda uma. Se ele quiser as duas, é ação nova.
+
+---
+
 ## 2026-09-01 (noite, 13) — O mapa do fluxo virou RAMIFICADO: cada regra mostra os dois caminhos
 
 **Pedido:** *"veja a janela nova de fluxo de atendimento, quero que seja ramificado"*.

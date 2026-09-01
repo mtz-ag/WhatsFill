@@ -456,3 +456,12 @@
 .wf-root h3.wf-h { margin: 0 0 6px; font-size: 13px; }
 .wf-switch { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
 .wf-switch input { width: auto; }
+
+/* ---- botao que abre a janela do fluxo ----------------------------------- */
+/* Fica logo abaixo do Recarregar, no cabecalho: o fluxo vale para todas as abas. */
+.wf-fluxo-abrir {
+  display: block;
+  width: 100%;
+  margin: 6px 0 2px;
+  text-align: center;
+}
