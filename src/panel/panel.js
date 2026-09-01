@@ -3554,15 +3554,47 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * Compara um trecho do MEIO do modelo com o que já saiu: o começo costuma ser saudação
        * igual em todos, e um trecho curto sobrevive a variável interpolada no caminho.
        */
+      /**
+       * O modelo já está na conversa?
+       *
+       * **Compara o maior pedaço LITERAL do modelo, e não uma fatia fixa.** A versão anterior
+       * pegava os caracteres 40 a 100 — e modelo aprovado tem variáveis (`{{1}}`, nome, cidade).
+       * Variável caindo nessa fatia fazia a comparação nunca casar, porque o que saiu tem o VALOR
+       * no lugar do marcador. Print do Cris (31/08): histórico grande, modelo provavelmente já
+       * entregue, e a caixa sugerindo mandar de novo.
+       *
+       * 30 caracteres literais é pouco para dar falso positivo (é meia frase específica) e curto
+       * o bastante para sobrar mesmo em modelo cheio de variável.
+       */
       const modeloJaNaConversa = (() => {
-        const corpo = achatarTexto(modelo?.text || '');
-        if (corpo.length < 100) return false;
-        const trecho = corpo.slice(40, 100);
-        return state.nossas.some((m) => achatarTexto(m.texto).includes(trecho));
+        const bruto = String(modelo?.text || '');
+        // Quebra nos marcadores de variável: sobra o que o modelo tem de fixo.
+        const pedacos = bruto
+          .split(/\{\{[^}]*\}\}|\{\{?\d+\}?\}/g)
+          .map((t) => achatarTexto(t))
+          .filter((t) => t.length >= 30);
+        if (!pedacos.length) return false;
+
+        const maior = pedacos.sort((a, b) => b.length - a.length)[0];
+        return state.nossas.some((m) => achatarTexto(m.texto).includes(maior));
       })();
+
+      /**
+       * Já mandamos alguma mensagem para este contato, em algum momento?
+       *
+       * Escolha dele (31/08), print do Cris: *"histórico de conversa grande provavelmente já
+       * recebeu modelo de mensagem, vou mandar mensagem do momento"*. O modelo é a entrega
+       * INICIAL; depois dela, quem volta recebe a mensagem da ocasião.
+       *
+       * `nossas` inclui o que saiu à mão e o que a automação da plataforma mandou — é o mesmo
+       * campo que já resolvia o "modelo já na conversa", e por isso enxerga mais que o registro de
+       * envios do painel.
+       */
+      const jaRespondemosAntes = state.nossas.length > 0;
 
       const sugestao = sugerirAcao({
         modeloJaNaConversa,
+        jaRespondemosAntes,
         ultimaEhDespedida: ultimaEhDespedida(state.entrantes),
         // "Já foi respondida": nossa última mensagem saiu hoje. Serve para a reação (figura,
         // emoji, link) virar "concluir" em vez de "mais uma mensagem".

@@ -28,6 +28,7 @@ const base = {
   rajadaEhSoRepasse: false,
   pedeAlgoIndefinido: null,
   podePerguntarAjuda: true,
+  jaRespondemosAntes: false,
   podeMandarMomento: true,
   temEtiquetaDeCidade: true,
   podePedirDados: true,
@@ -422,6 +423,45 @@ grupo('pediu-algo-sem-dizer-o-que: a regra de maior risco, e fica no alto');
 
   // Sem pedido, nada muda.
   check(com({ podeEnviar: true, conteudoPedido: 'ADS' })?.id === 'conteudo-pedido', 'sem pedido o modelo continua indo');
+}
+
+
+grupo('ja-respondemos-antes: o modelo e a entrega INICIAL');
+{
+  /**
+   * Print do Cris (31/08): historico grande, etiquetas de conteudo, e a caixa sugerindo mandar o
+   * modelo. *"historico de conversa grande provavelmente ja recebeu modelo de mensagem, vou mandar
+   * mensagem do momento"*.
+   *
+   * Quem ja foi atendido e volta dizendo que apoia nao esta pedindo o material de novo — esta
+   * aparecendo. Modelo repetido parece que ninguem olhou o historico.
+   */
+  const cris = com({ jaRespondemosAntes: true, podeEnviar: true, conteudoPedido: 'ADS' });
+  check(cris?.tecla === '5', 'manda a mensagem do momento: ' + JSON.stringify(cris));
+  check(cris?.id === 'ja-respondemos-antes', 'e e a regra nova');
+
+  /**
+   * **O contra-teste que preserva o proposito do modelo:** na PRIMEIRA vez, ele vai. E a entrega
+   * que a pessoa pediu ao clicar no anuncio.
+   */
+  check(com({ jaRespondemosAntes: false, podeEnviar: true, conteudoPedido: 'ADS' })?.id === 'conteudo-pedido',
+    'primeira vez: o modelo vai');
+
+  /**
+   * O desfecho vira CONCLUIR nos tres casos em que mais uma mensagem nossa seria empilhar em cima
+   * do que ela ainda nao comentou. Mesmo desenho da regra da reacao.
+   */
+  check(com({ jaRespondemosAntes: true, respondidoHoje: true })?.tecla === '3', 'ja respondemos hoje: conclui');
+  check(com({ jaRespondemosAntes: true, momentoJaEnviado: true })?.tecla === '3', 'momento ja enviado: conclui');
+  check(com({ jaRespondemosAntes: true, podeMandarMomento: false })?.tecla === '3', 'sem momento configurado: conclui');
+
+  // Perde para tudo que fala do que ela acabou de dizer.
+  check(com({ jaRespondemosAntes: true, soExpressaApoio: { motivo: 'a' } })?.tecla === '8',
+    'apoio proprio vence: responder a ela e melhor que a mensagem da semana');
+  check(com({ jaRespondemosAntes: true, pedeAlgoIndefinido: { trecho: 'x' } })?.tecla === '9', 'pedido indefinido vence');
+  check(com({ jaRespondemosAntes: true, perguntaAberta: { motivo: 'p' } })?.tecla === '6', 'pergunta vence');
+  check(com({ jaRespondemosAntes: true, pedeRespostaPessoal: { motivo: 'a' } })?.tecla === '6', 'audio vence');
+  check(com({ jaRespondemosAntes: true, ultimaEhDespedida: true })?.tecla === '3', 'despedida vence');
 }
 
 fim();

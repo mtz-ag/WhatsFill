@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-08-31 — O modelo é a entrega INICIAL; quem volta recebe a mensagem do momento
+
+**Relato dele**, print do Cris: *"histórico de conversa grande provavelmente já recebeu modelo de
+mensagem, vou mandar mensagem do momento"*. A caixa sugeria mandar o modelo.
+
+### Uma causa que eu achei no caminho
+
+`modeloJaNaConversa` comparava os **caracteres 40 a 100** do texto do modelo com as nossas
+mensagens. Modelo aprovado tem variáveis (`{{1}}`, nome, cidade) — variável caindo nessa fatia faz a
+comparação **nunca casar**, porque o que saiu tem o VALOR no lugar do marcador.
+
+Agora ela quebra o modelo nos marcadores e compara o **maior pedaço literal** (mínimo 30
+caracteres): pouco para dar falso positivo, curto o bastante para sobrar mesmo em modelo cheio de
+variável.
+
+### A regra que ele escolheu
+
+`ja-respondemos-antes`: se já mandamos qualquer mensagem para o contato, o modelo perde para a
+mensagem do momento. **O modelo é a entrega inicial** — quem já foi atendido e volta dizendo que
+apoia não está pedindo o material de novo, está aparecendo. Modelo repetido parece que ninguém olhou
+o histórico.
+
+O sinal é `state.nossas.length > 0`, que enxerga o que saiu à mão e o que a automação da plataforma
+mandou — mais que o registro de envios do painel.
+
+### O desenho, e o contra-teste que o sustenta
+
+**Na primeira vez o modelo vai** — é a entrega que a pessoa pediu ao clicar no anúncio. Tem teste.
+
+Fica **abaixo de `so-expressa-apoio`, `pergunta-aberta` e `pediu-algo-sem-dizer-o-que`**: tudo que
+fala do que ela acabou de dizer vem antes da mensagem da semana.
+
+E vira **concluir** em três casos, pelo mesmo desenho da regra da reação: já respondemos hoje, a
+mensagem do momento já saiu, ou não há uma configurada. Mais uma mensagem nossa em cima do que ela
+ainda não comentou é empilhar.
+
+**Alcance a observar:** quase todo contato antigo já recebeu algo nosso, então esta regra vai casar
+com frequência. É o que ele pediu; se na prática o modelo deixar de sair para quem devia receber,
+o ajuste é uma linha.
+
+**Arquivos:** `src/panel/panel.js`, `src/lib/sugestao.js`, `tests/sugestao.test.mjs` (+10),
+`manifest.json` (0.53.0 → **0.54.0**). 29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — "Preciso da força do senhor": a rodada mandava material de campanha
 
 **Relato dele**, print da Mari: *"provável pedido financeiro ou trabalho, vou perguntar em que posso

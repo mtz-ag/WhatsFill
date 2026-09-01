@@ -274,6 +274,36 @@ export const REGRAS = [
     motivo: () => 'escreveu apoio em mensagem própria — responda a ela; o material fica para depois.',
   },
   {
+    id: 'ja-respondemos-antes',
+    /**
+     * Já mandamos algo para este contato antes → o modelo não é a entrega desta vez.
+     *
+     * Escolha dele (31/08), print do Cris: *"histórico de conversa grande provavelmente já recebeu
+     * modelo de mensagem, vou mandar mensagem do momento"*.
+     *
+     * **O modelo é a entrega INICIAL.** Quem já foi atendido e volta dizendo que apoia não está
+     * pedindo o material de novo — está aparecendo. A mensagem da ocasião responde a isso; o
+     * modelo repetido parece que ninguém olhou o histórico.
+     *
+     * Fica **abaixo de `so-expressa-apoio`**: quem escreveu mensagem própria merece resposta
+     * àquilo, não a mensagem da semana.
+     *
+     * O desfecho segue o mesmo desenho da regra da reação: sem mensagem do momento configurada,
+     * ou já tendo respondido hoje, ou já tendo mandado a do momento, o certo é **concluir** — mais
+     * uma mensagem nossa em cima da que ela ainda não comentou é empilhar.
+     */
+    tecla: (c) => (c.respondidoHoje || c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5'),
+    quando: (c) => !!c.jaRespondemosAntes,
+    motivo: (c) =>
+      c.respondidoHoje
+        ? 'já respondemos hoje e ela voltou — pode concluir.'
+        : c.momentoJaEnviado
+          ? 'já foi atendida antes e a mensagem do momento já saiu — pode concluir.'
+          : !c.podeMandarMomento
+            ? 'já foi atendida antes, e não há mensagem do momento configurada — conclua.'
+            : 'já foi atendida antes (o modelo provavelmente já saiu) — mande a mensagem do momento.',
+  },
+  {
     id: 'conteudo-pedido',
     tecla: '1',
     /**
