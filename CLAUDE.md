@@ -520,6 +520,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   merge, rode **`node tools/checar-referencias.mjs`** e confira os DOIS lados com `git diff` contra
   cada branch.
 
+- **Opção na pergunta da rodada sem `if` que a execute manda OUTRA mensagem.** A tecla 0 (a
+  recomendação da IA) devolvia `ia:<id>` e nenhum ramo tratava esse valor: a escolha caía no fim de
+  `tratarContato` e enviava o modelo do conteúdo — mensagem errada, para eleitor de verdade — e
+  quebrava quando não havia modelo. Sintaxe válida, nenhuma função faltando: a passada de chamadas
+  do `checar-referencias.mjs` não pegava, porque o que faltava era o ramo. Hoje ele confere também
+  que todo `valor:` das opções tem um `=== '…'` (ou um `startsWith('…'` quando o valor é montado).
+  **Criou opção? O ramo entra no mesmo commit.**
+
 ## Regras do projeto
 
 - **Sem IA na extração.** Custo por contato. Parser determinístico: regex, dicionário, lista de

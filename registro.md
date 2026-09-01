@@ -51,9 +51,16 @@ hoje** para o contato. Esta última é a que muda de natureza no automático: a 
 aviso de duplicata e deixava ELE decidir — sem ninguém para ler o aviso, a decisão vira "não
 manda, pergunta".
 
+### A checagem que passou a existir
+
+`checar-referencias.mjs` ganhou uma segunda passada: todo `valor:` de opção da pergunta tem que
+aparecer num `=== '...'` (ou num `startsWith('...'` quando o valor é montado). Conferido contra o
+`panel.js` de ontem: `prefixo achado: ia: | tem ramo? false` — teria pego. A primeira passada dele
+não pegava porque não faltava chamada nenhuma; faltava o ramo.
+
 **Arquivos:** `src/lib/store.js` (`auto.automatizarComIA`, já na lista de mescla), `src/panel/panel.js`
-(a caixa, `enviarEscolhaDaIA`, o ramo `ia:`), `manifest.json` (1.6.0 → **1.7.0**). 31 módulos sem
-erro, onze suítes passando.
+(a caixa, `enviarEscolhaDaIA`, o ramo `ia:`), `tools/checar-referencias.mjs`, `CLAUDE.md`,
+`manifest.json` (1.6.0 → **1.7.0**). 31 módulos sem erro, onze suítes passando, referências ok.
 
 ---
 

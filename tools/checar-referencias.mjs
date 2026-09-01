@@ -220,9 +220,44 @@ for (const arquivo of arquivos) {
   }
 }
 
+/**
+ * Segunda passada: toda opção da pergunta da rodada tem quem a execute?
+ *
+ * **Nasceu do mesmo tipo de bug, um dia depois.** A tecla 0 (a recomendação da IA) devolvia
+ * `ia:<id>` e NENHUM `if` tratava esse valor: a escolha caía no fim da função e mandava outra
+ * mensagem, para gente de verdade. Sintaxe válida, nenhuma função faltando — a passada de cima
+ * não vê, porque não falta chamada nenhuma. O que falta é o **ramo**.
+ *
+ * A checagem é literal e por isso confiável: cada `valor: 'x'` das opções tem que aparecer em
+ * algum `=== 'x'`. Valor montado (`valor: \`ia:${id}\``) é conferido pelo prefixo, que tem que
+ * aparecer num `startsWith('ia:'`.
+ */
+const opcoesOrfas = [];
+for (const arquivo of arquivos) {
+  const src = soCodigo(readFileSync(arquivo, 'utf8'));
+
+  for (const m of src.matchAll(/valor:\s*'([^']+)'/g)) {
+    const valor = m[1];
+    if (!src.includes(`=== '${valor}'`) && !src.includes(`!== '${valor}'`)) {
+      opcoesOrfas.push({ arquivo, valor, como: 'nenhum `=== ' + `'${valor}'` + '` no arquivo' });
+    }
+  }
+  for (const m of src.matchAll(/valor:\s*`([^`$]+)\$\{/g)) {
+    const prefixo = m[1];
+    if (!src.includes(`startsWith('${prefixo}'`)) {
+      opcoesOrfas.push({ arquivo, valor: `${prefixo}…`, como: `nenhum startsWith('${prefixo}')` });
+    }
+  }
+}
+if (opcoesOrfas.length) {
+  console.log('\nOpções de pergunta sem ramo que as execute:');
+  for (const o of opcoesOrfas) console.log(`   ${o.arquivo}: valor "${o.valor}" — ${o.como}`);
+  problemas += opcoesOrfas.length;
+}
+
 console.log(
   problemas
-    ? `\n=== ${problemas} chamada(s) sem declaração ===`
-    : `\n=== ${arquivos.length} arquivo(s), toda chamada tem declaração ===`
+    ? `\n=== ${problemas} problema(s): chamada sem declaração ou opção sem ramo ===`
+    : `\n=== ${arquivos.length} arquivo(s), toda chamada declarada e toda opção com ramo ===`
 );
 process.exit(problemas ? 1 : 0);
