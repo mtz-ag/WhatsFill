@@ -409,6 +409,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   a `nossaUltimaAt`. Regra nova que dependa do que a pessoa acabou de dizer: pense na rajada,
   não na última.
 
+- **Vídeo compartilhado NÃO é áudio, e a diferença é quem está falando.** Áudio é a pessoa
+  gravando para ele (o caso que criou a regra foi 1min13 sobre a família e a igreja — modelo ali
+  parece deboche). Vídeo é conteúdo de terceiro chegando pela décima vez no dia: *"são centenas
+  de mensagens e crescendo, não existe essa de parar pra ver vídeos e responder, é ignorar dando
+  bom dia ou enrolar com outro assunto"* (31/08). Vídeo está em `TIPOS_COMPARTILHADOS` com figura
+  e figurinha; áudio, arquivo, contato e localização em `TIPOS_QUE_PEDEM_VOCE`. **Regra que para a
+  fila só se paga em mensagem endereçada a ele** — a fila é de centenas e cresce.
+
 ## Regras do projeto
 
 - **Sem IA na extração.** Custo por contato. Parser determinístico: regex, dicionário, lista de

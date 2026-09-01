@@ -20,7 +20,21 @@
  */
 
 /** Tipos que a plataforma usa para figura. Conferidos no bundle do app (29/08/2026). */
-const TIPOS_DE_IMAGEM = new Set(['IMAGE', 'STICKER']);
+/**
+ * Mídia que a pessoa **repassa**, e não produz: figura, figurinha e vídeo.
+ *
+ * O vídeo entrou aqui em 31/08, a pedido dele, com a print do Odone — que mandou um reel do
+ * Instagram e um vídeo do Facebook de 631 mil visualizações. A caixa sugeria *"mandou um vídeo
+ * — só dá para responder depois de abrir. Responda à mão"*, e a resposta dele foi:
+ * *"são centenas de mensagens e crescendo, não existe essa de parar pra ver vídeos e responder,
+ * é ignorar dando bom dia ou enrolar com outro assunto"*.
+ *
+ * **O áudio continua fora desta lista, e a diferença é quem está falando.** Áudio é a pessoa
+ * gravando para ele — o caso que criou a regra foi 1min13 sobre a família e a igreja, e mandar
+ * modelo ali parece deboche. Vídeo compartilhado é conteúdo de terceiro chegando pela décima
+ * vez no dia; abrir cada um não escala, e não abrir não ofende ninguém.
+ */
+const TIPOS_COMPARTILHADOS = new Set(['IMAGE', 'STICKER', 'VIDEO']);
 
 /** "bom dia", "boa tarde", "boa noite", "boa madrugada" — com ou sem acento, com ou sem espaço. */
 const SAUDACAO = /\b(bom\s*dia|boa\s*(tarde|noite|madrugada))\b/i;
@@ -61,8 +75,8 @@ function mensagemDeCortesia(msg) {
   const texto = String(msg?.texto || '');
 
   // Figura sem legenda é o caso que sumia da conta.
-  if (TIPOS_DE_IMAGEM.has(tipo) && !texto.trim()) return true;
-  if (TIPOS_DE_IMAGEM.has(tipo)) return !restoDaMensagem(texto);
+  if (TIPOS_COMPARTILHADOS.has(tipo) && !texto.trim()) return true;
+  if (TIPOS_COMPARTILHADOS.has(tipo)) return !restoDaMensagem(texto);
 
   if (!texto.trim()) return false;
   if (!SAUDACAO.test(texto) && !LINK.test(texto)) return false;
@@ -86,7 +100,7 @@ export function ehSoReacao(msg) {
   const tipo = String(msg?.tipo || 'TEXT').toUpperCase();
   const texto = String(msg?.texto || '');
 
-  if (TIPOS_DE_IMAGEM.has(tipo)) return !texto.trim() || !restoDaMensagem(texto);
+  if (TIPOS_COMPARTILHADOS.has(tipo)) return !texto.trim() || !restoDaMensagem(texto);
   if (!texto.trim()) return false;
 
   // Link e nada mais.
@@ -149,8 +163,22 @@ export function ultimaEhDespedida(entrantes) {
   return ehDespedida(lista[lista.length - 1]);
 }
 
-/** Tipos que sempre pedem você em pessoa: não dá para responder sem ouvir. */
-const TIPOS_QUE_PEDEM_VOCE = new Set(['AUDIO', 'VIDEO', 'DOCUMENT', 'CONTACT', 'LOCATION']);
+/**
+ * Tipos que sempre pedem você em pessoa: não dá para responder sem abrir.
+ *
+ * **`VIDEO` saiu daqui em 31/08** e foi para `TIPOS_COMPARTILHADOS` — ver o comentário de lá.
+ * O que sobrou é o que a pessoa produziu ou endereçou a ele: a voz dela, um arquivo que ela
+ * anexou, um contato que ela passou, o lugar onde ela está.
+ */
+const TIPOS_QUE_PEDEM_VOCE = new Set(['AUDIO', 'DOCUMENT', 'CONTACT', 'LOCATION']);
+
+/** Como cada um desses tipos se chama na frase que aparece na caixa. */
+const NOME_DO_TIPO = {
+  AUDIO: 'um áudio',
+  DOCUMENT: 'um arquivo',
+  CONTACT: 'um contato',
+  LOCATION: 'uma localização',
+};
 
 /**
  * A partir de quantos caracteres uma mensagem deixa de caber numa resposta pronta.
@@ -178,7 +206,7 @@ export function pedeRespostaPessoal(msg) {
   const texto = String(msg?.texto || '');
 
   if (TIPOS_QUE_PEDEM_VOCE.has(tipo)) {
-    const comoChama = tipo === 'AUDIO' ? 'um áudio' : tipo === 'VIDEO' ? 'um vídeo' : 'um arquivo';
+    const comoChama = NOME_DO_TIPO[tipo] || 'um arquivo';
     return { motivo: `mandou ${comoChama} — só dá para responder depois de abrir` };
   }
   if (texto.trim().length >= TEXTO_LONGO) {
@@ -430,7 +458,7 @@ export function soCortesia(entrantes, quantas = 3) {
   if (!lista.length) return null;
   if (!lista.every(mensagemDeCortesia)) return null;
 
-  const temImagem = lista.some((m) => TIPOS_DE_IMAGEM.has(String(m?.tipo || '').toUpperCase()));
+  const temImagem = lista.some((m) => TIPOS_COMPARTILHADOS.has(String(m?.tipo || '').toUpperCase()));
   const temLink = lista.some((m) => LINK.test(String(m?.texto || '')));
   const temSaudacao = lista.some((m) => SAUDACAO.test(String(m?.texto || '')));
 

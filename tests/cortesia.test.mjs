@@ -97,7 +97,12 @@ grupo('mensagem que pede resposta escrita por voce');
 {
   check(!!pedeRespostaPessoal({ texto: '', tipo: 'AUDIO' }), 'áudio pede sempre');
   check(/áudio/.test(pedeRespostaPessoal({ texto: '', tipo: 'AUDIO' }).motivo), 'o motivo diz que foi áudio');
-  check(!!pedeRespostaPessoal({ texto: '', tipo: 'VIDEO' }), 'vídeo também');
+  /**
+   * O vídeo saiu daqui em 31/08, a pedido dele (print do Odone): *"não existe essa de parar pra
+   * ver vídeos e responder"*. A asserção antiga dizia o contrário e fica trocada, não apagada —
+   * a reversão é o que impede alguém de "consertar" isto de volta daqui a um mês.
+   */
+  check(!pedeRespostaPessoal({ texto: '', tipo: 'VIDEO' }), 'vídeo NÃO pede — é conteúdo repassado');
   check(!!pedeRespostaPessoal({ texto: '', tipo: 'DOCUMENT' }), 'documento também');
 
   // O caso da Janete: áudio de 1min13 que a plataforma transcreveu num texto enorme.
@@ -327,6 +332,42 @@ grupo('soExpressaApoio: agradecer cabe quando o apoio e a mensagem INTEIRA');
     'audio pede ele em pessoa');
 
   check(!soExpressaApoio([], null), 'sem rajada nao ha o que agradecer');
+}
+
+
+grupo('video compartilhado NAO para a fila; audio sim');
+{
+  const M = (tipo, texto) => [{ texto: texto || '', tipo, at: '2026-08-31T23:20:00Z' }];
+
+  /**
+   * Print do Odone (31/08): reel do Instagram e video do Facebook de 631 mil visualizacoes. A
+   * caixa mandava responder a mao. *"sao centenas de mensagens e crescendo, nao existe essa de
+   * parar pra ver videos e responder, e ignorar dando bom dia ou enrolar com outro assunto"*.
+   */
+  check(!conversaPedeRespostaPessoal(M('VIDEO'), null), 'video NAO pede resposta a mao');
+  check(ultimaEhSoReacao(M('VIDEO')), 'video conta como reacao: vai para a mensagem do momento');
+
+  /**
+   * O contra-teste, e a razao de a mudanca ser segura: AUDIO e a pessoa gravando para ELE. O
+   * caso que criou a regra foi 1min13 sobre a familia e a igreja, e mandar modelo ali parece
+   * deboche. Video compartilhado e conteudo de terceiro chegando pela decima vez no dia.
+   */
+  check(!!conversaPedeRespostaPessoal(M('AUDIO'), null), 'audio continua pedindo resposta a mao');
+  check(!ultimaEhSoReacao(M('AUDIO')), 'e audio nao vira reacao');
+
+  // O que a pessoa anexou ou enderecou a ele continua pedindo.
+  check(!!conversaPedeRespostaPessoal(M('DOCUMENT'), null), 'arquivo pede');
+  check(!!conversaPedeRespostaPessoal(M('CONTACT'), null), 'contato pede');
+  check(!!conversaPedeRespostaPessoal(M('LOCATION'), null), 'localizacao pede');
+
+  // O nome do tipo aparece certo na frase da caixa (antes, tudo que nao era audio/video
+  // virava "um arquivo").
+  check(/localização/.test(conversaPedeRespostaPessoal(M('LOCATION'), null).motivo), 'localizacao tem nome proprio na frase');
+  check(/contato/.test(conversaPedeRespostaPessoal(M('CONTACT'), null).motivo), 'contato tambem');
+
+  // Video COM texto longo junto continua sendo conversa: o texto e que manda.
+  const comTexto = [{ texto: 'a'.repeat(500), tipo: 'VIDEO', at: '2026-08-31T23:20:00Z' }];
+  check(!!conversaPedeRespostaPessoal(comTexto, null), 'video com texto longo junto ainda pede voce');
 }
 
 fim();

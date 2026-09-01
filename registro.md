@@ -5,6 +5,49 @@
 
 ---
 
+## 2026-08-31 — Vídeo compartilhado sai da fila de "responder à mão"
+
+**Relato dele**, print do Odone: reel do Instagram e vídeo do Facebook de 631 mil visualizações. A
+caixa sugeria *"6: mandou um vídeo — só dá para responder depois de abrir. Responda à mão"*.
+
+> *"são centenas de mensagens e crescendo, não existe essa de parar pra ver vídeos e responder, é
+> ignorar dando bom dia ou enrolar com outro assunto"*
+
+### A distinção que faltava
+
+`VIDEO` estava em `TIPOS_QUE_PEDEM_VOCE`, junto do áudio. Mas **a diferença é quem está falando**:
+
+- **Áudio** é a pessoa gravando *para ele*. O caso que criou essa regra foi 1min13 sobre a família e
+  a igreja — mandar modelo aprovado ali parece deboche.
+- **Vídeo** é conteúdo de terceiro chegando pela décima vez no dia. Abrir cada um não escala, e não
+  abrir não ofende ninguém.
+
+`VIDEO` foi para `TIPOS_COMPARTILHADOS` (antes `TIPOS_DE_IMAGEM`), junto de figura e figurinha — ou
+seja, passa a ser tratado como **reação**: mensagem do momento, ou concluir se já respondemos hoje.
+Que é exatamente o "dar bom dia ou enrolar com outro assunto" da frase dele.
+
+Ficaram em `TIPOS_QUE_PEDEM_VOCE` o que a pessoa produziu ou endereçou a ele: **áudio, arquivo,
+contato e localização**.
+
+### Um defeito de tela que apareceu junto
+
+O rótulo era `tipo === 'AUDIO' ? 'um áudio' : tipo === 'VIDEO' ? 'um vídeo' : 'um arquivo'` — então
+contato e localização apareciam como *"mandou um arquivo"*. Virou um mapa `NOME_DO_TIPO`, e agora
+cada um se chama pelo nome.
+
+### A trava que mantém isto seguro
+
+**Vídeo COM texto longo junto continua pedindo resposta à mão** — o texto é que manda, e o teste
+trava isso. Quem grava um vídeo e escreve três parágrafos junto não está repassando meme.
+
+A asserção antiga (*"vídeo também"* pede) foi **trocada e não apagada**, com o motivo no comentário:
+é o que impede alguém de "consertar" isto de volta daqui a um mês.
+
+**Arquivos:** `src/lib/cortesia.js`, `tests/cortesia.test.mjs` (+11 e 1 revertida), `CLAUDE.md`,
+`manifest.json` (0.45.0 → **0.46.0**). 29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — Tecla 8: agradecer o apoio. E o "pq" que eu tinha quebrado
 
 **Relato dele**, print do Ciro: *"esse é um caso comum até onde a pessoa só expressa o apoio, ja tem
