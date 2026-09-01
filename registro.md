@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-08-31 — Pular deixa de escrever no CRM
+
+**Pedido dele:** *"ao pular tem gravado dados no crm o que faz eu perder tempo com esses contatos
+que eram pra ser pulados rapidamente"*.
+
+### O que o pulo custava
+
+`saveClassification({ withCompletionDate: true })` em cada pulo, ou seja, por contato:
+
+- `confirmarCidadeSePendente` — que pode **abrir a pergunta de cidade**, a espera mais longa que
+  existe no meio de uma gravação;
+- uma requisição por campo alterado (`writeValues`);
+- mais uma de etiquetas (`applyTags`).
+
+Numa fila de centenas, com respiro entre requisições, isso é a diferença entre passar por um
+contato e parar nele.
+
+### E o que ele gravava estava errado
+
+`withCompletionDate: true` grava a **"Data de conclusão do contato"** — num atendimento que o
+próprio motivo dizia ficar *"aberto"*. Marcava como tratado justamente quem foi deixado para
+depois. Isso não apareceu como defeito porque ninguém filtra por esse campo hoje; apareceu como
+lentidão.
+
+### O que mudou
+
+Os dois caminhos de pular (a tecla 2 da rodada e a da caixa de canal fora do ar) saem sem tocar no
+CRM. O pulo automático por etiqueta já não gravava.
+
+**Nada se perde:** o que era gravado ali era palpite do parser que ninguém tinha confirmado, e o
+parser refaz tudo na próxima vez que o contato abrir. O que se perde é só a rede gasta com quem foi
+pulado.
+
+A caixa do canal fora do ar também parou de gravar **antes** de perguntar: as duas saídas dela são
+pular (que não grava) e parar, então a gravação pagava o custo em 100% dos casos para servir a
+nenhum. As mensagens que diziam *"classificação gravada"* foram corrigidas — texto de tela que
+mente é pior que texto de tela que falta.
+
+**Regra que fica:** saída que não trata o contato não paga escrita.
+
+**Arquivos:** `src/panel/panel.js`, `CLAUDE.md`, `manifest.json` (0.48.0 → **0.49.0**).
+29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — Rajada de links não pede formulário
 
 **Relato dele**, print do Odone na 0.47.0 (agora sugerindo *"4: veio do anúncio e o formulário nunca

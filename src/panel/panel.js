@@ -3482,7 +3482,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // Canal fora do ar: some TODA saída que envia, e sobra pular. Ver `canalDesteContatoFora`.
       const canalFora = await canalDesteContatoFora();
       if (canalFora) {
-        await saveClassification({ withCompletionDate: true, quiet: true });
+        // Não grava ANTES de perguntar: as duas saídas daqui são pular (que não grava) e
+        // concluir (que grava na hora). Gravar aqui pagava o custo mesmo quando ele ia pular.
         const escolhaFora = await perguntarNaRodada({
           titulo: nome,
           linhas: [linhaCanalFora(canalFora), canalFora.texto].filter(Boolean),
@@ -3496,7 +3497,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           nome,
           resultado: 'pulado',
           parar: escolhaFora !== 'pular',
-          motivo: 'o número deste atendimento está fora do ar — classificação gravada, nada enviado',
+          motivo: 'o número deste atendimento está fora do ar — nada gravado, nada enviado',
         };
       }
 
@@ -3712,9 +3713,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return { nome, resultado: 'pulado', parar: true, motivo: 'você parou a rodada' };
       }
 
+      /**
+       * Pular **não escreve nada no CRM**, e essa é a razão de ele existir.
+       *
+       * Pedido dele (31/08): *"ao pular tem gravado dados no crm o que faz eu perder tempo com
+       * esses contatos que eram pra ser pulados rapidamente"*. Está certo — gravar custava, por
+       * contato pulado, uma escrita por campo mais uma de etiquetas, e podia abrir a pergunta de
+       * cidade, que é a espera mais longa que existe no meio de uma gravação.
+       *
+       * **E gravava a "Data de conclusão do contato" num atendimento que fica ABERTO** — marcava
+       * como tratado quem foi deixado para depois, que é o oposto do que pular quer dizer.
+       *
+       * Nada se perde: o parser reconstrói tudo na próxima vez que o contato abrir. O que ele
+       * gravava era palpite que ninguém tinha confirmado ainda.
+       */
       if (escolha === 'pular') {
-        await saveClassification({ withCompletionDate: true, quiet: true });
-        return { nome, resultado: 'pulado', motivo: 'você pulou — classificação gravada, atendimento aberto' };
+        return { nome, resultado: 'pulado', motivo: 'você pulou — nada gravado, atendimento aberto' };
       }
 
       // Tecla 6: a rodada sai da frente e fica de vigia. Você responde à mão no atendimento que
@@ -4464,9 +4478,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // Pular NÃO tira a etiqueta: o contato tem que continuar na lista filtrada, senão ele
       // some do trabalho sem nunca ter sido atendido.
+      // Pular não escreve no CRM — ver o comentário do outro `pular`, na rodada principal.
       if (escolha === 'pular') {
-        await saveClassification({ withCompletionDate: true, quiet: true });
-        return { nome, resultado: 'pulado', motivo: 'você pulou — etiqueta mantida, atendimento aberto' };
+        return { nome, resultado: 'pulado', motivo: 'você pulou — nada gravado, atendimento aberto' };
       }
 
       // A rodada sai da frente e fica de vigia. Ele responde à mão; quando concluir, ela segue.

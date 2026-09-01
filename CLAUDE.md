@@ -409,6 +409,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   a `nossaUltimaAt`. Regra nova que dependa do que a pessoa acabou de dizer: pense na rajada,
   não na última.
 
+- **Pular NÃO escreve no CRM — e o que ele escrevia estava errado duas vezes.** Custava uma
+  requisição por campo mais uma de etiquetas por contato pulado, podia abrir a pergunta de cidade
+  (a espera mais longa dentro de uma gravação), e gravava a **"Data de conclusão do contato" num
+  atendimento que fica ABERTO** — marcando como tratado quem foi deixado para depois. Nada se
+  perde: o parser reconstrói na próxima abertura. **Saída que não trata o contato não paga
+  escrita** (31/08).
 - **"Sem resposta nossa" NÃO é o mesmo que "escreveu de uma vez" — a diferença é o relógio.**
   A rajada (`cortesia.rajadaFinal`) para em DUAS coisas: a nossa última mensagem e um buraco de
   mais de 30 min entre mensagens dela. Sem a segunda parada, quem nunca foi respondido tinha o
