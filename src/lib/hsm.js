@@ -61,6 +61,95 @@ export function invalidate() {
 }
 
 /**
+ * O modelo que casa com o TEXTO que a pessoa mandou.
+ *
+ * Pedido dele (01/09): *"não será feito etiqueta a etiqueta para os anúncios, agora é só ads; o
+ * padrão para casar o modelo deve ser o texto (Olá! Eu apoio as Escolas Cívico-Militares = modelo)"*.
+ *
+ * **Por que isto existe em vez de mais etiquetas.** A etiqueta ADS diz que a pessoa veio de anúncio,
+ * não de QUAL anúncio, e o caminho antigo (texto → etiqueta → modelo) exigiria uma etiqueta nova no
+ * CRM por anúncio — rótulo permanente na base de eleitores para transportar uma informação que já
+ * está escrita na mensagem. Aqui o texto vai direto ao modelo.
+ *
+ * **Compara sem acento e sem caixa** (`semAcento`, que este módulo reserva justamente para valor
+ * digitado à mão): "Civico" digitado tem de casar com "Cívico" da mensagem.
+ *
+ * **Casa por trecho CONTIDO, não por igualdade:** a mensagem do anúncio chega com emoji e às vezes
+ * com o que a pessoa acrescentou depois ("…Escolas Cívico-Militares 🤙 olá Capitão Martins…").
+ * Exigir igualdade não casaria nunca.
+ *
+ * **A entrada MAIS ESPECÍFICA ganha** — o trecho mais longo. Sem isso, "eu apoio" cadastrado para um
+ * modelo genérico venceria "eu apoio as escolas" pela ordem de digitação, e ordem de digitação não é
+ * uma decisão.
+ *
+ * @param {string[]} textos  o que a pessoa mandou
+ * @param {object} mapa      { "trecho do texto": "nome do modelo" }
+ * @param {object[]} modelos os modelos aprovados da plataforma
+ * @returns {{modelo?:object, erro?:string, trecho?:string}|null} `null` = nenhum trecho casou
+ */
+export function modeloPorTexto(textos, mapa, modelos) {
+  const entradas = Object.entries(mapa || {}).filter(([trecho]) => semAcento(trecho));
+  if (!entradas.length) return null;
+
+  const conversa = (textos || []).map((t) => semAcento(t)).join(' | ');
+  if (!conversa) return null;
+
+  const casaram = entradas
+    .filter(([trecho]) => conversa.includes(semAcento(trecho)))
+    .sort((a, b) => semAcento(b[0]).length - semAcento(a[0]).length);
+  if (!casaram.length) return null;
+
+  const [trecho, nome] = casaram[0];
+  const nomes = (modelos || []).filter((m) => achatar(m.name) === achatar(nome));
+
+  if (!nomes.length) {
+    return {
+      erro: `O texto casou com "${trecho}", mas o modelo "${nome}" não está entre os aprovados da plataforma.`,
+      trecho,
+    };
+  }
+  if (nomes.length > 1) {
+    return {
+      erro: `Há ${nomes.length} modelos chamados "${nome}". Renomeie um deles na plataforma.`,
+      trecho,
+    };
+  }
+  return { modelo: nomes[0], trecho };
+}
+
+/**
+ * Editor em texto da tabela TEXTO → modelo: uma linha por par, `trecho = Modelo`.
+ *
+ * Separado do `parseContentTemplates` porque a chave aqui **não é achatada na gravação**: o que ele
+ * digita é o trecho como aparece na conversa ("Olá! Eu apoio as Escolas Cívico-Militares"), e mostrar
+ * isso de volta em minúsculas e sem acento seria mostrar outra coisa. O achatamento acontece só na
+ * COMPARAÇÃO, dentro de `modeloPorTexto`.
+ *
+ * O primeiro `=` separa: nome de modelo pode conter `=`, trecho de anúncio raramente contém.
+ */
+export function parseModeloPorTexto(texto) {
+  const out = {};
+  for (const linha of String(texto || '').split('\n')) {
+    const t = linha.trim();
+    if (!t || t.startsWith('#')) continue;
+    const i = t.indexOf('=');
+    if (i < 0) continue;
+    const trecho = t.slice(0, i).trim();
+    const modelo = t.slice(i + 1).trim();
+    if (!trecho || !modelo) continue;
+    out[trecho] = modelo;
+  }
+  return out;
+}
+
+/** O inverso, para a tela: uma linha por par. */
+export function formatModeloPorTexto(mapa) {
+  return Object.entries(mapa || {})
+    .map(([trecho, modelo]) => `${trecho} = ${modelo}`)
+    .join('\n');
+}
+
+/**
  * Qual modelo atende o conteúdo que o contato pediu.
  *
  * O caminho é: a mensagem casa com uma regra ("zucco"), a regra dá a etiqueta

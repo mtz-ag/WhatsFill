@@ -5,6 +5,58 @@
 
 ---
 
+## 2026-09-01 — O modelo do anúncio sai do TEXTO, sem etiqueta por anúncio
+
+**Decisão dele:** *"não será feito etiqueta a etiqueta para os anúncios, agora é só ads; o padrão para
+casar o modelo deve ser o texto (Olá! Eu apoio as Escolas Cívico-Militares = modelo)"*.
+
+Está certo, e é mais simples do que o que eu tinha proposto na resposta anterior: o caminho
+texto → etiqueta → modelo exigiria uma **etiqueta nova no CRM por anúncio** — rótulo permanente na
+base de eleitores para transportar uma informação que já está escrita na mensagem.
+
+### A tabela
+
+`store.modeloPorTexto`: `{ "trecho do texto": "Nome do modelo" }`, editável na aba Config, uma linha
+por par. **Nasce vazia** de propósito: o nome tem de ser o exato da plataforma, e chutar aqui manda o
+modelo errado para eleitor real.
+
+Ela **decide antes** da tabela por etiqueta. Casando, a etiqueta nem é consultada; nada casando, o
+caminho antigo segue idêntico — é o que atende quem já tem "Conteúdo Zucco"/"Conteúdo Flávio".
+
+### Quatro decisões que o teste trava
+
+- **Casa por trecho CONTIDO.** A mensagem real chega com emoji e com o que a pessoa acrescentou
+  depois (*"…Escolas Cívico-Militares 🤙 olá Capitão Martins…"*). Igualdade não casaria nunca.
+- **Compara com `semAcento`**, que o `hsm.js` já reservava para valor digitado à mão: "Civico"
+  digitado casa com "Cívico" da mensagem.
+- **O trecho MAIS LONGO ganha.** Sem isso, "eu apoio" cadastrado para o modelo genérico venceria "eu
+  apoio as escolas" pela ordem de digitação — e ordem de digitação não é uma decisão.
+- **Nome que a plataforma não tem vira ERRO, nunca `null`.** `null` faria a rodada cair no caminho da
+  etiqueta como se nada tivesse acontecido, e o erro de configuração dele desapareceria em silêncio.
+
+Na tela, o botão de salvar confere os nomes contra os modelos aprovados **antes** de gravar: nome
+errado não dá erro ao salvar, dá ao enviar, no meio de uma rodada com o contato aberto.
+
+E a caixa passa a mostrar `Conteúdo pedido: texto: "<trecho>"` — sem isso ela diria "Sem modelo"
+enquanto oferece a tecla 1, que é pior do que não explicar.
+
+### Um buraco antigo que apareceu no caminho
+
+`modeloPorTexto`, `padroesDeAnuncio` e `conteudoPreferido` não estavam na lista `allowed` do
+`importJson`. O `exportJson` varre `DEFAULTS`, então o backup **exportava** as três — e a restauração
+**descartava**. `conteudoPreferido` estava assim desde antes de hoje.
+
+**Arquivos:** `src/lib/hsm.js` (`modeloPorTexto`, `parseModeloPorTexto`, `formatModeloPorTexto`),
+`src/lib/store.js` (a tabela e a `allowed`), `src/panel/panel.js` (a decisão e o campo na Config),
+`tests/hsm.test.mjs` (+15), `CLAUDE.md`, `manifest.json` (0.59.0 → **0.60.0**).
+29 módulos sem erro, dez suítes passando.
+
+**Para usar:** aba Config → "Modelo por TEXTO da mensagem", uma linha:
+`Olá! Eu apoio as Escolas Cívico-Militares = <nome exato do modelo>`. O botão avisa na hora se o nome
+não existir na plataforma.
+
+---
+
 ## 2026-09-01 — A mensagem do anúncio se reconhece pelo TEXTO, não pela posição
 
 **Pergunta e pedido dele**, print da Erenita: *"qual foi a mudança feita pro caso da print? preciso

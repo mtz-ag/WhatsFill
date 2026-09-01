@@ -561,6 +561,25 @@ const DEFAULTS = {
    * **Posição não serve; texto serve.** Configurável porque o texto do anúncio muda quando a
    * campanha muda, e isso não deveria exigir um commit. Uma expressão por linha, sem barras.
    */
+  /**
+   * TEXTO da mensagem → nome do MODELO aprovado. `{ "trecho": "Modelo" }`.
+   *
+   * Pedido dele (01/09): *"não será feito etiqueta a etiqueta para os anúncios, agora é só ads;
+   * o padrão para casar o modelo deve ser o texto (Olá! Eu apoio as Escolas Cívico-Militares =
+   * modelo)"*.
+   *
+   * A etiqueta ADS diz que veio de anúncio, não de QUAL anúncio — e criar uma etiqueta por
+   * anúncio seria pôr rótulo permanente na base de eleitores para transportar o que já está
+   * escrito na mensagem.
+   *
+   * **Vence a tabela por etiqueta** (`contentTemplates`) quando casa: é a informação mais
+   * específica que existe sobre o que a pessoa quer. Nada casando, o caminho antigo segue igual.
+   *
+   * Nasce VAZIA de propósito: o nome do modelo tem de ser o exato da plataforma, e chutar aqui
+   * manda o modelo errado para eleitor real. Editável na aba Config.
+   */
+  modeloPorTexto: {},
+
   padroesDeAnuncio: ['^ol[áa]!?\\s+eu\\s+apoio'],
 
   tagRules: [
@@ -769,9 +788,19 @@ export async function exportJson() {
 
 export async function importJson(text) {
   const data = JSON.parse(text);
+  /**
+   * O que o backup restaura.
+   *
+   * `modeloPorTexto` e `padroesDeAnuncio` entraram em 01/09 junto com as próprias funções: são
+   * tabelas que ele preenche à mão, e ficar fora daqui significaria perdê-las na restauração —
+   * um trabalho que só se descobre perdido quando o modelo errado sai para um eleitor.
+   *
+   * `conteudoPreferido` estava faltando desde antes, pelo mesmo motivo e com o mesmo efeito.
+   */
   const allowed = [
     'templates', 'cityLinks', 'defaultGroupLink', 'settings', 'writeContract', 'dicts',
     'temaByNumber', 'tagRules', 'tagAliases', 'contentTemplates', 'auto',
+    'modeloPorTexto', 'padroesDeAnuncio', 'conteudoPreferido',
   ];
   for (const key of allowed) {
     if (data[key] !== undefined) await set(key, data[key]);

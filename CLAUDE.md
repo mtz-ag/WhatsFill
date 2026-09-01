@@ -437,6 +437,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   anúncio à mão no teste saiu `'s'` com UMA barra — que em string JS é a letra `s`. Três asserções
   passaram a "passar" testando nada. O teste agora lê `store.get('padroesDeAnuncio')`: prova o valor
   que a extensão usa, não uma cópia.
+- **O modelo do anúncio sai do TEXTO, não de etiqueta por anúncio.** Decisão dele (01/09): *"não
+  será feito etiqueta a etiqueta para os anúncios, agora é só ads; o padrão para casar o modelo deve
+  ser o texto (Olá! Eu apoio as Escolas Cívico-Militares = modelo)"*. `store.modeloPorTexto` +
+  `hsm.modeloPorTexto`, e ele **decide antes** da tabela por etiqueta — casando, a etiqueta nem é
+  consultada. Casa por trecho **contido** e via `semAcento` (a mensagem real vem com emoji e com o
+  que a pessoa acrescentou depois; igualdade não casaria nunca), e **o trecho mais longo ganha** —
+  senão "eu apoio" venceria "eu apoio as escolas" pela ordem de digitação. Nome de modelo que a
+  plataforma não tem vira **erro**, nunca `null`: `null` faria a rodada cair no caminho da etiqueta
+  e o erro de configuração desapareceria em silêncio.
+- **Tabela que ele preenche à mão TEM de entrar na `allowed` do `importJson`.** `modeloPorTexto`,
+  `padroesDeAnuncio` e `conteudoPreferido` ficavam fora: o backup exportava (o `exportJson` varre
+  `DEFAULTS`) e a restauração descartava. Trabalho que só se descobre perdido quando o modelo errado
+  sai para um eleitor.
 - **ADS é ORIGEM, não conteúdo — e por isso é `fallback`.** Ela diz que a pessoa veio de anúncio,
   não de QUAL anúncio: *"eu tenho um modelo pra escolas civico militares mas a etiqueta ads não faz
   distinção"* (31/08). `hsm.escolherConteudo` ignora os `fallback` quando existe conteúdo

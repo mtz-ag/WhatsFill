@@ -3292,16 +3292,46 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       let conteudoEscolhido = null;
       let desempatado = false;
 
-      const escolha0 = hsmLib.escolherConteudo(conteudos, await store.get('conteudoPreferido'));
-      if (escolha0.erro) {
-        semModelo = escolha0.erro;
+      /**
+       * **O TEXTO decide primeiro.**
+       *
+       * Pedido dele (01/09): *"o padrão para casar o modelo deve ser o texto (Olá! Eu apoio as
+       * Escolas Cívico-Militares = modelo)"*, e *"não será feito etiqueta a etiqueta para os
+       * anúncios, agora é só ads"*.
+       *
+       * A etiqueta ADS não distingue de QUAL anúncio a pessoa veio; o texto que ela mandou
+       * distingue. Quando a tabela casa, o modelo sai daí — a etiqueta nem é consultada.
+       *
+       * Nada casando, o caminho antigo (etiqueta → modelo) segue exatamente como era: é o que
+       * atende quem chega por outra via e quem já tem "Conteúdo Zucco"/"Conteúdo Flávio".
+       */
+      const porTexto = hsmLib.modeloPorTexto(
+        state.incoming,
+        await store.get('modeloPorTexto'),
+        state.hsmTemplates
+      );
+
+      if (porTexto?.modelo) {
+        modelo = porTexto.modelo;
+        // Vira o "conteúdo escolhido" para a tela dizer POR QUE este modelo: sem isso a caixa
+        // mostraria "Sem modelo" enquanto oferece a tecla 1, que é pior que não explicar.
+        conteudoEscolhido = { nome: `texto: "${porTexto.trecho}"` };
+      } else if (porTexto?.erro) {
+        // Casou o texto e o modelo não existe: isto é erro de configuração DELE, e some no
+        // silêncio se a rodada cair no caminho da etiqueta como se nada tivesse acontecido.
+        semModelo = porTexto.erro;
       } else {
-        conteudoEscolhido = escolha0.conteudo;
-        desempatado = !!escolha0.desempatado;
-        const mapa = await store.get('contentTemplates');
-        const achado = hsmLib.templateParaConteudo(conteudoEscolhido.nome, mapa, state.hsmTemplates);
-        modelo = achado.modelo || null;
-        semModelo = achado.erro || '';
+        const escolha0 = hsmLib.escolherConteudo(conteudos, await store.get('conteudoPreferido'));
+        if (escolha0.erro) {
+          semModelo = escolha0.erro;
+        } else {
+          conteudoEscolhido = escolha0.conteudo;
+          desempatado = !!escolha0.desempatado;
+          const mapa = await store.get('contentTemplates');
+          const achado = hsmLib.templateParaConteudo(conteudoEscolhido.nome, mapa, state.hsmTemplates);
+          modelo = achado.modelo || null;
+          semModelo = achado.erro || '';
+        }
       }
 
       // Sem conteúdo identificado a pergunta aparece do mesmo jeito, só sem a tecla 1.
@@ -6580,6 +6610,73 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       })
     );
     body.append(rulesArea, rulesBtn);
+
+    /**
+     * A tabela TEXTO → modelo. Vem ANTES da tabela por etiqueta na tela porque vem antes na
+     * decisão: quando um trecho casa, o modelo sai daqui e a etiqueta nem é consultada.
+     */
+    body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Modelo por TEXTO da mensagem'));
+    body.append(
+      h('p', { class: 'wf-hint' },
+        'Uma linha por anúncio, no formato "trecho do texto = Nome do modelo". Serve para o caso em ' +
+          'que a etiqueta ADS não distingue de qual anúncio a pessoa veio: o texto que ela manda ' +
+          'distingue. Casa por trecho CONTIDO e sem diferenciar acento ou maiúscula, então não ' +
+          'precisa copiar a mensagem inteira nem se preocupar com o emoji. Havendo dois trechos que ' +
+          'casam, ganha o mais específico (o maior).')
+    );
+
+    const textoArea = h('textarea', { rows: '4', placeholder: 'Olá! Eu apoio as Escolas Cívico-Militares = Escolas CM' });
+    store.get('modeloPorTexto').then((m) => (textoArea.value = hsmLib.formatModeloPorTexto(m)));
+
+    const textoBtn = h('button', { class: 'wf-btn', type: 'button' }, 'Salvar modelo por texto');
+    textoBtn.addEventListener('click', () =>
+      withBusy(async () => {
+        const parsed = hsmLib.parseModeloPorTexto(textoArea.value);
+        const pares = Object.entries(parsed);
+
+        /**
+         * Confere os nomes contra os modelos aprovados ANTES de gravar.
+         *
+         * Nome errado aqui não dá erro na hora de salvar — dá na hora de enviar, no meio de uma
+         * rodada, com o contato aberto. Avisar agora é a diferença entre corrigir uma linha e
+         * descobrir o problema com trinta contatos na fila.
+         */
+        const nomesAprovados = state.hsmTemplates.map((m) => m.name.trim().toLowerCase());
+        const desconhecidos = state.hsmTemplates.length
+          ? pares.filter(([, nome]) => !nomesAprovados.includes(nome.trim().toLowerCase()))
+          : [];
+
+        await store.set('modeloPorTexto', parsed);
+        textoArea.value = hsmLib.formatModeloPorTexto(parsed);
+
+        if (desconhecidos.length) {
+          setStatus(
+            `Salvei ${pares.length} linha(s), mas ${desconhecidos.length} apontam para modelo que a ` +
+              `plataforma não tem: ${desconhecidos.map(([, n]) => `"${n}"`).join(", ")}. ` +
+              'Confira os nomes na lista abaixo.',
+            'err'
+          );
+          return;
+        }
+        setStatus(
+          pares.length
+            ? `${pares.length} texto(s) mapeado(s) para modelo. O texto decide antes da etiqueta.`
+            : 'Tabela vazia: o modelo volta a sair só da etiqueta de conteúdo.'
+        );
+      })
+    );
+    body.append(textoArea, textoBtn);
+    if (state.hsmTemplates.length) {
+      body.append(
+        h('div', { class: 'wf-origin' }, 'Modelos aprovados: ' + state.hsmTemplates.map((m) => m.name).join(' · '))
+      );
+    } else {
+      body.append(
+        h('div', { class: 'wf-origin' },
+          'A lista de modelos aprovados não está carregada, então não consigo conferir os nomes ' +
+            'agora. Abra um atendimento e volte aqui para eu avisar se algum nome estiver errado.')
+      );
+    }
 
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Modelo por conteúdo'));
     body.append(
