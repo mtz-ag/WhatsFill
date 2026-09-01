@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -626,6 +626,55 @@ grupo('apoio: "sempre com voces" e as formas sem verbo na frente');
    */
   check(!A('preciso falar com voces'), 'preciso falar com voces NAO e apoio');
   check(!A('vou conversar com vocês amanha'), 'conversar com voces tambem nao');
+}
+
+
+grupo('confirmaPresenca: quem NAO vai comeca dizendo que queria — a ressalva decide');
+{
+  const E = (t) => [{ texto: t, tipo: 'TEXT', at: '2026-09-01T22:35:00Z' }];
+  const p = (t) => confirmaPresenca(E(t), null);
+
+  /**
+   * A frase REAL da print (01/09): *"Gostaria de estar mas sem condições 22 certamente"*.
+   *
+   * Ela tem "gostaria" E "certamente" — duas marcas positivas — e e uma recusa. Por isso a
+   * negativa vence e o teste olha a mensagem INTEIRA, sem as "primeiras quatro palavras" que o
+   * `tags.respostaAfirmativa` usa.
+   */
+  check(p('Gostaria de estar mas sem condições 22 certamente') === 'nao',
+    'a frase da print e recusa, apesar de gostaria e certamente');
+
+  /**
+   * **`tags.respostaAfirmativa` NAO serve aqui, e e por isso que esta funcao existe.** Ele foi
+   * escrito para "quer receber conteudo?", onde "gostaria" e um sim — e erra os dois lados das
+   * respostas de presenca. Pergunta diferente pede vocabulario diferente.
+   */
+  check(p('nao vou poder ir') === 'nao', 'nao vou poder');
+  check(p('sem condicoes') === 'nao', 'sem condicoes');
+  check(p('infelizmente nao consigo') === 'nao', 'infelizmente');
+  check(p('estarei viajando') === 'nao', 'estarei viajando');
+  check(p('fica para a proxima') === 'nao', 'fica para a proxima');
+  check(p('queria muito mas tenho outro compromisso') === 'nao', 'queria mas outro compromisso');
+
+  check(p('vou sim') === 'sim', 'vou sim');
+  check(p('estarei la') === 'sim', 'estarei la');
+  check(p('confirmado') === 'sim', 'confirmado');
+  check(p('pode contar comigo') === 'sim', 'pode contar comigo');
+  check(p('com certeza vou') === 'sim', 'com certeza vou');
+  check(p('vou participar') === 'sim', 'vou participar');
+  check(p('la estarei') === 'sim', 'la estarei');
+
+  /**
+   * Sem resposta clara sobre presenca, devolve null e a tecla 4 manda o pedido de dados de sempre.
+   * **"sim" solto nao basta**: pode ser resposta a outra pergunta, e o texto de comemoracao mandado
+   * a quem nao falou de evento nenhum le como confusao.
+   */
+  check(p('sim') === null, 'sim solto NAO e confirmacao de presenca');
+  check(p('bom dia') === null, 'cumprimento nao diz nada de presenca');
+  check(p('quero receber o material') === null, 'pedido de material tambem nao');
+  check(p('obrigado') === null, 'agradecimento tambem nao');
+  check(p('') === null, 'vazio devolve null');
+  check(confirmaPresenca([], null) === null, 'sem rajada devolve null');
 }
 
 fim();

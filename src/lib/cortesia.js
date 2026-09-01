@@ -389,6 +389,80 @@ const EXPRESSOES_DE_APOIO = [
 ];
 
 /**
+ * Ela disse que VAI ou que NÃO VAI ao evento?
+ *
+ * Anúncio novo (01/09): o convite pergunta se a pessoa vai, e ele responde de dois jeitos — consolo
+ * para quem não pode, comemoração para quem vai. Os dois textos terminam pedindo nome e cidade, então
+ * são o "pedir dados" com prefixos diferentes: a tecla 4 escolhe qual sai.
+ *
+ * **`tags.respostaAfirmativa` NÃO serve aqui, e testar mostrou por quê.** Ele foi escrito para
+ * *"quer receber conteúdo?"*, onde "gostaria" é um sim. Contra as respostas de presença ele erra os
+ * dois lados:
+ *
+ * | resposta | `respostaAfirmativa` | verdade |
+ * |---|---|---|
+ * | *"Gostaria de estar mas sem condições"* | sim | **não vai** |
+ * | *"vou sim"* | não | **vai** |
+ * | *"estarei lá"* | não | **vai** |
+ *
+ * Pergunta diferente pede vocabulário diferente — é a armadilha do `CLAUDE.md` sobre mexer no texto
+ * de uma pergunta sem mexer no parser dela, vista do outro lado.
+ *
+ * **A negativa vence, e olha a mensagem INTEIRA.** *"Gostaria de estar mas sem condições 22
+ * certamente"* tem "gostaria" e "certamente" — duas marcas positivas — e é uma recusa. Quem não pode
+ * ir quase sempre começa dizendo que queria: a intenção está na ressalva, não na abertura. Por isso
+ * aqui não há "primeiras quatro palavras" como no `respostaAfirmativa`.
+ *
+ * @param {Array<{texto?:string}>} entrantes
+ * @param {string|null} nossaUltimaAt
+ * @returns {'sim'|'nao'|null}
+ */
+export function confirmaPresenca(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  if (!rajada.length) return null;
+
+  const texto = rajada
+    .map((m) => String(m?.texto || ''))
+    .join(' ')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!texto) return null;
+
+  /**
+   * NÃO vai. Vem primeiro de propósito: a recusa quase sempre chega embalada em intenção boa
+   * ("gostaria", "queria", "adoraria") e é a ressalva que decide.
+   */
+  const NAO_VAI = [
+    /(^|[^\p{L}])(nao|nem)\s+(vou|irei|posso|consigo|da|vai\s+dar|tenho\s+como|conseguirei|poderei)/u,
+    /(^|[^\p{L}])sem\s+(condicoes|condicao|como|tempo|possibilidade)/u,
+    /(^|[^\p{L}])(gostaria|queria|adoraria|amaria)\s+.{0,40}?\bmas\b/u,
+    /(^|[^\p{L}])infelizmente/u,
+    /(^|[^\p{L}])(estarei|vou\s+estar|to)\s+(fora|viajando|trabalhando)/u,
+    /(^|[^\p{L}])(outro|ja\s+tenho)\s+compromisso/u,
+    /(^|[^\p{L}])fica\s+(para|pra)\s+(a\s+)?(proxima|outra)/u,
+    /(^|[^\p{L}])(esse|este|dessa|nessa)\s+(dia|data)\s+.{0,20}?nao/u,
+  ];
+  for (const padrao of NAO_VAI) if (padrao.test(texto)) return 'nao';
+
+  /** VAI. Só formas que afirmam presença — "sim" solto não basta, pode ser resposta a outra coisa. */
+  const VAI = [
+    /(^|[^\p{L}])(vou|irei|vamos)(\s+sim)?(\s|$|!|,|\.)/u,
+    /(^|[^\p{L}])(estarei|estaremos)(\s+(la|ai|presente|junto|com\s+voces))?(\s|$|!|,|\.)/u,
+    /(^|[^\p{L}])(confirmado|confirmada|confirmo|presenca\s+confirmada)/u,
+    /(^|[^\p{L}])(pode|podem)\s+contar\s+comigo/u,
+    /(^|[^\p{L}])(com\s+certeza|certamente)\s+(vou|irei|estarei|estarei\s+la)/u,
+    /(^|[^\p{L}])(vou|pretendo)\s+participar/u,
+    /(^|[^\p{L}])(la|ai)\s+estarei/u,
+  ];
+  for (const padrao of VAI) if (padrao.test(texto)) return 'sim';
+
+  return null;
+}
+
+/**
  * Alguém pedindo algo, sem dizer o quê.
  *
  * Print da Mari (31/08): *"Preciso da forca do senhor"* — e a caixa sugeria **mandar o modelo da
