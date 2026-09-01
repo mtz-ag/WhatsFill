@@ -5,6 +5,66 @@
 
 ---
 
+## 2026-09-01 — A mensagem do anúncio se reconhece pelo TEXTO, não pela posição
+
+**Pergunta e pedido dele**, print da Erenita: *"qual foi a mudança feita pro caso da print? preciso
+que identifique o modelo pelo texto (Olá! Eu apoio as Escolas Cívico-Militares)"*.
+
+### Respondendo o "qual foi a mudança"
+
+A caixa sugeria a tecla 8 (agradecer o apoio) por causa da regra `so-expressa-apoio`, que subiu acima
+do modelo em 31/08. **E estava errada ali** — pelo meu critério, não pela regra.
+
+Eu havia implementado "a PRIMEIRA mensagem é o texto do anúncio, e sai da conta". A Erenita mandou
+uma **figura antes**: o texto do anúncio virou a segunda mensagem, entrou na conta como se fosse dela,
+e *"Eu apoio as Escolas Cívico-Militares"* foi lido como apoio escrito por ela.
+
+**Ele apontou o critério certo: texto, não posição.** Basta um "bom dia" antes para qualquer critério
+posicional cair.
+
+### O conserto
+
+`store.padroesDeAnuncio` (fábrica: `^ol[áa]!?\s+eu\s+apoio`) e `cortesia.ehMensagemDeAnuncio`.
+Configurável porque o texto do anúncio muda quando a campanha muda, e isso não deveria exigir um
+commit. Padrão inválido é ignorado **um por um**: expressão mal digitada na Config não pode derrubar
+a leitura da conversa.
+
+Conferido nos quatro casos reais do dia:
+
+| | resultado |
+|---|---|
+| Erenita — figura antes, depois o texto do anúncio | **não** é apoio dela ✔ |
+| Izaak — anúncio + *"Tamojuntos"* | é apoio dela ✔ |
+| Ciro — anúncio + o *"texto de baixo"* | é apoio dele ✔ |
+| só o clique no anúncio | não é apoio ✔ |
+
+### Um bug no TESTE, que é a lição maior
+
+Escrevi o padrão à mão no arquivo de teste e saiu `'\s'` com **uma** barra — em string JS isso é a
+letra `s`, não a classe de espaço. O padrão virou `^ol[áa]!?s+eu s+apoio`, que não casa com nada, e
+**três asserções passaram a "passar" testando nada**.
+
+O teste agora lê `store.get('padroesDeAnuncio')`: prova o valor que a extensão usa, não uma cópia.
+Duplicar valor de configuração em teste é o tipo de coisa que mente exatamente quando importa.
+
+### Sobre "identificar o MODELO pelo texto" — isso já funciona, e é configuração
+
+O mecanismo existe e não precisa de código:
+
+1. **`tagRules`** casa texto → etiqueta (hoje: `zucco` → `Conteúdo Zucco`, `fl[áa]vio` → `Conteúdo
+   Flávio`);
+2. **`contentTemplates`** mapeia etiqueta → modelo aprovado;
+3. desde 0.56.0, a etiqueta específica **vence o ADS**, que virou último recurso.
+
+Para as Escolas Cívico-Militares: criar a etiqueta no CRM, somar `escolas c[íi]vico` → `Conteúdo
+Escolas` nas regras, e mapear `Conteúdo Escolas = <modelo>` na tabela.
+
+**Arquivos:** `src/lib/store.js` (`padroesDeAnuncio`), `src/lib/cortesia.js`
+(`ehMensagemDeAnuncio`, `soExpressaApoio`), `src/panel/panel.js`, `tests/cortesia.test.mjs`,
+`CLAUDE.md`, `manifest.json` (0.58.0 → **0.59.0**). 29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-09-01 — A caixa da rodada fica na tela com o painel escondido
 
 **Pedido dele:** *"ao eu mandar o whatsfill ocultar ele oculta o popup da automatização, faça com que

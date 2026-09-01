@@ -495,6 +495,32 @@ export function rajadaEhSoRepasse(entrantes, nossaUltimaAt) {
 
 
 /**
+ * Esta mensagem foi **gerada pelo anúncio**, e não escrita pela pessoa?
+ *
+ * O Instagram manda um texto pronto quando alguém clica no botão: *"Olá! Eu apoio as Escolas
+ * Cívico-Militares"*. Ela não escolheu as palavras — clicou.
+ *
+ * Os padrões vêm de `store.padroesDeAnuncio`, e quem chama passa: este módulo é puro e sem
+ * dependência, que é o que permite testar tudo offline.
+ *
+ * Padrão inválido é ignorado em silêncio, um por um: expressão mal digitada na Config não pode
+ * derrubar a leitura da conversa inteira.
+ */
+export function ehMensagemDeAnuncio(msg, padroes = []) {
+  const texto = String(msg?.texto || '').trim();
+  if (!texto) return false;
+
+  for (const bruto of padroes) {
+    try {
+      if (new RegExp(String(bruto), 'i').test(texto)) return true;
+    } catch (_) {
+      // expressão inválida: ignora só ela
+    }
+  }
+  return false;
+}
+
+/**
  * A conversa pendente é SÓ expressão de apoio, sem nada a resolver?
  *
  * Pedido dele (31/08, print do Ciro): *"esse é um caso comum até onde a pessoa só expressa o
@@ -510,9 +536,22 @@ export function rajadaEhSoRepasse(entrantes, nossaUltimaAt) {
  *
  * @returns {{motivo:string}|null}
  */
-export function soExpressaApoio(entrantes, nossaUltimaAt) {
+export function soExpressaApoio(entrantes, nossaUltimaAt, padroesDeAnuncio = []) {
   const rajada = rajadaFinal(entrantes, nossaUltimaAt);
   if (!rajada.length) return null;
+
+  /**
+   * Ela precisa ter escrito algo que **não** seja o texto do anúncio.
+   *
+   * É o critério que ele descreveu: *"se não tivesse o texto de baixo eu mandaria o modelo,
+   * agradeceria a atenção e encerraria"*. Só o clique no anúncio não é exceção — é o caso normal,
+   * e o caso normal já tem resposta (modelo + agradecimento pela atenção).
+   */
+  const todas = Array.isArray(entrantes) ? entrantes : [];
+  const escreveuAlgoDela = todas.some(
+    (m) => String(m?.texto || '').trim() && !ehMensagemDeAnuncio(m, padroesDeAnuncio)
+  );
+  if (!escreveuAlgoDela) return null;
 
   // Tipo que pede ele em pessoa (áudio, vídeo, arquivo) nunca é "só apoio".
   for (const msg of rajada) {
@@ -526,32 +565,17 @@ export function soExpressaApoio(entrantes, nossaUltimaAt) {
   if (PEDIDO_DE_MATERIAL.test(texto)) return null;
 
   /**
-   * **O critério é ela ter escrito MAIS DE UMA VEZ — não o tamanho do texto.**
+   * O apoio tem de estar no que ELA escreveu — **as mensagens do ANÚNCIO saem da conta.**
    *
-   * A primeira versão usava 100 caracteres, e ele derrubou na hora: *"se basear em caracteres vai
-   * dar só erro, é um valor totalmente aleatório e será trocado toda hora"*. Estava certo.
+   * A primeira versão excluía a primeira mensagem da conversa, presumindo que ela era a do
+   * anúncio. Print da Erenita (01/09) derrubou: ela mandou uma **figura antes**, o texto do anúncio
+   * virou a segunda mensagem, e a regra passou a ler *"Eu apoio as Escolas Cívico-Militares"* como
+   * apoio escrito por ela. *"preciso que identifique o modelo pelo texto"*.
    *
-   * O que separa os dois casos dele é estrutural, e as duas prints mostram a mesma coisa: a
-   * PRIMEIRA mensagem é o texto pronto do anúncio (*"Olá! Eu apoio as Escolas Cívico-Militares"*,
-   * *"Olá! Eu apoio o Flávio, Zucco e Capitão Martim"*) — ela não escolheu as palavras, clicou num
-   * botão. Qualquer mensagem depois dessa é ela escrevendo: o *"texto de baixo"* do Ciro, o
-   * *"Tamojuntos"* do Izaak.
-   *
-   * Foi o que ele descreveu: *"se não tivesse o texto de baixo eu mandaria o modelo, agradeceria a
-   * atenção e encerraria"*. Uma mensagem só = clique no anúncio = caso normal, tecla 1.
-   */
-  const lista = Array.isArray(entrantes) ? entrantes : [];
-  if (lista.length < 2) return null;
-
-  /**
-   * O apoio tem de estar no que ELA escreveu — **a primeira mensagem sai da conta.**
-   *
-   * Pego por teste: com a rajada colada, *"Olá! Eu apoio as Escolas"* + *"bom dia"* casava, porque
-   * o "apoio" estava no texto do ANÚNCIO. A regra ficaria valendo para qualquer um que clicasse no
-   * anúncio e depois escrevesse qualquer coisa — o oposto do critério.
+   * Posição é frágil (basta ela mandar um "bom dia" antes); texto não é.
    */
   const dela = rajada
-    .filter((m) => m !== lista[0])
+    .filter((m) => !ehMensagemDeAnuncio(m, padroesDeAnuncio))
     .map((m) => String(m?.texto || ''))
     .join(' ')
     .trim();

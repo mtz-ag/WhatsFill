@@ -8,8 +8,18 @@
  *
  * Rode: node tests/cortesia.test.mjs
  */
-import { check, grupo, fim } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, pedeAlgoIndefinido, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
+import { check, grupo, fim, lib } from './_harness.mjs';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
+
+/**
+ * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
+ *
+ * A primeira versão duplicava a string — e divergiu na primeira escrita: no arquivo de teste
+ * ficou `'s'` com UMA barra, que em string JS é só a letra `s`. Três asserções passaram a
+ * mentir por causa disso. Lendo do store, o teste prova o valor que a extensão usa.
+ */
+const storeParaPadroes = await lib('store.js');
+const PADROES_DO_STORE = await storeParaPadroes.get('padroesDeAnuncio');
 
 const texto = (t) => ({ texto: t, tipo: 'TEXT' });
 
@@ -314,60 +324,80 @@ grupo('pergunta: "pq" no MEIO da frase e conjuncao, nao pergunta');
   check(q('por que ele nao veio aqui?'), 'por que separado com interrogacao');
 }
 
-grupo('soExpressaApoio: vale quando ela escreveu MAIS DE UMA VEZ');
+grupo('mensagem do ANUNCIO se reconhece pelo TEXTO, nao pela posicao');
 {
-  const M = (texto, at) => ({ texto, tipo: 'TEXT', at: at || '2026-08-31T11:40:00Z' });
+  const P = PADROES_DO_STORE;
+  const M = (texto, tipo, at) => ({ texto, tipo: tipo || 'TEXT', at: at || '2026-09-01T18:52:00Z' });
+
+  check(ehMensagemDeAnuncio(M('Olá! Eu apoio as Escolas Cívico-Militares 🤙'), P), 'o texto do anuncio');
+  check(ehMensagemDeAnuncio(M('Ola! Eu apoio o Flávio, Zucco e Capitão Martim'), P), 'sem acento tambem');
+  check(ehMensagemDeAnuncio(M('olá! eu apoio'), P), 'em minusculas tambem');
+
+  check(!ehMensagemDeAnuncio(M('Eu apoio muito voces'), P), 'apoio ESCRITO por ela nao e do anuncio');
+  check(!ehMensagemDeAnuncio(M('sempre com voces'), P), 'nem outras formas de apoio');
+  check(!ehMensagemDeAnuncio(M(''), P), 'vazio nao e do anuncio');
 
   /**
-   * O criterio nao e tamanho. A primeira versao usava 100 caracteres e ele derrubou na hora:
-   * *"se basear em caracteres vai dar so erro, e um valor totalmente aleatorio e sera trocado
-   * toda hora"*.
-   *
-   * O que separa os casos e estrutural, e as duas prints mostram o mesmo: a PRIMEIRA mensagem e
-   * o texto pronto do anuncio ("Ola! Eu apoio ..."), em que ela clicou num botao. Qualquer
-   * mensagem depois dessa e ela escrevendo.
+   * Expressao invalida na Config nao pode derrubar a leitura da conversa: cada padrao e tentado
+   * por conta propria, e o que nao compila e ignorado em silencio.
    */
-  const izaak = [
-    M('Olá! Eu apoio as Escolas Cívico-Militares 🤙', '2026-08-31T11:44:00Z'),
-    M('Tamojuntos', '2026-08-31T11:44:30Z'),
+  check(ehMensagemDeAnuncio(M('Olá! Eu apoio X'), ['((((', '^ol[áa]!?\\s+eu\\s+apoio']),
+    'padrao invalido e ignorado, o valido continua valendo');
+  check(!ehMensagemDeAnuncio(M('qualquer coisa'), ['((((']), 'so padrao invalido: nao casa nada');
+  check(!ehMensagemDeAnuncio(M('Olá! Eu apoio X'), []), 'sem padroes, nada e do anuncio');
+}
+
+grupo('soExpressaApoio: ela precisa ter escrito algo QUE NAO SEJA o texto do anuncio');
+{
+  const P = PADROES_DO_STORE;
+  const M = (texto, tipo, at) => ({ texto, tipo: tipo || 'TEXT', at });
+
+  /**
+   * Print da Erenita (01/09), e o defeito era meu: a versao anterior excluia a PRIMEIRA mensagem,
+   * presumindo que era a do anuncio. Ela mandou uma FIGURA antes, o texto do anuncio virou a
+   * segunda, e a regra leu "Eu apoio as Escolas Civico-Militares" como apoio escrito por ela.
+   *
+   * *"preciso que identifique o modelo pelo texto (Ola! Eu apoio as Escolas Civico-Militares)"*.
+   */
+  const erenita = [
+    M('', 'IMAGE', '2026-08-31T23:37:00Z'),
+    M('Olá! Eu apoio as Escolas Cívico-Militares 🤙', 'TEXT', '2026-09-01T18:52:00Z'),
   ];
-  check(!!soExpressaApoio(izaak, null), 'Izaak: 2 mensagens, a 2a e dela (54 caracteres no total)');
+  check(!soExpressaApoio(erenita, null, P), 'figura antes do anuncio: NAO e apoio dela');
+
+  // E o que continua valendo: ela escreveu algo proprio depois do clique.
+  const izaak = [
+    M('Olá! Eu apoio as Escolas Cívico-Militares', 'TEXT', '2026-08-31T11:44:00Z'),
+    M('Tamojuntos', 'TEXT', '2026-08-31T11:44:30Z'),
+  ];
+  check(!!soExpressaApoio(izaak, null, P), 'Izaak: o Tamojuntos e dela');
 
   const ciro = [
-    M('Olá! Eu apoio o Flávio, Zucco e Capitão Martim', '2026-08-30T17:34:00Z'),
-    M('Pode e desde já ficou muito grato pq sou Bolsonaro desde sempre e vou votar no PL mas para senador um no PL e o outro para marcel von Hatten 300', '2026-08-31T00:03:00Z'),
+    M('Olá! Eu apoio o Flávio, Zucco e Capitão Martim', 'TEXT', '2026-08-30T17:34:00Z'),
+    M('Pode e desde já ficou muito grato pq sou Bolsonaro desde sempre e vou votar no PL', 'TEXT', '2026-08-31T00:03:00Z'),
   ];
-  check(!!soExpressaApoio(ciro, null), 'Ciro: 2 mensagens, e a 2a esta 6h30 depois');
+  check(!!soExpressaApoio(ciro, null, P), 'Ciro: o texto de baixo e dele');
 
   /**
    * **O contra-teste que e a regra**, nas palavras dele: *"se nao tivesse o texto de baixo eu
-   * mandaria o modelo, agradeceria a atencao e encerraria"*. Uma mensagem so = clique no anuncio.
+   * mandaria o modelo, agradeceria a atencao e encerraria"*.
    */
-  check(!soExpressaApoio([M('Olá! Eu apoio as Escolas Cívico-Militares 🤙')], null),
-    'so o clique no anuncio NAO e excecao: vai para o modelo');
-  check(!soExpressaApoio([M('apoio!')], null), 'apoio solto, uma mensagem, e o caso normal');
+  check(!soExpressaApoio([M('Olá! Eu apoio as Escolas', 'TEXT', '2026-09-01T18:52:00Z')], null, P),
+    'so o clique no anuncio: vai para o modelo');
 
-  // As formas de "tamo junto" que faltavam no dicionario.
-  for (const forma of ['Tamojuntos', 'tamo junto', 'tamos juntos', 'tmj', 'estamos juntos', 'to junto']) {
-    check(!!soExpressaApoio([M('Olá! Eu apoio X'), M(forma)], null), 'reconhece: ' + forma);
-  }
+  // Sem os padroes configurados, o texto do anuncio conta como dela — e a regra volta a exigir
+  // que haja mais de uma mensagem, que era o comportamento antigo.
+  check(!!soExpressaApoio(izaak, null, []), 'sem padroes: cai no comportamento antigo');
 
-  /**
-   * O que NAO pode virar agradecimento: apoio junto com pergunta e pergunta; junto com pedido e
-   * pedido. Responder a metade facil e engolir a que importa e o defeito mais caro que uma
-   * resposta automatica pode ter.
-   */
-  check(!soExpressaApoio([M('Olá! Eu apoio X'), M('apoio voces, mas por que nao vem aqui?')], null),
+  // O que NAO pode virar agradecimento, mesmo sendo dela.
+  check(!soExpressaApoio([M('Olá! Eu apoio X', 'TEXT', '2026-09-01T18:00:00Z'), M('apoio, mas por que nao vem aqui?', 'TEXT', '2026-09-01T18:05:00Z')], null, P),
     'apoio + pergunta e pergunta');
-  check(!soExpressaApoio([M('Olá! Eu apoio X'), M('apoio, me manda o material?')], null),
+  check(!soExpressaApoio([M('Olá! Eu apoio X', 'TEXT', '2026-09-01T18:00:00Z'), M('apoio, me manda o material?', 'TEXT', '2026-09-01T18:05:00Z')], null, P),
     'apoio + pedido e pedido');
-  check(!soExpressaApoio([M('Olá! Eu apoio X'), M('bom dia')], null), 'cumprimento nao e apoio');
+  check(!soExpressaApoio([M('Olá! Eu apoio X', 'TEXT', '2026-09-01T18:00:00Z'), M('bom dia', 'TEXT', '2026-09-01T18:05:00Z')], null, P),
+    'cumprimento nao e apoio');
 
-  // Audio nunca e "so apoio".
-  check(!soExpressaApoio([M('Olá! Eu apoio X'), { texto: 'tamo junto', tipo: 'AUDIO', at: '2026-08-31T11:45:00Z' }], null),
-    'audio pede ele em pessoa');
-
-  check(!soExpressaApoio([], null), 'sem rajada nao ha o que agradecer');
+  check(!soExpressaApoio([], null, P), 'sem rajada nao ha o que agradecer');
 }
 
 grupo('video compartilhado NAO para a fila; audio sim');
@@ -540,8 +570,13 @@ grupo('pedeAlgoIndefinido: pediu algo sem dizer o que — o caso de maior risco'
 grupo('fronteira de palavra: (^|\\s) nao casa depois de PONTUACAO');
 {
   const M = (texto, at) => ({ texto, tipo: 'TEXT', at: at || '2026-08-31T19:30:00Z' });
+  /**
+   * Os padroes do anuncio vao junto: sem eles, o "Eu apoio" da mensagem do ANUNCIO conta como
+   * escrito por ela, e todo caso vira apoio (01/09).
+   */
+  const PADROES = PADROES_DO_STORE;
   const A = (t) =>
-    !!soExpressaApoio([M('Olá! Eu apoio X'), M(t, '2026-08-31T19:35:00Z')], null);
+    !!soExpressaApoio([M('Olá! Eu apoio X'), M(t, '2026-08-31T19:35:00Z')], null, PADROES);
   const P = (t) => !!pedeAlgoIndefinido([M(t)], null);
   const Q = (t) => !!conversaTemPerguntaAberta([M(t)], null);
 
@@ -571,8 +606,13 @@ grupo('fronteira de palavra: (^|\\s) nao casa depois de PONTUACAO');
 grupo('apoio: "sempre com voces" e as formas sem verbo na frente');
 {
   const M = (texto, at) => ({ texto, tipo: 'TEXT', at: at || '2026-08-31T19:30:00Z' });
+  /**
+   * Os padroes do anuncio vao junto: sem eles, o "Eu apoio" da mensagem do ANUNCIO conta como
+   * escrito por ela, e todo caso vira apoio (01/09).
+   */
+  const PADROES = PADROES_DO_STORE;
   const A = (t) =>
-    !!soExpressaApoio([M('Olá! Eu apoio X'), M(t, '2026-08-31T19:35:00Z')], null);
+    !!soExpressaApoio([M('Olá! Eu apoio X'), M(t, '2026-08-31T19:35:00Z')], null, PADROES);
 
   check(A('sempre com voces capitao'), 'sempre com voces');
   check(A('junto com o senhor'), 'junto com o senhor');

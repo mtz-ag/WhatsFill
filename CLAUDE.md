@@ -426,6 +426,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `jaRespondemosAntes` tira da conta as nossas mensagens que são PERGUNTA (`pedir-dados`,
   `interesse-conteudo`, `perguntar-como-ajudar`), comparando o maior pedaço literal de cada texto E
   de cada variante. **Resposta pronta nova que seja pergunta entra nessa lista.**
+- **A mensagem do anúncio se reconhece pelo TEXTO, nunca pela posição.** O Instagram manda um texto
+  pronto no clique (*"Olá! Eu apoio as Escolas Cívico-Militares"*) — ela não escolheu as palavras.
+  Eu presumi que essa era sempre a PRIMEIRA mensagem, e a print da Erenita derrubou: ela mandou uma
+  **figura antes**, o texto do anúncio virou a segunda, e a regra o leu como apoio escrito por ela.
+  Hoje `cortesia.ehMensagemDeAnuncio` casa contra `store.padroesDeAnuncio` (configurável, porque o
+  texto muda quando a campanha muda). **Basta um "bom dia" antes para qualquer critério posicional
+  cair.**
+- **Teste que duplica um valor do `store` mente na primeira divergência.** Ao escrever o padrão do
+  anúncio à mão no teste saiu `'s'` com UMA barra — que em string JS é a letra `s`. Três asserções
+  passaram a "passar" testando nada. O teste agora lê `store.get('padroesDeAnuncio')`: prova o valor
+  que a extensão usa, não uma cópia.
 - **ADS é ORIGEM, não conteúdo — e por isso é `fallback`.** Ela diz que a pessoa veio de anúncio,
   não de QUAL anúncio: *"eu tenho um modelo pra escolas civico militares mas a etiqueta ads não faz
   distinção"* (31/08). `hsm.escolherConteudo` ignora os `fallback` quando existe conteúdo

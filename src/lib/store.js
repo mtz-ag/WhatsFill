@@ -546,6 +546,23 @@ const DEFAULTS = {
    * Regras de etiqueta por conteúdo: padrão (regex, sem diferenciar maiúscula) casado contra
    * as mensagens do contato e a campanha do anúncio. Editável na aba Config.
    */
+  /**
+   * Como reconhecer que a mensagem foi **gerada pelo anúncio**, e não escrita pela pessoa.
+   *
+   * O Instagram e o Facebook mandam um texto pronto quando alguém clica no botão do anúncio:
+   * *"Olá! Eu apoio as Escolas Cívico-Militares"*, *"Olá! Eu apoio o Flávio, Zucco e Capitão
+   * Martim"*. **Ela não escolheu essas palavras — clicou num botão.**
+   *
+   * Pedido dele (01/09): *"preciso que identifique o modelo pelo texto (Olá! Eu apoio as Escolas
+   * Cívico-Militares)"*. A primeira versão presumia que a mensagem do anúncio era a PRIMEIRA da
+   * conversa, e a print da Erenita derrubou isso: ela mandou uma figura antes, o texto do anúncio
+   * virou a segunda, e a regra passou a tratar o texto do anúncio como apoio escrito por ela.
+   *
+   * **Posição não serve; texto serve.** Configurável porque o texto do anúncio muda quando a
+   * campanha muda, e isso não deveria exigir um commit. Uma expressão por linha, sem barras.
+   */
+  padroesDeAnuncio: ['^ol[áa]!?\\s+eu\\s+apoio'],
+
   tagRules: [
     { padrao: 'zucco', etiqueta: 'Conteúdo Zucco' },
     { padrao: 'fl[áa]vio', etiqueta: 'Conteúdo Flávio' },

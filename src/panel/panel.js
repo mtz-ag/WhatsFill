@@ -140,6 +140,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     nossaUltimaAt: null,
     /** O nome que a pessoa escreveu nesta conversa (palpite do parser), não o do cadastro. */
     nomeInformado: '',
+    /** Expressões que identificam a mensagem gerada pelo anúncio (Config). */
+    padroesDeAnuncio: [],
     /** O que NÓS mandamos nesta conversa — para saber o que já foi, mesmo fora do painel. */
     nossas: [],
     /**
@@ -448,6 +450,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.error = null;
     state.hasContract = !!(await store.get('writeContract'))?.entries?.length;
     state.settings = await store.get('settings');
+    state.padroesDeAnuncio = await store.get('padroesDeAnuncio');
     state.auto.cfg = await store.get('auto');
     state.templates = await templatesLib.list();
     renderAll();
@@ -3660,7 +3663,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         perguntaAberta: conversaTemPerguntaAberta(state.entrantes, state.nossaUltimaAt),
         // Só apoio, sem pergunta e sem pedido: agradecer é o desfecho (print do Ciro, 31/08).
         // A tecla só é oferecida se o texto do agradecimento não estiver travado por variável.
-        soExpressaApoio: apoioTrava ? null : soExpressaApoio(state.entrantes, state.nossaUltimaAt),
+        // Os padrões do anúncio vêm da Config: é por eles que a mensagem gerada pelo anúncio
+        // ("Olá! Eu apoio as Escolas Cívico-Militares") deixa de contar como apoio escrito por
+        // ela. Por TEXTO e não por posição — a figura que a Erenita mandou antes derrubou a
+        // versão posicional (01/09).
+        soExpressaApoio: apoioTrava
+          ? null
+          : soExpressaApoio(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
         etiquetaQueDispensa: await etiquetaQueDispensaDaFila(),
         ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
         // Só links e vídeos repassados: é ruído, e ruído não pede formulário (print do Odone).
