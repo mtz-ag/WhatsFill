@@ -5,6 +5,55 @@
 
 ---
 
+## 2026-08-31 — "76 mensagens somando 3254 caracteres": a rajada somava o arquivo morto
+
+**Relato dele**, print do Odone na 0.46.0: *"não fez sentido nenhum a sugestão, explique"*. A caixa
+dizia *"6: escreveu 76 mensagens somando 3254 caracteres — é conversa, não é caso de modelo"*.
+
+**Defeito meu, do mesmo dia**, na regra da rajada.
+
+### A explicação
+
+`rajadaFinal` parava numa coisa só: a nossa última mensagem. E tinha esta linha:
+
+```js
+if (!nossaUltimaAt) return lista;   // nunca respondemos → a rajada é TUDO
+```
+
+O Odone compartilha vídeo o dia todo e nunca foi respondido. Então a "rajada" dele era o histórico
+inteiro — **76 mensagens acumuladas ao longo de semanas**, somando 3.254 caracteres. Passou dos 400
+e virou "conversa".
+
+**A conta que denuncia: 3254 ÷ 76 = 43 caracteres por mensagem.** São links e repasses, não
+parágrafos. Uma conversa de verdade tem 150+ por mensagem — o caso que criou a regra tinha três
+mensagens de 250, 55 e 145 caracteres em dois minutos.
+
+**O erro foi de definição, não de número.** Eu tratei *"tudo que não respondemos"* como se fosse
+*"tudo que ela escreveu de uma vez"*. São coisas diferentes, e o que as separa é o relógio.
+
+### O conserto
+
+A rajada agora para em **duas** coisas: a nossa última mensagem **e** um buraco de mais de 30
+minutos entre duas mensagens dela. Meia hora é folga larga para quem escreve devagar, e ainda
+separa isso de quem manda uma coisa hoje e outra amanhã.
+
+No caso do Odone a rajada passou de 76 para **1**, e a sugestão saiu da tecla 6.
+
+Mensagem sem `at` não quebra a corrente: sem horário não dá para afirmar que houve buraco, e o lado
+seguro é manter na rajada.
+
+### Duas asserções antigas trocadas, não apagadas
+
+*"sem nossa mensagem, a rajada é tudo"* passou a `=== 2`, com o motivo no comentário. É o que
+impede alguém de "consertar" a definição de volta em um mês — e hoje mesmo isso aconteceria, porque
+a frase antiga soa correta lida sozinha.
+
+**Arquivos:** `src/lib/cortesia.js` (`INTERVALO_DA_RAJADA_MS`, `rajadaFinal`),
+`tests/cortesia.test.mjs` (+9, 1 trocada), `CLAUDE.md`, `manifest.json` (0.46.0 → **0.47.0**).
+29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — Vídeo compartilhado sai da fila de "responder à mão"
 
 **Relato dele**, print do Odone: reel do Instagram e vídeo do Facebook de 631 mil visualizações. A

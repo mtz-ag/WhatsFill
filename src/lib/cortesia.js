@@ -216,25 +216,60 @@ export function pedeRespostaPessoal(msg) {
 }
 
 /**
- * As mensagens que chegaram DEPOIS da nossa última — a conversa que está pendente.
+ * Quanto tempo entre duas mensagens ainda é a MESMA rajada.
  *
- * Sem `nossaUltimaAt` (nunca respondemos este contato), a rajada é tudo o que ele escreveu:
- * está certo, porque nada foi respondido ainda.
+ * Rajada é a pessoa digitando de uma vez — o caso que criou isto foram três mensagens em dois
+ * minutos. Meia hora é folga larga para quem escreve devagar, e ainda separa isso de quem manda
+ * uma coisa hoje e outra amanhã.
+ */
+const INTERVALO_DA_RAJADA_MS = 30 * 60 * 1000;
+
+/**
+ * A última rajada do contato: mensagens seguidas, próximas no tempo, sem resposta nossa depois.
  *
- * Mensagem sem `at` entra na rajada. É o lado seguro de errar aqui — pôr de fora faria a soma
- * baixar e o modelo voltar a ser sugerido, que é exatamente o defeito que isto conserta.
+ * **Duas paradas, e a segunda foi aprendida caro** (31/08, print do Odone):
+ *
+ *  1. **a nossa última mensagem** — o que veio antes dela já foi respondido;
+ *  2. **um buraco de mais de 30 minutos** entre duas mensagens dela.
+ *
+ * Sem a segunda, quem nunca foi respondido tinha como "rajada" o histórico INTEIRO. O Odone
+ * compartilha vídeo o dia todo: 76 mensagens ao longo de semanas, 3.254 caracteres somados — e
+ * a caixa anunciou *"escreveu 76 mensagens somando 3254 caracteres — é conversa"*. Não era
+ * conversa: era **43 caracteres por mensagem**, links e repasses, acumulados porque ninguém
+ * respondeu.
+ *
+ * O erro foi de definição, não de número: eu tratei "tudo que não respondemos" como se fosse
+ * "tudo que ela escreveu de uma vez". São coisas diferentes, e a diferença é o relógio.
+ *
+ * Mensagem sem `at` não quebra a corrente: sem horário não dá para afirmar que houve buraco, e
+ * o lado seguro de errar aqui é manter na rajada (ver `conversaPedeRespostaPessoal`).
  */
 export function rajadaFinal(entrantes, nossaUltimaAt) {
   const lista = Array.isArray(entrantes) ? entrantes : [];
-  if (!nossaUltimaAt) return lista;
-  const corte = new Date(nossaUltimaAt).getTime();
-  if (!Number.isFinite(corte)) return lista;
+  if (!lista.length) return [];
+
+  const corte = nossaUltimaAt ? new Date(nossaUltimaAt).getTime() : NaN;
+  const temCorte = Number.isFinite(corte);
+
+  const quando = (m) => {
+    const t = m?.at ? new Date(m.at).getTime() : NaN;
+    return Number.isFinite(t) ? t : null;
+  };
 
   const depois = [];
+  let seguinte = null; // horário da mensagem à direita desta, para medir o buraco
+
   for (let i = lista.length - 1; i >= 0; i--) {
-    const at = lista[i]?.at ? new Date(lista[i].at).getTime() : NaN;
-    if (Number.isFinite(at) && at <= corte) break;
+    const at = quando(lista[i]);
+
+    // Já foi respondida: daqui para trás não interessa.
+    if (temCorte && at !== null && at <= corte) break;
+
+    // Buraco grande até a mensagem seguinte: a rajada começa depois dele.
+    if (at !== null && seguinte !== null && seguinte - at > INTERVALO_DA_RAJADA_MS) break;
+
     depois.unshift(lista[i]);
+    if (at !== null) seguinte = at;
   }
   return depois;
 }

@@ -409,6 +409,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   a `nossaUltimaAt`. Regra nova que dependa do que a pessoa acabou de dizer: pense na rajada,
   não na última.
 
+- **"Sem resposta nossa" NÃO é o mesmo que "escreveu de uma vez" — a diferença é o relógio.**
+  A rajada (`cortesia.rajadaFinal`) para em DUAS coisas: a nossa última mensagem e um buraco de
+  mais de 30 min entre mensagens dela. Sem a segunda parada, quem nunca foi respondido tinha o
+  histórico inteiro como rajada: o Odone, que compartilha vídeo o dia todo, apareceu como
+  *"escreveu 76 mensagens somando 3254 caracteres — é conversa"* (31/08). Eram **43 caracteres
+  por mensagem** — links acumulados por semanas, não conversa. Regra que soma mensagens precisa
+  dizer em quanto tempo, senão soma o arquivo morto.
 - **Vídeo compartilhado NÃO é áudio, e a diferença é quem está falando.** Áudio é a pessoa
   gravando para ele (o caso que criou a regra foi 1min13 sobre a família e a igreja — modelo ali
   parece deboche). Vídeo é conteúdo de terceiro chegando pela décima vez no dia: *"são centenas

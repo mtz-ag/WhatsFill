@@ -192,8 +192,15 @@ grupo('rajadaFinal: o que chegou depois da nossa ultima mensagem');
   const r = rajadaFinal(lista, '2026-08-31T15:55:00Z');
   check(r.length === 2 && r[0].texto === 'depois 1', 'pega so as posteriores a nossa');
 
-  // Nunca respondemos: tudo esta pendente, e isso e o correto.
-  check(rajadaFinal(lista, null).length === 3, 'sem nossa mensagem, a rajada e tudo');
+  /**
+   * Esta assercao dizia `=== 3` ("sem nossa mensagem, a rajada e tudo") e caiu em 31/08, com a
+   * print do Odone: sem parada por tempo, quem nunca foi respondido tinha o historico inteiro
+   * como rajada, e 76 repasses viravam "conversa de 3254 caracteres".
+   *
+   * A de 10:00 esta a oito horas das outras duas: nao e a mesma rajada. Trocada e nao apagada,
+   * para que a reversao fique legivel para quem vier depois.
+   */
+  check(rajadaFinal(lista, null).length === 2, 'sem nossa mensagem, a rajada vai ate o buraco de tempo');
 
   // Mensagem sem `at` entra: por fora, a soma baixa e o modelo volta a ser sugerido — que e
   // exatamente o defeito que isto conserta.
@@ -368,6 +375,67 @@ grupo('video compartilhado NAO para a fila; audio sim');
   // Video COM texto longo junto continua sendo conversa: o texto e que manda.
   const comTexto = [{ texto: 'a'.repeat(500), tipo: 'VIDEO', at: '2026-08-31T23:20:00Z' }];
   check(!!conversaPedeRespostaPessoal(comTexto, null), 'video com texto longo junto ainda pede voce');
+}
+
+
+grupo('rajada: para no buraco de tempo, senao o historico inteiro vira "conversa"');
+{
+  /**
+   * Print do Odone (31/08), e o defeito era meu, do mesmo dia.
+   *
+   * Ele compartilha video o dia todo e nunca foi respondido. Sem parada por tempo, a "rajada"
+   * era o historico INTEIRO: a caixa anunciou *"escreveu 76 mensagens somando 3254 caracteres —
+   * e conversa"*. Nao era: 43 caracteres por mensagem, links e repasses acumulados.
+   *
+   * O erro foi de definicao — tratei "tudo que nao respondemos" como "tudo que ela escreveu de
+   * uma vez". A diferenca entre as duas coisas e o relogio.
+   */
+  const odone = [];
+  for (let i = 0; i < 76; i++) {
+    const d = new Date(Date.UTC(2026, 7, 1 + Math.floor(i / 3), 12 + (i % 3) * 4, 0, 0));
+    odone.push({ texto: 'https://www.facebook.com/share/v/' + i, tipo: 'VIDEO', at: d.toISOString() });
+  }
+  check(rajadaFinal(odone, null).length === 1, 'so a ultima entra: as outras vieram horas antes');
+  check(!conversaPedeRespostaPessoal(odone, null), 'e 76 repasses nao viram "conversa"');
+
+  /**
+   * O contra-teste: o caso que criou a regra continua valendo. Tres mensagens em dois minutos.
+   */
+  const alerta = [
+    { texto: 'a'.repeat(250), tipo: 'TEXT', at: '2026-08-31T21:17:00Z' },
+    { texto: 'b'.repeat(55), tipo: 'TEXT', at: '2026-08-31T21:18:00Z' },
+    { texto: 'c'.repeat(145), tipo: 'TEXT', at: '2026-08-31T21:19:00Z' },
+  ];
+  check(rajadaFinal(alerta, null).length === 3, 'tres em dois minutos sao uma rajada so');
+  check(!!conversaPedeRespostaPessoal(alerta, null), 'e continuam pedindo resposta a mao');
+
+  // A fronteira dos 30 minutos, dos dois lados.
+  const perto = [
+    { texto: 'x'.repeat(300), tipo: 'TEXT', at: '2026-08-31T21:00:00Z' },
+    { texto: 'y'.repeat(300), tipo: 'TEXT', at: '2026-08-31T21:25:00Z' },
+  ];
+  check(rajadaFinal(perto, null).length === 2, '25 minutos ainda e a mesma rajada');
+
+  const longe = [
+    { texto: 'x'.repeat(300), tipo: 'TEXT', at: '2026-08-31T21:00:00Z' },
+    { texto: 'y'.repeat(300), tipo: 'TEXT', at: '2026-08-31T22:00:00Z' },
+  ];
+  check(rajadaFinal(longe, null).length === 1, 'uma hora depois e outra rajada');
+  check(!conversaPedeRespostaPessoal(longe, null), 'e as duas separadas nao somam 400');
+
+  // A nossa mensagem continua cortando, mesmo com tudo junto no tempo.
+  const respondida = [
+    { texto: 'z'.repeat(300), tipo: 'TEXT', at: '2026-08-31T21:00:00Z' },
+    { texto: 'w'.repeat(50), tipo: 'TEXT', at: '2026-08-31T21:10:00Z' },
+  ];
+  check(rajadaFinal(respondida, '2026-08-31T21:05:00Z').length === 1, 'a nossa resposta corta a rajada');
+
+  // Sem horario nenhum, tudo entra: nao da para afirmar que houve buraco.
+  const semHora = [
+    { texto: 'a'.repeat(300), tipo: 'TEXT' },
+    { texto: 'b'.repeat(300), tipo: 'TEXT' },
+  ];
+  check(rajadaFinal(semHora, null).length === 2, 'sem hora, a corrente nao quebra');
 }
 
 fim();
