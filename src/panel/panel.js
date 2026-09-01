@@ -132,6 +132,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * de ser tentativa e erro.
        */
       semRegra: new Map(),
+      /** Já avisei nesta rodada que confirmei o diálogo de conclusão? (uma vez basta) */
+      avisouConfirmacao: false,
     },
     incoming: [],
     /** O que o contato mandou, com o tipo junto — é o que enxerga figura e figurinha. */
@@ -2217,9 +2219,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Só reconta quando a conclusão deu certo: contar depois de um Concluir que falhou traria o
    * mesmo número e daria a impressão de que o contador é que está quebrado.
    */
+  /**
+   * Concluir pelo painel.
+   *
+   * Quando a plataforma abre uma **confirmação** ("tem certeza?"), a página confirma sozinha —
+   * a conclusão foi pedida por ele dois cliques atrás, e parar ali travava a rodada em todo
+   * contato (print de 01/09). Mas o que foi aceito em nome dele **vai para o log**: este diálogo
+   * avisa que mensagens pendentes serão canceladas, e aceitar isso em silêncio seria decidir por
+   * ele sem contar.
+   *
+   * Uma vez por rodada basta: o texto é o mesmo em todo contato, e repeti-lo cem vezes afogaria o
+   * resto do log — que é onde ele procura o que deu errado.
+   */
   async function concluirPeloPainel() {
     const r = await page.clickConcluir();
     if (r?.ok) agendarContagem();
+
+    if (r?.avisoDaConfirmacao && !state.auto.avisouConfirmacao) {
+      state.auto.avisouConfirmacao = true;
+      registrarNaRodada('plataforma', 'aviso',
+        `confirmei o diálogo de conclusão em seu nome: "${r.avisoDaConfirmacao}"`);
+    }
     return r;
   }
 
@@ -2725,6 +2745,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.auto.parar = false;
     state.auto.log = [];
     state.auto.semRegra = new Map();
+    state.auto.avisouConfirmacao = false;
     renderAll();
 
     // Aba escondida é aba CONGELADA — timer nenhum roda, nem o da plataforma. Sem isto, a

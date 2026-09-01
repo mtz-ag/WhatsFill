@@ -347,6 +347,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 - **Na ponte de mensagens, argumento omitido chega como `null`.** O padrão `= {}` só cobre
   `undefined`: desestruturar dá TypeError e `slice(0, null)` devolve vazio. Use `opts || {}`.
   Pelo mesmo motivo, método de `page.js` que alguém chama com `.catch()` tem que ser `async`.
+- **Diálogo de CONFIRMAÇÃO a rodada resolve; de FORMULÁRIO ela devolve.** *"Uma mensagem está
+  aguardando resposta do contato… Tem certeza de que deseja concluir?"* (print de 01/09) parava a
+  rodada em todo contato — *"é para concluir e continuar mas está parando tudo"*. Confirmar não
+  decide nada novo: a conclusão foi pedida dois cliques antes. Quem separa os dois é
+  `dom.getConfirmacaoDeConclusao`, e a trava é o **teste de campo vindo primeiro**: qualquer
+  `input`/`select`/`mat-select`/`textarea`/`mat-radio-group` dentro do diálogo devolve `null`,
+  mesmo havendo um botão "Concluir" ao lado — errar para o lado de não clicar custa uma rodada
+  parada, errar para o outro grava decisão que ninguém tomou. Exige também que o texto fale de
+  concluir/encerrar, e limita a **duas** confirmações por conclusão. O texto do que foi aceito vai
+  para o log da rodada, uma vez: este diálogo avisa que mensagens pendentes serão canceladas.
 - **Diálogo do Material é MODAL e mata a rodada em silêncio.** Anexar figura no meio da
   resposta à mão deixa um diálogo por cima; o clique no próximo item da fila não chega ao item e
   a rodada terminava dizendo "a fila acabou". Antes de abrir o próximo contato, espere a tela

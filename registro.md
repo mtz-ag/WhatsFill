@@ -5,6 +5,68 @@
 
 ---
 
+## 2026-09-01 — O diálogo "tem certeza que deseja concluir?" parava a rodada inteira
+
+**Relato dele**, print do diálogo da plataforma: *"essa mensagem está quebrando a automação, é para
+concluir e continuar mas está parando tudo"*.
+
+O diálogo:
+
+> **Atenção!** Uma mensagem está aguardando resposta do contato. Se você prosseguir com a conclusão
+> do atendimento, essas mensagens serão canceladas. Tem certeza de que deseja concluir o atendimento?
+> — **Cancelar** · **Concluir**
+
+### A causa
+
+`clickConcluir` tinha esta linha, e o comentário explicava a intenção:
+
+```js
+// Diálogo de motivo de conclusão: quem decide é o humano, então devolve para o painel.
+if (dom.hasOpenDialog()) return { ok: true, dialogOpen: true };
+```
+
+Escrita para o diálogo de **motivo de conclusão** — que pede um dado que só ele tem. Mas ela pega
+**qualquer** diálogo, e o da print é outra coisa: uma confirmação do que a rodada acabou de pedir.
+
+**Confirmar ali não decide nada novo.** A conclusão foi pedida por ele dois cliques antes.
+
+### A distinção, e a trava que a torna segura
+
+`dom.getConfirmacaoDeConclusao` separa os dois:
+
+- **confirmação** → a rodada clica e segue;
+- **formulário** → devolve para o painel, como sempre.
+
+**O teste de campo vem PRIMEIRO, e é ele que segura a mão:** qualquer `input`, `select`,
+`mat-select`, `textarea` ou `mat-radio-group` dentro do diálogo faz a função devolver `null` — mesmo
+havendo um botão "Concluir" ao lado. Errar para o lado de não clicar custa uma rodada parada; errar
+para o outro grava decisão que ninguém tomou.
+
+Também exige que o texto fale de concluir/encerrar (diálogo de "Excluir contato" ou de transferência
+não entra), recusa botão desabilitado, e limita a **duas** confirmações por conclusão — o encadeado
+"tem certeza?" → "confirma?" cabe, e a teimosia de bater na mesma porta 40 vezes até o prazo não.
+
+### O que ele precisa saber, e o log conta
+
+Este diálogo avisa que **mensagens pendentes serão canceladas**. Aceitar isso em silêncio seria
+decidir por ele sem contar — então o texto do que foi confirmado vai para o log da rodada, **uma vez
+por rodada**: é o mesmo em todo contato, e repetido cem vezes afogaria o resto do log.
+
+### Provado no navegador, com o diálogo da print
+
+`tools/checar-dom.mjs` precisa de Playwright, que não está instalado. Montei os casos com o `dom.js`
+real: **17 verificações, zero falhas.** As sete que mais importam são as que garantem que ele **não**
+clica — diálogo de motivo (nas quatro formas de campo), "Excluir contato", transferência, botão
+desabilitado.
+
+**Arquivos:** `src/lib/dom.js` (`getConfirmacaoDeConclusao`), `src/lib/page.js` (o laço do
+`clickConcluir`), `src/panel/panel.js` (o aviso no log), `CLAUDE.md`,
+`manifest.json` (0.60.0 → **0.61.0**). 29 módulos sem erro, dez suítes passando.
+
+**Vale para os dois branches:** feito aqui e a levar para `claude/whatsfill-ia` por merge.
+
+---
+
 ## 2026-09-01 — O modelo do anúncio sai do TEXTO, sem etiqueta por anúncio
 
 **Decisão dele:** *"não será feito etiqueta a etiqueta para os anúncios, agora é só ads; o padrão para
