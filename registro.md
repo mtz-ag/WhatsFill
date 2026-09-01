@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-08-31 — A lista dos casos sem regra, que é a lista das regras a escrever
+
+**Dele:** *"refinar até sobrar pouca indecisão"*.
+
+O contador do commit anterior diz **quanto** sobrou. Para escrever a regra seguinte ele precisa
+saber **o quê** — e vinte linhas espalhadas no meio de cem passam batidas.
+
+### O que a rodada mostra agora, no fim
+
+```
+? — a refinar —  7 caso(s) que nenhuma regra reconheceu. Vários iguais = uma regra nova:
+? Marta Ferreira  última mensagem: "🙏🙏"
+? Clair           última mensagem: "Porque?"
+? José            última mensagem: "(AUDIO)"
+```
+
+Lidos **juntos**, o padrão aparece: seis casos iguais são uma regra, não seis decisões. Foi assim
+que as três regras de hoje nasceram, só que a partir de prints que ele mandou uma por uma.
+
+`state.auto.semRegra` virou um `Map` guardando `{nome, texto, tipo}` — a última mensagem **com
+texto** do contato, cortada em 120 caracteres. Continua sendo escrito num ponto só, logo depois de
+`sugerirAcao`.
+
+### Dois detalhes que evitam armadilha
+
+- **`refinar` é resultado próprio, não `'pulado'`.** Estas linhas entram DEPOIS de o resumo estar
+  montado; reusar um resultado que o resumo conta deixaria uma bomba armada para quem mover a ordem
+  dessas duas coisas um dia. Ele também não está em `SAI_DA_FILA` nem no limite da rodada.
+- **`aviso` ganhou sinal (`⚠`) junto.** Já era usado em outro lugar e caía no `·` genérico do
+  fallback desde então.
+
+**Arquivos:** `src/panel/panel.js`, `manifest.json` (0.43.0 → **0.44.0**).
+29 módulos sem erro, dez suítes passando.
+
+**Como usar:** rode uma rodada, leia a lista do fim. Situação que aparece três vezes é regra nova em
+`sugestao.js`; situação que aparece uma vez e é única mesmo é caso da IA. Essa separação é o que
+decide onde vale gastar o próximo esforço — e é ela que diz quando "sobrou pouca indecisão".
+
+---
+
 ## 2026-08-31 — "Reconhecer pela falta de opções": o sinal já existia e a tela o escondia
 
 **Pedido dele:** *"não sera criado etiqueta pra isso terá que reconhecer isso pela falta de

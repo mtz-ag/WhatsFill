@@ -122,11 +122,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * caminhos de `return` no tratamento de um contato, e marcar em cada um é o tipo de coisa
        * que fica errada no dia em que alguém acrescenta o vigésimo primeiro.
        *
-       * Um `Set` e não um contador porque o mesmo contato pode passar duas vezes na rodada
-       * (a fila devolve o concluído ao topo — está no `CLAUDE.md`), e contar duas vezes
-       * inflaria a medida justamente no caso que já dá trabalho.
+       * Um mapa por id de atendimento (e não um contador) porque o mesmo contato pode passar
+       * duas vezes na rodada — a fila devolve o concluído ao topo, está no `CLAUDE.md` — e
+       * contar duas vezes inflaria a medida justamente no caso que já dá trabalho.
+       *
+       * Guarda `{ nome, texto }` e não só a contagem: o número diz QUANTO sobrou, e para
+       * escrever a regra seguinte ele precisa saber O QUÊ. Dez casos lidos de uma vez mostram
+       * que seis são a mesma situação — é assim que "refinar até sobrar pouca indecisão" deixa
+       * de ser tentativa e erro.
        */
-      semRegra: new Set(),
+      semRegra: new Map(),
     },
     incoming: [],
     /** O que o contato mandou, com o tipo junto — é o que enxerga figura e figurinha. */
@@ -2373,7 +2378,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return card;
   }
 
-  const SINAL_RODADA = { enviado: '✓', concluido: '▪', pulado: '–', triado: '→', reiniciado: '↻', erro: '×', fim: '■' };
+  /**
+   * O sinal de cada linha do log.
+   *
+   * `refinar` é resultado PRÓPRIO e não 'pulado' de propósito: as linhas da lista de casos sem
+   * regra entram depois de o resumo estar montado, e reusar um resultado que o resumo conta
+   * deixaria uma bomba armada para quem mover a ordem dessas duas coisas um dia.
+   */
+  const SINAL_RODADA = { enviado: '✓', concluido: '▪', pulado: '–', triado: '→', reiniciado: '↻', erro: '×', fim: '■', aviso: '⚠', refinar: '?' };
 
   /** Resultados em que o contato deixa a lista: a posição não pode avançar junto. */
   const SAI_DA_FILA = new Set(['triado', 'concluido', 'reiniciado']);
@@ -2691,7 +2703,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.auto.rodando = true;
     state.auto.parar = false;
     state.auto.log = [];
-    state.auto.semRegra = new Set();
+    state.auto.semRegra = new Map();
     renderAll();
 
     // Aba escondida é aba CONGELADA — timer nenhum roda, nem o da plataforma. Sem isto, a
@@ -2771,6 +2783,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // O log ANTES do status: `refresh()` logo abaixo carrega o contato aberto e sobrescreve a
     // barra de status, então o veredito da rodada só sobrevive aqui. Era por isso que a rodada
     // parecia parar sem explicação.
+    /**
+     * Os casos que nenhuma regra reconheceu, listados no fim para serem lidos JUNTOS.
+     *
+     * Separados no meio do log eles são vinte linhas perdidas entre cem; juntos, o padrão
+     * aparece — e o padrão é a próxima regra a escrever. É o instrumento do plano dele:
+     * refinar até sobrar pouca indecisão, e só então ligar a IA para o que sobrou.
+     */
+    if (state.auto.semRegra.size) {
+      registrarNaRodada('— a refinar —', 'refinar',
+        `${state.auto.semRegra.size} caso(s) que nenhuma regra reconheceu. Vários iguais = uma regra nova:`);
+      for (const caso of state.auto.semRegra.values()) {
+        const oQue = caso.texto ? `"${caso.texto}"` : `(${caso.tipo || 'sem texto'})`;
+        registrarNaRodada(caso.nome, 'refinar', `última mensagem: ${oQue}`);
+      }
+    }
+
     registrarNaRodada('rodada', 'fim', `${resumo}${sobra} ${motivo} ${audio}`);
 
     setStatus(`${resumo}${sobra} ${motivo}`, resultado.interrompida || sobra ? 'err' : 'ok');
@@ -3585,7 +3613,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // Nenhuma regra reconheceu: o caso é para ele decidir hoje, e é o gatilho da IA no outro
       // branch. Marcado AQUI, onde a informação existe — não em cada `return` lá embaixo.
-      if (!sugestao) state.auto.semRegra.add(sessionId);
+      if (!sugestao) {
+        const ultimaDela = [...state.entrantes].reverse().find((m) => String(m?.texto || '').trim());
+        state.auto.semRegra.set(sessionId, {
+          nome,
+          texto: String(ultimaDela?.texto || '').replace(/\s+/g, ' ').trim().slice(0, 120),
+          tipo: ultimaDela?.tipo || '',
+        });
+      }
 
       const escolha = await perguntarNaRodada({
         titulo: nome,
