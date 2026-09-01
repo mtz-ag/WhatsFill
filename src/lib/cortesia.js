@@ -369,6 +369,73 @@ const EXPRESSOES_DE_APOIO = [
 ];
 
 /**
+ * Alguém pedindo algo, sem dizer o quê.
+ *
+ * Print da Mari (31/08): *"Preciso da forca do senhor"* — e a caixa sugeria **mandar o modelo da
+ * campanha**. Ele leu como *"provável pedido financeiro ou trabalho, vou perguntar em que posso
+ * ajudar? para ter certeza"*.
+ *
+ * **É o caso de maior risco do projeto inteiro.** Pedido de dinheiro ou de emprego não pode
+ * receber resposta automática (Lei 9.504/97, art. 41-A e 73), e material de campanha em cima de
+ * quem está pedindo ajuda é pior do que não responder. Só que a frase não diz o que ela quer —
+ * pode ser dinheiro, emprego, ou força política na luta dela.
+ *
+ * Como não se sabe, **não se responde: pergunta-se.** Perguntar não promete nada, não nega nada,
+ * e é o que transforma uma frase ambígua em decisão informada dele.
+ */
+const PRECISA_DE_ALGO = [
+  // "preciso da sua força", "preciso da forca do senhor", "preciso de uma ajuda"
+  /(^|\s)(preciso|precisava|precisando|necessito)\s+(de\s+|da\s+|do\s+|duma\s+|dum\s+)/i,
+  // "conto com o senhor", "conto com sua ajuda"
+  /(^|\s)cont(o|ando)\s+com\s+(o\s+senhor|a\s+senhora|voc[eê]|sua|seu)/i,
+  // "o senhor pode me ajudar?", "vocês podem me ajudar"
+  /(^|\s)(pode|podem|poderia|poderiam|consegue|conseguem)\s+(me\s+)?ajudar/i,
+  // "me ajuda", "me ajude", "queria uma ajuda"
+  /(^|\s)me\s+ajud(a|e|ar)/i,
+  /(^|\s)(queria|quero|gostaria\s+de)\s+(uma\s+|um\s+)?ajuda/i,
+  // "estou passando por", "estou numa situação", "estou desempregado"
+  /(^|\s)(t[oô]|estou|estamos)\s+(passando|numa|em\s+uma|desempregad)/i,
+];
+
+/**
+ * **A oferta desarma a mensagem inteira, e vem ANTES de qualquer teste de pedido.**
+ *
+ * Armadilha já registrada no `CLAUDE.md`: *"ajuda" é a mesma palavra dos dois lados da campanha*.
+ * *"Quero ajudar"* é apoiador se oferecendo — o público principal. Um padrão que confunda os dois
+ * põe metade da base na fila de revisão dele e o trabalho para.
+ */
+const OFERECE_AJUDA =
+  /(^|\s)(quero|queria|posso|gostaria\s+de|vou|estou\s+aqui\s+para|to\s+aqui\s+para)\s+(te\s+|lhe\s+|)?(ajudar|colaborar|contribuir|apoiar)/i;
+
+/**
+ * A conversa pendente traz pedido de algo que ela não nomeou?
+ *
+ * @returns {{motivo:string, trecho:string}|null}
+ */
+export function pedeAlgoIndefinido(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  if (!rajada.length) return null;
+
+  for (const msg of rajada) {
+    const texto = String(msg?.texto || '').trim();
+    if (!texto) continue;
+
+    // A oferta desarma a mensagem inteira, antes de qualquer teste de pedido.
+    if (OFERECE_AJUDA.test(texto)) continue;
+
+    for (const padrao of PRECISA_DE_ALGO) {
+      if (padrao.test(texto)) {
+        return {
+          motivo: 'pediu algo sem dizer o quê — pergunte antes de responder',
+          trecho: texto.slice(0, 120),
+        };
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * Esta mensagem é **repasse** — conteúdo de terceiro que a pessoa encaminhou?
  *
  * Link sozinho e vídeo. É o que ele chamou de ruído em 31/08: *"está confuso quando é rajada de

@@ -19,7 +19,7 @@ import * as categorizar from '../lib/categorizar.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, ultimaEhDespedida } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, ultimaEhDespedida } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -3347,6 +3347,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * SOME com o motivo na tela, em vez de travar na hora do envio.
        */
       const apoio = state.templates.find((t) => t.id === 'agradecer-apoio');
+      const perguntarAjuda = state.templates.find((t) => t.id === 'perguntar-como-ajudar');
+      const textoPerguntarAjuda = perguntarAjuda ? await templatesLib.varianteAtual(perguntarAjuda) : '';
+      const perguntarAjudaTrava = perguntarAjuda
+        ? vars.render(textoPerguntarAjuda, contexto).missing.length > 0
+        : true;
       const textoApoio = apoio ? await templatesLib.varianteAtual(apoio) : '';
       const apoioTrava = apoio ? vars.render(textoApoio, contexto).missing.length > 0 : true;
 
@@ -3578,6 +3583,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
         // Só links e vídeos repassados: é ruído, e ruído não pede formulário (print do Odone).
         rajadaEhSoRepasse: rajadaEhSoRepasse(state.entrantes, state.nossaUltimaAt),
+        // Pediu algo sem dizer o quê: material de campanha em cima disso é o pior caso do
+        // projeto (print da Mari, 31/08). Perguntar é a única resposta segura.
+        pedeAlgoIndefinido: pedeAlgoIndefinido(state.entrantes, state.nossaUltimaAt),
+        podePerguntarAjuda: !perguntarAjudaTrava,
         podeMandarMomento: !momentoTrava,
         temEtiquetaDeCidade,
         // O critério de "pedir dados" é o NOME, não a cidade (decisão dele, 31/08).
@@ -3627,6 +3636,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
       if (!apoioTrava) {
         opcoes.push({ tecla: '8', valor: 'apoio', rotulo: 'Agradecer o apoio e concluir' });
+      }
+      /**
+       * Tecla 9 — perguntar em que pode ajudar.
+       *
+       * **Não conclui**, ao contrário das outras que enviam texto: a resposta dela é o que decide
+       * o caso, e concluir tiraria o contato da fila justamente antes de ela responder.
+       */
+      if (!perguntarAjudaTrava) {
+        opcoes.push({ tecla: '9', valor: 'perguntarajuda', rotulo: 'Perguntar em que pode ajudar (deixa aberto)' });
       }
 
       // Um lugar só decide o destaque. Antes eram três expressões independentes, e duas podiam
@@ -3744,6 +3762,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // A pergunta de interesse entra aqui pelo mesmo caminho: concluir tira da fila, e quando
       // a pessoa responder a plataforma devolve o atendimento para "Meus" sozinha — é lá que o
       // "sim" vira etiqueta, na passada seguinte.
+      /**
+       * Tecla 9: manda a pergunta e **deixa o atendimento aberto**.
+       *
+       * Todas as outras teclas que enviam texto concluem. Esta não: o caso só se resolve com a
+       * resposta dela, e concluir tiraria o contato da fila exatamente antes disso.
+       */
+      if (escolha === 'perguntarajuda') {
+        await saveClassification({ withCompletionDate: true, quiet: true });
+        if (!(await sendTemplate(perguntarAjuda, { send: true, jaConfirmado: true }))) {
+          return { nome, resultado: 'erro', motivo: 'a pergunta não saiu' };
+        }
+        return {
+          nome,
+          resultado: 'enviado',
+          motivo: 'perguntei em que posso ajudar — atendimento aberto, esperando a resposta dela',
+        };
+      }
+
       if (escolha === 'pedirdados' || escolha === 'momento' || escolha === 'interesse' || escolha === 'apoio') {
         const texto =
           escolha === 'pedirdados'

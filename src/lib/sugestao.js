@@ -75,6 +75,31 @@ export const REGRAS = [
     motivo: (c) => `${c.pedeRespostaPessoal.motivo}. Responda à mão.`,
   },
   {
+    id: 'pediu-algo-sem-dizer-o-que',
+    tecla: '9',
+    /**
+     * Ela pediu algo e não disse o quê → **perguntar**, nunca responder.
+     *
+     * Print da Mari (31/08): *"Preciso da forca do senhor"*, e a caixa sugeria **mandar o modelo
+     * da campanha**. Ele: *"provável pedido financeiro ou trabalho, vou perguntar em que posso
+     * ajudar? para ter certeza"*.
+     *
+     * **É a regra de maior risco do arquivo, e por isso fica no alto.** Pedido de dinheiro ou de
+     * emprego não pode receber resposta automática (Lei 9.504/97), e material de campanha em cima
+     * de quem está pedindo ajuda é pior do que não responder. Só perdem para ela a etiqueta que
+     * dispensa da fila e o áudio — que precisa ser ouvido antes de qualquer decisão.
+     *
+     * **Vence a despedida de propósito.** "Preciso da sua força, abraço" tem despedida dentro, e
+     * concluir ali é fechar a porta na cara de um pedido.
+     *
+     * Perguntar não promete e não nega: a recusa (`pedido-ajuda`, `pedido-emprego`) só cabe
+     * depois de ela dizer o que quer, e negar antes disso ofende quem só queria apoio político.
+     */
+    quando: (c) => !!c.pedeAlgoIndefinido && c.podePerguntarAjuda,
+    motivo: (c) =>
+      `"${c.pedeAlgoIndefinido.trecho}" — pediu algo sem dizer o quê. Pergunte antes de responder.`,
+  },
+  {
     id: 'ultima-e-despedida',
     tecla: '3',
     /**

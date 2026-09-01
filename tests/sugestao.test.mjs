@@ -26,6 +26,8 @@ const base = {
   perguntaAberta: null,
   soExpressaApoio: null,
   rajadaEhSoRepasse: false,
+  pedeAlgoIndefinido: null,
+  podePerguntarAjuda: true,
   podeMandarMomento: true,
   temEtiquetaDeCidade: true,
   podePedirDados: true,
@@ -384,6 +386,42 @@ grupo('repasse nao pede formulario, mas reacao continua pedindo');
   // Quem tem texto de verdade tambem continua.
   check(com({ rajadaEhSoRepasse: false, jaPediramDados: false, temEtiquetaDeCidade: false })?.tecla === '4',
     'sem repasse, o formulario segue como antes');
+}
+
+
+grupo('pediu-algo-sem-dizer-o-que: a regra de maior risco, e fica no alto');
+{
+  const P = { motivo: 'pediu algo', trecho: 'Preciso da forca do senhor' };
+
+  // Print da Mari: tinha conteudo mapeado, e o modelo vencia.
+  const mari = com({ pedeAlgoIndefinido: P, podeEnviar: true, conteudoPedido: 'ADS' });
+  check(mari?.tecla === '9', 'pergunta em que pode ajudar: ' + JSON.stringify(mari));
+  check(/Preciso da forca/.test(mari?.motivo), 'e o motivo mostra o trecho, para ele conferir');
+
+  /**
+   * **Vence a despedida de proposito.** "Preciso da sua forca, abraco" tem despedida dentro, e
+   * concluir ali e fechar a porta na cara de um pedido.
+   */
+  check(com({ pedeAlgoIndefinido: P, ultimaEhDespedida: true })?.tecla === '9', 'vence a despedida');
+  check(com({ pedeAlgoIndefinido: P, ultimaEhSoReacao: true })?.tecla === '9', 'vence a reacao');
+  check(com({ pedeAlgoIndefinido: P, soExpressaApoio: { motivo: 'a' } })?.tecla === '9', 'vence o apoio');
+  check(com({ pedeAlgoIndefinido: P, jaPediramDados: false, temEtiquetaDeCidade: false })?.tecla === '9', 'vence pedir dados');
+
+  /**
+   * So duas coisas passam na frente, e as duas por boa razao: a etiqueta que dispensa da fila
+   * (decisao explicita dele) e o audio, que precisa ser ouvido antes de qualquer decisao.
+   */
+  check(com({ pedeAlgoIndefinido: P, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6', 'audio vence: ouca primeiro');
+  check(com({ pedeAlgoIndefinido: P, etiquetaQueDispensa: 'engajado' })?.tecla === '2', 'etiqueta dispensa vence');
+
+  /**
+   * Sem o texto da pergunta (variavel faltando, ou a resposta apagada), a tecla nao pode ser
+   * recomendada — senao a caixa aponta para uma opcao que nao esta na tela.
+   */
+  check(com({ pedeAlgoIndefinido: P, podePerguntarAjuda: false })?.tecla !== '9', 'sem o texto, nao recomenda a 9');
+
+  // Sem pedido, nada muda.
+  check(com({ podeEnviar: true, conteudoPedido: 'ADS' })?.id === 'conteudo-pedido', 'sem pedido o modelo continua indo');
 }
 
 fim();

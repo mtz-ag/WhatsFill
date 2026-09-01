@@ -232,6 +232,41 @@ export const DEFAULT_TEMPLATES = [
   },
   {
     /**
+     * Ela pediu algo e não disse o quê. **Perguntar é a única resposta segura.**
+     *
+     * Print da Mari (31/08): *"Preciso da forca do senhor"*, e a caixa sugeria mandar o modelo da
+     * campanha. Ele: *"provável pedido financeiro ou trabalho, vou perguntar em que posso ajudar?
+     * para ter certeza"*.
+     *
+     * **O que este texto NÃO faz é o que importa:**
+     *
+     *  - não promete nada — nem ajuda, nem encaminhamento, nem "vou ver o que posso fazer";
+     *  - não nega nada — a recusa (`pedido-ajuda`, `pedido-emprego`) só cabe depois de ela dizer
+     *    o que quer, e negar antes disso ofende quem só queria apoio político;
+     *  - não manda material de campanha, que é o que a rodada fazia.
+     *
+     * Promessa em ano eleitoral é o risco que a Lei 9.504/97 trata (art. 41-A, captação ilícita;
+     * art. 73, §10, distribuição de bens). Uma pergunta não é promessa.
+     *
+     * Sem vocativo, como todo o resto (`vars.semVocativo`): o cadastro erra demais para ir num
+     * texto que a pessoa lê — e neste, em que ela está pedindo ajuda, errar o nome é pior.
+     */
+    id: 'perguntar-como-ajudar',
+    name: 'Perguntar em que pode ajudar (pedido sem detalhe)',
+    text:
+      '{{saudacao}}! Obrigado por escrever e por confiar na gente.\n\n' +
+      'Para eu entender direito e te responder com sinceridade: em que você precisa de ajuda? ' +
+      'Me conta com suas palavras o que está acontecendo.',
+    variantes: [
+      '{{saudacao}}! Obrigado pela mensagem e pela confiança.\n\n' +
+        'Me explica um pouco melhor em que você precisa de ajuda? Assim eu consigo te responder ' +
+        'com sinceridade sobre o que está no meu alcance.',
+      '{{saudacao}}! Recebi sua mensagem, obrigado por procurar a gente.\n\n' +
+        'Para eu te ajudar direito, me conta o que está acontecendo e em que você precisa de ajuda?',
+    ],
+  },
+  {
+    /**
      * A pessoa só expressou apoio, e já está classificada. Não há o que pedir nem o que mandar.
      *
      * Pedido dele (31/08), print do Ciro: *"esse é um caso comum até onde a pessoa só expressa o

@@ -51,20 +51,21 @@ entrada. **Ele vai pedir situações novas; é lá que elas entram.**
 Ordem em 31/08 (de cima para baixo):
 
 1. `etiqueta-dispensa-da-fila` — tem "engajado" → **2, pular**
-2. `ultima-pede-resposta-pessoal` — áudio, vídeo, texto 400+ → **6, à mão**
-3. `ultima-e-despedida` — "é nós", "abraço", "amém mestre" → **3, concluir**
-4. `voltou-por-outro-anuncio` → **5** ou **3** (se já recebeu a mensagem do momento)
-5. `nunca-pediram-dados` — veio do anúncio, sem cidade, formulário nunca saiu → **4**
-6. `ultima-e-so-reacao` — figura, emoji, link → **5**, ou **3** se já respondemos hoje
-7. `pergunta-aberta` — "por que", "qual a posição", "o que ele acha" → **6, à mão**
-8. `so-expressa-apoio` — apoio em mensagem PRÓPRIA (100+ caracteres) → **8, agradecer o apoio**
-9. `conteudo-pedido` → **1, mandar o modelo + agradecer a atenção**
-10. `nome-sem-sentido` → **4, pedir dados**
-11. `nunca-perguntaram-interesse` → **7**
-12. `pedido-hoje-sem-resposta` → **3**
+2. `ultima-pede-resposta-pessoal` — áudio, arquivo, texto 400+ → **6, à mão**
+3. `pediu-algo-sem-dizer-o-que` — "preciso da sua força", "me ajuda" → **9, perguntar** ⚠ maior risco
+4. `ultima-e-despedida` — "é nós", "abraço", "amém" → **3, concluir**
+5. `voltou-por-outro-anuncio` → **5** ou **3** (se já recebeu a mensagem do momento)
+6. `nunca-pediram-dados` — veio do anúncio, sem cidade, formulário nunca saiu → **4**
+7. `ultima-e-so-reacao` — figura, emoji, link, **vídeo** → **5**, ou **3** se já respondemos hoje
+8. `pergunta-aberta` — "por que", "qual a posição", "o que ele acha" → **6, à mão**
+9. `so-expressa-apoio` — apoio em mensagem PRÓPRIA (ela escreveu mais de uma vez) → **8**
+10. `conteudo-pedido` → **1, mandar o modelo + agradecer a atenção**
+11. `nome-sem-sentido` → **4, pedir dados**
+12. `nunca-perguntaram-interesse` → **7**
+13. `pedido-hoje-sem-resposta` → **3**
 
-**5 e 6 trocaram de lugar em 31/08** (print da Marta: emoji como única mensagem de quem veio do
-anúncio). Quem já recebeu o formulário ou já tem cidade não casa na 5 e continua caindo na 6 —
+**6 e 7 trocaram de lugar em 31/08** (print da Marta: emoji como única mensagem de quem veio do
+anúncio). Quem já recebeu o formulário ou já tem cidade não casa na 6 e continua caindo na 7 —
 é a condição da 5 que impede a inversão de estragar o caso que criou a 6.
 
 **A regra só recomenda, nunca decide.** Todas as opções continuam na tela. É essa fronteira que

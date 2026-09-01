@@ -22,6 +22,7 @@ export async function list() {
     await migrarRespostaSemRetorno();
     await migrarRespostaPedidoEmprego();
     await migrarRespostaAgradecerApoio();
+    await migrarRespostaPerguntarAjuda();
     await migrarVariantesDeTexto();
   }
   return store.get('templates');
@@ -119,6 +120,17 @@ export const migrarRespostaPedidoEmprego = () =>
  */
 export const migrarRespostaAgradecerApoio = () =>
   garantirRespostas(['agradecer-apoio'], 'respostaAgradecerApoio');
+
+/**
+ * A pergunta "em que posso ajudar?", para quem já tinha a lista salva.
+ *
+ * É a resposta de maior risco jurídico do conjunto — não pela promessa que faz, mas pela que
+ * ela EVITA: sem esta, a rodada mandava material de campanha para quem escreveu "preciso da
+ * força do senhor" (31/08). Se a migração não roda, a tecla não aparece e o caso volta a cair
+ * na tecla 1.
+ */
+export const migrarRespostaPerguntarAjuda = () =>
+  garantirRespostas(['perguntar-como-ajudar'], 'respostaPerguntarAjuda');
 
 /**
  * A pergunta dos grupos passa a pedir o LINK de convite, e não o nome.

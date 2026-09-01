@@ -409,6 +409,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   a `nossaUltimaAt`. Regra nova que dependa do que a pessoa acabou de dizer: pense na rajada,
   não na última.
 
+- **Pedido SEM detalhe se responde com PERGUNTA, nunca com modelo.** *"Preciso da forca do senhor"*
+  (print da Mari, 31/08) recebia a sugestão de mandar material de campanha — o pior caso do
+  projeto: pedido de dinheiro ou emprego não pode ter resposta automática (Lei 9.504/97), e não se
+  sabe qual dos dois é. Hoje `cortesia.pedeAlgoIndefinido` + tecla 9 (`perguntar-como-ajudar`)
+  perguntam **em que ela precisa de ajuda**. A regra fica no ALTO — só a etiqueta que dispensa e o
+  áudio passam na frente — e **vence a despedida**: "preciso da sua força, abraço" concluído é
+  fechar a porta na cara de um pedido. **A tecla 9 não conclui**: o caso se resolve com a resposta
+  dela. E a oferta (*"quero ajudar"*) desarma a mensagem inteira ANTES de qualquer teste — é a
+  armadilha das duas pontas da palavra "ajuda", que já está registrada acima.
 - **São DOIS agradecimentos, e confundi-los troca o desfecho.** *Agradecer a ATENÇÃO* já sai junto
   com o modelo (a tecla 1 é "modelo + agradecimento e concluir") e é o caso normal. *Agradecer o
   APOIO* (tecla 8) é **exceção**, e só vale quando a pessoa escreveu mensagem própria — 100+

@@ -140,4 +140,30 @@ grupo('o agradecimento pelo APOIO chega a quem ja tem a lista salva');
   check(mem.templates[0].text === 'MEU TEXTO', 'e nao sobrescreve o texto dele');
 }
 
+
+grupo('a pergunta "em que posso ajudar" chega a quem ja tem a lista salva');
+{
+  const templates = await lib('templates.js');
+  const store = await lib('store.js');
+
+  const padrao = store.DEFAULT_TEMPLATES.find((t) => t.id === 'perguntar-como-ajudar');
+  check(!!padrao, 'a resposta existe no padrao');
+
+  /**
+   * **O que este texto NAO faz e o que importa.** Promessa em ano eleitoral e o risco que a Lei
+   * 9.504/97 trata (art. 41-A, art. 73 §10). Uma pergunta nao e promessa — mas se o texto
+   * escorregar para "vou ver o que posso fazer", passa a ser.
+   */
+  check(!/vou (ver|tentar|providenciar|conseguir)/i.test(padrao.text), 'nao promete providenciar nada');
+  check(!/(cesta|dinheiro|emprego|vaga|curr[ií]culo)/i.test(padrao.text), 'nao cita bem nem emprego');
+  check(/em que voc[eê] precisa de ajuda/i.test(padrao.text), 'e pergunta o que ela precisa');
+  check(!/\{\{primeiro_nome\}\}|\{\{nome\}\}/.test(padrao.text), 'sem vocativo, como todo o resto');
+
+  mem.migracoes = {};
+  mem.templates = [{ id: 'agradecimento', name: 'Agradecer', text: 'Obrigado!' }];
+  check((await templates.migrarRespostaPerguntarAjuda()) === true, 'acrescentou a quem nao tinha');
+  check(mem.templates.some((t) => t.id === 'perguntar-como-ajudar'), 'entrou na lista salva');
+  check((await templates.migrarRespostaPerguntarAjuda()) === false, 'nao repete na segunda vez');
+}
+
 fim();

@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, pedeAlgoIndefinido, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida } from '../src/lib/cortesia.js';
 
 const texto = (t) => ({ texto: t, tipo: 'TEXT' });
 
@@ -493,6 +493,47 @@ grupo('repasse: link e video sao ruido; emoji nao e');
   check(!rajadaEhSoRepasse([M('https://a.com/1', 'TEXT', '2026-08-31T21:30:00Z'), M('bom dia', 'TEXT', '2026-08-31T21:33:00Z')], null),
     'um link e um bom dia: ela escreveu algo');
   check(!rajadaEhSoRepasse([], null), 'sem rajada nao ha ruido a ignorar');
+}
+
+
+grupo('pedeAlgoIndefinido: pediu algo sem dizer o que — o caso de maior risco');
+{
+  const E = (...t) => t.map((texto, i) => ({ texto, tipo: 'TEXT', at: `2026-08-31T23:5${i}:00Z` }));
+  const p = (...t) => !!pedeAlgoIndefinido(E(...t), null);
+
+  /**
+   * Print da Mari (31/08): *"Preciso da forca do senhor"*, e a caixa sugeria MANDAR O MODELO da
+   * campanha. Ele: *"provavel pedido financeiro ou trabalho, vou perguntar em que posso ajudar?
+   * para ter certeza"*.
+   *
+   * Pedido de dinheiro ou emprego nao pode receber resposta automatica (Lei 9.504/97), e material
+   * de campanha em cima de quem pede ajuda e pior que nao responder.
+   */
+  check(p('Preciso da forca do senhor'), 'o caso da Mari');
+  check(p('preciso de uma ajuda'), 'preciso de ajuda');
+  check(p('conto com o senhor'), 'conto com o senhor');
+  check(p('o senhor pode me ajudar?'), 'pode me ajudar');
+  check(p('me ajuda por favor'), 'me ajuda');
+  check(p('to passando por um problema'), 'passando por');
+  check(p('estou desempregado'), 'desempregado');
+
+  /**
+   * **A armadilha do `CLAUDE.md`, e ela e a razao de a oferta desarmar a mensagem INTEIRA:**
+   * *"ajuda" e a mesma palavra dos dois lados da campanha*. "Quero ajudar" e apoiador se
+   * oferecendo — o publico principal. Um padrao que confunda os dois poe metade da base na fila de
+   * revisao dele e o trabalho para.
+   */
+  check(!p('quero ajudar na campanha'), 'quero ajudar e OFERTA, nao pedido');
+  check(!p('posso ajudar de alguma forma?'), 'posso ajudar tambem');
+  check(!p('estou aqui para ajudar'), 'estou aqui para ajudar tambem');
+  check(!p('vou ajudar a divulgar'), 'vou ajudar tambem');
+
+  // E o vocabulario normal de apoio nao vira pedido.
+  check(!p('Eu apoio o candidato'), 'apoio nao e pedido');
+  check(!p('tamo junto'), 'tamo junto nao e pedido');
+  check(!p('preciso te dizer que sou seu eleitor'), 'preciso DIZER nao e preciso DE algo');
+
+  check(!pedeAlgoIndefinido([], null), 'sem rajada nao ha pedido');
 }
 
 fim();

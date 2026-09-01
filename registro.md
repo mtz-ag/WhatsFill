@@ -5,6 +5,57 @@
 
 ---
 
+## 2026-08-31 — "Preciso da força do senhor": a rodada mandava material de campanha
+
+**Relato dele**, print da Mari: *"provável pedido financeiro ou trabalho, vou perguntar em que posso
+ajudar? para ter certeza"*. A caixa sugeria **1: mandar o modelo "Campanha Martim2"**.
+
+**É o pior caso do projeto, e passou o dia inteiro em aberto.** Pedido de dinheiro ou de emprego não
+pode receber resposta automática (Lei 9.504/97, art. 41-A e 73 §10) — e material de campanha em cima
+de quem está pedindo ajuda é pior do que não responder. A triagem que pegava isso foi removida hoje
+de manhã, a pedido dele, e nada tinha ficado no lugar.
+
+### Por que perguntar, e não responder
+
+A frase **não diz o que ela quer**: pode ser dinheiro, emprego, ou força política na luta dela.
+
+- **Responder** com material é o defeito da print.
+- **Negar** (as respostas `pedido-ajuda`/`pedido-emprego`) ofende quem só queria apoio político — e a
+  recusa só cabe depois de ela dizer o que quer.
+- **Perguntar** não promete nem nega, e transforma a frase ambígua em decisão informada dele.
+
+### O que entrou
+
+`cortesia.pedeAlgoIndefinido` reconhece "preciso de/da", "conto com o senhor", "pode me ajudar",
+"me ajuda", "estou passando por", "estou desempregado".
+
+**A oferta desarma a mensagem inteira, ANTES de qualquer teste de pedido** — é a armadilha já
+registrada: *"ajuda" é a mesma palavra dos dois lados da campanha*. "Quero ajudar" é apoiador se
+oferecendo, o público principal; confundir os dois põe metade da base na fila de revisão dele. Quatro
+asserções cobrem esse lado.
+
+**Tecla 9** e a resposta `perguntar-como-ajudar` (com migração, senão não chega em quem já usa —
+lição de meia hora antes). O texto **não promete nada**: nem ajuda, nem encaminhamento, nem "vou ver
+o que posso fazer". Há teste que falha se ele escorregar para isso.
+
+### Duas decisões de desenho
+
+**A regra fica no ALTO** — posição 3 de 13. Só passam na frente a etiqueta que dispensa da fila
+(decisão explícita dele) e o áudio, que precisa ser ouvido antes de qualquer decisão. **Vence a
+despedida de propósito**: *"preciso da sua força, abraço"* concluído é fechar a porta na cara de um
+pedido.
+
+**A tecla 9 não conclui**, ao contrário de todas as outras que enviam texto. O caso só se resolve com
+a resposta dela, e concluir tiraria o contato da fila exatamente antes disso.
+
+**Arquivos:** `src/lib/cortesia.js`, `src/lib/sugestao.js`, `src/lib/store.js`,
+`src/lib/templates.js`, `src/panel/panel.js`, `tests/cortesia.test.mjs` (+16),
+`tests/sugestao.test.mjs` (+10), `tests/templates.test.mjs` (+7), `CLAUDE.md`,
+`CONTEXTO.md` (a lista de ordem foi reescrita a partir do código — estava com numeração furada),
+`manifest.json` (0.52.0 → **0.53.0**). 29 módulos sem erro, dez suítes passando.
+
+---
+
 ## 2026-08-31 — "Tamojuntos" é apoio, e o critério do apoio deixa de ser tamanho
 
 **Relato dele**, print do Izaak: última mensagem *"Tamojuntos"*, e a caixa sugeriu **concluir**.
