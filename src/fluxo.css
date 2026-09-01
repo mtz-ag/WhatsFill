@@ -1,23 +1,22 @@
 /*
- * fluxo.css — a janela do fluxo de atendimento.
+ * fluxo.css — a janela do fluxo: o QUADRO.
  *
  * CSS próprio e não o do painel de propósito: o painel é uma coluna de 380px encaixada na borda,
- * e aqui o espaço é o ponto. Reusar `panel.css` traria as regras de largura estreita que existem
- * justamente para o outro caso.
+ * e aqui o espaço é o ponto.
  *
- * ## O desenho da árvore
+ * ## O desenho
  *
- * Cada nó é uma linha; o nível dele vira recuo por `--nivel`. O cotovelo (a vertical que desce do
- * pai mais a horizontal que entra no filho) é desenhado nos pseudo-elementos da própria linha, em
- * função do recuo — assim não existe estrutura de HTML aninhada e a lista continua sendo uma
- * sequência plana de linhas, que é o que faz mover, aninhar e apagar não embaralharem a tela.
+ * Caixas em posição absoluta dentro de um palco, e os fios num `<svg>` ATRÁS delas. O palco
+ * inteiro é movido por um `transform` só — é o que faz arrastar o fundo e o zoom serem baratos:
+ * uma propriedade que o navegador compõe na GPU, em vez de vinte caixas reposicionadas.
  *
- * A cor mora na borda esquerda do cartão e é **o que o eleitor recebe**, nunca o tipo do ramo:
- * vermelho sai mensagem, verde não sai nada, roxo precisa de gente, cinza só agrupa.
+ * A cor mora na borda esquerda da caixa e é **o que o eleitor recebe**, nunca o tipo do ramo:
+ * vermelho sai mensagem, verde não sai nada, roxo precisa de gente, azul tracejado só agrupa.
  */
 
 :root {
   --bg: #eef1f5;
+  --quadro: #e7ecf2;
   --superficie: #fafbfc;
   --afundado: #e4e9ef;
   --tinta: #141d28;
@@ -33,7 +32,7 @@
   --gente-bg: #e8e1f1;
   --alerta: #8d2b2b;
   --alerta-bg: #f7e3e3;
-  --recuo: 30px;
+  --grade: #d5dde6;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
@@ -41,6 +40,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0d1319;
+    --quadro: #0a1016;
     --superficie: #161e27;
     --afundado: #1e2831;
     --tinta: #e6ecf2;
@@ -56,11 +56,13 @@
     --gente-bg: #251e34;
     --alerta: #e08585;
     --alerta-bg: #331d1d;
+    --grade: #18222c;
   }
 }
 
 * { box-sizing: border-box; }
 
+html, body { height: 100%; }
 body {
   margin: 0;
   background: var(--bg);
@@ -68,30 +70,31 @@ body {
   font-family: var(--sans);
   font-size: 14px;
   line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* quem rola é o quadro, não a página */
 }
 
 /* ---- topo ---- */
 .topo {
   display: flex;
   align-items: flex-start;
-  gap: 24px;
+  gap: 20px;
   flex-wrap: wrap;
-  padding: 16px 24px 14px;
+  padding: 12px 20px;
   background: var(--superficie);
   border-bottom: 1px solid var(--borda);
-  position: sticky;
-  top: 0;
-  z-index: 5;
+  flex: 0 0 auto;
 }
-.titulo { flex: 1 1 360px; min-width: 0; }
-.titulo h1 { margin: 0 0 4px; font-size: 19px; letter-spacing: -0.01em; }
-.titulo p { margin: 0; font-size: 12.5px; color: var(--tinta-media); max-width: 76ch; }
+.titulo { flex: 1 1 340px; min-width: 0; }
+.titulo h1 { margin: 0 0 3px; font-size: 18px; letter-spacing: -0.01em; }
+.titulo p { margin: 0; font-size: 12.5px; color: var(--tinta-media); max-width: 80ch; }
 
-.contagem { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; max-width: 340px; }
+.contagem { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; max-width: 300px; }
 .contagem span {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
-  padding: 3px 8px;
+  padding: 3px 7px;
   border-radius: 4px;
   border: 1px solid currentColor;
   white-space: nowrap;
@@ -100,15 +103,14 @@ body {
 .c-silencio { color: var(--silencio); background: var(--silencio-bg); }
 .c-gente { color: var(--gente); background: var(--gente-bg); }
 .c-depende, .c-off { color: var(--tinta-fraca); }
-.c-igual { color: var(--silencio); }
-.c-mexido { color: var(--trilha); }
 
-.acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.acoes { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+.zoom { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11px; color: var(--tinta-fraca); }
 
 .btn {
   font: inherit;
   font-size: 12.5px;
-  padding: 6px 12px;
+  padding: 6px 11px;
   border: 1px solid var(--borda);
   background: var(--superficie);
   color: var(--tinta);
@@ -116,123 +118,89 @@ body {
   cursor: pointer;
 }
 .btn:hover { background: var(--afundado); }
+.btn:disabled { opacity: 0.45; cursor: default; }
 .btn:focus-visible { outline: 2px solid var(--trilha); outline-offset: 1px; }
 .btn-primario { background: var(--trilha); border-color: var(--trilha); color: #fff; font-weight: 600; }
 .btn-primario:hover { filter: brightness(1.08); background: var(--trilha); }
+.btn-quadrado { width: 26px; padding: 4px 0; text-align: center; }
+.btn-perigo { color: var(--alerta); border-color: var(--alerta); }
+.btn-perigo:hover { background: var(--alerta-bg); }
 
-/* ---- os avisos: ramo que nunca vai funcionar ---- */
-.problemas { display: none; flex-direction: column; gap: 4px; padding: 10px 24px; background: var(--alerta-bg); border-bottom: 1px solid var(--alerta); }
+.problemas { display: none; flex-direction: column; gap: 3px; padding: 8px 20px; background: var(--alerta-bg); border-bottom: 1px solid var(--alerta); flex: 0 0 auto; }
 .problemas.tem { display: flex; }
 .problema { font-size: 12px; color: var(--alerta); font-weight: 600; }
 
-/* ---- corpo ---- */
+/* ---- corpo: quadro + lado ---- */
 .tela {
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 26px;
-  align-items: start;
-  padding: 20px 24px 40px;
-  max-width: 1560px;
-  margin: 0 auto;
+  gap: 0;
 }
-@media (max-width: 1080px) { .tela { grid-template-columns: minmax(0, 1fr); } }
 
-.mapa { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-
-.no-raiz {
-  background: var(--superficie);
-  border: 1.5px solid var(--trilha);
-  border-radius: 6px;
-  padding: 9px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.no-raiz .rot { font-weight: 600; font-size: 13px; color: var(--trilha); }
-.no-raiz .sub { font-size: 11.5px; color: var(--tinta-fraca); }
-.no-fim { border-color: var(--gente); }
-.no-fim .rot { color: var(--gente); }
-
-/* ---- a árvore ---- */
-.arvore { display: flex; flex-direction: column; }
-
-.no-linha {
+/* ---- o quadro ---- */
+.quadro {
   position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 4px 0 4px calc(var(--nivel) * var(--recuo));
+  overflow: hidden;
+  background-color: var(--quadro);
+  /* A grade dá a referência de que isto é um quadro que se arrasta, e não uma página parada. */
+  background-image: radial-gradient(circle, var(--grade) 1px, transparent 1px);
+  background-size: 22px 22px;
+  cursor: grab;
+  touch-action: none;
 }
-.no-linha.off { opacity: 0.5; }
+.quadro.puxando { cursor: grabbing; }
 
-/*
- * O cotovelo. A vertical corre no recuo do nível de cima e a horizontal entra no cartão; juntas
- * dizem "este ramo está DENTRO daquele", que é a informação que a indentação sozinha não dá em
- * lista longa.
- */
-.no-linha[style*="--nivel: 0"]::before,
-.no-linha[style*="--nivel: 0"]::after { display: none; }
-.no-linha::before {
-  content: "";
+.palco { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.fios { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
+.fio { fill: none; stroke: var(--tinta-fraca); stroke-width: 1.6; opacity: 0.75; }
+.fio-aceso { stroke: var(--trilha); stroke-width: 2.6; opacity: 1; }
+.caixas { position: absolute; top: 0; left: 0; }
+
+.caixa {
   position: absolute;
-  left: calc((var(--nivel) - 1) * var(--recuo) + 13px);
-  top: -6px;
-  bottom: 50%;
-  width: 1.5px;
-  background: var(--borda);
-}
-.no-linha::after {
-  content: "";
-  position: absolute;
-  left: calc((var(--nivel) - 1) * var(--recuo) + 13px);
-  top: 50%;
-  width: 15px;
-  height: 1.5px;
-  background: var(--borda);
-}
-
-.no-pos {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--tinta-fraca);
-  padding-top: 12px;
-  min-width: 26px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.no-card {
-  flex: 1;
-  min-width: 0;
+  width: 260px;
   background: var(--superficie);
   border: 1px solid var(--borda);
-  border-left: 3px solid var(--tinta-fraca);
-  border-radius: 6px;
-  padding: 8px 12px 9px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 2px 12px;
+  border-left: 4px solid var(--tinta-fraca);
+  border-radius: 7px;
+  padding: 8px 11px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  cursor: grab;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.10);
+  touch-action: none;
+  user-select: none;
 }
-.no-card.envia { border-left-color: var(--envia); }
-.no-card.silencio { border-left-color: var(--silencio); }
-.no-card.gente { border-left-color: var(--gente); }
-.no-card.depende { border-left-color: var(--tinta-fraca); }
-.no-card.porta { border-left-color: var(--trilha); border-left-style: dashed; }
-.no-linha.no-caminho .no-card { box-shadow: 0 0 0 2px var(--trilha); }
+.caixa.arrastando { cursor: grabbing; z-index: 20; box-shadow: 0 8px 20px rgb(0 0 0 / 0.28); opacity: 0.92; }
+.caixa.off { opacity: 0.5; border-style: dashed; }
+.caixa.sel { border-color: var(--trilha); box-shadow: 0 0 0 2px var(--trilha); }
+.caixa.aceso { box-shadow: 0 0 0 2px var(--trilha), 0 2px 10px rgb(0 0 0 / 0.2); }
+/* O destino que ACEITA o ramo. Só acende quem aceita: prometer um movimento que vai ser recusado
+   é pior que não prometer nada. */
+.caixa.alvo { border-color: var(--silencio); box-shadow: 0 0 0 3px var(--silencio); }
 
-.no-topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
-.no-topo b { font-size: 13.5px; }
-.no-corpo { grid-column: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.quando { font-size: 12px; color: var(--tinta-media); line-height: 1.4; }
-.entao { font-size: 12px; color: var(--tinta); font-weight: 600; }
-.entao.vazio { color: var(--alerta); font-weight: 600; }
+.caixa.envia { border-left-color: var(--envia); }
+.caixa.silencio { border-left-color: var(--silencio); }
+.caixa.gente { border-left-color: var(--gente); }
+.caixa.depende { border-left-color: var(--tinta-fraca); }
+.caixa.porta { border-left-color: var(--trilha); border-left-style: dashed; }
+
+.caixa-topo { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.caixa-topo b { font-size: 13px; line-height: 1.25; }
+.caixa-quando { font-size: 11px; color: var(--tinta-media); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.caixa-entao { font-size: 11.5px; font-weight: 600; color: var(--tinta); line-height: 1.3; }
+.caixa-entao.vazio { color: var(--alerta); }
+.caixa-rodape { display: flex; align-items: center; gap: 6px; margin-top: 1px; }
 
 .selo {
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  padding: 2px 6px;
+  padding: 2px 5px;
   border-radius: 3px;
   border: 1px solid currentColor;
   white-space: nowrap;
@@ -241,59 +209,38 @@ body {
 .selo.silencio { color: var(--silencio); background: var(--silencio-bg); }
 .selo.gente { color: var(--gente); background: var(--gente-bg); }
 .selo.depende, .selo.porta { color: var(--tinta-fraca); }
-.marca-regra { font-family: var(--mono); font-size: 9.5px; color: var(--tinta-fraca); border: 1px dashed currentColor; padding: 1px 5px; border-radius: 3px; }
-.venceu { font-family: var(--mono); font-size: 10.5px; color: var(--tinta-fraca); }
+.marca-regra { font-family: var(--mono); font-size: 9px; color: var(--tinta-fraca); border: 1px dashed currentColor; padding: 0 4px; border-radius: 3px; }
+.venceu { font-family: var(--mono); font-size: 10px; color: var(--tinta-fraca); }
 
-.no-acoes { grid-row: 1 / span 2; grid-column: 2; display: flex; align-items: center; gap: 3px; }
-.mini {
-  font: inherit;
-  font-size: 12px;
-  line-height: 1;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid var(--borda);
-  background: var(--superficie);
-  color: var(--tinta-media);
-  border-radius: 4px;
-  cursor: pointer;
-}
-.mini:hover { background: var(--afundado); color: var(--tinta); }
-.mini.perigo:hover { background: var(--alerta-bg); color: var(--alerta); border-color: var(--alerta); }
-
-.chk { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--tinta-media); cursor: pointer; }
-
-/* ---- o editor de um nó ---- */
-.editor {
-  grid-column: 1 / -1;
-  margin-top: 8px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--borda);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.campo { display: flex; flex-direction: column; gap: 3px; }
-.campo-rot { font-size: 11px; font-weight: 600; color: var(--tinta-media); }
-.editor input[type="text"], .editor select {
-  font: inherit;
-  font-size: 12.5px;
-  padding: 5px 7px;
-  border: 1px solid var(--borda);
-  border-radius: 4px;
+.dica {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  margin: 0;
+  font-size: 11px;
+  color: var(--tinta-fraca);
   background: var(--bg);
-  color: var(--tinta);
-  max-width: 100%;
+  border: 1px solid var(--borda);
+  border-radius: 5px;
+  padding: 4px 9px;
+  pointer-events: none;
 }
-.nota { margin: 0; font-size: 11.5px; color: var(--tinta-fraca); background: var(--afundado); padding: 7px 9px; border-radius: 4px; }
 
 /* ---- lado ---- */
-.lado { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 100px; }
+.lado {
+  border-left: 1px solid var(--borda);
+  background: var(--bg);
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 .cartao {
   background: var(--superficie);
   border: 1px solid var(--borda);
   border-radius: 6px;
-  padding: 13px 15px 15px;
+  padding: 12px 14px 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -301,6 +248,7 @@ body {
 .cartao h2 { margin: 0; font-size: 14px; }
 .ajuda { margin: 0; font-size: 11.5px; color: var(--tinta-media); }
 .ajuda-fraca { color: var(--tinta-fraca); }
+.leitura { font-size: 11.5px; color: var(--tinta-media); }
 .cartao textarea {
   font: inherit;
   font-size: 12.5px;
@@ -312,7 +260,23 @@ body {
   color: var(--tinta);
   resize: vertical;
 }
-.passos { margin: 0; padding-left: 18px; font-size: 11.5px; color: var(--tinta-media); display: flex; flex-direction: column; gap: 4px; }
+
+#editor { display: flex; flex-direction: column; gap: 8px; }
+.campo { display: flex; flex-direction: column; gap: 3px; }
+.campo-rot { font-size: 11px; font-weight: 600; color: var(--tinta-media); }
+#editor input[type="text"], #editor select {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 7px;
+  border: 1px solid var(--borda);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--tinta);
+  max-width: 100%;
+}
+.nota { margin: 0; font-size: 11.5px; color: var(--tinta-fraca); background: var(--afundado); padding: 7px 9px; border-radius: 4px; }
+.chk { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--tinta-media); cursor: pointer; }
+.botoes { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
 
 .resultado { font-family: var(--mono); font-size: 11.5px; display: none; flex-direction: column; gap: 4px; }
 .resultado.tem { display: flex; }
@@ -320,6 +284,6 @@ body {
 .resultado .nada { font-weight: 600; color: var(--gente); }
 .resultado .fraco { color: var(--tinta-fraca); word-break: break-word; }
 
-.teclas { margin: 0; display: grid; grid-template-columns: 1.6em 1fr; gap: 5px 9px; align-items: baseline; }
+.teclas { margin: 0; display: grid; grid-template-columns: 1.6em 1fr; gap: 4px 9px; align-items: baseline; }
 .teclas dt { font-family: var(--mono); font-weight: 700; font-size: 12.5px; color: var(--trilha); text-align: center; }
 .teclas dd { margin: 0; font-size: 12px; }

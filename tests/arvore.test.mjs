@@ -315,4 +315,70 @@ grupo('o motivo nomeia a palavra que a pessoa ESCREVEU');
   check(arv.palavraQueCasou(['bom dia'], { ultimoTexto: 'BOM DIA!' }) === 'bom dia', 'devolve a palavra como ele a escreveu');
   check(arv.palavraQueCasou(['oi'], { ultimoTexto: 'tchau' }) === null, 'e null quando nenhuma casa');
 }
+grupo('o QUADRO: arrastar para mover e para religar');
+{
+  const base = [
+    { id: 'p', rotulo: 'pai', condicao: {}, acao: null, filhos: [{ id: 'f', rotulo: 'filho', condicao: {}, acao: { tecla: '5' }, filhos: [] }] },
+    { id: 'o', rotulo: 'outro', condicao: {}, acao: { tecla: '3' }, filhos: [] },
+  ];
+
+  // Religar: arrastar "outro" para dentro de "pai".
+  const dentro = arv.reparentar(base, 'o', 'p');
+  check(dentro.length === 1 && dentro[0].filhos.map((n) => n.id).join() === 'f,o', `religou (${dentro[0].filhos.map((n) => n.id).join()})`);
+
+  // E soltar na raiz devolve ao topo.
+  const naRaiz = arv.reparentar(dentro, 'f', null);
+  check(naRaiz.map((n) => n.id).join() === 'p,f', `soltar na raiz volta ao topo (${naRaiz.map((n) => n.id).join()})`);
+
+  /**
+   * **A guarda que impede o ramo de sumir.** Arrastar um pai para dentro do proprio filho
+   * arrancaria o pedaco da arvore junto com o novo pai: some da tela e continua gravado. Na tela
+   * "sumiu" e "esta no lugar errado" sao a mesma coisa, entao recusar sem mexer e o certo.
+   */
+  check(arv.reparentar(base, 'p', 'f') === base, 'nao deixa o pai virar filho do proprio filho');
+  check(arv.reparentar(base, 'p', 'p') === base, 'nem filho de si mesmo');
+  check(arv.ehDescendente(base, 'p', 'f') === true, 'ehDescendente enxerga o filho');
+  check(arv.ehDescendente(base, 'f', 'p') === false, 'e nao enxerga o contrario');
+
+  // Mover a caixa: com filhos, o ramo inteiro anda junto.
+  const posto = arv.posicionar(arv.arrumar(base), 'p', 500, 300, true);
+  const p = arv.localizar(posto, 'p').no;
+  const filho = arv.localizar(posto, 'f').no;
+  check(p.x === 500 && p.y === 300, `a caixa foi para onde ele soltou (${p.x},${p.y})`);
+  check(filho.x > 500, `e o filho andou junto (${filho.x})`);
+
+  const soEla = arv.posicionar(arv.arrumar(base), 'p', 500, 300, false);
+  check(arv.localizar(soEla, 'f').no.x === arv.CAIXA.largura + arv.CAIXA.colunaVaga, 'sem "com filhos", so a caixa anda');
+
+  /**
+   * **A altura na tela E a prioridade.** Guardar uma ordem invisivel ao lado da posicao faria a
+   * tela mostrar um ramo acima do outro e a rodada obedecer o contrario -- e ele decide a
+   * prioridade OLHANDO o quadro.
+   */
+  const trocado = arv.ordenarPorPosicao([
+    { id: 'baixo', rotulo: 'b', y: 400, condicao: {}, acao: { tecla: '3' }, filhos: [] },
+    { id: 'cima', rotulo: 'c', y: 100, condicao: {}, acao: { tecla: '5' }, filhos: [] },
+  ]);
+  check(trocado.map((n) => n.id).join() === 'cima,baixo', `o mais alto vem primeiro (${trocado.map((n) => n.id).join()})`);
+  check(arv.decidir({}, trocado)?.tecla === '5', 'e e ele que decide');
+
+  // Arrumar: uma coluna por nivel, e o pai centrado nos filhos.
+  const arrumada = arv.arrumar([
+    { id: 'a', rotulo: 'a', condicao: {}, acao: null, filhos: [
+      { id: 'a1', rotulo: 'a1', condicao: {}, acao: { tecla: '3' }, filhos: [] },
+      { id: 'a2', rotulo: 'a2', condicao: {}, acao: { tecla: '3' }, filhos: [] },
+    ] },
+  ]);
+  const raiz = arv.localizar(arrumada, 'a').no;
+  const um = arv.localizar(arrumada, 'a1').no;
+  const dois = arv.localizar(arrumada, 'a2').no;
+  check(raiz.x === 0 && um.x === dois.x && um.x > 0, `filhos numa coluna a direita (${um.x})`);
+  check(raiz.y === Math.round((um.y + dois.y) / 2), `o pai fica centrado nos filhos (${raiz.y} entre ${um.y} e ${dois.y})`);
+  check(um.y !== dois.y, 'e os irmaos nao se empilham no mesmo ponto');
+
+  check(arv.precisaArrumar(base) === true, 'arvore sem posicao pede arrumacao');
+  check(arv.precisaArrumar(arrumada) === false, 'e arrumada nao pede mais');
+  check(arv.precisaArrumar(arv.arrumar(arv.arvoreDoQuadro())) === false, 'o preset do quadro arruma inteiro');
+}
+
 fim();

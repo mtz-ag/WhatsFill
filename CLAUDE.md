@@ -71,7 +71,7 @@ src/lib/ia.js           prompt, esquema e TRAVAS da decisão por IA (puro, testa
 src/lib/ia-cliente.js   ponte painel <-> service worker (a chave nunca entra na página)
 src/lib/sugestao.js     tabela de regras da rodada, e os verbetes dela (puro, testado)
 src/lib/arvore.js       o fluxo como ARVORE: sinais, ramos dele, decisao (puro, testado)
-src/fluxo.html/.css/.js JANELA do fluxo: a ARVORE editavel (ramo, condicao, desfecho)
+src/fluxo.html/.css/.js JANELA do fluxo: o QUADRO (caixas soltas, fios, arrastar, editar)
 src/lib/fluxo-msg.js    a mensagem que pede ao service worker para abrir a janela
 src/data/coredes-rs.json  município -> COREDE (planilha oficial da SPGG-RS)
 tools/make-icons.mjs    desenha os ícones
@@ -366,6 +366,24 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   este caminho, decisao dele (01/09):** o texto NEGA o pedido, e o risco da Lei 9.504/97 e prometer
   beneficio. A trava da IA (`ia.RESTRITOS`) continua de pe — a IA segue sem poder escolher esse
   texto; o que pode e um ramo que ELE escreveu.
+- **No QUADRO, a prioridade entre irmaos e a ALTURA na tela** — `arvore.ordenarPorPosicao`, chamada
+  depois de todo arrasto. E a unica regra honesta num quadro livre: guardar uma ordem invisivel ao
+  lado da posicao faria a tela mostrar um ramo acima do outro e a rodada obedecer o contrario, e
+  ele decide a prioridade OLHANDO. Consequencia a lembrar: mover uma caixa para cima MUDA o que a
+  rodada faz, mesmo sem tocar em condicao nenhuma.
+- **`setPointerCapture` LANCA quando o `pointerId` nao esta ativo**, e a excecao sobe no meio do
+  `pointerdown`: o estado do arrasto fica montado e a caixa gruda no ponteiro sem soltar — o
+  sintoma e exatamente *"nao consigo arrastar"*. Acontece com caneta, com toque que virou gesto do
+  navegador e em automacao (peguei assim). Toda captura de ponteiro vai dentro de `try`.
+- **Arrastar um ramo para dentro de um filho dele mesmo faz o ramo SUMIR** — ele sai da arvore
+  junto com o novo pai, continua gravado e nao aparece mais. `arvore.reparentar` recusa (devolve a
+  arvore intacta) e a tela so acende como alvo quem aceita: prometer um movimento que vai ser
+  recusado e pior que nao prometer nada. Tem teste.
+- **Nao entregue outro desenho quando ele mandar um desenho.** Eu troquei o leque do quadro dele
+  por um esquema indentado, com o argumento de que o leque nao cabe quando a arvore cresce. O
+  argumento estava certo e a entrega estava errada: *"a visualizacao continua sem ter nenhuma
+  referencia com o que mandei"*. O problema de espaco se resolve com o quadro sendo MAIOR que a
+  tela (arrastar o fundo, zoom, "caber na tela"), nao encolhendo o desenho dele.
 
 - **Regra nova no TOPO da tabela tem que ser conferida contra as regras que ela passou a vencer.**
   Pôr algo em primeiro lugar é dizer "isto vence as outras quinze", e em 01/09/2026 eu não olhei

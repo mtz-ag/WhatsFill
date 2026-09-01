@@ -474,6 +474,130 @@ export function editar(arvore, id, mudancas) {
   return nova;
 }
 
+// ---- o canvas: posição, religação e arrumação ------------------------------
+
+/**
+ * `id` está DENTRO de `possivelPai`?
+ *
+ * A guarda que impede o defeito clássico do editor de árvore: arrastar um ramo para dentro de um
+ * filho dele mesmo. O pedaço arrastado sairia da árvore junto com o novo pai e sumiria da tela —
+ * com os ramos dele, que continuariam gravados e invisíveis.
+ */
+export function ehDescendente(arvore, possivelPai, id) {
+  const achado = localizar(arvore, possivelPai);
+  if (!achado) return false;
+  return arvoreTem(achado.no.filhos, id);
+}
+
+function arvoreTem(nos, id) {
+  for (const no of nos || []) {
+    if (no.id === id) return true;
+    if (arvoreTem(no.filhos, id)) return true;
+  }
+  return false;
+}
+
+/**
+ * Muda o PAI de um ramo — é o que acontece quando ele arrasta uma caixa em cima de outra.
+ *
+ * `paiId` nulo solta o ramo na raiz. Devolve a árvore intacta quando o movimento não faz sentido
+ * (o nó dentro de si mesmo, ou dentro de um filho dele): recusar sem mexer é melhor que aceitar e
+ * fazer sumir, porque na tela "sumiu" e "está no lugar errado" parecem a mesma coisa.
+ */
+export function reparentar(arvore, id, paiId) {
+  if (id === paiId) return arvore;
+  if (paiId && ehDescendente(arvore, id, paiId)) return arvore;
+
+  const nova = copiar(arvore);
+  const achado = localizar(nova, id);
+  if (!achado) return arvore;
+  const [tirado] = achado.irmaos.splice(achado.i, 1);
+
+  if (!paiId) {
+    nova.push(tirado);
+    return nova;
+  }
+  const destino = localizar(nova, paiId);
+  if (!destino) return arvore;
+  destino.no.filhos = destino.no.filhos || [];
+  destino.no.filhos.push(tirado);
+  return nova;
+}
+
+/** Onde a caixa está no quadro. Move o ramo inteiro quando `comFilhos`. */
+export function posicionar(arvore, id, x, y, comFilhos) {
+  const nova = copiar(arvore);
+  const achado = localizar(nova, id);
+  if (!achado) return arvore;
+  const dx = Math.round(x) - (achado.no.x || 0);
+  const dy = Math.round(y) - (achado.no.y || 0);
+  const empurrar = (no) => {
+    no.x = Math.round((no.x || 0) + dx);
+    no.y = Math.round((no.y || 0) + dy);
+    if (comFilhos) for (const f of no.filhos || []) empurrar(f);
+  };
+  empurrar(achado.no);
+  return nova;
+}
+
+/**
+ * A PRIORIDADE entre irmãos passa a ser a posição na tela: o mais alto é olhado primeiro.
+ *
+ * É a única regra que funciona num quadro livre. A alternativa — guardar uma ordem invisível ao
+ * lado da posição — faria a tela mostrar um ramo acima do outro e a rodada obedecer o contrário,
+ * e ele decide a prioridade OLHANDO. Chamada depois de todo arrasto.
+ */
+export function ordenarPorPosicao(arvore) {
+  const nova = copiar(arvore);
+  const anda = (nos) => {
+    (nos || []).sort((a, b) => (a.y || 0) - (b.y || 0));
+    for (const no of nos || []) anda(no.filhos);
+  };
+  anda(nova);
+  return nova;
+}
+
+/** Largura e altura que a arrumação assume para uma caixa. A tela usa as mesmas. */
+export const CAIXA = { largura: 260, altura: 96, colunaVaga: 90, linhaVaga: 26 };
+
+/**
+ * Arruma o quadro: uma COLUNA por nível, filhos empilhados à direita do pai.
+ *
+ * Da esquerda para a direita, e não de cima para baixo como no quadro dele, por um motivo de
+ * espaço: em cima da mesa o desenho tinha dezoito nós e já ocupava a largura toda; "incrementado
+ * de acordo com a demanda" quer dizer o dobro. Para o lado, a árvore cresce para BAIXO, que é onde
+ * a tela rola. A leitura continua a mesma: situação → tipo de mensagem → ação.
+ *
+ * O pai fica centrado na altura dos filhos, que é o que faz um mapa parecer um mapa.
+ */
+export function arrumar(arvore) {
+  const nova = copiar(arvore);
+  const passoX = CAIXA.largura + CAIXA.colunaVaga;
+  const passoY = CAIXA.altura + CAIXA.linhaVaga;
+  let proximaLinha = 0;
+
+  const colocar = (no, nivel) => {
+    no.x = nivel * passoX;
+    const filhos = no.filhos || [];
+    if (!filhos.length) {
+      no.y = proximaLinha * passoY;
+      proximaLinha += 1;
+      return no.y;
+    }
+    const ys = filhos.map((f) => colocar(f, nivel + 1));
+    no.y = Math.round((ys[0] + ys[ys.length - 1]) / 2);
+    return no.y;
+  };
+
+  for (const no of nova) colocar(no, 0);
+  return nova;
+}
+
+/** O quadro já tem posição? Árvore vinda da versão em lista não tem, e precisa ser arrumada. */
+export function precisaArrumar(arvore) {
+  return todosOsNos(arvore).some(({ no }) => typeof no.x !== 'number' || typeof no.y !== 'number');
+}
+
 // ---- conferência ------------------------------------------------------------
 
 /**

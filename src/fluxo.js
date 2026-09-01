@@ -1,32 +1,35 @@
 /**
- * fluxo.js — a janela do fluxo de atendimento, agora uma ÁRVORE.
+ * fluxo.js — a janela do fluxo: o QUADRO, do jeito que ele desenhou.
  *
- * ## De onde veio este formato
+ * ## Duas correções que ele fez em mim
  *
- * Ele desenhou o fluxo num quadro (01/09/2026) e mandou a foto: *"esse é o exemplo que eu estava
- * pensando, está incompleto ainda o fluxo, ele precisa ser incrementado de acordo com a demanda"*.
- * O desenho não é uma cascata que se lê de cima para baixo — é uma árvore que ramifica por
- * SITUAÇÃO ("anúncio, pessoa nova" de um lado, "pessoa retornando" do outro) e só depois por tipo
- * de mensagem, até a ação.
+ * Ele mandou a foto do quadro dele e eu entreguei um esquema indentado, argumentando que o leque
+ * horizontal não cabe quando a árvore cresce. Ele respondeu: *"a visualização continua sem ter
+ * nenhuma referência com o que mandei, não posso arrastar editar etc"*. As duas coisas eram
+ * verdade, e o argumento do espaço não compra o direito de entregar outra coisa — ele desenhou
+ * caixas soltas ligadas por setas, e é isso que tem que aparecer.
  *
- * A frase que decide o desenho da tela é a segunda: **o fluxo cresce**. Por isso a árvore é
- * desenhada como esquema indentado com cotovelo, e não como o leque horizontal do quadro: o leque
- * dele já ocupava 1800px com 18 nós, e "incrementado de acordo com a demanda" quer dizer o dobro
- * disso em um mês. Indentado, cresce para baixo, que é onde a tela tem espaço.
+ * Então: **quadro livre**. Caixa que se arrasta para qualquer lugar, seta curva ligando pai e
+ * filho, arrastar uma caixa em cima de outra para pendurar o ramo nela, clique para editar. O
+ * problema do espaço se resolve com o quadro sendo maior que a tela — ele anda pelo quadro,
+ * afasta e aproxima —, não encolhendo o desenho dele.
  *
- * ## O que ele pode montar sozinho, e o que não
+ * ## A regra que o quadro livre exige
  *
- * Escolha dele entre as três que ofereci: a condição de um ramo é **um sinal da lista** (coisas que
- * o código já reconhece, todas com teste) **e/ou palavras que ele digita**. Nunca uma expressão
- * escrita na hora. A ação é uma tecla ou uma resposta pronta. É o que tira o gargalo — ele
- * acrescenta o ramo quando a situação aparece — sem deixar o que sai para eleitor depender de uma
- * condição sem teste.
+ * Entre irmãos, **a caixa mais alta é olhada primeiro**. É a única regra honesta aqui: guardar uma
+ * ordem invisível ao lado da posição faria a tela mostrar um ramo acima do outro e a rodada
+ * obedecer o contrário. Ele decide a prioridade OLHANDO, e é assim que ela funciona.
  *
- * ## A trava que faz isto ser seguro de ligar
+ * ## O que ele monta sozinho
  *
- * A árvore nasce sendo a tabela de hoje achatada, e há teste exigindo que as duas decidam igual em
- * 400 contextos (`tests/arvore.test.mjs`). Abrir esta janela, portanto, não muda a rodada. O que
- * muda é o que ele montar depois — e a tela diz, em cima, quando a árvore já não é mais a padrão.
+ * Escolha dele (01/09): a condição de um ramo é um SINAL da lista — coisas que o código já
+ * reconhece, todas com teste — e/ou palavras que ele digita. A ação é uma tecla ou uma resposta
+ * pronta. Nunca condição escrita à mão: o que decide isto sai para eleitor real.
+ *
+ * ## A trava que torna seguro ligar
+ *
+ * A árvore nasce sendo a tabela de hoje achatada, e o teste exige que as duas decidam igual em 400
+ * contextos (`tests/arvore.test.mjs`). Abrir esta janela não muda a rodada; muda o que ele montar.
  */
 
 import * as store from './lib/store.js';
@@ -56,14 +59,15 @@ const SELO = {
 const el = (id) => document.getElementById(id);
 
 let fluxo = { ordem: [], desligadas: [], teclas: {}, vitorias: {}, arvore: null };
-/** As respostas prontas, para o menu de ação. Só o id e o nome interessam aqui. */
 let respostas = [];
-/** O nó com o editor aberto. Um por vez: dezoito formulários abertos é tela ilegível. */
-let editando = null;
-/** O caminho que venceu no último teste, para acender os nós percorridos. */
+/** O ramo aberto no editor do lado. */
+let selecionado = null;
+/** O caminho que venceu no último teste, para acender as caixas e os fios. */
 let caminhoDoTeste = [];
+/** A vista: quanto o quadro está deslocado e em que zoom. */
+let vista = { x: 40, y: 30, z: 1 };
 
-async function salvarArvore(nova) {
+async function gravar(nova) {
   fluxo = { ...fluxo, arvore: nova };
   await store.set('fluxo', fluxo);
   desenhar();
@@ -76,42 +80,15 @@ function span(classe, texto) {
   return s;
 }
 
-function botao(rotulo, titulo, aoClicar, classe) {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = classe || 'mini';
-  b.textContent = rotulo;
-  b.title = titulo;
-  b.addEventListener('click', (ev) => {
-    ev.stopPropagation();
-    aoClicar();
-  });
-  return b;
-}
+// ---- leitura de um nó, em português ----------------------------------------
 
-/** Um `<select>` com opções `[valor, rótulo]`. */
-function seletor(opcoes, valorAtual, aoMudar) {
-  const s = document.createElement('select');
-  for (const [valor, rotulo] of opcoes) {
-    const o = document.createElement('option');
-    o.value = valor;
-    o.textContent = rotulo;
-    if (valor === (valorAtual || '')) o.selected = true;
-    s.append(o);
-  }
-  s.addEventListener('change', () => aoMudar(s.value));
-  return s;
-}
-
-/** O efeito (a cor) do desfecho deste nó: é o que o eleitor recebe. */
 function efeitoDoNo(no) {
   if (no.regra) return sugestaoLib.efeitoDaRegra(no.regra, fluxo);
   if (no.acao?.resposta) return 'envia';
   if (no.acao?.tecla) return sugestaoLib.TECLAS[no.acao.tecla]?.efeito || 'depende';
-  return null; // não decide: é uma porta, não um desfecho
+  return null;
 }
 
-/** A condição em português, para a linha de resumo do nó. */
 function condicaoEmPortugues(no) {
   if (no.regra) return sugestaoLib.SOBRE[no.regra]?.quando || '';
   const cond = no.condicao || {};
@@ -119,18 +96,16 @@ function condicaoEmPortugues(no) {
   const sinal = arvoreLib.SINAIS.find((s) => s.id === cond.sinal);
   if (sinal) partes.push(cond.negar ? sinal.nao : sinal.rotulo);
   if ((cond.palavras || []).length) {
-    const onde = cond.onde === 'qualquer' ? 'em qualquer mensagem' : 'na última mensagem';
-    partes.push(`escreveu "${cond.palavras.join('", "')}" ${onde}`);
+    partes.push(`escreveu "${cond.palavras.join('", "')}"${cond.onde === 'qualquer' ? ' (em qualquer mensagem)' : ''}`);
   }
-  return partes.length ? partes.join(' E ') : 'sem condição — casa sempre';
+  return partes.length ? partes.join(' E ') : 'qualquer contato que chegar aqui';
 }
 
-/** O desfecho em português. */
 function acaoEmPortugues(no) {
   if (no.regra) {
     const ramos = sugestaoLib.ramosDaRegra(no.regra, fluxo);
     if (!ramos.length) return 'sem desfecho';
-    return ramos.map((r) => `tecla ${r.tecla} · ${r.rotulo}${r.se ? ` (se ${r.se})` : ''}`).join('  ou  ');
+    return ramos.map((r) => `tecla ${r.tecla} · ${r.rotulo}`).join('  ou  ');
   }
   if (no.acao?.resposta) {
     const t = respostas.find((r) => r.id === no.acao.resposta);
@@ -140,226 +115,115 @@ function acaoEmPortugues(no) {
   return null;
 }
 
-// ---- o editor de um nó ------------------------------------------------------
+// ---- o quadro ---------------------------------------------------------------
 
-/**
- * O formulário do nó, aberto sob demanda.
- *
- * Um por vez de propósito: com dezoito nós na tela, dezoito formulários abertos deixam de ser um
- * mapa e viram um formulário gigante — e o mapa é o que ele pediu.
- */
-function editorDoNo(no) {
-  const caixa = document.createElement('div');
-  caixa.className = 'editor';
-
-  const linha = (rotulo, campo) => {
-    const l = document.createElement('label');
-    l.className = 'campo';
-    l.append(span('campo-rot', rotulo), campo);
-    caixa.append(l);
-    return l;
-  };
-
-  const nome = document.createElement('input');
-  nome.type = 'text';
-  nome.value = no.rotulo || '';
-  nome.addEventListener('change', () => salvarArvore(arvoreLib.editar(fluxo.arvore, no.id, { rotulo: nome.value.trim() || 'ramo sem nome' })));
-  linha('Nome do ramo', nome);
-
-  if (no.regra) {
-    /**
-     * Nó respaldado por regra do código: a condição NÃO se edita aqui.
-     *
-     * É o que preserva os testes das dezesseis regras — e a condição é o que decide o que sai
-     * para eleitor. O que ele pode fazer é trocar a TECLA, desligar, mover, e pendurar ramos mais
-     * específicos dentro.
-     */
-    const aviso = document.createElement('p');
-    aviso.className = 'nota';
-    aviso.textContent = 'A condição deste ramo vem do código e tem teste — por isso não se edita aqui. Você pode trocar o desfecho, desligar, mover, e pendurar ramos mais específicos dentro dele.';
-    caixa.append(aviso);
-
-    const daRegra = sugestaoLib.REGRAS.find((r) => r.id === no.regra);
-    const padrao = typeof daRegra?.tecla === 'function' ? 'dois desfechos, conforme o contexto' : `tecla ${daRegra?.tecla}`;
-    linha(
-      'Desfecho',
-      seletor(
-        [['', `o do código (${padrao})`], ...TECLAS.map(([k, t]) => [k, `${k} · ${t}`])],
-        fluxo.teclas?.[no.regra] || '',
-        (valor) => {
-          const teclas = { ...(fluxo.teclas || {}) };
-          if (valor) teclas[no.regra] = valor;
-          else delete teclas[no.regra];
-          fluxo = { ...fluxo, teclas };
-          store.set('fluxo', fluxo).then(desenhar);
-        }
-      )
-    );
-    return caixa;
-  }
-
-  const cond = no.condicao || {};
-  const trocarCond = (mudanca) =>
-    salvarArvore(arvoreLib.editar(fluxo.arvore, no.id, { condicao: { ...cond, ...mudanca } }));
-
-  linha(
-    'Quando o contato…',
-    seletor(
-      [['', '— qualquer contato (é só um agrupamento) —'], ...arvoreLib.SINAIS.map((s) => [s.id, s.rotulo])],
-      cond.sinal || '',
-      (valor) => trocarCond({ sinal: valor })
-    )
-  );
-
-  if (cond.sinal) {
-    const inverter = document.createElement('label');
-    inverter.className = 'chk';
-    const c = document.createElement('input');
-    c.type = 'checkbox';
-    c.checked = !!cond.negar;
-    c.addEventListener('change', () => trocarCond({ negar: c.checked }));
-    const sinal = arvoreLib.SINAIS.find((s) => s.id === cond.sinal);
-    inverter.append(c, span('', `ao contrário: ${sinal?.nao || 'não'}`));
-    caixa.append(inverter);
-  }
-
-  const palavras = document.createElement('input');
-  palavras.type = 'text';
-  palavras.placeholder = 'bom dia, boa tarde, boa noite';
-  palavras.value = (cond.palavras || []).join(', ');
-  palavras.addEventListener('change', () =>
-    trocarCond({ palavras: palavras.value.split(',').map((p) => p.trim()).filter(Boolean) })
-  );
-  linha('E escreveu (separe por vírgula; acento e maiúscula não importam)', palavras);
-
-  linha(
-    'Procurar essas palavras',
-    seletor(
-      [
-        ['ultima', 'só na última mensagem dela (recomendado)'],
-        ['qualquer', 'em qualquer mensagem da conversa'],
-      ],
-      cond.onde || 'ultima',
-      (valor) => trocarCond({ onde: valor })
-    )
-  );
-
-  const acao = no.acao || {};
-  linha(
-    'Então…',
-    seletor(
-      [
-        ['', '— nada: este ramo só agrupa outros —'],
-        ...TECLAS.map(([k, t]) => [`t:${k}`, `tecla ${k} · ${t}`]),
-        ...respostas.map((r) => [`r:${r.id}`, `mandar "${r.name}" e concluir`]),
-      ],
-      acao.resposta ? `r:${acao.resposta}` : acao.tecla ? `t:${acao.tecla}` : '',
-      (valor) => {
-        const nova = !valor
-          ? null
-          : valor.startsWith('r:')
-            ? { tecla: null, resposta: valor.slice(2) }
-            : { tecla: valor.slice(2), resposta: null };
-        salvarArvore(arvoreLib.editar(fluxo.arvore, no.id, { acao: nova }));
-      }
-    )
-  );
-
-  return caixa;
+function aplicarVista() {
+  el('palco').style.transform = `translate(${vista.x}px, ${vista.y}px) scale(${vista.z})`;
+  el('nivelzoom').textContent = `${Math.round(vista.z * 100)}%`;
 }
 
-// ---- desenho da árvore ------------------------------------------------------
-
-function cartaoDoNo(no, nivel, indice, total) {
+/**
+ * Uma caixa do quadro.
+ *
+ * Ela carrega tudo que ele precisa ler sem abrir nada: o nome, a condição, o desfecho e a cor do
+ * que o eleitor recebe. Editar é clicar; o formulário abre no lado, e não dentro da caixa, para o
+ * quadro não mudar de tamanho a cada clique.
+ */
+function caixaDoNo(no) {
   const efeito = efeitoDoNo(no);
-  const linha = document.createElement('div');
-  linha.className = `no-linha${no.desligado ? ' off' : ''}${caminhoDoTeste.includes(no.id) ? ' no-caminho' : ''}`;
-  linha.style.setProperty('--nivel', String(nivel));
+  const d = document.createElement('div');
+  d.className = `caixa ${efeito || 'porta'}`;
+  if (no.desligado) d.classList.add('off');
+  if (selecionado === no.id) d.classList.add('sel');
+  if (caminhoDoTeste.includes(no.id)) d.classList.add('aceso');
+  d.dataset.no = no.id;
+  d.style.left = `${no.x || 0}px`;
+  d.style.top = `${no.y || 0}px`;
 
-  const card = document.createElement('div');
-  card.className = `no-card ${efeito || 'porta'}`;
-
-  // ---- cabeçalho ----
   const topo = document.createElement('div');
-  topo.className = 'no-topo';
+  topo.className = 'caixa-topo';
   const nome = document.createElement('b');
   nome.textContent = no.rotulo || '(sem nome)';
   topo.append(nome);
-  if (efeito) topo.append(span(`selo ${efeito}`, SELO[efeito]));
-  else topo.append(span('selo porta', 'só agrupa'));
-  if (no.regra) topo.append(span('marca-regra', 'regra do código'));
+  if (no.regra) topo.append(span('marca-regra', 'do código'));
+  d.append(topo);
 
-  const vitorias = Number(fluxo.vitorias?.[no.id] || fluxo.vitorias?.[no.regra] || 0);
-  if (vitorias) topo.append(span('venceu', `venceu ${vitorias}×`));
+  d.append(span('caixa-quando', condicaoEmPortugues(no)));
 
-  // ---- resumo ----
-  const corpo = document.createElement('div');
-  corpo.className = 'no-corpo';
-  corpo.append(span('quando', condicaoEmPortugues(no)));
   const desfecho = acaoEmPortugues(no);
-  if (desfecho) corpo.append(span('entao', `→ ${desfecho}`));
-  else if (!(no.filhos || []).length) corpo.append(span('entao vazio', '→ não faz nada ainda; o fluxo segue para os ramos de baixo'));
+  if (desfecho) {
+    const linha = span('caixa-entao', `→ ${desfecho}`);
+    d.append(linha);
+  } else if (!(no.filhos || []).length) {
+    d.append(span('caixa-entao vazio', '→ não faz nada ainda'));
+  }
 
-  // ---- controles ----
-  const acoes = document.createElement('div');
-  acoes.className = 'no-acoes';
-  acoes.append(
-    botao('✎', 'Editar este ramo', () => {
-      editando = editando === no.id ? null : no.id;
-      desenhar();
-    }),
-    botao('+', 'Criar um ramo DENTRO deste', () => {
-      const novo = arvoreLib.noVazio('ramo novo');
-      editando = novo.id;
-      salvarArvore(arvoreLib.acrescentar(fluxo.arvore, no.id, novo));
-    }),
-    botao('↑', 'Subir (mais prioridade que os irmãos)', () => salvarArvore(arvoreLib.mover(fluxo.arvore, no.id, -1))),
-    botao('↓', 'Descer', () => salvarArvore(arvoreLib.mover(fluxo.arvore, no.id, 1))),
-    botao('⇥', 'Pôr dentro do ramo de cima', () => salvarArvore(arvoreLib.aninhar(fluxo.arvore, no.id))),
-    botao('⇤', 'Tirar de dentro do ramo pai', () => salvarArvore(arvoreLib.desaninhar(fluxo.arvore, no.id)))
-  );
+  const rodape = document.createElement('div');
+  rodape.className = 'caixa-rodape';
+  if (efeito) rodape.append(span(`selo ${efeito}`, SELO[efeito]));
+  else rodape.append(span('selo porta', 'só agrupa'));
+  const vitorias = Number(fluxo.vitorias?.[no.id] || fluxo.vitorias?.[no.regra] || 0);
+  if (vitorias) rodape.append(span('venceu', `${vitorias}×`));
+  d.append(rodape);
 
-  const liga = document.createElement('label');
-  liga.className = 'chk';
-  const chk = document.createElement('input');
-  chk.type = 'checkbox';
-  chk.checked = !no.desligado;
-  chk.title = 'Ligado';
-  chk.addEventListener('change', () => salvarArvore(arvoreLib.editar(fluxo.arvore, no.id, { desligado: !chk.checked })));
-  liga.append(chk);
-  acoes.append(liga);
-
-  acoes.append(
-    botao(
-      '✕',
-      'Apagar este ramo',
-      () => {
-        const dentro = arvoreLib.todosOsNos([no]).length - 1;
-        // O aviso diz quantos vão junto: apagar leva os filhos, e promover os filhos os soltaria
-        // numa condição que não é mais a deles.
-        const texto = dentro
-          ? `Apagar "${no.rotulo}" e os ${dentro} ramos que estão dentro dele?`
-          : `Apagar "${no.rotulo}"?`;
-        if (confirm(texto)) salvarArvore(arvoreLib.apagar(fluxo.arvore, no.id));
-      },
-      'mini perigo'
-    )
-  );
-
-  card.append(topo, corpo, acoes);
-  if (editando === no.id) card.append(editorDoNo(no));
-
-  // A posição entre os irmãos é a prioridade, e é a informação que faz o mapa ser um fluxo.
-  const pos = span('no-pos', `${indice + 1}/${total}`);
-  linha.append(pos, card);
-  return linha;
+  return d;
 }
 
-function desenharNos(nos, nivel, alvo) {
-  (nos || []).forEach((no, i) => {
-    alvo.append(cartaoDoNo(no, nivel, i, nos.length));
-    if ((no.filhos || []).length) desenharNos(no.filhos, nivel + 1, alvo);
-  });
+/**
+ * Os fios entre pai e filho.
+ *
+ * Curva de Bézier saindo da direita do pai e entrando na esquerda do filho — é o traço do desenho
+ * dele. Desenhados DEPOIS das caixas, medindo a altura real de cada uma: o texto de cada ramo tem
+ * tamanho diferente, e fio calculado com altura fixa descola da caixa justamente nas maiores.
+ */
+function desenharFios() {
+  const svg = el('fios');
+  svg.replaceChildren();
+  const caixas = new Map([...el('caixas').children].map((c) => [c.dataset.no, c]));
+
+  let maiorX = 0;
+  let maiorY = 0;
+  const linhas = [];
+
+  const anda = (nos) => {
+    for (const no of nos || []) {
+      const daqui = caixas.get(no.id);
+      if (daqui) {
+        maiorX = Math.max(maiorX, (no.x || 0) + daqui.offsetWidth);
+        maiorY = Math.max(maiorY, (no.y || 0) + daqui.offsetHeight);
+      }
+      for (const filho of no.filhos || []) {
+        const la = caixas.get(filho.id);
+        if (daqui && la) {
+          const x1 = (no.x || 0) + daqui.offsetWidth;
+          const y1 = (no.y || 0) + daqui.offsetHeight / 2;
+          const x2 = filho.x || 0;
+          const y2 = (filho.y || 0) + la.offsetHeight / 2;
+          const meio = Math.max(30, (x2 - x1) / 2);
+          linhas.push({
+            d: `M ${x1} ${y1} C ${x1 + meio} ${y1}, ${x2 - meio} ${y2}, ${x2} ${y2}`,
+            aceso: caminhoDoTeste.includes(no.id) && caminhoDoTeste.includes(filho.id),
+          });
+        }
+      }
+      anda(no.filhos);
+    }
+  };
+  anda(fluxo.arvore || []);
+
+  svg.setAttribute('width', String(maiorX + 80));
+  svg.setAttribute('height', String(maiorY + 80));
+  const ns = 'http://www.w3.org/2000/svg';
+  for (const linha of linhas) {
+    const p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', linha.d);
+    p.setAttribute('class', `fio${linha.aceso ? ' fio-aceso' : ''}`);
+    svg.append(p);
+  }
+
+  // O palco acompanha o conteúdo, senão arrastar uma caixa para longe não abre espaço para ela.
+  el('palco').style.width = `${maiorX + 120}px`;
+  el('palco').style.height = `${maiorY + 120}px`;
 }
 
 function desenharProblemas() {
@@ -373,39 +237,377 @@ function desenharProblemas() {
 function desenharResumo() {
   const caixa = el('contagem');
   caixa.replaceChildren();
-  const todos = arvoreLib.todosOsNos(fluxo.arvore || []);
   const c = { envia: 0, silencio: 0, gente: 0, depende: 0, porta: 0, off: 0 };
-  for (const { no } of todos) {
+  for (const { no } of arvoreLib.todosOsNos(fluxo.arvore || [])) {
     if (no.desligado) c.off++;
     else c[efeitoDoNo(no) || 'porta']++;
   }
   const par = (classe, texto) => caixa.append(span(classe, texto));
-  par('c-envia', `${c.envia} enviam mensagem`);
+  par('c-envia', `${c.envia} enviam`);
   par('c-silencio', `${c.silencio} não enviam`);
-  par('c-gente', `${c.gente} precisam de você`);
+  par('c-gente', `${c.gente} pedem você`);
   if (c.depende) par('c-depende', `${c.depende} com dois desfechos`);
   if (c.porta) par('c-off', `${c.porta} só agrupam`);
   if (c.off) par('c-off', `${c.off} desligados`);
-
-  /**
-   * "Igual ao código" é a informação mais importante do topo: ela responde "eu já mexi nisso?".
-   * Comparar o desenho com a árvore padrão é a única forma honesta de dizer isso — guardar uma
-   * bandeira "mexeu" mentiria depois de ele desfazer as mudanças à mão.
-   */
-  const padrao = JSON.stringify(arvoreLib.arvorePadrao(fluxo));
-  const igual = JSON.stringify(fluxo.arvore || []) === padrao;
-  par(igual ? 'c-igual' : 'c-mexido', igual ? 'igual às regras do código' : 'árvore sua, diferente do código');
 }
 
 function desenhar() {
   desenharResumo();
   desenharProblemas();
-  const caixa = el('arvore');
-  caixa.replaceChildren();
-  desenharNos(fluxo.arvore || [], 0, caixa);
+
+  const alvo = el('caixas');
+  alvo.replaceChildren();
+  for (const { no } of arvoreLib.todosOsNos(fluxo.arvore || [])) alvo.append(caixaDoNo(no));
+
+  desenharFios();
+  desenharEditor();
+  aplicarVista();
 }
 
-/** A legenda das teclas, no lado. */
+// ---- arrastar ---------------------------------------------------------------
+
+/**
+ * Arrastar uma caixa: move o ramo; soltando em cima de outra, pendura nela.
+ *
+ * Durante o arrasto só o `transform` da caixa muda — nada de redesenhar a cada pixel, que com
+ * vinte caixas e os fios ficaria pesado e engasgado. Grava e redesenha uma vez, ao soltar.
+ *
+ * **Move o ramo inteiro, com os filhos.** Levar só o pai deixaria os filhos para trás, ligados por
+ * fios atravessando o quadro — e um mapa em que o desenho não acompanha a estrutura mente.
+ */
+function ligarArrasto() {
+  const caixas = el('caixas');
+  let arrastando = null;
+
+  caixas.addEventListener('pointerdown', (ev) => {
+    const caixa = ev.target.closest('.caixa');
+    if (!caixa || ev.button !== 0) return;
+    ev.stopPropagation();
+    const achado = arvoreLib.localizar(fluxo.arvore, caixa.dataset.no);
+    if (!achado) return;
+
+    arrastando = {
+      id: caixa.dataset.no,
+      elemento: caixa,
+      partiuX: ev.clientX,
+      partiuY: ev.clientY,
+      origemX: achado.no.x || 0,
+      origemY: achado.no.y || 0,
+      andou: false,
+      alvo: null,
+    };
+    /**
+     * A captura é o que faz o arrasto continuar quando o ponteiro sai de cima da caixa — e ela
+     * lança quando o `pointerId` já não está ativo (acontece com caneta, com toque que virou
+     * gesto do navegador, e em automação). Sem o `try`, a exceção sobe no meio do `pointerdown`,
+     * `arrastando` fica montado e a caixa gruda no ponteiro sem nunca soltar: exatamente o
+     * sintoma de "não consigo arrastar", que é o que ele relatou.
+     */
+    try {
+      caixa.setPointerCapture(ev.pointerId);
+    } catch (_) {
+      // Sem captura o arrasto ainda funciona enquanto o ponteiro estiver sobre o quadro.
+    }
+    caixa.classList.add('arrastando');
+  });
+
+  caixas.addEventListener('pointermove', (ev) => {
+    if (!arrastando) return;
+    const dx = (ev.clientX - arrastando.partiuX) / vista.z;
+    const dy = (ev.clientY - arrastando.partiuY) / vista.z;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) arrastando.andou = true;
+    arrastando.elemento.style.transform = `translate(${dx}px, ${dy}px)`;
+    arrastando.dx = dx;
+    arrastando.dy = dy;
+
+    // Quem está embaixo do ponteiro? É onde o ramo vai ser pendurado.
+    arrastando.elemento.style.pointerEvents = 'none';
+    const embaixo = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.caixa');
+    arrastando.elemento.style.pointerEvents = '';
+    const novoAlvo = embaixo && embaixo !== arrastando.elemento ? embaixo : null;
+    if (novoAlvo !== arrastando.alvo) {
+      arrastando.alvo?.classList.remove('alvo');
+      arrastando.alvo = novoAlvo;
+      // Só acende o alvo que ACEITA o ramo: acender um destino que vai recusar é pior que não
+      // acender nenhum, porque promete um movimento que não vai acontecer.
+      if (novoAlvo && !arvoreLib.ehDescendente(fluxo.arvore, arrastando.id, novoAlvo.dataset.no)) {
+        novoAlvo.classList.add('alvo');
+      } else {
+        arrastando.alvo = null;
+      }
+    }
+  });
+
+  const soltar = async (ev) => {
+    if (!arrastando) return;
+    const { id, elemento, origemX, origemY, dx = 0, dy = 0, alvo, andou } = arrastando;
+    elemento.classList.remove('arrastando');
+    elemento.style.transform = '';
+    alvo?.classList.remove('alvo');
+    arrastando = null;
+
+    if (!andou) {
+      // Clique, não arrasto: seleciona e abre o editor.
+      selecionado = id;
+      desenhar();
+      return;
+    }
+
+    let nova = arvoreLib.posicionar(fluxo.arvore, id, origemX + dx, origemY + dy, true);
+    if (alvo) nova = arvoreLib.reparentar(nova, id, alvo.dataset.no);
+    nova = arvoreLib.ordenarPorPosicao(nova);
+    await gravar(nova);
+  };
+
+  caixas.addEventListener('pointerup', soltar);
+  caixas.addEventListener('pointercancel', soltar);
+}
+
+/** Arrastar o FUNDO anda pelo quadro. É o que permite o quadro ser maior que a tela. */
+function ligarPanoramica() {
+  const area = el('quadro-area');
+  let puxando = null;
+
+  area.addEventListener('pointerdown', (ev) => {
+    if (ev.target.closest('.caixa') || ev.button !== 0) return;
+    puxando = { x: ev.clientX, y: ev.clientY, vx: vista.x, vy: vista.y };
+    area.classList.add('puxando');
+    try {
+      area.setPointerCapture(ev.pointerId);
+    } catch (_) {
+      // Mesma razão do arrasto da caixa: sem captura ainda anda, com exceção trava tudo.
+    }
+  });
+  area.addEventListener('pointermove', (ev) => {
+    if (!puxando) return;
+    vista.x = puxando.vx + (ev.clientX - puxando.x);
+    vista.y = puxando.vy + (ev.clientY - puxando.y);
+    aplicarVista();
+  });
+  const parar = () => {
+    puxando = null;
+    area.classList.remove('puxando');
+  };
+  area.addEventListener('pointerup', parar);
+  area.addEventListener('pointercancel', parar);
+
+  // Duplo clique no vazio cria um ramo ali — é como se desenha num quadro.
+  area.addEventListener('dblclick', async (ev) => {
+    if (ev.target.closest('.caixa')) return;
+    const caixa = area.getBoundingClientRect();
+    const x = Math.round((ev.clientX - caixa.left - vista.x) / vista.z);
+    const y = Math.round((ev.clientY - caixa.top - vista.y) / vista.z);
+    const novo = { ...arvoreLib.noVazio('ramo novo'), x, y };
+    selecionado = novo.id;
+    await gravar(arvoreLib.ordenarPorPosicao(arvoreLib.acrescentar(fluxo.arvore, null, novo)));
+  });
+
+  area.addEventListener(
+    'wheel',
+    (ev) => {
+      if (!ev.ctrlKey) return;
+      ev.preventDefault();
+      aproximar(ev.deltaY < 0 ? 0.1 : -0.1);
+    },
+    { passive: false }
+  );
+}
+
+function aproximar(passo) {
+  vista.z = Math.min(1.6, Math.max(0.35, Math.round((vista.z + passo) * 100) / 100));
+  aplicarVista();
+}
+
+/** Enquadra o quadro inteiro na área visível. */
+function caberNaTela() {
+  const area = el('quadro-area').getBoundingClientRect();
+  const nos = arvoreLib.todosOsNos(fluxo.arvore || []).map(({ no }) => no);
+  if (!nos.length) return;
+  const largura = Math.max(...nos.map((n) => (n.x || 0))) + arvoreLib.CAIXA.largura + 40;
+  const altura = Math.max(...nos.map((n) => (n.y || 0))) + arvoreLib.CAIXA.altura + 40;
+  vista.z = Math.min(1, Math.max(0.35, Math.min((area.width - 40) / largura, (area.height - 40) / altura)));
+  vista.x = 20;
+  vista.y = 20;
+  aplicarVista();
+}
+
+// ---- o editor do lado -------------------------------------------------------
+
+function desenharEditor() {
+  const caixa = el('editor');
+  caixa.replaceChildren();
+  const achado = selecionado ? arvoreLib.localizar(fluxo.arvore, selecionado) : null;
+
+  if (!achado) {
+    el('titulo-edicao').textContent = 'Nenhum ramo selecionado';
+    el('ajuda-edicao').textContent = 'Clique numa caixa do quadro para editar a condição e o desfecho dela.';
+    return;
+  }
+
+  const no = achado.no;
+  el('titulo-edicao').textContent = no.rotulo || '(sem nome)';
+  el('ajuda-edicao').textContent = achado.pai
+    ? `Dentro de "${achado.pai.rotulo}" — só é olhado se aquele ramo casar.`
+    : 'Na raiz do quadro.';
+
+  const linha = (rotulo, campo) => {
+    const l = document.createElement('label');
+    l.className = 'campo';
+    l.append(span('campo-rot', rotulo), campo);
+    caixa.append(l);
+  };
+  const seletor = (opcoes, atual, aoMudar) => {
+    const s = document.createElement('select');
+    for (const [valor, rotulo] of opcoes) {
+      const o = document.createElement('option');
+      o.value = valor;
+      o.textContent = rotulo;
+      if (valor === (atual || '')) o.selected = true;
+      s.append(o);
+    }
+    s.addEventListener('change', () => aoMudar(s.value));
+    return s;
+  };
+
+  const nome = document.createElement('input');
+  nome.type = 'text';
+  nome.value = no.rotulo || '';
+  nome.addEventListener('change', () => gravar(arvoreLib.editar(fluxo.arvore, no.id, { rotulo: nome.value.trim() || 'ramo sem nome' })));
+  linha('Nome do ramo', nome);
+
+  if (no.regra) {
+    /**
+     * Ramo respaldado por regra do código: a condição não se edita aqui.
+     *
+     * É o que preserva os testes das dezesseis regras, e a condição é o que decide o que sai para
+     * eleitor. Ele troca o desfecho, desliga, move e pendura ramos mais específicos dentro.
+     */
+    const nota = document.createElement('p');
+    nota.className = 'nota';
+    nota.textContent = 'A condição deste ramo vem do código e tem teste — por isso não se edita aqui. Você pode trocar o desfecho, movê-lo, desligá-lo e pendurar ramos mais específicos dentro dele.';
+    caixa.append(nota);
+    caixa.append(span('leitura', condicaoEmPortugues(no)));
+
+    const daRegra = sugestaoLib.REGRAS.find((r) => r.id === no.regra);
+    const padrao = typeof daRegra?.tecla === 'function' ? 'dois desfechos, conforme o contexto' : `tecla ${daRegra?.tecla}`;
+    linha(
+      'Desfecho',
+      seletor([['', `o do código (${padrao})`], ...TECLAS.map(([k, t]) => [k, `${k} · ${t}`])], fluxo.teclas?.[no.regra] || '', (valor) => {
+        const teclas = { ...(fluxo.teclas || {}) };
+        if (valor) teclas[no.regra] = valor;
+        else delete teclas[no.regra];
+        fluxo = { ...fluxo, teclas };
+        store.set('fluxo', fluxo).then(desenhar);
+      })
+    );
+  } else {
+    const cond = no.condicao || {};
+    const trocarCond = (mudanca) => gravar(arvoreLib.editar(fluxo.arvore, no.id, { condicao: { ...cond, ...mudanca } }));
+
+    linha(
+      'Quando o contato…',
+      seletor([['', '— qualquer um que chegar aqui —'], ...arvoreLib.SINAIS.map((s) => [s.id, s.rotulo])], cond.sinal || '', (v) => trocarCond({ sinal: v }))
+    );
+
+    if (cond.sinal) {
+      const inverter = document.createElement('label');
+      inverter.className = 'chk';
+      const c = document.createElement('input');
+      c.type = 'checkbox';
+      c.checked = !!cond.negar;
+      c.addEventListener('change', () => trocarCond({ negar: c.checked }));
+      inverter.append(c, span('', `ao contrário: ${arvoreLib.SINAIS.find((s) => s.id === cond.sinal)?.nao || 'não'}`));
+      caixa.append(inverter);
+    }
+
+    const palavras = document.createElement('input');
+    palavras.type = 'text';
+    palavras.placeholder = 'bom dia, boa tarde, boa noite';
+    palavras.value = (cond.palavras || []).join(', ');
+    palavras.addEventListener('change', () => trocarCond({ palavras: palavras.value.split(',').map((p) => p.trim()).filter(Boolean) }));
+    linha('E escreveu (vírgula separa; acento e maiúscula não importam)', palavras);
+
+    linha(
+      'Procurar as palavras',
+      seletor(
+        [
+          ['ultima', 'só na última mensagem dela'],
+          ['qualquer', 'em qualquer mensagem da conversa'],
+        ],
+        cond.onde || 'ultima',
+        (v) => trocarCond({ onde: v })
+      )
+    );
+
+    const acao = no.acao || {};
+    linha(
+      'Então…',
+      seletor(
+        [
+          ['', '— nada: este ramo só agrupa outros —'],
+          ...TECLAS.map(([k, t]) => [`t:${k}`, `tecla ${k} · ${t}`]),
+          ...respostas.map((r) => [`r:${r.id}`, `mandar "${r.name}" e concluir`]),
+        ],
+        acao.resposta ? `r:${acao.resposta}` : acao.tecla ? `t:${acao.tecla}` : '',
+        (valor) => {
+          const nova = !valor
+            ? null
+            : valor.startsWith('r:')
+              ? { tecla: null, resposta: valor.slice(2) }
+              : { tecla: valor.slice(2), resposta: null };
+          gravar(arvoreLib.editar(fluxo.arvore, no.id, { acao: nova }));
+        }
+      )
+    );
+  }
+
+  const ligado = document.createElement('label');
+  ligado.className = 'chk';
+  const chk = document.createElement('input');
+  chk.type = 'checkbox';
+  chk.checked = !no.desligado;
+  chk.addEventListener('change', () => gravar(arvoreLib.editar(fluxo.arvore, no.id, { desligado: !chk.checked })));
+  ligado.append(chk, span('', 'ligado (desligado, a rodada pula este ramo)'));
+  caixa.append(ligado);
+
+  const botoes = document.createElement('div');
+  botoes.className = 'botoes';
+
+  const dentro = document.createElement('button');
+  dentro.type = 'button';
+  dentro.className = 'btn';
+  dentro.textContent = '+ Ramo dentro deste';
+  dentro.addEventListener('click', async () => {
+    const filho = { ...arvoreLib.noVazio('ramo novo'), x: (no.x || 0) + arvoreLib.CAIXA.largura + arvoreLib.CAIXA.colunaVaga, y: (no.y || 0) + (no.filhos || []).length * (arvoreLib.CAIXA.altura + arvoreLib.CAIXA.linhaVaga) };
+    selecionado = filho.id;
+    await gravar(arvoreLib.acrescentar(fluxo.arvore, no.id, filho));
+  });
+
+  const soltar = document.createElement('button');
+  soltar.type = 'button';
+  soltar.className = 'btn';
+  soltar.textContent = 'Soltar na raiz';
+  soltar.disabled = !achado.pai;
+  soltar.addEventListener('click', () => gravar(arvoreLib.ordenarPorPosicao(arvoreLib.reparentar(fluxo.arvore, no.id, null))));
+
+  const apagar = document.createElement('button');
+  apagar.type = 'button';
+  apagar.className = 'btn btn-perigo';
+  apagar.textContent = 'Apagar';
+  apagar.addEventListener('click', () => {
+    const filhos = arvoreLib.todosOsNos([no]).length - 1;
+    const texto = filhos ? `Apagar "${no.rotulo}" e os ${filhos} ramos que estão dentro dele?` : `Apagar "${no.rotulo}"?`;
+    if (confirm(texto)) {
+      selecionado = null;
+      gravar(arvoreLib.apagar(fluxo.arvore, no.id));
+    }
+  });
+
+  botoes.append(dentro, soltar, apagar);
+  caixa.append(botoes);
+}
+
+/** A legenda das teclas. */
 function desenharTeclas() {
   const dl = el('teclas');
   dl.replaceChildren();
@@ -421,12 +623,12 @@ function desenharTeclas() {
 // ---- o simulador ------------------------------------------------------------
 
 /**
- * Testa uma conversa contra a árvore de agora.
+ * Testa uma conversa contra o quadro de agora, e acende o caminho.
  *
  * **Diz o que não sabe, e isso é metade do valor.** Os sinais de conversa saem do texto colado; os
  * de CRM (etiqueta aplicada, modelo mapeado, pedido feito hoje) dependem do contato e ficam de
  * fora — está escrito na tela. Simulador que fingisse conhecer o CRM daria confiança falsa numa
- * mudança de ordem, e ordem errada manda mensagem errada para eleitor.
+ * mudança de prioridade, e prioridade errada manda mensagem errada para eleitor.
  */
 function testar() {
   const linhas = el('conversa').value.split('\n').map((t) => t.trim()).filter(Boolean);
@@ -449,7 +651,6 @@ function testar() {
   const entrantes = linhas.map((texto) => ({ texto, tipo: 'TEXT' }));
   const nossaUltimaAt = Date.now() - 60 * 60 * 1000;
   const retornando = el('retornando').checked;
-  const deAnuncio = el('deanuncio').checked;
 
   const ctx = {
     semInteresse: semInteresse(entrantes),
@@ -461,14 +662,11 @@ function testar() {
     pedeAlgoIndefinido: pedeAlgoIndefinido(entrantes, nossaUltimaAt),
     rajadaEhSoRepasse: rajadaEhSoRepasse(entrantes, nossaUltimaAt),
     confirmaPresenca: confirmaPresenca(entrantes, nossaUltimaAt),
-    // O texto, que é o que os ramos de palavra leem.
     textos: linhas,
     ultimoTexto: linhas[linhas.length - 1],
-    // As duas chaves do desenho dele, que a tela deixa ele escolher.
     jaRespondemosAntes: retornando,
     jaPediramDados: retornando,
-    veioDeAnuncio: deAnuncio,
-    // Suposições, para os ramos poderem disparar. A tela avisa que são suposições.
+    veioDeAnuncio: el('deanuncio').checked,
     podePerguntarAjuda: true,
     podePedirDados: true,
     podePerguntarInteresse: true,
@@ -479,13 +677,13 @@ function testar() {
   caminhoDoTeste = r?.caminho || [];
 
   if (r) {
-    const nomes = (r.caminho || [])
-      .map((id) => arvoreLib.localizar(fluxo.arvore, id)?.no?.rotulo || id)
-      .join(' → ');
+    const nomes = (r.caminho || []).map((id) => arvoreLib.localizar(fluxo.arvore, id)?.no?.rotulo || id).join(' → ');
     escreve('venceu-linha', nomes);
     escreve(
       'fraco',
-      r.resposta ? `desfecho: manda "${respostas.find((t) => t.id === r.resposta)?.name || r.resposta}" e conclui` : `desfecho: tecla ${r.tecla} · ${sugestaoLib.TECLAS[r.tecla]?.rotulo || '?'}`
+      r.resposta
+        ? `desfecho: manda "${respostas.find((t) => t.id === r.resposta)?.name || r.resposta}" e conclui`
+        : `desfecho: tecla ${r.tecla} · ${sugestaoLib.TECLAS[r.tecla]?.rotulo || '?'}`
     );
     escreve('fraco', `motivo na tela: ${r.motivo}`);
   } else {
@@ -504,29 +702,34 @@ function testar() {
 // ---- ligação da tela --------------------------------------------------------
 
 el('testar').addEventListener('click', testar);
+el('mais').addEventListener('click', () => aproximar(0.1));
+el('menos').addEventListener('click', () => aproximar(-0.1));
+el('ajustar').addEventListener('click', caberNaTela);
+el('arrumar').addEventListener('click', () => gravar(arvoreLib.arrumar(fluxo.arvore)));
 
-el('novo').addEventListener('click', () => {
-  const novo = arvoreLib.noVazio('ramo novo');
-  editando = novo.id;
-  salvarArvore(arvoreLib.acrescentar(fluxo.arvore, null, novo));
+el('novo').addEventListener('click', async () => {
+  // Nasce à vista, no canto de cima da área visível — caixa criada fora da tela parece que o
+  // botão não fez nada.
+  const novo = { ...arvoreLib.noVazio('ramo novo'), x: Math.round(-vista.x / vista.z) + 40, y: Math.round(-vista.y / vista.z) + 40 };
+  selecionado = novo.id;
+  await gravar(arvoreLib.ordenarPorPosicao(arvoreLib.acrescentar(fluxo.arvore, null, novo)));
 });
 
-el('quadro').addEventListener('click', () => {
-  if (confirm('Substituir a árvore de agora pelo desenho do quadro? As protecões (hater, denúncia, despedida, pergunta aberta) entram acima da bifurcação.')) {
-    salvarArvore(arvoreLib.arvoreDoQuadro());
+el('quadro').addEventListener('click', async () => {
+  if (confirm('Substituir o quadro de agora pelo desenho do quadro? As protecões (hater, denúncia, despedida, pergunta aberta) entram na frente da bifurcação.')) {
+    selecionado = null;
+    await gravar(arvoreLib.arrumar(arvoreLib.arvoreDoQuadro()));
+    caberNaTela();
   }
 });
 
-el('padrao').addEventListener('click', () => {
-  if (confirm('Voltar a árvore para as regras do código, como elas estão hoje? Os ramos que você criou se perdem.')) {
+el('padrao').addEventListener('click', async () => {
+  if (confirm('Voltar às regras do código, como elas estão hoje? Os ramos que você criou se perdem.')) {
+    selecionado = null;
     fluxo = { ...fluxo, teclas: {} };
-    salvarArvore(arvoreLib.arvorePadrao({}));
+    await gravar(arvoreLib.arrumar(arvoreLib.arvorePadrao({})));
+    caberNaTela();
   }
-});
-
-el('zerar').addEventListener('click', () => {
-  fluxo = { ...fluxo, vitorias: {} };
-  store.set('fluxo', fluxo).then(desenhar);
 });
 
 /**
@@ -548,14 +751,18 @@ chrome.storage.onChanged.addListener((mudancas, area) => {
   }
 
   /**
-   * Semeia a árvore com a tabela de hoje, **carregando a ordem e as desligadas da versão de
-   * lista**. Sem isso, abrir esta janela jogaria fora em silêncio o trabalho que ele já tinha
-   * feito arrastando as regras.
+   * Semeia o quadro com a tabela de hoje, **carregando a ordem e as desligadas da versão em
+   * lista**. Sem isso, abrir esta janela jogaria fora em silêncio o que ele já tinha arrastado.
    */
-  if (!Array.isArray(fluxo.arvore) || !fluxo.arvore.length) {
-    fluxo = { ...fluxo, arvore: arvoreLib.arvorePadrao(fluxo) };
-    await store.set('fluxo', fluxo);
-  }
+  let arvore = Array.isArray(fluxo.arvore) && fluxo.arvore.length ? fluxo.arvore : arvoreLib.arvorePadrao(fluxo);
+  // Árvore de antes do quadro não tem posição, e caixa sem posição empilha tudo no canto.
+  if (arvoreLib.precisaArrumar(arvore)) arvore = arvoreLib.arrumar(arvore);
+  fluxo = { ...fluxo, arvore };
+  await store.set('fluxo', fluxo);
+
   desenharTeclas();
+  ligarArrasto();
+  ligarPanoramica();
   desenhar();
+  caberNaTela();
 })();

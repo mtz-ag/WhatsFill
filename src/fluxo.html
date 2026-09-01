@@ -9,60 +9,56 @@
     <header class="topo">
       <div class="titulo">
         <h1>Fluxo de atendimento</h1>
-        <p>A rodada desce a árvore e segue o <b>primeiro ramo que descreve o contato</b>; dentro dele, o primeiro filho que descreve. Ramo mais fundo é mais específico e vence o de cima. Use <b>⇥</b> para pôr um ramo dentro do outro.</p>
+        <p><b>Arraste</b> uma caixa para movê-la. <b>Solte em cima de outra</b> para pôr o ramo dentro dela. <b>Clique</b> para editar no lado. Entre irmãos, a caixa mais <b>alta</b> é olhada primeiro.</p>
       </div>
       <div class="contagem" id="contagem"></div>
       <div class="acoes">
         <button type="button" id="novo" class="btn btn-primario">+ Ramo novo</button>
+        <button type="button" id="arrumar" class="btn">Arrumar o quadro</button>
         <button type="button" id="quadro" class="btn">Carregar o desenho do quadro</button>
         <button type="button" id="padrao" class="btn">Voltar às regras do código</button>
-        <button type="button" id="zerar" class="btn">Zerar contagens</button>
+        <span class="zoom">
+          <button type="button" id="menos" class="btn btn-quadrado" title="Afastar">−</button>
+          <span id="nivelzoom">100%</span>
+          <button type="button" id="mais" class="btn btn-quadrado" title="Aproximar">+</button>
+          <button type="button" id="ajustar" class="btn" title="Enquadrar tudo">Caber na tela</button>
+        </span>
       </div>
     </header>
 
     <div id="problemas" class="problemas"></div>
 
     <main class="tela">
-      <section class="mapa" aria-label="A árvore do fluxo">
-        <div class="no-raiz">
-          <span class="rot">Mensagem do contato chega</span>
-          <span class="sub">a plataforma devolve o atendimento para as não lidas, o parser lê nome e cidade, e aí a árvore decide</span>
+      <!-- O quadro. Arrastar o fundo move a vista; arrastar uma caixa move o ramo. -->
+      <section class="quadro" id="quadro-area" aria-label="O mapa do fluxo">
+        <div class="palco" id="palco">
+          <svg class="fios" id="fios" aria-hidden="true"></svg>
+          <div class="caixas" id="caixas"></div>
         </div>
-
-        <div id="arvore" class="arvore"></div>
-
-        <div class="no-raiz no-fim">
-          <span class="rot">Nenhum ramo resolveu → a IA opina</span>
-          <span class="sub">responder (manda a resposta pronta que ela escolheu) · escalar (rascunho) · incerto (tudo como antes da IA). A tecla 6 também passa por ela.</span>
-        </div>
+        <p class="dica" id="dica">Arraste o fundo para andar pelo quadro. Duplo clique no vazio cria um ramo ali.</p>
       </section>
 
       <aside class="lado">
+        <div class="cartao" id="painel-edicao">
+          <h2 id="titulo-edicao">Nenhum ramo selecionado</h2>
+          <p class="ajuda" id="ajuda-edicao">Clique numa caixa do quadro para editar a condição e o desfecho dela.</p>
+          <div id="editor"></div>
+        </div>
+
         <div class="cartao">
           <h2>Testar uma conversa</h2>
-          <p class="ajuda">Cole o que o contato escreveu — uma mensagem por linha, a última embaixo. O caminho que vencer fica aceso na árvore.</p>
-          <textarea id="conversa" rows="5" placeholder="Bom dia!"></textarea>
-          <label class="chk"><input type="checkbox" id="retornando" checked /> <span>é pessoa retornando (já entregamos algo antes)</span></label>
+          <p class="ajuda">Cole o que o contato escreveu — uma mensagem por linha, a última embaixo. O caminho que vencer acende no quadro.</p>
+          <textarea id="conversa" rows="4" placeholder="Bom dia!"></textarea>
+          <label class="chk"><input type="checkbox" id="retornando" checked /> <span>é pessoa retornando</span></label>
           <label class="chk"><input type="checkbox" id="deanuncio" /> <span>veio de um anúncio</span></label>
           <button type="button" id="testar" class="btn btn-primario">Testar</button>
           <div id="resultado" class="resultado"></div>
-          <p class="ajuda ajuda-fraca">Fora da conta: etiqueta que dispensa, modelo mapeado, pedido de dados feito hoje e histórico de envios — dependem do contato, não do texto.</p>
+          <p class="ajuda ajuda-fraca">Fora da conta: etiqueta que dispensa, modelo mapeado, pedido feito hoje e histórico de envios — dependem do contato, não do texto.</p>
         </div>
 
         <div class="cartao">
           <h2>O que cada tecla faz</h2>
           <dl class="teclas" id="teclas"></dl>
-        </div>
-
-        <div class="cartao">
-          <h2>Como crescer a árvore</h2>
-          <ol class="passos">
-            <li><b>+ Ramo novo</b> cria na raiz; o <b>+</b> de um ramo cria dentro dele.</li>
-            <li>No <b>✎</b>, escolha a condição: um sinal da lista, palavras que ela escreveu, ou os dois juntos.</li>
-            <li>Escolha o desfecho: uma tecla, ou uma resposta pronta sua.</li>
-            <li><b>↑ ↓</b> mudam a prioridade entre irmãos. O de cima é olhado primeiro.</li>
-          </ol>
-          <p class="ajuda ajuda-fraca">Ramo sem desfecho e sem filhos não faz nada — o fluxo segue para os de baixo, e o aviso aparece no topo.</p>
         </div>
       </aside>
     </main>

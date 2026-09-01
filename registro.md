@@ -5,6 +5,66 @@
 
 ---
 
+## 2026-09-01 (noite, 15) — O quadro de verdade: caixas soltas, fios curvos, arrastar e editar
+
+**Pedido:** *"a visualização continua sem ter nenhuma referência com o que mandei, não posso
+arrastar editar etc"*.
+
+### As duas correções, e a lição
+
+Ele mandou a foto de um mapa — caixas soltas ligadas por setas curvas — e eu entreguei um esquema
+indentado, argumentando que o leque horizontal não cabe quando a árvore cresce. **O argumento
+estava certo e a entrega estava errada.** O problema de espaço se resolve com o quadro sendo MAIOR
+que a tela (arrastar o fundo, zoom, "caber na tela"), não encolhendo o desenho dele. Entrou no
+`CLAUDE.md`: quando ele manda um desenho, não entregue outro desenho.
+
+A segunda metade era funcional: na versão anterior eu tinha **removido o arrastar** (troquei por
+botões ⇥ ⇤) e escondido a edição atrás de um `✎`. Ele tentou arrastar, não aconteceu nada, e
+concluiu — corretamente — que não dava para editar.
+
+### O que existe agora
+
+Um quadro: caixas em posição livre, fios em Bézier saindo da direita do pai e entrando na esquerda
+do filho, grade de fundo. **Arrastar** move o ramo inteiro (com os filhos); **soltar em cima de
+outra caixa** pendura o ramo nela; **clicar** abre o editor no lado; **duplo clique no vazio** cria
+um ramo ali; arrastar o fundo anda pelo quadro; zoom por botão e por Ctrl+roda; "Arrumar o quadro"
+refaz a diagramação (uma coluna por nível, pai centrado nos filhos) e "Caber na tela" enquadra.
+
+### A regra que o quadro livre obrigou
+
+**A prioridade entre irmãos passou a ser a ALTURA na tela** — a caixa mais alta é olhada primeiro,
+e `ordenarPorPosicao` roda depois de todo arrasto. É a única regra honesta aqui: guardar uma ordem
+invisível ao lado da posição faria a tela mostrar um ramo acima do outro e a rodada obedecer o
+contrário. Consequência que vale lembrar: **mover uma caixa para cima muda o que a rodada faz**,
+sem tocar em condição nenhuma.
+
+### Dois defeitos que peguei medindo
+
+1. **`setPointerCapture` lança quando o `pointerId` não está ativo**, e a exceção sobe no meio do
+   `pointerdown`: o estado do arrasto fica montado e a caixa gruda no ponteiro sem soltar — que é
+   exatamente o sintoma que ele relatou. Peguei ao simular o arrasto no navegador (`NotFoundError:
+   No active pointer with the given id is found`). Hoje toda captura vai dentro de `try`.
+2. **Arrastar um ramo para dentro de um filho dele mesmo faria o ramo sumir** — sairia da árvore
+   junto com o novo pai, gravado e invisível. `reparentar` recusa e devolve a árvore intacta, e a
+   tela só acende como alvo quem aceita: prometer um movimento que vai ser recusado é pior que não
+   prometer nada. Tem teste.
+
+**Arquivos:** `src/lib/arvore.js` (`reparentar`, `posicionar`, `ordenarPorPosicao`, `arrumar`,
+`ehDescendente`, `precisaArrumar`, `CAIXA`), `src/fluxo.js`, `src/fluxo.html`, `src/fluxo.css`
+(reescritos como quadro), `tests/arvore.test.mjs` (grupo novo), `manifest.json` (1.23.0 → 1.24.0),
+`registro.md`, `CLAUDE.md`.
+
+**Conferido no navegador**, num servidor de rascunho FORA do repositório com `chrome.storage`
+fingido: o preset do quadro dá 20 caixas e 10 fios; arrastar uma caixa move e grava (80×70 px
+pedidos, 80×70 medidos depois do redesenho); soltar sobre outra acende o alvo e move o ramo para
+dentro dela na árvore gravada; clicar abre o editor com os campos preenchidos; duplo clique no
+vazio cria (20 → 21 caixas) e o aviso do ramo vazio aparece na faixa vermelha.
+
+**Não testado:** a janela real do Chrome, com a extensão carregada. Arrasto com mouse de verdade e
+`chrome.windows` só se conferem lá.
+
+---
+
 ## 2026-09-01 (noite, 14) — O fluxo virou ÁRVORE de verdade, e ele passa a montá-la sozinho
 
 **Pedido:** a foto do quadro dele, com o fluxo desenhado, e *"esse é o exemplo que eu estava
