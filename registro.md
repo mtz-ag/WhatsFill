@@ -5,6 +5,45 @@
 
 ---
 
+## 2026-09-01 (noite, 23) — O pino agora liga nos DOIS sentidos
+
+**Relato dele:** *"fez algo que não pedi e continuo com mesmo problema, as duas caixas de baixo eu
+quero ligar na de cima e não liga"*.
+
+### O que eu errei
+
+Na rodada anterior eu diagnostiquei certo (o pino puxa do pai para o filho, e ele puxava ao
+contrário) e **consertei errado**: escrevi uma frase explicando a direção e acrescentei uma lista
+no editor que ele não tinha pedido. Explicação não conserta gesto invertido — e a lista foi escopo
+que eu inventei.
+
+**A direção certa depende de qual das duas caixas ele está olhando na hora.** No quadro dele o
+filho está sempre EMBAIXO, então o gesto natural é do filho para o pai, de baixo para cima. Era o
+único sentido que não existia.
+
+### O conserto
+
+Cada caixa passou a ter **dois pinos**, como qualquer editor de nós:
+
+- **saída**, na borda direita (cheio): puxar dela até B põe **B dentro desta**;
+- **entrada**, na borda esquerda (vazada): puxar dela até B põe **esta dentro de B**.
+
+É a mesma ligação, puxada de uma ponta ou da outra. A frase ao vivo acompanha o sentido, e a guarda
+de ciclo também — quem é pai e quem é filho depende do pino que ele pegou.
+
+**Conferido no navegador**, no gesto exato dele: puxando da ENTRADA de "só mandou bom dia" até
+"Tem a etiqueta que dispensa", e depois da ENTRADA de "mandou figura" até a mesma caixa, as duas
+ficaram como filhas dela. A frase mostrou os dois nomes e o "e sai de «pessoa retornando»" nas duas
+vezes.
+
+**Pendência aberta:** a lista *"Pôr este ramo dentro de…"* no editor, que eu acrescentei sem ele
+pedir. Ficou porque é o caminho que não depende de mira nem de direção, mas é dele a decisão de
+tirar.
+
+**Arquivos:** `src/fluxo.js`, `src/fluxo.css`, `manifest.json` (1.31.0 → 1.32.0), `registro.md`.
+
+---
+
 ## 2026-09-01 (noite, 22) — Ligar tinha DIREÇÃO invertida, e agora existe caminho sem gesto
 
 **Relato dele:** *"estou tentando ligar duas caixas a caixa com nome tem etiqueta e como antes não

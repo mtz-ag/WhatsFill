@@ -402,3 +402,25 @@ body {
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
 }
 .rotulo-ligacao .sai-de { color: var(--alerta); font-weight: 600; }
+
+/*
+ * A ENTRADA, na borda esquerda — o mesmo gesto no sentido contrário.
+ *
+ * Só havia a saída, e ele puxava de baixo para cima: "as duas caixas de baixo eu quero ligar na de
+ * cima e não liga". No quadro dele o filho está sempre embaixo, então o gesto natural é do filho
+ * para o pai. Agora os dois pinos existem e dizem o que são: saída cheia, entrada vazada.
+ */
+.entrada-pino {
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  margin-top: -6px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--quadro);
+  border: 2px solid var(--tinta-fraca);
+  cursor: crosshair;
+}
+.entrada-pino:hover { border-color: var(--trilha); background: var(--trilha); }
+.caixa:hover .entrada-pino { border-color: var(--trilha); }

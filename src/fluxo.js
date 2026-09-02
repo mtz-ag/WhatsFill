@@ -191,8 +191,25 @@ function caixaDoNo(no) {
   const pino = document.createElement('span');
   pino.className = 'pino';
   pino.dataset.pino = no.id;
-  pino.title = 'Puxe daqui até outra caixa para pôr AQUELA dentro DESTA (o pino é a saída deste ramo)';
+  pino.title = 'SAÍDA: puxe daqui até outra caixa para pôr AQUELA dentro DESTA';
   d.append(pino);
+
+  /**
+   * A ENTRADA, na borda esquerda — o mesmo gesto no sentido contrário.
+   *
+   * Só havia a saída, e ele puxava de baixo para cima: *"as duas caixas de baixo eu quero ligar na
+   * de cima e não liga"*. Explicar a direção não resolve, porque a direção certa depende de qual
+   * das duas caixas ele está olhando na hora — e no quadro dele o filho está SEMPRE embaixo, então
+   * o gesto natural é de baixo para cima.
+   *
+   * Agora os dois valem: puxar da SAÍDA de A até B põe B dentro de A; puxar da ENTRADA de B até A
+   * põe B dentro de A. É a mesma ligação, dita das duas pontas, como em qualquer editor de nós.
+   */
+  const entrada = document.createElement('span');
+  entrada.className = 'entrada-pino';
+  entrada.dataset.entrada = no.id;
+  entrada.title = 'ENTRADA: puxe daqui até outra caixa para pôr ESTA dentro DAQUELA';
+  d.append(entrada);
 
   return d;
 }
@@ -352,19 +369,22 @@ function ligarArrasto() {
    * resolve é a frase com os DOIS nomes, e principalmente **de onde a caixa vai sair** quando ela
    * já tem pai — é essa metade que ele não estava vendo acontecer.
    */
-  const dizerOQueVaiAcontecer = (alvoEl, origemId, clienteX, clienteY) => {
+  const dizerOQueVaiAcontecer = (alvoEl, origemId, invertido, clienteX, clienteY) => {
     const caixa = el('rotulo-ligacao');
     if (!alvoEl) {
       caixa.hidden = true;
       return;
     }
     const daArea = el('quadro-area').getBoundingClientRect();
-    const alvoNo = arvoreLib.localizar(fluxo.arvore, alvoEl.dataset.no);
-    const paiNovo = arvoreLib.localizar(fluxo.arvore, origemId);
-    const paiAtual = alvoNo?.pai;
+    const naPonta = arvoreLib.localizar(fluxo.arvore, alvoEl.dataset.no);
+    const naOrigem = arvoreLib.localizar(fluxo.arvore, origemId);
+    // Quem entra em quem depende de qual pino ele puxou: saída manda para dentro, entrada vem.
+    const filho = invertido ? naOrigem : naPonta;
+    const paiNovo = invertido ? naPonta : naOrigem;
+    const paiAtual = filho?.pai;
 
     caixa.replaceChildren();
-    caixa.append(span('', `"${alvoNo?.no?.rotulo || '?'}" vai para dentro de "${paiNovo?.no?.rotulo || '?'}"`));
+    caixa.append(span('', `"${filho?.no?.rotulo || '?'}" vai para dentro de "${paiNovo?.no?.rotulo || '?'}"`));
     if (paiAtual) caixa.append(span('sai-de', `e sai de "${paiAtual.rotulo}"`));
     caixa.hidden = false;
     caixa.style.left = `${clienteX - daArea.left + 14}px`;
@@ -376,11 +396,22 @@ function ligarArrasto() {
     if (!caixa || ev.button !== 0) return;
     ev.stopPropagation();
 
-    // O pino ganha do arrasto: puxar dele é ligar, não mover.
-    if (ev.target.closest('.pino')) {
+    // Os pinos ganham do arrasto: puxar deles é ligar, não mover.
+    const naSaida = ev.target.closest('.pino');
+    const naEntrada = ev.target.closest('.entrada-pino');
+    if (naSaida || naEntrada) {
       const achado = arvoreLib.localizar(fluxo.arvore, caixa.dataset.no);
       if (!achado) return;
-      ligando = { origem: caixa.dataset.no, alvo: null, de: { x: (achado.no.x || 0) + caixa.offsetWidth, y: (achado.no.y || 0) + caixa.offsetHeight / 2 } };
+      ligando = {
+        origem: caixa.dataset.no,
+        // Puxando da ENTRADA, é ESTA caixa que vai para dentro da outra: o sentido se inverte.
+        invertido: !!naEntrada,
+        alvo: null,
+        de: {
+          x: naEntrada ? (achado.no.x || 0) : (achado.no.x || 0) + caixa.offsetWidth,
+          y: (achado.no.y || 0) + caixa.offsetHeight / 2,
+        },
+      };
       caixa.classList.add('ligando');
       try {
         caixa.setPointerCapture(ev.pointerId);
@@ -441,13 +472,19 @@ function ligarArrasto() {
       const novo = embaixo && embaixo.dataset.no !== ligando.origem ? embaixo : null;
       if (novo !== ligando.alvo) {
         ligando.alvo?.classList.remove('alvo');
-        // Só acende quem aceita: pôr a origem dentro de um filho dela criaria um ciclo, e a
-        // ligação seria recusada — acender ali prometeria um movimento que não vai acontecer.
-        const aceita = novo && !arvoreLib.ehDescendente(fluxo.arvore, novo.dataset.no, ligando.origem);
+        /**
+         * Só acende quem ACEITA: pôr um ramo dentro de um filho dele criaria ciclo e a ligação
+         * seria recusada — acender ali prometeria um movimento que não vai acontecer.
+         *
+         * Quem é o filho e quem é o pai depende do pino que ele puxou, então a guarda também.
+         */
+        const filhoId = ligando.invertido ? ligando.origem : novo?.dataset.no;
+        const paiId = ligando.invertido ? novo?.dataset.no : ligando.origem;
+        const aceita = novo && !arvoreLib.ehDescendente(fluxo.arvore, filhoId, paiId);
         ligando.alvo = aceita ? novo : null;
         ligando.alvo?.classList.add('alvo');
       }
-      dizerOQueVaiAcontecer(ligando.alvo, ligando.origem, ev.clientX, ev.clientY);
+      dizerOQueVaiAcontecer(ligando.alvo, ligando.origem, ligando.invertido, ev.clientX, ev.clientY);
       return;
     }
     if (!arrastando) return;
@@ -473,15 +510,19 @@ function ligarArrasto() {
 
   const soltar = async (ev) => {
     if (ligando) {
-      const { origem, alvo } = ligando;
+      const { origem, alvo, invertido } = ligando;
       limparFioProvisorio();
       el('rotulo-ligacao').hidden = true;
       caixas.querySelector('.ligando')?.classList.remove('ligando');
       alvo?.classList.remove('alvo');
       ligando = null;
-      // Puxou o pino de A até B: B passa a ser um ramo DENTRO de A. É o sentido em que o fio já
-      // corre no quadro (pai à esquerda, filho à direita), então o gesto lê o que ele vê.
-      if (alvo) await gravar(arvoreLib.ordenarPorPosicao(arvoreLib.reparentar(fluxo.arvore, alvo.dataset.no, origem)));
+      if (alvo) {
+        // Da SAÍDA de A até B: B vai para dentro de A. Da ENTRADA de A até B: A vai para dentro
+        // de B. É a mesma ligação, puxada de uma ponta ou da outra.
+        const filhoId = invertido ? origem : alvo.dataset.no;
+        const paiId = invertido ? alvo.dataset.no : origem;
+        await gravar(arvoreLib.ordenarPorPosicao(arvoreLib.reparentar(fluxo.arvore, filhoId, paiId)));
+      }
       return;
     }
     if (!arrastando) return;
