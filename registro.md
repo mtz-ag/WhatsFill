@@ -5,6 +5,54 @@
 
 ---
 
+## 2026-09-02 — "Confirmou presença (só agradecer)": a raiz era o TEXTO, não a trava
+
+**Diagnóstico dele:** *"provavelmente pode ser o problema do padrão de mensagem, ela já vem incluso
+pedindo dados; se usar a mensagem rápida sempre irá pedir os dados"*.
+
+### Ele achou a raiz, e ela não era onde eu estava procurando
+
+Eu estava atrás da trava de duplicata — de onde vinha o histórico que ela consulta, se `state.nossas`
+é por sessão, se concluir apagava a memória. Nada disso era o problema.
+
+**As duas respostas de evento fundem duas coisas**: a confirmação da presença e o pedido de
+`Nome / Cidade`. Não existia versão só com a primeira metade. Então quem já tinha tudo no CRM
+recebia o formulário junto do *"que bom"* — pela rodada **ou** por ele clicando na resposta rápida,
+que é o caminho que nenhuma trava do painel cobre.
+
+Lição que entrou no `CLAUDE.md`: **antes de blindar a trava, leia o que a mensagem diz.** Trava
+nenhuma conserta um texto que pede o que não devia pedir.
+
+### O que existe agora
+
+- **`presenca-confirmada`** — *"Confirmou presença (só agradecer)"*. É a `pedir-dados-evento-sim`
+  **sem o bloco do cadastro**, na mesma voz, para a pessoa não perceber duas redações diferentes
+  para a mesma situação. Não pede nada e não promete nada.
+- **A tecla 8 passou a escolher o texto**: apoio genérico continua mandando `agradecer-apoio`;
+  quem confirmou presença **e já tem etiqueta de cidade** recebe o texto novo. O rótulo da caixa
+  muda junto — *"Agradecer a presença e concluir (sem pedir dados)"* —, senão a tela prometeria uma
+  coisa e sairia outra. O log da rodada também diz qual dos dois saiu.
+- A condição é a **mesma** da regra `confirmou-presenca-com-dados`, escrita nos dois lugares de
+  propósito: a regra decide o destaque, o painel decide o texto.
+- `apoioTrava` continua separado: ele alimenta a regra `so-expressa-apoio`, e misturar faria a
+  falta de variável de um texto sumir com a tecla do outro.
+
+### O teste que impede a volta
+
+`!ehPedidoDeDados` no texto base **e em cada variante**. Se uma reescrita futura devolver o bloco do
+cadastro, o defeito volta **calado** — a tecla continua se chamando "agradecer a presença". O mesmo
+teste confirma que as duas de evento continuam pedindo os dados, que é o motivo de a terceira ter
+precisado existir.
+
+**Arquivos:** `src/lib/store.js` (a resposta nova), `src/panel/panel.js` (a tecla 8 escolhe texto e
+rótulo), `tests/templates.test.mjs`, `manifest.json` (1.55.0 → 1.56.0), `registro.md`, `CLAUDE.md`.
+Catorze suítes, `checar-modulos` e `checar-referencias` passando.
+
+**Não testado na tela:** o envio real. Depende do Chrome com a extensão carregada — teste no
+Thiago Tim, num contato que já tenha etiqueta de cidade, respondendo ao convite com "vou sim".
+
+---
+
 ## 2026-09-02 — Pedido de dados repetido para quem tem todas as etiquetas
 
 **Relato dele**, com a print do Deoclecio (etiquetas ADS, CACHOEIRINHA, CONTATO-ASSES, CONTEUDO

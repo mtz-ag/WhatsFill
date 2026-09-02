@@ -326,6 +326,36 @@ export const DEFAULT_TEMPLATES = [
   },
   {
     /**
+     * **Confirmou presença e NÃO falta dado nenhum: só agradece.**
+     *
+     * Diagnóstico dele (02/09/2026), depois de o mesmo contato receber o pedido de cadastro duas
+     * vezes: *"provavelmente pode ser o problema do padrão de mensagem, ela já vem incluso pedindo
+     * dados; se usar a mensagem rápida sempre irá pedir os dados"*.
+     *
+     * Estava certo, e é a raiz que faltava. As duas respostas de evento **fundem** duas coisas —
+     * a confirmação e o pedido de `Nome / Cidade` — e não havia versão só com a primeira metade.
+     * Então quem já tinha tudo no CRM recebia o formulário junto do "que bom", por qualquer
+     * caminho: a rodada, ou ele clicando na resposta rápida.
+     *
+     * Este texto é a metade que faltava. É `pedir-dados-evento-sim` **sem o bloco do cadastro** —
+     * a mesma voz, para a pessoa não perceber duas redações diferentes para a mesma situação.
+     *
+     * **Não pede nada e não promete nada.** Quem confirmou presença já fez a sua parte; o que resta
+     * é reconhecer e encerrar.
+     */
+    id: 'presenca-confirmada',
+    name: 'Confirmou presença (só agradecer)',
+    text:
+      'Que bom! Será uma grande satisfação contar com você! 🇧🇷🙌 ' +
+      'Sua presença é muito importante para nós.\n\n' +
+      'Já está tudo certo com o seu cadastro — é só chegar. Até lá! 🙏',
+    variantes: [
+      'Que alegria! Contar com você faz toda a diferença. 🇧🇷🙌\n\n' +
+        'Seu cadastro já está com a gente, então não precisa fazer mais nada — nos vemos lá!',
+    ],
+  },
+  {
+    /**
      * A pessoa só expressou apoio, e já está classificada. Não há o que pedir nem o que mandar.
      *
      * Pedido dele (31/08), print do Ciro: *"esse é um caso comum até onde a pessoa só expressa o

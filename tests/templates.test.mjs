@@ -327,4 +327,42 @@ grupo('quem ja recebeu a versao COM grupos recebe a versao sem');
   check(mem.templates[0].text === dele, 'texto reescrito por ele fica intacto, com grupo e tudo');
 }
 
+grupo('"Confirmou presenca (so agradecer)": a metade que faltava (02/09/2026)');
+{
+  /**
+   * Diagnostico dele, depois de o mesmo contato receber o pedido de cadastro duas vezes:
+   * *"provavelmente pode ser o problema do padrao de mensagem, ela ja vem incluso pedindo dados;
+   * se usar a mensagem rapida sempre ira pedir os dados"*.
+   *
+   * As duas respostas de evento FUNDEM confirmacao e pedido de dados, e nao havia versao so com a
+   * primeira metade. Este teste trava a propriedade que faz o texto novo existir.
+   */
+  const todos = store.DEFAULT_TEMPLATES;
+  const so = todos.find((t) => t.id === 'presenca-confirmada');
+  check(!!so, 'a resposta "presenca-confirmada" existe de fabrica');
+
+  /**
+   * **A assercao que importa.** Se este texto virar um pedido de dados numa reescrita futura, o
+   * defeito volta inteiro — e volta calado, porque a tecla continua se chamando "agradecer a
+   * presenca". Vale para o texto base E para cada variante.
+   */
+  check(!templates.ehPedidoDeDados(so.text), 'o texto base NAO pede nome e cidade');
+  for (const v of so.variantes || []) {
+    check(!templates.ehPedidoDeDados(v), `a variante tambem nao pede: "${String(v).slice(0, 34)}..."`);
+  }
+
+  // As duas de evento continuam PEDINDO -- e por isso que a terceira precisou existir.
+  const sim = todos.find((t) => t.id === 'pedir-dados-evento-sim');
+  const nao = todos.find((t) => t.id === 'pedir-dados-evento-nao');
+  check(templates.ehPedidoDeDados(sim.text), 'a de evento com "sim" continua pedindo os dados');
+  check(templates.ehPedidoDeDados(nao.text), 'a de evento com "nao" continua pedindo os dados');
+
+  // Nao promete nada: quem confirmou presenca ja fez a parte dela (Lei 9.504/97, e bom senso).
+  const proibido = /(cesta|rem[ée]dio|dinheiro|emprego|vaga|benef[ií]cio|ajuda financeira)/i;
+  check(!proibido.test(so.text), 'nao promete beneficio nenhum');
+
+  // Sem variavel de template: texto que trava por variavel faltando some a tecla da tela.
+  check(!/\{\{/.test(so.text), 'nao depende de variavel, entao a tecla nunca some por isso');
+}
+
 fim();

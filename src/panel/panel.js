@@ -3872,6 +3872,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const textoApoio = apoio ? await templatesLib.varianteAtual(apoio) : '';
       const apoioTrava = apoio ? vars.render(textoApoio, contexto).missing.length > 0 : true;
 
+      /**
+       * A METADE QUE FALTAVA: confirmar a presença **sem** pedir o cadastro de novo.
+       *
+       * Diagnóstico dele (02/09/2026): *"provavelmente pode ser o problema do padrão de mensagem,
+       * ela já vem incluso pedindo dados; se usar a mensagem rápida sempre irá pedir os dados"*.
+       * As duas respostas de evento fundem confirmação e pedido de `Nome / Cidade`, e não havia
+       * versão só com a primeira metade — então quem já tinha tudo no CRM levava o formulário
+       * junto, por qualquer caminho.
+       *
+       * Fica separado de `apoioTrava` de propósito: aquele alimenta a regra `so-expressa-apoio`,
+       * que é sobre apoio genérico. Misturar os dois faria a falta de variável de um sumir com a
+       * tecla do outro.
+       */
+      const presencaOk = state.templates.find((t) => t.id === 'presenca-confirmada');
+      const textoPresencaOk = presencaOk ? await templatesLib.varianteAtual(presencaOk) : '';
+      const presencaOkTrava = presencaOk ? vars.render(textoPresencaOk, contexto).missing.length > 0 : true;
+
       const interesse = state.templates.find((t) => t.id === INTEREST_TEMPLATE_ID);
       const interesseTrava = interesse
         ? vars.render(interesse.text, contexto).missing.length > 0
@@ -4055,6 +4072,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const temEtiquetaDeCidade =
         (state.contact?.tagsId || []).some((id) => idsDeCidade.has(id)) ||
         state.tagSuggestions.some((sug) => sug.origem === 'cidade' && sug.tag && (sug.marcada || sug.jaTem));
+
+      /**
+       * **Qual texto a tecla 8 manda.**
+       *
+       * A tecla é uma só ("agradece e conclui") e as situações são duas: apoio genérico, e
+       * confirmação de presença de quem já está cadastrada. A condição aqui é a MESMA da regra
+       * `confirmou-presenca-com-dados` (`confirmouPresenca && temEtiquetaDeCidade`) — escrita duas
+       * vezes porque a regra decide o DESTAQUE e isto decide o TEXTO, mas divergir seria mostrar
+       * "agradeça a presença" e mandar o agradecimento de apoio.
+       *
+       * Sem a etiqueta de cidade não entra aqui: aí ainda falta dado, e quem resolve é a tecla 4
+       * com o preâmbulo de evento.
+       */
+      const ehPresencaSemPendencia = presenca === 'sim' && temEtiquetaDeCidade && !!presencaOk && !presencaOkTrava;
+      const textoDaTecla8 = ehPresencaSemPendencia ? presencaOk : apoio;
+      const tecla8Trava = ehPresencaSemPendencia ? presencaOkTrava : apoioTrava;
 
       // O destaque vem da tabela de regras (`sugestao.js`), não de condições espalhadas aqui.
       // Ela só RECOMENDA: todas as opções continuam na tela e todas as teclas continuam valendo.
@@ -4556,8 +4589,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             : 'Perguntar interesse + pedir nome e cidade, e concluir',
         });
       }
-      if (!apoioTrava) {
-        opcoes.push({ tecla: '8', valor: 'apoio', rotulo: 'Agradecer o apoio e concluir' });
+      if (!tecla8Trava) {
+        opcoes.push({
+          tecla: '8',
+          valor: 'apoio',
+          // O rótulo diz qual dos dois vai sair — a tecla é a mesma, o texto não.
+          rotulo: ehPresencaSemPendencia
+            ? 'Agradecer a presença e concluir (sem pedir dados)'
+            : 'Agradecer o apoio e concluir',
+        });
       }
       /**
        * Tecla 9 — perguntar em que pode ajudar.
@@ -4864,7 +4904,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             : escolha === 'momento'
               ? momento
               : escolha === 'apoio'
-                ? apoio
+                ? textoDaTecla8
                 : interesse;
         const rotulo =
           escolha === 'pedirdados'
@@ -4872,7 +4912,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             : escolha === 'momento'
               ? 'mensagem do momento enviada'
               : escolha === 'apoio'
-                ? 'agradeci o apoio'
+                ? ehPresencaSemPendencia
+                  ? 'agradeci a presença no evento (sem pedir dados)'
+                  : 'agradeci o apoio'
                 : 'perguntei o interesse no conteúdo';
 
         await saveClassification({ withCompletionDate: true, quiet: true });

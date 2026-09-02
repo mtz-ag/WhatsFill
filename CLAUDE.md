@@ -460,6 +460,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   **A unica excecao que ele nomeou e evento confirmando presenca**, que hoje so troca o TEXTO da
   tecla 4 (`confirmaPresenca` -> `pedir-dados-evento-sim/nao`): nao e regra, nao e sinal, e quem
   responde ao convite **ja tendo cidade** nao recebe recomendacao nenhuma.
+- **Resposta pronta que FUNDE duas coisas nao tem como ser usada pela metade.** As duas de evento
+  confirmam a presenca **e** pedem `Nome / Cidade` no mesmo texto, e nao existia versao so com a
+  primeira metade — entao quem ja tinha tudo no CRM recebia o formulario junto do "que bom", por
+  qualquer caminho: a rodada, ou ele clicando na resposta rapida. Diagnostico dele (02/09):
+  *"ela ja vem incluso pedindo dados; se usar a mensagem rapida sempre ira pedir os dados"*. Eu
+  tinha ido caçar a trava de duplicata; a raiz era o TEXTO. **Antes de blindar a trava, leia o que
+  a mensagem diz** — trava nenhuma conserta um texto que pede o que nao devia pedir.
+  `presenca-confirmada` e a metade que faltava, e o teste exige `!ehPedidoDeDados` no texto base e
+  em cada variante: se uma reescrita futura devolver o bloco do cadastro, o defeito volta calado,
+  porque a tecla continua se chamando "agradecer a presenca".
+- **Tecla que serve a mais de uma situacao escolhe o TEXTO junto com o rotulo.** A tecla 8 atende
+  apoio generico e confirmacao de presenca; a condicao que troca o texto e a MESMA da regra
+  `confirmou-presenca-com-dados` (`confirmouPresenca && temEtiquetaDeCidade`), escrita nos dois
+  lugares de proposito — a regra decide o DESTAQUE, o painel decide o TEXTO, e divergir faria a
+  caixa prometer "agradeca a presenca" e mandar o agradecimento de apoio. A trava por variavel de
+  cada texto tambem e separada: `apoioTrava` alimenta a regra `so-expressa-apoio` e nao pode sumir
+  com a tecla do outro caso.
 - **Antes de oferecer opcoes a ele, confira se voce entendeu o que a coisa FAZ.** A escolha dele e
   boa na medida em que a minha descricao e verdadeira; descricao errada nao produz escolha errada
   dele, produz escolha errada minha assinada por ele. Foi o que aconteceu com o modelo padrao acima.
