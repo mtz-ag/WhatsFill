@@ -926,7 +926,34 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * o sinal `anuncioReconhecido` vai para o quadro do fluxo. Reconhecer nos três separadamente
        * daria três respostas diferentes assim que um deles usasse outra lista de mensagens.
        */
-      state.anuncio = anunciosLib.reconhecer(state.incoming, anunciosDoMomento);
+      /**
+       * **O que a plataforma diz sobre o anúncio entra no reconhecimento, não só o que ela digitou.**
+       *
+       * Relato dele (02/09/2026), com a print da Inês: contato com etiqueta ADS — ou seja, chegou
+       * por anúncio — e a caixa oferecendo o modelo genérico, *"não reconheceu o anúncio"*.
+       *
+       * O motivo é que `reconhecer` lia só `state.incoming`, que é o que **ela** escreveu. Quem
+       * chega pelo anúncio e não repete o texto dele (ou repete com outra redação) ficava sem
+       * anúncio reconhecido, mesmo com a plataforma dizendo de qual campanha veio.
+       *
+       * É a regra que já está escrita no CLAUDE.md e que este caminho não seguia: **a origem do
+       * anúncio é DADO, não texto** — `utm.campaign`, `utm.headline` e `utm.referralUrl` carregam a
+       * identidade da campanha e existem mesmo quando ela não escreve nada. Agora ele pode
+       * cadastrar o trecho pelo nome da campanha ou pelo link, que é o identificador estável.
+       *
+       * **`utm.source` fica de fora de propósito.** Ele é só "FACEBOOK": diz que veio de anúncio,
+       * não de QUAL — um trecho cadastrado com "face" casaria com todos os anúncios de uma vez.
+       * Nas regras de etiqueta ele entra porque lá a pergunta é outra.
+       */
+      state.anuncio = anunciosLib.reconhecer(
+        [
+          ...state.incoming,
+          state.session?.utm?.campaign,
+          state.session?.utm?.headline,
+          state.session?.utm?.referralUrl,
+        ],
+        anunciosDoMomento
+      );
 
       const sugeridas = await tagsLib.suggest({
         city: valueNamed('Cidade'),

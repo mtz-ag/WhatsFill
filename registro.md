@@ -5,6 +5,57 @@
 
 ---
 
+## 2026-09-02 — O anúncio é reconhecido pelo DADO da plataforma, não só pelo que ela digitou
+
+**Relato dele**, com a print da Inês (Rosário do Sul): contato com etiqueta **ADS** — ou seja, a
+plataforma registrou que ela chegou por anúncio — e a caixa oferecendo o modelo genérico
+*"Campanha Martim"*. *"não reconheceu o anúncio"*.
+
+### Causa raiz
+
+`anuncios.reconhecer` lia **só `state.incoming`**, que é o que *ela* escreveu. Quem chega pelo
+anúncio e não repete o texto dele — ou repete com outra redação, ou manda só "boa tarde", ou manda
+uma figura — ficava sem anúncio reconhecido, mesmo com a sessão dizendo de qual campanha veio.
+
+É a regra que já estava escrita no `CLAUDE.md` e que este caminho não seguia: **a origem do anúncio
+é DADO, não texto.** Os quatro campos de `utm` já iam para as regras de etiqueta (`tagsLib.suggest`,
+via `extra`) desde 31/08 — o reconhecedor de anúncio ficou de fora quando nasceu.
+
+### O conserto
+
+`reconhecer` passa a ver, junto com o que ela escreveu:
+
+- `utm.campaign` — o nome da campanha;
+- `utm.headline` — o título do anúncio;
+- `utm.referralUrl` — o link (`fb.me/…`), que é o identificador mais estável de todos.
+
+Assim ele pode cadastrar o trecho pelo **nome da campanha ou pelo link**, e o reconhecimento passa a
+funcionar mesmo quando ela não escreve nada.
+
+**`utm.source` fica de fora de propósito.** Ele é só "FACEBOOK": diz que veio de anúncio, não de
+QUAL. Um trecho cadastrado com "face" casaria com todos os anúncios de uma vez. Nas regras de
+etiqueta ele entra porque lá a pergunta é outra.
+
+### Conferido
+
+Teste novo em `anuncios.test.mjs`: sem o dado da plataforma não reconhece nada (o estado antigo); com
+o nome da campanha reconhece; pelo link reconhece; o texto que ela escreveu continua reconhecendo; o
+trecho mais específico continua vencendo o genérico; e anúncio desligado continua sem reconhecer,
+venha o texto de onde vier. Catorze suítes e os dois verificadores passando.
+
+### O que ele precisa fazer, e só ele pode
+
+Reconhecer exige que o anúncio esteja **cadastrado na Config** com um trecho que case. Se a campanha
+da Inês não estiver lá, nada disto a alcança — não é defeito, é lista vazia. O nome da campanha
+aparece no **cabeçalho do painel**, ao lado do telefone: é de lá que sai o trecho a cadastrar.
+
+**Arquivos:** `src/panel/panel.js`, `tests/anuncios.test.mjs`, `manifest.json` (1.58.0 → 1.59.0),
+`registro.md`, `CLAUDE.md`.
+
+**Não testado na tela:** depende de um contato real vindo de anúncio com a campanha cadastrada.
+
+---
+
 ## 2026-09-02 — Agradecimento saía sem ela responder nome e cidade
 
 **Relato dele**, com a print: pedimos *"Nome, Cidade"* às 12:51, ela não respondeu, e saiu mensagem

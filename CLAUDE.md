@@ -508,6 +508,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   separador), mas quem pergunta *"ela respondeu?"* tem que exigir cidade RECONHECIDA ou nome. So
   isso ja reproduzia a print inteira, e sozinho teria feito o conserto anterior parecer que
   funcionou. **Nunca teste so \`if (palpite.cidade)\` no modo generoso; olhe a confianca.**
+- **`anuncios.reconhecer` le o DADO da plataforma, nao so o que ela digitou.** Ele lia so
+  `state.incoming`, entao quem chegava pelo anuncio e nao repetia o texto dele ficava sem anuncio
+  reconhecido — com a etiqueta ADS aplicada e o modelo generico oferecido (print da Ines, 02/09,
+  *"nao reconheceu o anuncio"*). Hoje entram tambem `utm.campaign`, `utm.headline` e
+  `utm.referralUrl`, que sao a identidade da campanha e existem mesmo quando ela nao escreve nada.
+  **`utm.source` fica de fora**: e so "FACEBOOK", diz que veio de anuncio e nao de QUAL, e um trecho
+  com "face" casaria com todos de uma vez. Nas regras de etiqueta ele entra porque la a pergunta e
+  outra. **Reconhecer continua exigindo o anuncio cadastrado na Config** — lista vazia nao e
+  defeito, e o nome da campanha aparece no cabecalho do painel, que e de onde sai o trecho.
 - **Antes de oferecer opcoes a ele, confira se voce entendeu o que a coisa FAZ.** A escolha dele e
   boa na medida em que a minha descricao e verdadeira; descricao errada nao produz escolha errada
   dele, produz escolha errada minha assinada por ele. Foi o que aconteceu com o modelo padrao acima.

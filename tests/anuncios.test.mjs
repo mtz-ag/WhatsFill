@@ -292,4 +292,62 @@ grupo('o rodizio do modelo padrao (02/09/2026)');
   check(especifico.nome === 'ECM' && especifico.proximo === undefined, 'modelo de anuncio nao reveza');
 }
 
+grupo('o anuncio e reconhecido pelo DADO da plataforma, nao so pelo que ela digitou (02/09/2026)');
+{
+  /**
+   * Print da Ines (02/09): contato com etiqueta ADS -- chegou por anuncio -- e a caixa oferecendo o
+   * modelo generico. *"nao reconheceu o anuncio"*.
+   *
+   * `reconhecer` lia so o que ELA escreveu. Quem chega pelo anuncio e nao repete o texto dele, ou
+   * repete com outra redacao, ficava sem anuncio reconhecido -- mesmo com a plataforma dizendo de
+   * qual campanha veio. E a regra ja escrita no projeto: a origem do anuncio e DADO, nao texto.
+   */
+  const doMomento = [
+    {
+      id: 'a1',
+      nome: 'Escolas Civico-Militares',
+      ligado: true,
+      trechos: ['Campanha Escolas Civico Militares', 'Eu apoio as Escolas Civico-Militares'],
+      acao: 'modelo',
+      etiquetas: ['ADS ECM'],
+    },
+  ];
+
+  // Como era: ela nao repete o texto do anuncio, so cumprimenta.
+  const soOQueElaEscreveu = anuncios.reconhecer(['Oi, boa tarde'], doMomento);
+  check(soOQueElaEscreveu === null, 'sem o dado da plataforma, nao reconhece nada');
+
+  /**
+   * Como e agora: o nome da campanha vem junto. E o identificador que existe mesmo quando ela nao
+   * escreve nada -- e o unico que continua valendo quando ela responde com uma figura.
+   */
+  const comACampanha = anuncios.reconhecer(['Oi, boa tarde', 'Campanha Escolas Civico Militares'], doMomento);
+  check(comACampanha?.anuncio?.id === 'a1', `com o nome da campanha, reconhece (${comACampanha?.anuncio?.nome})`);
+
+  // O link do anuncio tambem serve como trecho, e e o mais estavel de todos.
+  const porLink = anuncios.reconhecer(
+    ['Oi', 'https://fb.me/ecm-rs-2026'],
+    [{ ...doMomento[0], trechos: ['fb.me/ecm-rs-2026'] }]
+  );
+  check(porLink?.anuncio?.id === 'a1', 'o link da campanha tambem reconhece');
+
+  // E o que ela digita continua valendo, porque nem todo anuncio traz campanha preenchida.
+  const peloTexto = anuncios.reconhecer(['Eu apoio as Escolas Civico-Militares'], doMomento);
+  check(peloTexto?.anuncio?.id === 'a1', 'o texto que ela escreveu continua reconhecendo');
+
+  /**
+   * **A generica nao pode vencer a especifica.** Com campanha E texto, ganha o trecho mais longo --
+   * que ja era a regra de `reconhecer`, e continua sendo com o dado no meio.
+   */
+  const dois = [
+    { id: 'curto', nome: 'curto', ligado: true, trechos: ['Escolas'], acao: 'modelo', etiquetas: [] },
+    { id: 'longo', nome: 'longo', ligado: true, trechos: ['Campanha Escolas Civico Militares'], acao: 'modelo', etiquetas: [] },
+  ];
+  check(anuncios.reconhecer(['Campanha Escolas Civico Militares'], dois)?.anuncio?.id === 'longo', 'o trecho mais especifico vence');
+
+  // Anuncio desligado continua sem reconhecer, venha o texto de onde vier.
+  const desligado = [{ ...doMomento[0], ligado: false }];
+  check(anuncios.reconhecer(['Campanha Escolas Civico Militares'], desligado) === null, 'anuncio desligado nao reconhece nem pelo dado');
+}
+
 fim();
