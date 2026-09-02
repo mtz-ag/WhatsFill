@@ -32,6 +32,52 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-02 — A rodada pulava contato sem perguntar: era a IA escalando
+
+**Relato dele:** *"pulando contato sem eu pedir mesmo a minha mensagem não sendo a última e com o box
+de pular desmarcado"*.
+
+Estava certo, e as duas observações dele eram a pista: **não era** a conclusão automática (essa exige
+que a nossa mensagem seja a última) e **não era** o pulo por etiqueta (essa olha a caixa que ele
+deixou desmarcada).
+
+### A causa
+
+Quando a IA **escala** — nenhuma resposta pronta serve —, o código devolvia `pulado` e voltava, sem
+abrir a caixa. E esse retorno **não olhava caixa de seleção nenhuma**: nem a de automatizar, nem a de
+pular por etiqueta. Com a avaliação por IA ligada, todo caso que ela passasse para ele sumia da
+rodada, com o motivo só no log do Andamento.
+
+A incoerência era com a **tecla 6**, que significa a mesma coisa — "aqui precisa de gente" — e é a
+exceção que a automação respeita: ela **abre a caixa**. Escalar fazia o oposto.
+
+### O conserto
+
+Escalar deixou de retornar. O caso segue para a caixa, com uma linha nova:
+
+> ⚠ IA passou para você: \<motivo dela\> (sugestão dela: "…")
+
+O rascunho, quando existe, já está no campo de mensagem — então ele decide olhando o texto pronto,
+que é o laço manual que a IA veio encurtar.
+
+### O que conferi antes de tirar o `return`
+
+Deixar de retornar faz o caso escalado passar por dois blocos que antes ele nunca via. Os dois estão
+fechados:
+
+- a automação da IA exige `recomendada`, que só existe quando `decisaoIA.acao === 'responder'` —
+  numa escalada é `null`;
+- a automação determinística exige `sugestao`, e a escalada acontece justamente quando não há uma
+  (ou quando ela é a tecla 6, que já mantém a caixa aberta).
+
+Ou seja: nada passa a ser enviado sozinho por causa desta mudança. O que muda é a rodada **parar e
+perguntar** onde antes ela pulava calada.
+
+**Arquivos:** `src/panel/panel.js` (a escalada, a linha da caixa), `CLAUDE.md` (+1 armadilha),
+`manifest.json` (1.70.1 → 1.71.0). Quinze suítes e os dois verificadores passando.
+
+---
+
 ## 2026-09-02 — Onde as observações ficam, e o "ADS, ADS" da print
 
 **Pergunta dele:** *"onde está salvando e o contexto fica salvo para você entender?"*, com a print da

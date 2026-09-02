@@ -982,6 +982,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   bom humor.
 - **Falha de IA nunca para a rodada.** Sem chave, sem rede, sem crédito, resposta ilegível: tudo
   vira `incerto`. Mesma prioridade do canal caído — o que o contato recebe vem primeiro.
+- **ESCALAR ABRE A CAIXA; nao pula.** Ate 02/09/2026 a escalada da IA devolvia `pulado` **sem
+  perguntar nada** e sem olhar caixa de selecao nenhuma — nem a de automatizar, nem a de pular por
+  etiqueta. O contato sumia da rodada com o motivo so no log, e o relato dele foi *"pulando contato
+  sem eu pedir mesmo a minha mensagem nao sendo a ultima e com o box de pular desmarcado"*. A
+  incoerencia era com a propria **tecla 6**: as duas coisas significam "aqui precisa de gente", e a
+  tecla 6 abre a caixa (e a excecao que a automacao respeita). Hoje as duas fazem o mesmo, e a
+  escalada vira uma linha `⚠` na caixa dizendo por que o caso esta com ele. **A automacao nao age
+  num caso escalado**: `recomendada` exige `decisaoIA.acao === 'responder'`, e a automacao
+  deterministica exige `sugestao` — as duas continuam de fora, o que e o que torna seguro deixar de
+  retornar ali.
+
 - **A recomendação é tecla 0, e não substitui tecla existente.** Trocar o significado de uma
   tecla que ele já tem no dedo é como o "2" digitado na conversa acabou concluindo atendimento.
 - **Automatizar a rodada é automatizar TODA pergunta dela, inclusive a da cidade.** A caixa

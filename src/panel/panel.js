@@ -4685,6 +4685,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const ramoChamaIA = !!sugestao?.ia;
 
       let decisaoIA = null;
+      /** Preenchido quando a IA escala: vira uma linha da caixa, para ele ver POR QUE está com ele. */
+      let escalouParaVoce = '';
       if (!sugestao || regraPedeGente || ramoChamaIA) {
         decisaoIA = await avaliarComIA();
         if (decisaoIA?.acao === 'escalar') {
@@ -4715,17 +4717,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
            * É consequência direta da remoção, não esquecimento: se um dia a etiqueta voltar a ser
            * desejada, é aqui que ela entra.
            */
+          /**
+           * **Escalar ABRE A CAIXA — não pula.**
+           *
+           * Relato dele (02/09/2026): *"pulando contato sem eu pedir mesmo a minha mensagem não
+           * sendo a última e com o box de pular desmarcado"*. Estava certo, e a causa era esta
+           * linha: escalar devolvia `pulado` **sem perguntar nada**, e sem olhar caixa de seleção
+           * nenhuma — nem a de automatizar, nem a de pular por etiqueta. O contato sumia da rodada
+           * com o motivo só no log.
+           *
+           * A incoerência era com a própria tecla 6: as duas coisas significam *"aqui precisa de
+           * gente"*, e a tecla 6 **abre a caixa** (é a exceção que a automação respeita). Escalar
+           * fazia o oposto. Agora as duas fazem o mesmo.
+           *
+           * O rascunho, quando existe, já está no campo de mensagem — então ele decide olhando o
+           * texto pronto, que era o laço manual que a IA veio encurtar.
+           */
           const porque = auto.motivo ? ` · rascunho automático não saiu: ${auto.motivo}` : '';
           const motivoIA = decisaoIA.motivo || 'a IA achou que este é para você';
           // Nome diferente do `sugestao` de fora DE PROPÓSITO: este bloco vive dentro do
           // `if (!sugestao)`, e sombrear a recomendação determinística aqui dentro é armadilha
           // esperando quem vier depois.
           const sugestaoDela = decisaoIA.templateId ? ` (sugestão dela: "${decisaoIA.templateId}")` : '';
-          return {
-            nome,
-            resultado: 'pulado',
-            motivo: `você responde este: ${motivoIA}${sugestaoDela}${porque}`,
-          };
+          escalouParaVoce = `IA passou para você: ${motivoIA}${sugestaoDela}${porque}`;
+          registrarNaRodada(nome, 'aviso', escalouParaVoce);
         }
       }
 
@@ -5046,6 +5061,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             ? `A IA sugeriu "${recomendada.name}", mas essa resposta está travada por variável faltando.`
             : '',
           decisaoIA?.acao === 'incerto' && decisaoIA.aviso ? `IA não opinou: ${decisaoIA.aviso}` : '',
+          // A IA escalou: nenhuma resposta pronta serve. Antes isto pulava o contato em silêncio.
+          escalouParaVoce ? `⚠ ${escalouParaVoce}` : '',
           pedidoHoje
             ? `⚠ Já pedi os dados hoje, às ${formatarHora(pedidoDeHoje.at)}. Pedir de novo no ` +
               'mesmo dia soa a robô — o texto muda (são três variações que se revezam), o pedido não.'
