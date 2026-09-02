@@ -1355,15 +1355,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       h('div', { class: 'wf-preview' }, conteudos.length === 1
         ? `Envia o modelo de "${conteudos[0].nome}", agradece, grava a classificação e conclui.`
         : conteudos.length === 0
-          ? 'Nada foi reconhecido: vai o modelo do CONTEÚDO PREFERIDO da aba Config, agradece e conclui.'
+          ? 'Nada foi reconhecido: vai o MODELO PADRÃO da aba Config, agradece e conclui.'
           : 'Envia o modelo do conteúdo pedido, agradece, grava a classificação e conclui.'),
       fechar,
     ]);
     if (!conteudos.length) {
       cartaoFechar.append(
         h('div', { class: 'wf-hint' },
-          'Nenhum conteúdo reconhecido nas mensagens deste contato — vai o preferido da Config. ' +
-            'Confira a conversa antes: o modelo sai como se ele tivesse pedido esse conteúdo.')
+          'Nenhum conteúdo reconhecido nas mensagens deste contato — vai o modelo padrão, que é o ' +
+            'que existe justamente para quando não se sabe o que ela quer. Nenhuma etiqueta de ' +
+            'conteúdo é aplicada: o padrão não afirma que ela pediu alguma coisa.')
       );
     } else if (conteudos.length > 1) {
       cartaoFechar.append(
@@ -1649,43 +1650,80 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       /**
-       * Sem conteúdo reconhecido, vale o preferido da Config — pedido dele: *"libere o botão
-       * mesmo sem reconhecer"*.
+       * **Nada reconhecido → vai o MODELO PADRÃO**, e não um conteúdo inventado.
        *
-       * O preferido já existia para desempatar quando o contato casa com dois conteúdos; aqui
-       * ele serve de padrão quando não casa com nenhum. É a única escolha defensável: continua
-       * sendo um modelo que ELE configurou, e não um chute do painel entre os 19 aprovados.
+       * Pedido dele (02/09/2026): *"esse botão deve utilizar o modelo padrão, fica pedindo
+       * conteúdo sem necessidade, só tem que mandar o que estou pedindo"*.
        *
-       * **A etiqueta vai junto** (pedido dele, depois de eu ter deixado de fora). O motivo dele é
-       * o que resolve a minha objeção: o conteúdo com frequência FOI pedido, só que numa mensagem
-       * de outro dia que a extensão não enxerga. Então a etiqueta não está sendo inventada — está
-       * sendo posta por quem leu a conversa inteira na tela, que é ele. A origem fica registrada
-       * no motivo, para depois dar para saber que veio do fecho e não do parser.
+       * Antes o vazio caía no "conteúdo preferido" da Config — que é uma ETIQUETA, e por isso
+       * dependia de a tabela "Modelo por conteúdo" ter uma linha para ela. Duas configurações para
+       * mandar um modelo, e a etiqueta ainda era aplicada como se ele tivesse pedido aquele
+       * conteúdo. O modelo padrão é o que ele já cadastrou para exatamente este caso: mandar
+       * alguma coisa quando não se sabe o que a pessoa quer.
+       *
+       * O preferido continua como último recurso, para quem já tinha só ele configurado — mas
+       * agora vem depois, não na frente.
        */
-      const nomeDoConteudo = conteudos.length === 1
-        ? conteudos[0].nome
-        : String(await store.get('conteudoPreferido') || '').trim();
+      let modelo = null;
+      let nomeDoConteudo = conteudos.length === 1 ? conteudos[0].nome : '';
+      let usouPadrao = false;
 
-      if (!nomeDoConteudo) {
-        setStatus(
-          'Nada foi reconhecido e não há "conteúdo preferido" na aba Config — não tenho modelo para enviar.',
-          'err'
+      if (nomeDoConteudo) {
+        const mapa = await store.get('contentTemplates');
+        const achado = hsmLib.templateParaConteudo(nomeDoConteudo, mapa, state.hsmTemplates);
+        if (achado.erro) return setStatus(achado.erro, 'err');
+        modelo = achado.modelo;
+      } else {
+        const daVez = anunciosLib.padraoDaVez(
+          await carregarModelosPadrao(),
+          Number(await store.get('modeloPadraoIndex')) || 0
         );
-        return;
+        if (daVez) {
+          // Mesmo caminho da rodada para achar o modelo aprovado pelo NOME.
+          const porNome = hsmLib.modeloPorTexto([daVez.nome], { [daVez.nome]: daVez.nome }, state.hsmTemplates);
+          if (porNome?.erro) return setStatus(porNome.erro, 'err');
+          modelo = porNome?.modelo || null;
+          usouPadrao = !!modelo;
+          // O rodízio anda só quando o envio acontece — ver `templates.avancarVariante`, mesma
+          // razão: queimar a vez de um modelo que não saiu faria o próximo pular sozinho.
+          if (modelo && Number.isInteger(daVez.proximo)) {
+            await store.set('modeloPadraoIndex', daVez.proximo);
+          }
+        }
+        if (!modelo) {
+          // Sem modelo padrão cadastrado, o preferido ainda resolve para quem já o tinha.
+          nomeDoConteudo = String(await store.get('conteudoPreferido') || '').trim();
+          if (!nomeDoConteudo) {
+            setStatus(
+              'Não há modelo padrão cadastrado na aba Config (nem "conteúdo preferido") — ' +
+                'não tenho modelo para enviar.',
+              'err'
+            );
+            return;
+          }
+          const mapa = await store.get('contentTemplates');
+          const achado = hsmLib.templateParaConteudo(nomeDoConteudo, mapa, state.hsmTemplates);
+          if (achado.erro) return setStatus(achado.erro, 'err');
+          modelo = achado.modelo;
+        }
       }
 
-      const mapa = await store.get('contentTemplates');
-      const { modelo, erro } = hsmLib.templateParaConteudo(nomeDoConteudo, mapa, state.hsmTemplates);
-      if (erro) return setStatus(erro, 'err');
-
-      // Nada reconhecido: a etiqueta do preferido entra junto com o modelo.
-      //
-      // Não é criada no CRM se não existir — criar rótulo é decisão dele, e um erro de digitação
-      // na Config viraria etiqueta permanente. Falhar aqui também não cancela o envio: etiqueta é
-      // organização interna, a mensagem é o que o contato recebe. O aviso vai no fim, e não em
-      // `setStatus` agora, porque a linha seguinte ("1/4 gravando…") o apagaria.
+      /**
+       * A etiqueta do preferido entra junto com o modelo — **mas não no caminho do modelo padrão.**
+       *
+       * Quando o preferido é usado, ele está dizendo "o conteúdo é este, o parser é que não viu" —
+       * e a etiqueta registra isso, com o motivo dizendo que veio do fecho. O modelo padrão não
+       * afirma nada sobre o que ela pediu: é o que se manda justamente quando não se sabe. Pôr uma
+       * etiqueta de conteúdo ali seria inventar um pedido que ninguém fez, e a etiqueta fica
+       * permanente no CRM.
+       *
+       * A etiqueta não é criada no CRM se não existir — criar rótulo é decisão dele, e um erro de
+       * digitação na Config viraria etiqueta permanente. Falhar aqui também não cancela o envio:
+       * etiqueta é organização interna, a mensagem é o que o contato recebe. O aviso vai no fim, e
+       * não em `setStatus` agora, porque a linha seguinte ("1/4 gravando…") o apagaria.
+       */
       let avisoEtiqueta = '';
-      if (!conteudos.length) {
+      if (!conteudos.length && nomeDoConteudo) {
         const tag = await tagsLib.resolveTag(nomeDoConteudo);
         if (tag) {
           state.tagSuggestions = [
@@ -1731,7 +1769,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       setStatus('4/4 concluindo…');
-      await concluirEAbrirProximo('Enviado e classificado' + avisoEtiqueta);
+      // Diz QUAL modelo saiu: com o padrão em rodízio, o próximo contato recebe outro, e sem esta
+      // linha ele não teria como saber qual foi para este.
+      const deOnde = usouPadrao ? ` (modelo padrão "${modelo.name}")` : '';
+      await concluirEAbrirProximo('Enviado e classificado' + deOnde + avisoEtiqueta);
     });
   }
 

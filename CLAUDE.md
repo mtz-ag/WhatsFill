@@ -550,6 +550,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   descartada quando o nome batia com o que `suggest` achou — com o nome batendo, tudo parecia certo;
   bastava o rotulo no CRM diferir de um espaco para escapar. Filtre por IDENTIDADE na origem, nunca
   confie na deduplicacao de quem chama para garantir uma regra.
+- **"Conteudo preferido" e ETIQUETA; "modelo padrao" e MODELO — e o botao de fechar confundia os
+  dois.** Sem conteudo reconhecido, "Enviar conteudo + agradecer + concluir" caia no preferido, que
+  so vira mensagem se tambem houver linha na tabela "Modelo por conteudo": duas configuracoes para
+  mandar um modelo, e o botao travava faltando qualquer uma. Piorou quando a ADS deixou de ser
+  conteudo, porque quem chega por anuncio passou a nao ter conteudo nenhum. Hoje o vazio manda o
+  **modelo padrao** (com o rodizio andando so no envio) e o preferido ficou como ultimo recurso.
+  **Nesse caminho nao se aplica etiqueta de conteudo**: o preferido afirma "o conteudo e este, o
+  parser e que nao viu" e a etiqueta registra a afirmacao dele; o padrao nao afirma nada sobre o que
+  ela pediu, e etiqueta inventada fica permanente no CRM.
 - **Mensagem enviada FORA do `if` da tecla vai em todas elas.** O agradecimento (*"Obrigado pela
   atencao! Qualquer coisa, e so chamar"* — um ENCERRAMENTO) era enviado depois do bloco do modelo,
   sem condicao: a tecla `a` mandava tres mensagens, e a terceira fechava a conversa que o pedido de

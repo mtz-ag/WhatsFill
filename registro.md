@@ -5,6 +5,49 @@
 
 ---
 
+## 2026-09-02 — "Enviar conteúdo + agradecer + concluir" passou a usar o MODELO PADRÃO
+
+**Pedido dele**, com a print do cartão: *"esse botão deve utilizar o modelo padrão, fica pedindo
+conteúdo sem necessidade, só tem que mandar o que estou pedindo"*.
+
+### O que estava errado
+
+Quando nada era reconhecido, o botão caía no **"conteúdo preferido"** da Config — que é uma
+**etiqueta**, não um modelo. Para virar mensagem ela precisava, além de estar preenchida, ter uma
+linha na tabela "Modelo por conteúdo". Duas configurações para mandar um modelo, e o botão travava
+com *"não tenho modelo para enviar"* quando faltava qualquer uma das duas.
+
+Ficou pior depois que a etiqueta ADS deixou de ser conteúdo (1.62.0): quem chega por anúncio não tem
+mais conteúdo nenhum reconhecido, então este botão passou a cair no vazio com muito mais frequência.
+
+E ele ainda **aplicava a etiqueta do preferido** no contato — como se a pessoa tivesse pedido aquele
+conteúdo.
+
+### O conserto
+
+Nada reconhecido agora manda o **modelo padrão**, que é o que ele já cadastrou exatamente para isto:
+mandar alguma coisa quando não se sabe o que a pessoa quer. Sem tabela intermediária, sem etiqueta.
+
+- **O rodízio anda**, e só quando o envio acontece — mesma disciplina de `avancarVariante`: queimar
+  a vez de um modelo que não saiu faria o próximo pular sozinho.
+- **Nenhuma etiqueta de conteúdo é aplicada nesse caminho.** O preferido afirma *"o conteúdo é este,
+  o parser é que não viu"*, e a etiqueta registra a afirmação dele. O modelo padrão não afirma nada
+  sobre o que ela pediu — pôr etiqueta ali seria inventar um pedido que ninguém fez, e etiqueta fica
+  permanente no CRM.
+- **O preferido continua existindo, como último recurso**, para quem já tinha só ele configurado.
+  Mudou a ordem: padrão primeiro, preferido depois. Nada que funcionava parou de funcionar.
+- A mensagem final diz qual modelo saiu (`modelo padrão "X"`), porque com o rodízio o próximo
+  contato recebe outro.
+- O texto do cartão e o aviso embaixo dele passaram a descrever isso, em vez do preferido.
+
+**Arquivos:** `src/panel/panel.js`, `manifest.json` (1.64.0 → 1.65.0), `registro.md`, `CLAUDE.md`.
+Catorze suítes e os dois verificadores passando.
+
+**Não testado na tela:** o envio real. Teste no Thiago Tim com um contato sem conteúdo reconhecido —
+tem que sair o modelo padrão e nenhuma etiqueta de conteúdo nova.
+
+---
+
 ## 2026-09-02 — A ADS voltava como conteúdo por uma SEGUNDA porta
 
 **Relato dele**, com a print da Liana: *"falhando novamente"*. Anúncio **cadastrado** na Config, com
