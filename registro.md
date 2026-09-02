@@ -32,6 +32,75 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-02 — As seis anotações dele, medidas uma a uma
+
+Ele mandou seis observações com o contexto de cinco mensagens. **Cada uma era um defeito diferente**,
+e cinco deles eu consegui reproduzir no motor antes de mexer em qualquer linha.
+
+### 1 e 2 — a cidade sumia com mais de uma mensagem *(Jeane, Silvia — e o João da leva anterior)*
+
+`extract` chamava `matchCityComContexto` na **conversa inteira colada num texto só**. Dentro dela, o
+caminho *"texto curto é a própria resposta"* exige 30 caracteres — então funcionava apenas quando a
+conversa tinha UMA mensagem. Medido: `["Oi jeane Souza Novo Hamburgo"]` dá Novo Hamburgo;
+`["oi", "Oi jeane Souza Novo Hamburgo"]` dá **nada**.
+
+Hoje a busca é **mensagem a mensagem**, da mais nova para a mais antiga. Os três caminhos são os
+mesmos (resposta ao formulário, mensagem curta que é a cidade, menção depois de pista) — mudou onde
+procuram. Bônus: a pista de uma mensagem não alcança mais o texto da seguinte.
+
+Dez asserções, incluindo as três guardas que não podem cair (estado por extenso, vocabulário da
+campanha, "Capitão Martim").
+
+**A Silvia se resolve junto:** com a cidade voltando a sair, ela deixa de ser concluída em silêncio.
+
+### 3 — grito de campanha virando RSVP *(Eliane — e a Mary da leva anterior)*
+
+`confirmaPresenca` aceitava o verbo **solto**. Medido: *"Juntos vamos"*, *"Vamos vencer Flávio"*,
+*"Vamos juntos mudar o Rio Grande"* e *"vou votar em vocês"* — todos viravam confirmação de presença.
+
+Hoje o verbo precisa vir com o que o torna presença: "sim", um lugar (lá, aí), um verbo de
+comparecer, ou ser a mensagem inteira. Doze confirmações reais continuam passando, sete falsos
+positivos caem, e a recusa não foi tocada.
+
+### 4 — o áudio transcrito ainda alegava que precisa ser aberto *(Eunice)*
+
+O conserto de 01/09 vive em `pedeRespostaPessoal`, mas `conversaPedeRespostaPessoal` chamava
+`pedeRespostaPessoal({ tipo: msg?.tipo })` — **jogando fora `texto` e `transcrito`**. A regra estava
+certa e testada; a chamada não a deixava ver nada.
+
+Com a rajada real dela, o motivo passou de *"mandou um áudio — só dá para responder depois de
+abrir"* para *"mandou 5 mensagens (com áudio) somando 690 caracteres — é conversa, não é caso de
+modelo"*. O desfecho continua tecla 6, que é onde o painel chama a IA — que era o que ele queria.
+
+### 5 — o agradecimento repetia *(Iraci)*
+
+`respondeuOsDados` era recortado **depois do pedido**, e isso não se apaga nunca: a resposta dela
+continua sendo posterior ao pedido para sempre. Ela respondeu, foi agradecida, mandou dois emojis, e
+a rodada quis agradecer de novo.
+
+Hoje o corte é na **nossa última mensagem** — o sinal passa a significar "ela respondeu e nós ainda
+não respondemos de volta".
+
+### 6 — o texto que nega emprego existia sem ninguém acioná-lo *(Kelvem)*
+
+`pedido-emprego` estava escrito, revisado, entre os `RESTRITOS` da IA e com etiqueta própria — e
+**nenhuma regra ou caixa o alcançava**. Quem perguntava como trabalhar no mandato recebia
+agradecimento genérico, o que em cima de *"vocês pagam?"* soa como sim. Prometer emprego a eleitor é
+proibido pela Lei 9.504/97.
+
+`cortesia.pedeEmprego` lê a **rajada** (o pedido dele veio partido: a pergunta numa mensagem, o
+"vcs não pagam" na seguinte) e tem lista de guarda contra o falso positivo — *"vamos trabalhar
+juntos"* e *"obrigado pelo trabalho"* são a fala mais comum desta base. Treze asserções, seis delas
+falso positivo.
+
+**Arquivos:** `src/lib/extract.js` (busca por mensagem), `src/lib/cortesia.js` (`confirmaPresenca`,
+`conversaPedeRespostaPessoal`, `pedeEmprego`), `src/lib/arvore.js` (sinal + caixa), `src/panel/panel.js`
+(o corte do `respondeuOsDados`, o sinal novo), `tests/parser.test.mjs` (+10),
+`tests/cortesia.test.mjs` (+36), `CLAUDE.md` (+5 armadilhas), `manifest.json` (1.73.0 → 1.74.0).
+Quinze suítes, os dois verificadores e o quadro sem problemas.
+
+---
+
 ## 2026-09-02 — "não capturou porto alegre": o IBGE fora do ar apagava a lista inteira
 
 **Relato dele:** *"tem uma [observação] que pode confundir que é com relação a cidade, a extensão não

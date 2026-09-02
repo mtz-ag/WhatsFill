@@ -294,6 +294,40 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `cities.conferirGrafia` é quem decide, e a regra que a mantém útil é: **acento e caixa não são
   erro** (resolvem para o mesmo município e geram a mesma etiqueta) — avisar disso treinaria a
   ignorar o aviso.
+- **A cidade sumia quando a conversa tinha MAIS DE UMA mensagem.** `extract` chamava
+  `matchCityComContexto(joined)` — a conversa inteira colada num texto so —, e dentro dela o caminho
+  *"texto curto e a propria resposta"* exige **30 caracteres**. Ou seja: funcionava apenas com UMA
+  mensagem; qualquer segunda, mesmo um "oi", estourava o limite e a cidade sumia. Explicou tres
+  anotacoes dele de uma vez (*"cidade vazia mas ela respondeu"*, *"nao pegou cidade"*, e a Silvia
+  concluida em silencio depois de responder). Hoje a busca e **mensagem a mensagem, da mais nova
+  para a mais antiga** — os tres caminhos sao os mesmos, o que mudou foi onde procuram. Bonus: a
+  pista de uma mensagem nao alcanca mais o texto da seguinte, que a juncao permitia.
+- **Grito de campanha nao e confirmacao de presenca.** `confirmaPresenca` aceitava o verbo SOLTO
+  (`vou|irei|vamos` seguido de espaco ou fim), e nesta base isso e *"Juntos vamos"*, *"Vamos vencer
+  Flavio"* e ate *"vou votar em voces"* — duas anotacoes dele com pessoas recebendo texto de evento.
+  Hoje o verbo precisa vir com o que o torna presenca: **"sim"**, um lugar (**la**, **ai**), ou um
+  verbo de comparecer; ou ser a mensagem inteira, que e a resposta seca a "voce vai?". Nao da para
+  resolver pelo contexto ("so olhe se o convite saiu") porque o convite e modelo aprovado da
+  plataforma e o painel nao o reconhece por id.
+- **`conversaPedeRespostaPessoal` passava SO O TIPO da mensagem, e com isso anulava o conserto do
+  audio transcrito.** O laco fazia `pedeRespostaPessoal({ tipo: msg?.tipo })`, jogando fora `texto` e
+  `transcrito` — entao audio COM transcricao continuava dizendo *"so da para responder depois de
+  abrir"*, com a transcricao inteira do lado. A regra de 01/09 estava certa e testada; o defeito era
+  a chamada nao deixa-la ver nada. **Funcao pura com teste nao garante nada se quem chama filtrar os
+  campos que ela le.**
+- **`respondeuOsDados` tem que ser cortado na NOSSA ULTIMA mensagem, nao so no pedido.** Recortar
+  "depois do pedido" nao se apaga nunca: a resposta dela continua sendo posterior ao pedido para
+  sempre, entao a rodada agradecia de novo a cada passada (anotacao da Iraci, que respondeu, foi
+  agradecida, mandou dois emojis e quase recebeu outro agradecimento). Cortar na nossa ultima
+  mensagem e o que faz o sinal significar **"ela respondeu e nos ainda nao respondemos de volta"**.
+- **O texto `pedido-emprego` existia sem NINGUEM aciona-lo.** Estava escrito, revisado, entre os
+  `RESTRITOS` da IA e com etiqueta propria — e nenhuma regra ou caixa o alcancava, entao quem
+  perguntava como trabalhar no mandato recebia agradecimento generico (anotacao do Kelvem, que
+  perguntou e emendou *"No caso vcs nao pagam"*). Hoje ha `cortesia.pedeEmprego`, que le a RAJADA
+  (o pedido vem partido) e tem lista de guarda contra o falso positivo — *"vamos trabalhar juntos"*
+  e *"obrigado pelo trabalho"* sao a fala mais comum desta base. **Resposta pronta sem gatilho e
+  trabalho parado: ao criar uma, crie no mesmo commit quem a chama.**
+
 - **IBGE fora do ar apagava o reconhecimento de cidade INTEIRO, em silencio.** `loadMunicipios` ia
   a rede e, falhando, caia numa lista montada com o que ele ja tinha cadastrado em `cityLinks` —
   quase sempre vazia. Com a lista vazia `matchCity` compara contra nada e **nenhuma cidade e

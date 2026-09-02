@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -815,6 +815,79 @@ grupo('pedeAjudaFinanceira: dinheiro pedido, e nao "ajuda" solta (02/09/2026)');
    */
   const antesDaNossa = [{ texto: 'Meu Pix 123', tipo: 'TEXT', at: '2026-09-02T13:00:00Z' }];
   check(!pedeAjudaFinanceira(antesDaNossa, NOSSA), 'pedido anterior a nossa resposta nao conta de novo');
+}
+
+
+grupo('grito de campanha NAO e confirmacao de presenca (02/09/2026)');
+{
+  /**
+   * Duas anotacoes dele, do mesmo defeito: *"Juntos vamos"* (Eliane) e *"Vamos vencer Flavio"*
+   * (Mary) viravam confirmacao de presenca. A Eliane recebeu o agradecimento de um evento ja
+   * passado; a Mary, sem cidade, recebeu o pedido de cadastro com preambulo de evento.
+   *
+   * A causa era o padrao aceitar o VERBO SOLTO (`vou|irei|vamos` seguido de espaco ou fim). Nesta
+   * base isso e grito de campanha, nao RSVP -- e "vou votar em voces" casava igual.
+   */
+  const m = (t) => [{ texto: t, at: new Date().toISOString() }];
+  const vai = (t) => confirmaPresenca(m(t), null);
+
+  // Os falsos positivos que ele pegou, e os vizinhos deles.
+  for (const t of ['Juntos vamos', 'Vamos vencer Flavio', 'Vamos juntos mudar o Rio Grande', 'vou votar em voces', 'vamos que vamos', 'Estamos juntos', 'vou orar por voces']) {
+    check(vai(t) !== 'sim', `"${t}" nao e confirmacao de presenca`);
+  }
+
+  /**
+   * E as confirmacoes de verdade continuam: o verbo vale com "sim", com um lugar, com verbo de
+   * comparecer, ou sendo a mensagem inteira -- que e a resposta seca a "voce vai?".
+   */
+  for (const t of ['vou sim', 'Vou', 'irei', 'Vamos sim', 'vou estar la', 'vou la', 'vou participar', 'vou ao evento', 'Estarei la', 'confirmado', 'pode contar comigo', 'com certeza vou', 'la estarei']) {
+    check(vai(t) === 'sim', `"${t}" continua sendo confirmacao`);
+  }
+
+  // A recusa vem primeiro e nao foi tocada.
+  for (const t of ['Nao conseguirei ir', 'gostaria mas sem condicoes', 'infelizmente nao vou']) {
+    check(vai(t) === 'nao', `"${t}" continua sendo recusa`);
+  }
+}
+
+
+grupo('quer trabalhar para o mandato (02/09/2026)');
+{
+  /**
+   * Anotacao do Kelvem Marinho: *"Queria saber como faz para trabalhar para vc aqui em sao gabriel"*
+   * e, na mensagem seguinte, *"No caso vcs nao pagam"*. A rodada agradeceu e concluiu.
+   *
+   * O texto `pedido-emprego` existia desde sempre, entre os RESTRITOS que a IA nao pode escolher --
+   * e nada no quadro o alcancava. Prometer emprego a eleitor e proibido pela Lei 9.504/97, e um
+   * agradecimento generico em cima de "voces pagam?" soa como sim.
+   */
+  const agora = Date.now();
+  const conv = (textos) => textos.map((t, i) => ({ texto: t, at: new Date(agora - (textos.length - i) * 60000).toISOString() }));
+  const quer = (textos) => !!pedeEmprego(conv(textos), null);
+
+  check(quer(['Queria saber como faz para trabalhar para vc aqui em sao gabriel']), 'o caso do Kelvem, numa mensagem');
+
+  /**
+   * **Le a rajada inteira**, pelo mesmo motivo de `pedeAjudaFinanceira`: o pedido vem partido. Foi
+   * exatamente o caso dele -- a pergunta numa mensagem, o "vcs nao pagam" na seguinte.
+   */
+  check(quer(['Queria saber como faz para trabalhar', 'No caso vcs nao pagam']), 'e partido em duas mensagens');
+  check(quer(['tem alguma vaga ai']), 'pergunta de vaga');
+  check(quer(['posso mandar o meu curriculo?']), 'curriculo');
+  check(quer(['preciso de um emprego']), 'pedido direto de emprego');
+  check(quer(['e remunerado ou voluntario?']), 'pergunta se e remunerado');
+
+  /**
+   * **O falso positivo e o risco.** "vamos trabalhar juntos" e "obrigado pelo seu trabalho" sao a
+   * fala mais comum desta base -- mandar o texto que NEGA emprego para quem estava elogiando seria
+   * pior que nao ter a regra. Mesma logica das negativas benignas em `semInteresse`.
+   */
+  for (const t of ['vamos trabalhar juntos por um Brasil melhor', 'obrigado pelo trabalho de voces', 'parabens pelo belo trabalho', 'bom trabalho a todos', 'admiro o trabalho de voces', 'Estamos juntos']) {
+    check(!quer([t]), `"${t}" nao e pedido de trabalho`);
+  }
+
+  // E nao rouba o pedido de dinheiro, que tem texto proprio.
+  check(!quer(['preciso de remedio']), 'pedido de remedio nao vira pedido de emprego');
 }
 
 fim();

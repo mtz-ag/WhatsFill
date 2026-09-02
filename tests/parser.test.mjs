@@ -849,4 +849,40 @@ grupo('IBGE fora do ar: a lista do pacote salva o reconhecimento (02/09/2026)');
   globalThis.chrome.runtime.getURL = original.getURL;
 }
 
+
+grupo('a cidade sumia quando havia mais de uma mensagem (02/09/2026)');
+{
+  /**
+   * Tres anotacoes dele apontavam para o mesmo lugar: *"cidade vazia mas ela respondeu"* (Jeane),
+   * *"nao pegou cidade"* (Joao) e a Silvia concluida em silencio depois de responder nome e cidade.
+   *
+   * A busca por contexto rodava na conversa INTEIRA colada num texto so, e dentro dela o caminho
+   * "texto curto e a propria resposta" exige 30 caracteres. Ou seja: funcionava apenas quando a
+   * conversa tinha UMA mensagem -- qualquer segunda, mesmo um "oi", estourava o limite e a cidade
+   * sumia. Hoje a busca e mensagem a mensagem, da mais nova para a mais antiga.
+   */
+  const cidade = async (conv) => (await extract(conv, {})).cidade?.value || null;
+
+  check(await cidade(['Oi jeane Souza Novo Hamburgo']) === 'Novo Hamburgo', 'uma mensagem: sempre funcionou');
+  check(await cidade(['oi', 'Oi jeane Souza Novo Hamburgo']) === 'Novo Hamburgo', 'com um "oi" antes: era o que sumia');
+  check(await cidade(['Olá! Eu apoio o Flávio, Zucco e Capitão Martim 🫡', 'Oi jeane Souza Novo Hamburgo']) === 'Novo Hamburgo', 'depois do texto do anuncio (o caso da Jeane)');
+  check(await cidade(['Olá! Eu apoio as Escolas Cívico-Militares 🤝', 'Se tivesse filhos adolescente colocaria com certeza.', 'Silvia Maria Krindges Portão']) === 'Portão', 'o caso da Silvia, com tres mensagens');
+  check(await cidade(['Olá! Eu apoio as Escolas', 'João Natalio Porto Alegre']) === 'Porto Alegre', 'o caso do Joao Natalio');
+
+  // Da mais NOVA para a mais antiga: se ela corrigiu depois, vale a correcao.
+  check(await cidade(['Canoas', 'Porto Alegre']) === 'Porto Alegre', 'a correcao mais recente vence');
+
+  /**
+   * **As tres guardas continuam de pe.** Nenhum dos caminhos mudou -- o que mudou foi ONDE eles
+   * procuram. Se alguma destas cair, a cidade voltou a sair de mencao solta, que e o que a decisao
+   * dele de 31/08 proibiu.
+   */
+  check(await cidade(['bom dia', 'sou do Rio Grande do Sul']) === null, 'o estado por extenso continua fora');
+  check(await cidade(['oi', 'Vamos juntos mudar o Rio Grande']) === null, 'o vocabulario da campanha continua fora');
+  check(await cidade(['oi', 'Olá! Eu apoio o Capitão Martim']) === null, 'Capitao Martim continua fora');
+
+  // E a pista de uma mensagem nao alcanca o texto da seguinte, que a juncao permitia.
+  check(await cidade(['eu moro em', 'Canoas é longe daqui pra caramba mesmo viu']) === null, 'a pista nao atravessa a fronteira da mensagem');
+}
+
 fim();

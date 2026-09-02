@@ -59,6 +59,7 @@ export const SINAIS = [
   { id: 'confirmouPresenca', rotulo: 'Disse que VAI ao evento', nao: 'Não confirmou presença no evento' },
   { id: 'pedeAlgoIndefinido', rotulo: 'Pediu algo e não disse o quê', nao: 'Não pediu nada em aberto' },
   { id: 'pedeAjudaFinanceira', rotulo: 'Pediu dinheiro, cesta básica ou remédio', nao: 'Não pediu dinheiro nem o básico' },
+  { id: 'pedeEmprego', rotulo: 'Perguntou como trabalhar no mandato', nao: 'Não perguntou sobre trabalhar aqui' },
   { id: 'ultimaEhDespedida', rotulo: 'Só se despediu ("amém", "é nós", "abraço")', nao: 'Não foi despedida' },
   { id: 'ultimaEhSoReacao', rotulo: 'Só figura, emoji, sticker ou link', nao: 'Escreveu alguma coisa' },
   { id: 'rajadaEhSoRepasse', rotulo: 'Só repassa link e vídeo de outras pessoas', nao: 'Não é só repasse' },
@@ -448,6 +449,22 @@ export function fluxoPadrao() {
     { ...noVazio('pediu dinheiro, cesta basica ou remedio'),
       condicao: { sinal: 'pedeAjudaFinanceira', negar: false, palavras: [], onde: 'ultima' },
       acao: { tecla: null, resposta: 'pedido-ajuda' } },
+
+    /**
+     * **Quer trabalhar para o mandato** — anotação do Kelvem Marinho (02/09/2026).
+     *
+     * Ele perguntou *"como faz para trabalhar para vc"* e, na mensagem seguinte, *"No caso vcs não
+     * pagam"*. A rodada agradeceu e concluiu. O texto `pedido-emprego` existia desde sempre, entre
+     * os `RESTRITOS` que a IA não pode escolher — **e nada no quadro o alcançava.**
+     *
+     * Fica ao lado do pedido de dinheiro porque é a mesma família: os dois são pedidos que o
+     * mandato **não pode atender**, e os dois têm um texto que explica e nega com respeito. Deixar
+     * a pergunta sem resposta, ou respondê-la com um agradecimento genérico, é o que faz
+     * *"vocês pagam?"* parecer um sim — e prometer emprego a eleitor é proibido pela Lei 9.504/97.
+     */
+    { ...noVazio('quer trabalhar para o mandato'),
+      condicao: { sinal: 'pedeEmprego', negar: false, palavras: [], onde: 'ultima' },
+      acao: { tecla: null, resposta: 'pedido-emprego' } },
 
     /**
      * **Texto longo vem ANTES das caixas de palavra** — print da Cris (02/09/2026).
@@ -1344,6 +1361,7 @@ export function quantosEnviam(arvore) {
  */
 const SINAIS_QUE_A_RESPOSTA_APAGA = new Set([
   'pedeAjudaFinanceira',
+  'pedeEmprego',
   'pedeAlgoIndefinido',
   'pedeRespostaPessoal',
   'perguntaAberta',

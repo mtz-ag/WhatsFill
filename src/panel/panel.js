@@ -27,7 +27,7 @@ import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -4476,7 +4476,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       const depoisDoPedido = respostasApos(state.entrantes, state.nossas, pediuNomeECidade);
       const respondeuOsDados = await (async () => {
-        const textos = (depoisDoPedido || []).map((m) => String(m?.texto || '').trim()).filter(Boolean);
+        /**
+         * **E depois da NOSSA ÚLTIMA mensagem, não só depois do pedido.**
+         *
+         * Anotação da Iraci Salete (02/09/2026): ela respondeu *"sou de cristal do sul meu nome é
+         * iraci salete cardoso"*, foi agradecida, e mandou dois emojis — e a rodada quis agradecer
+         * de novo. Relato dele: *"mandou emoji só concluir"*.
+         *
+         * O recorte "depois do pedido" não se apaga nunca: a resposta dela continua sendo posterior
+         * ao pedido para sempre, então o sinal ficava verdadeiro em toda passada seguinte. Cortar
+         * na nossa última mensagem é o que faz o sinal significar **"ela respondeu e nós ainda não
+         * respondemos de volta"** — que é quando o agradecimento é devido.
+         *
+         * Estreitar aqui é seguro: quem responde depois de nós continua sendo pego na passada
+         * seguinte, porque aí a resposta dela é que passa a ser a mais recente.
+         */
+        const aindaSemResposta = (depoisDoPedido || []).filter(
+          (m) => !state.nossaUltimaAt || (m?.at && new Date(m.at) > new Date(state.nossaUltimaAt))
+        );
+        const textos = aindaSemResposta.map((m) => String(m?.texto || '').trim()).filter(Boolean);
         if (!textos.length) return false;
         const doPedido = await extract(textos, { respostaAoPedido: true });
         /**
@@ -4554,6 +4572,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // Pediu DINHEIRO: vem antes do "pediu algo sem dizer o quê" no quadro, porque aqui já se
         // sabe o que ela quer — perguntar seria fingir que não (print da Marli, 02/09).
         pedeAjudaFinanceira: pedeAjudaFinanceira(state.entrantes, state.nossaUltimaAt),
+        /**
+         * **Perguntou como trabalhar no mandato.** Anotação do Kelvem (02/09/2026): a pergunta veio
+         * numa mensagem e o *"No caso vcs não pagam"* na seguinte, e a rodada agradeceu e concluiu.
+         * O texto que explica e nega já existia sem ninguém acioná-lo.
+         */
+        pedeEmprego: pedeEmprego(state.entrantes, state.nossaUltimaAt),
         podePerguntarAjuda: !perguntarAjudaTrava,
         podeMandarMomento: !momentoTrava,
         temEtiquetaDeCidade,

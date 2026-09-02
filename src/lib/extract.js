@@ -104,7 +104,40 @@ export async function extract(texts, { respostaAoPedido = false } = {}) {
      */
     const soCidade = await cidadeSozinha(list);
 
-    const hit = soCidade || naResposta || (await cities.matchCityComContexto(joined));
+    /**
+     * **A busca por contexto é MENSAGEM A MENSAGEM, não na conversa junta.**
+     *
+     * Era `matchCityComContexto(joined)` — a conversa inteira colada num texto só. E dentro dela o
+     * caminho *"texto curto é a própria resposta"* exige **30 caracteres**, então ele funcionava
+     * apenas quando a conversa tinha UMA mensagem: qualquer segunda, mesmo um "oi", estourava o
+     * limite e a cidade sumia.
+     *
+     * Medido em 02/09/2026 com os casos que ele anotou:
+     *
+     * | conversa                                            | antes | agora |
+     * |---|---|---|
+     * | `["Oi jeane Souza Novo Hamburgo"]`                  | Novo Hamburgo | Novo Hamburgo |
+     * | `["oi", "Oi jeane Souza Novo Hamburgo"]`            | **nada** | Novo Hamburgo |
+     * | a Silvia, com o texto do anúncio antes              | **nada** | Portão |
+     *
+     * O sintoma na tela é o campo Cidade vazio com a cidade escrita na conversa — o mesmo de três
+     * anotações dele ("cidade vazia mas ela respondeu", "não pegou cidade", e a Silvia concluída em
+     * silêncio). **Nenhum dos três caminhos mudou**: continuam sendo a resposta ao formulário, a
+     * mensagem curta que é a cidade, e a menção depois de pista. O que muda é onde eles procuram.
+     *
+     * Da mais NOVA para a mais antiga, como `cidadeSozinha`: se ela corrigiu a cidade depois, vale
+     * a correção. E procurar por mensagem também impede a pista de uma mensagem alcançar o texto da
+     * seguinte, que a junção permitia.
+     */
+    const porContexto = await (async () => {
+      for (const texto of [...list].reverse()) {
+        const achado = await cities.matchCityComContexto(texto);
+        if (achado) return achado;
+      }
+      return null;
+    })();
+
+    const hit = soCidade || naResposta || porContexto;
     if (hit) {
       guesses.cidade = {
         value: hit.city,

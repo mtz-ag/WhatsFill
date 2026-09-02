@@ -335,17 +335,32 @@ export function conversaPedeRespostaPessoal(entrantes, nossaUltimaAt) {
   const rajada = rajadaFinal(entrantes, nossaUltimaAt);
   if (!rajada.length) return null;
 
-  // Tipo vence tamanho: não dá para responder um áudio sem abrir, venha ele sozinho ou não.
+  /**
+   * Tipo vence tamanho: não dá para responder um áudio sem abrir, venha ele sozinho ou não.
+   *
+   * **A mensagem INTEIRA, e não só o tipo.** Este laço passava `{ tipo: msg?.tipo }`, jogando fora
+   * o `texto` e o `transcrito` — e com isso anulava, aqui dentro, o conserto de 01/09/2026 que fez
+   * áudio transcrito deixar de alegar que precisa ser aberto. Resultado: a caixa aparecia com a
+   * transcrição inteira do lado e o motivo dizendo *"mandou um áudio — só dá para responder depois
+   * de abrir"* (anotação da Eunice Peixoto, 02/09).
+   *
+   * A regra de 01/09 estava certa e testada; o defeito era esta chamada não deixá-la ver nada.
+   */
   for (const msg of rajada) {
-    const porTipo = pedeRespostaPessoal({ tipo: msg?.tipo });
+    const porTipo = pedeRespostaPessoal(msg);
     if (porTipo) return porTipo;
   }
 
   const total = rajada.reduce((n, m) => n + String(m?.texto || '').trim().length, 0);
   if (total >= TEXTO_LONGO) {
+    // "escreveu" o que ela FALOU manda quem lê procurar uma mensagem de texto que não existe — a
+    // mesma razão do `verbo` na função de uma mensagem só.
+    const comAudio = rajada.some((m) => m?.transcrito);
+    const verbo = comAudio ? 'mandou' : 'escreveu';
+    const marca = comAudio ? ' (com áudio)' : '';
     return rajada.length > 1
-      ? { motivo: `escreveu ${rajada.length} mensagens somando ${total} caracteres — é conversa, não é caso de modelo` }
-      : { motivo: `escreveu ${total} caracteres — é conversa, não é caso de modelo` };
+      ? { motivo: `${verbo} ${rajada.length} mensagens${marca} somando ${total} caracteres — é conversa, não é caso de modelo` }
+      : { motivo: `${verbo} ${total} caracteres${marca} — é conversa, não é caso de modelo` };
   }
   return null;
 }
@@ -464,9 +479,31 @@ export function confirmaPresenca(entrantes, nossaUltimaAt) {
   ];
   for (const padrao of NAO_VAI) if (padrao.test(texto)) return 'nao';
 
-  /** VAI. Só formas que afirmam presença — "sim" solto não basta, pode ser resposta a outra coisa. */
+  /**
+   * VAI. Só formas que afirmam presença — "sim" solto não basta, pode ser resposta a outra coisa.
+   *
+   * **"vamos" e "vou" soltos SAÍRAM daqui** (02/09/2026), e é a correção mais importante desta
+   * função. O padrão anterior aceitava o verbo sozinho, e nesta base isso é grito de campanha:
+   *
+   *  - *"Juntos vamos"* (Eliane) → virava confirmação de presença, e ela recebeu o agradecimento
+   *    de um evento que já tinha passado;
+   *  - *"Vamos vencer Flávio"* (Mary) → a mesma coisa, e como ela não tinha cidade ainda recebeu o
+   *    pedido de cadastro com preâmbulo de evento;
+   *  - *"vou votar em vocês"* casava igual — é intenção de voto, não presença.
+   *
+   * Hoje o verbo precisa vir com o que o torna presença: **"sim"**, um lugar (**lá**, **aí**), ou um
+   * verbo de comparecer. Ou ser a mensagem inteira, que é a resposta seca a "você vai?".
+   *
+   * Não dá para resolver isso pelo contexto ("só olhe se o convite saiu") porque o convite é um
+   * modelo aprovado da plataforma e o painel não tem como reconhecê-lo pelo id — a mesma razão que
+   * fez o pedido de dados ser reconhecido por invariante.
+   */
   const VAI = [
-    /(^|[^\p{L}])(vou|irei|vamos)(\s+sim)?(\s|$|!|,|\.)/u,
+    // A mensagem INTEIRA é o verbo: a resposta seca a "você vai?".
+    /^\s*(vou|irei|vamos)\s*[!.]*\s*$/u,
+    /(^|[^\p{L}])(vou|irei|vamos)\s+sim(\s|$|!|,|\.)/u,
+    /(^|[^\p{L}])(vou|irei|vamos)\s+(estar|comparecer|participar|ao\s+evento|na\s+agenda)/u,
+    /(^|[^\p{L}])(vou|irei|vamos)\s+(la|ai)(\s|$|!|,|\.)/u,
     /(^|[^\p{L}])(estarei|estaremos)(\s+(la|ai|presente|junto|com\s+voces))?(\s|$|!|,|\.)/u,
     /(^|[^\p{L}])(confirmado|confirmada|confirmo|presenca\s+confirmada)/u,
     /(^|[^\p{L}])(pode|podem)\s+contar\s+comigo/u,
@@ -626,6 +663,76 @@ export function pedeAjudaFinanceira(entrantes, nossaUltimaAt) {
     }
   }
 
+  return null;
+}
+
+/**
+ * **Ela quer TRABALHAR para o mandato** — e o texto que nega isso já existia sem ninguém acioná-lo.
+ *
+ * Anotação do Kelvem Marinho (02/09/2026): *"Queria saber como faz para trabalhar para vc aqui em
+ * são gabriel"* e, na mensagem seguinte, *"No caso vcs não pagam"*. A rodada agradeceu e concluiu.
+ * Relato dele: *"a pessoa está perguntando como trabalhar pra nós e nós estamos trabalhando somente
+ * com voluntários sem dinheiro envolvido"*.
+ *
+ * `pedido-emprego` existe desde sempre, está entre os `RESTRITOS` que a IA não pode escolher e tem
+ * etiqueta própria — **mas nada no quadro o alcançava.** Era resposta escrita, revisada e parada.
+ *
+ * Por que isto pesa mais que uma sugestão errada comum: prometer emprego a eleitor é proibido pela
+ * Lei 9.504/97, e um agradecimento genérico em cima de *"vocês pagam?"* soa como sim.
+ *
+ * **Lê a rajada inteira**, pelo mesmo motivo de `pedeAjudaFinanceira`: o pedido vem partido — a
+ * pergunta numa mensagem e o "vocês pagam" na seguinte, que foi exatamente o caso dele.
+ */
+const QUER_TRABALHAR = [
+  /(^|[^\p{L}])(como|onde)\s+(faz|faco|fazer|posso|consigo)\s+.{0,20}?trabalhar/u,
+  /(^|[^\p{L}])trabalhar\s+(para|pra|com|no|na)\s+(voce|voces|vc|vcs|ti|o\s+mandato|o\s+gabinete|a\s+campanha)/u,
+  /(^|[^\p{L}])(preciso|procuro|procurando|quero|queria|busco)\s+.{0,15}?(emprego|trabalho|vaga)/u,
+  /(^|[^\p{L}])(arrumar|conseguir|indicar|arruma|consegue|indica)\s+.{0,15}?(emprego|vaga|trabalho)/u,
+  /(^|[^\p{L}])(alguma|tem|teria|tem\s+alguma)\s+vaga/u,
+  /(^|[^\p{L}])(meu|o)\s+curriculo/u,
+  /(^|[^\p{L}])(voces|vcs)\s+(pagam|remuneram)/u,
+  /(^|[^\p{L}])(e|eh)\s+(remunerado|voluntario\s+ou)/u,
+  /(^|[^\p{L}])tem\s+(salario|remuneracao)/u,
+];
+
+/**
+ * O que NÃO é pedido de trabalho, por mais que a palavra apareça.
+ *
+ * "vamos trabalhar juntos" e "obrigado pelo seu trabalho" são a fala mais comum desta base — a
+ * mesma razão da lista de negativas benignas em `semInteresse`. Sem esta guarda, o texto que NEGA
+ * emprego sairia para quem estava elogiando.
+ */
+const NAO_E_PEDIDO_DE_TRABALHO = [
+  /(^|[^\p{L}])(vamos|bora|precisamos)\s+trabalhar\s+(juntos|unidos)/u,
+  /(^|[^\p{L}])(obrigad|parabens|admiro|gosto|agradeco).{0,30}?trabalho/u,
+  /(^|[^\p{L}])(pelo|do|seu|teu)\s+(belo\s+)?trabalho/u,
+  /(^|[^\p{L}])(bom|otimo|excelente)\s+trabalho/u,
+];
+
+export function pedeEmprego(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  if (!rajada.length) return null;
+
+  const conversa = rajada
+    .map((m) => String(m?.texto || '').trim())
+    .filter(Boolean)
+    .join(' \n ')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+  if (!conversa) return null;
+
+  for (const guarda of NAO_E_PEDIDO_DE_TRABALHO) if (guarda.test(conversa)) return null;
+
+  for (const padrao of QUER_TRABALHAR) {
+    const m = padrao.exec(conversa);
+    if (m) {
+      return {
+        motivo: `perguntou sobre trabalhar no mandato ("${m[0].trim()}") — vale a resposta que explica e nega`,
+        trecho: conversa.slice(0, 160),
+      };
+    }
+  }
   return null;
 }
 
