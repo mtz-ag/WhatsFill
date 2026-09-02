@@ -5,6 +5,40 @@
 
 ---
 
+## 2026-09-01 (noite, 21) — Arrastar move só a caixa; o ramo inteiro só com Shift
+
+**Relato dele:** *"quando arrasta um todos arrastam, o que deve fazer isso é o pai os outros não"*.
+
+### O que estava acontecendo
+
+`posicionar` era chamado sempre com `comFilhos: true`, então arrastar qualquer caixa levava a
+descendência junto. Medido antes de mexer: arrastar "pessoa retornando" movia **7 caixas** (ela e
+os 6 filhos); arrastar uma folha movia só ela.
+
+Era o desenho que eu escolhi, e estava errado por um motivo que só aparece com o quadro montado:
+**os filhos não ficam colados ao pai aqui** — ele os espalha pela tela. Levar a descendência junto
+não desloca um bloco coeso, atira meia dúzia de caixas para o outro lado do quadro a cada ajuste de
+layout. E num quadro em cadeia quase toda caixa é pai de alguém, então o "às vezes" virou "sempre".
+
+### O conserto
+
+**Arrastar move só a caixa. Shift + arrastar leva o ramo inteiro.** Mover o bloco continua útil
+quando é ele que quer, e aí é explícito.
+
+Com Shift, os filhos acompanham o arrasto **na tela**, e não só ao soltar: sem isso o bloco pularia
+de uma vez no fim, e o salto some com a noção de para onde ele está indo.
+
+O modificador está na **dica do rodapé**, que fica sempre visível — pela lição de dois pedidos
+atrás: modificador que ninguém vê é modificador que não existe.
+
+**Conferido no navegador:** arrastar "pessoa retornando" sem Shift muda a posição de **1** caixa;
+com Shift, das **7**.
+
+**Arquivos:** `src/fluxo.js`, `src/fluxo.html` (a dica), `manifest.json` (1.29.0 → 1.30.0),
+`registro.md`.
+
+---
+
 ## 2026-09-01 (noite, 20) — Arrastar deixou de religar: era isso que apagava ligação
 
 **Relato dele:** *"está removendo ligação quando tem mais de uma"*, com o print do quadro montado.

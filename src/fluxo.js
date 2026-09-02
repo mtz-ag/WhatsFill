@@ -304,6 +304,14 @@ function desenhar() {
  * **Move o ramo inteiro, com os filhos.** Levar só o pai deixaria os filhos para trás, ligados por
  * fios atravessando o quadro — e um mapa em que o desenho não acompanha a estrutura mente.
  */
+/** As caixas dos ramos que estão DENTRO deste — as que acompanham um arrasto com Shift. */
+function descendentesNaTela(id) {
+  const achado = arvoreLib.localizar(fluxo.arvore, id);
+  if (!achado) return [];
+  const ids = new Set(arvoreLib.todosOsNos(achado.no.filhos).map(({ no }) => no.id));
+  return [...el('caixas').children].filter((c) => ids.has(c.dataset.no));
+}
+
 function ligarArrasto() {
   const caixas = el('caixas');
   let arrastando = null;
@@ -354,9 +362,27 @@ function ligarArrasto() {
     const achado = arvoreLib.localizar(fluxo.arvore, caixa.dataset.no);
     if (!achado) return;
 
+    /**
+     * **Arrastar move SÓ a caixa. O ramo inteiro só com Shift.**
+     *
+     * Era o contrário, e ele reclamou: *"quando arrasta um todos arrastam"* (01/09/2026). O motivo
+     * é que os filhos não ficam colados ao pai neste quadro — ele os espalha —, então levar a
+     * descendência junto atira meia dúzia de caixas para o outro lado da tela a cada ajuste de
+     * layout. Num quadro em cadeia, quase toda caixa é pai de alguém, e o "quase sempre" virou
+     * "sempre".
+     *
+     * Mover o ramo inteiro continua útil quando é ELE que quer (levar um bloco para outra área), e
+     * aí é explícito. Fica escrito na dica do rodapé, que está sempre na tela: modificador que
+     * ninguém vê é modificador que não existe.
+     */
+    const comFilhos = ev.shiftKey;
     arrastando = {
       id: caixa.dataset.no,
       elemento: caixa,
+      comFilhos,
+      // Com Shift, os filhos acompanham o arrasto na tela — senão eles só pulariam ao soltar, e o
+      // salto some com a noção de para onde o bloco está indo.
+      juntos: comFilhos ? descendentesNaTela(caixa.dataset.no) : [],
       partiuX: ev.clientX,
       partiuY: ev.clientY,
       origemX: achado.no.x || 0,
@@ -398,6 +424,7 @@ function ligarArrasto() {
     const dy = (ev.clientY - arrastando.partiuY) / vista.z;
     if (Math.abs(dx) > 3 || Math.abs(dy) > 3) arrastando.andou = true;
     arrastando.elemento.style.transform = `translate(${dx}px, ${dy}px)`;
+    for (const filho of arrastando.juntos) filho.style.transform = `translate(${dx}px, ${dy}px)`;
     arrastando.dx = dx;
     arrastando.dy = dy;
     /**
@@ -426,9 +453,10 @@ function ligarArrasto() {
       return;
     }
     if (!arrastando) return;
-    const { id, elemento, origemX, origemY, dx = 0, dy = 0, andou } = arrastando;
+    const { id, elemento, origemX, origemY, dx = 0, dy = 0, andou, comFilhos, juntos } = arrastando;
     elemento.classList.remove('arrastando');
     elemento.style.transform = '';
+    for (const filho of juntos) filho.style.transform = '';
     arrastando = null;
 
     if (!andou) {
@@ -438,8 +466,8 @@ function ligarArrasto() {
       return;
     }
 
-    // Só posição. Quem muda a estrutura é o pino — ver a nota no `pointermove`.
-    const nova = arvoreLib.ordenarPorPosicao(arvoreLib.posicionar(fluxo.arvore, id, origemX + dx, origemY + dy, true));
+    // Só posição. Quem muda a estrutura é o pino — ver a nota no pointerdown.
+    const nova = arvoreLib.ordenarPorPosicao(arvoreLib.posicionar(fluxo.arvore, id, origemX + dx, origemY + dy, comFilhos));
     await gravar(nova);
   };
 
