@@ -745,18 +745,6 @@ export function conversaTemPerguntaAberta(entrantes, nossaUltimaAt) {
   return null;
 }
 
-/**
- * A última mensagem do contato pede resposta escrita por você?
- *
- * Mantida porque é pura e testada, e porque `conversaPedeRespostaPessoal` a usa por dentro para
- * o teste de TIPO. Para decidir a rodada, use a outra: esta não vê a rajada.
- */
-export function ultimaPedeRespostaPessoal(entrantes) {
-  const lista = Array.isArray(entrantes) ? entrantes : [];
-  if (!lista.length) return null;
-  return pedeRespostaPessoal(lista[lista.length - 1]);
-}
-
 /** A última mensagem do contato é só uma reação? */
 export function ultimaEhSoReacao(entrantes) {
   const lista = Array.isArray(entrantes) ? entrantes : [];

@@ -5,6 +5,85 @@
 
 ---
 
+## 2026-09-02 — Revisão do projeto: código morto removido, pendências conferidas
+
+**Pedido dele:** *"revise todo o projeto veja se tem código antigo não utilizado e remova e veja os
+erros pendentes"*.
+
+### Como foi feito
+
+Levantamento por script, não por leitura: para cada `export` de `src/`, contar as referências ao
+nome em todo o repositório **descontando a linha que o declara**. Zero referências = ninguém usa.
+
+A primeira versão do script deu **falso positivo em massa** — acusou 42 exports, incluindo
+`store.get` — porque só contava usos em OUTROS arquivos, e as migrações de `templates.js` são
+chamadas dentro do próprio arquivo. Vale como método: um levantamento que acusa quase tudo está
+errado, não o código.
+
+### O que saiu (8 funções e constantes)
+
+Nenhuma tinha uma única referência, em `src/`, em `tests/` ou em `tools/`:
+
+- `contract.js :: SENTINEL_DATE` — `SENTINEL_DATE_NEEDLES` já carrega o mesmo literal.
+- `dock.js :: isDocked`
+- `dom.js :: onSessionChange` — o painel usa `getConversationSignal`.
+- `dom.js :: ABA_NOVOS`, `ABA_MEUS` — só `ABA_CONCLUIDOS` é usada.
+- `hsm.js :: invalidate` — o cache por canal expira sozinho.
+- `arvore.js :: aninhar`, `desaninhar` — eram os botões `⇥ ⇤` do editor indentado, que saiu quando
+  o quadro virou canvas. Quem religa ramo hoje é `reparentar`.
+- `cortesia.js :: ultimaPedeRespostaPessoal` — **e o comentário dela mentia**: dizia que
+  `conversaPedeRespostaPessoal` a usava por dentro, e a chamada é a `pedeRespostaPessoal`. Terceiro
+  caso do mesmo tipo neste projeto: comentário descrevendo o que o código não faz.
+- `hsm.js :: parseModeloPorTexto`, `formatModeloPorTexto` — o `CLAUDE.md` já os documentava como
+  mortos desde a migração para `store.anuncios`; a tela que os usava não existe mais.
+
+Os testes dessas funções saíram junto (nove arquivos, 143 linhas a menos).
+
+### O resto da submissão na loja
+
+`STORE.md`, `PRIVACY.md`, `tools/package.mjs` e `icons/promo-440x280.png` — o `CLAUDE.md` diz
+*"Não vai para a Chrome Web Store"*, então era peso morto de um objetivo cancelado. Junto foi
+`tools/descobrir-listagem.js`, script de console que respondeu suas perguntas em agosto (a listagem
+traz cidade e etiquetas) e cujas respostas estão hoje dentro de `categorizar.js`. **Tudo recuperável
+pelo histórico do git.**
+
+### O que NÃO foi removido, e por quê
+
+- **36 exports usados só dentro do próprio arquivo** (`IS_IN_PAGE`, `getSessionListItems`, as
+  migrações…). Não é código morto — é `export` a mais. Tirar a palavra é cosmético e mexeria em
+  arquivos que decidem envio; fica registrado, não feito.
+- **Funções usadas só por testes que são GUARDAS**: `regrasSemVerbete`,
+  `regrasComDesfechoIncoerente`, `setCoredeLoader` (costura de teste), `anuncios.acaoConhecida`.
+  Existem para o teste poder perguntar — é a função delas.
+- **`tools/simular-fila.mjs`, `checar-dom`, `checar-pergunta`, `make-icons`**: documentados como
+  ferramentas vivas.
+
+### Erros pendentes: nenhum
+
+Rodados sobre o estado de hoje, não só nos testes:
+
+| conferência | resultado |
+|---|---|
+| toda regra tem verbete | ok |
+| desfecho de cada regra é coerente com a tecla | ok |
+| o fluxo padrão não acusa problema | ok |
+| a árvore achatada não acusa problema | ok |
+| a árvore achatada decide igual à tabela (400 casos) | ok |
+| import importado e nunca usado | nenhum |
+| TODO/FIXME/HACK | nenhum (os três achados são a palavra "todo" em português) |
+| arquivo que o Chrome recusa (começa com `_`) | nenhum |
+| cópia congelada (`dist/`, `build/`) dentro da pasta | nenhuma |
+| `options.html` que o manifesto aponta | existe |
+
+Catorze suítes, `checar-modulos` e `checar-referencias` passando.
+
+**Arquivos:** `src/lib/{arvore,contract,cortesia,dock,dom,hsm}.js`,
+`tests/{arvore,cortesia,hsm}.test.mjs`, `manifest.json` (1.60.0 → 1.61.0), `CLAUDE.md`,
+`registro.md`. Apagados: `STORE.md`, `PRIVACY.md`, `tools/package.mjs`,
+`tools/descobrir-listagem.js`, `icons/promo-440x280.png`.
+
+---
+
 ## 2026-09-02 — A tecla `a` mandava TRÊS mensagens, e a terceira era um encerramento
 
 **Relato dele**, com a print da caixa: *"botão a totalmente errado mandando modelo + pedindo dados +

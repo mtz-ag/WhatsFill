@@ -7,7 +7,7 @@
  */
 import { check, grupo, fim, lib, mem } from './_harness.mjs';
 
-const { pickRow, PARAMS_NAO_APRENDIDOS, templateParaConteudo, parseContentTemplates, formatContentTemplates, modeloPorTexto, parseModeloPorTexto, formatModeloPorTexto, escolherConteudo, decidirSemResposta, decidirReenvio } =
+const { pickRow, PARAMS_NAO_APRENDIDOS, templateParaConteudo, parseContentTemplates, formatContentTemplates, modeloPorTexto, escolherConteudo, decidirSemResposta, decidirReenvio } =
   await lib('hsm.js');
 
 // Linhas como o diálogo as mostra: nome + começo do texto (line-clamp de uma linha).
@@ -300,28 +300,6 @@ grupo('modeloPorTexto: o TEXTO do anuncio escolhe o modelo, sem etiqueta nova');
   check(!!repetido?.erro && /2 modelos/.test(repetido.erro), 'dois modelos com o mesmo nome: recusa');
 }
 
-grupo('parseModeloPorTexto: o trecho NAO e achatado na gravacao');
-{
-  const p = parseModeloPorTexto('Olá! Eu apoio as Escolas Cívico-Militares = Escolas CM\n# comentario\n\nsem igual');
-  check(Object.keys(p).length === 1, 'uma linha valida, comentario e linha sem = ignorados');
 
-  /**
-   * A chave fica como ele digitou. Achatar na gravacao faria a tela mostrar de volta em minusculas
-   * e sem acento — ou seja, mostrar outra coisa. O achatamento acontece so na COMPARACAO.
-   */
-  check(Object.keys(p)[0] === 'Olá! Eu apoio as Escolas Cívico-Militares', 'o trecho fica como digitado');
-  check(p['Olá! Eu apoio as Escolas Cívico-Militares'] === 'Escolas CM', 'e o modelo tambem');
-
-  // O primeiro = separa: nome de modelo pode ter =.
-  const comIgual = parseModeloPorTexto('trecho = Modelo A = B');
-  check(comIgual['trecho'] === 'Modelo A = B', 'o primeiro = separa, o resto e o nome');
-
-  // Ida e volta.
-  const mapa = { 'Olá! Eu apoio X': 'Modelo X' };
-  check(
-    JSON.stringify(parseModeloPorTexto(formatModeloPorTexto(mapa))) === JSON.stringify(mapa),
-    'formatar e reler devolve o mesmo mapa'
-  );
-}
 
 fim();

@@ -213,12 +213,6 @@ grupo('edicao da arvore: pura, e sem perder ninguem pelo caminho');
   check(arv.mover(base, 'a', -1).map((n) => n.id).join('') === 'abc', 'mover no topo nao faz nada');
   check(JSON.stringify(base) === antes, 'e a arvore original nao e tocada');
 
-  const aninhada = arv.aninhar(base, 'b');
-  check(aninhada.length === 2 && aninhada[0].filhos[0].id === 'b', 'aninhar poe o no dentro do irmao de cima');
-  check(arv.aninhar(base, 'a').length === 3, 'sem irmao acima, aninhar nao inventa pai');
-
-  const solta = arv.desaninhar(aninhada, 'b');
-  check(solta.map((n) => n.id).join('') === 'abc', 'desaninhar devolve o no ao nivel do pai, logo abaixo');
 
   const comFilho = arv.acrescentar(base, 'a', { ...arv.noVazio('novo'), id: 'z' });
   check(comFilho[0].filhos[0].id === 'z', 'acrescentar poe como filho');

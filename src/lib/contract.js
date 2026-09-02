@@ -19,7 +19,6 @@ export const SENTINEL = 'WHATSFILL-TESTE';
  * improvável de existir de verdade num contato. As duas grafias cobrem o que a plataforma
  * pode mandar no body (ISO ou brasileiro) — o casamento por conteúdo cuida do resto.
  */
-export const SENTINEL_DATE = '1999-12-31';
 export const SENTINEL_DATE_NEEDLES = ['1999-12-31', '31/12/1999'];
 export const SENTINEL_DATE_HUMANO = '31/12/1999';
 

@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, ultimaPedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -146,11 +146,6 @@ grupo('mensagem que pede resposta escrita por voce');
   check(!pedeRespostaPessoal({ texto: '', tipo: 'IMAGE' }), 'figura não é caso disto (é reação)');
   check(!pedeRespostaPessoal({ texto: '', tipo: 'TEXT' }), 'vazia não pede');
   check(!pedeRespostaPessoal(null), 'nulo não explode');
-
-  const t2 = (x, tipo) => ({ texto: x, tipo: tipo || 'TEXT' });
-  check(!!ultimaPedeRespostaPessoal([t2('oi'), t2('', 'AUDIO')]), 'olha a última');
-  check(!ultimaPedeRespostaPessoal([t2('', 'AUDIO'), t2('oi')]), 'a última é curta');
-  check(!ultimaPedeRespostaPessoal([]), 'vazio');
 }
 
 
@@ -265,9 +260,6 @@ grupo('conversaPedeRespostaPessoal: tres mensagens curtas somam como uma longa')
   const r = conversaPedeRespostaPessoal(rajada, NOSSA);
   check(!!r, 'a rajada de 450 caracteres pede resposta pessoal');
   check(/3 mensagens/.test(r.motivo), 'e o motivo diz que foram varias: ' + (r && r.motivo));
-
-  // A regra antiga NAO pegava: e a regressao que este teste tranca.
-  check(!ultimaPedeRespostaPessoal(rajada), 'olhando so a ultima, passava batido');
 
   // Rajada curta continua sendo caso de resposta pronta.
   const curta = [m('oi', '2026-08-31T18:17:00Z'), m('tudo bem?', '2026-08-31T18:18:00Z')];

@@ -79,7 +79,8 @@ tools/make-icons.mjs    desenha os ícones
 tests/*.test.mjs        Node puro, sem dependência
 ```
 
-`STORE.md`, `PRIVACY.md` e `tools/package.mjs` são resto da submissão na loja, abandonada.
+O resto da submissão na loja (`STORE.md`, `PRIVACY.md`, `tools/package.mjs` e o ícone promo) foi
+apagado em 02/09/2026 — está no histórico do git se algum dia voltar a fazer sentido.
 
 ### Stack
 

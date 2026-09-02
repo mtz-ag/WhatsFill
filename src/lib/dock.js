@@ -45,10 +45,6 @@ export function removeDock() {
   document.documentElement.classList.remove(CLASS);
 }
 
-export function isDocked() {
-  return document.documentElement.classList.contains(CLASS);
-}
-
 export function clamp(width) {
   const n = Math.round(Number(width) || DEFAULT_WIDTH);
   return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, n));

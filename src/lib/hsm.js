@@ -56,10 +56,6 @@ export async function list({ channelId, force = false } = {}) {
   return lista;
 }
 
-export function invalidate() {
-  cachePorCanal.clear();
-}
-
 /**
  * O modelo que casa com o TEXTO que a pessoa mandou.
  *
@@ -115,38 +111,6 @@ export function modeloPorTexto(textos, mapa, modelos) {
     };
   }
   return { modelo: nomes[0], trecho };
-}
-
-/**
- * Editor em texto da tabela TEXTO → modelo: uma linha por par, `trecho = Modelo`.
- *
- * Separado do `parseContentTemplates` porque a chave aqui **não é achatada na gravação**: o que ele
- * digita é o trecho como aparece na conversa ("Olá! Eu apoio as Escolas Cívico-Militares"), e mostrar
- * isso de volta em minúsculas e sem acento seria mostrar outra coisa. O achatamento acontece só na
- * COMPARAÇÃO, dentro de `modeloPorTexto`.
- *
- * O primeiro `=` separa: nome de modelo pode conter `=`, trecho de anúncio raramente contém.
- */
-export function parseModeloPorTexto(texto) {
-  const out = {};
-  for (const linha of String(texto || '').split('\n')) {
-    const t = linha.trim();
-    if (!t || t.startsWith('#')) continue;
-    const i = t.indexOf('=');
-    if (i < 0) continue;
-    const trecho = t.slice(0, i).trim();
-    const modelo = t.slice(i + 1).trim();
-    if (!trecho || !modelo) continue;
-    out[trecho] = modelo;
-  }
-  return out;
-}
-
-/** O inverso, para a tela: uma linha por par. */
-export function formatModeloPorTexto(mapa) {
-  return Object.entries(mapa || {})
-    .map(([trecho, modelo]) => `${trecho} = ${modelo}`)
-    .join('\n');
 }
 
 /**

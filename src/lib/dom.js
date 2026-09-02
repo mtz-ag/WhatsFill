@@ -19,24 +19,6 @@ export function getSessionId(href = location.pathname) {
   return m ? m[1] : null;
 }
 
-/**
- * Avisa quando o operador troca de atendimento.
- * Polling em vez de patch no history: o content script vive num mundo JS separado do
- * Angular, então interceptar history.pushState daqui não pegaria as navegações do app.
- */
-export function onSessionChange(callback, intervalMs = 400) {
-  let current = getSessionId();
-  callback(current);
-  const timer = setInterval(() => {
-    const next = getSessionId();
-    if (next !== current) {
-      current = next;
-      callback(next);
-    }
-  }, intervalMs);
-  return () => clearInterval(timer);
-}
-
 export function getComposer() {
   return (
     document.querySelector('sessions-conversation textarea.mat-input-element') ||
@@ -294,11 +276,6 @@ const ABAS_DA_FILA = {
   Meus: 'button-my-sessions',
   Outros: 'button-other-sessions',
 };
-
-export const ABA_NOVOS = 'Novos';
-
-/** Quem respondeu depois de concluído reaparece aqui: o atendimento já é seu. */
-export const ABA_MEUS = 'Meus';
 
 /**
  * A lista dos **concluídos/arquivados** — o ícone de caixa ao lado das três abas de texto.

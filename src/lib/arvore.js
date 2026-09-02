@@ -841,35 +841,6 @@ export function mover(arvore, id, passo) {
   return nova;
 }
 
-/**
- * Aninhar: o nó vira filho do irmão de cima.
- *
- * É como se diz "isto só vale dentro daquilo" — o passo que transforma lista em árvore. Sem irmão
- * acima não há onde aninhar, e devolver a árvore intacta é melhor que inventar um pai.
- */
-export function aninhar(arvore, id) {
-  const nova = copiar(arvore);
-  const achado = localizar(nova, id);
-  if (!achado || achado.i === 0) return arvore;
-  const acima = achado.irmaos[achado.i - 1];
-  const [tirado] = achado.irmaos.splice(achado.i, 1);
-  acima.filhos = acima.filhos || [];
-  acima.filhos.push(tirado);
-  return nova;
-}
-
-/** Desaninhar: o nó sai de dentro do pai e vira irmão dele, logo abaixo. */
-export function desaninhar(arvore, id) {
-  const nova = copiar(arvore);
-  const achado = localizar(nova, id);
-  if (!achado || !achado.pai) return arvore;
-  const doPai = localizar(nova, achado.pai.id);
-  if (!doPai) return arvore;
-  const [tirado] = achado.irmaos.splice(achado.i, 1);
-  doPai.irmaos.splice(doPai.i + 1, 0, tirado);
-  return nova;
-}
-
 /** Acrescenta um filho ao nó (ou na raiz, com `id` nulo). */
 export function acrescentar(arvore, id, no) {
   const nova = copiar(arvore);
