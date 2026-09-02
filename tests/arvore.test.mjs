@@ -1141,4 +1141,65 @@ grupo('confirmou presenca e ja temos os dados: agradece (02/09/2026)');
   check(tecla({ ...deoclecio, confirmouPresenca: false }) !== '8', 'sem confirmacao, nao agradece a presenca');
 }
 
+grupo('desabafo longo vai para a IA, nao para a mensagem do momento (02/09/2026)');
+{
+  /**
+   * Print da Cris (02/09/2026): contato com etiqueta de cidade e de conteudo escreveu 437
+   * caracteres de desabafo — sem esperanca nas eleicoes, urnas, "tudo tempo perdido", "Triste!".
+   * O atendimento ficou sem classificacao e ele teve que assumir a mao. Relato dele: *"a IA devia
+   * ter assumido e mandado uma mensagem personalizada"*.
+   *
+   * Dois defeitos somados, e os dois sao de ORDEM dentro do quadro:
+   *
+   *  1. `ja-respondemos-antes` estava ACIMA das caixas que reconhecem "isto precisa de gente".
+   *     Quem ja foi atendida e escreve QUALQUER coisa recebia a mensagem do momento — uma
+   *     mensagem de campanha em cima de um desabafo.
+   *  2. A caixa "so mandou bom dia" casa por PALAVRA CONTIDA, e o desabafo comeca com "Oi. Bom
+   *     dia,". Mesmo sem o defeito 1, um texto longo que comece com saudacao levava a mensagem
+   *     do momento por ser confundido com um "bom dia" seco.
+   */
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const desabafo =
+    'Oi. Bom dia,\n\nVenho aqui para desabafar, estou muito triste, sem esperanca sobre as ' +
+    'eleicoes, sobre futuro do pais. Sim, eu vou votar, vou fazer minha parte como sempre, mas do ' +
+    'q adianta se e o sistema que manda? As urnas nao sao confiaveis todos sabem, mentem todo ' +
+    'tempo e nada acontece..... Onde trabalho escuto alguns comentarios q da vontade de chorar. ' +
+    'E acho q e tudo tempo perdido. Triste!';
+
+  const daCris = {
+    textos: [desabafo],
+    ultimoTexto: desabafo,
+    // O sinal que o painel calcula para texto longo: "e conversa, nao e caso de modelo".
+    pedeRespostaPessoal: { motivo: 'escreveu 437 caracteres — e conversa, nao e caso de modelo' },
+    temEtiquetaDeCidade: true,
+    jaRespondemosAntes: true,
+    jaPediramDados: true,
+    podeEnviar: true,
+    podeMandarMomento: true,
+  };
+
+  const r = arv.decidir(daCris, q);
+  const nome = (id) => arv.localizar(q, id)?.no?.rotulo || id;
+  const caminho = (r?.caminho || []).map(nome).join(' > ');
+
+  /**
+   * **A tecla 6 E o caminho da IA**: o painel a chama em `!sugestao || sugestao.tecla === '6'`, e
+   * quando ela escala o rascunho personalizado pode sair. Qualquer outra tecla aqui e uma mensagem
+   * pronta em cima de um desabafo.
+   */
+  check(r?.tecla === '6', `desabafo longo vai para quem escreve, nao para o momento (deu ${r?.tecla}, por ${caminho})`);
+  check(r?.tecla !== '5', 'e NUNCA a mensagem do momento');
+
+  // O mesmo texto sem a etiqueta de cidade tem que ir para o mesmo lugar: e o texto que decide.
+  const semCidade = arv.decidir({ ...daCris, temEtiquetaDeCidade: false, podePedirDados: true }, q);
+  check(semCidade?.tecla === '6', `sem etiqueta de cidade tambem vai para gente (deu ${semCidade?.tecla})`);
+
+  /**
+   * **A saudacao dentro de um texto longo nao pode valer como "so mandou bom dia".** Sem esta
+   * assercao, a caixa de palavras volta a pegar qualquer desabafo que comece com "Bom dia".
+   */
+  const soSaudacao = { ...daCris, pedeRespostaPessoal: null, ultimoTexto: 'Bom dia!', textos: ['Bom dia!'] };
+  check(arv.decidir(soSaudacao, q)?.tecla === '5', 'um "Bom dia!" seco continua recebendo a mensagem do momento');
+}
+
 fim();

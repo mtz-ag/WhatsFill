@@ -477,6 +477,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   caixa prometer "agradeca a presenca" e mandar o agradecimento de apoio. A trava por variavel de
   cada texto tambem e separada: `apoioTrava` alimenta a regra `so-expressa-apoio` e nao pode sumir
   com a tecla do outro caso.
+- **Caixa de PALAVRAS casa por trecho contido, entao ela nao sabe se a mensagem e SO aquilo.** A
+  caixa "so mandou bom dia" pegava um desabafo de 437 caracteres que comecava com *"Oi. Bom dia,"*
+  (print da Cris, 02/09). O nome da caixa diz "so mandou", a condicao nao verifica isso, e o
+  resultado era mensagem de campanha em cima de um desabafo. **A protecao e de ORDEM:**
+  `ultima-pede-resposta-pessoal` (texto longo / audio) fica ACIMA de toda caixa de palavra, entao
+  quem escreve conversa nunca e decidido por palavra solta. Regra que vale sempre que voce criar
+  caixa de palavras com nome que promete exclusividade.
+- **`ja-respondemos-antes` e a caixa mais GENERICA do lado de quem volta, e generico nao pode ficar
+  em cima.** Ela nao olha o que a pessoa escreveu — so que ja fomos atendidos antes — e mandava a
+  mensagem do momento. Em terceiro lugar no ramo "com etiqueta de cidade", vencia todas as caixas
+  que reconhecem conteudo. Hoje fica embaixo das pendencias, como o lado "sem etiqueta" ja fazia:
+  **quando os dois lados do quadro discordam na ordem, um dos dois esta errado** — foi assim que
+  este apareceu.
+- **A tecla 6 e o caminho da IA, e por isso ela e o desfecho certo para desabafo.** *"a IA devia ter
+  assumido e mandado uma mensagem personalizada"* (02/09). O painel chama a IA em
+  `!sugestao || sugestao.tecla === '6'`, e quando ela escala o rascunho personalizado pode sair.
+  Mandar qualquer mensagem PRONTA nesse caso e o erro — nao existe resposta pronta para desabafo.
 - **Antes de oferecer opcoes a ele, confira se voce entendeu o que a coisa FAZ.** A escolha dele e
   boa na medida em que a minha descricao e verdadeira; descricao errada nao produz escolha errada
   dele, produz escolha errada minha assinada por ele. Foi o que aconteceu com o modelo padrao acima.

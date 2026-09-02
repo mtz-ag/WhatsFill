@@ -434,11 +434,29 @@ export function fluxoPadrao() {
    */
   const dosDoisLados = (onde) => [
     porPalavras('pediu ajuda financeira', ['ajuda financeira', 'preciso de dinheiro', 'me ajuda com', 'cesta basica', 'remedio'], { tecla: null, resposta: 'pedido-ajuda' }),
+
+    /**
+     * **Texto longo vem ANTES das caixas de palavra** — print da Cris (02/09/2026).
+     *
+     * Ela escreveu 437 caracteres de desabafo: sem esperança nas eleições, urnas, *"tudo tempo
+     * perdido"*, *"Triste!"*. E começou com *"Oi. Bom dia,"*. A caixa de saudação casa por palavra
+     * **contida**, então o desabafo inteiro era lido como um "bom dia" seco e levava a mensagem do
+     * momento — material de campanha em cima de um desabafo. Relato dele: *"a IA devia ter assumido
+     * e mandado uma mensagem personalizada"*.
+     *
+     * Aqui em cima, quem escreve conversa nunca é decidido por palavra solta: vai para a tecla 6,
+     * que é justamente onde o painel chama a IA (`!sugestao || sugestao.tecla === '6'`) e onde o
+     * rascunho personalizado pode sair.
+     *
+     * **A ajuda financeira continua acima**, e é decisão dele: aquele texto é uma resposta que ele
+     * escolheu para sair sozinha. O resto do que é longo passa a ser conversa.
+     */
+    r('ultima-pede-resposta-pessoal', null, onde),
+
     porPalavras('só mandou bom dia, boa tarde ou boa noite', ['bom dia', 'boa tarde', 'boa noite', 'bom domingo'], { tecla: '5', resposta: null }),
     r('pediu-algo-sem-dizer-o-que', 'pediu algo e não disse o quê', onde),
     r('ultima-e-so-reacao', 'mandou figura, emoji, sticker ou link', onde),
     r('pergunta-aberta', null, onde),
-    r('ultima-pede-resposta-pessoal', null, onde),
     r('ultima-e-despedida', null, onde),
   ];
 
@@ -741,8 +759,25 @@ export function fluxoPadrao() {
        */
       r('confirmou-presenca-com-dados', 'confirmou presença e já temos os dados', 'com-cidade'),
       r('respondeu-os-dados', 'respondeu o nome e a cidade', 'com-cidade'),
-      r('ja-respondemos-antes', 'já entregamos algo antes'),
+
+      /**
+       * **As pendências vêm ANTES de "já entregamos algo antes"** — print da Cris (02/09/2026).
+       *
+       * `ja-respondemos-antes` é a caixa mais genérica deste lado: ela não olha o que a pessoa
+       * escreveu, só que já fomos atendidos antes, e manda a mensagem do momento. Estando em
+       * terceiro lugar, ela vencia TODAS as caixas que reconhecem o conteúdo — inclusive a que
+       * manda um desabafo de 437 caracteres para quem escreve.
+       *
+       * Medido antes de mover: a Cris caía em `pessoa retornando > com etiqueta de cidade > já
+       * entregamos algo antes` e recebia a mensagem do momento. Depois: `ultima-pede-resposta-
+       * pessoal`, tecla 6, que é o caminho da IA.
+       *
+       * É a mesma ordem que o lado "sem etiqueta de cidade" já tinha — pendência primeiro, o
+       * genérico depois. Os dois lados passam a concordar, que era o sinal de que este estava
+       * errado.
+       */
       ...dosDoisLados('com-cidade'),
+      r('ja-respondemos-antes', 'já entregamos algo antes'),
     ]),
   ]);
 

@@ -5,6 +5,64 @@
 
 ---
 
+## 2026-09-02 — Desabafo longo ia para a mensagem do momento; agora vai para a IA
+
+**Relato dele**, com a print da Cris: *"a IA devia ter assumido e mandado uma mensagem
+personalizada"*.
+
+### O caso
+
+Contato com etiqueta de cidade (IVOTI) e de conteúdo (CONTEÚDO ZUC) escreveu **437 caracteres** de
+desabafo — sem esperança nas eleições, urnas, *"tudo tempo perdido"*, *"Triste!"*. O atendimento
+ficou sem classificação e ele assumiu à mão quatro horas depois.
+
+### Dois defeitos somados, os dois de ORDEM no quadro
+
+Medido antes de mexer: o caso caía em `pessoa retornando > com etiqueta de cidade > já entregamos
+algo antes` → **tecla 5, mensagem do momento**. Material de campanha em cima de um desabafo.
+
+1. **`ja-respondemos-antes` estava em terceiro lugar** no ramo "com etiqueta de cidade". Ela é a
+   caixa mais genérica desse lado: não olha o que a pessoa escreveu, só que já fomos atendidos
+   antes. Nessa posição vencia **todas** as caixas que reconhecem conteúdo.
+2. **A caixa "só mandou bom dia" casa por palavra CONTIDA**, e o desabafo começa com *"Oi. Bom
+   dia,"*. Mesmo sem o defeito 1, o texto longo seria lido como saudação seca. O nome da caixa diz
+   "só mandou"; a condição nunca verificou isso.
+
+O sinal certo existia e estava embaixo dos dois: `conversaPedeRespostaPessoal` devolve *"escreveu
+437 caracteres — é conversa, não é caso de modelo"*.
+
+### O conserto
+
+- **`ultima-pede-resposta-pessoal` subiu para cima de todas as caixas de palavra**, nos dois lados
+  da bifurcação: quem escreve conversa nunca é decidido por palavra solta. A **ajuda financeira
+  continua acima dela**, e é decisão dele — aquele texto é uma resposta que ele escolheu para sair
+  sozinha.
+- **`ja-respondemos-antes` desceu para baixo das pendências**, que é a ordem que o lado "sem
+  etiqueta de cidade" já tinha. Os dois lados passam a concordar — e a discordância entre eles era
+  o sinal de que este estava errado.
+
+Depois: `ultima-pede-resposta-pessoal` → **tecla 6**, que é onde o painel chama a IA
+(`!sugestao || sugestao.tecla === '6'`) e onde o rascunho personalizado pode sair.
+
+### Conferido
+
+Varredura de 10 cenários no padrão corrigido: "bom dia" seco continua na mensagem do momento (5),
+figura continua em 5, despedida em 3, quem já foi atendida e escreve coisa curta neutra continua em
+5, ajuda financeira continua na resposta pronta, presença e dados continuam em 8, chegada do anúncio
+em `a`, hostil em `s`. Só o desabafo mudou — de 5 para 6. Catorze suítes, `checar-modulos` e
+`checar-referencias` passando.
+
+**Arquivos:** `src/lib/arvore.js` (`fluxoPadrao`), `tests/arvore.test.mjs`, `manifest.json`
+(1.56.0 → 1.57.0), `registro.md`, `CLAUDE.md`.
+
+**Para ele:** o arquivo do padrão corrigido foi gerado para importar (41 ramos, 17 enviam).
+Importar substitui o quadro e leva junto as observações escritas nas caixas.
+
+**Não testado na tela:** a IA de fato assumindo e o rascunho saindo. Depende do Chrome com a
+extensão carregada e de chave da API.
+
+---
+
 ## 2026-09-02 — "Confirmou presença (só agradecer)": a raiz era o TEXTO, não a trava
 
 **Diagnóstico dele:** *"provavelmente pode ser o problema do padrão de mensagem, ela já vem incluso
