@@ -799,4 +799,54 @@ grupo('POA como resposta ao pedido de dados');
   check(!slogan.cidade, 'o slogan do anuncio continua nao virando cidade');
 }
 
+
+grupo('IBGE fora do ar: a lista do pacote salva o reconhecimento (02/09/2026)');
+{
+  /**
+   * Relato dele: *"a extensao nao capturou porto alegre para preencher"*. O parser estava certo --
+   * testei dezessete formas de escrever Porto Alegre e todas passaram. O que faltava era a LISTA:
+   * com o IBGE fora do ar (503, rede bloqueada, primeira abertura sem internet) `matchCity` compara
+   * contra uma lista VAZIA e nada casa nunca. O unico sinal era um console.warn.
+   *
+   * Peguei por acidente: montando o teste do "Porto Alegre" o meu proprio banco caiu no IBGE 503 e
+   * NENHUMA das dezessete formas foi reconhecida, nem "Porto Alegre" puro.
+   *
+   * O `coredes-rs.json` ja vem no pacote com os 497 municipios, e e a MESMA fonte que decide o
+   * COREDE -- entao usa-lo aqui garante que as duas coisas nao possam discordar sobre quais
+   * municipios existem.
+   */
+  const { mem: mem2, lib: lib2 } = await import('./_harness.mjs');
+  const original = { fetch: globalThis.fetch, getURL: globalThis.chrome.runtime.getURL };
+  const RAIZ = new URL('../', import.meta.url);
+
+  delete mem2.municipios;                      // storage vazio, como numa instalacao nova
+  globalThis.chrome.runtime.getURL = (p) => new URL(p, RAIZ).href;
+  globalThis.fetch = async (url) => {
+    if (String(url).includes('ibge')) return { ok: false, status: 503 };
+    const { readFileSync } = await import('node:fs');
+    const { fileURLToPath } = await import('node:url');
+    return { ok: true, json: async () => JSON.parse(readFileSync(fileURLToPath(String(url)), 'utf8')) };
+  };
+
+  // Modulo novo, para nao pegar o cache em memoria do que ja rodou acima.
+  const cities2 = await import('../src/lib/cities.js?semIbge=1');
+  const lista = await cities2.loadMunicipios();
+
+  check(lista.length === 497, `sem o IBGE, carrega os 497 do pacote (veio ${lista.length})`);
+  check(lista.includes('Porto Alegre'), 'e Porto Alegre esta na lista');
+
+  const poa = await cities2.matchCity('Maria Silva / POA');
+  check(poa?.city === 'Porto Alegre', 'e o apelido POA volta a ser reconhecido');
+  check((await cities2.matchCity('Porto Alegre'))?.city === 'Porto Alegre', 'assim como o nome por extenso');
+
+  /**
+   * **Nao grava no cache do storage.** Se gravasse, a lista de emergencia viraria a definitiva e o
+   * IBGE nunca mais seria consultado -- inclusive depois de a rede voltar.
+   */
+  check(mem2.municipios === undefined, 'a lista de emergencia NAO vira o cache do storage');
+
+  globalThis.fetch = original.fetch;
+  globalThis.chrome.runtime.getURL = original.getURL;
+}
+
 fim();

@@ -294,6 +294,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `cities.conferirGrafia` é quem decide, e a regra que a mantém útil é: **acento e caixa não são
   erro** (resolvem para o mesmo município e geram a mesma etiqueta) — avisar disso treinaria a
   ignorar o aviso.
+- **IBGE fora do ar apagava o reconhecimento de cidade INTEIRO, em silencio.** `loadMunicipios` ia
+  a rede e, falhando, caia numa lista montada com o que ele ja tinha cadastrado em `cityLinks` —
+  quase sempre vazia. Com a lista vazia `matchCity` compara contra nada e **nenhuma cidade e
+  reconhecida nunca**; o unico sinal era um `console.warn`, e o sintoma na tela e o campo Cidade
+  vazio com a cidade escrita na conversa. Relato dele em 02/09/2026 (*"nao capturou porto alegre"*),
+  e eu peguei por acidente: montando o teste o meu proprio banco caiu no `IBGE 503` e **nenhuma** das
+  dezessete formas de escrever Porto Alegre passou, nem o nome puro. Hoje o fallback e o
+  `src/data/coredes-rs.json` que **ja vem no pacote** (497 municipios, a mesma fonte que decide o
+  COREDE — entao as duas nao podem discordar sobre quais municipios existem). Duas coisas a lembrar:
+  ele fica **depois** do IBGE, que continua sendo a autoridade quando a rede funciona; e a lista de
+  emergencia **nao e gravada no cache do storage**, senao ela viraria a definitiva e o IBGE nunca
+  mais seria consultado. Tem teste que finge o 503.
+
 - **A cidade pode ser RECONHECIDA e mesmo assim não valer.** `matchCity("Canoas RS")` sempre achou
   Canoas; o que falhava era a igualdade que decide se a pessoa **informou** a cidade
   (`cidadeSozinha`, `isCityAlone`), porque `"canoas rs" !== "canoas"`. O sintoma na tela é

@@ -141,7 +141,41 @@ export async function loadMunicipios() {
     console.warn('[WhatsFill] não consegui buscar os municípios no IBGE:', err.message);
   }
 
-  // Fallback: as cidades que você já cadastrou na tabela de links.
+  /**
+   * **A lista que VEM COM A EXTENSÃO** — e por que ela precisava estar aqui.
+   *
+   * O IBGE fora do ar (503, rede bloqueada, primeira abertura sem internet) apagava a capacidade de
+   * reconhecer cidade **inteira**: `matchCity` passa a comparar contra uma lista vazia e nada casa
+   * nunca. O único sinal era um `console.warn`, e o sintoma na tela é o campo Cidade vazio com a
+   * cidade escrita na conversa — que foi o relato dele em 02/09/2026 sobre Porto Alegre não ser
+   * capturada.
+   *
+   * Peguei isso por acidente: montando o teste do "Porto Alegre" o meu próprio banco caiu no
+   * `IBGE 503` e **nenhuma** das dezessete formas foi reconhecida, nem "Porto Alegre" puro.
+   *
+   * O arquivo `coredes-rs.json` já vem no pacote, com os 497 municípios da planilha oficial da
+   * SPGG-RS, e é a MESMA fonte que decide o COREDE — então usá-lo aqui também garante que as duas
+   * coisas não possam discordar sobre quais municípios existem.
+   *
+   * Fica DEPOIS do IBGE de propósito: quando a rede funciona, a autoridade continua sendo ele, e
+   * município novo aparece sem precisar de commit. O arquivo é a rede de segurança, não a fonte.
+   */
+  try {
+    const res = await fetch(chrome.runtime.getURL('src/data/coredes-rs.json'));
+    const dados = await res.json();
+    const nomes = Object.keys(dados?.municipios || {}).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    if (nomes.length) {
+      console.warn(`[WhatsFill] usando a lista de municípios que vem com a extensão (${nomes.length}).`);
+      // **Não grava no cache do storage.** Se gravasse, a lista de emergência viraria a definitiva
+      // e o IBGE nunca mais seria consultado — inclusive depois de a rede voltar.
+      municipiosCache = nomes;
+      return nomes;
+    }
+  } catch (err) {
+    console.warn('[WhatsFill] não consegui ler a lista de municípios do pacote:', err.message);
+  }
+
+  // Último recurso: as cidades que você já cadastrou na tabela de links.
   const links = await store.get('cityLinks');
   municipiosCache = Object.values(links).map((v) => v.label).filter(Boolean);
   return municipiosCache;

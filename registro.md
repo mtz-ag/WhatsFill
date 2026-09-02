@@ -32,6 +32,58 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-02 — "não capturou porto alegre": o IBGE fora do ar apagava a lista inteira
+
+**Relato dele:** *"tem uma [observação] que pode confundir que é com relação a cidade, a extensão não
+capturou porto alegre para preencher"*.
+
+### O parser estava certo
+
+Testei dezessete formas de escrever Porto Alegre — `POA`, `Poa`, `Ana POA`, `Maria Silva / POA`,
+`Porto alegre/RS`, `Porto Alegre.`, `moro em porto alegre`. **Todas** voltam
+`Porto Alegre` com confiança `exata`, e o nome sobra certo nas que têm nome junto.
+
+### A causa, que eu peguei por acidente
+
+Na primeira tentativa o meu próprio banco de testes caiu em `IBGE 503` e **nenhuma** das dezessete
+passou — nem "Porto Alegre" puro. Aí estava o defeito de verdade.
+
+`loadMunicipios` busca a lista no IBGE e, falhando, caía numa lista montada com o que ele já tinha
+cadastrado em `cityLinks` — quase sempre vazia. **Com a lista vazia, `matchCity` compara contra nada
+e nenhuma cidade é reconhecida nunca.** O único sinal era um `console.warn`, e o sintoma na tela é
+exatamente o que ele descreveu: campo Cidade vazio com a cidade escrita na conversa.
+
+Basta o IBGE dar 503, a rede estar bloqueada, ou a primeira abertura ser sem internet — e como o
+resultado bom fica em cache para sempre, quem já tinha a lista nunca via o problema, e quem não
+tinha nunca teve cidade nenhuma.
+
+### O conserto
+
+O `src/data/coredes-rs.json` **já vem no pacote** com os 497 municípios da planilha oficial da
+SPGG-RS. É a mesma fonte que decide o COREDE, então usá-la aqui garante que as duas coisas não
+possam discordar sobre quais municípios existem.
+
+Medido com o IBGE fingindo 503 e o storage vazio: de **zero** para 497, e `POA` volta a virar
+Porto Alegre.
+
+Duas decisões:
+
+- **fica depois do IBGE** — com rede, a autoridade continua sendo ele, e município novo aparece sem
+  precisar de commit;
+- **a lista de emergência não é gravada no cache do storage** — se fosse, ela viraria a definitiva e
+  o IBGE nunca mais seria consultado, inclusive depois de a rede voltar.
+
+### E as observações
+
+Não consigo lê-las: elas ficam no `chrome.storage.local` do navegador dele, e eu só alcanço o
+repositório. O caminho é o botão **Copiar observações** na aba Automatizado, e colar aqui.
+
+**Arquivos:** `src/lib/cities.js` (`loadMunicipios`), `tests/parser.test.mjs` (+5),
+`CLAUDE.md` (+1 armadilha), `manifest.json` (1.71.0 → 1.72.0). Quinze suítes e os dois verificadores
+passando.
+
+---
+
 ## 2026-09-02 — A rodada pulava contato sem perguntar: era a IA escalando
 
 **Relato dele:** *"pulando contato sem eu pedir mesmo a minha mensagem não sendo a última e com o box
