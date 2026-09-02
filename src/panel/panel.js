@@ -8721,8 +8721,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         anuncioInput,
         h('div', { class: 'wf-origin' },
           'O bloco "ANÚNCIO | FACEBOOK" no topo da conversa vem de um campo da sessão, não de ' +
-            'texto — então isto não depende de regra nem de acerto de regex. A etiqueta entra ' +
-            'como CONTEÚDO, que é o que a liga à tabela "Modelo por conteúdo" logo acima. ' +
+            'texto — então isto não depende de regra nem de acerto de regex. Ela é só ETIQUETA: ' +
+            'entra no CRM e serve ao filtro, e NÃO escolhe o modelo, porque diz que a pessoa veio ' +
+            'de anúncio e não de qual. Quem escolhe o modelo é "Anúncios do momento", pelo texto. ' +
             'Vazio = não etiqueta ninguém por essa via.'),
       ])
     );
