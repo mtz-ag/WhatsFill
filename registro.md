@@ -32,6 +32,62 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-02 — A sugestão em vermelho, e o caderno das que estão erradas
+
+**Pedido dele:** *"marque a sugestão e o botão referente da sugestão de vermelho para se destacar, e
+vamos implementar a observação para sugestão onde vou escrever o porque está errado e lhe passar
+essas informações depois, monte um botão de salvar as observações para que isso seja possível"*.
+
+### O vermelho
+
+A faixa *"Sugiro a X…"* e o **botão daquela tecla** saem os dois em vermelho. A mesma cor de
+propósito: são a mesma informação dita duas vezes, e cores diferentes fariam procurar qual das duas
+é a sugestão de verdade.
+
+Classe própria (`wf-rec-btn`), **não** o `wf-primary`: aquele é o botão de ação padrão do painel
+inteiro, e repintá-lo tornaria vermelho o "Aceitar" do popup de cidade e o "Começar pelos Meus", que
+não são sugestão nenhuma.
+
+### O caderno
+
+Na caixa da rodada, **"✎ Anotar por que está errado"** abre um campo e um botão **Salvar
+observação**. Salvar **não fecha a pergunta** — igual às respostas rápidas: anotar é sobre o caso que
+ele está olhando, e fechar a caixa o obrigaria a decidir antes de terminar de escrever.
+
+**A anotação carrega o caso junto, e ele não escolhe isso.** Vão automaticamente: o contato, a regra
+que decidiu, a tecla que ela mandou apertar, o motivo que a caixa mostrou, **o que a pessoa
+escreveu** e as etiquetas. É a lição que ele mesmo me deu na janela do fluxo em 01/09 — *"não faz
+sentido eu colar para você sem você ter a visão do fluxo"*. Aqui é igual: *"essa sugestão está
+errada"* sozinho me faria adivinhar.
+
+### Como chega até mim
+
+Cartão **"Observações para o Claude"** na aba Automatizado, acima do Andamento: o texto pronto, um
+botão **Copiar observações** e um **Apagar todas** (que pergunta, porque não tem volta).
+
+O texto sai **agrupado por regra**, com a contagem: uma regra errada é um lugar no código, e ver as
+três vezes que ela errou juntas mostra o padrão que uma sozinha não mostra.
+
+### Detalhes que valem lembrar
+
+- **Não grava anotação vazia** — botão que grava nada e diz "salvo" ensina a não confiar no botão. A
+  função devolve `gravou: false` e a tela avisa;
+- **teto de 200 anotações**, a mais antiga saindo: `chrome.storage.local` não é infinito. Textos
+  longos são cortados (o porquê em 1000, a mensagem dela em 400);
+- **nada aqui muda o que a rodada decide** — é caderno, o mesmo papel do `no.nota` no quadro;
+- se a área de transferência recusar (foco fora da aba, permissão), o texto é **selecionado** e a
+  mensagem manda usar Ctrl+C, em vez de o botão não fazer nada e não dizer nada.
+
+Conferido abrindo o painel de verdade: o cartão listou a anotação semeada e gerou o texto agrupado, e
+a caixa da rodada apareceu com a faixa e o botão vermelhos, com os outros botões neutros.
+
+**Arquivos:** `src/lib/observacoes.js` (novo), `tests/observacoes.test.mjs` (novo, 30),
+`src/lib/store.js` (chave `observacoes` + backup), `src/panel/panel.js` (`montarObservacao`, o cartão
+da Config, o vermelho), `src/panel/panel.css`, `CLAUDE.md` (quinze suítes), `manifest.json`
+(1.69.0 → 1.70.0). Quinze suítes e os dois verificadores passando.
+
+---
+
 # Registro de mudanças
 
 > Entrada nova sempre no **TOPO**. Formato: data, o que foi pedido, o que foi feito, causa raiz

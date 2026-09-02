@@ -471,3 +471,34 @@
    existe, resposta apagada, anúncio sem texto. Não é enfeite: é o que evita descobrir o problema
    no meio de uma rodada, com o contato aberto. */
 .wf-root .wf-aviso-anuncio { color: var(--wf-err); font-weight: 600; }
+
+/* ---- a sugestão da rodada, em VERMELHO ----
+   Pedido dele (02/09/2026): "marque a sugestão e o botão referente da sugestão de vermelho para se
+   destacar". A faixa e o botão usam a MESMA cor de propósito — são a mesma informação dita duas
+   vezes, e cores diferentes fariam procurar qual das duas é a sugestão de verdade. */
+.wf-root .wf-pergunta-recomendada.wf-rec,
+.wf-pergunta-fundo .wf-pergunta-recomendada.wf-rec {
+  color: #fff;
+  background: var(--wf-err);
+  border-color: var(--wf-err);
+  font-weight: 600;
+}
+.wf-root button.wf-rec-btn,
+.wf-pergunta-fundo button.wf-rec-btn {
+  background: var(--wf-err);
+  border-color: var(--wf-err);
+  color: #fff;
+  font-weight: 600;
+}
+.wf-root button.wf-rec-btn:hover,
+.wf-pergunta-fundo button.wf-rec-btn:hover { filter: brightness(1.1); }
+
+/* ---- a anotação "por que está errado" ----
+   Fechada por padrão: ela é o caso excepcional (a sugestão errada), e um campo de texto sempre
+   aberto na caixa da rodada disputaria a atenção com as teclas, que são o trabalho normal. */
+.wf-pergunta-obs { margin-top: 6px; }
+.wf-pergunta-obs-corpo { margin-top: 5px; display: flex; flex-direction: column; gap: 5px; }
+.wf-pergunta-obs-corpo textarea { width: 100%; box-sizing: border-box; }
+.wf-pergunta-obs-aviso { font-size: 11.5px; }
+.wf-pergunta-obs-aviso.bom { color: var(--wf-ok, #15803d); }
+.wf-pergunta-obs-aviso.ruim { color: var(--wf-err); font-weight: 600; }

@@ -20,6 +20,7 @@ import * as iaCliente from '../lib/ia-cliente.js';
 import * as iaLib from '../lib/ia.js';
 import * as gabineteLib from '../lib/gabinete.js';
 import * as anunciosLib from '../lib/anuncios.js';
+import * as observacoesLib from '../lib/observacoes.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
@@ -2099,6 +2100,74 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // elas chamam) — só as duas linhas que as colocavam na tela. Reverter é só devolvê-las aqui.
     // body.append(renderCartaoReabrir(cfg));
     // body.append(renderCartaoSemRetorno(cfg, modeloDaRodada()));
+
+    /**
+     * **As observações que ele anotou na rodada — e o botão que as manda para mim.**
+     *
+     * Pedido dele (02/09/2026): *"vou escrever o porque está errado e lhe passar essas informações
+     * depois"*. Anotar na caixa da rodada só serve se houver como tirar de lá: sem este botão o
+     * caderno ficaria preso no armazenamento do navegador dele.
+     *
+     * O texto sai agrupado por REGRA (ver `observacoes.paraTexto`), porque é assim que eu conserto:
+     * uma regra errada é um lugar no código, e ver as três vezes que ela errou juntas mostra o
+     * padrão que uma sozinha não mostra.
+     */
+    body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Observações para o Claude'));
+    const obsNode = h('div', {});
+    body.append(obsNode);
+
+    async function desenharObservacoes() {
+      obsNode.replaceChildren();
+      const lista = observacoesLib.normalizar(await store.get('observacoes'));
+
+      if (!lista.length) {
+        obsNode.append(
+          h('p', { class: 'wf-hint' },
+            'Nenhuma ainda. Quando a rodada sugerir algo errado, clique em "Anotar por que está ' +
+              'errado" na caixa da pergunta — a anotação vem para cá com o caso junto.')
+        );
+        return;
+      }
+
+      obsNode.append(
+        h('p', { class: 'wf-hint' },
+          `${lista.length} anotação(ões). Cada uma traz a regra que decidiu, a tecla que ela sugeriu ` +
+            'e o que a pessoa escreveu — é isso que me permite consertar sem adivinhar.')
+      );
+
+      const saida = h('textarea', { rows: '6', readonly: 'readonly' });
+      saida.value = observacoesLib.paraTexto(lista);
+
+      const copiar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Copiar observações');
+      copiar.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(saida.value);
+          setStatus(`${lista.length} observação(ões) copiada(s). Cole na conversa com o Claude.`, 'ok');
+        } catch (_) {
+          // Área de transferência recusada (foco fora da aba, permissão): selecionar deixa o
+          // Ctrl+C funcionar, em vez de o botão não fazer nada e não dizer nada.
+          saida.select();
+          setStatus('Não consegui copiar sozinho — o texto está selecionado, use Ctrl+C.', 'err');
+        }
+      });
+
+      /**
+       * Apagar é destrutivo e não tem volta, então pergunta. O momento certo de usar é depois de
+       * colar para mim: as anotações já cumpriram o papel, e a lista limpa deixa a próxima leva
+       * legível.
+       */
+      const limpar = h('button', { class: 'wf-btn wf-danger', type: 'button' }, 'Apagar todas');
+      limpar.addEventListener('click', async () => {
+        if (!confirm(`Apagar as ${lista.length} observações? Copie antes — não tem volta.`)) return;
+        await store.set('observacoes', observacoesLib.apagarTudo());
+        await desenharObservacoes();
+        setStatus('Observações apagadas.', 'ok');
+      });
+
+      obsNode.append(saida, h('div', { class: 'wf-row' }, [copiar, limpar]));
+    }
+
+    desenharObservacoes();
 
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Andamento'));
     logNode = h('div', {});
@@ -5326,8 +5395,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // dos dados do contato e das opções. O destaque na tecla continua, mas sozinho ele não
       // dizia POR QUE aquela era a sugerida — e o porquê é o que deixa discordar dela.
       if (recomendacao) {
+        /**
+         * **Vermelho** — pedido dele (02/09/2026): *"marque a sugestão e o botão referente da
+         * sugestão de vermelho para se destacar"*.
+         *
+         * A faixa e o botão usam a mesma cor de propósito: são a mesma informação dita duas vezes,
+         * e cores diferentes fariam procurar qual das duas é a sugestão de verdade.
+         */
         caixa.append(
-          h('div', { class: 'wf-pergunta-recomendada' }, `Sugiro a ${sugestaoLib.mostrarTecla(recomendacao.tecla)}: ${recomendacao.motivo}`)
+          h('div', { class: 'wf-pergunta-recomendada wf-rec' }, `Sugiro a ${sugestaoLib.mostrarTecla(recomendacao.tecla)}: ${recomendacao.motivo}`)
         );
       } else if (semRegra) {
         /**
@@ -5363,9 +5439,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const botoes = [];
       const linhaBotoes = h('div', { class: 'wf-pergunta-botoes' });
       for (const opcao of opcoes) {
+        /**
+         * O botão da sugestão sai em VERMELHO, e só ele. `wf-rec` em vez de `wf-primary` porque
+         * `wf-primary` é o botão de ação padrão do painel inteiro — repintá-lo tornaria vermelho o
+         * "Aceitar" do popup de cidade e o "Começar pelos Meus", que não são sugestão nenhuma.
+         */
+        const ehSugestao = !!opcao.primaria && !!recomendacao;
         const btn = h(
           'button',
-          { class: `wf-btn ${opcao.primaria ? 'wf-primary' : ''}`, type: 'button' },
+          { class: `wf-btn ${ehSugestao ? 'wf-rec-btn' : opcao.primaria ? 'wf-primary' : ''}`, type: 'button' },
           `${sugestaoLib.mostrarTecla(opcao.tecla)}  ${opcao.rotulo}`
         );
         btn.addEventListener('click', () => fechar(opcao.valor));
@@ -5375,6 +5457,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       caixa.append(linhaBotoes);
       if (copiarConversa?.length) caixa.append(montarCopiarConversa(copiarConversa, titulo));
       if (respostas.length) caixa.append(montarRespostasRapidas(respostas));
+      caixa.append(montarObservacao(titulo, recomendacao, linhas));
       caixa.append(h('div', { class: 'wf-pergunta-dica' }, dica));
 
       function aoTeclar(ev) {
@@ -5547,6 +5630,81 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     linha.append(botao, aviso);
     return linha;
+  }
+
+  /**
+   * **"Por que esta sugestão está errada?"** — o caderno dele, dentro da caixa da rodada.
+   *
+   * Pedido dele (02/09/2026): *"vamos implementar a observação para sugestão onde vou escrever o
+   * porque está errado e lhe passar essas informações depois, monte um botão de salvar as
+   * observações para que isso seja possível"*.
+   *
+   * **Salvar não fecha a pergunta**, igual às respostas rápidas: anotar é sobre o caso que ele está
+   * olhando, e fechar a caixa o obrigaria a decidir antes de terminar de escrever.
+   *
+   * O que vai junto com o texto dele — a regra, a tecla, o motivo que a caixa mostrou, o que a
+   * pessoa escreveu e as etiquetas — o painel preenche sozinho. É a lição que ele mesmo me deu na
+   * janela do fluxo: *"não faz sentido eu colar para você sem você ter a visão do fluxo"*. Aqui é o
+   * mesmo — sem o caso, "essa sugestão está errada" me faria adivinhar.
+   */
+  function montarObservacao(nomeDoContato, recomendacao, linhas) {
+    const bloco = h('div', { class: 'wf-pergunta-obs' });
+
+    const abrir = h('button', { class: 'wf-btn wf-mini', type: 'button' }, '✎ Anotar por que está errado');
+    const corpo = h('div', { class: 'wf-pergunta-obs-corpo' });
+    corpo.style.display = 'none';
+
+    abrir.addEventListener('click', () => {
+      const aberto = corpo.style.display !== 'none';
+      corpo.style.display = aberto ? 'none' : 'block';
+      abrir.textContent = aberto ? '✎ Anotar por que está errado' : '▾ Fechar a anotação';
+      if (!aberto) area.focus();
+    });
+
+    const area = h('textarea', {
+      rows: '3',
+      placeholder: recomendacao
+        ? 'Ex.: ele já tem todas as etiquetas, era só agradecer e concluir.'
+        : 'Ex.: a caixa não sugeriu nada, e o certo aqui seria…',
+    });
+
+    const salvar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Salvar observação');
+    const aviso = h('div', { class: 'wf-pergunta-obs-aviso' });
+
+    salvar.addEventListener('click', async () => {
+      const porque = area.value.trim();
+      if (!porque) {
+        // Botão que grava nada e diz "salvo" ensina a não confiar no botão.
+        aviso.textContent = 'Escreva o que está errado antes de salvar.';
+        aviso.className = 'wf-pergunta-obs-aviso ruim';
+        return;
+      }
+      try {
+        const guardadas = await store.get('observacoes');
+        const r = observacoesLib.acrescentar(guardadas, {
+          contato: nomeDoContato,
+          regra: recomendacao?.id || '',
+          tecla: recomendacao?.tecla || (recomendacao?.resposta ? 'f' : ''),
+          motivo: recomendacao?.motivo || '',
+          // O que ELA escreveu — a última mensagem, que é o que a regra olhou para decidir.
+          mensagem: state.entrantes[state.entrantes.length - 1]?.texto || '',
+          etiquetas: (state.tagSuggestions || []).filter((t) => t.jaTem || t.marcada).map((t) => t.nome),
+          porque,
+        });
+        await store.set('observacoes', r.lista);
+        area.value = '';
+        aviso.textContent = `Anotado. São ${r.lista.length} observação(ões) — copie na aba Automatizado e me mande.`;
+        aviso.className = 'wf-pergunta-obs-aviso bom';
+      } catch (err) {
+        // Extensão recarregada com a aba aberta: o armazenamento morre. Dizer é melhor que fingir.
+        aviso.textContent = 'Não consegui salvar: ' + (err?.message || err);
+        aviso.className = 'wf-pergunta-obs-aviso ruim';
+      }
+    });
+
+    corpo.append(area, h('div', { class: 'wf-row' }, [salvar]), aviso);
+    bloco.append(abrir, corpo);
+    return bloco;
   }
 
   function montarRespostasRapidas(respostas) {

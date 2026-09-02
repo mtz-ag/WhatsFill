@@ -1,0 +1,110 @@
+/**
+ * As observacoes da rodada: o que ele anota quando a sugestao esta errada.
+ *
+ * O que este arquivo protege e a UTILIDADE da anotacao. "essa sugestao esta errada" sem o caso
+ * junto nao me diz nada -- eu responderia adivinhando. Entao a entrada nasce com a regra, a tecla,
+ * o motivo que a caixa mostrou e o que a pessoa escreveu, e nada disso e opcional.
+ *
+ * Rode: node tests/observacoes.test.mjs
+ */
+import { check, grupo, fim } from './_harness.mjs';
+import * as obs from '../src/lib/observacoes.js';
+
+const caso = (extra) => ({
+  contato: 'Deoclecio Mello',
+  regra: 'nunca-pediram-dados',
+  tecla: '4',
+  motivo: 'veio do anuncio e nunca pedimos o nome e a cidade dela',
+  mensagem: 'Que bom! Vou sim',
+  etiquetas: ['ADS', 'CACHOEIRINHA'],
+  porque: 'ele ja tem todas as etiquetas, era so agradecer',
+  ...extra,
+});
+
+grupo('a anotacao carrega o caso junto');
+{
+  const it = obs.nova(caso());
+  check(it.regra === 'nunca-pediram-dados', 'guarda a regra que decidiu');
+  check(it.tecla === '4', 'e a tecla que ela mandou apertar');
+  check(it.mensagem.includes('Vou sim'), 'e o que a pessoa escreveu');
+  check(it.etiquetas.length === 2, 'e as etiquetas do contato');
+  check(!!it.em && it.em.includes('T'), 'e carimba a hora sozinho');
+
+  // A hora vinda de fora e respeitada: e o que permite reimportar sem embaralhar a ordem.
+  check(obs.nova(caso({ em: '2026-09-02T10:00:00.000Z' })).em === '2026-09-02T10:00:00.000Z', 'aceita a hora ja gravada');
+}
+
+grupo('nao grava anotacao vazia');
+{
+  /**
+   * Botao que grava nada e diz "salvo" ensina a nao confiar no botao. Quem chama precisa saber que
+   * nao gravou para poder avisar na tela.
+   */
+  const r = obs.acrescentar([], caso({ porque: '' }));
+  check(r.gravou === false && r.lista.length === 0, 'sem o porque, nao grava');
+  check(obs.acrescentar([], caso({ porque: '   ' })).gravou === false, 'so espaco tambem nao');
+  check(obs.acrescentar([], caso()).gravou === true, 'com o porque, grava');
+}
+
+grupo('a lista nao cresce para sempre');
+{
+  let lista = [];
+  for (let i = 0; i < obs.MAX + 25; i++) lista = obs.acrescentar(lista, caso({ porque: 'nota ' + i })).lista;
+  check(lista.length === obs.MAX, `para em ${obs.MAX} anotacoes`);
+  // A mais ANTIGA sai: o armazenamento nao e infinito, e o problema recente e o que interessa.
+  check(lista[lista.length - 1].porque === 'nota ' + (obs.MAX + 24), 'a mais recente fica por ultimo');
+  check(!lista.some((x) => x.porque === 'nota 0'), 'e a primeira saiu');
+}
+
+grupo('a peneira do que veio do armazenamento');
+{
+  check(obs.normalizar(null).length === 0, 'lista ausente vira vazia');
+  check(obs.normalizar('nada').length === 0, 'o que nao e lista vira vazia');
+  check(obs.normalizar([null, 7, 'x']).length === 0, 'item que nao e objeto e descartado');
+  check(obs.normalizar([{ porque: 'ok' }]).length === 1, 'item com o porque sobrevive');
+  check(obs.normalizar([{ contato: 'x' }]).length === 0, 'item SEM o porque e descartado');
+
+  // Texto longo e cortado -- `chrome.storage.local` nao e infinito.
+  const gigante = obs.nova(caso({ porque: 'x'.repeat(5000), mensagem: 'y'.repeat(5000) }));
+  check(gigante.porque.length <= 1000, 'o porque e limitado');
+  check(gigante.mensagem.length <= 400, 'a mensagem dela tambem');
+  check(obs.nova(caso({ etiquetas: Array(40).fill('E') })).etiquetas.length <= 12, 'e as etiquetas');
+
+  // Campo desconhecido nao passa: e o mesmo cuidado de `arvore.sanitizar`.
+  const extra = obs.nova({ porque: 'ok', enviarPix: 1 });
+  check(!('enviarPix' in extra), 'campo desconhecido nao passa');
+}
+
+grupo('o texto que ele cola para mim');
+{
+  check(obs.paraTexto([]).includes('Nenhuma observação'), 'lista vazia diz que esta vazia');
+
+  let lista = [];
+  lista = obs.acrescentar(lista, caso({ porque: 'primeira' })).lista;
+  lista = obs.acrescentar(lista, caso({ porque: 'segunda' })).lista;
+  lista = obs.acrescentar(lista, caso({ regra: 'conteudo-pedido', tecla: '1', porque: 'outra regra' })).lista;
+
+  const t = obs.paraTexto(lista);
+  /**
+   * Agrupado por REGRA porque e assim que eu conserto: uma regra errada e um lugar no codigo, e ver
+   * as tres vezes que ela errou juntas mostra o padrao que uma sozinha nao mostra.
+   */
+  check(t.includes('## nunca-pediram-dados  (2×)'), 'agrupa por regra e conta quantas vezes');
+  check(t.includes('## conteudo-pedido  (1×)'), 'e separa a outra regra');
+  check(t.includes('primeira') && t.includes('segunda') && t.includes('outra regra'), 'todas as anotacoes saem');
+  check(t.includes('Deoclecio Mello'), 'com o contato');
+  check(t.includes('Vou sim'), 'e com o que a pessoa escreveu');
+  check(t.includes('tecla 4'), 'e a tecla que a caixa sugeriu');
+  check(t.includes('ADS, CACHOEIRINHA'), 'e as etiquetas');
+
+  // Sem regra nenhuma (a caixa nao sugeriu nada) tem grupo proprio, e nao some.
+  const semRegra = obs.paraTexto(obs.acrescentar([], caso({ regra: '', porque: 'a caixa nao sugeriu nada' })).lista);
+  check(semRegra.includes('sem regra'), 'o caso sem regra tem grupo proprio');
+}
+
+grupo('apagar tudo');
+{
+  check(obs.apagarTudo().length === 0, 'devolve lista vazia');
+}
+
+fim();

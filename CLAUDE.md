@@ -72,6 +72,7 @@ src/lib/ia-cliente.js   ponte painel <-> service worker (a chave nunca entra na 
 src/lib/sugestao.js     tabela de regras da rodada, e os verbetes dela (puro, testado)
 src/lib/arvore.js       o fluxo como ARVORE: sinais, ramos dele, decisao (puro, testado)
 src/lib/anuncios.js     ANUNCIOS do momento: texto que reconhece + o que fazer (puro, testado)
+src/lib/observacoes.js  o caderno das sugestoes erradas, com o caso junto (puro, testado)
 src/fluxo.html/.css/.js JANELA do fluxo: o QUADRO (caixas soltas, fios, arrastar, editar)
 src/lib/fluxo-msg.js    a mensagem que pede ao service worker para abrir a janela
 src/data/coredes-rs.json  município -> COREDE (planilha oficial da SPGG-RS)
@@ -1123,10 +1124,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
 > `src/` e reclama só de `SyntaxError`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as catorze suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as quinze suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

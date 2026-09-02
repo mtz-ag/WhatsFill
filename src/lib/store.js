@@ -766,6 +766,19 @@ const DEFAULTS = {
    */
   modelosPadraoAnuncio: [],
 
+  /**
+   * **O caderno das sugestões erradas** — pedido dele (02/09/2026): *"vamos implementar a observação
+   * para sugestão onde vou escrever o porque está errado e lhe passar essas informações depois"*.
+   *
+   * Cada entrada carrega o CASO junto (contato, regra, tecla, motivo, o que ela escreveu), porque
+   * *"essa sugestão está errada"* sozinho não me diz nada — é a mesma lição do "Copiar o fluxo" da
+   * janela, que ele mesmo corrigiu em 01/09.
+   *
+   * Nada aqui muda o que a rodada decide: é caderno, como o `no.nota` do quadro.
+   * Formato e limite em `lib/observacoes.js`.
+   */
+  observacoes: [],
+
   /** Ponteiro do rodízio: o índice do PRÓXIMO modelo padrão a usar. Anda só depois do envio. */
   modeloPadraoIndex: 0,
 
@@ -1126,7 +1139,7 @@ export async function importJson(text) {
     'templates', 'cityLinks', 'defaultGroupLink', 'settings', 'writeContract', 'dicts',
     'tagRules', 'tagAliases', 'contentTemplates', 'auto', 'fluxo',
     'modeloPorTexto', 'padroesDeAnuncio', 'conteudoPreferido', 'anuncios',
-    'modeloPadraoAnuncio', 'modelosPadraoAnuncio',
+    'modeloPadraoAnuncio', 'modelosPadraoAnuncio', 'observacoes',
   ];
   for (const key of allowed) {
     if (data[key] !== undefined) await set(key, data[key]);
