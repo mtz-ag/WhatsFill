@@ -5,6 +5,55 @@
 
 ---
 
+## 2026-09-02 — A tecla `a` mandava TRÊS mensagens, e a terceira era um encerramento
+
+**Relato dele**, com a print da caixa: *"botão a totalmente errado mandando modelo + pedindo dados +
+agradecendo e concluindo, não existe agradecer depois de pedir dados"*.
+
+### Não era rótulo, era envio
+
+A tecla `a` mandava mesmo três mensagens: modelo → pedido de dados → **agradecimento**. E o texto do
+agradecimento mostra o tamanho do erro: *"Obrigado pela atenção! Qualquer coisa, é só chamar por
+aqui. Um abraço"* — um **encerramento**. Sair logo depois de perguntar o nome e a cidade fecha a
+conversa que a pergunta acabou de abrir, e a pessoa lê "não precisa responder".
+
+Era sobra do desenho antigo: a tecla 1 era "modelo + agradecimento", e quando o pedido de dados
+entrou no meio (a tecla `a`, 02/09) o encerramento ficou depois dele sem ninguém reparar. O envio
+era incondicional, fora do `if` da tecla `a`.
+
+Contraria também o invariante já registrado no `CLAUDE.md`: *"a tecla `a` é a ÚNICA do projeto que
+manda duas mensagens"*. Mandava três.
+
+### Três consertos
+
+1. **O agradecimento não vai atrás do pedido de dados.** A tecla 1 continua mandando: lá o modelo é
+   a entrega e o encerramento fecha o atendimento, que é o que ela sempre fez.
+2. **O título da caixa descreve a SITUAÇÃO, não uma das teclas.** Ele dizia *"Enviar o modelo X +
+   agradecimento e concluir?"* — a frase da tecla 1, encimando dez opções. Com a tecla `a` na lista,
+   o título prometia agradecimento e a opção prometia pedido de dados: duas frases sobre o mesmo
+   contato, discordando. Foi por aí que ele viu o defeito. Agora é *"Modelo X disponível para este
+   contato. O que fazer?"*, e cada opção diz o que faz.
+3. **A tecla `a` deixou de depender da trava do agradecimento.** `podeEnviar`/`modeloTravado` são a
+   trava daquele texto; a tecla `a` amarrada ali sumiria por causa de uma mensagem que ela não
+   manda, com o motivo na tela falando de um texto fora do caminho. E o aviso passou de *"Modelo X
+   travado"* para *"Tecla 1 fora: o agradecimento não sai"* — dizer "modelo travado" mandava ele
+   procurar o problema no lugar errado.
+
+### Uma pergunta que fica para ele
+
+A tecla 1 continua mandando **duas** mensagens (modelo + agradecimento). Isso também contraria o
+"uma passada, uma mensagem" que ele escolheu em 01/09, e o agradecimento continua disponível nas
+respostas rápidas e na tecla 8. Não mexi porque ele reclamou da `a`, e tirar mensagem que vai para
+eleitor é decisão dele.
+
+**Arquivos:** `src/panel/panel.js`, `manifest.json` (1.59.0 → 1.60.0), `registro.md`, `CLAUDE.md`.
+Catorze suítes e os dois verificadores passando.
+
+**Não testado na tela:** o envio real. Teste no Thiago Tim com a tecla `a` — têm que sair duas
+mensagens, não três.
+
+---
+
 ## 2026-09-02 — O anúncio é reconhecido pelo DADO da plataforma, não só pelo que ela digitou
 
 **Relato dele**, com a print da Inês (Rosário do Sul): contato com etiqueta **ADS** — ou seja, a

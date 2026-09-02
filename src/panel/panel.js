@@ -4547,7 +4547,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * variável travada. Oferecer uma tecla que vai travar no meio do envio é pior que não
        * oferecer: a primeira mensagem já saiu e a segunda não sai mais.
        */
-      const podeModeloEDados = podeEnviar && !!pedirDados && !pedirTrava && !modeloTravado;
+      /**
+       * **A tecla `a` não depende mais do agradecimento**, porque não o manda.
+       *
+       * `podeEnviar` e `modeloTravado` são a trava do AGRADECIMENTO (ver onde `modeloTravado` é
+       * calculado): a tecla 1 some quando aquele texto fica sem variável. Como a tecla `a` deixou
+       * de mandá-lo (02/09/2026), continuar amarrada ali faria a opção desaparecer por causa de uma
+       * mensagem que ela não envia — e o motivo na tela falaria de um texto que não está no caminho.
+       */
+      const podeModeloEDados = !!modelo && !!pedirDados && !pedirTrava;
       if (podeModeloEDados) {
         opcoes.push({
           tecla: 'a',
@@ -4818,7 +4826,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             ? `Conteúdo pedido: ${conteudoEscolhido.nome}` +
               (desempatado ? ` (casou com ${conteudos.length}, escolhi o preferido)` : '')
             : `Sem modelo: ${semModelo}`,
-          modeloTravado ? `Modelo "${modelo.name}" travado: ${modeloTravado}` : '',
+          // Quem trava é o AGRADECIMENTO, não o modelo — dizer "modelo travado" mandava ele
+          // procurar o problema no lugar errado. A tecla `a` continua na lista porque não o manda.
+          modeloTravado ? `Tecla 1 fora: o agradecimento não sai — ${modeloTravado}` : '',
           enviadoHoje
             ? `⚠ "${modelo.name}" JÁ FOI ENVIADO hoje, às ${formatarHora(jaEnviado.at)}` +
               (jaEnviado.nome ? ` (para ${jaEnviado.nome})` : '') +
@@ -4866,11 +4876,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             enviar: () => sendTemplate(t, { send: true, jaConfirmado: true }),
           };
         }),
-        pergunta: podeEnviar
-          ? `Enviar o modelo "${modelo.name}" + agradecimento e concluir?`
-          : modeloTravado
-            ? 'O modelo existe, mas o agradecimento não sai sem o nome. Corrija o nome na aba Dados ou escolha outra saída.'
-            : 'Não há modelo de conteúdo para este contato. O que fazer?',
+        /**
+         * **O título descreve a SITUAÇÃO, não uma das teclas.**
+         *
+         * Ele dizia *"Enviar o modelo X + agradecimento e concluir?"* — a frase da tecla 1, num
+         * título que encima dez opções. Com a tecla `a` na lista (modelo + pedir dados), o título
+         * prometia agradecimento e a opção prometia pedido de dados: duas frases sobre o mesmo
+         * contato, discordando. Foi assim que ele viu o defeito (02/09/2026).
+         *
+         * Cada opção já diz exatamente o que faz. O título só precisa dizer onde estamos.
+         */
+        pergunta: modelo
+          ? `Modelo "${modelo.name}" disponível para este contato. O que fazer?`
+          : 'Não há modelo de conteúdo para este contato. O que fazer?',
         opcoes,
       });
 
@@ -5098,7 +5116,26 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         }
         registrarNaRodada(nome, 'info', `recibo do anúncio + pedido de dados ("${pedirDados.name}")`);
       }
-      if (agradecimento && !(await sendTemplate(agradecimento, { send: true, jaConfirmado: true }))) {
+
+      /**
+       * **O agradecimento NÃO vai atrás do pedido de dados.**
+       *
+       * Relato dele (02/09/2026), com a print da caixa: *"botão a totalmente errado mandando modelo
+       * + pedindo dados + agradecendo e concluindo, não existe agradecer depois de pedir dados"*.
+       *
+       * Ele está certo, e o texto mostra o tamanho do erro: o agradecimento é *"Obrigado pela
+       * atenção! Qualquer coisa, é só chamar por aqui. Um abraço"* — um ENCERRAMENTO. Sair logo
+       * depois de perguntar o nome e a cidade fecha a conversa que a pergunta acabou de abrir, e a
+       * pessoa lê "não precisa responder".
+       *
+       * Era sobra do desenho antigo, quando a tecla 1 era "modelo + agradecimento" e a tecla `a`
+       * ainda não existia. Quando o pedido de dados entrou no meio, o encerramento ficou depois
+       * dele sem ninguém reparar.
+       *
+       * A tecla 1 continua mandando o agradecimento: lá o modelo é a entrega e o encerramento
+       * fecha o atendimento, que é o que ele sempre fez.
+       */
+      if (escolha !== 'modelodados' && agradecimento && !(await sendTemplate(agradecimento, { send: true, jaConfirmado: true }))) {
         return { nome, resultado: 'erro', motivo: 'o modelo saiu mas o agradecimento não' };
       }
 

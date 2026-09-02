@@ -517,6 +517,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   com "face" casaria com todos de uma vez. Nas regras de etiqueta ele entra porque la a pergunta e
   outra. **Reconhecer continua exigindo o anuncio cadastrado na Config** — lista vazia nao e
   defeito, e o nome da campanha aparece no cabecalho do painel, que e de onde sai o trecho.
+- **Mensagem enviada FORA do `if` da tecla vai em todas elas.** O agradecimento (*"Obrigado pela
+  atencao! Qualquer coisa, e so chamar"* — um ENCERRAMENTO) era enviado depois do bloco do modelo,
+  sem condicao: a tecla `a` mandava tres mensagens, e a terceira fechava a conversa que o pedido de
+  dados acabara de abrir (print dele, 02/09, *"nao existe agradecer depois de pedir dados"*). Era
+  sobra de quando a tecla 1 era "modelo + agradecimento" e a `a` nao existia. **Criou tecla nova que
+  reusa um bloco de envio? Confira o que ja estava DEPOIS do bloco** — e lembre do invariante: a
+  tecla `a` e a unica que manda duas mensagens.
+- **O titulo da caixa da rodada descreve a SITUACAO, nunca uma das teclas.** Ele dizia *"Enviar o
+  modelo X + agradecimento e concluir?"*, que era a frase da tecla 1, encimando dez opcoes — com a
+  tecla `a` na lista, o titulo prometia agradecimento e a opcao prometia pedido de dados. Duas
+  frases sobre o mesmo contato, discordando, e foi por ai que ele viu o defeito. Cada opcao ja diz o
+  que faz; o titulo so precisa dizer onde estamos.
+- **Trava de variavel amarra so a tecla que MANDA aquele texto.** `modeloTravado` e a trava do
+  agradecimento, e a tecla `a` estava presa nela — sumiria por causa de uma mensagem que nao envia,
+  com o motivo na tela falando de um texto fora do caminho. O aviso tambem mentia: dizia *"Modelo X
+  travado"* quando o travado era o agradecimento, mandando procurar no lugar errado.
 - **Antes de oferecer opcoes a ele, confira se voce entendeu o que a coisa FAZ.** A escolha dele e
   boa na medida em que a minha descricao e verdadeira; descricao errada nao produz escolha errada
   dele, produz escolha errada minha assinada por ele. Foi o que aconteceu com o modelo padrao acima.
