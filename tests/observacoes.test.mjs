@@ -138,4 +138,47 @@ grupo('o contexto sao as CINCO ultimas (02/09/2026)');
   check(varias.includes('· "antes"') && varias.includes('· "depois"'), 'e todas aparecem');
 }
 
+
+grupo('a copia manda so as NOVAS (02/09/2026)');
+{
+  /**
+   * Pedido dele: *"ao copiar vai vir casos anteriores, eu tenho que lembrar de apagar para comecar
+   * outra rodada"*. Regra que exige alguem lembrar nao e regra -- e a saida que ele tinha (apagar
+   * tudo depois de colar) e destrutiva: colagem que der errado leva as anotacoes junto.
+   */
+  let lista = [];
+  lista = obs.acrescentar(lista, caso({ porque: 'primeira' })).lista;
+  lista = obs.acrescentar(lista, caso({ porque: 'segunda' })).lista;
+
+  check(obs.naoCopiadas(lista).length === 2, 'as duas comecam como novas');
+
+  // Copia as duas.
+  lista = obs.marcarCopiadas(lista, obs.naoCopiadas(lista));
+  check(obs.naoCopiadas(lista).length === 0, 'depois de copiadas, nao ha novas');
+  check(lista.length === 2, 'e nenhuma se perdeu -- marcar nao e apagar');
+
+  // Chega uma terceira: so ela e nova.
+  lista = obs.acrescentar(lista, caso({ porque: 'terceira' })).lista;
+  const novas = obs.naoCopiadas(lista);
+  check(novas.length === 1 && novas[0].porque === 'terceira', 'a nova leva so traz a terceira');
+  check(obs.paraTexto(novas).includes('terceira'), 'e o texto dela sai');
+  check(!obs.paraTexto(novas).includes('primeira'), 'sem as ja copiadas');
+
+  // "Copiar todas" continua possivel: o historico nao se perde.
+  check(obs.paraTexto(lista).includes('primeira'), 'o texto de todas ainda traz as antigas');
+
+  /**
+   * A marca e pelo `em` (o instante em que a anotacao nasceu) e nao pela posicao: entre o clique e
+   * a gravacao o painel pode ter acrescentado outra, e marcar por indice pegaria a errada.
+   */
+  const antes = obs.acrescentar([], caso({ em: '2026-09-02T10:00:00.000Z', porque: 'a' })).lista;
+  const depois = obs.acrescentar(antes, caso({ em: '2026-09-02T11:00:00.000Z', porque: 'b' })).lista;
+  const so_a = obs.marcarCopiadas(depois, [depois[0]]);
+  check(so_a[0].copiada === true && so_a[1].copiada === false, 'marca exatamente a que foi copiada');
+
+  // A marca sobrevive a leitura do armazenamento.
+  check(obs.normalizar(so_a)[0].copiada === true, 'e sobrevive ao normalizar');
+  check(obs.nova({ porque: 'x' }).copiada === false, 'anotacao nova nasce sem a marca');
+}
+
 fim();

@@ -2118,9 +2118,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     async function desenharObservacoes() {
       obsNode.replaceChildren();
-      const lista = observacoesLib.normalizar(await store.get('observacoes'));
+      const todas = observacoesLib.normalizar(await store.get('observacoes'));
 
-      if (!lista.length) {
+      if (!todas.length) {
         obsNode.append(
           h('p', { class: 'wf-hint' },
             'Nenhuma ainda. Quando a rodada sugerir algo errado, clique em "Anotar por que está ' +
@@ -2129,42 +2129,109 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return;
       }
 
+      /**
+       * **A cópia manda só as NOVAS.**
+       *
+       * Pedido dele (02/09/2026): *"ao copiar vai vir casos anteriores, eu tenho que lembrar de
+       * apagar para começar outra rodada"*. Regra que exige alguém lembrar não é regra — e a saída
+       * que ele tinha (apagar tudo depois de colar) é destrutiva: colagem que der errado leva as
+       * anotações junto.
+       *
+       * Agora cada anotação é marcada ao ser copiada. A próxima cópia começa do zero sozinha, e o
+       * histórico continua ali para consultar.
+       */
+      const novas = todas.filter((x) => !x.copiada);
+      const jaForam = todas.length - novas.length;
+
       obsNode.append(
         h('p', { class: 'wf-hint' },
-          `${lista.length} anotação(ões). Cada uma traz a regra que decidiu, a tecla que ela sugeriu ` +
-            'e o que a pessoa escreveu — é isso que me permite consertar sem adivinhar.')
+          (novas.length
+            ? `${novas.length} anotação(ões) nova(s)`
+            : 'Nenhuma nova desde a última cópia') +
+            (jaForam ? ` · ${jaForam} já copiada(s) antes` : '') +
+            '. Cada uma traz a regra que decidiu, a tecla que ela sugeriu e o que a pessoa ' +
+            'escreveu — é isso que me permite consertar sem adivinhar.')
       );
 
       const saida = h('textarea', { rows: '6', readonly: 'readonly' });
-      saida.value = observacoesLib.paraTexto(lista);
 
-      const copiar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Copiar observações');
+      /**
+       * O que está na tela é o que o botão copia — senão o botão vira surpresa.
+       *
+       * `mostrarTudo` é o caso em que ele precisa reenviar algo já copiado (a conversa comigo se
+       * perdeu, ou ele quer o histórico junto).
+       */
+      let mostrarTudo = !novas.length;
+      const emCena = () => (mostrarTudo ? todas : novas);
+      const redesenhar = () => {
+        saida.value = observacoesLib.paraTexto(emCena());
+      };
+      redesenhar();
+
+      const copiar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, '');
+      const rotularCopiar = () => {
+        copiar.textContent = mostrarTudo
+          ? `Copiar todas (${todas.length})`
+          : `Copiar as ${novas.length} novas`;
+      };
+      rotularCopiar();
+
       copiar.addEventListener('click', async () => {
+        const levadas = emCena();
+        if (!levadas.length) return;
+        let copiou = true;
         try {
           await navigator.clipboard.writeText(saida.value);
-          setStatus(`${lista.length} observação(ões) copiada(s). Cole na conversa com o Claude.`, 'ok');
         } catch (_) {
           // Área de transferência recusada (foco fora da aba, permissão): selecionar deixa o
           // Ctrl+C funcionar, em vez de o botão não fazer nada e não dizer nada.
           saida.select();
-          setStatus('Não consegui copiar sozinho — o texto está selecionado, use Ctrl+C.', 'err');
+          copiou = false;
         }
+        /**
+         * Marca mesmo quando a área de transferência recusou: ali o texto ficou SELECIONADO e o
+         * caminho é o Ctrl+C dele, que eu não tenho como observar. Marcar é a suposição certa —
+         * errar para o outro lado faria a próxima cópia repetir tudo, que é o defeito que isto
+         * veio consertar. E se ele precisar de novo, "Copiar todas" está ao lado.
+         */
+        await store.set('observacoes', observacoesLib.marcarCopiadas(todas, levadas));
+        setStatus(
+          copiou
+            ? `${levadas.length} observação(ões) copiada(s). Cole na conversa com o Claude — a próxima cópia começa do zero.`
+            : 'Não consegui copiar sozinho — o texto está selecionado, use Ctrl+C. Já marquei como enviadas.',
+          copiou ? 'ok' : 'err'
+        );
+        await desenharObservacoes();
       });
 
+      const botoes = [copiar];
+
+      // Só aparece quando há as duas coisas: sem novas, o botão de cima já mostra todas.
+      if (novas.length && jaForam) {
+        const tudo = h('button', { class: 'wf-btn wf-mini', type: 'button' }, `Ver todas (${todas.length})`);
+        tudo.addEventListener('click', () => {
+          mostrarTudo = !mostrarTudo;
+          tudo.textContent = mostrarTudo ? `Só as ${novas.length} novas` : `Ver todas (${todas.length})`;
+          redesenhar();
+          rotularCopiar();
+        });
+        botoes.push(tudo);
+      }
+
       /**
-       * Apagar é destrutivo e não tem volta, então pergunta. O momento certo de usar é depois de
-       * colar para mim: as anotações já cumpriram o papel, e a lista limpa deixa a próxima leva
-       * legível.
+       * Apagar continua existindo, mas deixou de ser necessário para começar do zero — que era o
+       * único motivo de ele apagar. Serve agora para limpar de vez o que já foi resolvido.
        */
       const limpar = h('button', { class: 'wf-btn wf-danger', type: 'button' }, 'Apagar todas');
       limpar.addEventListener('click', async () => {
-        if (!confirm(`Apagar as ${lista.length} observações? Copie antes — não tem volta.`)) return;
+        if (!confirm(`Apagar as ${todas.length} observações? Não tem volta.`)) return;
         await store.set('observacoes', observacoesLib.apagarTudo());
         await desenharObservacoes();
         setStatus('Observações apagadas.', 'ok');
       });
+      botoes.push(limpar);
 
-      obsNode.append(saida, h('div', { class: 'wf-row' }, [copiar, limpar]));
+      obsNode.append(saida, h('div', { class: 'wf-row' }, botoes));
     }
 
     desenharObservacoes();

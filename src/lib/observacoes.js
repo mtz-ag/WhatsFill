@@ -72,6 +72,18 @@ export function nova(dados) {
     })(),
     etiquetas: (Array.isArray(d.etiquetas) ? d.etiquetas : []).map((t) => texto(t, 40)).filter(Boolean).slice(0, 12),
     porque: texto(d.porque, 1000),
+    /**
+     * **Já foi copiada para o Claude?**
+     *
+     * Pedido dele (02/09/2026): *"ao copiar vai vir casos anteriores, eu tenho que lembrar de apagar
+     * para começar outra rodada"*. Regra que exige alguém lembrar não é regra — é a mesma lição que
+     * a série da versão deste projeto já carrega.
+     *
+     * Sem esta marca a única saída era apagar tudo depois de colar, e apagar é destrutivo: se a
+     * colagem desse errado, as anotações tinham ido embora. Marcar não perde nada e ainda deixa o
+     * histórico consultável.
+     */
+    copiada: !!d.copiada,
   };
 }
 
@@ -93,6 +105,22 @@ export function acrescentar(lista, entrada) {
   if (!item.porque) return { lista: normalizar(lista), gravou: false };
   const nova_ = [...normalizar(lista), item];
   return { lista: nova_.slice(-MAX), gravou: true };
+}
+
+/** As que ainda não foram para o Claude — é o que a cópia manda por padrão. */
+export function naoCopiadas(lista) {
+  return normalizar(lista).filter((x) => !x.copiada);
+}
+
+/**
+ * Marca como copiadas as anotações cujo `em` está na lista dada.
+ *
+ * Pelo `em` (o instante em que ela nasceu) e não pela posição: entre o clique e a gravação o painel
+ * pode ter acrescentado outra anotação, e marcar por índice pegaria a errada.
+ */
+export function marcarCopiadas(lista, marcadas) {
+  const alvos = new Set(normalizar(marcadas).map((x) => x.em));
+  return normalizar(lista).map((x) => (alvos.has(x.em) ? { ...x, copiada: true } : x));
 }
 
 export function apagarTudo() {

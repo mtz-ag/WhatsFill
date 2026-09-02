@@ -32,6 +32,53 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-02 — A cópia das observações manda só as novas
+
+**Pedido dele:** *"ao copiar vai vir casos anteriores, eu tenho que lembrar de apagar para começar
+outra rodada"*.
+
+Ele estava certo duas vezes. **Regra que exige alguém lembrar não é regra** — é a mesma lição que a
+série da versão deste projeto já carrega. E a única saída que existia (apagar tudo depois de colar)
+é destrutiva: colagem que desse errado levava as anotações junto.
+
+E deu para ver o efeito na prática: das onze anotações que ele me mandou na segunda leva, **oito
+eram repetidas** da primeira — eu li e reanalisei casos que já estavam consertados.
+
+### Como ficou
+
+Cada anotação carrega `copiada`. O cartão mostra três estados:
+
+| situação | o que aparece |
+|---|---|
+| 2 novas, 1 já copiada | *"2 nova(s) · 1 já copiada(s) antes"* · **Copiar as 2 novas** · **Ver todas (3)** |
+| depois de copiar | *"Nenhuma nova desde a última cópia · 3 já copiada(s)"* · **Copiar todas (3)** |
+| nada copiado ainda | **Copiar as N novas**, sem o botão de alternar |
+
+O texto na tela é sempre o que o botão copia — botão que leva outra coisa vira surpresa. E **marcar
+não é apagar**: o histórico continua consultável, e "Copiar todas" reenvia quando a conversa comigo
+se perder.
+
+### Uma decisão que vale explicar
+
+A marca é aplicada **mesmo quando a área de transferência recusa** (foco fora da aba, permissão). Ali
+o texto fica selecionado e o caminho é o Ctrl+C dele, que eu não tenho como observar — marcar é a
+suposição certa, porque errar para o outro lado devolve exatamente o defeito que isto veio consertar.
+A mensagem diz que marcou, e "Copiar todas" está ao lado.
+
+A marca é pelo `em` (o instante em que a anotação nasceu) e não pela posição: entre o clique e a
+gravação o painel pode ter acrescentado outra, e marcar por índice pegaria a errada.
+
+### Conferido na tela
+
+Painel aberto de verdade com uma lista mista: os três estados, o alternar mudando o texto **e** o
+rótulo do botão junto, e as três marcas gravadas depois de copiar.
+
+**Arquivos:** `src/lib/observacoes.js` (`copiada`, `naoCopiadas`, `marcarCopiadas`),
+`src/panel/panel.js` (o cartão), `tests/observacoes.test.mjs` (+10), `manifest.json`
+(1.75.0 → 1.76.0). Quinze suítes e os dois verificadores passando.
+
+---
+
 ## 2026-09-02 — Segunda leva: três casos novos (e oito que já estavam consertados)
 
 Ele mandou onze anotações. **Oito eram anteriores à recarga** — o motivo da Eunice ainda dizia
