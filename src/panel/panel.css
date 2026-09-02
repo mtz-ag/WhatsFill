@@ -465,3 +465,9 @@
   margin: 6px 0 2px;
   text-align: center;
 }
+
+/* O aviso da conferência dos anúncios do momento.
+   Vermelho porque cada linha é uma configuração que vai FALHAR NA HORA DE ENVIAR — modelo que não
+   existe, resposta apagada, anúncio sem texto. Não é enfeite: é o que evita descobrir o problema
+   no meio de uma rodada, com o contato aberto. */
+.wf-root .wf-aviso-anuncio { color: var(--wf-err); font-weight: 600; }

@@ -15,6 +15,7 @@
  */
 import { check, grupo, fim } from './_harness.mjs';
 import * as arv from '../src/lib/arvore.js';
+import * as cortesia from '../src/lib/cortesia.js';
 import { sugerirAcao, REGRAS } from '../src/lib/sugestao.js';
 import * as sugestaoLib from '../src/lib/sugestao.js';
 
@@ -401,7 +402,14 @@ grupo('o desfecho "a IA assume e responde"');
   check(arv.decidir({ ultimoTexto: 'oi' }, arvore)?.tecla === '4', 'o irmao de baixo continua decidindo o resto');
 
   // E o ramo NAO e acusado de "nao faz nada" -- entregar para a IA e fazer algo.
-  check(arv.problemas(arvore).length === 0, `entregar para a IA conta como acao (${JSON.stringify(arv.problemas(arvore))})`);
+  const acusados = arv.problemas(arvore);
+  check(!acusados.some((m) => m.includes('falou de denuncia')), `entregar para a IA conta como acao (${JSON.stringify(acusados)})`);
+
+  /**
+   * Mas "o resto" E acusado, e com razao: manda a tecla 4 e nao tem condicao nenhuma, ou seja casa
+   * de novo em TODA passada. E o detector que nasceu da caixa dele de 02/09 -- ver `repeteSozinha`.
+   */
+  check(acusados.some((m) => m.includes('"o resto"') && m.includes('mandar de novo')), 'caixa sem guarda que envia e acusada de repetir');
 
   const semNada = [{ id: 'x', rotulo: 'vazio', condicao: { palavras: ['oi'] }, acao: {}, filhos: [] }];
   check(arv.problemas(semNada).some((p) => p.includes('vazio')), 'e acao vazia continua sendo acusada');
@@ -540,6 +548,505 @@ grupo('observacoes: o recado dele para mim, e o fluxo em texto');
   const longa = arv.sanitizar([{ id: 'z', rotulo: 'z', nota: 'x'.repeat(9000) }]);
   check(longa.arvore[0].nota.length === 4000, `observacao gigante e cortada no teto (${longa.arvore[0].nota.length})`);
   check(arv.sanitizar([{ id: 'z', rotulo: 'z', nota: { nao: 'e texto' } }]).arvore[0].nota === '', 'observacao que nao e texto vira vazia');
+}
+
+grupo('duplicar: o ramo inteiro, com ids novos (01/09/2026)');
+{
+  const base = () => [
+    {
+      id: 'pai',
+      rotulo: 'tem etiqueta de cidade',
+      x: 10,
+      y: 20,
+      filhos: [
+        { id: 'f1', rotulo: 'bom dia', x: 300, y: 20, condicao: { palavras: ['bom dia'] }, acao: { tecla: '5' }, filhos: [] },
+        { id: 'f2', rotulo: 'figura', x: 300, y: 140, filhos: [] },
+      ],
+    },
+    { id: 'outro', rotulo: 'outro ramo', x: 10, y: 400, filhos: [] },
+  ];
+
+  const r = arv.duplicar(base(), 'pai');
+  const nos = arv.todosOsNos(r.arvore);
+  check(nos.length === 7, `os 3 nos do ramo foram junto: ${nos.length} (era 4)`);
+
+  /**
+   * **Id repetido e o defeito que esta operacao mais pode causar.** E o que `problemas` acusa e o
+   * que `sanitizar` renomeia na importacao -- e, na tela, faria a janela editar dois nos de uma vez.
+   */
+  const ids = nos.map((n) => n.no.id);
+  check(ids.length === new Set(ids).size, 'nenhum id repetido depois de duplicar');
+
+  const copia = arv.localizar(r.arvore, r.id).no;
+  check(/\(copia\)|\(cópia\)/.test(copia.rotulo), `o rotulo diz que e copia: ${copia.rotulo}`);
+  check(copia.filhos.length === 2, 'os filhos vieram junto');
+  check(copia.filhos.every((f) => f.id !== 'f1' && f.id !== 'f2'), 'e os filhos tambem ganharam id novo');
+  check(copia.filhos[0].condicao?.palavras?.[0] === 'bom dia', 'a condicao veio junto');
+  check(copia.filhos[0].acao?.tecla === '5', 'o desfecho veio junto');
+
+  // A copia entra como IRMAO SEGUINTE: entre irmaos a prioridade e a altura, e a copia nasce logo
+  // abaixo, ou seja, com a prioridade seguinte.
+  check(r.arvore[1].id === r.id, 'a copia entra logo depois do original');
+  check(r.arvore[2].id === 'outro', 'e o irmao que ja existia continua depois dela');
+  check(copia.y > 20, 'e nasce mais embaixo na tela');
+
+  // Copia FUNDA: mexer numa nao pode mexer na outra.
+  copia.filhos[0].rotulo = 'MUDOU';
+  check(arv.localizar(r.arvore, 'f1').no.rotulo === 'bom dia', 'mexer na copia nao mexe no original');
+
+  const original = base();
+  const nada = arv.duplicar(original, 'nao-existe');
+  check(nada.arvore === original && nada.id === null, 'id que nao existe devolve a arvore intacta');
+}
+
+grupo('o modelo nao pode ficar preso atras da pendencia (01/09/2026)');
+{
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const base = {
+    jaRespondemosAntes: true, temEtiquetaDeCidade: false, podeEnviar: true,
+    enviadoHoje: false, modeloJaNaConversa: false, podePedirDados: true,
+    textos: ['bom dia'], ultimoTexto: 'bom dia',
+  };
+  const tecla = (c) => arv.decidir(c, q)?.tecla ?? null;
+
+  /**
+   * Relato dele: *"se continuar como na print o modelo nunca será enviado porque está concluindo
+   * apos resolver a pendencia"*. Sem a guarda de "ja respondemos hoje", a MESMA caixa de pendencia
+   * casava de novo na passada seguinte e o modelo ficava preso atras dela para sempre.
+   */
+  check(tecla({ ...base, respondidoHoje: false }) === '5', 'primeira passada resolve a pendencia');
+  check(tecla({ ...base, respondidoHoje: true, momentoJaEnviado: true }) === '1', 'segunda passada MANDA O MODELO');
+
+  check(tecla({ ...base, respondidoHoje: false, textos: [], ultimoTexto: '' }) === '1', 'quem chega sem pendencia recebe o modelo direto');
+
+  // A recusa continua acima de tudo, nas duas passadas.
+  check(tecla({ ...base, respondidoHoje: false, semInteresse: true }) === 's', 'hostil vence na primeira passada');
+  check(tecla({ ...base, respondidoHoje: true, semInteresse: true }) === 's', 'e tambem depois de ja termos respondido');
+}
+
+
+grupo('o catalogo devolve as regras apagadas para o quadro (01/09/2026)');
+{
+  /**
+   * Pedido dele: *"quando regras sao apagadas tem que ter uma opcao ou uma aba ali com a lista de
+   * regras para arrastar pro fluxo novamente"*. Antes disto, apagar uma caixa "do codigo" so tinha
+   * volta pelo Desfazer; passado ele, o unico caminho era resetar o quadro e perder o arranjo.
+   */
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const cat = arv.catalogoDeRegras(q);
+
+  check(cat.length === REGRAS.length, 'o catalogo oferece TODAS as regras do codigo');
+  check(cat.every((r) => r.rotulo && typeof r.quantasNoQuadro === 'number'), 'cada verbete tem rotulo e a contagem');
+
+  // Repetir e legitimo: o proprio padrao poe as mesmas regras dos dois lados da bifurcacao de
+  // cidade. A marca informa quantas vezes, e nao esconde a regra da lista.
+  const repetida = cat.find((r) => r.id === 'ultima-e-despedida');
+  check(repetida.quantasNoQuadro === 3, 'regra repetida conta as 3 vezes (chegada + os dois lados de cidade)');
+
+  const descartada = cat.find((r) => r.id === 'nome-sem-sentido');
+  check(descartada && descartada.quantasNoQuadro === 0, 'regra fora do quadro aparece na lista, zerada');
+
+  // Apagar uma caixa devolve a regra a lista — e e isto que torna o apagar reversivel.
+  const semDespedida = arv.apagar(q, 'r:ultima-e-despedida:sem-cidade');
+  const depois = arv.catalogoDeRegras(semDespedida).find((r) => r.id === 'ultima-e-despedida');
+  check(depois.quantasNoQuadro === 2, 'apagar uma caixa desconta a regra do catalogo');
+}
+
+grupo('por a regra de volta nunca repete id');
+{
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const idsAntes = new Set(arv.todosOsNos(q).map(({ no }) => no.id));
+
+  // A que foi descartada do padrao: id livre, entao fica com o nome simples.
+  const novo = arv.noDeRegraLivre(q, 'nome-sem-sentido', { x: 10, y: 20 });
+  check(novo.id === 'r:nome-sem-sentido', 'id livre vira o nome simples da regra');
+  check(novo.regra === 'nome-sem-sentido' && novo.x === 10 && novo.y === 20, 'leva a regra e a posicao pedida');
+
+  /**
+   * Id repetido nao e cosmetico: `problemas` acusa, e na janela um clique abriria as duas caixas de
+   * uma vez. Por isso por uma regra que JA esta no quadro tem que cunhar id novo.
+   */
+  const outra = arv.noDeRegraLivre(q, 'sem-interesse');
+  check(!idsAntes.has(outra.id), 'regra ja presente ganha id que ninguem usa');
+
+}
+
+grupo('a regra posta de volta decide de verdade');
+{
+  let q = arv.arrumar(arv.fluxoPadrao());
+  const antes = arv.problemas(q).length;
+
+  // Duas de uma vez, sendo uma delas ja presente no quadro — o pior caso para o id.
+  for (const id of ['nome-sem-sentido', 'sem-interesse']) {
+    q = arv.ordenarPorPosicao(arv.acrescentar(q, null, arv.noDeRegraLivre(q, id, { x: 900, y: 900 })));
+  }
+  check(arv.problemas(q).length === antes, 'nenhum problema novo — nem id repetido, nem ramo morto');
+
+  /**
+   * A prova de que voltou viva: o contexto abaixo nao casa com nada do padrao, e a regra reposta e
+   * quem decide. Se `noDeRegraLivre` devolvesse uma caixa sem a marca `regra`, isto daria nada.
+   */
+  const ctx = {
+    jaRespondemosAntes: false, temEtiquetaDeCidade: true, nomeSemSentido: true,
+    podePedirDados: true, podeEnviar: false, textos: ['oi'], ultimoTexto: 'oi',
+  };
+  check(arv.decidir(ctx, arv.arrumar(arv.fluxoPadrao())) === null, 'no padrao este caso sai da rodada sem nada');
+  const d = arv.decidir(ctx, q);
+  check(d && d.tecla === '4', 'com a regra reposta, ela decide (tecla 4)');
+}
+
+
+grupo('quem vem de anuncio reconhecido nao atravessa o quadro em silencio (02/09/2026)');
+{
+  /**
+   * A print da Inge: veio do ANUNCIO | FACEBOOK e escreveu SO o texto do anuncio
+   * ("Ola! Eu apoio as Escolas Civico-Militares"). Sem etiqueta de cidade, sem modelo mapeado, e
+   * nenhuma caixa casava — ela atravessava o quadro inteiro e caia na caixa de pergunta. Relato
+   * dele: *"nao seguiu o fluxo"*.
+   *
+   * O vazio era efeito colateral de uma decisao certa: a mensagem gerada pelo anuncio e excluida
+   * de "so expressa apoio" de proposito, para nao contar como apoio escrito por ela.
+   */
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const texto = 'Olá! Eu apoio as Escolas Cívico-Militares 🙏';
+  const inge = {
+    veioDeAnuncio: true, anuncioReconhecido: true, temEtiquetaDeCidade: false,
+    jaPediramDados: false, podePedirDados: true, pedidoHoje: false,
+    podeEnviar: false, enviadoHoje: false, modeloJaNaConversa: false,
+    textos: [texto], ultimoTexto: texto,
+  };
+  const tecla = (c) => arv.decidir(c, q)?.tecla ?? null;
+
+  check(tecla({ ...inge, jaRespondemosAntes: false }) === '4', 'primeira vez: pede nome e cidade');
+  check(tecla({ ...inge, jaRespondemosAntes: true, respondidoHoje: false }) === '4', 'RETORNANDO: pede nome e cidade (era o vazio)');
+  check(tecla({ ...inge, jaRespondemosAntes: true, respondidoHoje: true }) === '4', 'e tambem depois de ja termos respondido hoje');
+
+  /**
+   * Quem JA recebeu o formulario e volta mandando so o texto do anuncio continua sem desfecho
+   * automatico, de proposito: ela nao respondeu o que perguntamos, e nao existe resposta certa
+   * para mandar sozinho. O ramo usa a regra do codigo justamente para herdar essa guarda — uma
+   * tecla 4 fixa pediria os dados de novo a quem ja recebeu o pedido.
+   */
+  check(tecla({ ...inge, jaRespondemosAntes: true, jaPediramDados: true }) === null, 'quem JA recebeu o formulario nao recebe de novo');
+  check(tecla({ ...inge, jaRespondemosAntes: true, pedidoHoje: true }) === null, 'nem quem recebeu o formulario hoje');
+
+  // O ramo e ULTIMO RECURSO: nao rouba a vez de quem ja funcionava.
+  check(tecla({ ...inge, jaRespondemosAntes: true, podeEnviar: true }) === '1', 'havendo modelo mapeado, o modelo vence o ramo novo');
+  check(tecla({ ...inge, jaRespondemosAntes: true, ultimoTexto: 'bom dia', textos: [texto, 'bom dia'] }) === '5', 'pendencia na frente: "bom dia" ainda resolve primeiro');
+  check(arv.decidir({ ...inge, jaRespondemosAntes: true, semInteresse: true }, q)?.tecla === 's', 'e a recusa continua vencendo tudo');
+
+  /**
+   * A condicao e `anuncioReconhecido`, nao `veioDeAnuncio`: a origem vem da plataforma e vale para
+   * qualquer anuncio, e o sinal so e verdade para anuncio que ELE cadastrou. Assim o ramo nao muda
+   * nada para quem chega por campanha nao mapeada.
+   */
+  check(tecla({ ...inge, jaRespondemosAntes: true, anuncioReconhecido: false }) === null, 'anuncio NAO reconhecido nao entra neste ramo');
+}
+
+
+grupo('a CHEGADA pelo anuncio: modelo, dados, pendencia (02/09/2026)');
+{
+  /**
+   * Redesenho dele, na ordem que ele escreveu:
+   *
+   *   *"o sistema atual esta dando problemas, o modelo agora sera feito pra cada anuncio
+   *   especifico e sera mandado no momento que a pessoa chegar pelo anuncio, pedir dados vira apos
+   *   isso se a pessoa nao tiver etiqueta de cidade, se ela tiver etiqueta de cidade fica so no
+   *   modelo, apos o modelo tera que ver se tem uma pendencia que e a mensagem apos a mensagem de
+   *   anuncio e escolher a resposta de acordo com a pendencia"*
+   *
+   * Inverteu a ordem que valia antes (dados primeiro, decisao dele de 01/09). O que mudou e que
+   * agora existe UM MODELO POR ANUNCIO, entao o que sai na chegada responde ao que ela clicou.
+   *
+   * **Uma passada, uma mensagem** — a propriedade que ele escolheu em 01/09 para nao sair rajada ao
+   * mesmo numero. Quem faz a passada seguinte descer um passo sao as guardas de `conteudo-pedido`
+   * (`!enviadoHoje && !modeloJaNaConversa`).
+   */
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const ad = 'Olá! Eu apoio as Escolas Cívico-Militares 🙏';
+  const chega = {
+    veioDeAnuncio: true, anuncioReconhecido: true, jaRespondemosAntes: false,
+    temEtiquetaDeCidade: false, jaPediramDados: false, podePedirDados: true, pedidoHoje: false,
+    podeEnviar: true, enviadoHoje: false, modeloJaNaConversa: false, podePerguntarAjuda: true,
+    textos: [ad], ultimoTexto: ad,
+  };
+  const tecla = (c) => arv.decidir(c, q)?.tecla ?? null;
+
+  // A sequencia, sem etiqueta de cidade.
+  check(tecla(chega) === 'a', '1a passada: modelo + pedido de dados na MESMA passada');
+  check(tecla({ ...chega, modeloJaNaConversa: true }) === '4', '2a passada: pede nome e cidade');
+  check(tecla({ ...chega, modeloJaNaConversa: true, jaPediramDados: true }) === null, '3a passada: nada mais a fazer sozinho');
+
+  // "se ela tiver etiqueta de cidade fica so no modelo".
+  check(tecla({ ...chega, temEtiquetaDeCidade: true }) === '1', 'com cidade: o modelo sai igual');
+  check(tecla({ ...chega, temEtiquetaDeCidade: true, modeloJaNaConversa: true }) === null, 'com cidade: fica SO no modelo, nao pede dados');
+
+  // O modelo padrao entra pelo mesmo caminho: quem resolve "qual modelo" e `anuncios.modeloDoAnuncio`,
+  // fora do quadro. Aqui so se ve que sem modelo nenhum o passo e pulado.
+  check(tecla({ ...chega, podeEnviar: false }) === '4', 'sem modelo mapeado, cai direto no pedido de dados');
+  check(tecla({ ...chega, podeEnviar: false, temEtiquetaDeCidade: true }) === null, 'sem modelo e com cidade, nao ha o que mandar');
+
+  /**
+   * **As protecoes que ficam ACIMA do modelo.** A ordem dele diz "pendencia depois do modelo", e
+   * vale para as neutras. Estas nao: mandar a nossa mensagem primeiro E o dano, nao o atraso.
+   */
+  check(tecla({ ...chega, semInteresse: true }) === 's', 'recusa: nada sai');
+  check(tecla({ ...chega, etiquetaQueDispensa: 'Sem Retorno' }) === '2', 'etiqueta que dispensa: pula (era regressao, o modelo vencia)');
+  /**
+   * **A ajuda financeira ESTAVA acima do modelo e saiu, por decisao dele** (02/09, no mesmo dia):
+   * *"o modelo nao ira confirmar apoio ao pedido de ajuda ou confirmar que ira ajudar entao pode
+   * ser respondido apos"*.
+   *
+   * Ele esta certo sobre o texto: o modelo e recibo de cadastro e nao promete coisa nenhuma, entao
+   * manda-lo antes nao e promessa de beneficio (Lei 9.504/97), que era a minha objecao. A negativa
+   * sai na passada seguinte, e continua sendo o `pedido-ajuda` — o que este teste trava e que ela
+   * NAO se perde no caminho.
+   */
+  const remedio = { ultimoTexto: 'preciso de remedio', textos: [ad, 'preciso de remedio'] };
+  check(tecla({ ...chega, ...remedio }) === 'a', 'quem pediu ajuda recebe primeiro o recibo do anuncio');
+  check(arv.decidir({ ...chega, ...remedio, modeloJaNaConversa: true, jaPediramDados: true }, q)?.resposta === 'pedido-ajuda',
+    'e a NEGATIVA sai na passada seguinte -- nao se perde');
+  check(arv.decidir({ ...chega, ...remedio, modeloJaNaConversa: true, temEtiquetaDeCidade: true }, q)?.resposta === 'pedido-ajuda',
+    'quem ja tinha cidade recebe a negativa logo depois do modelo');
+  check(tecla({ ...chega, perguntaAberta: true }) === '6', 'pergunta de posicao: gente, nao modelo (print da Clair)');
+  check(tecla({ ...chega, pedeAlgoIndefinido: true }) === '9', 'pediu algo sem dizer o que: pergunta (print da Mari)');
+
+  /**
+   * **As pendencias NEUTRAS, depois do modelo** — a ordem que ele pediu. Na 1a passada o modelo
+   * ganha; resolvido ele, a pendencia decide.
+   */
+  const jaFoi = { modeloJaNaConversa: true, jaPediramDados: true };
+  check(tecla({ ...chega, ultimoTexto: 'bom dia', textos: [ad, 'bom dia'] }) === 'a', 'na 1a passada o modelo + dados vence "bom dia"');
+  check(tecla({ ...chega, ...jaFoi, ultimoTexto: 'bom dia', textos: [ad, 'bom dia'] }) === '5', 'resolvido o modelo, "bom dia" recebe a mensagem do momento');
+  check(tecla({ ...chega, ...jaFoi, ultimaEhSoReacao: true }) === '3', 'figura depois do modelo: conclui');
+  check(tecla({ ...chega, ...jaFoi, ultimaEhDespedida: true }) === '3', 'despedida depois do modelo: conclui');
+  check(tecla({ ...chega, ...jaFoi, pedeRespostaPessoal: true }) === '6', 'audio ou texto longo: gente');
+}
+
+
+grupo('a comparacao com o padrao (02/09/2026)');
+{
+  /**
+   * Relato dele depois de eu reordenar a chegada varias vezes num dia: *"a ramificacao nao foi
+   * atualizada"*. Estava certo, e o defeito e de desenho: o quadro dele e uma COPIA, e melhoria no
+   * padrao nunca chegava nele. O unico caminho de volta ("Resetar para o padrao") joga fora o
+   * arranjo feito a mao.
+   */
+  const padrao = arv.arrumar(arv.fluxoPadrao());
+  check(arv.diferencaDoPadrao(padrao).faltando.length === 0, 'o proprio padrao nao tem nada faltando');
+  check(arv.diferencaDoPadrao(padrao).sobrando.length === 0, 'nem nada sobrando');
+
+  // O quadro de quem semeou antes da regra nova: ela tem que aparecer como faltando.
+  const antigo = arv.arvorePadrao({}).filter((n) => n.regra !== 'anuncio-modelo-e-dados');
+  const d = arv.diferencaDoPadrao(antigo);
+  check(d.faltando.some((n) => n.regra === 'anuncio-modelo-e-dados'), 'regra nova do codigo aparece como faltando');
+  check(d.faltando.some((n) => n.condicao?.sinal === 'anuncioReconhecido'), 'grupo com condicao nova tambem aparece');
+
+  /**
+   * Caixa que so AGRUPA fica fora da comparacao: e estrutura, nao decisao, e todas colidiriam na
+   * mesma chave. "pessoa retornando" nao tem condicao, entao nunca aparece como faltando.
+   */
+  check(!d.faltando.some((n) => n.rotulo === 'pessoa retornando'), 'caixa que so agrupa nao entra na conta');
+
+  // O que e so dele e INFORMACAO, nao erro: montar ramo proprio e a razao da janela existir.
+  check(d.sobrando.some((n) => n.regra === 'nome-sem-sentido'), 'regra que ele tem e o padrao descartou aparece como sua');
+
+  // A comparacao e por CONTEUDO, nao por id: os ids do quadro dele nasceram em outro momento.
+  const outrosIds = arv.arrumar(arv.fluxoPadrao()).map((n) => ({ ...n, id: 'x' + Math.random() }));
+  check(arv.diferencaDoPadrao(outrosIds).faltando.length === 0, 'id diferente nao conta como caixa faltando');
+
+  // Cada chave aparece UMA vez, mesmo que o padrao repita a regra nos tres ramos.
+  const vazio = arv.diferencaDoPadrao([]);
+  const chaves = vazio.faltando.filter((n) => n.regra === 'ultima-e-despedida');
+  check(chaves.length === 1, 'regra repetida no padrao aparece uma vez so na lista');
+}
+
+
+grupo('a caixa que manda mensagem e casa de novo (02/09/2026)');
+{
+  /**
+   * **Caso real dele.** Ele montou a mao uma caixa *"mandar modelo conforme o anuncio"* com a
+   * condicao "Reconheci de QUAL anuncio ela veio" e a **tecla 1 FIXA**. Medido no motor: o modelo
+   * saia em TODA passada, para sempre. Dois motivos somados:
+   *
+   *  - a condicao e estado do contato -- continua verdadeira depois de mandarmos;
+   *  - **fixar a tecla nao herda as guardas da regra do codigo.** `conteudo-pedido` exige
+   *    `!enviadoHoje && !modeloJaNaConversa`; a caixa dele nao exigia nada.
+   *
+   * E a armadilha central do quadro livre: a caixa PARECE a regra, tem o mesmo desfecho na tela, e
+   * nao tem a metade que impede repetir. Maquina de repetir mensagem para eleitor real e o defeito
+   * que este projeto mais pagou.
+   */
+  const caixa = (cond, acao, rotulo) => ({ id: 'x', rotulo: rotulo || 'x', regra: null, condicao: cond, acao, nota: '', desligado: false, filhos: [] });
+  const c = (sinal, negar, palavras, onde) => ({ sinal: sinal || '', negar: !!negar, palavras: palavras || [], onde: onde || 'ultima' });
+  const acusa = (no) => arv.problemas([no]).some((m) => m.includes('mandar de novo'));
+
+  check(acusa(caixa(c('anuncioReconhecido'), { tecla: '1' })), 'a caixa dele e acusada');
+  check(!acusa(caixa(c('modeloJaNaConversa', true), { tecla: '1' })), 'com a guarda do modelo, nao e acusada');
+  check(!acusa(caixa(c('jaRespondemosAntes', true), { tecla: '1' })), '"nunca entregamos nada" tambem e guarda');
+  check(acusa(caixa(c('jaRespondemosAntes', false), { tecla: '1' })), 'mas exigir que JA entregamos nao protege nada');
+
+  // Palavra na ULTIMA mensagem e guarda: a ultima muda quando a pessoa escreve de novo.
+  check(!acusa(caixa(c('', false, ['bom dia']), { tecla: '5' })), 'palavra na ultima mensagem nao repete');
+  // Em QUALQUER mensagem, nao: o texto fica na conversa para sempre.
+  check(acusa(caixa(c('', false, ['bom dia'], 'qualquer'), { tecla: '5' })), 'palavra em qualquer mensagem repete');
+
+  // Tecla que nao manda nada nao tem como repetir mensagem.
+  check(!acusa(caixa(c('anuncioReconhecido'), { tecla: '3' })), 'concluir sem enviar nao e acusado');
+  check(!acusa(caixa(c('anuncioReconhecido'), { tecla: '2' })), 'pular nao e acusado');
+
+  // Resposta pronta conta como envio, igual.
+  check(acusa(caixa(c('anuncioReconhecido'), { tecla: null, resposta: 'pedido-ajuda' })), 'resposta pronta sem guarda tambem e acusada');
+
+  // Regra do CODIGO nunca e acusada: ela carrega as proprias guardas.
+  const doCodigo = { id: 'r:conteudo-pedido', rotulo: 'x', regra: 'conteudo-pedido', condicao: null, acao: null, nota: '', desligado: false, filhos: [] };
+  check(!acusa(doCodigo), 'regra do codigo nao e acusada');
+
+  // E o padrao inteiro continua limpo -- senao o aviso tocaria sempre e ele aprenderia a ignorar.
+  check(arv.problemas(arv.arrumar(arv.fluxoPadrao())).length === 0, 'o padrao nao acusa nada');
+  check(arv.problemas(arv.arvorePadrao({})).length === 0, 'nem a semeadura plana');
+}
+
+
+grupo('respondeu os dados: agradece e encerra, SEM modelo (02/09/2026)');
+{
+  /**
+   * Pedido dele, com a print da caixa aberta: *"aqui esta o que tem que mudar agora so precisa
+   * agradecer a atencao e encerrar sem mandar modelo"*. E consequencia do redesenho do mesmo dia --
+   * o modelo virou o RECIBO DA CHEGADA, entao quando ela responde o cadastro o modelo ja saiu, e
+   * manda-lo de novo e repetir.
+   *
+   * **Ele tentou fazer isso fixando a tecla 8 na caixa `conteudo-pedido`, e nao funcionaria:** a
+   * condicao daquela regra exige `!modeloJaNaConversa`, ou seja, ela deixa de casar justamente
+   * depois de o modelo ter saido. Medido antes de mexer: quem respondia com os dados nao recebia
+   * NADA, ou era concluida em silencio por `ja-respondemos-antes`.
+   */
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const base = {
+    jaRespondemosAntes: true, veioDeAnuncio: true, jaPediramDados: true, podePedirDados: true,
+    podeEnviar: true, enviadoHoje: false, modeloJaNaConversa: true, respondeuOsDados: true,
+    textos: ['Olá! Eu apoio', 'Maria Silva / Canoas'], ultimoTexto: 'Maria Silva / Canoas',
+  };
+  const tecla = (c) => arv.decidir(c, q)?.tecla ?? null;
+
+  check(tecla({ ...base, temEtiquetaDeCidade: false }) === '8', 'sem cidade: agradece e conclui');
+
+  /**
+   * **Os dois lados da bifurcacao dao o mesmo.** Sem a caixa no lado "com cidade", a mesma pessoa
+   * era agradecida ou concluida em silencio dependendo de a etiqueta ja ter sido aplicada -- e isso
+   * e decidido pela ORDEM das coisas dentro da rodada, que ela nao ve. Regra que trata dois
+   * contatos iguais de forma diferente por estado invisivel e o "alguns concluem e outros nao".
+   */
+  check(tecla({ ...base, temEtiquetaDeCidade: true }) === '8', 'com cidade: o mesmo agradecimento');
+
+  // Quem NAO respondeu segue como antes -- a condicao e estreita de proposito.
+  check(tecla({ ...base, temEtiquetaDeCidade: true, respondeuOsDados: false }) === '3', 'quem nao respondeu continua como era');
+
+  // E o modelo nao sai junto: era o pedido dele.
+  check(tecla({ ...base, temEtiquetaDeCidade: false }) !== '1', 'nao manda o modelo');
+  check(tecla({ ...base, temEtiquetaDeCidade: false }) !== 'a', 'nem o modelo + dados');
+
+  /**
+   * **As protecoes continuam ganhando**, nos DOIS lados. A etiqueta que dispensa vivia so dentro de
+   * "com etiqueta de cidade": quem a carregava e nao tinha cidade nunca era protegido. Subiu para
+   * cima da bifurcacao, junto da recusa, e estas duas asercoes travam isso.
+   */
+  for (const comCidade of [true, false]) {
+    const onde = comCidade ? 'com cidade' : 'sem cidade';
+    check(tecla({ ...base, temEtiquetaDeCidade: comCidade, semInteresse: true }) === 's', `a recusa vence (${onde})`);
+    check(tecla({ ...base, temEtiquetaDeCidade: comCidade, etiquetaQueDispensa: 'Sem Retorno' }) === '2', `a etiqueta que dispensa vence (${onde})`);
+  }
+}
+
+grupo('respostasApos: a resposta a UMA mensagem nossa');
+{
+  const nossas = [
+    { texto: 'oi', at: '2026-09-01T10:00:00Z' },
+    { texto: 'me diz seu nome e a sua cidade', at: '2026-09-01T12:00:00Z' },
+  ];
+  const ehPedido = (t) => /nome e a sua cidade/.test(t);
+
+  const depois = cortesia.respostasApos(
+    [{ texto: 'bom dia', at: '2026-09-01T11:00:00Z' }, { texto: 'Maria / Canoas', at: '2026-09-01T13:00:00Z' }],
+    nossas, ehPedido
+  );
+  check(depois?.length === 1 && depois[0].texto === 'Maria / Canoas', 'so o que veio DEPOIS do pedido');
+
+  check(cortesia.respostasApos([{ texto: 'bom dia', at: '2026-09-01T11:00:00Z' }], nossas, ehPedido) === null,
+    'nada depois do pedido devolve nada');
+  check(cortesia.respostasApos([{ texto: 'oi', at: '2026-09-01T13:00:00Z' }], [{ texto: 'oi' }], ehPedido) === null,
+    'sem pedido nenhum devolve nada');
+  check(cortesia.respostasApos([], nossas, ehPedido) === null, 'sem mensagem dela devolve nada');
+  check(cortesia.respostasApos([{ texto: '   ' }], nossas, ehPedido) === null, 'mensagem em branco nao conta');
+
+  /**
+   * Sem hora na nossa mensagem (historico antigo), considera todas as dela: supor que nada veio
+   * depois seria pior -- ela teria respondido e ninguem veria.
+   */
+  const semHora = cortesia.respostasApos([{ texto: 'Maria / Canoas' }], [{ texto: 'me diz seu nome e a sua cidade' }], ehPedido);
+  check(semHora?.length === 1, 'sem hora, considera tudo que ela escreveu');
+
+  // Pega a ULTIMA vez que pedimos, nao a primeira: pedido repetido reinicia a conta.
+  const doisPedidos = [
+    { texto: 'me diz seu nome e a sua cidade', at: '2026-09-01T10:00:00Z' },
+    { texto: 'me diz seu nome e a sua cidade', at: '2026-09-01T14:00:00Z' },
+  ];
+  check(cortesia.respostasApos([{ texto: 'oi', at: '2026-09-01T11:00:00Z' }], doisPedidos, ehPedido) === null,
+    'conta a partir do ULTIMO pedido');
+}
+
+
+grupo('remetente dentro de protecao -- o erro que aconteceu DUAS vezes');
+{
+  /**
+   * 01/09/2026: "mensagem padrao" caiu dentro de "Recusou ou veio hostilizar".
+   * 02/09/2026: "mandar modelo conforme o anuncio" caiu no MESMO lugar.
+   *
+   * Medido no quadro que ele colou: o hostil recebia o pedido de nome e cidade, e a pessoa normal
+   * nao recebia o modelo -- escapava para "pessoa retornando" e terminava agradecida por um apoio
+   * que nunca expressou.
+   *
+   * O motivo e o desenho do motor: o filho e testado ANTES da acao do proprio no, e so e alcancado
+   * quando o PAI casa. Por o remetente dentro de uma protecao significa "quando eu reconhecer que
+   * nao devo mandar nada, mande isto". Duas vezes o mesmo erro e problema de ferramenta.
+   */
+  const acusa = (arvore) => arv.problemas(arvore).filter((m) => m.includes('MANDAM dentro'));
+  const R = (id, filhos) => ({ id: 'r:' + id, rotulo: id, regra: id, condicao: null, acao: null, nota: '', desligado: false, filhos: filhos || [] });
+  const meu = (rot, acao, filhos) => ({ id: 'n:' + rot, rotulo: rot, regra: null, condicao: { sinal: 'anuncioReconhecido', negar: false, palavras: [], onde: 'ultima' }, acao, nota: '', desligado: false, filhos: filhos || [] });
+
+  // O caso real dele.
+  const dele = [R('sem-interesse', [meu('mandar modelo', { tecla: '1' }, [R('nunca-pediram-dados')])])];
+  const m = acusa(dele);
+  check(m.length === 1, 'acusa uma vez, na caixa da protecao');
+  check(m[0].includes('Recusou') || m[0].includes('sem-interesse'), 'nomeia a caixa que protege');
+  check(m[0].includes('mandar modelo') && m[0].includes('nunca-pediram-dados'), 'e nomeia as DUAS que mandam, inclusive a de dentro da de dentro');
+
+  // A mesma coisa com a outra protecao do projeto.
+  check(acusa([R('etiqueta-dispensa-da-fila', [meu('manda', { tecla: '1' })])]).length === 1, 'vale para a etiqueta que dispensa tambem');
+
+  // Sem remetente dentro, nao acusa.
+  check(acusa([R('sem-interesse', [R('ultima-e-despedida')])]).length === 0, 'protecao com protecao dentro nao e problema');
+  check(acusa([R('sem-interesse')]).length === 0, 'protecao sem filho nenhum nao e problema');
+
+  // Remetente dentro de remetente e legitimo: o mais especifico vence o mais geral.
+  check(acusa([R('conteudo-pedido', [meu('caso especifico', { tecla: '4' })])]).length === 0, 'remetente dentro de remetente nao e acusado');
+
+  // Grupo (so agrupa) nao e protecao: ele nao tem desfecho para contradizer.
+  const grupoVazio = { id: 'g', rotulo: 'grupo', regra: null, condicao: { sinal: '', negar: false, palavras: [], onde: 'ultima' }, acao: null, nota: '', desligado: false, filhos: [meu('manda', { tecla: '1' })] };
+  check(acusa([grupoVazio]).length === 0, 'grupo com remetente dentro e o normal, nao e acusado');
+
+  // Resposta pronta conta como envio.
+  check(acusa([R('sem-interesse', [meu('resposta', { tecla: null, resposta: 'pedido-ajuda' })])]).length === 1, 'resposta pronta dentro da protecao tambem e acusada');
+
+  /**
+   * A conferencia fica ACIMA do `continue` das caixas de regra: as protecoes deste projeto SAO
+   * regras do codigo, e posta depois ela nunca veria o caso real -- foi o que aconteceu na primeira
+   * versao dela, e este teste e o que impede a regressao.
+   */
+  check(acusa([R('sem-interesse', [meu('manda', { tecla: '1' })])]).length === 1, 'protecao que e REGRA do codigo tambem e conferida');
+
+  // E o padrao continua limpo -- alarme que toca sempre se aprende a ignorar.
+  check(acusa(arv.arrumar(arv.fluxoPadrao())).length === 0, 'o padrao nao acusa nada');
 }
 
 fim();

@@ -205,6 +205,37 @@ export const REGRAS = [
         : 'voltou por outro anúncio — não mande o mesmo conteúdo de novo; a mensagem do momento serve.',
   },
   {
+    id: 'anuncio-modelo-e-dados',
+    tecla: 'a',
+    /**
+     * **O recibo do anúncio e o começo do atendimento, na mesma passada.**
+     *
+     * Escolha dele (02/09/2026): *"o modelo seria uma resposta automática ao anúncio, o atendimento
+     * vem depois disso que seria pedir dados e responder as perguntas"* — e, perguntado se "depois"
+     * era a mesma passada ou a seguinte, **a mesma**, sabendo que são duas mensagens seguidas.
+     *
+     * A versão anterior mandava só o modelo na chegada e pedia os dados na passada seguinte. O
+     * custo era real: a rodada só volta a quem escreveu de novo, então **quem recebia o modelo e
+     * sumia nunca era perguntada** — e sem nome e cidade não há o que classificar, que é o trabalho
+     * inteiro desta extensão.
+     *
+     * A condição exige **as duas metades disponíveis**. Faltando uma, esta regra não casa e as
+     * antigas seguem valendo sozinhas: `conteudo-pedido` manda só o modelo (quem já tem cidade),
+     * `nunca-pediram-dados` pede só os dados (quando não há modelo mapeado). É o que evita esta
+     * regra virar um caminho paralelo que decide sozinho em situação que ninguém previu.
+     */
+    quando: (c) =>
+      c.podeEnviar &&
+      !c.enviadoHoje &&
+      !c.modeloJaNaConversa &&
+      !c.temEtiquetaDeCidade &&
+      c.podePedirDados &&
+      !c.jaPediramDados &&
+      !c.pedidoHoje,
+    motivo: () =>
+      'chegou pelo anúncio: sai o modelo como recibo e, em seguida, o pedido de nome e cidade.',
+  },
+  {
     id: 'nunca-pediram-dados',
     tecla: '4',
     /**
@@ -246,7 +277,7 @@ export const REGRAS = [
       !c.temEtiquetaDeCidade &&
       c.podePedirDados &&
       !c.pedidoHoje,
-    motivo: () => 'veio do anúncio e o formulário nunca saiu para ele — peça os dados esta vez.',
+    motivo: () => 'veio do anúncio e nunca pedimos o nome e a cidade dela — peça os dados esta vez.',
   },
   {
     id: 'ultima-e-so-reacao',
@@ -356,6 +387,26 @@ export const REGRAS = [
           : !c.podeMandarMomento
             ? 'já foi atendida antes, e não há mensagem do momento configurada — conclua.'
             : 'já foi atendida antes (o modelo provavelmente já saiu) — mande a mensagem do momento.',
+  },
+  {
+    id: 'respondeu-os-dados',
+    tecla: '8',
+    /**
+     * **Ela respondeu o nome ou a cidade que pedimos: agradece e encerra.**
+     *
+     * Pedido dele (02/09/2026): *"agora só precisa agradecer a atenção e encerrar sem mandar
+     * modelo"*. É consequência do redesenho do mesmo dia — o modelo virou o **recibo da chegada**,
+     * então quando ela responde o cadastro o modelo já saiu, e mandá-lo de novo é repetir.
+     *
+     * Vem ACIMA de `conteudo-pedido` de propósito: quem respondeu o que pedimos não precisa de mais
+     * material, precisa de reconhecimento e do atendimento fechado.
+     *
+     * O sinal é calculado no painel juntando duas coisas — o pedido de dados saiu (reconhecido por
+     * INVARIANTE, nunca pelo texto atual) e o parser achou nome ou cidade no que ela escreveu
+     * depois. Sem as duas metades, "sim" solto ou assunto novo viraria agradecimento e conclusão.
+     */
+    quando: (c) => !!c.respondeuOsDados,
+    motivo: () => 'respondeu o nome e a cidade que pedimos — agradeça e encerre.',
   },
   {
     id: 'conteudo-pedido',
@@ -530,6 +581,22 @@ export const TECLAS = {
   '8': { rotulo: 'Agradece o apoio, e conclui', efeito: 'envia' },
   '9': { rotulo: 'Pergunta em que pode ajudar (deixa aberto)', efeito: 'envia' },
   s: { rotulo: 'Marca sem interesse, conclui sem responder', efeito: 'silencio' },
+  /**
+   * **Tecla `a` — o modelo do anúncio E o pedido de dados, na mesma passada.**
+   *
+   * Escolha dele em 02/09/2026, depois de explicar a natureza do modelo: *"o modelo seria uma
+   * resposta automática ao anúncio, o atendimento vem depois disso que seria pedir dados e
+   * responder as perguntas"*. Perguntado se "depois" era a mesma passada ou a seguinte, escolheu
+   * **a mesma**, sabendo que são DUAS mensagens seguidas para o mesmo número.
+   *
+   * É a única tecla do projeto que manda duas mensagens, e existe porque as duas são coisas
+   * diferentes: o modelo é o recibo automático do anúncio, o pedido de dados é o atendimento
+   * começando. Uma passada só captura o cadastro na chegada, em vez de esperar ela escrever de novo
+   * — que era o custo da versão anterior, e o que ele quis resolver.
+   *
+   * **Letra e não dígito**, pelo mesmo motivo do `s` e do `f`.
+   */
+  a: { rotulo: 'Manda o modelo do anúncio + pede nome e cidade, e conclui', efeito: 'envia' },
 };
 
 export const SOBRE = {
@@ -581,8 +648,24 @@ export const SOBRE = {
       { tecla: '3', se: 'ela já recebeu a do momento, ou não há uma configurada' },
     ],
   },
+  'anuncio-modelo-e-dados': {
+    rotulo: 'Chegou pelo anúncio: modelo + pedir os dados',
+    efeito: 'envia',
+    quando:
+      'Manda o modelo deste anúncio (ou o padrão, quando o texto não foi reconhecido) e, na mesma ' +
+      'passada, o pedido de nome e cidade — depois conclui. São DUAS mensagens, e é a única tecla ' +
+      'do projeto que faz isso. Só casa quando as duas metades cabem: há modelo mapeado que ainda ' +
+      'não saiu, ela não tem etiqueta de cidade e o pedido nunca foi feito.',
+  },
+  'respondeu-os-dados': {
+    rotulo: 'Respondeu o nome e a cidade que pedimos',
+    efeito: 'envia',
+    quando:
+      'O pedido de dados saiu e ela respondeu com nome ou cidade. Agradece e conclui, SEM mandar ' +
+      'modelo — o modelo já foi o recibo da chegada, e repeti-lo é mandar duas vezes a mesma coisa.',
+  },
   'nunca-pediram-dados': {
-    rotulo: 'Veio do anúncio e o formulário nunca saiu',
+    rotulo: 'Veio do anúncio e nunca pedimos os dados dela',
     efeito: 'envia',
     quando:
       'Pede nome e cidade e conclui. Quem respondeu que não vai ao evento cai aqui: sai "não tem ' +

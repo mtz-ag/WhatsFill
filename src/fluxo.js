@@ -77,10 +77,65 @@ let caminhoDoTeste = [];
 /** A vista: quanto o quadro está deslocado e em que zoom. */
 let vista = { x: 40, y: 30, z: 1 };
 
-async function gravar(nova) {
+/**
+ * Os estados anteriores do quadro, do mais antigo para o mais recente.
+ *
+ * Nasceu de perda de dados real: *"acabei de perder todo meu trabalho"* (01/09/2026). Os botões que
+ * substituem o quadro já perguntavam antes, mas **"Arrumar o quadro" não** — e ele reposiciona
+ * TODAS as caixas de uma vez. Num quadro que ele arrumou à mão, isso é o trabalho inteiro.
+ *
+ * **Gravada no armazenamento, não só em memória.** Desfazer que morre ao fechar a janela não serve
+ * para o caso que a criou: ele percebe o estrago, fecha para "ver se volta", e aí não volta mais.
+ * Fica em chave PRÓPRIA — não dentro de `fluxo` — para não engordar o objeto que a janela lê e
+ * grava a cada mexida.
+ */
+let historico = [];
+
+/** Quantos passos guardar. Vinte cobre uma sessão de trabalho sem inchar o armazenamento. */
+const TETO_HISTORICO = 20;
+
+/**
+ * Grava o quadro, empilhando o estado ANTERIOR.
+ *
+ * Empilhar aqui dentro, e não em cada botão, é o que faz o desfazer valer para as dezenove
+ * chamadas de uma vez — inclusive as que eu ainda não escrevi. Todos os campos do editor gravam no
+ * evento `change` (nunca `input`), então cada entrada da pilha é uma ação de verdade, e não uma
+ * tecla digitada.
+ */
+async function gravar(nova, opcoes) {
+  if (!opcoes?.semHistorico) {
+    historico.push(JSON.parse(JSON.stringify(fluxo.arvore || [])));
+    if (historico.length > TETO_HISTORICO) historico.shift();
+    store.set('fluxoHistorico', historico).catch(() => {});
+  }
   fluxo = { ...fluxo, arvore: nova };
   await store.set('fluxo', fluxo);
   desenhar();
+}
+
+/**
+ * Volta um passo.
+ *
+ * Não empilha o que está desfazendo: desfazer não é uma ação nova, e empilhá-la faria o botão
+ * alternar entre dois estados para sempre em vez de andar para trás.
+ */
+async function desfazer() {
+  if (!historico.length) return;
+  const anterior = historico.pop();
+  await store.set('fluxoHistorico', historico);
+  selecionado = null;
+  caminhoDoTeste = [];
+  await gravar(anterior, { semHistorico: true });
+}
+
+function atualizarDesfazer() {
+  const b = el('desfazer');
+  if (!b) return;
+  b.disabled = !historico.length;
+  b.textContent = historico.length ? `↶ Desfazer (${historico.length})` : '↶ Desfazer';
+  b.title = historico.length
+    ? 'Volta o quadro ao estado anterior — Ctrl+Z'
+    : 'Nada para desfazer nesta sessão';
 }
 
 function span(classe, texto) {
@@ -191,7 +246,7 @@ function caixaDoNo(no) {
   const pino = document.createElement('span');
   pino.className = 'pino';
   pino.dataset.pino = no.id;
-  pino.title = 'SAÍDA: puxe daqui até outra caixa para pôr AQUELA dentro DESTA';
+  pino.title = 'Puxe daqui até outra caixa para pôr ESTA dentro DAQUELA';
   d.append(pino);
 
   /**
@@ -208,7 +263,7 @@ function caixaDoNo(no) {
   const entrada = document.createElement('span');
   entrada.className = 'entrada-pino';
   entrada.dataset.entrada = no.id;
-  entrada.title = 'ENTRADA: puxe daqui até outra caixa para pôr ESTA dentro DAQUELA';
+  entrada.title = 'Puxe daqui até outra caixa para pôr ESTA dentro DAQUELA';
   d.append(entrada);
 
   return d;
@@ -271,14 +326,6 @@ function desenharFios() {
   el('palco').style.height = `${maiorY + 120}px`;
 }
 
-function desenharProblemas() {
-  const caixa = el('problemas');
-  caixa.replaceChildren();
-  const lista = arvoreLib.problemas(fluxo.arvore || []);
-  caixa.classList.toggle('tem', lista.length > 0);
-  for (const p of lista) caixa.append(span('problema', p));
-}
-
 function desenharResumo() {
   const caixa = el('contagem');
   caixa.replaceChildren();
@@ -298,8 +345,8 @@ function desenharResumo() {
 }
 
 function desenhar() {
+  atualizarDesfazer();
   desenharResumo();
-  desenharProblemas();
 
   const alvo = el('caixas');
   alvo.replaceChildren();
@@ -307,7 +354,25 @@ function desenhar() {
 
   desenharFios();
   desenharEditor();
+  // O catálogo mostra quantas caixas apontam para cada regra — pôr, apagar e desfazer mudam isso.
+  desenharCatalogo();
+  desenharDiferenca();
   aplicarVista();
+}
+
+/**
+ * Onde o ponteiro está, em coordenadas do palco (o palco é movido e escalado).
+ *
+ * Fora de `ligarArrasto` porque o catálogo do lado precisa da mesma conta: largar uma regra no
+ * quadro tem que pousar onde o ponteiro está, e não onde ele estaria se o quadro nunca tivesse
+ * sido rolado nem aproximado.
+ */
+function noPalco(clienteX, clienteY) {
+  const area = el('quadro-area').getBoundingClientRect();
+  return {
+    x: (clienteX - area.left - vista.x) / vista.z,
+    y: (clienteY - area.top - vista.y) / vista.z,
+  };
 }
 
 // ---- arrastar ---------------------------------------------------------------
@@ -335,15 +400,6 @@ function ligarArrasto() {
   /** A ligação sendo puxada de um pino até outra caixa. */
   let ligando = null;
 
-  /** Onde o ponteiro está, em coordenadas do palco (o palco é movido e escalado). */
-  const noPalco = (clienteX, clienteY) => {
-    const area = el('quadro-area').getBoundingClientRect();
-    return {
-      x: (clienteX - area.left - vista.x) / vista.z,
-      y: (clienteY - area.top - vista.y) / vista.z,
-    };
-  };
-
   /** O fio provisório, enquanto ele puxa do pino. Some ao soltar. */
   const desenharFioProvisorio = (de, para) => {
     let p = el('fios').querySelector('.fio-novo');
@@ -358,39 +414,6 @@ function ligarArrasto() {
 
   const limparFioProvisorio = () => el('fios').querySelector('.fio-novo')?.remove();
 
-  /**
-   * A frase que diz, DURANTE o arrasto, o que vai acontecer ao soltar.
-   *
-   * O pino puxa do pai para o filho: de A até B significa "B vai para dentro de A". Ele leu ao
-   * contrário — puxou de duas caixas até a mesma caixa esperando ligá-las **a** ela, e cada
-   * puxada tirava a caixa da anterior: *"ao acertar ele remove a outra caixa"* (01/09/2026).
-   *
-   * A direção não é adivinhável olhando um pino, e a seta do fio provisório não basta. O que
-   * resolve é a frase com os DOIS nomes, e principalmente **de onde a caixa vai sair** quando ela
-   * já tem pai — é essa metade que ele não estava vendo acontecer.
-   */
-  const dizerOQueVaiAcontecer = (alvoEl, origemId, invertido, clienteX, clienteY) => {
-    const caixa = el('rotulo-ligacao');
-    if (!alvoEl) {
-      caixa.hidden = true;
-      return;
-    }
-    const daArea = el('quadro-area').getBoundingClientRect();
-    const naPonta = arvoreLib.localizar(fluxo.arvore, alvoEl.dataset.no);
-    const naOrigem = arvoreLib.localizar(fluxo.arvore, origemId);
-    // Quem entra em quem depende de qual pino ele puxou: saída manda para dentro, entrada vem.
-    const filho = invertido ? naOrigem : naPonta;
-    const paiNovo = invertido ? naPonta : naOrigem;
-    const paiAtual = filho?.pai;
-
-    caixa.replaceChildren();
-    caixa.append(span('', `"${filho?.no?.rotulo || '?'}" vai para dentro de "${paiNovo?.no?.rotulo || '?'}"`));
-    if (paiAtual) caixa.append(span('sai-de', `e sai de "${paiAtual.rotulo}"`));
-    caixa.hidden = false;
-    caixa.style.left = `${clienteX - daArea.left + 14}px`;
-    caixa.style.top = `${clienteY - daArea.top + 16}px`;
-  };
-
   caixas.addEventListener('pointerdown', (ev) => {
     const caixa = ev.target.closest('.caixa');
     if (!caixa || ev.button !== 0) return;
@@ -404,8 +427,6 @@ function ligarArrasto() {
       if (!achado) return;
       ligando = {
         origem: caixa.dataset.no,
-        // Puxando da ENTRADA, é ESTA caixa que vai para dentro da outra: o sentido se inverte.
-        invertido: !!naEntrada,
         alvo: null,
         de: {
           x: naEntrada ? (achado.no.x || 0) : (achado.no.x || 0) + caixa.offsetWidth,
@@ -478,13 +499,12 @@ function ligarArrasto() {
          *
          * Quem é o filho e quem é o pai depende do pino que ele puxou, então a guarda também.
          */
-        const filhoId = ligando.invertido ? ligando.origem : novo?.dataset.no;
-        const paiId = ligando.invertido ? novo?.dataset.no : ligando.origem;
+        const filhoId = ligando.origem;
+        const paiId = novo?.dataset.no;
         const aceita = novo && !arvoreLib.ehDescendente(fluxo.arvore, filhoId, paiId);
         ligando.alvo = aceita ? novo : null;
         ligando.alvo?.classList.add('alvo');
       }
-      dizerOQueVaiAcontecer(ligando.alvo, ligando.origem, ligando.invertido, ev.clientX, ev.clientY);
       return;
     }
     if (!arrastando) return;
@@ -510,17 +530,26 @@ function ligarArrasto() {
 
   const soltar = async (ev) => {
     if (ligando) {
-      const { origem, alvo, invertido } = ligando;
+      const { origem, alvo } = ligando;
       limparFioProvisorio();
-      el('rotulo-ligacao').hidden = true;
       caixas.querySelector('.ligando')?.classList.remove('ligando');
       alvo?.classList.remove('alvo');
       ligando = null;
       if (alvo) {
-        // Da SAÍDA de A até B: B vai para dentro de A. Da ENTRADA de A até B: A vai para dentro
-        // de B. É a mesma ligação, puxada de uma ponta ou da outra.
-        const filhoId = invertido ? origem : alvo.dataset.no;
-        const paiId = invertido ? alvo.dataset.no : origem;
+        /**
+         * **Uma regra só, para os dois pinos: a caixa de onde você puxa é a que se move.**
+         *
+         * Os dois tinham direções opostas, e era isso que produzia *"ao tentar uma remove a
+         * outra"* (01/09/2026): o pai que ele queria estava em cima, a mão alcançava a entrada
+         * dele, e cada puxada movia a caixa de cima em vez de trazer a de baixo.
+         *
+         * Explicar a direção não resolveu em três tentativas — pino de saída, pino de entrada e a
+         * frase ao vivo. O que resolve é **não haver direção para ler**: puxe de qualquer lado de
+         * A até B e A entra em B. Duas caixas puxadas até a mesma viram duas filhas dela, e
+         * nenhuma remove a outra.
+         */
+        const filhoId = origem;
+        const paiId = alvo.dataset.no;
         await gravar(arvoreLib.ordenarPorPosicao(arvoreLib.reparentar(fluxo.arvore, filhoId, paiId)));
       }
       return;
@@ -873,6 +902,23 @@ function desenharEditor() {
   soltar.disabled = !achado.pai;
   soltar.addEventListener('click', () => gravar(arvoreLib.ordenarPorPosicao(arvoreLib.reparentar(fluxo.arvore, no.id, null))));
 
+  /**
+   * Duplicar leva o que está DENTRO junto, e o rótulo do botão diz isso quando há filhos — do
+   * mesmo jeito que o Apagar avisa. Cópia que traz seis ramos sem avisar é surpresa.
+   */
+  const duplicar = document.createElement('button');
+  duplicar.type = 'button';
+  duplicar.className = 'btn';
+  const dentroDele = arvoreLib.todosOsNos([no]).length - 1;
+  duplicar.textContent = dentroDele ? `Duplicar (com ${dentroDele} dentro)` : 'Duplicar';
+  duplicar.title = 'A cópia nasce logo abaixo, com a prioridade seguinte';
+  duplicar.addEventListener('click', async () => {
+    const r = arvoreLib.duplicar(fluxo.arvore, no.id);
+    if (!r.id) return;
+    selecionado = r.id;
+    await gravar(arvoreLib.ordenarPorPosicao(r.arvore));
+  });
+
   const apagar = document.createElement('button');
   apagar.type = 'button';
   apagar.className = 'btn btn-perigo';
@@ -886,8 +932,263 @@ function desenharEditor() {
     }
   });
 
-  botoes.append(dentro, soltar, apagar);
+  botoes.append(dentro, duplicar, soltar, apagar);
   caixa.append(botoes);
+}
+
+// ---- o catálogo das regras do código ----------------------------------------
+
+/**
+ * **A lista de onde as regras voltam para o quadro.**
+ *
+ * Pedido dele (01/09/2026): *"quando regras são apagadas tem que ter uma opção ou uma aba ali com a
+ * lista de regras para arrastar pro fluxo novamente"*. O buraco era real e caro: apagar uma caixa
+ * "do código" é reversível em um passo pelo Desfazer, e **irreversível depois disso** — a regra
+ * continua viva no código, mas o único jeito de trazê-la de volta era "Resetar para o padrão", que
+ * joga fora o arranjo inteiro feito à mão. Duas caixas apagadas custavam a tarde de trabalho.
+ *
+ * Mostra as dezesseis, com a marca de quantas caixas já apontam para cada uma. Repetir é legítimo —
+ * o próprio padrão põe as mesmas sete regras dos dois lados da bifurcação de cidade —, então a
+ * marca informa e o filtro "só as que estão fora" é dele.
+ */
+function desenharCatalogo() {
+  const area = el('catalogo');
+  area.replaceChildren();
+
+  const busca = (el('busca-regra').value || '').trim().toLowerCase();
+  const soFora = el('so-fora').checked;
+
+  const lista = arvoreLib.catalogoDeRegras(fluxo.arvore || []).filter((r) => {
+    if (soFora && r.quantasNoQuadro) return false;
+    if (!busca) return true;
+    return `${r.rotulo} ${r.id} ${r.quando}`.toLowerCase().includes(busca);
+  });
+
+  if (!lista.length) {
+    area.append(span('vazio', soFora ? 'Todas as regras já estão no quadro.' : 'Nenhuma regra com esse nome.'));
+    return;
+  }
+
+  for (const r of lista) {
+    const item = document.createElement('div');
+    item.className = 'regra-item';
+    item.dataset.regra = r.id;
+    item.title = r.quando || r.rotulo;
+
+    const texto = document.createElement('div');
+    texto.className = 'regra-item-texto';
+    texto.append(span('regra-item-nome', r.rotulo));
+
+    const selos = document.createElement('div');
+    selos.className = 'regra-item-selos';
+    if (r.efeito) selos.append(span(`selo ${r.efeito}`, SELO[r.efeito]));
+    if (r.quantasNoQuadro) {
+      selos.append(span('ja-no-quadro', r.quantasNoQuadro > 1 ? `já no quadro ${r.quantasNoQuadro}×` : 'já no quadro'));
+    }
+    texto.append(selos);
+    if (r.quando) texto.append(span('regra-item-quando', r.quando));
+    item.append(texto);
+
+    /**
+     * O botão faz o mesmo que o arrasto.
+     *
+     * Não é redundância: o quadro pode estar rolado longe ou muito afastado, e aí a mira do arrasto
+     * é trabalho. A lição do "Ramos dentro deste" vale aqui — quando o gesto exige pontaria, a
+     * lista tem que oferecer o caminho sem pontaria ao lado.
+     */
+    const por = document.createElement('button');
+    por.type = 'button';
+    por.className = 'btn';
+    por.textContent = 'Pôr';
+    por.title = 'Largar esta regra no meio da vista';
+    por.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      const vis = el('quadro-area').getBoundingClientRect();
+      const meio = noPalco(vis.left + vis.width / 2, vis.top + vis.height / 3);
+      await largarRegra(r.id, meio.x - arvoreLib.CAIXA.largura / 2, meio.y);
+    });
+    item.append(por);
+
+    area.append(item);
+  }
+}
+
+/**
+ * Põe a regra no quadro, solta na raiz, na posição pedida.
+ *
+ * **Nasce na raiz de propósito**, e não dentro do ramo selecionado: na raiz ela é o último recurso
+ * — só decide quando tudo acima falha —, enquanto dentro de um grupo ela passa a valer só naquele
+ * ramo e pode roubar a vez de quem está embaixo. Largar uma regra que ENVIA num lugar que ele não
+ * escolheu é o tipo de surpresa que este quadro existe para não ter. Ele pendura onde quiser
+ * depois, com o pino.
+ */
+async function largarRegra(regra, x, y) {
+  const no = arvoreLib.noDeRegraLivre(fluxo.arvore || [], regra, { x: Math.round(x), y: Math.round(y) });
+  selecionado = no.id;
+  await gravar(arvoreLib.ordenarPorPosicao(arvoreLib.acrescentar(fluxo.arvore, null, no)));
+}
+
+/**
+ * Arrastar um item do catálogo até o quadro.
+ *
+ * O que acompanha o ponteiro é a **caixa de verdade** (`caixaDoNo` sobre um nó de mentira), e não
+ * um retângulo genérico: ele vê o nome, o desfecho e a cor do que vai chegar lá antes de soltar. É
+ * a mesma razão de o pino existir — o gesto tem que mostrar o que faz enquanto acontece.
+ *
+ * Ponteiro, e não o arrastar nativo do HTML: o quadro inteiro já é ponteiro (mover, ligar, andar,
+ * zoom), e misturar os dois daria dois modelos de arrasto na mesma tela, com o nativo ignorando o
+ * `vista.z` de que a conta de posição precisa.
+ */
+function ligarCatalogo() {
+  const area = el('catalogo');
+  let puxando = null;
+
+  const soltarFantasma = () => {
+    puxando?.fantasma?.remove();
+    puxando?.item?.classList.remove('arrastando');
+    el('quadro-area').classList.remove('recebendo');
+    puxando = null;
+  };
+
+  const noQuadro = (ev) => {
+    const vis = el('quadro-area').getBoundingClientRect();
+    return ev.clientX >= vis.left && ev.clientX <= vis.right && ev.clientY >= vis.top && ev.clientY <= vis.bottom;
+  };
+
+  area.addEventListener('pointerdown', (ev) => {
+    const item = ev.target.closest('.regra-item');
+    if (!item || ev.button !== 0) return;
+    if (ev.target.closest('button')) return; // o "Pôr" é clique, não arrasto
+
+    const molde = { ...arvoreLib.noDeRegraLivre(fluxo.arvore || [], item.dataset.regra), x: 0, y: 0 };
+    const fantasma = caixaDoNo(molde);
+    fantasma.classList.add('fantasma');
+    fantasma.style.left = '0px';
+    fantasma.style.top = '0px';
+    fantasma.style.width = `${arvoreLib.CAIXA.largura}px`;
+    document.body.append(fantasma);
+
+    puxando = { regra: item.dataset.regra, item, fantasma, moveu: false };
+    item.classList.add('arrastando');
+    // Ver a armadilha do `setPointerCapture`: ele LANÇA quando o id não está ativo, e a exceção no
+    // meio do pointerdown deixaria o fantasma grudado no ponteiro sem soltar nunca.
+    try {
+      item.setPointerCapture(ev.pointerId);
+    } catch (_) {
+      /* segue sem captura: os ouvintes na janela dão conta */
+    }
+    ev.preventDefault();
+  });
+
+  window.addEventListener('pointermove', (ev) => {
+    if (!puxando) return;
+    puxando.moveu = true;
+    puxando.fantasma.style.transform = `translate(${ev.clientX + 12}px, ${ev.clientY - 18}px)`;
+    el('quadro-area').classList.toggle('recebendo', noQuadro(ev));
+  });
+
+  window.addEventListener('pointerup', async (ev) => {
+    if (!puxando) return;
+    const { regra, moveu } = puxando;
+    const largar = moveu && noQuadro(ev);
+    soltarFantasma();
+    // Soltar fora do quadro não faz nada: desistir do arrasto tem que ser possível sem consequência.
+    if (!largar) return;
+    const p = noPalco(ev.clientX, ev.clientY);
+    await largarRegra(regra, p.x, p.y);
+  });
+
+  window.addEventListener('pointercancel', soltarFantasma);
+}
+
+// ---- o que mudou no padrão --------------------------------------------------
+
+/**
+ * **A comparação entre este quadro e o padrão de hoje.**
+ *
+ * Relato dele (02/09/2026), depois de eu reordenar a chegada pelo anúncio várias vezes num dia:
+ * *"a ramificação não foi atualizada"*. Estava certo, e o defeito é de desenho e não daquele dia:
+ * este quadro é uma **cópia**, e melhoria no padrão nunca chegava nele. O único caminho de volta —
+ * "Resetar para o padrão" — joga fora o arranjo feito à mão, que é exatamente o trabalho que ele não
+ * quer perder. Então toda mudança minha no padrão era invisível ou custava o quadro dele.
+ *
+ * **Nada entra sozinho.** No quadro a posição é a prioridade: enfiar uma caixa nova por conta
+ * própria mudaria o que a rodada faz sem ninguém escolher onde. Ele põe uma por uma, e arrasta.
+ */
+function desenharDiferenca() {
+  const area = el('diferenca');
+  area.replaceChildren();
+
+  const { faltando, sobrando } = arvoreLib.diferencaDoPadrao(fluxo.arvore || []);
+
+  if (!faltando.length && !sobrando.length) {
+    area.append(span('vazio', 'Este quadro decide as mesmas coisas que o padrão de hoje.'));
+    return;
+  }
+
+  if (faltando.length) {
+    area.append(span('dif-titulo', `${faltando.length} no padrão e não aqui:`));
+  }
+
+  for (const no of faltando) {
+    const item = document.createElement('div');
+    item.className = 'regra-item';
+
+    const texto = document.createElement('div');
+    texto.className = 'regra-item-texto';
+    texto.append(span('regra-item-nome', no.rotulo || '(sem nome)'));
+
+    const selos = document.createElement('div');
+    selos.className = 'regra-item-selos';
+    const efeito = efeitoDoNo(no);
+    if (efeito) selos.append(span(`selo ${efeito}`, SELO[efeito]));
+    if (no.regra) selos.append(span('marca-regra', 'do código'));
+    texto.append(selos);
+    texto.append(span('regra-item-quando', condicaoEmPortugues(no)));
+    item.append(texto);
+
+    /**
+     * Traz o ramo INTEIRO, e o botão diz quantas caixas vêm.
+     *
+     * Metade de um grupo não decide nada — "veio de um anúncio que eu reconheço" sem o filho dentro
+     * é uma caixa que casa e não faz nada. E a lição do Duplicar vale igual: cópia que traz seis
+     * ramos sem avisar é surpresa, então o número está no botão antes do clique.
+     */
+    const dentro = arvoreLib.todosOsNos([no]).length;
+    const por = document.createElement('button');
+    por.type = 'button';
+    por.className = 'btn';
+    por.textContent = dentro > 1 ? `Pôr (${dentro})` : 'Pôr';
+    por.title = dentro > 1
+      ? `Põe esta caixa e os ${dentro - 1} ramos que estão dentro dela, soltos na raiz do quadro`
+      : 'Põe esta caixa solta na raiz do quadro';
+    por.addEventListener('click', async () => {
+      const vis = el('quadro-area').getBoundingClientRect();
+      const meio = noPalco(vis.left + vis.width / 2, vis.top + vis.height / 3);
+      const copia = {
+        ...arvoreLib.comIdsNovos(JSON.parse(JSON.stringify(no))),
+        x: Math.round(meio.x - arvoreLib.CAIXA.largura / 2),
+        y: Math.round(meio.y),
+      };
+      selecionado = copia.id;
+      await gravar(arvoreLib.ordenarPorPosicao(arvoreLib.acrescentar(fluxo.arvore, null, copia)));
+    });
+    item.append(por);
+
+    area.append(item);
+  }
+
+  /**
+   * O que é só dele. **Informação, não erro** — montar ramo que o padrão nunca teve é a razão de
+   * esta janela existir. Aparece porque, olhando os dois lados, ele consegue dizer se é uma escolha
+   * sua ou uma caixa que ficou para trás de uma versão antiga.
+   */
+  if (sobrando.length) {
+    area.append(span('dif-titulo', `${sobrando.length} aqui e não no padrão (suas, ou de uma versão antiga):`));
+    for (const no of sobrando) {
+      area.append(span('dif-so-dele', `· ${no.rotulo || '(sem nome)'}`));
+    }
+  }
 }
 
 // ---- salvar, carregar e levar para fora -------------------------------------
@@ -1189,7 +1490,32 @@ el('testar').addEventListener('click', testar);
 el('mais').addEventListener('click', () => aproximar(1.1));
 el('menos').addEventListener('click', () => aproximar(1 / 1.1));
 el('ajustar').addEventListener('click', caberNaTela);
-el('arrumar').addEventListener('click', () => gravar(arvoreLib.arrumar(fluxo.arvore)));
+el('desfazer').addEventListener('click', desfazer);
+
+/**
+ * Ctrl+Z, e **só fora de campo de texto**.
+ *
+ * Dentro de um `input` ou `textarea` o Ctrl+Z do navegador desfaz a digitação, que é o que ele
+ * espera ali. Roubar o atalho faria o quadro voltar um passo enquanto ele só queria apagar uma
+ * palavra que acabou de escrever.
+ */
+document.addEventListener('keydown', (ev) => {
+  if (!(ev.ctrlKey || ev.metaKey) || ev.key.toLowerCase() !== 'z' || ev.shiftKey) return;
+  if (ev.target.closest('input, textarea, select')) return;
+  ev.preventDefault();
+  desfazer();
+});
+
+/**
+ * "Arrumar o quadro" reposiciona TODAS as caixas, e era o único botão que mexia em tudo sem
+ * perguntar — o suspeito mais provável do trabalho que ele perdeu. Hoje pergunta, e mesmo que ele
+ * confirme sem ler, o desfazer está a um clique.
+ */
+el('arrumar').addEventListener('click', () => {
+  const quantas = arvoreLib.todosOsNos(fluxo.arvore || []).length;
+  if (!confirm(`Reposicionar as ${quantas} caixas em colunas? O arranjo que você fez à mão se perde (dá para desfazer).`)) return;
+  gravar(arvoreLib.arrumar(fluxo.arvore));
+});
 
 el('novo').addEventListener('click', async () => {
   // Nasce à vista, no canto de cima da área visível — caixa criada fora da tela parece que o
@@ -1226,6 +1552,42 @@ chrome.storage.onChanged.addListener((mudancas, area) => {
   desenhar();
 });
 
+/**
+ * O cabeçalho recolhe, e a escolha fica gravada.
+ *
+ * Gravada em `fluxo` porque é onde esta janela já lê e grava — e `arvore.paraArquivo` só exporta
+ * `teclas` e `arvore`, então a preferência de tela não vaza para o arquivo que ele manda para
+ * alguém.
+ *
+ * Recolhido some o título, a contagem, os botões e a linha de atalhos; sobra a faixa com o botão.
+ * A roda do mouse continua dando zoom e o duplo clique continua criando ramo, então dá para
+ * trabalhar o tempo todo assim.
+ */
+function aplicarCabecalho(oculto) {
+  const topo = el('topo');
+  const botao = el('alternar-topo');
+  topo.classList.toggle('oculto', !!oculto);
+  botao.textContent = oculto ? '▾ Mostrar controles' : '▴ Ocultar';
+  botao.title = oculto
+    ? 'Mostrar o título, a contagem e os botões'
+    : 'Recolher e devolver a altura ao quadro (a roda do mouse continua dando zoom)';
+  botao.setAttribute('aria-expanded', oculto ? 'false' : 'true');
+}
+
+el('busca-regra').addEventListener('input', desenharCatalogo);
+el('so-fora').addEventListener('change', desenharCatalogo);
+
+el('alternar-topo').addEventListener('click', async () => {
+  const oculto = !el('topo').classList.contains('oculto');
+  aplicarCabecalho(oculto);
+  fluxo = { ...fluxo, cabecalhoOculto: oculto };
+  await store.set('fluxo', fluxo);
+});
+
+// O rótulo já vale agora: `boot` é assíncrono e espera o armazenamento, e sem isto o botão ficaria
+// em branco até a leitura voltar. Se ele tiver deixado recolhido, o `boot` corrige em seguida.
+aplicarCabecalho(false);
+
 (async function boot() {
   fluxo = await store.get('fluxo');
   try {
@@ -1244,11 +1606,15 @@ chrome.storage.onChanged.addListener((mudancas, area) => {
   fluxo = { ...fluxo, arvore };
   await store.set('fluxo', fluxo);
 
+  historico = (await store.get('fluxoHistorico')) || [];
+  aplicarCabecalho(!!fluxo.cabecalhoOculto);
+
   salvos = (await store.get('fluxosSalvos')) || [];
   desenharSalvos();
   desenharTeclas();
   ligarArrasto();
   ligarPanoramica();
+  ligarCatalogo();
   desenhar();
   caberNaTela();
 })();

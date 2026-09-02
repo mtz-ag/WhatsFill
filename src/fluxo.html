@@ -6,13 +6,22 @@
     <link rel="stylesheet" href="fluxo.css" />
   </head>
   <body>
-    <header class="topo">
+    <header class="topo" id="topo">
+      <!--
+        Ocultar o cabeçalho devolve a altura dele ao quadro. Recolhido, sobra uma faixa fina com
+        este botão — e NÃO um botão flutuando sobre o quadro, que é justamente o que ele mandou
+        tirar de lá. Com ele recolhido a roda do mouse continua dando zoom e o duplo clique
+        continua criando ramo, então dá para trabalhar assim.
+      -->
+      <button type="button" id="alternar-topo" class="alternar-topo" aria-expanded="true" aria-controls="topo"></button>
+
       <div class="titulo">
         <h1>Fluxo de atendimento</h1>
-        <p><b>Arraste</b> uma caixa para movê-la — mover nunca muda a estrutura. <b>Puxe o pino</b> da borda direita até outra caixa para pôr aquela dentro desta. <b>Clique</b> para editar no lado. Entre irmãos, a caixa mais <b>alta</b> é olhada primeiro.</p>
+        <p><b>Arraste</b> uma caixa para movê-la — mover nunca muda a estrutura. <b>Puxe um pino</b> (qualquer um dos lados) até outra caixa para pôr <b>esta dentro daquela</b>: quem se move é sempre a caixa de onde você puxou, então dá para pôr várias dentro da mesma. <b>Clique</b> para editar no lado. Entre irmãos, a caixa mais <b>alta</b> é olhada primeiro.</p>
       </div>
       <div class="contagem" id="contagem"></div>
       <div class="acoes">
+        <button type="button" id="desfazer" class="btn" disabled>↶ Desfazer</button>
         <button type="button" id="novo" class="btn btn-primario">+ Ramo novo</button>
         <button type="button" id="arrumar" class="btn">Arrumar o quadro</button>
         <button type="button" id="quadro" class="btn">Resetar para o padrão</button>
@@ -24,9 +33,15 @@
           <button type="button" id="ajustar" class="btn" title="Enquadrar tudo">Caber na tela</button>
         </span>
       </div>
-    </header>
 
-    <div id="problemas" class="problemas"></div>
+      <!--
+        Os atalhos do quadro ficam AQUI, com os botões, e não flutuando dentro do quadro: lá
+        embaixo a faixa entrava na seleção de texto do arrasto e atrapalhava o gesto (relato dele,
+        01/09/2026). Aviso fixo em cima de área que se arrasta é obstáculo, por mais discreto que
+        pareça.
+      -->
+      <p class="dica" id="dica">Arraste o fundo para andar pelo quadro · roda do mouse aproxima e afasta · duplo clique no vazio cria um ramo · <b>Shift + arrastar</b> leva o ramo inteiro junto</p>
+    </header>
 
     <main class="tela">
       <!-- O quadro. Arrastar o fundo move a vista; arrastar uma caixa move o ramo. -->
@@ -35,8 +50,6 @@
           <svg class="fios" id="fios" aria-hidden="true"></svg>
           <div class="caixas" id="caixas"></div>
         </div>
-        <div class="rotulo-ligacao" id="rotulo-ligacao" hidden></div>
-        <p class="dica" id="dica">Arraste o fundo para andar pelo quadro · roda do mouse aproxima e afasta · duplo clique no vazio cria um ramo · <b>Shift + arrastar</b> leva o ramo inteiro junto</p>
       </section>
 
       <aside class="lado">
@@ -44,6 +57,38 @@
           <h2 id="titulo-edicao">Nenhum ramo selecionado</h2>
           <p class="ajuda" id="ajuda-edicao">Clique numa caixa do quadro para editar a condição e o desfecho dela.</p>
           <div id="editor"></div>
+        </div>
+
+        <!--
+          O catálogo das regras do código.
+
+          Apagar uma caixa "do código" era irreversível na prática: a regra continuava no código e o
+          único caminho de volta era resetar o quadro inteiro, que joga fora o arranjo feito à mão.
+          Pedido dele: *"quando regras são apagadas tem que ter uma opção ou uma aba ali com a lista
+          de regras para arrastar pro fluxo novamente"*.
+
+          Arrastar é o gesto que ele pediu; o botão faz o mesmo sem mira, porque o quadro pode estar
+          rolado longe e uma lista nunca erra o alvo.
+        -->
+        <div class="cartao">
+          <h2>Regras do código</h2>
+          <p class="ajuda">As dezesseis que a extensão sabe reconhecer. <b>Arraste</b> uma para o quadro, ou clique em <b>Pôr</b> para largá-la no meio da vista. Apagar uma caixa nunca apaga a regra — ela volta para cá.</p>
+          <input type="text" id="busca-regra" class="busca-regra" placeholder="filtrar pelo nome" />
+          <label class="chk"><input type="checkbox" id="so-fora" /> <span>só as que estão fora do quadro</span></label>
+          <div id="catalogo" class="catalogo"></div>
+        </div>
+
+        <!--
+          O que mudou no padrao e nao esta neste quadro.
+
+          Relato dele: *"a ramificacao nao foi atualizada"*. Estava certo, e o problema e de
+          desenho: este quadro e uma COPIA, e melhoria no padrao era invisivel para ele. O unico
+          caminho de volta ("Resetar para o padrao") joga fora o arranjo feito a mao.
+        -->
+        <div class="cartao">
+          <h2>O padrão mudou?</h2>
+          <p class="ajuda">Compara este quadro com o padrão de hoje. <b>Nada entra sozinho:</b> no quadro a <b>posição</b> é a prioridade, então quem decide onde cada caixa vai é você.</p>
+          <div id="diferenca" class="catalogo"></div>
         </div>
 
         <div class="cartao">

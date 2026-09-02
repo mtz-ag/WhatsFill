@@ -234,5 +234,97 @@ grupo('ehPedidoDeDados — reconhece pelo INVARIANTE, não pela redação (01/09
   check(!ehPedidoDeDados(""), "vazio");
   check(!ehPedidoDeDados(null), "nulo não explode");
 }
+
+grupo('pedir-dados: "antes de qualquer coisa" (01/09/2026)');
+{
+  const padrao = store.DEFAULT_TEMPLATES.find((t) => t.id === 'pedir-dados');
+  const versoes = [padrao.text, ...padrao.variantes];
+
+  // O invariante que o parser e o `ehPedidoDeDados` dependem, nas TRES versoes.
+  for (const [i, v] of versoes.entries()) {
+    check(/Nome completo \/ Cidade/.test(v), `versao ${i} mantem a linha "Nome completo / Cidade"`);
+    check(templates.ehPedidoDeDados(v), `versao ${i} continua sendo reconhecida como o pedido de dados`);
+    check(/antes de (qualquer coisa|mais nada)/i.test(v), `versao ${i} pede antes de explicar`);
+    check(!/\{\{primeiro_nome\}\}|\{\{nome\}\}/.test(v), `versao ${i} continua sem vocativo`);
+  }
+}
+
+grupo('migrarPedirDadosAntesDeTudo: so mexe em quem tem o texto de fabrica');
+{
+  const padrao = store.DEFAULT_TEMPLATES.find((t) => t.id === 'pedir-dados');
+  const antigo =
+    '{{saudacao}}! Que bom ter voce com a gente.\n\n' +
+    store.PEDIR_DADOS_MIOLO_ANTIGO[0] +
+    '\n\nNome completo / Cidade\n\n(exemplo: Maria Silva / Santo Angelo)';
+
+  // Quem ainda tem o texto de fabrica RECEBE o novo.
+  mem.migracoes = {};
+  mem.templates = [{ id: 'pedir-dados', name: 'Pedir dados (formato fixo)', text: antigo, variantes: [] }];
+  check((await templates.migrarPedirDadosAntesDeTudo()) === true, 'mexeu em quem tinha o texto antigo');
+  check(mem.templates[0].text === padrao.text, 'e o texto virou o novo');
+
+  /**
+   * **A assercao que importa.** Reescrever por cima do que ele escreveu e o erro que nenhuma
+   * migracao pode cometer -- ele passa o dia ajustando esses textos.
+   */
+  mem.migracoes = {};
+  const dele = 'Oi! Me manda por favor:\n\nNome completo / Cidade';
+  mem.templates = [{ id: 'pedir-dados', name: 'Pedir dados (formato fixo)', text: dele, variantes: [] }];
+  check((await templates.migrarPedirDadosAntesDeTudo()) === false, 'nao mexe no texto que ele reescreveu');
+  check(mem.templates[0].text === dele, 'e o texto dele fica intacto');
+
+  // Roda uma vez so.
+  mem.migracoes = {};
+  mem.templates = [{ id: 'pedir-dados', name: 'x', text: antigo, variantes: [] }];
+  await templates.migrarPedirDadosAntesDeTudo();
+  mem.templates[0].text = 'EU MEXI DEPOIS';
+  check((await templates.migrarPedirDadosAntesDeTudo()) === false, 'segunda chamada nao faz nada');
+  check(mem.templates[0].text === 'EU MEXI DEPOIS', 'e nao desfaz a edicao posterior dele');
+}
+
+grupo('pedir-dados: a pergunta dos grupos saiu (01/09/2026)');
+{
+  const padrao = store.DEFAULT_TEMPLATES.find((t) => t.id === 'pedir-dados');
+  const versoes = [padrao.text, ...padrao.variantes];
+
+  /**
+   * *"nao tem necessidade de perguntar por grupos, ninguem estava me dando links"* — decisao dele,
+   * medida no trabalho. A mensagem e um portao curto: pede os dois dados e conclui.
+   */
+  for (const [i, v] of versoes.entries()) {
+    check(!/grupo pol[ií]tico/i.test(v), `versao ${i} nao pergunta mais por grupo`);
+    check(!/link de convite/i.test(v), `versao ${i} nao pede link de convite`);
+    check(/Nome completo \/ Cidade/.test(v), `versao ${i} mantem o invariante do parser`);
+  }
+
+  /**
+   * **`migrarPerguntaGrupos` nao pode estar na fila.** Ela ACRESCENTA a pergunta em quem nao a tem:
+   * numa instalacao nova, desfaria a remocao no primeiro carregamento.
+   */
+  mem.migracoes = {};
+  mem.templates = [{ id: 'pedir-dados', name: 'x', text: padrao.text, variantes: [] }];
+  await templates.list();
+  check(!/grupo pol[ií]tico/i.test(mem.templates[0].text), 'depois de list(), a pergunta continua fora');
+}
+
+grupo('quem ja recebeu a versao COM grupos recebe a versao sem');
+{
+  const padrao = store.DEFAULT_TEMPLATES.find((t) => t.id === 'pedir-dados');
+
+  // A v1: mesmo miolo, mas com a pergunta dos grupos pendurada no fim.
+  const v1 = padrao.text + '\n\n' + store.PERGUNTA_GRUPOS;
+  mem.migracoes = {};
+  mem.templates = [{ id: 'pedir-dados', name: 'Pedir dados (formato fixo)', text: v1, variantes: [] }];
+
+  check((await templates.migrarPedirDadosAntesDeTudo()) === true, 'reconheceu a v1 como texto de fabrica');
+  check(!/grupo pol[ií]tico/i.test(mem.templates[0].text), 'e tirou a pergunta dos grupos');
+
+  // E continua sem tocar no que ele escreveu.
+  mem.migracoes = {};
+  const dele = 'Oi! Me manda:\n\nNome completo / Cidade\n\nE me diz de qual grupo político você faz parte.';
+  mem.templates = [{ id: 'pedir-dados', name: 'x', text: dele, variantes: [] }];
+  await templates.migrarPedirDadosAntesDeTudo();
+  check(mem.templates[0].text === dele, 'texto reescrito por ele fica intacto, com grupo e tudo');
+}
 
 fim();

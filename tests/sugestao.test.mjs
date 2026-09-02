@@ -244,7 +244,7 @@ grupo('modelo ja esta na conversa: nao sugere mandar de novo');
 }
 
 
-grupo('veio do anuncio e o formulario NUNCA saiu');
+grupo('veio do anuncio e nunca pedimos os dados dela');
 {
   // Print da Sonia: nome de verdade (a regra do nome nao pega), conteudo pedido (a regra do
   // modelo pega e manda), e o formulario nunca tinha saido. "bastante contatos que vieram de
@@ -252,11 +252,17 @@ grupo('veio do anuncio e o formulario NUNCA saiu');
   const nunca = { jaPediramDados: false, temEtiquetaDeCidade: false };
   const r = com(nunca);
   check(r?.tecla === '4', 'recomendou pedir os dados = ' + JSON.stringify(r));
-  check(String(r?.motivo).includes('nunca saiu'), 'o motivo diz que nunca saiu');
+  check(String(r?.motivo).includes('nunca pedimos o nome e a cidade'), 'o motivo diz, sem jargao, que nunca pedimos os dados');
 
-  // A distincao que faltava: pedir vence o modelo SO para quem nunca foi perguntado.
-  check(com({ ...nunca, podeEnviar: true, conteudoPedido: 'ADS' })?.tecla === '4',
-    'nunca perguntado: pedir vence o modelo');
+  /**
+   * A distincao que faltava: o pedido de dados nunca e PULADO em favor do modelo.
+   *
+   * Desde 02/09/2026 os dois saem na MESMA passada (tecla `a`, escolha dele) quando as duas metades
+   * cabem. A intencao do teste e a mesma de antes -- o que mudou e que o modelo nao precisa mais
+   * esperar a passada seguinte.
+   */
+  check(com({ ...nunca, podeEnviar: true, conteudoPedido: 'ADS' })?.tecla === 'a',
+    'nunca perguntado, com modelo: saem os DOIS na mesma passada');
   check(com({ jaPediramDados: true, temEtiquetaDeCidade: false, podeEnviar: true, conteudoPedido: 'ADS' })?.tecla === '1',
     'ja perguntado e ignorou: manda o modelo, nao insiste');
 
@@ -286,8 +292,12 @@ grupo('emoji como PRIMEIRA mensagem de quem veio do anuncio: pedir dados vence a
     podeEnviar: true,
     conteudoPedido: 'ADS',
   });
-  check(marta?.tecla === '4', 'pedir dados vence o emoji: ' + JSON.stringify(marta));
-  check(marta?.id === 'nunca-pediram-dados', 'e e a regra do formulario que casa');
+  check(marta?.tecla === 'a', 'o emoji nao pula o pedido de dados: ' + JSON.stringify(marta));
+  check(marta?.id === 'anuncio-modelo-e-dados', 'e casa a regra que manda o modelo E pede os dados');
+
+  // Sem modelo mapeado a composta nao cabe, e o pedido de dados sai sozinho -- como sempre saiu.
+  const semModelo = com({ ultimaEhSoReacao: true, jaPediramDados: false, temEtiquetaDeCidade: false, podeEnviar: false });
+  check(semModelo?.id === 'nunca-pediram-dados', 'sem modelo, quem pede os dados continua sendo a regra antiga');
 
   /**
    * O contra-teste, que e o que impede a troca de ordem de estragar o caso original.

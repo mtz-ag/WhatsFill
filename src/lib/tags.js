@@ -173,13 +173,38 @@ function casa(re, padrao, haystack, haystackSemAcento) {
  * @param {string} ctx.city    cidade já classificada
  * @param {string[]} ctx.texts mensagens recebidas do contato
  * @param {string} [ctx.extra] texto adicional para casar as regras (ex.: campanha do anúncio)
+ * @param {string[]} [ctx.etiquetasDoAnuncio] etiquetas do anúncio reconhecido (`store.anuncios`).
+ *   Entram com origem `anúncio`, fora da disputa de conteúdo: servem para ele filtrar por campanha.
  * @param {object} [ctx.interesse] `{ perguntado:boolean, etiquetas:string[] }` — o aceite à
  *   pergunta de interesse no conteúdo. Só vira etiqueta quando a pergunta SAIU para este
  *   contato: sem isso, qualquer "sim" solto da conversa viraria aceite.
  * @returns {Promise<Array<{origem:string, nome:string, tag:object|null, motivo:string}>>}
  */
-export async function suggest({ city, texts = [], extra = '', interesse = null, veioDeAnuncio = false, nomeDivergente = false }) {
+export async function suggest({ city, texts = [], extra = '', interesse = null, veioDeAnuncio = false, nomeDivergente = false, etiquetasDoAnuncio = [] }) {
   const out = [];
+
+  /**
+   * **As etiquetas do anúncio reconhecido.**
+   *
+   * Pedido dele (02/09/2026): os anúncios do momento ganharam um campo de etiquetas, porque a
+   * etiqueta ADS diz que a pessoa veio de anúncio e **não de qual** — sem isto não há como filtrar
+   * depois quem chegou por qual campanha.
+   *
+   * Origem `anúncio`, e **não** `conteúdo`: conteúdo é o que decide qual modelo enviar, e uma
+   * etiqueta de campanha entrando ali disputaria essa escolha com "Conteúdo Zucco"/"Conteúdo
+   * Flávio" — o mesmo problema que fez a etiqueta ADS precisar do `fallback`. Aqui a etiqueta é
+   * para o filtro dele, não para a decisão da rodada. Quem manda o modelo é a ação do anúncio.
+   */
+  for (const nome of Array.isArray(etiquetasDoAnuncio) ? etiquetasDoAnuncio : []) {
+    const limpo = String(nome || '').trim();
+    if (!limpo) continue;
+    out.push({
+      origem: 'anúncio',
+      nome: limpo,
+      tag: await resolveTag(limpo),
+      motivo: 'o texto do anúncio reconhecido pede esta etiqueta',
+    });
+  }
 
   /**
    * Chegou por anúncio → etiqueta de anúncio, direto do dado da plataforma.

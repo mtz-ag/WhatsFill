@@ -5,6 +5,1321 @@
 
 ---
 
+## 2026-09-02 — O quadro dele: o hostil recebia o pedido de dados, a pessoa normal não recebia nada
+
+Ele colou o quadro e pediu: *"veja se está de acordo com as mudanças"*. **Não está**, e o problema
+principal é o mesmo de 01/09.
+
+### Medido no quadro exatamente como ele colou
+
+| quem chega pelo anúncio | o quadro dele decide |
+|---|---|
+| pessoa normal, anúncio reconhecido | tecla 8 — **agradece um apoio que ela nunca expressou** |
+| pessoa normal, anúncio não reconhecido | tecla 8 — o mesmo |
+| **hostil (recusou/xingou)** | **tecla 4 — pede nome e cidade** |
+
+Ninguém recebe o modelo do anúncio, e o hostil é tratado como cadastro novo.
+
+### A causa: remetente dentro de proteção
+
+No quadro dele, `mandar modelo conforme o anuncio` e `mensagem de pedido de dados` estão **dentro**
+de `Recusou ou veio hostilizar`. O motor testa **o filho antes da ação do próprio nó**, e o filho só
+é alcançado **quando o pai casa**. Então:
+
+- pessoa normal → `sem-interesse` não casa → o ramo 1 inteiro é pulado. Ela cai em "pessoa
+  retornando" (que não tem condição e casa com todos), atravessa "com pendência" sem casar com nada,
+  e termina em `conteudo-pedido` com a tecla 8 fixada;
+- hostil → `sem-interesse` casa → os filhos são olhados primeiro → sai o pedido de dados.
+
+**É o erro de 01/09, com a mesma forma**, e já estava escrito num comentário do `fluxoPadrao`. Duas
+ocorrências iguais é problema de ferramenta: o aninhamento não anuncia essa inversão em lugar nenhum
+da tela.
+
+### O conserto estrutural
+
+`arvore.problemas` ganhou `remetenteDentroDeProtecao`: acusa caixa de efeito `silencio` com
+descendente que **envia**, nomeando as duas pontas e dizendo o que fazer ("solte-as na raiz e
+ponha-as ABAIXO desta").
+
+A conferência fica **acima do `continue` das caixas de regra** — e isso foi conserto de um erro meu
+na primeira versão: as proteções deste projeto **são** regras do código, então posta depois do
+`continue` ela não via o caso real. Há teste travando as duas coisas.
+
+Onze asserções, incluindo os não-casos: proteção dentro de proteção, remetente dentro de remetente
+(legítimo — o específico vence o geral), grupo com remetente dentro (o normal), e o padrão limpo.
+
+### O resto do que achei no quadro dele, e que ainda é decisão dele
+
+- `mandar modelo conforme o anuncio` é caixa dele com **tecla 1 fixa** → sem as guardas da regra,
+  manda em toda passada. Já era acusado desde a 1.51.0;
+- a condição dela é `anuncioReconhecido`, então **o modelo padrão nunca sai**;
+- `respondeu com os dados` é `conteudo-pedido` com a tecla 8 fixada — a condição exige
+  `!modeloJaNaConversa` e não casa depois do modelo. A regra `respondeu-os-dados` (1.52.0) resolve e
+  ainda não está no quadro dele;
+- `voltou por outro anúncio` está com a **tecla 1 fixa**, o que troca "mensagem do momento" por
+  "manda o modelo";
+- `Pedimos hoje e nada voltou`, `Nunca perguntamos se ela quer conteúdo` e `o nome do cadastro não
+  serve` continuam no quadro com a observação "descarte" — as duas últimas na raiz, e as duas
+  **enviam**;
+- **`fluxo.teclas` é por id da REGRA**, então "VOCÊ FIXOU" vale para todas as cópias daquela caixa —
+  não existe fixar numa e não na outra.
+
+**Arquivos:** `src/lib/arvore.js` (`remetenteDentroDeProtecao`, `efeitoDaCaixa`, `problemas`),
+`tests/arvore.test.mjs` (+11), `CLAUDE.md` (+2 armadilhas), `manifest.json` (1.52.0 → 1.53.0).
+Catorze suítes e os dois verificadores passando.
+
+---
+
+## 2026-09-02 — Respondeu os dados: agradece e encerra, sem mandar modelo
+
+**Pedido dele**, com a print da caixa aberta e o seletor em "8 · Agradece o apoio, e conclui":
+*"aqui está o que tem que mudar agora só precisa agradecer a atenção e encerrar sem mandar modelo"*.
+
+É consequência do redesenho do mesmo dia: o modelo virou o **recibo da chegada**, então quando ela
+responde o cadastro o modelo já saiu, e mandá-lo de novo é repetir.
+
+### A edição dele não pegaria, e medi antes de mexer
+
+A caixa "respondeu com os dados" é a regra `conteudo-pedido`, cuja condição — que ele não edita —
+exige `!modeloJaNaConversa`. Com o modelo saindo na chegada, ela **deixou de casar**:
+
+| ela respondeu com os dados | antes |
+|---|---|
+| modelo já saiu, sem etiqueta de cidade | **nada — saía da rodada sem resposta** |
+| modelo já saiu, com etiqueta | tecla 3 — concluída **em silêncio** |
+| modelo não saiu (caso antigo) | tecla 1 — mandava o modelo |
+
+Trocar o desfecho para 8 ali não mudaria nada: a caixa não é alcançada. **Quando a intenção não cabe
+na condição da regra, o certo é regra nova** — não trocar a tecla da existente.
+
+### O que entrou
+
+Regra **`respondeu-os-dados`** (tecla 8), acima de `conteudo-pedido`, e o sinal `respondeuOsDados`.
+
+**O sinal tem duas metades, e é isso que o torna seguro:** o pedido de dados saiu e ela escreveu
+depois (`cortesia.respostasApos`, casando por **invariante** e nunca pelo texto atual do template)
+**e** o parser achou nome ou cidade no que ela escreveu. Só a primeira faria um "sim" solto, ou um
+assunto novo, virar agradecimento e conclusão.
+
+Ele escolheu essa condição entre três, sabendo que eu teria de criar e testar o sinal.
+
+### Duas correções de simetria que os testes forçaram
+
+**O agradecimento vale nos dois lados da bifurcação de cidade.** Sem a caixa no lado "com cidade", a
+mesma pessoa era agradecida ou concluída em silêncio conforme a etiqueta já tivesse sido aplicada —
+decidido pela ordem das coisas dentro da rodada, que ela não vê. É o "alguns concluem e outros não".
+
+**A etiqueta que dispensa da fila subiu para cima da bifurcação.** Ela vivia só dentro de "com
+etiqueta de cidade": quem a carregava e **não** tinha cidade nunca era protegido — recebia o modelo
+antes, e passaria a receber o agradecimento. O comentário da recusa já dizia que proteção vai acima
+da bifurcação desde 01/09; a lição é que dizer não basta, tem que ter teste dos dois lados. Agora
+tem.
+
+### Um defeito vizinho, de passagem
+
+`respondeuComoAjudar` montava o trecho para a tela com `.replace(/s+/g, ' ')` — **sem a barra**, ou
+seja, o padrão era a letra "s". *"Maria Silva / Canoas"* aparecia como *"Maria Silva / Canoa "*.
+Corrigido.
+
+**Arquivos:** `src/lib/cortesia.js` (`respostasApos`), `src/lib/sugestao.js` (regra + verbete),
+`src/lib/arvore.js` (sinal + as caixas nos dois lados + a dispensa acima da bifurcação),
+`src/panel/panel.js` (o sinal, `state.informouNomeOuCidade`, o reset na troca de contato, o `\s+`),
+`tests/arvore.test.mjs` (+16), `CLAUDE.md` (+2 armadilhas), `manifest.json` (1.51.0 → 1.52.0).
+Catorze suítes, os dois verificadores, nenhum desfecho incoerente e nenhum problema no quadro.
+
+---
+
+## 2026-09-02 — A caixa que ele montou à mão manda o modelo em toda passada
+
+**Relato dele:** *"pedi para atualizar e não o fez então fui lá e criei o passo"*, com a print do
+quadro.
+
+A cobrança é justa: ele pediu *"atualize o ramo"* e eu atualizei o **documento** (`fluxoPadrao`),
+deixando o quadro dele para ele. Foi por isso que ele montou a caixa à mão — e ela tem dois
+defeitos que só apareceram medindo.
+
+### O que a caixa dele faz
+
+Caixa *"mandar modelo conforme o anuncio"*, condição **"Reconheci de QUAL anúncio ela veio"**, tecla
+**1 fixa**:
+
+| | quadro dele |
+|---|---|
+| anúncio reconhecido, 1ª passada | tecla 1 — manda o modelo |
+| anúncio reconhecido, **2ª passada** | **tecla 1 — manda o modelo DE NOVO** |
+| anúncio **não** reconhecido | tecla 4 — pede dados (o modelo padrão nunca sai) |
+
+**1. Fixar a tecla não herda as guardas da regra.** `conteudo-pedido` exige
+`!enviadoHoje && !modeloJaNaConversa`; a caixa dele não exige nada, então casa e dispara toda vez. É
+a armadilha central do quadro livre: **a caixa parece a regra e tem o mesmo desfecho na tela**, e o
+que falta é invisível.
+
+**2. A condição errada mata o modelo padrão.** `anuncioReconhecido` só é verdade para anúncio
+cadastrado na Config — e o modelo padrão (com o rodízio de três, feito hoje) existe justamente para
+os **não** cadastrados. Trocando o sinal para "Veio de um anúncio", o padrão passa a sair.
+
+### O conserto estrutural
+
+`arvore.problemas` ganhou `repeteSozinha`: acusa caixa **dele** que **envia** e cuja condição não
+inclui nenhum sinal que o próprio envio apaga (`SINAIS_QUE_O_ENVIO_APAGA`).
+
+- palavra na **última** mensagem conta como guarda (a última muda quando ela escreve de novo);
+- em **qualquer** mensagem não conta (o texto fica na conversa para sempre);
+- tecla que não envia nunca é acusada; regra do código nunca é acusada (traz as próprias guardas);
+- `"nunca entregamos nada"` é guarda; exigir que **já** entregamos não é.
+
+Doze asserções, mais duas exigindo que **o padrão e a semeadura plana continuem limpos** — alarme
+que toca sempre é alarme que se aprende a ignorar.
+
+Um teste antigo caiu e estava certo cair: ele afirmava `problemas(arvore).length === 0` numa árvore
+que continha uma caixa sem condição mandando a tecla 4 — que **é** uma caixa que repete. A asserção
+foi estreitada para o que ela queria dizer (a caixa da IA não é acusada) e ganhou a afirmação
+oposta ao lado.
+
+**Arquivos:** `src/lib/arvore.js` (`repeteSozinha`, `SINAIS_QUE_O_ENVIO_APAGA`, `problemas`),
+`tests/arvore.test.mjs` (+13, 1 estreitada), `CLAUDE.md` (+2 armadilhas), `manifest.json`
+(1.50.0 → 1.51.0). Catorze suítes e os dois verificadores passando.
+
+---
+
+## 2026-09-02 — O modelo padrão do anúncio agora reveza
+
+**Pedido dele:** *"o modelo padrão deve variar entre 3 modelos já que chega bastante gente por
+eles"*.
+
+Mesmo motivo das variações das respostas prontas: quando muita gente chega pela mesma porta, todo
+mundo receber a frase idêntica é o que faz a mensagem parecer robô.
+
+### O que entrou
+
+`modelosPadraoAnuncio` (lista de nomes) + `modeloPadraoIndex` (o ponteiro), e
+`anuncios.padraoDaVez` decidindo — puro e testado. Sete envios seguidos com três modelos dão
+`A B C A B C A`.
+
+Na Config, o cartão virou lista: linhas com seletor, `×` para tirar, `+ modelo` para somar, e **um
+▶ marcando o da vez**. O marcador não é enfeite — rodízio invisível é indistinguível de rodízio
+parado, e ele descobriria pelo eleitor recebendo sempre a mesma frase.
+
+**Sem migração:** a leitura aceita a lista nova **e** o texto único da versão anterior, então quem
+já tinha um modelo escolhido não perde nada e nenhuma marca em `migracoes` foi gasta.
+
+### As duas decisões que importam
+
+**O ponteiro anda depois do ENVIO, não da leitura.** Mesma separação de `templates.varianteAtual` /
+`avancarVariante`, e pela mesma razão: a caixa da rodada mostra o nome do modelo antes de o envio
+acontecer, e queimar o rodízio ali faria o próximo pular sozinho em todo contato que ele decidisse
+não mandar. Dois testes travam que ler duas vezes devolve o mesmo.
+
+**Só o padrão gira.** O modelo específico de um anúncio é escolha dele para aquele anúncio, e não
+tem rodízio — tem teste.
+
+Índice sujo (negativo, quebrado, maior que a lista depois de ele apagar um modelo) cai no primeiro
+em vez de virar `undefined`: o que sai daí é mensagem para eleitor real.
+
+### Um defeito que só apareceu abrindo a Config de verdade
+
+**"+ modelo" não fazia nada, em silêncio**, quando a lista de modelos aprovados não estava
+carregada: a linha nova nascia vazia e o gravar a descartava na mesma hora. A tela lia pelo
+`carregarModelosPadrao`, que peneira os vazios — certo para a rodada, errado para a tela, que
+precisa da linha em branco existindo enquanto ele digita. Hoje a Config lê a lista crua, a linha
+vazia se anuncia (*"não entra no rodízio"*), e quem peneira é a leitura da rodada.
+
+Conferido também que tirar o modelo **marcado como o da vez** devolve o ponteiro para 0 — senão ele
+ficaria apontando fora da lista.
+
+**Arquivos:** `src/lib/anuncios.js` (`padraoDaVez`, `modeloDoAnuncio` com rodízio),
+`src/lib/store.js` (`modelosPadraoAnuncio`, `modeloPadraoIndex`, backup), `src/panel/panel.js`
+(`carregarModelosPadrao`, o cartão da Config, o avanço depois do envio),
+`tests/anuncios.test.mjs` (+14), `manifest.json` (1.49.0 → 1.50.0). Catorze suítes e os dois
+verificadores passando.
+
+---
+
+## 2026-09-02 — "a ramificação não foi atualizada": o quadro dele é uma cópia
+
+**Relato dele**, depois de eu reordenar a chegada pelo anúncio várias vezes no mesmo dia: *"a
+ramificação não foi atualizada"*.
+
+Conferi primeiro se o erro era meu: gerei o `fluxoPadrao` inteiro em texto e a chegada estava certa,
+com as doze caixas na ordem nova. **O padrão estava atualizado; o quadro dele não.**
+
+### O defeito, que não é daquele dia
+
+`fluxoPadrao` é o que o botão "Resetar para o padrão" devolve. O quadro de trabalho dele é uma
+**cópia**, e nada a atualiza. Então:
+
+- toda melhoria minha no padrão era **invisível** para ele; ou
+- ele resetava e **perdia o arranjo feito à mão** — que é exatamente o trabalho que o Desfazer
+  existe para proteger.
+
+Eu avisei disso duas vezes hoje e não resolvi. Ele apontou, e é o tipo de coisa que vai se repetir a
+cada mudança no padrão.
+
+### O que entrou
+
+Cartão **"O padrão mudou?"** na janela do fluxo, sobre `arvore.diferencaDoPadrao` (puro, testado):
+
+- **o que o padrão decide e o quadro dele não**, cada um com botão **"Pôr"** — que traz o ramo
+  **inteiro** e diz quantas caixas vêm no próprio botão (a lição do Duplicar: cópia que traz seis
+  ramos sem avisar é surpresa). No teste ao vivo, um clique em "anúncio — pessoa nova" trouxe as
+  **13 caixas** da chegada de uma vez;
+- **o que é só dele** — informação, não erro. Montar ramo que o padrão nunca teve é a razão da
+  janela existir; a lista serve para ele distinguir escolha própria de caixa esquecida de uma versão
+  velha.
+
+**Nada entra sozinho.** No quadro a posição é a prioridade: enfiar uma caixa por conta própria
+mudaria o que a rodada faz sem ninguém escolher onde.
+
+### Duas decisões da comparação
+
+**É por CONTEÚDO, nunca por id** — a regra do código que a caixa carrega, ou o sinal mais as palavras
+que ele montou. Os ids do quadro dele nasceram em outro momento e não batem com os do padrão; tem
+teste com ids trocados.
+
+**Caixa que só AGRUPA fica de fora**: é estrutura, não decisão, e todas colidiriam na mesma chave.
+"pessoa retornando" nunca aparece como faltando.
+
+### Conferido na janela
+
+Servida fora da extensão: o cartão acusou **7 caixas** faltando num quadro semeado antes das
+mudanças de hoje; "Pôr (13)" trouxe o ramo da chegada inteiro; pondo o resto, a lista de faltantes
+zerou e sobraram só as três regras que ele mandou descartar, do lado "aqui e não no padrão".
+
+Também exportei `comIdsNovos`, que a janela passou a usar e **não estava exportada** — daria
+`undefined` no clique. Nenhum verificador pega isso; peguei conferindo o export à mão.
+
+**Arquivos:** `src/lib/arvore.js` (`diferencaDoPadrao`, `chaveDeComparacao`, export de
+`comIdsNovos`), `src/fluxo.html`, `src/fluxo.css`, `src/fluxo.js` (`desenharDiferenca`),
+`tests/arvore.test.mjs` (+8), `CLAUDE.md`, `manifest.json` (1.48.1 → 1.49.0). Catorze suítes e os
+dois verificadores passando.
+
+---
+
+## 2026-09-02 — Ajuda financeira volta para depois do modelo (correção dele)
+
+**Correção dele:** *"o modelo não irá confirmar apoio ao pedido de ajuda ou confirmar que irá ajudar
+então pode ser respondido após"*.
+
+Eu havia posto "pediu ajuda financeira" **acima** do modelo na chegada, com o argumento da Lei
+9.504/97. Ele está certo sobre o texto: **o modelo é recibo de cadastro e não promete coisa
+nenhuma**, então mandá-lo antes não é promessa de benefício — que era a minha objeção inteira. A
+caixa voltou para as pendências neutras, abaixo do modelo, como ele havia desenhado.
+
+| quem pediu remédio, chegando pelo anúncio | agora |
+|---|---|
+| 1ª passada | tecla `a` — recibo do anúncio + pedido de dados |
+| 2ª passada | **a negativa (`pedido-ajuda`)** |
+| se ela já tinha cidade | 1ª: só o modelo · 2ª: a negativa |
+
+Três asserções travam que **a negativa não se perde no caminho** — era o único risco real de
+descê-la.
+
+### O que fica dito, e ele pode querer mudar
+
+A tecla `a` manda o modelo **e o pedido de dados** juntos. Ele autorizou o modelo ir antes; o
+formulário vai de carona. Ou seja: quem pediu remédio recebe *"você vai receber nosso conteúdo"* +
+*"me diz seu nome e a sua cidade"* antes da negativa. Se isso incomodar, a saída é a regra composta
+não casar quando há pedido de ajuda — aí a chegada manda só o modelo e a negativa vem na passada
+seguinte.
+
+**As outras duas continuam acima do modelo:** "pediu algo e não disse o quê" (print da Mari) e
+"pergunta de razão ou de posição" (print da Clair). Ele não falou delas, e o argumento que ele
+derrubou era específico da promessa de benefício — nessas duas o problema é responder outra coisa em
+cima da pergunta dela, que o recibo também faz.
+
+**Arquivos:** `src/lib/arvore.js` (`fluxoPadrao`), `tests/arvore.test.mjs` (3 asserções no lugar de
+1), `CLAUDE.md`, `manifest.json` (1.48.0 → 1.48.1). Catorze suítes, os dois verificadores e nenhum
+problema no quadro.
+
+---
+
+## 2026-09-02 — Tecla `a`: o recibo do anúncio e o atendimento na mesma passada
+
+**Explicação dele:** *"o modelo seria uma resposta automática ao anúncio, o atendimento vem depois
+disso que seria pedir dados e responder as perguntas"*.
+
+Isso resolveu a natureza do modelo — não é uma resposta do atendimento, é o recibo do anúncio — mas
+deixou uma ambiguidade que muda o que o eleitor recebe: "depois" é a mesma passada ou a seguinte?
+Perguntei, com as duas tabelas na frente. **Ele escolheu a mesma passada**, sabendo que são duas
+mensagens seguidas para o mesmo número.
+
+O motivo é bom: com uma mensagem por passada, quem recebia o modelo e sumia **nunca era perguntada**
+— e sem nome e cidade não há o que classificar, que é o trabalho inteiro da extensão.
+
+### A tecla nova
+
+**`a` — "Manda o modelo do anúncio + pede nome e cidade, e conclui".** Letra e não dígito, pelo
+mesmo motivo do `s` e do `f`: os dez dígitos já têm significado no dedo dele.
+
+É a **única tecla do projeto que manda duas mensagens**, e existe porque as duas são coisas
+diferentes: o modelo é o recibo automático, o pedido de dados é o atendimento começando.
+
+| passada | sem etiqueta de cidade | com etiqueta de cidade |
+|---|---|---|
+| 1ª | **tecla `a` — modelo + pede os dados** | tecla 1 — só o modelo |
+| 2ª | tecla 4 — pede os dados | nada — fica só no modelo |
+| 3ª | nada | — |
+
+### Três travas que a fazem segura
+
+**A regra exige as DUAS metades disponíveis.** `anuncio-modelo-e-dados` só casa com modelo mapeado
+que ainda não saiu, sem etiqueta de cidade e sem pedido feito. Faltando uma, ela não casa e as
+regras antigas resolvem cada pedaço sozinho — `conteudo-pedido` manda só o modelo, `nunca-pediram-dados`
+pede só os dados. É o que evita a tecla nova virar caminho paralelo que decide em situação não
+prevista.
+
+**A oferta exige os dois textos destravados.** Oferecer uma tecla que vai travar no meio é pior que
+não oferecer: a primeira mensagem já saiu e a segunda não sai mais.
+
+**Se a segunda falhar, a rodada PARA** com resultado `enviado` e o motivo dizendo qual contato ficou
+com o recibo e sem o pedido. Seguir a fila esconderia um contato pela metade.
+
+### Testes que caíram e estavam certos cair
+
+Três asserções em `sugestao.test.mjs` afirmavam tecla 4 onde agora sai `a` — a intenção delas era
+*"o pedido de dados nunca é pulado em favor do modelo"*, e ela continua valendo: agora os dois saem.
+Reescritas dizendo isso, e ganharam a asserção do caso oposto (sem modelo mapeado, o pedido sai
+sozinho pela regra antiga).
+
+### O que fica registrado no CLAUDE.md
+
+A tecla `a` e as três pendências que ficam acima do modelo na chegada (ajuda financeira, pediu algo
+sem dizer o quê, pergunta de posição) — contra a ordem que ele descreveu, porque nesses três mandar
+a nossa mensagem primeiro é o dano, não o atraso.
+
+**Arquivos:** `src/lib/sugestao.js` (tecla `a`, regra `anuncio-modelo-e-dados` + verbete),
+`src/lib/arvore.js` (a caixa no ramo da chegada), `src/panel/panel.js` (a opção e o ramo que
+executa), `tests/sugestao.test.mjs`, `tests/arvore.test.mjs`, `CLAUDE.md` (+2 armadilhas),
+`manifest.json` (1.47.0 → 1.48.0). Catorze suítes, os dois verificadores, nenhum desfecho incoerente
+e nenhum problema no quadro.
+
+---
+
+## 2026-09-02 — A chegada pelo anúncio, redesenhada: modelo primeiro, dados depois
+
+**Pedido dele:** *"o sistema atual está dando problemas, o modelo agora será feito pra cada anúncio
+específico e será mandado no momento que a pessoa chegar pelo anúncio, pedir dados virá após isso se
+a pessoa não tiver etiqueta de cidade, se ela tiver etiqueta de cidade fica só no modelo, após o
+modelo terá que ver se tem uma pendência que é a mensagem após a mensagem de anúncio e escolher a
+resposta de acordo com a pendência"* e *"caso o texto do anúncio não seja reconhecido será mandado o
+modelo padrão"*.
+
+Inverte a ordem que valia desde 01/09 (dados primeiro). O que mudou é que agora existe **um modelo
+por anúncio**, então o que sai na chegada responde ao que ela clicou, em vez de ser um pedido de
+cadastro seco.
+
+### A sequência, medida
+
+| passada | sem etiqueta de cidade | com etiqueta de cidade |
+|---|---|---|
+| 1ª | tecla 1 — o modelo deste anúncio | tecla 1 — o modelo |
+| 2ª | tecla 4 — pede nome e cidade | nada — **fica só no modelo** |
+| 3ª | nada | — |
+
+Uma mensagem por passada, que é a propriedade que ele escolheu em 01/09 para não sair rajada ao
+mesmo número. Quem faz a passada seguinte descer um passo são as guardas de `conteudo-pedido`
+(`!enviadoHoje && !modeloJaNaConversa`).
+
+**"Fica só no modelo" não precisou de caixa:** `nunca-pediram-dados` já exige
+`!temEtiquetaDeCidade`, então quem tem cidade simplesmente não casa — e a segunda metade da frase
+dele acontece por si.
+
+### O modelo padrão
+
+Chave nova `store.modeloPadraoAnuncio` e um cartão no topo da seção "Anúncios do momento". Sai para
+quem a plataforma diz que veio de anúncio mas cujo texto não casou com nenhum da lista — anúncio
+novo não cadastrado, texto que mudou, mensagem cortada. Quem resolve "qual modelo" é
+`anuncios.modeloDoAnuncio`, puro e testado.
+
+**O padrão não cobre anúncio reconhecido com outra ação** (resposta pronta, pedir dados, devolver ao
+quadro): aquilo é escolha explícita dele, e escolha explícita não se substitui por dedução — nem por
+um padrão. Tem teste para as três.
+
+### Uma regressão que eu causei e os testes pegaram
+
+Subir o modelo para o topo fez ele vencer a **etiqueta que dispensa da fila**. Antes, quem chegava
+do anúncio carregando essa etiqueta caía por exclusão no lado "com etiqueta de cidade", onde a regra
+a pegava; com o modelo no topo ela passou a **receber mensagem** — e a etiqueta existe justamente
+para ninguém receber. É a lição já registrada: regra nova no topo tem que ser conferida contra as
+regras que ela passou a vencer. Consertado pondo a etiqueta acima do modelo.
+
+### Três pendências que ficaram ACIMA do modelo, contra a ordem que ele descreveu
+
+A ordem "pendência depois do modelo" vale para as neutras (bom dia, figura, despedida). Estas três
+não, e medindo o quadro novo elas recebiam a tecla 1:
+
+- **pediu ajuda financeira** → o texto `pedido-ajuda` existe para NEGAR, e prometer benefício é
+  risco da Lei 9.504/97. Responder *"você vai receber nosso conteúdo"* a quem pediu remédio ou cesta
+  é o pior lugar possível para uma confirmação de cadastro;
+- **pediu algo e não disse o quê** → *"material de campanha em cima disso é o pior caso do
+  projeto"* (print da Mari);
+- **pergunta de razão ou de posição** → vira material de campanha em cima da pergunta dela (print
+  da Clair).
+
+O modelo não deixa de sair: sai na passada seguinte. Nos três, o custo de inverter é assimétrico —
+atrasar o recibo um dia contra responder propaganda a um pedido de socorro. **Está dito a ele.**
+
+### O que ele precisa saber
+
+**Quem recebe o modelo e não escreve de novo nunca chega no pedido de dados**, porque a rodada só
+volta a quem respondeu. Antes, com os dados primeiro, o cadastro era capturado logo. Foi dito no
+mesmo dia, antes de eu começar.
+
+**Arquivos:** `src/lib/anuncios.js` (`modeloDoAnuncio`), `src/lib/arvore.js` (`fluxoPadrao` — a
+chegada inteira), `src/lib/store.js` (`modeloPadraoAnuncio` + backup), `src/panel/panel.js` (a
+escolha do modelo e o cartão da Config), `tests/anuncios.test.mjs` (+11),
+`tests/arvore.test.mjs` (grupo reescrito, 17 asserções), `manifest.json` (1.46.0 → 1.47.0). Catorze
+suítes e os dois verificadores passando.
+
+---
+
+## 2026-09-02 — Desfeito: o modelo padrão é um RECIBO, não entrega de conteúdo
+
+**Correção dele**, minutos depois de escolher: *"a menos que seja um evento confirmando a presença
+não há necessidade de mandar modelo novamente, o modelo padrão é uma confirmação para a pessoa que
+ela irá receber nosso conteúdo"* e *"se a pessoa já respondeu a cidade a chance de ela ter recebido
+um modelo é muito grande então não tem necessidade de mandar o padrão novamente"*.
+
+### O que eu errei
+
+Medindo o lado de quem chega, encontrei o caso "veio do anúncio e já tem etiqueta de cidade" caindo
+no vazio. Ofereci quatro desfechos e argumentei **"o que ela clicou para receber é o conteúdo"** —
+como se o modelo entregasse conteúdo. Ele escolheu "mandar o modelo" com base nessa frase.
+
+O modelo padrão não entrega nada: **é o recibo** de que ela vai receber. Cidade conhecida é bom
+indício de que o recibo já saiu, e mandar de novo é repetir mensagem para eleitor real — o defeito
+que este projeto mais paga.
+
+Descrição errada minha não produz escolha errada dele: produz **escolha errada minha assinada por
+ele**. Está no `CLAUDE.md` agora, junto da regra de conferir o que a coisa faz antes de oferecer
+opções.
+
+### O que foi desfeito
+
+A caixa "veio de um anúncio que eu reconheço → manda o modelo do anúncio", criada na entrada
+anterior dentro de "com etiqueta de cidade", **saiu**. O caso volta a cair na caixa de pergunta — e
+isso agora está travado em teste como o desfecho **certo**, com o motivo escrito, para ninguém
+"consertar" de novo achando que é buraco.
+
+**O outro ramo continua**, e é o que resolve de verdade: quem vem de anúncio reconhecido e **não
+tem** etiqueta de cidade recebe o pedido de nome e cidade (tecla 4). Ali falta dado; no caso acima
+não faltava nada.
+
+### A exceção que ele nomeou, medida
+
+Evento confirmando presença hoje **só troca o texto** da tecla 4 (`confirmaPresenca` →
+`pedir-dados-evento-sim/nao`). Não é regra e não é sinal — então o quadro não consegue ramificar por
+ela. Medido com *"Não conseguirei ir!"*:
+
+| respondeu ao convite | hoje |
+|---|---|
+| pessoa nova, sem cidade | tecla 4 — pede dados |
+| **pessoa nova, com cidade** | **nada — cai na mão dele** |
+| retorno, sem cidade | tecla 4 |
+| retorno, com cidade | tecla 3 — conclui |
+
+Quem responde ao convite **já tendo cidade** não recebe recomendação nenhuma. É o buraco que sobra
+da exceção que ele nomeou, e fechá-lo pede um sinal novo (`respondeuSobrePresenca`) — o que exige
+calculá-lo no painel com teste, senão o ramo nunca casa e não acusa. **Não fiz: é decisão dele.**
+
+**Arquivos:** `src/lib/arvore.js` (caixa removida), `tests/arvore.test.mjs` (grupo reescrito, 7
+asserções travando o oposto), `CLAUDE.md` (+2 armadilhas), `manifest.json` (1.45.0 → 1.46.0).
+Catorze suítes e os dois verificadores passando.
+
+---
+
+## 2026-09-02 — O buraco gêmeo: quem CHEGA pelo anúncio já com etiqueta de cidade
+
+**Pergunta dele:** *"atualizou o ramo agora então de pessoas chegando, para após reconhecer se é
+hostil reconhecer qual o anúncio?"*
+
+Resposta curta: **não** — o ramo do dia foi no lado de quem retorna. Mas a pergunta valeu a medição,
+porque o lado de quem chega tinha o mesmo buraco.
+
+### Duas coisas que a medição respondeu
+
+**A ordem que ele descreveu já existia** no lado de quem chega: hostil primeiro, depois o pedido de
+dados. E "mandar o modelo" **não** vence ali de propósito — o pedido de dados ganha, que é a decisão
+dele de 01/09 (*"primeiramente nós perguntamos os dados"*).
+
+**O quadro só sabe perguntar "reconheci ALGUM anúncio?", não qual.** É de design: "qual anúncio faz
+o quê" mora na Config, num lugar só. Nos dois, ele teria a mesma decisão duplicada e um dia elas
+discordariam.
+
+### O buraco que apareceu medindo
+
+Quem chega pelo anúncio e **já tem etiqueta de cidade** atravessava o quadro inteiro sem desfecho —
+com ou sem anúncio reconhecido. Não é caso raro: é exatamente quem foi etiquetado na passada em
+massa da aba Cidades.
+
+O caminho dela morria porque cada caixa daquele lado exige outra coisa: `ja-respondemos-antes` exige
+ser retorno (e ela é primeira vez), a etiqueta que dispensa exige a etiqueta, e as caixas de
+pendência não casam com o texto do anúncio — que é excluído de "só expressa apoio" de propósito.
+
+### O conserto, escolhido por ele
+
+Perguntei entre quatro desfechos (mandar o modelo · agradecer o apoio · os dois em cascata · deixar
+como estava) e ele escolheu **mandar o modelo do anúncio**. Faz sentido: não falta dado nenhum dela,
+e o que ela clicou para receber é o conteúdo.
+
+Caixa nova em `fluxoPadrao`, em ÚLTIMO dentro de "com etiqueta de cidade":
+
+> **veio de um anúncio que eu reconheço** → *manda o modelo do anúncio* (a regra `conteudo-pedido`)
+
+| quem chega com etiqueta de cidade | antes | agora |
+|---|---|---|
+| hostil | tecla s | tecla s |
+| anúncio com modelo mapeado | **nada** | **tecla 1 — manda o modelo** |
+| anúncio sem modelo mapeado | nada | nada *(honesto: não há o que mandar)* |
+
+**Sem modelo mapeado ela continua caindo na caixa de pergunta.** Isso quer dizer que o buraco só
+fecha de verdade para anúncio com modelo escolhido na Config — e é por isso que o aviso de "este
+anúncio não faz nada" (entrada anterior) importa tanto.
+
+### Dois erros meus que a medição pegou
+
+Escrevi duas asserções por suposição e as duas estavam erradas:
+
+- `etiqueta-dispensa-da-fila` é **tecla 2 (pular)**, não 3. Eu supus que concluía.
+- `ultima-e-despedida` é regra do CÓDIGO: lê o **sinal** `ultimaEhDespedida`, não o texto. Passei só
+  o texto e o teste acusou. Caixa de PALAVRAS lê texto; regra lê sinal já calculado — confundir os
+  dois faz o teste mentir sobre a prioridade.
+
+**Arquivos:** `src/lib/arvore.js` (`fluxoPadrao`), `tests/arvore.test.mjs` (+9), `manifest.json`
+(1.44.1 → 1.45.0). Catorze suítes e os dois verificadores passando.
+
+---
+
+## 2026-09-02 — "o formulário nunca saiu?" — jargão meu nos rótulos da janela dele
+
+**Pergunta dele:** *"o formulário nunca saiu? o que quer dizer com isso?"*
+
+**Não existe formulário nenhum.** É a mensagem de WhatsApp que pede *"Nome completo / Cidade"* — a
+resposta pronta `pedir-dados`. A palavra veio de mim e ficou nos rótulos que **ele lê para montar os
+ramos**, o que é pior do que estar numa mensagem minha: ele escolhe a condição de um ramo lendo
+aquele texto, e um ramo montado por leitura errada decide o que sai para eleitor.
+
+A pergunta dele é a prova de que o rótulo não se explicava. Trocado onde aparece na tela:
+
+| onde | antes | agora |
+|---|---|---|
+| sinal (condição de ramo) | O formulário já saiu para ela | **Já pedimos o nome e a cidade dela** |
+| a negação dele | O formulário nunca saiu | **Nunca pedimos o nome e a cidade dela** |
+| sinal (condição de ramo) | O formulário saiu hoje | **Pedimos o nome e a cidade HOJE** |
+| a negação dele | O formulário não saiu hoje | **Não pedimos o nome e a cidade hoje** |
+| rótulo da regra | Veio do anúncio e o formulário nunca saiu | **Veio do anúncio e nunca pedimos os dados dela** |
+| motivo no log da rodada | …o formulário nunca saiu para ele | **…nunca pedimos o nome e a cidade dela** |
+| dica na Config | quem já chegou lá não precisa de formulário | **…não precisa que peçam os dados** |
+
+**Os SINAIS são lidos ao vivo** por `condicaoEmPortugues`, então o conserto vale para as caixas que
+já existem no quadro dele, não só para as novas. O `rotulo` da regra é copiado no momento em que a
+caixa nasce (`noDeRegra`), então caixa antiga guarda o texto velho — só o catálogo e as caixas novas
+mostram o novo.
+
+Um teste caiu e estava certo cair: ele exigia a frase `'nunca saiu'` no motivo. Reescrito para exigir
+a frase sem jargão.
+
+**Lição:** rótulo que o usuário lê para tomar decisão é interface, não comentário. "Formulário"
+descrevia como eu penso o campo, não o que a pessoa recebe — e este projeto já tem a regra de que
+nome de coisa vem do vocabulário dele.
+
+**Arquivos:** `src/lib/arvore.js` (`SINAIS`), `src/lib/sugestao.js` (`SOBRE` + `motivo`),
+`src/panel/panel.js` (dica), `tests/sugestao.test.mjs`, `manifest.json` (1.44.0 → 1.44.1). Catorze
+suítes e os dois verificadores passando.
+
+---
+
+## 2026-09-02 — O ramo do anúncio reconhecido, no padrão do quadro
+
+**Pedido dele:** *"atualize o ramo"*, depois do diagnóstico da print da Inge.
+
+### O ramo
+
+Caixa nova em `fluxoPadrao`, dentro de "pessoa retornando" → "sem etiqueta de cidade":
+
+> **veio de um anúncio que eu reconheço** → *ainda não temos nome e cidade* (a regra
+> `nunca-pediram-dados`)
+
+Com a configuração exata da print dele — anúncio em "só etiquetar e deixar o fluxo decidir", sem
+etiquetas, sem modelo mapeado — o vazio virou desfecho:
+
+| a Inge | antes | agora |
+|---|---|---|
+| primeira vez | tecla 4 | tecla 4 |
+| **já respondemos antes** | **nada** | **tecla 4 — pede nome e cidade** |
+| já respondemos hoje | **nada** | **tecla 4** |
+| já pedimos os dados | nada | nada *(de propósito — ver abaixo)* |
+
+### As três escolhas de desenho, todas conservadoras
+
+**Fica EMBAIXO de "com pendência" e de "sem pendência".** É último recurso dentro do lado sem
+cidade: quem tem pendência resolve a pendência, quem tem modelo mapeado recebe o modelo, e só o que
+sobra chega aqui. Pôr esta caixa em cima roubaria a vez de quem já funcionava — o erro que a regra
+de sem interesse no topo já custou uma vez. Tem teste para os três: com modelo mapeado sai a tecla
+1, com "bom dia" sai a tecla 5, e a recusa continua vencendo tudo.
+
+**A condição é `anuncioReconhecido`, não `veioDeAnuncio`.** A origem vem da plataforma e vale para
+qualquer anúncio; o sinal só é verdade para anúncio que ELE cadastrou na Config. Assim o ramo não
+muda nada para quem chega por campanha não mapeada — e isso está travado em teste.
+
+**O desfecho é a regra do código, não uma tecla fixa.** `nunca-pediram-dados` traz as guardas
+junto: só dispara se o formulário nunca saiu, se não saiu hoje, se não é só repasse de link e se não
+há etiqueta de cidade. Uma tecla 4 fixa aqui pediria os dados de novo a quem já recebeu o pedido.
+
+### O que continua sem desfecho, e é de propósito
+
+Quem **já recebeu** o formulário e volta mandando só o texto do anúncio não tem desfecho automático:
+ela não respondeu o que perguntamos, e não existe resposta certa para mandar sozinho. Esse caso é da
+IA ou dele. Está travado em teste para não virar "pede os dados de novo" num conserto futuro.
+
+### Como isto chega no quadro dele
+
+`fluxoPadrao` é o que **"Resetar para o padrão"** devolve — o quadro de trabalho dele **não muda
+sozinho**. Ou ele reseta (e perde o arranjo à mão), ou monta a caixa em três campos: *Ramo novo* →
+condição **"Reconheci de QUAL anúncio ela veio"** → dentro dela, a regra *"o formulário nunca saiu"*
+do catálogo, arrastada da lista de regras do código.
+
+**Arquivos:** `src/lib/arvore.js` (`fluxoPadrao`), `tests/arvore.test.mjs` (+9), `manifest.json`
+(1.43.1 → 1.44.0). Catorze suítes, `checar-modulos` e `checar-referencias` passando.
+
+---
+
+## 2026-09-02 — "não seguiu o fluxo": o anúncio estava configurado para não fazer nada
+
+**Relato dele**, com a print da Inge (veio do ANÚNCIO | FACEBOOK, escreveu *"Olá! Eu apoio as
+Escolas Cívico-Militares 🙏"*): *"não seguiu o fluxo"*.
+
+### O que realmente aconteceu
+
+Rodei o motor com os textos exatos dos dois anúncios da print. **O reconhecimento funcionou** —
+casou com o primeiro anúncio. O problema é o que estava configurado para acontecer depois: os dois
+cartões estavam em **"Só etiquetar, e deixar o fluxo decidir"** e com o campo de etiquetas
+**vazio**. Ou seja: o anúncio não mandava fazer nada.
+
+E o quadro do fluxo também não decide nada para o caso dela. Medido:
+
+| a Inge | o quadro decide |
+|---|---|
+| primeira vez | tecla 4 — pede nome e cidade |
+| **já respondemos antes** | **nada** |
+| já respondemos hoje | **nada** |
+| já pedimos os dados | **nada** |
+
+O motivo é uma consequência de outra decisão certa: a mensagem gerada pelo anúncio é **excluída de
+propósito** de "só expressa apoio" (`padroesDeAnuncio`), para não contar como apoio escrito por ela.
+Com isso, quem chega do anúncio, escreve só o texto do anúncio, não tem etiqueta de cidade e não tem
+modelo mapeado **não casa com nenhuma caixa** — e cai na caixa de pergunta, esperando ele.
+
+Com o mesmo anúncio configurado para **mandar o modelo**, os quatro casos resolvem: tecla 4 na
+primeira vez, tecla 1 depois.
+
+### O defeito que era meu
+
+Do lado de fora, "configurado para não fazer nada" é **indistinguível de "o reconhecimento
+falhou"** — e foi por isso que o tempo dele foi gasto procurando defeito onde não havia. Duas
+correções, as duas de visibilidade:
+
+1. **`anuncios.conferir` acusa a configuração inerte.** Anúncio com ação "só devolve ao fluxo" e
+   nenhuma etiqueta ganha aviso vermelho na Config: *"não faz nada"*, com as três saídas
+   (escolher o que fazer, pôr uma etiqueta, ou usar o sinal do quadro). Mesmo raciocínio de
+   `arvore.problemas`, que já acusa a caixa "sem condição, sem ação e sem ramo dentro".
+2. **A rodada passou a registrar o anúncio reconhecido**, com o nome, o que ele manda fazer e —
+   quando o fluxo também não decidiu — a frase de que ninguém decidiu nada. Antes o anúncio não
+   aparecia em lugar nenhum do log.
+
+Um teste que eu já tinha escrito **caiu** com a mudança (`"deixar o fluxo decidir" nao exige
+valor`), o que é exatamente o que devia acontecer: ele afirmava que essa configuração era válida.
+Reescrito para exigir a etiqueta, com o caso oposto ao lado.
+
+### O que fica em aberto, e é decisão dele
+
+O quadro não tem caixa para **"veio de um anúncio que eu reconheço e não disse mais nada"** no lado
+de quem retorna. `fluxoPadrao` é documento dele e não mexo sem pedido — mas é o buraco que produziu
+esta print, e agora existe o sinal **"Reconheci de QUAL anúncio ela veio"** para fechá-lo com um
+ramo.
+
+**Arquivos:** `src/lib/anuncios.js` (`conferir`), `tests/anuncios.test.mjs` (asserção reescrita + 2),
+`src/panel/panel.js` (o registro na rodada), `manifest.json` (1.43.0 → 1.43.1). Catorze suítes,
+`checar-modulos` e `checar-referencias` passando.
+
+---
+
+## 2026-09-02 — Os anúncios do momento: reconhecer, e dizer o que fazer
+
+**Pedido dele:** *"falta reconhecer o anúncio, nas configurações bote os anúncios do momento onde
+botarei o texto para ser reconhecido e o que fazer quando for determinado texto do anúncio"*.
+
+### O que existia, e a metade que faltava
+
+A tabela "Modelo por TEXTO da mensagem" já reconhecia o anúncio pelo texto — e só sabia responder
+**uma** coisa: qual modelo aprovado mandar. Anúncio sem modelo era reconhecido e morria ali:
+
+- convite de evento — não tem modelo, tem uma resposta pronta;
+- anúncio que só traz gente nova — o que falta é o cadastro, não conteúdo;
+- pesquisa, ou qualquer campanha nova — nada mapeado ainda.
+
+### O que entrou
+
+**Aba Config → "Anúncios do momento"**, substituindo a tabela antiga. Um cartão por anúncio no ar:
+
+| campo | para quê |
+|---|---|
+| nome | só para ele se achar na lista |
+| **texto que reconhece** | um por linha; casa por trecho **contido**, sem acento nem caixa |
+| **o que fazer** | mandar modelo · mandar resposta pronta · pedir nome e cidade · só etiquetar e deixar o fluxo decidir |
+| etiquetas | aplicadas em qualquer ação — é o que permite filtrar por campanha depois |
+| "no ar" | desligar guarda o texto da campanha que acabou, sem apagar |
+
+Cartões em vez de `chave = valor` porque a ação não é um valor: é uma escolha entre quatro, e cada
+uma pede um alvo diferente. Um formato de texto para isso seria uma linguagem que só eu saberia
+escrever. O alvo vem de **lista** (os modelos aprovados, as respostas dele) — escolher de lista não
+erra o nome, e nome errado aqui só daria erro na hora de enviar.
+
+**As linhas antigas vêm sozinhas** na primeira abertura (`migracoes.anunciosDoModeloPorTexto`), uma
+vez só e sem sobrescrever o que ele editar. Sem isso, estrear a tela apagaria em silêncio o
+reconhecimento que já funcionava, e ele descobriria pelo modelo que parou de sair.
+
+### As três decisões que protegem eleitor real
+
+**O texto do anúncio fica na conversa para sempre.** Quem clicou em julho continua "reconhecido" em
+setembro — um gatilho ingênuo mandaria a ação do anúncio de novo a cada passada. Então
+`decidirComAnuncio` **nunca passa por cima de regra que decidiu não enviar**: recusa, despedida,
+etiqueta que dispensa da fila. É o mesmo erro do "Amém" que recebeu mais uma mensagem 36 min depois,
+e tem teste para as três. Regra que ia enviar de qualquer forma perde para o anúncio de propósito:
+aí ele decide **o quê** sai, e escolha explícita dele não se substitui por dedução.
+
+**Não existe campo de texto livre.** As ações são lista de permissão (`anuncios.ACOES`): o texto que
+sai é, byte a byte, um que ele escreveu na aba Respostas ou aprovou na plataforma. Um campo de texto
+ali transformaria configuração de anúncio em redator de mensagem sem revisão — a mesma fronteira que
+faz a IA escolher e nunca escrever.
+
+**Uma fonte só.** `modeloPorTexto` deixou de ser consultado. Se as duas fossem lidas, **apagar um
+anúncio não teria efeito**: a linha velha continuaria mandando o modelo que ele acabou de tirar do
+ar.
+
+### Detalhes que valem lembrar
+
+- Etiquetas entram com origem **`anúncio`**, nunca `conteúdo` — `conteúdo` é o que decide o modelo, e
+  uma etiqueta de campanha ali disputaria essa escolha com "Conteúdo Zucco"/"Conteúdo Flávio". Elas
+  existem porque **ADS diz que veio de anúncio e não de QUAL**.
+- `state.anuncio` é zerado na troca de contato. Sem isso, o anúncio do contato anterior decidiria o
+  que a rodada manda para o próximo — a armadilha da pergunta de cidade, de novo.
+- Sinal novo no quadro do fluxo: **"Reconheci de QUAL anúncio ela veio"**, diferente de "Veio de um
+  anúncio" (que é a origem que a plataforma informa). Dá para ramificar entre os dois.
+- A conferência roda a cada edição e acusa em vermelho: modelo que não existe, resposta apagada,
+  anúncio sem texto, o mesmo texto em dois anúncios. Nenhuma dessas daria erro ao salvar — daria na
+  hora de enviar, com o contato aberto.
+- `hsm.parseModeloPorTexto`/`formatModeloPorTexto` ficaram sem uso em `src/` (só os testes de `hsm`
+  os cobrem): a tela que os usava não existe mais.
+
+### Conferido
+
+**55 asserções** em `tests/anuncios.test.mjs` (nova suíte, a catorze). E a Config foi **aberta de
+verdade** num navegador, com `chrome.storage` de mentira: a migração trouxe a linha antiga, trocar a
+ação zerou o alvo e trocou o seletor, "+ Anúncio novo" acusou "sem nenhum texto" na hora, e o que a
+tela gravou é exatamente o que o motor espera.
+
+**O que NÃO conferi:** a aparência dentro do mobiliza. Meu banco de testes não carrega o CSS do
+painel do mesmo jeito que a página real — a estrutura está certa, o visual ele vai ver primeiro.
+
+**Arquivos:** `src/lib/anuncios.js` (novo), `tests/anuncios.test.mjs` (novo, 55), `src/lib/store.js`
+(chave `anuncios` + backup), `src/lib/tags.js` (`etiquetasDoAnuncio`), `src/lib/arvore.js` (sinal),
+`src/panel/panel.js` (`carregarAnuncios`, a seção da Config, a decisão da rodada),
+`src/panel/panel.css`, `CLAUDE.md`, `manifest.json` (1.42.0 → 1.43.0). Catorze suítes,
+`checar-modulos` e `checar-referencias` passando.
+
+---
+
+## 2026-09-02 — Regra apagada agora tem volta: o catálogo no lado da janela
+
+**Pedido dele:** *"quando regras são apagadas tem que ter uma opção ou uma aba ali com a lista de
+regras para arrastar pro fluxo novamente"*.
+
+O buraco era real e caro. Apagar uma caixa "do código" tinha volta **por um passo**, pelo Desfazer;
+passado ele, não tinha mais. A regra continuava viva no código, mas o único caminho de volta era
+"Resetar para o padrão", que joga fora o arranjo inteiro feito à mão. Ou seja: **duas caixas
+apagadas custavam a tarde de trabalho** — o mesmo estrago que gerou o Desfazer, por outra porta.
+
+### O que entrou
+
+Um cartão **"Regras do código"** no lado da janela, com as dezesseis. Cada verbete traz o rótulo, o
+selo do que sai para o eleitor e o resumo da condição. Dois caminhos para pôr no quadro:
+
+- **arrastar** o verbete até o quadro — o que acompanha o ponteiro é a **caixa de verdade**, com
+  nome, desfecho e cor, e não um retângulo genérico que só vira caixa depois de soltar. Mesma razão
+  de o pino existir: o gesto tem que mostrar o que faz enquanto acontece;
+- **botão "Pôr"**, que larga no meio da vista. Não é redundância — o quadro pode estar rolado longe
+  ou a 35%, e aí a mira é trabalho. É a lição do "Ramos dentro deste": quando o gesto exige
+  pontaria, a lista precisa oferecer o caminho sem pontaria ao lado.
+
+Filtro por nome e a caixa **"só as que estão fora do quadro"**, que é a pergunta que ele vai fazer
+na prática ("o que eu apaguei?").
+
+### Três decisões que valem registro
+
+**Mostra as dezesseis, não só as que faltam.** Cada verbete diz *já no quadro 2×*. Sumir da lista
+assim que entra esconderia que **pôr a mesma regra em dois lugares é legítimo** — o próprio padrão
+faz isso, com as sete caixas repetidas dos dois lados da bifurcação de cidade.
+
+**Id novo quando a regra já está no quadro.** `noDeRegra` cunha o id a partir da regra
+(`r:sem-interesse`), o que basta enquanto ela aparece uma vez. Pôr de novo criaria id repetido — e
+isso não é cosmético: `problemas` acusa, e na janela um clique abriria as duas caixas de uma vez.
+`noDeRegraLivre` numera (`r:sem-interesse:2`), o mesmo formato que o padrão já usa.
+
+**A caixa nasce na RAIZ, não dentro do ramo selecionado.** Na raiz ela é último recurso — só decide
+quando tudo acima falha. Dentro de um grupo, passa a valer só naquele ramo e pode roubar a vez de
+quem está embaixo. Largar uma regra que ENVIA num lugar que ele não escolheu é o tipo de surpresa
+que este quadro existe para não ter. Ele pendura onde quiser depois, com o pino.
+
+### Conferido na janela, não só no motor
+
+Servida fora da extensão com um `chrome.storage` de mentira: apagar a caixa devolveu a regra à
+lista, o arrasto criou a caixa **onde o ponteiro estava** (`1589px, 798px`, com o quadro rolado e a
+35%), soltar **fora** do quadro não fez nada, e pôr uma regra já presente gerou
+`r:sem-interesse` + `r:sem-interesse:2` sem id repetido.
+
+**Arquivos:** `src/lib/arvore.js` (`catalogoDeRegras`, `noDeRegraLivre`), `src/fluxo.html`,
+`src/fluxo.css`, `src/fluxo.js` (`desenharCatalogo`, `largarRegra`, `ligarCatalogo`; `noPalco` subiu
+para o módulo), `tests/arvore.test.mjs` (+12), `manifest.json` (1.41.0 → 1.42.0). Treze suítes,
+`checar-modulos` e `checar-referencias` passando.
+
+---
+
+## 2026-09-01 — O modelo estava preso atrás da pendência
+
+**Relato dele:** *"se continuar como na print o modelo nunca será enviado porque está concluindo
+após resolver a pendência, teria que resolver e então mandar o modelo e encerrar"*.
+
+Está certo, e foi medido no motor. Com o quadro como estava, qualquer pendência engolia a entrega:
+
+| contato do anúncio, com modelo mapeado | desfecho |
+|---|---|
+| mandou figurinha | tecla 3 — conclui |
+| só disse bom dia | tecla 5 — momento, conclui |
+| só expressou apoio | tecla 8 — agradece, conclui |
+| **nenhuma pendência** | tecla 1 — manda o modelo |
+
+O modelo só saía para quem chegasse limpo. Uma figurinha bastava para a entrega nunca acontecer.
+
+### Por que, e por que "não concluir" sozinho não resolve
+
+`decidir` devolve **uma** ação e a rodada executa **uma** tecla — não existe "faz isto e depois
+aquilo". Como as caixas de pendência concluem, elas encerram antes de o fluxo chegar ao modelo.
+
+Meu primeiro instinto foi tirar a conclusão dessas caixas. **Não resolve, e o motor mostrou:** a
+mesma caixa casa de novo na passada seguinte e manda o momento outra vez. A entrega continua presa,
+agora num laço.
+
+### O conserto: a pendência sai da frente depois de resolvida
+
+A caixa **"com pendência"** ganhou a condição **"ainda não respondemos hoje"**. Com ela:
+
+- **1ª passada** — nada respondido hoje → a pendência resolve (momento, agradecimento, o que for);
+- **2ª passada** — já respondemos hoje → a pendência não está mais na frente, o caso desce para "sem
+  pendência" e **o modelo sai**.
+
+Uma mensagem por passada, sempre.
+
+### A escolha que ele fez, e o que ela custa
+
+Havia dois caminhos, e a diferença importa para o número dele:
+
+- **(a) ação composta** — resolver e mandar o modelo na MESMA passada. Duas mensagens seguidas para
+  a mesma pessoa, na fila inteira. Rajada para o mesmo número é o que já pesou no WhatsApp dele.
+- **(b) uma mensagem por passada** — a que ele escolheu.
+
+O custo de (b): o modelo só chega **quando ela voltar a escrever no mesmo dia**. Quem resolve a
+pendência e some não recebe o modelo naquele dia — e é a diferença entre entregar rápido e não
+arriscar o número.
+
+### Uma fragilidade que fica registrada, não consertada
+
+A caixa **"só mandou bom dia"** é dele, casa por palavras e tem a tecla 5 fixa — **sem a guarda de
+"o momento já saiu"** que a regra `ultima-e-so-reacao` tem. No dia seguinte, se a pessoa disser "bom
+dia" de novo, sai outro momento. A guarda nova cobre o mesmo dia, não o dia seguinte. Não mexi
+porque a caixa é dele; se incomodar, é acrescentar o sinal "a mensagem do momento já saiu" à
+condição dela, negado.
+
+**Arquivos:** `src/lib/arvore.js` (`fluxoPadrao`), `tests/arvore.test.mjs` (+5), `manifest.json`
+(1.40.0 → 1.41.0), `registro.md`. Treze suítes, `checar-modulos` e `checar-referencias` passando.
+
+---
+
+## 2026-09-01 — O quadro dele virou o padrão
+
+**Pedido:** *"veja o fluxo, o que lhe mandei é o novo padrão"* — com o texto de 31 ramos e as
+observações dentro das caixas.
+
+`arvore.fluxoPadrao()` foi reescrito com a estrutura dele: **anúncio — pessoa nova** e **pessoa
+retornando**, e dentro do retorno a bifurcação **sem etiqueta de cidade** / **com etiqueta**. 29
+ramos, 9 enviam mensagem, zero problemas.
+
+### O que as observações dele mandaram
+
+- **`mensagem padrão do anúncio` virou IRMÃ de `Recusou`**, não filha. No texto que ele mandou ela
+  tinha caído dentro da recusa, e como o motor testa o filho antes da ação do próprio nó, o
+  resultado era o inverso do desenho: **o hostil recebia o pedido de nome e cidade e o contato
+  normal não recebia nada**. Medido antes de consertar.
+- **`nunca-perguntaram-interesse` e `nome-sem-sentido` saíram do quadro** (*"descarte"*). As regras
+  continuam no código — descartadas do quadro, não apagadas.
+- **`pedido-hoje-sem-resposta` saiu**, que era a opção que ele deu (*"ou retire essa caixa"*). O que
+  ela protegia — não repetir o pedido no mesmo dia — **já está dentro de `nunca-pediram-dados`**, que
+  exige `!pedidoHoje` para disparar. Sem a caixa ninguém pede duas vezes; só deixa de ser concluído,
+  que era o que ele queria.
+
+### As duas coisas que os testes pegaram, e que o quadro dele tinha
+
+1. **`sem-interesse` só existia do lado do anúncio.** Quem já tinha sido atendido e voltava
+   hostilizando não era pego por lugar nenhum — caía nas regras de baixo e podia **receber a
+   mensagem do momento depois de mandar um desaforo**. Uma caixa no topo de "pessoa retornando"
+   cobre os dois lados da bifurcação de uma vez.
+2. **Id repetido.** A mesma regra aparece nos dois lados da bifurcação, e `noDeRegra` dava o mesmo
+   id às duas — o que `problemas` acusa e o que, na janela, faria um clique abrir as duas caixas.
+   O lado entra no id (`r:pergunta-aberta:com-cidade`).
+
+### A única coisa que mudei além do que ele escreveu
+
+**A condição do lado "sem etiqueta de cidade" está NEGADA.** No quadro dele ela não tinha condição —
+pegava todo mundo — e, como os dois lados têm as mesmas regras, o lado "com etiqueta" nunca era
+alcançado: a mesma regra já havia falhado do outro lado. Nove caixas mortas. O rótulo da caixa já
+prometia "sem etiqueta de cidade"; o código passou a fazer o que o nome dela diz.
+
+### Conferido no motor
+
+| contato | desfecho |
+|---|---|
+| anúncio, hostil | tecla s — marca e conclui sem responder |
+| anúncio, normal | tecla 4 — pede nome e cidade |
+| **voltou e hostilizou** | tecla s |
+| voltou, respondeu a denúncia | tecla 6 — vai para gente |
+| voltou com etiqueta, se despediu | tecla 3 |
+| voltou sem etiqueta, com conteúdo | tecla 1 — manda o modelo |
+
+**Pendência:** a observação de `respondeu com os dados` (*"e manda + o agradecer e encerrar +
+concluir"*) continua **não atendida** — a rodada não tem tecla que faça modelo + agradecimento +
+conclusão numa só. Precisa de tecla nova.
+
+**Arquivos:** `src/lib/arvore.js` (`fluxoPadrao` reescrito), `manifest.json` (1.39.0 → 1.40.0),
+`registro.md`. Treze suítes, `checar-modulos` e `checar-referencias` passando.
+
+---
+
+## 2026-09-01 — A pergunta dos grupos saiu do pedido de dados
+
+**Pedido:** *"não tem necessidade de perguntar por grupos, ninguem estava me dando links"*.
+
+A pergunta existia para conseguir **link de convite** de grupos (decisão de 11/08: pedir o link, não
+o nome, porque nome de grupo não serve para entrar). A medida dele no trabalho é a que vale: os
+links não estavam vindo, e a pergunta era a segunda coisa a responder numa mensagem cujo ponto é ser
+um portão curto.
+
+O `pedir-dados` agora termina no exemplo:
+
+> {{saudacao}}! Que bom ter você com a gente. 🇧🇷
+> Mas antes de qualquer coisa: me diz seu nome e a sua cidade, para eu salvar seu contato
+> direitinho. Responde nesta ordem, numa mensagem só:
+> Nome completo / Cidade
+> (exemplo: Maria Silva / Santo Ângelo)
+
+### A armadilha: uma migração antiga desfaria isto sozinha
+
+`migrarPerguntaGrupos` **acrescenta** a pergunta em qualquer `pedir-dados` que não fale de "grupo
+político". Numa instalação nova, `templates` nasce igual ao padrão — sem a pergunta — e ela a
+devolveria no primeiro carregamento. **Saiu da fila do `list()`.** A função fica, porque é história
+de como o texto chegou onde chegou; o que não pode é ela rodar.
+
+Tem asserção: depois de `list()`, a pergunta continua fora.
+
+`migrarGruposPedeLink` ficou — ela só troca a redação ANTIGA da pergunta pela nova onde a antiga
+estiver literalmente presente, então é inofensiva agora e ainda protege um texto próprio dele que
+tenha a frase velha.
+
+### Quem já recebeu a v1
+
+A versão de meia hora atrás (com a pergunta no fim) já podia ter chegado à máquina dele. Duas
+providências: o **miolo da v1 entrou na lista de reconhecimento** de "texto de fábrica", e a
+migração ganhou **flag nova** (`pedirDadosSemGrupos`) para rodar de novo. Tem asserção do caminho
+v1 → v2.
+
+E a trava de sempre continua: **texto reescrito por ele fica intacto** — testado com um texto dele
+que menciona grupo político de propósito.
+
+### O que NÃO saiu
+
+O envio do **link do grupo da cidade** continua inteiro: a resposta `link-grupo`, a tabela
+cidade → link e a tecla que a manda. O que saiu foi *perguntar de quais grupos a pessoa participa* —
+coisa diferente de *mandar o grupo dela*.
+
+**Arquivos:** `src/lib/store.js`, `src/lib/templates.js`, `tests/templates.test.mjs` (+13),
+`manifest.json` (1.38.0 → 1.39.0), `registro.md`. Treze suítes, `checar-modulos` e
+`checar-referencias` passando.
+
+---
+
+## 2026-09-01 — O pedido de dados vem "antes de qualquer coisa"
+
+**Pedido:** *"pode ser mantida exemplo, que bom ter voce com a gente mas antes de qualquer coisa..."*,
+fechando a observação que ele deixou no ramo `mensagem padrão do anúncio`.
+
+### O texto
+
+A abertura calorosa ficou (pedido dele). O que mudou é o miolo: antes o texto explicava o grupo da
+região **antes** de pedir; agora pede primeiro.
+
+> {{saudacao}}! Que bom ter você com a gente. 🇧🇷
+> **Mas antes de qualquer coisa: me diz seu nome e a sua cidade, para eu salvar seu contato
+> direitinho.** Responde nesta ordem, numa mensagem só:
+> Nome completo / Cidade
+
+As duas variantes acompanham ("Antes de qualquer coisa…", "Antes de mais nada…").
+
+**A linha `Nome completo / Cidade` continua intocada nas três** — é o invariante que
+`extract.findStructured` casa para ler a resposta dela e que `templates.ehPedidoDeDados` usa para
+reconhecer que a mensagem foi o pedido. Tem asserção nas três versões.
+
+### Mudar o DEFAULT não bastava, e essa é a metade que quase escapa
+
+Ele já tem o texto salvo no `chrome.storage`: mexer só em `DEFAULT_TEMPLATES` vale para quem nunca
+gravou nada, e ele continuaria mandando a versão de ontem. É a armadilha registrada em 31/08 (a
+tecla 8 que "não apareceu" — o texto é que nunca tinha chegado).
+
+Nova `templates.migrarPedirDadosAntesDeTudo`, registrada em `list()` com as outras.
+
+**Ela só mexe em quem ainda tem o texto de fábrica**, e a identificação é pelo **miolo** antigo
+(`PEDIR_DADOS_MIOLO_ANTIGO`), não pelo texto inteiro: as três versões tinham aberturas diferentes e
+a saudação já havia sido mexida por outra migração. Se ele reescreveu a mensagem, a frase antiga não
+está lá e o texto dele fica intacto — **reescrever por cima do que ele escreveu é o erro que
+nenhuma migração pode cometer**, e ele passa o dia ajustando esses textos. Tem asserção própria,
+inclusive para edição feita DEPOIS da migração ter rodado.
+
+### O que ficou de fora, e ele decide
+
+A **pergunta dos grupos** continua no fim da mensagem. A observação dele dizia "antes de qualquer
+coisa… após isso concluir", o que sugere uma mensagem curta — mas tirar a pergunta dos grupos é
+remover um recurso que ele desenhou de propósito (o link de convite é como a base cresce), e ele
+pediu para ajustar a frase, não para tirar aquilo. Fica como pergunta.
+
+**Arquivos:** `src/lib/store.js` (texto novo + `PEDIR_DADOS_MIOLO_ANTIGO`), `src/lib/templates.js`
+(migração + registro na `list()`), `tests/templates.test.mjs` (+18), `manifest.json`
+(1.37.0 → 1.38.0), `registro.md`. Treze suítes, `checar-modulos` e `checar-referencias` passando.
+
+---
+
+## 2026-09-01 — Desfazer no quadro do fluxo (depois de ele perder o trabalho)
+
+**Pedido:** *"preciso de um botão de desfazer ultima ação, acabei de perder todo meu trabalho por
+isso"*.
+
+### O que faltava, e o que provavelmente causou
+
+Os botões que **substituem** o quadro já perguntavam antes ("Resetar para o padrão", "Só as regras
+do código", carregar versão, importar arquivo). **"Arrumar o quadro" não perguntava** — e ele
+reposiciona TODAS as caixas de uma vez. Num quadro arrumado à mão, isso é o trabalho inteiro, e não
+havia volta.
+
+### O desfazer
+
+- **A pilha vive dentro do `gravar`**, não em cada botão. É o que faz o desfazer valer para as
+  dezenove chamadas de uma vez — inclusive as que eu ainda não escrevi. Todos os campos do editor
+  gravam no evento `change` (nunca `input`), então cada entrada é uma ação de verdade e não uma
+  tecla digitada.
+- **Vinte passos**, gravados no armazenamento e **não só em memória**. Desfazer que morre ao fechar a
+  janela não serve para o caso que o criou: ele vê o estrago, fecha a janela "para ver se volta", e
+  aí não volta mais.
+- **Chave própria (`fluxoHistorico`)**, fora de `fluxo`: não engorda o objeto que a janela lê e grava
+  a cada mexida, e fica fora do `exportJson` — conferido.
+- **Desfazer não empilha a si mesmo.** Empilhar faria o botão alternar entre dois estados para
+  sempre em vez de andar para trás.
+- **Ctrl+Z, e só fora de campo de texto.** Dentro de um `input`/`textarea` o Ctrl+Z do navegador
+  desfaz a digitação, que é o que ele espera ali; roubar o atalho faria o quadro voltar um passo
+  enquanto ele só queria apagar uma palavra.
+- O botão mostra **quantos passos** existem e nasce desabilitado.
+
+Conferido em simulação, inclusive o caso que o queimou: zerar o quadro e voltar em um clique, e a
+pilha parando sem estourar quando acaba.
+
+### E "Arrumar o quadro" passou a perguntar
+
+Com a contagem no texto (`Reposicionar as 23 caixas em colunas?`) e dizendo que dá para desfazer.
+Mesmo que ele confirme sem ler, agora o desfazer está a um clique.
+
+### O que este conserto NÃO faz
+
+**Não traz de volta o que ele já perdeu.** A pilha começa vazia. O que existe para recuperar
+trabalho antigo é "Salvar versão" e "Exportar arquivo" — e vale ele salvar uma versão antes de
+experimentar, porque o desfazer cobre a sessão, não a semana.
+
+**Arquivos:** `src/fluxo.js`, `src/fluxo.html`, `src/lib/store.js` (`fluxoHistorico`),
+`manifest.json` (1.36.0 → 1.37.0), `CLAUDE.md`, `registro.md`. Treze suítes, `checar-modulos` e
+`checar-referencias` passando.
+
+---
+
+## 2026-09-01 — Duplicar um ramo
+
+**Pedido:** *"preciso da opção de duplicar uma caixa"*.
+
+Montar um ramo dá trabalho — condição, palavras, desfecho — e variação do mesmo ramo é o caso comum:
+*"isto aqui, mas com outras palavras"*.
+
+### As decisões
+
+- **Os filhos vão junto.** Pela mesma razão que vão no `apagar`: um ramo é a condição **mais** o que
+  está dentro dela, e copiar só a casca daria um grupo vazio que não faz nada. O botão diz quantos
+  vão — `Duplicar (com 3 dentro)` — como o Apagar já avisava. Cópia que traz seis ramos sem avisar é
+  surpresa.
+- **Id novo em cada nó copiado, sem exceção.** Id repetido é o que `problemas` acusa e o que
+  `sanitizar` renomeia na importação — e, na tela, faria a janela editar dois nós de uma vez. É o
+  defeito que esta operação mais pode causar, e tem asserção própria.
+- **A cópia entra como irmã SEGUINTE e nasce logo abaixo.** Entre irmãos a prioridade é a altura,
+  então nascer abaixo é nascer com a prioridade seguinte — que é o que se espera de uma cópia. O
+  deslocamento lateral (+24px) é para ela não sumir atrás de um irmão que já estivesse ali: cópia
+  escondida parece cópia que não aconteceu.
+- **O rótulo ganha "(cópia)".** Duas caixas idênticas no quadro seriam indistinguíveis.
+- **Cópia funda.** Mexer na cópia não pode mexer no original — tem asserção.
+- **`duplicar` devolve `{arvore, id}`**, diferente das vizinhas que devolvem só a árvore. Quem chama
+  precisa SELECIONAR a cópia, e sem o id a janela teria que adivinhar qual das duas caixas iguais é
+  a nova. Está documentado na função.
+
+12 asserções novas em `tests/arvore.test.mjs`.
+
+**Um tropeço no caminho, que vale a nota:** o ajudante local do teste se chamava `arv()` e sombreou o
+namespace `arv` do módulo — `arv.duplicar is not a function`. Renomeado para `base()`.
+
+**Arquivos:** `src/lib/arvore.js` (`duplicar`, `comIdsNovos`), `src/fluxo.js` (botão),
+`tests/arvore.test.mjs` (+12), `manifest.json` (1.35.0 → 1.36.0), `registro.md`. Treze suítes,
+`checar-modulos` e `checar-referencias` passando.
+
+---
+
+## 2026-09-01 — Cabeçalho ocultável na janela do fluxo
+
+**Pedido:** *"faça o cabeçalho ocultável"*.
+
+O cabeçalho tem cinco faixas — título, parágrafo de instruções, contagem, botões e a linha de
+atalhos — e come uma boa parte da altura, que é justamente o que o quadro precisa.
+
+### O desenho
+
+Botão `▴ Ocultar` / `▾ Mostrar controles` no canto do cabeçalho. Recolhido, somem o título, a
+contagem, os botões e a linha de atalhos; sobra uma faixa fina com o botão.
+
+**O botão fica no cabeçalho, não flutuando sobre o quadro** — e isso é decisão, não preguiça: um
+botão sobre o quadro seria exatamente o que ele mandou tirar de lá na mudança anterior (elemento
+fixo em cima da área que se arrasta atrapalha o gesto). A faixa fina custa ~26px e não atrapalha
+nada.
+
+**Dá para trabalhar o tempo todo recolhido:** a roda do mouse continua dando zoom e o duplo clique
+continua criando ramo. É por isso que recolher pode esconder os botões sem deixá-lo sem ferramenta.
+
+### Detalhes que valem registro
+
+- **`position: absolute` no botão**, dentro do cabeçalho. Se ele participasse do flex, recolher
+  mudaria a largura disponível para as outras colunas e os botões saltariam de linha ao expandir.
+- **A escolha fica gravada** em `fluxo.cabecalhoOculto`. Fica ali porque é onde esta janela já lê e
+  grava, e `arvore.paraArquivo` exporta só `teclas` e `arvore` — a preferência de tela **não vaza**
+  para o arquivo que ele manda para alguém.
+- **O rótulo é aplicado de forma síncrona ao carregar**, antes do `boot`. `boot` é assíncrono e
+  espera o armazenamento; sem isso o botão apareceria em branco por um instante.
+
+**Arquivos:** `src/fluxo.html`, `src/fluxo.css`, `src/fluxo.js`, `manifest.json` (1.34.1 → 1.35.0),
+`registro.md`. Treze suítes, `checar-modulos` e `checar-referencias` passando.
+
+---
+
+## 2026-09-01 — Os atalhos do quadro subiram para o cabeçalho
+
+**Pedido:** *"bote esse aviso junto com os botões em cima, ali ele fica sendo selecionado e
+atrapalhando quando arrasto"*.
+
+A faixa com os atalhos (arrastar o fundo, roda do mouse, duplo clique, Shift+arrastar) flutuava no
+canto de baixo do quadro, **por cima da área que se arrasta**.
+
+### `pointer-events: none` não era suficiente, e o motivo importa
+
+A faixa já tinha `pointer-events: none`, então ela não recebia clique — e mesmo assim atrapalhava.
+**`pointer-events` impede o clique, não a SELEÇÃO de texto**: um arrasto que passa por cima ainda
+monta um intervalo de seleção incluindo aquele texto, e o navegador passa a desenhar o realce azul
+no meio do gesto.
+
+O conserto não foi acrescentar `user-select: none` e deixar a faixa lá. Aviso fixo em cima de área
+que se arrasta é obstáculo por natureza, por mais discreto que pareça — subiu para junto dos botões,
+ocupando a linha inteira do cabeçalho (`flex: 1 0 100%`). O `user-select: none` ficou de qualquer
+jeito, porque agora é barato e impede o realce se ele arrastar por ali.
+
+**Efeito colateral bom:** o quadro ficou sem nenhum elemento fixo por cima. Só o palco e as caixas.
+
+**Arquivos:** `src/fluxo.html`, `src/fluxo.css`, `manifest.json` (1.34.0 → 1.34.1), `registro.md`.
+Treze suítes, `checar-modulos` e `checar-referencias` passando.
+
+---
+
+## 2026-09-01 — Os dois pinos passaram a significar a mesma coisa; as duas faixas de aviso saíram
+
+**Pedido:** *"retire essas mensagens de aviso que foram postas por ultimo (…) e eu preciso que a
+caixa (mandou figura) e a caixa (só mandou bom dia) possam ser ligadas ao mesmo tempo na caixa (tem
+etiqueta de cidade), ao tentar uma remove a outra, preciso de múltiplas ligações"*.
+
+### A causa: os dois pinos tinham direções OPOSTAS
+
+| gesto | fazia |
+|---|---|
+| puxar a **saída** de A até B | **B** ia para dentro de A |
+| puxar a **entrada** de A até B | **A** ia para dentro de B |
+
+No quadro dele o pai desejado ("tem etiqueta de cidade") está **em cima**, e a entrada dele é o que
+a mão alcança. Cada puxada movia a caixa de cima — tirando-a de onde ela estava. Daí *"ao tentar uma
+remove a outra"*: não era a árvore recusando duas ligações, era cada gesto **re-parentando o mesmo
+nó**.
+
+Medido, com o quadro do print:
+
+```
+ANTES  · puxou de figura até cidade, depois de bomdia até cidade
+         dentro de figura: []
+         dentro de bomdia: ["tem etiqueta de cidade"]     ← saiu de figura
+
+DEPOIS · o mesmo par de gestos
+         dentro de cidade: ["mandou figura", "so mandou bom dia"]
+```
+
+### O conserto: não há mais direção para ler
+
+**Uma regra só, para os dois pinos: a caixa de onde você puxa é a que se move.** Puxe de qualquer
+lado de A até B e A entra em B. Duas caixas puxadas até a mesma viram duas filhas dela.
+
+Isto é a quarta tentativa no mesmo problema, e as três anteriores erraram do mesmo jeito: pino de
+saída, pino de entrada e a frase ao vivo — **todas explicavam a direção em vez de eliminá-la**. A
+nota antiga do `CLAUDE.md` já dizia que o pedido era "N para 1"; o que faltava era perceber que o
+gesto também precisava ser N-para-1, e não só a lista de caixas de seleção.
+
+Nenhuma mudança no modelo: continua sendo árvore, um pai por nó, e a trava contra ciclo
+(`ehDescendente`) continua de pé — conferido.
+
+### As duas faixas de aviso saíram
+
+- **A frase ao vivo** durante o arrasto (`rotulo-ligacao`), que dizia *"X vai para dentro de Y e sai
+  de Z"*. Ela existia para explicar a direção; sem direção para explicar, virou ruído.
+- **A faixa vermelha** de `arvore.problemas` no topo, que acusava *"sem condição, sem ação e sem ramo
+  dentro — não faz nada"*. Ele monta o quadro em partes, então ramo pela metade é estado normal de
+  trabalho e o aviso tocava o tempo todo — alarme que toca sempre é alarme que se aprende a ignorar.
+
+`arvore.problemas()` **continua existindo e testada**, só não é mais desenhada: ela é a rede que
+`sanitizar` e a importação de arquivo usam para recusar fluxo estragado. O que saiu foi a faixa.
+
+Saiu junto o CSS órfão das duas (20 linhas) e a flag `invertido`, que ficou sem sentido.
+
+### Retrocesso
+
+**Quem já tinha ligações feitas com o gesto antigo não é afetado** — a árvore salva não muda, só o
+gesto. Mas a memória muscular dele muda: o mesmo arrasto que antes trazia a outra caixa agora leva
+esta. O texto do topo foi reescrito para dizer isso na primeira linha.
+
+**Arquivos:** `src/fluxo.js`, `src/fluxo.html`, `src/fluxo.css`, `manifest.json`, `registro.md`.
+Treze suítes, `checar-modulos` e `checar-referencias` passando.
+
+---
+
 ## 2026-09-01 (noite, 24) — "Ramos dentro deste": a operação de VÁRIAS para UMA, num lugar só
 
 **Relato dele:** *"pela décima vez eu preciso que as duas liguem na mesma e continua uma removendo
@@ -672,7 +1987,6 @@ se conferem no navegador — as suítes não os alcançam.
 
 ---
 
-
 ## 2026-09-01 (noite, 11) — Aba Fluxo: a ordem das regras passou a ser dele
 
 **Pedido:** *"vamos montar uma janela que ficara abaixo do botão de recarregar que será o fluxo de
@@ -740,7 +2054,6 @@ No topo, a conta das ligadas por efeito — é o que deixa visível que 9 das 16
 
 ---
 
-
 ## 2026-09-01 (noite, 10) — Ponto como separador: a terceira forma de "a pessoa escreveu diferente"
 
 **Pedido:** *"mesmo caso novamente"* — print da Nilza, que veio do anúncio, respondeu o formulário
@@ -789,7 +2102,6 @@ comuns que não podem virar formulário.
 **Retrocesso:** nenhum encontrado; nenhuma asserção existente foi alterada.
 
 ---
-
 
 ## 2026-09-01 (noite, 9) — REGRESSÃO MINHA: recusar o evento virou "sem interesse"
 
@@ -850,7 +2162,6 @@ conversa dele à mão.
 
 ---
 
-
 ## 2026-09-01 (noite, 8) — O envio mais simples do painel era o único inalcançável
 
 **Pedido:** *"tendo problemas para enviar novamente, só preciso enviar o modelo, não tem necessidade
@@ -899,7 +2210,6 @@ mapeamento manda o modelo errado para eleitor.
 comportamento.
 
 ---
-
 
 ## 2026-09-01 (noite, 7) — Propaganda em cima de uma denúncia
 
@@ -968,7 +2278,6 @@ Doze suítes, `checar-modulos` e `checar-referencias` passando.
 
 ---
 
-
 ## 2026-09-01 (noite, 6) — Redação antiga do pedido de dados fazia a rodada pular o modelo
 
 **Pedido:** *"no caso o modelo não tinha sido enviado, em vez de mandar modelo pronto mandou
@@ -1031,7 +2340,6 @@ reconhecidas). Confundir uma entrega com pergunta faria o contato deixar de rece
 o erro oposto e igualmente ruim.
 
 ---
-
 
 ## 2026-09-01 (noite, 5) — "Sem interesse": etiqueta e conclui sem responder
 
@@ -1112,7 +2420,6 @@ ramo, campo na Config), `tests/cortesia.test.mjs` (+19), `manifest.json` (1.14.0
 
 ---
 
-
 ## 2026-09-01 (noite, 4) — A IA voltou a ser consultada na tecla 6; áudio transcrito deixou de "precisar abrir"
 
 **Pedido:** *"esse caso a ia deveria assumir, ela parou de ver praticamente tudo e está passando pra
@@ -1175,7 +2482,6 @@ procurar uma mensagem de texto que não existe.
 
 ---
 
-
 ## 2026-09-01 (noite, 3) — Cidade abreviada impedia o NOME, e a rodada pedia os dados de novo
 
 **Pedido:** *"ja deu os dados e perguntou novamente"* — print do contato que respondeu
@@ -1230,7 +2536,6 @@ comparações), `tests/parser.test.mjs` (+11), `manifest.json` (1.12.0 → 1.13.
 numa linha só, que é o caso deste conserto.
 
 ---
-
 
 ## 2026-09-01 (noite, 2) — A regex voltou a decidir ANTES da IA
 
@@ -1293,7 +2598,6 @@ rodada cai junto, sem nenhuma trava nova.
 Doze suítes, `checar-modulos` e `checar-referencias` passando.
 
 ---
-
 
 ## 2026-09-01 (noite) — Sigla do estado matava o "informada"; dossiê passou a ser sob demanda
 
@@ -1372,7 +2676,6 @@ já registrado.
 
 ---
 
-
 ## 2026-09-01 — Dossiê "quem é quem" virou arquivo, com pesquisa e trava de revisão
 
 **Pedido:** *"seria muita informação pra botar no espaço da extensão, teria que ser um arquivo tipo
@@ -1445,7 +2748,6 @@ Onze suítes, `checar-modulos` e `checar-referencias` passando.
 
 ---
 
-
 ## 2026-09-01 — Tema de Interesse, Função e Partido saíram; COREDE de Canoas conferido
 
 **Pedido:** *"remova qualquer coisa relacionada a tema de interesse, partido, função, não preciso
@@ -1513,7 +2815,6 @@ deixa `guesses.partido` e companhia atravessando o painel esperando um consumido
 
 ---
 
-
 ## 2026-09-01 — Ponto colado matava o casamento de cidade
 
 **Pedido:** *"está falhando em pegar cidade"*, com print de um contato que escreveu
@@ -1576,7 +2877,6 @@ sem aceitar frase solta — e isso é decisão dele, porque o erro cai em dado d
 `manifest.json` (1.8.0 → 1.8.1), `CLAUDE.md`, `registro.md`. Onze suítes passando.
 
 ---
-
 
 ## 2026-09-01 - A IA responde a caixa da cidade (a rodada parava ali)
 

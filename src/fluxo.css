@@ -86,6 +86,44 @@ body {
   border-bottom: 1px solid var(--borda);
   flex: 0 0 auto;
 }
+/*
+ * O cabeçalho recolhe.
+ *
+ * Recolhido sobra uma faixa fina com o botão, e o resto da altura volta para o quadro. O botão
+ * fica no cabeçalho e não flutuando sobre o quadro de propósito: elemento fixo por cima da área
+ * que se arrasta é obstáculo, e foi o que ele mandou tirar de lá.
+ *
+ * `position: absolute` dentro do cabeçalho para o botão não empurrar as outras colunas do flex —
+ * sem isso, recolher mudaria a largura disponível para os botões e eles saltariam de linha.
+ */
+.alternar-topo {
+  position: absolute;
+  top: 8px;
+  right: 14px;
+  font: inherit;
+  font-size: 11.5px;
+  line-height: 1;
+  padding: 5px 9px;
+  border: 1px solid var(--borda);
+  background: var(--superficie);
+  color: var(--tinta-fraca);
+  border-radius: 5px;
+  cursor: pointer;
+  user-select: none;
+  z-index: 2;
+}
+.alternar-topo:hover { background: var(--afundado); color: var(--tinta); }
+.alternar-topo:focus-visible { outline: 2px solid var(--trilha); outline-offset: 1px; }
+
+.topo { position: relative; padding-right: 130px; }
+
+/* Recolhido: só a faixa e o botão. */
+.topo.oculto { padding: 5px 130px 5px 20px; gap: 0; }
+.topo.oculto > .titulo,
+.topo.oculto > .contagem,
+.topo.oculto > .acoes,
+.topo.oculto > .dica { display: none; }
+.topo.oculto .alternar-topo { top: 4px; }
 .titulo { flex: 1 1 340px; min-width: 0; }
 .titulo h1 { margin: 0 0 3px; font-size: 18px; letter-spacing: -0.01em; }
 .titulo p { margin: 0; font-size: 12.5px; color: var(--tinta-media); max-width: 80ch; }
@@ -125,10 +163,6 @@ body {
 .btn-quadrado { width: 26px; padding: 4px 0; text-align: center; }
 .btn-perigo { color: var(--alerta); border-color: var(--alerta); }
 .btn-perigo:hover { background: var(--alerta-bg); }
-
-.problemas { display: none; flex-direction: column; gap: 3px; padding: 8px 20px; background: var(--alerta-bg); border-bottom: 1px solid var(--alerta); flex: 0 0 auto; }
-.problemas.tem { display: flex; }
-.problema { font-size: 12px; color: var(--alerta); font-weight: 600; }
 
 /* ---- corpo: quadro + lado ---- */
 .tela {
@@ -212,18 +246,20 @@ body {
 .marca-regra { font-family: var(--mono); font-size: 9px; color: var(--tinta-fraca); border: 1px dashed currentColor; padding: 0 4px; border-radius: 3px; }
 .venceu { font-family: var(--mono); font-size: 10px; color: var(--tinta-fraca); }
 
+/*
+ * Os atalhos do quadro, no cabeçalho.
+ *
+ * Estavam flutuando no canto de baixo do quadro, com `pointer-events: none` — e mesmo assim a
+ * faixa entrava na SELEÇÃO DE TEXTO do arrasto e atrapalhava o gesto. `pointer-events` impede o
+ * clique, não a seleção; quem impede é `user-select`, e ainda assim um aviso fixo em cima de área
+ * que se arrasta é obstáculo. Subiu para junto dos botões, ocupando a linha inteira do cabeçalho.
+ */
 .dica {
-  position: absolute;
-  left: 12px;
-  bottom: 10px;
-  margin: 0;
+  flex: 1 0 100%;
+  margin: 2px 0 0;
   font-size: 11px;
   color: var(--tinta-fraca);
-  background: var(--bg);
-  border: 1px solid var(--borda);
-  border-radius: 5px;
-  padding: 4px 9px;
-  pointer-events: none;
+  user-select: none;
 }
 
 /* ---- lado ---- */
@@ -385,23 +421,6 @@ body {
  * caixa, e cada puxada a tirava da anterior. Direção de gesto não se adivinha olhando um ponto;
  * a frase com os dois nomes, e principalmente com o "sai de", é o que resolve.
  */
-.rotulo-ligacao {
-  position: absolute;
-  z-index: 30;
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  max-width: 320px;
-  padding: 6px 9px;
-  font-size: 11.5px;
-  background: var(--superficie);
-  color: var(--tinta);
-  border: 1px solid var(--trilha);
-  border-radius: 5px;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
-}
-.rotulo-ligacao .sai-de { color: var(--alerta); font-weight: 600; }
 
 /*
  * A ENTRADA, na borda esquerda — o mesmo gesto no sentido contrário.
@@ -439,3 +458,89 @@ body {
 }
 .item-filho { font-size: 11.5px; padding: 2px 0; align-items: flex-start; line-height: 1.3; }
 .item-filho input { margin-top: 2px; flex: 0 0 auto; }
+
+/* ---- o catálogo das regras do código ----
+   Vive no lado, e a caixa que ele arrasta daqui é a MESMA caixa do quadro (`.fantasma` reusa
+   `.caixa`), para o gesto mostrar o que vai chegar lá — e não um retângulo genérico que só vira
+   caixa depois de soltar. */
+.busca-regra {
+  width: 100%;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--tinta);
+  background: var(--bg);
+  border: 1px solid var(--borda);
+  border-radius: 5px;
+}
+.busca-regra:focus-visible { outline: 2px solid var(--trilha); outline-offset: -1px; }
+
+.catalogo { display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow-y: auto; }
+.catalogo .vazio { font-size: 11.5px; color: var(--tinta-fraca); }
+
+.regra-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--bg);
+  border: 1px solid var(--borda);
+  border-radius: 5px;
+  /* O cursor é a única pista de que dá para arrastar antes de tentar — a lição do pino: gesto
+     invisível é gesto que não existe. */
+  cursor: grab;
+  touch-action: none;
+}
+.regra-item:hover { border-color: var(--trilha); }
+.regra-item.arrastando { opacity: 0.4; }
+.regra-item-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.regra-item-nome { font-size: 12.5px; font-weight: 600; line-height: 1.25; }
+.regra-item-quando {
+  font-size: 10.5px;
+  color: var(--tinta-fraca);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.regra-item-selos { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.regra-item .btn { font-size: 11px; padding: 3px 8px; flex: 0 0 auto; }
+
+/* "já no quadro 2×" — o número importa: pôr a mesma regra em dois lugares é legítimo (o padrão
+   faz isso nos dois lados da bifurcação de cidade), então a marca informa, não proíbe. */
+.ja-no-quadro {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--tinta-fraca);
+  background: var(--afundado);
+}
+
+/* A caixa que acompanha o ponteiro durante o arrasto. Fora do palco, então não escala com o
+   zoom — ela é do ponteiro, não do quadro. */
+.fantasma {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.9;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+.quadro.recebendo { outline: 2px dashed var(--trilha); outline-offset: -4px; }
+
+/* A comparação com o padrão. Reusa `.catalogo` e `.regra-item` de propósito: é a mesma operação —
+   uma lista de caixas que se pode pôr no quadro —, e dois desenhos para a mesma coisa fariam ele
+   aprender duas vezes. Só o cursor muda: aqui não se arrasta, o botão é o caminho. */
+#diferenca .regra-item { cursor: default; }
+.dif-titulo {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tinta-fraca);
+  margin-top: 4px;
+}
+.dif-so-dele { font-size: 11.5px; color: var(--tinta-media); padding-left: 4px; }

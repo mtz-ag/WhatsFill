@@ -47,13 +47,15 @@ import { REGRAS, SOBRE, TECLAS } from './sugestao.js';
  */
 export const SINAIS = [
   { id: 'veioDeAnuncio', rotulo: 'Veio de um anúncio', nao: 'Não veio de anúncio' },
+  { id: 'anuncioReconhecido', rotulo: 'Reconheci de QUAL anúncio ela veio', nao: 'Não reconheci o anúncio' },
   { id: 'jaRespondemosAntes', rotulo: 'Já entregamos algo antes (é retorno)', nao: 'Nunca entregamos nada (é primeira vez)' },
-  { id: 'jaPediramDados', rotulo: 'O formulário já saiu para ela', nao: 'O formulário nunca saiu' },
+  { id: 'jaPediramDados', rotulo: 'Já pedimos o nome e a cidade dela', nao: 'Nunca pedimos o nome e a cidade dela' },
   { id: 'temEtiquetaDeCidade', rotulo: 'Já tem etiqueta de cidade', nao: 'Ainda não tem etiqueta de cidade' },
   { id: 'semInteresse', rotulo: 'Recusou ou veio hostilizar (hater)', nao: 'Não recusou nem hostilizou' },
   { id: 'etiquetaQueDispensa', rotulo: 'Tem a etiqueta que dispensa da fila', nao: 'Não tem a etiqueta que dispensa' },
   { id: 'pedeRespostaPessoal', rotulo: 'Áudio sem transcrição, arquivo ou texto longo', nao: 'Não é áudio, arquivo nem texto longo' },
   { id: 'respondeuComoAjudar', rotulo: 'Respondeu à nossa pergunta "em que posso ajudar?"', nao: 'Não é resposta à nossa pergunta' },
+  { id: 'respondeuOsDados', rotulo: 'Respondeu o nome ou a cidade que pedimos', nao: 'Não respondeu o nome nem a cidade' },
   { id: 'pedeAlgoIndefinido', rotulo: 'Pediu algo e não disse o quê', nao: 'Não pediu nada em aberto' },
   { id: 'ultimaEhDespedida', rotulo: 'Só se despediu ("amém", "é nós", "abraço")', nao: 'Não foi despedida' },
   { id: 'ultimaEhSoReacao', rotulo: 'Só figura, emoji, sticker ou link', nao: 'Escreveu alguma coisa' },
@@ -64,7 +66,7 @@ export const SINAIS = [
   { id: 'nomeSemSentido', rotulo: 'O nome do cadastro não serve', nao: 'O nome do cadastro serve' },
   { id: 'respondidoHoje', rotulo: 'Você já respondeu hoje', nao: 'Você ainda não respondeu hoje' },
   { id: 'momentoJaEnviado', rotulo: 'A mensagem do momento já saiu para ela', nao: 'A mensagem do momento ainda não saiu' },
-  { id: 'pedidoHoje', rotulo: 'O formulário saiu hoje', nao: 'O formulário não saiu hoje' },
+  { id: 'pedidoHoje', rotulo: 'Pedimos o nome e a cidade HOJE', nao: 'Não pedimos o nome e a cidade hoje' },
   { id: 'enviadoHoje', rotulo: 'Já mandamos o modelo hoje', nao: 'Não mandamos modelo hoje' },
   { id: 'modeloJaNaConversa', rotulo: 'O modelo já está na conversa', nao: 'O modelo não está na conversa' },
   { id: 'interessePerguntado', rotulo: 'Já perguntamos se ela quer conteúdo', nao: 'Nunca perguntamos o interesse' },
@@ -282,6 +284,50 @@ export function noVazio(rotulo) {
   };
 }
 
+/**
+ * **O catalogo das regras do codigo — o que o painel do lado oferece para pôr de volta no quadro.**
+ *
+ * Pedido dele (01/09/2026): *"quando regras são apagadas tem que ter uma opção ou uma aba ali com
+ * a lista de regras para arrastar pro fluxo novamente"*. Antes disto, apagar uma caixa "do codigo"
+ * era **irreversivel na pratica**: a regra continuava viva no codigo, mas o unico jeito de traze-la
+ * de volta era resetar o quadro inteiro para o padrao — que joga fora o arranjo dele. Apagar duas
+ * caixas custava o trabalho de uma tarde.
+ *
+ * Devolve TODAS as regras, e nao so as que faltam, com `quantasNoQuadro` dizendo quantas caixas ja
+ * apontam para cada uma. Sao duas coisas diferentes e as duas importam: sumir da lista assim que
+ * entra no quadro esconderia que **pôr a mesma regra em dois lugares e legitimo** — o proprio
+ * padrao faz isso, com as sete caixas que se repetem dos dois lados da bifurcacao de cidade.
+ */
+export function catalogoDeRegras(arvore) {
+  const quantas = new Map();
+  for (const { no } of todosOsNos(arvore)) {
+    if (no.regra) quantas.set(no.regra, (quantas.get(no.regra) || 0) + 1);
+  }
+  return REGRAS.map((r) => ({
+    id: r.id,
+    rotulo: SOBRE[r.id]?.rotulo || r.id,
+    efeito: SOBRE[r.id]?.efeito || '',
+    quando: SOBRE[r.id]?.quando || '',
+    quantasNoQuadro: quantas.get(r.id) || 0,
+  }));
+}
+
+/**
+ * Uma caixa de regra com id que ainda nao existe no quadro.
+ *
+ * `noDeRegra` cunha o id a partir da propria regra (`r:sem-interesse`), o que basta enquanto cada
+ * regra aparece uma vez. No catalogo ela pode entrar de novo estando ja no quadro — e id repetido e
+ * defeito de verdade, nao cosmetico: `problemas` acusa, e na janela um clique abriria as duas
+ * caixas de uma vez. O sufixo numerado e o mesmo formato que `fluxoPadrao` ja usa (`r:id:onde`).
+ */
+export function noDeRegraLivre(arvore, regra, extras) {
+  const usados = new Set(todosOsNos(arvore).map(({ no }) => no.id));
+  const base = noDeRegra(regra);
+  let id = base.id;
+  for (let n = 2; usados.has(id); n += 1) id = `r:${regra}:${n}`;
+  return { ...base, id, ...(extras || {}) };
+}
+
 function noDeRegra(id) {
   return {
     id: `r:${id}`,
@@ -354,50 +400,330 @@ export function arvorePadrao(fluxo) {
  *    está voltando, e o pedido de ajuda financeira com a resposta pronta.
  */
 export function fluxoPadrao() {
-  const protecoes = [
-    'sem-interesse',
-    'etiqueta-dispensa-da-fila',
-    'ultima-pede-resposta-pessoal',
-    'respondeu-nossa-pergunta',
-    'ultima-e-despedida',
-    'pergunta-aberta',
-  ].map(noDeRegra);
+  /**
+   * Atalho: um ramo que é só uma regra do código.
+   *
+   * `onde` entra no ID porque a mesma regra aparece nos dois lados da bifurcação, e id repetido é
+   * o que `problemas` acusa — na janela, faria um clique abrir as duas caixas de uma vez.
+   */
+  const r = (id, rotulo, onde) => ({
+    ...noDeRegra(id),
+    ...(onde ? { id: `r:${id}:${onde}` } : {}),
+    ...(rotulo ? { rotulo } : {}),
+  });
 
-  const novaPessoa = {
-    ...noVazio('anúncio — pessoa nova'),
-    condicao: { sinal: 'jaRespondemosAntes', negar: true, palavras: [], onde: 'ultima' },
-    filhos: [
-      { ...noVazio('pediu algo e não disse o quê'), regra: 'pediu-algo-sem-dizer-o-que', condicao: null },
-      { ...noVazio('mensagem do anúncio + apoio'), regra: 'so-expressa-apoio', condicao: null },
-      { ...noVazio('mensagem padrão do anúncio'), regra: 'nunca-pediram-dados', condicao: null },
-      { ...noVazio('o nome do cadastro não serve'), regra: 'nome-sem-sentido', condicao: null },
-    ],
-  };
+  /** Atalho: um ramo dele, que casa por PALAVRAS na última mensagem. */
+  const porPalavras = (rotulo, palavras, acao) => ({
+    ...noVazio(rotulo),
+    condicao: { sinal: '', negar: false, palavras, onde: 'ultima' },
+    acao,
+  });
 
-  const retornando = {
-    ...noVazio('pessoa retornando'),
-    condicao: { sinal: '', negar: false, palavras: [], onde: 'ultima' },
-    filhos: [
-      {
-        ...noVazio('só mandou bom dia, boa tarde ou boa noite'),
-        condicao: { sinal: '', negar: false, palavras: ['bom dia', 'boa tarde', 'boa noite', 'bom domingo'], onde: 'ultima' },
-        acao: { tecla: '5', resposta: null },
-      },
-      {
-        ...noVazio('pediu ajuda financeira'),
-        condicao: { sinal: '', negar: false, palavras: ['ajuda financeira', 'preciso de dinheiro', 'me ajuda com', 'cesta basica', 'remedio'], onde: 'ultima' },
-        acao: { tecla: null, resposta: 'pedido-ajuda' },
-      },
-      { ...noVazio('voltou por outro anúncio'), regra: 'voltou-por-outro-anuncio', condicao: null },
-      { ...noVazio('mandou figura, emoji, sticker ou link'), regra: 'ultima-e-so-reacao', condicao: null },
-      { ...noVazio('respondeu com os dados'), regra: 'conteudo-pedido', condicao: null },
-      { ...noVazio('já entregamos algo antes'), regra: 'ja-respondemos-antes', condicao: null },
-    ],
-  };
+  /** Atalho: uma caixa que só agrupa — quem decide são os ramos de dentro. */
+  const grupo = (rotulo, condicao, filhos) => ({ ...noVazio(rotulo), condicao, filhos });
 
-  const resto = ['nunca-perguntaram-interesse', 'pedido-hoje-sem-resposta'].map(noDeRegra);
+  const SEM_CONDICAO = { sinal: '', negar: false, palavras: [], onde: 'ultima' };
 
-  return [...protecoes, novaPessoa, retornando, ...resto];
+  /**
+   * As caixas que se repetem nos dois lados (com e sem etiqueta de cidade).
+   *
+   * Ele montou as mesmas situações nas duas pontas de propósito: ter ou não ter a etiqueta não muda
+   * o que fazer com quem só disse "bom dia". Uma função em vez de copiar e colar porque, copiado, um
+   * lado é consertado e o outro fica para trás.
+   */
+  const dosDoisLados = (onde) => [
+    porPalavras('pediu ajuda financeira', ['ajuda financeira', 'preciso de dinheiro', 'me ajuda com', 'cesta basica', 'remedio'], { tecla: null, resposta: 'pedido-ajuda' }),
+    porPalavras('só mandou bom dia, boa tarde ou boa noite', ['bom dia', 'boa tarde', 'boa noite', 'bom domingo'], { tecla: '5', resposta: null }),
+    r('pediu-algo-sem-dizer-o-que', 'pediu algo e não disse o quê', onde),
+    r('ultima-e-so-reacao', 'mandou figura, emoji, sticker ou link', onde),
+    r('pergunta-aberta', null, onde),
+    r('ultima-pede-resposta-pessoal', null, onde),
+    r('ultima-e-despedida', null, onde),
+  ];
+
+  /**
+   * **1. Quem chega do anúncio.**
+   *
+   * A hostilidade é testada ANTES do pedido de dados, e é decisão dele: *"não faz sentido perguntar
+   * quando a pessoa não quer diálogo"* (01/09/2026). Entre irmãos a prioridade é a altura, e
+   * `arrumar` respeita a ordem desta lista — a recusa nasce em cima.
+   *
+   * **As duas são IRMÃS, não uma dentro da outra.** No quadro que ele mandou, "mensagem padrão" tinha
+   * caído DENTRO de "Recusou", e como o motor testa o filho antes da ação do próprio nó, o resultado
+   * era o inverso do desenho: o hostil recebia o pedido de nome e cidade, e o contato normal não
+   * recebia nada. Medido antes de consertar.
+   */
+  const doAnuncio = grupo('anúncio — pessoa nova', { sinal: 'jaRespondemosAntes', negar: true, palavras: [], onde: 'ultima' }, [
+    r('sem-interesse', 'Recusou ou veio hostilizar'),
+
+    /**
+     * **A etiqueta que dispensa da fila fica ACIMA do modelo, e isto foi conserto de regressão.**
+     *
+     * Antes de o modelo subir para cá, quem chegava do anúncio carregando essa etiqueta caía por
+     * exclusão no lado "com etiqueta de cidade", onde `etiqueta-dispensa-da-fila` a pegava. Com o
+     * modelo no topo, ela passou a **receber mensagem** — e essa etiqueta existe justamente para
+     * ninguém receber. Pegado pelos testes do lado de quem chega.
+     *
+     * É a lição registrada no CLAUDE.md: regra nova no topo tem que ser conferida contra as regras
+     * que ela passou a vencer.
+     */
+    r('etiqueta-dispensa-da-fila', null, 'chegada'),
+
+    /**
+     * **Duas pendências que ficam ACIMA do modelo, contra a ordem que ele descreveu.**
+     *
+     * Ele pediu *"após o modelo terá que ver se tem uma pendência"* — e essa ordem vale para as
+     * pendências neutras (bom dia, figura, despedida), que estão logo abaixo. Estas três não:
+     * medindo o quadro novo, quem **pediu ajuda financeira** na mensagem seguinte à do anúncio
+     * recebia a tecla 1 na primeira passada, e as outras duas também.
+     *
+     * As três estão registradas neste projeto como o caso em que mandar a nossa mensagem primeiro
+     * é o dano, não o atraso:
+     *
+     * **A ajuda financeira ESTAVA nesta lista e saiu, por decisão dele** (02/09, no mesmo dia):
+     * *"o modelo não irá confirmar apoio ao pedido de ajuda ou confirmar que irá ajudar então pode
+     * ser respondido após"*. Ele está certo sobre o texto — o modelo é recibo de cadastro e não
+     * promete coisa nenhuma, então mandá-lo antes não é promessa de benefício (Lei 9.504/97), que
+     * era a minha objeção. A negativa sai na passada seguinte, e continua sendo o `pedido-ajuda`.
+     *
+     *  - **pediu algo e não disse o quê** → *"material de campanha em cima disso é o pior caso do
+     *    projeto"* (print da Mari, 31/08). Perguntar é a única resposta segura;
+     *  - **fez uma pergunta de razão ou de posição** → mandar a nossa mensagem vira material de
+     *    campanha em cima da pergunta dela (print da Clair, 31/08).
+     *
+     * O modelo não deixa de sair: sai na passada seguinte, quando a pendência estiver resolvida.
+     * O que muda é a ORDEM entre os dois, e nos três casos o custo de inverter é assimétrico —
+     * atrasar o recibo um dia contra responder propaganda a um pedido de socorro.
+     */
+    r('pediu-algo-sem-dizer-o-que', 'pediu algo e não disse o quê', 'chegada-antes'),
+    r('pergunta-aberta', null, 'chegada-antes'),
+
+    /**
+     * **O MODELO PRIMEIRO** — redesenho dele em 02/09/2026, e a inversão da ordem que valia antes.
+     *
+     * O que ele escreveu: *"o sistema atual está dando problemas, o modelo agora será feito pra
+     * cada anúncio específico e será mandado no momento que a pessoa chegar pelo anúncio, pedir
+     * dados virá após isso se a pessoa não tiver etiqueta de cidade, se ela tiver etiqueta de
+     * cidade fica só no modelo"*. E: *"caso o texto do anúncio não seja reconhecido será mandado o
+     * modelo padrão"*.
+     *
+     * Antes era o contrário — o pedido de dados vinha primeiro, decisão dele de 01/09. O que mudou
+     * é que agora existe **um modelo por anúncio**, então o que sai na chegada responde ao que a
+     * pessoa clicou, em vez de ser um pedido de cadastro seco.
+     *
+     * Quem resolve o "qual modelo" é `anuncios.modeloDoAnuncio`, fora do quadro: o específico do
+     * anúncio reconhecido, ou o modelo padrão quando o texto não casou com nenhum. O quadro só vê
+     * `podeEnviar`, como sempre viu.
+     *
+     * **Uma passada, uma mensagem** — a propriedade que ele escolheu em 01/09 para não sair rajada
+     * ao mesmo número. As guardas de `conteudo-pedido` (`!enviadoHoje && !modeloJaNaConversa`) são
+     * o que faz a passada seguinte cair no passo de baixo em vez de repetir o modelo.
+     *
+     * **Consequência a lembrar:** quem recebe o modelo e **não escreve de novo** nunca chega no
+     * pedido de dados, porque a rodada só volta a quem respondeu. Antes, com os dados primeiro, o
+     * cadastro era capturado logo. Foi dito a ele no mesmo dia.
+     */
+    /**
+     * **O recibo e o atendimento na MESMA passada** — escolha dele em 02/09/2026, depois de
+     * explicar que *"o modelo seria uma resposta automática ao anúncio, o atendimento vem depois
+     * disso que seria pedir dados e responder as perguntas"*.
+     *
+     * Vem acima das duas caixas de baixo porque é o caso completo: quando as duas metades cabem,
+     * saem as duas. Faltando uma, esta não casa e cada caixa de baixo resolve o seu pedaço — o
+     * modelo sozinho para quem já tem cidade, o pedido de dados sozinho quando não há modelo.
+     */
+    r('anuncio-modelo-e-dados', 'modelo + pedir os dados', 'chegada'),
+    r('conteudo-pedido', 'manda só o modelo (ela já tem cidade)', 'chegada'),
+
+    /**
+     * **Depois do modelo, os dados — e só para quem não tem cidade.**
+     *
+     * *"pedir dados virá após isso se a pessoa não tiver etiqueta de cidade, se ela tiver etiqueta
+     * de cidade fica só no modelo"*. A segunda metade não precisa de caixa: `nunca-pediram-dados`
+     * já exige `!temEtiquetaDeCidade`, então quem tem cidade simplesmente não casa aqui — e "fica
+     * só no modelo" acontece por si.
+     */
+    r('nunca-pediram-dados', 'ainda não temos nome e cidade', 'chegada'),
+
+    /**
+     * **A pendência: o que ela escreveu DEPOIS da mensagem do anúncio.**
+     *
+     * *"após o modelo terá que ver se tem uma pendência que é a mensagem após a mensagem de anúncio
+     * e escolher a resposta de acordo com a pendência"*.
+     *
+     * São as mesmas caixas que ele já montou para quem retorna (`dosDoisLados`), e é de propósito
+     * que sejam as mesmas: "só mandou bom dia", "pediu ajuda financeira", "mandou figura", "fez
+     * pergunta" não mudam de resposta por a pessoa ser nova. Uma cópia com outra redação seria o
+     * jeito de as duas divergirem em uma semana.
+     *
+     * Elas leem a ÚLTIMA mensagem, que é justamente "a mensagem após a mensagem de anúncio" quando
+     * existe uma. Quando a única mensagem é a do anúncio, nenhuma casa e o caso termina nos passos
+     * de cima — que é o certo.
+     *
+     * Ficam ABAIXO do modelo e do pedido de dados porque é a ordem que ele escreveu: o modelo sai
+     * na chegada, os dados vêm em seguida, e a pendência é o "após o modelo".
+     */
+    /**
+     * As pendências NEUTRAS, na ordem que ele pediu: depois do modelo e do pedido de dados.
+     *
+     * As três de cima foram tiradas desta lista para não aparecerem duas vezes no mesmo ramo — id
+     * repetido é o que `problemas` acusa, e na janela um clique abriria as duas caixas de uma vez.
+     */
+    ...dosDoisLados('chegada').filter(
+      (no) => !['pediu-algo-sem-dizer-o-que', 'pergunta-aberta'].includes(no.regra)
+    ),
+  ]);
+
+  /**
+   * **2. Quem volta.**
+   *
+   * Divide por ter ou não a etiqueta de cidade, porque é isso que diz se ela já foi classificada.
+   *
+   * **A condição do lado "sem etiqueta" é NEGADA, e essa é a única coisa que eu mudei do quadro que
+   * ele mandou.** Lá ela estava sem condição — pegava todo mundo —, e como os dois lados têm as
+   * mesmas regras, o lado "com etiqueta" nunca era alcançado: a mesma regra já havia falhado do
+   * outro lado. Nove caixas mortas. O rótulo da caixa já prometia "sem etiqueta de cidade"; aqui o
+   * código passa a fazer o que o nome dela diz.
+   */
+  const retornando = grupo('pessoa retornando', SEM_CONDICAO, [
+    /**
+     * **A recusa é testada aqui também, antes da bifurcação.**
+     *
+     * No quadro que ele mandou ela existia só do lado do anúncio — quem já tinha sido atendido e
+     * voltava hostilizando não era pego por lugar nenhum, e caía nas regras de baixo: podia receber
+     * a mensagem do momento depois de mandar um desaforo. O teste do preset já exigia isto, e
+     * pegou. Uma caixa aqui em cima cobre os dois lados da bifurcação de uma vez.
+     */
+    r('sem-interesse', 'Recusou ou veio hostilizar', 'volta'),
+
+    /**
+     * **A etiqueta que dispensa da fila também sobe para cima da bifurcação de cidade.**
+     *
+     * Ela vivia só dentro de "com etiqueta de cidade", e o efeito era uma assimetria invisível:
+     * quem carregava a etiqueta e **não** tinha cidade nunca era protegido — recebia o modelo antes,
+     * e ia receber o agradecimento depois da caixa nova de 02/09/2026. A etiqueta significa "não
+     * trabalhe este contato", e isso não depende de ele ter cidade cadastrada.
+     *
+     * É o mesmo raciocínio já escrito na recusa, uma linha acima: uma caixa aqui cobre os dois lados
+     * da bifurcação de uma vez, em vez de repetir a proteção e esquecer um dos lados — que foi
+     * exatamente o que aconteceu.
+     */
+    r('etiqueta-dispensa-da-fila', null, 'volta'),
+
+    grupo('sem etiqueta de cidade', { sinal: 'temEtiquetaDeCidade', negar: true, palavras: [], onde: 'ultima' }, [
+      /**
+       * **A pendência só é olhada enquanto não respondemos hoje.**
+       *
+       * Sem esta guarda o modelo nunca sai — foi o que ele viu: *"se continuar como na print o
+       * modelo nunca será enviado porque está concluindo após resolver a pendência"*. Medido: quem
+       * diz "bom dia" recebe a mensagem do momento, e na passada seguinte a MESMA caixa casa de
+       * novo e manda o momento outra vez. A entrega fica presa atrás da pendência para sempre.
+       *
+       * Com a guarda o fluxo anda: resolvemos a pendência numa passada, e quando ela volta a
+       * escrever no mesmo dia a pendência já não está na frente — o caso desce para "sem pendência"
+       * e o modelo sai.
+       *
+       * **Escolha dele entre os dois caminhos possíveis** (01/09/2026): a alternativa era a ação
+       * composta, que resolveria e mandaria o modelo na mesma passada — e sairiam DUAS mensagens
+       * seguidas para a mesma pessoa, na fila inteira. Rajada para o mesmo número é o que já pesou
+       * no WhatsApp dele antes. Uma mensagem por passada é a propriedade que se preferiu manter.
+       */
+      grupo('com pendência', { sinal: 'respondidoHoje', negar: true, palavras: [], onde: 'ultima' }, [
+        r('voltou-por-outro-anuncio'),
+        ...dosDoisLados('sem-cidade'),
+        r('so-expressa-apoio', 'apoio'),
+        r('respondeu-nossa-pergunta'),
+      ]),
+      grupo('sem pendência', SEM_CONDICAO, [
+        /**
+         * **Ela respondeu o que pedimos: agradece e encerra, SEM mandar modelo.**
+         *
+         * Pedido dele (02/09/2026), com a print da caixa aberta: *"aqui está o que tem que mudar
+         * agora só precisa agradecer a atenção e encerrar sem mandar modelo"*.
+         *
+         * É consequência do redesenho do mesmo dia: o modelo passou a ser o **recibo da chegada**,
+         * então quando ela responde o nome e a cidade o modelo já saiu — mandá-lo de novo é repetir.
+         *
+         * **Ele tentou fazer isso fixando a tecla 8 na caixa `conteudo-pedido`, e não funcionaria:**
+         * a condição daquela regra exige `!modeloJaNaConversa`, ou seja, ela deixa de casar
+         * justamente depois de o modelo ter saído. Medido: quem respondia com os dados não recebia
+         * nada, ou era concluída em silêncio por `ja-respondemos-antes`.
+         *
+         * Fica ACIMA do modelo dentro deste ramo: quem respondeu não precisa de mais material.
+         */
+        r('respondeu-os-dados', 'respondeu o nome e a cidade'),
+        r('conteudo-pedido', 'pediu conteúdo e há modelo mapeado'),
+      ]),
+
+      /**
+       * **Veio de um anúncio que ele cadastrou e não disse mais nada** — pedido dele em
+       * 02/09/2026, depois da print da Inge: *"não seguiu o fluxo"* / *"atualize o ramo"*.
+       *
+       * Era o buraco que produziu aquela print. A Inge chegou pelo ANÚNCIO | FACEBOOK e escreveu só
+       * o texto do anúncio (*"Olá! Eu apoio as Escolas Cívico-Militares"*). Sem etiqueta de cidade,
+       * sem modelo mapeado, e **nenhuma caixa casava** — ela atravessava o quadro inteiro e caía na
+       * caixa de pergunta.
+       *
+       * O motivo é consequência de uma decisão certa: a mensagem gerada pelo anúncio é excluída de
+       * propósito de "só expressa apoio" (`padroesDeAnuncio`), para não contar como apoio escrito
+       * por ela. O efeito colateral era este vazio.
+       *
+       * **Três escolhas de desenho, todas conservadoras:**
+       *
+       *  1. **Fica EMBAIXO de "com pendência" e de "sem pendência".** É último recurso dentro do
+       *     lado sem cidade: quem tem pendência resolve a pendência, quem tem modelo mapeado recebe
+       *     o modelo, e só o que sobra chega aqui. Pôr esta caixa em cima roubaria a vez de quem já
+       *     funcionava — o erro que a regra de sem interesse no topo já custou uma vez.
+       *  2. **A condição é `anuncioReconhecido`, não `veioDeAnuncio`.** A origem vem da plataforma
+       *     e vale para qualquer anúncio; este sinal só é verdade para anúncio que ELE cadastrou na
+       *     Config. Assim o ramo não muda nada para quem chega por campanha que ele não mapeou.
+       *  3. **O desfecho é a regra do código `nunca-pediram-dados`, não uma tecla fixa.** Ela traz
+       *     as guardas junto: só dispara se nunca pedimos o nome e a cidade, se não pedimos hoje, se não é só
+       *     repasse de link e se não há etiqueta de cidade. Uma tecla 4 fixa aqui pediria os dados
+       *     de novo a quem já recebeu o pedido.
+       *
+       * Consequência a lembrar: quem **já recebeu** o pedido de dados e volta mandando só o texto do
+       * anúncio continua sem desfecho automático, e é de propósito — ela não respondeu o que
+       * perguntamos, e não existe resposta certa para mandar sozinho. Esse caso é da IA ou dele.
+       */
+      grupo('veio de um anúncio que eu reconheço', { sinal: 'anuncioReconhecido', negar: false, palavras: [], onde: 'ultima' }, [
+        r('nunca-pediram-dados', 'ainda não temos nome e cidade', 'anuncio-conhecido'),
+      ]),
+    ]),
+    grupo('com etiqueta de cidade', { sinal: 'temEtiquetaDeCidade', negar: false, palavras: [], onde: 'ultima' }, [
+      /**
+       * **O agradecimento vale nos DOIS lados da bifurcação de cidade.**
+       *
+       * Sem esta caixa, quem respondeu o nome e a cidade era agradecida ou concluída em silêncio
+       * dependendo de a etiqueta de cidade já ter sido aplicada ou não — e isso é decidido pela
+       * ORDEM das coisas dentro da rodada, que ela não vê. Regra que trata dois contatos iguais de
+       * forma diferente por estado invisível é o "alguns concluem e outros não" que este projeto já
+       * pagou.
+       *
+       * Vence `ja-respondemos-antes` (que conclui em silêncio) só quando ela de fato respondeu o
+       * que pedimos — condição estreita, e é exatamente a intenção dele.
+       */
+      r('respondeu-os-dados', 'respondeu o nome e a cidade', 'com-cidade'),
+      r('ja-respondemos-antes', 'já entregamos algo antes'),
+      ...dosDoisLados('com-cidade'),
+    ]),
+  ]);
+
+  /**
+   * **O que ele mandou descartar** (01/09/2026), e por quê:
+   *
+   *  - `nunca-perguntaram-interesse` — *"descarte também"*;
+   *  - `nome-sem-sentido` — *"descarte, essa regra será refeita ou não de acordo com a necessidade"*;
+   *  - `pedido-hoje-sem-resposta` — *"retire o concluir, só deixe o lembrete para não enviar
+   *    novamente, ou retire essa caixa"*. Tirei a caixa, que era a opção que ele deu: o que ela
+   *    protegia (não repetir o pedido no mesmo dia) **já está dentro de `nunca-pediram-dados`**, que
+   *    exige `!pedidoHoje` para disparar. Sem a caixa, ninguém pede duas vezes — só deixa de ser
+   *    concluído, que era o que ele queria.
+   *
+   * As regras continuam no código: descartadas do QUADRO, não apagadas. Ele volta a pôr qualquer uma
+   * arrastando um ramo novo.
+   */
+  return [doAnuncio, retornando];
 }
 
 // ---- edição (a janela mexe na árvore por aqui) ------------------------------
@@ -502,6 +828,53 @@ export function apagar(arvore, id) {
   return nova;
 }
 
+/**
+ * Duplica um ramo — o nó e tudo que está dentro dele.
+ *
+ * Pedido dele (01/09/2026): *"preciso da opção de duplicar uma caixa"*. Montar um ramo dá
+ * trabalho (condição, palavras, desfecho), e variação do mesmo ramo é o caso comum — "isto
+ * aqui, mas com outras palavras".
+ *
+ * **Os filhos vão junto**, pela mesma razão que vão no `apagar`: um ramo é a condição MAIS o
+ * que está dentro dela, e copiar só a casca daria um grupo vazio que não faz nada. A janela
+ * diz quantos vão junto antes de duplicar.
+ *
+ * **Id novo em cada nó copiado, sem exceção.** Id repetido é o que `problemas` acusa e o que
+ * `sanitizar` renomeia na importação — e, pior, faria a janela editar dois nós de uma vez.
+ *
+ * A cópia entra como o **irmão seguinte** e desce um pouco na tela. Entre irmãos a prioridade é
+ * a altura, então nascer logo abaixo é nascer com a prioridade seguinte — que é o que se espera
+ * de uma cópia. O deslocamento lateral é para ela não sumir atrás de um irmão que já estivesse
+ * ali: cópia escondida parece cópia que não aconteceu.
+ *
+ * Devolve `{arvore, id}` em vez de só a árvore — diferente das vizinhas de propósito, porque
+ * quem chama precisa SELECIONAR a cópia. Sem o id, a janela teria que adivinhar qual das duas
+ * caixas iguais é a nova.
+ *
+ * @returns {{arvore: Array, id: string|null}}
+ */
+export function duplicar(arvore, id) {
+  const nova = copiar(arvore);
+  const achado = localizar(nova, id);
+  if (!achado) return { arvore, id: null };
+
+  const copia = comIdsNovos(achado.no);
+  copia.rotulo = texto(`${achado.no.rotulo || "ramo"} (cópia)`, 80);
+  copia.x = (achado.no.x || 0) + 24;
+  copia.y = (achado.no.y || 0) + CAIXA.altura + CAIXA.linhaVaga;
+
+  achado.irmaos.splice(achado.i + 1, 0, copia);
+  return { arvore: nova, id: copia.id };
+}
+
+/** Cópia funda de um ramo, com id novo em cada nó. */
+export function comIdsNovos(no) {
+  return {
+    ...JSON.parse(JSON.stringify(no)),
+    id: novoId(),
+    filhos: (no.filhos || []).map((f) => comIdsNovos(f)),
+  };
+}
 /** Troca campos de um nó. */
 export function editar(arvore, id, mudancas) {
   const nova = copiar(arvore);
@@ -895,6 +1268,104 @@ export function quantosEnviam(arvore) {
  * de montar seria pior que avisar. O que existe aqui é o que faz um ramo NUNCA funcionar, e que
  * sem aviso pareceria "a extensão ignorou minha regra".
  */
+/**
+ * **Os sinais que o NOSSO próprio envio apaga** — os únicos que servem de guarda contra repetir.
+ *
+ * Todo o resto (`veioDeAnuncio`, `anuncioReconhecido`, `temEtiquetaDeCidade`, `semInteresse`…) é
+ * estado do contato: continua verdadeiro depois de a gente mandar a mensagem, e uma caixa que casa
+ * só por ele **casa de novo na passada seguinte**.
+ *
+ * A polaridade importa e está tratada em `repeteSozinha`: `jaRespondemosAntes` NEGADO ("nunca
+ * entregamos nada") vira falso depois do envio e por isso é guarda; não negado, não é.
+ */
+const SINAIS_QUE_O_ENVIO_APAGA = new Set([
+  'modeloJaNaConversa',
+  'enviadoHoje',
+  'pedidoHoje',
+  'jaPediramDados',
+  'momentoJaEnviado',
+  'respondidoHoje',
+  'interessePerguntado',
+  'jaRespondemosAntes',
+]);
+
+/**
+ * **Esta caixa manda mensagem e vai casar de novo na próxima passada?**
+ *
+ * Nasceu de um caso real (02/09/2026). Ele montou à mão uma caixa *"mandar modelo conforme o
+ * anuncio"* com a condição "Reconheci de QUAL anúncio ela veio" e a **tecla 1 fixa** — e o motor
+ * mostrou o modelo saindo em TODA passada, para sempre, porque:
+ *
+ *  - a condição é estado do contato: continua verdadeira depois de mandarmos;
+ *  - **fixar a tecla não herda as guardas da regra do código.** `conteudo-pedido` exige
+ *    `!enviadoHoje && !modeloJaNaConversa`; a caixa dele não exigia nada.
+ *
+ * É a armadilha central do quadro livre: a caixa parece a regra, tem o mesmo desfecho na tela, e
+ * não tem a metade que impede repetir. Máquina de repetir mensagem para eleitor real é o defeito
+ * que este projeto mais pagou.
+ *
+ * Só olha caixa DELE (`regra` nula): regra do código carrega as próprias guardas. Palavra na
+ * ÚLTIMA mensagem conta como guarda — a última muda quando a pessoa escreve de novo.
+ */
+function repeteSozinha(no) {
+  if (no.regra) return false;
+  const acao = no.acao || {};
+  if (!acao.tecla && !acao.resposta) return false;
+
+  const efeito = acao.tecla ? TECLAS[acao.tecla]?.efeito : 'envia';
+  if (efeito !== 'envia') return false;
+
+  const cond = no.condicao || {};
+  if ((cond.palavras || []).length && cond.onde !== 'qualquer') return false;
+
+  if (!cond.sinal) return true;
+  if (!SINAIS_QUE_O_ENVIO_APAGA.has(cond.sinal)) return true;
+  /**
+   * A polaridade: todos estes viram VERDADE depois do envio, então a caixa só está protegida se
+   * exigir o sinal FALSO. "O modelo não está na conversa" protege; "o modelo está" não protegeria
+   * nada — casaria justamente depois de já ter saído.
+   */
+  return !cond.negar;
+}
+
+/**
+ * O efeito de uma caixa, para a conferência: `envia`, `silencio`, `gente`, `depende` ou `''`.
+ *
+ * Caixa de regra pega do verbete (`SOBRE`); caixa dele, da tecla que ela dispara. Resposta pronta
+ * é sempre envio.
+ */
+function efeitoDaCaixa(no) {
+  if (no.regra) return SOBRE[no.regra]?.efeito || '';
+  const acao = no.acao || {};
+  if (acao.resposta) return 'envia';
+  if (acao.tecla) return TECLAS[acao.tecla]?.efeito || '';
+  return '';
+}
+
+/**
+ * **Caixa que NÃO manda nada, com caixa que MANDA dentro dela.**
+ *
+ * É o erro mais caro do quadro livre, e já aconteceu **duas vezes** com a mesma forma:
+ *
+ *  - 01/09/2026: "mensagem padrão" caiu dentro de "Recusou ou veio hostilizar";
+ *  - 02/09/2026: "mandar modelo conforme o anuncio" caiu no mesmo lugar. Medido no quadro que ele
+ *    colou: **o hostil recebia o pedido de nome e cidade** e **a pessoa normal não recebia o
+ *    modelo** — ela escapava para "pessoa retornando" e terminava agradecida por um apoio que nunca
+ *    expressou.
+ *
+ * O motivo é o desenho do motor: **o filho é testado ANTES da ação do próprio nó**, e o filho só é
+ * alcançado quando o PAI casa. Então pôr um remetente dentro de uma proteção significa, literalmente,
+ * "quando eu reconhecer que não devo mandar nada, mande isto".
+ *
+ * Duas ocorrências do mesmo erro é problema de ferramenta, não de quem usa: o aninhamento não
+ * anuncia essa inversão em lugar nenhum da tela. Agora anuncia.
+ */
+function remetenteDentroDeProtecao(no) {
+  if (efeitoDaCaixa(no) !== 'silencio') return null;
+  const dentro = todosOsNos(no.filhos).filter(({ no: f }) => efeitoDaCaixa(f) === 'envia');
+  return dentro.length ? dentro.map(({ no: f }) => f.rotulo || f.id) : null;
+}
+
 export function problemas(arvore) {
   const achados = [];
   const ids = new Set();
@@ -908,6 +1379,25 @@ export function problemas(arvore) {
       achados.push(`"${nome}": aponta para a regra "${no.regra}", que não existe mais no código`);
       continue;
     }
+    /**
+     * **Remetente dentro de proteção** — o erro que já aconteceu duas vezes. Ver
+     * `remetenteDentroDeProtecao`.
+     *
+     * Fica ACIMA do `continue` das caixas de regra de propósito: as proteções deste projeto **são**
+     * regras do código (`sem-interesse`, `etiqueta-dispensa-da-fila`), e nas duas vezes foi dentro
+     * de uma delas que o remetente caiu. Posta depois do `continue`, esta conferência nunca teria
+     * visto o caso real — foi o que aconteceu na primeira versão dela.
+     */
+    const dentroDaProtecao = remetenteDentroDeProtecao(no);
+    if (dentroDaProtecao) {
+      achados.push(
+        `"${nome}" NÃO manda nada, mas tem ${dentroDaProtecao.length} caixa(s) que MANDAM dentro ` +
+          `dela (${dentroDaProtecao.map((x) => `"${x}"`).join(', ')}). O filho é olhado ANTES da ação ` +
+          'do pai, e só é alcançado quando o pai casa — então quem esta caixa deveria proteger é ' +
+          'justamente quem vai receber. Solte-as na raiz e ponha-as ABAIXO desta.'
+      );
+    }
+
     if (no.regra) continue;
 
     const cond = no.condicao || {};
@@ -920,6 +1410,19 @@ export function problemas(arvore) {
     const semCondicao = !cond.sinal && !(cond.palavras || []).length;
     const semAcao = !acao.tecla && !acao.resposta && !acao.ia;
     const semFilhos = !(no.filhos || []).length;
+    /**
+     * A caixa que manda mensagem e casa de novo na passada seguinte. Ver `repeteSozinha`: nasceu de
+     * uma caixa dele que mandava o modelo em toda passada, porque fixar a tecla não herda as
+     * guardas da regra do código.
+     */
+    if (repeteSozinha(no)) {
+      achados.push(
+        `"${nome}": manda mensagem e a condição continua verdadeira depois do envio — vai mandar de ` +
+          'novo em toda passada. Acrescente uma guarda (ex.: "O modelo não está na conversa"), ou ' +
+          'use a regra do código, que já traz as guardas.'
+      );
+    }
+
     if (semCondicao && semAcao && semFilhos) {
       achados.push(`"${nome}": sem condição, sem ação e sem ramo dentro — não faz nada`);
     } else if (semAcao && semFilhos) {
@@ -928,4 +1431,62 @@ export function problemas(arvore) {
     if (nivel > 6) achados.push(`"${nome}": fundo demais (nível ${nivel}) — ninguém vai achar este ramo na tela`);
   }
   return achados;
+}
+
+/**
+ * A chave que diz "esta caixa é a mesma coisa que aquela", entre dois quadros diferentes.
+ *
+ * Não é o `id`: os ids do quadro dele nasceram em outro momento e não batem com os do padrão. O que
+ * identifica uma caixa é **o que ela decide** — a regra do código que ela carrega, ou a condição que
+ * ele montou (sinal + palavras).
+ *
+ * Caixa que só AGRUPA (sem regra, sem sinal e sem palavra) fica fora da comparação: ela é estrutura,
+ * não decisão, e todas colidiriam na mesma chave.
+ */
+function chaveDeComparacao(no) {
+  if (no.regra) return `regra:${no.regra}`;
+  const cond = no.condicao || {};
+  const palavras = (cond.palavras || []).map((p) => String(p).trim().toLowerCase()).filter(Boolean).sort();
+  if (!cond.sinal && !palavras.length) return null;
+  return `cond:${cond.sinal || ''}:${cond.negar ? 'nao' : 'sim'}:${palavras.join('|')}`;
+}
+
+/**
+ * **O que mudou no padrão e não está no quadro dele.**
+ *
+ * Relato dele (02/09/2026), depois de eu reordenar a chegada pelo anúncio várias vezes num dia:
+ * *"a ramificação não foi atualizada"*. Estava certo — e o problema é de desenho, não daquele dia:
+ * `fluxoPadrao` é o que o botão "Resetar para o padrão" devolve, e o quadro de trabalho dele é uma
+ * CÓPIA que nada atualiza. Toda melhoria no padrão era invisível para ele, e o único caminho de
+ * volta ("resetar") joga fora o arranjo feito à mão — que é justamente o trabalho que ele não quer
+ * perder.
+ *
+ * Devolve `{ faltando, sobrando }`, os dois como caixas. `faltando` é o que o padrão decide e o
+ * quadro dele não; `sobrando` é o contrário — e é **informação, não erro**: ele monta ramos que o
+ * padrão nunca teve, e essa é a razão da janela existir.
+ *
+ * **Não mexe em nada.** Quem decide o que entra é ele, caixa por caixa, porque no quadro a POSIÇÃO
+ * é a prioridade: enfiar uma caixa nova por conta própria mudaria o que a rodada faz sem ninguém ter
+ * escolhido onde.
+ */
+export function diferencaDoPadrao(arvore) {
+  const doPadrao = todosOsNos(arrumar(fluxoPadrao()));
+  const dele = todosOsNos(arvore || []);
+
+  const chavesDele = new Set(dele.map(({ no }) => chaveDeComparacao(no)).filter(Boolean));
+  const chavesDoPadrao = new Set(doPadrao.map(({ no }) => chaveDeComparacao(no)).filter(Boolean));
+
+  const junta = (nos, jaTem) => {
+    const vistos = new Set();
+    const saida = [];
+    for (const { no } of nos) {
+      const chave = chaveDeComparacao(no);
+      if (!chave || jaTem.has(chave) || vistos.has(chave)) continue;
+      vistos.add(chave);
+      saida.push(no);
+    }
+    return saida;
+  };
+
+  return { faltando: junta(doPadrao, chavesDele), sobrando: junta(dele, chavesDoPadrao) };
 }

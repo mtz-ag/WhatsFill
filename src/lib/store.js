@@ -21,6 +21,22 @@ export const PERGUNTA_GRUPOS =
   'Se sim, me manda o *link de convite* dele — é por ele que eu consigo entrar e somar com ' +
   'vocês. (No grupo: toque no nome dele em cima → Convidar via link → Copiar link.) 🇧🇷';
 
+/**
+ * O miolo do `pedir-dados` ANTES de "antes de qualquer coisa" (01/09/2026). Só a migração usa.
+ *
+ * É o trecho literal, e não o texto inteiro: as três versões (base e duas variantes) tinham
+ * aberturas diferentes, e o que as identifica como "ainda de fábrica" é esta frase do meio.
+ */
+export const PEDIR_DADOS_MIOLO_ANTIGO = [
+  // v1 (com a pergunta dos grupos no fim) — quem recebeu esta ainda precisa receber a v2.
+  'Mas antes de qualquer coisa: me diz seu nome e a sua cidade, para eu salvar seu contato',
+  'Antes de qualquer coisa, preciso de dois dados para salvar seu contato.',
+  'Antes de mais nada, me diz quem é você e de onde fala, para eu salvar seu contato.',
+  'Para eu te incluir no grupo certo da sua região, me responde nesta ordem, em uma única mensagem:',
+  'Para eu te colocar no grupo certo da sua região, preciso de dois dados — me manda numa única mensagem, nesta ordem:',
+  'Pra te incluir no grupo certo da sua região, só preciso de dois dados seus, numa mensagem só, nesta ordem:',
+];
+
 /** A versão anterior, que pedia "o nome ou o link". Só a migração usa. */
 export const PERGUNTA_GRUPOS_ANTIGA =
   'Ah, e me conta: você já faz parte de algum grupo político no WhatsApp? ' +
@@ -73,25 +89,45 @@ export const INTERESSE_CONTEUDO_ANTIGO =
  */
 export const DEFAULT_TEMPLATES = [
   {
+    /**
+     * **"Antes de qualquer coisa"** — reescrito a pedido dele (01/09/2026).
+     *
+     * A mensagem é o portão do fluxo do anúncio: ela pede os dois dados e conclui, e a pessoa volta
+     * pelo ramo de "pessoa retornando" com a resposta. *"não faz sentido perguntar quando a pessoa
+     * não quer diálogo"* é a outra metade — quem vem hostil nem chega aqui, porque a recusa é
+     * testada antes no quadro.
+     *
+     * A abertura calorosa ficou por pedido dele (*"pode ser mantida"*); o que mudou é o miolo, que
+     * antes explicava o grupo da região antes de pedir. O pedido vem primeiro agora.
+     *
+     * **E a pergunta dos grupos saiu** (01/09/2026): *"não tem necessidade de perguntar por grupos,
+     * ninguém estava me dando links"*. Era a segunda coisa a responder numa mensagem cujo ponto é
+     * ser um portão curto, e a medida dele é a que vale — a pergunta existia para conseguir links de
+     * convite, e links não estavam vindo.
+     *
+     * **A linha `Nome completo / Cidade` é intocável nas três versões.** É o invariante que
+     * `extract.findStructured` casa para ler a resposta dela e que `templates.ehPedidoDeDados`
+     * usa para reconhecer que esta mensagem foi o pedido — e ele tem teste nas três.
+     */
     id: 'pedir-dados',
     name: 'Pedir dados (formato fixo)',
     text:
       '{{saudacao}}! Que bom ter você com a gente. 🇧🇷\n\n' +
-      'Para eu te incluir no grupo certo da sua região, me responde nesta ordem, em uma única mensagem:\n\n' +
+      'Mas antes de qualquer coisa: me diz seu nome e a sua cidade, para eu salvar seu contato ' +
+      'direitinho. Responde nesta ordem, numa mensagem só:\n\n' +
       'Nome completo / Cidade\n\n' +
-      '(exemplo: Maria Silva / Santo Ângelo)\n\n' +
-      PERGUNTA_GRUPOS,
+      '(exemplo: Maria Silva / Santo Ângelo)',
     variantes: [
       '{{saudacao}}! Fico feliz que você esteja com a gente. 🇧🇷\n\n' +
-        'Para eu te colocar no grupo certo da sua região, preciso de dois dados — me manda numa única mensagem, nesta ordem:\n\n' +
+        'Antes de qualquer coisa, preciso de dois dados para salvar seu contato. Me manda numa ' +
+        'mensagem só, nesta ordem:\n\n' +
         'Nome completo / Cidade\n\n' +
-        '(exemplo: Maria Silva / Santo Ângelo)\n\n' +
-        PERGUNTA_GRUPOS,
+        '(exemplo: Maria Silva / Santo Ângelo)',
       '{{saudacao}}! Que bom te ter por aqui. 🇧🇷\n\n' +
-        'Pra te incluir no grupo certo da sua região, só preciso de dois dados seus, numa mensagem só, nesta ordem:\n\n' +
+        'Antes de mais nada, me diz quem é você e de onde fala, para eu salvar seu contato. Numa ' +
+        'mensagem só, nesta ordem:\n\n' +
         'Nome completo / Cidade\n\n' +
-        '(exemplo: Maria Silva / Santo Ângelo)\n\n' +
-        PERGUNTA_GRUPOS,
+        '(exemplo: Maria Silva / Santo Ângelo)',
     ],
   },
   // A resposta "Perguntar o tema (opções numeradas)" saiu em 01/09/2026 junto com o campo "Tema de
@@ -637,6 +673,63 @@ const DEFAULTS = {
    */
   modeloPorTexto: {},
 
+  /**
+   * **OS ANÚNCIOS DO MOMENTO — o texto que reconhece e o que fazer com ele.**
+   *
+   * Pedido dele (02/09/2026): *"falta reconhecer o anúncio, nas configurações bote os anúncios do
+   * momento onde botarei o texto para ser reconhecido e o que fazer quando for determinado texto do
+   * anúncio"*.
+   *
+   * `modeloPorTexto` (acima) já reconhecia o anúncio pelo texto e só sabia responder **uma** coisa:
+   * qual modelo mandar. Anúncio sem modelo — convite de evento, pesquisa, anúncio que só traz gente
+   * nova — era reconhecido e morria ali. Aqui cada anúncio tem as duas metades: os `trechos` que o
+   * reconhecem e a `acao` do que fazer.
+   *
+   * Formato de cada item (peneirado por `anuncios.normalizar`, que é quem manda):
+   * `{ id, nome, trechos: [], acao: 'modelo'|'resposta'|'dados'|'fluxo', valor, etiquetas: [], ligado }`
+   *
+   * **Nasce vazia, e é semeada de `modeloPorTexto` na primeira abertura** (migração
+   * `anunciosDoModeloPorTexto`): estrear a tela sem isso apagaria em silêncio o reconhecimento que
+   * já funcionava, e ele descobriria pelo modelo que parou de sair.
+   *
+   * As AÇÕES são lista de permissão em `anuncios.ACOES`, e **não existe** ação de escrever a
+   * mensagem aqui: o texto que sai é, byte a byte, um que ele escreveu na aba Respostas ou aprovou
+   * na plataforma. Campo de texto livre nesta tela viraria redator de mensagem sem revisão.
+   */
+  anuncios: [],
+
+  /**
+   * **O modelo aprovado que sai para quem chega por anúncio que NÃO foi reconhecido.**
+   *
+   * Pedido dele (02/09/2026): *"caso o texto do anúncio não seja reconhecido será mandado o modelo
+   * padrão"*. A plataforma informa a origem (`utm.source`) mesmo quando o texto não casa com nada
+   * da lista — anúncio novo que ele ainda não cadastrou, texto que mudou, mensagem cortada. Antes
+   * essa pessoa caía no caminho da etiqueta de conteúdo, que para quem só mandou o texto do anúncio
+   * dava ADS e mais nada.
+   *
+   * Guarda o NOME do modelo, como o `valor` de cada anúncio — a plataforma reordena e recria ids, e
+   * o nome é o que ele lê na tela. Vazio = sem padrão, e aí o não-reconhecido segue como antes.
+   */
+  modeloPadraoAnuncio: '',
+
+  /**
+   * **Os modelos padrão do anúncio, que se revezam.**
+   *
+   * Pedido dele (02/09/2026): *"o modelo padrão deve variar entre 3 modelos já que chega bastante
+   * gente por eles"*. Mesmo motivo das variações das respostas prontas: quando muita gente chega
+   * pela mesma porta, todo mundo receber a mesma frase é o que faz a mensagem parecer robô.
+   *
+   * Lista de NOMES de modelos aprovados, na ordem do rodízio. `modeloPadraoIndex` aponta o
+   * PRÓXIMO a usar, e só anda depois de a mensagem sair de verdade.
+   *
+   * `modeloPadraoAnuncio` (acima, singular) é a versão anterior e vira o primeiro item desta lista
+   * na primeira leitura — quem já tinha um escolhido não perde.
+   */
+  modelosPadraoAnuncio: [],
+
+  /** Ponteiro do rodízio: o índice do PRÓXIMO modelo padrão a usar. Anda só depois do envio. */
+  modeloPadraoIndex: 0,
+
   padroesDeAnuncio: ['^ol[áa]!?\\s+eu\\s+apoio'],
 
   tagRules: [
@@ -848,6 +941,14 @@ const DEFAULTS = {
    * custa desfazer tudo à mão.
    */
   fluxosSalvos: [],
+  /**
+   * Os estados anteriores do quadro do fluxo, para o botão Desfazer.
+   *
+   * Chave própria, e não dentro de `fluxo`: é histórico de tela, some quando ele quiser, e não
+   * deve engordar o objeto que a janela lê e grava a cada mexida. Fora do `exportJson` pelo
+   * mesmo motivo — ninguém quer o histórico de outra pessoa junto da configuração.
+   */
+  fluxoHistorico: [],
   /** Cache da lista de municípios do RS (IBGE). */
   municipios: null,
   /**
@@ -985,7 +1086,8 @@ export async function importJson(text) {
   const allowed = [
     'templates', 'cityLinks', 'defaultGroupLink', 'settings', 'writeContract', 'dicts',
     'tagRules', 'tagAliases', 'contentTemplates', 'auto', 'fluxo',
-    'modeloPorTexto', 'padroesDeAnuncio', 'conteudoPreferido',
+    'modeloPorTexto', 'padroesDeAnuncio', 'conteudoPreferido', 'anuncios',
+    'modeloPadraoAnuncio', 'modelosPadraoAnuncio',
   ];
   for (const key of allowed) {
     if (data[key] !== undefined) await set(key, data[key]);

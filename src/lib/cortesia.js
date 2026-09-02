@@ -921,3 +921,30 @@ export function semInteresse(entrantes) {
 
   return null;
 }
+
+/**
+ * **As mensagens dela que vieram DEPOIS de uma mensagem nossa específica.**
+ *
+ * Devolve o array (nunca vazio) ou `null`. `reconhecer` é quem diz qual mensagem nossa interessa —
+ * uma função, para este módulo continuar sem depender de `templates.js`.
+ *
+ * **Casa por INVARIANTE, não pelo texto atual**, porque quem chama passa `templates.ehPedidoDeDados`
+ * ou `ehPerguntaComoAjudar`: comparar com o texto de hoje só enxergaria as conversas que saíram com
+ * a redação de hoje, e este projeto reescreve resposta com frequência — cada reescrita deixaria uma
+ * safra de conversas invisíveis. Foi assim que a Loreta recebeu a mensagem errada em 31/08.
+ *
+ * Sem hora na nossa mensagem, considera todas as dela: é o caso do histórico antigo, e supor que
+ * nada veio depois seria pior — ela teria respondido e ninguém veria.
+ */
+export function respostasApos(entrantes, nossas, reconhecer) {
+  const nossa = [...(nossas || [])].reverse().find((m) => reconhecer(String(m?.texto || '')));
+  if (!nossa) return null;
+
+  const comTexto = (entrantes || []).filter((m) => String(m?.texto || '').trim());
+  if (!comTexto.length) return null;
+
+  if (!nossa.at) return comTexto;
+
+  const depois = comTexto.filter((m) => m.at && new Date(m.at) > new Date(nossa.at));
+  return depois.length ? depois : null;
+}

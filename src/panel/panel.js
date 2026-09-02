@@ -19,13 +19,14 @@ import * as categorizar from '../lib/categorizar.js';
 import * as iaCliente from '../lib/ia-cliente.js';
 import * as iaLib from '../lib/ia.js';
 import * as gabineteLib from '../lib/gabinete.js';
+import * as anunciosLib from '../lib/anuncios.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, confirmaPresenca, ultimaEhDespedida, semInteresse } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -150,6 +151,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     nossaUltimaAt: null,
     /** O nome que a pessoa escreveu nesta conversa (palpite do parser), não o do cadastro. */
     nomeInformado: '',
+    /** O parser achou nome ou cidade no que ela escreveu? Metade do sinal `respondeuOsDados`. */
+    informouNomeOuCidade: false,
+    /**
+     * O anúncio que o texto desta conversa reconhece: `{ anuncio, trecho }` ou `null`.
+     *
+     * Calculado em `refreshTagSuggestions` e lido em três lugares — as etiquetas, a ação da rodada
+     * e o sinal do quadro do fluxo. Um lugar só porque reconhecer três vezes daria três respostas
+     * diferentes assim que um deles olhasse outra lista de mensagens.
+     */
+    anuncio: null,
     /** Expressões que identificam a mensagem gerada pelo anúncio (Config). */
     padroesDeAnuncio: [],
     /** O que NÓS mandamos nesta conversa — para saber o que já foi, mesmo fora do painel. */
@@ -457,6 +468,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // Sobreviver à troca de contato faria a etiqueta de nome divergente cair na pessoa errada —
     // é a mesma armadilha da pergunta de cidade, registrada no CLAUDE.md.
     state.nomeInformado = '';
+    state.informouNomeOuCidade = false;
+    /**
+     * O anúncio reconhecido é do contato ANTERIOR até `refreshTagSuggestions` rodar de novo, e ele
+     * decide o que a rodada manda. Sobreviver à troca é a mesma armadilha da pergunta de cidade:
+     * a decisão de um contato executada em outro.
+     */
+    state.anuncio = null;
     state.cidadeRecusada = new Set();
     state.ultimaMensagem = null;
     state.hsmTemplates = [];
@@ -528,6 +546,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * no caso que interessa. O palpite do parser é a única fonte que diz o que ela informou.
        */
       state.nomeInformado = palpites.nome?.value || '';
+      /**
+       * O parser achou nome ou cidade no que ela escreveu?
+       *
+       * Metade do sinal `respondeuOsDados`. A outra metade — "o pedido de dados saiu e ela escreveu
+       * depois" — é lida na rodada, porque depende da hora das mensagens. Guardado aqui porque é
+       * aqui que o parser roda, e refazer a extração na rodada seria trabalho repetido.
+       */
+      state.informouNomeOuCidade = !!(palpites.nome || palpites.cidade);
       applyGuesses(palpites, classify);
 
       /**
@@ -898,10 +924,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     try {
       // O "sim" só vira etiqueta se a pergunta de interesse tiver saído para ESTE contato —
       // senão qualquer "sim, moro em Pelotas" viraria aceite de conteúdo.
-      const [perguntado, etiquetasInteresse] = await Promise.all([
+      const [perguntado, etiquetasInteresse, anunciosDoMomento] = await Promise.all([
         templatesLib.wasSent(state.contact.id, INTEREST_TEMPLATE_ID),
         store.get('etiquetasInteresse'),
+        carregarAnuncios(),
       ]);
+
+      /**
+       * **Qual anúncio o texto reconhece — guardado no estado porque três lugares precisam.**
+       *
+       * As etiquetas dele saem daqui (é a única metade que é etiqueta); a AÇÃO é lida na rodada, e
+       * o sinal `anuncioReconhecido` vai para o quadro do fluxo. Reconhecer nos três separadamente
+       * daria três respostas diferentes assim que um deles usasse outra lista de mensagens.
+       */
+      state.anuncio = anunciosLib.reconhecer(state.incoming, anunciosDoMomento);
 
       const sugeridas = await tagsLib.suggest({
         city: valueNamed('Cidade'),
@@ -926,6 +962,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          */
         nomeDivergente: nomeDivergeDoInformado(state.contact?.name, state.nomeInformado),
         interesse: { perguntado: !!perguntado, etiquetas: etiquetasInteresse },
+        etiquetasDoAnuncio: state.anuncio?.anuncio?.etiquetas || [],
       });
 
       // O conteúdo que o contato JÁ carrega no CRM entra na conta junto com o que as regras
@@ -2103,7 +2140,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     card.append(
       h('div', { class: 'wf-origin' },
         'Quem tem uma destas vem com "Pular" sugerido: o trabalho da rodada é transformar ' +
-          'desconhecido em engajado, e quem já chegou lá não precisa de formulário. Casa por ' +
+          'desconhecido em engajado, e quem já chegou lá não precisa que peçam os dados. Casa por ' +
           'pedaço do rótulo, sem acento e sem caixa — "engajado" pega "ENGAJADO/BIZA" e ' +
           '"Apoiador Muito engajado". Vazio = não pula ninguém. **A sugestão continua sendo só ' +
           'sugestão:** quem mandou áudio ou texto longo continua vindo com "Responder à mão", ' +
@@ -2768,7 +2805,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * regra entram depois de o resumo estar montado, e reusar um resultado que o resumo conta
    * deixaria uma bomba armada para quem mover a ordem dessas duas coisas um dia.
    */
-  const SINAL_RODADA = { enviado: '✓', concluido: '▪', pulado: '–', triado: '→', reiniciado: '↻', erro: '×', fim: '■', aviso: '⚠', refinar: '?' };
+  const SINAL_RODADA = { enviado: '✓', concluido: '▪', pulado: '–', triado: '→', reiniciado: '↻', erro: '×', fim: '■', aviso: '⚠', refinar: '?', info: '·' };
 
   /** Resultados em que o contato deixa a lista: a posição não pode avançar junto. */
   const SAI_DA_FILA = new Set(['triado', 'concluido', 'reiniciado']);
@@ -3668,17 +3705,59 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * Nada casando, o caminho antigo (etiqueta → modelo) segue exatamente como era: é o que
        * atende quem chega por outra via e quem já tem "Conteúdo Zucco"/"Conteúdo Flávio".
        */
-      const porTexto = hsmLib.modeloPorTexto(
-        state.incoming,
-        await store.get('modeloPorTexto'),
-        state.hsmTemplates
+      /**
+       * **O ANÚNCIO decide, e agora decide mais que o modelo.**
+       *
+       * Pedido dele (02/09): *"falta reconhecer o anúncio, nas configurações bote os anúncios do
+       * momento onde botarei o texto para ser reconhecido e o que fazer quando for determinado
+       * texto do anúncio"*.
+       *
+       * A versão anterior (`modeloPorTexto`) reconhecia o anúncio pelo texto e só sabia responder
+       * **uma** coisa: qual modelo mandar. Anúncio sem modelo — convite de evento, pesquisa,
+       * anúncio que só traz gente nova — era reconhecido e morria ali.
+       *
+       * `store.anuncios` é a única fonte (a tabela antiga foi migrada por `carregarAnuncios`).
+       * Consultar as duas faria apagar um anúncio não ter efeito: a linha velha continuaria
+       * mandando o modelo que ele acabou de tirar do ar.
+       *
+       * Aqui só a ação `modelo` é tratada; `resposta` e `dados` viram recomendação depois da
+       * regra (ver `sugestaoDoAnuncio`), e `fluxo` não faz nada de propósito — devolve o caso ao
+       * quadro, com as etiquetas do anúncio já marcadas por `refreshTagSuggestions`.
+       */
+      const anuncio = state.anuncio?.anuncio || null;
+
+      /**
+       * **Qual modelo sai para quem chegou por anúncio** — o específico dele, ou o padrão.
+       *
+       * Redesenho dele (02/09): *"o modelo agora será feito pra cada anúncio específico e será
+       * mandado no momento que a pessoa chegar pelo anúncio"* e *"caso o texto do anúncio não seja
+       * reconhecido será mandado o modelo padrão"*.
+       *
+       * O padrão só entra quando o texto **não** foi reconhecido, e só para quem veio de anúncio —
+       * a origem é dado da plataforma (`utm.source`), então não há como sair para quem chegou por
+       * outra via. Anúncio reconhecido cuja ação é outra (resposta pronta, pedir dados, devolver ao
+       * quadro) é escolha explícita dele, e escolha explícita não se substitui por um padrão.
+       */
+      const veioDeUmAnuncio = !!(state.session?.utm?.source || state.session?.utm?.referralUrl);
+      const escolhaDeModelo = anunciosLib.modeloDoAnuncio(
+        state.anuncio,
+        veioDeUmAnuncio ? await carregarModelosPadrao() : [],
+        veioDeUmAnuncio ? Number(await store.get('modeloPadraoIndex')) || 0 : 0
       );
+      const porTexto = escolhaDeModelo
+        ? hsmLib.modeloPorTexto([escolhaDeModelo.nome], { [escolhaDeModelo.nome]: escolhaDeModelo.nome }, state.hsmTemplates)
+        : null;
 
       if (porTexto?.modelo) {
         modelo = porTexto.modelo;
         // Vira o "conteúdo escolhido" para a tela dizer POR QUE este modelo: sem isso a caixa
         // mostraria "Sem modelo" enquanto oferece a tecla 1, que é pior que não explicar.
-        conteudoEscolhido = { nome: `texto: "${porTexto.trecho}"` };
+        conteudoEscolhido = {
+          nome:
+            escolhaDeModelo.deOnde === 'padrao'
+              ? 'anúncio não reconhecido — modelo padrão'
+              : `anúncio: ${anuncio.nome || `"${state.anuncio.trecho}"`}`,
+        };
       } else if (porTexto?.erro) {
         // Casou o texto e o modelo não existe: isto é erro de configuração DELE, e some no
         // silêncio se a rodada cair no caminho da etiqueta como se nada tivesse acontecido.
@@ -4097,18 +4176,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         if (!alvo.length) return null;
 
         const ultima = alvo[alvo.length - 1];
-        return { trecho: String(ultima.texto || '').replace(/s+/g, ' ').trim().slice(0, 90) };
+        // `\s+`, com a barra: sem ela o padrão é a LETRA "s", e o trecho que aparece na caixa da
+        // rodada saía com todo "s" trocado por espaço ("Maria Silva / Canoas" → "Maria Silva / Canoa ").
+        return { trecho: String(ultima.texto || '').replace(/\s+/g, ' ').trim().slice(0, 90) };
       })();
 
       // Lida aqui, antes das opções e da regra, porque as duas usam.
       const etiquetaSemInteresse = String(state.auto.cfg.etiquetaSemInteresse || '').trim();
 
-      const sugestao = sugerirAcaoComFluxo({
+      let sugestao = sugerirAcaoComFluxo({
         // Recusou ou veio hostilizar: a regra mais alta da tabela, porque continuar mandando
         // mensagem para quem pediu para parar é o que gera denúncia.
         semInteresse: semInteresse(state.entrantes),
         // Perguntamos e ela respondeu: a resposta precisa de gente, nunca de modelo.
         respondeuComoAjudar,
+        /**
+         * **Ela respondeu o nome ou a cidade que pedimos** — agradece e encerra, sem modelo.
+         *
+         * Pedido dele (02/09): *"agora só precisa agradecer a atenção e encerrar sem mandar
+         * modelo"*, porque o modelo passou a ser o recibo da chegada.
+         *
+         * **As duas metades juntas, e é isso que o torna seguro:** o pedido de dados saiu e ela
+         * escreveu depois (`respostasApos`, casando por INVARIANTE e não pelo texto atual do
+         * template) **e** o parser achou nome ou cidade no que ela escreveu. Só a primeira faria um
+         * "sim" solto, ou um assunto novo, virar agradecimento e conclusão.
+         */
+        respondeuOsDados: state.informouNomeOuCidade && !!respostasApos(state.entrantes, state.nossas, pediuNomeECidade),
         modeloJaNaConversa,
         jaRespondemosAntes,
         ultimaEhDespedida: ultimaEhDespedida(state.entrantes),
@@ -4164,7 +4257,64 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         ultimoTexto: (state.entrantes || []).slice(-1)[0]?.texto || '',
         // A origem e DADO, nao texto (utm.source/referralUrl) -- ver o CLAUDE.md.
         veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
+        /**
+         * **Reconheci de QUAL anúncio ela veio** — diferente de `veioDeAnuncio`, que é a origem.
+         *
+         * A origem vem da plataforma e diz só que houve um anúncio; este sinal diz que o texto
+         * casou com um dos anúncios do momento que ele cadastrou. É o que permite um ramo do
+         * quadro separar "veio de anúncio que eu conheço" de "veio de anúncio qualquer".
+         */
+        anuncioReconhecido: !!state.anuncio,
       });
+
+      /**
+       * **O anúncio impõe o desfecho — mas nunca por cima de quem decidiu não mandar nada.**
+       *
+       * Pedido dele (02/09): o anúncio agora diz *o que fazer*, e não só qual modelo. As ações
+       * `resposta` e `dados` são as duas que a tabela antiga não sabia expressar; `modelo` já saiu
+       * pela tecla 1 lá em cima e `fluxo` de propósito não muda nada.
+       *
+       * Vem DEPOIS da regra e ANTES da IA: escolha explícita dele não se substitui por dedução, e
+       * pagar pela IA num caso que ele já configurou não muda o resultado.
+       *
+       * **A trava está em `anuncios.decidirComAnuncio`**, e é a lição que este projeto já pagou
+       * duas vezes: pôr algo no topo sem olhar o que ele passou a vencer. Quem escreveu o texto do
+       * anúncio uma vez carrega esse texto na conversa para sempre — então a regra que decidiu
+       * **não enviar** (recusa, despedida, etiqueta que dispensa) continua ganhando. Foi assim que
+       * quem só escreveu "Amém" recebeu mais uma mensagem 36 min depois.
+       */
+      const doAnuncio = anunciosLib.decidirComAnuncio(
+        state.anuncio?.anuncio,
+        sugestao,
+        sugestao?.id ? sugestaoLib.efeitoDaRegra(sugestao.id, state.fluxo) : null
+      );
+      if (doAnuncio) {
+        registrarNaRodada(nome, 'info', doAnuncio.motivo);
+        sugestao = doAnuncio;
+      } else if (state.anuncio) {
+        /**
+         * **Reconhecer o anúncio e não fazer nada precisa APARECER.**
+         *
+         * Relato dele em 02/09/2026, com a print: *"não seguiu o fluxo"*. O anúncio dele estava
+         * reconhecido certo, com a ação "só etiquetar e deixar o fluxo decidir" e **sem etiqueta
+         * nenhuma** — ou seja, configurado para não fazer nada. Do lado de fora era
+         * indistinguível de o reconhecimento ter falhado, e o tempo foi gasto procurando defeito
+         * onde não havia.
+         *
+         * Então a linha diz as três coisas: qual anúncio casou, o que ele manda fazer, e — quando
+         * o fluxo também não decidiu — que ninguém decidiu nada. A Config passou a acusar a
+         * configuração inerte (`anuncios.conferir`); esta linha é a mesma verdade no momento em
+         * que ele está olhando a conversa.
+         */
+        const qual = state.anuncio.anuncio.nome || `"${state.anuncio.trecho}"`;
+        const oQue = anunciosLib.desfechoEmPortugues(state.anuncio.anuncio);
+        registrarNaRodada(
+          nome,
+          sugestao ? 'info' : 'aviso',
+          `anúncio reconhecido: ${qual} → ${oQue}` +
+            (sugestao ? '' : ' — e o fluxo não decidiu nada para este caso, então é com você')
+        );
+      }
 
       /**
        * A avaliação de contexto — a SEGUNDA camada, e só do que a primeira não resolveu.
@@ -4264,6 +4414,26 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           tecla: '1',
           valor: 'enviar',
           rotulo: enviadoHoje ? `Mandar de novo "${modelo.name}"` : `Mandar modelo "${modelo.name}"`,
+        });
+      }
+
+      /**
+       * **Tecla `a` — o modelo do anúncio E o pedido de dados, na mesma passada.**
+       *
+       * Escolha dele em 02/09/2026: *"o modelo seria uma resposta automática ao anúncio, o
+       * atendimento vem depois disso que seria pedir dados e responder as perguntas"*, e "depois"
+       * é **a mesma passada**, sabendo que são duas mensagens seguidas para o mesmo número.
+       *
+       * A oferta exige as **duas** metades prontas — o modelo resolvido e o texto do pedido sem
+       * variável travada. Oferecer uma tecla que vai travar no meio do envio é pior que não
+       * oferecer: a primeira mensagem já saiu e a segunda não sai mais.
+       */
+      const podeModeloEDados = podeEnviar && !!pedirDados && !pedirTrava && !modeloTravado;
+      if (podeModeloEDados) {
+        opcoes.push({
+          tecla: 'a',
+          valor: 'modelodados',
+          rotulo: `Mandar "${modelo.name}" + ${pedirDados.name} e concluir`,
         });
       }
       /**
@@ -4762,6 +4932,43 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       if (!(await enviarModelo(modelo, { send: true, jaConfirmado: true }))) {
         return { nome, resultado: 'erro', motivo: `o modelo "${modelo.name}" não saiu` };
+      }
+
+      /**
+       * **O rodízio do modelo padrão anda AQUI, e não na decisão.**
+       *
+       * Mesma separação de `templates.varianteAtual` / `avancarVariante`, e pela mesma razão: a
+       * caixa da rodada mostra o nome do modelo antes de o envio acontecer, e queimar o rodízio ali
+       * faria o próximo pular sozinho em todo contato que ele decidisse não mandar.
+       *
+       * Só o padrão gira. O modelo específico de um anúncio é escolha dele para aquele anúncio, e
+       * não tem rodízio nenhum.
+       */
+      if (escolhaDeModelo?.deOnde === 'padrao' && Number.isInteger(escolhaDeModelo.proximo)) {
+        await store.set('modeloPadraoIndex', escolhaDeModelo.proximo);
+      }
+
+      /**
+       * **A tecla `a` continua daqui: o pedido de dados vai atrás do modelo.**
+       *
+       * A ordem é essa e não a inversa: o modelo é o recibo do anúncio, e recibo depois da pergunta
+       * fica estranho. O modelo já saiu na linha acima — as duas teclas compartilham esse envio de
+       * propósito, para não haver duas maneiras de mandar a mesma coisa.
+       *
+       * **Se a segunda mensagem falhar, o resultado é `enviado` e a rodada PARA.** Contar como
+       * enviado é a verdade (o modelo saiu) e parar é o certo: o contato ficou com o recibo e sem o
+       * pedido, e seguir a fila esconderia isso. O motivo diz exatamente onde parou.
+       */
+      if (escolha === 'modelodados') {
+        if (!(await sendTemplate(pedirDados, { send: true, jaConfirmado: true }))) {
+          return {
+            nome,
+            resultado: 'enviado',
+            parar: true,
+            motivo: `o modelo "${modelo.name}" saiu, mas "${pedirDados.name}" não — este contato ficou sem o pedido de dados`,
+          };
+        }
+        registrarNaRodada(nome, 'info', `recibo do anúncio + pedido de dados ("${pedirDados.name}")`);
       }
       if (agradecimento && !(await sendTemplate(agradecimento, { send: true, jaConfirmado: true }))) {
         return { nome, resultado: 'erro', motivo: 'o modelo saiu mas o agradecimento não' };
@@ -7885,71 +8092,372 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(rulesArea, rulesBtn);
 
     /**
-     * A tabela TEXTO → modelo. Vem ANTES da tabela por etiqueta na tela porque vem antes na
-     * decisão: quando um trecho casa, o modelo sai daqui e a etiqueta nem é consultada.
+     * **OS ANÚNCIOS DO MOMENTO.**
+     *
+     * Pedido dele (02/09/2026): *"falta reconhecer o anúncio, nas configurações bote os anúncios do
+     * momento onde botarei o texto para ser reconhecido e o que fazer quando for determinado texto
+     * do anúncio"*.
+     *
+     * Substitui a tabela "Modelo por TEXTO da mensagem", que fazia metade disto: reconhecia o
+     * anúncio pelo texto e só sabia responder qual modelo mandar. Anúncio sem modelo — convite de
+     * evento, pesquisa, anúncio que só traz gente nova — era reconhecido e morria ali. As linhas
+     * antigas vêm para cá sozinhas na primeira abertura (`carregarAnuncios`).
+     *
+     * Vem ANTES da tabela por etiqueta na tela porque vem antes na decisão: reconhecido o anúncio,
+     * a ação dele decide, e a etiqueta de conteúdo nem é consultada.
+     *
+     * Cartões em vez de uma caixa de texto com `chave = valor`: a ação não é um valor, é uma
+     * escolha entre quatro, e cada uma pede um alvo diferente (um modelo, uma resposta, nada). Um
+     * formato de texto para isso seria uma linguagem que só eu saberia escrever.
      */
-    body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Modelo por TEXTO da mensagem'));
+    body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Anúncios do momento'));
     body.append(
       h('p', { class: 'wf-hint' },
-        'Uma linha por anúncio, no formato "trecho do texto = Nome do modelo". Serve para o caso em ' +
-          'que a etiqueta ADS não distingue de qual anúncio a pessoa veio: o texto que ela manda ' +
-          'distingue. Casa por trecho CONTIDO e sem diferenciar acento ou maiúscula, então não ' +
-          'precisa copiar a mensagem inteira nem se preocupar com o emoji. Havendo dois trechos que ' +
-          'casam, ganha o mais específico (o maior).')
+        'Um cartão por anúncio no ar: o texto que a pessoa manda quando clica nele, e o que fazer ' +
+          'quando esse texto aparecer. Casa por trecho CONTIDO na conversa, sem diferenciar acento ' +
+          'nem maiúscula — não precisa copiar a mensagem inteira nem se preocupar com o emoji. ' +
+          'Havendo dois trechos que casam, ganha o mais específico (o maior).')
     );
 
-    const textoArea = h('textarea', { rows: '4', placeholder: 'Olá! Eu apoio as Escolas Cívico-Militares = Escolas CM' });
-    store.get('modeloPorTexto').then((m) => (textoArea.value = hsmLib.formatModeloPorTexto(m)));
+    /**
+     * **Os modelos padrão do anúncio — e o rodízio entre eles.**
+     *
+     * Pedidos dele em 02/09/2026: *"caso o texto do anúncio não seja reconhecido será mandado o
+     * modelo padrão"* e, em seguida, *"o modelo padrão deve variar entre 3 modelos já que chega
+     * bastante gente por eles"*.
+     *
+     * O segundo pedido tem o mesmo motivo das variações das respostas prontas: quando muita gente
+     * chega pela mesma porta, todo mundo receber a frase idêntica é o que faz a mensagem parecer
+     * robô. O rodízio anda **um por envio de verdade** — não a cada vez que a caixa da rodada
+     * mostra o nome.
+     *
+     * Fica ACIMA da lista de anúncios porque é o que vale quando a lista não resolve — e porque,
+     * sem ele à vista, "o anúncio não foi reconhecido" não teria desfecho visível em lugar nenhum.
+     */
+    const padraoLinha = h('div', { class: 'wf-card' }, [
+      h('h4', {}, 'Modelos padrão do anúncio (revezam)'),
+      h('div', { class: 'wf-preview' },
+        'Saem para quem a plataforma diz que veio de anúncio, mas cujo texto não casou com nenhum ' +
+          'da lista abaixo. Com mais de um, eles se revezam a cada envio. Deixe vazio para esses ' +
+          'caírem na sua mão como antes.'),
+    ]);
+    body.append(padraoLinha);
 
-    const textoBtn = h('button', { class: 'wf-btn', type: 'button' }, 'Salvar modelo por texto');
-    textoBtn.addEventListener('click', () =>
-      withBusy(async () => {
-        const parsed = hsmLib.parseModeloPorTexto(textoArea.value);
-        const pares = Object.entries(parsed);
+    /**
+     * Redesenha só este cartão, relendo do armazenamento — o mesmo motivo da lista de anúncios:
+     * o que está na tela tem que ser o que a rodada vai ler.
+     */
+    async function desenharModelosPadrao() {
+      // Tudo depois do título e da explicação é a lista; os dois primeiros filhos ficam.
+      while (padraoLinha.children.length > 2) padraoLinha.lastChild.remove();
+
+      /**
+       * Aqui a lista é lida CRUA, e não pelo `carregarModelosPadrao`.
+       *
+       * O carregador peneira os vazios — que é o certo para a rodada, porque nome vazio não é
+       * modelo. Mas a tela precisa da linha em branco existindo enquanto ele digita: com o
+       * carregador, clicar em "+ modelo" com a lista de aprovados fora do ar criava um item vazio
+       * que o gravar descartava na mesma hora, e o botão **não fazia nada, em silêncio**. Peguei
+       * abrindo a Config de verdade.
+       */
+      const salva = await store.get('modelosPadraoAnuncio');
+      const antigo = String((await store.get('modeloPadraoAnuncio')) || '').trim();
+      const lista = Array.isArray(salva) && salva.length ? salva : antigo ? [antigo] : [];
+      const indice = Number(await store.get('modeloPadraoIndex')) || 0;
+
+      const gravar = async (nova) => {
+        // Guarda como ele digitou (só sem espaço nas pontas). Quem peneira vazio é a leitura da
+        // rodada — `carregarModelosPadrao` e `anuncios.padraoDaVez`, os dois com teste.
+        const limpa = nova.map((m) => String(m || '').trim());
+        await store.set('modelosPadraoAnuncio', limpa);
+        /**
+         * O ponteiro volta para dentro da lista quando ela encolhe.
+         *
+         * Sem isto, apagar o terceiro modelo deixaria o ponteiro em 2 numa lista de 2 — e o
+         * `padraoDaVez` cairia no primeiro por causa do resto da divisão, o que funciona, mas o
+         * número gravado seria mentira e confundiria a próxima leitura.
+         */
+        if (indice >= limpa.filter(Boolean).length) await store.set('modeloPadraoIndex', 0);
+        await desenharModelosPadrao();
+      };
+
+      if (!lista.length) {
+        padraoLinha.append(
+          h('div', { class: 'wf-hint' },
+            'Nenhum modelo padrão. Anúncio que o painel não reconhece cai na sua mão.')
+        );
+      }
+
+      lista.forEach((nome, i) => {
+        const linha = h('div', { class: 'wf-row' });
 
         /**
-         * Confere os nomes contra os modelos aprovados ANTES de gravar.
-         *
-         * Nome errado aqui não dá erro na hora de salvar — dá na hora de enviar, no meio de uma
-         * rodada, com o contato aberto. Avisar agora é a diferença entre corrigir uma linha e
-         * descobrir o problema com trinta contatos na fila.
+         * O da vez fica marcado. É a única forma de ele conferir que o rodízio está andando —
+         * rodízio invisível é indistinguível de rodízio parado, e ele descobriria pelo eleitor
+         * recebendo sempre a mesma frase.
          */
-        const nomesAprovados = state.hsmTemplates.map((m) => m.name.trim().toLowerCase());
-        const desconhecidos = state.hsmTemplates.length
-          ? pares.filter(([, nome]) => !nomesAprovados.includes(nome.trim().toLowerCase()))
-          : [];
+        linha.append(h('span', { class: 'wf-hint' }, i === indice % Math.max(lista.length, 1) ? '▶' : `${i + 1}.`));
 
-        await store.set('modeloPorTexto', parsed);
-        textoArea.value = hsmLib.formatModeloPorTexto(parsed);
-
-        if (desconhecidos.length) {
-          setStatus(
-            `Salvei ${pares.length} linha(s), mas ${desconhecidos.length} apontam para modelo que a ` +
-              `plataforma não tem: ${desconhecidos.map(([, n]) => `"${n}"`).join(", ")}. ` +
-              'Confira os nomes na lista abaixo.',
-            'err'
+        if (state.hsmTemplates.length) {
+          const sel = h('select', {});
+          for (const m of state.hsmTemplates) {
+            const o = h('option', { value: m.name }, m.name);
+            if (m.name === nome) o.setAttribute('selected', 'selected');
+            sel.append(o);
+          }
+          sel.addEventListener('change', () =>
+            withBusy(() => gravar(lista.map((x, j) => (j === i ? sel.value : x))))
           );
-          return;
+          linha.append(sel);
+        } else {
+          const campo = h('input', { type: 'text', placeholder: 'nome exato do modelo' });
+          campo.value = nome;
+          campo.addEventListener('change', () =>
+            withBusy(() => gravar(lista.map((x, j) => (j === i ? campo.value : x))))
+          );
+          linha.append(campo);
         }
-        setStatus(
-          pares.length
-            ? `${pares.length} texto(s) mapeado(s) para modelo. O texto decide antes da etiqueta.`
-            : 'Tabela vazia: o modelo volta a sair só da etiqueta de conteúdo.'
+
+        if (!nome.trim()) linha.append(h('span', { class: 'wf-hint' }, '(vazio — não entra no rodízio)'));
+
+        const tirar = h('button', { class: 'wf-btn wf-mini', type: 'button' }, '×');
+        tirar.title = 'Tirar este da lista';
+        tirar.addEventListener('click', () => withBusy(() => gravar(lista.filter((_, j) => j !== i))));
+        linha.append(tirar);
+
+        padraoLinha.append(linha);
+      });
+
+      const somar = h('button', { class: 'wf-btn wf-mini', type: 'button' }, '+ modelo');
+      somar.addEventListener('click', () =>
+        withBusy(() => gravar([...lista, state.hsmTemplates[0]?.name || '']))
+      );
+      padraoLinha.append(h('div', { class: 'wf-row' }, [somar]));
+
+      if (!state.hsmTemplates.length) {
+        padraoLinha.append(
+          h('div', { class: 'wf-hint' },
+            'A lista de modelos aprovados não está carregada, então digite os nomes exatos. Abra um ' +
+              'atendimento e volte aqui para eu conferir se existem.')
         );
-      })
-    );
-    body.append(textoArea, textoBtn);
-    if (state.hsmTemplates.length) {
-      body.append(
-        h('div', { class: 'wf-origin' }, 'Modelos aprovados: ' + state.hsmTemplates.map((m) => m.name).join(' · '))
-      );
-    } else {
-      body.append(
-        h('div', { class: 'wf-origin' },
-          'A lista de modelos aprovados não está carregada, então não consigo conferir os nomes ' +
-            'agora. Abra um atendimento e volte aqui para eu avisar se algum nome estiver errado.')
-      );
+      } else if (lista.length) {
+        const desconhecidos = lista.filter(
+          (n) => n.trim() && !state.hsmTemplates.some((m) => m.name.trim().toLowerCase() === n.trim().toLowerCase())
+        );
+        for (const n of desconhecidos) {
+          padraoLinha.append(
+            h('div', { class: 'wf-origin wf-aviso-anuncio' },
+              `⚠ "${n}" não está entre os modelos aprovados da plataforma.`)
+          );
+        }
+      }
     }
+
+    desenharModelosPadrao();
+
+    const anunciosNode = h('div', {});
+    body.append(anunciosNode);
+
+    /**
+     * Redesenha só a lista, e **relê do armazenamento**.
+     *
+     * Reler em vez de mexer numa cópia em memória é o que faz duas abas do painel (encaixado e
+     * janela) não se sobrescreverem, e é o que garante que o que está na tela é o que a rodada vai
+     * ler. A lista é curta — meia dúzia de anúncios —, então o custo é irrelevante.
+     */
+    async function desenharAnuncios() {
+      const lista = await carregarAnuncios();
+      anunciosNode.replaceChildren();
+
+      const gravar = async (nova) => {
+        await store.set('anuncios', anunciosLib.normalizar(nova));
+        await desenharAnuncios();
+      };
+
+      if (!lista.length) {
+        anunciosNode.append(
+          h('p', { class: 'wf-hint' },
+            'Nenhum anúncio cadastrado. Sem isto o painel sabe que a pessoa veio de um anúncio (a ' +
+              'plataforma informa), mas não de qual — e é o texto que distingue.')
+        );
+      }
+
+      for (const anuncio of lista) {
+        const card = h('div', { class: 'wf-card' });
+
+        // ---- nome e o interruptor -------------------------------------------
+        const nome = h('input', { type: 'text', placeholder: 'nome do anúncio (só para você)' });
+        nome.value = anuncio.nome;
+        nome.addEventListener('change', () =>
+          withBusy(() => gravar(lista.map((x) => (x.id === anuncio.id ? { ...x, nome: nome.value } : x))))
+        );
+
+        /**
+         * Desligar em vez de apagar: a campanha que acabou volta no mês seguinte, e o texto dela
+         * é a parte chata de digitar. Desligado, o anúncio não casa com nada.
+         */
+        const ligado = h('input', { type: 'checkbox' });
+        ligado.checked = anuncio.ligado;
+        ligado.addEventListener('change', () =>
+          withBusy(() => gravar(lista.map((x) => (x.id === anuncio.id ? { ...x, ligado: ligado.checked } : x))))
+        );
+
+        const apagar = h('button', { class: 'wf-btn wf-mini', type: 'button' }, 'Apagar');
+        apagar.addEventListener('click', () =>
+          withBusy(async () => {
+            if (!confirm(`Apagar o anúncio "${anuncio.nome || '(sem nome)'}"? O texto dele se perde.`)) return;
+            await gravar(lista.filter((x) => x.id !== anuncio.id));
+            setStatus('Anúncio apagado.', 'ok');
+          })
+        );
+
+        card.append(
+          h('div', { class: 'wf-row' }, [
+            nome,
+            h('label', { class: 'wf-switch' }, [ligado, h('span', {}, 'no ar')]),
+            apagar,
+          ])
+        );
+
+        // ---- o texto que reconhece ------------------------------------------
+        card.append(h('div', { class: 'wf-hint' }, 'Texto que reconhece — um por linha:'));
+        const trechos = h('textarea', { rows: '2', placeholder: 'Olá! Eu apoio as Escolas Cívico-Militares' });
+        trechos.value = anuncio.trechos.join('\n');
+        trechos.addEventListener('change', () =>
+          withBusy(() =>
+            gravar(
+              lista.map((x) =>
+                x.id === anuncio.id ? { ...x, trechos: trechos.value.split('\n').map((t) => t.trim()).filter(Boolean) } : x
+              )
+            )
+          )
+        );
+        card.append(trechos);
+
+        // ---- o que fazer -----------------------------------------------------
+        card.append(h('div', { class: 'wf-hint' }, 'O que fazer quando este texto aparecer:'));
+        const acao = h('select', {});
+        for (const op of anunciosLib.ACOES) {
+          const o = h('option', { value: op.id }, op.rotulo);
+          if (op.id === anuncio.acao) o.setAttribute('selected', 'selected');
+          acao.append(o);
+        }
+        acao.addEventListener('change', () =>
+          // O alvo é zerado junto: o nome de um modelo não serve como id de resposta pronta, e
+          // guardá-lo faria a conferência acusar um erro que ele não cometeu.
+          withBusy(() => gravar(lista.map((x) => (x.id === anuncio.id ? { ...x, acao: acao.value, valor: '' } : x))))
+        );
+        card.append(acao);
+
+        const sobre = anunciosLib.sobreAcao(anuncio.acao);
+        if (sobre?.ajuda) card.append(h('div', { class: 'wf-hint' }, sobre.ajuda));
+
+        /**
+         * O alvo da ação, quando ela precisa de um.
+         *
+         * **Lista, não campo de texto, sempre que a lista existe** — é a lição do "Ramos dentro
+         * deste" na janela do fluxo: escolher de uma lista não erra o nome, e nome errado aqui só
+         * daria erro na hora de enviar. O campo de texto sobra para o caso em que a lista de
+         * modelos ainda não carregou (o painel abre a Config antes de abrir atendimento).
+         */
+        if (sobre?.precisaValor === 'modelo') {
+          if (state.hsmTemplates.length) {
+            const alvo = h('select', {});
+            alvo.append(h('option', { value: '' }, '— escolha o modelo aprovado —'));
+            for (const m of state.hsmTemplates) {
+              const o = h('option', { value: m.name }, m.name);
+              if (m.name === anuncio.valor) o.setAttribute('selected', 'selected');
+              alvo.append(o);
+            }
+            alvo.addEventListener('change', () =>
+              withBusy(() => gravar(lista.map((x) => (x.id === anuncio.id ? { ...x, valor: alvo.value } : x))))
+            );
+            card.append(alvo);
+          } else {
+            const alvo = h('input', { type: 'text', placeholder: 'nome exato do modelo na plataforma' });
+            alvo.value = anuncio.valor;
+            alvo.addEventListener('change', () =>
+              withBusy(() => gravar(lista.map((x) => (x.id === anuncio.id ? { ...x, valor: alvo.value } : x))))
+            );
+            card.append(
+              alvo,
+              h('div', { class: 'wf-hint' },
+                'A lista de modelos aprovados não está carregada, então digite o nome exato. Abra um ' +
+                  'atendimento e volte aqui para eu conferir se ele existe.')
+            );
+          }
+        }
+
+        if (sobre?.precisaValor === 'resposta') {
+          const alvo = h('select', {});
+          alvo.append(h('option', { value: '' }, '— escolha a resposta pronta —'));
+          for (const t of state.templates) {
+            const o = h('option', { value: t.id }, t.name);
+            if (t.id === anuncio.valor) o.setAttribute('selected', 'selected');
+            alvo.append(o);
+          }
+          alvo.addEventListener('change', () =>
+            withBusy(() => gravar(lista.map((x) => (x.id === anuncio.id ? { ...x, valor: alvo.value } : x))))
+          );
+          card.append(alvo);
+          // Lista vazia é um seletor que não deixa escolher nada, e sem explicação ele parece
+          // quebrado. `load()` carrega as respostas antes de qualquer outra coisa, então isto só
+          // aparece se a Config for aberta antes da primeira leitura.
+          if (!state.templates.length) {
+            card.append(
+              h('div', { class: 'wf-hint' },
+                'As respostas prontas ainda não carregaram. Clique em Recarregar e volte aqui.')
+            );
+          }
+        }
+
+        // ---- etiquetas --------------------------------------------------------
+        /**
+         * As etiquetas existem porque a etiqueta ADS diz que a pessoa veio de anúncio e **não de
+         * qual** — sem isto não há como filtrar depois quem chegou por qual campanha. Entram com
+         * origem `anúncio`, fora da disputa de conteúdo: quem manda o modelo é a ação acima.
+         */
+        card.append(
+          h('div', { class: 'wf-hint' }, 'Etiquetas a aplicar (separadas por vírgula) — valem em qualquer ação:')
+        );
+        const etiquetas = h('input', { type: 'text', placeholder: 'ex.: ADS Escolas' });
+        etiquetas.value = anuncio.etiquetas.join(', ');
+        etiquetas.addEventListener('change', () =>
+          withBusy(() =>
+            gravar(
+              lista.map((x) =>
+                x.id === anuncio.id
+                  ? { ...x, etiquetas: etiquetas.value.split(',').map((t) => t.trim()).filter(Boolean) }
+                  : x
+              )
+            )
+          )
+        );
+        card.append(etiquetas);
+
+        card.append(h('div', { class: 'wf-preview' }, `→ ${anunciosLib.desfechoEmPortugues(anuncio)}`));
+        anunciosNode.append(card);
+      }
+
+      /**
+       * A conferência, embaixo da lista.
+       *
+       * Roda a cada redesenho porque é depois de editar que ela importa. O que ela pega — modelo
+       * que não existe, resposta apagada, anúncio sem texto, o mesmo texto em dois anúncios — não
+       * daria erro ao salvar: daria na hora de enviar, no meio de uma rodada, com o contato aberto.
+       */
+      const avisos = anunciosLib.conferir(lista, { modelos: state.hsmTemplates, respostas: state.templates });
+      for (const aviso of avisos) {
+        anunciosNode.append(h('div', { class: 'wf-origin wf-aviso-anuncio' }, '⚠ ' + aviso));
+      }
+
+      const novo = h('button', { class: 'wf-btn', type: 'button' }, '+ Anúncio novo');
+      novo.addEventListener('click', () => withBusy(() => gravar([...lista, anunciosLib.anuncioVazio()])));
+      anunciosNode.append(h('div', { class: 'wf-row' }, [novo]));
+    }
+
+    desenharAnuncios();
+
 
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Modelo por conteúdo'));
     body.append(
@@ -8621,6 +9129,52 @@ function h(tag, props = {}, children = []) {
     el.append(typeof child === 'string' ? document.createTextNode(child) : child);
   }
   return el;
+}
+
+/**
+ * **Os anúncios do momento, já peneirados — e a mudança da tabela antiga, uma vez só.**
+ *
+ * `modeloPorTexto` reconhecia o anúncio pelo texto e só sabia responder qual modelo mandar. Os
+ * anúncios (`store.anuncios`) guardam as duas metades que ele pediu: o texto que reconhece e o que
+ * fazer. Estrear a tela sem trazer a tabela antiga apagaria em silêncio o reconhecimento que já
+ * funcionava, e ele descobriria pelo modelo que parou de sair.
+ *
+ * **A migração roda uma vez e nunca sobrescreve o que ele editou.** Sem a marca em `migracoes`, ela
+ * ressuscitaria linhas velhas toda vez que o painel subisse — inclusive as que ele apagou de
+ * propósito, que é o pior caso: o anúncio que saiu do ar voltaria a mandar modelo sozinho.
+ */
+async function carregarAnuncios() {
+  const lista = anunciosLib.normalizar(await store.get('anuncios'));
+
+  const migracoes = await store.get('migracoes');
+  if (migracoes.anunciosDoModeloPorTexto) return lista;
+
+  const vindos = anunciosLib.deModeloPorTexto(await store.get('modeloPorTexto'));
+  await store.set('migracoes', { ...migracoes, anunciosDoModeloPorTexto: true });
+
+  // Já mexeu aqui? A tabela antiga não passa por cima do que ele montou.
+  if (!vindos.length || lista.length) return lista;
+
+  await store.set('anuncios', vindos);
+  return vindos;
+}
+
+/**
+ * **Os modelos padrão do anúncio, na ordem do rodízio.**
+ *
+ * Pedido dele (02/09/2026): *"o modelo padrão deve variar entre 3 modelos já que chega bastante
+ * gente por eles"*.
+ *
+ * Junta a lista nova com o texto único da versão anterior: quem já tinha um modelo escolhido não
+ * perde nada, e não precisou de migração com marca em `migracoes` — a leitura resolve, porque aqui
+ * o dado antigo é só o primeiro item do novo.
+ */
+async function carregarModelosPadrao() {
+  const lista = await store.get('modelosPadraoAnuncio');
+  if (Array.isArray(lista) && lista.length) return lista.map((m) => String(m || '').trim()).filter(Boolean);
+
+  const unico = String((await store.get('modeloPadraoAnuncio')) || '').trim();
+  return unico ? [unico] : [];
 }
 
 function truncate(text, max) {

@@ -11,7 +11,10 @@ export async function list() {
   // Uma vez por carregamento do painel: a migração relê o storage, não custa a cada chamada.
   if (!migrado) {
     migrado = true;
-    await migrarPerguntaGrupos();
+    // `migrarPerguntaGrupos` saiu da fila em 01/09/2026, quando a pergunta dos grupos foi tirada
+    // do `pedir-dados`: ela ACRESCENTA a pergunta em quem não a tem, então numa instalação nova
+    // desfaria a remoção no primeiro carregamento. A função fica, porque é história de como o texto
+    // chegou onde chegou — o que não pode é ela rodar.
     await migrarRespostasNovas();
     await migrarRespostaAgradecerInfo();
     await migrarSaudacaoSemConvite();
@@ -25,6 +28,7 @@ export async function list() {
     await migrarRespostaPerguntarAjuda();
     await migrarRespostasDeEvento();
     await migrarVariantesDeTexto();
+    await migrarPedirDadosAntesDeTudo();
   }
   return store.get('templates');
 }
@@ -274,6 +278,47 @@ export async function migrarPerguntaGrupos() {
  * com a base editada dele mandaria conteúdo inconsistente. Nesse caso fica de fora, em
  * silêncio: sem variante é o comportamento de sempre (só o texto que ele escreveu), nunca erro.
  */
+/**
+ * O `pedir-dados` passa a pedir os dados ANTES de explicar o grupo (01/09/2026).
+ *
+ * Pedido dele: *"antes de qualquer coisa nos diga seu nome e cidade para salvarmos seu contato"*.
+ * Mudar `DEFAULT_TEMPLATES` só vale para quem nunca gravou nada — quem já usa a extensão tem o
+ * texto antigo salvo, e sem esta migração continuaria mandando a versão de ontem.
+ *
+ * **Só mexe em quem ainda tem o texto de fábrica.** A identificação é pelo MIOLO antigo, não pelo
+ * texto inteiro: as três versões tinham aberturas diferentes, e a saudação já foi mexida por outra
+ * migração antes. Se ele reescreveu a mensagem, a frase antiga não está lá e o texto dele fica
+ * intacto — reescrever por cima do que ele escreveu é o erro que nenhuma migração pode cometer.
+ *
+ * @returns {Promise<boolean>} se mexeu em alguma coisa
+ */
+export async function migrarPedirDadosAntesDeTudo() {
+  const migracoes = await store.get('migracoes');
+  if (migracoes.pedirDadosSemGrupos) return false;
+
+  const templates = await store.get('templates');
+  const alvo = templates.find((t) => t.id === 'pedir-dados');
+  const padrao = store.DEFAULT_TEMPLATES.find((t) => t.id === 'pedir-dados');
+  let mexeu = false;
+
+  if (alvo && padrao) {
+    const deFabrica = (texto) => store.PEDIR_DADOS_MIOLO_ANTIGO.some((m) => String(texto || '').includes(m));
+
+    if (deFabrica(alvo.text)) {
+      alvo.text = padrao.text;
+      mexeu = true;
+    }
+    if (Array.isArray(alvo.variantes)) {
+      alvo.variantes = alvo.variantes.map((v, i) => (deFabrica(v) ? padrao.variantes[i] || v : v));
+      mexeu = mexeu || alvo.variantes.some((v, i) => v === padrao.variantes[i]);
+    }
+    if (mexeu) await store.set('templates', templates);
+  }
+
+  await store.set('migracoes', { ...migracoes, pedirDadosSemGrupos: true });
+  return mexeu;
+}
+
 export async function migrarVariantesDeTexto() {
   const migracoes = await store.get('migracoes');
   if (migracoes.variantesDeTexto) return false;
