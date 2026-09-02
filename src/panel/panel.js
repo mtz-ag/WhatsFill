@@ -5703,8 +5703,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           regra: recomendacao?.id || '',
           tecla: recomendacao?.tecla || (recomendacao?.resposta ? 'f' : ''),
           motivo: recomendacao?.motivo || '',
-          // O que ELA escreveu — a última mensagem, que é o que a regra olhou para decidir.
-          mensagem: state.entrantes[state.entrantes.length - 1]?.texto || '',
+          /**
+           * **As cinco últimas dela**, e não só a última — pedido dele (02/09/2026) depois de me
+           * mandar as dez primeiras anotações: *"o contexto das conversas está muito pequeno"*.
+           *
+           * Ele estava certo. Em várias delas a última mensagem era um link solto ou um "Estamos
+           * juntos", e o que explicava o caso estava duas acima — eu leria o sintoma sem a conversa.
+           */
+          mensagens: (state.entrantes || [])
+            .map((m) => m?.texto || '')
+            .filter(Boolean)
+            .slice(-observacoesLib.MAX_MENSAGENS),
           etiquetas: (state.tagSuggestions || []).filter((t) => t.jaTem || t.marcada).map((t) => t.nome),
           porque,
         });

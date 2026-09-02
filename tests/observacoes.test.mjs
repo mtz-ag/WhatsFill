@@ -15,7 +15,7 @@ const caso = (extra) => ({
   regra: 'nunca-pediram-dados',
   tecla: '4',
   motivo: 'veio do anuncio e nunca pedimos o nome e a cidade dela',
-  mensagem: 'Que bom! Vou sim',
+  mensagens: ['Boa tarde', 'Recebi o convite', 'Que bom! Vou sim'],
   etiquetas: ['ADS', 'CACHOEIRINHA'],
   porque: 'ele ja tem todas as etiquetas, era so agradecer',
   ...extra,
@@ -26,7 +26,8 @@ grupo('a anotacao carrega o caso junto');
   const it = obs.nova(caso());
   check(it.regra === 'nunca-pediram-dados', 'guarda a regra que decidiu');
   check(it.tecla === '4', 'e a tecla que ela mandou apertar');
-  check(it.mensagem.includes('Vou sim'), 'e o que a pessoa escreveu');
+  check(it.mensagens.length === 3, 'e as mensagens dela, nao so a ultima');
+  check(it.mensagens[it.mensagens.length - 1].includes('Vou sim'), 'a mais recente por ultimo');
   check(it.etiquetas.length === 2, 'e as etiquetas do contato');
   check(!!it.em && it.em.includes('T'), 'e carimba a hora sozinho');
 
@@ -65,9 +66,9 @@ grupo('a peneira do que veio do armazenamento');
   check(obs.normalizar([{ contato: 'x' }]).length === 0, 'item SEM o porque e descartado');
 
   // Texto longo e cortado -- `chrome.storage.local` nao e infinito.
-  const gigante = obs.nova(caso({ porque: 'x'.repeat(5000), mensagem: 'y'.repeat(5000) }));
+  const gigante = obs.nova(caso({ porque: 'x'.repeat(5000), mensagens: ['y'.repeat(5000)] }));
   check(gigante.porque.length <= 1000, 'o porque e limitado');
-  check(gigante.mensagem.length <= 400, 'a mensagem dela tambem');
+  check(gigante.mensagens[0].length <= 300, 'a mensagem dela tambem');
   check(obs.nova(caso({ etiquetas: Array(40).fill('E') })).etiquetas.length <= 12, 'e as etiquetas');
 
   // Campo desconhecido nao passa: e o mesmo cuidado de `arvore.sanitizar`.
@@ -93,7 +94,7 @@ grupo('o texto que ele cola para mim');
   check(t.includes('## conteudo-pedido  (1×)'), 'e separa a outra regra');
   check(t.includes('primeira') && t.includes('segunda') && t.includes('outra regra'), 'todas as anotacoes saem');
   check(t.includes('Deoclecio Mello'), 'com o contato');
-  check(t.includes('Vou sim'), 'e com o que a pessoa escreveu');
+  check(t.includes('Vou sim') && t.includes('Recebi o convite'), 'e com as mensagens dela, nao so a ultima');
   check(t.includes('tecla 4'), 'e a tecla que a caixa sugeriu');
   check(t.includes('ADS, CACHOEIRINHA'), 'e as etiquetas');
 
@@ -105,6 +106,36 @@ grupo('o texto que ele cola para mim');
 grupo('apagar tudo');
 {
   check(obs.apagarTudo().length === 0, 'devolve lista vazia');
+}
+
+
+grupo('o contexto sao as CINCO ultimas (02/09/2026)');
+{
+  /**
+   * Pedido dele depois de me mandar as dez primeiras anotacoes: *"o contexto das conversas esta
+   * muito pequeno, deve pegar ao menos as 5 ultimas mensagens"*. Estava certo -- em varias delas a
+   * ultima mensagem era um link solto ou um "Estamos juntos", e o que explicava o caso estava duas
+   * mensagens acima. Com uma so, eu leria o sintoma sem a conversa.
+   */
+  check(obs.MAX_MENSAGENS === 5, 'guarda cinco');
+
+  const muitas = obs.nova(caso({ mensagens: ['1', '2', '3', '4', '5', '6', '7'] }));
+  check(muitas.mensagens.length === 5, 'passando de cinco, guarda cinco');
+  check(muitas.mensagens[0] === '3' && muitas.mensagens[4] === '7', 'e sao as CINCO ULTIMAS, nao as primeiras');
+
+  // Anotacao gravada pela versao anterior tinha `mensagem` no singular: nao pode se perder.
+  const antiga = obs.nova({ porque: 'x', mensagem: 'a unica que eu tinha' });
+  check(antiga.mensagens.length === 1 && antiga.mensagens[0] === 'a unica que eu tinha', 'a anotacao antiga sobrevive');
+
+  check(obs.nova({ porque: 'x' }).mensagens.length === 0, 'sem mensagem nenhuma nao quebra');
+  check(obs.nova({ porque: 'x', mensagens: ['', '  ', 'ok'] }).mensagens.length === 1, 'mensagem em branco nao conta');
+
+  // No texto que ele cola, uma so continua numa linha; varias viram uma lista.
+  const uma = obs.paraTexto([obs.nova({ porque: 'p', regra: 'r', mensagens: ['so essa'] })]);
+  check(uma.includes('ela escreveu: "so essa"'), 'com uma mensagem, a linha e direta');
+  const varias = obs.paraTexto([obs.nova({ porque: 'p', regra: 'r', mensagens: ['antes', 'depois'] })]);
+  check(varias.includes('as ultimas 2 dela:') || varias.includes('as últimas 2 dela:'), 'com varias, vira lista');
+  check(varias.includes('· "antes"') && varias.includes('· "depois"'), 'e todas aparecem');
 }
 
 fim();

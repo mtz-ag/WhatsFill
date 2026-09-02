@@ -25,6 +25,15 @@
 /** Quantas anotações guardar. Passa disso, a mais antiga sai. */
 export const MAX = 200;
 
+/**
+ * Quantas mensagens dela cada anotação carrega.
+ *
+ * Cinco é o número dele (*"deve pegar ao menos as 5 últimas mensagens"*), e é o que faz a anotação
+ * explicar o caso em vez de mostrar o sintoma: nas dez que ele me mandou, várias tinham como última
+ * mensagem um link solto ou um "Estamos juntos", com o assunto duas mensagens acima.
+ */
+export const MAX_MENSAGENS = 5;
+
 /** Corta texto longo sem quebrar o armazenamento — `chrome.storage.local` não é infinito. */
 function texto(valor, limite) {
   return String(valor || '')
@@ -47,8 +56,20 @@ export function nova(dados) {
     regra: texto(d.regra, 60),
     tecla: texto(d.tecla, 4),
     motivo: texto(d.motivo, 240),
-    // O que ELA escreveu. Sem isto, "a regra pegou gente demais" não tem como ser conferido.
-    mensagem: texto(d.mensagem, 400),
+    /**
+     * **As últimas mensagens dela** — pedido dele (02/09/2026): *"o contexto das conversas está
+     * muito pequeno, deve pegar ao menos as 5 últimas mensagens"*.
+     *
+     * A primeira versão guardava só a última, e ele estava certo: em várias das dez anotações que
+     * ele me mandou a última mensagem era um link solto ou um "Estamos juntos", e o que explicava o
+     * caso estava duas mensagens acima. Com uma só, eu leria o sintoma sem a conversa.
+     *
+     * Aceita também o `mensagem` singular das anotações já gravadas — elas não se perdem.
+     */
+    mensagens: (() => {
+      const lista = Array.isArray(d.mensagens) ? d.mensagens : d.mensagem ? [d.mensagem] : [];
+      return lista.map((m) => texto(m, 300)).filter(Boolean).slice(-MAX_MENSAGENS);
+    })(),
     etiquetas: (Array.isArray(d.etiquetas) ? d.etiquetas : []).map((t) => texto(t, 40)).filter(Boolean).slice(0, 12),
     porque: texto(d.porque, 1000),
   };
@@ -110,7 +131,13 @@ export function paraTexto(lista) {
       const dia = it.em.slice(0, 10).split('-').reverse().join('/');
       linhas.push(`  - ${dia} · ${it.contato || 'contato sem nome'} · sugeriu a tecla ${it.tecla || '?'}`);
       if (it.motivo) linhas.push(`      a caixa disse: ${it.motivo}`);
-      if (it.mensagem) linhas.push(`      ela escreveu: "${it.mensagem}"`);
+      if (it.mensagens.length === 1) {
+        linhas.push(`      ela escreveu: "${it.mensagens[0]}"`);
+      } else if (it.mensagens.length) {
+        // Em ordem, a mais recente por último — é como a conversa é lida na tela.
+        linhas.push(`      as últimas ${it.mensagens.length} dela:`);
+        for (const m of it.mensagens) linhas.push(`         · "${m}"`);
+      }
       if (it.etiquetas.length) linhas.push(`      etiquetas: ${it.etiquetas.join(', ')}`);
       linhas.push(`      >> ELE: ${it.porque}`);
     }
