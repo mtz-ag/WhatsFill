@@ -5,6 +5,55 @@
 
 ---
 
+## 2026-09-02 — A chegada não repete o que a volta já resolve (correção dele)
+
+**Correção dele:** *"porque o modelo que você criou tem todas essas opções em pessoa nova? ao mandar
+modelo e pedir dados irá concluir a conversa e ela volta pelo pessoa retornando"*.
+
+Está certo, e a medição confirmou. Eu havia copiado as cinco caixas de pendência para o ramo da
+chegada por causa do pedido anterior dele (*"após o modelo terá que ver se tem uma pendência"*) —
+sem perceber que o **"depois" acontece na volta**, porque a tecla `a` conclui.
+
+As cinco (ajuda financeira, bom dia, figura, áudio, despedida) **já existiam em "pessoa
+retornando"**. Ter as duas cópias é a receita para as versões divergirem: um conserto de um lado e o
+outro fica para trás — a mesma razão de `dosDoisLados` ser uma função em vez de copiar e colar.
+
+### O ramo da chegada foi de 12 caixas para 7
+
+Ficaram as proteções e as **três saídas que só a chegada resolve**:
+
+| fica | por quê |
+|---|---|
+| Recusou ou veio hostilizar | proteção |
+| Tem a etiqueta que dispensa da fila | proteção |
+| pediu algo e não disse o quê | material em cima do pedido dela |
+| Fez uma pergunta de razão ou de posição | idem |
+| **modelo + pedir os dados** | o recibo do anúncio e o atendimento |
+| **manda só o modelo** (ela já tem cidade) | a composta não cabe |
+| **ainda não temos nome e cidade** | não há modelo mapeado |
+
+As duas últimas não são cópia de pendência: sem elas, medido, esses dois casos atravessam o quadro
+sem desfecho.
+
+### A prova de que nada piorou
+
+As mesmas situações continuam resolvidas, agora pela volta e com o mesmo desfecho:
+
+- quem chega e diz "bom dia" → tecla 5, a mensagem do momento;
+- quem chega pedindo remédio → a negativa (`pedido-ajuda`).
+
+Quinze asserções travam isso, incluindo a contagem de caixas do ramo (7, não 12) e a exigência de
+que cada pendência tirada da chegada **continue existindo na volta**.
+
+Dois testes de contagem do catálogo caíram e estavam certos cair: a regra repetida agora aparece
+duas vezes no quadro (os dois lados da bifurcação de cidade), não três.
+
+**Arquivos:** `src/lib/arvore.js` (`fluxoPadrao`), `tests/arvore.test.mjs` (+15, 2 ajustadas),
+`manifest.json` (1.53.0 → 1.54.0). Arquivo de importação regerado: 38 ramos, sem avisos e sem
+problemas. Catorze suítes e os dois verificadores passando.
+
+---
+
 ## 2026-09-02 — O quadro dele: o hostil recebia o pedido de dados, a pessoa normal não recebia nada
 
 Ele colou o quadro e pediu: *"veja se está de acordo com as mudanças"*. **Não está**, e o problema

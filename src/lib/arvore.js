@@ -564,14 +564,25 @@ export function fluxoPadrao() {
      * na chegada, os dados vêm em seguida, e a pendência é o "após o modelo".
      */
     /**
-     * As pendências NEUTRAS, na ordem que ele pediu: depois do modelo e do pedido de dados.
+     * **As pendências NÃO ficam aqui — e a correção é dele** (02/09/2026): *"porque o modelo que
+     * você criou tem todas essas opções em pessoa nova? ao mandar modelo e pedir dados irá concluir
+     * a conversa e ela volta pelo pessoa retornando"*.
      *
-     * As três de cima foram tiradas desta lista para não aparecerem duas vezes no mesmo ramo — id
-     * repetido é o que `problemas` acusa, e na janela um clique abriria as duas caixas de uma vez.
+     * Ele está certo, e a medição confirmou: as cinco caixas de pendência que eu havia posto aqui
+     * (ajuda financeira, bom dia, figura, áudio, despedida) **já existem em "pessoa retornando"** —
+     * e é lá que ela chega, porque a tecla `a` conclui. Eu as havia copiado por causa do pedido
+     * anterior dele (*"após o modelo terá que ver se tem uma pendência"*), sem perceber que o
+     * "depois" acontece na volta, não aqui.
+     *
+     * Deixá-las nos dois lugares é a receita para as duas versões divergirem: um conserto de um
+     * lado e o outro fica para trás. É a mesma razão de `dosDoisLados` ser uma função em vez de
+     * copiar e colar.
+     *
+     * **O que fica são as três coisas que só a chegada resolve:** o recibo com o pedido de dados,
+     * o recibo sozinho para quem já tem cidade, e o pedido de dados sozinho para quem não tem
+     * modelo mapeado. Sem as duas últimas, medido, esses dois casos atravessam o quadro sem
+     * desfecho.
      */
-    ...dosDoisLados('chegada').filter(
-      (no) => !['pediu-algo-sem-dizer-o-que', 'pergunta-aberta'].includes(no.regra)
-    ),
   ]);
 
   /**

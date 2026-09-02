@@ -641,7 +641,7 @@ grupo('o catalogo devolve as regras apagadas para o quadro (01/09/2026)');
   // Repetir e legitimo: o proprio padrao poe as mesmas regras dos dois lados da bifurcacao de
   // cidade. A marca informa quantas vezes, e nao esconde a regra da lista.
   const repetida = cat.find((r) => r.id === 'ultima-e-despedida');
-  check(repetida.quantasNoQuadro === 3, 'regra repetida conta as 3 vezes (chegada + os dois lados de cidade)');
+  check(repetida.quantasNoQuadro === 2, 'regra repetida conta as 2 vezes (os dois lados de cidade)');
 
   const descartada = cat.find((r) => r.id === 'nome-sem-sentido');
   check(descartada && descartada.quantasNoQuadro === 0, 'regra fora do quadro aparece na lista, zerada');
@@ -649,7 +649,7 @@ grupo('o catalogo devolve as regras apagadas para o quadro (01/09/2026)');
   // Apagar uma caixa devolve a regra a lista — e e isto que torna o apagar reversivel.
   const semDespedida = arv.apagar(q, 'r:ultima-e-despedida:sem-cidade');
   const depois = arv.catalogoDeRegras(semDespedida).find((r) => r.id === 'ultima-e-despedida');
-  check(depois.quantasNoQuadro === 2, 'apagar uma caixa desconta a regra do catalogo');
+  check(depois.quantasNoQuadro === 1, 'apagar uma caixa desconta a regra do catalogo');
 }
 
 grupo('por a regra de volta nunca repete id');
@@ -1047,6 +1047,58 @@ grupo('remetente dentro de protecao -- o erro que aconteceu DUAS vezes');
 
   // E o padrao continua limpo -- alarme que toca sempre se aprende a ignorar.
   check(acusa(arv.arrumar(arv.fluxoPadrao())).length === 0, 'o padrao nao acusa nada');
+}
+
+
+grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
+{
+  /**
+   * Correcao dele: *"porque o modelo que voce criou tem todas essas opcoes em pessoa nova? ao mandar
+   * modelo e pedir dados ira concluir a conversa e ela volta pelo pessoa retornando"*.
+   *
+   * Eu havia copiado as cinco caixas de pendencia para a chegada, por causa do pedido anterior dele
+   * (*"apos o modelo tera que ver se tem uma pendencia"*) -- sem perceber que o "depois" acontece
+   * na VOLTA, porque a tecla `a` conclui. Deixa-las nos dois lugares e a receita para as duas
+   * versoes divergirem: um conserto de um lado e o outro fica para tras.
+   */
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const chegada = q.find((n) => n.rotulo === 'anúncio — pessoa nova');
+  const volta = q.find((n) => n.rotulo === 'pessoa retornando');
+
+  const naChegada = chegada.filhos.map((n) => n.regra || n.rotulo);
+  const PENDENCIAS = ['pediu ajuda financeira', 'ultima-e-so-reacao', 'ultima-pede-resposta-pessoal', 'ultima-e-despedida'];
+  for (const p of PENDENCIAS) {
+    check(!naChegada.includes(p), `"${p}" nao esta mais na chegada`);
+  }
+  check(!naChegada.some((x) => String(x).startsWith('só mandou bom dia')), '"so mandou bom dia" nao esta mais na chegada');
+
+  // E continuam existindo na volta -- e por isso que remover da chegada nao perde nada.
+  const naVolta = new Set(arv.todosOsNos(volta.filhos).map(({ no }) => no.regra || no.rotulo));
+  for (const p of PENDENCIAS) check(naVolta.has(p), `"${p}" continua na volta`);
+
+  /**
+   * O que a chegada resolve e que a volta NAO resolve: as tres saidas do recibo. Sem as duas
+   * ultimas, medido, o contato atravessa o quadro sem desfecho.
+   */
+  check(naChegada.includes('anuncio-modelo-e-dados'), 'o recibo + pedido de dados fica na chegada');
+  check(naChegada.includes('conteudo-pedido'), 'o recibo sozinho (ela ja tem cidade) fica na chegada');
+  check(naChegada.includes('nunca-pediram-dados'), 'o pedido de dados sozinho (sem modelo) fica na chegada');
+  check(chegada.filhos.length === 7, 'e a chegada tem 7 caixas, nao 12');
+
+  /**
+   * A prova de que nada piorou: as pendencias de quem CHEGA continuam sendo resolvidas -- pela
+   * volta, com o mesmo desfecho de antes.
+   */
+  const ad = 'Olá! Eu apoio as Escolas';
+  const b = {
+    veioDeAnuncio: true, anuncioReconhecido: true, jaRespondemosAntes: false,
+    jaPediramDados: false, podePedirDados: true, pedidoHoje: false, enviadoHoje: false,
+    modeloJaNaConversa: false, podeEnviar: false, temEtiquetaDeCidade: true, podeMandarMomento: true,
+  };
+  const bomDia = arv.decidir({ ...b, textos: [ad, 'bom dia'], ultimoTexto: 'bom dia' }, q);
+  check(bomDia?.tecla === '5', 'quem chega e diz "bom dia" ainda recebe a mensagem do momento');
+  const remedio = arv.decidir({ ...b, textos: [ad, 'preciso de remedio'], ultimoTexto: 'preciso de remedio' }, q);
+  check(remedio?.resposta === 'pedido-ajuda', 'e quem pede remedio ainda recebe a negativa');
 }
 
 fim();
