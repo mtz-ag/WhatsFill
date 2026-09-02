@@ -2508,7 +2508,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'aparece no status. Vazio = não marca ninguém.'),
       h('div', { class: 'wf-origin' },
         'Quem pede para não receber mais, ou vem hostilizar, é marcado com esta etiqueta e ' +
-          'concluído SEM resposta (tecla "s" na caixa da rodada). Digite o nome exatamente como ' +
+          'concluído SEM resposta (tecla "S" na caixa da rodada). Digite o nome exatamente como ' +
           'está no CRM — a extensão não cria etiqueta sozinha. Vazio: a rodada conclui sem ' +
           'responder e não marca ninguém. A detecção exige sinal forte: pedido explícito de sair, ' +
           '"não" na abertura da resposta, ou xingamento dirigido a nós. Xingar o adversário em ' +
@@ -4925,7 +4925,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           // A regra recomendou uma tecla que não está na lista (travada por variável faltando,
           // por exemplo). Cai na caixa, com o motivo no log — silêncio aqui viraria "a rodada
           // ignorou a regra" sem ninguém conseguir dizer por quê.
-          registrarNaRodada(nome, 'aviso', `o fluxo pediu ${sugestao.resposta ? `a resposta "${sugestao.resposta}"` : `a tecla ${sugestao.tecla}`} ("${sugestao.id}"), que não está disponível agora — decida você`);
+          registrarNaRodada(nome, 'aviso', `o fluxo pediu ${sugestao.resposta ? `a resposta "${sugestao.resposta}"` : `a tecla ${sugestaoLib.mostrarTecla(sugestao.tecla)}`} ("${sugestao.id}"), que não está disponível agora — decida você`);
         } else if (sugestao.tecla === '6') {
           registrarNaRodada(nome, 'aviso', `regra "${sugestao.id}": ${sugestao.motivo} — precisa de você`);
         } else {
@@ -5327,7 +5327,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // dizia POR QUE aquela era a sugerida — e o porquê é o que deixa discordar dela.
       if (recomendacao) {
         caixa.append(
-          h('div', { class: 'wf-pergunta-recomendada' }, `Sugiro a ${recomendacao.tecla}: ${recomendacao.motivo}`)
+          h('div', { class: 'wf-pergunta-recomendada' }, `Sugiro a ${sugestaoLib.mostrarTecla(recomendacao.tecla)}: ${recomendacao.motivo}`)
         );
       } else if (semRegra) {
         /**
@@ -5366,7 +5366,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         const btn = h(
           'button',
           { class: `wf-btn ${opcao.primaria ? 'wf-primary' : ''}`, type: 'button' },
-          `${opcao.tecla}  ${opcao.rotulo}`
+          `${sugestaoLib.mostrarTecla(opcao.tecla)}  ${opcao.rotulo}`
         );
         btn.addEventListener('click', () => fechar(opcao.valor));
         botoes.push(btn);
@@ -5386,7 +5386,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // o número vai para a decisão e o atendimento fecha no meio de uma frase.
         if (ehCampoDeTexto(ev.composedPath?.()[0] || ev.target)) return;
 
-        const opcao = opcoes.find((o) => o.tecla === ev.key);
+        // A caixa mostra a letra em MAIÚSCULA (ver `sugestao.mostrarTecla`), então o Shift junto
+        // tem que valer: caixa que ensina uma tecla e recusa o jeito óbvio de apertá-la é pior
+        // que caixa sem atalho. As teclas em si continuam minúsculas — o que muda é só a leitura.
+        const apertada = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+        const opcao = opcoes.find((o) => o.tecla === apertada);
         if (!opcao && ev.key !== 'Escape') return;
         ev.preventDefault();
         ev.stopPropagation();

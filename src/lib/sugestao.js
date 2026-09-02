@@ -620,6 +620,22 @@ export const TECLAS = {
   a: { rotulo: 'Manda o modelo do anúncio + pede nome e cidade, e conclui', efeito: 'envia' },
 };
 
+/**
+ * Como a tecla APARECE na tela: letra em maiúscula, dígito como está.
+ *
+ * Pedido dele (02/09/2026): *"troque a opção a por A maiúsculo para ficar destacado, mas só na
+ * visualização; no teclado pode ser a minúsculo"*. No print da caixa da rodada a linha
+ * `a  Mandar "Segurança" + Pedir dados` desaparece no meio dos dígitos, e a recomendação sai como
+ * *"Sugiro a a:"*, que parece erro de digitação.
+ *
+ * **É só desenho.** As teclas continuam sendo `'a'`, `'s'` e `'f'` em toda parte — é por elas que
+ * `sugestao.tecla === 'a'`, a automação da rodada e os ramos da árvore acham a opção. Converter na
+ * hora de ESCREVER, e não na lista, é o que impede a maiúscula de vazar para a comparação.
+ */
+export function mostrarTecla(tecla) {
+  return String(tecla ?? '').toUpperCase();
+}
+
 export const SOBRE = {
   'sem-interesse': {
     rotulo: 'Recusou ou veio hostilizar',

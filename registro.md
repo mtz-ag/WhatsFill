@@ -1,3 +1,37 @@
+## 2026-09-02 — A tecla aparece MAIUSCULA na tela; no teclado continua minuscula (v1.69.0)
+
+**Pedido dele**, com a print da caixa da rodada: *"troque a opcao a por A maiusculo para ficar
+destacado, mas so na visualizacao; no teclado pode ser a minusculo"*.
+
+Na print a linha `a  Mandar "Seguranca" + Pedir dados (formato fixo) e concluir` some no meio dos
+digitos, e a recomendacao sai como *"Sugiro a a:"*, que parece erro de digitacao.
+
+### O que mudou
+
+`sugestao.mostrarTecla` — quatro linhas, puro e testado. Converte **na hora de escrever**, nunca na
+lista de opcoes: as teclas continuam `'a'`, `'s'` e `'f'` em toda parte, que e por onde
+`sugestao.tecla === 'a'`, a automacao da rodada e os ramos da arvore acham a opcao.
+
+Aplicado nos dois lugares que ele le:
+
+- **Caixa da rodada**: os botoes e a linha "Sugiro a A:". Junto, o atalho passou a aceitar Shift —
+  caixa que mostra "A" e recusa Shift+A ensina uma tecla que ela mesma nao aceita.
+- **Janela do fluxo**: o desfecho do cartao, os dois seletores de desfecho, a legenda e o relatorio
+  de regras.
+
+Tambem subiu o `"s"` da prosa da Config, para a tela nao contradizer a caixa.
+
+### A trava
+
+O teste percorre as chaves de `TECLAS` exigindo que continuem minusculas. Se alguem "arrumar" a
+tabela para bater com a tela, todo `=== 'a'` do painel para de casar de uma vez — e o sintoma seria
+a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
+
+**Arquivos:** `src/lib/sugestao.js`, `src/panel/panel.js`, `src/fluxo.js`,
+`tests/sugestao.test.mjs`, `manifest.json` (1.68.0 → 1.69.0), `registro.md`.
+
+---
+
 # Registro de mudanças
 
 > Entrada nova sempre no **TOPO**. Formato: data, o que foi pedido, o que foi feito, causa raiz

@@ -171,14 +171,14 @@ function acaoEmPortugues(no) {
   if (no.regra) {
     const ramos = sugestaoLib.ramosDaRegra(no.regra, fluxo);
     if (!ramos.length) return 'sem desfecho';
-    return ramos.map((r) => `tecla ${r.tecla} · ${r.rotulo}`).join('  ou  ');
+    return ramos.map((r) => `tecla ${sugestaoLib.mostrarTecla(r.tecla)} · ${r.rotulo}`).join('  ou  ');
   }
   if (no.acao?.ia) return 'a IA assume: escolhe uma resposta pronta sua, ou escala para você';
   if (no.acao?.resposta) {
     const t = respostas.find((r) => r.id === no.acao.resposta);
     return `manda "${t?.name || no.acao.resposta}" e conclui`;
   }
-  if (no.acao?.tecla) return `tecla ${no.acao.tecla} · ${sugestaoLib.TECLAS[no.acao.tecla]?.rotulo || '?'}`;
+  if (no.acao?.tecla) return `tecla ${sugestaoLib.mostrarTecla(no.acao.tecla)} · ${sugestaoLib.TECLAS[no.acao.tecla]?.rotulo || '?'}`;
   return null;
 }
 
@@ -734,10 +734,10 @@ function desenharEditor() {
     caixa.append(span('leitura', condicaoEmPortugues(no)));
 
     const daRegra = sugestaoLib.REGRAS.find((r) => r.id === no.regra);
-    const padrao = typeof daRegra?.tecla === 'function' ? 'dois desfechos, conforme o contexto' : `tecla ${daRegra?.tecla}`;
+    const padrao = typeof daRegra?.tecla === 'function' ? 'dois desfechos, conforme o contexto' : `tecla ${sugestaoLib.mostrarTecla(daRegra?.tecla)}`;
     linha(
       'Desfecho',
-      seletor([['', `o do código (${padrao})`], ...TECLAS.map(([k, t]) => [k, `${k} · ${t}`])], fluxo.teclas?.[no.regra] || '', (valor) => {
+      seletor([['', `o do código (${padrao})`], ...TECLAS.map(([k, t]) => [k, `${sugestaoLib.mostrarTecla(k)} · ${t}`])], fluxo.teclas?.[no.regra] || '', (valor) => {
         const teclas = { ...(fluxo.teclas || {}) };
         if (valor) teclas[no.regra] = valor;
         else delete teclas[no.regra];
@@ -791,7 +791,7 @@ function desenharEditor() {
         [
           ['', '— nada: este ramo só agrupa outros —'],
           ['ia', 'a IA assume e responde'],
-          ...TECLAS.map(([k, t]) => [`t:${k}`, `tecla ${k} · ${t}`]),
+          ...TECLAS.map(([k, t]) => [`t:${k}`, `tecla ${sugestaoLib.mostrarTecla(k)} · ${t}`]),
           ...respostas.map((r) => [`r:${r.id}`, `mandar "${r.name}" e concluir`]),
         ],
         acao.ia ? 'ia' : acao.resposta ? `r:${acao.resposta}` : acao.tecla ? `t:${acao.tecla}` : '',
@@ -1396,7 +1396,7 @@ function desenharTeclas() {
   dl.replaceChildren();
   for (const [k, texto] of TECLAS) {
     const dt = document.createElement('dt');
-    dt.textContent = k;
+    dt.textContent = sugestaoLib.mostrarTecla(k);
     const dd = document.createElement('dd');
     dd.textContent = texto;
     dl.append(dt, dd);
@@ -1468,7 +1468,7 @@ function testar() {
         ? 'desfecho: a IA assume — escolhe uma resposta pronta, ou escala para você'
         : r.resposta
           ? `desfecho: manda "${respostas.find((t) => t.id === r.resposta)?.name || r.resposta}" e conclui`
-          : `desfecho: tecla ${r.tecla} · ${sugestaoLib.TECLAS[r.tecla]?.rotulo || '?'}`
+          : `desfecho: tecla ${sugestaoLib.mostrarTecla(r.tecla)} · ${sugestaoLib.TECLAS[r.tecla]?.rotulo || '?'}`
     );
     escreve('fraco', `motivo na tela: ${r.motivo}`);
   } else {

@@ -615,4 +615,33 @@ grupo('o mapa RAMIFICADO da janela: cada regra tem os dois galhos (01/09/2026)')
   check(ramosDaRegra('nao-existe').length === 0, 'id inexistente devolve lista vazia');
 }
 
+grupo('mostrarTecla: maiuscula na TELA, minuscula na comparacao (02/09/2026)');
+{
+  /**
+   * Pedido dele: *"troque a opcao a por A maiusculo para ficar destacado, mas so na visualizacao;
+   * no teclado pode ser a minusculo"*. O risco desta mudanca e a maiuscula VAZAR para a
+   * comparacao -- `sugestao.tecla === 'a'` esta espalhado pelo painel e pela arvore, e um 'A'
+   * chegando ali faria a rodada dizer "tecla nao disponivel" em todo contato de anuncio.
+   */
+  const { mostrarTecla, TECLAS } = sugestaoLib;
+
+  check(mostrarTecla('a') === 'A', 'a letra sobe');
+  check(mostrarTecla('s') === 'S', 'o s tambem');
+  check(mostrarTecla('f') === 'F', 'e o f do ramo com resposta pronta');
+  check(mostrarTecla('1') === '1', 'digito nao muda');
+
+  // Nulo e indefinido viram texto vazio: quem escreve na tela nao pode explodir por falta de dado.
+  check(mostrarTecla(null) === '', 'nulo vira vazio, nao "null"');
+  check(mostrarTecla(undefined) === '', 'indefinido tambem');
+
+  /**
+   * **A trava que importa:** as chaves da tabela continuam minusculas. Se alguem "arrumar" a
+   * TECLAS para bater com a tela, todo `=== 'a'` do painel para de casar de uma vez.
+   */
+  for (const k of Object.keys(TECLAS)) {
+    check(k === k.toLowerCase(), `a chave "${k}" continua minuscula na tabela`);
+  }
+  check(!!TECLAS.a && !TECLAS.A, 'a tecla do anuncio e "a", nunca "A"');
+}
+
 fim();
