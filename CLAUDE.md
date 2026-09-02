@@ -494,6 +494,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   assumido e mandado uma mensagem personalizada"* (02/09). O painel chama a IA em
   `!sugestao || sugestao.tecla === '6'`, e quando ela escala o rascunho personalizado pode sair.
   Mandar qualquer mensagem PRONTA nesse caso e o erro — nao existe resposta pronta para desabafo.
+- **Sinal que junta "ela escreveu depois" com "o parser achou algo" tem que rodar o parser SO no
+  depois.** `respondeuOsDados` somava `respostasApos` com `state.informouNomeOuCidade`, que roda na
+  CONVERSA INTEIRA — e nesta base a pessoa diz de onde e antes de qualquer pedido. Bastava ela
+  escrever qualquer coisa depois (um "ok", um link) para as duas metades darem verdadeiro:
+  agradeciamos por um dado que ela nunca deu e concluiamos o atendimento (print dele, 02/09,
+  *"agradecimento saindo sem a pessoa responder nome e cidade"*). O comentario do sinal ja dizia
+  *"o parser achou nome ou cidade no que ela escreveu"* — a intencao estava certa e o codigo nao a
+  cumpria. **Mesma familia do "comentario que descreve a ordem nao e a ordem".**
+- **No modo `respostaAoPedido` o parser devolve QUALQUER palavra solta como cidade
+  `nao-reconhecida`** — medido: um link do Instagram volta como `cidade: "www.instagram.com"`. A
+  generosidade e de proposito (e ela que faz "maria cachoeirinha" virar nome e cidade sem
+  separador), mas quem pergunta *"ela respondeu?"* tem que exigir cidade RECONHECIDA ou nome. So
+  isso ja reproduzia a print inteira, e sozinho teria feito o conserto anterior parecer que
+  funcionou. **Nunca teste so \`if (palpite.cidade)\` no modo generoso; olhe a confianca.**
 - **Antes de oferecer opcoes a ele, confira se voce entendeu o que a coisa FAZ.** A escolha dele e
   boa na medida em que a minha descricao e verdadeira; descricao errada nao produz escolha errada
   dele, produz escolha errada minha assinada por ele. Foi o que aconteceu com o modelo padrao acima.

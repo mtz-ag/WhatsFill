@@ -5,6 +5,60 @@
 
 ---
 
+## 2026-09-02 — Agradecimento saía sem ela responder nome e cidade
+
+**Relato dele**, com a print: pedimos *"Nome, Cidade"* às 12:51, ela não respondeu, e saiu mensagem
+nossa mesmo assim — *"agradecimento saindo sem a pessoa responder nome e cidade"*.
+
+### Causa raiz: DOIS defeitos empilhados
+
+**1. O sinal olhava a conversa inteira, não a resposta.**
+
+`respondeuOsDados` era `state.informouNomeOuCidade && respostasApos(...)`. A segunda metade está
+certa — "o pedido saiu e ela escreveu depois". A primeira não: `informouNomeOuCidade` roda o parser
+na **conversa inteira**. Nesta base a pessoa costuma dizer de onde é antes de qualquer pedido, então
+bastava ela escrever **qualquer coisa** depois — um "ok", um link repassado, um vídeo — para as duas
+metades darem verdadeiro. Agradecíamos por um dado que ela nunca deu, e concluíamos o atendimento.
+
+O comentário do próprio sinal já dizia *"o parser achou nome ou cidade **no que ela escreveu**"*. A
+intenção estava certa e o código não a cumpria — mesma família do "comentário que descreve a ordem
+não é a ordem", já registrada.
+
+**2. No modo `respostaAoPedido`, qualquer palavra solta volta como cidade.**
+
+Descoberto escrevendo o teste, e sozinho já reproduzia a print: `extract(['https://www.instagram.com/reels/…'], { respostaAoPedido: true })`
+devolve `cidade: "www.instagram.com"` com confiança `nao-reconhecida`. A generosidade do modo é de
+propósito — é ela que faz *"maria cachoeirinha"* virar nome e cidade sem separador —, mas quem
+pergunta *"ela respondeu?"* não pode aceitar isso.
+
+**Sem achar o segundo, o conserto do primeiro teria parecido que funcionou** e a print voltaria na
+primeira pessoa que repassasse um vídeo depois do pedido.
+
+### O conserto
+
+- O parser roda **só nas mensagens que vieram depois do pedido** (`respostasApos`), com
+  `respostaAoPedido: true`, que é o modo que a nossa própria pergunta autoriza.
+- E o resultado só conta como resposta se a **cidade for reconhecida** (confiança diferente de
+  `nao-reconhecida`) **ou** houver nome — que já passa pelas guardas de `NAO_E_NOME`.
+- `state.informouNomeOuCidade` foi **removido**: virou estado morto, e estado morto que já causou um
+  defeito é convite para religarem no próximo sinal.
+
+### O teste
+
+Em `parser.test.mjs`, o caso da print inteiro: a conversa antiga com "Sou de Canoas", o pedido, e o
+link repassado depois. Trava as duas leituras — a conversa inteira **acha** a cidade (era o falso
+positivo) e a resposta sozinha **não conta**. Mais o ruído que ela manda de verdade: emoji, link do
+YouTube, "obrigada!", "vou ver depois". E o que **deve** contar continua contando: "Maria Silva ,
+Canoas" e "canoas" sozinho.
+
+**Arquivos:** `src/panel/panel.js`, `tests/parser.test.mjs`, `manifest.json` (1.57.0 → 1.58.0),
+`registro.md`, `CLAUDE.md`. Catorze suítes, `checar-modulos` e `checar-referencias` passando.
+
+**Não testado na tela:** o comportamento com a extensão carregada. Teste no Thiago Tim: peça os
+dados, responda com um link, e a rodada não pode agradecer.
+
+---
+
 ## 2026-09-02 — Desabafo longo ia para a mensagem do momento; agora vai para a IA
 
 **Relato dele**, com a print da Cris: *"a IA devia ter assumido e mandado uma mensagem

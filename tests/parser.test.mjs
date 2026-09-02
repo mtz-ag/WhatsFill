@@ -691,4 +691,59 @@ grupo('separador que a pessoa escolheu: ponto e hifen (print da Nilza, 01/09/202
   check(await naoInformada('Ola! Eu apoio o Flavio, Zucco e Capitao Martim'), 'o aceite do anuncio continua sem cidade');
 }
 
+grupo('agradecimento so quando ela responde o pedido, nao a conversa inteira (02/09/2026)');
+{
+  /**
+   * Print dele: pedimos "Nome, Cidade" as 12:51, ela nao respondeu, e saiu o agradecimento --
+   * *"agradecimento saindo sem a pessoa responder nome e cidade"*.
+   *
+   * A causa: o sinal `respondeuOsDados` somava "ela escreveu depois do pedido" com um parser que
+   * rodava na CONVERSA INTEIRA. Nesta base a pessoa costuma dizer de onde e antes de qualquer
+   * pedido, entao bastava ela escrever qualquer coisa depois -- um "ok", um link repassado -- para
+   * as duas metades darem verdadeiro. Agradeciamos por um dado que ela nunca deu, e concluiamos.
+   *
+   * Este teste trava a diferenca entre as duas leituras. O painel agora roda o parser SO nas
+   * mensagens de depois do pedido; se alguem voltar a usar a conversa inteira, a primeira assercao
+   * cai.
+   */
+  const antesDoPedido = 'Oi, tudo bem? Sou de Canoas e acompanho o trabalho de voces.';
+  const depoisDoPedido = 'https://www.instagram.com/reels/DcyPfNjxsZF/';
+
+  // Como era: a conversa inteira. O parser acha Canoas -- da mensagem ANTIGA.
+  const naConversaInteira = await extract([antesDoPedido, depoisDoPedido], { respostaAoPedido: true });
+  check(!!naConversaInteira.cidade, 'na conversa inteira o parser acha a cidade (era o que dava o falso positivo)');
+
+  // Como e agora: so o que veio DEPOIS do pedido. Um link repassado nao e nome nem cidade.
+  /**
+   * **A regra que o painel aplica**: cidade com confianca `nao-reconhecida` NAO conta.
+   *
+   * No modo `respostaAoPedido` o parser e generoso de proposito -- e ele que faz
+   * "maria cachoeirinha" virar nome e cidade sem separador. O preco e que qualquer palavra solta
+   * volta como cidade nao-reconhecida: um link do Instagram devolve cidade "www.instagram.com".
+   * So isso ja reproduziria a print inteira.
+   */
+  const respondeuDeVerdade = (p) => (!!p.cidade && p.cidade.confidence !== 'nao-reconhecida') || !!p.nome;
+
+  const soNaResposta = await extract([depoisDoPedido], { respostaAoPedido: true });
+  check(soNaResposta.cidade?.confidence === 'nao-reconhecida', `o link volta como cidade nao-reconhecida (${soNaResposta.cidade?.value})`);
+  check(!respondeuDeVerdade(soNaResposta), 'e por isso NAO conta como resposta ao pedido');
+
+  // E quem RESPONDE de verdade continua sendo reconhecida -- senao o conserto viraria outro buraco.
+  const respondeu = await extract(['Maria Silva , Canoas'], { respostaAoPedido: true });
+  check(respondeuDeVerdade(respondeu), 'quem responde nome e cidade continua sendo reconhecida');
+
+  const soCidade = await extract(['canoas'], { respostaAoPedido: true });
+  check(respondeuDeVerdade(soCidade), 'so a cidade tambem conta como resposta');
+
+  // "ok" solto nao pode virar agradecimento.
+  const ok = await extract(['ok'], { respostaAoPedido: true });
+  check(!respondeuDeVerdade(ok), '"ok" solto nao e resposta ao pedido');
+
+  // Outras coisas que ela manda depois do pedido e nao sao resposta.
+  for (const ruido of ['👍', 'https://youtu.be/abc123', 'obrigada!', 'vou ver depois']) {
+    const p = await extract([ruido], { respostaAoPedido: true });
+    check(!respondeuDeVerdade(p), `"${ruido}" nao e resposta ao pedido`);
+  }
+}
+
 fim();

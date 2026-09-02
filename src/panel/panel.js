@@ -151,8 +151,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     nossaUltimaAt: null,
     /** O nome que a pessoa escreveu nesta conversa (palpite do parser), não o do cadastro. */
     nomeInformado: '',
-    /** O parser achou nome ou cidade no que ela escreveu? Metade do sinal `respondeuOsDados`. */
-    informouNomeOuCidade: false,
     /**
      * O anúncio que o texto desta conversa reconhece: `{ anuncio, trecho }` ou `null`.
      *
@@ -468,7 +466,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // Sobreviver à troca de contato faria a etiqueta de nome divergente cair na pessoa errada —
     // é a mesma armadilha da pergunta de cidade, registrada no CLAUDE.md.
     state.nomeInformado = '';
-    state.informouNomeOuCidade = false;
     /**
      * O anúncio reconhecido é do contato ANTERIOR até `refreshTagSuggestions` rodar de novo, e ele
      * decide o que a rodada manda. Sobreviver à troca é a mesma armadilha da pergunta de cidade:
@@ -546,14 +543,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * no caso que interessa. O palpite do parser é a única fonte que diz o que ela informou.
        */
       state.nomeInformado = palpites.nome?.value || '';
-      /**
-       * O parser achou nome ou cidade no que ela escreveu?
-       *
-       * Metade do sinal `respondeuOsDados`. A outra metade — "o pedido de dados saiu e ela escreveu
-       * depois" — é lida na rodada, porque depende da hora das mensagens. Guardado aqui porque é
-       * aqui que o parser roda, e refazer a extração na rodada seria trabalho repetido.
-       */
-      state.informouNomeOuCidade = !!(palpites.nome || palpites.cidade);
       applyGuesses(palpites, classify);
 
       /**
@@ -4240,6 +4229,46 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // Lida aqui, antes das opções e da regra, porque as duas usam.
       const etiquetaSemInteresse = String(state.auto.cfg.etiquetaSemInteresse || '').trim();
 
+      /**
+       * **Ela respondeu o nome ou a cidade DEPOIS do pedido?**
+       *
+       * O parser dos palpites roda na conversa INTEIRA, e a pergunta aqui e outra. Print dele (02/09/2026): pedimos os dados às 12:51, ela não respondeu, e
+       * saiu o agradecimento — *"agradecimento saindo sem a pessoa responder nome e cidade"*.
+       *
+       * O motivo é essa diferença. Se o parser tinha achado um nome ou uma cidade em qualquer
+       * mensagem anterior — e nesta base isso é comum, porque ela costuma dizer de onde é antes de
+       * qualquer pedido —, bastava ela escrever QUALQUER coisa depois (um "ok", um link
+       * repassado, um vídeo) para as duas metades darem verdadeiro. Agradecíamos por um dado que
+       * ela nunca deu, e concluíamos o atendimento.
+       *
+       * O comentário do sinal já dizia *"o parser achou nome ou cidade no que ela escreveu"* — a
+       * intenção estava certa e o código não a cumpria. Agora o parser roda **só nas mensagens que
+       * vieram depois do pedido**.
+       *
+       * `respostaAoPedido: true` é o modo que a nossa própria pergunta autoriza: estas mensagens
+       * SÃO a resposta ao formulário, então "maria cachoeirinha" vale sem separador e sem pista.
+       */
+      const depoisDoPedido = respostasApos(state.entrantes, state.nossas, pediuNomeECidade);
+      const respondeuOsDados = await (async () => {
+        const textos = (depoisDoPedido || []).map((m) => String(m?.texto || '').trim()).filter(Boolean);
+        if (!textos.length) return false;
+        const doPedido = await extract(textos, { respostaAoPedido: true });
+        /**
+         * **Cidade `nao-reconhecida` NÃO conta como resposta.**
+         *
+         * No modo `respostaAoPedido` o parser é generoso de propósito — é ele que faz
+         * "maria cachoeirinha" virar nome e cidade sem separador nenhum. O preço é que qualquer
+         * palavra solta volta como cidade com confiança `nao-reconhecida`: medido, um link do
+         * Instagram repassado devolve `cidade: "www.instagram.com"`.
+         *
+         * Isso sozinho reproduziria a print inteira — ela repassa um vídeo depois do pedido e nós
+         * agradecemos pelos dados. Exigir cidade RECONHECIDA (ou um nome, que já passa pelas
+         * guardas de `NAO_E_NOME`) é o que separa "respondeu" de "escreveu qualquer coisa".
+         */
+        const cidadeVale = !!doPedido.cidade && doPedido.cidade.confidence !== 'nao-reconhecida';
+        return cidadeVale || !!doPedido.nome;
+      })();
+
       let sugestao = sugerirAcaoComFluxo({
         // Recusou ou veio hostilizar: a regra mais alta da tabela, porque continuar mandando
         // mensagem para quem pediu para parar é o que gera denúncia.
@@ -4254,10 +4283,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          *
          * **As duas metades juntas, e é isso que o torna seguro:** o pedido de dados saiu e ela
          * escreveu depois (`respostasApos`, casando por INVARIANTE e não pelo texto atual do
-         * template) **e** o parser achou nome ou cidade no que ela escreveu. Só a primeira faria um
-         * "sim" solto, ou um assunto novo, virar agradecimento e conclusão.
+         * template) **e** o parser achou nome ou cidade **nessas** mensagens — não na conversa
+         * inteira, que era o defeito de 02/09. Ver `respondeuOsDados`, acima.
          */
-        respondeuOsDados: state.informouNomeOuCidade && !!respostasApos(state.entrantes, state.nossas, pediuNomeECidade),
+        respondeuOsDados,
         /**
          * **Disse que VAI ao evento.** `presenca` já era calculado aqui para escolher o texto da
          * tecla 4; agora também é sinal, porque faltava um desfecho para "confirmou e não falta
