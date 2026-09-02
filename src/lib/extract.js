@@ -47,13 +47,15 @@ export async function extract(texts, { respostaAoPedido = false } = {}) {
    */
   const naRespostaBruta = !structured && respostaAoPedido ? await cities.matchCity(joined) : null;
 
-  /** O que sobra da resposta depois de tirar o município — deveria ser o nome, e só ele. */
-  const sobraDaResposta = naRespostaBruta
-    ? joined
-        .replace(new RegExp(escapeRe(naRespostaBruta.matched || ''), 'i'), ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-    : '';
+  /**
+   * O que sobra da resposta depois de tirar o município — deveria ser o nome, e só ele.
+   *
+   * Removido por `cities.semACidade`, que procura pelo mesmo `normalize` que casou. Antes isto
+   * removia o nome OFICIAL do texto cru, e não achava nada quando ela escreveu um apelido: "POA"
+   * virava o nome "Poa", e "Vera POA" virava "Vera Poa" com a cidade rebaixada a palpite
+   * (relato dele, 02/09/2026).
+   */
+  const sobraDaResposta = naRespostaBruta ? cities.semACidade(joined, naRespostaBruta.city) : '';
 
   /**
    * A resposta só conta se o que sobrou for **nome ou nada**.
@@ -372,10 +374,6 @@ function plausivelNome(parte) {
   if (palavras.length < 1 || palavras.length > 4) return false;
   // Só sigla ("PL", "srn") não é nome: se depois da limpeza não sobra nada, não era nome.
   return !!limparSiglas(s);
-}
-
-function escapeRe(s) {
-  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function titleCase(s) {

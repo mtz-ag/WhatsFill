@@ -540,6 +540,42 @@ function prefixoDeMunicipio(words, lista) {
  *
  * @returns {Promise<{cidade:string, nome:string}|null>}
  */
+/**
+ * O texto SEM o pedaço que é o município — preservando acento e caixa do que sobra.
+ *
+ * Relato dele (02/09/2026): *"não pegou POA como cidade, seria porto alegre"*. A cidade era
+ * reconhecida; o que quebrava era **a sobra**. Quem a calculava removia o nome OFICIAL
+ * ("Porto Alegre") de um texto onde ela escreveu **"POA"** — não removia nada, e então
+ * "Vera POA" virava o nome "Vera Poa" com a cidade rebaixada a palpite, e "POA" sozinho virava
+ * o nome "Poa".
+ *
+ * A raiz é que o casamento acontece no texto NORMALIZADO, onde o apelido já virou "porto alegre",
+ * e a remoção acontecia no texto CRU. Aqui os dois passam pelo mesmo `normalize`: procura-se o
+ * menor trecho de palavras cujo texto normalizado contenha o município. Por construção não há como
+ * discordar do casador — é a mesma função.
+ *
+ * Devolve o texto inteiro quando não acha (nada a remover é melhor que remover a esmo).
+ */
+export function semACidade(texto, city) {
+  const bruto = String(texto || '').trim();
+  const alvo = normalize(city);
+  if (!bruto || !alvo) return bruto;
+
+  const palavras = bruto.split(/\s+/);
+  let melhor = null;
+  for (let i = 0; i < palavras.length; i++) {
+    for (let j = i + 1; j <= palavras.length; j++) {
+      if (!normalize(palavras.slice(i, j).join(' ')).includes(alvo)) continue;
+      // O MENOR trecho que basta: "Vera POA" tem que perder só "POA", não a frase toda.
+      if (!melhor || j - i < melhor.j - melhor.i) melhor = { i, j };
+      break;
+    }
+  }
+  if (!melhor) return bruto;
+
+  return [...palavras.slice(0, melhor.i), ...palavras.slice(melhor.j)].join(' ').replace(/\s+/g, ' ').trim();
+}
+
 export async function splitCidadeNome(texto) {
   const m = /^(.{3,40}?)\s*[-–—|/]\s*(.{2,60})$/.exec(String(texto || '').trim());
   if (!m) return null;

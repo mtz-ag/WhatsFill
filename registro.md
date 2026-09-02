@@ -5,6 +5,55 @@
 
 ---
 
+## 2026-09-02 — "POA" virava o NOME "Poa": a sobra era calculada no texto errado
+
+**Relato dele:** *"não pegou POA como cidade, seria porto alegre"*.
+
+### O que realmente acontecia
+
+A cidade **era** reconhecida: `matchCity('POA')` sempre devolveu Porto Alegre com confiança
+`exata`, porque `normalize` aplica os apelidos (`poa`, `cxs`, `sm`, `sto`…). O que quebrava era a
+**sobra** — o pedaço que deveria virar o nome.
+
+Quem calculava a sobra removia o nome **oficial** ("Porto Alegre") do texto **cru**, onde ela
+escreveu "POA". Não removia nada. Medido antes de mexer:
+
+| ela escreveu | cidade | nome |
+|---|---|---|
+| `POA` | Porto Alegre | **Poa** ← inventado |
+| `Vera POA` | Porto Alegre (palpite) | **Vera Poa** ← poluído |
+| `Ana SM` | Santa Maria (palpite) | **Ana Sm** |
+
+A raiz: o casamento acontece no texto **normalizado**, onde o apelido já virou "porto alegre"; a
+remoção acontecia no texto **cru**. Dois textos diferentes para a mesma pergunta.
+
+### O conserto
+
+`cities.semACidade(texto, city)` — procura o **menor trecho de palavras** cujo `normalize()` contém
+o município, e remove só ele. Por construção não há como discordar do casador: é a mesma função.
+
+Acento e caixa do que sobra são preservados, porque a sobra vira o nome do eleitor — devolvê-la
+achatada trocaria "José" por "Jose" no CRM.
+
+Depois: `POA` → cidade Porto Alegre, **informada**, sem nome. `Vera POA` → Vera / Porto Alegre.
+`Ana SM` → Ana / Santa Maria. E a trava do slogan continua de pé: *"Vamos juntos mudar o Rio
+Grande"* segue não virando cidade.
+
+Saiu junto o `escapeRe` de `extract.js`, que só existia para a remoção antiga.
+
+### Uma coisa que NÃO mudei
+
+`Vera POA` continua com `informada: false` — a cidade entra como palpite e espera um clique. É a
+regra conservadora do caminho sem separador, que não é deste conserto: só `POA` sozinho e a resposta
+com separador (`Thiago / POA`) substituem o que está no CRM. Se ele quiser que o formato sem
+separador também substitua, é decisão dele.
+
+**Arquivos:** `src/lib/cities.js` (`semACidade`), `src/lib/extract.js`, `tests/parser.test.mjs`,
+`manifest.json` (1.65.0 → 1.66.0), `registro.md`, `CLAUDE.md`. Catorze suítes e os dois
+verificadores passando.
+
+---
+
 ## 2026-09-02 — "Enviar conteúdo + agradecer + concluir" passou a usar o MODELO PADRÃO
 
 **Pedido dele**, com a print do cartão: *"esse botão deve utilizar o modelo padrão, fica pedindo

@@ -559,6 +559,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   **Nesse caminho nao se aplica etiqueta de conteudo**: o preferido afirma "o conteudo e este, o
   parser e que nao viu" e a etiqueta registra a afirmacao dele; o padrao nao afirma nada sobre o que
   ela pediu, e etiqueta inventada fica permanente no CRM.
+- **Apelido de cidade casa no texto NORMALIZADO; nao remova pelo nome oficial no texto CRU.**
+  `matchCity` casa depois de `normalize`, que expande `poa` -> `porto alegre`, e tambem `cxs`, `sm`,
+  `sto`, `pto`. Quem calculava a sobra da resposta removia o nome OFICIAL do texto cru: com "POA"
+  nao removia nada, e o apelido virava o NOME ("Poa", "Vera Poa"), com a cidade rebaixada a palpite
+  (relato dele, 02/09). Hoje `cities.semACidade` procura o menor trecho de palavras cujo
+  `normalize()` contem o municipio -- mesma funcao dos dois lados, entao nao ha como discordarem.
+  **A sobra preserva acento e caixa**, porque ela vira o nome do eleitor no CRM.
 - **Mensagem enviada FORA do `if` da tecla vai em todas elas.** O agradecimento (*"Obrigado pela
   atencao! Qualquer coisa, e so chamar"* — um ENCERRAMENTO) era enviado depois do bloco do modelo,
   sem condicao: a tecla `a` mandava tres mensagens, e a terceira fechava a conversa que o pedido de

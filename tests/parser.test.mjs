@@ -746,4 +746,57 @@ grupo('agradecimento so quando ela responde o pedido, nao a conversa inteira (02
   }
 }
 
+grupo('apelido de cidade: POA e as outras abreviacoes (02/09/2026)');
+{
+  /**
+   * Relato dele: *"nao pegou POA como cidade, seria porto alegre"*.
+   *
+   * A cidade era reconhecida -- `matchCity('POA')` sempre devolveu Porto Alegre, porque `normalize`
+   * aplica os apelidos. O que quebrava era a SOBRA: quem a calculava removia o nome OFICIAL
+   * ("Porto Alegre") de um texto onde ela escreveu "POA", e nao removia nada. Resultado: "POA"
+   * sozinho virava o NOME "Poa", e "Vera POA" virava o nome "Vera Poa" com a cidade rebaixada a
+   * palpite.
+   *
+   * A raiz: o casamento acontece no texto NORMALIZADO (onde o apelido ja virou "porto alegre") e a
+   * remocao acontecia no texto CRU. `cities.semACidade` passa os dois pelo mesmo `normalize`.
+   */
+  check(cities.semACidade('Vera POA', 'Porto Alegre') === 'Vera', 'tira o apelido e deixa o nome');
+  check(cities.semACidade('POA', 'Porto Alegre') === '', 'so o apelido nao deixa sobra nenhuma');
+  check(cities.semACidade('maria cachoeirinha', 'Cachoeirinha') === 'maria', 'o caso que ja funcionava continua');
+  check(cities.semACidade('Sto Angelo', 'Santo Ângelo') === '', 'apelido de duas palavras tambem sai inteiro');
+  check(cities.semACidade('Ana SM', 'Santa Maria') === 'Ana', 'SM vira Santa Maria e sai');
+
+  /**
+   * **Acento e caixa do que SOBRA sao preservados.** A sobra vira o nome do eleitor; devolve-la
+   * achatada trocaria "José" por "Jose" no CRM.
+   */
+  check(cities.semACidade('José Porto Alegre', 'Porto Alegre') === 'José', 'o acento do nome sobrevive');
+
+  // O MENOR trecho que basta: sem isso "Vera POA" perderia a frase toda.
+  check(cities.semACidade('Vera Cruz POA', 'Porto Alegre') === 'Vera Cruz', 'tira so o pedaco da cidade');
+  check(cities.semACidade('sem cidade aqui', 'Porto Alegre') === 'sem cidade aqui', 'nao achou: nao remove nada');
+  check(cities.semACidade('', 'Porto Alegre') === '', 'vazio nao explode');
+}
+
+grupo('POA como resposta ao pedido de dados');
+{
+  const comoResposta = async (t) => extract([t], { respostaAoPedido: true });
+
+  const so = await comoResposta('POA');
+  check(so.cidade?.value === 'Porto Alegre', `POA sozinho e a cidade (${so.cidade?.value})`);
+  check(so.cidade?.informada === true, 'e conta como informada, entao substitui o CRM');
+  check(!so.nome, `e NAO inventa o nome "Poa" (${so.nome?.value})`);
+
+  const comNome = await comoResposta('Vera POA');
+  check(comNome.cidade?.value === 'Porto Alegre', 'nome + apelido: a cidade sai');
+  check(comNome.nome?.value === 'Vera', `e o nome e so o nome (${comNome.nome?.value})`);
+
+  const sigla = await comoResposta('Ana SM');
+  check(sigla.cidade?.value === 'Santa Maria' && sigla.nome?.value === 'Ana', 'SM tambem: Ana / Santa Maria');
+
+  // A trava do slogan continua de pe: municipio + sobra que nao e nome nao vira resposta.
+  const slogan = await comoResposta('Vamos juntos mudar o Rio Grande');
+  check(!slogan.cidade, 'o slogan do anuncio continua nao virando cidade');
+}
+
 fim();
