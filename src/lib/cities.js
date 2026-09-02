@@ -416,10 +416,36 @@ export async function matchCityComContexto(text) {
   const bruto = String(text || '');
   if (!bruto.trim()) return null;
 
-  // Texto curto é a própria resposta: vale sem pista.
+  /**
+   * Texto curto é a própria resposta: vale sem pista — mas só o casamento **EXATO**.
+   *
+   * Anotação do Luiz Zanchet (02/09/2026): *"Seja bem vindo at a vitória"* — "até a vitória" com um
+   * "é" comido — virou **Vitória das Missões**, com confiança `aproximada`, e a etiqueta do
+   * município foi parar no contato. É frase de campanha, não é onde ele mora.
+   *
+   * O casamento aproximado existe para o erro de digitação NA POSIÇÃO da cidade, onde já se sabe
+   * que aquilo é uma cidade: a resposta ao formulário. Em texto livre ele transforma qualquer
+   * palavra parecida com um município em município — e "vitória", "esperança", "progresso",
+   * "campina" são palavras comuns antes de serem cidades.
+   *
+   * Exigir `exata` aqui não custa nada aos casos reais: "Porto Alegre", "POA", "Novo Hamburgo" e
+   * "Portão" casam exato. O que se perde é o palpite em cima de um texto que ninguém disse ser uma
+   * cidade — e esse palpite estava virando etiqueta permanente no CRM.
+   */
   if (bruto.trim().length <= TEXTO_CURTO) {
     const curto = await matchCity(bruto);
-    if (curto) return curto;
+    if (curto?.confidence === 'exata') return curto;
+    /**
+     * O aproximado vale quando a mensagem INTEIRA foi o que casou — "Sao lourenso" é alguém
+     * tentando escrever São Lourenço do Sul, e é o caso que a tolerância existe para atender.
+     * O que sai é o casamento de um PEDAÇO: em "Seja bem vindo at a vitória" quem casou foi a
+     * palavra "vitória", e o resto da frase é a prova de que ninguém falou de cidade nenhuma.
+     *
+     * É a mesma conferência de `isCityAlone`, e pela mesma razão.
+     */
+    if (curto?.confidence === 'aproximada' && normalize(curto.matched || '') === formaCanonica(bruto)) {
+      return curto;
+    }
   }
 
   for (const pista of PISTAS_DE_CIDADE) {

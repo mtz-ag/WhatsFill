@@ -376,6 +376,30 @@ export function conversaPedeRespostaPessoal(entrantes, nossaUltimaAt) {
  * `(^|\s)` e não `\b` porque `\b` não funciona antes de palavra acentuada — armadilha já
  * registrada no `CLAUDE.md` ("é nós" nunca casava no começo da string).
  */
+/**
+ * **Perguntas que não dependem de onde estão na frase.**
+ *
+ * A lista de baixo (`PERGUNTAS_QUE_PEDEM_VOCE`) só vale no COMEÇO da mensagem ou com "?", e a razão
+ * é boa: "pq" no meio de uma frase é conjunção, não pergunta — foi assim que *"ficou muito grato pq
+ * sou Bolsonaro desde sempre"* virava resposta à mão (print do Ciro, 31/08).
+ *
+ * Mas essa trava é cega demais para o que entra AQUI. Anotação da Eliana (02/09/2026): ela colou o
+ * texto do anúncio e emendou *"olá eu gostaria de saber se tem algum projeto para criar leis mais
+ * rígidas…"* — tudo numa mensagem só, sem interrogação. A pergunta ficava no meio, a trava a
+ * descartava, e ela recebeu o recibo do anúncio com o pedido de cadastro.
+ *
+ * Ninguém usa "tem algum projeto para criar leis" como explicação. Estas frases são pergunta em
+ * qualquer posição, e é isso que as separa do "pq".
+ *
+ * **"tem algum material/conteúdo" fica de fora de propósito** — aquilo o modelo responde
+ * perfeitamente, e é a maior parte do que chega.
+ */
+const PERGUNTAS_INEQUIVOCAS = [
+  /(^|[^\p{L}])(tem|existe|ha|teria)\s+(algum|alguma|algo)\s+.{0,20}?(projeto|lei|proposta|pl\b|emenda|medida)/iu,
+  /(^|[^\p{L}])(vao|v[aã]o|vai|pretende[m]?|pensa[m]?)\s+(apoiar|votar|aprovar|derrubar|apresentar)/iu,
+  /(^|[^\p{L}])(o\s+que|oq)\s+.{0,25}?(fazer|far[aã]o?)\s+(sobre|quanto|a\s+respeito|com)/iu,
+];
+
 const PERGUNTAS_QUE_PEDEM_VOCE = [
   // Razão: "por que não tem propaganda aqui?"
   /(^|[^\p{L}])(por\s?qu[eê]|pq|pk)(\s|\?|$)/iu,
@@ -383,6 +407,21 @@ const PERGUNTAS_QUE_PEDEM_VOCE = [
   /(^|[^\p{L}])qual\s+(a\s+)?(posi[çc][aã]o|opini[aã]o|proposta|ideia)/iu,
   /(^|[^\p{L}])o\s+que\s+(ele|voc[eê]s?|o\s+candidato|o\s+deputado)\s+(acha|acham|pensa|pensam|vai|v[aã]o|pretende|pretendem|faria|fariam|far[aá]|far[aã]o)/iu,
   /(^|[^\p{L}])como\s+(ele|voc[eê]s?)\s+(vai|v[aã]o|pretende|pretendem|pensa|pensam)/iu,
+  /**
+   * **Pergunta sobre PROJETO, LEI ou POSIÇÃO em pauta** — anotação da Eliana (02/09/2026).
+   *
+   * Ela escreveu *"gostaria de saber se tem algum projeto para criar leis mais rígidas para punir
+   * bandidos…"* e recebeu o recibo do anúncio com o pedido de cadastro. Relato dele: *"aqui teria
+   * que responder a pergunta (por mim ou IA) + mandar modelo + pedir dados"*.
+   *
+   * É exatamente a classe que esta lista existe para pegar: depende do que o mandato pensa e do que
+   * ele já apresentou, e **não existe texto pronto** para responder. Faltava porque as entradas
+   * antigas cobrem "qual a posição/proposta" e "o que ele acha", e ninguém pergunta assim — a
+   * pergunta real vem como *"tem algum projeto para…"*, *"vocês vão apoiar…"*.
+   *
+   * **"tem algum material/conteúdo" fica de fora de propósito**: aquilo o modelo responde
+   * perfeitamente, e é a maior parte do que chega. O que entra aqui é lei, projeto e votação.
+   */
   // Pedido explícito de explicação
   /(^|[^\p{L}])(me\s+)?explica(r|\s|$)/iu,
   /(^|[^\p{L}])n[aã]o\s+entendi(\s|$|\.)/iu,
@@ -475,6 +514,24 @@ export function confirmaPresenca(entrantes, nossaUltimaAt) {
     /(^|[^\p{L}])(estarei|vou\s+estar|to)\s+(fora|viajando|trabalhando)/u,
     /(^|[^\p{L}])(outro|ja\s+tenho)\s+compromisso/u,
     /(^|[^\p{L}])fica\s+(para|pra)\s+(a\s+)?(proxima|outra)/u,
+
+    /**
+     * **A ida CONDICIONAL é uma recusa, na prática.**
+     *
+     * Anotação da Elsa Tonini (02/09/2026): *"Eu irei só se ele vier para Bento Gonçalves…"*. Ela
+     * não vai ao evento que existe — vai a um que talvez nem aconteça. Relato dele: *"resposta ao
+     * evento que não irá"*.
+     *
+     * Ficar em silêncio aqui é pior que responder: quem escreveu uma condição está esperando a
+     * resposta dela, e o texto do "não tem problema" reconhece a intenção sem prometer nada.
+     *
+     * Vem junto das outras negativas, ANTES da lista do "vai", porque a condição é a ressalva —
+     * e a ressalva é sempre o que decide, como o "gostaria… mas" logo acima.
+     */
+    /(^|[^\p{L}])(vou|irei|vamos|iria)\s+(so\s+)?(se|caso|quando)(\s|$)/u,
+    /(^|[^\p{L}])so\s+(vou|irei|se\s+for|se\s+fosse)(\s|$)/u,
+    /(^|[^\p{L}])(vou|irei)\s+(se|caso)\s+der(\s|$|\.)/u,
+    /(^|[^\p{L}])se\s+(ele|voces?|vcs?)\s+vier/u,
     /(^|[^\p{L}])(esse|este|dessa|nessa)\s+(dia|data)\s+.{0,20}?nao/u,
   ];
   for (const padrao of NAO_VAI) if (padrao.test(texto)) return 'nao';
@@ -920,6 +977,13 @@ export function conversaTemPerguntaAberta(entrantes, nossaUltimaAt) {
      * pergunta ou a marca com "?"; quem explica põe o "pq" no meio do que está contando.
      */
     const temInterrogacao = texto.includes('?');
+
+    // As inequívocas valem em qualquer posição — ver `PERGUNTAS_INEQUIVOCAS`.
+    for (const padrao of PERGUNTAS_INEQUIVOCAS) {
+      if (padrao.test(texto)) {
+        return { motivo: 'perguntou sobre projeto, lei ou posição em pauta — nenhuma resposta pronta responde' };
+      }
+    }
 
     for (const padrao of PERGUNTAS_QUE_PEDEM_VOCE) {
       const achou = texto.match(padrao);

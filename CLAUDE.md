@@ -302,6 +302,28 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   concluida em silencio depois de responder). Hoje a busca e **mensagem a mensagem, da mais nova
   para a mais antiga** — os tres caminhos sao os mesmos, o que mudou foi onde procuram. Bonus: a
   pista de uma mensagem nao alcanca mais o texto da seguinte, que a juncao permitia.
+- **Casamento APROXIMADO de cidade em texto livre grava etiqueta errada no CRM.** Anotacao do Luiz
+  Zanchet (02/09/2026): *"Seja bem vindo at a vitoria"* — "ate a vitoria" com um "e" comido — virou
+  **Vitoria das Missoes** com confianca `aproximada`, e a etiqueta do municipio foi parar no
+  contato. O caminho "texto curto e a propria resposta" de `matchCityComContexto` chamava `matchCity`
+  e aceitava qualquer confianca. Hoje aceita `exata`, **ou** `aproximada` quando o casamento consumiu
+  a MENSAGEM INTEIRA (`normalize(matched) === formaCanonica(bruto)`) — que e a mesma conferencia de
+  `isCityAlone`, e o que mantem "Sao lourenso" funcionando. **A tolerancia a erro de digitacao existe
+  para a POSICAO da cidade, onde ja se sabe que aquilo e uma cidade; em texto livre ela transforma
+  "vitoria", "esperanca" e "progresso" em municipio.**
+- **Ir CONDICIONAL e recusa.** *"Eu irei so se ele vier para Bento Goncalves"* (Elsa, 02/09) nao
+  casava com nada e o caso seguia como se ela nao tivesse falado do evento. Os padroes de recusa
+  ganharam a condicao (`vou/irei/vamos + so se|caso|quando`, `so vou se`, `se ele vier`), e ficam
+  ANTES da lista do "vai" pelo mesmo motivo do "gostaria... mas": a ressalva e o que decide.
+- **A trava de POSICAO das perguntas e cega demais para pergunta de politica.**
+  `conversaTemPerguntaAberta` so aceita o padrao no COMECO da mensagem ou com "?" — guarda boa, que
+  existe porque "pq" no meio de frase e conjuncao (print do Ciro). Mas a Eliana (02/09) colou o texto
+  do anuncio e emendou *"gostaria de saber se tem algum projeto para criar leis mais rigidas"*, tudo
+  numa mensagem so e sem interrogacao: a pergunta ficou no meio e foi descartada. Hoje ha
+  `PERGUNTAS_INEQUIVOCAS`, que valem em qualquer posicao — "tem algum projeto/lei", "vao
+  apoiar/votar", "o que vao fazer sobre". **"tem algum material/conteudo" fica de fora de proposito:**
+  aquilo o modelo responde, e e a maior parte do que chega.
+
 - **Grito de campanha nao e confirmacao de presenca.** `confirmaPresenca` aceitava o verbo SOLTO
   (`vou|irei|vamos` seguido de espaco ou fim), e nesta base isso e *"Juntos vamos"*, *"Vamos vencer
   Flavio"* e ate *"vou votar em voces"* — duas anotacoes dele com pessoas recebendo texto de evento.

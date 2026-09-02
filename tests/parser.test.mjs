@@ -885,4 +885,32 @@ grupo('a cidade sumia quando havia mais de uma mensagem (02/09/2026)');
   check(await cidade(['eu moro em', 'Canoas é longe daqui pra caramba mesmo viu']) === null, 'a pista nao atravessa a fronteira da mensagem');
 }
 
+
+grupo('palavra parecida com municipio NAO vira cidade (02/09/2026)');
+{
+  /**
+   * Anotacao do Luiz Zanchet: *"Seja bem vindo at a vitoria"* -- "ate a vitoria" com um "e" comido
+   * -- virou **Vitoria das Missoes**, com confianca `aproximada`, e a etiqueta do municipio foi
+   * parar no contato. E frase de campanha, nao e onde ele mora.
+   *
+   * O casamento aproximado existe para o erro de digitacao NA POSICAO da cidade. Em texto livre ele
+   * transforma qualquer palavra parecida em municipio -- e "vitoria", "esperanca", "progresso" sao
+   * palavras comuns antes de serem cidades.
+   */
+  const cidade = async (t) => (await extract([t], {})).cidade?.value || null;
+
+  check(await cidade('Seja bem vindo at a vitória') === null, 'o caso do Luiz: "at a vitoria" nao e cidade');
+  check(await cidade('até a vitória!') === null, 'nem "ate a vitoria"');
+  check(await cidade('rumo a vitoria') === null, 'nem "rumo a vitoria"');
+
+  /**
+   * Mas o erro de digitacao na mensagem INTEIRA continua valendo: "Sao lourenso" e alguem tentando
+   * escrever Sao Lourenco do Sul, e e o caso que a tolerancia existe para atender. A diferenca e o
+   * casamento ter consumido a mensagem toda, e nao um pedaco dela.
+   */
+  check(await cidade('Sao lourenso') === 'São Lourenço do Sul', 'a mensagem inteira com erro de digitacao continua');
+  check(await cidade('Canoass') === 'Canoas', 'e outra igual');
+  check(await cidade('Porto Alegre') === 'Porto Alegre', 'e o exato, claro');
+}
+
 fim();

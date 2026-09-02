@@ -32,6 +32,67 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-02 — Segunda leva: três casos novos (e oito que já estavam consertados)
+
+Ele mandou onze anotações. **Oito eram anteriores à recarga** — o motivo da Eunice ainda dizia
+*"mandou um áudio — só dá para responder depois de abrir"*, que é literalmente a frase que eu tinha
+trocado, e Iraci, Kelvem, Eliane, Silvia e Jeane vinham palavra por palavra iguais às da leva
+anterior. Conferi a Eunice do desabafo no motor: já dá **tecla 6**, que é o que ele queria.
+
+Três eram novos.
+
+### Luiz Zanchet — palavra parecida virando etiqueta no CRM
+
+*"Seja bem vindo at a vitória"* — "até a vitória" com um "é" comido — virou **Vitória das Missões**,
+confiança `aproximada`, e a etiqueta do município foi parar no contato dele.
+
+O caminho *"texto curto é a própria resposta"* aceitava qualquer confiança. Hoje aceita `exata`, ou
+`aproximada` **quando o casamento consumiu a mensagem inteira** — a mesma conferência de
+`isCityAlone`.
+
+O teste do parser pegou meu excesso no meio do caminho: a primeira versão exigia só `exata` e
+derrubou `"Sao lourenso"`, que é alguém tentando escrever São Lourenço do Sul. A tolerância a erro
+de digitação existe para a POSIÇÃO da cidade; em texto livre ela transforma "vitória", "esperança" e
+"progresso" em município.
+
+### Elsa Tonini — ir condicional não era nada
+
+*"Eu irei só se ele vier para Bento Gonçalves…"* não casava com confirmação nem com recusa, e o caso
+seguia como se ela não tivesse falado do evento. Relato dele: *"resposta ao evento que não irá"*.
+
+Os padrões de recusa ganharam a condição, e ficam **antes** da lista do "vai" pelo mesmo motivo do
+"gostaria… mas": a ressalva é o que decide.
+
+### Eliana — pergunta de política descartada pela trava de posição
+
+Ela colou o texto do anúncio e emendou *"gostaria de saber se tem algum projeto para criar leis mais
+rígidas…"* — **numa mensagem só, sem interrogação**. A trava que exige o padrão no começo da mensagem
+(ou um "?") descartou, e ela recebeu o recibo do anúncio com o pedido de cadastro.
+
+Essa trava é boa e tem motivo: "pq" no meio de frase é conjunção (print do Ciro, 31/08). Mas é cega
+demais para frases que são pergunta em qualquer posição. Hoje há `PERGUNTAS_INEQUIVOCAS` —
+"tem algum projeto/lei", "vão apoiar/votar", "o que vão fazer sobre" — que não passam pela trava.
+
+**"tem algum material/conteúdo" fica de fora de propósito:** aquilo o modelo responde perfeitamente,
+e é a maior parte do que chega.
+
+### Dois que ficam para ele decidir
+
+- **Luiz** — ele pediu *"modelo + pedir dados + concluir"*, mas o contato tem etiqueta de cidade, e a
+  regra composta exige não ter (decisão dele: *"se ela tiver etiqueta de cidade fica só no modelo"*).
+  Com a etiqueta errada corrigida, o caso pode ter mudado sozinho;
+- **Mary** — *"já foi mandado modelo, última resposta foi um emoji, só concluir"*. `conteudo-pedido`
+  exige `!modeloJaNaConversa`, e o modelo padrão agora **reveza entre três** — se o que saiu foi outra
+  variante, a comparação não casa e ele é reenviado. Preciso confirmar com ele antes de mexer: a
+  correção é comparar contra os três modelos padrão, não só o da vez.
+
+**Arquivos:** `src/lib/cities.js` (`matchCityComContexto`), `src/lib/cortesia.js` (recusa condicional,
+`PERGUNTAS_INEQUIVOCAS`), `tests/parser.test.mjs` (+6), `tests/cortesia.test.mjs` (+18),
+`CLAUDE.md` (+3 armadilhas), `manifest.json` (1.74.0 → 1.75.0). Quinze suítes, os dois verificadores
+e o quadro sem problemas.
+
+---
+
 ## 2026-09-02 — As seis anotações dele, medidas uma a uma
 
 Ele mandou seis observações com o contexto de cinco mensagens. **Cada uma era um defeito diferente**,

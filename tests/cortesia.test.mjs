@@ -890,4 +890,45 @@ grupo('quer trabalhar para o mandato (02/09/2026)');
   check(!quer(['preciso de remedio']), 'pedido de remedio nao vira pedido de emprego');
 }
 
+
+grupo('ir CONDICIONAL e recusa, e pergunta de politica pede voce (02/09/2026)');
+{
+  const m = (t) => [{ texto: t, at: new Date().toISOString() }];
+
+  /**
+   * Anotacao da Elsa Tonini: *"Eu irei so se ele vier para Bento Goncalves..."*. Ela nao vai ao
+   * evento que existe -- vai a um que talvez nem aconteca. Relato dele: *"resposta ao evento que
+   * nao ira"*. Ficar em silencio e pior que responder: quem escreveu uma condicao espera resposta.
+   */
+  check(confirmaPresenca(m('Eu irei só se ele vier para Bento Gonçalves que bom que o nosso futuro presidente vai vir'), null) === 'nao', 'o caso da Elsa: ida condicional e recusa');
+  for (const t of ['vou se der', 'irei caso seja em Canoas', 'so vou se for perto', 'se ele vier aqui eu vou']) {
+    check(confirmaPresenca(m(t), null) === 'nao', `"${t}" e recusa`);
+  }
+  // E a confirmacao sem condicao continua sendo confirmacao.
+  for (const t of ['vou sim', 'irei', 'Estarei la', 'pode contar comigo', 'vou participar']) {
+    check(confirmaPresenca(m(t), null) === 'sim', `"${t}" continua sendo sim`);
+  }
+
+  /**
+   * Anotacao da Eliana: ela colou o texto do anuncio e emendou *"gostaria de saber se tem algum
+   * projeto para criar leis mais rigidas..."* -- numa mensagem so, sem interrogacao. A trava de
+   * posicao (que existe para o "pq" conjuncao) descartava, e ela recebeu o recibo do anuncio.
+   *
+   * Estas frases sao pergunta em QUALQUER posicao, e e isso que as separa do "pq".
+   */
+  const q = (t) => !!conversaTemPerguntaAberta(m(t), null);
+  check(q('Olá! Eu apoio o Flávio, Zucco e Capitão Martim 🫡olá eu gostaria de saber se tem algum projeto para criar leis mais rígidas para punir bandidos'), 'o caso da Eliana, no meio da mensagem e sem "?"');
+  for (const t of ['tem alguma lei sobre isso', 'voces vao apoiar o PL das drogas', 'o que voces vao fazer sobre a seguranca']) {
+    check(q(t), `"${t}" pede voce`);
+  }
+
+  /**
+   * **"tem algum material" fica de fora de proposito** -- aquilo o modelo responde perfeitamente, e
+   * e a maior parte do que chega. E o "pq" conjuncao continua protegido.
+   */
+  for (const t of ['tem algum material para eu compartilhar?', 'quero receber o conteudo', 'tem algum grupo?', 'ficou muito grato pq sou Bolsonaro desde sempre', 'ele explica bem as coisas']) {
+    check(!q(t), `"${t}" NAO pede voce`);
+  }
+}
+
 fim();
