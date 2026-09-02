@@ -2179,8 +2179,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * armadilha que este painel já pagou com o botão "Avaliar o contato aberto".
      */
     card.append(
-      checkbox('Automatizar com IA (a rodada envia a escolha dela sem perguntar)', state.auto.cfg.automatizarComIA, (v) =>
-        salvarAuto({ automatizarComIA: v }).then(renderAll)
+      /**
+       * O rótulo diz **as duas** coisas que a caixa faz.
+       *
+       * Ele dizia só "Automatizar com IA", e a caixa automatiza também as REGRAS — que é a metade
+       * que resolve a maioria dos contatos, com ou sem IA ligada. Nome que conta metade do que o
+       * interruptor faz é o motivo de ele ter perguntado *"essa mensagem foi mandada sozinha?"*
+       * olhando para uma conversa que a rodada tinha fechado sem perguntar (02/09/2026).
+       */
+      checkbox(
+        'Automatizar a rodada: envia sozinha a escolha das REGRAS e da IA, sem perguntar',
+        state.auto.cfg.automatizarComIA,
+        (v) => salvarAuto({ automatizarComIA: v }).then(renderAll)
       )
     );
     card.append(
@@ -2199,11 +2209,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'município — e só um que exista na lista do IBGE — ou não grava nada. Município que ela ' +
           'invente não passa. O que ela decidir sobre a cidade vai para o Andamento, linha a linha.')
     );
+    /**
+     * **O aviso dizia que a caixa não fazia nada sem a IA, e era falso.**
+     *
+     * Pergunta dele (02/09/2026), depois de ver duas mensagens saírem sozinhas: *"essa mensagem foi
+     * mandada sozinha? tem algum gatilho no momento que pede sem ser no modo IA?"*.
+     *
+     * Tem: esta mesma caixa. A automação das REGRAS é controlada por ela e **não** consulta
+     * `state.ia.ligada` — com a avaliação desligada, a rodada continua executando a tecla que a
+     * regra recomenda, e a maioria das regras ENVIA. O texto antigo mandava ele procurar no lugar
+     * errado justamente quando fosse investigar um envio que não entendeu.
+     */
     if (state.auto.cfg.automatizarComIA && !state.ia?.ligada) {
       card.append(
         h('div', { class: 'wf-block' },
-          'Esta caixa não faz nada enquanto "Ligar a avaliação por IA" estiver desmarcada na aba ' +
-            'Config — sem avaliação não há escolha para automatizar.')
+          'Atenção: com "Ligar a avaliação por IA" desmarcada, a parte da IA não roda — mas as ' +
+            'REGRAS continuam sendo executadas sozinhas por esta caixa, e a maioria delas envia ' +
+            'mensagem. Para a rodada voltar a perguntar antes de cada envio, desmarque esta caixa.')
       );
     }
 

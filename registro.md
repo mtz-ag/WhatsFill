@@ -5,6 +5,43 @@
 
 ---
 
+## 2026-09-02 — A caixa "Automatizar com IA" automatiza as REGRAS, e o aviso dizia o contrário
+
+**Pergunta dele**, com a print do Robertino: *"essa mensagem foi mandada sozinha? tem algum gatilho
+no momento que pede sem ser no modo IA?"*
+
+### A resposta é sim, e a tela dizia que não
+
+A automação das regras é a linha `state.auto.cfg.automatizarComIA && sugestao` — a **mesma caixa**
+da IA. E ela **não consulta** `state.ia.ligada`. Com a avaliação por IA desmarcada, a rodada
+continua executando sozinha a tecla que a regra recomenda, e a maioria das regras envia mensagem.
+
+O aviso embaixo da caixa dizia: *"Esta caixa não faz nada enquanto 'Ligar a avaliação por IA'
+estiver desmarcada"*. **Falso** — e falso justamente no momento em que ele foi investigar um envio
+que não entendeu, mandando procurar no lugar errado.
+
+### O conserto
+
+- O rótulo passou a dizer as duas coisas: *"Automatizar a rodada: envia sozinha a escolha das REGRAS
+  e da IA, sem perguntar"*.
+- O aviso passou a dizer a verdade: com a IA desligada, a parte dela não roda **mas as regras
+  continuam sendo executadas**, e para a rodada voltar a perguntar antes de cada envio é preciso
+  desmarcar a caixa.
+
+Nada mudou no comportamento — mudou o que a tela conta sobre ele. O comportamento é o documentado
+desde 01/09 (*"automatizar a rodada é executar as REGRAS, não só a IA"*); o que faltava era a tela
+concordar com o `CLAUDE.md`.
+
+### Onde mora a resposta de "por que isso saiu"
+
+No **log do Andamento**: cada envio automático escreve `automático pelo fluxo ("<regra>", caminho
+X > Y): <o que foi feito>`. É o único lugar que identifica a tecla — os textos são editáveis por
+ele, então reconhecer a mensagem não diz qual regra a mandou.
+
+**Arquivos:** `src/panel/panel.js`, `manifest.json` (1.67.0 → 1.68.0), `registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-02 — Pedido de dinheiro: detector testado e etiqueta no CRM
 
 **Relato dele**, com a print da Marli: *"aqui está claro ela deu o pix dela e pediu 50, caso de

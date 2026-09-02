@@ -566,6 +566,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   (relato dele, 02/09). Hoje `cities.semACidade` procura o menor trecho de palavras cujo
   `normalize()` contem o municipio -- mesma funcao dos dois lados, entao nao ha como discordarem.
   **A sobra preserva acento e caixa**, porque ela vira o nome do eleitor no CRM.
+- **A caixa "Automatizar" controla as REGRAS tambem, e nao consulta `ia.ligada`.** O rotulo dizia so
+  *"Automatizar com IA"* e o aviso embaixo dizia que ela *"nao faz nada enquanto a avaliacao por IA
+  estiver desmarcada"* — **falso**: a automacao das regras (`state.auto.cfg.automatizarComIA &&
+  sugestao`) nao olha `state.ia.ligada`, entao com a IA desligada a rodada continua executando a
+  tecla que a regra recomenda, e **a maioria das regras ENVIA**. Ele viu duas mensagens sairem
+  sozinhas e perguntou *"tem algum gatilho no momento que pede sem ser no modo IA?"* — tinha, e a
+  tela mandava procurar no lugar errado. **Interruptor que faz duas coisas tem que dizer as duas no
+  nome.**
+- **Para saber POR QUE a rodada mandou algo, o lugar e o log do Andamento.** Cada envio automatico
+  escreve `automatico pelo fluxo ("<regra>", caminho X > Y): <o que foi feito>`. Sem olhar o log, a
+  reconstrucao e adivinhacao — os textos sao editaveis por ele, entao o mesmo texto nao identifica a
+  tecla que o mandou.
 - **Mensagem enviada FORA do `if` da tecla vai em todas elas.** O agradecimento (*"Obrigado pela
   atencao! Qualquer coisa, e so chamar"* — um ENCERRAMENTO) era enviado depois do bloco do modelo,
   sem condicao: a tecla `a` mandava tres mensagens, e a terceira fechava a conversa que o pedido de
