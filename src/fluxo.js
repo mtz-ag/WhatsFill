@@ -191,7 +191,7 @@ function caixaDoNo(no) {
   const pino = document.createElement('span');
   pino.className = 'pino';
   pino.dataset.pino = no.id;
-  pino.title = 'Puxe daqui até outra caixa para pôr aquela dentro desta';
+  pino.title = 'Puxe daqui até outra caixa para pôr AQUELA dentro DESTA (o pino é a saída deste ramo)';
   d.append(pino);
 
   return d;
@@ -341,6 +341,36 @@ function ligarArrasto() {
 
   const limparFioProvisorio = () => el('fios').querySelector('.fio-novo')?.remove();
 
+  /**
+   * A frase que diz, DURANTE o arrasto, o que vai acontecer ao soltar.
+   *
+   * O pino puxa do pai para o filho: de A até B significa "B vai para dentro de A". Ele leu ao
+   * contrário — puxou de duas caixas até a mesma caixa esperando ligá-las **a** ela, e cada
+   * puxada tirava a caixa da anterior: *"ao acertar ele remove a outra caixa"* (01/09/2026).
+   *
+   * A direção não é adivinhável olhando um pino, e a seta do fio provisório não basta. O que
+   * resolve é a frase com os DOIS nomes, e principalmente **de onde a caixa vai sair** quando ela
+   * já tem pai — é essa metade que ele não estava vendo acontecer.
+   */
+  const dizerOQueVaiAcontecer = (alvoEl, origemId, clienteX, clienteY) => {
+    const caixa = el('rotulo-ligacao');
+    if (!alvoEl) {
+      caixa.hidden = true;
+      return;
+    }
+    const daArea = el('quadro-area').getBoundingClientRect();
+    const alvoNo = arvoreLib.localizar(fluxo.arvore, alvoEl.dataset.no);
+    const paiNovo = arvoreLib.localizar(fluxo.arvore, origemId);
+    const paiAtual = alvoNo?.pai;
+
+    caixa.replaceChildren();
+    caixa.append(span('', `"${alvoNo?.no?.rotulo || '?'}" vai para dentro de "${paiNovo?.no?.rotulo || '?'}"`));
+    if (paiAtual) caixa.append(span('sai-de', `e sai de "${paiAtual.rotulo}"`));
+    caixa.hidden = false;
+    caixa.style.left = `${clienteX - daArea.left + 14}px`;
+    caixa.style.top = `${clienteY - daArea.top + 16}px`;
+  };
+
   caixas.addEventListener('pointerdown', (ev) => {
     const caixa = ev.target.closest('.caixa');
     if (!caixa || ev.button !== 0) return;
@@ -417,6 +447,7 @@ function ligarArrasto() {
         ligando.alvo = aceita ? novo : null;
         ligando.alvo?.classList.add('alvo');
       }
+      dizerOQueVaiAcontecer(ligando.alvo, ligando.origem, ev.clientX, ev.clientY);
       return;
     }
     if (!arrastando) return;
@@ -444,6 +475,7 @@ function ligarArrasto() {
     if (ligando) {
       const { origem, alvo } = ligando;
       limparFioProvisorio();
+      el('rotulo-ligacao').hidden = true;
       caixas.querySelector('.ligando')?.classList.remove('ligando');
       alvo?.classList.remove('alvo');
       ligando = null;
@@ -727,6 +759,29 @@ function desenharEditor() {
     : 'O que você quer que eu mude neste ramo';
   obs.addEventListener('change', () => gravar(arvoreLib.editar(fluxo.arvore, no.id, { nota: obs.value.trim() })));
   linha('Observações para o Claude', obs);
+
+  /**
+   * **Ligar sem gesto nenhum: escolher o pai numa lista.**
+   *
+   * O pino falhou duas vezes com ele — primeiro por ser invisível, depois porque a DIREÇÃO dele
+   * (puxa do pai para o filho) é o contrário do que ele tentava fazer, e cada tentativa arrancava
+   * a caixa do pai anterior. Gesto tem direção; lista não tem. Aqui ele lê a frase inteira — *"pôr
+   * este ramo dentro de X"* — e não há como interpretar ao contrário.
+   *
+   * Os descendentes do próprio ramo ficam FORA da lista: pôr um ramo dentro de um filho dele seria
+   * recusado, e oferecer uma opção que vai ser recusada é pior que não oferecer.
+   */
+  const dentroDe = arvoreLib
+    .todosOsNos(fluxo.arvore)
+    .filter(({ no: outro }) => outro.id !== no.id && !arvoreLib.ehDescendente(fluxo.arvore, no.id, outro.id))
+    .map(({ no: outro, nivel }) => [outro.id, `${'— '.repeat(nivel)}${outro.rotulo || outro.id}`]);
+
+  linha(
+    'Pôr este ramo dentro de…',
+    seletor([['', '— na raiz do quadro (sem pai) —'], ...dentroDe], achado.pai?.id || '', (valor) => {
+      gravar(arvoreLib.ordenarPorPosicao(arvoreLib.reparentar(fluxo.arvore, no.id, valor || null)));
+    })
+  );
 
   const ligado = document.createElement('label');
   ligado.className = 'chk';

@@ -383,6 +383,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   quadro cheio a 35% de zoom as caixas tem 91px: encostar e o normal, nao a excecao. Hoje arrastar
   SO move; ligar e so o pino. **Gesto destrutivo nunca pode ser o mesmo gesto do inofensivo** — e
   quando um gesto novo cobre o antigo, o antigo sai, nao fica como atalho.
+- **Gesto tem DIRECAO, e direcao nao se adivinha olhando um pino.** O pino puxa do PAI para o
+  FILHO: de A ate B significa "B vai para dentro de A". Ele leu ao contrario — puxava de duas
+  caixas ate a mesma caixa esperando ligar as duas A ela, e cada puxada arrancava a caixa do pai
+  anterior (*"ao acertar ele remove a outra caixa"*, 01/09). Eu perdi tempo medindo o TAMANHO do
+  pino, e ele corrigiu: *"nao e tamanho"*. **Antes de otimizar a mira, confira se o gesto faz o que
+  a pessoa acha que faz.** Duas coisas resolveram: a frase ao vivo durante o arrasto com os DOIS
+  nomes e o "sai de X" (a metade que ele nao via acontecer), e a lista "Por este ramo dentro de..."
+  no editor — **lista nao tem direcao**, e e por isso que ela e o caminho confiavel.
 - **Arquivo de fluxo e ENTRADA NAO CONFIAVEL, e `JSON.parse` nao basta.** O que vem no arquivo
   decide o que a rodada manda para eleitor real. `arvore.sanitizar` peneira campo a campo: regra
   que sumiu do codigo, sinal desconhecido e tecla inventada sao DESCARTADOS com aviso — nunca

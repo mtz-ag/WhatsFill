@@ -5,6 +5,43 @@
 
 ---
 
+## 2026-09-01 (noite, 22) — Ligar tinha DIREÇÃO invertida, e agora existe caminho sem gesto
+
+**Relato dele:** *"estou tentando ligar duas caixas a caixa com nome tem etiqueta e como antes não
+consigo"*, e depois a correção que resolveu o diagnóstico: *"ao acertar ele remove a outra caixa,
+não é tamanho"*.
+
+### Causa raiz
+
+O pino puxa **do pai para o filho**: de A até B significa *"B vai para dentro de A"*. Ele estava
+fazendo o contrário — puxando de duas caixas diferentes até "tem etiqueta de cidade", esperando
+ligar as duas **a** ela. Cada puxada fazia "tem etiqueta" virar filha de uma caixa e, na seguinte,
+filha da outra — saindo da primeira. Da tela: a ligação anterior sumia.
+
+**Eu comecei medindo o tamanho do pino** (4,6px a 35% de zoom, que é pequeno mesmo) e ele cortou:
+*"não é tamanho"*. Estava certo, e entrou no `CLAUDE.md`: antes de otimizar a mira, conferir se o
+gesto faz o que a pessoa acha que faz.
+
+### Os dois consertos
+
+1. **A frase ao vivo durante o arrasto**, ao lado do ponteiro: *"«voltou por outro anúncio» vai
+   para dentro de «Só se despediu»"* e, em vermelho, *"e sai de «pessoa retornando»"*. É a segunda
+   linha que importa — ela mostra a metade que ele não via acontecer. Direção de gesto não se
+   adivinha olhando um ponto na borda; com os dois nomes escritos, não há como ler ao contrário.
+2. **"Pôr este ramo dentro de…"** no editor do lado: uma lista com todos os ramos (indentados pelo
+   nível), e os descendentes do próprio ramo ficam de fora porque seriam recusados. **Lista não tem
+   direção** — ele lê a frase inteira e escolhe. É o caminho confiável, e existe porque o pino já
+   falhou com ele duas vezes: primeiro por ser invisível, agora por ser ambíguo.
+
+**Conferido no navegador:** a frase aparece durante o arrasto com as duas linhas e some ao soltar;
+pela lista, dois ramos diferentes foram postos dentro do mesmo pai, um depois do outro, e os dois
+ficaram.
+
+**Arquivos:** `src/fluxo.js`, `src/fluxo.html`, `src/fluxo.css`, `manifest.json` (1.30.0 → 1.31.0),
+`registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-01 (noite, 21) — Arrastar move só a caixa; o ramo inteiro só com Shift
 
 **Relato dele:** *"quando arrasta um todos arrastam, o que deve fazer isso é o pai os outros não"*.
