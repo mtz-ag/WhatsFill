@@ -32,6 +32,57 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-02 — Onde as observações ficam, e o "ADS, ADS" da print
+
+**Pergunta dele:** *"onde está salvando e o contexto fica salvo para você entender?"*, com a print da
+caixa funcionando (faixa e botão vermelhos, "Anotado. São 1 observação(ões)").
+
+Respondido — e a print trouxe junto um defeito que eu não tinha visto.
+
+### Onde fica
+
+`chrome.storage.local`, chave `observacoes`, no perfil do Chrome dele. Sobrevive a fechar o
+navegador e a recarregar a extensão; some se ele limpar os dados do navegador ou trocar de perfil.
+**O contexto fica salvo inteiro**, e não é opcional: contato, regra, tecla, motivo da caixa, o que a
+pessoa escreveu e as etiquetas.
+
+### E FORA do backup — mudança desta entrada
+
+`exportJson` levava as observações junto, e elas carregam **nome de eleitor e o texto que a pessoa
+escreveu**. É o mesmo motivo pelo qual `cidadeRecusada` e `iaChave` já estavam de fora: backup é
+arquivo que circula.
+
+Elas são feitas para me chegar, mas pelo caminho que ele escolhe — o botão "Copiar observações",
+uma vez, quando ele quer. Ir de carona num backup que ele manda para outra máquina é distribuir
+conversa de eleitor sem ninguém ter decidido isso. Saíram também da lista do `importJson`, para não
+restaurar o que nunca é exportado.
+
+### O "ADS, ADS"
+
+A print mostrava *"Etiquetas: ADS, ADS"*. A etiqueta de anúncio (`etiquetaAnuncio`) e a lista de
+etiquetas do anúncio reconhecido são **duas fontes**, e ele pôs "ADS" nas duas.
+
+A deduplicação de `refreshTagSuggestions` não pega este caso: ela filtra o que vem do CRM contra o
+que `suggest` achou, e aqui as duas entradas saem do próprio `suggest`.
+
+Consertado dentro de `tags.suggest`, comparando por **rótulo normalizado** — nunca por id, porque o
+CRM tem etiquetas de rótulo repetido com ids diferentes, e comparar id já produziu 1293 linhas de
+"Caxias do Sul → Serra (tem: Serra)". Acento e caixa não criam uma segunda: quem digita a lista do
+anúncio na Config não repete a grafia do CRM.
+
+**E o teste pegou um erro meu no meio do conserto:** eu havia posto o bloco das etiquetas do anúncio
+**antes** do bloco da ADS, então a conferência tirava o retrato da lista sem a ADS dentro e não tinha
+como ver a repetição. A asserção da grafia diferente falhou e me mandou olhar a ordem.
+
+Sem a correção, as duplicatas também entrariam nas observações que ele me manda — e eu leria
+"etiquetas: ADS, ADS" como se fosse informação.
+
+**Arquivos:** `src/lib/tags.js` (`achatarRotulo` + a deduplicação, movida para depois da ADS),
+`src/lib/store.js` (`observacoes` fora do backup), `tests/tags.test.mjs` (+4), `manifest.json`
+(1.70.0 → 1.70.1). Quinze suítes e os dois verificadores passando.
+
+---
+
 ## 2026-09-02 — A sugestão em vermelho, e o caderno das que estão erradas
 
 **Pedido dele:** *"marque a sugestão e o botão referente da sugestão de vermelho para se destacar, e

@@ -1120,6 +1120,15 @@ export async function exportJson() {
   delete data.sentLog;
   delete data.varianteIndex; // ponteiro de rotação, não é configuração
   delete data.cidadeRecusada; // referência a contato real, e é memória de trabalho
+  /**
+   * As observações carregam **nome de eleitor e o que a pessoa escreveu** — o mesmo motivo do
+   * `cidadeRecusada`, e o mesmo do `iaChave`: backup é arquivo que circula.
+   *
+   * Elas são feitas para me chegar, mas pelo caminho que ele escolhe: o botão "Copiar observações"
+   * na aba Automatizado, uma vez, quando ele quer. Ir de carona num backup que ele manda para outra
+   * máquina é distribuir conversa de eleitor sem ninguém ter decidido isso.
+   */
+  delete data.observacoes;
   delete data.iaChave; // credencial: backup é arquivo que circula
   return JSON.stringify(data, null, 2);
 }
@@ -1139,7 +1148,7 @@ export async function importJson(text) {
     'templates', 'cityLinks', 'defaultGroupLink', 'settings', 'writeContract', 'dicts',
     'tagRules', 'tagAliases', 'contentTemplates', 'auto', 'fluxo',
     'modeloPorTexto', 'padroesDeAnuncio', 'conteudoPreferido', 'anuncios',
-    'modeloPadraoAnuncio', 'modelosPadraoAnuncio', 'observacoes',
+    'modeloPadraoAnuncio', 'modelosPadraoAnuncio',
   ];
   for (const key of allowed) {
     if (data[key] !== undefined) await set(key, data[key]);

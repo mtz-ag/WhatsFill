@@ -180,6 +180,21 @@ function casa(re, padrao, haystack, haystackSemAcento) {
  *   contato: sem isso, qualquer "sim" solto da conversa viraria aceite.
  * @returns {Promise<Array<{origem:string, nome:string, tag:object|null, motivo:string}>>}
  */
+/**
+ * Rótulo achatado, só para comparar duas etiquetas.
+ *
+ * Sem acento e sem caixa porque quem digita a lista do anúncio na Config não repete a grafia do
+ * CRM — "ADS", "Ads" e "ads" são a mesma etiqueta para os olhos dele, e duas linhas na tela.
+ */
+function achatarRotulo(texto) {
+  return String(texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
 export async function suggest({ city, texts = [], extra = '', interesse = null, veioDeAnuncio = false, nomeDivergente = false, etiquetasDoAnuncio = [] }) {
   const out = [];
 
@@ -195,16 +210,6 @@ export async function suggest({ city, texts = [], extra = '', interesse = null, 
    * Flávio" — o mesmo problema que fez a etiqueta ADS precisar do `fallback`. Aqui a etiqueta é
    * para o filtro dele, não para a decisão da rodada. Quem manda o modelo é a ação do anúncio.
    */
-  for (const nome of Array.isArray(etiquetasDoAnuncio) ? etiquetasDoAnuncio : []) {
-    const limpo = String(nome || '').trim();
-    if (!limpo) continue;
-    out.push({
-      origem: 'anúncio',
-      nome: limpo,
-      tag: await resolveTag(limpo),
-      motivo: 'o texto do anúncio reconhecido pede esta etiqueta',
-    });
-  }
 
   /**
    * Chegou por anúncio → etiqueta de anúncio, direto do dado da plataforma.
@@ -233,6 +238,39 @@ export async function suggest({ city, texts = [], extra = '', interesse = null, 
       nome: etiquetaAnuncio,
       tag: await resolveTag(etiquetaAnuncio),
       motivo: 'a conversa começou por um anúncio (a plataforma informa a origem)',
+    });
+  }
+
+  /**
+   * **As etiquetas do anúncio reconhecido** — e sem repetir o que já está na lista.
+   *
+   * Elas existem porque a etiqueta ADS diz que a pessoa veio de anúncio e **não de qual**: sem isto
+   * não há como filtrar depois quem chegou por qual campanha. Origem `anúncio` e não `conteúdo`,
+   * porque conteúdo é o que decide qual modelo enviar — uma etiqueta de campanha ali disputaria
+   * essa escolha.
+   *
+   * **Fica DEPOIS do bloco acima de propósito.** Print dele (02/09/2026): a caixa da rodada mostrava
+   * *"Etiquetas: ADS, ADS"* — ele pôs "ADS" na lista do anúncio e a `etiquetaAnuncio` também é
+   * "ADS". Na primeira versão este bloco vinha ANTES, então a conferência tirava o retrato da lista
+   * sem a ADS dentro e não tinha como ver a repetição. Os testes pegaram.
+   *
+   * A deduplicação de `refreshTagSuggestions` também não pegaria: ela filtra o que vem do CRM
+   * contra o que `suggest` achou, e aqui as duas entradas saem do próprio `suggest`.
+   *
+   * Compara por RÓTULO normalizado, nunca por id — o CRM tem etiquetas de rótulo repetido com ids
+   * diferentes, e comparar id já produziu 1293 linhas de "Caxias do Sul → Serra (tem: Serra)".
+   */
+  const jaNaLista = new Set(out.map((s) => achatarRotulo(s.nome)));
+
+  for (const nome of Array.isArray(etiquetasDoAnuncio) ? etiquetasDoAnuncio : []) {
+    const limpo = String(nome || '').trim();
+    if (!limpo || jaNaLista.has(achatarRotulo(limpo))) continue;
+    jaNaLista.add(achatarRotulo(limpo));
+    out.push({
+      origem: 'anúncio',
+      nome: limpo,
+      tag: await resolveTag(limpo),
+      motivo: 'o texto do anúncio reconhecido pede esta etiqueta',
     });
   }
 

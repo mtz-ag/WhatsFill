@@ -398,4 +398,30 @@ grupo('a etiqueta de anuncio NAO volta como conteudo pelo CRM (02/09/2026)');
   delete mem.etiquetaAnuncio;
 }
 
+
+grupo('as etiquetas do anuncio nao repetem a ADS (02/09/2026)');
+{
+  /**
+   * Print dele: a caixa da rodada mostrava *"Etiquetas: ADS, ADS"*. A etiqueta de anuncio
+   * (`etiquetaAnuncio`) e a lista de etiquetas do anuncio reconhecido sao duas fontes, e ele pos
+   * "ADS" nas duas. A deduplicacao de `refreshTagSuggestions` nao pega: ela filtra o que vem do CRM
+   * contra o que `suggest` achou, e aqui as duas entradas saem do proprio `suggest`.
+   */
+  mem.etiquetaAnuncio = 'ADS';
+  mem.tagRules = [];
+
+  const comRepetida = await tags.suggest({ texts: [], veioDeAnuncio: true, etiquetasDoAnuncio: ['ADS'] });
+  const ads = comRepetida.filter((s) => s.nome === 'ADS');
+  check(ads.length === 1, 'a ADS aparece UMA vez, nao duas');
+
+  // Acento e caixa nao criam uma segunda: quem digita a lista do anuncio nao repete a grafia do CRM.
+  const comCaixa = await tags.suggest({ texts: [], veioDeAnuncio: true, etiquetasDoAnuncio: ['ads', 'Ads'] });
+  check(comCaixa.filter((s) => /^ads$/i.test(s.nome)).length === 1, 'grafia diferente nao vira etiqueta a mais');
+
+  // E a etiqueta do anuncio que NAO repete continua entrando.
+  const outra = await tags.suggest({ texts: [], veioDeAnuncio: true, etiquetasDoAnuncio: ['ADS', 'ADS Escolas'] });
+  check(outra.some((s) => s.nome === 'ADS Escolas'), 'etiqueta propria do anuncio entra normalmente');
+  check(outra.filter((s) => s.nome === 'ADS').length === 1, 'e a ADS continua sem repetir');
+}
+
 fim();
