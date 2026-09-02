@@ -376,6 +376,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   outra, escrito no cabecalho da janela, e ele perguntou *"como faco para linkar as caixas?"*. O
   mesmo tinha acontecido com o arrastar, que eu havia trocado por botoes. Recurso de quadro precisa
   de alca visivel (o `.pino` na borda direita), nao de instrucao em texto.
+- **MOVER e LIGAR nao podem ser o mesmo gesto.** Soltar uma caixa em cima de outra religava o ramo —
+  era o unico jeito de ligar antes do pino, e virou armadilha no instante em que o pino nasceu: ele
+  arruma o quadro, encosta uma caixa na outra sem querer, e o ramo troca de pai, apagando a ligacao
+  anterior em silencio (*"esta removendo ligacao quando tem mais de uma"*, 01/09, com print). Num
+  quadro cheio a 35% de zoom as caixas tem 91px: encostar e o normal, nao a excecao. Hoje arrastar
+  SO move; ligar e so o pino. **Gesto destrutivo nunca pode ser o mesmo gesto do inofensivo** — e
+  quando um gesto novo cobre o antigo, o antigo sai, nao fica como atalho.
 - **Arquivo de fluxo e ENTRADA NAO CONFIAVEL, e `JSON.parse` nao basta.** O que vem no arquivo
   decide o que a rodada manda para eleitor real. `arvore.sanitizar` peneira campo a campo: regra
   que sumiu do codigo, sinal desconhecido e tecla inventada sao DESCARTADOS com aviso — nunca

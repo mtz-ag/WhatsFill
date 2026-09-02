@@ -10,9 +10,18 @@
  * caixas soltas ligadas por setas, e é isso que tem que aparecer.
  *
  * Então: **quadro livre**. Caixa que se arrasta para qualquer lugar, seta curva ligando pai e
- * filho, arrastar uma caixa em cima de outra para pendurar o ramo nela, clique para editar. O
- * problema do espaço se resolve com o quadro sendo maior que a tela — ele anda pelo quadro,
- * afasta e aproxima —, não encolhendo o desenho dele.
+ * filho, clique para editar. O problema do espaço se resolve com o quadro sendo maior que a tela —
+ * ele anda pelo quadro, afasta e aproxima —, não encolhendo o desenho dele.
+ *
+ * ## Mover e ligar são gestos DIFERENTES
+ *
+ * Ligar era soltar uma caixa em cima de outra, porque antes do pino não havia outro jeito. Virou
+ * armadilha no instante em que o pino nasceu: ele arruma o quadro, encosta uma caixa na outra sem
+ * querer, e o ramo troca de pai — *"está removendo ligação quando tem mais de uma"* (01/09/2026,
+ * com o print). Num quadro cheio a 35% de zoom as caixas têm 91px: encostar é o normal, não a
+ * exceção, e o gesto perigoso era o mesmo que o inofensivo.
+ *
+ * Hoje **arrastar só move** e **o pino é o único jeito de ligar**.
  *
  * ## A regra que o quadro livre exige
  *
@@ -176,8 +185,8 @@ function caixaDoNo(no) {
    * Ligar duas caixas só existia arrastando uma em cima da outra, e ele perguntou *"como faço para
    * linkar as caixas?"* — ou seja, o gesto existia e era invisível. Um pino que se puxa é como
    * todo editor de diagrama faz, e ele fica do lado de onde o fio sai, que é o mesmo lugar de onde
-   * os fios já saem. O outro gesto continua valendo: quem descobrir arrastar a caixa em cima da
-   * outra também liga.
+   * os fios já saem. **É o único jeito de ligar** — arrastar a caixa em cima da outra ligava antes
+   * e virou armadilha assim que o pino nasceu; ver a nota no arrasto.
    */
   const pino = document.createElement('span');
   pino.className = 'pino';
@@ -353,7 +362,6 @@ function ligarArrasto() {
       origemX: achado.no.x || 0,
       origemY: achado.no.y || 0,
       andou: false,
-      alvo: null,
     };
     /**
      * A captura é o que faz o arrasto continuar quando o ponteiro sai de cima da caixa — e ela
@@ -392,23 +400,17 @@ function ligarArrasto() {
     arrastando.elemento.style.transform = `translate(${dx}px, ${dy}px)`;
     arrastando.dx = dx;
     arrastando.dy = dy;
-
-    // Quem está embaixo do ponteiro? É onde o ramo vai ser pendurado.
-    arrastando.elemento.style.pointerEvents = 'none';
-    const embaixo = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.caixa');
-    arrastando.elemento.style.pointerEvents = '';
-    const novoAlvo = embaixo && embaixo !== arrastando.elemento ? embaixo : null;
-    if (novoAlvo !== arrastando.alvo) {
-      arrastando.alvo?.classList.remove('alvo');
-      arrastando.alvo = novoAlvo;
-      // Só acende o alvo que ACEITA o ramo: acender um destino que vai recusar é pior que não
-      // acender nenhum, porque promete um movimento que não vai acontecer.
-      if (novoAlvo && !arvoreLib.ehDescendente(fluxo.arvore, arrastando.id, novoAlvo.dataset.no)) {
-        novoAlvo.classList.add('alvo');
-      } else {
-        arrastando.alvo = null;
-      }
-    }
+    /**
+     * **Arrastar SÓ move. Não religa.**
+     *
+     * Antes de o pino existir, soltar uma caixa em cima de outra era o único jeito de ligar as
+     * duas — e virou uma armadilha no instante em que o pino nasceu: ele arruma o quadro, encosta
+     * uma caixa na outra sem querer, e o ramo troca de pai. A ligacão anterior some, calada, e o
+     * que ele vê é *"está removendo ligação"* (relato dele, 01/09/2026, com o print).
+     *
+     * O gesto perigoso era o mesmo que o inofensivo, e num quadro cheio a 35% de zoom as caixas
+     * têm 91px: encostar é o normal, não a exceção. Hoje mover é mover, e ligar é o pino.
+     */
   });
 
   const soltar = async (ev) => {
@@ -424,10 +426,9 @@ function ligarArrasto() {
       return;
     }
     if (!arrastando) return;
-    const { id, elemento, origemX, origemY, dx = 0, dy = 0, alvo, andou } = arrastando;
+    const { id, elemento, origemX, origemY, dx = 0, dy = 0, andou } = arrastando;
     elemento.classList.remove('arrastando');
     elemento.style.transform = '';
-    alvo?.classList.remove('alvo');
     arrastando = null;
 
     if (!andou) {
@@ -437,9 +438,8 @@ function ligarArrasto() {
       return;
     }
 
-    let nova = arvoreLib.posicionar(fluxo.arvore, id, origemX + dx, origemY + dy, true);
-    if (alvo) nova = arvoreLib.reparentar(nova, id, alvo.dataset.no);
-    nova = arvoreLib.ordenarPorPosicao(nova);
+    // Só posição. Quem muda a estrutura é o pino — ver a nota no `pointermove`.
+    const nova = arvoreLib.ordenarPorPosicao(arvoreLib.posicionar(fluxo.arvore, id, origemX + dx, origemY + dy, true));
     await gravar(nova);
   };
 

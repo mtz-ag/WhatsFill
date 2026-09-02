@@ -5,6 +5,43 @@
 
 ---
 
+## 2026-09-01 (noite, 20) — Arrastar deixou de religar: era isso que apagava ligação
+
+**Relato dele:** *"está removendo ligação quando tem mais de uma"*, com o print do quadro montado.
+
+### Causa raiz
+
+Soltar uma caixa em cima de outra **religava o ramo**. Era o único jeito de ligar antes do pino
+existir, e eu o mantive como atalho quando o pino nasceu — *"quem descobrir arrastar a caixa em
+cima da outra também liga"*, escrito no comentário, o que já era o erro.
+
+O gesto perigoso passou a ser **o mesmo gesto do inofensivo**: ele arruma o quadro, encosta uma
+caixa na outra, e o ramo troca de pai — o que apaga a ligação anterior, porque um nó tem um pai só.
+Num quadro cheio a 35% de zoom as caixas têm 91px de largura; encostar é o normal, não a exceção.
+
+Reproduzi no navegador antes de mexer: arrastar "voltou por outro anúncio" para cima de
+"anúncio — pessoa nova" tirava o ramo de "pessoa retornando" e o punha no outro, sem nada perguntar.
+
+### O conserto
+
+**Arrastar só move. Ligar é só o pino.** Sumiu do arrasto o realce de alvo e a religação; ficou a
+posição (com os filhos junto) e a reordenação por altura, que é a prioridade entre irmãos.
+
+Entrou no `CLAUDE.md` como regra geral: **gesto destrutivo nunca pode ser o mesmo gesto do
+inofensivo**, e quando um gesto novo cobre o antigo, o antigo SAI — não fica como atalho.
+
+### Conferido no navegador
+
+- Arrastar uma caixa para cima de outra agora **não acende alvo nenhum** e **não muda a estrutura**:
+  o pai de destino continua com os mesmos 5 filhos, o de origem com os mesmos 6 (reordenados por
+  altura, que é o comportamento certo), 20 nós, 20 caixas, 10 fios.
+- O pino continua ligando, inclusive **dois filhos no mesmo pai**, um depois do outro.
+
+**Arquivos:** `src/fluxo.js`, `src/fluxo.html` (o cabeçalho não promete mais o gesto antigo),
+`manifest.json` (1.28.0 → 1.29.0), `registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-01 (noite, 19) — Observações em cada caixa, reset para o padrão, e o fluxo em texto
 
 **Pedido:** *"preciso que cada caixa tenha um input para botar observações que vou escrever para
