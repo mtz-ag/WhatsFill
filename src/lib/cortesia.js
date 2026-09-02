@@ -547,6 +547,89 @@ export function pedeAlgoIndefinido(entrantes, nossaUltimaAt) {
 }
 
 /**
+ * Marcadores de DINHEIRO. Não é "ajuda": é dinheiro, e é isso que separa o pedido do agradecimento.
+ *
+ * A palavra "ajuda" sozinha é a mais comum desta base nos dois sentidos — *"em que posso ajudar"*,
+ * *"vocês me ajudaram muito"*, *"obrigada pela ajuda"*. Uma regra que olhasse só ela mandaria a
+ * negativa para quem estava agradecendo. Aqui o gatilho é o dinheiro estar na mensagem.
+ */
+const MARCADORES_DE_DINHEIRO = [
+  // A chave PIX é a mais decisiva: ninguém manda a própria chave para o canal de um mandato a não
+  // ser para receber. Print da Marli (02/09/2026): "Meu Pix 01757539005" e "50 me ajuda muito".
+  /\bpix\b/i,
+  // O valor inteiro, e não só o primeiro dígito: o motivo vai para a tela e "R$ 2" leria errado.
+  /\br\$\s*\d[\d.,]*/i,
+  /\b\d{1,4}\s*(?:reais|real|conto|pila)\b/i,
+  /\bdinheiro\b/i,
+  /\bgrana\b/i,
+  /\bempr[ée]stimo\b/i,
+  /\bdoa[çc][ãa]o\b/i,
+];
+
+/**
+ * Coisas que se pede quando falta o básico. Sozinhas não bastam — "tomei meu remédio" não é pedido.
+ * Só valem junto de um verbo de pedir, que é o que separa relatar de pedir.
+ */
+const NECESSIDADES = [/\bcesta\s*b[áa]sica\b/i, /\brem[ée]dio?s?\b/i, /\bmedicamento?s?\b/i, /\bg[áa]s\b/i, /\balimento?s?\b/i];
+
+const VERBO_DE_PEDIR = /\b(preciso|precisava|necessito|me\s+ajud|ajuda\s*r?\s*me|pode(?:ria|m)?\s+(?:me\s+)?ajudar|consegue|tem\s+como|manda|envia|faz\s+um)\b/i;
+
+/**
+ * A conversa pendente traz pedido de DINHEIRO ou do que se compra com ele?
+ *
+ * Relato dele (02/09/2026), com a print da Marli: *"aqui está claro ela deu o pix dela e pediu 50,
+ * caso de mandar a mensagem negando apoio financeiro"*. A rodada sugeria a tecla 9 — *"pediu algo
+ * sem dizer o quê"* —, que é a pergunta de quem ainda não sabe o que a pessoa quer. Ali já se
+ * sabia.
+ *
+ * **Por que não bastou acrescentar palavras na caixa do quadro:** ela casava por trecho contido
+ * ("me ajuda com"), e a Marli escreveu "me ajuda muito". Palavra a palavra, a lista nunca fecha —
+ * e o que decide aqui manda uma NEGATIVA para eleitor, então precisa de teste, não de sorte.
+ *
+ * A regra tem duas portas: marcador de dinheiro sozinho basta; necessidade material precisa de
+ * verbo de pedir junto.
+ *
+ * @returns {{motivo:string, trecho:string}|null}
+ */
+export function pedeAjudaFinanceira(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  if (!rajada.length) return null;
+
+  const textos = rajada.map((m) => String(m?.texto || '').trim()).filter(Boolean);
+  if (!textos.length) return null;
+
+  // A rajada inteira, porque o pedido vem partido: a chave numa mensagem e o valor na seguinte.
+  const conversa = textos.join(' \n ');
+
+  // Quem oferece ajuda não está pedindo — mesma guarda do `pedeAlgoIndefinido`.
+  if (OFERECE_AJUDA.test(conversa)) return null;
+
+  for (const padrao of MARCADORES_DE_DINHEIRO) {
+    const m = padrao.exec(conversa);
+    if (m) {
+      return {
+        motivo: `pediu ajuda financeira (escreveu "${m[0].trim()}") — vale a resposta que nega com respeito`,
+        trecho: conversa.slice(0, 160),
+      };
+    }
+  }
+
+  if (VERBO_DE_PEDIR.test(conversa)) {
+    for (const padrao of NECESSIDADES) {
+      const m = padrao.exec(conversa);
+      if (m) {
+        return {
+          motivo: `pediu ${m[0].trim()} — vale a resposta que nega com respeito`,
+          trecho: conversa.slice(0, 160),
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Esta mensagem é **repasse** — conteúdo de terceiro que a pessoa encaminhou?
  *
  * Link sozinho e vídeo. É o que ele chamou de ruído em 31/08: *"está confuso quando é rajada de

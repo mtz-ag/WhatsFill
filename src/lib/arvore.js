@@ -58,6 +58,7 @@ export const SINAIS = [
   { id: 'respondeuOsDados', rotulo: 'Respondeu o nome ou a cidade que pedimos', nao: 'Não respondeu o nome nem a cidade' },
   { id: 'confirmouPresenca', rotulo: 'Disse que VAI ao evento', nao: 'Não confirmou presença no evento' },
   { id: 'pedeAlgoIndefinido', rotulo: 'Pediu algo e não disse o quê', nao: 'Não pediu nada em aberto' },
+  { id: 'pedeAjudaFinanceira', rotulo: 'Pediu dinheiro, cesta básica ou remédio', nao: 'Não pediu dinheiro nem o básico' },
   { id: 'ultimaEhDespedida', rotulo: 'Só se despediu ("amém", "é nós", "abraço")', nao: 'Não foi despedida' },
   { id: 'ultimaEhSoReacao', rotulo: 'Só figura, emoji, sticker ou link', nao: 'Escreveu alguma coisa' },
   { id: 'rajadaEhSoRepasse', rotulo: 'Só repassa link e vídeo de outras pessoas', nao: 'Não é só repasse' },
@@ -433,7 +434,20 @@ export function fluxoPadrao() {
    * lado é consertado e o outro fica para trás.
    */
   const dosDoisLados = (onde) => [
-    porPalavras('pediu ajuda financeira', ['ajuda financeira', 'preciso de dinheiro', 'me ajuda com', 'cesta basica', 'remedio'], { tecla: null, resposta: 'pedido-ajuda' }),
+    /**
+     * **Pediu dinheiro: a condicao virou SINAL, nao lista de palavras.**
+     *
+     * Print da Marli (02/09/2026): ela mandou a propria chave PIX e "50 me ajuda muito", e a caixa
+     * sugeria a tecla 9 -- a pergunta de quem ainda nao sabe o que a pessoa quer. A lista casava
+     * por trecho contido ("me ajuda com") e ela escreveu "me ajuda muito".
+     *
+     * Palavra a palavra a lista nunca fecha, e o que decide aqui manda uma NEGATIVA para eleitor.
+     * `cortesia.pedeAjudaFinanceira` e testada, olha a rajada inteira (a chave vem numa mensagem e
+     * o valor na seguinte) e separa pedir de agradecer -- "voces me ajudaram muito" nao casa.
+     */
+    { ...noVazio('pediu dinheiro, cesta basica ou remedio'),
+      condicao: { sinal: 'pedeAjudaFinanceira', negar: false, palavras: [], onde: 'ultima' },
+      acao: { tecla: null, resposta: 'pedido-ajuda' } },
 
     /**
      * **Texto longo vem ANTES das caixas de palavra** — print da Cris (02/09/2026).
@@ -1321,6 +1335,23 @@ export function quantosEnviam(arvore) {
  * A polaridade importa e está tratada em `repeteSozinha`: `jaRespondemosAntes` NEGADO ("nunca
  * entregamos nada") vira falso depois do envio e por isso é guarda; não negado, não é.
  */
+/**
+ * Sinais lidos da RAJADA — as mensagens dela depois da nossa última.
+ *
+ * Responder move a nossa última mensagem para a frente delas, e a rajada fica vazia: o sinal volta
+ * a ser falso sozinho. São o oposto da lista de baixo, e por isso a caixa que os exige VERDADEIROS
+ * já está protegida contra repetir.
+ */
+const SINAIS_QUE_A_RESPOSTA_APAGA = new Set([
+  'pedeAjudaFinanceira',
+  'pedeAlgoIndefinido',
+  'pedeRespostaPessoal',
+  'perguntaAberta',
+  'soExpressaApoio',
+  'rajadaEhSoRepasse',
+  'respondeuComoAjudar',
+]);
+
 const SINAIS_QUE_O_ENVIO_APAGA = new Set([
   'modeloJaNaConversa',
   'enviadoHoje',
@@ -1362,6 +1393,19 @@ function repeteSozinha(no) {
   if ((cond.palavras || []).length && cond.onde !== 'qualquer') return false;
 
   if (!cond.sinal) return true;
+
+  /**
+   * **Sinal que só existe enquanto ela não foi respondida protege sozinho.**
+   *
+   * Estes são calculados sobre a RAJADA depois da nossa última mensagem: assim que respondemos,
+   * as mensagens dela ficam para trás e o sinal volta a ser falso. A polaridade é o contrário da
+   * lista de cima — aqui a caixa está protegida quando exige o sinal VERDADEIRO.
+   *
+   * Sem esta lista, `pedeAjudaFinanceira` foi acusada de repetir na primeira vez que virou caixa
+   * do quadro (02/09/2026), e o aviso era falso: mandar a negativa apaga a condição.
+   */
+  if (SINAIS_QUE_A_RESPOSTA_APAGA.has(cond.sinal)) return !!cond.negar;
+
   if (!SINAIS_QUE_O_ENVIO_APAGA.has(cond.sinal)) return true;
   /**
    * A polaridade: todos estes viram VERDADE depois do envio, então a caixa só está protegida se

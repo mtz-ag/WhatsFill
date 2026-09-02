@@ -5,6 +5,69 @@
 
 ---
 
+## 2026-09-02 — Pedido de dinheiro: detector testado e etiqueta no CRM
+
+**Relato dele**, com a print da Marli: *"aqui está claro ela deu o pix dela e pediu 50, caso de
+mandar a mensagem negando apoio financeiro"*, e depois *"já existe a etiqueta de 🔴Procura emprego
+ou dinheiro, deve ser aplicada também"*.
+
+### Por que a rodada errou
+
+Ela mandou **"Meu Pix 01757539005"** e, na mensagem seguinte, **"50 me ajuda muito"**. A caixa
+sugeriu a tecla 9 — *"pediu algo sem dizer o quê"* —, que é a pergunta de quem ainda não sabe o que
+a pessoa quer. Ali já se sabia.
+
+A caixa do quadro casava por trecho contido, com a lista `['ajuda financeira', 'preciso de
+dinheiro', 'me ajuda com', 'cesta basica', 'remedio']`. Ela escreveu **"me ajuda muito"**. Palavra a
+palavra a lista nunca fecha — e o que decide isto manda uma **negativa** para eleitor.
+
+### O detector
+
+`cortesia.pedeAjudaFinanceira`, puro e testado, com duas portas:
+
+- **marcador de dinheiro** basta sozinho: `pix`, `R$ 200`, `50 reais`, `dinheiro`, `grana`,
+  `empréstimo`, `doação`;
+- **necessidade material** (`cesta básica`, `remédio`, `gás`, `alimento`) exige **verbo de pedir**
+  junto — *"já tomei meu remédio hoje"* é relato, não pedido.
+
+Lê a **rajada inteira** (a chave veio numa mensagem e o valor na outra) e desarma quando ela está
+oferecendo ajuda, não pedindo.
+
+**Os falsos positivos são o risco**, como no detector de sem interesse: "ajuda" é a palavra mais
+comum desta base nos dois sentidos. Das 24 asserções, 10 são falso positivo — *"obrigada, vocês me
+ajudaram muito"*, *"em que posso ajudar?"*, *"quero ajudar na campanha"*.
+
+A caixa do quadro passou a usar o **sinal** em vez da lista de palavras.
+
+### A etiqueta
+
+Config nova: **"Etiqueta de quem PEDIU DINHEIRO OU EMPREGO"**. Aplicada assim que sai `pedido-ajuda`
+ou `pedido-emprego` — as duas que negam, as mesmas de `ia.RESTRITOS`.
+
+Fica dentro de `sendTemplate`, que é o **ponto único** por onde toda resposta pronta sai: a rodada,
+a tecla `f` de um ramo, a escolha da IA e as **respostas rápidas** — foi por uma resposta rápida que
+ele mandou a da Marli, e um gancho na rodada não teria pegado.
+
+**Aplica de verdade, não sugere**: a resposta rápida não conclui, então nada chamaria
+`saveClassification` depois dela e uma sugestão ficaria esperando uma gravação que não vem. Falhar
+nunca é erro do envio — a mensagem já saiu; o aviso vai junto do status.
+
+### Um falso positivo do próprio verificador
+
+`arvore.problemas` acusou a caixa nova de *"manda mensagem e a condição continua verdadeira depois
+do envio"*. Era falso: o sinal lê a rajada **depois da nossa última mensagem**, então responder
+apaga a condição sozinho. Faltava a lista `SINAIS_QUE_A_RESPOSTA_APAGA` — a polaridade oposta da que
+já existia, onde a caixa está protegida quando exige o sinal **verdadeiro**.
+
+**Arquivos:** `src/lib/cortesia.js`, `src/lib/arvore.js`, `src/lib/store.js`, `src/panel/panel.js`,
+`tests/cortesia.test.mjs`, `tests/arvore.test.mjs`, `manifest.json` (1.66.0 → 1.67.0),
+`registro.md`, `CLAUDE.md`. Catorze suítes e os dois verificadores passando.
+
+**Para ele:** preencher a Config com o nome exato da etiqueta (`🔴Procura emprego ou dinheiro`) —
+vazio não marca ninguém, e a etiqueta não é criada no CRM.
+
+---
+
 ## 2026-09-02 — "POA" virava o NOME "Poa": a sobra era calculada no texto errado
 
 **Relato dele:** *"não pegou POA como cidade, seria porto alegre"*.

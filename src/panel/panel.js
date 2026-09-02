@@ -26,12 +26,19 @@ import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
 const GROUP_TEMPLATE_ID = 'link-grupo';
 const THANKS_TEMPLATE_ID = 'agradecimento';
+/**
+ * As duas respostas que NEGAM: dinheiro e emprego. Quem as recebe ganha a etiqueta da Config.
+ *
+ * As mesmas de ia.RESTRITOS, e pela mesma razao de fundo: sao as de risco juridico (Lei
+ * 9.504/97). La a lista impede a IA de escolhe-las; aqui ela diz quais deixam marca no CRM.
+ */
+const ETIQUETA_PEDIDO_IDS = ['pedido-ajuda', 'pedido-emprego'];
 /** Agradece a mensagem e fecha, sem abrir demanda. É a saída da tecla 4. */
 const THANKS_INFO_TEMPLATE_ID = 'agradecer-info';
 const ASK_TEMPLATE_ID = 'pedir-dados';
@@ -1890,8 +1897,43 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.lastSendAt = Date.now();
     await templatesLib.markSent(alvo.id, template.id, { nome: alvo.name });
     await templatesLib.avancarVariante(template);
-    setStatus(`Enviado: ${template.name}`, 'ok');
+    const marca = await etiquetarPedidoDeAjuda(template, alvo);
+    setStatus(`Enviado: ${template.name}${marca}`, 'ok');
     return true;
+  }
+
+  /**
+   * **Quem recebeu a negativa fica marcado no CRM.**
+   *
+   * Pedido dele (02/09/2026), com a print da Marli: *"já existe a etiqueta de 🔴Procura emprego ou
+   * dinheiro, deve ser aplicada também"*.
+   *
+   * Fica aqui, dentro do `sendTemplate`, porque este é o **ponto único** por onde toda resposta
+   * pronta sai: a rodada, a tecla `f` de um ramo do quadro, a escolha da IA e as respostas rápidas
+   * da caixa. Foi por uma resposta rápida que ele mandou a da Marli — e um gancho na rodada não
+   * teria pegado.
+   *
+   * **Aplica de verdade, não sugere.** A resposta rápida não conclui o atendimento, então nada
+   * chama `saveClassification` depois dela: uma sugestão em `tagSuggestions` ficaria esperando uma
+   * gravação que não vem.
+   *
+   * Falhar aqui **nunca** é erro do envio — a mensagem já saiu. Etiqueta é organização interna; o
+   * que o contato recebe vem primeiro. O aviso vai junto do status, para ele saber que faltou.
+   */
+  async function etiquetarPedidoDeAjuda(template, alvo) {
+    if (!ETIQUETA_PEDIDO_IDS.includes(template.id)) return '';
+    const nome = String(state.auto.cfg.etiquetaPedidoAjuda || '').trim();
+    if (!nome || !alvo?.id) return '';
+
+    try {
+      const tag = await tagsLib.resolveTag(nome);
+      if (!tag) return ` (a etiqueta "${nome}" não existe no CRM — não marquei)`;
+      if ((alvo.tagsId || []).includes(tag.id)) return '';
+      const r = await tagsLib.applyTags(alvo, [tag.id]);
+      return r?.ok ? ` + etiqueta "${tag.label}"` : ` (não consegui aplicar "${nome}")`;
+    } catch (err) {
+      return ` (não consegui aplicar "${nome}": ${err?.message || err})`;
+    }
   }
 
   async function throttle() {
@@ -2433,6 +2475,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       campoTexto('Etiqueta de SEM INTERESSE (recusou ou hostilizou)', cfg.etiquetaSemInteresse, (v) =>
         salvarAuto({ etiquetaSemInteresse: v.trim() }).then(renderAll)
       ),
+      campoTexto('Etiqueta de quem PEDIU DINHEIRO OU EMPREGO', cfg.etiquetaPedidoAjuda, (v) =>
+        salvarAuto({ etiquetaPedidoAjuda: v.trim() }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Aplicada assim que sai uma das duas respostas que negam — "Pedido de ajuda financeira" ou ' +
+          '"Pedido de emprego" —, por qualquer caminho: a rodada, um ramo do quadro ou a resposta ' +
+          'rápida da caixa. Digite o nome exatamente como está no CRM (ex.: "🔴Procura emprego ou ' +
+          'dinheiro"). A etiqueta NÃO é criada: se não existir, o envio acontece igual e o aviso ' +
+          'aparece no status. Vazio = não marca ninguém.'),
       h('div', { class: 'wf-origin' },
         'Quem pede para não receber mais, ou vem hostilizar, é marcado com esta etiqueta e ' +
           'concluído SEM resposta (tecla "s" na caixa da rodada). Digite o nome exatamente como ' +
@@ -4409,6 +4460,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // Pediu algo sem dizer o quê: material de campanha em cima disso é o pior caso do
         // projeto (print da Mari, 31/08). Perguntar é a única resposta segura.
         pedeAlgoIndefinido: pedeAlgoIndefinido(state.entrantes, state.nossaUltimaAt),
+        // Pediu DINHEIRO: vem antes do "pediu algo sem dizer o quê" no quadro, porque aqui já se
+        // sabe o que ela quer — perguntar seria fingir que não (print da Marli, 02/09).
+        pedeAjudaFinanceira: pedeAjudaFinanceira(state.entrantes, state.nossaUltimaAt),
         podePerguntarAjuda: !perguntarAjudaTrava,
         podeMandarMomento: !momentoTrava,
         temEtiquetaDeCidade,

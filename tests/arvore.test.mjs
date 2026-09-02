@@ -277,7 +277,7 @@ grupo('o desenho do QUADRO dele: as protecoes ficam acima da bifurcacao');
   const bomDia = arv.decidir({ jaRespondemosAntes: true, ultimoTexto: 'Bom dia!' }, quadro);
   check(bomDia?.tecla === '5', `saudacao escrita manda a mensagem do momento (${bomDia?.tecla})`);
 
-  const financeiro = arv.decidir({ jaRespondemosAntes: true, ultimoTexto: 'preciso de ajuda financeira' }, quadro);
+  const financeiro = arv.decidir({ jaRespondemosAntes: true, pedeAjudaFinanceira: { motivo: 'pix' } }, quadro);
   check(financeiro?.resposta === 'pedido-ajuda', `pedido financeiro tem resposta pronta (${financeiro?.resposta})`);
 
   /**
@@ -796,7 +796,7 @@ grupo('a CHEGADA pelo anuncio: modelo, dados, pendencia (02/09/2026)');
    * sai na passada seguinte, e continua sendo o `pedido-ajuda` — o que este teste trava e que ela
    * NAO se perde no caminho.
    */
-  const remedio = { ultimoTexto: 'preciso de remedio', textos: [ad, 'preciso de remedio'] };
+  const remedio = { pedeAjudaFinanceira: { motivo: 'remedio' }, textos: [ad, 'preciso de remedio'], ultimoTexto: 'preciso de remedio' };
   check(tecla({ ...chega, ...remedio }) === 'a', 'quem pediu ajuda recebe primeiro o recibo do anuncio');
   check(arv.decidir({ ...chega, ...remedio, modeloJaNaConversa: true, jaPediramDados: true }, q)?.resposta === 'pedido-ajuda',
     'e a NEGATIVA sai na passada seguinte -- nao se perde');
@@ -1060,7 +1060,7 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   const volta = q.find((n) => n.rotulo === 'pessoa retornando');
 
   const naChegada = chegada.filhos.map((n) => n.regra || n.rotulo);
-  const PENDENCIAS = ['pediu ajuda financeira', 'ultima-e-so-reacao', 'ultima-pede-resposta-pessoal', 'ultima-e-despedida'];
+  const PENDENCIAS = ['pediu dinheiro, cesta basica ou remedio', 'ultima-e-so-reacao', 'ultima-pede-resposta-pessoal', 'ultima-e-despedida'];
   for (const p of PENDENCIAS) {
     check(!naChegada.includes(p), `"${p}" nao esta mais na chegada`);
   }
@@ -1091,7 +1091,7 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   };
   const bomDia = arv.decidir({ ...b, textos: [ad, 'bom dia'], ultimoTexto: 'bom dia' }, q);
   check(bomDia?.tecla === '5', 'quem chega e diz "bom dia" ainda recebe a mensagem do momento');
-  const remedio = arv.decidir({ ...b, textos: [ad, 'preciso de remedio'], ultimoTexto: 'preciso de remedio' }, q);
+  const remedio = arv.decidir({ ...b, pedeAjudaFinanceira: { motivo: 'remedio' }, textos: [ad, 'preciso de remedio'], ultimoTexto: 'preciso de remedio' }, q);
   check(remedio?.resposta === 'pedido-ajuda', 'e quem pede remedio ainda recebe a negativa');
 }
 

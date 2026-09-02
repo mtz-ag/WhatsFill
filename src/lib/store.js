@@ -662,6 +662,15 @@ const DEFAULTS = {
      * já usa a extensão recebe o campo em vez de `undefined`.
      */
     etiquetaSemInteresse: '',
+
+    /**
+     * Etiqueta de quem pediu dinheiro ou emprego — a marca fica no CRM depois da negativa.
+     *
+     * Pedido dele (02/09/2026): *"ja existe a etiqueta de Procura emprego ou dinheiro, deve ser
+     * aplicada tambem"*. Aplicada quando sai pedido-ajuda ou pedido-emprego, por qualquer
+     * caminho — inclusive a resposta rapida, que foi por onde ele mandou a da Marli.
+     */
+    etiquetaPedidoAjuda: '',
   },
 
 

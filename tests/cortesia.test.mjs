@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -755,6 +755,66 @@ grupo('recusar o EVENTO nao e recusar o contato (regressao de 01/09/2026)');
   check(!!si('nao vou mais receber isso, me tira da lista'), 'pedido de sair da lista vence o verbo de ir');
   check(!!si('Não quero receber nada'), 'recusa explicita nao regrediu');
   check(!!si('nao'), 'negativa seca nao regrediu');
+}
+
+grupo('pedeAjudaFinanceira: dinheiro pedido, e nao "ajuda" solta (02/09/2026)');
+{
+  /**
+   * Print da Marli: ela mandou a propria chave PIX e "50 me ajuda muito", e a caixa sugeria a
+   * tecla 9 -- *"pediu algo sem dizer o que"*, que e a pergunta de quem ainda nao sabe o que a
+   * pessoa quer. Ali ja se sabia. Relato dele: *"aqui esta claro ela deu o pix dela e pediu 50,
+   * caso de mandar a mensagem negando apoio financeiro"*.
+   *
+   * A caixa do quadro casava por trecho contido ("me ajuda com") e ela escreveu "me ajuda muito".
+   * Palavra a palavra a lista nunca fecha -- e o que decide aqui manda uma NEGATIVA para eleitor.
+   */
+  const NOSSA = '2026-09-02T14:00:00Z';
+  const m = (t) => ({ texto: t, tipo: 'TEXT', at: '2026-09-02T14:57:00Z' });
+  const pede = (...textos) => pedeAjudaFinanceira(textos.map(m), NOSSA);
+
+  // O caso da print, com o pedido PARTIDO em duas mensagens.
+  const marli = pede('Meu Pix 01757539005', '50 me ajuda muito');
+  check(!!marli, 'a chave PIX numa mensagem e o valor na outra: reconhece');
+  check(/pix/i.test(marli?.motivo || ''), `e o motivo diz o que casou (${marli?.motivo})`);
+
+  check(!!pede('me manda um pix por favor'), 'pedir pix');
+  check(!!pede('preciso de R$ 200 para o remedio'), 'valor em reais');
+  check(/R\$ 200/.test(pede('preciso de R$ 200 para o remedio').motivo), 'o motivo traz o valor inteiro, nao so o primeiro digito');
+  check(!!pede('estou precisando de dinheiro'), 'dinheiro por extenso');
+  check(!!pede('50 reais me ajudam muito'), 'valor sem cifrao');
+  check(!!pede('vc tem como fazer um emprestimo'), 'emprestimo');
+
+  /**
+   * **A necessidade material exige VERBO DE PEDIR.** "tomei meu remedio" e relato, nao pedido --
+   * e mandar a negativa para quem so contou da vida dela e o erro que esta regra pode cometer.
+   */
+  check(!!pede('preciso de uma cesta basica'), 'cesta basica com verbo de pedir');
+  check(!!pede('tem como me ajudar com o gas'), 'gas com verbo de pedir');
+  check(!pede('ja tomei meu remedio hoje, obrigada'), 'remedio SEM pedido nao conta');
+  check(!pede('faltou gas la em casa ontem'), 'relato sobre gas tambem nao');
+
+  /**
+   * **Os falsos positivos sao o risco desta regra**, como no detector de sem interesse: "ajuda" e
+   * a palavra mais comum desta base nos DOIS sentidos.
+   */
+  check(!pede('obrigada, voces me ajudaram muito'), 'agradecer nao e pedir');
+  check(!pede('em que posso ajudar voces?'), 'oferecer ajuda nao e pedir');
+  check(!pede('quero ajudar na campanha'), 'querer ajudar a campanha nao e pedir');
+  check(!pede('posso ajudar de alguma forma?'), 'se oferecer nao e pedir');
+  check(!pede('Ola! Eu apoio as Escolas Civico-Militares'), 'a mensagem do anuncio nao e pedido');
+  check(!pede('bom dia'), 'saudacao nao e pedido');
+
+  // Vazio e lixo nao explodem.
+  check(!pedeAjudaFinanceira([], NOSSA), 'sem mensagem, null');
+  check(!pedeAjudaFinanceira([m('')], NOSSA), 'mensagem vazia, null');
+  check(!pedeAjudaFinanceira(null, NOSSA), 'nulo nao explode');
+
+  /**
+   * **A rajada e o que vem DEPOIS da nossa ultima mensagem** — e e por isso que a caixa do quadro
+   * nao repete: respondida, a rajada esvazia e o sinal volta a ser falso sozinho.
+   */
+  const antesDaNossa = [{ texto: 'Meu Pix 123', tipo: 'TEXT', at: '2026-09-02T13:00:00Z' }];
+  check(!pedeAjudaFinanceira(antesDaNossa, NOSSA), 'pedido anterior a nossa resposta nao conta de novo');
 }
 
 fim();
