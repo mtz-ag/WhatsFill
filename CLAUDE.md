@@ -391,6 +391,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   a pessoa acha que faz.** Duas coisas resolveram: a frase ao vivo durante o arrasto com os DOIS
   nomes e o "sai de X" (a metade que ele nao via acontecer), e a lista "Por este ramo dentro de..."
   no editor — **lista nao tem direcao**, e e por isso que ela e o caminho confiavel.
+- **"Ligar duas caixas na mesma" e uma operacao de VARIAS PARA UMA, e nenhum arrasto expressa
+  isso.** Ele pediu dez vezes; eu entreguei tres caminhos e os tres eram uma-por-vez-com-direcao
+  (pino de saida, pino de entrada, lista "por este ramo dentro de"). Cada puxada e uma ligacao so,
+  e quando ele pegava a ponta errada a puxada seguinte DESFAZIA a anterior — foi o que ele viu dez
+  vezes. **Pior: o pino de entrada que eu criei para "consertar" deu a ele um jeito mais tentador
+  de cometer o mesmo erro** (o filho esta sempre embaixo, entao a entrada da caixa de cima e o que
+  a mao alcanca). O que resolveu foi a lista de caixas de selecao "Ramos dentro deste": as marcadas
+  SAO os filhos, sem direcao, sem mira e sem ordem. **Quando o pedido e N para 1, a resposta e um
+  lugar onde os N aparecem juntos.**
+- **Nunca jogue a verificacao para segundo plano.** Rodei `checar-modulos` junto com o start do
+  servidor num comando com `&`, nao li a saida, e mandei uma janela que nao carregava: o proprio
+  verificador dizia *"1 com erro de sintaxe"* (um `const` redeclarado) e eu so descobri pelo console
+  do navegador. Verificacao lida depois nao e verificacao.
 - **Arquivo de fluxo e ENTRADA NAO CONFIAVEL, e `JSON.parse` nao basta.** O que vem no arquivo
   decide o que a rodada manda para eleitor real. `arvore.sanitizar` peneira campo a campo: regra
   que sumiu do codigo, sinal desconhecido e tecla inventada sao DESCARTADOS com aviso — nunca

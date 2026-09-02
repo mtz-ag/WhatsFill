@@ -5,6 +5,52 @@
 
 ---
 
+## 2026-09-01 (noite, 24) — "Ramos dentro deste": a operação de VÁRIAS para UMA, num lugar só
+
+**Relato dele:** *"pela décima vez eu preciso que as duas liguem na mesma e continua uma removendo
+a outra sem ficar as duas ligadas"*.
+
+### O erro foi meu, e foi de leitura do pedido
+
+Ele pediu dez vezes a mesma coisa. Eu entreguei três caminhos, e os três eram
+**uma-por-vez-com-direção**: o pino de saída, o pino de entrada e a lista "pôr este ramo dentro
+de". Cada puxada é uma ligação só, e quando ele pegava a ponta errada, a puxada seguinte **desfazia
+a anterior** — que é exatamente o que ele descreveu todas as vezes.
+
+**Pior: o pino de entrada que eu criei na rodada anterior para "consertar" deu a ele um jeito mais
+tentador de cometer o mesmo erro.** No quadro dele o filho está sempre embaixo, então a entrada da
+caixa de cima é o que a mão alcança — e puxar dali joga a caixa de cima para dentro de uma, depois
+da outra, desfazendo.
+
+### O conserto
+
+**"Ramos dentro deste"**: no editor da caixa selecionada, a lista de todas as outras caixas com uma
+caixa de seleção. As marcadas **são** os filhos. Sem direção, sem mira, sem ordem.
+
+Ele seleciona a caixa de cima, marca as duas de baixo, e as duas ficam. O título do campo conta
+quantas estão marcadas. Desmarcar solta o ramo na raiz — tirar de dentro nunca apaga nada. Os
+descendentes do próprio ramo ficam fora da lista, porque seriam recusados.
+
+Substituiu a lista "pôr este ramo dentro de…" que eu tinha acrescentado sem ele pedir na rodada
+anterior. Os dois pinos continuam, para quem gosta do arrasto.
+
+**A regra que fica:** quando o pedido é N para 1, a resposta é um lugar onde os N aparecem juntos.
+
+### Um erro de processo no meio
+
+Mandei a janela com um `const` redeclarado — ela não carregava. O `checar-modulos` **tinha** pegado
+(*"1 com erro de sintaxe"*), mas eu o rodei junto com o start do servidor num comando em segundo
+plano e não li a saída; só descobri pelo console do navegador. Entrou no `CLAUDE.md`: verificação
+lida depois não é verificação.
+
+**Conferido no navegador:** selecionar "Tem a etiqueta que dispensa" e marcar duas caixas deixa as
+duas como filhas dela (`2 marcados`), com os 10 fios do quadro no lugar.
+
+**Arquivos:** `src/fluxo.js`, `src/fluxo.css`, `manifest.json` (1.32.0 → 1.33.0), `registro.md`,
+`CLAUDE.md`.
+
+---
+
 ## 2026-09-01 (noite, 23) — O pino agora liga nos DOIS sentidos
 
 **Relato dele:** *"fez algo que não pedi e continuo com mesmo problema, as duas caixas de baixo eu

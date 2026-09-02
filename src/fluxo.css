@@ -424,3 +424,18 @@ body {
 }
 .entrada-pino:hover { border-color: var(--trilha); background: var(--trilha); }
 .caixa:hover .entrada-pino { border-color: var(--trilha); }
+
+/* A lista dos ramos que ficam dentro do selecionado — a operação "várias para uma", num lugar só. */
+.lista-filhos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 6px 7px;
+  border: 1px solid var(--borda);
+  border-radius: 4px;
+  background: var(--bg);
+}
+.item-filho { font-size: 11.5px; padding: 2px 0; align-items: flex-start; line-height: 1.3; }
+.item-filho input { margin-top: 2px; flex: 0 0 auto; }

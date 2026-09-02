@@ -802,27 +802,47 @@ function desenharEditor() {
   linha('Observações para o Claude', obs);
 
   /**
-   * **Ligar sem gesto nenhum: escolher o pai numa lista.**
+   * **Marcar os ramos que ficam DENTRO deste.**
    *
-   * O pino falhou duas vezes com ele — primeiro por ser invisível, depois porque a DIREÇÃO dele
-   * (puxa do pai para o filho) é o contrário do que ele tentava fazer, e cada tentativa arrancava
-   * a caixa do pai anterior. Gesto tem direção; lista não tem. Aqui ele lê a frase inteira — *"pôr
-   * este ramo dentro de X"* — e não há como interpretar ao contrário.
+   * Ele pediu dez vezes a mesma coisa — *"eu preciso que as duas liguem na mesma"* — e todo
+   * caminho que eu dei era uma-por-vez-com-direção: o pino de saída, o pino de entrada, e a lista
+   * "pôr este ramo dentro de". Ligar duas caixas na mesma é uma operação de **várias para uma**, e
+   * nenhum arrasto expressa isso: cada puxada é uma ligação só, e quando ele pegava a ponta errada
+   * a puxada seguinte desfazia a anterior.
    *
-   * Os descendentes do próprio ramo ficam FORA da lista: pôr um ramo dentro de um filho dele seria
-   * recusado, e oferecer uma opção que vai ser recusada é pior que não oferecer.
+   * Aqui a operação inteira acontece num lugar. Ele seleciona a caixa de cima, marca as duas de
+   * baixo, e as duas ficam. Sem direção, sem mira, sem ordem — as caixas marcadas SÃO os filhos.
+   *
+   * Desmarcar solta o ramo na raiz, e não o apaga: tirar de dentro nunca pode destruir nada.
+   *
+   * Os descendentes deste ramo ficam de fora da lista — pôr um ramo dentro de um filho dele seria
+   * recusado, e oferecer o que vai ser recusado é pior que não oferecer.
    */
-  const dentroDe = arvoreLib
+  const candidatos = arvoreLib
     .todosOsNos(fluxo.arvore)
-    .filter(({ no: outro }) => outro.id !== no.id && !arvoreLib.ehDescendente(fluxo.arvore, no.id, outro.id))
-    .map(({ no: outro, nivel }) => [outro.id, `${'— '.repeat(nivel)}${outro.rotulo || outro.id}`]);
+    .filter(({ no: outro }) => outro.id !== no.id && !arvoreLib.ehDescendente(fluxo.arvore, no.id, outro.id));
 
-  linha(
-    'Pôr este ramo dentro de…',
-    seletor([['', '— na raiz do quadro (sem pai) —'], ...dentroDe], achado.pai?.id || '', (valor) => {
-      gravar(arvoreLib.ordenarPorPosicao(arvoreLib.reparentar(fluxo.arvore, no.id, valor || null)));
-    })
-  );
+  const campoFilhos = document.createElement('div');
+  campoFilhos.className = 'campo';
+  campoFilhos.append(span('campo-rot', `Ramos dentro deste (${(no.filhos || []).length} marcados)`));
+
+  const lista = document.createElement('div');
+  lista.className = 'lista-filhos';
+  for (const { no: outro, nivel } of candidatos) {
+    const item = document.createElement('label');
+    item.className = 'chk item-filho';
+    const marca = document.createElement('input');
+    marca.type = 'checkbox';
+    marca.checked = (no.filhos || []).some((f) => f.id === outro.id);
+    marca.addEventListener('change', () => {
+      const paiNovo = marca.checked ? no.id : null;
+      gravar(arvoreLib.ordenarPorPosicao(arvoreLib.reparentar(fluxo.arvore, outro.id, paiNovo)));
+    });
+    item.append(marca, span('', `${'· '.repeat(nivel)}${outro.rotulo || outro.id}`));
+    lista.append(item);
+  }
+  campoFilhos.append(lista);
+  caixa.append(campoFilhos);
 
   const ligado = document.createElement('label');
   ligado.className = 'chk';
