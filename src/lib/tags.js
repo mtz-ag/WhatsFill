@@ -370,11 +370,32 @@ export async function suggest({ city, texts = [], extra = '', interesse = null, 
  * @param {object} contact contato do CRM (usa `tagsId`)
  * @param {object} [mapaModelos] tabela "Modelo por conteúdo" (chaves já achatadas)
  */
+/**
+ * Os nomes de etiqueta que são ORIGEM, e por isso nunca são conteúdo.
+ *
+ * Decisão dele (02/09/2026): *"o conteúdo a ser mandado não deve ser decidido pelo ads, e sim pelo
+ * texto do ads"*. São duas fontes: a etiqueta geral de quem chega por anúncio (`etiquetaAnuncio`) e
+ * as etiquetas que cada anúncio da Config aplica — as duas dizem de ONDE a pessoa veio, e nenhuma
+ * diz o que ela quer.
+ *
+ * Uma função só porque o vazamento foi exatamente isto: a ADS saiu de `suggest` e voltou por
+ * `conteudosJaAplicados`. Duas listas separadas divergem na primeira vez que alguém acrescenta uma
+ * fonte nova.
+ */
+export async function etiquetasDeOrigem() {
+  const [geral, anuncios] = await Promise.all([store.get('etiquetaAnuncio'), store.get('anuncios')]);
+  const nomes = [String(geral || '')];
+  for (const a of Array.isArray(anuncios) ? anuncios : []) {
+    for (const e of Array.isArray(a?.etiquetas) ? a.etiquetas : []) nomes.push(String(e || ''));
+  }
+  return new Set(nomes.map((n) => n.trim()).filter(Boolean).map((n) => normalize(n)));
+}
+
 export async function conteudosJaAplicados(contact, mapaModelos = {}) {
   const ids = new Set(contact?.tagsId || []);
   if (!ids.size) return [];
 
-  const [todas, regras] = await Promise.all([loadTags(), store.get('tagRules')]);
+  const [todas, regras, deOrigem] = await Promise.all([loadTags(), store.get('tagRules'), etiquetasDeOrigem()]);
   const conhecidos = new Set(
     [
       ...(regras || []).map((r) => r.etiqueta),
@@ -382,6 +403,20 @@ export async function conteudosJaAplicados(contact, mapaModelos = {}) {
     ]
       .filter(Boolean)
       .map((nome) => normalize(nome))
+      /**
+       * **A etiqueta de anúncio não volta como conteúdo por esta porta.**
+       *
+       * Print da Liana (02/09/2026): anúncio cadastrado, texto casando, e a caixa ainda oferecendo
+       * "Campanha Martim" com `Conteúdo pedido: ADS`. A ADS tinha saído dos conteúdos em
+       * `suggest` — mas **esta função a reconstruía**, porque `mapaModelos` é a tabela "Modelo por
+       * conteúdo" e ele tem `ADS = Campanha Martim` lá. A etiqueta já está no CRM, o nome está na
+       * tabela, e ela voltava como conteúdo por um caminho que a primeira correção não fechou.
+       *
+       * Fechar aqui por IDENTIDADE, e não confiando na deduplicação de quem chama: quem monta a
+       * lista lá em cima já filtra por nome repetido, e foi justamente por isso que o vazamento
+       * passou despercebido — bastava o rótulo no CRM diferir de uma vírgula para escapar.
+       */
+      .filter((nome) => !deOrigem.has(nome))
   );
 
   return todas

@@ -351,4 +351,51 @@ grupo('quem chega por anuncio ganha a etiqueta de anuncio');
   mem.etiquetaAnuncio = 'ADS';
 }
 
+grupo('a etiqueta de anuncio NAO volta como conteudo pelo CRM (02/09/2026)');
+{
+  /**
+   * Print da Liana: anuncio cadastrado, texto casando, e a caixa ainda oferecia "Campanha Martim"
+   * com `Conteudo pedido: ADS`.
+   *
+   * A ADS ja tinha saido dos conteudos em `suggest` -- mas `conteudosJaAplicados` a reconstruia,
+   * porque ela monta a lista de conteudos conhecidos a partir das CHAVES da tabela "Modelo por
+   * conteudo", e ele tem `ADS = Campanha Martim` la. Etiqueta ja no CRM + nome na tabela =
+   * conteudo de novo, por uma porta que a primeira correcao nao fechou.
+   */
+  TAGS_CRM.push(
+    { id: 't-ads', message: 'ADS', active: true },
+    { id: 't-ads-seg', message: 'ADS SEGURANCA', active: true }
+  );
+  tags.invalidateTags();
+
+  mem.etiquetaAnuncio = 'ADS';
+  mem.anuncios = [
+    { id: 'a1', nome: 'Seguranca', ligado: true, trechos: ['apoio o Capitao'], acao: 'fluxo', etiquetas: ['ADS SEGURANCA'] },
+  ];
+  mem.tagRules = [{ padrao: 'zucco', etiqueta: 'Conteúdo Zucco' }];
+
+  const noCrm = { id: 'c-9', tagsId: ['t-ads', 't-ads-seg', 't-zucco'] };
+  const mapa = { ADS: 'Campanha Martim', 'Conteúdo Zucco': 'Modelo Zucco' };
+  const jaNoCrm = await tags.conteudosJaAplicados(noCrm, mapa);
+  const nomes = jaNoCrm.map((c) => c.nome);
+
+  check(!nomes.includes('ADS'), `a etiqueta geral de anuncio nao volta como conteudo (${JSON.stringify(nomes)})`);
+  check(!nomes.includes('ADS SEGURANCA'), 'nem a etiqueta que o anuncio aplica');
+  check(nomes.includes('Conteúdo Zucco'), `e o tema de verdade continua voltando (${JSON.stringify(nomes)})`);
+
+  /**
+   * **Mesmo mapeada na tabela, a ADS nao vira conteudo.** E a assercao que trava a regra dele: o
+   * mapeamento `ADS = Campanha Martim` pode continuar na Config sem efeito nenhum.
+   */
+  const soADS = await tags.conteudosJaAplicados({ id: 'c-9', tagsId: ['t-ads'] }, { ADS: 'Campanha Martim' });
+  check(soADS.length === 0, `so a ADS no CRM nao produz conteudo nenhum (${JSON.stringify(soADS)})`);
+
+  // A lista de origens junta as duas fontes, e e ela que os dois lados consultam.
+  const origens = await tags.etiquetasDeOrigem();
+  check(origens.size === 2, `duas origens conhecidas (${origens.size})`);
+
+  delete mem.anuncios;
+  delete mem.etiquetaAnuncio;
+}
+
 fim();

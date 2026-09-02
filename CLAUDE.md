@@ -538,6 +538,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   *"nenhum conteudo reconhecido"* — mandando ele procurar uma etiqueta de tema que nunca vai
   existir. A caixa diz as duas saidas que resolvem: cadastrar o anuncio, ou preencher os modelos
   padrao.
+- **Os conteudos da rodada vem de DUAS fontes, e fechar uma so nao fecha nada.** `tags.suggest` acha
+  pelo texto; `tags.conteudosJaAplicados` reconstroi a partir das etiquetas que o contato JA tem no
+  CRM, usando as regras dele **e as CHAVES da tabela "Modelo por conteudo"**. Tirar a ADS da
+  primeira (1.62.0) deixou a segunda devolvendo `ADS` como conteudo, porque ele tem
+  `ADS = Campanha Martim` na tabela — print da Liana, com o anuncio ja cadastrado e o modelo errado
+  saindo do mesmo jeito. Hoje as duas consultam `tags.etiquetasDeOrigem()`, **uma funcao so**: duas
+  listas separadas divergem na primeira fonte nova. **Mexeu no que e "conteudo"? Sao os dois
+  lugares.**
+- **Deduplicacao por nome entre as duas listas ESCONDE vazamento.** A entrada do CRM so era
+  descartada quando o nome batia com o que `suggest` achou — com o nome batendo, tudo parecia certo;
+  bastava o rotulo no CRM diferir de um espaco para escapar. Filtre por IDENTIDADE na origem, nunca
+  confie na deduplicacao de quem chama para garantir uma regra.
 - **Mensagem enviada FORA do `if` da tecla vai em todas elas.** O agradecimento (*"Obrigado pela
   atencao! Qualquer coisa, e so chamar"* — um ENCERRAMENTO) era enviado depois do bloco do modelo,
   sem condicao: a tecla `a` mandava tres mensagens, e a terceira fechava a conversa que o pedido de

@@ -5,6 +5,63 @@
 
 ---
 
+## 2026-09-02 — A ADS voltava como conteúdo por uma SEGUNDA porta
+
+**Relato dele**, com a print da Liana: *"falhando novamente"*. Anúncio **cadastrado** na Config, com
+o texto exato da mensagem dela (*"Olá! Eu estou do lado da segurança e apoio o Capitão Martim"*), e
+a caixa ainda oferecendo **"Campanha Martim"**, com a linha `Conteúdo pedido: ADS`.
+
+### A correção anterior fechou uma porta só
+
+Na 1.62.0 a etiqueta ADS deixou de entrar como conteúdo em `tags.suggest`. Mas os conteúdos da
+rodada vêm de **duas** fontes, e eu só fechei uma:
+
+```
+sugeridas   = tags.suggest(...)              ← fechada em 1.62.0
+jaNoCrm     = tags.conteudosJaAplicados(...) ← a que vazava
+conteudos   = [...sugeridas, ...jaNoCrm]
+```
+
+`conteudosJaAplicados` existe porque etiqueta aplicada à mão é invisível para as regras de texto.
+Ela monta a lista de "conteúdos conhecidos" a partir das regras dele **e das CHAVES da tabela
+"Modelo por conteúdo"** — onde está `ADS = Campanha Martim`. Então: etiqueta ADS já no CRM + nome na
+tabela = conteúdo de novo. A porta que a primeira correção não fechou.
+
+Havia uma deduplicação por nome entre as duas listas, e foi ela que escondeu o vazamento: quando o
+nome batia, a entrada do CRM era descartada e tudo parecia certo. Bastava o rótulo no CRM diferir de
+um espaço para escapar.
+
+### O conserto
+
+`tags.etiquetasDeOrigem()` — uma função só, com as duas fontes de etiqueta que dizem **de onde** a
+pessoa veio: a etiqueta geral de anúncio (`etiquetaAnuncio`) e as etiquetas que cada anúncio da
+Config aplica. `conteudosJaAplicados` filtra por ela.
+
+Uma função e não duas listas, porque foi exatamente isso que falhou: a ADS saiu de um lugar e voltou
+por outro. Duas listas separadas divergem na primeira vez que alguém acrescenta uma fonte nova.
+
+**Fechado por identidade, não pela deduplicação de quem chama.**
+
+### Testes
+
+Com a etiqueta ADS de verdade no CRM de teste e o mapeamento `ADS = Campanha Martim` na tabela: a
+ADS não volta como conteúdo, a etiqueta que o anúncio aplica também não, e o tema de verdade
+(`Conteúdo Zucco`) continua voltando. Mais a asserção que trava a regra dele: **só a ADS no CRM não
+produz conteúdo nenhum**, mesmo mapeada.
+
+### O que ele ainda vai ver nesta print, e é outra coisa
+
+O anúncio da Liana está cadastrado com a ação **"Só etiquetar, e deixar o fluxo decidir"**. Com essa
+ação, `modeloDoAnuncio` devolve `null` de propósito — escolha explícita dele não vira modelo. Sem
+modelo padrão cadastrado, a caixa agora dirá *"veio de um anúncio e não sei qual…"* em vez de
+oferecer o modelo errado. Para sair modelo por aquele anúncio, a ação dele tem que ser **"mandar
+modelo aprovado"**.
+
+**Arquivos:** `src/lib/tags.js`, `tests/tags.test.mjs`, `manifest.json` (1.63.0 → 1.64.0),
+`registro.md`, `CLAUDE.md`. Catorze suítes e os dois verificadores passando.
+
+---
+
 ## 2026-09-02 — A etiqueta ADS deixou de escolher modelo: quem escolhe é o TEXTO do anúncio
 
 **Decisão dele**, depois da print da Vera: *"o conteúdo a ser mandado não deve ser decidido pelo
