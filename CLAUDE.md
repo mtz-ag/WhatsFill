@@ -347,6 +347,24 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   janela muda o efeito da regra**: o `efeito` do verbete e o do codigo, e quem le a cor do cartao
   tem que ler `efeitoDaRegra(id, fluxo)`, nunca `SOBRE[id].efeito` cru.
 
+- **O pedido de dados tem TRES formas, e trava de duplicata que olha o ID do modelo nao ve as outras
+  duas.** Print do Deoclecio (02/09/2026): contato com TODAS as etiquetas recebeu *"Que bom! Sera uma
+  grande satisfacao contar com voce... Nome / Cidade"* **duas vezes**. A trava era
+  `wasSent(contato, pedirDados.id)` — so a forma que sairia AGORA. Basta `confirmaPresenca` responder
+  diferente entre duas passadas (ela le a rajada depois da nossa ultima mensagem, e a rajada muda)
+  para a trava olhar um id que nunca saiu e concluir que ninguem pediu nada. Somava-se o registro de
+  envios so enxergar o que saiu PELO PAINEL. Hoje quem responde e a CONVERSA, por
+  `templates.ehPedidoDeDados` (invariante `Nome / Cidade`): pega toda variante, toda redacao antiga e
+  todo envio fora do painel. **Nunca amarre trava de duplicata a id de modelo nem a fatia de texto** —
+  a versao anterior comparava os caracteres 40 a 100 do texto atual, e variante com preambulo de
+  evento ja deixava de casar.
+- **`confirmaPresenca` mudava o TEXTO da tecla 4 e nao existia como desfecho, entao "confirmou e nao
+  falta dado nenhum" pedia o cadastro de novo.** Duas caixas fecham isso:
+  `confirmou-presenca-com-dados` (tecla 8, agradece e conclui, quando ja ha etiqueta de cidade) e
+  "confirmou presenca no evento" dentro de "sem pendencia", que alcanca `nunca-pediram-dados` para
+  quem confirmou e NAO tem cidade — esse segundo caso tambem caia no vazio quando ela nao vinha de
+  anuncio reconhecido, achado escrevendo o teste do primeiro.
+
 - **REMETENTE DENTRO DE PROTECAO: o mesmo erro aconteceu DUAS vezes, e agora a janela acusa.** Em
   01/09 "mensagem padrao" caiu dentro de "Recusou ou veio hostilizar"; em 02/09 "mandar modelo
   conforme o anuncio" caiu no mesmo lugar. Medido no quadro dele: **o hostil recebia o pedido de nome

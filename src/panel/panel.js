@@ -3964,8 +3964,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // O pedido de dados tem aviso PRÓPRIO, e não uma linha na lista acima: ele é a tecla 4, a
       // opção destacada, e é a que mais tenta ser repetida. Merece a hora na cara.
-      const pedidoDeHoje = pedirDados ? await templatesLib.wasSent(state.contact.id, pedirDados.id) : null;
-      const pedidoHoje = !!pedidoDeHoje && ehHoje(pedidoDeHoje.at);
+      /**
+       * **O pedido de dados JÁ SAIU? Pergunte à conversa, por invariante — nunca por id de modelo.**
+       *
+       * Print do Deoclecio (02/09/2026): ele tem TODAS as etiquetas, e recebeu duas vezes *"Que
+       * bom! Será uma grande satisfação contar com você… Nome / Cidade"*. Relato dele: *"repetindo
+       * resposta em pessoa com todas etiquetas"*.
+       *
+       * A causa era esta linha. Havia **três formas** do pedido de dados — `pedir-dados` e as duas
+       * de evento — e a trava perguntava `wasSent(contato, pedirDados.id)`, ou seja **só a forma
+       * que sairia AGORA**. Basta `confirmaPresenca` responder diferente entre duas passadas (ela lê
+       * a rajada depois da nossa última mensagem, e a rajada muda) para a trava olhar um id que
+       * nunca saiu e concluir que ninguém pediu nada.
+       *
+       * Somava-se o registro de envios só enxergar o que saiu PELO PAINEL — o que o CLAUDE.md já
+       * registra —, então mensagem disparada à mão ou pela automação da plataforma passava batido.
+       *
+       * Hoje quem responde é a **conversa**, por `templates.ehPedidoDeDados`, que casa pela linha
+       * `Nome / Cidade`: o invariante das três formas, protegido por teste em cada texto. Pega toda
+       * variante, toda redação antiga e todo envio fora do painel de uma vez.
+       */
+      const nossosPedidos = state.nossas.filter((m) => templatesLib.ehPedidoDeDados(m?.texto));
+      const pedidoDeHoje = [...nossosPedidos].reverse().find((m) => m.at && ehHoje(m.at)) || null;
+      const pedidoHoje = !!pedidoDeHoje;
 
       /**
        * O formulário já saiu para este contato ALGUMA VEZ?
@@ -3974,13 +3995,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * o formulário também pode ter saído pela plataforma ou pela mão de outra pessoa. A
        * segunda fonte é a conversa — um trecho do meio do texto contra o que já mandamos.
        */
-      const jaPediramDados = (() => {
-        if (pedidoDeHoje) return true;
-        const corpo = achatarTexto(textoPedirDados || '');
-        if (corpo.length < 100) return false;
-        const trecho = corpo.slice(40, 100);
-        return state.nossas.some((m) => achatarTexto(m.texto).includes(trecho));
-      })();
+      /**
+       * Mesma pergunta, sem recorte de "hoje" — e sem o palpite que havia aqui.
+       *
+       * A versão anterior comparava os caracteres 40 a 100 do texto que sairia agora contra o que
+       * já mandamos. Isso amarrava a trava à REDAÇÃO: variante diferente, texto de evento com
+       * preâmbulo, ou uma reescrita minha, e a fatia deixava de casar. O invariante `Nome / Cidade`
+       * não depende de redação nenhuma.
+       */
+      const jaPediramDados = nossosPedidos.length > 0;
 
       // Nome errado — o apelido automático do anúncio ("[NOVO] (51) 9…") ou qualquer cadastro
       // que o `looksLikePlaceholder` recuse — deixa o {{primeiro_nome}} do agradecimento sem
@@ -4202,6 +4225,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * "sim" solto, ou um assunto novo, virar agradecimento e conclusão.
          */
         respondeuOsDados: state.informouNomeOuCidade && !!respostasApos(state.entrantes, state.nossas, pediuNomeECidade),
+        /**
+         * **Disse que VAI ao evento.** `presenca` já era calculado aqui para escolher o texto da
+         * tecla 4; agora também é sinal, porque faltava um desfecho para "confirmou e não falta
+         * dado nenhum" — o caso do Deoclecio, que recebeu o pedido de cadastro duas vezes tendo
+         * todas as etiquetas.
+         */
+        confirmouPresenca: presenca === 'sim',
         modeloJaNaConversa,
         jaRespondemosAntes,
         ultimaEhDespedida: ultimaEhDespedida(state.entrantes),

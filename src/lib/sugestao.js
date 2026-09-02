@@ -389,6 +389,27 @@ export const REGRAS = [
             : 'já foi atendida antes (o modelo provavelmente já saiu) — mande a mensagem do momento.',
   },
   {
+    id: 'confirmou-presenca-com-dados',
+    tecla: '8',
+    /**
+     * **Ela confirmou que vai ao evento e nós já temos os dados dela: agradece e encerra.**
+     *
+     * Print do Deoclecio (02/09/2026): contato com TODAS as etiquetas — cidade, conteúdo, engajado
+     * — recebeu *"Que bom! Será uma grande satisfação contar com você… Nome / Cidade"* **duas
+     * vezes**. Relato dele: *"repetindo resposta em pessoa com todas etiquetas, pediu dados, o caso
+     * certo seria só agradecer a presença no evento e concluir"*.
+     *
+     * Faltava esta regra. Até aqui `confirmaPresenca` só trocava o TEXTO da tecla 4 — o pedido de
+     * dados ganhava um preâmbulo de evento. Não havia desfecho para "confirmou e não falta dado
+     * nenhum", então o caso descia até quem pede o cadastro, e pedia o que já estava no CRM.
+     *
+     * Fica ACIMA de `respondeu-os-dados`: quem confirmou presença falou de outra coisa, e o
+     * agradecimento pela presença é o desfecho mais específico.
+     */
+    quando: (c) => c.confirmouPresenca && c.temEtiquetaDeCidade,
+    motivo: () => 'confirmou que vai ao evento e já temos os dados dela — agradeça a presença e encerre.',
+  },
+  {
     id: 'respondeu-os-dados',
     tecla: '8',
     /**
@@ -656,6 +677,14 @@ export const SOBRE = {
       'passada, o pedido de nome e cidade — depois conclui. São DUAS mensagens, e é a única tecla ' +
       'do projeto que faz isso. Só casa quando as duas metades cabem: há modelo mapeado que ainda ' +
       'não saiu, ela não tem etiqueta de cidade e o pedido nunca foi feito.',
+  },
+  'confirmou-presenca-com-dados': {
+    rotulo: 'Confirmou presença no evento e já temos os dados',
+    efeito: 'envia',
+    quando:
+      'Ela disse que vai ao evento e já tem etiqueta de cidade — não falta dado nenhum. Agradece e ' +
+      'conclui, SEM pedir nome e cidade de novo. Sem esta regra o caso descia até o pedido de ' +
+      'cadastro e pedia o que já está no CRM.',
   },
   'respondeu-os-dados': {
     rotulo: 'Respondeu o nome e a cidade que pedimos',

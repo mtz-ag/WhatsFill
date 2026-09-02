@@ -1101,4 +1101,44 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   check(remedio?.resposta === 'pedido-ajuda', 'e quem pede remedio ainda recebe a negativa');
 }
 
+
+grupo('confirmou presenca e ja temos os dados: agradece (02/09/2026)');
+{
+  /**
+   * Print do Deoclecio: contato com TODAS as etiquetas -- cidade, conteudo, engajado -- recebeu
+   * "Que bom! Sera uma grande satisfacao contar com voce... Nome / Cidade" DUAS vezes. Relato dele:
+   * *"repetindo resposta em pessoa com todas etiquetas, pediu dados, o caso certo seria so
+   * agradecer a presenca no evento e concluir"*.
+   *
+   * Faltava a regra: `confirmaPresenca` so trocava o TEXTO da tecla 4, entao nao havia desfecho
+   * para "confirmou e nao falta dado nenhum" -- o caso descia ate quem pede o cadastro, e pedia o
+   * que ja estava no CRM.
+   */
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const deoclecio = {
+    jaRespondemosAntes: true, temEtiquetaDeCidade: true, confirmouPresenca: true,
+    jaPediramDados: true, pedidoHoje: true, podePedirDados: true,
+    podeEnviar: true, enviadoHoje: false, modeloJaNaConversa: true,
+    textos: ['Que bom!', 'link'], ultimoTexto: 'https://facebook.com/x',
+  };
+  const tecla = (c) => arv.decidir(c, q)?.tecla ?? null;
+
+  check(tecla(deoclecio) === '8', 'agradece e conclui, em vez de pedir os dados de novo');
+  check(tecla(deoclecio) !== '4', 'e NAO pede nome e cidade');
+
+  /**
+   * Sem etiqueta de cidade a regra nao casa, e e certo que nao case: la falta o cadastro, e o
+   * pedido de dados (com o preambulo de evento) continua sendo o desfecho.
+   */
+  check(tecla({ ...deoclecio, temEtiquetaDeCidade: false, jaPediramDados: false, pedidoHoje: false }) === '4',
+    'quem confirmou e NAO tem cidade continua recebendo o pedido');
+
+  // As protecoes continuam ganhando.
+  check(tecla({ ...deoclecio, semInteresse: true }) === 's', 'a recusa vence');
+  check(tecla({ ...deoclecio, etiquetaQueDispensa: 'Sem Retorno' }) === '2', 'a etiqueta que dispensa vence');
+
+  // E quem nao confirmou presenca nao e agradecido por isso.
+  check(tecla({ ...deoclecio, confirmouPresenca: false }) !== '8', 'sem confirmacao, nao agradece a presenca');
+}
+
 fim();

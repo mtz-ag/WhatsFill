@@ -5,6 +5,70 @@
 
 ---
 
+## 2026-09-02 — Pedido de dados repetido para quem tem todas as etiquetas
+
+**Relato dele**, com a print do Deoclecio (etiquetas ADS, CACHOEIRINHA, CONTATO-ASSES, CONTEUDO
+FLAV, ENGAJADO, METROPOLITANO): *"repetindo resposta em pessoa com todas etiquetas, pediu dados, o
+caso certo seria so agradecer a presenca no evento e concluir"*.
+
+Na conversa: as 10:34 saiu *"Que bom! Sera uma grande satisfacao contar com voce... Nome / Cidade"*,
+o atendimento foi concluido, ele mandou dois links, e **a mesma mensagem saiu de novo**.
+
+### Causa 1 — a trava de duplicata olhava o id do modelo
+
+O pedido de dados tem **tres formas**: `pedir-dados` e as duas de evento. A trava era
+`wasSent(contato, pedirDados.id)` — **so a forma que sairia agora**. Basta `confirmaPresenca`
+responder diferente entre duas passadas (ela le a rajada depois da nossa ultima mensagem, e a rajada
+muda quando ele manda links) para a trava olhar um id que nunca saiu e concluir que ninguem pediu
+nada.
+
+O `jaPediramDados` tinha o mesmo problema por outro caminho: comparava os **caracteres 40 a 100** do
+texto que sairia agora contra o que ja mandamos — amarrado a redacao, e a variante de evento tem
+preambulo, entao a fatia deixava de casar.
+
+Hoje quem responde e a **conversa**, por `templates.ehPedidoDeDados`, que casa pela linha
+`Nome / Cidade` — o invariante das tres formas, protegido por teste em cada texto. Pega toda
+variante, toda redacao antiga e todo envio fora do painel de uma vez. Conferido contra o texto exato
+da print.
+
+### Causa 2 — faltava o desfecho que ele nomeou
+
+`confirmaPresenca` so trocava o **texto** da tecla 4. Nao havia desfecho para "confirmou presenca e
+nao falta dado nenhum", entao o caso descia ate quem pede o cadastro — e pedia o que ja estava no
+CRM.
+
+Regra nova **`confirmou-presenca-com-dados`** (tecla 8): confirmou que vai ao evento e ja tem
+etiqueta de cidade -> agradece e conclui. Fica no lado "com etiqueta de cidade", acima de
+`respondeu-os-dados` e abaixo das protecoes.
+
+### E o buraco gemeo, achado escrevendo o teste
+
+Minha primeira assercao afirmava que quem confirma presenca **sem** etiqueta de cidade recebia o
+pedido. Ela falhou — e estava me mostrando outro vazio: essa pessoa atravessava o quadro sem
+desfecho, porque a unica caixa que alcanca `nunca-pediram-dados` naquele lado esta dentro de "veio de
+um anuncio que eu reconheco". Caixa nova **"confirmou presenca no evento"** dentro de "sem
+pendencia", com a condicao estreita de proposito.
+
+| o caso | antes | agora |
+|---|---|---|
+| confirmou, com todas as etiquetas | pedia os dados, **duas vezes** | **tecla 8 — agradece e conclui** |
+| confirmou, sem etiqueta de cidade | **nada** | tecla 4 — o "Que bom!" com o pedido |
+| recusa / etiqueta que dispensa | — | continuam vencendo |
+
+### Uma coisa que fica dita
+
+A tecla 8 e *"Agradecer o apoio e encerrar"* — o texto fala de apoio, nao de presenca no evento. E o
+agradecimento que existe e que conclui. Se ele quiser um texto proprio para "obrigado por
+confirmar", escreve na aba Respostas e a caixa passa a apontar para ela.
+
+**Arquivos:** `src/panel/panel.js` (a trava por invariante, o sinal `confirmouPresenca`),
+`src/lib/sugestao.js` (regra + verbete), `src/lib/arvore.js` (sinal + as duas caixas),
+`tests/arvore.test.mjs` (+6), `CLAUDE.md` (+2 armadilhas), `manifest.json` (1.54.0 -> 1.55.0).
+Arquivo de importacao regerado: 41 ramos, sem avisos e sem problemas. Catorze suites e os dois
+verificadores passando.
+
+---
+
 ## 2026-09-02 — A chegada não repete o que a volta já resolve (correção dele)
 
 **Correção dele:** *"porque o modelo que você criou tem todas essas opções em pessoa nova? ao mandar
