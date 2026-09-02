@@ -5,6 +5,73 @@
 
 ---
 
+## 2026-09-02 — A etiqueta ADS deixou de escolher modelo: quem escolhe é o TEXTO do anúncio
+
+**Decisão dele**, depois da print da Vera: *"o conteúdo a ser mandado não deve ser decidido pelo
+ads, e sim pelo texto do ads"*, e *"remova tudo que interfira nisso"*.
+
+### O que a print mostrava
+
+Vera chegou pelo ANÚNCIO | FACEBOOK das Escolas Cívico-Militares e escreveu *"Olá! Eu apoio as
+Escolas Cívico-Militares"*. A caixa ofereceu o modelo **"Campanha Martim"**.
+
+A linha `Conteúdo pedido: ADS` foi o que permitiu rastrear: o painel escolhe o modelo por três
+caminhos, e cada um escreve um rótulo diferente ali —
+
+| caminho | rótulo |
+|---|---|
+| anúncio reconhecido, ação "mandar modelo" | `anúncio: <nome>` |
+| veio de anúncio, texto não reconhecido | `anúncio não reconhecido — modelo padrão` |
+| nenhum dos dois → etiqueta de conteúdo | `Conteúdo pedido: ADS` ← **o da print** |
+
+Ou seja: o modelo veio da **etiqueta de origem**. A Config mapeia `ADS → Campanha Martim`, e a ADS
+diz que a pessoa veio de anúncio, **não de qual**.
+
+### O que foi removido
+
+A meia medida de 31/08. A ADS entrava como `origem: 'conteúdo'` com `fallback: true` — um marcador
+que a fazia perder de qualquer tema de verdade, mas **vencer quando não havia tema nenhum**, que é
+justamente o caso de quem chega do anúncio e não diz mais nada. Saíram as duas coisas:
+
+- em `tags.suggest`, a ADS passou a ter **`origem: 'anúncio'`**, como as etiquetas dos anúncios da
+  Config já tinham. Continua sendo aplicada no CRM e continua servindo ao filtro dele; só não entra
+  mais na lista que escolhe o modelo;
+- em `hsm.escolherConteudo`, o desempate por `fallback` foi apagado. Ninguém marca mais esse campo,
+  e um ramo morto dentro de um desempate é o tipo de coisa que alguém religa sem querer.
+
+Quem escolhe o modelo agora é só `anuncios.modeloDoAnuncio`: o modelo do anúncio reconhecido pelo
+texto (ou pelo nome da campanha, desde 1.59.0), ou o modelo padrão.
+
+### A consequência, e o aviso que ela exigiu
+
+Sem a ADS como conteúdo, quem chega por anúncio **não cadastrado** e sem modelo padrão configurado
+deixa de ter modelo — que é o certo. Mas a mensagem genérica seria *"nenhum conteúdo reconhecido"*,
+mandando ele procurar uma etiqueta de tema que nunca vai existir.
+
+A caixa passa a dizer o que falta: *"veio de um anúncio e não sei qual: o texto dela não casou com
+nenhum anúncio da Config, e não há modelo padrão cadastrado. Cadastre o anúncio (pelo texto ou pelo
+nome da campanha, que aparece no cabeçalho) ou preencha os modelos padrão."* Sem isso, o conserto
+trocaria um modelo errado por uma caixa muda — e foi a caixa muda que o obrigou a mandar print.
+
+### Testes
+
+- `tags.test.mjs`: a ADS entra com origem `anúncio` **e** não aparece na lista de conteúdos. É a
+  trava — se ela voltar a ser conteúdo, volta a escolher modelo.
+- `hsm.test.mjs`: o grupo do `fallback` foi substituído. O que sobrou é o desempate entre temas de
+  verdade, que continua igual: dois temas sem preferido seguem sendo erro.
+
+**Para ele:** se `conteudoPreferido` na Config estiver como "ADS", agora não casa com nada — pode
+apagar. O mapeamento `ADS → Campanha Martim` na tabela "Modelo por conteúdo" também ficou sem uso.
+
+**Arquivos:** `src/lib/tags.js`, `src/lib/hsm.js`, `src/panel/panel.js`, `tests/tags.test.mjs`,
+`tests/hsm.test.mjs`, `manifest.json` (1.61.0 → 1.62.0), `registro.md`, `CLAUDE.md`. Catorze suítes
+e os dois verificadores passando.
+
+**Não testado na tela:** um contato real vindo de anúncio. Teste com a Vera reaberta: sem o anúncio
+cadastrado, a caixa tem que dizer que não sabe qual é — e não oferecer "Campanha Martim".
+
+---
+
 ## 2026-09-02 — Revisão do projeto: código morto removido, pendências conferidas
 
 **Pedido dele:** *"revise todo o projeto veja se tem código antigo não utilizado e remova e veja os

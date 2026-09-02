@@ -518,6 +518,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   com "face" casaria com todos de uma vez. Nas regras de etiqueta ele entra porque la a pergunta e
   outra. **Reconhecer continua exigindo o anuncio cadastrado na Config** — lista vazia nao e
   defeito, e o nome da campanha aparece no cabecalho do painel, que e de onde sai o trecho.
+- **A etiqueta ADS e ORIGEM e nunca decide o modelo** (decisao dele, 02/09/2026: *"o conteudo a ser
+  mandado nao deve ser decidido pelo ads, e sim pelo texto do ads"*). Ela entrava como
+  `origem: 'conteudo'` com `fallback: true`, marcador que a fazia perder de qualquer tema de verdade
+  mas **vencer quando nao havia tema nenhum** — que e exatamente quem chega do anuncio e nao diz
+  mais nada. Print da Vera: anuncio das Escolas Civico-Militares e a caixa oferecendo
+  "Campanha Martim", porque a Config mapeia `ADS -> Campanha Martim`. Hoje a ADS tem
+  `origem: 'anuncio'`, continua sendo aplicada no CRM e servindo ao filtro, e nao entra na lista que
+  escolhe o modelo; o `fallback` de `escolherConteudo` foi apagado junto, porque ramo morto dentro
+  de um desempate e o que alguem religa sem querer. **Quem escolhe o modelo e so
+  `anuncios.modeloDoAnuncio`.**
+- **Para achar de onde veio um modelo errado, leia a linha do conteudo na caixa.** Ela e escrita por
+  tres caminhos diferentes e cada um tem um rotulo: `anuncio: <nome>` (anuncio reconhecido),
+  `anuncio nao reconhecido — modelo padrao`, ou `Conteudo pedido: <etiqueta>` (o caminho da etiqueta
+  de conteudo). Foi assim que a print da Vera se resolveu sem adivinhacao — o rotulo dizia qual das
+  tres portas tinha atendido.
+- **Fechar um caminho errado sem escrever a mensagem nova troca o defeito por uma caixa muda.**
+  Tirando a ADS da escolha, quem chega por anuncio nao cadastrado e sem modelo padrao ficava com
+  *"nenhum conteudo reconhecido"* — mandando ele procurar uma etiqueta de tema que nunca vai
+  existir. A caixa diz as duas saidas que resolvem: cadastrar o anuncio, ou preencher os modelos
+  padrao.
 - **Mensagem enviada FORA do `if` da tecla vai em todas elas.** O agradecimento (*"Obrigado pela
   atencao! Qualquer coisa, e so chamar"* — um ENCERRAMENTO) era enviado depois do bloco do modelo,
   sem condicao: a tecla `a` mandava tres mensagens, e a terceira fechava a conversa que o pedido de

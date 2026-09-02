@@ -321,7 +321,23 @@ grupo('quem chega por anuncio ganha a etiqueta de anuncio');
   const doAnuncio = await tags.suggest({ texts: ['Olá!'], veioDeAnuncio: true });
   const ads = doAnuncio.find((x) => x.nome === 'ADS');
   check(!!ads, 'sugeriu a etiqueta do anuncio');
-  check(ads?.origem === 'conteúdo', 'entra como conteudo, para virar modelo na tabela dele');
+  /**
+   * **A ADS e ORIGEM, nunca conteudo** — decisao dele (02/09/2026): *"o conteudo a ser mandado
+   * nao deve ser decidido pelo ads, e sim pelo texto do ads"*.
+   *
+   * Ela entrava como conteudo, marcada para perder de qualquer tema de verdade. Era
+   * meia medida: quem chegava por anuncio e nao dizia mais nada continuava com a ADS decidindo
+   * o modelo, e ADS diz que veio de anuncio e nao de QUAL. Print da Vera: anuncio das Escolas
+   * Civico-Militares, e a caixa oferecendo "Campanha Martim" porque a Config mapeia ADS para
+   * ele -- o modelo saiu da ORIGEM.
+   *
+   * Esta assercao e a trava: se a ADS voltar a ser conteudo, ela volta a escolher modelo.
+   */
+  check(ads?.origem === 'anúncio', 'entra como ORIGEM, nao como conteudo (origem = ' + ads?.origem + ')');
+
+  // O que decide o modelo e a lista de conteudos; a ADS nao pode estar nela.
+  const comoConteudo = doAnuncio.filter((x) => x.origem === 'conteúdo');
+  check(!comoConteudo.some((x) => x.nome === 'ADS'), 'e nao entra na lista que escolhe o modelo');
   check(/an[úu]ncio/.test(ads?.motivo || ''), 'o motivo diz de onde veio = ' + ads?.motivo);
 
   const semAnuncio = await tags.suggest({ texts: ['Olá!'], veioDeAnuncio: false });

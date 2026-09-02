@@ -213,32 +213,26 @@ export async function suggest({ city, texts = [], extra = '', interesse = null, 
    * tudo"*, com a print do bloco "ANÚNCIO | FACEBOOK". A sessão traz `utm.source` e
    * `utm.referralUrl` — é dado estruturado, não texto a adivinhar.
    *
-   * Entra como **conteúdo** de propósito: é assim que ela alimenta a tabela "Modelo por
-   * conteúdo" e vira o modelo a enviar, que é o "resolve tudo" da frase dele.
+   * **Origem `anúncio`, NUNCA `conteúdo`** — decisão dele em 02/09/2026: *"o conteúdo a ser
+   * mandado não deve ser decidido pelo ads, e sim pelo texto do ads"*.
+   *
+   * Ela entrava como conteúdo, com `fallback: true` para perder de qualquer tema de verdade. Era
+   * meia medida: quem chegava por anúncio e não dizia mais nada continuava com a ADS decidindo o
+   * modelo, e a ADS **diz que veio de anúncio, não de QUAL**. Print da Vera (02/09): anúncio das
+   * Escolas Cívico-Militares, e a caixa oferecendo "Campanha Martim" porque a Config mapeia
+   * `ADS → Campanha Martim`. O modelo saiu da ORIGEM, não do anúncio.
+   *
+   * Agora ela é só etiqueta: entra no CRM, serve ao filtro dele, e fica fora da escolha do modelo.
+   * Quem escolhe é `anuncios.modeloDoAnuncio` — o modelo do anúncio reconhecido pelo texto (ou
+   * pela campanha), ou o modelo padrão quando nada foi reconhecido.
    */
   const etiquetaAnuncio = String(await store.get('etiquetaAnuncio') || '').trim();
   if (veioDeAnuncio && etiquetaAnuncio) {
     out.push({
-      origem: 'conteúdo',
+      origem: 'anúncio',
       nome: etiquetaAnuncio,
       tag: await resolveTag(etiquetaAnuncio),
       motivo: 'a conversa começou por um anúncio (a plataforma informa a origem)',
-      /**
-       * **Último recurso na hora de escolher o modelo.**
-       *
-       * Print da Seura (31/08): ela clicou no anúncio das Escolas Cívico-Militares e escreveu
-       * *"Eu apoio as Escolas Cívico-Militares"*. Ele: *"eu tenho um modelo pra escolas civico
-       * militares mas a etiqueta ads não faz distinção"*.
-       *
-       * ADS diz que ela **veio de anúncio**, não de QUAL anúncio — é origem, e uma origem só
-       * serve de conteúdo enquanto nada melhor aparecer. Com `fallback`, qualquer etiqueta de
-       * conteúdo de verdade (as que as regras de texto acham) vence, e o ADS volta a ser o que
-       * ele é: a resposta para quem veio do anúncio e não disse mais nada.
-       *
-       * Isto já valia sem o caso das Escolas: com ADS como preferido na Config, ele vencia até
-       * "CONTEÚDO FLÁV" e "CONTEÚDO ZUC", que são específicos e já existem na base dele.
-       */
-      fallback: true,
     });
   }
 

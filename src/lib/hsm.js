@@ -246,21 +246,17 @@ export function escolherConteudo(conteudos, preferido) {
   if (!todos.length) return { erro: 'nenhum conteúdo reconhecido' };
 
   /**
-   * **Conteúdo específico vence o de ÚLTIMO RECURSO, e isso não passa pelo preferido.**
+   * **Aqui só chegam CONTEÚDOS de verdade.**
    *
-   * A etiqueta de anúncio (`fallback: true`) diz que a pessoa veio de anúncio, não de QUAL
-   * anúncio. Print da Seura (31/08): ela clicou no anúncio das Escolas Cívico-Militares, e o
-   * modelo que saía era o genérico — *"eu tenho um modelo pra escolas civico militares mas a
-   * etiqueta ads não faz distinção"*.
-   *
-   * O desempate por `preferido` continua existindo, mas só **entre iguais**: com ADS na Config
-   * como preferido, ele vencia até "CONTEÚDO FLÁV" e "CONTEÚDO ZUC", que são temas de verdade.
-   * Origem não desempata com tema; origem espera que nenhum tema apareça.
+   * Havia um `fallback` para a etiqueta de anúncio perder de qualquer tema: ela é origem, e origem
+   * não diz de QUAL anúncio a pessoa veio. Saiu em 02/09/2026, com a decisão dele — *"o conteúdo a
+   * ser mandado não deve ser decidido pelo ads, e sim pelo texto do ads"*: a ADS deixou de ser
+   * conteúdo em `tags.suggest` e não chega mais nesta função. Um `fallback` que ninguém marca é
+   * ramo morto, e ramo morto num desempate é o tipo de coisa que alguém religa sem querer.
    */
-  const especificos = todos.filter((c) => !c.fallback);
-  const lista = especificos.length ? especificos : todos;
+  const lista = todos;
 
-  if (lista.length === 1) return { conteudo: lista[0], desempatado: lista.length !== todos.length };
+  if (lista.length === 1) return { conteudo: lista[0], desempatado: false };
 
   // Sem acento aqui, diferente do resto do módulo: este valor é **digitado à mão** na Config,
   // e "Conteudo Flavio" não pode deixar de desempatar por causa de um til.

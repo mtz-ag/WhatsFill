@@ -201,41 +201,26 @@ grupo('não mandar duas vezes para o mesmo contato');
 }
 
 
-grupo('escolherConteudo: origem (ADS) e ULTIMO RECURSO, nao desempata com tema');
+grupo('escolherConteudo so recebe TEMA: a origem (ADS) nao chega mais aqui');
 {
-  const ADS = { nome: 'ADS', fallback: true };
   const ESCOLAS = { nome: 'CONTEUDO ESCOLAS' };
   const FLAVIO = { nome: 'CONTEUDO FLAVIO' };
 
   /**
-   * Print da Seura (31/08): ela clicou no anuncio das Escolas Civico-Militares e escreveu "Eu
-   * apoio as Escolas Civico-Militares". O modelo que saia era o genarico.
+   * Decisao dele (02/09/2026): *"o conteudo a ser mandado nao deve ser decidido pelo ads, e sim
+   * pelo texto do ads"*.
    *
-   * *"eu tenho um modelo pra escolas civico militares mas a etiqueta ads nao faz distincao"*.
+   * Havia um `fallback` aqui para a etiqueta ADS perder de qualquer tema de verdade. Era meia
+   * medida: quem chegava por anuncio e nao dizia mais nada continuava com a ADS escolhendo o
+   * modelo -- e ADS diz que veio de anuncio, nao de QUAL. Print da Vera: anuncio das Escolas
+   * Civico-Militares e a caixa oferecendo "Campanha Martim", porque a Config mapeia ADS para ele.
    *
-   * ADS diz que ela veio de anuncio, nao de QUAL anuncio — e origem, e origem so serve de
-   * conteudo enquanto nada melhor aparecer.
+   * Hoje a ADS sai de `tags.suggest` com origem `anuncio` e nao chega nesta funcao. O teste que
+   * garante isso vive em `tags.test.mjs`; aqui fica o que sobrou: um desempate entre temas.
    */
-  check(escolherConteudo([ADS, ESCOLAS], 'ads').conteudo?.nome === 'CONTEUDO ESCOLAS',
-    'o tema vence o ADS mesmo com ADS como preferido');
-
-  /**
-   * **E vence sem depender do preferido**, que e o que resolve de verdade: antes, dois conteudos
-   * sem preferido eram um ERRO, e a rodada ficava sem modelo.
-   */
-  check(escolherConteudo([ADS, ESCOLAS], '').conteudo?.nome === 'CONTEUDO ESCOLAS',
-    'o tema vence sem preferido configurado');
-
-  /**
-   * Isto ja valia antes do caso das Escolas: com ADS como preferido, ele vencia "CONTEUDO FLAV" e
-   * "CONTEUDO ZUC", que sao temas de verdade e ja existem na base dele.
-   */
-  check(escolherConteudo([ADS, FLAVIO], 'ads').conteudo?.nome === 'CONTEUDO FLAVIO',
-    'o ADS nao vence mais os conteudos que ele ja tinha');
-
-  // So ADS: ele continua sendo a resposta de quem veio do anuncio e nao disse mais nada.
-  check(escolherConteudo([ADS], 'ads').conteudo?.nome === 'ADS', 'so ADS: o ADS vale');
-  check(!escolherConteudo([ADS], '').erro, 'e nem precisa de preferido quando e o unico');
+  check(escolherConteudo([ESCOLAS], '').conteudo?.nome === 'CONTEUDO ESCOLAS', 'um tema so: e ele');
+  check(!escolherConteudo([ESCOLAS], '').desempatado, 'e nao ha desempate para relatar');
+  check(escolherConteudo([], '').erro === 'nenhum conteúdo reconhecido', 'sem conteudo: erro, nao chute');
 
   /**
    * O desempate por preferido continua existindo **entre iguais** — dois temas de verdade sem

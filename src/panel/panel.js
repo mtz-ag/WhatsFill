@@ -3781,7 +3781,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       } else {
         const escolha0 = hsmLib.escolherConteudo(conteudos, await store.get('conteudoPreferido'));
         if (escolha0.erro) {
-          semModelo = escolha0.erro;
+          /**
+           * **Veio de anúncio e não sabemos qual: diga isso, não "nenhum conteúdo reconhecido".**
+           *
+           * Depois que a etiqueta ADS deixou de ser conteúdo (02/09/2026, decisão dele), quem chega
+           * por anúncio sem anúncio cadastrado e sem modelo padrão cai aqui — e a mensagem genérica
+           * mandaria ele procurar uma etiqueta de tema que nunca vai existir.
+           *
+           * As duas saídas estão na frase porque são as duas que resolvem: cadastrar o anúncio faz
+           * sair o modelo certo daqui em diante; o modelo padrão atende quem chegar por campanha
+           * não cadastrada. É o mesmo cuidado da mensagem de `templateParaConteudo`, que diz o que
+           * fazer AGORA e o que fazer para não acontecer de novo.
+           */
+          semModelo = veioDeUmAnuncio
+            ? 'veio de um anúncio e não sei qual: o texto dela não casou com nenhum anúncio da ' +
+              'Config, e não há modelo padrão cadastrado. Cadastre o anúncio (pelo texto ou pelo ' +
+              'nome da campanha, que aparece no cabeçalho) ou preencha os modelos padrão.'
+            : escolha0.erro;
         } else {
           conteudoEscolhido = escolha0.conteudo;
           desempatado = !!escolha0.desempatado;
