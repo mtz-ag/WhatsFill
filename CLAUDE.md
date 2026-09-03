@@ -1378,6 +1378,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   pergunta não é só "ela repete sozinha?", é "o que impede a segunda vez?"** — e o aviso amarelo do
   painel é a lista de guardas que faltam.
 
+- **Detector que olha só a ÚLTIMA mensagem falha na rajada — e o teste que "prova" que ele funciona
+  pode ser o que esconde isso.** Anotação da susana (03/09/2026), na segunda vez que ela apareceu:
+  *"segunda vez que ela vem e eu já tinha especificado que era hostil, por que não gravou?"*. Ela
+  xingou o aliado, escreveu mais duas mensagens, e a última era *"9"* — `semInteresse` lia só a
+  última com texto e não via nada. **Eu tinha travado esse insulto com um teste de UMA mensagem, que
+  é exatamente a forma que a função enxergava**: o teste passava enquanto a produção falhava. Hoje
+  ela lê a rajada, mensagem a mensagem com todas as guardas, e o que substitui o "só a última vale"
+  é a **retratação**: pedir material ou dizer que está junto DEPOIS cancela; um "9" não. A recusa é
+  testada antes da retratação — *"não quero receber nada"* tem "receber" dentro e se cancelava
+  sozinha (três asserções caíram de uma vez).
+- **Etiqueta que a rodada APLICA também precisa ser LIDA na volta.** Mesma anotação: a etiqueta de
+  sem interesse estava no contato, e nada a consultava — na visita seguinte o detector tinha que
+  redescobrir a hostilidade a partir do que ela escrevesse naquele dia. **Detector é palpite; a
+  etiqueta é decisão dele, e decisão dele não se redescobre.** Hoje `etiquetaQueSoConclui` soma
+  `auto.etiquetaSemInteresse` à lista dele, com o mesmo desfecho (conclui, não manda nada, nunca).
+  **Depende do campo estar preenchido na Config** — vazio, não faz nada.
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto

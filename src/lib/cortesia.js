@@ -1323,7 +1323,7 @@ const RECUSA = new RegExp(RECUSA_EXPLICITA, 'i');
  * Mesma coisa com *"não sei"* na posição da cidade e *"não moro mais lá"*.
  */
 const NEGATIVA_BENIGNA =
-  /\bnao (sei|lembro|faco parte|participo|estou em|tenho grupo|tenho whats|moro|sou de|consigo|entendi)\b|\bnenhum grupo\b|\bnao tenho nenhum\b/i;
+  /\bnao (sei|lembro|faco parte|participo|estou em|tenho grupo|tenho whats|moro|sou de|consigo|entendi)\b|\bnenhum grupo\b|\bnao tenho nenhum\b|\b(nunca|nao) (ouvi|conheco|conhecia|vi) \b/i;
 
 /**
  * Negativa sobre IR ao evento — resposta ao convite, nunca recusa de contato.
@@ -1402,12 +1402,54 @@ const INSULTO_AO_ALIADO =
  * @param {Array<{texto?:string, tipo?:string}>} entrantes
  * @returns {{motivo:string}|null}
  */
-export function semInteresse(entrantes) {
-  const lista = Array.isArray(entrantes) ? entrantes : [];
-  const ultima = [...lista].reverse().find((m) => String(m?.texto || '').trim());
-  if (!ultima) return null;
+export function semInteresse(entrantes, nossaUltimaAt) {
+  /**
+   * **A RAJADA, e não só a última mensagem** — anotação da susana (03/09/2026), a segunda vez que
+   * ela apareceu: *"segunda vez que ela vem e eu já tinha especificado que era hostil, por que não
+   * gravou?"*.
+   *
+   * Ela escreveu *"E o bolso bosta o que cumpriu"*, *"Nunca ouvi falar do sr"* e, por último,
+   * *"9"*. Lendo só a última mensagem com texto, o insulto duas mensagens acima era invisível — e
+   * a caixa recomendou responder à mão.
+   *
+   * **Foi um teste meu que passou enquanto a produção falhava:** eu havia travado "bolso bosta"
+   * com uma mensagem só, que é exatamente a forma que a função enxergava. O caso real vem em
+   * rajada, e é assim que todos os outros detectores deste arquivo já leem.
+   *
+   * Cada mensagem é testada INTEIRA e sozinha, com todas as guardas: a recusa de presença, a
+   * negativa benigna e a exigência de segunda pessoa continuam valendo mensagem a mensagem. O que
+   * mudou é quantas ela olha.
+   */
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  const lista = rajada.length ? rajada : (Array.isArray(entrantes) ? entrantes : []);
+  const comTexto = lista.filter((m) => String(m?.texto || '').trim());
+  if (!comTexto.length) return null;
 
-  const texto = String(ultima.texto || '');
+  /**
+   * **Da mais recente para a mais antiga, e uma retratação MAIS NOVA cancela.**
+   *
+   * A assercão que existia — *"quem xingou ontem e hoje voltou pedindo conteúdo mudou de ideia"* —
+   * continua valendo, e é ela que impede a leitura da rajada de virar rancor. O que a substitui não
+   * é a POSIÇÃO da mensagem, é o que ela diz: pedir material ou dizer que está junto é retratação;
+   * um *"9"* solto não é.
+   *
+   * Por isso o laço para na primeira coisa que encontra, seja ela retratação ou recusa: a fala mais
+   * recente é que vale, e as duas são falas.
+   */
+  for (let i = comTexto.length - 1; i >= 0; i -= 1) {
+    const texto = String(comTexto[i]?.texto || '');
+    // A recusa é testada ANTES da retratação: "não quero receber nada" tem "receber" dentro, e
+    // pela ordem inversa a própria recusa se cancelava. Medido — três asserções caíram de uma vez.
+    const achado = umaMensagemRecusa(comTexto[i]);
+    if (achado) return achado;
+    if (PEDIDO_DE_MATERIAL.test(texto) || EXPRESSOES_DE_APOIO.some((padrao) => padrao.test(texto))) return null;
+  }
+  return null;
+}
+
+/** Uma mensagem só, com todas as guardas — é aqui que mora a regra. */
+function umaMensagemRecusa(msg) {
+  const texto = String(msg?.texto || '');
   const norm = texto
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')

@@ -2376,8 +2376,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Pedido dele (03/09/2026): *"contatos com etiqueta de assessor só conclua"*. Lista própria e
    * não um item da outra, porque o desfecho é outro: aqui **nada sai, nunca**.
    */
+  /**
+   * **A etiqueta de SEM INTERESSE entra junto: quem já foi marcado não recebe mais nada.**
+   *
+   * Anotação da susana (03/09/2026), na segunda vez que ela apareceu: *"segunda vez que ela vem e
+   * eu já tinha especificado que era hostil, por que não gravou? ela está com etiqueta de sem
+   * interesse"*.
+   *
+   * **Gravou — o que faltava era LER.** A etiqueta é aplicada pela tecla `s` e fica permanente no
+   * CRM, e nada a consultava depois: na visita seguinte o detector tinha que reconhecer a hostilidade
+   * outra vez, do zero, a partir do que ela escrevesse naquele dia. Detector é palpite; a etiqueta é
+   * decisão dele, e decisão dele não se redescobre.
+   *
+   * Entra por aqui e não numa regra nova porque o desfecho é exatamente o mesmo de
+   * `etiqueta-so-conclui`: **conclui e não manda nada, nunca**. A lista dele continua editável e
+   * independente; o que se soma é a etiqueta que a própria rodada aplica.
+   *
+   * **Depende do campo estar preenchido na Config** ("Etiqueta de sem interesse"). Vazio, isto não
+   * faz nada — e a caixa da rodada já avisa disso na opção `s`.
+   */
   function etiquetaQueSoConclui() {
-    return etiquetaDaLista(state.auto.cfg.etiquetasSoConcluir);
+    const marcada = String(state.auto.cfg.etiquetaSemInteresse || '').trim();
+    const lista = [state.auto.cfg.etiquetasSoConcluir, marcada].filter((p) => String(p || '').trim()).join(', ');
+    return etiquetaDaLista(lista);
   }
 
   function renderCartaoRespondidos() {

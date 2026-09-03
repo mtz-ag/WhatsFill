@@ -1176,4 +1176,44 @@ grupo('deOutroDia: o corte e o DIA local, nao um numero de horas (03/09/2026)');
   check(!deOutroDia(null, agora), 'nulo nao explode');
 }
 
+grupo('semInteresse le a RAJADA, e a retratacao mais nova cancela (03/09/2026)');
+{
+  const M = (t, i) => ({ texto: t, tipo: 'TEXT', at: `2026-09-03T19:4${i}:00Z` });
+  const r = (...t) => semInteresse(t.map(M));
+
+  /**
+   * Anotacao da susana, a SEGUNDA vez que ela apareceu: *"segunda vez que ela vem e eu ja tinha
+   * especificado que era hostil, por que nao gravou?"*.
+   *
+   * Ela escreveu *"E o bolso bosta o que cumpriu"*, *"Nunca ouvi falar do sr"* e, por ultimo, *"9"*.
+   * Lendo so a ultima mensagem com texto, o insulto duas acima era invisivel.
+   *
+   * **Foi um teste meu que passou enquanto a producao falhava:** eu travei "bolso bosta" com uma
+   * mensagem so, que era exatamente a forma que a funcao enxergava.
+   */
+  check(!!r('E o bolso bosta o que cumpriu', 'Nunca ouvi falar do sr', '9'), 'o caso da susana, com o insulto no meio');
+  check(!!r('Nao quero receber nada', 'obrigada'), 'recusa duas mensagens atras ainda conta');
+
+  /**
+   * **A retratacao MAIS NOVA cancela** -- e o que substitui a regra antiga de "so a ultima vale",
+   * sem perder o caso que ela protegia: quem xingou e depois pediu conteudo mudou de ideia.
+   *
+   * O criterio nao e a posicao, e o que a mensagem DIZ: pedir material ou dizer que esta junto e
+   * retratacao; um "9" solto nao e.
+   */
+  check(!r('seus mentirosos, vocês são um lixo', 'me manda os conteudos por favor'), 'pediu conteudo depois: mudou de ideia');
+  check(!r('seus mentirosos, vocês são um lixo', 'tamo junto'), 'disse que esta junto depois: idem');
+
+  /**
+   * **A recusa e testada ANTES da retratacao.** "Nao quero receber nada" tem "receber" dentro, e
+   * pela ordem inversa a propria recusa se cancelava -- tres assercoes cairam de uma vez.
+   */
+  check(!!r('Nao quero receber nada'), 'a recusa nao se cancela sozinha');
+  check(!!r('nao vou mais receber isso, me tira da lista'), 'nem o pedido de sair da lista');
+
+  // "Nunca ouvi falar do sr" NAO e recusa: e o falso positivo que a leitura da rajada exporia.
+  check(!r('Nunca ouvi falar do sr'), '"nunca ouvi falar" e desconhecimento, nao recusa');
+  check(!r('nao conheco o candidato ainda'), '"nao conheco" tambem nao');
+}
+
 fim();

@@ -1,3 +1,53 @@
+## 2026-09-03 — A susana voltou: o detector lia só a última, e a etiqueta ninguém lia (v2.4.0)
+
+Lote de três anotações. Duas já estavam resolvidas em versões que ele ainda não carregou; uma era
+nova, e é a mais séria do dia — **ele reportou o MESMO contato pela segunda vez**.
+
+### susana — *"por que não gravou?"*
+
+Ela xingou o aliado (*"E o bolso bosta o que cumpriu"*), escreveu mais duas mensagens, e a última
+era *"9"*. A caixa recomendou responder à mão.
+
+**Duas causas, e as duas são sobre memória:**
+
+1. **`semInteresse` lia só a ÚLTIMA mensagem com texto.** O insulto estava duas acima e era
+   invisível. Pior: **eu havia travado esse insulto com um teste de UMA mensagem** — exatamente a
+   forma que a função enxergava. O teste passava enquanto a produção falhava. Hoje ela lê a rajada,
+   mensagem a mensagem, com todas as guardas de sempre.
+
+   O que substitui o *"só a última vale"* (que existia por boa razão — *"quem xingou ontem e hoje
+   voltou pedindo conteúdo mudou de ideia"*) é a **retratação**: pedir material ou dizer que está
+   junto DEPOIS cancela a recusa; um *"9"* não cancela nada. O critério é o que a mensagem diz, não
+   onde ela está.
+
+   A recusa é testada **antes** da retratação: *"não quero receber nada"* tem "receber" dentro e,
+   pela ordem inversa, se cancelava sozinha — três asserções caíram de uma vez e mostraram isso.
+
+   `NEGATIVA_BENIGNA` ganhou *"nunca ouvi falar"* / *"não conheço"*: é o falso positivo que a
+   leitura da rajada exporia, e ele apareceu no primeiro teste.
+
+2. **A etiqueta de sem interesse já estava no contato, e nada a lia.** Ele marcou; a rodada não
+   consultou. Na visita seguinte o detector tinha que redescobrir a hostilidade do zero, a partir do
+   que ela escrevesse naquele dia. **Detector é palpite; a etiqueta é decisão dele, e decisão dele
+   não se redescobre.** `etiquetaQueSoConclui` passou a somar `auto.etiquetaSemInteresse` à lista
+   dele — mesmo desfecho, conclui e não manda nada, nunca.
+
+   **Depende do campo "Etiqueta de sem interesse" estar preenchido na Config.** Vazio, não faz nada.
+
+### As outras duas, já resolvidas antes da anotação
+
+- **Aldo Borges** (*"emoji sem nada de texto = concluir"*): é o buraco do lado sem cidade, fechado na
+  v2.2.0. Medido no padrão de agora: tecla 3.
+- **Iris Guizzo**: com o padrão de agora ela cai em `so-expressa-apoio` (o *"22"* conta como apoio) e
+  recebe o agradecimento em vez do pedido de dados — **desde que não tenhamos respondido hoje**.
+  Respondido hoje, `nunca-pediram-dados:anuncio-conhecido` ainda vence, porque o grupo do anúncio
+  fica acima do fecho. Fica anotado como pendente.
+
+**Arquivos:** `src/lib/cortesia.js`, `src/panel/panel.js`, `tests/cortesia.test.mjs`,
+`manifest.json` (2.3.0 → 2.4.0), `registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-03 — "Respondeu o nome e a cidade" voltou a vencer o modelo (v2.3.0)
 
 Pergunta dele: *"por que utilizou essa expressão de nada foi removido? você criou alguma regra? se
