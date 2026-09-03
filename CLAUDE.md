@@ -1353,6 +1353,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `entrantes`, nunca `incoming`** — e a guarda "o contato não escreveu nada" também, senão o
   contato que só falou nunca chega a ser rascunhado.
 
+- **"Como consigo adesivo, bandeira, camiseta?" é pergunta de LOGÍSTICA, e o modelo não a
+  responde.** Anotação do Valdomiro (03/09/2026): ele perguntou isso e recebeu o cartão da campanha,
+  com a conversa concluída em seguida — *"não respondeu a pergunta e concluiu"*. A exclusão
+  registrada aqui (*"tem algum material/conteúdo fica de fora de propósito"*) continua certa e é
+  sobre outra coisa: quem pede material tem resposta pronta. Quem pergunta **como pega** material
+  físico precisa de quem sabe onde tem, quem entrega e quando — mandar o modelo é responder "pega o
+  material" a quem perguntou como. Hoje `(como|onde) (consigo|conseguir|faço|faz|fazer)` entra em
+  `PERGUNTAS_QUE_PEDEM_VOCE`, com a guarda de posição de sempre. **Duas travas mantêm a exclusão
+  antiga:** `PEDIDO_DE_MATERIAL` desarma a mensagem inteira (*"como consigo receber o conteúdo?"*
+  segue sendo caso de modelo), e **"posso" ficou de fora** — *"como posso ajudar?"* é oferta, e
+  oferta é o público principal desta base.
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto

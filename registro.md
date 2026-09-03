@@ -1,3 +1,45 @@
+## 2026-09-03 — "Como consigo adesivo, bandeira, camiseta?" precisa de gente (v2.0.0)
+
+Anotação do Valdomiro: *"Boa tarde Como consigo as coisas de campanha adevisto bandeira
+camiseta?"* — e a rodada mandou o cartão da campanha e concluiu. Ele: *"não respondeu a pergunta e
+concluiu"*.
+
+### Causa raiz
+
+Medido antes de mexer: **nenhum sinal casava**. `conversaTemPerguntaAberta` não tinha padrão para
+"como consigo", e o caso desceu até `conteudo-pedido` — tecla 1, modelo e conclui.
+
+A exclusão registrada no `CLAUDE.md` (*"tem algum material/conteúdo fica de fora de propósito"*)
+continua certa, e é sobre outra coisa: **quem pede material tem resposta pronta**. Quem pergunta
+**como pega** material físico — adesivo, bandeira, camiseta — precisa de quem sabe onde tem, quem
+entrega e quando. Mandar o modelo ali é responder *"pega o material"* a quem perguntou *"como eu
+pego"*.
+
+### O conserto
+
+`(como|onde) (consigo|conseguir|faço|faz|fazer)` entrou em `PERGUNTAS_QUE_PEDEM_VOCE`, com a guarda
+de posição de sempre (começo da mensagem, ou "?").
+
+**Três coisas seguram os falsos positivos**, e cada uma tem teste:
+
+- `PEDIDO_DE_MATERIAL` desarma a mensagem inteira — *"como consigo receber o conteúdo de vocês?"*
+  tem "receber" e segue sendo caso de modelo;
+- **"posso" ficou de fora**: *"como posso ajudar?"* é oferta, e oferta é o público principal desta
+  base — mandá-la para atendimento à mão é o erro caro do outro lado;
+- a guarda de posição: *"não sei como consigo agradecer vocês"* não tem "?" nem está no começo.
+
+Efeito colateral bom: *"Como faço pra conversar com vocês"* (a Teresinha, 02/09) passou a casar
+também.
+
+### O caso agora
+
+Tecla 6, `pergunta-aberta` — que é o caminho da IA. Medido.
+
+**Arquivos:** `src/lib/cortesia.js`, `tests/cortesia.test.mjs`, `manifest.json` (1.99.0 → 2.0.0),
+`registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-03 — A IA não enxergava a transcrição do áudio (v1.99.0)
 
 Print da Sueli: ela mandou 29 segundos de áudio, a plataforma transcreveu e mostrou na tela

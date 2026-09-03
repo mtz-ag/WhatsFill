@@ -532,6 +532,29 @@ const PERGUNTAS_QUE_PEDEM_VOCE = [
    */
   /(^|[^\p{L}])tem\s+algu[eé]m\s+(que|pra|para|no|na|em|de|do|da|a[ií]|aqui)(\s|$)/iu,
   /(^|[^\p{L}])tem\s+como\s+/iu,
+  /**
+   * **"Como consigo…", "onde consigo…", "como faço para…"** — anotação do Valdomiro (03/09/2026).
+   *
+   * Ele escreveu *"Boa tarde Como consigo as coisas de campanha adevisto bandeira camiseta?"* e
+   * recebeu o cartão da campanha, com a conversa concluída em seguida. Relato dele: *"não respondeu
+   * a pergunta e concluiu"*.
+   *
+   * **É pergunta de LOGÍSTICA, e é aí que ela se separa do "tem material?".** Adesivo, bandeira e
+   * camiseta são coisa física: quem responde é quem sabe onde tem, quem entrega e quando. Nenhum
+   * modelo aprovado responde isso — mandá-lo é responder "pega o material" a quem perguntou
+   * "**como** eu pego".
+   *
+   * **O `PEDIDO_DE_MATERIAL` continua desarmando a mensagem inteira**, e é o que mantém a exclusão
+   * de propósito registrada acima: *"como consigo receber o conteúdo de vocês?"* tem "receber",
+   * desarma, e segue sendo caso de modelo. O que sobra aqui é o que o modelo não resolve.
+   *
+   * **"posso" ficou de fora**: *"como posso ajudar?"* é oferta, e oferta é o público principal
+   * desta base — mandá-la para atendimento à mão é o erro caro do outro lado.
+   *
+   * A guarda de POSIÇÃO segura o resto: *"não sei como consigo agradecer vocês"* não tem "?" nem
+   * está no começo, então não conta.
+   */
+  /(^|[^\p{L}])(como|onde)\s+(eu\s+)?(consigo|conseguir|fa[çc]o|faz|fazer)(\s|$)/iu,
   /(^|[^\p{L}])(voc[eê]s|vcs)\s+(fazem|atendem|v[eê]m|visitam)(\s|$|\?)/iu,
   // Pedido explícito de explicação
   /(^|[^\p{L}])(me\s+)?explica(r|\s|$)/iu,

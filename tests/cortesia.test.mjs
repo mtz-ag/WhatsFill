@@ -312,6 +312,30 @@ grupo('conversaTemPerguntaAberta: so razao e posicao, nao toda pergunta');
   check(!q(''), 'texto vazio nao conta');
 
   check(!conversaTemPerguntaAberta([], null), 'sem rajada nao ha pergunta');
+
+  /**
+   * **"Como consigo..." e pergunta de LOGISTICA** -- anotacao do Valdomiro (03/09/2026):
+   * *"Boa tarde Como consigo as coisas de campanha adevisto bandeira camiseta?"*, e a rodada mandou
+   * o cartao da campanha e concluiu. Ele: *"nao respondeu a pergunta e concluiu"*.
+   *
+   * Adesivo, bandeira e camiseta sao coisa fisica: quem responde e quem sabe onde tem, quem entrega
+   * e quando. Mandar o modelo e responder "pega o material" a quem perguntou COMO pega.
+   */
+  check(q('Boa tarde Como consigo as coisas de campanha adevisto bandeira camiseta?'), 'o caso do Valdomiro');
+  check(q('onde consigo uma bandeira?'), 'onde consigo');
+  check(q('Como faco pra conversar com voces'), 'como faco, no comeco, sem interrogacao');
+
+  /**
+   * **A exclusao de proposito continua de pe**, e quem a mantem e o `PEDIDO_DE_MATERIAL`, que
+   * desarma a mensagem inteira: pedir material tem resposta pronta.
+   */
+  check(!q('Como consigo receber o conteudo de voces?'), '"receber" desarma: segue sendo caso de modelo');
+  check(!q('me manda como consigo o material'), '"me manda" tambem desarma');
+
+  // "posso" ficou de fora: oferta e o publico principal desta base.
+  check(!q('Como posso ajudar na campanha?'), 'oferta de ajuda nao vira atendimento a mao');
+  // E a guarda de POSICAO segura o resto.
+  check(!q('nao sei como consigo agradecer voces'), 'no meio da frase e sem "?" nao conta');
 }
 
 
