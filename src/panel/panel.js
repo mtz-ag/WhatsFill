@@ -5179,10 +5179,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * o rascunho num campo de mensagem que ele não está mais olhando.
        *
        * **Letra e não dígito**, como o `s`, o `a` e o `f`: os dez dígitos já têm significado no
-       * dedo dele. Só aparece com a avaliação por IA ligada — opção que não faz nada é pior que
-       * opção que não existe.
+       * dedo dele.
+       *
+       * **A caixa "Usar a avaliação por IA nesta rodada" NÃO governa esta tecla** — ele apertou a
+       * opção e ela não estava lá (03/09/2026: *"agora eu queria testar a resposta e não posso"*).
+       * Aquela caixa decide se a rodada gasta sozinha, contato a contato, e é por isso que ela
+       * existe e nasce desligada. Apertar o `i` é o contrário disso: é ele pedindo UM rascunho,
+       * de propósito, olhando aquela conversa. O que a tecla precisa é de chave cadastrada, e é
+       * isso que ela pergunta.
        */
-      if (state.ia?.ligada) {
+      if (state.iaTemChave) {
         opcoes.push({
           tecla: 'i',
           valor: 'rascunhar',
@@ -8400,7 +8406,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *   campo — quem chama usa isso para não repetir no log a linha que esta função já escreveu.
    */
   async function rascunharParaEle() {
-    if (!state.ia?.ligada) return { ok: false, enviado: false, motivo: 'a avaliação por IA está desligada' };
+    // `iaTemChave` e não `ia.ligada`: a caixa da rodada governa o gasto AUTOMÁTICO; um rascunho
+    // pedido na tecla `i` é escolha dele, contato a contato. Sem chave não há o que chamar.
+    if (!state.iaTemChave) return { ok: false, enviado: false, motivo: 'não há chave da API cadastrada na aba Config' };
     if (!state.incoming.length) return { ok: false, enviado: false, motivo: 'o contato não escreveu nada' };
     if (state.session?.expired) return { ok: false, enviado: false, motivo: 'janela de 24h vencida' };
 

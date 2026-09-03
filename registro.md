@@ -1,3 +1,21 @@
+## 2026-09-03 — A tecla `i` não depende da caixa "usar IA nesta rodada" (v1.92.0)
+
+Ele foi testar e a opção não estava lá: *"agora eu queria testar a resposta e não posso"*. Eu a
+tinha prendido em `state.ia.ligada`, que é a caixa **"Usar a avaliação por IA nesta rodada"** — e na
+print dele ela está desmarcada, como nasce.
+
+**Eram duas perguntas diferentes tratadas como uma.** Aquela caixa decide se a rodada gasta
+sozinha, contato a contato, e é por isso que ela existe e nasce desligada. Apertar o `i` é o
+contrário: é ele pedindo UM rascunho, de propósito, olhando aquela conversa. O que a tecla precisa
+é de **chave cadastrada** — `state.iaTemChave` —, e é isso que ela pergunta agora, aqui e dentro de
+`rascunharParaEle`.
+
+Sem chave, a opção continua não aparecendo, e o motivo diz onde cadastrar.
+
+**Arquivos:** `src/panel/panel.js`, `manifest.json` (1.91.0 → 1.92.0), `registro.md`.
+
+---
+
 ## 2026-09-03 — Tecla `i`: a IA escreve o rascunho no campo, e quem manda é ele (v1.91.0)
 
 Pedido dele, olhando a caixa da rodada: *"no botão 8 bote a opção chamar IA, que irá botar a
