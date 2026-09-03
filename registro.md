@@ -32,6 +32,76 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-02 — Terceira leva: o ruído da plataforma virava recusa do eleitor
+
+Das dezoito anotações, **sete eram novas**. Duas delas apontavam para a mesma causa, e é a mais
+grave que apareceu até agora.
+
+### O Carlos foi etiquetado como "sem interesse" por um texto que a plataforma escreveu
+
+Ele mandou um áudio. O que chegou no lugar foi *"Não foi possível transcrever este áudio"* — e
+`semInteresse` leu o "Não foi possível" como recusa. **Etiqueta permanente errada no CRM, num
+apoiador do anúncio, com o atendimento concluído em silêncio.**
+
+A **Vera** teve dois *"*Atenção:* o tipo da mensagem enviada pelo contato não é suportado."* lidos
+como *"escreveu apoio em mensagem própria"*, e recebeu o modelo em cima de um aviso de erro.
+
+A plataforma injeta esses textos no fluxo do contato, então chegam idênticos a uma mensagem dela.
+Nenhum parser tem como saber: é ruído com forma de fala.
+
+`cortesia.ehMensagemDaPlataforma` reconhece, e o painel **esvazia** o texto (marcando
+`sistema: true`) num lugar só, antes de qualquer regra ver. Três decisões:
+
+- **esvazia, não descarta** — "mandou um áudio e não deu para ler" é informação diferente de "não
+  mandou nada", e é a primeira que leva o caso para a tecla 6, onde alguém abre;
+- **o asterisco do `*Atenção:*` é obrigatório** — gente escreve "Atenção: preciso de ajuda" sem ele,
+  e apagar a fala de quem falou de verdade é pior que ler o ruído. Meu primeiro padrão pegava as
+  duas coisas, e o teste dos falsos positivos me mostrou;
+- fica no **painel**, não em `api.js`, que não importa nada de propósito.
+
+### A Teresinha e a caixa que prometia exclusividade no nome
+
+*"Boa tarde queria saber mais"*, *"Como faso pra conversar com vocês"*, *"Boa tarde o senhor tá
+concorendo também"* — e ela recebeu a mensagem do momento, porque a caixa **"só mandou bom dia"**
+casa por trecho **contido**.
+
+É o mesmo defeito da print da Cris (desabafo de 437 caracteres começando com "Oi. Bom dia,"), e o
+`CLAUDE.md` já o registrava. A caixa virou o sinal **`soCortesia`**, que pergunta o que o nome dela
+sempre prometeu: **todas** as últimas mensagens são só cumprimento?
+
+Medido nos quatro casos: a Teresinha e a Cris deixam de casar, "Boa tarde" sozinho e "bom dia"
+continuam.
+
+**E o `problemas` me pegou no meio:** `soCortesia` olha as três últimas da conversa, sem saber onde a
+nossa entrou — então o sinal continuaria verdadeiro depois de respondermos, e a caixa mandaria a
+mensagem do momento em toda passada. O painel passa a **rajada**.
+
+### A Vivi — "Tem trabalho ai?"
+
+A forma mais curta e mais comum de perguntar sobre trabalho, e não casava com nada: ela foi
+**concluída em silêncio**. Relato dele: *"ela fez uma pergunta, nunca concluir sem responder"*.
+Entrou em `pedeEmprego`, com o "tem/teria" na frente para não pegar *"o trabalho de vocês é ótimo"*.
+
+### O que fica para ele decidir
+
+- **Mary e Eliana** — *"já foi mandado modelo… só concluir"*. `conteudo-pedido` exige que o modelo
+  não esteja na conversa, e o modelo padrão agora **reveza entre três**: se o que saiu foi outra
+  variante, a comparação não casa e ele é reenviado. O conserto é comparar contra os três, e eu
+  quero a confirmação dele antes de mexer;
+- **Vera Lúcia (Osório)** — *"gostaria de saber mais sobre o candidato"*. Ele escreveu que pergunta
+  sempre tem prioridade sobre o modelo, mas essa pergunta específica é o que o modelo responde.
+  Preciso que ele diga qual das duas leituras vale;
+- **Helena** — *"22 com toda certeza"* não casou com nada. É declaração de voto, e `soExpressaApoio`
+  não a reconhece. Marcar número de urna como apoio é fácil de errar para o outro lado.
+
+**Arquivos:** `src/lib/cortesia.js` (`ehMensagemDaPlataforma`, `pedeEmprego`), `src/lib/arvore.js`
+(sinal `soCortesia`, a caixa nova), `src/panel/panel.js` (`semRuidoDaPlataforma`, os dois sinais),
+`tests/cortesia.test.mjs` (+14), `tests/arvore.test.mjs` (6 asserções migradas para o sinal),
+`CLAUDE.md` (+2 armadilhas), `manifest.json` (1.76.0 → 1.77.0). Quinze suítes, os dois verificadores,
+o quadro sem problemas e nenhum desfecho incoerente.
+
+---
+
 ## 2026-09-02 — A cópia das observações manda só as novas
 
 **Pedido dele:** *"ao copiar vai vir casos anteriores, eu tenho que lembrar de apagar para começar

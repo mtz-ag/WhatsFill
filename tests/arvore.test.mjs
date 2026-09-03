@@ -274,7 +274,9 @@ grupo('o desenho do QUADRO dele: as protecoes ficam acima da bifurcacao');
   check(hater?.tecla === 's', `hater etiqueta e conclui (${hater?.tecla})`);
 
   // Os dois ramos que o desenho tinha e o codigo nao tinha.
-  const bomDia = arv.decidir({ jaRespondemosAntes: true, ultimoTexto: 'Bom dia!' }, quadro);
+  // Desde 02/09/2026 a caixa le o SINAL `soCortesia` (a mensagem e SO cumprimento?) e nao a
+  // palavra "bom dia" contida -- ver a caixa "so cumprimentou, e nada mais".
+  const bomDia = arv.decidir({ jaRespondemosAntes: true, soCortesia: { motivo: 'cumprimentou' } }, quadro);
   check(bomDia?.tecla === '5', `saudacao escrita manda a mensagem do momento (${bomDia?.tecla})`);
 
   const financeiro = arv.decidir({ jaRespondemosAntes: true, pedeAjudaFinanceira: { motivo: 'pix' } }, quadro);
@@ -608,7 +610,7 @@ grupo('o modelo nao pode ficar preso atras da pendencia (01/09/2026)');
    * apos resolver a pendencia"*. Sem a guarda de "ja respondemos hoje", a MESMA caixa de pendencia
    * casava de novo na passada seguinte e o modelo ficava preso atras dela para sempre.
    */
-  check(tecla({ ...base, respondidoHoje: false }) === '5', 'primeira passada resolve a pendencia');
+  check(tecla({ ...base, respondidoHoje: false, soCortesia: { motivo: 'cumprimentou' } }) === '5', 'primeira passada resolve a pendencia');
   check(tecla({ ...base, respondidoHoje: true, momentoJaEnviado: true }) === '1', 'segunda passada MANDA O MODELO');
 
   check(tecla({ ...base, respondidoHoje: false, textos: [], ultimoTexto: '' }) === '1', 'quem chega sem pendencia recebe o modelo direto');
@@ -726,7 +728,7 @@ grupo('quem vem de anuncio reconhecido nao atravessa o quadro em silencio (02/09
 
   // O ramo e ULTIMO RECURSO: nao rouba a vez de quem ja funcionava.
   check(tecla({ ...inge, jaRespondemosAntes: true, podeEnviar: true }) === '1', 'havendo modelo mapeado, o modelo vence o ramo novo');
-  check(tecla({ ...inge, jaRespondemosAntes: true, ultimoTexto: 'bom dia', textos: [texto, 'bom dia'] }) === '5', 'pendencia na frente: "bom dia" ainda resolve primeiro');
+  check(tecla({ ...inge, jaRespondemosAntes: true, soCortesia: { motivo: 'cumprimentou' } }) === '5', 'pendencia na frente: "bom dia" ainda resolve primeiro');
   check(arv.decidir({ ...inge, jaRespondemosAntes: true, semInteresse: true }, q)?.tecla === 's', 'e a recusa continua vencendo tudo');
 
   /**
@@ -810,8 +812,8 @@ grupo('a CHEGADA pelo anuncio: modelo, dados, pendencia (02/09/2026)');
    * ganha; resolvido ele, a pendencia decide.
    */
   const jaFoi = { modeloJaNaConversa: true, jaPediramDados: true };
-  check(tecla({ ...chega, ultimoTexto: 'bom dia', textos: [ad, 'bom dia'] }) === 'a', 'na 1a passada o modelo + dados vence "bom dia"');
-  check(tecla({ ...chega, ...jaFoi, ultimoTexto: 'bom dia', textos: [ad, 'bom dia'] }) === '5', 'resolvido o modelo, "bom dia" recebe a mensagem do momento');
+  check(tecla({ ...chega, soCortesia: { motivo: 'cumprimentou' } }) === 'a', 'na 1a passada o modelo + dados vence "bom dia"');
+  check(tecla({ ...chega, ...jaFoi, soCortesia: { motivo: 'cumprimentou' } }) === '5', 'resolvido o modelo, "bom dia" recebe a mensagem do momento');
   check(tecla({ ...chega, ...jaFoi, ultimaEhSoReacao: true }) === '3', 'figura depois do modelo: conclui');
   check(tecla({ ...chega, ...jaFoi, ultimaEhDespedida: true }) === '3', 'despedida depois do modelo: conclui');
   check(tecla({ ...chega, ...jaFoi, pedeRespostaPessoal: true }) === '6', 'audio ou texto longo: gente');
@@ -1089,7 +1091,7 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
     jaPediramDados: false, podePedirDados: true, pedidoHoje: false, enviadoHoje: false,
     modeloJaNaConversa: false, podeEnviar: false, temEtiquetaDeCidade: true, podeMandarMomento: true,
   };
-  const bomDia = arv.decidir({ ...b, textos: [ad, 'bom dia'], ultimoTexto: 'bom dia' }, q);
+  const bomDia = arv.decidir({ ...b, soCortesia: { motivo: 'cumprimentou' } }, q);
   check(bomDia?.tecla === '5', 'quem chega e diz "bom dia" ainda recebe a mensagem do momento');
   const remedio = arv.decidir({ ...b, pedeAjudaFinanceira: { motivo: 'remedio' }, textos: [ad, 'preciso de remedio'], ultimoTexto: 'preciso de remedio' }, q);
   check(remedio?.resposta === 'pedido-ajuda', 'e quem pede remedio ainda recebe a negativa');

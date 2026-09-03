@@ -27,7 +27,7 @@ import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, ehMensagemDaPlataforma, rajadaFinal } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -434,7 +434,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const antes = state.incoming.length;
       const conversa = await api.getConversation(state.pageState.sessionId);
       state.incoming = conversa.incoming;
-      state.entrantes = conversa.entrantes || [];
+      state.entrantes = semRuidoDaPlataforma(conversa.entrantes);
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.nossas = conversa.nossas || [];
       state.ultimaMensagem = conversa.ultima;
@@ -530,7 +530,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       const conversa = await api.getConversation(sessionId);
       state.incoming = conversa.incoming;
-      state.entrantes = conversa.entrantes || [];
+      state.entrantes = semRuidoDaPlataforma(conversa.entrantes);
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.nossas = conversa.nossas || [];
       state.ultimaMensagem = conversa.ultima;
@@ -4645,6 +4645,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * O texto que explica e nega já existia sem ninguém acioná-lo.
          */
         pedeEmprego: pedeEmprego(state.entrantes, state.nossaUltimaAt),
+        /**
+         * **Só cumprimentou, e nada mais.** Substitui a caixa de palavras "bom dia", que casava por
+         * trecho contido e por isso pegava a Teresinha (*"Boa tarde o senhor tá concorendo
+         * também"*) e o desabafo da Cris. `soCortesia` olha se TODAS as últimas mensagens são só
+         * cumprimento — que é o que o nome da caixa sempre prometeu.
+         */
+        // A RAJADA, e nao as tres ultimas da conversa: `soCortesia` olha as ultimas mensagens sem
+        // saber onde a nossa entrou, entao sem este recorte o sinal continuaria verdadeiro depois
+        // de respondermos — e a caixa mandaria a mensagem do momento em toda passada.
+        soCortesia: soCortesia(rajadaFinal(state.entrantes, state.nossaUltimaAt)),
         podePerguntarAjuda: !perguntarAjudaTrava,
         podeMandarMomento: !momentoTrava,
         temEtiquetaDeCidade,
@@ -9753,6 +9763,36 @@ async function carregarModelosPadrao() {
 
   const unico = String((await store.get('modeloPadraoAnuncio')) || '').trim();
   return unico ? [unico] : [];
+}
+
+/**
+ * **Tira do que a pessoa "escreveu" o que a PLATAFORMA escreveu.**
+ *
+ * Duas anotações de 02/09/2026, e a primeira é a mais grave que apareceu:
+ *
+ *  - **Carlos** mandou um áudio, e o que chegou no lugar foi *"Não foi possível transcrever este
+ *    áudio"*. `semInteresse` leu o "Não foi possível" como recusa: ele foi **etiquetado como sem
+ *    interesse e concluído em silêncio**, sendo apoiador do anúncio. Etiqueta permanente errada, no
+ *    CRM, num eleitor real;
+ *  - **Vera** teve dois *"*Atenção:* o tipo da mensagem enviada pelo contato não é suportado."*
+ *    lidos como "escreveu apoio em mensagem própria", e recebeu o modelo em cima de um aviso.
+ *
+ * A plataforma injeta esses textos no fluxo do contato, então chegam idênticos a uma mensagem dela.
+ * Nenhum parser tem como saber: é ruído com forma de fala.
+ *
+ * **Esvazia, não descarta.** A mensagem continua na lista com o `tipo` dela — "mandou um áudio e não
+ * deu para ler" é informação diferente de "não mandou nada", e é a primeira que leva o caso para a
+ * tecla 6, onde alguém abre.
+ *
+ * Um lugar só de propósito: `state.entrantes` é atribuído em dois pontos (o carregamento e a
+ * reanálise), e peneirar em cada um seria garantir que o próximo esquecesse.
+ */
+function semRuidoDaPlataforma(entrantes) {
+  return (entrantes || []).map((m) =>
+    ehMensagemDaPlataforma(m?.texto)
+      ? { ...m, texto: '', transcrito: false, sistema: true }
+      : m
+  );
 }
 
 function truncate(text, max) {

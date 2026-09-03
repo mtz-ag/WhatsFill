@@ -302,6 +302,27 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   concluida em silencio depois de responder). Hoje a busca e **mensagem a mensagem, da mais nova
   para a mais antiga** — os tres caminhos sao os mesmos, o que mudou foi onde procuram. Bonus: a
   pista de uma mensagem nao alcanca mais o texto da seguinte, que a juncao permitia.
+- **A PLATAFORMA escreve no fluxo do contato, e nos liamos como fala dela.** A anotacao mais grave
+  que apareceu (02/09/2026): o **Carlos** mandou um audio e o que chegou no lugar foi *"Nao foi
+  possivel transcrever este audio"*. `semInteresse` leu o "Nao foi possivel" como recusa: ele foi
+  **etiquetado como sem interesse e concluido em silencio**, sendo apoiador do anuncio — etiqueta
+  permanente errada, no CRM, num eleitor real. A **Vera** teve dois *"*Atencao:* o tipo da mensagem
+  enviada pelo contato nao e suportado."* lidos como apoio, e recebeu o modelo em cima de um aviso de
+  erro. Hoje `cortesia.ehMensagemDaPlataforma` reconhece esses textos e o painel **esvazia** o
+  `texto` (marcando `sistema: true`) num lugar so, antes de qualquer regra ver. Tres coisas:
+  **esvaziar e nao descartar** ("mandou um audio e nao deu para ler" e diferente de "nao mandou
+  nada"); o **asterisco do `*Atencao:*` e obrigatorio**, porque gente escreve "Atencao:" sem ele e
+  apagar a fala de quem falou de verdade e pior que ler o ruido; e fica no PAINEL e nao em `api.js`,
+  que nao importa nada de proposito.
+- **Caixa de PALAVRAS nao sabe se a mensagem e SO aquilo — e "so mandou bom dia" prometia isso no
+  nome.** Anotacao da Teresinha (02/09): ela escreveu *"Boa tarde queria saber mais"*, *"Como faso
+  pra conversar com voces"* e *"Boa tarde o senhor ta concorendo tambem"*, e recebeu a mensagem do
+  momento porque "boa tarde" estava contido. Mesmo defeito da print da Cris (desabafo de 437
+  caracteres comecando com "Oi. Bom dia,"). A caixa virou o sinal **`soCortesia`**, que pergunta se
+  TODAS as ultimas mensagens sao so cumprimento. **O painel passa a RAJADA** (`rajadaFinal`), nao as
+  tres ultimas da conversa: sem esse recorte o sinal continuaria verdadeiro depois de respondermos, e
+  a caixa mandaria a mensagem do momento em toda passada — `problemas` acusou isso na hora.
+
 - **Casamento APROXIMADO de cidade em texto livre grava etiqueta errada no CRM.** Anotacao do Luiz
   Zanchet (02/09/2026): *"Seja bem vindo at a vitoria"* — "ate a vitoria" com um "e" comido — virou
   **Vitoria das Missoes** com confianca `aproximada`, e a etiqueta do municipio foi parar no

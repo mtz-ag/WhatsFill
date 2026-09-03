@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -929,6 +929,52 @@ grupo('ir CONDICIONAL e recusa, e pergunta de politica pede voce (02/09/2026)');
   for (const t of ['tem algum material para eu compartilhar?', 'quero receber o conteudo', 'tem algum grupo?', 'ficou muito grato pq sou Bolsonaro desde sempre', 'ele explica bem as coisas']) {
     check(!q(t), `"${t}" NAO pede voce`);
   }
+}
+
+
+grupo('texto da PLATAFORMA nao e fala da pessoa (02/09/2026)');
+{
+  /**
+   * **A anotacao mais grave que apareceu.** O Carlos mandou um audio, e o que chegou no lugar foi
+   * *"Nao foi possivel transcrever este audio"*. `semInteresse` leu o "Nao foi possivel" como
+   * recusa: ele foi ETIQUETADO COMO SEM INTERESSE e concluido em silencio, sendo apoiador do
+   * anuncio. Etiqueta permanente errada, no CRM, num eleitor real.
+   *
+   * E a Vera teve dois *"*Atencao:* o tipo da mensagem enviada pelo contato nao e suportado."*
+   * lidos como "escreveu apoio em mensagem propria", e recebeu o modelo em cima de um aviso de erro.
+   */
+  for (const t of ['Não foi possível transcrever este áudio', '*Atenção:* o tipo da mensagem enviada pelo contato não é suportado.', 'Esta mensagem foi apagada', 'Mensagem não suportada']) {
+    check(ehMensagemDaPlataforma(t), `"${t.slice(0, 40)}" e ruido da plataforma`);
+  }
+
+  /**
+   * **O falso positivo e o risco.** Apagar o texto de quem falou de verdade e pior que ler o ruido:
+   * o contato fica mudo para todas as regras. O asterisco no "*Atencao:*" e obrigatorio porque a
+   * plataforma escreve em negrito e gente escreve sem.
+   */
+  for (const t of ['Não foi possível ir ao evento', 'atenção para o que eu vou dizer', 'Atenção: preciso muito de ajuda', 'não tenho interesse', 'Boa tarde', 'nao consegui transcrever o que ele falou']) {
+    check(!ehMensagemDaPlataforma(t), `"${t.slice(0, 40)}" e fala de gente`);
+  }
+
+  // Com o texto esvaziado, o Carlos deixa de ser lido como recusa.
+  const agora = new Date().toISOString();
+  const carlos = [{ texto: 'Olá! Eu apoio as Escolas Cívico-Militares 🤝', at: agora }, { texto: '', tipo: 'AUDIO', sistema: true, at: agora }];
+  check(semInteresse(carlos) === null, 'o caso do Carlos: nao e mais "sem interesse"');
+}
+
+grupo('"so cumprimentou" tem que ser SO isso');
+{
+  /**
+   * Anotacao da Teresinha (02/09/2026): *"Boa tarde queria saber mais"*, *"Como faso pra conversar
+   * com voces"*, *"Boa tarde o senhor ta concorendo tambem"* -- e ela recebeu a mensagem do momento,
+   * porque a caixa de palavras casa por trecho CONTIDO. `soCortesia` responde a pergunta certa:
+   * TODAS as ultimas mensagens sao so cumprimento?
+   */
+  const conv = (a) => a.map((t, i) => ({ texto: t, at: new Date(Date.now() - (a.length - i) * 60000).toISOString() }));
+
+  check(soCortesia(conv(['Boa tarde'])) !== null, 'so "Boa tarde" e cortesia');
+  check(soCortesia(conv(['Boa tarde queria saber mais', 'Como faso pra conversar com vocês', 'Boa tarde o senhor tá concorendo também'])) === null, 'o caso da Teresinha NAO e so cortesia');
+  check(soCortesia(conv(['Oi. Bom dia, eu ja nao tenho mais esperanca nenhuma nessas eleicoes, as urnas sao fraudadas e tudo isso e tempo perdido. Triste!'])) === null, 'nem o desabafo da Cris, que comeca com "Bom dia,"');
 }
 
 fim();

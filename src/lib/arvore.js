@@ -60,6 +60,7 @@ export const SINAIS = [
   { id: 'pedeAlgoIndefinido', rotulo: 'Pediu algo e não disse o quê', nao: 'Não pediu nada em aberto' },
   { id: 'pedeAjudaFinanceira', rotulo: 'Pediu dinheiro, cesta básica ou remédio', nao: 'Não pediu dinheiro nem o básico' },
   { id: 'pedeEmprego', rotulo: 'Perguntou como trabalhar no mandato', nao: 'Não perguntou sobre trabalhar aqui' },
+  { id: 'soCortesia', rotulo: 'Só cumprimentou (e nada mais)', nao: 'Escreveu mais que um cumprimento' },
   { id: 'ultimaEhDespedida', rotulo: 'Só se despediu ("amém", "é nós", "abraço")', nao: 'Não foi despedida' },
   { id: 'ultimaEhSoReacao', rotulo: 'Só figura, emoji, sticker ou link', nao: 'Escreveu alguma coisa' },
   { id: 'rajadaEhSoRepasse', rotulo: 'Só repassa link e vídeo de outras pessoas', nao: 'Não é só repasse' },
@@ -484,7 +485,26 @@ export function fluxoPadrao() {
      */
     r('ultima-pede-resposta-pessoal', null, onde),
 
-    porPalavras('só mandou bom dia, boa tarde ou boa noite', ['bom dia', 'boa tarde', 'boa noite', 'bom domingo'], { tecla: '5', resposta: null }),
+    /**
+     * **"Só cumprimentou" virou SINAL, e não lista de palavras.**
+     *
+     * Anotação da Teresinha (02/09/2026): ela escreveu *"Boa tarde queria saber mais"*, *"Como faso
+     * pra conversar com vocês"* e *"Boa tarde o senhor tá concorendo também"* — e recebeu a mensagem
+     * do momento, porque a caixa de palavras casa por trecho CONTIDO e "boa tarde" estava lá.
+     * Relato dele: *"não foi só boa tarde, ela fez uma pergunta"*.
+     *
+     * É a armadilha que o CLAUDE.md já registra com estas palavras: *"caixa de PALAVRAS casa por
+     * trecho contido, então ela não sabe se a mensagem é SÓ aquilo"* — e o nome da caixa promete
+     * exatamente essa exclusividade. A print da Cris (desabafo de 437 caracteres começando com
+     * "Oi. Bom dia,") foi o mesmo defeito em 02/09.
+     *
+     * `cortesia.soCortesia` responde a pergunta certa: **todas** as últimas mensagens são só
+     * cumprimento, figura ou link? Medido nos quatro casos — a Teresinha e a Cris deixam de casar,
+     * "Boa tarde" sozinho e "bom dia" continuam.
+     */
+    { ...noVazio('só cumprimentou, e nada mais'),
+      condicao: { sinal: 'soCortesia', negar: false, palavras: [], onde: 'ultima' },
+      acao: { tecla: '5', resposta: null } },
     r('pediu-algo-sem-dizer-o-que', 'pediu algo e não disse o quê', onde),
     r('ultima-e-so-reacao', 'mandou figura, emoji, sticker ou link', onde),
     r('pergunta-aberta', null, onde),
@@ -1361,6 +1381,7 @@ export function quantosEnviam(arvore) {
  */
 const SINAIS_QUE_A_RESPOSTA_APAGA = new Set([
   'pedeAjudaFinanceira',
+  'soCortesia',
   'pedeEmprego',
   'pedeAlgoIndefinido',
   'pedeRespostaPessoal',

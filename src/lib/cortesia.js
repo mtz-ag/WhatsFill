@@ -746,6 +746,15 @@ const QUER_TRABALHAR = [
   /(^|[^\p{L}])(preciso|procuro|procurando|quero|queria|busco)\s+.{0,15}?(emprego|trabalho|vaga)/u,
   /(^|[^\p{L}])(arrumar|conseguir|indicar|arruma|consegue|indica)\s+.{0,15}?(emprego|vaga|trabalho)/u,
   /(^|[^\p{L}])(alguma|tem|teria|tem\s+alguma)\s+vaga/u,
+  /**
+   * *"Tem trabalho ai?"* (Vivi Gutierrez, 02/09/2026) -- e a forma mais curta e mais comum de
+   * perguntar, e nao casava com nada: ela foi CONCLUIDA EM SILENCIO. Relato dele: *"ela fez uma
+   * pergunta, nunca concluir sem responder"*.
+   *
+   * Exige o "tem/teria/tera" na frente para nao pegar "o trabalho de voces e otimo", que a lista de
+   * guarda ja cobre por outro lado.
+   */
+  /(^|[^\p{L}])(tem|teria|tera)\s+(algum\s+|alguma\s+)?(trabalho|emprego|servico)(\s|$|\?|\.)/u,
   /(^|[^\p{L}])(meu|o)\s+curriculo/u,
   /(^|[^\p{L}])(voces|vcs)\s+(pagam|remuneram)/u,
   /(^|[^\p{L}])(e|eh)\s+(remunerado|voluntario\s+ou)/u,
@@ -791,6 +800,50 @@ export function pedeEmprego(entrantes, nossaUltimaAt) {
     }
   }
   return null;
+}
+
+/**
+ * **Texto escrito pela PLATAFORMA e entregue como se fosse a pessoa.**
+ *
+ * Duas anotações de 02/09/2026, e a primeira é a mais grave que apareceu até agora:
+ *
+ *  - **Carlos** — a mensagem dele era um áudio, e o que chegou no lugar foi *"Não foi possível
+ *    transcrever este áudio"*. `semInteresse` leu o "Não foi possível" como recusa: ele foi
+ *    **etiquetado como sem interesse e concluído em silêncio**, sendo apoiador do anúncio. Etiqueta
+ *    permanente errada, no CRM, num eleitor real;
+ *  - **Vera** — duas mensagens *"*Atenção:* o tipo da mensagem enviada pelo contato não é
+ *    suportado."* viraram "escreveu apoio em mensagem própria", e ela recebeu o modelo em cima de
+ *    um aviso de erro.
+ *
+ * A plataforma injeta esses textos no fluxo do contato, então para nós eles chegam idênticos a uma
+ * mensagem dela. **Nenhum parser tem como saber**: é ruído com forma de fala.
+ *
+ * Quem chama esvazia o `texto` e marca `sistema: true` em vez de descartar a mensagem — descartar
+ * apagaria o fato de que ela mandou ALGUMA coisa (um áudio, uma figura), e "não escreveu nada" é
+ * informação diferente de "não mandou nada".
+ */
+const MENSAGENS_DA_PLATAFORMA = [
+  /nao\s+foi\s+possivel\s+transcrever/,
+  /o\s+tipo\s+da\s+mensagem\s+enviada\s+pelo\s+contato\s+nao\s+e\s+suportado/,
+  /mensagem\s+(nao\s+suportada|apagada|removida)/,
+  /esta\s+mensagem\s+foi\s+apagada/,
+  /**
+   * O asterisco e OBRIGATORIO: a plataforma escreve em negrito (`*Atencao:*`), e gente escreve
+   * "Atencao para o que eu vou dizer" sem ele. Sem exigir a marca, a frase mais comum de quem vai
+   * desabafar virava ruido de sistema e o texto dela era apagado.
+   */
+  /^\*atencao/,
+];
+
+export function ehMensagemDaPlataforma(texto) {
+  const plano = String(texto || '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!plano) return false;
+  return MENSAGENS_DA_PLATAFORMA.some((p) => p.test(plano));
 }
 
 /**
