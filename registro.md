@@ -1,3 +1,72 @@
+## 2026-09-03 — O lote de 8 anotacoes: 3 ja estavam consertadas, 5 eram novas (v1.89.0)
+
+Ele mandou o relatorio das observacoes e pediu *"veja se tem algo novo"*. Medi caso a caso antes de
+mexer em qualquer coisa — e a primeira conclusao foi que **eu nao tinha como saber quais ja estavam
+atendidas**, o que virou o conserto do fim desta entrada.
+
+### Ja consertadas quando o relatorio saiu
+
+- **Martin Luther** (*"Quero confirmar minha presenca no evento"*): `confirmaPresenca` devolve
+  `'sim'`, e `confirmou-presenca-evento` PULA. Consertado em c05369b, 12:17.
+- **susana** (*"Se for bolso bosta. Negativo"*): `INSULTO_AO_ALIADO` em `semInteresse`.
+- **Maria Genoli** (audio de 7 min recebendo a resposta enlatada do anuncio): `decidirComAnuncio` ja
+  se cala quando o efeito e `gente`.
+
+As duas ultimas estavam no diretorio de trabalho **sem commit e sem teste**. Ganharam teste de
+regressao agora — as tres assercoes que importam sao os falsos positivos (xingar o ADVERSARIO em
+terceira pessoa continua sendo apoio, e regra que ENVIA continua perdendo para o anuncio).
+
+### Novas — Plauto
+
+A ultima mensagem dele era *"Plauto Velho, cidade Sao Leopoldo"* e a caixa sugeria a tecla 4,
+*"peca os dados esta vez"*. Ele: *"ja foi pedido dados, seria agradecer e encerrar"*.
+
+**Causa raiz:** as guardas de `nunca-pediram-dados` olhavam o CRM (`temEtiquetaDeCidade`) e o nosso
+historico (`jaPediramDados`), e **as duas podem ser falsas no exato momento em que ela responde** —
+a etiqueta ainda nao existe no CRM e a pergunta nunca saiu porque ela se adiantou. `respondeuOsDados`
+tambem nao alcanca: ele exige que o NOSSO pedido tenha saido.
+
+O sinal novo e `jaDeuNomeECidade`: o parser leu nome **e** cidade reconhecida no que ELA escreveu.
+Roda na conversa inteira de proposito — *"ela ja disse de onde e"* nao deixa de ser verdade com o
+tempo, ao contrario de *"ela acabou de responder"*. So BLOQUEIA o pedido; nao manda nada. Em
+`anuncio-modelo-e-dados` ele derruba so a metade do formulario, e o caso desce para
+`conteudo-pedido`, que manda o recibo sozinho.
+
+### Novas — Maria Bernardete
+
+Cidade Caxias do Sul no CRM, anuncio nao reconhecido, mensagem de apoio — e a caixa oferecia o
+**modelo padrao**. Ele: *"mandar 8"*.
+
+**Causa raiz:** a decisao dele de 02/09 (*"se a pessoa ja respondeu a cidade a chance de ela ter
+recebido um modelo e muito grande"*) estava implementada pela metade — `anuncio-modelo-e-dados` exige
+`!temEtiquetaDeCidade`, `conteudo-pedido` nao exige nada, e e ele que manda o modelo sozinho. Agora o
+**padrao** nao e sequer carregado para quem tem etiqueta de cidade. Anuncio RECONHECIDO continua
+mandando o modelo dele (ela clicou pedindo aquilo, e ha teste travando).
+
+Fechar esse caminho deixaria os dois casos sem desfecho nenhum, entao a chegada ganhou a caixa
+`so-expressa-apoio` **em ultimo lugar**. A posicao e a trava: a mensagem do anuncio E apoio escrito,
+e `soExpressaApoio` so a descarta com o anuncio cadastrado — em cima, a caixa agradeceria a chegada
+de todo anuncio novo e engoliria o recibo. Tem teste exigindo que ela seja a ultima.
+
+### Ainda com ele — Geny, Tere e Gilmar, Jacira
+
+As tres pedem a **mensagem do momento**, e hoje o padrao agradece (tecla 8, `so-expressa-apoio`) ou
+nao decide nada. Trocar 8 por 5 manda material de campanha onde hoje so vai um obrigado; e decisao
+dele, perguntada.
+
+### A anotacao passou a guardar a VERSAO e a hora
+
+Foi o custo real desta sessao: com a data sozinha, e varios consertos no MESMO dia, nao havia como
+distinguir anotacao pendente de anotacao ja atendida — eu medi tres casos para descobrir que nao
+havia nada a fazer. A anotacao nasce no instante da decisao, entao a versao de entao e o unico dado
+que responde *"isto ja foi consertado?"*. Anotacoes antigas ficam sem o campo e continuam valendo.
+
+**Arquivos:** `src/lib/sugestao.js`, `src/lib/arvore.js`, `src/lib/anuncios.js`,
+`src/lib/cortesia.js`, `src/lib/observacoes.js`, `src/panel/panel.js`, os cinco testes,
+`manifest.json` (1.88.0 → 1.89.0), `registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-02 — A tecla aparece MAIUSCULA na tela; no teclado continua minuscula (v1.69.0)
 
 **Pedido dele**, com a print da caixa da rodada: *"troque a opcao a por A maiusculo para ficar

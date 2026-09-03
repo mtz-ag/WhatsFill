@@ -227,6 +227,20 @@ const TEXTO_LONGO = 400;
  * gente sai da automação.
  */
 const RAJADA_LONGA = 250;
+
+/**
+ * **Áudio transcrito é conversa mais cedo que texto escrito.**
+ *
+ * Anotação da Maria Genoli (03/09/2026): ela mandou um áudio de sete minutos explicando por que
+ * não consegue ir ao evento — doente, com falta de ar, pedindo desculpas — e a rodada ofereceu a
+ * **resposta pronta do anúncio**. Ele: *"mandou 7min de áudio que foi transcrito; a IA assume e
+ * responde, ou eu"*.
+ *
+ * A transcrição tem ~300 caracteres, e o corte de texto longo é 400. Mas quem grava sete minutos
+ * está conversando de um jeito que nenhuma resposta pronta cobre — e a transcrição é um resumo do
+ * que foi dito, não a fala inteira. Por isso o corte é mais baixo quando veio de áudio.
+ */
+const TEXTO_FALADO = 150;
 const RAJADA_MUITAS = 3;
 
 /**
@@ -279,7 +293,8 @@ export function pedeRespostaPessoal(msg) {
     const comoChama = NOME_DO_TIPO[tipo] || 'um arquivo';
     return { motivo: `mandou ${comoChama} — só dá para responder depois de abrir` };
   }
-  if (texto.trim().length >= TEXTO_LONGO) {
+  // O corte é mais baixo para o que foi FALADO — ver `TEXTO_FALADO`.
+  if (texto.trim().length >= (temTranscricao ? TEXTO_FALADO : TEXTO_LONGO)) {
     // "Falou" quando veio de áudio: o motivo aparece na tela, e dizer que a pessoa "escreveu"
     // 700 caracteres que ela falou faz quem lê procurar uma mensagem de texto que não existe.
     const verbo = temTranscricao ? 'falou' : 'escreveu';
@@ -525,11 +540,43 @@ const EXPRESSOES_DE_APOIO = [
    */
   /(^|[^\p{L}])(sempre|junto|juntos|aqui)\s+com\s+(voc[eê]s?|vcs?|o\s+senhor|a\s+senhora|a\s+gente|nois|n[óo]s)/iu,
   /(^|[^\p{L}])conte?\s+comigo(\s|$|!|\.)/iu,
+  /**
+   * **"pode contar conosco"** — anotação do Tere e Gilmar (03/09/2026): *"Tá bom, tô acompanhando
+   * vocês, se Deus quiser nós vamos ter a Vitória, pode contar conosco"*, e nenhuma regra casou.
+   *
+   * A lista tinha só "conte comigo", no singular. Quem responde em nome da casa fala no plural — e
+   * é a forma mais comprometida das duas.
+   */
+  /(^|[^\p{L}])(pode|podem)?\s*cont(e|ar|em|amos)\s+(comigo|conosco|com\s+n[oó]s|com\s+a\s+gente)/iu,
+  /(^|[^\p{L}])(estou|to|t[oô])\s+acompanhando\s+(voc[eê]s?|vcs?|o\s+senhor|a\s+campanha)/iu,
+  /(^|[^\p{L}])(n[oó]s\s+)?vamos\s+(vencer|ganhar)(\s|$|!|,|\.)/iu,
   /(^|[^\p{L}])(vou|vamos)\s+votar(\s|$)/iu,
   /(^|[^\p{L}])sou\s+(seu\s+)?(eleitor|eleitora|f[aã]|bolsonarist[ao]|bolsonaro)(\s|$)/iu,
   /(^|[^\p{L}])(parab[eé]ns|sucesso|for[çc]a|felicidades)(\s|$|!|,|\.)/iu,
   /(^|[^\p{L}])(deus|jesus)\s+(te|o|a|lhe)\s+(aben[çc]oe|guarde|proteja)/iu,
   /(^|[^\p{L}])torcendo(\s|$)/iu,
+
+  /**
+   * **Declaração de VOTO é declaração de apoio** — três anotações antes de eu ver o padrão.
+   *
+   *  - **Maria bernardete** (03/09): *"Olá capitão estou falando com todas as minhas amigas para
+   *    votarem no Senhor, estou contando com elas."* → recebeu o MODELO. *"mensagem de apoio,
+   *    mandar 8"*;
+   *  - **Helena** (03/09): *"22 com toda certeza"* → nenhuma regra casou;
+   *  - **Maria Geny** (03/09): *"Eu e minhas família também votamos para eles"*.
+   *
+   * A lista já tinha "vou votar", que é o jeito de UMA pessoa dizer. O que faltava é o resto do
+   * português real: votar **em quem** (no senhor, nele, no 22), quem mais vota (minha família, as
+   * amigas), e o número de urna sozinho.
+   *
+   * **O número exige posição ou companhia** — "22" solto é endereço, idade e hora. Vale começando
+   * a mensagem ("22 com toda certeza") ou colado num verbo de votar.
+   */
+  // `vot\w*` cobre "votarem", "votassem", "votando" — a conjugação real não cabe numa lista.
+  /(^|[^\p{L}])vot\w*\s+(no|na|em|pro|pra|neste|nesse|nele|nela|neles|nelas|voc[eê]s?)(\s|$)/iu,
+  /(^|[^\p{L}])(meu|nosso|meus|nossos)\s+votos?(\s|$|!|,|\.)/iu,
+  /(^|[^\p{L}])(vot(o|a|ar|am|em|amos)|somos|sou|[eé])\s*(no\s+)?22(\s|$|!|,|\.)/iu,
+  /^\s*22(\s|$|!|,|\.)/u,
 ];
 
 /**
@@ -636,6 +683,19 @@ export function confirmaPresenca(entrantes, nossaUltimaAt) {
     /(^|[^\p{L}])(vou|irei|vamos)\s+(la|ai)(\s|$|!|,|\.)/u,
     /(^|[^\p{L}])(estarei|estaremos)(\s+(la|ai|presente|junto|com\s+voces))?(\s|$|!|,|\.)/u,
     /(^|[^\p{L}])(confirmado|confirmada|confirmo|presenca\s+confirmada)/u,
+    /**
+     * **"Quero confirmar minha presença no evento: …"** — o texto do BOTÃO do anúncio de evento.
+     *
+     * Anotações da Elci e do Martin (03/09/2026), e é o caso mais embaraçoso possível: a regra que
+     * manda pular quem confirma presença foi escrita hoje de manhã por causa da Elci, e **não
+     * funcionava para ela** — `confirmaPresenca` não reconhecia a frase. Nenhum padrão daqui pega
+     * "confirmar": eles esperam "confirmo", "confirmado", "presença confirmada".
+     *
+     * É a frase que o próprio anúncio gera, então é a forma mais comum que existe nesta base — e
+     * era justamente a que faltava.
+     */
+    /(^|[^\p{L}])(quero|vou|gostaria\s+de|venho|pretendo)\s+confirmar\s+(a\s+)?(minha\s+)?presenca/u,
+    /(^|[^\p{L}])confirmar\s+(a\s+)?(minha\s+)?presenca\s+(no|na|ao)\s+evento/u,
     /(^|[^\p{L}])(pode|podem)\s+contar\s+comigo/u,
     /(^|[^\p{L}])(com\s+certeza|certamente)\s+(vou|irei|estarei|estarei\s+la)/u,
     /(^|[^\p{L}])(vou|pretendo)\s+participar/u,
@@ -1225,6 +1285,29 @@ const AGRESSAO =
 const DIRIGIDA_A_NOS = /\b(voces|voce|vocês|tu|es igual|teu|tua|seu candidato|sua campanha|de voces)\b/i;
 
 /**
+ * **Apelido pejorativo para quem está do NOSSO lado** — conta sozinho, sem precisar de segunda
+ * pessoa.
+ *
+ * Anotação da susana (03/09/2026): *"IOla! Só prometeram e não cumpriram"* e *"Se for bolso
+ * bosta.Negativo"*, e a rodada mandou o modelo do anúncio **mais** o pedido de nome e cidade. Ele:
+ * *"bolso bosta está hostilizando; ela está se referindo ao Bolsonaro, nosso aliado, usando um
+ * termo pejorativo"*.
+ *
+ * É exatamente o pedido dele de 01/09 (*"falando mal do Bolsonaro, e Martim é aliado do
+ * Bolsonaro"*) — o que faltava era a lista.
+ *
+ * **Por que dispensa a fala em segunda pessoa**, ao contrário de `AGRESSAO`: aquela lista é de
+ * xingamentos genéricos, que o apoiador usa contra o adversário o dia inteiro. Estes apelidos não
+ * são ambíguos de direção — ninguém que apoia o mandato chama o aliado assim. É a própria palavra
+ * que carrega o lado.
+ *
+ * Lista curta e literal de propósito: apelido ambíguo (um "mito" irônico) fica de fora, porque o
+ * custo de errar aqui é etiquetar um apoiador como sem interesse, para sempre, no CRM.
+ */
+const INSULTO_AO_ALIADO =
+  /\b(bolso\s*bosta|bolsobosta|bostanaro|bolsonazi|bolsolixo|bolsomerda|bozo|capitao\s+cloroquina|milician[oa])\b/i;
+
+/**
  * O contato não tem interesse — ou recusou, ou veio hostilizar.
  *
  * Pedido dele (01/09/2026): *"falando mal do bolsonaro e martim é aliado do bolsonaro, esse tipo
@@ -1277,6 +1360,13 @@ export function semInteresse(entrantes) {
    * tem verbo de ir dentro e continua sendo recusa de contato.
    */
   if (RECUSA_DE_PRESENCA.test(norm)) return null;
+
+  /**
+   * O apelido pejorativo do ALIADO vale sozinho — ver `INSULTO_AO_ALIADO`. Fica DEPOIS da recusa
+   * de presença: quem diz que não pode ir ao evento e xinga na mesma mensagem é caso raro, e o
+   * lado seguro é o que ele já decidiu para o evento.
+   */
+  if (INSULTO_AO_ALIADO.test(norm)) return { motivo: 'chamou nosso aliado por apelido pejorativo — não é público do mandato' };
 
   const agride = AGRESSAO.test(norm) && DIRIGIDA_A_NOS.test(norm);
   if (agride) return { motivo: 'veio hostilizar, não é público do mandato' };

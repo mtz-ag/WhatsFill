@@ -317,6 +317,19 @@ export function decidirComAnuncio(anuncio, sugestao, efeitoDaSugestao, opcoes) {
   if (sugestao && efeitoDaSugestao === 'silencio') return null;
 
   /**
+   * **"Precisa de gente" também vence** — anotação da Maria Genoli (03/09/2026).
+   *
+   * Ela mandou um áudio de sete minutos explicando por que não consegue ir ao evento, e a caixa
+   * ofereceu a resposta pronta do anúncio *"Não conseguirei ir!"*. Quando o fluxo diz que alguém
+   * precisa escrever, a resposta enlatada é exatamente o que não serve: ela responde ao clique no
+   * anúncio, não ao que a pessoa acabou de dizer.
+   *
+   * É o mesmo raciocínio do `silencio`, uma linha acima — o anúncio decide o que sai **quando há
+   * o que sair**, e não sobrepõe uma leitura da conversa.
+   */
+  if (sugestao && efeitoDaSugestao === 'gente') return null;
+
+  /**
    * **A ação do anúncio é do momento da CHEGADA — depois de cumprida, ela acaba.**
    *
    * Duas anotações de 03/09/2026, a mesma regra:

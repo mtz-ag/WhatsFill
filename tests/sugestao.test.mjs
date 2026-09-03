@@ -703,4 +703,40 @@ grupo('conclua e nao mande nada (03/09/2026)');
     'com as duas etiquetas, o desfecho mais silencioso ganha');
 }
 
+grupo('jaDeuNomeECidade: nao peca o que ela acabou de escrever (03/09/2026)');
+{
+  /**
+   * Anotacao do Plauto: a ultima mensagem dele era *"Plauto Velho, cidade Sao Leopoldo"* -- nome e
+   * cidade, sem ninguem ter pedido -- e a caixa sugeria a tecla 4, *"peca os dados esta vez"*.
+   * Ele: *"ja foi pedido dados, seria agradecer e encerrar"*.
+   *
+   * As guardas que existiam olhavam o CRM e o nosso historico, e as duas podem ser falsas no exato
+   * momento em que ela responde: a etiqueta ainda nao existe, e a pergunta nunca saiu porque ela se
+   * adiantou.
+   */
+  const plauto = { jaPediramDados: false, temEtiquetaDeCidade: false, podePedirDados: true, pedidoHoje: false };
+
+  check(com({ ...plauto })?.id === 'nunca-pediram-dados', 'sem o sinal, o pedido de dados continua saindo');
+  check(com({ ...plauto, jaDeuNomeECidade: true })?.id !== 'nunca-pediram-dados',
+    'com nome e cidade escritos, o pedido NAO sai');
+
+  /**
+   * **Na chegada ele derruba so a metade do formulario.** `anuncio-modelo-e-dados` manda o recibo
+   * E o pedido juntos; se ela ja se cadastrou, o recibo continua devido e o caso desce para
+   * `conteudo-pedido`, que manda o modelo sozinho.
+   */
+  const chegada = { ...plauto, veioDeAnuncio: true, podeEnviar: true, enviadoHoje: false, modeloJaNaConversa: false };
+  check(com({ ...chegada })?.id === 'anuncio-modelo-e-dados', 'sem o sinal: recibo + pedido na mesma passada');
+  const jaSeCadastrou = com({ ...chegada, jaDeuNomeECidade: true });
+  check(jaSeCadastrou?.id === 'conteudo-pedido', 'com o sinal: so o recibo, sem repetir o formulario');
+  check(jaSeCadastrou?.tecla === '1', 'e a tecla e a do modelo sozinho');
+
+  /**
+   * **Nenhuma outra regra olha este sinal**, e e isso que o mantem barato: ele so BLOQUEIA o
+   * pedido. Quem decide o desfecho continua sendo o quadro.
+   */
+  check(com({ soExpressaApoio: { motivo: 'x' }, jaDeuNomeECidade: true, jaPediramDados: true })?.id === 'so-expressa-apoio',
+    'o sinal nao atrapalha quem ja tinha desfecho');
+}
+
 fim();

@@ -169,6 +169,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     nossaUltimaAt: null,
     /** O nome que a pessoa escreveu nesta conversa (palpite do parser), não o do cadastro. */
     nomeInformado: '',
+    /** A cidade que o parser achou no que ELA escreveu: o palpite inteiro, ou `null`. */
+    cidadeInformada: null,
     /**
      * O anúncio que o texto desta conversa reconhece: `{ anuncio, trecho }` ou `null`.
      *
@@ -495,6 +497,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // Sobreviver à troca de contato faria a etiqueta de nome divergente cair na pessoa errada —
     // é a mesma armadilha da pergunta de cidade, registrada no CLAUDE.md.
     state.nomeInformado = '';
+    state.cidadeInformada = null;
     /**
      * O anúncio reconhecido é do contato ANTERIOR até `refreshTagSuggestions` rodar de novo, e ele
      * decide o que a rodada manda. Sobreviver à troca é a mesma armadilha da pergunta de cidade:
@@ -583,6 +586,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * no caso que interessa. O palpite do parser é a única fonte que diz o que ela informou.
        */
       state.nomeInformado = palpites.nome?.value || '';
+      state.cidadeInformada = palpites.cidade || null;
       applyGuesses(palpites, classify);
 
       /**
@@ -3985,6 +3989,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         }
       }
 
+      /**
+       * A etiqueta de CIDADE é o que faz o contato existir para o trabalho: a API só filtra por
+       * etiqueta, e sem ela a pessoa não entra em lista nenhuma. Conta tanto a que já está no CRM
+       * quanto a que esta rodada vai gravar agora.
+       *
+       * **Sobe até aqui porque o modelo PADRÃO depende dela** — ver `modelosPadrao`, logo abaixo.
+       * Antes era calculada só na hora de montar a caixa, e a escolha do modelo acontecia antes.
+       */
+      const idsDeCidade = await tagsLib.cityTagIds().catch(() => new Set());
+      const temEtiquetaDeCidade =
+        (state.contact?.tagsId || []).some((id) => idsDeCidade.has(id)) ||
+        state.tagSuggestions.some((sug) => sug.origem === 'cidade' && sug.tag && (sug.marcada || sug.jaTem));
+
       const conteudos = state.tagSuggestions.filter((s) => s.origem === 'conteúdo');
       let modelo = null;
       let semModelo = '';
@@ -4037,8 +4054,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * outra via. Anúncio reconhecido cuja ação é outra (resposta pronta, pedir dados, devolver ao
        * quadro) é escolha explícita dele, e escolha explícita não se substitui por um padrão.
        */
+      /**
+       * **O padrão não sai para quem já tem etiqueta de cidade** — decisão dele de 02/09/2026:
+       * *"se a pessoa já respondeu a cidade a chance de ela ter recebido um modelo é muito grande,
+       * então não tem necessidade de mandar o padrão novamente"*.
+       *
+       * A decisão estava escrita e valia por meio caminho: `anuncio-modelo-e-dados` exige
+       * `!temEtiquetaDeCidade`, mas `conteudo-pedido` não exige nada — e é ele que manda o modelo
+       * sozinho. Resultado na anotação da Maria Bernardete (03/09): cidade Caxias do Sul no CRM,
+       * anúncio NÃO reconhecido, e a caixa oferecendo *"pediu «anúncio não reconhecido — modelo
+       * padrão» e há modelo mapeado — mande"*. Ela: *"está retornando por outro anúncio que não
+       * pode ser reconhecido, com uma mensagem de apoio — mandar 8"*.
+       *
+       * **Só o padrão é travado.** Anúncio RECONHECIDO continua mandando o modelo dele mesmo com
+       * cidade — ela clicou pedindo aquilo, e há teste travando isso (*"com cidade: o modelo sai
+       * igual"*). O padrão é o contrário: é o que sai quando não se sabe o que ela pediu, e para
+       * quem já está cadastrada ele é repetição.
+       */
       const veioDeUmAnuncio = !!(state.session?.utm?.source || state.session?.utm?.referralUrl);
-      const modelosPadrao = veioDeUmAnuncio ? await carregarModelosPadrao() : [];
+      const modelosPadrao = veioDeUmAnuncio && !temEtiquetaDeCidade ? await carregarModelosPadrao() : [];
       const escolhaDeModelo = anunciosLib.modeloDoAnuncio(
         state.anuncio,
         modelosPadrao,
@@ -4380,16 +4414,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       /**
-       * A etiqueta de CIDADE é o que faz o contato existir para o trabalho: a API só filtra por
-       * etiqueta, e sem ela a pessoa não entra em lista nenhuma. Conta tanto a que já está no CRM
-       * quanto a que esta rodada vai gravar agora.
-       */
-      const idsDeCidade = await tagsLib.cityTagIds().catch(() => new Set());
-      const temEtiquetaDeCidade =
-        (state.contact?.tagsId || []).some((id) => idsDeCidade.has(id)) ||
-        state.tagSuggestions.some((sug) => sug.origem === 'cidade' && sug.tag && (sug.marcada || sug.jaTem));
-
-      /**
        * **Qual texto a tecla 8 manda.**
        *
        * A tecla é uma só ("agradece e conclui") e as situações são duas: apoio genérico, e
@@ -4665,6 +4689,33 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * inteira, que era o defeito de 02/09. Ver `respondeuOsDados`, acima.
          */
         respondeuOsDados,
+        /**
+         * **Ela já escreveu o nome E a cidade — pedir de novo é pedir o que já temos.**
+         *
+         * Anotação do Plauto (03/09/2026): a última mensagem dele era *"Plauto Velho, cidade São
+         * Leopoldo"* e a caixa sugeria a tecla 4, *"peça os dados esta vez"*. Ele: *"já foi pedido
+         * dados, seria agradecer e encerrar"*.
+         *
+         * **É um sinal diferente de `respondeuOsDados`, e as duas metades explicam por quê.** Aquele
+         * pergunta *"ela respondeu ao NOSSO pedido e nós ainda não respondemos de volta?"* — e para
+         * quem informa sem ter sido perguntado ele é falso, porque a nossa pergunta nunca saiu. Este
+         * pergunta só *"nós já sabemos as duas coisas?"*, que é o que decide se o formulário faz
+         * sentido.
+         *
+         * **Por isso ele roda na conversa INTEIRA, e aqui isso está certo** — a armadilha de 02/09
+         * (o parser da conversa toda dando "ela respondeu") era sobre o outro sinal, que afirma algo
+         * sobre o momento. "Ela já disse de onde é" não deixa de ser verdade com o tempo.
+         *
+         * **As duas metades juntas**: nome e cidade RECONHECIDA. Só o nome, ou só a cidade, e o
+         * pedido continua tendo o que buscar — e `nao-reconhecida` é o modo generoso do parser
+         * devolvendo qualquer palavra solta, que já causou agradecimento por um link do Instagram.
+         *
+         * Ele **só bloqueia o pedido**; não manda nada. Quem decide o desfecho é o quadro.
+         */
+        jaDeuNomeECidade:
+          !!state.nomeInformado &&
+          !!state.cidadeInformada?.value &&
+          state.cidadeInformada.confidence !== 'nao-reconhecida',
         /**
          * **Disse que VAI ao evento.** `presenca` já era calculado aqui para escolher o texto da
          * tecla 4; agora também é sinal, porque faltava um desfecho para "confirmou e não falta
@@ -5936,6 +5987,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             .filter(Boolean)
             .slice(-observacoesLib.MAX_MENSAGENS),
           etiquetas: (state.tagSuggestions || []).filter((t) => t.jaTem || t.marcada).map((t) => t.nome),
+          /**
+           * **A versão que decidiu** — sem ela, anotação e conserto do mesmo dia são
+           * indistinguíveis, e três anotações de 03/09 chegaram até mim já consertadas.
+           */
+          versao: versaoCarregada(),
           porque,
         });
         await store.set('observacoes', r.lista);

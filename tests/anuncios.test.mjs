@@ -378,4 +378,34 @@ grupo('a acao do anuncio nao vale para sempre (03/09/2026)');
   check(anuncios.decidirComAnuncio(resposta, { id: 'x' }, 'silencio') === null, 'a protecao continua vencendo');
 }
 
+grupo('o anuncio nao passa por cima de quem precisa de GENTE (03/09/2026)');
+{
+  /**
+   * Anotacao da Maria Genoli: ela clicou em *"Nao conseguirei ir!"* e, logo depois, mandou um audio
+   * de sete minutos explicando que esta doente, com falta de ar, e que por isso nao consegue ir. A
+   * caixa ofereceu a resposta pronta do anuncio. Ele: *"ia assume e responde, ou eu"*.
+   *
+   * O raciocinio e o mesmo do `silencio` que ja estava ali: o anuncio decide o que sai **quando ha
+   * o que sair**, e nao sobrepoe uma leitura da conversa. Resposta enlatada em cima de um desabafo
+   * responde ao CLIQUE, nao a pessoa.
+   */
+  const resposta = { id: 'a1', nome: 'Convite', ligado: true, trechos: ['nao conseguirei ir'], acao: 'resposta', valor: 'confirmar', etiquetas: [] };
+  const regra = { id: 'ultima-pede-resposta-pessoal' };
+
+  check(anuncios.decidirComAnuncio(resposta, regra, 'gente') === null, 'precisa de gente: o anuncio se cala');
+  check(anuncios.decidirComAnuncio({ ...resposta, acao: 'dados' }, regra, 'gente') === null, 'vale tambem para a acao de pedir dados');
+
+  /**
+   * **E so esses dois efeitos.** Regra que ENVIA de qualquer forma continua perdendo para o
+   * anuncio de proposito -- ai o anuncio decide O QUE sai, e escolha explicita dele nao se
+   * substitui por deducao.
+   */
+  check(anuncios.decidirComAnuncio(resposta, { id: 'conteudo-pedido' }, 'envia')?.resposta === 'confirmar',
+    'regra que envia continua perdendo para o anuncio');
+  check(anuncios.decidirComAnuncio(resposta, { id: 'x' }, 'depende')?.resposta === 'confirmar',
+    'efeito indefinido nao cala o anuncio');
+  check(anuncios.decidirComAnuncio(resposta, null, 'gente')?.resposta === 'confirmar',
+    'sem regra nenhuma, o efeito sozinho nao decide nada');
+}
+
 fim();

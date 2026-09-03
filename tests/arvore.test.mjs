@@ -1103,7 +1103,23 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   check(naChegada.includes('conteudo-pedido'), 'o recibo sozinho (ela ja tem cidade) fica na chegada');
   check(naChegada.includes('nunca-pediram-dados'), 'o pedido de dados sozinho (sem modelo) fica na chegada');
   check(naChegada.includes('pediu dinheiro, cesta basica ou remedio'), 'e a ajuda financeira VOLTOU para a chegada (03/09)');
-  check(chegada.filhos.length === 11, 'e a chegada tem 11 caixas, nao 12');
+  check(chegada.filhos.length === 12, 'e a chegada tem 12 caixas, nao 13');
+
+  /**
+   * **O apoio entrou na chegada em 03/09, e entrou em ULTIMO lugar.**
+   *
+   * Anotacoes da Maria Bernardete (*"mandar 8"*) e do Plauto (*"agradecer e encerrar"*): as duas
+   * chegaram pelo anuncio e sairam sem desfecho nenhum. A posicao e a trava, nao um detalhe de
+   * arrumacao: a mensagem do anuncio E apoio escrito, e `soExpressaApoio` so a descarta quando o
+   * anuncio esta cadastrado. Em cima, esta caixa agradeceria a chegada de todo anuncio novo e
+   * engoliria o recibo. Se alguem a subir, este teste cai.
+   */
+  const ultima = chegada.filhos[chegada.filhos.length - 1];
+  check(ultima.regra === 'so-expressa-apoio', 'o apoio e a ULTIMA caixa da chegada');
+  const posApoio = naChegada.indexOf('so-expressa-apoio');
+  for (const antes of ['anuncio-modelo-e-dados', 'conteudo-pedido', 'nunca-pediram-dados']) {
+    check(naChegada.indexOf(antes) < posApoio, `"${antes}" decide antes do apoio`);
+  }
 
   /**
    * As duas caixas de "conclua e nao mande nada" (03/09) ficam nos DOIS lados: sao sobre NAO

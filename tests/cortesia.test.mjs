@@ -1072,4 +1072,34 @@ grupo('a RAJADA de mensagens proprias pede gente (03/09/2026)');
   check(pede(['x'.repeat(420)]) !== null, 'com 420 continua sendo');
 }
 
+grupo('insulto ao ALIADO e recusa; insulto ao adversario nao (03/09/2026)');
+{
+  /**
+   * Anotacao da susana: ela chegou pelo anuncio, escreveu *"So prometeram e nao cumpriram"* e
+   * *"Se for bolso bosta. Negativo"*, e a caixa ofereceu o recibo do anuncio + o pedido de dados.
+   * Ele: *"bolso bosta esta hostilizando; ela esta se referindo ao Bolsonaro, nosso aliado, usando
+   * um termo pejorativo"*.
+   *
+   * **A regra geral desta base continua sendo a oposta**, e e a que este arquivo protege em doze
+   * assercoes: xingar o ADVERSARIO em terceira pessoa e a fala mais comum de quem apoia. O que
+   * inverte aqui e de quem se fala -- estes apelidos nao sao ambiguos de direcao: ninguem que apoia
+   * o mandato chama o aliado assim.
+   */
+  const m = (t) => ({ texto: t, tipo: 'TEXT' });
+
+  check(!!semInteresse([m('Se for bolso bosta. Negativo')]), 'o apelido pejorativo do aliado conta');
+  check(!!semInteresse([m('mais um bostanaro')]), 'e as variantes tambem');
+  check(!!semInteresse([m('bando de bozo')]), 'bozo');
+
+  /**
+   * **O outro lado, que e o caro:** o apoiador xinga o adversario o tempo todo, em terceira
+   * pessoa, e tirar essa gente da fila com etiqueta permanente no CRM e o pior erro possivel aqui.
+   */
+  check(!semInteresse([m('o Lula e um ladrao safado, golpista')]), 'xingar o adversario NAO e recusa');
+  check(!semInteresse([m('esses petistas sao uns bandidos')]), 'nem no plural');
+  check(!semInteresse([m('VAMOS DERRUBAR A ESQUERDA, CAPITAO CONTA COM MEU VOTO')]), 'grito de campanha nao e recusa');
+  check(!semInteresse([m('bolsonaro e o melhor presidente que ja tivemos')]), 'falar BEM do aliado, muito menos');
+  check(!semInteresse([m('sou bolsonarista desde sempre')]), 'e se declarar bolsonarista e apoio');
+}
+
 fim();

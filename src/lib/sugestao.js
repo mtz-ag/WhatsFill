@@ -341,6 +341,7 @@ export const REGRAS = [
       !c.modeloJaNaConversa &&
       !c.temEtiquetaDeCidade &&
       c.podePedirDados &&
+      !c.jaDeuNomeECidade &&
       !c.jaPediramDados &&
       !c.pedidoHoje,
     motivo: () =>
@@ -382,8 +383,26 @@ export const REGRAS = [
      * A reação continua contando (o 🙏 da Marta pede o formulário): um emoji é dirigido a ele,
      * um link do Facebook é conteúdo de outra pessoa passando adiante.
      */
+    /**
+     * **Nunca peça o que ela acabou de escrever.**
+     *
+     * Anotação do Plauto (03/09/2026): a última mensagem dele era *"Plauto Velho, cidade São
+     * Leopoldo"* — nome e cidade, sem separador nenhum, sem ninguém ter pedido — e esta regra
+     * casou, sugerindo *"peça os dados esta vez"*. Ele: *"já foi pedido dados, seria agradecer e
+     * encerrar"*.
+     *
+     * As condições que existiam olhavam o CRM (`temEtiquetaDeCidade`) e o nosso histórico
+     * (`jaPediramDados`), e as duas podem ser falsas no exato momento em que ela está respondendo:
+     * a etiqueta ainda não existe no CRM, e a pergunta nunca saiu porque ela se adiantou.
+     *
+     * `jaDeuNomeECidade` é a metade que faltava, e é a que não depende de nada ter sido gravado:
+     * o parser leu as duas coisas no que ELA escreveu. Vale igual em `anuncio-modelo-e-dados`, que
+     * carrega o mesmo pedido junto do recibo — lá ele derruba só a metade do formulário, e o caso
+     * desce para `conteudo-pedido`, que manda o recibo sozinho.
+     */
     quando: (c) =>
       !c.rajadaEhSoRepasse &&
+      !c.jaDeuNomeECidade &&
       !c.jaPediramDados &&
       !c.temEtiquetaDeCidade &&
       c.podePedirDados &&

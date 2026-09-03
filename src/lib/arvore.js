@@ -728,6 +728,26 @@ export function fluxoPadrao() {
     r('nunca-pediram-dados', 'ainda não temos nome e cidade', 'chegada'),
 
     /**
+     * **O apoio, no FIM do ramo — o que sobra quando não há o que mandar.**
+     *
+     * Duas anotações de 03/09/2026, as duas chegando pelo anúncio e as duas terminando em vazio:
+     *
+     *  - **Maria Bernardete** já tinha cidade no CRM, veio por um anúncio que não dá para
+     *    reconhecer e escreveu *"estou falando com todas as minhas amigas para votarem no
+     *    Senhor"*. Ele: *"mandar 8"*;
+     *  - **Plauto** escreveu *"CAPITÃO CONTA COM MEU VOTO"* e, em seguida, o nome e a cidade. Ele:
+     *    *"já foi pedido dados, seria agradecer e encerrar"*.
+     *
+     * **A posição é o que torna isto seguro, e é por ela que a caixa não existia aqui.** A mensagem
+     * do anúncio é apoio escrito ("Eu apoio as Escolas Cívico-Militares"), e `soExpressaApoio` só a
+     * descarta quando o anúncio está cadastrado — para todo anúncio novo, ela conta como fala da
+     * pessoa. Em cima, esta caixa agradeceria a chegada e engoliria o recibo de quem acabou de
+     * clicar. No fim, ela só alcança quem **já passou** por todas as saídas que mandam alguma
+     * coisa: o recibo, o modelo sozinho e o pedido de dados.
+     */
+    r('so-expressa-apoio', 'só expressou apoio (não sobrou o que mandar)', 'chegada'),
+
+    /**
      * **A pendência: o que ela escreveu DEPOIS da mensagem do anúncio.**
      *
      * *"após o modelo terá que ver se tem uma pendência que é a mensagem após a mensagem de anúncio

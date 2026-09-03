@@ -181,4 +181,25 @@ grupo('a copia manda so as NOVAS (02/09/2026)');
   check(obs.nova({ porque: 'x' }).copiada === false, 'anotacao nova nasce sem a marca');
 }
 
+grupo('a anotacao guarda a VERSAO e a hora (03/09/2026)');
+{
+  /**
+   * Das oito anotacoes de um lote, tres ja estavam consertadas quando ele me mandou -- e com a
+   * data sozinha, num dia com varios consertos, nao havia como saber. Eu medi caso a caso para
+   * descobrir que nao havia nada a fazer. A anotacao nasce no instante da decisao, entao a versao
+   * de entao e o unico dado que responde "isto ja foi consertado?".
+   */
+  const it = obs.nova({ porque: 'errou', versao: '1.70.0', em: '2026-09-03T16:45:00.000Z', contato: 'Fulano' });
+  check(it.versao === '1.70.0', 'a versao e guardada');
+
+  const texto = obs.paraTexto([it]);
+  check(texto.includes('v1.70.0'), 'e sai no relatorio');
+  check(/03\/09\/2026 \d\d:\d\d/.test(texto), 'com a HORA junto do dia');
+
+  // Anotacao antiga nao tem versao, e continua valendo: campo vazio some do relatorio.
+  const antiga = obs.nova({ porque: 'errou', em: '2026-09-01T10:00:00.000Z' });
+  check(antiga.versao === '', 'sem versao, campo vazio');
+  check(!obs.paraTexto([antiga]).includes(' · v'), 'e o relatorio nao inventa uma');
+}
+
 fim();

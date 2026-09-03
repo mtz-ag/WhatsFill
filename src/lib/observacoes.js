@@ -71,6 +71,19 @@ export function nova(dados) {
       return lista.map((m) => texto(m, 300)).filter(Boolean).slice(-MAX_MENSAGENS);
     })(),
     etiquetas: (Array.isArray(d.etiquetas) ? d.etiquetas : []).map((t) => texto(t, 40)).filter(Boolean).slice(0, 12),
+    /**
+     * **Qual versão da extensão decidiu isto.**
+     *
+     * Custou uma tarde em 03/09/2026: das oito anotações de um lote, três já estavam consertadas
+     * antes de ele me mandar — a confirmação de presença, o insulto ao aliado e a resposta enlatada
+     * em cima do áudio longo. Com a data sozinha (e vários consertos no MESMO dia) não havia como
+     * saber, e eu medi caso a caso para descobrir que não havia nada a fazer.
+     *
+     * A anotação nasce no instante da decisão, então a versão de então é o único dado que responde
+     * *"isto já foi consertado?"* sem adivinhação. Vazio nas anotações antigas, que continuam
+     * valendo.
+     */
+    versao: texto(d.versao, 12),
     porque: texto(d.porque, 1000),
     /**
      * **Já foi copiada para o Claude?**
@@ -156,8 +169,15 @@ export function paraTexto(lista) {
   for (const [regra, doGrupo] of porRegra) {
     linhas.push(`## ${regra}  (${doGrupo.length}×)`);
     for (const it of doGrupo) {
+      // A HORA junto do dia: num dia com vários consertos, "de manhã" e "à tarde" são versões
+      // diferentes da extensão, e é isso que diz se a anotação já foi atendida.
+      const quando = new Date(it.em);
       const dia = it.em.slice(0, 10).split('-').reverse().join('/');
-      linhas.push(`  - ${dia} · ${it.contato || 'contato sem nome'} · sugeriu a tecla ${it.tecla || '?'}`);
+      const hora = Number.isNaN(quando.getTime())
+        ? ''
+        : ` ${String(quando.getHours()).padStart(2, '0')}:${String(quando.getMinutes()).padStart(2, '0')}`;
+      const versao = it.versao ? ` · v${it.versao}` : '';
+      linhas.push(`  - ${dia}${hora}${versao} · ${it.contato || 'contato sem nome'} · sugeriu a tecla ${it.tecla || '?'}`);
       if (it.motivo) linhas.push(`      a caixa disse: ${it.motivo}`);
       if (it.mensagens.length === 1) {
         linhas.push(`      ela escreveu: "${it.mensagens[0]}"`);

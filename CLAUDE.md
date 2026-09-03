@@ -1240,6 +1240,32 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   etiqueta vai para o status **e para o log da rodada** (o status é sobrescrito pela linha
   seguinte, e sem o log o conserto viraria falha silenciosa).
 
+- **"Ela já respondeu" e "nós já sabemos" são sinais DIFERENTES, e confundi-los pede o que ela
+  acabou de escrever.** Anotação do Plauto (03/09/2026): a última mensagem era *"Plauto Velho,
+  cidade São Leopoldo"* e a caixa sugeria *"peça os dados esta vez"*. `respondeuOsDados` não
+  alcança — ele exige que o NOSSO pedido tenha saído, e ela se adiantou. As outras guardas de
+  `nunca-pediram-dados` olham o que foi GRAVADO (`temEtiquetaDeCidade`, `jaPediramDados`), e as
+  duas são falsas no exato instante em que ela responde: a etiqueta ainda não existe no CRM.
+  `jaDeuNomeECidade` é a metade que faltava — o parser leu nome **e** cidade reconhecida no que ELA
+  escreveu, e por isso **roda na conversa inteira**: "ela já disse de onde é" não deixa de ser
+  verdade com o tempo, ao contrário de "ela acabou de responder" (a armadilha de 02/09, que é sobre
+  o OUTRO sinal). Ele só BLOQUEIA o pedido; nunca manda nada.
+- **O modelo PADRÃO não sai para quem já tem etiqueta de cidade — e a decisão valia por metade.**
+  Anotação da Maria Bernardete (03/09): cidade no CRM, anúncio não reconhecido, e a caixa oferecendo
+  o modelo padrão. A decisão dele de 02/09 estava escrita só dentro de `anuncio-modelo-e-dados`
+  (`!temEtiquetaDeCidade`); `conteudo-pedido` não exige nada, e é ele que manda o modelo sozinho.
+  Hoje o padrão **não é sequer carregado** nesse caso. **Anúncio RECONHECIDO continua mandando o
+  modelo dele mesmo com cidade** — ela clicou pedindo aquilo, e há teste travando ("com cidade: o
+  modelo sai igual"). Fechar um caminho sem escrever a saída deixaria os dois casos mudos, então a
+  chegada ganhou `so-expressa-apoio` **em ÚLTIMO lugar**: a mensagem do anúncio É apoio escrito, e
+  `soExpressaApoio` só a descarta com o anúncio cadastrado — em cima, essa caixa agradeceria a
+  chegada de todo anúncio novo e engoliria o recibo. Tem teste exigindo a posição.
+- **A anotação da rodada guarda a VERSÃO que decidiu.** Num dia com vários consertos, data sozinha
+  não distingue anotação pendente de anotação já atendida: de um lote de oito (03/09), **três já
+  estavam consertadas** e eu medi caso a caso para descobrir que não havia nada a fazer. Antes de
+  trabalhar num relatório de observações, compare a `v` de cada linha com o que já está no
+  `registro.md`.
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto
