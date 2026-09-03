@@ -1,3 +1,41 @@
+## 2026-09-03 — O "?" é escolha dela, e pergunta sem "?" também conta (v2.6.0)
+
+Duas correções dele, no mesmo recado, sobre o sinal criado na v2.5.0:
+
+> *"tudo bem exige resposta igual; quando a pessoa faz questão de botar (?) ela espera uma resposta.
+> Muitas perguntas são feitas sem a interrogação e isso é problemático."*
+
+### 1. A cortesia com "?" volta a contar
+
+Eu tinha excluído *"Tudo bem?"*, *"Bom dia! tudo certo?"* e *"como vai?"* do sinal. Ele desfez, e o
+argumento é melhor que o meu: **a interrogação é uma escolha de quem escreveu.** Quem se deu ao
+trabalho de botar o "?" está esperando alguma coisa de volta, e o custo de honrar isso é uma conversa
+que fica aberta — não uma mensagem errada.
+
+A exclusão de *"Tudo bem?"* **continua valendo em `conversaTemPerguntaAberta`**, que responde outra
+pergunta: lá se decide se o caso vai para ELE. Aqui só se decide não concluir.
+
+### 2. Pergunta sem "?" — o buraco que ele apontou
+
+Duas formas novas, as duas testadas:
+
+- **abertura interrogativa**: quem começa a mensagem com *que, qual, quais, quem, quando, onde,
+  aonde, como, quanto, cadê, por que, pq, será* está perguntando, com ou sem o sinal no fim;
+- **pergunta declarada**: *"queria saber"*, *"me diz"*, *"me informa"*, *"me explica"*, *"fiquei na
+  dúvida"*.
+
+**Isto é barato aqui e seria caro em `conversaTemPerguntaAberta`** — e é a razão de o sinal fraco
+existir. Ele não escolhe desfecho nenhum: no máximo deixa uma conversa aberta a mais. A mesma
+largura na outra lista mandaria metade da base para atendimento à mão.
+
+Medido nos dois lados: as oito formas de pergunta passam, e cumprimento seco, agradecimento, apoio e
+declaração de voto continuam fora.
+
+**Arquivos:** `src/lib/cortesia.js`, `tests/cortesia.test.mjs`, `manifest.json` (2.5.0 → 2.6.0),
+`registro.md`.
+
+---
+
 ## 2026-09-03 — Pergunta pendente nunca vira "conclua" (v2.5.0)
 
 Print do Paulo Quevedo: imagem de bom dia, dois links e, por último, *"Colorado ou Gremista?"*. A

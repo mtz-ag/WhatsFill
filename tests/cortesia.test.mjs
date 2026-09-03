@@ -1241,9 +1241,37 @@ grupo('terminouComPergunta: pergunta pendente nunca vira "conclua" (03/09/2026)'
    * **As exclusoes que a lista de perguntas ja tinha continuam.** "Tudo bem?" e o cumprimento com
    * interrogacao, das formas mais comuns desta base.
    */
-  check(!p('Tudo bem?'), 'cortesia com interrogacao');
-  check(!p('Bom dia! tudo certo?'), 'cumprimento + gentileza');
-  check(!p('Boa tarde, como vai?'), 'como vai');
+  /**
+   * **A cortesia com "?" TAMBEM conta** -- decisao dele em 03/09/2026, desfazendo a guarda que eu
+   * tinha posto: *"tudo bem exige resposta igual; quando a pessoa faz questao de botar (?) ela
+   * espera uma resposta"*.
+   *
+   * O argumento e dele e e bom: a interrogacao e uma ESCOLHA de quem escreveu, e o custo de
+   * honra-la e uma conversa que fica aberta -- nao uma mensagem errada.
+   *
+   * A exclusao de "Tudo bem?" continua valendo em `conversaTemPerguntaAberta`, que e outra
+   * pergunta: la se decide se o caso vai para ELE. Aqui so se decide nao concluir.
+   */
+  check(p('Tudo bem?'), 'cortesia com "?" tambem impede concluir (decisao dele, 03/09)');
+  check(p('Bom dia! tudo certo?'), 'cumprimento + gentileza com "?"');
+  check(p('Boa tarde, como vai?'), 'como vai');
+
+  /**
+   * **E muita pergunta vem SEM interrogacao** -- *"isso e problematico"*, no mesmo recado. A
+   * abertura interrogativa conta: quem comeca com "quem", "quando", "cade", "qual" esta
+   * perguntando, com ou sem o sinal no fim.
+   */
+  check(p('quando vai ser o evento'), 'abertura interrogativa, sem "?"');
+  check(p('cade o material que voces prometeram'), 'cade');
+  check(p('qual o endereco do comite'), 'qual');
+  check(p('queria saber se tem caminhada aqui'), 'pergunta declarada');
+  check(p('me diz o horario por favor'), 'me diz');
+
+  // E o que nao e pergunta continua nao sendo: e o que impede isto de esvaziar a automacao.
+  check(!p('Bom dia'), 'cumprimento seco');
+  check(!p('obrigado pelo trabalho de voces'), 'agradecimento');
+  check(!p('tamo junto, sempre com voces'), 'apoio');
+  check(!p('vou votar 22 com certeza'), 'declaracao de voto');
   check(!p('obrigado!'), 'sem interrogacao nao conta');
   check(!p(M('', 'STICKER')), 'figurinha sem texto');
   check(!terminouComPergunta([], null), 'sem rajada');

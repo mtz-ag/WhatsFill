@@ -574,40 +574,40 @@ const PERGUNTAS_QUE_PEDEM_VOCE = [
  * grupo?", "posso ajudar?"). Medido antes de desistir do caminho.
  *
  * Esta aqui responde uma pergunta mais fraca e faz uma coisa só: **impedir que a rodada CONCLUA em
- * silêncio** por cima de uma interrogação sem resposta. Concluir é o desfecho irreversível — tira
- * o contato da tela dele. Errar para o lado de deixar aberto custa uma linha na fila.
+ * silêncio** por cima de uma pergunta sem resposta. Concluir é o desfecho irreversível — tira o
+ * contato da tela dele. Errar para o lado de deixar aberto custa uma linha na fila.
  *
- * Só a ÚLTIMA mensagem, e sem cortesia: "Tudo bem?" no fim de um "bom dia" continua sendo cortesia.
+ * **O "?" vale sozinho, inclusive em "Tudo bem?"** — decisão dele em 03/09/2026: *"tudo bem exige
+ * resposta igual; quando a pessoa faz questão de botar (?) ela espera uma resposta"*. Eu tinha
+ * excluído a cortesia e ele desfez. O argumento é dele e é bom: a interrogação é uma ESCOLHA de
+ * quem escreveu, e o custo de honrá-la é uma conversa que fica aberta.
+ *
+ * **E muita pergunta vem sem "?"** — *"isso é problemático"*, no mesmo recado. Por isso a abertura
+ * interrogativa conta também: quem começa a mensagem com "quem", "quando", "cadê", "qual" está
+ * perguntando, com ou sem o sinal no fim. Aqui isso é barato porque o sinal não decide desfecho
+ * nenhum: no máximo deixa uma conversa aberta a mais.
  */
-const PERGUNTA_DE_CORTESIA =
-  /^(e\s+ai|tudo\s*(bem|certo|bom|joia|blz)|td\s*(bem|certo)|como\s+(vai|vao|esta|estao|voce\s+esta|vc\s+ta)|beleza|blz)$/i;
+const ABRE_PERGUNTANDO =
+  /^\s*(o\s+)?(que|qual|quais|quem|quando|onde|aonde|como|quanto|quanta|quantos|quantas|cade|porque|por\s?que|pq|sera)\b/i;
+
+/** "queria saber", "me diz", "me informa" — pergunta declarada, sem interrogação. */
+const PERGUNTA_DECLARADA =
+  /(^|[^\p{L}])((queria|gostaria|quero)\s+saber|me\s+(diz|diga|informa|informe|explica|explique)|fiquei\s+na\s+duvida|tenho\s+uma\s+duvida)/iu;
 
 export function terminouComPergunta(entrantes, nossaUltimaAt) {
   const rajada = rajadaFinal(entrantes, nossaUltimaAt);
   const ultima = [...rajada].reverse().find((m) => String(m?.texto || '').trim());
   if (!ultima) return false;
   const texto = String(ultima.texto || '');
-  if (!texto.includes('?')) return false;
-  if (mensagemDeCortesia(ultima)) return false;
 
-  /**
-   * **"Tudo bem?" não é pergunta que impede concluir.** Sem esta guarda o sinal pegava o
-   * cumprimento com interrogação, que é das formas mais comuns desta base — e a exclusão dele já
-   * está travada em `conversaTemPerguntaAberta` desde sempre.
-   *
-   * Tira o cumprimento, os emojis e a pontuação, e pergunta se o que sobrou é só a gentileza.
-   */
-  const resto = texto
-    .replace(EMOJI_TODOS, ' ')
-    .replace(SAUDACAO, ' ')
+  const semAcento = texto
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  if (!resto || PERGUNTA_DE_CORTESIA.test(resto)) return false;
+  if (!semAcento) return false;
 
-  return true;
+  return texto.includes('?') || ABRE_PERGUNTANDO.test(semAcento) || PERGUNTA_DECLARADA.test(semAcento);
 }
 
 /** Pede material/conteúdo — aí a pergunta TEM resposta pronta e não é caso de resposta à mão. */
