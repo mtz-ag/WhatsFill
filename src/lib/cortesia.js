@@ -561,6 +561,55 @@ const PERGUNTAS_QUE_PEDEM_VOCE = [
   /(^|[^\p{L}])n[aã]o\s+entendi(\s|$|\.)/iu,
 ];
 
+/**
+ * **A última coisa que ela escreveu foi uma pergunta?**
+ *
+ * Print do Paulo Quevedo (03/09/2026): imagem de bom dia, dois links e, por último, *"Colorado ou
+ * Gremista?"*. A rodada recomendou **concluir**. Ele: *"qual a regra que já tínhamos acertado? tem
+ * pergunta não conclui"*.
+ *
+ * **Isto NÃO é `conversaTemPerguntaAberta`, e a diferença é o que o torna seguro.** Aquela decide
+ * que o caso precisa de você (tecla 6) e por isso é uma lista curta de FORMAS conhecidas — alargá-la
+ * para "qualquer ?" quebrou cinco exclusões que ele já tinha decidido ("Tudo bem?", "tem algum
+ * grupo?", "posso ajudar?"). Medido antes de desistir do caminho.
+ *
+ * Esta aqui responde uma pergunta mais fraca e faz uma coisa só: **impedir que a rodada CONCLUA em
+ * silêncio** por cima de uma interrogação sem resposta. Concluir é o desfecho irreversível — tira
+ * o contato da tela dele. Errar para o lado de deixar aberto custa uma linha na fila.
+ *
+ * Só a ÚLTIMA mensagem, e sem cortesia: "Tudo bem?" no fim de um "bom dia" continua sendo cortesia.
+ */
+const PERGUNTA_DE_CORTESIA =
+  /^(e\s+ai|tudo\s*(bem|certo|bom|joia|blz)|td\s*(bem|certo)|como\s+(vai|vao|esta|estao|voce\s+esta|vc\s+ta)|beleza|blz)$/i;
+
+export function terminouComPergunta(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  const ultima = [...rajada].reverse().find((m) => String(m?.texto || '').trim());
+  if (!ultima) return false;
+  const texto = String(ultima.texto || '');
+  if (!texto.includes('?')) return false;
+  if (mensagemDeCortesia(ultima)) return false;
+
+  /**
+   * **"Tudo bem?" não é pergunta que impede concluir.** Sem esta guarda o sinal pegava o
+   * cumprimento com interrogação, que é das formas mais comuns desta base — e a exclusão dele já
+   * está travada em `conversaTemPerguntaAberta` desde sempre.
+   *
+   * Tira o cumprimento, os emojis e a pontuação, e pergunta se o que sobrou é só a gentileza.
+   */
+  const resto = texto
+    .replace(EMOJI_TODOS, ' ')
+    .replace(SAUDACAO, ' ')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!resto || PERGUNTA_DE_CORTESIA.test(resto)) return false;
+
+  return true;
+}
+
 /** Pede material/conteúdo — aí a pergunta TEM resposta pronta e não é caso de resposta à mão. */
 const PEDIDO_DE_MATERIAL = /(^|[^\p{L}])(manda|mande|envia|envie|me\s+passa|quero\s+receber|receber)(\s|$)/iu;
 
@@ -1254,6 +1303,7 @@ export function conversaTemPerguntaAberta(entrantes, nossaUltimaAt) {
         return { motivo: 'fez uma pergunta que nenhuma resposta pronta responde' };
       }
     }
+
   }
   return null;
 }

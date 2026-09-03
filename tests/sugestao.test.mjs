@@ -634,12 +634,13 @@ grupo('o mapa RAMIFICADO da janela: cada regra tem os dois galhos (01/09/2026)')
      * foi o que aconteceu com `apoioDeOutroDia` em 03/09. Campo novo numa tecla-funcao entra aqui.
      */
     const daFuncao = new Set();
-    for (let m = 0; m < 16; m++) {
+    for (let m = 0; m < 32; m++) {
       daFuncao.add(r.tecla({
         respondidoHoje: !!(m & 1),
         momentoJaEnviado: !!(m & 2),
         podeMandarMomento: !!(m & 4),
         apoioDeOutroDia: !!(m & 8),
+        terminouComPergunta: !!(m & 16),
       }));
     }
     const noMapa = new Set(ramosDaRegra(r.id).map((x) => x.tecla));

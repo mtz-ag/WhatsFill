@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, terminouComPergunta } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -1214,6 +1214,40 @@ grupo('semInteresse le a RAJADA, e a retratacao mais nova cancela (03/09/2026)')
   // "Nunca ouvi falar do sr" NAO e recusa: e o falso positivo que a leitura da rajada exporia.
   check(!r('Nunca ouvi falar do sr'), '"nunca ouvi falar" e desconhecimento, nao recusa');
   check(!r('nao conheco o candidato ainda'), '"nao conheco" tambem nao');
+}
+
+grupo('terminouComPergunta: pergunta pendente nunca vira "conclua" (03/09/2026)');
+{
+  const M = (t, tipo) => ({ texto: t, tipo: tipo || 'TEXT', at: '2026-09-03T19:29:00Z' });
+  const p = (...t) => terminouComPergunta(t.map((x) => (typeof x === 'string' ? M(x) : x)), null);
+
+  /**
+   * Print do Paulo Quevedo: imagem de bom dia, dois links e, por ultimo, *"Colorado ou Gremista?"*.
+   * A rodada recomendou CONCLUIR. Ele: *"qual a regra que ja tinhamos acertado? tem pergunta nao
+   * conclui"*.
+   *
+   * **Este sinal NAO e `conversaTemPerguntaAberta`.** Aquele decide que o caso precisa dele
+   * (tecla 6) e por isso e uma lista curta de FORMAS conhecidas -- alargar para "qualquer ?"
+   * quebrou cinco exclusoes que ele ja tinha decidido, medido antes de desistir do caminho. Este
+   * faz uma coisa so: impedir o desfecho irreversivel.
+   */
+  check(p(M('', 'IMAGE'), 'https://youtu.be/a', 'Colorado ou Gremista?'), 'o caso do Paulo');
+  check(p('e o material, chega quando?'), 'pergunta comum no fim');
+
+  // So a ULTIMA: interrogacao no meio de conversa ja respondida nao reabre nada.
+  check(!p('Colorado ou Gremista?', 'deixa pra la'), 'pergunta no meio nao conta');
+
+  /**
+   * **As exclusoes que a lista de perguntas ja tinha continuam.** "Tudo bem?" e o cumprimento com
+   * interrogacao, das formas mais comuns desta base.
+   */
+  check(!p('Tudo bem?'), 'cortesia com interrogacao');
+  check(!p('Bom dia! tudo certo?'), 'cumprimento + gentileza');
+  check(!p('Boa tarde, como vai?'), 'como vai');
+  check(!p('obrigado!'), 'sem interrogacao nao conta');
+  check(!p(M('', 'STICKER')), 'figurinha sem texto');
+  check(!terminouComPergunta([], null), 'sem rajada');
+  check(!terminouComPergunta(null, null), 'nulo nao explode');
 }
 
 fim();

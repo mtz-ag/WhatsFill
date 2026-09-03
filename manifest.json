@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WhatsFill+IA",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "WhatsFill com avaliação de contexto por IA: a IA escolhe entre as respostas prontas, nunca escreve para o eleitor.",
   "permissions": [
     "storage",

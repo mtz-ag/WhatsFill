@@ -1,3 +1,55 @@
+## 2026-09-03 — Pergunta pendente nunca vira "conclua" (v2.5.0)
+
+Print do Paulo Quevedo: imagem de bom dia, dois links e, por último, *"Colorado ou Gremista?"*. A
+rodada recomendou **concluir** (`ja-respondemos-antes`, tecla 3). Ele: *"qual a regra que já
+tínhamos acertado? tem pergunta não conclui"*.
+
+### O caminho que NÃO funcionou, e por quê
+
+Alarguei `conversaTemPerguntaAberta` para aceitar qualquer "?" na última mensagem. **Cinco asserções
+caíram na hora**, todas de decisões dele:
+
+| Texto | Por que era exclusão |
+|---|---|
+| *"pode me mandar o material?"* | tem resposta pronta — o modelo |
+| *"Tudo bem?"* | é cumprimento; a resposta é a mensagem do momento |
+| *"Como posso ajudar na campanha?"* | é OFERTA, e oferta é o público principal |
+| *"tem algum material para eu compartilhar?"* | tem resposta pronta |
+| *"tem algum grupo?"* | tem resposta pronta |
+
+**As cinco continuam sendo RESPONDIDAS.** A exclusão diz **quem** responde — o modelo, a mensagem do
+momento —, não **se** responde. Foi por isso que o caminho estava errado: ele trocava "responder" por
+"mandar para o Thiago" em cima de metade da automação.
+
+### O que resolveu
+
+`cortesia.terminouComPergunta`, um sinal deliberadamente mais fraco. Ele não decide desfecho: faz uma
+coisa só, **impedir a conclusão em silêncio**. Concluir é o irreversível — tira o contato da tela
+dele; errar para o lado de deixar aberto custa uma linha na fila.
+
+- vale só na **última** mensagem da rajada (interrogação no meio de conversa já respondida não
+  reabre nada);
+- exclui **cortesia** ("Tudo bem?", "Bom dia! tudo certo?", "como vai?") — sem essa guarda o sinal
+  pegava o cumprimento com interrogação, que é das formas mais comuns desta base;
+- a **única** regra que o consulta é `ja-respondemos-antes`, e é suficiente: a despedida e a reação
+  **são** a última mensagem, então nenhuma outra regra pode concluir tendo uma pergunta na frente.
+
+Medido: as cinco exclusões acima **impedem concluir** (menos "Tudo bem?", que é cortesia), e nenhuma
+delas passou a exigir atendimento à mão.
+
+### Um erro de ferramenta que vale registrar
+
+O heredoc do shell comeu as contrabarras da expressão regular: `[^\p{L}\p{N}\s]` virou `[^p{L}p{N}s]`
+e apagava o texto inteiro. O sintoma foi *"Colorado ou Gremista?"* deixar de casar depois de um
+conserto que só tinha acrescentado uma guarda. **Expressão regular não passa por heredoc** — vai pelo
+editor.
+
+**Arquivos:** `src/lib/cortesia.js`, `src/lib/sugestao.js`, `src/panel/panel.js`,
+`tests/cortesia.test.mjs`, `tests/sugestao.test.mjs`, `manifest.json` (2.4.0 → 2.5.0), `registro.md`,
+`CLAUDE.md`.
+
+---
+
 ## 2026-09-03 — A susana voltou: o detector lia só a última, e a etiqueta ninguém lia (v2.4.0)
 
 Lote de três anotações. Duas já estavam resolvidas em versões que ele ainda não carregou; uma era

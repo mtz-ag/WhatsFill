@@ -598,7 +598,24 @@ export const REGRAS = [
      * ou já tendo respondido hoje, ou já tendo mandado a do momento, o certo é **concluir** — mais
      * uma mensagem nossa em cima da que ela ainda não comentou é empilhar.
      */
-    tecla: (c) => (c.respondidoHoje || c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5'),
+    /**
+     * **Pergunta pendente nunca vira "conclua"** — print do Paulo Quevedo (03/09/2026): imagem de
+     * bom dia, dois links e, por último, *"Colorado ou Gremista?"*. Esta regra recomendou concluir.
+     * Ele: *"qual a regra que já tínhamos acertado? tem pergunta não conclui"*.
+     *
+     * Ela é a caixa mais genérica do quadro — não olha o que a pessoa escreveu, só que já fomos
+     * atendidos antes — e é a única que pode CONCLUIR tendo uma interrogação sem resposta na frente
+     * (a despedida e a reação são, elas próprias, a última mensagem).
+     *
+     * O sinal é `terminouComPergunta`, deliberadamente mais fraco que `perguntaAberta`: aquele
+     * decide que o caso precisa de você e por isso é uma lista curta de formas conhecidas; este só
+     * impede o desfecho irreversível. Alargar o outro para "qualquer ?" quebrou cinco exclusões que
+     * ele já tinha decidido — medido antes de escolher este caminho.
+     */
+    tecla: (c) => {
+      if (c.terminouComPergunta) return '6';
+      return c.respondidoHoje || c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5';
+    },
     quando: (c) => !!c.jaRespondemosAntes,
     motivo: (c) =>
       c.respondidoHoje
@@ -997,6 +1014,7 @@ export const SOBRE = {
     rotulo: 'Já entregamos algo antes',
     efeito: 'depende',
     ramos: [
+      { tecla: '6', se: 'a última coisa que ela escreveu foi uma pergunta' },
       { tecla: '5', se: 'nada saiu hoje e a do momento ainda não foi' },
       { tecla: '3', se: 'já respondemos hoje, ou a do momento já saiu' },
     ],

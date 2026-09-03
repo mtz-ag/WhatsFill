@@ -1395,6 +1395,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `auto.etiquetaSemInteresse` à lista dele, com o mesmo desfecho (conclui, não manda nada, nunca).
   **Depende do campo estar preenchido na Config** — vazio, não faz nada.
 
+- **"Responder a pergunta" e "mandar para ele" são coisas diferentes — e confundir as duas custa
+  metade da automação.** Print do Paulo Quevedo (03/09/2026): imagem de bom dia, dois links e, por
+  último, *"Colorado ou Gremista?"*. A rodada recomendou CONCLUIR. Ele: *"qual a regra que já
+  tínhamos acertado? tem pergunta não conclui"*. A primeira tentativa foi alargar
+  `conversaTemPerguntaAberta` para "qualquer ?" — e caíram cinco exclusões que ele já tinha decidido
+  (*"pode me mandar o material?"*, *"Tudo bem?"*, *"Como posso ajudar na campanha?"*, *"tem algum
+  material para eu compartilhar?"*, *"tem algum grupo?"*). **As cinco continuam sendo respondidas**:
+  a exclusão diz QUEM responde (o modelo, a mensagem do momento), não SE responde. O que faltava era
+  um sinal mais fraco — `terminouComPergunta` — que faz uma coisa só: **impedir a conclusão em
+  silêncio**. Ele vale só na ÚLTIMA mensagem, exclui cortesia ("Tudo bem?", "tudo certo?"), e a
+  única regra que o consulta é `ja-respondemos-antes`, que é a mais genérica do quadro e a única
+  capaz de concluir com uma interrogação na frente (a despedida e a reação SÃO a última mensagem).
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto
