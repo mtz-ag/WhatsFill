@@ -1304,15 +1304,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     botao.addEventListener('click', () =>
       withBusy(async () => {
         avisos.replaceChildren();
-        if (!state.incoming.length) return setStatus('Este contato ainda não escreveu nada.', 'err');
+        const dela = mensagensParaIA();
+        if (!dela.length) return setStatus('Este contato ainda não escreveu nada.', 'err');
 
         setStatus('Escrevendo o rascunho…');
         const r = await iaCliente.rascunhar({
           templates: state.templates,
           regras: state.ia.regras,
-          gabinete: await gabineteLib.paraOPrompt(state.incoming),
+          gabinete: await gabineteLib.paraOPrompt(dela),
           modelo: state.ia.modelo,
-          mensagens: state.incoming,
+          mensagens: dela,
           campos: { Cidade: valueNamed('Cidade') },
         });
 
@@ -8412,6 +8413,35 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /**
+   * **As mensagens dela como a IA precisa ler — com a TRANSCRIÇÃO do áudio junto.**
+   *
+   * Print da Sueli (03/09/2026): ela mandou 29 segundos de áudio, a plataforma transcreveu na
+   * tela (*"tomara que vocês enxerguem as pessoas que não enxergam…"*), e o rascunho saiu falando
+   * de presença em evento. Ele: *"a IA não pegou o texto transcrito"*.
+   *
+   * A causa é `incoming`: ele filtra `m.text`, e o áudio **não tem** `text` — a transcrição mora
+   * em `details.transcription.text`, que só chega em `entrantes`. Está escrito no `api.js` desde
+   * 31/08 (*"incoming continua exatamente como era: é a base do parser"*), e a ressalva vale para
+   * o PARSER, que não deve gravar cidade a partir de fala ouvida por máquina. Para a IA é o
+   * contrário: ela existe justamente para os casos que a regex não cobre, e áudio é a maior fatia
+   * deles nesta base. O painel já mostra a transcrição na tela; esconder dela era o defeito.
+   *
+   * A marca `(áudio, transcrito automaticamente)` vai junto de propósito: transcrição erra
+   * palavra, e a IA precisa saber que não é o que a pessoa escreveu.
+   *
+   * Ruído da plataforma continua fora: `semRuidoDaPlataforma` esvazia o texto dessas mensagens, e
+   * o filtro de vazio as descarta aqui — é o conserto do Carlos, preservado.
+   */
+  function mensagensParaIA() {
+    return (state.entrantes || [])
+      .map((m) => {
+        const texto = String(m?.texto || '').trim();
+        if (!texto) return '';
+        return m?.transcrito ? `(áudio, transcrito automaticamente) ${texto}` : texto;
+      })
+      .filter(Boolean);
+  }
+  /**
    * Rascunha com a IA e **deixa o texto no campo de mensagem, para ele mandar.**
    *
    * **Esta função ENVIAVA sozinha até 03/09/2026.** Era o único ponto do projeto em que texto
@@ -8439,7 +8469,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // `iaTemChave` e não `ia.ligada`: a caixa da rodada governa o gasto AUTOMÁTICO; um rascunho
     // pedido na tecla `i` é escolha dele, contato a contato. Sem chave não há o que chamar.
     if (!state.iaTemChave) return { ok: false, enviado: false, motivo: 'não há chave da API cadastrada na aba Config' };
-    if (!state.incoming.length) return { ok: false, enviado: false, motivo: 'o contato não escreveu nada' };
+    const dela = mensagensParaIA();
+    if (!dela.length) return { ok: false, enviado: false, motivo: 'o contato não escreveu nada' };
     if (state.session?.expired) return { ok: false, enviado: false, motivo: 'janela de 24h vencida' };
 
     let rascunho;
@@ -8447,9 +8478,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       rascunho = await iaCliente.rascunhar({
         templates: state.templates,
         regras: state.ia.regras,
-        gabinete: await gabineteLib.paraOPrompt(state.incoming),
+        gabinete: await gabineteLib.paraOPrompt(dela),
         modelo: state.ia.modelo,
-        mensagens: state.incoming,
+        mensagens: dela,
         /**
          * **O cadastro inteiro, e não só a cidade.**
          *
@@ -8503,12 +8534,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const cfg = state.ia || {};
     if (!cfg.ligada || !state.contact) return null;
 
+    // Com a transcrição junto: o áudio é a maior fatia do que a regex não cobre nesta base.
+    const dela = mensagensParaIA();
+
     const decisao = await iaCliente.avaliar({
       templates: state.templates,
       regras: cfg.regras,
-      gabinete: await gabineteLib.paraOPrompt(state.incoming),
+      gabinete: await gabineteLib.paraOPrompt(dela),
       modelo: cfg.modelo,
-      mensagens: state.incoming,
+      mensagens: dela,
       campos: Object.fromEntries(
         state.classify.map((f) => [f.name, valueNamed(f.name)]).filter(([, v]) => v)
       ),
@@ -8528,7 +8562,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // maior, e estimar com a fonte errada faria o painel dizer "SEM CACHE" (ou o contrário)
         // sobre um prompt que não é o que saiu.
         iaLib.tokensAproximados(
-          iaLib.montarSistema({ templates: state.templates, regras: cfg.regras, gabinete: await gabineteLib.paraOPrompt(state.incoming) })
+          iaLib.montarSistema({ templates: state.templates, regras: cfg.regras, gabinete: await gabineteLib.paraOPrompt(dela) })
         )
       );
       const cacheOk = c.cacheLido > 0 ? `cache ${c.cacheLido}` : podia ? 'SEM CACHE' : 'sem cache (esperado)';

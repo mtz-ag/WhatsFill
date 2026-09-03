@@ -103,4 +103,37 @@ grupo('getIncomingText continua sendo o que era');
   check(textos.length === 2 && textos[1] === 'Maria / Pelotas', `só o contato, em ordem = ${JSON.stringify(textos)}`);
 }
 
+grupo('a TRANSCRICAO do audio so existe em entrantes -- nunca em incoming (03/09/2026)');
+{
+  /**
+   * Print da Sueli: ela mandou 29 segundos de audio, a plataforma transcreveu na tela, e o rascunho
+   * da IA saiu falando de outra coisa. Ele: *"a IA nao pegou o texto transcrito"*.
+   *
+   * A causa esta aqui: `incoming` filtra `m.text`, e o audio NAO tem `text` -- a transcricao mora
+   * em `details.transcription.text`. Quem alimenta a IA com `incoming` a deixa cega para a maior
+   * fatia do que a regex nao cobre nesta base.
+   *
+   * A assimetria e de PROPOSITO e continua: `incoming` e a base do parser, e gravar cidade a partir
+   * de fala ouvida por maquina e outra decisao. O teste existe para que quem ler `incoming` saiba
+   * que ela nao e a conversa inteira.
+   */
+  const audio = {
+    direction: 'FROM_HUB',
+    createdAt: '2026-09-03T14:31:00Z',
+    type: 'AUDIO',
+    details: { transcription: { text: 'tomara que voces enxerguem as pessoas que nao enxergam' } },
+  };
+  ITENS = [doContato('2026-09-03T14:30:00Z', 'Ola! Eu apoio'), audio];
+
+  const c = await api.getConversation('s-1');
+  check(c.incoming.length === 1, 'incoming NAO traz o audio transcrito');
+  check(!c.incoming.join(' ').includes('enxergam'), 'e nao traz a transcricao por nenhuma via');
+
+  check(c.entrantes.length === 2, 'entrantes traz as duas');
+  const t = c.entrantes[1];
+  check(t.texto.includes('enxergam'), 'com a transcricao no texto');
+  check(t.transcrito === true, 'e marcada como transcrita, porque nao foi ela que escreveu');
+  check(t.tipo === 'AUDIO', 'com o tipo junto');
+}
+
 fim();

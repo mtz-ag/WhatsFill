@@ -1,3 +1,44 @@
+## 2026-09-03 — A IA não enxergava a transcrição do áudio (v1.99.0)
+
+Print da Sueli: ela mandou 29 segundos de áudio, a plataforma transcreveu e mostrou na tela
+(*"tomara que vocês enxerguem as pessoas que não enxergam…"*), e o rascunho saiu falando de presença
+em evento. Ele: *"a IA não pegou o texto transcrito"*.
+
+### Causa raiz
+
+A assimetria está registrada no `api.js` desde 31/08 e eu não a apliquei aqui: **`incoming` filtra
+`m.text`, e áudio não tem `text`** — a transcrição mora em `details.transcription.text` e só chega
+em `entrantes`.
+
+A ressalva original (*"incoming continua exatamente como era: é a base do parser"*) vale para o
+**parser**, que não deve gravar cidade a partir de fala ouvida por máquina. Para a IA é o contrário:
+ela existe justamente para os casos que a regex não cobre, e áudio é a maior fatia deles nesta base.
+O painel já mostrava a transcrição na tela — esconder dela era o defeito.
+
+Pior: a guarda `if (!state.incoming.length) return 'o contato não escreveu nada'` fazia o contato que
+**só falou** nunca chegar a ser rascunhado.
+
+### O conserto
+
+`mensagensParaIA()` lê `entrantes`, descarta o vazio (que é como o ruído da plataforma chega, pelo
+conserto do Carlos) e marca a transcrição com `(áudio, transcrito automaticamente)` — transcrição
+erra palavra, e a IA precisa saber que não foi o que a pessoa escreveu.
+
+Passou a ser usada nos **três** caminhos: a avaliação, o rascunho da rodada e o rascunho da aba —
+mais o `gabinete` de cada um, que escolhe os verbetes do dossiê por texto e, sem a transcrição, não
+escolhia nenhum. E a estimativa de cache, que precisa medir o prompt que realmente saiu.
+
+### A trava
+
+Teste novo em `conversa.test.mjs` fixando a assimetria dos dois lados: `incoming` **não** traz a
+transcrição, `entrantes` traz, com `transcrito: true` e o tipo junto. Ele existe para que quem ler
+`incoming` saiba que ela não é a conversa inteira.
+
+**Arquivos:** `src/panel/panel.js`, `tests/conversa.test.mjs`, `manifest.json` (1.98.0 → 1.99.0),
+`registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-03 — Sem nenhuma informação, pergunte o interesse (v1.98.0)
 
 Print do Tilin: a conversa inteira eram dois avisos *"Atenção: o tipo da mensagem enviada pelo

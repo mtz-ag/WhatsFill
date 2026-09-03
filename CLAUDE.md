@@ -1340,6 +1340,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `nunca-perguntaram-interesse`, que ele descartou do quadro em 01/09: aquela pergunta para todo
   mundo que nunca foi perguntado, que é quase a base inteira.
 
+- **A IA lia `state.incoming`, que NÃO tem a transcrição do áudio — ela estava cega justamente onde
+  existe para enxergar.** Print da Sueli (03/09/2026): 29 segundos de áudio, transcrição visível na
+  tela da plataforma, e o rascunho saiu falando de outra coisa. *"A IA não pegou o texto
+  transcrito"*. A causa é a assimetria registrada no `api.js` desde 31/08: `incoming` filtra
+  `m.text`, e áudio **não tem** `text` — a transcrição mora em `details.transcription.text` e só
+  chega em `entrantes`. A ressalva original (*"incoming continua como era: é a base do parser"*)
+  vale para o PARSER, que não deve gravar cidade a partir de fala ouvida por máquina; para a IA é o
+  contrário, porque áudio é a maior fatia do que a regex não cobre nesta base. Hoje os três
+  caminhos da IA (avaliar, rascunhar, e o `gabinete` de cada um) usam `mensagensParaIA()`, que lê
+  `entrantes` e marca `(áudio, transcrito automaticamente)`. **Regra geral: quem alimenta a IA usa
+  `entrantes`, nunca `incoming`** — e a guarda "o contato não escreveu nada" também, senão o
+  contato que só falou nunca chega a ser rascunhado.
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto
