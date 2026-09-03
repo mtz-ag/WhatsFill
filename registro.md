@@ -1,3 +1,43 @@
+## 2026-09-03 — "Respondeu o nome e a cidade" voltou a vencer o modelo (v2.3.0)
+
+Pergunta dele: *"por que utilizou essa expressão de nada foi removido? você criou alguma regra? se
+for necessário é para remover se der conflito com as novas regras"*.
+
+**Não há regra nenhuma.** "Nada removido" era cautela minha, e a resposta certa à pergunta é a
+conferência — que eu não tinha feito. Feita agora, ela achou um conflito **criado por mim hoje**.
+
+### O conflito
+
+`respondeu-os-dados` vem ACIMA de `conteudo-pedido` por decisão dele de 02/09 (*"quem respondeu o
+que pedimos não precisa de mais material"*), e isso valia porque as duas moravam no mesmo grupo —
+"sem pendência".
+
+Ao trazer `conteudo-pedido` para dentro de `dosDoisLados` (v2.2.0, o caso da Rosa), o lado **sem
+cidade** passou a decidir o modelo **antes** de chegar naquele grupo. Medido: quem respondia nome e
+cidade, com modelo mapeado e sem ter sido respondido hoje, recebia o **modelo** em vez do
+agradecimento.
+
+**A lição:** ordem escrita dentro de uma regra não se garante sozinha quando as caixas mudam de
+grupo. O grupo é que decide quem é olhado primeiro.
+
+### O conserto, com uma remoção
+
+`respondeu-os-dados` subiu para o topo de `dosDoisLados` — vale nos dois lados e acima de tudo,
+como estava documentado. A cópia explícita do lado "com etiqueta de cidade" **foi removida**: virou
+duplicata, e duas caixas iguais no mesmo ramo é o começo de divergirem.
+
+### E a conferência que a pergunta dele obrigou
+
+Teste novo varre o padrão inteiro com um conjunto de gatilhos e exige que **toda caixa com desfecho
+decida em algum contexto**. Rodou: nenhuma caixa morta. As duas que a primeira varredura acusou eram
+falha da varredura, não do quadro — uma usa um sinal que não está em `SINAIS` (`soRuidoDaPlataforma`,
+lido pela regra e não escolhível numa caixa dele) e a outra só é alcançável sem modelo mapeado.
+
+**Arquivos:** `src/lib/arvore.js`, `tests/arvore.test.mjs`, `manifest.json` (2.2.0 → 2.3.0),
+`registro.md`.
+
+---
+
 ## 2026-09-03 — O lado SEM cidade não fechava, e o modelo vinha depois do obrigado (v2.2.0)
 
 Lote de seis anotações, cinco delas com a caixa mostrando *"a decisão é sua"* e **nenhuma

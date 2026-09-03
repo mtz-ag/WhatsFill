@@ -527,6 +527,23 @@ export function fluxoPadrao() {
    */
   const dosDoisLados = (onde) => [
     /**
+     * **"Ela respondeu o nome e a cidade" fica no TOPO — e agora dos dois lados.**
+     *
+     * Conserto de um conflito que eu mesmo criei ao trazer `conteudo-pedido` para cá (03/09/2026).
+     * A prioridade está escrita na regra desde 02/09 (*"vem ACIMA de `conteudo-pedido` de
+     * propósito: quem respondeu o que pedimos não precisa de mais material"*), e ela valia porque
+     * as duas moravam no mesmo grupo — "sem pendência".
+     *
+     * Com o modelo dentro de `dosDoisLados`, o lado sem cidade passou a decidir o modelo **antes**
+     * de chegar naquele grupo: medido, quem respondia nome e cidade e tinha modelo mapeado recebia
+     * o modelo (tecla 1) em vez do agradecimento. A ordem escrita numa regra não se garante sozinha
+     * quando as duas caixas mudam de grupo.
+     *
+     * No topo, e nos dois lados, ela volta a valer sempre — que é como estava documentada.
+     */
+    r('respondeu-os-dados', 'respondeu o nome e a cidade', onde),
+
+    /**
      * **Pediu dinheiro: a condicao virou SINAL, nao lista de palavras.**
      *
      * Print da Marli (02/09/2026): ela mandou a propria chave PIX e "50 me ajuda muito", e a caixa
@@ -1063,8 +1080,6 @@ export function fluxoPadrao() {
        * Vence `ja-respondemos-antes` (que conclui em silêncio) só quando ela de fato respondeu o
        * que pedimos — condição estreita, e é exatamente a intenção dele.
        */
-      r('respondeu-os-dados', 'respondeu o nome e a cidade', 'com-cidade'),
-
       /**
        * **As pendências vêm ANTES de "já entregamos algo antes"** — print da Cris (02/09/2026).
        *

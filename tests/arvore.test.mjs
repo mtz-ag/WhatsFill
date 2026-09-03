@@ -1544,4 +1544,67 @@ grupo('o lado SEM cidade tambem fecha, e o modelo vem antes do obrigado (03/09/2
   check(arv.problemas(q).length === 0, 'e o quadro continua sem problemas acusados');
 }
 
+grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)');
+{
+  /**
+   * **Conflito que eu mesmo criei** ao trazer `conteudo-pedido` para `dosDoisLados`. A prioridade
+   * esta escrita na regra desde 02/09 -- *"vem ACIMA de conteudo-pedido de proposito: quem
+   * respondeu o que pedimos nao precisa de mais material"* -- e valia porque as duas moravam no
+   * mesmo grupo. Com o modelo subindo de grupo, o lado sem cidade passou a decidir o modelo antes
+   * de chegar la: medido, tecla 1 em vez do agradecimento.
+   *
+   * **A licao:** ordem escrita numa regra nao se garante sozinha quando as caixas mudam de grupo.
+   */
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const base = { jaRespondemosAntes: true, jaPediramDados: true, respondeuOsDados: true,
+    podeEnviar: true, enviadoHoje: false, modeloJaNaConversa: false };
+
+  for (const [lado, cidade, hoje] of [
+    ['sem cidade, nao respondido hoje', false, false],
+    ['sem cidade, ja respondido hoje', false, true],
+    ['com cidade', true, false],
+  ]) {
+    const r = arv.decidir({ ...base, temEtiquetaDeCidade: cidade, respondidoHoje: hoje }, q);
+    check(r?.id?.includes('respondeu-os-dados'), `${lado}: agradece, nao manda o modelo (${r?.id})`);
+    check(r?.tecla === 'i', `${lado}: e a tecla e a do agradecimento`);
+  }
+
+  // Sem o sinal, o modelo volta a ser o desfecho -- a caixa nova nao roubou a vez de ninguem.
+  const semSinal = arv.decidir({ ...base, respondeuOsDados: false, temEtiquetaDeCidade: true }, q);
+  check(semSinal?.tecla === '1', 'quem NAO respondeu os dados continua recebendo o modelo');
+
+  /**
+   * **Nenhuma caixa do padrao esta morta.** Ele perguntou se havia regra minha impedindo remocao --
+   * nao ha, e este teste e a conferencia: toda caixa com desfecho decide em algum contexto.
+   */
+  const q2 = arv.arrumar(arv.fluxoPadrao());
+  const comDesfecho = arv.todosOsNos(q2).filter(({ no }) => no.acao || no.regra);
+  const decidiram = new Set();
+  const bits = ['temEtiquetaDeCidade', 'jaRespondemosAntes', 'respondidoHoje', 'jaPediramDados'];
+  const gatilhos = [
+    { semInteresse: { motivo: 'x' } }, { etiquetaSoConclui: 'assessor' }, { ultimaEhNossa: 'nossa' },
+    { confirmouPresenca: true }, { etiquetaQueDispensa: 'Sem Retorno', podeMandarMomento: true },
+    { pedeAjudaFinanceira: { motivo: 'x' } }, { pedeEmprego: { motivo: 'x' } },
+    { pedeAlgoIndefinido: { motivo: 'x', trecho: 'x' } }, { perguntaAberta: { termo: 'x' } },
+    { pedeRespostaPessoal: { motivo: 'x' } }, { soCortesia: { motivo: 'x' }, podeMandarMomento: true },
+    { ultimaEhSoReacao: true, podeMandarMomento: true }, { ultimaEhDespedida: true },
+    { soExpressaApoio: { motivo: 'x' } }, { respondeuComoAjudar: true }, { respondeuOsDados: true },
+    { soRuidoDaPlataforma: true, podePerguntarInteresse: true },
+    { podeEnviar: true }, { podePedirDados: true }, { voltouPorOutroAnuncio: true, modeloJaNaConversa: true },
+    { anuncioReconhecido: true, podeEnviar: true, podePedirDados: true },
+    // Sem modelo mapeado: e a unica porta para o ramo "veio de um anuncio que eu reconheco".
+    { anuncioReconhecido: true, podeEnviar: false, podePedirDados: true }, {},
+  ];
+  for (const g of gatilhos) {
+    for (let m = 0; m < 16; m++) {
+      const c = { podeMandarMomento: true, podePedirDados: true, ...g };
+      bits.forEach((b, i) => { if (!(b in g)) c[b] = !!(m & (1 << i)); });
+      const r = arv.decidir(c, q2);
+      if (r) decidiram.add(r.id);
+    }
+  }
+  const mortas = comDesfecho.filter(({ no }) => !decidiram.has(no.id)).map(({ no }) => no.id);
+  check(mortas.length === 0, `nenhuma caixa do padrao esta morta (${mortas.join(', ') || 'ok'})`);
+}
+
 fim();
