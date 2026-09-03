@@ -723,8 +723,18 @@ grupo('quem vem de anuncio reconhecido nao atravessa o quadro em silencio (02/09
    * para mandar sozinho. O ramo usa a regra do codigo justamente para herdar essa guarda — uma
    * tecla 4 fixa pediria os dados de novo a quem ja recebeu o pedido.
    */
-  check(tecla({ ...inge, jaRespondemosAntes: true, jaPediramDados: true }) === null, 'quem JA recebeu o formulario nao recebe de novo');
-  check(tecla({ ...inge, jaRespondemosAntes: true, pedidoHoje: true }) === null, 'nem quem recebeu o formulario hoje');
+  /**
+   * **Quem JA recebeu o formulario nao recebe de novo** -- e a guarda que o ramo herda da regra do
+   * codigo. Uma tecla 4 fixa aqui pediria os dados a quem ja recebeu o pedido.
+   *
+   * **O desfecho VAZIO deixou de existir em 03/09**, por decisao dele: quatro anotacoes no mesmo
+   * lote (Antonio, jairoc, Sidnei, Maria de Lourdes) pedindo *"so concluir"* para quem volta
+   * mandando figura, link ou o texto do anuncio. `ja-respondemos-antes` fecha o lado sem cidade e
+   * conclui; o que continua valendo, e e o que estas assercoes protegem, e que **o formulario nao
+   * sai de novo**.
+   */
+  check(tecla({ ...inge, jaRespondemosAntes: true, jaPediramDados: true }) !== '4', 'quem JA recebeu o formulario nao recebe de novo');
+  check(tecla({ ...inge, jaRespondemosAntes: true, pedidoHoje: true }) !== '4', 'nem quem recebeu o formulario hoje');
 
   // O ramo e ULTIMO RECURSO: nao rouba a vez de quem ja funcionava.
   check(tecla({ ...inge, jaRespondemosAntes: true, podeEnviar: true }) === '1', 'havendo modelo mapeado, o modelo vence o ramo novo');
@@ -736,7 +746,9 @@ grupo('quem vem de anuncio reconhecido nao atravessa o quadro em silencio (02/09
    * qualquer anuncio, e o sinal so e verdade para anuncio que ELE cadastrou. Assim o ramo nao muda
    * nada para quem chega por campanha nao mapeada.
    */
-  check(tecla({ ...inge, jaRespondemosAntes: true, anuncioReconhecido: false }) === null, 'anuncio NAO reconhecido nao entra neste ramo');
+  const naoReconhecido = arv.decidir({ ...inge, jaRespondemosAntes: true, anuncioReconhecido: false }, q);
+  check(!String(naoReconhecido?.id || '').includes('anuncio-conhecido'), 'anuncio NAO reconhecido nao entra neste ramo');
+  check(naoReconhecido?.tecla !== '4', 'e nao recebe o formulario por outra porta');
 }
 
 
@@ -1315,7 +1327,9 @@ grupo('desabafo longo vai para a IA, nao para a mensagem do momento (02/09/2026)
    * **A saudacao dentro de um texto longo nao pode valer como "so mandou bom dia".** Sem esta
    * assercao, a caixa de palavras volta a pegar qualquer desabafo que comece com "Bom dia".
    */
-  const soSaudacao = { ...daCris, pedeRespostaPessoal: null, ultimoTexto: 'Bom dia!', textos: ['Bom dia!'] };
+  // `soCortesia` junto: e o sinal que um "Bom dia!" seco produz de verdade. Sem ele o teste media
+  // a caixa de baixo e prometia, no nome, uma coisa que nao estava exercitando.
+  const soSaudacao = { ...daCris, pedeRespostaPessoal: null, soCortesia: { motivo: 'so cumprimentou' }, ultimoTexto: 'Bom dia!', textos: ['Bom dia!'] };
   check(arv.decidir(soSaudacao, q)?.tecla === '5', 'um "Bom dia!" seco continua recebendo a mensagem do momento');
 }
 
@@ -1472,6 +1486,60 @@ grupo('so cumprimentou: nao oferece a mensagem do momento duas vezes (03/09/2026
   // Vale nos DOIS lados da bifurcacao de cidade -- a caixa nasce em `dosDoisLados`.
   check(arv.decidir({ ...base, temEtiquetaDeCidade: false, respondidoHoje: false, momentoJaEnviado: true }, q)?.tecla !== '5',
     'sem etiqueta de cidade tambem nao repete');
+
+  check(arv.problemas(q).length === 0, 'e o quadro continua sem problemas acusados');
+}
+
+grupo('o lado SEM cidade tambem fecha, e o modelo vem antes do obrigado (03/09/2026)');
+{
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const d = (c) => arv.decidir(c, q);
+
+  /**
+   * **Quatro anotacoes, o mesmo buraco.** Antonio Bersch (*"mandou foto ou sticker de boa noite, so
+   * concluir"*), jairoc e Sidnei Martins (*"mandou link, pode concluir"*) e Maria de Lourdes
+   * (*"quando voltasse pelo mesmo anuncio sem enviar nada alem do texto padrao era pra concluir"*).
+   *
+   * Os tres grupos do lado "sem etiqueta de cidade" cobrem quem AINDA nao foi respondido hoje, quem
+   * tem dado ou modelo a receber, e a chegada por anuncio cadastrado. Quem ja foi respondido hoje e
+   * nao tem nada disso atravessava os tres e saia sem desfecho -- o lado "com cidade" nunca teve
+   * esse buraco, porque `ja-respondemos-antes` o fecha.
+   */
+  const semCidade = {
+    jaRespondemosAntes: true, temEtiquetaDeCidade: false, respondidoHoje: true,
+    jaPediramDados: true, ultimaEhSoReacao: true, podeMandarMomento: true, momentoJaEnviado: true,
+  };
+  const fecha = d(semCidade);
+  check(fecha?.tecla === '3', 'ja respondido hoje, sem cidade: conclui em vez de sair sem desfecho');
+  check(fecha?.id === 'r:ja-respondemos-antes:sem-cidade', `e quem fecha e a caixa nova (${fecha?.id})`);
+
+  // E nao rouba a vez de quem ainda nao foi respondido: la a pendencia continua decidindo.
+  check(d({ ...semCidade, respondidoHoje: false, momentoJaEnviado: false })?.id === 'r:ultima-e-so-reacao:sem-cidade',
+    'ainda nao respondido hoje: a pendencia decide, como antes');
+
+  /**
+   * **O modelo vem ANTES do agradecimento** -- anotacao da Rosa: ela ja tinha cidade, voltou
+   * clicando num anuncio novo e escreveu so apoio, e a caixa recomendou agradecer. Ele: *"ela veio
+   * por um anuncio diferente do padrao, vou mandar o modelo"*.
+   *
+   * O lado "com etiqueta de cidade" nao tinha `conteudo-pedido`: quem voltava com cidade e clicava
+   * num anuncio novo nunca recebia o modelo daquele anuncio.
+   */
+  const rosa = {
+    jaRespondemosAntes: true, temEtiquetaDeCidade: true, jaPediramDados: true, respondidoHoje: false,
+    soExpressaApoio: { motivo: 'apoio' }, podeEnviar: true, enviadoHoje: false,
+    modeloJaNaConversa: false, anuncioReconhecido: true, veioDeAnuncio: true,
+  };
+  check(d(rosa)?.tecla === '1', 'anuncio novo com modelo mapeado: o modelo sai');
+  check(d(rosa)?.id === 'r:conteudo-pedido:com-cidade', 'pela caixa do lado com cidade');
+
+  // E as guardas da regra sao o que impede virar repeticao.
+  check(d({ ...rosa, modeloJaNaConversa: true })?.id?.includes('so-expressa-apoio'), 'modelo ja na conversa: volta a agradecer');
+  check(d({ ...rosa, podeEnviar: false })?.id?.includes('so-expressa-apoio'), 'sem modelo mapeado tambem');
+
+  // A pendencia continua vencendo o modelo nos dois lados.
+  check(d({ ...rosa, perguntaAberta: { termo: 'por que' } })?.id?.includes('pergunta-aberta'),
+    'pergunta vence o modelo, no lado com cidade');
 
   check(arv.problemas(q).length === 0, 'e o quadro continua sem problemas acusados');
 }

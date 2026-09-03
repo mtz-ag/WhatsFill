@@ -636,6 +636,42 @@ export function fluxoPadrao() {
      * Fica no FIM, abaixo de todas as pendências: quem escreveu uma pergunta, um pedido ou um
      * desabafo é atendido por aquilo, não pelo apoio que veio junto.
      */
+    /**
+     * **O modelo vem ANTES do agradecimento** — anotação da Rosa (03/09/2026).
+     *
+     * Ela já tinha etiqueta de cidade, voltou clicando no anúncio das Escolas Cívico-Militares e
+     * escreveu *"Temo junto"*, *"Obrigado"*, *"Temo junto 22222"*. A caixa recomendou agradecer
+     * (`so-expressa-apoio`). Ele: *"ela veio por um anúncio diferente do padrão, vou mandar o
+     * modelo"*.
+     *
+     * **O lado "com etiqueta de cidade" não tinha `conteudo-pedido`**: quem voltava com cidade e
+     * clicava num anúncio novo nunca recebia o modelo daquele anúncio. `voltou-por-outro-anuncio`
+     * não cobre — ela exige `modeloJaNaConversa`, ou seja, existe para quem volta pedindo a MESMA
+     * coisa (é a distinção da Eroni, 03/09).
+     *
+     * Fica **abaixo de todas as pendências e acima do apoio**: quem escreveu pergunta ou pedido é
+     * atendido por aquilo; quem só disse que está junto e pediu um conteúdo novo recebe o conteúdo,
+     * que é resposta melhor que um obrigado. As guardas da regra (`!enviadoHoje`,
+     * `!modeloJaNaConversa`) são o que impede isso de virar repetição.
+     *
+     * No lado "sem cidade" ela já existia em "sem pendência"; aqui ela também aparece dentro de
+     * "com pendência", e o efeito é o mesmo daquela — as duas só casam quando nenhuma pendência
+     * casou antes.
+     */
+    /**
+     * **A resposta à NOSSA pergunta vem antes do modelo, e agora nos dois lados.**
+     *
+     * Ela vivia só em "sem etiqueta de cidade", e **abaixo** do apoio. Duas coisas erradas: é a
+     * mesma assimetria de cidade que já custou duas regras, e a posição deixava de proteger o caso
+     * que ela existe para proteger — a contato respondeu *"é sobre as irregularidades na compra
+     * assistida em Eldorado do Sul"* e recebeu material de campanha (01/09/2026).
+     *
+     * Com o modelo entrando aqui embaixo, a ordem passou a importar de verdade: sem esta caixa
+     * acima dele, quem responde uma denúncia à nossa própria pergunta recebe o modelo. O teste que
+     * trava o caso de 01/09 acusou na hora.
+     */
+    r('respondeu-nossa-pergunta', null, onde),
+    r('conteudo-pedido', 'pediu conteúdo e há modelo mapeado', onde),
     r('so-expressa-apoio', 'apoio', onde),
   ];
 
@@ -935,7 +971,6 @@ export function fluxoPadrao() {
       grupo('com pendência', { sinal: 'respondidoHoje', negar: true, palavras: [], onde: 'ultima' }, [
         r('voltou-por-outro-anuncio'),
         ...dosDoisLados('sem-cidade'),
-        r('respondeu-nossa-pergunta'),
       ]),
       grupo('sem pendência', SEM_CONDICAO, [
 
@@ -993,6 +1028,27 @@ export function fluxoPadrao() {
       grupo('veio de um anúncio que eu reconheço', { sinal: 'anuncioReconhecido', negar: false, palavras: [], onde: 'ultima' }, [
         r('nunca-pediram-dados', 'ainda não temos nome e cidade', 'anuncio-conhecido'),
       ]),
+
+      /**
+       * **O fecho do lado SEM cidade — e ele desfaz o "de propósito" logo acima.**
+       *
+       * Quatro anotações de 03/09/2026, todas com a caixa mostrando *"a decisão é sua"* e nenhuma
+       * recomendação: **Antônio Bersch** (*"mandou foto ou sticker de boa noite, só concluir"*),
+       * **jairoc** e **Sidnei Martins** (*"mandou link, pode concluir"*), e **Maria de Lourdes**
+       * (*"quando voltasse pelo mesmo anúncio sem enviar nada além do texto padrão do anúncio era
+       * pra concluir"*). Nos quatro o desfecho que ele quer é o mesmo: **concluir**.
+       *
+       * **A causa é estrutural, e é a mesma família da assimetria de cidade.** Os três grupos acima
+       * cobrem quem AINDA não foi respondido hoje ("com pendência"), quem tem dado ou modelo a
+       * receber ("sem pendência") e a chegada por anúncio cadastrado. Quem já foi respondido hoje e
+       * não tem nada disso atravessava os três e saía sem desfecho — o lado "com etiqueta de
+       * cidade" nunca teve esse buraco, porque `ja-respondemos-antes` fecha ele.
+       *
+       * A mesma regra resolve aqui, e traz as guardas junto: **conclui** quando já respondemos hoje
+       * ou a do momento já saiu, e **manda a do momento** quando ela ainda não foi. É o que ele
+       * pediu nos quatro casos, sem inventar um desfecho novo.
+       */
+      r('ja-respondemos-antes', 'já entregamos algo antes', 'sem-cidade'),
     ]),
     grupo('com etiqueta de cidade', { sinal: 'temEtiquetaDeCidade', negar: false, palavras: [], onde: 'ultima' }, [
       /**

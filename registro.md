@@ -1,3 +1,59 @@
+## 2026-09-03 — O lado SEM cidade não fechava, e o modelo vinha depois do obrigado (v2.2.0)
+
+Lote de seis anotações, cinco delas com a caixa mostrando *"a decisão é sua"* e **nenhuma
+recomendação**.
+
+### Quatro casos, um buraco estrutural
+
+**Antônio Bersch** (*"mandou foto ou sticker de boa noite, só concluir"*), **jairoc** e **Sidnei
+Martins** (*"mandou link, pode concluir"*) e **Maria de Lourdes** (*"quando voltasse pelo mesmo
+anúncio sem enviar nada além do texto padrão era pra concluir"*). Nos quatro o desfecho que ele quer
+é o mesmo: **concluir**.
+
+Medido: os sinais estavam todos certos (`ultimaEhSoReacao` verdadeiro nos três primeiros). O que
+faltava era **onde**. Os três grupos do lado "sem etiqueta de cidade" cobrem quem ainda não foi
+respondido hoje ("com pendência"), quem tem dado ou modelo a receber ("sem pendência") e a chegada
+por anúncio cadastrado. **Quem já foi respondido hoje e não tem nada disso atravessava os três e
+saía sem desfecho** — o lado "com etiqueta de cidade" nunca teve esse buraco, porque
+`ja-respondemos-antes` o fecha.
+
+A mesma regra fecha aqui, com as guardas junto: conclui quando já respondemos hoje ou a do momento
+já saiu, manda a do momento quando ela ainda não foi.
+
+**Isto desfaz o "de propósito" que estava escrito no ramo do anúncio** (*"quem já recebeu o
+formulário e volta mandando só o texto do anúncio continua sem desfecho automático"*). Era decisão
+de 02/09; ele a revisou com quatro casos reais. O que continua valendo — e o que as asserções agora
+protegem — é que **o formulário não sai de novo**.
+
+### A Rosa: o modelo vinha depois do obrigado
+
+Ela já tinha cidade, voltou clicando no anúncio das Escolas Cívico-Militares e escreveu só apoio. A
+caixa recomendou agradecer. Ele: *"ela veio por um anúncio diferente do padrão, vou mandar o
+modelo"*.
+
+**O lado "com etiqueta de cidade" não tinha `conteudo-pedido`**: quem voltava com cidade e clicava
+num anúncio novo nunca recebia o modelo daquele anúncio. `voltou-por-outro-anuncio` não cobre — ela
+exige `modeloJaNaConversa`, porque existe para quem volta pedindo a MESMA coisa (a distinção da
+Eroni). Agora o modelo fica **abaixo de todas as pendências e acima do apoio**, nos dois lados.
+
+### O que o próprio conserto acusou
+
+Pôr o modelo acima do apoio quebrou na hora o teste que trava o caso de 01/09: quem responde
+*"é sobre as irregularidades na compra assistida em Eldorado do Sul"* à nossa pergunta passaria a
+receber material de campanha, porque `respondeu-nossa-pergunta` ficava **abaixo** do apoio — e só no
+lado sem cidade. Subiu para cima do modelo e passou a valer nos dois lados.
+
+### A Marroni
+
+*"Mensagem do momento, tempo de contexto já passou"* — é o critério de tempo do apoio, e já estava
+pronto desde a v1.90.0; o que faltava era a caixa existir no lado "com cidade", feito na v1.95.0. A
+anotação é das 14:10, antes das duas. Nada a fazer além de importar.
+
+**Arquivos:** `src/lib/arvore.js`, `tests/arvore.test.mjs`, `manifest.json` (2.1.0 → 2.2.0),
+`registro.md`.
+
+---
+
 ## 2026-09-03 — "Só cumprimentou" oferecia a mensagem do momento pela segunda vez (v2.1.0)
 
 Print da Carmem Souza. A caixa da rodada mostrava, em amarelo, *"Hoje este contato já recebeu:
