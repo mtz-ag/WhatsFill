@@ -128,6 +128,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     auto: {
       cfg: { templateId: '', templateName: '', limite: 20, pausaSeg: 8 },
       rodando: false,
+      /**
+       * **Esta rodada anda sozinha?** — vale para a rodada em curso, não é configuração.
+       *
+       * A caixa "Automatizar" da fila dos "Meus" mora em `cfg.automatizarComIA`; a dos "Novos" é
+       * outra (`cfg.automaticoNovos`), e quem decide qual vale é a rodada que está rodando. Guardar
+       * aqui em vez de passar pelo `ctx` é o que faz a **pergunta da cidade** enxergar a decisão:
+       * ela nasce lá dentro do `saveClassification`, longe de quem chamou a rodada, e pergunta sem
+       * dono trava a fila inteira em silêncio.
+       */
+      automatico: false,
       parar: false,
       fila: [], // retrato da fila da plataforma, só para conferência
       meusAbertos: { total: null, erro: '', quando: 0 },
@@ -742,6 +752,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      */
     if (await cidadeConferidaPelaIA(campo, entry)) return;
 
+    /**
+     * **Rodada andando sozinha e a IA não pôde conferir: não grava e não pergunta.**
+     *
+     * A caixa da cidade espera um clique que, numa rodada automática, ninguém vai dar — e uma
+     * pergunta sem dono trava a fila inteira em silêncio. Essa armadilha já custou uma rodada
+     * parada quando a automação dos "Meus" nasceu, e a dos "Novos" a traria de volta com a IA
+     * desligada, que é justamente como ela vai rodar na maior parte das vezes.
+     *
+     * **Não gravar é o desfecho certo**, não um remendo: a regra dele é que nenhuma cidade de
+     * palpite vai para o CRM sem confirmação. O palpite volta a aparecer na próxima passada, para
+     * ele. E a linha no Andamento é o que impede isto de virar "às vezes pega a cidade".
+     */
+    if (state.auto?.rodando && rodadaAutomatica()) {
+      registrarNaRodada(
+        state.contact?.name || 'contato',
+        'aviso',
+        `cidade "${entry.value}" não gravada: é palpite e a rodada está automática — confirme você depois`
+      );
+      return;
+    }
+
     const doCadastro = entry.source === FONTE_CIDADE_CADASTRO;
     const linhas = [`Encontrei "${entry.value}" como cidade.`];
     if (doCadastro) {
@@ -829,7 +860,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * continua sendo.
    */
   async function cidadeConferidaPelaIA(campo, entry) {
-    if (!state.auto?.rodando || !state.auto?.cfg?.automatizarComIA || !state.ia?.ligada) return false;
+    if (!state.auto?.rodando || !rodadaAutomatica() || !state.ia?.ligada) return false;
 
     const municipios = await cities.loadMunicipios();
     if (!municipios?.length) {
@@ -2638,6 +2669,42 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'novo. Os anúncios em si ficam na aba Config, em "Anúncios do momento".')
     );
 
+    /**
+     * **A caixa que faz a rodada dos Novos andar sozinha** — pedido dele (03/09/2026): *"nos novos
+     * as mensagens raramente saem do contexto, faça um botão para mandar mensagem automática nos
+     * novos, um box de marcar automático ligado"*.
+     *
+     * Ele tem razão sobre a chegada: o que sai aqui é o recibo do anúncio e o pedido de nome e
+     * cidade, e os dois valem para quase todo mundo que chega. Na fila dos "Meus" não é assim —
+     * lá chega desabafo, pedido de ajuda e pergunta de posição —, e por isso esta caixa é
+     * **separada** da de lá: uma caixa só o obrigaria a automatizar as duas ou nenhuma.
+     *
+     * O rótulo diz as DUAS coisas que ela faz, que é a lição da caixa dos "Meus": ela chamava-se
+     * "Automatizar com IA" e executava as REGRAS também, com a IA desligada.
+     */
+    const auto = checkbox(
+      'Automático ligado — mandar sem me perguntar, contato a contato',
+      !!cfg.automaticoNovos,
+      async (v) => {
+        await salvarAuto({ automaticoNovos: v });
+        setStatus(
+          v
+            ? 'Automático LIGADO nos Novos: o fluxo manda sozinho. Cada envio fica no Andamento.'
+            : 'Automático desligado: volto a perguntar contato a contato.',
+          v ? 'err' : 'ok'
+        );
+        renderAll();
+      }
+    );
+    card.append(auto);
+    card.append(
+      h('div', { class: 'wf-origin' },
+        'Vale para as regras do fluxo E para a IA, quando ela estiver ligada — não é uma caixa de ' +
+          'IA. Só a tecla "Responder à mão" continua parando para você: ela quer dizer, por ' +
+          'definição, que alguém precisa escrever. E cidade de palpite não é gravada sozinha: ' +
+          'fica esperando você, com a linha no Andamento.')
+    );
+
     const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Começar pelos Novos');
     comecar.addEventListener('click', () => withBusy(runLoteNovos));
     card.append(h('div', { class: 'wf-row' }, [comecar]));
@@ -3438,10 +3505,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /** Abre a rodada, roda o percurso e fecha o status. Comum às duas. */
-  async function rodar({ aba, processar }) {
+  /**
+   * **Esta rodada decide sozinha?**
+   *
+   * Duas caixas respondem que sim, e são de filas diferentes: "Automatizar" (os "Meus") e
+   * "Automático ligado" (os "Novos"). Uma função só porque três lugares perguntam isso — a
+   * execução da tecla, a da IA e a pergunta da cidade —, e três leituras separadas divergiriam na
+   * primeira caixa nova.
+   */
+  function rodadaAutomatica() {
+    return !!state.auto.cfg.automatizarComIA || !!state.auto.automatico;
+  }
+
+  async function rodar({ aba, processar, automatico = false }) {
     const limite = clampInt(state.auto.cfg.limite, 1, 200);
     const pausaMs = clampInt(state.auto.cfg.pausaSeg, 3, 300) * 1000;
 
+    state.auto.automatico = !!automatico;
     state.auto.rodando = true;
     state.auto.parar = false;
     state.auto.log = [];
@@ -3476,6 +3556,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       aindaTocando = keepalive.ativo();
       keepalive.desligar();
       state.auto.rodando = false;
+      // Zerado aqui e não onde foi ligado: o `automatico` vale para a rodada, e uma rodada que
+      // termina por erro deixaria a próxima andando sozinha sem ninguém ter marcado nada.
+      state.auto.automatico = false;
     }
 
     const conta = (tipo) => state.auto.log.filter((l) => l.resultado === tipo).length;
@@ -3694,10 +3777,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const limite = clampInt(state.auto.cfg.limite, 1, 200);
     const pausaSeg = clampInt(state.auto.cfg.pausaSeg, 3, 300);
 
+    const sozinha = !!state.auto.cfg.automaticoNovos;
     if (
       !confirm(
         `Vou percorrer a aba "Novos", assumir o atendimento e decidir pelo fluxo em até ${limite} ` +
           `contato(s), com ${pausaSeg}s entre um envio e outro.\n\n` +
+          (sozinha
+            ? 'AUTOMÁTICO LIGADO: a mensagem que o fluxo escolher sai SEM eu perguntar, contato a ' +
+              'contato. Cada envio fica no log do Andamento.\n\n'
+            : 'Vou perguntar a cada contato antes de mandar qualquer coisa.\n\n') +
           'Assumir tira o contato de "Novos" mesmo quando o fluxo resolve não mandar nada — ele ' +
           'passa para "Meus". Confirma?'
       )
@@ -3705,7 +3793,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return setStatus('Rodada cancelada.');
     }
 
-    await rodar({ aba: 'Novos', processar: processarNovo });
+    await rodar({ aba: 'Novos', processar: processarNovo, automatico: !!state.auto.cfg.automaticoNovos });
   }
 
   /**
@@ -4976,7 +5064,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        *    caixa de pergunta mostrava o aviso de duplicata e deixava ELE decidir; sem ninguém
        *    para ler o aviso, a decisão vira "não manda e pergunta".
        */
-      if (state.auto.cfg.automatizarComIA && recomendada && !recomendadaTrava) {
+      if (rodadaAutomatica() && recomendada && !recomendadaTrava) {
         const jaSaiu = await templatesLib.wasSent(state.contact.id, recomendada.id);
         if (jaSaiu && ehHoje(jaSaiu.at)) {
           registrarNaRodada(
@@ -5012,7 +5100,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // Ramo que entregou o caso para a IA não passa por aqui: a tecla dele vem nula, e esta
       // automação diria "tecla não disponível" e pararia a rodada em todo contato desses. Quem o
       // executa é a automação da IA, algumas linhas acima — a mesma de sempre.
-      if (state.auto.cfg.automatizarComIA && sugestao && !ramoChamaIA) {
+      if (rodadaAutomatica() && sugestao && !ramoChamaIA) {
         // Ramo da árvore com resposta pronta aponta para a tecla `f`, que não é a `sugestao.tecla`
         // (essa vem nula). Sem esta linha o automático diria "tecla não disponível" e pararia em
         // todo contato que caísse num ramo desses — o mesmo "trocar mensagem errada por não anda".

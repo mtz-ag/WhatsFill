@@ -32,6 +32,48 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-03 — "Automático ligado" nos Novos
+
+Pedido dele: *"nos novos as mensagens raramente saem do contexto, faça um botão para mandar mensagem
+automática nos novos, um box de marcar automático ligado"*.
+
+Ele está certo sobre a chegada: o que sai ali é o recibo do anúncio e o pedido de nome e cidade, e
+os dois valem para quase todo mundo que chega. Na fila dos "Meus" não é assim — lá chega desabafo,
+pedido de ajuda e pergunta de posição —, e é por isso que a caixa é **separada** da de lá. Uma caixa
+só o obrigaria a automatizar as duas filas ou nenhuma.
+
+A caixa fica no cartão "Novos: começar a conversa", logo acima do botão, e o rótulo diz as duas
+coisas que ela faz — lição da caixa dos "Meus", que se chamava "Automatizar com IA" e executava as
+REGRAS também, com a IA desligada.
+
+### O que quase virou uma fila parada em silêncio
+
+Três lugares perguntam "esta rodada anda sozinha?": a execução da tecla, a da IA, e **a pergunta da
+cidade**. Os dois primeiros eu teria achado; o terceiro é o que já custou uma rodada parada quando a
+automação dos "Meus" nasceu, e voltaria agora — porque `cidadeConferidaPelaIA` só responde com a
+**IA ligada**, e o automático dos Novos vai rodar quase sempre com ela desligada. A caixa da cidade
+abriria esperando um clique que ninguém ia dar.
+
+`confirmarCidadeSePendente` passou a **não gravar e não perguntar** nesse caso. Não é remendo: a
+regra dele é que nenhuma cidade de palpite vai para o CRM sem confirmação, então não gravar é o
+desfecho certo, e o palpite volta na próxima passada. A linha no Andamento é o que impede isto de
+virar "às vezes pega a cidade".
+
+Por isso a leitura virou uma função só (`rodadaAutomatica()`): três leituras separadas divergem na
+primeira caixa nova. O estado da rodada em curso é `state.auto.automatico`, zerado no `finally` do
+`rodar` — rodada que morre por erro deixaria a próxima andando sozinha sem ninguém ter marcado nada.
+
+**O que continua parando para ele, com o automático ligado:** a tecla "Responder à mão" (por
+definição alguém precisa escrever), a cidade de palpite, e o rascunho da IA, que desde a versão
+anterior nunca envia sozinho.
+
+**Arquivos:** `src/lib/store.js` (`automaticoNovos`, na lista de mescla — chave nova em objeto já
+salvo não alcança quem já usa), `src/panel/panel.js` (`rodadaAutomatica`, `state.auto.automatico`,
+os três pontos de leitura, a guarda da cidade, a caixa e o confirm), `CLAUDE.md` (+2 armadilhas),
+`manifest.json` (1.80.0 → 1.81.0). Quinze suítes e os dois verificadores.
+
+---
+
 ## 2026-09-03 — O rascunho da IA não envia mais sozinho
 
 Ele viu a mensagem sair e cortou: *"retire essa mensagem automática, só no modo IA manda sem eu

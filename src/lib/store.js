@@ -626,6 +626,20 @@ const DEFAULTS = {
      * rodada com o motivo e a confiança da IA.
      */
     automatizarComIA: false,
+
+    /**
+     * **A rodada dos NOVOS anda sozinha** — pedido dele (03/09/2026): *"nos novos as mensagens
+     * raramente saem do contexto, faça um botão para mandar mensagem automática nos novos, um box
+     * de marcar automático ligado"*.
+     *
+     * É uma caixa SEPARADA da de cima de propósito: na chegada o que sai é previsível (o recibo do
+     * anúncio e o pedido de nome e cidade), e na fila dos "Meus" não é — lá chega desabafo, pedido
+     * de ajuda e pergunta de posição, e ele quer olhar. Uma caixa só forçaria a escolher entre
+     * automatizar as duas ou nenhuma.
+     *
+     * Nasce DESLIGADA: caixa que manda mensagem para eleitor real nunca vem marcada de fábrica.
+     */
+    automaticoNovos: false,
     /**
      * Janela em que a rodada NÃO manda de novo para quem já recebeu mensagem nossa.
      *

@@ -342,6 +342,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   nada); o que o caso real mostrou e outra coisa — **propaganda como primeira resposta a um pedido
   de socorro e a resposta errada mesmo quando o texto e inofensivo.**
 
+- **Sao DUAS caixas de automatico, e a pergunta "esta rodada anda sozinha?" tem uma resposta so.**
+  `cfg.automatizarComIA` e a fila dos "Meus"; `cfg.automaticoNovos` e a dos Novos (pedido dele,
+  03/09: *"nos novos as mensagens raramente saem do contexto, faca um botao para mandar mensagem
+  automatica nos novos"*). Separadas de proposito: na chegada o que sai e previsivel (recibo do
+  anuncio + pedido de dados), na fila dos "Meus" chega desabafo e pedido de ajuda. Quem le e
+  **`rodadaAutomatica()`**, um lugar so, porque TRES pontos perguntam isso — a execucao da tecla, a
+  da IA e a pergunta da cidade —, e tres leituras separadas divergem na primeira caixa nova. O
+  estado da rodada em curso e `state.auto.automatico`, zerado no `finally` do `rodar` (rodada que
+  morre por erro deixaria a proxima andando sozinha).
+- **Rodada automatica sem IA travaria na PERGUNTA DA CIDADE.** A caixa espera um clique que ninguem
+  vai dar, e `cidadeConferidaPelaIA` so responde com a IA ligada — que nao e como o automatico dos
+  Novos vai rodar na maior parte das vezes. Hoje `confirmarCidadeSePendente` **nao grava e nao
+  pergunta** nesse caso, com a linha no Andamento. Nao gravar e o desfecho CERTO e nao um remendo:
+  a regra dele e que nenhuma cidade de palpite vai para o CRM sem confirmacao, e o palpite volta na
+  passada seguinte. **Toda pergunta nova que pode abrir dentro da rodada precisa das duas coisas:
+  resposta automatica ou um jeito de nao abrir.**
+
 - **A RODADA DOS NOVOS era um motor a parte, e por isso envelheceu sozinha.** Relato dele
   (03/09/2026): *"o iniciar conversas nao foi atualizado com as regras atuais"*. Estava certo — e a
   distancia era grande: todo o redesenho da chegada (reconhecer de QUAL anuncio, mandar o modelo
