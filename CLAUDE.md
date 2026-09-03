@@ -342,6 +342,27 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   nada); o que o caso real mostrou e outra coisa — **propaganda como primeira resposta a um pedido
   de socorro e a resposta errada mesmo quando o texto e inofensivo.**
 
+- **Rascunho da IA que falha NAO pode parar a rodada — e parou.** Em 03/09/2026 um `auto.motivo`
+  orfao (sobra de uma troca minha) virou `auto is not defined` dentro do caminho do rascunho:
+  `processarRespondido` devolveu `erro`, `percorrerFila` PAROU, e a rodada de 37 contatos encerrou
+  ali. Relato dele: *"parou a rodada, o que nao e pra acontecer"*. A regra ja estava escrita neste
+  arquivo (*"falha de IA nunca para a rodada"*) e este caminho nao a seguia. Hoje a chamada esta
+  dentro de `try`, e a falha vira linha de aviso. **Erro de ambiente PARA a rodada de proposito**
+  (aba trocou, campo de mensagem sumiu); conveniencia que quebra, nao.
+- **`checar-referencias.mjs` NAO pega variavel fora de escopo, e nao da para pegar sem parser.**
+  Tentei: uma passada que acusasse `nome.campo` sem declaracao deu 33 falsos, e o corte que a
+  deixou quieta (nome que aparece uma vez so no arquivo) **nao pegava o caso real** — `auto`
+  aparece dezenas de vezes em `panel.js` (`state.auto`, `salvarAuto`), so nao NAQUELE escopo. Fica
+  registrado para ninguem refazer a tentativa: o que protege e o `try`, nao o verificador. A
+  tentativa deixou dois consertos de verdade no `soCodigo`: as FLAGS da expressao regular agora
+  somem junto com ela (um `i` solto virava falso positivo) e desestruturacao e `for...of` contam
+  como declaracao.
+- **O rascunho da IA pedia o que ja estava no CADASTRO.** Print da Catarina (03/09): *"a IA
+  perguntou nome — o nome dela e Catarina, eu apaguei a parte perguntando"*.
+  `montarContatoRascunho` mandava so a cidade. Hoje manda o cadastro inteiro com o pedido
+  explicito de nao pedir de novo. **O nome vai para a IA SABER que ja o temos, nunca para usar**: a
+  regra de nao chamar a pessoa pelo nome (decisao dele, 10/08) continua no prompt de sistema.
+
 - **Sao DUAS caixas de automatico, e a pergunta "esta rodada anda sozinha?" tem uma resposta so.**
   `cfg.automatizarComIA` e a fila dos "Meus"; `cfg.automaticoNovos` e a dos Novos (pedido dele,
   03/09: *"nos novos as mensagens raramente saem do contexto, faca um botao para mandar mensagem

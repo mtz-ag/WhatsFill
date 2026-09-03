@@ -4805,8 +4805,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
            * automática"*). Ela deixa o texto no campo de mensagem e o contato segue para a caixa
            * de pergunta, onde ele lê e decide — inclusive apagar o rascunho e escrever outro.
            */
-          // Deixa o rascunho no campo de mensagem e SEGUE para a caixa: quem manda é ele.
-          await rascunharParaEle();
+          /**
+           * Deixa o rascunho no campo de mensagem e SEGUE para a caixa: quem manda é ele.
+           *
+           * **O `try` não é decoração.** Sem ele, um defeito aqui dentro vira `resultado: 'erro'`
+           * lá embaixo e `percorrerFila` PARA a rodada — foi exatamente o que aconteceu em
+           * 03/09/2026 (*"× Catarina — auto is not defined"*, e a rodada encerrou ali). Relato
+           * dele: *"e parou a rodada, o que não é pra acontecer"*.
+           *
+           * É a regra que o CLAUDE.md já registra e que este caminho não seguia: **falha de IA
+           * nunca para a rodada.** O rascunho é uma conveniência; a fila é o trabalho.
+           */
+          let rascunho = { enviado: false, motivo: '' };
+          try {
+            rascunho = await rascunharParaEle();
+          } catch (err) {
+            rascunho = { enviado: false, motivo: `falhou: ${err?.message || err}` };
+            registrarNaRodada(nome, 'aviso', `não consegui rascunhar (${rascunho.motivo}) — segui sem`);
+          }
 
           /**
            * Escalar = sair da rodada sem enviar nada.
@@ -4833,7 +4849,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
            * O rascunho, quando existe, já está no campo de mensagem — então ele decide olhando o
            * texto pronto, que era o laço manual que a IA veio encurtar.
            */
-          const porque = auto.motivo ? ` · rascunho automático não saiu: ${auto.motivo}` : '';
+          const porque = rascunho.motivo ? ` · ${rascunho.motivo}` : '';
           const motivoIA = decisaoIA.motivo || 'a IA achou que este é para você';
           // Nome diferente do `sugestao` de fora DE PROPÓSITO: este bloco vive dentro do
           // `if (!sugestao)`, e sombrear a recomendação determinística aqui dentro é armadilha
@@ -8166,7 +8182,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         gabinete: await gabineteLib.paraOPrompt(state.incoming),
         modelo: state.ia.modelo,
         mensagens: state.incoming,
-        campos: { Cidade: valueNamed('Cidade') },
+        /**
+         * **O cadastro inteiro, e não só a cidade.**
+         *
+         * Anotação dele (03/09/2026, print da Catarina): *"a IA perguntou nome — o nome dela é
+         * Catarina, eu apaguei a parte perguntando"*. O nome estava no CRM; a IA não o recebia, e
+         * pedir o que já se tem é o jeito mais rápido de a pessoa achar que ninguém leu nada.
+         *
+         * O nome vai para a IA **saber que já o tem**, não para usar: a regra de não chamar a
+         * pessoa pelo nome continua no prompt de sistema, e é decisão dele de 10/08.
+         */
+        campos: { Nome: valueNamed('Nome') || state.contact?.name || '', Cidade: valueNamed('Cidade') },
       });
     } catch (err) {
       return { enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };

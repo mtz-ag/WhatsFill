@@ -37,6 +37,8 @@ const GLOBAIS = new Set([
   'URLSearchParams', 'MutationObserver', 'IntersectionObserver', 'ResizeObserver', 'Event',
   'CustomEvent', 'KeyboardEvent', 'MouseEvent', 'AbortController', 'DOMParser', 'Node',
   'HTMLElement', 'Element', 'getComputedStyle', 'matchMedia', 'localStorage', 'sessionStorage',
+  'XMLHttpRequest', 'WebSocket', 'Notification', 'Image', 'Worker', 'TextEncoder', 'TextDecoder',
+  'NodeFilter', 'NodeList', 'Text', 'Range', 'Selection',
   'navigator', 'location', 'history', 'screen', 'performance', 'crypto', 'atob', 'btoa',
   'TextEncoder', 'TextDecoder', 'AudioContext', 'webkitAudioContext',
   'ArrayBuffer', 'DataView', 'Uint8Array', 'Uint16Array', 'Int8Array', 'Float32Array',
@@ -116,7 +118,16 @@ function soCodigo(src) {
       if (c === '\\') { saida += '  '; i++; continue; } // escape: pula o par
       if (c === '[') dentroDeClasse = true;
       else if (c === ']') dentroDeClasse = false;
-      else if (c === '/' && !dentroDeClasse) { estado = 'codigo'; saida += ' '; continue; }
+      else if (c === '/' && !dentroDeClasse) {
+        estado = 'codigo';
+        saida += ' ';
+        /**
+         * **As FLAGS somem junto com a expressão.** `/\d+/i.test(x)` deixava um `i` solto seguido
+         * de ponto, e as duas passadas o liam como variável — cinco falsos, todos chamados `i`.
+         */
+        while (i + 1 < src.length && /[a-z]/.test(src[i + 1])) { saida += ' '; i++; }
+        continue;
+      }
       saida += c === '\n' ? c : ' ';
       continue;
     }
@@ -175,6 +186,24 @@ function nomesDeclarados(src) {
   }
   // arrow de um parâmetro sem parênteses: x => …
   for (const m of src.matchAll(/(^|[^\w$.])([A-Za-z_$][\w$]*)\s*=>/g)) nomes.add(m[2]);
+
+  /**
+   * **Desestruturação e `for…of`** — as formas que a passada dos ACESSOS obrigou a cobrir.
+   *
+   * A passada das chamadas vivia sem elas porque quase ninguém CHAMA o que desestruturou; a dos
+   * acessos usa `x.campo` o tempo todo (`const { a, b } = …; a.nome`), e sem isto ela acusava 47
+   * falsos de uma vez — número que ensina a ignorar a ferramenta.
+   */
+  const ligacoes = [
+    /(?:const|let|var)\s*\{([^}]*)\}/g,      // const { a, b: c } = …
+    /(?:const|let|var)\s*\[([^\]]*)\]/g,     // const [a, b] = …
+    /for\s*\(\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s+(?:of|in)/g,
+  ];
+  for (const re of ligacoes) {
+    for (const m of src.matchAll(re)) {
+      for (const ident of (m[1] || '').matchAll(/[A-Za-z_$][\w$]*/g)) nomes.add(ident[0]);
+    }
+  }
 
   return nomes;
 }

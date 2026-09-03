@@ -634,13 +634,36 @@ export function montarContatoRascunho({ mensagens = [], campos = {} } = {}) {
     .map((m, i) => `[${i + 1}] ${umaLinha(m, 4000)}`)
     .join('\n\n');
 
-  const cidade = campos?.Cidade ? `A pessoa é de ${campos.Cidade}.` : '';
+  /**
+   * **O que já se sabe sobre a pessoa — e o pedido explícito de não perguntar de novo.**
+   *
+   * Anotação dele (03/09/2026, print da Catarina): *"a IA perguntou nome — o nome dela é Catarina,
+   * eu apaguei a parte perguntando"*. O nome estava no cadastro e este bloco só mandava a cidade,
+   * então a IA não tinha como saber. Pedir o que já se tem é o jeito mais rápido de a pessoa achar
+   * que ninguém leu nada — e ele teve que editar o rascunho à mão para tirar.
+   *
+   * O nome entra para a IA **saber que já o tem**; usá-lo continua proibido pela regra do sistema
+   * (o cadastro erra o nome com frequência alta demais).
+   */
+  const sabidos = Object.entries(campos || {})
+    .filter(([, v]) => v != null && String(v).trim() !== '')
+    .map(([k, v]) => `${k}: ${String(v).trim()}`);
+
+  const cadastro = sabidos.length
+    ? [
+        `Já temos no cadastro desta pessoa — ${sabidos.join(' · ')}.`,
+        'NÃO peça nada que já esteja nesta linha. Pedir de novo dá a impressão de que ninguém leu',
+        'a conversa. (O nome está aqui para você saber que já o temos: continua proibido usá-lo no',
+        'texto.)',
+      ].join('\n')
+    : '';
+
   return [
     'Mensagens recebidas desta pessoa, da mais antiga para a mais recente:',
     '',
     conversa || '(nada)',
     '',
-    cidade,
+    cadastro,
     'Escreva o rascunho da resposta.',
   ]
     .filter(Boolean)

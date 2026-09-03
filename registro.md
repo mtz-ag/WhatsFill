@@ -32,6 +32,58 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-03 — A rodada parou por um `auto` órfão
+
+No log da print, entre 37 enviados: `× Catarina — auto is not defined`, e a rodada encerrou ali.
+Relato dele: *"parou a rodada, o que não é pra acontecer"*.
+
+**Bug meu, da versão anterior.** Ao trocar `const auto = await tentarRascunhoAutomatico()` por
+`await rascunharParaEle()`, deixei um `auto.motivo` trinta linhas abaixo. Sintaxe válida, nenhuma
+função faltando, os dois verificadores em silêncio — e o erro só aparece ao rodar.
+
+Duas coisas foram consertadas, e a segunda é a que importa:
+
+1. o `auto.motivo` virou `rascunho.motivo`;
+2. **a chamada do rascunho está dentro de `try`.** A regra já estava escrita no `CLAUDE.md` —
+   *"falha de IA nunca para a rodada"* — e este caminho não a seguia. O rascunho é uma
+   conveniência; a fila é o trabalho. Erro de AMBIENTE continua parando a rodada de propósito (a
+   aba trocou de atendimento, o campo de mensagem não apareceu): ali seguir seria agir às cegas.
+
+### A tentativa de fazer o verificador pegar isso — e por que ela não deu
+
+Escrevi uma passada nova em `checar-referencias.mjs` que acusaria `nome.campo` sem declaração.
+Deu **33 falsos positivos** (`for (const item of ...)`, `.map((op) => ...)`, e o `i` de flag de
+expressão regular). O corte que a deixou quieta — nome que aparece uma vez só no arquivo — **não
+pegava o caso real**: `auto` aparece dezenas de vezes em `panel.js` (`state.auto`, `salvarAuto`),
+só não naquele escopo.
+
+Joguei a passada fora. Pegar isso de verdade exige análise de escopo, e análise de escopo exige um
+parser — que este projeto não tem por decisão (sem dependência). Fica registrado para ninguém
+refazer a tentativa. **O que protege é o `try`, não o verificador.**
+
+A tentativa deixou dois consertos de verdade no `soCodigo`, que valem para a passada que já
+existia: as **flags** da expressão regular agora somem junto com ela (deixavam um `i` solto), e
+**desestruturação e `for...of`** passaram a contar como declaração.
+
+### O rascunho pedia o nome que já estava no CRM
+
+*"a IA perguntou nome — o nome dela é Catarina, eu apaguei a parte perguntando"*.
+
+`montarContatoRascunho` mandava só a cidade para a IA. O nome estava no cadastro e ela não tinha
+como saber — e pedir o que já se tem é o jeito mais rápido de a pessoa achar que ninguém leu nada.
+Agora vai o cadastro inteiro, com o pedido explícito de não pedir de novo.
+
+**O nome vai para a IA saber que já o temos, nunca para usar:** a regra de não chamar a pessoa pelo
+nome (decisão dele, 10/08 — o cadastro erra o nome com frequência alta demais) continua no prompt
+de sistema, e está dita de novo na linha do cadastro.
+
+**Arquivos:** `src/panel/panel.js` (o `try`, o `rascunho.motivo`, o cadastro que vai para a IA),
+`src/lib/ia.js` (`montarContatoRascunho`), `tools/checar-referencias.mjs` (flags de regex,
+desestruturação, `for...of`, mais globais), `CLAUDE.md` (+3 armadilhas), `manifest.json` (1.81.0 →
+1.82.0). Quinze suítes e os dois verificadores.
+
+---
+
 ## 2026-09-03 — "Automático ligado" nos Novos
 
 Pedido dele: *"nos novos as mensagens raramente saem do contexto, faça um botão para mandar mensagem
