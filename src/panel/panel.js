@@ -4713,18 +4713,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
            * sair sozinho — decisão dele (20/08/2026), com o padrão sendo as respostas prontas e o
            * rascunho como exceção.
            *
-           * `tentarRascunhoAutomatico` devolve `enviado: false` em tudo que não passa pelas quatro
-           * travas, e nesse caso o contato segue para a triagem exatamente como seguia antes: o
-           * caminho de falha é o comportamento antigo, não um caminho novo.
+           * `rascunharParaEle` **nunca envia** (03/09/2026, pedido dele: *"retire essa mensagem
+           * automática"*). Ela deixa o texto no campo de mensagem e o contato segue para a caixa
+           * de pergunta, onde ele lê e decide — inclusive apagar o rascunho e escrever outro.
            */
-          const auto = await tentarRascunhoAutomatico();
-          if (auto.enviado) {
-            const fechou = await page.clickConcluir();
-            if (!fechou.ok) {
-              return { nome, resultado: 'enviado', parar: true, motivo: `rascunho da IA enviado, mas ${fechou.reason}` };
-            }
-            return { nome, resultado: 'enviado', motivo: `rascunho da IA enviado sozinho (${auto.motivo})` };
-          }
+          // Deixa o rascunho no campo de mensagem e SEGUE para a caixa: quem manda é ele.
+          await rascunharParaEle();
 
           /**
            * Escalar = sair da rodada sem enviar nada.
@@ -8053,32 +8047,26 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
   }
 
-  // ---- aba Config --------------------------------------------------------
   /**
-   * A avaliação de contexto por IA — o que separa esta versão do WhatsFill normal.
+   * Rascunha com a IA e **deixa o texto no campo de mensagem, para ele mandar.**
    *
-   * Fica no TOPO da Config de propósito: é o que muda o comportamento do painel de forma menos
-   * óbvia, e a primeira pergunta de quem abre esta aba é "isto está ligado?".
+   * **Esta função ENVIAVA sozinha até 03/09/2026.** Era o único ponto do projeto em que texto
+   * gerado por IA chegava a um eleitor sem ninguém ler, protegido por quatro travas (ligado na
+   * Config, zero avisos da revisão, a IA não ter pedido revisão, confiança ≥ 90%).
+   *
+   * As quatro travas funcionaram — o log mostrava *"rascunho da IA enviado sozinho (confiança 92%,
+   * sem avisos)"*. Ele viu a mensagem sair e cortou: *"retire essa mensagem automática, só no modo
+   * IA manda sem eu escolher"*. É o desfecho certo: trava boa não transforma texto inventado em
+   * texto revisado, e mensagem de WhatsApp não volta.
+   *
+   * O que sobrou é o laço que ele já fazia à mão — pedir uma resposta a uma IA, ler, ajustar,
+   * mandar — sem o copiar e colar. **Quem aperta enviar é ele.**
+   *
+   * @returns {Promise<{enviado:boolean, motivo:string}>} `enviado` é sempre falso: a rodada segue
+   *   para a caixa de pergunta, que é onde ele escolhe.
    */
-  /**
-   * Tenta mandar o rascunho da IA **sem ele ler antes** — e recusa em quase tudo.
-   *
-   * Só é chamada quando a IA escalou, ou seja, quando nenhuma resposta pronta serve. As prontas
-   * continuam sendo o caminho normal (decisão dele: *"em geral utilizar as mensagens prontas e
-   * suas variações"*).
-   *
-   * **Este é o único ponto do projeto em que texto gerado por IA chega a um eleitor sem revisão
-   * humana**, e mensagem de WhatsApp não volta. Por isso tudo aqui é escrito para dizer NÃO:
-   * quem decide é `ia.podeEnviarSozinho` (puro e testado), que exige as quatro travas juntas —
-   * ligado na Config, zero avisos da revisão, a IA não ter pedido revisão, e confiança acima do
-   * limiar. Qualquer erro de rede ou formato também cai em não.
-   *
-   * @returns {Promise<{enviado:boolean, motivo:string}>}
-   */
-  async function tentarRascunhoAutomatico() {
-    if (!state.ia?.ligada || !state.ia?.enviarRascunhoAuto) {
-      return { enviado: false, motivo: '' }; // desligado: nem gasta chamada de IA
-    }
+  async function rascunharParaEle() {
+    if (!state.ia?.ligada) return { enviado: false, motivo: '' };
     if (!state.incoming.length) return { enviado: false, motivo: 'o contato não escreveu nada' };
     if (state.session?.expired) return { enviado: false, motivo: 'janela de 24h vencida' };
 
@@ -8096,33 +8084,34 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return { enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };
     }
 
-    const veredito = iaLib.podeEnviarSozinho({ rascunho, ligado: true });
-    if (!veredito.pode) return { enviado: false, motivo: veredito.motivo };
+    const texto = String(rascunho?.texto || '').trim();
+    if (!texto) return { enviado: false, motivo: 'a IA não escreveu nada' };
 
-    // Passou nas quatro travas. Daqui para baixo é envio de verdade, para gente de verdade.
+    // `setComposerText`, NUNCA `sendText`: a diferença entre as duas é a decisão dele.
     try {
-      await page.sendText(rascunho.texto);
+      await page.setComposerText(texto);
     } catch (err) {
-      return { enviado: false, motivo: `o envio falhou: ${err?.message || err}` };
+      return { enviado: false, motivo: `não consegui pôr o rascunho no campo: ${err?.message || err}` };
     }
-    state.lastSendAt = Date.now();
 
     /**
-     * O texto ENVIADO vai inteiro para o log da rodada.
-     *
-     * Não é enfeite: é a única forma de ele auditar depois o que a IA falou em nome do mandato.
-     * Registro parcial aqui seria pior que nenhum — daria a impressão de auditoria sem permitir
-     * auditar.
+     * Os avisos da revisão continuam aparecendo, e continuam **sem esconder o texto**: esconder
+     * tiraria a decisão dele, que é justamente o que este caminho passou a existir para devolver.
      */
-    registrarNaRodada(state.contact?.name || 'contato', 'aviso', `IA enviou sozinha: "${rascunho.texto}"`);
-    return { enviado: true, motivo: veredito.motivo };
+    const avisos = iaLib.revisarRascunho(rascunho)?.avisos || [];
+    registrarNaRodada(
+      state.contact?.name || 'contato',
+      'refinar',
+      `rascunho da IA no campo de mensagem, para você mandar${avisos.length ? ` — confira: ${avisos.join('; ')}` : ''}`
+    );
+    return { enviado: false, motivo: 'rascunho pronto no campo de mensagem' };
   }
 
   /**
    * A avaliação por IA deste contato.
    *
    * **Esta função foi PERDIDA no merge `c7a6d59` e restaurada em 01/09.** O auto-merge do git a
-   * removeu junto com `tentarRascunhoAutomatico`, e ninguém notou porque `checar-modulos.mjs` só
+   * removeu junto com o rascunho automatico, e ninguém notou porque `checar-modulos.mjs` só
    * vê sintaxe: o arquivo continuava válido, com duas chamadas para funções que não existiam.
    *
    * A lição virou armadilha no `CLAUDE.md`: naquele merge eu conferi que nada de PRODUÇÃO se
@@ -8201,37 +8190,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
 
     /**
-     * O envio automático do rascunho — a única opção do painel que deixa a IA falar em nome dele.
+     * **O que a IA faz e o que ela NÃO faz** — a fronteira, escrita onde ele decide sobre ela.
      *
-     * Só aparece com a IA ligada, e o aviso vem ANTES do controle: quem lê de cima para baixo
-     * encontra o risco antes do interruptor, não depois.
+     * Aqui havia o interruptor que deixava a IA escrever e enviar sozinha, com quatro travas.
+     * Elas funcionaram e a mensagem saiu mesmo assim; ele tirou em 03/09: *"retire essa mensagem
+     * automática, só no modo IA manda sem eu escolher"*.
      */
     if (cfg.ligada) {
       body.append(
         h('div', { class: 'wf-block' },
-          'ATENÇÃO — o que segue é diferente de tudo o mais nesta extensão. Ligado, a IA ESCREVE ' +
-            'uma resposta e ENVIA sozinha, sem você ler antes. Só acontece quando nenhuma ' +
-            'resposta pronta serve, e só se passar em quatro travas: a revisão não pode levantar ' +
-            'nada (marcador, promessa, menção a cesta/remédio/dinheiro/emprego), a própria IA não ' +
-            'pode ter pedido revisão, e a confiança dela precisa ficar acima de ' +
-            `${Math.round(iaLib.CONFIANCA_RASCUNHO_AUTO * 100)}%. Mensagem de WhatsApp não volta — ` +
-            'e o texto enviado fica no log da rodada para você conferir depois.')
-      );
-      body.append(
-        checkbox(
-          'Deixar a IA ESCREVER E ENVIAR quando nenhuma resposta pronta servir',
-          !!cfg.enviarRascunhoAuto,
-          async (v) => {
-            await salvarIA({ enviarRascunhoAuto: v });
-            setStatus(
-              v
-                ? 'Envio automático de rascunho LIGADO. O texto de cada envio fica no log da rodada.'
-                : 'Envio automático de rascunho desligado — o rascunho volta a só aparecer para você.',
-              v ? 'err' : 'ok'
-            );
-            renderAll();
-          }
-        )
+          'A IA ESCOLHE entre as suas respostas prontas; ela nunca escreve o que sai. Quando ' +
+            'nenhuma pronta serve, ela escala e o rascunho dela cai no campo de mensagem para ' +
+            'VOCÊ ler, ajustar e mandar.'),
+        h('div', { class: 'wf-origin' },
+          'Até a versão 1.79 havia aqui uma caixa que deixava a IA escrever E ENVIAR sozinha, ' +
+            'com quatro travas. As travas funcionavam e a mensagem saía mesmo assim — você tirou ' +
+            'em 03/09: "retire essa mensagem automática".')
       );
     }
 

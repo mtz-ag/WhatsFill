@@ -40,20 +40,6 @@ export const MODELO_PADRAO = 'claude-haiku-4-5';
 export const CONFIANCA_MINIMA = 0.7;
 
 /**
- * O limiar para o rascunho sair **sozinho**, sem ele ler antes.
- *
- * Alto e separado do `CONFIANCA_MINIMA` de propósito. Os dois números respondem perguntas
- * diferentes e têm consequências diferentes: errar a escolha entre respostas prontas manda um
- * texto que ELE escreveu para a pessoa errada — chato, recuperável. Errar aqui manda uma frase
- * **inventada** em nome de um mandato, e mensagem de WhatsApp não volta.
- *
- * Decidido pelo Thiago em 20/08/2026, ciente do risco, depois de eu apontá-lo. O desenho anterior
- * era "a IA nunca envia o que ela escreveu"; a autoavaliação da IA sozinha é garantia fraca, então
- * ela é a MENOS importante das travas em `podeEnviarSozinho` — as duras estão lá embaixo.
- */
-export const CONFIANCA_RASCUNHO_AUTO = 0.9;
-
-/**
  * Respostas que a IA pode SUGERIR mas nunca disparar sozinha.
  *
  * São as de risco jurídico (Lei 9.504/97): negar ajuda financeira e negar pedido de emprego.
@@ -705,7 +691,7 @@ function umaLinha(texto, limite = 400) {
 /**
  * Lê o que a IA devolveu no rascunho e junta com a revisão heurística.
  *
- * O esquema garante JSON válido; quem decide se dá para usar é isto e `podeEnviarSozinho`.
+ * O esquema garante JSON válido; quem decide se dá para usar é isto.
  * `avisos` sai de `revisarRascunho` (texto) mais `precisaDeRevisao` (a própria IA levantando a
  * mão) — os dois no mesmo lugar, porque quem chama trata os dois igual: qualquer aviso, humano lê.
  *
@@ -740,52 +726,6 @@ export function validarRascunho(bruto) {
     avisos,
     precisaDeRevisao,
   };
-}
-
-/**
- * O rascunho pode sair **sem ninguém ler antes**?
- *
- * Esta é a função mais perigosa do projeto: é o único ponto em que texto **gerado por IA** chega a
- * um eleitor em nome de um mandato sem revisão humana. Mensagem de WhatsApp não volta.
- *
- * Por isso a resposta padrão é **não**, e cada `true` exige uma razão. As travas, da mais forte
- * para a mais fraca:
- *
- * 1. **Desligado por padrão.** Sem `ligado` explícito na Config, nada sai sozinho — e é assim que
- *    a extensão se comporta em qualquer instalação nova.
- * 2. **Qualquer aviso bloqueia.** `revisarRascunho` já levantava a mão para marcador esquecido,
- *    promessa de entrega, menção a bem/benefício (Lei 9.504/97) e texto longo. Ali eram avisos
- *    ao lado do texto; aqui viram **veto**. É a trava mais valiosa, porque não depende de a IA
- *    ser honesta sobre si mesma.
- * 3. **A IA pedindo revisão bloqueia** (entra em `avisos` por `validarRascunho`).
- * 4. **Confiança acima do limiar.** A mais fraca das quatro — autoavaliação de modelo não é
- *    medida confiável — e por isso a última, nunca a única.
- *
- * Pura e testada de propósito: é a linha entre "a IA sugere" e "a IA fala pelo parlamentar".
- *
- * @returns {{pode:boolean, motivo:string}}
- */
-export function podeEnviarSozinho({ rascunho, ligado = false, limiar = CONFIANCA_RASCUNHO_AUTO } = {}) {
-  if (!ligado) return { pode: false, motivo: 'envio automático de rascunho está desligado' };
-  if (!rascunho) return { pode: false, motivo: 'não há rascunho' };
-
-  const texto = String(rascunho.texto || '').trim();
-  if (!texto) return { pode: false, motivo: 'o rascunho veio vazio' };
-
-  const avisos = rascunho.avisos || [];
-  if (avisos.length) {
-    return { pode: false, motivo: `a revisão levantou: ${avisos.join(' · ')}` };
-  }
-
-  const confianca = Number(rascunho.confianca) || 0;
-  if (confianca < limiar) {
-    return {
-      pode: false,
-      motivo: `confiança ${(confianca * 100).toFixed(0)}% abaixo do mínimo de ${(limiar * 100).toFixed(0)}%`,
-    };
-  }
-
-  return { pode: true, motivo: `confiança ${(confianca * 100).toFixed(0)}%, sem avisos` };
 }
 
 // ---------------------------------------------------------------------------

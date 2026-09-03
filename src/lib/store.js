@@ -902,19 +902,6 @@ const DEFAULTS = {
     dossieAtivo: false,
     regras: '',
     /**
-     * O rascunho escrito pela IA pode ser ENVIADO sem ele ler antes.
-     *
-     * **Nasce desligado, e a decisão de ligar é dele** (20/08/2026, ciente do risco). É o único
-     * caminho do projeto em que texto gerado por IA chega a um eleitor sem revisão humana — e
-     * mensagem de WhatsApp não volta.
-     *
-     * Ligar isto **não** basta para uma frase sair sozinha: `ia.podeEnviarSozinho` ainda exige
-     * zero avisos da revisão (marcador, promessa, bem/benefício — Lei 9.504/97), a própria IA não
-     * ter pedido revisão, e confiança acima de `CONFIANCA_RASCUNHO_AUTO`. Este campo é a primeira
-     * de quatro travas, não a única.
-     */
-    enviarRascunhoAuto: false,
-    /**
      * Teto de gasto da API, em DÓLARES por mês. `0` desliga o teto.
      *
      * **A assinatura Claude Pro/Max não cobre a API** — são faturas separadas, e cada chamada

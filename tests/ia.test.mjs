@@ -14,7 +14,6 @@ import {
   montarRequisicaoRascunho,
   revisarRascunho,
   validarRascunho,
-  podeEnviarSozinho,
   vaiCachear,
   tokensAproximados,
   CACHE_MINIMO_TOKENS,
@@ -23,7 +22,6 @@ import {
   podeGastar,
   mesDe,
   PRECOS_USD_POR_MTOK,
-  CONFIANCA_RASCUNHO_AUTO,
   montarSistema,
   montarContato,
   montarRequisicao,
@@ -182,12 +180,11 @@ grupo('rascunho: a conversa longa entra inteira — é o caso de uso');
 
   const req = montarRequisicaoRascunho({ sistema: 'S', contato: 'C', modelo: 'claude-opus-5' });
   check(req.system[0].cache_control?.type === 'ephemeral', 'o sistema do rascunho também é cacheado');
-  // Passou a ter esquema em 20/08/2026: sem um numero devolvido pela IA nao ha como aplicar
-  // limiar, e sem limiar nao ha envio automatico. Ver podeEnviarSozinho.
-  check(!!req.output_config, 'rascunho agora vem com esquema, para ter confiança');
+  // O esquema traz a confianca e o `precisaDeRevisao`, que hoje viram AVISO na tela dele -- o
+  // envio automatico saiu em 03/09, mas os dois numeros continuam servindo para ele decidir.
+  check(!!req.output_config, 'rascunho vem com esquema, para ter confiança');
   check(req.max_tokens >= 2048, 'folga para o pensamento do Opus 5 caber antes do texto');
-  // Único caminho em que uma frase gerada chega a um eleitor sem ninguém ler: aqui não se
-  // economiza esforço. O texto continua curto pelo prompt, não pelo teto.
+  // O rascunho e o que ele vai ler e mandar: nao se economiza esforco aqui.
   check(req.output_config.effort === 'medium', 'rascunho não usa o esforço mais barato');
 }
 
@@ -212,64 +209,28 @@ grupo('rascunho: a revisão levanta a mão, mas nunca esconde o texto');
 
 
 // ---------------------------------------------------------------------------
-// A trava do envio automatico de rascunho
+// O que a revisao do rascunho levanta
 //
-// Este e o unico ponto do projeto em que texto GERADO por IA chega a um eleitor sem revisao
-// humana. Decisao do Thiago (20/08/2026), tomada depois de eu apontar o risco. Cada assercao aqui
-// e uma trava contra um jeito especifico de uma frase inventada sair em nome do mandato.
+// **O envio automatico foi RETIRADO em 03/09/2026**, a pedido dele: *"retire essa mensagem
+// automatica, so no modo IA manda sem eu escolher"*. Era o unico ponto do projeto em que texto
+// gerado por IA chegava a um eleitor sem ninguem ler; as quatro travas funcionavam e a mensagem
+// saia mesmo assim.
+//
+// O que estas asercoes protegem agora e o AVISO: o rascunho cai no campo de mensagem e a revisao
+// diz o que ele precisa olhar antes de apertar enviar. Nenhuma delas envia coisa nenhuma.
 // ---------------------------------------------------------------------------
-
-grupo('podeEnviarSozinho: desligado por padrao');
-{
-  const bom = { texto: 'Obrigado pela mensagem!', confianca: 1, avisos: [] };
-  check(!podeEnviarSozinho({ rascunho: bom }).pode, 'sem `ligado`, nao envia');
-  check(!podeEnviarSozinho({ rascunho: bom, ligado: false }).pode, 'ligado:false idem');
-  check(podeEnviarSozinho({ rascunho: bom, ligado: true }).pode, 'com tudo ok e ligado, envia');
-}
-
-grupo('podeEnviarSozinho: QUALQUER aviso veta');
-{
-  // A trava mais valiosa: nao depende de a IA ser honesta sobre si mesma.
-  const base = { texto: 'Oi', confianca: 1 };
-  for (const aviso of [
-    'sobrou marcador no texto — troque antes de mandar',
-    'parece prometer entregar alguma coisa — confira antes de mandar',
-    'cita bem ou benefício (cesta, remédio, dinheiro, emprego) — a lei eleitoral proíbe prometer',
-    'a própria IA pediu revisão humana',
-  ]) {
-    const r = podeEnviarSozinho({ rascunho: { ...base, avisos: [aviso] }, ligado: true });
-    check(!r.pode, `vetado por: ${aviso.slice(0, 40)}…`);
-  }
-}
-
-grupo('podeEnviarSozinho: confianca abaixo do limiar veta');
-{
-  const r = (c) => podeEnviarSozinho({ rascunho: { texto: 'Oi', confianca: c, avisos: [] }, ligado: true });
-  check(!r(0.5).pode, '50% nao passa');
-  check(!r(0.89).pode, '89% nao passa (limiar e 0,9)');
-  check(r(0.9).pode, '90% passa');
-  check(CONFIANCA_RASCUNHO_AUTO > 0.7, 'o limiar do envio automatico e MAIOR que o da decisao');
-}
-
-grupo('podeEnviarSozinho: texto vazio nunca sai');
-{
-  check(!podeEnviarSozinho({ rascunho: { texto: '', confianca: 1, avisos: [] }, ligado: true }).pode, 'vazio');
-  check(!podeEnviarSozinho({ rascunho: { texto: '   ', confianca: 1, avisos: [] }, ligado: true }).pode, 'so espaco');
-  check(!podeEnviarSozinho({ ligado: true }).pode, 'sem rascunho nenhum');
-}
 
 grupo('validarRascunho: a IA pedindo revisao vira aviso');
 {
   const r = validarRascunho({ texto: 'Boa tarde! Recebemos sua mensagem.', confianca: 0.95, precisaDeRevisao: true });
   check(r.avisos.some((a) => /revisão humana/.test(a)), 'entra em avisos');
-  check(!podeEnviarSozinho({ rascunho: r, ligado: true }).pode, 'e por isso nao envia sozinho');
+  check(r.texto.length > 0, 'e o texto continua indo para o campo de mensagem, com o aviso junto');
 }
 
 grupo('validarRascunho: precisaDeRevisao ausente = SIM, por seguranca');
 {
   const r = validarRascunho({ texto: 'Oi', confianca: 1 });
   check(r.precisaDeRevisao === true, 'campo ausente nao vira permissao');
-  check(!podeEnviarSozinho({ rascunho: r, ligado: true }).pode, 'nao envia');
 }
 
 grupo('validarRascunho: promessa proibida bloqueia mesmo com confianca 1');
@@ -280,15 +241,13 @@ grupo('validarRascunho: promessa proibida bloqueia mesmo com confianca 1');
     confianca: 1,
     precisaDeRevisao: false,
   });
-  check(r.avisos.length > 0, 'a revisao pegou');
-  check(!podeEnviarSozinho({ rascunho: r, ligado: true }).pode, 'e o envio automatico foi vetado');
+  check(r.avisos.length > 0, 'a revisao pegou -- e o aviso aparece na linha do Andamento');
 }
 
 grupo('validarRascunho: resposta ilegivel nunca vira envio automatico');
 {
   const r = validarRascunho('isto nao e json');
   check(r.confianca === 0, 'sem esquema, confianca zero');
-  check(!podeEnviarSozinho({ rascunho: r, ligado: true }).pode, 'entao nao sai sozinho');
   check(r.texto === 'isto nao e json', 'mas o texto continua servindo de rascunho para ele ler');
 }
 

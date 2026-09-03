@@ -32,6 +32,42 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-03 — O rascunho da IA não envia mais sozinho
+
+Ele viu a mensagem sair e cortou: *"retire essa mensagem automática, só no modo IA manda sem eu
+escolher"*. No log da rodada, na print:
+
+> ⚠ Gabinete Deputado Capitão Martim — IA enviou sozinha: "Opa! Que legal você acompanhando! Sim,
+> está sendo um grande movimento aqui no RS. Obrigado por estar junto nessa caminhada!"
+> ✓ Gabinete Deputado Capitão Martim — rascunho da IA enviado sozinho (confiança 92%, sem avisos)
+
+**As quatro travas funcionaram.** Estava ligado na Config, a revisão não levantou nada, a IA não
+pediu revisão, e a confiança foi 92% (o limiar era 90%). O texto até era razoável. E saiu assim
+mesmo, sem ninguém ler, em nome do mandato.
+
+É a lição que eu não tinha: **trava boa não transforma texto inventado em texto revisado.** Ela
+reduz a frequência do erro; não muda o que a coisa é. E mensagem de WhatsApp não volta.
+
+`tentarRascunhoAutomatico` virou `rascunharParaEle`: rascunha, põe o texto no campo de mensagem com
+`setComposerText` — **nunca** `sendText` — e devolve `enviado: false` sempre, então a rodada segue
+para a caixa de pergunta, onde ele lê, ajusta ou apaga. Os avisos da revisão vão para a linha do
+Andamento, e continuam **sem esconder o texto**: esconder tiraria a decisão dele, que é justamente
+o que este caminho passou a existir para devolver.
+
+**Apaguei junto** `ia.podeEnviarSozinho`, `CONFIANCA_RASCUNHO_AUTO`, a chave `enviarRascunhoAuto` do
+armazenamento e a caixa da Config — com os testes que os cobriam. Deixar a função de pé sem gatilho
+é a armadilha do `pedido-emprego`, e esta em especial é a que alguém religa sem querer.
+
+O que sobrou é o laço que ele já fazia à mão — pedir uma resposta a uma IA, ler, ajustar, mandar —
+sem o copiar e colar. **Quem aperta enviar é ele.**
+
+**Arquivos:** `src/panel/panel.js` (`rascunharParaEle`, o ponto de chamada, a Config),
+`src/lib/ia.js` (−`podeEnviarSozinho`, −`CONFIANCA_RASCUNHO_AUTO`), `src/lib/ia-cliente.js`,
+`src/lib/store.js` (−`enviarRascunhoAuto`), `tests/ia.test.mjs`, `CLAUDE.md`, `manifest.json`
+(1.79.0 → 1.80.0). Quinze suítes e os dois verificadores.
+
+---
+
 ## 2026-09-03 — Quarta leva: o anúncio que respondia para sempre
 
 Oito anotações. Seis viraram conserto; duas continuam com ele.

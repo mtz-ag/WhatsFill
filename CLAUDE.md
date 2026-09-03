@@ -1157,19 +1157,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   digitou (duas grafias = duas etiquetas para o mesmo município). Confiança baixa, JSON ilegível e
   nome de fora viram `incerto`, que **não grava e não recusa**: recusa é decisão dele, e guardar
   "não é Canoas" porque o modelo ficou em 60% seria transformar dúvida em fato.
-- **O rascunho pode ENVIAR sozinho, e é a única coisa do projeto que faz isso.** Decisão dele
-  (20/08/2026), tomada depois de eu apontar o risco: é o único caminho em que texto **gerado** por
-  IA chega a um eleitor sem revisão humana, em nome de um mandato, e mensagem de WhatsApp não
-  volta. Só acontece quando a IA **escala** (nenhuma resposta pronta serve) — as prontas continuam
-  sendo o caminho normal. Quem decide é `ia.podeEnviarSozinho`, puro e testado, e ele exige as
-  **quatro travas juntas**: (1) `ia.enviarRascunhoAuto` ligado na Config, que nasce desligado;
-  (2) **zero avisos** de `revisarRascunho` — marcador, promessa de entrega, menção a
-  cesta/remédio/dinheiro/emprego (Lei 9.504/97), texto longo; (3) a IA não ter marcado
-  `precisaDeRevisao` (ausente conta como SIM); (4) confiança ≥ `CONFIANCA_RASCUNHO_AUTO` (0,9,
-  maior que o 0,7 da decisão). A trava (2) é a mais valiosa porque **não depende de a IA ser
-  honesta sobre si mesma**; a (4) é a mais fraca e por isso nunca é a única. Qualquer falha de
-  rede ou formato também vira "não envia". **O texto enviado vai inteiro para o log da rodada** —
-  é a única forma de auditar depois o que a IA falou em nome do mandato.
+- **O rascunho da IA NUNCA envia sozinho — retirado em 03/09/2026, a pedido dele.** Existia o
+  caminho do envio automatico (decisao dele de 20/08), com quatro travas: ligado na Config, zero
+  avisos de `revisarRascunho`, a IA nao ter pedido revisao, e confianca >= 0,9. **As quatro
+  funcionaram e a mensagem saiu mesmo assim** — o log dizia *"rascunho da IA enviado sozinho
+  (confianca 92%, sem avisos)"*, ele viu e cortou: *"retire essa mensagem automatica, so no modo IA
+  manda sem eu escolher"*. Licao que fica: **trava boa nao transforma texto inventado em texto
+  revisado**; o que ela faz e reduzir a frequencia do erro, e mensagem de WhatsApp nao volta. Hoje
+  `rascunharParaEle` usa `setComposerText` e **nunca** `sendText`, e a rodada segue para a caixa,
+  onde ele escolhe. `ia.podeEnviarSozinho`, `CONFIANCA_RASCUNHO_AUTO` e a caixa da Config foram
+  APAGADOS junto — funcao sem gatilho e a armadilha do `pedido-emprego`, e esta em especial e a que
+  alguem religa sem querer.
 - **Com o automático DESLIGADO, o rascunho continua só aparecendo para ele.** O texto cai no campo de
   mensagem (`setComposerText`, nunca `sendText`) e quem aperta enviar é ele. É o laço que ele já
   fazia à mão (copiar para uma IA, editar, mandar) sem o copiar e colar, e sem mudar a última
