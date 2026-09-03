@@ -32,6 +32,54 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-03 — Cinco mensagens dele, e a rodada mandou o modelo
+
+Print de Porto Alegre. O contato escreveu:
+
+> *"Vocês viram a propaganda denegrindo o Flávio Bolsonaro nos canais Globo / RBS e Band do RS?"*
+> *"Simplesmente horrível! Insinuando q. ele é bandido, etc. etc."*
+> *"Já tomaram providências?"* · *"??"* · *"Agora com o Vorcaro X careca…msg reveladoras."*
+
+E recebeu **o modelo, com o atendimento concluído**. Ele: *"mandou modelo e concluiu; quando tiver
+mensagens assim, ao menos tem que deixar aberta a conversa"*.
+
+### Por que nada pegava
+
+A rajada tem **~230 caracteres** e o corte de "texto longo" é **400**. Não é reação, não é
+despedida, e as perguntas dela não estão em lista nenhuma — ninguém cadastra *"já tomaram
+providências"*, e cadastrar caso a caso é a corrida que nunca termina.
+
+**O número de mensagens era o sinal que faltava.** Quem escreve quatro vezes seguidas sem resposta
+está conversando, não reagindo, e o tamanho de cada uma não muda isso.
+
+`conversaPedeRespostaPessoal` passou a contar as mensagens **próprias** da rajada: **3 delas, ou 2
+somando 250 caracteres**. O corte antigo de 400 continua valendo para uma mensagem só, onde o
+tamanho é o único sinal.
+
+Duas coisas que quem mexer nisso precisa saber:
+
+- **os dois cortes foram calibrados em dois casos reais** — este e a anotação do jairoc (~326
+  caracteres em duas mensagens). Não são princípio, são medida; mexer neles muda quanta gente sai
+  da automação, e vale medir de novo;
+- **a mensagem gerada pelo ANÚNCIO não conta como própria.** Foi o falso positivo que apareceu no
+  teste: quem clica em três anúncios manda três mensagens compridas que não escreveu, e sem essa
+  guarda a Eroni iria para atendimento manual em vez de receber o modelo que pediu. É o mesmo
+  critério de `soExpressaApoio`, e o painel passa `state.padroesDeAnuncio`.
+
+**Medido antes e depois**, com os casos reais e seis falsos positivos: resposta do formulário
+("Maria Silva" + "Porto Alegre"), três cumprimentos, emoji + link, agradecimento curto, três
+cliques em anúncio e a confirmação de presença repetida — todos continuam sendo resolvidos pelo
+fluxo.
+
+O desfecho é a tecla 6, que **abre a caixa e não conclui** — que é o "ao menos deixar aberta" que
+ele pediu.
+
+**Arquivos:** `src/lib/cortesia.js` (`RAJADA_MUITAS`, `RAJADA_LONGA`, `temSubstancia`),
+`src/panel/panel.js` (passa os padrões do anúncio), `tests/cortesia.test.mjs` (+13), `CLAUDE.md`
+(+1 armadilha), `manifest.json` (1.87.0 → 1.88.0). Quinze suítes e os dois verificadores.
+
+---
+
 ## 2026-09-03 — A caixa da IA no cartão dos Novos
 
 *"adicione o box de iniciar com IA também"*.

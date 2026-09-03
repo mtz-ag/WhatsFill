@@ -4683,7 +4683,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         momentoJaEnviado,
         // A RAJADA, não só a última: três mensagens curtas somando 450 caracteres são conversa
         // igual a uma longa de 450 (print dele, 31/08).
-        pedeRespostaPessoal: conversaPedeRespostaPessoal(state.entrantes, state.nossaUltimaAt),
+        // Os padroes do anuncio entram para a mensagem GERADA pelo anuncio nao contar como
+        // mensagem propria dela -- mesmo criterio de `soExpressaApoio`, logo abaixo.
+        pedeRespostaPessoal: conversaPedeRespostaPessoal(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
         // Pergunta de razão ou de posição: nenhuma resposta pronta responde, e mandar o modelo
         // vira material de campanha em cima da pergunta dela (print da Clair, 31/08).
         perguntaAberta: conversaTemPerguntaAberta(state.entrantes, state.nossaUltimaAt),

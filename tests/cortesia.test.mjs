@@ -1006,4 +1006,70 @@ grupo('pergunta sobre o que o mandato FAZ (03/09/2026)');
   check(pergunta('tem algum material para eu divulgar') === null, 'pedido de material continua fora');
 }
 
+grupo('a RAJADA de mensagens proprias pede gente (03/09/2026)');
+{
+  /**
+   * Print dele (Porto Alegre): o contato escreveu cinco mensagens -- duas perguntas sobre a
+   * cobertura da imprensa, uma indignacao, um "??" e um comentario -- e recebeu **o modelo, com o
+   * atendimento concluido**. *"mandou modelo e concluiu; quando tiver mensagens assim, ao menos
+   * tem que deixar aberta a conversa"*.
+   *
+   * Nada pegava: ~230 caracteres (longe dos 400), nao e reacao, nao e despedida, e "ja tomaram
+   * providencias" nao esta em lista de pergunta nenhuma -- ninguem cadastra isso.
+   *
+   * **O numero de mensagens era o sinal que faltava.** Quem escreve quatro vezes seguidas sem
+   * resposta esta conversando.
+   */
+  const conv = (a) => a.map((t, i) => ({ texto: t, at: new Date(Date.now() - (a.length - i) * 60000).toISOString() }));
+  const pede = (a, padroes) => conversaPedeRespostaPessoal(conv(a), null, padroes || []);
+
+  const portoAlegre = [
+    'Vocês viram a propaganda denegrindo o Flávio Bolsonaro nos canais Globo / RBS e Band do RS?',
+    'Simplesmente horrível! Insinuando q. ele é bandido, etc. etc.',
+    'Já tomaram providências?',
+    '??',
+    'Agora com o Vorcaro X careca...msg reveladoras.',
+  ];
+  check(pede(portoAlegre) !== null, 'o caso dele vai para gente');
+  check(/4 mensagens/.test(pede(portoAlegre).motivo), 'e o "??" nao conta como mensagem propria');
+
+  // A anotacao do jairoc: duas mensagens compridas entre emoji e link.
+  const jairoc = [
+    'Meu Amigo,eu Só Quero que Você Faça o que Prometem,Não dar uma de 9dedos,🙏estamsJuntos',
+    '👍🏽🙏👁️👁️',
+    'https://www.instagram.com/reel/Dcteaulxlps/',
+    'Tem que Ser assim,Cago Fora do Pinico,tira Fora,Não Deixar Ficar 4 Anos Mámando no Governo,(No Povo)Risca os Benefícios pra Vagabundo,Não Vamos suster mais ,tem Que Trabalham,',
+    'Sustentar',
+  ];
+  check(pede(jairoc) !== null, 'duas mensagens compridas tambem contam');
+
+  /**
+   * **Os falsos positivos sao onde esta o risco**, como sempre nesta base: tudo aqui embaixo tem
+   * que continuar sendo resolvido pelo fluxo, sem tirar contato da automacao.
+   */
+  check(pede(['Maria Silva', 'Porto Alegre']) === null, 'a resposta do formulario nao e conversa');
+  check(pede(['Bom dia', 'Boa tarde', 'Bom dia!']) === null, 'tres cumprimentos nao sao conversa');
+  check(pede(['🙏', 'https://youtu.be/x', '👍']) === null, 'emoji e link nao sao conversa');
+  check(pede(['Muito obrigado pelo trabalho de vocês', 'Estamos juntos sempre']) === null,
+    'agradecimento curto nao e conversa');
+
+  /**
+   * **O texto do ANUNCIO nao conta como mensagem dela** -- e este e o falso positivo mais caro.
+   * A Eroni clicou em tres anuncios; sem esta guarda ela iria para atendimento manual em vez de
+   * receber o modelo que pediu.
+   */
+  const tresAnuncios = [
+    'Olá! Eu apoio as Escolas Cívico-Militares 🤝',
+    'Olá! Eu escolho o lado da Liberdade 👍🤝',
+    'A família toda é 22👍',
+  ];
+  check(pede(tresAnuncios, ['Eu apoio as Escolas', 'Eu escolho o lado da Liberdade']) === null,
+    'tres cliques em anuncio nao viram conversa');
+  check(pede(tresAnuncios) !== null, 'sem os padroes cadastrados, elas contam — e por isso o painel os passa');
+
+  // Uma mensagem so continua no criterio antigo: la o tamanho e o unico sinal.
+  check(pede(['x'.repeat(300)]) === null, 'uma mensagem de 300 caracteres ainda nao e "texto longo"');
+  check(pede(['x'.repeat(420)]) !== null, 'com 420 continua sendo');
+}
+
 fim();

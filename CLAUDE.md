@@ -342,6 +342,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   nada); o que o caso real mostrou e outra coisa — **propaganda como primeira resposta a um pedido
   de socorro e a resposta errada mesmo quando o texto e inofensivo.**
 
+- **Quem escreve VARIAS mensagens seguidas esta conversando, e o tamanho de cada uma nao muda
+  isso.** Print dele (03/09/2026, Porto Alegre): cinco mensagens sobre a cobertura da imprensa,
+  duas delas perguntas, e a rodada mandou o MODELO e concluiu — *"quando tiver mensagens assim, ao
+  menos tem que deixar aberta a conversa"*. Nada pegava: ~230 caracteres (o corte de texto longo e
+  400), nao e reacao, nao e despedida, e *"ja tomaram providencias?"* nao esta em lista de pergunta
+  nenhuma — ninguem cadastra isso. Hoje `conversaPedeRespostaPessoal` conta as mensagens
+  PROPRIAS da rajada: **3 delas, ou 2 somando 250 caracteres**. Duas coisas a lembrar: os cortes
+  foram calibrados em dois casos reais (este e a anotacao do jairoc) e mexer neles muda quanta
+  gente sai da automacao; e a mensagem GERADA pelo anuncio **nao conta como propria**, senao quem
+  clica em tres anuncios (a Eroni) vai para atendimento manual em vez de receber o modelo — mesmo
+  criterio de `soExpressaApoio`, e o painel precisa passar `state.padroesDeAnuncio`.
+
 - **Confirmacao de presenca em evento NAO se responde: pula, e ele atende no fim** (pedido dele,
   03/09/2026, print da Elci). Ela escreveu duas vezes *"Quero confirmar minha presenca no evento"*
   e recebeu *"Que bom!... Nome / Cidade"* + conclusao. Ele: *"nao e para responder, e para pular e

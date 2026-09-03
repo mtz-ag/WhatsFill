@@ -209,6 +209,42 @@ const NOME_DO_TIPO = {
 const TEXTO_LONGO = 400;
 
 /**
+ * **A RAJADA pede gente por outro caminho: várias mensagens próprias, sem ninguém responder.**
+ *
+ * Print dele (03/09/2026, Porto Alegre): o contato escreveu *"Vocês viram a propaganda denegrindo
+ * o Flávio Bolsonaro nos canais Globo / RBS e Band do RS?"*, *"Simplesmente horrível! Insinuando
+ * q. ele é bandido"*, *"Já tomaram providências?"*, *"??"* e *"Agora com o Vorcaro X careca…msg
+ * reveladoras."* — e recebeu **o modelo, com o atendimento concluído**. Ele: *"mandou modelo e
+ * concluiu; quando tiver mensagens assim, ao menos tem que deixar aberta a conversa"*.
+ *
+ * Pelo caminho antigo nada pegava: a rajada tem ~230 caracteres (longe dos 400), não é reação, não
+ * é despedida, e as perguntas dela não estão nas listas de `conversaTemPerguntaAberta` — ninguém
+ * cadastra "já tomaram providências". Mesma coisa na anotação do jairoc (~255).
+ *
+ * **O número de mensagens é o sinal que faltava.** Quem escreve quatro vezes seguidas sem
+ * resposta está conversando, não reagindo — e o tamanho de cada uma não muda isso. Os dois cortes
+ * abaixo são calibrados nesses dois casos reais, e é bom saber que são: mexer neles muda quanta
+ * gente sai da automação.
+ */
+const RAJADA_LONGA = 250;
+const RAJADA_MUITAS = 3;
+
+/**
+ * Mensagem com substância PRÓPRIA — nem cortesia, nem reação, nem "??" solto.
+ *
+ * **O texto do ANÚNCIO não conta**, e essa é a metade que evita o falso positivo mais caro: quem
+ * clica em três anúncios manda três mensagens compridas que ela não escreveu (*"Olá! Eu apoio as
+ * Escolas Cívico-Militares 🤝"*), e sem isto a rodada mandaria a Eroni para atendimento manual em
+ * vez de entregar o modelo que ela pediu. É o mesmo critério de `soExpressaApoio`, e pela mesma
+ * razão — medido nos dois casos.
+ */
+function temSubstancia(msg, padroesDeAnuncio) {
+  if (mensagemDeCortesia(msg) || ehSoReacao(msg)) return false;
+  if (ehMensagemDeAnuncio(msg, padroesDeAnuncio)) return false;
+  return String(msg?.texto || '').trim().length >= 20;
+}
+
+/**
  * Esta mensagem pede uma resposta ESCRITA POR VOCÊ?
  *
  * Áudio, vídeo e documento entram sempre: não dá para responder sem abrir. Texto entra por
@@ -331,7 +367,7 @@ export function rajadaFinal(entrantes, nossaUltimaAt) {
  * @param {string|null} nossaUltimaAt quando saiu a nossa última mensagem
  * @returns {{motivo:string}|null}
  */
-export function conversaPedeRespostaPessoal(entrantes, nossaUltimaAt) {
+export function conversaPedeRespostaPessoal(entrantes, nossaUltimaAt, padroesDeAnuncio = []) {
   const rajada = rajadaFinal(entrantes, nossaUltimaAt);
   if (!rajada.length) return null;
 
@@ -352,6 +388,24 @@ export function conversaPedeRespostaPessoal(entrantes, nossaUltimaAt) {
   }
 
   const total = rajada.reduce((n, m) => n + String(m?.texto || '').trim().length, 0);
+  const proprias = rajada.filter((m) => temSubstancia(m, padroesDeAnuncio));
+
+  /**
+   * **Várias mensagens próprias sem resposta = conversa**, mesmo que curtas — ver `RAJADA_MUITAS`.
+   *
+   * O corte de 400 caracteres continua valendo para UMA mensagem só: lá o tamanho é o único sinal.
+   * Aqui, com duas ou mais, o tamanho que basta é menor, porque o fato de ela ter voltado a
+   * escrever já diz que está esperando.
+   */
+  if (proprias.length >= RAJADA_MUITAS || (proprias.length >= 2 && total >= RAJADA_LONGA)) {
+    const comAudio = rajada.some((m) => m?.transcrito);
+    return {
+      motivo:
+        `escreveu ${proprias.length} mensagens próprias${comAudio ? ' (com áudio)' : ''} ` +
+        `somando ${total} caracteres, sem resposta — é conversa, não é caso de modelo`,
+    };
+  }
+
   if (total >= TEXTO_LONGO) {
     // "escreveu" o que ela FALOU manda quem lê procurar uma mensagem de texto que não existe — a
     // mesma razão do `verbo` na função de uma mensagem só.
