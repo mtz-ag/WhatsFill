@@ -1232,4 +1232,49 @@ grupo('desabafo longo vai para a IA, nao para a mensagem do momento (02/09/2026)
   check(arv.decidir(soSaudacao, q)?.tecla === '5', 'um "Bom dia!" seco continua recebendo a mensagem do momento');
 }
 
+grupo('as protecoes valem mesmo fora do quadro dele (03/09/2026)');
+{
+  /**
+   * O quadro de trabalho e uma COPIA do padrao, e nada entra nele sozinho. Certo como desenho -- a
+   * posicao e a prioridade, e ele escolhe. O preco apareceu no mesmo dia: ele reportou DUAS vezes a
+   * conversa em que so nos falamos recebendo mensagem, eu criei `ultima-e-nossa`, e a regra nao
+   * podia decidir nada para ele, porque so existia no padrao.
+   *
+   * A distincao e entre PREFERENCIA (onde, o que, em que ordem: dele) e PROTECAO ("nao mande
+   * nada": nao ha ordem em que seja outra coisa).
+   */
+  const f = { ordem: [], desligadas: [], teclas: {} };
+  const padrao = arv.arrumar(arv.fluxoPadrao());
+  const tira = (nos) => nos.filter((n) => {
+    n.filhos = tira(n.filhos || []);
+    return !['ultima-e-nossa', 'etiqueta-so-conclui', 'sem-interesse'].includes(n.regra);
+  });
+  const dele = tira(JSON.parse(JSON.stringify(padrao)));
+
+  const chegando = { veioDeAnuncio: true, jaRespondemosAntes: false, podeEnviar: true, podePedirDados: true, podeMandarMomento: true };
+
+  const vazia = arv.decidir({ ...chegando, ultimaEhNossa: 'vazia' }, dele, f);
+  check(vazia?.tecla === '3', 'sem a caixa no quadro, a protecao decide = ' + JSON.stringify(vazia));
+  check(vazia?.id.startsWith('protecao:'), 'e diz que veio do codigo, nao do quadro');
+  check(vazia?.caminho.join('') .includes('protecao'), 'o caminho aparece no log da rodada');
+
+  check(arv.decidir({ ...chegando, etiquetaSoConclui: 'Assessor Cap' }, dele, f)?.tecla === '3', 'a de assessor tambem');
+  check(arv.decidir({ ...chegando, semInteresse: { motivo: 'pediu para sair' } }, dele, f)?.tecla === 's', 'e a recusa tambem');
+
+  /**
+   * **Tendo a caixa, quem decide e o QUADRO.** A lista so cobre a ausencia -- senao ela passaria
+   * por cima da posicao que ele escolheu, que e o oposto do que a janela existe para dar.
+   */
+  const comAsCaixas = arv.decidir({ ...chegando, ultimaEhNossa: 'vazia' }, padrao, f);
+  check(comAsCaixas?.id.startsWith('r:'), 'com a caixa no quadro, quem decide e o quadro');
+
+  // Desligada por ele continua desligada: a lista nao ressuscita escolha dele.
+  const desligada = arv.decidir({ ...chegando, ultimaEhNossa: 'vazia' }, dele, { ...f, desligadas: ['ultima-e-nossa'] });
+  check(desligada?.tecla !== '3' || desligada?.id.startsWith('r:'), 'desligada por ele, a protecao nao volta');
+
+  // E o caso normal continua andando pelo quadro dele, sem interferencia.
+  check(arv.decidir({ ...chegando, anuncioReconhecido: true, ultimaEhNossa: false, textos: ['oi'], ultimoTexto: 'oi' }, dele, f)?.tecla === 'a',
+    'quem chega normal continua recebendo modelo + dados');
+}
+
 fim();

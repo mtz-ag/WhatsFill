@@ -342,6 +342,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   nada); o que o caso real mostrou e outra coisa — **propaganda como primeira resposta a um pedido
   de socorro e a resposta errada mesmo quando o texto e inofensivo.**
 
+- **PROTECAO do codigo vale mesmo fora do quadro dele — e este foi o custo de "nada entra
+  sozinho".** O quadro e uma COPIA do padrao, e regra nova nunca chega nele: desenho certo, porque
+  no quadro a POSICAO e a prioridade. O preco apareceu em 03/09/2026: ele reportou DUAS vezes no
+  mesmo dia a conversa em que so nos falamos recebendo mensagem, eu criei `ultima-e-nossa`, e ela
+  **nao podia decidir nada para ele** — existia so no padrao, esperando ele encaixar pelo cartao
+  "O padrao mudou?", enquanto a mensagem continuava saindo para eleitor. A saida e a distincao
+  entre **preferencia** (onde, o que, em que ordem: dele) e **protecao** ("nao mande nada": nao ha
+  ordem em que seja outra coisa). `arvore.PROTECOES` e a lista, curta, e o criterio de entrada e
+  duro: **efeito `silencio` na tabela e nenhum ramo que envie**. Tendo a caixa no quadro, quem
+  decide e o QUADRO; desligada por ele, continua desligada. A lista so cobre a AUSENCIA, e o
+  resultado carrega `id: 'protecao:<regra>'` e `caminho: ['protecao do codigo']`, para o Andamento
+  dizer de onde veio.
+
 - **Conversa que termina em mensagem NOSSA nao recebe nada — e a conversa VAZIA era a que
   escapava.** Print dele (03/09/2026): a conversa tinha so o nosso disparo, ele assumiu o
   atendimento e a rodada mandou o pedido de nome e cidade em cima. *"pegando conversas que a ultima

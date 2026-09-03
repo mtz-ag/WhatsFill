@@ -230,9 +230,56 @@ function motivoDele(no, ctx) {
  *
  * @returns {{id:string, tecla:string|null, resposta:string|null, motivo:string, caminho:string[]}|null}
  */
+/**
+ * **As protecoes que valem MESMO QUE NAO ESTEJAM NO QUADRO DELE.**
+ *
+ * O quadro de trabalho e uma COPIA do padrao, e nada entra nele sozinho — decisao de desenho, e
+ * certa: no quadro a posicao e a prioridade, e enfiar caixa por conta propria mudaria a rodada sem
+ * ninguem escolher onde.
+ *
+ * O preco apareceu em 03/09/2026. Ele reportou duas vezes no mesmo dia o mesmo defeito -- conversa
+ * em que so nos falamos recebendo mensagem --, eu criei a regra `ultima-e-nossa`, e ela **nao podia
+ * decidir nada** para ele: existe so no padrao. A caixa iria aparecer no cartao "O padrao mudou?" e
+ * ficaria esperando ele encaixar, enquanto a mensagem continuava saindo para eleitor.
+ *
+ * A saida e a distincao entre **preferencia** e **protecao**. Onde mandar o modelo, o que mandar,
+ * em que ordem: preferencia, e e dele. "Nao mande nada": protecao, e nao ha ordem em que ela seja
+ * outra coisa -- ela nunca compete com as outras caixas, porque o desfecho dela e o silencio.
+ *
+ * Esta lista e curta de proposito, e o criterio para entrar e duro: **a regra tem que ter efeito
+ * `silencio` na tabela, e nao pode enviar nada em nenhum ramo.** Quem esta aqui continua podendo
+ * aparecer no quadro (e aparece no padrao), e la ele posiciona; a lista so garante que a ausencia
+ * nao vira envio.
+ */
+const PROTECOES = ['sem-interesse', 'etiqueta-so-conclui', 'ultima-e-nossa'];
+
 export function decidir(ctx, arvore, fluxo) {
   const fixadas = fluxo?.teclas || {};
   const c = ctx || {};
+
+  /**
+   * As protecoes primeiro, e so as que o quadro dele NAO tem.
+   *
+   * Tendo a caixa, ela decide pelo quadro como sempre -- inclusive desligada, que continua sendo
+   * escolha dele. O que a lista impede e o buraco: protecao que o codigo ganhou e o quadro nunca
+   * recebeu.
+   */
+  const noQuadro = new Set(todosOsNos(arvore).map(({ no }) => no.regra).filter(Boolean));
+  const desligadas = new Set(fluxo?.desligadas || []);
+  for (const id of PROTECOES) {
+    if (noQuadro.has(id) || desligadas.has(id)) continue;
+    const regra = REGRAS.find((r) => r.id === id);
+    if (!regra || !regra.quando(c)) continue;
+    const tecla = typeof regra.tecla === 'function' ? regra.tecla(c) : regra.tecla;
+    return {
+      id: 'protecao:' + id,
+      tecla,
+      resposta: null,
+      ia: false,
+      motivo: regra.motivo(c),
+      caminho: ['protecao do codigo'],
+    };
+  }
 
   const andar = (nos, trilha) => {
     for (const no of nos || []) {

@@ -32,6 +32,46 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-03 — "Mandou novamente": a regra existia e não alcançava o quadro dele
+
+Segunda print do mesmo defeito no mesmo dia — conversa em que só nós falamos (o disparo das 11:08),
+ele assume às 11:42, e sai a mensagem do momento.
+
+Eu tinha acabado de escrever a regra que impede isso (`ultima-e-nossa`). **E ela não podia decidir
+nada para ele.**
+
+O quadro de trabalho é uma **cópia** do padrão, e nada entra nele sozinho. É desenho certo — no
+quadro a posição é a prioridade, e enfiar caixa por conta própria mudaria a rodada sem ninguém
+escolher onde. Mas o preço, aqui, era: a caixa apareceria no cartão "O padrão mudou?" e ficaria
+esperando ele encaixar, **enquanto a mensagem continuava saindo para eleitor**.
+
+### A distinção que resolve
+
+**Preferência** é dele: onde mandar o modelo, o que mandar, em que ordem. **Proteção** não tem
+ordem em que seja outra coisa: "não mande nada" nunca compete com as outras caixas, porque o
+desfecho dela é o silêncio.
+
+`arvore.PROTECOES` é a lista — hoje três: `sem-interesse`, `etiqueta-so-conclui`, `ultima-e-nossa`.
+O critério de entrada é duro: **efeito `silencio` na tabela, e nenhum ramo que envie.**
+
+Três coisas que a mantêm honesta:
+
+- **tendo a caixa no quadro, quem decide é o quadro** — a lista só cobre a ausência, senão ela
+  passaria por cima da posição que ele escolheu, que é o oposto do que a janela existe para dar;
+- **desligada por ele continua desligada** — a lista não ressuscita escolha dele;
+- o resultado carrega `id: 'protecao:<regra>'` e `caminho: ['protecao do codigo']`, então o
+  Andamento diz de onde a decisão veio, em vez de aparecer um desfecho sem origem no quadro.
+
+Medido no quadro dele reconstruído (o padrão sem as três caixas): conversa vazia → conclui;
+etiqueta de assessor → conclui; recusa → conclui sem responder; e quem chega normal continua
+recebendo modelo + pedido de dados pelo caminho de sempre.
+
+**Arquivos:** `src/lib/arvore.js` (`PROTECOES` e a passada em `decidir`), `tests/arvore.test.mjs`
+(+9), `CLAUDE.md` (+1 armadilha), `manifest.json` (1.83.0 → 1.84.0). Quinze suítes e os dois
+verificadores.
+
+---
+
 ## 2026-09-03 — "É pra concluir sem mandar nada"
 
 Dois pedidos dele, os dois sobre **não** mandar.
