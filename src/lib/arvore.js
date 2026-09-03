@@ -592,8 +592,27 @@ export function fluxoPadrao() {
      * cumprimento, figura ou link? Medido nos quatro casos — a Teresinha e a Cris deixam de casar,
      * "Boa tarde" sozinho e "bom dia" continuam.
      */
+    /**
+     * **A exceção é o que faltava, e é o defeito que ele achou** — print da Carmem Souza
+     * (03/09/2026). A caixa da rodada mostrava, em amarelo, *"Hoje este contato já recebeu:
+     * Mensagem do momento às 09:36"* — e recomendava, em destaque, a tecla 5. Ele: *"sugestão
+     * totalmente errada, já identificou que mandou e sugeriu mandar novamente"*.
+     *
+     * **É a armadilha registrada da caixa com tecla FIXA**: ela parece a regra do código e tem o
+     * mesmo desfecho na tela, mas não carrega as guardas dela. `ultima-e-so-reacao`, logo abaixo,
+     * nunca teve esse problema — a tecla dela é função e olha `respondidoHoje`.
+     *
+     * `repeteSozinha` não acusava, e com razão: `soCortesia` lê a RAJADA depois da nossa última
+     * mensagem, então o envio apaga o sinal e a caixa não repete sozinha. O que aconteceu foi
+     * outra coisa — ela **escreveu de novo** no mesmo dia, a rajada encheu com outro cumprimento, e
+     * a caixa ofereceu a mesma mensagem pela segunda vez.
+     *
+     * `momentoJaEnviado` é a guarda exata: é literalmente o que o aviso amarelo diz. Sem casar
+     * aqui, o caso desce para `ultima-e-so-reacao` ou `ja-respondemos-antes`, que concluem.
+     */
     { ...noVazio('só cumprimentou, e nada mais'),
       condicao: { sinal: 'soCortesia', negar: false, palavras: [], onde: 'ultima' },
+      excecao: { sinal: 'momentoJaEnviado', negar: false, palavras: [], onde: 'ultima' },
       acao: { tecla: '5', resposta: null } },
     r('pediu-algo-sem-dizer-o-que', 'pediu algo e não disse o quê', onde),
     r('ultima-e-so-reacao', 'mandou figura, emoji, sticker ou link', onde),

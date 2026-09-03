@@ -1,3 +1,48 @@
+## 2026-09-03 — "Só cumprimentou" oferecia a mensagem do momento pela segunda vez (v2.1.0)
+
+Print da Carmem Souza. A caixa da rodada mostrava, em amarelo, *"Hoje este contato já recebeu:
+Mensagem do momento às 09:36"* — e recomendava, em destaque, a **tecla 5**. Ele: *"sugestão
+totalmente errada, já identificou que mandou e sugeriu mandar novamente"*.
+
+### Causa raiz
+
+A caixa *"só cumprimentou, e nada mais"* tem `acao.tecla: '5'` **fixa**, e caixa de tecla fixa não
+carrega guarda nenhuma. `ultima-e-so-reacao`, logo abaixo dela, nunca teve o problema: a tecla dela
+é FUNÇÃO e olha `respondidoHoje`.
+
+**`repeteSozinha` não acusava, e estava certo.** `soCortesia` lê a rajada DEPOIS da nossa última
+mensagem, então o envio apaga o sinal e a caixa não repete sozinha. O que aconteceu foi outra
+coisa: ela **escreveu de novo no mesmo dia**, a rajada encheu com outro cumprimento, e a caixa
+ofereceu a mesma mensagem pela segunda vez.
+
+É a distinção que faltava no verificador e que fica registrada: a pergunta não é só *"ela repete
+sozinha?"*, é *"o que impede a segunda vez?"*.
+
+### O conserto
+
+`excecao: { sinal: 'momentoJaEnviado' }` na caixa — literalmente o que o aviso amarelo já dizia. É
+o primeiro uso do "exceto quando" dentro do padrão, e a caixa era exatamente o caso que motivou a
+feature.
+
+Medido: com a do momento ainda não enviada, tecla 5 como antes; já enviada hoje, o caso desce e
+`ja-respondemos-antes` conclui (tecla 3). Vale nos dois lados da bifurcação de cidade, porque a
+caixa nasce em `dosDoisLados`.
+
+### Sobre o caso do Valdomiro (a pergunta na chegada)
+
+Ele perguntou se a visão dele estava errada: *"o modelo sempre vai mandar modelo no início, mas
+nesse caso mandou o modelo e ignorou o caso que seria uma exceção à regra onde a pessoa chegou com
+uma pergunta"*.
+
+**Não está errada, e já é o desenho:** `pergunta-aberta` fica em `chegada-antes`, ACIMA do modelo,
+desde 02/09 — junto de "pediu algo e não disse o quê". O que falhou não foi a ordem, foi o
+reconhecimento: *"como consigo…"* não estava em nenhuma lista de pergunta. Consertado em v2.0.0.
+
+**Arquivos:** `src/lib/arvore.js`, `tests/arvore.test.mjs`, `manifest.json` (2.0.0 → 2.1.0),
+`registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-03 — "Como consigo adesivo, bandeira, camiseta?" precisa de gente (v2.0.0)
 
 Anotação do Valdomiro: *"Boa tarde Como consigo as coisas de campanha adevisto bandeira

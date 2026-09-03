@@ -1365,6 +1365,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   segue sendo caso de modelo), e **"posso" ficou de fora** — *"como posso ajudar?"* é oferta, e
   oferta é o público principal desta base.
 
+- **Caixa de tecla FIXA não tem guarda — e a segunda vez não precisa de repetição automática para
+  acontecer.** Print da Carmem Souza (03/09/2026): a caixa da rodada mostrava em amarelo *"Hoje este
+  contato já recebeu: Mensagem do momento às 09:36"* e recomendava, em destaque, a tecla 5. Ele:
+  *"já identificou que mandou e sugeriu mandar novamente"*. A caixa *"só cumprimentou"* tem
+  `acao.tecla: '5'` fixa e nenhuma guarda; `ultima-e-so-reacao`, logo abaixo, nunca teve o problema
+  porque a tecla dela é FUNÇÃO e olha `respondidoHoje`. **`repeteSozinha` não acusava, e estava
+  certo:** `soCortesia` lê a rajada depois da nossa última mensagem, então o envio apaga o sinal.
+  O que houve foi ela **escrever de novo no mesmo dia** — a rajada encheu com outro cumprimento e a
+  caixa ofereceu a mesma mensagem outra vez. Hoje a caixa tem `excecao: momentoJaEnviado`, que é
+  literalmente o que o aviso amarelo diz. **Lição para toda caixa de tecla fixa que ENVIA: a
+  pergunta não é só "ela repete sozinha?", é "o que impede a segunda vez?"** — e o aviso amarelo do
+  painel é a lista de guardas que faltam.
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto

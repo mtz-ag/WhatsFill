@@ -1443,4 +1443,37 @@ grupo('a EXCECAO da caixa (03/09/2026)');
   check(arv.paraTexto(comExcecao).includes('EXCETO'), 'o texto do fluxo mostra a excecao');
 }
 
+grupo('so cumprimentou: nao oferece a mensagem do momento duas vezes (03/09/2026)');
+{
+  /**
+   * Print da Carmem Souza: a caixa mostrava, em amarelo, *"Hoje este contato ja recebeu: Mensagem
+   * do momento as 09:36"* -- e recomendava, em destaque, a tecla 5. Ele: *"sugestao totalmente
+   * errada, ja identificou que mandou e sugeriu mandar novamente"*.
+   *
+   * E a armadilha da caixa com tecla FIXA: ela parece a regra do codigo e tem o mesmo desfecho na
+   * tela, mas nao carrega as guardas dela. `ultima-e-so-reacao`, logo abaixo, nunca teve o
+   * problema -- a tecla dela e funcao e olha `respondidoHoje`.
+   *
+   * `repeteSozinha` nao acusava, e com razao: `soCortesia` le a rajada DEPOIS da nossa ultima
+   * mensagem, entao o envio apaga o sinal. O que houve foi ela escrever de novo no mesmo dia.
+   */
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const base = {
+    jaRespondemosAntes: true, temEtiquetaDeCidade: true, jaPediramDados: true,
+    soCortesia: { motivo: 'so cumprimentou' }, podeMandarMomento: true,
+  };
+
+  check(arv.decidir({ ...base, momentoJaEnviado: false }, q)?.tecla === '5',
+    'a do momento ainda nao saiu: a caixa manda');
+  const jaFoi = arv.decidir({ ...base, momentoJaEnviado: true, respondidoHoje: true }, q);
+  check(jaFoi?.tecla === '3', 'ja saiu hoje: conclui em vez de repetir');
+  check(jaFoi?.id === 'r:ja-respondemos-antes', `e quem decide e a caixa generica do fim (${jaFoi?.id})`);
+
+  // Vale nos DOIS lados da bifurcacao de cidade -- a caixa nasce em `dosDoisLados`.
+  check(arv.decidir({ ...base, temEtiquetaDeCidade: false, respondidoHoje: false, momentoJaEnviado: true }, q)?.tecla !== '5',
+    'sem etiqueta de cidade tambem nao repete');
+
+  check(arv.problemas(q).length === 0, 'e o quadro continua sem problemas acusados');
+}
+
 fim();
