@@ -225,6 +225,11 @@ body {
 .caixa-topo { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
 .caixa-topo b { font-size: 13px; line-height: 1.25; }
 .caixa-quando { font-size: 11px; color: var(--tinta-media); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/**
+ * A EXCECAO da caixa -- pedido dele (03/09/2026). Cor de aviso e nao de texto comum: ela e a
+ * metade que IMPEDE o ramo de decidir, e ler as duas linhas com o mesmo peso confunde as duas.
+ */
+.caixa-exceto { font-size: 11px; color: var(--aviso, #b45309); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .caixa-entao { font-size: 11.5px; font-weight: 600; color: var(--tinta); line-height: 1.3; }
 .caixa-entao.vazio { color: var(--alerta); }
 .caixa-rodape { display: flex; align-items: center; gap: 6px; margin-top: 1px; }

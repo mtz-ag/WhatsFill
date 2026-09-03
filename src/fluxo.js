@@ -155,6 +155,26 @@ function efeitoDoNo(no) {
   return null;
 }
 
+/**
+ * **"Exceto quando…"** em português, para a caixa e para a lista de regras.
+ *
+ * Devolve string vazia quando não há exceção — quem chama só acrescenta a linha se houver, para a
+ * caixa não ganhar um rótulo vazio em todo ramo.
+ */
+function excecaoEmPortugues(no) {
+  const exc = no.excecao || {};
+  const partes = [];
+  const sinal = arvoreLib.SINAIS.find((x) => x.id === exc.sinal);
+  if (sinal) partes.push(exc.negar ? sinal.nao : sinal.rotulo);
+  if ((exc.palavras || []).length) {
+    partes.push(
+      `escreveu ${exc.palavras.map((x) => `“${x}”`).join(' ou ')}` +
+        (exc.onde === 'qualquer' ? ' (em qualquer mensagem)' : ' (na última)')
+    );
+  }
+  return partes.length ? `exceto quando: ${partes.join(' e ')}` : '';
+}
+
 function condicaoEmPortugues(no) {
   if (no.regra) return sugestaoLib.SOBRE[no.regra]?.quando || '';
   const cond = no.condicao || {};
@@ -216,6 +236,8 @@ function caixaDoNo(no) {
   d.append(topo);
 
   d.append(span('caixa-quando', condicaoEmPortugues(no)));
+  const excCaixa = excecaoEmPortugues(no);
+  if (excCaixa) d.append(span('caixa-exceto', excCaixa));
 
   const desfecho = acaoEmPortugues(no);
   if (desfecho) {
@@ -729,7 +751,7 @@ function desenharEditor() {
      */
     const nota = document.createElement('p');
     nota.className = 'nota';
-    nota.textContent = 'A condição deste ramo vem do código e tem teste — por isso não se edita aqui. Você pode trocar o desfecho, movê-lo, desligá-lo e pendurar ramos mais específicos dentro dele.';
+    nota.textContent = 'A condição deste ramo vem do código e tem teste — por isso não se edita aqui. Você pode trocar o desfecho, movê-lo, desligá-lo, pendurar ramos mais específicos dentro dele e pôr uma exceção abaixo.';
     caixa.append(nota);
     caixa.append(span('leitura', condicaoEmPortugues(no)));
 
@@ -805,6 +827,63 @@ function desenharEditor() {
                 : { tecla: valor.slice(2), resposta: null };
           gravar(arvoreLib.editar(fluxo.arvore, no.id, { acao: nova }));
         }
+      )
+    );
+  }
+
+  /**
+   * **A EXCEÇÃO, e ela vale para os DOIS tipos de caixa** — pedido dele (03/09/2026): *"algo que
+   * notei que está faltando nos ramos e em geral: condição de mandar mensagem e exceção"*.
+   *
+   * Fica fora do `if/else` de propósito. Na caixa de REGRA é o único jeito de estreitar o que o
+   * código decide sem mexer no código — e estreitar é seguro: exceção nunca faz uma mensagem
+   * passar a sair, só deixar de sair. Na caixa dele é a guarda que faltava, a mesma que a regra do
+   * código carrega sozinha ("mande o modelo, exceto quando o modelo já está na conversa"), e é o
+   * que tira o aviso de "esta caixa vai mandar de novo em toda passada".
+   */
+  const exc = no.excecao || {};
+  const trocarExc = (mudanca) => gravar(arvoreLib.editar(fluxo.arvore, no.id, { excecao: { ...exc, ...mudanca } }));
+
+  const tituloExc = document.createElement('p');
+  tituloExc.className = 'nota';
+  tituloExc.textContent = 'Exceção — quando isto for verdade, este ramo não decide nada e a rodada segue procurando abaixo.';
+  caixa.append(tituloExc);
+
+  linha(
+    'Exceto quando o contato…',
+    seletor([['', '— sem exceção —'], ...arvoreLib.SINAIS.map((x) => [x.id, x.rotulo])], exc.sinal || '', (v) => trocarExc({ sinal: v }))
+  );
+
+  if (exc.sinal) {
+    const inverterExc = document.createElement('label');
+    inverterExc.className = 'chk';
+    const ce = document.createElement('input');
+    ce.type = 'checkbox';
+    ce.checked = !!exc.negar;
+    ce.addEventListener('change', () => trocarExc({ negar: ce.checked }));
+    inverterExc.append(ce, span('', `ao contrário: ${arvoreLib.SINAIS.find((x) => x.id === exc.sinal)?.nao || 'não'}`));
+    caixa.append(inverterExc);
+  }
+
+  const palavrasExc = document.createElement('input');
+  palavrasExc.type = 'text';
+  palavrasExc.placeholder = 'obrigado, já recebi';
+  palavrasExc.value = (exc.palavras || []).join(', ');
+  palavrasExc.addEventListener('change', () =>
+    trocarExc({ palavras: palavrasExc.value.split(',').map((x) => x.trim()).filter(Boolean) })
+  );
+  linha('Ou escreveu (vírgula separa)', palavrasExc);
+
+  if ((exc.palavras || []).length) {
+    linha(
+      'Procurar essas palavras',
+      seletor(
+        [
+          ['ultima', 'só na última mensagem dela'],
+          ['qualquer', 'em qualquer mensagem da conversa'],
+        ],
+        exc.onde || 'ultima',
+        (v) => trocarExc({ onde: v })
       )
     );
   }

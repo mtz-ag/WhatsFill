@@ -1277,4 +1277,83 @@ grupo('as protecoes valem mesmo fora do quadro dele (03/09/2026)');
     'quem chega normal continua recebendo modelo + dados');
 }
 
+grupo('a EXCECAO da caixa (03/09/2026)');
+{
+  /**
+   * Pedido dele: *"algo que notei que esta faltando nos ramos e em geral: condicao de mandar
+   * mensagem e excecao"*. E o buraco mais caro do quadro livre, o mesmo que `problemas` acusava
+   * sem poder resolver: a caixa dele PARECE a regra do codigo e tem o mesmo desfecho na tela, mas
+   * nao carrega as guardas dela. Ate aqui, a unica forma de dizer "mande, mas nao quando X" era
+   * nao usar a caixa.
+   */
+  const f = { ordem: [], desligadas: [], teclas: {} };
+  const caixa = (extra) => ({
+    ...arv.noVazio('mandar o modelo'),
+    id: 'x',
+    condicao: { sinal: 'anuncioReconhecido', negar: false, palavras: [], onde: 'ultima' },
+    acao: { tecla: '1', resposta: null },
+    ...extra,
+  });
+
+  const semExcecao = [caixa()];
+  check(arv.decidir({ anuncioReconhecido: true }, semExcecao, f)?.tecla === '1', 'sem excecao, a caixa decide');
+
+  const comExcecao = [caixa({ excecao: { sinal: 'modeloJaNaConversa', negar: false, palavras: [], onde: 'ultima' } })];
+  check(arv.decidir({ anuncioReconhecido: true }, comExcecao, f)?.tecla === '1', 'excecao falsa nao atrapalha');
+  check(arv.decidir({ anuncioReconhecido: true, modeloJaNaConversa: true }, comExcecao, f) === null,
+    'excecao verdadeira impede a caixa de decidir');
+
+  // A excecao NAO para a busca: o irmao de baixo continua sendo tentado.
+  const irmaos = [
+    caixa({ excecao: { sinal: 'modeloJaNaConversa', negar: false, palavras: [], onde: 'ultima' } }),
+    { ...arv.noVazio('entao pede os dados'), id: 'y', condicao: { sinal: '', negar: false, palavras: [], onde: 'ultima' }, acao: { tecla: '4', resposta: null } },
+  ];
+  check(arv.decidir({ anuncioReconhecido: true, modeloJaNaConversa: true }, irmaos, f)?.tecla === '4',
+    'com a excecao valendo, o irmao de baixo decide');
+
+  // Por PALAVRA tambem.
+  const porPalavra = [caixa({ excecao: { sinal: '', negar: false, palavras: ['ja recebi'], onde: 'ultima' } })];
+  check(arv.decidir({ anuncioReconhecido: true, ultimoTexto: 'obrigado, ja recebi' }, porPalavra, f) === null,
+    'excecao por palavra tambem impede');
+  check(arv.decidir({ anuncioReconhecido: true, ultimoTexto: 'quero receber' }, porPalavra, f)?.tecla === '1',
+    'palavra que nao aparece nao impede');
+
+  /**
+   * **Vale para caixa de REGRA, e so para ESTREITAR.** Era o unico lugar do quadro que ele nao
+   * podia tocar. Excecao nunca faz mensagem passar a sair; so deixar de sair.
+   */
+  const daRegra = { ...arv.noVazio('conteudo'), id: 'r', regra: 'conteudo-pedido', condicao: null,
+    excecao: { sinal: 'temEtiquetaDeCidade', negar: false, palavras: [], onde: 'ultima' } };
+  const ctxRegra = { podeEnviar: true, enviadoHoje: false, modeloJaNaConversa: false, conteudoPedido: 'ADS' };
+  check(arv.decidir(ctxRegra, [{ ...daRegra, excecao: { sinal: '', negar: false, palavras: [], onde: 'ultima' } }], f)?.tecla === '1',
+    'a regra do codigo decide como sempre');
+  check(arv.decidir({ ...ctxRegra, temEtiquetaDeCidade: true }, [daRegra], f) === null,
+    'com a excecao, a mesma regra deixa de alcancar aquele contato');
+
+  /**
+   * **A excecao conta como GUARDA no `problemas`** -- e para isso que ela serve. A caixa que
+   * mandava em toda passada deixa de ser acusada quando ele poe "exceto quando o modelo ja esta na
+   * conversa".
+   */
+  const acusa = (no) => arv.problemas([no]).some((m) => m.includes('mandar de novo'));
+  check(acusa(caixa()), 'sem excecao, a caixa e acusada de repetir');
+  check(!acusa(caixa({ excecao: { sinal: 'modeloJaNaConversa', negar: false, palavras: [], onde: 'ultima' } })),
+    'com a excecao certa, o aviso some');
+  check(acusa(caixa({ excecao: { sinal: 'modeloJaNaConversa', negar: true, palavras: [], onde: 'ultima' } })),
+    'com a polaridade errada, continua acusando');
+
+  // Sobrevive ao arquivo, e sinal inventado e descartado com aviso.
+  const arq = arv.paraArquivo({ arvore: comExcecao, teclas: {} }, 'x');
+  const volta = arv.deArquivo(JSON.stringify(arq));
+  check(volta.ok && volta.arvore[0].excecao.sinal === 'modeloJaNaConversa', 'a excecao sobrevive ao arquivo');
+
+  const sujo = arv.paraArquivo({ arvore: [caixa({ excecao: { sinal: 'enviarPix', negar: false, palavras: [], onde: 'ultima' } })], teclas: {} }, 'x');
+  const peneirado = arv.deArquivo(JSON.stringify(sujo));
+  check(peneirado.ok && !peneirado.arvore[0].excecao.sinal, 'sinal inventado na excecao e descartado');
+  check((peneirado.avisos || []).some((a) => a.includes('exce')), 'e o descarte aparece no aviso');
+
+  // No texto que ele cola para mim, a excecao aparece.
+  check(arv.paraTexto(comExcecao).includes('EXCETO'), 'o texto do fluxo mostra a excecao');
+}
+
 fim();

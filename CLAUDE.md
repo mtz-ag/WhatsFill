@@ -342,6 +342,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   nada); o que o caso real mostrou e outra coisa — **propaganda como primeira resposta a um pedido
   de socorro e a resposta errada mesmo quando o texto e inofensivo.**
 
+- **Toda caixa tem EXCECAO, e ela vale tambem nas caixas de REGRA** (pedido dele, 03/09/2026:
+  *"algo que notei que esta faltando nos ramos e em geral: condicao de mandar mensagem e
+  excecao"*). Ele apontou o buraco mais caro do quadro livre — o mesmo que `problemas` acusava sem
+  poder resolver: a caixa dele PARECE a regra do codigo e tem o mesmo desfecho na tela, mas nao
+  carrega as guardas dela (`!enviadoHoje && !modeloJaNaConversa`). Ate entao a unica forma de dizer
+  "mande, mas nao quando X" era nao usar a caixa. Tres coisas a lembrar: a excecao e conferida
+  **antes de tudo**, inclusive antes da `quando` da regra; ela so **ESTREITA** (nenhuma mensagem
+  passa a sair por causa de uma excecao, algumas deixam de sair — por isso e seguro deixa-la mexer
+  em caixa de regra, que era o unico lugar do quadro fechado para ele); e ela **conta como guarda
+  no `repeteSozinha`**, com a polaridade invertida da condicao (o ENVIO tem que tornar a excecao
+  verdadeira). `chaveDeComparacao` inclui a excecao: "mande o modelo" e "mande o modelo exceto
+  quando ja mandamos" sao caixas diferentes, e trata-las como a mesma faria o cartao "O padrao
+  mudou?" dizer que ele ja tem uma guarda que nao tem.
+
 - **Mexeu no `fluxoPadrao`? Gere o arquivo e MANDE para ele no mesmo turno.** Combinado de
   03/09/2026: *"arrume o ramo, eu vou importar. Todas as mudancas feitas aqui, se afetarem o ramo,
   voce deve me passar o ramo atual"*. `node tools/exportar-fluxo.mjs <saida.json>` escreve o padrao

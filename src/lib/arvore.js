@@ -152,6 +152,26 @@ export function casa(no, ctx) {
   if (!no || no.desligado) return false;
 
   const regra = regraDoNo(no);
+  /**
+   * **A EXCEÇÃO vale antes de tudo, e vale também para as caixas de REGRA.**
+   *
+   * Pedido dele (03/09/2026): *"algo que notei que está faltando nos ramos e em geral: condição de
+   * mandar mensagem e exceção"*.
+   *
+   * Ele está apontando o buraco mais caro do quadro livre, o mesmo que o `problemas` já acusava
+   * sem poder resolver: a caixa dele **parece** a regra do código e tem o mesmo desfecho na tela,
+   * mas não tem as guardas que a regra carrega (`!enviadoHoje && !modeloJaNaConversa`). Antes
+   * disto, a única forma de expressar "mande, mas não quando X" era não usar a caixa.
+   *
+   * Vale para caixa de regra **de propósito**: até aqui a condição das regras do código era o
+   * único lugar do quadro que ele não podia tocar, e a exceção é a forma segura de tocar —
+   * ela só **estreita** o que a regra alcança, nunca amplia. Nenhuma mensagem passa a sair por
+   * causa de uma exceção; algumas deixam de sair, que é o lado barato de errar.
+   */
+  const exc = no.excecao || {};
+  const temExcecao = !!exc.sinal || (exc.palavras || []).length > 0;
+  if (temExcecao && condicaoCasa(exc, ctx)) return false;
+
   if (regra) {
     try {
       return !!regra.quando(ctx || {});
@@ -161,7 +181,17 @@ export function casa(no, ctx) {
     }
   }
 
-  const cond = no.condicao || {};
+  return condicaoCasa(no.condicao || {}, ctx);
+}
+
+/**
+ * Uma condição (sinal + palavras) descreve este contato?
+ *
+ * Uma função só porque a caixa tem DUAS: a que a faz casar e a exceção que a impede. Duas cópias
+ * divergiriam na primeira vez que o formato ganhasse um campo — e a exceção decide o que **não**
+ * sai para eleitor, que é o lado em que divergir custa caro.
+ */
+function condicaoCasa(cond, ctx) {
   if (cond.sinal) {
     if (!sinalConhecido(cond.sinal)) return false;
     const valor = !!(ctx || {})[cond.sinal];
@@ -318,6 +348,17 @@ export function noVazio(rotulo) {
     rotulo: rotulo || 'ramo novo',
     regra: null,
     condicao: { sinal: '', negar: false, palavras: [], onde: 'ultima' },
+    /**
+     * **"Exceto quando…"** — a condição que IMPEDE esta caixa de decidir.
+     *
+     * Pedido dele (03/09/2026): *"falta condição de mandar mensagem e exceção"*. É o que permite
+     * uma caixa dele carregar a guarda que a regra do código carrega sozinha — "mande o modelo,
+     * exceto quando o modelo já está na conversa" — e é a única forma de estreitar uma caixa de
+     * regra sem mexer no código.
+     *
+     * Vazia (sem sinal e sem palavras) não faz nada, que é como toda caixa nasce.
+     */
+    excecao: { sinal: '', negar: false, palavras: [], onde: 'ultima' },
     acao: null,
     /**
      * O que ele quer que MUDE neste ramo — escrito para mim, não para a extensão.
@@ -1238,6 +1279,7 @@ export function sanitizar(bruto) {
       rotulo: nome,
       regra: null,
       condicao: { sinal: '', negar: false, palavras: [], onde: 'ultima' },
+      excecao: { sinal: '', negar: false, palavras: [], onde: 'ultima' },
       acao: null,
       nota,
       desligado: cru.desligado === true,
@@ -1250,6 +1292,22 @@ export function sanitizar(bruto) {
     if (regra) {
       if (REGRAS.some((r) => r.id === regra)) no.regra = regra;
       else avisos.push(`"${nome}": a regra "${regra}" não existe mais no código — o ramo virou um agrupamento`);
+    }
+
+    /**
+     * A EXCEÇÃO passa pela mesma peneira da condição — é entrada não confiável igual, e decide o
+     * que a rodada manda para eleitor.
+     */
+    const exc = cru.excecao && typeof cru.excecao === 'object' ? cru.excecao : {};
+    const sinalExc = texto(exc.sinal, 40);
+    if (sinalExc) {
+      if (sinalConhecido(sinalExc)) no.excecao.sinal = sinalExc;
+      else avisos.push(`ramo "${no.rotulo}": exceção com sinal desconhecido "${sinalExc}" — descartada`);
+    }
+    no.excecao.negar = exc.negar === true;
+    no.excecao.onde = exc.onde === 'qualquer' ? 'qualquer' : 'ultima';
+    if (Array.isArray(exc.palavras)) {
+      no.excecao.palavras = exc.palavras.map((x) => texto(x, 80)).filter(Boolean).slice(0, LIMITES.palavras);
     }
 
     const cond = cru.condicao && typeof cru.condicao === 'object' ? cru.condicao : {};
@@ -1403,6 +1461,17 @@ export function paraTexto(arvore, opcoes) {
       linhas.push('');
       linhas.push(`${pad}${numero}. ${no.rotulo || '(sem nome)'}${no.regra ? `   [regra do código: ${no.regra}]` : ''}${no.desligado ? '   *** DESLIGADO ***' : ''}`);
       linhas.push(`${pad}    quando: ${condicao(no)}`);
+      const exc = no.excecao || {};
+      if (exc.sinal || (exc.palavras || []).length) {
+        const sinal = SINAIS.find((x) => x.id === exc.sinal);
+        const partes = [];
+        if (sinal) partes.push(exc.negar ? sinal.nao : sinal.rotulo);
+        if ((exc.palavras || []).length) {
+          partes.push(`escreveu ${exc.palavras.map((x) => `"${x}"`).join(' ou ')}` +
+            (exc.onde === 'qualquer' ? ' (em qualquer mensagem)' : ' (na última)'));
+        }
+        linhas.push(`${pad}    EXCETO: ${partes.join(' e ')}`);
+      }
       linhas.push(`${pad}    então:  ${desfecho(no)}`);
       // A observação é o motivo de tudo isto existir: ela vem por último e marcada, para saltar aos
       // olhos numa colagem de cem linhas.
@@ -1512,6 +1581,19 @@ function repeteSozinha(no) {
 
   const efeito = acao.tecla ? TECLAS[acao.tecla]?.efeito : 'envia';
   if (efeito !== 'envia') return false;
+
+  /**
+   * **A EXCEÇÃO conta como guarda** — é para isso que ele a pediu (03/09/2026).
+   *
+   * "Mande o modelo, EXCETO quando o modelo já está na conversa" é exatamente a guarda que a
+   * regra do código carrega, escrita do lado de fora. A polaridade é invertida em relação à
+   * condição: aqui o envio tem que tornar a exceção VERDADEIRA, e aí a caixa deixa de casar.
+   */
+  const exc = no.excecao || {};
+  if (exc.sinal && SINAIS_QUE_O_ENVIO_APAGA.has(exc.sinal) && !exc.negar) return false;
+  if (exc.sinal && SINAIS_QUE_A_RESPOSTA_APAGA.has(exc.sinal) && exc.negar) return false;
+  // Palavra na ÚLTIMA mensagem também: a última muda quando ela escreve de novo.
+  if ((exc.palavras || []).length && exc.onde !== 'qualquer') return false;
 
   const cond = no.condicao || {};
   if ((cond.palavras || []).length && cond.onde !== 'qualquer') return false;
@@ -1655,11 +1737,22 @@ export function problemas(arvore) {
  * não decisão, e todas colidiriam na mesma chave.
  */
 function chaveDeComparacao(no) {
-  if (no.regra) return `regra:${no.regra}`;
+  /**
+   * A exceção entra na chave: "mande o modelo" e "mande o modelo exceto quando já mandamos" são
+   * caixas diferentes, e tratá-las como a mesma faria o cartão "O padrão mudou?" dizer que ele já
+   * tem uma guarda que não tem.
+   */
+  const exc = no.excecao || {};
+  const excPalavras = (exc.palavras || []).map((x) => String(x).trim().toLowerCase()).filter(Boolean).sort();
+  const marca = exc.sinal || excPalavras.length
+    ? `|exceto:${exc.sinal || ''}:${exc.negar ? 'nao' : 'sim'}:${excPalavras.join('|')}`
+    : '';
+
+  if (no.regra) return `regra:${no.regra}${marca}`;
   const cond = no.condicao || {};
   const palavras = (cond.palavras || []).map((p) => String(p).trim().toLowerCase()).filter(Boolean).sort();
-  if (!cond.sinal && !palavras.length) return null;
-  return `cond:${cond.sinal || ''}:${cond.negar ? 'nao' : 'sim'}:${palavras.join('|')}`;
+  if (!cond.sinal && !palavras.length && !marca) return null;
+  return `cond:${cond.sinal || ''}:${cond.negar ? 'nao' : 'sim'}:${palavras.join('|')}${marca}`;
 }
 
 /**

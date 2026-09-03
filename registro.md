@@ -32,6 +32,47 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-03 — A exceção que faltava em toda caixa
+
+*"algo que notei que está faltando nos ramos e em geral: condição de mandar mensagem e exceção"*.
+
+Ele apontou o buraco mais caro do quadro livre — e é o mesmo que o `problemas` já acusava **sem
+poder resolver**: a caixa dele *parece* a regra do código e tem o mesmo desfecho na tela, mas não
+carrega as guardas que a regra carrega sozinha (`!enviadoHoje && !modeloJaNaConversa`). Era a
+armadilha registrada em 02/09, quando a caixa *"mandar modelo conforme o anúncio"* com a tecla 1
+fixa mandava o modelo em **toda passada, para sempre**.
+
+Até hoje, a única forma de dizer *"mande, mas não quando X"* era não usar a caixa.
+
+Agora toda caixa tem **"Exceto quando…"** — mesmo formato da condição (sinal + palavras + onde), e
+vazia não faz nada. Quatro decisões:
+
+- **vale também nas caixas de REGRA**, que eram o único lugar do quadro fechado para ele. É seguro
+  porque a exceção só **estreita**: nenhuma mensagem passa a sair por causa dela, algumas deixam de
+  sair — e errar para o lado de não mandar é o lado barato;
+- **é conferida antes de tudo**, inclusive antes do `quando` da regra;
+- **não para a busca**: com a exceção valendo, o ramo não decide e a rodada segue nos irmãos —
+  mesma disciplina do "casou e não resolveu", que existe para não abrir buraco silencioso;
+- **conta como guarda no `repeteSozinha`**, com a polaridade invertida da condição: o *envio* tem
+  que tornar a exceção verdadeira. É literalmente para isso que ele a pediu — "mande o modelo,
+  exceto quando o modelo já está na conversa" tira o aviso de "esta caixa vai mandar de novo".
+
+`chaveDeComparacao` passou a incluir a exceção: *"mande o modelo"* e *"mande o modelo exceto quando
+já mandamos"* são caixas diferentes, e tratá-las como a mesma faria o cartão "O padrão mudou?"
+dizer que ele já tem uma guarda que não tem.
+
+**Medido na janela de verdade** (montada com um `chrome.storage` de mentira e o quadro padrão
+semeado): abri a caixa `pergunta-aberta` — que é regra do código —, pus a exceção "o modelo já está
+na conversa", e ela gravou, apareceu na caixa do quadro em cor de aviso e passou a impedir a regra
+naquele contexto.
+
+**Arquivos:** `src/lib/arvore.js` (`excecao` em `noVazio` e no sanitizador, `condicaoCasa`,
+`repeteSozinha`, `chaveDeComparacao`, `paraTexto`), `src/fluxo.js` (o editor, para os dois tipos de
+caixa, e a leitura no quadro), `src/fluxo.css`, `tests/arvore.test.mjs` (+16), `CLAUDE.md`
+(+1 armadilha), `manifest.json` (1.84.0 → 1.85.0). Quinze suítes e os dois verificadores.
+
+---
+
 ## 2026-09-03 — O ramo atual, para ele importar
 
 Combinado dele: *"arrume o ramo, eu vou importar. Todas as mudanças feitas aqui, se afetarem o ramo,
