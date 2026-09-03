@@ -32,6 +32,33 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-03 — A caixa da IA no cartão dos Novos
+
+*"adicione o box de iniciar com IA também"*.
+
+O cartão de "iniciar conversas" (a fila dos Novos) tinha só a caixa de automático; a de ligar a
+avaliação por IA morava na aba Config. Ele decide começar a rodada olhando para o botão de começar,
+e não numa aba de configuração — então a chave tem que estar ali.
+
+**É a MESMA chave (`ia.ligada`), não uma segunda.** Dois interruptores para a mesma coisa é como as
+duas versões desta extensão divergiram, e aqui divergir significaria a rodada gastando dinheiro que
+a outra tela diz estar desligado.
+
+As duas caixas fazem coisas diferentes, e a linha embaixo passou a dizer isso:
+
+- **"Automático ligado"** decide se o que a regra **ou a IA** escolher sai sem perguntar. Não é uma
+  caixa de IA — e o rótulo agora diz "REGRAS e da IA", igual ao da fila dos Meus, que já tinha sido
+  corrigido pelo mesmo motivo em 02/09;
+- **"Usar a avaliação por IA"** liga a IA, e vale para todas as rodadas.
+
+E o aviso que faltava: **IA ligada sem chave salva não avalia nada.** Caixa marcada que não faz nada
+é a armadilha que este painel já pagou com o botão "Avaliar o contato aberto" — dizer isso no
+cartão é mais barato que ele descobrir pelo silêncio no Andamento.
+
+**Arquivos:** `src/panel/panel.js` (`renderCartaoNovos`), `manifest.json` (1.86.0 → 1.87.0).
+
+---
+
 ## 2026-09-03 — Confirmação de presença: pular, não responder
 
 Print da Elci: ela escreveu **duas vezes** *"Quero confirmar minha presença no evento: AMIGOS

@@ -2727,7 +2727,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * "Automatizar com IA" e executava as REGRAS também, com a IA desligada.
      */
     const auto = checkbox(
-      'Automático ligado — mandar sem me perguntar, contato a contato',
+      'Automático ligado: envia sozinha a escolha das REGRAS e da IA, sem perguntar',
       !!cfg.automaticoNovos,
       async (v) => {
         await salvarAuto({ automaticoNovos: v });
@@ -2741,13 +2741,52 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
     );
     card.append(auto);
+
+    /**
+     * **A avaliação por IA, aqui também** — pedido dele (03/09/2026): *"adicione o box de iniciar
+     * com IA também"*.
+     *
+     * É a MESMA chave da aba Config (`ia.ligada`), e não uma segunda: dois interruptores para a
+     * mesma coisa é como as duas versões da extensão divergiram, e aqui divergir significaria a
+     * rodada gastando dinheiro que a outra tela diz estar desligado.
+     *
+     * Está aqui porque é aqui que ele decide começar a rodada — e a decisão "usar IA nesta leva"
+     * é tomada olhando para o botão de começar, não numa aba de configuração.
+     *
+     * **Ela e a caixa de cima são coisas diferentes**, e a linha abaixo diz isso: esta liga a IA;
+     * a de cima decide se o que a IA (ou a regra) escolher sai sem perguntar.
+     */
+    const comIA = checkbox(
+      'Usar a avaliação por IA nesta rodada (custa por contato avaliado)',
+      !!state.ia?.ligada,
+      async (v) => {
+        await salvarIA({ ligada: v });
+        setStatus(
+          v
+            ? 'Avaliação por IA ligada — vale para todas as rodadas, e custa por contato.'
+            : 'Avaliação por IA desligada: só as regras do fluxo decidem.',
+          'ok'
+        );
+        renderAll();
+      }
+    );
+    card.append(comIA);
+
     card.append(
       h('div', { class: 'wf-origin' },
-        'Vale para as regras do fluxo E para a IA, quando ela estiver ligada — não é uma caixa de ' +
-          'IA. Só a tecla "Responder à mão" continua parando para você: ela quer dizer, por ' +
-          'definição, que alguém precisa escrever. E cidade de palpite não é gravada sozinha: ' +
-          'fica esperando você, com a linha no Andamento.')
+        'A primeira caixa vale para as regras do fluxo E para a IA — não é uma caixa de IA. A ' +
+          'segunda é a MESMA chave da aba Config: ligar aqui liga em todas as rodadas. Só a tecla ' +
+          '"Responder à mão" continua parando para você: ela quer dizer, por definição, que ' +
+          'alguém precisa escrever. E cidade de palpite não é gravada sozinha — fica esperando ' +
+          'você, com a linha no Andamento.')
     );
+
+    // Caixa marcada que não faz nada é a armadilha que este painel já pagou: sem chave, a IA não
+    // roda, e a rodada segue só com as regras. Dizer isso aqui é mais barato que ele descobrir
+    // pelo silêncio no Andamento.
+    if (state.ia?.ligada && !state.iaTemChave) {
+      card.append(h('div', { class: 'wf-block' }, 'A IA está ligada mas não há chave salva — cadastre na aba Config, senão ela não avalia nada.'));
+    }
 
     const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Começar pelos Novos');
     comecar.addEventListener('click', () => withBusy(runLoteNovos));
