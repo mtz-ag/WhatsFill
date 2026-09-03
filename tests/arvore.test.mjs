@@ -1103,7 +1103,7 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   check(naChegada.includes('conteudo-pedido'), 'o recibo sozinho (ela ja tem cidade) fica na chegada');
   check(naChegada.includes('nunca-pediram-dados'), 'o pedido de dados sozinho (sem modelo) fica na chegada');
   check(naChegada.includes('pediu dinheiro, cesta basica ou remedio'), 'e a ajuda financeira VOLTOU para a chegada (03/09)');
-  check(chegada.filhos.length === 10, 'e a chegada tem 10 caixas, nao 12');
+  check(chegada.filhos.length === 11, 'e a chegada tem 11 caixas, nao 12');
 
   /**
    * As duas caixas de "conclua e nao mande nada" (03/09) ficam nos DOIS lados: sao sobre NAO
@@ -1132,17 +1132,21 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
 }
 
 
-grupo('confirmou presenca e ja temos os dados: agradece (02/09/2026)');
+grupo('confirmou presenca no evento: PULA e ele atende no fim (03/09/2026)');
 {
   /**
-   * Print do Deoclecio: contato com TODAS as etiquetas -- cidade, conteudo, engajado -- recebeu
-   * "Que bom! Sera uma grande satisfacao contar com voce... Nome / Cidade" DUAS vezes. Relato dele:
-   * *"repetindo resposta em pessoa com todas etiquetas, pediu dados, o caso certo seria so
-   * agradecer a presenca no evento e concluir"*.
+   * **A confirmacao de presenca deixou de ser respondida, por pedido dele.**
    *
-   * Faltava a regra: `confirmaPresenca` so trocava o TEXTO da tecla 4, entao nao havia desfecho
-   * para "confirmou e nao falta dado nenhum" -- o caso descia ate quem pede o cadastro, e pedia o
-   * que ja estava no CRM.
+   * Print da Elci (03/09): ela escreveu duas vezes *"Quero confirmar minha presenca no evento:
+   * AMIGOS CAPITAO MARTIM E GUSTAVO VICTORINO"*, a rodada respondeu *"Que bom! Sera uma grande
+   * satisfacao contar com voce... Nome / Cidade"* e concluiu. Ele: *"nao e para responder, e para
+   * pular e eu atendo no final -- nessa situacao de confirmacao para evento"*.
+   *
+   * A tecla e 2 e nao 3 de proposito: confirmacao de presenca nao e atendimento que se fecha, e
+   * uma lista que alguem monta. Concluir tiraria da tela justamente quem ele quer atender depois.
+   *
+   * Antes disto era a `confirmou-presenca-com-dados` (tecla 8), do caso do Deoclecio (02/09) --
+   * ela agradecia e encerrava, e foi apagada junto: duas regras para a mesma situacao divergem.
    */
   const q = arv.arrumar(arv.fluxoPadrao());
   const deoclecio = {
@@ -1153,22 +1157,35 @@ grupo('confirmou presenca e ja temos os dados: agradece (02/09/2026)');
   };
   const tecla = (c) => arv.decidir(c, q)?.tecla ?? null;
 
-  check(tecla(deoclecio) === '8', 'agradece e conclui, em vez de pedir os dados de novo');
+  check(tecla(deoclecio) === '2', 'pula, deixando o atendimento aberto');
   check(tecla(deoclecio) !== '4', 'e NAO pede nome e cidade');
+  check(tecla(deoclecio) !== '8', 'nem agradece, que era o desfecho anterior');
+  check(tecla(deoclecio) !== '3', 'e nao CONCLUI: concluir tiraria da tela quem ele quer atender');
+
+  // Sem cidade da no mesmo: quem confirma presenca e sempre caso dele, com ou sem cadastro.
+  check(tecla({ ...deoclecio, temEtiquetaDeCidade: false, jaPediramDados: false, pedidoHoje: false }) === '2',
+    'sem etiqueta de cidade, tambem pula');
+
+  // A recusa continua acima -- quem pediu para sair nao vira caso de evento.
+  check(tecla({ ...deoclecio, semInteresse: true }) === 's', 'a recusa vence');
 
   /**
-   * Sem etiqueta de cidade a regra nao casa, e e certo que nao case: la falta o cadastro, e o
-   * pedido de dados (com o preambulo de evento) continua sendo o desfecho.
+   * **Vence a etiqueta que dispensa da fila**, e isto e escolha: engajado que confirma presenca e
+   * ainda mais o caso dele, e a etiqueta mandaria a mensagem do momento por cima da confirmacao.
    */
-  check(tecla({ ...deoclecio, temEtiquetaDeCidade: false, jaPediramDados: false, pedidoHoje: false }) === '4',
-    'quem confirmou e NAO tem cidade continua recebendo o pedido');
+  check(tecla({ ...deoclecio, etiquetaQueDispensa: 'Sem Retorno', podeMandarMomento: true }) === '2',
+    'e vence a etiqueta que dispensa da fila');
 
-  // As protecoes continuam ganhando.
-  check(tecla({ ...deoclecio, semInteresse: true }) === 's', 'a recusa vence');
-  check(tecla({ ...deoclecio, etiquetaQueDispensa: 'Sem Retorno', podeMandarMomento: true }) === '5', 'a etiqueta que dispensa vence');
+  // Quem NAO confirmou segue o fluxo normal.
+  check(tecla({ ...deoclecio, confirmouPresenca: false }) !== '2', 'sem confirmacao, o fluxo segue como antes');
 
-  // E quem nao confirmou presenca nao e agradecido por isso.
-  check(tecla({ ...deoclecio, confirmouPresenca: false }) !== '8', 'sem confirmacao, nao agradece a presenca');
+  /**
+   * **O sinal e so o "sim".** Quem responde que NAO vai ao evento nao e pulado -- `confirmouPresenca`
+   * e falso para ela, e o caso segue o fluxo normal. O preambulo de evento continua existindo no
+   * TEXTO da tecla 4 (`pedir-dados-evento-nao`), para quando ele apertar o 4.
+   */
+  const naoVai = { ...deoclecio, confirmouPresenca: false, temEtiquetaDeCidade: false, jaPediramDados: false, pedidoHoje: false };
+  check(tecla(naoVai) !== '2', 'quem disse que NAO vai nao e pulada por esta regra');
 }
 
 grupo('desabafo longo vai para a IA, nao para a mensagem do momento (02/09/2026)');

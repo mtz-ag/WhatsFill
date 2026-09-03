@@ -32,6 +32,55 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-03 — Confirmação de presença: pular, não responder
+
+Print da Elci: ela escreveu **duas vezes** *"Quero confirmar minha presença no evento: AMIGOS
+CAPITAO MARTIM E GUSTAVO VICTORINO"*, a rodada respondeu *"Que bom! Será uma grande satisfação
+contar com você… Nome / Cidade"* e concluiu. Ele: *"não é para responder, é para pular e eu atendo
+no final — nessa situação de confirmação para evento"*.
+
+`confirmou-presenca-evento` (tecla **2**) é a regra nova.
+
+**A tecla é 2 e não 3, e essa é a decisão que importa.** Confirmação de presença não é um
+atendimento que se fecha: é uma **lista** que alguém precisa montar, com nome, cidade e a
+confirmação conferidos por gente. Concluir tiraria da tela justamente quem ele quer atender depois.
+
+Ela **substitui `confirmou-presenca-com-dados`** (tecla 8), que nasceu ontem do caso do Deoclécio e
+agradecia + encerrava. Apaguei a regra, o verbete e as duas caixas do padrão que a alcançavam —
+inclusive o grupo "confirmou presença no evento" dentro de "sem pendência". Deixar as duas de pé
+seria a receita de sempre: duas regras para a mesma situação divergem na primeira semana, e a que
+ninguém olha é a que responde errado.
+
+Duas coisas que **não** mudaram, e que os testes travam:
+
+- **o sinal é só o "sim"** — quem responde que não vai ao evento segue o fluxo normal, e o preâmbulo
+  *"não tem problema"* continua no texto da tecla 4;
+- **a recusa continua acima** — quem pediu para sair não vira caso de evento.
+
+E uma que mudou por escolha: **vence a etiqueta que dispensa da fila.** Engajado que confirma
+presença é ainda mais o caso dele, e a etiqueta mandaria a mensagem do momento por cima da
+confirmação.
+
+A regra entrou em `arvore.PROTECOES`, então vale **antes de ele importar** o quadro novo — que é o
+que impede a print de se repetir amanhã.
+
+### O botão de download
+
+*"me dê o botão de download, esse caminho ficou esquisito"*. Ele estava certo duas vezes: o caminho
+era mesmo uma pasta temporária, e o problema de fundo é pior — **ele dependia de eu lembrar de
+gerar e mandar o arquivo**. Regra que exige alguém lembrar não é regra.
+
+**"Baixar o padrão de hoje"**, ao lado de Exportar/Importar. Baixar não mexe no quadro, de
+propósito: é o vizinho seguro do "Resetar para o padrão", que substitui tudo.
+
+**Arquivos:** `src/lib/sugestao.js` (+`confirmou-presenca-evento`, −`confirmou-presenca-com-dados`),
+`src/lib/arvore.js` (as caixas nos dois ramos, `PROTECOES`), `src/fluxo.html` e `src/fluxo.js` (o
+botão), `src/panel/panel.js` (o comentário do texto da tecla 8), `tests/arvore.test.mjs`,
+`CLAUDE.md` (+2 armadilhas), `manifest.json` (1.85.0 → 1.86.0). Quinze suítes, os dois
+verificadores, o quadro sem problemas e nenhum desfecho incoerente.
+
+---
+
 ## 2026-09-03 — A exceção que faltava em toda caixa
 
 *"algo que notei que está faltando nos ramos e em geral: condição de mandar mensagem e exceção"*.

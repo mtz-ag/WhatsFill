@@ -342,6 +342,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   nada); o que o caso real mostrou e outra coisa — **propaganda como primeira resposta a um pedido
   de socorro e a resposta errada mesmo quando o texto e inofensivo.**
 
+- **Confirmacao de presenca em evento NAO se responde: pula, e ele atende no fim** (pedido dele,
+  03/09/2026, print da Elci). Ela escreveu duas vezes *"Quero confirmar minha presenca no evento"*
+  e recebeu *"Que bom!... Nome / Cidade"* + conclusao. Ele: *"nao e para responder, e para pular e
+  eu atendo no final"*. A tecla e **2 e nao 3**: confirmacao de presenca nao e atendimento que se
+  fecha, e uma LISTA que alguem monta — concluir tiraria da tela justamente quem ele quer atender
+  depois. Isto **substituiu `confirmou-presenca-com-dados`** (tecla 8, do caso do Deoclecio em
+  02/09), que foi apagada junto com a caixa "confirmou presenca no evento" do ramo "sem pendencia":
+  duas regras para a mesma situacao divergem na primeira semana. O sinal e so o **"sim"** — quem
+  responde que nao vai segue o fluxo normal, e o preambulo de evento continua no TEXTO da tecla 4.
+  A regra esta em `arvore.PROTECOES`, entao vale mesmo antes de ele importar o quadro novo.
+- **Botao "Baixar o padrao de hoje" na janela do fluxo** (pedido dele, 03/09: *"me de o botao de
+  download, esse caminho ficou esquisito"*). Ele estava certo duas vezes: o caminho era uma pasta
+  temporaria, e o problema de fundo e pior — **ele dependia de eu lembrar de gerar e mandar o
+  arquivo**. Com o botao, o padrao de agora esta a um clique. Baixar nao mexe no quadro, de
+  proposito: e o vizinho seguro do "Resetar para o padrao", que substitui tudo.
+
 - **Toda caixa tem EXCECAO, e ela vale tambem nas caixas de REGRA** (pedido dele, 03/09/2026:
   *"algo que notei que esta faltando nos ramos e em geral: condicao de mandar mensagem e
   excecao"*). Ele apontou o buraco mais caro do quadro livre — o mesmo que `problemas` acusava sem

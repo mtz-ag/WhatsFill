@@ -106,6 +106,33 @@ export const REGRAS = [
         : 'a última mensagem da conversa é nossa — conclua sem mandar nada.',
   },
   {
+    id: 'confirmou-presenca-evento',
+    tecla: '2',
+    /**
+     * **Confirmou presença no evento → PULA, e ele atende no fim.**
+     *
+     * Pedido dele (03/09/2026), com a print da Elci: ela escreveu duas vezes *"Quero confirmar
+     * minha presença no evento: AMIGOS CAPITAO MARTIM E GUSTAVO VICTORINO"*, a rodada respondeu
+     * *"Que bom! Será uma grande satisfação contar com você… Nome / Cidade"* e concluiu. Ele:
+     * *"não é para responder, é para pular e eu atendo no final — nessa situação de confirmação
+     * para evento"*.
+     *
+     * **É diferente de tudo o mais nesta tabela, e por isso a tecla é 2 e não 3.** Confirmação de
+     * presença não é um atendimento que se fecha: é uma lista que alguém precisa montar, com
+     * nome, cidade e a confirmação conferidos por gente. Pular deixa o atendimento ABERTO, onde
+     * ele estava — concluir tiraria da tela justamente quem ele quer atender depois.
+     *
+     * **Isto substitui `confirmou-presenca-com-dados`**, que agradecia e encerrava, e o preâmbulo
+     * de evento da tecla 4 continua existindo para quem responde que **não** vai: o sinal aqui é
+     * só o "sim".
+     *
+     * Fica acima da etiqueta que dispensa da fila de propósito: engajado que confirma presença é
+     * ainda mais o caso dele — a etiqueta mandaria a mensagem do momento por cima da confirmação.
+     */
+    quando: (c) => !!c.confirmouPresenca,
+    motivo: () => 'confirmou presença no evento — pulei para você atender no fim, com a lista na mão.',
+  },
+  {
     id: 'etiqueta-dispensa-da-fila',
     tecla: (c) => (c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5'),
     /**
@@ -481,27 +508,6 @@ export const REGRAS = [
             : 'já foi atendida antes (o modelo provavelmente já saiu) — mande a mensagem do momento.',
   },
   {
-    id: 'confirmou-presenca-com-dados',
-    tecla: '8',
-    /**
-     * **Ela confirmou que vai ao evento e nós já temos os dados dela: agradece e encerra.**
-     *
-     * Print do Deoclecio (02/09/2026): contato com TODAS as etiquetas — cidade, conteúdo, engajado
-     * — recebeu *"Que bom! Será uma grande satisfação contar com você… Nome / Cidade"* **duas
-     * vezes**. Relato dele: *"repetindo resposta em pessoa com todas etiquetas, pediu dados, o caso
-     * certo seria só agradecer a presença no evento e concluir"*.
-     *
-     * Faltava esta regra. Até aqui `confirmaPresenca` só trocava o TEXTO da tecla 4 — o pedido de
-     * dados ganhava um preâmbulo de evento. Não havia desfecho para "confirmou e não falta dado
-     * nenhum", então o caso descia até quem pede o cadastro, e pedia o que já estava no CRM.
-     *
-     * Fica ACIMA de `respondeu-os-dados`: quem confirmou presença falou de outra coisa, e o
-     * agradecimento pela presença é o desfecho mais específico.
-     */
-    quando: (c) => c.confirmouPresenca && c.temEtiquetaDeCidade,
-    motivo: () => 'confirmou que vai ao evento e já temos os dados dela — agradeça a presença e encerre.',
-  },
-  {
     id: 'respondeu-os-dados',
     tecla: '8',
     /**
@@ -751,6 +757,14 @@ export const SOBRE = {
       'Não há o que responder: a conversa termina numa mensagem nossa, ou o contato nunca ' +
       'escreveu. Conclui sem mandar nada.',
   },
+  'confirmou-presenca-evento': {
+    rotulo: 'Confirmou presença no evento',
+    efeito: 'silencio',
+    quando:
+      'Disse que VAI ao evento. Pula e deixa o atendimento aberto — confirmação de presença é uma ' +
+      'lista para você montar no fim, não um atendimento para fechar. Quem responde que NÃO vai ' +
+      'continua caindo no pedido de nome e cidade, com o "não tem problema" junto.',
+  },
   'etiqueta-dispensa-da-fila': {
     rotulo: 'Tem a etiqueta que dispensa da fila',
     efeito: 'depende',
@@ -804,14 +818,7 @@ export const SOBRE = {
       'do projeto que faz isso. Só casa quando as duas metades cabem: há modelo mapeado que ainda ' +
       'não saiu, ela não tem etiqueta de cidade e o pedido nunca foi feito.',
   },
-  'confirmou-presenca-com-dados': {
-    rotulo: 'Confirmou presença no evento e já temos os dados',
-    efeito: 'envia',
-    quando:
-      'Ela disse que vai ao evento e já tem etiqueta de cidade — não falta dado nenhum. Agradece e ' +
-      'conclui, SEM pedir nome e cidade de novo. Sem esta regra o caso descia até o pedido de ' +
-      'cadastro e pedia o que já está no CRM.',
-  },
+
   'respondeu-os-dados': {
     rotulo: 'Respondeu o nome e a cidade que pedimos',
     efeito: 'envia',

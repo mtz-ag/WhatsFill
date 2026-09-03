@@ -281,7 +281,7 @@ function motivoDele(no, ctx) {
  * aparecer no quadro (e aparece no padrao), e la ele posiciona; a lista so garante que a ausencia
  * nao vira envio.
  */
-const PROTECOES = ['sem-interesse', 'etiqueta-so-conclui', 'ultima-e-nossa'];
+const PROTECOES = ['sem-interesse', 'etiqueta-so-conclui', 'ultima-e-nossa', 'confirmou-presenca-evento'];
 
 export function decidir(ctx, arvore, fluxo) {
   const fixadas = fluxo?.teclas || {};
@@ -617,6 +617,7 @@ export function fluxoPadrao() {
     r('sem-interesse', 'Recusou ou veio hostilizar'),
     r('etiqueta-so-conclui', null, 'chegada'),
     r('ultima-e-nossa', null, 'chegada'),
+    r('confirmou-presenca-evento', null, 'chegada'),
 
     /**
      * **A etiqueta que dispensa da fila fica ACIMA do modelo, e isto foi conserto de regressão.**
@@ -802,6 +803,7 @@ export function fluxoPadrao() {
      */
     r('etiqueta-so-conclui', null, 'volta'),
     r('ultima-e-nossa', null, 'volta'),
+    r('confirmou-presenca-evento', null, 'volta'),
 
     /**
      * **A etiqueta que dispensa da fila também sobe para cima da bifurcação de cidade.**
@@ -842,21 +844,6 @@ export function fluxoPadrao() {
         r('respondeu-nossa-pergunta'),
       ]),
       grupo('sem pendência', SEM_CONDICAO, [
-        /**
-         * **Confirmou presença e NÃO temos os dados dela** — o buraco gêmeo do que ele apontou.
-         *
-         * Achado escrevendo o teste do caso do Deoclecio: quem diz "vou sim" ao convite, não tem
-         * etiqueta de cidade e não veio de anúncio reconhecido atravessava o quadro sem desfecho. O
-         * pedido de dados existe e sabe o texto certo (`pedir-dados-evento-sim`, o "Que bom!"), mas
-         * a única caixa que o alcançava neste lado estava dentro de "veio de um anúncio que eu
-         * reconheço".
-         *
-         * A condição é a presença confirmada, e não "sem cidade" em geral: estreita de propósito,
-         * porque alargar aqui mudaria o desfecho de muito mais gente do que ele pediu.
-         */
-        grupo('confirmou presença no evento', { sinal: 'confirmouPresenca', negar: false, palavras: [], onde: 'ultima' }, [
-          r('nunca-pediram-dados', 'ainda não temos nome e cidade', 'presenca'),
-        ]),
 
         /**
          * **Ela respondeu o que pedimos: agradece e encerra, SEM mandar modelo.**
@@ -926,15 +913,6 @@ export function fluxoPadrao() {
        * Vence `ja-respondemos-antes` (que conclui em silêncio) só quando ela de fato respondeu o
        * que pedimos — condição estreita, e é exatamente a intenção dele.
        */
-      /**
-       * **Confirmou presença no evento e já temos os dados** — print do Deoclecio (02/09/2026), que
-       * tem todas as etiquetas e recebeu o pedido de nome e cidade duas vezes.
-       *
-       * Fica só neste lado da bifurcação de propósito: a regra exige `temEtiquetaDeCidade`, então no
-       * lado "sem etiqueta" ela nunca casaria — e é certo que não case, porque lá falta o cadastro e
-       * o pedido de dados (com o preâmbulo de evento) continua sendo o desfecho.
-       */
-      r('confirmou-presenca-com-dados', 'confirmou presença e já temos os dados', 'com-cidade'),
       r('respondeu-os-dados', 'respondeu o nome e a cidade', 'com-cidade'),
 
       /**

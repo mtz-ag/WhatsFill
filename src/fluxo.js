@@ -1411,6 +1411,41 @@ el('exportar').addEventListener('click', () => {
 });
 
 /**
+ * **Baixa o PADRÃO DE HOJE como arquivo** — pedido dele (03/09/2026), depois de eu lhe mandar o
+ * arquivo por fora: *"me dê o botão de download, esse caminho ficou esquisito"*.
+ *
+ * Ele estava certo duas vezes. O caminho era mesmo esquisito (uma pasta temporária), e o problema
+ * de fundo é pior: **ele dependia de mim para ter o fluxo atual.** Toda vez que eu mexesse no
+ * padrão, o arquivo só chegaria nele se eu lembrasse de gerar e mandar — regra que exige alguém
+ * lembrar não é regra, e este projeto já pagou por isso.
+ *
+ * Com o botão, o padrão de agora está sempre a um clique, na pasta de downloads dele, com nome e
+ * versão no arquivo. Ele baixa e importa quando quiser.
+ *
+ * **Baixar não muda nada no quadro**, de propósito: é o vizinho seguro do "Resetar para o padrão",
+ * que substitui tudo. Aqui ele fica com o arquivo na mão e decide depois.
+ */
+el('baixar-padrao').addEventListener('click', () => {
+  const arvore = arvoreLib.arrumar(arvoreLib.fluxoPadrao());
+  const versao = chrome.runtime.getManifest?.().version || '';
+  const nome = `fluxo-padrao${versao ? '-' + versao : ''}`;
+  const dados = arvoreLib.paraArquivo({ arvore, teclas: {} }, nome);
+
+  const url = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${nome}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  escreverAviso(
+    `Baixado ${a.download}: ${arvoreLib.todosOsNos(arvore).length} ramos, ` +
+      `${arvoreLib.quantosEnviam(arvore)} deles enviando. Seu quadro não mudou — use "Importar arquivo" quando quiser trocar.`,
+    'bom'
+  );
+});
+
+/**
  * Copia o fluxo INTEIRO em texto, para ele colar numa conversa comigo.
  *
  * Eu ia fazer um botão que copiava só as observações, e ele cortou na hora — *"não faz sentido eu

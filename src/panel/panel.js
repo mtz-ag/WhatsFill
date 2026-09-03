@@ -4354,10 +4354,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * **Qual texto a tecla 8 manda.**
        *
        * A tecla é uma só ("agradece e conclui") e as situações são duas: apoio genérico, e
-       * confirmação de presença de quem já está cadastrada. A condição aqui é a MESMA da regra
-       * `confirmou-presenca-com-dados` (`confirmouPresenca && temEtiquetaDeCidade`) — escrita duas
-       * vezes porque a regra decide o DESTAQUE e isto decide o TEXTO, mas divergir seria mostrar
-       * "agradeça a presença" e mandar o agradecimento de apoio.
+       * confirmação de presença de quem já está cadastrada.
+       *
+       * **Nenhuma regra recomenda a tecla 8 para presença desde 03/09/2026** — quem confirma vai
+       * para `confirmou-presenca-evento`, que PULA e deixa o atendimento para ele (*"não é para
+       * responder, é para pular e eu atendo no final"*). Isto aqui continua valendo para quando
+       * ELE aperta o 8 assim mesmo: o texto certo é o de presença, e mandar o agradecimento de
+       * apoio genérico seria responder outra coisa.
        *
        * Sem a etiqueta de cidade não entra aqui: aí ainda falta dado, e quem resolve é a tecla 4
        * com o preâmbulo de evento.
