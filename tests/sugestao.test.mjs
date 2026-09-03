@@ -432,17 +432,35 @@ grupo('pediu-algo-sem-dizer-o-que: a regra de maior risco, e fica no alto');
 
   // Print da Mari: tinha conteudo mapeado, e o modelo vencia.
   const mari = com({ pedeAlgoIndefinido: P, podeEnviar: true, conteudoPedido: 'ADS' });
-  check(mari?.tecla === '9', 'pergunta em que pode ajudar: ' + JSON.stringify(mari));
+  /**
+   * **A tecla virou 6 em 03/09**, decisao dele depois da print da Odete: *"ja que pedido e algo
+   * dificil de ser identificado, sera agora pra mim ou IA responder"*.
+   *
+   * Ajustar o padrao conserta o caso e nao conserta a classe: "pedido" e intencao, nao forma de
+   * frase, e toda tentativa de cerca-la por texto erra para um dos dois lados -- pergunta em cima
+   * de quem ja explicou, ou modelo em cima de quem pede socorro. O que a regra protege nao mudou:
+   * ela continua no alto e continua impedindo que as caixas de baixo enviem.
+   */
+  check(mari?.tecla === '6', 'o caso fica com ele ou com a IA: ' + JSON.stringify(mari));
   check(/Preciso da forca/.test(mari?.motivo), 'e o motivo mostra o trecho, para ele conferir');
+  check(sugestaoLib.SOBRE['pediu-algo-sem-dizer-o-que'].efeito === 'gente', 'o verbete diz "gente", nao "envia"');
+
+  /**
+   * **Sem `podePerguntarAjuda`**: a guarda existia porque a regra DISPARAVA aquele texto. Agora
+   * ela nao manda nada, e condicionar o desfecho a saude de um template que nao vai sair deixaria
+   * o caso de maior risco do arquivo escapar para as caixas de baixo, que enviam.
+   */
+  check(com({ pedeAlgoIndefinido: P, podePerguntarAjuda: false, podeEnviar: true })?.tecla === '6',
+    'decide mesmo com o texto da pergunta travado');
 
   /**
    * **Vence a despedida de proposito.** "Preciso da sua forca, abraco" tem despedida dentro, e
    * concluir ali e fechar a porta na cara de um pedido.
    */
-  check(com({ pedeAlgoIndefinido: P, ultimaEhDespedida: true })?.tecla === '9', 'vence a despedida');
-  check(com({ pedeAlgoIndefinido: P, ultimaEhSoReacao: true })?.tecla === '9', 'vence a reacao');
-  check(com({ pedeAlgoIndefinido: P, soExpressaApoio: { motivo: 'a' } })?.tecla === '9', 'vence o apoio');
-  check(com({ pedeAlgoIndefinido: P, jaPediramDados: false, temEtiquetaDeCidade: false })?.tecla === '9', 'vence pedir dados');
+  check(com({ pedeAlgoIndefinido: P, ultimaEhDespedida: true })?.tecla === '6', 'vence a despedida');
+  check(com({ pedeAlgoIndefinido: P, ultimaEhSoReacao: true })?.tecla === '6', 'vence a reacao');
+  check(com({ pedeAlgoIndefinido: P, soExpressaApoio: { motivo: 'a' } })?.tecla === '6', 'vence o apoio');
+  check(com({ pedeAlgoIndefinido: P, jaPediramDados: false, temEtiquetaDeCidade: false })?.tecla === '6', 'vence pedir dados');
 
   /**
    * So duas coisas passam na frente, e as duas por boa razao: a etiqueta que dispensa da fila
@@ -494,7 +512,7 @@ grupo('ja-respondemos-antes: o modelo e a entrega INICIAL');
   // Perde para tudo que fala do que ela acabou de dizer.
   check(com({ jaRespondemosAntes: true, soExpressaApoio: { motivo: 'a' } })?.tecla === 'i',
     'apoio proprio vence: responder a ela e melhor que a mensagem da semana');
-  check(com({ jaRespondemosAntes: true, pedeAlgoIndefinido: { trecho: 'x' } })?.tecla === '9', 'pedido indefinido vence');
+  check(com({ jaRespondemosAntes: true, pedeAlgoIndefinido: { trecho: 'x' } })?.tecla === '6', 'pedido indefinido vence');
   check(com({ jaRespondemosAntes: true, perguntaAberta: { motivo: 'p' } })?.tecla === '6', 'pergunta vence');
   check(com({ jaRespondemosAntes: true, pedeRespostaPessoal: { motivo: 'a' } })?.tecla === '6', 'audio vence');
   check(com({ jaRespondemosAntes: true, ultimaEhDespedida: true })?.tecla === '3', 'despedida vence');

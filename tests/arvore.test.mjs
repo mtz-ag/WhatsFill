@@ -812,7 +812,9 @@ grupo('a CHEGADA pelo anuncio: modelo, dados, pendencia (02/09/2026)');
   check(arv.decidir({ ...chega, ...remedio, modeloJaNaConversa: true, temEtiquetaDeCidade: true }, q)?.resposta === 'pedido-ajuda',
     'quem ja tinha cidade tambem recebe a negativa');
   check(tecla({ ...chega, perguntaAberta: true }) === '6', 'pergunta de posicao: gente, nao modelo (print da Clair)');
-  check(tecla({ ...chega, pedeAlgoIndefinido: true }) === '9', 'pediu algo sem dizer o que: pergunta (print da Mari)');
+  // Desde 03/09 a tecla e 6 (decisao dele: "pedido e algo dificil de ser identificado, sera pra mim
+  // ou IA responder"). O que a caixa protege nao mudou: ela continua acima do recibo.
+  check(tecla({ ...chega, pedeAlgoIndefinido: true }) === '6', 'pediu algo sem dizer o que: fica com ele ou com a IA');
 
   /**
    * **As pendencias NEUTRAS, depois do modelo** — a ordem que ele pediu. Na 1a passada o modelo

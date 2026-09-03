@@ -223,7 +223,28 @@ export const REGRAS = [
   },
   {
     id: 'pediu-algo-sem-dizer-o-que',
-    tecla: '9',
+    /**
+     * **A tecla virou 6 em 03/09/2026: o caso vai para ele ou para a IA, e nada sai sozinho.**
+     *
+     * Decisão dele, depois da print da Odete (*"Preciso do nome de um deputado federal que seja de
+     * direita"* recebendo *"em que você precisa de ajuda?"*): *"já que pedido é algo difícil de ser
+     * identificado, será agora pra mim ou IA responder"*.
+     *
+     * Ele está certo sobre a natureza do sinal. Ajustar o padrão conserta o caso que apareceu e não
+     * conserta a classe: **"pedido" não é uma forma de frase, é uma intenção**, e toda tentativa de
+     * cercá-la por texto erra para um dos dois lados — ou pergunta em cima de quem já explicou (a
+     * Odete), ou manda material de campanha em cima de quem está pedindo socorro (a Mari). Das duas,
+     * a segunda é a cara, e é ela que a regra existe para impedir.
+     *
+     * **O que NÃO mudou é o que a regra protege.** Ela continua no alto, continua vencendo a
+     * despedida, e continua impedindo que qualquer caixa de baixo mande o modelo. O que mudou é só
+     * o desfecho: em vez de disparar a pergunta pronta, o caso para com ele — e com a avaliação por
+     * IA ligada, é a tecla 6 que a chama. A pergunta continua a um clique, na tecla 9.
+     *
+     * Consequência a lembrar: **a rodada PARA nesses contatos** em vez de perguntar e seguir. Foi a
+     * troca que ele escolheu, sabendo.
+     */
+    tecla: '6',
     /**
      * Ela pediu algo e não disse o quê → **perguntar**, nunca responder.
      *
@@ -242,9 +263,15 @@ export const REGRAS = [
      * Perguntar não promete e não nega: a recusa (`pedido-ajuda`, `pedido-emprego`) só cabe
      * depois de ela dizer o que quer, e negar antes disso ofende quem só queria apoio político.
      */
-    quando: (c) => !!c.pedeAlgoIndefinido && c.podePerguntarAjuda,
+    /**
+     * **Sem `podePerguntarAjuda`**: essa guarda existia porque a regra DISPARAVA aquele texto, e
+     * oferecer uma tecla que trava por variável faltando é pior que não oferecer. Agora a regra não
+     * manda nada — condicionar o desfecho à saúde de um template que não vai sair deixaria o caso
+     * de maior risco do arquivo escapar para as caixas de baixo, que enviam.
+     */
+    quando: (c) => !!c.pedeAlgoIndefinido,
     motivo: (c) =>
-      `"${c.pedeAlgoIndefinido.trecho}" — pediu algo sem dizer o quê. Pergunte antes de responder.`,
+      `"${c.pedeAlgoIndefinido.trecho}" — pediu algo, e o quê não está claro. Responda você (ou a IA).`,
   },
   {
     id: 'ultima-e-despedida',
@@ -843,10 +870,13 @@ export const SOBRE = {
   },
   'pediu-algo-sem-dizer-o-que': {
     rotulo: 'Pediu algo e não disse o quê',
-    efeito: 'envia',
+    efeito: 'gente',
     quando:
-      '"Preciso da sua força." Pergunta em que pode ajudar e deixa aberto. Negar ou responder ' +
-      'antes de saber ofende quem só queria apoio político (Lei 9.504/97).',
+      '"Preciso da sua força." O caso fica com você — e com a avaliação por IA ligada, é ela que ' +
+      'assume. Decisão sua (03/09): pedido é intenção, não forma de frase, e nenhum padrão de ' +
+      'texto acerta os dois lados. Nada sai sozinho aqui; a pergunta "em que posso ajudar" ' +
+      'continua a um clique, na tecla 9. Negar ou responder antes de saber ofende quem só queria ' +
+      'apoio político (Lei 9.504/97).',
   },
   'ultima-e-despedida': {
     rotulo: 'Só se despediu',

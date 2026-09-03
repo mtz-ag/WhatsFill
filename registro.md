@@ -1,3 +1,42 @@
+## 2026-09-03 — Pedido sem objeto claro vai para ele ou para a IA (v1.97.0)
+
+Decisão dele, logo depois do conserto do padrão da Odete: *"já que pedido é algo difícil de ser
+identificado, será agora pra mim ou IA responder"*.
+
+Ele está certo sobre a natureza do sinal, e é o argumento que fecha o assunto: **"pedido" é intenção,
+não forma de frase.** Ajustar a expressão conserta o caso que apareceu e não conserta a classe — toda
+tentativa de cercá-la por texto erra para um dos dois lados:
+
+- pergunta em cima de quem já explicou (a Odete, hoje);
+- material de campanha em cima de quem está pedindo socorro (a Mari, 31/08).
+
+Das duas, a segunda é a cara, e é ela que a regra existe para impedir.
+
+### O que mudou, e o que não mudou
+
+`pediu-algo-sem-dizer-o-que` passou da tecla **9** (dispara "em que você precisa de ajuda?") para a
+**6** (o caso fica com ele; com a avaliação por IA ligada, é ela que assume). A pergunta continua a
+um clique, na tecla 9 da caixa.
+
+**O que a regra protege não mudou:** ela continua no alto do quadro, continua vencendo a despedida,
+a reação e o apoio, e continua impedindo que qualquer caixa de baixo mande o modelo. Só o desfecho
+é outro.
+
+Saiu junto a guarda `podePerguntarAjuda`. Ela existia porque a regra DISPARAVA aquele texto, e
+oferecer uma tecla que trava por variável faltando é pior que não oferecer. Agora a regra não manda
+nada — mantê-la faria o caso de maior risco do arquivo escapar para as caixas de baixo, que enviam,
+justamente quando o template estivesse quebrado.
+
+**Consequência a lembrar: a rodada PARA nesses contatos** em vez de perguntar e seguir. Foi a troca
+que ele escolheu, sabendo.
+
+Nada a importar: a caixa já existe no quadro dele, e o desfecho vem da regra do código.
+
+**Arquivos:** `src/lib/sugestao.js`, `tests/sugestao.test.mjs`, `tests/arvore.test.mjs`,
+`manifest.json` (1.96.0 → 1.97.0), `registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-03 — "Preciso do nome de um deputado" não é pedido indefinido (v1.96.0)
 
 Print da Odete: ela escreveu *"Preciso do nome de um deputado federal que seja de direita"* e, 28

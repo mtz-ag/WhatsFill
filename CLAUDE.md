@@ -1313,6 +1313,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   senhor"). **Reconhecer o objeto CONCRETO seria o caminho errado**: são infinitos, e errar para
   esse lado devolve o defeito.
 
+- **"Pedido" é INTENÇÃO, não forma de frase — e por isso o desfecho virou "fica com ele ou com a
+  IA".** Decisão dele em 03/09/2026, logo depois de eu ajustar o padrão da Odete: *"já que pedido é
+  algo difícil de ser identificado, será agora pra mim ou IA responder"*. Ele está certo sobre a
+  natureza do sinal: ajustar a expressão conserta o caso e não conserta a classe, e toda tentativa
+  de cercá-la por texto erra para um dos dois lados — pergunta em cima de quem já explicou (Odete),
+  ou material de campanha em cima de quem pede socorro (Mari). **O que a regra protege não mudou**:
+  `pediu-algo-sem-dizer-o-que` continua no alto, continua vencendo a despedida e continua impedindo
+  que as caixas de baixo enviem. O que mudou é só o desfecho — tecla **6** em vez da 9, e a pergunta
+  *"em que posso ajudar"* segue a um clique. Saiu junto a guarda `podePerguntarAjuda`: ela existia
+  porque a regra DISPARAVA aquele texto, e mantê-la faria o caso de maior risco do arquivo escapar
+  para as caixas que enviam quando o template estivesse travado por variável. **Consequência: a
+  rodada PARA nesses contatos** em vez de perguntar e seguir.
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto
