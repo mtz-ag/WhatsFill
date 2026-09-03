@@ -1,3 +1,40 @@
+## 2026-09-03 — O apoio: o TEMPO escolhe entre agradecer e a mensagem do momento (v1.90.0)
+
+Resposta dele às três anotações que pediam a mesma coisa (Maria Geny, Tere e Gilmar, Jacira):
+*"a questão é o contexto, a mensagem tem quanto tempo que mandou dando apoio; se foi no dia
+anterior, é mensagem do momento; se foi recente, mensagem de apoio; único pretexto que exclui a
+necessidade de hora é pergunta pendente, que deve ser respondida"*.
+
+`so-expressa-apoio` passou a ter tecla-função: **5** quando o apoio foi escrito em outro dia (e a do
+momento ainda não saiu), **8** quando é de hoje. A leitura é de atendimento — apoio escrito agora é
+resposta ao que acabamos de mandar, e o que ele espera é um obrigado; apoio de ontem é alguém que
+voltou sozinho depois de a conversa fechar.
+
+**O corte é o DIA local, não um número de horas** (`cortesia.deOutroDia`). É o que ele lê na tela: a
+plataforma separa a conversa por data. Horas contadas dariam resultado diferente do que ele vê —
+23h e 1h da manhã são "ontem e hoje" para quem olha, e duas horas para quem conta.
+
+**As duas guardas do momento continuam** (`podeMandarMomento`, `!momentoJaEnviado`), e são elas que
+impedem isto de virar máquina de repetir: a condição é estado da conversa — o texto de apoio fica lá
+para sempre — e o envio não a apaga.
+
+**Pergunta pendente vence, e vence por ORDEM**: `pergunta-aberta` e `pediu-algo-sem-dizer-o-que`
+ficam acima nos dois ramos. Tem teste comparando as posições, para não depender de alguém lembrar.
+
+### Duas coisas que o próprio conserto acusou
+
+- O verbete dizia `efeito: 'depende'`, e as duas saídas ENVIAM — diferente de `ja-respondemos-antes`,
+  cujo outro ramo conclui em silêncio. `regrasComDesfechoIncoerente` pegou na hora.
+- A matriz do teste de tecla-função variava só três campos, então a tecla 5 nunca aparecia e o teste
+  acusava o mapa de *"inventar um desfecho"* que existe de verdade. **Campo novo lido por uma
+  tecla-função entra na matriz** — está escrito lá.
+
+**Arquivos:** `src/lib/cortesia.js`, `src/lib/sugestao.js`, `src/panel/panel.js`,
+`tests/cortesia.test.mjs`, `tests/sugestao.test.mjs`, `manifest.json` (1.89.0 → 1.90.0),
+`registro.md`.
+
+---
+
 ## 2026-09-03 — O lote de 8 anotacoes: 3 ja estavam consertadas, 5 eram novas (v1.89.0)
 
 Ele mandou o relatorio das observacoes e pediu *"veja se tem algo novo"*. Medi caso a caso antes de

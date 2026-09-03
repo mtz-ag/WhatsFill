@@ -332,6 +332,29 @@ const INTERVALO_DA_RAJADA_MS = 30 * 60 * 1000;
  * Mensagem sem `at` não quebra a corrente: sem horário não dá para afirmar que houve buraco, e
  * o lado seguro de errar aqui é manter na rajada (ver `conversaPedeRespostaPessoal`).
  */
+/**
+ * **A última coisa que ela escreveu é de um dia anterior?**
+ *
+ * Critério dele (03/09/2026), decidindo o que fazer com quem volta só dizendo que apoia: *"a
+ * questão é o contexto, a mensagem tem quanto tempo que mandou dando apoio; se foi no dia
+ * anterior, é mensagem do momento; se foi recente, mensagem de apoio"*.
+ *
+ * O corte é o **dia local**, e não um número de horas, porque foi assim que ele descreveu (*"já é
+ * outro dia"*, anotação do Tere e Gilmar) e porque é o que ele enxerga na tela da conversa: a
+ * plataforma separa as mensagens por data. Horas contadas dariam resultados diferentes dos que ele
+ * lê ali — 23h e 1h da manhã são "ontem e hoje" para quem olha, e três horas para quem conta.
+ *
+ * Mensagem sem `at` não decide nada: devolve `false`, que é o lado que **não** manda material.
+ */
+export function deOutroDia(entrantes, agora = new Date()) {
+  const lista = Array.isArray(entrantes) ? entrantes : [];
+  for (let i = lista.length - 1; i >= 0; i -= 1) {
+    const t = lista[i]?.at ? new Date(lista[i].at) : null;
+    if (t && !Number.isNaN(t.getTime())) return t.toDateString() !== new Date(agora).toDateString();
+  }
+  return false;
+}
+
 export function rajadaFinal(entrantes, nossaUltimaAt) {
   const lista = Array.isArray(entrantes) ? entrantes : [];
   if (!lista.length) return [];

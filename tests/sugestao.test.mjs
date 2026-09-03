@@ -610,12 +610,18 @@ grupo('o mapa RAMIFICADO da janela: cada regra tem os dois galhos (01/09/2026)')
    * verbete deixa a janela prometendo um desfecho que o codigo nao produz mais.
    */
   for (const r of REGRAS.filter((x) => typeof x.tecla === 'function')) {
+    /**
+     * **A matriz precisa cobrir os campos que as funcoes LEEM.** Faltando um, a tecla que depende
+     * dele nunca aparece e o teste acusa o mapa de "inventar" um desfecho que existe de verdade --
+     * foi o que aconteceu com `apoioDeOutroDia` em 03/09. Campo novo numa tecla-funcao entra aqui.
+     */
     const daFuncao = new Set();
-    for (let m = 0; m < 8; m++) {
+    for (let m = 0; m < 16; m++) {
       daFuncao.add(r.tecla({
         respondidoHoje: !!(m & 1),
         momentoJaEnviado: !!(m & 2),
         podeMandarMomento: !!(m & 4),
+        apoioDeOutroDia: !!(m & 8),
       }));
     }
     const noMapa = new Set(ramosDaRegra(r.id).map((x) => x.tecla));
@@ -737,6 +743,49 @@ grupo('jaDeuNomeECidade: nao peca o que ela acabou de escrever (03/09/2026)');
    */
   check(com({ soExpressaApoio: { motivo: 'x' }, jaDeuNomeECidade: true, jaPediramDados: true })?.id === 'so-expressa-apoio',
     'o sinal nao atrapalha quem ja tinha desfecho');
+}
+
+grupo('apoio: o TEMPO escolhe entre agradecer e a mensagem do momento (03/09/2026)');
+{
+  /**
+   * Tres anotacoes pedindo a mesma coisa (Maria Geny, Tere e Gilmar, Jacira), e o criterio dele:
+   * *"a questao e o contexto, a mensagem tem quanto tempo que mandou dando apoio; se foi no dia
+   * anterior, e mensagem do momento; se foi recente, mensagem de apoio"*.
+   */
+  const A = { motivo: 'escreveu apoio' };
+  const apoio = { soExpressaApoio: A, podeMandarMomento: true, momentoJaEnviado: false, jaPediramDados: true };
+
+  check(com({ ...apoio })?.tecla === '8', 'apoio de hoje: agradece');
+  check(com({ ...apoio, apoioDeOutroDia: true })?.tecla === '5', 'apoio de outro dia: mensagem do momento');
+
+  /**
+   * **As duas guardas do momento continuam**, e sao elas que impedem isto de virar maquina de
+   * repetir: a condicao e estado da conversa (o texto de apoio fica la para sempre) e o envio nao
+   * a apaga.
+   */
+  check(com({ ...apoio, apoioDeOutroDia: true, momentoJaEnviado: true })?.tecla === '8',
+    'ja recebeu a do momento: volta a agradecer');
+  check(com({ ...apoio, apoioDeOutroDia: true, podeMandarMomento: false })?.tecla === '8',
+    'sem mensagem do momento configurada: agradece');
+
+  // As duas saidas ENVIAM, entao o cartao da janela e verde nos dois casos.
+  check(sugestaoLib.SOBRE['so-expressa-apoio'].efeito === 'envia', 'o efeito e "envia", nao "depende"');
+
+  /**
+   * **A unica coisa que passa por cima do tempo e pergunta pendente**, e ele disse isso na mesma
+   * frase: *"unico pretexto que exclui a necessidade de hora e pergunta pendente, que deve ser
+   * respondida"*. Vale por ORDEM: as duas caixas de pergunta ficam acima desta.
+   */
+  const P = { termo: 'por que' };
+  check(com({ ...apoio, apoioDeOutroDia: true, perguntaAberta: P })?.id === 'pergunta-aberta',
+    'pergunta de razao vence o apoio de outro dia');
+  check(com({ ...apoio, apoioDeOutroDia: true, pedeAlgoIndefinido: { motivo: 'x' } })?.id === 'pediu-algo-sem-dizer-o-que',
+    'pediu algo sem dizer o que tambem vence');
+
+  const ids = REGRAS.map((r) => r.id);
+  for (const antes of ['pergunta-aberta', 'pediu-algo-sem-dizer-o-que']) {
+    check(ids.indexOf(antes) < ids.indexOf('so-expressa-apoio'), `"${antes}" esta acima do apoio na tabela`);
+  }
 }
 
 fim();

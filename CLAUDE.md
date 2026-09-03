@@ -1266,6 +1266,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   trabalhar num relatório de observações, compare a `v` de cada linha com o que já está no
   `registro.md`.
 
+- **Quando o TEMPO decide o desfecho, o corte é o DIA LOCAL — não um número de horas.** Critério
+  dele para o apoio (03/09/2026): *"se foi no dia anterior, é mensagem do momento; se foi recente,
+  mensagem de apoio"*. `cortesia.deOutroDia` compara datas locais porque é o que ele LÊ: a
+  plataforma separa a conversa por data, e 23h contra 1h da manhã são "ontem e hoje" para quem olha
+  e duas horas para quem conta. **Pergunta pendente passa por cima do tempo, e passa por ORDEM** —
+  as caixas de pergunta ficam acima do apoio nos dois ramos, com teste comparando as posições.
+- **Campo novo lido por uma tecla-FUNÇÃO entra na matriz do teste.** Ela varia hoje
+  `respondidoHoje` × `momentoJaEnviado` × `podeMandarMomento` × `apoioDeOutroDia`. Faltando um, a
+  tecla que depende dele nunca aparece e o teste acusa o verbete de *"inventar um desfecho"* que
+  existe de verdade — foi o que aconteceu ao acrescentar o tempo. E confira o `efeito` do verbete:
+  duas saídas que ENVIAM não fazem `'depende'`, e `regrasComDesfechoIncoerente` pega isso.
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto

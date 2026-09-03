@@ -27,7 +27,7 @@ import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, ehMensagemDaPlataforma, rajadaFinal } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, ehMensagemDaPlataforma, rajadaFinal, deOutroDia } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -4749,6 +4749,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         soExpressaApoio: apoioTrava
           ? null
           : soExpressaApoio(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
+        /**
+         * **O apoio foi escrito em outro dia?** — é o que escolhe entre agradecer e mandar a
+         * mensagem do momento (critério dele, 03/09/2026: *"se foi no dia anterior, é mensagem do
+         * momento; se foi recente, mensagem de apoio"*).
+         *
+         * Olha a ÚLTIMA mensagem dela com hora, não a rajada inteira: o que interessa é quando ela
+         * falou pela última vez, e uma conversa que atravessa a meia-noite continua sendo de hoje.
+         */
+        apoioDeOutroDia: deOutroDia(state.entrantes),
         etiquetaQueDispensa: await etiquetaQueDispensaDaFila(),
         // "É da casa": conclui e não manda nada. Lista própria — ver `etiquetaQueSoConclui`.
         etiquetaSoConclui: await etiquetaQueSoConclui(),

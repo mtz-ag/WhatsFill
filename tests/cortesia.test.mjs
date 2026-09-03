@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -1100,6 +1100,35 @@ grupo('insulto ao ALIADO e recusa; insulto ao adversario nao (03/09/2026)');
   check(!semInteresse([m('VAMOS DERRUBAR A ESQUERDA, CAPITAO CONTA COM MEU VOTO')]), 'grito de campanha nao e recusa');
   check(!semInteresse([m('bolsonaro e o melhor presidente que ja tivemos')]), 'falar BEM do aliado, muito menos');
   check(!semInteresse([m('sou bolsonarista desde sempre')]), 'e se declarar bolsonarista e apoio');
+}
+
+grupo('deOutroDia: o corte e o DIA local, nao um numero de horas (03/09/2026)');
+{
+  /**
+   * Criterio dele, decidindo o que fazer com quem volta so dizendo que apoia: *"a mensagem tem
+   * quanto tempo que mandou dando apoio; se foi no dia anterior, e mensagem do momento; se foi
+   * recente, mensagem de apoio"*.
+   *
+   * **Dia local e nao horas** porque e o que ele LE na tela: a plataforma separa a conversa por
+   * data. Horas contadas dariam resultado diferente do que ele ve -- 23h e 1h sao "ontem e hoje"
+   * para quem olha, e duas horas para quem conta.
+   */
+  const agora = new Date('2026-09-03T15:00:00');
+  const m = (at) => ({ texto: 'conte comigo', tipo: 'TEXT', at });
+
+  check(deOutroDia([m('2026-09-02T23:50:00')], agora), 'ontem a noite e outro dia');
+  check(!deOutroDia([m('2026-09-03T01:10:00')], agora), 'de madrugada HOJE nao e');
+  check(!deOutroDia([m('2026-09-03T14:59:00')], agora), 'ha um minuto, muito menos');
+  check(deOutroDia([m('2026-08-20T10:00:00')], agora), 'duas semanas atras tambem e outro dia');
+
+  // Olha a ULTIMA com hora: a conversa que atravessa a meia-noite continua sendo de hoje.
+  check(!deOutroDia([m('2026-09-02T22:00:00'), m('2026-09-03T09:00:00')], agora),
+    'ela voltou a escrever hoje: e hoje');
+
+  // Sem hora nao decide nada, e o lado seguro e o que NAO manda material.
+  check(!deOutroDia([{ texto: 'oi', tipo: 'TEXT' }], agora), 'mensagem sem hora nao conta');
+  check(!deOutroDia([], agora), 'conversa vazia');
+  check(!deOutroDia(null, agora), 'nulo nao explode');
 }
 
 fim();
