@@ -599,6 +599,25 @@ export function fluxoPadrao() {
     r('ultima-e-so-reacao', 'mandou figura, emoji, sticker ou link', onde),
     r('pergunta-aberta', null, onde),
     r('ultima-e-despedida', null, onde),
+
+    /**
+     * **O apoio vive nos DOIS lados da bifurcação de cidade** — pedido dele em 03/09/2026, depois
+     * de eu apontar a assimetria comparando o quadro dele com o padrão: *"arrume para que a regra
+     * siga pras duas"*.
+     *
+     * Ela existia só em "sem etiqueta de cidade". Quem voltava **com** cidade e só escrevia apoio
+     * nunca passava por aqui: caía em `ja-respondemos-antes`, que é a caixa mais genérica do ramo e
+     * não olha o que a pessoa escreveu. Na prática o critério de tempo que ele definiu no mesmo dia
+     * (apoio de ontem → mensagem do momento; de hoje → agradecer) valia só para metade da base.
+     *
+     * É a lição que o projeto já pagou uma vez, com `etiqueta-dispensa-da-fila`: **regra que vive
+     * só num lado da bifurcação é regra pela metade**, e o lado que falta é invisível — nada
+     * acusa, o contato só desce até a primeira caixa genérica.
+     *
+     * Fica no FIM, abaixo de todas as pendências: quem escreveu uma pergunta, um pedido ou um
+     * desabafo é atendido por aquilo, não pelo apoio que veio junto.
+     */
+    r('so-expressa-apoio', 'apoio', onde),
   ];
 
   /**
@@ -885,7 +904,6 @@ export function fluxoPadrao() {
       grupo('com pendência', { sinal: 'respondidoHoje', negar: true, palavras: [], onde: 'ultima' }, [
         r('voltou-por-outro-anuncio'),
         ...dosDoisLados('sem-cidade'),
-        r('so-expressa-apoio', 'apoio'),
         r('respondeu-nossa-pergunta'),
       ]),
       grupo('sem pendência', SEM_CONDICAO, [

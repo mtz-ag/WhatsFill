@@ -1,3 +1,30 @@
+## 2026-09-03 — O apoio passou a valer nos DOIS lados da bifurcação de cidade (v1.95.0)
+
+Pedido dele — *"arrume para que a regra siga pras duas"* —, depois de eu apontar a assimetria
+comparando o `fluxo-padrao-1.86.0.json` que ele baixou com o padrão de agora.
+
+`so-expressa-apoio` existia só em **"sem etiqueta de cidade"**. Quem voltava **com** cidade e só
+escrevia apoio nunca passava por ela: descia até `ja-respondemos-antes`, que é a caixa mais genérica
+do ramo e não olha o que a pessoa escreveu. Efeito prático — o critério de tempo definido hoje de
+manhã (apoio de ontem → mensagem do momento; de hoje → agradecer) valia só para **metade da base**.
+
+É a lição que o projeto já pagou uma vez, com `etiqueta-dispensa-da-fila`, e o sintoma é o mesmo:
+**invisível**. Nada acusa; o contato só escorrega até a primeira caixa genérica.
+
+A caixa passou a nascer dentro de `dosDoisLados`, que é a função que monta as pendências dos dois
+ramos — assim não há como um lado ficar para trás numa mudança futura. Fica no **fim**, abaixo de
+todas as pendências: quem escreveu uma pergunta, um pedido ou um desabafo é atendido por aquilo, e
+não pelo apoio que veio junto.
+
+O teste novo **decide de verdade nos dois lados** (não só procura a caixa na lista), então ele cai
+também se alguém mexer na ordem e puser algo genérico por cima. E confere as duas saídas do
+critério de tempo em cada lado.
+
+**Arquivos:** `src/lib/arvore.js`, `tests/arvore.test.mjs`, `manifest.json` (1.94.0 → 1.95.0),
+`registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-03 — "Ignorou o pedido e concluiu": conversa na chegada agora vence o modelo (v1.94.0)
 
 Print dele, e a palavra que usou foi **"crítico"**. A contato de Serafina Corrêa chegou pelo anúncio

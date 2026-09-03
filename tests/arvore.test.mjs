@@ -1148,6 +1148,31 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   }
 
   /**
+   * **O apoio nos DOIS lados da bifurcacao de cidade** (pedido dele, 03/09: *"arrume para que a
+   * regra siga pras duas"*). Ela vivia so em "sem etiqueta de cidade": quem voltava COM cidade e
+   * so escrevia apoio caia em `ja-respondemos-antes`, a caixa mais generica do ramo, e o criterio
+   * de tempo do mesmo dia valia so para metade da base.
+   *
+   * O teste decide de verdade, nos dois lados, em vez de so procurar a caixa: assim ele cai
+   * tambem se alguem mexer na ORDEM e puser algo generico por cima.
+   */
+  const apoiando = {
+    soExpressaApoio: { motivo: 'escreveu apoio' }, podeMandarMomento: true, momentoJaEnviado: false,
+    jaPediramDados: true, podePedirDados: true,
+  };
+  for (const [lado, temCidade] of [['sem cidade', false], ['com cidade', true]]) {
+    const hoje = arv.decidir({ ...apoiando, temEtiquetaDeCidade: temCidade }, q);
+    check(hoje?.id?.includes('so-expressa-apoio'), `${lado}: o apoio decide (${hoje?.id})`);
+    check(hoje?.tecla === 'i', `${lado}: apoio de hoje agradece`);
+    const ontem = arv.decidir({ ...apoiando, temEtiquetaDeCidade: temCidade, apoioDeOutroDia: true }, q);
+    check(ontem?.tecla === '5', `${lado}: apoio de outro dia manda a do momento`);
+  }
+
+  // E continua ABAIXO das pendencias: quem escreveu uma pergunta e atendido por ela, nao pelo apoio.
+  const comPergunta = arv.decidir({ ...apoiando, temEtiquetaDeCidade: true, perguntaAberta: { termo: 'por que' } }, q);
+  check(comPergunta?.id?.includes('pergunta-aberta'), 'a pergunta vence o apoio, nos dois lados');
+
+  /**
    * A prova de que nada piorou: as pendencias de quem CHEGA continuam sendo resolvidas -- pela
    * volta, com o mesmo desfecho de antes.
    */

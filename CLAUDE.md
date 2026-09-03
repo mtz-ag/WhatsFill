@@ -1292,6 +1292,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   pedido. **O custo aceito:** quem chega mandando áudio sem transcrição, arquivo ou texto longo
   não recebe o recibo nessa passada e vai para ele.
 
+- **Regra que vive só num lado da bifurcação de cidade é regra pela metade — aconteceu de novo, com
+  o APOIO.** Já estava registrado para `etiqueta-dispensa-da-fila`; `so-expressa-apoio` tinha o
+  mesmo defeito e ninguém viu, porque o sintoma é invisível: quem voltava **com** etiqueta de cidade
+  e só escrevia apoio não caía em lugar nenhum e descia até `ja-respondemos-antes`, a caixa mais
+  genérica do ramo, que não olha o que a pessoa escreveu. Efeito prático: o critério de tempo que
+  ele definiu em 03/09 (apoio de ontem → mensagem do momento) valia só para **metade da base**.
+  Achado comparando o quadro dele com o padrão, não por relato. Hoje a caixa nasce dentro de
+  `dosDoisLados`, que é o que garante os dois — e o teste **decide de verdade nos dois lados** em
+  vez de só procurar a caixa, então ele cai também se alguém puser algo genérico por cima.
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto
