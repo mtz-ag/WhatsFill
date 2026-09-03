@@ -433,7 +433,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     try {
       const antes = state.incoming.length;
       const conversa = await api.getConversation(state.pageState.sessionId);
-      state.incoming = conversa.incoming;
+      /**
+       * **O texto que a PLATAFORMA escreveu não conta como mensagem dela — aqui também.**
+       *
+       * `entrantes` já era peneirado por `semRuidoDaPlataforma`, e `incoming` não: é a metade que
+       * faltava. E `incoming` é justamente quem alimenta o parser, `tags.suggest`, o
+       * reconhecimento do anúncio e a IA — ou seja, *"Não foi possível transcrever este áudio"*
+       * continuava sendo lido como fala dela em quatro lugares.
+       *
+       * Aqui a mensagem sai da lista em vez de ficar vazia: `incoming` é uma lista de TEXTOS, e
+       * texto vazio ali não carrega o "ela mandou um áudio" que os `entrantes` guardam.
+       */
+      state.incoming = conversa.incoming.filter((t) => !ehMensagemDaPlataforma(t));
       state.entrantes = semRuidoDaPlataforma(conversa.entrantes);
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.nossas = conversa.nossas || [];
@@ -529,7 +540,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       const conversa = await api.getConversation(sessionId);
-      state.incoming = conversa.incoming;
+      /**
+       * **O texto que a PLATAFORMA escreveu não conta como mensagem dela — aqui também.**
+       *
+       * `entrantes` já era peneirado por `semRuidoDaPlataforma`, e `incoming` não: é a metade que
+       * faltava. E `incoming` é justamente quem alimenta o parser, `tags.suggest`, o
+       * reconhecimento do anúncio e a IA — ou seja, *"Não foi possível transcrever este áudio"*
+       * continuava sendo lido como fala dela em quatro lugares.
+       *
+       * Aqui a mensagem sai da lista em vez de ficar vazia: `incoming` é uma lista de TEXTOS, e
+       * texto vazio ali não carrega o "ela mandou um áudio" que os `entrantes` guardam.
+       */
+      state.incoming = conversa.incoming.filter((t) => !ehMensagemDaPlataforma(t));
       state.entrantes = semRuidoDaPlataforma(conversa.entrantes);
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.nossas = conversa.nossas || [];
@@ -2568,26 +2590,52 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /**
-   * Rodada 1: a fila dos Novos, que chega do anúncio com uma frase só.
+   * Rodada 1: a fila dos NOVOS — quem acabou de chegar, quase sempre pelo anúncio.
    *
-   * Só entra quem tem o aceite do anúncio e **nada mais**: se a pessoa já escreveu nome ou
-   * cidade, o pedido de dados não é o que falta e ela fica para a classificação normal.
+   * **Ela era um motor à parte, e por isso envelheceu sozinha.** Relato dele (03/09/2026): *"o
+   * iniciar conversas não foi atualizado com as regras atuais"*. Estava certo, e a distância era
+   * grande: todo o redesenho da chegada — reconhecer de qual anúncio ela veio, mandar o modelo
+   * daquele anúncio como recibo, pedir nome e cidade em seguida, responder a pendência que veio
+   * depois — foi escrito no caminho de quem já está em "Meus". Aqui continuava o motor antigo:
+   * **uma frase única** no lugar do cadastro de anúncios, **o formulário como única mensagem
+   * possível**, e o quadro do fluxo **sem voz nenhuma**.
+   *
+   * O efeito prático era o pior tipo: quem chega pelo anúncio está EXATAMENTE nesta fila, então o
+   * ramo "pessoa chegando" que ele montou no quadro quase nunca decidia a chegada de verdade.
+   *
+   * Hoje a rodada assume o atendimento e **entrega o caso ao mesmo caminho das outras**. Regra que
+   * ele mexe no quadro passa a valer aqui no mesmo instante — que é o que "as regras atuais"
+   * significa.
    */
   function renderCartaoNovos(cfg) {
-    const template = state.templates.find((t) => t.id === ASK_TEMPLATE_ID);
     const card = h('div', { class: 'wf-card' }, [
-      h('h4', {}, 'Novos: pedir os dados'),
+      h('h4', {}, 'Novos: começar a conversa'),
       h('div', { class: 'wf-preview' },
-        'Percorre a aba "Novos": assume o atendimento, manda o pedido de nome e cidade, conclui ' +
-          'e volta para os Novos. Só recebe mensagem quem tem o aceite do anúncio e ainda não ' +
-          'disse nome nem cidade. Os demais são apenas assumidos, sem receber nada — saem da ' +
-          'fila e ficam em "Meus" para você ver depois. A fila esvazia.'),
+        'Percorre a aba "Novos", assume o atendimento (é o que libera o campo de mensagem) e ' +
+          'decide pelo MESMO fluxo dos "Meus": reconhece o anúncio, manda o modelo dele, pede o ' +
+          'nome e a cidade, responde o que ficou pendente. Assumido, o contato sai da fila mesmo ' +
+          'quando o fluxo resolve não mandar nada — ele fica em "Meus" para você ver depois.'),
+      h('div', { class: 'wf-origin' },
+        'Até a versão 1.77 esta rodada tinha regras próprias, de antes do fluxo: só mandava o ' +
+          'pedido de nome e cidade, e só para quem repetisse uma frase exata. Quem chega pelo ' +
+          'anúncio está nesta fila, então o ramo "pessoa chegando" do seu quadro quase nunca ' +
+          'decidia a chegada de verdade.'),
     ]);
 
+    /**
+     * A frase do aceite continua aqui, mas ela **não é mais a porta da rodada**.
+     *
+     * Quem reconhece o anúncio agora é a Config ("Anúncios do momento") mais o que a plataforma
+     * diz sobre a campanha. Esta frase serve a outra coisa: notar quando o contato VOLTA clicando
+     * noutro anúncio em vez de responder o que pedimos.
+     */
     card.append(
       campoTexto('Frase que identifica o aceite do anúncio', cfg.padraoNovos, (v) =>
         salvarAuto({ padraoNovos: v.trim() }).then(renderAll)
-      )
+      ),
+      h('div', { class: 'wf-hint' },
+        'Não é mais o filtro da rodada: serve para reconhecer quem voltou clicando no anúncio de ' +
+          'novo. Os anúncios em si ficam na aba Config, em "Anúncios do momento".')
     );
 
     const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Começar pelos Novos');
@@ -2595,9 +2643,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     card.append(h('div', { class: 'wf-row' }, [comecar]));
 
     const impedimentos = [];
-    if (!template) impedimentos.push(`Não achei a resposta "${ASK_TEMPLATE_ID}" na aba Config.`);
-    if (!cfg.padraoNovos) impedimentos.push('Sem a frase do aceite, a rodada mandaria para qualquer um da fila.');
     if (!state.settings.autoSend) impedimentos.push('Precisa do "Enviar automático" ligado (acima).');
+    if (!state.hsmTemplates.length) {
+      impedimentos.push('Nenhum modelo aprovado carregado — abra um atendimento e clique em Recarregar.');
+    }
 
     comecar.disabled = state.auto.rodando || impedimentos.length > 0;
     for (const motivo of impedimentos) card.append(h('div', { class: 'wf-block' }, motivo));
@@ -3343,7 +3392,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        *   senão a rodada reabre o mesmo — `visitados` protege, mas ao custo de uma abertura
        *   extra por contato, e abertura é o que derruba a API.
        */
-      const saiuDaLista = SAI_DA_FILA.has(r.resultado) || (contou && !r.continuaNaFila);
+      /**
+       * `saiuDaFila` é o que a rodada dos Novos precisa dizer: lá o contato é ASSUMIDO antes de
+       * qualquer decisão, então ele sai da lista mesmo quando o fluxo resolve não mandar nada.
+       * Sem isso, um `pulado` faria a posição andar em cima de uma lista que já encurtou — e o
+       * contato que escorregou para o lugar deste nunca seria aberto, em silêncio.
+       */
+      const saiuDaLista =
+        r.saiuDaFila === true || SAI_DA_FILA.has(r.resultado) || (contou && !r.continuaNaFila);
       if (!saiuDaLista) posicao++;
 
       if (enviados >= limite || state.auto.parar) continue;
@@ -3628,282 +3684,88 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   async function runLoteNovos() {
-    const template = state.templates.find((t) => t.id === ASK_TEMPLATE_ID);
-    if (!template) return setStatus(`Não achei a resposta "${ASK_TEMPLATE_ID}". Confira a aba Config.`, 'err');
     if (!state.settings.autoSend) {
       return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
     }
-    const padrao = String(state.auto.cfg.padraoNovos || '').trim();
-    if (!padrao) return setStatus('Defina a frase que identifica o aceite do anúncio.', 'err');
+    if (!state.hsmTemplates.length) {
+      return setStatus('Nenhum modelo aprovado carregado. Abra um atendimento e clique em Recarregar.', 'err');
+    }
 
     const limite = clampInt(state.auto.cfg.limite, 1, 200);
     const pausaSeg = clampInt(state.auto.cfg.pausaSeg, 3, 300);
 
     if (
       !confirm(
-        `Vou percorrer a aba "Novos" e pedir os dados para até ${limite} contato(s), ` +
-          `concluindo cada atendimento, com ${pausaSeg}s entre um envio e outro.\n\n` +
-          `Só entra quem tem "${padrao}" na conversa e ainda não disse nome nem cidade. Confirma?`
+        `Vou percorrer a aba "Novos", assumir o atendimento e decidir pelo fluxo em até ${limite} ` +
+          `contato(s), com ${pausaSeg}s entre um envio e outro.\n\n` +
+          'Assumir tira o contato de "Novos" mesmo quando o fluxo resolve não mandar nada — ele ' +
+          'passa para "Meus". Confirma?'
       )
     ) {
       return setStatus('Rodada cancelada.');
     }
 
-    await rodar({ aba: 'Novos', processar: (sessionId, ctx) => processarNovo(sessionId, template, padrao, ctx) });
+    await rodar({ aba: 'Novos', processar: processarNovo });
   }
 
   /**
-   * Um contato da fila dos Novos: confere que só há o aceite do anúncio, assume, pede os dados
-   * e conclui.
+   * Um contato da fila dos Novos: **assume o atendimento e entrega o caso ao fluxo.**
    *
-   * A conferência é o coração desta rodada. Mandar o formulário para quem já escreveu o nome —
-   * ou para quem está no meio de uma conversa de verdade — é o erro caro aqui, e ele é barato
-   * de evitar: o parser já sabe dizer se saiu nome ou cidade das mensagens.
+   * Esta função tinha 120 linhas de decisão própria — gate por uma frase, formulário, mensagem do
+   * momento, triagem — escritas antes de o quadro existir. Era o motor que ele viu envelhecer:
+   * *"o iniciar conversas não foi atualizado com as regras atuais"* (03/09/2026).
+   *
+   * **Assumir vem antes de decidir, e é obrigatório**, não uma escolha: contato em "Novos" está
+   * PENDENTE, e pendente não tem campo de mensagem — nenhuma decisão do fluxo poderia ser
+   * executada. O efeito colateral é o que a rodada antiga já queria de propósito: assumido, ele
+   * sai da fila mesmo quando o fluxo resolve não mandar nada, em vez de ser reaberto por toda
+   * rodada futura (que é o que derrubava a API). Ele fica em "Meus".
+   *
+   * O que se perdeu ao apagar o motor antigo — e onde cada coisa foi parar:
+   *
+   *  - *só cumprimentou* → a caixa "só cumprimentou, e nada mais" do quadro, com o sinal
+   *    `soCortesia`, que é mais estrita que a lista de palavras que estava aqui;
+   *  - *já informou nome ou cidade* → o quadro decide, e o parser roda no `load()`;
+   *  - *o formulário* → continua saindo, agora pela tecla que o quadro escolher — inclusive junto
+   *    do modelo do anúncio, que era a metade que esta rodada nunca soube mandar.
    */
-  async function processarNovo(sessionId, template, padrao, ctx) {
-    let nome = 'contato';
+  async function processarNovo(sessionId, ctx) {
+    let alvo = sessionId;
+    let assumido = false;
+
     try {
-      const sessao = await api.getSession(sessionId);
-      const contato = await api.getContact(sessao.contactId);
-      nome = contato.name || contato.nameWhatsapp || 'sem nome';
-
-      // Janela vencida: texto livre não sai. Esse é caso da outra rodada, não desta.
-      if (sessao.expired) {
-        return { nome, resultado: 'pulado', motivo: 'janela de 24h vencida — é caso de modelo aprovado' };
-      }
-
-      // Quem não traz o identificador do anúncio não é caso desta rodada — mas deixar em
-      // "Novos" faz toda rodada futura abrir o contato de novo, e é justamente isso que
-      // sobrecarrega a API. Assumir tira da fila sem mandar nada: vira pilha de triagem manual
-      // em "Meus". Nenhuma mensagem sai daqui.
-      // A conversa inteira numa leitura só, agora COM o tipo de cada mensagem: sem isso a figura
-      // não existe para a rodada (`incoming` filtra mensagem sem texto) e quem manda só uma
-      // imagem chegava aqui como "não escreveu nada".
-      const conversa = await api.getConversation(sessionId);
-      const mensagens = conversa.incoming;
-      const temAceite = mensagens.some((m) => achatarTexto(m).includes(achatarTexto(padrao)));
-
-      if (!temAceite) {
-        /**
-         * Só cumprimentou, mandou um link ou mandou uma figura.
-         *
-         * Estas pessoas eram assumidas sem receber nada — a rodada abria a conversa e não
-         * mandava coisa nenhuma. Elas falaram com o gabinete: o silêncio é a pior resposta
-         * possível, e o formulário de nome/cidade não é resposta a "bom dia". A mensagem do
-         * momento é.
-         */
-        const cortesia = soCortesia(conversa.entrantes);
-        if (cortesia) return responderComMomento(sessionId, contato, nome, cortesia, ctx);
-
-        return assumirParaTriagem(
-          sessionId,
-          nome,
-          mensagens.length || conversa.entrantes.length ? 'sem o aceite do anúncio' : 'não escreveu nada'
-        );
-      }
-
-      // Quem já respondeu nome ou cidade não precisa do formulário: precisa da classificação,
-      // que é manual. Deixar em "Novos" o prendia na fila para sempre — ocupando posição em toda
-      // rodada futura. Assumido, ele espera em "Meus" junto com o resto da triagem.
-      const achados = await extract(mensagens, {});
-      if (achados.nome || achados.cidade) {
-        return assumirParaTriagem(sessionId, nome, 'já informou nome ou cidade — vai pela classificação');
-      }
-
-      // Fora do `if (antiDup)` de propósito: não é preferência, é a mesma pessoa duas vezes na
-      // mesma rodada. Ver `contatosTratados` em `percorrerFila`.
-      if (ctx?.contatosTratados?.has(contato.id)) {
-        return { nome, resultado: 'pulado', motivo: 'já tratei este contato nesta rodada' };
-      }
-
-      if (state.settings.antiDup) {
-        const quando = await templatesLib.wasSent(contato.id, template.id);
-        if (quando) {
-          return {
-            nome,
-            resultado: 'pulado',
-            motivo: `já recebeu o pedido de dados em ${new Date(quando.at).toLocaleDateString('pt-BR')}`,
-          };
-        }
-      }
-
-      // O contexto é montado para ESTE contato: a rodada não passa pelo `load()` do painel.
-      // A variante vem do MESMO ponteiro de rotação do envio manual: reabrir o painel não
-      // adianta nada e mandar por esta rodada não pula nenhuma — é uma fila só.
-      const textoVariante = await templatesLib.varianteAtual(template);
-      const { text, missing, reasons } = vars.render(textoVariante, await vars.buildContext({ contact: contato }));
-      if (missing.length) return { nome, resultado: 'erro', motivo: vars.explainMissing(missing, reasons) };
-
       let estado = await page.getState();
       if (estado.sessionId !== sessionId) {
-        return { nome, resultado: 'erro', motivo: 'a aba trocou de atendimento no meio do caminho' };
+        return { nome: 'contato', resultado: 'erro', motivo: 'a aba trocou de atendimento no meio do caminho' };
       }
+
       if (estado.isPending) {
-        setStatus(`Assumindo o atendimento de ${nome}…`);
+        setStatus('Assumindo o atendimento…');
         estado = await page.clickIniciar();
+        assumido = true;
+        // A plataforma pode devolver o atendimento com outro id ao assumir. Seguir o que está na
+        // ABA é o certo: é ele que tem o campo de mensagem, e decidir sobre um id e escrever no
+        // outro é a pior falha possível aqui.
+        if (estado.sessionId) alvo = estado.sessionId;
       }
+
       if (estado.isPending || !estado.hasComposer) {
         // As duas causas pedem conserto diferente, então não vale colapsar numa frase só.
         return {
-          nome,
+          nome: 'contato',
           resultado: 'erro',
           motivo: estado.isPending
             ? 'a plataforma não assumiu o atendimento (o botão Iniciar continua na tela)'
             : 'o campo de mensagem não apareceu depois de assumir o atendimento',
         };
       }
-
-      // Esta rodada não pergunta nada, então a trava aqui é pular e seguir: a fila pode
-      // misturar instâncias, e parar tudo tiraria do trabalho quem está num número que funciona.
-      const canalFora = await canalDesteContatoFora();
-      if (canalFora) {
-        return { nome, resultado: 'pulado', motivo: 'o número deste atendimento está fora do ar — não enviei nada' };
-      }
-
-      setStatus(`Pedindo os dados para ${nome}…`);
-      await page.sendText(text);
-      await templatesLib.markSent(contato.id, template.id, { nome });
-      await templatesLib.avancarVariante(template);
-      ctx?.contatosTratados?.add(contato.id);
-
-      const concluido = await concluirPeloPainel();
-      if (!concluido.ok) {
-        // Enviado mas nao fechou: parar e dizer. Contar como concluido faria a fila crescer
-        // em silencio, que foi o sintoma de "Meus" so aumentando.
-        return { nome, resultado: "enviado", parar: true, motivo: concluido.reason };
-      }
-      if (concluido.dialogOpen) {
-        return {
-          nome,
-          resultado: 'enviado',
-          parar: true,
-          motivo: 'enviado, mas a plataforma pediu motivo de conclusão — responda o diálogo na aba',
-        };
-      }
-      return { nome, resultado: 'enviado' };
     } catch (err) {
       await page.closeOverlay().catch(() => {});
-      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
-    }
-  }
-
-  /**
-   * Responde a mensagem do momento a quem só cumprimentou, mandou link ou figura, e conclui.
-   *
-   * Passa pelas MESMAS travas do envio do formulário — variável faltando, canal fora do ar,
-   * anti-duplicata, contato já tratado nesta rodada. Envio é envio: quem cumprimentou merece a
-   * mesma disciplina de quem responde ao anúncio, e o caminho curto é como se manda mensagem
-   * quebrada para gente real.
-   *
-   * A mensagem do momento vira um template de mentira, igual à tecla 5: reaproveita variáveis,
-   * variantes e registro de envio. A chave carrega um resumo do texto para que trocar a
-   * mensagem (Dia dos Pais → Natal) não seja barrada pelo anti-duplicata da anterior.
-   */
-  async function responderComMomento(sessionId, contato, nome, cortesia, ctx) {
-    const textoMomento = String(state.auto.cfg.mensagemMomento || '').trim();
-
-    // Sem mensagem do momento configurada não há o que enviar. Volta ao comportamento de antes,
-    // mas dizendo o que faltou — senão isto vira "às vezes manda, às vezes não".
-    if (!textoMomento) {
-      return assumirParaTriagem(
-        sessionId,
-        nome,
-        `${cortesia.motivo}, mas a "Mensagem do momento" está vazia na aba Automatizado — não tinha o que responder`
-      );
+      return { nome: 'contato', resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
     }
 
-    const momento = {
-      id: `momento:${chaveDoTexto(textoMomento)}`,
-      name: 'Mensagem do momento',
-      text: textoMomento,
-      variantes: state.auto.cfg.mensagemMomentoVariantes,
-    };
-
-    if (ctx?.contatosTratados?.has(contato.id)) {
-      return { nome, resultado: 'pulado', motivo: 'já tratei este contato nesta rodada' };
-    }
-
-    if (state.settings.antiDup) {
-      const quando = await templatesLib.wasSent(contato.id, momento.id);
-      if (quando) {
-        return {
-          nome,
-          resultado: 'pulado',
-          motivo: `${cortesia.motivo}, mas já recebeu esta mensagem do momento em ${new Date(quando.at).toLocaleDateString('pt-BR')}`,
-        };
-      }
-    }
-
-    const textoVariante = await templatesLib.varianteAtual(momento);
-    const { text, missing, reasons } = vars.render(textoVariante, await vars.buildContext({ contact: contato }));
-    if (missing.length) return { nome, resultado: 'erro', motivo: vars.explainMissing(missing, reasons) };
-
-    let estado = await page.getState();
-    if (estado.sessionId !== sessionId) {
-      return { nome, resultado: 'erro', motivo: 'a aba trocou de atendimento no meio do caminho' };
-    }
-    if (estado.isPending) {
-      setStatus(`Assumindo o atendimento de ${nome}…`);
-      estado = await page.clickIniciar();
-    }
-    if (estado.isPending || !estado.hasComposer) {
-      return {
-        nome,
-        resultado: 'erro',
-        motivo: estado.isPending
-          ? 'a plataforma não assumiu o atendimento (o botão Iniciar continua na tela)'
-          : 'o campo de mensagem não apareceu depois de assumir o atendimento',
-      };
-    }
-
-    const canalFora = await canalDesteContatoFora();
-    if (canalFora) {
-      return { nome, resultado: 'pulado', motivo: 'o número deste atendimento está fora do ar — não enviei nada' };
-    }
-
-    setStatus(`Respondendo ${nome} com a mensagem do momento…`);
-    await page.sendText(text);
-    await templatesLib.markSent(contato.id, momento.id, { nome });
-    await templatesLib.avancarVariante(momento);
-    ctx?.contatosTratados?.add(contato.id);
-
-    const concluido = await concluirPeloPainel();
-    if (!concluido.ok) {
-      return { nome, resultado: 'enviado', parar: true, motivo: concluido.reason };
-    }
-    if (concluido.dialogOpen) {
-      return {
-        nome,
-        resultado: 'enviado',
-        parar: true,
-        motivo: 'enviado, mas a plataforma pediu motivo de conclusão — responda o diálogo na aba',
-      };
-    }
-    return { nome, resultado: 'enviado', motivo: `${cortesia.motivo} — mandei a mensagem do momento` };
-  }
-
-  /**
-   * Assume o atendimento e não envia nada, só para o contato sair de "Novos".
-   *
-   * O ganho é duplo: você tem uma pilha de triagem em "Meus" em vez de gente perdida no meio da
-   * fila, e a rodada seguinte não gasta requisição reabrindo quem já foi avaliado — que era o
-   * que derrubava a API.
-   *
-   * Assumido some da lista de "Novos", então quem chama **não** avança a posição: o próximo
-   * escorrega para o lugar deste.
-   */
-  async function assumirParaTriagem(sessionId, nome, motivo) {
-    const estado = await page.getState();
-    if (estado.sessionId !== sessionId) {
-      return { nome, resultado: 'erro', motivo: 'a aba trocou de atendimento no meio do caminho' };
-    }
-    if (!estado.isPending) {
-      // Já estava assumido: sai da fila sozinho, nada a fazer.
-      return { nome, resultado: 'triado', motivo: `${motivo} — já estava assumido` };
-    }
-
-    await page.clickIniciar();
-    return { nome, resultado: 'triado', motivo: `${motivo} — assumido para você ver depois` };
+    const r = await processarRespondido(alvo, ctx);
+    return assumido ? { ...r, saiuDaFila: true } : r;
   }
 
   /**

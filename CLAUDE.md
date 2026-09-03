@@ -302,6 +302,28 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   concluida em silencio depois de responder). Hoje a busca e **mensagem a mensagem, da mais nova
   para a mais antiga** — os tres caminhos sao os mesmos, o que mudou foi onde procuram. Bonus: a
   pista de uma mensagem nao alcanca mais o texto da seguinte, que a juncao permitia.
+- **A RODADA DOS NOVOS era um motor a parte, e por isso envelheceu sozinha.** Relato dele
+  (03/09/2026): *"o iniciar conversas nao foi atualizado com as regras atuais"*. Estava certo — e a
+  distancia era grande: todo o redesenho da chegada (reconhecer de QUAL anuncio, mandar o modelo
+  daquele anuncio como recibo, pedir nome e cidade em seguida, so entao a pendencia) foi escrito em
+  `processarRespondido`, e `processarNovo` continuava com **uma frase unica** (`padraoNovos`) no
+  lugar do cadastro de anuncios, **o formulario como unica mensagem possivel** e **o quadro sem voz
+  nenhuma**. O efeito e o pior tipo: quem chega pelo anuncio esta EXATAMENTE nessa fila, entao o
+  ramo "pessoa chegando" que ele montou quase nunca decidia a chegada de verdade. Hoje
+  `processarNovo` **assume e delega** — 120 linhas de decisao propria viraram doze. Tres coisas a
+  lembrar: **assumir vem antes de decidir e nao e escolha** (contato em "Novos" esta PENDENTE, sem
+  campo de mensagem, e nenhuma decisao do fluxo poderia ser executada); o contato entao **sai da
+  fila mesmo quando o fluxo nao manda nada**, e por isso o resultado carrega `saiuDaFila: true` —
+  sem isso um `pulado` faz a posicao andar sobre uma lista que ja encurtou e o contato que
+  escorregou nunca e aberto, em silencio; e **a rodada passou a PERGUNTAR contato a contato**, como
+  a dos "Meus", a menos que "Automatizar" esteja marcado.
+- **Rodada com motor proprio nao herda conserto.** E a familia do "uma pasta, DUAS extensoes": duas
+  copias da mesma decisao divergem na primeira semana, e a que ninguem olha e a que manda mensagem
+  errada. Antes de escrever decisao dentro de uma rodada nova, pergunte se o quadro nao decide
+  isso — e se decidir, delegue. O que se perdeu ao apagar o motor antigo tem endereco: *so
+  cumprimentou* virou a caixa com o sinal `soCortesia`, *ja informou nome ou cidade* e o parser do
+  `load()`, e o formulario continua saindo pela tecla que o quadro escolher.
+
 - **A PLATAFORMA escreve no fluxo do contato, e nos liamos como fala dela.** A anotacao mais grave
   que apareceu (02/09/2026): o **Carlos** mandou um audio e o que chegou no lugar foi *"Nao foi
   possivel transcrever este audio"*. `semInteresse` leu o "Nao foi possivel" como recusa: ele foi

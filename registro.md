@@ -32,6 +32,66 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-03 — "O iniciar conversas não foi atualizado com as regras atuais"
+
+Ele está certo, e a distância era maior do que a frase sugere.
+
+### A rodada dos Novos era um motor à parte
+
+Todo o redesenho da chegada — reconhecer **de qual** anúncio a pessoa veio, mandar o modelo daquele
+anúncio como recibo, pedir nome e cidade em seguida, só então responder a pendência — foi escrito em
+`processarRespondido`, o caminho de quem já está em "Meus".
+
+`processarNovo` continuava com o motor de antes do quadro existir:
+
+- **uma frase única** (`padraoNovos`) no lugar do cadastro de "Anúncios do momento". Quem chegava por
+  um anúncio cadastrado e não repetia aquela frase era assumida **sem receber nada**;
+- **o formulário como única mensagem possível** — o modelo do anúncio, que é o recibo que ele
+  desenhou em 02/09, esta rodada nunca soube mandar;
+- **o quadro sem voz nenhuma**: `sugerirAcaoComFluxo` não era chamado aqui.
+
+O efeito é o pior tipo de defeito deste projeto: **quem chega pelo anúncio está exatamente nesta
+fila**, então o ramo "pessoa chegando" que ele montou no quadro quase nunca decidia uma chegada de
+verdade. Ele mexia no ramo e não via diferença — porque a diferença estava noutro motor.
+
+### O conserto: assume e delega
+
+`processarNovo` são doze linhas agora. Assume o atendimento e chama `processarRespondido`.
+
+**Assumir vem antes de decidir, e não é escolha:** contato em "Novos" está PENDENTE, e pendente não
+tem campo de mensagem — nenhuma decisão do fluxo poderia ser executada. O efeito colateral é o que a
+rodada antiga já queria: assumido, ele sai da fila mesmo quando o fluxo resolve não mandar nada, em
+vez de ser reaberto por toda rodada futura (o que derrubava a API).
+
+E é aí que estava a armadilha silenciosa: `percorrerFila` decide andar de posição perguntando *"o
+contato continua na lista?"*, e um `pulado` respondia que sim. Como aqui ele **sempre** sai, a
+posição andaria sobre uma lista que já encurtou — e o contato que escorregou para o lugar deste
+nunca seria aberto, sem nada na tela. O resultado agora carrega `saiuDaFila: true`.
+
+**O que se perdeu ao apagar o motor antigo, e onde cada coisa foi parar:** *só cumprimentou* virou a
+caixa com o sinal `soCortesia` (mais estrita que a lista de palavras que estava ali); *já informou
+nome ou cidade* é o parser do `load()` mais o quadro; o formulário continua saindo, agora pela tecla
+que o quadro escolher — inclusive junto do modelo do anúncio.
+
+**Mudança de comportamento que ele precisa saber:** a rodada dos Novos passou a **perguntar contato a
+contato**, como a dos "Meus". Sem marcar "Automatizar", ela para em cada um.
+
+### A metade que faltava do conserto do Carlos
+
+Achado escrevendo isto: `semRuidoDaPlataforma` peneirava `state.entrantes` e **não** `state.incoming`
+— e `incoming` é quem alimenta o parser, `tags.suggest`, o reconhecimento do anúncio e a IA. Ou
+seja, *"Não foi possível transcrever este áudio"* continuava sendo lido como fala dela em quatro
+lugares; só as regras de cortesia estavam protegidas.
+
+Aqui a mensagem **sai da lista** em vez de ficar vazia: `incoming` é uma lista de textos, e texto
+vazio ali não carrega o "ela mandou um áudio" que os `entrantes` guardam.
+
+**Arquivos:** `src/panel/panel.js` (`processarNovo`, `runLoteNovos`, `renderCartaoNovos`,
+`percorrerFila`, os dois pontos de `state.incoming`), `CLAUDE.md` (+2 armadilhas), `manifest.json`
+(1.77.0 → 1.78.0). Quinze suítes e os dois verificadores.
+
+---
+
 ## 2026-09-02 — Terceira leva: o ruído da plataforma virava recusa do eleitor
 
 Das dezoito anotações, **sete eram novas**. Duas delas apontavam para a mesma causa, e é a mais
