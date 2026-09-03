@@ -32,6 +32,106 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-03 — Quarta leva: o anúncio que respondia para sempre
+
+Oito anotações. Seis viraram conserto; duas continuam com ele.
+
+### A Lúcia e o Deoclécio: a mesma resposta do anúncio, em toda passada
+
+A Lúcia respondeu ao convite, deu **nome**, deu **cidade** e escreveu *"Sim estarei lá com voceis"* —
+e a caixa oferecia de novo a resposta pronta do anúncio. *"só concluir, ela confirmou minha
+mensagem"*. O Deoclécio já tinha mandado seis vídeos depois disso: *"o contexto se perdeu"*.
+
+A causa é a armadilha que este projeto já registrava: **o texto do anúncio fica na conversa para
+sempre.** A única trava que existia (`silencio`) cobre só quem decidiu não mandar NADA — recusa,
+despedida. Para todo o resto o anúncio vencia a regra em toda passada, para sempre.
+
+`decidirComAnuncio` passou a perguntar **se a ação já foi cumprida**, e quem calcula pergunta à
+CONVERSA, não ao registro de envios (que só enxerga o que saiu pelo painel): `resposta` olha se
+aquele texto já saiu, com as três variantes; `dados` usa `jaPediramDados`, que casa pelo invariante
+`Nome / Cidade`. Cumprida a ação, **o anúncio se cala e o quadro decide** — que é o certo, porque a
+conversa andou.
+
+### E o modelo padrão que reveza: a conferência olhava só o da vez
+
+Achado no mesmo caminho, e é a resposta às anotações da Mary e da Eliana (*"já foi mandado modelo,
+só concluir"*, 02/09): `modeloJaNaConversa` comparava a conversa com **o modelo que sairia agora**.
+O padrão reveza entre três desde 02/09 — bastava a roleta andar entre duas passadas para o recibo
+ser **reenviado**.
+
+Agora, quando a escolha é o padrão, a conferência varre os três. Não é preferência de redação: os
+três dizem a mesma coisa, então ter recebido um é ter recebido o recibo.
+
+### A Eroni: "não mande o mesmo conteúdo de novo" pressupõe que o conteúdo é o mesmo
+
+Ela recusou o convite e depois clicou em **dois anúncios diferentes**. A caixa ofereceu a mensagem
+do momento, por `voltou-por-outro-anuncio`. Ele: *"aqui ela veio por outro modelo sem ser o padrão,
+mandar o modelo pedido e pedir dados que falta"*.
+
+Certo — a regra existe para quem volta pedindo **a mesma coisa** (print do Telmo, 31/08). Passou a
+exigir `modeloJaNaConversa`: para o Telmo é verdadeiro, para a Eroni é falso, e o caso desce para
+`anuncio-modelo-e-dados`, que manda o modelo e pede os dados na mesma passada.
+
+### O Paulo Cézar: o engajado deixou de ser pulado
+
+*"engajado recebe mensagem do momento uma vez por dia e depois toda vez que aparecer pode concluir
+em vez de pular"*.
+
+Pular deixava o atendimento **aberto**: o engajado que manda vídeo o dia inteiro voltava a custar
+uma abertura por rodada, para sempre — e nunca recebia nada, sendo quem mais fala com o gabinete.
+O desfecho passou a ser o mesmo par de `voltou-por-outro-anuncio`.
+
+**Consequência a lembrar: essa regra deixou de ser uma proteção.** Enquanto o efeito era `silencio`
+ela barrava a ação do anúncio e a janela do fluxo acusava caixa que envia pendurada nela. A proteção
+que continua de pé é `sem-interesse`, com a despedida — e há teste travando as duas coisas.
+
+### A Teresinha: uma pergunta que não casava com nada
+
+*"Tem alguém que vem na casa da gente pra conversar"* — sem "?", sem "por que", sem "qual a
+posição". Nenhum padrão pegava, e a rodada sugeriu **concluir**. Ele: *"ela quer saber se fazemos
+visitas, respondi a pergunta, a regra de sempre responder uma pergunta tem que valer"*.
+
+Entraram "tem alguém que/pra", "tem como" e "vocês fazem/atendem/vêm", guardados por **posição**
+(começo da mensagem, ou "?") — sem essa guarda, *"aqui na minha rua tem alguém que apoia vocês"*
+viraria pergunta e tiraria da automação quem só estava contando algo.
+
+### A Regina: a ajuda financeira voltou para cima do modelo
+
+*"Presizo de uma ajuda"*, *"Meda uma ajuda"*, *"Eu preciso pagar umas contas que estão muito
+atrasada"* — e a caixa ofereceu o modelo padrão. Ele: *"modelo fora de contexto, ela quer ajuda
+financeira, mandar mensagem pronta referente"*.
+
+**Isto desfaz a decisão dele de 02/09** (*"o modelo não irá confirmar apoio ao pedido de ajuda…
+então pode ser respondido após"*). O argumento continua verdadeiro sobre o TEXTO — o modelo é recibo
+de cadastro e não promete nada. O que o caso real mostrou é outra coisa: **propaganda como primeira
+resposta a quem escreve que não consegue pagar as contas é a resposta errada mesmo quando o texto é
+inofensivo.**
+
+Foi mudado no `fluxoPadrao`; o quadro dele é uma cópia, então o cartão "O padrão mudou?" vai
+acusar a caixa nova.
+
+### O que fica com ele
+
+- **jairoc** — escreveu quatro mensagens de opinião política e recebeu o pedido de dados. *"chegar
+  pedindo dados seria fora do contexto, a IA assume, responde e pede os dados"*. A regra que existe
+  para isto (`ultima-pede-resposta-pessoal`) mede a rajada em **400 caracteres**, e a dele tem ~270.
+  Baixar o limite tira mais gente da automação; preciso do número dele antes de mexer;
+- **Maria de Lourdes** — o motivo da caixa foi corrigido (não fala mais de "material"), mas ele
+  escreveu *"eu vou mandar modelo pois ela não recebeu ainda"*, e isso contraria a decisão de 31/08
+  (*"a prioridade é responder o que foi falado, depois mandar modelo"*). São ordens opostas para o
+  mesmo caso; ele decide qual vale. **E a cidade dela**: ele diz que era Caxias do Sul e o campo
+  ficou vazio — nas cinco mensagens que vieram na anotação não há "Caxias", então preciso da
+  mensagem em que ela escreveu.
+
+**Arquivos:** `src/lib/anuncios.js` (`jaSaiu`), `src/lib/cortesia.js` (três padrões de pergunta),
+`src/lib/sugestao.js` (`voltou-por-outro-anuncio`, `etiqueta-dispensa-da-fila`, o motivo de
+`so-expressa-apoio`), `src/lib/arvore.js` (a ajuda financeira na chegada), `src/panel/panel.js`
+(`jaSaiuNaConversa`, os três modelos padrão, `jaSaiuOAnuncio`), os testes de `anuncios`, `cortesia`,
+`sugestao` e `arvore`, `CLAUDE.md` (+6 armadilhas), `manifest.json` (1.78.0 → 1.79.0). Quinze
+suítes, os dois verificadores, o quadro sem problemas e nenhum desfecho incoerente.
+
+---
+
 ## 2026-09-03 — "O iniciar conversas não foi atualizado com as regras atuais"
 
 Ele está certo, e a distância era maior do que a frase sugere.

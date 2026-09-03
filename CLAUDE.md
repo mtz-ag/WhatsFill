@@ -302,6 +302,46 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   concluida em silencio depois de responder). Hoje a busca e **mensagem a mensagem, da mais nova
   para a mais antiga** — os tres caminhos sao os mesmos, o que mudou foi onde procuram. Bonus: a
   pista de uma mensagem nao alcanca mais o texto da seguinte, que a juncao permitia.
+- **A acao do ANUNCIO e do momento da CHEGADA, e sem trava ela se repete para sempre.** Duas
+  anotacoes de 03/09/2026: a **Lucia** ja tinha dado nome, cidade e confirmado presenca, e a caixa
+  oferecia de novo a resposta pronta do anuncio; o **Deoclecio** ja tinha mandado seis videos depois
+  disso. A causa e a armadilha ja registrada — **o texto do anuncio fica na conversa para sempre** —
+  e a trava que existia (`silencio`) cobre so quem decidiu nao mandar NADA. Hoje
+  `decidirComAnuncio` recebe `jaSaiu`, e quem calcula pergunta a **CONVERSA**, nunca ao registro de
+  envios: `resposta` olha se aquele texto (com as variantes) ja saiu, `dados` usa
+  `jaPediramDados`, que casa pelo invariante `Nome / Cidade`. **Acao configurada e do momento da
+  chegada: cumprida, o anuncio se cala e o quadro decide.**
+- **Comparar com o modelo "da vez" nao serve depois que o padrao passou a REVEZAR entre tres.**
+  `modeloJaNaConversa` olhava so o modelo que sairia agora; bastava a roleta andar entre duas
+  passadas para o recibo ser reenviado (anotacoes da Mary e da Eliana, 02/09). Hoje, quando a
+  escolha e `deOnde: 'padrao'`, a conferencia varre os TRES — eles dizem a mesma coisa, entao ter
+  recebido um e ter recebido o recibo. Regra geral: **conferencia de duplicata tem que cobrir todo
+  o conjunto que pode sair, nao o item sorteado.**
+- **"Nao mande o mesmo conteudo de novo" pressupoe que o conteudo e o mesmo.**
+  `voltou-por-outro-anuncio` mandava a mensagem do momento para quem voltava clicando num anuncio
+  cujo modelo NUNCA tinha saido (anotacao da Eroni, 03/09). Ela passou a exigir
+  `modeloJaNaConversa`: para o Telmo (mesmo modelo, mesmo dia) continua verdadeiro, para quem pediu
+  outra coisa e falso e o caso desce para `anuncio-modelo-e-dados`.
+- **`etiqueta-dispensa-da-fila` DEIXOU DE SER PROTECAO** (pedido dele, 03/09, anotacao do Paulo
+  Cezar): *"engajado recebe mensagem do momento uma vez por dia e depois toda vez que aparecer pode
+  concluir em vez de pular"*. Pular deixava o atendimento ABERTO — o engajado que manda video o dia
+  inteiro voltava a custar uma abertura por rodada, para sempre, sem nunca receber nada. Duas
+  consequencias: ela nao barra mais a acao do anuncio (`efeito` deixou de ser `silencio`) e
+  `remetenteDentroDeProtecao` nao a confere mais; **a protecao que continua de pe e
+  `sem-interesse`**, com a despedida.
+- **Pergunta sobre o que o mandato FAZ ("tem alguem que vem na casa da gente pra conversar") nao
+  casava com nada.** Anotacao da Teresinha (03/09): sem "?", sem "por que", sem "qual a posicao" —
+  e a rodada sugeriu CONCLUIR. *"a regra de sempre responder uma pergunta tem que valer"*. Entraram
+  "tem alguem que/pra", "tem como" e "voces fazem/atendem/vem" em `PERGUNTAS_QUE_PEDEM_VOCE`, que
+  sao guardadas por POSICAO (comeco da mensagem ou "?") — sem essa guarda, *"aqui tem alguem que
+  apoia voces"* viraria pergunta.
+- **A ajuda financeira VOLTOU para cima do modelo, desfazendo a decisao dele de 02/09.** Anotacao
+  da Regina (03/09), que escreveu *"Eu preciso pagar umas contas que estao muito atrasada"* e
+  recebeu o modelo padrao: *"modelo fora de contexto, ela quer ajuda financeira, mandar mensagem
+  pronta referente"*. O argumento de 02/09 continua verdadeiro sobre o TEXTO (o modelo nao promete
+  nada); o que o caso real mostrou e outra coisa — **propaganda como primeira resposta a um pedido
+  de socorro e a resposta errada mesmo quando o texto e inofensivo.**
+
 - **A RODADA DOS NOVOS era um motor a parte, e por isso envelheceu sozinha.** Relato dele
   (03/09/2026): *"o iniciar conversas nao foi atualizado com as regras atuais"*. Estava certo — e a
   distancia era grande: todo o redesenho da chegada (reconhecer de QUAL anuncio, mandar o modelo

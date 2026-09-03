@@ -977,4 +977,33 @@ grupo('"so cumprimentou" tem que ser SO isso');
   check(soCortesia(conv(['Oi. Bom dia, eu ja nao tenho mais esperanca nenhuma nessas eleicoes, as urnas sao fraudadas e tudo isso e tempo perdido. Triste!'])) === null, 'nem o desabafo da Cris, que comeca com "Bom dia,"');
 }
 
+grupo('pergunta sobre o que o mandato FAZ (03/09/2026)');
+{
+  /**
+   * Anotacao da Teresinha: ela escreveu *"Tem alguem que vem na casa da gente pra conversar"* --
+   * sem "?", sem "por que", sem "qual a posicao" -- e a rodada sugeriu CONCLUIR
+   * (`ja-respondemos-antes`). Relato dele: *"ela quer saber se fazemos visitas, respondi a
+   * pergunta, a regra de sempre responder uma pergunta tem que valer"*.
+   */
+  const conv = (a) => a.map((t, i) => ({ texto: t, at: new Date(Date.now() - (a.length - i) * 60000).toISOString() }));
+  const pergunta = (t) => conversaTemPerguntaAberta(conv([t]), null);
+
+  check(pergunta('Tem alguem que vem na casa da gente pra conversar') !== null, 'o caso dela');
+  check(pergunta('Tem alguém que vem na casa da gente pra conversar') !== null, 'com acento tambem');
+  check(pergunta('Tem como voces virem aqui') !== null, '"tem como" tambem e pergunta');
+  check(pergunta('Voces fazem visita nas casas') !== null, '"voces fazem" tambem');
+
+  /**
+   * **A guarda de POSICAO e o que os mantem seguros.** No meio de um relato, "tem alguem" e
+   * afirmacao -- e afirmacao virando pergunta tira da automacao quem so estava contando algo.
+   */
+  check(pergunta('aqui na minha rua tem alguem que apoia voces desde sempre') === null,
+    'no meio da frase, e afirmacao e nao pergunta');
+  check(pergunta('aqui na minha rua tem alguem que apoia voces?') !== null,
+    'a mesma frase COM interrogacao volta a ser pergunta');
+
+  // E o que ja funcionava continua: pedido de material nao e pergunta para gente.
+  check(pergunta('tem algum material para eu divulgar') === null, 'pedido de material continua fora');
+}
+
 fim();

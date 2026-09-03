@@ -787,23 +787,30 @@ grupo('a CHEGADA pelo anuncio: modelo, dados, pendencia (02/09/2026)');
    * vale para as neutras. Estas nao: mandar a nossa mensagem primeiro E o dano, nao o atraso.
    */
   check(tecla({ ...chega, semInteresse: true }) === 's', 'recusa: nada sai');
-  check(tecla({ ...chega, etiquetaQueDispensa: 'Sem Retorno' }) === '2', 'etiqueta que dispensa: pula (era regressao, o modelo vencia)');
+  // A etiqueta que dispensa deixou de PULAR em 03/09 (anotacao do Paulo Cezar): manda a mensagem
+  // do momento uma vez e conclui. Continua vencendo o modelo, que era a regressao original.
+  check(tecla({ ...chega, etiquetaQueDispensa: 'Sem Retorno', podeMandarMomento: true }) === '5',
+    'etiqueta que dispensa: momento, e vence o modelo');
+  check(tecla({ ...chega, etiquetaQueDispensa: 'Sem Retorno', podeMandarMomento: true, momentoJaEnviado: true }) === '3',
+    'ja recebeu o momento: conclui');
   /**
-   * **A ajuda financeira ESTAVA acima do modelo e saiu, por decisao dele** (02/09, no mesmo dia):
-   * *"o modelo nao ira confirmar apoio ao pedido de ajuda ou confirmar que ira ajudar entao pode
-   * ser respondido apos"*.
+   * **A ajuda financeira VOLTOU para cima do modelo, por decisao dele** (03/09/2026).
    *
-   * Ele esta certo sobre o texto: o modelo e recibo de cadastro e nao promete coisa nenhuma, entao
-   * manda-lo antes nao e promessa de beneficio (Lei 9.504/97), que era a minha objecao. A negativa
-   * sai na passada seguinte, e continua sendo o `pedido-ajuda` — o que este teste trava e que ela
-   * NAO se perde no caminho.
+   * Anotacao da Regina -- *"Presizo de uma ajuda"*, *"Eu preciso pagar umas contas que estao muito
+   * atrasada"* -- e a caixa ofereceu o modelo padrao: *"modelo fora de contexto, ela quer ajuda
+   * financeira, mandar mensagem pronta referente"*.
+   *
+   * Isto desfaz a decisao dele de 02/09 (*"pode ser respondido apos"*). O argumento continua
+   * verdadeiro sobre o TEXTO -- o modelo nao promete nada --, mas o caso real mostrou outra coisa:
+   * propaganda como PRIMEIRA resposta a quem diz que nao consegue pagar as contas e a resposta
+   * errada mesmo quando o texto e inofensivo.
    */
   const remedio = { pedeAjudaFinanceira: { motivo: 'remedio' }, textos: [ad, 'preciso de remedio'], ultimoTexto: 'preciso de remedio' };
-  check(tecla({ ...chega, ...remedio }) === 'a', 'quem pediu ajuda recebe primeiro o recibo do anuncio');
-  check(arv.decidir({ ...chega, ...remedio, modeloJaNaConversa: true, jaPediramDados: true }, q)?.resposta === 'pedido-ajuda',
-    'e a NEGATIVA sai na passada seguinte -- nao se perde');
+  check(arv.decidir({ ...chega, ...remedio }, q)?.resposta === 'pedido-ajuda',
+    'quem pediu ajuda recebe a NEGATIVA antes do recibo');
+  check(tecla({ ...chega, ...remedio }) !== 'a', 'e nao o modelo + pedido de dados');
   check(arv.decidir({ ...chega, ...remedio, modeloJaNaConversa: true, temEtiquetaDeCidade: true }, q)?.resposta === 'pedido-ajuda',
-    'quem ja tinha cidade recebe a negativa logo depois do modelo');
+    'quem ja tinha cidade tambem recebe a negativa');
   check(tecla({ ...chega, perguntaAberta: true }) === '6', 'pergunta de posicao: gente, nao modelo (print da Clair)');
   check(tecla({ ...chega, pedeAlgoIndefinido: true }) === '9', 'pediu algo sem dizer o que: pergunta (print da Mari)');
 
@@ -950,7 +957,8 @@ grupo('respondeu os dados: agradece e encerra, SEM modelo (02/09/2026)');
   for (const comCidade of [true, false]) {
     const onde = comCidade ? 'com cidade' : 'sem cidade';
     check(tecla({ ...base, temEtiquetaDeCidade: comCidade, semInteresse: true }) === 's', `a recusa vence (${onde})`);
-    check(tecla({ ...base, temEtiquetaDeCidade: comCidade, etiquetaQueDispensa: 'Sem Retorno' }) === '2', `a etiqueta que dispensa vence (${onde})`);
+    check(tecla({ ...base, temEtiquetaDeCidade: comCidade, etiquetaQueDispensa: 'Sem Retorno', podeMandarMomento: true }) === '5',
+      `a etiqueta que dispensa vence (${onde})`);
   }
 }
 
@@ -1017,8 +1025,18 @@ grupo('remetente dentro de protecao -- o erro que aconteceu DUAS vezes');
   check(m[0].includes('Recusou') || m[0].includes('sem-interesse'), 'nomeia a caixa que protege');
   check(m[0].includes('mandar modelo') && m[0].includes('nunca-pediram-dados'), 'e nomeia as DUAS que mandam, inclusive a de dentro da de dentro');
 
-  // A mesma coisa com a outra protecao do projeto.
-  check(acusa([R('etiqueta-dispensa-da-fila', [meu('manda', { tecla: '1' })])]).length === 1, 'vale para a etiqueta que dispensa tambem');
+  /**
+   * **`etiqueta-dispensa-da-fila` deixou de ser protecao em 03/09** (anotacao do Paulo Cezar): ela
+   * manda a mensagem do momento uma vez e conclui, em vez de pular. Como o efeito dela nao e mais
+   * `silencio`, ela nao entra mais nesta conferencia -- e nao pode entrar, senao a janela acusaria
+   * uma caixa que ENVIA pendurada numa caixa que ENVIA, que e legitimo.
+   *
+   * A protecao que continua de pe e `sem-interesse`, acima, e a despedida.
+   */
+  check(acusa([R('etiqueta-dispensa-da-fila', [meu('manda', { tecla: '1' })])]).length === 0,
+    'a etiqueta que dispensa nao e mais protecao: nao acusa');
+  check(acusa([R('ultima-e-despedida', [meu('manda', { tecla: '1' })])]).length === 1,
+    'a despedida continua sendo protecao, e acusa');
 
   // Sem remetente dentro, nao acusa.
   check(acusa([R('sem-interesse', [R('ultima-e-despedida')])]).length === 0, 'protecao com protecao dentro nao e problema');
@@ -1062,7 +1080,11 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   const volta = q.find((n) => n.rotulo === 'pessoa retornando');
 
   const naChegada = chegada.filhos.map((n) => n.regra || n.rotulo);
-  const PENDENCIAS = ['pediu dinheiro, cesta basica ou remedio', 'ultima-e-so-reacao', 'ultima-pede-resposta-pessoal', 'ultima-e-despedida'];
+  /**
+   * "pediu dinheiro" SAIU desta lista em 03/09: ele decidiu que ela volta para cima do modelo
+   * (anotacao da Regina). As outras continuam sendo resolvidas so na volta.
+   */
+  const PENDENCIAS = ['ultima-e-so-reacao', 'ultima-pede-resposta-pessoal', 'ultima-e-despedida'];
   for (const p of PENDENCIAS) {
     check(!naChegada.includes(p), `"${p}" nao esta mais na chegada`);
   }
@@ -1071,6 +1093,7 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   // E continuam existindo na volta -- e por isso que remover da chegada nao perde nada.
   const naVolta = new Set(arv.todosOsNos(volta.filhos).map(({ no }) => no.regra || no.rotulo));
   for (const p of PENDENCIAS) check(naVolta.has(p), `"${p}" continua na volta`);
+  check(naVolta.has('pediu dinheiro, cesta basica ou remedio'), 'a ajuda financeira existe nos DOIS lados');
 
   /**
    * O que a chegada resolve e que a volta NAO resolve: as tres saidas do recibo. Sem as duas
@@ -1079,7 +1102,8 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   check(naChegada.includes('anuncio-modelo-e-dados'), 'o recibo + pedido de dados fica na chegada');
   check(naChegada.includes('conteudo-pedido'), 'o recibo sozinho (ela ja tem cidade) fica na chegada');
   check(naChegada.includes('nunca-pediram-dados'), 'o pedido de dados sozinho (sem modelo) fica na chegada');
-  check(chegada.filhos.length === 7, 'e a chegada tem 7 caixas, nao 12');
+  check(naChegada.includes('pediu dinheiro, cesta basica ou remedio'), 'e a ajuda financeira VOLTOU para a chegada (03/09)');
+  check(chegada.filhos.length === 8, 'e a chegada tem 8 caixas, nao 12');
 
   /**
    * A prova de que nada piorou: as pendencias de quem CHEGA continuam sendo resolvidas -- pela
@@ -1131,7 +1155,7 @@ grupo('confirmou presenca e ja temos os dados: agradece (02/09/2026)');
 
   // As protecoes continuam ganhando.
   check(tecla({ ...deoclecio, semInteresse: true }) === 's', 'a recusa vence');
-  check(tecla({ ...deoclecio, etiquetaQueDispensa: 'Sem Retorno' }) === '2', 'a etiqueta que dispensa vence');
+  check(tecla({ ...deoclecio, etiquetaQueDispensa: 'Sem Retorno', podeMandarMomento: true }) === '5', 'a etiqueta que dispensa vence');
 
   // E quem nao confirmou presenca nao e agradecido por isso.
   check(tecla({ ...deoclecio, confirmouPresenca: false }) !== '8', 'sem confirmacao, nao agradece a presenca');

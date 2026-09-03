@@ -309,12 +309,34 @@ export function desfechoEmPortugues(anuncio) {
  * a regra ia enviar de qualquer forma, o anúncio decide **o quê** — que é a escolha explícita dele,
  * e escolha explícita não se substitui por dedução.
  */
-export function decidirComAnuncio(anuncio, sugestao, efeitoDaSugestao) {
+export function decidirComAnuncio(anuncio, sugestao, efeitoDaSugestao, opcoes) {
   if (!anuncio || !anuncio.ligado) return null;
   if (anuncio.acao !== 'resposta' && anuncio.acao !== 'dados') return null;
 
   // A proteção vence: a regra decidiu não mandar nada, e o texto do anúncio é de outro dia.
   if (sugestao && efeitoDaSugestao === 'silencio') return null;
+
+  /**
+   * **A ação do anúncio é do momento da CHEGADA — depois de cumprida, ela acaba.**
+   *
+   * Duas anotações de 03/09/2026, a mesma regra:
+   *
+   *  - **Lúcia** respondeu ao convite, deu nome e cidade e confirmou presença — e a caixa mandava
+   *    de novo a resposta pronta do anúncio. *"só concluir, ela confirmou minha mensagem"*;
+   *  - **Deoclécio** já tinha mandado meia dúzia de vídeos depois disso, e a mesma resposta
+   *    continuava sendo oferecida. *"ele já mandou várias mensagens, o contexto se perdeu"*.
+   *
+   * A causa é a que o CLAUDE.md já registra: **o texto do anúncio fica na conversa para sempre.**
+   * A trava que existia (`silencio`) cobre só quem decidiu não mandar NADA; para todo o resto o
+   * anúncio vencia a regra em toda passada, para sempre.
+   *
+   * `jaSaiu` é a pergunta que faltava: **esta resposta já foi entregue?** Quem chama olha a
+   * CONVERSA (não o registro de envios) — é a mesma lição do pedido de dados, que tem três formas
+   * e sai também pela mão dele e pela automação da plataforma.
+   *
+   * Cumprida a ação, o anúncio se cala e o quadro decide — que é o certo: a conversa andou.
+   */
+  if (opcoes?.jaSaiu) return null;
 
   const nome = anuncio.nome || 'anúncio reconhecido';
   if (anuncio.acao === 'resposta') {

@@ -565,6 +565,25 @@ export function fluxoPadrao() {
      * O que muda é a ORDEM entre os dois, e nos três casos o custo de inverter é assimétrico —
      * atrasar o recibo um dia contra responder propaganda a um pedido de socorro.
      */
+    /**
+     * **A ajuda financeira VOLTOU para cima do modelo, por decisão dele** (03/09/2026).
+     *
+     * Anotação da Regina: *"Presizo de uma ajuda"*, *"Meda uma ajuda"*, *"Eu preciso pagar umas
+     * contas que estão muito atrasada"* — e a caixa ofereceu o modelo padrão. Ele: *"modelo fora de
+     * contexto, ela quer ajuda financeira, mandar mensagem pronta referente"*.
+     *
+     * **Isto desfaz a decisão dele de 02/09**, que era *"o modelo não irá confirmar apoio ao pedido
+     * de ajuda ou confirmar que irá ajudar então pode ser respondido após"*. O argumento continua
+     * verdadeiro sobre o TEXTO — o modelo é recibo de cadastro e não promete nada. O que o caso
+     * real mostrou é outra coisa: mandar propaganda como primeira resposta a quem escreve que não
+     * consegue pagar as contas é a resposta errada mesmo quando o texto é inofensivo.
+     *
+     * A negativa (`pedido-ajuda`) sai aqui, e o modelo sai na passada seguinte.
+     */
+    { ...noVazio('pediu dinheiro, cesta basica ou remedio'), id: 'chegada-ajuda',
+      condicao: { sinal: 'pedeAjudaFinanceira', negar: false, palavras: [], onde: 'ultima' },
+      acao: { tecla: null, resposta: 'pedido-ajuda' } },
+
     r('pediu-algo-sem-dizer-o-que', 'pediu algo e não disse o quê', 'chegada-antes'),
     r('pergunta-aberta', null, 'chegada-antes'),
 

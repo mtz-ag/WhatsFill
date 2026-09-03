@@ -422,6 +422,25 @@ const PERGUNTAS_QUE_PEDEM_VOCE = [
    * **"tem algum material/conteúdo" fica de fora de propósito**: aquilo o modelo responde
    * perfeitamente, e é a maior parte do que chega. O que entra aqui é lei, projeto e votação.
    */
+  /**
+   * **Pergunta se o mandato FAZ alguma coisa** — anotação da Teresinha (03/09/2026).
+   *
+   * Ela escreveu *"Tem alguém que vem na casa da gente pra conversar"*: sem "?", sem "por que",
+   * sem "qual a posição". Nenhum padrão pegava, e a rodada sugeriu **concluir** (`ja-respondemos-antes`,
+   * tecla 3) sobre uma pergunta sem resposta. Relato dele: *"ela quer saber se fazemos visitas,
+   * respondi a pergunta, a regra de sempre responder uma pergunta tem que valer"*.
+   *
+   * Não existe resposta pronta para isto: depende da agenda do mandato. É a mesma classe de
+   * "tem algum projeto" — muda só o objeto da pergunta.
+   *
+   * **A guarda de POSIÇÃO é o que os mantém seguros** (começo da mensagem, ou "?"): *"tem alguém
+   * aqui que apoia vocês"* no meio de um relato é afirmação, não pergunta. Errar para o lado de
+   * chamar gente custa um contato fora da automação; errar para o outro conclui em cima de quem
+   * perguntou.
+   */
+  /(^|[^\p{L}])tem\s+algu[eé]m\s+(que|pra|para|no|na|em|de|do|da|a[ií]|aqui)(\s|$)/iu,
+  /(^|[^\p{L}])tem\s+como\s+/iu,
+  /(^|[^\p{L}])(voc[eê]s|vcs)\s+(fazem|atendem|v[eê]m|visitam)(\s|$|\?)/iu,
   // Pedido explícito de explicação
   /(^|[^\p{L}])(me\s+)?explica(r|\s|$)/iu,
   /(^|[^\p{L}])n[aã]o\s+entendi(\s|$|\.)/iu,

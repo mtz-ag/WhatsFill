@@ -350,4 +350,32 @@ grupo('o anuncio e reconhecido pelo DADO da plataforma, nao so pelo que ela digi
   check(anuncios.reconhecer(['Campanha Escolas Civico Militares'], desligado) === null, 'anuncio desligado nao reconhece nem pelo dado');
 }
 
+grupo('a acao do anuncio nao vale para sempre (03/09/2026)');
+{
+  /**
+   * Duas anotacoes, a mesma regra:
+   *
+   *  - **Lucia** respondeu ao convite, deu nome e cidade e confirmou presenca -- e a caixa mandava
+   *    de novo a resposta pronta do anuncio: *"so concluir, ela confirmou minha mensagem"*;
+   *  - **Deoclecio** ja tinha mandado meia duzia de videos depois disso, e a mesma resposta
+   *    continuava sendo oferecida: *"o contexto se perdeu"*.
+   *
+   * A causa e a que o CLAUDE.md registra: o TEXTO do anuncio fica na conversa para sempre. A trava
+   * que existia (`silencio`) cobre so quem decidiu nao mandar NADA.
+   */
+  const resposta = { id: 'a1', nome: 'Convite', ligado: true, trechos: ['estarei presente'], acao: 'resposta', valor: 'confirmar', etiquetas: [] };
+
+  check(anuncios.decidirComAnuncio(resposta, null, null)?.resposta === 'confirmar', 'sem ter saido, o anuncio decide');
+  check(anuncios.decidirComAnuncio(resposta, null, null, { jaSaiu: true }) === null, 'ja tendo saido, o anuncio se cala');
+  check(anuncios.decidirComAnuncio(resposta, null, null, {}) !== null, 'objeto vazio nao conta como ja saiu');
+
+  // A mesma coisa para a acao de pedir os dados.
+  const dados = { ...resposta, acao: 'dados', valor: '' };
+  check(anuncios.decidirComAnuncio(dados, null, null)?.tecla === '4', 'sem ter saido, pede os dados');
+  check(anuncios.decidirComAnuncio(dados, null, null, { jaSaiu: true }) === null, 'ja tendo pedido, se cala');
+
+  // E a protecao continua vencendo, cumprida ou nao: sao travas independentes.
+  check(anuncios.decidirComAnuncio(resposta, { id: 'x' }, 'silencio') === null, 'a protecao continua vencendo');
+}
+
 fim();

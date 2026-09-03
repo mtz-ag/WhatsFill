@@ -147,37 +147,62 @@ grupo('audio ou texto longo: responder a mao, e na frente de tudo');
 }
 
 
-grupo('etiqueta que dispensa da fila: sugere pular');
+grupo('etiqueta que dispensa da fila: momento uma vez, depois concluir (03/09/2026)');
 {
+  /**
+   * Pedido dele, anotacao do Paulo Cezar: *"engajado recebe mensagem do momento uma vez por dia e
+   * depois toda vez que aparecer pode concluir em vez de pular"*.
+   *
+   * Pular deixava o atendimento ABERTO: o engajado que manda video o dia inteiro voltava a custar
+   * uma abertura por rodada, para sempre, e nunca recebia nada.
+   */
   const r = com({ etiquetaQueDispensa: 'ENGAJADO/BIZA' });
-  check(r?.tecla === '2', 'recomendou pular = ' + JSON.stringify(r));
+  check(r?.tecla === '5', 'ainda nao recebeu o momento: manda o momento = ' + JSON.stringify(r));
   check(String(r?.motivo || '').includes('ENGAJADO/BIZA'), 'o motivo nomeia a etiqueta = ' + r?.motivo);
 
+  const jaFoi = com({ etiquetaQueDispensa: 'engajado', momentoJaEnviado: true });
+  check(jaFoi?.tecla === '3', 'ja recebeu o momento: concluir, e nao pular = ' + JSON.stringify(jaFoi));
+  check(com({ etiquetaQueDispensa: 'engajado', podeMandarMomento: false })?.tecla === '3',
+    'sem mensagem do momento configurada, concluir');
+
+  // Nao pula mais NUNCA: pular era o que prendia o engajado na fila.
+  check(r?.tecla !== '2' && jaFoi?.tecla !== '2', 'a tecla 2 saiu deste desfecho');
+
   // Vence o resto do trabalho de fila: engajado nao precisa de formulario nem de interesse.
-  check(com({ etiquetaQueDispensa: 'engajado', nomeSemSentido: true })?.tecla === '2', 'vence pedir dados');
-  check(com({ etiquetaQueDispensa: 'engajado', podeEnviar: true })?.tecla === '2', 'vence o modelo');
-  check(com({ etiquetaQueDispensa: 'engajado', ultimaEhSoReacao: true })?.tecla === '2', 'vence a reacao');
+  const id = (extra) => com({ etiquetaQueDispensa: 'engajado', ...extra })?.id;
+  check(id({ nomeSemSentido: true }) === 'etiqueta-dispensa-da-fila', 'vence pedir dados');
+  check(id({ podeEnviar: true }) === 'etiqueta-dispensa-da-fila', 'vence o modelo');
+  check(id({ ultimaEhSoReacao: true }) === 'etiqueta-dispensa-da-fila', 'vence a reacao');
 
   // A prioridade INVERTEU em 31/08, por decisao dele (print do Deoclecio, engajado com video):
   // "veja isso tambem que nao pulou o engajado". Engajado manda video e link o dia inteiro, e
   // responder a cada um e nao sair da fila. A tecla 6 continua a um toque quando merecer.
-  const pede = { motivo: 'mandou um video' };
-  check(com({ etiquetaQueDispensa: 'engajado', pedeRespostaPessoal: pede })?.tecla === '2',
-    'engajado com video e pulado — a etiqueta vence tudo');
+  check(id({ pedeRespostaPessoal: { motivo: 'mandou um video' } }) === 'etiqueta-dispensa-da-fila',
+    'engajado com video: a etiqueta vence tudo');
 }
 
 
 grupo('voltou por outro anuncio');
 {
+  /**
+   * **A regra exige que o modelo JA esteja na conversa** -- anotacao da Eroni (03/09/2026).
+   *
+   * Ela recusou o convite e clicou em dois anuncios diferentes; a caixa ofereceu a mensagem do
+   * momento. *"aqui ela veio por outro modelo sem ser o padrao, mandar o modelo pedido e pedir
+   * dados que falta"*. "Nao mande o mesmo conteudo de novo" pressupoe que o conteudo e o mesmo.
+   */
+  check(com({ voltouPorOutroAnuncio: true, modeloJaNaConversa: false })?.id !== 'voltou-por-outro-anuncio',
+    'voltou por um anuncio cujo modelo NUNCA saiu: nao e esta regra');
+
   // Os dois desfechos que ele descreveu, escolhidos pelo que ja saiu.
-  const r = com({ voltouPorOutroAnuncio: true });
+  const r = com({ voltouPorOutroAnuncio: true, modeloJaNaConversa: true });
   check(r?.tecla === '5', 'momento ainda nao enviado, sugere a mensagem do momento = ' + JSON.stringify(r));
   check(String(r?.motivo).includes('outro an'), 'o motivo diz que voltou por anuncio = ' + r?.motivo);
 
-  const jaFoi = com({ voltouPorOutroAnuncio: true, momentoJaEnviado: true });
+  const jaFoi = com({ voltouPorOutroAnuncio: true, modeloJaNaConversa: true, momentoJaEnviado: true });
   check(jaFoi?.tecla === '3', 'momento ja enviado, sugere concluir = ' + JSON.stringify(jaFoi));
 
-  const semMomento = com({ voltouPorOutroAnuncio: true, podeMandarMomento: false });
+  const semMomento = com({ voltouPorOutroAnuncio: true, modeloJaNaConversa: true, podeMandarMomento: false });
   check(semMomento?.tecla === '3', 'sem mensagem do momento configurada, sugere concluir');
 
   // Vence "sem etiqueta de cidade", que sugeriria justamente pedir dados de novo.
@@ -185,13 +210,13 @@ grupo('voltou por outro anuncio');
 
   // Print do Telmo: cidade Viamao, modelo enviado as 10:28, voltou por anuncio as 18:24 -- e a
   // rodada sugeria mandar o modelo de novo. Ter cidade nao muda o que a pessoa acabou de fazer.
-  check(com({ voltouPorOutroAnuncio: true, temEtiquetaDeCidade: true })?.id === 'voltou-por-outro-anuncio',
+  check(com({ voltouPorOutroAnuncio: true, modeloJaNaConversa: true, temEtiquetaDeCidade: true })?.id === 'voltou-por-outro-anuncio',
     'com cidade a regra casa igual');
-  check(com({ voltouPorOutroAnuncio: true, momentoJaEnviado: true, podeEnviar: true, conteudoPedido: 'ADS' })?.tecla === '3',
+  check(com({ voltouPorOutroAnuncio: true, modeloJaNaConversa: true, momentoJaEnviado: true, podeEnviar: true, conteudoPedido: 'ADS' })?.tecla === '3',
     'vence o modelo: nao manda o mesmo conteudo de novo');
 
   // E audio continua ganhando: quem falou merece resposta.
-  check(com({ voltouPorOutroAnuncio: true, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6',
+  check(com({ voltouPorOutroAnuncio: true, modeloJaNaConversa: true, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6',
     'audio vence o retorno por anuncio');
 }
 
@@ -332,7 +357,7 @@ grupo('pergunta-aberta: vence o modelo, perde para as regras de cima');
   check(clair?.id === 'pergunta-aberta', 'e e a regra da pergunta');
 
   // Perde para tudo que ja estava certo acima dela.
-  check(com({ perguntaAberta: P, etiquetaQueDispensa: 'engajado' })?.tecla === '2', 'etiqueta dispensa vence');
+  check(com({ perguntaAberta: P, etiquetaQueDispensa: 'engajado' })?.id === 'etiqueta-dispensa-da-fila', 'etiqueta dispensa vence');
   check(com({ perguntaAberta: P, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6', 'audio tambem manda para 6');
   check(com({ perguntaAberta: P, ultimaEhDespedida: true })?.tecla === '3', 'despedida vence');
   check(com({ perguntaAberta: P, jaPediramDados: false, temEtiquetaDeCidade: false })?.tecla === '4', 'pedir dados vence');
@@ -374,7 +399,7 @@ grupo('so-expressa-apoio: e a EXCECAO, e vence o modelo quando casa');
   check(com({ soExpressaApoio: A, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6', 'audio vence');
   check(com({ soExpressaApoio: A, ultimaEhDespedida: true })?.tecla === '3', 'despedida vence');
   check(com({ soExpressaApoio: A, jaPediramDados: false, temEtiquetaDeCidade: false })?.tecla === '4', 'pedir dados vence');
-  check(com({ soExpressaApoio: A, etiquetaQueDispensa: 'engajado' })?.tecla === '2', 'etiqueta dispensa vence');
+  check(com({ soExpressaApoio: A, etiquetaQueDispensa: 'engajado' })?.id === 'etiqueta-dispensa-da-fila', 'etiqueta dispensa vence');
   check(com({ soExpressaApoio: A, perguntaAberta: { motivo: 'p' } })?.tecla === '6', 'pergunta vence: responder a pergunta e mais urgente que agradecer');
 }
 
@@ -424,7 +449,7 @@ grupo('pediu-algo-sem-dizer-o-que: a regra de maior risco, e fica no alto');
    * (decisao explicita dele) e o audio, que precisa ser ouvido antes de qualquer decisao.
    */
   check(com({ pedeAlgoIndefinido: P, pedeRespostaPessoal: { motivo: 'audio' } })?.tecla === '6', 'audio vence: ouca primeiro');
-  check(com({ pedeAlgoIndefinido: P, etiquetaQueDispensa: 'engajado' })?.tecla === '2', 'etiqueta dispensa vence');
+  check(com({ pedeAlgoIndefinido: P, etiquetaQueDispensa: 'engajado' })?.id === 'etiqueta-dispensa-da-fila', 'etiqueta dispensa vence');
 
   /**
    * Sem o texto da pergunta (variavel faltando, ou a resposta apagada), a tecla nao pode ser

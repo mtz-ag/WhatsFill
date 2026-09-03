@@ -57,7 +57,7 @@ export const REGRAS = [
   },
   {
     id: 'etiqueta-dispensa-da-fila',
-    tecla: '2',
+    tecla: (c) => (c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5'),
     /**
      * Etiqueta que dispensa o contato da rodada (configurável na aba Automatizado).
      *
@@ -76,11 +76,27 @@ export const REGRAS = [
      *
      * Continua sendo só sugestão: a tecla 6 está lá, a um toque, para quando o vídeo merecer.
      *
-     * Sugere PULAR e não CONCLUIR: pular deixa o atendimento aberto, e fechar quem está engajado
-     * sem dizer nada é decisão maior do que uma sugestão deve tomar.
+     * **Deixou de PULAR, por pedido dele** (03/09/2026, anotação do Paulo Cézar): *"engajado
+     * recebe mensagem do momento uma vez por dia e depois toda vez que aparecer pode concluir em
+     * vez de pular"*.
+     *
+     * Pular deixava o atendimento aberto para sempre — o engajado que manda vídeo o dia inteiro
+     * ficava na fila em toda rodada, custando uma abertura por passada, que é o que derruba a API.
+     * E ele nunca recebia nada, mesmo sendo quem mais fala com o gabinete.
+     *
+     * O desfecho passou a ser o mesmo par de `voltou-por-outro-anuncio`, pela mesma razão: alguma
+     * coisa a pessoa recebe, uma vez; depois disso o certo é fechar e seguir.
+     *
+     * **Consequência a lembrar: esta regra deixou de ser uma PROTEÇÃO.** Enquanto o efeito era
+     * `silencio`, ela barrava a ação do anúncio (ver `anuncios.decidirComAnuncio`) e a janela do
+     * fluxo acusava caixa que envia pendurada nela. Agora ela envia — a proteção que continua de
+     * pé é `sem-interesse`.
      */
     quando: (c) => !!c.etiquetaQueDispensa,
-    motivo: (c) => `tem a etiqueta "${c.etiquetaQueDispensa}" — já está engajado, a rodada não precisa dele.`,
+    motivo: (c) =>
+      c.momentoJaEnviado || !c.podeMandarMomento
+        ? `tem a etiqueta "${c.etiquetaQueDispensa}" e já recebeu a mensagem do momento — conclua e siga.`
+        : `tem a etiqueta "${c.etiquetaQueDispensa}" — já está engajado: mande a mensagem do momento e conclua.`,
   },
   {
     id: 'ultima-pede-resposta-pessoal',
@@ -197,8 +213,26 @@ export const REGRAS = [
      * E "já mandei" não é "hoje": a chave do envio inclui um resumo do texto, então a conta é
      * sobre a mensagem do momento ATUAL.
      */
+    /**
+     * **"Não mande o mesmo conteúdo de novo" pressupõe que o conteúdo é o mesmo.**
+     *
+     * Anotação da Eroni (03/09/2026): ela recusou o convite do evento e depois clicou em DOIS
+     * anúncios diferentes — *"Eu escolho o lado da Liberdade"* e *"Eu apoio as Escolas
+     * Cívico-Militares"*. A caixa ofereceu a mensagem do momento. Relato dele: *"aqui ela veio por
+     * outro modelo sem ser o padrão, mandar o modelo pedido e pedir dados que falta"*.
+     *
+     * Ele está certo e o defeito é meu: esta regra existe para quem volta pedindo **a mesma
+     * coisa** (print do Telmo, 31/08 — modelo enviado às 10:28, volta às 18:24). Quando o anúncio
+     * novo pede um modelo que **nunca saiu**, o conteúdo é outro, e negá-lo é deixar de entregar o
+     * que ela acabou de pedir.
+     *
+     * `modeloJaNaConversa` é a pergunta certa porque ele olha o modelo que sairia AGORA: para o
+     * Telmo é verdadeiro (é o mesmo), para a Eroni é falso. Não casando aqui, o caso desce para
+     * `anuncio-modelo-e-dados`, que manda o modelo e pede os dados na mesma passada — exatamente o
+     * que ele descreveu.
+     */
     tecla: (c) => (c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5'),
-    quando: (c) => c.voltouPorOutroAnuncio,
+    quando: (c) => c.voltouPorOutroAnuncio && c.modeloJaNaConversa,
     motivo: (c) =>
       c.momentoJaEnviado || !c.podeMandarMomento
         ? 'voltou por outro anúncio e já recebeu a mensagem do momento — conclua e siga.'
@@ -356,7 +390,15 @@ export const REGRAS = [
      * agradecimento pela atenção, que é o desfecho normal.
      */
     quando: (c) => !!c.soExpressaApoio,
-    motivo: () => 'escreveu apoio em mensagem própria — responda a ela; o material fica para depois.',
+    /**
+     * **O motivo não pode falar de "material" como se houvesse um esperando.**
+     *
+     * Anotação da Maria de Lourdes (03/09/2026): *"a sugestão está falando de material sem ter
+     * material na conversa"*. Ela estava certa sobre a frase — *"o material fica para depois"*
+     * descreve o que a regra faz com o modelo quando ele existe, e é lido como promessa de algo
+     * que está na fila. Quem lê a caixa precisa saber o que ela vai FAZER, não o que ela adiou.
+     */
+    motivo: () => 'escreveu apoio em mensagem própria — agradeça a ela; a resposta é o agradecimento.',
   },
   {
     id: 'ja-respondemos-antes',
@@ -647,8 +689,12 @@ export const SOBRE = {
   },
   'etiqueta-dispensa-da-fila': {
     rotulo: 'Tem a etiqueta que dispensa da fila',
-    efeito: 'silencio',
-    quando: 'Já está engajado. Pula e deixa o atendimento aberto onde estava.',
+    efeito: 'depende',
+    quando: 'Já está engajado: manda a mensagem do momento uma vez e conclui; depois, só conclui.',
+    ramos: [
+      { tecla: '5', se: 'a mensagem do momento ainda não saiu para ele' },
+      { tecla: '3', se: 'ele já recebeu a do momento, ou não há uma configurada' },
+    ],
   },
   'ultima-pede-resposta-pessoal': {
     rotulo: 'Áudio sem transcrição, arquivo, ou texto longo',

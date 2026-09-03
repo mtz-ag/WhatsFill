@@ -3867,9 +3867,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * quadro) é escolha explícita dele, e escolha explícita não se substitui por um padrão.
        */
       const veioDeUmAnuncio = !!(state.session?.utm?.source || state.session?.utm?.referralUrl);
+      const modelosPadrao = veioDeUmAnuncio ? await carregarModelosPadrao() : [];
       const escolhaDeModelo = anunciosLib.modeloDoAnuncio(
         state.anuncio,
-        veioDeUmAnuncio ? await carregarModelosPadrao() : [],
+        modelosPadrao,
         veioDeUmAnuncio ? Number(await store.get('modeloPadraoIndex')) || 0 : 0
       );
       const porTexto = escolhaDeModelo
@@ -4283,17 +4284,47 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * 30 caracteres literais é pouco para dar falso positivo (é meia frase específica) e curto
        * o bastante para sobrar mesmo em modelo cheio de variável.
        */
-      const modeloJaNaConversa = (() => {
-        const bruto = String(modelo?.text || '');
-        // Quebra nos marcadores de variável: sobra o que o modelo tem de fixo.
-        const pedacos = bruto
+      /**
+       * **Este texto nosso já saiu nesta conversa?**
+       *
+       * Compara pelo maior pedaço LITERAL do texto — o que sobra depois de tirar as variáveis. É o
+       * que sobrevive ao `{{primeiro_nome}}` substituído e às três variantes de cada resposta, e é
+       * a mesma conta que `jaRespondemosAntes` já fazia.
+       *
+       * Pergunta à CONVERSA e não ao registro de envios de propósito: `templatesLib.wasSent` só
+       * enxerga o que saiu pelo painel, e nesta base a mensagem sai também pela automação da
+       * plataforma, pelo chatbot do anúncio e pela mão dele.
+       */
+      const jaSaiuNaConversa = (texto) => {
+        const pedacos = String(texto || '')
           .split(/\{\{[^}]*\}\}|\{\{?\d+\}?\}/g)
           .map((t) => achatarTexto(t))
           .filter((t) => t.length >= 30);
         if (!pedacos.length) return false;
-
         const maior = pedacos.sort((a, b) => b.length - a.length)[0];
         return state.nossas.some((m) => achatarTexto(m.texto).includes(maior));
+      };
+
+      /**
+       * **O modelo já está na conversa — e quando ele é o PADRÃO, são os três.**
+       *
+       * O modelo padrão reveza entre três (pedido dele, 02/09: *"o modelo padrão deve variar entre
+       * 3 modelos já que chega bastante gente por eles"*), e esta conferência olhava só o da vez.
+       * Bastava a roleta ter andado entre uma passada e outra para o modelo ser **reenviado** —
+       * anotações da Mary e da Eliana (02/09): *"já foi mandado modelo, última resposta foi um
+       * emoji, só concluir"*.
+       *
+       * Não é preferência de redação: os três dizem a mesma coisa (que ela vai receber o
+       * conteúdo), então ter recebido um é ter recebido o recibo.
+       */
+      const modeloJaNaConversa = (() => {
+        if (jaSaiuNaConversa(modelo?.text)) return true;
+        if (escolhaDeModelo?.deOnde !== 'padrao') return false;
+
+        return modelosPadrao.some((nome) => {
+          const outro = hsmLib.modeloPorTexto([nome], { [nome]: nome }, state.hsmTemplates);
+          return outro?.modelo ? jaSaiuNaConversa(outro.modelo.text) : false;
+        });
       })();
 
       /**
@@ -4567,10 +4598,34 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * **não enviar** (recusa, despedida, etiqueta que dispensa) continua ganhando. Foi assim que
        * quem só escreveu "Amém" recebeu mais uma mensagem 36 min depois.
        */
+      /**
+       * **A ação do anúncio já foi cumprida?** Anotações da Lúcia e do Deoclécio (03/09/2026).
+       *
+       * O texto do anúncio fica na conversa para sempre, então sem esta pergunta a resposta pronta
+       * dele era oferecida em toda passada — para a Lúcia, que já tinha respondido nome, cidade e
+       * confirmado presença (*"só concluir, ela confirmou minha mensagem"*), e para o Deoclécio,
+       * seis vídeos depois (*"o contexto se perdeu"*).
+       *
+       * Cada ação tem a sua própria pergunta, e as duas olham a CONVERSA:
+       *
+       *  - `resposta` → o texto daquela resposta pronta já saiu;
+       *  - `dados` → o pedido de nome e cidade já saiu, em qualquer uma das três formas
+       *    (`jaPediramDados` casa pelo invariante `Nome / Cidade`).
+       */
+      const acaoDoAnuncio = state.anuncio?.anuncio?.acao;
+      const jaSaiuOAnuncio = (() => {
+        if (acaoDoAnuncio === 'dados') return jaPediramDados;
+        if (acaoDoAnuncio !== 'resposta') return false;
+        const pronta = state.templates.find((x) => x.id === state.anuncio.anuncio.valor);
+        if (!pronta) return false;
+        return [pronta.text, ...(pronta.variantes || [])].some((texto) => jaSaiuNaConversa(texto));
+      })();
+
       const doAnuncio = anunciosLib.decidirComAnuncio(
         state.anuncio?.anuncio,
         sugestao,
-        sugestao?.id ? sugestaoLib.efeitoDaRegra(sugestao.id, state.fluxo) : null
+        sugestao?.id ? sugestaoLib.efeitoDaRegra(sugestao.id, state.fluxo) : null,
+        { jaSaiu: jaSaiuOAnuncio }
       );
       if (doAnuncio) {
         registrarNaRodada(nome, 'info', doAnuncio.motivo);
