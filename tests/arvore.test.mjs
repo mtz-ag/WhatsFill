@@ -1121,7 +1121,18 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   check(naChegada.includes('conteudo-pedido'), 'o recibo sozinho (ela ja tem cidade) fica na chegada');
   check(naChegada.includes('nunca-pediram-dados'), 'o pedido de dados sozinho (sem modelo) fica na chegada');
   check(naChegada.includes('pediu dinheiro, cesta basica ou remedio'), 'e a ajuda financeira VOLTOU para a chegada (03/09)');
-  check(chegada.filhos.length === 13, 'e a chegada tem 13 caixas, nao 14');
+  check(chegada.filhos.length === 14, 'e a chegada tem 14 caixas, nao 15');
+
+  /**
+   * **"Nada legivel dela" entrou em 03/09** (print do Tilin: dois avisos de tipo nao suportado,
+   * numero privado, e a rodada pedindo nome e cidade). Fica ABAIXO do modelo e ACIMA do pedido de
+   * dados -- quem chega com modelo mapeado recebe o recibo, que responde melhor que uma pergunta.
+   */
+  check(naChegada.includes('nada-legivel-dela'), 'a caixa de "nada legivel" esta na chegada');
+  check(naChegada.indexOf('conteudo-pedido') < naChegada.indexOf('nada-legivel-dela'),
+    'o modelo decide antes dela');
+  check(naChegada.indexOf('nada-legivel-dela') < naChegada.indexOf('nunca-pediram-dados'),
+    'e ela decide antes do pedido de nome e cidade');
 
   /**
    * **O apoio entrou na chegada em 03/09, e entrou em ULTIMO lugar.**

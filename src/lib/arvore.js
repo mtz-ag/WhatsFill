@@ -769,6 +769,18 @@ export function fluxoPadrao() {
      * já exige `!temEtiquetaDeCidade`, então quem tem cidade simplesmente não casa aqui — e "fica
      * só no modelo" acontece por si.
      */
+    /**
+     * **Não deu nada para trabalhar: pergunte o interesse, não o cadastro** — print do Tilin
+     * (03/09/2026), em que a conversa inteira eram dois avisos de *"tipo da mensagem não
+     * suportado"* e um *"número privado"*, e a rodada mandou o pedido de nome e cidade. Ele: *"eu
+     * não tenho nenhuma informação nesse caso, então é para perguntar se a pessoa tem interesse em
+     * receber conteúdo; a mensagem de nome e cidade ficou deslocada demais"*.
+     *
+     * Fica ABAIXO do modelo e ACIMA do pedido de dados: quem chega com modelo mapeado recebe o
+     * recibo, que responde melhor que qualquer pergunta. Esta caixa é o que sobra para quem não
+     * deixou nada.
+     */
+    r('nada-legivel-dela', 'ela não mandou nada legível', 'chegada'),
     r('nunca-pediram-dados', 'ainda não temos nome e cidade', 'chegada'),
 
     /**

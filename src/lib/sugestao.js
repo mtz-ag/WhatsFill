@@ -375,6 +375,40 @@ export const REGRAS = [
       'chegou pelo anúncio: sai o modelo como recibo e, em seguida, o pedido de nome e cidade.',
   },
   {
+    id: 'nada-legivel-dela',
+    tecla: '7',
+    /**
+     * **Ela mandou só coisa que a plataforma não conseguiu ler → pergunte o interesse.**
+     *
+     * Print do Tilin (03/09/2026): a conversa inteira eram dois avisos *"Atenção: o tipo da mensagem
+     * enviada pelo contato não é suportado"* e um *"Número privado"* — sem texto, sem nome, sem
+     * cidade e sem nem o telefone. A rodada mandou *"Para eu poder salvar seu número me diga seu:
+     * Nome, Cidade"* e concluiu. Ele: *"eu não tenho nenhuma informação nesse caso, então é para
+     * perguntar se a pessoa tem interesse em receber conteúdo; a mensagem de nome e cidade ficou
+     * deslocada demais"*.
+     *
+     * Ele está certo sobre o que a mensagem PARECE do outro lado. *"Para eu poder salvar seu
+     * número"* pressupõe uma conversa em andamento — alguém que pediu alguma coisa, ou pelo menos
+     * escreveu. Quem só mandou uma mídia que não abriu recebe um formulário sem saber do quê.
+     *
+     * A pergunta de interesse serve porque **ela cria o contexto que falta**: diz o que temos para
+     * oferecer, transforma o silêncio em sim ou não, e já pede nome e cidade na mesma mensagem —
+     * então nada se perde em relação ao pedido seco.
+     *
+     * **Fica logo acima do pedido de dados e ABAIXO do modelo**, de propósito: quem chega por
+     * anúncio com modelo mapeado recebe o recibo, que é resposta melhor que qualquer pergunta. Esta
+     * regra só alcança quem não deixou nada para trabalhar.
+     *
+     * **`nunca-perguntaram-interesse` continua fora do quadro dele** (descarte de 01/09) — aquela
+     * dispara a pergunta para todo mundo que nunca foi perguntado, que é quase a base inteira. Esta
+     * exige, junto, que ela não tenha mandado nada legível.
+     */
+    quando: (c) => !!c.soRuidoDaPlataforma && c.podePerguntarInteresse && !c.interessePerguntado,
+    motivo: () =>
+      'ela só mandou mídia que a plataforma não conseguiu ler — não há o que responder: ' +
+      'pergunte se ela quer receber conteúdo.',
+  },
+  {
     id: 'nunca-pediram-dados',
     tecla: '4',
     /**
@@ -908,6 +942,15 @@ export const SOBRE = {
     quando:
       'O pedido de dados saiu e ela respondeu com nome ou cidade. Agradece e conclui, SEM mandar ' +
       'modelo — o modelo já foi o recibo da chegada, e repeti-lo é mandar duas vezes a mesma coisa.',
+  },
+  'nada-legivel-dela': {
+    rotulo: 'Ela não mandou nada legível',
+    efeito: 'envia',
+    quando:
+      'Tudo o que ela mandou foi mídia que a plataforma não conseguiu ler — sem texto, sem nome, ' +
+      'sem cidade. O pedido de nome e cidade fica deslocado aí (decisão sua, 03/09: "a mensagem de ' +
+      'nome e cidade ficou deslocada demais"), porque ele pressupõe uma conversa em andamento. A ' +
+      'pergunta de interesse cria o contexto que falta e já pede nome e cidade na mesma mensagem.',
   },
   'nunca-pediram-dados': {
     rotulo: 'Veio do anúncio e nunca pedimos os dados dela',

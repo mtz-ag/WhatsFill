@@ -4817,6 +4817,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         enviadoHoje,
         conteudoPedido: conteudoEscolhido?.nome || '',
         podePerguntarInteresse,
+        /**
+         * **Tudo o que ela mandou foi mídia que a plataforma não conseguiu ler.**
+         *
+         * Print do Tilin (03/09/2026): dois avisos de tipo não suportado, número privado, e nada
+         * mais. A rodada pediu nome e cidade — *"a mensagem de nome e cidade ficou deslocada
+         * demais"*.
+         *
+         * `semRuidoDaPlataforma` marca essas mensagens com `sistema: true` e ESVAZIA o texto, em
+         * vez de descartá-las: "mandou algo que não deu para ler" é diferente de "não mandou nada",
+         * e é essa diferença que o sinal usa. Conversa vazia de verdade é `ultimaEhNossa`.
+         *
+         * Exige que TODAS sejam ruído. Uma figura no meio já é algo que ele pode olhar, e aí quem
+         * decide é `ultima-e-so-reacao`; um áudio, `ultima-pede-resposta-pessoal`.
+         */
+        soRuidoDaPlataforma:
+          (state.entrantes || []).length > 0 && state.entrantes.every((m) => !!m?.sistema),
         interessePerguntado: !!interessePerguntado,
         /**
          * O TEXTO, para os ramos que ele monta por palavra na janela do fluxo.

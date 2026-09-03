@@ -1,3 +1,45 @@
+## 2026-09-03 — Sem nenhuma informação, pergunte o interesse (v1.98.0)
+
+Print do Tilin: a conversa inteira eram dois avisos *"Atenção: o tipo da mensagem enviada pelo
+contato não é suportado"* e um *"Número privado"*. Sem texto, sem nome, sem cidade, sem nem o
+telefone. A rodada mandou *"Para eu poder salvar seu número me diga seu: Nome, Cidade"* e concluiu.
+
+Ele: *"eu não tenho nenhuma informação nesse caso, então é para perguntar se a pessoa tem interesse
+em receber conteúdo; a mensagem de nome e cidade ficou deslocada demais"*.
+
+Ele está certo sobre o que a mensagem **parece do outro lado**. *"Para eu poder salvar seu número"*
+pressupõe uma conversa em andamento — alguém que pediu alguma coisa, ou pelo menos escreveu. Quem só
+mandou uma mídia que não abriu recebe um formulário sem saber do quê.
+
+A pergunta de interesse serve porque **cria o contexto que falta**: diz o que temos para oferecer,
+transforma o silêncio em sim ou não, e **já pede nome e cidade na mesma mensagem** — então nada se
+perde em relação ao pedido seco.
+
+### O sinal
+
+`soRuidoDaPlataforma`: há mensagens dela e **todas** são ruído da plataforma (`sistema: true`). É a
+diferença que `semRuidoDaPlataforma` já preservava de propósito — *"mandou algo que não deu para
+ler"* não é *"não mandou nada"*, e conversa vazia de verdade continua sendo `ultima-e-nossa`.
+
+Exigir TODAS é o que mantém a regra estreita: uma figura no meio é algo que ele pode olhar, e aí
+quem decide é `ultima-e-so-reacao`; um áudio, `ultima-pede-resposta-pessoal`.
+
+### A posição
+
+Abaixo do modelo e acima do pedido de dados. Quem chega por anúncio com modelo mapeado recebe o
+recibo, que responde melhor que qualquer pergunta; a caixa nova é o que sobra para quem não deixou
+nada para trabalhar.
+
+**Não é `nunca-perguntaram-interesse`**, que ele descartou do quadro em 01/09: aquela dispara a
+pergunta para todo mundo que nunca foi perguntado, que é quase a base inteira. Esta exige, junto,
+que ela não tenha mandado nada legível.
+
+**Arquivos:** `src/lib/sugestao.js`, `src/lib/arvore.js`, `src/panel/panel.js`,
+`tests/sugestao.test.mjs`, `tests/arvore.test.mjs`, `manifest.json` (1.97.0 → 1.98.0),
+`registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-03 — Pedido sem objeto claro vai para ele ou para a IA (v1.97.0)
 
 Decisão dele, logo depois do conserto do padrão da Odete: *"já que pedido é algo difícil de ser

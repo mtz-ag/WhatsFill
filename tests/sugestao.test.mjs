@@ -832,4 +832,37 @@ grupo('a tecla 8 e da IA, e NENHUMA regra a recomenda (03/09/2026)');
   check(com({ respondeuOsDados: true })?.tecla === 'i', 'respondeu-os-dados tambem');
 }
 
+grupo('nada-legivel-dela: sem nenhuma informacao, pergunte o interesse (03/09/2026)');
+{
+  /**
+   * Print do Tilin: a conversa inteira eram dois avisos *"Atencao: o tipo da mensagem enviada pelo
+   * contato nao e suportado"* e um *"Numero privado"* -- sem texto, sem nome, sem cidade e sem nem
+   * o telefone. A rodada mandou *"Para eu poder salvar seu numero me diga seu: Nome, Cidade"* e
+   * concluiu. Ele: *"eu nao tenho nenhuma informacao nesse caso, entao e para perguntar se a pessoa
+   * tem interesse em receber conteudo; a mensagem de nome e cidade ficou deslocada demais"*.
+   *
+   * *"Para eu poder salvar seu numero"* pressupoe uma conversa em andamento. A pergunta de
+   * interesse cria o contexto que falta e ja pede nome e cidade na mesma mensagem, entao nada se
+   * perde em relacao ao pedido seco.
+   */
+  const tilin = { soRuidoDaPlataforma: true, podePerguntarInteresse: true, interessePerguntado: false,
+    jaPediramDados: false, temEtiquetaDeCidade: false, podePedirDados: true, pedidoHoje: false };
+
+  check(com({ ...tilin, soRuidoDaPlataforma: false })?.id === 'nunca-pediram-dados', 'sem o sinal, o pedido de dados sai como antes');
+  const r = com({ ...tilin });
+  check(r?.id === 'nada-legivel-dela', 'com o sinal, quem decide e a caixa nova');
+  check(r?.tecla === '7', 'e a tecla e a da pergunta de interesse');
+
+  /**
+   * **Abaixo do modelo, de proposito:** quem chega por anuncio com modelo mapeado recebe o recibo,
+   * que responde melhor que qualquer pergunta.
+   */
+  check(com({ ...tilin, podeEnviar: true, enviadoHoje: false, modeloJaNaConversa: false })?.id !== 'nada-legivel-dela',
+    'havendo modelo, o recibo vence');
+
+  // Sem o texto da pergunta configurado, cai no pedido de dados -- que e o que ja acontecia.
+  check(com({ ...tilin, podePerguntarInteresse: false })?.id === 'nunca-pediram-dados', 'sem o texto da pergunta, o pedido de dados continua');
+  check(com({ ...tilin, interessePerguntado: true })?.id === 'nunca-pediram-dados', 'ja perguntado uma vez, nao insiste');
+}
+
 fim();

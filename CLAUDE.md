@@ -1326,6 +1326,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   para as caixas que enviam quando o template estivesse travado por variável. **Consequência: a
   rodada PARA nesses contatos** em vez de perguntar e seguir.
 
+- **"Me diga seu Nome, Cidade" pressupõe uma conversa em andamento — e sem ela a mensagem fica
+  deslocada.** Print do Tilin (03/09/2026): a conversa inteira eram dois avisos *"o tipo da mensagem
+  enviada pelo contato não é suportado"* e um *"Número privado"*. Sem texto, sem nome, sem cidade e
+  sem nem o telefone — e a rodada mandou o pedido de cadastro e concluiu. Ele: *"eu não tenho
+  nenhuma informação nesse caso, então é para perguntar se a pessoa tem interesse em receber
+  conteúdo"*. A pergunta de interesse resolve porque **cria o contexto que falta** (diz o que temos
+  a oferecer) e **já pede nome e cidade na mesma mensagem**, então nada se perde. A regra é
+  `nada-legivel-dela`, e o sinal exige que TODAS as mensagens dela sejam ruído da plataforma
+  (`sistema: true`) — uma figura no meio é algo que ele pode olhar, e aí quem decide é
+  `ultima-e-so-reacao`. Fica **abaixo do modelo** (quem tem modelo mapeado recebe o recibo, que
+  responde melhor que uma pergunta) e **acima do pedido de dados**. Não confundir com
+  `nunca-perguntaram-interesse`, que ele descartou do quadro em 01/09: aquela pergunta para todo
+  mundo que nunca foi perguntado, que é quase a base inteira.
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto
