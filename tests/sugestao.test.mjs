@@ -669,4 +669,38 @@ grupo('mostrarTecla: maiuscula na TELA, minuscula na comparacao (02/09/2026)');
   check(!!TECLAS.a && !TECLAS.A, 'a tecla do anuncio e "a", nunca "A"');
 }
 
+grupo('conclua e nao mande nada (03/09/2026)');
+{
+  /**
+   * Dois pedidos dele no mesmo dia, e os dois sobre NAO mandar:
+   *
+   *  - print da conversa que tinha so o nosso disparo, com a rodada mandando o pedido de nome e
+   *    cidade em cima: *"pegando conversas que a ultima mensagem foi minha e mandando mensagem, e
+   *    pra concluir sem mandar nada"*;
+   *  - *"contatos com etiqueta de assessor so conclua"*.
+   */
+  const nossa = com({ ultimaEhNossa: true, podeEnviar: true, conteudoPedido: 'ADS' });
+  check(nossa?.id === 'ultima-e-nossa' && nossa?.tecla === '3', 'ultima nossa: conclui = ' + JSON.stringify(nossa));
+
+  // O caso que escapava de tudo: ela nunca escreveu, entao `decidirSemResposta` nao tem o que ver.
+  const vazia = com({ ultimaEhNossa: 'vazia', podeEnviar: true, podePedirDados: true });
+  check(vazia?.tecla === '3', 'conversa em que ela nunca escreveu: conclui');
+  check(String(vazia?.motivo).includes('nao escreveu') || String(vazia?.motivo).includes('não escreveu'),
+    'e o motivo diz qual dos dois casos e');
+
+  // Vence tudo que ENVIA -- era o defeito da print.
+  check(com({ ultimaEhNossa: true, podePedirDados: true, jaPediramDados: false })?.tecla === '3', 'vence o pedido de dados');
+  check(com({ ultimaEhNossa: true, soCortesia: { motivo: 'bom dia' }, podeMandarMomento: true })?.tecla === '3', 'vence a mensagem do momento');
+
+  // Mas a recusa continua acima: la a etiqueta importa.
+  check(com({ ultimaEhNossa: true, semInteresse: { motivo: 'pediu para sair' } })?.id === 'sem-interesse', 'a recusa continua vencendo');
+
+  // Etiqueta de assessor: conclui, e vence ate a que dispensa da fila.
+  const casa = com({ etiquetaSoConclui: 'Assessor', podeMandarMomento: true });
+  check(casa?.id === 'etiqueta-so-conclui' && casa?.tecla === '3', 'assessor: conclui = ' + JSON.stringify(casa));
+  check(String(casa?.motivo).includes('Assessor'), 'o motivo nomeia a etiqueta');
+  check(com({ etiquetaSoConclui: 'Assessor', etiquetaQueDispensa: 'engajado', podeMandarMomento: true })?.id === 'etiqueta-so-conclui',
+    'com as duas etiquetas, o desfecho mais silencioso ganha');
+}
+
 fim();

@@ -56,6 +56,56 @@ export const REGRAS = [
     motivo: (c) => `${c.semInteresse.motivo} — marque "sem interesse" e conclua sem responder.`,
   },
   {
+    id: 'etiqueta-so-conclui',
+    tecla: '3',
+    /**
+     * **Etiqueta que só conclui — assessor, equipe, quem não é eleitor a atender.**
+     *
+     * Pedido dele (03/09/2026): *"contatos com etiqueta de assessor só conclua"*. É diferente da
+     * etiqueta que dispensa da fila, que hoje manda a mensagem do momento uma vez: aqui **nada
+     * sai, nunca**. Mandar material de campanha para quem trabalha no mandato não é inofensivo —
+     * é ruído para quem já está do lado de dentro.
+     *
+     * **Fica acima da que dispensa** justamente porque as duas casariam no mesmo contato se ele
+     * pusesse a mesma palavra nas duas listas, e o desfecho mais silencioso tem que ganhar.
+     *
+     * A lista é dele, na aba Automatizado, e nasce com "assessor". Como a de baixo, ela lê as
+     * etiquetas REAIS do contato (`state.contact.tagsId` cruzado com o CRM) e não a lista da
+     * caixa — que só mostra o que a rodada sugere.
+     */
+    quando: (c) => !!c.etiquetaSoConclui,
+    motivo: (c) => `tem a etiqueta "${c.etiquetaSoConclui}" — é da casa: conclua sem mandar nada.`,
+  },
+  {
+    id: 'ultima-e-nossa',
+    tecla: '3',
+    /**
+     * **A última mensagem da conversa é NOSSA — não há o que responder.**
+     *
+     * Print dele (03/09/2026): a conversa tinha só o nosso disparo (*"É hoje, Rio Grande do Sul!"*
+     * + o pedido de salvar o contato), ele assumiu o atendimento às 11:27 e a rodada mandou o
+     * pedido de nome e cidade em cima. Relato: *"pegando conversas que a última mensagem foi minha
+     * e mandando mensagem, é pra concluir sem mandar nada"*.
+     *
+     * Vale também para quem **não escreveu nada** — a conversa em que só nós falamos é o mesmo
+     * caso, e era a que escapava: sem mensagem dela, `hsm.decidirSemResposta` não tem `ultima`
+     * para olhar e o caso descia até `nunca-pediram-dados`, que envia.
+     *
+     * **Fica logo abaixo das etiquetas e acima de tudo o que envia.** Não é sobre o que a pessoa
+     * escreveu; é sobre não haver nada a responder — e nesse caso qualquer regra abaixo estaria
+     * respondendo a nós mesmos.
+     *
+     * `hsm.decidirSemResposta` continua existindo e roda ANTES da tabela: ela conclui na hora,
+     * sem passar por aqui, quando a nossa mensagem é recente. Esta regra é a rede para o resto —
+     * inclusive a conversa vazia, que aquela não enxerga.
+     */
+    quando: (c) => !!c.ultimaEhNossa,
+    motivo: (c) =>
+      c.ultimaEhNossa === 'vazia'
+        ? 'o contato não escreveu nada nesta conversa — conclua sem mandar nada.'
+        : 'a última mensagem da conversa é nossa — conclua sem mandar nada.',
+  },
+  {
     id: 'etiqueta-dispensa-da-fila',
     tecla: (c) => (c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5'),
     /**
@@ -686,6 +736,20 @@ export const SOBRE = {
       'Pediu para não receber mais, respondeu "não" seco, ou xingou em segunda pessoa. Marca a ' +
       'etiqueta de sem interesse e conclui sem responder. Xingar o adversário em terceira pessoa ' +
       'NÃO conta — isso é apoiador.',
+  },
+  'etiqueta-so-conclui': {
+    rotulo: 'Tem a etiqueta que só conclui (assessor)',
+    efeito: 'silencio',
+    quando:
+      'É da casa — assessor, equipe. Conclui sem mandar nada, nunca. Diferente da etiqueta que ' +
+      'dispensa da fila, que ainda manda a mensagem do momento uma vez.',
+  },
+  'ultima-e-nossa': {
+    rotulo: 'A última mensagem é nossa (ou ela não escreveu nada)',
+    efeito: 'silencio',
+    quando:
+      'Não há o que responder: a conversa termina numa mensagem nossa, ou o contato nunca ' +
+      'escreveu. Conclui sem mandar nada.',
   },
   'etiqueta-dispensa-da-fila': {
     rotulo: 'Tem a etiqueta que dispensa da fila',

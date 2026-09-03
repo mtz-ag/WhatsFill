@@ -32,6 +32,54 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-03 — "É pra concluir sem mandar nada"
+
+Dois pedidos dele, os dois sobre **não** mandar.
+
+### A conversa em que só nós falamos
+
+Print: a conversa tinha o nosso disparo (*"É hoje, Rio Grande do Sul!"* + o pedido de salvar o
+contato), ele assumiu o atendimento às 11:27, e a rodada mandou o pedido de nome e cidade em cima.
+*"pegando conversas que a última mensagem foi minha e mandando mensagem, é pra concluir sem mandar
+nada"*.
+
+`hsm.decidirSemResposta` já cobria parte disso e roda **antes** da tabela. O que ela não cobre é a
+conversa **vazia**: sem nenhuma mensagem do contato não há `ultima` do lado dele para olhar, e o
+caso descia até `nunca-pediram-dados`, que envia. Era exatamente a da print.
+
+Agora é uma regra do quadro, `ultima-e-nossa` (tecla 3), presente nos dois lados da bifurcação de
+cidade. O sinal vale `'vazia'` no segundo caso — string que é verdadeira e ainda diz na caixa qual
+dos dois é, em vez de os dois saírem com a mesma frase.
+
+### A etiqueta de assessor
+
+*"contatos com etiqueta de assessor só conclua"*. Lista própria, `etiquetasSoConcluir`, na aba
+Automatizado — separada da que dispensa da fila, porque aquela hoje ainda manda a mensagem do
+momento uma vez, e aqui **nada sai, nunca**: quem trabalha no mandato não é público de material de
+campanha. A regra fica acima da outra, porque as duas casariam no mesmo contato e o desfecho mais
+silencioso tem que ganhar.
+
+**E ele corrigiu na hora, olhando as etiquetas de verdade.** A comparação é por trecho **contido**
+(é o que faz "engajado" casar com "ENGAJADO/BIZA" e com "Apoiador Muito engajado"), então `assessor`
+pegava as três etiquetas de assessor **e também `CONTATO-ASSESSOR`** — que é eleitor trazido por um
+assessor, não a equipe. *"com exceção do contato assessor"*.
+
+Trocar "contido" por "começa com" resolveria este caso e quebraria o outro. Então **item com traço
+na frente virou exceção**: o padrão é `assessor, -contato-assessor`, e a exceção é conferida antes
+da inclusão. Vale para as duas listas, e a linha embaixo do campo explica.
+
+Medido nas quatro etiquetas da print: as três de assessor concluem, `CONTATO-ASSESSOR` segue o
+fluxo normal.
+
+**Arquivos:** `src/lib/sugestao.js` (`etiqueta-so-conclui`, `ultima-e-nossa`, os dois verbetes),
+`src/lib/arvore.js` (os dois sinais e as caixas nos dois ramos), `src/panel/panel.js`
+(`etiquetaDaLista` com exceção, `etiquetaQueSoConclui`, o sinal `ultimaEhNossa`, o campo novo),
+`src/lib/store.js`, `tests/sugestao.test.mjs` (+10), `tests/arvore.test.mjs`, `CLAUDE.md`
+(+3 armadilhas), `manifest.json` (1.82.0 → 1.83.0). Quinze suítes, os dois verificadores, o quadro
+sem problemas e nenhum desfecho incoerente.
+
+---
+
 ## 2026-09-03 — A rodada parou por um `auto` órfão
 
 No log da print, entre 37 enviados: `× Catarina — auto is not defined`, e a rodada encerrou ali.

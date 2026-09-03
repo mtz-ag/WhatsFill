@@ -1103,7 +1103,17 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   check(naChegada.includes('conteudo-pedido'), 'o recibo sozinho (ela ja tem cidade) fica na chegada');
   check(naChegada.includes('nunca-pediram-dados'), 'o pedido de dados sozinho (sem modelo) fica na chegada');
   check(naChegada.includes('pediu dinheiro, cesta basica ou remedio'), 'e a ajuda financeira VOLTOU para a chegada (03/09)');
-  check(chegada.filhos.length === 8, 'e a chegada tem 8 caixas, nao 12');
+  check(chegada.filhos.length === 10, 'e a chegada tem 10 caixas, nao 12');
+
+  /**
+   * As duas caixas de "conclua e nao mande nada" (03/09) ficam nos DOIS lados: sao sobre NAO
+   * mandar, e isso nao depende de o contato ter cidade. Protecao que vive so num lado da
+   * bifurcacao e protecao pela metade -- ja aconteceu com a etiqueta que dispensa.
+   */
+  for (const regra of ['etiqueta-so-conclui', 'ultima-e-nossa']) {
+    check(naChegada.includes(regra), `"${regra}" esta na chegada`);
+    check(naVolta.has(regra), `"${regra}" esta na volta`);
+  }
 
   /**
    * A prova de que nada piorou: as pendencias de quem CHEGA continuam sendo resolvidas -- pela

@@ -598,6 +598,19 @@ const DEFAULTS = {
      * acrescentar outras — é para ele mexer aqui sem precisar de mim.
      */
     etiquetasQuePulam: 'engajado',
+
+    /**
+     * **Etiquetas que só CONCLUEM — nada sai, nunca.**
+     *
+     * Pedido dele (03/09/2026): *"contatos com etiqueta de assessor só conclua"*. Diferente da
+     * lista de cima, que hoje ainda manda a mensagem do momento uma vez: aqui a pessoa é da casa,
+     * e material de campanha para quem trabalha no mandato é ruído.
+     *
+     * **Item com traço na frente é EXCEÇÃO:** `assessor, -contato-assessor` pega "Assessor Cap" e
+     * "Assessor Claudia" e deixa `CONTATO-ASSESSOR` de fora, que é eleitor trazido por um assessor
+     * — correção dele no mesmo dia: *"com exceção do contato assessor"*.
+     */
+    etiquetasSoConcluir: 'assessor, -contato-assessor',
     /**
      * Pular esses contatos SOZINHO, sem perguntar.
      *

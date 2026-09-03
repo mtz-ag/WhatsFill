@@ -342,6 +342,27 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   nada); o que o caso real mostrou e outra coisa — **propaganda como primeira resposta a um pedido
   de socorro e a resposta errada mesmo quando o texto e inofensivo.**
 
+- **Conversa que termina em mensagem NOSSA nao recebe nada — e a conversa VAZIA era a que
+  escapava.** Print dele (03/09/2026): a conversa tinha so o nosso disparo, ele assumiu o
+  atendimento e a rodada mandou o pedido de nome e cidade em cima. *"pegando conversas que a ultima
+  mensagem foi minha e mandando mensagem, e pra concluir sem mandar nada"*. `hsm.decidirSemResposta`
+  ja cobria parte disso e roda ANTES da tabela — mas ela olha `ultima`, e **numa conversa sem
+  nenhuma mensagem do contato nao ha `ultima` do lado dele para olhar**: o caso descia ate
+  `nunca-pediram-dados`, que envia. Hoje ha a regra `ultima-e-nossa` (tecla 3), com o sinal
+  valendo `'vazia'` no segundo caso — string que e verdadeira e ainda diz na caixa QUAL dos dois e.
+- **Etiqueta de ASSESSOR so conclui, e e lista SEPARADA da que dispensa da fila.** Pedido dele
+  (03/09): *"contatos com etiqueta de assessor so conclua"*. A outra lista hoje manda a mensagem do
+  momento uma vez; esta nao manda **nada, nunca** — quem trabalha no mandato nao e publico de
+  material de campanha. `etiqueta-so-conclui` fica ACIMA de `etiqueta-dispensa-da-fila`, porque as
+  duas casariam no mesmo contato e o desfecho mais silencioso tem que ganhar.
+- **Lista de etiquetas casa por trecho CONTIDO, e por isso precisou de EXCECAO.** `assessor` pegava
+  as tres etiquetas de assessor **e tambem `CONTATO-ASSESSOR`**, que e eleitor trazido por um
+  assessor — ele corrigiu na hora: *"com excecao do contato assessor"*. Trocar "contido" por
+  "comeca com" resolveria este caso e quebraria o outro (a etiqueta que dispensa precisa casar no
+  MEIO do rotulo: "Apoiador Muito engajado"). Hoje **item com traco na frente e excecao**:
+  `assessor, -contato-assessor`. Vale para as duas listas, e a excecao e conferida ANTES da
+  inclusao.
+
 - **Rascunho da IA que falha NAO pode parar a rodada — e parou.** Em 03/09/2026 um `auto.motivo`
   orfao (sobra de uma troca minha) virou `auto is not defined` dentro do caminho do rascunho:
   `processarRespondido` devolveu `erro`, `percorrerFila` PAROU, e a rodada de 37 contatos encerrou

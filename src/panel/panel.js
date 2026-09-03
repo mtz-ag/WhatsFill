@@ -2312,10 +2312,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * @param {string[]} etiquetas rótulos que o contato tem (ou vai receber)
    * @returns {string|null} o rótulo que casou, para a sugestão poder nomeá-lo
    */
-  async function etiquetaQueDispensaDaFila() {
-    const pedacos = String(state.auto.cfg.etiquetasQuePulam || '')
+  async function etiquetaDaLista(lista) {
+    /**
+     * **Item que começa com `-` é EXCEÇÃO** — pedido dele (03/09/2026).
+     *
+     * A comparação é por trecho CONTIDO, de propósito ("engajado" casa com "ENGAJADO/BIZA" e com
+     * "Apoiador Muito engajado"). O preço apareceu na hora: `assessor` pegava as três etiquetas de
+     * assessor **e também `CONTATO-ASSESSOR`**, que é eleitor trazido por um assessor. Ele: *"com
+     * exceção do contato assessor"*.
+     *
+     * Trocar "contido" por "começa com" resolveria este caso e quebraria o outro (a etiqueta que
+     * dispensa depende de casar no meio do rótulo). A exceção explícita não quebra nada e fica
+     * onde ele pode editar: `assessor, -contato-assessor`.
+     */
+    const itens = String(lista || '')
       .split(',')
-      .map((p) => cities.semAcentoNemCaixa(p.trim()))
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const pedacos = itens
+      .filter((p) => !p.startsWith('-'))
+      .map((p) => cities.semAcentoNemCaixa(p))
+      .filter(Boolean);
+    const excecoes = itens
+      .filter((p) => p.startsWith('-'))
+      .map((p) => cities.semAcentoNemCaixa(p.slice(1).trim()))
       .filter(Boolean);
     if (!pedacos.length) return null;
 
@@ -2334,9 +2354,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     for (const rotulo of rotulos) {
       const alvo = cities.semAcentoNemCaixa(rotulo);
+      if (excecoes.some((e) => alvo.includes(e))) continue;
       if (pedacos.some((p) => alvo.includes(p))) return rotulo;
     }
     return null;
+  }
+
+  /** A etiqueta que dispensa da fila (hoje: manda a mensagem do momento uma vez e conclui). */
+  function etiquetaQueDispensaDaFila() {
+    return etiquetaDaLista(state.auto.cfg.etiquetasQuePulam);
+  }
+
+  /**
+   * A etiqueta que só CONCLUI — assessor, equipe, quem é da casa.
+   *
+   * Pedido dele (03/09/2026): *"contatos com etiqueta de assessor só conclua"*. Lista própria e
+   * não um item da outra, porque o desfecho é outro: aqui **nada sai, nunca**.
+   */
+  function etiquetaQueSoConclui() {
+    return etiquetaDaLista(state.auto.cfg.etiquetasSoConcluir);
   }
 
   function renderCartaoRespondidos() {
@@ -2434,7 +2470,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     card.append(
       campoTexto('Etiquetas que a rodada pode pular (separe por vírgula)', state.auto.cfg.etiquetasQuePulam, (v) =>
         salvarAuto({ etiquetasQuePulam: v.trim() }).then(renderAll)
-      )
+      ),
+      campoTexto('Etiquetas que só CONCLUEM, sem mandar nada (separe por vírgula)', state.auto.cfg.etiquetasSoConcluir, (v) =>
+        salvarAuto({ etiquetasSoConcluir: v.trim() }).then(renderAll)
+      ),
+      h('div', { class: 'wf-hint' },
+        'A de cima ainda manda a mensagem do momento uma vez; esta não manda nada, nunca. É para ' +
+          'quem é da casa — assessor, equipe. Casa por PEDAÇO do nome: "assessor" pega ' +
+          '"Assessor Cap" e "Assessor Claudia". Para tirar uma do meio, ponha um traço na frente ' +
+          '— "assessor, -contato-assessor" pega as de assessor e deixa CONTATO-ASSESSOR de fora.')
     );
     card.append(
       checkbox('Pular sozinho, sem perguntar', state.auto.cfg.pularEtiquetasSozinho, (v) =>
@@ -4611,6 +4655,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           ? null
           : soExpressaApoio(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
         etiquetaQueDispensa: await etiquetaQueDispensaDaFila(),
+        // "É da casa": conclui e não manda nada. Lista própria — ver `etiquetaQueSoConclui`.
+        etiquetaSoConclui: await etiquetaQueSoConclui(),
+        /**
+         * **Não há o que responder: a conversa termina numa mensagem NOSSA.**
+         *
+         * Print dele (03/09/2026): a conversa tinha só o nosso disparo, ele assumiu o atendimento
+         * e a rodada mandou o pedido de nome e cidade em cima. *"pegando conversas que a última
+         * mensagem foi minha e mandando mensagem, é pra concluir sem mandar nada"*.
+         *
+         * `'vazia'` é o caso que escapava de tudo: sem nenhuma mensagem dela,
+         * `hsm.decidirSemResposta` não tem `ultima` para olhar e o contato descia até
+         * `nunca-pediram-dados`, que envia. A string vale como verdadeiro e ainda diz na caixa
+         * QUAL dos dois casos é.
+         */
+        ultimaEhNossa: !state.entrantes.length
+          ? 'vazia'
+          : !!state.ultimaMensagem && !state.ultimaMensagem.doContato,
         ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
         // Só links e vídeos repassados: é ruído, e ruído não pede formulário (print do Odone).
         rajadaEhSoRepasse: rajadaEhSoRepasse(state.entrantes, state.nossaUltimaAt),

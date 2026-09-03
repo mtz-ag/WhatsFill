@@ -61,6 +61,8 @@ export const SINAIS = [
   { id: 'pedeAjudaFinanceira', rotulo: 'Pediu dinheiro, cesta básica ou remédio', nao: 'Não pediu dinheiro nem o básico' },
   { id: 'pedeEmprego', rotulo: 'Perguntou como trabalhar no mandato', nao: 'Não perguntou sobre trabalhar aqui' },
   { id: 'soCortesia', rotulo: 'Só cumprimentou (e nada mais)', nao: 'Escreveu mais que um cumprimento' },
+  { id: 'ultimaEhNossa', rotulo: 'A última mensagem é nossa (ou ela não escreveu nada)', nao: 'Ela falou por último' },
+  { id: 'etiquetaSoConclui', rotulo: 'Tem a etiqueta que só conclui (assessor)', nao: 'Não é da casa' },
   { id: 'ultimaEhDespedida', rotulo: 'Só se despediu ("amém", "é nós", "abraço")', nao: 'Não foi despedida' },
   { id: 'ultimaEhSoReacao', rotulo: 'Só figura, emoji, sticker ou link', nao: 'Escreveu alguma coisa' },
   { id: 'rajadaEhSoRepasse', rotulo: 'Só repassa link e vídeo de outras pessoas', nao: 'Não é só repasse' },
@@ -525,6 +527,8 @@ export function fluxoPadrao() {
    */
   const doAnuncio = grupo('anúncio — pessoa nova', { sinal: 'jaRespondemosAntes', negar: true, palavras: [], onde: 'ultima' }, [
     r('sem-interesse', 'Recusou ou veio hostilizar'),
+    r('etiqueta-so-conclui', null, 'chegada'),
+    r('ultima-e-nossa', null, 'chegada'),
 
     /**
      * **A etiqueta que dispensa da fila fica ACIMA do modelo, e isto foi conserto de regressão.**
@@ -695,6 +699,21 @@ export function fluxoPadrao() {
      * pegou. Uma caixa aqui em cima cobre os dois lados da bifurcação de uma vez.
      */
     r('sem-interesse', 'Recusou ou veio hostilizar', 'volta'),
+
+    /**
+     * **As duas caixas de "conclua e nao mande nada"** -- pedidos dele de 03/09/2026.
+     *
+     * `etiqueta-so-conclui` e a etiqueta de assessor (*"contatos com etiqueta de assessor so
+     * conclua"*); `ultima-e-nossa` e a conversa que termina em mensagem NOSSA, ou em que ela nunca
+     * escreveu (*"pegando conversas que a ultima mensagem foi minha e mandando mensagem, e pra
+     * concluir sem mandar nada"*).
+     *
+     * As duas ficam acima da bifurcacao de cidade pelo mesmo motivo da recusa: sao sobre NAO
+     * mandar, e isso nao depende de o contato ter cidade cadastrada. Protecao que vive so num lado
+     * da bifurcacao e protecao pela metade -- ja aconteceu com a etiqueta que dispensa.
+     */
+    r('etiqueta-so-conclui', null, 'volta'),
+    r('ultima-e-nossa', null, 'volta'),
 
     /**
      * **A etiqueta que dispensa da fila também sobe para cima da bifurcação de cidade.**
