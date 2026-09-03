@@ -1,3 +1,38 @@
+## 2026-09-03 — "Ignorou o pedido e concluiu": conversa na chegada agora vence o modelo (v1.94.0)
+
+Print dele, e a palavra que usou foi **"crítico"**. A contato de Serafina Corrêa chegou pelo anúncio
+e escreveu duas mensagens, 314 caracteres: pedia uma **cola com letras maiores, do primeiro ao
+último**, porque tem *"muita gente idosa pedindo"*, e se oferecia para imprimir. A rodada mandou o
+cartão da campanha e **concluiu**.
+
+### Causa raiz
+
+Reproduzido antes de mexer: `conteudo-pedido` na chegada, tecla 1 — manda o modelo e conclui.
+
+**Nada pegava, e não havia como pegar por lista de palavras.** Ela DISSE o que queria, então
+`pediu-algo-sem-dizer-o-que` não casa; não é pergunta de razão nem de posição, então
+`pergunta-aberta` não casa. O único sinal que existe para *"isto é conversa"* é o **tamanho**, e ele
+estava calculado e correto (`conversaPedeRespostaPessoal` devolvia os 314 caracteres) — a caixa
+`ultima-pede-resposta-pessoal` simplesmente **não existia no ramo da chegada**.
+
+Ela tinha ficado de fora por correção dele de 02/09: as pendências neutras se resolvem na VOLTA,
+porque a tecla `a` conclui. **A distinção que faltava** é a mesma que já valia para as duas caixas
+acima dela: pendência neutra (figura, cumprimento, despedida) custa **um dia de atraso** no recibo;
+esta não — mandar a nossa mensagem primeiro **é o dano**, e concluir apaga o pedido.
+
+Agora a chegada tem TRÊS caixas acima do modelo, e a nova fica abaixo das outras duas, que são mais
+específicas e escrevem um motivo melhor quando também casam.
+
+### O custo, que é real e foi dito a ele
+
+Quem chega mandando **áudio sem transcrição, arquivo ou texto longo** deixa de receber o recibo do
+anúncio nessa passada e vai para ele. É o mesmo trade que ele já aceitou nas outras duas.
+
+**Arquivos:** `src/lib/arvore.js`, `tests/arvore.test.mjs`, `manifest.json` (1.93.0 → 1.94.0),
+`registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-03 — A tecla 8 virou a chamada da IA; o agradecimento foi para o `i` (v1.93.0)
 
 Pedido dele: *"era pra substituir o botão 8 com o chamar IA"* — eu tinha posto a opção como uma A

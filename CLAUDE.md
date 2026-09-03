@@ -1278,6 +1278,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   existe de verdade — foi o que aconteceu ao acrescentar o tempo. E confira o `efeito` do verbete:
   duas saídas que ENVIAM não fazem `'depende'`, e `regrasComDesfechoIncoerente` pega isso.
 
+- **São TRÊS as pendências que ficam acima do modelo na chegada — a terceira entrou em 03/09 e o
+  caso era "crítico".** Print dele: a contato chegou pelo anúncio e escreveu **314 caracteres**
+  pedindo *"uma cola com letras maiores, do primeiro ao último"* porque tem *"muita gente idosa
+  pedindo"*, e se oferecia para imprimir. A rodada mandou o cartão da campanha e **concluiu** —
+  *"ignorou o pedido e concluiu"*. **Nada pegava, e não havia como pegar por lista:** ela DISSE o
+  que queria (`pediu-algo-sem-dizer-o-que` não casa) e não era pergunta de razão nem de posição
+  (`pergunta-aberta` não casa). O único sinal de "isto é conversa" é o TAMANHO, e ele estava
+  calculado e correto — `ultima-pede-resposta-pessoal` simplesmente **não existia no ramo da
+  chegada**, por ser uma das pendências neutras que ele mandou resolver na volta (02/09). A
+  distinção que faltava: pendência neutra (figura, cumprimento, despedida) custa **um dia de
+  atraso** no recibo; aqui mandar a nossa mensagem primeiro **É o dano**, e concluir apaga o
+  pedido. **O custo aceito:** quem chega mandando áudio sem transcrição, arquivo ou texto longo
+  não recebe o recibo nessa passada e vai para ele.
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto

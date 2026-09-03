@@ -681,6 +681,31 @@ export function fluxoPadrao() {
     r('pergunta-aberta', null, 'chegada-antes'),
 
     /**
+     * **Quem escreveu conversa na chegada também fica acima do modelo** — print dele de
+     * 03/09/2026, e a palavra que ele usou foi *"crítico"*.
+     *
+     * A contato de Serafina Corrêa chegou pelo anúncio e escreveu duas mensagens, 314 caracteres:
+     * pedia uma **cola com letras maiores, do primeiro ao último**, porque tem *"muita gente idosa
+     * pedindo"*, e se oferecia para imprimir. A rodada mandou o cartão da campanha e **concluiu**.
+     * *"ignorou o pedido e concluiu"*.
+     *
+     * **Nada pegava, e não havia como pegar por lista.** Ela disse o que queria, então
+     * `pediu-algo-sem-dizer-o-que` não casa; não é pergunta de razão nem de posição, então
+     * `pergunta-aberta` não casa. O único sinal que existe para *"isto é conversa"* é o TAMANHO, e
+     * ele estava calculado e correto — só não era consultado neste ramo.
+     *
+     * **Por que esta caixa tinha ficado fora da chegada.** Correção dele em 02/09: as pendências
+     * neutras se resolvem na VOLTA, porque a tecla `a` conclui. Vale para figura, cumprimento e
+     * despedida — adiar o recibo delas custa um dia. Não vale aqui, pelo mesmo motivo das duas
+     * caixas acima: **mandar a nossa mensagem primeiro É o dano**, não o atraso. E concluir apaga
+     * o pedido.
+     *
+     * **O custo, que é real:** quem chega mandando um áudio sem transcrição, um arquivo ou um texto
+     * longo deixa de receber o recibo do anúncio nessa passada e vai para você. Foi dito a ele.
+     */
+    r('ultima-pede-resposta-pessoal', 'escreveu conversa, não é caso de modelo', 'chegada-antes'),
+
+    /**
      * **O MODELO PRIMEIRO** — redesenho dele em 02/09/2026, e a inversão da ordem que valia antes.
      *
      * O que ele escreveu: *"o sistema atual está dando problemas, o modelo agora será feito pra
