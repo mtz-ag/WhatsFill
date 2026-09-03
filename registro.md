@@ -1,3 +1,31 @@
+## 2026-09-03 — Tecla `i`: a IA escreve o rascunho no campo, e quem manda é ele (v1.91.0)
+
+Pedido dele, olhando a caixa da rodada: *"no botão 8 bote a opção chamar IA, que irá botar a
+resposta na caixa de mensagem sem mandar"*.
+
+`rascunharParaEle` **já existia e já fazia exatamente isso** (`setComposerText`, nunca `sendText`) —
+o que faltava era um jeito de PEDIR. Até hoje ela só era alcançada quando a IA ESCALAVA, ou seja,
+quando nenhuma resposta pronta servia e a decisão não era dele. Agora há a tecla, logo abaixo da 8,
+onde ele quis: o caso típico é o agradecimento não servir e ele querer algo escrito para aquela
+conversa.
+
+**O desfecho é o mesmo da tecla 6** — a rodada sai da frente e fica de vigia, retomando quando ele
+concluir. Tem que ser: fechar a caixa e seguir para o próximo contato deixaria o rascunho num campo
+de mensagem que ele não está mais olhando.
+
+**Letra e não dígito**, como o `s`, o `a` e o `f`. E só aparece com a avaliação por IA ligada —
+opção que não faz nada é pior que opção que não existe.
+
+**Falha do rascunho não devolve o contato à fila**: ele pediu o caso para si ao apertar a tecla, e o
+motivo vai para o log. É a mesma disciplina do rascunho da escalada, que nunca para a rodada.
+
+`rascunharParaEle` ganhou um `ok` no retorno. Sem ele, a linha de sucesso apareceria **duas vezes**
+no Andamento: a própria função já a escreve, com os avisos da revisão junto.
+
+**Arquivos:** `src/panel/panel.js`, `manifest.json` (1.90.0 → 1.91.0), `registro.md`.
+
+---
+
 ## 2026-09-03 — O apoio: o TEMPO escolhe entre agradecer e a mensagem do momento (v1.90.0)
 
 Resposta dele às três anotações que pediam a mesma coisa (Maria Geny, Tere e Gilmar, Jacira):

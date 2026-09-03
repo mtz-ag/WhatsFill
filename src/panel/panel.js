@@ -5162,6 +5162,34 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         });
       }
       /**
+       * **Tecla `i` — a IA escreve, o texto fica no campo, e quem manda é você.**
+       *
+       * Pedido dele (03/09/2026), olhando a caixa: *"no botão 8 bote a opção chamar IA, que irá
+       * botar a resposta na caixa de mensagem sem mandar"*. Fica logo abaixo da 8 porque é ali que
+       * ele quis — o caso típico é o agradecimento não servir e ele querer algo escrito para aquela
+       * conversa.
+       *
+       * **É `rascunharParaEle`, que já existia e nunca envia** (`setComposerText`, nunca
+       * `sendText`) — até 03/09 ela só era alcançada quando a IA ESCALAVA, e não havia como pedir
+       * um rascunho de propósito. É o laço que ele fazia à mão (copiar a conversa para uma IA,
+       * ler, ajustar, mandar) sem o copiar e colar.
+       *
+       * **O desfecho é o mesmo da tecla 6:** a rodada sai da frente e fica de vigia, retomando
+       * quando ele concluir. Tem que ser — fechar a caixa e seguir para o próximo contato deixaria
+       * o rascunho num campo de mensagem que ele não está mais olhando.
+       *
+       * **Letra e não dígito**, como o `s`, o `a` e o `f`: os dez dígitos já têm significado no
+       * dedo dele. Só aparece com a avaliação por IA ligada — opção que não faz nada é pior que
+       * opção que não existe.
+       */
+      if (state.ia?.ligada) {
+        opcoes.push({
+          tecla: 'i',
+          valor: 'rascunhar',
+          rotulo: 'Chamar a IA: põe o rascunho no campo, sem mandar (retomo quando você concluir)',
+        });
+      }
+      /**
        * Tecla 9 — perguntar em que pode ajudar.
        *
        * **Não conclui**, ao contrário das outras que enviam texto: a resposta dela é o que decide
@@ -5412,6 +5440,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       if (escolha === 'pular') {
         return { nome, resultado: 'pulado', motivo: 'você pulou — nada gravado, atendimento aberto' };
+      }
+
+      /**
+       * Tecla `i`: a IA rascunha, o texto fica no campo, e a rodada fica de vigia como na 6.
+       *
+       * **Rascunhar primeiro, gravar depois:** o que ele espera ver na tela é o texto, e a gravação
+       * não muda nada do que a IA lê (o rascunho usa o cadastro em memória, não o gravado).
+       *
+       * **Falhou o rascunho? A rodada continua no mesmo desfecho**, com o motivo no log. Ele pediu
+       * o caso para si ao apertar a tecla; devolvê-lo à fila por causa de uma conveniência que não
+       * saiu seria trocar um problema por outro — é a mesma disciplina do rascunho da escalada,
+       * que nunca para a rodada.
+       */
+      if (escolha === 'rascunhar') {
+        setStatus('Escrevendo o rascunho…');
+        let r = { ok: false, motivo: '' };
+        try {
+          r = await rascunharParaEle();
+        } catch (err) {
+          r = { ok: false, motivo: `falhou: ${err?.message || err}` };
+        }
+        // `rascunharParaEle` já escreve a linha do SUCESSO (com os avisos da revisão junto);
+        // aqui só entra o que deu errado, senão a mesma coisa apareceria duas vezes no log.
+        if (!r.ok) registrarNaRodada(nome, 'aviso', `não consegui rascunhar (${r.motivo}) — o caso ficou com você`);
+        await saveClassification({ withCompletionDate: true, quiet: true });
+        return esperarVoceConcluir(sessionId, nome);
       }
 
       // Tecla 6: a rodada sai da frente e fica de vigia. Você responde à mão no atendimento que
@@ -8336,13 +8390,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * O que sobrou é o laço que ele já fazia à mão — pedir uma resposta a uma IA, ler, ajustar,
    * mandar — sem o copiar e colar. **Quem aperta enviar é ele.**
    *
-   * @returns {Promise<{enviado:boolean, motivo:string}>} `enviado` é sempre falso: a rodada segue
-   *   para a caixa de pergunta, que é onde ele escolhe.
+   * **Dois caminhos chegam aqui.** Até 03/09 só a ESCALADA da IA — quando nenhuma resposta pronta
+   * servia. Desde então também a **tecla `i`** da caixa, que é ele pedindo um rascunho de propósito
+   * (*"no botão 8 bote a opção chamar IA, que irá botar a resposta na caixa de mensagem sem
+   * mandar"*). A função é a mesma nos dois; o que muda é quem decidiu chamá-la.
+   *
+   * @returns {Promise<{ok:boolean, enviado:boolean, motivo:string}>} `enviado` é sempre falso: a
+   *   rodada segue para a caixa de pergunta, que é onde ele escolhe. `ok` diz se o texto chegou ao
+   *   campo — quem chama usa isso para não repetir no log a linha que esta função já escreveu.
    */
   async function rascunharParaEle() {
-    if (!state.ia?.ligada) return { enviado: false, motivo: '' };
-    if (!state.incoming.length) return { enviado: false, motivo: 'o contato não escreveu nada' };
-    if (state.session?.expired) return { enviado: false, motivo: 'janela de 24h vencida' };
+    if (!state.ia?.ligada) return { ok: false, enviado: false, motivo: 'a avaliação por IA está desligada' };
+    if (!state.incoming.length) return { ok: false, enviado: false, motivo: 'o contato não escreveu nada' };
+    if (state.session?.expired) return { ok: false, enviado: false, motivo: 'janela de 24h vencida' };
 
     let rascunho;
     try {
@@ -8365,17 +8425,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         campos: { Nome: valueNamed('Nome') || state.contact?.name || '', Cidade: valueNamed('Cidade') },
       });
     } catch (err) {
-      return { enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };
+      return { ok: false, enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };
     }
 
     const texto = String(rascunho?.texto || '').trim();
-    if (!texto) return { enviado: false, motivo: 'a IA não escreveu nada' };
+    if (!texto) return { ok: false, enviado: false, motivo: 'a IA não escreveu nada' };
 
     // `setComposerText`, NUNCA `sendText`: a diferença entre as duas é a decisão dele.
     try {
       await page.setComposerText(texto);
     } catch (err) {
-      return { enviado: false, motivo: `não consegui pôr o rascunho no campo: ${err?.message || err}` };
+      return { ok: false, enviado: false, motivo: `não consegui pôr o rascunho no campo: ${err?.message || err}` };
     }
 
     /**
@@ -8388,7 +8448,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       'refinar',
       `rascunho da IA no campo de mensagem, para você mandar${avisos.length ? ` — confira: ${avisos.join('; ')}` : ''}`
     );
-    return { enviado: false, motivo: 'rascunho pronto no campo de mensagem' };
+    return { ok: true, enviado: false, motivo: 'rascunho pronto no campo de mensagem' };
   }
 
   /**
