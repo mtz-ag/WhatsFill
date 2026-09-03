@@ -342,6 +342,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   nada); o que o caso real mostrou e outra coisa — **propaganda como primeira resposta a um pedido
   de socorro e a resposta errada mesmo quando o texto e inofensivo.**
 
+- **Mexeu no `fluxoPadrao`? Gere o arquivo e MANDE para ele no mesmo turno.** Combinado de
+  03/09/2026: *"arrume o ramo, eu vou importar. Todas as mudancas feitas aqui, se afetarem o ramo,
+  voce deve me passar o ramo atual"*. `node tools/exportar-fluxo.mjs <saida.json>` escreve o padrao
+  de agora no formato que a janela importa, **confere relendo** (a peneira do `deArquivo` descarta
+  regra que sumiu, sinal desconhecido e tecla inventada — arquivo que perde ramo na importacao
+  chegaria a ele como "veio faltando pedaco") e imprime o fluxo em texto para conferir antes de
+  mandar. **A saida vai FORA do repositorio**, que e a pasta que o Chrome carrega. E **nao commite
+  um retrato**: snapshot envelhece no primeiro commit que mexe no padrao, e fluxo velho e pior que
+  nenhum — ele reimporta e volta no tempo sem perceber. O gerador e versionado; o arquivo, nao.
+
 - **PROTECAO do codigo vale mesmo fora do quadro dele — e este foi o custo de "nada entra
   sozinho".** O quadro e uma COPIA do padrao, e regra nova nunca chega nele: desenho certo, porque
   no quadro a POSICAO e a prioridade. O preco apareceu em 03/09/2026: ele reportou DUAS vezes no

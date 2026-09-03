@@ -32,6 +32,34 @@ a rodada dizendo "tecla nao disponivel" em todo contato vindo de anuncio.
 
 ---
 
+## 2026-09-03 — O ramo atual, para ele importar
+
+Combinado dele: *"arrume o ramo, eu vou importar. Todas as mudanças feitas aqui, se afetarem o ramo,
+você deve me passar o ramo atual"*.
+
+`tools/exportar-fluxo.mjs` gera o padrão de agora no formato que a janela do fluxo importa. Três
+decisões:
+
+- **é um gerador, não um retrato guardado.** Snapshot commitado envelhece no primeiro commit que
+  mexe no `fluxoPadrao`, e um arquivo de fluxo velho é pior que nenhum: ele reimporta e volta no
+  tempo sem perceber. O gerador é versionado; o arquivo, não;
+- **confere relendo antes de entregar** — a peneira do `deArquivo` descarta regra que sumiu do
+  código, sinal desconhecido e tecla inventada, e um arquivo que perde ramos na importação chegaria
+  a ele como *"o fluxo veio faltando pedaço"*. Se a conta não bater, o comando falha em vez de
+  escrever;
+- **a saída vai fora do repositório**, que é a pasta que o Chrome carrega.
+
+Ele imprime também o fluxo em texto, numerado (`2.5.1` é o primeiro filho do primeiro filho do
+quinto ramo do segundo), para eu conferir antes de mandar e para nós dois apontarmos para o mesmo
+lugar.
+
+O ramo de agora tem **48 caixas, 20 que enviam**, e sobrevive inteiro à importação.
+
+**Arquivos:** `tools/exportar-fluxo.mjs` (novo), `CLAUDE.md` (+1 armadilha). Sem mudança de
+comportamento na extensão, então a versão não sobe.
+
+---
+
 ## 2026-09-03 — "Mandou novamente": a regra existia e não alcançava o quadro dele
 
 Segunda print do mesmo defeito no mesmo dia — conversa em que só nós falamos (o disparo das 11:08),
