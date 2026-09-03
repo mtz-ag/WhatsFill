@@ -576,6 +576,27 @@ grupo('pedeAlgoIndefinido: pediu algo sem dizer o que — o caso de maior risco'
   check(!p('tamo junto'), 'tamo junto nao e pedido');
   check(!p('preciso te dizer que sou seu eleitor'), 'preciso DIZER nao e preciso DE algo');
 
+  /**
+   * **O que torna o pedido INDEFINIDO e o OBJETO dele** -- print da Odete (03/09/2026):
+   * *"Preciso do nome de um deputado federal que seja de direita"*, e a rodada perguntou *"em que
+   * voce precisa de ajuda?"*. Ele: *"interpretou 'preciso' fora de contexto, ja estava explicado"*.
+   *
+   * O padrao era `preciso de|da|do` e mais nada -- a regra se chama "pediu algo sem dizer o que" e
+   * nao olhava o que. Mesma familia do "so mandou bom dia" que pegava um desabafo de 437
+   * caracteres: nome de caixa que promete uma condicao que a condicao nao verifica.
+   */
+  check(!p('Preciso do nome de um deputado federal que seja de direita'), 'o caso da Odete: ela DISSE o que queria');
+  check(!p('preciso do link do evento'), 'objeto concreto: link');
+  check(!p('preciso de informacoes sobre a agenda'), 'objeto concreto: informacoes');
+  check(!p('preciso da data da caminhada'), 'objeto concreto: data');
+
+  // E o que continua sendo indefinido: o objeto e vago, ou e a propria pessoa.
+  check(p('preciso do senhor'), 'o objeto e ele mesmo');
+  check(p('preciso de voces'), 'no plural tambem');
+  check(p('preciso de apoio'), 'apoio');
+  check(p('necessito de uma forca'), 'necessito de uma forca');
+  check(p('preciso da sua ajuda'), 'preciso da sua ajuda');
+
   check(!pedeAlgoIndefinido([], null), 'sem rajada nao ha pedido');
 }
 

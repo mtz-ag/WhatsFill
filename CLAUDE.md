@@ -1302,6 +1302,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `dosDoisLados`, que é o que garante os dois — e o teste **decide de verdade nos dois lados** em
   vez de só procurar a caixa, então ele cai também se alguém puser algo genérico por cima.
 
+- **O que torna o pedido INDEFINIDO é o objeto dele — "preciso de" sozinho não é sinal de nada.**
+  Print da Odete (03/09/2026): *"Preciso do nome de um deputado federal que seja de direita"*, e a
+  rodada perguntou *"em que você precisa de ajuda?"*. Ele: *"interpretou 'preciso' fora de contexto,
+  já estava explicado"* — e, na mensagem seguinte, ela já tinha resolvido sozinha. O padrão era
+  `preciso de|da|do` e mais nada: a regra se chama *"pediu algo sem dizer o quê"* e **não olhava o
+  quê**. Mesma família do *"só mandou bom dia"* que pegava um desabafo de 437 caracteres — nome de
+  caixa prometendo uma condição que a condição não verifica. Hoje o objeto tem que estar numa lista
+  curta de PERMISSÃO (ajuda, força, apoio, socorro, uma mão) ou ser a própria pessoa ("preciso do
+  senhor"). **Reconhecer o objeto CONCRETO seria o caminho errado**: são infinitos, e errar para
+  esse lado devolve o defeito.
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto

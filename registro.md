@@ -1,3 +1,41 @@
+## 2026-09-03 — "Preciso do nome de um deputado" não é pedido indefinido (v1.96.0)
+
+Print da Odete: ela escreveu *"Preciso do nome de um deputado federal que seja de direita"* e, 28
+minutos depois, *"Já encontrei o deputado federal que vou votar DIVALDO LARA"*. A rodada mandou
+*"Para eu entender direito e te responder com sinceridade: em que você precisa de ajuda?"*. Ele:
+*"interpretou 'preciso' fora de contexto, já estava explicado"*.
+
+### Causa raiz
+
+Reproduzido antes de mexer: tecla 9, `pediu-algo-sem-dizer-o-que`. O padrão era
+`preciso|precisava|precisando|necessito` seguido de `de|da|do` — **e mais nada**. A regra se chama
+*"pediu algo sem dizer o quê"* e não olhava o quê.
+
+É a mesma família do *"só mandou bom dia"* que pegava um desabafo de 437 caracteres: **nome de caixa
+que promete uma condição que a condição não verifica.**
+
+### O conserto
+
+O objeto do pedido passou a ser exigido, por lista curta de **permissão**: ajuda, ajudinha, força,
+apoio, socorro, auxílio, uma mão — ou a própria pessoa (*"preciso do senhor"*, *"preciso de
+vocês"*), que é a forma da print da Mari que originou a regra.
+
+**Reconhecer o objeto CONCRETO seria o caminho errado** — são infinitos, e errar para esse lado
+devolve o defeito: a frase volta a casar e a pergunta sai por cima de um pedido claro.
+
+As 19 asserções que já existiam continuam passando: as três formas reais (*"Preciso da forca do
+senhor"*, *"preciso de uma ajuda"*, *"bom dia,preciso de ajuda"*) têm todas objeto vago.
+
+### O que o caso vira agora
+
+`conteudo-pedido` — tecla 1, manda o modelo. Ela tem etiqueta de conteúdo e de cidade, então é o
+recibo do anúncio. Medido.
+
+**Arquivos:** `src/lib/cortesia.js`, `tests/cortesia.test.mjs`, `manifest.json` (1.95.0 → 1.96.0),
+`registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-03 — O apoio passou a valer nos DOIS lados da bifurcação de cidade (v1.95.0)
 
 Pedido dele — *"arrume para que a regra siga pras duas"* —, depois de eu apontar a assimetria

@@ -744,9 +744,36 @@ export function confirmaPresenca(entrantes, nossaUltimaAt) {
  * Como não se sabe, **não se responde: pergunta-se.** Perguntar não promete nada, não nega nada,
  * e é o que transforma uma frase ambígua em decisão informada dele.
  */
+/**
+ * **O que torna o pedido INDEFINIDO é o objeto dele.**
+ *
+ * Print da Odete (03/09/2026): *"Preciso do nome de um deputado federal que seja de direita"* — e a
+ * rodada perguntou *"em que você precisa de ajuda?"*. Ele: *"interpretou 'preciso' fora de
+ * contexto, já estava explicado"*. Ela disse exatamente o que queria, e na mensagem seguinte disse
+ * que já tinha resolvido sozinha.
+ *
+ * O padrão era `preciso de|da|do` e mais nada — a regra se chama *"pediu algo sem dizer o quê"* e
+ * não olhava o quê. É a mesma família do *"só mandou bom dia"* que pegava um desabafo de 437
+ * caracteres: **nome de caixa que promete uma condição que a condição não verifica.**
+ *
+ * A lista de objetos é curta e é de PERMISSÃO — palavras que, sozinhas, não dizem o que a pessoa
+ * quer: ajuda, força, apoio, socorro, uma mão. Entra também o objeto que é a própria pessoa
+ * ("preciso do senhor", "preciso de vocês"), que é a forma da print da Mari.
+ *
+ * **Tentar reconhecer o objeto CONCRETO seria o caminho errado**: são infinitos, e errar para esse
+ * lado devolve o problema — a frase volta a casar e a pergunta sai por cima de um pedido claro.
+ */
+const OBJETO_VAGO =
+  '((uma?|a|o|sua|seu|tua|teu|nossa|vossa)\\s+)?(ajuda|ajudinha|for[çc]a|apoio|socorro|aux[íi]lio|m[ãa]o|senhor|senhora|voc[eê]s?|vcs?|ti)';
+
 const PRECISA_DE_ALGO = [
   // "preciso da sua força", "preciso da forca do senhor", "preciso de uma ajuda"
-  /(^|[^\p{L}])(preciso|precisava|precisando|necessito)\s+(de\s+|da\s+|do\s+|duma\s+|dum\s+)/iu,
+  new RegExp(
+    '(^|[^\\p{L}])(preciso|precisava|precisando|necessito)\\s+(de|da|do|duma|dum|das|dos)\\s+' +
+      OBJETO_VAGO +
+      '(\\P{L}|$)',
+    'iu'
+  ),
   // "conto com o senhor", "conto com sua ajuda"
   /(^|[^\p{L}])cont(o|ando)\s+com\s+(o\s+senhor|a\s+senhora|voc[eê]|sua|seu)/iu,
   // "o senhor pode me ajudar?", "vocês podem me ajudar"
