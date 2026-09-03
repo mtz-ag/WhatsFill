@@ -1,3 +1,33 @@
+## 2026-09-03 — A tecla 8 virou a chamada da IA; o agradecimento foi para o `i` (v1.93.0)
+
+Pedido dele: *"era pra substituir o botão 8 com o chamar IA"* — eu tinha posto a opção como uma A
+MAIS, abaixo da 8.
+
+**As duas trocaram de lugar, e nenhuma some.** É a troca que torna isso seguro, e foi a opção que
+ele escolheu quando expus a consequência: a 8 era o desfecho que `so-expressa-apoio` e
+`respondeu-os-dados` RECOMENDAM, e fazer a recomendação apontar para a IA **pararia a rodada em
+cada contato de apoio**, esperando ele escrever — chamar a IA deixa o caso com ele, como a tecla 6.
+Com o automático ligado seria a fila inteira travada.
+
+Então:
+
+- **8** = chamar a IA (põe o rascunho no campo, não manda). **Nenhuma regra a recomenda**, e há
+  teste percorrendo as regras para garantir isso — inclusive as de tecla-função, pelos `ramos`.
+- **`i`** = agradecer o apoio / a presença e concluir. `sugestao.TECLAS` foi renomeada junto: é ela
+  que transforma a recomendação em destaque, e é a lista que a janela do fluxo oferece.
+- **O 8 saiu de `TECLAS` de propósito**: aquela tabela é o que uma REGRA pode mandar apertar, e a
+  chamada da IA não é isso. Consequência: quem tivesse fixado a tecla 8 numa caixa do quadro perde
+  essa fixação na importação, com aviso — a peneira do `deArquivo` descarta tecla inexistente.
+
+`textoDaTecla8`/`tecla8Trava` viraram `textoDoApoio`/`travaDoApoio`. Nome de variável que aponta
+para a tecla errada é a armadilha do comentário que descreve a ordem sem ser a ordem — e aqui ela
+estaria dentro do trecho que decide o que sai para eleitor.
+
+**Arquivos:** `src/lib/sugestao.js`, `src/lib/templates.js`, `src/panel/panel.js`,
+`tests/sugestao.test.mjs`, `tests/arvore.test.mjs`, `manifest.json` (1.92.0 → 1.93.0), `registro.md`.
+
+---
+
 ## 2026-09-03 — A tecla `i` não depende da caixa "usar IA nesta rodada" (v1.92.0)
 
 Ele foi testar e a opção não estava lá: *"agora eu queria testar a resposta e não posso"*. Eu a

@@ -483,7 +483,7 @@ export const REGRAS = [
      * respondida"*. Isso já vale por ORDEM — `pergunta-aberta` e `pediu-algo-sem-dizer-o-que` ficam
      * acima desta regra nos dois ramos do quadro. Tem teste.
      */
-    tecla: (c) => (c.apoioDeOutroDia && c.podeMandarMomento && !c.momentoJaEnviado ? '5' : '8'),
+    tecla: (c) => (c.apoioDeOutroDia && c.podeMandarMomento && !c.momentoJaEnviado ? '5' : 'i'),
     /**
      * A pessoa só disse que está com você, e já está classificada → agradecer e encerrar.
      *
@@ -550,7 +550,7 @@ export const REGRAS = [
   },
   {
     id: 'respondeu-os-dados',
-    tecla: '8',
+    tecla: 'i',
     /**
      * **Ela respondeu o nome ou a cidade que pedimos: agradece e encerra.**
      *
@@ -738,7 +738,19 @@ export const TECLAS = {
   '5': { rotulo: 'Mensagem do momento, e conclui', efeito: 'envia' },
   '6': { rotulo: 'Você responde à mão', efeito: 'gente' },
   '7': { rotulo: 'Pergunta interesse + pede dados', efeito: 'envia' },
-  '8': { rotulo: 'Agradece o apoio, e conclui', efeito: 'envia' },
+  /**
+   * **O agradecimento trocou de tecla com a chamada da IA em 03/09/2026**, a pedido dele: *"era
+   * pra substituir o botão 8 com o chamar IA"*.
+   *
+   * A troca é o que a mantém segura. Este era o desfecho que `so-expressa-apoio` e a
+   * confirmação de presença RECOMENDAM; fazer a recomendação apontar para a IA pararia a rodada
+   * em cada contato de apoio, esperando ele escrever. Assim as regras continuam recomendando o
+   * agradecimento — só que no `i` — e **a chamada da IA não é recomendada por regra nenhuma**,
+   * que é o certo: chamar a IA é escolha dele, contato a contato.
+   *
+   * Por isso o 8 **não está nesta tabela**: ela é a lista do que uma REGRA pode mandar apertar.
+   */
+  i: { rotulo: 'Agradece o apoio, e conclui', efeito: 'envia' },
   '9': { rotulo: 'Pergunta em que pode ajudar (deixa aberto)', efeito: 'envia' },
   s: { rotulo: 'Marca sem interesse, conclui sem responder', efeito: 'silencio' },
   /**
@@ -899,7 +911,7 @@ export const SOBRE = {
     efeito: 'envia',
     ramos: [
       { tecla: '5', se: 'o apoio foi escrito em outro dia e a do momento ainda não saiu' },
-      { tecla: '8', se: 'o apoio é de hoje, ou a do momento já saiu' },
+      { tecla: 'i', se: 'o apoio é de hoje, ou a do momento já saiu' },
     ],
     quando:
       'É o desfecho de quem só apareceu para dizer que está com vocês. O TEMPO escolhe o que sai ' +

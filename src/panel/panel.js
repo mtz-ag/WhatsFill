@@ -4205,7 +4205,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // A pergunta de interesse (tecla 7): só faz sentido para quem NÃO tem etiqueta de
       // conteúdo. Quem já pediu conteúdo tem modelo para receber, não pergunta.
       /**
-       * Tecla 8: a pessoa só expressou apoio e já está classificada — agradecer é o desfecho.
+       * Tecla `i` (a 8 até 03/09): a pessoa só expressou apoio e já está classificada — agradecer
+       * é o desfecho.
        *
        * Pedido dele (31/08, print do Ciro): *"esse é um caso comum até onde a pessoa só expressa
        * o apoio, ja tem as etiquetas, então é só uma questão de agradecer o apoio e carinho"*.
@@ -4414,12 +4415,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       /**
-       * **Qual texto a tecla 8 manda.**
+       * **Qual texto a tecla do agradecimento manda** (o `i`; era a 8 até 03/09/2026).
        *
        * A tecla é uma só ("agradece e conclui") e as situações são duas: apoio genérico, e
        * confirmação de presença de quem já está cadastrada.
        *
-       * **Nenhuma regra recomenda a tecla 8 para presença desde 03/09/2026** — quem confirma vai
+       * **Nenhuma regra recomenda esta tecla para presença desde 03/09/2026** — quem confirma vai
        * para `confirmou-presenca-evento`, que PULA e deixa o atendimento para ele (*"não é para
        * responder, é para pular e eu atendo no final"*). Isto aqui continua valendo para quando
        * ELE aperta o 8 assim mesmo: o texto certo é o de presença, e mandar o agradecimento de
@@ -4429,8 +4430,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * com o preâmbulo de evento.
        */
       const ehPresencaSemPendencia = presenca === 'sim' && temEtiquetaDeCidade && !!presencaOk && !presencaOkTrava;
-      const textoDaTecla8 = ehPresencaSemPendencia ? presencaOk : apoio;
-      const tecla8Trava = ehPresencaSemPendencia ? presencaOkTrava : apoioTrava;
+      // O agradecimento trocou de tecla em 03/09 (foi para o `i`, e a chamada da IA ficou com o 8,
+      // a pedido dele), e o nome acompanha: variavel chamada "tecla8" governando outra tecla seria a
+      // armadilha ja registrada do comentario que descreve a ordem sem ser a ordem.
+      const textoDoApoio = ehPresencaSemPendencia ? presencaOk : apoio;
+      const travaDoApoio = ehPresencaSemPendencia ? presencaOkTrava : apoioTrava;
 
       // O destaque vem da tabela de regras (`sugestao.js`), não de condições espalhadas aqui.
       // Ela só RECOMENDA: todas as opções continuam na tela e todas as teclas continuam valendo.
@@ -5151,23 +5155,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             : 'Perguntar interesse + pedir nome e cidade, e concluir',
         });
       }
-      if (!tecla8Trava) {
-        opcoes.push({
-          tecla: '8',
-          valor: 'apoio',
-          // O rótulo diz qual dos dois vai sair — a tecla é a mesma, o texto não.
-          rotulo: ehPresencaSemPendencia
-            ? 'Agradecer a presença e concluir (sem pedir dados)'
-            : 'Agradecer o apoio e concluir',
-        });
-      }
       /**
-       * **Tecla `i` — a IA escreve, o texto fica no campo, e quem manda é você.**
+       * **Tecla `8` — a IA escreve, o texto fica no campo, e quem manda é você.**
        *
-       * Pedido dele (03/09/2026), olhando a caixa: *"no botão 8 bote a opção chamar IA, que irá
-       * botar a resposta na caixa de mensagem sem mandar"*. Fica logo abaixo da 8 porque é ali que
-       * ele quis — o caso típico é o agradecimento não servir e ele querer algo escrito para aquela
-       * conversa.
+       * Pedido dele (03/09/2026), olhando a caixa: *"no botão 8 bote a opção chamar IA"* e, depois
+       * de eu a pôr como uma opção A MAIS: *"era pra SUBSTITUIR o botão 8 com o chamar IA"*.
+       *
+       * **As duas trocaram de lugar, e nenhuma some.** O agradecimento foi para o `i`, que é o que
+       * torna a troca segura: o agradecimento é o desfecho que `so-expressa-apoio` e a confirmação de
+       * presença RECOMENDAM, e fazer a recomendação apontar para a IA pararia a rodada em cada
+       * contato de apoio, esperando ele escrever. As regras continuam recomendando o agradecimento
+       * — só que agora ele mora no `i` — e **nenhuma regra recomenda a IA**, que é como tem que
+       * ser: chamar a IA é escolha dele, contato a contato.
        *
        * **É `rascunharParaEle`, que já existia e nunca envia** (`setComposerText`, nunca
        * `sendText`) — até 03/09 ela só era alcançada quando a IA ESCALAVA, e não havia como pedir
@@ -5178,21 +5177,36 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * quando ele concluir. Tem que ser — fechar a caixa e seguir para o próximo contato deixaria
        * o rascunho num campo de mensagem que ele não está mais olhando.
        *
-       * **Letra e não dígito**, como o `s`, o `a` e o `f`: os dez dígitos já têm significado no
-       * dedo dele.
-       *
        * **A caixa "Usar a avaliação por IA nesta rodada" NÃO governa esta tecla** — ele apertou a
        * opção e ela não estava lá (03/09/2026: *"agora eu queria testar a resposta e não posso"*).
        * Aquela caixa decide se a rodada gasta sozinha, contato a contato, e é por isso que ela
        * existe e nasce desligada. Apertar o `i` é o contrário disso: é ele pedindo UM rascunho,
        * de propósito, olhando aquela conversa. O que a tecla precisa é de chave cadastrada, e é
-       * isso que ela pergunta.
+       * isso que ela pergunta. Sem chave, a opção não aparece e o 8 fica livre.
        */
       if (state.iaTemChave) {
         opcoes.push({
-          tecla: 'i',
+          tecla: '8',
           valor: 'rascunhar',
           rotulo: 'Chamar a IA: põe o rascunho no campo, sem mandar (retomo quando você concluir)',
+        });
+      }
+      /**
+       * **Tecla `i` — o agradecimento, que morava no 8 até 03/09/2026.**
+       *
+       * Trocou de lugar com a chamada da IA a pedido dele. **Letra e não dígito** é o que sobrou de
+       * teclado livre — os dez dígitos já têm significado no dedo dele —, e é o mesmo caminho do
+       * `s`, do `a` e do `f`. As regras (`so-expressa-apoio`, `respondeu-os-dados`) recomendam
+       * esta tecla, e `sugestao.TECLAS` foi renomeada junto: é lá que a recomendação vira destaque.
+       */
+      if (!travaDoApoio) {
+        opcoes.push({
+          tecla: 'i',
+          valor: 'apoio',
+          // O rótulo diz qual dos dois vai sair — a tecla é a mesma, o texto não.
+          rotulo: ehPresencaSemPendencia
+            ? 'Agradecer a presença e concluir (sem pedir dados)'
+            : 'Agradecer o apoio e concluir',
         });
       }
       /**
@@ -5449,7 +5463,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       /**
-       * Tecla `i`: a IA rascunha, o texto fica no campo, e a rodada fica de vigia como na 6.
+       * Tecla 8: a IA rascunha, o texto fica no campo, e a rodada fica de vigia como na 6.
        *
        * **Rascunhar primeiro, gravar depois:** o que ele espera ver na tela é o texto, e a gravação
        * não muda nada do que a IA lê (o rascunho usa o cadastro em memória, não o gravado).
@@ -5538,7 +5552,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             : escolha === 'momento'
               ? momento
               : escolha === 'apoio'
-                ? textoDaTecla8
+                ? textoDoApoio
                 : interesse;
         const rotulo =
           escolha === 'pedirdados'

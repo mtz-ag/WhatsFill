@@ -380,7 +380,7 @@ grupo('so-expressa-apoio: e a EXCECAO, e vence o modelo quando casa');
    * rodada seguinte.
    */
   const ciro = com({ soExpressaApoio: A, podeEnviar: true, conteudoPedido: 'ADS' });
-  check(ciro?.tecla === '8', 'o apoio VENCE o modelo: ' + JSON.stringify(ciro));
+  check(ciro?.tecla === 'i', 'o apoio VENCE o modelo: ' + JSON.stringify(ciro));
   check(ciro?.id === 'so-expressa-apoio', 'e e a regra do apoio');
 
   /**
@@ -492,7 +492,7 @@ grupo('ja-respondemos-antes: o modelo e a entrega INICIAL');
   check(com({ jaRespondemosAntes: true, podeMandarMomento: false })?.tecla === '3', 'sem momento configurado: conclui');
 
   // Perde para tudo que fala do que ela acabou de dizer.
-  check(com({ jaRespondemosAntes: true, soExpressaApoio: { motivo: 'a' } })?.tecla === '8',
+  check(com({ jaRespondemosAntes: true, soExpressaApoio: { motivo: 'a' } })?.tecla === 'i',
     'apoio proprio vence: responder a ela e melhor que a mensagem da semana');
   check(com({ jaRespondemosAntes: true, pedeAlgoIndefinido: { trecho: 'x' } })?.tecla === '9', 'pedido indefinido vence');
   check(com({ jaRespondemosAntes: true, perguntaAberta: { motivo: 'p' } })?.tecla === '6', 'pergunta vence');
@@ -755,7 +755,7 @@ grupo('apoio: o TEMPO escolhe entre agradecer e a mensagem do momento (03/09/202
   const A = { motivo: 'escreveu apoio' };
   const apoio = { soExpressaApoio: A, podeMandarMomento: true, momentoJaEnviado: false, jaPediramDados: true };
 
-  check(com({ ...apoio })?.tecla === '8', 'apoio de hoje: agradece');
+  check(com({ ...apoio })?.tecla === 'i', 'apoio de hoje: agradece');
   check(com({ ...apoio, apoioDeOutroDia: true })?.tecla === '5', 'apoio de outro dia: mensagem do momento');
 
   /**
@@ -763,9 +763,9 @@ grupo('apoio: o TEMPO escolhe entre agradecer e a mensagem do momento (03/09/202
    * repetir: a condicao e estado da conversa (o texto de apoio fica la para sempre) e o envio nao
    * a apaga.
    */
-  check(com({ ...apoio, apoioDeOutroDia: true, momentoJaEnviado: true })?.tecla === '8',
+  check(com({ ...apoio, apoioDeOutroDia: true, momentoJaEnviado: true })?.tecla === 'i',
     'ja recebeu a do momento: volta a agradecer');
-  check(com({ ...apoio, apoioDeOutroDia: true, podeMandarMomento: false })?.tecla === '8',
+  check(com({ ...apoio, apoioDeOutroDia: true, podeMandarMomento: false })?.tecla === 'i',
     'sem mensagem do momento configurada: agradece');
 
   // As duas saidas ENVIAM, entao o cartao da janela e verde nos dois casos.
@@ -786,6 +786,32 @@ grupo('apoio: o TEMPO escolhe entre agradecer e a mensagem do momento (03/09/202
   for (const antes of ['pergunta-aberta', 'pediu-algo-sem-dizer-o-que']) {
     check(ids.indexOf(antes) < ids.indexOf('so-expressa-apoio'), `"${antes}" esta acima do apoio na tabela`);
   }
+}
+
+grupo('a tecla 8 e da IA, e NENHUMA regra a recomenda (03/09/2026)');
+{
+  /**
+   * Pedido dele: *"era pra substituir o botao 8 com o chamar IA"*. As duas trocaram de lugar -- o
+   * agradecimento foi para o `i` -- e e a troca que mantem isso seguro.
+   *
+   * **Se uma regra voltar a recomendar o 8, a rodada PARA em cada contato daquela regra**, porque
+   * chamar a IA deixa o caso com ele (mesmo desfecho da tecla 6). Com o automatico ligado, isso
+   * seria a fila inteira travada esperando alguem escrever.
+   */
+  const { TECLAS, ramosDaRegra } = sugestaoLib;
+  check(!TECLAS['8'], 'o 8 nao esta na tabela de teclas que uma REGRA pode mandar apertar');
+  check(!!TECLAS.i && TECLAS.i.rotulo.includes('Agradece'), 'e o agradecimento e o `i`');
+
+  for (const r of REGRAS) {
+    const teclas = typeof r.tecla === 'function'
+      ? ramosDaRegra(r.id).map((x) => x.tecla)
+      : [r.tecla];
+    check(!teclas.includes('8'), `"${r.id}" nao recomenda o 8`);
+  }
+
+  // As duas regras que agradecem apontam para o `i`.
+  check(com({ soExpressaApoio: { motivo: 'a' }, jaPediramDados: true })?.tecla === 'i', 'so-expressa-apoio manda agradecer no `i`');
+  check(com({ respondeuOsDados: true })?.tecla === 'i', 'respondeu-os-dados tambem');
 }
 
 fim();

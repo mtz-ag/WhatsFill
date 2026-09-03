@@ -115,7 +115,8 @@ export const migrarRespostaPedidoEmprego = () =>
 /**
  * O agradecimento pelo APOIO, para quem já tinha a lista de respostas salva.
  *
- * Sem isto ela não chega a ninguém que já usa a extensão — e a tecla 8 da rodada, que depende
+ * Sem isto ela não chega a ninguém que já usa a extensão — e a tecla do agradecimento (`i` desde
+ * 03/09/2026, antes a 8), que depende
  * dela, some junto. Foi o que aconteceu em 31/08: ele atualizou para a 0.48.0 e a opção
  * "Agradecer o apoio e concluir" não apareceu. **A tecla não estava faltando; o texto é que
  * nunca tinha chegado.**

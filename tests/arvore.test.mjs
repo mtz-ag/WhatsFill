@@ -932,7 +932,7 @@ grupo('respondeu os dados: agradece e encerra, SEM modelo (02/09/2026)');
   };
   const tecla = (c) => arv.decidir(c, q)?.tecla ?? null;
 
-  check(tecla({ ...base, temEtiquetaDeCidade: false }) === '8', 'sem cidade: agradece e conclui');
+  check(tecla({ ...base, temEtiquetaDeCidade: false }) === 'i', 'sem cidade: agradece e conclui');
 
   /**
    * **Os dois lados da bifurcacao dao o mesmo.** Sem a caixa no lado "com cidade", a mesma pessoa
@@ -940,7 +940,7 @@ grupo('respondeu os dados: agradece e encerra, SEM modelo (02/09/2026)');
    * e decidido pela ORDEM das coisas dentro da rodada, que ela nao ve. Regra que trata dois
    * contatos iguais de forma diferente por estado invisivel e o "alguns concluem e outros nao".
    */
-  check(tecla({ ...base, temEtiquetaDeCidade: true }) === '8', 'com cidade: o mesmo agradecimento');
+  check(tecla({ ...base, temEtiquetaDeCidade: true }) === 'i', 'com cidade: o mesmo agradecimento');
 
   // Quem NAO respondeu segue como antes -- a condicao e estreita de proposito.
   check(tecla({ ...base, temEtiquetaDeCidade: true, respondeuOsDados: false }) === '3', 'quem nao respondeu continua como era');
@@ -1175,7 +1175,7 @@ grupo('confirmou presenca no evento: PULA e ele atende no fim (03/09/2026)');
 
   check(tecla(deoclecio) === '2', 'pula, deixando o atendimento aberto');
   check(tecla(deoclecio) !== '4', 'e NAO pede nome e cidade');
-  check(tecla(deoclecio) !== '8', 'nem agradece, que era o desfecho anterior');
+  check(tecla(deoclecio) !== 'i', 'nem agradece, que era o desfecho anterior');
   check(tecla(deoclecio) !== '3', 'e nao CONCLUI: concluir tiraria da tela quem ele quer atender');
 
   // Sem cidade da no mesmo: quem confirma presenca e sempre caso dele, com ou sem cadastro.
