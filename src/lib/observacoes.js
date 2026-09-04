@@ -34,6 +34,45 @@ export const MAX = 200;
  */
 export const MAX_MENSAGENS = 5;
 
+/**
+ * **O que ela mandou, INCLUSIVE o que não é texto.**
+ *
+ * Pedido dele (04/09/2026): *"as observações estão com um problema: elas pegam só texto e ignoram
+ * fotos, links e emojis; ao menos tem que ter ciência do que foi enviado além do texto"*.
+ *
+ * A anotação juntava `m.texto` e descartava o vazio — então **figura, figurinha e áudio sem
+ * transcrição sumiam da lista**. Duas perdas: eu lia uma conversa que nunca existiu daquele jeito,
+ * e o corte das cinco últimas pegava mensagens mais antigas para completar o número, porque as sem
+ * texto não contavam.
+ *
+ * É a mesma lição do `api.js`: `incoming` filtra `m.text` e por isso a figura desaparecia — quem
+ * precisa enxergar mídia usa `entrantes`, que traz o tipo junto. Aqui a mídia vira uma linha
+ * curta, entre colchetes, para o relatório mostrar o RITMO da conversa e não só as palavras.
+ *
+ * O ruído da plataforma (*"o tipo da mensagem enviada pelo contato não é suportado"*) chega com
+ * `sistema: true` e o texto já esvaziado; ele aparece como tal, porque "ela mandou algo que a
+ * plataforma não leu" é informação, não ausência.
+ */
+export function descreverMensagem(msg) {
+  const m = msg || {};
+  const texto = String(m.texto || '').trim();
+  const tipo = String(m.tipo || 'TEXT').toUpperCase();
+
+  if (m.sistema) return '[aviso da plataforma: mensagem não suportada]';
+  if (texto) return m.transcrito ? `[áudio transcrito] ${texto}` : texto;
+
+  const semTexto = {
+    IMAGE: '[foto, sem legenda]',
+    STICKER: '[figurinha]',
+    AUDIO: '[áudio, sem transcrição]',
+    VIDEO: '[vídeo, sem legenda]',
+    DOCUMENT: '[arquivo]',
+    LOCATION: '[localização]',
+    CONTACT: '[contato compartilhado]',
+  };
+  return semTexto[tipo] || `[${tipo.toLowerCase()}, sem texto]`;
+}
+
 /** Corta texto longo sem quebrar o armazenamento — `chrome.storage.local` não é infinito. */
 function texto(valor, limite) {
   return String(valor || '')

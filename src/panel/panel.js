@@ -6146,8 +6146,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
            * Ele estava certo. Em várias delas a última mensagem era um link solto ou um "Estamos
            * juntos", e o que explicava o caso estava duas acima — eu leria o sintoma sem a conversa.
            */
+          /**
+           * **Figura, figurinha e áudio sem transcrição também contam** — pedido dele (04/09):
+           * *"elas pegam só texto e ignoram fotos, links e emojis"*. Descartar o que não tem texto
+           * fazia o corte das cinco últimas alcançar mensagens mais antigas para completar o
+           * número, e eu lia uma conversa que nunca existiu daquele jeito.
+           */
           mensagens: (state.entrantes || [])
-            .map((m) => m?.texto || '')
+            .map((m) => observacoesLib.descreverMensagem(m))
             .filter(Boolean)
             .slice(-observacoesLib.MAX_MENSAGENS),
           etiquetas: (state.tagSuggestions || []).filter((t) => t.jaTem || t.marcada).map((t) => t.nome),

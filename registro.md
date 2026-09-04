@@ -1,3 +1,40 @@
+## 2026-09-04 — A anotação mostra o que NÃO é texto (v2.14.0)
+
+Pedido dele: *"as observações estão com um problema: elas pegam só texto e ignoram fotos, links e
+emojis; ao menos tem que ter ciência do que foi enviado além do texto"*.
+
+A anotação juntava `m.texto` e descartava o vazio. **Duas perdas, e a segunda é a pior:**
+
+1. Figura, figurinha e áudio sem transcrição **sumiam** — eu lia uma conversa que nunca existiu
+   daquele jeito.
+2. O corte das cinco últimas **alcançava mensagens mais antigas** para completar o número, porque as
+   sem texto não contavam. O relatório dizia "as últimas 5 dela" e mostrava outra coisa.
+
+É a mesma lição que o `api.js` já carrega: `incoming` filtra `m.text` e por isso a figura
+desaparecia; quem precisa enxergar mídia usa `entrantes`, que traz o tipo junto.
+
+### O formato
+
+`descreverMensagem` é pura e testada. Emoji e link já eram texto e continuam como estão; o que
+mudou é o que não tinha texto nenhum:
+
+```
+[foto, sem legenda]   [figurinha]   [áudio, sem transcrição]   [vídeo, sem legenda]   [arquivo]
+[áudio transcrito] moro em Canoas
+[aviso da plataforma: mensagem não suportada]
+```
+
+Tipo desconhecido vira `[<tipo>, sem texto]` em vez de sumir — a plataforma pode inventar um amanhã.
+
+O ruído da plataforma aparece **como tal**: *"ela mandou algo que a plataforma não leu"* é
+informação, não ausência — a mesma distinção que `semRuidoDaPlataforma` preserva ao esvaziar em vez
+de descartar.
+
+**Arquivos:** `src/lib/observacoes.js`, `src/panel/panel.js`, `tests/observacoes.test.mjs`,
+`manifest.json` (2.13.0 → 2.14.0), `registro.md`.
+
+---
+
 ## 2026-09-04 — O critério de tempo virou caixa própria, e vale para tudo (v2.13.0)
 
 Quatro anotações no mesmo lote, com regras diferentes e a mesma correção dele:

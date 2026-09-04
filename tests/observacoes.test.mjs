@@ -225,4 +225,43 @@ grupo('a anotacao diz QUANDO ela falou pela ultima vez (04/09/2026)');
   check(obs.nova({ porque: 'x', ultimaDelaEm: '2026-09-03T11:00:00' }).ultimaDelaEm === '2026-09-03T11:00:00', 'o campo e guardado');
 }
 
+grupo('descreverMensagem: a anotacao mostra o que NAO e texto (04/09/2026)');
+{
+  /**
+   * Pedido dele: *"as observacoes estao com um problema: elas pegam so texto e ignoram fotos, links
+   * e emojis; ao menos tem que ter ciencia do que foi enviado alem do texto"*.
+   *
+   * A anotacao juntava `m.texto` e descartava o vazio -- figura, figurinha e audio sem transcricao
+   * sumiam. Duas perdas: eu lia uma conversa que nunca existiu daquele jeito, e o corte das cinco
+   * ultimas alcancava mensagens mais antigas para completar o numero.
+   */
+  const d = (m) => obs.descreverMensagem(m);
+
+  check(d({ texto: 'bom dia', tipo: 'TEXT' }) === 'bom dia', 'texto passa como esta');
+  check(d({ texto: '👍🏻👍🏻', tipo: 'TEXT' }) === '👍🏻👍🏻', 'emoji e texto, e continua aparecendo');
+  check(d({ texto: 'https://youtu.be/x', tipo: 'TEXT' }) === 'https://youtu.be/x', 'link tambem');
+
+  // O que sumia:
+  check(d({ texto: '', tipo: 'IMAGE' }) === '[foto, sem legenda]', 'foto sem legenda vira uma linha');
+  check(d({ texto: '', tipo: 'STICKER' }) === '[figurinha]', 'figurinha');
+  check(d({ texto: '', tipo: 'AUDIO' }) === '[áudio, sem transcrição]', 'audio sem transcricao');
+  check(d({ texto: '', tipo: 'VIDEO' }) === '[vídeo, sem legenda]', 'video');
+  check(d({ texto: '', tipo: 'DOCUMENT' }) === '[arquivo]', 'arquivo');
+  check(d({ texto: '', tipo: 'COISA_NOVA' }) === '[coisa_nova, sem texto]', 'tipo desconhecido nao some');
+
+  // A transcricao vem marcada: e fala ouvida por maquina, nao o que ela escreveu.
+  check(d({ texto: 'moro em Canoas', tipo: 'AUDIO', transcrito: true }) === '[áudio transcrito] moro em Canoas',
+    'audio com transcricao vem marcado');
+
+  /**
+   * O ruido da plataforma aparece COMO TAL: "ela mandou algo que a plataforma nao leu" e
+   * informacao, nao ausencia -- a mesma distincao que `semRuidoDaPlataforma` preserva ao esvaziar
+   * em vez de descartar.
+   */
+  check(d({ texto: '', tipo: 'TEXT', sistema: true }) === '[aviso da plataforma: mensagem não suportada]',
+    'o ruido da plataforma tem a sua propria linha');
+
+  check(d(null) === '[text, sem texto]', 'nulo nao explode');
+}
+
 fim();
