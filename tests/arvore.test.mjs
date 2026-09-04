@@ -1511,7 +1511,15 @@ grupo('o lado SEM cidade tambem fecha, e o modelo vem antes do obrigado (03/09/2
   };
   const fecha = d(semCidade);
   check(fecha?.tecla === '3', 'ja respondido hoje, sem cidade: conclui em vez de sair sem desfecho');
-  check(fecha?.id === 'r:ja-respondemos-antes:sem-cidade', `e quem fecha e a caixa nova (${fecha?.id})`);
+  /**
+   * **Quem fecha passou a ser a caixa da REACAO** (03/09, ao desfazer a divisao "com pendencia" /
+   * "sem pendencia"): ela le o que a pessoa fez e ja tinha `respondidoHoje` na propria tecla. O
+   * desfecho e o mesmo -- concluir --, e o motivo na tela ficou melhor.
+   *
+   * O que este teste protege e o DESFECHO, nao o id: sem nenhuma das duas o contato saia sem nada.
+   */
+  check(fecha?.id?.includes('ultima-e-so-reacao') || fecha?.id?.includes('ja-respondemos-antes'),
+    `e alguma caixa fecha o caso (${fecha?.id})`);
 
   // E nao rouba a vez de quem ainda nao foi respondido: la a pendencia continua decidindo.
   check(d({ ...semCidade, respondidoHoje: false, momentoJaEnviado: false })?.id === 'r:ultima-e-so-reacao:sem-cidade',

@@ -1408,6 +1408,28 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   única regra que o consulta é `ja-respondemos-antes`, que é a mais genérica do quadro e a única
   capaz de concluir com uma interrogação na frente (a despedida e a reação SÃO a última mensagem).
 
+- **Transcrição de áudio NÃO pode decidir "sem interesse".** Anotação do lopezp4295 (03/09/2026):
+  a rodada sugeriu a tecla `s` sobre um áudio em que a pessoa dizia *"eu não tenho, eu não tenho,
+  né, nenhum… os números dos candidatos"* — e, na MESMA mensagem, *"mas eu vou ir votar, sim"*. Ele:
+  *"de onde saiu a frase para sugerir sem interesse? transcrição para ser respondida por mim ou
+  IA"*. Duas causas: `nao tenho` seco estava em `RECUSA_EXPLICITA` (não tenho o número, não tenho
+  WhatsApp — recusa é *"não tenho interesse"*, e essa forma ficou), e a função lia transcrição.
+  **É a regra mais destrutiva do arquivo** — etiqueta permanente no CRM + conclusão em silêncio — e
+  fala passada por reconhecimento automático é o pior insumo possível: vem cheia de repetição e de
+  "não" solto. Mesma disciplina do parser desde 31/08, levada ao extremo: aqui a transcrição **não
+  conta**, e o áudio vira caso de `ultima-pede-resposta-pessoal`. **Recusa de verdade a pessoa
+  escreve.**
+- **Grupo com condição própria esconde as caixas que estão dentro dele.** Anotação da Maria Genoli
+  (03/09/2026): dois áudios longos contando que está doente, e a rodada mandou o **modelo padrão**.
+  O lado "sem etiqueta de cidade" tinha *"com pendência"* (exigindo `!respondidoHoje`) com TODAS as
+  caixas que leem o texto, e *"sem pendência"* com duas que não olham nada. Bastava termos
+  respondido no mesmo dia para o quadro **parar de ler a conversa**. A guarda existia porque a caixa
+  do cumprimento repetia a mensagem do momento; hoje ela tem `excecao: momentoJaEnviado` e
+  `ultima-e-so-reacao` olha `respondidoHoje` na própria tecla. **Guarda mora na CAIXA, onde dá para
+  testá-la — não num grupo acima, onde ela silencia tudo o que está dentro.** Os dois lados da
+  bifurcação passaram a ter a mesma forma, e as duas caixas de *"sem pendência"* viraram cópias
+  mortas e foram removidas (o verificador de caixas mortas acusou).
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto

@@ -985,31 +985,38 @@ export function fluxoPadrao() {
        * seguidas para a mesma pessoa, na fila inteira. Rajada para o mesmo número é o que já pesou
        * no WhatsApp dele antes. Uma mensagem por passada é a propriedade que se preferiu manter.
        */
-      grupo('com pendência', { sinal: 'respondidoHoje', negar: true, palavras: [], onde: 'ultima' }, [
-        r('voltou-por-outro-anuncio'),
-        ...dosDoisLados('sem-cidade'),
-      ]),
-      grupo('sem pendência', SEM_CONDICAO, [
-
-        /**
-         * **Ela respondeu o que pedimos: agradece e encerra, SEM mandar modelo.**
-         *
-         * Pedido dele (02/09/2026), com a print da caixa aberta: *"aqui está o que tem que mudar
-         * agora só precisa agradecer a atenção e encerrar sem mandar modelo"*.
-         *
-         * É consequência do redesenho do mesmo dia: o modelo passou a ser o **recibo da chegada**,
-         * então quando ela responde o nome e a cidade o modelo já saiu — mandá-lo de novo é repetir.
-         *
-         * **Ele tentou fazer isso fixando a tecla 8 na caixa `conteudo-pedido`, e não funcionaria:**
-         * a condição daquela regra exige `!modeloJaNaConversa`, ou seja, ela deixa de casar
-         * justamente depois de o modelo ter saído. Medido: quem respondia com os dados não recebia
-         * nada, ou era concluída em silêncio por `ja-respondemos-antes`.
-         *
-         * Fica ACIMA do modelo dentro deste ramo: quem respondeu não precisa de mais material.
-         */
-        r('respondeu-os-dados', 'respondeu o nome e a cidade'),
-        r('conteudo-pedido', 'pediu conteúdo e há modelo mapeado'),
-      ]),
+      /**
+       * **Os dois grupos viraram UM** — anotação da Maria Genoli (03/09/2026): ela mandou dois
+       * áudios longos, transcritos, contando que está doente e não consegue ir ao evento, e a
+       * rodada mandou o **modelo padrão**. Ele: *"texto gigante obviamente é conversa, eu respondo
+       * ou IA"*.
+       *
+       * **A causa era a divisão, não a ordem.** "Com pendência" exigia `!respondidoHoje` e continha
+       * TODAS as caixas que leem o que ela escreveu; "sem pendência" tinha duas, e nenhuma delas
+       * olha o texto. Bastava termos respondido alguma coisa no mesmo dia para o quadro parar de
+       * ler a conversa e mandar o modelo — que foi exatamente o caso dela.
+       *
+       * **A guarda existia por um motivo que já não existe** (01/09: *"se continuar como na print o
+       * modelo nunca será enviado porque está concluindo após resolver a pendência"*). O que a
+       * tornava necessária era a caixa do cumprimento repetir a mensagem do momento a cada passada;
+       * hoje ela tem a exceção `momentoJaEnviado`, e `ultima-e-so-reacao` olha `respondidoHoje` na
+       * própria tecla. As guardas moram nas caixas, que é onde dá para testá-las.
+       *
+       * **O lado "com etiqueta de cidade" nunca teve essa divisão** e funciona — os dois lados
+       * passam a ter a mesma forma, que é o que impede um deles de envelhecer sozinho.
+       */
+      r('voltou-por-outro-anuncio'),
+      ...dosDoisLados('sem-cidade'),
+      /**
+       * **O grupo "sem pendência" foi REMOVIDO em 03/09/2026** — com a divisão desfeita, as duas
+       * caixas dele (`respondeu-os-dados` e `conteudo-pedido`) viraram cópias mortas: as de
+       * `dosDoisLados` decidem antes, com a mesma condição. O verificador de caixas mortas acusou
+       * as duas.
+       *
+       * Ele autorizou a remoção no mesmo dia, e o critério é dele: *"se for necessário é para
+       * remover se der conflito com as novas regras"*. Duplicata no mesmo ramo é o começo de duas
+       * caixas divergirem.
+       */
 
       /**
        * **Veio de um anúncio que ele cadastrou e não disse mais nada** — pedido dele em

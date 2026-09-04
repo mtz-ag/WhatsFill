@@ -1354,8 +1354,22 @@ export function soCortesia(entrantes, quantas = 3) {
  * chamado, e continuar mandando mensagem depois é o que gera denúncia — o sinal que derruba
  * número.
  */
+/**
+ * **"não tenho" saiu daqui** — anotação do lopezp4295 (03/09/2026), e ele perguntou o essencial:
+ * *"de onde saiu a frase para sugerir sem interesse?"*.
+ *
+ * Saiu de *"Eu não tenho, eu não tenho, né, nenhum, uma, como é que se diz, um, os números, né,
+ * dos candidatos pra eu votar"* — alguém dizendo que **não tem os números dos candidatos**, e que
+ * na mesma mensagem diz *"mas eu vou ir votar, sim"*. O padrão aceitava `nao tenho` seco.
+ *
+ * `nao tenho` sozinho não é recusa de nada: não tenho o número, não tenho WhatsApp, não tenho
+ * carro. O que é recusa é `não tenho interesse` — e essa forma continua aqui, escrita por extenso.
+ * As outras (`não quero`, `não desejo`, `não preciso`) já trazem o sentido no próprio verbo.
+ */
 const RECUSA_EXPLICITA =
-  /\bnao (quero|tenho|desejo|preciso|me interess)/i.source +
+  /\bnao (quero|desejo|preciso|me interess)/i.source +
+  '|' +
+  /\bnao tenho (interesse|mais interesse)\b/i.source +
   '|' +
   /\b(sem|nenhum) interesse\b|\bme (tira|tire|retira|retire|remove|remova)\b|\b(tirar|sair|me tirem?) da lista\b|\bdescadastr|\bpara de (mandar|enviar|me chamar)\b|\bnao me (mande|manda|envie|chame|perturbe|encha)\b|\bnao insista\b/i
     .source;
@@ -1472,7 +1486,20 @@ export function semInteresse(entrantes, nossaUltimaAt) {
    */
   const rajada = rajadaFinal(entrantes, nossaUltimaAt);
   const lista = rajada.length ? rajada : (Array.isArray(entrantes) ? entrantes : []);
-  const comTexto = lista.filter((m) => String(m?.texto || '').trim());
+  /**
+   * **Transcrição de áudio NÃO decide "sem interesse"** — anotação do lopezp4295 (03/09/2026):
+   * *"transcrição para ser respondida por mim ou IA"*.
+   *
+   * Esta é a regra mais destrutiva do arquivo: aplica etiqueta **permanente** no CRM e conclui **em
+   * silêncio**. Fala passada por reconhecimento automático é o pior insumo possível para isso — vem
+   * cheia de repetição e de "não" solto (*"eu não tenho, eu não tenho, né, nenhum…"*), e a pessoa
+   * da anotação dizia, na MESMA mensagem, *"mas eu vou ir votar, sim"*.
+   *
+   * É a disciplina que o parser já segue desde 31/08: transcrição entra rebaixada e nunca grava
+   * sozinha. Aqui o rebaixamento é total — ela não conta, e o áudio vira caso de
+   * `ultima-pede-resposta-pessoal`, que é dele ou da IA. **Recusa de verdade a pessoa escreve.**
+   */
+  const comTexto = lista.filter((m) => String(m?.texto || '').trim() && !m?.transcrito);
   if (!comTexto.length) return null;
 
   /**

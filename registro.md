@@ -1,3 +1,59 @@
+## 2026-09-03 — Transcrição não marca sem interesse, e o grupo que escondia as caixas saiu (v2.7.0)
+
+Três anotações. Uma delas é **falso positivo criado hoje por mim**.
+
+### lopezp4295 — a mais grave
+
+A rodada sugeriu a tecla `s` (etiqueta permanente + concluir em silêncio) para alguém que dizia
+*"mas eu vou ir votar, sim"*. Ele: *"de onde saiu a frase para sugerir sem interesse?"*.
+
+Saiu de **duas** coisas, e as duas foram consertadas:
+
+1. **`nao tenho` seco estava em `RECUSA_EXPLICITA`.** A frase era *"eu não tenho, eu não tenho, né,
+   nenhum… os números dos candidatos pra eu votar"* — alguém dizendo que não tem os números.
+   `não tenho` sozinho não recusa nada; recusa é *"não tenho interesse"*, e essa forma continua.
+
+2. **A função lia TRANSCRIÇÃO.** É a regra mais destrutiva do arquivo, e fala passada por
+   reconhecimento automático é o pior insumo possível: repetição e "não" solto em toda frase. Agora
+   a transcrição não conta — o áudio vira caso de `ultima-pede-resposta-pessoal`, que é dele ou da
+   IA. **Recusa de verdade a pessoa escreve.**
+
+**Foi a leitura da rajada (v2.4.0) que expôs isto.** A mudança estava certa e necessária — sem ela a
+susana escapava —, mas ela multiplicou as chances de um padrão frouxo casar. Ampliar o alcance de um
+detector destrutivo exige revisar o que ele aceita, não só de onde ele lê.
+
+### Maria Genoli — o grupo que escondia as caixas
+
+Dois áudios longos contando que está doente e não consegue ir, e a rodada mandou o **modelo padrão**.
+Ele: *"texto gigante obviamente é conversa, eu respondo ou IA"*.
+
+**A causa era a divisão, não a ordem.** O lado "sem etiqueta de cidade" tinha *"com pendência"*
+(exigindo `!respondidoHoje`) com TODAS as caixas que leem o texto, e *"sem pendência"* com duas que
+não olham nada. Bastava termos respondido qualquer coisa no mesmo dia para o quadro **parar de ler a
+conversa** e mandar o modelo.
+
+A guarda existia por um motivo real de 01/09 — a caixa do cumprimento repetia a mensagem do momento
+a cada passada. Hoje ela tem `excecao: momentoJaEnviado` e `ultima-e-so-reacao` olha `respondidoHoje`
+na própria tecla. **Guarda mora na CAIXA, onde dá para testá-la; num grupo acima ela silencia tudo o
+que está dentro.**
+
+Desfeita a divisão, `respondeu-os-dados` e `conteudo-pedido` de *"sem pendência"* viraram cópias
+mortas — o verificador de caixas mortas acusou as duas — e **foram removidas**. Os dois lados da
+bifurcação de cidade passaram a ter a mesma forma.
+
+Medido: a Genoli agora dá tecla 6, com ou sem termos respondido hoje.
+
+### Neca Tamiozzo
+
+*"Concluir, já foi enviado e retornou pedindo mesmo modelo"*. Medido no padrão de agora: tecla 3, por
+`ja-respondemos-antes` — a caixa que fecha o lado sem cidade, criada na v2.2.0. **Ela precisa ser
+importada**; o quadro dele ainda é o de 1.86.0.
+
+**Arquivos:** `src/lib/cortesia.js`, `src/lib/arvore.js`, `tests/arvore.test.mjs`,
+`manifest.json` (2.6.0 → 2.7.0), `registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-03 — O "?" é escolha dela, e pergunta sem "?" também conta (v2.6.0)
 
 Duas correções dele, no mesmo recado, sobre o sinal criado na v2.5.0:
