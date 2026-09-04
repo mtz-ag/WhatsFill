@@ -1670,6 +1670,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   que todo `valor:` das opções tem um `=== '…'` (ou um `startsWith('…'` quando o valor é montado).
   **Criou opção? O ramo entra no mesmo commit.**
 
+- **A caixa da rodada precisa CABER na tela, e ela e modal para a rodada.** Relato dele
+  (04/09/2026): *"cortado e nao consigo pegar a resposta"* — dez opcoes mais as treze respostas
+  rapidas abertas passavam do fim da janela, e a unica saida era Esc, que descarta a decisao. Hoje
+  `.wf-pergunta` tem `max-height` + `overflow-y: auto`. Tres coisas: **`box-sizing: border-box` e
+  obrigatorio** (sem ele o `max-height` vale so para o conteudo, e os 14px de padding de cima e de
+  baixo mais a borda somam 30px que estouram — medido, a caixa passava 18px do fim da janela mesmo
+  com o limite escrito); **arrastada, o limite e escrito pelo JS** em `aplicarPosicao`, porque o
+  espaco disponivel depende do `top` e nao ha como dizer isso em CSS; e o **titulo e `sticky`**,
+  senao rolar ate as respostas rapidas leva a alca de arrastar para fora da vista, justo quando a
+  caixa esta grande demais. O limite vai na CAIXA e nunca no fundo: o fundo e `pointer-events:
+  none` de proposito, e capturar rolagem ali travaria a conversa atras.
+
+
 ## Regras do projeto
 
 - **Sem IA na extração.** Custo por contato. Parser determinístico: regex, dicionário, lista de

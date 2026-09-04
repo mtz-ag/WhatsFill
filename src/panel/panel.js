@@ -6021,6 +6021,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       caixa.classList.remove('wf-pergunta-solta');
       caixa.style.left = '';
       caixa.style.top = '';
+      // Centrada, quem limita é o CSS (`max-height: calc(100vh - 32px)`).
+      caixa.style.maxHeight = '';
       return;
     }
     caixa.classList.add('wf-pergunta-solta');
@@ -6029,8 +6031,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // Deixa sempre uma faixa visível, mesmo que a caixa seja mais alta que a janela.
     const maxLeft = Math.max(0, window.innerWidth - largura);
     const maxTop = Math.max(0, window.innerHeight - Math.min(altura, window.innerHeight - 40));
+    const top = Math.min(Math.max(0, pos.top), maxTop);
     caixa.style.left = `${Math.min(Math.max(0, pos.left), maxLeft)}px`;
-    caixa.style.top = `${Math.min(Math.max(0, pos.top), maxTop)}px`;
+    caixa.style.top = `${top}px`;
+
+    /**
+     * **A altura que sobra DEPOIS do topo escolhido** — o CSS não sabe disso.
+     *
+     * Relato dele (04/09/2026): *"cortado e não consigo pegar a resposta"*. A caixa com dez opções
+     * e as respostas rápidas abertas passava do fim da janela, e a pergunta é modal para a rodada:
+     * opção inalcançável trava o trabalho, com Esc (que descarta a decisão) como única saída.
+     *
+     * Centrada, `max-height: calc(100vh - 32px)` no CSS resolve. Arrastada, o espaço disponível
+     * depende de onde ela está — e é por isso que esta linha existe aqui, e não lá.
+     *
+     * O piso de 160px é para a caixa nunca virar uma fresta ilegível se `top` ficar no limite.
+     */
+    caixa.style.maxHeight = `${Math.max(160, window.innerHeight - top - 12)}px`;
   }
 
   /**

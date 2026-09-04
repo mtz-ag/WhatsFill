@@ -41,6 +41,40 @@ Branch `claude/whatsfill-ia`, **v2.14.0**, tudo commitado e no remoto. 38 commit
 
 ---
 
+## 2026-09-04 — A caixa da rodada cortada na tela (v2.18.0)
+
+*"cortado e não consigo pegar a resposta"*, com a print: dez opções mais as treze respostas rápidas
+abertas, e o fim da caixa abaixo da janela.
+
+Não é cosmético. **A pergunta é modal para a rodada**: opção inalcançável trava o trabalho, e a
+única saída era Esc — que descarta a decisão.
+
+`max-height` + `overflow-y: auto` na caixa. Três coisas que a medição ensinou:
+
+- **`box-sizing: border-box` é obrigatório.** Sem ele o `max-height` vale só para o CONTEÚDO, e os
+  14px de padding de cima e de baixo mais a borda somam 30px que estouram a conta. Medido: a caixa
+  passava 18px do fim da janela **mesmo com o limite escrito** — o tipo de defeito que se dá por
+  resolvido sem medir;
+- **arrastada, o limite é escrito pelo JS.** O espaço disponível depende do `top` escolhido, e não
+  há como dizer "daqui até o fim da tela" em CSS. Fica em `aplicarPosicao`, junto do resto da
+  aritmética de posição;
+- **o título é `sticky`.** A caixa passou a rolar por dentro, e sem isso rolar até as respostas
+  rápidas levava a alça de arrastar para fora da vista — justo quando a caixa está grande demais,
+  que é quando arrastar importa.
+
+O limite vai na **caixa** e nunca no fundo: o fundo é `pointer-events: none` de propósito, e
+capturar rolagem ali travaria a conversa atrás.
+
+**Medido no navegador** (o conferidor `checar-pergunta.mjs` precisa de Playwright, que não está
+instalado aqui): página com o mesmo CSS e a mesma quantidade de opções, janela de 903px. Centrada e
+arrastada para 0, 200, 400 e 690px de topo — **as cinco terminam em 891px**, com o título visível
+depois de rolar até o fim e o último botão alcançável.
+
+**Arquivos:** `src/panel/panel.css`, `src/panel/panel.js` (`aplicarPosicao`), `CLAUDE.md`
+(+1 armadilha), `manifest.json` (2.17.0 → 2.18.0).
+
+---
+
 ## 2026-09-04 — "Certamente é um problema de ramo" (v2.17.0)
 
 A Ieda perguntou *"Você é candidato daqui do RS?"* e a caixa ofereceu **a mensagem do momento**, com

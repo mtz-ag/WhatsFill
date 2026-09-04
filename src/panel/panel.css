@@ -346,6 +346,19 @@
   pointer-events: none;
 }
 
+/*
+  A caixa NUNCA passa da tela.
+
+  Relato dele (04/09/2026), com a print: *"cortado e não consigo pegar a resposta"* — a caixa
+  tinha dez opções mais as treze respostas rápidas abertas, e o fim dela ficava abaixo da janela.
+  Não é cosmético: a pergunta é modal para a rodada, então a opção inalcançável **trava o
+  trabalho**, e a única saída era Esc (que descarta a decisão).
+
+  O limite é da CAIXA e não do fundo: o fundo é `pointer-events: none` de propósito — ele não pode
+  capturar rolagem nenhuma, senão a conversa atrás para de rolar (ver o cabeçalho deste arquivo).
+
+  `overscroll-behavior: contain` para a rolagem não vazar para a página quando ela acaba aqui.
+*/
 .wf-pergunta {
   background: var(--wf-bg);
   color: var(--wf-fg);
@@ -356,16 +369,39 @@
   width: 100%;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   pointer-events: auto;
+  /*
+    `border-box` é obrigatório aqui: sem ele o `max-height` vale só para o CONTEÚDO, e os 14px de
+    padding de cima e de baixo mais a borda somam 30px que estouram a conta — medido, a caixa
+    passava 18px do fim da janela mesmo com o limite escrito.
+  */
+  box-sizing: border-box;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
-/* Arrastada para uma posição sua: sai do centro e passa a valer left/top. */
+/*
+  Arrastada para uma posição sua: sai do centro e passa a valer left/top.
+
+  A altura máxima aqui é escrita pelo JS (`aplicarPosicao`), porque depende do `top` escolhido —
+  não há como dizer "daqui até o fim da tela" só em CSS.
+*/
 .wf-pergunta-solta {
   position: fixed;
   margin: 0;
   width: min(460px, calc(100vw - 32px));
 }
 
-/* O título é a alça: é por ele que se arrasta. */
+/*
+  O título é a alça: é por ele que se arrasta.
+
+  `sticky` porque a caixa passou a rolar por dentro: sem isto, rolar até as respostas rápidas
+  levava a alça para fora da vista, e a caixa deixava de ser arrastável justamente quando está
+  grande demais — que é quando arrastar importa.
+
+  O `background` e o `padding-top` negativo compensado existem para o texto rolando por baixo não
+  aparecer atrás do título.
+*/
 .wf-pergunta-titulo {
   font-weight: 600;
   font-size: 15px;
@@ -373,6 +409,12 @@
   cursor: grab;
   user-select: none;
   touch-action: none;
+  position: sticky;
+  top: -14px;
+  z-index: 1;
+  background: var(--wf-bg);
+  padding: 14px 0 4px;
+  margin-top: -14px;
 }
 .wf-pergunta-titulo:active { cursor: grabbing; }
 .wf-pergunta-titulo::before { content: '⠿ '; color: var(--wf-muted); font-weight: 400; }
