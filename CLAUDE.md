@@ -1430,6 +1430,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   bifurcação passaram a ter a mesma forma, e as duas caixas de *"sem pendência"* viraram cópias
   mortas e foram removidas (o verificador de caixas mortas acusou).
 
+- **O rascunho da IA não via a NOSSA fala — ela escrevia sem saber o que já tinha sido
+  respondido.** Print da Maria Geny (03/09/2026): ela mandou um áudio às 21:39, nós já tínhamos
+  respondido às 19:47, e o rascunho respondeu a mensagem ANTERIOR à nossa resposta. Ele: *"ignorou a
+  última mensagem da pessoa e a minha resposta, e respondeu a penúltima mensagem dela"*. A IA não
+  tinha como acertar: `montarContatoRascunho` mandava só as mensagens DELA, numeradas, sem a nossa
+  fala no meio e sem dizer qual estava pendente — para o modelo era uma pilha de falas soltas, e
+  responder qualquer uma era igualmente plausível. Hoje vai a conversa inteira, com `NÓS:`/`ELA:` e
+  a marca **← RESPONDA A ESTA** na última dela (que é a última DELA, não a última da conversa: se
+  nós falamos por último, a marca continua na fala que ficou sem resposta). **`mensagensParaIA` (só
+  o que ela escreveu) continua certo para a DECISÃO** — escolher entre respostas prontas é sobre o
+  que ela pediu; quem ESCREVE precisa dos dois lados, e é `conversaParaIA`.
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto

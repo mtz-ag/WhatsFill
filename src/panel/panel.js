@@ -1313,7 +1313,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           regras: state.ia.regras,
           gabinete: await gabineteLib.paraOPrompt(dela),
           modelo: state.ia.modelo,
-          mensagens: dela,
+          // Rascunhar precisa dos DOIS lados: sem a nossa fala no meio a IA não sabe o que já foi
+          // respondido. Ver `conversaParaIA`.
+          mensagens: conversaParaIA(),
           campos: { Cidade: valueNamed('Cidade') },
         });
 
@@ -8467,6 +8469,39 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       })
       .filter(Boolean);
   }
+
+  /**
+   * **A conversa dos DOIS lados, em ordem** — é disto que o rascunho precisa.
+   *
+   * Print da Maria Geny (03/09/2026): ela mandou um áudio às 21:39, nós já tínhamos respondido às
+   * 19:47, e o rascunho respondeu a mensagem anterior à nossa resposta. Ele: *"ignorou a última
+   * mensagem da pessoa e a minha resposta, e respondeu a penúltima mensagem dela"*.
+   *
+   * `mensagensParaIA` manda só o que ELA escreveu — está certo para a DECISÃO (escolher entre as
+   * respostas prontas é sobre o que ela pediu), e é insuficiente para ESCREVER: sem a nossa fala no
+   * meio, não há como saber o que já foi respondido.
+   *
+   * Ordena pelo horário porque as duas listas vêm separadas; mensagem sem hora vai para o fim da
+   * ordem em que já estava, que é a ordem da própria plataforma.
+   */
+  function conversaParaIA() {
+    const dela = (state.entrantes || []).map((m, i) => ({
+      de: 'contato',
+      texto: m?.transcrito ? `(áudio, transcrito automaticamente) ${String(m?.texto || '')}` : String(m?.texto || ''),
+      at: m?.at || null,
+      ordem: i,
+    }));
+    const nossa = (state.nossas || []).map((m, i) => ({
+      de: 'nos',
+      texto: String(m?.texto || ''),
+      at: m?.at || null,
+      ordem: i,
+    }));
+    return [...dela, ...nossa]
+      .filter((m) => m.texto.trim())
+      .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0) || a.ordem - b.ordem)
+      .map(({ de, texto }) => ({ de, texto }));
+  }
   /**
    * Rascunha com a IA e **deixa o texto no campo de mensagem, para ele mandar.**
    *
@@ -8506,7 +8541,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         regras: state.ia.regras,
         gabinete: await gabineteLib.paraOPrompt(dela),
         modelo: state.ia.modelo,
-        mensagens: dela,
+        // Rascunhar precisa dos DOIS lados — ver `conversaParaIA`.
+        mensagens: conversaParaIA(),
         /**
          * **O cadastro inteiro, e não só a cidade.**
          *

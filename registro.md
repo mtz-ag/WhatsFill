@@ -1,3 +1,57 @@
+## 2026-09-03 — O rascunho da IA não via a nossa resposta (v2.8.0)
+
+Print da Maria Geny: ela mandou um áudio às 21:39, nós já tínhamos respondido às 19:47, e o rascunho
+da IA respondeu a mensagem **anterior** à nossa resposta. Ele: *"ignorou a última mensagem da pessoa
+e a minha resposta, e respondeu a penúltima mensagem dela"* — e confirmou: *"a IA no caso"*.
+
+### Causa raiz
+
+`montarContatoRascunho` mandava **só as mensagens dela**, numeradas de 1 a N, sem nenhuma marca de
+qual estava pendente:
+
+```
+Mensagens recebidas desta pessoa, da mais antiga para a mais recente:
+[1] …
+[2] …
+```
+
+**A IA não tinha como acertar.** Sem a nossa fala no meio, não existe "já respondido"; sem marca, não
+existe "esta é a que espera". Para o modelo era uma pilha de falas soltas, e responder qualquer uma
+era igualmente plausível — a penúltima inclusive, que por acaso era a mais fácil de responder bem.
+
+### O conserto
+
+O bloco passou a levar a conversa inteira, com os dois lados e a pendência marcada:
+
+```
+A conversa inteira, da mais antiga para a mais recente. "NÓS" é o atendimento:
+ELA: …
+NÓS: …
+ELA: …   ← RESPONDA A ESTA
+Responda à ÚLTIMA mensagem dela — a marcada. O que veio antes da nossa última fala já foi
+respondido: não repita aquilo nem volte a um assunto que já encerramos.
+```
+
+A marca vai na última **dela**, não na última da conversa: se nós falamos por último, ela continua
+apontando para a fala que ficou sem resposta. Tem teste.
+
+`conversaParaIA` no painel junta `entrantes` e `nossas` e ordena pelo horário — as duas listas vêm
+separadas de `getConversation`. A transcrição continua marcada como tal.
+
+### O que NÃO mudou, de propósito
+
+`mensagensParaIA` — só o que ela escreveu — continua alimentando a **decisão**. Escolher entre as
+respostas prontas é sobre o que ela pediu; quem **escreve** é que precisa dos dois lados. Misturar as
+duas coisas encareceria o prompt da decisão sem melhorar a escolha.
+
+A forma antiga (lista de strings) continua aceita e conta como fala do contato — quebrá-la deixaria o
+rascunho sem conversa nenhuma, calado.
+
+**Arquivos:** `src/lib/ia.js`, `src/panel/panel.js`, `tests/ia.test.mjs`,
+`manifest.json` (2.7.0 → 2.8.0), `registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-03 — Transcrição não marca sem interesse, e o grupo que escondia as caixas saiu (v2.7.0)
 
 Três anotações. Uma delas é **falso positivo criado hoje por mim**.

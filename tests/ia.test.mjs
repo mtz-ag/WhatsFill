@@ -462,4 +462,45 @@ grupo('cidade: a requisicao e barata e cacheavel');
   check(req.output_config.format.schema.properties.acao.enum.length === 3, 'tres acoes, nao mais');
 }
 
+grupo('montarContatoRascunho: os DOIS lados, e a pendencia marcada (03/09/2026)');
+{
+  /**
+   * Print da Maria Geny: ela mandou um audio as 21:39, nos ja tinhamos respondido as 19:47, e o
+   * rascunho respondeu a mensagem ANTERIOR a nossa resposta. Ele: *"ignorou a ultima mensagem da
+   * pessoa e a minha resposta, e respondeu a penultima mensagem dela"*.
+   *
+   * **A IA nao tinha como acertar:** o bloco mandava so as mensagens DELA, numeradas, sem o que nos
+   * haviamos dito e sem dizer qual estava esperando resposta. Para o modelo era uma pilha de falas
+   * soltas -- responder qualquer uma era igualmente plausivel.
+   */
+  const conversa = [
+    { de: 'contato', texto: 'eu e minha familia apoiamos voces' },
+    { de: 'nos', texto: 'obrigado por contar com a gente' },
+    { de: 'contato', texto: 'espero que ele nao pegue o que nao e dele' },
+  ];
+  const t = montarContatoRascunho({ mensagens: conversa });
+
+  check(t.includes('NÓS: obrigado por contar com a gente'), 'a NOSSA fala entra na conversa');
+  check(/ELA: espero que ele nao pegue[^\n]*RESPONDA A ESTA/.test(t), 'a ultima DELA vem marcada');
+  check(!/apoiamos voces[^\n]*RESPONDA A ESTA/.test(t), 'e a penultima NAO vem marcada');
+  check(t.includes('já foi'), 'e o prompt diz que o anterior a nossa fala ja foi respondido');
+
+  // A marca vai na ultima DELA, nao na ultima da conversa: se nos falamos por ultimo, ela continua
+  // apontando para a fala dela que ficou sem resposta.
+  const nosPorUltimo = montarContatoRascunho({
+    mensagens: [...conversa, { de: 'nos', texto: 'ja te respondo' }],
+  });
+  check(/ELA: espero que ele nao pegue[^\n]*RESPONDA A ESTA/.test(nosPorUltimo), 'nos por ultimo: a marca fica na dela');
+
+  /**
+   * **A forma antiga continua valendo** -- string solta e do contato. Quebrar isto deixaria o
+   * rascunho sem conversa nenhuma, calado.
+   */
+  const soStrings = montarContatoRascunho({ mensagens: ["oi", "tudo bem?"] });
+  check(soStrings.includes('ELA: oi'), 'string solta conta como do contato');
+  check(/ELA: tudo bem\?[^\n]*RESPONDA A ESTA/.test(soStrings), 'e a ultima delas vem marcada');
+
+  check(montarContatoRascunho({}).includes("(nada)"), "sem mensagem nao explode");
+}
+
 fim();

@@ -630,8 +630,33 @@ export function montarRequisicaoRascunho({ sistema, contato, modelo = MODELO_PAD
 
 /** O bloco do contato para o rascunho: a conversa com folga, porque é dela que ele precisa. */
 export function montarContatoRascunho({ mensagens = [], campos = {} } = {}) {
-  const conversa = (mensagens || [])
-    .map((m, i) => `[${i + 1}] ${umaLinha(m, 4000)}`)
+  /**
+   * **A conversa INTEIRA, com os dois lados e com a pendência marcada.**
+   *
+   * Print da Maria Geny (03/09/2026): ela mandou um áudio às 21:39, nós já tínhamos respondido às
+   * 19:47, e o rascunho da IA respondeu a mensagem ANTERIOR à nossa resposta. Ele: *"ignorou a
+   * última mensagem da pessoa e a minha resposta, e respondeu a penúltima mensagem dela"*.
+   *
+   * **A IA não tinha como acertar:** este bloco mandava só as mensagens DELA, numeradas, sem o que
+   * nós havíamos dito e sem dizer qual estava esperando resposta. Para o modelo a conversa era uma
+   * pilha de falas soltas — responder qualquer uma era igualmente plausível.
+   *
+   * Aceita string solta (é do contato, como antes) e `{de, texto}`, que é a forma que
+   * `montarContatoCidade` já usava. A marca **← RESPONDA A ESTA** vai na última dela, e é o que
+   * transforma "escreva algo" em "responda isto".
+   */
+  const lista = (mensagens || [])
+    .map((m) => (typeof m === 'string' ? { de: 'contato', texto: m } : m))
+    .filter((m) => String(m?.texto || '').trim());
+
+  let ultimaDela = -1;
+  lista.forEach((m, i) => { if (m.de !== 'nos') ultimaDela = i; });
+
+  const conversa = lista
+    .map((m, i) => {
+      const quem = m.de === 'nos' ? 'NÓS' : 'ELA';
+      return `${quem}: ${umaLinha(m.texto, 4000)}${i === ultimaDela ? '   ← RESPONDA A ESTA' : ''}`;
+    })
     .join('\n\n');
 
   /**
@@ -659,9 +684,12 @@ export function montarContatoRascunho({ mensagens = [], campos = {} } = {}) {
     : '';
 
   return [
-    'Mensagens recebidas desta pessoa, da mais antiga para a mais recente:',
+    'A conversa inteira, da mais antiga para a mais recente. "NÓS" é o atendimento:',
     '',
     conversa || '(nada)',
+    '',
+    'Responda à ÚLTIMA mensagem dela — a marcada. O que veio antes da nossa última fala já foi',
+    'respondido: não repita aquilo nem volte a um assunto que já encerramos.',
     '',
     cadastro,
     'Escreva o rascunho da resposta.',
