@@ -5408,6 +5408,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             ? ['Cidade: ', ...cidadeMarcada(), cidadeSubstituida()]
             : 'Cidade: (vazia)',
           `Etiquetas: ${etiquetas.join(', ') || '(nenhuma)'}`,
+          /**
+           * **Quando ela falou pela última vez** — pedido dele (04/09), com a print da Isaura: a
+           * caixa recomendava a mensagem do momento por um "Bom dia" do dia anterior, e nada na
+           * tela dizia isso.
+           *
+           * Fica no alto, junto de cidade e etiquetas, porque é retrato do contato e não aviso:
+           * ele lê essas três linhas antes de olhar as opções.
+           */
+          (() => {
+            const ultimaDela = [...(state.entrantes || [])].reverse().find((m) => m?.at);
+            if (!ultimaDela) return '';
+            const quando = quandoFoi(ultimaDela.at);
+            return quando ? `Última mensagem dela: ${quando}` : '';
+          })(),
           // O que ela respondeu sobre o evento, quando respondeu: é o que explica por que a
           // tecla 4 mudou de nome, e sem isso a troca de texto seria invisível.
           presenca
@@ -6120,6 +6134,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
            * indistinguíveis, e três anotações de 03/09 chegaram até mim já consertadas.
            */
           versao: versaoCarregada(),
+          // Quando ela falou pela última vez — mesmo pedido que pôs a linha na caixa da rodada.
+          ultimaDelaEm: [...(state.entrantes || [])].reverse().find((m) => m?.at)?.at || '',
           porque,
         });
         await store.set('observacoes', r.lista);
@@ -6283,6 +6299,34 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /** "hoje às 14:03" / "05/08 às 09:12" — o dia só aparece quando não é hoje. */
+  /**
+   * **Quando foi, do jeito que ele lê** — "hoje às 11:00", "ONTEM às 11:00", "há 3 dias (01/09)".
+   *
+   * Pedido dele (04/09/2026), com a print da Isaura: a caixa recomendava a mensagem do momento por
+   * um "Bom dia" que era **do dia anterior**, e nada na tela dizia isso. *"A sugestão não fala que
+   * foi ontem a mensagem dela; especifique sempre quando foi feita a última mensagem."*
+   *
+   * "Ontem" vem em MAIÚSCULA de propósito: é a informação que muda a decisão dele — cumprimento de
+   * hoje se responde, cumprimento de ontem já é outra conversa — e ela estava passando despercebida
+   * no meio das outras linhas.
+   *
+   * O corte é o DIA local, o mesmo de `cortesia.deOutroDia`: é o que a plataforma mostra na tela,
+   * e duas contagens diferentes de "ontem" na mesma tela seriam pior que nenhuma.
+   */
+  function quandoFoi(quando) {
+    const d = new Date(quando);
+    if (Number.isNaN(d.getTime())) return '';
+    const hora = formatarHora(quando);
+    if (ehHoje(quando)) return `hoje às ${hora}`;
+
+    const dia = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+    const dias = Math.round((dia(new Date()) - dia(d)) / 86400000);
+    const data = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    if (dias === 1) return `ONTEM às ${hora}`;
+    if (dias > 1) return `há ${dias} dias (${data} às ${hora})`;
+    return `${data} às ${hora}`;
+  }
+
   function formatarQuando(quando) {
     const d = new Date(quando);
     if (Number.isNaN(d.getTime())) return 'em data desconhecida';

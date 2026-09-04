@@ -84,6 +84,15 @@ export function nova(dados) {
      * valendo.
      */
     versao: texto(d.versao, 12),
+    /**
+     * **Quando ela falou pela última vez.**
+     *
+     * Mesmo pedido dele que pôs a linha na caixa da rodada (04/09/2026): *"especifique sempre
+     * quando foi feita a última mensagem"*. Vale igual aqui — eu li vários lotes sem saber se as
+     * mensagens eram do mesmo dia, e "cumprimento de hoje" e "cumprimento de ontem" pedem
+     * desfechos diferentes desde o critério de tempo do apoio.
+     */
+    ultimaDelaEm: texto(d.ultimaDelaEm, 40),
     porque: texto(d.porque, 1000),
     /**
      * **Já foi copiada para o Claude?**
@@ -185,6 +194,15 @@ export function paraTexto(lista) {
         // Em ordem, a mais recente por último — é como a conversa é lida na tela.
         linhas.push(`      as últimas ${it.mensagens.length} dela:`);
         for (const m of it.mensagens) linhas.push(`         · "${m}"`);
+      }
+      if (it.ultimaDelaEm) {
+        const q = new Date(it.ultimaDelaEm);
+        if (!Number.isNaN(q.getTime())) {
+          const dia = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+          const dias = Math.round((dia(new Date(it.em)) - dia(q)) / 86400000);
+          const quando = dias <= 0 ? 'no mesmo dia' : dias === 1 ? 'no dia ANTERIOR' : `${dias} dias antes`;
+          linhas.push(`      a última dela foi ${quando} (${q.toLocaleString('pt-BR')})`);
+        }
       }
       if (it.etiquetas.length) linhas.push(`      etiquetas: ${it.etiquetas.join(', ')}`);
       linhas.push(`      >> ELE: ${it.porque}`);

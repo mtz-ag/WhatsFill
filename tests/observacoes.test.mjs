@@ -202,4 +202,27 @@ grupo('a anotacao guarda a VERSAO e a hora (03/09/2026)');
   check(!obs.paraTexto([antiga]).includes(' · v'), 'e o relatorio nao inventa uma');
 }
 
+grupo('a anotacao diz QUANDO ela falou pela ultima vez (04/09/2026)');
+{
+  /**
+   * Mesmo pedido dele que pos a linha na caixa da rodada: *"a sugestao nao fala que foi ontem a
+   * mensagem dela, especifique sempre quando foi feita a ultima mensagem"*.
+   *
+   * Vale igual aqui -- eu li varios lotes sem saber se as mensagens eram do mesmo dia, e
+   * "cumprimento de hoje" e "cumprimento de ontem" pedem desfechos diferentes desde o criterio de
+   * tempo do apoio.
+   */
+  const em = '2026-09-04T09:40:00';
+  const com = (ultima) => obs.paraTexto([obs.nova({ porque: 'x', em, ultimaDelaEm: ultima })]);
+
+  check(com('2026-09-04T08:00:00').includes('no mesmo dia'), 'mesma data: "no mesmo dia"');
+  check(com('2026-09-03T11:00:00').includes('no dia ANTERIOR'), 'vespera: "no dia ANTERIOR"');
+  check(com('2026-09-01T11:00:00').includes('3 dias antes'), 'tres dias atras');
+
+  // Sem o campo (anotacao antiga) o relatorio nao inventa nada.
+  check(!obs.paraTexto([obs.nova({ porque: 'x', em })]).includes('a última dela'), 'sem o campo, nada aparece');
+  check(!com('nao-e-data').includes('a última dela'), 'data invalida tambem nao');
+  check(obs.nova({ porque: 'x', ultimaDelaEm: '2026-09-03T11:00:00' }).ultimaDelaEm === '2026-09-03T11:00:00', 'o campo e guardado');
+}
+
 fim();

@@ -1,3 +1,35 @@
+## 2026-09-04 — A caixa diz QUANDO foi a última mensagem dela (v2.10.0)
+
+Pedido dele, com a print da Isaura: a caixa recomendava a **mensagem do momento** por um *"Bom dia"*
+que era do **dia anterior**, e nada na tela dizia isso. *"A sugestão não fala que foi ontem a
+mensagem dela; especifique sempre quando foi feita a última mensagem."*
+
+Ele tem razão e a informação já decidia coisas: desde o critério de tempo do apoio (03/09),
+"cumprimento de hoje" e "cumprimento de ontem" pedem desfechos diferentes — e a única maneira de ele
+conferir era abrir a conversa e olhar o relógio.
+
+### Onde a linha entrou
+
+Duas telas, o mesmo dado:
+
+- **A caixa da rodada**, logo abaixo de cidade e etiquetas: `Última mensagem dela: ONTEM às 11:00`.
+  Fica no alto porque é retrato do contato, não aviso — ele lê essas três linhas antes das opções.
+- **A anotação**, que é o que chega até mim: `a última dela foi no dia ANTERIOR (03/09/2026 11:00)`.
+  Li vários lotes hoje sem saber se as mensagens eram do mesmo dia.
+
+### O formato
+
+`hoje às 11:00` · **`ONTEM às 11:00`** · `há 3 dias (01/09 às 11:00)`.
+
+"ONTEM" em maiúscula de propósito: é a informação que muda a decisão, e estava passando despercebida
+no meio das outras linhas. O corte é o **dia local**, o mesmo de `cortesia.deOutroDia` — duas
+contagens diferentes de "ontem" na mesma tela seriam pior que nenhuma.
+
+**Arquivos:** `src/panel/panel.js`, `src/lib/observacoes.js`, `tests/observacoes.test.mjs`,
+`manifest.json` (2.9.0 → 2.10.0), `registro.md`.
+
+---
+
 ## 2026-09-04 — O pedido de dados não era reconhecido, e a IA respondia só a última (v2.9.0)
 
 Quatro correções: três do lote da manhã e uma que ele mandou no meio do trabalho.
