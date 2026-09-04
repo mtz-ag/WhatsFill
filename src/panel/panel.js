@@ -2170,6 +2170,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(renderCartaoNovos(cfg));
     body.append(renderCartaoMomento(cfg));
     body.append(renderCartaoRespondidos());
+    body.append(renderCartaoEtiquetas(cfg));
     // "Sem retorno" (reabrir em lote + trabalhar em Meus) escondida por decisão do Thiago
     // (15/08): risco de derrubar o número é grande demais para o uso que ela teria — reabrir
     // gente fria em sequência é o padrão que mais se parece com disparo em massa para o
@@ -2680,6 +2681,49 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /** Limite, pausa e o Parar — valem para qualquer rodada. */
+  /**
+   * **As etiquetas que a rodada APLICA sozinha.**
+   *
+   * Cartão próprio porque os dois campos decidem o que fica gravado no CRM, e estavam presos dentro
+   * de um cartão escondido desde 15/08 (relato dele em 04/09: *"não achei esse campo"*). Regra que
+   * depende de configuração precisa da configuração ALCANÇÁVEL — senão ela nasce desligada em quem
+   * mais precisa dela, que é a armadilha do `store.get` que este projeto já registrou.
+   *
+   * As duas listas de etiqueta que a rodada LÊ (pular, só concluir) ficam no cartão da fila, junto
+   * do botão que as usa. Estas duas são o contrário: elas ESCREVEM.
+   */
+  function renderCartaoEtiquetas(cfg) {
+    const card = h('div', { class: 'wf-card' }, [
+      h('h4', {}, 'Etiquetas que a rodada aplica'),
+      h('div', { class: 'wf-preview' },
+        'Duas etiquetas que a rodada grava no contato sozinha. Digite o nome EXATAMENTE como está ' +
+          'no CRM — a extensão nunca cria etiqueta. Vazio = não marca ninguém.'),
+    ]);
+
+    card.append(
+      campoTexto('Etiqueta de SEM INTERESSE (recusou ou hostilizou)', cfg.etiquetaSemInteresse, (v) =>
+        salvarAuto({ etiquetaSemInteresse: v.trim() }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Quem pede para não receber mais, ou vem hostilizar, é marcado com ela e concluído SEM ' +
+          'resposta (tecla "S"). Ela também é LIDA na visita seguinte: sem o campo preenchido, a ' +
+          'rodada precisa redescobrir a hostilidade toda vez. A detecção exige sinal forte — ' +
+          'xingar o adversário em terceira pessoa NÃO conta, isso é apoiador.'),
+      campoTexto('Etiqueta de quem PEDIU DINHEIRO OU EMPREGO', cfg.etiquetaPedidoAjuda, (v) =>
+        salvarAuto({ etiquetaPedidoAjuda: v.trim() }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Aplicada assim que sai uma das duas respostas que negam — "Pedido de ajuda financeira" ou ' +
+          '"Pedido de emprego" —, por qualquer caminho: a rodada, um ramo do quadro, a escolha da ' +
+          'IA ou a resposta rápida da caixa. Ex.: "🔴Procura emprego ou dinheiro".')
+    );
+
+    if (!cfg.etiquetaSemInteresse && !cfg.etiquetaPedidoAjuda) {
+      card.append(h('div', { class: 'wf-block' }, 'Nenhuma das duas está preenchida — a rodada não vai marcar ninguém.'));
+    }
+    return card;
+  }
+
   function renderCartaoRitmo(cfg) {
     const card = h('div', { class: 'wf-card' }, [h('h4', {}, 'Ritmo')]);
     card.append(
@@ -2870,29 +2914,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'servidor.'),
     ]);
 
+    /**
+     * **Os campos de ETIQUETA saíram daqui em 04/09/2026** — relato dele: *"não achei esse campo na
+     * extensão, na aba Automatizado"*.
+     *
+     * Este cartão está escondido desde 15/08 (a rodada de "sem retorno", que ele decidiu não usar),
+     * e os três campos de etiqueta foram junto **sem que ninguém notasse**: dois deles não têm nada
+     * a ver com esta rodada, e as regras que dependem deles — a etiqueta de sem interesse e a de
+     * quem pede dinheiro — ficaram **impossíveis de configurar**. Uma delas estava na lista de
+     * pendências há dois dias como coisa para ele preencher, num campo que não existia na tela.
+     *
+     * Foram para `renderCartaoEtiquetas`, que é visível. Aqui fica só o desta fila.
+     */
     card.append(
       campoTexto('Etiqueta que marca esta fila (some ao concluir pelo painel)', cfg.etiquetaSemRetorno, (v) =>
         salvarAuto({ etiquetaSemRetorno: v.trim() }).then(renderAll)
       ),
-      campoTexto('Etiqueta de SEM INTERESSE (recusou ou hostilizou)', cfg.etiquetaSemInteresse, (v) =>
-        salvarAuto({ etiquetaSemInteresse: v.trim() }).then(renderAll)
-      ),
-      campoTexto('Etiqueta de quem PEDIU DINHEIRO OU EMPREGO', cfg.etiquetaPedidoAjuda, (v) =>
-        salvarAuto({ etiquetaPedidoAjuda: v.trim() }).then(renderAll)
-      ),
-      h('div', { class: 'wf-origin' },
-        'Aplicada assim que sai uma das duas respostas que negam — "Pedido de ajuda financeira" ou ' +
-          '"Pedido de emprego" —, por qualquer caminho: a rodada, um ramo do quadro ou a resposta ' +
-          'rápida da caixa. Digite o nome exatamente como está no CRM (ex.: "🔴Procura emprego ou ' +
-          'dinheiro"). A etiqueta NÃO é criada: se não existir, o envio acontece igual e o aviso ' +
-          'aparece no status. Vazio = não marca ninguém.'),
-      h('div', { class: 'wf-origin' },
-        'Quem pede para não receber mais, ou vem hostilizar, é marcado com esta etiqueta e ' +
-          'concluído SEM resposta (tecla "S" na caixa da rodada). Digite o nome exatamente como ' +
-          'está no CRM — a extensão não cria etiqueta sozinha. Vazio: a rodada conclui sem ' +
-          'responder e não marca ninguém. A detecção exige sinal forte: pedido explícito de sair, ' +
-          '"não" na abertura da resposta, ou xingamento dirigido a nós. Xingar o adversário em ' +
-          'terceira pessoa NÃO conta — isso é apoiador, e tirá-lo da fila seria o pior erro aqui.'),
       h('div', { class: 'wf-origin' },
         'Concluir sem tirar esta etiqueta devolve o contato ao topo da lista filtrada por ela — ' +
           'ele vira trabalho de novo amanhã, já tendo sido trabalhado hoje. O Concluir do painel ' +

@@ -41,6 +41,35 @@ Branch `claude/whatsfill-ia`, **v2.14.0**, tudo commitado e no remoto. 38 commit
 
 ---
 
+## 2026-09-04 — Os campos de etiqueta estavam escondidos há vinte dias (v2.23.0)
+
+*"não achei esse campo na extensão na aba automatizado"*. Ele tinha razão, e o motivo é pior do que
+não achar: **o campo não estava na tela.**
+
+Os três campos de etiqueta viviam dentro de `renderCartaoReabrir` — o cartão da rodada de "sem
+retorno", **escondido desde 15/08** por decisão dele (reabrir gente fria em sequência é o padrão que
+mais se parece com disparo em massa). Escondi as duas linhas que o punham na tela; os campos foram
+junto, e dois deles não têm nada a ver com aquela rodada:
+
+- **Etiqueta de SEM INTERESSE** — a rodada aplica quando alguém recusa ou hostiliza, e **lê** na
+  visita seguinte;
+- **Etiqueta de quem PEDIU DINHEIRO OU EMPREGO** — aplicada quando sai uma das respostas que negam.
+
+As duas regras existem, funcionam e estavam **impossíveis de configurar**. Pior: a primeira passou
+dois dias na lista de pendências desta sessão como *"coisa para ele preencher"*, num campo que não
+existia. Eu escrevi a pendência sem conferir se dava para cumpri-la.
+
+Agora há um cartão próprio, **"Etiquetas que a rodada aplica"**, visível na aba Automatizado, com um
+aviso quando as duas estão vazias. O cartão escondido ficou só com o campo que é dele.
+
+A lição, que vale para a próxima vez que algo for escondido: **esconder um cartão esconde tudo o que
+está dentro dele.** Antes de comentar a linha que o desenha, veja o que mais mora ali.
+
+**Arquivos:** `src/panel/panel.js`, `CLAUDE.md` (+1 armadilha), `manifest.json` (2.22.0 → 2.23.0).
+Quinze suítes e os dois verificadores.
+
+---
+
 ## 2026-09-04 — O modelo padrão só na primeira vinda pelo anúncio (v2.22.0)
 
 Regra dele, com a definição junto:

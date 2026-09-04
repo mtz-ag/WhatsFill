@@ -1212,6 +1212,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   aquilo, e aquilo e conteudo de verdade, nao recibo.
 
 
+- **Esconder um CARTAO esconde tudo o que estiver dentro dele — inclusive o que nao tem nada a ver.**
+  Relato dele (04/09/2026): *"nao achei esse campo na extensao na aba automatizado"*. Os campos
+  "Etiqueta de SEM INTERESSE" e "Etiqueta de quem PEDIU DINHEIRO OU EMPREGO" viviam dentro de
+  `renderCartaoReabrir`, **escondido desde 15/08** por causa da rodada de "sem retorno" — e foram
+  junto sem ninguem notar. Duas regras que gravam no CRM ficaram **impossiveis de configurar**, e
+  uma delas passou dois dias na lista de pendencias como coisa para ele preencher **num campo que
+  nao existia na tela**. Hoje ha `renderCartaoEtiquetas`, visivel. **Ao esconder um cartao, confira
+  o que mais esta dentro** — e prefira esconder a LINHA que o coloca na tela apenas quando tudo ali
+  pertence ao que se esta escondendo.
+
+
 ## Armadilhas do próprio painel
 
 - **`store.get` só mescla defaults em ALGUMAS chaves.** Chave nova dentro de um objeto já salvo
