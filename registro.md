@@ -41,6 +41,74 @@ Branch `claude/whatsfill-ia`, **v2.14.0**, tudo commitado e no remoto. 38 commit
 
 ---
 
+## 2026-09-04 — "Certamente é um problema de ramo" (v2.17.0)
+
+A Ieda perguntou *"Você é candidato daqui do RS?"* e a caixa ofereceu **a mensagem do momento**, com
+o motivo *"a última mensagem dela é de outro dia — o contexto passou"*.
+
+Ele estava certo sobre o sintoma e o conserto é mais fundo que mover a caixa.
+
+### Primeiro: a exceção estava na posição, e posição não basta
+
+Quando criei `contexto-de-outro-dia` (ontem), ele nomeou a exceção no mesmo recado: *"único pretexto
+que exclui a necessidade de hora é pergunta pendente, que deve ser respondida"*. Eu a implementei
+como **ordem** — a caixa fica abaixo de `pergunta-aberta`.
+
+Ordem só cobre o que a regra de cima reconhece. A pergunta da Ieda não estava em lista nenhuma, e a
+caixa do tempo decidiu.
+
+Agora a exceção está no `quando` da própria regra. A diferença que importa: **vale onde quer que a
+caixa esteja no quadro dele** — inclusive no que ele já exportou. Posição é preferência dele;
+exceção que ele nomeou é regra dele.
+
+### Depois: a lista de formas de perguntar não fecha
+
+Só isso não resolveu — medido: com a caixa do tempo fora, `conteudo-pedido` assumia e mandava **o
+modelo**, que é pior.
+
+E aí está o padrão que eu devia ter visto duas anotações atrás:
+
+| anotação | pergunta | o que eu fiz |
+|---|---|---|
+| Teresinha (03/09) | *"Tem alguém que vem na casa da gente pra conversar"* | acrescentei a forma à lista |
+| Paulo Quevedo (03/09) | *"Colorado ou Gremista?"* | criei um sinal fraco, só para não concluir |
+| Ieda (04/09) | *"Você é candidato daqui do RS?"* | — |
+
+**Ninguém cadastra todas as maneiras de perguntar.** O que fecha é a inversão: **é pergunta a menos
+que uma resposta pronta a responda.**
+
+Em 03/09 eu tentei alargar para "qualquer ?" e quebrei cinco casos que ele já tinha decidido, então
+desisti. O erro não era o alargamento — era que as cinco exclusões **só existiam por acidente**, por
+não casarem com a lista curta de formas. Escritas (`RESPONDIDA_POR_PRONTA`), o alargamento fica
+seguro:
+
+1. *"pode me mandar o material?"* — e o infinitivo, que o padrão antigo não pegava;
+2. *"Tudo bem?"*, *"tudo certo?"*, *"como vai?"*;
+3. *"Como posso ajudar na campanha?"*;
+4. *"tem algum material para eu compartilhar?"*;
+5. *"tem algum grupo?"*.
+
+**A exclusão diz QUEM responde, nunca SE responde** — `perguntaPendente` continua impedindo concluir
+em silêncio para todas elas.
+
+A guarda de **posição** continua: sem "?", só conta abrindo a mensagem. É ela que impede *"ficou
+muito grato pq sou Bolsonaro desde sempre"* (print do Ciro) de virar pergunta.
+
+### O custo, dito
+
+Mais contato indo para a **tecla 6** — ele respondendo à mão. É o lado barato de errar; o outro é
+material de campanha em cima de uma pergunta, que é o que ele reportou três vezes.
+
+**Medido no quadro que ELE tem** (o exportado em 2.14.0, sem reimportar): a Ieda passa de tecla 5
+para **tecla 6**. Sem a pergunta, a caixa do tempo continua decidindo como antes.
+
+**Arquivos:** `src/lib/cortesia.js` (`RESPONDIDA_POR_PRONTA`, a inversão em
+`conversaTemPerguntaAberta`), `src/lib/sugestao.js` (a exceção na condição de
+`contexto-de-outro-dia`), `tests/cortesia.test.mjs` (+22), `CLAUDE.md` (+2 armadilhas),
+`manifest.json` (2.16.0 → 2.17.0). Quinze suítes, os dois verificadores, 59 caixas sem problemas.
+
+---
+
 ## 2026-09-04 — O relógio da IA, e a pergunta que o "boa tarde" escondia (v2.16.0)
 
 ### "A IA está sem acesso a data e hora atual"

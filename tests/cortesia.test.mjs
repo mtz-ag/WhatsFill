@@ -1326,4 +1326,54 @@ grupo('"confirmado" sozinho nao e presenca (04/09/2026)');
   check(presenca('Estarei lá') === 'sim', 'e "estarei la"');
 }
 
+grupo('pergunta aberta: e pergunta a menos que uma pronta responda (04/09/2026)');
+{
+  /**
+   * Print da Ieda: *"Obrigada pelas relevantes informacoes!"*, *"Voce e candidato daqui do RS?"*,
+   * *"Boa tarde!"* -- e a rodada ofereceu a mensagem do momento. Ele: *"certamente e um problema de
+   * ramo"*, depois de ja ter dito *"responder a pergunta e prioridade"*.
+   *
+   * **Terceira vez a mesma classe**, e as tres resolvidas acrescentando uma forma a lista: a
+   * Teresinha ("tem alguem que vem na casa da gente"), o Paulo Quevedo ("Colorado ou Gremista?") e
+   * agora a Ieda. Lista de formas nao fecha -- ninguem cadastra todas as maneiras de perguntar.
+   *
+   * O que fecha e a inversao: **e pergunta a menos que uma resposta pronta a responda**.
+   */
+  const M = (t) => [{ texto: t, at: '2026-09-04T13:43:00' }];
+  const aberta = (t) => conversaTemPerguntaAberta(M(t), null) !== null;
+
+  check(aberta('Você é candidato daqui do RS?'), 'o caso da Ieda');
+  check(aberta('Colorado ou Gremista?'), 'o caso do Paulo Quevedo');
+  check(aberta('Já tomaram providências?'), 'o caso de Porto Alegre');
+  check(aberta('e o material, chega quando?'), 'pergunta sobre prazo');
+
+  /**
+   * **As CINCO exclusoes dele continuam** -- em 03/09 eu alarguei para "qualquer ?" sem elas e
+   * quebrei as cinco. Agora estao escritas em `RESPONDIDA_POR_PRONTA`, entao deixam de ser
+   * acidente. A exclusao diz QUEM responde, nunca SE responde: `perguntaPendente` continua
+   * impedindo concluir em silencio.
+   */
+  check(!aberta('pode me mandar o material?'), '1. pedido de material');
+  check(!aberta('Tudo bem?'), '2. cortesia com interrogacao');
+  check(!aberta('Como posso ajudar na campanha?'), '3. oferta de ajuda');
+  check(!aberta('tem algum material para eu compartilhar?'), '4. material para compartilhar');
+  check(!aberta('tem algum grupo?'), '5. grupo');
+
+  /**
+   * **A guarda de POSICAO continua**: sem "?", so conta abrindo a mensagem. E ela que impede o
+   * "pq" explicativo do Ciro de virar pergunta.
+   */
+  check(!aberta('ficou muito grato pq sou Bolsonaro desde sempre'), 'o "pq" no meio continua nao sendo pergunta');
+  check(aberta('pq nao tem material aqui'), 'mas no comeco continua sendo');
+
+  // E o que nunca foi pergunta continua fora -- e o que impede isto de esvaziar a automacao.
+  for (const t of ['Bom dia', 'obrigado pelo trabalho de voces', 'tamo junto, sempre com voces',
+                   'vou votar 22 com certeza', 'Olá! Eu apoio as Escolas Cívico-Militares 🤝',
+                   'Nossos votos, estão confirmados: Capitão Martim para Deputado Estadual',
+                   'Quero confirmar minha presença no evento: AMIGOS CAPITAO MARTIM',
+                   'Maria Silva', 'Porto Alegre', 'Boa tarde!']) {
+    check(!aberta(t), `nao e pergunta: "${t.slice(0, 40)}"`);
+  }
+}
+
 fim();

@@ -1313,6 +1313,36 @@ export function soExpressaApoio(entrantes, nossaUltimaAt, padroesDeAnuncio = [])
  * @param {string|null} nossaUltimaAt
  * @returns {{motivo:string}|null}
  */
+/**
+ * **Perguntas que uma resposta PRONTA já responde** — as exclusões dele, agora explícitas.
+ *
+ * Em 03/09/2026 eu tentei alargar `conversaTemPerguntaAberta` para "qualquer ?" e quebrei cinco
+ * casos que ele já tinha decidido: *"pode me mandar o material?"*, *"Tudo bem?"*, *"Como posso
+ * ajudar na campanha?"*, *"tem algum material para eu compartilhar?"* e *"tem algum grupo?"*. Na
+ * ocasião desisti do caminho — as exclusões só existiam por acidente, por não estarem na lista
+ * curta de formas.
+ *
+ * Escritas, elas deixam de ser acidente, e o alargamento passa a ser seguro. **A exclusão diz QUEM
+ * responde (o modelo, a mensagem do momento), nunca SE responde** — nenhuma delas conclui em
+ * silêncio, porque `perguntaPendente` continua valendo por cima.
+ */
+const RESPONDIDA_POR_PRONTA = [
+  // "quero receber o conteúdo", "me manda o material"
+  PEDIDO_DE_MATERIAL,
+  /**
+   * O INFINITIVO, que o `PEDIDO_DE_MATERIAL` não pega: *"pode me mandar o material?"* é a forma
+   * mais comum de pedir, e a exclusão dele nunca precisou funcionar até a pergunta passar a valer
+   * por "?" — antes ela morria por não casar com nenhuma forma da lista curta.
+   */
+  /(^|[^\p{L}])(mandar|enviar|passar|repassar|disponibilizar)\s+(o\s+|a\s+|um\s+|uma\s+|uns\s+|algum\s+)?(material|conteudo|conte[uú]do|adesivo|santinho|panfleto|folder|arte|card|v[ií]deo|foto|link|informa)/iu,
+  /(^|[^\p{L}])(tem|teria|tenho\s+como|onde\s+tem)\s+(algum|alguma)\s+(material|conteudo|adesivo|santinho|panfleto|folder|arte|card|video|foto)/iu,
+  /(^|[^\p{L}])(tem|teria)\s+(algum|alguma)\s+(grupo|lista|whats|whatsapp)/iu,
+  // cortesia com interrogação: "tudo bem?", "como vai?", "tudo certo?"
+  /(^|[^\p{L}])(tudo\s+(bem|certo|joia|bom)|como\s+(vai|esta|voce\s+esta)|como\s+vao\s+voces)(\s|\?|!|$)/iu,
+  // oferta: "como posso ajudar na campanha?" — é ela querendo ajudar, e há resposta pronta
+  /(^|[^\p{L}])(como|em\s+que|no\s+que)\s+(eu\s+)?posso\s+(ajudar|contribuir|colaborar)/iu,
+];
+
 export function conversaTemPerguntaAberta(entrantes, nossaUltimaAt) {
   const rajada = rajadaFinal(entrantes, nossaUltimaAt);
   if (!rajada.length) return null;
@@ -1359,8 +1389,41 @@ export function conversaTemPerguntaAberta(entrantes, nossaUltimaAt) {
       }
     }
 
+    /**
+     * **Qualquer pergunta que uma resposta pronta não cubra** — print da Ieda (04/09/2026).
+     *
+     * Ela perguntou *"Você é candidato daqui do RS?"* e recebeu a mensagem do momento. Antes disso,
+     * a Teresinha (*"Tem alguém que vem na casa da gente pra conversar"*) e o Paulo Quevedo
+     * (*"Colorado ou Gremista?"*): **três vezes a mesma classe**, e as três resolvidas
+     * acrescentando uma forma à lista. Lista de formas não fecha — ninguém cadastra todas as
+     * maneiras de perguntar.
+     *
+     * O que fecha é a inversão: **é pergunta a menos que uma resposta pronta a responda**, e essas
+     * estão escritas em `RESPONDIDA_POR_PRONTA`. Ele repetiu a regra três vezes com as mesmas
+     * palavras — *"a regra de sempre responder uma pergunta tem que valer"*, *"tem pergunta não
+     * conclui"*, *"responder a pergunta é prioridade"*.
+     *
+     * **A guarda de POSIÇÃO continua**: sem "?", só conta abrindo a mensagem. É ela que impede
+     * *"ficou muito grato pq sou Bolsonaro desde sempre"* (print do Ciro) de virar pergunta.
+     *
+     * O custo é conhecido e é o lado barato: mais contato indo para a tecla 6, que é ele
+     * respondendo. O outro lado é material de campanha em cima de uma pergunta.
+     */
+    if (RESPONDIDA_POR_PRONTA.some((re) => re.test(texto))) continue;
+    if (temInterrogacao || ABRE_PERGUNTANDO.test(semAcentos(texto)) || PERGUNTA_DECLARADA.test(semAcentos(texto))) {
+      return { motivo: 'fez uma pergunta que nenhuma resposta pronta responde' };
+    }
   }
   return null;
+}
+
+/** Sem acento e com o espaço normalizado — os padrões de pergunta são escritos assim. */
+function semAcentos(texto) {
+  return String(texto || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /** A última mensagem do contato é só uma reação? */

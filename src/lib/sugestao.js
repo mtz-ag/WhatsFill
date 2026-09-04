@@ -566,14 +566,26 @@ export const REGRAS = [
      *
      * **As guardas estão na condição, e são o que impede a repetição:** sem mensagem do momento
      * configurada, ou já tendo saído para essa pessoa, a regra não casa e o quadro decide como
-     * antes. Ela também fica **abaixo de tudo o que precisa de gente** — pedido de ajuda, pergunta,
-     * áudio, denúncia respondida —, que é a exceção que ele nomeou no mesmo dia: *"único pretexto
-     * que exclui a necessidade de hora é pergunta pendente, que deve ser respondida"*.
+     * antes.
+     *
+     * **A exceção da pergunta está na CONDIÇÃO, e não só na posição** — print da Ieda (04/09/2026).
+     * Ele nomeou a exceção no dia em que criou a regra: *"único pretexto que exclui a necessidade
+     * de hora é pergunta pendente, que deve ser respondida"*. Eu a implementei como ORDEM (esta
+     * regra fica abaixo de `pergunta-aberta`), e ordem só cobre as perguntas da lista curta. A Ieda
+     * perguntou *"Você é candidato daqui do RS?"* — que não está em lista nenhuma — e a rodada
+     * ofereceu a mensagem do momento. Ele: *"certamente é um problema de ramo"*.
+     *
+     * Estava certo sobre o sintoma, e o conserto é mais fundo que mover a caixa: com a exceção na
+     * condição, ela vale **onde quer que a caixa esteja no quadro dele** — inclusive nos quadros já
+     * exportados. Posição é preferência dele; esta exceção é regra dele.
+     *
+     * Ela também continua **abaixo de tudo o que precisa de gente** — pedido de ajuda, pergunta,
+     * áudio, denúncia respondida.
      *
      * E abaixo do anúncio reconhecido: clicar num anúncio é pedir uma coisa específica, e escolha
      * explícita dela não se substitui por dedução nossa.
      */
-    quando: (c) => !!c.deOutroDia && c.podeMandarMomento && !c.momentoJaEnviado,
+    quando: (c) => !!c.deOutroDia && !c.perguntaPendente && c.podeMandarMomento && !c.momentoJaEnviado,
     motivo: () =>
       'a última mensagem dela é de outro dia — o contexto passou; a mensagem do momento é o que ' +
       'há de novo.',

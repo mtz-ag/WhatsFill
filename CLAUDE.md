@@ -1120,6 +1120,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   qualquer em cima; e a mesma ideia da retratacao em `semInteresse`.
 
 
+- **LISTA DE FORMAS DE PERGUNTAR NAO FECHA — a inversao e que fecha.** Tres anotacoes, tres vezes o
+  mesmo conserto (acrescentar uma forma a lista) e tres vezes o mesmo defeito de volta: Teresinha
+  (*"tem alguem que vem na casa da gente pra conversar"*), Paulo Quevedo (*"Colorado ou
+  Gremista?"*) e Ieda (*"Voce e candidato daqui do RS?"*, 04/09/2026). Ninguem cadastra todas as
+  maneiras de perguntar. Hoje `conversaTemPerguntaAberta` inverteu: **e pergunta a menos que uma
+  resposta PRONTA a responda**, e essas estao escritas em `RESPONDIDA_POR_PRONTA` — as cinco
+  exclusoes dele (pedido de material, "tudo bem?", oferta de ajuda, material para compartilhar,
+  grupo). Em 03/09 eu tentei alargar para "qualquer ?" **sem** escrever as exclusoes e quebrei as
+  cinco; elas so existiam por acidente, por nao casarem com a lista curta. **A guarda de POSICAO
+  continua** (sem "?", so conta abrindo a mensagem): e ela que impede o "pq" explicativo. E o custo
+  e conhecido e e o lado barato: mais contato indo para a tecla 6.
+- **Excecao que ele nomeia vai na CONDICAO, nao na posicao.** Ele definiu a excecao do tempo no dia
+  em que criou a regra — *"unico pretexto que exclui a necessidade de hora e pergunta pendente"* — e
+  eu a implementei como ORDEM (`contexto-de-outro-dia` abaixo de `pergunta-aberta`). Ordem so cobre
+  o que a regra de cima reconhece, e no dia seguinte a Ieda escapou. Hoje a excecao esta no
+  `quando` da propria regra, e por isso vale **onde quer que a caixa esteja no quadro dele** —
+  inclusive nos quadros ja exportados. **Posicao e preferencia dele; excecao que ele nomeou e regra
+  dele.**
+
+
 ## Armadilhas do próprio painel
 
 - **`store.get` só mescla defaults em ALGUMAS chaves.** Chave nova dentro de um objeto já salvo
