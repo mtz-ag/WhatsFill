@@ -4084,6 +4084,65 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const anuncio = state.anuncio?.anuncio || null;
 
       /**
+       * **Subiu para cá em 04/09/2026**: a escolha do modelo passou a depender dele, e no lugar
+       * antigo (bem abaixo) ele ainda não existia. O bloco é fechado em si — só lê `state.nossas`
+       * e `state.templates` —, então mover é seguro.
+       */
+      /**
+       * Já **ENTREGAMOS** algo a este contato — e não apenas perguntado algo a ele?
+       *
+       * Escolha dele (31/08), print do Cris: *"histórico de conversa grande provavelmente já
+       * recebeu modelo de mensagem, vou mandar mensagem do momento"*.
+       *
+       * **A primeira versão contava QUALQUER mensagem nossa, e estava errada.** Print da Ivone,
+       * uma hora depois: a nossa única mensagem tinha sido o **pedido de dados**, ela respondeu
+       * *"Ivone trentim Borges passo fundo"* — e a caixa dizia *"já foi atendida antes (o modelo
+       * provavelmente já saiu)"*. Não tinha saído nada. *"o atendimento foi perguntar os dados"*.
+       *
+       * **Pergunta não é entrega.** Quem só foi perguntado não recebeu nada ainda, e é exatamente
+       * quem está esperando o material. Por isso as nossas mensagens que são PERGUNTA saem da
+       * conta: o pedido de dados, a pergunta de interesse e a de "em que posso ajudar".
+       *
+       * A comparação usa o maior pedaço literal de cada texto, como o `modeloJaNaConversa` — é o
+       * que sobrevive às variáveis substituídas e às três variantes de cada resposta.
+       */
+      const jaRespondemosAntes = (() => {
+        if (!state.nossas.length) return false;
+
+        const perguntas = ['pedir-dados', 'interesse-conteudo', 'perguntar-como-ajudar']
+          .map((id) => state.templates.find((t) => t.id === id))
+          .filter(Boolean);
+
+        // Todos os textos possíveis de cada pergunta: o base e as variantes.
+        const pedacosDePergunta = [];
+        for (const t of perguntas) {
+          for (const texto of [t.text, ...(t.variantes || [])]) {
+            const literais = String(texto || '')
+              .split(/\{\{[^}]*\}\}/g)
+              .map((x) => achatarTexto(x))
+              .filter((x) => x.length >= 30);
+            if (literais.length) pedacosDePergunta.push(literais.sort((a, b) => b.length - a.length)[0]);
+          }
+        }
+
+        /**
+         * **O INVARIANTE vem primeiro, e o texto literal só depois.**
+         *
+         * `templatesLib.ehPedidoDeDados` reconhece o pedido pela linha `Nome / Cidade`, que não
+         * muda entre redações nem entre variantes — ver o porquê lá, com o caso da Loreta. O
+         * casamento por trecho literal fica como segunda camada: ele cobre as outras duas
+         * perguntas (interesse e "como posso ajudar"), que não têm essa linha.
+         */
+        const ehPergunta = (m) => {
+          if (templatesLib.ehPedidoDeDados(m.texto)) return true;
+          const texto = achatarTexto(m.texto);
+          return pedacosDePergunta.some((pedaco) => texto.includes(pedaco));
+        };
+
+        return state.nossas.some((m) => !ehPergunta(m));
+      })();
+
+      /**
        * **Qual modelo sai para quem chegou por anúncio** — o específico dele, ou o padrão.
        *
        * Redesenho dele (02/09): *"o modelo agora será feito pra cada anúncio específico e será
@@ -4113,7 +4172,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * quem já está cadastrada ele é repetição.
        */
       const veioDeUmAnuncio = !!(state.session?.utm?.source || state.session?.utm?.referralUrl);
-      const modelosPadrao = veioDeUmAnuncio && !temEtiquetaDeCidade ? await carregarModelosPadrao() : [];
+      /**
+       * **O modelo PADRÃO só sai na PRIMEIRA vinda pelo anúncio** — regra dele (04/09/2026):
+       * *"a exceção de mandar modelo novamente é somente quando o modelo não é o padrão; contato
+       * que não é a primeira vez que vem por anúncio não recebe modelo padrão"*.
+       *
+       * O padrão é o recibo de quem chegou: ele **confirma que a pessoa vai receber o conteúdo**,
+       * e não entrega conteúdo nenhum (decisão dele, 02/09). Mandado de novo, é a mesma frase pela
+       * segunda vez — e quem volta pelo anúncio já ouviu isso.
+       *
+       * `jaRespondemosAntes` é o "não é a primeira vez" **entregue**, e não "já falamos": pergunta
+       * não conta (a lição da Ivone, 31/08 — quem só recebeu o pedido de dados não recebeu nada
+       * ainda). A guarda de `temEtiquetaDeCidade`, de 03/09, continua junto: cidade conhecida é
+       * indício de recibo já enviado.
+       *
+       * **O modelo do anúncio RECONHECIDO não é travado por nada disto** — é a exceção que ele
+       * nomeou. Ela clicou pedindo aquilo, e aquilo é conteúdo de verdade, não recibo.
+       */
+      const modelosPadrao =
+        veioDeUmAnuncio && !temEtiquetaDeCidade && !jaRespondemosAntes ? await carregarModelosPadrao() : [];
       const escolhaDeModelo = anunciosLib.modeloDoAnuncio(
         state.anuncio,
         modelosPadrao,
@@ -4568,60 +4645,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           const outro = hsmLib.modeloPorTexto([nome], { [nome]: nome }, state.hsmTemplates);
           return outro?.modelo ? jaSaiuNaConversa(outro.modelo.text) : false;
         });
-      })();
-
-      /**
-       * Já **ENTREGAMOS** algo a este contato — e não apenas perguntado algo a ele?
-       *
-       * Escolha dele (31/08), print do Cris: *"histórico de conversa grande provavelmente já
-       * recebeu modelo de mensagem, vou mandar mensagem do momento"*.
-       *
-       * **A primeira versão contava QUALQUER mensagem nossa, e estava errada.** Print da Ivone,
-       * uma hora depois: a nossa única mensagem tinha sido o **pedido de dados**, ela respondeu
-       * *"Ivone trentim Borges passo fundo"* — e a caixa dizia *"já foi atendida antes (o modelo
-       * provavelmente já saiu)"*. Não tinha saído nada. *"o atendimento foi perguntar os dados"*.
-       *
-       * **Pergunta não é entrega.** Quem só foi perguntado não recebeu nada ainda, e é exatamente
-       * quem está esperando o material. Por isso as nossas mensagens que são PERGUNTA saem da
-       * conta: o pedido de dados, a pergunta de interesse e a de "em que posso ajudar".
-       *
-       * A comparação usa o maior pedaço literal de cada texto, como o `modeloJaNaConversa` — é o
-       * que sobrevive às variáveis substituídas e às três variantes de cada resposta.
-       */
-      const jaRespondemosAntes = (() => {
-        if (!state.nossas.length) return false;
-
-        const perguntas = ['pedir-dados', 'interesse-conteudo', 'perguntar-como-ajudar']
-          .map((id) => state.templates.find((t) => t.id === id))
-          .filter(Boolean);
-
-        // Todos os textos possíveis de cada pergunta: o base e as variantes.
-        const pedacosDePergunta = [];
-        for (const t of perguntas) {
-          for (const texto of [t.text, ...(t.variantes || [])]) {
-            const literais = String(texto || '')
-              .split(/\{\{[^}]*\}\}/g)
-              .map((x) => achatarTexto(x))
-              .filter((x) => x.length >= 30);
-            if (literais.length) pedacosDePergunta.push(literais.sort((a, b) => b.length - a.length)[0]);
-          }
-        }
-
-        /**
-         * **O INVARIANTE vem primeiro, e o texto literal só depois.**
-         *
-         * `templatesLib.ehPedidoDeDados` reconhece o pedido pela linha `Nome / Cidade`, que não
-         * muda entre redações nem entre variantes — ver o porquê lá, com o caso da Loreta. O
-         * casamento por trecho literal fica como segunda camada: ele cobre as outras duas
-         * perguntas (interesse e "como posso ajudar"), que não têm essa linha.
-         */
-        const ehPergunta = (m) => {
-          if (templatesLib.ehPedidoDeDados(m.texto)) return true;
-          const texto = achatarTexto(m.texto);
-          return pedacosDePergunta.some((pedaco) => texto.includes(pedaco));
-        };
-
-        return state.nossas.some((m) => !ehPergunta(m));
       })();
 
       /**

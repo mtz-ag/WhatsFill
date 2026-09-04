@@ -457,4 +457,39 @@ grupo('reconhecer: o anuncio MAIS RECENTE ganha (04/09/2026)');
   check(anuncios.reconhecer([], lista) === null, 'sem conversa, null');
 }
 
+grupo('o modelo PADRAO so na primeira vinda pelo anuncio (04/09/2026)');
+{
+  /**
+   * Regra dele: *"a excecao de mandar modelo novamente e somente quando o modelo NAO e o padrao;
+   * contato que nao e a primeira vez que vem por anuncio nao recebe modelo padrao"*.
+   *
+   * O padrao e o recibo de quem chegou -- ele CONFIRMA que a pessoa vai receber, e nao entrega
+   * conteudo nenhum (decisao dele, 02/09). Mandado de novo e a mesma frase pela segunda vez.
+   *
+   * **Quem decide se a lista chega ate aqui e o painel**, com tres guardas:
+   * `veioDeUmAnuncio && !temEtiquetaDeCidade && !jaRespondemosAntes`. Este teste trava a metade
+   * pura: lista vazia nao inventa padrao, e o anuncio reconhecido nao e travado por nada disto.
+   */
+  const padroes = ['Campanha Martim', 'Campanha Martim2', 'Campanha Martim3'];
+  const doAnuncio = { anuncio: { id: 'a1', nome: 'Escolas', ligado: true, acao: 'modelo', valor: 'Civico-Militar', trechos: ['x'], etiquetas: [] } };
+
+  // Primeira vinda: o painel passa a lista, e o padrao sai.
+  check(anuncios.modeloDoAnuncio(null, padroes, 0)?.nome === 'Campanha Martim', 'com a lista, o padrao da vez sai');
+  check(anuncios.modeloDoAnuncio(null, padroes, 0)?.deOnde === 'padrao', 'e vem marcado como padrao');
+
+  // Volta pelo anuncio, ou ja tem cidade: o painel passa lista VAZIA, e nada e inventado.
+  check(anuncios.modeloDoAnuncio(null, [], 0) === null, 'sem a lista, nao ha modelo padrao');
+  check(anuncios.modeloDoAnuncio(null, null, 0) === null, 'nem com a lista nula');
+
+  /**
+   * **A excecao que ele nomeou:** o modelo do anuncio RECONHECIDO sai em qualquer um dos casos --
+   * ela clicou pedindo aquilo, e aquilo e conteudo de verdade, nao recibo.
+   */
+  for (const lista of [padroes, []]) {
+    const r = anuncios.modeloDoAnuncio(doAnuncio, lista, 0);
+    check(r?.nome === 'Civico-Militar' && r.deOnde === 'anuncio',
+      `o modelo do anuncio sai com a lista ${lista.length ? 'cheia' : 'vazia'}`);
+  }
+}
+
 fim();

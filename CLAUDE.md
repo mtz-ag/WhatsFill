@@ -1201,6 +1201,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   so falou de telefone ("meu telefone mudou", "liguei para o CRAS"), e o texto E uma recusa.
 
 
+- **O modelo PADRAO so sai na PRIMEIRA vinda pelo anuncio.** Regra dele (04/09/2026): *"a excecao
+  de mandar modelo novamente e somente quando o modelo nao e o padrao; contato que nao e a primeira
+  vez que vem por anuncio nao recebe modelo padrao"*. E a definicao que ele deu no mesmo recado:
+  **"padrao" e todo anuncio que NAO esta listado na Config** — reconhecido e o que ele cadastrou e
+  deixou ligado; o resto cai no padrao. As tres guardas ficam em `panel.js`, na montagem de
+  `modelosPadrao`: `veioDeUmAnuncio && !temEtiquetaDeCidade && !jaRespondemosAntes`. `jaRespondemosAntes`
+  e o "nao e a primeira vez" **entregue**, e nao "ja falamos": pergunta nao conta (licao da Ivone,
+  31/08). **O modelo do anuncio RECONHECIDO nao e travado por nada disto** — ela clicou pedindo
+  aquilo, e aquilo e conteudo de verdade, nao recibo.
+
+
 ## Armadilhas do próprio painel
 
 - **`store.get` só mescla defaults em ALGUMAS chaves.** Chave nova dentro de um objeto já salvo

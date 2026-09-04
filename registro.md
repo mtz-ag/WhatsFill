@@ -41,6 +41,45 @@ Branch `claude/whatsfill-ia`, **v2.14.0**, tudo commitado e no remoto. 38 commit
 
 ---
 
+## 2026-09-04 — O modelo padrão só na primeira vinda pelo anúncio (v2.22.0)
+
+Regra dele, com a definição junto:
+
+> *"a exceção de mandar modelo novamente é somente quando o modelo não é o padrão; contato que não é
+> a primeira vez que vem por anúncio não recebe modelo padrão"* — e, no mesmo recado: *"considere
+> todos os anúncios que não estão listados nas configurações como padrão"*.
+
+**A definição já era a do código**, e conferi antes de mexer: `modeloDoAnuncio` só devolve
+`deOnde: 'anuncio'` quando o anúncio está cadastrado **e ligado** na Config; tudo o mais cai em
+`deOnde: 'padrao'`. Anúncio desligado também é padrão.
+
+O que faltava era a guarda do "primeira vez". O padrão é o **recibo de quem chegou** — ele confirma
+que a pessoa vai receber, e não entrega conteúdo nenhum (decisão dele, 02/09). Mandado de novo, é a
+mesma frase pela segunda vez, e quem volta pelo anúncio já ouviu.
+
+`modelosPadrao` passou a exigir três coisas:
+
+```
+veioDeUmAnuncio && !temEtiquetaDeCidade && !jaRespondemosAntes
+```
+
+- `jaRespondemosAntes` é o "não é a primeira vez" **entregue**, não "já falamos": pergunta não conta.
+  É a lição da Ivone (31/08) — quem só recebeu o pedido de dados não recebeu nada ainda;
+- `temEtiquetaDeCidade` já estava lá desde 03/09: cidade conhecida é indício de recibo enviado;
+- e o cálculo de `jaRespondemosAntes` **subiu no arquivo**, porque a escolha do modelo passou a
+  depender dele e no lugar antigo ele ainda não existia. O bloco é fechado em si (só lê
+  `state.nossas` e `state.templates`), então mover foi seguro.
+
+**A exceção que ele nomeou fica intacta:** o modelo do anúncio RECONHECIDO sai em qualquer caso —
+volta, cidade cadastrada, o que for. Ela clicou pedindo aquilo, e aquilo é conteúdo de verdade, não
+recibo. Medido nos quatro cenários.
+
+**Arquivos:** `src/panel/panel.js`, `tests/anuncios.test.mjs` (+7), `CLAUDE.md` (+1 armadilha),
+`manifest.json` (2.21.0 → 2.22.0). Quinze suítes e os dois verificadores. Sem mudança de caixa — o
+ramo de 2.21.0 continua valendo.
+
+---
+
 ## 2026-09-04 — "Me liga", a ADS pela terceira porta, e a sigla com barra (v2.21.0)
 
 ### A Jucileia pediu ligação, e a rodada ofereceu concluir
