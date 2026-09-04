@@ -475,7 +475,20 @@ export function ehPedidoDeDados(texto) {
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();
-  return /\bnome( completo)?\s*\/\s*cidade\b/.test(plano);
+  /**
+   * **O SEPARADOR não é o invariante — e foi ele que quebrou tudo** (04/09/2026).
+   *
+   * A regra exigia a barra (`nome / cidade`) e o texto em uso passou a ser `Nome , Cidade`, com
+   * vírgula. O efeito é grande e silencioso: `jaPediramDados` ficava **falso para todo mundo** que
+   * recebeu a redação atual, e a rodada voltava a pedir nome e cidade a quem já tinha o formulário.
+   *
+   * Custou três anotações antes de aparecer — Iris (*"a minha última mensagem já pediu dados"*),
+   * Plauto (*"já foi pedido dados"*) e jairoc (*"o contato ignorou o pedido de dados no dia
+   * anterior"*) —, e nas três eu procurei a causa no quadro. **Escrever "reconhece pelo invariante"
+   * não torna invariante o que está escrito:** barra, vírgula, hífen e "e" são a mesma frase para
+   * quem lê.
+   */
+  return /\bnome( completo)?\s*(\/|,|-|–|—|\be\b)?\s*cidade\b/.test(plano);
 }
 
 /**

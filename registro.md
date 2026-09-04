@@ -1,3 +1,57 @@
+## 2026-09-04 — O pedido de dados não era reconhecido, e a IA respondia só a última (v2.9.0)
+
+Quatro correções: três do lote da manhã e uma que ele mandou no meio do trabalho.
+
+### O mais grave: `jaPediramDados` estava falso para TODO MUNDO
+
+`ehPedidoDeDados` reconhecia o pedido pelo invariante `nome / cidade` — **com barra**. O texto em uso
+passou a ser `Nome , Cidade`, **com vírgula**. Medido: a redação atual não casava.
+
+O efeito é silencioso e grande: a rodada voltava a pedir nome e cidade a quem já tinha recebido o
+formulário. **Custou três anotações antes de eu achar** — Iris (*"a minha última mensagem já pediu
+dados"*), Plauto (*"já foi pedido dados"*) e jairoc (*"o contato ignorou o pedido de dados no dia
+anterior"*) — e nas três eu procurei a causa na ordem das caixas.
+
+**Escrever "reconhece pelo invariante" não torna invariante o que está escrito.** Barra, vírgula,
+hífen e "e" são a mesma frase para quem lê; a regra aceita as quatro agora.
+
+O pedido dele de esperar 3 dias antes de repetir não chegou a ser necessário: com o reconhecimento
+consertado, `nunca-pediram-dados` já não dispara para quem recebeu o formulário — nunca, não só por
+três dias.
+
+### Iolanda: o estado por extenso estourava a janela do texto curto
+
+*"Iolanda de Capão da Canoa Rio Grande do Sul."* — 43 caracteres. `matchCityComContexto` aceita a
+cidade sem pista até 30; sem o estado são 25, e a cidade era achada. `formaCanonica` apagava o estado
+só na hora de casar, **depois** da conta de tamanho. Agora ele sai antes.
+
+**"de" sozinho não entrou na lista de pistas**, e não pode entrar: é a preposição mais comum do
+português e transformaria "material de campanha" em município.
+
+### Maria Genoli: link não é cumprimento
+
+*"Confusão entre cumprimento e mandar link"*. `soCortesia` conta link e figura como cortesia de
+propósito (é o "bom dia ilustrado" desta base), e a caixa dela estava ACIMA da caixa da reação — que
+descreve melhor o caso e tem a tecla-função com `respondidoHoje`. As duas trocaram de lugar.
+
+### Janete: a IA ignorou a rajada
+
+Ela mandou um áudio longo às 10:52 e, às 17:19, clicou num anúncio. O rascunho respondeu **só o
+clique**.
+
+**Foi consequência direta do conserto de ontem.** Marcar *uma* mensagem (`← RESPONDA A ESTA`)
+resolveu a Maria Geny — que respondia mensagem velha — e criou o oposto. O que separa "já
+respondido" de "pendente" **não é a posição da última, é a NOSSA última fala**: tudo o que ela
+escreveu depois disso está esperando.
+
+Hoje a rajada inteira vem marcada `← SEM RESPOSTA`, com a contagem no pedido (*"responda a TODAS
+elas, juntas"*) e um texto próprio para quando não há pendência nenhuma.
+
+**Arquivos:** `src/lib/templates.js`, `src/lib/cities.js`, `src/lib/arvore.js`, `src/lib/ia.js`,
+`tests/ia.test.mjs`, `manifest.json` (2.8.0 → 2.9.0), `registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-03 — O rascunho da IA não via a nossa resposta (v2.8.0)
 
 Print da Maria Geny: ela mandou um áudio às 21:39, nós já tínhamos respondido às 19:47, e o rascunho

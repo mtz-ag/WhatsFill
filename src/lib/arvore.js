@@ -627,12 +627,26 @@ export function fluxoPadrao() {
      * `momentoJaEnviado` é a guarda exata: é literalmente o que o aviso amarelo diz. Sem casar
      * aqui, o caso desce para `ultima-e-so-reacao` ou `ja-respondemos-antes`, que concluem.
      */
+    /**
+     * **A figura e o link vêm ANTES do cumprimento** — anotação da Maria Genoli (04/09/2026):
+     * *"confusão entre cumprimento e mandar link"*.
+     *
+     * A última coisa que ela mandou foi um link do Facebook, e a caixa que decidiu foi a do
+     * cumprimento, com o motivo dizendo *"só cumprimentou, e nada mais"*. `soCortesia` conta link e
+     * figura como cortesia de propósito (é o "bom dia ilustrado" desta base), então ela casa nos
+     * dois casos — e, estando em cima, engolia o que a caixa de baixo descreve melhor.
+     *
+     * **A troca resolve as duas coisas de uma vez.** A caixa da reação diz na tela o que de fato
+     * aconteceu, e a tecla dela é FUNÇÃO: olha `respondidoHoje` e conclui em vez de repetir a
+     * mensagem do momento. A do cumprimento fica com o que sobra — cumprimento **escrito**, que é o
+     * que `ehSoReacao` não considera reação.
+     */
+    r('ultima-e-so-reacao', 'mandou figura, emoji, sticker ou link', onde),
     { ...noVazio('só cumprimentou, e nada mais'),
       condicao: { sinal: 'soCortesia', negar: false, palavras: [], onde: 'ultima' },
       excecao: { sinal: 'momentoJaEnviado', negar: false, palavras: [], onde: 'ultima' },
       acao: { tecla: '5', resposta: null } },
     r('pediu-algo-sem-dizer-o-que', 'pediu algo e não disse o quê', onde),
-    r('ultima-e-so-reacao', 'mandou figura, emoji, sticker ou link', onde),
     r('pergunta-aberta', null, onde),
     r('ultima-e-despedida', null, onde),
 

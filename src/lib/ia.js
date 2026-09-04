@@ -649,13 +649,28 @@ export function montarContatoRascunho({ mensagens = [], campos = {} } = {}) {
     .map((m) => (typeof m === 'string' ? { de: 'contato', texto: m } : m))
     .filter((m) => String(m?.texto || '').trim());
 
-  let ultimaDela = -1;
-  lista.forEach((m, i) => { if (m.de !== 'nos') ultimaDela = i; });
+  /**
+   * **A marca vai na RAJADA inteira, não só na última** — print da Janete (04/09/2026): *"IA ignorou
+   * rajada de mensagens"*.
+   *
+   * Ela mandou um áudio longo às 10:52 contando a política da cidade dela, e depois, às 17:19,
+   * clicou num anúncio (*"Olá! Eu escolho a segurança"*). O rascunho respondeu **só o clique** e
+   * ignorou o áudio.
+   *
+   * Foi consequência direta do conserto anterior: marcar *uma* mensagem resolveu a Maria Geny (que
+   * respondia a mensagem velha) e criou o oposto — o modelo passou a olhar só a última. O que
+   * separa "já respondido" de "pendente" não é a posição da última, é a **nossa última fala**: tudo
+   * o que ela escreveu depois disso está esperando resposta, e é a rajada inteira.
+   */
+  let ultimaNossa = -1;
+  lista.forEach((m, i) => { if (m.de === 'nos') ultimaNossa = i; });
+  const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).length;
 
   const conversa = lista
     .map((m, i) => {
       const quem = m.de === 'nos' ? 'NÓS' : 'ELA';
-      return `${quem}: ${umaLinha(m.texto, 4000)}${i === ultimaDela ? '   ← RESPONDA A ESTA' : ''}`;
+      const pendente = m.de !== 'nos' && i > ultimaNossa;
+      return `${quem}: ${umaLinha(m.texto, 4000)}${pendente ? '   ← SEM RESPOSTA' : ''}`;
     })
     .join('\n\n');
 
@@ -688,8 +703,16 @@ export function montarContatoRascunho({ mensagens = [], campos = {} } = {}) {
     '',
     conversa || '(nada)',
     '',
-    'Responda à ÚLTIMA mensagem dela — a marcada. O que veio antes da nossa última fala já foi',
-    'respondido: não repita aquilo nem volte a um assunto que já encerramos.',
+    pendentes === 0
+      ? 'A última fala da conversa é NOSSA: ela não deixou nada sem resposta. Se for escrever, que ' +
+        'seja um complemento curto ao que já dissemos — nunca uma repetição.'
+      : pendentes > 1
+      ? `Ela escreveu ${pendentes} mensagens sem resposta — as marcadas "← SEM RESPOSTA". Responda a ` +
+        'TODAS elas, juntas, num texto só. Não escolha uma e ignore as outras: se ela desabafou e ' +
+        'depois clicou num anúncio, o desabafo é o que ela está esperando que alguém tenha lido.'
+      : 'Responda à mensagem marcada "← SEM RESPOSTA".',
+    'O que veio ANTES da nossa última fala já foi respondido: não repita aquilo nem volte a um',
+    'assunto que já encerramos.',
     '',
     cadastro,
     'Escreva o rascunho da resposta.',

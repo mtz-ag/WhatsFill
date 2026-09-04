@@ -222,6 +222,12 @@ function tolerance(name) {
 const NOME_DO_ESTADO = /\brio grande do sul\b/g;
 
 /**
+ * O mesmo, sobre o texto CRU (com acento e maiúscula) — para tirar o estado antes de medir o
+ * tamanho da mensagem em `matchCityComContexto`. Ver a anotação da Iolanda lá.
+ */
+const NOME_DO_ESTADO_CRU = /\b(rio\s+grande\s+do\s+sul|rio\s+grande\s+d[oa]\s+sul)\b\.?/gi;
+
+/**
  * A sigla do estado pendurada no fim do que a pessoa escreveu: "Canoas RS", "Canoas - RS",
  * "Canoas/RS".
  *
@@ -413,7 +419,20 @@ const ALCANCE_DA_PISTA = 40;
  * Rio Grande" de "vamos mudar o Rio Grande".
  */
 export async function matchCityComContexto(text) {
-  const bruto = String(text || '');
+  /**
+   * **O nome do estado sai ANTES da conta de tamanho** — anotação da Iolanda (04/09/2026): ela
+   * escreveu *"Iolanda de Capão da Canoa Rio Grande do Sul."* e a cidade não foi reconhecida, com
+   * ele apontando o óbvio: *"está presente na mensagem"*.
+   *
+   * Medido: sem o estado no fim, os mesmos 25 caracteres achavam Capão da Canoa pelo caminho do
+   * texto curto. Com ele, são 43 — passa dos 30 de `TEXTO_CURTO`, e não há pista antes da cidade
+   * ("de" sozinho não é pista, e não pode ser: é a preposição mais comum do português).
+   *
+   * `formaCanonica` já apagava o estado, mas só **depois**, na hora de casar; a conta de tamanho
+   * via o texto cru. Escrever a UF por extenso é o jeito mais comum de responder de onde se é, e
+   * ela estava justamente encurtando a janela em que a resposta é aceita.
+   */
+  const bruto = String(text || '').replace(NOME_DO_ESTADO_CRU, ' ').replace(/\s+/g, ' ');
   if (!bruto.trim()) return null;
 
   /**

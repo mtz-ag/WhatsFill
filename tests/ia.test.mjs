@@ -481,16 +481,39 @@ grupo('montarContatoRascunho: os DOIS lados, e a pendencia marcada (03/09/2026)'
   const t = montarContatoRascunho({ mensagens: conversa });
 
   check(t.includes('NÓS: obrigado por contar com a gente'), 'a NOSSA fala entra na conversa');
-  check(/ELA: espero que ele nao pegue[^\n]*RESPONDA A ESTA/.test(t), 'a ultima DELA vem marcada');
-  check(!/apoiamos voces[^\n]*RESPONDA A ESTA/.test(t), 'e a penultima NAO vem marcada');
+  check(/ELA: espero que ele nao pegue[^\n]*SEM RESPOSTA/.test(t), 'a que veio depois da nossa fala vem marcada');
+  check(!/apoiamos voces[^\n]*SEM RESPOSTA/.test(t), 'e a que veio ANTES nao vem marcada');
   check(t.includes('já foi'), 'e o prompt diz que o anterior a nossa fala ja foi respondido');
 
-  // A marca vai na ultima DELA, nao na ultima da conversa: se nos falamos por ultimo, ela continua
-  // apontando para a fala dela que ficou sem resposta.
   const nosPorUltimo = montarContatoRascunho({
     mensagens: [...conversa, { de: 'nos', texto: 'ja te respondo' }],
   });
-  check(/ELA: espero que ele nao pegue[^\n]*RESPONDA A ESTA/.test(nosPorUltimo), 'nos por ultimo: a marca fica na dela');
+  /**
+   * **Nos por ultimo: nao ha pendencia.** O que separa "ja respondido" de "esperando" e a NOSSA
+   * ultima fala -- se ela e a mais recente, nada dela ficou sem resposta.
+   */
+  const marcadas = (texto) => texto.split('\n').filter((l) => l.startsWith('ELA:') && l.includes('SEM RESPOSTA'));
+  check(marcadas(nosPorUltimo).length === 0, 'nos por ultimo: nenhuma fala dela fica marcada');
+  check(nosPorUltimo.includes('não deixou nada sem resposta'), 'e o prompt diz isso, em vez de mandar responder o nada');
+
+  /**
+   * **A RAJADA inteira vem marcada, nao so a ultima** -- print da Janete (04/09/2026): *"IA ignorou
+   * rajada de mensagens"*. Ela mandou um audio longo e, horas depois, clicou num anuncio; o
+   * rascunho respondeu so o clique.
+   *
+   * Foi consequencia direta do conserto anterior: marcar UMA mensagem resolveu quem respondia a
+   * mensagem velha e criou o oposto. O que separa pendente de respondido e a nossa ultima fala.
+   */
+  const rajada = montarContatoRascunho({
+    mensagens: [
+      { de: 'nos', texto: 'ola' },
+      { de: 'contato', texto: 'desabafo longo sobre a politica da cidade' },
+      { de: 'contato', texto: 'Ola! Eu escolho a seguranca' },
+    ],
+  });
+  check(/desabafo longo[^\n]*SEM RESPOSTA/.test(rajada), 'o desabafo vem marcado');
+  check(/seguranca[^\n]*SEM RESPOSTA/.test(rajada), 'e o clique no anuncio tambem');
+  check(rajada.includes('Responda a TODAS elas'), 'e o prompt manda responder as duas juntas');
 
   /**
    * **A forma antiga continua valendo** -- string solta e do contato. Quebrar isto deixaria o
@@ -498,7 +521,7 @@ grupo('montarContatoRascunho: os DOIS lados, e a pendencia marcada (03/09/2026)'
    */
   const soStrings = montarContatoRascunho({ mensagens: ["oi", "tudo bem?"] });
   check(soStrings.includes('ELA: oi'), 'string solta conta como do contato');
-  check(/ELA: tudo bem\?[^\n]*RESPONDA A ESTA/.test(soStrings), 'e a ultima delas vem marcada');
+  check(/ELA: tudo bem\?[^\n]*SEM RESPOSTA/.test(soStrings), 'e todas elas vem marcadas, sem fala nossa no meio');
 
   check(montarContatoRascunho({}).includes("(nada)"), "sem mensagem nao explode");
 }

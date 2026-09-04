@@ -1442,6 +1442,29 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   o que ela escreveu) continua certo para a DECISÃO** — escolher entre respostas prontas é sobre o
   que ela pediu; quem ESCREVE precisa dos dois lados, e é `conversaParaIA`.
 
+- **O invariante do pedido de dados era o SEPARADOR, e ele mudou — `jaPediramDados` ficou falso
+  para todo mundo.** `ehPedidoDeDados` exigia `nome / cidade` com barra, e o texto em uso passou a
+  ser `Nome , Cidade` com vírgula. Efeito silencioso e grande: a rodada voltava a pedir nome e
+  cidade a quem já tinha recebido o formulário. **Custou três anotações antes de aparecer** — Iris,
+  Plauto e jairoc, todos dizendo *"já foi pedido dados"* —, e nas três eu procurei a causa no
+  quadro. **Escrever "reconhece pelo invariante" não torna invariante o que está escrito:** barra,
+  vírgula, hífen e "e" são a mesma frase para quem lê, e a regra hoje aceita as quatro. Antes de
+  culpar a ordem das caixas por um "pediu de novo", teste `ehPedidoDeDados` no texto ATUAL do
+  template.
+- **O nome do ESTADO por extenso estoura a janela de "texto curto".** `matchCityComContexto` aceita
+  a cidade sem pista quando a mensagem tem até 30 caracteres — e *"Iolanda de Capão da Canoa Rio
+  Grande do Sul."* tem 43. Sem o estado são 25, e a cidade era achada. `formaCanonica` apagava o
+  estado só na hora de casar, depois da conta de tamanho. Hoje ele sai antes. **"de" sozinho não
+  entra na lista de pistas** e não pode entrar: é a preposição mais comum do português, e
+  transformaria "material de campanha" em município.
+- **Marcar UMA mensagem como pendente criou o defeito oposto.** O conserto da Maria Geny pôs
+  `← RESPONDA A ESTA` na última fala dela; no dia seguinte a Janete mandou um áudio longo e, horas
+  depois, clicou num anúncio — e o rascunho respondeu **só o clique** (*"IA ignorou rajada de
+  mensagens"*). O que separa "já respondido" de "pendente" **não é a posição da última, é a NOSSA
+  última fala**: tudo o que ela escreveu depois disso está esperando, e é a rajada inteira. Hoje
+  todas vêm marcadas `← SEM RESPOSTA`, com a contagem no pedido ("responda a TODAS elas, juntas") e
+  um texto próprio para quando não há nenhuma.
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto
