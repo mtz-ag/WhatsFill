@@ -1140,6 +1140,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   dele.**
 
 
+- **"Pode contar comigo" nao e confirmacao de presenca — e o TERCEIRO apagamento dessa lista pelo
+  mesmo motivo.** Anotacao do Guilherme (04/09/2026): *"Pode contar comigo e toda minha familia
+  somos muitos e somos Bolsonarista ate a morte"* fez a rodada PULA-LO como quem confirma presenca.
+  *"nao e evento, somente apoiando"*. Antes dele sairam "vamos"/"vou" soltos (02/09) e "confirmado"
+  solto (04/09). **A regra que fica: vocabulario de campanha nao e resposta ao convite** — e a frase
+  continua em `EXPRESSOES_DE_APOIO`, que e de onde ela deve decidir.
+- **Guarda que depende de um campo da Config preenchido NAO e guarda.** Anotacao do Geminiano
+  (04/09): a caixa dizia *pediu "ADS" e ha modelo mapeado — mande*. A guarda de 02/09 (a etiqueta
+  ADS e ORIGEM, nunca conteudo) monta a lista de `etiquetaAnuncio` + as etiquetas de cada anuncio —
+  entao com o campo VAZIO a ADS volta a ser conteudo pela tabela "Modelo por conteudo", onde ele tem
+  `ADS = Campanha Martim`. Hoje `tags.ORIGEM_SEMPRE` e o piso: o nome e literal de proposito, e
+  nenhum conteudo se chama ADS.
+
+
 ## Armadilhas do próprio painel
 
 - **`store.get` só mescla defaults em ALGUMAS chaves.** Chave nova dentro de um objeto já salvo

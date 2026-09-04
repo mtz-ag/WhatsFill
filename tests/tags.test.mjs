@@ -424,4 +424,34 @@ grupo('as etiquetas do anuncio nao repetem a ADS (02/09/2026)');
   check(outra.filter((s) => s.nome === 'ADS').length === 1, 'e a ADS continua sem repetir');
 }
 
+grupo('a ADS nunca e conteudo, mesmo com a Config vazia (04/09/2026)');
+{
+  /**
+   * Anotacao do Geminiano: quatro links do Instagram e o aceite do anuncio, e a caixa dizia
+   * *pediu "ADS" e ha modelo mapeado -- mande*. Ele: *"ja recebeu o modelo padrao; contato antigo,
+   * recebeu mensagem do momento, vou concluir"*.
+   *
+   * A guarda existia desde 02/09 e **dependia inteiramente da Config**: a lista de origem e
+   * montada de `etiquetaAnuncio` mais as etiquetas de cada anuncio. Campo vazio, a ADS volta a ser
+   * conteudo pela tabela "Modelo por conteudo", onde ele tem `ADS = Campanha Martim`.
+   *
+   * Guarda que depende de alguem ter preenchido um campo nao e guarda.
+   */
+  mem.etiquetaAnuncio = '';
+  mem.anuncios = [];
+  const vazia = await tags.etiquetasDeOrigem();
+  check(vazia.has('ads'), 'com a Config vazia, a ADS continua sendo origem');
+
+  mem.etiquetaAnuncio = 'ADS';
+  const cheia = await tags.etiquetasDeOrigem();
+  check(cheia.has('ads'), 'e com a Config preenchida tambem');
+
+  // O que ele cadastra continua entrando, que e o motivo de a lista existir.
+  mem.etiquetaAnuncio = 'Veio de anuncio';
+  mem.anuncios = [{ id: 'a1', nome: 'x', ligado: true, trechos: ['oi'], acao: 'modelo', etiquetas: ['Campanha Escolas'] }];
+  const dele = await tags.etiquetasDeOrigem();
+  check(dele.has('veio de anuncio') && dele.has('campanha escolas'), 'as etiquetas dele continuam entrando');
+  check(dele.has('ads'), 'e o piso continua valendo junto');
+}
+
 fim();

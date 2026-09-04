@@ -846,7 +846,18 @@ export function confirmaPresenca(entrantes, nossaUltimaAt) {
      */
     /(^|[^\p{L}])(quero|vou|gostaria\s+de|venho|pretendo)\s+confirmar\s+(a\s+)?(minha\s+)?presenca/u,
     /(^|[^\p{L}])confirmar\s+(a\s+)?(minha\s+)?presenca\s+(no|na|ao)\s+evento/u,
-    /(^|[^\p{L}])(pode|podem)\s+contar\s+comigo/u,
+    /**
+     * **"Pode contar comigo" SAIU daqui** — anotacao do Guilherme (04/09/2026).
+     *
+     * Ele escreveu *"Pode contar comigo e toda minha família somos muitos e somos Bolsonarista até
+     * a morte"* e a rodada o PULOU como quem confirma presença em evento. Ele: *"não é evento,
+     * somente apoiando"*.
+     *
+     * A frase está — corretamente — em `EXPRESSOES_DE_APOIO`, e é dali que ela deve decidir. Como
+     * resposta ao convite ela é ambígua; como declaração de apoio, não é. É o terceiro apagamento
+     * desta lista pelo mesmo motivo, depois de "vamos"/"vou" (02/09) e "confirmado" (04/09):
+     * **vocabulário de campanha não é resposta ao convite.**
+     */
     /(^|[^\p{L}])(com\s+certeza|certamente)\s+(vou|irei|estarei|estarei\s+la)/u,
     /(^|[^\p{L}])(vou|pretendo)\s+participar/u,
     /(^|[^\p{L}])(la|ai)\s+estarei/u,

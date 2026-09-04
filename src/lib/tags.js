@@ -420,9 +420,26 @@ export async function suggest({ city, texts = [], extra = '', interesse = null, 
  * `conteudosJaAplicados`. Duas listas separadas divergem na primeira vez que alguém acrescenta uma
  * fonte nova.
  */
+/**
+ * **O piso da lista: "ADS" nunca é conteúdo, mesmo com a Config vazia.**
+ *
+ * Anotação do Geminiano (04/09/2026): quatro links do Instagram e o aceite do anúncio, e a caixa
+ * dizia *pediu "ADS" e há modelo mapeado — mande*. Ele: *"já recebeu o modelo padrão; contato
+ * antigo, recebeu mensagem do momento, vou concluir"*.
+ *
+ * A guarda existia e **dependia inteiramente da Config**: a lista de origem é montada de
+ * `etiquetaAnuncio` mais as etiquetas de cada anúncio. Com o campo vazio — ou com outro nome — a
+ * ADS volta a ser conteúdo pela tabela "Modelo por conteúdo", que é onde ele tem `ADS = Campanha
+ * Martim`.
+ *
+ * Guarda que depende de alguém ter preenchido um campo não é guarda. O nome é literal de propósito:
+ * é o que está no CRM dele, e nenhum conteúdo se chama ADS.
+ */
+const ORIGEM_SEMPRE = ['ADS'];
+
 export async function etiquetasDeOrigem() {
   const [geral, anuncios] = await Promise.all([store.get('etiquetaAnuncio'), store.get('anuncios')]);
-  const nomes = [String(geral || '')];
+  const nomes = [String(geral || ''), ...ORIGEM_SEMPRE];
   for (const a of Array.isArray(anuncios) ? anuncios : []) {
     for (const e of Array.isArray(a?.etiquetas) ? a.etiquetas : []) nomes.push(String(e || ''));
   }

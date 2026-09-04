@@ -717,7 +717,18 @@ grupo('confirmaPresenca: quem NAO vai comeca dizendo que queria — a ressalva d
   check(p('vou sim') === 'sim', 'vou sim');
   check(p('estarei la') === 'sim', 'estarei la');
   check(p('confirmado') === 'sim', 'confirmado');
-  check(p('pode contar comigo') === 'sim', 'pode contar comigo');
+  /**
+   * **"pode contar comigo" SAIU da lista** -- anotacao do Guilherme (04/09/2026): ele escreveu
+   * *"Pode contar comigo e toda minha familia somos muitos e somos Bolsonarista ate a morte"* e a
+   * rodada o PULOU como quem confirma presenca. *"nao e evento, somente apoiando"*.
+   *
+   * Terceiro apagamento desta lista pelo mesmo motivo, depois de "vamos"/"vou" (02/09) e
+   * "confirmado" (04/09): vocabulario de campanha nao e resposta ao convite. A frase continua em
+   * EXPRESSOES_DE_APOIO, que e de onde ela deve decidir.
+   */
+  check(p('pode contar comigo') === null, '"pode contar comigo" e apoio, nao presenca');
+  check(p('Pode contar comigo e toda minha família somos Bolsonarista até a morte') === null,
+    'o caso do Guilherme');
   check(p('com certeza vou') === 'sim', 'com certeza vou');
   check(p('vou participar') === 'sim', 'vou participar');
   check(p('la estarei') === 'sim', 'la estarei');
@@ -885,7 +896,7 @@ grupo('grito de campanha NAO e confirmacao de presenca (02/09/2026)');
    * E as confirmacoes de verdade continuam: o verbo vale com "sim", com um lugar, com verbo de
    * comparecer, ou sendo a mensagem inteira -- que e a resposta seca a "voce vai?".
    */
-  for (const t of ['vou sim', 'Vou', 'irei', 'Vamos sim', 'vou estar la', 'vou la', 'vou participar', 'vou ao evento', 'Estarei la', 'confirmado', 'pode contar comigo', 'com certeza vou', 'la estarei']) {
+  for (const t of ['vou sim', 'Vou', 'irei', 'Vamos sim', 'vou estar la', 'vou la', 'vou participar', 'vou ao evento', 'Estarei la', 'confirmado', 'com certeza vou', 'la estarei']) {
     check(vai(t) === 'sim', `"${t}" continua sendo confirmacao`);
   }
 
@@ -950,7 +961,7 @@ grupo('ir CONDICIONAL e recusa, e pergunta de politica pede voce (02/09/2026)');
     check(confirmaPresenca(m(t), null) === 'nao', `"${t}" e recusa`);
   }
   // E a confirmacao sem condicao continua sendo confirmacao.
-  for (const t of ['vou sim', 'irei', 'Estarei la', 'pode contar comigo', 'vou participar']) {
+  for (const t of ['vou sim', 'irei', 'Estarei la', 'vou participar']) {
     check(confirmaPresenca(m(t), null) === 'sim', `"${t}" continua sendo sim`);
   }
 

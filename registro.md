@@ -41,6 +41,60 @@ Branch `claude/whatsfill-ia`, **v2.14.0**, tudo commitado e no remoto. 38 commit
 
 ---
 
+## 2026-09-04 — Três anotações: apoio lido como presença, e a ADS de volta (v2.19.0)
+
+### O Guilherme foi pulado como quem vai a um evento
+
+*"Pode contar comigo e toda minha família somos muitos e somos Bolsonarista até a morte somos
+omildes trabalhador. Mais somos de palavra"* — e a caixa: *"confirmou presença no evento"*. Ele:
+*"não é evento, somente apoiando"*.
+
+`pode contar comigo` estava na lista do "vai". **É o terceiro apagamento dessa lista pelo mesmo
+motivo**, depois de "vamos"/"vou" soltos (02/09) e "confirmado" solto (04/09, a Nice).
+
+A regra que fica, e que já devia ter ficado nas duas primeiras vezes: **vocabulário de campanha não
+é resposta ao convite.** A frase continua em `EXPRESSOES_DE_APOIO` — é de lá que ela deve decidir, e
+como declaração de apoio ela não é ambígua.
+
+Medido no quadro dele: passa de **tecla 2** (pular) para **tecla 5** — a mensagem do momento, porque
+a última dele foi ontem. É a regra de tempo dele mesmo.
+
+### A ADS voltou a decidir modelo, e a guarda dependia da Config
+
+Quatro links do Instagram e o aceite do anúncio, e a caixa: *pediu "ADS" e há modelo mapeado —
+mande*. Ele: *"já recebeu o modelo padrão; contato antigo, recebeu mensagem do momento, vou
+concluir"*.
+
+A guarda existe desde 02/09 — a etiqueta ADS é **origem**, nunca conteúdo. Mas ela monta a lista a
+partir de `etiquetaAnuncio` (aba Config) mais as etiquetas de cada anúncio: **campo vazio, a ADS
+volta a ser conteúdo** pela tabela "Modelo por conteúdo", onde ele tem `ADS = Campanha Martim`.
+
+Estava na lista de pendências desde ontem (*"limpar a linha ADS → Campanha Martim"*), como coisa
+para ele fazer. Errado: **guarda que depende de alguém ter preenchido um campo não é guarda.**
+`ORIGEM_SEMPRE` é o piso, com o nome literal — nenhum conteúdo se chama ADS.
+
+Medido no quadro dele: passa de **tecla 1** (mandar o modelo) para **tecla 3** — concluir, que é o
+que ele disse que ia fazer.
+
+### A Iracema: o que a versão de agora faz, e o que ele quer
+
+Na anotação (v2.15.0) **nenhuma regra casou**. Com o código de agora ela cai em
+`ultima-pede-resposta-pessoal` → **tecla 6**, por causa do áudio transcrito de 256 caracteres.
+
+Ele quer *"conclua para sair da lista"*. As duas coisas não batem, e a diferença é uma decisão dele:
+o áudio dela é de **ontem** e é torcida pura — sem pergunta. Pela regra de tempo que ele escreveu em
+03/09, o contexto passou; pela ordem atual, "precisa de gente" vem antes do tempo.
+
+Não mexi: inverter isso faria todo áudio antigo passar a receber a mensagem do momento em vez de ir
+para ele, e isso muda muito mais que este contato. Fica com ele. **Tecla 6 não manda nada errado** —
+custa um toque a mais, não uma mensagem.
+
+**Arquivos:** `src/lib/cortesia.js` (a lista do "vai"), `src/lib/tags.js` (`ORIGEM_SEMPRE`),
+`tests/cortesia.test.mjs`, `tests/tags.test.mjs` (+4), `CLAUDE.md` (+2 armadilhas), `manifest.json`
+(2.18.0 → 2.19.0). Quinze suítes e os dois verificadores.
+
+---
+
 ## 2026-09-04 — A caixa da rodada cortada na tela (v2.18.0)
 
 *"cortado e não consigo pegar a resposta"*, com a print: dez opções mais as treze respostas rápidas
