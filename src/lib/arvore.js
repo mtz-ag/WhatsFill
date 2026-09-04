@@ -848,6 +848,23 @@ export function fluxoPadrao() {
       condicao: { sinal: 'pedeAjudaFinanceira', negar: false, palavras: [], onde: 'ultima' },
       acao: { tecla: null, resposta: 'pedido-ajuda' } },
 
+    /**
+     * **As outras DUAS respostas que negam também valem na chegada** — relato dele (04/09/2026):
+     * *"o fluxo de chegada parece ter sido deixado para trás; muitas regras se aplicam lá
+     * também"*. Estava certo, e estas duas eram a metade mais fácil de ver: a ajuda financeira
+     * tinha caixa aqui desde 02/09 e as irmãs dela nunca vieram junto.
+     *
+     * Quem chega perguntando como trabalhar no mandato, ou pedindo que a gente ligue, recebia o
+     * MODELO — porque `conteudo-pedido` fica logo abaixo e casa. É o mesmo dano do pedido de
+     * socorro: propaganda como primeira resposta a quem perguntou outra coisa.
+     */
+    { ...noVazio('quer trabalhar para o mandato'), id: 'chegada-emprego',
+      condicao: { sinal: 'pedeEmprego', negar: false, palavras: [], onde: 'ultima' },
+      acao: { tecla: null, resposta: 'pedido-emprego' } },
+    { ...noVazio('pediu que a gente ligasse'), id: 'chegada-ligacao',
+      condicao: { sinal: 'pedeLigacao', negar: false, palavras: [], onde: 'ultima' },
+      acao: { tecla: null, resposta: 'pedido-ligacao' } },
+
     r('pediu-algo-sem-dizer-o-que', 'pediu algo e não disse o quê', 'chegada-antes'),
     r('pergunta-aberta', null, 'chegada-antes'),
 
@@ -875,6 +892,21 @@ export function fluxoPadrao() {
      * longo deixa de receber o recibo do anúncio nessa passada e vai para você. Foi dito a ele.
      */
     r('ultima-pede-resposta-pessoal', 'escreveu conversa, não é caso de modelo', 'chegada-antes'),
+
+    /**
+     * **A DENÚNCIA respondida à nossa própria pergunta — a quarta pendência que fica acima do
+     * recibo, e a que faltava.**
+     *
+     * Esta regra nasceu em 01/09 por causa do pior caso já registrado aqui: a contato respondeu
+     * *"é sobre as irregularidades na compra assistida"* à nossa pergunta "em que posso ajudar?"
+     * e recebeu **material de campanha**. Ela protegia a volta e **não existia na chegada** —
+     * medido: com um modelo disponível, o caso ia para a tecla 1.
+     *
+     * Fica acima do recibo pelo critério que já separa as outras três: pendência neutra (bom dia,
+     * figura, despedida) custa um dia de atraso; aqui mandar a nossa mensagem primeiro **É** o
+     * dano.
+     */
+    r('respondeu-nossa-pergunta', null, 'chegada'),
 
     /**
      * **O MODELO PRIMEIRO** — redesenho dele em 02/09/2026, e a inversão da ordem que valia antes.
@@ -911,6 +943,18 @@ export function fluxoPadrao() {
      * modelo sozinho para quem já tem cidade, o pedido de dados sozinho quando não há modelo.
      */
     r('anuncio-modelo-e-dados', 'modelo + pedir os dados', 'chegada'),
+
+    /**
+     * **As pendências NEUTRAS ficam abaixo do recibo — e essa é a diferença deliberada para a
+     * volta**, onde elas ficam acima. Decisão dele de 02/09: figura, cumprimento e despedida
+     * custam um dia de atraso no recibo, e o recibo é o que ela clicou para receber.
+     *
+     * O que faltava era elas existirem AQUI, abaixo. Sem isso, quem chegava e só se despedia caía
+     * na caixa do TEMPO (logo abaixo) e recebia a **mensagem do momento** — enviar por cima de um
+     * "amém" —, ou no modelo, quando havia um. Medido nos dois casos.
+     */
+    r('ultima-e-so-reacao', 'mandou figura, emoji, sticker ou link', 'chegada'),
+    r('ultima-e-despedida', null, 'chegada'),
     /**
      * **Na chegada o tempo entra ABAIXO do recibo** — anotação do Giovani (04/09/2026): ele mandou
      * um texto político longo e um link ontem à noite, e a caixa oferecia o modelo. *"Modelo fora
@@ -925,6 +969,15 @@ export function fluxoPadrao() {
      * modelo. Aí o conteúdo dela é de ontem, e o modelo responde a um assunto que esfriou.
      */
     r('contexto-de-outro-dia', 'a última dela é de outro dia', 'chegada'),
+    /**
+     * **Ela respondeu o nome e a cidade — agradece, não manda modelo.** Decisão dele de 02/09
+     * (*"agora só precisa agradecer a atenção e encerrar sem mandar modelo"*), que também só
+     * valia na volta: na chegada o caso descia até `conteudo-pedido` e recebia o modelo.
+     *
+     * A posição é a mesma da volta — abaixo do tempo e do anúncio reconhecido, acima do modelo
+     * genérico. O anúncio reconhecido continua ganhando porque ela clicou pedindo aquilo.
+     */
+    r('respondeu-os-dados', 'respondeu o nome e a cidade', 'chegada'),
     r('conteudo-pedido', 'manda só o modelo (ela já tem cidade)', 'chegada'),
 
     /**

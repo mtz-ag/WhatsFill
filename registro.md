@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.27.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.28.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,18 +7,21 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.27.0**, tudo commitado e no remoto. 21 commits no dia 04/09.
-Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem problemas e
+Branch `claude/whatsfill-ia`, **v2.28.0**, tudo commitado e no remoto. 22 commits no dia 04/09.
+Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente.
 
 ### Pendências que NÃO estão no código — precisam dele
 
 1. **Importar o fluxo.** O quadro dele é o exportado em **2.14.0** (59 caixas); o padrão de agora tem
-   **63** — as quatro novas são *"pediu que a gente ligasse"* e *"mandou o endereço"*, nos dois
-   ramos. Entregue como `fluxo-padrao-2.24.0.json`. Regenerar com
-   `node tools/exportar-fluxo.mjs <saida.json>` — saída FORA do repositório. **As duas regras novas
-   decidem sem a importação** (estão em `PROTECOES`, medido contra o quadro dele); importar é o que
-   deixa ele mover as caixas.
+   **69** — entraram *"pediu que a gente ligasse"*, *"mandou o endereço"* e o bloco que faltava na
+   chegada (04/09). Entregue como `fluxo-padrao-2.28.0.json`. Regenerar com
+   `node tools/exportar-fluxo.mjs <saida.json>` — saída FORA do repositório.
+   **Agora a importação MUDA o que sai para eleitor, e não só a arrumação das caixas.** As duas
+   proteções novas (ligação, endereço) decidem sem ela; o conserto da CHEGADA (04/09) é ORDEM, e
+   ordem mora no quadro. Medido contra o quadro dele: denúncia respondida, pedido de emprego,
+   despedida e "respondeu nome e cidade" ainda recebem a **tecla 1** (o modelo) na chegada até ele
+   importar.
 2. **Aba Automatizado → "Etiquetas que a rodada aplica"** (cartão criado em 04/09, porque os campos
    estavam escondidos dentro de um cartão desativado desde 15/08). **As três estão vazias:**
    - **Etiqueta de SEM INTERESSE** — a rodada não marca e, na visita seguinte, precisa
@@ -68,6 +71,60 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — A chegada estava atrás da volta em seis caixas (v2.28.0)
+
+*"o fluxo de chegada parece ter sido deixado pra trás, confira; muitas regras se aplicam lá
+também"*. Estava certo, e o defeito era estrutural.
+
+### Por que faltar caixa na chegada não vira buraco — vira inversão de ordem
+
+O ramo geral (*"pessoa retornando"*) **não tem condição**: ele é a rede que pega tudo o que a
+chegada não resolveu. Então a chegada não é um fluxo separado, é uma camada de **prioridade** que
+roda antes. Consequência: o que falta nela não deixa o contato sem desfecho — **deixa o desfecho
+para a caixa que a chegada tem e a volta não teria alcançado ainda**, que ali é o MODELO.
+
+A chegada ia do bloco de perguntas direto ao modelo. Medido, com um modelo disponível:
+
+| caso | chegada (antes) | volta |
+|---|---|---|
+| denúncia respondida à nossa pergunta | **tecla 1** (modelo) | tecla 6 |
+| quer trabalhar para o mandato | **tecla 1** | `pedido-emprego` |
+| pediu que a gente ligasse | **tecla 1** | `pedido-ligacao` |
+| respondeu o nome e a cidade | **tecla 1** | tecla i (agradece) |
+| só se despediu | **tecla 1** | tecla 3 |
+| despediu-se ONTEM, sem modelo | tecla 5 (a do momento) | tecla 3 |
+
+A pior é a primeira: `respondeu-nossa-pergunta` existe desde 01/09 **exatamente** para impedir
+material de campanha em cima de uma denúncia, e protegia só metade da base.
+
+### O que entrou, e onde
+
+Seis caixas, nas posições espelhadas da volta:
+
+- **acima do recibo** (mandar a nossa mensagem primeiro É o dano): `pedido-emprego`,
+  `pedido-ligacao` — as irmãs do `pedido-ajuda`, que tinha caixa aqui desde 02/09 e veio sozinho —
+  e `respondeu-nossa-pergunta`;
+- **abaixo do recibo**: `ultima-e-so-reacao` e `ultima-e-despedida`;
+- **acima do modelo genérico**: `respondeu-os-dados`.
+
+### O que muda na decisão dele de 02/09, e é bom ele saber
+
+As duas pendências neutras tinham sido **removidas** da chegada em 02/09, e havia teste exigindo
+que não estivessem lá. A decisão dele era sobre ORDEM (*"pendência depois do modelo"*) e continua
+de pé: o **recibo do anúncio** ganha da despedida e da figura na chegada — tem teste novo travando
+isso. O que mudou é que elas agora **existem** ali, abaixo do recibo, e por isso vencem duas coisas
+que não deveriam ter ganhado delas: a caixa do TEMPO (mensagem do momento por cima de um "amém") e
+o modelo **genérico** — que não é o recibo do anúncio, e que para quem já tem cidade nem é
+carregado desde 2.22.0.
+
+O teste novo compara os DOIS ramos no mesmo contexto, em vez de procurar a caixa: se alguém tirar
+uma de um lado, os dois passam a discordar e ele cai.
+
+Padrão: **69 caixas** (a chegada foi de 16 para 22), sem problemas e sem desfecho incoerente.
+Quinze suítes verdes.
 
 ---
 

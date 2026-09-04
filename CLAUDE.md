@@ -1257,6 +1257,24 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   Entraram junto `aluguel`, `farmacia` e `conta de luz/agua` nas NECESSIDADES, que continuam
   exigindo o verbo de pedir.
 
+- **A CHEGADA e um ramo de PRIORIDADE, entao tudo o que falta nela vira "o modelo decidiu".** Relato
+  dele (04/09/2026): *"o fluxo de chegada parece ter sido deixado pra tras, confira; muitas regras
+  se aplicam la tambem"*. O ramo geral ("pessoa retornando") **nao tem condicao** — e a rede que
+  pega o que a chegada nao resolve —, entao caixa faltando na chegada nao vira buraco: vira
+  **inversao de ordem**. A chegada ia do bloco de perguntas direto ao MODELO, e as caixas que a
+  volta tem no meio nao existiam ali. Medido com um modelo disponivel: denuncia respondida a nossa
+  pergunta, pedido de emprego, pedido de ligacao, "respondeu nome e cidade" e despedida recebiam
+  todos a **tecla 1**, contra 6 / pedido-emprego / pedido-ligacao / i / 3 na volta. A pior era a
+  denuncia — a regra `respondeu-nossa-pergunta` existe desde 01/09 exatamente para isso e protegia
+  so metade da base. **Ao criar caixa que impede envio, ponha-a nos DOIS ramos** — e o teste que
+  segura isso compara os dois no mesmo contexto, em vez de procurar a caixa.
+- **A diferenca que FICA entre os dois ramos e o RECIBO, e so ela** (decisao dele, 02/09): na
+  chegada o modelo do anuncio vem acima das pendencias neutras (figura, cumprimento, despedida),
+  porque o recibo e o que ela clicou para receber e o atraso custa um dia. Elas voltaram para a
+  chegada em 04/09 **abaixo do recibo** — o que estava errado nao era a ordem, era elas nao
+  existirem ali: quem chegava e so se despedia caia na caixa do TEMPO e recebia a mensagem do
+  momento por cima de um "amem".
+
 - **Quem faz a rodada pular o caso de MATERIAL e a etiqueta, nao o detector.** Regra dele
   (04/09/2026): *"para pular o contato sempre sera depois que eu pedir o endereco e etiqueta for
   colocada"*. O detector (`informouEndereco`) le a RAJADA e serve para uma coisa so: reconhecer a

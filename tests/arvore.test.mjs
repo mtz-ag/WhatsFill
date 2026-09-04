@@ -637,7 +637,7 @@ grupo('o catalogo devolve as regras apagadas para o quadro (01/09/2026)');
   // Repetir e legitimo: o proprio padrao poe as mesmas regras dos dois lados da bifurcacao de
   // cidade. A marca informa quantas vezes, e nao esconde a regra da lista.
   const repetida = cat.find((r) => r.id === 'ultima-e-despedida');
-  check(repetida.quantasNoQuadro === 2, 'regra repetida conta as 2 vezes (os dois lados de cidade)');
+  check(repetida.quantasNoQuadro === 3, 'regra repetida conta as 3 vezes (chegada + os dois lados de cidade)');
 
   const descartada = cat.find((r) => r.id === 'nome-sem-sentido');
   check(descartada && descartada.quantasNoQuadro === 0, 'regra fora do quadro aparece na lista, zerada');
@@ -645,7 +645,7 @@ grupo('o catalogo devolve as regras apagadas para o quadro (01/09/2026)');
   // Apagar uma caixa devolve a regra a lista — e e isto que torna o apagar reversivel.
   const semDespedida = arv.apagar(q, 'r:ultima-e-despedida:sem-cidade');
   const depois = arv.catalogoDeRegras(semDespedida).find((r) => r.id === 'ultima-e-despedida');
-  check(depois.quantasNoQuadro === 1, 'apagar uma caixa desconta a regra do catalogo');
+  check(depois.quantasNoQuadro === 2, 'apagar uma caixa desconta a regra do catalogo');
 }
 
 grupo('por a regra de volta nunca repete id');
@@ -1098,9 +1098,22 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
    * "pediu dinheiro" SAIU desta lista em 03/09: ele decidiu que ela volta para cima do modelo
    * (anotacao da Regina). As outras continuam sendo resolvidas so na volta.
    */
+  /**
+   * **Elas VOLTARAM para a chegada em 04/09, abaixo do recibo** -- relato dele: *"o fluxo de
+   * chegada parece ter sido deixado para tras; muitas regras se aplicam la tambem"*.
+   *
+   * A decisao de 02/09 continua de pe e e sobre ORDEM: o recibo do anuncio vem primeiro, e
+   * pendencia neutra custa um dia de atraso. O que estava errado era elas nao existirem AQUI --
+   * medido, quem chegava e so se despedia caia na caixa do TEMPO e recebia a mensagem do momento
+   * por cima de um "amem", ou o modelo generico quando havia um.
+   */
   const PENDENCIAS = ['ultima-e-so-reacao', 'ultima-e-despedida'];
   for (const p of PENDENCIAS) {
-    check(!naChegada.includes(p), `"${p}" nao esta mais na chegada`);
+    check(naChegada.includes(p), `"${p}" existe na chegada`);
+    check(naChegada.indexOf('anuncio-modelo-e-dados') < naChegada.indexOf(p),
+      `e o recibo do anuncio decide ANTES de "${p}"`);
+    check(naChegada.indexOf(p) < naChegada.indexOf('contexto-de-outro-dia'),
+      `mas "${p}" vence a caixa do tempo`);
   }
 
   /**
@@ -1135,7 +1148,10 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   check(naChegada.includes('pediu dinheiro, cesta basica ou remedio'), 'e a ajuda financeira VOLTOU para a chegada (03/09)');
   // 16 desde 04/09, com a caixa do endereco (material a enviar). O numero e proposital: ele
   // acusa caixa que entrou na chegada sem ninguem decidir que ela pertence ali.
-  check(chegada.filhos.length === 16, 'e a chegada tem 16 caixas, nao 17');
+  // 22 desde 04/09: entraram as duas respostas que negam (emprego, ligacao), a denuncia
+  // respondida, as duas pendencias neutras e "respondeu os dados" -- o bloco que so existia na
+  // volta. O numero e proposital: ele acusa caixa que entrou sem ninguem decidir que pertence ali.
+  check(chegada.filhos.length === 22, 'e a chegada tem 22 caixas, nao 23');
 
   /**
    * **"Nada legivel dela" entrou em 03/09** (print do Tilin: dois avisos de tipo nao suportado,
@@ -1275,6 +1291,59 @@ grupo('confirmou presenca no evento: PULA e ele atende no fim (03/09/2026)');
    */
   const naoVai = { ...deoclecio, confirmouPresenca: false, temEtiquetaDeCidade: false, jaPediramDados: false, pedidoHoje: false };
   check(tecla(naoVai) !== '2', 'quem disse que NAO vai nao e pulada por esta regra');
+}
+
+grupo('a chegada decide como a volta no que nao e recibo (04/09/2026)');
+{
+  /**
+   * Relato dele: *"o fluxo de chegada parece ter sido deixado pra tras, confira; muitas regras se
+   * aplicam la tambem"*. Estava certo, e o defeito era estrutural: a chegada e um ramo de
+   * PRIORIDADE que roda antes do ramo geral, entao tudo o que ela resolve primeiro vence -- e ela
+   * ia direto do bloco de perguntas para o MODELO, sem as caixas que a volta tem no meio.
+   *
+   * Medido antes do conserto, com um modelo disponivel: denuncia respondida, quem quer trabalhar
+   * no mandato, quem pediu ligacao, quem respondeu nome e cidade e quem so se despediu recebiam
+   * todos a **tecla 1** na chegada, contra 6 / pedido-emprego / pedido-ligacao / i / 3 na volta.
+   *
+   * Este teste compara os DOIS ramos no mesmo contexto: se alguem tirar uma caixa de um lado, os
+   * dois passam a discordar e isto cai.
+   */
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const base = {
+    veioDeAnuncio: true, anuncioReconhecido: false, temEtiquetaDeCidade: false,
+    jaPediramDados: true, pedidoHoje: false, podePedirDados: true, podeEnviar: true,
+    podeMandarMomento: true, textos: ['x'], ultimoTexto: 'x',
+  };
+  const desfecho = (c) => {
+    const d = arv.decidir(c, q);
+    return d ? `${d.tecla ?? d.resposta ?? '?'}` : 'nada';
+  };
+
+  const casos = [
+    ['denuncia respondida a nossa pergunta', { respondeuComoAjudar: true }],
+    ['quer trabalhar para o mandato', { pedeEmprego: { motivo: 'x' } }],
+    ['pediu que a gente ligasse', { pedeLigacao: { motivo: 'x' } }],
+    ['respondeu o nome e a cidade', { respondeuOsDados: true }],
+    ['so se despediu', { ultimaEhDespedida: true }],
+    ['so figura, sem modelo', { ultimaEhSoReacao: true, podeEnviar: false }],
+    ['despediu-se ONTEM, sem modelo', { ultimaEhDespedida: true, deOutroDia: true, podeEnviar: false }],
+  ];
+  for (const [rotulo, extra] of casos) {
+    const naChegada = desfecho({ ...base, jaRespondemosAntes: false, ...extra });
+    const naVolta = desfecho({ ...base, jaRespondemosAntes: true, ...extra });
+    check(naChegada === naVolta, `"${rotulo}": chegada e volta decidem igual (${naChegada} / ${naVolta})`);
+    check(naChegada !== '1', `e "${rotulo}" NAO recebe o modelo na chegada`);
+  }
+
+  /**
+   * **O que continua diferente, e e decisao dele (02/09): o RECIBO do anuncio vem primeiro.**
+   * Quem chega por anuncio reconhecido e so diz "amem" recebe o modelo + o pedido de dados; na
+   * volta, a despedida venceria. Pendencia neutra custa um dia de atraso; o recibo e o que ela
+   * clicou para receber.
+   */
+  const comRecibo = { ...base, jaRespondemosAntes: false, anuncioReconhecido: true, jaPediramDados: false };
+  check(desfecho({ ...comRecibo, ultimaEhDespedida: true }) === 'a', 'o recibo do anuncio vence a despedida na chegada');
+  check(desfecho({ ...comRecibo, ultimaEhSoReacao: true }) === 'a', 'e vence a figura tambem');
 }
 
 grupo('mandou o endereco: PULA e ele transfere no fim (04/09/2026)');
