@@ -1669,9 +1669,16 @@ export function pedeLigacao(entrantes, nossaUltimaAt) {
  * pede o endereço à mão, com a redação do dia, então não há invariante para casar — a regra nunca
  * dispararia. O que ELA escreve é o sinal.
  *
- * **Roda na conversa INTEIRA, não na rajada.** "Ela já mandou o endereço" não deixa de ser verdade
- * quando respondemos — é a mesma natureza de `jaDeuNomeECidade`, e o oposto de "ela acabou de
- * responder". Repetir não custa nada porque o desfecho é silêncio: pula, não manda, não conclui.
+ * **Roda na RAJADA, e isso é o que a torna uma resposta.** Regra dele, no mesmo dia: *"para pular o
+ * contato sempre será depois que eu pedir o endereço e etiqueta for colocada"*. O endereço que
+ * conta é o que ela escreveu **depois da nossa última mensagem** — ou seja, respondendo a alguma
+ * coisa que nós dissemos. Ler a conversa inteira (como esta função fazia por uma versão) puxaria
+ * também a rua citada num desabafo de julho, e o contato ficaria pulado para sempre.
+ *
+ * **Quem carrega o estado adiante é a ETIQUETA, não este detector.** Assim que respondemos, a
+ * rajada esvazia e ele volta a ser falso — e é a etiqueta no CRM que continua dizendo "este é caso
+ * de material". Detector é palpite; a marca é decisão, e decisão não se redescobre. Mesma lição da
+ * etiqueta de sem interesse.
  */
 const CEP = /(^|[^\p{L}\p{N}])\d{5}-?\d{3}([^\p{L}\p{N}]|$)/u;
 
@@ -1710,8 +1717,8 @@ const NUMERO_DA_CASA = [
  * quase sempre volta por extenso e não casa, então incluí-la custa quase nada e pega o raro caso em
  * que a pessoa ditou o endereço já formatado.
  */
-export function informouEndereco(entrantes) {
-  for (const msg of entrantes || []) {
+export function informouEndereco(entrantes, nossaUltimaAt) {
+  for (const msg of rajadaFinal(entrantes, nossaUltimaAt)) {
     if (msg?.sistema) continue;
     const texto = semAcentos(msg?.texto);
     if (!texto) continue;

@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.24.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.25.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.24.0**, tudo commitado e no remoto. 18 commits no dia 04/09.
+Branch `claude/whatsfill-ia`, **v2.25.0**, tudo commitado e no remoto. 19 commits no dia 04/09.
 Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente.
 
@@ -24,8 +24,10 @@ sem desfecho incoerente.
    - **Etiqueta de SEM INTERESSE** — a rodada não marca e, na visita seguinte, precisa
      redescobrir a hostilidade do zero (o caso da susana, reportado duas vezes);
    - **Etiqueta de quem PEDIU DINHEIRO OU EMPREGO** — ele quer `🔴Procura emprego ou dinheiro`;
-   - **Etiqueta de quem MANDOU ENDEREÇO** — a lista de material a enviar. Sem ela a rodada pula do
-     mesmo jeito, e ele perde a marca que junta esses contatos para transferir.
+   - **Etiqueta de quem MANDOU ENDEREÇO** — a lista de material a enviar. Ele disse que a etiqueta
+     já existe na plataforma; falta só digitar o nome dela aqui. **Este é o campo que mais custa
+     ficar vazio dos três:** é a etiqueta que faz a rodada pular o contato em toda passada, então
+     sem ela quem está esperando material volta para a automação assim que a rajada esvazia.
 3. **Config → tabela "Modelo por conteúdo", linha `ADS = Campanha Martim`**: não é mais necessário
    limpar (o código tem o piso `tags.ORIGEM_SEMPRE`), mas continua sendo lixo que confunde a leitura.
 
@@ -69,6 +71,45 @@ consertar, **medir de novo no quadro dele**, escrever o teste de regressão, reg
 
 ---
 
+## 2026-09-04 — Quem faz pular é a ETIQUETA, não o detector (v2.25.0)
+
+Correção da versão anterior, no mesmo dia, com uma frase dele: *"já tem uma etiqueta na plataforma
+pra isso, só tenho que configurar ela assim como a de sem interesse — e para pular o contato sempre
+será depois que eu pedir o endereço e etiqueta for colocada"*.
+
+### O que estava errado
+
+Em 2.24.0 o que fazia pular era o **detector**, lendo a conversa inteira. Dois defeitos nisso, e o
+segundo é o que ele nomeou:
+
+1. **Conversa inteira nunca esquece.** Uma rua citada num desabafo de julho deixaria o contato
+   pulado para sempre, sem nada dizendo por quê.
+2. **O detector não é a decisão.** Ele é palpite sobre um texto; a marca no CRM é a decisão — e
+   decisão dele não se redescobre a cada passada. É a lição da susana (03/09), a mesma que fez a
+   etiqueta de sem interesse passar a ser LIDA e não só aplicada.
+
+### Como ficou
+
+**A etiqueta manda.** Contato com a etiqueta de material configurada é pulado em toda passada,
+tenha ele escrito o que for — e nada é gravado nessas passadas, porque a marca já está lá.
+
+**O detector é a outra ponta**, e só isso: reconhece a resposta dela e aplica a marca, para ele não
+ter que marcar contato por contato. Passou a ler a **rajada** — o endereço que conta é o que ela
+escreveu depois da nossa última mensagem, ou seja, respondendo a alguma coisa nossa. É a tradução
+literal do *"depois que eu pedir o endereço"*.
+
+**E o detector some sozinho**, de propósito: respondida a pessoa, a rajada esvazia e ele volta a ser
+falso. Se a etiqueta fosse só um efeito colateral, o contato voltaria à automação no dia seguinte.
+Com ela no comando, o contato fica fora até **ele tirar a etiqueta** — que é o gesto que diz "esta
+conversa foi transferida".
+
+O rótulo da tecla 2 diz qual dos três casos é: *"Pular e marcar X"*, *"Pular (já marcado como
+material a enviar)"*, ou o *"Pular (deixa aberto)"* de sempre.
+
+Padrão: 63 caixas, sem problemas e sem desfecho incoerente. Quinze suítes verdes.
+
+---
+
 ## 2026-09-04 — Mandou o endereço: pula, marca, e ele transfere no fim (v2.24.0)
 
 Pedido dele, com o anúncio novo: *"anúncio novo é sobre material de campanha e eu peço endereço...
@@ -102,9 +143,8 @@ em qualquer posição faria *"a rua aqui está esburacada há 20 anos"* — recl
 nesta base — virar endereço, com a marca da via junto. Das 20 asserções do teste, 10 são falso
 positivo.
 
-Roda na **conversa inteira**, não na rajada: "ela já mandou o endereço" não deixa de ser verdade
-quando respondemos — mesma natureza de `jaDeuNomeECidade`. Repetir não custa nada porque o desfecho
-é silêncio.
+Rodava na **conversa inteira** nesta versão; passou a ler a **rajada** em 2.25.0, e quem carrega o
+caso adiante virou a etiqueta — ver a entrada acima.
 
 ### A tecla é 2, e a etiqueta é a exceção do "pular"
 

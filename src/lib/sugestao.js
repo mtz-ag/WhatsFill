@@ -150,11 +150,18 @@ export const REGRAS = [
      * do próprio atendimento: qualquer mensagem nossa aqui — o modelo, o agradecimento, a do
      * momento — chega por cima de um pedido que já foi entendido e está esperando o material.
      *
-     * **A etiqueta é o que torna a lista utilizável**, e é o campo "Etiqueta de quem MANDOU
-     * ENDEREÇO" da aba Automatizado. Vazio, a regra continua pulando e diz no log que não marcou.
+     * **Quem manda é a ETIQUETA**, e isso é regra dele no mesmo dia: *"para pular o contato sempre
+     * será depois que eu pedir o endereço e etiqueta for colocada"*. O campo é "Etiqueta de quem
+     * MANDOU ENDEREÇO", na aba Automatizado. O detector de endereço é a outra ponta: reconhece a
+     * resposta e aplica a marca, para ele não ter que marcar contato por contato.
+     *
+     * **O detector sozinho não sustenta o caso, de propósito.** Ele lê a rajada, então some assim
+     * que respondemos; é a etiqueta que carrega o estado adiante — e é ela que ele tira quando a
+     * conversa for transferida, devolvendo o contato ao fluxo normal. Detector é palpite; a marca
+     * é decisão, e decisão não se redescobre (mesma lição da etiqueta de sem interesse).
      */
     quando: (c) => !!c.informouEndereco,
-    motivo: () => 'ela mandou o endereço para receber material — pulei para você transferir no fim.',
+    motivo: () => 'é caso de material a enviar — pulei para você transferir no fim.',
   },
   {
     id: 'etiqueta-dispensa-da-fila',
@@ -989,13 +996,14 @@ export const SOBRE = {
       'continua caindo no pedido de nome e cidade, com o "não tem problema" junto.',
   },
   'informou-endereco': {
-    rotulo: 'Mandou o endereço (material para enviar)',
+    rotulo: 'Mandou o endereço, ou já tem a etiqueta de material',
     efeito: 'silencio',
     quando:
-      'Ela escreveu um endereço — rua com número, bairro ou CEP. Pula e deixa o atendimento ' +
-      'aberto, para você transferir a conversa ao responsável pelo envio, e marca a etiqueta que ' +
-      'você configurou. Você só pede endereço para mandar material, então o endereço sozinho ' +
-      'identifica o caso.',
+      'Duas portas para a mesma situação: ela respondeu com um endereço — rua com número, bairro ' +
+      'ou CEP —, ou o contato já carrega a etiqueta de material que você configurou. Pula e deixa ' +
+      'o atendimento aberto, para você transferir a conversa ao responsável pelo envio. Quem ' +
+      'manda é a ETIQUETA: reconhecido o endereço, ela é aplicada, e daí em diante é ela que ' +
+      'segura o contato fora da automação — até você tirá-la.',
   },
   'etiqueta-dispensa-da-fila': {
     rotulo: 'Tem a etiqueta que dispensa da fila',

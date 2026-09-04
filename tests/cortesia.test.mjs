@@ -1487,7 +1487,18 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(end('casa 12, bairro Guajuviras'), 'bairro + complemento, sem via');
   check(end('92310-000'), 'o CEP basta sozinho');
   check(end('cep 92310000 casa 2'), 'e o CEP sem o traco tambem');
-  check(end('Bom dia!', 'Rua das Flores, 123'), 'acha na conversa inteira, nao so na ultima');
+  check(end('Bom dia!', 'Rua das Flores, 123'), 'acha na rajada inteira, nao so na ultima');
+
+  /**
+   * **A RAJADA, e nao a conversa inteira** -- regra dele: *"para pular o contato sempre sera depois
+   * que eu pedir o endereco e etiqueta for colocada"*. O endereco que conta e o que ela escreveu
+   * DEPOIS da nossa ultima mensagem, ou seja, respondendo alguma coisa nossa. Quem carrega o caso
+   * adiante e a ETIQUETA, nao este detector.
+   */
+  const antes = [{ texto: 'Rua das Flores, 123', at: '2026-09-04T10:00:00Z' }];
+  check(!informouEndereco(antes, '2026-09-04T12:00:00Z'), 'endereco anterior a nossa ultima mensagem nao conta');
+  check(informouEndereco([...antes, { texto: 'Rua das Flores, 123', at: '2026-09-04T13:00:00Z' }], '2026-09-04T12:00:00Z'),
+    'e o que ela escreve depois conta');
 
   /**
    * **Os falsos positivos.** O caro aqui e a reclamacao de rua, que e comum nesta base: ela tem a

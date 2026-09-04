@@ -2015,12 +2015,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /**
-   * Ela mandou o endereço? Um lugar só, porque TRÊS pontos perguntam isso — o sinal do quadro, o
-   * rótulo da tecla 2 e a etiqueta ao pular —, e três leituras separadas divergem na primeira
-   * mudança do detector.
+   * **É caso de material a enviar?** Um lugar só, porque TRÊS pontos perguntam isso — o sinal do
+   * quadro, o rótulo da tecla 2 e a etiqueta ao pular —, e três leituras separadas divergem na
+   * primeira mudança.
+   *
+   * **A ETIQUETA vem primeiro, e é ela que manda.** Regra dele (04/09/2026): *"para pular o contato
+   * sempre será depois que eu pedir o endereço e etiqueta for colocada"*. Quem já está marcado é
+   * pulado em toda passada, tenha ela escrito o que for — é o mesmo desenho da etiqueta de sem
+   * interesse, que a rodada aplica E lê. O detector é só a outra ponta: reconhece a resposta e põe
+   * a marca, para ele não precisar marcar contato por contato.
+   *
+   * **O detector sozinho não sustenta o caso**, e é de propósito: ele lê a rajada, então some
+   * assim que respondemos. Quem carrega o estado adiante é a etiqueta no CRM — e é ela que ele
+   * tira quando a conversa for transferida, devolvendo o contato ao fluxo normal.
    */
-  function enderecoParaMaterial() {
-    return informouEndereco(state.entrantes);
+  async function enderecoParaMaterial() {
+    const marcada = await etiquetaDeEndereco();
+    if (marcada) return { motivo: `tem a etiqueta "${marcada}" — é material a enviar`, jaMarcada: true };
+    const dela = informouEndereco(state.entrantes, state.nossaUltimaAt);
+    return dela ? { ...dela, jaMarcada: false } : null;
+  }
+
+  /** A etiqueta de endereço que o contato JÁ tem no CRM — `null` sem o campo preenchido. */
+  function etiquetaDeEndereco() {
+    return etiquetaDaLista(String(state.auto.cfg.etiquetaEndereco || '').trim());
   }
 
   /**
@@ -4880,7 +4898,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * material, então o endereço sozinho identifica o caso — pula, não conclui, e a etiqueta
          * fica no contato para ele transferir a conversa ao responsável no fim.
          */
-        informouEndereco: !!enderecoParaMaterial(),
+        informouEndereco: !!(await enderecoParaMaterial()),
         modeloJaNaConversa,
         jaRespondemosAntes,
         ultimaEhDespedida: ultimaEhDespedida(state.entrantes),
@@ -5301,19 +5319,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       /**
-       * O rótulo diz que a etiqueta vai junto **quando o endereço foi reconhecido** — regra da
-       * rodada que depende de estado invisível parece defeito, e aqui a diferença é uma escrita
-       * no CRM num caminho que normalmente não grava nada.
+       * O rótulo diz o que vai acontecer, e são três coisas diferentes: marcar agora, já estar
+       * marcado, ou o pulo de sempre. Regra da rodada que depende de estado invisível parece
+       * defeito — e aqui a diferença é uma escrita no CRM num caminho que normalmente não grava
+       * nada.
        */
-      const enderecoDela = enderecoParaMaterial();
+      const enderecoDela = await enderecoParaMaterial();
       const etiquetaEndereco = String(state.auto.cfg.etiquetaEndereco || '').trim();
       opcoes.push({
         tecla: '2',
         valor: 'pular',
-        rotulo:
-          enderecoDela && etiquetaEndereco
-            ? `Pular e marcar "${etiquetaEndereco}" (deixa aberto para transferir)`
-            : 'Pular (deixa aberto)',
+        rotulo: !enderecoDela
+          ? 'Pular (deixa aberto)'
+          : enderecoDela.jaMarcada
+            ? 'Pular (já marcado como material a enviar)'
+            : etiquetaEndereco
+              ? `Pular e marcar "${etiquetaEndereco}" (deixa aberto para transferir)`
+              : 'Pular (mandou o endereço — etiqueta não configurada)',
       });
       opcoes.push({ tecla: '3', valor: 'concluir', rotulo: 'Concluir sem enviar' });
       /**
@@ -5680,11 +5702,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * conclusão e sem a pergunta de cidade, que era o que custava caro aqui.
        */
       if (escolha === 'pular') {
-        const dela = enderecoParaMaterial();
+        const dela = await enderecoParaMaterial();
         if (dela) {
-          // Vale também quando é ele que aperta a tecla: a situação é a mesma, e marcar só no
-          // automático faria a etiqueta depender de quem apertou.
-          const aviso = await etiquetarEndereco(state.contact);
+          /**
+           * **Já marcado, nada é escrito** — a etiqueta que faz pular já está lá, e reaplicar seria
+           * uma requisição por passada num contato que fica na fila até ele transferir.
+           *
+           * Marcar vale também quando é ELE que aperta a tecla: a situação é a mesma, e gravar só
+           * no automático faria a marca depender de quem apertou.
+           */
+          const aviso = dela.jaMarcada ? '' : await etiquetarEndereco(state.contact);
           return { nome, resultado: 'pulado', motivo: `${dela.motivo} — pulei para você transferir${aviso}` };
         }
         return { nome, resultado: 'pulado', motivo: 'você pulou — nada gravado, atendimento aberto' };

@@ -1216,6 +1216,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   aquilo, e aquilo e conteudo de verdade, nao recibo.
 
 
+- **Quem faz a rodada pular o caso de MATERIAL e a etiqueta, nao o detector.** Regra dele
+  (04/09/2026): *"para pular o contato sempre sera depois que eu pedir o endereco e etiqueta for
+  colocada"*. O detector (`informouEndereco`) le a RAJADA e serve para uma coisa so: reconhecer a
+  resposta dela e APLICAR a marca. Ele some assim que respondemos — e e por isso que ele nao pode
+  ser o gatilho: quem carrega o caso adiante e a etiqueta no CRM, ate ele tira-la, que e o gesto de
+  "esta conversa foi transferida". Mesma licao da susana (03/09): **detector e palpite; a marca e
+  decisao, e decisao nao se redescobre.** Na primeira versao (v2.24.0) o detector decidia sozinho,
+  lendo a conversa INTEIRA — uma rua citada num desabafo de julho deixaria o contato pulado para
+  sempre.
 - **O "pular" GRAVA uma coisa desde 04/09/2026: a etiqueta de quem mandou o ENDERECO.** A decisao
   dele de 31/08 (*"ao pular tem gravado dados no CRM, o que faz eu perder tempo"*) continua valendo
   para todo o resto — nenhum campo, nenhuma data de conclusao, nenhuma pergunta de cidade. A
