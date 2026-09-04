@@ -1,43 +1,67 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.14.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.23.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
-confiar.
+confiar. **Substitui a entrada equivalente de v2.14.0** — duas destas no arquivo é o começo da
+divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.14.0**, tudo commitado e no remoto. 38 commits em 03–04/09.
+Branch `claude/whatsfill-ia`, **v2.23.0**, tudo commitado e no remoto (`fb4e44c`). 17 commits no dia
+04/09. Quinze suítes verdes, os dois verificadores limpos, **61 caixas** no fluxo padrão sem
+problemas e sem desfecho incoerente.
 
 ### Pendências que NÃO estão no código — precisam dele
 
-1. **Importar o fluxo.** O quadro dele ainda é o exportado em **1.86.0**; o padrão de agora tem 59
-   caixas. Tudo o que mudou de POSIÇÃO nos dois dias só vale depois de importar — inclusive a caixa
-   `contexto-de-outro-dia`, que é a correção de quatro anotações do dia 04.
-   Gerar com `node tools/exportar-fluxo.mjs <saida.json>` (saída FORA do repositório).
-2. **Config → "Etiqueta de sem interesse"**: se estiver vazio, a etiqueta que a rodada aplica não é
-   lida na visita seguinte (o caso da susana, que ele reportou duas vezes). O conserto de 04/09
-   depende desse campo preenchido.
-3. **Config → "conteúdo preferido" e a linha `ADS → Campanha Martim`**: a caixa da Elaine mostrava
-   *pediu "ADS"*, e a etiqueta ADS é ORIGEM, não conteúdo. Limpar os dois evita que ela volte a
-   decidir modelo.
+1. **Importar o fluxo.** O quadro dele é o exportado em **2.14.0** (59 caixas); o padrão de agora tem
+   **61** — as duas novas são *"pediu que a gente ligasse"*, nos dois ramos. Já foi gerado e entregue
+   como `fluxo-padrao-2.21.0.json` (61 caixas, mesmo conteúdo do de agora). Regenerar com
+   `node tools/exportar-fluxo.mjs <saida.json>` — saída FORA do repositório.
+2. **Aba Automatizado → "Etiquetas que a rodada aplica"** (cartão novo, criado hoje porque os campos
+   estavam escondidos dentro de um cartão desativado desde 15/08):
+   - **Etiqueta de SEM INTERESSE** — vazia, a rodada não marca e, na visita seguinte, precisa
+     redescobrir a hostilidade do zero (o caso da susana, reportado duas vezes);
+   - **Etiqueta de quem PEDIU DINHEIRO OU EMPREGO** — vazia; ele quer `🔴Procura emprego ou dinheiro`.
+3. **Config → tabela "Modelo por conteúdo", linha `ADS = Campanha Martim`**: não é mais necessário
+   limpar (o código tem o piso `tags.ORIGEM_SEMPRE`), mas continua sendo lixo que confunde a leitura.
 
 ### Aberto, esperando decisão dele
 
-- **Casamento aproximado de cidade ainda abre a caixa "Cidade a gravar".** *"Só q ia me mudar pra
-  Santa Rita"* casa como **Santa Rosa** (`aproximada`). O `nao-reconhecida` já foi barrado em
-  04/09; barrar o `aproximada` também tiraria "Sao lourenso" e os outros erros de digitação.
-- **Nada de 03–04/09 foi testado na tela** — só medido em Node. Vale conferir na primeira rodada:
-  a caixa do tempo (tecla 5), a tecla 8 chamando a IA, e o rascunho lendo a rajada inteira.
+- **Áudio antigo sem pergunta: gente ou tempo?** A Iracema mandou áudio de torcida ONTEM e ele quer
+  *"conclua para sair da lista"*; hoje o caso cai em `ultima-pede-resposta-pessoal` (tecla 6). Inverter
+  faria todo áudio antigo receber a mensagem do momento em vez de ir para ele — muda muito mais que
+  aquele contato, e por isso não mexi. **Tecla 6 não manda nada errado**, custa um toque.
+- **Casamento aproximado de cidade ainda abre a caixa "Cidade a gravar."** *"Só q ia me mudar pra
+  Santa Rita"* casa como Santa Rosa. O `nao-reconhecida` já foi barrado; barrar o `aproximada`
+  também tiraria "Sao lourenso" e os outros erros de digitação.
+- **O "me liga" não aplica etiqueta nenhuma.** As duas respostas que negam (dinheiro, emprego) marcam;
+  esta não, porque ele não pediu. Se quiser, é um id a mais em `ETIQUETA_PEDIDO_IDS`.
+
+### O que foi medido e o que não foi
+
+**Nada de 03–04/09 foi testado na tela**, com uma exceção: a altura da caixa da rodada, medida no
+navegador com o CSS real. Todo o resto foi medido em Node — inclusive **contra o quadro que ele tem**
+(`fluxopadrao2.14.0.json`), que é a conferência que importa: regra nova só vale para ele se decidir no
+quadro dele.
 
 ### Onde as coisas moram
 
-- **`CLAUDE.md`** — 241 armadilhas, lido em toda sessão. É onde entra fato que custou horas.
-- **`registro.md`** — causa raiz de cada mudança, mais recente no topo. Não é lido sozinho: quem vai
-  mexer numa área procura aqui primeiro.
+- **`CLAUDE.md`** — as armadilhas, lido em toda sessão. É onde entra fato que custou horas.
+- **`registro.md`** — causa raiz de cada mudança, mais recente no topo.
 - **`tests/`** — 15 suítes. **É a forma mais forte de guardar uma decisão dele**; comentário
   envelhece, teste cai. Toda anotação da rodada vira teste.
+- **`tools/exportar-fluxo.mjs`** — gera o ramo para ele importar, confere relendo e imprime o fluxo
+  em texto. Nunca commitar o arquivo gerado: retrato envelhece no primeiro commit que mexe no padrão.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`.
+
+### O ritmo desta sessão, para quem entrar agora
+
+Ele cola **observações da rodada** (o botão "Copiar as novas" da aba Automatizado) com o caso junto:
+regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada uma: **medir com o
+código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
+consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
+`CLAUDE.md`, e commitar. Uma versão por lote.
 
 ---
 

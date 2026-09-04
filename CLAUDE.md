@@ -25,7 +25,11 @@
 
 > Antes de implementar, refatorar ou executar qualquer tarefa, SEMPRE verifique:
 >
-> 1. **`registro.md`** — log de mudanças, decisões e pendências
+> 1. **`registro.md`** — log de mudanças, decisões e pendências. **A entrada do TOPO é a de
+>    passagem de contexto** (*"ESTADO DE AGORA"*): é a única que descreve o presente — o que está
+>    no ar, o que espera decisão dele e o que ele precisa fazer na mão. Se a versão do
+>    `manifest.json` for maior que a do título dela, ela envelheceu: confira antes de confiar, e
+>    **reescreva-a** em vez de acrescentar uma segunda.
 > 2. **`CLAUDE.md`** (este arquivo) — regras e armadilhas conhecidas
 > 3. **`README.md`** — arquitetura, medições ao vivo e o porquê de cada escolha
 >
