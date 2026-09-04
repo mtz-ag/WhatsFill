@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.26.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.27.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.26.0**, tudo commitado e no remoto. 20 commits no dia 04/09.
+Branch `claude/whatsfill-ia`, **v2.27.0**, tudo commitado e no remoto. 21 commits no dia 04/09.
 Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente.
 
@@ -68,6 +68,36 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — "Boa noite!" às 16:21: o relógio faltava no rascunho (v2.27.0)
+
+Print dele, com o rascunho da IA aberto no campo de mensagem: *"a IA respondeu com boa noite e agora
+é 16:22 — é algo que já tinha falado para checar hora e data atual antes de formular mensagem"*.
+
+### Ele estava certo, e o conserto de hoje de manhã foi pela metade
+
+Em 2.16.0 o relógio entrou no prompt — **no caminho da DECISÃO**. `montarContato` abre com
+`agoraEmPortugues`. `montarContatoRascunho`, que é o que **escreve texto para eleitor**, ficou de
+fora: ele carimbava cada mensagem com `quandoFoi` e nunca dizia que horas são AGORA.
+
+E o carimbo, sozinho, empurra para o erro: a última fala dela estava marcada `ontem 20:21`, e "boa
+noite" é a dedução natural de quem só vê isso. **Carimbar as mensagens não é ter relógio** — é
+saber quando as coisas foram, sem saber quando é agora.
+
+### Três camadas, porque prompt é pedido
+
+1. O bloco do rascunho passou a abrir com a hora, como o da decisão.
+2. E diz a saudação certa **por extenso** (`saudacaoDeAgora`): deduzir a faixa da hora é justamente
+   o passo em que ele errou, então o código faz a conta.
+3. `revisarRascunho` **troca** a saudação quando ela abre o texto e está errada, com o aviso
+   dizendo que trocou. É a única correção que a revisão faz no texto da IA, e cabe aí por ser
+   verificável e mecânica: quem decide é o relógio, não uma leitura do que ela escreveu.
+
+Rascunho **sem** saudação continua sem — acrescentar uma seria escrever no lugar da IA.
+
+Doze asserções novas no `ia.test.mjs`. Quinze suítes verdes, verificadores limpos.
 
 ---
 

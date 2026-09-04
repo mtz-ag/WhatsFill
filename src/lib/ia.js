@@ -198,6 +198,27 @@ export function agoraEmPortugues(agora) {
   return `Agora são ${horaCurta(d)} de ${dias[d.getDay()]}, ${data}.`;
 }
 
+/**
+ * A saudação certa AGORA — calculada aqui, não deduzida pelo modelo.
+ *
+ * Print dele (04/09/2026): o rascunho saiu com *"Boa noite!"* às 16:21. Ele: *"já tinha falado para
+ * checar hora e data atual antes de formular mensagem"*.
+ *
+ * **Pedir ao modelo que "confira a hora" não é o conserto** — é a mesma armadilha registrada em
+ * 04/09: instrução no prompt é pedido, e o que ele tinha na frente era a última mensagem dela
+ * marcada `ontem 20:21`. Saudação é mecânica: hora do relógio, três faixas. Então o código diz
+ * qual é, e o código conserta se vier outra.
+ */
+export function saudacaoDeAgora(agora) {
+  const h = relogio(agora).getHours();
+  if (h < 12) return 'Bom dia';
+  if (h < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+/** As três, para reconhecer a errada no começo do rascunho. */
+const SAUDACAO_NO_COMECO = /^\s*(bom\s+dia|boa\s+tarde|boa\s+noite)\b/i;
+
 export function montarContato({ mensagens = [], campos = {}, etiquetas = [], agora } = {}) {
   /**
    * Cada mensagem leva QUANDO chegou — ver `quandoFoi`. Sem isso, saber "agora" não serve de nada:
@@ -775,6 +796,21 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora } = {
     : '';
 
   return [
+    /**
+     * **O relógio faltava AQUI** — e era o caminho que escreve texto para o eleitor.
+     *
+     * Em 04/09/2026 o horário entrou em `montarContato` (a decisão) e este bloco ficou de fora:
+     * ele carimbava cada mensagem com `quandoFoi`, mas nunca dizia que horas são AGORA. Com a
+     * última fala dela marcada `ontem 20:21`, o modelo abriu o rascunho com *"Boa noite!"* às
+     * 16:21. **Carimbar as mensagens não é ter relógio** — é saber quando as coisas foram, sem
+     * saber quando é agora.
+     *
+     * A saudação vai escrita por extenso porque deduzir a faixa da hora é justamente o passo em
+     * que ele errou.
+     */
+    agoraEmPortugues(agora),
+    `Se abrir com saudação, a correta agora é "${saudacaoDeAgora(agora)}" — não deduza pelo horário das mensagens.`,
+    '',
     'A conversa inteira, da mais antiga para a mais recente. "NÓS" é o atendimento:',
     '',
     conversa || '(nada)',
@@ -806,10 +842,28 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora } = {
  *
  * @returns {{texto:string, avisos:string[]}}
  */
-export function revisarRascunho(bruto) {
-  const texto = String(bruto || '').trim();
+export function revisarRascunho(bruto, agora) {
+  let texto = String(bruto || '').trim();
   const avisos = [];
   if (!texto) return { texto: '', avisos: ['a IA não devolveu texto'] };
+
+  /**
+   * **A saudação errada é consertada, não avisada.**
+   *
+   * É a única correção que esta função faz no texto, e ela cabe aqui por ser verificável e
+   * mecânica: a hora do relógio decide, sem julgar uma vírgula do que a IA escreveu. Avisar em vez
+   * de consertar devolveria a ele um trabalho de um segundo que a máquina faz melhor — e a print
+   * de 04/09 mostra o custo de deixar passar: *"Boa noite!"* às 16:21, para um eleitor.
+   *
+   * Só troca a PALAVRA da abertura, e só quando já há uma saudação ali: rascunho sem saudação
+   * continua sem, porque acrescentar uma seria escrever no lugar da IA.
+   */
+  const certa = saudacaoDeAgora(agora);
+  const abertura = SAUDACAO_NO_COMECO.exec(texto);
+  if (abertura && abertura[1].toLowerCase() !== certa.toLowerCase()) {
+    texto = texto.replace(SAUDACAO_NO_COMECO, certa);
+    avisos.push(`a IA abriu com "${abertura[1]}" e agora é ${certa.toLowerCase()} — troquei`);
+  }
 
   // Marcador esquecido: iria como está para o eleitor e apareceria literalmente na conversa.
   if (/\{\{|\[nome\]|\[cidade\]|xxx+/i.test(texto)) {
@@ -847,7 +901,7 @@ function umaLinha(texto, limite = 400) {
  *
  * @returns {{texto:string, confianca:number, motivo:string, avisos:string[], precisaDeRevisao:boolean}}
  */
-export function validarRascunho(bruto) {
+export function validarRascunho(bruto, agora) {
   const vazio = { texto: '', confianca: 0, motivo: '', avisos: ['a IA não devolveu rascunho'], precisaDeRevisao: true };
 
   let d = bruto;
@@ -858,13 +912,13 @@ export function validarRascunho(bruto) {
       // Formato ilegível: trata como texto puro, que é o que a versão anterior devolvia. Assim
       // um modelo que ignore o esquema ainda produz rascunho — só nunca automático, porque sem
       // `confianca` ele não passa do limiar.
-      const cru = revisarRascunho(bruto);
+      const cru = revisarRascunho(bruto, agora);
       return { texto: cru.texto, confianca: 0, motivo: '', avisos: cru.avisos, precisaDeRevisao: true };
     }
   }
   if (!d || typeof d !== 'object') return vazio;
 
-  const revisao = revisarRascunho(d.texto);
+  const revisao = revisarRascunho(d.texto, agora);
   const precisaDeRevisao = d.precisaDeRevisao !== false; // ausente = sim, por segurança
   const avisos = [...revisao.avisos];
   if (precisaDeRevisao) avisos.push('a própria IA pediu revisão humana');

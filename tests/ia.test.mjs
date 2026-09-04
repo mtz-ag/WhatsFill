@@ -11,6 +11,7 @@ import { check, grupo, fim } from './_harness.mjs';
 import {
   montarSistemaRascunho,
   montarContatoRascunho,
+  saudacaoDeAgora,
   montarRequisicaoRascunho,
   revisarRascunho,
   validarRascunho,
@@ -524,6 +525,46 @@ grupo('montarContatoRascunho: os DOIS lados, e a pendencia marcada (03/09/2026)'
   check(/ELA: tudo bem\?[^\n]*SEM RESPOSTA/.test(soStrings), 'e todas elas vem marcadas, sem fala nossa no meio');
 
   check(montarContatoRascunho({}).includes("(nada)"), "sem mensagem nao explode");
+}
+
+{
+  grupo('o relogio faltava no RASCUNHO (04/09/2026)');
+
+  /**
+   * Print dele: o rascunho abriu com *"Boa noite!"* as **16:21**. Ele: *"ja tinha falado para
+   * checar hora e data atual antes de formular mensagem"*.
+   *
+   * O horario entrou em `montarContato` (a decisao) em 04/09 e este bloco -- o que ESCREVE texto
+   * para eleitor -- ficou de fora: carimbava cada mensagem com o "quando", e nunca dizia que horas
+   * sao AGORA. Com a ultima fala dela marcada `ontem 20:21`, "boa noite" era a deducao natural.
+   */
+  const tarde = new Date('2026-09-04T16:21:00');
+  const bloco = montarContatoRascunho({
+    mensagens: [{ de: 'contato', texto: 'DC - Democracia Crista - e isto mesmo?', at: '2026-09-03T20:21:00' }],
+    agora: tarde,
+  });
+  check(bloco.includes('Agora sao 16:21'.replace('sao', 'são')), 'o bloco do rascunho abre dizendo que horas sao');
+  check(bloco.includes('"Boa tarde"'), 'e diz qual saudacao esta certa, por extenso');
+  check(bloco.includes('ontem 20:21'), 'a mensagem dela continua carimbada com o quando');
+
+  check(saudacaoDeAgora(new Date('2026-09-04T08:00:00')) === 'Bom dia', 'de manha, bom dia');
+  check(saudacaoDeAgora(tarde) === 'Boa tarde', 'as 16h, boa tarde');
+  check(saudacaoDeAgora(new Date('2026-09-04T19:30:00')) === 'Boa noite', 'as 19h30, boa noite');
+
+  /**
+   * **E a saudacao errada e CONSERTADA, nao avisada** -- e a unica coisa que a revisao troca no
+   * texto, porque e verificavel e mecanica: quem decide e o relogio.
+   */
+  const r = revisarRascunho('Boa noite! Sobre a propaganda que voce viu: sim, usar a imagem...', tarde);
+  check(r.texto.startsWith('Boa tarde!'), 'a saudacao errada e trocada pela certa');
+  check(r.avisos.some((a) => a.includes('troquei')), 'e o aviso diz que foi trocada');
+
+  const certa = revisarRascunho('Boa tarde! Tudo bem?', tarde);
+  check(certa.texto === 'Boa tarde! Tudo bem?', 'a saudacao certa nao e mexida');
+  check(!certa.avisos.length, 'e nao gera aviso');
+
+  const semSaudacao = revisarRascunho('Sobre a propaganda que voce viu: sim.', tarde);
+  check(semSaudacao.texto === 'Sobre a propaganda que voce viu: sim.', 'rascunho sem saudacao continua sem');
 }
 
 fim();

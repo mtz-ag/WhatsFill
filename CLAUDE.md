@@ -1109,6 +1109,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   CONTATO e NUNCA no de sistema**: o sistema leva `cache_control: ephemeral`, e o horario ali
   invalidaria o cache a cada chamada — a diferenca entre 10% e 100% do preco de entrada. Mensagem
   sem `at` sai sem marca, de proposito: inventar horario faria a IA raciocinar sobre dado falso.
+- **O relogio entrou no caminho da DECISAO e faltou no do RASCUNHO — que e o que escreve para
+  eleitor.** Print dele (04/09/2026): *"Boa noite!"* as **16:21**, e ele: *"ja tinha falado para
+  checar hora e data atual antes de formular mensagem"*. `montarContato` abria com
+  `agoraEmPortugues`; `montarContatoRascunho` so carimbava cada mensagem com `quandoFoi`, e a
+  ultima fala dela estava marcada `ontem 20:21` — "boa noite" era a deducao natural. **Carimbar as
+  mensagens nao e ter relogio**: e saber quando as coisas foram, sem saber quando e agora. Ao dar
+  contexto novo a IA, confira os DOIS blocos: sao duas funcoes, e a que escreve texto e a que
+  custa caro.
+- **Saudacao nao se pede ao modelo: calcula-se.** `saudacaoDeAgora` decide pela hora do relogio, o
+  bloco do contato diz qual e **por extenso**, e `revisarRascunho` **troca** a errada quando ela
+  abre o texto (unica correcao que ela faz no rascunho, com aviso dizendo que trocou). Instrucao no
+  prompt e pedido — a mesma licao do relogio, um dia depois. Rascunho sem saudacao continua sem:
+  acrescentar uma seria escrever no lugar da IA.
+
 - **Mudar a FORMA do que se passa para uma funcao pura quebra quem ela chama, em silencio.** Ao
   dar horario as mensagens, `mensagensParaIA` passou a devolver `{texto, at}` em vez de string — e
   `gabinete.precisaDoDossie` faz `join('\n')`, que viraria `[object Object]`: o dossie deixaria de

@@ -91,7 +91,7 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     // `validarRascunho` e não `revisarRascunho`: o rascunho passou a vir com esquema (texto +
     // confianca + precisaDeRevisao), e é a confiança que o envio automático precisa. Resposta
     // sem esquema ainda vira rascunho: o texto continua servindo para ele ler e mandar.
-    return { ...validarRascunho(r.decisao), custo: r.custo, custoUsd: r.custoUsd, gastoMes: r.gastoMes };
+    return { ...validarRascunho(r.decisao, agora), custo: r.custo, custoUsd: r.custoUsd, gastoMes: r.gastoMes };
   } catch (err) {
     return { texto: '', avisos: [err?.message || String(err)], custo: null };
   }
