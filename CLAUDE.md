@@ -1077,6 +1077,24 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   é texto livre, e "não sei"/"aaa"/cidade de outro estado viraria etiqueta permanente no CRM.
   O que não casa vai para a lista de revisão na tela. Ver `categorizar.analisar`.
 
+- **"Confirmado" sozinho NAO e confirmacao de presenca.** Anotacao da Nice (04/09/2026): *"Nossos
+  votos, estao confirmados: Capitao Martim para Deputado Estadual, Capitao Zucco para
+  Governador..."* — declaracao de VOTO — e a rodada a PULOU como quem confirma presenca em evento.
+  O padrao aceitava a palavra solta em qualquer posicao, e nesta base "confirmado" e dito de voto,
+  de chapa e de agenda. Hoje ela precisa vir **com o que a torna presenca** (presenca, ida,
+  participacao, "estarei") ou **ser a mensagem inteira**. E o mesmo conserto que "vamos"/"vou"
+  soltos levaram em 02/09, e pela mesma razao: **verbo sozinho e vocabulario de campanha, nao
+  resposta ao convite.**
+- **`momentoJaEnviado` nao e "ja respondi hoje", e a etiqueta de engajado confundia os dois.**
+  Anotacao da Janete (04/09): ela tem "Engajado", mandou dois audios e clicou em dois anuncios, e a
+  caixa ofereceu a mensagem do momento — *"ja mandei mensagem hoje, mesmo nao sendo do momento; nao
+  mandar quando ja respondi"*. A guarda que existia so sabia da mensagem do momento: quem respondeu
+  a mao, ou com outra resposta pronta, nao aparecia ali, e o engajado que fala o dia inteiro recebia
+  a mensagem do momento por cima da conversa que acabara de ter. Hoje
+  `etiqueta-dispensa-da-fila` olha `respondidoHoje` primeiro — a mesma guarda que
+  `ultima-e-so-reacao` ja usava.
+
+
 ## Armadilhas do próprio painel
 
 - **`store.get` só mescla defaults em ALGUMAS chaves.** Chave nova dentro de um objeto já salvo

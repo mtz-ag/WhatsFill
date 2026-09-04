@@ -134,7 +134,21 @@ export const REGRAS = [
   },
   {
     id: 'etiqueta-dispensa-da-fila',
-    tecla: (c) => (c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5'),
+    /**
+     * **Já respondemos hoje? Então nada sai** — anotação da Janete (04/09/2026).
+     *
+     * Ela tem a etiqueta "Engajado", mandou dois áudios e clicou em dois anúncios, e a caixa
+     * ofereceu a mensagem do momento. Ele: *"já mandei mensagem hoje, mesmo não sendo do momento —
+     * não mandar quando já respondi"*.
+     *
+     * A guarda que existia era `momentoJaEnviado`, que só sabe da mensagem do momento. Quem
+     * respondeu à mão, ou com outra resposta pronta, não aparecia ali — e o engajado que fala o dia
+     * inteiro recebia a mensagem do momento por cima da conversa que ele acabara de ter.
+     *
+     * `respondidoHoje` é a mesma guarda que `ultima-e-so-reacao` já usava, e pela mesma razão:
+     * mais uma mensagem nossa no mesmo dia é empilhar, não atender.
+     */
+    tecla: (c) => (c.respondidoHoje || c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5'),
     /**
      * Etiqueta que dispensa o contato da rodada (configurável na aba Automatizado).
      *
@@ -171,9 +185,11 @@ export const REGRAS = [
      */
     quando: (c) => !!c.etiquetaQueDispensa,
     motivo: (c) =>
-      c.momentoJaEnviado || !c.podeMandarMomento
-        ? `tem a etiqueta "${c.etiquetaQueDispensa}" e já recebeu a mensagem do momento — conclua e siga.`
-        : `tem a etiqueta "${c.etiquetaQueDispensa}" — já está engajado: mande a mensagem do momento e conclua.`,
+      c.respondidoHoje
+        ? `tem a etiqueta "${c.etiquetaQueDispensa}" e você já respondeu hoje — conclua e siga.`
+        : c.momentoJaEnviado || !c.podeMandarMomento
+          ? `tem a etiqueta "${c.etiquetaQueDispensa}" e já recebeu a mensagem do momento — conclua e siga.`
+          : `tem a etiqueta "${c.etiquetaQueDispensa}" — já está engajado: mande a mensagem do momento e conclua.`,
   },
   {
     id: 'ultima-pede-resposta-pessoal',
@@ -938,7 +954,7 @@ export const SOBRE = {
     quando: 'Já está engajado: manda a mensagem do momento uma vez e conclui; depois, só conclui.',
     ramos: [
       { tecla: '5', se: 'a mensagem do momento ainda não saiu para ele' },
-      { tecla: '3', se: 'ele já recebeu a do momento, ou não há uma configurada' },
+      { tecla: '3', se: 'você já respondeu hoje, ele já recebeu a do momento, ou não há uma configurada' },
     ],
   },
   'ultima-pede-resposta-pessoal': {

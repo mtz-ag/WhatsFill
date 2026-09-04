@@ -873,4 +873,22 @@ grupo('nada-legivel-dela: sem nenhuma informacao, pergunte o interesse (03/09/20
   check(com({ ...tilin, interessePerguntado: true })?.id === 'nunca-pediram-dados', 'ja perguntado uma vez, nao insiste');
 }
 
+grupo('engajado: ja respondi hoje, nao manda nada (04/09/2026)');
+{
+  /**
+   * Anotacao da Janete: ela tem a etiqueta "Engajado", mandou dois audios e clicou em dois
+   * anuncios, e a caixa ofereceu a mensagem do momento. Ele: *"ja mandei mensagem hoje, mesmo nao
+   * sendo do momento -- nao mandar quando ja respondi"*.
+   *
+   * A guarda que existia era `momentoJaEnviado`, que so sabe da mensagem do momento: quem
+   * respondeu a mao, ou com outra resposta pronta, nao aparecia ali.
+   */
+  const base = { etiquetaQueDispensa: 'Engajado', podeMandarMomento: true };
+  check(com({ ...base, respondidoHoje: true })?.tecla === '3', 'ja respondemos hoje: conclui, nada sai');
+  check(String(com({ ...base, respondidoHoje: true })?.motivo).includes('já respondeu hoje'),
+    'e o motivo diz por que');
+  check(com(base)?.tecla === '5', 'sem ter respondido hoje, a mensagem do momento continua saindo');
+  check(com({ ...base, momentoJaEnviado: true })?.tecla === '3', 'a guarda antiga continua valendo');
+}
+
 fim();

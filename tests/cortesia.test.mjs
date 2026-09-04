@@ -1278,4 +1278,33 @@ grupo('terminouComPergunta: pergunta pendente nunca vira "conclua" (03/09/2026)'
   check(!terminouComPergunta(null, null), 'nulo nao explode');
 }
 
+grupo('"confirmado" sozinho nao e presenca (04/09/2026)');
+{
+  /**
+   * Anotacao da Nice: *"Nossos votos, estao confirmados: Capitao Martim para Deputado Estadual,
+   * Capitao Zucco para Governador..."* -- declaracao de VOTO -- e a rodada a PULOU como quem
+   * confirma presenca em evento. Ele: *"pegou confirmacao de evento sem contexto, vou mandar
+   * mensagem do dia"*.
+   *
+   * O padrao aceitava a palavra solta em qualquer posicao, e nesta base "confirmado" e dito de
+   * voto, de chapa e de agenda. Mesmo conserto que "vamos"/"vou" soltos levaram em 02/09.
+   */
+  const conv = (a) => a.map((t, i) => ({ texto: t, at: new Date(Date.now() - (a.length - i) * 60000).toISOString() }));
+  const presenca = (t) => confirmaPresenca(conv([t]), null);
+
+  check(presenca('Nossos votos, estão confirmados: Capitão Martim, para Deputado Estadual, Capitão ZUCCO para Governador') === null,
+    'declaracao de voto nao e confirmacao de presenca');
+  check(presenca('Meu voto está confirmado no 22') === null, 'nem o voto no singular');
+
+  // E tudo o que E presenca continua sendo.
+  check(presenca('Confirmado!') === 'sim', '"Confirmado!" sozinho continua valendo');
+  check(presenca('presença confirmada') === 'sim', '"presenca confirmada" tambem');
+  check(presenca('Confirmo minha presença') === 'sim', '"confirmo minha presenca" tambem');
+  check(presenca('Quero confirmar minha presença no evento: AMIGOS CAPITAO MARTIM') === 'sim',
+    'o texto do botao do anuncio continua valendo');
+  check(presenca('confirmado, estarei presente') === 'sim', '"confirmado, estarei presente" tambem');
+  check(presenca('Estou confirmada') === 'sim', '"estou confirmada" tambem');
+  check(presenca('Estarei lá') === 'sim', 'e "estarei la"');
+}
+
 fim();

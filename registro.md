@@ -41,6 +41,52 @@ Branch `claude/whatsfill-ia`, **v2.14.0**, tudo commitado e no remoto. 38 commit
 
 ---
 
+## 2026-09-04 — Duas anotações: "confirmado" que não era presença, e o engajado já respondido (v2.15.0)
+
+### A Nice foi pulada como quem vai a um evento
+
+Ela escreveu *"Nossos votos, estão confirmados: Capitão Martim para Deputado Estadual, Capitão Zucco
+para Governador do Rio Grande do Sul e Flávio Bolsonaro 22 para Presidente"* — uma declaração de
+**voto**, das mais entusiasmadas que chegam aqui — e a rodada a **pulou**, tratando-a como quem
+confirma presença em evento. Ele: *"pegou confirmação de evento sem contexto, vou mandar mensagem do
+dia"*.
+
+O padrão aceitava `confirmado|confirmada|confirmo` **solto, em qualquer posição**. Nesta base
+"confirmado" é dito de voto, de chapa e de agenda — a palavra sozinha não diz de quê.
+
+É o mesmo conserto que "vamos"/"vou" soltos levaram em 02/09, e pela mesma razão: **verbo sozinho é
+vocabulário de campanha, não resposta ao convite.** Agora a confirmação precisa vir com o que a torna
+presença (presença, ida, participação, "estarei", "estou confirmada") ou **ser a mensagem inteira**,
+que é a resposta seca a *"você vai?"*.
+
+Medido nas sete formas que têm que continuar valendo, inclusive o texto do botão do anúncio
+(*"Quero confirmar minha presença no evento: …"*), que foi o conserto de 03/09.
+
+**E o desfecho dela passou a ser o que ele disse que ia fazer:** a última mensagem foi do dia
+anterior, então `contexto-de-outro-dia` decide — tecla 5, a mensagem do momento. Medido na árvore.
+
+### A Janete recebia a mensagem do momento em cima da conversa
+
+Ela tem a etiqueta "Engajado", mandou dois áudios longos (um contando que foi atacada num comitê) e
+clicou em dois anúncios. A caixa ofereceu a mensagem do momento. Ele: *"já mandei mensagem hoje,
+mesmo não sendo do momento — não mandar quando já respondi"*.
+
+A guarda de `etiqueta-dispensa-da-fila` era `momentoJaEnviado`, que **só sabe da mensagem do
+momento**. Quem foi respondido à mão, ou com outra resposta pronta, não aparecia ali — e o engajado
+que fala o dia inteiro é justamente quem mais recebe resposta à mão.
+
+`respondidoHoje` é a mesma guarda que `ultima-e-so-reacao` já usava, e pela mesma razão: mais uma
+mensagem nossa no mesmo dia é empilhar, não atender. Sem ter respondido hoje, a mensagem do momento
+continua saindo — a regra de 03/09 (*"engajado recebe a mensagem do momento uma vez por dia"*) fica
+inteira.
+
+**Arquivos:** `src/lib/cortesia.js` (os padrões de presença), `src/lib/sugestao.js`
+(`etiqueta-dispensa-da-fila`: tecla, motivo e verbete), `tests/cortesia.test.mjs` (+9),
+`tests/sugestao.test.mjs` (+4), `CLAUDE.md` (+2 armadilhas), `manifest.json` (2.14.0 → 2.15.0).
+Quinze suítes, os dois verificadores, 59 caixas no padrão sem problemas.
+
+---
+
 ## 2026-09-04 — A anotação mostra o que NÃO é texto (v2.14.0)
 
 Pedido dele: *"as observações estão com um problema: elas pegam só texto e ignoram fotos, links e

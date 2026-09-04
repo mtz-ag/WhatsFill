@@ -777,7 +777,25 @@ export function confirmaPresenca(entrantes, nossaUltimaAt) {
     /(^|[^\p{L}])(vou|irei|vamos)\s+(estar|comparecer|participar|ao\s+evento|na\s+agenda)/u,
     /(^|[^\p{L}])(vou|irei|vamos)\s+(la|ai)(\s|$|!|,|\.)/u,
     /(^|[^\p{L}])(estarei|estaremos)(\s+(la|ai|presente|junto|com\s+voces))?(\s|$|!|,|\.)/u,
-    /(^|[^\p{L}])(confirmado|confirmada|confirmo|presenca\s+confirmada)/u,
+    /**
+     * **"Confirmado" sozinho NÃO é confirmação de presença** — anotação da Nice (04/09/2026).
+     *
+     * Ela escreveu *"Nossos votos, estão confirmados: Capitão Martim para Deputado Estadual,
+     * Capitão Zucco para Governador…"* — uma declaração de VOTO — e a rodada a pulou como quem
+     * confirma presença em evento. Ele: *"pegou confirmação de evento sem contexto"*.
+     *
+     * O padrão anterior aceitava a palavra solta em qualquer posição, e nesta base "confirmado" é
+     * dito de voto, de chapa e de agenda. Agora ela precisa vir **com o que a torna presença**
+     * (presença, ida, participação, estar lá) ou **ser a mensagem inteira**, que é a resposta seca
+     * a "você vai?".
+     *
+     * É o mesmo conserto que "vamos"/"vou" soltos levaram em 02/09, e pela mesma razão: o verbo
+     * sozinho é vocabulário de campanha, não resposta ao convite.
+     */
+    /^\s*confirmad[oa]s?\s*[!.]*\s*$/u,
+    /(^|[^\p{L}])(confirmo|confirmada|confirmado|confirmar)\s+(a\s+)?(minha\s+)?(presenca|ida|participacao)/u,
+    /(^|[^\p{L}])presenca\s+(esta\s+)?confirmada/u,
+    /(^|[^\p{L}])(estou|to)\s+confirmad[oa](\s|$|!|,|\.)/u,
     /**
      * **"Quero confirmar minha presença no evento: …"** — o texto do BOTÃO do anúncio de evento.
      *
