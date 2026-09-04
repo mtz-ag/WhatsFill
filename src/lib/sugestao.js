@@ -659,13 +659,17 @@ export const REGRAS = [
      * atendidos antes — e é a única que pode CONCLUIR tendo uma interrogação sem resposta na frente
      * (a despedida e a reação são, elas próprias, a última mensagem).
      *
-     * O sinal é `terminouComPergunta`, deliberadamente mais fraco que `perguntaAberta`: aquele
+     * O sinal é `perguntaPendente`, deliberadamente mais fraco que `perguntaAberta`: aquele
      * decide que o caso precisa de você e por isso é uma lista curta de formas conhecidas; este só
      * impede o desfecho irreversível. Alargar o outro para "qualquer ?" quebrou cinco exclusões que
      * ele já tinha decidido — medido antes de escolher este caminho.
+     *
+     * **Ele olha a RAJADA inteira desde 04/09/2026**, e não só a última mensagem — print da Ieda,
+     * que perguntou *"Você é candidato daqui do RS?"* e disse *"Boa tarde!"* depois: a pergunta não
+     * deixou de estar pendente por causa do cumprimento.
      */
     tecla: (c) => {
-      if (c.terminouComPergunta) return '6';
+      if (c.perguntaPendente) return '6';
       return c.respondidoHoje || c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5';
     },
     quando: (c) => !!c.jaRespondemosAntes,

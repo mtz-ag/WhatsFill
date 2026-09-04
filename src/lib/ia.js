@@ -138,9 +138,81 @@ export function montarSistema({ templates = [], regras = '', gabinete = '' } = {
 }
 
 /** O bloco que descreve ESTE contato. É a parte que muda, e por isso fica fora do cache. */
-export function montarContato({ mensagens = [], campos = {}, etiquetas = [] } = {}) {
-  const conversa = mensagens.length
-    ? mensagens.map((m, i) => `${i + 1}. ${umaLinha(m, 600)}`).join('\n')
+/**
+ * **O relógio da conversa — e por que ele mora no bloco do CONTATO.**
+ *
+ * Relato dele (04/09/2026): *"a IA está sem acesso à data e hora atual, pelo visto; botei nos
+ * comandos extras da IA para ver a data e hora atual mas não mudou nada"*.
+ *
+ * Ele estava certo nas duas metades. **Nada no prompt levava data nenhuma** — nem "agora", nem
+ * quando cada mensagem chegou —, e as instruções extras dele vão para o prompt de SISTEMA, que é
+ * texto: mandar o modelo "ver a hora" não dá hora a ele. Modelo de linguagem não tem relógio.
+ *
+ * **Fica no bloco do contato de propósito.** O sistema leva `cache_control: ephemeral`, e o cache
+ * vale enquanto o prefixo for idêntico — pôr o horário lá dentro invalidaria o cache a cada
+ * chamada, que é a diferença entre 10% e 100% do preço de entrada. O bloco do contato muda a cada
+ * contato de qualquer jeito.
+ *
+ * O formato é RELATIVO ("hoje 11:29", "ontem 18:07") porque é assim que a decisão dele é tomada —
+ * *"responder o conteúdo de ontem soa a quem não estava lá"* —, e porque é mais curto que a data
+ * inteira em toda linha.
+ */
+function relogio(agora) {
+  const d = agora instanceof Date ? agora : agora ? new Date(agora) : new Date();
+  return Number.isNaN(d.getTime()) ? new Date() : d;
+}
+
+/** O dia local, para comparar "mesmo dia" sem passar por fuso. */
+function diaLocal(d) {
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function horaCurta(d) {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/**
+ * Quando esta mensagem chegou, em relação a agora: `hoje 11:29`, `ontem 18:07`, `02/09 13:35`.
+ *
+ * Sem hora na mensagem devolve string vazia — histórico antigo não tem `createdAt`, e inventar um
+ * horário seria pior que não ter: a IA passaria a raciocinar sobre um dado falso.
+ */
+export function quandoFoi(at, agora) {
+  if (!at) return '';
+  const d = new Date(at);
+  if (Number.isNaN(d.getTime())) return '';
+
+  const hoje = relogio(agora);
+  const ontem = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 1);
+
+  if (diaLocal(d) === diaLocal(hoje)) return `hoje ${horaCurta(d)}`;
+  if (diaLocal(d) === diaLocal(ontem)) return `ontem ${horaCurta(d)}`;
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${horaCurta(d)}`;
+}
+
+/** A linha de "agora" que abre o bloco do contato. */
+export function agoraEmPortugues(agora) {
+  const d = relogio(agora);
+  const dias = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const data = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  return `Agora são ${horaCurta(d)} de ${dias[d.getDay()]}, ${data}.`;
+}
+
+export function montarContato({ mensagens = [], campos = {}, etiquetas = [], agora } = {}) {
+  /**
+   * Cada mensagem leva QUANDO chegou — ver `quandoFoi`. Sem isso, saber "agora" não serve de nada:
+   * o modelo continuaria sem poder dizer se a conversa é desta manhã ou da semana passada.
+   *
+   * Aceita string solta (como sempre foi) e `{texto, at}`.
+   */
+  const linhas = (mensagens || []).map((m) => (typeof m === 'string' ? { texto: m } : m || {}));
+  const conversa = linhas.length
+    ? linhas
+        .map((m, i) => {
+          const q = quandoFoi(m.at, agora);
+          return `${i + 1}. ${q ? `[${q}] ` : ''}${umaLinha(m.texto, 600)}`;
+        })
+        .join('\n')
     : '(o contato ainda não escreveu nada)';
 
   const cadastro = Object.entries(campos)
@@ -149,6 +221,8 @@ export function montarContato({ mensagens = [], campos = {}, etiquetas = [] } = 
     .join(' · ');
 
   return [
+    agoraEmPortugues(agora),
+    '',
     'Mensagens recebidas do contato, da mais antiga para a mais recente:',
     '',
     conversa,
@@ -629,7 +703,7 @@ export function montarRequisicaoRascunho({ sistema, contato, modelo = MODELO_PAD
 }
 
 /** O bloco do contato para o rascunho: a conversa com folga, porque é dela que ele precisa. */
-export function montarContatoRascunho({ mensagens = [], campos = {} } = {}) {
+export function montarContatoRascunho({ mensagens = [], campos = {}, agora } = {}) {
   /**
    * **A conversa INTEIRA, com os dois lados e com a pendência marcada.**
    *
@@ -670,7 +744,9 @@ export function montarContatoRascunho({ mensagens = [], campos = {} } = {}) {
     .map((m, i) => {
       const quem = m.de === 'nos' ? 'NÓS' : 'ELA';
       const pendente = m.de !== 'nos' && i > ultimaNossa;
-      return `${quem}: ${umaLinha(m.texto, 4000)}${pendente ? '   ← SEM RESPOSTA' : ''}`;
+      // O horário de cada fala — é o que permite o rascunho reconhecer que a conversa esfriou.
+      const q = quandoFoi(m.at, agora);
+      return `${quem}${q ? ` [${q}]` : ''}: ${umaLinha(m.texto, 4000)}${pendente ? '   ← SEM RESPOSTA' : ''}`;
     })
     .join('\n\n');
 

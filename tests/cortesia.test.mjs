@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, terminouComPergunta } from '../src/lib/cortesia.js';
+import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -1216,10 +1216,10 @@ grupo('semInteresse le a RAJADA, e a retratacao mais nova cancela (03/09/2026)')
   check(!r('nao conheco o candidato ainda'), '"nao conheco" tambem nao');
 }
 
-grupo('terminouComPergunta: pergunta pendente nunca vira "conclua" (03/09/2026)');
+grupo('perguntaPendente: pergunta pendente nunca vira "conclua" (03/09/2026)');
 {
   const M = (t, tipo) => ({ texto: t, tipo: tipo || 'TEXT', at: '2026-09-03T19:29:00Z' });
-  const p = (...t) => terminouComPergunta(t.map((x) => (typeof x === 'string' ? M(x) : x)), null);
+  const p = (...t) => perguntaPendente(t.map((x) => (typeof x === 'string' ? M(x) : x)), null);
 
   /**
    * Print do Paulo Quevedo: imagem de bom dia, dois links e, por ultimo, *"Colorado ou Gremista?"*.
@@ -1234,8 +1234,27 @@ grupo('terminouComPergunta: pergunta pendente nunca vira "conclua" (03/09/2026)'
   check(p(M('', 'IMAGE'), 'https://youtu.be/a', 'Colorado ou Gremista?'), 'o caso do Paulo');
   check(p('e o material, chega quando?'), 'pergunta comum no fim');
 
-  // So a ULTIMA: interrogacao no meio de conversa ja respondida nao reabre nada.
-  check(!p('Colorado ou Gremista?', 'deixa pra la'), 'pergunta no meio nao conta');
+  /**
+   * **A pergunta do MEIO conta** -- print da Ieda (04/09/2026): *"Obrigada pelas relevantes
+   * informacoes!"*, *"Voce e candidato daqui do RS?"*, *"Boa tarde!"*, e a rodada ofereceu a
+   * mensagem do momento. Ele: *"a sugestao queria mandar mensagem do momento ignorando a pergunta;
+   * ja vimos antes que responder a pergunta e prioridade"*.
+   *
+   * A pergunta nao deixa de estar pendente porque ela disse "boa tarde" depois. A rajada inteira e
+   * o recorte certo: por definicao e o que ainda nao foi respondido.
+   */
+  check(p('Obrigada pelas relevantes informações!', 'Você é candidato daqui do RS?', 'Boa tarde!'),
+    'o caso da Ieda: a pergunta esta no meio da rajada');
+  check(p('Colorado ou Gremista?', 'e ai'), 'mensagem qualquer depois nao cancela a pergunta');
+
+  /**
+   * **O que cancela e a RETRATACAO**, nao uma mensagem qualquer em cima -- mesma ideia da
+   * retratacao em `semInteresse`.
+   */
+  check(!p('Colorado ou Gremista?', 'deixa pra la'), '"deixa pra la" retira a pergunta');
+  check(!p('qual o endereco do comite?', 'ja achei, obrigado'), '"ja achei" tambem');
+  check(!p('cade o material?', 'esquece'), 'e "esquece"');
+  check(p('deixa pra la', 'mas quando vai ser o evento?'), 'a retratacao so vale para o que veio ANTES dela');
 
   /**
    * **As exclusoes que a lista de perguntas ja tinha continuam.** "Tudo bem?" e o cumprimento com
@@ -1274,8 +1293,8 @@ grupo('terminouComPergunta: pergunta pendente nunca vira "conclua" (03/09/2026)'
   check(!p('vou votar 22 com certeza'), 'declaracao de voto');
   check(!p('obrigado!'), 'sem interrogacao nao conta');
   check(!p(M('', 'STICKER')), 'figurinha sem texto');
-  check(!terminouComPergunta([], null), 'sem rajada');
-  check(!terminouComPergunta(null, null), 'nulo nao explode');
+  check(!perguntaPendente([], null), 'sem rajada');
+  check(!perguntaPendente(null, null), 'nulo nao explode');
 }
 
 grupo('"confirmado" sozinho nao e presenca (04/09/2026)');

@@ -640,7 +640,7 @@ grupo('o mapa RAMIFICADO da janela: cada regra tem os dois galhos (01/09/2026)')
         momentoJaEnviado: !!(m & 2),
         podeMandarMomento: !!(m & 4),
         deOutroDia: !!(m & 8),
-        terminouComPergunta: !!(m & 16),
+        perguntaPendente: !!(m & 16),
       }));
     }
     const noMapa = new Set(ramosDaRegra(r.id).map((x) => x.tecla));

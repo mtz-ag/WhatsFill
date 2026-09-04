@@ -1095,6 +1095,31 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `ultima-e-so-reacao` ja usava.
 
 
+- **A IA nao tem relogio, e instrucao no prompt nao da um.** Relato dele (04/09/2026): *"a IA esta
+  sem acesso a data e hora atual; botei nos comandos extras da IA para ver a data e hora atual mas
+  nao mudou nada"*. Estava certo nas duas metades — **nada no prompt levava data nenhuma** (nem
+  "agora", nem quando cada mensagem chegou), e as instrucoes extras dele vao para o prompt de
+  SISTEMA, que e texto: mandar o modelo "ver a hora" nao da hora a ele. Hoje `montarContato` e
+  `montarContatoRascunho` abrem com `agoraEmPortugues(agora)` e marcam cada mensagem com
+  `quandoFoi(at, agora)` — `hoje 11:29`, `ontem 18:07`, `02/09 13:35`. **O relogio fica no bloco do
+  CONTATO e NUNCA no de sistema**: o sistema leva `cache_control: ephemeral`, e o horario ali
+  invalidaria o cache a cada chamada — a diferenca entre 10% e 100% do preco de entrada. Mensagem
+  sem `at` sai sem marca, de proposito: inventar horario faria a IA raciocinar sobre dado falso.
+- **Mudar a FORMA do que se passa para uma funcao pura quebra quem ela chama, em silencio.** Ao
+  dar horario as mensagens, `mensagensParaIA` passou a devolver `{texto, at}` em vez de string — e
+  `gabinete.precisaDoDossie` faz `join('\n')`, que viraria `[object Object]`: o dossie deixaria de
+  ser pedido sem erro nenhum. Peguei conferindo os chamadores, nao por teste. **Toda vez que o
+  formato de um argumento mudar, procure quem mais o recebe.**
+- **Pergunta pendente e a da RAJADA, nao a da ultima mensagem.** Print da Ieda (04/09/2026):
+  *"Obrigada pelas relevantes informacoes!"*, *"Voce e candidato daqui do RS?"*, *"Boa tarde!"* — e
+  a rodada ofereceu a mensagem do momento. Ele: *"ja vimos antes que responder a pergunta e
+  prioridade"*. `terminouComPergunta` olhava so a ultima mensagem com texto, entao o cumprimento em
+  cima escondia a pergunta. Hoje e `perguntaPendente`, que varre tudo o que chegou desde a nossa
+  ultima fala — por definicao, o que ainda nao foi respondido. **O que cancela e uma RETRATACAO
+  explicita** ("deixa pra la", "esquece", "ja resolvi") vinda DEPOIS da pergunta, e nao uma mensagem
+  qualquer em cima; e a mesma ideia da retratacao em `semInteresse`.
+
+
 ## Armadilhas do próprio painel
 
 - **`store.get` só mescla defaults em ALGUMAS chaves.** Chave nova dentro de um objeto já salvo

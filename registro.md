@@ -41,6 +41,71 @@ Branch `claude/whatsfill-ia`, **v2.14.0**, tudo commitado e no remoto. 38 commit
 
 ---
 
+## 2026-09-04 — O relógio da IA, e a pergunta que o "boa tarde" escondia (v2.16.0)
+
+### "A IA está sem acesso a data e hora atual"
+
+E ele tinha tentado o caminho que parecia óbvio: *"botei nos comandos extras da IA para ver a data e
+hora atual mas não mudou nada"*.
+
+Estava certo nas duas metades. **Nada no prompt levava data nenhuma** — nem "agora", nem quando cada
+mensagem chegou. E as instruções extras dele vão para o prompt de **sistema**, que é texto: mandar o
+modelo "ver a hora" não dá hora a ele. Modelo de linguagem não tem relógio; alguém precisa escrever
+que horas são.
+
+Agora o bloco do contato abre com **"Agora são 13:44 de sexta-feira, 04/09/2026."** e cada mensagem
+leva quando chegou, em forma relativa:
+
+```
+1. [hoje 13:43] Obrigada pelas relevantes informações!
+2. [hoje 13:43] Você é candidato daqui do RS?
+3. [ontem 18:07] Boa tarde!
+```
+
+Três decisões:
+
+- **fica no bloco do CONTATO, nunca no de sistema.** O sistema leva `cache_control: ephemeral`, e o
+  cache vale enquanto o prefixo for idêntico — pôr o horário lá invalidaria o cache a cada chamada,
+  que é a diferença entre 10% e 100% do preço de entrada. O bloco do contato muda a cada contato de
+  qualquer jeito;
+- **a forma é relativa** ("hoje", "ontem") porque é assim que a decisão dele é tomada — *"responder o
+  conteúdo de ontem soa a quem não estava lá"* — e é mais curta que a data inteira em cada linha;
+- **mensagem sem `at` sai sem marca.** Histórico antigo não tem horário, e inventar um seria pior que
+  não ter: a IA passaria a raciocinar sobre dado falso.
+
+**Um efeito colateral que quase passou:** ao ganhar horário, as mensagens viraram `{texto, at}` em
+vez de string — e `gabinete.precisaDoDossie` faz `join('\n')`, que produziria `[object Object]`. O
+dossiê deixaria de ser pedido **sem erro nenhum**. Peguei conferindo os chamadores, não por teste.
+
+### A Ieda perguntou no meio da rajada
+
+*"Obrigada pelas relevantes informações!"* · *"Você é candidato daqui do RS?"* · *"Boa tarde!"* — e a
+rodada ofereceu a mensagem do momento. Ele: *"a sugestão queria mandar mensagem do momento ignorando
+a pergunta; já vimos antes que responder a pergunta é prioridade"*.
+
+O mecanismo existia — `terminouComPergunta`, criado em 03/09 pelo caso do Paulo Quevedo — e olhava
+**só a última mensagem com texto**. O "Boa tarde!" em cima escondia a pergunta.
+
+O nome dizia o que ele fazia, e o que ele fazia é que estava errado: a pergunta não deixa de estar
+pendente porque ela cumprimentou depois. Agora é **`perguntaPendente`**, e varre tudo o que chegou
+desde a nossa última fala — que, por definição, é o que ainda não foi respondido.
+
+**O que cancela é uma retratação explícita**, não uma mensagem qualquer em cima: *"deixa pra lá"*,
+*"esquece"*, *"já resolvi"* — e só vale para a pergunta que veio **antes** dela. É a mesma ideia da
+retratação em `semInteresse`. Isso preserva o teste que existia (*"Colorado ou Gremista? … deixa pra
+lá"* continua não segurando ninguém) e conserta o caso dela.
+
+Medido na árvore: com a pergunta, `ja-respondemos-antes` passa a dar **tecla 6**; sem ela, continua
+concluindo como antes.
+
+**Arquivos:** `src/lib/ia.js` (`quandoFoi`, `agoraEmPortugues`, os dois blocos de contato),
+`src/lib/ia-cliente.js`, `src/lib/gabinete.js`, `src/lib/cortesia.js` (`perguntaPendente`,
+`RETIROU_A_PERGUNTA`), `src/lib/sugestao.js`, `src/panel/panel.js`, `tests/cortesia.test.mjs`,
+`tests/sugestao.test.mjs`, `CLAUDE.md` (+3 armadilhas), `manifest.json` (2.15.0 → 2.16.0). Quinze
+suítes e os dois verificadores.
+
+---
+
 ## 2026-09-04 — Duas anotações: "confirmado" que não era presença, e o engajado já respondido (v2.15.0)
 
 ### A Nice foi pulada como quem vai a um evento

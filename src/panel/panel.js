@@ -27,7 +27,7 @@ import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, terminouComPergunta } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -1331,6 +1331,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           // Rascunhar precisa dos DOIS lados: sem a nossa fala no meio a IA não sabe o que já foi
           // respondido. Ver `conversaParaIA`.
           mensagens: conversaParaIA(),
+          // O relógio: sem ele a IA não sabe se a conversa é de agora ou da semana passada.
+          agora: new Date(),
           campos: { Cidade: valueNamed('Cidade') },
         });
 
@@ -4810,9 +4812,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         deOutroDia: deOutroDia(state.entrantes),
         /**
          * **Terminou com uma pergunta?** Só impede a conclusão em silêncio — ver
-         * `cortesia.terminouComPergunta`. Não é `perguntaAberta`, que decide o desfecho.
+         * `cortesia.perguntaPendente`, que olha a RAJADA inteira. Não é `perguntaAberta`, que
+         * decide o desfecho.
          */
-        terminouComPergunta: terminouComPergunta(state.entrantes, state.nossaUltimaAt),
+        perguntaPendente: perguntaPendente(state.entrantes, state.nossaUltimaAt),
         etiquetaQueDispensa: await etiquetaQueDispensaDaFila(),
         // "É da casa": conclui e não manda nada. Lista própria — ver `etiquetaQueSoConclui`.
         etiquetaSoConclui: await etiquetaQueSoConclui(),
@@ -8540,8 +8543,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return (state.entrantes || [])
       .map((m) => {
         const texto = String(m?.texto || '').trim();
-        if (!texto) return '';
-        return m?.transcrito ? `(áudio, transcrito automaticamente) ${texto}` : texto;
+        if (!texto) return null;
+        // `{texto, at}` e não string solta: o QUANDO de cada mensagem é metade do relógio — a
+        // outra metade é o "agora", que `montarContato` escreve no topo do bloco.
+        return { texto: m?.transcrito ? `(áudio, transcrito automaticamente) ${texto}` : texto, at: m?.at || null };
       })
       .filter(Boolean);
   }
@@ -8576,7 +8581,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return [...dela, ...nossa]
       .filter((m) => m.texto.trim())
       .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0) || a.ordem - b.ordem)
-      .map(({ de, texto }) => ({ de, texto }));
+      // O `at` VAI JUNTO: sem ele a IA sabe a ordem e não sabe o tempo, e foi disso que ele
+      // reclamou em 04/09 — "a IA está sem acesso a data e hora atual".
+      .map(({ de, texto, at }) => ({ de, texto, at }));
   }
   /**
    * Rascunha com a IA e **deixa o texto no campo de mensagem, para ele mandar.**
@@ -8619,6 +8626,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         modelo: state.ia.modelo,
         // Rascunhar precisa dos DOIS lados — ver `conversaParaIA`.
         mensagens: conversaParaIA(),
+        // O relógio: sem ele a IA não sabe se a conversa é de agora ou da semana passada.
+        agora: new Date(),
         /**
          * **O cadastro inteiro, e não só a cidade.**
          *
@@ -8681,6 +8690,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       gabinete: await gabineteLib.paraOPrompt(dela),
       modelo: cfg.modelo,
       mensagens: dela,
+      // O relógio: sem ele a IA não sabe se a conversa é de agora ou da semana passada.
+      agora: new Date(),
       campos: Object.fromEntries(
         state.classify.map((f) => [f.name, valueNamed(f.name)]).filter(([, v]) => v)
       ),

@@ -95,8 +95,17 @@ function semBlocoDeRevisao(md) {
  * @returns {boolean}
  */
 export function precisaDoDossie(mensagens) {
+  /**
+   * Aceita string solta e `{texto, at}`.
+   *
+   * As mensagens ganharam o horário em 04/09/2026 (para a IA saber que dia é hoje), e sem esta
+   * linha o `join` produziria `[object Object]`: o dossiê deixaria de ser pedido, em silêncio. É a
+   * armadilha registrada no CLAUDE.md — função pura e testada não garante nada se quem chama
+   * mudar a forma do que passa.
+   */
   const texto = (Array.isArray(mensagens) ? mensagens : [mensagens])
     .filter(Boolean)
+    .map((m) => (typeof m === 'string' ? m : String(m?.texto || '')))
     .join('\n')
     .toLowerCase()
     .normalize('NFD')

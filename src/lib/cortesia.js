@@ -594,20 +594,57 @@ const ABRE_PERGUNTANDO =
 const PERGUNTA_DECLARADA =
   /(^|[^\p{L}])((queria|gostaria|quero)\s+saber|me\s+(diz|diga|informa|informe|explica|explique)|fiquei\s+na\s+duvida|tenho\s+uma\s+duvida)/iu;
 
-export function terminouComPergunta(entrantes, nossaUltimaAt) {
-  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
-  const ultima = [...rajada].reverse().find((m) => String(m?.texto || '').trim());
-  if (!ultima) return false;
-  const texto = String(ultima.texto || '');
+/**
+ * **A pergunta foi retirada depois?** *"deixa pra lá"*, *"esquece"*, *"já resolvi"*.
+ *
+ * Existe porque a pergunta passou a valer em qualquer mensagem da rajada (ver abaixo), e sem isto
+ * um *"Colorado ou Gremista? … deixa pra lá"* continuaria segurando o atendimento aberto para
+ * sempre. É a mesma ideia da retratação em `semInteresse`.
+ */
+const RETIROU_A_PERGUNTA =
+  /(^|[^\p{L}])(deixa\s+(pra|para)\s+la|deixa\s+quieto|esquec(e|a)|ja\s+(resolvi|consegui|descobri|achei|vi)|nao\s+precisa\s+(mais|responder)|nem\s+precisa)/iu;
 
-  const semAcento = texto
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (!semAcento) return false;
+/**
+ * Há uma **pergunta pendente** — em qualquer mensagem que ela escreveu depois da nossa última?
+ *
+ * **Olhava só a ÚLTIMA mensagem, e isso escondia a pergunta do meio.** Print da Ieda (04/09/2026):
+ * *"Obrigada pelas relevantes informações!"*, *"Você é candidato daqui do RS?"*, *"Boa tarde!"* — e
+ * a rodada ofereceu a mensagem do momento. Ele: *"a sugestão queria mandar mensagem do momento
+ * ignorando a pergunta; já vimos antes que responder a pergunta é prioridade"*.
+ *
+ * A pergunta não deixa de estar pendente porque ela disse "boa tarde" depois. O recorte certo é a
+ * RAJADA inteira — o que chegou desde que falamos —, que por definição é o que ainda não foi
+ * respondido. O que cancela é uma **retratação** explícita, não uma mensagem qualquer em cima.
+ *
+ * **Este sinal NÃO é `conversaTemPerguntaAberta`.** Aquele decide que o caso precisa dele (tecla 6)
+ * e por isso é uma lista curta de formas conhecidas — alargá-lo para "qualquer ?" quebrou cinco
+ * exclusões que ele já tinha decidido, medido antes de desistir do caminho. Este faz uma coisa só:
+ * **impedir o desfecho irreversível.**
+ */
+export function perguntaPendente(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt).filter((m) => String(m?.texto || '').trim());
+  if (!rajada.length) return false;
 
-  return texto.includes('?') || ABRE_PERGUNTANDO.test(semAcento) || PERGUNTA_DECLARADA.test(semAcento);
+  const plano = (m) =>
+    String(m?.texto || '')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  for (let i = 0; i < rajada.length; i++) {
+    const texto = String(rajada[i].texto || '');
+    const semAcento = plano(rajada[i]);
+    if (!semAcento) continue;
+
+    const ehPergunta = texto.includes('?') || ABRE_PERGUNTANDO.test(semAcento) || PERGUNTA_DECLARADA.test(semAcento);
+    if (!ehPergunta) continue;
+
+    // Retirada por uma mensagem POSTERIOR dela, na mesma rajada.
+    const retirou = rajada.slice(i + 1).some((m) => RETIROU_A_PERGUNTA.test(plano(m)));
+    if (!retirou) return true;
+  }
+  return false;
 }
 
 /** Pede material/conteúdo — aí a pergunta TEM resposta pronta e não é caso de resposta à mão. */
