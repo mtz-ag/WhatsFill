@@ -742,6 +742,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (somenteExatos && entry.confidence !== 'exata') return;
 
     /**
+     * **Palpite que não é município NÃO vira pergunta** — anotação dele (04/09/2026): a caixa
+     * *"Cidade a gravar"* abriu com **"Mathias"**, que é o sobrenome dela (*"Taila, Mathias"*).
+     * Ele: *"mathias não existe no IBGE, não aceite o palpite"*.
+     *
+     * `nao-reconhecida` é o modo generoso do parser devolvendo **qualquer palavra solta** — é o
+     * mesmo caminho que já tinha feito um link do Instagram voltar como cidade. Ela existe para
+     * alimentar a lista de revisão da aba Cidades, onde ninguém grava nada; oferecer para gravar é
+     * transformar "não achei" em "confirme isto".
+     *
+     * A pergunta continua valendo para `aproximada` — ali o parser achou um município de verdade e
+     * a dúvida é se é ESTE. Aqui não há município nenhum.
+     */
+    if (entry.confidence === 'nao-reconhecida') return;
+
+    /**
      * Com a rodada automatizada, quem responde esta caixa é a IA — e ela responde ANTES de a
      * caixa existir.
      *
@@ -6343,21 +6358,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * mesma linha em toda variante — porque é dela que sai a precisão do parser, e há teste em cada
    * um dos textos travando isso.
    */
-  const PEDIU_NOME_E_CIDADE = /nome(\s+completo)?\s*\/\s*cidade/i;
-
   /**
-   * Esta mensagem NOSSA é um pedido de nome e cidade?
+   * **Era a TERCEIRA cópia do mesmo invariante, e a última a ficar para trás** (relato dele,
+   * 04/09/2026): *"já havia mandado modelo, contato deu os dados, e a sugestão foi mandar modelo
+   * novamente"*.
    *
-   * **Substitui uma comparação minha que estava furada** (relato dele, 01/09: *"deu a cidade e não
-   * pegou"*). Eu comparava um trecho do meio do texto base do `pedir-dados` — então bastava a
-   * mensagem ter saído como **variante**, ou ser um dos **textos de evento**, para a resposta do
-   * contato deixar de ser lida como resposta. Eram três formas de pedir e eu reconhecia uma.
+   * O painel tinha a sua própria expressão exigindo a BARRA (`nome / cidade`), e o texto em uso
+   * passou a ser `Nome , Cidade`. Com ela furada, duas coisas paravam de funcionar de uma vez: o
+   * parser deixava de ler a mensagem seguinte como RESPOSTA ao formulário, e `respondeuOsDados`
+   * ficava falso — então a rodada voltava a oferecer o modelo a quem tinha acabado de se cadastrar.
    *
-   * A linha do formato é o que todas têm em comum, é o que o parser depende, e é o que os testes
-   * já protegem em cada texto. Casar por ela vale inclusive para texto novo que ele escrever.
+   * Consertei `templates.ehPedidoDeDados` de manhã e esta cópia continuou quebrada, porque o
+   * `CLAUDE.md` mandava usar aquela função e o painel não usava. **Agora chama, e é a única
+   * definição** — duas cópias de um invariante divergem na primeira reescrita do texto.
+   *
+   * O mesmo erro, uma camada acima, já tinha custado a print da Loreta (01/09): eu comparava um
+   * trecho do TEXTO BASE, e bastava sair a variante para a resposta dela deixar de ser lida.
    */
   function pediuNomeECidade(texto) {
-    return PEDIU_NOME_E_CIDADE.test(achatarTexto(texto));
+    return templatesLib.ehPedidoDeDados(texto);
   }
 
   function achatarTexto(texto) {

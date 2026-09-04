@@ -1,3 +1,51 @@
+## 2026-09-04 — Três cópias do mesmo invariante, e o anúncio mais recente (v2.11.0)
+
+### O pedido de dados: a TERCEIRA cópia
+
+Depois de eu consertar `templates.ehPedidoDeDados` de manhã (a barra virou vírgula no texto), ele
+reportou: *"já havia mandado modelo, contato deu os dados, e a sugestão foi mandar modelo
+novamente"*.
+
+**O painel tinha a sua própria expressão** — `PEDIU_NOME_E_CIDADE` — ainda exigindo a barra. E ela
+governa **duas** coisas: se o parser lê a mensagem seguinte como RESPOSTA ao formulário
+(`respostaAoPedido`, que é o modo generoso) e se `respondeuOsDados` é verdadeiro. Com ela furada,
+quem se cadastrava recebia o modelo de novo.
+
+O `CLAUDE.md` já mandava usar `templates.ehPedidoDeDados` — e o painel não usava. **Agora chama, e é
+a única definição.** Duas cópias de um invariante divergem na primeira reescrita do texto; três
+divergem mais rápido.
+
+### O anúncio reconhecido é o MAIS RECENTE
+
+Duas anotações do João Carlos, no mesmo contato: clicou em *"Eu escolho o lado da Liberdade"*,
+respondeu ao convite de evento, e por último escreveu *"ero receber o Material da Direita"*. O
+anúncio reconhecido era o **primeiro**. *"O modelo também pegou o primeiro do contexto, pegue o
+último."*
+
+`reconhecer` juntava a conversa inteira num string só — o que **apaga a ordem** — e o desempate
+virava o tamanho do trecho. É a consequência da armadilha já registrada: **o texto do anúncio fica na
+conversa para sempre**, então o clique de semana passada vencia o de agora.
+
+Hoje ela varre mensagem a mensagem, da mais nova para a mais antiga. **Dentro de uma mensagem** o
+trecho mais longo continua ganhando (dois anúncios da mesma campanha compartilham a abertura). A
+`utm` entra no fim da lista de propósito: é a campanha que trouxe esta sessão.
+
+### "Mathias" não é município
+
+A caixa *"Cidade a gravar"* abriu com o **sobrenome** dela (*"Taila, Mathias"*). Ele: *"não existe no
+IBGE, não aceite o palpite"*.
+
+Confiança `nao-reconhecida` é o modo generoso do parser devolvendo **qualquer palavra solta** — é o
+mesmo caminho que já fez um link do Instagram voltar como cidade. Ela existe para a lista de revisão
+da aba Cidades, onde nada é gravado; oferecer para gravar transforma *"não achei"* em *"confirme
+isto"*. A pergunta continua valendo para `aproximada`, onde há um município de verdade e a dúvida é
+se é ESTE.
+
+**Arquivos:** `src/panel/panel.js`, `src/lib/anuncios.js`, `tests/anuncios.test.mjs`,
+`manifest.json` (2.10.0 → 2.11.0), `registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-04 — A caixa diz QUANDO foi a última mensagem dela (v2.10.0)
 
 Pedido dele, com a print da Isaura: a caixa recomendava a **mensagem do momento** por um *"Bom dia"*

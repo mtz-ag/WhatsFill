@@ -1465,6 +1465,31 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   todas vêm marcadas `← SEM RESPOSTA`, com a contagem no pedido ("responda a TODAS elas, juntas") e
   um texto próprio para quando não há nenhuma.
 
+- **O invariante do pedido de dados tinha TRÊS cópias, e consertar uma não conserta as outras.**
+  Depois de arrumar `templates.ehPedidoDeDados` (a barra virou vírgula no texto), ele reportou:
+  *"já havia mandado modelo, contato deu os dados, e a sugestão foi mandar modelo novamente"*. O
+  painel tinha a **sua própria** expressão, `PEDIU_NOME_E_CIDADE`, ainda exigindo a barra — e ela
+  governa duas coisas de uma vez: se o parser lê a mensagem seguinte como RESPOSTA ao formulário
+  (`respostaAoPedido`) e se `respondeuOsDados` é verdadeiro. Com ela furada, quem se cadastrava
+  recebia o modelo de novo. **Hoje o painel CHAMA `templates.ehPedidoDeDados`** — o `CLAUDE.md` já
+  mandava usá-la, e o painel não usava. Duas cópias de um invariante divergem na primeira reescrita
+  do texto.
+- **O anúncio reconhecido é o MAIS RECENTE, não o de trecho mais longo.** Duas anotações do João
+  Carlos (04/09/2026), no mesmo contato: ele clicou em *"Eu escolho o lado da Liberdade"*, depois
+  respondeu ao convite de evento, e por último escreveu *"ero receber o Material da Direita"* — e o
+  anúncio reconhecido era o primeiro. *"O modelo também pegou o primeiro do contexto, pegue o
+  último."* `reconhecer` juntava a conversa inteira num string só, o que **apaga a ordem**, e o
+  desempate virava tamanho — o clique de semana passada vencendo o de agora. Hoje ela varre mensagem
+  a mensagem, da mais nova para a mais antiga; **dentro de uma mensagem** o trecho mais longo
+  continua ganhando (dois anúncios da mesma campanha compartilham a abertura). A `utm` entra no fim
+  da lista de propósito: é a campanha desta sessão, e ganha de qualquer clique antigo.
+- **Palpite de cidade `nao-reconhecida` NÃO pode virar a pergunta "Cidade a gravar".** Anotação dele
+  (04/09): a caixa abriu com **"Mathias"**, que é o sobrenome dela (*"Taila, Mathias"*) — *"não
+  existe no IBGE, não aceite o palpite"*. Aquela confiança é o modo generoso do parser devolvendo
+  **qualquer palavra solta** (é o mesmo caminho que já fez um link do Instagram voltar como cidade);
+  ela existe para a lista de revisão da aba Cidades, onde nada é gravado. A pergunta continua
+  valendo para `aproximada`, onde o parser achou um município de verdade e a dúvida é se é ESTE.
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto

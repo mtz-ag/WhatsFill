@@ -152,30 +152,46 @@ export function normalizar(bruto) {
 /**
  * **Qual anúncio a conversa reconhece.**
  *
- * Devolve `{ anuncio, trecho }` ou `null`. Os trechos de TODOS os anúncios ligados entram numa
- * disputa só, e o mais longo ganha: dois anúncios da mesma campanha costumam compartilhar a
- * abertura ("Olá! Eu apoio"), e sem isso o desempate seria a ordem da lista — invisível na tela e
- * mudando quando ele reordena.
+ * Devolve `{ anuncio, trecho }` ou `null`.
+ *
+ * **O MAIS RECENTE ganha** — duas anotações do João Carlos (04/09/2026), no mesmo contato: ele
+ * clicou em *"Eu escolho o lado da Liberdade"*, depois respondeu ao convite de evento, e por último
+ * escreveu *"ero receber o Material da Direita"*. O anúncio reconhecido era o **primeiro**. Ele:
+ * *"o modelo também pegou o primeiro do contexto, pegue o último"*.
+ *
+ * É a consequência da armadilha que o `CLAUDE.md` já registra: **o texto do anúncio fica na conversa
+ * para sempre**. Juntar tudo num string só apaga a ordem, e o que sobra é uma disputa de tamanho —
+ * o clique de semana passada vencendo o de agora. O que ela clicou por último é o que ela quer
+ * agora.
+ *
+ * Dentro de UMA mensagem o desempate continua sendo o trecho mais longo: dois anúncios da mesma
+ * campanha compartilham a abertura ("Olá! Eu apoio"), e sem isso o desempate seria a ordem da
+ * lista — invisível na tela e mudando quando ele reordena.
+ *
+ * **A ordem de `textos` é a da conversa**, e quem chama põe os campos da `utm` no fim — a
+ * identidade da campanha que trouxe a sessão. Estando por último, ela ganha de qualquer clique
+ * antigo, que é o certo: é o dado da plataforma sobre esta visita.
  *
  * Anúncio desligado não participa: é como ele guarda a campanha que acabou sem perder o texto.
  */
 export function reconhecer(textos, anuncios) {
-  const conversa = (Array.isArray(textos) ? textos : [])
-    .map((t) => semAcento(t))
-    .filter(Boolean)
-    .join(' | ');
-  if (!conversa) return null;
+  const lista = (Array.isArray(textos) ? textos : []).map((t) => semAcento(t)).filter(Boolean);
+  if (!lista.length) return null;
 
-  let melhor = null;
-  for (const anuncio of normalizar(anuncios)) {
-    if (!anuncio.ligado) continue;
-    for (const trecho of anuncio.trechos) {
-      const alvo = semAcento(trecho);
-      if (!alvo || !conversa.includes(alvo)) continue;
-      if (!melhor || alvo.length > melhor.tamanho) melhor = { anuncio, trecho, tamanho: alvo.length };
+  const ligados = normalizar(anuncios).filter((a) => a.ligado);
+
+  for (let i = lista.length - 1; i >= 0; i -= 1) {
+    let melhor = null;
+    for (const anuncio of ligados) {
+      for (const trecho of anuncio.trechos) {
+        const alvo = semAcento(trecho);
+        if (!alvo || !lista[i].includes(alvo)) continue;
+        if (!melhor || alvo.length > melhor.tamanho) melhor = { anuncio, trecho, tamanho: alvo.length };
+      }
     }
+    if (melhor) return { anuncio: melhor.anuncio, trecho: melhor.trecho };
   }
-  return melhor ? { anuncio: melhor.anuncio, trecho: melhor.trecho } : null;
+  return null;
 }
 
 /**

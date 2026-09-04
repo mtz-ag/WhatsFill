@@ -408,4 +408,53 @@ grupo('o anuncio nao passa por cima de quem precisa de GENTE (03/09/2026)');
     'sem regra nenhuma, o efeito sozinho nao decide nada');
 }
 
+grupo('reconhecer: o anuncio MAIS RECENTE ganha (04/09/2026)');
+{
+  /**
+   * Duas anotacoes do Joao Carlos, no mesmo contato: ele clicou em *"Eu escolho o lado da
+   * Liberdade"*, depois respondeu ao convite de evento, e por ultimo escreveu *"ero receber o
+   * Material da Direita"*. O anuncio reconhecido era o PRIMEIRO. Ele: *"o modelo tambem pegou o
+   * primeiro do contexto, pegue o ultimo"*.
+   *
+   * E consequencia da armadilha ja registrada: **o texto do anuncio fica na conversa para sempre**.
+   * Juntar tudo num string so apaga a ordem, e o que sobra e uma disputa de tamanho -- o clique de
+   * semana passada vencendo o de agora.
+   */
+  const lista = [
+    { id: '1', nome: 'Liberdade', ligado: true, trechos: ['Eu escolho o lado da Liberdade'], acao: 'fluxo', etiquetas: [] },
+    { id: '2', nome: 'Material', ligado: true, trechos: ['Material da Direita'], acao: 'fluxo', etiquetas: [] },
+  ];
+  const conversa = [
+    'Ola! Eu escolho o lado da Liberdade',
+    'Joao Carlos Casca Vamos la',
+    'ero receber o Material da Direita',
+  ];
+  check(anuncios.reconhecer(conversa, lista)?.anuncio?.nome === 'Material', 'o clique mais NOVO decide');
+  check(anuncios.reconhecer([...conversa].reverse(), lista)?.anuncio?.nome === 'Liberdade', 'invertida a ordem, o outro ganha');
+  check(anuncios.reconhecer([conversa[0]], lista)?.anuncio?.nome === 'Liberdade', 'com um so, e ele mesmo');
+
+  /**
+   * **A `utm` entra no fim de proposito** (e o painel a poe la): e a identidade da campanha que
+   * trouxe ESTA sessao, entao ela ganha de qualquer clique antigo.
+   */
+  check(anuncios.reconhecer([...conversa, 'CAMPANHA: Eu escolho o lado da Liberdade'], lista)?.anuncio?.nome === 'Liberdade',
+    'a utm no fim vence o clique anterior');
+
+  /**
+   * **Dentro de UMA mensagem o desempate continua sendo o trecho mais longo** -- dois anuncios da
+   * mesma campanha compartilham a abertura, e sem isso o desempate seria a ordem da lista.
+   */
+  const mesmaAbertura = [
+    { id: '1', nome: 'Curto', ligado: true, trechos: ['Eu apoio'], acao: 'fluxo', etiquetas: [] },
+    { id: '2', nome: 'Longo', ligado: true, trechos: ['Eu apoio as Escolas Civico-Militares'], acao: 'fluxo', etiquetas: [] },
+  ];
+  check(anuncios.reconhecer(['Ola! Eu apoio as Escolas Civico-Militares'], mesmaAbertura)?.anuncio?.nome === 'Longo',
+    'na mesma mensagem, o trecho mais longo ganha');
+
+  // Desligado continua fora, e conversa vazia nao explode.
+  const desligado = [{ ...lista[1], ligado: false }];
+  check(anuncios.reconhecer(conversa, desligado) === null, 'anuncio desligado nao participa');
+  check(anuncios.reconhecer([], lista) === null, 'sem conversa, null');
+}
+
 fim();
