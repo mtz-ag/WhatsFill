@@ -1133,7 +1133,7 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   check(naChegada.includes('conteudo-pedido'), 'o recibo sozinho (ela ja tem cidade) fica na chegada');
   check(naChegada.includes('nunca-pediram-dados'), 'o pedido de dados sozinho (sem modelo) fica na chegada');
   check(naChegada.includes('pediu dinheiro, cesta basica ou remedio'), 'e a ajuda financeira VOLTOU para a chegada (03/09)');
-  check(chegada.filhos.length === 14, 'e a chegada tem 14 caixas, nao 15');
+  check(chegada.filhos.length === 15, 'e a chegada tem 15 caixas, nao 16');
 
   /**
    * **"Nada legivel dela" entrou em 03/09** (print do Tilin: dois avisos de tipo nao suportado,
@@ -1189,8 +1189,13 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
     const hoje = arv.decidir({ ...apoiando, temEtiquetaDeCidade: temCidade }, q);
     check(hoje?.id?.includes('so-expressa-apoio'), `${lado}: o apoio decide (${hoje?.id})`);
     check(hoje?.tecla === 'i', `${lado}: apoio de hoje agradece`);
-    const ontem = arv.decidir({ ...apoiando, temEtiquetaDeCidade: temCidade, apoioDeOutroDia: true }, q);
-    check(ontem?.tecla === '5', `${lado}: apoio de outro dia manda a do momento`);
+    /**
+     * **O TEMPO saiu do apoio em 04/09** e virou caixa propria, uma acima: quatro anotacoes no
+     * mesmo lote mostraram que a razao nunca teve a ver com apoio. O desfecho e o mesmo.
+     */
+    const ontem = arv.decidir({ ...apoiando, temEtiquetaDeCidade: temCidade, deOutroDia: true }, q);
+    check(ontem?.tecla === '5', `${lado}: de outro dia manda a do momento`);
+    check(ontem?.id?.includes('contexto-de-outro-dia'), `${lado}: e quem decide e a caixa do tempo`);
   }
 
   // E continua ABAIXO das pendencias: quem escreveu uma pergunta e atendido por ela, nao pelo apoio.
@@ -1551,14 +1556,20 @@ grupo('o lado SEM cidade tambem fecha, e o modelo vem antes do obrigado (03/09/2
    * proprio e nunca saiu; a Elaine so disse que esta junto, e o "modelo" dela vem da etiqueta de
    * conteudo -- o caminho que o criterio de tempo do apoio deve decidir.
    */
-  const elaine = { ...rosa, anuncioReconhecido: false, apoioDeOutroDia: true, podeMandarMomento: true };
-  check(d(elaine)?.id?.includes('so-expressa-apoio'), `sem anuncio reconhecido, o apoio decide (${d(elaine)?.id})`);
-  check(d(elaine)?.tecla === '5', 'e apoio de ontem manda a mensagem do momento');
+  const elaine = { ...rosa, anuncioReconhecido: false, deOutroDia: true, podeMandarMomento: true };
+  check(d(elaine)?.tecla === '5', `sem anuncio reconhecido, o tempo decide (${d(elaine)?.id})`);
+  check(d(elaine)?.id?.includes('contexto-de-outro-dia'), 'pela caixa do tempo');
+  // E no mesmo dia, quem decide volta a ser o apoio.
+  check(d({ ...elaine, deOutroDia: false })?.id?.includes('so-expressa-apoio'), 'no mesmo dia, o apoio decide');
 
-  // Quem nao expressou apoio nenhum continua recebendo o modelo pela caixa de baixo.
-  const semApoio = { ...elaine, soExpressaApoio: null };
-  check(d(semApoio)?.tecla === '1', 'sem apoio, o modelo sai como antes');
+  /**
+   * Quem nao expressou apoio nenhum continua recebendo o modelo pela caixa de baixo -- **desde que
+   * tenha escrito hoje**. De outro dia, o tempo decide antes, que e o caso do Giovani.
+   */
+  const semApoio = { ...elaine, soExpressaApoio: null, deOutroDia: false };
+  check(d(semApoio)?.tecla === '1', 'sem apoio e no mesmo dia, o modelo sai como antes');
   check(d(semApoio)?.id === 'r:conteudo-pedido:com-cidade', 'pela copia de baixo');
+  check(d({ ...semApoio, deOutroDia: true })?.tecla === '5', 'de outro dia, a do momento (o caso do Giovani)');
 
   // E as guardas da regra sao o que impede virar repeticao.
   check(d({ ...rosa, modeloJaNaConversa: true })?.id?.includes('so-expressa-apoio'), 'modelo ja na conversa: volta a agradecer');
@@ -1617,6 +1628,8 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
     { ultimaEhSoReacao: true, podeMandarMomento: true }, { ultimaEhDespedida: true },
     { soExpressaApoio: { motivo: 'x' } }, { respondeuComoAjudar: true }, { respondeuOsDados: true },
     { soRuidoDaPlataforma: true, podePerguntarInteresse: true },
+    // O tempo: sem ele na lista, as tres caixas de "a ultima dela e de outro dia" ficam sem gatilho.
+    { deOutroDia: true, podeMandarMomento: true },
     { podeEnviar: true }, { podePedirDados: true }, { voltouPorOutroAnuncio: true, modeloJaNaConversa: true },
     { anuncioReconhecido: true, podeEnviar: true, podePedirDados: true },
     // Sem modelo mapeado: e a unica porta para o ramo "veio de um anuncio que eu reconheco".

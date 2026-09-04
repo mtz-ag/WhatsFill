@@ -4800,7 +4800,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * Olha a ÚLTIMA mensagem dela com hora, não a rajada inteira: o que interessa é quando ela
          * falou pela última vez, e uma conversa que atravessa a meia-noite continua sendo de hoje.
          */
-        apoioDeOutroDia: deOutroDia(state.entrantes),
+        /**
+         * **A última coisa que ela escreveu é de outro dia?**
+         *
+         * Nasceu como `apoioDeOutroDia` em 03/09 e perdeu o "apoio" do nome em 04/09: quatro
+         * anotações mostraram que a razão nunca teve a ver com apoio — responder o conteúdo de
+         * ontem soa a quem não estava lá, seja ele apoio, cadastro ou piada política.
+         */
+        deOutroDia: deOutroDia(state.entrantes),
         /**
          * **Terminou com uma pergunta?** Só impede a conclusão em silêncio — ver
          * `cortesia.terminouComPergunta`. Não é `perguntaAberta`, que decide o desfecho.

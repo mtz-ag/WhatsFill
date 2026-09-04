@@ -1490,6 +1490,21 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   ela existe para a lista de revisão da aba Cidades, onde nada é gravado. A pergunta continua
   valendo para `aproximada`, onde o parser achou um município de verdade e a dúvida é se é ESTE.
 
+- **O critério de TEMPO não era do apoio: é geral, e virou caixa própria.** Ele o definiu em 03/09
+  dentro de `so-expressa-apoio` (*"se foi no dia anterior, é mensagem do momento"*), e quatro
+  anotações de 04/09 mostraram que a razão nunca teve a ver com apoio — **Bia** e **Noeli**
+  responderam nome e cidade ONTEM e a caixa oferecia o agradecimento, **Giovani** mandou um texto
+  político ontem à noite e a caixa oferecia o modelo, **Beatriz Pansaia** o mesmo com o
+  agradecimento. *"Responder o conteúdo de ontem soa a quem não estava lá."* Hoje é
+  `contexto-de-outro-dia` (tecla 5), e `so-expressa-apoio` voltou a ser só "agradece" — um conceito,
+  um lugar. **A posição é a regra inteira:** fica **abaixo** de tudo o que precisa de gente (pedido
+  de dinheiro, pergunta, áudio, denúncia respondida — *"único pretexto que exclui a necessidade de
+  hora é pergunta pendente"*) e **abaixo do anúncio reconhecido** (clicar num anúncio é pedir uma
+  coisa específica, e escolha explícita dela não se substitui por dedução). Na CHEGADA ela fica
+  ainda mais baixo, sob `anuncio-modelo-e-dados`: quem nunca recebeu nada tem direito ao recibo
+  mesmo que a rodada só a alcance no dia seguinte — o contrário tiraria o recibo de quase todo
+  mundo, porque a rodada quase sempre roda depois.
+
 ## Avaliação por IA (só neste branch)
 
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto

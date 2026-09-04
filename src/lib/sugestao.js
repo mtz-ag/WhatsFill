@@ -524,6 +524,45 @@ export const REGRAS = [
     motivo: () => 'fez uma pergunta que nenhuma resposta pronta responde — escreva você.',
   },
   {
+    id: 'contexto-de-outro-dia',
+    tecla: '5',
+    /**
+     * **A última coisa que ela escreveu é de outro dia: o contexto passou.**
+     *
+     * Quatro anotações do mesmo lote (04/09/2026), todas com desfechos diferentes e a mesma
+     * correção dele:
+     *
+     *  - **Bia** e **Noeli** responderam nome e cidade ONTEM, e a caixa oferecia o agradecimento —
+     *    *"como foi ontem, mandar mensagem do momento; se fosse no dia, mandava agradecer e
+     *    encerrar"*;
+     *  - **Giovani** mandou um texto político e um link ontem à noite, e a caixa oferecia o modelo —
+     *    *"modelo fora de contexto, aqui vou mandar mensagem do momento"*;
+     *  - **Beatriz Pansaia**, o mesmo, com o agradecimento — *"erro de mandar apoio se repetindo"*.
+     *
+     * **O critério de tempo não era do apoio, era geral.** Ele o definiu em 03/09 dentro de
+     * `so-expressa-apoio` (*"se foi no dia anterior, é mensagem do momento; se foi recente,
+     * mensagem de apoio"*) e o que os quatro casos mostram é que a razão não tinha nada a ver com
+     * apoio: **responder o conteúdo de ontem soa a quem não estava lá.** A mensagem do momento é o
+     * que há de novo hoje, e é a resposta certa para qualquer assunto que esfriou.
+     *
+     * Por isso esta regra substituiu a bifurcação de tempo que vivia lá dentro: um conceito, um
+     * lugar. `so-expressa-apoio` voltou a ser só "agradece".
+     *
+     * **As guardas estão na condição, e são o que impede a repetição:** sem mensagem do momento
+     * configurada, ou já tendo saído para essa pessoa, a regra não casa e o quadro decide como
+     * antes. Ela também fica **abaixo de tudo o que precisa de gente** — pedido de ajuda, pergunta,
+     * áudio, denúncia respondida —, que é a exceção que ele nomeou no mesmo dia: *"único pretexto
+     * que exclui a necessidade de hora é pergunta pendente, que deve ser respondida"*.
+     *
+     * E abaixo do anúncio reconhecido: clicar num anúncio é pedir uma coisa específica, e escolha
+     * explícita dela não se substitui por dedução nossa.
+     */
+    quando: (c) => !!c.deOutroDia && c.podeMandarMomento && !c.momentoJaEnviado,
+    motivo: () =>
+      'a última mensagem dela é de outro dia — o contexto passou; a mensagem do momento é o que ' +
+      'há de novo.',
+  },
+  {
     id: 'so-expressa-apoio',
     /**
      * **O TEMPO decide entre agradecer e mandar a mensagem do momento** — critério dele
@@ -544,7 +583,7 @@ export const REGRAS = [
      * respondida"*. Isso já vale por ORDEM — `pergunta-aberta` e `pediu-algo-sem-dizer-o-que` ficam
      * acima desta regra nos dois ramos do quadro. Tem teste.
      */
-    tecla: (c) => (c.apoioDeOutroDia && c.podeMandarMomento && !c.momentoJaEnviado ? '5' : 'i'),
+    tecla: 'i',
     /**
      * A pessoa só disse que está com você, e já está classificada → agradecer e encerrar.
      *
@@ -574,10 +613,7 @@ export const REGRAS = [
      * descreve o que a regra faz com o modelo quando ele existe, e é lido como promessa de algo
      * que está na fila. Quem lê a caixa precisa saber o que ela vai FAZER, não o que ela adiou.
      */
-    motivo: (c) =>
-      c.apoioDeOutroDia && c.podeMandarMomento && !c.momentoJaEnviado
-        ? 'escreveu apoio, e foi em outro dia — a mensagem do momento é o que há de novo para ela.'
-        : 'escreveu apoio em mensagem própria — agradeça a ela; a resposta é o agradecimento.',
+    motivo: () => 'escreveu apoio em mensagem própria — agradeça a ela; a resposta é o agradecimento.',
   },
   {
     id: 'ja-respondemos-antes',
@@ -994,21 +1030,23 @@ export const SOBRE = {
       'Nenhuma resposta pronta responde, e o modelo em cima da pergunta dela vira material de ' +
       'campanha.',
   },
+  'contexto-de-outro-dia': {
+    rotulo: 'A última dela é de outro dia',
+    efeito: 'envia',
+    quando:
+      'O contexto passou: responder o conteúdo de ontem soa a quem não estava lá. Manda a mensagem ' +
+      'do momento, que é o que há de novo hoje, e conclui. Decisão sua (03/09, generalizada em ' +
+      '04/09 com quatro casos). Só casa se houver mensagem do momento configurada e ela ainda não ' +
+      'tiver saído para essa pessoa — e fica ABAIXO de tudo o que precisa de você (pedido, ' +
+      'pergunta, áudio) e do anúncio reconhecido, que é escolha explícita dela.',
+  },
   'so-expressa-apoio': {
     rotulo: 'Só apoio, sem pergunta e sem pedido',
-    // As DUAS saídas mandam mensagem, então o efeito é 'envia' e não 'depende' — diferente de
-    // `ja-respondemos-antes`, cujo outro ramo conclui em silêncio. É a cor do cartão na janela.
     efeito: 'envia',
-    ramos: [
-      { tecla: '5', se: 'o apoio foi escrito em outro dia e a do momento ainda não saiu' },
-      { tecla: 'i', se: 'o apoio é de hoje, ou a do momento já saiu' },
-    ],
     quando:
-      'É o desfecho de quem só apareceu para dizer que está com vocês. O TEMPO escolhe o que sai ' +
-      '(decisão sua, 03/09): apoio de hoje é resposta ao que acabamos de mandar, e o que ele espera ' +
-      'é um obrigado; apoio de ontem é alguém que voltou sozinho, e aí a mensagem do momento é o ' +
-      'que há de novo. Pergunta pendente passa por cima do tempo — mas por ORDEM, não por aqui: as ' +
-      'caixas de pergunta ficam acima desta.',
+      'É o desfecho de quem só apareceu para dizer que está com vocês: agradece e conclui. O TEMPO ' +
+      'saiu daqui em 04/09 — quem escreveu em outro dia é atendido pela caixa "A última dela é de ' +
+      'outro dia", que fica acima. Um conceito, um lugar.',
   },
   'ja-respondemos-antes': {
     rotulo: 'Já entregamos algo antes',

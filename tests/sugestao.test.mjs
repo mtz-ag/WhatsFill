@@ -631,7 +631,7 @@ grupo('o mapa RAMIFICADO da janela: cada regra tem os dois galhos (01/09/2026)')
     /**
      * **A matriz precisa cobrir os campos que as funcoes LEEM.** Faltando um, a tecla que depende
      * dele nunca aparece e o teste acusa o mapa de "inventar" um desfecho que existe de verdade --
-     * foi o que aconteceu com `apoioDeOutroDia` em 03/09. Campo novo numa tecla-funcao entra aqui.
+     * foi o que aconteceu com o tempo em 03/09. Campo novo numa tecla-funcao entra aqui.
      */
     const daFuncao = new Set();
     for (let m = 0; m < 32; m++) {
@@ -639,7 +639,7 @@ grupo('o mapa RAMIFICADO da janela: cada regra tem os dois galhos (01/09/2026)')
         respondidoHoje: !!(m & 1),
         momentoJaEnviado: !!(m & 2),
         podeMandarMomento: !!(m & 4),
-        apoioDeOutroDia: !!(m & 8),
+        deOutroDia: !!(m & 8),
         terminouComPergunta: !!(m & 16),
       }));
     }
@@ -775,16 +775,23 @@ grupo('apoio: o TEMPO escolhe entre agradecer e a mensagem do momento (03/09/202
   const apoio = { soExpressaApoio: A, podeMandarMomento: true, momentoJaEnviado: false, jaPediramDados: true };
 
   check(com({ ...apoio })?.tecla === 'i', 'apoio de hoje: agradece');
-  check(com({ ...apoio, apoioDeOutroDia: true })?.tecla === '5', 'apoio de outro dia: mensagem do momento');
+
+  /**
+   * **O TEMPO saiu daqui em 04/09.** Quatro anotacoes no mesmo lote mostraram que a razao nunca
+   * teve a ver com apoio -- responder o conteudo de ontem soa a quem nao estava la, seja ele apoio,
+   * cadastro ou piada politica. Quem decide agora e `contexto-de-outro-dia`, uma caixa acima.
+   */
+  check(com({ ...apoio, deOutroDia: true })?.id === 'contexto-de-outro-dia', 'de outro dia, quem decide e a caixa do tempo');
+  check(com({ ...apoio, deOutroDia: true })?.tecla === '5', 'e ela manda a mensagem do momento');
 
   /**
    * **As duas guardas do momento continuam**, e sao elas que impedem isto de virar maquina de
    * repetir: a condicao e estado da conversa (o texto de apoio fica la para sempre) e o envio nao
    * a apaga.
    */
-  check(com({ ...apoio, apoioDeOutroDia: true, momentoJaEnviado: true })?.tecla === 'i',
+  check(com({ ...apoio, deOutroDia: true, momentoJaEnviado: true })?.tecla === 'i',
     'ja recebeu a do momento: volta a agradecer');
-  check(com({ ...apoio, apoioDeOutroDia: true, podeMandarMomento: false })?.tecla === 'i',
+  check(com({ ...apoio, deOutroDia: true, podeMandarMomento: false })?.tecla === 'i',
     'sem mensagem do momento configurada: agradece');
 
   // As duas saidas ENVIAM, entao o cartao da janela e verde nos dois casos.
@@ -796,9 +803,9 @@ grupo('apoio: o TEMPO escolhe entre agradecer e a mensagem do momento (03/09/202
    * respondida"*. Vale por ORDEM: as duas caixas de pergunta ficam acima desta.
    */
   const P = { termo: 'por que' };
-  check(com({ ...apoio, apoioDeOutroDia: true, perguntaAberta: P })?.id === 'pergunta-aberta',
-    'pergunta de razao vence o apoio de outro dia');
-  check(com({ ...apoio, apoioDeOutroDia: true, pedeAlgoIndefinido: { motivo: 'x' } })?.id === 'pediu-algo-sem-dizer-o-que',
+  check(com({ ...apoio, deOutroDia: true, perguntaAberta: P })?.id === 'pergunta-aberta',
+    'pergunta de razao vence o tempo');
+  check(com({ ...apoio, deOutroDia: true, pedeAlgoIndefinido: { motivo: 'x' } })?.id === 'pediu-algo-sem-dizer-o-que',
     'pediu algo sem dizer o que tambem vence');
 
   const ids = REGRAS.map((r) => r.id);

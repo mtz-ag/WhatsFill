@@ -71,6 +71,7 @@ export const SINAIS = [
   { id: 'voltouPorOutroAnuncio', rotulo: 'Voltou clicando em outro anúncio', nao: 'Não voltou por anúncio' },
   { id: 'nomeSemSentido', rotulo: 'O nome do cadastro não serve', nao: 'O nome do cadastro serve' },
   { id: 'respondidoHoje', rotulo: 'Você já respondeu hoje', nao: 'Você ainda não respondeu hoje' },
+  { id: 'deOutroDia', rotulo: 'A última mensagem dela é de outro dia', nao: 'Ela escreveu hoje' },
   { id: 'momentoJaEnviado', rotulo: 'A mensagem do momento já saiu para ela', nao: 'A mensagem do momento ainda não saiu' },
   { id: 'pedidoHoje', rotulo: 'Pedimos o nome e a cidade HOJE', nao: 'Não pedimos o nome e a cidade hoje' },
   { id: 'enviadoHoje', rotulo: 'Já mandamos o modelo hoje', nao: 'Não mandamos modelo hoje' },
@@ -541,7 +542,7 @@ export function fluxoPadrao() {
      *
      * No topo, e nos dois lados, ela volta a valer sempre — que é como estava documentada.
      */
-    r('respondeu-os-dados', 'respondeu o nome e a cidade', onde),
+
 
     /**
      * **Pediu dinheiro: a condicao virou SINAL, nao lista de palavras.**
@@ -702,6 +703,18 @@ export function fluxoPadrao() {
      * trava o caso de 01/09 acusou na hora.
      */
     r('respondeu-nossa-pergunta', null, onde),
+
+    /**
+     * **O tempo decide DEPOIS das pendências, e é a exceção que ele nomeou.**
+     *
+     * *"Único pretexto que exclui a necessidade de hora é pergunta pendente, que deve ser
+     * respondida"* (03/09). Vale para todas as caixas acima, não só para a pergunta: pedido de
+     * dinheiro, áudio longo e denúncia respondida não esfriam por ser de ontem.
+     *
+     * Abaixo delas, porém, o tempo manda — e passa na frente do agradecimento pelo cadastro, do
+     * agradecimento pelo apoio e do modelo por etiqueta de conteúdo, que foram os quatro casos de
+     * 04/09.
+     */
     /**
      * **O modelo só passa na frente do apoio quando o ANÚNCIO foi reconhecido.**
      *
@@ -724,6 +737,20 @@ export function fluxoPadrao() {
     grupo('veio de um anúncio que eu reconheço', { sinal: 'anuncioReconhecido', negar: false, palavras: [], onde: 'ultima' }, [
       r('conteudo-pedido', 'manda o modelo daquele anúncio', `${onde}-anuncio`),
     ]),
+
+    /**
+     * **O tempo fica ABAIXO do anúncio reconhecido, e acima de todo o resto que envia.**
+     *
+     * Clicar num anúncio é pedir uma coisa específica; o `CLAUDE.md` já registra que escolha
+     * explícita dela não se substitui por dedução nossa. Um clique de ontem continua sendo um
+     * pedido, e o modelo daquele anúncio é a resposta.
+     *
+     * Daqui para baixo o tempo manda: o agradecimento pelo cadastro, o agradecimento pelo apoio e o
+     * modelo por etiqueta de conteúdo foram os quatro casos de 04/09, e nos quatro ele pediu a
+     * mensagem do momento.
+     */
+    r('contexto-de-outro-dia', 'a última dela é de outro dia', onde),
+    r('respondeu-os-dados', 'respondeu o nome e a cidade', onde),
     r('so-expressa-apoio', 'apoio', onde),
     r('conteudo-pedido', 'pediu conteúdo e há modelo mapeado', onde),
   ];
@@ -867,6 +894,20 @@ export function fluxoPadrao() {
      * modelo sozinho para quem já tem cidade, o pedido de dados sozinho quando não há modelo.
      */
     r('anuncio-modelo-e-dados', 'modelo + pedir os dados', 'chegada'),
+    /**
+     * **Na chegada o tempo entra ABAIXO do recibo** — anotação do Giovani (04/09/2026): ele mandou
+     * um texto político longo e um link ontem à noite, e a caixa oferecia o modelo. *"Modelo fora
+     * de contexto, aqui vou mandar mensagem do momento."*
+     *
+     * A posição é diferente da que ela tem na volta, e de propósito: `anuncio-modelo-e-dados` fica
+     * **acima**. Quem chega pelo anúncio e ainda não recebeu nada tem direito ao recibo, mesmo que
+     * a rodada só a alcance no dia seguinte — trocar isso pela mensagem do momento tiraria o recibo
+     * de quase todo mundo, porque a rodada quase sempre roda depois.
+     *
+     * O que o tempo alcança aqui é o outro caso: quem **já tem cidade** e por isso receberia só o
+     * modelo. Aí o conteúdo dela é de ontem, e o modelo responde a um assunto que esfriou.
+     */
+    r('contexto-de-outro-dia', 'a última dela é de outro dia', 'chegada'),
     r('conteudo-pedido', 'manda só o modelo (ela já tem cidade)', 'chegada'),
 
     /**

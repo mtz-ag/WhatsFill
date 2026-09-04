@@ -1,3 +1,47 @@
+## 2026-09-04 — O critério de tempo virou caixa própria, e vale para tudo (v2.13.0)
+
+Quatro anotações no mesmo lote, com regras diferentes e a mesma correção dele:
+
+| Contato | O que a caixa oferecia | O que ele quer |
+|---|---|---|
+| **Bia** | agradecer (respondeu os dados ONTEM) | mensagem do momento |
+| **Noeli** | agradecer (deu os dados ONTEM) | mensagem do momento |
+| **Beatriz Pansaia** | agradecer o apoio (de ONTEM) | *"erro de mandar apoio se repetindo"* |
+| **Giovani** | o modelo (texto e link de ONTEM à noite) | *"modelo fora de contexto"* |
+
+### O que os quatro dizem juntos
+
+**O critério de tempo não era do apoio.** Ele o definiu em 03/09 dentro de `so-expressa-apoio`, e a
+razão que deu vale para qualquer assunto: *responder o conteúdo de ontem soa a quem não estava lá*.
+Cadastro, apoio ou piada política — se esfriou, o que há de novo hoje é a mensagem do momento.
+
+Agora é uma regra própria, `contexto-de-outro-dia` (tecla 5), e `so-expressa-apoio` voltou a ser só
+"agradece". Um conceito, um lugar. O sinal perdeu o "apoio" do nome: `deOutroDia`, e entrou em
+`SINAIS` — ele pode usá-lo numa caixa dele.
+
+### A posição é a regra inteira
+
+- **Abaixo de tudo o que precisa de gente**: pedido de dinheiro, pergunta, áudio longo, denúncia
+  respondida. É a exceção que ele mesmo nomeou — *"único pretexto que exclui a necessidade de hora é
+  pergunta pendente, que deve ser respondida"*. Medido nas três.
+- **Abaixo do anúncio reconhecido**: clicar num anúncio é pedir uma coisa específica, e escolha
+  explícita dela não se substitui por dedução nossa. Um clique de ontem continua sendo um pedido.
+- **Na CHEGADA, ainda mais baixo** — sob `anuncio-modelo-e-dados`. Quem nunca recebeu nada tem
+  direito ao recibo mesmo que a rodada só a alcance no dia seguinte; o contrário tiraria o recibo de
+  quase todo mundo, porque a rodada quase sempre roda depois.
+
+### As guardas
+
+`podeMandarMomento && !momentoJaEnviado` na condição. Sem mensagem do momento configurada, ou já
+tendo saído para essa pessoa, a regra não casa e o quadro decide como antes — é o que impede a caixa
+mais genérica do quadro de virar repetição.
+
+**Arquivos:** `src/lib/sugestao.js`, `src/lib/arvore.js`, `src/panel/panel.js`,
+`tests/arvore.test.mjs`, `tests/sugestao.test.mjs`, `manifest.json` (2.12.0 → 2.13.0),
+`registro.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-09-04 — O modelo só passa na frente do apoio quando o ANÚNCIO foi reconhecido (v2.12.0)
 
 Print da Elaine, já com a v2.11.0 carregada: cidade Bom Retiro do Sul, e a última mensagem dela era
