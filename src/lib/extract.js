@@ -45,7 +45,32 @@ export async function extract(texts, { respostaAoPedido = false } = {}) {
    * Fica FORA do `else` porque a seção do Nome também usa: é dela que sai o "maria" de
    * "maria cachoeirinha".
    */
-  const naRespostaBruta = !structured && respostaAoPedido ? await cities.matchCity(joined) : null;
+  /**
+   * **E a busca é MENSAGEM A MENSAGEM aqui também** — segunda cópia da armadilha de 02/09/2026.
+   *
+   * Este caminho olhava a conversa INTEIRA colada (`joined`), e a conferência logo abaixo exige que
+   * o que sobra depois da cidade seja um nome de gente. Com duas mensagens na conversa — e quem
+   * chega pelo anúncio tem sempre duas, porque o texto do anúncio é uma delas — a sobra passava a
+   * ser o anúncio inteiro, e **nada era aceito**. Medido com as anotações de 04/09: a mesma
+   * resposta que dá `Chuvisca` sozinha devolve vazio com a mensagem do anúncio junto.
+   *
+   * O outro caminho (`matchCityComContexto`) já tinha sido consertado assim; este ficou para trás,
+   * que é o defeito de sempre quando o mesmo invariante mora em dois lugares.
+   *
+   * Da mais NOVA para a mais antiga: a resposta ao formulário é a última coisa que ela escreveu.
+   * Mensagem que casa mas não passa na conferência do nome **não interrompe a busca** — antes ela
+   * derrubava a passada inteira.
+   */
+  const daResposta = await (async () => {
+    if (structured || !respostaAoPedido) return null;
+    for (const texto of [...list].reverse()) {
+      const bruta = await cities.matchCity(texto);
+      if (!bruta) continue;
+      const sobra = semConectorSolto(cities.semACidade(texto, bruta.city));
+      if (!sobra || plausivelNome(sobra)) return { bruta, sobra };
+    }
+    return null;
+  })();
 
   /**
    * O que sobra da resposta depois de tirar o município — deveria ser o nome, e só ele.
@@ -55,7 +80,8 @@ export async function extract(texts, { respostaAoPedido = false } = {}) {
    * virava o nome "Poa", e "Vera POA" virava "Vera Poa" com a cidade rebaixada a palpite
    * (relato dele, 02/09/2026).
    */
-  const sobraDaResposta = naRespostaBruta ? cities.semACidade(joined, naRespostaBruta.city) : '';
+  const naRespostaBruta = daResposta?.bruta || null;
+  const sobraDaResposta = daResposta?.sobra || '';
 
   /**
    * A resposta só conta se o que sobrou for **nome ou nada**.
@@ -395,6 +421,28 @@ function cityPositionGuess(texts) {
     }
   }
   return null;
+}
+
+/**
+ * Tira a preposição que ficou pendurada quando a cidade saiu do meio da frase.
+ *
+ * Anotação do Carlos (04/09/2026): *"Carlos Elci Bitencourt Alves **de** Minas do Leão"*. Tirando
+ * o município sobra `Carlos Elci Bitencourt Alves de` — cinco palavras, e o limite do nome é
+ * quatro; a resposta inteira era descartada por causa de um "de" que nem é do nome, é da cidade.
+ *
+ * Vale nas duas pontas: *"de Gravataí Maria"* deixa a preposição na frente.
+ */
+function semConectorSolto(parte) {
+  let s = String(parte || '').trim();
+  let antes = null;
+  while (s !== antes) {
+    antes = s;
+    s = s
+      .replace(/^(?:de|da|do|das|dos|em|no|na|nos|nas|e)\b[\s.,;:-]*/i, '')
+      .replace(/[\s.,;:-]*\b(?:de|da|do|das|dos|em|no|na|nos|nas|e)\.?$/i, '')
+      .trim();
+  }
+  return s;
 }
 
 function plausivelNome(parte) {

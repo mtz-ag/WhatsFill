@@ -1465,6 +1465,42 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
 }
 
 {
+  grupo('pedido financeiro com o valor por extenso (04/09/2026)');
+
+  /**
+   * Anotacao da Maira (04/09/2026): cinco mensagens contando que ficou um mes sem trabalhar por
+   * doenca, que as contas acumularam, *"Me consegue eu pago"*, *"Eu tenho que comer paga
+   * farmacia"* e, duas vezes, *"Qualquer mil reais ja me ajuda"*. A rodada mandou o caso para a
+   * tecla 6. Ele: *"esta claro que e pedido financeiro e nao foi identificado"*.
+   *
+   * Duas causas somadas: o marcador de dinheiro exigia DIGITO antes de "reais", e quem escreve mil
+   * ou quinhentos escreve por extenso; e aluguel e farmacia nao estavam entre as necessidades.
+   */
+  const dela = [
+    'Boa tarde',
+    'Eu fiquei um mes cem trabalho problema de saude e ai acumulo minhas contas agora que peguei um cervico pra ganha mil reais so o aluguel e 500',
+    'Me consegue eu pago',
+    'Eu tenho que comer paga farmacia',
+    'Qualquer mil reais ja me ajuda',
+  ].map((t) => ({ texto: t }));
+  check(!!pedeAjudaFinanceira(dela), 'a rajada inteira e reconhecida como pedido financeiro');
+  check(!!pedeAjudaFinanceira([{ texto: 'Qualquer mil reais ja me ajuda' }]), 'e a frase sozinha tambem');
+  check(!!pedeAjudaFinanceira([{ texto: 'me consegue ajuda com o aluguel' }]), 'aluguel com verbo de pedir conta');
+  check(!!pedeAjudaFinanceira([{ texto: 'preciso pagar a conta de luz' }]), 'e a conta de luz tambem');
+
+  /**
+   * **Os falsos positivos.** Esta regra manda uma NEGATIVA para eleitor, entao o valor por extenso
+   * so vale colado em "reais" -- "mil" e a quantidade de tudo nesta base --, e as necessidades
+   * continuam exigindo o verbo de pedir.
+   */
+  check(!pedeAjudaFinanceira([{ texto: 'mil abracos e mil vezes obrigada' }]), '"mil" sem "reais" nao e pedido');
+  check(!pedeAjudaFinanceira([{ texto: 'vou votar mil vezes no Martim' }]), 'nem "mil vezes"');
+  check(!pedeAjudaFinanceira([{ texto: 'pago meu aluguel em dia gracas a Deus' }]), 'falar do aluguel sem pedir nao conta');
+  check(!pedeAjudaFinanceira([{ texto: 'fui na farmacia hoje' }]), 'nem falar da farmacia');
+  check(!pedeAjudaFinanceira([{ texto: 'em que posso ajudar voces?' }]), 'e quem OFERECE ajuda continua de fora');
+}
+
+{
   grupo('informouEndereco — a lista de material a enviar');
 
   /**

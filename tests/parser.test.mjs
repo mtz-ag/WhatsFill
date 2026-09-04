@@ -706,6 +706,49 @@ grupo('agradecimento so quando ela responde o pedido, nao a conversa inteira (02
    * mensagens de depois do pedido; se alguem voltar a usar a conversa inteira, a primeira assercao
    * cai.
    */
+  /**
+   * **A resposta ao pedido tambem procura MENSAGEM A MENSAGEM** -- tres anotacoes de 04/09/2026.
+   *
+   * As tres chegaram pelo anuncio e responderam nome e cidade numa frase so, e nas tres a cidade
+   * sumiu. A causa era a segunda copia da armadilha de 02/09: este caminho olhava a conversa
+   * INTEIRA colada, e a conferencia "o que sobra tem que ser um nome" passava a ver o texto do
+   * anuncio junto. Quem chega pelo anuncio tem SEMPRE duas mensagens, entao o modo generoso nao
+   * funcionava para eles -- que sao a maior parte de quem chega.
+   *
+   * Os nomes aqui sao ficticios de proposito (dado de eleitor nao entra no repositorio); o que e
+   * real e a FORMA: nome completo, a cidade no fim, sem separador nenhum.
+   */
+  const ANUNCIO = 'Ola! Eu apoio o Flavio, Zucco e Capitao Martim';
+  const comAnuncio = async (t) => extract([ANUNCIO, t], { respostaAoPedido: true });
+
+  const semSeparador = await comAnuncio('Antonio Carlos Ferreira Lima de Minas do leao.');
+  check(semSeparador.cidade?.value === 'Minas do Leão', `acha a cidade com a mensagem do anuncio junto (${semSeparador.cidade?.value})`);
+  /**
+   * **A preposicao pendurada era o que derrubava este caso.** Tirado o municipio, sobra
+   * "Antonio Carlos Ferreira Lima de" -- cinco palavras, e o limite do nome sao quatro. O "de" nem
+   * e do nome: e da cidade.
+   */
+  check(semSeparador.nome?.value === 'Antonio Carlos Ferreira Lima', `e o nome sai sem o "de" que era da cidade (${semSeparador.nome?.value})`);
+
+  const coladoNoPonto = await comAnuncio('Rubens Elio Kowalski dos santos.chuvisca');
+  check(coladoNoPonto.cidade?.value === 'Chuvisca', `cidade colada no ponto final tambem (${coladoNoPonto.cidade?.value})`);
+
+  /**
+   * **A sigla da CIDADE colada na sigla do estado**: *"...Praia do Cassino. RG RS"*, e ele: *"ela
+   * deu a sigla RG -- Rio Grande"*. O bairro nao e municipio e nao tem como ser; o que identifica
+   * o lugar e o "RG RS".
+   */
+  const porSigla = await comAnuncio('Marina de Souza Praia do Cassino. RG RS');
+  check(porSigla.cidade?.value === 'Rio Grande', `a sigla RG antes de RS vira Rio Grande (${porSigla.cidade?.value})`);
+
+  /**
+   * **E so nessa posicao.** `RG` e o documento de identidade -- fora de "Cidade UF" ele nao pode
+   * valer, senao "meu RG e 123" viraria Rio Grande em toda a base.
+   */
+  const rgDocumento = await cities.matchCityComContexto('meu RG e 1234567 moro em Canoas RS');
+  check(rgDocumento?.city === 'Canoas', `"meu RG" nao vira cidade quando ha outra (${rgDocumento?.city})`);
+  check(!(await cities.matchCityComContexto('preciso tirar o RG novo')), 'e sozinho nao vira cidade nenhuma');
+
   const antesDoPedido = 'Oi, tudo bem? Sou de Canoas e acompanho o trabalho de voces.';
   const depoisDoPedido = 'https://www.instagram.com/reels/DcyPfNjxsZF/';
 

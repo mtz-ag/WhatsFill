@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.25.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.26.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.25.0**, tudo commitado e no remoto. 19 commits no dia 04/09.
+Branch `claude/whatsfill-ia`, **v2.26.0**, tudo commitado e no remoto. 20 commits no dia 04/09.
 Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente.
 
@@ -68,6 +68,59 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — Quatro anotações: a cidade que sumia na chegada, e o pedido por extenso (v2.26.0)
+
+Quatro anotações, e as três primeiras são **o mesmo defeito** — a mesma forma de resposta, a mesma
+queixa: *"falhou em pegar minas do leão como cidade"*, *"não reconheceu chuvisca como cidade"*,
+*"ela deu a sigla rg - rio grande"*.
+
+### A causa das três: "mensagem a mensagem" tinha DUAS portas
+
+O conserto de 02/09 fez a busca por contexto olhar mensagem a mensagem em vez da conversa colada.
+**O caminho generoso não foi junto.** `respostaAoPedido` — o modo que a nossa própria pergunta
+autoriza, que dispensa pista e tamanho — continuou lendo a conversa INTEIRA, e a conferência que o
+protege ("o que sobra depois de tirar a cidade tem que ser um nome de gente") passava a ver o texto
+do anúncio junto do nome. Resultado: **nada era aceito**.
+
+E quem chega pelo anúncio tem SEMPRE duas mensagens — o texto do anúncio é uma delas. Ou seja: o
+modo generoso não funcionava justamente para a maior parte de quem chega.
+
+Medido: a mesma resposta que devolve `Chuvisca` sozinha devolve **vazio** com a mensagem do anúncio
+junto. Agora a busca é da mais nova para a mais antiga, e mensagem que casa mas não passa na
+conferência **não derruba a passada inteira** — segue para a próxima.
+
+### Duas coisas menores que faltavam, e cada uma explicava uma anotação
+
+**A preposição pendurada.** *"…Alves **de** Minas do Leão"*: tirado o município, sobra
+`… Alves de` — cinco palavras, e o limite do nome são quatro. O "de" nem é do nome, é da cidade.
+`semConectorSolto` tira nas duas pontas.
+
+**A sigla da cidade colada na do estado.** *"Praia do Cassino. RG RS"* — o bairro não é município e
+não tem como ser; o que identifica o lugar é o `RG RS`. Entrou `SIGLAS_DE_CIDADE`, lido **só** na
+passada que olha para trás da sigla do estado. Fora dali `RG` é o documento de identidade: um
+apelido em `ALIASES` faria *"meu RG é 123"* virar Rio Grande na base inteira. A lista tem um item.
+
+### A quarta: pedido financeiro escrito por extenso
+
+*"Qualquer mil reais já me ajuda"*, duas vezes na mesma rajada, e o caso foi para a tecla 6.
+Ele: *"está claro que é pedido financeiro e não foi identificado"*. O marcador de dinheiro exigia
+**dígito** antes de "reais" — e quem escreve mil, cem ou quinhentos escreve por extenso. Agora a
+palavra do valor vale colada em "reais"; "mil" sozinho não, porque é a quantidade de tudo nesta base
+("mil abraços", "mil vezes"). Entraram junto `aluguel`, `farmácia` e `conta de luz/água` nas
+necessidades, que continuam exigindo o verbo de pedir.
+
+Medido no quadro dele e no padrão: o caso passou a resolver em `pedido-ajuda`, a resposta que nega
+com respeito, em vez da tecla 6.
+
+**A exposição que fica, e é a mesma de antes:** marcador de dinheiro sozinho basta, então
+*"gastaram mil reais nessa obra"* — reclamação sobre gasto público — é lida como pedido. Vale
+igual para `R$ 5000` e `5000 reais`, que já eram assim; o formato novo não criou a classe. Se
+aparecer numa anotação, o conserto é exigir verbo de pedir junto do valor.
+
+Quinze suítes verdes, os dois verificadores limpos.
 
 ---
 

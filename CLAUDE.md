@@ -1216,6 +1216,33 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   aquilo, e aquilo e conteudo de verdade, nao recibo.
 
 
+- **"Mensagem a mensagem" tinha DUAS portas, e so uma foi consertada em 02/09.** O caminho generoso
+  (`respostaAoPedido`, dentro do `extract`) continuou olhando a conversa INTEIRA colada — e a
+  conferencia que o protege ("o que sobra depois da cidade tem que ser um nome de gente") passava a
+  ver o texto do anuncio junto, entao **nada era aceito**. Quem chega pelo anuncio tem SEMPRE duas
+  mensagens: o modo generoso nao funcionava justamente para a maior parte de quem chega. Tres
+  anotacoes de 04/09/2026 com a mesma forma (nome completo + cidade numa frase so) e a mesma
+  queixa. Medido: a resposta que da `Chuvisca` sozinha devolve vazio com a mensagem do anuncio
+  junto. **Conserto que muda ONDE se procura tem que ser aplicado a todos os caminhos que
+  procuram** — e agora mensagem que casa mas nao passa na conferencia nao derruba mais a passada
+  inteira, so segue para a proxima.
+- **Tirar a cidade do meio da frase deixa a PREPOSICAO pendurada, e ela conta como palavra do
+  nome.** *"<Nome> de Minas do Leao"* vira a sobra `<Nome> de` — que estourava o limite de quatro
+  palavras do nome por causa de um "de" que e da cidade, nao do nome. `semConectorSolto` tira nas
+  duas pontas.
+- **Abreviacao de CIDADE so vale colada na sigla do estado.** `RG RS` e Rio Grande (anotacao de
+  04/09/2026), mas `RG` e o documento de identidade, e um apelido em `ALIASES` valeria no texto
+  inteiro: *"meu RG e 123"* viraria Rio Grande na base toda. Por isso existe `SIGLAS_DE_CIDADE`,
+  lido **so** na passada que olha para tras da sigla do estado — a mesma razao pela qual
+  `rio grande` sozinho nunca entra na limpeza do nome do estado. A lista e literal e so cresce com
+  caso trazido por ele.
+- **Valor em dinheiro tambem se escreve por EXTENSO.** O marcador exigia digito antes de "reais", e
+  *"Qualquer mil reais ja me ajuda"* (anotacao de 04/09) passou batido duas vezes na mesma rajada —
+  o caso foi para a tecla 6 em vez da resposta que nega. A palavra do valor precisa vir **colada**
+  em "reais": "mil" sozinho e a quantidade de tudo nesta base ("mil abracos", "mil vezes").
+  Entraram junto `aluguel`, `farmacia` e `conta de luz/agua` nas NECESSIDADES, que continuam
+  exigindo o verbo de pedir.
+
 - **Quem faz a rodada pular o caso de MATERIAL e a etiqueta, nao o detector.** Regra dele
   (04/09/2026): *"para pular o contato sempre sera depois que eu pedir o endereco e etiqueta for
   colocada"*. O detector (`informouEndereco`) le a RAJADA e serve para uma coisa so: reconhecer a

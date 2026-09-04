@@ -997,6 +997,16 @@ const MARCADORES_DE_DINHEIRO = [
   // O valor inteiro, e não só o primeiro dígito: o motivo vai para a tela e "R$ 2" leria errado.
   /\br\$\s*\d[\d.,]*/i,
   /\b\d{1,4}\s*(?:reais|real|conto|pila)\b/i,
+  /**
+   * **O valor por EXTENSO** — anotação da Maira (04/09/2026): *"Qualquer mil reais já me ajuda"*,
+   * duas vezes na mesma rajada, e a rodada mandou o caso para a tecla 6. Ele: *"está claro que é
+   * pedido financeiro e não foi identificado"*.
+   *
+   * O padrão de cima exige DÍGITO antes de "reais", e quem escreve mil, cem ou quinhentos escreve
+   * por extenso. A palavra do valor precisa vir colada em "reais" — "mil" sozinho é a quantidade
+   * de tudo nesta base ("mil vezes", "mil abraços").
+   */
+  /\b(?:mil|cem|cento|duzentos|trezentos|quatrocentos|quinhentos|seiscentos|setecentos|oitocentos|novecentos)\s+(?:reais|real|conto|pila)\b/i,
   /\bdinheiro\b/i,
   /\bgrana\b/i,
   /\bempr[ée]stimo\b/i,
@@ -1007,7 +1017,22 @@ const MARCADORES_DE_DINHEIRO = [
  * Coisas que se pede quando falta o básico. Sozinhas não bastam — "tomei meu remédio" não é pedido.
  * Só valem junto de um verbo de pedir, que é o que separa relatar de pedir.
  */
-const NECESSIDADES = [/\bcesta\s*b[áa]sica\b/i, /\brem[ée]dio?s?\b/i, /\bmedicamento?s?\b/i, /\bg[áa]s\b/i, /\balimento?s?\b/i];
+const NECESSIDADES = [
+  /\bcesta\s*b[áa]sica\b/i,
+  /\brem[ée]dio?s?\b/i,
+  /\bmedicamento?s?\b/i,
+  /\bg[áa]s\b/i,
+  /\balimento?s?\b/i,
+  /**
+   * **O aluguel e a farmácia** — anotação da Maira (04/09/2026): *"só o aluguel e 500"*, *"eu tenho
+   * que comer paga farmácia"*, junto de *"me consegue eu pago"*. São a mesma família da cesta
+   * básica: o que se paga quando o dinheiro acabou. Continuam exigindo o verbo de pedir, senão
+   * *"pago meu aluguel em dia"* viraria pedido.
+   */
+  /\baluguel\b/i,
+  /\bfarm[áa]cia\b/i,
+  /\bconta\s+de\s+(?:luz|[áa]gua|energia)\b/i,
+];
 
 const VERBO_DE_PEDIR = /\b(preciso|precisava|necessito|me\s+ajud|ajuda\s*r?\s*me|pode(?:ria|m)?\s+(?:me\s+)?ajudar|consegue|tem\s+como|manda|envia|faz\s+um)\b/i;
 

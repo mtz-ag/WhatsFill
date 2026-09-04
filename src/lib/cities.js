@@ -398,6 +398,13 @@ async function municipiosValidos() {
  */
 const SUFIXO_ESTADO_SOLTO = /[\s,.\/-]+(r\s*[\/.\-]?\s*s|rgs|rgds)\b/gi;
 
+/**
+ * Abreviações de CIDADE que só valem coladas na sigla do estado — ver a passada que as usa.
+ *
+ * Nunca vão para `ALIASES`: lá elas valeriam no texto inteiro, e `RG` é o documento de identidade.
+ */
+const SIGLAS_DE_CIDADE = { rg: 'rio grande' };
+
 const PISTAS_DE_CIDADE = [
   /\bmoro\s+(em|no|na|nos|nas)\s+/gi,
   /\bmorando\s+(em|no|na)\s+/gi,
@@ -516,6 +523,25 @@ export async function matchCityComContexto(text) {
     const antes = bruto.slice(Math.max(0, sufixo.index - ALCANCE_DA_PISTA), sufixo.index);
     const hit = await matchCity(antes);
     if (hit?.confidence === 'exata') return { ...hit, pista: sufixo[0].trim() };
+
+    /**
+     * **A cidade também vem abreviada nesta posição** — anotação da Marly (04/09/2026):
+     * *"…Praia do Cassino. RG RS"*, e ele: *"ela deu a sigla RG — Rio Grande"*.
+     *
+     * A abreviação só é lida **colada na sigla do estado**, que é a forma "Cidade/UF" (`RG RS`).
+     * Fora daí, `RG` é o documento — a palavra mais comum desta base depois de "nome" —, e um
+     * apelido em `ALIASES` valeria no texto inteiro: *"meu RG é 123"* viraria Rio Grande. É a
+     * mesma razão pela qual `rio grande` sozinho nunca entra na limpeza do nome do estado.
+     *
+     * Lista curta e literal, e ela só cresce quando ele trouxer o caso: abreviação de cidade é
+     * regional, e inventar uma erra a etiqueta de um município inteiro.
+     */
+    const ultima = /([\p{L}]{2,4})[\s.,;:-]*$/u.exec(antes);
+    const expandida = ultima && SIGLAS_DE_CIDADE[semAcentoNemCaixa(ultima[1])];
+    if (expandida) {
+      const porSigla = await matchCity(expandida);
+      if (porSigla?.confidence === 'exata') return { ...porSigla, pista: `${ultima[1]} ${sufixo[0].trim()}` };
+    }
   }
 
   for (const pista of PISTAS_DE_CIDADE) {
