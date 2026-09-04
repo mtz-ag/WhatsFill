@@ -388,7 +388,15 @@ async function municipiosValidos() {
  * Sem `rio grande do sul` por extenso de propósito: `formaCanonica` já apaga o nome do estado antes
  * de casar (senão "Rio Grande" viraria o município), então procurá-lo aqui não acharia nada.
  */
-const SUFIXO_ESTADO_SOLTO = /[\s,.\/-]+(rs|rgs|rgds)\b/gi;
+/**
+ * A sigla com QUALQUER separador no meio: `RS`, `R/S`, `R . S`, `R-S`.
+ *
+ * Anotação do Romário (04/09/2026): ele escreveu *"cidade Panambi R / S"*, e o padrão exigia as
+ * duas letras coladas. É a mesma lição da lista de siglas de 01/09 (`rs`, `rgs`, `rgds`, `r s`):
+ * **sigla incompleta faz o defeito parecer aleatório** — a mesma pessoa escreve de dois jeitos, e
+ * um funciona.
+ */
+const SUFIXO_ESTADO_SOLTO = /[\s,.\/-]+(r\s*[\/.\-]?\s*s|rgs|rgds)\b/gi;
 
 const PISTAS_DE_CIDADE = [
   /\bmoro\s+(em|no|na|nos|nas)\s+/gi,
@@ -406,6 +414,14 @@ const PISTAS_DE_CIDADE = [
    * identificada"*. A lista tinha `minha cidade é` e `cidade:`, e não a forma mais natural de todas.
    */
   /\bcidade\s+(de|do|da)\s+/gi,
+  /**
+   * **"cidade Panambi", sem preposição nenhuma** — anotação do Romário (04/09/2026): *"Romario
+   * gralow cidade Panambi R / S"*, e *"cidade novamente sem reconhecer"*.
+   *
+   * Fica DEPOIS da forma com preposição de propósito: assim "cidade de Pelotas" consome o "de" e
+   * o alcance começa no nome, em vez de gastar dois caracteres da janela.
+   */
+  /\bcidade\s+/gi,
   /\b(estou|to|tô)\s+(em|no|na)\s+/gi,
   /\bfica\s+(em|no|na)\s+/gi,
   /\bregi[ãa]o\s+(de|do|da)\s+/gi,

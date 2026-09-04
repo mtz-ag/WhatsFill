@@ -454,4 +454,38 @@ grupo('a ADS nunca e conteudo, mesmo com a Config vazia (04/09/2026)');
   check(dele.has('ads'), 'e o piso continua valendo junto');
 }
 
+grupo('a etiqueta de ORIGEM nao vira conteudo pela REGRA dele (04/09/2026)');
+{
+  /**
+   * Anotacao da Fatima Silva: a caixa dizia *pediu "ADS" e ha modelo mapeado -- mande*, um dia
+   * depois de a ADS ter sido barrada como conteudo. As duas portas conhecidas estavam fechadas --
+   * `conteudosJaAplicados` e o piso `ORIGEM_SEMPRE` -- e faltava a TERCEIRA: uma regra de conteudo
+   * dele cuja etiqueta e a de origem. O texto do anuncio casa, a regra aponta para ADS, e ADS volta
+   * como conteudo.
+   *
+   * Terceira porta do mesmo vazamento (a Liana foi a segunda, em 02/09). "Duas listas separadas
+   * divergem" vale tambem para dois PONTOS de filtragem: agora as tres consultam
+   * `etiquetasDeOrigem()`.
+   */
+  mem.etiquetaAnuncio = '';
+  mem.anuncios = [];
+  mem.tagRules = [
+    { padrao: 'Eu apoio o Fl[aá]vio', etiqueta: 'ADS' },
+    { padrao: 'seguran[cç]a', etiqueta: 'Conteudo Zucco' },
+  ];
+
+  const doAnuncio = await tags.suggest({ texts: ['Olá! Eu apoio o Flávio, Zucco e Capitão Martim 🫡'] });
+  check(!doAnuncio.some((x) => x.origem === 'conteúdo'), 'a regra que aponta para ADS nao vira conteudo');
+
+  const deVerdade = await tags.suggest({ texts: ['eu apoio as pautas de segurança'] });
+  check(deVerdade.some((x) => x.origem === 'conteúdo' && x.nome === 'Conteudo Zucco'),
+    'e a regra de conteudo de verdade continua valendo');
+
+  // Com o campo da Config preenchido, a etiqueta que ELE nomeia entra junto.
+  mem.etiquetaAnuncio = 'Veio de anuncio';
+  mem.tagRules = [{ padrao: 'seguran[cç]a', etiqueta: 'Veio de anuncio' }];
+  const nomeada = await tags.suggest({ texts: ['eu apoio as pautas de segurança'] });
+  check(!nomeada.some((x) => x.origem === 'conteúdo'), 'a etiqueta de origem que ele nomeou tambem nao vira conteudo');
+}
+
 fim();

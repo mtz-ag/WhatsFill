@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente } from '../src/lib/cortesia.js';
+import { pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -1433,6 +1433,35 @@ grupo('quatro anotacoes de 04/09/2026: o 13, a piada, e a despedida amarga');
   check(ehDespedida({ texto: 'valeu por nada' }), 'e a variante');
   check(!ehDespedida({ texto: 'Muito obrigado pelo trabalho de voces' }), 'o agradecimento de verdade nao e despedida');
   check(!ehDespedida({ texto: 'obrigada pelas informacoes' }), 'nem o agradecimento pelo conteudo');
+}
+
+grupo('"Me liga": o pedido de ligacao (04/09/2026)');
+{
+  /**
+   * Anotacao da Jucileia: ela escreveu *"Oi"*, tres mensagens que a plataforma nao leu, e
+   * *"Me liga"* -- e a rodada ofereceu CONCLUIR, deixando a pessoa esperando o telefone tocar.
+   * Ele: *"caso raro que a pessoa pede ligacao: criar mensagem falando que nao podemos e dando uma
+   * desculpa; nao fazemos ligacoes, a plataforma nao aceita e e contraproducente"*.
+   */
+  const pede = (...t) => pedeLigacao(t.map((x) => ({ texto: x })));
+
+  check(pede('Me liga'), 'o caso da Jucileia');
+  check(pede('Oi', '', 'Me liga'), 'e na rajada, depois do "oi" e do ruido da plataforma');
+  check(pede('Pode me ligar?'), 'a forma com pergunta');
+  check(pede('liga pra mim'), 'liga pra mim');
+  check(pede('quero falar por telefone'), 'falar por telefone');
+  check(pede('aguardo sua ligacao'), 'aguardo sua ligacao');
+
+  /**
+   * **Os falsos positivos.** A lista e curta e literal de proposito: alargar mandaria a recusa para
+   * quem so falou de telefone, e o texto diz "nao ligamos" -- e uma recusa, e recusa errada custa.
+   */
+  check(!pede('meu telefone mudou'), 'falar do proprio telefone nao e pedir ligacao');
+  check(!pede('liguei para o CRAS e nao atenderam'), 'ligar para terceiro tambem nao');
+  check(!pede('vou ligar la'), 'ela ligando nao e ela pedindo');
+  check(!pede('a ligacao caiu ontem'), 'contar que a ligacao caiu tambem nao');
+  check(!pede('desliga isso'), 'e nem o verbo parecido');
+  check(!pede(''), 'mensagem vazia nao quebra');
 }
 
 fim();

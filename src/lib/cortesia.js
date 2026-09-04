@@ -1612,6 +1612,46 @@ const DIRIGIDA_A_NOS = /\b(voces|voce|vocês|tu|es igual|teu|tua|seu candidato|s
  * custo de errar aqui é etiquetar um apoiador como sem interesse, para sempre, no CRM.
  */
 /**
+ * **Pediu para a gente LIGAR** — pedido dele (04/09/2026, anotação da Jucileia).
+ *
+ * Ela escreveu *"Oi"*, três mensagens que a plataforma não leu, e *"Me liga"*. A rodada ofereceu
+ * concluir. Ele: *"caso raro que a pessoa pede ligação: criar mensagem falando que não podemos e
+ * dando uma desculpa; não fazemos ligações, a plataforma não aceita e é contraproducente"*.
+ *
+ * A lista é curta e literal: **o pedido de ligação é dito de poucas maneiras**, e alargar aqui
+ * mandaria a recusa para quem só falou de telefone ("meu telefone mudou", "liguei para o CRAS").
+ * Por isso o verbo precisa ser dirigido a NÓS — "me liga", "pode me ligar", "quero falar por
+ * telefone" — e não a terceiro.
+ */
+const PEDIDO_DE_LIGACAO = [
+  /(^|[^\p{L}])(me|nos)\s+lig(a|ue|uem|em)(\s|$|!|,|\.|\?)/iu,
+  /(^|[^\p{L}])(pode|podem|poderia|poderiam|da\s+pra|consegue)\s+(me\s+|nos\s+)?lig(ar|arem)/iu,
+  /(^|[^\p{L}])(liga|ligue|liguem)\s+(pra|para)\s+(mim|nos|eu)/iu,
+  /(^|[^\p{L}])(quero|queria|gostaria\s+de|preciso)\s+.{0,20}?(falar|conversar)\s+(por|no)\s+(telefone|fone|ligacao)/iu,
+  /(^|[^\p{L}])(aguardo|espero)\s+(a\s+)?(sua\s+)?ligacao/iu,
+];
+
+/**
+ * A pessoa pediu que ligássemos para ela — na rajada, porque o pedido costuma vir depois de um
+ * "oi" e de uma mídia que a plataforma não leu.
+ */
+export function pedeLigacao(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  for (const msg of rajada) {
+    const texto = String(msg?.texto || '')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!texto) continue;
+    if (PEDIDO_DE_LIGACAO.some((re) => re.test(texto))) {
+      return { motivo: 'pediu que a gente ligasse — aqui o atendimento é só por mensagem' };
+    }
+  }
+  return null;
+}
+
+/**
  * **Declarar voto no ADVERSÁRIO** — anotação da Rosa Maria (04/09/2026).
  *
  * Ela escreveu *"SOU APOSENTADA RURAL. MINHA CONCIENCIA DIZ QUE TENHO QUE SER 13"* e, na mensagem

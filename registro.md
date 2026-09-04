@@ -41,6 +41,63 @@ Branch `claude/whatsfill-ia`, **v2.14.0**, tudo commitado e no remoto. 38 commit
 
 ---
 
+## 2026-09-04 — "Me liga", a ADS pela terceira porta, e a sigla com barra (v2.21.0)
+
+### A Jucileia pediu ligação, e a rodada ofereceu concluir
+
+*"Oi"*, três mensagens que a plataforma não leu, e *"Me liga"*. Ele: *"caso raro que a pessoa pede
+ligação: criar mensagem falando que não podemos e dando uma desculpa; não fazemos ligações, a
+plataforma não aceita e é contraproducente"*.
+
+Resposta pronta nova (`pedido-ligacao`), sinal (`cortesia.pedeLigacao`) e caixa no padrão, ao lado
+do pedido de dinheiro e do de emprego — é a mesma família: pedidos que o atendimento **não pode
+atender**, e que ficam piores em silêncio.
+
+Duas decisões no texto:
+
+- **não promete retorno.** Quem pede ligação está esperando o telefone tocar, e um "vamos ver"
+  deixa a pessoa aguardando algo que não vem. Ele diz o que É possível — escrever por aqui;
+- **nenhum número no texto.** Publicar um telefone ali criaria exatamente a expectativa que a
+  mensagem existe para desfazer.
+
+A lista de padrões é curta e literal, e os falsos positivos foram medidos: *"meu telefone mudou"*,
+*"liguei para o CRAS e não atenderam"*, *"vou ligar lá"*, *"a ligação caiu ontem"* — nenhum aciona a
+recusa. **O texto é uma recusa, e recusa errada custa.**
+
+### A ADS voltou pela TERCEIRA porta
+
+A caixa da Fátima dizia *pediu "ADS" e há modelo mapeado* — um dia depois de eu ter fechado a
+segunda porta. As duas conhecidas estavam bem fechadas; faltava esta: **uma regra de conteúdo DELE
+cujo alvo é a etiqueta de origem.** O texto do anúncio casa, a regra aponta para ADS, e ADS volta
+como conteúdo pelo laço de `tagRules` dentro do `suggest`.
+
+É o terceiro vazamento do mesmo lugar (a Liana foi o segundo, em 02/09). A lição que faltava: **"duas
+listas separadas divergem" vale também para dois PONTOS de filtragem.** Agora os três consultam
+`etiquetasDeOrigem()`, e há teste para cada um.
+
+### A sigla do estado com barra no meio
+
+*"Romario gralow cidade Panambi R / S"* — e a cidade sumiu, tendo ele escrito o nome certo. O padrão
+de ontem exigia as duas letras coladas.
+
+É a repetição literal da lição de 01/09, quando a lista tinha só `rs` e chegou um `rgds`: **sigla
+incompleta faz o defeito parecer aleatório** — a mesma pessoa escreve de dois jeitos, e um funciona.
+Agora aceita qualquer separador entre o R e o S.
+
+Entrou junto a pista `cidade <nome>` **sem preposição**, que é como ele escreveu — a lista tinha
+`minha cidade é`, `cidade:` e `cidade de`, e não a forma seca.
+
+**Arquivos:** `src/lib/store.js` (a resposta pronta), `src/lib/cortesia.js` (`pedeLigacao`),
+`src/lib/arvore.js` (o sinal e a caixa nos dois ramos), `src/lib/tags.js` (a terceira porta),
+`src/lib/cities.js` (a sigla e a pista), `src/panel/panel.js`, `tests/cortesia.test.mjs` (+13),
+`tests/tags.test.mjs` (+3), `tests/arvore.test.mjs`, `CLAUDE.md` (+3 armadilhas), `manifest.json`
+(2.20.0 → 2.21.0). Quinze suítes, os dois verificadores, **61 caixas** no padrão sem problemas.
+
+**O quadro dele precisa ser reimportado:** a caixa do pedido de ligação é nova, e caixa nova nunca
+entra sozinha.
+
+---
+
 ## 2026-09-04 — Seis anotações: o 13, a piada, a despedida amarga e duas cidades (v2.20.0)
 
 Cinco casos distintos, todos medidos **no quadro que ele tem** (o exportado em 2.14.0):

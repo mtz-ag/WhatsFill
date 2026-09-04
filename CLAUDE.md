@@ -1181,6 +1181,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   Entrou junto `cidade de/do/da`, que faltava na lista de pistas.
 
 
+- **A etiqueta de ORIGEM tinha uma TERCEIRA porta: a regra de conteudo dele.** Anotacao da Fatima
+  Silva (04/09/2026): a caixa dizia *pediu "ADS" e ha modelo mapeado*, um dia depois de a ADS ter
+  sido barrada. As duas portas conhecidas estavam fechadas (`conteudosJaAplicados` e o piso
+  `ORIGEM_SEMPRE`) — faltava o laco de `tagRules` dentro do `suggest`: **uma regra dele cujo alvo e
+  a etiqueta de origem** (o texto do anuncio casa, a regra aponta para ADS, ADS volta como
+  conteudo). Terceira porta do mesmo vazamento. **"Duas listas separadas divergem" vale tambem para
+  dois PONTOS de filtragem**: agora as tres consultam `etiquetasDeOrigem()`.
+- **A SIGLA do estado vem com separador no meio: `R / S`, `R-S`, `R.S`.** Anotacao do Romario
+  (04/09): *"Romario gralow cidade Panambi R / S"* — e a cidade sumiu, com a mesma pessoa tendo
+  escrito o nome certo. E a repeticao da licao de 01/09 (`rs`, `rgs`, `rgds`): **sigla incompleta
+  faz o defeito parecer aleatorio.** Entrou junto a pista `cidade <nome>` sem preposicao, que e como
+  ele escreveu.
+- **"Me liga" tem resposta pronta propria** (pedido dele, 04/09, anotacao da Jucileia): *"caso raro
+  que a pessoa pede ligacao: criar mensagem falando que nao podemos e dando uma desculpa; nao
+  fazemos ligacoes, a plataforma nao aceita e e contraproducente"*. O texto **nao promete retorno** —
+  quem pede ligacao esta esperando o telefone tocar, e um "vamos ver" deixa a pessoa aguardando algo
+  que nao vem. `cortesia.pedeLigacao` e a lista, curta e literal: alargar mandaria a recusa para quem
+  so falou de telefone ("meu telefone mudou", "liguei para o CRAS"), e o texto E uma recusa.
+
+
 ## Armadilhas do próprio painel
 
 - **`store.get` só mescla defaults em ALGUMAS chaves.** Chave nova dentro de um objeto já salvo

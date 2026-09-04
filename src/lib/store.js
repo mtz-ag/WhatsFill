@@ -175,6 +175,27 @@ export const DEFAULT_TEMPLATES = [
      * da Lei 8.742/93 (LOAS), que existem justamente para nascimento, falecimento,
      * vulnerabilidade temporária e calamidade.
      */
+    /**
+     * **"Me liga"** — pedido dele (04/09/2026, anotação da Jucileia): *"caso raro que a pessoa pede
+     * ligação: criar mensagem falando que não podemos e dando uma desculpa; não fazemos ligações,
+     * a plataforma não aceita e é contraproducente"*.
+     *
+     * O texto **não promete retorno** e não manda ela esperar: quem pede ligação está esperando o
+     * telefone tocar, e um "vamos ver" deixa a pessoa aguardando algo que não vem. Diz o que É
+     * possível — escrever por aqui — e devolve a conversa para o canal que existe.
+     *
+     * Sem número de telefone no texto, de propósito: publicar um número aqui criaria exatamente a
+     * expectativa que a mensagem existe para desfazer.
+     */
+    id: 'pedido-ligacao',
+    name: 'Pedido de ligação (explicar que é só por mensagem)',
+    text:
+      '{{saudacao}}! Obrigado por chamar. Aqui a gente atende *só por mensagem* — é o que '
+      + 'permite dar conta de todo mundo que escreve, sem deixar ninguém sem resposta.\n\n'
+      + 'Me conta por escrito o que você precisa, com calma e sem pressa. Eu leio tudo e respondo '
+      + 'por aqui mesmo.',
+  },
+  {
     id: 'pedido-ajuda',
     name: 'Pedido de ajuda financeira (negar com respeito)',
     text:

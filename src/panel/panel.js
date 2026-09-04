@@ -27,7 +27,7 @@ import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -4849,6 +4849,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * O texto que explica e nega já existia sem ninguém acioná-lo.
          */
         pedeEmprego: pedeEmprego(state.entrantes, state.nossaUltimaAt),
+        /**
+         * **Pediu que a gente ligasse.** Anotação da Jucileia (04/09/2026): *"Oi"*, três mensagens
+         * que a plataforma não leu e *"Me liga"* — e a rodada ofereceu concluir, deixando a pessoa
+         * esperando o telefone tocar.
+         */
+        pedeLigacao: pedeLigacao(state.entrantes, state.nossaUltimaAt),
         /**
          * **Só cumprimentou, e nada mais.** Substitui a caixa de palavras "bom dia", que casava por
          * trecho contido e por isso pegava a Teresinha (*"Boa tarde o senhor tá concorendo

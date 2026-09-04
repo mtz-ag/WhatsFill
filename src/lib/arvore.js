@@ -60,6 +60,7 @@ export const SINAIS = [
   { id: 'pedeAlgoIndefinido', rotulo: 'Pediu algo e não disse o quê', nao: 'Não pediu nada em aberto' },
   { id: 'pedeAjudaFinanceira', rotulo: 'Pediu dinheiro, cesta básica ou remédio', nao: 'Não pediu dinheiro nem o básico' },
   { id: 'pedeEmprego', rotulo: 'Perguntou como trabalhar no mandato', nao: 'Não perguntou sobre trabalhar aqui' },
+  { id: 'pedeLigacao', rotulo: 'Pediu que a gente ligasse para ela', nao: 'Não pediu ligação' },
   { id: 'soCortesia', rotulo: 'Só cumprimentou (e nada mais)', nao: 'Escreveu mais que um cumprimento' },
   { id: 'ultimaEhNossa', rotulo: 'A última mensagem é nossa (ou ela não escreveu nada)', nao: 'Ela falou por último' },
   { id: 'etiquetaSoConclui', rotulo: 'Tem a etiqueta que só conclui (assessor)', nao: 'Não é da casa' },
@@ -574,6 +575,20 @@ export function fluxoPadrao() {
     { ...noVazio('quer trabalhar para o mandato'),
       condicao: { sinal: 'pedeEmprego', negar: false, palavras: [], onde: 'ultima' },
       acao: { tecla: null, resposta: 'pedido-emprego' } },
+
+    /**
+     * **"Me liga"** — pedido dele (04/09/2026, anotação da Jucileia).
+     *
+     * Ela escreveu *"Oi"*, três mensagens que a plataforma não leu, e *"Me liga"*; a rodada ofereceu
+     * concluir. Ele: *"caso raro que a pessoa pede ligação: criar mensagem falando que não podemos
+     * e dando uma desculpa; não fazemos ligações, a plataforma não aceita e é contraproducente"*.
+     *
+     * Mesma família das duas de cima: é um pedido que o atendimento **não pode atender**, e o texto
+     * explica sem prometer retorno. Concluir em silêncio deixa a pessoa esperando o telefone tocar.
+     */
+    { ...noVazio('pediu que a gente ligasse'),
+      condicao: { sinal: 'pedeLigacao', negar: false, palavras: [], onde: 'ultima' },
+      acao: { tecla: null, resposta: 'pedido-ligacao' } },
 
     /**
      * **Texto longo vem ANTES das caixas de palavra** — print da Cris (02/09/2026).
@@ -1764,6 +1779,7 @@ const SINAIS_QUE_A_RESPOSTA_APAGA = new Set([
   'pedeAjudaFinanceira',
   'soCortesia',
   'pedeEmprego',
+  'pedeLigacao',
   'pedeAlgoIndefinido',
   'pedeRespostaPessoal',
   'perguntaAberta',

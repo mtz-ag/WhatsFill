@@ -348,8 +348,23 @@ export async function suggest({ city, texts = [], extra = '', interesse = null, 
    */
   const haystackSemAcento = semAcentoNemCaixa(haystack);
 
+  /**
+   * **A TERCEIRA porta da etiqueta de origem** — anotação da Fátima Silva (04/09/2026).
+   *
+   * A caixa dizia *pediu "ADS" e há modelo mapeado — mande*, um dia depois de a ADS ter sido
+   * barrada como conteúdo. As duas portas conhecidas estavam fechadas (`conteudosJaAplicados` e o
+   * piso `ORIGEM_SEMPRE`), e faltava esta: **uma regra de conteúdo dele cuja etiqueta é a de
+   * origem**. O texto do anúncio casa, a regra aponta para ADS, e ADS volta como conteúdo.
+   *
+   * É o mesmo vazamento de 02/09 (a Liana), pela terceira porta — e é a demonstração de que
+   * "duas listas separadas divergem" vale também para dois PONTOS de filtragem. Agora as três
+   * consultam `etiquetasDeOrigem()`.
+   */
+  const deOrigem = await etiquetasDeOrigem();
+
   for (const regra of await store.get('tagRules')) {
     if (!regra.padrao || !regra.etiqueta) continue;
+    if (deOrigem.has(normalize(regra.etiqueta))) continue;
     let re;
     try {
       re = new RegExp(regra.padrao, 'i');

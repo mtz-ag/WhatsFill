@@ -1623,6 +1623,7 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
     { semInteresse: { motivo: 'x' } }, { etiquetaSoConclui: 'assessor' }, { ultimaEhNossa: 'nossa' },
     { confirmouPresenca: true }, { etiquetaQueDispensa: 'Sem Retorno', podeMandarMomento: true },
     { pedeAjudaFinanceira: { motivo: 'x' } }, { pedeEmprego: { motivo: 'x' } },
+    { pedeLigacao: { motivo: 'x' } },
     { pedeAlgoIndefinido: { motivo: 'x', trecho: 'x' } }, { perguntaAberta: { termo: 'x' } },
     { pedeRespostaPessoal: { motivo: 'x' } }, { soCortesia: { motivo: 'x' }, podeMandarMomento: true },
     { ultimaEhSoReacao: true, podeMandarMomento: true }, { ultimaEhDespedida: true },
