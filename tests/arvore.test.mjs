@@ -1539,7 +1539,26 @@ grupo('o lado SEM cidade tambem fecha, e o modelo vem antes do obrigado (03/09/2
     modeloJaNaConversa: false, anuncioReconhecido: true, veioDeAnuncio: true,
   };
   check(d(rosa)?.tecla === '1', 'anuncio novo com modelo mapeado: o modelo sai');
-  check(d(rosa)?.id === 'r:conteudo-pedido:com-cidade', 'pela caixa do lado com cidade');
+  check(d(rosa)?.id === 'r:conteudo-pedido:com-cidade-anuncio', 'pela caixa que fica dentro do anuncio reconhecido');
+
+  /**
+   * **E o modelo so passa na frente do apoio quando o ANUNCIO foi reconhecido** -- anotacao da
+   * Elaine (04/09/2026), que desfez metade do conserto da Rosa: ela ja tinha cidade, escreveu
+   * *"Tamos junto capitao"* ONTEM, sem anuncio reconhecido, e recebeu o modelo. Ele: *"nao foi
+   * arrumado"*.
+   *
+   * A diferenca entre as duas e o anuncio, nao o apoio: a Rosa clicou em algo que tem modelo
+   * proprio e nunca saiu; a Elaine so disse que esta junto, e o "modelo" dela vem da etiqueta de
+   * conteudo -- o caminho que o criterio de tempo do apoio deve decidir.
+   */
+  const elaine = { ...rosa, anuncioReconhecido: false, apoioDeOutroDia: true, podeMandarMomento: true };
+  check(d(elaine)?.id?.includes('so-expressa-apoio'), `sem anuncio reconhecido, o apoio decide (${d(elaine)?.id})`);
+  check(d(elaine)?.tecla === '5', 'e apoio de ontem manda a mensagem do momento');
+
+  // Quem nao expressou apoio nenhum continua recebendo o modelo pela caixa de baixo.
+  const semApoio = { ...elaine, soExpressaApoio: null };
+  check(d(semApoio)?.tecla === '1', 'sem apoio, o modelo sai como antes');
+  check(d(semApoio)?.id === 'r:conteudo-pedido:com-cidade', 'pela copia de baixo');
 
   // E as guardas da regra sao o que impede virar repeticao.
   check(d({ ...rosa, modeloJaNaConversa: true })?.id?.includes('so-expressa-apoio'), 'modelo ja na conversa: volta a agradecer');

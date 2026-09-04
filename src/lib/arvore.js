@@ -702,8 +702,30 @@ export function fluxoPadrao() {
      * trava o caso de 01/09 acusou na hora.
      */
     r('respondeu-nossa-pergunta', null, onde),
-    r('conteudo-pedido', 'pediu conteúdo e há modelo mapeado', onde),
+    /**
+     * **O modelo só passa na frente do apoio quando o ANÚNCIO foi reconhecido.**
+     *
+     * Duas anotações no mesmo dia, e a segunda desfez metade da primeira:
+     *
+     *  - **Rosa** (03/09): já tinha cidade, voltou clicando no anúncio das Escolas Cívico-Militares
+     *    e escreveu só apoio. Ele: *"ela veio por um anúncio diferente do padrão, vou mandar o
+     *    modelo"*. Eu pus `conteudo-pedido` acima do apoio.
+     *  - **Elaine** (04/09): já tinha cidade, escreveu *"Tamos junto capitão"* ONTEM, sem anúncio
+     *    reconhecido — e recebeu o modelo por causa daquela mudança. Ele: *"não foi arrumado"*.
+     *
+     * **A diferença entre as duas é o anúncio, não o apoio.** A Rosa clicou em alguma coisa e
+     * aquilo tem um modelo próprio que nunca saiu; a Elaine só disse que está junto, e o "modelo"
+     * dela vem da etiqueta de conteúdo — que é justamente o caminho que o critério de tempo do
+     * apoio deve decidir (apoio de ontem → mensagem do momento).
+     *
+     * Por isso o modelo sobe para cima do apoio **dentro do grupo do anúncio reconhecido**, e a
+     * cópia de baixo continua atendendo quem não expressou apoio nenhum.
+     */
+    grupo('veio de um anúncio que eu reconheço', { sinal: 'anuncioReconhecido', negar: false, palavras: [], onde: 'ultima' }, [
+      r('conteudo-pedido', 'manda o modelo daquele anúncio', `${onde}-anuncio`),
+    ]),
     r('so-expressa-apoio', 'apoio', onde),
+    r('conteudo-pedido', 'pediu conteúdo e há modelo mapeado', onde),
   ];
 
   /**

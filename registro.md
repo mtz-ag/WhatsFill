@@ -1,3 +1,44 @@
+## 2026-09-04 — O modelo só passa na frente do apoio quando o ANÚNCIO foi reconhecido (v2.12.0)
+
+Print da Elaine, já com a v2.11.0 carregada: cidade Bom Retiro do Sul, e a última mensagem dela era
+*"Tamos junto capitão"* — **de ontem**. A caixa recomendou a tecla 1, mandar o modelo. Ele: *"não foi
+arrumado"* / *"confira o fluxo"*.
+
+**Ele estava certo, e a causa fui eu, ontem à noite.**
+
+### Duas anotações do mesmo dia, e a segunda desfez metade da primeira
+
+- **Rosa** (03/09): já tinha cidade, voltou clicando no anúncio das Escolas Cívico-Militares e
+  escreveu só apoio. *"Ela veio por um anúncio diferente do padrão, vou mandar o modelo."* Eu pus
+  `conteudo-pedido` acima de `so-expressa-apoio`.
+- **Elaine** (04/09): já tinha cidade, escreveu apoio ONTEM, **sem anúncio reconhecido** — e recebeu
+  o modelo por causa daquela mudança.
+
+**A diferença entre as duas é o anúncio, não o apoio.** A Rosa clicou em alguma coisa que tem modelo
+próprio e nunca saiu; a Elaine só disse que está junto, e o "modelo" dela vem da etiqueta de conteúdo
+— que é exatamente o caminho que o critério de tempo do apoio existe para decidir (apoio de ontem →
+mensagem do momento).
+
+### O conserto
+
+`conteudo-pedido` sobe para cima do apoio **dentro do grupo "veio de um anúncio que eu reconheço"**,
+e a cópia de baixo continua atendendo quem não expressou apoio nenhum. Três desfechos, medidos:
+
+| Situação | Antes | Agora |
+|---|---|---|
+| Rosa — anúncio reconhecido, com apoio | tecla 1 | tecla 1 (pela caixa do anúncio) |
+| Elaine — sem anúncio reconhecido, apoio de ontem | tecla 1 | **tecla 5** |
+| Sem apoio nenhum, com modelo mapeado | tecla 1 | tecla 1 (pela cópia de baixo) |
+
+**A lição:** um conserto que sobe uma caixa de posição não é local. `conteudo-pedido` acima do apoio
+resolvia a Rosa e passava por cima do critério de tempo que ele tinha definido no mesmo dia — e o
+sinal que separa os dois casos (`anuncioReconhecido`) já existia; faltou eu usá-lo.
+
+**Arquivos:** `src/lib/arvore.js`, `tests/arvore.test.mjs`, `manifest.json` (2.11.0 → 2.12.0),
+`registro.md`.
+
+---
+
 ## 2026-09-04 — Três cópias do mesmo invariante, e o anúncio mais recente (v2.11.0)
 
 ### O pedido de dados: a TERCEIRA cópia
