@@ -1,3 +1,46 @@
+## 2026-09-04 — ESTADO DE AGORA (v2.14.0) — leia isto primeiro numa sessão nova
+
+Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
+mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
+confiar.
+
+### O que está no ar
+
+Branch `claude/whatsfill-ia`, **v2.14.0**, tudo commitado e no remoto. 38 commits em 03–04/09.
+
+### Pendências que NÃO estão no código — precisam dele
+
+1. **Importar o fluxo.** O quadro dele ainda é o exportado em **1.86.0**; o padrão de agora tem 59
+   caixas. Tudo o que mudou de POSIÇÃO nos dois dias só vale depois de importar — inclusive a caixa
+   `contexto-de-outro-dia`, que é a correção de quatro anotações do dia 04.
+   Gerar com `node tools/exportar-fluxo.mjs <saida.json>` (saída FORA do repositório).
+2. **Config → "Etiqueta de sem interesse"**: se estiver vazio, a etiqueta que a rodada aplica não é
+   lida na visita seguinte (o caso da susana, que ele reportou duas vezes). O conserto de 04/09
+   depende desse campo preenchido.
+3. **Config → "conteúdo preferido" e a linha `ADS → Campanha Martim`**: a caixa da Elaine mostrava
+   *pediu "ADS"*, e a etiqueta ADS é ORIGEM, não conteúdo. Limpar os dois evita que ela volte a
+   decidir modelo.
+
+### Aberto, esperando decisão dele
+
+- **Casamento aproximado de cidade ainda abre a caixa "Cidade a gravar".** *"Só q ia me mudar pra
+  Santa Rita"* casa como **Santa Rosa** (`aproximada`). O `nao-reconhecida` já foi barrado em
+  04/09; barrar o `aproximada` também tiraria "Sao lourenso" e os outros erros de digitação.
+- **Nada de 03–04/09 foi testado na tela** — só medido em Node. Vale conferir na primeira rodada:
+  a caixa do tempo (tecla 5), a tecla 8 chamando a IA, e o rascunho lendo a rajada inteira.
+
+### Onde as coisas moram
+
+- **`CLAUDE.md`** — 241 armadilhas, lido em toda sessão. É onde entra fato que custou horas.
+- **`registro.md`** — causa raiz de cada mudança, mais recente no topo. Não é lido sozinho: quem vai
+  mexer numa área procura aqui primeiro.
+- **`tests/`** — 15 suítes. **É a forma mais forte de guardar uma decisão dele**; comentário
+  envelhece, teste cai. Toda anotação da rodada vira teste.
+- **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
+  projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`.
+
+---
+
 ## 2026-09-04 — A anotação mostra o que NÃO é texto (v2.14.0)
 
 Pedido dele: *"as observações estão com um problema: elas pegam só texto e ignoram fotos, links e
