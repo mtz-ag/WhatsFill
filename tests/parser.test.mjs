@@ -913,4 +913,37 @@ grupo('palavra parecida com municipio NAO vira cidade (02/09/2026)');
   check(await cidade('Porto Alegre') === 'Porto Alegre', 'e o exato, claro');
 }
 
+grupo('a sigla do estado depois do nome e contexto (04/09/2026)');
+{
+  /**
+   * Duas anotacoes no mesmo lote:
+   *
+   *  - **Maria Virginia**: *"Eu Rio grande do Sul cidade de Gravatai rs Maria Virginia da Silva"* --
+   *    *"gravatai nao foi identificada"*;
+   *  - **Carmem**: *"CARMEM JUSSARA CORREA DA CRUZ. URUGUAIANA RS FRONTEIRA."* -- *"nao pegou cidade"*.
+   *
+   * As duas escreveram o cadastro inteiro numa frase so, sem pista de lugar na frente e longe do
+   * corte de "texto curto". Mas ninguem escreve "RS" depois de uma palavra que nao e uma cidade
+   * daqui: a sigla e, ela propria, a afirmacao de que o que vem antes e um lugar.
+   */
+  const cidadeDe = async (t) => (await extract([t], {})).cidade?.value || null;
+
+  check(await cidadeDe('Eu Rio grande do Sul cidade de Gravataí rs Maria Virgínia da Silva') === 'Gravataí',
+    'o caso da Maria Virginia');
+  check(await cidadeDe('CARMEM JUSSARA CORRÊA DA CRUZ. URUGUAIANA RS FRONTEIRA. .') === 'Uruguaiana',
+    'o caso da Carmem');
+  check(await cidadeDe('sou de Canoas rs') === 'Canoas', 'com pista na frente tambem, como sempre');
+
+  // "cidade de X" entrou junto: era a forma mais natural, e faltava na lista.
+  check(await cidadeDe('minha cidade de origem e Pelotas') === 'Pelotas', '"cidade de" e pista');
+
+  /**
+   * **Os falsos positivos, que sao onde mora o risco:** "rs" e risada nesta base, e a passada olha
+   * para TRAS da sigla. Exigir casamento `exata` e o que mantem isto seguro.
+   */
+  check(await cidadeDe('kkk rs rs') === null, 'risada nao vira cidade');
+  check(await cidadeDe('meu nome e Ana Paula rs') === null, 'nome antes da sigla nao vira cidade');
+  check(await cidadeDe('Estamos juntos rs') === null, 'apoio antes da sigla tambem nao');
+}
+
 fim();

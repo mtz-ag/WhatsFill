@@ -1154,6 +1154,33 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   nenhum conteudo se chama ADS.
 
 
+- **A negativa de ABERTURA so vale se a mensagem FOR a negativa — e a piada custou uma etiqueta
+  permanente.** Anotacao do Alfredo (04/09/2026): ele mandou uma foto e escreveu *"Nao precisa muito
+  pra ser feliz 😂😂😂😂"* — piada sobre a propria foto — e foi **etiquetado como sem interesse e
+  concluido em silencio**. `COMECA_NEGANDO` existe porque a pergunta que fizemos era FECHADA
+  ("posso te mandar os conteudos?"), e resposta a pergunta fechada e curta; uma frase de trinta e
+  nove caracteres que segue falando de outra coisa nao responde pergunta nenhuma. Hoje ela exige
+  **mensagem curta (<= 28) ou o "nao" colado no que se recusa** (`NEGACAO_COM_OBJETO`). Das doze
+  asercoes do teste, nove sao falso positivo — e onde mora o risco desta regra.
+- **O numero do ADVERSARIO e o espelho do "22", com a mesma guarda.** Anotacao da Rosa Maria
+  (04/09): *"MINHA CONCIENCIA DIZ QUE TENHO QUE SER 13"* e, na seguinte, so *"13"* — e a rodada
+  ofereceu a mensagem do momento. *"13 e numero do Lula, adversario; e comum repetirem 13 para
+  mostrar hostilidade"*. O numero SOLTO nao basta (13 e endereco, hora e idade): vale como a
+  mensagem inteira, ou colado num verbo de votar/ser.
+- **"Obrigada por nada" e despedida, e o desfecho da despedida e o que ele queria.** Anotacao da Eva
+  (04/09): ela pediu ajuda financeira, recebeu a negativa e respondeu *"Entao deixa muito obrigada
+  por nada"*; a rodada ofereceu a mensagem do momento. *"vou concluir sem mandar nada"* — que e
+  exatamente a tecla 3 da despedida. `DESPEDIDA_AMARGA` **nao passa pela conferencia do "sobrou
+  conteudo"**: a frase inteira e a despedida, e exigir que nada sobre a faria deixar de contar.
+- **A SIGLA DO ESTADO depois do nome e contexto de cidade.** Duas anotacoes de 04/09 (Maria Virginia
+  e Carmem): as duas escreveram o cadastro inteiro numa frase so — *"cidade de Gravatai rs Maria
+  Virginia da Silva"*, *"CARMEM ... CRUZ. URUGUAIANA RS FRONTEIRA."* —, sem pista na frente e longe
+  do corte de "texto curto". **Ninguem escreve "RS" depois de uma palavra que nao e cidade daqui**:
+  a sigla e a afirmacao de que o que vem antes e um lugar. A passada olha para TRAS da sigla (as
+  pistas normais olham para a frente) e exige casamento `exata` — "rs" tambem e risada nesta base.
+  Entrou junto `cidade de/do/da`, que faltava na lista de pistas.
+
+
 ## Armadilhas do próprio painel
 
 - **`store.get` só mescla defaults em ALGUMAS chaves.** Chave nova dentro de um objeto já salvo

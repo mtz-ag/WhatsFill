@@ -41,6 +41,71 @@ Branch `claude/whatsfill-ia`, **v2.14.0**, tudo commitado e no remoto. 38 commit
 
 ---
 
+## 2026-09-04 — Seis anotações: o 13, a piada, a despedida amarga e duas cidades (v2.20.0)
+
+Cinco casos distintos, todos medidos **no quadro que ele tem** (o exportado em 2.14.0):
+
+| contato | antes | agora | o que ele pediu |
+|---|---|---|---|
+| **Rosa Maria** | tecla 5 (momento) | **tecla s** | *"13 é número do Lula, adversário"* |
+| **Alfredo** | tecla s (sem interesse!) | **tecla 5** | *"contexto errado, vou mandar mensagem do momento"* |
+| **Eva** | tecla 5 (momento) | **tecla 3** | *"vou concluir sem mandar nada"* |
+| **Maria Virgínia** | cidade vazia | **Gravataí** | *"gravataí não foi identificada"* |
+| **Carmem** | cidade vazia | **Uruguaiana** | *"não pegou cidade"* |
+
+### O Alfredo é o mais grave, e é o mesmo defeito da susana
+
+Ele mandou uma foto e escreveu *"Não precisa muito pra ser feliz 😂😂😂😂"* — piada sobre a própria
+foto — e foi **etiquetado como sem interesse e concluído em silêncio**. Etiqueta permanente no CRM,
+em eleitor real.
+
+`COMECA_NEGANDO` existe porque **a pergunta que fizemos era fechada** ("posso te mandar os
+conteúdos?"), e resposta a pergunta fechada é curta. Uma frase de trinta e nove caracteres que segue
+falando de outra coisa não responde pergunta nenhuma — o gatilho era só começar com "não".
+
+Agora ela exige **mensagem curta (≤ 28) ou o "não" colado no que se recusa**. Das doze asserções do
+teste, **nove são falso positivo** — é onde mora o risco desta regra, como sempre foi.
+
+### O 13 é o espelho do 22
+
+*"MINHA CONCIENCIA DIZ QUE TENHO QUE SER 13"* e, na seguinte, só *"13"*. O "22" já contava como
+apoio; faltava o outro lado, com a mesma guarda: **o número solto não basta** (13 é endereço, hora e
+idade). Vale como a mensagem inteira, ou colado num verbo de votar/ser.
+
+### "Obrigada por nada" é despedida
+
+A Eva pediu ajuda financeira, recebeu a negativa — que é o desfecho certo, e o texto é respeitoso —
+e respondeu *"Então deixa muito obrigada por nada"*. A rodada ofereceu a mensagem da semana.
+
+É despedida: amarga, mas despedida. E o desfecho da despedida é **concluir sem enviar**, exatamente
+o que ele escreveu. `DESPEDIDA_AMARGA` não passa pela conferência do "sobrou conteúdo": a frase
+inteira é a despedida, e exigir que nada sobre a faria deixar de contar justamente por ser uma frase.
+
+### A sigla do estado é contexto de cidade
+
+A Maria Virgínia e a Carmem escreveram o cadastro inteiro numa frase só — *"cidade de Gravataí rs
+Maria Virgínia da Silva"*, *"CARMEM JUSSARA CORRÊA DA CRUZ. URUGUAIANA RS FRONTEIRA."* — sem pista de
+lugar na frente e longe do corte de "texto curto".
+
+**Ninguém escreve "RS" depois de uma palavra que não é uma cidade daqui.** A sigla é, ela própria, a
+afirmação de que o que vem antes é um lugar. As pistas normais olham para a FRENTE do nome; esta
+olha para trás, e por isso é uma passada própria — exigindo casamento `exata`, porque "rs" também é
+risada nesta base e o aproximado em texto livre foi o que transformou *"at a vitória"* em Vitória das
+Missões (02/09).
+
+Entrou junto `cidade de/do/da`, que faltava: a lista tinha `minha cidade é` e `cidade:`, e não a
+forma mais natural de todas.
+
+**Falsos positivos medidos e limpos:** "kkk rs rs", "meu nome e Ana Paula rs", "Estamos juntos rs" —
+nenhum vira cidade.
+
+**Arquivos:** `src/lib/cortesia.js` (`VOTO_NO_ADVERSARIO`, `NEGACAO_COM_OBJETO`, `DESPEDIDA_AMARGA`),
+`src/lib/cities.js` (`SUFIXO_ESTADO_SOLTO`, `cidade de`), `tests/cortesia.test.mjs` (+16),
+`tests/parser.test.mjs` (+7), `CLAUDE.md` (+4 armadilhas), `manifest.json` (2.19.0 → 2.20.0). Quinze
+suítes, os dois verificadores, 59 caixas sem problemas.
+
+---
+
 ## 2026-09-04 — Três anotações: apoio lido como presença, e a ADS de volta (v2.19.0)
 
 ### O Guilherme foi pulado como quem vai a um evento

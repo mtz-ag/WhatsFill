@@ -382,6 +382,14 @@ async function municipiosValidos() {
  * município no meio de uma frase **prova que o texto contém um nome de município**, não que a
  * pessoa more lá — "meu genro mora em Santiago" é o exemplo que já estava no `CLAUDE.md`.
  */
+/**
+ * A sigla do estado solta no meio do texto — o gancho da passada que olha para TRÁS do nome.
+ *
+ * Sem `rio grande do sul` por extenso de propósito: `formaCanonica` já apaga o nome do estado antes
+ * de casar (senão "Rio Grande" viraria o município), então procurá-lo aqui não acharia nada.
+ */
+const SUFIXO_ESTADO_SOLTO = /[\s,.\/-]+(rs|rgs|rgds)\b/gi;
+
 const PISTAS_DE_CIDADE = [
   /\bmoro\s+(em|no|na|nos|nas)\s+/gi,
   /\bmorando\s+(em|no|na)\s+/gi,
@@ -393,6 +401,11 @@ const PISTAS_DE_CIDADE = [
   /\baqui\s+(em|no|na|de|do|da)\s+/gi,
   /\b(minha|nossa)\s+cidade\s+(é|e)\s+/gi,
   /\bcidade\s*[:\-]\s*/gi,
+  /**
+   * **"cidade de Gravataí"** — anotação da Maria Virgínia (04/09/2026): *"gravataí não foi
+   * identificada"*. A lista tinha `minha cidade é` e `cidade:`, e não a forma mais natural de todas.
+   */
+  /\bcidade\s+(de|do|da)\s+/gi,
   /\b(estou|to|tô)\s+(em|no|na)\s+/gi,
   /\bfica\s+(em|no|na)\s+/gi,
   /\bregi[ãa]o\s+(de|do|da)\s+/gi,
@@ -465,6 +478,28 @@ export async function matchCityComContexto(text) {
     if (curto?.confidence === 'aproximada' && normalize(curto.matched || '') === formaCanonica(bruto)) {
       return curto;
     }
+  }
+
+  /**
+   * **A SIGLA DO ESTADO depois do nome também é contexto** — duas anotações de 04/09/2026.
+   *
+   *  - **Maria Virgínia**: *"Eu Rio grande do Sul cidade de Gravataí rs Maria Virgínia da Silva"*;
+   *  - **Carmem**: *"CARMEM JUSSARA CORRÊA DA CRUZ. URUGUAIANA RS FRONTEIRA."*
+   *
+   * As duas escreveram o cadastro inteiro numa frase só, sem pista de lugar na frente e longe
+   * demais do corte de "texto curto". Mas **ninguém escreve "RS" depois de uma palavra que não é
+   * uma cidade daqui** — a sigla é, ela própria, a afirmação de que o que vem antes é um lugar.
+   *
+   * As pistas normais olham para a FRENTE do nome; esta olha para trás, e por isso é uma passada
+   * própria. Exige casamento `exata`: o aproximado em texto livre é o que transformou "at a
+   * vitória" em Vitória das Missões (02/09), e a sigla não muda esse risco.
+   */
+  SUFIXO_ESTADO_SOLTO.lastIndex = 0;
+  let sufixo;
+  while ((sufixo = SUFIXO_ESTADO_SOLTO.exec(bruto)) !== null) {
+    const antes = bruto.slice(Math.max(0, sufixo.index - ALCANCE_DA_PISTA), sufixo.index);
+    const hit = await matchCity(antes);
+    if (hit?.confidence === 'exata') return { ...hit, pista: sufixo[0].trim() };
   }
 
   for (const pista of PISTAS_DE_CIDADE) {

@@ -1387,4 +1387,52 @@ grupo('pergunta aberta: e pergunta a menos que uma pronta responda (04/09/2026)'
   }
 }
 
+grupo('quatro anotacoes de 04/09/2026: o 13, a piada, e a despedida amarga');
+{
+  const M = (t) => [{ texto: t, at: '2026-09-03T15:00:00' }];
+  const sem = (...t) => semInteresse(t.map((x) => ({ texto: x })));
+
+  /**
+   * **ROSA MARIA: o numero do ADVERSARIO.** *"SOU APOSENTADA RURAL. MINHA CONCIENCIA DIZ QUE TENHO
+   * QUE SER 13"* e, na seguinte, so *"13"* -- e a rodada ofereceu a mensagem do momento. Ele:
+   * *"13 e numero do Lula, adversario; e comum repetirem 13 para mostrar hostilidade"*.
+   *
+   * E o espelho do "22" que ja conta como apoio, com a mesma guarda: o numero sozinho nao basta.
+   */
+  check(sem('SOU APOSENTADA RURAL. MINHA CONCIENCIA DIZ QUE TENHO QUE SER 13'), 'o caso da Rosa');
+  check(sem('13'), 'o numero sozinho, que e a resposta seca de quem quer marcar posicao');
+  check(sem('vou de 13'), 'e o verbo de votar junto');
+  // 13 e endereco, hora e idade -- o numero solto no meio da frase nao conta.
+  check(!sem('meu numero e 13 9999-0000'), 'telefone nao e voto');
+  check(!sem('chego as 13 horas'), 'hora nao e voto');
+  check(!sem('moro na rua 13 de maio'), 'endereco nao e voto');
+
+  /**
+   * **ALFREDO: a piada que virou etiqueta permanente.** Ele mandou uma foto e escreveu *"Nao precisa
+   * muito pra ser feliz 😂😂😂😂"* -- e foi etiquetado como sem interesse e concluido em silencio.
+   * *"contexto errado, vou mandar mensagem do momento"*.
+   *
+   * `COMECA_NEGANDO` existe porque a pergunta que fizemos era FECHADA, e resposta a pergunta fechada
+   * e curta. Uma frase que segue falando de outra coisa nao e resposta a pergunta nenhuma.
+   */
+  check(!sem('Não precisa muito pra ser feliz 😂😂😂😂'), 'o caso do Alfredo');
+  check(!sem('Não vejo a hora de votar em vocês'), 'nem o entusiasmo que comeca com "nao"');
+  check(!sem('Não tem como eu ir. Mas fico aqui na torcida e orando pra tudo dar certo 🙏'), 'nem a recusa do evento');
+
+  // E a resposta seca continua contando, que e o motivo de a regra existir.
+  check(sem('Não'), '"Nao" seco continua sendo recusa');
+  check(sem('Não, obrigado'), '"Nao, obrigado" tambem');
+  check(sem('não quero receber nada'), 'e a negacao colada no que se recusa');
+
+  /**
+   * **EVA: "obrigada por nada" encerra a conversa.** Ela pediu ajuda financeira, recebeu a negativa
+   * e respondeu *"Entao deixa muito obrigada por nada"*. A rodada ofereceu a mensagem do momento;
+   * ele: *"vou concluir sem mandar nada"*, que e o desfecho da despedida.
+   */
+  check(ehDespedida({ texto: 'Então deixa muito obrigada por nada' }), 'a despedida amarga da Eva');
+  check(ehDespedida({ texto: 'valeu por nada' }), 'e a variante');
+  check(!ehDespedida({ texto: 'Muito obrigado pelo trabalho de voces' }), 'o agradecimento de verdade nao e despedida');
+  check(!ehDespedida({ texto: 'obrigada pelas informacoes' }), 'nem o agradecimento pelo conteudo');
+}
+
 fim();

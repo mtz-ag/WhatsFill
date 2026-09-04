@@ -169,6 +169,14 @@ const DESPEDIDA =
 export function ehDespedida(msg) {
   const texto = String(msg?.texto || '');
   if (!texto.trim()) return false;
+
+  /**
+   * A despedida AMARGA fecha a conversa igual — ver `DESPEDIDA_AMARGA`. Vale sem a conferência do
+   * "sobrou conteúdo": *"Então deixa muito obrigada por nada"* tem o "então deixa" antes, e exigir
+   * que nada sobre faria a frase inteira deixar de contar justamente por ser uma frase.
+   */
+  if (DESPEDIDA_AMARGA.test(texto)) return true;
+
   if (!DESPEDIDA.test(texto)) return false;
 
   // Tira a despedida (todas as ocorrências) e vê o que sobrou de conteúdo.
@@ -654,6 +662,20 @@ const PEDIDO_DE_MATERIAL = /(^|[^\p{L}])(manda|mande|envia|envie|me\s+passa|quer
  * Jeitos de dizer "estou com você". Lista de reconhecimento, não de julgamento: o que ela
  * decide é se cabe um agradecimento, e agradecer errado custa pouco.
  */
+/**
+ * **"Obrigada por nada" encerra a conversa** — anotação da Eva (04/09/2026).
+ *
+ * Ela pediu ajuda financeira, recebeu a negativa (que é o desfecho certo, e o texto é respeitoso) e
+ * respondeu *"Então deixa muito obrigada por nada"*. A rodada ofereceu a mensagem do momento; ele:
+ * *"vou concluir sem mandar nada"*.
+ *
+ * É despedida — amarga, mas despedida: ela está dizendo que a conversa acabou. Mandar a mensagem da
+ * semana em cima disso é não ter lido. O desfecho da despedida (concluir sem enviar) é exatamente o
+ * que ele descreveu.
+ */
+const DESPEDIDA_AMARGA =
+  /(^|[^\p{L}])(obrigad[oa]\s+por\s+nada|valeu\s+por\s+nada|deixa\s+(pra|para)\s+la|deixa\s+quieto|esquece\s+entao)/iu;
+
 const EXPRESSOES_DE_APOIO = [
   /(^|[^\p{L}])(eu\s+)?apoio(\s|$|,|!|\.)/iu
 ,
@@ -1532,6 +1554,25 @@ const RECUSA_DE_PRESENCA =
 const COMECA_NEGANDO = /^\s*(nao|nunca|jamais|nada|negativo|dispenso)\b/i;
 
 /**
+ * **A negativa de abertura só vale se a mensagem FOR a negativa** — anotação do Alfredo (04/09/2026).
+ *
+ * Ele mandou uma foto e escreveu *"Não precisa muito pra ser feliz 😂😂😂😂"* — uma piada sobre a
+ * própria foto — e foi **etiquetado como sem interesse e concluído em silêncio**. Ele: *"contexto
+ * errado, vou mandar mensagem do momento"*. É a regra mais destrutiva do arquivo (etiqueta
+ * permanente no CRM, em eleitor real), e o gatilho era só a mensagem começar com "não".
+ *
+ * `COMECA_NEGANDO` existe porque **a pergunta que fizemos era fechada** ("posso te mandar os
+ * conteúdos?"), e resposta a pergunta fechada é curta. Uma frase de trinta e nove caracteres que
+ * segue falando de outra coisa não é resposta a pergunta nenhuma.
+ *
+ * Duas formas de valer, e nenhuma delas pega a piada: a mensagem é **curta** (a resposta seca), ou
+ * o "não" vem colado no que se está recusando.
+ */
+const NEGATIVA_CURTA = 28;
+const NEGACAO_COM_OBJETO =
+  /^\s*(nao|nunca|jamais)\s+(quero|queria|desejo|aceito|autorizo|permito|gosto|preciso\s+disso|tenho\s+interesse|me\s+interessa|vou\s+receber|recebo|estou\s+interessad)/i;
+
+/**
  * Palavras que ninguém usa para falar COM quem apoia.
  *
  * Não entram sozinhas: insulto solto é ambíguo de direção. Apoiador chama o adversário de ladrão
@@ -1570,6 +1611,26 @@ const DIRIGIDA_A_NOS = /\b(voces|voce|vocês|tu|es igual|teu|tua|seu candidato|s
  * Lista curta e literal de propósito: apelido ambíguo (um "mito" irônico) fica de fora, porque o
  * custo de errar aqui é etiquetar um apoiador como sem interesse, para sempre, no CRM.
  */
+/**
+ * **Declarar voto no ADVERSÁRIO** — anotação da Rosa Maria (04/09/2026).
+ *
+ * Ela escreveu *"SOU APOSENTADA RURAL. MINHA CONCIENCIA DIZ QUE TENHO QUE SER 13"* e, na mensagem
+ * seguinte, só *"13"*. A rodada ofereceu a mensagem do momento. Ele: *"13 é número do Lula,
+ * adversário; é comum repetirem 13 para mostrar hostilidade"*.
+ *
+ * É o espelho exato do "22" que já conta como apoio, e a guarda é a mesma: **o número sozinho não
+ * basta** — 13 é endereço, hora e idade. Vale como a mensagem inteira (a resposta seca de quem quer
+ * marcar posição) ou colado num verbo de votar/ser.
+ *
+ * Vale por si, sem precisar de segunda pessoa: quem declara voto no adversário não é público de
+ * material de campanha nossa, e é disso que esta regra trata.
+ */
+const VOTO_NO_ADVERSARIO = [
+  /^\s*13\s*[!.\s]*$/u,
+  /(^|[^\d\p{L}])(vou\s+de|voto|votar|vota|votamos|sou|ser|somos|serei)\s+(no\s+|na\s+)?13(\s|$|!|,|\.)/iu,
+  /(^|[^\d\p{L}])13\s+(neles|sempre|ate\s+a\s+morte|com\s+orgulho|na\s+veia)/iu,
+];
+
 const INSULTO_AO_ALIADO =
   /\b(bolso\s*bosta|bolsobosta|bostanaro|bolsonazi|bolsolixo|bolsomerda|bozo|capitao\s+cloroquina|milician[oa])\b/i;
 
@@ -1689,10 +1750,16 @@ function umaMensagemRecusa(msg) {
    */
   if (INSULTO_AO_ALIADO.test(norm)) return { motivo: 'chamou nosso aliado por apelido pejorativo — não é público do mandato' };
 
+  // O número do adversário, declarado — ver `VOTO_NO_ADVERSARIO`.
+  if (VOTO_NO_ADVERSARIO.some((re) => re.test(norm))) {
+    return { motivo: 'declarou voto no adversário — não é público do mandato' };
+  }
+
   const agride = AGRESSAO.test(norm) && DIRIGIDA_A_NOS.test(norm);
   if (agride) return { motivo: 'veio hostilizar, não é público do mandato' };
 
-  if (COMECA_NEGANDO.test(norm) && !NEGATIVA_BENIGNA.test(norm)) {
+  const negativaVale = norm.trim().length <= NEGATIVA_CURTA || NEGACAO_COM_OBJETO.test(norm);
+  if (COMECA_NEGANDO.test(norm) && negativaVale && !NEGATIVA_BENIGNA.test(norm)) {
     // A negativa de abertura vale porque a pergunta era fechada. Se ela vier junto de agressão, o
     // motivo é o mais forte dos dois — é o que aparece na tela e no log.
     return { motivo: AGRESSAO.test(norm) ? 'respondeu que não e veio hostilizar' : 'respondeu que não tem interesse' };
