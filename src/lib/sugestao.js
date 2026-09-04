@@ -133,6 +133,30 @@ export const REGRAS = [
     motivo: () => 'confirmou presença no evento — pulei para você atender no fim, com a lista na mão.',
   },
   {
+    id: 'informou-endereco',
+    tecla: '2',
+    /**
+     * **Mandou o endereço → PULA, e a conversa é transferida no fim.**
+     *
+     * Pedido dele (04/09/2026), com o anúncio novo de material de campanha: *"eu peço endereço...
+     * a pessoa deve ser pulada e não concluída, pois vou transferir pro responsável a conversa no
+     * final"*.
+     *
+     * **A tecla é 2 e não 3 pela mesma razão da confirmação de presença**, e o motivo aqui é ainda
+     * mais literal: concluir tiraria da tela justamente a conversa que precisa ser passada para
+     * outra pessoa. Pular deixa o atendimento aberto, onde ele estava.
+     *
+     * Fica junto das proteções, acima de tudo o que envia. Quem mandou o endereço já está no fim
+     * do próprio atendimento: qualquer mensagem nossa aqui — o modelo, o agradecimento, a do
+     * momento — chega por cima de um pedido que já foi entendido e está esperando o material.
+     *
+     * **A etiqueta é o que torna a lista utilizável**, e é o campo "Etiqueta de quem MANDOU
+     * ENDEREÇO" da aba Automatizado. Vazio, a regra continua pulando e diz no log que não marcou.
+     */
+    quando: (c) => !!c.informouEndereco,
+    motivo: () => 'ela mandou o endereço para receber material — pulei para você transferir no fim.',
+  },
+  {
     id: 'etiqueta-dispensa-da-fila',
     /**
      * **Já respondemos hoje? Então nada sai** — anotação da Janete (04/09/2026).
@@ -963,6 +987,15 @@ export const SOBRE = {
       'Disse que VAI ao evento. Pula e deixa o atendimento aberto — confirmação de presença é uma ' +
       'lista para você montar no fim, não um atendimento para fechar. Quem responde que NÃO vai ' +
       'continua caindo no pedido de nome e cidade, com o "não tem problema" junto.',
+  },
+  'informou-endereco': {
+    rotulo: 'Mandou o endereço (material para enviar)',
+    efeito: 'silencio',
+    quando:
+      'Ela escreveu um endereço — rua com número, bairro ou CEP. Pula e deixa o atendimento ' +
+      'aberto, para você transferir a conversa ao responsável pelo envio, e marca a etiqueta que ' +
+      'você configurou. Você só pede endereço para mandar material, então o endereço sozinho ' +
+      'identifica o caso.',
   },
   'etiqueta-dispensa-da-fila': {
     rotulo: 'Tem a etiqueta que dispensa da fila',

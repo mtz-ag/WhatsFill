@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente } from '../src/lib/cortesia.js';
+import { pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -1462,6 +1462,48 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(!pede('a ligacao caiu ontem'), 'contar que a ligacao caiu tambem nao');
   check(!pede('desliga isso'), 'e nem o verbo parecido');
   check(!pede(''), 'mensagem vazia nao quebra');
+}
+
+{
+  grupo('informouEndereco — a lista de material a enviar');
+
+  /**
+   * Pedido dele (04/09/2026), com o anuncio novo de material: *"eu peco endereco... a pessoa deve
+   * ser pulada e nao concluida, pois vou transferir pro responsavel a conversa no final"*, e
+   * depois *"deixe somente para quando eu pedir endereco, no momento so peco endereco para enviar
+   * material"*.
+   *
+   * **Metade destas asercoes e falso positivo, e e onde mora o risco**: a etiqueta fica permanente
+   * no CRM. O separador e a CONTAGEM de marcas — endereco e uma lista de campos, reclamacao de rua
+   * e uma frase.
+   */
+  const end = (...t) => informouEndereco(t.map((x) => ({ texto: x })));
+
+  check(end('Rua das Flores, 123'), 'via + numero depois da virgula');
+  check(end('Rua Joao Silva 456'), 'via + numero fechando a mensagem, que e como se escreve sem pontuacao');
+  check(end('rua sete de setembro 200 bairro centro'), 'via + bairro');
+  check(end('Meu endereco e Rua Silva 45, Canoas'), 'a palavra endereco + via');
+  check(end('Av. Assis Brasil, 3500 - apto 302'), 'avenida com complemento');
+  check(end('casa 12, bairro Guajuviras'), 'bairro + complemento, sem via');
+  check(end('92310-000'), 'o CEP basta sozinho');
+  check(end('cep 92310000 casa 2'), 'e o CEP sem o traco tambem');
+  check(end('Bom dia!', 'Rua das Flores, 123'), 'acha na conversa inteira, nao so na ultima');
+
+  /**
+   * **Os falsos positivos.** O caro aqui e a reclamacao de rua, que e comum nesta base: ela tem a
+   * via e tem digito, e o que a mantem de fora e o numero precisar de virgula na frente ou de
+   * fechar a mensagem.
+   */
+  check(!end('a rua aqui esta esburacada ha 20 anos'), 'reclamacao de rua nao e endereco');
+  check(!end('a estrada esta horrivel, precisamos de ajuda ha 2 anos assim'), 'nem reclamacao de estrada');
+  check(!end('moro na rua 15 de novembro'), 'via sem numero de casa nao basta');
+  check(!end('sou do bairro Restinga'), 'bairro sozinho nao basta');
+  check(!end('quero receber o material'), 'pedir material nao e mandar endereco');
+  check(!end('Maria da Silva, Canoas'), 'nome e cidade nao sao endereco');
+  check(!end('Bom dia! Tudo bem?'), 'cortesia nao e endereco');
+  check(!end(''), 'mensagem vazia nao quebra');
+  check(!informouEndereco([{ texto: 'Rua das Flores, 123', sistema: true }]), 'ruido da plataforma nao conta');
+  check(!informouEndereco(null), 'sem conversa nao quebra');
 }
 
 fim();

@@ -1652,6 +1652,88 @@ export function pedeLigacao(entrantes, nossaUltimaAt) {
 }
 
 /**
+ * **Ela informou um ENDEREÇO** — pedido dele (04/09/2026), com o anúncio novo de material.
+ *
+ * *"anúncio novo é sobre material de campanha e eu peço endereço... a pessoa deve ser pulada e não
+ * concluída, pois vou transferir pro responsável a conversa no final"*.
+ *
+ * **O endereço sozinho basta, e é decisão dele:** *"deixe somente para quando eu pedir endereço, no
+ * momento só peço endereço para enviar material"*. Era para ser o cruzamento de duas metades (pediu
+ * material E deu endereço), e ele cortou pela metade que é verdadeira na base dele — só se pede
+ * endereço para mandar material, então quem escreve um é quem pediu o outro. Cruzar com a palavra
+ * "material" seria pior, e não melhor: nesta base *"quero receber o material"* é conteúdo DIGITAL,
+ * a frase mais comum que chega, e ela viria do texto do próprio anúncio — que fica na conversa para
+ * sempre.
+ *
+ * **Reconhecer NOSSO pedido não serve como gatilho aqui**, e é a lição já registrada duas vezes: ele
+ * pede o endereço à mão, com a redação do dia, então não há invariante para casar — a regra nunca
+ * dispararia. O que ELA escreve é o sinal.
+ *
+ * **Roda na conversa INTEIRA, não na rajada.** "Ela já mandou o endereço" não deixa de ser verdade
+ * quando respondemos — é a mesma natureza de `jaDeuNomeECidade`, e o oposto de "ela acabou de
+ * responder". Repetir não custa nada porque o desfecho é silêncio: pula, não manda, não conclui.
+ */
+const CEP = /(^|[^\p{L}\p{N}])\d{5}-?\d{3}([^\p{L}\p{N}]|$)/u;
+
+/** O tipo da via: é o que diz "isto é um lugar", e sem ele nada aqui vira endereço. */
+const TIPO_DE_VIA = /(^|[^\p{L}])(rua|r\.|avenida|av\.?|travessa|trav\.?|estrada|rodovia|rod\.?|beco|alameda|al\.|linha|servidao|passagem|praca|loteamento|vila|condominio|residencial)(\s|\.|,|$)/iu;
+
+const BAIRRO = /(^|[^\p{L}])bairro(\s|:|$)/iu;
+
+const DIZ_ENDERECO = /(^|[^\p{L}])(endereco|end\.)(\s|:|$)/iu;
+
+const COMPLEMENTO = /(^|[^\p{L}])(apto|apartamento|ap\.|bloco|casa|lote|quadra|qd\.?|km|fundos|complemento|s\/n)(\s|\.|,|:|$)/iu;
+
+/**
+ * O NÚMERO da casa — e ele é a marca mais delicada da lista, porque dígito solto é qualquer coisa.
+ *
+ * Só conta em duas formas: **depois de vírgula** (*"Rua das Flores, 123"*) ou **fechando a
+ * mensagem** (*"Rua João Silva 456"*, que é como se escreve endereço sem pontuação), além do
+ * `nº` explícito. Aceitar dígito em qualquer posição faria *"a rua aqui está esburacada há 20
+ * anos"* — reclamação, não endereço, e comum nesta base — virar endereço com a marca da via junto.
+ */
+const NUMERO_DA_CASA = [
+  /,\s*\d{1,5}(\D|$)/,
+  /(^|[^\p{L}])n[º°o]?\.?\s*\d{1,5}(\D|$)/iu,
+  /\d{1,5}\s*$/,
+];
+
+/**
+ * Ela escreveu um endereço? Devolve o motivo, ou `null`.
+ *
+ * **A regra das duas marcas**: o CEP basta sozinho (nada mais tem aquele formato); fora ele, são
+ * necessárias DUAS marcas, e uma delas tem que dizer que ali há um lugar (via, bairro, ou a palavra
+ * "endereço"). Endereço é uma LISTA de campos, e reclamação de rua é uma frase — a contagem é o que
+ * separa as duas sem precisar entender português.
+ *
+ * Mensagem da plataforma não conta (é ruído, não fala dela). Transcrição de áudio entra: o número
+ * quase sempre volta por extenso e não casa, então incluí-la custa quase nada e pega o raro caso em
+ * que a pessoa ditou o endereço já formatado.
+ */
+export function informouEndereco(entrantes) {
+  for (const msg of entrantes || []) {
+    if (msg?.sistema) continue;
+    const texto = semAcentos(msg?.texto);
+    if (!texto) continue;
+
+    if (CEP.test(texto)) return { motivo: 'ela mandou um CEP — é endereço para enviar material' };
+
+    const temLugar = TIPO_DE_VIA.test(texto) || BAIRRO.test(texto) || DIZ_ENDERECO.test(texto);
+    if (!temLugar) continue;
+
+    const marcas =
+      (TIPO_DE_VIA.test(texto) ? 1 : 0) +
+      (BAIRRO.test(texto) ? 1 : 0) +
+      (DIZ_ENDERECO.test(texto) ? 1 : 0) +
+      (COMPLEMENTO.test(texto) ? 1 : 0) +
+      (NUMERO_DA_CASA.some((re) => re.test(texto)) ? 1 : 0);
+
+    if (marcas >= 2) return { motivo: 'ela mandou o endereço — é o material para enviar' };
+  }
+  return null;
+}
+
+/**
  * **Declarar voto no ADVERSÁRIO** — anotação da Rosa Maria (04/09/2026).
  *
  * Ela escreveu *"SOU APOSENTADA RURAL. MINHA CONCIENCIA DIZ QUE TENHO QUE SER 13"* e, na mensagem

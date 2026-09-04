@@ -1133,7 +1133,9 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   check(naChegada.includes('conteudo-pedido'), 'o recibo sozinho (ela ja tem cidade) fica na chegada');
   check(naChegada.includes('nunca-pediram-dados'), 'o pedido de dados sozinho (sem modelo) fica na chegada');
   check(naChegada.includes('pediu dinheiro, cesta basica ou remedio'), 'e a ajuda financeira VOLTOU para a chegada (03/09)');
-  check(chegada.filhos.length === 15, 'e a chegada tem 15 caixas, nao 16');
+  // 16 desde 04/09, com a caixa do endereco (material a enviar). O numero e proposital: ele
+  // acusa caixa que entrou na chegada sem ninguem decidir que ela pertence ali.
+  check(chegada.filhos.length === 16, 'e a chegada tem 16 caixas, nao 17');
 
   /**
    * **"Nada legivel dela" entrou em 03/09** (print do Tilin: dois avisos de tipo nao suportado,
@@ -1273,6 +1275,59 @@ grupo('confirmou presenca no evento: PULA e ele atende no fim (03/09/2026)');
    */
   const naoVai = { ...deoclecio, confirmouPresenca: false, temEtiquetaDeCidade: false, jaPediramDados: false, pedidoHoje: false };
   check(tecla(naoVai) !== '2', 'quem disse que NAO vai nao e pulada por esta regra');
+}
+
+grupo('mandou o endereco: PULA e ele transfere no fim (04/09/2026)');
+{
+  /**
+   * Pedido dele (04/09/2026), com o anuncio novo de material de campanha: *"eu peco endereco... a
+   * pessoa deve ser pulada e nao concluida, pois vou transferir pro responsavel a conversa no
+   * final"*. E, sobre como reconhecer: *"deixe somente para quando eu pedir endereco, no momento
+   * so peco endereco para enviar material"*.
+   *
+   * Mesma forma da confirmacao de presenca, e pela mesma razao: **concluir tiraria da tela
+   * justamente a conversa que precisa ser passada para outra pessoa.**
+   */
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const comEndereco = {
+    jaRespondemosAntes: true, temEtiquetaDeCidade: true, informouEndereco: true,
+    jaPediramDados: true, pedidoHoje: false, podePedirDados: true,
+    podeEnviar: true, enviadoHoje: false, modeloJaNaConversa: true,
+    podeMandarMomento: true,
+    textos: ['Rua das Flores, 123'], ultimoTexto: 'Rua das Flores, 123',
+  };
+  const tecla = (c) => arv.decidir(c, q)?.tecla ?? null;
+
+  check(tecla(comEndereco) === '2', 'pula, deixando o atendimento aberto para transferir');
+  check(tecla(comEndereco) !== '3', 'e nao CONCLUI, que e o que ele pediu explicitamente');
+  check(tecla(comEndereco) !== '1', 'nem manda o modelo por cima de quem ja esta esperando o material');
+  check(tecla(comEndereco) !== '5', 'nem a mensagem do momento');
+
+  // Os dois lados da bifurcacao de cidade: protecao que vive num lado so e protecao pela metade.
+  check(tecla({ ...comEndereco, temEtiquetaDeCidade: false, jaPediramDados: false }) === '2',
+    'sem etiqueta de cidade, tambem pula');
+
+  // Quem chega pelo anuncio e ja manda o endereco na primeira mensagem.
+  check(tecla({ ...comEndereco, jaRespondemosAntes: false, temEtiquetaDeCidade: false, jaPediramDados: false,
+    veioDeAnuncio: true, anuncioReconhecido: true }) === '2', 'na chegada pelo anuncio, tambem pula');
+
+  // A recusa continua acima: quem pediu para sair nao vira caso de material.
+  check(tecla({ ...comEndereco, semInteresse: true }) === 's', 'a recusa vence');
+
+  // Sem o sinal, nada muda.
+  check(tecla({ ...comEndereco, informouEndereco: false }) !== '2', 'sem endereco, o fluxo segue como antes');
+
+  /**
+   * **E decide mesmo no quadro que ele ainda NAO importou** — a regra esta em `PROTECOES`, entao
+   * a ausencia da caixa nao vira envio. E o remendo que a `ultima-e-nossa` obrigou a criar em
+   * 03/09, e este caso nasce precisando dele: o anuncio e de hoje.
+   */
+  const semACaixa = arv.arrumar(arv.fluxoPadrao());
+  const podar = (nos) => nos.filter((no) => no.regra !== 'informou-endereco')
+    .map((no) => ({ ...no, filhos: podar(no.filhos || []) }));
+  const decisao = arv.decidir(comEndereco, podar(semACaixa));
+  check(decisao?.tecla === '2', 'sem a caixa no quadro dele, a protecao do codigo decide igual');
+  check(decisao?.caminho?.[0] === 'protecao do codigo', 'e o Andamento diz de onde veio');
 }
 
 grupo('desabafo longo vai para a IA, nao para a mensagem do momento (02/09/2026)');
@@ -1622,6 +1677,7 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   const gatilhos = [
     { semInteresse: { motivo: 'x' } }, { etiquetaSoConclui: 'assessor' }, { ultimaEhNossa: 'nossa' },
     { confirmouPresenca: true }, { etiquetaQueDispensa: 'Sem Retorno', podeMandarMomento: true },
+    { informouEndereco: true },
     { pedeAjudaFinanceira: { motivo: 'x' } }, { pedeEmprego: { motivo: 'x' } },
     { pedeLigacao: { motivo: 'x' } },
     { pedeAlgoIndefinido: { motivo: 'x', trecho: 'x' } }, { perguntaAberta: { termo: 'x' } },

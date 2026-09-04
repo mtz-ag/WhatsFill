@@ -1216,6 +1216,24 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   aquilo, e aquilo e conteudo de verdade, nao recibo.
 
 
+- **O "pular" GRAVA uma coisa desde 04/09/2026: a etiqueta de quem mandou o ENDERECO.** A decisao
+  dele de 31/08 (*"ao pular tem gravado dados no CRM, o que faz eu perder tempo"*) continua valendo
+  para todo o resto — nenhum campo, nenhuma data de conclusao, nenhuma pergunta de cidade. A
+  excecao existe porque o pulo nao deixa rastro nenhum, e o caso do endereco E uma LISTA: ele
+  transfere essas conversas ao responsavel pelo envio no fim do dia, e sem marca teria que
+  reencontra-las na fila inteira. Uma escrita de etiqueta, so quando o endereco foi reconhecido, e
+  **tambem quando e ele que aperta o 2** — marcar so no automatico faria a marca depender de quem
+  apertou.
+- **Digito solto nao e numero de casa, e e por isso que reclamacao de rua nao vira endereco.**
+  `informouEndereco` conta MARCAS (via, bairro, a palavra "endereco", complemento, numero) e exige
+  duas, sendo uma delas um lugar; o CEP basta sozinho. O numero so conta **depois de virgula**,
+  **fechando a mensagem** ou com o `nº` explicito — aceita-lo em qualquer posicao faz *"a rua aqui
+  esta esburacada ha 20 anos"* virar endereco, e reclamacao de rua e comum nesta base. Metade das
+  asercoes do teste sao falso positivo, que e onde mora o risco: a etiqueta fica permanente no CRM.
+  **Cruzar com "pediu material" foi cortado por ele e estava certo**: nesta base *"quero receber o
+  material"* e conteudo DIGITAL, a frase mais comum que chega, e vem do texto do proprio anuncio —
+  a metade "material" nao separa nada, e so o endereco separa.
+
 - **Esconder um CARTAO esconde tudo o que estiver dentro dele — inclusive o que nao tem nada a ver.**
   Relato dele (04/09/2026): *"nao achei esse campo na extensao na aba automatizado"*. Os campos
   "Etiqueta de SEM INTERESSE" e "Etiqueta de quem PEDIU DINHEIRO OU EMPREGO" viviam dentro de

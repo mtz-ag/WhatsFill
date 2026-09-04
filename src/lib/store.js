@@ -719,6 +719,18 @@ const DEFAULTS = {
      * caminho — inclusive a resposta rapida, que foi por onde ele mandou a da Marli.
      */
     etiquetaPedidoAjuda: '',
+
+    /**
+     * Etiqueta de quem mandou o ENDEREÇO — a lista de material a enviar.
+     *
+     * Pedido dele (04/09/2026), com o anúncio novo: *"anúncio novo é sobre material de campanha e
+     * eu peço endereço... a pessoa deve ser pulada e não concluída, pois vou transferir pro
+     * responsável a conversa no final"*.
+     *
+     * É a única etiqueta que a rodada aplica ao PULAR — em todos os outros casos, pular não grava
+     * nada. Vazia, a regra continua pulando e diz no log que não marcou.
+     */
+    etiquetaEndereco: '',
   },
 
 

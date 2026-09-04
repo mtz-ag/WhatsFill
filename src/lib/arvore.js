@@ -57,6 +57,7 @@ export const SINAIS = [
   { id: 'respondeuComoAjudar', rotulo: 'Respondeu à nossa pergunta "em que posso ajudar?"', nao: 'Não é resposta à nossa pergunta' },
   { id: 'respondeuOsDados', rotulo: 'Respondeu o nome ou a cidade que pedimos', nao: 'Não respondeu o nome nem a cidade' },
   { id: 'confirmouPresenca', rotulo: 'Disse que VAI ao evento', nao: 'Não confirmou presença no evento' },
+  { id: 'informouEndereco', rotulo: 'Mandou o endereço (material para enviar)', nao: 'Não mandou endereço' },
   { id: 'pedeAlgoIndefinido', rotulo: 'Pediu algo e não disse o quê', nao: 'Não pediu nada em aberto' },
   { id: 'pedeAjudaFinanceira', rotulo: 'Pediu dinheiro, cesta básica ou remédio', nao: 'Não pediu dinheiro nem o básico' },
   { id: 'pedeEmprego', rotulo: 'Perguntou como trabalhar no mandato', nao: 'Não perguntou sobre trabalhar aqui' },
@@ -283,7 +284,7 @@ function motivoDele(no, ctx) {
  * aparecer no quadro (e aparece no padrao), e la ele posiciona; a lista so garante que a ausencia
  * nao vira envio.
  */
-const PROTECOES = ['sem-interesse', 'etiqueta-so-conclui', 'ultima-e-nossa', 'confirmou-presenca-evento'];
+const PROTECOES = ['sem-interesse', 'etiqueta-so-conclui', 'ultima-e-nossa', 'confirmou-presenca-evento', 'informou-endereco'];
 
 export function decidir(ctx, arvore, fluxo) {
   const fixadas = fluxo?.teclas || {};
@@ -787,6 +788,7 @@ export function fluxoPadrao() {
     r('etiqueta-so-conclui', null, 'chegada'),
     r('ultima-e-nossa', null, 'chegada'),
     r('confirmou-presenca-evento', null, 'chegada'),
+    r('informou-endereco', null, 'chegada'),
 
     /**
      * **A etiqueta que dispensa da fila fica ACIMA do modelo, e isto foi conserto de regressão.**
@@ -1044,6 +1046,15 @@ export function fluxoPadrao() {
     r('etiqueta-so-conclui', null, 'volta'),
     r('ultima-e-nossa', null, 'volta'),
     r('confirmou-presenca-evento', null, 'volta'),
+    /**
+     * **O endereço fica acima da bifurcação de cidade**, com as outras proteções.
+     *
+     * Quem mandou o endereço quase sempre já tem etiqueta de cidade — mas nem sempre, e proteção
+     * que vive só num lado é proteção pela metade: já aconteceu duas vezes neste arquivo (a
+     * etiqueta que dispensa e o apoio). Aqui o custo de errar o lado seria mandar mensagem por
+     * cima de quem está esperando o material.
+     */
+    r('informou-endereco', null, 'volta'),
 
     /**
      * **A etiqueta que dispensa da fila também sobe para cima da bifurcação de cidade.**

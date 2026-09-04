@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.23.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.24.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,21 +7,25 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.23.0**, tudo commitado e no remoto (`fb4e44c`). 17 commits no dia
-04/09. Quinze suítes verdes, os dois verificadores limpos, **61 caixas** no fluxo padrão sem
-problemas e sem desfecho incoerente.
+Branch `claude/whatsfill-ia`, **v2.24.0**, tudo commitado e no remoto. 18 commits no dia 04/09.
+Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem problemas e
+sem desfecho incoerente.
 
 ### Pendências que NÃO estão no código — precisam dele
 
 1. **Importar o fluxo.** O quadro dele é o exportado em **2.14.0** (59 caixas); o padrão de agora tem
-   **61** — as duas novas são *"pediu que a gente ligasse"*, nos dois ramos. Já foi gerado e entregue
-   como `fluxo-padrao-2.21.0.json` (61 caixas, mesmo conteúdo do de agora). Regenerar com
-   `node tools/exportar-fluxo.mjs <saida.json>` — saída FORA do repositório.
-2. **Aba Automatizado → "Etiquetas que a rodada aplica"** (cartão novo, criado hoje porque os campos
-   estavam escondidos dentro de um cartão desativado desde 15/08):
-   - **Etiqueta de SEM INTERESSE** — vazia, a rodada não marca e, na visita seguinte, precisa
+   **63** — as quatro novas são *"pediu que a gente ligasse"* e *"mandou o endereço"*, nos dois
+   ramos. Entregue como `fluxo-padrao-2.24.0.json`. Regenerar com
+   `node tools/exportar-fluxo.mjs <saida.json>` — saída FORA do repositório. **As duas regras novas
+   decidem sem a importação** (estão em `PROTECOES`, medido contra o quadro dele); importar é o que
+   deixa ele mover as caixas.
+2. **Aba Automatizado → "Etiquetas que a rodada aplica"** (cartão criado em 04/09, porque os campos
+   estavam escondidos dentro de um cartão desativado desde 15/08). **As três estão vazias:**
+   - **Etiqueta de SEM INTERESSE** — a rodada não marca e, na visita seguinte, precisa
      redescobrir a hostilidade do zero (o caso da susana, reportado duas vezes);
-   - **Etiqueta de quem PEDIU DINHEIRO OU EMPREGO** — vazia; ele quer `🔴Procura emprego ou dinheiro`.
+   - **Etiqueta de quem PEDIU DINHEIRO OU EMPREGO** — ele quer `🔴Procura emprego ou dinheiro`;
+   - **Etiqueta de quem MANDOU ENDEREÇO** — a lista de material a enviar. Sem ela a rodada pula do
+     mesmo jeito, e ele perde a marca que junta esses contatos para transferir.
 3. **Config → tabela "Modelo por conteúdo", linha `ADS = Campanha Martim`**: não é mais necessário
    limpar (o código tem o piso `tags.ORIGEM_SEMPRE`), mas continua sendo lixo que confunde a leitura.
 
@@ -62,6 +66,73 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — Mandou o endereço: pula, marca, e ele transfere no fim (v2.24.0)
+
+Pedido dele, com o anúncio novo: *"anúncio novo é sobre material de campanha e eu peço endereço...
+a pessoa deve ser pulada e não concluída, pois vou transferir pro responsável a conversa no final"*.
+
+### O que ele cortou, e por que ele estava certo
+
+A primeira leitura era o cruzamento de duas metades — **pediu material E deu endereço** —, e ele
+cortou pela metade que é verdadeira na base dele: *"deixe somente para quando eu pedir endereço, no
+momento só peço endereço para enviar material"*.
+
+Cruzar teria sido pior, e não mais seguro. Nesta base *"quero receber o material"* é a frase mais
+comum que chega e significa conteúdo **digital** — e ela vem do texto do próprio anúncio, que fica
+na conversa para sempre. A metade "material" não separava nada; a metade "endereço" separa sozinha,
+porque **só se pede endereço para mandar material**.
+
+**Reconhecer a NOSSA pergunta também não serviria de gatilho**, e é a lição já registrada duas
+vezes: ele pede o endereço à mão, com a redação do dia, então não há invariante para casar e a
+regra nunca dispararia. O sinal é o que ELA escreve.
+
+### Como o endereço é reconhecido
+
+`cortesia.informouEndereco` conta MARCAS na mensagem: via (rua, avenida, travessa…), bairro, a
+palavra "endereço", complemento (casa, apto, bloco, lote, km) e o número da casa. O CEP basta
+sozinho; fora ele são **duas marcas**, e uma delas tem que dizer que ali há um lugar.
+
+**O número é a marca delicada**, e é onde estava o falso positivo caro: dígito solto é qualquer
+coisa. Ele só conta depois de vírgula (*"Rua das Flores, 123"*), fechando a mensagem (*"Rua João
+Silva 456"*, que é como se escreve endereço sem pontuação) ou com o `nº` explícito. Aceitar dígito
+em qualquer posição faria *"a rua aqui está esburacada há 20 anos"* — reclamação de rua, comum
+nesta base — virar endereço, com a marca da via junto. Das 20 asserções do teste, 10 são falso
+positivo.
+
+Roda na **conversa inteira**, não na rajada: "ela já mandou o endereço" não deixa de ser verdade
+quando respondemos — mesma natureza de `jaDeuNomeECidade`. Repetir não custa nada porque o desfecho
+é silêncio.
+
+### A tecla é 2, e a etiqueta é a exceção do "pular"
+
+Tecla **2 e não 3**, pela mesma razão da confirmação de presença: concluir tiraria da tela
+justamente a conversa que precisa ser passada para outra pessoa.
+
+E o pulo passou a **gravar uma coisa** — a etiqueta nova, "Etiqueta de quem MANDOU ENDEREÇO", no
+cartão de etiquetas da aba Automatizado. É exceção à decisão dele de 31/08 (*"ao pular tem gravado
+dados no CRM, o que faz eu perder tempo"*), e é estreita de propósito: **uma escrita de etiqueta**,
+só quando o endereço foi reconhecido, sem gravar campo nenhum, sem data de conclusão e sem abrir a
+pergunta de cidade — que era o que custava caro ali. Sem a etiqueta, pular não deixa rastro, e ele
+teria que reencontrar esses contatos na fila inteira.
+
+A etiqueta vale também quando é ELE que aperta o 2: marcar só no automático faria a marca depender
+de quem apertou. O rótulo da tecla diz que ela vai junto, porque regra da rodada que depende de
+estado invisível parece defeito.
+
+### Onde a caixa fica
+
+Em `arvore.PROTECOES` e nas duas pontas do padrão (chegada e volta), acima da bifurcação de cidade —
+proteção que vive num lado só é proteção pela metade, e isso já aconteceu duas vezes neste arquivo.
+
+**Medido contra o quadro que ele tem** (`fluxopadrao2.14.0.json`): decide a tecla 2 nos três casos
+(com cidade, sem cidade, chegada pelo anúncio), por `protecao:informou-endereco` — ou seja,
+**funciona antes de ele importar qualquer coisa**, que é o que importa num anúncio que já está no
+ar. Sem o sinal, o quadro dele decide como antes (tecla 5, `ja-respondemos-antes`).
+
+Padrão: **63 caixas**, sem problemas e sem desfecho incoerente. Quinze suítes verdes.
 
 ---
 

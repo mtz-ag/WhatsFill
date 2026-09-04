@@ -27,7 +27,7 @@ import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -2014,6 +2014,45 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
   }
 
+  /**
+   * Ela mandou o endereço? Um lugar só, porque TRÊS pontos perguntam isso — o sinal do quadro, o
+   * rótulo da tecla 2 e a etiqueta ao pular —, e três leituras separadas divergem na primeira
+   * mudança do detector.
+   */
+  function enderecoParaMaterial() {
+    return informouEndereco(state.entrantes);
+  }
+
+  /**
+   * **A etiqueta de quem mandou o ENDEREÇO — a única escrita que o "pular" faz.**
+   *
+   * Pedido dele (04/09/2026): *"a pessoa deve ser pulada e não concluída, pois vou transferir pro
+   * responsável a conversa no final"*. A etiqueta é o que torna essa lista utilizável: pular não
+   * deixa rastro nenhum, e sem marca ele teria que reencontrar esses contatos na fila inteira.
+   *
+   * **É exceção à regra dele de 31/08** (*"ao pular tem gravado dados no CRM, o que faz eu perder
+   * tempo"*), e a exceção é estreita de propósito: uma escrita de etiqueta, só quando o endereço
+   * foi reconhecido, sem gravar campo nenhum, sem data de conclusão e sem abrir a pergunta de
+   * cidade — que era o que custava caro ali.
+   *
+   * Falhar aqui **nunca** impede o pulo: etiqueta é organização interna, e o aviso vai para o log.
+   */
+  async function etiquetarEndereco(alvo) {
+    const nome = String(state.auto.cfg.etiquetaEndereco || '').trim();
+    if (!nome) return ' (sem etiqueta de endereço configurada na aba Automatizado)';
+    if (!alvo?.id) return '';
+
+    try {
+      const tag = await tagsLib.resolveTag(nome);
+      if (!tag) return ` (a etiqueta "${nome}" não existe no CRM — não marquei)`;
+      if ((alvo.tagsId || []).includes(tag.id)) return '';
+      const r = await tagsLib.applyTags(alvo, [tag.id]);
+      return r?.ok ? ` + etiqueta "${tag.label}"` : ` (não consegui aplicar "${nome}")`;
+    } catch (err) {
+      return ` (não consegui aplicar "${nome}": ${err?.message || err})`;
+    }
+  }
+
   async function throttle() {
     const wait = state.settings.throttleMs - (Date.now() - state.lastSendAt);
     if (wait > 0) await new Promise((r) => setTimeout(r, wait));
@@ -2696,7 +2735,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const card = h('div', { class: 'wf-card' }, [
       h('h4', {}, 'Etiquetas que a rodada aplica'),
       h('div', { class: 'wf-preview' },
-        'Duas etiquetas que a rodada grava no contato sozinha. Digite o nome EXATAMENTE como está ' +
+        'Três etiquetas que a rodada grava no contato sozinha. Digite o nome EXATAMENTE como está ' +
           'no CRM — a extensão nunca cria etiqueta. Vazio = não marca ninguém.'),
     ]);
 
@@ -2715,11 +2754,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       h('div', { class: 'wf-origin' },
         'Aplicada assim que sai uma das duas respostas que negam — "Pedido de ajuda financeira" ou ' +
           '"Pedido de emprego" —, por qualquer caminho: a rodada, um ramo do quadro, a escolha da ' +
-          'IA ou a resposta rápida da caixa. Ex.: "🔴Procura emprego ou dinheiro".')
+          'IA ou a resposta rápida da caixa. Ex.: "🔴Procura emprego ou dinheiro".'),
+      campoTexto('Etiqueta de quem MANDOU ENDEREÇO (material para enviar)', cfg.etiquetaEndereco, (v) =>
+        salvarAuto({ etiquetaEndereco: v.trim() }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Quem escreve um endereço — rua com número, bairro ou CEP — é marcado com ela e PULADO, ' +
+          'com o atendimento deixado aberto para você transferir a conversa ao responsável pelo ' +
+          'envio. É a única etiqueta que a rodada aplica ao pular: nos outros casos, pular não ' +
+          'grava nada. O endereço sozinho basta porque você só o pede para mandar material.')
     );
 
-    if (!cfg.etiquetaSemInteresse && !cfg.etiquetaPedidoAjuda) {
-      card.append(h('div', { class: 'wf-block' }, 'Nenhuma das duas está preenchida — a rodada não vai marcar ninguém.'));
+    if (!cfg.etiquetaSemInteresse && !cfg.etiquetaPedidoAjuda && !cfg.etiquetaEndereco) {
+      card.append(h('div', { class: 'wf-block' }, 'Nenhuma das três está preenchida — a rodada não vai marcar ninguém.'));
     }
     return card;
   }
@@ -4828,6 +4875,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * todas as etiquetas.
          */
         confirmouPresenca: presenca === 'sim',
+        /**
+         * **Ela mandou o endereço.** Pedido dele (04/09/2026): só se pede endereço para enviar
+         * material, então o endereço sozinho identifica o caso — pula, não conclui, e a etiqueta
+         * fica no contato para ele transferir a conversa ao responsável no fim.
+         */
+        informouEndereco: !!enderecoParaMaterial(),
         modeloJaNaConversa,
         jaRespondemosAntes,
         ultimaEhDespedida: ultimaEhDespedida(state.entrantes),
@@ -5247,7 +5300,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         });
       }
 
-      opcoes.push({ tecla: '2', valor: 'pular', rotulo: 'Pular (deixa aberto)' });
+      /**
+       * O rótulo diz que a etiqueta vai junto **quando o endereço foi reconhecido** — regra da
+       * rodada que depende de estado invisível parece defeito, e aqui a diferença é uma escrita
+       * no CRM num caminho que normalmente não grava nada.
+       */
+      const enderecoDela = enderecoParaMaterial();
+      const etiquetaEndereco = String(state.auto.cfg.etiquetaEndereco || '').trim();
+      opcoes.push({
+        tecla: '2',
+        valor: 'pular',
+        rotulo:
+          enderecoDela && etiquetaEndereco
+            ? `Pular e marcar "${etiquetaEndereco}" (deixa aberto para transferir)`
+            : 'Pular (deixa aberto)',
+      });
       opcoes.push({ tecla: '3', valor: 'concluir', rotulo: 'Concluir sem enviar' });
       /**
        * Tecla `s` — sem interesse. **Letra, não dígito**, porque os dez dígitos já têm significado
@@ -5607,8 +5674,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        *
        * Nada se perde: o parser reconstrói tudo na próxima vez que o contato abrir. O que ele
        * gravava era palpite que ninguém tinha confirmado ainda.
+       *
+       * **Uma exceção, criada em 04/09/2026: a etiqueta de quem mandou o ENDEREÇO.** Ela é o que
+       * torna a lista de material utilizável, e é uma escrita só — sem campo, sem data de
+       * conclusão e sem a pergunta de cidade, que era o que custava caro aqui.
        */
       if (escolha === 'pular') {
+        const dela = enderecoParaMaterial();
+        if (dela) {
+          // Vale também quando é ele que aperta a tecla: a situação é a mesma, e marcar só no
+          // automático faria a etiqueta depender de quem apertou.
+          const aviso = await etiquetarEndereco(state.contact);
+          return { nome, resultado: 'pulado', motivo: `${dela.motivo} — pulei para você transferir${aviso}` };
+        }
         return { nome, resultado: 'pulado', motivo: 'você pulou — nada gravado, atendimento aberto' };
       }
 
