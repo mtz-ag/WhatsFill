@@ -1337,51 +1337,58 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Fica no TOPO da aba Respostas porque é onde ele está quando o caso aparece: contato aberto,
    * conversa longa na tela, e nenhuma das respostas prontas servindo.
    */
+  /**
+   * **Chamar a IA — o mesmo que a tecla 8 da caixa da rodada.**
+   *
+   * Pedido dele (05/09/2026): *"faça um botão de chamar IA na aba das respostas que bote o texto na
+   * caixa"*. Um clique, e o rascunho já está no campo de mensagem — sem o passo intermediário de
+   * copiar de um textarea para lá.
+   *
+   * **Ele CHAMA `rascunharParaEle`, e isso é o conserto principal deste cartão.** A versão antiga
+   * montava a chamada por conta própria, e por isso ficou para trás em três consertos que a tecla 8
+   * recebeu:
+   *
+   *  - **não mandava o Nome** — a IA pedia o nome de quem já estava cadastrado (a Catarina, 03/09);
+   *  - **não pedia o cadastro** de quem não o deu (05/09), nem tinha o PISO que acrescenta o bloco
+   *    `Nome , Cidade` quando a IA não o copia — e é esse invariante que faz a rodada enxergar que
+   *    o pedido saiu;
+   *  - **jogava fora os avisos da revisão**, que é onde aparece a saudação trocada e o traço eme.
+   *
+   * É a armadilha registrada quatro vezes neste projeto: duas cópias da mesma decisão divergem, e a
+   * que ninguém olha é a que manda o texto errado. Agora há um caminho só.
+   */
   function renderRascunho() {
-    if (!state.ia?.ligada) return;
+    const card = h('div', { class: 'wf-card' }, [h('h4', {}, 'Chamar a IA (o mesmo da tecla 8)')]);
 
-    const card = h('div', { class: 'wf-card' }, [h('h4', {}, 'Rascunho para este contato')]);
-    const botao = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Rascunhar resposta');
-    const saida = h('textarea', { rows: '8', placeholder: 'O rascunho aparece aqui para você editar.' });
+    /**
+     * **O cartão aparece mesmo com a avaliação por IA desligada**, e o botão é quem se desativa.
+     *
+     * `state.ia.ligada` governa o gasto AUTOMÁTICO da rodada; chamar a IA aqui é escolha dele,
+     * contato a contato — a mesma distinção que faz `rascunharParaEle` olhar `iaTemChave` e não
+     * `ligada`. Esconder o cartão faria o botão sumir justamente para quem deixou a avaliação
+     * desligada por causa do custo, que é quem mais precisa do caminho manual. É a lição dos dois
+     * campos de etiqueta que sumiram dentro de um cartão escondido (04/09).
+     */
+    const botao = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Chamar a IA');
+    const saida = h('textarea', { rows: '8', placeholder: 'O texto que foi para o campo de mensagem aparece aqui.' });
     const avisos = h('div', {});
 
     botao.addEventListener('click', () =>
       withBusy(async () => {
         avisos.replaceChildren();
-        const dela = mensagensParaIA();
-        if (!dela.length) return setStatus('Este contato ainda não escreveu nada.', 'err');
-
         setStatus('Escrevendo o rascunho…');
-        const r = await iaCliente.rascunhar({
-          templates: state.templates,
-          regras: state.ia.regras,
-          gabinete: await gabineteLib.paraOPrompt(dela),
-          modelo: state.ia.modelo,
-          // Rascunhar precisa dos DOIS lados: sem a nossa fala no meio a IA não sabe o que já foi
-          // respondido. Ver `conversaParaIA`.
-          mensagens: conversaParaIA(),
-          // O relógio: sem ele a IA não sabe se a conversa é de agora ou da semana passada.
-          agora: new Date(),
-          campos: { Cidade: valueNamed('Cidade') },
-        });
+        const r = await rascunharParaEle();
+        if (!r.ok) return setStatus(`Não saiu rascunho: ${r.motivo}`, 'err');
 
-        if (!r.texto) {
-          setStatus(`Não saiu rascunho: ${r.avisos.join(' · ')}`, 'err');
-          return;
-        }
-        saida.value = r.texto;
-        // Os avisos ficam ao lado do texto, não numa barra de status que a próxima ação apaga:
+        saida.value = r.texto || '';
+        // Os avisos ficam ao lado do texto, e não numa barra de status que a próxima ação apaga:
         // são o que ele precisa reler ANTES de mandar, não enquanto o rascunho chega.
-        for (const a of r.avisos) avisos.append(h('div', { class: 'wf-block' }, `⚠ ${a}`));
-        setStatus(
-          r.custo
-            ? `Rascunho pronto (${r.custo.saida} tokens de saída${r.custo.cacheLido ? ', cache usado' : ', SEM CACHE'}).`
-            : 'Rascunho pronto. Edite antes de mandar.'
-        );
+        for (const a of r.avisos || []) avisos.append(h('div', { class: 'wf-block' }, `⚠ ${a}`));
+        setStatus('No campo de mensagem. Leia, ajuste e mande você mesmo.', 'ok');
       })
     );
 
-    const inserir = h('button', { class: 'wf-btn', type: 'button' }, 'Colocar no campo de mensagem');
+    const inserir = h('button', { class: 'wf-btn', type: 'button' }, 'Pôr no campo de novo');
     inserir.addEventListener('click', () =>
       withBusy(async () => {
         const texto = saida.value.trim();
@@ -1396,13 +1403,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     card.append(
       h('div', { class: 'wf-preview' },
         'Para transcrição longa, relato comprido, pergunta específica — o que nenhuma resposta ' +
-          'pronta cobre. A IA escreve no seu tom (ela usa as suas respostas prontas como ' +
-          'referência de estilo) e o texto vem para cá. **Ela não envia nada**: você edita e ' +
-          'manda pela plataforma.'),
+          'pronta cobre. A IA escreve no seu tom (usa as suas respostas prontas como referência de ' +
+          'estilo), o texto vai direto para o campo de mensagem e uma cópia fica aqui para você ' +
+          'editar. **Ela não envia nada**: quem aperta enviar é você.'),
       h('div', { class: 'wf-row' }, [botao, inserir]),
       saida,
       avisos
     );
+
+    if (!state.iaTemChave) {
+      botao.disabled = true;
+      card.append(h('div', { class: 'wf-block' }, 'Sem chave da API cadastrada (aba Config) não há o que chamar.'));
+    } else if (state.session?.expired) {
+      botao.disabled = true;
+      card.append(h('div', { class: 'wf-block' }, 'Janela de 24h vencida: texto livre não chega neste contato. Só modelo aprovado.'));
+    }
+
     body.append(card);
   }
 
@@ -1438,11 +1454,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       ]));
     }
 
+    /**
+     * **Os cartões daqui em diante são as MESMAS ações das teclas da caixa da rodada**, e o rótulo
+     * diz qual — pedido dele (05/09/2026): *"mude os botões da aba de respostas para ficar de
+     * acordo com o projeto atual"*.
+     *
+     * Eles nasceram antes do quadro existir, com nomes próprios ("Pedir os dados e seguir"), e hoje
+     * o trabalho dele é por TECLA. Dois nomes para a mesma ação é o começo de duas versões dela:
+     * enquanto o nome não disser a tecla, não há como notar que uma delas envelheceu — foi o que
+     * aconteceu com o cartão da IA logo acima, que ficou três consertos atrás da tecla 8.
+     *
+     * O que muda aqui é só o RÓTULO. Nenhuma ação foi trocada, e nada saiu da aba.
+     */
     // A abertura do laço: pergunta e sai de cima. É o botão de maior volume nos oito mil.
     const pedir = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Pedir dados + concluir + próximo');
     pedir.addEventListener('click', runPedirDados);
     const cartaoPedir = h('div', { class: 'wf-card' }, [
-      h('h4', {}, 'Pedir os dados e seguir'),
+      h('h4', {}, 'Pede nome e cidade, e conclui (tecla 4)'),
       h('div', { class: 'wf-preview' }, 'Envia o pedido de nome e cidade, conclui e abre o próximo. Quando a pessoa responder, a plataforma traz o atendimento de volta para as não lidas.'),
       pedir,
     ]);
@@ -1465,7 +1493,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // e escolher por você seria chutar entre modelos que a pessoa realmente pediu.
     fechar.disabled = conteudos.length > 1;
     const cartaoFechar = h('div', { class: 'wf-card' }, [
-      h('h4', {}, 'Atender o pedido e encerrar'),
+      h('h4', {}, 'Manda o modelo do conteúdo, e conclui (tecla 1)'),
       h('div', { class: 'wf-preview' }, conteudos.length === 1
         ? `Envia o modelo de "${conteudos[0].nome}", agradece, grava a classificação e conclui.`
         : conteudos.length === 0
@@ -1490,23 +1518,34 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const concluir = h('button', { class: 'wf-btn', type: 'button' }, 'Salvar + concluir + próximo');
     concluir.addEventListener('click', runConcluir);
     body.append(h('div', { class: 'wf-card' }, [
-      h('h4', {}, 'Só encerrar'),
+      h('h4', {}, 'Conclui sem enviar nada (tecla 3)'),
       h('div', { class: 'wf-preview' }, 'Grava a classificação, marca a data de conclusão, conclui e abre o próximo. Não envia mensagem.'),
       concluir,
-    ]));
-
-    const macro = h('button', { class: 'wf-btn', type: 'button' }, 'Enviar grupo + salvar + concluir');
-    macro.addEventListener('click', runMacro);
-    body.append(h('div', { class: 'wf-card' }, [
-      h('h4', {}, 'Com link de grupo'),
-      h('div', { class: 'wf-preview' }, 'O mesmo, mas enviando antes o link do grupo da cidade. Só serve com os grupos cadastrados na aba Config.'),
-      macro,
     ]));
 
     for (const template of state.templates) body.append(renderTemplateCard(template));
     if (!state.templates.length) {
       body.append(h('p', { class: 'wf-hint' }, 'Nenhuma resposta cadastrada. Vá na aba Config.'));
     }
+
+    /**
+     * **O link de grupo desceu para o fim da aba** (05/09/2026), e não saiu.
+     *
+     * O comentário que estava aqui desde agosto já dizia o que ele virou: *"o contato já vem de um
+     * grupo: o link não faz parte do dia a dia"*. Ele não corresponde a tecla nenhuma da caixa da
+     * rodada, o quadro não o alcança, e ficava no meio dos três botões de maior volume.
+     *
+     * **Não removi**: nenhuma função sai da aba sem ele pedir, e o grupo da cidade continua
+     * cadastrado na Config para quem precisar. O lugar dele é depois das respostas prontas, junto
+     * dos modelos aprovados — os dois caminhos que existem para o caso avulso.
+     */
+    const macro = h('button', { class: 'wf-btn', type: 'button' }, 'Enviar grupo + salvar + concluir');
+    macro.addEventListener('click', runMacro);
+    body.append(h('div', { class: 'wf-card' }, [
+      h('h4', {}, 'Com link de grupo (caminho antigo)'),
+      h('div', { class: 'wf-preview' }, 'Envia o link do grupo da cidade, grava a classificação e conclui. Não corresponde a nenhuma tecla da rodada — o quadro não usa este caminho. Só funciona com os grupos cadastrados na aba Config.'),
+      macro,
+    ]));
 
     renderModelos();
   }
@@ -9213,7 +9252,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       'refinar',
       `rascunho da IA no campo de mensagem, para você mandar${avisos.length ? ` — confira: ${avisos.join('; ')}` : ''}`
     );
-    return { ok: true, enviado: false, motivo: 'rascunho pronto no campo de mensagem' };
+    // `texto` e `avisos` existem para o cartão da aba Respostas MOSTRAR o que foi para o campo.
+    // A rodada só olha `ok`/`motivo`, e continua funcionando igual.
+    return { ok: true, enviado: false, motivo: 'rascunho pronto no campo de mensagem', texto, avisos };
   }
 
   /**

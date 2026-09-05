@@ -1,4 +1,4 @@
-## 2026-09-05 — ESTADO DE AGORA (v2.51.0) — leia isto primeiro numa sessão nova
+## 2026-09-05 — ESTADO DE AGORA (v2.52.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.51.0**, tudo commitado e no remoto. **Dez versões no dia 05/09**
-(2.42 → 2.51). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
+Branch `claude/whatsfill-ia`, **v2.52.0**, tudo commitado e no remoto. **Onze versões no dia 05/09**
+(2.42 → 2.52). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -24,6 +24,7 @@ problemas e sem desfecho incoerente.
 | 2.49 | **Já atendida antes não recebe as boas-vindas de novo** — o sinal do retorno lia só a sessão, e o CRM é quem tem memória. |
 | 2.50 | **"Ver conversa anterior" virou o sinal do retorno** — e a Data de conclusão, que eu tinha posto ali, saiu: concluir não é entregar. |
 | 2.51 | **Conversa longa não é "sem interesse"** — recusa de verdade é curta; texto longo vai para ele ou para a IA. |
+| 2.52 | **Botão "Chamar a IA" na aba Respostas**, e os cartões passaram a dizer a tecla. O cartão antigo era uma cópia, três consertos atrás. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -91,6 +92,57 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-05 — "Chamar a IA" na aba Respostas, e os botões pela tecla (v2.52.0)
+
+Pedido dele: *"faça um botão de chamar IA na aba das respostas que bote o texto na caixa, e mude os
+botões da aba de resposta para ficar de acordo com o projeto atual"*.
+
+### O cartão da IA já existia — e era uma cópia que envelheceu
+
+Ele montava a chamada de `iaCliente.rascunhar` **por conta própria**, em vez de chamar
+`rascunharParaEle`, que é a tecla 8 da caixa da rodada. Por isso ficou **três consertos atrás**:
+
+- **não mandava o Nome** — a IA pedia o nome de quem já estava cadastrado (a Catarina, 03/09);
+- **não pedia o cadastro** de quem não o deu (05/09), nem tinha o **piso** que acrescenta o bloco
+  `Nome , Cidade` quando a IA não o copia — e é esse invariante que faz a rodada enxergar que o
+  pedido saiu, em vez de pedir de novo na passada seguinte;
+- **jogava fora os avisos da revisão**: a saudação trocada e o traço eme nunca apareciam ali.
+
+A rodada é exercitada centenas de vezes por dia; a aba, não. Então a divergência não aparece em
+relato nenhum — aparece só quando ele usa o botão. Agora há **um caminho só**: `iaCliente.rascunhar`
+tem uma única chamada no painel.
+
+O botão passou a fazer os dois passos de uma vez, que é o que ele pediu: chama a IA e **põe direto no
+campo de mensagem**, com uma cópia no textarea para editar e o botão "Pôr no campo de novo".
+
+**O cartão aparece mesmo com a avaliação por IA desligada**, e é o botão que se desativa (sem chave,
+ou com a janela de 24h vencida). `ia.ligada` governa o gasto AUTOMÁTICO da rodada; chamar a IA aqui é
+escolha dele, contato a contato — a mesma distinção que `rascunharParaEle` já fazia ao olhar
+`iaTemChave`. Esconder o cartão faria o botão sumir justamente para quem desligou a avaliação por
+causa do custo. É a lição dos dois campos de etiqueta que sumiram dentro de um cartão escondido.
+
+### Os botões passaram a dizer a TECLA
+
+- "Pedir os dados e seguir" → **"Pede nome e cidade, e conclui (tecla 4)"**
+- "Atender o pedido e encerrar" → **"Manda o modelo do conteúdo, e conclui (tecla 1)"**
+- "Só encerrar" → **"Conclui sem enviar nada (tecla 3)"**
+
+Só o rótulo mudou; nenhuma ação foi trocada. O motivo é o defeito acima: **dois nomes para a mesma
+ação são o começo de duas versões dela**, e enquanto o nome não diz a tecla não há como notar que uma
+envelheceu.
+
+**"Com link de grupo" desceu para o fim da aba**, depois das respostas prontas. Ele não corresponde a
+tecla nenhuma, o quadro não o alcança, e o comentário no código já dizia desde agosto que *"o contato
+já vem de um grupo: o link não faz parte do dia a dia"*. **Não foi removido** — função só sai quando
+ele pede.
+
+**Arquivos:** `src/panel/panel.js`, `CLAUDE.md` (+2 armadilhas), `manifest.json` (2.51.0 -> 2.52.0).
+Quinze suítes e os dois verificadores.
+
+**Não testado na tela** — é interface, e nenhuma suíte alcança o painel (ele precisa de `window`).
 
 ---
 

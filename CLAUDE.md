@@ -1373,6 +1373,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   destrutiva do arquivo (etiqueta permanente **e** conclusao em silencio). **O texto da print nao
   reproduz o defeito** (`semInteresse` devolve null para ele, inteiro e em pedacos): o gatilho esta
   no que a print nao mostra, e a guarda cobre a classe sem depender de achar o padrao.
+- **A copia que ninguem exercita e a que envelhece — e uma delas estava numa ABA.** Pedido dele
+  (05/09/2026): *"faca um botao de chamar IA na aba das respostas que bote o texto na caixa"*. O
+  cartao ja existia, e montava a chamada de `iaCliente.rascunhar` **por conta propria**, em vez de
+  chamar `rascunharParaEle` (a tecla 8). Resultado: ficou tres consertos atras — nao mandava o
+  **Nome** (a Catarina, 03/09), nao pedia o cadastro nem tinha o **PISO** do bloco `Nome , Cidade`
+  (05/09), e **jogava fora os avisos** da revisao (a saudacao trocada, o traco eme). A rodada e
+  exercitada centenas de vezes por dia e a aba nao, entao a divergencia nao aparece em relato
+  nenhum: aparece so quando ele usa o botao. **Ao consertar um caminho, procure quem mais faz a
+  mesma coisa** — `grep` pelo nome da funcao de baixo nivel (`iaCliente.rascunhar`), nao pela de
+  cima.
+- **Botao que nao diz a TECLA vira um segundo vocabulario.** Os cartoes da aba Respostas nasceram
+  antes do quadro, com nomes proprios ("Pedir os dados e seguir"), e o trabalho dele hoje e por
+  tecla. Enquanto o nome nao disser qual e, nao ha como notar que uma das duas versoes envelheceu —
+  foi exatamente o que aconteceu com o cartao da IA. Hoje cada cartao diz a tecla, e o **link de
+  grupo** — que nao corresponde a tecla nenhuma e cujo proprio comentario dizia *"nao faz parte do
+  dia a dia"* — desceu para o fim da aba. **Nao foi removido:** funcao so sai quando ele pede.
 
 - **A QUERY STRING do link tem "?", e por isso todo video repassado virava PERGUNTA.** Relato dele
   (05/09/2026): *"varios casos da pessoa mandando link e reconhece como conversa e passa pra mim"*.
