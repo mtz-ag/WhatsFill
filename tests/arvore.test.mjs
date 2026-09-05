@@ -1346,6 +1346,79 @@ grupo('a chegada decide como a volta no que nao e recibo (04/09/2026)');
   check(desfecho({ ...comRecibo, ultimaEhSoReacao: true }) === 'a', 'e vence a figura tambem');
 }
 
+grupo('condicoes e excecoes: a caixa decide por ela mesma (04/09/2026)');
+{
+  /**
+   * Pedido dele: *"o fluxo trabalha com prioridade quando devia estar trabalhando com condicoes e
+   * excecoes; se todas condicoes sao aceitas, enviar mensagem de acordo"*.
+   *
+   * Ele estava apontando um numero. Medido em 3.000 contextos sorteados no quadro padrao: **10,5
+   * regras distintas casavam ao mesmo tempo**, e em **85% deles mais de uma MANDARIA mensagem** --
+   * ou seja, quem escolhia a mensagem era a ALTURA da caixa, nao a condicao dela.
+   *
+   * Com uma condicao so, a condicao significa "eu poderia atender este contato". Com todas, ela
+   * passa a significar "eu sou a resposta certa para ele".
+   */
+  const caixa = {
+    ...arv.noVazio('material para quem chega por anuncio e ainda nao tem cadastro'),
+    condicao: { sinal: 'veioDeAnuncio', negar: false, palavras: [], onde: 'ultima' },
+    maisCondicoes: [
+      { sinal: 'temEtiquetaDeCidade', negar: true, palavras: [], onde: 'ultima' },
+      { sinal: 'jaPediramDados', negar: true, palavras: [], onde: 'ultima' },
+    ],
+    maisExcecoes: [{ sinal: 'respondidoHoje', negar: false, palavras: [], onde: 'ultima' }],
+    acao: { tecla: '4', resposta: null },
+  };
+  const base = { veioDeAnuncio: true, temEtiquetaDeCidade: false, jaPediramDados: false, respondidoHoje: false, textos: [], ultimoTexto: '' };
+
+  check(arv.casa(caixa, base), 'com TODAS as condicoes verdadeiras, a caixa decide');
+  check(!arv.casa(caixa, { ...base, jaPediramDados: true }), 'uma condicao falsa ja tira a caixa do caminho');
+  check(!arv.casa(caixa, { ...base, temEtiquetaDeCidade: true }), 'e qualquer uma das outras tambem');
+  check(!arv.casa(caixa, { ...base, respondidoHoje: true }), 'basta UMA excecao ser verdade para a caixa nao decidir nada');
+
+  // Numa caixa de REGRA a condicao extra ESTREITA -- nunca amplia.
+  const deRegra = {
+    ...arv.noVazio('so cumprimentou, mas so quem veio de anuncio'),
+    regra: 'ultima-e-so-reacao',
+    maisCondicoes: [{ sinal: 'veioDeAnuncio', negar: false, palavras: [], onde: 'ultima' }],
+  };
+  const comReacao = { ultimaEhSoReacao: true, podeMandarMomento: true, textos: [], ultimoTexto: '' };
+  check(arv.casa(deRegra, { ...comReacao, veioDeAnuncio: true }), 'caixa de regra + condicao extra: casa quando as duas valem');
+  check(!arv.casa(deRegra, { ...comReacao, veioDeAnuncio: false }), 'e a condicao extra estreita o que o codigo decidiria sozinho');
+
+  /**
+   * **As duas sobrevivem a importacao.** Arquivo de fluxo e entrada nao confiavel: sinal que nao
+   * existe e descartado com aviso, e o resto passa inteiro.
+   */
+  const arquivo = JSON.stringify({ formato: 'whatsfill-fluxo', versao: 1, nome: 'x', arvore: [caixa], teclas: {} });
+  const lido = arv.deArquivo(arquivo);
+  check(lido.arvore?.[0]?.maisCondicoes?.length === 2, 'as condicoes extras sobrevivem a importacao');
+  check(lido.arvore?.[0]?.maisExcecoes?.length === 1, 'e as excecoes extras tambem');
+
+  const sujo = JSON.stringify({
+    formato: 'whatsfill-fluxo', versao: 1, nome: 'x', teclas: {},
+    arvore: [{ ...caixa, maisCondicoes: [{ sinal: 'sinalQueNaoExiste' }, { sinal: 'deOutroDia' }] }],
+  });
+  const peneirado = arv.deArquivo(sujo);
+  check(peneirado.arvore?.[0]?.maisCondicoes?.length === 1, 'sinal inventado e descartado na importacao');
+  check(peneirado.avisos.some((a) => a.includes('desconhecido')), 'e o aviso sobrevive para ele ver');
+
+  /**
+   * **O EMPATE e acusado** -- escolha dele: *"a de cima ganha, e o quadro acusa"*. So conta quem
+   * ENVIA: duas caixas que concluem em silencio nao custam nada.
+   */
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const comEmpate = arv.decidir({
+    veioDeAnuncio: true, anuncioReconhecido: false, jaRespondemosAntes: false, temEtiquetaDeCidade: false,
+    jaPediramDados: false, pedidoHoje: false, podePedirDados: true, podeEnviar: true, podeMandarMomento: true,
+    deOutroDia: true, soExpressaApoio: { motivo: 'x' }, textos: ['x'], ultimoTexto: 'x',
+  }, q);
+  check((comEmpate?.empate || []).length > 0, `a decisao diz com quem empatou (${(comEmpate?.empate || []).length} caixas)`);
+
+  const semEmpate = arv.decidir({ semInteresse: { motivo: 'x' }, textos: ['x'], ultimoTexto: 'x' }, q);
+  check((semEmpate?.empate || []).length === 0, 'quem conclui em silencio nao gera empate');
+}
+
 grupo('mandou o endereco: PULA e ele transfere no fim (04/09/2026)');
 {
   /**

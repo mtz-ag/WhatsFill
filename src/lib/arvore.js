@@ -171,20 +171,60 @@ export function casa(no, ctx) {
    * ela só **estreita** o que a regra alcança, nunca amplia. Nenhuma mensagem passa a sair por
    * causa de uma exceção; algumas deixam de sair, que é o lado barato de errar.
    */
-  const exc = no.excecao || {};
-  const temExcecao = !!exc.sinal || (exc.palavras || []).length > 0;
-  if (temExcecao && condicaoCasa(exc, ctx)) return false;
+  /**
+   * **TODAS as exceções, não só a primeira** (04/09/2026). Basta uma ser verdade para a caixa não
+   * decidir nada.
+   */
+  for (const exc of excecoesDe(no)) {
+    if (condicaoCasa(exc, ctx)) return false;
+  }
 
   if (regra) {
     try {
-      return !!regra.quando(ctx || {});
+      if (!regra.quando(ctx || {})) return false;
     } catch (_) {
       // Regra quebrada não derruba a rodada: ela simplesmente não casa.
       return false;
     }
+    /**
+     * **Numa caixa de REGRA, as condições extras também estreitam.** A `quando` do código continua
+     * mandando; o que ele acrescenta na janela é somado com E. Nunca amplia — é a mesma disciplina
+     * da exceção.
+     */
+    return (no.maisCondicoes || []).every((cond) => condicaoCasa(cond, ctx));
   }
 
-  return condicaoCasa(no.condicao || {}, ctx);
+  /**
+   * **TODAS as condições verdadeiras** — pedido dele (04/09/2026): *"o fluxo trabalha com prioridade
+   * quando devia estar trabalhando com condições e exceções; se todas condições são aceitas, enviar
+   * mensagem de acordo"*.
+   *
+   * Ele estava apontando um número: medido em 3.000 contextos sorteados, **10,5 regras casavam ao
+   * mesmo tempo** e em **85% deles mais de uma mandaria mensagem** — ou seja, quem escolhia a
+   * mensagem era a ALTURA da caixa, não a condição dela. Com uma condição só por caixa, a condição
+   * significa "eu poderia atender este contato"; com todas, ela passa a significar "eu sou a
+   * resposta certa para ele".
+   *
+   * A ordem continua existindo e vira o que sempre deveria ter sido: **desempate**. Quando duas
+   * caixas completas casam juntas e as duas enviam, a de cima ganha e a rodada ACUSA o empate — ver
+   * `decidir`.
+   */
+  return condicoesDe(no).every((cond) => condicaoCasa(cond, ctx));
+}
+
+/**
+ * As condições de uma caixa: a primeira (`condicao`, que sempre existiu) mais as que ele
+ * acrescentou (`maisCondicoes`). Caixa sem condição nenhuma casa com todo mundo, como antes.
+ */
+export function condicoesDe(no) {
+  return [no?.condicao || {}, ...(no?.maisCondicoes || [])];
+}
+
+/** As exceções de uma caixa — só as que dizem alguma coisa. */
+export function excecoesDe(no) {
+  return [no?.excecao || {}, ...(no?.maisExcecoes || [])].filter(
+    (e) => !!e && (!!e.sinal || (e.palavras || []).length > 0)
+  );
 }
 
 /**
@@ -332,7 +372,38 @@ export function decidir(ctx, arvore, fluxo) {
     return null;
   };
 
-  return andar(arvore, []);
+  const escolhida = andar(arvore, []);
+  return escolhida ? { ...escolhida, empate: empatesDe(escolhida, arvore, c, fixadas) } : null;
+}
+
+/**
+ * **Quem mais teria mandado mensagem neste contato** — a acusação de empate, escolha dele em
+ * 04/09/2026: *"a de cima ganha, e o quadro acusa"*.
+ *
+ * Medido antes de existir: 10,5 regras casavam ao mesmo tempo e, em 85% dos contextos sorteados,
+ * mais de uma MANDARIA mensagem. Isso é a definição de quadro decidido por prioridade — e o
+ * empate era invisível, porque a rodada só mostra a caixa que venceu.
+ *
+ * **É medido no contato real, não no papel.** Uma varredura estática do quadro ("estas duas podem
+ * casar juntas?") acusaria quase todos os pares, e alarme que toca sempre se aprende a ignorar. Aqui
+ * só aparece o empate que aconteceu de verdade, com o nome de quem perdeu, no log daquele
+ * atendimento.
+ *
+ * Só conta quem **envia**: duas caixas que concluem em silêncio não são um empate que custe nada.
+ */
+function empatesDe(escolhida, arvore, ctx, fixadas) {
+  const envia = (acao) => !!acao && (!!acao.resposta || (!!acao.tecla && TECLAS[acao.tecla]?.efeito === 'envia'));
+  const daEscolhida = { tecla: escolhida.tecla, resposta: escolhida.resposta };
+  if (!envia(daEscolhida)) return [];
+
+  const perdedores = [];
+  for (const { no } of todosOsNos(arvore)) {
+    if (no.id === escolhida.id) continue;
+    if (!casa(no, ctx)) continue;
+    if (envia(acaoDoNo(no, ctx, fixadas))) perdedores.push(no.rotulo || no.regra || no.id);
+    if (perdedores.length >= 3) break;
+  }
+  return perdedores;
 }
 
 // ---- construção -------------------------------------------------------------
@@ -1541,7 +1612,9 @@ export const FORMATO = 'whatsfill-fluxo';
 export const FORMATO_VERSAO = 1;
 
 /** Limites de sanidade do que vem de arquivo. Não são regras de negócio: são o teto do absurdo. */
-const LIMITES = { nos: 400, fundo: 8, palavras: 60, texto: 200, nota: 4000 };
+const LIMITES = {
+  // Quantas condições (e exceções) a mais uma caixa pode ter, além da primeira.
+  condicoesExtras: 6, nos: 400, fundo: 8, palavras: 60, texto: 200, nota: 4000 };
 
 const texto = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max || LIMITES.texto) : '');
 
@@ -1560,6 +1633,29 @@ const texto = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max || LIMI
  */
 export function sanitizar(bruto) {
   const avisos = [];
+  /**
+   * Peneira uma lista de condições extras. Fora da função de cima porque condição e exceção usam a
+   * mesma, e duas cópias divergiriam na primeira mudança.
+   */
+  const extras = (lista, rotulo) => {
+    if (!Array.isArray(lista)) return [];
+    const saida = [];
+    for (const cru of lista.slice(0, LIMITES.condicoesExtras)) {
+      if (!cru || typeof cru !== 'object') continue;
+      const item = { sinal: '', negar: cru.negar === true, palavras: [], onde: cru.onde === 'qualquer' ? 'qualquer' : 'ultima' };
+      const sinal = texto(cru.sinal, 60);
+      if (sinal) {
+        if (sinalConhecido(sinal)) item.sinal = sinal;
+        else avisos.push(`${rotulo}: sinal desconhecido "${sinal}" — descartada`);
+      }
+      if (Array.isArray(cru.palavras)) {
+        item.palavras = cru.palavras.map((p) => texto(p, 80)).filter(Boolean).slice(0, LIMITES.palavras);
+      }
+      if (item.sinal || item.palavras.length) saida.push(item);
+    }
+    return saida;
+  };
+
   const usados = new Set();
   let quantos = 0;
 
@@ -1627,6 +1723,14 @@ export function sanitizar(bruto) {
     if (Array.isArray(cond.palavras)) {
       no.condicao.palavras = cond.palavras.map((p) => texto(p, 80)).filter(Boolean).slice(0, LIMITES.palavras);
     }
+
+    /**
+     * **As condições e exceções EXTRAS** (04/09/2026), pela mesma peneira das primeiras: sinal que
+     * não existe é descartado com aviso, palavra é cortada, e há teto — arquivo de fluxo é entrada
+     * não confiável, e o que vem nele decide o que sai para eleitor.
+     */
+    no.maisCondicoes = extras(cru.maisCondicoes, `"${nome}": condição a mais`);
+    no.maisExcecoes = extras(cru.maisExcecoes, `"${nome}": exceção a mais`);
 
     const acao = cru.acao && typeof cru.acao === 'object' ? cru.acao : {};
     if (acao.ia === true) {
@@ -1748,16 +1852,24 @@ export function paraTexto(arvore, opcoes) {
     return (no.filhos || []).length ? '(só agrupa — quem decide são os ramos de dentro)' : '(NADA — este ramo não faz nada ainda)';
   };
 
-  const condicao = (no) => {
-    if (no.regra) return SOBRE[no.regra]?.quando || '(a condição está no código)';
-    const cond = no.condicao || {};
+  /** Uma condição (ou exceção) em português — a mesma leitura que a janela mostra. */
+  const umaCondicao = (c) => {
     const partes = [];
-    const sinal = SINAIS.find((s) => s.id === cond.sinal);
-    if (sinal) partes.push(cond.negar ? sinal.nao : sinal.rotulo);
-    if ((cond.palavras || []).length) {
-      partes.push(`escreveu "${cond.palavras.join('", "')}"${cond.onde === 'qualquer' ? ' (em qualquer mensagem)' : ' (na última mensagem)'}`);
+    const sinal = SINAIS.find((s) => s.id === c.sinal);
+    if (sinal) partes.push(c.negar ? sinal.nao : sinal.rotulo);
+    if ((c.palavras || []).length) {
+      partes.push(`escreveu "${c.palavras.join('", "')}"${c.onde === 'qualquer' ? ' (em qualquer mensagem)' : ' (na última mensagem)'}`);
     }
-    return partes.length ? partes.join(' E ') : 'qualquer contato que chegar aqui';
+    return partes.join(' e ');
+  };
+
+  const condicao = (no) => {
+    const minhas = condicoesDe(no).map(umaCondicao).filter(Boolean);
+    if (no.regra) {
+      const doCodigo = SOBRE[no.regra]?.quando || '(a condição está no código)';
+      return [doCodigo, ...minhas].filter(Boolean).join(' E ');
+    }
+    return minhas.length ? minhas.join(' E ') : 'qualquer contato que chegar aqui';
   };
 
   const anda = (nos, prefixo, recuo) => {
@@ -1767,17 +1879,8 @@ export function paraTexto(arvore, opcoes) {
       linhas.push('');
       linhas.push(`${pad}${numero}. ${no.rotulo || '(sem nome)'}${no.regra ? `   [regra do código: ${no.regra}]` : ''}${no.desligado ? '   *** DESLIGADO ***' : ''}`);
       linhas.push(`${pad}    quando: ${condicao(no)}`);
-      const exc = no.excecao || {};
-      if (exc.sinal || (exc.palavras || []).length) {
-        const sinal = SINAIS.find((x) => x.id === exc.sinal);
-        const partes = [];
-        if (sinal) partes.push(exc.negar ? sinal.nao : sinal.rotulo);
-        if ((exc.palavras || []).length) {
-          partes.push(`escreveu ${exc.palavras.map((x) => `"${x}"`).join(' ou ')}` +
-            (exc.onde === 'qualquer' ? ' (em qualquer mensagem)' : ' (na última)'));
-        }
-        linhas.push(`${pad}    EXCETO: ${partes.join(' e ')}`);
-      }
+      const excecoes = excecoesDe(no).map(umaCondicao).filter(Boolean);
+      if (excecoes.length) linhas.push(`${pad}    EXCETO: ${excecoes.join('  OU  ')}`);
       linhas.push(`${pad}    então:  ${desfecho(no)}`);
       // A observação é o motivo de tudo isto existir: ela vem por último e marcada, para saltar aos
       // olhos numa colagem de cem linhas.
@@ -1791,6 +1894,7 @@ export function paraTexto(arvore, opcoes) {
   const total = todosOsNos(arvore).length;
   linhas.push('FLUXO DE ATENDIMENTO — WhatsFill+IA');
   linhas.push(`${total} ramos, ${quantosEnviam(arvore)} enviam mensagem. Gerado em ${new Date().toLocaleString('pt-BR')}.`);
+  linhas.push('Uma caixa decide quando TODAS as condições dela são verdade e NENHUMA exceção é.');
   linhas.push('A rodada segue o PRIMEIRO ramo que descreve o contato; dentro dele, o primeiro filho que descreve.');
   linhas.push('Entre irmãos, a ordem abaixo é a prioridade.');
   anda(arvore, '', 0);
@@ -2049,17 +2153,23 @@ function chaveDeComparacao(no) {
    * caixas diferentes, e tratá-las como a mesma faria o cartão "O padrão mudou?" dizer que ele já
    * tem uma guarda que não tem.
    */
-  const exc = no.excecao || {};
-  const excPalavras = (exc.palavras || []).map((x) => String(x).trim().toLowerCase()).filter(Boolean).sort();
-  const marca = exc.sinal || excPalavras.length
-    ? `|exceto:${exc.sinal || ''}:${exc.negar ? 'nao' : 'sim'}:${excPalavras.join('|')}`
-    : '';
+  const umaSo = (c) => {
+    const palavras = (c.palavras || []).map((p) => String(p).trim().toLowerCase()).filter(Boolean).sort();
+    if (!c.sinal && !palavras.length) return '';
+    return `${c.sinal || ''}:${c.negar ? 'nao' : 'sim'}:${palavras.join('|')}`;
+  };
 
-  if (no.regra) return `regra:${no.regra}${marca}`;
-  const cond = no.condicao || {};
-  const palavras = (cond.palavras || []).map((p) => String(p).trim().toLowerCase()).filter(Boolean).sort();
-  if (!cond.sinal && !palavras.length && !marca) return null;
-  return `cond:${cond.sinal || ''}:${cond.negar ? 'nao' : 'sim'}:${palavras.join('|')}${marca}`;
+  // As extras entram ordenadas: "A e B" e "B e A" são a mesma caixa.
+  const marca = excecoesDe(no).map(umaSo).filter(Boolean).sort().join('+');
+  const selo = marca ? `|exceto:${marca}` : '';
+
+  if (no.regra) {
+    const extras = (no.maisCondicoes || []).map(umaSo).filter(Boolean).sort().join('+');
+    return `regra:${no.regra}${extras ? `|e:${extras}` : ''}${selo}`;
+  }
+  const todas = condicoesDe(no).map(umaSo).filter(Boolean).sort().join('+');
+  if (!todas && !selo) return null;
+  return `cond:${todas}${selo}`;
 }
 
 /**

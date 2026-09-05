@@ -5687,7 +5687,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         } else if (sugestao.tecla === '6') {
           registrarNaRodada(nome, 'aviso', `regra "${sugestao.id}": ${sugestao.motivo} — precisa de você`);
         } else {
-          registrarNaRodada(nome, 'aviso', `automático pelo fluxo ("${sugestao.id}"${sugestao.caminho ? `, caminho ${sugestao.caminho.join(' > ')}` : ''}): ${alvo.rotulo}`);
+          /**
+           * **O EMPATE vai para o log junto** — escolha dele (04/09/2026), quando pediu que o fluxo
+           * trabalhasse por condições e exceções: *"a de cima ganha, e o quadro acusa"*.
+           *
+           * Medido antes de existir: em 85% dos contextos sorteados **mais de uma caixa mandaria
+           * mensagem**, e quem escolhia era a altura. O empate era invisível porque a rodada só
+           * mostra quem venceu; aqui ele aparece com o nome de quem perdeu, no atendimento em que
+           * aconteceu de verdade.
+           */
+          const empate = (sugestao.empate || []).length
+            ? ` — empate com: ${sugestao.empate.join('; ')} (ganhou por estar mais acima)`
+            : '';
+          registrarNaRodada(nome, 'aviso', `automático pelo fluxo ("${sugestao.id}"${sugestao.caminho ? `, caminho ${sugestao.caminho.join(' > ')}` : ''}): ${alvo.rotulo}${empate}`);
           escolhaAutomatica = alvo.valor;
         }
       }

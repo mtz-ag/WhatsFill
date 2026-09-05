@@ -161,30 +161,35 @@ function efeitoDoNo(no) {
  * Devolve string vazia quando não há exceção — quem chama só acrescenta a linha se houver, para a
  * caixa não ganhar um rótulo vazio em todo ramo.
  */
-function excecaoEmPortugues(no) {
-  const exc = no.excecao || {};
+/** Uma condição (ou exceção) em português. Vazia quando ela não diz nada. */
+function umaCondicaoEmPortugues(c) {
   const partes = [];
-  const sinal = arvoreLib.SINAIS.find((x) => x.id === exc.sinal);
-  if (sinal) partes.push(exc.negar ? sinal.nao : sinal.rotulo);
-  if ((exc.palavras || []).length) {
+  const sinal = arvoreLib.SINAIS.find((x) => x.id === c.sinal);
+  if (sinal) partes.push(c.negar ? sinal.nao : sinal.rotulo);
+  if ((c.palavras || []).length) {
     partes.push(
-      `escreveu ${exc.palavras.map((x) => `“${x}”`).join(' ou ')}` +
-        (exc.onde === 'qualquer' ? ' (em qualquer mensagem)' : ' (na última)')
+      `escreveu ${c.palavras.map((x) => `“${x}”`).join(' ou ')}` +
+        (c.onde === 'qualquer' ? ' (em qualquer mensagem)' : ' (na última)')
     );
   }
-  return partes.length ? `exceto quando: ${partes.join(' e ')}` : '';
+  return partes.join(' e ');
 }
 
+function excecaoEmPortugues(no) {
+  const todas = arvoreLib.excecoesDe(no).map(umaCondicaoEmPortugues).filter(Boolean);
+  return todas.length ? `exceto quando: ${todas.join('  OU  ')}` : '';
+}
+
+/**
+ * **TODAS as condições, ligadas por E** — pedido dele (04/09/2026): *"o fluxo trabalha com
+ * prioridade quando devia estar trabalhando com condições e exceções"*. A caixa tem que se explicar
+ * sozinha; era isso que uma condição só impedia.
+ */
 function condicaoEmPortugues(no) {
-  if (no.regra) return sugestaoLib.SOBRE[no.regra]?.quando || '';
-  const cond = no.condicao || {};
-  const partes = [];
-  const sinal = arvoreLib.SINAIS.find((s) => s.id === cond.sinal);
-  if (sinal) partes.push(cond.negar ? sinal.nao : sinal.rotulo);
-  if ((cond.palavras || []).length) {
-    partes.push(`escreveu "${cond.palavras.join('", "')}"${cond.onde === 'qualquer' ? ' (em qualquer mensagem)' : ''}`);
-  }
-  return partes.length ? partes.join(' E ') : 'qualquer contato que chegar aqui';
+  const doCodigo = no.regra ? sugestaoLib.SOBRE[no.regra]?.quando || '' : '';
+  const minhas = arvoreLib.condicoesDe(no).map(umaCondicaoEmPortugues).filter(Boolean);
+  if (no.regra) return [doCodigo, ...minhas].filter(Boolean).join(' E ');
+  return minhas.length ? minhas.join(' E ') : 'qualquer contato que chegar aqui';
 }
 
 function acaoEmPortugues(no) {
@@ -841,6 +846,65 @@ function desenharEditor() {
    * código carrega sozinha ("mande o modelo, exceto quando o modelo já está na conversa"), e é o
    * que tira o aviso de "esta caixa vai mandar de novo em toda passada".
    */
+  /**
+   * **As condições A MAIS** — pedido dele (04/09/2026): *"o fluxo trabalha com prioridade quando
+   * devia estar trabalhando com condições e exceções; se todas condições são aceitas, enviar
+   * mensagem de acordo"*.
+   *
+   * Fica fora do `if/else` de propósito, como a exceção: numa caixa de REGRA, condição a mais
+   * ESTREITA o que o código decide, que é a forma segura de tocar numa regra sem mexer no código.
+   *
+   * Cada linha tem o seu "— tirar esta —" no próprio seletor: botão separado de remover, num
+   * editor que já é comprido, é mais uma coisa para procurar.
+   */
+  const listaExtras = (campo, titulo, rotuloDaLinha, aviso) => {
+    const atuais = no[campo] || [];
+    const gravarLista = (nova) => gravar(arvoreLib.editar(fluxo.arvore, no.id, { [campo]: nova }));
+
+    const t = document.createElement('p');
+    t.className = 'nota';
+    t.textContent = titulo;
+    caixa.append(t);
+
+    atuais.forEach((item, i) => {
+      const trocar = (mudanca) => gravarLista(atuais.map((x, j) => (i === j ? { ...x, ...mudanca } : x)));
+      linha(
+        `${rotuloDaLinha} ${i + 1}`,
+        seletor(
+          [['', '— tirar esta —'], ...arvoreLib.SINAIS.map((x) => [x.id, x.rotulo])],
+          item.sinal || '',
+          (v) => (v ? trocar({ sinal: v }) : gravarLista(atuais.filter((_, j) => j !== i)))
+        )
+      );
+      if (item.sinal) {
+        const inv = document.createElement('label');
+        inv.className = 'chk';
+        const ci = document.createElement('input');
+        ci.type = 'checkbox';
+        ci.checked = !!item.negar;
+        ci.addEventListener('change', () => trocar({ negar: ci.checked }));
+        inv.append(ci, span('', `ao contrário: ${arvoreLib.SINAIS.find((x) => x.id === item.sinal)?.nao || 'não'}`));
+        caixa.append(inv);
+      }
+    });
+
+    const mais = document.createElement('button');
+    mais.type = 'button';
+    mais.className = 'mini';
+    mais.textContent = aviso;
+    mais.addEventListener('click', () =>
+      gravarLista([...atuais, { sinal: '', negar: false, palavras: [], onde: 'ultima' }])
+    );
+    caixa.append(mais);
+  };
+
+  listaExtras(
+    'maisCondicoes',
+    'E TAMBÉM — todas estas precisam ser verdade junto com a de cima. É o que faz a caixa decidir por ela mesma, em vez de depender da altura.',
+    'E também quando…',
+    '+ acrescentar condição'
+  );
+
   const exc = no.excecao || {};
   const trocarExc = (mudanca) => gravar(arvoreLib.editar(fluxo.arvore, no.id, { excecao: { ...exc, ...mudanca } }));
 
@@ -887,6 +951,13 @@ function desenharEditor() {
       )
     );
   }
+
+  listaExtras(
+    'maisExcecoes',
+    'OU TAMBÉM — basta UMA destas ser verdade para a caixa não decidir nada. Exceção só estreita: nenhuma mensagem passa a sair por causa dela.',
+    'Ou exceto quando…',
+    '+ acrescentar exceção'
+  );
 
   /**
    * As OBSERVAÇÕES — o campo que ele escreve para MIM, não para a extensão.

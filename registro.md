@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.35.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.36.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.35.0**, tudo commitado e no remoto. 29 commits no dia 04/09.
+Branch `claude/whatsfill-ia`, **v2.36.0**, tudo commitado e no remoto. 30 commits no dia 04/09.
 Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente. A lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o
 quadro tem dois ramos.
@@ -68,6 +68,60 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — O quadro passou a decidir por condições e exceções (v2.36.0)
+
+*"o fluxo trabalha com prioridade quando devia estar trabalhando com condições e exceções; se todas
+condições são aceitas, enviar mensagem de acordo"*.
+
+### Ele estava apontando um número, e o número era feio
+
+Medido no quadro padrão, 3.000 contextos sorteados:
+
+```
+caixas com desfecho no quadro:                  62
+regras DISTINTAS que casam ao mesmo tempo:      10,5 (média)
+contextos em que mais de uma MANDARIA mensagem: 85%
+```
+
+Ou seja: na maioria dos casos quem escolhia a mensagem era a **altura** da caixa, não a condição
+dela. Com uma condição só por caixa, a condição significa *"eu poderia atender este contato"*; ela
+nunca chega a dizer *"eu sou a resposta certa para ele"* — e o resto do trabalho ficava com a ordem,
+que é invisível quando o quadro tem 62 caixas.
+
+### O que mudou
+
+**Uma caixa agora tem N condições e N exceções.** Decide quando **todas** as condições são verdade e
+**nenhuma** exceção é. Ele pode escrever, numa caixa só, *"veio de anúncio E não tem cidade E ainda
+não pedimos os dados, exceto se já respondemos hoje"* — que antes exigia depender da posição.
+
+- Na janela: **"+ acrescentar condição"** e **"+ acrescentar exceção"**, cada linha com o seu
+  *"— tirar esta —"* no próprio seletor (botão separado, num editor comprido, é mais uma coisa para
+  procurar).
+- **Na caixa de REGRA a condição extra ESTREITA**: a condição do código continua mandando, e a dele
+  é somada com E. Nenhuma mensagem passa a sair por causa disso — mesma disciplina da exceção, que
+  é o que torna seguro deixá-lo mexer numa caixa de regra.
+- Tudo passa pela peneira da importação: sinal inventado é descartado com aviso, e há teto de 6
+  condições extras por caixa.
+
+### O empate, que era invisível
+
+Escolha dele: **a de cima ganha, e o quadro acusa**. `decidir` devolve `empate: [rótulos]` e a linha
+do Andamento fica *"…— empate com: X; Y (ganhou por estar mais acima)"*.
+
+**Medido no contato real, não no papel**: uma varredura estática ("estas duas podem casar juntas?")
+acusaria quase todos os 1.900 pares do quadro, e alarme que toca sempre se aprende a ignorar. Só
+conta quem **envia** — duas caixas que concluem em silêncio não custam nada.
+
+### O que NÃO mudou
+
+O comportamento de hoje: nenhuma caixa do padrão ganhou condição nova, então a rodada decide
+exatamente como decidia. O que existe agora é a **capacidade** de escrever caixas completas — e a
+acusação para achar onde ainda falta.
+
+Doze asserções novas. Quinze suítes verdes, os dois verificadores limpos, 69 caixas sem problemas.
 
 ---
 

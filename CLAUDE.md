@@ -1289,6 +1289,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   separador do template mudou. O campo novo da Config avisa na tela quando o texto perde a linha, e
   ha teste no `templates.test.mjs`.
 
+- **O quadro decide por CONDICOES E EXCECOES; a ordem virou desempate.** Pedido dele (04/09/2026):
+  *"o fluxo trabalha com prioridade quando devia estar trabalhando com condicoes e excecoes; se
+  todas condicoes sao aceitas, enviar mensagem de acordo"*. Ele estava apontando um numero, e o
+  numero era feio: medido em 3.000 contextos sorteados, **10,5 regras distintas casavam ao mesmo
+  tempo** e em **85% deles mais de uma MANDARIA mensagem** — quem escolhia era a ALTURA da caixa.
+  Com uma condicao so por caixa, a condicao significa "eu poderia atender este contato"; com todas,
+  ela passa a significar "eu sou a resposta certa para ele". Hoje a caixa tem `condicao` +
+  `maisCondicoes[]` (todas verdadeiras, E) e `excecao` + `maisExcecoes[]` (nenhuma verdadeira).
+  **Numa caixa de REGRA a condicao extra ESTREITA** — a `quando` do codigo continua mandando, e o
+  que ele acrescenta e somado com E: nenhuma mensagem passa a sair por causa disso, que e a mesma
+  disciplina da excecao.
+- **O EMPATE e medido no contato real, nunca no papel.** Quando duas caixas casam juntas e as duas
+  enviam, a de cima ganha (escolha dele) e a rodada ACUSA no Andamento, com o nome de quem perdeu.
+  Uma varredura estatica do quadro ("estas duas podem casar juntas?") acusaria quase todos os pares
+  — e alarme que toca sempre se aprende a ignorar. `decidir` devolve `empate: [rotulos]`, e so conta
+  quem ENVIA: duas caixas que concluem em silencio nao custam nada.
+
 - **Regra que ELE dita nao pode virar DEFAULT de campo que ele ja preencheu — ela nunca chega.**
   Relato dele (04/09/2026): *"pra onde esta indo parar as regras que eu falo?"*, com a print de uma
   contato que chegou pelo anuncio do Instagram pedindo material, tinha cidade e etiqueta de
