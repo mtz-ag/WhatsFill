@@ -14,10 +14,10 @@ lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o quadro te
 
 ### Pendências que NÃO estão no código — precisam dele
 
-1. **Importar o fluxo — de novo, e é o mesmo formato de antes.** O quadro dele é o exportado em
-   **2.14.0** (59 caixas); o padrão de agora tem **69**, nos dois ramos de sempre. Entregue como
-   `fluxo-padrao-2.32.0.json`. **Se ele importou o 2.29.0 (a lista única), este arquivo desfaz
-   aquilo.** Regenerar com `node tools/exportar-fluxo.mjs <saida.json>` — saída FORA do repositório.
+1. **Importar o fluxo.** O quadro dele é o exportado em **2.14.0** (59 caixas, com a estrutura
+   antiga); o padrão de agora tem **60**, nos dois ramos de sempre, com as situações do mesmo
+   desfecho já juntadas numa caixa só. Entregue como `fluxo-padrao-2.40.0.json`. Regenerar com
+   `node tools/exportar-fluxo.mjs <saida.json>` — saída FORA do repositório.
 2. **Aba Automatizado → "Etiquetas que a rodada aplica"** (cartão criado em 04/09, porque os campos
    estavam escondidos dentro de um cartão desativado desde 15/08). **As três estão vazias:**
    - **Etiqueta de SEM INTERESSE** — a rodada não marca e, na visita seguinte, precisa
