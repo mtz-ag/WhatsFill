@@ -9099,14 +9099,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!bruto) return { ok: false, enviado: false, motivo: 'a IA não escreveu nada' };
 
     /**
-     * **A revisão vem ANTES do campo, e recebe o TEXTO** — dois defeitos que se somavam desde
-     * 04/09/2026: ela era chamada com o OBJETO (`String({...})` dá `[object Object]`, então nenhum
-     * aviso jamais apareceu e nada era conferido), e só depois de o texto ir para o campo — ou seja,
-     * a troca da saudação errada, a única correção que ela faz, **nunca chegava ao eleitor**.
+     * **Os avisos vêm de quem já revisou** — e este era o defeito, desde 04/09/2026.
+     *
+     * `iaCliente.rascunhar` chama `validarRascunho`, que chama `revisarRascunho` com o texto e o
+     * relógio: o que volta em `rascunho.texto` **já está corrigido** (a saudação trocada, o traço
+     * eme virado hífen) e `rascunho.avisos` já traz o que ele precisa ler. O painel jogava os dois
+     * fora e chamava `revisarRascunho(rascunho)` de novo — com o OBJETO, que vira
+     * `[object Object]`. Nenhum aviso jamais apareceu, e a revisão foi feita duas vezes.
      */
-    const revisado = iaLib.revisarRascunho(bruto, new Date());
-    const avisos = revisado.avisos || [];
-    let texto = revisado.texto || bruto;
+    const avisos = [...(rascunho?.avisos || [])];
+    let texto = bruto;
 
     /**
      * **O PISO do pedido de dados.** O prompt manda copiar o bloco; se a IA não copiar, o painel o

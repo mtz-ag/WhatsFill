@@ -1,4 +1,4 @@
-## 2026-09-05 — ESTADO DE AGORA (v2.46.0) — leia isto primeiro numa sessão nova
+## 2026-09-05 — ESTADO DE AGORA (v2.47.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,8 +7,8 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.46.0**, tudo commitado e no remoto. 36 commits no dia 04/09,
-e cinco no dia 05/09.
+Branch `claude/whatsfill-ia`, **v2.47.0**, tudo commitado e no remoto. 36 commits no dia 04/09,
+e seis no dia 05/09.
 Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente — **60 caixas** desde que as situações do mesmo desfecho foram juntadas. A
 lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o quadro tem dois ramos.
@@ -75,6 +75,53 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-05 — Hostilidade no imperativo, e o traço eme da IA (v2.47.0)
+
+### *"chegou hostilizando e extensão não reconheceu"*
+
+Print: a contato chegou pelo anúncio do Facebook, mandou o texto de apoio às 23:38 e, **um minuto
+depois**, *"Então vá para o inferno.. desgraçado"*. A rodada não viu nada.
+
+Medido, e as duas metades falhavam:
+
+- **`desgraçado` não estava na lista de xingamentos** — nem canalha, escroto, arrombado, pilantra,
+  picareta, "filho da puta", fdp;
+- **"vá para o inferno" não estava na lista de segunda pessoa**, que só conhecia pronomes (*você*,
+  *vocês*, *tu*, *teu*). Mandar alguém ir a algum lugar **é** falar com a pessoa: o verbo carrega o
+  "você" que a lista procurava.
+
+Testei antes de mexer: *"vai tomar no cu"*, *"vá se fuder"* e *"você é um desgraçado"* **também**
+passavam batido. Não era o caso da print, era a regra inteira.
+
+**A guarda que fica:** o imperativo sozinho só conta quando é a mensagem inteira — *"kkkk vai tomar
+no cu esse Lula"* é apoiador falando do adversário, e é a fala mais comum desta base. Com outro
+xingamento junto (o caso da print), ele vale como direção. Metade das dezesseis asserções é falso
+positivo, que é onde mora o risco: esta regra deixa etiqueta permanente no CRM e conclui em silêncio.
+
+Desfecho medido: **tecla `s`** — marca sem interesse e conclui sem responder. É proteção do código,
+então vale no quadro dele sem importar nada.
+
+### *"a IA não segue todas as instruções? pedi para não usar travessão eme e continua usando"*
+
+A resposta é a lição mais repetida deste projeto: **prompt é pedido, código é regra.** As instruções
+extras dele vão para o prompt, e o modelo as segue quase sempre — "quase" não serve para o que é
+verificável. Foi assim com o relógio e com a saudação, ontem.
+
+Agora `revisarRascunho` **troca o traço eme por hífen** e avisa; e **avisa** (sem reescrever) quando o
+rascunho abre com *"entendi"*, que é a outra instrução dele — ali não dá para consertar sem
+reescrever a frase, e reescrever é escrever no lugar da IA. O que depende de julgamento (*"dê corda
+para quem busca remuneração"*) continua só no prompt, que agora diz para seguir as instruções da
+equipe **literalmente**, acima das regras de estilo e nunca acima da lista do que ela não pode
+escrever.
+
+**E o motivo pelo qual isso passou tanto tempo despercebido:** o painel jogava fora os avisos que
+vinham de `validarRascunho` e chamava `revisarRascunho(rascunho)` de novo — com o **objeto**, que
+vira `[object Object]`. Nenhum aviso jamais apareceu na tela.
+
+Vinte e duas asserções novas. Quinze suítes verdes, os dois verificadores limpos.
 
 ---
 

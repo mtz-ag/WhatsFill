@@ -654,7 +654,15 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * dizer exatamente isso: conversa e este bloco, nada além.
      */
     gabinete ? `Quem é quem neste mandato (informação do gabinete — use-a como fonte e não invente o que não estiver aqui):\n${gabinete}\n` : '',
-    regras ? `Instruções adicionais da equipe:\n${regras}\n` : '',
+    /**
+     * **As instruções dele mandam sobre o ESTILO, e nunca sobre as proibições** — escrito assim
+     * depois de ele perguntar *"a IA não segue todas as instruções?"* (05/09/2026). O que é
+     * mecânico (o traço eme) virou conserto em `revisarRascunho`; o que depende de julgamento
+     * continua aqui — e aqui é pedido, por isso o texto diz "literalmente".
+     */
+    regras
+      ? `Instruções da equipe, a seguir LITERALMENTE (elas mandam sobre as regras de estilo acima, e nunca sobre a lista do que você não pode escrever):\n${regras}\n`
+      : '',
     'Exemplos do jeito de escrever da equipe:',
     '',
     exemplos,
@@ -925,8 +933,41 @@ export function revisarRascunho(bruto, agora) {
   }
   if (texto.length > 1500) avisos.push('ficou longo para WhatsApp — vale cortar');
 
+  /**
+   * **O TRAVESSÃO é trocado, e não pedido** — regra dele (05/09/2026): *"não use traço eme nas
+   * conversas"*, escrita nas Instruções extras da IA, e o rascunho seguinte veio com *"Salto do
+   * Yucumã — tudo isso merece visibilidade"*. Ele: *"a IA não segue todas as instruções?"*.
+   *
+   * A resposta é a lição mais repetida deste projeto: **prompt é pedido, código é regra.** As
+   * instruções extras entram no prompt e o modelo as segue quase sempre — "quase" não serve para o
+   * que é verificável. Foi assim com o relógio e com a saudação (04/09), e o critério para entrar
+   * aqui é o mesmo: **mecânico e sem julgamento**. Instrução de conteúdo (*"dê corda para quem
+   * busca remuneração"*) continua só no prompt, porque conferi-la exigiria julgar a frase.
+   *
+   * Troca por hífen, com os espaços preservados: é a pontuação que a equipe usa no WhatsApp, e não
+   * muda o sentido de nenhuma frase.
+   */
+  if (/[—–]/.test(texto)) {
+    texto = texto.replace(/[—–]/g, '-');
+    avisos.push('a IA usou traço eme — troquei por hífen');
+  }
+
+  /**
+   * **Abrir com "entendi" é aviso, e não troca** — a outra instrução dele do mesmo dia: *"não
+   * comece as mensagens pela abordagem de 'entendi' e repetindo o que foi dito"*.
+   *
+   * Aqui não dá para consertar sem reescrever a frase, e reescrever é escrever no lugar da IA. O
+   * que cabe é levantar a mão: ele lê e corta a abertura, que é o gesto de um segundo.
+   */
+  if (ABRE_REPETINDO.test(texto)) {
+    avisos.push('abriu repetindo o que ela disse — você pediu para não começar assim');
+  }
+
   return { texto, avisos };
 }
+
+/** As aberturas que ele mandou evitar. Só o COMEÇO conta: "entendi" no meio da frase é normal. */
+const ABRE_REPETINDO = /^\s*(entendi|entendo|compreendo|entendemos|percebi|vi que|li sua|recebi sua)\b/i;
 
 /** Achata para uma linha e corta: conversa longa não pode dominar o prompt nem o custo. */
 function umaLinha(texto, limite = 400) {

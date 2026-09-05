@@ -1681,7 +1681,7 @@ const NEGACAO_COM_OBJETO =
 // O `s?` no fim é obrigatório: sem ele "vocês são uns idiotas mentirosos" passava batido, porque
 // `\b` depois de "idiota" não casa com "idiotas". Xingamento vem no plural com frequência.
 const AGRESSAO =
-  /\b(mentiros[oa]|idiota|imbecil|burr[oa]|lesma|otari[oa]|vagabund[oa]|corrupt[oa]|ladr(ao|a|oes)|safad[oa]|nojent[oa]|palhac[oa]|lixo|verme|fascista|golpista|presidiari[oa]|genocida|cretin[oa]|babaca)s?\b/i;
+  /\b(mentiros[oa]|idiota|imbecil|burr[oa]|lesma|otari[oa]|vagabund[oa]|corrupt[oa]|ladr(ao|a|oes)|safad[oa]|nojent[oa]|palhac[oa]|lixo|verme|fascista|golpista|presidiari[oa]|genocida|cretin[oa]|babaca|desgracad[oa]|canalha|escrot[oa]|arrombad[oa]|cuzao|pilantra|picareta|energumen[oa]|sem[- ]vergonha|filho\s+d[ae]\s+puta|fdp)s?\b/i;
 
 /**
  * Fala dirigida a NÓS. É o que separa "vocês são mentirosos" de "o adversário é mentiroso".
@@ -1690,6 +1690,23 @@ const AGRESSAO =
  * mais comum de mensagem nesta base — seria etiquetada como sem interesse e sairia da fila.
  */
 const DIRIGIDA_A_NOS = /\b(voces|voce|vocês|tu|es igual|teu|tua|seu candidato|sua campanha|de voces)\b/i;
+
+/**
+ * **O xingamento no IMPERATIVO já é segunda pessoa** — print dele (05/09/2026): a contato chegou
+ * pelo anúncio, mandou o texto de apoio às 23:38 e, um minuto depois, *"Então vá para o inferno..
+ * desgraçado"*. *"chegou hostilizando e extensão não reconheceu"*.
+ *
+ * Medido: **nada** casava. `desgracado` não estava na lista de xingamentos, e *"vá para o inferno"*
+ * não estava na de segunda pessoa — que só conhecia pronomes. Mandar alguém ir a algum lugar é
+ * falar COM a pessoa: o verbo carrega o "você" que a lista procurava.
+ *
+ * **Sozinho ele só conta quando é a mensagem inteira**, e essa guarda é a mesma do "confirmado" e
+ * do "13": *"kkkk vai tomar no cu esse Lula"* é apoiador falando do adversário, e etiquetar isso
+ * como sem interesse deixa rótulo permanente no CRM de quem mais apoia. Com outro xingamento junto
+ * — o caso da print — ele vale como direção, e aí a regra de sempre decide.
+ */
+const XINGAMENTO_IMPERATIVO =
+  /(^|[^\p{L}])(v[aá]|vai|vaite|vao)\s+(se\s+)?(pa?ra\s+(o\s+)?(inferno|pqp)|toma[r]?\s+n[oa]\s+(cu|c\*+)|fude[rn]|fode[rn]|ferrar|catar|lascar|plantar\s+batata)/iu;
 
 /**
  * **Apelido pejorativo para quem está do NOSSO lado** — conta sozinho, sem precisar de segunda
@@ -2052,8 +2069,16 @@ function umaMensagemRecusa(msg) {
     return { motivo: 'declarou voto no adversário — não é público do mandato' };
   }
 
-  const agride = AGRESSAO.test(norm) && DIRIGIDA_A_NOS.test(norm);
-  if (agride) return { motivo: 'veio hostilizar, não é público do mandato' };
+  /**
+   * O imperativo conta como segunda pessoa — ver `XINGAMENTO_IMPERATIVO`. Sozinho, só quando é a
+   * mensagem inteira: o que sobra depois dele tem que caber numa pontuação.
+   */
+  const mandouEmbora = XINGAMENTO_IMPERATIVO.test(norm);
+  const soOImperativo =
+    mandouEmbora && norm.replace(XINGAMENTO_IMPERATIVO, ' ').replace(/[^\p{L}\p{N}]+/gu, '').length === 0;
+
+  const agride = AGRESSAO.test(norm) && (DIRIGIDA_A_NOS.test(norm) || mandouEmbora);
+  if (agride || soOImperativo) return { motivo: 'veio hostilizar, não é público do mandato' };
 
   const negativaVale = norm.trim().length <= NEGATIVA_CURTA || NEGACAO_COM_OBJETO.test(norm);
   if (COMECA_NEGANDO.test(norm) && negativaVale && !NEGATIVA_BENIGNA.test(norm)) {

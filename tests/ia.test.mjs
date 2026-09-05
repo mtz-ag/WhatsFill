@@ -594,4 +594,32 @@ grupo('montarContatoRascunho: os DOIS lados, e a pendencia marcada (03/09/2026)'
     'e o bloco que impede pedir o que ja se tem continua la (o caso da Catarina)');
 }
 
+{
+  grupo('as instrucoes dele que sao mecanicas viram conserto (05/09/2026)');
+
+  /**
+   * Print dele: nas Instrucoes extras da IA estava escrito *"nao use traco eme nas conversas"*, e o
+   * rascunho veio com *"Salto do Yucuma -- tudo isso merece visibilidade"* (com travessao). Ele:
+   * *"a IA nao segue todas as instrucoes?"*.
+   *
+   * A resposta e a licao mais repetida do projeto: **prompt e pedido, codigo e regra.** O que e
+   * mecanico e verificavel vira conserto aqui; o que depende de julgamento (*"de corda para quem
+   * busca remuneracao"*) continua so no prompt, porque conferí-lo exigiria julgar a frase.
+   */
+  const agora = new Date('2026-09-05T15:00:00');
+
+  const comTravessao = revisarRascunho('Boa tarde! As Missoes, Salto do Yucuma — tudo isso merece visibilidade.', agora);
+  check(!/[—–]/.test(comTravessao.texto), 'o traco eme sai do texto');
+  check(comTravessao.texto.includes('Yucuma - tudo'), 'e vira hifen, sem mudar o resto da frase');
+  check(comTravessao.avisos.some((a) => /traço eme/.test(a)), 'e o aviso diz que foi trocado');
+
+  const repetindo = revisarRascunho('Entendi sua sugestao sobre o turismo.', agora);
+  check(repetindo.avisos.some((a) => /começar assim/.test(a)), 'abrir com "entendi" levanta a mao');
+  check(repetindo.texto === 'Entendi sua sugestao sobre o turismo.',
+    'mas NAO reescreve -- reescrever seria escrever no lugar da IA');
+
+  const limpo = revisarRascunho('Boa tarde! Obrigado pela mensagem.', agora);
+  check(limpo.avisos.length === 0, 'texto sem nada disso passa sem aviso');
+}
+
 fim();

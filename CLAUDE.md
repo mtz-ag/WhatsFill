@@ -1289,6 +1289,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   separador do template mudou. O campo novo da Config avisa na tela quando o texto perde a linha, e
   ha teste no `templates.test.mjs`.
 
+- **Xingamento no IMPERATIVO e segunda pessoa, e a lista nao sabia disso.** Print dele (05/09/2026):
+  a contato chegou pelo anuncio e um minuto depois escreveu *"Entao va para o inferno..
+  desgracado"* — *"chegou hostilizando e extensao nao reconheceu"*. Medido, as duas metades
+  falhavam: `desgracado` nao estava em `AGRESSAO`, e *"va para o inferno"* nao estava em
+  `DIRIGIDA_A_NOS`, que so conhecia PRONOMES. Testando antes de mexer, *"vai tomar no cu"* e
+  *"voce e um desgracado"* tambem passavam batido — nao era o caso, era a regra inteira. **A guarda
+  que fica:** o imperativo sozinho so conta quando e a mensagem INTEIRA, porque *"kkkk vai tomar no
+  cu esse Lula"* e apoiador falando do adversario — mesma disciplina do "confirmado" e do "13".
+- **Instrucao extra da IA que e MECANICA vira conserto, nao pedido.** *"a IA nao segue todas as
+  instrucoes? pedi para nao usar travessao eme e continua usando"* (05/09/2026). Prompt e pedido;
+  `revisarRascunho` e regra — hoje ela troca o traco eme por hifen e avisa. O criterio para entrar
+  la e **mecanico e sem julgamento**: abrir com "entendi" (a outra instrucao dele) so gera AVISO,
+  porque consertar exigiria reescrever a frase, e conteudo (*"de corda para quem busca
+  remuneracao"*) fica so no prompt. **E confira quem CHAMA:** o painel jogava fora os avisos de
+  `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
+  jamais apareceu na tela.
+
 - **`session.utm` é "veio de anúncio NESTA sessão"; a ETIQUETA é "veio de anúncio".** Print dele
   (05/09/2026, o Orides): etiqueta **ADS** no CRM, mandou um vídeo do TikTok e recebeu as
   boas-vindas de *"chegou sem anúncio"* com o pedido de cadastro junto — *"a pessoa com etiqueta de

@@ -1718,4 +1718,41 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
     'e o texto longo junto de um link tambem');
 }
 
+{
+  grupo('xingamento no imperativo e hostilidade (05/09/2026)');
+
+  /**
+   * Print dele: a contato chegou pelo anuncio, mandou o texto de apoio as 23:38 e, um minuto
+   * depois, *"Entao va para o inferno.. desgracado"*. *"chegou hostilizando e extensao nao
+   * reconheceu"*.
+   *
+   * Medido: **nada** casava. `desgracado` nao estava na lista de xingamentos, e *"va para o
+   * inferno"* nao estava na de segunda pessoa -- que so conhecia pronomes. Mandar alguem ir a
+   * algum lugar e falar COM a pessoa.
+   *
+   * **Metade destas assercoes e falso positivo**, que e onde mora o risco desta regra: ela deixa
+   * etiqueta permanente no CRM e conclui em silencio.
+   */
+  const daPrint = [
+    { texto: 'Ola! Eu apoio o Flavio, Zucco e Capitao Martim', tipo: 'TEXT', geradaPeloAnuncio: true },
+    texto('Entao va para o inferno.. desgracado'),
+  ];
+  check(!!semInteresse(daPrint, null), 'a rajada da print e reconhecida como hostilidade');
+
+  for (const t of ['vai tomar no cu', 'va se fuder', 'voce e um desgracado', 'seu canalha, nao quero mais nada']) {
+    check(!!semInteresse([texto(t)], null), `hostil reconhecido: "${t}"`);
+  }
+
+  /**
+   * **O apoiador xingando o ADVERSARIO continua de fora**, que e a fala mais comum desta base. O
+   * imperativo sozinho so conta quando e a mensagem inteira -- mesma guarda do "confirmado" e do
+   * "13".
+   */
+  for (const t of ['kkkk vai tomar no cu esse Lula', 'esse governo do Lula que va para o inferno',
+                   'o Lula e um ladrao safado, golpista', 'esse transito e uma desgraca',
+                   'vai ser um prazer ajudar voces', 'vou votar em voces, conte comigo']) {
+    check(!semInteresse([texto(t)], null), `NAO e hostilidade: "${t}"`);
+  }
+}
+
 fim();
