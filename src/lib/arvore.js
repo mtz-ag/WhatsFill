@@ -74,6 +74,11 @@ export const SINAIS = [
   { id: 'nomeSemSentido', rotulo: 'O nome do cadastro não serve', nao: 'O nome do cadastro serve' },
   { id: 'respondidoHoje', rotulo: 'Você já respondeu hoje', nao: 'Você ainda não respondeu hoje' },
   { id: 'deOutroDia', rotulo: 'A última mensagem dela é de outro dia', nao: 'Ela escreveu hoje' },
+  {
+    id: 'materialPendente',
+    rotulo: 'Pediu material e ainda não recebeu',
+    nao: 'Não há material pendente',
+  },
   { id: 'momentoJaEnviado', rotulo: 'A mensagem do momento já saiu para ela', nao: 'A mensagem do momento ainda não saiu' },
   { id: 'pedidoHoje', rotulo: 'Pedimos o nome e a cidade HOJE', nao: 'Não pedimos o nome e a cidade hoje' },
   { id: 'enviadoHoje', rotulo: 'Já mandamos o modelo hoje', nao: 'Não mandamos modelo hoje' },

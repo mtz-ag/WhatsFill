@@ -27,7 +27,7 @@ import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -5061,6 +5061,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * ontem soa a quem não estava lá, seja ele apoio, cadastro ou piada política.
          */
         deOutroDia: deOutroDia(state.entrantes),
+        /**
+         * **Ela pediu material e ainda não recebeu.**
+         *
+         * Regra dele (05/09/2026): *"o modelo de material é uma exceção, ele sempre tem que ser
+         * mandado quando requisitado"*. É a exceção de `contexto-de-outro-dia`: a print mostrava
+         * *"Olá! Eu quero receber o Material da Direita"* de ontem recebendo a mensagem do momento
+         * e sendo concluída.
+         *
+         * **As duas metades:** o pedido, que `cortesia.pedeMaterial` lê na conversa INTEIRA (o
+         * pedido não vence com o dia), e a ENTREGA, que é a guarda contra a repetição — saíndo o
+         * modelo, o sinal se apaga e a caixa do tempo volta a valer. Sem a segunda metade isto
+         * seria a armadilha já registrada: o texto do anúncio fica na conversa para sempre.
+         */
+        materialPendente: !modeloJaNaConversa && !enviadoHoje && !!pedeMaterial(state.entrantes),
         /**
          * **Terminou com uma pergunta?** Só impede a conclusão em silêncio — ver
          * `cortesia.perguntaPendente`, que olha a RAJADA inteira. Não é `perguntaAberta`, que

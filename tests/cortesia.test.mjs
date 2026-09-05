@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco } from '../src/lib/cortesia.js';
+import { pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -1595,6 +1595,55 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   // A lista de padroes continua valendo: e ela que alcanca o segundo clique.
   check(ehMensagemDeAnuncio({ texto: 'Ola! Eu apoio o Capitao Martim' }, PADROES_CADASTRADOS),
     'a lista cadastrada continua reconhecendo a redacao que ela cobre');
+}
+
+{
+  grupo('o material pedido nao vence com o dia (05/09/2026)');
+
+  /**
+   * Regra dele: *"o modelo de material e uma excecao, ele sempre tem que ser mandado quando
+   * requisitado"*. A print: ela chegou pelo anuncio escrevendo *"Ola! Eu quero receber o Material
+   * da Direita"* as 13:23, a rodada so a alcancou no dia seguinte -- e mandou a mensagem do
+   * momento, concluindo.
+   *
+   * **Metade destas assercoes e falso positivo**, que e onde mora o risco: o objeto sozinho
+   * ("obrigada pelo material") e o verbo sozinho ("quero receber a visita") aparecem o tempo todo
+   * nesta base, e cada um deles sairia mandando modelo.
+   */
+  const pedidos = [
+    'Ola! Eu quero receber o Material da Direita',
+    'me manda o material por favor',
+    'Pode me mandar o material?',
+    'gostaria de receber os adesivos',
+    'tem como enviar uns santinhos',
+    'quero material',
+    'como faco para conseguir bandeira',
+    'quero receber o conteudo de voces',
+  ];
+  for (const t of pedidos) check(!!pedeMaterial([texto(t)]), `pedido reconhecido: "${t}"`);
+
+  const naoSao = [
+    'Ola! Eu apoio o Capitao Martim',
+    'obrigada pelo material, muito bom',
+    'ja recebi o material, valeu',
+    'vou distribuir o material aqui na minha rua',
+    'quero ajudar na campanha',
+    'quero receber a visita de voces aqui',
+    'nao quero receber material nenhum',
+    'bom dia, tudo bem?',
+  ];
+  for (const t of naoSao) check(!pedeMaterial([texto(t)]), `nao e pedido de material: "${t}"`);
+
+  /**
+   * **Le a conversa INTEIRA, ao contrario do `informouEndereco`.** O que impede a repeticao nao e
+   * a janela de tempo: e a ENTREGA, conferida por quem chama (`!modeloJaNaConversa &&
+   * !enviadoHoje`). Fosse pela rajada, o pedido sumiria assim que respondessemos qualquer coisa --
+   * que e justamente quando ele ainda esta de pe.
+   */
+  check(!!pedeMaterial([texto('quero receber o material'), texto('obrigada')]),
+    'o pedido continua de pe depois de ela escrever outra coisa');
+  check(!pedeMaterial([{ texto: 'quero receber o material', sistema: true }]),
+    'ruido da plataforma nao conta como pedido');
 }
 
 fim();

@@ -1785,6 +1785,74 @@ export function informouEndereco(entrantes, nossaUltimaAt) {
 }
 
 /**
+ * **Ela pediu o MATERIAL** — regra dele (05/09/2026): *"o modelo de material é uma exceção, ele
+ * sempre tem que ser mandado quando requisitado"*.
+ *
+ * O caso: anúncio do Facebook, ela escreveu *"Olá! Eu quero receber o Material da Direita"* às
+ * 13:23, a rodada só a alcançou no dia seguinte — e mandou a **mensagem do momento**, concluindo.
+ * Medido no quadro padrão: `contexto-de-outro-dia` fica acima da entrega do modelo nos três ramos,
+ * então **o pedido de material vencia o dia e virava "o contexto passou"**. Não passou: material
+ * pedido e não entregue continua pendente na semana que vem.
+ *
+ * **Roda na conversa INTEIRA, e não na rajada** — ao contrário de `informouEndereco`. O que a torna
+ * segura não é a janela de tempo, é a ENTREGA: quem chama soma `!modeloJaNaConversa &&
+ * !enviadoHoje`, e o sinal se apaga sozinho no instante em que o modelo sai. Fosse pela rajada, o
+ * pedido sumiria assim que respondêssemos qualquer coisa — que é justamente quando ele ainda está
+ * de pé.
+ *
+ * **A mensagem gerada pelo ANÚNCIO conta**, e aqui isso é o oposto de `soExpressaApoio`: lá o texto
+ * do anúncio não pode virar fala dela; aqui **o clique É o pedido** — ela escolheu o anúncio que
+ * dizia "Material da Direita", e escolha explícita dela não se substitui por dedução nossa.
+ *
+ * **Verbo E objeto, com o objeto numa lista curta de PERMISSÃO.** *"Quero receber"* sozinho pega
+ * *"quero receber a visita de vocês"*; o objeto sozinho pega *"obrigada pelo material"*. Os dois
+ * juntos, com até duas palavras no meio, são o que esta base escreve. A lista só cresce com caso
+ * trazido por ele — mesma disciplina das siglas de cidade.
+ */
+const NEGA_O_PEDIDO = /(^|[^\p{L}])nao\s+(quero|queria|preciso|desejo|me\s+(manda|mande|envie))/iu;
+
+const VERBO_DE_PEDIR_MATERIAL = [
+  /(?:quero|queria|gostaria\s+de|desejo|preciso\s+d[eo]s?|como\s+fa[cç]o\s+p(?:ara|ra)|onde\s+consigo)\s+(?:receber|ter|pegar|adquirir|conseguir)/,
+  /(?:pode|poderia|podem|poderiam|tem\s+como|teria\s+como)\s+(?:me\s+)?(?:mandar|enviar|passar|repassar|disponibilizar)/,
+  /(?:me\s+)?(?:manda|mande|mandem|envia|envie|enviem|passa|passe|repassa|repasse)/,
+  /(?:quero|queria|gostaria\s+de)/,
+];
+
+/** O que se pede. Literal de propósito: é o vocabulário desta campanha, e não uma categoria. */
+const OBJETO_DE_MATERIAL =
+  /(?:materia(?:l|is)|conteudos?|adesivos?|santinhos?|panfletos?|folders?|artes?|cards?|informativos?|cartilhas?|bandeiras?|camisetas?|bones?)/;
+
+/**
+ * Verbo, até duas palavras no meio, e o objeto. As peças ficam separadas acima porque é assim que
+ * elas crescem: uma forma nova de pedir não é uma coisa nova a pedir.
+ */
+const PEDIDO_DE_MATERIAL_COMPLETO = VERBO_DE_PEDIR_MATERIAL.map(
+  (verbo) =>
+    new RegExp(
+      String.raw`(^|[^\p{L}])(?:${verbo.source})(?:\s+\S+){0,2}\s+(?:${OBJETO_DE_MATERIAL.source})(?![\p{L}])`,
+      'iu'
+    )
+);
+
+/**
+ * Ela pediu material em alguma mensagem? Devolve o motivo, ou `null`.
+ *
+ * @param {Array<{texto?:string, sistema?:boolean}>} entrantes
+ */
+export function pedeMaterial(entrantes) {
+  for (const msg of entrantes || []) {
+    if (msg?.sistema) continue;
+    const texto = semAcentos(msg?.texto);
+    if (!texto) continue;
+    if (NEGA_O_PEDIDO.test(texto)) continue;
+    if (PEDIDO_DE_MATERIAL_COMPLETO.some((re) => re.test(texto))) {
+      return { motivo: 'ela pediu o material — o modelo tem que sair, e o pedido não vence com o dia' };
+    }
+  }
+  return null;
+}
+
+/**
  * **Declarar voto no ADVERSÁRIO** — anotação da Rosa Maria (04/09/2026).
  *
  * Ela escreveu *"SOU APOSENTADA RURAL. MINHA CONCIENCIA DIZ QUE TENHO QUE SER 13"* e, na mensagem

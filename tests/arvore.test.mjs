@@ -1971,4 +1971,62 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   check(mortas.length === 0, `nenhuma caixa do padrao esta morta (${mortas.join(', ') || 'ok'})`);
 }
 
+{
+  grupo('o material pedido nao vence com o dia (05/09/2026)');
+
+  /**
+   * Regra dele: *"o modelo de material e uma excecao, ele sempre tem que ser mandado quando
+   * requisitado"*. A print: ela chegou pelo anuncio do Facebook escrevendo *"Ola! Eu quero receber
+   * o Material da Direita"* as 13:23, a rodada so a alcancou no dia seguinte -- e mandou a
+   * **mensagem do momento**, concluindo.
+   *
+   * Medido antes do conserto: `contexto-de-outro-dia` fica acima da entrega do modelo nos tres
+   * ramos, entao o pedido de material vencia o dia. As duas excecoes ficam na CONDICAO, e nao na
+   * posicao: assim valem tambem no quadro que ele ja exportou.
+   */
+  const fluxo = arv.fluxoPadrao();
+  const pedido = 'Ola! Eu quero receber o Material da Direita';
+  const materialPendente = !!cortesia.pedeMaterial([{ texto: pedido, tipo: 'TEXT' }]);
+  check(materialPendente, 'o texto do anuncio de material e reconhecido como pedido');
+
+  const base = {
+    veioDeAnuncio: true, podeMandarMomento: true, podePedirDados: true,
+    textos: [pedido], ultimoTexto: pedido, deOutroDia: true, materialPendente,
+  };
+
+  const chegada = arv.decidir({ ...base, podeEnviar: true }, fluxo, {});
+  check(chegada?.tecla === 'a', `de ontem, na chegada, o modelo sai igual (tecla ${chegada?.tecla})`);
+
+  const volta = arv.decidir({ ...base, jaRespondemosAntes: true, temEtiquetaDeCidade: true, podeEnviar: true }, fluxo, {});
+  check(volta?.tecla === '1', `de ontem, na volta, o modelo sai igual (tecla ${volta?.tecla})`);
+
+  /**
+   * **A guarda contra a repeticao e a ENTREGA, e nao o tempo.** Saindo o modelo, o sinal se apaga
+   * (quem calcula soma `!modeloJaNaConversa && !enviadoHoje`) e a caixa do tempo volta a valer --
+   * senao o texto do anuncio, que fica na conversa para sempre, viraria maquina de repetir.
+   */
+  const entregue = arv.decidir(
+    { ...base, materialPendente: false, jaRespondemosAntes: true, temEtiquetaDeCidade: true, podeEnviar: true, modeloJaNaConversa: true },
+    fluxo, {}
+  );
+  check(entregue?.tecla === '5', 'entregue o modelo, "a ultima dela e de outro dia" volta a decidir');
+
+  /**
+   * A OUTRA caixa que enterrava o pedido, achada na varredura: `respondeu-os-dados` agradece e
+   * conclui *"sem mandar modelo, porque o modelo ja foi o recibo da chegada"* -- argumento que
+   * deixa de valer quando o recibo nao foi. Caminho real na configuracao dele: sem modelo padrao
+   * cadastrado, ela recebe so o formulario, responde "Maria, Canoas" e era concluida sem material.
+   */
+  const respondeu = arv.decidir(
+    { ...base, deOutroDia: false, respondeuOsDados: true, jaPediramDados: true, podeEnviar: true }, fluxo, {}
+  );
+  check(respondeu?.tecla === '1', `quem respondeu os dados sem ter recebido o material recebe o modelo (tecla ${respondeu?.tecla})`);
+
+  const respondeuComRecibo = arv.decidir(
+    { ...base, deOutroDia: false, respondeuOsDados: true, jaPediramDados: true, podeEnviar: true, materialPendente: false, modeloJaNaConversa: true },
+    fluxo, {}
+  );
+  check(respondeuComRecibo?.tecla === 'i', 'tendo recebido, o agradecimento continua sendo o desfecho');
+}
+
 fim();

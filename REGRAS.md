@@ -67,13 +67,14 @@ está valendo de verdade:
 | **Na chegada, pendência neutra vem DEPOIS do modelo** (02/09) — figura, cumprimento, despedida. Pedido, pergunta e áudio vêm **antes**: ali mandar a nossa mensagem primeiro É o dano. | quadro |
 | **A ação do anúncio é do momento da chegada**: cumprida, o anúncio se cala e o quadro decide. | código |
 | **A ação do anúncio nunca é texto livre** — são quatro ações permitidas. | código |
+| **O modelo de MATERIAL é exceção: sempre sai quando requisitado** (05/09). Pedido não entregue não vence com o dia nem é substituído pelo agradecimento. A guarda é a entrega, não o tempo. | código (`materialPendente`) |
 
 ## 5. Tempo
 
 | regra | onde vive |
 |---|---|
 | **A última mensagem dela é de outro dia → mensagem do momento** (03/09, generalizado em 04/09): *"responder o conteúdo de ontem soa a quem não estava lá"*. O corte é o **dia local**, não um número de horas. | código + quadro |
-| **A única exceção ao tempo é pergunta pendente** (03/09) — e ela vive na **condição** da regra, não na posição, então vale em qualquer quadro. | código |
+| **São DUAS as exceções ao tempo: pergunta pendente** (03/09) **e material pedido que não saiu** (05/09) — as duas vivem na **condição** da regra, não na posição, então valem em qualquer quadro. | código |
 | **Não mandar quando já respondi hoje** (04/09, a Janete), mesmo que não tenha sido a mensagem do momento. | código |
 | **A caixa da rodada diz sempre QUANDO foi a última mensagem dela** (04/09). | código |
 

@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.41.0) — leia isto primeiro numa sessão nova
+## 2026-09-05 — ESTADO DE AGORA (v2.42.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,8 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.41.0**, tudo commitado e no remoto. 35 commits no dia 04/09.
+Branch `claude/whatsfill-ia`, **v2.42.0**, tudo commitado e no remoto. 36 commits no dia 04/09,
+e o primeiro do dia 05/09.
 Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente — **60 caixas** desde que as situações do mesmo desfecho foram juntadas. A
 lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o quadro tem dois ramos.
@@ -16,7 +17,8 @@ lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o quadro te
 
 1. **Importar o fluxo.** O quadro dele é o exportado em **2.14.0** (59 caixas, com a estrutura
    antiga); o padrão de agora tem **60**, nos dois ramos de sempre, com as situações do mesmo
-   desfecho já juntadas numa caixa só. Entregue como `fluxo-padrao-2.41.0.json`. Regenerar com
+   desfecho já juntadas numa caixa só. Entregue como `fluxo-padrao-2.41.0.json`, que continua
+   valendo — o padrão de 2.42.0 tem as mesmas 60 caixas. Regenerar com
    `node tools/exportar-fluxo.mjs <saida.json>` — saída FORA do repositório.
 2. **Aba Automatizado → "Etiquetas que a rodada aplica"** (cartão criado em 04/09, porque os campos
    estavam escondidos dentro de um cartão desativado desde 15/08). **As três estão vazias:**
@@ -27,7 +29,12 @@ lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o quadro te
      já existe na plataforma; falta só digitar o nome dela aqui. **É o campo que mais custa ficar
      vazio dos três:** ela é aplicada quando o pedido de endereço SAI e quando ela responde, e é o
      que faz a rodada pular o contato em toda passada até ele transferir a conversa.
-3. **Config → tabela "Modelo por conteúdo", linha `ADS = Campanha Martim`**: não é mais necessário
+3. **Os MODELOS PADRÃO estão vazios, e agora há uma print do custo.** O anúncio CONVERSE CONOSCO
+   ("Olá! Eu quero receber o Material da Direita") não está cadastrado na Config, e sem modelo
+   padrão não existe modelo nenhum para mandar a quem chega por ele: ela pede material e recebe o
+   formulário seco. Duas saídas, as duas dele — cadastrar o anúncio com o modelo, ou preencher os
+   modelos padrão.
+4. **Config → tabela "Modelo por conteúdo", linha `ADS = Campanha Martim`**: não é mais necessário
    limpar (o código tem o piso `tags.ORIGEM_SEMPRE`), mas continua sendo lixo que confunde a leitura.
 
 ### Aberto, esperando decisão dele
@@ -68,6 +75,71 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-05 — O material pedido não vence com o dia (v2.42.0)
+
+*"o modelo de material é uma exceção, ele sempre tem que ser mandado quando requisitado; nesse caso
+mandou mensagem do momento e concluiu"*.
+
+A print: anúncio do Facebook (campanha CONVERSE CONOSCO), ela escreveu **"Olá! Eu quero receber o
+Material da Direita"** às 13:23, a rodada só a alcançou no dia seguinte — e mandou a **mensagem do
+momento**, concluindo o atendimento.
+
+### O que a medição mostrou
+
+Reproduzido no quadro padrão, com o contexto da print:
+
+| situação | antes | agora |
+|---|---|---|
+| chegada, sem modelo, **de ontem** | tecla 5 (`contexto-de-outro-dia`) | tecla 4 |
+| chegada, com modelo, de ontem | tecla a | tecla a |
+| volta com cidade + modelo, **de ontem** | **tecla 5** | **tecla 1** |
+| volta sem cidade + modelo, **de ontem** | **tecla 5** | **tecla 1** |
+
+`contexto-de-outro-dia` fica **acima da entrega do modelo nos três ramos**, então o pedido de
+material vencia com o dia. Não vence: pedido não entregue continua de pé na semana que vem, e é a
+razão pela qual a pessoa apareceu.
+
+### O conserto
+
+`cortesia.pedeMaterial` é o detector, e ele exige **verbo E objeto** — *"quero receber"* sozinho
+pega *"quero receber a visita de vocês"*, e *"material"* sozinho pega *"obrigada pelo material"*.
+Metade das dezoito asserções é falso positivo, que é onde mora o risco.
+
+Ele lê a **conversa inteira**, ao contrário do `informouEndereco`: o que impede a repetição não é a
+janela de tempo, é a **entrega** — o painel calcula `materialPendente = pediuMaterial &&
+!modeloJaNaConversa && !enviadoHoje`, então o sinal se apaga sozinho no instante em que o modelo
+sai, e a caixa do tempo volta a valer. Sem isso seria a armadilha já registrada: o texto do anúncio
+fica na conversa para sempre.
+
+**A mensagem gerada pelo anúncio CONTA aqui** — e é o oposto do `soExpressaApoio`, onde o texto do
+anúncio não pode virar fala dela. Aqui **o clique É o pedido**: ela escolheu o anúncio que dizia
+"Material da Direita".
+
+### As duas exceções ficam na CONDIÇÃO
+
+`contexto-de-outro-dia` e `respondeu-os-dados` ganharam `!materialPendente`. Na condição e não na
+posição, pelo motivo já registrado: **vale onde quer que a caixa esteja no quadro dele** — inclusive
+no quadro 2.14.0 que ele ainda usa. **Não há fluxo novo para importar**; o padrão continua com as
+mesmas 60 caixas.
+
+A segunda foi achada na varredura, não no relato: `respondeu-os-dados` agradece e conclui *"sem
+mandar modelo, porque o modelo já foi o recibo da chegada"* — argumento que deixa de valer quando o
+recibo não foi. Medido em 10.000 contextos, era a **única** caixa que ainda enterrava o pedido
+(4.201 deles), e o caminho é real na configuração dele hoje: sem modelo padrão cadastrado ela recebe
+só o formulário, responde *"Maria, Canoas"* e era agradecida e concluída **sem nunca receber o
+material**. Depois do conserto: **0 de 10.000**.
+
+### O que isto NÃO conserta, e é dele
+
+Nesta print **não havia modelo nenhum para mandar**: o anúncio CONVERSE CONOSCO não está cadastrado
+na Config e os **modelos padrão estão vazios**. Com a correção ela deixa de ser concluída com a
+mensagem do momento e passa a receber o formulário (tecla 4) — o material só sai quando ele
+cadastrar o anúncio com o modelo dele, ou preencher os modelos padrão.
+
+Vinte e quatro asserções novas. Quinze suítes verdes, os dois verificadores limpos.
 
 ---
 

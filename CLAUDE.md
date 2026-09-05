@@ -1289,6 +1289,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   separador do template mudou. O campo novo da Config avisa na tela quando o texto perde a linha, e
   ha teste no `templates.test.mjs`.
 
+- **O MATERIAL pedido nao vence com o dia, e a excecao vale nas DUAS caixas que o enterravam.**
+  Regra dele (05/09/2026), com a print do anuncio CONVERSE CONOSCO: *"o modelo de material e uma
+  excecao, ele sempre tem que ser mandado quando requisitado; nesse caso mandou mensagem do momento
+  e concluiu"*. Ela escreveu *"Ola! Eu quero receber o Material da Direita"* as 13:23 e a rodada so
+  a alcancou no dia seguinte. Medido: `contexto-de-outro-dia` fica **acima da entrega do modelo nos
+  tres ramos**, entao o pedido virava "o contexto passou". A segunda caixa saiu da varredura e nao
+  do relato: `respondeu-os-dados` agradece e conclui *"sem mandar modelo, porque o modelo ja foi o
+  recibo da chegada"* — argumento que deixa de valer quando o recibo nao foi, e era a UNICA que
+  ainda enterrava o pedido (4.201 de 10.000; depois, 0). **A guarda contra a repeticao e a ENTREGA,
+  nunca a janela de tempo:** `cortesia.pedeMaterial` le a conversa INTEIRA (ao contrario do
+  `informouEndereco`) e o painel soma `!modeloJaNaConversa && !enviadoHoje` — sem essa metade, o
+  texto do anuncio, que fica na conversa para sempre, viraria maquina de repetir. **A mensagem
+  gerada pelo anuncio CONTA aqui**, e e o oposto do `soExpressaApoio`: la o texto do anuncio nao
+  pode virar fala dela; aqui **o clique E o pedido**. O detector exige **verbo E objeto**, com o
+  objeto numa lista curta de permissao: *"quero receber"* sozinho pega *"quero receber a visita de
+  voces"*, e *"material"* sozinho pega *"obrigada pelo material"*.
+
 - **UMA caixa por desfecho: situacoes que levam a mesma mensagem sao JUNTADAS (`tambemQuando`).**
   Pedido dele (04/09/2026), com a print de duas caixas identicas *"Conclui sem enviar nada (tecla
   3)"*: *"junte todas as situacoes que sao usadas na mesma tecla"*. `tambemQuando` e a lista de

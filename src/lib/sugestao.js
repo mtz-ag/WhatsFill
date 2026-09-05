@@ -616,13 +616,25 @@ export const REGRAS = [
      * condição, ela vale **onde quer que a caixa esteja no quadro dele** — inclusive nos quadros já
      * exportados. Posição é preferência dele; esta exceção é regra dele.
      *
+     * **A segunda exceção é o MATERIAL PEDIDO**, e ele nomeou-a em 05/09/2026: *"o modelo de
+     * material é uma exceção, ele sempre tem que ser mandado quando requisitado"*. A print: ela
+     * chegou pelo anúncio escrevendo *"Olá! Eu quero receber o Material da Direita"* às 13:23, a
+     * rodada só a alcançou no dia seguinte, e mandou a mensagem do momento — concluindo. Medido no
+     * quadro padrão, esta caixa fica acima da entrega do modelo nos três ramos, então **o pedido de
+     * material vencia o dia**. Não vence: pedido não entregue continua de pé na semana que vem, e é
+     * a razão pela qual a pessoa apareceu.
+     *
+     * O sinal já vem com a guarda de repetição — quem calcula soma "e o modelo ainda não saiu" —,
+     * então ele se apaga sozinho no instante da entrega e a caixa volta a valer.
+     *
      * Ela também continua **abaixo de tudo o que precisa de gente** — pedido de ajuda, pergunta,
      * áudio, denúncia respondida.
      *
      * E abaixo do anúncio reconhecido: clicar num anúncio é pedir uma coisa específica, e escolha
      * explícita dela não se substitui por dedução nossa.
      */
-    quando: (c) => !!c.deOutroDia && !c.perguntaPendente && c.podeMandarMomento && !c.momentoJaEnviado,
+    quando: (c) =>
+      !!c.deOutroDia && !c.perguntaPendente && !c.materialPendente && c.podeMandarMomento && !c.momentoJaEnviado,
     motivo: () =>
       'a última mensagem dela é de outro dia — o contexto passou; a mensagem do momento é o que ' +
       'há de novo.',
@@ -748,7 +760,21 @@ export const REGRAS = [
      * INVARIANTE, nunca pelo texto atual) e o parser achou nome ou cidade no que ela escreveu
      * depois. Sem as duas metades, "sim" solto ou assunto novo viraria agradecimento e conclusão.
      */
-    quando: (c) => !!c.respondeuOsDados,
+    /**
+     * **A exceção é o material que nunca saiu** — regra dele (05/09/2026): *"o modelo de material
+     * é uma exceção, ele sempre tem que ser mandado quando requisitado"*.
+     *
+     * O argumento desta caixa é *"o modelo já foi o recibo da chegada"* — e ele deixa de valer
+     * quando o modelo não foi. Medido em 10.000 contextos: com o material pedido e não entregue,
+     * esta era a ÚNICA caixa que ainda enterrava o pedido (4.201 deles), e o caminho é real na
+     * configuração dele hoje — ela chega pelo anúncio pedindo material, recebe só o formulário
+     * (sem modelo padrão cadastrado não há recibo), responde *"Maria, Canoas"* e era **agradecida
+     * e concluída sem nunca receber o material**.
+     *
+     * O agradecimento não se perde: sai o modelo agora, e na passada seguinte — com o modelo já
+     * na conversa — esta caixa volta a ganhar.
+     */
+    quando: (c) => !!c.respondeuOsDados && !c.materialPendente,
     motivo: () => 'respondeu o nome e a cidade que pedimos — agradeça e encerre.',
   },
   {
@@ -1115,9 +1141,11 @@ export const SOBRE = {
     quando:
       'O contexto passou: responder o conteúdo de ontem soa a quem não estava lá. Manda a mensagem ' +
       'do momento, que é o que há de novo hoje, e conclui. Decisão sua (03/09, generalizada em ' +
-      '04/09 com quatro casos). Só casa se houver mensagem do momento configurada e ela ainda não ' +
-      'tiver saído para essa pessoa — e fica ABAIXO de tudo o que precisa de você (pedido, ' +
-      'pergunta, áudio) e do anúncio reconhecido, que é escolha explícita dela.',
+      '04/09 com quatro casos). Duas exceções, e as duas estão na CONDIÇÃO: pergunta pendente e ' +
+      'material pedido que ainda não saiu — pedido não vence com o dia (05/09). Só casa se houver ' +
+      'mensagem do momento configurada e ela ainda não tiver saído para essa pessoa — e fica ' +
+      'ABAIXO de tudo o que precisa de você (pedido, pergunta, áudio) e do anúncio reconhecido, ' +
+      'que é escolha explícita dela.',
   },
   'so-expressa-apoio': {
     rotulo: 'Só apoio, sem pergunta e sem pedido',
