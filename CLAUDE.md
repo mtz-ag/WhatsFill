@@ -1423,6 +1423,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   (`^ola!? eu <algo>`), **valido apenas dentro de sessao que veio de anuncio**, sem "?" e com ate
   160 caracteres: e o que separa *"Ola! Eu apoio as Escolas Civico-Militares"* de *"Ola! Eu queria
   saber se voces tem..."*.
+- **O rascunho e a PROXIMA mensagem dele, nao a de um terceiro que chegou agora.** Relato dele
+  (05/09/2026): *"a IA pegou o contexto de umas 3 mensagens e ignorou a minha resposta e respondeu
+  todas; eu queria que ela ficasse ciente do contexto e respondesse a ultima mensagem do contato e
+  tambem identificar o que ja respondi; ela tem que ser uma sequencia das minhas mensagens, no
+  momento esta agindo como uma terceira pessoa na conversa"*. Tres coisas mudaram no bloco do
+  contato: **o que ja foi respondido tem marca propria** (`← ja respondida`) — ate entao a
+  distincao era a AUSENCIA de `← SEM RESPOSTA`, e **ausencia nao e sinal**: o modelo via uma pilha
+  de falas dela com uma nossa no meio e tratava tudo como pendente; **a resposta tem EIXO** (o que
+  ela quer agora, com as outras pendentes reconhecidas numa frase, nunca respondidas uma a uma); e
+  **a VOZ** e dita explicitamente — havendo fala nossa, "voce e a MESMA pessoa que escreveu as
+  falas NOS". **Isto NAO desfaz o conserto da Janete** (04/09): ignorar continua proibido, e a
+  rajada inteira continua marcada; o que mudou e a forma.
+- **O eixo nao pode ser "a ultima" ao pe da letra.** A primeira versao dizia isso e cai no caso
+  comum de a ultima ser *"obrigada"* — o eixo viraria o agradecimento e a pergunta ficaria sem
+  resposta. Peguei lendo o prompt gerado, nao por teste. Hoje o texto diz **"a mais recente que
+  pede ou pergunta alguma coisa"**, com a cortesia respondida em duas palavras.
+- **`revisarRascunho` avisa quando o rascunho se APRESENTA havendo conversa** (`jaFalamos`, que
+  `ia-cliente` calcula das proprias mensagens). So aviso, nunca conserto: consertar exigiria
+  reescrever a frase, e a disciplina daquela funcao e corrigir apenas o mecanico (a saudacao
+  errada, o traco eme).
 
 - **A QUERY STRING do link tem "?", e por isso todo video repassado virava PERGUNTA.** Relato dele
   (05/09/2026): *"varios casos da pessoa mandando link e reconhece como conversa e passa pra mim"*.

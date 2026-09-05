@@ -91,7 +91,15 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     // `validarRascunho` e não `revisarRascunho`: o rascunho passou a vir com esquema (texto +
     // confianca + precisaDeRevisao), e é a confiança que o envio automático precisa. Resposta
     // sem esquema ainda vira rascunho: o texto continua servindo para ele ler e mandar.
-    return { ...validarRascunho(r.decisao, agora), custo: r.custo, custoUsd: r.custoUsd, gastoMes: r.gastoMes };
+    // `jaFalamos` liga o aviso de apresentação repetida: a mesma conversa que o prompt usa para
+    // pedir a VOZ de continuação (05/09/2026, *"está agindo como uma terceira pessoa"*).
+    const jaFalamos = (mensagens || []).some((m) => m && typeof m === 'object' && m.de === 'nos');
+    return {
+      ...validarRascunho(r.decisao, agora, { jaFalamos }),
+      custo: r.custo,
+      custoUsd: r.custoUsd,
+      gastoMes: r.gastoMes,
+    };
   } catch (err) {
     return { texto: '', avisos: [err?.message || String(err)], custo: null };
   }

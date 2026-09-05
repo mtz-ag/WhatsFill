@@ -1,4 +1,4 @@
-## 2026-09-05 — ESTADO DE AGORA (v2.54.0) — leia isto primeiro numa sessão nova
+## 2026-09-05 — ESTADO DE AGORA (v2.55.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.54.0**, tudo commitado e no remoto. **Treze versões no dia 05/09**
-(2.42 → 2.54). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
+Branch `claude/whatsfill-ia`, **v2.55.0**, tudo commitado e no remoto. **Catorze versões no dia 05/09**
+(2.42 → 2.55). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -27,6 +27,7 @@ problemas e sem desfecho incoerente.
 | 2.52 | **Botão "Chamar a IA" na aba Respostas**, e os cartões passaram a dizer a tecla. O cartão antigo era uma cópia, três consertos atrás. |
 | 2.53 | **Mal-estar não é ignorado nem concluído** — e "Estou com infecção" tinha virado apoio. |
 | 2.54 | **Rajada de cliques em anúncio → mensagem do momento**, não o modelo de um deles. |
+| 2.55 | **O rascunho é a próxima mensagem DELE**, não a de um terceiro — e o que ele já respondeu passou a ter marca. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -94,6 +95,63 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-05 — O rascunho é a próxima mensagem dele, não a de um terceiro (v2.55.0)
+
+### O pedido
+
+*"A IA pegou o contexto de umas 3 mensagens e ignorou a minha resposta e respondeu todas. Eu queria
+que ela ficasse ciente do contexto e respondesse a última mensagem do contato, e também identificar
+o que já respondi. Ela tem que ser uma sequência das minhas mensagens; no momento está agindo como
+uma terceira pessoa na conversa."*
+
+Três coisas, e as três estavam no bloco do contato.
+
+### 1. Ausência não é sinal
+
+O que estava pendente vinha marcado `← SEM RESPOSTA`; o que já havia sido respondido não vinha
+marcado com **nada**. Para o modelo, a conversa era uma pilha de falas dela com uma nossa no meio — e
+tratar tudo como pendente é uma leitura razoável de uma lista sem marca.
+
+Agora as falas anteriores à nossa última levam `← já respondida`, e o pedido diz, com todas as
+letras, que aquilo **nós já respondemos**: é contexto, e nada mais.
+
+### 2. A resposta tem eixo
+
+O pedido anterior era *"responda a TODAS elas, juntas"* — o conserto da Janete (04/09), quando o
+rascunho respondeu só o clique e ignorou o áudio. Ele produzia exatamente o que ele viu agora: um
+texto que responde item por item, como quem chegou depois e está zerando a fila.
+
+Hoje o pedido tem **eixo**: o que ela quer agora, com as outras pendentes reconhecidas numa frase e
+**nunca respondidas uma a uma**. **Isto não desfaz a Janete** — ignorar continua proibido, e a rajada
+inteira continua marcada. O que mudou é a forma.
+
+**O eixo não podia ser "a última" ao pé da letra**, e peguei isso lendo o prompt gerado, não por
+teste: no caso comum de a última ser *"obrigada"*, o eixo viraria o agradecimento e a pergunta
+ficaria sem resposta. O texto diz **"a mais recente que pede ou pergunta alguma coisa"**, com a
+cortesia respondida em duas palavras.
+
+### 3. A voz
+
+Havendo fala nossa na conversa, o prompt agora diz: *"você é a MESMA pessoa que escreveu as falas
+marcadas NÓS. Esta mensagem é a PRÓXIMA da conversa, não uma resposta de fora. Não se apresente de
+novo, não recapitule o que já dissemos e não abra saudação como se fosse o primeiro contato — emende
+de onde nós paramos."* Sem fala nossa, o prompt diz o contrário: é a primeira coisa que o atendimento
+diz a essa pessoa.
+
+E `revisarRascunho` ganhou a rede: com `jaFalamos`, um rascunho que abre com *"Bem-vindo, você está
+falando com o gabinete do..."* vira **aviso** na caixa. Só aviso — consertar exigiria reescrever a
+frase, e a disciplina daquela função é corrigir apenas o mecânico (a saudação errada, o traço eme).
+
+**Arquivos:** `src/lib/ia.js` (as marcas, o eixo, a voz e o aviso), `src/lib/ia-cliente.js` (calcula
+`jaFalamos`), `tests/ia.test.mjs` (+11), `CLAUDE.md` (+3 armadilhas), `manifest.json`
+(2.54.0 -> 2.55.0). Quinze suítes e os dois verificadores.
+
+**Não testado com a IA de verdade** — é prompt, e o que se prova em Node é o texto que sai daqui.
+Se o rascunho continuar soando a terceira pessoa, o caminho é o mesmo do traço eme: o que for
+mecânico vira conserto em `revisarRascunho`.
 
 ---
 

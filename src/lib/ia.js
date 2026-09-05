@@ -785,13 +785,23 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
   lista.forEach((m, i) => { if (m.de === 'nos') ultimaNossa = i; });
   const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).length;
 
+  /**
+   * **O que JÁ foi respondido leva marca própria** — relato dele (05/09/2026): *"a IA pegou o
+   * contexto de umas 3 mensagens e ignorou a minha resposta e respondeu todas"*.
+   *
+   * Até aqui a distinção era a AUSÊNCIA de "← SEM RESPOSTA", e ausência não é sinal: o modelo via
+   * uma pilha de falas dela e uma nossa no meio, e tratava tudo como pendente. A marca explícita é
+   * o que faz a nossa resposta valer como resposta.
+   */
   const conversa = lista
     .map((m, i) => {
       const quem = m.de === 'nos' ? 'NÓS' : 'ELA';
       const pendente = m.de !== 'nos' && i > ultimaNossa;
+      const jaRespondida = m.de !== 'nos' && ultimaNossa >= 0 && i < ultimaNossa;
+      const marca = pendente ? '   ← SEM RESPOSTA' : jaRespondida ? '   ← já respondida' : '';
       // O horário de cada fala — é o que permite o rascunho reconhecer que a conversa esfriou.
       const q = quandoFoi(m.at, agora);
-      return `${quem}${q ? ` [${q}]` : ''}: ${umaLinha(m.texto, 4000)}${pendente ? '   ← SEM RESPOSTA' : ''}`;
+      return `${quem}${q ? ` [${q}]` : ''}: ${umaLinha(m.texto, 4000)}${marca}`;
     })
     .join('\n\n');
 
@@ -839,16 +849,43 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
     '',
     conversa || '(nada)',
     '',
+    /**
+     * **Você é a MESMA pessoa que já falou com ela** — pedido dele (05/09/2026): *"ela tem que ser
+     * uma sequência das minhas mensagens; no momento está agindo como uma terceira pessoa na
+     * conversa"*.
+     *
+     * O rascunho vinha soando como alguém que chegou agora, leu tudo e respondeu ponto a ponto:
+     * recapitulando, se apresentando de novo, tratando cada fala dela como um item de lista. O que
+     * ele manda é a próxima mensagem DELE numa conversa que já estava em curso.
+     */
+    ultimaNossa >= 0
+      ? 'VOZ: você é a MESMA pessoa que escreveu as falas marcadas "NÓS". Esta mensagem é a ' +
+        'PRÓXIMA da conversa, não uma resposta de fora. Não se apresente de novo, não recapitule o ' +
+        'que já dissemos e não abra saudação como se fosse o primeiro contato — emende de onde nós ' +
+        'paramos.'
+      : 'VOZ: é a primeira coisa que o atendimento diz a esta pessoa.',
+    '',
+    /**
+     * **O eixo é a ÚLTIMA sem resposta** — mesma conversa de 05/09: *"eu queria que ela ficasse
+     * ciente do contexto e respondesse a última mensagem do contato"*.
+     *
+     * Isto ajusta, e não desfaz, o conserto da Janete (04/09), onde o rascunho respondeu só o
+     * clique e ignorou o áudio: o que estava errado lá era **ignorar**, e continua proibido. O que
+     * mudou é a forma — a resposta tem um eixo, e o resto entra reconhecido de passagem, em vez de
+     * virar um relatório que responde item por item.
+     */
     pendentes === 0
       ? 'A última fala da conversa é NOSSA: ela não deixou nada sem resposta. Se for escrever, que ' +
         'seja um complemento curto ao que já dissemos — nunca uma repetição.'
       : pendentes > 1
-      ? `Ela escreveu ${pendentes} mensagens sem resposta — as marcadas "← SEM RESPOSTA". Responda a ` +
-        'TODAS elas, juntas, num texto só. Não escolha uma e ignore as outras: se ela desabafou e ' +
-        'depois clicou num anúncio, o desabafo é o que ela está esperando que alguém tenha lido.'
+      ? `Ela escreveu ${pendentes} mensagens sem resposta, marcadas "← SEM RESPOSTA". O EIXO da sua ` +
+        'resposta é o que ela quer AGORA: a mais recente que pede ou pergunta alguma coisa. Se a ' +
+        'última for só cortesia ("obrigada", "bom dia"), o eixo é a anterior, e a cortesia se ' +
+        'responde em duas palavras. As outras você leva em conta e reconhece de passagem, numa ' +
+        'frase — nunca responda uma a uma, nem por tópicos.'
       : 'Responda à mensagem marcada "← SEM RESPOSTA".',
-    'O que veio ANTES da nossa última fala já foi respondido: não repita aquilo nem volte a um',
-    'assunto que já encerramos.',
+    'As falas dela marcadas "← já respondida" NÓS JÁ RESPONDEMOS: elas são contexto, e nada mais.',
+    'Não volte a elas, não as responda de novo e não retome assunto que já encerramos.',
     '',
     cadastro,
     /**
@@ -892,10 +929,36 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
  *
  * @returns {{texto:string, avisos:string[]}}
  */
-export function revisarRascunho(bruto, agora) {
+/**
+ * **Abertura de PRIMEIRO CONTATO** — o que a mensagem seguinte de uma conversa em curso não pode
+ * ter. Relato dele (05/09/2026): *"ela tem que ser uma sequência das minhas mensagens; no momento
+ * está agindo como uma terceira pessoa na conversa"*.
+ *
+ * É só AVISO, nunca conserto: consertar exigiria reescrever a frase, e a disciplina desta função é
+ * corrigir só o mecânico (a saudação errada, o traço eme). O prompt é quem pede a voz certa; isto
+ * é a rede que mostra quando ele não foi obedecido.
+ */
+const SE_APRESENTANDO = [
+  /\bgabinete d[oa]\b/i,
+  /\b(bem[- ]vind[oa]s?|seja bem[- ]vind[oa])\b/i,
+  /\baqui (é|e) o\b/i,
+  /\b(voc[êe]|vc) est[áa] falando com\b/i,
+  /\bem que (podemos|posso) ajudar\b/i,
+];
+
+/**
+ * @param {string} bruto
+ * @param {Date|number} agora
+ * @param {{jaFalamos?: boolean}} [contexto] `jaFalamos` liga o aviso de apresentação repetida.
+ */
+export function revisarRascunho(bruto, agora, contexto = {}) {
   let texto = String(bruto || '').trim();
   const avisos = [];
   if (!texto) return { texto: '', avisos: ['a IA não devolveu texto'] };
+
+  if (contexto?.jaFalamos && SE_APRESENTANDO.some((re) => re.test(texto))) {
+    avisos.push('o rascunho se apresenta como primeiro contato, e vocês já conversaram — leia a abertura');
+  }
 
   /**
    * **A saudação errada é consertada, não avisada.**
@@ -984,7 +1047,7 @@ function umaLinha(texto, limite = 400) {
  *
  * @returns {{texto:string, confianca:number, motivo:string, avisos:string[], precisaDeRevisao:boolean}}
  */
-export function validarRascunho(bruto, agora) {
+export function validarRascunho(bruto, agora, contexto = {}) {
   const vazio = { texto: '', confianca: 0, motivo: '', avisos: ['a IA não devolveu rascunho'], precisaDeRevisao: true };
 
   let d = bruto;
@@ -995,13 +1058,13 @@ export function validarRascunho(bruto, agora) {
       // Formato ilegível: trata como texto puro, que é o que a versão anterior devolvia. Assim
       // um modelo que ignore o esquema ainda produz rascunho — só nunca automático, porque sem
       // `confianca` ele não passa do limiar.
-      const cru = revisarRascunho(bruto, agora);
+      const cru = revisarRascunho(bruto, agora, contexto);
       return { texto: cru.texto, confianca: 0, motivo: '', avisos: cru.avisos, precisaDeRevisao: true };
     }
   }
   if (!d || typeof d !== 'object') return vazio;
 
-  const revisao = revisarRascunho(d.texto, agora);
+  const revisao = revisarRascunho(d.texto, agora, contexto);
   const precisaDeRevisao = d.precisaDeRevisao !== false; // ausente = sim, por segurança
   const avisos = [...revisao.avisos];
   if (precisaDeRevisao) avisos.push('a própria IA pediu revisão humana');

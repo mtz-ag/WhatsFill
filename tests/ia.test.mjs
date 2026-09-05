@@ -484,8 +484,26 @@ grupo('montarContatoRascunho: os DOIS lados, e a pendencia marcada (03/09/2026)'
 
   check(t.includes('NÓS: obrigado por contar com a gente'), 'a NOSSA fala entra na conversa');
   check(/ELA: espero que ele nao pegue[^\n]*SEM RESPOSTA/.test(t), 'a que veio depois da nossa fala vem marcada');
-  check(!/apoiamos voces[^\n]*SEM RESPOSTA/.test(t), 'e a que veio ANTES nao vem marcada');
-  check(t.includes('já foi'), 'e o prompt diz que o anterior a nossa fala ja foi respondido');
+  check(!/apoiamos voces[^\n]*SEM RESPOSTA/.test(t), 'e a que veio ANTES nao vem marcada como pendente');
+
+  /**
+   * **O que JA foi respondido leva marca PROPRIA** -- relato dele (05/09/2026): *"a IA pegou o
+   * contexto de umas 3 mensagens e ignorou a minha resposta e respondeu todas"*.
+   *
+   * Ate aqui a distincao era a AUSENCIA de "SEM RESPOSTA", e ausencia nao e sinal: o modelo via uma
+   * pilha de falas dela com uma nossa no meio e tratava tudo como pendente.
+   */
+  check(/apoiamos voces[^\n]*já respondida/.test(t), 'a que veio ANTES vem marcada como ja respondida');
+  check(t.includes('JÁ RESPONDEMOS'), 'e o prompt diz, com todas as letras, que aquilo nao se responde de novo');
+
+  /**
+   * **A VOZ: a mesma pessoa que ja falou** -- *"ela tem que ser uma sequencia das minhas mensagens;
+   * no momento esta agindo como uma terceira pessoa na conversa"*.
+   */
+  check(t.includes('MESMA pessoa'), 'havendo fala nossa, o prompt manda escrever como quem ja falou');
+  const primeiraVez = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi, quero material' }] });
+  check(!primeiraVez.includes('MESMA pessoa'), 'sem fala nossa, nao ha de onde emendar');
+  check(primeiraVez.includes('primeira coisa que o atendimento diz'), 'e o prompt diz que e o primeiro contato');
 
   const nosPorUltimo = montarContatoRascunho({
     mensagens: [...conversa, { de: 'nos', texto: 'ja te respondo' }],
@@ -515,7 +533,18 @@ grupo('montarContatoRascunho: os DOIS lados, e a pendencia marcada (03/09/2026)'
   });
   check(/desabafo longo[^\n]*SEM RESPOSTA/.test(rajada), 'o desabafo vem marcado');
   check(/seguranca[^\n]*SEM RESPOSTA/.test(rajada), 'e o clique no anuncio tambem');
-  check(rajada.includes('Responda a TODAS elas'), 'e o prompt manda responder as duas juntas');
+
+  /**
+   * **O EIXO e a ULTIMA, e as outras entram reconhecidas** -- ajuste de 05/09/2026: *"eu queria que
+   * ela ficasse ciente do contexto e respondesse a ultima mensagem do contato"*.
+   *
+   * Isto NAO desfaz o conserto da Janete: o que estava errado la era IGNORAR o desabafo, e ele
+   * continua marcado e continua tendo que ser levado em conta. O que mudou e a forma -- a resposta
+   * tem um eixo, em vez de virar um relatorio que responde item por item.
+   */
+  check(rajada.includes('EIXO'), 'o prompt diz qual e o eixo da resposta');
+  check(rajada.includes('leva em conta'), 'e manda levar as outras em conta -- o desabafo nao pode ser ignorado');
+  check(rajada.includes('nunca responda uma a uma'), 'sem responder uma a uma, que era o que soava a terceira pessoa');
 
   /**
    * **A forma antiga continua valendo** -- string solta e do contato. Quebrar isto deixaria o
@@ -526,6 +555,33 @@ grupo('montarContatoRascunho: os DOIS lados, e a pendencia marcada (03/09/2026)'
   check(/ELA: tudo bem\?[^\n]*SEM RESPOSTA/.test(soStrings), 'e todas elas vem marcadas, sem fala nossa no meio');
 
   check(montarContatoRascunho({}).includes("(nada)"), "sem mensagem nao explode");
+}
+
+grupo('o rascunho nao pode se apresentar de novo (05/09/2026)');
+{
+  /**
+   * *"Ela tem que ser uma sequencia das minhas mensagens; no momento esta agindo como uma terceira
+   * pessoa na conversa."*
+   *
+   * O prompt e quem pede a voz certa. Isto e a rede que mostra quando ele nao foi obedecido -- e e
+   * so AVISO: consertar exigiria reescrever a frase, e a disciplina desta funcao e corrigir apenas
+   * o mecanico (a saudacao errada, o traco eme).
+   */
+  const meioDia = new Date('2026-09-05T12:00:00');
+  const abertura = 'Boa tarde! Bem-vindo. Voce esta falando com o gabinete do Capitao Martim. Em que podemos ajudar?';
+
+  const comHistorico = revisarRascunho(abertura, meioDia, { jaFalamos: true });
+  check(comHistorico.avisos.some((a) => /se apresenta/.test(a)), 'ja tendo conversado, a apresentacao repetida vira aviso');
+  check(comHistorico.texto.includes('gabinete'), 'mas o texto NAO e mexido -- quem decide e ele');
+
+  const primeiraVez = revisarRascunho(abertura, meioDia, { jaFalamos: false });
+  check(!primeiraVez.avisos.some((a) => /se apresenta/.test(a)), 'no primeiro contato a apresentacao e o certo, e nao avisa');
+
+  const semContexto = revisarRascunho(abertura, meioDia);
+  check(!semContexto.avisos.some((a) => /se apresenta/.test(a)), 'sem contexto nenhum, nao inventa aviso');
+
+  const emenda = revisarRascunho('Boa tarde! Entendo a sua preocupacao com a seguranca.', meioDia, { jaFalamos: true });
+  check(!emenda.avisos.some((a) => /se apresenta/.test(a)), 'texto que emenda na conversa passa sem aviso');
 }
 
 {
