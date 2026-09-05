@@ -196,14 +196,16 @@ function acaoEmPortugues(no) {
   if (no.regra) {
     const ramos = sugestaoLib.ramosDaRegra(no.regra, fluxo);
     if (!ramos.length) return 'sem desfecho';
-    return ramos.map((r) => `tecla ${sugestaoLib.mostrarTecla(r.tecla)} · ${r.rotulo}`).join('  ou  ');
+    // O que sai vem primeiro; a tecla vai atrás, entre parênteses -- ela é detalhe do dedo dele na
+    // caixa da rodada, não o assunto do quadro (relato de 04/09: *"a ordem está trocada"*).
+    return ramos.map((r) => `${r.rotulo} (tecla ${sugestaoLib.mostrarTecla(r.tecla)})`).join('  ou  ');
   }
   if (no.acao?.ia) return 'a IA assume: escolhe uma resposta pronta sua, ou escala para você';
   if (no.acao?.resposta) {
     const t = respostas.find((r) => r.id === no.acao.resposta);
     return `manda "${t?.name || no.acao.resposta}" e conclui`;
   }
-  if (no.acao?.tecla) return `tecla ${sugestaoLib.mostrarTecla(no.acao.tecla)} · ${sugestaoLib.TECLAS[no.acao.tecla]?.rotulo || '?'}`;
+  if (no.acao?.tecla) return `${sugestaoLib.TECLAS[no.acao.tecla]?.rotulo || '?'} (tecla ${sugestaoLib.mostrarTecla(no.acao.tecla)})`;
   return null;
 }
 
@@ -232,25 +234,34 @@ function caixaDoNo(no) {
   d.style.left = `${no.x || 0}px`;
   d.style.top = `${no.y || 0}px`;
 
+  /**
+   * **O QUE NÓS VAMOS MANDAR vem primeiro; a condição vem depois.**
+   *
+   * Relato dele (04/09/2026), com a print de uma caixa: *"no momento o fluxo se baseia no texto de
+   * quem vem, eu quero me basear no que vamos falar e nas nossas respostas rápidas — na print a
+   * ordem está trocada"*.
+   *
+   * Ele está certo, e o cartão dizia isso na cara: a linha grande era a descrição do CONTATO
+   * ("só expressou apoio"), e o que sai para o eleitor ficava na última linha, pequeno, atrás de
+   * uma seta. Um quadro que decide o que mandar tem que ser lido pelo que manda.
+   *
+   * O nome da caixa continua existindo, embaixo: ele é a etiqueta que os dois usam para apontar
+   * para o mesmo lugar ("a caixa 2.7.3"). O que mudou é o que salta aos olhos.
+   */
+  const desfecho = acaoEmPortugues(no);
   const topo = document.createElement('div');
   topo.className = 'caixa-topo';
   const nome = document.createElement('b');
-  nome.textContent = no.rotulo || '(sem nome)';
+  nome.textContent = desfecho || ((no.filhos || []).length ? 'só agrupa outras caixas' : 'não faz nada ainda');
   topo.append(nome);
   if (no.regra) topo.append(span('marca-regra', 'do código'));
   d.append(topo);
 
-  d.append(span('caixa-quando', condicaoEmPortugues(no)));
+  d.append(span('caixa-quando', `quando: ${condicaoEmPortugues(no)}`));
   const excCaixa = excecaoEmPortugues(no);
   if (excCaixa) d.append(span('caixa-exceto', excCaixa));
 
-  const desfecho = acaoEmPortugues(no);
-  if (desfecho) {
-    const linha = span('caixa-entao', `→ ${desfecho}`);
-    d.append(linha);
-  } else if (!(no.filhos || []).length) {
-    d.append(span('caixa-entao vazio', '→ não faz nada ainda'));
-  }
+  d.append(span('caixa-nome', no.rotulo || '(sem nome)'));
 
   const rodape = document.createElement('div');
   rodape.className = 'caixa-rodape';
@@ -763,7 +774,7 @@ function desenharEditor() {
     const daRegra = sugestaoLib.REGRAS.find((r) => r.id === no.regra);
     const padrao = typeof daRegra?.tecla === 'function' ? 'dois desfechos, conforme o contexto' : `tecla ${sugestaoLib.mostrarTecla(daRegra?.tecla)}`;
     linha(
-      'Desfecho',
+      'Vamos mandar…',
       seletor([['', `o do código (${padrao})`], ...TECLAS.map(([k, t]) => [k, `${sugestaoLib.mostrarTecla(k)} · ${t}`])], fluxo.teclas?.[no.regra] || '', (valor) => {
         const teclas = { ...(fluxo.teclas || {}) };
         if (valor) teclas[no.regra] = valor;
@@ -773,11 +784,42 @@ function desenharEditor() {
       })
     );
   } else {
+    /**
+     * **O DESFECHO vem primeiro no editor, como no cartão** — relato dele (04/09/2026): *"eu quero
+     * me basear no que vamos falar e nas nossas respostas rápidas; na print a ordem está trocada"*.
+     *
+     * Primeiro se escolhe o que NÓS vamos mandar; depois se escreve quando aquilo pode sair. Era o
+     * contrário, e o contrário ensina a montar o quadro pelo texto de quem chega.
+     */
+    const acao = no.acao || {};
+    linha(
+      'Vamos mandar…',
+      seletor(
+        [
+          ['', '— nada: este ramo só agrupa outros —'],
+          ['ia', 'a IA assume e responde'],
+          ...TECLAS.map(([k, t]) => [`t:${k}`, `tecla ${sugestaoLib.mostrarTecla(k)} · ${t}`]),
+          ...respostas.map((r) => [`r:${r.id}`, `mandar "${r.name}" e concluir`]),
+        ],
+        acao.ia ? 'ia' : acao.resposta ? `r:${acao.resposta}` : acao.tecla ? `t:${acao.tecla}` : '',
+        (valor) => {
+          const nova = !valor
+            ? null
+            : valor === 'ia'
+              ? { tecla: null, resposta: null, ia: true }
+              : valor.startsWith('r:')
+                ? { tecla: null, resposta: valor.slice(2) }
+                : { tecla: valor.slice(2), resposta: null };
+          gravar(arvoreLib.editar(fluxo.arvore, no.id, { acao: nova }));
+        }
+      )
+    );
+
     const cond = no.condicao || {};
     const trocarCond = (mudanca) => gravar(arvoreLib.editar(fluxo.arvore, no.id, { condicao: { ...cond, ...mudanca } }));
 
     linha(
-      'Quando o contato…',
+      'Só quando o contato…',
       seletor([['', '— qualquer um que chegar aqui —'], ...arvoreLib.SINAIS.map((s) => [s.id, s.rotulo])], cond.sinal || '', (v) => trocarCond({ sinal: v }))
     );
 
@@ -811,29 +853,6 @@ function desenharEditor() {
       )
     );
 
-    const acao = no.acao || {};
-    linha(
-      'Então…',
-      seletor(
-        [
-          ['', '— nada: este ramo só agrupa outros —'],
-          ['ia', 'a IA assume e responde'],
-          ...TECLAS.map(([k, t]) => [`t:${k}`, `tecla ${sugestaoLib.mostrarTecla(k)} · ${t}`]),
-          ...respostas.map((r) => [`r:${r.id}`, `mandar "${r.name}" e concluir`]),
-        ],
-        acao.ia ? 'ia' : acao.resposta ? `r:${acao.resposta}` : acao.tecla ? `t:${acao.tecla}` : '',
-        (valor) => {
-          const nova = !valor
-            ? null
-            : valor === 'ia'
-              ? { tecla: null, resposta: null, ia: true }
-              : valor.startsWith('r:')
-                ? { tecla: null, resposta: valor.slice(2) }
-                : { tecla: valor.slice(2), resposta: null };
-          gravar(arvoreLib.editar(fluxo.arvore, no.id, { acao: nova }));
-        }
-      )
-    );
   }
 
   /**

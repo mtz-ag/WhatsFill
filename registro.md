@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.38.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.39.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.38.0**, tudo commitado e no remoto. 32 commits no dia 04/09.
+Branch `claude/whatsfill-ia`, **v2.39.0**, tudo commitado e no remoto. 33 commits no dia 04/09.
 Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente. A lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o
 quadro tem dois ramos.
@@ -68,6 +68,42 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — O quadro passou a ser lido pelo que NÓS mandamos (v2.39.0)
+
+*"no momento o fluxo se baseia no texto de quem vem, eu quero me basear no que vamos falar e nas
+nossas respostas rápidas — na print a ordem está trocada"*.
+
+A print era um cartão do quadro:
+
+```
+só expressou apoio (não sobrou o que mandar)      ← linha grande
+É o desfecho de quem só apareceu para dizer…      ← a condição
+→ tecla i · Agradece o apoio, e conclui           ← o que sai, por último e pequeno
+```
+
+Um quadro que decide **o que mandar** estava sendo lido pela descrição de quem chega. Invertido:
+
+```
+Agradece o apoio, e conclui (tecla I)             ← linha grande
+quando: É o desfecho de quem só apareceu…         ← a condição
+só expressou apoio (não sobrou o que mandar)      ← o nome da caixa, no rodapé
+```
+
+**O nome da caixa continua existindo** — é a etiqueta com que nós dois apontamos para o mesmo lugar
+("a caixa 2.7.3"). O que mudou é o que salta aos olhos.
+
+**No editor a ordem inverteu junto**: primeiro *"Vamos mandar…"*, depois *"Só quando o contato…"*.
+Primeiro se escolhe o que vai sair; depois se escreve quando aquilo pode sair. O contrário ensinava
+a montar o quadro pelo texto de quem chega.
+
+**E a tecla saiu da frente**: onde se lia *"tecla i · Agradece o apoio"* agora se lê *"Agradece o
+apoio, e conclui (tecla I)"*. A tecla é detalhe do dedo dele na caixa da rodada, não o assunto do
+quadro.
+
+Nada mudou no comportamento e **o fluxo padrão não mudou** — é só a janela. Não precisa reimportar.
 
 ---
 

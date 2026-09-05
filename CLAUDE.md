@@ -1289,6 +1289,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   separador do template mudou. O campo novo da Config avisa na tela quando o texto perde a linha, e
   ha teste no `templates.test.mjs`.
 
+- **O quadro se le pelo que NOS mandamos, nao pelo texto de quem chega.** Relato dele (04/09/2026),
+  com a print de um cartao: *"no momento o fluxo se baseia no texto de quem vem, eu quero me basear
+  no que vamos falar e nas nossas respostas rapidas — na print a ordem esta trocada"*. Estava: a
+  linha grande do cartao era a descricao do CONTATO ("so expressou apoio") e o que sai para o
+  eleitor ficava na ultima linha, pequeno, atras de uma seta. Hoje o cartao abre com o desfecho, a
+  condicao vem como `quando:` e o nome da caixa desceu para o rodape — ele continua existindo
+  porque e a etiqueta com que nos dois apontamos para a mesma caixa. **No editor a ordem inverteu
+  junto**: primeiro "Vamos mandar…", depois "So quando o contato…". E a TECLA saiu da frente
+  (`Agradece o apoio, e conclui (tecla I)`): ela e detalhe do dedo dele na caixa da rodada, nao o
+  assunto do quadro.
+
 - **O quadro decide por CONDICOES E EXCECOES; a ordem virou desempate.** Pedido dele (04/09/2026):
   *"o fluxo trabalha com prioridade quando devia estar trabalhando com condicoes e excecoes; se
   todas condicoes sao aceitas, enviar mensagem de acordo"*. Ele estava apontando um numero, e o
