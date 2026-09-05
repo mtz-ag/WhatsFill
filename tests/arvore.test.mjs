@@ -637,15 +637,15 @@ grupo('o catalogo devolve as regras apagadas para o quadro (01/09/2026)');
   // Repetir e legitimo: o proprio padrao poe as mesmas regras dos dois lados da bifurcacao de
   // cidade. A marca informa quantas vezes, e nao esconde a regra da lista.
   const repetida = cat.find((r) => r.id === 'ultima-e-despedida');
-  check(repetida.quantasNoQuadro === 1, 'com uma lista so, cada regra aparece UMA vez');
+  check(repetida.quantasNoQuadro === 3, 'regra repetida conta as 3 vezes (chegada + os dois lados de cidade)');
 
   const descartada = cat.find((r) => r.id === 'nome-sem-sentido');
   check(descartada && descartada.quantasNoQuadro === 0, 'regra fora do quadro aparece na lista, zerada');
 
   // Apagar uma caixa devolve a regra a lista — e e isto que torna o apagar reversivel.
-  const semDespedida = arv.apagar(q, 'r:ultima-e-despedida');
+  const semDespedida = arv.apagar(q, 'r:ultima-e-despedida:sem-cidade');
   const depois = arv.catalogoDeRegras(semDespedida).find((r) => r.id === 'ultima-e-despedida');
-  check(depois.quantasNoQuadro === 0, 'apagar a caixa devolve a regra ao catalogo, zerada');
+  check(depois.quantasNoQuadro === 2, 'apagar uma caixa desconta a regra do catalogo');
 }
 
 grupo('por a regra de volta nunca repete id');
@@ -748,18 +748,7 @@ grupo('quem vem de anuncio reconhecido nao atravessa o quadro em silencio (02/09
    */
   const naoReconhecido = arv.decidir({ ...inge, jaRespondemosAntes: true, anuncioReconhecido: false }, q);
   check(!String(naoReconhecido?.id || '').includes('anuncio-conhecido'), 'anuncio NAO reconhecido nao entra neste ramo');
-  /**
-   * **Isto mudou em 04/09, com a lista unica.** Antes, no lado "sem etiqueta de cidade", a caixa
-   * `nunca-pediram-dados` so existia DENTRO do grupo do anuncio reconhecido -- entao quem voltava
-   * por um anuncio nao cadastrado nao recebia o formulario, por posicao. Hoje a caixa e uma so, e
-   * quem decide sao as guardas da propria regra: `!jaPediramDados`, `!pedidoHoje`,
-   * `!temEtiquetaDeCidade` e `!jaDeuNomeECidade`.
-   *
-   * **O que a decisao dele protegia continua protegido** -- o formulario nao sai DE NOVO, e e o
-   * que as duas assercoes acima travam. O que passou a acontecer e pedir nome e cidade a quem
-   * nunca recebeu o pedido, que e o proposito da regra.
-   */
-  check(naoReconhecido?.tecla === '4', 'quem nunca recebeu o formulario passa a receber pela caixa unica');
+  check(naoReconhecido?.tecla !== '4', 'e nao recebe o formulario por outra porta');
 }
 
 
@@ -1089,82 +1078,162 @@ grupo('remetente dentro de protecao -- o erro que aconteceu DUAS vezes');
 }
 
 
-grupo('a ORDEM da lista unica (04/09/2026)');
+grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
 {
   /**
-   * O quadro deixou de ter dois ramos, por pergunta dele: *"a questao e se realmente tem
-   * necessidade de duas arvores que seguem praticamente as mesmas regras"*. Nao tinha -- eram tres
-   * copias da mesma lista (chegada, sem cidade, com cidade), 36 caixas duplicadas em 69, e a
-   * duplicacao ja tinha produzido QUATRO defeitos de "regra que existe num ramo e nao no outro".
+   * Correcao dele: *"porque o modelo que voce criou tem todas essas opcoes em pessoa nova? ao mandar
+   * modelo e pedir dados ira concluir a conversa e ela volta pelo pessoa retornando"*.
    *
-   * Este teste substitui o que conferia a composicao da chegada: numa lista unica o que importa e
-   * a ORDEM, e cada assercao abaixo e uma decisao dele que a ordem carrega.
+   * Eu havia copiado as cinco caixas de pendencia para a chegada, por causa do pedido anterior dele
+   * (*"apos o modelo tera que ver se tem uma pendencia"*) -- sem perceber que o "depois" acontece
+   * na VOLTA, porque a tecla `a` conclui. Deixa-las nos dois lugares e a receita para as duas
+   * versoes divergirem: um conserto de um lado e o outro fica para tras.
    */
   const q = arv.arrumar(arv.fluxoPadrao());
-  check(q.length === 1, 'o padrao tem UMA arvore');
+  const chegada = q.find((n) => n.rotulo === 'anúncio — pessoa nova');
+  const volta = q.find((n) => n.rotulo === 'pessoa retornando');
 
-  const lista = q[0].filhos.map((n) => n.regra || n.rotulo);
-  const pos = (x) => lista.indexOf(x);
-  const antes = (a, b, texto) => check(pos(a) !== -1 && pos(b) !== -1 && pos(a) < pos(b), texto);
-
-  // As protecoes no topo: o desfecho delas e o silencio, e nao ha ordem em que seja outra coisa.
-  for (const p of ['sem-interesse', 'etiqueta-so-conclui', 'ultima-e-nossa', 'confirmou-presenca-evento',
-    'informou-endereco', 'etiqueta-dispensa-da-fila']) {
-    check(pos(p) < 6, `"${p}" esta entre as protecoes do topo`);
+  const naChegada = chegada.filhos.map((n) => n.regra || n.rotulo);
+  /**
+   * "pediu dinheiro" SAIU desta lista em 03/09: ele decidiu que ela volta para cima do modelo
+   * (anotacao da Regina). As outras continuam sendo resolvidas so na volta.
+   */
+  /**
+   * **Elas VOLTARAM para a chegada em 04/09, abaixo do recibo** -- relato dele: *"o fluxo de
+   * chegada parece ter sido deixado para tras; muitas regras se aplicam la tambem"*.
+   *
+   * A decisao de 02/09 continua de pe e e sobre ORDEM: o recibo do anuncio vem primeiro, e
+   * pendencia neutra custa um dia de atraso. O que estava errado era elas nao existirem AQUI --
+   * medido, quem chegava e so se despedia caia na caixa do TEMPO e recebia a mensagem do momento
+   * por cima de um "amem", ou o modelo generico quando havia um.
+   */
+  const PENDENCIAS = ['ultima-e-so-reacao', 'ultima-e-despedida'];
+  for (const p of PENDENCIAS) {
+    check(naChegada.includes(p), `"${p}" existe na chegada`);
+    check(naChegada.indexOf('anuncio-modelo-e-dados') < naChegada.indexOf(p),
+      `e o recibo do anuncio decide ANTES de "${p}"`);
+    check(naChegada.indexOf(p) < naChegada.indexOf('contexto-de-outro-dia'),
+      `mas "${p}" vence a caixa do tempo`);
   }
 
   /**
-   * **O que precisa de gente fica acima do recibo** -- as tres respostas que negam, o pedido sem
-   * objeto, a pergunta, o audio/texto longo e a denuncia respondida a nossa propria pergunta.
-   * Nesses casos mandar a nossa mensagem primeiro E o dano, nao o atraso.
+   * **`ultima-pede-resposta-pessoal` SAIU desta lista em 03/09**, com a print que ele chamou de
+   * *"critico"*: a contato chegou pelo anuncio, escreveu 314 caracteres pedindo uma cola com letras
+   * maiores para os idosos da cidade dela, e a rodada mandou o cartao da campanha e CONCLUIU.
+   *
+   * Ela disse o que queria (`pediu-algo-sem-dizer-o-que` nao casa) e nao e pergunta de razao
+   * (`pergunta-aberta` nao casa). O unico sinal de "isto e conversa" e o TAMANHO -- estava certo e
+   * so nao era consultado neste ramo. Como as duas caixas acima, aqui mandar a nossa mensagem
+   * primeiro E o dano, nao o atraso.
    */
-  for (const p of ['pediu dinheiro, cesta basica ou remedio', 'quer trabalhar para o mandato',
-    'pediu que a gente ligasse', 'pediu-algo-sem-dizer-o-que', 'pergunta-aberta',
-    'ultima-pede-resposta-pessoal', 'respondeu-nossa-pergunta']) {
-    antes(p, 'anuncio-modelo-e-dados', `"${p}" decide antes do recibo do anuncio`);
-    antes(p, 'conteudo-pedido', `e antes do modelo`);
+  check(naChegada.includes('ultima-pede-resposta-pessoal'), 'quem escreveu conversa fica ACIMA do modelo na chegada');
+  for (const depois of ['anuncio-modelo-e-dados', 'conteudo-pedido', 'nunca-pediram-dados']) {
+    check(naChegada.indexOf('ultima-pede-resposta-pessoal') < naChegada.indexOf(depois),
+      `e decide antes de "${depois}"`);
+  }
+  check(!naChegada.some((x) => String(x).startsWith('só mandou bom dia')), '"so mandou bom dia" nao esta mais na chegada');
+
+  // E continuam existindo na volta -- e por isso que remover da chegada nao perde nada.
+  const naVolta = new Set(arv.todosOsNos(volta.filhos).map(({ no }) => no.regra || no.rotulo));
+  for (const p of PENDENCIAS) check(naVolta.has(p), `"${p}" continua na volta`);
+  check(naVolta.has('pediu dinheiro, cesta basica ou remedio'), 'a ajuda financeira existe nos DOIS lados');
+
+  /**
+   * O que a chegada resolve e que a volta NAO resolve: as tres saidas do recibo. Sem as duas
+   * ultimas, medido, o contato atravessa o quadro sem desfecho.
+   */
+  check(naChegada.includes('anuncio-modelo-e-dados'), 'o recibo + pedido de dados fica na chegada');
+  check(naChegada.includes('conteudo-pedido'), 'o recibo sozinho (ela ja tem cidade) fica na chegada');
+  check(naChegada.includes('nunca-pediram-dados'), 'o pedido de dados sozinho (sem modelo) fica na chegada');
+  check(naChegada.includes('pediu dinheiro, cesta basica ou remedio'), 'e a ajuda financeira VOLTOU para a chegada (03/09)');
+  // 16 desde 04/09, com a caixa do endereco (material a enviar). O numero e proposital: ele
+  // acusa caixa que entrou na chegada sem ninguem decidir que ela pertence ali.
+  // 22 desde 04/09: entraram as duas respostas que negam (emprego, ligacao), a denuncia
+  // respondida, as duas pendencias neutras e "respondeu os dados" -- o bloco que so existia na
+  // volta. O numero e proposital: ele acusa caixa que entrou sem ninguem decidir que pertence ali.
+  check(chegada.filhos.length === 22, 'e a chegada tem 22 caixas, nao 23');
+
+  /**
+   * **"Nada legivel dela" entrou em 03/09** (print do Tilin: dois avisos de tipo nao suportado,
+   * numero privado, e a rodada pedindo nome e cidade). Fica ABAIXO do modelo e ACIMA do pedido de
+   * dados -- quem chega com modelo mapeado recebe o recibo, que responde melhor que uma pergunta.
+   */
+  check(naChegada.includes('nada-legivel-dela'), 'a caixa de "nada legivel" esta na chegada');
+  check(naChegada.indexOf('conteudo-pedido') < naChegada.indexOf('nada-legivel-dela'),
+    'o modelo decide antes dela');
+  check(naChegada.indexOf('nada-legivel-dela') < naChegada.indexOf('nunca-pediram-dados'),
+    'e ela decide antes do pedido de nome e cidade');
+
+  /**
+   * **O apoio entrou na chegada em 03/09, e entrou em ULTIMO lugar.**
+   *
+   * Anotacoes da Maria Bernardete (*"mandar 8"*) e do Plauto (*"agradecer e encerrar"*): as duas
+   * chegaram pelo anuncio e sairam sem desfecho nenhum. A posicao e a trava, nao um detalhe de
+   * arrumacao: a mensagem do anuncio E apoio escrito, e `soExpressaApoio` so a descarta quando o
+   * anuncio esta cadastrado. Em cima, esta caixa agradeceria a chegada de todo anuncio novo e
+   * engoliria o recibo. Se alguem a subir, este teste cai.
+   */
+  const ultima = chegada.filhos[chegada.filhos.length - 1];
+  check(ultima.regra === 'so-expressa-apoio', 'o apoio e a ULTIMA caixa da chegada');
+  const posApoio = naChegada.indexOf('so-expressa-apoio');
+  for (const antes of ['anuncio-modelo-e-dados', 'conteudo-pedido', 'nunca-pediram-dados']) {
+    check(naChegada.indexOf(antes) < posApoio, `"${antes}" decide antes do apoio`);
   }
 
   /**
-   * **As pendencias NEUTRAS ficam abaixo do recibo** -- decisao dele de 02/09: figura, cumprimento
-   * e despedida custam um dia de atraso, e o recibo e o que ela clicou para receber. E ficam ACIMA
-   * da caixa do tempo, senao quem se despediu ontem recebe a mensagem do momento.
+   * As duas caixas de "conclua e nao mande nada" (03/09) ficam nos DOIS lados: sao sobre NAO
+   * mandar, e isso nao depende de o contato ter cidade. Protecao que vive so num lado da
+   * bifurcacao e protecao pela metade -- ja aconteceu com a etiqueta que dispensa.
    */
-  for (const p of ['ultima-e-so-reacao', 'só cumprimentou, e nada mais', 'ultima-e-despedida']) {
-    antes('anuncio-modelo-e-dados', p, `o recibo decide antes de "${p}"`);
-    antes(p, 'contexto-de-outro-dia', `e "${p}" vence a caixa do tempo`);
+  for (const regra of ['etiqueta-so-conclui', 'ultima-e-nossa']) {
+    check(naChegada.includes(regra), `"${regra}" esta na chegada`);
+    check(naVolta.has(regra), `"${regra}" esta na volta`);
   }
 
-  // O anuncio reconhecido decide o QUE sai, e ganha do criterio de tempo: clicar num anuncio e
-  // pedir uma coisa especifica, e escolha explicita dela nao se substitui por deducao.
-  antes('veio de um anúncio que eu reconheço', 'contexto-de-outro-dia', 'o anuncio reconhecido vence o tempo');
-  antes('contexto-de-outro-dia', 'respondeu-os-dados', 'o tempo vence o agradecimento pelos dados');
-  antes('respondeu-os-dados', 'conteudo-pedido', 'e responder os dados vence o modelo generico');
-
-  // A caixa mais generica do quadro fecha a lista.
-  check(lista[lista.length - 1] === 'ja-respondemos-antes', '"ja entregamos algo antes" e a ultima');
-  antes('nada-legivel-dela', 'nunca-pediram-dados', '"nada legivel" decide antes do pedido de dados');
-
   /**
-   * 26 caixas no primeiro nivel (28 no total, com o grupo do anuncio e o filho dele). O numero e
-   * proposital: ele acusa caixa que entrou sem ninguem decidir que pertence ali.
+   * **O apoio nos DOIS lados da bifurcacao de cidade** (pedido dele, 03/09: *"arrume para que a
+   * regra siga pras duas"*). Ela vivia so em "sem etiqueta de cidade": quem voltava COM cidade e
+   * so escrevia apoio caia em `ja-respondemos-antes`, a caixa mais generica do ramo, e o criterio
+   * de tempo do mesmo dia valia so para metade da base.
+   *
+   * O teste decide de verdade, nos dois lados, em vez de so procurar a caixa: assim ele cai
+   * tambem se alguem mexer na ORDEM e puser algo generico por cima.
    */
-  check(q[0].filhos.length === 26, 'a lista tem 26 caixas no primeiro nivel');
-
-  /**
-   * **A chegada virou CONDICAO, e nao posicao.** `anuncio-modelo-e-dados` e `nada-legivel-dela` so
-   * valem para quem nunca recebeu nada, e isso passou a morar no `quando` das duas regras -- antes
-   * era o ramo `!jaRespondemosAntes` que garantia. E a mesma licao da excecao do tempo.
-   */
-  const b = {
-    veioDeAnuncio: true, anuncioReconhecido: true, temEtiquetaDeCidade: false, jaPediramDados: false,
-    pedidoHoje: false, podePedirDados: true, podeEnviar: true, podeMandarMomento: true,
-    textos: ['x'], ultimoTexto: 'x',
+  const apoiando = {
+    soExpressaApoio: { motivo: 'escreveu apoio' }, podeMandarMomento: true, momentoJaEnviado: false,
+    jaPediramDados: true, podePedirDados: true,
   };
-  check(arv.decidir({ ...b, jaRespondemosAntes: false }, q)?.tecla === 'a', 'quem chega recebe o recibo + o pedido de dados');
-  check(arv.decidir({ ...b, jaRespondemosAntes: true }, q)?.tecla !== 'a', 'e quem ja foi atendido nao recebe o recibo de novo');
-  check(arv.decidir({ ...b, jaRespondemosAntes: true, soRuidoDaPlataforma: true, podePerguntarInteresse: true }, q)?.tecla !== '7',
-    'nem a pergunta de interesse de "nada legivel"');
+  for (const [lado, temCidade] of [['sem cidade', false], ['com cidade', true]]) {
+    const hoje = arv.decidir({ ...apoiando, temEtiquetaDeCidade: temCidade }, q);
+    check(hoje?.id?.includes('so-expressa-apoio'), `${lado}: o apoio decide (${hoje?.id})`);
+    check(hoje?.tecla === 'i', `${lado}: apoio de hoje agradece`);
+    /**
+     * **O TEMPO saiu do apoio em 04/09** e virou caixa propria, uma acima: quatro anotacoes no
+     * mesmo lote mostraram que a razao nunca teve a ver com apoio. O desfecho e o mesmo.
+     */
+    const ontem = arv.decidir({ ...apoiando, temEtiquetaDeCidade: temCidade, deOutroDia: true }, q);
+    check(ontem?.tecla === '5', `${lado}: de outro dia manda a do momento`);
+    check(ontem?.id?.includes('contexto-de-outro-dia'), `${lado}: e quem decide e a caixa do tempo`);
+  }
+
+  // E continua ABAIXO das pendencias: quem escreveu uma pergunta e atendido por ela, nao pelo apoio.
+  const comPergunta = arv.decidir({ ...apoiando, temEtiquetaDeCidade: true, perguntaAberta: { termo: 'por que' } }, q);
+  check(comPergunta?.id?.includes('pergunta-aberta'), 'a pergunta vence o apoio, nos dois lados');
+
+  /**
+   * A prova de que nada piorou: as pendencias de quem CHEGA continuam sendo resolvidas -- pela
+   * volta, com o mesmo desfecho de antes.
+   */
+  const ad = 'Olá! Eu apoio as Escolas';
+  const b = {
+    veioDeAnuncio: true, anuncioReconhecido: true, jaRespondemosAntes: false,
+    jaPediramDados: false, podePedirDados: true, pedidoHoje: false, enviadoHoje: false,
+    modeloJaNaConversa: false, podeEnviar: false, temEtiquetaDeCidade: true, podeMandarMomento: true,
+  };
+  const bomDia = arv.decidir({ ...b, soCortesia: { motivo: 'cumprimentou' } }, q);
+  check(bomDia?.tecla === '5', 'quem chega e diz "bom dia" ainda recebe a mensagem do momento');
+  const remedio = arv.decidir({ ...b, pedeAjudaFinanceira: { motivo: 'remedio' }, textos: [ad, 'preciso de remedio'], ultimoTexto: 'preciso de remedio' }, q);
+  check(remedio?.resposta === 'pedido-ajuda', 'e quem pede remedio ainda recebe a negativa');
 }
 
 
@@ -1582,7 +1651,7 @@ grupo('o lado SEM cidade tambem fecha, e o modelo vem antes do obrigado (03/09/2
     `e alguma caixa fecha o caso (${fecha?.id})`);
 
   // E nao rouba a vez de quem ainda nao foi respondido: la a pendencia continua decidindo.
-  check(d({ ...semCidade, respondidoHoje: false, momentoJaEnviado: false })?.id === 'r:ultima-e-so-reacao',
+  check(d({ ...semCidade, respondidoHoje: false, momentoJaEnviado: false })?.id === 'r:ultima-e-so-reacao:sem-cidade',
     'ainda nao respondido hoje: a pendencia decide, como antes');
 
   /**
@@ -1599,7 +1668,7 @@ grupo('o lado SEM cidade tambem fecha, e o modelo vem antes do obrigado (03/09/2
     modeloJaNaConversa: false, anuncioReconhecido: true, veioDeAnuncio: true,
   };
   check(d(rosa)?.tecla === '1', 'anuncio novo com modelo mapeado: o modelo sai');
-  check(d(rosa)?.id === 'r:conteudo-pedido:anuncio', 'pela caixa que fica dentro do anuncio reconhecido');
+  check(d(rosa)?.id === 'r:conteudo-pedido:com-cidade-anuncio', 'pela caixa que fica dentro do anuncio reconhecido');
 
   /**
    * **E o modelo so passa na frente do apoio quando o ANUNCIO foi reconhecido** -- anotacao da
@@ -1623,7 +1692,7 @@ grupo('o lado SEM cidade tambem fecha, e o modelo vem antes do obrigado (03/09/2
    */
   const semApoio = { ...elaine, soExpressaApoio: null, deOutroDia: false };
   check(d(semApoio)?.tecla === '1', 'sem apoio e no mesmo dia, o modelo sai como antes');
-  check(d(semApoio)?.id === 'r:conteudo-pedido', 'pela copia de baixo');
+  check(d(semApoio)?.id === 'r:conteudo-pedido:com-cidade', 'pela copia de baixo');
   check(d({ ...semApoio, deOutroDia: true })?.tecla === '5', 'de outro dia, a do momento (o caso do Giovani)');
 
   // E as guardas da regra sao o que impede virar repeticao.

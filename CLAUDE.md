@@ -1286,22 +1286,21 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   separador do template mudou. O campo novo da Config avisa na tela quando o texto perde a linha, e
   ha teste no `templates.test.mjs`.
 
-- **O quadro tem UMA lista desde 04/09/2026 — os dois ramos e a bifurcacao de cidade sairam.**
-  Pergunta dele: *"a questao e se realmente tem necessidade de duas arvores que seguem praticamente
-  as mesmas regras"*. Nao tinha: eram TRES copias da mesma lista (chegada, sem cidade, com cidade),
-  **21 das 24 regras apareciam mais de uma vez** — 36 caixas duplicadas em 69, hoje 28. Medido em
-  8.000 contextos sorteados: 0,34% das decisoes mudam, e todas na direcao ja documentada (o que
-  precisa de gente passou a vencer o que ganhava por posicao). **O motivo nao era o numero de
-  caixas**: a duplicacao produziu QUATRO defeitos registrados aqui, todos da mesma familia — regra
-  que existe num ramo e nao no outro decide para metade da base e ninguem ve.
-- **"E a chegada" virou CONDICAO das duas regras que dependiam disso.** `anuncio-modelo-e-dados` e
-  `nada-legivel-dela` ganharam `!jaRespondemosAntes` no proprio `quando` — antes era o ramo que
-  garantia, e numa lista unica o recibo do anuncio sairia para quem ja foi atendido. Mesma licao da
-  excecao do tempo (04/09): **excecao que ele nomeia vai na condicao, nao na posicao.**
-  Consequencia boa: a guarda passou a valer tambem nos quadros que ele ja exportou.
-- **Da para separar de novo:** `jaRespondemosAntes` continua em `SINAIS`, entao um grupo com esse
-  sinal recria a chegada quando ele quiser. **Nao recrie por conta propria** — no quadro a posicao
-  e a prioridade, e a decisao e dele.
+- **O quadro tem DOIS ramos, e a divisao nao e enfeite — ela guarda decisoes que nao estao escritas
+  em regra nenhuma.** Em 04/09/2026 eu medi que os ramos eram quase copias (21 das 24 regras
+  duplicadas, 36 caixas em 69) e que junta-los mudava 0,34% das decisoes; recomendei a lista unica,
+  ele aprovou, testou **e cortou no mesmo dia**: *"nao estou gostando desse fluxo, parece ter criado
+  mais problemas, antes estava separado por categoria... agora ficou uma salada"*. Revertido.
+  **A medicao respondia a pergunta errada.** "Quanto muda o desfecho" nao mede o que o ramo faz por
+  ele: a divisao e como ele LE o quadro e decide a ordem, olhando. E o custo apareceu em producao no
+  mesmo dia — com a lista unica, `nunca-pediram-dados` passou a pedir nome e cidade para quem **nunca
+  veio de anuncio**, porque essa condicao vivia na POSICAO (a caixa so existia dentro do grupo do
+  anuncio reconhecido). Print dele: uma conversa que so tinha um convite de grupo aceito recebeu
+  *"ATENCAO! me diga seu Nome, Cidade"* e foi concluida.
+  **A licao que fica:** quando uma regra so vale num ramo, mova essa condicao para o `quando` da
+  regra — **uma de cada vez, quando o caso aparecer** —, nunca reestruture o quadro para economizar
+  caixas. E duplicacao continua sendo o defeito registrado quatro vezes aqui: as duas coisas sao
+  verdade ao mesmo tempo, e a que decide e ele.
 
 - **A CHEGADA e um ramo de PRIORIDADE, entao tudo o que falta nela vira "o modelo decidiu".** Relato
   dele (04/09/2026): *"o fluxo de chegada parece ter sido deixado pra tras, confira; muitas regras

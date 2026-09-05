@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.31.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.32.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,18 +7,17 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.31.0**, tudo commitado e no remoto. 25 commits no dia 04/09.
-Quinze suítes verdes, os dois verificadores limpos, **28 caixas** no fluxo padrão sem problemas e
-sem desfecho incoerente — o quadro virou UMA lista em 04/09.
+Branch `claude/whatsfill-ia`, **v2.32.0**, tudo commitado e no remoto. 26 commits no dia 04/09.
+Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
+sem desfecho incoerente. A lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o
+quadro tem dois ramos.
 
 ### Pendências que NÃO estão no código — precisam dele
 
-1. **Importar o fluxo — e desta vez é o quadro inteiro.** O quadro dele é o exportado em **2.14.0**
-   (59 caixas, três cópias da mesma lista); o padrão de agora é **uma lista de 28**. Entregue como
-   `fluxo-padrao-2.29.0.json`. Regenerar com `node tools/exportar-fluxo.mjs <saida.json>` — saída
-   FORA do repositório. **Sem importar, o quadro antigo continua decidindo**: as proteções novas
-   valem sozinhas, mas ordem mora no quadro. O cartão "O padrão mudou?" vai acusar muita coisa; o
-   caminho aqui é importar, não encaixar caixa por caixa.
+1. **Importar o fluxo — de novo, e é o mesmo formato de antes.** O quadro dele é o exportado em
+   **2.14.0** (59 caixas); o padrão de agora tem **69**, nos dois ramos de sempre. Entregue como
+   `fluxo-padrao-2.32.0.json`. **Se ele importou o 2.29.0 (a lista única), este arquivo desfaz
+   aquilo.** Regenerar com `node tools/exportar-fluxo.mjs <saida.json>` — saída FORA do repositório.
 2. **Aba Automatizado → "Etiquetas que a rodada aplica"** (cartão criado em 04/09, porque os campos
    estavam escondidos dentro de um cartão desativado desde 15/08). **As três estão vazias:**
    - **Etiqueta de SEM INTERESSE** — a rodada não marca e, na visita seguinte, precisa
@@ -68,6 +67,73 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — A lista única foi desfeita: os dois ramos voltaram (v2.32.0)
+
+*"pedindo dados sem contexto por pessoa que não veio por ads, não estou gostando desse fluxo, parece
+ter criado mais problemas — antes estava separado por categoria: não veio por ads, veio por ads mas
+sem cidade, e veio por ads e tem os dados. Agora ficou uma salada."*
+
+Revertido. O quadro voltou a ter os dois ramos (69 caixas), com tudo o que foi consertado hoje.
+
+### O defeito da print, medido nos dois quadros
+
+A conversa tinha um convite de grupo nosso e duas mensagens dela — *"Bom dia"* e *"Sim aceito"* —,
+não veio de anúncio, e recebeu o formulário seco às 21:45, com conclusão em seguida.
+
+| quadro | desfecho |
+|---|---|
+| dois ramos (2.28.0) | tecla 5 — mensagem do momento |
+| **lista única (2.29.0)** | **tecla 4 — pede nome e cidade** |
+
+A causa é minha, e é precisa: no lado "sem etiqueta de cidade" a caixa `nunca-pediram-dados` só
+existia **dentro** do grupo do anúncio reconhecido. Ao achatar, ela virou uma caixa solta que vale
+para todo mundo — e "o formulário é para quem veio de anúncio" era uma decisão que morava na
+**posição**, não em nenhuma condição. Eu tinha visto essa mudança e escrito no teste que era "o
+propósito da regra". Não era: era uma decisão dele que a estrutura guardava.
+
+### A segunda print, mesma causa
+
+Uma contato chegou pelo anúncio do Facebook pela primeira vez, escreveu só a mensagem gerada pelo
+anúncio (*"Olá! Eu estou do lado da segurança e apoio o Capitão Martim"*) e recebeu **o
+agradecimento pelo apoio** — *"mandou mensagem agradecendo apoio sendo que é a primeira vez que
+aparece o contato"*.
+
+| quadro | desfecho |
+|---|---|
+| dois ramos | tecla 4 — pede nome e cidade |
+| **lista única** | **tecla i — agradece o apoio** |
+
+Mesma família: na chegada, `so-expressa-apoio` tinha que ficar em **ÚLTIMO** lugar — está registrado
+desde 03/09, porque *a mensagem do anúncio É apoio escrito*, e `soExpressaApoio` só a descarta quando
+o anúncio está cadastrado na Config. Ao achatar, ela subiu para cima de `nunca-pediram-dados` e
+passou a agradecer a chegada de todo anúncio não cadastrado.
+
+**Com os "Modelos padrão" preenchidos, este contato receberia a tecla `a`** — o recibo do anúncio
+mais o pedido de dados —, que é o desfecho certo. Sem eles, a tecla 4 é o que sobra.
+
+### O que a medição não mediu
+
+Medi *"quanto muda o desfecho"* (0,34%) e concluí que os ramos eram redundantes. A pergunta certa era
+outra: **o que o ramo faz por ele**. A divisão é como ele lê o quadro e decide a ordem — olhando —, e
+é onde ficam decisões que nunca foram escritas como condição. A duplicação continua sendo real (21
+das 24 regras, e quatro defeitos registrados por causa dela); as duas coisas são verdade ao mesmo
+tempo, e quem decide o custo aceitável é ele.
+
+**O caminho daqui:** quando uma regra só valer num ramo, essa condição vai para o `quando` da regra —
+uma de cada vez, quando o caso aparecer. Foi o que já aconteceu com `anuncio-modelo-e-dados` e
+`nada-legivel-dela`, que ganharam `!jaRespondemosAntes` na condição e **ficaram assim**: a guarda
+agora vale mesmo nos quadros já exportados, o que é melhor do que depender da posição.
+
+### O que sobreviveu da versão de ontem à noite
+
+Tudo o que não era estrutura: o bloco que faltava na chegada (2.28.0), a mensagem do momento com o
+pedido de dados junto (2.30.0) e o pedido de endereço que marca e não conclui (2.31.0).
+
+Quinze suítes verdes, os dois verificadores limpos, 69 caixas sem problemas e sem desfecho
+incoerente.
 
 ---
 
