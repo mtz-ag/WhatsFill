@@ -1,4 +1,4 @@
-## 2026-09-05 — ESTADO DE AGORA (v2.45.0) — leia isto primeiro numa sessão nova
+## 2026-09-05 — ESTADO DE AGORA (v2.46.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,8 +7,8 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.45.0**, tudo commitado e no remoto. 36 commits no dia 04/09,
-e quatro no dia 05/09.
+Branch `claude/whatsfill-ia`, **v2.46.0**, tudo commitado e no remoto. 36 commits no dia 04/09,
+e cinco no dia 05/09.
 Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente — **60 caixas** desde que as situações do mesmo desfecho foram juntadas. A
 lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o quadro tem dois ramos.
@@ -75,6 +75,40 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-05 — A etiqueta de ADS não contava como "veio de anúncio" (v2.46.0)
+
+Print dele (o Orides): etiqueta **ADS** no CRM, mandou um vídeo do TikTok às 20:05, e às 11:43 do dia
+seguinte recebeu as **boas-vindas de "chegou sem anúncio"**, com o pedido de cadastro junto.
+*"a pessoa com etiqueta de ADS e parou no ramo de sem etiqueta"*.
+
+### A causa
+
+O sinal `veioDeAnuncio` lia só `session.utm` — que é **"veio de anúncio NESTA sessão"**. Quem clicou
+no anúncio semanas atrás e volta sozinho abre sessão sem `utm`, e a **etiqueta é justamente o que
+guarda que ele veio de lá**. Detector é palpite; a marca no CRM é decisão, e decisão não se
+redescobre — a mesma lição da etiqueta de sem interesse (susana, 03/09) e da de material.
+
+Hoje o sinal é `session.utm` **ou** a etiqueta de origem (`tags.etiquetasDeOrigem`, que já tem o piso
+`ADS` no código e não depende de campo preenchido).
+
+**As outras duas leituras de `utm` continuam como estão, de propósito:** `prepararEntrantes` marca a
+primeira mensagem da sessão como gerada pelo anúncio (uma etiqueta velha marcaria a fala de outra
+visita), e a etiqueta de origem só é aplicada a quem chega agora.
+
+Medido: com a etiqueta, o vídeo deixa de cair em `chegada-boas-vindas` e vai para a caixa da reação
+— **tecla 5**, mensagem do momento. Só uma caixa do quadro usa esse sinal, então o raio é esse.
+
+### E o motivo do bloqueio saiu do tooltip
+
+*"bloqueio de mensagens ao mandar a IA responder"* — respostas rápidas com o **Enviar apagado**. O
+botão só ficava cinza, com a explicação num `title` que exige parar o mouse em cima; a aba Respostas
+já mostrava o motivo embaixo do cartão, e era a lista da **caixa da rodada** que faltava. É a regra
+do projeto: *na dúvida, recusar com o motivo na tela* — e tooltip não é tela.
+
+Três asserções novas. Quinze suítes verdes, os dois verificadores limpos.
 
 ---
 

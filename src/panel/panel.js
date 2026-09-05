@@ -2477,6 +2477,34 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return null;
   }
 
+  /**
+   * **Ela veio de anúncio?** — e a resposta não está só na sessão.
+   *
+   * Relato dele (05/09/2026), com a print do Orides: *"a pessoa com etiqueta de ADS e parou no ramo
+   * de sem etiqueta"*. Ele mandou um vídeo do TikTok, tem a etiqueta **ADS** no CRM — e recebeu as
+   * boas-vindas de *"chegou sem anúncio"*, com o pedido de cadastro junto.
+   *
+   * A causa: o sinal lia só `session.utm`, que é **"veio de anúncio NESTA sessão"**. Quem clicou no
+   * anúncio semanas atrás e voltou sozinho abre sessão sem `utm` — e a etiqueta é justamente o que
+   * guarda que ele veio de lá. Detector é palpite; a marca no CRM é decisão, e decisão não se
+   * redescobre — mesma lição da etiqueta de sem interesse e da de material.
+   *
+   * **As outras duas leituras de `utm` continuam como estão, e de propósito:** `prepararEntrantes`
+   * marca a primeira mensagem da sessão como gerada pelo anúncio (uma etiqueta velha marcaria a
+   * fala de outra visita), e a etiqueta de origem só é aplicada por quem chega agora. O que muda
+   * aqui é só o SINAL do quadro.
+   */
+  async function veioDeAnuncioAlgumaVez() {
+    if (state.session?.utm?.source || state.session?.utm?.referralUrl) return true;
+    const doCrm = new Set(state.contact?.tagsId || []);
+    if (!doCrm.size) return false;
+    const [todas, deOrigem] = await Promise.all([
+      tagsLib.allTags().catch(() => []),
+      tagsLib.etiquetasDeOrigem().catch(() => new Set()),
+    ]);
+    return todas.some((t) => doCrm.has(t.id) && deOrigem.has(cities.normalize(t.label)));
+  }
+
   /** A etiqueta que dispensa da fila (hoje: manda a mensagem do momento uma vez e conclui). */
   function etiquetaQueDispensaDaFila() {
     return etiquetaDaLista(state.auto.cfg.etiquetasQuePulam);
@@ -5176,7 +5204,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         textos: (state.entrantes || []).map((e) => e?.texto || ''),
         ultimoTexto: (state.entrantes || []).slice(-1)[0]?.texto || '',
         // A origem e DADO, nao texto (utm.source/referralUrl) -- ver o CLAUDE.md.
-        veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
+        // A sessão OU a etiqueta de origem no CRM — ver `veioDeAnuncioAlgumaVez`.
+        veioDeAnuncio: await veioDeAnuncioAlgumaVez(),
         /**
          * **Reconheci de QUAL anúncio ela veio** — diferente de `veioDeAnuncio`, que é a origem.
          *
@@ -6594,8 +6623,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const pares = respostas.map((resposta) => {
       const btn = h('button', { class: 'wf-btn wf-mini', type: 'button' }, resposta.nome);
       btn.disabled = !!resposta.bloqueio;
-      if (resposta.bloqueio) btn.title = resposta.bloqueio;
       bloco.append(btn);
+      /**
+       * **O motivo do bloqueio vai NA TELA, e não no tooltip** — relato dele (05/09/2026):
+       * *"bloqueio de mensagens ao mandar a IA responder"*, sobre resposta rápida com o Enviar
+       * apagado. O botão só ficava cinza, com a explicação num `title` que exige parar o mouse em
+       * cima — ou seja, na prática, sem explicação.
+       *
+       * A aba Respostas já fazia certo (o `.wf-block` embaixo do cartão); era esta lista, dentro da
+       * caixa da rodada, que faltava. É a regra do projeto: *na dúvida, recusar com o motivo na
+       * tela* — e tooltip não é tela.
+       */
+      if (resposta.bloqueio) {
+        btn.title = resposta.bloqueio;
+        bloco.append(h('div', { class: 'wf-rapidas-bloqueio' }, resposta.bloqueio));
+      }
       return { resposta, btn };
     });
 

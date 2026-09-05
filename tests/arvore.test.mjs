@@ -2029,4 +2029,35 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   check(respondeuComRecibo?.tecla === 'i', 'tendo recebido, o agradecimento continua sendo o desfecho');
 }
 
+{
+  grupo('quem tem etiqueta de ADS veio de anuncio (05/09/2026)');
+
+  /**
+   * Print dele (o Orides): etiqueta **ADS** no CRM, mandou um video do TikTok, e recebeu as
+   * boas-vindas de *"chegou sem anuncio"* com o pedido de cadastro junto. *"a pessoa com etiqueta
+   * de ADS e parou no ramo de sem etiqueta"*.
+   *
+   * A causa estava no painel: o sinal lia so `session.utm`, que e "veio de anuncio NESTA sessao".
+   * Quem clicou semanas atras e voltou sozinho abre sessao sem `utm` -- e a etiqueta e justamente
+   * o que guarda que ele veio de la. Aqui o teste trava o que o QUADRO faz com o sinal.
+   */
+  const fluxo = arv.fluxoPadrao();
+  const video = [{ texto: '', tipo: 'VIDEO' }];
+  const base = {
+    soCortesia: cortesia.soCortesia(video, null),
+    ultimaEhSoReacao: cortesia.ultimaEhSoReacao(video),
+    podeMandarMomento: true,
+    podePedirDados: true,
+    textos: [''],
+    ultimoTexto: '',
+  };
+
+  const semAds = arv.decidir({ ...base, veioDeAnuncio: false }, fluxo, {});
+  check(semAds?.resposta === 'boas-vindas', 'sem anuncio, a chegada que so cumprimenta recebe boas-vindas');
+
+  const comAds = arv.decidir({ ...base, veioDeAnuncio: true }, fluxo, {});
+  check(comAds?.resposta !== 'boas-vindas', 'com anuncio, NAO recebe "chegou sem anuncio" -- era o defeito');
+  check(comAds?.tecla === '5', `e cai na caixa da reacao, que manda a mensagem do momento (tecla ${comAds?.tecla})`);
+}
+
 fim();

@@ -1289,6 +1289,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   separador do template mudou. O campo novo da Config avisa na tela quando o texto perde a linha, e
   ha teste no `templates.test.mjs`.
 
+- **`session.utm` é "veio de anúncio NESTA sessão"; a ETIQUETA é "veio de anúncio".** Print dele
+  (05/09/2026, o Orides): etiqueta **ADS** no CRM, mandou um vídeo do TikTok e recebeu as
+  boas-vindas de *"chegou sem anúncio"* com o pedido de cadastro junto — *"a pessoa com etiqueta de
+  ADS e parou no ramo de sem etiqueta"*. Quem clicou semanas atrás e volta sozinho abre sessão sem
+  `utm`. O SINAL do quadro passou a ser `utm` **ou** etiqueta de origem; as outras duas leituras de
+  `utm` ficaram como estavam de propósito — `prepararEntrantes` marca a primeira mensagem DESTA
+  sessão (etiqueta velha marcaria a fala de outra visita) e a etiqueta de origem só é aplicada a
+  quem chega agora. Mesma lição da etiqueta de sem interesse: **detector é palpite, a marca é
+  decisão, e decisão não se redescobre.**
+
 - **A QUERY STRING do link tem "?", e por isso todo video repassado virava PERGUNTA.** Relato dele
   (05/09/2026): *"varios casos da pessoa mandando link e reconhece como conversa e passa pra mim"*.
   O teste de pergunta e `texto.includes('?')`, e `?igsh=`, `?utm_source=` e `?v=` sao parte do
