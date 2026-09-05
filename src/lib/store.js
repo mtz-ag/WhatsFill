@@ -598,6 +598,27 @@ const DEFAULTS = {
      * repetir a mesma frase mandada em massa. Editável no popup do cartão da mensagem do momento.
      */
     mensagemMomentoVariantes: [],
+
+    /**
+     * O pedido de nome e cidade que vai JUNTO da mensagem do momento, para quem já recebeu o
+     * formulário e continua sem cadastro.
+     *
+     * Pedido dele (04/09/2026), com a print do contato que mandou uma imagem de bom dia às 08:18 e
+     * recebeu o formulário seco treze horas depois: *"soltou sem contexto nenhum"*. A ideia é dele:
+     * *"será a mensagem do momento + notei que estou sem seu nome aqui nos meus contatos e não sei
+     * de onde você é, poderia me informar"*.
+     *
+     * **A linha `Nome , Cidade` é obrigatória**: é o invariante que `templates.ehPedidoDeDados`
+     * reconhece, e sem ela a resposta dela deixa de ser lida como resposta ao formulário — a
+     * rodada pediria os dados mais uma vez. Tem teste.
+     *
+     * Editável na aba Automatizado, junto da mensagem do momento. Vazio, a tecla 5 volta a mandar
+     * só a mensagem do momento.
+     */
+    pedidoJuntoDoMomento:
+      'Ah, e aproveitando: notei que ainda não tenho o seu nome aqui nos meus contatos, e também ' +
+      'não sei de onde você é. Pode me passar:\n\nNome , Cidade\n\n(exemplo: Pedro Silva , ' +
+      'Porto Alegre)',
     /**
      * A partir de quantas horas de silêncio a rodada **pergunta** em vez de concluir sozinha,
      * quando a última mensagem da conversa é nossa.

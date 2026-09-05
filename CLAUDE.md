@@ -1257,6 +1257,24 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   Entraram junto `aluguel`, `farmacia` e `conta de luz/agua` nas NECESSIDADES, que continuam
   exigindo o verbo de pedir.
 
+- **O formulario seco, dias depois, chega sem contexto — e a tecla 5 passou a levar o pedido
+  junto.** Print dele (04/09/2026): o contato mandou uma imagem de bom dia as 08:18 e recebeu as
+  21:16 *"ATENCAO! Para eu poder salvar seu contato me diga seu: Nome, Cidade"*. Ele: *"soltou sem
+  contexto nenhum"*, e a ideia veio junto — *"sera a mensagem do momento + notei que estou sem seu
+  nome aqui nos meus contatos e nao sei de onde voce e"*. **Nao e tecla nova**: e a tecla 5 trocando
+  de TEXTO quando o contato ja recebeu o formulario e continua sem nome e sem cidade, o mesmo
+  desenho de `confirmaPresenca` na tecla 4 — e o rotulo da opcao muda junto, senao a rodada mandaria
+  duas coisas diferentes com o mesmo nome na tela.
+- **O id da mensagem combinada continua sendo o do MOMENTO, e e o que impede a repeticao.** A
+  anti-duplicata precisa enxergar as duas formas como a mesma entrega (quem recebeu a combinada
+  recebeu a do momento), e e isso que faz `momentoJaEnviado` apagar o sinal na passada seguinte. Id
+  proprio faria a caixa oferecer a mesma coisa todo dia.
+- **Texto que pede dados sem a linha `Nome , Cidade` quebra o reconhecimento da resposta.** O
+  invariante e o que `templates.ehPedidoDeDados` casa; sem ele a resposta dela deixa de ser lida
+  como resposta ao formulario e a rodada pede outra vez — foi o que custou tres anotacoes quando o
+  separador do template mudou. O campo novo da Config avisa na tela quando o texto perde a linha, e
+  ha teste no `templates.test.mjs`.
+
 - **O quadro tem UMA lista desde 04/09/2026 — os dois ramos e a bifurcacao de cidade sairam.**
   Pergunta dele: *"a questao e se realmente tem necessidade de duas arvores que seguem praticamente
   as mesmas regras"*. Nao tinha: eram TRES copias da mesma lista (chegada, sem cidade, com cidade),

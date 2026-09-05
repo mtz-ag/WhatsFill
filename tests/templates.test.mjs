@@ -234,7 +234,8 @@ grupo('ehPedidoDeDados — reconhece pelo INVARIANTE, não pela redação (01/09
   check(!ehPedidoDeDados(""), "vazio");
   check(!ehPedidoDeDados(null), "nulo não explode");
 }
-
+
+
 grupo('pedir-dados: "antes de qualquer coisa" (01/09/2026)');
 {
   const padrao = store.DEFAULT_TEMPLATES.find((t) => t.id === 'pedir-dados');
@@ -281,7 +282,8 @@ grupo('migrarPedirDadosAntesDeTudo: so mexe em quem tem o texto de fabrica');
   check((await templates.migrarPedirDadosAntesDeTudo()) === false, 'segunda chamada nao faz nada');
   check(mem.templates[0].text === 'EU MEXI DEPOIS', 'e nao desfaz a edicao posterior dele');
 }
-
+
+
 grupo('pedir-dados: a pergunta dos grupos saiu (01/09/2026)');
 {
   const padrao = store.DEFAULT_TEMPLATES.find((t) => t.id === 'pedir-dados');
@@ -363,6 +365,34 @@ grupo('"Confirmou presenca (so agradecer)": a metade que faltava (02/09/2026)');
 
   // Sem variavel de template: texto que trava por variavel faltando some a tecla da tela.
   check(!/\{\{/.test(so.text), 'nao depende de variavel, entao a tecla nunca some por isso');
+}
+
+{
+  grupo('o pedido que vai junto da mensagem do momento (04/09/2026)');
+
+  /**
+   * Print dele: o contato mandou uma imagem de bom dia as 08:18 e recebeu, treze horas depois, o
+   * formulario seco -- *"soltou sem contexto nenhum"*. A ideia e dele: *"sera a mensagem do
+   * momento + notei que estou sem seu nome aqui nos meus contatos e nao sei de onde voce e"*.
+   *
+   * **A linha `Nome , Cidade` e o que este teste protege.** Sem ela o texto continua saindo e o
+   * defeito e calado: a resposta dela deixa de ser lida como resposta ao formulario, e a rodada
+   * pede os dados mais uma vez. Foi o que custou tres anotacoes quando o separador do template
+   * mudou de barra para virgula.
+   */
+  const auto = await store.get('auto');
+  const junto = auto.pedidoJuntoDoMomento;
+
+  check(!!junto, 'o texto nasce preenchido');
+  check(templates.ehPedidoDeDados(junto), 'e carrega o invariante "Nome , Cidade"');
+  check(!/\{\{/.test(junto), 'nao depende de variavel, entao a tecla 5 nao some por isso');
+
+  // Ele vai COLADO na mensagem do momento -- e o conjunto tambem tem que ser reconhecido.
+  const comMomento = `Bom dia! Que hoje seja um dia leve.\n\n${junto}`;
+  check(templates.ehPedidoDeDados(comMomento), 'e o texto inteiro, com a mensagem do momento na frente, tambem');
+
+  // Nao promete nada: e um pedido de cadastro, nao uma oferta.
+  check(!/(cesta|rem[ée]dio|dinheiro|emprego|vaga|benef[ií]cio)/i.test(junto), 'nao promete beneficio nenhum');
 }
 
 fim();

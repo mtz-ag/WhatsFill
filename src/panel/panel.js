@@ -2642,6 +2642,37 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       card.append(h('div', { class: 'wf-hint' }, 'Variáveis: ' + vars.KNOWN_VARS.map(([v]) => v).join(' ')));
     }
 
+    /**
+     * **O pedido que vai JUNTO, para quem já ignorou o formulário uma vez.**
+     *
+     * Pedido dele (04/09/2026): *"soltou sem contexto nenhum... será a mensagem do momento +
+     * notei que estou sem seu nome aqui nos meus contatos e não sei de onde você é"*.
+     *
+     * Fica neste cartão, e não num próprio, porque ele só existe grudado na mensagem do momento —
+     * nunca sai sozinho.
+     */
+    card.append(
+      h('div', { class: 'wf-preview' },
+        'Quando o contato JÁ recebeu o formulário e continua sem nome e sem cidade, a tecla 5 ' +
+          'manda a mensagem do momento com este pedido no fim — o formulário sozinho, dias ' +
+          'depois, chega sem contexto. Deixe vazio para a tecla 5 mandar só a mensagem do momento.')
+    );
+    const pedido = h('textarea', { rows: '4', placeholder: 'Deixe vazio para não pedir junto' });
+    pedido.value = cfg.pedidoJuntoDoMomento || '';
+    pedido.addEventListener('change', () => salvarAuto({ pedidoJuntoDoMomento: pedido.value }).then(renderAll));
+    card.append(pedido);
+    if (cfg.pedidoJuntoDoMomento && !templatesLib.ehPedidoDeDados(cfg.pedidoJuntoDoMomento)) {
+      /**
+       * **O aviso existe porque o defeito seria calado.** Sem a linha `Nome , Cidade` o texto
+       * continua saindo — e a resposta dela deixa de ser reconhecida como resposta ao formulário,
+       * então a rodada pede os dados outra vez. Já custou três anotações quando o separador do
+       * template mudou.
+       */
+      card.append(h('div', { class: 'wf-block' },
+        'Falta a linha "Nome , Cidade" neste texto. Sem ela a extensão não reconhece a resposta ' +
+          'do contato como resposta ao pedido, e vai pedir de novo.'));
+    }
+
     // Mesmo tratamento das respostas prontas: reveza entre variações a cada envio de verdade,
     // para não repetir a mesma frase mandada em massa para quem recebe a mensagem do momento.
     const variantesBtn = h('button', { class: 'wf-btn wf-mini', type: 'button' },
@@ -4420,7 +4451,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             variantes: state.auto.cfg.mensagemMomentoVariantes,
           }
         : null;
-      const momentoTrava = momento ? vars.render(momento.text, contexto).missing.length > 0 : true;
+      // `let`: o texto pode ganhar o pedido de dados mais abaixo, e a trava por variável tem
+      // que valer para o texto que REALMENTE vai sair.
+      let momentoTrava = momento ? vars.render(momento.text, contexto).missing.length > 0 : true;
 
       // A pergunta de interesse (tecla 7): só faz sentido para quem NÃO tem etiqueta de
       // conteúdo. Quem já pediu conteúdo tem modelo para receber, não pergunta.
@@ -4592,6 +4625,41 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * não depende de redação nenhuma.
        */
       const jaPediramDados = nossosPedidos.length > 0;
+
+      /**
+       * **Quem ignorou o pedido de dados não recebe a mensagem do momento seca** — pedido dele
+       * (04/09/2026), com a print do contato que mandou uma imagem de bom dia às 08:18 e recebeu,
+       * treze horas depois, *"🚨 ATENÇÃO! Para eu poder salvar seu contato me diga seu: Nome,
+       * Cidade"*. Ele: *"soltou sem contexto nenhum"*.
+       *
+       * A ideia é dele: **a mensagem do momento + o pedido de novo, agora explicando por quê**.
+       * O formulário sozinho, treze horas depois de uma figura, não tem contexto nenhum; junto do
+       * conteúdo do dia ele vira o que é — alguém falando com ela.
+       *
+       * **Não é tecla nova.** É a tecla 5 trocando de TEXTO quando o contato já recebeu o pedido e
+       * continua sem nome e sem cidade — o mesmo desenho de `confirmaPresenca` na tecla 4. O
+       * rótulo da opção diz o que vai sair, senão a rodada mandaria duas coisas diferentes com o
+       * mesmo nome na tela.
+       *
+       * **O id continua sendo o do momento**, de propósito: a anti-duplicata tem que enxergar as
+       * duas formas como a mesma entrega — quem recebeu a combinada recebeu a do momento — e é
+       * isso que faz `momentoJaEnviado` apagar o sinal no dia seguinte, em vez de a caixa repetir.
+       *
+       * **O bloco `Nome , Cidade` é obrigatório no texto**, e é o que `templates.ehPedidoDeDados`
+       * casa: sem ele, a resposta dela deixaria de ser lida como resposta ao formulário e a rodada
+       * pediria os dados outra vez. Tem teste.
+       */
+      const faltaCadastro =
+        jaPediramDados &&
+        !temEtiquetaDeCidade &&
+        !(state.nomeInformado && state.cidadeInformada?.value && state.cidadeInformada.confidence !== 'nao-reconhecida');
+      const pedidoJunto = String(state.auto.cfg.pedidoJuntoDoMomento || '').trim();
+      if (momento && faltaCadastro && pedidoJunto) {
+        momento.name = 'Mensagem do momento + pedir nome e cidade';
+        momento.text = `${momento.text}\n\n${pedidoJunto}`;
+        momento.variantes = (momento.variantes || []).map((v) => `${String(v || '').trim()}\n\n${pedidoJunto}`);
+        momentoTrava = vars.render(momento.text, contexto).missing.length > 0;
+      }
 
       // Nome errado — o apelido automático do anúncio ("[NOVO] (51) 9…") ou qualquer cadastro
       // que o `looksLikePlaceholder` recuse — deixa o {{primeiro_nome}} do agradecimento sem
@@ -5368,7 +5436,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         });
       }
       if (!momentoTrava) {
-        opcoes.push({ tecla: '5', valor: 'momento', rotulo: 'Mensagem do momento e concluir' });
+        opcoes.push({ tecla: '5', valor: 'momento', rotulo: `${momento.name} e concluir` });
       }
       opcoes.push({ tecla: '6', valor: 'responder', rotulo: 'Responder à mão (retomo quando você concluir)' });
       if (podePerguntarInteresse) {

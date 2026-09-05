@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.29.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.30.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.29.0**, tudo commitado e no remoto. 23 commits no dia 04/09.
+Branch `claude/whatsfill-ia`, **v2.30.0**, tudo commitado e no remoto. 24 commits no dia 04/09.
 Quinze suítes verdes, os dois verificadores limpos, **28 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente — o quadro virou UMA lista em 04/09.
 
@@ -68,6 +68,58 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — O formulário seco virou mensagem do momento + pedido com contexto (v2.30.0)
+
+Print dele: o contato mandou uma imagem de bom dia às 08:18, ele assumiu o atendimento às 21:16 e a
+rodada soltou *"🚨 ATENÇÃO! Para eu poder salvar seu contato me diga seu: Nome, Cidade"*. Relato:
+*"soltou sem contexto nenhum"*.
+
+E a ideia veio junto: *"vamos adicionar a seguinte mensagem pra esse tipo de contato que ignorou o
+pedido de dados na primeira vez — será a mensagem do momento + notei que estou sem seu nome aqui nos
+meus contatos e não sei de onde você é, poderia me informar"*.
+
+### Como ficou
+
+**Não é tecla nova.** É a **tecla 5** trocando de texto quando o contato **já recebeu o formulário e
+continua sem nome e sem cidade** — o mesmo desenho de `confirmaPresenca` na tecla 4. O rótulo da
+opção muda junto ("Mensagem do momento + pedir nome e cidade e concluir"), senão a rodada mandaria
+duas coisas diferentes com o mesmo nome na tela.
+
+O texto que vai colado, editável na aba Automatizado logo abaixo da mensagem do momento:
+
+> Ah, e aproveitando: notei que ainda não tenho o seu nome aqui nos meus contatos, e também não sei
+> de onde você é. Pode me passar:
+>
+> Nome , Cidade
+>
+> (exemplo: Pedro Silva , Porto Alegre)
+
+Vazio, a tecla 5 volta a mandar só a mensagem do momento.
+
+### Duas coisas que o fazem não repetir nem quebrar
+
+**O id continua sendo o do momento.** A anti-duplicata precisa enxergar as duas formas como a mesma
+entrega — quem recebeu a combinada recebeu a do momento —, e é isso que faz `momentoJaEnviado` apagar
+o sinal na passada seguinte. Com id próprio, a caixa ofereceria a mesma coisa todo dia.
+
+**A linha `Nome , Cidade` é obrigatória**, e é o que o teste protege: é o invariante que
+`templates.ehPedidoDeDados` casa. Sem ela o texto sai igual e o defeito é calado — a resposta dela
+deixa de ser lida como resposta ao formulário e a rodada pede de novo. Foi exatamente isso que custou
+três anotações quando o separador do template mudou de barra para vírgula. O campo da Config avisa na
+tela se o texto perder a linha.
+
+### O que alcança este contato
+
+Qualquer caixa que recomende a tecla 5 passa a mandar a versão com contexto para quem está nesse
+estado — a figura/emoji, o cumprimento, a caixa do tempo e "já entregamos algo antes". No caso da
+print, quem decide é *"mandou figura, emoji, sticker ou link"*. Quem escreve algo que nenhuma caixa
+reconhece continua indo para ele ou para a IA, e a tecla 5 já está com o texto certo se ele apertar.
+
+Quinze suítes verdes, os dois verificadores limpos. **O fluxo padrão não mudou** — nada para
+reimportar.
 
 ---
 
