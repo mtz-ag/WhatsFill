@@ -309,6 +309,16 @@ export const canalForaDoAr = IS_IN_PAGE
     })
   : () => call('canalForaDoAr');
 
+/**
+ * O contato tem atendimento ANTERIOR? (o botão "Ver conversa anterior" no topo da conversa)
+ *
+ * Fora da `pageStateLocal` pelo mesmo motivo do canal caído: aquilo é lido a cada 400 ms e isto
+ * varre os nós de texto da página. Uma vez por contato é barato.
+ */
+export const temConversaAnterior = IS_IN_PAGE
+  ? local(() => dom.temConversaAnterior())
+  : () => call('temConversaAnterior');
+
 export function pageStateLocal() {
   return {
     sessionId: dom.getSessionId(),

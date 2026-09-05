@@ -117,6 +117,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     classify: [],
     draft: {}, // fieldId -> { value, from, confidence, source, suggestions }
     tagSuggestions: [], // [{ origem, nome, tag, motivo, marcada }]
+    /** A plataforma mostra "Ver conversa anterior"? É a prova de que ela já esteve aqui. */
+    temConversaAnterior: false,
     /** A ordem/teclas/desligadas que ele editou na aba Fluxo. Vazio = ordem do codigo. */
     fluxo: { ordem: [], desligadas: [], teclas: {}, vitorias: {} },
     templates: [],
@@ -508,6 +510,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.anuncio = null;
     // Os sinais do contato anterior decidiriam o rascunho deste. Mesma armadilha do anuncio.
     state.sinais = null;
+    // "Já esteve aqui antes" é do CONTATO: sobreviver à troca faria a primeira vinda de um herdar
+    // o histórico do outro. Mesma armadilha do anúncio.
+    state.temConversaAnterior = false;
     state.cidadeRecusada = new Set();
     state.ultimaMensagem = null;
     state.hsmTemplates = [];
@@ -575,6 +580,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.nossas = conversa.nossas || [];
       state.ultimaMensagem = conversa.ultima;
+
+      /**
+       * **"Ver conversa anterior" — o botão que diz se ela já esteve aqui.**
+       *
+       * Ele apontou o sinal (05/09/2026): *"tem uma trava que identifica pessoa nova, que é
+       * conversa anterior; normalmente eu tenho que clicar para abrir a conversa do dia anterior"*.
+       * A plataforma só mostra esse botão quando existe atendimento anterior.
+       *
+       * É o que a API não dá: `getConversation` é por SESSÃO, então uma conversa sem nada nosso
+       * pode ser a primeira vinda ou a décima. Falhar aqui devolve `false`, e o painel decide como
+       * decidia — o lado barato do erro.
+       */
+      try {
+        state.temConversaAnterior = !!(await page.temConversaAnterior());
+      } catch {
+        state.temConversaAnterior = false;
+      }
+
       /**
        * A nossa ÚLTIMA mensagem foi o pedido de dados?
        *
@@ -4349,26 +4372,35 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * sessão"; a etiqueta é "veio de anúncio"**. Aqui o par é o mesmo — a conversa é uma janela,
        * a marca no CRM é a memória.
        *
-       * Duas marcas provam o retorno, e nenhuma delas depende da sessão:
+       * **A prova de primeira mão é o botão "Ver conversa anterior"** (`state.temConversaAnterior`),
+       * que a plataforma só mostra quando existe atendimento anterior — foi ele quem apontou o
+       * sinal, e é o único aqui que não é dedução.
        *
-       *  - **a Data de conclusão do contato**, que só a extensão grava, ao concluir. Falso positivo
-       *    é impossível; ela só não alcança quem foi concluído fora do painel;
-       *  - **a etiqueta de cidade que já estava lá.** É a decisão dele de 02/09, escrita neste
-       *    arquivo: *"se a pessoa já respondeu a cidade a chance de ela ter recebido um modelo é
-       *    muito grande"*. **O custo, que é real e foi dito a ele:** contato de base importada, com
-       *    cidade preenchida e conversando pela primeira vez, passa a receber a mensagem do momento
-       *    em vez das boas-vindas.
+       * A segunda marca é **a etiqueta de cidade que já estava lá** — decisão dele de 02/09,
+       * escrita neste arquivo: *"se a pessoa já respondeu a cidade a chance de ela ter recebido um
+       * modelo é muito grande"*. Ela cobre o caso em que a leitura da tela falha. **O custo, dito a
+       * ele:** contato de base importada, com cidade preenchida e conversando pela primeira vez,
+       * passa a receber a mensagem do momento em vez das boas-vindas.
+       *
+       * **A Data de conclusão do contato ESTAVA aqui e saiu no mesmo dia** — print da Neiva
+       * (05/09/2026): ela chegou pelo anúncio do Facebook, escreveu só o texto do próprio anúncio,
+       * **não tem etiqueta de cidade**, e recebeu o modelo + agradecimento em vez do modelo + o
+       * pedido de nome e cidade. *"Começou a mandar agradecimento em vez de pedir os dados; segundo
+       * caso já, e claramente é pessoa nova que chegou por anúncio."* Medido: com o sinal
+       * verdadeiro o caso vai para `conteudo-pedido` (tecla 1); com ele falso, para
+       * `anuncio-modelo-e-dados` (tecla `a`), que é o desfecho certo.
+       *
+       * Eu havia escrito que ali **"falso positivo é impossível"**, e é o contrário: a data prova
+       * que já **CONCLUÍMOS** um atendimento, não que já **ENTREGAMOS** alguma coisa. Concluir em
+       * silêncio grava a data igual — e esta rodada conclui em silêncio o tempo todo (tecla 3,
+       * `ultima-e-nossa`, `etiqueta-so-conclui`). Num dia de 268 conclusões, a data está em quase
+       * todo mundo que já passou por uma rodada.
+       *
+       * É a lição da Ivone (31/08) uma linha acima, na forma que eu não reconheci: **pergunta não é
+       * entrega — e conclusão também não é.**
        */
-      const jaConcluimosAntes = (() => {
-        const campo = state.schema.find((f) => f.name === fieldsLib.COMPLETION_FIELD);
-        if (!campo) return false;
-        const entry = state.draft[campo.id];
-        // `from === 'crm'` é o que separa o que estava lá do palpite desta passada.
-        return !!(entry && entry.from === 'crm' && entry.value);
-      })();
-
       const jaRespondemosAntes = (() => {
-        if (cidadeJaNoCrm || jaConcluimosAntes) return true;
+        if (state.temConversaAnterior || cidadeJaNoCrm) return true;
         if (!state.nossas.length) return false;
 
         const perguntas = ['pedir-dados', 'interesse-conteudo', 'perguntar-como-ajudar']

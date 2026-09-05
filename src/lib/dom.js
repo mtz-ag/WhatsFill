@@ -907,6 +907,42 @@ function* textosDaPagina(padrao, maxLen = 300) {
   }
 }
 
+/**
+ * **Esta pessoa já esteve aqui antes?** — a resposta está na TELA, e foi ele quem a apontou.
+ *
+ * Quando o contato tem atendimento anterior, a plataforma põe um botão **"Ver conversa
+ * anterior"** no topo da conversa: *"tem uma trava que identifica pessoa nova, que é conversa
+ * anterior; normalmente eu tenho que clicar para abrir a conversa do dia anterior"* (05/09/2026).
+ * Sem atendimento anterior, o botão não existe.
+ *
+ * É o sinal que a API não dá de graça: `getConversation` é por SESSÃO, então uma conversa sem
+ * nada nosso pode ser tanto a primeira vinda quanto a décima. Tentar deduzir isso de etiqueta é
+ * palpite — e o palpite errado mandou o modelo sem o pedido de cadastro para quem tinha acabado
+ * de chegar (a Neiva), e as boas-vindas pela segunda vez para quem já era de casa (a Rosa).
+ *
+ * **Por texto e não por `data-cy`**, porque o gancho não é conhecido: é a mesma escolha da tarja
+ * de canal caído, e pelo mesmo motivo — o texto é o que a plataforma promete ao usuário. A guarda
+ * contra o falso positivo é rejeitar o que está dentro de um balão de mensagem: contato escreve
+ * de tudo, inclusive isto.
+ *
+ * **Falso negativo é o lado barato:** não achar o botão devolve `false`, e o painel volta a
+ * decidir como decidia. Falso positivo trataria quem chegou agora como retorno, que é o defeito
+ * que este sinal existe para consertar.
+ */
+export function temConversaAnterior() {
+  for (const no of textosDaPagina(/ver\s+conversas?\s+anterior(es)?/i, 80)) {
+    let dentroDeBalao = false;
+    for (let el = no.parentElement, i = 0; el && i < 6; el = el.parentElement, i++) {
+      if (el.classList?.contains('message-text') || el.tagName === 'SESSIONS-MESSAGE') {
+        dentroDeBalao = true;
+        break;
+      }
+    }
+    if (!dentroDeBalao) return true;
+  }
+  return false;
+}
+
 export function getConversationSignal() {
   const conv = document.querySelector('sessions-conversation');
   if (!conv) return '';

@@ -1,4 +1,4 @@
-## 2026-09-05 — ESTADO DE AGORA (v2.49.0) — leia isto primeiro numa sessão nova
+## 2026-09-05 — ESTADO DE AGORA (v2.50.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.49.0**, tudo commitado e no remoto. **Oito versões no dia 05/09**
-(2.42 → 2.49). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
+Branch `claude/whatsfill-ia`, **v2.50.0**, tudo commitado e no remoto. **Nove versões no dia 05/09**
+(2.42 → 2.50). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -22,6 +22,7 @@ problemas e sem desfecho incoerente.
 | 2.47 | **Xingamento no imperativo é hostilidade**, e o traço eme virou conserto em vez de pedido. |
 | 2.48 | **"Aguardando mensagem" é ruído da plataforma** — o link do FAQ estava virando CIDADE no CRM. |
 | 2.49 | **Já atendida antes não recebe as boas-vindas de novo** — o sinal do retorno lia só a sessão, e o CRM é quem tem memória. |
+| 2.50 | **"Ver conversa anterior" virou o sinal do retorno** — e a Data de conclusão, que eu tinha posto ali, saiu: concluir não é entregar. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -89,6 +90,63 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-05 — "Ver conversa anterior" é quem sabe se ela já veio (v2.50.0)
+
+### O caso, que foi meu
+
+A **Neiva** chegou pelo anúncio do Facebook (campanha CAPITÃO MARTIM), escreveu só o texto do
+próprio anúncio, **não tem etiqueta de cidade** — e recebeu o modelo + agradecimento, sem o pedido
+de nome e cidade. Ele: *"começou a mandar agradecimento em vez de pedir os dados; segundo caso já, e
+claramente é pessoa nova que chegou por anúncio"*.
+
+A causa foi o conserto da Rosa, horas antes. Eu havia posto a **Data de conclusão do contato** dentro
+de `jaRespondemosAntes` escrevendo, em comentário, que ali *"falso positivo é impossível"*.
+
+É o contrário. A data prova que **já concluímos um atendimento**, não que **já entregamos alguma
+coisa** — e esta rodada conclui em silêncio o tempo todo (tecla 3, `ultima-e-nossa`,
+`etiqueta-so-conclui`). Num dia de 268 conclusões, a data está em quase todo mundo que já passou por
+uma rodada.
+
+**É a lição da Ivone (31/08) na forma que eu não reconheci:** *pergunta não é entrega* — e conclusão
+também não é. O comentário dela está três linhas acima do que eu escrevi.
+
+Medido com o contexto da Neiva: com o sinal verdadeiro o caso vai para `conteudo-pedido` (tecla 1,
+que é a print); com ele falso, para `anuncio-modelo-e-dados` (tecla `a`), que é o certo.
+
+### O sinal de verdade, que ele apontou
+
+*"Tem uma trava que identifica pessoa nova, que é conversa anterior; normalmente eu tenho que clicar
+para abrir a conversa do dia anterior."* — e mandou o exemplo: o botão **"Ver conversa anterior"** no
+topo da conversa, que a plataforma só mostra quando existe atendimento anterior.
+
+É exatamente o que a API não dá: `getConversation` é por SESSÃO, então uma conversa sem nada nosso
+pode ser a primeira vinda ou a décima. Nenhuma etiqueta responde isso sem palpitar — e os dois
+palpites erraram, um para cada lado: as boas-vindas repetidas na Rosa, o cadastro não pedido na
+Neiva.
+
+`dom.temConversaAnterior()` lê por TEXTO, como a tarja de canal caído e pelo mesmo motivo (o
+`data-cy` não é conhecido, e o texto é o que a plataforma promete ao usuário). A guarda contra o
+falso positivo é rejeitar o que está dentro de balão de mensagem. Viaja por `page.js` +
+`rpc-host.js`, então funciona também no modo janela; falhar devolve `false`, e aí decide a etiqueta
+de cidade, como antes.
+
+`state.temConversaAnterior` é **zerado na troca de contato**, junto do anúncio e dos sinais — sem
+isso, a primeira vinda de um herdaria o histórico do outro.
+
+### O que fica
+
+A etiqueta de cidade continua no sinal, como segunda marca: ela cobre o caso em que a leitura da
+tela falha, e é a decisão dele de 02/09. A Rosa é pega pelas duas.
+
+**Arquivos:** `src/lib/dom.js` (o sinal), `src/lib/page.js`, `src/lib/rpc-host.js`,
+`src/panel/panel.js` (a leitura, o `state` e o cálculo), `tests/arvore.test.mjs` (+2), `CLAUDE.md`
+(+2 armadilhas), `manifest.json` (2.49.0 -> 2.50.0). Quinze suítes e os dois verificadores.
+
+**Não testado na tela** — `temConversaAnterior` lê o DOM da plataforma e nenhuma suíte alcança isso.
+Se o botão tiver outro texto, o sinal devolve `false` e o comportamento é o de 2.49.
 
 ---
 

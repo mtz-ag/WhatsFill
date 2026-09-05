@@ -2097,4 +2097,42 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   check(agora?.tecla === '5', `e recebe a mensagem do momento, que foi o que ele pediu (tecla ${agora?.tecla})`);
 }
 
+{
+  grupo('quem chega pelo anuncio recebe o modelo E o pedido de dados (05/09/2026)');
+
+  /**
+   * A outra ponta do mesmo sinal, no mesmo dia. Print da NEIVA: ela chegou pelo anuncio do
+   * Facebook (campanha CAPITAO MARTIM), escreveu so o texto do proprio anuncio, **nao tem etiqueta
+   * de cidade** -- e recebeu o modelo + agradecimento, sem o pedido de nome e cidade. Ele:
+   * *"comecou a mandar agradecimento em vez de pedir os dados; segundo caso ja, e claramente e
+   * pessoa nova que chegou por anuncio"*.
+   *
+   * A causa foi minha, horas antes: eu havia posto a **Data de conclusao do contato** dentro de
+   * `jaRespondemosAntes`, dizendo que falso positivo era impossivel. E o contrario -- a data prova
+   * que ja CONCLUIMOS um atendimento, nao que ja ENTREGAMOS nada, e esta rodada conclui em silencio
+   * o tempo todo. Ela saiu; o sinal de primeira mao passou a ser o botao "Ver conversa anterior",
+   * que ele apontou.
+   *
+   * Aqui fica travado o que o QUADRO faz com o sinal: e a diferenca entre a tecla `a` (recibo mais
+   * cadastro) e a tecla 1 (so o recibo).
+   */
+  const fluxo = arv.fluxoPadrao();
+  const base = {
+    veioDeAnuncio: true,
+    temEtiquetaDeCidade: false,
+    jaPediramDados: false,
+    jaDeuNomeECidade: false,
+    podePedirDados: true,
+    podeEnviar: true,
+    textos: ['Ola! Eu estou do lado da seguranca e apoio o Capitao Martim'],
+    ultimoTexto: 'Ola! Eu estou do lado da seguranca e apoio o Capitao Martim',
+  };
+
+  const nova = arv.decidir({ ...base, jaRespondemosAntes: false }, fluxo, {});
+  check(nova?.tecla === 'a', `pessoa nova do anuncio: modelo + pedido de dados (tecla ${nova?.tecla})`);
+
+  const retorno = arv.decidir({ ...base, jaRespondemosAntes: true }, fluxo, {});
+  check(retorno?.tecla === '1', `quem ja veio antes recebe so o modelo (tecla ${retorno?.tecla}) -- era o que ela recebia`);
+}
+
 fim();

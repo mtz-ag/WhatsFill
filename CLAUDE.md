@@ -1341,6 +1341,24 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   conversando pela primeira vez, passa a receber a mensagem do momento em vez das boas-vindas.
   Medido: 2,9% dos contextos com etiqueta de cidade mudam de desfecho, e **dois tercos deles nao
   tinham desfecho nenhum** (o ramo da chegada nao tem `ja-respondemos-antes`).
+- **"Ja veio antes" esta na TELA: o botao "Ver conversa anterior".** Foi ele quem apontou
+  (05/09/2026): *"tem uma trava que identifica pessoa nova, que e conversa anterior; normalmente eu
+  tenho que clicar para abrir a conversa do dia anterior"*. A plataforma so mostra esse botao quando
+  existe atendimento anterior — e e o que a API nao da: `getConversation` e por SESSAO, entao
+  conversa sem nada nosso pode ser a primeira vinda ou a decima. `dom.temConversaAnterior` le por
+  TEXTO (o `data-cy` nao e conhecido), rejeitando o que esta dentro de balao de mensagem, e o
+  painel guarda em `state.temConversaAnterior`, zerado na troca de contato. **Falhar devolve
+  `false`**, e ai decide a etiqueta de cidade, como antes.
+- **A DATA DE CONCLUSAO nao prova entrega — e eu escrevi que "falso positivo e impossivel".** Print
+  da Neiva (05/09/2026, horas depois do conserto da Rosa): chegou pelo anuncio do Facebook, escreveu
+  so o texto do anuncio, **sem etiqueta de cidade**, e recebeu o modelo + agradecimento em vez do
+  modelo + o pedido de cadastro. *"Comecou a mandar agradecimento em vez de pedir os dados; segundo
+  caso ja, e claramente e pessoa nova que chegou por anuncio."* A data prova que ja **CONCLUIMOS** um
+  atendimento, nao que ja **ENTREGAMOS** alguma coisa — e esta rodada conclui em silencio o tempo
+  todo (tecla 3, `ultima-e-nossa`, `etiqueta-so-conclui`): num dia de 268 conclusoes ela esta em
+  quase todo mundo. **E a licao da Ivone (31/08) na forma que eu nao reconheci: pergunta nao e
+  entrega, e conclusao tambem nao.** Medido: com o sinal verdadeiro o caso vai para
+  `conteudo-pedido` (tecla 1); com ele falso, para `anuncio-modelo-e-dados` (tecla `a`).
 
 - **A QUERY STRING do link tem "?", e por isso todo video repassado virava PERGUNTA.** Relato dele
   (05/09/2026): *"varios casos da pessoa mandando link e reconhece como conversa e passa pra mim"*.
