@@ -1151,7 +1151,8 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   // 22 desde 04/09: entraram as duas respostas que negam (emprego, ligacao), a denuncia
   // respondida, as duas pendencias neutras e "respondeu os dados" -- o bloco que so existia na
   // volta. O numero e proposital: ele acusa caixa que entrou sem ninguem decidir que pertence ali.
-  check(chegada.filhos.length === 22, 'e a chegada tem 22 caixas, nao 23');
+  // 23 desde 04/09, com "chegou sem anuncio e so cumprimentou" (boas-vindas do gabinete).
+  check(chegada.filhos.length === 23, 'e a chegada tem 23 caixas, nao 24');
 
   /**
    * **"Nada legivel dela" entrou em 03/09** (print do Tilin: dois avisos de tipo nao suportado,
@@ -1344,6 +1345,45 @@ grupo('a chegada decide como a volta no que nao e recibo (04/09/2026)');
   const comRecibo = { ...base, jaRespondemosAntes: false, anuncioReconhecido: true, jaPediramDados: false };
   check(desfecho({ ...comRecibo, ultimaEhDespedida: true }) === 'a', 'o recibo do anuncio vence a despedida na chegada');
   check(desfecho({ ...comRecibo, ultimaEhSoReacao: true }) === 'a', 'e vence a figura tambem');
+}
+
+grupo('chegou sem anuncio e so cumprimentou: boas-vindas (04/09/2026)');
+{
+  /**
+   * Decisao dele na revisao caixa a caixa da chegada: *"se ela chegou cumprimentando, podemos
+   * mandar uma mensagem: bem-vindo, voce esta falando com o gabinete do Capitao Martim, em que
+   * podemos ajudar? E se puder nos forneca seu nome e cidade para melhor atende-lo -- e entao
+   * concluir ate o contato responder"*.
+   *
+   * **Primeiro uso das duas condicoes numa caixa do padrao**: so cumprimentou E nao veio de
+   * anuncio. Quem chega por anuncio tem recibo a receber, e o recibo ja pede os dados -- as duas
+   * caixas nunca disputam o mesmo contato, e quem garante isso e a CONDICAO, nao a posicao.
+   */
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const base = {
+    jaRespondemosAntes: false, jaPediramDados: false, temEtiquetaDeCidade: false, pedidoHoje: false,
+    podePedirDados: true, podeMandarMomento: true, podeEnviar: false,
+    textos: ['bom dia'], ultimoTexto: 'bom dia',
+  };
+  const d = (c) => arv.decidir({ ...base, ...c }, q);
+
+  check(d({ soCortesia: { motivo: 'x' } })?.resposta === 'boas-vindas', 'sem anuncio e so cumprimento: manda as boas-vindas');
+  check(d({ veioDeAnuncio: true, podeEnviar: true, soCortesia: { motivo: 'x' } })?.tecla === 'a',
+    'com anuncio, o recibo continua vencendo -- as duas condicoes se excluem');
+
+  /**
+   * **As duas excecoes que ele nomeou no mesmo recado**: *"se o contexto for maior, como uma
+   * pergunta ja de cara, entao eu devo assumir ou a IA"*, e *"se a pessoa for hostil ja de inicio,
+   * encerra toda a conversa e e marcada como sem interesse"*.
+   */
+  check(d({ perguntaAberta: { termo: 'x' } })?.tecla === '6', 'pergunta logo de cara continua sendo dele ou da IA');
+  check(d({ pedeRespostaPessoal: { motivo: 'x' } })?.tecla === '6', 'e texto longo ou audio tambem');
+  check(d({ semInteresse: { motivo: 'x' }, soCortesia: { motivo: 'x' } })?.tecla === 's',
+    'hostil de inicio: marca e conclui, mesmo cumprimentando');
+
+  // E quem JA foi atendido nao recebe boas-vindas de novo.
+  check(d({ jaRespondemosAntes: true, soCortesia: { motivo: 'x' } })?.resposta !== 'boas-vindas',
+    'quem ja foi atendido nao recebe boas-vindas');
 }
 
 grupo('condicoes e excecoes: a caixa decide por ela mesma (04/09/2026)');

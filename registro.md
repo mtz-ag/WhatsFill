@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.37.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.38.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.37.0**, tudo commitado e no remoto. 31 commits no dia 04/09.
+Branch `claude/whatsfill-ia`, **v2.38.0**, tudo commitado e no remoto. 32 commits no dia 04/09.
 Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente. A lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o
 quadro tem dois ramos.
@@ -68,6 +68,53 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — Revisão caixa a caixa: a chegada (v2.38.0)
+
+Começou a revisão que ele pediu — *"em cada caixa você vai me perguntar e vou responder o que fazer
+em todas as situações; vamos começar por um contato novo chegou"*. Levantei antes o que a chegada
+faz hoje em catorze situações, para ele responder olhando o que existe.
+
+### Duas decisões, nesta rodada de perguntas
+
+**1. Anúncio não cadastrado, sem modelo padrão** — *"mandar o modelo padrão e pedir dados para
+cadastro"*. **Nada a mudar no código**: é exatamente o que a tecla `a` faz quando há modelo. O que
+falta é a Config — com "Modelos padrão" vazio, `podeEnviar` é falso e sobra só o pedido de dados.
+Está na lista de pendências dele desde 02/09.
+
+**2. Contato novo que NÃO veio de anúncio** — *"depende da forma que a pessoa chegou. Se ela chegou
+cumprimentando, podemos mandar uma mensagem: bem-vindo, você está falando com o gabinete do Capitão
+Martim, em quê podemos ajudar? E se puder nos forneça seu nome e cidade para melhor atendê-lo — e
+então concluir até o contato responder. Se o contexto for maior, como uma pergunta já de cara, então
+eu devo assumir ou a IA. Se a pessoa for hostil já de início, encerra e é marcada como sem
+interesse."*
+
+### O que entrou
+
+**Resposta pronta nova, "Boas-vindas (chegou sem anúncio)"** — o texto dele, com a linha
+`Nome , Cidade` obrigatória (é o invariante que faz a resposta dela ser lida como resposta ao
+formulário) e com migração própria, porque mudar as respostas de fábrica sozinho **não alcança quem
+já tem a lista salva** — a lição de hoje mais cedo.
+
+**Caixa nova na chegada**, e ela é o **primeiro uso das duas condições numa caixa do padrão**:
+*só cumprimentou* **E** *não veio de anúncio*. Quem chega por anúncio tem recibo a receber, e o
+recibo já pede os dados — as duas caixas nunca disputam o mesmo contato, e quem garante isso é a
+condição, não a posição. É o que ele pediu hoje, valendo na prática.
+
+As duas exceções que ele nomeou no mesmo recado **já estavam de pé e foram medidas**: pergunta logo
+de cara vai para a tecla 6 (ele ou a IA), e hostilidade é pega pela proteção do topo, mesmo com
+cumprimento junto.
+
+| situação (contato novo, sem anúncio) | antes | agora |
+|---|---|---|
+| só cumprimentou | tecla 4 — formulário seco | **manda "Boas-vindas" e conclui** |
+| fez uma pergunta | tecla 6 | tecla 6 |
+| áudio ou texto longo | tecla 6 | tecla 6 |
+| hostil de início | tecla `s` | tecla `s` |
+
+Padrão: **70 caixas**, sem problemas e sem desfecho incoerente. Quinze suítes verdes.
 
 ---
 

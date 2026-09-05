@@ -29,6 +29,7 @@ export async function list() {
     await migrarRespostasDeEvento();
     await migrarVariantesDeTexto();
     await migrarPedirDadosAntesDeTudo();
+    await migrarRespostaBoasVindas();
   }
   return store.get('templates');
 }
@@ -94,6 +95,15 @@ export const migrarRespostasNovas = () =>
  */
 export const migrarRespostaAgradecerInfo = () =>
   garantirRespostas(['agradecer-info'], 'respostaAgradecerInfo');
+
+/**
+ * As boas-vindas de quem chega sem anúncio (04/09/2026).
+ *
+ * Flag própria, como todas: reaproveitar a de outra migração faria voltar resposta que ele apagou
+ * de propósito. E ela é o que faz a resposta chegar em quem JÁ tem a lista salva — mudar
+ * `DEFAULT_TEMPLATES` sozinho só alcança instalação nova, e existe uma só, a dele.
+ */
+export const migrarRespostaBoasVindas = () => garantirRespostas(['boas-vindas'], 'respostaBoasVindas');
 
 /** A pergunta de interesse no conteúdo, para quem já tinha a lista de respostas salva. */
 export const migrarRespostaInteresse = () =>

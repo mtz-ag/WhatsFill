@@ -434,4 +434,35 @@ grupo('"Confirmou presenca (so agradecer)": a metade que faltava (02/09/2026)');
   check(!templates.ehPedidoDeEndereco(auto2.pedidoJuntoDoMomento), 'o pedido de nome e cidade do momento tambem nao conta como endereco');
 }
 
+{
+  grupo('boas-vindas de quem chega sem anuncio (04/09/2026)');
+
+  /**
+   * Decisao dele: *"se ela chegou cumprimentando, podemos mandar uma mensagem: bem-vindo, voce esta
+   * falando com o gabinete do Capitao Martim, em que podemos ajudar? E se puder nos forneca seu
+   * nome e cidade para melhor atende-lo"*.
+   */
+  const bv = store.DEFAULT_TEMPLATES.find((t) => t.id === 'boas-vindas');
+  check(!!bv, 'a resposta existe entre as de fabrica');
+  check(templates.ehPedidoDeDados(bv.text), 'carrega o invariante "Nome , Cidade"');
+  for (const v of bv.variantes || []) check(templates.ehPedidoDeDados(v), 'e a variante tambem');
+  check(/gabinete/i.test(bv.text), 'diz de quem e o gabinete -- e o contexto que faltava');
+  check(!/(cesta|rem[ée]dio|dinheiro|emprego|vaga|benef[ií]cio)/i.test(bv.text), 'nao promete beneficio nenhum');
+
+  /**
+   * **Chega em quem JA tem a lista salva.** Mudar DEFAULT_TEMPLATES sozinho so alcanca instalacao
+   * nova -- e existe uma so, a dele. E a licao de 04/09, o dia em que uma regra dele ficou parada
+   * num valor padrao.
+   */
+  mem.templates = [{ id: 'pedir-dados', name: 'x', text: 'Nome , Cidade', variantes: [] }];
+  mem.migracoes = {};
+  await templates.migrarRespostaBoasVindas();
+  check(mem.templates.some((t) => t.id === 'boas-vindas'), 'a migracao acrescenta a resposta em quem ja tinha lista salva');
+
+  // E nao volta depois que ele apagar: a migracao roda uma vez so.
+  mem.templates = [{ id: 'pedir-dados', name: 'x', text: 'Nome , Cidade', variantes: [] }];
+  await templates.migrarRespostaBoasVindas();
+  check(!mem.templates.some((t) => t.id === 'boas-vindas'), 'e nao volta se ele apagar depois');
+}
+
 fim();

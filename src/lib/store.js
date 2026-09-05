@@ -258,6 +258,36 @@ export const DEFAULT_TEMPLATES = [
      * Termina sem pergunta de propósito: convite a responder vira atendimento, e o gabinete não
      * tem braço para o volume que isso geraria. A mensagem entrega o afeto e fecha.
      */
+    /**
+     * **Quem chega sem anúncio e só cumprimenta** — decisão dele (04/09/2026), na revisão caixa a
+     * caixa da chegada: *"se ela chegou cumprimentando, podemos mandar uma mensagem: bem-vindo,
+     * você está falando com o gabinete do Capitão Martim, em quê podemos ajudar? E se puder nos
+     * forneça seu nome e cidade para melhor atendê-lo — e então concluir até o contato responder"*.
+     *
+     * Ela existe porque o formulário seco é a primeira coisa que essa pessoa lê de nós, e ela não
+     * clicou em nada: não há recibo a mandar, e "ATENÇÃO! me diga seu Nome, Cidade" chega sem
+     * contexto nenhum.
+     *
+     * **A linha `Nome , Cidade` é obrigatória** — é o invariante que faz a resposta dela ser lida
+     * como resposta ao formulário. Tem teste.
+     */
+    id: 'boas-vindas',
+    name: 'Boas-vindas (chegou sem anúncio)',
+    text:
+      '{{saudacao}}! Bem-vindo. Você está falando com o gabinete do Capitão Martim.\n\n' +
+      'Em que podemos ajudar?\n\n' +
+      'E, se puder, nos informe para melhor atendê-lo:\n\n' +
+      'Nome , Cidade\n\n' +
+      '(exemplo: Pedro Silva , Porto Alegre)',
+    variantes: [
+      '{{saudacao}}! Seja bem-vindo — aqui é o gabinete do Capitão Martim.\n\n' +
+        'Em que podemos ajudar?\n\n' +
+        'E, se puder, nos informe para melhor atendê-lo:\n\n' +
+        'Nome , Cidade\n\n' +
+        '(exemplo: Pedro Silva , Porto Alegre)',
+    ],
+  },
+  {
     id: 'saudacao-fe',
     name: 'Saudação com mensagem de fé',
     text:

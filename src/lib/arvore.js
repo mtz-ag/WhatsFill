@@ -980,6 +980,28 @@ export function fluxoPadrao() {
     r('respondeu-nossa-pergunta', null, 'chegada'),
 
     /**
+     * **Chegou SEM anúncio e só cumprimentou → boas-vindas do gabinete, e conclui.**
+     *
+     * Decisão dele (04/09/2026), na revisão caixa a caixa da chegada: *"se ela chegou
+     * cumprimentando, podemos mandar uma mensagem: bem-vindo, você está falando com o gabinete do
+     * Capitão Martim, em quê podemos ajudar? E se puder nos forneça seu nome e cidade para melhor
+     * atendê-lo — e então concluir até o contato responder"*.
+     *
+     * **Duas condições, e é o primeiro uso do que ele pediu hoje**: só cumprimentou **E** não veio
+     * de anúncio. Quem chega por anúncio tem recibo a receber, e o recibo já pede os dados — as
+     * duas caixas nunca disputam o mesmo contato, e é a condição que garante isso, não a posição.
+     *
+     * Fica ABAIXO do bloco que precisa de gente: pergunta logo de cara continua sendo sua ou da IA,
+     * e hostilidade continua sendo pega pela proteção lá em cima — as duas exceções que ele nomeou
+     * no mesmo recado.
+     */
+    { ...noVazio('chegou sem anúncio e só cumprimentou'),
+      id: 'chegada-boas-vindas',
+      condicao: { sinal: 'soCortesia', negar: false, palavras: [], onde: 'ultima' },
+      maisCondicoes: [{ sinal: 'veioDeAnuncio', negar: true, palavras: [], onde: 'ultima' }],
+      acao: { tecla: null, resposta: 'boas-vindas' } },
+
+    /**
      * **O MODELO PRIMEIRO** — redesenho dele em 02/09/2026, e a inversão da ordem que valia antes.
      *
      * O que ele escreveu: *"o sistema atual está dando problemas, o modelo agora será feito pra
