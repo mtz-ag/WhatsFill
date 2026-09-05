@@ -63,6 +63,7 @@ export const SINAIS = [
   { id: 'pedeEmprego', rotulo: 'Perguntou como trabalhar no mandato', nao: 'Não perguntou sobre trabalhar aqui' },
   { id: 'pedeLigacao', rotulo: 'Pediu que a gente ligasse para ela', nao: 'Não pediu ligação' },
   { id: 'naoPodeFalarAgora', rotulo: 'Está passando mal, ou fala depois', nao: 'Não avisou nada disso' },
+  { id: 'rajadaDeAnuncios', rotulo: 'Só clicou em vários anúncios seguidos', nao: 'Não é rajada de cliques' },
   { id: 'soCortesia', rotulo: 'Só cumprimentou (e nada mais)', nao: 'Escreveu mais que um cumprimento' },
   { id: 'ultimaEhNossa', rotulo: 'A última mensagem é nossa (ou ela não escreveu nada)', nao: 'Ela falou por último' },
   { id: 'etiquetaSoConclui', rotulo: 'Tem a etiqueta que só conclui (assessor)', nao: 'Não é da casa' },
@@ -878,6 +879,15 @@ export function fluxoPadrao() {
      * Por isso o modelo sobe para cima do apoio **dentro do grupo do anúncio reconhecido**, e a
      * cópia de baixo continua atendendo quem não expressou apoio nenhum.
      */
+    /**
+     * **A rajada de cliques vence o modelo do anúncio** — print da Irene (05/09/2026).
+     *
+     * Ela precisa ficar acima das duas portas do modelo (o grupo do anúncio reconhecido, logo
+     * abaixo, e `conteudo-pedido` mais adiante): quem clicou em três anúncios não está pedindo o
+     * conteúdo de um deles.
+     */
+    r('rajada-de-anuncios', 'só clicou em vários anúncios: mensagem do momento', onde),
+
     grupo('veio de um anúncio que eu reconheço', { sinal: 'anuncioReconhecido', negar: false, palavras: [], onde: 'ultima' }, [
       r('conteudo-pedido', 'manda o modelo daquele anúncio', `${onde}-anuncio`),
     ]),
@@ -1101,6 +1111,13 @@ export function fluxoPadrao() {
      * saem as duas. Faltando uma, esta não casa e cada caixa de baixo resolve o seu pedaço — o
      * modelo sozinho para quem já tem cidade, o pedido de dados sozinho quando não há modelo.
      */
+    /**
+     * **Vários cliques em rajada não são um pedido** — a Irene (05/09/2026) chegou clicando em três
+     * anúncios seguidos e a caixa ofereceu o modelo de um deles. Fica acima do recibo porque é o
+     * recibo que ela vence: a mensagem do momento serve para os três.
+     */
+    r('rajada-de-anuncios', 'só clicou em vários anúncios: mensagem do momento', 'chegada'),
+
     r('anuncio-modelo-e-dados', 'modelo + pedir os dados', 'chegada'),
 
     /**
@@ -2069,6 +2086,7 @@ const SINAIS_QUE_A_RESPOSTA_APAGA = new Set([
   'pedeEmprego',
   'pedeLigacao',
   'naoPodeFalarAgora',
+  'rajadaDeAnuncios',
   'pedeAlgoIndefinido',
   'pedeRespostaPessoal',
   'perguntaAberta',

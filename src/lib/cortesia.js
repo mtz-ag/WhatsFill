@@ -1757,6 +1757,37 @@ const XINGAMENTO_IMPERATIVO =
  * custo de errar aqui é etiquetar um apoiador como sem interesse, para sempre, no CRM.
  */
 /**
+ * **Ela só clicou em anúncios — vários, em rajada.**
+ *
+ * Print da Irene (05/09/2026): três cliques seguidos em anúncios diferentes do Instagram (*"Eu
+ * escolho o Lado de Quem Produz"*, *"Eu apoio o Flávio, Zucco, Hiago e Capitão Martim"*, *"Eu estou
+ * do lado da segurança"*), nada mais escrito, e a caixa ofereceu o modelo de um deles. Ele:
+ * *"rajada de entrada em anúncio, mensagem do momento e concluir"*.
+ *
+ * **Por que não o modelo.** Quem clica em três anúncios está navegando, não pedindo uma coisa. O
+ * modelo de um deles responde a um terço do que ela fez, escolhido pela ordem; mandar os três seria
+ * rajada para o mesmo número. A mensagem do momento serve para qualquer um dos três.
+ *
+ * **A rajada tem de ser SÓ cliques, e é isso que separa este caso da Eroni** (03/09): ela recusou o
+ * convite do evento **e** clicou em dois anúncios, e a decisão dele ali foi mandar o modelo novo.
+ * Quem escreveu alguma coisa está falando; quem só clicou, não.
+ *
+ * @param {Array<{texto?:string, tipo?:string, at?:string, geradaPeloAnuncio?:boolean}>} entrantes
+ * @param {string|null} nossaUltimaAt
+ * @param {string[]} padroesDeAnuncio
+ * @returns {{motivo:string, quantos:number}|null}
+ */
+export function rajadaDeAnuncios(entrantes, nossaUltimaAt, padroesDeAnuncio = []) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt).filter((m) => String(m?.texto || '').trim());
+  if (rajada.length < 2) return null;
+  if (!rajada.every((m) => ehMensagemDeAnuncio(m, padroesDeAnuncio))) return null;
+  return {
+    quantos: rajada.length,
+    motivo: `clicou em ${rajada.length} anúncios seguidos e não escreveu nada — a mensagem do momento serve para todos`,
+  };
+}
+
+/**
  * **Ela avisou que está doente, ou que não pode falar agora.**
  *
  * Print da Elenir (05/09/2026): chegou pelo anúncio das Escolas Cívico-Militares e, quatro minutos

@@ -1156,7 +1156,8 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   // 23 desde 04/09, com "chegou sem anuncio e so cumprimentou" (boas-vindas do gabinete).
   // 21 desde 04/09, quando as situacoes que levam ao mesmo desfecho foram JUNTADAS numa caixa so
   // (pedido dele: "junte todas as situacoes que sao usadas na mesma tecla").
-  check(chegada.filhos.length === 19, 'e a chegada tem 19 caixas, nao 20');
+  // 20 desde 05/09, com "so clicou em varios anuncios" (print da Irene).
+  check(chegada.filhos.length === 20, 'e a chegada tem 20 caixas, nao 21');
 
   /**
    * **"Nada legivel dela" entrou em 03/09** (print do Tilin: dois avisos de tipo nao suportado,
@@ -1955,6 +1956,9 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
     // O tempo: sem ele na lista, as tres caixas de "a ultima dela e de outro dia" ficam sem gatilho.
     { deOutroDia: true, podeMandarMomento: true },
     { podeEnviar: true }, { podePedirDados: true }, { voltouPorOutroAnuncio: true, modeloJaNaConversa: true },
+    // A rajada de cliques (a Irene, 05/09): sem ela aqui, as tres caixas de
+    // "so clicou em varios anuncios" aparecem como mortas.
+    { rajadaDeAnuncios: { motivo: 'x', quantos: 3 }, podeMandarMomento: true },
     { anuncioReconhecido: true, podeEnviar: true, podePedirDados: true },
     // Sem modelo mapeado: e a unica porta para o ramo "veio de um anuncio que eu reconheco".
     { anuncioReconhecido: true, podeEnviar: false, podePedirDados: true }, {},
@@ -2205,6 +2209,46 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   // E na CHEGADA, que e onde a Elenir estava.
   const chegada = arv.decidir({ ...base, jaRespondemosAntes: false, temEtiquetaDeCidade: false, naoPodeFalarAgora: { motivo: 'esta passando mal' } }, fluxo, {});
   check(chegada?.tecla === '6', `e na chegada pelo anuncio (tecla ${chegada?.tecla})`);
+}
+
+{
+  grupo('rajada de cliques: mensagem do momento, nao o modelo (05/09/2026)');
+
+  /**
+   * Print da Irene: tres cliques em anuncios do Instagram e a caixa ofereceu a tecla 1 (o modelo
+   * "Campanha Seguranca"). Ele: *"rajada de entrada em anuncio, mensagem do momento e concluir"*.
+   *
+   * A caixa precisa vencer as DUAS portas do modelo -- o grupo do anuncio reconhecido e
+   * `conteudo-pedido` -- e tambem o recibo da chegada (`anuncio-modelo-e-dados`).
+   */
+  const fluxo = arv.fluxoPadrao();
+  const base = {
+    veioDeAnuncio: true,
+    anuncioReconhecido: true,
+    podeEnviar: true,
+    podePedirDados: true,
+    podeMandarMomento: true,
+    rajadaDeAnuncios: { motivo: 'clicou em 3 anuncios seguidos', quantos: 3 },
+    textos: ['x'],
+    ultimoTexto: 'x',
+  };
+
+  const chegada = arv.decidir({ ...base, jaRespondemosAntes: false }, fluxo, {});
+  check(chegada?.tecla === '5', `na chegada, mensagem do momento em vez do recibo (tecla ${chegada?.tecla})`);
+
+  const volta = arv.decidir({ ...base, jaRespondemosAntes: true, temEtiquetaDeCidade: true }, fluxo, {});
+  check(volta?.tecla === '5', `e na volta tambem, vencendo o modelo do anuncio (tecla ${volta?.tecla})`);
+
+  const semCidade = arv.decidir({ ...base, jaRespondemosAntes: true, temEtiquetaDeCidade: false }, fluxo, {});
+  check(semCidade?.tecla === '5', `nos dois lados da bifurcacao (tecla ${semCidade?.tecla})`);
+
+  // Ja tendo recebido a do momento, conclui -- o segundo desfecho que ele descreveu.
+  const jaSaiu = arv.decidir({ ...base, jaRespondemosAntes: true, temEtiquetaDeCidade: true, momentoJaEnviado: true }, fluxo, {});
+  check(jaSaiu?.tecla === '3', `com a do momento ja enviada, conclui (tecla ${jaSaiu?.tecla})`);
+
+  // E um clique so continua recebendo o recibo: a regra nao pode comer a chegada normal.
+  const umClique = arv.decidir({ ...base, jaRespondemosAntes: false, rajadaDeAnuncios: null }, fluxo, {});
+  check(umClique?.tecla === 'a', `um clique so continua com o recibo + pedido de dados (tecla ${umClique?.tecla})`);
 }
 
 fim();

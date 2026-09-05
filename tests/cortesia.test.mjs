@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { naoPodeFalarAgora, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial } from '../src/lib/cortesia.js';
+import { rajadaDeAnuncios, naoPodeFalarAgora, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -1816,6 +1816,40 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(!!soExpressaApoio([{ texto: 'Estou com voces capitao!', tipo: 'TEXT', at: 2 }], null, []), '"Estou com voces" continua sendo apoio');
   check(!!soExpressaApoio([{ texto: 'Tamo junto', tipo: 'TEXT', at: 2 }], null, []), '"Tamo junto" continua sendo apoio');
   check(!!soExpressaApoio([{ texto: 'to contigo capitao', tipo: 'TEXT', at: 2 }], null, []), '"to contigo" entrou junto');
+}
+
+{
+  grupo('rajada de cliques em anuncio (05/09/2026)');
+
+  /**
+   * Print da IRENE: tres cliques seguidos em anuncios diferentes do Instagram, nada mais escrito, e
+   * a caixa ofereceu o modelo de UM deles ("Campanha Seguranca"). Ele: *"rajada de entrada em
+   * anuncio, mensagem do momento e concluir"*.
+   *
+   * **A ERONI (03/09) e o contra-exemplo que define a regra**: ela recusou o convite do evento E
+   * clicou em dois anuncios, e ali a decisao dele foi mandar o modelo novo. A diferenca e que ela
+   * ESCREVEU alguma coisa -- por isso a rajada tem que ser SO cliques.
+   */
+  const clique = (t, at) => ({ texto: t, tipo: 'TEXT', at, geradaPeloAnuncio: true });
+
+  const irene = [
+    clique('Ola! Eu escolho o Lado de Quem Produz', 1),
+    clique('Ola! Eu apoio o Flavio, Zucco, Hiago e Capitao Martim', 2),
+    clique('Ola! Eu estou do lado da seguranca e apoio o Capitao Martim', 3),
+  ];
+  const r = rajadaDeAnuncios(irene, null, []);
+  check(!!r, 'tres cliques seguidos sao reconhecidos');
+  check(r?.quantos === 3, `e o motivo diz quantos foram (${r?.quantos})`);
+
+  const eroni = [
+    { texto: 'Nao vou conseguir ir ao evento, obrigada', tipo: 'TEXT', at: 1 },
+    clique('Ola! Eu escolho o lado da Liberdade', 2),
+    clique('Ola! Eu apoio as Escolas Civico-Militares', 3),
+  ];
+  check(!rajadaDeAnuncios(eroni, null, []), 'quem ESCREVEU alem de clicar nao cai aqui -- e a decisao da Eroni (03/09)');
+
+  check(!rajadaDeAnuncios([irene[0]], null, []), 'um clique so e a chegada normal, nao rajada');
+  check(!rajadaDeAnuncios([], null, []), 'conversa vazia nao casa');
 }
 
 fim();

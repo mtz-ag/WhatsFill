@@ -446,6 +446,33 @@ export const REGRAS = [
         : 'voltou por outro anúncio — não mande o mesmo conteúdo de novo; a mensagem do momento serve.',
   },
   {
+    id: 'rajada-de-anuncios',
+    /**
+     * **Ela só clicou em anúncios, vários seguidos → mensagem do momento e conclui.**
+     *
+     * Print da Irene (05/09/2026): três cliques em anúncios diferentes do Instagram, nada mais
+     * escrito, e a caixa ofereceu o modelo de um deles (*"Campanha Segurança"*). Ele: *"rajada de
+     * entrada em anúncio, mensagem do momento e concluir"*.
+     *
+     * Quem clica em três anúncios está navegando, não pedindo uma coisa: o modelo de um deles
+     * responde a um terço do que ela fez, escolhido pela ordem em que a rodada varre a conversa.
+     * Mandar os três seria rajada para o mesmo número. A mensagem do momento serve para todos.
+     *
+     * **Fica ACIMA do modelo do anúncio nos dois ramos**, que é quem ela precisa vencer — e abaixo
+     * de tudo o que precisa de você, que já está mais em cima.
+     *
+     * **Não colide com a Eroni** (03/09), onde a decisão dele foi mandar o modelo novo: lá ela
+     * **escreveu** (recusou o convite do evento) além de clicar, e `rajadaDeAnuncios` exige que a
+     * rajada seja SÓ cliques. Tem teste com os dois casos lado a lado.
+     */
+    tecla: (c) => (c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5'),
+    quando: (c) => !!c.rajadaDeAnuncios,
+    motivo: (c) =>
+      c.momentoJaEnviado || !c.podeMandarMomento
+        ? `${c.rajadaDeAnuncios.motivo} — e a do momento já saiu: conclua.`
+        : c.rajadaDeAnuncios.motivo + '.',
+  },
+  {
     id: 'anuncio-modelo-e-dados',
     tecla: 'a',
     /**
@@ -1132,6 +1159,18 @@ export const SOBRE = {
     rotulo: 'Só se despediu',
     efeito: 'silencio',
     quando: '"Amém", "é nós", "abraço". A conversa acabou: conclui sem mandar mais nada.',
+  },
+  'rajada-de-anuncios': {
+    rotulo: 'Só clicou em vários anúncios seguidos',
+    efeito: 'depende',
+    quando:
+      'Dois ou mais cliques em anúncio na mesma rajada, sem ela ter escrito nada. Não é pedido de ' +
+      'um conteúdo: é navegação. A mensagem do momento serve para todos os anúncios; o modelo de ' +
+      'um deles responderia a um terço do que ela fez.',
+    ramos: [
+      { tecla: '5', se: 'a mensagem do momento ainda não saiu para ela' },
+      { tecla: '3', se: 'ela já recebeu a do momento, ou não há uma configurada' },
+    ],
   },
   'voltou-por-outro-anuncio': {
     rotulo: 'Ignorou o pedido e voltou por outro anúncio',

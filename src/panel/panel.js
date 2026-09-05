@@ -27,7 +27,7 @@ import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, naoPodeFalarAgora, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, naoPodeFalarAgora, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -5274,6 +5274,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          */
         pedeLigacao: pedeLigacao(state.entrantes, state.nossaUltimaAt),
         naoPodeFalarAgora: naoPodeFalarAgora(state.entrantes, state.nossaUltimaAt),
+        rajadaDeAnuncios: rajadaDeAnuncios(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
         /**
          * **Só cumprimentou, e nada mais.** Substitui a caixa de palavras "bom dia", que casava por
          * trecho contido e por isso pegava a Teresinha (*"Boa tarde o senhor tá concorendo
@@ -10850,15 +10851,41 @@ async function carregarModelosPadrao() {
  * então a primeira mensagem de uma sessão com `utm` é, por construção, o clique que a abriu. Quem
  * clica noutro anúncio depois cai na lista de padrões, que continua existindo como reforço.
  */
+/**
+ * **O texto pré-preenchido do anúncio tem forma fixa: "Olá! Eu ..."**
+ *
+ * Todos os anúncios desta campanha geram a mesma abertura — *"Olá! Eu apoio as Escolas
+ * Cívico-Militares"*, *"Olá! Eu escolho o Lado de Quem Produz"*, *"Olá! Eu estou do lado da
+ * segurança..."*, *"Olá! Eu quero receber o Material da Direita"*.
+ *
+ * Serve para marcar o **segundo e o terceiro** cliques, que a marca de posição não alcança: ela
+ * cobre só a primeira mensagem da sessão. Print da Irene (05/09/2026): três cliques seguidos, e
+ * apenas um deles era reconhecido.
+ *
+ * As guardas existem porque isto é texto, não dado: só vale **dentro de uma sessão que veio de
+ * anúncio**, e a mensagem não pode ter "?" nem ser longa — quem escreve *"Olá! Eu queria saber se
+ * vocês têm..."* está falando, e o texto do anúncio é curto e afirmativo.
+ */
+const ABERTURA_DE_ANUNCIO = /^\s*ol[áa]!?[\s,]+eu\s+\S/i;
+
+function pareceCliqueDeAnuncio(texto) {
+  const t = String(texto || '').trim();
+  if (!t || t.length > 160 || t.includes('?')) return false;
+  return ABERTURA_DE_ANUNCIO.test(t);
+}
+
 function prepararEntrantes(entrantes, { veioDeAnuncio = false } = {}) {
   let primeiraDela = true;
   return (entrantes || []).map((m) => {
     const marcada = ehMensagemDaPlataforma(m?.texto)
       ? { ...m, texto: '', transcrito: false, sistema: true }
       : { ...m };
-    if (primeiraDela && veioDeAnuncio && !marcada.sistema && String(marcada.texto || '').trim()) {
+    const temTexto = !marcada.sistema && String(marcada.texto || '').trim();
+    if (primeiraDela && veioDeAnuncio && temTexto) {
       marcada.geradaPeloAnuncio = true;
       primeiraDela = false;
+    } else if (veioDeAnuncio && temTexto && pareceCliqueDeAnuncio(marcada.texto)) {
+      marcada.geradaPeloAnuncio = true;
     }
     return marcada;
   });

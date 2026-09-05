@@ -1,4 +1,4 @@
-## 2026-09-05 — ESTADO DE AGORA (v2.53.0) — leia isto primeiro numa sessão nova
+## 2026-09-05 — ESTADO DE AGORA (v2.54.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.53.0**, tudo commitado e no remoto. **Doze versões no dia 05/09**
-(2.42 → 2.53). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
+Branch `claude/whatsfill-ia`, **v2.54.0**, tudo commitado e no remoto. **Treze versões no dia 05/09**
+(2.42 → 2.54). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -26,6 +26,7 @@ problemas e sem desfecho incoerente.
 | 2.51 | **Conversa longa não é "sem interesse"** — recusa de verdade é curta; texto longo vai para ele ou para a IA. |
 | 2.52 | **Botão "Chamar a IA" na aba Respostas**, e os cartões passaram a dizer a tecla. O cartão antigo era uma cópia, três consertos atrás. |
 | 2.53 | **Mal-estar não é ignorado nem concluído** — e "Estou com infecção" tinha virado apoio. |
+| 2.54 | **Rajada de cliques em anúncio → mensagem do momento**, não o modelo de um deles. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -93,6 +94,61 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-05 — Rajada de cliques em anúncio não é pedido de conteúdo (v2.54.0)
+
+### O caso
+
+A **Irene** clicou em **três anúncios seguidos** do Instagram — *"Eu escolho o Lado de Quem Produz"*
+(14:22), *"Eu apoio o Flávio, Zucco, Hiago e Capitão Martim"* (15:15) e *"Eu estou do lado da
+segurança"* — e não escreveu mais nada. A caixa sugeriu a tecla 1: mandar o modelo *"Campanha
+Segurança"*.
+
+Ele: *"rajada de entrada em anúncio, mensagem do momento e concluir"*.
+
+### Por que a mensagem do momento
+
+Quem clica em três anúncios está **navegando**, não pedindo uma coisa. O modelo de um deles responde
+a um terço do que ela fez — e a escolha de qual é arbitrária: sai o mais recente, porque é assim que
+a rodada varre a conversa. Mandar os três seria rajada para o mesmo número. A mensagem do momento
+serve para qualquer um dos três.
+
+### A guarda que define a regra: a Eroni
+
+Em 03/09 ele decidiu o **contrário** num caso parecido: a Eroni recusou o convite do evento e clicou
+em dois anúncios, e ele disse *"aqui ela veio por outro modelo sem ser o padrão, mandar o modelo
+pedido"*. A diferença é que **ela escreveu alguma coisa** além de clicar.
+
+`rajadaDeAnuncios` exige que a rajada seja **só cliques**: quem escreveu está falando; quem só
+clicou, não. Os dois casos estão lado a lado no teste — sem isso, este conserto desfaria aquela
+decisão sem ninguém perceber.
+
+### A marca cobria só o primeiro clique
+
+Achado medindo: `prepararEntrantes` marcava como "gerada pelo anúncio" apenas a **primeira** mensagem
+de uma sessão com `utm`. Os cliques seguintes dependiam da lista de padrões cadastrada — e ela não
+fecha, que é a lição de 04/09 (*o anúncio muda de redação e a lista não*). Dos três textos da Irene,
+**um** casava.
+
+Entrou o formato do texto pré-preenchido (`^olá!? eu <algo>`), com três guardas: só vale **dentro de
+sessão que veio de anúncio**, a mensagem não pode ter "?" e tem no máximo 160 caracteres. É o que
+separa *"Olá! Eu apoio as Escolas Cívico-Militares"* de *"Olá! Eu queria saber se vocês têm..."*.
+
+### Medido
+
+Com o sinal ligado: tecla **5** na chegada, na volta com cidade e na volta sem cidade — vencendo as
+duas portas do modelo e o recibo. Com a do momento já enviada, tecla **3**. **Um clique só continua
+recebendo o recibo + pedido de dados (tecla `a`)** — a regra não come a chegada normal.
+
+**Arquivos:** `src/lib/cortesia.js` (o detector), `src/lib/sugestao.js` (a regra e o verbete),
+`src/lib/arvore.js` (o sinal e as três caixas), `src/panel/panel.js` (a marca dos cliques e o
+sinal), `tests/cortesia.test.mjs` (+5), `tests/arvore.test.mjs` (+5, e o contador da chegada foi a
+20), `CLAUDE.md` (+2 armadilhas), `manifest.json` (2.53.0 -> 2.54.0). Quinze suítes e os dois
+verificadores.
+
+**O quadro dele precisa ser reimportado** — a caixa é nova, e caixa nova nunca entra sozinha.
 
 ---
 

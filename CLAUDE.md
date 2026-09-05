@@ -1407,6 +1407,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   remedio (regra propria, acima desta) e na noticia de terceiro (*"minha vizinha esta internada"*).
   Metade das asercoes do teste e falso positivo. **Concluir e o pior desfecho**: ela avisou que
   voltaria, e fechar responde que nao precisa.
+- **RAJADA de cliques em anuncio nao e pedido de conteudo: e navegacao.** Print da Irene
+  (05/09/2026): tres cliques seguidos em anuncios diferentes do Instagram, nada mais escrito, e a
+  caixa ofereceu o modelo de UM deles. *"Rajada de entrada em anuncio, mensagem do momento e
+  concluir."* O modelo de um responde a um terco do que ela fez, escolhido pela ordem em que a
+  rodada varre a conversa; mandar os tres seria rajada para o mesmo numero. **A guarda que define a
+  regra e a ERONI (03/09)**, onde ele decidiu o contrario (mandar o modelo novo): la ela ESCREVEU
+  alem de clicar. Por isso `rajadaDeAnuncios` exige que a rajada seja **so cliques** — quem escreveu
+  esta falando, quem so clicou, nao. A caixa fica acima das DUAS portas do modelo (o grupo do
+  anuncio reconhecido e `conteudo-pedido`) e acima do recibo da chegada.
+- **A marca de "mensagem gerada pelo anuncio" cobria so o PRIMEIRO clique.** `prepararEntrantes`
+  marcava a primeira mensagem de uma sessao com `utm`, e os cliques seguintes dependiam da lista de
+  padroes que ele cadastrou — que nao fecha (a licao de 04/09: o anuncio muda de redacao e a lista
+  nao). Dos tres textos da Irene, so um casava. Hoje entra tambem o formato do texto pre-preenchido
+  (`^ola!? eu <algo>`), **valido apenas dentro de sessao que veio de anuncio**, sem "?" e com ate
+  160 caracteres: e o que separa *"Ola! Eu apoio as Escolas Civico-Militares"* de *"Ola! Eu queria
+  saber se voces tem..."*.
 
 - **A QUERY STRING do link tem "?", e por isso todo video repassado virava PERGUNTA.** Relato dele
   (05/09/2026): *"varios casos da pessoa mandando link e reconhece como conversa e passa pra mim"*.
