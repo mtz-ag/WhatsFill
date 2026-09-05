@@ -48,7 +48,7 @@ import { REGRAS, SOBRE, TECLAS } from './sugestao.js';
 export const SINAIS = [
   { id: 'veioDeAnuncio', rotulo: 'Veio de um anúncio', nao: 'Não veio de anúncio' },
   { id: 'anuncioReconhecido', rotulo: 'Reconheci de QUAL anúncio ela veio', nao: 'Não reconheci o anúncio' },
-  { id: 'jaRespondemosAntes', rotulo: 'Já entregamos algo antes (é retorno)', nao: 'Nunca entregamos nada (é primeira vez)' },
+  { id: 'jaRespondemosAntes', rotulo: 'Já a atendemos antes (é retorno)', nao: 'Nunca a atendemos (é a primeira vez)' },
   { id: 'jaPediramDados', rotulo: 'Já pedimos o nome e a cidade dela', nao: 'Nunca pedimos o nome e a cidade dela' },
   { id: 'temEtiquetaDeCidade', rotulo: 'Já tem etiqueta de cidade', nao: 'Ainda não tem etiqueta de cidade' },
   { id: 'semInteresse', rotulo: 'Recusou ou veio hostilizar (hater)', nao: 'Não recusou nem hostilizou' },

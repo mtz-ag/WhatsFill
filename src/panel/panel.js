@@ -4254,9 +4254,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * Antes era calculada só na hora de montar a caixa, e a escolha do modelo acontecia antes.
        */
       const idsDeCidade = await tagsLib.cityTagIds().catch(() => new Set());
-      const temEtiquetaDeCidade =
+
+      /**
+       * **A cidade que JÁ ESTAVA no CRM** — separada da que esta passada vai gravar.
+       *
+       * As duas contam para "tem cidade" (é o que decide o lado do quadro), mas só esta prova que
+       * **alguém já trabalhou este contato antes** — ver `jaRespondemosAntes`, logo abaixo. A que
+       * vamos gravar agora é desta conversa: contá-la ali faria quem acabou de responder o cadastro
+       * na primeira vinda ser tratada como retorno.
+       */
+      const cidadeJaNoCrm =
         (state.contact?.tagsId || []).some((id) => idsDeCidade.has(id)) ||
-        state.tagSuggestions.some((sug) => sug.origem === 'cidade' && sug.tag && (sug.marcada || sug.jaTem));
+        state.tagSuggestions.some((sug) => sug.origem === 'cidade' && sug.tag && sug.jaTem);
+
+      const temEtiquetaDeCidade =
+        cidadeJaNoCrm ||
+        state.tagSuggestions.some((sug) => sug.origem === 'cidade' && sug.tag && sug.marcada);
 
       const conteudos = state.tagSuggestions.filter((s) => s.origem === 'conteúdo');
       let modelo = null;
@@ -4321,7 +4334,41 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * A comparação usa o maior pedaço literal de cada texto, como o `modeloJaNaConversa` — é o
        * que sobrevive às variáveis substituídas e às três variantes de cada resposta.
        */
+      /**
+       * **A conversa é a memória da SESSÃO; o CRM é a memória de verdade** — print da Rosa
+       * (05/09/2026): ela mandou uma figura de "bom dia", carregava etiqueta de cidade, de COREDE e
+       * de conteúdo, e recebeu as **boas-vindas do gabinete** — *"não foi a primeira vez que a
+       * pessoa veio, mesmo que esteja sem etiqueta ADS; correto seria mensagem do momento, dois
+       * casos seguidos já"*.
+       *
+       * Ela voltou sozinha, semanas depois, e isso abre uma **sessão nova**: `state.nossas` nasce
+       * vazio, `jaRespondemosAntes` dava falso, e o quadro a mandava para o ramo *"anúncio — pessoa
+       * nova"*, onde `chegada-boas-vindas` a apresentou ao gabinete pela segunda vez.
+       *
+       * É a mesma armadilha do Orides, três dias antes: **`session.utm` é "veio de anúncio NESTA
+       * sessão"; a etiqueta é "veio de anúncio"**. Aqui o par é o mesmo — a conversa é uma janela,
+       * a marca no CRM é a memória.
+       *
+       * Duas marcas provam o retorno, e nenhuma delas depende da sessão:
+       *
+       *  - **a Data de conclusão do contato**, que só a extensão grava, ao concluir. Falso positivo
+       *    é impossível; ela só não alcança quem foi concluído fora do painel;
+       *  - **a etiqueta de cidade que já estava lá.** É a decisão dele de 02/09, escrita neste
+       *    arquivo: *"se a pessoa já respondeu a cidade a chance de ela ter recebido um modelo é
+       *    muito grande"*. **O custo, que é real e foi dito a ele:** contato de base importada, com
+       *    cidade preenchida e conversando pela primeira vez, passa a receber a mensagem do momento
+       *    em vez das boas-vindas.
+       */
+      const jaConcluimosAntes = (() => {
+        const campo = state.schema.find((f) => f.name === fieldsLib.COMPLETION_FIELD);
+        if (!campo) return false;
+        const entry = state.draft[campo.id];
+        // `from === 'crm'` é o que separa o que estava lá do palpite desta passada.
+        return !!(entry && entry.from === 'crm' && entry.value);
+      })();
+
       const jaRespondemosAntes = (() => {
+        if (cidadeJaNoCrm || jaConcluimosAntes) return true;
         if (!state.nossas.length) return false;
 
         const perguntas = ['pedir-dados', 'interesse-conteudo', 'perguntar-como-ajudar']

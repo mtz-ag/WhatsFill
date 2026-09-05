@@ -2060,4 +2060,41 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   check(comAds?.tecla === '5', `e cai na caixa da reacao, que manda a mensagem do momento (tecla ${comAds?.tecla})`);
 }
 
+{
+  grupo('ja atendida antes nao recebe as boas-vindas de novo (05/09/2026)');
+
+  /**
+   * Print da ROSA: figura de "bom dia" as 05:49, etiquetas de cidade, de COREDE e de conteudo no
+   * CRM, e a rodada mandou *"Bem-vindo. Voce esta falando com o gabinete do Capitao Martim"* e
+   * concluiu. Ele: *"nao foi a primeira vez que a pessoa veio, mesmo que esteja sem etiqueta ADS;
+   * correto seria mensagem do momento, dois casos seguidos ja"*.
+   *
+   * Ela voltou sozinha e isso abre SESSAO NOVA: `state.nossas` nasce vazio e `jaRespondemosAntes`
+   * dava falso, entao o quadro a mandava para o ramo "pessoa nova". O conserto e no painel -- o
+   * sinal passou a ler tambem a marca do CRM (a etiqueta de cidade que ja estava la, e a Data de
+   * conclusao). Aqui fica travado o que o QUADRO faz com o sinal, que e a metade testavel.
+   *
+   * Mesma familia do Orides, logo acima: a sessao e uma janela, a marca no CRM e a memoria.
+   */
+  const fluxo = arv.fluxoPadrao();
+  const figura = [{ texto: '', tipo: 'IMAGE' }];
+  const base = {
+    soCortesia: cortesia.soCortesia(figura, null),
+    ultimaEhSoReacao: cortesia.ultimaEhSoReacao(figura),
+    temEtiquetaDeCidade: true,
+    podeMandarMomento: true,
+    podePedirDados: true,
+    veioDeAnuncio: false,
+    textos: [''],
+    ultimoTexto: '',
+  };
+
+  const comoEra = arv.decidir({ ...base, jaRespondemosAntes: false }, fluxo, {});
+  check(comoEra?.resposta === 'boas-vindas', 'era isto o que ela recebia: as boas-vindas do gabinete');
+
+  const agora = arv.decidir({ ...base, jaRespondemosAntes: true }, fluxo, {});
+  check(agora?.resposta !== 'boas-vindas', 'reconhecida como retorno, NAO recebe as boas-vindas de novo');
+  check(agora?.tecla === '5', `e recebe a mensagem do momento, que foi o que ele pediu (tecla ${agora?.tecla})`);
+}
+
 fim();

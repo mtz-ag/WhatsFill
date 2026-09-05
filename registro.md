@@ -1,4 +1,4 @@
-## 2026-09-05 — ESTADO DE AGORA (v2.48.0) — leia isto primeiro numa sessão nova
+## 2026-09-05 — ESTADO DE AGORA (v2.49.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.48.0**, tudo commitado e no remoto. **Sete versões no dia 05/09**
-(2.42 → 2.48). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
+Branch `claude/whatsfill-ia`, **v2.49.0**, tudo commitado e no remoto. **Oito versões no dia 05/09**
+(2.42 → 2.49). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -21,6 +21,7 @@ problemas e sem desfecho incoerente.
 | 2.46 | **Etiqueta de ADS conta como "veio de anúncio"** — `session.utm` só sabe da sessão de agora. |
 | 2.47 | **Xingamento no imperativo é hostilidade**, e o traço eme virou conserto em vez de pedido. |
 | 2.48 | **"Aguardando mensagem" é ruído da plataforma** — o link do FAQ estava virando CIDADE no CRM. |
+| 2.49 | **Já atendida antes não recebe as boas-vindas de novo** — o sinal do retorno lia só a sessão, e o CRM é quem tem memória. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -88,6 +89,71 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-05 — Já atendida antes não recebe as boas-vindas de novo (v2.49.0)
+
+### O caso
+
+A **Rosa** mandou uma figura de "bom dia" às 05:49. Ela carrega etiqueta de cidade (Porto Alegre),
+de COREDE (Metropolitano) e de conteúdo (Contra MST) — e recebeu *"Bem-vindo. Você está falando com
+o gabinete do Capitão Martim. Em que podemos ajudar?"*, seguido de conclusão.
+
+Ele: *"não foi a primeira vez que a pessoa veio, mesmo que esteja sem etiqueta ADS; correto seria
+mensagem do momento, dois casos seguidos já"*.
+
+### A causa
+
+`jaRespondemosAntes` lia **só a conversa**, e a conversa é a sessão. Quem volta sozinha semanas
+depois abre uma sessão nova: `state.nossas` nasce vazio, o sinal dá falso, e o quadro manda o caso
+para o ramo *"anúncio — pessoa nova"* — onde `chegada-boas-vindas` a apresenta ao gabinete pela
+segunda vez.
+
+Medido antes de mexer, com o contexto dela: `chegada-boas-vindas` com o sinal falso, tecla 5
+(mensagem do momento) com o sinal verdadeiro. É o desfecho que ele pediu, e o quadro já o produzia —
+faltava o sinal dizer a verdade.
+
+**É a armadilha do Orides outra vez**, dois dias depois: `session.utm` é *"veio de anúncio NESTA
+sessão"*, e a etiqueta é *"veio de anúncio"*. Aqui o par é o mesmo — **a conversa é uma janela, a
+marca no CRM é a memória.**
+
+### O conserto
+
+O sinal passou a somar duas marcas que não dependem da sessão:
+
+- **a Data de conclusão do contato**, que só a extensão grava, ao concluir. Falso positivo é
+  impossível; ela apenas não alcança quem foi concluído fora do painel;
+- **a etiqueta de cidade que já estava no CRM.** É a decisão dele de 02/09, que já estava escrita no
+  código: *"se a pessoa já respondeu a cidade a chance de ela ter recebido um modelo é muito
+  grande"*.
+
+`cidadeJaNoCrm` nasceu separado de `temEtiquetaDeCidade`: a etiqueta que **esta passada vai gravar**
+não conta como memória, senão quem responde o cadastro na primeira vinda viraria retorno na mesma
+passada em que chegou.
+
+### O que muda, medido
+
+Em 30.000 contextos sorteados **com etiqueta de cidade**, 2,9% mudam de desfecho:
+
+- **dois terços deles não tinham desfecho nenhum** — atravessavam o quadro em silêncio, porque
+  `ja-respondemos-antes` só existe no ramo do retorno. Agora recebem a mensagem do momento, a
+  conclusão ou a tecla 6;
+- o caso da Rosa (as boas-vindas dando lugar ao momento, à conclusão ou ao modelo);
+- quem tem cidade deixa de receber a pergunta de interesse de `nada-legivel-dela` — ela existe para
+  quem não deixou nada para trabalhar, e cidade é alguma coisa.
+
+**Nenhuma mudança tira um caso de você para mandar mensagem:** não há transição de tecla 6 para
+tecla 1 ou 5 na varredura.
+
+**O custo, que é real e fica dito:** contato de base importada, com o campo Cidade preenchido e
+conversando conosco pela primeira vez, passa a receber a mensagem do momento em vez das boas-vindas.
+
+**Arquivos:** `src/panel/panel.js` (o sinal e `cidadeJaNoCrm`), `src/lib/arvore.js` (o rótulo do
+sinal na janela), `tests/arvore.test.mjs` (+3), `CLAUDE.md`, `manifest.json` (2.47.0 → 2.49.0 — o commit de
+2.48 escreveu o número no registro e esqueceu de subi-lo no manifesto).
+Quinze suítes e os dois verificadores. **O quadro dele não muda** — nenhuma caixa entrou ou saiu,
+então não há o que reimportar.
 
 ---
 

@@ -1325,6 +1325,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   sessão (etiqueta velha marcaria a fala de outra visita) e a etiqueta de origem só é aplicada a
   quem chega agora. Mesma lição da etiqueta de sem interesse: **detector é palpite, a marca é
   decisão, e decisão não se redescobre.**
+- **A CONVERSA e a memoria da SESSAO; o CRM e a memoria de verdade.** Print da Rosa (05/09/2026),
+  dois dias depois do Orides e pelo mesmo motivo: figura de "bom dia", etiquetas de cidade, COREDE e
+  conteudo no CRM, e ela recebeu as **boas-vindas do gabinete** — *"nao foi a primeira vez que a
+  pessoa veio, mesmo que esteja sem etiqueta ADS; correto seria mensagem do momento, dois casos
+  seguidos ja"*. Voltar sozinha abre **sessao nova**: `state.nossas` nasce vazio, entao
+  `jaRespondemosAntes` dava falso e o quadro a mandava para o ramo *"anuncio — pessoa nova"*, onde
+  `chegada-boas-vindas` a apresentou pela segunda vez. Hoje o sinal soma duas marcas do CRM: a
+  **Data de conclusao do contato** (so a extensao grava, ao concluir — falso positivo e impossivel)
+  e a **etiqueta de cidade que JA ESTAVA la**, que e a decisao dele de 02/09 (*"se a pessoa ja
+  respondeu a cidade a chance de ela ter recebido um modelo e muito grande"*). Duas coisas: a
+  etiqueta que esta rodada VAI gravar nao conta (`cidadeJaNoCrm` e separado de
+  `temEtiquetaDeCidade`), senao quem responde o cadastro na primeira vinda vira retorno na mesma
+  passada; e o **custo, dito a ele** — contato de base importada, com cidade preenchida e
+  conversando pela primeira vez, passa a receber a mensagem do momento em vez das boas-vindas.
+  Medido: 2,9% dos contextos com etiqueta de cidade mudam de desfecho, e **dois tercos deles nao
+  tinham desfecho nenhum** (o ramo da chegada nao tem `ja-respondemos-antes`).
 
 - **A QUERY STRING do link tem "?", e por isso todo video repassado virava PERGUNTA.** Relato dele
   (05/09/2026): *"varios casos da pessoa mandando link e reconhece como conversa e passa pra mim"*.
