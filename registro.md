@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.30.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.31.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.30.0**, tudo commitado e no remoto. 24 commits no dia 04/09.
+Branch `claude/whatsfill-ia`, **v2.31.0**, tudo commitado e no remoto. 25 commits no dia 04/09.
 Quinze suítes verdes, os dois verificadores limpos, **28 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente — o quadro virou UMA lista em 04/09.
 
@@ -25,9 +25,9 @@ sem desfecho incoerente — o quadro virou UMA lista em 04/09.
      redescobrir a hostilidade do zero (o caso da susana, reportado duas vezes);
    - **Etiqueta de quem PEDIU DINHEIRO OU EMPREGO** — ele quer `🔴Procura emprego ou dinheiro`;
    - **Etiqueta de quem MANDOU ENDEREÇO** — a lista de material a enviar. Ele disse que a etiqueta
-     já existe na plataforma; falta só digitar o nome dela aqui. **Este é o campo que mais custa
-     ficar vazio dos três:** é a etiqueta que faz a rodada pular o contato em toda passada, então
-     sem ela quem está esperando material volta para a automação assim que a rajada esvazia.
+     já existe na plataforma; falta só digitar o nome dela aqui. **É o campo que mais custa ficar
+     vazio dos três:** ela é aplicada quando o pedido de endereço SAI e quando ela responde, e é o
+     que faz a rodada pular o contato em toda passada até ele transferir a conversa.
 3. **Config → tabela "Modelo por conteúdo", linha `ADS = Campanha Martim`**: não é mais necessário
    limpar (o código tem o piso `tags.ORIGEM_SEMPRE`), mas continua sendo lixo que confunde a leitura.
 
@@ -68,6 +68,49 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — Pedir o endereço pelo modelo agora marca e NÃO conclui (v2.31.0)
+
+*"pedi o endereço pelo modelo e não etiquetou e concluiu"*, com a print do modelo aprovado:
+*"Para encaminharmos seu pedido ao assessor responsável pela sua região, por favor, me informe seu
+endereço completo (rua, número, bairro e cidade)"*.
+
+### O que faltava
+
+O caso de material tinha só **uma ponta**: `cortesia.informouEndereco`, que reconhece quando **ela**
+responde com um endereço, aplica a etiqueta e pula. Mas quem **abre** o caso é o nosso pedido — e
+era ele que passava batido: o modelo saía, nada era marcado, e a rodada concluía o atendimento.
+
+Concluir ali é pior do que nos outros casos: a conversa acabou de fazer uma pergunta, e fechar diz
+*"não precisa responder"* para quem estava prestes a mandar o endereço.
+
+### Como ficou
+
+`templates.ehPedidoDeEndereco` reconhece o pedido **por invariante** — *"endereço completo"*, ou a
+enumeração `rua` + `número` + `bairro`. **Por invariante e nunca por id de modelo**: este pedido sai
+por modelo aprovado, cuja redação é da plataforma e muda sem passar por nós. É a mesma lição do
+`ehPedidoDeDados`, e aqui vale mais.
+
+Duas coisas passaram a acontecer quando esse texto sai:
+
+1. **A etiqueta de material é aplicada**, dentro do `sendTemplate` — o ponto único por onde toda
+   mensagem sai (a rodada, o modelo aprovado, um ramo do quadro, a escolha da IA, as respostas
+   rápidas). O aviso vai junto do status, e diz se o campo da Config está vazio.
+2. **A rodada deixa o atendimento ABERTO**, com o motivo no log: *"pedido de endereço, deixei o
+   atendimento ABERTO para você transferir"*.
+
+Daí em diante o caso já andava: com a etiqueta no contato, a rodada pula em toda passada até ele
+tirar a marca, que é o gesto de "esta conversa foi transferida".
+
+### O que continua dependendo dele
+
+O campo **"Etiqueta de quem MANDOU ENDEREÇO"**, na aba Automatizado. Vazio, o atendimento fica
+aberto do mesmo jeito, mas nada é marcado — e é a marca que junta a lista.
+
+Quinze suítes verdes, os dois verificadores limpos. **O fluxo padrão não mudou** — nada para
+reimportar.
 
 ---
 

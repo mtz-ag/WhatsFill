@@ -395,4 +395,43 @@ grupo('"Confirmou presenca (so agradecer)": a metade que faltava (02/09/2026)');
   check(!/(cesta|rem[ée]dio|dinheiro|emprego|vaga|benef[ií]cio)/i.test(junto), 'nao promete beneficio nenhum');
 }
 
+{
+  grupo('ehPedidoDeEndereco — o pedido que ABRE o caso de material (04/09/2026)');
+
+  /**
+   * Relato dele: *"pedi o endereco pelo modelo e nao etiquetou e concluiu"*. A marca existia so
+   * para quando ELA responde com um endereco -- mas quem abre o caso e o NOSSO pedido, e e dele
+   * que sai a lista que ele transfere no fim do dia.
+   *
+   * O texto abaixo e o modelo aprovado que ele mandou, palavra por palavra: e a redacao da
+   * plataforma, que muda sem passar por nos -- e por isso o reconhecimento e por INVARIANTE.
+   */
+  const modelo = [
+    'Ola! Que bom saber do seu interesse em receber materiais de campanha do Capitao Martim!',
+    '',
+    'Para encaminharmos seu pedido ao assessor responsavel pela sua regiao, por favor, me informe',
+    'seu endereco completo (rua, numero, bairro e cidade).',
+    '',
+    'Assim, conseguimos direcionar o atendimento para a pessoa responsavel pela sua regiao. Um abraco!',
+  ].join('\n');
+
+  check(templates.ehPedidoDeEndereco(modelo), 'o modelo aprovado que ele usa e reconhecido');
+  check(templates.ehPedidoDeEndereco('me passa o seu endereco completo por favor'), 'a forma curta, com "endereco completo"');
+  check(templates.ehPedidoDeEndereco('qual seu endereco? rua, numero e bairro'), 'e a enumeracao rua + numero + bairro');
+
+  /**
+   * **Os falsos negativos importam mais que os positivos aqui**: a funcao so ve texto NOSSO, entao
+   * errar para o lado de nao reconhecer significa concluir o atendimento de quem ia mandar o
+   * endereco -- que e exatamente a anotacao dele.
+   */
+  check(!templates.ehPedidoDeEndereco('Para eu poder salvar seu contato me diga seu: Nome , Cidade'), 'o pedido de nome e cidade NAO e pedido de endereco');
+  check(!templates.ehPedidoDeEndereco('Obrigado pela atencao! Qualquer coisa e so chamar'), 'nem o agradecimento');
+  check(!templates.ehPedidoDeEndereco('moro na rua das flores 123, bairro centro'), 'nem um endereco escrito por ela');
+  check(!templates.ehPedidoDeEndereco(''), 'texto vazio nao quebra');
+
+  // As duas coisas andam juntas no mesmo caso, mas sao perguntas diferentes.
+  const auto2 = await store.get('auto');
+  check(!templates.ehPedidoDeEndereco(auto2.pedidoJuntoDoMomento), 'o pedido de nome e cidade do momento tambem nao conta como endereco');
+}
+
 fim();

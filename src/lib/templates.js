@@ -468,6 +468,45 @@ function slug(name) {
  * @param {string} texto uma mensagem que NÓS mandamos
  * @returns {boolean}
  */
+/**
+ * Esta mensagem NOSSA pede o ENDEREÇO? (em qualquer redação, de qualquer época)
+ *
+ * Relato dele (04/09/2026), com a print do modelo aprovado que ele mandou — *"Para encaminharmos
+ * seu pedido ao assessor responsável pela sua região, por favor, me informe seu endereço completo
+ * (rua, número, bairro e cidade)"* —: *"pedi o endereço pelo modelo e não etiquetou e concluiu"*.
+ *
+ * **É a outra ponta do caso de material.** O detector `cortesia.informouEndereco` reconhece quando
+ * ELA responde; este reconhece quando NÓS pedimos — e é o pedido que abre o caso: a partir dele o
+ * contato entra na lista de material, fica marcado e não é concluído.
+ *
+ * **Pelo invariante, nunca pelo id do modelo nem por uma fatia do texto** — é a lição registrada no
+ * `ehPedidoDeDados`, e vale mais aqui: este pedido sai por MODELO APROVADO, cuja redação é da
+ * plataforma e muda sem passar por nós.
+ *
+ * Duas portas, e as duas literais:
+ *
+ *  - **"endereço completo"** — a forma que ele usa, e que ninguém escreve por acaso;
+ *  - **a enumeração** `rua` + `número` + `bairro`, que é como se explica o que se quer, com a
+ *    palavra "endereço" na mensagem.
+ *
+ * Só é aplicada em texto NOSSO, então o risco é o falso negativo (o caso escapa e é concluído),
+ * não o falso positivo.
+ *
+ * @param {string} texto uma mensagem que NÓS mandamos
+ * @returns {boolean}
+ */
+export function ehPedidoDeEndereco(texto) {
+  const plano = String(texto || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!plano.includes('endereco')) return false;
+  if (/\bendereco\s+(completo|residencial)\b/.test(plano)) return true;
+  return /\brua\b/.test(plano) && /\b(numero|n[º°]|nro)\b/.test(plano) && /\bbairro\b/.test(plano);
+}
+
 export function ehPedidoDeDados(texto) {
   const plano = String(texto || '')
     .normalize('NFD')

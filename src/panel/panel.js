@@ -1976,7 +1976,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     await templatesLib.markSent(alvo.id, template.id, { nome: alvo.name });
     await templatesLib.avancarVariante(template);
     const marca = await etiquetarPedidoDeAjuda(template, alvo);
-    setStatus(`Enviado: ${template.name}${marca}`, 'ok');
+    /**
+     * **Pedir o endereço ABRE o caso de material, e é aqui que ele é marcado.**
+     *
+     * Relato dele (04/09/2026): *"pedi o endereço pelo modelo e não etiquetou e concluiu"*. A
+     * marca existia só para quando ELA responde com um endereço — mas quem abre o caso é o nosso
+     * pedido, e é dele que sai a lista que ele transfere no fim do dia.
+     *
+     * Fica no mesmo lugar da etiqueta de pedido de ajuda, e pelo mesmo motivo: este é o ponto
+     * ÚNICO por onde toda mensagem sai — a rodada, o modelo aprovado, um ramo do quadro, a escolha
+     * da IA e as respostas rápidas da caixa.
+     *
+     * Casa pelo TEXTO RENDERIZADO, não pelo id: o pedido dele sai por modelo aprovado, cuja
+     * redação é da plataforma.
+     */
+    const marcaEndereco = templatesLib.ehPedidoDeEndereco(text) ? await etiquetarEndereco(alvo) : '';
+    setStatus(`Enviado: ${template.name}${marca}${marcaEndereco}`, 'ok');
     return true;
   }
 
@@ -2068,6 +2083,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return r?.ok ? ` + etiqueta "${tag.label}"` : ` (não consegui aplicar "${nome}")`;
     } catch (err) {
       return ` (não consegui aplicar "${nome}": ${err?.message || err})`;
+    }
+  }
+
+  /**
+   * O texto que vai sair pede o endereço? Olha o texto base e a variante da vez — as duas, porque
+   * o revezamento pode estar em qualquer uma delas.
+   */
+  async function vaiPedirEndereco(template) {
+    if (!template) return false;
+    if (templatesLib.ehPedidoDeEndereco(template.text)) return true;
+    try {
+      return templatesLib.ehPedidoDeEndereco(await templatesLib.varianteAtual(template));
+    } catch (_) {
+      return false;
     }
   }
 
@@ -5856,6 +5885,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         if (!(await sendTemplate(doFluxo, { send: true, jaConfirmado: true }))) {
           return { nome, resultado: 'erro', motivo: `"${doFluxo.name}" (ramo do fluxo) não saiu` };
         }
+        // Pedido de endereço não conclui: o caso vai para a lista de material, aberto.
+        if (await vaiPedirEndereco(doFluxo)) {
+          return {
+            nome,
+            resultado: 'enviado',
+            motivo: `mandei "${doFluxo.name}" — pedido de endereço, deixei o atendimento ABERTO para você transferir`,
+          };
+        }
         const fechouFluxo = await concluirPeloPainel();
         if (!fechouFluxo.ok) {
           return { nome, resultado: 'enviado', parar: true, motivo: `"${doFluxo.name}" saiu, mas ${fechouFluxo.reason}` };
@@ -6034,6 +6071,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       if (escolha !== 'modelodados' && agradecimento && !(await sendTemplate(agradecimento, { send: true, jaConfirmado: true }))) {
         return { nome, resultado: 'erro', motivo: 'o modelo saiu mas o agradecimento não' };
+      }
+
+      /**
+       * **Pedido de endereço NÃO conclui o atendimento** — relato dele (04/09/2026): *"pedi o
+       * endereço pelo modelo e não etiquetou e concluiu"*.
+       *
+       * É a mesma regra que ele deu para o caso de material: *"a pessoa deve ser pulada e não
+       * concluída, pois vou transferir pro responsável a conversa no final"*. Concluir aqui é pior
+       * que nos outros casos — a conversa acabou de fazer uma pergunta, e fechar diz "não precisa
+       * responder" para quem está prestes a mandar o endereço.
+       *
+       * A etiqueta já foi aplicada no envio (ver `sendTemplate`); o que falta é não fechar.
+       */
+      if (await vaiPedirEndereco(modelo)) {
+        return {
+          nome,
+          resultado: 'enviado',
+          motivo: `mandei "${modelo.name}" — pedido de endereço, deixei o atendimento ABERTO para você transferir`,
+        };
       }
 
       const concluido = await concluirPeloPainel();

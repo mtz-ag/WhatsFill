@@ -1257,6 +1257,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   Entraram junto `aluguel`, `farmacia` e `conta de luz/agua` nas NECESSIDADES, que continuam
   exigindo o verbo de pedir.
 
+- **Quem ABRE o caso de material e o NOSSO pedido de endereco, e ele nao conclui.** Relato dele
+  (04/09/2026), com a print do modelo aprovado: *"pedi o endereco pelo modelo e nao etiquetou e
+  concluiu"*. O que existia era so a outra ponta — `cortesia.informouEndereco`, para quando ELA
+  responde. Hoje `templates.ehPedidoDeEndereco` reconhece o nosso pedido **por invariante**
+  ("endereco completo", ou a enumeracao rua + numero + bairro), e duas coisas acontecem: a etiqueta
+  de material e aplicada dentro do `sendTemplate` (o ponto UNICO por onde tudo sai) e a rodada
+  **deixa o atendimento ABERTO**. Concluir ali e pior que nos outros casos: a conversa acabou de
+  fazer uma pergunta, e fechar diz "nao precisa responder" para quem ia mandar o endereco.
+  **Por invariante e nao por id** porque este pedido sai por MODELO APROVADO, cuja redacao e da
+  plataforma e muda sem passar por nos.
+
 - **O formulario seco, dias depois, chega sem contexto — e a tecla 5 passou a levar o pedido
   junto.** Print dele (04/09/2026): o contato mandou uma imagem de bom dia as 08:18 e recebeu as
   21:16 *"ATENCAO! Para eu poder salvar seu contato me diga seu: Nome, Cidade"*. Ele: *"soltou sem
