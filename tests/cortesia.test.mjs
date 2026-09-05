@@ -1755,4 +1755,25 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   }
 }
 
+{
+  grupo('"Aguardando mensagem" e ruido da plataforma (05/09/2026)');
+
+  /**
+   * Print dele: o fluxo trazia *"Aguardando mensagem. Essa acao pode levar alguns instantes. Saiba
+   * mais: https://faq.whatsapp.com/..."* -- e **"faq.whatsapp.com" foi gravado no campo Cidade** de
+   * uma eleitora real, com a tela oferecendo *"Este e o grupo de faq.whatsapp.com"*.
+   *
+   * Mesma familia do Carlos e da Vera (02/09), com uma diferenca: este ruido carrega um LINK, e
+   * link vira dado.
+   */
+  check(ehMensagemDaPlataforma('⏳ Aguardando mensagem. Essa acao pode levar alguns instantes. Saiba mais: https://faq.whatsapp.com/1234'),
+    'o aviso com o link do faq e reconhecido como ruido');
+  check(ehMensagemDaPlataforma('Aguardando mensagem. Essa acao pode levar alguns instantes.'),
+    'e sem o emoji tambem');
+
+  // O falso positivo que importa: gente escreve "aguardando" o tempo todo.
+  check(!ehMensagemDaPlataforma('Estou aguardando mensagem de voces ha dias'), 'fala de gente com "aguardando" nao conta');
+  check(!ehMensagemDaPlataforma('Essa acao do governo foi boa'), 'nem "essa acao" solto');
+}
+
 fim();

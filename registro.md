@@ -1,80 +1,113 @@
-## 2026-09-05 — ESTADO DE AGORA (v2.47.0) — leia isto primeiro numa sessão nova
+## 2026-09-05 — ESTADO DE AGORA (v2.48.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
-confiar. **Substitui a entrada equivalente de v2.14.0** — duas destas no arquivo é o começo da
-divergência.
+confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.47.0**, tudo commitado e no remoto. 36 commits no dia 04/09,
-e seis no dia 05/09.
-Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
-sem desfecho incoerente — **60 caixas** desde que as situações do mesmo desfecho foram juntadas. A
-lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o quadro tem dois ramos.
+Branch `claude/whatsfill-ia`, **v2.48.0**, tudo commitado e no remoto. **Sete versões no dia 05/09**
+(2.42 → 2.48). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
+problemas e sem desfecho incoerente.
+
+### O que mudou hoje, em uma linha cada
+
+| v | o que |
+|---|---|
+| 2.42 | **Material pedido não vence com o dia** — exceção em `contexto-de-outro-dia` e em `respondeu-os-dados`, na CONDIÇÃO. |
+| 2.43 | **Boas-vindas não pedem o cadastro de quem já tem** — nasceu `boas-vindas-tem-dados`, e a conta virou `sugestao.pedirDadosNaoCabe`. |
+| 2.44 | **"trabalhar NA campanha"** — a lista colava preposição e artigo, e as três formas mais naturais nunca casavam. |
+| 2.45 | **Link não é pergunta nem conversa** (a query string tinha o "?"), e o rascunho passou a pedir o cadastro que falta. |
+| 2.46 | **Etiqueta de ADS conta como "veio de anúncio"** — `session.utm` só sabe da sessão de agora. |
+| 2.47 | **Xingamento no imperativo é hostilidade**, e o traço eme virou conserto em vez de pedido. |
+| 2.48 | **"Aguardando mensagem" é ruído da plataforma** — o link do FAQ estava virando CIDADE no CRM. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
-1. **Importar o fluxo.** O quadro dele é o exportado em **2.14.0** (59 caixas, com a estrutura
-   antiga); o padrão de agora tem **60**, nos dois ramos de sempre, com as situações do mesmo
-   desfecho já juntadas numa caixa só. Entregue como `fluxo-padrao-2.41.0.json`, que continua
-   valendo — o padrão de 2.42.0 tem as mesmas 60 caixas. Regenerar com
-   `node tools/exportar-fluxo.mjs <saida.json>` — saída FORA do repositório.
-2. **Aba Automatizado → "Etiquetas que a rodada aplica"** (cartão criado em 04/09, porque os campos
-   estavam escondidos dentro de um cartão desativado desde 15/08). **As três estão vazias:**
-   - **Etiqueta de SEM INTERESSE** — a rodada não marca e, na visita seguinte, precisa
-     redescobrir a hostilidade do zero (o caso da susana, reportado duas vezes);
-   - **Etiqueta de quem PEDIU DINHEIRO OU EMPREGO** — ele quer `🔴Procura emprego ou dinheiro`;
-   - **Etiqueta de quem MANDOU ENDEREÇO** — a lista de material a enviar. Ele disse que a etiqueta
-     já existe na plataforma; falta só digitar o nome dela aqui. **É o campo que mais custa ficar
-     vazio dos três:** ela é aplicada quando o pedido de endereço SAI e quando ela responde, e é o
-     que faz a rodada pular o contato em toda passada até ele transferir a conversa.
-3. **Os MODELOS PADRÃO estão vazios, e agora há uma print do custo.** O anúncio CONVERSE CONOSCO
-   ("Olá! Eu quero receber o Material da Direita") não está cadastrado na Config, e sem modelo
-   padrão não existe modelo nenhum para mandar a quem chega por ele: ela pede material e recebe o
-   formulário seco. Duas saídas, as duas dele — cadastrar o anúncio com o modelo, ou preencher os
-   modelos padrão.
-4. **Config → tabela "Modelo por conteúdo", linha `ADS = Campanha Martim`**: não é mais necessário
-   limpar (o código tem o piso `tags.ORIGEM_SEMPRE`), mas continua sendo lixo que confunde a leitura.
+1. **Consertar à mão a Cidade de quem já foi contaminado.** O aviso *"Cidade escrita fora do padrão:
+   `faq.whatsapp.com`"* aparece no cabeçalho do painel quando acontece. O conserto de 2.48 impede
+   novos casos; **não** limpa os que já foram gravados. A aba Cidades lista o que não casa com os
+   497 municípios — é por ali que se acha o resto.
+2. **Importar o fluxo: não há o que importar hoje.** O quadro dele é o exportado em **2.41.0** (60
+   caixas), e nada do dia 05/09 mexeu no `fluxoPadrao` — todas as correções foram em CONDIÇÃO de
+   regra do código, que vale em qualquer quadro. Regenerar com
+   `node tools/exportar-fluxo.mjs <saida.json>`, saída FORA do repositório.
+3. **Aba Automatizado → "Etiquetas que a rodada aplica": as três continuam vazias.**
+   - **SEM INTERESSE** — a rodada não marca, e na visita seguinte precisa redescobrir a hostilidade
+     do zero. Ficou mais caro hoje: `semInteresse` passou a pegar o xingamento no imperativo, e sem
+     a etiqueta nada disso fica registrado.
+   - **PEDIU DINHEIRO OU EMPREGO** — ele quer `🔴Procura emprego ou dinheiro`.
+   - **MANDOU ENDEREÇO** — a lista de material a enviar; é o que faz a rodada pular o contato até ele
+     transferir a conversa.
+4. **Os MODELOS PADRÃO estão vazios**, e o anúncio *CONVERSE CONOSCO* não está cadastrado. Sem um dos
+   dois não existe modelo nenhum para quem chega por ele: pede material e recebe o formulário seco.
+5. **Config → "Modelo por conteúdo", linha `ADS = Campanha Martim`**: não é mais necessário limpar (o
+   código tem o piso `tags.ORIGEM_SEMPRE`), mas continua confundindo a leitura.
 
 ### Aberto, esperando decisão dele
 
-- **Áudio antigo sem pergunta: gente ou tempo?** A Iracema mandou áudio de torcida ONTEM e ele quer
-  *"conclua para sair da lista"*; hoje o caso cai em `ultima-pede-resposta-pessoal` (tecla 6). Inverter
-  faria todo áudio antigo receber a mensagem do momento em vez de ir para ele — muda muito mais que
-  aquele contato, e por isso não mexi. **Tecla 6 não manda nada errado**, custa um toque.
-- **Casamento aproximado de cidade ainda abre a caixa "Cidade a gravar."** *"Só q ia me mudar pra
-  Santa Rita"* casa como Santa Rosa. O `nao-reconhecida` já foi barrado; barrar o `aproximada`
-  também tiraria "Sao lourenso" e os outros erros de digitação.
-- **O "me liga" não aplica etiqueta nenhuma.** As duas respostas que negam (dinheiro, emprego) marcam;
-  esta não, porque ele não pediu. Se quiser, é um id a mais em `ETIQUETA_PEDIDO_IDS`.
+- **A rodada PARA no rascunho da IA** (`esperarVoceConcluir`, até 30 min ou até ele concluir). Ele
+  reportou *"bloqueio de mensagens ao mandar a IA responder"* e, perguntado, disse que o que viu foi
+  **resposta rápida com o Enviar apagado** — resolvido em 2.46 (o motivo saiu do tooltip e foi para a
+  tela). **A parada da rodada continua como está**, e ninguém decidiu mexer.
+- **Áudio antigo sem pergunta: gente ou tempo?** Hoje cai em `ultima-pede-resposta-pessoal` (tecla 6).
+- **Casamento aproximado de cidade ainda abre a caixa "Cidade a gravar."**
+- **O "me liga" não aplica etiqueta nenhuma** — é um id a mais em `ETIQUETA_PEDIDO_IDS` se ele quiser.
+- **Teclas 7, 9 e `i` como caixas do quadro** — oferecido em 04/09, não decidido.
 
 ### O que foi medido e o que não foi
 
-**Nada de 03–04/09 foi testado na tela**, com uma exceção: a altura da caixa da rodada, medida no
-navegador com o CSS real. Todo o resto foi medido em Node — inclusive **contra o quadro que ele tem**
-(`fluxopadrao2.14.0.json`), que é a conferência que importa: regra nova só vale para ele se decidir no
-quadro dele.
-
-### Onde as coisas moram
-
-- **`REGRAS.md`** — as 65 regras que ELE ditou, com onde cada uma vive (código, quadro ou Config).
-- **`CLAUDE.md`** — as armadilhas, lido em toda sessão. É onde entra fato que custou horas.
-- **`registro.md`** — causa raiz de cada mudança, mais recente no topo.
-- **`tests/`** — 15 suítes. **É a forma mais forte de guardar uma decisão dele**; comentário
-  envelhece, teste cai. Toda anotação da rodada vira teste.
-- **`tools/exportar-fluxo.mjs`** — gera o ramo para ele importar, confere relendo e imprime o fluxo
-  em texto. Nunca commitar o arquivo gerado: retrato envelhece no primeiro commit que mexe no padrão.
-- **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
-  projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`.
+**Nada do dia 05/09 foi testado na tela** — tudo medido em Node, contra o fluxo padrão e com o
+contexto reconstruído de cada print. As correções do dia são de CONDIÇÃO e de detector, que é o que
+permite medir sem navegador; mas o efeito na tela (a linha do bloqueio nas respostas rápidas, o
+rascunho com o formulário no fim) só ele vai ver.
 
 ### O ritmo desta sessão, para quem entrar agora
 
-Ele cola **observações da rodada** (o botão "Copiar as novas" da aba Automatizado) com o caso junto:
-regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada uma: **medir com o
-código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
-consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
-`CLAUDE.md`, e commitar. Uma versão por lote.
+Ele manda **uma print e uma frase curta** ("não pegou o contexto", "chegou hostilizando e extensão
+não reconheceu"). O trabalho é sempre o mesmo, nesta ordem: **reproduzir com uma medição antes de
+mexer** — várias vezes o defeito era maior que o relatado: no caso da hostilidade, *"vai tomar no
+cu"* e *"você é um desgraçado"* também passavam batido —, achar a causa, consertar, **medir o
+desfecho no fluxo padrão**, escrever o teste de regressão **com os falsos positivos junto**,
+registrar aqui e no `CLAUDE.md`, subir a versão e commitar. Uma versão por print.
+
+**Duas armadilhas do ambiente, que custaram tempo hoje:** escrita de arquivo por script Python às
+vezes **não persiste** (o script diz que escreveu e o arquivo não muda) — quando acontecer, use a
+ferramenta Edit; e escape de `\n` dentro de string JS escrita por script vira quebra de linha de
+verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
+
+### Onde as coisas moram
+
+- **`REGRAS.md`** — as regras que ELE ditou, com onde cada uma vive (código, quadro ou Config).
+- **`CLAUDE.md`** — as armadilhas, lido em toda sessão. É onde entra fato que custou horas.
+- **`registro.md`** — causa raiz de cada mudança, mais recente no topo.
+- **`tests/`** — 15 suítes. **É a forma mais forte de guardar uma decisão dele**; comentário
+  envelhece, teste cai. Toda print vira teste, com os falsos positivos junto.
+- **`tools/exportar-fluxo.mjs`** — gera o ramo para ele importar, confere relendo e imprime o fluxo
+  em texto. Nunca commitar o arquivo gerado.
+- **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
+  projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
+  `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-05 — "Aguardando mensagem" virava CIDADE no CRM (v2.48.0)
+
+Print dele: no fluxo do contato havia *"⏳ Aguardando mensagem. Essa ação pode levar alguns
+instantes. Saiba mais: https://faq.whatsapp.com/…"* — e o cabeçalho do painel mostrava
+**Cidade: faq.whatsapp.com**, com o aviso *"Cidade escrita fora do padrão"* e a resposta do grupo
+oferecendo *"Este é o grupo de faq.whatsapp.com"*.
+
+Medido: `ehMensagemDaPlataforma` devolvia **false** para esse texto. É a mesma família do Carlos e
+da Vera (02/09) — a plataforma escreve no fluxo do contato e nós lemos como fala dela —, com uma
+diferença que a torna pior: **este ruído carrega um link, e link vira dado**. O parser em modo
+"resposta ao pedido" aceita qualquer palavra solta, e a URL virou município.
+
+Os dois padrões novos são o começo do aviso e a frase do meio, separados de propósito: a primeira
+parte muda com o idioma do aparelho. O falso positivo que importa (*"estou aguardando mensagem de
+vocês há dias"*) está no teste.
+
+**O conserto não limpa o que já foi gravado** — ver a pendência 1 do ESTADO DE AGORA.
 
 ---
 

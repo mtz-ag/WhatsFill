@@ -1245,6 +1245,20 @@ const MENSAGENS_DA_PLATAFORMA = [
    * desabafar virava ruido de sistema e o texto dela era apagado.
    */
   /^\*atencao/,
+  /**
+   * **"Aguardando mensagem. Essa ação pode levar alguns instantes."** — print dele (05/09/2026), e
+   * o estrago desta foi o pior tipo: o aviso traz o link do `faq.whatsapp.com`, o parser leu a URL
+   * como resposta ao formulário e **"faq.whatsapp.com" foi gravado no campo Cidade** de uma
+   * eleitora real. A tela ainda oferecia *"Este é o grupo de faq.whatsapp.com"*.
+   *
+   * É a mesma família do Carlos e da Vera (02/09): a plataforma escreve no fluxo do contato e nós
+   * lemos como fala dela. A diferença aqui é que o ruído carrega um LINK, e link vira dado.
+   *
+   * O `saiba mais` fica junto na alternativa porque a primeira parte muda de redação com o idioma
+   * do aparelho; as duas juntas não aparecem em fala de gente.
+   */
+  /^\s*(⏳\s*)?aguardando\s+mensagem/,
+  /essa\s+acao\s+pode\s+levar\s+alguns\s+instantes/,
 ];
 
 export function ehMensagemDaPlataforma(texto) {

@@ -1289,6 +1289,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   separador do template mudou. O campo novo da Config avisa na tela quando o texto perde a linha, e
   ha teste no `templates.test.mjs`.
 
+- **Ruido da plataforma que carrega LINK vira DADO — e virou cidade no CRM.** Print dele
+  (05/09/2026): o fluxo trazia *"Aguardando mensagem. Essa acao pode levar alguns instantes. Saiba
+  mais: https://faq.whatsapp.com/..."* e o painel mostrava **Cidade: faq.whatsapp.com**, com a
+  resposta do grupo oferecendo *"Este e o grupo de faq.whatsapp.com"*. Medido:
+  `ehMensagemDaPlataforma` devolvia false. Mesma familia do Carlos e da Vera (02/09), com a
+  diferenca que torna esta pior — no modo `respostaAoPedido` o parser aceita QUALQUER palavra solta,
+  entao a URL do aviso virou municipio. **Aviso novo da plataforma entra em
+  `MENSAGENS_DA_PLATAFORMA` no mesmo dia em que aparecer**, e o conserto NAO limpa o que ja foi
+  gravado.
+
 - **Xingamento no IMPERATIVO e segunda pessoa, e a lista nao sabia disso.** Print dele (05/09/2026):
   a contato chegou pelo anuncio e um minuto depois escreveu *"Entao va para o inferno..
   desgracado"* — *"chegou hostilizando e extensao nao reconheceu"*. Medido, as duas metades
