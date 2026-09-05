@@ -1110,7 +1110,22 @@ export function pedeAjudaFinanceira(entrantes, nossaUltimaAt) {
  */
 const QUER_TRABALHAR = [
   /(^|[^\p{L}])(como|onde)\s+(faz|faco|fazer|posso|consigo)\s+.{0,20}?trabalhar/u,
-  /(^|[^\p{L}])trabalhar\s+(para|pra|com|no|na)\s+(voce|voces|vc|vcs|ti|o\s+mandato|o\s+gabinete|a\s+campanha)/u,
+  /**
+   * **O ARTIGO estava colado no substantivo, e isso apagava as tres formas mais naturais.**
+   *
+   * A lista dizia `(no|na) + (o mandato|a campanha)` -- e "no o mandato" nao existe. Ou seja:
+   * *"trabalhar NA campanha"*, *"trabalhar NO mandato"* e *"trabalhar NO gabinete"* nunca casaram,
+   * embora *"trabalhar para a campanha"* casasse. Print dele (05/09/2026): *"Vc esta chamando
+   * gente pra trabalhar na campanha tou precisando"* -- *"nao pegou o contexto"*.
+   *
+   * Hoje a preposicao e o artigo sao pecas separadas, que e o que a gramatica pede.
+   */
+  /(^|[^\p{L}])trabalhar\s+(para|pra|com|no|na|em|de)\s+(o\s+|a\s+|um\s+|uma\s+)?(voce|voces|vc|vcs|ti|mandato|gabinete|campanha|deputado|candidato)/u,
+  /**
+   * **"Voces estao contratando?"** -- a pergunta pela vaga sem a palavra vaga. E a forma da print
+   * de 05/09/2026, e o que a torna pedido e ela perguntar se a campanha esta CHAMANDO gente.
+   */
+  /(^|[^\p{L}])(esta|estao|estas|ta|tao|voces|vcs|vc)\s+.{0,12}?(chamando|contratando|selecionando|recrutando|precisando\s+de)\s+(gente|pessoa|pessoas|pessoal|alguem|funcionari|volunta)/u,
   /(^|[^\p{L}])(preciso|procuro|procurando|quero|queria|busco)\s+.{0,15}?(emprego|trabalho|vaga)/u,
   /(^|[^\p{L}])(arrumar|conseguir|indicar|arruma|consegue|indica)\s+.{0,15}?(emprego|vaga|trabalho)/u,
   /(^|[^\p{L}])(alguma|tem|teria|tem\s+alguma)\s+vaga/u,
@@ -1141,6 +1156,15 @@ const NAO_E_PEDIDO_DE_TRABALHO = [
   /(^|[^\p{L}])(obrigad|parabens|admiro|gosto|agradeco).{0,30}?trabalho/u,
   /(^|[^\p{L}])(pelo|do|seu|teu)\s+(belo\s+)?trabalho/u,
   /(^|[^\p{L}])(bom|otimo|excelente)\s+trabalho/u,
+  /**
+   * **Quem se OFERECE nao esta pedindo emprego** -- e o texto que nega comeca com *"procurar
+   * trabalho cansa"*, que seria a resposta errada para quem escreveu que quer ajudar de graca.
+   *
+   * A guarda e literal de proposito: *"e remunerado ou voluntario?"* continua sendo pedido, e esta
+   * na lista de cima. O que sai daqui e a AFIRMACAO de que ela nao quer nada em troca.
+   */
+  /(^|[^\p{L}])(sou|como|quero\s+ser|posso\s+ser)\s+voluntari/u,
+  /(^|[^\p{L}])(de\s+graca|sem\s+ganhar\s+nada|sem\s+receber\s+nada|nao\s+quero\s+nada\s+em\s+troca)/u,
 ];
 
 export function pedeEmprego(entrantes, nossaUltimaAt) {

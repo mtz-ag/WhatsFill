@@ -1289,6 +1289,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   separador do template mudou. O campo novo da Config avisa na tela quando o texto perde a linha, e
   ha teste no `templates.test.mjs`.
 
+- **Preposicao colada no artigo apaga as formas mais naturais — e o defeito parece "a regra nao
+  existe".** Print dele (05/09/2026): *"Vc esta chamando gente pra trabalhar na campanha tou
+  precisando"*, e nenhum detector viu nada. A lista dizia `(no|na) + (o mandato|a campanha)`, e
+  **"no o mandato" nao existe**: *"trabalhar NA campanha"*, *"NO mandato"* e *"NO gabinete"* nunca
+  casaram, embora *"trabalhar para a campanha"* casasse desde 02/09. Em lista de formas, **a
+  preposicao e o artigo sao pecas separadas**. A metade cara da regra continua sendo o falso
+  positivo: *"quero trabalhar na campanha"* e o que um VOLUNTARIO escreve, e o texto que nega abre
+  com *"procurar trabalho cansa"* — por isso as guardas literais (*"sou voluntaria"*, *"de graca"*,
+  *"sem ganhar nada"*), com *"e remunerado ou voluntario?"* continuando do lado do pedido.
+
 - **Caixa que ENVIA um texto com pedido de dados precisa da guarda do pedido de dados.** Print dele
   (05/09/2026): contato com etiqueta de cidade (Erechim) e de conteudo recebeu as boas-vindas com o
   *"nos informe Nome , Cidade"* dentro. *"ja tem os dados e pediu novamente; a mensagem padrao

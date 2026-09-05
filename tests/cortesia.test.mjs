@@ -1646,4 +1646,38 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
     'ruido da plataforma nao conta como pedido');
 }
 
+{
+  grupo('"trabalhar NA campanha" tambem e pedido de trabalho (05/09/2026)');
+
+  /**
+   * Print dele: *"Boa noite"* as 17:04 e *"Vc esta chamando gente pra trabalhar na campanha tou
+   * precisando"* as 17:05. *"nao pegou o contexto"*.
+   *
+   * Medido: NENHUM detector via nada. A causa era gramatical -- a lista colava a preposicao no
+   * artigo (`(no|na) + (o mandato|a campanha)`), e "no o mandato" nao existe. Ou seja, as tres
+   * formas mais naturais de dizer isso nunca casaram, embora *"trabalhar para a campanha"*
+   * casasse.
+   */
+  const daPrint = [texto('Boa noite'), texto('Vc esta chamando gente pra trabalhar na campanha tou precisando')];
+  check(!!pedeEmprego(daPrint, null), 'a rajada da print e reconhecida como pedido de trabalho');
+
+  for (const t of ['quero trabalhar no mandato', 'tem como trabalhar no gabinete de voces?',
+                   'trabalhar na campanha de voces, como faco?', 'Voces estao contratando pessoal?']) {
+    check(!!pedeEmprego([texto(t)], null), `forma reconhecida: "${t}"`);
+  }
+
+  /**
+   * **Quem se OFERECE nao esta pedindo emprego**, e a metade cara da regra e esta: o texto que nega
+   * abre com *"procurar trabalho cansa"* e explica que a lei proibe indicar vaga -- resposta errada
+   * para quem escreveu que quer ajudar de graca. *"E remunerado ou voluntario?"* continua sendo
+   * pedido, porque ali a pergunta E sobre dinheiro.
+   */
+  for (const t of ['sou voluntaria, quero trabalhar na campanha de voces', 'quero ajudar de graca na campanha',
+                   'vamos trabalhar juntos por um Brasil melhor', 'obrigado pelo seu trabalho, admiro muito',
+                   'o trabalho de voces e otimo']) {
+    check(!pedeEmprego([texto(t)], null), `nao e pedido de trabalho: "${t}"`);
+  }
+  check(!!pedeEmprego([texto('e remunerado ou voluntario?')], null), 'perguntar se e remunerado continua sendo pedido');
+}
+
 fim();

@@ -1,4 +1,4 @@
-## 2026-09-05 — ESTADO DE AGORA (v2.43.0) — leia isto primeiro numa sessão nova
+## 2026-09-05 — ESTADO DE AGORA (v2.44.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,8 +7,8 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.43.0**, tudo commitado e no remoto. 36 commits no dia 04/09,
-e dois no dia 05/09.
+Branch `claude/whatsfill-ia`, **v2.44.0**, tudo commitado e no remoto. 36 commits no dia 04/09,
+e três no dia 05/09.
 Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente — **60 caixas** desde que as situações do mesmo desfecho foram juntadas. A
 lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o quadro tem dois ramos.
@@ -75,6 +75,48 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-05 — "trabalhar NA campanha" não casava com nada (v2.44.0)
+
+Print dele: *"Boa noite"* às 17:04 e *"Vc está chamando gente pra trabalhar na campanha tou
+precisando"* às 17:05. *"não pegou o contexto"*.
+
+### A causa era gramatical
+
+Medido: **nenhum** detector via nada — nem `pedeEmprego`, nem `pedeAjudaFinanceira`, nem
+`pedeAlgoIndefinido`. A lista de formas colava a preposição no artigo:
+
+```
+trabalhar (para|pra|com|no|na) (voce|voces|vc|vcs|ti|o mandato|o gabinete|a campanha)
+```
+
+E **"no o mandato" não existe**. Ou seja: *"trabalhar NA campanha"*, *"trabalhar NO mandato"* e
+*"trabalhar NO gabinete"* — as três formas mais naturais de dizer isso — nunca casaram, embora
+*"trabalhar para a campanha"* casasse desde 02/09. A preposição e o artigo agora são peças
+separadas, que é o que a gramática pede.
+
+Entrou junto a pergunta pela vaga **sem a palavra vaga**: *"vocês estão contratando/chamando gente"*,
+que é a forma da print.
+
+### A metade cara: quem se OFERECE não está pedindo emprego
+
+O texto que nega abre com *"procurar trabalho cansa"* e explica que a lei proíbe indicar vaga — é a
+resposta errada para quem escreveu que quer ajudar **de graça**, e "quero trabalhar na campanha" é
+exatamente o que um voluntário escreve. As guardas novas são literais: *"sou voluntária"*,
+*"de graça"*, *"sem ganhar nada"*. **"É remunerado ou voluntário?" continua sendo pedido** — ali a
+pergunta É sobre dinheiro, e está na lista de cima.
+
+Onze das dezesseis asserções são falso positivo, que é onde mora o risco desta regra.
+
+### O desfecho, medido nos três ramos
+
+`pedido-emprego` nos três — chegada, volta, e volta com a mensagem de ontem. A caixa fica acima de
+`contexto-de-outro-dia`, então o tempo não a engole.
+
+**Lembrete:** a etiqueta que este caso deveria aplicar (`🔴Procura emprego ou dinheiro`) continua
+**vazia** na Config — o texto sai, a marca não.
 
 ---
 
