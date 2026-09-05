@@ -25,6 +25,9 @@
 
 > Antes de implementar, refatorar ou executar qualquer tarefa, SEMPRE verifique:
 >
+> 0. **`REGRAS.md`** — a lista das regras que ELE ditou, com **onde cada uma vive** (código, quadro
+>    ou Config). Serve para uma coisa: antes de mexer, saber se a regra que você vai tocar está no
+>    código (vale sempre) ou depende de um campo preenchido / de ele ter importado o quadro.
 > 1. **`registro.md`** — log de mudanças, decisões e pendências. **A entrada do TOPO é a de
 >    passagem de contexto** (*"ESTADO DE AGORA"*): é a única que descreve o presente — o que está
 >    no ar, o que espera decisão dele e o que ele precisa fazer na mão. Se a versão do

@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.34.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.35.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.34.0**, tudo commitado e no remoto. 28 commits no dia 04/09.
+Branch `claude/whatsfill-ia`, **v2.35.0**, tudo commitado e no remoto. 29 commits no dia 04/09.
 Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente. A lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o
 quadro tem dois ramos.
@@ -51,6 +51,7 @@ quadro dele.
 
 ### Onde as coisas moram
 
+- **`REGRAS.md`** — as 65 regras que ELE ditou, com onde cada uma vive (código, quadro ou Config).
 - **`CLAUDE.md`** — as armadilhas, lido em toda sessão. É onde entra fato que custou horas.
 - **`registro.md`** — causa raiz de cada mudança, mais recente no topo.
 - **`tests/`** — 15 suítes. **É a forma mais forte de guardar uma decisão dele**; comentário
@@ -67,6 +68,33 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — REGRAS.md: as 65 regras que ele ditou, e onde cada uma vive (v2.35.0)
+
+*"eu quero que liste todas as regras que eu lhe falei até agora"* — logo depois de descobrir que uma
+regra dele de 03/09 nunca tinha chegado à extensão, por ter virado valor padrão de um campo já
+preenchido.
+
+Levantei do `CLAUDE.md` e do `registro.md` (486 falas dele registradas, curadas para 65 regras) e
+escrevi o `REGRAS.md`, em nove blocos: o que nunca sai daqui, quem não recebe nada, o que precisa de
+gente, anúncio e modelo, tempo, cadastro e etiquetas, o quadro, o comportamento da rodada, e como eu
+devo trabalhar.
+
+**A coluna que importa é "onde vive"**, e ela existe por causa do caso de hoje:
+
+| onde vive | vale quando | risco |
+|---|---|---|
+| código | sempre | nenhum — se sumir, um teste cai |
+| quadro | depois que ele importa | ordem errada ou caixa faltando muda o desfecho em silêncio |
+| Config | com o campo preenchido | **campo vazio = regra desligada, sem aviso** |
+
+O arquivo fecha com o que está **desligado agora por campo vazio**: as três etiquetas da aba
+Automatizado e os modelos padrão.
+
+Entrou no PROTOCOLO do `CLAUDE.md` como item 0: antes de mexer numa regra, saber se ela vale sempre
+ou depende de configuração.
 
 ---
 
