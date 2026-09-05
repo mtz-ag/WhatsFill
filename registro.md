@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.36.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.37.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.36.0**, tudo commitado e no remoto. 30 commits no dia 04/09.
+Branch `claude/whatsfill-ia`, **v2.37.0**, tudo commitado e no remoto. 31 commits no dia 04/09.
 Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente. A lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o
 quadro tem dois ramos.
@@ -68,6 +68,25 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — O botão de tirar a condição é um BOTÃO (v2.37.0)
+
+*"ficou sem botão de excluir condição adicionada"*.
+
+Eu tinha posto o "tirar esta" como **opção dentro do seletor de sinais**, com o argumento — escrito
+no código, para piorar — de que um botão separado seria *"mais uma coisa para procurar"*. É o
+oposto: ele procurou o botão e não achou.
+
+É a lição que este projeto já registrou duas vezes, com o arrastar e com o pino: **gesto invisível é
+gesto que não existe**. E aqui era pior, porque o destrutivo estava escondido dentro da lista do
+inofensivo — ninguém procura "apagar" numa lista de sinais.
+
+Agora cada condição e cada exceção extra tem um botão **Tirar** ao lado do seletor, e a opção vazia
+do seletor voltou a significar o que parece ("— escolha o sinal —"). De quebra, o botão de
+acrescentar usava uma classe de CSS que não existe no arquivo (`mini`) — passou a usar `btn`, como
+todos os outros.
 
 ---
 

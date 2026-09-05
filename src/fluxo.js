@@ -868,14 +868,34 @@ function desenharEditor() {
 
     atuais.forEach((item, i) => {
       const trocar = (mudanca) => gravarLista(atuais.map((x, j) => (i === j ? { ...x, ...mudanca } : x)));
-      linha(
-        `${rotuloDaLinha} ${i + 1}`,
+
+      /**
+       * **O botão de tirar é um BOTÃO** — relato dele (04/09/2026): *"ficou sem botão de excluir
+       * condição adicionada"*.
+       *
+       * Eu tinha posto o "tirar esta" como opção dentro do seletor de sinais, argumentando que um
+       * botão a mais seria "mais uma coisa para procurar". É o oposto: ele procurou o botão e não
+       * achou. É a lição que este projeto já registrou duas vezes (o arrastar e o pino):
+       * **gesto invisível é gesto que não existe** — e esconder o destrutivo dentro da lista do
+       * inofensivo é pior ainda, porque ninguém procura "apagar" numa lista de sinais.
+       */
+      const dupla = document.createElement('div');
+      dupla.className = 'acoes';
+      dupla.append(
         seletor(
-          [['', '— tirar esta —'], ...arvoreLib.SINAIS.map((x) => [x.id, x.rotulo])],
+          [['', '— escolha o sinal —'], ...arvoreLib.SINAIS.map((x) => [x.id, x.rotulo])],
           item.sinal || '',
-          (v) => (v ? trocar({ sinal: v }) : gravarLista(atuais.filter((_, j) => j !== i)))
+          (v) => trocar({ sinal: v })
         )
       );
+      const tirar = document.createElement('button');
+      tirar.type = 'button';
+      tirar.className = 'btn btn-perigo';
+      tirar.textContent = 'Tirar';
+      tirar.title = `Tirar ${rotuloDaLinha.toLowerCase()} ${i + 1}`;
+      tirar.addEventListener('click', () => gravarLista(atuais.filter((_, j) => j !== i)));
+      dupla.append(tirar);
+      linha(`${rotuloDaLinha} ${i + 1}`, dupla);
       if (item.sinal) {
         const inv = document.createElement('label');
         inv.className = 'chk';
@@ -890,7 +910,7 @@ function desenharEditor() {
 
     const mais = document.createElement('button');
     mais.type = 'button';
-    mais.className = 'mini';
+    mais.className = 'btn';
     mais.textContent = aviso;
     mais.addEventListener('click', () =>
       gravarLista([...atuais, { sinal: '', negar: false, palavras: [], onde: 'ultima' }])
