@@ -2135,4 +2135,42 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   check(retorno?.tecla === '1', `quem ja veio antes recebe so o modelo (tecla ${retorno?.tecla}) -- era o que ela recebia`);
 }
 
+{
+  grupo('conversa longa nao e decidida por "sem interesse" (05/09/2026)');
+
+  /**
+   * Print dele: um contato que chegou pelo anuncio, escreveu 927 caracteres de analise politica e
+   * foi etiquetado como SEM INTERESSE. *"Duas conversas longas foram reconhecidas como sem
+   * interesse; for assim, eu que analiso ou a IA."*
+   *
+   * Recusa de verdade e CURTA -- "nao quero receber", "me tira da lista". Quem escreve nove linhas
+   * esta conversando, mesmo quando o assunto e raivoso, e e ai que o detector erra: esta base e de
+   * apoiadores que falam mal do adversario.
+   *
+   * A excecao esta na CONDICAO e nao na ordem do quadro, porque `sem-interesse` e PROTECAO do
+   * codigo -- decide mesmo nos quadros que ele ja exportou, onde caixa nova nunca chega. Por isso o
+   * teste confere os dois caminhos: com a caixa no quadro, e sem ela.
+   */
+  const fluxo = arv.fluxoPadrao();
+  const base = {
+    semInteresse: { motivo: 'xingou' },
+    textos: ['x'],
+    ultimoTexto: 'x',
+    podeMandarMomento: true,
+    podePedirDados: true,
+    podeEnviar: true,
+  };
+
+  const curta = arv.decidir({ ...base }, fluxo, {});
+  check(curta?.tecla === 's', `a recusa curta continua sendo etiquetada e concluida (tecla ${curta?.tecla})`);
+
+  const longa = arv.decidir({ ...base, pedeRespostaPessoal: { motivo: 'escreveu 927 caracteres' } }, fluxo, {});
+  check(longa?.tecla === '6', `em conversa longa quem decide e ele ou a IA (tecla ${longa?.tecla})`);
+
+  // E a PROTECAO do codigo, que vale nos quadros dele que nao tem a caixa.
+  const semACaixa = [{ ...arv.noVazio('so isto'), condicao: { sinal: '', negar: false, palavras: ['zzz'], onde: 'ultima' }, acao: { tecla: '3', resposta: null } }];
+  const prot = arv.decidir({ ...base, pedeRespostaPessoal: { motivo: 'escreveu 927 caracteres' } }, semACaixa, {});
+  check(prot?.tecla !== 's', 'a protecao do codigo tambem nao marca sem interesse em conversa longa');
+}
+
 fim();

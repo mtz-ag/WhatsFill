@@ -1,4 +1,4 @@
-## 2026-09-05 — ESTADO DE AGORA (v2.50.0) — leia isto primeiro numa sessão nova
+## 2026-09-05 — ESTADO DE AGORA (v2.51.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.50.0**, tudo commitado e no remoto. **Nove versões no dia 05/09**
-(2.42 → 2.50). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
+Branch `claude/whatsfill-ia`, **v2.51.0**, tudo commitado e no remoto. **Dez versões no dia 05/09**
+(2.42 → 2.51). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -23,6 +23,7 @@ problemas e sem desfecho incoerente.
 | 2.48 | **"Aguardando mensagem" é ruído da plataforma** — o link do FAQ estava virando CIDADE no CRM. |
 | 2.49 | **Já atendida antes não recebe as boas-vindas de novo** — o sinal do retorno lia só a sessão, e o CRM é quem tem memória. |
 | 2.50 | **"Ver conversa anterior" virou o sinal do retorno** — e a Data de conclusão, que eu tinha posto ali, saiu: concluir não é entregar. |
+| 2.51 | **Conversa longa não é "sem interesse"** — recusa de verdade é curta; texto longo vai para ele ou para a IA. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -90,6 +91,55 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-05 — Conversa longa não é "sem interesse" (v2.51.0)
+
+### O caso
+
+Um contato que chegou pelo anúncio (campanha QUAL FOI SUA ESCOLHA) escreveu **927 caracteres** de
+análise política — muçulmanos, Xandão, o "golpe após a eleição" — e foi etiquetado como **SEM
+INTERESSE**. Ele: *"duas conversas longas foram reconhecidas como sem interesse; for assim, eu que
+analiso ou a IA"*.
+
+### O que eu não consegui reproduzir, e o que isso muda
+
+`cortesia.semInteresse` devolve **null** para o texto da print, inteiro **e** quebrado em nove
+pedaços — nenhum dispara. Ou seja: o gatilho está no que a print não mostra (a conversa continua
+abaixo da rolagem), ou a etiqueta já estava no contato de uma passada anterior.
+
+Isso muda o conserto, para melhor. Caçar o padrão exato consertaria **aquele texto**; a regra que ele
+ditou conserta a **classe** — e é a mesma disciplina que fez `conversaTemPerguntaAberta` inverter em
+04/09, depois de três tentativas de acrescentar formas a uma lista.
+
+### A regra
+
+**Recusa de verdade é curta.** *"Não quero receber"*, *"me tira da lista"*, *"para de mandar"* — quem
+pede para sair escreve uma linha e vai embora. Quem escreve nove linhas está conversando, mesmo
+quando o assunto é raivoso, e é exatamente aí que o detector erra: esta base é de apoiadores que
+falam mal do adversário.
+
+A guarda do texto curto já existia **dentro** de `COMECA_NEGANDO` (28 caracteres, o caso do Alfredo
+em 04/09). Agora vale para a regra inteira: `quando: (c) => !!c.semInteresse && !c.pedeRespostaPessoal`.
+
+**Na condição, não na ordem do quadro.** `sem-interesse` é proteção do código — decide também nos
+quadros que ele já exportou, onde caixa nova nunca chega. Mudar a posição só valeria para quem
+reimportasse. É a mesma lição de 04/09: *exceção que ele nomeia vai na condição*.
+
+Medido: recusa curta continua na tecla `s`; a mesma recusa dentro de conversa longa vai para
+`ultima-pede-resposta-pessoal`, tecla 6. O teste confere os dois caminhos — com a caixa no quadro e
+sem ela, que é o da proteção.
+
+### O custo
+
+Quem escreve um texto longo pedindo para sair **não é marcado nem concluído**: vai para ele, na tecla
+6. É o lado barato do erro, porque esta é a regra mais destrutiva do arquivo — etiqueta permanente no
+CRM **e** conclusão em silêncio, e nenhuma das duas se desfaz sozinha.
+
+**Arquivos:** `src/lib/sugestao.js`, `tests/arvore.test.mjs` (+3), `CLAUDE.md`, `manifest.json`
+(2.50.0 -> 2.51.0). Quinze suítes e os dois verificadores. **O quadro dele não muda** — a exceção
+está na condição da regra, então vale no quadro que ele já tem.
 
 ---
 

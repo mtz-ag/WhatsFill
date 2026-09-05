@@ -1359,6 +1359,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   quase todo mundo. **E a licao da Ivone (31/08) na forma que eu nao reconheci: pergunta nao e
   entrega, e conclusao tambem nao.** Medido: com o sinal verdadeiro o caso vai para
   `conteudo-pedido` (tecla 1); com ele falso, para `anuncio-modelo-e-dados` (tecla `a`).
+- **CONVERSA LONGA nao e decidida por "sem interesse" — recusa de verdade e curta.** Print dele
+  (05/09/2026): um contato que chegou pelo anuncio escreveu **927 caracteres** de analise politica
+  (muculmanos, Xandao, o "golpe apos a eleicao") e foi etiquetado como sem interesse. *"Duas
+  conversas longas foram reconhecidas como sem interesse; for assim, eu que analiso ou a IA."*
+  Quem pede para sair escreve uma linha e vai embora; quem escreve nove esta conversando, mesmo com
+  o assunto raivoso — e e ai que o detector erra, porque **esta base e de apoiadores que falam mal
+  do adversario**. A guarda do texto curto ja existia dentro de `COMECA_NEGANDO` (28 caracteres, o
+  caso do Alfredo); agora vale para a regra inteira, como `!c.pedeRespostaPessoal` na `quando`.
+  **Na CONDICAO e nao na ordem**, porque `sem-interesse` e protecao do codigo e decide tambem nos
+  quadros ja exportados, onde caixa nova nunca chega. O custo: quem escreve um textao pedindo para
+  sair vai para a tecla 6 em vez de ser marcado — o lado barato, porque esta e a regra mais
+  destrutiva do arquivo (etiqueta permanente **e** conclusao em silencio). **O texto da print nao
+  reproduz o defeito** (`semInteresse` devolve null para ele, inteiro e em pedacos): o gatilho esta
+  no que a print nao mostra, e a guarda cobre a classe sem depender de achar o padrao.
 
 - **A QUERY STRING do link tem "?", e por isso todo video repassado virava PERGUNTA.** Relato dele
   (05/09/2026): *"varios casos da pessoa mandando link e reconhece como conversa e passa pra mim"*.

@@ -65,7 +65,27 @@ export const REGRAS = [
      * pessoa é o que mais aparece nesta base e não conta — tratar isso como recusa tiraria da fila
      * justamente quem mais apoia.
      */
-    quando: (c) => !!c.semInteresse,
+    /**
+     * **Conversa longa NÃO é decidida por esta regra** — decisão dele (05/09/2026), com a print de
+     * um contato que chegou pelo anúncio, escreveu **927 caracteres** de análise política e foi
+     * etiquetado como sem interesse: *"duas conversas longas foram reconhecidas como sem interesse;
+     * for assim, eu que analiso ou a IA"*.
+     *
+     * **Recusa de verdade é curta.** *"Não quero receber"*, *"me tira da lista"*, *"para de mandar"*
+     * — quem pede para sair escreve uma linha e vai embora. Quem escreve nove linhas está
+     * conversando, mesmo quando o assunto é raivoso: a base é de apoiadores que falam mal do
+     * adversário, e é justamente aí que o detector erra. A guarda do texto curto já existia dentro
+     * de `COMECA_NEGANDO` (28 caracteres, o caso do Alfredo); aqui ela vale para a regra inteira.
+     *
+     * A exceção mora na CONDIÇÃO e não na ordem do quadro, de propósito: `sem-interesse` é
+     * proteção do código e decide **mesmo nos quadros que ele já exportou**, onde uma caixa nova
+     * nunca chega. Ordem só valeria para quem reimportasse.
+     *
+     * **O custo:** quem escreve um texto longo pedindo para sair não é marcado nem concluído — vai
+     * para ele, com a tecla 6. É o lado barato: esta é a regra mais destrutiva do arquivo (etiqueta
+     * permanente no CRM **e** conclusão em silêncio), e o erro dela não se desfaz sozinho.
+     */
+    quando: (c) => !!c.semInteresse && !c.pedeRespostaPessoal,
     motivo: (c) => `${c.semInteresse.motivo} — marque "sem interesse" e conclua sem responder.`,
   },
   {
