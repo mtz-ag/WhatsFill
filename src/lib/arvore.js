@@ -62,6 +62,7 @@ export const SINAIS = [
   { id: 'pedeAjudaFinanceira', rotulo: 'Pediu dinheiro, cesta básica ou remédio', nao: 'Não pediu dinheiro nem o básico' },
   { id: 'pedeEmprego', rotulo: 'Perguntou como trabalhar no mandato', nao: 'Não perguntou sobre trabalhar aqui' },
   { id: 'pedeLigacao', rotulo: 'Pediu que a gente ligasse para ela', nao: 'Não pediu ligação' },
+  { id: 'naoPodeFalarAgora', rotulo: 'Está passando mal, ou fala depois', nao: 'Não avisou nada disso' },
   { id: 'soCortesia', rotulo: 'Só cumprimentou (e nada mais)', nao: 'Escreveu mais que um cumprimento' },
   { id: 'ultimaEhNossa', rotulo: 'A última mensagem é nossa (ou ela não escreveu nada)', nao: 'Ela falou por último' },
   { id: 'etiquetaSoConclui', rotulo: 'Tem a etiqueta que só conclui (assessor)', nao: 'Não é da casa' },
@@ -733,7 +734,8 @@ export function fluxoPadrao() {
      * **A ajuda financeira continua acima**, e é decisão dele: aquele texto é uma resposta que ele
      * escolheu para sair sozinha. O resto do que é longo passa a ser conversa.
      */
-    r('ultima-pede-resposta-pessoal', null, onde),
+    { ...r('ultima-pede-resposta-pessoal', 'você responde: áudio, texto longo, ou ela está passando mal', onde),
+      tambemQuando: ['nao-pode-falar-agora'] },
 
     /**
      * **"Só cumprimentou" virou SINAL, e não lista de palavras.**
@@ -1025,8 +1027,8 @@ export function fluxoPadrao() {
      * **O custo, que é real:** quem chega mandando um áudio sem transcrição, um arquivo ou um texto
      * longo deixa de receber o recibo do anúncio nessa passada e vai para você. Foi dito a ele.
      */
-    { ...r('ultima-pede-resposta-pessoal', 'você responde: áudio, arquivo, texto longo, ou denúncia', 'chegada-antes'),
-      tambemQuando: ['respondeu-nossa-pergunta'] },
+    { ...r('ultima-pede-resposta-pessoal', 'você responde: áudio, texto longo, denúncia, ou ela está passando mal', 'chegada-antes'),
+      tambemQuando: ['respondeu-nossa-pergunta', 'nao-pode-falar-agora'] },
 
     /**
      * **A DENÚNCIA respondida à nossa própria pergunta — a quarta pendência que fica acima do
@@ -2066,6 +2068,7 @@ const SINAIS_QUE_A_RESPOSTA_APAGA = new Set([
   'soCortesia',
   'pedeEmprego',
   'pedeLigacao',
+  'naoPodeFalarAgora',
   'pedeAlgoIndefinido',
   'pedeRespostaPessoal',
   'perguntaAberta',

@@ -256,6 +256,29 @@ export const REGRAS = [
           : `tem a etiqueta "${c.etiquetaQueDispensa}" — já está engajado: mande a mensagem do momento e conclua.`,
   },
   {
+    id: 'nao-pode-falar-agora',
+    tecla: '6',
+    /**
+     * **Ela está passando mal, ou avisou que fala depois → você ou a IA.**
+     *
+     * Print da Elenir (05/09/2026): chegou pelo anúncio das Escolas Cívico-Militares e, quatro
+     * minutos depois, escreveu *"Não posso falar. Estou com infecção urinária e respiratória. muita
+     * tosse e febre. Falarei assim que for possível. Faço oração pela minha recuperação salutar por
+     * gentileza. Grata"*. A rodada **ignorou e concluiu** — *"caso de mal estar foi ignorado e
+     * concluído"*.
+     *
+     * **Fica ao lado de `ultima-pede-resposta-pessoal`, e na mesma caixa**: as duas dizem a mesma
+     * coisa — aqui precisa de gente. Concluir é o pior dos dois desfechos possíveis, porque ela
+     * avisou que voltaria e fechar responde que não precisa.
+     *
+     * O detector exige **primeira pessoa**, e é o que sustenta a regra: nesta base a doença aparece
+     * na fala política (*"o Brasil está doente"*), no pedido de remédio (que tem regra própria,
+     * acima desta) e na notícia de terceiro. Metade das asserções do teste é falso positivo.
+     */
+    quando: (c) => !!c.naoPodeFalarAgora,
+    motivo: (c) => c.naoPodeFalarAgora.motivo,
+  },
+  {
     id: 'ultima-pede-resposta-pessoal',
     tecla: '6',
     /**
@@ -1072,6 +1095,14 @@ export const SOBRE = {
       { tecla: '5', se: 'a mensagem do momento ainda não saiu para ele' },
       { tecla: '3', se: 'você já respondeu hoje, ele já recebeu a do momento, ou não há uma configurada' },
     ],
+  },
+  'nao-pode-falar-agora': {
+    rotulo: 'Está passando mal, ou avisou que fala depois',
+    efeito: 'gente',
+    quando:
+      'Ela falou de si — que está doente, internada, em recuperação — ou avisou que não pode falar ' +
+      'agora e volta depois. Material de campanha em cima disso é a resposta errada, e concluir é ' +
+      'pior: ela disse que voltaria.',
   },
   'ultima-pede-resposta-pessoal': {
     rotulo: 'Áudio sem transcrição, arquivo, ou texto longo',

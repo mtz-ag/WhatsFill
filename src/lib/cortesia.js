@@ -699,8 +699,22 @@ const DESPEDIDA_AMARGA =
 const EXPRESSOES_DE_APOIO = [
   /(^|[^\p{L}])(eu\s+)?apoio(\s|$|,|!|\.)/iu
 ,
-  // `\s*` e não `\s+`: "Tamojuntos" vem colado, e foi assim que ele apareceu na print.
-  /(^|[^\p{L}])(tamo|tamos|t[oô]|estou|estamos|seguimos|segue)\s*(com|junto|juntos)\b/iu,
+  /**
+   * **"junto" vale sozinho; "com" precisa do OBJETO** — print da Elenir (05/09/2026).
+   *
+   * Ela escreveu *"Não posso falar. **Estou com** infecção urinária e respiratória. muita tosse e
+   * febre..."* e a regra leu **apoio**. O padrão aceitava `estou com` seguido de qualquer coisa —
+   * e "estou com" é a forma mais comum de dizer o que se TEM: dúvida, problema, fome, medo, febre.
+   *
+   * A guarda já estava escrita três linhas abaixo, para outro padrão: *"'com vocês' sozinho ficou
+   * de fora de propósito — o que qualifica é o advérbio de permanência"*. A mesma disciplina não
+   * tinha sido aplicada aqui. **O que qualifica é o objeto ser NÓS.**
+   *
+   * `\s*` e não `\s+`: "Tamojuntos" vem colado, e foi assim que ele apareceu na print.
+   */
+  /(^|[^\p{L}])(tamo|tamos|t[oô]|estou|estamos|seguimos|segue)\s*(junto|juntos)\b/iu,
+  /(^|[^\p{L}])(tamo|tamos|t[oô]|estou|estamos|seguimos|segue)\s*com\s+(voc[eê]s?|vcs?|o\s+senhor|a\s+senhora|a\s+gente|n[óo]is|n[óo]s|o\s+capit[ãa]o|o\s+martim|a\s+campanha|o\s+mandato)\b/iu,
+  /(^|[^\p{L}])(tamo|tamos|t[oô]|estou|estamos)\s*contigo\b/iu,
   /(^|[^\p{L}])tmj\b/iu,
   /**
    * "sempre com vocês", "junto com o senhor" — apoio sem o verbo na frente.
@@ -1742,6 +1756,66 @@ const XINGAMENTO_IMPERATIVO =
  * Lista curta e literal de propósito: apelido ambíguo (um "mito" irônico) fica de fora, porque o
  * custo de errar aqui é etiquetar um apoiador como sem interesse, para sempre, no CRM.
  */
+/**
+ * **Ela avisou que está doente, ou que não pode falar agora.**
+ *
+ * Print da Elenir (05/09/2026): chegou pelo anúncio das Escolas Cívico-Militares e, quatro minutos
+ * depois, escreveu *"Não posso falar. Estou com infecção urinária e respiratória. muita tosse e
+ * febre. Falarei assim que for possível. Faço oração pela minha recuperação salutar por gentileza.
+ * Grata"*. A rodada **ignorou e concluiu**.
+ *
+ * São duas situações com o mesmo desfecho, e por isso um detector só: **quem está passando mal** e
+ * **quem avisa que fala depois**. Nas duas, material de campanha é a resposta errada, e concluir em
+ * silêncio é pior — a pessoa disse que voltaria, e fechar diz que não precisa.
+ *
+ * **Primeira pessoa é obrigatória**, e é a guarda que sustenta a regra. Nesta base a doença aparece
+ * o tempo todo na fala política (*"o Brasil está doente"*), no pedido de remédio (que tem regra
+ * própria, acima desta) e na notícia de terceiro (*"minha vizinha está internada"*). O que importa
+ * aqui é ela falando de si.
+ *
+ * O desfecho é a **tecla 6**: quem responde é ele ou a IA. Não há resposta pronta para isto — e
+ * escrever uma seria pior, porque o que a pessoa espera é alguém, não um texto.
+ */
+const MAL_ESTAR = [
+  // "estou com febre", "to com covid" — o objeto tem que ser sintoma ou doença, senão "estou com"
+  // pega tudo (foi assim que ela virou apoio).
+  /(^|[^\p{L}])(estou|est[oô]|t[oô]|fiquei|acordei)\s+(com\s+)?(muita\s+|muito\s+|forte\s+)?(febre|tosse|gripe|covid|dengue|infec[çc][ãa]o|dor(es)?\b|enxaqueca|press[ãa]o\s+alta|virose|pneumonia|c[âa]ncer|depress[ãa]o)/iu,
+  /(^|[^\p{L}])(estou|est[oô]|t[oô]|fiquei|ando)\s+(muito\s+|meio\s+)?(doente|adoentad[ao]|mal\s+de\s+sa[úu]de|hospitalizad[ao]|internad[ao]|acamad[ao]|de\s+cama|debilitad[ao])/iu,
+  /(^|[^\p{L}])(estou|est[oô]|t[oô])\s+(no|em)\s+(hospital|uti|pronto\s*socorro)/iu,
+  /(^|[^\p{L}])(fiz|farei|vou\s+fazer)\s+(uma\s+)?cirurgia/iu,
+  /(^|[^\p{L}])minha\s+(sa[úu]de|recupera[çc][ãa]o|cirurgia|interna[çc][ãa]o)/iu,
+  /(^|[^\p{L}])(me\s+)?recuperando\s+(de|da|do)\b/iu,
+];
+
+const NAO_POSSO_FALAR = [
+  /(^|[^\p{L}])n[ãa]o\s+(posso|consigo|d[áa]\s+pra|da\s+pra|tenho\s+como)\s+(falar|conversar|responder|atender)/iu,
+  /(^|[^\p{L}])falarei\s+(assim\s+que|quando|depois|mais\s+tarde)/iu,
+  /(^|[^\p{L}])(falo|respondo|converso|retorno|volto)\s+(com\s+voc[eê]s?\s+)?(depois|mais\s+tarde|amanh[ãa]|assim\s+que|quando\s+(eu\s+)?puder|logo\s+mais)/iu,
+  /(^|[^\p{L}])(assim\s+que\s+(eu\s+)?(puder|melhorar)|quando\s+(eu\s+)?melhorar)/iu,
+];
+
+/**
+ * A pessoa está passando mal, ou avisou que fala depois — na RAJADA, porque o aviso vem depois do
+ * cumprimento ou do clique no anúncio.
+ *
+ * @param {Array<{texto?:string, tipo?:string, at?:string}>} entrantes
+ * @param {string|null} nossaUltimaAt
+ * @returns {{motivo:string}|null}
+ */
+export function naoPodeFalarAgora(entrantes, nossaUltimaAt) {
+  for (const msg of rajadaFinal(entrantes, nossaUltimaAt)) {
+    const texto = semAcentos(msg?.texto);
+    if (!texto) continue;
+    if (MAL_ESTAR.some((re) => re.test(texto))) {
+      return { motivo: 'contou que está passando mal — isso não se responde com material de campanha' };
+    }
+    if (NAO_POSSO_FALAR.some((re) => re.test(texto))) {
+      return { motivo: 'avisou que não pode falar agora e que volta depois — não conclua por ela' };
+    }
+  }
+  return null;
+}
+
 /**
  * **Pediu para a gente LIGAR** — pedido dele (04/09/2026, anotação da Jucileia).
  *

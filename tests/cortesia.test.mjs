@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial } from '../src/lib/cortesia.js';
+import { naoPodeFalarAgora, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -1774,6 +1774,48 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   // O falso positivo que importa: gente escreve "aguardando" o tempo todo.
   check(!ehMensagemDaPlataforma('Estou aguardando mensagem de voces ha dias'), 'fala de gente com "aguardando" nao conta');
   check(!ehMensagemDaPlataforma('Essa acao do governo foi boa'), 'nem "essa acao" solto');
+}
+
+{
+  grupo('esta passando mal, ou avisou que fala depois (05/09/2026)');
+
+  /**
+   * Print da Elenir: chegou pelo anuncio das Escolas Civico-Militares e, quatro minutos depois,
+   * escreveu *"Nao posso falar. Estou com infeccao urinaria e respiratoria. muita tosse e febre.
+   * Falarei assim que for possivel..."*. A rodada IGNOROU E CONCLUIU -- *"caso de mal estar foi
+   * ignorado e concluido"*.
+   *
+   * Duas causas somadas, e as duas estao aqui: `soExpressaApoio` leu **"Estou com"** como apoio
+   * (o padrao aceitava qualquer objeto depois do "com"), e nada reconhecia o mal-estar.
+   *
+   * **Metade das asercoes e falso positivo**, que e onde mora o risco: nesta base a doenca aparece
+   * na fala politica, no pedido de remedio e na noticia de terceiro.
+   */
+  const um = (t) => naoPodeFalarAgora([{ texto: t, tipo: 'TEXT', at: 2 }], null);
+
+  const dela = 'Nao posso falar. Estou com infeccao urinaria e respiratoria. muita tosse e febre. Falarei assim que for possivel. Faco oracao pela minha recuperacao salutar por gentileza. Grata';
+  check(!!um(dela), 'a mensagem da print e reconhecida');
+  check(!soExpressaApoio([{ texto: dela, tipo: 'TEXT', at: 2 }], null, []), '"Estou com infeccao" NAO e mais lido como apoio -- era metade do defeito');
+
+  check(!!um('Estou doente, falo depois'), 'doenca em primeira pessoa');
+  check(!!um('to com febre alta'), 'sintoma com o verbo abreviado');
+  check(!!um('Estou internada no hospital'), 'internada');
+  check(!!um('Fiz uma cirurgia semana passada'), 'cirurgia');
+  check(!!um('nao consigo falar agora, respondo mais tarde'), 'avisou que nao pode falar');
+  check(!!um('Falo com voces amanha'), 'adiou para amanha');
+
+  // O que NAO pode pegar.
+  check(!um('O Brasil esta doente com essa esquerda'), 'doenca como metafora politica nao conta');
+  check(!um('minha vizinha esta internada, voces podem ajudar?'), 'doenca de TERCEIRO nao conta');
+  check(!um('Preciso de remedio, estou sem dinheiro'), 'pedido de remedio e da regra da ajuda, nao desta');
+  check(!um('Estou com uma duvida sobre o horario do evento'), '"estou com" seguido de outra coisa nao conta');
+  check(!um('meu filho fez cirurgia e precisamos de ajuda'), 'cirurgia de terceiro nao conta');
+  check(!um('a saude publica esta um caos aqui'), 'falar de saude publica nao conta');
+
+  // E o apoio de verdade continua sendo apoio.
+  check(!!soExpressaApoio([{ texto: 'Estou com voces capitao!', tipo: 'TEXT', at: 2 }], null, []), '"Estou com voces" continua sendo apoio');
+  check(!!soExpressaApoio([{ texto: 'Tamo junto', tipo: 'TEXT', at: 2 }], null, []), '"Tamo junto" continua sendo apoio');
+  check(!!soExpressaApoio([{ texto: 'to contigo capitao', tipo: 'TEXT', at: 2 }], null, []), '"to contigo" entrou junto');
 }
 
 fim();

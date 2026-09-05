@@ -2173,4 +2173,38 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   check(prot?.tecla !== 's', 'a protecao do codigo tambem nao marca sem interesse em conversa longa');
 }
 
+{
+  grupo('mal-estar nao e ignorado nem concluido (05/09/2026)');
+
+  /**
+   * Print da Elenir: chegou pelo anuncio, disse que esta com infeccao e febre e que falaria assim
+   * que fosse possivel -- e a rodada mandou o agradecimento pelo apoio e CONCLUIU. Medido antes de
+   * consertar: tecla `i`.
+   *
+   * O desfecho certo e a tecla 6. Nao existe resposta pronta para isto, e escrever uma seria pior:
+   * o que a pessoa espera e alguem, nao um texto.
+   */
+  const fluxo = arv.fluxoPadrao();
+  const base = {
+    veioDeAnuncio: true,
+    temEtiquetaDeCidade: true,
+    jaRespondemosAntes: true,
+    podeEnviar: true,
+    podeMandarMomento: true,
+    textos: ['x'],
+    ultimoTexto: 'x',
+  };
+
+  const doente = arv.decidir({ ...base, naoPodeFalarAgora: { motivo: 'esta passando mal' } }, fluxo, {});
+  check(doente?.tecla === '6', `quem contou que esta passando mal fica com voce (tecla ${doente?.tecla})`);
+
+  // O lado SEM etiqueta de cidade tem que decidir igual -- protecao que vive num lado so e metade.
+  const semCidade = arv.decidir({ ...base, temEtiquetaDeCidade: false, naoPodeFalarAgora: { motivo: 'esta passando mal' } }, fluxo, {});
+  check(semCidade?.tecla === '6', `e do outro lado da bifurcacao tambem (tecla ${semCidade?.tecla})`);
+
+  // E na CHEGADA, que e onde a Elenir estava.
+  const chegada = arv.decidir({ ...base, jaRespondemosAntes: false, temEtiquetaDeCidade: false, naoPodeFalarAgora: { motivo: 'esta passando mal' } }, fluxo, {});
+  check(chegada?.tecla === '6', `e na chegada pelo anuncio (tecla ${chegada?.tecla})`);
+}
+
 fim();

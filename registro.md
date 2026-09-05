@@ -1,4 +1,4 @@
-## 2026-09-05 — ESTADO DE AGORA (v2.52.0) — leia isto primeiro numa sessão nova
+## 2026-09-05 — ESTADO DE AGORA (v2.53.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.52.0**, tudo commitado e no remoto. **Onze versões no dia 05/09**
-(2.42 → 2.52). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
+Branch `claude/whatsfill-ia`, **v2.53.0**, tudo commitado e no remoto. **Doze versões no dia 05/09**
+(2.42 → 2.53). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -25,6 +25,7 @@ problemas e sem desfecho incoerente.
 | 2.50 | **"Ver conversa anterior" virou o sinal do retorno** — e a Data de conclusão, que eu tinha posto ali, saiu: concluir não é entregar. |
 | 2.51 | **Conversa longa não é "sem interesse"** — recusa de verdade é curta; texto longo vai para ele ou para a IA. |
 | 2.52 | **Botão "Chamar a IA" na aba Respostas**, e os cartões passaram a dizer a tecla. O cartão antigo era uma cópia, três consertos atrás. |
+| 2.53 | **Mal-estar não é ignorado nem concluído** — e "Estou com infecção" tinha virado apoio. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -92,6 +93,64 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-05 — Mal-estar não é ignorado nem concluído (v2.53.0)
+
+### O caso
+
+A **Elenir** chegou pelo anúncio das Escolas Cívico-Militares e, quatro minutos depois, escreveu:
+
+> *"Não posso falar. Estou com infecção urinária e respiratória. muita tosse e febre. Falarei assim
+> que for possível. Faço oração pela minha recuperação salutar por gentileza. Grata"*
+
+A rodada **agradeceu o apoio e concluiu**. Ele: *"caso de mal estar foi ignorado e concluído"*.
+
+### Duas causas somadas
+
+**1. "Estou com" tinha virado apoio.** O padrão era
+`(estou|tamo|to|estamos|seguimos|segue)\s*(com|junto|juntos)` — qualquer coisa depois do "com". E
+"estou com" é a forma mais comum de dizer o que se **tem**: dúvida, problema, fome, medo, febre.
+Medido: `soExpressaApoio` devolvia *"escreveu apoio em mensagem própria"* para o texto dela.
+
+A guarda já estava escrita **três linhas abaixo**, para o padrão vizinho: *"'com vocês' sozinho ficou
+de fora de propósito — o que qualifica é o advérbio de permanência"*. A mesma disciplina não tinha
+sido aplicada aqui. Hoje **"junto" vale sozinho e "com" exige o objeto** (vocês, o senhor, a
+campanha), com `contigo` entrando junto.
+
+**2. Nada reconhecia o mal-estar.** `cortesia.naoPodeFalarAgora` cobre as duas situações que têm o
+mesmo desfecho: **quem está passando mal** e **quem avisa que fala depois**. A regra
+`nao-pode-falar-agora` (tecla 6) foi **juntada** na caixa de `ultima-pede-resposta-pessoal`, que diz
+a mesma coisa — aqui precisa de gente.
+
+Medido no contexto dela: antes, tecla `i` (agradece o apoio e conclui); agora, tecla 6, nos três
+lugares — com cidade, sem cidade e na chegada pelo anúncio.
+
+### A guarda que sustenta o detector
+
+**Primeira pessoa é obrigatória.** Nesta base a doença aparece o tempo todo na fala política (*"o
+Brasil está doente"*), no pedido de remédio (que tem regra própria, acima desta) e na notícia de
+terceiro (*"minha vizinha está internada, vocês podem ajudar?"*). Metade das asserções do teste é
+falso positivo — é onde mora o risco.
+
+**Não há resposta pronta, e escrever uma seria pior:** o que a pessoa espera é alguém, não um texto.
+E **concluir é o pior desfecho possível** — ela avisou que voltaria, e fechar responde que não
+precisa.
+
+**Arquivos:** `src/lib/cortesia.js` (o padrão do apoio e o detector), `src/lib/sugestao.js` (a regra
+e o verbete), `src/lib/arvore.js` (o sinal e as duas caixas), `src/panel/panel.js`,
+`tests/cortesia.test.mjs` (+17), `tests/arvore.test.mjs` (+3), `CLAUDE.md` (+2 armadilhas),
+`manifest.json` (2.52.0 -> 2.53.0). Quinze suítes e os dois verificadores.
+
+**O quadro dele PRECISA ser reimportado, e isto foi medido.** `nao-pode-falar-agora` entrou como
+`tambemQuando` de uma caixa que ele já tem — mas `tambemQuando` é conteúdo da caixa, e o quadro dele
+é uma cópia. Simulando o quadro atual (as três caixas sem a regra nova), o caso da Elenir **continua
+recebendo o modelo, tecla 1**; no padrão novo, tecla 6.
+
+E não vale como proteção do código: `arvore.PROTECOES` só cobre regras de efeito `silencio`, e esta é
+`gente`. O conserto do `soExpressaApoio` vale desde já (é cálculo do sinal, no painel) — o que
+depende da importação é o desfecho.
 
 ---
 

@@ -1389,6 +1389,24 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   foi exatamente o que aconteceu com o cartao da IA. Hoje cada cartao diz a tecla, e o **link de
   grupo** — que nao corresponde a tecla nenhuma e cujo proprio comentario dizia *"nao faz parte do
   dia a dia"* — desceu para o fim da aba. **Nao foi removido:** funcao so sai quando ele pede.
+- **"Estou com" nao e apoio: o que qualifica e o OBJETO ser NOS.** Print da Elenir (05/09/2026):
+  *"Nao posso falar. **Estou com** infeccao urinaria e respiratoria. muita tosse e febre. Falarei
+  assim que for possivel..."* — e a rodada agradeceu o APOIO e concluiu. O padrao aceitava
+  `(estou|tamo|to)\s*(com|junto|juntos)` com qualquer coisa depois do "com", e "estou com" e a forma
+  mais comum de dizer o que se TEM: duvida, problema, fome, medo, febre. **A guarda ja estava
+  escrita tres linhas abaixo, para o padrao vizinho** (*"'com voces' sozinho ficou de fora de
+  proposito"*) e nao tinha sido aplicada aqui. Hoje "junto" vale sozinho e "com" exige o objeto
+  (voces, o senhor, a campanha...), com `contigo` entrando junto.
+- **Mal-estar nao se responde com material de campanha, e concluir e pior que nao responder.**
+  Mesmo caso, a outra metade: nada reconhecia que ela estava doente. *"Caso de mal estar foi
+  ignorado e concluido."* `cortesia.naoPodeFalarAgora` cobre as duas situacoes que tem o mesmo
+  desfecho — **quem esta passando mal** e **quem avisa que fala depois** — e a regra
+  `nao-pode-falar-agora` (tecla 6) foi JUNTADA na caixa de `ultima-pede-resposta-pessoal`, que diz
+  a mesma coisa: aqui precisa de gente. **Primeira pessoa e obrigatoria**, e e o que sustenta o
+  detector: nesta base a doenca aparece na fala politica (*"o Brasil esta doente"*), no pedido de
+  remedio (regra propria, acima desta) e na noticia de terceiro (*"minha vizinha esta internada"*).
+  Metade das asercoes do teste e falso positivo. **Concluir e o pior desfecho**: ela avisou que
+  voltaria, e fechar responde que nao precisa.
 
 - **A QUERY STRING do link tem "?", e por isso todo video repassado virava PERGUNTA.** Relato dele
   (05/09/2026): *"varios casos da pessoa mandando link e reconhece como conversa e passa pra mim"*.
