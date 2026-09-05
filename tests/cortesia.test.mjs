@@ -1553,4 +1553,48 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(!informouEndereco(null), 'sem conversa nao quebra');
 }
 
+{
+  grupo('a mensagem do anuncio e identificada por DADO, nao por regex (04/09/2026)');
+
+  /**
+   * Print dele: a contato chegou pelo anuncio do Facebook, escreveu so a mensagem gerada pelo
+   * anuncio e recebeu **o agradecimento pelo apoio** -- *"mandou mensagem agradecendo apoio sendo
+   * que e a primeira vez que aparece o contato"*.
+   *
+   * Medido: o padrao cadastrado e `^ol[aá]!? eu apoio` e a redacao nova do anuncio diz *"Ola! Eu
+   * ESTOU DO LADO DA SEGURANCA E apoio o Capitao Martim"*. Nao casou -- entao o texto DO ANUNCIO
+   * contou como fala dela, e `soExpressaApoio` deu verdadeiro.
+   *
+   * **Lista de texto nao fecha.** O que fecha e o dado: a plataforma diz que a sessao veio de
+   * anuncio, e a primeira mensagem de uma sessao dessas e o texto pre-preenchido. Quem marca e o
+   * painel (`prepararEntrantes`), num lugar so, antes de qualquer regra ver.
+   */
+  const PADROES_CADASTRADOS = await storeParaPadroes.get('padroesDeAnuncio');
+  const doAnuncioNovo = 'Ola! Eu estou do lado da seguranca e apoio o Capitao Martim';
+
+  check(!ehMensagemDeAnuncio({ texto: doAnuncioNovo }, PADROES_CADASTRADOS),
+    'a redacao NOVA do anuncio nao casa com o padrao cadastrado -- era este o defeito');
+  check(ehMensagemDeAnuncio({ texto: doAnuncioNovo, geradaPeloAnuncio: true }, PADROES_CADASTRADOS),
+    'e com a marca do painel ela e reconhecida do mesmo jeito');
+
+  // O efeito que ele viu: agradecer o apoio de quem acabou de chegar.
+  const marcada = { texto: doAnuncioNovo, tipo: 'TEXT', geradaPeloAnuncio: true };
+  check(!soExpressaApoio([marcada], null, PADROES_CADASTRADOS), 'com a marca, a chegada NAO conta como apoio escrito por ela');
+  check(!!soExpressaApoio([{ ...marcada, geradaPeloAnuncio: false }], null, PADROES_CADASTRADOS),
+    'sem a marca, contava -- e era o agradecimento saindo na primeira mensagem');
+
+  /**
+   * **O apoio de verdade continua sendo apoio.** A marca vale para UMA mensagem, a primeira da
+   * sessao que veio de anuncio; o que ela escreve depois e dela.
+   */
+  check(!!soExpressaApoio([{ texto: 'Estou com voces, conte comigo!', tipo: 'TEXT' }], null, PADROES_CADASTRADOS),
+    'quem escreve apoio depois continua sendo agradecida');
+  check(!!soExpressaApoio([marcada, { texto: 'Conte comigo, sempre!', tipo: 'TEXT' }], null, PADROES_CADASTRADOS),
+    'e a mensagem do anuncio seguida de apoio dela tambem');
+
+  // A lista de padroes continua valendo: e ela que alcanca o segundo clique.
+  check(ehMensagemDeAnuncio({ texto: 'Ola! Eu apoio o Capitao Martim' }, PADROES_CADASTRADOS),
+    'a lista cadastrada continua reconhecendo a redacao que ela cobre');
+}
+
 fim();

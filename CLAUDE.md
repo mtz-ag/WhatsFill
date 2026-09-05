@@ -1286,6 +1286,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   separador do template mudou. O campo novo da Config avisa na tela quando o texto perde a linha, e
   ha teste no `templates.test.mjs`.
 
+- **A mensagem GERADA pelo anuncio e identificada por DADO, e a lista de padroes virou reforco.**
+  Print dele (04/09/2026): a contato chegou pelo anuncio do Facebook, escreveu so a mensagem
+  pre-preenchida e recebeu o **agradecimento pelo apoio** — *"mandou mensagem agradecendo apoio
+  sendo que e a primeira vez que aparece o contato"*. Medido: o padrao cadastrado e
+  `^ol[aá]!? eu apoio` e a redacao nova diz *"Ola! Eu **estou do lado da seguranca e** apoio o
+  Capitao Martim"*. Nao casou — entao o texto DO ANUNCIO contou como fala dela e `soExpressaApoio`
+  deu verdadeiro. **O anuncio mudou de redacao e a lista nao**, que e a mesma armadilha das formas
+  de perguntar. Hoje o painel marca `geradaPeloAnuncio` na **primeira mensagem de uma sessao com
+  `utm`** — `getConversation` e por SESSAO e o `utm` tambem, entao a primeira mensagem de uma sessao
+  dessas e, por construcao, o clique que a abriu. A marca fica em `prepararEntrantes`, junto da de
+  `sistema`: **um lugar so, antes de qualquer regra ver**. A lista continua valendo para o segundo
+  clique, num anuncio que nao abriu sessao nova.
+
 - **O quadro tem DOIS ramos, e a divisao nao e enfeite — ela guarda decisoes que nao estao escritas
   em regra nenhuma.** Em 04/09/2026 eu medi que os ramos eram quase copias (21 das 24 regras
   duplicadas, 36 caixas em 69) e que junta-los mudava 0,34% das decisoes; recomendei a lista unica,

@@ -1269,6 +1269,25 @@ export function ehMensagemDeAnuncio(msg, padroes = []) {
   const texto = String(msg?.texto || '').trim();
   if (!texto) return false;
 
+  /**
+   * **A MARCA vem antes da lista, e é ela que fecha a classe** — pedido dele (04/09/2026), depois
+   * da print da contato que chegou pelo anúncio do Facebook e recebeu o agradecimento pelo apoio.
+   *
+   * O padrão cadastrado era `^olá!? eu apoio` e a mensagem gerada pelo anúncio novo dizia
+   * *"Olá! Eu **estou do lado da segurança e** apoio o Capitão Martim"*. Não casou — então o texto
+   * DO ANÚNCIO passou a contar como fala dela, `soExpressaApoio` deu verdadeiro, e ela foi
+   * agradecida por um apoio que ela não escreveu. **O anúncio mudou de redação e a lista não.**
+   *
+   * Lista de texto não fecha — é a mesma lição das formas de perguntar. O que fecha é o DADO: a
+   * plataforma diz que a sessão veio de anúncio (`utm`), e a primeira mensagem de uma sessão
+   * dessas é o texto pré-preenchido, não a voz dela. Quem marca é o painel, num lugar só
+   * (`prepararEntrantes`), antes de qualquer regra ver — igual ao ruído da plataforma.
+   *
+   * A lista continua valendo **como reforço**: ela é o que alcança o segundo clique, num anúncio
+   * que não abriu sessão nova.
+   */
+  if (msg?.geradaPeloAnuncio) return true;
+
   for (const bruto of padroes) {
     try {
       if (new RegExp(String(bruto), 'i').test(texto)) return true;

@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.32.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.33.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.32.0**, tudo commitado e no remoto. 26 commits no dia 04/09.
+Branch `claude/whatsfill-ia`, **v2.33.0**, tudo commitado e no remoto. 27 commits no dia 04/09.
 Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente. A lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o
 quadro tem dois ramos.
@@ -67,6 +67,66 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — A mensagem do anúncio agora é reconhecida por dado (v2.33.0)
+
+*"nós temos um problema sério de identificação... me diz o que falta e o que você consegue ver
+hoje"*. Fiz o inventário e a primeira coisa da lista virou este commit.
+
+### O defeito, medido
+
+A contato da print chegou pelo anúncio do Facebook e escreveu só a mensagem gerada por ele:
+
+> Olá! Eu **estou do lado da segurança e** apoio o Capitão Martim 🫡
+
+O padrão cadastrado em `padroesDeAnuncio` é `^olá!? eu apoio`. Não casa.
+
+```
+é mensagem de anúncio?  false
+soExpressaApoio         "escreveu apoio em mensagem própria"
+```
+
+Com isso o texto **do anúncio** contou como fala dela, e ela foi agradecida por um apoio que não
+escreveu — na primeira vez que apareceu. **O anúncio mudou de redação e a lista não**: é a mesma
+armadilha das formas de perguntar, que já custou três anotações.
+
+### O conserto: dado em vez de texto
+
+A plataforma diz que a sessão veio de anúncio (`utm.source` / `utm.referralUrl`), e
+`getConversation` é **por sessão** — o `utm` também. Então a **primeira mensagem de uma sessão com
+`utm`** é, por construção, o clique que a abriu: é o texto pré-preenchido, não a voz dela.
+
+O painel passou a marcá-la com `geradaPeloAnuncio`, em `prepararEntrantes` — a mesma função que já
+marcava o ruído da plataforma (`sistema`). **Um lugar só, antes de qualquer regra ver**, que é o
+desenho que essa marca já tinha.
+
+`cortesia.ehMensagemDeAnuncio` honra a marca antes de olhar a lista, e as duas regras que dependiam
+dela herdam de graça: `soExpressaApoio` e `conversaPedeRespostaPessoal`.
+
+### Medido depois
+
+| caso | antes | agora |
+|---|---|---|
+| chegou pelo anúncio, sem modelo padrão | tecla i — agradece o apoio | **tecla 4 — pede nome e cidade** |
+| chegou pelo anúncio, com modelo padrão | tecla i | **tecla `a` — recibo + pede os dados** |
+| escreveu apoio depois da mensagem do anúncio | tecla i | tecla i (não mudou) |
+| apoio escrito por ela, sem anúncio | tecla i | tecla i (não mudou) |
+
+**A lista de padrões continua existindo**, e não é redundante: ela é o que alcança o *segundo*
+clique, num anúncio que não abriu sessão nova.
+
+### O resto do inventário, para não se perder
+
+O que ainda falta, na ordem que eu faria: identificar **de qual** anúncio sem depender do cadastro
+(`utm.campaign` chega pronto); **número de mensagens** como sinal do quadro (hoje só existe escondido
+dentro de "texto longo"); **tempo** além de "é de outro dia" (a hora de cada mensagem está lá, o
+sinal é que não existe); **quando o contato/sessão nasceu**; **tipo de mídia** separado (áudio, vídeo,
+documento); e `jaDeuNomeECidade` no menu de sinais, que o motor calcula e o quadro não alcança.
+
+Quinze suítes verdes, os dois verificadores limpos. **O fluxo padrão não mudou** — nada para
+reimportar.
 
 ---
 

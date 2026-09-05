@@ -448,7 +448,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       /**
        * **O texto que a PLATAFORMA escreveu não conta como mensagem dela — aqui também.**
        *
-       * `entrantes` já era peneirado por `semRuidoDaPlataforma`, e `incoming` não: é a metade que
+       * `entrantes` já era peneirado por `prepararEntrantes`, e `incoming` não: é a metade que
        * faltava. E `incoming` é justamente quem alimenta o parser, `tags.suggest`, o
        * reconhecimento do anúncio e a IA — ou seja, *"Não foi possível transcrever este áudio"*
        * continuava sendo lido como fala dela em quatro lugares.
@@ -457,7 +457,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * texto vazio ali não carrega o "ela mandou um áudio" que os `entrantes` guardam.
        */
       state.incoming = conversa.incoming.filter((t) => !ehMensagemDaPlataforma(t));
-      state.entrantes = semRuidoDaPlataforma(conversa.entrantes);
+      state.entrantes = prepararEntrantes(conversa.entrantes, {
+        veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
+      });
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.nossas = conversa.nossas || [];
       state.ultimaMensagem = conversa.ultima;
@@ -556,7 +558,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       /**
        * **O texto que a PLATAFORMA escreveu não conta como mensagem dela — aqui também.**
        *
-       * `entrantes` já era peneirado por `semRuidoDaPlataforma`, e `incoming` não: é a metade que
+       * `entrantes` já era peneirado por `prepararEntrantes`, e `incoming` não: é a metade que
        * faltava. E `incoming` é justamente quem alimenta o parser, `tags.suggest`, o
        * reconhecimento do anúncio e a IA — ou seja, *"Não foi possível transcrever este áudio"*
        * continuava sendo lido como fala dela em quatro lugares.
@@ -565,7 +567,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * texto vazio ali não carrega o "ela mandou um áudio" que os `entrantes` guardam.
        */
       state.incoming = conversa.incoming.filter((t) => !ehMensagemDaPlataforma(t));
-      state.entrantes = semRuidoDaPlataforma(conversa.entrantes);
+      state.entrantes = prepararEntrantes(conversa.entrantes, {
+        veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
+      });
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.nossas = conversa.nossas || [];
       state.ultimaMensagem = conversa.ultima;
@@ -5112,7 +5116,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * mais. A rodada pediu nome e cidade — *"a mensagem de nome e cidade ficou deslocada
          * demais"*.
          *
-         * `semRuidoDaPlataforma` marca essas mensagens com `sistema: true` e ESVAZIA o texto, em
+         * `prepararEntrantes` marca essas mensagens com `sistema: true` e ESVAZIA o texto, em
          * vez de descartá-las: "mandou algo que não deu para ler" é diferente de "não mandou nada",
          * e é essa diferença que o sinal usa. Conversa vazia de verdade é `ultimaEhNossa`.
          *
@@ -8848,7 +8852,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * A marca `(áudio, transcrito automaticamente)` vai junto de propósito: transcrição erra
    * palavra, e a IA precisa saber que não é o que a pessoa escreveu.
    *
-   * Ruído da plataforma continua fora: `semRuidoDaPlataforma` esvazia o texto dessas mensagens, e
+   * Ruído da plataforma continua fora: `prepararEntrantes` esvazia o texto dessas mensagens, e
    * o filtro de vazio as descarta aqui — é o conserto do Carlos, preservado.
    */
   function mensagensParaIA() {
@@ -10555,12 +10559,34 @@ async function carregarModelosPadrao() {
  * Um lugar só de propósito: `state.entrantes` é atribuído em dois pontos (o carregamento e a
  * reanálise), e peneirar em cada um seria garantir que o próximo esquecesse.
  */
-function semRuidoDaPlataforma(entrantes) {
-  return (entrantes || []).map((m) =>
-    ehMensagemDaPlataforma(m?.texto)
+/**
+ * As duas marcas que TODA regra precisa ver, postas num lugar só, antes de qualquer uma decidir.
+ *
+ *  - **`sistema`**: o texto foi a PLATAFORMA que escreveu (*"Não foi possível transcrever este
+ *    áudio"*, *"o tipo da mensagem não é suportado"*). Esvazia o texto e mantém a mensagem — "ela
+ *    mandou um áudio e não deu para ler" é diferente de "ela não mandou nada".
+ *  - **`geradaPeloAnuncio`**: a PRIMEIRA mensagem de uma sessão que veio de anúncio é o texto
+ *    pré-preenchido pelo Facebook, não a voz dela. Pedido dele (04/09/2026) depois de a contato
+ *    que chegou pelo anúncio receber o agradecimento pelo apoio: o padrão de texto cadastrado
+ *    (`^olá!? eu apoio`) não casou com a redação nova do anúncio, e a mensagem do anúncio passou a
+ *    contar como apoio escrito por ela.
+ *
+ * **Por que a primeira, e por que isso basta:** `getConversation` é por SESSÃO, e o `utm` também —
+ * então a primeira mensagem de uma sessão com `utm` é, por construção, o clique que a abriu. Quem
+ * clica noutro anúncio depois cai na lista de padrões, que continua existindo como reforço.
+ */
+function prepararEntrantes(entrantes, { veioDeAnuncio = false } = {}) {
+  let primeiraDela = true;
+  return (entrantes || []).map((m) => {
+    const marcada = ehMensagemDaPlataforma(m?.texto)
       ? { ...m, texto: '', transcrito: false, sistema: true }
-      : m
-  );
+      : { ...m };
+    if (primeiraDela && veioDeAnuncio && !marcada.sistema && String(marcada.texto || '').trim()) {
+      marcada.geradaPeloAnuncio = true;
+      primeiraDela = false;
+    }
+    return marcada;
+  });
 }
 
 function truncate(text, max) {
