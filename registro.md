@@ -7,7 +7,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 ### O que está no ar
 
 Branch `claude/whatsfill-ia`, **v2.55.0**, tudo commitado e no remoto. **Catorze versões no dia 05/09**
-(2.42 → 2.55). Quinze suítes verdes, os dois verificadores limpos, **60 caixas** no fluxo padrão sem
+(2.42 → 2.55). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -35,9 +35,16 @@ problemas e sem desfecho incoerente.
    `faq.whatsapp.com`"* aparece no cabeçalho do painel quando acontece. O conserto de 2.48 impede
    novos casos; **não** limpa os que já foram gravados. A aba Cidades lista o que não casa com os
    497 municípios — é por ali que se acha o resto.
-2. **Importar o fluxo: não há o que importar hoje.** O quadro dele é o exportado em **2.41.0** (60
-   caixas), e nada do dia 05/09 mexeu no `fluxoPadrao` — todas as correções foram em CONDIÇÃO de
-   regra do código, que vale em qualquer quadro. Regenerar com
+2. **IMPORTAR O FLUXO — e desta vez importa de verdade.** Foi entregue a ele o
+   `fluxo-padrao-2.54.0.json` (**63 caixas**); o quadro dele é o de **2.41.0** (60). Duas caixas
+   novas do dia só decidem depois da importação, e **isso foi medido**:
+   - **`nao-pode-falar-agora`** (2.53) entrou como `tambemQuando` de uma caixa que ele já tem — mas
+     `tambemQuando` é conteúdo da caixa, e o quadro dele é uma cópia. Simulando o quadro atual, o
+     caso da Elenir **continua recebendo o modelo (tecla 1)** em vez da tecla 6. E não vale como
+     proteção do código: `arvore.PROTECOES` só cobre efeito `silencio`, e esta é `gente`;
+   - **`rajada-de-anuncios`** (2.54) é caixa nova em três lugares, e caixa nova nunca entra sozinha.
+
+   O resto do dia foi em CONDIÇÃO de regra do código, que vale em qualquer quadro. Regenerar com
    `node tools/exportar-fluxo.mjs <saida.json>`, saída FORA do repositório.
 3. **Aba Automatizado → "Etiquetas que a rodada aplica": as três continuam vazias.**
    - **SEM INTERESSE** — a rodada não marca, e na visita seguinte precisa redescobrir a hostilidade
@@ -61,13 +68,33 @@ problemas e sem desfecho incoerente.
 - **Casamento aproximado de cidade ainda abre a caixa "Cidade a gravar."**
 - **O "me liga" não aplica etiqueta nenhuma** — é um id a mais em `ETIQUETA_PEDIDO_IDS` se ele quiser.
 - **Teclas 7, 9 e `i` como caixas do quadro** — oferecido em 04/09, não decidido.
+- **"Com link de grupo" desceu para o fim da aba Respostas (2.52) e NÃO foi removido.** Não
+  corresponde a tecla nenhuma e o quadro não o alcança. Foi oferecido remover; ele não respondeu.
+- **O sinal "Ver conversa anterior" (2.50) não foi visto funcionando.** Ele lê o DOM da plataforma
+  por TEXTO e nenhuma suíte alcança isso. Se o botão tiver outro rótulo, o sinal devolve `false` e o
+  comportamento volta ao de 2.49 — o caso da Rosa continua consertado pela etiqueta de cidade, mas
+  quem volta SEM cidade deixa de ser reconhecido como retorno. **É a primeira coisa a conferir com
+  ele numa sessão nova.**
 
 ### O que foi medido e o que não foi
 
 **Nada do dia 05/09 foi testado na tela** — tudo medido em Node, contra o fluxo padrão e com o
 contexto reconstruído de cada print. As correções do dia são de CONDIÇÃO e de detector, que é o que
-permite medir sem navegador; mas o efeito na tela (a linha do bloqueio nas respostas rápidas, o
-rascunho com o formulário no fim) só ele vai ver.
+permite medir sem navegador.
+
+Três coisas do dia **não têm como ser provadas aqui**, e estão ditas nos commits:
+
+- **`dom.temConversaAnterior`** (2.50) lê o DOM da plataforma;
+- **os botões da aba Respostas** (2.52) são interface, e nenhuma suíte importa o `panel.js`, que
+  precisa de `window`;
+- **o prompt do rascunho** (2.55) é pedido, não regra: o que os testes provam é o texto que sai
+  daqui, nunca o que o modelo faz com ele. Se continuar soando a terceira pessoa, o caminho é o do
+  traço eme — o que for mecânico vira conserto em `revisarRascunho`.
+
+**Um caso não foi reproduzido**: o texto de 927 caracteres que virou "sem interesse" (2.51) devolve
+`null` no detector, inteiro e em nove pedaços. O gatilho está no que a print não mostra. A guarda que
+entrou cobre a CLASSE (conversa longa não é decidida por aquela regra) sem depender de achar o
+padrão — se aparecer um terceiro caso, é preciso a conversa INTEIRA, não a print.
 
 ### O ritmo desta sessão, para quem entrar agora
 
