@@ -1390,6 +1390,31 @@ grupo('chegou sem anuncio e so cumprimentou: boas-vindas (04/09/2026)');
     'quem ja foi atendido nao recebe boas-vindas');
 }
 
+grupo('o quadro arrumado nao tem caixa sobreposta (04/09/2026)');
+{
+  /**
+   * Relato dele: *"as caixas estao se sobrepondo, arrume para nao acontecer"*. A causa foi minha:
+   * o cartao ganhou a linha do desfecho no topo e a do nome no rodape, cresceu, e a arrumacao
+   * continuou espacando por `CAIXA.altura`, que valia 96.
+   *
+   * **A altura do cartao e fixa no CSS e o numero aqui tem que ser o mesmo** -- cartao que cresce
+   * com o texto exigiria medir cada um na tela antes de posicionar.
+   */
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const nos = arv.todosOsNos(q).map(({ no }) => no);
+  const cruzam = [];
+  for (let i = 0; i < nos.length; i++) {
+    for (let j = i + 1; j < nos.length; j++) {
+      const A = nos[i], B = nos[j];
+      const perto = Math.abs((A.x || 0) - (B.x || 0)) < arv.CAIXA.largura
+        && Math.abs((A.y || 0) - (B.y || 0)) < arv.CAIXA.altura;
+      if (perto) cruzam.push(`${A.rotulo} x ${B.rotulo}`);
+    }
+  }
+  check(cruzam.length === 0, `nenhuma caixa se sobrepoe depois de arrumar (${cruzam.slice(0, 2).join(' / ') || 'ok'})`);
+  check(arv.CAIXA.altura >= 140, 'a altura da caixa acompanha o conteudo do cartao');
+}
+
 grupo('situacoes juntadas na mesma caixa (04/09/2026)');
 {
   /**

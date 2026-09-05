@@ -1647,7 +1647,18 @@ export function ordenarPorPosicao(arvore) {
 }
 
 /** Largura e altura que a arrumação assume para uma caixa. A tela usa as mesmas. */
-export const CAIXA = { largura: 260, altura: 96, colunaVaga: 90, linhaVaga: 26 };
+/**
+ * O tamanho da caixa na tela — e `altura` tem que bater com o `height` do `.caixa` no `fluxo.css`.
+ *
+ * Ela subiu de 96 para 140 em 04/09/2026: o cartão ganhou a linha do desfecho no topo e a do nome
+ * no rodapé, cresceu, e as caixas passaram a se sobrepor no quadro arrumado — *"as caixas estão se
+ * sobrepondo, arrume para não acontecer"*. **Cartão de altura variável exigiria medir cada um na
+ * tela antes de posicionar**; altura fixa com o texto cortado resolve sem isso, e de quebra deixa o
+ * quadro alinhado.
+ *
+ * Mexeu no conteúdo do cartão? Confira os dois números juntos.
+ */
+export const CAIXA = { largura: 260, altura: 140, colunaVaga: 90, linhaVaga: 26 };
 
 /**
  * Arruma o quadro: uma COLUNA por nível, filhos empilhados à direita do pai.

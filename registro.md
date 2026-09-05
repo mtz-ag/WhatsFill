@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.40.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.41.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.40.0**, tudo commitado e no remoto. 34 commits no dia 04/09.
+Branch `claude/whatsfill-ia`, **v2.41.0**, tudo commitado e no remoto. 35 commits no dia 04/09.
 Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente — **60 caixas** desde que as situações do mesmo desfecho foram juntadas. A
 lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o quadro tem dois ramos.
@@ -16,7 +16,7 @@ lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o quadro te
 
 1. **Importar o fluxo.** O quadro dele é o exportado em **2.14.0** (59 caixas, com a estrutura
    antiga); o padrão de agora tem **60**, nos dois ramos de sempre, com as situações do mesmo
-   desfecho já juntadas numa caixa só. Entregue como `fluxo-padrao-2.40.0.json`. Regenerar com
+   desfecho já juntadas numa caixa só. Entregue como `fluxo-padrao-2.41.0.json`. Regenerar com
    `node tools/exportar-fluxo.mjs <saida.json>` — saída FORA do repositório.
 2. **Aba Automatizado → "Etiquetas que a rodada aplica"** (cartão criado em 04/09, porque os campos
    estavam escondidos dentro de um cartão desativado desde 15/08). **As três estão vazias:**
@@ -68,6 +68,28 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — As caixas do quadro estavam se sobrepondo (v2.41.0)
+
+*"as caixas estão se sobrepondo, arrume para não acontecer"*.
+
+Causa minha, e recente: o cartão ganhou hoje a linha do **desfecho no topo** e a do **nome no
+rodapé**, cresceu de altura — e a arrumação continuou espaçando as linhas por `CAIXA.altura`, que
+valia **96**. Cartão maior que o espaço reservado é sobreposição garantida.
+
+**Cartão de altura variável exigiria medir cada um na tela antes de posicionar** — a arrumação é
+função pura, não tem DOM. Então a altura virou **fixa**: `height: 140px` no `.caixa` com o texto
+cortado (o desfecho em até duas linhas, a exceção e o nome em uma), e `CAIXA.altura` subiu para 140,
+o mesmo número. De quebra, o quadro fica alinhado.
+
+Tem teste: nenhuma caixa se sobrepõe depois de `arrumar`, e a altura tem que acompanhar o cartão.
+**Mexeu no conteúdo do cartão? Os dois números andam juntos** — o do CSS e o do `arvore.js`.
+
+**O quadro dele continua com as posições antigas** (espaçadas para 96): o conserto chega
+importando o `fluxo-padrao-2.41.0.json`, que já vem arrumado, ou clicando em "Arrumar o quadro" —
+este último desfaz o arranjo manual, e tem o desfazer de 20 passos.
 
 ---
 
