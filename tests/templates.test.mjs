@@ -465,4 +465,39 @@ grupo('"Confirmou presenca (so agradecer)": a metade que faltava (02/09/2026)');
   check(!mem.templates.some((t) => t.id === 'boas-vindas'), 'e nao volta se ele apagar depois');
 }
 
+{
+  grupo('as boas-vindas tem a metade SEM o pedido de dados (05/09/2026)');
+
+  /**
+   * Print dele: o contato tinha etiqueta de cidade (Erechim) e de conteudo, mandou uma figura, e
+   * recebeu as boas-vindas com o *"nos informe Nome , Cidade"* dentro. *"ja tem os dados e pediu
+   * novamente; a mensagem padrao provavelmente so tem pedindo dados"*.
+   *
+   * E o mesmo defeito das duas respostas de evento -- resposta que FUNDE duas coisas nao tem como
+   * ser usada pela metade -- e o mesmo conserto: escrever a metade que faltava.
+   */
+  const todos = store.DEFAULT_TEMPLATES;
+  const comPedido = todos.find((t) => t.id === 'boas-vindas');
+  const semPedido = todos.find((t) => t.id === 'boas-vindas-tem-dados');
+  check(!!semPedido, 'a resposta "boas-vindas-tem-dados" existe de fabrica');
+
+  /**
+   * **A assercao que importa.** Se este texto voltar a pedir o cadastro numa reescrita futura, o
+   * defeito volta calado, porque a resposta continua se chamando "boas-vindas". Vale para o texto
+   * base E para cada variante.
+   */
+  check(!templates.ehPedidoDeDados(semPedido.text), 'o texto base NAO pede nome e cidade');
+  for (const v of semPedido.variantes || []) {
+    check(!templates.ehPedidoDeDados(v), `a variante tambem nao pede: "${String(v).slice(0, 34)}..."`);
+  }
+
+  // A primeira continua PEDINDO -- e por isso que a segunda precisou existir.
+  check(templates.ehPedidoDeDados(comPedido.text), 'a de quem NAO tem cadastro continua pedindo');
+
+  // As duas dizem a mesma coisa na abertura: e a mesma mensagem, sem o bloco do cadastro.
+  check(semPedido.text.includes('gabinete do Capitao Martim'.replace('Capitao', 'Capitão')),
+    'a metade sem pedido continua se apresentando como o gabinete');
+  check(semPedido.text.includes('Em que podemos ajudar?'), 'e continua perguntando em que pode ajudar');
+}
+
 fim();

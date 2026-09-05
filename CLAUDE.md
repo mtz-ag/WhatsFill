@@ -1289,6 +1289,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   separador do template mudou. O campo novo da Config avisa na tela quando o texto perde a linha, e
   ha teste no `templates.test.mjs`.
 
+- **Caixa que ENVIA um texto com pedido de dados precisa da guarda do pedido de dados.** Print dele
+  (05/09/2026): contato com etiqueta de cidade (Erechim) e de conteudo recebeu as boas-vindas com o
+  *"nos informe Nome , Cidade"* dentro. *"ja tem os dados e pediu novamente; a mensagem padrao
+  provavelmente so tem pedindo dados"*. Duas causas somadas, e as duas ja estao registradas aqui em
+  outras palavras: a caixa `chegada-boas-vindas` nasceu (04/09) com duas condicoes e **nenhuma
+  guarda sobre ja termos o cadastro**, enquanto `nunca-pediram-dados`, tres linhas abaixo, tem tres;
+  e o TEXTO funde apresentacao com formulario, entao nao havia como dar as boas-vindas sem pedir o
+  cadastro — o mesmo defeito das duas respostas de evento (02/09). Hoje existe
+  `boas-vindas-tem-dados`, a metade sem o pedido, e quem escolhe o texto e o painel pela conta
+  **exportada** `sugestao.pedirDadosNaoCabe` (`jaDeuNomeECidade || jaPediramDados ||
+  temEtiquetaDeCidade`), a MESMA que guarda o formulario. **Troca de TEXTO e nao de caixa**, como a
+  tecla 4 no evento e a tecla 5 no pedido junto do momento: duas caixas para a mesma situacao
+  divergem na primeira semana.
+
 - **O MATERIAL pedido nao vence com o dia, e a excecao vale nas DUAS caixas que o enterravam.**
   Regra dele (05/09/2026), com a print do anuncio CONVERSE CONOSCO: *"o modelo de material e uma
   excecao, ele sempre tem que ser mandado quando requisitado; nesse caso mandou mensagem do momento

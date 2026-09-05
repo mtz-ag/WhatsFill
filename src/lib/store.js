@@ -288,6 +288,32 @@ export const DEFAULT_TEMPLATES = [
     ],
   },
   {
+    /**
+     * **A metade das boas-vindas SEM o pedido de dados** — print dele (05/09/2026): o contato tinha
+     * etiqueta de cidade (Erechim) e de conteúdo, mandou uma figura, e recebeu as boas-vindas com o
+     * *"nos informe Nome , Cidade"* dentro. *"já tem os dados e pediu novamente; a mensagem padrão
+     * provavelmente só tem pedindo dados"*.
+     *
+     * Ele estava certo sobre a causa: existia **uma redacão só**, e ela funde as duas coisas —
+     * então não havia como dar as boas-vindas sem pedir o cadastro. É o mesmo defeito das duas
+     * respostas de evento, que confirmavam a presença **e** pediam os dados no mesmo texto, e o
+     * conserto é o mesmo: escrever a metade que faltava.
+     *
+     * **O teste exige que este texto NÃO case com `ehPedidoDeDados`** — em cada variante. Se uma
+     * reescrita futura devolver o bloco do cadastro, o defeito volta calado, porque a resposta
+     * continua se chamando "boas-vindas".
+     */
+    id: 'boas-vindas-tem-dados',
+    name: 'Boas-vindas (já temos o cadastro)',
+    text:
+      '{{saudacao}}! Bem-vindo. Você está falando com o gabinete do Capitão Martim.\n\n' +
+      'Em que podemos ajudar?',
+    variantes: [
+      '{{saudacao}}! Seja bem-vindo — aqui é o gabinete do Capitão Martim.\n\n' +
+        'Em que podemos ajudar?',
+    ],
+  },
+  {
     id: 'saudacao-fe',
     name: 'Saudação com mensagem de fé',
     text:

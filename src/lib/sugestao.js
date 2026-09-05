@@ -26,6 +26,19 @@
  * caso de quem volta por outro anúncio, que ora merece a mensagem do momento, ora só concluir.
  * `quando(ctx)` recebe o retrato do contato; `motivo(ctx)` escreve a frase que aparece em cima.
  */
+/**
+ * **Não há o que pedir**: ou já sabemos o nome e a cidade, ou o formulário já saiu.
+ *
+ * Exportado porque o PAINEL precisa da mesma conta — print dele de 05/09/2026: o contato tinha
+ * etiqueta de cidade (Erechim) e recebeu as boas-vindas com o *"nos informe Nome , Cidade"* dentro.
+ * *"já tem os dados e pediu novamente"*. Uma definição só: duas cópias divergem na primeira
+ * guarda nova, e a que ninguém olha é a que pede o cadastro de quem já o deu.
+ *
+ * `jaPediramDados` entra junto de propósito — pedir duas vezes soa a robô, mesmo sem resposta.
+ */
+export const pedirDadosNaoCabe = (c) =>
+  !!(c?.jaDeuNomeECidade || c?.jaPediramDados || c?.temEtiquetaDeCidade);
+
 export const REGRAS = [
   {
     id: 'sem-interesse',
@@ -514,13 +527,7 @@ export const REGRAS = [
      * carrega o mesmo pedido junto do recibo — lá ele derruba só a metade do formulário, e o caso
      * desce para `conteudo-pedido`, que manda o recibo sozinho.
      */
-    quando: (c) =>
-      !c.rajadaEhSoRepasse &&
-      !c.jaDeuNomeECidade &&
-      !c.jaPediramDados &&
-      !c.temEtiquetaDeCidade &&
-      c.podePedirDados &&
-      !c.pedidoHoje,
+    quando: (c) => !c.rajadaEhSoRepasse && !pedirDadosNaoCabe(c) && c.podePedirDados && !c.pedidoHoje,
     motivo: () => 'veio do anúncio e nunca pedimos o nome e a cidade dela — peça os dados esta vez.',
   },
   {

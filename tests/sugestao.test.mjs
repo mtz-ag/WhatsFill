@@ -891,4 +891,28 @@ grupo('engajado: ja respondi hoje, nao manda nada (04/09/2026)');
   check(com({ ...base, momentoJaEnviado: true })?.tecla === '3', 'a guarda antiga continua valendo');
 }
 
+{
+  grupo('"nao ha o que pedir" tem uma definicao so (05/09/2026)');
+
+  /**
+   * Print dele: o contato tinha etiqueta de cidade (Erechim) e recebeu as boas-vindas com o
+   * *"nos informe Nome , Cidade"* dentro. *"ja tem os dados e pediu novamente"*.
+   *
+   * A conta que guarda o formulario (`nunca-pediram-dados`) passou a ser exportada, porque o
+   * PAINEL precisa dela para escolher qual das duas redacoes de boas-vindas sai. Duas copias
+   * divergem na primeira guarda nova, e a que ninguem olha e a que pede o cadastro de quem ja deu.
+   */
+  const { pedirDadosNaoCabe } = sugestaoLib;
+  check(!pedirDadosNaoCabe({}), 'contato sem nada: o pedido cabe');
+  check(pedirDadosNaoCabe({ temEtiquetaDeCidade: true }), 'com etiqueta de cidade, nao cabe');
+  check(pedirDadosNaoCabe({ jaDeuNomeECidade: true }), 'tendo escrito nome e cidade, nao cabe');
+  check(pedirDadosNaoCabe({ jaPediramDados: true }), 'ja tendo pedido, nao cabe -- pedir duas vezes soa a robo');
+
+  // E a regra continua lendo a mesma conta: o quadro e o painel nao podem discordar.
+  const regra = REGRAS.find((r) => r.id === 'nunca-pediram-dados');
+  const base = { podePedirDados: true, veioDeAnuncio: true };
+  check(regra.quando(base), 'a regra do formulario casa quando nao temos nada');
+  check(!regra.quando({ ...base, temEtiquetaDeCidade: true }), 'e nao casa para quem ja tem etiqueta de cidade');
+}
+
 fim();

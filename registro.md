@@ -1,4 +1,4 @@
-## 2026-09-05 — ESTADO DE AGORA (v2.42.0) — leia isto primeiro numa sessão nova
+## 2026-09-05 — ESTADO DE AGORA (v2.43.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,8 +7,8 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.42.0**, tudo commitado e no remoto. 36 commits no dia 04/09,
-e o primeiro do dia 05/09.
+Branch `claude/whatsfill-ia`, **v2.43.0**, tudo commitado e no remoto. 36 commits no dia 04/09,
+e dois no dia 05/09.
 Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente — **60 caixas** desde que as situações do mesmo desfecho foram juntadas. A
 lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o quadro tem dois ramos.
@@ -75,6 +75,44 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-05 — As boas-vindas pediam o cadastro de quem já tinha (v2.43.0)
+
+*"já tem os dados e pediu novamente; a mensagem padrão provavelmente só tem pedindo dados"*.
+
+A print: contato com etiqueta de **cidade (Erechim)** e de conteúdo, que mandou uma figura. A rodada
+mandou as boas-vindas — e elas trazem *"nos informe: Nome , Cidade"* dentro.
+
+### Ele estava certo sobre a causa
+
+O texto existia numa **redação só**, e ela funde duas coisas: a apresentação do gabinete e o pedido
+de cadastro. Não havia como dar as boas-vindas sem pedir os dados. É o mesmo defeito das duas
+respostas de evento (02/09), que confirmavam a presença **e** pediam o cadastro no mesmo texto, e o
+conserto é o mesmo: **escrever a metade que faltava**.
+
+`boas-vindas-tem-dados` é a metade nova — mesma abertura, mesmo *"em que podemos ajudar?"*, sem o
+bloco do cadastro. Migração própria, então ela chega em quem já tem a lista salva.
+
+### E a caixa não tinha guarda nenhuma
+
+A caixa "chegou sem anúncio e só cumprimentou" nasceu ontem com duas condições (só cumprimentou, não
+veio de anúncio) e **nada sobre já termos o cadastro** — enquanto a caixa do formulário, três linhas
+abaixo, tem três guardas para isso. Quem escolhe agora é o painel, pela mesma conta:
+
+`sugestao.pedirDadosNaoCabe` — `jaDeuNomeECidade || jaPediramDados || temEtiquetaDeCidade` — passou a
+ser **exportada**, e `nunca-pediram-dados` a usa no lugar da conta escrita à mão. Uma definição só:
+duas cópias divergem na primeira guarda nova, e a que ninguém olha é a que pede o cadastro de quem já
+o deu.
+
+### A troca é do TEXTO, não da caixa
+
+Como a tecla 4 faz com o evento e a tecla 5 com o pedido junto do momento. O quadro continua dizendo
+"manda boas-vindas" e o rótulo da opção mostra qual das duas sai — duas caixas para a mesma situação
+divergiriam na primeira semana. **Não há fluxo novo para importar.**
+
+Treze asserções novas. Quinze suítes verdes, os dois verificadores limpos.
 
 ---
 

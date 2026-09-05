@@ -30,6 +30,7 @@ export async function list() {
     await migrarVariantesDeTexto();
     await migrarPedirDadosAntesDeTudo();
     await migrarRespostaBoasVindas();
+    await migrarBoasVindasTemDados();
   }
   return store.get('templates');
 }
@@ -104,6 +105,13 @@ export const migrarRespostaAgradecerInfo = () =>
  * `DEFAULT_TEMPLATES` sozinho só alcança instalação nova, e existe uma só, a dele.
  */
 export const migrarRespostaBoasVindas = () => garantirRespostas(['boas-vindas'], 'respostaBoasVindas');
+
+/**
+ * A metade sem o pedido de dados (05/09/2026), para quem já tem o cadastro. Flag própria: quem
+ * apagou a primeira não pediu para ficar sem a segunda.
+ */
+export const migrarBoasVindasTemDados = () =>
+  garantirRespostas(['boas-vindas-tem-dados'], 'respostaBoasVindasTemDados');
 
 /** A pergunta de interesse no conteúdo, para quem já tinha a lista de respostas salva. */
 export const migrarRespostaInteresse = () =>

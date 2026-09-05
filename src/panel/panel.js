@@ -4961,7 +4961,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return cidadeVale || !!doPedido.nome;
       })();
 
-      let sugestao = sugerirAcaoComFluxo({
+      /**
+       * Os sinais ficam num nome próprio porque o painel os consulta DEPOIS — e a primeira consulta
+       * foi a troca de texto das boas-vindas (05/09/2026). Lidos de um objeto só, painel e quadro
+       * não têm como discordar sobre o mesmo contato.
+       */
+      const sinaisDoContato = {
         // Recusou ou veio hostilizar: a regra mais alta da tabela, porque continuar mandando
         // mensagem para quem pediu para parar é o que gera denúncia.
         semInteresse: semInteresse(state.entrantes),
@@ -5178,7 +5183,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * quadro separar "veio de anúncio que eu conheço" de "veio de anúncio qualquer".
          */
         anuncioReconhecido: !!state.anuncio,
-      });
+      };
+      let sugestao = sugerirAcaoComFluxo(sinaisDoContato);
 
       /**
        * **O anúncio impõe o desfecho — mas nunca por cima de quem decidiu não mandar nada.**
@@ -5440,7 +5446,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * dele, e trocar o sentido de um é como o "2" digitado na conversa acabou concluindo
        * atendimento.
        */
-      const doFluxo = sugestao?.resposta ? state.templates.find((tpl) => tpl.id === sugestao.resposta) : null;
+      /**
+       * **As boas-vindas têm DUAS redacões, e quem escolhe é o cadastro** — print dele (05/09/2026):
+       * o contato tinha etiqueta de cidade (Erechim) e de conteúdo, mandou uma figura, e recebeu as
+       * boas-vindas com o *"nos informe Nome , Cidade"* dentro. *"já tem os dados e pediu
+       * novamente; a mensagem padrão provavelmente só tem pedindo dados"*.
+       *
+       * Ele estava certo sobre a causa: a resposta funde as duas coisas e existia numa redacão só,
+       * então não havia como dar as boas-vindas sem pedir o cadastro — o mesmo defeito das duas
+       * respostas de evento, e o mesmo conserto: escrever a metade que faltava.
+       *
+       * **A troca é do TEXTO e não da caixa**, como a tecla 4 faz com o evento e a tecla 5 com o
+       * pedido junto do momento: o quadro continua dizendo "manda boas-vindas", e o rótulo da opção
+       * mostra qual das duas sai — duas caixas para a mesma situação divergiriam na primeira semana.
+       *
+       * A conta de "não há o que pedir" é a de `sugestao.pedirDadosNaoCabe`, a mesma que guarda o
+       * formulário: duas cópias divergem na primeira guarda nova.
+       */
+      const respostaDoFluxo =
+        sugestao?.resposta === 'boas-vindas' && sugestaoLib.pedirDadosNaoCabe(sinaisDoContato)
+          ? 'boas-vindas-tem-dados'
+          : sugestao?.resposta;
+      const doFluxo = respostaDoFluxo ? state.templates.find((tpl) => tpl.id === respostaDoFluxo) : null;
       const doFluxoTrava = doFluxo
         ? vars.render(await templatesLib.varianteAtual(doFluxo), contexto).missing.length > 0
         : false;

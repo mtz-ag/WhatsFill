@@ -67,6 +67,7 @@ está valendo de verdade:
 | **Na chegada, pendência neutra vem DEPOIS do modelo** (02/09) — figura, cumprimento, despedida. Pedido, pergunta e áudio vêm **antes**: ali mandar a nossa mensagem primeiro É o dano. | quadro |
 | **A ação do anúncio é do momento da chegada**: cumprida, o anúncio se cala e o quadro decide. | código |
 | **A ação do anúncio nunca é texto livre** — são quatro ações permitidas. | código |
+| **Nunca pedir o cadastro de quem já o tem** (05/09): *"já tem os dados e pediu novamente"*. As boas-vindas têm duas redações, e quem escolhe é o cadastro. | código (`pedirDadosNaoCabe`) |
 | **O modelo de MATERIAL é exceção: sempre sai quando requisitado** (05/09). Pedido não entregue não vence com o dia nem é substituído pelo agradecimento. A guarda é a entrega, não o tempo. | código (`materialPendente`) |
 
 ## 5. Tempo
