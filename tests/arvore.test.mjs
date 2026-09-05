@@ -1093,7 +1093,9 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   const chegada = q.find((n) => n.rotulo === 'anúncio — pessoa nova');
   const volta = q.find((n) => n.rotulo === 'pessoa retornando');
 
-  const naChegada = chegada.filhos.map((n) => n.regra || n.rotulo);
+  // As situacoes JUNTADAS contam: desde 04/09 uma caixa pode carregar mais de uma regra do codigo
+  // (pedido dele -- "junte todas as situacoes que sao usadas na mesma tecla").
+  const naChegada = chegada.filhos.flatMap((n) => [n.regra || n.rotulo, ...(n.tambemQuando || [])]);
   /**
    * "pediu dinheiro" SAIU desta lista em 03/09: ele decidiu que ela volta para cima do modelo
    * (anotacao da Regina). As outras continuam sendo resolvidas so na volta.
@@ -1134,7 +1136,7 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   check(!naChegada.some((x) => String(x).startsWith('só mandou bom dia')), '"so mandou bom dia" nao esta mais na chegada');
 
   // E continuam existindo na volta -- e por isso que remover da chegada nao perde nada.
-  const naVolta = new Set(arv.todosOsNos(volta.filhos).map(({ no }) => no.regra || no.rotulo));
+  const naVolta = new Set(arv.todosOsNos(volta.filhos).flatMap(({ no }) => [no.regra || no.rotulo, ...(no.tambemQuando || [])]));
   for (const p of PENDENCIAS) check(naVolta.has(p), `"${p}" continua na volta`);
   check(naVolta.has('pediu dinheiro, cesta basica ou remedio'), 'a ajuda financeira existe nos DOIS lados');
 
@@ -1152,7 +1154,9 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   // respondida, as duas pendencias neutras e "respondeu os dados" -- o bloco que so existia na
   // volta. O numero e proposital: ele acusa caixa que entrou sem ninguem decidir que pertence ali.
   // 23 desde 04/09, com "chegou sem anuncio e so cumprimentou" (boas-vindas do gabinete).
-  check(chegada.filhos.length === 23, 'e a chegada tem 23 caixas, nao 24');
+  // 21 desde 04/09, quando as situacoes que levam ao mesmo desfecho foram JUNTADAS numa caixa so
+  // (pedido dele: "junte todas as situacoes que sao usadas na mesma tecla").
+  check(chegada.filhos.length === 19, 'e a chegada tem 19 caixas, nao 20');
 
   /**
    * **"Nada legivel dela" entrou em 03/09** (print do Tilin: dois avisos de tipo nao suportado,
@@ -1219,7 +1223,7 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
 
   // E continua ABAIXO das pendencias: quem escreveu uma pergunta e atendido por ela, nao pelo apoio.
   const comPergunta = arv.decidir({ ...apoiando, temEtiquetaDeCidade: true, perguntaAberta: { termo: 'por que' } }, q);
-  check(comPergunta?.id?.includes('pergunta-aberta'), 'a pergunta vence o apoio, nos dois lados');
+  check(comPergunta?.tecla === '6', 'a pergunta vence o apoio, nos dois lados');
 
   /**
    * A prova de que nada piorou: as pendencias de quem CHEGA continuam sendo resolvidas -- pela
@@ -1386,6 +1390,56 @@ grupo('chegou sem anuncio e so cumprimentou: boas-vindas (04/09/2026)');
     'quem ja foi atendido nao recebe boas-vindas');
 }
 
+grupo('situacoes juntadas na mesma caixa (04/09/2026)');
+{
+  /**
+   * Pedido dele, com a print de duas caixas identicas: *"junte todas as situacoes que sao usadas na
+   * mesma tecla; na print sao duas tecla 3, junte as duas e faca o mesmo com exemplos parecidos"*.
+   *
+   * E a consequencia do que ele pediu antes: se o quadro se le pelo que NOS mandamos, duas caixas
+   * com o mesmo desfecho sao a mesma caixa -- o que muda entre elas e so a situacao que a libera.
+   * `tambemQuando` e a lista dessas situacoes, e elas valem por OU.
+   */
+  const q = arv.arrumar(arv.fluxoPadrao());
+  const base = { textos: ['x'], ultimoTexto: 'x' };
+  const tecla = (c) => arv.decidir({ ...base, ...c }, q)?.tecla ?? null;
+
+  // A caixa da print: assessor OU a ultima e nossa -- as duas concluem sem mandar nada.
+  check(tecla({ etiquetaSoConclui: 'assessor' }) === '3', 'a caixa juntada decide pela primeira situacao');
+  check(tecla({ ultimaEhNossa: 'nossa' }) === '3', 'e tambem pela segunda');
+
+  // A de pular: confirmou presenca OU mandou o endereco.
+  check(tecla({ confirmouPresenca: true }) === '2', 'confirmou presenca: pula');
+  check(tecla({ informouEndereco: true }) === '2', 'mandou o endereco: pula igual');
+
+  /**
+   * **O MOTIVO tem que ser o da situacao que casou**, e nao o da primeira da lista: e a frase que
+   * aparece na caixa da rodada, e ela precisa dizer POR QUE aquele contato caiu ali.
+   */
+  const porEndereco = arv.decidir({ ...base, informouEndereco: true }, q);
+  check(/material/i.test(porEndereco?.motivo || '') && !/presen/i.test(porEndereco?.motivo || ''),
+    `o motivo e o da situacao que casou, nao o da primeira da lista (${porEndereco?.motivo})`);
+
+  /**
+   * **A regra juntada continua contando como "esta no quadro"** -- se sumir desta conta, a protecao
+   * do codigo dispara ANTES da arvore e vence ate a recusa. Peguei isso numa varredura: 32% das
+   * decisoes mudaram, com a tecla `s` virando 2 ou 3.
+   */
+  check(tecla({ semInteresse: { motivo: 'x' }, informouEndereco: true }) === 's',
+    'a recusa continua vencendo quem mandou o endereco');
+  check(tecla({ semInteresse: { motivo: 'x' }, ultimaEhNossa: 'nossa' }) === 's',
+    'e continua vencendo a conversa que termina em mensagem nossa');
+
+  // E a peneira da importacao: situacao que nao existe mais no codigo e descartada com aviso.
+  const sujo = JSON.stringify({
+    formato: 'whatsfill-fluxo', versao: 1, nome: 'x', teclas: {},
+    arvore: [{ id: 'a', rotulo: 'x', regra: 'ultima-e-nossa', tambemQuando: ['naoExisteEssaRegra', 'etiqueta-so-conclui'] }],
+  });
+  const lido = arv.deArquivo(sujo);
+  check(lido.arvore?.[0]?.tambemQuando?.length === 1, 'situacao inventada e descartada na importacao');
+  check(lido.avisos.some((a) => a.includes('não existe mais')), 'e o aviso sobrevive para ele ver');
+}
+
 grupo('condicoes e excecoes: a caixa decide por ela mesma (04/09/2026)');
 {
   /**
@@ -1506,7 +1560,13 @@ grupo('mandou o endereco: PULA e ele transfere no fim (04/09/2026)');
    */
   const semACaixa = arv.arrumar(arv.fluxoPadrao());
   const podar = (nos) => nos.filter((no) => no.regra !== 'informou-endereco')
-    .map((no) => ({ ...no, filhos: podar(no.filhos || []) }));
+    .map((no) => ({
+      ...no,
+      // Tirar a regra tambem de dentro das caixas JUNTADAS -- senao ela continua no quadro, e a
+      // protecao do codigo (que so cobre a ausencia) nao dispara.
+      tambemQuando: (no.tambemQuando || []).filter((id) => id !== 'informou-endereco'),
+      filhos: podar(no.filhos || []),
+    }));
   const decisao = arv.decidir(comEndereco, podar(semACaixa));
   check(decisao?.tecla === '2', 'sem a caixa no quadro dele, a protecao do codigo decide igual');
   check(decisao?.caminho?.[0] === 'protecao do codigo', 'e o Andamento diz de onde veio');
@@ -1797,7 +1857,7 @@ grupo('o lado SEM cidade tambem fecha, e o modelo vem antes do obrigado (03/09/2
   check(d(elaine)?.tecla === '5', `sem anuncio reconhecido, o tempo decide (${d(elaine)?.id})`);
   check(d(elaine)?.id?.includes('contexto-de-outro-dia'), 'pela caixa do tempo');
   // E no mesmo dia, quem decide volta a ser o apoio.
-  check(d({ ...elaine, deOutroDia: false })?.id?.includes('so-expressa-apoio'), 'no mesmo dia, o apoio decide');
+  check(d({ ...elaine, deOutroDia: false })?.tecla === 'i', 'no mesmo dia, o apoio decide');
 
   /**
    * Quem nao expressou apoio nenhum continua recebendo o modelo pela caixa de baixo -- **desde que
@@ -1809,11 +1869,11 @@ grupo('o lado SEM cidade tambem fecha, e o modelo vem antes do obrigado (03/09/2
   check(d({ ...semApoio, deOutroDia: true })?.tecla === '5', 'de outro dia, a do momento (o caso do Giovani)');
 
   // E as guardas da regra sao o que impede virar repeticao.
-  check(d({ ...rosa, modeloJaNaConversa: true })?.id?.includes('so-expressa-apoio'), 'modelo ja na conversa: volta a agradecer');
-  check(d({ ...rosa, podeEnviar: false })?.id?.includes('so-expressa-apoio'), 'sem modelo mapeado tambem');
+  check(d({ ...rosa, modeloJaNaConversa: true })?.tecla === 'i', 'modelo ja na conversa: volta a agradecer');
+  check(d({ ...rosa, podeEnviar: false })?.tecla === 'i', 'sem modelo mapeado tambem');
 
   // A pendencia continua vencendo o modelo nos dois lados.
-  check(d({ ...rosa, perguntaAberta: { termo: 'por que' } })?.id?.includes('pergunta-aberta'),
+  check(d({ ...rosa, perguntaAberta: { termo: 'por que' } })?.tecla === '6',
     'pergunta vence o modelo, no lado com cidade');
 
   check(arv.problemas(q).length === 0, 'e o quadro continua sem problemas acusados');

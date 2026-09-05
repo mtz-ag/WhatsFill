@@ -179,13 +179,36 @@ export function casa(no, ctx) {
     if (condicaoCasa(exc, ctx)) return false;
   }
 
-  if (regra) {
-    try {
-      if (!regra.quando(ctx || {})) return false;
-    } catch (_) {
-      // Regra quebrada não derruba a rodada: ela simplesmente não casa.
-      return false;
-    }
+  const outras = no.tambemQuando || [];
+  if (regra || outras.length) {
+    /**
+     * **UMA caixa, VÁRIAS situações que levam ao mesmo texto** — pedido dele (04/09/2026), com a
+     * print de duas caixas idênticas: *"junte todas as situações que são usadas na mesma tecla; na
+     * print são duas tecla 3, junte as duas e faça o mesmo com exemplos parecidos"*.
+     *
+     * Ele está certo e é a consequência do que pediu antes: se o quadro se lê pelo que NÓS
+     * mandamos, duas caixas com o mesmo desfecho são a mesma caixa — o que muda entre elas é só a
+     * situação que a libera. `tambemQuando` é a lista dessas situações a mais, e elas valem por
+     * **OU**: basta uma casar.
+     *
+     * Note a diferença para `maisCondicoes`, que é **E**: aquelas estreitam a mesma situação; estas
+     * acrescentam situações. Juntas: (esta OU aquela) E as condições extras E nenhuma exceção.
+     *
+     * **Só junte o que está COLADO na ordem de decisão.** Duas caixas com o mesmo desfecho em
+     * posições distantes fazem trabalhos diferentes — `etiqueta-so-conclui` é proteção e vem no
+     * topo; `ultima-e-despedida` tem que perder para a pergunta e para o pedido de dinheiro. Juntar
+     * as duas moveria uma delas, e isso muda o que sai para eleitor.
+     */
+    const casouAlguma = [no.regra, ...outras].filter(Boolean).some((id) => {
+      const r = REGRAS.find((x) => x.id === id);
+      try {
+        return !!r && !!r.quando(ctx || {});
+      } catch (_) {
+        // Regra quebrada não derruba a rodada: ela simplesmente não casa.
+        return false;
+      }
+    });
+    if (!casouAlguma) return false;
     /**
      * **Numa caixa de REGRA, as condições extras também estreitam.** A `quando` do código continua
      * mandando; o que ele acrescenta na janela é somado com E. Nunca amplia — é a mesma disciplina
@@ -250,7 +273,9 @@ function condicaoCasa(cond, ctx) {
  * ramificar, não para decidir.
  */
 export function acaoDoNo(no, ctx, fixadas) {
-  const regra = regraDoNo(no);
+  // Numa caixa juntada, quem dita o MOTIVO e a tecla e a regra que realmente casou -- as outras
+  // levam ao mesmo desfecho, mas a frase que aparece na caixa da rodada tem que dizer qual foi.
+  const regra = regraQueCasou(no, ctx);
   if (regra) {
     const fixa = fixadas?.[regra.id];
     const tecla = fixa || (typeof regra.tecla === 'function' ? regra.tecla(ctx || {}) : regra.tecla);
@@ -282,6 +307,19 @@ export function acaoDoNo(no, ctx, fixadas) {
 }
 
 /** A frase que aparece em cima da caixa da rodada, para um ramo que é dele. */
+/** Entre as regras de uma caixa juntada, a que realmente casou — é o motivo que vai para a tela. */
+function regraQueCasou(no, ctx) {
+  for (const id of [no.regra, ...(no.tambemQuando || [])].filter(Boolean)) {
+    const r = REGRAS.find((x) => x.id === id);
+    try {
+      if (r && r.quando(ctx || {})) return r;
+    } catch (_) {
+      // ignora a quebrada
+    }
+  }
+  return regraDoNo(no);
+}
+
 function motivoDele(no, ctx) {
   const cond = no.condicao || {};
   const sinal = SINAIS.find((s) => s.id === cond.sinal);
@@ -337,7 +375,17 @@ export function decidir(ctx, arvore, fluxo) {
    * escolha dele. O que a lista impede e o buraco: protecao que o codigo ganhou e o quadro nunca
    * recebeu.
    */
-  const noQuadro = new Set(todosOsNos(arvore).map(({ no }) => no.regra).filter(Boolean));
+  /**
+   * **As regras JUNTADAS também contam como "está no quadro"** (04/09/2026).
+   *
+   * Peguei isto na varredura, não por teste: ao juntar `informou-endereco` dentro da caixa de
+   * `confirmou-presenca-evento`, ela sumiu desta conta — e a proteção do código passou a disparar
+   * ANTES da árvore, vencendo até a recusa. **32% das decisões mudaram** numa varredura de 10.000
+   * contextos, com o desfecho errado (`s` virando 2 ou 3).
+   */
+  const noQuadro = new Set(
+    todosOsNos(arvore).flatMap(({ no }) => [no.regra, ...(no.tambemQuando || [])]).filter(Boolean)
+  );
   const desligadas = new Set(fluxo?.desligadas || []);
   for (const id of PROTECOES) {
     if (noQuadro.has(id) || desligadas.has(id)) continue;
@@ -469,7 +517,9 @@ export function noVazio(rotulo) {
 export function catalogoDeRegras(arvore) {
   const quantas = new Map();
   for (const { no } of todosOsNos(arvore)) {
-    if (no.regra) quantas.set(no.regra, (quantas.get(no.regra) || 0) + 1);
+    for (const id of [no.regra, ...(no.tambemQuando || [])].filter(Boolean)) {
+      quantas.set(id, (quantas.get(id) || 0) + 1);
+    }
   }
   return REGRAS.map((r) => ({
     id: r.id,
@@ -734,8 +784,8 @@ export function fluxoPadrao() {
       condicao: { sinal: 'soCortesia', negar: false, palavras: [], onde: 'ultima' },
       excecao: { sinal: 'momentoJaEnviado', negar: false, palavras: [], onde: 'ultima' },
       acao: { tecla: '5', resposta: null } },
-    r('pediu-algo-sem-dizer-o-que', 'pediu algo e não disse o quê', onde),
-    r('pergunta-aberta', null, onde),
+    { ...r('pediu-algo-sem-dizer-o-que', 'você responde: pedido sem objeto, ou pergunta', onde),
+      tambemQuando: ['pergunta-aberta'] },
     r('ultima-e-despedida', null, onde),
 
     /**
@@ -837,8 +887,8 @@ export function fluxoPadrao() {
      * mensagem do momento.
      */
     r('contexto-de-outro-dia', 'a última dela é de outro dia', onde),
-    r('respondeu-os-dados', 'respondeu o nome e a cidade', onde),
-    r('so-expressa-apoio', 'apoio', onde),
+    { ...r('respondeu-os-dados', 'agradecer: respondeu os dados, ou só expressou apoio', onde),
+      tambemQuando: ['so-expressa-apoio'] },
     r('conteudo-pedido', 'pediu conteúdo e há modelo mapeado', onde),
   ];
 
@@ -856,10 +906,18 @@ export function fluxoPadrao() {
    */
   const doAnuncio = grupo('anúncio — pessoa nova', { sinal: 'jaRespondemosAntes', negar: true, palavras: [], onde: 'ultima' }, [
     r('sem-interesse', 'Recusou ou veio hostilizar'),
-    r('etiqueta-so-conclui', null, 'chegada'),
-    r('ultima-e-nossa', null, 'chegada'),
-    r('confirmou-presenca-evento', null, 'chegada'),
-    r('informou-endereco', null, 'chegada'),
+    /**
+     * **Duas situações, um desfecho, UMA caixa** — pedido dele (04/09/2026): *"junte todas as
+     * situações que são usadas na mesma tecla; na print são duas tecla 3, junte as duas"*.
+     *
+     * Só junto o que está COLADO na ordem: estas duas são vizinhas, então juntar não move nada. A
+     * despedida também conclui e ficou de fora de propósito — ela vive lá embaixo, onde tem que
+     * perder para a pergunta e para o pedido de dinheiro.
+     */
+    { ...r('etiqueta-so-conclui', 'não mandar nada: é da casa, ou a última é nossa', 'chegada'),
+      tambemQuando: ['ultima-e-nossa'] },
+    { ...r('confirmou-presenca-evento', 'pular: confirmou presença, ou mandou o endereço', 'chegada'),
+      tambemQuando: ['informou-endereco'] },
 
     /**
      * **A etiqueta que dispensa da fila fica ACIMA do modelo, e isto foi conserto de regressão.**
@@ -936,8 +994,8 @@ export function fluxoPadrao() {
       condicao: { sinal: 'pedeLigacao', negar: false, palavras: [], onde: 'ultima' },
       acao: { tecla: null, resposta: 'pedido-ligacao' } },
 
-    r('pediu-algo-sem-dizer-o-que', 'pediu algo e não disse o quê', 'chegada-antes'),
-    r('pergunta-aberta', null, 'chegada-antes'),
+    { ...r('pediu-algo-sem-dizer-o-que', 'você responde: pedido sem objeto, ou pergunta', 'chegada-antes'),
+      tambemQuando: ['pergunta-aberta'] },
 
     /**
      * **Quem escreveu conversa na chegada também fica acima do modelo** — print dele de
@@ -962,7 +1020,8 @@ export function fluxoPadrao() {
      * **O custo, que é real:** quem chega mandando um áudio sem transcrição, um arquivo ou um texto
      * longo deixa de receber o recibo do anúncio nessa passada e vai para você. Foi dito a ele.
      */
-    r('ultima-pede-resposta-pessoal', 'escreveu conversa, não é caso de modelo', 'chegada-antes'),
+    { ...r('ultima-pede-resposta-pessoal', 'você responde: áudio, arquivo, texto longo, ou denúncia', 'chegada-antes'),
+      tambemQuando: ['respondeu-nossa-pergunta'] },
 
     /**
      * **A DENÚNCIA respondida à nossa própria pergunta — a quarta pendência que fica acima do
@@ -977,7 +1036,7 @@ export function fluxoPadrao() {
      * figura, despedida) custa um dia de atraso; aqui mandar a nossa mensagem primeiro **É** o
      * dano.
      */
-    r('respondeu-nossa-pergunta', null, 'chegada'),
+
 
     /**
      * **Chegou SEM anúncio e só cumprimentou → boas-vindas do gabinete, e conclui.**
@@ -1189,9 +1248,10 @@ export function fluxoPadrao() {
      * mandar, e isso nao depende de o contato ter cidade cadastrada. Protecao que vive so num lado
      * da bifurcacao e protecao pela metade -- ja aconteceu com a etiqueta que dispensa.
      */
-    r('etiqueta-so-conclui', null, 'volta'),
-    r('ultima-e-nossa', null, 'volta'),
-    r('confirmou-presenca-evento', null, 'volta'),
+    { ...r('etiqueta-so-conclui', 'não mandar nada: é da casa, ou a última é nossa', 'volta'),
+      tambemQuando: ['ultima-e-nossa'] },
+    { ...r('confirmou-presenca-evento', 'pular: confirmou presença, ou mandou o endereço', 'volta'),
+      tambemQuando: ['informou-endereco'] },
     /**
      * **O endereço fica acima da bifurcação de cidade**, com as outras proteções.
      *
@@ -1200,7 +1260,7 @@ export function fluxoPadrao() {
      * etiqueta que dispensa e o apoio). Aqui o custo de errar o lado seria mandar mensagem por
      * cima de quem está esperando o material.
      */
-    r('informou-endereco', null, 'volta'),
+
 
     /**
      * **A etiqueta que dispensa da fila também sobe para cima da bifurcação de cidade.**
@@ -1704,6 +1764,7 @@ export function sanitizar(bruto) {
       regra: null,
       condicao: { sinal: '', negar: false, palavras: [], onde: 'ultima' },
       excecao: { sinal: '', negar: false, palavras: [], onde: 'ultima' },
+      tambemQuando: [],
       acao: null,
       nota,
       desligado: cru.desligado === true,
@@ -1716,6 +1777,20 @@ export function sanitizar(bruto) {
     if (regra) {
       if (REGRAS.some((r) => r.id === regra)) no.regra = regra;
       else avisos.push(`"${nome}": a regra "${regra}" não existe mais no código — o ramo virou um agrupamento`);
+    }
+
+    /**
+     * As situações A MAIS da caixa juntada, pela mesma peneira: regra que sumiu do código é
+     * descartada com aviso, nunca aceita como situação que nunca casa e ninguém entende.
+     */
+    if (Array.isArray(cru.tambemQuando)) {
+      no.tambemQuando = [];
+      for (const bruto of cru.tambemQuando.slice(0, LIMITES.condicoesExtras)) {
+        const id = texto(bruto, 60);
+        if (!id) continue;
+        if (REGRAS.some((r) => r.id === id)) no.tambemQuando.push(id);
+        else avisos.push(`"${nome}": a situação "${id}" não existe mais no código — descartada`);
+      }
     }
 
     /**
@@ -1888,7 +1963,12 @@ export function paraTexto(arvore, opcoes) {
   const condicao = (no) => {
     const minhas = condicoesDe(no).map(umaCondicao).filter(Boolean);
     if (no.regra) {
-      const doCodigo = SOBRE[no.regra]?.quando || '(a condição está no código)';
+      // Caixa juntada: as situações vêm separadas por OU, como na janela.
+      const situacoes = [no.regra, ...(no.tambemQuando || [])];
+      const doCodigo =
+        situacoes.length > 1
+          ? situacoes.map((id) => SOBRE[id]?.rotulo || id).join('  OU  ')
+          : SOBRE[no.regra]?.quando || '(a condição está no código)';
       return [doCodigo, ...minhas].filter(Boolean).join(' E ');
     }
     return minhas.length ? minhas.join(' E ') : 'qualquer contato que chegar aqui';
@@ -2187,7 +2267,10 @@ function chaveDeComparacao(no) {
 
   if (no.regra) {
     const extras = (no.maisCondicoes || []).map(umaSo).filter(Boolean).sort().join('+');
-    return `regra:${no.regra}${extras ? `|e:${extras}` : ''}${selo}`;
+    // A caixa juntada é OUTRA caixa: "conclui quando é assessor" e "conclui quando é assessor OU a
+    // última é nossa" cobrem gente diferente, e o cartão "O padrão mudou?" tem que dizer isso.
+    const juntas = [no.regra, ...(no.tambemQuando || [])].sort().join('+');
+    return `regra:${juntas}${extras ? `|e:${extras}` : ''}${selo}`;
   }
   const todas = condicoesDe(no).map(umaSo).filter(Boolean).sort().join('+');
   if (!todas && !selo) return null;

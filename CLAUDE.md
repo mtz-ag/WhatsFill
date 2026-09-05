@@ -1289,6 +1289,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   separador do template mudou. O campo novo da Config avisa na tela quando o texto perde a linha, e
   ha teste no `templates.test.mjs`.
 
+- **UMA caixa por desfecho: situacoes que levam a mesma mensagem sao JUNTADAS (`tambemQuando`).**
+  Pedido dele (04/09/2026), com a print de duas caixas identicas *"Conclui sem enviar nada (tecla
+  3)"*: *"junte todas as situacoes que sao usadas na mesma tecla"*. `tambemQuando` e a lista de
+  regras a mais que liberam a caixa, e elas valem por **OU** — o contrario de `maisCondicoes`, que e
+  **E**. Juntas: (esta OU aquela) E as condicoes extras E nenhuma excecao. O padrao foi de 70 para
+  60 caixas.
+  **So se junta o que esta COLADO na ordem de decisao.** `etiqueta-so-conclui` e proteção e vem no
+  topo; `ultima-e-despedida` tem o mesmo desfecho e vive la embaixo, onde precisa perder para a
+  pergunta e para o pedido de dinheiro — juntar as duas moveria uma delas. A prova de que um merge
+  e seguro e a varredura: **0 decisoes diferentes em 10.000 contextos sorteados**.
+- **Regra dentro de `tambemQuando` continua "no quadro" — e esquecer isso quebrou 32% das
+  decisoes.** `decidir` so aplica a PROTECAO do codigo para regra que o quadro NAO tem, e a conta
+  lia apenas `no.regra`. Ao juntar `informou-endereco` dentro da caixa de `confirmou-presenca`, ela
+  sumiu da conta, a protecao passou a disparar ANTES da arvore e venceu ate a recusa: `s` virando 2
+  ou 3 em um terco dos contextos. Peguei na varredura, nao por teste — **toda mudanca estrutural no
+  quadro se prova com a varredura antes/depois**.
+
 - **O quadro se le pelo que NOS mandamos, nao pelo texto de quem chega.** Relato dele (04/09/2026),
   com a print de um cartao: *"no momento o fluxo se baseia no texto de quem vem, eu quero me basear
   no que vamos falar e nas nossas respostas rapidas — na print a ordem esta trocada"*. Estava: a

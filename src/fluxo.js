@@ -186,9 +186,19 @@ function excecaoEmPortugues(no) {
  * sozinha; era isso que uma condição só impedia.
  */
 function condicaoEmPortugues(no) {
-  const doCodigo = no.regra ? sugestaoLib.SOBRE[no.regra]?.quando || '' : '';
   const minhas = arvoreLib.condicoesDe(no).map(umaCondicaoEmPortugues).filter(Boolean);
-  if (no.regra) return [doCodigo, ...minhas].filter(Boolean).join(' E ');
+  if (no.regra) {
+    /**
+     * **As situações juntadas aparecem separadas por OU** — pedido dele (04/09/2026): *"junte todas
+     * as situações que são usadas na mesma tecla"*. A caixa é uma, e o cartão tem que dizer as duas
+     * portas que levam a ela.
+     */
+    const situacoes = [no.regra, ...(no.tambemQuando || [])]
+      .map((id) => sugestaoLib.SOBRE[id]?.rotulo || id)
+      .filter(Boolean);
+    const cabecalho = situacoes.length > 1 ? situacoes.join('  OU  ') : sugestaoLib.SOBRE[no.regra]?.quando || '';
+    return [cabecalho, ...minhas].filter(Boolean).join(' E ');
+  }
   return minhas.length ? minhas.join(' E ') : 'qualquer contato que chegar aqui';
 }
 
@@ -936,6 +946,56 @@ function desenharEditor() {
     );
     caixa.append(mais);
   };
+
+  /**
+   * **Juntar e separar situações** — pedido dele (04/09/2026): *"junte todas as situações que são
+   * usadas na mesma tecla"*. A caixa fica uma só e as situações valem por OU.
+   *
+   * Só aparece em caixa de REGRA: juntar é somar situações do CÓDIGO, e cada uma traz as guardas
+   * dela. Numa caixa dele, "mais situações" seria só outra caixa.
+   *
+   * **A lista de escolha esconde as que levam a outro desfecho.** Juntar duas situações de teclas
+   * diferentes faria a caixa mandar uma coisa quando a outra casasse — que é o defeito que o
+   * `problemas` acusa como "caixa que promete o que não cumpre".
+   */
+  if (no.regra) {
+    const juntas = no.tambemQuando || [];
+    const gravarJuntas = (nova) => gravar(arvoreLib.editar(fluxo.arvore, no.id, { tambemQuando: nova }));
+    const meuDesfecho = sugestaoLib.SOBRE[no.regra]?.efeito;
+
+    const t = document.createElement('p');
+    t.className = 'nota';
+    t.textContent =
+      'OU TAMBÉM QUANDO — outras situações que levam a esta MESMA mensagem. Basta uma delas para a caixa decidir.';
+    caixa.append(t);
+
+    juntas.forEach((id, i) => {
+      const dupla = document.createElement('div');
+      dupla.className = 'acoes';
+      dupla.append(span('', sugestaoLib.SOBRE[id]?.rotulo || id));
+      const tirar = document.createElement('button');
+      tirar.type = 'button';
+      tirar.className = 'btn btn-perigo';
+      tirar.textContent = 'Separar';
+      tirar.addEventListener('click', () => gravarJuntas(juntas.filter((_, j) => j !== i)));
+      dupla.append(tirar);
+      linha(`Ou também quando ${i + 1}`, dupla);
+    });
+
+    const candidatas = sugestaoLib.REGRAS.filter(
+      (r) => r.id !== no.regra && !juntas.includes(r.id) && sugestaoLib.SOBRE[r.id]?.efeito === meuDesfecho
+    );
+    if (candidatas.length) {
+      linha(
+        'Juntar outra situação',
+        seletor(
+          [['', '— escolha uma —'], ...candidatas.map((r) => [r.id, sugestaoLib.SOBRE[r.id]?.rotulo || r.id])],
+          '',
+          (v) => v && gravarJuntas([...juntas, v])
+        )
+      );
+    }
+  }
 
   listaExtras(
     'maisCondicoes',

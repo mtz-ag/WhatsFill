@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.39.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.40.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,10 +7,10 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.39.0**, tudo commitado e no remoto. 33 commits no dia 04/09.
+Branch `claude/whatsfill-ia`, **v2.40.0**, tudo commitado e no remoto. 34 commits no dia 04/09.
 Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
-sem desfecho incoerente. A lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o
-quadro tem dois ramos.
+sem desfecho incoerente — **60 caixas** desde que as situações do mesmo desfecho foram juntadas. A
+lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o quadro tem dois ramos.
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -68,6 +68,55 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — Uma caixa por desfecho: as situações foram juntadas (v2.40.0)
+
+*"agora junte todas as situações que são usadas na mesma tecla em vez de 2 ou mais; como na print
+são duas tecla 3, junte as duas e faça o mesmo com exemplos parecidos"*.
+
+É a consequência do que ele pediu antes: se o quadro se lê pelo que **nós** mandamos, duas caixas com
+o mesmo desfecho são a mesma caixa — o que muda entre elas é só a situação que a libera.
+
+### O que foi juntado
+
+`tambemQuando` é a lista de situações a mais de uma caixa, e elas valem por **OU** (o contrário de
+`maisCondicoes`, que é **E**). Seis merges, **70 → 60 caixas**:
+
+| caixa | situações juntadas |
+|---|---|
+| conclui sem mandar nada (chegada e volta) | é da casa **ou** a última é nossa |
+| pula e deixa aberto (chegada e volta) | confirmou presença **ou** mandou o endereço |
+| você responde (chegada) | pedido sem objeto **ou** pergunta · áudio/texto longo **ou** denúncia |
+| você responde (nos dois lados de cidade) | pedido sem objeto **ou** pergunta |
+| agradece e conclui (nos dois lados) | respondeu os dados **ou** só expressou apoio |
+
+### O que NÃO foi juntado, e por quê
+
+**Só se junta o que está colado na ordem de decisão.** A despedida também conclui (tecla 3) e ficou
+de fora: ela vive lá embaixo, onde precisa perder para a pergunta e para o pedido de dinheiro —
+juntá-la com a proteção do topo moveria uma das duas. O mesmo vale para as quatro caixas de "tecla
+variável", cuja tecla é uma função diferente em cada regra.
+
+### A prova, e o defeito que ela pegou
+
+A varredura antes/depois: **0 decisões diferentes em 10.000 contextos sorteados**.
+
+Mas a primeira rodada dela deu **32%** de diferença, com a tecla `s` virando 2 ou 3. Causa:
+`decidir` só aplica a proteção do código para regra que o quadro **não tem**, e essa conta lia
+apenas `no.regra`. Ao juntar `informou-endereco` dentro da caixa de `confirmou-presenca`, ela sumiu
+da conta — a proteção passou a disparar **antes** da árvore e venceu até a recusa. Peguei na
+varredura, não por teste.
+
+### Na janela
+
+O cartão mostra as situações separadas por **OU**. No editor, uma caixa de regra ganhou
+*"OU TAMBÉM QUANDO"*, com **Separar** em cada situação juntada e um seletor para juntar outra — e a
+lista de escolha só oferece situações **do mesmo desfecho**, porque juntar teclas diferentes faria a
+caixa mandar uma coisa quando a outra casasse.
+
+Nove asserções novas. Quinze suítes verdes, os dois verificadores limpos, 60 caixas sem problemas.
 
 ---
 
