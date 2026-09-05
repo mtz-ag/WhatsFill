@@ -11,6 +11,7 @@ import { check, grupo, fim } from './_harness.mjs';
 import {
   montarSistemaRascunho,
   montarContatoRascunho,
+  PEDIDO_DE_DADOS_NO_RASCUNHO,
   saudacaoDeAgora,
   montarRequisicaoRascunho,
   revisarRascunho,
@@ -565,6 +566,32 @@ grupo('montarContatoRascunho: os DOIS lados, e a pendencia marcada (03/09/2026)'
 
   const semSaudacao = revisarRascunho('Sobre a propaganda que voce viu: sim.', tarde);
   check(semSaudacao.texto === 'Sobre a propaganda que voce viu: sim.', 'rascunho sem saudacao continua sem');
+}
+
+{
+  grupo('o rascunho pede o cadastro que falta (05/09/2026)');
+
+  /**
+   * Print dele: o rascunho respondeu bem o policial militar da reserva e **nao pediu nada** --
+   * *"faltou detalhes, nao pediu dados"*. O prompt dizia o que NAO pedir (o bloco do cadastro,
+   * criado no caso da Catarina) e nada dizia o que pedir.
+   *
+   * **O texto vai literal**: a linha `Nome , Cidade` e o INVARIANTE que `templates.ehPedidoDeDados`
+   * reconhece. Deixando a IA pedir com as palavras dela, a rodada nao enxerga que o pedido saiu e
+   * pede de novo na passada seguinte.
+   */
+  const agora = new Date('2026-09-05T11:27:00');
+  const conversa = [{ de: 'contato', texto: 'Sou policial militar da reserva' }];
+
+  const pedindo = montarContatoRascunho({ mensagens: conversa, campos: { Nome: 'Vacenton Salinas' }, agora, pedirDados: true });
+  check(pedindo.includes(PEDIDO_DE_DADOS_NO_RASCUNHO), 'o prompt manda copiar o formulario, literal');
+  check(/copie-o inteiro mesmo/.test(pedindo.replace(/\s+/g, ' ')),
+    'e diz para copiar mesmo com o nome conhecido -- senao os dois blocos se contradizem');
+
+  const semPedir = montarContatoRascunho({ mensagens: conversa, campos: { Nome: 'X', Cidade: 'Canoas' }, agora });
+  check(!semPedir.includes(PEDIDO_DE_DADOS_NO_RASCUNHO), 'com o cadastro completo, nao manda pedir nada');
+  check(/NAO peca nada que ja esteja nesta linha/.test(semPedir.normalize('NFD').replace(/[̀-ͯ]/g, '')),
+    'e o bloco que impede pedir o que ja se tem continua la (o caso da Catarina)');
 }
 
 fim();

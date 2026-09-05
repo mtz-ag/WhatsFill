@@ -1289,6 +1289,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   separador do template mudou. O campo novo da Config avisa na tela quando o texto perde a linha, e
   ha teste no `templates.test.mjs`.
 
+- **A QUERY STRING do link tem "?", e por isso todo video repassado virava PERGUNTA.** Relato dele
+  (05/09/2026): *"varios casos da pessoa mandando link e reconhece como conversa e passa pra mim"*.
+  O teste de pergunta e `texto.includes('?')`, e `?igsh=`, `?utm_source=` e `?v=` sao parte do
+  endereco — medido, um link do Instagram sozinho volta como *"fez uma pergunta que nenhuma
+  resposta pronta responde"*, e `perguntaPendente` volta `true`, o que ainda impede concluir.
+  Somava-se a conta de tamanho: tres links com legenda curta dao 224 caracteres e viravam
+  *"escreveu 3 mensagens proprias"*. **`semLinks` tira o link antes das duas contas** — mesmo
+  criterio que ja tira o texto gerado pelo anuncio: o que ela nao escreveu nao conta como escrita
+  dela. Regra geral: **antes de medir texto de gente, tire o que e endereco de maquina.**
+- **O rascunho da IA nao pedia o cadastro, e `revisarRascunho` estava MORTA neste caminho.** Print
+  dele (05/09/2026): *"faltou detalhes, nao pediu dados"*. Duas coisas: o prompt tinha o bloco que
+  diz o que NÃO pedir (o caso da Catarina) e nada dizia o que pedir — hoje manda fechar com
+  `ia.PEDIDO_DE_DADOS_NO_RASCUNHO`, **literal**, porque a linha `Nome , Cidade` e o INVARIANTE que
+  `ehPedidoDeDados` reconhece (pedido com as palavras da IA nao e visto pela rodada, que pede de
+  novo), com PISO no painel se ela nao copiar; e `revisarRascunho` era chamada com o **objeto**
+  (`String({...})` da `[object Object]`) e **depois** de o texto ir para o campo, entao nenhum aviso
+  jamais apareceu e a troca da saudacao errada nunca chegou ao eleitor. **Funcao pura testada nao
+  garante nada se quem chama passar o argumento errado** — mesma familia do
+  `conversaPedeRespostaPessoal` que passava so o tipo.
+
 - **Preposicao colada no artigo apaga as formas mais naturais — e o defeito parece "a regra nao
   existe".** Print dele (05/09/2026): *"Vc esta chamando gente pra trabalhar na campanha tou
   precisando"*, e nenhum detector viu nada. A lista dizia `(no|na) + (o mandato|a campanha)`, e

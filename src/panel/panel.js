@@ -506,6 +506,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * a decisão de um contato executada em outro.
      */
     state.anuncio = null;
+    // Os sinais do contato anterior decidiriam o rascunho deste. Mesma armadilha do anuncio.
+    state.sinais = null;
     state.cidadeRecusada = new Set();
     state.ultimaMensagem = null;
     state.hsmTemplates = [];
@@ -5184,6 +5186,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          */
         anuncioReconhecido: !!state.anuncio,
       };
+      /**
+       * **Guardados no `state` porque o RASCUNHO precisa deles** (05/09/2026): a IA só sabe se deve
+       * pedir o cadastro consultando a mesma conta que guarda o formulário, e `rascunharParaEle`
+       * roda fora deste bloco. Zerado no `load()`, como o anúncio: sinal de um contato executado em
+       * outro é a armadilha da pergunta de cidade.
+       */
+      state.sinais = sinaisDoContato;
       let sugestao = sugerirAcaoComFluxo(sinaisDoContato);
 
       /**
@@ -9005,6 +9014,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!dela.length) return { ok: false, enviado: false, motivo: 'o contato não escreveu nada' };
     if (state.session?.expired) return { ok: false, enviado: false, motivo: 'janela de 24h vencida' };
 
+    /**
+     * **O que FALTA tem que ser pedido** — print dele (05/09/2026): o rascunho respondeu bem o
+     * policial militar da reserva e não pediu nada. *"faltou detalhes, não pediu dados"*. O prompt
+     * dizia o que NÃO pedir, e nada dizia o que pedir.
+     *
+     * A conta é a MESMA que guarda o formulário da rodada (`pedirDadosNaoCabe`), lida dos sinais
+     * deste contato: duas definições divergiriam, e a que ninguém olha é a que pede o cadastro de
+     * quem já o deu. Sem sinais (rascunho pedido fora da rodada), não pede — o lado seguro.
+     */
+    const pedirDadosNoRascunho = !!state.sinais && !sugestaoLib.pedirDadosNaoCabe(state.sinais);
+
     let rascunho;
     try {
       rascunho = await iaCliente.rascunhar({
@@ -9027,13 +9047,36 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * pessoa pelo nome continua no prompt de sistema, e é decisão dele de 10/08.
          */
         campos: { Nome: valueNamed('Nome') || state.contact?.name || '', Cidade: valueNamed('Cidade') },
+        pedirDados: pedirDadosNoRascunho,
       });
     } catch (err) {
       return { ok: false, enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };
     }
 
-    const texto = String(rascunho?.texto || '').trim();
-    if (!texto) return { ok: false, enviado: false, motivo: 'a IA não escreveu nada' };
+    const bruto = String(rascunho?.texto || '').trim();
+    if (!bruto) return { ok: false, enviado: false, motivo: 'a IA não escreveu nada' };
+
+    /**
+     * **A revisão vem ANTES do campo, e recebe o TEXTO** — dois defeitos que se somavam desde
+     * 04/09/2026: ela era chamada com o OBJETO (`String({...})` dá `[object Object]`, então nenhum
+     * aviso jamais apareceu e nada era conferido), e só depois de o texto ir para o campo — ou seja,
+     * a troca da saudação errada, a única correção que ela faz, **nunca chegava ao eleitor**.
+     */
+    const revisado = iaLib.revisarRascunho(bruto, new Date());
+    const avisos = revisado.avisos || [];
+    let texto = revisado.texto || bruto;
+
+    /**
+     * **O PISO do pedido de dados.** O prompt manda copiar o bloco; se a IA não copiar, o painel o
+     * acrescenta — e o texto é o mesmo (`ia.PEDIDO_DE_DADOS_NO_RASCUNHO`), porque o que está em jogo
+     * é o INVARIANTE `Nome , Cidade`: sem ele a rodada não enxerga que o pedido saiu e pede de novo
+     * na passada seguinte. Acrescentar TEXTO NOSSO, fixo e já revisado, é diferente de escrever no
+     * lugar da IA — que continua sendo o motivo de a saudação ausente não ser inventada.
+     */
+    if (pedirDadosNoRascunho && !templatesLib.ehPedidoDeDados(texto)) {
+      texto = [texto, '', iaLib.PEDIDO_DE_DADOS_NO_RASCUNHO].join('\n');
+      avisos.push('a IA não pediu o cadastro — acrescentei o formulário no fim');
+    }
 
     // `setComposerText`, NUNCA `sendText`: a diferença entre as duas é a decisão dele.
     try {
@@ -9042,11 +9085,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return { ok: false, enviado: false, motivo: `não consegui pôr o rascunho no campo: ${err?.message || err}` };
     }
 
-    /**
-     * Os avisos da revisão continuam aparecendo, e continuam **sem esconder o texto**: esconder
-     * tiraria a decisão dele, que é justamente o que este caminho passou a existir para devolver.
-     */
-    const avisos = iaLib.revisarRascunho(rascunho)?.avisos || [];
     registrarNaRodada(
       state.contact?.name || 'contato',
       'refinar',

@@ -77,13 +77,13 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  *
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
-export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora }) {
+export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados }) {
   try {
     const r = await chrome.runtime.sendMessage({
       type: MSG_IA,
       modo: 'rascunho',
       sistema: montarSistemaRascunho({ templates, regras, gabinete }),
-      contato: montarContatoRascunho({ mensagens, campos, agora }),
+      contato: montarContatoRascunho({ mensagens, campos, agora, pedirDados }),
       modelo: modelo || MODELO_PADRAO,
     });
 

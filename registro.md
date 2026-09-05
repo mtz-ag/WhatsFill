@@ -1,4 +1,4 @@
-## 2026-09-05 — ESTADO DE AGORA (v2.44.0) — leia isto primeiro numa sessão nova
+## 2026-09-05 — ESTADO DE AGORA (v2.45.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,8 +7,8 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.44.0**, tudo commitado e no remoto. 36 commits no dia 04/09,
-e três no dia 05/09.
+Branch `claude/whatsfill-ia`, **v2.45.0**, tudo commitado e no remoto. 36 commits no dia 04/09,
+e quatro no dia 05/09.
 Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente — **60 caixas** desde que as situações do mesmo desfecho foram juntadas. A
 lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o quadro tem dois ramos.
@@ -75,6 +75,52 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-05 — Link virava pergunta, e o rascunho não pedia o cadastro (v2.45.0)
+
+Dois relatos dele, e o primeiro tinha uma causa que eu não teria adivinhado sem medir.
+
+### 1. *"vários casos da pessoa mandando link e reconhece como conversa e passa pra mim"*
+
+**A URL carrega a query string** — `?igsh=`, `?utm_source=`, `?v=` — e o teste de pergunta é
+`texto.includes('?')`. Medido: um link do Instagram sozinho volta como *"fez uma pergunta que
+nenhuma resposta pronta responde"*, e `perguntaPendente` volta `true`. Ou seja, **toda pessoa que
+repassa vídeo caía na tecla 6**, e a pergunta pendente ainda impedia concluir.
+
+Somava-se uma segunda conta: três links com legenda curta (*"olha isso &lt;link&gt;"*) somam **224
+caracteres** e viravam *"escreveu 3 mensagens próprias — é conversa"*. Ela escreveu quinze
+caracteres; o resto é endereço.
+
+`semLinks` tira o link antes das duas contas — a da pergunta e a do tamanho. É o mesmo critério que
+já tira o texto gerado pelo anúncio: **o que ela não escreveu não conta como escrita dela.**
+
+Medido depois: link sozinho → tecla 5 (mensagem do momento); três links com legenda → tecla 5 na
+volta, tecla 4 na chegada. **Pergunta de verdade continua indo para ele**, com link junto ou sem, e
+texto escrito continua contando — quatro asserções guardam esse lado.
+
+### 2. *"faltou detalhes, não pediu dados"*
+
+O rascunho respondeu bem o policial militar da reserva e **não pediu nada**. O prompt tinha o bloco
+que diz o que **não** pedir (o caso da Catarina, 03/09) e nada dizia o que pedir.
+
+Agora, quando falta cadastro, o prompt manda **fechar com o formulário, copiado literal** —
+`ia.PEDIDO_DE_DADOS_NO_RASCUNHO`. Literal porque a linha `Nome , Cidade` é o **invariante** que
+`templates.ehPedidoDeDados` reconhece: deixando a IA pedir com as palavras dela, a rodada não
+enxerga que o pedido saiu e pede de novo na passada seguinte. Quem decide se pede é a **mesma conta**
+que guarda o formulário da rodada (`sugestao.pedirDadosNaoCabe`).
+
+E há um **piso**: se a IA não copiar o bloco, o painel o acrescenta, com aviso no log.
+
+### 3. `revisarRascunho` estava morta neste caminho
+
+Achado ao mexer aqui: ela era chamada com o **objeto** (`String({…})` dá `[object Object]`) e **depois**
+de o texto ir para o campo. Ou seja, desde 04/09 nenhum aviso apareceu, e a troca da saudação errada
+— a única correção que ela faz, criada por causa do *"Boa noite!"* às 16:21 — **nunca chegava ao
+eleitor**. Hoje ela roda antes, sobre o texto, e o revisado é o que vai para o campo.
+
+Vinte e uma asserções novas. Quinze suítes verdes, os dois verificadores limpos.
 
 ---
 

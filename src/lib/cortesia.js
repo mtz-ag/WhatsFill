@@ -43,6 +43,24 @@ const SAUDACAO = /\b(bom\s*dia|boa\s*(tarde|noite|madrugada))\b/i;
 const LINK = /(https?:\/\/\S+|www\.\S+|\b[a-z0-9-]+\.(com|br|net|org|me|tv|app|io)(\/\S*)?\b)/i;
 
 /**
+ * **O ENDEREÇO não é escrita dela** — relato dele (05/09/2026): *"vários casos da pessoa mandando
+ * link e reconhece como conversa e passa pra mim"*.
+ *
+ * Medido: três mensagens do tipo *"olha isso aqui <link do Instagram>"* somam **224 caracteres** e
+ * caem em `conversaPedeRespostaPessoal` como *"escreveu 3 mensagens próprias"* — tecla 6. Mas ela
+ * escreveu quinze caracteres; o resto é URL. O tamanho existe para medir **quanto ela falou**, e
+ * URL colada não é fala — é o mesmo critério que já tira o texto gerado pelo anúncio da conta.
+ *
+ * Vale para as duas pontas: o corte de "mensagem própria" e a soma da rajada.
+ */
+function semLinks(texto) {
+  return String(texto || '')
+    .replace(LINK, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Só emoji (e o modificador de tom de pele / seletor de variação que costuma vir junto).
  *
  * São DUAS: a com `g` serve para apagar, a sem `g` para testar. `RegExp` com `g` guarda o
@@ -263,7 +281,7 @@ const RAJADA_MUITAS = 3;
 function temSubstancia(msg, padroesDeAnuncio) {
   if (mensagemDeCortesia(msg) || ehSoReacao(msg)) return false;
   if (ehMensagemDeAnuncio(msg, padroesDeAnuncio)) return false;
-  return String(msg?.texto || '').trim().length >= 20;
+  return semLinks(msg?.texto).length >= 20;
 }
 
 /**
@@ -433,7 +451,7 @@ export function conversaPedeRespostaPessoal(entrantes, nossaUltimaAt, padroesDeA
     if (porTipo) return porTipo;
   }
 
-  const total = rajada.reduce((n, m) => n + String(m?.texto || '').trim().length, 0);
+  const total = rajada.reduce((n, m) => n + semLinks(m?.texto).length, 0);
   const proprias = rajada.filter((m) => temSubstancia(m, padroesDeAnuncio));
 
   /**
@@ -633,15 +651,17 @@ export function perguntaPendente(entrantes, nossaUltimaAt) {
   const rajada = rajadaFinal(entrantes, nossaUltimaAt).filter((m) => String(m?.texto || '').trim());
   if (!rajada.length) return false;
 
+  // O link sai antes de tudo: a query string (`?igsh=`, `?v=`) fazia todo vídeo repassado virar
+  // pergunta pendente, e pergunta pendente e o que impede concluir. Ver `semLinks`.
   const plano = (m) =>
-    String(m?.texto || '')
+    semLinks(m?.texto)
       .normalize('NFD')
       .replace(/[̀-ͯ]/g, '')
       .replace(/\s+/g, ' ')
       .trim();
 
   for (let i = 0; i < rajada.length; i++) {
-    const texto = String(rajada[i].texto || '');
+    const texto = semLinks(rajada[i].texto);
     const semAcento = plano(rajada[i]);
     if (!semAcento) continue;
 
@@ -1455,7 +1475,19 @@ export function conversaTemPerguntaAberta(entrantes, nossaUltimaAt) {
    * posição abaixo não valia nada.
    */
   for (const msg of rajada) {
-    const texto = String(msg?.texto || '').trim();
+    /**
+     * **O LINK sai antes de qualquer coisa, e ele era a causa de *"passa pra mim"* nos links.**
+     *
+     * Relato dele (05/09/2026): *"vários casos da pessoa mandando link e reconhece como conversa e
+     * passa pra mim"*. Medido: um link do Instagram é lido como PERGUNTA — e a causa é boba e
+     * grande, porque a URL carrega a **query string**: `?igsh=`, `?utm_source=`, `?v=`. O teste da
+     * interrogação via aquele "?" e a intersão do link virava *"fez uma pergunta que nenhuma
+     * resposta pronta responde"* — tecla 6, em toda pessoa que repassa vídeo.
+     *
+     * Tirar o link antes também arruma a guarda de POSIÇÃO: com a URL na frente, o padrão de
+     * pergunta nunca estava "no começo da mensagem".
+     */
+    const texto = semLinks(msg?.texto);
     if (!texto) continue;
     if (PEDIDO_DE_MATERIAL.test(texto)) continue;
 

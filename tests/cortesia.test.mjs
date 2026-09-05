@@ -1680,4 +1680,42 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(!!pedeEmprego([texto('e remunerado ou voluntario?')], null), 'perguntar se e remunerado continua sendo pedido');
 }
 
+{
+  grupo('link nao e pergunta nem conversa (05/09/2026)');
+
+  /**
+   * Relato dele: *"varios casos da pessoa mandando link e reconhece como conversa e passa pra
+   * mim"*.
+   *
+   * Medido, e a causa e boba e grande: a URL carrega a QUERY STRING (`?igsh=`, `?utm_source=`,
+   * `?v=`), o teste da interrogacao via aquele "?" e o link virava *"fez uma pergunta que nenhuma
+   * resposta pronta responde"* -- tecla 6, em toda pessoa que repassa video. Somava-se a soma de
+   * caracteres: tres links com legenda curta dao 224 caracteres e viravam "3 mensagens proprias".
+   */
+  const L = 'https://www.instagram.com/reel/DCkXvC2AykS/?igsh=MWx4b3d2eDk4cXNsZw==';
+  const Y = 'https://www.youtube.com/watch?v=abcdefghijk';
+
+  check(!conversaTemPerguntaAberta([texto(L)], null), 'um link sozinho nao e pergunta');
+  check(!conversaTemPerguntaAberta([texto(Y)], null), 'o link do YouTube (?v=) tambem nao');
+  check(!perguntaPendente([texto(L)], null), 'e nao deixa pergunta pendente -- era o que impedia concluir');
+
+  const rajada = [texto('olha isso ' + L), texto('veja esse ' + L), texto('e esse aqui ' + L)];
+  check(!conversaPedeRespostaPessoal(rajada, null, []), 'tres links com legenda curta nao sao conversa');
+  check(!conversaTemPerguntaAberta(rajada, null), 'nem pergunta');
+
+  /**
+   * **O outro lado, que e o que importa guardar:** pergunta de verdade continua indo para ele, com
+   * link ou sem, e texto escrito continua contando.
+   */
+  check(!!conversaTemPerguntaAberta([texto('Voce e candidato daqui do RS?')], null),
+    'pergunta de verdade continua sendo pergunta');
+  check(!!conversaTemPerguntaAberta([texto('o que voce acha disso? ' + L)], null),
+    'pergunta COM link junto continua sendo pergunta');
+  check(!!conversaPedeRespostaPessoal(
+    [texto('preciso muito falar com voces'), texto('ninguem me responde nunca'), texto('ja tentei varias vezes')],
+    null, []), 'tres mensagens escritas de verdade continuam sendo conversa');
+  check(!!conversaPedeRespostaPessoal([texto('olha ' + L), texto('a'.repeat(420))], null, []),
+    'e o texto longo junto de um link tambem');
+}
+
 fim();

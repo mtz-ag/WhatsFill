@@ -723,8 +723,24 @@ export function montarRequisicaoRascunho({ sistema, contato, modelo = MODELO_PAD
   };
 }
 
+/**
+ * **O formulário que fecha o rascunho quando falta cadastro** — e ele é uma string só de propósito.
+ *
+ * A linha `Nome , Cidade` é o INVARIANTE que `templates.ehPedidoDeDados` reconhece. Quem chama usa
+ * esta mesma constante como PISO: se a IA não copiar o bloco, o painel o acrescenta. Duas redações
+ * (uma no prompt, outra no piso) divergiriam na primeira reescrita, e o custo é conhecido — a
+ * rodada deixa de enxergar que o pedido saiu e pede de novo na passada seguinte.
+ */
+export const PEDIDO_DE_DADOS_NO_RASCUNHO = [
+  'E, se puder, me diga seu:',
+  '',
+  'Nome , Cidade',
+  '',
+  '(exemplo: Pedro Silva , Porto Alegre)',
+].join('\n');
+
 /** O bloco do contato para o rascunho: a conversa com folga, porque é dela que ele precisa. */
-export function montarContatoRascunho({ mensagens = [], campos = {}, agora } = {}) {
+export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false } = {}) {
   /**
    * **A conversa INTEIRA, com os dois lados e com a pendência marcada.**
    *
@@ -827,6 +843,32 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora } = {
     'assunto que já encerramos.',
     '',
     cadastro,
+    /**
+     * **O que FALTA no cadastro tem que ser pedido, e com o texto exato.**
+     *
+     * Print dele (05/09/2026): o rascunho respondeu bem o policial militar da reserva e **não pediu
+     * nada** — *"faltou detalhes, não pediu dados"*. O bloco de cima dizia o que NÃO pedir; nada
+     * dizia o que pedir. Sem cidade, o contato fica sem etiqueta e fora de todo filtro.
+     *
+     * **O texto vai literal de propósito, e não e enfeite:** a linha `Nome , Cidade` é o INVARIANTE
+     * que `templates.ehPedidoDeDados` reconhece. Deixando a IA pedir com as palavras dela, a rodada
+     * não enxerga que o pedido saiu e pede de novo na passada seguinte — o defeito que já custou
+     * três anotações quando o separador do template mudou.
+     *
+     * Quem decide se pede é quem chama, com a MESMA conta que guarda o formulário
+     * (`sugestao.pedirDadosNaoCabe`): duas definições divergiriam, e a que ninguém olha é a que
+     * pede o cadastro de quem já o deu.
+     */
+    pedirDados
+      ? [
+          'O cadastro desta pessoa está incompleto. Depois de responder o que ela escreveu, FECHE a',
+          'mensagem com este bloco, copiado exatamente assim (sem reescrever) — copie-o inteiro mesmo',
+          'que o nome já apareça acima: é o formulário padrão do gabinete, e é por ele que o sistema',
+          'reconhece que o pedido saiu.',
+          '',
+          PEDIDO_DE_DADOS_NO_RASCUNHO,
+        ].join('\n')
+      : '',
     'Escreva o rascunho da resposta.',
   ]
     .filter(Boolean)
