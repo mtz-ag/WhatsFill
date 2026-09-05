@@ -1257,6 +1257,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   Entraram junto `aluguel`, `farmacia` e `conta de luz/agua` nas NECESSIDADES, que continuam
   exigindo o verbo de pedir.
 
+- **O quadro tem UMA lista desde 04/09/2026 — os dois ramos e a bifurcacao de cidade sairam.**
+  Pergunta dele: *"a questao e se realmente tem necessidade de duas arvores que seguem praticamente
+  as mesmas regras"*. Nao tinha: eram TRES copias da mesma lista (chegada, sem cidade, com cidade),
+  **21 das 24 regras apareciam mais de uma vez** — 36 caixas duplicadas em 69, hoje 28. Medido em
+  8.000 contextos sorteados: 0,34% das decisoes mudam, e todas na direcao ja documentada (o que
+  precisa de gente passou a vencer o que ganhava por posicao). **O motivo nao era o numero de
+  caixas**: a duplicacao produziu QUATRO defeitos registrados aqui, todos da mesma familia — regra
+  que existe num ramo e nao no outro decide para metade da base e ninguem ve.
+- **"E a chegada" virou CONDICAO das duas regras que dependiam disso.** `anuncio-modelo-e-dados` e
+  `nada-legivel-dela` ganharam `!jaRespondemosAntes` no proprio `quando` — antes era o ramo que
+  garantia, e numa lista unica o recibo do anuncio sairia para quem ja foi atendido. Mesma licao da
+  excecao do tempo (04/09): **excecao que ele nomeia vai na condicao, nao na posicao.**
+  Consequencia boa: a guarda passou a valer tambem nos quadros que ele ja exportou.
+- **Da para separar de novo:** `jaRespondemosAntes` continua em `SINAIS`, entao um grupo com esse
+  sinal recria a chegada quando ele quiser. **Nao recrie por conta propria** — no quadro a posicao
+  e a prioridade, e a decisao e dele.
+
 - **A CHEGADA e um ramo de PRIORIDADE, entao tudo o que falta nela vira "o modelo decidiu".** Relato
   dele (04/09/2026): *"o fluxo de chegada parece ter sido deixado pra tras, confira; muitas regras
   se aplicam la tambem"*. O ramo geral ("pessoa retornando") **nao tem condicao** — e a rede que

@@ -417,7 +417,12 @@ export const REGRAS = [
       c.podePedirDados &&
       !c.jaDeuNomeECidade &&
       !c.jaPediramDados &&
-      !c.pedidoHoje,
+      !c.pedidoHoje &&
+      // **"É a CHEGADA" saiu da posição e virou condição** (04/09/2026), quando o quadro deixou de
+      // ter dois ramos. Era o ramo `!jaRespondemosAntes` que garantia isso; numa lista única a
+      // guarda tem que morar aqui, senão o recibo do anúncio sai para quem já foi atendido.
+      // É a mesma lição da exceção do tempo: exceção que ele nomeia vai na CONDIÇÃO.
+      !c.jaRespondemosAntes,
     motivo: () =>
       'chegou pelo anúncio: sai o modelo como recibo e, em seguida, o pedido de nome e cidade.',
   },
@@ -450,7 +455,8 @@ export const REGRAS = [
      * dispara a pergunta para todo mundo que nunca foi perguntado, que é quase a base inteira. Esta
      * exige, junto, que ela não tenha mandado nada legível.
      */
-    quando: (c) => !!c.soRuidoDaPlataforma && c.podePerguntarInteresse && !c.interessePerguntado,
+    quando: (c) =>
+      !!c.soRuidoDaPlataforma && c.podePerguntarInteresse && !c.interessePerguntado && !c.jaRespondemosAntes,
     motivo: () =>
       'ela só mandou mídia que a plataforma não conseguiu ler — não há o que responder: ' +
       'pergunte se ela quer receber conteúdo.',

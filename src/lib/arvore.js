@@ -522,746 +522,130 @@ export function fluxoPadrao() {
   const SEM_CONDICAO = { sinal: '', negar: false, palavras: [], onde: 'ultima' };
 
   /**
-   * As caixas que se repetem nos dois lados (com e sem etiqueta de cidade).
+   * **UMA lista só, de cima para baixo — o quadro deixou de ter dois ramos em 04/09/2026.**
    *
-   * Ele montou as mesmas situações nas duas pontas de propósito: ter ou não ter a etiqueta não muda
-   * o que fazer com quem só disse "bom dia". Uma função em vez de copiar e colar porque, copiado, um
-   * lado é consertado e o outro fica para trás.
+   * Pergunta dele: *"a questão é se realmente tem necessidade de duas árvores que seguem
+   * praticamente as mesmas regras"*. Não tinha. O quadro anterior era **três cópias** da mesma
+   * lista — a chegada, o lado "sem etiqueta de cidade" e o lado "com etiqueta" —, e **21 das 24
+   * regras apareciam mais de uma vez**: 36 caixas duplicadas em 69.
+   *
+   * O que a duplicação custava não era espaço: era o defeito que este arquivo registra **quatro
+   * vezes** — regra que existe num ramo e não no outro decide para metade da base e ninguém vê.
+   * Aconteceu com a etiqueta que dispensa, com o apoio, com o grupo que escondia caixas e com a
+   * chegada inteira, que ia do bloco de perguntas direto ao modelo.
+   *
+   * **A bifurcação de cidade não decidia nada**: os dois lados eram idênticos menos uma caixa, e a
+   * cidade já é testada dentro da condição de cada regra. Medido em 4.000 contextos sorteados,
+   * juntá-los muda 0,13% das decisões.
+   *
+   * **A chegada carregava uma decisão só**, e ela cabe aqui: o RECIBO do anúncio fica acima das
+   * pendências neutras (figura, cumprimento, despedida) — decisão dele de 02/09. Funciona numa
+   * lista única porque a condição do próprio recibo já significa "nunca mandamos nada"
+   * (`!jaPediramDados && !modeloJaNaConversa && !temEtiquetaDeCidade`): para quem está voltando ele
+   * não casa, e as pendências decidem como sempre.
+   *
+   * **Dá para separar de novo quando ele quiser:** `jaRespondemosAntes` continua na lista de
+   * sinais, então um grupo com esse sinal recria a chegada a qualquer momento.
    */
-  const dosDoisLados = (onde) => [
+  const atendimento = grupo('atendimento', SEM_CONDICAO, [
     /**
-     * **"Ela respondeu o nome e a cidade" fica no TOPO — e agora dos dois lados.**
-     *
-     * Conserto de um conflito que eu mesmo criei ao trazer `conteudo-pedido` para cá (03/09/2026).
-     * A prioridade está escrita na regra desde 02/09 (*"vem ACIMA de `conteudo-pedido` de
-     * propósito: quem respondeu o que pedimos não precisa de mais material"*), e ela valia porque
-     * as duas moravam no mesmo grupo — "sem pendência".
-     *
-     * Com o modelo dentro de `dosDoisLados`, o lado sem cidade passou a decidir o modelo **antes**
-     * de chegar naquele grupo: medido, quem respondia nome e cidade e tinha modelo mapeado recebia
-     * o modelo (tecla 1) em vez do agradecimento. A ordem escrita numa regra não se garante sozinha
-     * quando as duas caixas mudam de grupo.
-     *
-     * No topo, e nos dois lados, ela volta a valer sempre — que é como estava documentada.
+     * **AS PROTEÇÕES, no topo e sem exceção.** São as caixas cujo desfecho é o silêncio, e não há
+     * ordem em que sejam outra coisa. Todas estão em `PROTECOES`, então valem mesmo antes de ele
+     * importar o quadro.
      */
-
+    r('sem-interesse', 'Recusou ou veio hostilizar'),
+    r('etiqueta-so-conclui'),
+    r('ultima-e-nossa'),
+    r('confirmou-presenca-evento'),
+    r('informou-endereco'),
+    r('etiqueta-dispensa-da-fila'),
 
     /**
-     * **Pediu dinheiro: a condicao virou SINAL, nao lista de palavras.**
+     * **AS TRÊS RESPOSTAS QUE NEGAM.** Vêm antes de tudo o que envia porque, nesses casos, mandar a
+     * nossa mensagem primeiro **É** o dano — não o atraso. A de ajuda financeira voltou para cima
+     * do modelo por decisão dele em 03/09 (anotação da Regina): o modelo não promete nada, mas
+     * propaganda como primeira resposta a um pedido de socorro é a resposta errada mesmo assim.
      *
-     * Print da Marli (02/09/2026): ela mandou a propria chave PIX e "50 me ajuda muito", e a caixa
-     * sugeria a tecla 9 -- a pergunta de quem ainda nao sabe o que a pessoa quer. A lista casava
-     * por trecho contido ("me ajuda com") e ela escreveu "me ajuda muito".
-     *
-     * Palavra a palavra a lista nunca fecha, e o que decide aqui manda uma NEGATIVA para eleitor.
-     * `cortesia.pedeAjudaFinanceira` e testada, olha a rajada inteira (a chave vem numa mensagem e
-     * o valor na seguinte) e separa pedir de agradecer -- "voces me ajudaram muito" nao casa.
+     * As três saem sozinhas por este caminho — decisão dele de 01/09 —, e a trava da IA
+     * (`ia.RESTRITOS`) continua de pé: a IA segue sem poder escolhê-las.
      */
     { ...noVazio('pediu dinheiro, cesta basica ou remedio'),
       condicao: { sinal: 'pedeAjudaFinanceira', negar: false, palavras: [], onde: 'ultima' },
       acao: { tecla: null, resposta: 'pedido-ajuda' } },
-
-    /**
-     * **Quer trabalhar para o mandato** — anotação do Kelvem Marinho (02/09/2026).
-     *
-     * Ele perguntou *"como faz para trabalhar para vc"* e, na mensagem seguinte, *"No caso vcs não
-     * pagam"*. A rodada agradeceu e concluiu. O texto `pedido-emprego` existia desde sempre, entre
-     * os `RESTRITOS` que a IA não pode escolher — **e nada no quadro o alcançava.**
-     *
-     * Fica ao lado do pedido de dinheiro porque é a mesma família: os dois são pedidos que o
-     * mandato **não pode atender**, e os dois têm um texto que explica e nega com respeito. Deixar
-     * a pergunta sem resposta, ou respondê-la com um agradecimento genérico, é o que faz
-     * *"vocês pagam?"* parecer um sim — e prometer emprego a eleitor é proibido pela Lei 9.504/97.
-     */
     { ...noVazio('quer trabalhar para o mandato'),
       condicao: { sinal: 'pedeEmprego', negar: false, palavras: [], onde: 'ultima' },
       acao: { tecla: null, resposta: 'pedido-emprego' } },
-
-    /**
-     * **"Me liga"** — pedido dele (04/09/2026, anotação da Jucileia).
-     *
-     * Ela escreveu *"Oi"*, três mensagens que a plataforma não leu, e *"Me liga"*; a rodada ofereceu
-     * concluir. Ele: *"caso raro que a pessoa pede ligação: criar mensagem falando que não podemos
-     * e dando uma desculpa; não fazemos ligações, a plataforma não aceita e é contraproducente"*.
-     *
-     * Mesma família das duas de cima: é um pedido que o atendimento **não pode atender**, e o texto
-     * explica sem prometer retorno. Concluir em silêncio deixa a pessoa esperando o telefone tocar.
-     */
     { ...noVazio('pediu que a gente ligasse'),
       condicao: { sinal: 'pedeLigacao', negar: false, palavras: [], onde: 'ultima' },
       acao: { tecla: null, resposta: 'pedido-ligacao' } },
 
     /**
-     * **Texto longo vem ANTES das caixas de palavra** — print da Cris (02/09/2026).
+     * **O QUE PRECISA DE GENTE, e por isso fica acima do recibo.**
      *
-     * Ela escreveu 437 caracteres de desabafo: sem esperança nas eleições, urnas, *"tudo tempo
-     * perdido"*, *"Triste!"*. E começou com *"Oi. Bom dia,"*. A caixa de saudação casa por palavra
-     * **contida**, então o desabafo inteiro era lido como um "bom dia" seco e levava a mensagem do
-     * momento — material de campanha em cima de um desabafo. Relato dele: *"a IA devia ter assumido
-     * e mandado uma mensagem personalizada"*.
-     *
-     * Aqui em cima, quem escreve conversa nunca é decidido por palavra solta: vai para a tecla 6,
-     * que é justamente onde o painel chama a IA (`!sugestao || sugestao.tecla === '6'`) e onde o
-     * rascunho personalizado pode sair.
-     *
-     * **A ajuda financeira continua acima**, e é decisão dele: aquele texto é uma resposta que ele
-     * escolheu para sair sozinha. O resto do que é longo passa a ser conversa.
+     * *"Pedido é intenção, não forma de frase"* (03/09) — o caso fica com ele ou com a IA; pergunta
+     * de razão ou de posição nenhuma resposta pronta responde; áudio sem transcrição e texto longo
+     * só dá para responder lendo; e a denúncia respondida à NOSSA pergunta é o pior caso já
+     * registrado aqui (material de campanha em cima de uma denúncia, 01/09).
      */
-    r('ultima-pede-resposta-pessoal', null, onde),
+    r('pediu-algo-sem-dizer-o-que', 'pediu algo e não disse o quê'),
+    r('pergunta-aberta'),
+    r('ultima-pede-resposta-pessoal', 'áudio sem transcrição, arquivo, ou texto longo'),
+    r('respondeu-nossa-pergunta'),
 
     /**
-     * **"Só cumprimentou" virou SINAL, e não lista de palavras.**
+     * **O RECIBO DO ANÚNCIO — a única coisa que o ramo da chegada carregava.**
      *
-     * Anotação da Teresinha (02/09/2026): ela escreveu *"Boa tarde queria saber mais"*, *"Como faso
-     * pra conversar com vocês"* e *"Boa tarde o senhor tá concorendo também"* — e recebeu a mensagem
-     * do momento, porque a caixa de palavras casa por trecho CONTIDO e "boa tarde" estava lá.
-     * Relato dele: *"não foi só boa tarde, ela fez uma pergunta"*.
-     *
-     * É a armadilha que o CLAUDE.md já registra com estas palavras: *"caixa de PALAVRAS casa por
-     * trecho contido, então ela não sabe se a mensagem é SÓ aquilo"* — e o nome da caixa promete
-     * exatamente essa exclusividade. A print da Cris (desabafo de 437 caracteres começando com
-     * "Oi. Bom dia,") foi o mesmo defeito em 02/09.
-     *
-     * `cortesia.soCortesia` responde a pergunta certa: **todas** as últimas mensagens são só
-     * cumprimento, figura ou link? Medido nos quatro casos — a Teresinha e a Cris deixam de casar,
-     * "Boa tarde" sozinho e "bom dia" continuam.
+     * Modelo + pedido de nome e cidade na mesma passada (a tecla `a`, a única do projeto que manda
+     * duas mensagens — escolha dele em 02/09). Fica **acima** das pendências neutras logo abaixo,
+     * porque pendência neutra custa um dia de atraso e o recibo é o que ela clicou para receber.
      */
+    r('anuncio-modelo-e-dados', 'modelo + pedir os dados'),
+    r('nada-legivel-dela', 'ela não mandou nada legível'),
+
     /**
-     * **A exceção é o que faltava, e é o defeito que ele achou** — print da Carmem Souza
-     * (03/09/2026). A caixa da rodada mostrava, em amarelo, *"Hoje este contato já recebeu:
-     * Mensagem do momento às 09:36"* — e recomendava, em destaque, a tecla 5. Ele: *"sugestão
-     * totalmente errada, já identificou que mandou e sugeriu mandar novamente"*.
-     *
-     * **É a armadilha registrada da caixa com tecla FIXA**: ela parece a regra do código e tem o
-     * mesmo desfecho na tela, mas não carrega as guardas dela. `ultima-e-so-reacao`, logo abaixo,
-     * nunca teve esse problema — a tecla dela é função e olha `respondidoHoje`.
-     *
-     * `repeteSozinha` não acusava, e com razão: `soCortesia` lê a RAJADA depois da nossa última
-     * mensagem, então o envio apaga o sinal e a caixa não repete sozinha. O que aconteceu foi
-     * outra coisa — ela **escreveu de novo** no mesmo dia, a rajada encheu com outro cumprimento, e
-     * a caixa ofereceu a mesma mensagem pela segunda vez.
-     *
-     * `momentoJaEnviado` é a guarda exata: é literalmente o que o aviso amarelo diz. Sem casar
-     * aqui, o caso desce para `ultima-e-so-reacao` ou `ja-respondemos-antes`, que concluem.
+     * **AS PENDÊNCIAS NEUTRAS**, abaixo do recibo — figura, cumprimento e despedida. Cada uma tem a
+     * sua guarda: a do cumprimento não repete a mensagem do momento (`excecao: momentoJaEnviado`),
+     * e a da reação olha `respondidoHoje` na própria tecla.
      */
-    /**
-     * **A figura e o link vêm ANTES do cumprimento** — anotação da Maria Genoli (04/09/2026):
-     * *"confusão entre cumprimento e mandar link"*.
-     *
-     * A última coisa que ela mandou foi um link do Facebook, e a caixa que decidiu foi a do
-     * cumprimento, com o motivo dizendo *"só cumprimentou, e nada mais"*. `soCortesia` conta link e
-     * figura como cortesia de propósito (é o "bom dia ilustrado" desta base), então ela casa nos
-     * dois casos — e, estando em cima, engolia o que a caixa de baixo descreve melhor.
-     *
-     * **A troca resolve as duas coisas de uma vez.** A caixa da reação diz na tela o que de fato
-     * aconteceu, e a tecla dela é FUNÇÃO: olha `respondidoHoje` e conclui em vez de repetir a
-     * mensagem do momento. A do cumprimento fica com o que sobra — cumprimento **escrito**, que é o
-     * que `ehSoReacao` não considera reação.
-     */
-    r('ultima-e-so-reacao', 'mandou figura, emoji, sticker ou link', onde),
+    r('ultima-e-so-reacao', 'mandou figura, emoji, sticker ou link'),
     { ...noVazio('só cumprimentou, e nada mais'),
       condicao: { sinal: 'soCortesia', negar: false, palavras: [], onde: 'ultima' },
       excecao: { sinal: 'momentoJaEnviado', negar: false, palavras: [], onde: 'ultima' },
       acao: { tecla: '5', resposta: null } },
-    r('pediu-algo-sem-dizer-o-que', 'pediu algo e não disse o quê', onde),
-    r('pergunta-aberta', null, onde),
-    r('ultima-e-despedida', null, onde),
+    r('ultima-e-despedida'),
 
     /**
-     * **O apoio vive nos DOIS lados da bifurcação de cidade** — pedido dele em 03/09/2026, depois
-     * de eu apontar a assimetria comparando o quadro dele com o padrão: *"arrume para que a regra
-     * siga pras duas"*.
+     * Voltou clicando em OUTRO anúncio: a mensagem do momento, e não o modelo de novo. Exige
+     * `modeloJaNaConversa`, então só alcança quem já recebeu algo (anotação da Eroni, 03/09).
      *
-     * Ela existia só em "sem etiqueta de cidade". Quem voltava **com** cidade e só escrevia apoio
-     * nunca passava por aqui: caía em `ja-respondemos-antes`, que é a caixa mais genérica do ramo e
-     * não olha o que a pessoa escreveu. Na prática o critério de tempo que ele definiu no mesmo dia
-     * (apoio de ontem → mensagem do momento; de hoje → agradecer) valia só para metade da base.
-     *
-     * É a lição que o projeto já pagou uma vez, com `etiqueta-dispensa-da-fila`: **regra que vive
-     * só num lado da bifurcação é regra pela metade**, e o lado que falta é invisível — nada
-     * acusa, o contato só desce até a primeira caixa genérica.
-     *
-     * Fica no FIM, abaixo de todas as pendências: quem escreveu uma pergunta, um pedido ou um
-     * desabafo é atendido por aquilo, não pelo apoio que veio junto.
+     * Fica **acima** do anúncio reconhecido, que é quem mandaria o modelo, e **abaixo** das
+     * pendências neutras: ela ENVIA, e quem se despediu não recebe mensagem por ter clicado.
      */
-    /**
-     * **O modelo vem ANTES do agradecimento** — anotação da Rosa (03/09/2026).
-     *
-     * Ela já tinha etiqueta de cidade, voltou clicando no anúncio das Escolas Cívico-Militares e
-     * escreveu *"Temo junto"*, *"Obrigado"*, *"Temo junto 22222"*. A caixa recomendou agradecer
-     * (`so-expressa-apoio`). Ele: *"ela veio por um anúncio diferente do padrão, vou mandar o
-     * modelo"*.
-     *
-     * **O lado "com etiqueta de cidade" não tinha `conteudo-pedido`**: quem voltava com cidade e
-     * clicava num anúncio novo nunca recebia o modelo daquele anúncio. `voltou-por-outro-anuncio`
-     * não cobre — ela exige `modeloJaNaConversa`, ou seja, existe para quem volta pedindo a MESMA
-     * coisa (é a distinção da Eroni, 03/09).
-     *
-     * Fica **abaixo de todas as pendências e acima do apoio**: quem escreveu pergunta ou pedido é
-     * atendido por aquilo; quem só disse que está junto e pediu um conteúdo novo recebe o conteúdo,
-     * que é resposta melhor que um obrigado. As guardas da regra (`!enviadoHoje`,
-     * `!modeloJaNaConversa`) são o que impede isso de virar repetição.
-     *
-     * No lado "sem cidade" ela já existia em "sem pendência"; aqui ela também aparece dentro de
-     * "com pendência", e o efeito é o mesmo daquela — as duas só casam quando nenhuma pendência
-     * casou antes.
-     */
-    /**
-     * **A resposta à NOSSA pergunta vem antes do modelo, e agora nos dois lados.**
-     *
-     * Ela vivia só em "sem etiqueta de cidade", e **abaixo** do apoio. Duas coisas erradas: é a
-     * mesma assimetria de cidade que já custou duas regras, e a posição deixava de proteger o caso
-     * que ela existe para proteger — a contato respondeu *"é sobre as irregularidades na compra
-     * assistida em Eldorado do Sul"* e recebeu material de campanha (01/09/2026).
-     *
-     * Com o modelo entrando aqui embaixo, a ordem passou a importar de verdade: sem esta caixa
-     * acima dele, quem responde uma denúncia à nossa própria pergunta recebe o modelo. O teste que
-     * trava o caso de 01/09 acusou na hora.
-     */
-    r('respondeu-nossa-pergunta', null, onde),
+    r('voltou-por-outro-anuncio'),
 
     /**
-     * **O tempo decide DEPOIS das pendências, e é a exceção que ele nomeou.**
-     *
-     * *"Único pretexto que exclui a necessidade de hora é pergunta pendente, que deve ser
-     * respondida"* (03/09). Vale para todas as caixas acima, não só para a pergunta: pedido de
-     * dinheiro, áudio longo e denúncia respondida não esfriam por ser de ontem.
-     *
-     * Abaixo delas, porém, o tempo manda — e passa na frente do agradecimento pelo cadastro, do
-     * agradecimento pelo apoio e do modelo por etiqueta de conteúdo, que foram os quatro casos de
-     * 04/09.
-     */
-    /**
-     * **O modelo só passa na frente do apoio quando o ANÚNCIO foi reconhecido.**
-     *
-     * Duas anotações no mesmo dia, e a segunda desfez metade da primeira:
-     *
-     *  - **Rosa** (03/09): já tinha cidade, voltou clicando no anúncio das Escolas Cívico-Militares
-     *    e escreveu só apoio. Ele: *"ela veio por um anúncio diferente do padrão, vou mandar o
-     *    modelo"*. Eu pus `conteudo-pedido` acima do apoio.
-     *  - **Elaine** (04/09): já tinha cidade, escreveu *"Tamos junto capitão"* ONTEM, sem anúncio
-     *    reconhecido — e recebeu o modelo por causa daquela mudança. Ele: *"não foi arrumado"*.
-     *
-     * **A diferença entre as duas é o anúncio, não o apoio.** A Rosa clicou em alguma coisa e
-     * aquilo tem um modelo próprio que nunca saiu; a Elaine só disse que está junto, e o "modelo"
-     * dela vem da etiqueta de conteúdo — que é justamente o caminho que o critério de tempo do
-     * apoio deve decidir (apoio de ontem → mensagem do momento).
-     *
-     * Por isso o modelo sobe para cima do apoio **dentro do grupo do anúncio reconhecido**, e a
-     * cópia de baixo continua atendendo quem não expressou apoio nenhum.
+     * **O anúncio que ele cadastrou decide o QUE sai, e ganha do critério de tempo**: clicar num
+     * anúncio é pedir uma coisa específica, e escolha explícita dela não se substitui por dedução.
      */
     grupo('veio de um anúncio que eu reconheço', { sinal: 'anuncioReconhecido', negar: false, palavras: [], onde: 'ultima' }, [
-      r('conteudo-pedido', 'manda o modelo daquele anúncio', `${onde}-anuncio`),
+      r('conteudo-pedido', 'manda o modelo daquele anúncio', 'anuncio'),
     ]),
 
     /**
-     * **O tempo fica ABAIXO do anúncio reconhecido, e acima de todo o resto que envia.**
-     *
-     * Clicar num anúncio é pedir uma coisa específica; o `CLAUDE.md` já registra que escolha
-     * explícita dela não se substitui por dedução nossa. Um clique de ontem continua sendo um
-     * pedido, e o modelo daquele anúncio é a resposta.
-     *
-     * Daqui para baixo o tempo manda: o agradecimento pelo cadastro, o agradecimento pelo apoio e o
-     * modelo por etiqueta de conteúdo foram os quatro casos de 04/09, e nos quatro ele pediu a
-     * mensagem do momento.
+     * **O TEMPO** — a última dela é de outro dia, então o contexto passou e o que há de novo é a
+     * mensagem do momento (04/09) —, e então o que responde ao conteúdo.
      */
-    r('contexto-de-outro-dia', 'a última dela é de outro dia', onde),
-    r('respondeu-os-dados', 'respondeu o nome e a cidade', onde),
-    r('so-expressa-apoio', 'apoio', onde),
-    r('conteudo-pedido', 'pediu conteúdo e há modelo mapeado', onde),
-  ];
-
-  /**
-   * **1. Quem chega do anúncio.**
-   *
-   * A hostilidade é testada ANTES do pedido de dados, e é decisão dele: *"não faz sentido perguntar
-   * quando a pessoa não quer diálogo"* (01/09/2026). Entre irmãos a prioridade é a altura, e
-   * `arrumar` respeita a ordem desta lista — a recusa nasce em cima.
-   *
-   * **As duas são IRMÃS, não uma dentro da outra.** No quadro que ele mandou, "mensagem padrão" tinha
-   * caído DENTRO de "Recusou", e como o motor testa o filho antes da ação do próprio nó, o resultado
-   * era o inverso do desenho: o hostil recebia o pedido de nome e cidade, e o contato normal não
-   * recebia nada. Medido antes de consertar.
-   */
-  const doAnuncio = grupo('anúncio — pessoa nova', { sinal: 'jaRespondemosAntes', negar: true, palavras: [], onde: 'ultima' }, [
-    r('sem-interesse', 'Recusou ou veio hostilizar'),
-    r('etiqueta-so-conclui', null, 'chegada'),
-    r('ultima-e-nossa', null, 'chegada'),
-    r('confirmou-presenca-evento', null, 'chegada'),
-    r('informou-endereco', null, 'chegada'),
+    r('contexto-de-outro-dia', 'a última dela é de outro dia'),
+    r('respondeu-os-dados', 'respondeu o nome e a cidade'),
+    r('so-expressa-apoio', 'apoio'),
+    r('conteudo-pedido', 'pediu conteúdo e há modelo mapeado'),
 
     /**
-     * **A etiqueta que dispensa da fila fica ACIMA do modelo, e isto foi conserto de regressão.**
-     *
-     * Antes de o modelo subir para cá, quem chegava do anúncio carregando essa etiqueta caía por
-     * exclusão no lado "com etiqueta de cidade", onde `etiqueta-dispensa-da-fila` a pegava. Com o
-     * modelo no topo, ela passou a **receber mensagem** — e essa etiqueta existe justamente para
-     * ninguém receber. Pegado pelos testes do lado de quem chega.
-     *
-     * É a lição registrada no CLAUDE.md: regra nova no topo tem que ser conferida contra as regras
-     * que ela passou a vencer.
+     * **O fecho:** ainda não temos nome e cidade → pede; já entregamos algo antes → a mensagem do
+     * momento, ou conclui. Esta última é a caixa mais genérica do quadro, e por isso fica no fim.
      */
-    r('etiqueta-dispensa-da-fila', null, 'chegada'),
-
-    /**
-     * **Duas pendências que ficam ACIMA do modelo, contra a ordem que ele descreveu.**
-     *
-     * Ele pediu *"após o modelo terá que ver se tem uma pendência"* — e essa ordem vale para as
-     * pendências neutras (bom dia, figura, despedida), que estão logo abaixo. Estas três não:
-     * medindo o quadro novo, quem **pediu ajuda financeira** na mensagem seguinte à do anúncio
-     * recebia a tecla 1 na primeira passada, e as outras duas também.
-     *
-     * As três estão registradas neste projeto como o caso em que mandar a nossa mensagem primeiro
-     * é o dano, não o atraso:
-     *
-     * **A ajuda financeira ESTAVA nesta lista e saiu, por decisão dele** (02/09, no mesmo dia):
-     * *"o modelo não irá confirmar apoio ao pedido de ajuda ou confirmar que irá ajudar então pode
-     * ser respondido após"*. Ele está certo sobre o texto — o modelo é recibo de cadastro e não
-     * promete coisa nenhuma, então mandá-lo antes não é promessa de benefício (Lei 9.504/97), que
-     * era a minha objeção. A negativa sai na passada seguinte, e continua sendo o `pedido-ajuda`.
-     *
-     *  - **pediu algo e não disse o quê** → *"material de campanha em cima disso é o pior caso do
-     *    projeto"* (print da Mari, 31/08). Perguntar é a única resposta segura;
-     *  - **fez uma pergunta de razão ou de posição** → mandar a nossa mensagem vira material de
-     *    campanha em cima da pergunta dela (print da Clair, 31/08).
-     *
-     * O modelo não deixa de sair: sai na passada seguinte, quando a pendência estiver resolvida.
-     * O que muda é a ORDEM entre os dois, e nos três casos o custo de inverter é assimétrico —
-     * atrasar o recibo um dia contra responder propaganda a um pedido de socorro.
-     */
-    /**
-     * **A ajuda financeira VOLTOU para cima do modelo, por decisão dele** (03/09/2026).
-     *
-     * Anotação da Regina: *"Presizo de uma ajuda"*, *"Meda uma ajuda"*, *"Eu preciso pagar umas
-     * contas que estão muito atrasada"* — e a caixa ofereceu o modelo padrão. Ele: *"modelo fora de
-     * contexto, ela quer ajuda financeira, mandar mensagem pronta referente"*.
-     *
-     * **Isto desfaz a decisão dele de 02/09**, que era *"o modelo não irá confirmar apoio ao pedido
-     * de ajuda ou confirmar que irá ajudar então pode ser respondido após"*. O argumento continua
-     * verdadeiro sobre o TEXTO — o modelo é recibo de cadastro e não promete nada. O que o caso
-     * real mostrou é outra coisa: mandar propaganda como primeira resposta a quem escreve que não
-     * consegue pagar as contas é a resposta errada mesmo quando o texto é inofensivo.
-     *
-     * A negativa (`pedido-ajuda`) sai aqui, e o modelo sai na passada seguinte.
-     */
-    { ...noVazio('pediu dinheiro, cesta basica ou remedio'), id: 'chegada-ajuda',
-      condicao: { sinal: 'pedeAjudaFinanceira', negar: false, palavras: [], onde: 'ultima' },
-      acao: { tecla: null, resposta: 'pedido-ajuda' } },
-
-    /**
-     * **As outras DUAS respostas que negam também valem na chegada** — relato dele (04/09/2026):
-     * *"o fluxo de chegada parece ter sido deixado para trás; muitas regras se aplicam lá
-     * também"*. Estava certo, e estas duas eram a metade mais fácil de ver: a ajuda financeira
-     * tinha caixa aqui desde 02/09 e as irmãs dela nunca vieram junto.
-     *
-     * Quem chega perguntando como trabalhar no mandato, ou pedindo que a gente ligue, recebia o
-     * MODELO — porque `conteudo-pedido` fica logo abaixo e casa. É o mesmo dano do pedido de
-     * socorro: propaganda como primeira resposta a quem perguntou outra coisa.
-     */
-    { ...noVazio('quer trabalhar para o mandato'), id: 'chegada-emprego',
-      condicao: { sinal: 'pedeEmprego', negar: false, palavras: [], onde: 'ultima' },
-      acao: { tecla: null, resposta: 'pedido-emprego' } },
-    { ...noVazio('pediu que a gente ligasse'), id: 'chegada-ligacao',
-      condicao: { sinal: 'pedeLigacao', negar: false, palavras: [], onde: 'ultima' },
-      acao: { tecla: null, resposta: 'pedido-ligacao' } },
-
-    r('pediu-algo-sem-dizer-o-que', 'pediu algo e não disse o quê', 'chegada-antes'),
-    r('pergunta-aberta', null, 'chegada-antes'),
-
-    /**
-     * **Quem escreveu conversa na chegada também fica acima do modelo** — print dele de
-     * 03/09/2026, e a palavra que ele usou foi *"crítico"*.
-     *
-     * A contato de Serafina Corrêa chegou pelo anúncio e escreveu duas mensagens, 314 caracteres:
-     * pedia uma **cola com letras maiores, do primeiro ao último**, porque tem *"muita gente idosa
-     * pedindo"*, e se oferecia para imprimir. A rodada mandou o cartão da campanha e **concluiu**.
-     * *"ignorou o pedido e concluiu"*.
-     *
-     * **Nada pegava, e não havia como pegar por lista.** Ela disse o que queria, então
-     * `pediu-algo-sem-dizer-o-que` não casa; não é pergunta de razão nem de posição, então
-     * `pergunta-aberta` não casa. O único sinal que existe para *"isto é conversa"* é o TAMANHO, e
-     * ele estava calculado e correto — só não era consultado neste ramo.
-     *
-     * **Por que esta caixa tinha ficado fora da chegada.** Correção dele em 02/09: as pendências
-     * neutras se resolvem na VOLTA, porque a tecla `a` conclui. Vale para figura, cumprimento e
-     * despedida — adiar o recibo delas custa um dia. Não vale aqui, pelo mesmo motivo das duas
-     * caixas acima: **mandar a nossa mensagem primeiro É o dano**, não o atraso. E concluir apaga
-     * o pedido.
-     *
-     * **O custo, que é real:** quem chega mandando um áudio sem transcrição, um arquivo ou um texto
-     * longo deixa de receber o recibo do anúncio nessa passada e vai para você. Foi dito a ele.
-     */
-    r('ultima-pede-resposta-pessoal', 'escreveu conversa, não é caso de modelo', 'chegada-antes'),
-
-    /**
-     * **A DENÚNCIA respondida à nossa própria pergunta — a quarta pendência que fica acima do
-     * recibo, e a que faltava.**
-     *
-     * Esta regra nasceu em 01/09 por causa do pior caso já registrado aqui: a contato respondeu
-     * *"é sobre as irregularidades na compra assistida"* à nossa pergunta "em que posso ajudar?"
-     * e recebeu **material de campanha**. Ela protegia a volta e **não existia na chegada** —
-     * medido: com um modelo disponível, o caso ia para a tecla 1.
-     *
-     * Fica acima do recibo pelo critério que já separa as outras três: pendência neutra (bom dia,
-     * figura, despedida) custa um dia de atraso; aqui mandar a nossa mensagem primeiro **É** o
-     * dano.
-     */
-    r('respondeu-nossa-pergunta', null, 'chegada'),
-
-    /**
-     * **O MODELO PRIMEIRO** — redesenho dele em 02/09/2026, e a inversão da ordem que valia antes.
-     *
-     * O que ele escreveu: *"o sistema atual está dando problemas, o modelo agora será feito pra
-     * cada anúncio específico e será mandado no momento que a pessoa chegar pelo anúncio, pedir
-     * dados virá após isso se a pessoa não tiver etiqueta de cidade, se ela tiver etiqueta de
-     * cidade fica só no modelo"*. E: *"caso o texto do anúncio não seja reconhecido será mandado o
-     * modelo padrão"*.
-     *
-     * Antes era o contrário — o pedido de dados vinha primeiro, decisão dele de 01/09. O que mudou
-     * é que agora existe **um modelo por anúncio**, então o que sai na chegada responde ao que a
-     * pessoa clicou, em vez de ser um pedido de cadastro seco.
-     *
-     * Quem resolve o "qual modelo" é `anuncios.modeloDoAnuncio`, fora do quadro: o específico do
-     * anúncio reconhecido, ou o modelo padrão quando o texto não casou com nenhum. O quadro só vê
-     * `podeEnviar`, como sempre viu.
-     *
-     * **Uma passada, uma mensagem** — a propriedade que ele escolheu em 01/09 para não sair rajada
-     * ao mesmo número. As guardas de `conteudo-pedido` (`!enviadoHoje && !modeloJaNaConversa`) são
-     * o que faz a passada seguinte cair no passo de baixo em vez de repetir o modelo.
-     *
-     * **Consequência a lembrar:** quem recebe o modelo e **não escreve de novo** nunca chega no
-     * pedido de dados, porque a rodada só volta a quem respondeu. Antes, com os dados primeiro, o
-     * cadastro era capturado logo. Foi dito a ele no mesmo dia.
-     */
-    /**
-     * **O recibo e o atendimento na MESMA passada** — escolha dele em 02/09/2026, depois de
-     * explicar que *"o modelo seria uma resposta automática ao anúncio, o atendimento vem depois
-     * disso que seria pedir dados e responder as perguntas"*.
-     *
-     * Vem acima das duas caixas de baixo porque é o caso completo: quando as duas metades cabem,
-     * saem as duas. Faltando uma, esta não casa e cada caixa de baixo resolve o seu pedaço — o
-     * modelo sozinho para quem já tem cidade, o pedido de dados sozinho quando não há modelo.
-     */
-    r('anuncio-modelo-e-dados', 'modelo + pedir os dados', 'chegada'),
-
-    /**
-     * **As pendências NEUTRAS ficam abaixo do recibo — e essa é a diferença deliberada para a
-     * volta**, onde elas ficam acima. Decisão dele de 02/09: figura, cumprimento e despedida
-     * custam um dia de atraso no recibo, e o recibo é o que ela clicou para receber.
-     *
-     * O que faltava era elas existirem AQUI, abaixo. Sem isso, quem chegava e só se despedia caía
-     * na caixa do TEMPO (logo abaixo) e recebia a **mensagem do momento** — enviar por cima de um
-     * "amém" —, ou no modelo, quando havia um. Medido nos dois casos.
-     */
-    r('ultima-e-so-reacao', 'mandou figura, emoji, sticker ou link', 'chegada'),
-    r('ultima-e-despedida', null, 'chegada'),
-    /**
-     * **Na chegada o tempo entra ABAIXO do recibo** — anotação do Giovani (04/09/2026): ele mandou
-     * um texto político longo e um link ontem à noite, e a caixa oferecia o modelo. *"Modelo fora
-     * de contexto, aqui vou mandar mensagem do momento."*
-     *
-     * A posição é diferente da que ela tem na volta, e de propósito: `anuncio-modelo-e-dados` fica
-     * **acima**. Quem chega pelo anúncio e ainda não recebeu nada tem direito ao recibo, mesmo que
-     * a rodada só a alcance no dia seguinte — trocar isso pela mensagem do momento tiraria o recibo
-     * de quase todo mundo, porque a rodada quase sempre roda depois.
-     *
-     * O que o tempo alcança aqui é o outro caso: quem **já tem cidade** e por isso receberia só o
-     * modelo. Aí o conteúdo dela é de ontem, e o modelo responde a um assunto que esfriou.
-     */
-    r('contexto-de-outro-dia', 'a última dela é de outro dia', 'chegada'),
-    /**
-     * **Ela respondeu o nome e a cidade — agradece, não manda modelo.** Decisão dele de 02/09
-     * (*"agora só precisa agradecer a atenção e encerrar sem mandar modelo"*), que também só
-     * valia na volta: na chegada o caso descia até `conteudo-pedido` e recebia o modelo.
-     *
-     * A posição é a mesma da volta — abaixo do tempo e do anúncio reconhecido, acima do modelo
-     * genérico. O anúncio reconhecido continua ganhando porque ela clicou pedindo aquilo.
-     */
-    r('respondeu-os-dados', 'respondeu o nome e a cidade', 'chegada'),
-    r('conteudo-pedido', 'manda só o modelo (ela já tem cidade)', 'chegada'),
-
-    /**
-     * **Depois do modelo, os dados — e só para quem não tem cidade.**
-     *
-     * *"pedir dados virá após isso se a pessoa não tiver etiqueta de cidade, se ela tiver etiqueta
-     * de cidade fica só no modelo"*. A segunda metade não precisa de caixa: `nunca-pediram-dados`
-     * já exige `!temEtiquetaDeCidade`, então quem tem cidade simplesmente não casa aqui — e "fica
-     * só no modelo" acontece por si.
-     */
-    /**
-     * **Não deu nada para trabalhar: pergunte o interesse, não o cadastro** — print do Tilin
-     * (03/09/2026), em que a conversa inteira eram dois avisos de *"tipo da mensagem não
-     * suportado"* e um *"número privado"*, e a rodada mandou o pedido de nome e cidade. Ele: *"eu
-     * não tenho nenhuma informação nesse caso, então é para perguntar se a pessoa tem interesse em
-     * receber conteúdo; a mensagem de nome e cidade ficou deslocada demais"*.
-     *
-     * Fica ABAIXO do modelo e ACIMA do pedido de dados: quem chega com modelo mapeado recebe o
-     * recibo, que responde melhor que qualquer pergunta. Esta caixa é o que sobra para quem não
-     * deixou nada.
-     */
-    r('nada-legivel-dela', 'ela não mandou nada legível', 'chegada'),
-    r('nunca-pediram-dados', 'ainda não temos nome e cidade', 'chegada'),
-
-    /**
-     * **O apoio, no FIM do ramo — o que sobra quando não há o que mandar.**
-     *
-     * Duas anotações de 03/09/2026, as duas chegando pelo anúncio e as duas terminando em vazio:
-     *
-     *  - **Maria Bernardete** já tinha cidade no CRM, veio por um anúncio que não dá para
-     *    reconhecer e escreveu *"estou falando com todas as minhas amigas para votarem no
-     *    Senhor"*. Ele: *"mandar 8"*;
-     *  - **Plauto** escreveu *"CAPITÃO CONTA COM MEU VOTO"* e, em seguida, o nome e a cidade. Ele:
-     *    *"já foi pedido dados, seria agradecer e encerrar"*.
-     *
-     * **A posição é o que torna isto seguro, e é por ela que a caixa não existia aqui.** A mensagem
-     * do anúncio é apoio escrito ("Eu apoio as Escolas Cívico-Militares"), e `soExpressaApoio` só a
-     * descarta quando o anúncio está cadastrado — para todo anúncio novo, ela conta como fala da
-     * pessoa. Em cima, esta caixa agradeceria a chegada e engoliria o recibo de quem acabou de
-     * clicar. No fim, ela só alcança quem **já passou** por todas as saídas que mandam alguma
-     * coisa: o recibo, o modelo sozinho e o pedido de dados.
-     */
-    r('so-expressa-apoio', 'só expressou apoio (não sobrou o que mandar)', 'chegada'),
-
-    /**
-     * **A pendência: o que ela escreveu DEPOIS da mensagem do anúncio.**
-     *
-     * *"após o modelo terá que ver se tem uma pendência que é a mensagem após a mensagem de anúncio
-     * e escolher a resposta de acordo com a pendência"*.
-     *
-     * São as mesmas caixas que ele já montou para quem retorna (`dosDoisLados`), e é de propósito
-     * que sejam as mesmas: "só mandou bom dia", "pediu ajuda financeira", "mandou figura", "fez
-     * pergunta" não mudam de resposta por a pessoa ser nova. Uma cópia com outra redação seria o
-     * jeito de as duas divergirem em uma semana.
-     *
-     * Elas leem a ÚLTIMA mensagem, que é justamente "a mensagem após a mensagem de anúncio" quando
-     * existe uma. Quando a única mensagem é a do anúncio, nenhuma casa e o caso termina nos passos
-     * de cima — que é o certo.
-     *
-     * Ficam ABAIXO do modelo e do pedido de dados porque é a ordem que ele escreveu: o modelo sai
-     * na chegada, os dados vêm em seguida, e a pendência é o "após o modelo".
-     */
-    /**
-     * **As pendências NÃO ficam aqui — e a correção é dele** (02/09/2026): *"porque o modelo que
-     * você criou tem todas essas opções em pessoa nova? ao mandar modelo e pedir dados irá concluir
-     * a conversa e ela volta pelo pessoa retornando"*.
-     *
-     * Ele está certo, e a medição confirmou: as cinco caixas de pendência que eu havia posto aqui
-     * (ajuda financeira, bom dia, figura, áudio, despedida) **já existem em "pessoa retornando"** —
-     * e é lá que ela chega, porque a tecla `a` conclui. Eu as havia copiado por causa do pedido
-     * anterior dele (*"após o modelo terá que ver se tem uma pendência"*), sem perceber que o
-     * "depois" acontece na volta, não aqui.
-     *
-     * Deixá-las nos dois lugares é a receita para as duas versões divergirem: um conserto de um
-     * lado e o outro fica para trás. É a mesma razão de `dosDoisLados` ser uma função em vez de
-     * copiar e colar.
-     *
-     * **O que fica são as três coisas que só a chegada resolve:** o recibo com o pedido de dados,
-     * o recibo sozinho para quem já tem cidade, e o pedido de dados sozinho para quem não tem
-     * modelo mapeado. Sem as duas últimas, medido, esses dois casos atravessam o quadro sem
-     * desfecho.
-     */
-  ]);
-
-  /**
-   * **2. Quem volta.**
-   *
-   * Divide por ter ou não a etiqueta de cidade, porque é isso que diz se ela já foi classificada.
-   *
-   * **A condição do lado "sem etiqueta" é NEGADA, e essa é a única coisa que eu mudei do quadro que
-   * ele mandou.** Lá ela estava sem condição — pegava todo mundo —, e como os dois lados têm as
-   * mesmas regras, o lado "com etiqueta" nunca era alcançado: a mesma regra já havia falhado do
-   * outro lado. Nove caixas mortas. O rótulo da caixa já prometia "sem etiqueta de cidade"; aqui o
-   * código passa a fazer o que o nome dela diz.
-   */
-  const retornando = grupo('pessoa retornando', SEM_CONDICAO, [
-    /**
-     * **A recusa é testada aqui também, antes da bifurcação.**
-     *
-     * No quadro que ele mandou ela existia só do lado do anúncio — quem já tinha sido atendido e
-     * voltava hostilizando não era pego por lugar nenhum, e caía nas regras de baixo: podia receber
-     * a mensagem do momento depois de mandar um desaforo. O teste do preset já exigia isto, e
-     * pegou. Uma caixa aqui em cima cobre os dois lados da bifurcação de uma vez.
-     */
-    r('sem-interesse', 'Recusou ou veio hostilizar', 'volta'),
-
-    /**
-     * **As duas caixas de "conclua e nao mande nada"** -- pedidos dele de 03/09/2026.
-     *
-     * `etiqueta-so-conclui` e a etiqueta de assessor (*"contatos com etiqueta de assessor so
-     * conclua"*); `ultima-e-nossa` e a conversa que termina em mensagem NOSSA, ou em que ela nunca
-     * escreveu (*"pegando conversas que a ultima mensagem foi minha e mandando mensagem, e pra
-     * concluir sem mandar nada"*).
-     *
-     * As duas ficam acima da bifurcacao de cidade pelo mesmo motivo da recusa: sao sobre NAO
-     * mandar, e isso nao depende de o contato ter cidade cadastrada. Protecao que vive so num lado
-     * da bifurcacao e protecao pela metade -- ja aconteceu com a etiqueta que dispensa.
-     */
-    r('etiqueta-so-conclui', null, 'volta'),
-    r('ultima-e-nossa', null, 'volta'),
-    r('confirmou-presenca-evento', null, 'volta'),
-    /**
-     * **O endereço fica acima da bifurcação de cidade**, com as outras proteções.
-     *
-     * Quem mandou o endereço quase sempre já tem etiqueta de cidade — mas nem sempre, e proteção
-     * que vive só num lado é proteção pela metade: já aconteceu duas vezes neste arquivo (a
-     * etiqueta que dispensa e o apoio). Aqui o custo de errar o lado seria mandar mensagem por
-     * cima de quem está esperando o material.
-     */
-    r('informou-endereco', null, 'volta'),
-
-    /**
-     * **A etiqueta que dispensa da fila também sobe para cima da bifurcação de cidade.**
-     *
-     * Ela vivia só dentro de "com etiqueta de cidade", e o efeito era uma assimetria invisível:
-     * quem carregava a etiqueta e **não** tinha cidade nunca era protegido — recebia o modelo antes,
-     * e ia receber o agradecimento depois da caixa nova de 02/09/2026. A etiqueta significa "não
-     * trabalhe este contato", e isso não depende de ele ter cidade cadastrada.
-     *
-     * É o mesmo raciocínio já escrito na recusa, uma linha acima: uma caixa aqui cobre os dois lados
-     * da bifurcação de uma vez, em vez de repetir a proteção e esquecer um dos lados — que foi
-     * exatamente o que aconteceu.
-     */
-    r('etiqueta-dispensa-da-fila', null, 'volta'),
-
-    grupo('sem etiqueta de cidade', { sinal: 'temEtiquetaDeCidade', negar: true, palavras: [], onde: 'ultima' }, [
-      /**
-       * **A pendência só é olhada enquanto não respondemos hoje.**
-       *
-       * Sem esta guarda o modelo nunca sai — foi o que ele viu: *"se continuar como na print o
-       * modelo nunca será enviado porque está concluindo após resolver a pendência"*. Medido: quem
-       * diz "bom dia" recebe a mensagem do momento, e na passada seguinte a MESMA caixa casa de
-       * novo e manda o momento outra vez. A entrega fica presa atrás da pendência para sempre.
-       *
-       * Com a guarda o fluxo anda: resolvemos a pendência numa passada, e quando ela volta a
-       * escrever no mesmo dia a pendência já não está na frente — o caso desce para "sem pendência"
-       * e o modelo sai.
-       *
-       * **Escolha dele entre os dois caminhos possíveis** (01/09/2026): a alternativa era a ação
-       * composta, que resolveria e mandaria o modelo na mesma passada — e sairiam DUAS mensagens
-       * seguidas para a mesma pessoa, na fila inteira. Rajada para o mesmo número é o que já pesou
-       * no WhatsApp dele antes. Uma mensagem por passada é a propriedade que se preferiu manter.
-       */
-      /**
-       * **Os dois grupos viraram UM** — anotação da Maria Genoli (03/09/2026): ela mandou dois
-       * áudios longos, transcritos, contando que está doente e não consegue ir ao evento, e a
-       * rodada mandou o **modelo padrão**. Ele: *"texto gigante obviamente é conversa, eu respondo
-       * ou IA"*.
-       *
-       * **A causa era a divisão, não a ordem.** "Com pendência" exigia `!respondidoHoje` e continha
-       * TODAS as caixas que leem o que ela escreveu; "sem pendência" tinha duas, e nenhuma delas
-       * olha o texto. Bastava termos respondido alguma coisa no mesmo dia para o quadro parar de
-       * ler a conversa e mandar o modelo — que foi exatamente o caso dela.
-       *
-       * **A guarda existia por um motivo que já não existe** (01/09: *"se continuar como na print o
-       * modelo nunca será enviado porque está concluindo após resolver a pendência"*). O que a
-       * tornava necessária era a caixa do cumprimento repetir a mensagem do momento a cada passada;
-       * hoje ela tem a exceção `momentoJaEnviado`, e `ultima-e-so-reacao` olha `respondidoHoje` na
-       * própria tecla. As guardas moram nas caixas, que é onde dá para testá-las.
-       *
-       * **O lado "com etiqueta de cidade" nunca teve essa divisão** e funciona — os dois lados
-       * passam a ter a mesma forma, que é o que impede um deles de envelhecer sozinho.
-       */
-      r('voltou-por-outro-anuncio'),
-      ...dosDoisLados('sem-cidade'),
-      /**
-       * **O grupo "sem pendência" foi REMOVIDO em 03/09/2026** — com a divisão desfeita, as duas
-       * caixas dele (`respondeu-os-dados` e `conteudo-pedido`) viraram cópias mortas: as de
-       * `dosDoisLados` decidem antes, com a mesma condição. O verificador de caixas mortas acusou
-       * as duas.
-       *
-       * Ele autorizou a remoção no mesmo dia, e o critério é dele: *"se for necessário é para
-       * remover se der conflito com as novas regras"*. Duplicata no mesmo ramo é o começo de duas
-       * caixas divergirem.
-       */
-
-      /**
-       * **Veio de um anúncio que ele cadastrou e não disse mais nada** — pedido dele em
-       * 02/09/2026, depois da print da Inge: *"não seguiu o fluxo"* / *"atualize o ramo"*.
-       *
-       * Era o buraco que produziu aquela print. A Inge chegou pelo ANÚNCIO | FACEBOOK e escreveu só
-       * o texto do anúncio (*"Olá! Eu apoio as Escolas Cívico-Militares"*). Sem etiqueta de cidade,
-       * sem modelo mapeado, e **nenhuma caixa casava** — ela atravessava o quadro inteiro e caía na
-       * caixa de pergunta.
-       *
-       * O motivo é consequência de uma decisão certa: a mensagem gerada pelo anúncio é excluída de
-       * propósito de "só expressa apoio" (`padroesDeAnuncio`), para não contar como apoio escrito
-       * por ela. O efeito colateral era este vazio.
-       *
-       * **Três escolhas de desenho, todas conservadoras:**
-       *
-       *  1. **Fica EMBAIXO de "com pendência" e de "sem pendência".** É último recurso dentro do
-       *     lado sem cidade: quem tem pendência resolve a pendência, quem tem modelo mapeado recebe
-       *     o modelo, e só o que sobra chega aqui. Pôr esta caixa em cima roubaria a vez de quem já
-       *     funcionava — o erro que a regra de sem interesse no topo já custou uma vez.
-       *  2. **A condição é `anuncioReconhecido`, não `veioDeAnuncio`.** A origem vem da plataforma
-       *     e vale para qualquer anúncio; este sinal só é verdade para anúncio que ELE cadastrou na
-       *     Config. Assim o ramo não muda nada para quem chega por campanha que ele não mapeou.
-       *  3. **O desfecho é a regra do código `nunca-pediram-dados`, não uma tecla fixa.** Ela traz
-       *     as guardas junto: só dispara se nunca pedimos o nome e a cidade, se não pedimos hoje, se não é só
-       *     repasse de link e se não há etiqueta de cidade. Uma tecla 4 fixa aqui pediria os dados
-       *     de novo a quem já recebeu o pedido.
-       *
-       * Consequência a lembrar: quem **já recebeu** o pedido de dados e volta mandando só o texto do
-       * anúncio continua sem desfecho automático, e é de propósito — ela não respondeu o que
-       * perguntamos, e não existe resposta certa para mandar sozinho. Esse caso é da IA ou dele.
-       */
-      grupo('veio de um anúncio que eu reconheço', { sinal: 'anuncioReconhecido', negar: false, palavras: [], onde: 'ultima' }, [
-        r('nunca-pediram-dados', 'ainda não temos nome e cidade', 'anuncio-conhecido'),
-      ]),
-
-      /**
-       * **O fecho do lado SEM cidade — e ele desfaz o "de propósito" logo acima.**
-       *
-       * Quatro anotações de 03/09/2026, todas com a caixa mostrando *"a decisão é sua"* e nenhuma
-       * recomendação: **Antônio Bersch** (*"mandou foto ou sticker de boa noite, só concluir"*),
-       * **jairoc** e **Sidnei Martins** (*"mandou link, pode concluir"*), e **Maria de Lourdes**
-       * (*"quando voltasse pelo mesmo anúncio sem enviar nada além do texto padrão do anúncio era
-       * pra concluir"*). Nos quatro o desfecho que ele quer é o mesmo: **concluir**.
-       *
-       * **A causa é estrutural, e é a mesma família da assimetria de cidade.** Os três grupos acima
-       * cobrem quem AINDA não foi respondido hoje ("com pendência"), quem tem dado ou modelo a
-       * receber ("sem pendência") e a chegada por anúncio cadastrado. Quem já foi respondido hoje e
-       * não tem nada disso atravessava os três e saía sem desfecho — o lado "com etiqueta de
-       * cidade" nunca teve esse buraco, porque `ja-respondemos-antes` fecha ele.
-       *
-       * A mesma regra resolve aqui, e traz as guardas junto: **conclui** quando já respondemos hoje
-       * ou a do momento já saiu, e **manda a do momento** quando ela ainda não foi. É o que ele
-       * pediu nos quatro casos, sem inventar um desfecho novo.
-       */
-      r('ja-respondemos-antes', 'já entregamos algo antes', 'sem-cidade'),
-    ]),
-    grupo('com etiqueta de cidade', { sinal: 'temEtiquetaDeCidade', negar: false, palavras: [], onde: 'ultima' }, [
-      /**
-       * **O agradecimento vale nos DOIS lados da bifurcação de cidade.**
-       *
-       * Sem esta caixa, quem respondeu o nome e a cidade era agradecida ou concluída em silêncio
-       * dependendo de a etiqueta de cidade já ter sido aplicada ou não — e isso é decidido pela
-       * ORDEM das coisas dentro da rodada, que ela não vê. Regra que trata dois contatos iguais de
-       * forma diferente por estado invisível é o "alguns concluem e outros não" que este projeto já
-       * pagou.
-       *
-       * Vence `ja-respondemos-antes` (que conclui em silêncio) só quando ela de fato respondeu o
-       * que pedimos — condição estreita, e é exatamente a intenção dele.
-       */
-      /**
-       * **As pendências vêm ANTES de "já entregamos algo antes"** — print da Cris (02/09/2026).
-       *
-       * `ja-respondemos-antes` é a caixa mais genérica deste lado: ela não olha o que a pessoa
-       * escreveu, só que já fomos atendidos antes, e manda a mensagem do momento. Estando em
-       * terceiro lugar, ela vencia TODAS as caixas que reconhecem o conteúdo — inclusive a que
-       * manda um desabafo de 437 caracteres para quem escreve.
-       *
-       * Medido antes de mover: a Cris caía em `pessoa retornando > com etiqueta de cidade > já
-       * entregamos algo antes` e recebia a mensagem do momento. Depois: `ultima-pede-resposta-
-       * pessoal`, tecla 6, que é o caminho da IA.
-       *
-       * É a mesma ordem que o lado "sem etiqueta de cidade" já tinha — pendência primeiro, o
-       * genérico depois. Os dois lados passam a concordar, que era o sinal de que este estava
-       * errado.
-       */
-      ...dosDoisLados('com-cidade'),
-      r('ja-respondemos-antes', 'já entregamos algo antes'),
-    ]),
+    r('nunca-pediram-dados', 'ainda não temos nome e cidade'),
+    r('ja-respondemos-antes', 'já entregamos algo antes'),
   ]);
 
   /**
@@ -1269,16 +653,13 @@ export function fluxoPadrao() {
    *
    *  - `nunca-perguntaram-interesse` — *"descarte também"*;
    *  - `nome-sem-sentido` — *"descarte, essa regra será refeita ou não de acordo com a necessidade"*;
-   *  - `pedido-hoje-sem-resposta` — *"retire o concluir, só deixe o lembrete para não enviar
-   *    novamente, ou retire essa caixa"*. Tirei a caixa, que era a opção que ele deu: o que ela
-   *    protegia (não repetir o pedido no mesmo dia) **já está dentro de `nunca-pediram-dados`**, que
-   *    exige `!pedidoHoje` para disparar. Sem a caixa, ninguém pede duas vezes — só deixa de ser
-   *    concluído, que era o que ele queria.
+   *  - `pedido-hoje-sem-resposta` — o que ela protegia (não repetir o pedido no mesmo dia) já está
+   *    dentro de `nunca-pediram-dados`, que exige `!pedidoHoje`.
    *
-   * As regras continuam no código: descartadas do QUADRO, não apagadas. Ele volta a pôr qualquer uma
-   * arrastando um ramo novo.
+   * As regras continuam no código: descartadas do QUADRO, não apagadas. Ele volta a pôr qualquer
+   * uma pelo catálogo.
    */
-  return [doAnuncio, retornando];
+  return [atendimento];
 }
 
 // ---- edição (a janela mexe na árvore por aqui) ------------------------------

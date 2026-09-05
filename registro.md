@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.28.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.29.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,21 +7,18 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.28.0**, tudo commitado e no remoto. 22 commits no dia 04/09.
-Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
-sem desfecho incoerente.
+Branch `claude/whatsfill-ia`, **v2.29.0**, tudo commitado e no remoto. 23 commits no dia 04/09.
+Quinze suítes verdes, os dois verificadores limpos, **28 caixas** no fluxo padrão sem problemas e
+sem desfecho incoerente — o quadro virou UMA lista em 04/09.
 
 ### Pendências que NÃO estão no código — precisam dele
 
-1. **Importar o fluxo.** O quadro dele é o exportado em **2.14.0** (59 caixas); o padrão de agora tem
-   **69** — entraram *"pediu que a gente ligasse"*, *"mandou o endereço"* e o bloco que faltava na
-   chegada (04/09). Entregue como `fluxo-padrao-2.28.0.json`. Regenerar com
-   `node tools/exportar-fluxo.mjs <saida.json>` — saída FORA do repositório.
-   **Agora a importação MUDA o que sai para eleitor, e não só a arrumação das caixas.** As duas
-   proteções novas (ligação, endereço) decidem sem ela; o conserto da CHEGADA (04/09) é ORDEM, e
-   ordem mora no quadro. Medido contra o quadro dele: denúncia respondida, pedido de emprego,
-   despedida e "respondeu nome e cidade" ainda recebem a **tecla 1** (o modelo) na chegada até ele
-   importar.
+1. **Importar o fluxo — e desta vez é o quadro inteiro.** O quadro dele é o exportado em **2.14.0**
+   (59 caixas, três cópias da mesma lista); o padrão de agora é **uma lista de 28**. Entregue como
+   `fluxo-padrao-2.29.0.json`. Regenerar com `node tools/exportar-fluxo.mjs <saida.json>` — saída
+   FORA do repositório. **Sem importar, o quadro antigo continua decidindo**: as proteções novas
+   valem sozinhas, mas ordem mora no quadro. O cartão "O padrão mudou?" vai acusar muita coisa; o
+   caminho aqui é importar, não encaixar caixa por caixa.
 2. **Aba Automatizado → "Etiquetas que a rodada aplica"** (cartão criado em 04/09, porque os campos
    estavam escondidos dentro de um cartão desativado desde 15/08). **As três estão vazias:**
    - **Etiqueta de SEM INTERESSE** — a rodada não marca e, na visita seguinte, precisa
@@ -71,6 +68,78 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — O quadro virou UMA lista: 69 caixas → 28 (v2.29.0)
+
+Pergunta dele: *"a questão é se realmente tem necessidade de duas árvores que seguem praticamente as
+mesmas regras, seja na aba novos ou na aba meus"*. Não tinha — e a primeira parte da resposta foi
+corrigir a premissa: **os dois ramos nunca foram "Novos" e "Meus"**. O ramo era escolhido por
+`jaRespondemosAntes`; desde 03/09 as duas filas rodam o mesmo fluxo.
+
+### O que a medição mostrou
+
+O quadro era **três cópias** da mesma lista — a chegada, o lado "sem etiqueta de cidade" e o lado
+"com etiqueta". **21 das 24 regras apareciam mais de uma vez: 36 caixas duplicadas em 69.**
+
+| forma | caixas | decisões diferentes (contextos sorteados) |
+|---|---|---|
+| antes | 69 | — |
+| sem a bifurcação de cidade | 50 | 5/4000 (0,13%) |
+| **uma lista só** | **28** | **27/8000 (0,34%)** |
+
+As 27 diferenças são todas da mesma natureza e na direção que ele já tinha decidido: o que **precisa
+de gente** (pedido de dinheiro, de emprego, de ligação, pergunta aberta, pedido sem objeto, denúncia
+respondida) passou a vencer caixas que ganhavam só por estarem no topo de um dos lados.
+
+### Por que a duplicação era o problema, e não o número de caixas
+
+A bifurcação de cidade **não decidia nada**: os dois lados eram idênticos menos uma caixa, e a cidade
+já é testada dentro da condição de cada regra. E o custo estava registrado quatro vezes neste
+arquivo — a etiqueta que dispensa, o apoio, o grupo que escondia caixas e a chegada inteira: **regra
+que existe num ramo e não no outro decide para metade da base, e ninguém vê.**
+
+### A única coisa que a chegada carregava
+
+O **recibo do anúncio acima das pendências neutras** (figura, cumprimento, despedida) — decisão dele
+de 02/09. Isso cabe numa lista única, e a guarda mudou de lugar: `anuncio-modelo-e-dados` e
+`nada-legivel-dela` ganharam **`!jaRespondemosAntes` na própria condição**. Antes era o ramo que
+garantia; sem isso o recibo sairia para quem já foi atendido — peguei medindo, não por teste.
+
+É a lição da exceção do tempo, de novo: **exceção que ele nomeia vai na condição, não na posição.**
+Bônus: a guarda passou a valer também nos quadros que ele já exportou.
+
+### A ordem da lista, de cima para baixo
+
+1. **Proteções** (6): recusa, assessor, última é nossa, presença confirmada, endereço, etiqueta que
+   dispensa;
+2. **As três respostas que negam**: dinheiro, emprego, ligação;
+3. **O que precisa de gente**: pedido sem objeto, pergunta aberta, áudio/texto longo, denúncia
+   respondida;
+4. **O recibo do anúncio** + "nada legível dela";
+5. **Pendências neutras**: figura, cumprimento, despedida;
+6. **Conteúdo**: anúncio reconhecido → tempo → respondeu os dados → apoio → modelo;
+7. **Fecho**: pede nome e cidade, já entregamos algo antes.
+
+### Uma mudança que ele deve saber
+
+No lado "sem etiqueta de cidade", `nunca-pediram-dados` só existia **dentro** do grupo do anúncio
+reconhecido — então quem voltava por um anúncio não cadastrado não recebia o formulário, por
+posição. Agora a caixa é uma só e quem decide são as guardas da própria regra (`!jaPediramDados`,
+`!pedidoHoje`, `!temEtiquetaDeCidade`, `!jaDeuNomeECidade`). **O formulário continua não saindo duas
+vezes** — é o que a decisão dele protegia, e há teste. O que passou a acontecer é pedir nome e
+cidade a quem nunca recebeu o pedido.
+
+### O que fica para ele
+
+Ele já disse que tem o backup do último fluxo. **A reimportação é obrigatória** para o quadro dele
+virar a lista única; sem ela o quadro antigo continua decidindo, com as três cópias. O cartão "O
+padrão mudou?" vai acusar muita coisa — é esperado, e desta vez o certo é resetar/importar em vez de
+encaixar caixa por caixa.
+
+Quinze suítes verdes, os dois verificadores limpos, 28 caixas sem problemas e sem desfecho
+incoerente.
 
 ---
 
