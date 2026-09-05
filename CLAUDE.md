@@ -1286,6 +1286,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   separador do template mudou. O campo novo da Config avisa na tela quando o texto perde a linha, e
   ha teste no `templates.test.mjs`.
 
+- **Regra que ELE dita nao pode virar DEFAULT de campo que ele ja preencheu — ela nunca chega.**
+  Relato dele (04/09/2026): *"pra onde esta indo parar as regras que eu falo?"*, com a print de uma
+  contato que chegou pelo anuncio do Instagram pedindo material, tinha cidade e etiqueta de
+  conteudo, e foi **concluida sem receber nada**. A etiqueta dela era `CONTATO-ASSESSOR`.
+  A regra e de 03/09 (*"com excecao do contato assessor"*) e eu a implementei mudando o VALOR PADRAO
+  do campo para `assessor, -contato-assessor`. So que `store.get` mescla o default apenas nas chaves
+  que FALTAM: quem ja tinha `assessor` salvo — ele — continuou com `assessor`, e a excecao nunca
+  chegou. Medido: com a config antiga, `CONTATO-ASSESSOR` casa com `assessor` e cai em
+  "so conclui"; com o piso do codigo, nao casa, e ela recebe o modelo do conteudo que pediu.
+  **Onde a regra dele vira comportamento: no codigo (piso), nao no default.** E o mesmo conserto do
+  `tags.ORIGEM_SEMPRE` — a guarda que depende de o campo estar escrito nao e guarda. Hoje
+  `NUNCA_SO_CONCLUI` acrescenta `-contato-assessor` sempre, e o assessor de verdade continua sendo
+  pego.
+
 - **A mensagem GERADA pelo anuncio e identificada por DADO, e a lista de padroes virou reforco.**
   Print dele (04/09/2026): a contato chegou pelo anuncio do Facebook, escreveu so a mensagem
   pre-preenchida e recebeu o **agradecimento pelo apoio** — *"mandou mensagem agradecendo apoio

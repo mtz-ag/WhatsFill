@@ -2505,9 +2505,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * **Depende do campo estar preenchido na Config** ("Etiqueta de sem interesse"). Vazio, isto não
    * faz nada — e a caixa da rodada já avisa disso na opção `s`.
    */
+  /**
+   * **A exceção do `contato-assessor` é PISO do código, não texto da Config** — relato dele
+   * (04/09/2026): *"pra onde está indo parar as regras que eu falo?"*, com a print de uma contato
+   * que chegou pelo anúncio do Instagram pedindo material, tinha cidade e etiqueta de conteúdo, e
+   * foi **concluída sem receber nada**. A etiqueta dela era `CONTATO-ASSESSOR`.
+   *
+   * A regra dele é de 03/09 e eu a implementei como **valor padrão** do campo
+   * (`assessor, -contato-assessor`). Só que `store.get` mescla o default apenas nas chaves que
+   * FALTAM: quem já tinha `assessor` salvo continuou com `assessor`, e a exceção nunca chegou.
+   * **Regra que ele dita não pode virar default de campo que ele já preencheu.**
+   *
+   * É o mesmo conserto do `tags.ORIGEM_SEMPRE`: a guarda que depende de o campo estar escrito não
+   * é guarda. O nome é literal de propósito — `contato-assessor` é eleitor trazido por um assessor,
+   * e nenhuma etiqueta de "da casa" se chama assim.
+   */
+  const NUNCA_SO_CONCLUI = ['-contato-assessor'];
+
   function etiquetaQueSoConclui() {
     const marcada = String(state.auto.cfg.etiquetaSemInteresse || '').trim();
-    const lista = [state.auto.cfg.etiquetasSoConcluir, marcada].filter((p) => String(p || '').trim()).join(', ');
+    const lista = [state.auto.cfg.etiquetasSoConcluir, marcada, ...NUNCA_SO_CONCLUI]
+      .filter((p) => String(p || '').trim())
+      .join(', ');
     return etiquetaDaLista(lista);
   }
 

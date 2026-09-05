@@ -1,4 +1,4 @@
-## 2026-09-04 — ESTADO DE AGORA (v2.33.0) — leia isto primeiro numa sessão nova
+## 2026-09-04 — ESTADO DE AGORA (v2.34.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ divergência.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.33.0**, tudo commitado e no remoto. 27 commits no dia 04/09.
+Branch `claude/whatsfill-ia`, **v2.34.0**, tudo commitado e no remoto. 28 commits no dia 04/09.
 Quinze suítes verdes, os dois verificadores limpos, **69 caixas** no fluxo padrão sem problemas e
 sem desfecho incoerente. A lista única de 2.29.0 foi **desfeita** no mesmo dia, a pedido dele: o
 quadro tem dois ramos.
@@ -67,6 +67,54 @@ regra, tecla, últimas mensagens, etiquetas e a hora. O trabalho é, para cada u
 código de agora** (a anotação traz a versão, e várias já estão consertadas), achar a causa,
 consertar, **medir de novo no quadro dele**, escrever o teste de regressão, registrar aqui e no
 `CLAUDE.md`, e commitar. Uma versão por lote.
+
+---
+
+## 2026-09-04 — "Pra onde estão indo as regras que eu falo?" (v2.34.0)
+
+Print de uma contato que chegou pelo anúncio do Instagram escrevendo *"Olá! Eu quero receber o
+Material da Direita"*, com cidade (Rosário do Sul) e etiqueta de conteúdo — e foi **concluída sem
+receber nada**, às 22:11.
+
+A etiqueta dela era **CONTATO-ASSESSOR**.
+
+### A regra existia, e não tinha chegado nele
+
+Ele definiu isso em 03/09: a lista de "etiquetas que só concluem" é `assessor`, *"com exceção do
+contato assessor"* — que é eleitor trazido por um assessor, não gente da casa. Eu implementei
+mudando o **valor padrão** do campo para `assessor, -contato-assessor`.
+
+**E o default não alcança quem já tem valor salvo.** `store.get` mescla o default só nas chaves que
+faltam; o campo dele já existia com `assessor`, e continuou com `assessor`. A exceção ficou no
+código, correta, e nunca chegou à extensão dele.
+
+Medido com a config antiga:
+
+| lista | `CONTATO-ASSESSOR` | desfecho |
+|---|---|---|
+| `assessor` (o que ele tem salvo) | **casa** | tecla 3 — conclui sem mandar nada |
+| `assessor, -contato-assessor` | não casa | tecla 1 — manda o modelo do conteúdo |
+
+### O conserto
+
+`NUNCA_SO_CONCLUI` é um **piso do código**: `-contato-assessor` entra na lista sempre, seja qual for
+o texto do campo. É o mesmo desenho do `tags.ORIGEM_SEMPRE`, criado em 04/09 pela mesma razão — *a
+guarda que depende de o campo estar preenchido não é guarda*.
+
+O assessor de verdade continua sendo pego (testado com `ASSESSOR REGIONAL`), e o campo continua
+editável: o piso só impede que a exceção se perca.
+
+### A lição, que é maior que este caso
+
+**Regra ditada por ele não pode virar default de campo que ele já preencheu.** Mudar o default só
+alcança instalação nova — e existe uma só, a dele. Quando a regra é dele, ela vira **código**: um
+piso, uma condição de regra, uma constante. O default serve para o que é preferência, não para o que
+é decisão.
+
+Vale a pena varrer os outros campos de Config com essa pergunta; não fiz isso ainda.
+
+Quinze suítes verdes, os dois verificadores limpos. **O fluxo padrão não mudou** — nada para
+reimportar.
 
 ---
 
