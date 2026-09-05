@@ -2251,4 +2251,41 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   check(umClique?.tecla === 'a', `um clique so continua com o recibo + pedido de dados (tecla ${umClique?.tecla})`);
 }
 
+{
+  grupo('o arquivo do fluxo diz de qual VERSAO ele veio (05/09/2026)');
+
+  /**
+   * Pedido dele: *"o fluxo atualmente nao fala qual versao ele esta utilizando"*.
+   *
+   * A pergunta e a que mais custa neste projeto: o quadro e uma COPIA do padrao, entao caixa nova
+   * do codigo so decide depois que ele importa -- e o quadro dele passou o dia 05/09 no arranjo da
+   * 2.41.0 enquanto o padrao andava ate a 2.55.0.
+   *
+   * A versao ja existia, mas **so dentro do `nome`** ("fluxo padrao 2.54.0"), que e texto livre
+   * que ele pode reescrever. Carimbo que some quando alguem renomeia nao e carimbo.
+   */
+  const arvore = arv.arrumar(arv.fluxoPadrao());
+  const arquivo = arv.paraArquivo({ arvore, teclas: {} }, 'fluxo padrao 9.9.9', '9.9.9');
+
+  check(arquivo.extensao === '9.9.9', 'a versao da extensao vai em campo proprio');
+  check(arquivo.versao === 1, 'e nao se confunde com a versao do FORMATO, que continua 1');
+
+  const volta = arv.deArquivo(JSON.stringify(arquivo));
+  check(volta.ok && volta.extensao === '9.9.9', 'e volta na importacao');
+
+  /**
+   * **Arquivo gerado antes disto existir volta com o campo VAZIO**, e quem chama diz "versao
+   * desconhecida". Preencher com a versao de agora carimbaria como novo um quadro velho -- que e
+   * exatamente a confusao que este campo existe para desfazer.
+   */
+  const semCarimbo = { ...arquivo };
+  delete semCarimbo.extensao;
+  const antigo = arv.deArquivo(JSON.stringify(semCarimbo));
+  check(antigo.ok, 'arquivo antigo continua importando');
+  check(antigo.extensao === '', 'e sem carimbo o campo fica vazio, nunca inventado');
+
+  // Sem quem chame passar nada, o campo fica vazio -- este modulo e puro e nao le o manifesto.
+  check(arv.paraArquivo({ arvore, teclas: {} }, 'x').extensao === '', 'sem a versao, o campo sai vazio');
+}
+
 fim();

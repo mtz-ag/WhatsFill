@@ -1892,10 +1892,23 @@ export function sanitizar(bruto) {
 }
 
 /** O conteúdo do arquivo que ele leva para fora. */
-export function paraArquivo(fluxo, nome) {
+export function paraArquivo(fluxo, nome, extensao) {
   return {
     formato: FORMATO,
     versao: FORMATO_VERSAO,
+    /**
+     * **A versão da EXTENSÃO que gerou o arquivo — e ela não é a `versao` acima.**
+     *
+     * `versao` é o formato do arquivo (hoje 1) e quase nunca muda; esta é a `version` do
+     * `manifest.json`, que é a que responde *"o quadro que eu importei é de quando?"*. Pedido dele
+     * (05/09/2026): *"o fluxo atualmente não fala qual versão ele está utilizando"*.
+     *
+     * Até aqui ela existia **só dentro do `nome`** (`"fluxo padrão 2.54.0"`), que é texto livre que
+     * ele pode reescrever — carimbo que some quando alguém renomeia não é carimbo.
+     *
+     * Quem chama passa: este módulo é puro e não alcança `chrome.runtime.getManifest()`.
+     */
+    extensao: texto(extensao, 20),
     nome: texto(nome, 80) || 'fluxo',
     salvoEm: new Date().toISOString(),
     // As contagens de vitória ficam de fora: são medição desta máquina, não o fluxo.
@@ -1939,7 +1952,16 @@ export function deArquivo(conteudo) {
     if (REGRAS.some((r) => r.id === id) && TECLAS[tecla]) teclas[id] = tecla;
   }
 
-  return { ok: true, nome: texto(dados.nome, 80) || 'fluxo importado', arvore, teclas, avisos };
+  return {
+    ok: true,
+    nome: texto(dados.nome, 80) || 'fluxo importado',
+    // De qual versão da extensão veio este quadro. Arquivo antigo não tem, e aí quem chama diz
+    // "desconhecida" — inventar a versão de agora seria carimbar de novo o que veio sem carimbo.
+    extensao: texto(dados.extensao, 20),
+    arvore,
+    teclas,
+    avisos,
+  };
 }
 
 /**

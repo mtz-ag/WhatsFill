@@ -122,7 +122,8 @@ body {
 .topo.oculto > .titulo,
 .topo.oculto > .contagem,
 .topo.oculto > .acoes,
-.topo.oculto > .dica { display: none; }
+.topo.oculto > .dica,
+.topo.oculto > .versao-quadro { display: none; }
 .topo.oculto .alternar-topo { top: 4px; }
 .titulo { flex: 1 1 340px; min-width: 0; }
 .titulo h1 { margin: 0 0 3px; font-size: 18px; letter-spacing: -0.01em; }
@@ -276,6 +277,35 @@ body {
   color: var(--tinta-fraca);
   user-select: none;
 }
+
+/**
+ * DE QUANDO E O QUADRO. Linha inteira, logo abaixo da dica: e a primeira coisa a olhar quando ele
+ * abre a janela para saber se o quadro esta atras do padrao.
+ */
+.versao-quadro {
+  flex: 1 0 100%;
+  margin: 4px 0 0;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 11px;
+  user-select: none;
+}
+.versao-quadro .v-rotulo { color: var(--tinta-fraca); }
+.versao-quadro .v-versao { font-weight: 600; color: var(--tinta-media); }
+.versao-quadro .v-sep { color: var(--borda); }
+/* Vermelho de aviso: o quadro decide menos que o codigo, e isso e o que ele precisa ver. */
+.versao-quadro .v-atras {
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: var(--alerta);
+  background: var(--alerta-bg);
+  border: 1px solid currentColor;
+  cursor: help;
+}
+.versao-quadro .v-emdia { color: var(--tinta-fraca); }
 
 /* ---- lado ---- */
 .lado {

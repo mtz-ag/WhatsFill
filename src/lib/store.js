@@ -1108,6 +1108,20 @@ const DEFAULTS = {
      * muda nada. Ver `lib/arvore.js`.
      */
     arvore: null,
+    /**
+     * **De onde veio o quadro que está no ar, e de qual versão da extensão.**
+     *
+     * `{ versao, de: 'padrao'|'arquivo'|'semeado', em, nome }` — `null` em quem montou o quadro
+     * antes disto existir, e aí a janela diz "desconhecida" em vez de inventar a versão de agora.
+     *
+     * Pedido dele (05/09/2026): *"o fluxo atualmente não fala qual versão ele está utilizando"*. E
+     * a pergunta é a que mais custa neste projeto: **o quadro é uma cópia do padrão**, então uma
+     * caixa nova só decide depois que ele importa — o quadro dele passou o dia 05/09 na versão
+     * 2.41.0 enquanto o padrão andava até a 2.55.0, e nada na tela dizia isso.
+     *
+     * A chave `fluxo` está na lista de mescla do `get`, então este campo alcança quem já usa.
+     */
+    origem: null,
   },
   /**
    * Os quadros que ele salvou com nome — as versões dele, não um histórico automático.

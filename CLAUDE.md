@@ -1316,6 +1316,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **O QUADRO tem versao, e ela tem que estar na tela.** Pedido dele (05/09/2026): *"o fluxo
+  atualmente nao fala qual versao ele esta utilizando"*. O quadro e uma COPIA do padrao e caixa nova
+  so decide depois que ele importa — o quadro dele passou o dia 05/09 no arranjo da 2.41.0 enquanto
+  o padrao andava ate a 2.55.0, e a unica forma de saber era eu escrever no registro. A versao ja
+  existia **dentro do `nome` do arquivo** (`"fluxo padrao 2.54.0"`), que e texto que ele reescreve:
+  hoje e o campo `extensao`, separado do `versao` que e o FORMATO do arquivo. **O carimbo e posto no
+  `gravar`**, nao em cada botao — sao quatro caminhos que trocam o quadro inteiro, e o quinto
+  carimbaria errado. E a linha da janela mostra DUAS coisas de naturezas diferentes: a versao (um
+  carimbo, envelhece) e **quantas caixas do padrao de hoje faltam** (medido a cada desenho, nao
+  depende de ninguem lembrar de carimbar). **Quadro ou arquivo sem carimbo fica "desconhecida"** —
+  preencher com a versao de agora carimbaria como novo um quadro velho.
+
 - **`session.utm` é "veio de anúncio NESTA sessão"; a ETIQUETA é "veio de anúncio".** Print dele
   (05/09/2026, o Orides): etiqueta **ADS** no CRM, mandou um vídeo do TikTok e recebeu as
   boas-vindas de *"chegou sem anúncio"* com o pedido de cadastro junto — *"a pessoa com etiqueta de

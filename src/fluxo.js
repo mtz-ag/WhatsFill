@@ -109,8 +109,27 @@ async function gravar(nova, opcoes) {
     store.set('fluxoHistorico', historico).catch(() => {});
   }
   fluxo = { ...fluxo, arvore: nova };
+  /**
+   * **A origem é carimbada aqui, junto da gravação** — e não em cada botão, pelo mesmo motivo do
+   * histórico logo acima: são quatro caminhos que substituem o quadro inteiro (importar, resetar
+   * para o padrão, só as regras do código, carregar uma versão salva), e o quinto que eu ainda não
+   * escrevi carimbaria errado se cada um tivesse que lembrar.
+   *
+   * Edição normal (arrastar, trocar condição) **não** mexe no carimbo: o quadro continua sendo o
+   * que veio daquela versão, com as mexidas dele por cima.
+   */
+  if (opcoes?.origem) fluxo = { ...fluxo, origem: { ...opcoes.origem, em: new Date().toISOString() } };
   await store.set('fluxo', fluxo);
   desenhar();
+}
+
+/** A versão da extensão carregada. Fora da aba do mobiliza, é o único lugar que sabe disto. */
+function versaoDaExtensao() {
+  try {
+    return chrome.runtime.getManifest?.().version || '';
+  } catch (_) {
+    return '';
+  }
 }
 
 /**
@@ -374,6 +393,56 @@ function desenharFios() {
   el('palco').style.height = `${maiorY + 120}px`;
 }
 
+/**
+ * **De quando é este quadro** — pedido dele (05/09/2026): *"o fluxo atualmente não fala qual versão
+ * ele está utilizando"*.
+ *
+ * A pergunta é a que mais custa neste projeto. O quadro é uma **cópia** do padrão e nada entra
+ * nele sozinho, então caixa nova do código só decide depois que ele importa — e nada na tela dizia
+ * isso: o quadro dele passou o dia 05/09 no arranjo da 2.41.0 enquanto o padrão andava até a 2.55.0.
+ *
+ * São duas informações diferentes, e as duas ficam na linha:
+ *
+ *  - **a versão** de onde este quadro veio, que é um carimbo e pode envelhecer;
+ *  - **quantas caixas do padrão de HOJE não estão aqui**, que é medido a cada desenho e não depende
+ *    de ninguém ter lembrado de carimbar nada. É a mesma conta do cartão "O padrão mudou?" — a
+ *    diferença é que aqui ela aparece sem ele precisar rolar até lá.
+ *
+ * Quadro montado antes disto existir não tem carimbo, e a linha diz **"versão desconhecida"**: pôr
+ * a versão de agora seria responder a pergunta com um palpite.
+ */
+function desenharVersao() {
+  const caixa = el('versao-quadro');
+  if (!caixa) return;
+  caixa.replaceChildren();
+
+  const agora = versaoDaExtensao();
+  const origem = fluxo.origem || null;
+  const de = {
+    padrao: 'do padrão',
+    arquivo: 'de um arquivo',
+    salvo: 'de uma versão salva',
+    semeado: 'das regras do código',
+  }[origem?.de] || '';
+
+  caixa.append(
+    span('v-rotulo', 'Quadro:'),
+    span('v-versao', origem?.versao ? `${de} ${origem.versao}` : 'versão desconhecida'),
+    span('v-sep', '·'),
+    span('v-rotulo', `extensão ${agora || '?'}`)
+  );
+
+  // O que a comparação diz vale mais que o carimbo: ela é de agora.
+  const { faltando } = arvoreLib.diferencaDoPadrao(fluxo.arvore || []);
+  if (faltando.length) {
+    const alerta = span('v-atras', `${faltando.length} caixa(s) do padrão de hoje não estão aqui`);
+    alerta.title = 'Veja em "O padrão mudou?", no lado direito — ou importe o fluxo de hoje.';
+    caixa.append(alerta);
+  } else {
+    caixa.append(span('v-emdia', 'em dia com o padrão'));
+  }
+}
+
 function desenharResumo() {
   const caixa = el('contagem');
   caixa.replaceChildren();
@@ -395,6 +464,7 @@ function desenharResumo() {
 function desenhar() {
   atualizarDesfazer();
   desenharResumo();
+  desenharVersao();
 
   const alvo = el('caixas');
   alvo.replaceChildren();
@@ -1482,7 +1552,13 @@ function desenharSalvos() {
     carregar.type = 'button';
     carregar.className = 'btn';
     carregar.textContent = 'Carregar';
-    carregar.addEventListener('click', () => aplicarFluxo(s.arvore, s.teclas, `a versão "${s.nome}"`));
+    carregar.addEventListener('click', () =>
+      aplicarFluxo(s.arvore, s.teclas, `a versão "${s.nome}"`, null, {
+        de: 'salvo',
+        versao: s.origem?.versao || '',
+        nome: s.nome,
+      })
+    );
 
     const apagar = document.createElement('button');
     apagar.type = 'button';
@@ -1508,7 +1584,7 @@ function desenharSalvos() {
  * rodada; ver "23 ramos, 6 enviam" no lugar de "vai trocar?" é a diferença entre uma confirmação
  * que se lê e uma que se aperta no automático.
  */
-async function aplicarFluxo(arvore, teclas, deOnde, avisos) {
+async function aplicarFluxo(arvore, teclas, deOnde, avisos, origem) {
   const nos = arvoreLib.todosOsNos(arvore).length;
   if (!confirm(`Carregar ${deOnde}? O quadro de agora é substituído por ${nos} ramos, ${arvoreLib.quantosEnviam(arvore)} deles enviando mensagem.`)) {
     return;
@@ -1518,7 +1594,7 @@ async function aplicarFluxo(arvore, teclas, deOnde, avisos) {
   fluxo = { ...fluxo, teclas: { ...(teclas || {}) } };
   let nova = arvoreLib.ordenarPorPosicao(arvore);
   if (arvoreLib.precisaArrumar(nova)) nova = arvoreLib.arrumar(nova);
-  await gravar(nova);
+  await gravar(nova, { origem: origem || { de: 'arquivo', versao: '', nome: deOnde } });
   caberNaTela();
 
   /**
@@ -1550,6 +1626,9 @@ el('salvar').addEventListener('click', async () => {
     id: existente?.id || `s${Date.now().toString(36)}`,
     nome,
     salvoEm: new Date().toISOString(),
+    // De qual versão é o quadro que está sendo guardado — para carregá-lo de volta daqui a um mês
+    // e a janela continuar sabendo dizer de quando ele é.
+    origem: fluxo.origem ? { ...fluxo.origem } : null,
     teclas: { ...(fluxo.teclas || {}) },
     arvore: structuredClone(fluxo.arvore || []),
   };
@@ -1569,7 +1648,9 @@ el('salvar').addEventListener('click', async () => {
  */
 el('exportar').addEventListener('click', () => {
   const nome = el('nome-fluxo').value.trim() || 'fluxo-whatsfill';
-  const dados = arvoreLib.paraArquivo(fluxo, nome);
+  // A versão que EXPORTOU. Reimportado, é o que a janela mostra — e é o que diz se aquele arquivo
+  // guardado na pasta de downloads está atrás do padrão de hoje.
+  const dados = arvoreLib.paraArquivo(fluxo, nome, versaoDaExtensao());
   const url = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url;
@@ -1599,7 +1680,8 @@ el('baixar-padrao').addEventListener('click', () => {
   const arvore = arvoreLib.arrumar(arvoreLib.fluxoPadrao());
   const versao = chrome.runtime.getManifest?.().version || '';
   const nome = `fluxo-padrao${versao ? '-' + versao : ''}`;
-  const dados = arvoreLib.paraArquivo({ arvore, teclas: {} }, nome);
+  // A versão também em campo próprio: o nome do arquivo ele renomeia, o carimbo fica.
+  const dados = arvoreLib.paraArquivo({ arvore, teclas: {} }, nome, versao);
 
   const url = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' }));
   const a = document.createElement('a');
@@ -1671,7 +1753,14 @@ el('arquivo').addEventListener('change', async (ev) => {
   if (lido.avisos?.length) escreverAviso(['O arquivo tem problemas, e a conferência vai descartar:', ...lido.avisos], 'ruim');
   else escreverAviso([], '');
 
-  await aplicarFluxo(lido.arvore, lido.teclas, `o arquivo "${arquivo.name}"`, lido.avisos);
+  await aplicarFluxo(lido.arvore, lido.teclas, `o arquivo "${arquivo.name}"`, lido.avisos, {
+    de: 'arquivo',
+    // Arquivo gerado antes de 2.56 não tem carimbo: fica vazio e a janela diz "versão
+    // desconhecida". Pôr a versão de AGORA aqui seria carimbar como novo um quadro velho — que é
+    // exatamente a confusão que este campo existe para desfazer.
+    versao: lido.extensao || '',
+    nome: arquivo.name,
+  });
 });
 
 /** A legenda das teclas. */
@@ -1812,7 +1901,9 @@ el('novo').addEventListener('click', async () => {
 el('quadro').addEventListener('click', async () => {
   if (confirm('Resetar para o fluxo PADRÃO? O quadro de agora é substituído, e as suas observações nos ramos se perdem junto — exporte antes se quiser guardá-las.')) {
     selecionado = null;
-    await gravar(arvoreLib.arrumar(arvoreLib.fluxoPadrao()));
+    await gravar(arvoreLib.arrumar(arvoreLib.fluxoPadrao()), {
+      origem: { de: 'padrao', versao: versaoDaExtensao(), nome: 'o padrão desta versão' },
+    });
     caberNaTela();
   }
 });
@@ -1821,7 +1912,9 @@ el('padrao').addEventListener('click', async () => {
   if (confirm('Deixar SÓ as regras do código, sem o padrão montado? Os ramos que você criou e as observações se perdem.')) {
     selecionado = null;
     fluxo = { ...fluxo, teclas: {} };
-    await gravar(arvoreLib.arrumar(arvoreLib.arvorePadrao({})));
+    await gravar(arvoreLib.arrumar(arvoreLib.arvorePadrao({})), {
+      origem: { de: 'semeado', versao: versaoDaExtensao(), nome: 'só as regras do código' },
+    });
     caberNaTela();
   }
 });
@@ -1884,10 +1977,21 @@ aplicarCabecalho(false);
    * Semeia o quadro com a tabela de hoje, **carregando a ordem e as desligadas da versão em
    * lista**. Sem isso, abrir esta janela jogaria fora em silêncio o que ele já tinha arrastado.
    */
-  let arvore = Array.isArray(fluxo.arvore) && fluxo.arvore.length ? fluxo.arvore : arvoreLib.arvorePadrao(fluxo);
+  const tinhaQuadro = Array.isArray(fluxo.arvore) && fluxo.arvore.length;
+  let arvore = tinhaQuadro ? fluxo.arvore : arvoreLib.arvorePadrao(fluxo);
   // Árvore de antes do quadro não tem posição, e caixa sem posição empilha tudo no canto.
   if (arvoreLib.precisaArrumar(arvore)) arvore = arvoreLib.arrumar(arvore);
   fluxo = { ...fluxo, arvore };
+  /**
+   * O quadro semeado agora nasce carimbado com a versão de agora — ele É a tabela desta versão.
+   *
+   * Quem já tinha quadro fica **sem** carimbo de propósito, e a janela diz "versão desconhecida":
+   * carimbar um quadro antigo com a versão de hoje transformaria a pergunta que este campo existe
+   * para responder numa mentira.
+   */
+  if (!tinhaQuadro) {
+    fluxo = { ...fluxo, origem: { de: 'semeado', versao: versaoDaExtensao(), nome: 'as regras do código', em: new Date().toISOString() } };
+  }
   await store.set('fluxo', fluxo);
 
   historico = (await store.get('fluxoHistorico')) || [];

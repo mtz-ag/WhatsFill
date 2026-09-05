@@ -1,4 +1,4 @@
-## 2026-09-05 — ESTADO DE AGORA (v2.55.0) — leia isto primeiro numa sessão nova
+## 2026-09-05 — ESTADO DE AGORA (v2.56.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.55.0**, tudo commitado e no remoto. **Catorze versões no dia 05/09**
-(2.42 → 2.55). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
+Branch `claude/whatsfill-ia`, **v2.56.0**, tudo commitado e no remoto. **Quinze versões no dia 05/09**
+(2.42 → 2.56). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -28,6 +28,7 @@ problemas e sem desfecho incoerente.
 | 2.53 | **Mal-estar não é ignorado nem concluído** — e "Estou com infecção" tinha virado apoio. |
 | 2.54 | **Rajada de cliques em anúncio → mensagem do momento**, não o modelo de um deles. |
 | 2.55 | **O rascunho é a próxima mensagem DELE**, não a de um terceiro — e o que ele já respondeu passou a ter marca. |
+| 2.56 | **A janela do fluxo diz de qual versão é o quadro**, e quantas caixas do padrão de hoje faltam nele. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -36,7 +37,9 @@ problemas e sem desfecho incoerente.
    novos casos; **não** limpa os que já foram gravados. A aba Cidades lista o que não casa com os
    497 municípios — é por ali que se acha o resto.
 2. **IMPORTAR O FLUXO — e desta vez importa de verdade.** Foi entregue a ele o
-   `fluxo-padrao-2.54.0.json` (**63 caixas**); o quadro dele é o de **2.41.0** (60). Duas caixas
+   `fluxo-padrao-2.56.0.json` (**63 caixas**, o primeiro com o carimbo de versão dentro); o quadro
+   dele é o de **2.41.0** (60). Depois de importar, a janela passa a dizer sozinha se ele está em
+   dia — é o que a 2.56 resolveu. Duas caixas
    novas do dia só decidem depois da importação, e **isso foi medido**:
    - **`nao-pode-falar-agora`** (2.53) entrou como `tambemQuando` de uma caixa que ele já tem — mas
      `tambemQuando` é conteúdo da caixa, e o quadro dele é uma cópia. Simulando o quadro atual, o
@@ -122,6 +125,55 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-05 — A janela do fluxo diz de qual versão é o quadro (v2.56.0)
+
+*"o fluxo atualmente não fala qual versão ele está utilizando, arrume isso"*.
+
+É a pergunta que mais custou neste projeto. O quadro é uma **cópia** do padrão e nada entra nele
+sozinho, então caixa nova do código só decide depois que ele importa — e **nada na tela dizia
+isso**: o quadro dele passou o dia 05/09 no arranjo da **2.41.0** enquanto o padrão andava até a
+2.55.0, e a única forma de saber era eu escrever no registro.
+
+### A versão existia, e no lugar errado
+
+`paraArquivo` já gravava a versão da extensão — **dentro do `nome`** (`"fluxo padrão 2.54.0"`), que
+é texto livre que ele pode reescrever no campo da janela. Carimbo que some quando alguém renomeia
+não é carimbo. Agora é campo próprio, `extensao`, separado do `versao` que já existia e que é o
+**formato do arquivo** (1, quase nunca muda) — dois números diferentes com o mesmo nome era o começo
+da confusão seguinte.
+
+### O que a linha nova mostra
+
+Logo abaixo dos atalhos, no cabeçalho da janela:
+
+> **Quadro:** do padrão 2.56.0 · extensão 2.56.0 · *em dia com o padrão*
+
+São **duas informações de naturezas diferentes**, e é de propósito:
+
+- **a versão** é um carimbo, e carimbo envelhece;
+- **"N caixas do padrão de hoje não estão aqui"** é medido a cada desenho, pela mesma conta do
+  cartão "O padrão mudou?" — **não depende de ninguém ter lembrado de carimbar nada**. É a resposta
+  que vale quando as duas discordam.
+
+### Onde o carimbo é posto
+
+Dentro do `gravar`, e não em cada botão — mesmo motivo do histórico do desfazer: são quatro caminhos
+que substituem o quadro inteiro (importar, resetar para o padrão, só as regras do código, carregar
+uma versão salva), e o quinto que eu ainda não escrevi carimbaria errado se cada um tivesse que
+lembrar. **Editar não mexe no carimbo:** o quadro continua sendo o daquela versão, com as mexidas
+dele por cima.
+
+**Quadro montado antes disto existir fica sem carimbo, e a linha diz "versão desconhecida".** Pôr a
+versão de agora seria carimbar como novo um quadro velho — a confusão que este campo existe para
+desfazer. O mesmo vale para arquivo gerado antes da 2.56: importa igual, e volta sem versão.
+
+Seis asserções novas. Quinze suítes verdes, os dois verificadores limpos.
+
+**A linha em si não foi vista na tela** — a janela é uma página da extensão e não roda fora do
+Chrome. O que foi medido em Node é o carimbo indo e voltando pelo arquivo.
 
 ---
 

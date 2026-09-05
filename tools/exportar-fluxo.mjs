@@ -28,7 +28,9 @@ const versao = JSON.parse(readFileSync(new URL('../manifest.json', import.meta.u
 const saida = process.argv[2] || `fluxo-padrao-${versao}.json`;
 
 const arvore = arv.arrumar(arv.fluxoPadrao());
-const arquivo = arv.paraArquivo({ arvore, teclas: {} }, `fluxo padrão ${versao}`);
+// A versão vai em campo PRÓPRIO, e não só no nome: o nome é texto que ele pode reescrever, e a
+// janela precisa dela para dizer de quando é o quadro que está no ar.
+const arquivo = arv.paraArquivo({ arvore, teclas: {} }, `fluxo padrão ${versao}`, versao);
 
 /**
  * **Confere relendo, antes de entregar.** É a mesma disciplina da escrita no CRM: a peneira do
