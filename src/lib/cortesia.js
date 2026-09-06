@@ -809,12 +809,24 @@ const EXPRESSOES_DE_APOIO = [
    */
   /(^|[^\p{L}])(pode|podem)?\s*cont(e|ar|em|amos)\s+(comigo|conosco|com\s+n[oó]s|com\s+a\s+gente)/iu,
   /(^|[^\p{L}])(estou|to|t[oô])\s+acompanhando\s+(voc[eê]s?|vcs?|o\s+senhor|a\s+campanha)/iu,
-  /(^|[^\p{L}])(n[oó]s\s+)?vamos\s+(vencer|ganhar)(\s|$|!|,|\.)/iu,
+  /**
+   * **"vamos vencer" precisa do objeto POLÍTICO, ou de ser a mensagem inteira.**
+   *
+   * Solto, ele pega *"vamos vencer essa doença"* e *"vamos ganhar coragem"* — que é o oposto de
+   * apoio: é alguém contando um problema. Mesma disciplina do "confirmado" e do "13".
+   */
+  /(^|[^\p{L}])(n[oó]s\s+)?vamos\s+(vencer|ganhar)(\s+(essa|esta|a)\s+(elei[çc][ãa]o|disputa|campanha|batalha))?(\s*[!.,]*\s*$)/iu,
+  /(^|[^\p{L}])(n[oó]s\s+)?vamos\s+(vencer|ganhar)\s+(essa|esta|a)\s+(elei[çc][ãa]o|disputa|campanha)/iu,
   /(^|[^\p{L}])(vou|vamos)\s+votar(\s|$)/iu,
-  /(^|[^\p{L}])sou\s+(seu\s+)?(eleitor|eleitora|f[aã]|bolsonarist[ao]|bolsonaro)(\s|$)/iu,
-  /(^|[^\p{L}])(parab[eé]ns|sucesso|for[çc]a|felicidades)(\s|$|!|,|\.)/iu,
-  /(^|[^\p{L}])(deus|jesus)\s+(te|o|a|lhe)\s+(aben[çc]oe|guarde|proteja)/iu,
-  /(^|[^\p{L}])torcendo(\s|$)/iu,
+  /**
+   * **"eleitor" e "fã" precisam do SEU — "sou eleitor de Caxias do Sul" é endereço, não apoio.**
+   *
+   * Achado medindo os falsos positivos em 06/09/2026. `bolsonarista` continua valendo sozinho: nesta
+   * base é declaração de campo político, e não há "bolsonarista de" nenhum lugar.
+   */
+  /(^|[^\p{L}])sou\s+(seu|sua)\s+(eleitor|eleitora|f[aã])(\s|$|!|,|\.)/iu,
+  /(^|[^\p{L}])sou\s+(eleitor|eleitora|f[aã])\s*(seu|de\s+voc[eê]s?|do\s+senhor|do\s+capit[ãa]o|do\s+martim)?\s*[!.,]*\s*$/iu,
+  /(^|[^\p{L}])sou\s+bolsonarist[ao]\b/iu,
 
   /**
    * **Declaração de VOTO é declaração de apoio** — três anotações antes de eu ver o padrão.
@@ -1458,6 +1470,58 @@ export function ehMensagemDeAnuncio(msg, padroes = []) {
  *
  * @returns {{motivo:string}|null}
  */
+/**
+ * **Votos de BOA VONTADE — só contam quando são a mensagem inteira.**
+ *
+ * Relato dele (06/09/2026), depois de eu listar as condições do apoio: *"muito vago esses termos e
+ * podem pegar em mais contextos, o que mais pode ser feito?"*. Estava certo, e o número era feio —
+ * **15 de 19** frases plausíveis desta base davam apoio sem ser apoio:
+ *
+ *  - *"estou sem força nenhuma, muito cansada"*;
+ *  - *"faça força com o prefeito por nós"* — que é um PEDIDO;
+ *  - *"tentei falar com a prefeitura sem sucesso"*;
+ *  - *"Deus te abençoe, preciso muito de uma cesta básica"*;
+ *  - *"estou torcendo para conseguir a cirurgia"*;
+ *  - *"parabéns pelo aniversário do seu pai"*.
+ *
+ * **A diferença entre estes e o resto da lista é a natureza.** *"Eu apoio"*, *"conte comigo"*,
+ * *"vou votar"*, *"sou seu eleitor"* declaram lealdade e são dirigidos a NÓS — valem onde
+ * estiverem. *"Força"*, *"parabéns"*, *"sucesso"*, *"Deus te abençoe"*, *"torcendo"* são votos de
+ * boa vontade: sozinhos são carinho, e no meio de uma frase **quem decide é o resto da frase**.
+ *
+ * Por isso eles só contam quando a mensagem é **só isso** — que é o que o nome da regra sempre
+ * prometeu ("SÓ expressa apoio"). É a terceira vez que este projeto aprende a mesma coisa: a caixa
+ * do "só mandou bom dia" pegando o desabafo da Cris, e o "boa tarde queria saber mais" da Teresinha.
+ */
+const BOA_VONTADE = [
+  /(^|[^\p{L}])(parab[eé]ns|sucesso|for[çc]a|felicidades)(\s|$|!|,|\.)/iu,
+  /(^|[^\p{L}])(deus|jesus)\s+(te|o|a|lhe)\s+(aben[çc]oe|guarde|proteja)/iu,
+  /(^|[^\p{L}])torcendo(\s|$)/iu,
+];
+
+/**
+ * O que sobra da mensagem quando se tira o voto de boa vontade, a cortesia e a pontuação.
+ *
+ * Vazio (ou quase) = a mensagem É o voto. Qualquer coisa a mais e quem manda é essa coisa a mais.
+ */
+const RECHEIO_DE_BOA_VONTADE =
+  /\b(muita|muito|toda|todo|mais|bastante|meu|minha|meus|minhas|nosso|nossa|pra|para|pro|a[ií]|voc[eê]s?|vcs?|senhor|senhora|capit[ãa]o|martim|zucco|amigo|amiga|querido|querida|obrigad[ao]|abra[çc]o|abra[çc]os|bom|boa|dia|tarde|noite|e|de|do|da|no|na|com|que|deus|jesus|sempre|hoje)\b/giu;
+
+function soVotoDeBoaVontade(texto) {
+  const bruto = String(texto || '');
+  if (!BOA_VONTADE.some((re) => re.test(bruto))) return false;
+
+  let sobra = bruto;
+  for (const re of BOA_VONTADE) sobra = sobra.replace(new RegExp(re.source, 'giu'), ' ');
+  sobra = sobra
+    .replace(RECHEIO_DE_BOA_VONTADE, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+
+  // Uma palavra solta que sobrou ainda é carinho ("beijos", "amém"); duas já é outra frase.
+  return sobra.split(/\s+/).filter(Boolean).length <= 1;
+}
+
 export function soExpressaApoio(entrantes, nossaUltimaAt, padroesDeAnuncio = []) {
   const rajada = rajadaFinal(entrantes, nossaUltimaAt);
   if (!rajada.length) return null;
@@ -1508,6 +1572,11 @@ export function soExpressaApoio(entrantes, nossaUltimaAt, padroesDeAnuncio = [])
     if (padrao.test(dela)) {
       return { motivo: 'escreveu apoio em mensagem própria — responda a ela antes do material' };
     }
+  }
+
+  // Os votos de boa vontade só contam quando são a mensagem inteira — ver `soVotoDeBoaVontade`.
+  if (soVotoDeBoaVontade(dela)) {
+    return { motivo: 'mandou um voto de boa vontade e nada mais — agradeça' };
   }
   return null;
 }

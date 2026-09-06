@@ -1931,4 +1931,58 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
     'apoio comum continua fora');
 }
 
+{
+  grupo('voto de boa vontade so conta se for a mensagem inteira (06/09/2026)');
+
+  /**
+   * Depois de eu listar as condicoes do apoio, ele: *"muito vago esses termos e podem pegar em mais
+   * contextos, o que mais pode ser feito?"*. Media antes de mexer: **15 de 19** frases plausiveis
+   * desta base davam apoio sem ser apoio.
+   *
+   * A diferenca esta na NATUREZA do termo. "Eu apoio", "conte comigo", "vou votar", "sou seu
+   * eleitor" declaram lealdade e sao dirigidos a NOS -- valem onde estiverem. "Forca", "parabens",
+   * "sucesso", "Deus te abencoe", "torcendo" sao votos de boa vontade: sozinhos sao carinho, e no
+   * meio de uma frase quem decide e o RESTO da frase.
+   *
+   * E a terceira vez que este projeto aprende a mesma coisa -- a caixa do "so mandou bom dia"
+   * pegando o desabafo da Cris, e o "boa tarde queria saber mais" da Teresinha.
+   */
+  const ap = (t) => !!soExpressaApoio([{ texto: t, tipo: 'TEXT', at: 3 }], null, []);
+
+  // O voto SOZINHO continua sendo apoio.
+  for (const t of ['forca ai', 'muita forca', 'parabens', 'sucesso', 'Deus te abencoe',
+    'Deus te abencoe capitao', 'parabens capitao!', 'estou torcendo', 'torcendo muito',
+    'forca amigo, abraco', 'muito sucesso pra voces']) {
+    check(ap(t), `voto sozinho conta: ${t}`);
+  }
+
+  // No meio de uma frase, quem decide e a frase.
+  for (const t of ['preciso de forca para continuar', 'estou sem forca nenhuma, muito cansada',
+    'faca forca com o prefeito por nos', 'tentei falar com a prefeitura sem sucesso',
+    'desejo sucesso no seu trabalho mas preciso de ajuda', 'parabens pelo aniversario do seu pai',
+    'que Deus te abencoe e me ajude com o remedio', 'Deus te abencoe, preciso muito de uma cesta basica',
+    'estou torcendo para conseguir a cirurgia']) {
+    check(!ap(t), `NAO conta no meio da frase: ${t}`);
+  }
+
+  // "vamos vencer" precisa do objeto politico, ou de ser a mensagem inteira.
+  check(ap('vamos vencer!'), '"vamos vencer" sozinho e apoio');
+  check(ap('vamos vencer essa eleicao'), 'e com objeto politico tambem');
+  check(!ap('vamos vencer essa doenca'), 'mas "vencer essa doenca" nao e apoio');
+  check(!ap('vamos ganhar coragem'), 'nem "ganhar coragem"');
+
+  // "eleitor" precisa do SEU: "sou eleitor de X" e endereco.
+  check(ap('sou seu eleitor'), '"sou seu eleitor" e apoio');
+  check(ap('sou eleitor'), 'e sozinho tambem');
+  check(ap('sou bolsonarista'), '"bolsonarista" vale sozinho -- e campo politico, nao endereco');
+  check(!ap('sou eleitor de Caxias do Sul'), 'mas "sou eleitor de <cidade>" e endereco, nao apoio');
+
+  // As declaracoes de lealdade continuam valendo em qualquer posicao.
+  // Lealdade vale em qualquer POSICAO -- mas "so apoio" continua exigindo que nao haja pergunta
+  // nem pedido junto, o que e a guarda mais antiga desta regra.
+  check(ap('Boa tarde, eu apoio o Capitao e a familia dele'), 'lealdade vale no meio da frase');
+  check(!ap('Boa tarde, eu apoio o Capitao e queria saber do evento'), 'mas com pergunta junto nao e SO apoio');
+  check(ap('conte comigo sempre'), 'conte comigo');
+}
+
 fim();

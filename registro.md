@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.71.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.72.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.71.0**, tudo commitado e no remoto. Quinze versões no
-dia 05/09 (2.42 → 2.56) e **quinze em 06/09** (2.57 a 2.71). **64 caixas** no fluxo padrão. Quinze suítes verdes, os dois
+Branch `claude/whatsfill-ia`, **v2.72.0**, tudo commitado e no remoto. Quinze versões no
+dia 05/09 (2.42 → 2.56) e **dezesseis em 06/09** (2.57 a 2.72). **64 caixas** no fluxo padrão. Quinze suítes verdes, os dois
 verificadores limpos (38 arquivos), **63 caixas** no fluxo padrão sem problemas e sem desfecho
 incoerente.
 
@@ -50,6 +50,7 @@ incoerente.
 | 2.69 | **Endereço de máquina nunca é cidade**, e link gravado no campo deixa de bloquear a correção — a IA passa a resolver esses casos. |
 | 2.70 | **O clique no anúncio só vale enquanto não for respondido**, e o modelo não sai se já falamos hoje. A chegada ganhou FECHO. |
 | 2.71 | **O id da caixa não é o id da regra** — o agradecimento pela informação (2.65) nunca decidiu nada no quadro. |
+| 2.72 | **Voto de boa vontade só conta se for a mensagem inteira** — 15 falsos positivos em 19 viraram zero. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -179,6 +180,65 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — Voto de boa vontade não é declaração de apoio (v2.72.0)
+
+### A pergunta
+
+Depois de eu listar as condições do apoio: *"muito vago esses termos e podem pegar em mais contextos,
+o que mais pode ser feito?"*.
+
+### Ele estava certo, e o número era feio
+
+Medido antes de mexer, em 19 frases plausíveis desta base: **15 davam apoio sem ser apoio.**
+
+| frase | virava |
+|---|---|
+| *"estou sem força nenhuma, muito cansada"* | apoio |
+| *"faça força com o prefeito por nós"* — um PEDIDO | apoio |
+| *"tentei falar com a prefeitura sem sucesso"* | apoio |
+| *"Deus te abençoe, preciso muito de uma cesta básica"* | apoio |
+| *"estou torcendo para conseguir a cirurgia"* | apoio |
+| *"parabéns pelo aniversário do seu pai"* | apoio |
+| *"vamos vencer essa doença"* | apoio |
+| *"sou eleitor de Caxias do Sul"* | apoio |
+
+### A divisão é por NATUREZA do termo
+
+**Declaração de lealdade** — *"eu apoio"*, *"conte comigo"*, *"tamo junto"*, *"vou votar"*, *"sou seu
+eleitor"*, o **22**. São dirigidas a NÓS e não têm outro sentido: valem onde estiverem na frase.
+
+**Voto de boa vontade** — *"força"*, *"parabéns"*, *"sucesso"*, *"felicidades"*, *"Deus te abençoe"*,
+*"torcendo"*. Sozinhos são carinho; no meio de uma frase, **quem decide é o resto da frase**. Agora
+só contam quando a mensagem é só isso — o que o nome da regra sempre prometeu ("**só** expressa
+apoio").
+
+A conferência tira o voto, a cortesia e a pontuação, e olha o que sobrou: **uma palavra ainda é
+carinho** (*"força amigo, abraço"*), duas já são outra frase.
+
+**É a terceira vez que este projeto aprende isto** — a caixa do "só mandou bom dia" pegando o
+desabafo de 437 caracteres da Cris (02/09), e o *"boa tarde queria saber mais"* da Teresinha.
+
+### Duas guardas do mesmo tipo entraram junto
+
+- **`vamos vencer`** exige objeto político (*"essa eleição"*, *"a disputa"*) ou ser a mensagem
+  inteira. *"Vamos vencer essa doença"* é alguém contando um problema, o oposto de apoio.
+- **`eleitor` / `fã`** exigem o **seu**: *"sou eleitor de Caxias do Sul"* é endereço.
+  `bolsonarista` continua valendo sozinho — nesta base é campo político, e não existe "bolsonarista
+  de" lugar nenhum.
+
+### Medido depois
+
+**0 falsos positivos em 13** dos casos que passavam, e **0 apoios perdidos em 19** — as declarações
+de lealdade e os votos sozinhos continuam todos sendo reconhecidos.
+
+**Arquivos:** `src/lib/cortesia.js` (`BOA_VONTADE` e `soVotoDeBoaVontade`, mais as duas guardas),
+`tests/cortesia.test.mjs` (+28), `CLAUDE.md` (+1), `manifest.json` (2.71.0 → 2.72.0). Quinze suítes e
+os dois verificadores.
+
+**O quadro dele não muda** — é detector, e vale em qualquer quadro.
 
 ---
 

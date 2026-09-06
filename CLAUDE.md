@@ -1363,6 +1363,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   a caixa junta `respondeu-os-dados` com `so-expressa-apoio`, entao nem o id da caixa diria qual das
   duas casou. **Quem precisa saber "qual regra decidiu" tem que olhar o SINAL** (`c.respondeuOsDados`),
   como `ehPresencaSemPendencia` sempre fez tres blocos acima. Tem teste travando a armadilha.
+- **VOTO DE BOA VONTADE nao e declaracao de apoio, e so conta se for a mensagem inteira.** Relato
+  dele (06/09/2026), depois de eu listar as condicoes: *"muito vago esses termos e podem pegar em
+  mais contextos, o que mais pode ser feito?"*. Medido antes de mexer: **15 de 19** frases plausiveis
+  desta base davam apoio sem ser apoio — *"estou sem forca nenhuma, muito cansada"*, *"faca forca com
+  o prefeito por nos"* (um PEDIDO), *"tentei falar com a prefeitura sem sucesso"*, *"Deus te abencoe,
+  preciso de uma cesta basica"*, *"estou torcendo para conseguir a cirurgia"*. **A divisao e por
+  NATUREZA:** "eu apoio", "conte comigo", "vou votar", "sou seu eleitor" declaram lealdade e sao
+  dirigidos a NOS, entao valem onde estiverem; "forca", "parabens", "sucesso", "Deus te abencoe",
+  "torcendo" sao votos de boa vontade — sozinhos sao carinho, e no meio de uma frase **quem decide e
+  o resto da frase**. Depois: **0 falsos positivos, 0 apoios perdidos**. Entraram junto duas guardas
+  do mesmo tipo — `vamos vencer` exige objeto politico ou ser a mensagem inteira (*"vamos vencer essa
+  doenca"* nao e apoio), e `eleitor`/`fa` exigem o **seu** (*"sou eleitor de Caxias do Sul"* e
+  endereco). E a terceira vez que este projeto aprende isto: a caixa do "so mandou bom dia" pegando o
+  desabafo da Cris, e o "boa tarde queria saber mais" da Teresinha.
 
 - **Xingamento no IMPERATIVO e segunda pessoa, e a lista nao sabia disso.** Print dele (05/09/2026):
   a contato chegou pelo anuncio e um minuto depois escreveu *"Entao va para o inferno..
