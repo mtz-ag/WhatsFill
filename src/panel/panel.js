@@ -5472,74 +5472,61 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       const ramoChamaIA = !!sugestao?.ia;
 
-      let decisaoIA = null;
-      /** Preenchido quando a IA escala: vira uma linha da caixa, para ele ver POR QUE está com ele. */
+      /**
+       * **A IA ENTRA ONDE O DETERMINISTICO NAO RESOLVE, E O QUE ELA FAZ ALI E ESCREVER.**
+       *
+       * Regra dele (06/09/2026): *"o botao de chamar IA foi feito exatamente pra isso: quando
+       * nenhuma resposta serve, ela da uma resposta personalizada. Essa e a funcao dela. Tudo que
+       * o deterministico nao consegue resolver, ela resolve"*.
+       *
+       * **O que mudou:** ate aqui a IA ESCOLHIA uma resposta pronta nesses casos, e com
+       * "Automatizar" marcado ela mandava e concluia. Havia uma contradicao no meio: a tecla 6
+       * significa, por definicao, que **nenhuma resposta pronta serve** — e o que saia era
+       * justamente uma resposta pronta, escolhida de um conjunto que a regra acabara de dizer que
+       * nao servia. Medido: e o unico ponto em que a IA substituia uma decisao do quadro.
+       *
+       * Hoje o desfecho e um so: **rascunho personalizado no campo de mensagem**, e ele manda.
+       * `rascunharParaEle` nunca envia (decisao dele, 03/09) — a fronteira que torna o erro
+       * recuperavel continua de pe, porque quem aperta enviar e gente.
+       *
+       * As tres portas continuam sendo as mesmas, e sao as que ele nomeou: nenhuma caixa decidiu,
+       * tecla 6, ou um ramo dele entregou o caso a ela. Medido em 20.000 contextos: **5,4% do
+       * total no quadro dele**. Os outros 94,6% o fluxo resolve sem gastar um centavo.
+       *
+       * **`state.ia.ligada` e obrigatorio aqui**, e nao `iaTemChave`: este gasto e da rodada, e a
+       * caixa da Config e o interruptor dele. Rascunho pedido a mao (o botao da aba Respostas, a
+       * tecla 8) continua olhando so a chave, porque ali quem pediu foi ele.
+       */
+      const iaEntra = !!state.ia?.ligada && (!sugestao || regraPedeGente || ramoChamaIA);
+      /** Vira uma linha da caixa, para ele ver POR QUE o caso esta com ele e o que ela escreveu. */
       let escalouParaVoce = '';
-      if (!sugestao || regraPedeGente || ramoChamaIA) {
-        decisaoIA = await avaliarComIA();
-        if (decisaoIA?.acao === 'escalar') {
-          /**
-           * A IA escalou: nenhuma resposta pronta serve. É AQUI, e só aqui, que o rascunho pode
-           * sair sozinho — decisão dele (20/08/2026), com o padrão sendo as respostas prontas e o
-           * rascunho como exceção.
-           *
-           * `rascunharParaEle` **nunca envia** (03/09/2026, pedido dele: *"retire essa mensagem
-           * automática"*). Ela deixa o texto no campo de mensagem e o contato segue para a caixa
-           * de pergunta, onde ele lê e decide — inclusive apagar o rascunho e escrever outro.
-           */
-          /**
-           * Deixa o rascunho no campo de mensagem e SEGUE para a caixa: quem manda é ele.
-           *
-           * **O `try` não é decoração.** Sem ele, um defeito aqui dentro vira `resultado: 'erro'`
-           * lá embaixo e `percorrerFila` PARA a rodada — foi exatamente o que aconteceu em
-           * 03/09/2026 (*"× Catarina — auto is not defined"*, e a rodada encerrou ali). Relato
-           * dele: *"e parou a rodada, o que não é pra acontecer"*.
-           *
-           * É a regra que o CLAUDE.md já registra e que este caminho não seguia: **falha de IA
-           * nunca para a rodada.** O rascunho é uma conveniência; a fila é o trabalho.
-           */
-          let rascunho = { enviado: false, motivo: '' };
-          try {
-            rascunho = await rascunharParaEle();
-          } catch (err) {
-            rascunho = { enviado: false, motivo: `falhou: ${err?.message || err}` };
-            registrarNaRodada(nome, 'aviso', `não consegui rascunhar (${rascunho.motivo}) — segui sem`);
-          }
-
-          /**
-           * Escalar = sair da rodada sem enviar nada.
-           *
-           * Antes isto aplicava a etiqueta de triagem, que deixava o contato achável no filtro do
-           * CRM depois. A triagem foi **removida a pedido dele** (29/08), e a etiqueta foi junto —
-           * então hoje escalar deixa rastro só no log da rodada, que some quando o painel fecha.
-           * É consequência direta da remoção, não esquecimento: se um dia a etiqueta voltar a ser
-           * desejada, é aqui que ela entra.
-           */
-          /**
-           * **Escalar ABRE A CAIXA — não pula.**
-           *
-           * Relato dele (02/09/2026): *"pulando contato sem eu pedir mesmo a minha mensagem não
-           * sendo a última e com o box de pular desmarcado"*. Estava certo, e a causa era esta
-           * linha: escalar devolvia `pulado` **sem perguntar nada**, e sem olhar caixa de seleção
-           * nenhuma — nem a de automatizar, nem a de pular por etiqueta. O contato sumia da rodada
-           * com o motivo só no log.
-           *
-           * A incoerência era com a própria tecla 6: as duas coisas significam *"aqui precisa de
-           * gente"*, e a tecla 6 **abre a caixa** (é a exceção que a automação respeita). Escalar
-           * fazia o oposto. Agora as duas fazem o mesmo.
-           *
-           * O rascunho, quando existe, já está no campo de mensagem — então ele decide olhando o
-           * texto pronto, que era o laço manual que a IA veio encurtar.
-           */
-          const porque = rascunho.motivo ? ` · ${rascunho.motivo}` : '';
-          const motivoIA = decisaoIA.motivo || 'a IA achou que este é para você';
-          // Nome diferente do `sugestao` de fora DE PROPÓSITO: este bloco vive dentro do
-          // `if (!sugestao)`, e sombrear a recomendação determinística aqui dentro é armadilha
-          // esperando quem vier depois.
-          const sugestaoDela = decisaoIA.templateId ? ` (sugestão dela: "${decisaoIA.templateId}")` : '';
-          escalouParaVoce = `IA passou para você: ${motivoIA}${sugestaoDela}${porque}`;
-          registrarNaRodada(nome, 'aviso', escalouParaVoce);
+      if (iaEntra) {
+        /**
+         * **O `try` nao e decoracao.** Sem ele, um defeito aqui dentro vira `resultado: 'erro'` la
+         * embaixo e `percorrerFila` PARA a rodada — foi exatamente o que aconteceu em 03/09/2026
+         * (*"parou a rodada, o que nao e pra acontecer"*). Falha de IA nunca para a rodada: o
+         * rascunho e uma conveniencia, a fila e o trabalho.
+         */
+        let rascunho = { ok: false, motivo: '' };
+        try {
+          rascunho = await rascunharParaEle();
+        } catch (err) {
+          rascunho = { ok: false, motivo: `falhou: ${err?.message || err}` };
         }
+
+        const porQue = sugestao
+          ? `o fluxo mandou para você ("${sugestao.id}")`
+          : 'nenhuma caixa do fluxo decidiu este caso';
+        escalouParaVoce = rascunho.ok
+          ? `${porQue} — a IA escreveu um rascunho no campo de mensagem; leia e mande`
+          : `${porQue} — a IA não conseguiu rascunhar (${rascunho.motivo || 'sem motivo'})`;
+        /**
+         * **Só o que deu errado entra no log aqui.** `rascunharParaEle` já escreve a linha do
+         * sucesso, com os avisos da revisão junto (a saudação trocada, o traço eme); repetir
+         * faria a mesma coisa aparecer duas vezes no Andamento. O motivo de o caso estar com ele
+         * vai para a CAIXA, que é onde ele está olhando.
+         */
+        if (!rascunho.ok) registrarNaRodada(nome, 'aviso', escalouParaVoce);
       }
 
       const opcoes = [];
@@ -5579,27 +5566,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         });
       }
       /**
-       * A recomendação da IA entra como tecla **0**, e não substituindo outra.
+       * **A tecla 0 SAIU em 06/09/2026** — era "mandar a resposta que a IA escolheu e concluir".
        *
-       * Substituir o significado de uma tecla que ele já tem no dedo é como o "2" digitado na
-       * conversa acabou concluindo atendimento. Tecla nova, posição nova, e as antigas seguem
-       * fazendo o que sempre fizeram — com ou sem IA ligada.
+       * Ela nasceu quando o papel da IA era ESCOLHER entre as respostas prontas, e só aparecia em
+       * três situações: nenhuma caixa decidiu, tecla 6, ou um ramo dele entregou o caso a ela. Ele
+       * redefiniu as três: *"quando nenhuma resposta serve, ela dá uma resposta personalizada;
+       * essa é a função dela"*. Escolher uma resposta pronta num caso em que a regra acabou de
+       * dizer que nenhuma serve era a contradição que ele apontou.
+       *
+       * O que fica no lugar é o **rascunho no campo de mensagem** (ver `iaEntra`, acima) — e ele
+       * manda pelo botão da conversa, como já faz na tecla 8.
+       *
+       * `avaliarComIA` continua existindo e é usada pelo botão "Avaliar o contato aberto", na aba
+       * Config: ali é ele pedindo a opinião dela, sem gastar uma rodada.
        */
-      const recomendada = decisaoIA?.acao === 'responder'
-        ? state.templates.find((t) => t.id === decisaoIA.templateId)
-        : null;
-      const recomendadaTrava = recomendada
-        ? vars.render(await templatesLib.varianteAtual(recomendada), contexto).missing.length > 0
-        : false;
-
-      if (recomendada && !recomendadaTrava) {
-        opcoes.push({
-          tecla: '0',
-          valor: `ia:${recomendada.id}`,
-          rotulo: `Mandar "${recomendada.name}" e concluir (IA)`,
-          primaria: true,
-        });
-      }
 
       /**
        * **Tecla `f` — o desfecho que um ramo da ÁRVORE escolheu.**
@@ -5775,14 +5755,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // acender ao mesmo tempo num contato que casasse com as duas condições.
       // Um lugar só decide o destaque, e ele conta os dois jeitos de uma regra apontar: pela
       // tecla (a tabela) e pela resposta pronta (um ramo da árvore, que traz `tecla` nula).
+      /**
+       * **Ramo que entrega o caso à IA não acende opção nenhuma** (06/09/2026). Ele apontava para
+       * a tecla 0, que saiu junto com a escolha de resposta pronta pela IA: o que ela faz ali
+       * agora é deixar o rascunho no campo de mensagem, e quem manda é o botão da conversa. A
+       * linha `⚠` da caixa diz que o rascunho está lá.
+       */
       for (const opcao of opcoes) {
         opcao.primaria =
           !!sugestao &&
-          (ramoChamaIA
-            ? opcao.tecla === '0'
-            : sugestao.resposta
-              ? opcao.tecla === 'f' && !!doFluxo
-              : opcao.tecla === sugestao.tecla);
+          (sugestao.resposta ? opcao.tecla === 'f' && !!doFluxo : opcao.tecla === sugestao.tecla);
       }
 
       // Nenhuma regra reconheceu: o caso é para ele decidir hoje, e é o gatilho da IA no outro
@@ -5796,92 +5778,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         });
       }
 
-      /**
-       * Manda a resposta que a IA escolheu e conclui — o corpo da tecla 0.
-       *
-       * **Isto faltava.** A tecla 0 existia, aparecia em destaque na caixa e devolvia
-       * `ia:<id>`... que nenhum ramo tratava. A escolha caía no fim da função e mandava o
-       * `modelo` do conteúdo, não a resposta que a IA escolheu — e quando não havia modelo,
-       * quebrava. Bug de merge, do mesmo tipo que apagou `avaliarComIA`: a opção foi criada e o
-       * ramo que a executa não veio junto.
-       *
-       * Envia com `sendTemplate`, não `enviarModelo`: a recomendação sai de `state.templates`,
-       * que são as respostas prontas dele.
-       */
-      const enviarEscolhaDaIA = async (porQue) => {
-        if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) {
-          return { nome, resultado: 'erro', motivo: 'a classificação não gravou; não enviei nada' };
-        }
-        if (!(await sendTemplate(recomendada, { send: true, jaConfirmado: true }))) {
-          return { nome, resultado: 'erro', motivo: `"${recomendada.name}" (escolha da IA) não saiu` };
-        }
-        const fechouIA = await concluirPeloPainel();
-        if (!fechouIA.ok) {
-          return { nome, resultado: 'enviado', parar: true, motivo: `${porQue}, mas ${fechouIA.reason}` };
-        }
-        if (fechouIA.dialogOpen) {
-          return {
-            nome,
-            resultado: 'enviado',
-            parar: true,
-            motivo: `${porQue}, mas a plataforma pediu um motivo de conclusão — responda o diálogo`,
-          };
-        }
-        return { nome, resultado: 'enviado', motivo: porQue };
-      };
 
       /**
-       * A IA ASSUME a rodada — só com a caixa "Automatizar com IA" marcada por ele.
+       * **A IA NAO ASSUME MAIS A RODADA mandando resposta pronta** (06/09/2026).
        *
-       * Aqui a caixa de pergunta não chega a abrir: é a tecla 0 sendo apertada sozinha. A
-       * fronteira do branch não se move — o que sai é uma resposta pronta que ele escreveu, e a
-       * IA continua só escolhendo entre elas.
+       * Aqui ficava o bloco que, com "Automatizar" marcado, mandava a resposta escolhida pela IA e
+       * concluia — o unico ponto do painel em que ela substituia uma decisao do quadro. Saiu com a
+       * tecla 0, pela regra dele: *"quando nenhuma resposta serve, ela da uma resposta
+       * personalizada; essa e a funcao dela"*.
        *
-       * **Três travas antes de enviar**, e as duas primeiras já vieram de graça:
-       *  - `acao === 'responder'` (escalar e incerto nunca chegam aqui, e `validarDecisao` já
-       *    rebaixou a confiança baixa e os RESTRITOS a `incerto`/escalada);
-       *  - `!recomendadaTrava` — resposta com variável faltando não sai nem no manual;
-       *  - a mesma resposta não pode ter saído HOJE para este contato. Esta é a que importa: a
-       *    caixa de pergunta mostrava o aviso de duplicata e deixava ELE decidir; sem ninguém
-       *    para ler o aviso, a decisão vira "não manda e pergunta".
+       * O que a IA faz nesses casos agora acontece bem antes, na montagem do contexto: ela deixa o
+       * **rascunho no campo de mensagem** e a caixa abre para ele mandar. Automatizar continua
+       * valendo para tudo o que o quadro decide — que sao 94% dos contatos, medidos.
        */
-      if (rodadaAutomatica() && recomendada && !recomendadaTrava) {
-        const jaSaiu = await templatesLib.wasSent(state.contact.id, recomendada.id);
-        if (jaSaiu && ehHoje(jaSaiu.at)) {
-          registrarNaRodada(
-            nome,
-            'aviso',
-            `automático não assumiu: "${recomendada.name}" já saiu hoje às ${formatarHora(jaSaiu.at)} — decida você`
-          );
-        } else {
-          const confianca = Math.round((decisaoIA.confianca || 0) * 100);
-          /**
-           * **O log diz de QUEM a IA tomou o caso** — pedido dele (06/09/2026): *"ao ativar a IA
-           * ela está ignorando o fluxo"*.
-           *
-           * Medido: com a IA ligada ela só é consultada em ~5% dos contextos, e quase todos são a
-           * tecla 6 ("você responde"). Ou seja, o fluxo continua decidindo 94% — mas **este é o
-           * único ponto em que a IA substitui uma decisão do quadro**, e ele era invisível: a
-           * linha dizia "IA assumiu" sem dizer que o quadro tinha mandado o caso para ele.
-           * Regra do projeto: se a rodada trata dois contatos de forma diferente, o motivo tem
-           * que estar na tela.
-           */
-          const doQuadro = sugestao ? ` (o fluxo tinha mandado para você: "${sugestao.id}")` : ' (o fluxo não decidiu nada aqui)';
-          return enviarEscolhaDaIA(
-            `IA assumiu (${confianca}%)${doQuadro}: mandei "${recomendada.name}" e concluí — ` +
-              (decisaoIA.motivo || 'sem motivo dado')
-          );
-        }
-      }
 
       /**
        * A automação executa a RECOMENDAÇÃO DETERMINÍSTICA quando existe uma.
        *
        * Esta metade nasceu junto com a reordenação acima, e sem ela o conserto viraria um defeito
        * pior: com a regra decidindo antes, a IA deixa de ser chamada nos casos conhecidos, então
-       * `recomendada` fica nula e a caixa abriria esperando um clique **em todo contato com
-       * regra** — a rodada automatizada pararia em quase todos. Trocar "manda a mensagem errada"
-       * por "não anda" não é conserto.
+       * não haveria recomendação nenhuma e a caixa abriria esperando um clique **em todo contato
+       * com regra** — a rodada automatizada pararia em quase todos. Trocar "manda a mensagem
+       * errada" por "não anda" não é conserto.
        *
        * O que sai daqui é a tecla que a caixa mostraria em destaque, escolhida pelas regras que
        * ele escreveu — não uma decisão nova. É o que "automatizar a rodada" sempre significou.
@@ -5971,16 +5889,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
               '. Confirme antes de mandar de novo.'
             : '',
           textosDeHoje.length ? `⚠ Hoje este contato já recebeu: ${textosDeHoje.join(', ')}.` : '',
-          // O que a IA achou, e com quanta certeza. Vai para a tela SEMPRE que ela opinou —
-          // recomendação sem o porquê é ordem, e quem responde pelo envio é ele.
-          recomendada && !recomendadaTrava
-            ? `IA (${Math.round((decisaoIA.confianca || 0) * 100)}%): ${decisaoIA.motivo || 'sem motivo dado'}`
-            : '',
-          recomendada && recomendadaTrava
-            ? `A IA sugeriu "${recomendada.name}", mas essa resposta está travada por variável faltando.`
-            : '',
-          decisaoIA?.acao === 'incerto' && decisaoIA.aviso ? `IA não opinou: ${decisaoIA.aviso}` : '',
-          // A IA escalou: nenhuma resposta pronta serve. Antes isto pulava o contato em silêncio.
+          // A IA entrou: diz POR QUE o caso está com ele e se o rascunho ficou no campo. As três
+          // linhas antigas (a opinião dela, a resposta travada e o "não opinou") saíram junto com
+          // a tecla 0 — ela não escolhe mais resposta pronta aqui, ela escreve.
           escalouParaVoce ? `⚠ ${escalouParaVoce}` : '',
           pedidoHoje
             ? `⚠ Já pedi os dados hoje, às ${formatarHora(pedidoDeHoje.at)}. Pedir de novo no ` +
@@ -6152,11 +6063,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           return { nome, resultado: 'enviado', parar: true, motivo: `"${doFluxo.name}" saiu, mas ${fechouFluxo.reason}` };
         }
         return { nome, resultado: 'enviado', motivo: `mandei "${doFluxo.name}" (ramo do fluxo) e concluí` };
-      }
-
-      // Tecla 0 apertada à mão: mesmo caminho do automático, sem o automático.
-      if (typeof escolha === 'string' && escolha.startsWith('ia:') && recomendada) {
-        return enviarEscolhaDaIA(`mandei "${recomendada.name}" (escolha da IA) e concluí`);
       }
 
       if (escolha === 'pedirdados' || escolha === 'momento' || escolha === 'interesse' || escolha === 'apoio') {

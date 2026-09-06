@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.57.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.58.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.57.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
-(2.42 → 2.56) e a **2.57 em 06/09**. Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
+Branch `claude/whatsfill-ia`, **v2.58.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
+(2.42 → 2.56) e **duas em 06/09** (2.57 e 2.58). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -29,7 +29,8 @@ problemas e sem desfecho incoerente.
 | 2.54 | **Rajada de cliques em anúncio → mensagem do momento**, não o modelo de um deles. |
 | 2.55 | **O rascunho é a próxima mensagem DELE**, não a de um terceiro — e o que ele já respondeu passou a ter marca. |
 | 2.56 | **A janela do fluxo diz de qual versão é o quadro**, e quantas caixas do padrão de hoje faltam nele. |
-| 2.57 | **A IA confere a cidade na rodada normal** (antes só na automática) — e o log diz quando ela toma um caso do quadro. |
+| 2.57 | **A IA confere a cidade na rodada normal** (antes só na automática). |
+| 2.58 | **A IA ESCREVE onde o determinístico não resolve** — a tecla 0 e a escolha de resposta pronta por ela saíram. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -126,6 +127,52 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — A IA escreve onde o determinístico não resolve (v2.58.0)
+
+*"o botão de chamar IA foi feito exatamente pra isso: quando nenhuma resposta serve, ela dá uma
+resposta personalizada. Essa é a função dela. Tudo que o determinístico não consegue resolver, ela
+resolve"*.
+
+Ele corrigiu a tensão que eu tinha apontado uma hora antes, e do lado certo.
+
+### A contradição que saiu
+
+A tecla 6 significa, **por definição**, que nenhuma resposta pronta serve. E o que a IA fazia ali era
+escolher uma resposta pronta — de um conjunto que a regra acabara de dizer que não servia — e, com
+"Automatizar" marcado, **mandar e concluir**. Era o único ponto do painel em que a IA substituía uma
+decisão do quadro.
+
+### O que ficou
+
+Nas três portas da IA — nenhuma caixa decidiu, tecla 6, ou um ramo dele entregou o caso a ela — o
+desfecho agora é **um só: rascunho personalizado no campo de mensagem**, e ele manda. `rascunharParaEle`
+nunca envia (decisão dele, 03/09), então a fronteira que torna o erro recuperável continua de pé: quem
+aperta enviar é gente.
+
+**Saiu junto** (função sem gatilho é a armadilha do `pedido-emprego`):
+
+- a **tecla 0** e a opção *"Mandar X e concluir (IA)"* da caixa;
+- `enviarEscolhaDaIA`, o corpo dela;
+- o bloco *"a IA assume a rodada"*, que mandava sozinho no automático;
+- as três linhas da caixa que mostravam a opinião dela.
+
+**181 linhas removidas, 87 escritas.** `avaliarComIA` continua existindo e serve ao botão
+*"Avaliar o contato aberto"* da aba Config — ali é ele pedindo a opinião dela sem gastar uma rodada.
+
+### O que isso muda na prática
+
+- **Fica mais barato:** o caminho antigo gastava duas chamadas quando ela escalava (avaliar, depois
+  rascunhar). Agora é uma.
+- **A rodada automática PARA nesses ~5%**, com o rascunho pronto no campo — que é o que a tecla 6
+  sempre significou. Os 94% que o quadro decide seguem automáticos.
+- **O que sai para o eleitor deixou de poder ser escolhido pela IA.** Ela escreve, ele lê e manda.
+
+Quinze suítes verdes, os dois verificadores limpos — inclusive o que confere que toda opção da caixa
+tem um ramo que a executa, que é o que pegaria uma remoção pela metade. **Não foi visto na tela**:
+nenhuma suíte importa o `panel.js`.
 
 ---
 

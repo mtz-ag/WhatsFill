@@ -1316,6 +1316,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **A IA ESCREVE onde o deterministico nao resolve; ela nao escolhe mais resposta pronta.** Regra
+  dele (06/09/2026): *"o botao de chamar IA foi feito exatamente pra isso: quando nenhuma resposta
+  serve, ela da uma resposta personalizada. Essa e a funcao dela. Tudo que o deterministico nao
+  consegue resolver, ela resolve"*. A contradicao que saiu: **tecla 6 significa, por definicao, que
+  nenhuma resposta pronta serve** — e a IA escolhia uma, de um conjunto que a regra acabara de
+  dizer que nao servia, e com "Automatizar" marcado mandava e concluia. Era o unico ponto em que a
+  IA substituia uma decisao do quadro. Hoje as tres portas (nada decidiu, tecla 6, ramo `acao.ia`)
+  tem um desfecho so: **rascunho no campo de mensagem**, e ele manda. **Sairam junto** a tecla 0,
+  `enviarEscolhaDaIA`, o bloco "a IA assume a rodada" e as linhas da opiniao dela na caixa — 181
+  linhas removidas, porque funcao sem gatilho e a armadilha do `pedido-emprego`. `avaliarComIA`
+  continua viva no botao "Avaliar o contato aberto" da Config. **Fica mais barato** (uma chamada em
+  vez de duas quando ela escalava) e **a rodada automatica para nesses ~5%**, com o rascunho pronto
+  — que e o que a tecla 6 sempre significou.
+
 - **Ligar a IA muda DUAS coisas, e uma delas so existia no modo automatico.** Relato dele
   (06/09/2026): *"ao ativar a IA ela esta ignorando o fluxo; a IA deve assumir para ter certeza que
   a cidade esta correta e em casos que eu deveria assumir para responder"*. Medido em 20.000
