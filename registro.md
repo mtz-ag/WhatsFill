@@ -11102,7 +11102,7 @@ inclui um resumo do texto, então trocar de campanha zera a conta sozinho).
 ### O padrão, de novo
 
 É a terceira vez hoje que uma trava minha contra falso positivo derruba o caso verdadeiro:
-o `` antes de "É nós", a lista de etiquetas da caixa em vez das do contato, e agora estas duas
+o `\b` antes de "É nós", a lista de etiquetas da caixa em vez das do contato, e agora estas duas
 condições. Todas nasceram de "melhor não errar para o lado de fazer demais" — e o custo real foi
 não fazer nada no caso que importava.
 
@@ -11216,7 +11216,7 @@ parte das mensagens escape.
 
 Agora são três tentativas (`tags.casa`): a regra no texto cru, a regra no texto sem acento, e a
 regra sem acento no texto sem acento. **Testar nas duas versões em vez de trocar** — regra que já
-funcionava com acento continua funcionando, e nenhuma regex com classe de caractere ou `` é
+funcionava com acento continua funcionando, e nenhuma regex com classe de caractere ou `\b` é
 reescrita por mim. A terceira tentativa vem por último e dentro de `try`, porque
 `semAcentoNemCaixa` apaga metacaractere.
 
@@ -11480,7 +11480,7 @@ arquivo: sobrando substância, a regra não casa. Tem teste para os dois lados.
 
 A primeira versão **não pegava "É nós."** — justamente o caso que ele mandou.
 
-`` é fronteira de `w`, e `é` não é `w`. Então `/é nós/` **nunca** casa no começo da
+`\b` é fronteira de `\w`, e `é` não é `\w`. Então `/\bé nós/` **nunca** casa no começo da
 string. Só apareceu porque testei a frase dele literalmente antes de commitar; um teste com
 "e nos" sem acento teria passado e escondido o defeito. Virou armadilha no `CLAUDE.md`, porque o
 vocabulário deste projeto é cheio de acento no começo: "é nós", "ótimo", "amém".
