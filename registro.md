@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.67.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.68.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 ### O que está no ar
 
 Branch `claude/whatsfill-ia`, **v2.63.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
-(2.42 → 2.56) e **onze em 06/09** (2.57 a 2.67). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
+(2.42 → 2.56) e **doze em 06/09** (2.57 a 2.68). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -40,6 +40,7 @@ problemas e sem desfecho incoerente.
 | 2.65 | **Quem respondeu o cadastro não é concluído com pergunta em aberto**, e recebe o agradecimento da INFORMAÇÃO. |
 | 2.66 | **A perda de contexto conclui em vez de escorregar para o modelo** quando não há momento para mandar. |
 | 2.67 | **Quem retorna e escreveu em outro dia recebe a do momento, e não o modelo do anúncio.** |
+| 2.68 | **Link ou figura no fim não apaga a pergunta que ficou** — e "qual partido" e "gostaria de saber" passaram a ser reconhecidos. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -136,6 +137,57 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — O link no fim não apaga a pergunta que ficou (v2.68.0)
+
+Print da Maria Antonia: ela escreveu no dia **05** *"Boa noite capitão o senhor é candidato a qual
+partido desculpa a minha ignorância não prestei atenção"* e *"Gostaria muito saber se o senhor não
+se importa"*; no dia **06** mandou um link do TikTok, e a rodada mandou a mensagem do momento.
+Ele: *"ignorou por causa do link no final"*.
+
+### Ele apontou uma causa, e a medição achou DUAS
+
+| | antes | agora |
+|---|---|---|
+| `conversaTemPerguntaAberta` na rajada dela | **false** | true |
+| `perguntaPendente` | **false** | true |
+| o quadro | tecla 5 (`ultima-e-so-reacao`) | **tecla 6** |
+
+**1. A ordem — a causa que ele nomeou.** `ultima-e-so-reacao` fica acima de `pergunta-aberta` de
+propósito (responder um 👍 com texto é o que ela existe para impedir), mas **olha só a ÚLTIMA
+mensagem**, enquanto a pergunta pendente é da RAJADA — a lição da Ieda, de 04/09. Hoje ela exige
+`!perguntaAberta` na CONDIÇÃO, para valer no quadro dele sem depender de importar.
+
+**`perguntaAberta` e não `perguntaPendente`, de propósito:** o sinal amplo conta *"tudo bem?"*, que
+é metade das respostas ao formulário — com ele ali, quem cumprimenta e manda uma figura iria para a
+tecla 6.
+
+**2. O detector não reconhecia a pergunta dela.** Sem "?", a guarda de posição só aceita o padrão
+**abrindo** a mensagem, e ela abriu com *"Boa noite capitão"*. É a Ieda uma casa adentro: lá o
+cumprimento estava em outra mensagem, aqui está três palavras antes. Consertar só a ordem deixaria
+o caso dela igual.
+
+A guarda de posição existe pelo **"pq"** (*"fiquei grato pq sou Bolsonaro desde sempre"*), que é
+conjunção disfarçada de pergunta. **"qual" não tem esse problema**: seguido de substantivo nunca é
+explicação. Então a linha do *"qual a posição/opinião/proposta"* **subiu** para as inequívocas, com
+**partido, número, cargo e chapa** junto.
+
+**3. E "gostaria DE saber" nunca casou** — achado ao medir a segunda mensagem dela. O padrão exigia
+o verbo colado em "saber", então a forma mais comum de perguntar desta base era invisível. Mesma
+lição do *"trabalhar NA campanha"* (05/09): **a preposição e o advérbio são peças separadas**.
+
+### Falsos positivos
+
+Doze asserções novas, e sete são falso positivo: o "pq" explicativo, *"cada um tem sua opinião"*,
+*"meu partido é o PL"*, *"qualquer que seja o partido"*, o polegar sem pergunta (continua recebendo
+a do momento) e o link depois de já termos respondido hoje (continua concluindo). O falso positivo
+que **fica** é *"já sei qual o seu partido"* → tecla 6, o lado barato.
+
+**5 desfechos diferentes em 10.000 contextos sorteados**, todos saindo de "concluir". 15 suítes
+verdes, os dois verificadores limpos. **O `fluxoPadrao` não mudou de estrutura: nada novo para
+importar** — mas o **2.67.0 continua esperando**.
 
 ---
 

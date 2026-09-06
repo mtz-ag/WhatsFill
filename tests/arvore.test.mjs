@@ -2464,4 +2464,43 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   check(chegada?.tecla === '1' || chegada?.tecla === 'a', `pessoa NOVA de ontem: recebe o recibo (tecla ${chegada?.tecla})`);
 }
 
+{
+  grupo('o link no fim NAO apaga a pergunta que ficou (06/09/2026)');
+
+  /**
+   * Print da Maria Antonia: ela perguntou *"o senhor e candidato a qual partido"* no dia 05, no
+   * dia 06 mandou um link do TikTok, e a rodada mandou a mensagem do momento.
+   * Ele: *"ignorou por causa do link no final"*.
+   *
+   * `ultima-e-so-reacao` fica acima de `pergunta-aberta` de proposito (responder um polegar com
+   * texto e o que ela existe para impedir), e olha so a ULTIMA mensagem — enquanto a pergunta
+   * pendente e da RAJADA. A guarda entrou na CONDICAO, para valer no quadro dele sem importar.
+   */
+  const arvore = arv.fluxoPadrao();
+  const base = {
+    veioDeAnuncio: true,
+    jaRespondemosAntes: true,
+    temEtiquetaDeCidade: true,
+    podeEnviar: true,
+    podePedirDados: true,
+    podeMandarMomento: true,
+    momentoJaEnviado: false,
+    ultimaEhSoReacao: true,
+    textos: ['o senhor e candidato a qual partido', 'https://vt.tiktok.com/ZSq2mkb4N/'],
+    ultimoTexto: 'https://vt.tiktok.com/ZSq2mkb4N/',
+  };
+
+  const comPergunta = arv.decidir({ ...base, perguntaAberta: true }, arvore, {});
+  check(comPergunta?.tecla === '6', `com pergunta em aberto, o link nao decide (tecla ${comPergunta?.tecla})`);
+
+  // FALSO POSITIVO 1 — o polegar sozinho: a regra de 31/08 continua inteira.
+  const soReacao = arv.decidir({ ...base, perguntaAberta: false }, arvore, {});
+  check(soReacao?.tecla === '5', `so figura ou link, sem pergunta: mensagem do momento (tecla ${soReacao?.tecla})`);
+  check(soReacao?.id?.includes('ultima-e-so-reacao'), 'e quem decide continua sendo a caixa da reacao');
+
+  // FALSO POSITIVO 2 — ja respondemos hoje: o desfecho continua sendo concluir, nao a do momento.
+  const hoje = arv.decidir({ ...base, perguntaAberta: false, respondidoHoje: true }, arvore, {});
+  check(hoje?.tecla === '3', `ja respondeu hoje e ela mandou um link: conclui (tecla ${hoje?.tecla})`);
+}
+
 fim();

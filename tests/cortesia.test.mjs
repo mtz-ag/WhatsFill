@@ -1889,4 +1889,46 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
     'pergunta colada numa FIGURA continua sendo pergunta');
 }
 
+{
+  grupo('a pergunta no meio da mensagem (06/09/2026)');
+
+  /**
+   * Print da Maria Antonia: *"Boa noite capitao o senhor e candidato a qual partido desculpa a
+   * minha ignorancia nao prestei atencao"* (dia 05) e *"Gostaria muito saber se o senhor nao se
+   * importa"*; no dia 06 ela mandou um link do TikTok e a rodada mandou a mensagem do momento.
+   * Ele: *"ignorou por causa do link no final"*.
+   *
+   * Medido antes de mexer, os DOIS detectores devolviam false — nao era so a ordem das caixas:
+   * sem "?", a guarda de posicao so aceita o padrao ABRINDO a mensagem, e ela abriu com
+   * *"Boa noite capitao"*. E `PERGUNTA_DECLARADA` exigia o verbo colado em "saber".
+   */
+  const daMaria = 'Boa noite capitao o senhor e candidato a qual partido desculpa a minha ignorancia nao prestei atencao';
+  check(!!conversaTemPerguntaAberta([texto(daMaria)], null), 'a pergunta no MEIO da mensagem conta, sem "?"');
+  check(!!perguntaPendente([texto('Gostaria muito saber se o senhor nao se importa')], null),
+    '"gostaria MUITO saber": o adverbio no meio nao apaga a pergunta declarada');
+  check(!!perguntaPendente([texto('gostaria de saber se tem algum projeto')], null),
+    '"gostaria DE saber" — a forma mais comum, e ela nunca casava');
+
+  check(!!conversaTemPerguntaAberta([texto('qual seu partido')], null), 'qual + partido');
+  check(!!conversaTemPerguntaAberta([texto('Boa noite, qual o seu numero')], null), 'qual + numero, depois do cumprimento');
+  check(!!conversaTemPerguntaAberta([texto('nao sei qual a posicao dele sobre isso')], null),
+    'qual + posicao continua contando (era a linha que subiu de lista)');
+
+  /**
+   * **Os falsos positivos sao a metade cara.** A guarda de posicao existe pelo "pq" (print do
+   * Ciro), e ela continua de pe: o que subiu para as inequivocas foi so o "qual" seguido de
+   * substantivo, que nunca e conjuncao.
+   */
+  check(!conversaTemPerguntaAberta([texto('ficou muito grato pq sou Bolsonaro desde sempre')], null),
+    'o "pq" explicativo no meio da frase continua NAO sendo pergunta');
+  check(!conversaTemPerguntaAberta([texto('cada um tem sua opiniao e eu respeito')], null),
+    '"opiniao" sem o "qual" nao e pergunta');
+  check(!conversaTemPerguntaAberta([texto('meu partido e o PL desde 2018')], null),
+    '"partido" sem o "qual" nao e pergunta');
+  check(!conversaTemPerguntaAberta([texto('vou votar no senhor qualquer que seja o partido')], null),
+    '"qualquer" nao e "qual"');
+  check(!conversaTemPerguntaAberta([texto('apoio o senhor de qualquer jeito')], null),
+    'apoio comum continua fora');
+}
+
 fim();

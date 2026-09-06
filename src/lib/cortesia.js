@@ -550,13 +550,38 @@ const PERGUNTAS_INEQUIVOCAS = [
   /(^|[^\p{L}])(tem|existe|ha|teria)\s+(algum|alguma|algo)\s+.{0,20}?(projeto|lei|proposta|pl\b|emenda|medida)/iu,
   /(^|[^\p{L}])(vao|v[aã]o|vai|pretende[m]?|pensa[m]?)\s+(apoiar|votar|aprovar|derrubar|apresentar)/iu,
   /(^|[^\p{L}])(o\s+que|oq)\s+.{0,25}?(fazer|far[aã]o?)\s+(sobre|quanto|a\s+respeito|com)/iu,
+  /**
+   * **"QUAL" mais o substantivo é interrogativo em qualquer posição** — print da Maria Antonia
+   * (06/09/2026).
+   *
+   * Ela escreveu *"Boa noite capitão o senhor é candidato a qual partido desculpa a minha
+   * ignorância não prestei atenção"* e, no dia seguinte, mandou um link do TikTok. A pergunta foi
+   * ignorada. Medido: `conversaTemPerguntaAberta` devolvia **false** — sem "?", a guarda de
+   * posição só aceita o padrão ABRINDO a mensagem, e ela abriu com *"Boa noite capitão"*.
+   *
+   * É a lição da Ieda (04/09) uma casa adentro: lá o cumprimento estava em outra MENSAGEM e
+   * escondia a pergunta; aqui está na mesma mensagem, três palavras antes dela.
+   *
+   * **A guarda de posição existe pelo "pq"** (*"fiquei grato pq sou Bolsonaro desde sempre"*, print
+   * do Ciro), e é uma conjunção que se disfarça de pergunta. **"qual" não tem esse problema**:
+   * seguido de um destes substantivos, ele nunca é explicação. Por isso a linha do "qual a
+   * posição/opinião/proposta" **saiu da lista de baixo e entrou aqui**, com partido, número e
+   * cargo junto — a identificação política é a mesma classe: depende de nós responder, e nenhuma
+   * resposta pronta a cobre.
+   *
+   * O falso positivo conhecido é *"já sei qual o seu partido"*, e o custo dele é a tecla 6 — o
+   * lado barato, o mesmo que a inversão de 04/09 já aceitou.
+   */
+  /(^|[^\p{L}])qual\s+(e\s+)?(o\s+|a\s+)?(seu\s+|sua\s+)?(posi[çc][aã]o|opini[aã]o|proposta|ideia|partido|n[uú]mero|numero|cargo|chapa)/iu,
 ];
 
 const PERGUNTAS_QUE_PEDEM_VOCE = [
   // Razão: "por que não tem propaganda aqui?"
   /(^|[^\p{L}])(por\s?qu[eê]|pq|pk)(\s|\?|$)/iu,
   // Posição e opinião: dependem do que ELE pensa
-  /(^|[^\p{L}])qual\s+(a\s+)?(posi[çc][aã]o|opini[aã]o|proposta|ideia)/iu,
+  // "qual a posição/opinião/proposta" subiu para `PERGUNTAS_INEQUIVOCAS` em 06/09/2026, junto de
+  // partido, número e cargo: "qual" seguido de substantivo nunca é conjunção, então a guarda de
+  // posição (que existe pelo "pq") só o estava escondendo. Print da Maria Antonia.
   /(^|[^\p{L}])o\s+que\s+(ele|voc[eê]s?|o\s+candidato|o\s+deputado)\s+(acha|acham|pensa|pensam|vai|v[aã]o|pretende|pretendem|faria|fariam|far[aá]|far[aã]o)/iu,
   /(^|[^\p{L}])como\s+(ele|voc[eê]s?)\s+(vai|v[aã]o|pretende|pretendem|pensa|pensam)/iu,
   /**
@@ -650,9 +675,20 @@ const PERGUNTAS_QUE_PEDEM_VOCE = [
 const ABRE_PERGUNTANDO =
   /^\s*(o\s+)?(que|qual|quais|quem|quando|onde|aonde|como|quanto|quanta|quantos|quantas|cade|porque|por\s?que|pq|sera)\b/i;
 
-/** "queria saber", "me diz", "me informa" — pergunta declarada, sem interrogação. */
+/**
+ * "queria saber", "me diz", "me informa" — pergunta declarada, sem interrogação.
+ *
+ * **O advérbio e a preposição entram no meio, e a forma mais comum de todas não casava.** Print da
+ * Maria Antonia (06/09/2026): ela escreveu *"Gostaria muito saber se o senhor não se importa"*, e o
+ * padrão exigia o verbo COLADO em "saber". Medido na hora: **"gostaria DE saber" também não
+ * casava** — a forma que mais aparece nesta base, e a mesma que a anotação da Eliana (02/09) já
+ * tinha trazido escrita.
+ *
+ * É a lição registrada em 05/09 sobre "trabalhar NA campanha": **em lista de formas, a preposição
+ * e o advérbio são peças separadas** — e o defeito parece "a regra não existe".
+ */
 const PERGUNTA_DECLARADA =
-  /(^|[^\p{L}])((queria|gostaria|quero)\s+saber|me\s+(diz|diga|informa|informe|explica|explique)|fiquei\s+na\s+duvida|tenho\s+uma\s+duvida)/iu;
+  /(^|[^\p{L}])((queria|gostaria|quero)(\s+(de|muito|mesmo|bastante|tanto|bem))*\s+saber|me\s+(diz|diga|informa|informe|explica|explique)|fiquei\s+na\s+duvida|tenho\s+uma\s+duvida)/iu;
 
 /**
  * **A pergunta foi retirada depois?** *"deixa pra lá"*, *"esquece"*, *"já resolvi"*.

@@ -620,7 +620,26 @@ export const REGRAS = [
      * segunda mensagem nossa em cima da que ela ainda nem comentou.
      */
     tecla: (c) => (c.respondidoHoje || !c.podeMandarMomento ? '3' : '5'),
-    quando: (c) => c.ultimaEhSoReacao,
+    /**
+     * **Uma figura ou um link no fim NÃO apaga a pergunta que ficou para trás** — print da Maria
+     * Antonia (06/09/2026).
+     *
+     * Ela perguntou *"o senhor é candidato a qual partido"* no dia 05, no dia 06 mandou um link do
+     * TikTok, e a rodada mandou a mensagem do momento. Ele: *"ignorou por causa do link no final"*.
+     *
+     * Esta caixa fica ACIMA de `pergunta-aberta` de propósito — responder um 👍 com texto é o que
+     * ela existe para impedir. Mas ela olha só a ÚLTIMA mensagem, e a pergunta pendente é da
+     * RAJADA (lição da Ieda, 04/09): quem perguntou e depois repassou um vídeo continua esperando
+     * resposta, e o link não é uma retratação.
+     *
+     * **A guarda é `perguntaAberta` e não `perguntaPendente`, de propósito.** O sinal amplo conta
+     * *"tudo bem?"*, que é metade das respostas ao formulário — com ele aqui, quem cumprimenta e
+     * manda uma figura iria para a tecla 6. O estreito é exatamente "nenhuma resposta pronta
+     * responde isto", que é o caso em que a figura não pode decidir nada.
+     *
+     * **Na CONDIÇÃO e não na ordem**, porque vale no quadro dele sem depender de importar.
+     */
+    quando: (c) => c.ultimaEhSoReacao && !c.perguntaAberta,
     motivo: (c) =>
       c.respondidoHoje
         ? 'você já respondeu hoje e ela mandou só uma figura, emoji ou link — pode concluir.'
