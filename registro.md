@@ -6,9 +6,15 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.63.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
-(2.42 → 2.56) e **doze em 06/09** (2.57 a 2.68). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
-problemas e sem desfecho incoerente.
+Branch `claude/whatsfill-ia`, **v2.68.0** (`7c4541d`), tudo commitado e no remoto. Quinze versões no
+dia 05/09 (2.42 → 2.56) e **doze em 06/09** (2.57 a 2.68). Quinze suítes verdes, os dois
+verificadores limpos (38 arquivos), **63 caixas** no fluxo padrão sem problemas e sem desfecho
+incoerente.
+
+> **Esta entrada tinha envelhecido no meio.** Numa passagem anterior o título e a tabela foram até
+> 2.68 e **o corpo ficou em 2.63** — foi ele quem desconfiou (*"o limite acabou no meio da
+> atualização"*). Reescrito em 06/09 com os fatos remedidos: versão, contagem de arquivos, o quadro
+> comparado contra o de 2.56, e as decisões abertas que a mudança de papel da IA tornou falsas.
 
 ### O que mudou hoje, em uma linha cada
 
@@ -48,19 +54,23 @@ problemas e sem desfecho incoerente.
    `faq.whatsapp.com`"* aparece no cabeçalho do painel quando acontece. O conserto de 2.48 impede
    novos casos; **não** limpa os que já foram gravados. A aba Cidades lista o que não casa com os
    497 municípios — é por ali que se acha o resto.
-2. **IMPORTAR O FLUXO — e desta vez importa de verdade.** Foi entregue a ele o
-   `fluxo-padrao-2.56.0.json` (**63 caixas**, o primeiro com o carimbo de versão dentro); o quadro
-   dele é o de **2.41.0** (60). Depois de importar, a janela passa a dizer sozinha se ele está em
-   dia — é o que a 2.56 resolveu. Duas caixas
-   novas do dia só decidem depois da importação, e **isso foi medido**:
+2. **IMPORTAR O FLUXO — e o arquivo que ele tem em mãos JÁ ESTÁ VELHO.** O último entregue foi o
+   `fluxo-padrao-2.56.0.json`; o quadro dele é o de **2.41.0** (60 caixas). **Medido comparando o
+   `fluxoPadrao` de agora com o de 2.56:** mesmo número de caixas (63), mas a **2.67 mudou a ORDEM**
+   — `contexto-de-outro-dia` subiu para cima do grupo *"veio de um anúncio que eu reconheço"*, nos
+   DOIS ramos do retorno. No quadro a posição é a prioridade, então isso muda desfecho. Gerar um
+   novo antes de mandar: `node tools/exportar-fluxo.mjs <saida.json>`, saída FORA do repositório.
+
+   O que só decide depois da importação, medido:
    - **`nao-pode-falar-agora`** (2.53) entrou como `tambemQuando` de uma caixa que ele já tem — mas
      `tambemQuando` é conteúdo da caixa, e o quadro dele é uma cópia. Simulando o quadro atual, o
      caso da Elenir **continua recebendo o modelo (tecla 1)** em vez da tecla 6. E não vale como
      proteção do código: `arvore.PROTECOES` só cobre efeito `silencio`, e esta é `gente`;
-   - **`rajada-de-anuncios`** (2.54) é caixa nova em três lugares, e caixa nova nunca entra sozinha.
+   - **`rajada-de-anuncios`** (2.54) é caixa nova em três lugares;
+   - **a ordem da 2.67**, acima.
 
-   O resto do dia foi em CONDIÇÃO de regra do código, que vale em qualquer quadro. Regenerar com
-   `node tools/exportar-fluxo.mjs <saida.json>`, saída FORA do repositório.
+   Depois de importar, a janela passa a dizer sozinha se ele está em dia — é o que a 2.56 resolveu.
+   O resto foi em CONDIÇÃO de regra do código, que vale em qualquer quadro.
 3. **Aba Automatizado → "Etiquetas que a rodada aplica": as três continuam vazias.**
    - **SEM INTERESSE** — a rodada não marca, e na visita seguinte precisa redescobrir a hostilidade
      do zero. Ficou mais caro hoje: `semInteresse` passou a pegar o xingamento no imperativo, e sem
@@ -75,10 +85,14 @@ problemas e sem desfecho incoerente.
 
 ### Aberto, esperando decisão dele
 
-- **A rodada PARA no rascunho da IA** (`esperarVoceConcluir`, até 30 min ou até ele concluir). Ele
-  reportou *"bloqueio de mensagens ao mandar a IA responder"* e, perguntado, disse que o que viu foi
-  **resposta rápida com o Enviar apagado** — resolvido em 2.46 (o motivo saiu do tooltip e foi para a
-  tela). **A parada da rodada continua como está**, e ninguém decidiu mexer.
+- **A IA mudou de papel em 06/09, e isto substitui o item que estava aqui.** Ela não escolhe mais
+  resposta pronta (2.58: a tecla 0 e `enviarEscolhaDaIA` foram removidas); nas três portas dela o
+  desfecho é **um só, o rascunho no campo**. Com "Automatizar" marcada junto, **o rascunho é enviado
+  sem perguntar** (2.60, pedido dele) — é a única coisa do projeto que sai para eleitor sem ele ter
+  lido, e as duas travas que ficam são `rascunhoPodeSairSozinho`: marcador esquecido e promessa de
+  entregar. **Nada aqui espera decisão: está como ele pediu.** O que continua valendo a pena
+  observar é se o rascunho automático produz mensagem que ele não teria mandado — se produzir, a
+  decisão é dele, como foi em 03/09.
 - **Áudio antigo sem pergunta: gente ou tempo?** Hoje cai em `ultima-pede-resposta-pessoal` (tecla 6).
 - **Casamento aproximado de cidade ainda abre a caixa "Cidade a gravar."**
 - **O "me liga" não aplica etiqueta nenhuma** — é um id a mais em `ETIQUETA_PEDIDO_IDS` se ele quiser.
@@ -93,18 +107,22 @@ problemas e sem desfecho incoerente.
 
 ### O que foi medido e o que não foi
 
-**Nada do dia 05/09 foi testado na tela** — tudo medido em Node, contra o fluxo padrão e com o
-contexto reconstruído de cada print. As correções do dia são de CONDIÇÃO e de detector, que é o que
+**Nada dos dias 05 e 06/09 foi testado na tela** — tudo medido em Node, contra o fluxo padrão e com
+o contexto reconstruído de cada print. As correções são de CONDIÇÃO e de detector, que é o que
 permite medir sem navegador.
 
-Três coisas do dia **não têm como ser provadas aqui**, e estão ditas nos commits:
+**O que NÃO tem como ser provado aqui**, e está dito nos commits:
 
-- **`dom.temConversaAnterior`** (2.50) lê o DOM da plataforma;
-- **os botões da aba Respostas** (2.52) são interface, e nenhuma suíte importa o `panel.js`, que
-  precisa de `window`;
-- **o prompt do rascunho** (2.55) é pedido, não regra: o que os testes provam é o texto que sai
-  daqui, nunca o que o modelo faz com ele. Se continuar soando a terceira pessoa, o caminho é o do
-  traço eme — o que for mecânico vira conserto em `revisarRascunho`.
+- **`dom.temConversaAnterior`** (2.50) lê o DOM da plataforma. **É a primeira coisa a conferir com
+  ele** — ver a linha nas decisões abertas;
+- **toda a interface** — os botões da aba Respostas (2.52), o interruptor único da IA (2.59, 2.60),
+  a linha de versão da janela do fluxo (2.56). Nenhuma suíte importa o `panel.js` nem o `fluxo.js`,
+  que precisam de `window`;
+- **os prompts** (2.55, 2.62, 2.63): prompt é pedido, não regra. O que os testes provam é o texto
+  que sai daqui, nunca o que o modelo faz com ele. O caminho, quando falha, é o do traço eme — o que
+  for mecânico vira conserto em `revisarRascunho`; o que exige julgamento fica como aviso;
+- **o rascunho ENVIADO sozinho** (2.60) nunca foi visto saindo. As travas são testadas; o efeito num
+  eleitor real, não.
 
 **Um caso não foi reproduzido**: o texto de 927 caracteres que virou "sem interesse" (2.51) devolve
 `null` no detector, inteiro e em nove pedaços. O gatilho está no que a print não mostra. A guarda que
@@ -120,10 +138,21 @@ cu"* e *"você é um desgraçado"* também passavam batido —, achar a causa, c
 desfecho no fluxo padrão**, escrever o teste de regressão **com os falsos positivos junto**,
 registrar aqui e no `CLAUDE.md`, subir a versão e commitar. Uma versão por print.
 
-**Duas armadilhas do ambiente, que custaram tempo hoje:** escrita de arquivo por script Python às
-vezes **não persiste** (o script diz que escreveu e o arquivo não muda) — quando acontecer, use a
-ferramenta Edit; e escape de `\n` dentro de string JS escrita por script vira quebra de linha de
-verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
+**Armadilhas do ambiente, que custaram tempo nestes dois dias:**
+
+- escrita de arquivo por script Python às vezes **não persiste** (o script diz que escreveu e o
+  arquivo não muda) — quando acontecer, use a ferramenta Edit;
+- escape de `\n` dentro de string JS escrita por script vira quebra de linha de verdade, o que
+  quebra o arquivo em silêncio até o `checar-modulos` acusar;
+- **heredoc do bash com conteúdo grande trunca sem erro claro** — o aviso é `here-document delimited
+  by end-of-file`, e o `.py` fica pela metade. Para script longo, escreva o arquivo com a ferramenta
+  Write e só então rode.
+
+**E a armadilha desta própria entrada:** ela pode envelhecer no MEIO. Numa passagem anterior o
+título e a tabela foram até 2.68 e o corpo ficou em 2.63 — ao reescrevê-la, **remeça** cada número
+em vez de confiar no que está escrito: a versão, a contagem de arquivos dos verificadores, as caixas
+do quadro (e o quadro comparado contra o último arquivo entregue a ele) e as decisões abertas que
+uma mudança de comportamento pode ter tornado falsas.
 
 ### Onde as coisas moram
 
