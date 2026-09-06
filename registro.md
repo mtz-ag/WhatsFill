@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.62.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.63.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.62.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
-(2.42 → 2.56) e **seis em 06/09** (2.57 a 2.62). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
+Branch `claude/whatsfill-ia`, **v2.63.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
+(2.42 → 2.56) e **sete em 06/09** (2.57 a 2.63). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -35,6 +35,7 @@ problemas e sem desfecho incoerente.
 | 2.60 | **O rascunho da IA é ENVIADO sozinho** com "Automatizar" marcada, e o interruptor dela subiu para o topo da aba. |
 | 2.61 | **As três negativas saem uma vez por contato**; repetida, o caso desce para você ou para a IA. |
 | 2.62 | **O padrão de atendimento dele virou o prompt do rascunho** — e o prompt cruzou o mínimo de cache do Haiku. |
+| 2.63 | **Gênero: na dúvida, neutro** — e o nome do cadastro não serve para deduzir. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -131,6 +132,38 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — Gênero: na dúvida, neutro (v2.63.0)
+
+Print da Marli: a IA escreveu *"Você está **coberto** de razão em cobrar"* para uma contato chamada
+Marli. *"a IA não reconheceu o gênero dela e usou no masculino; quando não conseguir identificar,
+utilizar no neutro"*.
+
+### O sinal que vale, e o que NÃO vale
+
+O confiável é **como ela fala de si na conversa** — *"obrigada"*, *"estou cansada"*, *"sozinha"*.
+
+**O nome do cadastro não serve, e isso é uma decisão, não esquecimento:** é o mesmo nome que a regra
+1 do prompt manda não usar porque erra demais nesta base (apelido do perfil, cidade no campo do
+nome, `[NOVO] …`). Confiar nele para deduzir gênero seria confiar, para uma coisa, no dado que não
+se confia para outra.
+
+Na dúvida, contornar: *"Você está coberto de razão"* → *"Você tem toda razão"*. Os exemplos vão
+escritos no prompt de propósito — mandar "escreva no neutro" sem mostrar como deixa o modelo no
+masculino, que é o padrão dele em português.
+
+### Por que isto ficou no PROMPT, e não virou conserto nem aviso
+
+A disciplina de `revisarRascunho` é: **mecânico e sem julgamento vira conserto** (o traço eme),
+**verificável mas não corrigível vira aviso** (abriu com "entendi"), e o resto fica no prompt.
+
+Concordância de gênero não passa nem no segundo: **sem saber o gênero, o aviso tocaria também nos
+rascunhos certos** — inclusive quando a IA acertou o feminino porque ela escreveu "obrigada". Alarme
+que toca sempre é alarme que se aprende a ignorar, e este tocaria em quase todo rascunho.
+
+Três asserções novas. Quinze suítes verdes, os dois verificadores limpos.
 
 ---
 

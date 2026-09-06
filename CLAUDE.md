@@ -1317,6 +1317,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **GENERO: na duvida, neutro — e o nome do cadastro NAO serve para deduzir.** Print da Marli
+  (06/09/2026): a IA escreveu *"Voce esta COBERTO de razao em cobrar"* para uma contato chamada
+  Marli. O sinal confiavel e como ela fala de si na conversa (*"obrigada"*, *"cansada"*); o nome do
+  cadastro e o MESMO que a regra 1 manda nao usar porque erra demais — confiar nele para deduzir
+  genero seria confiar, para uma coisa, no dado que nao se confia para outra. **Ficou no PROMPT, e
+  nao virou aviso**, porque a disciplina de `revisarRascunho` e: mecanico vira conserto, verificavel
+  vira aviso, o resto fica no prompt — e aqui **sem saber o genero o aviso tocaria tambem nos
+  rascunhos certos**, inclusive quando a IA acerta o feminino. Os exemplos de contorno vao escritos
+  ("coberto de razao" -> "tem toda razao"): mandar "escreva no neutro" sem mostrar como deixa o
+  modelo no masculino, que e o padrao dele em portugues.
+
 - **`atendimento.PADRAO_DE_ATENDIMENTO` e um DOCUMENTO DELE, como o `fluxoPadrao` — nao altere sem
   ele pedir.** Entregue em 06/09/2026 (*"a IA deve seguir esse padrao para responder"*), 37 secoes,
   e virou o corpo do prompt de sistema do rascunho. **Arquivo proprio** porque `ia.js` e mecanica e

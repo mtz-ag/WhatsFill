@@ -178,6 +178,22 @@ grupo('rascunho: o prompt proíbe o que a lei proíbe, e ensina o tom pelos text
   check(/9\.504/.test(sistema), 'cita a lei eleitoral');
   check(/cesta|rem[ée]dio|emprego/i.test(sistema), 'proíbe prometer bem ou benefício');
   check(/N[ÃA]O chame a pessoa pelo nome/i.test(sistema), 'mantém a regra do projeto de não usar nome');
+
+  /**
+   * **Genero: na duvida, neutro** — regra dele (06/09/2026), com a print da Marli: a IA escreveu
+   * *"Voce esta COBERTO de razao em cobrar"* para uma contato chamada Marli.
+   *
+   * Fica no PROMPT e nao em `revisarRascunho` porque concordancia nao e mecanica: consertar
+   * exigiria saber o genero e analisar a frase, e AVISAR seria pior — sem saber o genero, o aviso
+   * tocaria tambem nos rascunhos certos, e alarme que toca sempre se aprende a ignorar.
+   *
+   * O teste guarda as duas metades: a regra do neutro e o EXEMPLO concreto. Mandar "escreva no
+   * neutro" sem mostrar como deixa o modelo no masculino, que e o padrao dele em portugues.
+   */
+  check(/na d[úu]vida, escreva no NEUTRO/i.test(sistema), 'manda escrever no neutro quando nao souber o genero');
+  check(/coberto de raz[ãa]o/i.test(sistema), 'e mostra COMO, com o exemplo da print da Marli');
+  check(/o nome do cadastro N[ÃA]O serve/i.test(sistema),
+    'e proibe deduzir o genero pelo nome do cadastro, que e o mesmo que a regra 1 manda nao usar');
   check(/Obrigado pela atenção/.test(sistema), 'as respostas DELE entram como exemplo de estilo');
   check(/agenda de terça/.test(sistema), 'as instruções dele entram');
   check(/n[ãa]o invente/i.test(sistema), 'proíbe inventar informação');

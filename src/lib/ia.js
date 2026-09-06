@@ -651,8 +651,36 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      */
     '1. NÃO chame a pessoa pelo nome. É regra do mandato: o cadastro erra o nome com frequência',
     '   alta demais, e errar o nome de alguém é pior do que não usar nenhum.',
-    '2. Nunca use {{variáveis}} nem qualquer marcador: escreva o texto final, pronto para enviar.',
-    '3. Sobre o candidato, a chapa e as pautas, use SÓ o que estiver na conversa e no bloco',
+    /**
+     * **Gênero: na dúvida, neutro** — regra dele (06/09/2026), com a print da Marli.
+     *
+     * A IA escreveu *"Você está **coberto** de razão em cobrar"* para uma contato chamada Marli.
+     * Ele: *"a IA não reconheceu o gênero dela e usou no masculino; quando não conseguir
+     * identificar, utilizar no neutro"*.
+     *
+     * **O sinal confiável é como ELA fala de si** (*"obrigada"*, *"estou cansada"*, *"sozinha"*),
+     * não o nome do cadastro — que é o mesmo nome que a regra 1 diz para não usar, justamente
+     * porque erra. Usá-lo para deduzir gênero seria confiar, para uma coisa, no dado que não se
+     * confia para outra.
+     *
+     * **Fica no PROMPT e não em `revisarRascunho`** porque concordância não é mecânica: consertar
+     * exigiria saber o gênero e analisar a frase. É a fronteira que separa o traço eme (troca) de
+     * "abriu com entendi" (aviso) — e aqui não dá nem para avisar sem julgar.
+     *
+     * Os exemplos são concretos de propósito: mandar "escreva no neutro" sem mostrar como fazer
+     * deixa o modelo no masculino, que é o padrão dele em português.
+     */
+    '2. CONCORDÂNCIA DE GÊNERO: só use masculino ou feminino quando tiver certeza. O sinal que vale',
+    '   é como a própria pessoa fala de si na conversa ("obrigada", "estou cansada", "sozinha") —',
+    '   o nome do cadastro NÃO serve, é o mesmo que a regra 1 manda não usar porque erra demais.',
+    '   Na dúvida, escreva no NEUTRO: contorne o adjetivo em vez de escolher um gênero.',
+    '   "Você está coberto de razão" → "Você tem toda razão".',
+    '   "Fico grato pela mensagem" → "Agradeço a mensagem".',
+    '   "Seja bem-vindo" → "Que bom ter você por aqui".',
+    '   "Você deve estar cansado" → "Imagino o cansaço que isso dá".',
+    '   (O "obrigado" de quem escreve é do mandato, e continua no masculino.)',
+    '3. Nunca use {{variáveis}} nem qualquer marcador: escreva o texto final, pronto para enviar.',
+    '4. Sobre o candidato, a chapa e as pautas, use SÓ o que estiver na conversa e no bloco',
     '   "Quem é quem" abaixo. É a mesma regra do documento ("não invente informação"), dita aqui',
     '   porque aqui está a fonte.',
     '',
