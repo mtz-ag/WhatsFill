@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.63.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.64.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 ### O que está no ar
 
 Branch `claude/whatsfill-ia`, **v2.63.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
-(2.42 → 2.56) e **sete em 06/09** (2.57 a 2.63). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
+(2.42 → 2.56) e **oito em 06/09** (2.57 a 2.64). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -36,6 +36,7 @@ problemas e sem desfecho incoerente.
 | 2.61 | **As três negativas saem uma vez por contato**; repetida, o caso desce para você ou para a IA. |
 | 2.62 | **O padrão de atendimento dele virou o prompt do rascunho** — e o prompt cruzou o mínimo de cache do Haiku. |
 | 2.63 | **Gênero: na dúvida, neutro** — e o nome do cadastro não serve para deduzir. |
+| 2.64 | **A legenda de um vídeo/link encaminhado não conta como pergunta** — vai para a mensagem do momento. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -132,6 +133,43 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — A legenda de um repasse não é pergunta (v2.64.0)
+
+Print do Eraldo: ele encaminhou um vídeo com a legenda *"Você é Patriota? Então coloque este Vídeo
+nos grupos !"*. A interrogação fez o caso cair em `pergunta-aberta` (tecla 6), a IA escreveu uma
+resposta longa explicando que não pode fazer campanha com recursos de terceiros, e ele apagou.
+
+*"a pessoa está encaminhando links e legendas, a resposta ficou fora de contexto; seria uma exceção
+à regra da pergunta: pergunta com link usa a regra de mandar mensagem do momento ou agradecer as
+informações e encerrar"*.
+
+### Por que ele está certo
+
+A "pergunta" da legenda é **retórica e nem é dirigida a nós** — ela veio escrita no próprio material
+que circula em grupo. Respondê-la é responder ao autor do vídeo, não à pessoa.
+
+**Não é o conserto de ontem.** O `semLinks` (2.45) tirava o "?" da *query string* da URL; aqui a
+interrogação está no texto de verdade. O que a desqualifica é **o que ela acompanha**.
+
+### O corte: vídeo e link, não figura
+
+`ehLegendaDeRepasse` usa o mesmo critério que `ehRepasse` já usava — **vídeo ou link**. Figura fica
+de fora de propósito: nesta base ela é o "bom dia ilustrado", mas também é a foto do exame, da rua
+esburacada, do documento. *"Olha meu exame, vocês conseguem ajudar?"* colado numa figura **continua
+sendo pergunta**; a mesma frase colada num vídeo encaminhado, não.
+
+Medido no caso da print: **tecla 5** — mensagem do momento —, contra a tecla 6 de antes.
+
+### Uma asserção de ontem foi INVERTIDA
+
+O teste de 05/09 dizia *"pergunta COM link junto continua sendo pergunta"*. A regra dele de hoje diz
+o contrário, e a inversão está escrita no teste com o motivo. O custo é conhecido e foi escolhido
+por ele: pergunta de verdade colada num link passa a receber a mensagem do momento.
+
+Sete asserções novas. Quinze suítes verdes, os dois verificadores limpos.
 
 ---
 

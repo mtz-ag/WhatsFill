@@ -1317,6 +1317,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **A LEGENDA de um repasse nao e pergunta para nos.** Print do Eraldo (06/09/2026): video
+  encaminhado com a legenda *"Voce e Patriota? Entao coloque este Video nos grupos !"* caiu em
+  `pergunta-aberta` (tecla 6) e a IA escreveu uma resposta longa sobre recursos de terceiros — ele
+  apagou. *"pergunta com link usa a regra de mandar mensagem do momento ou agradecer as informacoes
+  e encerrar"*. A pergunta da legenda e RETORICA e nem e dirigida a nos: ela veio escrita no
+  material que circula em grupo. **Nao e o conserto de 05/09** (`semLinks` tirava o "?" da query
+  string; aqui a interrogacao e texto de verdade — o que a desqualifica e o que ela acompanha).
+  **O corte e VIDEO ou LINK, e nao figura**, o mesmo de `ehRepasse`: figura nesta base tambem e a
+  foto do exame e do documento, e *"olha meu exame, voces ajudam?"* continua sendo pergunta. Uma
+  assercao de 05/09 foi INVERTIDA por isto, com o motivo escrito no teste.
+
 - **GENERO: na duvida, neutro — e o nome do cadastro NAO serve para deduzir.** Print da Marli
   (06/09/2026): a IA escreveu *"Voce esta COBERTO de razao em cobrar"* para uma contato chamada
   Marli. O sinal confiavel e como ela fala de si na conversa (*"obrigada"*, *"cansada"*); o nome do

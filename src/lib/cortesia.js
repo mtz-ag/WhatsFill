@@ -53,6 +53,40 @@ const LINK = /(https?:\/\/\S+|www\.\S+|\b[a-z0-9-]+\.(com|br|net|org|me|tv|app|i
  *
  * Vale para as duas pontas: o corte de "mensagem própria" e a soma da rajada.
  */
+/**
+ * **A LEGENDA de um repasse nao e pergunta para nos** — regra dele (06/09/2026), com a print do
+ * Eraldo.
+ *
+ * Ele encaminhou um video com a legenda *"Voce e Patriota? Entao coloque este Video nos grupos !"*,
+ * a interrogacao fez a caixa cair em `pergunta-aberta` (tecla 6), e a IA escreveu uma resposta
+ * longa explicando que nao pode fazer campanha com recursos de terceiros. Ele apagou. *"a pessoa
+ * esta encaminhando links e legendas, a resposta ficou fora de contexto; seria uma excecao a regra
+ * da pergunta: pergunta com link usa a regra de mandar mensagem do momento ou agradecer as
+ * informacoes e encerrar"*.
+ *
+ * **A "pergunta" da legenda e retorica, e nem e dirigida a nos** — ela veio escrita no proprio
+ * material que circula em grupo. Responde-la e responder ao autor do video, nao a pessoa.
+ *
+ * **Isto NAO e o conserto de 05/09** (`semLinks`), que tirava o "?" da query string da URL. Aqui a
+ * interrogacao esta no texto de verdade; o que a desqualifica e o que ela acompanha.
+ *
+ * O custo conhecido: pergunta de verdade colada num link (*"olha isso, voces vao apoiar?"*) deixa
+ * de ir para a tecla 6 e recebe a mensagem do momento. Foi a troca que ele escolheu, e o erro e
+ * recuperavel — ele ve a linha na rodada.
+ */
+function ehLegendaDeRepasse(msg) {
+  /**
+   * **VÍDEO ou LINK — e FIGURA não**, que é o mesmo corte que `ehRepasse` já fazia.
+   *
+   * `TIPOS_COMPARTILHADOS` tem IMAGE dentro por causa do "bom dia ilustrado", mas figura nesta base
+   * também é a foto do exame, da rua esburacada, do documento — coisa DELA, não conteúdo de
+   * terceiro. Uma pergunta colada numa figura *("olha meu exame, vocês ajudam?")* continua sendo
+   * pergunta; colada num vídeo encaminhado, não.
+   */
+  if (String(msg?.tipo || 'TEXT').toUpperCase() === 'VIDEO') return true;
+  return LINK.test(String(msg?.texto || ''));
+}
+
 function semLinks(texto) {
   return String(texto || '')
     .replace(LINK, ' ')
@@ -661,6 +695,8 @@ export function perguntaPendente(entrantes, nossaUltimaAt) {
       .trim();
 
   for (let i = 0; i < rajada.length; i++) {
+    // Legenda de repasse nao conta como pergunta pendente — ver `ehLegendaDeRepasse`.
+    if (ehLegendaDeRepasse(rajada[i])) continue;
     const texto = semLinks(rajada[i].texto);
     const semAcento = plano(rajada[i]);
     if (!semAcento) continue;
@@ -1515,6 +1551,13 @@ export function conversaTemPerguntaAberta(entrantes, nossaUltimaAt) {
      * Tirar o link antes também arruma a guarda de POSIÇÃO: com a URL na frente, o padrão de
      * pergunta nunca estava "no começo da mensagem".
      */
+    /**
+     * **E a LEGENDA de um repasse não conta como pergunta** — regra dele (06/09/2026), print do
+     * Eraldo. Ver `ehLegendaDeRepasse`: a interrogação está no texto de verdade, não na URL, mas
+     * ela veio escrita no material que circula em grupo — responder é responder ao autor do vídeo.
+     */
+    if (ehLegendaDeRepasse(msg)) continue;
+
     const texto = semLinks(msg?.texto);
     if (!texto) continue;
     if (PEDIDO_DE_MATERIAL.test(texto)) continue;

@@ -1704,13 +1704,20 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(!conversaTemPerguntaAberta(rajada, null), 'nem pergunta');
 
   /**
-   * **O outro lado, que e o que importa guardar:** pergunta de verdade continua indo para ele, com
-   * link ou sem, e texto escrito continua contando.
+   * **O outro lado, que e o que importa guardar:** pergunta de verdade continua indo para ele, e
+   * texto escrito continua contando.
    */
   check(!!conversaTemPerguntaAberta([texto('Voce e candidato daqui do RS?')], null),
     'pergunta de verdade continua sendo pergunta');
-  check(!!conversaTemPerguntaAberta([texto('o que voce acha disso? ' + L)], null),
-    'pergunta COM link junto continua sendo pergunta');
+
+  /**
+   * **A assercao "pergunta COM link continua sendo pergunta" foi INVERTIDA em 06/09/2026**, por
+   * regra dele, e a inversao esta certa: *"pergunta com link usa a regra de mandar mensagem do
+   * momento ou agradecer as informacoes e encerrar"* (print do Eraldo). Ver `ehLegendaDeRepasse` —
+   * o custo e conhecido e foi escolhido por ele.
+   */
+  check(!conversaTemPerguntaAberta([texto('o que voce acha disso? ' + L)], null),
+    'pergunta colada num link NAO conta mais como pergunta (06/09)');
   check(!!conversaPedeRespostaPessoal(
     [texto('preciso muito falar com voces'), texto('ninguem me responde nunca'), texto('ja tentei varias vezes')],
     null, []), 'tres mensagens escritas de verdade continuam sendo conversa');
@@ -1850,6 +1857,36 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
 
   check(!rajadaDeAnuncios([irene[0]], null, []), 'um clique so e a chegada normal, nao rajada');
   check(!rajadaDeAnuncios([], null, []), 'conversa vazia nao casa');
+}
+
+{
+  grupo('legenda de repasse nao e pergunta (06/09/2026)');
+
+  /**
+   * Print do Eraldo: ele encaminhou um video com a legenda *"Voce e Patriota? Entao coloque este
+   * Video nos grupos !"*, a interrogacao fez cair em `pergunta-aberta` (tecla 6) e a IA escreveu
+   * uma resposta longa sobre nao poder fazer campanha com recursos de terceiros. Ele apagou.
+   *
+   * *"a pessoa esta encaminhando links e legendas, a resposta ficou fora de contexto; seria uma
+   * excecao a regra da pergunta: pergunta com link usa a regra de mandar mensagem do momento ou
+   * agradecer as informacoes e encerrar"*.
+   *
+   * **Nao e o conserto de 05/09** (`semLinks`, que tirava o "?" da query string): aqui a
+   * interrogacao esta no texto de verdade. O que a desqualifica e o que ela acompanha.
+   */
+  const doEraldo = { texto: 'Voce e Patriota? Entao coloque este Video nos grupos !', tipo: 'VIDEO' };
+  check(!conversaTemPerguntaAberta([doEraldo], null), 'a legenda do video encaminhado nao e pergunta');
+  check(!perguntaPendente([doEraldo], null), 'e nao deixa pergunta pendente, que e o que impede concluir');
+
+  const comLink = texto('Voce e Patriota? Coloque nos grupos! https://www.instagram.com/reel/DCkXvC2AykS/');
+  check(!conversaTemPerguntaAberta([comLink], null), 'a mesma legenda com link tambem nao');
+
+  /**
+   * **FIGURA continua contando**, e o corte e o mesmo que `ehRepasse` ja fazia: video e link sao
+   * conteudo de terceiro; figura nesta base tambem e a foto do exame, da rua, do documento.
+   */
+  check(!!conversaTemPerguntaAberta([{ texto: 'olha meu exame, voces conseguem ajudar?', tipo: 'IMAGE' }], null),
+    'pergunta colada numa FIGURA continua sendo pergunta');
 }
 
 fim();
