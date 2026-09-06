@@ -1317,6 +1317,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **A caixa pode CASAR e mesmo assim perder — e o mesmo sintoma tem as duas causas.** Print da
+  Leonilda (06/09/2026), horas depois da Noeli e com a mesma frase dele: *"aconteceu a mesma coisa,
+  bom dia depois modelo"*. Aqui `contexto-de-outro-dia` casava; ela **perdia para o grupo do anuncio
+  reconhecido**, que estava logo acima no bloco de quem retorna. **O sinal que separa as duas causas
+  e o QUADRO CONTRA A TABELA**: medido no contexto dela, o quadro dava tecla 1 e `sugerirAcao` dava
+  5 — discordancia entre os dois motores e problema de POSICAO; os dois concordando no desfecho
+  errado e problema de CONDICAO. Meça os dois antes de escolher onde mexer. O conserto foi mover o
+  tempo para cima do grupo do anuncio **so no bloco de quem retorna**: o argumento da posicao antiga
+  era o RECIBO (*"um clique de ontem continua sendo um pedido"*), e neste bloco o clique dela ja foi
+  respondido. Na CHEGADA continua abaixo do recibo. Excecao dele que nao depende disso: o material
+  pedido, que mora na CONDICAO.
+
 - **Guarda na CONDICAO faz a caixa sair da frente — e quem entra no lugar pode ser justamente quem
   ela existia para impedir.** Print da Noeli (06/09/2026): escreveu no dia 05 e recebeu **o modelo
   da campanha** no dia 06 — *"ignorou a regra da perda de contexto e mandou modelo"*. A regra nao

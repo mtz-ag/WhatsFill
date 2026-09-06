@@ -2409,4 +2409,59 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   check(semMomento?.tecla === '3', 'sem momento configurado: conclui, e NAO manda o modelo');
 }
 
+{
+  grupo('quem RETORNA: o tempo vence o modelo do anuncio (06/09/2026)');
+
+  /**
+   * Print da Leonilda: ela clicou no anuncio em 04/09, **nos respondemos** em 05/09 as 11:03, ela
+   * escreveu *"Bom dia capitao Martins"* e *"Pode contar com meu voto"* as 11:05 e 11:07 — e no
+   * dia 06 recebeu **o modelo**. Ele: *"ela tem conversa anterior, entao recebe mensagem do
+   * momento; ela respondeu e retornou, recebeu modelo do contexto perdido"*.
+   *
+   * A caixa do tempo CASAVA e perdia para o grupo do anuncio reconhecido, que estava logo acima.
+   * O argumento antigo era do RECIBO (*"um clique de ontem continua sendo um pedido"*) e nao vale
+   * aqui: neste bloco ja a atendemos, o clique dela ja foi respondido, e ela respondeu de volta.
+   *
+   * As tres ultimas assercoes sao os falsos positivos, que e onde mora o risco desta mudanca.
+   */
+  const arvore = arv.fluxoPadrao();
+  const leonilda = {
+    veioDeAnuncio: true,
+    anuncioReconhecido: true,
+    jaRespondemosAntes: true,
+    temEtiquetaDeCidade: true,
+    soExpressaApoio: true,
+    podeEnviar: true,
+    podePedirDados: true,
+    deOutroDia: true,
+    textos: ['Bom dia capitao Martins', 'Pode contar com meu voto para deputado estadual'],
+    ultimoTexto: 'Pode contar com meu voto para deputado estadual',
+  };
+
+  const comMomento = arv.decidir({ ...leonilda, podeMandarMomento: true, momentoJaEnviado: false }, arvore, {});
+  check(comMomento?.tecla === '5', `retorno de outro dia: mensagem do momento, e nao o modelo (tecla ${comMomento?.tecla})`);
+  check(comMomento?.id?.includes('contexto-de-outro-dia'), 'e quem decide e a caixa do tempo, nao o grupo do anuncio');
+
+  const semMomento = arv.decidir({ ...leonilda, podeMandarMomento: false, momentoJaEnviado: false }, arvore, {});
+  check(semMomento?.tecla === '3', 'sem momento configurado: conclui, e continua NAO mandando o modelo');
+
+  // FALSO POSITIVO 1 — a Rosa (03/09): ela voltou clicando num anuncio HOJE, e o modelo daquele
+  // anuncio e a resposta. O tempo nao alcanca quem escreveu hoje.
+  const hoje = arv.decidir({ ...leonilda, deOutroDia: false, podeMandarMomento: true, momentoJaEnviado: false }, arvore, {});
+  check(hoje?.tecla === '1', `clicou HOJE: o modelo do anuncio sai igual (tecla ${hoje?.tecla})`);
+
+  // FALSO POSITIVO 2 — o material (05/09): *"o modelo de material e uma excecao, ele sempre tem
+  // que ser mandado quando requisitado"*. A guarda esta na CONDICAO da regra, entao nao depende
+  // desta posicao.
+  const material = arv.decidir({ ...leonilda, materialPendente: true, podeMandarMomento: true, momentoJaEnviado: false }, arvore, {});
+  check(material?.tecla === '1', `material pedido e nao entregue: o modelo vence o dia (tecla ${material?.tecla})`);
+
+  // FALSO POSITIVO 3 — a CHEGADA (04/09): quem nunca recebeu nada tem direito ao recibo mesmo que
+  // a rodada so a alcance no dia seguinte. La o tempo continua ABAIXO do recibo.
+  const chegada = arv.decidir(
+    { ...leonilda, jaRespondemosAntes: false, temEtiquetaDeCidade: false, podeMandarMomento: true, momentoJaEnviado: false },
+    arvore, {});
+  check(chegada?.tecla === '1' || chegada?.tecla === 'a', `pessoa NOVA de ontem: recebe o recibo (tecla ${chegada?.tecla})`);
+}
+
 fim();

@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.66.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.67.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 ### O que está no ar
 
 Branch `claude/whatsfill-ia`, **v2.63.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
-(2.42 → 2.56) e **dez em 06/09** (2.57 a 2.66). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
+(2.42 → 2.56) e **onze em 06/09** (2.57 a 2.67). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -39,6 +39,7 @@ problemas e sem desfecho incoerente.
 | 2.64 | **A legenda de um vídeo/link encaminhado não conta como pergunta** — vai para a mensagem do momento. |
 | 2.65 | **Quem respondeu o cadastro não é concluído com pergunta em aberto**, e recebe o agradecimento da INFORMAÇÃO. |
 | 2.66 | **A perda de contexto conclui em vez de escorregar para o modelo** quando não há momento para mandar. |
+| 2.67 | **Quem retorna e escreveu em outro dia recebe a do momento, e não o modelo do anúncio.** |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -135,6 +136,52 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — Quem retorna: o tempo vence o modelo do anúncio (v2.67.0)
+
+Print da Leonilda, no mesmo dia da 2.66 e com o mesmo sintoma: *"aconteceu a mesma coisa, bom dia
+depois modelo"*. Ela clicou no anúncio em **04/09 16:51**, **nós respondemos** em 05/09 às 11:03,
+ela escreveu *"Bom dia capitão Martins"* (11:05) e *"Pode contar com meu voto para deputado
+estadual"* (11:07) — e no dia **06** recebeu **o modelo**.
+
+Correção dele, que é o diagnóstico: *"ela tem conversa anterior, então recebe mensagem do momento;
+ela respondeu e retornou, recebeu modelo do contexto perdido"*.
+
+### Desta vez a caixa CASOU — e perdeu
+
+Medido antes de mexer, com o contexto dela nas seis combinações:
+
+| | antes | agora |
+|---|---|---|
+| anúncio **não** reconhecido | 5 / 3 / 3 | 5 / 3 / 3 |
+| **anúncio reconhecido** | **1 — o modelo, nas três** | **5 / 3 / 3** |
+
+O quadro dava tecla 1 e a **tabela dava 5** na mesma entrada: quadro e tabela discordando é o
+próprio sintoma. Quem vencia era o grupo *"veio de um anúncio que eu reconheço"*, logo acima da
+caixa do tempo.
+
+### O argumento antigo era do RECIBO, e o recibo já tinha acontecido
+
+A posição vinha de 04/09: *"clicar num anúncio é pedir uma coisa específica, e um clique de ontem
+continua sendo um pedido"*. Verdade — **para quem clicou e ainda não ouviu nada de nós**. Este
+bloco é o de quem **já foi atendida** (`jaRespondemosAntes`): o clique dela já foi respondido, ela
+respondeu de volta, e o assunto esfriou de um dia para o outro.
+
+Na **chegada** nada mudou: lá o tempo continua abaixo do recibo, porque quem nunca recebeu nada tem
+direito a ele mesmo que a rodada só a alcance no dia seguinte.
+
+### Os três falsos positivos, todos com teste
+
+- **a Rosa (03/09)** — clicou num anúncio **hoje**: o modelo daquele anúncio sai igual (tecla 1);
+- **o material (05/09)** — pediu e não recebeu: o modelo vence o dia (a guarda é `!materialPendente`,
+  na CONDIÇÃO, então não depende desta posição);
+- **a chegada (04/09)** — pessoa nova de ontem: continua recebendo o recibo (tecla `a`).
+
+**0 desfechos diferentes em 10.000 contextos sorteados** — o conserto só alcança retorno + outro dia
++ anúncio reconhecido. Seis asserções novas, 15 suítes verdes, 63 caixas sem problemas.
+**O `fluxoPadrao` mudou de ordem: o arquivo 2.67.0 foi para ele.**
 
 ---
 

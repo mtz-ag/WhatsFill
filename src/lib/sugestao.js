@@ -695,9 +695,9 @@ export const REGRAS = [
      * Por isso esta regra substituiu a bifurcação de tempo que vivia lá dentro: um conceito, um
      * lugar. `so-expressa-apoio` voltou a ser só "agradece".
      *
-     * **As guardas estão na condição, e são o que impede a repetição:** sem mensagem do momento
-     * configurada, ou já tendo saído para essa pessoa, a regra não casa e o quadro decide como
-     * antes.
+     * **As guardas do momento decidem o DESFECHO e não se a caixa casa** (06/09/2026, acima): sem
+     * mensagem do momento configurada, ou já tendo saído para essa pessoa, a regra continua
+     * vencendo e conclui — o que ela nunca pode fazer é deixar o caso escorregar para quem envia.
      *
      * **A exceção da pergunta está na CONDIÇÃO, e não só na posição** — print da Ieda (04/09/2026).
      * Ele nomeou a exceção no dia em que criou a regra: *"único pretexto que exclui a necessidade

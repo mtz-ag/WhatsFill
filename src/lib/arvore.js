@@ -888,22 +888,44 @@ export function fluxoPadrao() {
      */
     r('rajada-de-anuncios', 'só clicou em vários anúncios: mensagem do momento', onde),
 
-    grupo('veio de um anúncio que eu reconheço', { sinal: 'anuncioReconhecido', negar: false, palavras: [], onde: 'ultima' }, [
-      r('conteudo-pedido', 'manda o modelo daquele anúncio', `${onde}-anuncio`),
-    ]),
-
     /**
-     * **O tempo fica ABAIXO do anúncio reconhecido, e acima de todo o resto que envia.**
+     * **NA VOLTA o tempo fica ACIMA do anúncio reconhecido** — print da Leonilda (06/09/2026).
      *
-     * Clicar num anúncio é pedir uma coisa específica; o `CLAUDE.md` já registra que escolha
-     * explícita dela não se substitui por dedução nossa. Um clique de ontem continua sendo um
-     * pedido, e o modelo daquele anúncio é a resposta.
+     * Ela clicou no anúncio em 04/09, **nós respondemos** em 05/09 às 11:03, ela escreveu
+     * *"Bom dia capitão Martins"* e *"Pode contar com meu voto"* às 11:05 e 11:07 — e no dia 06
+     * recebeu **o modelo**. Ele: *"ela tem conversa anterior, então recebe mensagem do momento;
+     * ela respondeu e retornou, recebeu modelo do contexto perdido"*.
+     *
+     * A caixa do tempo casava; ela **perdia** para o grupo do anúncio reconhecido, que estava
+     * logo acima. Medido antes de mexer: com o anúncio reconhecido o quadro dava tecla 1
+     * (`conteudo-pedido`) nas três combinações do momento, enquanto a tabela dava 5 ou 3 — o
+     * quadro e a tabela discordando é o próprio sintoma.
+     *
+     * **O argumento antigo era do RECIBO, e aqui o recibo já aconteceu.** Ele dizia: *"clicar num
+     * anúncio é pedir uma coisa específica, e um clique de ontem continua sendo um pedido"* — o
+     * que é verdade para quem clicou e ainda não ouviu nada de nós. Este bloco é o de **quem já
+     * foi atendida** (`jaRespondemosAntes`): o clique dela já foi respondido, ela respondeu de
+     * volta, e o assunto esfriou de um dia para o outro. Aí o modelo do anúncio responde a uma
+     * conversa que acabou.
+     *
+     * **Na CHEGADA nada muda**: lá o tempo continua abaixo de `anuncio-modelo-e-dados`, porque
+     * quem nunca recebeu nada tem direito ao recibo mesmo que a rodada só a alcance no dia
+     * seguinte (decisão dele de 04/09, e a rodada quase sempre roda depois).
+     *
+     * **A exceção do material continua valendo, e é na CONDIÇÃO**: `contexto-de-outro-dia` exige
+     * `!materialPendente`, então quem pediu material ontem e não recebeu segue caindo aqui embaixo
+     * e ganhando o modelo — a regra dele de 05/09 não depende desta posição.
      *
      * Daqui para baixo o tempo manda: o agradecimento pelo cadastro, o agradecimento pelo apoio e o
      * modelo por etiqueta de conteúdo foram os quatro casos de 04/09, e nos quatro ele pediu a
      * mensagem do momento.
      */
     r('contexto-de-outro-dia', 'a última dela é de outro dia', onde),
+
+    grupo('veio de um anúncio que eu reconheço', { sinal: 'anuncioReconhecido', negar: false, palavras: [], onde: 'ultima' }, [
+      r('conteudo-pedido', 'manda o modelo daquele anúncio', `${onde}-anuncio`),
+    ]),
+
     { ...r('respondeu-os-dados', 'agradecer: respondeu os dados, ou só expressou apoio', onde),
       tambemQuando: ['so-expressa-apoio'] },
     r('conteudo-pedido', 'pediu conteúdo e há modelo mapeado', onde),
