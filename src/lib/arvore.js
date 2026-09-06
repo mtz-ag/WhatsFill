@@ -1221,6 +1221,19 @@ export function fluxoPadrao() {
     r('so-expressa-apoio', 'só expressou apoio (não sobrou o que mandar)', 'chegada'),
 
     /**
+     * **O FECHO da chegada** — entrou em 06/09/2026, com a guarda nova do modelo.
+     *
+     * O ramo do retorno sempre terminou em `ja-respondemos-antes`, que não olha o que ela escreveu
+     * e por isso pega o que ninguém pegou. A chegada não tinha nada disso: quem atravessava as
+     * vinte caixas sem casar em nenhuma **saía da rodada sem desfecho**, em silêncio.
+     *
+     * Não incomodava enquanto `conteudo-pedido` era largo o bastante para varrer o resto. Com a
+     * guarda de *"já falamos hoje"* isso mudou — medido: 14 casos em 30.000 passariam a ficar sem
+     * desfecho, todos aqui. Como é a ÚLTIMA caixa do ramo, ela só alcança o que sobrou.
+     */
+    r('ja-respondemos-antes', 'já falamos hoje: conclui', 'chegada'),
+
+    /**
      * **A pendência: o que ela escreveu DEPOIS da mensagem do anúncio.**
      *
      * *"após o modelo terá que ver se tem uma pendência que é a mensagem após a mensagem de anúncio

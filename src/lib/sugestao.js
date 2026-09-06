@@ -846,7 +846,21 @@ export const REGRAS = [
       if (c.perguntaPendente) return '6';
       return c.respondidoHoje || c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5';
     },
-    quando: (c) => !!c.jaRespondemosAntes,
+    /**
+     * **`respondidoHoje` entrou na condição em 06/09/2026**, junto com a guarda nova de
+     * `conteudo-pedido` — e é o que impede um buraco silencioso.
+     *
+     * Esta caixa é o fecho: ela não olha o que a pessoa escreveu, só que já fomos atendidos antes.
+     * Barrando o modelo de quem já foi respondido hoje, **os casos em que nada mais casa passariam
+     * a atravessar o quadro sem desfecho** — medido, 14 em 30.000, todos no ramo da CHEGADA, que
+     * não tinha fecho nenhum.
+     *
+     * Semanticamente é a mesma coisa: "já respondemos antes" e "já respondemos hoje" são os dois
+     * lados de *já falamos com esta pessoa*. Os ramos do RETORNO não mudam — quem chega neles já
+     * tem `jaRespondemosAntes` verdadeiro —, e o desfecho continua sendo o mesmo da função `tecla`,
+     * que sempre soube tratar `respondidoHoje`.
+     */
+    quando: (c) => !!c.jaRespondemosAntes || !!c.respondidoHoje,
     motivo: (c) =>
       c.respondidoHoje
         ? 'já respondemos hoje e ela voltou — pode concluir.'
@@ -918,7 +932,41 @@ export const REGRAS = [
      * automação da plataforma ou à mão por outra pessoa. Sem isso a rodada sugeria mandar de novo
      * o que estava na tela algumas mensagens acima (print dele, 31/08).
      */
-    quando: (c) => c.podeEnviar && !c.enviadoHoje && !c.modeloJaNaConversa,
+    /**
+     * **Já falamos hoje? Então o modelo só sai se houver um clique de anúncio esperando resposta.**
+     * Regra dele (06/09/2026), com quatro prints da Sirlene em ordem: *"o modelo só sai novamente no
+     * contexto do anúncio; se tiver resposta minha após o anúncio, não mandar"*.
+     *
+     * Ela clicou no anúncio em 04/09, recebeu a mensagem do momento em 05/09 e de novo na manhã de
+     * 06/09. Às 12:31 escreveu *"10.122 já está anotado 🌸💕"* — uma confirmação, que não pede nada
+     * — e às 13:23 recebeu o **modelo institucional** com agradecimento e conclusão em cima. *"O
+     * modelo tem sido mandado fora de contexto, achei que tinha sido arrumado mas continua."*
+     *
+     * **As duas guardas de tempo que existiam são sobre o MODELO** — `enviadoHoje` e
+     * `modeloJaNaConversa` — e nenhuma sabe que **já respondemos alguma coisa hoje**, que é o que
+     * quase sempre acontece: a do momento sai de manhã, a pessoa agradece, e a regra lê a etiqueta
+     * de conteúdo dela como se fosse um pedido de agora. **A etiqueta é permanente; o pedido é da
+     * rajada.** É a distinção que já apareceu na `momentoJaEnviado` da Janete (04/09).
+     *
+     * **As duas exceções são as duas coisas que a pessoa acabou de PEDIR**, e nas duas o pedido
+     * ainda não foi entregue:
+     *  - `anuncioReconhecido`, que desde hoje significa *"há um clique de anúncio depois da nossa
+     *    última fala"* — respondido, o anúncio se cala (ver `anuncioSemResposta` no painel);
+     *  - `pedeMaterial`, decisão dele de 05/09: *"o modelo de material é uma exceção, ele sempre tem
+     *    que ser mandado quando requisitado"*.
+     *
+     * **Isto refina a decisão de 01/09** (*"se continuar como na print o modelo nunca será enviado
+     * porque está concluindo após resolver a pendência"*), e o invariante daquele dia continua de
+     * pé: o modelo não fica preso atrás da pendência para sempre — ele sai na primeira passada de um
+     * dia em que ainda não falamos, em vez de na segunda passada do mesmo dia. O que tornava aquilo
+     * um risco real era a caixa do cumprimento repetir a mensagem do momento a cada passada, e ela
+     * ganhou `excecao: momentoJaEnviado` em 03/09.
+     */
+    quando: (c) =>
+      c.podeEnviar &&
+      !c.enviadoHoje &&
+      !c.modeloJaNaConversa &&
+      (!c.respondidoHoje || !!c.anuncioReconhecido || !!c.pedeMaterial),
     motivo: (c) => `pediu "${c.conteudoPedido || 'conteúdo'}" e há modelo mapeado — mande.`,
   },
   {

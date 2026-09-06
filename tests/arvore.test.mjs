@@ -611,7 +611,22 @@ grupo('o modelo nao pode ficar preso atras da pendencia (01/09/2026)');
    * casava de novo na passada seguinte e o modelo ficava preso atras dela para sempre.
    */
   check(tecla({ ...base, respondidoHoje: false, soCortesia: { motivo: 'cumprimentou' } }) === '5', 'primeira passada resolve a pendencia');
-  check(tecla({ ...base, respondidoHoje: true, momentoJaEnviado: true }) === '1', 'segunda passada MANDA O MODELO');
+
+  /**
+   * **REFINADO em 06/09/2026, com os quatro prints da Sirlene.** A asercao aqui dizia *"segunda
+   * passada MANDA O MODELO"*, e era isso que fazia o modelo institucional sair em cima de um
+   * *"10.122 ja esta anotado"*, horas depois de nos termos respondido. Regra dele: *"o modelo so
+   * sai novamente no contexto do anuncio; se tiver resposta minha apos o anuncio, nao mandar"*.
+   *
+   * **O invariante de 01/09 continua de pe, e e o que este bloco protege**: o modelo nao fica
+   * preso atras da pendencia para sempre. O que mudou e QUANDO ele se solta -- na primeira passada
+   * de um dia em que ainda nao falamos, em vez de na segunda passada do mesmo dia. E sai HOJE
+   * mesmo se houver o que ela acabou de pedir: um clique de anuncio sem resposta, ou material.
+   */
+  check(tecla({ ...base, respondidoHoje: true, momentoJaEnviado: true }) === '3', 'ja tendo respondido hoje, conclui em vez de mandar o modelo');
+  check(tecla({ ...base, respondidoHoje: false, momentoJaEnviado: true }) === '1', 'no dia seguinte o modelo sai -- ele nao fica preso');
+  check(tecla({ ...base, respondidoHoje: true, momentoJaEnviado: true, anuncioReconhecido: true }) === '1', 'e sai HOJE se houver clique de anuncio esperando resposta');
+  check(tecla({ ...base, respondidoHoje: true, momentoJaEnviado: true, pedeMaterial: { motivo: 'quero o material' } }) === '1', 'e tambem se ela pediu material (05/09)');
 
   check(tecla({ ...base, respondidoHoje: false, textos: [], ultimoTexto: '' }) === '1', 'quem chega sem pendencia recebe o modelo direto');
 
@@ -1157,7 +1172,8 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   // 21 desde 04/09, quando as situacoes que levam ao mesmo desfecho foram JUNTADAS numa caixa so
   // (pedido dele: "junte todas as situacoes que sao usadas na mesma tecla").
   // 20 desde 05/09, com "so clicou em varios anuncios" (print da Irene).
-  check(chegada.filhos.length === 20, 'e a chegada tem 20 caixas, nao 21');
+  // 21 desde 06/09, com o FECHO ("ja falamos hoje: conclui") -- ver o grupo da Sirlene.
+  check(chegada.filhos.length === 21, 'e a chegada tem 21 caixas, nao 22');
 
   /**
    * **"Nada legivel dela" entrou em 03/09** (print do Tilin: dois avisos de tipo nao suportado,
@@ -1179,8 +1195,17 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
    * anuncio esta cadastrado. Em cima, esta caixa agradeceria a chegada de todo anuncio novo e
    * engoliria o recibo. Se alguem a subir, este teste cai.
    */
+  /**
+   * **Em 06/09 o apoio deixou de ser o ultimo NO, e continua sendo o ultimo que ENVIA.** Abaixo
+   * dele entrou o fecho da chegada (`ja-respondemos-antes`), que so conclui -- ver o grupo da
+   * Sirlene. O que este teste protege nao mudou: o apoio nao pode SUBIR.
+   */
+  check(naChegada.indexOf('so-expressa-apoio') > naChegada.indexOf('anuncio-modelo-e-dados'),
+    'o apoio continua abaixo do recibo do anuncio');
+  check(naChegada.indexOf('so-expressa-apoio') > naChegada.indexOf('conteudo-pedido'),
+    'e abaixo do modelo');
   const ultima = chegada.filhos[chegada.filhos.length - 1];
-  check(ultima.regra === 'so-expressa-apoio', 'o apoio e a ULTIMA caixa da chegada');
+  check(ultima.regra === 'ja-respondemos-antes', 'e o FECHO e a ultima caixa -- sem ele o ramo termina sem desfecho');
   const posApoio = naChegada.indexOf('so-expressa-apoio');
   for (const antes of ['anuncio-modelo-e-dados', 'conteudo-pedido', 'nunca-pediram-dados']) {
     check(naChegada.indexOf(antes) < posApoio, `"${antes}" decide antes do apoio`);

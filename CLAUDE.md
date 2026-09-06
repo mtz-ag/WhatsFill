@@ -1318,6 +1318,40 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   nao e gravar**: ele entra como pendente, e quem decide continua sendo a IA ou ele. **Cidade de
   outro estado ficou de fora de proposito:** "Curitiba" nao casa com os 497 mas e um lugar de
   verdade, e troca-la por uma cidade citada de passagem seria inventar.
+- **O CLIQUE no anuncio so vale enquanto nao for respondido — e o modelo segue o clique.** Regra
+  dele (06/09/2026), com quatro prints da Sirlene em ordem: *"o modelo so sai novamente no contexto
+  do anuncio; se tiver resposta minha apos o anuncio, nao mandar"*. Ela clicou em 04/09, recebeu a
+  mensagem do momento em 05/09 e de novo na manha de 06/09, escreveu *"10.122 ja esta anotado"* as
+  12:31 e as 13:23 recebeu o MODELO institucional — *"o modelo tem sido mandado fora de contexto,
+  achei que tinha sido arrumado mas continua"*. E a armadilha ja registrada (**o texto do anuncio
+  fica na conversa para sempre**) chegando por outra porta: `state.anuncio` responde "de qual
+  anuncio ela veio", e isso nunca deixa de ser verdade. Hoje ha `state.anuncioSemResposta`, que le
+  **so a rajada** (o que ela escreveu desde a nossa ultima fala) e so aceita a `utm` quando ainda
+  nao falamos nada na sessao — a `utm` e da SESSAO e nao tem horario proprio. **`state.anuncio`
+  continua sendo quem aplica as etiquetas de origem**, que sao permanentes de proposito; o que passou
+  a depender da resposta e o MODELO e o sinal `anuncioReconhecido` do quadro.
+- **As guardas de tempo de `conteudo-pedido` eram todas sobre o MODELO, e nenhuma sabia que ja
+  tinhamos falado hoje.** `enviadoHoje` e `modeloJaNaConversa` respondem "o modelo ja saiu?"; o que
+  acontece quase sempre e outra coisa — a mensagem do momento sai de manha, a pessoa agradece, e a
+  regra le a **etiqueta de conteudo** dela como se fosse um pedido de agora. **A etiqueta e
+  permanente; o pedido e da rajada** (mesma distincao da `momentoJaEnviado` da Janete, 04/09). Hoje
+  a regra exige `!respondidoHoje`, com duas excecoes que sao as duas coisas que ela acabou de pedir
+  e ainda nao recebeu: **clique de anuncio sem resposta** e **material pedido** (05/09).
+- **Isto REFINOU a decisao de 01/09, e o invariante dela continua de pe.** Naquele dia ele disse *"se
+  continuar como na print o modelo nunca sera enviado porque esta concluindo apos resolver a
+  pendencia"*, e o teste travava *"segunda passada MANDA O MODELO"*. O modelo continua nao ficando
+  preso atras da pendencia — o que mudou e QUANDO ele se solta: na primeira passada de um dia em que
+  ainda nao falamos, em vez de na segunda passada do mesmo dia. O que tornava aquilo um risco real
+  era a caixa do cumprimento repetir a mensagem do momento a cada passada, e ela ganhou
+  `excecao: momentoJaEnviado` em 03/09.
+- **A CHEGADA nao tinha FECHO, e barrar o modelo revelou isso.** O ramo do retorno sempre terminou em
+  `ja-respondemos-antes`, que nao olha o texto e por isso pega o que ninguem pegou; a chegada nao
+  tinha nada disso — quem atravessava as vinte caixas sem casar saia da rodada **sem desfecho, em
+  silencio**. Nao incomodava enquanto `conteudo-pedido` era largo o bastante para varrer o resto.
+  Medido: com a guarda nova, 14 casos em 30.000 passariam a ficar sem desfecho, **todos ali**. Hoje a
+  chegada termina em `ja-respondemos-antes` tambem, e a condicao dela virou
+  `jaRespondemosAntes || respondidoHoje` — "ja respondemos antes" e "ja respondemos hoje" sao os dois
+  lados da mesma coisa, e os ramos do retorno nao mudam porque quem chega neles ja tem o primeiro.
 
 - **Xingamento no IMPERATIVO e segunda pessoa, e a lista nao sabia disso.** Print dele (05/09/2026):
   a contato chegou pelo anuncio e um minuto depois escreveu *"Entao va para o inferno..

@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.69.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.70.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.69.0**, tudo commitado e no remoto. Quinze versões no
-dia 05/09 (2.42 → 2.56) e **treze em 06/09** (2.57 a 2.69). Quinze suítes verdes, os dois
+Branch `claude/whatsfill-ia`, **v2.70.0**, tudo commitado e no remoto. Quinze versões no
+dia 05/09 (2.42 → 2.56) e **catorze em 06/09** (2.57 a 2.70). **64 caixas** no fluxo padrão. Quinze suítes verdes, os dois
 verificadores limpos (38 arquivos), **63 caixas** no fluxo padrão sem problemas e sem desfecho
 incoerente.
 
@@ -48,6 +48,7 @@ incoerente.
 | 2.67 | **Quem retorna e escreveu em outro dia recebe a do momento, e não o modelo do anúncio.** |
 | 2.68 | **Link ou figura no fim não apaga a pergunta que ficou** — e "qual partido" e "gostaria de saber" passaram a ser reconhecidos. |
 | 2.69 | **Endereço de máquina nunca é cidade**, e link gravado no campo deixa de bloquear a correção — a IA passa a resolver esses casos. |
+| 2.70 | **O clique no anúncio só vale enquanto não for respondido**, e o modelo não sai se já falamos hoje. A chegada ganhou FECHO. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -59,9 +60,9 @@ incoerente.
    por ali que se acha o resto.
 2. **IMPORTAR O FLUXO — e o arquivo que ele tem JÁ É o quadro de hoje.** O último entregue foi o
    `fluxopadrao2.67.0.json` (06/09, 14:13). **Medido, comparando caixa a caixa com o `fluxoPadrao`
-   de agora: idêntico** — 63 caixas, mesma ordem, mesmas condições, ações e `tambemQuando`, zero
-   linhas em posição diferente. A 2.68 mexeu só em detectores (`perguntaPendente`,
-   `PERGUNTAS_INEQUIVOCAS`), que são código e valem em qualquer quadro.
+   de agora: era idêntico até a 2.69** — 63 caixas, mesma ordem, mesmas condições. **A 2.70 mudou
+   isso:** a chegada ganhou uma caixa (o FECHO, `ja-respondemos-antes`), e o padrão passou a ter
+   **64**. O arquivo dele voltou a ficar uma caixa atrás.
 
    > **Uma passagem anterior desta entrada dizia que o último era o `fluxo-padrao-2.56.0.json` e que
    > o arquivo dele estava velho.** Estava errado: o 2.67.0 foi gerado depois, e já traz a ordem
@@ -177,6 +178,81 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — O clique no anúncio só vale enquanto não for respondido (v2.70.0)
+
+### O caso, em quatro prints
+
+A **Sirlene** clicou no anúncio das Escolas Cívico-Militares em **04/09 às 19:53**. Recebeu a
+mensagem do momento em **05/09 às 11:41**, uma figura de "boa noite" no meio, a mensagem do momento
+de novo na **manhã de 06/09** — e às **12:31** escreveu:
+
+> *"10.122 já está anotado 🌸💕"*
+
+Às **13:23** recebeu o **modelo institucional do canal de transmissões**, com agradecimento e
+conclusão em cima. Ele: *"o modelo tem sido mandado fora de contexto, achei que tinha sido arrumado
+mas continua; veja se é problema do fluxo"*.
+
+### A regra, que é dele
+
+Perguntado entre duas leituras possíveis, ele deu uma terceira, mais precisa que as minhas:
+
+> *"O modelo só sai novamente no contexto do anúncio; se tiver resposta minha após o anúncio, não
+> mandar."*
+
+### Duas coisas mandavam o modelo, e as duas foram fechadas
+
+**1. O clique de 04/09 continuava mandando em 06/09.** É a armadilha já registrada — *o texto do
+anúncio fica na conversa para sempre* — chegando por outra porta: `state.anuncio` responde *"de qual
+anúncio ela veio"*, e isso não deixa de ser verdade nunca. Nasceu `state.anuncioSemResposta`, que lê
+**só a rajada** e só aceita a `utm` quando ainda não falamos nada na sessão (a `utm` é da sessão e
+não tem horário próprio). `state.anuncio` continua aplicando as etiquetas de origem, que são
+permanentes de propósito.
+
+**2. A etiqueta de conteúdo dela.** Fechado o anúncio, `conteudo-pedido` casava do mesmo jeito — ela
+tem "CONTEÚDO FLÁV" no CRM. **As duas guardas de tempo daquela regra são sobre o MODELO**
+(`enviadoHoje`, `modeloJaNaConversa`) e nenhuma sabe que já respondemos alguma coisa hoje. **A
+etiqueta é permanente; o pedido é da rajada.**
+
+Hoje a regra exige `!respondidoHoje`, com as duas exceções que são o que ela acabou de pedir e ainda
+não recebeu: **clique de anúncio sem resposta** e **material pedido** (decisão dele de 05/09).
+
+### Isto refina 01/09, e o invariante daquele dia continua de pé
+
+O teste travava *"segunda passada MANDA O MODELO"*, do relato dele de 01/09: *"se continuar como na
+print o modelo nunca será enviado porque está concluindo após resolver a pendência"*.
+
+O modelo continua não ficando preso atrás da pendência. O que mudou é **quando** ele se solta: na
+primeira passada de um dia em que ainda não falamos, em vez de na segunda passada do mesmo dia. E
+sai hoje mesmo se houver clique novo ou pedido de material. O que tornava aquilo um risco real era a
+caixa do cumprimento repetir a mensagem do momento a cada passada — e ela ganhou
+`excecao: momentoJaEnviado` em 03/09.
+
+### O buraco que barrar o modelo revelou
+
+Medido: com a guarda nova, **14 casos em 30.000 passariam a atravessar o quadro sem desfecho**, todos
+no ramo da **chegada**.
+
+O retorno sempre terminou em `ja-respondemos-antes` — a caixa que não olha o texto e por isso pega o
+que ninguém pegou. **A chegada não tinha fecho nenhum**, e isso não incomodava enquanto
+`conteudo-pedido` era largo o bastante para varrer o resto. Agora a chegada termina nela também, e a
+condição virou `jaRespondemosAntes || respondidoHoje`: são os dois lados de *já falamos com esta
+pessoa*, e os ramos do retorno não mudam porque quem chega neles já tem o primeiro.
+
+### Medido
+
+Em 30.000 contextos sorteados, **32 mudam de desfecho (0,11%)** — todos de tecla 1 para 6, 3 ou `i`.
+**Nenhum passa a enviar**, e **zero ficam sem desfecho**. No contexto da Sirlene: tecla 1 antes,
+**tecla 3** agora (*"já respondemos hoje e ela voltou — pode concluir"*).
+
+**Arquivos:** `src/panel/panel.js` (`anuncioSemResposta`, o modelo e o sinal), `src/lib/sugestao.js`
+(a guarda e o fecho), `src/lib/arvore.js` (a caixa nova na chegada), `tests/arvore.test.mjs` (o teste
+de 01/09 refinado, +4 asserções), `CLAUDE.md` (+4 armadilhas), `manifest.json` (2.69.0 → 2.70.0).
+Quinze suítes e os dois verificadores; 64 caixas, zero problemas.
+
+**O quadro dele precisa ser reimportado** — a caixa do fecho é nova.
 
 ---
 

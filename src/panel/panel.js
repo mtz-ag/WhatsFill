@@ -508,6 +508,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * a decisão de um contato executada em outro.
      */
     state.anuncio = null;
+    state.anuncioSemResposta = null;
     // Os sinais do contato anterior decidiriam o rascunho deste. Mesma armadilha do anuncio.
     state.sinais = null;
     // "Já esteve aqui antes" é do CONTATO: sobreviver à troca faria a primeira vinda de um herdar
@@ -1068,6 +1069,46 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           state.session?.utm?.campaign,
           state.session?.utm?.headline,
           state.session?.utm?.referralUrl,
+        ],
+        anunciosDoMomento
+      );
+
+      /**
+       * **O anúncio que AINDA NÃO FOI RESPONDIDO** — regra dele (06/09/2026), com quatro prints da
+       * Sirlene em ordem: *"o modelo só sai novamente no contexto do anúncio; se tiver resposta
+       * minha após o anúncio, não mandar"*.
+       *
+       * Ela clicou no anúncio das Escolas Cívico-Militares em **04/09 às 19:53**. Respondemos em
+       * 05/09 (mensagem do momento) e de novo em 06/09 pela manhã. Às 12:31 ela escreveu *"10.122
+       * já está anotado 🌸💕"* — uma confirmação carinhosa, que não pede nada — e às 13:23 recebeu o
+       * **modelo institucional do canal de transmissões**, com agradecimento e conclusão em cima.
+       * *"O modelo tem sido mandado fora de contexto, achei que tinha sido arrumado mas continua."*
+       *
+       * **A causa é a armadilha que já está no CLAUDE.md desde 01/09: o TEXTO do anúncio fica na
+       * conversa para sempre.** `state.anuncio` responde *"de qual anúncio ela veio"*, e isso não
+       * deixa de ser verdade nunca — então o grupo *"veio de um anúncio que eu reconheço"* continuava
+       * ganhando dois dias depois, com o modelo daquele clique atrás dele.
+       *
+       * O critério dele resolve pela POSIÇÃO: o clique só conta enquanto estiver **depois** da nossa
+       * última fala. Respondido, o anúncio se cala e o quadro decide como decide para qualquer um.
+       *
+       * Duas leituras, e as duas pela mesma régua:
+       *  - **as mensagens** entram só se estiverem na rajada (o que ela escreveu desde a nossa
+       *    última);
+       *  - **a `utm`** entra só se ainda não falamos nada nesta sessão. Ela é da SESSÃO e não tem
+       *    horário próprio: o clique que a abriu é, por construção, anterior a qualquer resposta
+       *    nossa dentro dela.
+       *
+       * **`state.anuncio` continua existindo e não mudou de sentido** — é ele que aplica as
+       * etiquetas de origem, que são permanentes de propósito. O que passou a depender da resposta é
+       * o MODELO e o sinal do quadro.
+       */
+      state.anuncioSemResposta = anunciosLib.reconhecer(
+        [
+          ...rajadaFinal(state.entrantes, state.nossaUltimaAt).map((m) => m?.texto),
+          ...(state.nossaUltimaAt
+            ? []
+            : [state.session?.utm?.campaign, state.session?.utm?.headline, state.session?.utm?.referralUrl]),
         ],
         anunciosDoMomento
       );
@@ -4430,7 +4471,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * regra (ver `sugestaoDoAnuncio`), e `fluxo` não faz nada de propósito — devolve o caso ao
        * quadro, com as etiquetas do anúncio já marcadas por `refreshTagSuggestions`.
        */
-      const anuncio = state.anuncio?.anuncio || null;
+      // `anuncioSemResposta`: esta variável só serve para NOMEAR o modelo que vai sair, e o modelo
+      // sai do clique que ainda espera resposta. Ler `state.anuncio` aqui mostraria o nome de um
+      // anúncio e o trecho de outro. Ver o bloco em `load()`.
+      const anuncio = state.anuncioSemResposta?.anuncio || null;
 
       /**
        * **Subiu para cá em 04/09/2026**: a escolha do modelo passou a depender dele, e no lugar
@@ -4583,8 +4627,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       const modelosPadrao =
         veioDeUmAnuncio && !temEtiquetaDeCidade && !jaRespondemosAntes ? await carregarModelosPadrao() : [];
+      // `anuncioSemResposta`, e não `anuncio`: o modelo do anúncio é a resposta AO CLIQUE, e um
+      // clique já respondido não pede nada. Ver o bloco em `load()`.
       const escolhaDeModelo = anunciosLib.modeloDoAnuncio(
-        state.anuncio,
+        state.anuncioSemResposta,
         modelosPadrao,
         veioDeUmAnuncio ? Number(await store.get('modeloPadraoIndex')) || 0 : 0
       );
@@ -4600,7 +4646,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           nome:
             escolhaDeModelo.deOnde === 'padrao'
               ? 'anúncio não reconhecido — modelo padrão'
-              : `anúncio: ${anuncio.nome || `"${state.anuncio.trecho}"`}`,
+              : `anúncio: ${anuncio.nome || `"${state.anuncioSemResposta.trecho}"`}`,
         };
       } else if (porTexto?.erro) {
         // Casou o texto e o modelo não existe: isto é erro de configuração DELE, e some no
@@ -5429,7 +5475,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * casou com um dos anúncios do momento que ele cadastrou. É o que permite um ramo do
          * quadro separar "veio de anúncio que eu conheço" de "veio de anúncio qualquer".
          */
-        anuncioReconhecido: !!state.anuncio,
+        // O sinal do quadro é "há um clique de anúncio esperando resposta", e não "ela já veio de
+        // anúncio um dia" — ver `anuncioSemResposta` em `load()`.
+        anuncioReconhecido: !!state.anuncioSemResposta,
       };
       /**
        * **Guardados no `state` porque o RASCUNHO precisa deles** (05/09/2026): a IA só sabe se deve
