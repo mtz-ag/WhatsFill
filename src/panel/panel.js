@@ -5508,7 +5508,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const agradecerInfoTrava = agradecerInfo
         ? vars.render(agradecerInfoTexto, contexto).missing.length > 0
         : true;
-      const ehRespostaAoCadastro = sugestao?.id === 'respondeu-os-dados' && !agradecerInfoTrava;
+      /**
+       * **O SINAL decide, e não o id da regra** — print da Rosane (06/09/2026).
+       *
+       * Pedimos os dados às 11:30; às 12:00 ela respondeu *"Rosane Maria Bossle Debiasi"* e *"Caxias
+       * do sul"*; às 13:47 recebeu *"Que bom ler isso, obrigado pelo apoio e pelo carinho de
+       * sempre"*. Ele apagou a mensagem na plataforma.
+       *
+       * **O conserto de 2.65 nunca funcionou no quadro**, e a causa é uma linha: a comparação era
+       * `sugestao?.id === 'respondeu-os-dados'`, e no quadro o id da caixa é
+       * **`r:respondeu-os-dados:com-cidade`** — o `r()` do `fluxoPadrao` reescreve o id de propósito,
+       * porque a mesma regra aparece nos dois ramos e id repetido é o que `problemas` acusa. Medido:
+       * a comparação dava `false` em 100% dos casos, então **o texto do apoio saía sempre**.
+       *
+       * Somava-se `tambemQuando`: a caixa junta `respondeu-os-dados` com `so-expressa-apoio`, então
+       * nem o id da caixa diria qual das duas casou.
+       *
+       * Perguntar ao SINAL resolve as duas coisas e não depende de rota nenhuma — é a mesma
+       * disciplina de `ehPresencaSemPendencia`, três blocos acima, que sempre leu os sinais.
+       */
+      const ehRespostaAoCadastro =
+        !!sinaisDoContato.respondeuOsDados && !ehPresencaSemPendencia && !agradecerInfoTrava;
       const textoDaTeclaI = ehRespostaAoCadastro ? agradecerInfo : textoDoApoio;
       const travaDaTeclaI = ehRespostaAoCadastro ? agradecerInfoTrava : travaDoApoio;
 

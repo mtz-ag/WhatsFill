@@ -2528,4 +2528,40 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   check(hoje?.tecla === '3', `ja respondeu hoje e ela mandou um link: conclui (tecla ${hoje?.tecla})`);
 }
 
+{
+  grupo('o id da caixa NAO e o id da regra (06/09/2026)');
+
+  /**
+   * Print da ROSANE: pedimos os dados as 11:30, ela respondeu "Rosane Maria Bossle Debiasi" e
+   * "Caxias do sul" as 12:00, e as 13:47 recebeu *"Que bom ler isso, obrigado pelo APOIO e pelo
+   * carinho de sempre"*. Ele apagou a mensagem na plataforma.
+   *
+   * O detector estava certo -- `soExpressaApoio` devolve null para o texto dela. O defeito era uma
+   * COMPARACAO no painel: `sugestao?.id === 'respondeu-os-dados'`, para escolher entre os tres
+   * textos da tecla `i`. No quadro o id da caixa e `r:respondeu-os-dados:com-cidade`, porque o `r()`
+   * do fluxoPadrao reescreve o id (a mesma regra aparece nos dois ramos, e id repetido e o que
+   * `problemas` acusa). A comparacao dava false em 100% dos casos, e o conserto de 2.65 nunca
+   * funcionou no quadro.
+   *
+   * Este teste existe para deixar a armadilha executavel: **quem precisa saber "qual regra decidiu"
+   * tem que olhar o SINAL, nunca o id.** `tambemQuando` fecha o argumento -- a caixa junta duas
+   * regras, entao nem o id da caixa diria qual delas casou.
+   */
+  const fluxo = arv.fluxoPadrao();
+  const ctx = {
+    respondeuOsDados: true, temEtiquetaDeCidade: true, jaRespondemosAntes: true,
+    jaPediramDados: true, podeMandarMomento: true,
+    textos: ['Caxias do sul'], ultimoTexto: 'Caxias do sul',
+  };
+  const d = arv.decidir(ctx, fluxo, {});
+  check(d?.tecla === 'i', `quem respondeu o cadastro recebe a tecla i (${d?.tecla})`);
+  check(d?.id !== 'respondeu-os-dados', 'e o id da caixa NAO e o id da regra -- comparar por id nao funciona');
+  check(/^r:respondeu-os-dados:/.test(d?.id || ''), `o id vem reescrito pelo ramo (${d?.id})`);
+
+  // A caixa junta duas regras: nem o id diria qual casou.
+  const noQuadro = arv.todosOsNos(fluxo).find(({ no }) => no.id === d.id)?.no;
+  check((noQuadro?.tambemQuando || []).includes('so-expressa-apoio'),
+    'e ela esta JUNTADA com "so expressa apoio", que tem outro texto');
+}
+
 fim();

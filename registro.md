@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.70.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.71.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.70.0**, tudo commitado e no remoto. Quinze versões no
-dia 05/09 (2.42 → 2.56) e **catorze em 06/09** (2.57 a 2.70). **64 caixas** no fluxo padrão. Quinze suítes verdes, os dois
+Branch `claude/whatsfill-ia`, **v2.71.0**, tudo commitado e no remoto. Quinze versões no
+dia 05/09 (2.42 → 2.56) e **quinze em 06/09** (2.57 a 2.71). **64 caixas** no fluxo padrão. Quinze suítes verdes, os dois
 verificadores limpos (38 arquivos), **63 caixas** no fluxo padrão sem problemas e sem desfecho
 incoerente.
 
@@ -49,6 +49,7 @@ incoerente.
 | 2.68 | **Link ou figura no fim não apaga a pergunta que ficou** — e "qual partido" e "gostaria de saber" passaram a ser reconhecidos. |
 | 2.69 | **Endereço de máquina nunca é cidade**, e link gravado no campo deixa de bloquear a correção — a IA passa a resolver esses casos. |
 | 2.70 | **O clique no anúncio só vale enquanto não for respondido**, e o modelo não sai se já falamos hoje. A chegada ganhou FECHO. |
+| 2.71 | **O id da caixa não é o id da regra** — o agradecimento pela informação (2.65) nunca decidiu nada no quadro. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -178,6 +179,77 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — O id da caixa não é o id da regra (v2.71.0)
+
+### O caso
+
+Pedimos os dados à **Rosane** às 11:30. Às 12:00 ela respondeu, em duas mensagens: *"Rosane Maria
+Bossle Debiasi"* e *"Caxias do sul"*. Às 13:47 recebeu:
+
+> *"Que bom ler isso, obrigado pelo **apoio** e pelo carinho de sempre. Seguimos lado a lado."*
+
+Ele apagou a mensagem na plataforma e perguntou: *"quais são as condições para mandar apoio?"*
+
+### O detector estava certo
+
+`cortesia.soExpressaApoio` devolve **null** para o texto dela — medido. Ela não expressou apoio
+nenhum: deu o cadastro. Não havia nada a consertar no detector.
+
+### O defeito era uma comparação, e ela nunca funcionou no quadro
+
+A tecla `i` tem três textos, e quem escolhe é o painel. A linha era:
+
+```js
+const ehRespostaAoCadastro = sugestao?.id === 'respondeu-os-dados' && !agradecerInfoTrava;
+```
+
+**No quadro, o id da caixa é `r:respondeu-os-dados:com-cidade`.** O `r()` do `fluxoPadrao` reescreve
+o id de propósito — a mesma regra vive nos dois ramos, e id repetido é justamente o que `problemas`
+acusa. A comparação dava `false` em **100% dos casos**, então o texto do apoio saía sempre.
+
+Ou seja: **o conserto de 2.65** — que criou `agradecer-info` depois da print da Mari, exatamente para
+isto — **nunca decidiu nada**. Ele funcionava só na tabela, e nem lá alcançava este caso.
+
+Somava-se `tambemQuando`: a caixa junta `respondeu-os-dados` com `so-expressa-apoio`, então nem o id
+da caixa diria qual das duas casou.
+
+### O conserto
+
+Perguntar ao **sinal**, que é o dado:
+
+```js
+const ehRespostaAoCadastro =
+  !!sinaisDoContato.respondeuOsDados && !ehPresencaSemPendencia && !agradecerInfoTrava;
+```
+
+Não depende de rota nenhuma, e é a mesma disciplina de `ehPresencaSemPendencia`, três blocos acima,
+que sempre leu os sinais. Procurei outras comparações por id de regra no painel: **não há nenhuma.**
+
+### As condições do apoio, que foi o que ele perguntou
+
+`so-expressa-apoio` casa quando, na rajada (o que ela escreveu desde a nossa última fala):
+
+1. ela **escreveu algo que não é o texto do anúncio** — o clique não conta como fala dela;
+2. **nenhuma** mensagem da rajada é áudio, vídeo ou arquivo;
+3. **não** há pergunta aberta na conversa;
+4. **não** há pedido de material;
+5. e o que sobrou casa com `EXPRESSOES_DE_APOIO`: *"eu apoio"*, *"tamo junto"*, *"tmj"*, *"sempre com
+   vocês"*, *"conte comigo"*, *"pode contar conosco"*, *"estou acompanhando vocês"*, *"vamos
+   vencer"*, *"vou votar"*, *"sou seu eleitor"*, *"parabéns / força / sucesso"*, *"Deus te
+   abençoe"*, *"torcendo"*, o número **22**, e *"estou com"* **seguido de nós** (a guarda da Elenir,
+   05/09).
+
+E o TEXTO que sai na tecla `i` é escolhido depois, pelo painel, entre três: **presença confirmada**,
+**informação** (respondeu o cadastro) e **apoio** — nesta ordem de precedência.
+
+**Arquivos:** `src/panel/panel.js` (uma linha, mais o porquê), `tests/arvore.test.mjs` (+4, travando
+a armadilha), `CLAUDE.md` (+1), `manifest.json` (2.70.0 → 2.71.0). Quinze suítes e os dois
+verificadores.
+
+**O quadro dele não muda** — é painel.
 
 ---
 

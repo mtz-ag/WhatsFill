@@ -1352,6 +1352,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   chegada termina em `ja-respondemos-antes` tambem, e a condicao dela virou
   `jaRespondemosAntes || respondidoHoje` — "ja respondemos antes" e "ja respondemos hoje" sao os dois
   lados da mesma coisa, e os ramos do retorno nao mudam porque quem chega neles ja tem o primeiro.
+- **O id da CAIXA nao e o id da REGRA, e comparar por id nunca funcionou no quadro.** Print da
+  Rosane (06/09/2026): ela respondeu o cadastro (nome e "Caxias do sul") e recebeu *"obrigado pelo
+  APOIO e pelo carinho de sempre"*; ele apagou a mensagem. **O detector estava certo** —
+  `soExpressaApoio` devolve null para o texto dela. O defeito era uma comparacao no painel,
+  `sugestao?.id === 'respondeu-os-dados'`, que escolhia entre os tres textos da tecla `i`: no quadro
+  o id e **`r:respondeu-os-dados:com-cidade`**, porque o `r()` do `fluxoPadrao` reescreve o id de
+  proposito (a mesma regra vive nos dois ramos, e id repetido e o que `problemas` acusa). Medido:
+  `false` em 100% dos casos — **o conserto de 2.65 nunca decidiu nada.** Somava-se `tambemQuando`:
+  a caixa junta `respondeu-os-dados` com `so-expressa-apoio`, entao nem o id da caixa diria qual das
+  duas casou. **Quem precisa saber "qual regra decidiu" tem que olhar o SINAL** (`c.respondeuOsDados`),
+  como `ehPresencaSemPendencia` sempre fez tres blocos acima. Tem teste travando a armadilha.
 
 - **Xingamento no IMPERATIVO e segunda pessoa, e a lista nao sabia disso.** Print dele (05/09/2026):
   a contato chegou pelo anuncio e um minuto depois escreveu *"Entao va para o inferno..
