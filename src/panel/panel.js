@@ -5712,12 +5712,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * diferença de hoje é o rótulo da caixa, que diz o que ela faz: *"envia sozinha, sem
          * perguntar"*. Marcá-la é a escolha; desmarcá-la devolve o rascunho para ele mandar.
          *
-         * **As travas que ficam, e por que só estas duas:** `rascunhoPodeSairSozinho` barra o
-         * marcador esquecido (`{{primeiro_nome}}` iria literal para a tela do WhatsApp) e a
-         * promessa de entregar (Lei 9.504/97, a mesma razão dos `RESTRITOS`). As outras revisões
-         * são cosméticas ou já corrigidas — barrar por elas pararia a rodada por um traço eme.
+         * **As travas que ficam:** `rascunhoPodeSairSozinho` barra o marcador esquecido
+         * (`{{primeiro_nome}}` iria literal para a tela do WhatsApp), a promessa de entregar
+         * (Lei 9.504/97, a mesma razão dos `RESTRITOS`) e — desde 06/09, com a print da Dima —
+         * **os casos SENSÍVEIS**, lidos dos sinais deste contato: conversa longa ou áudio, pedido de
+         * dinheiro, mal-estar, pedido sem objeto e recusa. As outras revisões são cosméticas ou já
+         * corrigidas — barrar por elas pararia a rodada por um traço eme.
+         *
+         * Nos casos sensíveis o rascunho **continua sendo escrito e posto no campo**: o que muda é
+         * o último passo, que volta a ser dele. É o *"IA ou eu atender"* que ele pediu.
          */
-        if (rascunho.ok && rodadaAutomatica() && iaLib.rascunhoPodeSairSozinho(rascunho.avisos)) {
+        if (
+          rascunho.ok &&
+          rodadaAutomatica() &&
+          iaLib.rascunhoPodeSairSozinho(rascunho.avisos, sinaisDoContato)
+        ) {
           if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) {
             return { nome, resultado: 'erro', motivo: 'a classificação não gravou; não enviei o rascunho' };
           }
@@ -5754,7 +5763,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
         /** Rascunho barrado por aviso: ele lê e decide, que é o desfecho que a trava existe para dar. */
         const barrado =
-          rascunho.ok && rodadaAutomatica() && !iaLib.rascunhoPodeSairSozinho(rascunho.avisos)
+          rascunho.ok && rodadaAutomatica() && !iaLib.rascunhoPodeSairSozinho(rascunho.avisos, sinaisDoContato)
             ? ` — NÃO mandei sozinho: ${(rascunho.avisos || []).join('; ')}`
             : '';
 

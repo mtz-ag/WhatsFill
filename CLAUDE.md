@@ -1377,6 +1377,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   doenca"* nao e apoio), e `eleitor`/`fa` exigem o **seu** (*"sou eleitor de Caxias do Sul"* e
   endereco). E a terceira vez que este projeto aprende isto: a caixa do "so mandou bom dia" pegando o
   desabafo da Cris, e o "boa tarde queria saber mais" da Teresinha.
+- **A TECLA 6 e a porta da IA, e no automatico ela ENVIA — entao "vai para a IA" nao e o mesmo que
+  "vai para gente".** Print da Dima Souza (06/09/2026): 1min34 de audio transcrito — pensionista,
+  viuva, cirurgia de 18 mil pela frente — e a rodada mandou uma mensagem que ele apagou. *"Bote
+  transcricao desse tipo para IA ou eu atender sempre; o automatizado mandou mensagem ignorando o
+  contexto do pedido de ajuda."* **O quadro estava certo**: medido nos dois quadros (o dele e o
+  padrao), o caso da tecla 6 — nenhuma resposta pronta o alcanca. O que saiu foi o rascunho da IA,
+  que com "Automatizar" marcada vai sozinho desde a 2.60. Hoje `rascunhoPodeSairSozinho` recebe os
+  SINAIS do contato e barra os casos **sensiveis**: conversa longa ou audio, pedido de dinheiro,
+  mal-estar, pedido sem objeto e recusa. **As duas travas antigas olham o TEXTO que voltou; esta
+  olha o CASO** — nao e o rascunho que esta errado, e quem tem que decidir. O rascunho continua
+  sendo escrito e posto no campo: o que volta a ser dele e o ultimo passo.
 
 - **Xingamento no IMPERATIVO e segunda pessoa, e a lista nao sabia disso.** Print dele (05/09/2026):
   a contato chegou pelo anuncio e um minuto depois escreveu *"Entao va para o inferno..

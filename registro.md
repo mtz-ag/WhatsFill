@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.72.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.73.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.72.0**, tudo commitado e no remoto. Quinze versões no
-dia 05/09 (2.42 → 2.56) e **dezesseis em 06/09** (2.57 a 2.72). **64 caixas** no fluxo padrão. Quinze suítes verdes, os dois
+Branch `claude/whatsfill-ia`, **v2.73.0**, tudo commitado e no remoto. Quinze versões no
+dia 05/09 (2.42 → 2.56) e **dezessete em 06/09** (2.57 a 2.73). **64 caixas** no fluxo padrão. Quinze suítes verdes, os dois
 verificadores limpos (38 arquivos), **63 caixas** no fluxo padrão sem problemas e sem desfecho
 incoerente.
 
@@ -51,6 +51,7 @@ incoerente.
 | 2.70 | **O clique no anúncio só vale enquanto não for respondido**, e o modelo não sai se já falamos hoje. A chegada ganhou FECHO. |
 | 2.71 | **O id da caixa não é o id da regra** — o agradecimento pela informação (2.65) nunca decidiu nada no quadro. |
 | 2.72 | **Voto de boa vontade só conta se for a mensagem inteira** — 15 falsos positivos em 19 viraram zero. |
+| 2.73 | **O rascunho da IA não sai sozinho nos casos sensíveis** — áudio/desabafo, dinheiro, mal-estar, pedido sem objeto, recusa. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -180,6 +181,74 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — O rascunho da IA não sai sozinho nos casos sensíveis (v2.73.0)
+
+### O caso
+
+A **Dima Souza** mandou **1min34 de áudio**, transcrito: pensionista, viúva, sem aumento há anos,
+uma cirurgia dos dois pés de R$ 18 mil pela frente, os médicos tirados do IPE, *"tudo tem que pagar
+particular"*, revoltada com a política. A rodada mandou uma mensagem e ele a apagou.
+
+*"Bote transcrição desse tipo para IA ou eu atender sempre; o automatizado mandou mensagem ignorando
+o contexto do pedido de ajuda."* E depois: *"foi a IA? se foi ela respondendo, ela ignorou o contexto
+e mandou mensagem rápida, o que não era pra ser feito nesse caso"*.
+
+### O quadro estava certo — medi antes de mexer
+
+| onde | desfecho |
+|---|---|
+| quadro dele (2.67.0) | **tecla 6** |
+| padrão de agora | **tecla 6** |
+| ramo da chegada | **tecla 6** |
+
+Os detectores também: `conversaPedeRespostaPessoal` casa (*"falou 575 caracteres — é conversa, não é
+caso de modelo"*) e `conversaTemPerguntaAberta` casa. **Nenhuma resposta pronta alcança esse
+contexto.**
+
+### Então foi a IA, e o caminho é o que ele mesmo abriu hoje
+
+A **tecla 6 é a porta da IA**. Com a avaliação ligada e "Automatizar a rodada" marcada, o rascunho
+**é enviado sem ninguém ler** — decisão dele na 2.73 de hoje pela manhã (*"o box de IA está ligado,
+então aqui deveria chamar a IA para escrever e enviar"*).
+
+Ou seja: *"vai para a IA"* deixou de ser o mesmo que *"vai para gente"*. Este caso foi para a IA — e
+a IA respondeu como se fosse um caso comum.
+
+### O conserto
+
+`rascunhoPodeSairSozinho` passou a receber os **sinais do contato**, e barra o envio automático nos
+casos **sensíveis**:
+
+- **conversa longa ou áudio** (`pedeRespostaPessoal`) — o caso da Dima;
+- **pedido de dinheiro, cesta ou remédio** (`pedeAjudaFinanceira`) — o de maior risco do projeto, e o
+  único com a Lei 9.504/97 do lado;
+- **passando mal, ou avisou que fala depois** (`naoPodeFalarAgora`);
+- **pediu algo e não disse o quê** (`pedeAlgoIndefinido`) — decisão dele de 03/09: *"já que pedido é
+  algo difícil de ser identificado, será agora pra mim ou IA responder"*;
+- **recusou ou hostilizou** (`semInteresse`) — responder a quem pediu para sair é o que gera denúncia.
+
+**As duas travas antigas olham o TEXTO que voltou** (marcador esquecido, promessa de entregar).
+**Esta olha o CASO**: não é o rascunho que está errado, é *quem tem que decidir*.
+
+**Não para a rodada, e não é o corte de 03/09.** O rascunho continua sendo escrito e posto no campo
+de mensagem. O que volta a ser dele é o **último passo** — que é literalmente o *"IA ou eu atender"*
+que ele pediu, e a fronteira que o projeto manteve desde o começo.
+
+### O que ainda não sei
+
+**Não tenho como provar que a mensagem apagada era da IA.** A prova está no **Andamento da rodada**,
+que registra cada envio automático com o motivo — é onde olhar quando isso repetir. O que medi é o
+caminho: nenhuma resposta pronta chega naquele contexto, então uma mensagem automática ali só pode
+ter vindo da IA.
+
+**Arquivos:** `src/lib/ia.js` (`rascunhoPodeSairSozinho` com os sinais), `src/panel/panel.js` (os dois
+pontos que a chamam), `tests/ia.test.mjs` (+7), `CLAUDE.md` (+1), `manifest.json`
+(2.72.0 → 2.73.0). Quinze suítes e os dois verificadores.
+
+**O quadro dele não muda.**
 
 ---
 

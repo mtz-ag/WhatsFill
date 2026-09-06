@@ -752,4 +752,37 @@ grupo('o rascunho nao pode se apresentar de novo (05/09/2026)');
   check(marcador.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.marcador), 'o do marcador tambem');
 }
 
+grupo('o rascunho NAO sai sozinho nos casos sensiveis (06/09/2026)');
+{
+  /**
+   * Print da DIMA SOUZA: 1min34 de audio, transcrito -- pensionista, viuva, sem aumento ha anos, com
+   * uma cirurgia dos dois pes de 18 mil pela frente, revoltada com a politica. A rodada mandou uma
+   * mensagem e ele a apagou: *"bote transcricao desse tipo para IA ou eu atender sempre; o
+   * automatizado mandou mensagem ignorando o contexto do pedido de ajuda"*.
+   *
+   * **O quadro estava certo** -- medido nos dois quadros, o caso da tecla 6, que e a porta da IA. Com
+   * "Automatizar" marcada, o rascunho saia sem ninguem ler (2.60).
+   *
+   * As duas travas que existiam olham so o TEXTO que voltou. Esta olha o CASO: nao e o rascunho que
+   * esta errado, e QUEM tem que decidir. O rascunho continua sendo escrito e posto no campo -- o que
+   * volta a ser dele e o ultimo passo, que e o "IA ou eu" que ele pediu.
+   */
+  check(rascunhoPodeSairSozinho([], {}), 'caso comum com texto limpo continua saindo sozinho');
+
+  check(!rascunhoPodeSairSozinho([], { pedeRespostaPessoal: { motivo: 'falou 575 caracteres' } }),
+    'audio ou conversa longa NAO sai sozinho -- o caso da Dima');
+  check(!rascunhoPodeSairSozinho([], { pedeAjudaFinanceira: { motivo: 'x' } }),
+    'pedido de dinheiro NAO sai sozinho -- e o caso de maior risco do projeto');
+  check(!rascunhoPodeSairSozinho([], { naoPodeFalarAgora: { motivo: 'x' } }),
+    'quem esta passando mal NAO sai sozinho');
+  check(!rascunhoPodeSairSozinho([], { pedeAlgoIndefinido: { motivo: 'x' } }),
+    'pedido sem objeto NAO sai sozinho -- decisao dele de 03/09');
+  check(!rascunhoPodeSairSozinho([], { semInteresse: { motivo: 'x' } }),
+    'recusa NAO sai sozinho -- responder a quem pediu para sair gera denuncia');
+
+  // As duas travas antigas continuam de pe, e sao sobre o TEXTO.
+  check(!rascunhoPodeSairSozinho(['sobrou marcador no texto — troque antes de mandar'], {}),
+    'marcador esquecido continua barrando');
+}
+
 fim();

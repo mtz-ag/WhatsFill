@@ -1029,9 +1029,55 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
 };
 
 /** O rascunho pode sair sozinho, ou algum aviso exige que uma pessoa leia antes? */
-export function rascunhoPodeSairSozinho(avisos = []) {
+/**
+ * **Os casos em que o rascunho NUNCA sai sozinho, por mais limpo que o texto esteja.**
+ *
+ * Pedido dele (06/09/2026), com a print da Dima Souza — 1min34 de áudio, transcrito: pensionista,
+ * viúva, sem aumento há anos, com uma cirurgia dos dois pés de R$ 18 mil pela frente, revoltada com
+ * a política. A rodada mandou uma mensagem e ele a apagou: *"bote transcrição desse tipo para IA ou
+ * eu atender sempre; o automatizado mandou mensagem ignorando o contexto do pedido de ajuda"*.
+ *
+ * **O quadro estava certo** — medido nos dois quadros (o dele e o padrão), o caso dá **tecla 6**. E
+ * a tecla 6 é a porta da IA: ela escreveu, e com "Automatizar" marcada o texto saiu sem ninguém ler.
+ *
+ * As duas travas que existiam olham só o TEXTO que voltou (marcador esquecido, promessa de
+ * entregar). Esta olha o CASO: há situações em que o problema não é o rascunho estar errado, e sim
+ * **quem tem que decidir** — e nelas o desfecho que ele pediu é literalmente *"IA ou eu"*: a IA
+ * escreve, o texto fica no campo, e ele manda.
+ *
+ * **Isto não para a rodada** e não é o corte de 03/09: o rascunho continua sendo escrito e posto no
+ * campo. O que muda é o último passo, que passa a ser dele — que é a fronteira que o projeto
+ * manteve desde o começo, restaurada para os casos que mais custam quando saem errados.
+ *
+ * @param {string[]} avisos os que `revisarRascunho` levantou sobre o texto
+ * @param {{pedeRespostaPessoal?:unknown, pedeAjudaFinanceira?:unknown, naoPodeFalarAgora?:unknown,
+ *          pedeAlgoIndefinido?:unknown, semInteresse?:unknown}} [sinais] o caso deste contato
+ */
+export function rascunhoPodeSairSozinho(avisos = [], sinais = {}) {
   const impedem = Object.values(AVISOS_QUE_IMPEDEM_ENVIO);
-  return !(avisos || []).some((a) => impedem.includes(a));
+  if ((avisos || []).some((a) => impedem.includes(a))) return false;
+
+  /**
+   * A lista é curta e é toda de casos **sensíveis**, não de casos difíceis:
+   *
+   *  - **conversa longa, áudio, arquivo** (`pedeRespostaPessoal`) — o caso da Dima. Quem gravou 1min34
+   *    contando a vida espera alguém, e o pior erro possível aqui é uma resposta que não leu;
+   *  - **pedido de dinheiro, cesta ou remédio** (`pedeAjudaFinanceira`) — é o caso de maior risco do
+   *    projeto, e o único com a Lei 9.504/97 do lado. O texto que nega é dele, revisado;
+   *  - **passando mal, ou avisou que fala depois** (`naoPodeFalarAgora`) — 05/09;
+   *  - **pediu algo e não disse o quê** (`pedeAlgoIndefinido`) — decisão dele de 03/09: *"já que
+   *    pedido é algo difícil de ser identificado, será agora pra mim ou IA responder"*;
+   *  - **recusou ou hostilizou** (`semInteresse`) — responder a quem pediu para sair é o que gera
+   *    denúncia.
+   */
+  const sensivel =
+    !!sinais?.pedeRespostaPessoal ||
+    !!sinais?.pedeAjudaFinanceira ||
+    !!sinais?.naoPodeFalarAgora ||
+    !!sinais?.pedeAlgoIndefinido ||
+    !!sinais?.semInteresse;
+
+  return !sensivel;
 }
 
 export function revisarRascunho(bruto, agora, contexto = {}) {
