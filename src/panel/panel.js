@@ -786,17 +786,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (entry.confidence === 'nao-reconhecida') return;
 
     /**
-     * Com a rodada automatizada, quem responde esta caixa é a IA — e ela responde ANTES de a
-     * caixa existir.
+     * **Com a IA ligada, quem responde esta caixa é ela** — e responde ANTES de a caixa existir.
      *
-     * Relato dele (01/09): *"falta a IA aceitar a cidade e arrumar caso esteja errado, está
-     * parando o processo"*. Estava travando mesmo: a rodada abre a caixa e fica esperando um
-     * clique que, por definição, ninguém vai dar — automatizar tudo menos isto é não automatizar.
+     * Nasceu para a rodada automatizada (relato dele, 01/09: *"falta a IA aceitar a cidade e
+     * arrumar caso esteja errado, está parando o processo"*) e passou a valer na rodada normal em
+     * 06/09, a pedido dele: *"a IA deve assumir para ter certeza que a cidade está correta"*. Ver
+     * `cidadeConferidaPelaIA`.
      *
      * A regra dele não muda: **nenhuma cidade de palpite vai para o CRM sem confirmação.** Muda
-     * quem confirma quando ele não está olhando. E o que a IA pode fazer aqui é estreito: aceitar
-     * o que o parser achou, trocar por outro município **da lista do IBGE**, ou não gravar nada.
-     * Nome inventado não passa por `validarCidade`.
+     * QUEM confirma. E o que a IA pode fazer aqui é estreito: aceitar o que o parser achou, trocar
+     * por outro município **da lista do IBGE**, ou não gravar nada. Nome inventado não passa por
+     * `validarCidade`, e incerteza devolve a caixa para ele.
      */
     if (await cidadeConferidaPelaIA(campo, entry)) return;
 
@@ -889,7 +889,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /**
-   * A IA responde a caixa da cidade no lugar dele — só na rodada automatizada.
+   * A IA confere a cidade antes de a caixa abrir — **sempre que a avaliação por IA estiver
+   * ligada e uma rodada estiver andando**.
    *
    * @returns {Promise<boolean>} `true` = já resolvi, não abra a caixa. `false` = pergunte a ele.
    *
@@ -904,11 +905,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Canoas" porque o modelo ficou em 60% de certeza é transformar dúvida em fato, e é o tipo de
    * memória que ninguém revisa depois. O palpite volta a aparecer na próxima vez, para ele.
    *
-   * Nada aqui roda fora da rodada automatizada: no dia a dia quem confere a cidade é ele, e
-   * continua sendo.
+   * **A exigência de rodada AUTOMÁTICA saiu em 06/09/2026, a pedido dele:** *"a IA deve assumir
+   * para ter certeza que a cidade está correta"*. A guarda tinha nascido de outro problema — a
+   * rodada automática travava esperando um clique que ninguém ia dar (01/09) —, e com ela a
+   * conferência só existia no modo que ele quase nunca usa: rodando contato a contato, ligar a IA
+   * não conferia cidade nenhuma. Conferir é a metade do trabalho dela que ele nomeou.
+   *
+   * **Continua exigindo a RODADA andando.** Abrir um contato à mão para olhar não é pedir
+   * conferência, e cada chamada é dinheiro — a mesma razão pela qual `avaliarComIA` também só
+   * roda dentro da rodada. Incerta, ela devolve `false` e a caixa abre para ele, como antes.
    */
   async function cidadeConferidaPelaIA(campo, entry) {
-    if (!state.auto?.rodando || !rodadaAutomatica() || !state.ia?.ligada) return false;
+    if (!state.auto?.rodando || !state.ia?.ligada) return false;
 
     const municipios = await cities.loadMunicipios();
     if (!municipios?.length) {
@@ -5847,8 +5855,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           );
         } else {
           const confianca = Math.round((decisaoIA.confianca || 0) * 100);
+          /**
+           * **O log diz de QUEM a IA tomou o caso** — pedido dele (06/09/2026): *"ao ativar a IA
+           * ela está ignorando o fluxo"*.
+           *
+           * Medido: com a IA ligada ela só é consultada em ~5% dos contextos, e quase todos são a
+           * tecla 6 ("você responde"). Ou seja, o fluxo continua decidindo 94% — mas **este é o
+           * único ponto em que a IA substitui uma decisão do quadro**, e ele era invisível: a
+           * linha dizia "IA assumiu" sem dizer que o quadro tinha mandado o caso para ele.
+           * Regra do projeto: se a rodada trata dois contatos de forma diferente, o motivo tem
+           * que estar na tela.
+           */
+          const doQuadro = sugestao ? ` (o fluxo tinha mandado para você: "${sugestao.id}")` : ' (o fluxo não decidiu nada aqui)';
           return enviarEscolhaDaIA(
-            `IA assumiu (${confianca}%): mandei "${recomendada.name}" e concluí — ` +
+            `IA assumiu (${confianca}%)${doQuadro}: mandei "${recomendada.name}" e concluí — ` +
               (decisaoIA.motivo || 'sem motivo dado')
           );
         }

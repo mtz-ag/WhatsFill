@@ -1316,6 +1316,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **Ligar a IA muda DUAS coisas, e uma delas so existia no modo automatico.** Relato dele
+  (06/09/2026): *"ao ativar a IA ela esta ignorando o fluxo; a IA deve assumir para ter certeza que
+  a cidade esta correta e em casos que eu deveria assumir para responder"*. Medido em 20.000
+  contextos, nos dois quadros: a IA e consultada em **5,4% a 5,8%** — quase tudo **tecla 6** —, e o
+  fluxo resolve **94%** sozinho; o relato de "ignorando o fluxo" nao se sustenta no numero. O que
+  faltava era a outra metade: `cidadeConferidaPelaIA` exigia `rodadaAutomatica()`, entao **rodando
+  contato a contato ligar a IA nao conferia cidade nenhuma**. Hoje ela vale com a IA ligada e a
+  rodada andando (fora da rodada, nao: cada chamada e dinheiro). **O unico ponto em que a IA
+  substitui o quadro e a tecla 6 com "Automatizar" marcado** — e o log passou a dizer de quem ela
+  tomou o caso, porque a linha so dizia "IA assumiu". Tensao registrada: tecla 6 significa que
+  NENHUMA resposta pronta serve, e o que a IA manda ali e uma resposta pronta.
+
 - **O QUADRO tem versao, e ela tem que estar na tela.** Pedido dele (05/09/2026): *"o fluxo
   atualmente nao fala qual versao ele esta utilizando"*. O quadro e uma COPIA do padrao e caixa nova
   so decide depois que ele importa — o quadro dele passou o dia 05/09 no arranjo da 2.41.0 enquanto

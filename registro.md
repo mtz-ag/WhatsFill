@@ -1,4 +1,4 @@
-## 2026-09-05 — ESTADO DE AGORA (v2.56.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.57.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.56.0**, tudo commitado e no remoto. **Quinze versões no dia 05/09**
-(2.42 → 2.56). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
+Branch `claude/whatsfill-ia`, **v2.57.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
+(2.42 → 2.56) e a **2.57 em 06/09**. Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -29,6 +29,7 @@ problemas e sem desfecho incoerente.
 | 2.54 | **Rajada de cliques em anúncio → mensagem do momento**, não o modelo de um deles. |
 | 2.55 | **O rascunho é a próxima mensagem DELE**, não a de um terceiro — e o que ele já respondeu passou a ter marca. |
 | 2.56 | **A janela do fluxo diz de qual versão é o quadro**, e quantas caixas do padrão de hoje faltam nele. |
+| 2.57 | **A IA confere a cidade na rodada normal** (antes só na automática) — e o log diz quando ela toma um caso do quadro. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -125,6 +126,57 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — A IA confere a cidade também na rodada normal (v2.57.0)
+
+*"ao ativar a IA ela está ignorando o fluxo; a IA deve assumir para ter certeza que a cidade está
+correta e em casos que eu deveria assumir para responder, o restante fica pro determinístico do
+fluxo"*.
+
+### Medi antes de mexer, e o número contraria metade do relato
+
+Varredura de 20.000 contextos sorteados, nos DOIS quadros:
+
+| quadro | a IA é consultada | o fluxo resolve sozinho |
+|---|---|---|
+| o dele (2.41.0, 60 caixas) | **5,4%** — 4,9 deles tecla 6 | 94,6% |
+| o padrão de hoje (63 caixas) | **5,8%** — 5,5 deles tecla 6 | 94,2% |
+
+A IA só é chamada em três situações, e as três são as que ele descreveu: **nenhuma caixa decidiu**
+(0,3%), **tecla 6** — "você responde" (5,5%) e **um ramo dele entregou o caso à IA** (0%, ele não usa).
+Regra que decide qualquer outra coisa nunca passa pela IA — o gasto e a decisão continuam do quadro.
+
+### O que estava faltando de verdade: a metade da CIDADE
+
+`cidadeConferidaPelaIA` exigia `rodadaAutomatica()` — a caixa "Automatizar" marcada. A guarda nasceu
+de outro problema (01/09: a rodada automática travava esperando um clique que ninguém ia dar), e o
+efeito colateral era grande: **rodando contato a contato, que é como ele trabalha, ligar a IA não
+conferia cidade nenhuma**. A caixa "Cidade a gravar" abria como sempre.
+
+Hoje a conferência vale sempre que a IA estiver ligada **e uma rodada estiver andando**. Continua
+exigindo a rodada: abrir um contato à mão para olhar não é pedir conferência, e cada chamada é
+dinheiro. O que a IA pode fazer ali não mudou — aceitar o palpite, trocar por outro município **da
+lista do IBGE**, ou não gravar nada; incerta, a caixa abre para ele.
+
+**Consequência de custo, dita:** com a IA ligada, cada contato com palpite de cidade pendente passa a
+custar uma chamada na rodada normal. O teto mensal continua obrigado no service worker.
+
+### O único ponto em que a IA substitui o quadro — e agora ele aparece no log
+
+Quando o fluxo dá **tecla 6** e "Automatizar" está marcado, a IA manda uma resposta pronta e conclui:
+o quadro disse "isto é seu" e ela respondeu no lugar. É o que ele pediu (*"em casos que eu deveria
+assumir para responder"*), então ficou como está — mas a linha do Andamento dizia só *"IA assumiu"*,
+sem dizer de quem tomou o caso. Agora diz: **"IA assumiu (92%) (o fluxo tinha mandado para você:
+'ultima-pede-resposta-pessoal')"**.
+
+**A tensão que fica, para ele decidir:** tecla 6 significa, por definição, que *nenhuma resposta
+pronta serve* — e o que a IA manda ali é uma resposta pronta. Quando ela **escala**, o caminho é o
+rascunho, que é o desfecho mais coerente. Uma linha desliga o envio automático nesse caso.
+
+Quinze suítes verdes, os dois verificadores limpos. **Nada disto foi visto na tela**: é caminho de
+painel, e nenhuma suíte importa o `panel.js`.
 
 ---
 
