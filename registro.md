@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.60.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.61.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.60.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
-(2.42 → 2.56) e **quatro em 06/09** (2.57 a 2.60). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
+Branch `claude/whatsfill-ia`, **v2.61.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
+(2.42 → 2.56) e **cinco em 06/09** (2.57 a 2.61). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -33,6 +33,7 @@ problemas e sem desfecho incoerente.
 | 2.58 | **A IA ESCREVE onde o determinístico não resolve** — a tecla 0 e a escolha de resposta pronta por ela saíram. |
 | 2.59 | **Um interruptor só** (o da Config saiu), a tela parou de descrever a IA antiga, e o custo mudou-se para o rascunho. |
 | 2.60 | **O rascunho da IA é ENVIADO sozinho** com "Automatizar" marcada, e o interruptor dela subiu para o topo da aba. |
+| 2.61 | **As três negativas saem uma vez por contato**; repetida, o caso desce para você ou para a IA. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -129,6 +130,55 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — A negativa sai uma vez, e depois o caso é dele (v2.61.0)
+
+Print da Cleonice: ela já tinha recebido a negativa de ajuda financeira, mandou um **áudio longo**
+contando da mãe, do cartório e do dinheiro emprestado — e recebeu a **mesma negativa de novo**. Ele
+apagou a mensagem na plataforma. *"mandou mensagem sobre pedido financeiro novamente pra mesma
+pessoa, só deve ser mandado uma vez, e o contexto também pedia resposta minha ou de IA por ser
+conversa extensa"*.
+
+### O detector não estava errado
+
+`pedeAjudaFinanceira` lê a **rajada** — o que ela escreveu depois da nossa última mensagem. Ela pediu
+de novo, e o sinal ficou verdadeiro de novo, corretamente. O que faltava é outra coisa: **dizer "não
+podemos" duas vezes não é responder, é repetir** — a segunda não acrescenta nada e soa a robô em
+cima de quem está pedindo socorro.
+
+### A trava, e por que ela mora no SINAL
+
+`negativaJaSaiu` zera o sinal quando o texto já está na conversa. **No sinal, e não numa exceção da
+caixa**, porque as caixas do pedido de dinheiro são DELE (`noVazio` + condição) — uma exceção nova só
+chegaria depois de ele importar o fluxo, e esta precisa valer hoje. É o mesmo desenho do `apoioTrava`.
+
+Pergunta à **conversa**, não ao registro de envios: a mensagem sai também pela mão dele e pela
+automação da plataforma. E a que ele **apagou** continua contando — apagar tira da tela dela, não do
+que já foi dito.
+
+**Vale para as três negativas** — ajuda financeira, emprego e ligação. São a mesma classe de texto
+("não podemos fazer isso"), e repetir qualquer uma tem o mesmo defeito.
+
+### A segunda metade veio de graça
+
+Medido no caso real:
+
+| | desfecho |
+|---|---|
+| primeira vez | `pedido-ajuda` — a negativa sai |
+| **já negamos antes** | **tecla 6** — `ultima-pede-resposta-pessoal` |
+
+Ou seja: barrada a repetição, o caso desce sozinho para quem precisa de gente, que é exatamente o
+que ele pediu na segunda frase. **Não foi preciso reordenar nada** — e reordenar seria caro: pôr
+"conversa longa" acima do pedido de dinheiro mandaria para ele todo áudio de quem pede socorro,
+inclusive na primeira vez, quando a negativa é a resposta certa.
+
+Com a IA ligada e "Automatizar" marcada (2.60), essa tecla 6 vira o rascunho dela — escrito com a
+conversa inteira na frente.
+
+Cinco asserções novas. Quinze suítes verdes, os dois verificadores limpos.
 
 ---
 

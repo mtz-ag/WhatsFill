@@ -1316,6 +1316,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **As TRES NEGATIVAS saem uma vez por contato, e nunca mais.** Print da Cleonice (06/09/2026): ela
+  ja tinha recebido a negativa de ajuda financeira, mandou um audio longo e recebeu a MESMA negativa
+  de novo — ele apagou a mensagem na plataforma. *"so deve ser mandado uma vez"*. **O detector nao
+  estava errado**: `pedeAjudaFinanceira` le a RAJADA, ela pediu de novo, o sinal ficou verdadeiro de
+  novo. O que faltava e que **dizer "nao podemos" duas vezes nao e responder, e repetir**. A trava
+  (`negativaJaSaiu`) mora no SINAL e nao numa excecao da caixa, porque as caixas do pedido de
+  dinheiro sao DELE: excecao nova so chegaria depois de ele importar o fluxo, e esta precisa valer
+  hoje — mesmo desenho do `apoioTrava`. Pergunta a CONVERSA (a mensagem sai tambem pela mao dele, e
+  a que ele APAGOU continua contando). **A segunda metade do pedido veio de graca:** barrada a
+  repeticao, o caso desce sozinho para `ultima-pede-resposta-pessoal` (tecla 6), que era o outro
+  pedido dele (*"o contexto tambem pedia resposta minha ou de IA por ser conversa extensa"*) —
+  **sem reordenar nada**, e reordenar seria caro: por "conversa longa" acima do pedido de dinheiro
+  mandaria para ele todo audio de quem pede socorro, inclusive na primeira vez.
+
 - **O RASCUNHO DA IA VOLTOU A SAIR SOZINHO — decisao dele, e ele ja tinha cortado isto uma vez.**
   Print de 06/09/2026: *"o box de IA esta ligado, entao aqui deveria chamar a IA para escrever e
   enviar"*. **Antes de mudar comportamento, conferi: a IA NAO estava ligada** — o que estava marcado

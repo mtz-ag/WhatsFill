@@ -5026,6 +5026,43 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       };
 
       /**
+       * **As três NEGATIVAS saem uma vez por contato, e nunca mais** — regra dele (06/09/2026),
+       * com a print da Cleonice: *"mandou mensagem sobre pedido financeiro novamente pra mesma
+       * pessoa, só deve ser mandado uma vez"*.
+       *
+       * Ela já tinha recebido a negativa de ajuda financeira; mandou um áudio longo contando da
+       * mãe, do cartório e do dinheiro emprestado — e recebeu a MESMA negativa de novo. Ele apagou
+       * a mensagem na plataforma.
+       *
+       * **O detector não estava errado.** `pedeAjudaFinanceira` lê a RAJADA (o que ela escreveu
+       * depois da nossa última mensagem), então ela pediu de novo e o sinal ficou verdadeiro de
+       * novo — corretamente. O que faltava é que **dizer "não podemos" duas vezes não é responder,
+       * é repetir**: a segunda vez não acrescenta nada e soa a robô em cima de quem está pedindo
+       * socorro.
+       *
+       * **Vale para as TRÊS**, porque são a mesma classe de texto — ajuda financeira, emprego e
+       * ligação, as três dizem "não podemos fazer isso". Repetir qualquer uma tem o mesmo defeito.
+       *
+       * **A trava mora no SINAL, e é o que a faz valer no quadro dele sem importar nada.** As
+       * caixas são dele (`noVazio` + `condicao: pedeAjudaFinanceira`), então uma exceção nova só
+       * chegaria depois de ele importar o fluxo — e esta precisa valer hoje. Mesmo desenho do
+       * `apoioTrava`: o sinal chega nulo, e o quadro decide como se ela não tivesse pedido.
+       *
+       * **Pergunta à CONVERSA e não ao registro de envios** (`jaSaiuNaConversa`): a mensagem sai
+       * também pela mão dele e pela automação da plataforma, e a que ele APAGOU na plataforma
+       * continua contando — apagar tira da tela dela, não do que já foi dito.
+       *
+       * O que acontece depois: o caso desce para a caixa seguinte. No caso da Cleonice, o áudio
+       * longo cai em "você responde" — que é a outra metade do que ele pediu: *"o contexto também
+       * pedia resposta minha ou de IA por ser conversa extensa"*.
+       */
+      const negativaJaSaiu = (id) => {
+        const pronta = state.templates.find((t) => t.id === id);
+        if (!pronta) return false;
+        return [pronta.text, ...(pronta.variantes || [])].some((texto) => jaSaiuNaConversa(texto));
+      };
+
+      /**
        * **O modelo já está na conversa — e quando ele é o PADRÃO, são os três.**
        *
        * O modelo padrão reveza entre três (pedido dele, 02/09: *"o modelo padrão deve variar entre
@@ -5290,19 +5327,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         pedeAlgoIndefinido: pedeAlgoIndefinido(state.entrantes, state.nossaUltimaAt),
         // Pediu DINHEIRO: vem antes do "pediu algo sem dizer o quê" no quadro, porque aqui já se
         // sabe o que ela quer — perguntar seria fingir que não (print da Marli, 02/09).
-        pedeAjudaFinanceira: pedeAjudaFinanceira(state.entrantes, state.nossaUltimaAt),
+        pedeAjudaFinanceira: negativaJaSaiu('pedido-ajuda') ? null : pedeAjudaFinanceira(state.entrantes, state.nossaUltimaAt),
         /**
          * **Perguntou como trabalhar no mandato.** Anotação do Kelvem (02/09/2026): a pergunta veio
          * numa mensagem e o *"No caso vcs não pagam"* na seguinte, e a rodada agradeceu e concluiu.
          * O texto que explica e nega já existia sem ninguém acioná-lo.
          */
-        pedeEmprego: pedeEmprego(state.entrantes, state.nossaUltimaAt),
+        pedeEmprego: negativaJaSaiu('pedido-emprego') ? null : pedeEmprego(state.entrantes, state.nossaUltimaAt),
         /**
          * **Pediu que a gente ligasse.** Anotação da Jucileia (04/09/2026): *"Oi"*, três mensagens
          * que a plataforma não leu e *"Me liga"* — e a rodada ofereceu concluir, deixando a pessoa
          * esperando o telefone tocar.
          */
-        pedeLigacao: pedeLigacao(state.entrantes, state.nossaUltimaAt),
+        pedeLigacao: negativaJaSaiu('pedido-ligacao') ? null : pedeLigacao(state.entrantes, state.nossaUltimaAt),
         naoPodeFalarAgora: naoPodeFalarAgora(state.entrantes, state.nossaUltimaAt),
         rajadaDeAnuncios: rajadaDeAnuncios(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
         /**

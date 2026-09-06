@@ -2288,4 +2288,50 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   check(arv.paraArquivo({ arvore, teclas: {} }, 'x').extensao === '', 'sem a versao, o campo sai vazio');
 }
 
+{
+  grupo('a negativa sai uma vez, e depois o caso e seu (06/09/2026)');
+
+  /**
+   * Print da Cleonice: ela ja tinha recebido a negativa de ajuda financeira, mandou um audio longo
+   * contando da mae, do cartorio e do dinheiro emprestado -- e recebeu a MESMA negativa de novo.
+   * *"mandou mensagem sobre pedido financeiro novamente pra mesma pessoa, so deve ser mandado uma
+   * vez, e o contexto tambem pedia resposta minha ou de IA por ser conversa extensa"*.
+   *
+   * O detector nao estava errado: ele le a RAJADA, ela pediu de novo, o sinal ficou verdadeiro de
+   * novo. O que faltava e que **dizer "nao podemos" duas vezes nao e responder, e repetir**.
+   *
+   * A trava mora no painel (`negativaJaSaiu` zera o sinal quando o texto ja esta na conversa), e o
+   * que este teste guarda e o DESFECHO: com o sinal zerado, o caso desce para quem precisa de
+   * gente -- que e a outra metade do que ele pediu.
+   */
+  const fluxo = arv.fluxoPadrao();
+  const audio = [{
+    texto: 'Ai, vai no CRAS. CRAS e pra vadio. As fraldas da minha mae, eu tenho que ir la no cartorio ainda registrar. ' +
+      'Gente, a pessoa, o cidadao nao tem direito a nada. Eu falei aquilo, me desculpe de pedir. Mas hoje, se eu, o meu ' +
+      'marido pedir mil reais emprestado, nos vamos pagar tres mil, quatro mil. E horrivel.',
+    tipo: 'AUDIO',
+    transcrito: true,
+  }];
+  const base = {
+    pedeRespostaPessoal: cortesia.conversaPedeRespostaPessoal(audio, null, []),
+    jaRespondemosAntes: true,
+    temEtiquetaDeCidade: true,
+    podeMandarMomento: true,
+    podePedirDados: true,
+    textos: audio.map((m) => m.texto),
+    ultimoTexto: audio[0].texto,
+  };
+
+  const pedeDinheiro = cortesia.pedeAjudaFinanceira(audio, null);
+  check(!!pedeDinheiro, 'o detector reconhece o pedido de dinheiro no audio');
+  check(!!base.pedeRespostaPessoal, 'e reconhece que e conversa longa');
+
+  const primeira = arv.decidir({ ...base, pedeAjudaFinanceira: pedeDinheiro }, fluxo, {});
+  check(primeira?.resposta === 'pedido-ajuda', 'na PRIMEIRA vez, a negativa sai');
+
+  const segunda = arv.decidir({ ...base, pedeAjudaFinanceira: null }, fluxo, {});
+  check(segunda?.tecla === '6', `ja tendo negado, o caso vai para voce ou para a IA (tecla ${segunda?.tecla})`);
+  check(segunda?.resposta !== 'pedido-ajuda', 'e a negativa NAO sai de novo');
+}
+
 fim();

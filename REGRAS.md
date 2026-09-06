@@ -48,6 +48,7 @@ está valendo de verdade:
 | regra | onde vive |
 |---|---|
 | **Pergunta pendente tem prioridade máxima, e nunca se conclui com pergunta em aberto** (03/09, repetido em 04/09). É pergunta *a menos que* uma resposta pronta responda. | código + quadro (posição) |
+| **A negativa (dinheiro, emprego, ligação) sai UMA VEZ por contato** (06/09): *"só deve ser mandado uma vez"*. Repetida, o caso vai para você ou para a IA. | código (`negativaJaSaiu`) |
 | **Pedido de dinheiro, cesta ou remédio → a resposta que nega, ACIMA do modelo** (03/09, a Regina): *"modelo fora de contexto, ela quer ajuda financeira"*. Propaganda como primeira resposta a um pedido de socorro é errado mesmo com o texto inofensivo. | código + quadro |
 | **Quer trabalhar no mandato → resposta própria** (02/09), porque trabalhamos com voluntários. | código + quadro |
 | **Pediu que a gente ligasse → resposta própria** (04/09), que **não promete retorno**: não fazemos ligações. | código + quadro |
