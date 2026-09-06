@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.61.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.62.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.61.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
-(2.42 → 2.56) e **cinco em 06/09** (2.57 a 2.61). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
+Branch `claude/whatsfill-ia`, **v2.62.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
+(2.42 → 2.56) e **seis em 06/09** (2.57 a 2.62). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -34,6 +34,7 @@ problemas e sem desfecho incoerente.
 | 2.59 | **Um interruptor só** (o da Config saiu), a tela parou de descrever a IA antiga, e o custo mudou-se para o rascunho. |
 | 2.60 | **O rascunho da IA é ENVIADO sozinho** com "Automatizar" marcada, e o interruptor dela subiu para o topo da aba. |
 | 2.61 | **As três negativas saem uma vez por contato**; repetida, o caso desce para você ou para a IA. |
+| 2.62 | **O padrão de atendimento dele virou o prompt do rascunho** — e o prompt cruzou o mínimo de cache do Haiku. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -130,6 +131,67 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — O padrão de atendimento dele virou o prompt da IA (v2.62.0)
+
+*"a IA deve seguir esse padrão para responder"*, com um documento de 37 seções.
+
+Ele está em `src/lib/atendimento.js`, numa constante, e **vale para ele a mesma regra do
+`fluxoPadrao`: não altere sem ele pedir.** Quando mandar versão nova, troca-se o bloco inteiro.
+
+### O que saiu para dar lugar a ele
+
+As quatro linhas de estilo que eu tinha escrito ("frases curtas, diretas, calorosas sem ser
+piegas"). O documento diz a mesma coisa com muito mais precisão e cobre o que eu nunca teria
+escrito: **identificar o sentimento antes do assunto**, não diminuir o problema, não discutir com o
+cidadão, não concordar com afirmação factual falsa só para agradar, e a matriz de 18 situações.
+
+### O que FICOU, porque o documento não cobre
+
+1. **Não chamar a pessoa pelo nome** — decisão dele de 10/08, e o padrão não fala disso. Sem esta
+   linha a IA usaria o nome do cadastro, que nesta base erra demais.
+2. **Nada de `{{variáveis}}`** e "responda só com o texto" — mecânica do campo de mensagem.
+3. **A lei 9.504/97 nomeada**, porque a proibição de prometer bem ou benefício é a única com risco
+   jurídico e merece estar escrita duas vezes.
+
+### Um conflito real, resolvido a favor dele
+
+O prompt antigo mandava, no pedido de ajuda, *"escreva um rascunho que encaminhe para a assistência
+social do município (CRAS…)"*. **O padrão dele diz o contrário**: no item 5, *"Procure o CRAS"* está
+na lista do que NÃO dizer, porque soa a minimização — e o item 9 dá a estrutura que ele quer no
+lugar. Tirei a instrução. A proibição legal continua inteira; o que mudou é o que a IA escreve
+DEPOIS de negar.
+
+**O texto pronto `pedido-ajuda` não foi tocado** — ele lista SINE, Emprega Brasil e CRAS com
+detalhe, é dele, e não é um despacho. A regra nova vale para o que a IA escreve.
+
+### O efeito no custo, medido — e ele é bom
+
+O prompt de sistema do rascunho foi de **1.169 para 4.715 tokens** e **cruzou o mínimo de cache do
+Haiku 4.5**, que é 4.096. Isso muda a conta:
+
+| | Haiku 4.5 |
+|---|---|
+| antes (nunca cacheava) | US$ 0,0029 |
+| agora, cache frio (1ª chamada, escreve) | US$ 0,0076 |
+| agora, cache quente (as seguintes) | **US$ 0,0022** |
+
+O cache dura 5 minutos. Numa rodada corrida as chamadas caem dentro da janela e a maioria lê o
+cache; numa rodada lenta, algumas escrevem de novo. **Na prática fica entre US$ 0,0022 e US$ 0,0076
+por rascunho**, contra US$ 0,0029 antes — e o log do Andamento passa a dizer `cache <n>` em vez de
+"sem cache (esperado)", que era o normal no Haiku até hoje.
+
+### Testes
+
+Duas asserções caíram, e as duas estavam certas em cair: *"nunca envia"* (deixou de ser verdade na
+2.60) e *"diz para onde encaminhar (CRAS)"* (virou o oposto). Entraram seis, entre elas a que exige
+que o documento vá **inteiro** — se alguém trocá-lo por um resumo, ela cai antes de a IA começar a
+escrever diferente em produção.
+
+Quinze suítes verdes, os dois verificadores limpos. **O que a IA escreve com o padrão novo não foi
+visto**: isso só aparece no primeiro rascunho da próxima rodada.
 
 ---
 

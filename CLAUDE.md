@@ -1316,6 +1316,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **`atendimento.PADRAO_DE_ATENDIMENTO` e um DOCUMENTO DELE, como o `fluxoPadrao` — nao altere sem
+  ele pedir.** Entregue em 06/09/2026 (*"a IA deve seguir esse padrao para responder"*), 37 secoes,
+  e virou o corpo do prompt de sistema do rascunho. **Arquivo proprio** porque `ia.js` e mecanica e
+  isto e conteudo; **constante e nao arquivo lido**, porque o prompt de sistema leva `cache_control`
+  e o cache so pega enquanto o prefixo for identico — leitura de arquivo tem estados, e cada estado
+  seria um prompt diferente. **O que FICA escrito fora dele** e o que ele nao cobre: nao chamar pelo
+  nome (10/08), nada de `{{variaveis}}`, o formato de saida e a lei 9.504/97 nomeada. **Um conflito
+  real, resolvido a favor dele:** o prompt antigo mandava encaminhar ao CRAS no pedido de ajuda, e o
+  padrao poe *"Procure o CRAS"* na lista do que NAO dizer (soa a minimizacao) — a instrucao saiu, e
+  o TEXTO PRONTO `pedido-ajuda`, que lista SINE e CRAS com detalhe, nao foi tocado: e dele.
+  **Efeito medido no custo:** o prompt foi de 1.169 para 4.715 tokens e **cruzou o minimo de cache
+  do Haiku (4.096)** — cache quente custa US$ 0,0022 contra US$ 0,0029 de antes; frio, US$ 0,0076.
+
 - **As TRES NEGATIVAS saem uma vez por contato, e nunca mais.** Print da Cleonice (06/09/2026): ela
   ja tinha recebido a negativa de ajuda financeira, mandou um audio longo e recebeu a MESMA negativa
   de novo — ele apagou a mensagem na plataforma. *"so deve ser mandado uma vez"*. **O detector nao

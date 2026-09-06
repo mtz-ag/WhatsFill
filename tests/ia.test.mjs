@@ -8,6 +8,7 @@
  * padrão de segurança é `incerto`, que significa "o painel se comporta como antes da IA existir".
  */
 import { check, grupo, fim } from './_harness.mjs';
+import { PADRAO_DE_ATENDIMENTO } from '../src/lib/atendimento.js';
 import {
   montarSistemaRascunho,
   montarContatoRascunho,
@@ -165,14 +166,33 @@ grupo('rascunho: o prompt proíbe o que a lei proíbe, e ensina o tom pelos text
     templates: [{ id: 'agradecimento', name: 'Agradecer', text: 'Obrigado pela atenção! Um abraço.' }],
     regras: 'Cite a agenda de terça quando fizer sentido.',
   });
-  check(/nunca envia/i.test(sistema), 'deixa claro que ela não envia');
+  /**
+   * **Duas assercoes cairam em 06/09/2026, e as duas estavam certas em cair:**
+   *
+   *  - *"nunca envia"* deixou de ser verdade na 2.60 (com "Automatizar" marcada o rascunho SAI
+   *    sozinho), e o prompt nao pode afirmar o contrario;
+   *  - *"diz para onde encaminhar (CRAS)"* virou o oposto do que ele mandou: no padrao dele,
+   *    *"Procure o CRAS"* esta na lista do que NAO dizer, porque soa a minimizacao. O texto pronto
+   *    `pedido-ajuda`, que lista SINE e CRAS com detalhe, nao foi tocado -- ele e dele.
+   */
   check(/9\.504/.test(sistema), 'cita a lei eleitoral');
   check(/cesta|rem[ée]dio|emprego/i.test(sistema), 'proíbe prometer bem ou benefício');
-  check(/CRAS|assist[êe]ncia social/i.test(sistema), 'e diz para onde encaminhar em vez de prometer');
   check(/N[ÃA]O chame a pessoa pelo nome/i.test(sistema), 'mantém a regra do projeto de não usar nome');
   check(/Obrigado pela atenção/.test(sistema), 'as respostas DELE entram como exemplo de estilo');
   check(/agenda de terça/.test(sistema), 'as instruções dele entram');
-  check(/inventar dado/i.test(sistema), 'proíbe inventar dado');
+  check(/n[ãa]o invente/i.test(sistema), 'proíbe inventar informação');
+
+  /**
+   * **O PADRAO DE ATENDIMENTO dele está no prompt** (06/09/2026: *"a IA deve seguir esse padrao
+   * para responder"*). Cinco regras que só existem no documento dele -- se alguem trocar o prompt
+   * por um resumo, estas caem antes de a IA começar a escrever diferente em producao.
+   */
+  check(sistema.includes(PADRAO_DE_ATENDIMENTO), 'o padrao dele vai INTEIRO, e nao resumido');
+  check(/OUVIR .* ENTENDER .* ACOLHER/i.test(sistema), 'a ordem que ele definiu esta la');
+  check(/sentimento antes do assunto/i.test(sistema), 'identificar o sentimento antes do assunto');
+  check(/n[ãa]o discuta com o cidad[ãa]o/i.test(sistema), 'nao discutir com o cidadao');
+  check(/Procure o CRAS/.test(sistema), 'e "Procure o CRAS" aparece na lista do que NAO dizer');
+  check(/RESPONDA AO QUE A PESSOA EST[ÁA] VIVENDO/i.test(sistema), 'o principio final dele fecha o documento');
 }
 
 grupo('rascunho: a conversa longa entra inteira — é o caso de uso');

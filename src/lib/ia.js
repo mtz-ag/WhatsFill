@@ -25,6 +25,13 @@
  */
 
 /**
+ * A única dependência deste arquivo, e ela é um DOCUMENTO, não código: o padrão de atendimento que
+ * ele escreveu (06/09/2026). `atendimento.js` é puro como este — sem rede, sem `chrome` —, então a
+ * propriedade que importa continua de pé: dá para testar a decisão inteira offline.
+ */
+import * as atendimento from './atendimento.js';
+
+/**
  * O modelo padrão.
  *
  * **Haiku 4.5 por escolha dele** (29/08: *"vou testar com o haiku somente, os outros tem custo
@@ -617,31 +624,55 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     .join('\n');
 
   return [
-    'Você redige um RASCUNHO de resposta para o WhatsApp de um mandato parlamentar no Rio Grande',
-    'do Sul. Uma pessoa da equipe vai ler, editar e só então enviar. Você nunca envia nada.',
+    /**
+     * **O PADRÃO DE ATENDIMENTO DELE vem primeiro, e ocupa quase todo o prompt** — entregue em
+     * 06/09/2026 com a frase *"a IA deve seguir esse padrão para responder"*.
+     *
+     * O que estava aqui antes eram quatro linhas de estilo escritas por mim. Elas foram
+     * substituídas pelo documento, que diz a mesma coisa com muito mais precisão e cobre o que eu
+     * nunca teria: identificar o SENTIMENTO antes do assunto, não diminuir o problema, não discutir
+     * com o cidadão, não concordar com afirmação factual falsa só para agradar.
+     *
+     * **Fica no prompt de SISTEMA porque não muda entre contatos** — é ele que leva
+     * `cache_control`, e o documento é o mesmo em toda chamada.
+     */
+    atendimento.PADRAO_DE_ATENDIMENTO,
     '',
-    'Como escrever:',
+    '---',
     '',
-    '1. Em português do Brasil, no tom das mensagens de exemplo mais abaixo — elas foram escritas',
-    '   pela própria equipe e são a referência de voz. Frases curtas, diretas, calorosas sem ser',
-    '   piegas. Nada de "espero que esteja bem", "venho por meio desta" ou floreio de atendimento.',
-    '2. NÃO chame a pessoa pelo nome. É regra do mandato: o cadastro erra o nome com frequência',
+    '## O que este mandato exige além do padrão acima',
+    '',
+    /**
+     * **As três que o documento dele não cobre**, e por isso continuam escritas aqui.
+     *
+     * A do NOME é decisão dele de 10/08 e não aparece no padrão: sem ela a IA usaria o nome do
+     * cadastro, que nesta base erra demais (apelido do perfil, cidade no campo do nome, `[NOVO] …`).
+     * A do formato de saída é mecânica — o texto volta e vai direto para o campo de mensagem.
+     */
+    '1. NÃO chame a pessoa pelo nome. É regra do mandato: o cadastro erra o nome com frequência',
     '   alta demais, e errar o nome de alguém é pior do que não usar nenhum.',
-    '3. Responda o que foi perguntado. Se o texto é longo, mostre que leu — cite o ponto concreto,',
-    '   não faça resumo genérico.',
-    '4. Tamanho de WhatsApp: no máximo uns 4 parágrafos curtos. Se não couber, priorize.',
+    '2. Nunca use {{variáveis}} nem qualquer marcador: escreva o texto final, pronto para enviar.',
+    '3. Sobre o candidato, a chapa e as pautas, use SÓ o que estiver na conversa e no bloco',
+    '   "Quem é quem" abaixo. É a mesma regra do documento ("não invente informação"), dita aqui',
+    '   porque aqui está a fonte.',
     '',
-    'O que você NÃO pode escrever, em nenhuma hipótese:',
-    '',
-    '- prometer dinheiro, cesta, remédio, passagem, emprego, vaga ou qualquer bem ou benefício.',
-    '  A lei eleitoral (9.504/97) proíbe, e vale o ano inteiro. Se a pessoa pediu isso, escreva um',
-    '  rascunho que encaminhe para a assistência social do município (CRAS, Secretaria de',
-    '  Assistência Social) e ofereça cobrar o poder público — nunca prometa entregar;',
-    '- prometer resolver, garantir resultado, ou marcar compromisso em nome do parlamentar;',
-    '- inventar dado, número, agenda, lei ou posição. Você pode usar o que está na conversa e o',
-    '  que está no bloco "Quem é quem" acima — e NADA além. Não sabe? Escreva sem o dado, ou diga',
-    '  que vai confirmar;',
-    '- usar {{variáveis}} ou qualquer marcador: escreva o texto final.',
+    /**
+     * **O "encaminhe para o CRAS" SAIU daqui, e é um conflito real com o documento dele.**
+     *
+     * O prompt antigo mandava, no pedido de ajuda, *"escreva um rascunho que encaminhe para a
+     * assistência social do município (CRAS, Secretaria de Assistência Social)"*. O padrão dele diz
+     * o contrário, no item 5: *"Procure o CRAS"* está na lista do que **não** dizer, porque soa a
+     * minimização — e o item 9 dá a estrutura que ele quer no lugar (não precisa se desculpar,
+     * entendo a situação, infelizmente não posso assumir, obrigado pela confiança).
+     *
+     * A proibição legal continua inteira: prometer bem ou benefício segue proibido. O que mudou é
+     * o que a IA escreve DEPOIS de negar. **O texto pronto `pedido-ajuda`, que lista SINE, CRAS e
+     * Emprega Brasil, não foi tocado** — ele é dele, é detalhado e não é brusco; a regra nova vale
+     * para o que a IA escreve, não para a resposta pronta.
+     */
+    'A lei eleitoral (9.504/97) proíbe prometer dinheiro, cesta, remédio, passagem, emprego, vaga',
+    'ou qualquer bem ou benefício, e vale o ano inteiro. Negar com respeito é o item 9 do padrão',
+    'acima; prometer, nunca — nem "vou ver o que consigo".',
     '',
     'Responda SÓ com o texto do rascunho. Sem aspas, sem título, sem explicação.',
     '',
