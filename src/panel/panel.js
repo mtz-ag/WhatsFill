@@ -4258,11 +4258,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!state.settings.autoSend) {
       return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
     }
+    /**
+     * **A caixa "Automatizar a rodada" vale AQUI TAMBÉM, e o aviso não dizia.**
+     *
+     * `rodadaAutomatica()` lê `cfg.automatizarComIA` sem olhar em qual fila a rodada está — o que
+     * é o desenho certo (a caixa fica no mesmo cartão dos dois botões), mas o `confirm` dos Novos
+     * diz *"AUTOMÁTICO LIGADO: sai SEM eu perguntar"* e este não dizia nada. E aqui é mais grave
+     * que lá: **o atendimento é de outro operador**, e concluir sozinho fecha o trabalho de alguém.
+     *
+     * Mesma disciplina do rótulo da caixa (02/09/2026): interruptor que faz duas coisas tem que
+     * dizer as duas — e aviso que descreve metade do que vai acontecer manda procurar no lugar
+     * errado justamente quando ele for investigar um envio que não entendeu.
+     */
+    const sozinha = rodadaAutomatica();
     if (
       !confirm(
         'A aba "Outros" são atendimentos em andamento com OUTRO operador.\n\n' +
-          'Concluir ali fecha o atendimento de um colega. Você decide contato a contato, mas ' +
-          'confirme que é isso mesmo.'
+          'Concluir ali fecha o atendimento de um colega.\n\n' +
+          (sozinha
+            ? 'ATENÇÃO: "Automatizar a rodada" está MARCADA — a mensagem que o fluxo escolher sai ' +
+              'SEM eu perguntar, e o atendimento do colega é concluído sozinho. Cada envio fica ' +
+              'no log do Andamento.\n\n'
+            : 'Você decide contato a contato.\n\n') +
+          'Confirma?'
       )
     ) {
       return setStatus('Rodada cancelada.');

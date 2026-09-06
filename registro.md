@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.75.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.76.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -183,6 +183,36 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — A rodada dos "Outros" avisa quando vai andar sozinha (v2.76.0)
+
+Pedido dele: *"a extensão foi atualizada fique a par, e veja se a automatização dos outros está
+atualizada"*. Medido antes de responder — **as três rodadas usam o mesmo motor**:
+
+| fila | quem processa | herda as regras? |
+|---|---|---|
+| **Meus** | `processarRespondido` | — é ele |
+| **Outros** | `processarRespondido` | **sim, é a mesma função** |
+| **Novos** | `processarNovo` → assume e delega para `processarRespondido` | sim |
+
+Não há motor separado em lugar nenhum: `processarRespondido` **não recebe a aba**, e nada no
+caminho da decisão pergunta em qual fila está. Tudo o que entrou de 2.42 a 2.75 vale nas três.
+
+### O que estava desatualizado era o AVISO
+
+`rodadaAutomatica()` lê `cfg.automatizarComIA` sem olhar a fila — desenho certo, porque a caixa
+mora no mesmo cartão dos dois botões. Mas o `confirm` dos **Novos** diz *"AUTOMÁTICO LIGADO: a
+mensagem que o fluxo escolher sai SEM eu perguntar"* e o dos **Outros** dizia só *"você decide
+contato a contato"* — **que passa a ser falso com a caixa marcada**.
+
+E ali é mais grave que nos Novos: **o atendimento é de outro operador**, então a rodada conclui
+sozinha o trabalho de um colega. Hoje o aviso diz qual dos dois vai acontecer, lendo a caixa na
+hora do clique.
+
+Mesma disciplina do rótulo de 02/09 (*"interruptor que faz duas coisas tem que dizer as duas"*),
+agora aplicada ao aviso. 15 suítes verdes, os dois verificadores limpos.
 
 ---
 

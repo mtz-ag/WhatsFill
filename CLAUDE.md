@@ -1442,6 +1442,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **AS TRES RODADAS TEM UM MOTOR SO — e o que envelhece hoje e o AVISO, nao a decisao.** Medido em
+  06/09/2026 a pedido dele (*"veja se a automatizacao dos outros esta atualizada"*): **Meus** e
+  **Outros** chamam a MESMA funcao (`processarRespondido`), e **Novos** (`processarNovo`) assume e
+  delega para ela. `processarRespondido` **nao recebe a aba**, e nada no caminho da decisao pergunta
+  em qual fila esta — entao conserto de regra chega nas tres de graca, e a armadilha de 03/09 (*"a
+  rodada dos Novos era um motor a parte"*) esta fechada. **O que NAO e comum e a tela:** cada rodada
+  tem o seu `confirm`, e `rodadaAutomatica()` le `cfg.automatizarComIA` sem olhar a fila — a caixa
+  "Automatizar a rodada" faz a rodada dos **Outros** enviar e concluir sozinha, e o aviso de la
+  dizia *"voce decide contato a contato"*, que e falso com ela marcada. **Nos Outros isso e mais
+  grave que nas outras filas: o atendimento e de outro operador.** Ao criar rodada nova, herde o
+  motor E confira o que o `confirm` dela promete.
+
 - **A causa que ELE aponta pode ser a metade certa de um defeito com duas metades.** Print da Maria
   Antonia (06/09/2026): perguntou *"o senhor e candidato a qual partido"* no dia 05, mandou um link
   do TikTok no dia 06, e recebeu a mensagem do momento. *"ignorou por causa do link no final"* —
