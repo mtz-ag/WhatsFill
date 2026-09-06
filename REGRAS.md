@@ -24,6 +24,7 @@ está valendo de verdade:
 | regra | onde vive |
 |---|---|
 | **A resposta nunca chama o contato pelo nome** (10/08). O nome do CRM erra demais — apelido do perfil, cidade no campo do nome, `[NOVO] …` — e sem valor o envio é bloqueado. | código |
+| **Com "Automatizar" + IA marcadas, o rascunho dela SAI SOZINHO** (06/09) — sua escolha, e você já havia cortado este caminho em 03/09. Barram o envio só marcador esquecido e promessa de entregar. | código |
 | **A IA nao decide o que sai para o eleitor.** Na rodada ela **escreve um rascunho** onde o determinístico não resolve (06/09) e você manda; o envio automático e a escolha de resposta pronta por ela foram removidos. | código |
 | **Tudo que o determinístico resolve fica com o determinístico** (06/09): medido, o quadro decide 94% dos casos e a IA nunca e consultada neles. | código |
 | **A IA confere a cidade** sempre que estiver ligada e a rodada andando (06/09) — aceita, corrige com a lista do IBGE, ou não grava. | código |

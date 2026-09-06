@@ -1316,6 +1316,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **O RASCUNHO DA IA VOLTOU A SAIR SOZINHO — decisao dele, e ele ja tinha cortado isto uma vez.**
+  Print de 06/09/2026: *"o box de IA esta ligado, entao aqui deveria chamar a IA para escrever e
+  enviar"*. **Antes de mudar comportamento, conferi: a IA NAO estava ligada** — o que estava marcado
+  era "Automatizar a rodada", e a prova estava na propria print (o aviso *"com a avaliacao por IA
+  desmarcada..."* so aparece nessa combinacao). **A tela era a culpada, por dois defeitos meus:** o
+  aviso mandava procurar a caixa na aba Config, de onde ela saiu uma hora antes; e a caixa da IA
+  morava DENTRO do cartao dos Novos, longe do botao "Comecar pelos Meus". `ia.ligada` e chave unica
+  e vale para as duas filas — hoje o interruptor e um so, no topo da aba. **O comportamento novo:**
+  com as duas caixas marcadas, o rascunho e ENVIADO sem perguntar; isto atravessa a fronteira "o que
+  sai e byte a byte um texto que ele escreveu", que era o que tornava o erro recuperavel. As travas
+  que ficam sao duas e estao em `ia.rascunhoPodeSairSozinho`: **marcador esquecido** e **promessa de
+  entregar** (Lei 9.504/97). Sao CONSTANTES comparadas por identidade — reescrever o texto do aviso
+  sem reescrever a trava a faria deixar de casar em silencio. **E ha agora um SEGUNDO ponto de saida
+  de mensagem** (`page.sendText` direto, texto livre nao passa por `sendTemplate`): a marca do
+  endereco foi copiada para la, porque e por invariante do texto e sem ela o caso de material some
+  da lista dele.
+
 - **Mudou o papel de uma funcao? A TELA que a descreve envelheceu junto.** Pedido dele (06/09/2026),
   quatro horas depois da 2.58: *"confira se os botoes de ligar a IA seguem essas regras"*. A aba
   Config ainda dizia *"a IA le a conversa e ESCOLHE entre as suas respostas prontas"* e *"ela nunca

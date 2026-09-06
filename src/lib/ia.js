@@ -951,6 +951,30 @@ const SE_APRESENTANDO = [
  * @param {Date|number} agora
  * @param {{jaFalamos?: boolean}} [contexto] `jaFalamos` liga o aviso de apresentação repetida.
  */
+/**
+ * **Os dois avisos que IMPEDEM o envio automático do rascunho** (06/09/2026).
+ *
+ * Os outros que esta função levanta são cosméticos ou já corrigidos por ela — a saudação trocada,
+ * o traço eme virado hífen, a abertura com "entendi", o texto longo, a apresentação repetida.
+ * Estes dois não: **marcador esquecido** iria literalmente para o eleitor (`{{primeiro_nome}}` na
+ * tela do WhatsApp), e **promessa de entregar** é o risco da Lei 9.504/97, que é a razão de a IA
+ * nunca ter podido escolher `pedido-ajuda`/`pedido-emprego`.
+ *
+ * São CONSTANTES, e não uma lista de frases reescrita no painel, porque quem compara é código: o
+ * dia em que alguém reescrever o texto do aviso, a trava do envio tem que reescrever junto — ou
+ * ela deixa de casar em silêncio, e o silêncio aqui é uma mensagem inventada saindo sozinha.
+ */
+export const AVISOS_QUE_IMPEDEM_ENVIO = {
+  marcador: 'sobrou marcador no texto — troque antes de mandar',
+  promessa: 'parece prometer entregar alguma coisa — confira antes de mandar',
+};
+
+/** O rascunho pode sair sozinho, ou algum aviso exige que uma pessoa leia antes? */
+export function rascunhoPodeSairSozinho(avisos = []) {
+  const impedem = Object.values(AVISOS_QUE_IMPEDEM_ENVIO);
+  return !(avisos || []).some((a) => impedem.includes(a));
+}
+
 export function revisarRascunho(bruto, agora, contexto = {}) {
   let texto = String(bruto || '').trim();
   const avisos = [];
@@ -980,7 +1004,7 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
 
   // Marcador esquecido: iria como está para o eleitor e apareceria literalmente na conversa.
   if (/\{\{|\[nome\]|\[cidade\]|xxx+/i.test(texto)) {
-    avisos.push('sobrou marcador no texto — troque antes de mandar');
+    avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.marcador);
   }
 
   /**
@@ -989,7 +1013,7 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
    * mandato prometendo o que a lei proíbe.
    */
   if (/\b(vou|vamos|posso|podemos|consigo|conseguimos)\b[^.!?]{0,40}\b(mandar|enviar|dar|arrumar|conseguir|providenciar)\b/i.test(texto)) {
-    avisos.push('parece prometer entregar alguma coisa — confira antes de mandar');
+    avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.promessa);
   }
   if (/\b(cesta|rem[ée]dio|dinheiro|pix|emprego|vaga|passagem)\b/i.test(texto)) {
     avisos.push('cita bem ou benefício (cesta, remédio, dinheiro, emprego) — a lei eleitoral proíbe prometer');

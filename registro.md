@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.59.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.60.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.59.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
-(2.42 → 2.56) e **três em 06/09** (2.57 a 2.59). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
+Branch `claude/whatsfill-ia`, **v2.60.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
+(2.42 → 2.56) e **quatro em 06/09** (2.57 a 2.60). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -32,6 +32,7 @@ problemas e sem desfecho incoerente.
 | 2.57 | **A IA confere a cidade na rodada normal** (antes só na automática). |
 | 2.58 | **A IA ESCREVE onde o determinístico não resolve** — a tecla 0 e a escolha de resposta pronta por ela saíram. |
 | 2.59 | **Um interruptor só** (o da Config saiu), a tela parou de descrever a IA antiga, e o custo mudou-se para o rascunho. |
+| 2.60 | **O rascunho da IA é ENVIADO sozinho** com "Automatizar" marcada, e o interruptor dela subiu para o topo da aba. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -128,6 +129,58 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — A IA escreve E MANDA no automático, e o interruptor subiu (v2.60.0)
+
+*"o box de IA está ligado, então aqui deveria chamar a IA para escrever e enviar"*, com a print da
+caixa mostrando *"Sugiro a 6: falou 784 caracteres — é conversa"* e nenhuma linha da IA.
+
+### Antes de mudar comportamento: a IA NÃO estava ligada
+
+O que estava marcado era **"Automatizar a rodada"**. A caixa da IA estava desmarcada — e a prova
+está na própria print: o painel mostrava o aviso *"com 'Ligar a avaliação por IA' desmarcada…"*,
+que só aparece nessa combinação. Se ela estivesse ligada, a caixa traria a linha `⚠` do rascunho.
+
+**E a tela era a culpada, por dois motivos meus:**
+
+1. o aviso mandava procurar a caixa **na aba Config** — de onde ela saiu na 2.59, uma hora antes;
+2. a caixa da IA morava **dentro do cartão dos Novos**, outro cartão, longe do botão "Começar pelos
+   Meus" que ele aperta. `ia.ligada` é uma chave só e vale para as duas filas; morando dentro de um
+   cartão, ela parecia ser daquela fila.
+
+Agora há **um interruptor, num lugar**: o cartão *"A IA nesta aba"*, no topo do Automatizado, acima
+dos dois botões de começar. O texto dele diz as duas coisas que ela faz — escrever onde o fluxo não
+resolve, e conferir a cidade — e diz o que muda ao marcar "Automatizar" junto.
+
+### O que ele pediu, e o que isso custa
+
+**Com as duas caixas marcadas, o rascunho da IA é ENVIADO sem perguntar.**
+
+Isto atravessa a fronteira que o projeto manteve desde o começo: até aqui o que saía para o eleitor
+era, byte a byte, um texto que ele escreveu, e era isso que tornava o erro recuperável — o pior caso
+era a resposta pronta errada, nunca uma frase inventada num mandato. **Ele já cortou este caminho
+uma vez** (03/09: *"retire essa mensagem automática"*), com quatro travas que funcionaram e a
+mensagem saiu mesmo assim. A diferença de hoje é o rótulo: a caixa diz *"envia sozinha"*, e marcá-la
+é a escolha. Desmarcada, o rascunho fica no campo e ele manda.
+
+**As duas travas que ficam**, e só elas: `rascunhoPodeSairSozinho` barra **marcador esquecido**
+(`{{primeiro_nome}}` iria literal para a tela do WhatsApp) e **promessa de entregar** (Lei 9.504/97,
+a mesma razão dos `RESTRITOS`). Cosmético não barra — parar a rodada por um traço eme seria trocar
+"manda errado" por "não anda". As frases são **constantes** em `ia.js`, comparadas por identidade:
+reescrever o aviso sem reescrever a trava a faria deixar de casar em silêncio, e o silêncio aqui é
+uma mensagem inventada saindo sozinha.
+
+### O segundo ponto de saída, dito em voz alta
+
+`sendTemplate` era o ponto ÚNICO por onde toda mensagem saía, e agora há um segundo — texto livre
+não passa por lá (não há id para `markSent`, e as etiquetas de pedido de ajuda dependem de um
+template). **A marca que se aplica mesmo assim é a do endereço**, que é por invariante do texto e
+foi copiada para cá: sem ela, um rascunho que pedisse endereço sumiria da lista que ele transfere no
+fim do dia. `jaPediramDados` não precisa de nada — lê a conversa, e o texto acabou de entrar nela.
+
+Sete asserções novas. Quinze suítes verdes, os dois verificadores limpos.
 
 ---
 

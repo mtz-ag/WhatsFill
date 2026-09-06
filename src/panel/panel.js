@@ -2326,6 +2326,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'plataforma, de cima para baixo. Uma rodada por vez.')
     );
 
+    /**
+     * **A caixa da IA subiu para o TOPO da aba** — print dele (06/09/2026): *"o box de IA está
+     * ligado, então aqui deveria chamar a IA para escrever e enviar"*. Não estava: o que ele tinha
+     * marcado era "Automatizar a rodada", e a caixa da IA estava **desmarcada, dentro do cartão dos
+     * Novos** — outro cartão, longe do botão "Começar pelos Meus", que é o que ele aperta.
+     *
+     * `ia.ligada` é uma chave SÓ e vale para as duas filas; morando dentro de um dos cartões, ela
+     * parecia ser daquela fila. E o aviso do cartão dos Meus ainda mandava procurá-la na aba
+     * Config, de onde ela saiu na 2.59 — ou seja, a tela apontava para um controle que não existe.
+     *
+     * Um interruptor, um lugar, acima dos dois botões de começar.
+     */
+    body.append(renderCartaoIA());
     body.append(renderCartaoMeusAbertos());
     body.append(renderCartaoRitmo(cfg));
     body.append(renderCartaoFila());
@@ -2630,6 +2643,59 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return etiquetaDaLista(lista);
   }
 
+  /**
+   * **O interruptor da IA, e o único que existe** — no topo da aba Automatizado (06/09/2026).
+   *
+   * Ele já morou em dois lugares ao mesmo tempo (aba Config e cartão dos Novos) e nenhum dos dois
+   * era onde a decisão acontece. Agora é um só, acima dos dois botões de começar, porque a chave é
+   * uma só e vale para as duas filas.
+   *
+   * O texto diz as DUAS coisas que ela faz — escrever onde o fluxo não resolve, e conferir a
+   * cidade — porque o rótulo antigo (*"a avaliação por IA"*) descrevia a IA que escolhia resposta
+   * pronta, e essa deixou de existir na 2.58.
+   */
+  function renderCartaoIA() {
+    const card = h('div', { class: 'wf-card' });
+    card.append(h('h4', {}, 'A IA nesta aba'));
+
+    card.append(
+      checkbox(
+        'Usar a IA nas rodadas (custa por contato em que ela entra)',
+        !!state.ia?.ligada,
+        async (v) => {
+          await salvarIA({ ligada: v });
+          setStatus(
+            v
+              ? 'IA ligada — vale para as duas filas, e custa por contato em que ela entra.'
+              : 'IA desligada: só as regras do fluxo decidem, e a cidade de palpite espera você.',
+            'ok'
+          );
+          renderAll();
+        }
+      )
+    );
+
+    card.append(
+      h('div', { class: 'wf-origin' },
+        'Ligada, ela faz duas coisas e só elas: ESCREVE a resposta nos casos que o fluxo passa ' +
+          'para você (uns 5% dos contatos, medido) e CONFERE a cidade antes de ela ir para o CRM. ' +
+          'O resto continua sendo decidido pelo fluxo, de graça.'),
+      h('div', { class: 'wf-origin' },
+        'Com "Automatizar a rodada" também marcada, o que ela escrever é ENVIADO sem perguntar. ' +
+          'Sozinha, ela só deixa o rascunho no campo de mensagem para você mandar.')
+    );
+
+    // Caixa marcada que não faz nada é a armadilha que este painel já pagou: sem chave, a IA não
+    // roda, e a rodada segue só com as regras.
+    if (state.ia?.ligada && !state.iaTemChave) {
+      card.append(
+        h('div', { class: 'wf-block' },
+          'A IA está ligada mas não há chave salva — cadastre na aba Config, senão ela não escreve nada.')
+      );
+    }
+    return card;
+  }
+
   function renderCartaoRespondidos() {
     const card = h('div', { class: 'wf-card' }, [
       h('h4', {}, 'Conferir e responder a fila'),
@@ -2668,7 +2734,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * olhando para uma conversa que a rodada tinha fechado sem perguntar (02/09/2026).
        */
       checkbox(
-        'Automatizar a rodada: envia sozinha a escolha das REGRAS e da IA, sem perguntar',
+        'Automatizar a rodada: envia sozinha o que as REGRAS decidem — e, com a IA ligada, o que ela escrever',
         state.auto.cfg.automatizarComIA,
         (v) => salvarAuto({ automatizarComIA: v }).then(renderAll)
       )
@@ -2703,9 +2769,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (state.auto.cfg.automatizarComIA && !state.ia?.ligada) {
       card.append(
         h('div', { class: 'wf-block' },
-          'Atenção: com "Ligar a avaliação por IA" desmarcada, a parte da IA não roda — mas as ' +
-            'REGRAS continuam sendo executadas sozinhas por esta caixa, e a maioria delas envia ' +
-            'mensagem. Para a rodada voltar a perguntar antes de cada envio, desmarque esta caixa.')
+          'Atenção: a caixa "Usar a IA nas rodadas", no TOPO desta aba, está DESMARCADA — então a ' +
+            'IA não escreve nada aqui. As REGRAS continuam sendo executadas sozinhas por esta ' +
+            'caixa, e a maioria delas envia mensagem. Marque a de cima para a IA escrever (e, com ' +
+            'esta marcada, mandar) nos casos que o fluxo passa para você; desmarque esta para a ' +
+            'rodada voltar a perguntar antes de cada envio.')
       );
     }
 
@@ -3064,7 +3132,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * "Automatizar com IA" e executava as REGRAS também, com a IA desligada.
      */
     const auto = checkbox(
-      'Automático ligado: envia sozinha a escolha das REGRAS e da IA, sem perguntar',
+      'Automático ligado: envia sozinha o que as REGRAS decidem — e, com a IA ligada, o que ela escrever',
       !!cfg.automaticoNovos,
       async (v) => {
         await salvarAuto({ automaticoNovos: v });
@@ -3078,52 +3146,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
     );
     card.append(auto);
-
-    /**
-     * **A avaliação por IA, aqui também** — pedido dele (03/09/2026): *"adicione o box de iniciar
-     * com IA também"*.
-     *
-     * É a MESMA chave da aba Config (`ia.ligada`), e não uma segunda: dois interruptores para a
-     * mesma coisa é como as duas versões da extensão divergiram, e aqui divergir significaria a
-     * rodada gastando dinheiro que a outra tela diz estar desligado.
-     *
-     * Está aqui porque é aqui que ele decide começar a rodada — e a decisão "usar IA nesta leva"
-     * é tomada olhando para o botão de começar, não numa aba de configuração.
-     *
-     * **Ela e a caixa de cima são coisas diferentes**, e a linha abaixo diz isso: esta liga a IA;
-     * a de cima decide se o que a IA (ou a regra) escolher sai sem perguntar.
-     */
-    const comIA = checkbox(
-      'Usar a avaliação por IA nesta rodada (custa por contato avaliado)',
-      !!state.ia?.ligada,
-      async (v) => {
-        await salvarIA({ ligada: v });
-        setStatus(
-          v
-            ? 'Avaliação por IA ligada — vale para todas as rodadas, e custa por contato.'
-            : 'Avaliação por IA desligada: só as regras do fluxo decidem.',
-          'ok'
-        );
-        renderAll();
-      }
-    );
-    card.append(comIA);
-
-    card.append(
-      h('div', { class: 'wf-origin' },
-        'A primeira caixa vale para as regras do fluxo E para a IA — não é uma caixa de IA. A ' +
-          'segunda é a MESMA chave da aba Config: ligar aqui liga em todas as rodadas. Só a tecla ' +
-          '"Responder à mão" continua parando para você: ela quer dizer, por definição, que ' +
-          'alguém precisa escrever. E cidade de palpite não é gravada sozinha — fica esperando ' +
-          'você, com a linha no Andamento.')
-    );
-
-    // Caixa marcada que não faz nada é a armadilha que este painel já pagou: sem chave, a IA não
-    // roda, e a rodada segue só com as regras. Dizer isso aqui é mais barato que ele descobrir
-    // pelo silêncio no Andamento.
-    if (state.ia?.ligada && !state.iaTemChave) {
-      card.append(h('div', { class: 'wf-block' }, 'A IA está ligada mas não há chave salva — cadastre na aba Config, senão ela não avalia nada.'));
-    }
 
     const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Começar pelos Novos');
     comecar.addEventListener('click', () => withBusy(runLoteNovos));
@@ -5517,8 +5539,69 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         const porQue = sugestao
           ? `o fluxo mandou para você ("${sugestao.id}")`
           : 'nenhuma caixa do fluxo decidiu este caso';
+
+        /**
+         * **A IA ESCREVE E MANDA quando a rodada está automática** — decisão dele (06/09/2026):
+         * *"o box de IA está ligado, então aqui deveria chamar a IA para escrever e enviar"*.
+         *
+         * **Isto atravessa a fronteira que o projeto manteve desde o começo:** até aqui o que saía
+         * para o eleitor era, byte a byte, um texto que ELE escreveu, e era isso que tornava o
+         * erro recuperável — o pior caso era a resposta pronta errada, nunca uma frase inventada
+         * num mandato. Agora, com as duas caixas marcadas, sai texto que a IA escreveu.
+         *
+         * **Ele já viveu este caminho e o cortou uma vez** (03/09: *"retire essa mensagem
+         * automática"*), com quatro travas que funcionaram e a mensagem saiu mesmo assim. A
+         * diferença de hoje é o rótulo da caixa, que diz o que ela faz: *"envia sozinha, sem
+         * perguntar"*. Marcá-la é a escolha; desmarcá-la devolve o rascunho para ele mandar.
+         *
+         * **As travas que ficam, e por que só estas duas:** `rascunhoPodeSairSozinho` barra o
+         * marcador esquecido (`{{primeiro_nome}}` iria literal para a tela do WhatsApp) e a
+         * promessa de entregar (Lei 9.504/97, a mesma razão dos `RESTRITOS`). As outras revisões
+         * são cosméticas ou já corrigidas — barrar por elas pararia a rodada por um traço eme.
+         */
+        if (rascunho.ok && rodadaAutomatica() && iaLib.rascunhoPodeSairSozinho(rascunho.avisos)) {
+          if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) {
+            return { nome, resultado: 'erro', motivo: 'a classificação não gravou; não enviei o rascunho' };
+          }
+          await throttle();
+          try {
+            await page.sendText(rascunho.texto);
+          } catch (err) {
+            return { nome, resultado: 'erro', motivo: `o rascunho da IA não saiu: ${err?.message || err}` };
+          }
+          state.lastSendAt = Date.now();
+
+          /**
+           * **Este é um SEGUNDO ponto de saída, e o `CLAUDE.md` diz que só devia haver um.**
+           *
+           * `sendTemplate` é o ponto único por onde toda mensagem sai, e é lá que moram as marcas
+           * do envio. Aqui não dá para passar por ele: o que sai é texto livre, sem template — não
+           * há id para `markSent`, e as etiquetas de pedido de ajuda dependem de um template que a
+           * IA não pode escolher.
+           *
+           * **A marca que se aplica mesmo assim é a do ENDEREÇO**, e ela é por INVARIANTE do texto
+           * (não por id), então vale igual aqui: quem pede o endereço abre o caso de material, e
+           * sem esta linha um rascunho que pedisse endereço sumiria da lista que ele transfere no
+           * fim do dia. `jaPediramDados` não precisa de nada: ele lê a CONVERSA, e o texto acabou
+           * de entrar nela.
+           */
+          const marcaEndereco = templatesLib.ehPedidoDeEndereco(rascunho.texto)
+            ? await etiquetarEndereco(state.contact)
+            : '';
+          const comoFoi = `IA escreveu e mandou${marcaEndereco} (${porQue})`;
+          const fechou = await concluirPeloPainel();
+          if (!fechou.ok) return { nome, resultado: 'enviado', parar: true, motivo: `${comoFoi}, mas ${fechou.reason}` };
+          return { nome, resultado: 'enviado', motivo: `${comoFoi} — e concluí` };
+        }
+
+        /** Rascunho barrado por aviso: ele lê e decide, que é o desfecho que a trava existe para dar. */
+        const barrado =
+          rascunho.ok && rodadaAutomatica() && !iaLib.rascunhoPodeSairSozinho(rascunho.avisos)
+            ? ` — NÃO mandei sozinho: ${(rascunho.avisos || []).join('; ')}`
+            : '';
+
         escalouParaVoce = rascunho.ok
-          ? `${porQue} — a IA escreveu um rascunho no campo de mensagem; leia e mande`
+          ? `${porQue} — a IA escreveu um rascunho no campo de mensagem; leia e mande${barrado}`
           : `${porQue} — a IA não conseguiu rascunhar (${rascunho.motivo || 'sem motivo'})`;
         /**
          * **Só o que deu errado entra no log aqui.** `rascunharParaEle` já escreve a linha do

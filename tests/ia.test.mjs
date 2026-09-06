@@ -15,6 +15,8 @@ import {
   saudacaoDeAgora,
   montarRequisicaoRascunho,
   revisarRascunho,
+  rascunhoPodeSairSozinho,
+  AVISOS_QUE_IMPEDEM_ENVIO,
   validarRascunho,
   vaiCachear,
   tokensAproximados,
@@ -676,6 +678,42 @@ grupo('o rascunho nao pode se apresentar de novo (05/09/2026)');
 
   const limpo = revisarRascunho('Boa tarde! Obrigado pela mensagem.', agora);
   check(limpo.avisos.length === 0, 'texto sem nada disso passa sem aviso');
+}
+
+{
+  grupo('o rascunho so sai sozinho sem os dois avisos graves (06/09/2026)');
+
+  /**
+   * Decisao dele: *"o box de IA esta ligado, entao aqui deveria chamar a IA para escrever e
+   * enviar"*. Com "Automatizar a rodada" marcada, o rascunho passa a SAIR sozinho -- e isso
+   * atravessa a fronteira que o projeto manteve desde o comeco (o que saia era, byte a byte, um
+   * texto que ele escreveu).
+   *
+   * As duas travas que ficam sao as que uma pessoa PRECISA ler: marcador esquecido iria literal
+   * para a tela do WhatsApp, e promessa de entregar e o risco da Lei 9.504/97. As outras revisoes
+   * sao cosmeticas ou ja corrigidas -- barrar por elas pararia a rodada por um traco eme.
+   */
+  const agora = new Date('2026-09-06T10:00:00');
+
+  const promessa = revisarRascunho('Bom dia! Vou mandar o material para voce hoje mesmo.', agora);
+  check(!rascunhoPodeSairSozinho(promessa.avisos), 'promessa de entregar NAO sai sozinha');
+
+  const marcador = revisarRascunho('Bom dia {{primeiro_nome}}! Obrigado pela mensagem.', agora);
+  check(!rascunhoPodeSairSozinho(marcador.avisos), 'marcador esquecido NAO sai sozinho');
+
+  const cosmetico = revisarRascunho('Boa noite! Obrigado pela mensagem — seguimos juntos.', agora);
+  check(cosmetico.avisos.length >= 1, 'a saudacao errada e o traco eme geram aviso');
+  check(rascunhoPodeSairSozinho(cosmetico.avisos), 'mas aviso cosmetico NAO impede o envio');
+
+  check(rascunhoPodeSairSozinho([]), 'sem aviso nenhum, sai');
+
+  /**
+   * **As frases sao CONSTANTES, e nao texto reescrito nos dois lugares.** Se alguem mudar a
+   * redacao do aviso e a trava comparar por string antiga, ela deixa de casar em silencio -- e o
+   * silencio aqui e uma mensagem inventada saindo sozinha para eleitor.
+   */
+  check(promessa.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.promessa), 'o aviso vem da constante');
+  check(marcador.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.marcador), 'o do marcador tambem');
 }
 
 fim();
