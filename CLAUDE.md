@@ -210,10 +210,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   está no CRM, porque substituir exige a pessoa ter ESCRITO). Roda depois da passada normal,
   então o que foi digitado sempre ganha do que foi falado. Tem teste; se ele cair, transcrição
   volta a poder ser gravada sozinha em eleitor real.
-- **`` NÃO funciona antes de palavra acentuada.** `` é fronteira de `w`, e `é` não é `w`:
-  `/é nós/` **nunca** casa no começo da string. Foi assim que "É nós." — a frase exata que ele
-  mandou de exemplo — passou batido na primeira versão do detector de despedida. Em padrão que
-  começa com acento use `(^|s)`. Vale para todo o vocabulário daqui: "é nós", "ótimo", "amém".
+- **`\b` NÃO funciona antes de palavra acentuada.** `\b` é fronteira de `\w`, e `é` não é
+  `\w`: `/\bé nós/` **nunca** casa no começo da string. Foi assim que "É nós." — a frase exata
+  que ele mandou de exemplo — passou batido na primeira versão do detector de despedida. Em
+  padrão que começa com acento use `(^|\s)`. Vale para todo o vocabulário daqui: "é nós",
+  "ótimo", "amém". **E vale do outro lado também** — ver a fronteira que não FECHA depois de
+  letra acentuada, mais abaixo.
 - **A lista de etiquetas da caixa da rodada NÃO é a do contato.** Ela vem de `tagSuggestions` —
   só o que a rodada sugere ou reconhece. No contato da print (31/08) a caixa mostrava 3 etiquetas
   e o cabeçalho da plataforma mostrava 5, e a que faltava era justamente a que deveria dispensar
@@ -1388,6 +1390,25 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   mal-estar, pedido sem objeto e recusa. **As duas travas antigas olham o TEXTO que voltou; esta
   olha o CASO** — nao e o rascunho que esta errado, e quem tem que decidir. O rascunho continua
   sendo escrito e posto no campo: o que volta a ser dele e o ultimo passo.
+- **A pior alucinacao nao e o tom errado: e AFIRMAR que alguem ja fez alguma coisa.** Print da Sandra
+  Grandini (06/09/2026): ela escreveu so *"E a respeito do material?"* e o rascunho respondeu *"Ja
+  encaminhei seu pedido ao assessor da sua regiao para providenciar o material. Voce deve receber em
+  breve."* Ele apagou: *"a IA alucinou ou ignorou contexto, ela nunca nos forneceu endereco entao nao
+  tem como fazer entrega"*. **Nada daquilo aconteceu** — nao ha assessor designado, ninguem
+  encaminhou nada, e sem endereco nao ha entrega. Medido antes de mexer: `revisarRascunho` devolvia
+  **zero avisos** e o texto saiu sozinho. Hoje ha `AVISOS_QUE_IMPEDEM_ENVIO.afirmouAcao` (verbos de
+  **encaminhamento e providencia**, nao de fala — *"ja falei sobre isso"* continua passando), a
+  promessa passou a cobrir a voz DELA (*"voce deve receber"*, *"recebera"*, *"esta a caminho"*),
+  `pedeMaterial` entrou nos casos sensiveis, e o prompt ganhou a **regra 5**, escrita como proibicao
+  com os exemplos do caso real. **O que a IA pode dizer com verdade e o que ELE vai fazer depois de
+  ler** — "vou verificar", "me diga o endereco".
+- **A FRONTEIRA DE PALAVRA nao fecha depois de letra ACENTUADA, e nao so antes dela.** O padrao
+  novo da promessa usava `\b` nas duas pontas de `(voc[êe]|vc|...)` e **nao casava com "Voce deve
+  receber"**: `você` termina em `ê`, que nao e caractere de palavra em ASCII, entao a fronteira de
+  fechamento nunca acontece. E a armadilha do *"É nós"* (31/08) do outro lado da palavra — la o
+  problema era ABRIR com acento, aqui e FECHAR. **Use `(^|[^\p{L}])` com a flag `u` nas duas
+  pontas**, que e como o resto do `cortesia.js` ja escreve. Peguei medindo: a trava estava escrita
+  e devolvia zero avisos.
 
 - **Xingamento no IMPERATIVO e segunda pessoa, e a lista nao sabia disso.** Print dele (05/09/2026):
   a contato chegou pelo anuncio e um minuto depois escreveu *"Entao va para o inferno..

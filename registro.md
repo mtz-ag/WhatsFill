@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.73.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.74.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.73.0**, tudo commitado e no remoto. Quinze versões no
-dia 05/09 (2.42 → 2.56) e **dezessete em 06/09** (2.57 a 2.73). **64 caixas** no fluxo padrão. Quinze suítes verdes, os dois
+Branch `claude/whatsfill-ia`, **v2.74.0**, tudo commitado e no remoto. Quinze versões no
+dia 05/09 (2.42 → 2.56) e **dezoito em 06/09** (2.57 a 2.74). **64 caixas** no fluxo padrão. Quinze suítes verdes, os dois
 verificadores limpos (38 arquivos), **63 caixas** no fluxo padrão sem problemas e sem desfecho
 incoerente.
 
@@ -52,6 +52,7 @@ incoerente.
 | 2.71 | **O id da caixa não é o id da regra** — o agradecimento pela informação (2.65) nunca decidiu nada no quadro. |
 | 2.72 | **Voto de boa vontade só conta se for a mensagem inteira** — 15 falsos positivos em 19 viraram zero. |
 | 2.73 | **O rascunho da IA não sai sozinho nos casos sensíveis** — áudio/desabafo, dinheiro, mal-estar, pedido sem objeto, recusa. |
+| 2.74 | **A IA não pode afirmar que alguém já fez algo** nem prometer entrega — a alucinação que saiu para uma eleitora. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -181,6 +182,79 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — A IA afirmou uma ação que ninguém fez (v2.74.0)
+
+### O caso
+
+A **Sandra Grandini** escreveu uma linha: *"E a respeito do material?"*. O rascunho respondeu:
+
+> *"Fico feliz com seu interesse! **Já encaminhei seu pedido ao assessor da sua região para
+> providenciar o material. Você deve receber em breve.** Enquanto isso, entra no nosso grupo no
+> WhatsApp… E, se puder, me diga seu: Nome , Cidade"*
+
+Ele apagou a mensagem: *"a IA alucinou ou ignorou contexto; ela nunca nos forneceu endereço, então
+não tem como fazer entrega"*.
+
+### Por que esta é a pior que já apareceu
+
+As alucinações anteriores eram de **tom** ou de **foco**: responder a mensagem errada, soar como
+terceira pessoa, mandar material fora de contexto. Esta é de outra natureza — é uma **afirmação falsa
+sobre o mundo**, dita a uma eleitora em nome do mandato:
+
+- **não há assessor designado** para a região dela;
+- **ninguém encaminhou nada**;
+- **ela nunca deu endereço** — não há como entregar;
+- e, no meio, a mensagem ainda pede *"Nome , Cidade"*, ou seja, afirma conhecer a região dela e na
+  frase seguinte pergunta qual é.
+
+E *"você deve receber em breve"* cria exatamente a expectativa que a Lei 9.504/97 trata.
+
+### Medido antes de mexer: zero avisos
+
+`revisarRascunho` devolvia **`[]`** para esse texto, e ele **saía sozinho**. As duas travas existentes
+não o viam:
+
+- a de **promessa** exigia a nossa voz (*"vou mandar"*, *"posso enviar"*) e o texto usou a voz dela
+  (*"você deve receber"*);
+- **nada** olhava afirmação de ação tomada.
+
+### Quatro consertos
+
+1. **`AVISOS_QUE_IMPEDEM_ENVIO.afirmouAcao`** — verbos de **encaminhamento e providência**, não de
+   fala: *"já encaminhei"*, *"já repassei"*, *"já solicitei"*, *"seu pedido foi encaminhado"*.
+   *"Já falei sobre isso"* continua passando, porque é conversa.
+2. **A promessa passou a cobrir a voz dela** — *"você vai/deve receber"*, *"receberá"*, *"está a
+   caminho"*, *"em breve … receber"*, *"estou providenciando"*.
+3. **`pedeMaterial` entrou nos casos sensíveis** (2.73): material físico depende de endereço e de
+   gente, e as duas coisas estão fora do alcance de um rascunho.
+4. **A regra 5 do prompt**, escrita como proibição e com os exemplos do caso real — e dizendo o que
+   *dá* para escrever com verdade: *"vou verificar isso"*, *"me diga o endereço para eu ver o que é
+   possível"*.
+
+### Medido depois
+
+Os **nove** textos do tipo barram (os da print e mais sete variantes). Os **cinco** que a IA pode
+dizer continuam saindo — barrar demais faria a rodada parar em texto correto.
+
+### Uma armadilha do próprio conserto
+
+O padrão novo da promessa não funcionava: `\b(voc[êe]|vc|…)\b` **não casa com "Você deve receber"**,
+porque `você` termina em `ê` e a fronteira de palavra não fecha depois de letra acentuada. É a
+armadilha do *"É nós"* (31/08) do outro lado da palavra — lá o problema era ABRIR com acento.
+Peguei medindo, não lendo.
+
+Aproveitei para consertar a entrada de 31/08 no `CLAUDE.md`, que estava **ilegível**: os `\b` do
+texto tinham virado o caractere de backspace numa escrita antiga, e a armadilha explicava a si mesma
+sem mostrar o que era.
+
+**Arquivos:** `src/lib/ia.js` (o aviso novo, os padrões e a regra 5), `tests/ia.test.mjs` (+17),
+`CLAUDE.md` (+2 armadilhas, e a de 31/08 recuperada), `manifest.json` (2.73.0 → 2.74.0). Quinze
+suítes e os dois verificadores.
+
+**O quadro dele não muda.**
 
 ---
 

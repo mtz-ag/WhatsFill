@@ -683,6 +683,29 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '4. Sobre o candidato, a chapa e as pautas, use SÓ o que estiver na conversa e no bloco',
     '   "Quem é quem" abaixo. É a mesma regra do documento ("não invente informação"), dita aqui',
     '   porque aqui está a fonte.',
+    /**
+     * **A regra 5 nasceu da print da Sandra Grandini (06/09/2026)**, e é a alucinação mais cara que
+     * este projeto viu: ela escreveu só *"E a respeito do material?"* e o rascunho respondeu *"Já
+     * encaminhei seu pedido ao assessor da sua região para providenciar o material. Você deve
+     * receber em breve."*
+     *
+     * **Nada disso aconteceu.** Não há assessor designado, ninguém encaminhou nada, e ela nunca deu
+     * endereço — *"não tem como fazer entrega"*. Não é um texto fora de tom: é uma **afirmação falsa
+     * sobre o mundo**, dita a um eleitor em nome do mandato, e que cria a expectativa que a
+     * Lei 9.504/97 trata.
+     *
+     * Está escrita como proibição direta e com os exemplos do caso real, porque foi essa a forma que
+     * a alucinação tomou. `revisarRascunho` a barra do envio automático; isto é a outra metade.
+     */
+    '5. NUNCA afirme que alguém já fez alguma coisa, e NUNCA diga que a pessoa vai receber algo.',
+    '   Você não sabe o que foi feito fora desta conversa, e ninguém do mandato leu este rascunho',
+    '   antes de ele sair. Proibido escrever: "já encaminhei seu pedido", "já repassei ao assessor",',
+    '   "já anotei", "já solicitei", "você vai receber", "você deve receber em breve",',
+    '   "está a caminho", "estou providenciando".',
+    '   O que dá para dizer com verdade é o que ELE vai fazer depois de ler: "vou verificar isso",',
+    '   "sua mensagem chegou aqui", "me diga o endereço para eu ver o que é possível".',
+    '   Entrega de material físico depende de endereço e de gente — se a pessoa não deu o endereço,',
+    '   pedir o endereço é a resposta; prometer a entrega não é.',
     '',
     /**
      * **O "encaminhe para o CRAS" SAIU daqui, e é um conflito real com o documento dele.**
@@ -1026,6 +1049,23 @@ const SE_APRESENTANDO = [
 export const AVISOS_QUE_IMPEDEM_ENVIO = {
   marcador: 'sobrou marcador no texto — troque antes de mandar',
   promessa: 'parece prometer entregar alguma coisa — confira antes de mandar',
+  /**
+   * **A IA AFIRMOU ter feito uma coisa que ninguém fez** — print da Sandra Grandini (06/09/2026).
+   *
+   * Ela escreveu só *"E a respeito do material?"*. O rascunho respondeu: *"Já encaminhei seu pedido
+   * ao assessor da sua região para providenciar o material. Você deve receber em breve."* Ele apagou
+   * a mensagem: *"a IA alucinou ou ignorou contexto; ela nunca nos forneceu endereço, então não tem
+   * como fazer entrega"*.
+   *
+   * **É a pior alucinação possível neste projeto**, e é de outra natureza que as anteriores: não é
+   * um texto fora de tom nem uma resposta ao lado — é uma **afirmação falsa sobre o mundo**, dita a
+   * um eleitor em nome do mandato. Ninguém encaminhou nada, não há assessor designado, e a pessoa
+   * nunca deu endereço. E, dita assim, ela cria a expectativa que a Lei 9.504/97 trata.
+   *
+   * Barra o envio automático, como o marcador e a promessa: as três são coisas que **não se
+   * conserta lendo depois**, porque a mensagem já saiu.
+   */
+  afirmouAcao: 'afirma que alguém já providenciou algo — confira, porque ninguém fez isso',
 };
 
 /** O rascunho pode sair sozinho, ou algum aviso exige que uma pessoa leia antes? */
@@ -1068,14 +1108,19 @@ export function rascunhoPodeSairSozinho(avisos = [], sinais = {}) {
    *  - **pediu algo e não disse o quê** (`pedeAlgoIndefinido`) — decisão dele de 03/09: *"já que
    *    pedido é algo difícil de ser identificado, será agora pra mim ou IA responder"*;
    *  - **recusou ou hostilizou** (`semInteresse`) — responder a quem pediu para sair é o que gera
-   *    denúncia.
+   *    denúncia;
+   *  - **pediu material** (`pedeMaterial`) — entrou com a print da Sandra Grandini (06/09/2026),
+   *    onde a IA respondeu *"já encaminhei seu pedido ao assessor da sua região"* a quem só
+   *    perguntou *"e a respeito do material?"*. Material físico depende de **endereço e de gente**,
+   *    e as duas coisas estão fora do alcance de um rascunho.
    */
   const sensivel =
     !!sinais?.pedeRespostaPessoal ||
     !!sinais?.pedeAjudaFinanceira ||
     !!sinais?.naoPodeFalarAgora ||
     !!sinais?.pedeAlgoIndefinido ||
-    !!sinais?.semInteresse;
+    !!sinais?.semInteresse ||
+    !!sinais?.pedeMaterial;
 
   return !sensivel;
 }
@@ -1113,11 +1158,40 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
   }
 
   /**
+   * **Afirmar que alguém JÁ fez alguma coisa** — ver `AVISOS_QUE_IMPEDEM_ENVIO.afirmouAcao`.
+   *
+   * A lista é de verbos de **encaminhamento e providência**, não de fala: *"já falei sobre isso"* é
+   * conversa, *"já encaminhei ao assessor"* é uma afirmação sobre o mundo. O `já` não é obrigatório
+   * — *"encaminhei seu pedido"* diz a mesma coisa.
+   */
+  const AFIRMOU_ACAO = [
+    /\b(j[áa]\s+)?(encaminhei|encaminhamos|repassei|repassamos|solicitei|solicitamos|providenciei|providenciamos|registrei|registramos|anotei|anotamos)\b/i,
+    /\bj[áa]\s+(pedi|pedimos|avisei|avisamos|separei|separamos|enviei|enviamos|mandei|mandamos)\b/i,
+    /\b(seu|o)\s+pedido\s+(foi|j[áa]\s+foi)\s+(encaminhado|repassado|registrado|anotado|enviado)/i,
+    /\bfoi\s+(encaminhado|repassado)\s+(ao|para|pro)\b/i,
+  ];
+  if (AFIRMOU_ACAO.some((re) => re.test(texto))) {
+    avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.afirmouAcao);
+  }
+
+  /**
    * Promessa de bem ou benefício. A lista é grosseira de propósito: ela não julga a frase, só
    * levanta a mão para ele ler. Falso positivo aqui custa uma olhada; falso negativo custa um
    * mandato prometendo o que a lei proíbe.
    */
-  if (/\b(vou|vamos|posso|podemos|consigo|conseguimos)\b[^.!?]{0,40}\b(mandar|enviar|dar|arrumar|conseguir|providenciar)\b/i.test(texto)) {
+  const PROMESSA = [
+    /\b(vou|vamos|posso|podemos|consigo|conseguimos)\b[^.!?]{0,40}\b(mandar|enviar|dar|arrumar|conseguir|providenciar)\b/i,
+    /**
+     * **A promessa na VOZ DELA** — *"você deve receber em breve"* (a Sandra, 06/09/2026). O padrão
+     * de cima só olhava a nossa voz (*"vou mandar"*), e a forma que saiu foi a outra.
+     */
+    /(^|[^\p{L}])(voc[êe]|vc|o\s+senhor|a\s+senhora)[^.!?]{0,30}(vai|ir[áa]|deve|dever[áa])\s+receber/iu,
+    /\breceber[áa]\b/i,
+    /\b(j[áa]\s+)?est[áa]\s+a\s+caminho\b/i,
+    /\b(em\s+breve|nos\s+pr[óo]ximos\s+dias)\b[^.!?]{0,40}\b(receber|chegar|entregar|mandar|enviar)/i,
+    /\b(estou|estamos)\s+providenciando\b/i,
+  ];
+  if (PROMESSA.some((re) => re.test(texto))) {
     avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.promessa);
   }
   if (/\b(cesta|rem[ée]dio|dinheiro|pix|emprego|vaga|passagem)\b/i.test(texto)) {

@@ -785,4 +785,58 @@ grupo('o rascunho NAO sai sozinho nos casos sensiveis (06/09/2026)');
     'marcador esquecido continua barrando');
 }
 
+grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
+{
+  /**
+   * Print da SANDRA GRANDINI. Ela escreveu so *"E a respeito do material?"*, e o rascunho respondeu:
+   *
+   * > *"Ja encaminhei seu pedido ao assessor da sua regiao para providenciar o material. Voce deve
+   * > receber em breve."*
+   *
+   * Ele apagou a mensagem: *"a IA alucinou ou ignorou contexto; ela nunca nos forneceu endereco,
+   * entao nao tem como fazer entrega"*.
+   *
+   * **Nao e um texto fora de tom: e uma afirmacao FALSA sobre o mundo**, dita a um eleitor em nome
+   * do mandato -- nao ha assessor designado, ninguem encaminhou nada, e ela nunca deu endereco. E
+   * cria a expectativa que a Lei 9.504/97 trata.
+   *
+   * Medido antes de mexer: `revisarRascunho` devolvia **zero avisos**, e o texto saia sozinho.
+   */
+  const agora = new Date('2026-09-06T14:31:00');
+  const av = (t) => revisarRascunho(t, agora, {}).avisos;
+  const barra = (t) => !rascunhoPodeSairSozinho(av(t), {});
+
+  const daPrint = 'Ja encaminhei seu pedido ao assessor da sua regiao para providenciar o material. Voce deve receber em breve.';
+  check(barra(daPrint), 'o texto da print NAO sai mais sozinho');
+  check(av(daPrint).some((a) => /providenciou/.test(a)), 'e o aviso diz que ninguem fez aquilo');
+  check(av(daPrint).some((a) => /prometer entregar/.test(a)), 'a promessa tambem e apontada');
+
+  for (const t of ['Voce vai receber o material nos proximos dias.', 'Ja repassei ao assessor.',
+    'Seu pedido foi encaminhado ao responsavel.', 'Ja anotei aqui e ja solicitei.',
+    'Esta a caminho!', 'Estamos providenciando.', 'Vou mandar o material para voce.']) {
+    check(barra(t), `barrado: ${t}`);
+  }
+
+  /**
+   * **O que a IA PODE dizer** -- e onde mora o risco desta trava: barrar demais faz a rodada parar
+   * em texto correto, e o custo disso e ele apertar enviar a mais.
+   */
+  for (const t of ['Sua mensagem chegou aqui e vou verificar isso.',
+    'Me diga o endereco completo para eu ver o que e possivel.',
+    'Obrigado por escrever, li tudo com atencao.',
+    'Ja falei sobre isso com voce ontem.',
+    'O Capitao Martim defende a expansao das escolas civico-militares.']) {
+    check(!barra(t), `continua saindo: ${t}`);
+  }
+
+  // "pediu material" entrou na lista dos casos sensiveis, pelo mesmo caso.
+  check(!rascunhoPodeSairSozinho([], { pedeMaterial: { motivo: 'quero o material' } }),
+    'quem pediu material nao recebe rascunho automatico -- entrega depende de endereco e de gente');
+
+  // A regra 5 do prompt e a outra metade do conserto.
+  const sistema = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/NUNCA afirme que alguem ja fez/.test(sistema.normalize('NFD').replace(/[̀-ͯ]/g, '')),
+    'e o prompt proibe afirmar acao, com todas as letras');
+}
+
 fim();
