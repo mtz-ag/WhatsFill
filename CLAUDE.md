@@ -75,6 +75,7 @@ src/lib/categorizar.js  etiqueta de CIDADE para a base inteira (puro, testado)
 src/lib/hsm.js          modelos de mensagem aprovados
 src/lib/vars.js         variáveis dos templates e bloqueio por variável faltante
 src/lib/ia.js           prompt, esquema e TRAVAS da decisão por IA (puro, testado)
+src/lib/atendimento.js  o PADRAO DE ATENDIMENTO que ELE escreveu — documento dele, não mexer
 src/lib/ia-cliente.js   ponte painel <-> service worker (a chave nunca entra na página)
 src/lib/sugestao.js     tabela de regras da rodada, e os verbetes dela (puro, testado)
 src/lib/arvore.js       o fluxo como ARVORE: sinais, ramos dele, decisao (puro, testado)
