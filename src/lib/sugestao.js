@@ -655,7 +655,24 @@ export const REGRAS = [
   },
   {
     id: 'contexto-de-outro-dia',
-    tecla: '5',
+    /**
+     * **A tecla virou FUNÇÃO em 06/09/2026, e isso conserta o buraco que a print da Noeli mostrou.**
+     *
+     * Ela escreveu *"Eu já estou com vocês.....bom dia"* no dia 05, e no dia 06 recebeu **o modelo
+     * da campanha**. Ele: *"ignorou a regra da perda de contexto e mandou modelo"*.
+     *
+     * A regra não foi ignorada: ela **não casou**. As duas guardas do momento moravam na
+     * `quando` (*"só casa se houver mensagem do momento e ela ainda não tiver saído"*), e o
+     * comentário antigo dizia, com todas as letras, que sem elas *"o quadro decide como antes"*.
+     * **Decidir como antes, aqui, é mandar o modelo** — exatamente o que esta caixa existe para
+     * impedir. Medido: com o momento já enviado OU sem momento configurado, o caso caía em
+     * `conteudo-pedido`, tecla 1.
+     *
+     * O desenho certo já estava em `ultima-e-so-reacao` e em `ja-respondemos-antes`: **a guarda
+     * decide o DESFECHO, não se a caixa casa.** Sem momento para mandar, o certo é concluir sem
+     * enviar nada — nunca cair para quem envia.
+     */
+    tecla: (c) => (c.podeMandarMomento && !c.momentoJaEnviado ? '5' : '3'),
     /**
      * **A última coisa que ela escreveu é de outro dia: o contexto passou.**
      *
@@ -710,11 +727,11 @@ export const REGRAS = [
      * E abaixo do anúncio reconhecido: clicar num anúncio é pedir uma coisa específica, e escolha
      * explícita dela não se substitui por dedução nossa.
      */
-    quando: (c) =>
-      !!c.deOutroDia && !c.perguntaPendente && !c.materialPendente && c.podeMandarMomento && !c.momentoJaEnviado,
-    motivo: () =>
-      'a última mensagem dela é de outro dia — o contexto passou; a mensagem do momento é o que ' +
-      'há de novo.',
+    quando: (c) => !!c.deOutroDia && !c.perguntaPendente && !c.materialPendente,
+    motivo: (c) =>
+      c.podeMandarMomento && !c.momentoJaEnviado
+        ? 'a última mensagem dela é de outro dia — o contexto passou; a mensagem do momento é o que há de novo.'
+        : 'a última mensagem dela é de outro dia e não há mensagem do momento para mandar — conclua sem responder o de ontem.',
   },
   {
     id: 'so-expressa-apoio',
@@ -1252,7 +1269,11 @@ export const SOBRE = {
   },
   'contexto-de-outro-dia': {
     rotulo: 'A última dela é de outro dia',
-    efeito: 'envia',
+    efeito: 'depende',
+    ramos: [
+      { tecla: '5', se: 'há mensagem do momento e ela ainda não saiu para essa pessoa' },
+      { tecla: '3', se: 'não há mensagem do momento, ou ela já saiu' },
+    ],
     quando:
       'O contexto passou: responder o conteúdo de ontem soa a quem não estava lá. Manda a mensagem ' +
       'do momento, que é o que há de novo hoje, e conclui. Decisão sua (03/09, generalizada em ' +

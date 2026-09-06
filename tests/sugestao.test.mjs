@@ -785,14 +785,24 @@ grupo('apoio: o TEMPO escolhe entre agradecer e a mensagem do momento (03/09/202
   check(com({ ...apoio, deOutroDia: true })?.tecla === '5', 'e ela manda a mensagem do momento');
 
   /**
-   * **As duas guardas do momento continuam**, e sao elas que impedem isto de virar maquina de
-   * repetir: a condicao e estado da conversa (o texto de apoio fica la para sempre) e o envio nao
-   * a apaga.
+   * **As duas guardas do momento sairam da CONDICAO e viraram DESFECHO em 06/09/2026** — print da
+   * Noeli: ela escreveu *"Eu ja estou com voces.....bom dia"* no dia 05 e recebeu **o modelo da
+   * campanha** no dia 06. *"ignorou a regra da perda de contexto e mandou modelo"*.
+   *
+   * A regra nao foi ignorada: ela nao CASOU. Com as guardas na `quando`, sem momento para mandar a
+   * caixa saia da frente e "o quadro decidia como antes" — e decidir como antes, ali, era mandar o
+   * modelo. **A guarda decide o DESFECHO, nao se a caixa casa**, que e o desenho que
+   * `ultima-e-so-reacao` sempre teve.
+   *
+   * Estas duas assercoes diziam "volta a agradecer" e agora dizem "conclui": agradecer o apoio de
+   * ONTEM e responder o conteudo de ontem, que e o que a caixa existe para impedir.
    */
-  check(com({ ...apoio, deOutroDia: true, momentoJaEnviado: true })?.tecla === 'i',
-    'ja recebeu a do momento: volta a agradecer');
-  check(com({ ...apoio, deOutroDia: true, podeMandarMomento: false })?.tecla === 'i',
-    'sem mensagem do momento configurada: agradece');
+  check(com({ ...apoio, deOutroDia: true, momentoJaEnviado: true })?.tecla === '3',
+    'ja recebeu a do momento: conclui sem responder o de ontem');
+  check(com({ ...apoio, deOutroDia: true, podeMandarMomento: false })?.tecla === '3',
+    'sem mensagem do momento configurada: conclui, e nao cai para quem envia');
+  check(com({ ...apoio, deOutroDia: true, momentoJaEnviado: true })?.id === 'contexto-de-outro-dia',
+    'e quem decide continua sendo a caixa do tempo');
 
   // As duas saidas ENVIAM, entao o cartao da janela e verde nos dois casos.
   check(sugestaoLib.SOBRE['so-expressa-apoio'].efeito === 'envia', 'o efeito e "envia", nao "depende"');

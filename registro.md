@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.65.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.66.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 ### O que está no ar
 
 Branch `claude/whatsfill-ia`, **v2.63.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
-(2.42 → 2.56) e **nove em 06/09** (2.57 a 2.65). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
+(2.42 → 2.56) e **dez em 06/09** (2.57 a 2.66). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -38,6 +38,7 @@ problemas e sem desfecho incoerente.
 | 2.63 | **Gênero: na dúvida, neutro** — e o nome do cadastro não serve para deduzir. |
 | 2.64 | **A legenda de um vídeo/link encaminhado não conta como pergunta** — vai para a mensagem do momento. |
 | 2.65 | **Quem respondeu o cadastro não é concluído com pergunta em aberto**, e recebe o agradecimento da INFORMAÇÃO. |
+| 2.66 | **A perda de contexto conclui em vez de escorregar para o modelo** quando não há momento para mandar. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -134,6 +135,48 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — A perda de contexto não cai mais para quem envia (v2.66.0)
+
+Print da Noeli: ela escreveu *"Eu já estou com vocês.....bom dia"* no dia **05**, e no dia **06**
+recebeu **o modelo da campanha** (o card da Escola Cívico-Militar). *"ignorou a regra da perda de
+contexto e mandou modelo"*.
+
+### A regra não foi ignorada — ela não CASOU
+
+As duas guardas do momento moravam na **condição**: *"só casa se houver mensagem do momento e ela
+ainda não tiver saído para essa pessoa"*. E o comentário que eu mesmo escrevi em 04/09 dizia, com
+todas as letras, que sem elas *"o quadro decide como antes"*.
+
+**Decidir como antes, ali, é mandar o modelo.** Que é exatamente o que a caixa existe para impedir.
+Medido, e são três casos:
+
+| | antes | agora |
+|---|---|---|
+| momento disponível | tecla 5 | tecla 5 |
+| **momento já enviado** | **tecla 1 — o modelo** | **tecla 3 — conclui** |
+| **sem momento configurado** | **tecla 1 — o modelo** | **tecla 3 — conclui** |
+
+No caso da Noeli o momento já tinha saído: foi o convite do grupo, mandado no dia 05 às 10:11.
+
+### O desenho certo já existia no arquivo
+
+`ultima-e-so-reacao` e `ja-respondemos-antes` sempre fizeram assim: **a guarda decide o DESFECHO,
+não se a caixa casa**. Sem momento para mandar, o certo é concluir sem enviar nada — nunca deixar o
+caso escorregar para quem envia. A tecla virou função (`5` ou `3`), e o verbete da janela virou
+`depende` com os dois ramos escritos, senão `regrasComDesfechoIncoerente` acusaria.
+
+### Duas asserções invertidas, e as duas estavam erradas
+
+Diziam *"já recebeu a do momento: volta a agradecer"* e *"sem mensagem do momento: agradece"* — o
+tecla `i`, o agradecimento pelo apoio. **Agradecer o apoio de ONTEM é responder o conteúdo de
+ontem**, que é o que a caixa existe para impedir. Hoje as duas dizem "conclui".
+
+Sete asserções novas ou trocadas. Quinze suítes verdes, os dois verificadores limpos, 63 caixas sem
+problemas. **Não há fluxo novo para importar:** a mudança é na condição e na tecla de uma regra do
+código, e vale no quadro dele como está.
 
 ---
 

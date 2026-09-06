@@ -2373,4 +2373,40 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   check(semPergunta?.id?.includes('respondeu-os-dados'), 'e continua sendo a caixa de quem respondeu os dados');
 }
 
+{
+  grupo('a perda de contexto NAO cai para quem envia (06/09/2026)');
+
+  /**
+   * Print da Noeli: ela escreveu *"Eu ja estou com voces.....bom dia"* no dia 05, e no dia 06
+   * recebeu **o modelo da campanha**. Ele: *"ignorou a regra da perda de contexto e mandou modelo"*.
+   *
+   * A regra nao foi ignorada — ela nao CASOU. As duas guardas do momento moravam na condicao, e o
+   * comentario antigo dizia com todas as letras que sem elas *"o quadro decide como antes"*.
+   * Decidir como antes, ali, e mandar o modelo: exatamente o que a caixa existe para impedir.
+   *
+   * Hoje a guarda decide o DESFECHO (tecla 5 ou tecla 3), que e o desenho que `ultima-e-so-reacao`
+   * sempre teve. Este teste guarda os TRES casos, porque foi o do meio que apareceu em producao.
+   */
+  const fluxo = arv.fluxoPadrao();
+  const base = {
+    deOutroDia: true,
+    jaRespondemosAntes: true,
+    temEtiquetaDeCidade: true,
+    podeEnviar: true,
+    podePedirDados: true,
+    textos: ['Eu ja estou com voces.....bom dia'],
+    ultimoTexto: 'Eu ja estou com voces.....bom dia',
+  };
+
+  const comMomento = arv.decidir({ ...base, podeMandarMomento: true, momentoJaEnviado: false }, fluxo, {});
+  check(comMomento?.tecla === '5', 'com momento disponivel, manda a mensagem do momento');
+
+  const jaEnviado = arv.decidir({ ...base, podeMandarMomento: true, momentoJaEnviado: true }, fluxo, {});
+  check(jaEnviado?.tecla === '3', `momento ja enviado: conclui, e NAO manda o modelo (tecla ${jaEnviado?.tecla})`);
+  check(jaEnviado?.id?.includes('contexto-de-outro-dia'), 'e quem decide continua sendo a caixa do tempo');
+
+  const semMomento = arv.decidir({ ...base, podeMandarMomento: false, momentoJaEnviado: false }, fluxo, {});
+  check(semMomento?.tecla === '3', 'sem momento configurado: conclui, e NAO manda o modelo');
+}
+
 fim();

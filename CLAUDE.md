@@ -1317,6 +1317,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **Guarda na CONDICAO faz a caixa sair da frente — e quem entra no lugar pode ser justamente quem
+  ela existia para impedir.** Print da Noeli (06/09/2026): escreveu no dia 05 e recebeu **o modelo
+  da campanha** no dia 06 — *"ignorou a regra da perda de contexto e mandou modelo"*. A regra nao
+  foi ignorada: **nao casou**. As duas guardas do momento moravam na `quando`, e o comentario que eu
+  escrevi em 04/09 dizia com todas as letras que sem elas *"o quadro decide como antes"* — e decidir
+  como antes, ali, e mandar o modelo. **O desenho certo ja estava em `ultima-e-so-reacao` e
+  `ja-respondemos-antes`: a guarda decide o DESFECHO (tecla 5 ou 3), nao se a caixa casa.** Regra
+  geral: **antes de por uma guarda na condicao, pergunte quem decide quando ela barrar** — se a
+  resposta for uma caixa que ENVIA, a guarda tem que virar desfecho. Mexeu na funcao `tecla`? O
+  `ramos` do verbete entra no mesmo commit, senao `regrasComDesfechoIncoerente` acusa.
+
 - **"Nunca concluir com pergunta em aberto" tem que valer em TODA caixa que conclui — e faltava em
   `respondeu-os-dados`.** Print da Mari (06/09/2026): respondeu ao formulario por audio (*"Boa
   tarde, tudo bem com voce? Sou de Caxias do Sul."*) e recebeu *"Obrigado de coracao pelo apoio e
