@@ -1317,6 +1317,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **"Nunca concluir com pergunta em aberto" tem que valer em TODA caixa que conclui — e faltava em
+  `respondeu-os-dados`.** Print da Mari (06/09/2026): respondeu ao formulario por audio (*"Boa
+  tarde, tudo bem com voce? Sou de Caxias do Sul."*) e recebeu *"Obrigado de coracao pelo apoio e
+  pela confianca"*, com o atendimento fechado em cima do *"tudo bem com voce?"*. A regra e dele, de
+  03/09; `ja-respondemos-antes` ganhou a guarda naquele dia e esta caixa, criada em 02/09, ficou sem
+  — **o sintoma e invisivel**, porque a resposta sai educada e a pergunta morre junto com o
+  atendimento. **Ao criar caixa que CONCLUI, a pergunta e "o que impede fechar em cima de uma
+  pergunta?"** — a irma da pergunta de 03/09 sobre teclas fixas ("o que impede a segunda vez?").
+  Custo dito a ele: `perguntaPendente` conta "tudo bem?", que e metade das respostas ao formulario.
+- **Tecla que serve a TRES situacoes escolhe o texto junto do rotulo.** A tecla `i` mandava
+  `agradecer-apoio` para quem so deu a cidade — o texto certo (`agradecer-info`) existia e nenhuma
+  regra o alcancava, a armadilha do `pedido-emprego` de novo. Hoje sao tres: presenca confirmada,
+  resposta ao cadastro, apoio; a regra decide o DESTAQUE e o painel decide o TEXTO.
+
 - **A LEGENDA de um repasse nao e pergunta para nos.** Print do Eraldo (06/09/2026): video
   encaminhado com a legenda *"Voce e Patriota? Entao coloque este Video nos grupos !"* caiu em
   `pergunta-aberta` (tecla 6) e a IA escreveu uma resposta longa sobre recursos de terceiros — ele

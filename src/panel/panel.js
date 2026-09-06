@@ -5412,6 +5412,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       let sugestao = sugerirAcaoComFluxo(sinaisDoContato);
 
       /**
+       * **A tecla `i` tem TRÊS textos, e quem respondeu o cadastro recebe o da INFORMAÇÃO.**
+       *
+       * Print da Mari (06/09/2026): ela respondeu ao formulário por áudio — *"Boa tarde, tudo bem
+       * com você? Sou de Caxias do Sul."* — e recebeu *"Obrigado de coração pelo apoio e pela
+       * confiança — é isso que sustenta o trabalho"*. Ela não expressou apoio nenhum: deu a cidade.
+       * *"mensagem fora de contexto"*.
+       *
+       * `respondeu-os-dados` sempre apontou para a tecla `i`, e a tecla `i` mandava um texto sobre
+       * APOIO. O agradecimento certo já existia (`agradecer-info`: *"obrigado pela mensagem e pelas
+       * informações — recebemos tudo por aqui"*) e não era alcançado por nenhuma regra.
+       *
+       * É o mesmo desenho do evento (02/09): **a regra decide o DESTAQUE, o painel decide o TEXTO**,
+       * e o rótulo da opção muda junto — senão a rodada mandaria duas coisas diferentes com o mesmo
+       * nome na tela.
+       */
+      const agradecerInfoTexto = agradecerInfo ? await templatesLib.varianteAtual(agradecerInfo) : '';
+      const agradecerInfoTrava = agradecerInfo
+        ? vars.render(agradecerInfoTexto, contexto).missing.length > 0
+        : true;
+      const ehRespostaAoCadastro = sugestao?.id === 'respondeu-os-dados' && !agradecerInfoTrava;
+      const textoDaTeclaI = ehRespostaAoCadastro ? agradecerInfo : textoDoApoio;
+      const travaDaTeclaI = ehRespostaAoCadastro ? agradecerInfoTrava : travaDoApoio;
+
+      /**
        * **O anúncio impõe o desfecho — mas nunca por cima de quem decidiu não mandar nada.**
        *
        * Pedido dele (02/09): o anúncio agora diz *o que fazer*, e não só qual modelo. As ações
@@ -5854,14 +5878,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * `s`, do `a` e do `f`. As regras (`so-expressa-apoio`, `respondeu-os-dados`) recomendam
        * esta tecla, e `sugestao.TECLAS` foi renomeada junto: é lá que a recomendação vira destaque.
        */
-      if (!travaDoApoio) {
+      if (!travaDaTeclaI) {
         opcoes.push({
           tecla: 'i',
           valor: 'apoio',
-          // O rótulo diz qual dos dois vai sair — a tecla é a mesma, o texto não.
-          rotulo: ehPresencaSemPendencia
-            ? 'Agradecer a presença e concluir (sem pedir dados)'
-            : 'Agradecer o apoio e concluir',
+          // O rótulo diz qual dos TRES vai sair — a tecla é a mesma, o texto não.
+          rotulo: ehRespostaAoCadastro
+            ? 'Agradecer a informação e concluir'
+            : ehPresencaSemPendencia
+              ? 'Agradecer a presença e concluir (sem pedir dados)'
+              : 'Agradecer o apoio e concluir',
         });
       }
       /**
@@ -6195,7 +6221,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             : escolha === 'momento'
               ? momento
               : escolha === 'apoio'
-                ? textoDoApoio
+                ? textoDaTeclaI
                 : interesse;
         const rotulo =
           escolha === 'pedirdados'
@@ -6203,9 +6229,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             : escolha === 'momento'
               ? 'mensagem do momento enviada'
               : escolha === 'apoio'
-                ? ehPresencaSemPendencia
-                  ? 'agradeci a presença no evento (sem pedir dados)'
-                  : 'agradeci o apoio'
+                ? ehRespostaAoCadastro
+                  ? 'agradeci a informação'
+                  : ehPresencaSemPendencia
+                    ? 'agradeci a presença no evento (sem pedir dados)'
+                    : 'agradeci o apoio'
                 : 'perguntei o interesse no conteúdo';
 
         await saveClassification({ withCompletionDate: true, quiet: true });

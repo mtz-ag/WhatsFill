@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.64.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.65.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -7,7 +7,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 ### O que está no ar
 
 Branch `claude/whatsfill-ia`, **v2.63.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
-(2.42 → 2.56) e **oito em 06/09** (2.57 a 2.64). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
+(2.42 → 2.56) e **nove em 06/09** (2.57 a 2.65). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -37,6 +37,7 @@ problemas e sem desfecho incoerente.
 | 2.62 | **O padrão de atendimento dele virou o prompt do rascunho** — e o prompt cruzou o mínimo de cache do Haiku. |
 | 2.63 | **Gênero: na dúvida, neutro** — e o nome do cadastro não serve para deduzir. |
 | 2.64 | **A legenda de um vídeo/link encaminhado não conta como pergunta** — vai para a mensagem do momento. |
+| 2.65 | **Quem respondeu o cadastro não é concluído com pergunta em aberto**, e recebe o agradecimento da INFORMAÇÃO. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -133,6 +134,44 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — Não se conclui com pergunta em aberto, nem agradecendo (v2.65.0)
+
+Print da Mari: ela respondeu ao formulário **por áudio** — *"Boa tarde, tudo bem com você? Sou de
+Caxias do Sul."* — e recebeu *"Obrigado de coração pelo apoio e pela confiança — é isso que sustenta
+o trabalho"*, com o atendimento fechado em cima do *"tudo bem com você?"*. *"mensagem fora de
+contexto, IA deveria ter assumido aqui"*.
+
+**Duas coisas estavam erradas, e as duas já tinham regra dele.**
+
+### 1. Concluiu com pergunta em aberto
+
+A regra é de 03/09 e é dele: **nunca concluir com pergunta em aberto.** `ja-respondemos-antes` ganhou
+essa guarda naquele dia; `respondeu-os-dados` nasceu em 02/09 e ficou sem — e ninguém viu porque o
+sintoma é invisível: a resposta sai educada, e a pergunta dela morre junto com o atendimento.
+
+Medido: com a guarda, o caso desce para `ja-respondemos-antes`, cujo ramo de pergunta dá **tecla 6**
+— a IA escrevendo, que é o que ele pediu.
+
+**O custo, dito:** `perguntaPendente` conta *"tudo bem?"*, que é metade das respostas ao formulário
+nesta base. Quem responde o cadastro cumprimentando passa a ir para a IA em vez de receber o
+agradecimento pronto. Se pesar na rodada, o corte é excluir a cortesia desse sinal — mas aí a Mari
+voltaria a ser concluída.
+
+### 2. A tecla `i` mandava o texto do APOIO para quem só deu a cidade
+
+Ela não expressou apoio nenhum. O agradecimento certo **já existia** — `agradecer-info`: *"obrigado
+pela mensagem e pelas informações — recebemos tudo por aqui"* — e nenhuma regra o alcançava.
+
+Agora a tecla `i` tem três textos, e quem escolhe é o motivo: presença confirmada, resposta ao
+cadastro, ou apoio. É o mesmo desenho do evento (02/09): **a regra decide o destaque, o painel
+decide o texto**, e o rótulo da opção muda junto — senão a rodada mandaria duas coisas diferentes
+com o mesmo nome na tela.
+
+Quatro asserções novas. Quinze suítes verdes, os dois verificadores limpos. A troca de texto da
+tecla `i` é do painel, que nenhuma suíte importa.
 
 ---
 

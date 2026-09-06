@@ -851,7 +851,25 @@ export const REGRAS = [
      * O agradecimento não se perde: sai o modelo agora, e na passada seguinte — com o modelo já
      * na conversa — esta caixa volta a ganhar.
      */
-    quando: (c) => !!c.respondeuOsDados && !c.materialPendente,
+    /**
+     * **Não conclui com pergunta em aberto** — print da Mari (06/09/2026). Ela respondeu ao
+     * formulário por áudio: *"Boa tarde, tudo bem com você? Sou de Caxias do Sul."*, e recebeu
+     * *"Obrigado de coração pelo apoio e pela confiança"* — com a conversa fechada em cima do
+     * *"tudo bem com você?"*. Ele: *"mensagem fora de contexto, IA deveria ter assumido aqui"*.
+     *
+     * A regra que faltava aqui é dele e é de 03/09: **nunca concluir com pergunta em aberto.**
+     * `ja-respondemos-antes` ganhou essa guarda naquele dia; esta caixa nasceu em 02/09 e ficou
+     * sem, e ninguém viu porque o sintoma é invisível — a resposta sai, educada, e a pergunta dela
+     * morre junto com o atendimento.
+     *
+     * Medido no caso da print: com a guarda, o caso desce para `ja-respondemos-antes`, cujo ramo
+     * de pergunta dá **tecla 6** — que é a IA escrevendo, exatamente o que ele pediu.
+     *
+     * **O custo, dito a ele:** `perguntaPendente` conta *"tudo bem?"*, que é metade das respostas
+     * ao formulário nesta base. Quem responde o cadastro cumprimentando passa a ir para a IA em
+     * vez de receber o agradecimento pronto.
+     */
+    quando: (c) => !!c.respondeuOsDados && !c.materialPendente && !c.perguntaPendente,
     motivo: () => 'respondeu o nome e a cidade que pedimos — agradeça e encerre.',
   },
   {

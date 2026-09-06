@@ -2334,4 +2334,43 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   check(segunda?.resposta !== 'pedido-ajuda', 'e a negativa NAO sai de novo');
 }
 
+{
+  grupo('nao se conclui com pergunta em aberto, nem agradecendo (06/09/2026)');
+
+  /**
+   * Print da Mari: ela respondeu ao formulario por audio -- *"Boa tarde, tudo bem com voce? Sou de
+   * Caxias do Sul."* -- e recebeu *"Obrigado de coracao pelo apoio e pela confianca"*, com a
+   * conversa fechada em cima do *"tudo bem com voce?"*. Ele: *"mensagem fora de contexto, IA
+   * deveria ter assumido aqui"*.
+   *
+   * Duas coisas estavam erradas, e a regra que faltava e dele, de 03/09: **nunca concluir com
+   * pergunta em aberto**. `ja-respondemos-antes` ganhou a guarda naquele dia; `respondeu-os-dados`
+   * nasceu em 02/09 e ficou sem — e o sintoma e invisivel, porque a resposta sai educada e a
+   * pergunta dela morre junto com o atendimento.
+   *
+   * (A segunda: a tecla `i` mandava o texto do APOIO para quem so deu a cidade. Isso e do painel,
+   * que nenhuma suite importa.)
+   */
+  const fluxo = arv.fluxoPadrao();
+  const audio = [{ texto: 'Boa tarde, tudo bem com voce? Sou de Caxias do Sul.', tipo: 'AUDIO', transcrito: true }];
+  const base = {
+    respondeuOsDados: true,
+    jaPediramDados: true,
+    jaRespondemosAntes: true,
+    podeMandarMomento: true,
+    podePedirDados: true,
+    textos: audio.map((m) => m.texto),
+    ultimoTexto: audio[0].texto,
+  };
+
+  check(cortesia.perguntaPendente(audio, null), 'o "tudo bem com voce?" conta como pergunta pendente');
+
+  const comPergunta = arv.decidir({ ...base, perguntaPendente: true }, fluxo, {});
+  check(comPergunta?.tecla === '6', `com pergunta em aberto, o caso vai para voce ou para a IA (tecla ${comPergunta?.tecla})`);
+
+  const semPergunta = arv.decidir({ ...base, perguntaPendente: false }, fluxo, {});
+  check(semPergunta?.tecla === 'i', 'sem pergunta, continua agradecendo e encerrando');
+  check(semPergunta?.id?.includes('respondeu-os-dados'), 'e continua sendo a caixa de quem respondeu os dados');
+}
+
 fim();
