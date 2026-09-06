@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.74.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.75.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.74.0**, tudo commitado e no remoto. Quinze versões no
-dia 05/09 (2.42 → 2.56) e **dezoito em 06/09** (2.57 a 2.74). **64 caixas** no fluxo padrão. Quinze suítes verdes, os dois
+Branch `claude/whatsfill-ia`, **v2.75.0**, tudo commitado e no remoto. Quinze versões no
+dia 05/09 (2.42 → 2.56) e **dezenove em 06/09** (2.57 a 2.75). **64 caixas** no fluxo padrão. Quinze suítes verdes, os dois
 verificadores limpos (38 arquivos), **63 caixas** no fluxo padrão sem problemas e sem desfecho
 incoerente.
 
@@ -53,6 +53,7 @@ incoerente.
 | 2.72 | **Voto de boa vontade só conta se for a mensagem inteira** — 15 falsos positivos em 19 viraram zero. |
 | 2.73 | **O rascunho da IA não sai sozinho nos casos sensíveis** — áudio/desabafo, dinheiro, mal-estar, pedido sem objeto, recusa. |
 | 2.74 | **A IA não pode afirmar que alguém já fez algo** nem prometer entrega — a alucinação que saiu para uma eleitora. |
+| 2.75 | **"Dinheiro" solto não é pedido** — era o determinístico, não a IA, e a trava por caso (2.73) foi retirada. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -182,6 +183,73 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — "Dinheiro" solto não é pedido, e a trava por caso saiu (v2.75.0)
+
+### O diagnóstico estava errado, e foi ele quem corrigiu
+
+*"Foi o determinístico novamente mandando mensagem, no outro caso foi também. Volte a mensagem
+automática da IA."*
+
+Nas prints da **Dima** e da **Sandra** eu concluí que o texto vinha da IA porque *"nenhuma resposta
+pronta alcança este contexto"*. O raciocínio estava certo para o **quadro** e errado para a conversa
+real: `pedeAjudaFinanceira` alcançava — por causa de uma palavra solta.
+
+### A causa, na print da Elenir Minozzo
+
+Ela escreveu **858 caracteres de crítica política**:
+
+> *"MENOS DEPENDENTE DAS CESTAS BÁSICAS E SEM SUBSÍDIOS DO GOVERNO FEDERAL"* … *"Tem que acabar com
+> essas benesses e auxílios pecuniários"* … *"TEMOS QUE DESMAMAR ESSES BEZERROS CRIADOS PELO PT"* …
+> *"BASTA! Dinheiro ACABA."*
+
+E recebeu **a negativa de ajuda financeira** — o texto que explica que o mandato não pode doar
+dinheiro. Ele apagou a mensagem.
+
+Medido: casou por **`\bdinheiro\b`**, na última frase. Ela estava dizendo o **contrário** de pedir.
+
+### O conserto
+
+`dinheiro`, `grana`, `empréstimo` e `doação` são o vocabulário de qualquer conversa sobre gasto
+público nesta base — que é metade do que chega. Passaram para a mesma condição das NECESSIDADES:
+**só valem junto de um verbo de pedir**.
+
+**O que decide sozinho é só o que ninguém escreve sem estar pedindo:** a chave PIX e um valor
+concreto (*"R$ 200"*, *"mil reais"*).
+
+Medido: **6 falsos positivos em 6** saíram, e os **6** pedidos de verdade continuam sendo pegos —
+inclusive a rajada da Marli (PIX + *"50 me ajuda muito"*), que é o caso que deu origem à regra.
+
+### Um bug de anos que apareceu no meio
+
+**`me ajuda` NUNCA casou no verbo de pedir.** O padrão era `\b(…|me\s+ajud|…)\b`: a fronteira de
+fechamento exige não-letra depois de *"ajud"*, e em *"me ajuda"* vem um *"a"*. *"Me ajuda com um
+dinheiro"* passava batido — o caso da Marli só era pego porque ela mandou o PIX junto.
+
+**Terceira vez que esta armadilha aparece**, agora num radical truncado de propósito. Entrou junto
+`precisando`, que faltava.
+
+### A trava por CASO (2.73) foi retirada
+
+A lista de casos sensíveis que impedia o rascunho da IA de sair sozinho **viveu uma hora**. Ela
+nasceu do meu diagnóstico errado, e barrar a IA era tratar o sintoma no lugar errado — o preço era a
+rodada automática parar justamente nos casos que ela existe para resolver.
+
+**As travas que ficam são todas sobre o TEXTO que voltou:** marcador esquecido, promessa de entregar
+e afirmação de que alguém já providenciou algo (2.74, que continua valendo — é sobre o que a IA
+escreve, não sobre o caso).
+
+**A lição:** antes de pôr trava na IA, prove que foi a IA. **O Andamento da rodada** registra cada
+envio automático com o motivo, e é ali que se olha.
+
+**Arquivos:** `src/lib/cortesia.js` (a divisão dos marcadores e o `\b` do verbo de pedir),
+`src/lib/ia.js` e `src/panel/panel.js` (a reversão da trava por caso), `tests/cortesia.test.mjs`
+(+16), `tests/ia.test.mjs` (o grupo reescrito), `CLAUDE.md` (+2 armadilhas), `manifest.json`
+(2.74.0 → 2.75.0). Quinze suítes e os dois verificadores.
+
+**O quadro dele não muda.**
 
 ---
 

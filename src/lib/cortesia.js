@@ -1125,6 +1125,28 @@ const MARCADORES_DE_DINHEIRO = [
    * de tudo nesta base ("mil vezes", "mil abraços").
    */
   /\b(?:mil|cem|cento|duzentos|trezentos|quatrocentos|quinhentos|seiscentos|setecentos|oitocentos|novecentos)\s+(?:reais|real|conto|pila)\b/i,
+];
+
+/**
+ * **Palavras de dinheiro que NÃO decidem sozinhas** — print da Elenir Minozzo (06/09/2026).
+ *
+ * Ela escreveu 858 caracteres de crítica política: *"MENOS DEPENDENTE DAS CESTAS BÁSICAS E SEM
+ * SUBSÍDIOS DO GOVERNO FEDERAL"*, *"Tem que acabar com essas benesses e auxílios pecuniários"*,
+ * *"TEMOS QUE DESMAMAR ESSES BEZERROS CRIADOS PELO PT"*, *"BASTA! Dinheiro ACABA."* — e recebeu **a
+ * negativa de ajuda financeira**, o texto que explica que o mandato não pode doar dinheiro. Ele
+ * apagou a mensagem.
+ *
+ * Medido: casou por **`\bdinheiro\b`**, na última frase. Ela estava dizendo o contrário de pedir.
+ *
+ * **`dinheiro`, `grana`, `empréstimo` e `doação` são o vocabulário de qualquer conversa sobre gasto
+ * público nesta base** — que é metade do que chega. Ficam na mesma condição das NECESSIDADES: só
+ * valem junto de um verbo de pedir.
+ *
+ * **O que continua decidindo sozinho é só o que ninguém escreve sem estar pedindo:** a chave PIX e
+ * um valor concreto ("R$ 200", "200 reais", "mil reais"). É a mesma disciplina que separou o voto de
+ * boa vontade da declaração de apoio, algumas horas antes.
+ */
+const DINHEIRO_QUE_PRECISA_DO_VERBO = [
   /\bdinheiro\b/i,
   /\bgrana\b/i,
   /\bempr[ée]stimo\b/i,
@@ -1152,7 +1174,19 @@ const NECESSIDADES = [
   /\bconta\s+de\s+(?:luz|[áa]gua|energia)\b/i,
 ];
 
-const VERBO_DE_PEDIR = /\b(preciso|precisava|necessito|me\s+ajud|ajuda\s*r?\s*me|pode(?:ria|m)?\s+(?:me\s+)?ajudar|consegue|tem\s+como|manda|envia|faz\s+um)\b/i;
+/**
+ * **`me ajuda` nunca casou aqui, e o `\b` final era a causa** — achado em 06/09/2026, medindo o
+ * conserto da Elenir.
+ *
+ * O padrao era `\b(...|me\s+ajud|...)\b`: o `\b` de fechamento exige uma fronteira depois de
+ * "ajud", e em "me ajuda" vem um "a". *"Me ajuda com um dinheiro"* passava batido, e o caso da
+ * Marli (02/09) so era pego porque ela mandou o PIX junto.
+ *
+ * E a mesma armadilha da fronteira de palavra que este arquivo ja registrou duas vezes -- aqui pela
+ * terceira, agora num RADICAL truncado de proposito. **Radical nao leva `\b` no fim.**
+ */
+const VERBO_DE_PEDIR =
+  /(^|[^\p{L}])(precis(?:o|ava|ando|amos)|necessito|me\s+ajud|ajuda\s*r?\s*me|pode(?:ria|m)?\s+(?:me\s+)?ajudar|consegue|tem\s+como|manda|envia|faz\s+um)/iu;
 
 /**
  * A conversa pendente traz pedido de DINHEIRO ou do que se compra com ele?
@@ -1195,7 +1229,8 @@ export function pedeAjudaFinanceira(entrantes, nossaUltimaAt) {
   }
 
   if (VERBO_DE_PEDIR.test(conversa)) {
-    for (const padrao of NECESSIDADES) {
+    // As duas listas que precisam do verbo: o que se compra, e as palavras genéricas de dinheiro.
+    for (const padrao of [...NECESSIDADES, ...DINHEIRO_QUE_PRECISA_DO_VERBO]) {
       const m = padrao.exec(conversa);
       if (m) {
         return {

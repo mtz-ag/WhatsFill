@@ -752,36 +752,26 @@ grupo('o rascunho nao pode se apresentar de novo (05/09/2026)');
   check(marcador.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.marcador), 'o do marcador tambem');
 }
 
-grupo('o rascunho NAO sai sozinho nos casos sensiveis (06/09/2026)');
+grupo('a trava por CASO foi retirada (06/09/2026)');
 {
   /**
-   * Print da DIMA SOUZA: 1min34 de audio, transcrito -- pensionista, viuva, sem aumento ha anos, com
-   * uma cirurgia dos dois pes de 18 mil pela frente, revoltada com a politica. A rodada mandou uma
-   * mensagem e ele a apagou: *"bote transcricao desse tipo para IA ou eu atender sempre; o
-   * automatizado mandou mensagem ignorando o contexto do pedido de ajuda"*.
+   * A lista de casos sensiveis viveu uma hora. Ela nasceu do meu diagnostico de que a mensagem da
+   * print da Dima Souza tinha vindo da IA -- e ele corrigiu: *"foi o deterministico novamente
+   * mandando mensagem, no outro caso foi tambem; volte a mensagem automatica da IA"*.
    *
-   * **O quadro estava certo** -- medido nos dois quadros, o caso da tecla 6, que e a porta da IA. Com
-   * "Automatizar" marcada, o rascunho saia sem ninguem ler (2.60).
+   * Era `pedeAjudaFinanceira`, largo demais. Barrar a IA por causa dele foi tratar o sintoma no
+   * lugar errado, e o preco era a rodada automatica parar justamente nos casos que ela resolve.
    *
-   * As duas travas que existiam olham so o TEXTO que voltou. Esta olha o CASO: nao e o rascunho que
-   * esta errado, e QUEM tem que decidir. O rascunho continua sendo escrito e posto no campo -- o que
-   * volta a ser dele e o ultimo passo, que e o "IA ou eu" que ele pediu.
+   * **As travas que ficam sao todas sobre o TEXTO que voltou** -- o que a IA escreveu, nao o caso
+   * em que ela escreveu.
    */
-  check(rascunhoPodeSairSozinho([], {}), 'caso comum com texto limpo continua saindo sozinho');
+  check(rascunhoPodeSairSozinho([], {}), 'caso comum com texto limpo sai sozinho');
+  check(rascunhoPodeSairSozinho([], { pedeAjudaFinanceira: { motivo: 'x' } }),
+    'e o CASO nao barra mais nada -- foi retirado a pedido dele');
+  check(rascunhoPodeSairSozinho([], { pedeRespostaPessoal: { motivo: 'x' }, semInteresse: { motivo: 'x' } }),
+    'nem os outros sinais');
 
-  check(!rascunhoPodeSairSozinho([], { pedeRespostaPessoal: { motivo: 'falou 575 caracteres' } }),
-    'audio ou conversa longa NAO sai sozinho -- o caso da Dima');
-  check(!rascunhoPodeSairSozinho([], { pedeAjudaFinanceira: { motivo: 'x' } }),
-    'pedido de dinheiro NAO sai sozinho -- e o caso de maior risco do projeto');
-  check(!rascunhoPodeSairSozinho([], { naoPodeFalarAgora: { motivo: 'x' } }),
-    'quem esta passando mal NAO sai sozinho');
-  check(!rascunhoPodeSairSozinho([], { pedeAlgoIndefinido: { motivo: 'x' } }),
-    'pedido sem objeto NAO sai sozinho -- decisao dele de 03/09');
-  check(!rascunhoPodeSairSozinho([], { semInteresse: { motivo: 'x' } }),
-    'recusa NAO sai sozinho -- responder a quem pediu para sair gera denuncia');
-
-  // As duas travas antigas continuam de pe, e sao sobre o TEXTO.
-  check(!rascunhoPodeSairSozinho(['sobrou marcador no texto — troque antes de mandar'], {}),
+  check(!rascunhoPodeSairSozinho(['sobrou marcador no texto — troque antes de mandar']),
     'marcador esquecido continua barrando');
 }
 
@@ -828,10 +818,6 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
     'O Capitao Martim defende a expansao das escolas civico-militares.']) {
     check(!barra(t), `continua saindo: ${t}`);
   }
-
-  // "pediu material" entrou na lista dos casos sensiveis, pelo mesmo caso.
-  check(!rascunhoPodeSairSozinho([], { pedeMaterial: { motivo: 'quero o material' } }),
-    'quem pediu material nao recebe rascunho automatico -- entrega depende de endereco e de gente');
 
   // A regra 5 do prompt e a outra metade do conserto.
   const sistema = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });

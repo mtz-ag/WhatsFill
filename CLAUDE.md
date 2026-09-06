@@ -216,6 +216,21 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   padrão que começa com acento use `(^|\s)`. Vale para todo o vocabulário daqui: "é nós",
   "ótimo", "amém". **E vale do outro lado também** — ver a fronteira que não FECHA depois de
   letra acentuada, mais abaixo.
+- **"DINHEIRO" solto nao e pedido: e o vocabulario de politica desta base.** Print da Elenir Minozzo
+  (06/09/2026): 858 caracteres de critica politica — *"MENOS DEPENDENTE DAS CESTAS BASICAS E SEM
+  SUBSIDIOS DO GOVERNO FEDERAL"*, *"Tem que acabar com essas benesses e auxilios pecuniarios"*,
+  *"BASTA! Dinheiro ACABA."* — e ela recebeu **a negativa de ajuda financeira**. Medido: casou por
+  `\bdinheiro\b`. Ela estava dizendo o CONTRARIO de pedir. Hoje `dinheiro`, `grana`, `emprestimo` e
+  `doacao` estao na mesma condicao das NECESSIDADES: **so valem junto de um verbo de pedir**. O que
+  decide sozinho e so o que ninguem escreve sem estar pedindo — a chave PIX e um valor concreto.
+- **Antes de por trava na IA, PROVE que foi a IA.** Nas prints da Dima e da Sandra eu deduzi que o
+  texto vinha da IA porque *"nenhuma resposta pronta alcanca este contexto"* — e o caminho estava
+  certo para o QUADRO e errado para a conversa real, porque `pedeAjudaFinanceira` alcancava por
+  causa de uma palavra solta. Ele corrigiu: *"foi o deterministico novamente mandando mensagem, no
+  outro caso foi tambem; volte a mensagem automatica da IA"*. A lista de casos sensiveis que eu
+  criei (2.73) viveu uma hora e **foi retirada**: barrar a IA era tratar o sintoma no lugar errado, e
+  o preco era a rodada automatica parar justamente nos casos que ela existe para resolver. **Onde se
+  olha e o Andamento da rodada**, que registra cada envio automatico com o motivo.
 - **A lista de etiquetas da caixa da rodada NÃO é a do contato.** Ela vem de `tagSuggestions` —
   só o que a rodada sugere ou reconhece. No contato da print (31/08) a caixa mostrava 3 etiquetas
   e o cabeçalho da plataforma mostrava 5, e a que faltava era justamente a que deveria dispensar

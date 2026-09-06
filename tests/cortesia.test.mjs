@@ -153,7 +153,7 @@ grupo('despedida: a pessoa so fechou a conversa');
 {
   const t = (x) => ({ texto: x, tipo: 'TEXT' });
 
-  // A frase exata da print dele. A primeira versao NAO pegava:  antes de "é" nunca casa no
+  // A frase exata da print dele. A primeira versao NAO pegava: \b antes de "é" nunca casa no
   // comeco da string, porque acento nao e caractere de palavra.
   check(ehDespedida(t('É nós.')), 'É nós. — a frase da print');
   check(ehDespedida(t('É NÓS')), 'em caixa alta');
@@ -1983,6 +1983,58 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(ap('Boa tarde, eu apoio o Capitao e a familia dele'), 'lealdade vale no meio da frase');
   check(!ap('Boa tarde, eu apoio o Capitao e queria saber do evento'), 'mas com pergunta junto nao e SO apoio');
   check(ap('conte comigo sempre'), 'conte comigo');
+}
+
+{
+  grupo('"dinheiro" solto nao e pedido: e vocabulario de politica (06/09/2026)');
+
+  /**
+   * Print da ELENIR MINOZZO: 858 caracteres de critica politica -- *"MENOS DEPENDENTE DAS CESTAS
+   * BASICAS E SEM SUBSIDIOS DO GOVERNO FEDERAL"*, *"Tem que acabar com essas benesses e auxilios
+   * pecuniarios"*, *"TEMOS QUE DESMAMAR ESSES BEZERROS CRIADOS PELO PT"*, *"BASTA! Dinheiro
+   * ACABA."* -- e ela recebeu **a negativa de ajuda financeira**, o texto que explica que o mandato
+   * nao pode doar dinheiro. Ele apagou a mensagem.
+   *
+   * Medido: casou por `\bdinheiro\b`, na ultima frase. Ela estava dizendo o CONTRARIO de pedir.
+   *
+   * **"dinheiro", "grana", "emprestimo" e "doacao" sao o vocabulario de qualquer conversa sobre
+   * gasto publico nesta base** -- que e metade do que chega. Passaram para a mesma condicao das
+   * NECESSIDADES: so valem junto de um verbo de pedir. **O que decide sozinho e so o que ninguem
+   * escreve sem estar pedindo:** a chave PIX e um valor concreto.
+   */
+  const pf = (t) => pedeAjudaFinanceira([{ texto: t, tipo: 'TEXT', at: 1 }], null);
+
+  check(!pf('BASTA! Dinheiro ACABA. Tem que acabar com essas benesses e auxilios pecuniarios'),
+    'o texto da print NAO pede ajuda financeira');
+  check(!pf('MENOS DEPENDENTE DAS CESTAS BASICAS E SEM SUBSIDIOS DO GOVERNO FEDERAL'),
+    'nem falar de cesta basica em critica ao governo');
+  check(!pf('o governo gasta dinheiro demais com ONGs'), '"dinheiro" em critica politica nao conta');
+  check(!pf('esse emprestimo do BNDES foi um roubo'), 'nem "emprestimo"');
+  check(!pf('a doacao das estatais para o PT tem que acabar'), 'nem "doacao"');
+  check(!pf('nao tenho dinheiro nem para o gas, mas Deus prove'), 'relatar falta sem pedir tambem nao');
+
+  // O que decide SOZINHO, porque ninguem escreve sem estar pedindo.
+  check(!!pf('Meu Pix 01757539005'), 'a chave PIX decide sozinha');
+  check(!!pf('preciso de R$ 200 para o remedio'), 'e um valor concreto tambem');
+  check(!!pf('Qualquer mil reais ja me ajuda'), 'inclusive por extenso');
+
+  // Com o verbo de pedir, as palavras genericas voltam a valer.
+  check(!!pf('preciso de dinheiro para o aluguel'), '"dinheiro" com verbo de pedir conta');
+  check(!!pf('me ajuda com um dinheiro por favor'), 'e "me ajuda" tambem');
+  check(!!pf('estou precisando de dinheiro'), 'e "estou precisando"');
+
+  /**
+   * **`me ajuda` NUNCA casou no verbo de pedir, e o `\b` final era a causa.** O padrao era
+   * `\b(...|me\s+ajud|...)\b`: a fronteira de fechamento exige nao-letra depois de "ajud", e em
+   * "me ajuda" vem um "a". O caso da Marli (02/09) so era pego porque ela mandou o PIX junto.
+   *
+   * Terceira vez que esta armadilha aparece neste arquivo -- agora num RADICAL truncado de
+   * proposito. Radical nao leva fronteira de palavra no fim.
+   */
+  check(!!pedeAjudaFinanceira([
+    { texto: 'Meu Pix 01757539005', tipo: 'TEXT', at: 1 },
+    { texto: '50 me ajuda muito', tipo: 'TEXT', at: 2 },
+  ], null), 'a rajada da Marli continua sendo pega');
 }
 
 fim();

@@ -1070,59 +1070,28 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
 
 /** O rascunho pode sair sozinho, ou algum aviso exige que uma pessoa leia antes? */
 /**
- * **Os casos em que o rascunho NUNCA sai sozinho, por mais limpo que o texto esteja.**
+ * **A lista de casos SENSÍVEIS foi RETIRADA em 06/09/2026, no mesmo dia em que entrou.**
  *
- * Pedido dele (06/09/2026), com a print da Dima Souza — 1min34 de áudio, transcrito: pensionista,
- * viúva, sem aumento há anos, com uma cirurgia dos dois pés de R$ 18 mil pela frente, revoltada com
- * a política. A rodada mandou uma mensagem e ele a apagou: *"bote transcrição desse tipo para IA ou
- * eu atender sempre; o automatizado mandou mensagem ignorando o contexto do pedido de ajuda"*.
+ * Ela nasceu da print da Dima Souza, com o meu diagnóstico de que o texto que saiu tinha vindo da
+ * IA. **Estava errado, e foi ele quem corrigiu:** *"foi o determinístico novamente mandando
+ * mensagem, no outro caso foi também; volte a mensagem automática da IA"*.
  *
- * **O quadro estava certo** — medido nos dois quadros (o dele e o padrão), o caso dá **tecla 6**. E
- * a tecla 6 é a porta da IA: ela escreveu, e com "Automatizar" marcada o texto saiu sem ninguém ler.
+ * O que estava mandando mensagem fora de contexto era `pedeAjudaFinanceira`, largo demais — a
+ * palavra "dinheiro" solta bastava, e num texto político sobre auxílios ela aparece o tempo todo.
+ * Barrar a IA por causa disso foi tratar o sintoma no lugar errado, e o preço era alto: a rodada
+ * automática pararia justamente nos casos que ela existe para resolver.
  *
- * As duas travas que existiam olham só o TEXTO que voltou (marcador esquecido, promessa de
- * entregar). Esta olha o CASO: há situações em que o problema não é o rascunho estar errado, e sim
- * **quem tem que decidir** — e nelas o desfecho que ele pediu é literalmente *"IA ou eu"*: a IA
- * escreve, o texto fica no campo, e ele manda.
+ * **A lição, que fica:** antes de pôr trava na IA, prove que foi a IA. O Andamento da rodada
+ * registra cada envio automático com o motivo, e é lá que se olha — eu deduzi pelo caminho ("nenhuma
+ * resposta pronta alcança este contexto") e o caminho estava certo para o quadro e errado para a
+ * conversa real, porque `pedeAjudaFinanceira` alcançava.
  *
- * **Isto não para a rodada** e não é o corte de 03/09: o rascunho continua sendo escrito e posto no
- * campo. O que muda é o último passo, que passa a ser dele — que é a fronteira que o projeto
- * manteve desde o começo, restaurada para os casos que mais custam quando saem errados.
- *
- * @param {string[]} avisos os que `revisarRascunho` levantou sobre o texto
- * @param {{pedeRespostaPessoal?:unknown, pedeAjudaFinanceira?:unknown, naoPodeFalarAgora?:unknown,
- *          pedeAlgoIndefinido?:unknown, semInteresse?:unknown}} [sinais] o caso deste contato
+ * **As duas travas de TEXTO continuam** (marcador esquecido, promessa de entregar), mais a de
+ * afirmar ação, que entrou na 2.74 e é sobre o que a IA escreve — não sobre o caso.
  */
-export function rascunhoPodeSairSozinho(avisos = [], sinais = {}) {
+export function rascunhoPodeSairSozinho(avisos = []) {
   const impedem = Object.values(AVISOS_QUE_IMPEDEM_ENVIO);
-  if ((avisos || []).some((a) => impedem.includes(a))) return false;
-
-  /**
-   * A lista é curta e é toda de casos **sensíveis**, não de casos difíceis:
-   *
-   *  - **conversa longa, áudio, arquivo** (`pedeRespostaPessoal`) — o caso da Dima. Quem gravou 1min34
-   *    contando a vida espera alguém, e o pior erro possível aqui é uma resposta que não leu;
-   *  - **pedido de dinheiro, cesta ou remédio** (`pedeAjudaFinanceira`) — é o caso de maior risco do
-   *    projeto, e o único com a Lei 9.504/97 do lado. O texto que nega é dele, revisado;
-   *  - **passando mal, ou avisou que fala depois** (`naoPodeFalarAgora`) — 05/09;
-   *  - **pediu algo e não disse o quê** (`pedeAlgoIndefinido`) — decisão dele de 03/09: *"já que
-   *    pedido é algo difícil de ser identificado, será agora pra mim ou IA responder"*;
-   *  - **recusou ou hostilizou** (`semInteresse`) — responder a quem pediu para sair é o que gera
-   *    denúncia;
-   *  - **pediu material** (`pedeMaterial`) — entrou com a print da Sandra Grandini (06/09/2026),
-   *    onde a IA respondeu *"já encaminhei seu pedido ao assessor da sua região"* a quem só
-   *    perguntou *"e a respeito do material?"*. Material físico depende de **endereço e de gente**,
-   *    e as duas coisas estão fora do alcance de um rascunho.
-   */
-  const sensivel =
-    !!sinais?.pedeRespostaPessoal ||
-    !!sinais?.pedeAjudaFinanceira ||
-    !!sinais?.naoPodeFalarAgora ||
-    !!sinais?.pedeAlgoIndefinido ||
-    !!sinais?.semInteresse ||
-    !!sinais?.pedeMaterial;
-
-  return !sensivel;
+  return !(avisos || []).some((a) => impedem.includes(a));
 }
 
 export function revisarRascunho(bruto, agora, contexto = {}) {
