@@ -46,6 +46,21 @@ const VERSAO_API = '2023-06-01';
  * crédito — tudo vira `{acao: 'incerto'}`, que é o painel se comportando como antes da IA
  * existir. É a mesma disciplina do resto: na dúvida, quem decide é ele.
  *
+ * **SEM CHAMADOR desde 06/09/2026, e isto é uma escolha registrada.** O papel da IA mudou naquele
+ * dia (*"quando nenhuma resposta serve, ela dá uma resposta personalizada; essa é a função dela"*):
+ * ela deixou de ESCOLHER resposta pronta, e com isso saíram a tecla 0, o botão "Avaliar o contato
+ * aberto" e o `avaliarComIA` do painel.
+ *
+ * O que sobrou aqui — este cliente, o `modo: 'decisao'` do service worker e a metade da decisão em
+ * `ia.js` — **não foi apagado junto de propósito**: é código puro, coberto por `tests/ia.test.mjs`,
+ * e leva as travas que impedem a IA de escolher `pedido-ajuda`/`pedido-emprego` (`RESTRITOS`, Lei
+ * 9.504/97). Apagar tudo no mesmo turno seria deletar guarda testada por causa de uma mudança de
+ * produto de horas antes.
+ *
+ * **Se a decisão por IA não voltar, isto sai** — e sai inteiro: cliente, modo do service worker,
+ * `montarSistema`, `esquemaDaDecisao`, `validarDecisao` e os testes deles. Ficar meio apagado é
+ * pior que os dois lados.
+ *
  * @returns {Promise<{acao:string, templateId:string, motivo:string, confianca:number,
  *                    aviso:string, custo?:object}>}
  */

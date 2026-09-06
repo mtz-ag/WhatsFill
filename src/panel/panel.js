@@ -912,8 +912,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * não conferia cidade nenhuma. Conferir é a metade do trabalho dela que ele nomeou.
    *
    * **Continua exigindo a RODADA andando.** Abrir um contato à mão para olhar não é pedir
-   * conferência, e cada chamada é dinheiro — a mesma razão pela qual `avaliarComIA` também só
-   * roda dentro da rodada. Incerta, ela devolve `false` e a caixa abre para ele, como antes.
+   * conferência, e cada chamada é dinheiro — a mesma razão pela qual o rascunho automático também
+   * só roda dentro da rodada. Incerta, ela devolve `false` e a caixa abre para ele, como antes.
    */
   async function cidadeConferidaPelaIA(campo, entry) {
     if (!state.auto?.rodando || !state.ia?.ligada) return false;
@@ -5577,8 +5577,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * O que fica no lugar é o **rascunho no campo de mensagem** (ver `iaEntra`, acima) — e ele
        * manda pelo botão da conversa, como já faz na tecla 8.
        *
-       * `avaliarComIA` continua existindo e é usada pelo botão "Avaliar o contato aberto", na aba
-       * Config: ali é ele pedindo a opinião dela, sem gastar uma rodada.
+       * `avaliarComIA` foi apagada junto (06/09), quando o botão "Avaliar o contato aberto" saiu
+       * da aba Config: era o último a chamá-la, e ela previa um desfecho que o painel não produz
+       * mais. Função sem gatilho é a armadilha do `pedido-emprego` — e esta era a que alguém
+       * religaria sem querer. O custo por chamada, que era escrito lá dentro, mudou-se para
+       * `rascunharParaEle`.
        */
 
       /**
@@ -9141,6 +9144,38 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return { ok: false, enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };
     }
 
+    /**
+     * **O CUSTO mudou de caminho junto com a IA** (06/09/2026).
+     *
+     * Ele era escrito dentro de `avaliarComIA`, que sumiu quando a IA deixou de escolher resposta
+     * pronta. Sem trazer estas linhas para cá, o painel ficaria **sem número nenhum de gasto** —
+     * e a regra deste projeto sobre dinheiro é a mesma desde 29/08: sem número na tela, *"quanto
+     * isso está custando"* vira palpite, e foi palpite que quase manteve a IA fora daqui.
+     *
+     * O `vaiCachear` estima com o prompt do RASCUNHO, que é o que saiu — estimar com o da decisão
+     * (que não existe mais) faria a tela dizer "SEM CACHE" sobre um prompt que ninguém mandou.
+     */
+    if (rascunho?.custo) {
+      const c = rascunho.custo;
+      // "SEM CACHE" só é alarme onde o cache PODERIA ter pego. No Haiku 4.5 o prompt não alcança
+      // o mínimo de 4.096 tokens, então o zero é o normal — e alarme que toca sempre se aprende
+      // a ignorar.
+      const podia = iaLib.vaiCachear(
+        state.ia.modelo || iaLib.MODELO_PADRAO,
+        iaLib.tokensAproximados(
+          iaLib.montarSistemaRascunho({
+            templates: state.templates,
+            regras: state.ia.regras,
+            gabinete: await gabineteLib.paraOPrompt(dela),
+          })
+        )
+      );
+      const cacheOk = c.cacheLido > 0 ? `cache ${c.cacheLido}` : podia ? 'SEM CACHE' : 'sem cache (esperado)';
+      const usd = rascunho.custoUsd ? ` · US$ ${rascunho.custoUsd.toFixed(4)}` : '';
+      const mes = rascunho.gastoMes ? ` · mês US$ ${(rascunho.gastoMes.usd || 0).toFixed(2)}` : '';
+      registrarNaRodada('IA', 'pulado', `rascunho · ${cacheOk} · entrada ${c.entrada} · saída ${c.saida}${usd}${mes}`);
+    }
+
     const bruto = String(rascunho?.texto || '').trim();
     if (!bruto) return { ok: false, enviado: false, motivo: 'a IA não escreveu nada' };
 
@@ -9185,112 +9220,52 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return { ok: true, enviado: false, motivo: 'rascunho pronto no campo de mensagem', texto, avisos };
   }
 
-  /**
-   * A avaliação por IA deste contato.
-   *
-   * **Esta função foi PERDIDA no merge `c7a6d59` e restaurada em 01/09.** O auto-merge do git a
-   * removeu junto com o rascunho automatico, e ninguém notou porque `checar-modulos.mjs` só
-   * vê sintaxe: o arquivo continuava válido, com duas chamadas para funções que não existiam.
-   *
-   * A lição virou armadilha no `CLAUDE.md`: naquele merge eu conferi que nada de PRODUÇÃO se
-   * perdeu e não conferi o outro lado. Merge tem dois lados.
-   */
-  async function avaliarComIA() {
-    const cfg = state.ia || {};
-    if (!cfg.ligada || !state.contact) return null;
-
-    // Com a transcrição junto: o áudio é a maior fatia do que a regex não cobre nesta base.
-    const dela = mensagensParaIA();
-
-    const decisao = await iaCliente.avaliar({
-      templates: state.templates,
-      regras: cfg.regras,
-      gabinete: await gabineteLib.paraOPrompt(dela),
-      modelo: cfg.modelo,
-      mensagens: dela,
-      // O relógio: sem ele a IA não sabe se a conversa é de agora ou da semana passada.
-      agora: new Date(),
-      campos: Object.fromEntries(
-        state.classify.map((f) => [f.name, valueNamed(f.name)]).filter(([, v]) => v)
-      ),
-      etiquetas: state.tagSuggestions.filter((sg) => sg.tag && sg.jaTem).map((sg) => sg.tag.label),
-    });
-
-    // O custo de cada chamada vai para o log da rodada: sem número na tela, "quanto isso está
-    // custando" vira palpite — e foi palpite que quase manteve a IA fora do projeto.
-    if (decisao?.custo) {
-      const c = decisao.custo;
-      // "SEM CACHE" só é alarme onde o cache PODERIA ter pego. No Haiku 4.5 o prompt não
-      // alcança o mínimo de 4.096 tokens, então o zero é o normal — e alarme que toca sempre
-      // é alarme que se aprende a ignorar.
-      const podia = iaLib.vaiCachear(
-        cfg.modelo || iaLib.MODELO_PADRAO,
-        // O MESMO gabinete que foi mandado, não o da textarea: com o dossiê ligado o prompt é
-        // maior, e estimar com a fonte errada faria o painel dizer "SEM CACHE" (ou o contrário)
-        // sobre um prompt que não é o que saiu.
-        iaLib.tokensAproximados(
-          iaLib.montarSistema({ templates: state.templates, regras: cfg.regras, gabinete: await gabineteLib.paraOPrompt(dela) })
-        )
-      );
-      const cacheOk = c.cacheLido > 0 ? `cache ${c.cacheLido}` : podia ? 'SEM CACHE' : 'sem cache (esperado)';
-      // O dólar vem junto do token: token é diagnóstico (o cache está pegando?), dólar é a
-      // pergunta que ele realmente faz. Sem o acumulado do mês, cada linha parece barata e a
-      // soma só aparece na fatura.
-      const usd = decisao.custoUsd ? ` · US$ ${decisao.custoUsd.toFixed(4)}` : '';
-      const mes = decisao.gastoMes ? ` · mês US$ ${(decisao.gastoMes.usd || 0).toFixed(2)}` : '';
-      registrarNaRodada('IA', 'pulado', `${decisao.acao} · ${cacheOk} · entrada ${c.entrada} · saída ${c.saida}${usd}${mes}`);
-    }
-    if (decisao?.aviso) {
-      // Teto atingido não é "a IA não decidiu": é uma decisão dele, tomada antes, chegando
-      // agora. Vai como aviso para não se perder entre as linhas normais do log.
-      const teto = /teto de gasto/i.test(decisao.aviso);
-      registrarNaRodada('IA', teto ? 'aviso' : 'pulado', teto ? decisao.aviso : `avaliação não usada: ${decisao.aviso}`);
-    }
-    return decisao;
-  }
 
   function renderConfigIA() {
     const cfg = state.ia || {};
     body.append(h('h3', { class: 'wf-h' }, 'Avaliação por IA'));
 
+    /**
+     * **Esta tela descrevia a IA que ela deixou de ser** — conferido a pedido dele (06/09/2026),
+     * logo depois de a 2.58 mudar o papel dela.
+     *
+     * Dizia *"a IA lê a conversa e ESCOLHE entre as suas respostas prontas"* e, mais abaixo,
+     * *"ela nunca escreve o que sai"*. As duas frases estavam certas até hoje de manhã e viraram
+     * o pior tipo de texto de tela: **descrição que envelheceu e continua parecendo verdade**.
+     * É a mesma armadilha do desfecho no quadro — mapa que envelhece vira mapa mentiroso.
+     */
     body.append(
       h('div', { class: 'wf-preview' },
-        'A IA lê a conversa e ESCOLHE entre as suas respostas prontas. No caminho normal o que ' +
-          'sai é, palavra por palavra, um texto que você escreveu. Ela também pode dizer "este é ' +
-          'para você", e aí o contato sai da rodada com a etiqueta de triagem, igualzinho ao que ' +
-          'a detecção por texto já faz.'),
+        'A IA faz DUAS coisas, e só elas: ESCREVE um rascunho quando o fluxo não resolve o caso ' +
+          '(nenhuma caixa decidiu, ou a caixa mandou o contato para você), e CONFERE a cidade ' +
+          'antes de ela ir para o CRM. Todo o resto — 94% dos contatos, medido — é decidido pelo ' +
+          'fluxo, sem gastar um centavo.'),
       h('div', { class: 'wf-origin' },
-        'Ela roda DEPOIS da detecção por texto, e só no que sobrou: o caso conhecido é pego de ' +
-          'graça e não depende de a IA estar no ar. Pedido de ajuda e de emprego nunca são ' +
-          'enviados por ela — se ela escolher um desses, vira escalada com a sugestão junto.')
-    );
-
-    body.append(
-      checkbox('Ligar a avaliação por IA (custa por contato avaliado)', !!cfg.ligada, async (v) => {
-        await salvarIA({ ligada: v });
-        renderAll();
-      })
+        'O rascunho NUNCA é enviado sozinho: ele cai no campo de mensagem e quem aperta enviar é ' +
+          'você. E a IA não escolhe mais entre as suas respostas prontas — isso saiu em 06/09, ' +
+          'porque a caixa que manda o caso para você quer dizer, por definição, que nenhuma delas ' +
+          'serve.')
     );
 
     /**
-     * **O que a IA faz e o que ela NÃO faz** — a fronteira, escrita onde ele decide sobre ela.
+     * **O interruptor daqui SAIU** — pedido dele (06/09/2026): *"só preciso do botão na aba de
+     * automatização para ligar e desligar a IA"*.
      *
-     * Aqui havia o interruptor que deixava a IA escrever e enviar sozinha, com quatro travas.
-     * Elas funcionaram e a mensagem saiu mesmo assim; ele tirou em 03/09: *"retire essa mensagem
-     * automática, só no modo IA manda sem eu escolher"*.
+     * Eram dois controles para a MESMA chave (`ia.ligada`), e o outro está onde a decisão é
+     * tomada: na tela em que ele aperta "Começar". Dois interruptores para a mesma coisa é a
+     * família do "uma pasta, duas extensões" — não divergem no valor (a chave é uma só), divergem
+     * na cabeça de quem olha: desligar num lugar e ver o outro marcado é o tipo de dúvida que
+     * custa uma rodada inteira gastando dinheiro que ele achava desligado.
+     *
+     * **O que fica aqui é o que só existe aqui:** a chave, o modelo, o teto de gasto, as
+     * instruções extras e o dossiê.
      */
-    if (cfg.ligada) {
-      body.append(
-        h('div', { class: 'wf-block' },
-          'A IA ESCOLHE entre as suas respostas prontas; ela nunca escreve o que sai. Quando ' +
-            'nenhuma pronta serve, ela escala e o rascunho dela cai no campo de mensagem para ' +
-            'VOCÊ ler, ajustar e mandar.'),
-        h('div', { class: 'wf-origin' },
-          'Até a versão 1.79 havia aqui uma caixa que deixava a IA escrever E ENVIAR sozinha, ' +
-            'com quatro travas. As travas funcionavam e a mensagem saía mesmo assim — você tirou ' +
-            'em 03/09: "retire essa mensagem automática".')
-      );
-    }
+    body.append(
+      h('div', { class: cfg.ligada ? 'wf-origin' : 'wf-block' },
+        cfg.ligada
+          ? 'A avaliação por IA está LIGADA. O interruptor fica na aba Automatizado, junto do botão de começar.'
+          : 'A avaliação por IA está DESLIGADA. O interruptor fica na aba Automatizado, junto do botão de começar.')
+    );
 
     // A chave fica no armazenamento e NUNCA é relida para a tela: campo de senha, e o que se
     // mostra é se existe ou não. Chave visível no painel é chave que aparece em print.
@@ -9439,21 +9414,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             : 'Está DESLIGADO: o arquivo veio de pesquisa na internet e precisa da sua revisão. Número de urna errado manda eleitor votar em outra pessoa.');
     });
 
-    const testar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Avaliar o contato aberto');
-    testar.disabled = !cfg.ligada || !state.contact;
-    testar.addEventListener('click', () =>
-      withBusy(async () => {
-        const d = await avaliarComIA();
-        if (!d) return setStatus('A IA está desligada ou não há contato aberto.', 'err');
-        if (d.aviso) return setStatus(`A IA não decidiu: ${d.aviso}`, 'err');
-        const alvo = d.templateId ? ` → "${d.templateId}"` : '';
-        setStatus(`IA: ${d.acao}${alvo} (${Math.round((d.confianca || 0) * 100)}%) — ${d.motivo}`);
-      })
+    /**
+     * **O botão "Avaliar o contato aberto" SAIU** (06/09/2026), e a razão não é espaço na tela:
+     * ele testava um caminho que a rodada abandonou horas antes.
+     *
+     * Ele chamava `avaliarComIA` e respondia *"IA: responder → 'agradecer-apoio' (88%)"* — uma
+     * escolha de resposta pronta que **a rodada não faz mais**. Botão de teste que prevê o que o
+     * programa não vai fazer é pior que não ter teste: ele dá confiança na coisa errada.
+     *
+     * Quem quer ver o que ela escreveria já tem o caminho certo, e ele é do mesmo dia: o botão
+     * **"Chamar a IA"** na aba Respostas, que põe o rascunho no campo de mensagem.
+     */
+    body.append(
+      h('div', { class: 'wf-origin' },
+        'Para ver o que a IA escreveria neste contato, use "Chamar a IA" na aba Respostas — o ' +
+          'rascunho cai no campo de mensagem e nada é enviado.')
     );
-    body.append(h('div', { class: 'wf-row' }, [testar]));
-    if (!state.contact) {
-      body.append(h('div', { class: 'wf-origin' }, 'Abra um atendimento para poder testar sem gastar uma rodada.'));
-    }
     body.append(h('hr', { class: 'wf-sep' }));
   }
 

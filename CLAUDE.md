@@ -1316,6 +1316,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **Mudou o papel de uma funcao? A TELA que a descreve envelheceu junto.** Pedido dele (06/09/2026),
+  quatro horas depois da 2.58: *"confira se os botoes de ligar a IA seguem essas regras"*. A aba
+  Config ainda dizia *"a IA le a conversa e ESCOLHE entre as suas respostas prontas"* e *"ela nunca
+  escreve o que sai"* — verdade de manha, mentira a tarde, e **do tipo que continua parecendo
+  verdade**. Junto saiu o botao *"Avaliar o contato aberto"*, que testava o caminho morto (previa um
+  desfecho que o painel nao produz mais: botao de teste assim da confianca na coisa errada), e com
+  ele `avaliarComIA`, que ficou sem chamador. **A armadilha da remocao:** o CUSTO por chamada era
+  escrito dentro de `avaliarComIA` — sem move-lo para `rascunharParaEle` o painel ficaria sem numero
+  de gasto nenhum. **Ao apagar uma funcao, procure o que so ela fazia de util.** E o interruptor
+  duplicado da IA (Config + Automatizado, mesma chave) virou um so, na tela em que ele aperta
+  "Comecar".
+
 - **A IA ESCREVE onde o deterministico nao resolve; ela nao escolhe mais resposta pronta.** Regra
   dele (06/09/2026): *"o botao de chamar IA foi feito exatamente pra isso: quando nenhuma resposta
   serve, ela da uma resposta personalizada. Essa e a funcao dela. Tudo que o deterministico nao

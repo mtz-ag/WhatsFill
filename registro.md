@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.58.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.59.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.58.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
-(2.42 → 2.56) e **duas em 06/09** (2.57 e 2.58). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
+Branch `claude/whatsfill-ia`, **v2.59.0**, tudo commitado e no remoto. Quinze versões no dia 05/09
+(2.42 → 2.56) e **três em 06/09** (2.57 a 2.59). Quinze suítes verdes, os dois verificadores limpos, **63 caixas** no fluxo padrão sem
 problemas e sem desfecho incoerente.
 
 ### O que mudou hoje, em uma linha cada
@@ -31,6 +31,7 @@ problemas e sem desfecho incoerente.
 | 2.56 | **A janela do fluxo diz de qual versão é o quadro**, e quantas caixas do padrão de hoje faltam nele. |
 | 2.57 | **A IA confere a cidade na rodada normal** (antes só na automática). |
 | 2.58 | **A IA ESCREVE onde o determinístico não resolve** — a tecla 0 e a escolha de resposta pronta por ela saíram. |
+| 2.59 | **Um interruptor só** (o da Config saiu), a tela parou de descrever a IA antiga, e o custo mudou-se para o rascunho. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -127,6 +128,57 @@ verdade, o que quebra o arquivo em silêncio até o `checar-modulos` acusar.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — Um interruptor só, e a aba Config parou de mentir (v2.59.0)
+
+*"confira agora se os botões de ligar a IA seguem essas regras; provavelmente o botão na aba
+configurações deixou de ter utilidade, só preciso do botão na aba de automatização"*.
+
+Conferi, e o que estava fora das regras era **mais** que o interruptor.
+
+### 1. O interruptor duplicado — o que ele pediu
+
+Eram dois controles para a MESMA chave (`ia.ligada`): um na Config, outro no Automatizado. O da
+Config saiu. O que fica lá é o que só existe lá: a chave da API, o modelo, o teto de gasto, as
+instruções extras e o dossiê — e uma linha dizendo se a IA está ligada e onde é o interruptor.
+
+### 2. A tela descrevia a IA que ela deixou de ser — 4 horas antes
+
+A aba Config dizia, em duas caixas: *"a IA lê a conversa e ESCOLHE entre as suas respostas
+prontas"* e *"ela nunca escreve o que sai"*. As duas eram verdade até a 2.58 de hoje de manhã.
+É o pior tipo de texto de tela: **descrição que envelheceu e continua parecendo verdade** — a mesma
+armadilha do desfecho no quadro. Reescritas para o que ela faz: escreve onde o fluxo não resolve, e
+confere a cidade.
+
+### 3. O botão "Avaliar o contato aberto" testava um caminho morto
+
+Ele respondia *"IA: responder → 'agradecer-apoio' (88%)"* — uma escolha de resposta pronta que a
+rodada **não faz mais**. Botão de teste que prevê o que o programa não vai fazer é pior que não ter
+teste: dá confiança na coisa errada. Saiu. Quem quer ver o que ela escreveria usa **"Chamar a IA"**
+na aba Respostas, que é do mesmo dia e põe o rascunho no campo.
+
+### 4. E aí `avaliarComIA` ficou sem chamador — foi junto
+
+Era o último a chamá-la. Função sem gatilho é a armadilha do `pedido-emprego`, e esta em especial
+era a que alguém religaria sem querer.
+
+**O que veio junto, e sem isto a remoção seria uma regressão:** o **custo por chamada** era escrito
+dentro dela. Mudou-se para `rascunharParaEle` — com `vaiCachear` estimando pelo prompt do RASCUNHO,
+que é o que sai. Sem essa mudança o painel ficaria **sem número nenhum de gasto**, e a regra deste
+projeto sobre dinheiro é de 29/08: sem número na tela, *"quanto isso está custando"* vira palpite.
+
+### O que NÃO foi apagado, e por quê
+
+`iaCliente.avaliar`, o `modo: 'decisao'` do service worker e a metade da decisão em `ia.js` ficaram
+**sem chamador**. É código puro, coberto por `tests/ia.test.mjs`, e leva as travas que impedem a IA
+de escolher `pedido-ajuda`/`pedido-emprego` (Lei 9.504/97). Apagar guarda testada no mesmo turno de
+uma mudança de produto de horas antes é pressa, não limpeza — ficou um comentário no `ia-cliente.js`
+dizendo isso, e **se a decisão por IA não voltar, sai inteiro**: cliente, modo do worker, prompt,
+esquema, validação e os testes deles.
+
+111 linhas removidas, 102 escritas. Quinze suítes verdes, os dois verificadores limpos.
 
 ---
 
