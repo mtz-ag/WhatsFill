@@ -1299,6 +1299,25 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   entao a URL do aviso virou municipio. **Aviso novo da plataforma entra em
   `MENSAGENS_DA_PLATAFORMA` no mesmo dia em que aparecer**, e o conserto NAO limpa o que ja foi
   gravado.
+- **ENDERECO DE MAQUINA nunca e cidade — e a terceira vez foi a que nao tinha origem para
+  consertar.** Print da Maria Antonia (06/09/2026): o campo Cidade dela tinha **`vt.tiktok.com`**,
+  um link que ELA mandou. As duas vezes anteriores (o Instagram em 02/09, o FAQ do WhatsApp em
+  05/09) foram consertadas cada uma na sua origem; aqui nao ha origem — quem manda o link e a
+  pessoa. Por isso a peneira virou FORMA: `cities.ehEnderecoDeMaquina` barra `://`, `www.`, dominio
+  com sufixo, `@` e sequencia longa de digitos, e e consultada dentro de `naoPodeSerCidade`, que e
+  por onde o modo generoso ja perguntava. **Metade das asercoes do teste e sobre o que NAO pode ser
+  barrado** ("S.do Livramento", "Santo Antonio da Patrulha"): barrar municipio de verdade e o
+  defeito oposto.
+- **LIXO no campo Cidade nao conta como "o que ja esta no CRM", e sem isso a IA nunca era
+  consultada.** Mesmo caso: ela escreveu *"Moro em Cachoeirinha..."*, o parser achava a cidade com
+  confianca `exata`, e **nada acontecia** — `podeSubstituirCidade` exige `informada`, que so e
+  verdade na resposta ao formulario ou na mensagem que E a cidade. Sem substituicao nao ha palpite
+  PENDENTE, e sem palpite pendente nem a caixa abre nem `cidadeConferidaPelaIA` roda: *"a IA ficou
+  responsavel por verificar a cidade, quando estiver no automatizado tem que resolver casos como
+  esse"*. Hoje um valor do CRM que e endereco de maquina deixa o palpite `exata` passar — e **passar
+  nao e gravar**: ele entra como pendente, e quem decide continua sendo a IA ou ele. **Cidade de
+  outro estado ficou de fora de proposito:** "Curitiba" nao casa com os 497 mas e um lugar de
+  verdade, e troca-la por uma cidade citada de passagem seria inventar.
 
 - **Xingamento no IMPERATIVO e segunda pessoa, e a lista nao sabia disso.** Print dele (05/09/2026):
   a contato chegou pelo anuncio e um minuto depois escreveu *"Entao va para o inferno..

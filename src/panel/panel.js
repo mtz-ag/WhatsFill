@@ -1192,9 +1192,38 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   /** A exceção acima, isolada para ficar legível — e para não valer para nenhum outro campo. */
   function podeSubstituirCidade(name, guess, atual) {
     if (name !== 'Cidade') return false;
-    if (!guess.informada || guess.confidence !== 'exata') return false;
+    if (guess.confidence !== 'exata') return false;
     // Correção sua à mão vence o parser: você viu a conversa inteira, ele viu uma linha.
     if (atual.from === 'manual') return false;
+
+    /**
+     * **Lixo no campo não é "o que já está no CRM"** — print da Maria Antonia (06/09/2026).
+     *
+     * O campo Cidade dela tinha **`vt.tiktok.com`** (um link que ela mandou, gravado numa passada
+     * antiga pelo modo generoso do parser), e na última mensagem ela escreveu *"Moro em
+     * Cachoeirinha…"*. O parser achava Cachoeirinha com confiança `exata` — e **nada acontecia**,
+     * porque a substituição exige `informada`, que só é verdade quando a cidade é a resposta ao
+     * formulário ou a mensagem inteira. A caixa da cidade nunca abria, e a IA nunca era consultada:
+     * as duas dependem de um palpite PENDENTE, e o valor do CRM impedia o palpite de entrar.
+     *
+     * Ele: *"a IA ficou responsável por verificar a cidade; quando estiver no automatizado tem que
+     * resolver casos como esse"*.
+     *
+     * **A regra de não sobrescrever o CRM continua inteira.** Ela existe para não apagar o que
+     * alguém preencheu certo — e um endereço de máquina não é isso: não é nome de lugar em hipótese
+     * nenhuma, e `cities.ehEnderecoDeMaquina` reconhece a FORMA, sem depender de lista.
+     *
+     * **Cidade de outro estado NÃO entra aqui, de propósito.** "Curitiba" não casa com os 497
+     * municípios, mas é um lugar de verdade e pode ser onde a pessoa mora — trocá-la por uma cidade
+     * mencionada de passagem seria inventar. O que esta porta abre é só o caso em que o campo tem
+     * uma coisa que ninguém escreveria como cidade.
+     *
+     * E abrir a porta **não grava nada**: o palpite entra como `pendente`, e quem decide continua
+     * sendo a IA (no automatizado) ou a caixa, que é a regra dele desde sempre.
+     */
+    const lixoNoCampo = atual.from === 'crm' && cities.ehEnderecoDeMaquina(atual.value);
+    if (!guess.informada && !lixoNoCampo) return false;
+
     return cities.normalize(atual.value) !== cities.normalize(guess.value);
   }
 

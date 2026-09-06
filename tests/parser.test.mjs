@@ -767,8 +767,20 @@ grupo('agradecimento so quando ela responde o pedido, nao a conversa inteira (02
    */
   const respondeuDeVerdade = (p) => (!!p.cidade && p.cidade.confidence !== 'nao-reconhecida') || !!p.nome;
 
+  /**
+   * **O link deixou de voltar como cidade em 06/09/2026** -- print da Maria Antonia, que tinha
+   * `vt.tiktok.com` gravado no campo Cidade do CRM.
+   *
+   * Esta asercao dizia o contrario ate hoje: *"o link volta como cidade nao-reconhecida"*, e
+   * existia para provar que o PAINEL filtrava aquilo depois. Filtrar depois nao bastou -- em
+   * alguma passada antiga o valor entrou no CRM e ficou la, e nada o tirava.
+   *
+   * Agora a peneira e na origem (`cities.naoPodeSerCidade` -> `ehEnderecoDeMaquina`), e vale para
+   * qualquer endereco de maquina. A regra que este bloco protege nao mudou: link nao conta como
+   * resposta ao pedido de dados.
+   */
   const soNaResposta = await extract([depoisDoPedido], { respostaAoPedido: true });
-  check(soNaResposta.cidade?.confidence === 'nao-reconhecida', `o link volta como cidade nao-reconhecida (${soNaResposta.cidade?.value})`);
+  check(!soNaResposta.cidade, `link nao volta mais como cidade nenhuma (${soNaResposta.cidade?.value ?? 'nada'})`);
   check(!respondeuDeVerdade(soNaResposta), 'e por isso NAO conta como resposta ao pedido');
 
   // E quem RESPONDE de verdade continua sendo reconhecida -- senao o conserto viraria outro buraco.
@@ -987,6 +999,64 @@ grupo('a sigla do estado depois do nome e contexto (04/09/2026)');
   check(await cidadeDe('kkk rs rs') === null, 'risada nao vira cidade');
   check(await cidadeDe('meu nome e Ana Paula rs') === null, 'nome antes da sigla nao vira cidade');
   check(await cidadeDe('Estamos juntos rs') === null, 'apoio antes da sigla tambem nao');
+}
+
+grupo('endereco de maquina nunca e cidade (06/09/2026)');
+{
+  /**
+   * Print da MARIA ANTONIA: o campo Cidade dela tinha **`vt.tiktok.com`** -- um link que ela mesma
+   * mandou --, com o cabecalho avisando *"nao casa com nenhum dos 497 municipios do RS"*. Na ultima
+   * mensagem ela escreveu *"Moro em Cachoeirinha..."*, e nada corrigia.
+   *
+   * **E a terceira vez que um endereco vira dado**: o link do Instagram (02/09), o do FAQ do
+   * WhatsApp (05/09, dentro de um aviso da plataforma) e este. Os dois primeiros foram consertados
+   * na origem de cada um; este nao tinha origem para consertar, porque quem manda o link e a
+   * pessoa. Por isso a peneira passou a ser sobre a FORMA, sem depender de lista.
+   *
+   * **Metade das asercoes e sobre o que NAO pode ser barrado** -- e onde mora o risco: barrar um
+   * municipio de verdade deixaria a cidade sem ser reconhecida, que e o defeito oposto.
+   */
+  for (const t of [
+    'https://vt.tiktok.com/ZSAbc123/',
+    'vt.tiktok.com',
+    'faq.whatsapp.com',
+    'www.instagram.com',
+    'bit.ly/abc',
+    'maria@gmail.com',
+    '51999998888',
+  ]) {
+    check(await cities.naoPodeSerCidade(t), `barrado: ${t}`);
+    check(cities.ehEnderecoDeMaquina(t), `e reconhecido como endereco de maquina: ${t}`);
+  }
+
+  for (const t of [
+    'Cachoeirinha',
+    'Santo Antonio da Patrulha',
+    'S.do Livramento',
+    'Sao Jose do Norte',
+    'Nao sei',
+    'Mathias',
+    'Vera Cruz',
+  ]) {
+    check(!cities.ehEnderecoDeMaquina(t), `NAO e endereco de maquina: ${t}`);
+    check(!(await cities.naoPodeSerCidade(t)), `e continua podendo ser cidade: ${t}`);
+  }
+
+  /**
+   * O caso inteiro: o link nao vira cidade, e a cidade que ela escreveu continua sendo achada.
+   */
+  const soLink = await extract(['https://vt.tiktok.com/ZSAbc123/'], { respostaAoPedido: true });
+  check(!soLink.cidade, 'o link sozinho nao devolve cidade nenhuma');
+
+  const dela = await extract(
+    [
+      'https://vt.tiktok.com/ZSAbc123/',
+      'Moro em Cachoeirinha sou da familia Casagrande e com muito prazer votarno sua pessoa',
+    ],
+    { respostaAoPedido: true }
+  );
+  check(dela.cidade?.value === 'Cachoeirinha', `e a cidade que ela escreveu continua sendo achada (${dela.cidade?.value})`);
+  check(dela.cidade?.confidence === 'exata', 'com confianca exata, que e o que permite corrigir o campo');
 }
 
 fim();

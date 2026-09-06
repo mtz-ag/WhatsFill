@@ -300,7 +300,44 @@ const EXPRESSOES_QUE_NAO_SAO_CIDADE = [
  * não reconhecido — antes ela só tirava município da lista oficial, então "Zucco", que não é
  * município, escapava por ela.
  */
+/**
+ * **Endereço de máquina nunca é cidade** — print da Maria Antonia (06/09/2026): o campo Cidade dela
+ * tinha **`vt.tiktok.com`**, e o cabeçalho avisava *"não casa com nenhum dos 497 municípios do RS"*.
+ *
+ * É a terceira vez que um endereço vira dado: o link do Instagram (02/09), o do FAQ do WhatsApp
+ * (05/09, que veio dentro de um aviso da plataforma) e agora um do TikTok que **ela mesma mandou**.
+ * Os dois primeiros foram consertados na origem — o modo generoso do parser e o filtro de ruído da
+ * plataforma —, e este não tinha origem para consertar: quem manda o link é a pessoa.
+ *
+ * Então a peneira passou a ser sobre a FORMA. `www.`, `://`, um domínio com ponto, um arroba ou uma
+ * sequência longa de dígitos não são nome de lugar em nenhuma hipótese, e reconhecer isso não
+ * depende de lista nenhuma.
+ *
+ * **Fica em `naoPodeSerCidade`**, que é por onde o modo generoso já pergunta antes de oferecer
+ * qualquer palavra solta — um lugar só, e o mesmo que guarda o vocabulário da campanha.
+ */
+const ENDERECO_DE_MAQUINA = [
+  /https?:\/\//i,
+  /\bwww\./i,
+  // Domínio: "vt.tiktok.com", "faq.whatsapp.com", "bit.ly". Exige um ponto seguido de sufixo de
+  // 2 a 6 letras no fim do trecho -- "Santo Antônio da Patrulha" não casa, e "S.do Livramento"
+  // também não (o "do" é seguido de espaço, não de fim).
+  /[a-z0-9-]+\.[a-z]{2,6}(\/|$)/i,
+  /@/,
+  /\d{5,}/,
+];
+
+/** O texto é endereço de máquina (link, e-mail) em vez de nome de lugar? */
+export function ehEnderecoDeMaquina(texto) {
+  const bruto = String(texto || '').trim();
+  if (!bruto) return false;
+  return ENDERECO_DE_MAQUINA.some((re) => re.test(bruto));
+}
+
 export async function naoPodeSerCidade(texto) {
+  // Antes de tudo, e sem depender de lista: link, e-mail ou número não é lugar.
+  if (ehEnderecoDeMaquina(texto)) return true;
+
   const norm = normalize(texto);
   if (!norm) return true;
 

@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.68.0) — leia isto primeiro numa sessão nova
+## 2026-09-06 — ESTADO DE AGORA (v2.69.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,8 +6,8 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.68.0** (`7c4541d`), tudo commitado e no remoto. Quinze versões no
-dia 05/09 (2.42 → 2.56) e **doze em 06/09** (2.57 a 2.68). Quinze suítes verdes, os dois
+Branch `claude/whatsfill-ia`, **v2.69.0**, tudo commitado e no remoto. Quinze versões no
+dia 05/09 (2.42 → 2.56) e **treze em 06/09** (2.57 a 2.69). Quinze suítes verdes, os dois
 verificadores limpos (38 arquivos), **63 caixas** no fluxo padrão sem problemas e sem desfecho
 incoerente.
 
@@ -47,13 +47,16 @@ incoerente.
 | 2.66 | **A perda de contexto conclui em vez de escorregar para o modelo** quando não há momento para mandar. |
 | 2.67 | **Quem retorna e escreveu em outro dia recebe a do momento, e não o modelo do anúncio.** |
 | 2.68 | **Link ou figura no fim não apaga a pergunta que ficou** — e "qual partido" e "gostaria de saber" passaram a ser reconhecidos. |
+| 2.69 | **Endereço de máquina nunca é cidade**, e link gravado no campo deixa de bloquear a correção — a IA passa a resolver esses casos. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
-1. **Consertar à mão a Cidade de quem já foi contaminado.** O aviso *"Cidade escrita fora do padrão:
-   `faq.whatsapp.com`"* aparece no cabeçalho do painel quando acontece. O conserto de 2.48 impede
-   novos casos; **não** limpa os que já foram gravados. A aba Cidades lista o que não casa com os
-   497 municípios — é por ali que se acha o resto.
+1. **A Cidade de quem já foi contaminado: metade se conserta sozinha agora.** O aviso *"Cidade
+   escrita fora do padrão"* continua aparecendo no cabeçalho. O que mudou em **2.69**: quando o
+   campo tem um endereço de máquina (`vt.tiktok.com`, `faq.whatsapp.com`) **e ela menciona a cidade
+   de novo**, o palpite passa a valer e a IA — ou a caixa — corrige. **Não conserta quem nunca mais
+   escrever a cidade**: para esses, a aba Cidades lista o que não casa com os 497 municípios, e é
+   por ali que se acha o resto.
 2. **IMPORTAR O FLUXO — e o arquivo que ele tem JÁ É o quadro de hoje.** O último entregue foi o
    `fluxopadrao2.67.0.json` (06/09, 14:13). **Medido, comparando caixa a caixa com o `fluxoPadrao`
    de agora: idêntico** — 63 caixas, mesma ordem, mesmas condições, ações e `tambemQuando`, zero
@@ -174,6 +177,65 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-06 — Endereço de máquina nunca é cidade (v2.69.0)
+
+### O caso
+
+O painel mostrava **Cidade: `vt.tiktok.com`** para a Maria Antonia, com o aviso *"não casa com
+nenhum dos 497 municípios do RS"* no cabeçalho. Na última mensagem ela tinha escrito *"Moro em
+Cachoeirinha sou da família Casagrande…"*.
+
+Ele: *"a IA ficou responsável por verificar a cidade; quando estiver no automatizado tem que resolver
+casos como esse"*.
+
+### Duas metades, e a segunda é a que ele pediu
+
+**1. O link não podia ter entrado.** É a **terceira vez** que um endereço vira dado: o Instagram
+(02/09), o FAQ do WhatsApp (05/09, dentro de um aviso da plataforma) e este. As duas primeiras foram
+consertadas cada uma na sua origem — o modo generoso do parser, o filtro de ruído da plataforma.
+**Esta não tem origem para consertar: quem manda o link é a pessoa.**
+
+Então a peneira passou a ser sobre a **forma**. `cities.ehEnderecoDeMaquina` barra `://`, `www.`,
+domínio com sufixo, `@` e sequência longa de dígitos — e é consultada dentro de `naoPodeSerCidade`,
+que é por onde o modo generoso já perguntava antes de oferecer qualquer palavra solta. Um lugar só.
+
+Medido: o link deixou de voltar como cidade, e "S.do Livramento", "Santo Antônio da Patrulha", "Não
+sei" e "Mathias" continuam passando — **metade das asserções do teste é sobre o que não pode ser
+barrado**, porque barrar município de verdade é o defeito oposto.
+
+**2. O lixo que já estava no CRM bloqueava a correção — e era por isso que a IA nunca era
+consultada.** O parser achava Cachoeirinha com confiança `exata`, e nada acontecia:
+`podeSubstituirCidade` exige `informada`, que só é verdade quando a cidade é a resposta ao formulário
+ou a mensagem inteira. Sem substituição não há palpite **pendente**; sem palpite pendente, nem a
+caixa "Cidade a gravar" abre nem `cidadeConferidaPelaIA` roda.
+
+Hoje um valor do CRM que é endereço de máquina **deixa de bloquear** um palpite `exata`. E passar não
+é gravar: ele entra como pendente, e quem decide continua sendo a IA (no automatizado) ou ele — a
+regra de que nenhuma cidade de palpite vai para o CRM sem confirmação não mudou.
+
+### O que ficou de fora, de propósito
+
+**Cidade de outro estado.** "Curitiba" também não casa com os 497 municípios, mas é um lugar de
+verdade e pode ser onde a pessoa mora. Trocá-la por uma cidade mencionada de passagem seria inventar.
+O que esta porta abre é só o caso em que o campo tem uma coisa que ninguém escreveria como cidade.
+
+**Correção à mão continua vencendo:** `atual.from === 'manual'` bloqueia antes de tudo.
+
+### O que isso NÃO faz
+
+Não varre a base. O conserto alcança o contato **quando ele volta a escrever a cidade** — para quem
+nunca mais escrever, o campo continua com o link, e o caminho é a aba Cidades, que lista o que não
+casa com a planilha.
+
+**Arquivos:** `src/lib/cities.js` (`ehEnderecoDeMaquina` e a peneira), `src/panel/panel.js`
+(`podeSubstituirCidade`), `tests/parser.test.mjs` (+31, e uma asserção **invertida** — ela travava o
+comportamento antigo, *"o link volta como cidade não-reconhecida"*), `CLAUDE.md` (+2 armadilhas),
+`manifest.json` (2.68.0 → 2.69.0). Quinze suítes e os dois verificadores.
+
+**O quadro dele não muda** — nada aqui é caixa nem ordem.
 
 ---
 
