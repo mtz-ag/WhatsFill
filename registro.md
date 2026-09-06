@@ -54,23 +54,31 @@ incoerente.
    `faq.whatsapp.com`"* aparece no cabeçalho do painel quando acontece. O conserto de 2.48 impede
    novos casos; **não** limpa os que já foram gravados. A aba Cidades lista o que não casa com os
    497 municípios — é por ali que se acha o resto.
-2. **IMPORTAR O FLUXO — e o arquivo que ele tem em mãos JÁ ESTÁ VELHO.** O último entregue foi o
-   `fluxo-padrao-2.56.0.json`; o quadro dele é o de **2.41.0** (60 caixas). **Medido comparando o
-   `fluxoPadrao` de agora com o de 2.56:** mesmo número de caixas (63), mas a **2.67 mudou a ORDEM**
-   — `contexto-de-outro-dia` subiu para cima do grupo *"veio de um anúncio que eu reconheço"*, nos
-   DOIS ramos do retorno. No quadro a posição é a prioridade, então isso muda desfecho. Gerar um
-   novo antes de mandar: `node tools/exportar-fluxo.mjs <saida.json>`, saída FORA do repositório.
+2. **IMPORTAR O FLUXO — e o arquivo que ele tem JÁ É o quadro de hoje.** O último entregue foi o
+   `fluxopadrao2.67.0.json` (06/09, 14:13). **Medido, comparando caixa a caixa com o `fluxoPadrao`
+   de agora: idêntico** — 63 caixas, mesma ordem, mesmas condições, ações e `tambemQuando`, zero
+   linhas em posição diferente. A 2.68 mexeu só em detectores (`perguntaPendente`,
+   `PERGUNTAS_INEQUIVOCAS`), que são código e valem em qualquer quadro.
 
-   O que só decide depois da importação, medido:
+   > **Uma passagem anterior desta entrada dizia que o último era o `fluxo-padrao-2.56.0.json` e que
+   > o arquivo dele estava velho.** Estava errado: o 2.67.0 foi gerado depois, e já traz a ordem
+   > nova da 2.67 (`contexto-de-outro-dia` acima do grupo do anúncio reconhecido, nos dois ramos).
+   > Foi ele quem corrigiu, mandando o arquivo. **Antes de afirmar que o quadro dele está atrasado,
+   > compare com o arquivo que ele tem — não com o último que este registro menciona.**
+
+   **O que falta saber é se ele IMPORTOU.** Se importou, está em dia e a janela do fluxo diz isso
+   sozinha (é o que a 2.56 resolveu: a linha de versão mais quantas caixas do padrão de hoje faltam
+   no quadro dele). Se não importou, o quadro continua sendo o de **2.41.0** (60 caixas), e três
+   coisas não decidem — medido:
    - **`nao-pode-falar-agora`** (2.53) entrou como `tambemQuando` de uma caixa que ele já tem — mas
-     `tambemQuando` é conteúdo da caixa, e o quadro dele é uma cópia. Simulando o quadro atual, o
+     `tambemQuando` é conteúdo da caixa, e o quadro dele é uma cópia. Simulando o quadro de 2.41, o
      caso da Elenir **continua recebendo o modelo (tecla 1)** em vez da tecla 6. E não vale como
      proteção do código: `arvore.PROTECOES` só cobre efeito `silencio`, e esta é `gente`;
-   - **`rajada-de-anuncios`** (2.54) é caixa nova em três lugares;
-   - **a ordem da 2.67**, acima.
+   - **`rajada-de-anuncios`** (2.54), caixa nova em três lugares;
+   - **a ordem da 2.67**, que é prioridade.
 
-   Depois de importar, a janela passa a dizer sozinha se ele está em dia — é o que a 2.56 resolveu.
-   O resto foi em CONDIÇÃO de regra do código, que vale em qualquer quadro.
+   Regenerar, quando precisar: `node tools/exportar-fluxo.mjs <saida.json>`, saída FORA do
+   repositório.
 3. **Aba Automatizado → "Etiquetas que a rodada aplica": as três continuam vazias.**
    - **SEM INTERESSE** — a rodada não marca, e na visita seguinte precisa redescobrir a hostilidade
      do zero. Ficou mais caro hoje: `semInteresse` passou a pegar o xingamento no imperativo, e sem
