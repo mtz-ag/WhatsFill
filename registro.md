@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.89.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.90.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,15 +10,15 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.89.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v2.90.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**38 arquivos**),
 **64 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
 tabela. Prompt de sistema do rascunho: **5.290 tokens**, dos quais **72% é o `PADRAO_DE_ATENDIMENTO`
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
-Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **catorze em
-07/09** (2.76 a 2.89).
+Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **quinze em
+07/09** (2.76 a 2.90).
 
 ### O que mudou em 07/09, em uma linha cada
 
@@ -38,6 +38,7 @@ Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2
 | 2.87 | **Proposta comercial não abre porta** — nada é aceito no período eleitoral, e mandar procurar a coordenação virou trava. |
 | 2.88 | **Palpite PENDENTE ia para o CRM** — quem pergunta respeitava a marca, quem escreve não sabia dela. A Cidade contaminada tem causa. |
 | 2.89 | **A API da OpenAI (ChatGPT) entrou** — o modelo escolhe a casa, e as duas chaves convivem. |
+| 2.90 | **"A IA não escreveu nada" escondia a causa** — o motivo vinha em `avisos` e o painel o jogava fora. |
 
 As versões de 05 e 06/09 (2.42 a 2.75) estão nas entradas próprias, abaixo. O fio de 07/09 tem duas
 metades: **o controle da rodada** (2.76 a 2.80, que terminou no Esc que a própria extensão apertava)
@@ -245,6 +246,71 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-07 — O erro que a caixa não contava (v2.90.0)
+
+### A pergunta dele
+
+Print da caixa da rodada, e uma pergunta: *"qual foi o erro?"*
+
+> ⚠ o fluxo mandou para você ("ultima-pede-resposta-pessoal:chegada-antes") — **a IA não conseguiu
+> rascunhar (a IA não escreveu nada)**
+
+A resposta honesta é que **o painel não conta**. A frase entre parênteses descreve o sintoma: a IA
+não escreveu. O que aconteceu ficou no campo do lado.
+
+### A causa estava a uma linha de distância
+
+`iaCliente.rascunhar` devolve `{ texto: '', avisos: [motivo] }` em **toda** falha, e `avisos[0]`
+carrega o que de fato ocorreu:
+
+| o que aconteceu | a frase que estava em `avisos` |
+|---|---|
+| teto de gasto do mês atingido | *"teto de gasto da IA atingido: US$ X de US$ Y em 2026-09"* |
+| chave recusada | *"a chave da API foi recusada — confira na aba Config"* |
+| conta sem crédito | *"a conta da API está sem crédito"* |
+| resposta ilegível | *"a IA respondeu num formato que não deu para ler"* |
+| sem rede | *"não consegui falar com a API: …"* |
+
+O `if (!bruto)` de `rascunharParaEle` retornava com frase fixa **antes de ler `avisos`** — então
+nenhuma dessas linhas chegava à caixa nem ao Andamento.
+
+**O caminho do SUCESSO já mostrava os avisos** (o `barrado` da caixa junta todos, e é como ele lê a
+saudação trocada e o traço eme). Só o da falha não.
+
+### A regra que fica
+
+**Função que devolve motivo em DOIS campos exige que quem chama leia os dois.** É a família do log
+que mentia — a cidade *"não gravada"* que era gravada (03/09) — e do aviso que mandava procurar o
+interruptor na aba errada (06/09): mensagem de erro que não diz o que fazer custa uma sessão de
+diagnóstico, e esta custou a dele.
+
+### Onde ele descobre a causa AGORA, sem esperar a próxima rodada
+
+1. **Aba Config → o contador de gasto**, que diz `US$ x de US$ y em 2026-09`. Se estiver no teto, é
+   isso — e a saída é levantar o teto ali mesmo;
+2. **Andamento da rodada**: chamada que chegou à API escreve `rascunho · cache … · US$ …`. **Linha
+   ausente = a chamada não saiu** (teto, ou falha de rede), e não que ela saiu ruim.
+
+E há um suspeito que só existia até ontem: na 2.88 uma resposta **truncada** da Anthropic voltava
+como `ok: true` com JSON pela metade, que não faz parse e chega aqui como "não escreveu nada". A
+2.89 passou a reconhecer isso e a dizer *"a resposta foi truncada no teto de saída"* — nas duas
+APIs.
+
+### O que estava CERTO na mesma print
+
+- o fluxo mandou para ele por `ultima-pede-resposta-pessoal` — 193 caracteres de áudio, é conversa;
+- **Cidade: (vazia)** com a pessoa dizendo *"Eu sou de Venanzuay, Rio Grande do Sul"*. Medido: o
+  parser devolve `null` nos dois modos. "Venanzuay" não é município, e "Rio Grande do Sul" é apagado
+  pela guarda `NOME_DO_ESTADO` antes de qualquer casamento — sem ela, o palpite de posição teria
+  oferecido o nome do estado como cidade.
+
+**Arquivos:** `src/panel/panel.js` (o motivo real), `CLAUDE.md` (+1 armadilha), `manifest.json`
+(2.89.0 → 2.90.0). Quinze suítes e os dois verificadores.
+
+**O quadro dele não muda.**
+
 ---
 
 ## 2026-09-07 — A API da OpenAI (ChatGPT) entrou (v2.89.0)

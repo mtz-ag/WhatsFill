@@ -9739,7 +9739,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
 
     const bruto = String(rascunho?.texto || '').trim();
-    if (!bruto) return { ok: false, enviado: false, motivo: 'a IA não escreveu nada' };
+    if (!bruto) {
+      /**
+       * **O MOTIVO DE VERDADE vem em `avisos`, e esta linha o jogava fora.**
+       *
+       * Print dele (07/09/2026), perguntando *"qual foi o erro?"* sobre a caixa que dizia
+       * *"a IA não conseguiu rascunhar (a IA não escreveu nada)"* — uma frase que **descreve o
+       * sintoma e esconde a causa**. Do outro lado, `iaCliente.rascunhar` devolve
+       * `{ texto: '', avisos: [motivo] }` em toda falha, e ali estava escrito o que aconteceu:
+       * teto de gasto atingido, chave recusada, conta sem crédito, resposta ilegível, sem rede.
+       * Nada disso chegava à tela nem ao Andamento.
+       *
+       * É a família do log que mentia (a cidade *"não gravada"* que era gravada, 03/09) e do aviso
+       * que mandava procurar o interruptor na aba errada: **mensagem de erro que não diz o que
+       * fazer custa uma sessão de diagnóstico**, e esta custou a dele.
+       *
+       * Note que o caminho do SUCESSO já mostrava os avisos (o `barrado` da caixa da rodada junta
+       * todos) — só o da falha não. Guarda para o futuro: quando uma função devolve motivo em dois
+       * campos, quem chama tem que ler os dois.
+       */
+      const porque = (rascunho?.avisos || []).map((a) => String(a || '').trim()).filter(Boolean).join('; ');
+      return { ok: false, enviado: false, motivo: porque || 'a IA não escreveu nada e não disse por quê' };
+    }
 
     /**
      * **Os avisos vêm de quem já revisou** — e este era o defeito, desde 04/09/2026.

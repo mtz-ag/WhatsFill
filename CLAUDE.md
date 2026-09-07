@@ -2584,6 +2584,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   de problema, e no Haiku isso apareceria em 100% das chamadas estando tudo certo. **Alarme que
   toca sempre é alarme que se aprende a ignorar** — e aí não toca no dia em que é de verdade.
   Mexeu no tamanho do prompt ou no modelo? O teste de `vaiCachear` trava os dois lados.
+- **MENSAGEM DE ERRO QUE DESCREVE O SINTOMA ESCONDE A CAUSA — e a causa estava no campo do lado.**
+  Print dele (07/09/2026) com a pergunta *"qual foi o erro?"*: a caixa da rodada dizia *"a IA nao
+  conseguiu rascunhar (a IA nao escreveu nada)"*, que **e o sintoma**. `iaCliente.rascunhar`
+  devolve `{texto: '', avisos: [motivo]}` em toda falha, e ali estava escrito o que aconteceu —
+  teto de gasto atingido, chave recusada, conta sem credito, resposta ilegivel, sem rede. O
+  `if (!bruto)` de `rascunharParaEle` voltava com frase fixa **antes de ler `avisos`**, e nada
+  disso chegava a tela nem ao Andamento. O caminho do SUCESSO ja mostrava os avisos (o `barrado`
+  junta todos); so o da falha nao. **Regra geral: funcao que devolve motivo em dois campos exige
+  que quem chama leia os dois.** E a familia do log que mentia (a cidade *"nao gravada"* que era
+  gravada) e do aviso que mandava procurar o interruptor na aba errada.
 - **DUAS APIS AGORA, e quem escolhe a casa e o NOME DO MODELO.** Implementado em 07/09/2026 a
   pedido dele (*"faca agora a implementacao para utilizar a api do chatgpt"*), depois da comparacao
   de custo. `ia.provedorDoModelo` decide: `gpt-`, `o1..o9` e `chatgpt` vao para a OpenAI, o resto
