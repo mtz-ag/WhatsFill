@@ -3,8 +3,11 @@
 > **Este arquivo vai para o prompt de sistema da IA da extensão.** É a fonte dela sobre o mandato,
 > a chapa, os números de urna e as pautas — para ela não decidir sobre nomes que não conhece.
 >
-> **Status: AGUARDANDO REVISÃO DO THIAGO.** Enquanto `ia.dossieAtivo` estiver `false`, nada daqui
-> chega à IA. Pesquisa feita em 01/09/2026; as fontes de cada bloco estão em `## Fontes`.
+> **Status: LIGADO** (`ia.dossieAtivo`), revisado por ele. Pesquisa de 01/09/2026 mais o material
+> oficial da campanha que ele mandou em 07/09/2026 — as fontes de cada bloco estão em `## Fontes`.
+>
+> **A fonte mais forte deste arquivo é o material da campanha**, e não a internet: quem está na
+> chapa e com que número é decisão dele, não fato público a pesquisar.
 >
 > **Regra ao editar:** dado errado aqui vira escolha errada que chega a eleitor real e não volta.
 > Se não tiver certeza, **apague a linha** em vez de deixar um palpite. Vazio faz a IA escalar;
@@ -48,9 +51,11 @@
 
 - **Candidato à reeleição como deputado estadual**, pelo Republicanos, confirmado na convenção do
   partido no RS em 26/07/2026 `[CONFIRMADO]`
-- Número de urna: **10122** `[CONFERIR]` — este era o número dele em **2022**. Nenhuma fonte
-  independente de 2026 o confirma; o material da própria campanha usa 10122. **Confirme no TSE
-  antes de a IA poder dizer este número a um eleitor.**
+- **Número de urna: 10122** `[CONFIRMADO]` — pela **arte oficial da campanha** ("Candidatos do
+  Bolsonaro no Rio Grande do Sul"), mandada por ele em 07/09/2026, e pelo Headline do anúncio
+  *CONVERSE CONOSCO* no Instagram (*"Vote Capitão Martim, deputado estadual. 10122"*).
+  Ficou seis dias como `[CONFERIR]` porque nenhuma fonte independente de 2026 o trazia — e a fonte
+  que resolveu não era a internet, era o material dele.
 
 ---
 
@@ -79,6 +84,43 @@
 
 ---
 
+## A CHAPA COMPLETA de 2026 — a "colinha"
+
+Da **arte oficial da campanha** *"Candidatos do Bolsonaro no Rio Grande do Sul"*, que ele mandou em
+07/09/2026. Todos `[CONFIRMADO]` por ela.
+
+| cargo | nome | número |
+|---|---|---|
+| Presidente | **Flávio Bolsonaro** | **22** |
+| Governador | **Zucco** | **22** |
+| Senador | **Sanderson** | **222** |
+| Senador | **Marcel Van Hattem** | **300** |
+| Deputado Federal | **Felipe Pedri** | **2228** |
+| Deputado Estadual | **Capitão Martim** | **10122** |
+
+**Três coisas que o eleitor pergunta e que estão nesta tabela:**
+
+1. **São DOIS senadores nesta eleição**, e a chapa pede voto para os dois: Sanderson (222) e Van
+   Hattem (300). Quem pergunta *"qual o senador?"* recebe os dois nomes, não um.
+2. **Presidente e Governador têm o MESMO número, 22.** Isso é normal — nas eleições majoritárias o
+   número é o do partido —, e é a dúvida que mais aparece. Não é erro de digitação.
+3. **Partido:** derivado do número, não afirmado pela arte — 22 é o PL e 30 é o Novo, então
+   Sanderson e Pedri são do PL e Van Hattem é do Novo `[CONFERIR]`. **A IA não afirma partido de
+   ninguém desta tabela**: o número é o que o eleitor precisa, e o partido é dedução.
+
+### A regra da colinha
+
+**Quem pergunta em quem votar recebe a ARTE, não a lista digitada pela IA.** Decisão dele
+(07/09/2026): *"essa colinha deve ser mandada pra quem pede, vou criar um modelo de mensagem pra
+ela"*.
+
+O motivo é o de sempre neste projeto: **número errado manda o eleitor votar em outra pessoa**, e
+seis números redigitados por um modelo são seis chances de errar — a arte é a mesma coisa sem
+nenhuma. A IA pode dizer **o número de UM candidato** quando perguntam dele especificamente (é dado
+confirmado, está na tabela acima); montar a chapa inteira é o cartão.
+
+---
+
 ## ⚠ ATENÇÃO: existem DOIS Zuccos, e os dois são aliados
 
 Confundir os dois é o erro mais provável deste dossiê, porque os dois são do mesmo campo, no mesmo
@@ -98,10 +140,52 @@ possa ser o **Delegado Zucco** (por exemplo citando deputado estadual), **não d
 
 ---
 
+## O que o mandato FEZ — projetos
+
+Lacuna que ele nomeou em 07/09/2026 (*"falta informações de projetos do martim"*). Pesquisa daquele
+dia, e **tudo aqui está `[CONFERIR]`** — a Assembleia (`al.rs.gov.br`) e o site dele (`martim.rs`)
+não abriram na pesquisa, então nada foi conferido na fonte primária.
+
+**Enquanto estiver `[CONFERIR]`, a IA não afirma nada disto a um eleitor** (regra 4 do topo). É de
+propósito: projeto atribuído errado, ou descrito errado, é afirmação falsa sobre o trabalho do
+mandato — a mesma família do *"já encaminhei ao assessor"*. Ele confirma linha a linha, e o que ele
+riscar sai.
+
+### Com número de projeto
+
+| projeto | tema | situação |
+|---|---|---|
+| **PL 424/2023** | **Programa Defesa Civil na Escola** — preparar a comunidade escolar para emergências e desastres. Protocolado depois da participação dele no resgate das enchentes do Vale do Taquari (nov/2023) | aprovado na Assembleia `[CONFERIR]` |
+| **PL 77/2025** | **Patrulha Maria da Penha** como política pública permanente do RS | aprovado por unanimidade, 45 votos `[CONFERIR]` |
+| **PL 434/2023** | **Transparência na operação, manutenção e segurança de barragens** | aprovado na CCJ `[CONFERIR]` |
+| **PL 325/2024** | **Economia do oceano e das águas interiores** — setor náutico e hidroviário | em tramitação `[CONFERIR]` |
+
+### Sem número (não achei o projeto, só a notícia)
+
+- Proibir música com **apologia ao crime ou às drogas** em evento financiado com dinheiro público
+  `[CONFERIR]`
+- **Identificação de gênero obrigatória em banheiro escolar** — aprovado na CCJ em junho/2024
+  `[CONFERIR]`
+- Propostas de **prevenção e resposta a desastres naturais** `[CONFERIR]`
+- **Emendas parlamentares de R$ 2 milhões em 2023**, para 11 municípios `[CONFERIR]`
+- Integrante da **Frente Parlamentar de Proteção e Defesa Civil** `[CONFERIR]`
+- Representante da Assembleia no **atendimento aos desabrigados pelas cheias** `[CONFERIR]`
+
+### A regra dos projetos
+
+**Responda o que foi perguntado; não recite a lista.** Contato que pergunta de um tema recebe o que
+o mandato fez NAQUELE tema; ninguém pediu um currículo. E há pauta politicamente carregada nesta
+lista: ela existe aqui para a IA **saber**, não para ela levantar o assunto.
+
+---
+
 ## O que a IA NUNCA deve afirmar
 
 - **Nenhum número de urna marcado `[CONFERIR]`.** Número errado é o pior erro possível: manda o
-  eleitor votar em outra pessoa.
+  eleitor votar em outra pessoa. (Hoje todos os seis estão `[CONFIRMADO]` pela arte da campanha.)
+- **Projeto de lei, lei ou realização do mandato marcado `[CONFERIR]`** — e hoje isso é a lista
+  INTEIRA da seção "O que o mandato FEZ". Perguntaram de projeto e nada está confirmado? **Escale.**
+- **Partido de quem está na chapa**: a arte dá o número, não o partido.
 - Que Zucco é do Republicanos. **Ele saiu do Republicanos em 2023 e hoje é PL** — o partido apenas
   o apoia.
 - Resultado de pesquisa eleitoral, chance de vitória ou comparação com adversários.
@@ -112,10 +196,17 @@ possa ser o **Delegado Zucco** (por exemplo citando deputado estadual), **não d
 
 ## Espaço do Thiago
 
-Acrescente aqui o que só o gabinete sabe e a internet não tem — e o que a pesquisa não achou:
+Acrescente aqui o que só a equipe sabe e a internet não tem — e o que a pesquisa não achou.
 
-- Número de urna de 2026 do Capitão Martim, confirmado no TSE:
-- Demais nomes da chapa que o gabinete apoia (Senado, federal):
+**Resolvido em 07/09/2026, com o material que ele mandou:** o número de urna (10122) e a chapa
+inteira, que agora tem seção própria acima. As duas linhas saíram daqui.
+
+**O que falta, em ordem de valor:**
+
+- **Confirmar os projetos da seção acima** — é a maior lacuna do arquivo hoje. Tudo está
+  `[CONFERIR]`, então a IA não fala de nenhum deles. Riscar o que estiver errado vale tanto quanto
+  confirmar o que está certo.
+- Projeto ou lei que ficou de fora da lista, e que o eleitor pergunta:
 - Bases eleitorais e regiões prioritárias:
 - Pautas do mandato que o eleitor mais pergunta:
 - Nomes que **não** são aliados (para a IA não tratar como chapa):
@@ -124,7 +215,31 @@ Acrescente aqui o que só o gabinete sabe e a internet não tem — e o que a pe
 
 ## Fontes
 
-Pesquisa de 01/09/2026. Cada bloco `[CONFIRMADO]` veio de pelo menos uma destas:
+Pesquisa de 01/09/2026, mais o material da campanha e a pesquisa de projetos de 07/09/2026.
+
+**A fonte mais forte é o material dele**, e ela não é da lista abaixo:
+
+- **Arte oficial** *"Candidatos do Bolsonaro no Rio Grande do Sul"*, mandada por ele em 07/09/2026
+  — é a fonte da chapa completa e do número 10122;
+- **Headline do anúncio** *CONVERSE CONOSCO* no Instagram (*"Vote Capitão Martim, deputado
+  estadual. 10122"*).
+
+Sobre os **projetos** (todos `[CONFERIR]`), de 07/09/2026:
+
+- Rádio Difusora, Programa Defesa Civil na Escola aprovado (PL 424/2023):
+  https://rd3.net.br/noticia/22037/programa-defesa-civil-na-escola-e-aprovado-na-assembleia-legislativa
+- Rádio Missioneira, pacote contra feminicídio e violência contra a mulher (PL 77/2025, Patrulha
+  Maria da Penha): https://www.radiomissioneira.com/assembleia-aprova-pacote-de-projetos-para-combater-feminicidios-e-violencia-conta-a-mulher/
+- Site do deputado, transparência sobre segurança de barragens (PL 434/2023):
+  https://martim.rs/aprovado-na-ccj-o-projeto-de-lei-de-transparencia-sobre-seguranca-das-barragens-no-rs/
+- Defesa em Foco, projetos estratégicos com o Com5ºDN:
+  https://www.defesaemfoco.com.br/deputado-capitao-martim-debate-projetos-estrategicos-com-com5odn/
+
+> **Não conferido na fonte primária:** `al.rs.gov.br` não foi alcançado e `martim.rs` não resolveu
+> na pesquisa de 07/09. É por isso que os projetos estão todos `[CONFERIR]` — e a conferência mais
+> rápida é ele abrir o próprio site.
+
+Cada bloco `[CONFIRMADO]` da pesquisa de 01/09 veio de pelo menos uma destas:
 
 - Capitão Martim — Wikipédia: https://pt.wikipedia.org/wiki/Capit%C3%A3o_Martim
 - Assembleia Legislativa do RS, perfil do parlamentar: https://ww4.al.rs.gov.br/noticia/329582-0

@@ -2584,6 +2584,37 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   de problema, e no Haiku isso apareceria em 100% das chamadas estando tudo certo. **Alarme que
   toca sempre é alarme que se aprende a ignorar** — e aí não toca no dia em que é de verdade.
   Mexeu no tamanho do prompt ou no modelo? O teste de `vaiCachear` trava os dois lados.
+- **A IA NAO PESQUISA NA INTERNET, e o dossie e o lugar onde a pesquisa entra REVISADA.** Pergunta
+  dele (07/09/2026): *"a ia nao pesquisa na internet quando falta informacoes?"*. Nao — zero
+  `tools` nos tres corpos de requisicao, e e uma chamada so. O que existe e `src/data/gabinete.md`,
+  pesquisa feita UMA vez, escrita em arquivo com `git diff`, marcada linha a linha (`[CONFIRMADO]` /
+  `[CONFERIR]`) e ligada por ele. **Busca ao vivo poria texto de pagina dentro de mensagem enviada
+  em nome do mandato** — e uma pagina pode dizer qualquer coisa sobre o candidato: atravessa a
+  fronteira que o projeto inteiro segura (o que sai e texto dele, ou rascunho que ele le). E
+  **nao teria evitado nenhuma das quatro alucinacoes que viraram trava**: o que faltava nelas era
+  dado DELE (estoque de material, quem e o assessor, a agenda, o link do grupo), que nao esta em
+  pagina nenhuma.
+- **A FONTE MAIS FORTE DO DOSSIE E O MATERIAL DELE, e nao a internet.** O numero de urna 10122
+  passou seis dias como `[CONFERIR]` porque nenhuma fonte independente de 2026 o trazia — e quem
+  resolveu foi a arte da campanha que ele mandou, mais o Headline do proprio anuncio. Quem esta na
+  chapa e com que numero **e decisao dele**, nao fato publico a pesquisar. Ao encontrar lacuna
+  assim, peca o material antes de pesquisar mais.
+- **NUMERO DE URNA NAO SE REDIGITA: manda-se a ARTE.** Decisao dele (07/09/2026): *"essa colinha
+  deve ser mandada pra quem pede"*. Sao seis numeros na chapa, e seis numeros redigitados por um
+  modelo sao seis chances de mandar o eleitor votar em outra pessoa — a arte e a mesma informacao
+  com zero. A IA pode dizer o numero de UM candidato perguntado diretamente (dado confirmado, esta
+  na tabela); montar a chapa inteira e cartao. **O modelo da colinha e dele** (*"vou criar um modelo
+  de mensagem pra ela"*).
+- **`[CONFERIR]` E O QUE TORNA SEGURO PESQUISAR.** A regra 4 do dossie diz que linha `[CONFERIR]`
+  nao e afirmada ao contato, entao pesquisa nova entra INERTE e vira util quando ele confirma — e
+  riscar o que esta errado vale tanto quanto confirmar o certo. Foi assim que os projetos do Martim
+  entraram em 07/09 (quatro com numero de PL, seis sem), com `al.rs.gov.br` e `martim.rs` nao
+  alcancados na pesquisa: **fonte primaria nao alcancada e razao para marcar, nao para omitir.**
+- **Do dossie, so PARTE vai para o prompt:** `semBlocoDeRevisao` corta as linhas `> `, o
+  *"Espaco do Thiago"* e as *"Fontes"*. Medido em 07/09: arquivo de 13.184 caracteres, **8.831 no
+  prompt** (2.523 tokens). E ele entra **so quando a conversa pede** (`precisaDoDossie`), o que
+  custa +US$ 0,25 por mil rascunhos no Haiku. Ao estimar o custo do dossie, meca o texto INJETADO —
+  o tamanho do arquivo superestima em um terco.
 - **O LINK PADRAO DE GRUPO era inalcancavel SEM CIDADE — e sem cidade e a chegada.** Pedido dele
   (07/09/2026): a resposta que manda entrar no grupo para acompanhar a agenda, *"so que o link do
   grupo cai e eu tenho que trocar, entao tera que ser uma mensagem pronta"*. `cities.linkFor` tinha

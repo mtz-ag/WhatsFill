@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.91.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.92.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,15 +10,15 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.91.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v2.92.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**38 arquivos**),
 **64 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
 tabela. Prompt de sistema do rascunho: **5.290 tokens**, dos quais **72% é o `PADRAO_DE_ATENDIMENTO`
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
-Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **dezesseis em
-07/09** (2.76 a 2.91).
+Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **dezessete em
+07/09** (2.76 a 2.92).
 
 ### O que mudou em 07/09, em uma linha cada
 
@@ -40,6 +40,7 @@ Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2
 | 2.89 | **A API da OpenAI (ChatGPT) entrou** — o modelo escolhe a casa, e as duas chaves convivem. |
 | 2.90 | **"A IA não escreveu nada" escondia a causa** — o motivo vinha em `avisos` e o painel o jogava fora. |
 | 2.91 | **Resposta da AGENDA: entrar no grupo** — e o link padrão, que era inalcançável sem cidade. |
+| 2.92 | **O dossiê ganhou a chapa inteira e os projetos** — a arte dele confirmou o 10122, e a IA não pesquisa na internet. |
 
 As versões de 05 e 06/09 (2.42 a 2.75) estão nas entradas próprias, abaixo. O fio de 07/09 tem duas
 metades: **o controle da rodada** (2.76 a 2.80, que terminou no Esc que a própria extensão apertava)
@@ -249,6 +250,110 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-07 — A chapa inteira e os projetos entram no dossiê (v2.92.0)
+
+Começou com uma pergunta dele: *"a IA não pesquisa na internet quando falta informações?"*
+
+### A resposta é NÃO, e é de propósito
+
+Zero `tools` nos três corpos de requisição — é **uma chamada só**, com o texto que o painel monta.
+Quando falta informação, ela é instruída a não inventar, e quando inventa mesmo assim uma trava
+barra o envio.
+
+**E busca ao vivo não teria evitado nenhuma das quatro alucinações que viraram trava** (*"já
+encaminhei ao assessor"*, *"temos adesivos disponíveis"*, *"você deve receber em breve"*,
+*"procure a coordenação"*): o que faltava em todas era **dado dele** — estoque de material, quem é
+o assessor da região, a agenda, o link do grupo. Nada disso está em página nenhuma.
+
+O risco de fazer é conhecido e maior que o ganho: texto de uma página iria para uma mensagem
+enviada em nome do mandato, e uma página pode dizer qualquer coisa sobre o candidato. Atravessa a
+fronteira que o projeto inteiro segura.
+
+### Duas correções minhas
+
+1. **O dossiê está LIGADO.** Eu disse que estava desligado porque o padrão é `false` — ele havia
+   virado. O cabeçalho do arquivo agora diz LIGADO em vez de *"aguardando revisão"*.
+2. **O 10122 deixou de ser palpite.** Ficou seis dias `[CONFERIR]` — *"era o número dele em 2022,
+   nenhuma fonte independente de 2026 confirma"* — e quem resolveu **não foi a internet**: foi a
+   arte da campanha que ele mandou, mais o Headline do próprio anúncio (*"Vote Capitão Martim,
+   deputado estadual. 10122"*).
+
+> **A lição:** quem está na chapa e com que número **é decisão dele**, não fato público a
+> pesquisar. Diante de lacuna assim, pedir o material vem antes de pesquisar mais.
+
+### A chapa completa, da arte dele
+
+| cargo | nome | número |
+|---|---|---|
+| Presidente | Flávio Bolsonaro | 22 |
+| Governador | Zucco | 22 |
+| Senador | Sanderson | 222 |
+| Senador | Marcel Van Hattem | 300 |
+| Deputado Federal | Felipe Pedri | 2228 |
+| Deputado Estadual | Capitão Martim | 10122 |
+
+Era a lacuna que o próprio arquivo nomeava (*"Demais nomes da chapa que o gabinete apoia (Senado,
+federal):"*). Foram anotadas as três dúvidas que o eleitor traz: **são dois senadores** nesta
+eleição, **Presidente e Governador têm o mesmo 22** (número do partido nas majoritárias, não erro
+de digitação), e **partido é dedução do número** — a arte não diz, então a IA não afirma.
+
+### A regra da colinha, que é dele
+
+*"Essa colinha deve ser mandada pra quem pede, vou criar um modelo de mensagem pra ela."*
+
+**Quem pergunta em quem votar recebe a ARTE, não a lista digitada pela IA.** Seis números
+redigitados por um modelo são seis chances de mandar o eleitor votar em outra pessoa; a arte é a
+mesma informação com zero. A IA pode dizer o número de **um** candidato perguntado diretamente —
+dado confirmado, está na tabela; montar a chapa inteira é cartão.
+
+**O modelo é dele**, e não entrou nada de código para isto: ele cria e liga na ação do anúncio, como
+na 2.91.
+
+### Os projetos: pesquisados, e todos `[CONFERIR]`
+
+A outra lacuna que ele nomeou. Quatro com número de PL e seis sem:
+
+| projeto | tema | situação |
+|---|---|---|
+| PL 424/2023 | Programa Defesa Civil na Escola | aprovado na Assembleia |
+| PL 77/2025 | Patrulha Maria da Penha como política permanente | aprovado, 45 votos, unânime |
+| PL 434/2023 | Transparência e segurança de barragens | aprovado na CCJ |
+| PL 325/2024 | Economia do oceano e águas interiores | em tramitação |
+
+Mais seis sem número (música com apologia ao crime em evento público, identificação de gênero em
+banheiro escolar, prevenção a desastres, R$ 2 milhões de emendas em 2023 para 11 municípios, Frente
+Parlamentar de Proteção e Defesa Civil, representante da Assembleia no atendimento aos desabrigados).
+
+**`al.rs.gov.br` não foi alcançado e `martim.rs` não resolveu** na pesquisa. Por isso está tudo
+`[CONFERIR]` — e é a marca que torna seguro pesquisar: pela regra 4 do dossiê, linha `[CONFERIR]`
+**não é afirmada ao contato**, então a pesquisa entra inerte e vira útil quando ele confirma.
+**Fonte primária não alcançada é razão para marcar, não para omitir.**
+
+### Custo, medido
+
+Do arquivo, só parte vai para o prompt: `semBlocoDeRevisao` corta as linhas `> `, o *"Espaço do
+Thiago"* e as *"Fontes"*. **13.184 caracteres no arquivo, 8.831 no prompt** — 2.523 tokens, contra
+1.986 de antes.
+
+E ele entra **só quando a conversa pede**: +US$ 0,25 por mil rascunhos no Haiku, +US$ 0,06 no
+gpt-5-mini. *"Preciso de uma cesta básica"* e *"quero receber o material"* não puxam o dossiê.
+
+> Ao estimar o custo do dossiê, meça o texto **injetado**: o tamanho do arquivo superestima em um
+> terço.
+
+### O que falta, e é dele
+
+**Confirmar ou riscar os dez projetos** — é a maior lacuna do arquivo hoje, e enquanto estiver
+`[CONFERIR]` a IA não fala de nenhum. A conferência mais rápida é ele abrir o próprio site.
+
+**Arquivos:** `src/data/gabinete.md` (a chapa, os projetos, o cabeçalho e as fontes),
+`CLAUDE.md` (+5 armadilhas), `manifest.json` (2.91.0 → 2.92.0). Quinze suítes e os dois
+verificadores. **Nenhuma linha de código mudou** — o dossiê é dado, e é lido em tempo de execução.
+
+**O quadro dele não muda.**
+
 ---
 
 ## 2026-09-07 — A agenda se acompanha no grupo (v2.91.0)
