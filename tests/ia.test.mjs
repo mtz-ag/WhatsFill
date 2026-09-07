@@ -861,6 +861,20 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
     montarSistemaRascunho({ templates: [], regras: '', gabinete: '' }).includes('NUNCA diga que TEMOS'),
     'e o prompt proibe afirmar que temos, com todas as letras'
   );
+
+  /**
+   * **A regra dele para material, ditada no mesmo dia:** *"quando for relacionado a material nunca
+   * confirmar nada; nesse caso era especifico como adesivos, se nao for especifico perguntar que
+   * tipo de material a pessoa precisa"*. Sao duas metades, e a segunda e o que dizer no lugar —
+   * fechar um caminho sem escrever a saida troca o defeito por uma resposta muda.
+   */
+  const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(prompt.includes('MATERIAL é o assunto em que você NUNCA confirma nada'),
+    'o prompt diz que material nao se confirma');
+  check(prompt.includes('PERGUNTE que tipo de material ela precisa'),
+    'e manda PERGUNTAR o tipo quando ela nao disse qual');
+  check(prompt.includes('não pergunte de'),
+    'e manda NAO perguntar de novo quando ela ja nomeou o item (o caso do Lucas)');
 }
 
 fim();

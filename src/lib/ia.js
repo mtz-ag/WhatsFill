@@ -722,6 +722,27 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '   Quem pergunta como conseguir material físico quer saber de quem pegar — e isso é com ele.',
     '   O rascunho diz que a mensagem chegou e pede o que falta (cidade, endereço), sem afirmar que',
     '   o item existe.',
+    /**
+     * **A regra dele para MATERIAL, ditada em 07/09/2026**, logo depois da print do Lucas Mendes:
+     * *"quando for relacionado a material nunca confirmar nada; nesse caso era específico como
+     * adesivos, se não for específico perguntar que tipo de material a pessoa precisa"*.
+     *
+     * São duas metades, e a segunda é o que faltava. "Nunca confirmar" já estava virando trava
+     * (`AVISOS_QUE_IMPEDEM_ENVIO.afirmouTer`); o que não existia era **o que dizer no lugar**, e
+     * fechar um caminho sem escrever a saída troca um defeito por uma resposta muda — a lição que
+     * este projeto já pagou com o modelo padrão (02/09).
+     *
+     * **A divisão é ESPECÍFICO x GENÉRICO**, e é dele: quem já nomeou o item (o Lucas disse "boné")
+     * não pode ser perguntado de novo o que quer — isso é fazer a pessoa repetir o que acabou de
+     * escrever. Quem só disse "material" é que precisa da pergunta.
+     */
+    '   MATERIAL é o assunto em que você NUNCA confirma nada — nem que existe, nem que sai, nem',
+    '   quando. Duas situações, e elas se respondem diferente:',
+    '   (a) ela DISSE qual item quer (boné, adesivo, camiseta, bandeira, panfleto): não pergunte de',
+    '       novo o que ela quer. Diga que a mensagem chegou e peça o que falta para o pessoal ver',
+    '       (cidade, endereço) — sem dizer que temos e sem dizer que ela vai receber.',
+    '   (b) ela falou em "material" sem dizer qual: PERGUNTE que tipo de material ela precisa,',
+    '       antes de qualquer outra coisa. Não ofereça uma lista de itens: você não sabe o que há.',
     '',
     /**
      * **O "encaminhe para o CRAS" SAIU daqui, e é um conflito real com o documento dele.**

@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.81.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.82.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -183,6 +183,44 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-07 — Material: nunca confirmar, e perguntar QUAL quando não foi dito (v2.82.0)
+
+Regra dele, logo depois da print do Lucas: *"quando for relacionado a material nunca confirmar nada;
+nesse caso era específico como adesivos, se não for específico perguntar que tipo de material a
+pessoa precisa"*.
+
+### São duas metades, e a segunda é a que faltava
+
+"Nunca confirmar" virou trava na 2.81 (`afirmouTer` barra o envio). O que não existia era **o que
+dizer no lugar** — e fechar um caminho sem escrever a saída troca um defeito por uma resposta muda,
+que é a lição que este projeto pagou com o modelo padrão em 02/09.
+
+**A divisão é ESPECÍFICO × GENÉRICO, e é dele:**
+
+| o que ela escreveu | o rascunho faz |
+|---|---|
+| nomeou o item (*"um boné"*, *"adesivos"*) | **não pergunta de novo o que ela quer** — diz que a mensagem chegou e pede o que falta (cidade, endereço), sem dizer que temos nem que ela vai receber |
+| só disse *"material"* | **pergunta que tipo de material ela precisa**, antes de qualquer outra coisa — e sem oferecer uma lista de itens, porque a IA não sabe o que há |
+
+Fazer o Lucas repetir o que ele acabou de escrever seria o defeito espelhado do que ele apagou.
+
+### Onde entrou
+
+No **prompt**, que é onde o caso cai: *"como faço para conseguir um boné"* é
+`PERGUNTAS_QUE_PEDEM_VOCE` (a regra do Valdomiro, 03/09) → tecla 6 → a IA escreve. A trava da 2.81
+continua barrando o envio automático se ela afirmar estoque mesmo assim.
+
+**Custo:** o prompt foi de 4.715 para **4.758 tokens** — continua acima do mínimo de cache do Haiku
+(4.096), então o preço por chamada não muda.
+
+Três asserções novas no `ia.test.mjs`. 15 suítes verdes, os dois verificadores limpos.
+
+**Se você quiser isso como resposta pronta com tecla** (em vez de a IA escrever), é meia hora — mas
+aí precisa do texto seu, e a pergunta *"que tipo de material você precisa?"* passa a sair sozinha
+pelo determinístico.
 
 ---
 
