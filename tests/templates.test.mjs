@@ -545,4 +545,38 @@ grupo('"Confirmou presenca (so agradecer)": a metade que faltava (02/09/2026)');
   check(!/gabinete/i.test(defaults), 'nenhuma resposta de fabrica diz "gabinete"');
 }
 
+grupo('o link do grupo entra uma vez, e nunca por cima do dele (07/09/2026)');
+{
+  /**
+   * Ele mandou o link atual junto do pedido, e mandou porque **o link cai e ele troca**. O valor vai
+   * para `defaultGroupLink` — o campo "Link padrao" da Config —, que e o UM LUGAR onde ele troca: as
+   * tres variantes da resposta pegam o valor novo sem reescrita nenhuma.
+   *
+   * A marca em `migracoes` e o que garante o "uma vez": sem ela, o link que ele trocar amanha
+   * voltaria ao antigo no proximo carregamento do painel.
+   */
+  mem.migracoes = {};
+  mem.defaultGroupLink = '';
+  check(await templates.migrarLinkDoGrupoAtual(), 'campo vazio: preenche');
+  check(mem.defaultGroupLink === templates.LINK_GRUPO_07_09_2026, 'com o link que ele mandou');
+
+  // Roda de novo: nao mexe (e a marca que segura).
+  mem.defaultGroupLink = 'https://chat.whatsapp.com/OUTRO';
+  check(!(await templates.migrarLinkDoGrupoAtual()), 'segunda passada nao faz nada');
+  check(mem.defaultGroupLink === 'https://chat.whatsapp.com/OUTRO', 'e o link dele fica');
+
+  // E o caso que importa mais: ele JA tinha um link quando a migracao estreou.
+  mem.migracoes = {};
+  mem.defaultGroupLink = 'https://chat.whatsapp.com/DELE';
+  check(!(await templates.migrarLinkDoGrupoAtual()), 'campo preenchido: nao preenche');
+  check(mem.defaultGroupLink === 'https://chat.whatsapp.com/DELE', 'o link que ele ja tinha vence');
+
+  // A resposta nova chega nas respostas DELE, que estao gravadas sem ela.
+  mem.migracoes = {};
+  mem.templates = store.DEFAULT_TEMPLATES.filter((t) => t.id !== 'agenda-grupo').map((t) => ({ ...t }));
+  check(await templates.migrarRespostaAgendaGrupo(), 'acrescenta a resposta da agenda');
+  check(mem.templates.some((t) => t.id === 'agenda-grupo'), 'e ela esta la');
+  check(!(await templates.migrarRespostaAgendaGrupo()), 'e nao acrescenta duas vezes');
+}
+
 fim();

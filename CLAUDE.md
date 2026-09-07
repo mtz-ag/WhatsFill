@@ -2584,6 +2584,31 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   de problema, e no Haiku isso apareceria em 100% das chamadas estando tudo certo. **Alarme que
   toca sempre é alarme que se aprende a ignorar** — e aí não toca no dia em que é de verdade.
   Mexeu no tamanho do prompt ou no modelo? O teste de `vaiCachear` trava os dois lados.
+- **O LINK PADRAO DE GRUPO era inalcancavel SEM CIDADE — e sem cidade e a chegada.** Pedido dele
+  (07/09/2026): a resposta que manda entrar no grupo para acompanhar a agenda, *"so que o link do
+  grupo cai e eu tenho que trocar, entao tera que ser uma mensagem pronta"*. `cities.linkFor` tinha
+  `if (!key) return {reason: 'Cidade nao definida'}` **acima** da consulta ao `defaultGroupLink`, e
+  `vars.buildContext` nem chamava a funcao sem cidade: o campo que existe justamente para *"nao
+  tenho o grupo desta cidade"* nao valia no caso mais comum de todos, que e **nao ter cidade
+  nenhuma**. Quem chega pelo anuncio esta exatamente ai. A prioridade nao mudou (grupo da cidade
+  primeiro, padrao depois) e a resposta `link-grupo`, que promete *"o grupo de {{cidade}}"*,
+  continua bloqueando sem cidade — **a trava certa para ela e o TEXTO, e nao a falta do link**.
+- **Link que cai vira `{{link_grupo}}` na Config, nunca texto colado.** A resposta `agenda-grupo`
+  tem base e duas variantes; com o link escrito dentro, trocar o link seriam TRES reescritas e a
+  chance de uma ficar velha. Com a variavel e **uma edicao num campo** — e link vazio **bloqueia o
+  envio** com o motivo na tela, entao link morto nunca sai para eleitor. O valor de hoje entrou por
+  migracao (`migrarLinkDoGrupoAtual`), que **so preenche se estiver vazio** e marca em `migracoes`:
+  sem a marca, o link que ele trocar amanha voltaria ao antigo no proximo carregamento do painel.
+  **E nao entrou como default do `DEFAULT_STORE`** — o campo pode ja existir vazio no
+  armazenamento dele (o botao "Salvar grupos" o escreve), e ai o default nunca o alcancaria.
+- **"O sistema de mandar por anuncio ja existe"** — corte dele, 07/09/2026, e estava certo. Eu havia
+  criado junto um detector (`perguntaAgenda`), a exclusao em `RESPONDIDA_POR_PRONTA` e DUAS caixas
+  no `fluxoPadrao`, invocando a regra *"resposta pronta sem gatilho e trabalho parado"*. O gatilho
+  que ele quer e a **acao do anuncio**, que ja existe e e onde ele configura o anuncio novo. Foi
+  tudo revertido. **A licao nao e "nao criar gatilho": e perguntar se ja existe um.** E cuidado com
+  a meia-reversao: tirar as caixas e deixar a exclusao em `RESPONDIDA_POR_PRONTA` seria pior que
+  nao ter feito nada — a pergunta da agenda deixaria de ser tecla 6 e cairia em `conteudo-pedido`,
+  ou seja, material de campanha como resposta a *"qual a agenda?"*.
 - **MENSAGEM DE ERRO QUE DESCREVE O SINTOMA ESCONDE A CAUSA — e a causa estava no campo do lado.**
   Print dele (07/09/2026) com a pergunta *"qual foi o erro?"*: a caixa da rodada dizia *"a IA nao
   conseguiu rascunhar (a IA nao escreveu nada)"*, que **e o sintoma**. `iaCliente.rascunhar`

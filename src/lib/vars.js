@@ -180,15 +180,20 @@ export async function buildContext(ctx = {}) {
   const nome = ctx.nome || (looksLikePlaceholder(doCadastro) ? '' : doCadastro);
   const cidade = ctx.cidade || '';
 
-  let linkGrupo = '';
-  let linkReason = null;
-  if (cidade) {
-    const resolved = await cities.linkFor(cidade);
-    linkGrupo = resolved.link || '';
-    linkReason = resolved.reason || null;
-  } else {
-    linkReason = 'Cidade ainda não classificada — preencha na aba Dados.';
-  }
+  /**
+   * **`linkFor` é chamado mesmo SEM cidade** — a outra metade do conserto de 07/09/2026.
+   *
+   * Antes, cidade vazia nem consultava: o motivo virava *"Cidade ainda não classificada"* e
+   * `{{link_grupo}}` bloqueava o envio. Com o link padrão preenchido, a resposta que só precisa do
+   * link (a do grupo da agenda) passa a funcionar na chegada, que é quando ela é usada.
+   *
+   * Quem exige a cidade continua exigindo: a resposta `link-grupo` diz *"o grupo de {{cidade}}"*, e
+   * `{{cidade}}` bloqueia sozinha. Uma resposta que promete o grupo DA CIDADE não pode sair com o
+   * link geral — a trava certa para isso é o texto, e ela já está lá.
+   */
+  const resolved = await cities.linkFor(cidade);
+  const linkGrupo = resolved.link || '';
+  const linkReason = resolved.reason || null;
 
   return {
     values: {

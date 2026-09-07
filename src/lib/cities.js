@@ -840,9 +840,36 @@ export async function linkFor(city) {
   const fallback = await store.get('defaultGroupLink');
   const key = normalize(city);
 
-  if (!key) return { link: null, reason: 'Cidade não definida.' };
-  if (links[key]?.link) return { link: links[key].link, source: 'cidade' };
+  if (key && links[key]?.link) return { link: links[key].link, source: 'cidade' };
+
+  /**
+   * **O link PADRÃO era inalcançável sem cidade — e sem cidade é justamente a chegada.**
+   *
+   * O `if (!key) return` ficava ACIMA daqui e devolvia *"Cidade não definida"*, então
+   * `{{link_grupo}}` bloqueava o envio mesmo com o link padrão preenchido na Config. Ou seja: o
+   * campo que existe para o caso *"não tenho o grupo desta cidade"* não valia no caso mais comum
+   * de todos, que é **não ter cidade nenhuma** — quem acaba de chegar pelo anúncio.
+   *
+   * Apareceu em 07/09/2026, quando ele pediu a resposta que manda a pessoa entrar no grupo para
+   * acompanhar a agenda: a print era um contato do anúncio *CONVERSE CONOSCO* com Cidade vazia.
+   *
+   * **A prioridade não muda:** grupo da cidade primeiro, padrão depois. O que muda é o padrão
+   * passar a ser consultado sempre — e `source` continua dizendo qual dos dois respondeu, que é o
+   * que a aba Dados mostra.
+   */
   if (fallback) return { link: fallback, source: 'padrão' };
+
+  // Sem cidade E sem link padrão: as DUAS saídas resolvem, então as duas são ditas. Nomear só uma
+  // e o que faz a pessoa ir mexer no lugar errado — a família do aviso que mandava procurar o
+  // interruptor na aba de onde ele havia saído.
+  if (!key) {
+    return {
+      link: null,
+      reason:
+        'Cidade ainda não classificada e sem link padrão de grupo — preencha a Cidade na aba Dados, ' +
+        'ou o "Link padrão" na aba Config.',
+    };
+  }
   return {
     link: null,
     reason: `Sem grupo cadastrado para "${city}" e sem link padrão. Cadastre na aba Config.`,

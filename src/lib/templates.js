@@ -31,6 +31,8 @@ export async function list() {
     await migrarPedirDadosAntesDeTudo();
     await migrarRespostaBoasVindas();
     await migrarBoasVindasTemDados();
+    await migrarRespostaAgendaGrupo();
+    await migrarLinkDoGrupoAtual();
     // Por ÚLTIMO de propósito: as de cima acrescentam respostas novas, e o texto de fábrica delas
     // já vem sem "gabinete" — mas as antigas, que ele editou, só são alcançadas por esta.
     await migrarGabineteParaEquipe();
@@ -183,6 +185,48 @@ export const migrarRespostaBoasVindas = () => garantirRespostas(['boas-vindas'],
  * A metade sem o pedido de dados (05/09/2026), para quem já tem o cadastro. Flag própria: quem
  * apagou a primeira não pediu para ficar sem a segunda.
  */
+/**
+ * A resposta da agenda tem que chegar às respostas DELE, que estão gravadas.
+ *
+ * Acrescentar em `DEFAULT_TEMPLATES` só vale para instalação nova — `store.get` mescla default
+ * apenas em chave que FALTA, e `templates` existe no armazenamento dele desde o primeiro dia. É a
+ * armadilha do `-contato-assessor` (04/09/2026), e é por isso que toda resposta nova deste projeto
+ * entra com uma migração no mesmo commit.
+ */
+export const migrarRespostaAgendaGrupo = () =>
+  garantirRespostas(['agenda-grupo'], 'respostaAgendaGrupo');
+
+/**
+ * **O link do grupo de hoje, uma vez só e nunca por cima do dele.**
+ *
+ * Ele mandou o link atual junto do pedido (07/09/2026) — e mandou porque **o link cai e ele troca**:
+ * *"o link do grupo cai e eu tenho que trocar, então terá que ser uma mensagem pronta"*.
+ *
+ * O valor entra em `defaultGroupLink`, que é o campo *"Link padrão"* da aba Config: **um lugar para
+ * trocar**, e as três variantes da resposta pegam o valor novo sem reescrita nenhuma.
+ *
+ * **Não entra como valor padrão de `DEFAULT_STORE`** por dois motivos, e o segundo é o que decide:
+ * o campo pode já existir vazio no armazenamento dele (o botão "Salvar grupos" o escreve), e aí o
+ * default nunca o alcançaria; e default é o que uma instalação nova recebe — link que já morreu,
+ * ressuscitado, é pior que campo vazio, porque campo vazio BLOQUEIA o envio com o motivo na tela.
+ *
+ * A marca em `migracoes` é o que garante o "uma vez": sem ela, o link que ele trocar amanhã voltaria
+ * ao antigo no próximo carregamento do painel. E só preenche se estiver **vazio** — a troca dele
+ * vence sempre.
+ */
+export const LINK_GRUPO_07_09_2026 = 'https://chat.whatsapp.com/BbZPFbtXJ74AVIpSaQ09dD';
+
+export async function migrarLinkDoGrupoAtual() {
+  const migracoes = await store.get('migracoes');
+  if (migracoes.linkGrupoAgenda) return false;
+
+  const atual = String((await store.get('defaultGroupLink')) || '').trim();
+  if (!atual) await store.set('defaultGroupLink', LINK_GRUPO_07_09_2026);
+
+  await store.set('migracoes', { ...migracoes, linkGrupoAgenda: true });
+  return !atual;
+}
+
 export const migrarBoasVindasTemDados = () =>
   garantirRespostas(['boas-vindas-tem-dados'], 'respostaBoasVindasTemDados');
 

@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.90.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.91.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,15 +10,15 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.90.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v2.91.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**38 arquivos**),
 **64 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
 tabela. Prompt de sistema do rascunho: **5.290 tokens**, dos quais **72% é o `PADRAO_DE_ATENDIMENTO`
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
-Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **quinze em
-07/09** (2.76 a 2.90).
+Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **dezesseis em
+07/09** (2.76 a 2.91).
 
 ### O que mudou em 07/09, em uma linha cada
 
@@ -39,6 +39,7 @@ Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2
 | 2.88 | **Palpite PENDENTE ia para o CRM** — quem pergunta respeitava a marca, quem escreve não sabia dela. A Cidade contaminada tem causa. |
 | 2.89 | **A API da OpenAI (ChatGPT) entrou** — o modelo escolhe a casa, e as duas chaves convivem. |
 | 2.90 | **"A IA não escreveu nada" escondia a causa** — o motivo vinha em `avisos` e o painel o jogava fora. |
+| 2.91 | **Resposta da AGENDA: entrar no grupo** — e o link padrão, que era inalcançável sem cidade. |
 
 As versões de 05 e 06/09 (2.42 a 2.75) estão nas entradas próprias, abaixo. O fio de 07/09 tem duas
 metades: **o controle da rodada** (2.76 a 2.80, que terminou no Esc que a própria extensão apertava)
@@ -92,7 +93,9 @@ reescrever o texto de um aviso sem reescrever a trava a faria deixar de casar em
      ele transferir a conversa.
 3. **Os MODELOS PADRÃO estão vazios**, e o anúncio *CONVERSE CONOSCO* não está cadastrado. Sem um
    dos dois não existe modelo nenhum para quem chega por ele: pede material e recebe o formulário
-   seco.
+   seco. **Desde a 2.91 é aqui que a resposta da agenda entra:** cadastrar o anúncio novo em
+   Config → *Anúncios do momento* com a ação **"mandar resposta pronta" → "Agenda: entrar no
+   grupo"*. O link já está no campo *"Link padrão"*, e é lá que ele troca quando cair.
 4. **A Cidade de quem já foi contaminado — a entrada está fechada desde a 2.88, o passado não.**
    O aviso *"Cidade escrita fora do padrão"* continua no cabeçalho de quem já tem lixo no campo.
    Metade se conserta sozinha desde a 2.69 (campo com endereço de máquina + ela mencionando a
@@ -246,6 +249,93 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-07 — A agenda se acompanha no grupo (v2.91.0)
+
+Pedido dele, com a print de um contato do anúncio *CONVERSE CONOSCO* perguntando *"Olá! Gostaria de
+saber sobre a agenda do Capitão"* — que ele respondeu à mão:
+
+> *"anúncio novo, vou mandar a pessoa entrar no grupo para acompanhar a agenda; só que o link do
+> grupo cai e eu tenho que trocar, então terá que ser uma mensagem pronta"*
+
+### A resposta: `agenda-grupo`
+
+Base e duas variantes, com o link como **`{{link_grupo}}`** e não colado no texto. Três decisões, e
+as três vêm de armadilha registrada:
+
+- **o link mora na Config.** Trocar o link é UMA edição num campo, em vez de três reescritas com a
+  chance de uma ficar velha. E link vazio **bloqueia o envio** com o motivo na tela: link morto
+  nunca sai para eleitor;
+- **não pede nome e cidade.** Resposta que funde duas coisas não tem como ser usada pela metade (as
+  duas de evento, 02/09) — e a fusão aqui faria a rodada ler este texto como o formulário, pelo
+  invariante `Nome , Cidade`. Tem teste;
+- **não promete retorno.** A resposta dele à mão prometia (*"te aviso assim que tiver uma
+  novidade"*), e promessa individual já virou trava na IA duas vezes. Aqui a frase é verdadeira sem
+  promessa: quem avisa é o grupo.
+
+Sem `{{cidade}}` de propósito — com ela, bloquearia justamente na chegada, que é quando ela é usada.
+
+### O buraco que apareceu: o link padrão era inalcançável sem cidade
+
+`cities.linkFor` tinha `if (!key) return { reason: 'Cidade não definida' }` **acima** da consulta ao
+`defaultGroupLink`, e `vars.buildContext` nem chamava a função sem cidade.
+
+Ou seja: **o campo que existe justamente para *"não tenho o grupo desta cidade"* não valia no caso
+mais comum de todos — não ter cidade nenhuma.** Quem chega pelo anúncio está exatamente aí, e era o
+caso da print.
+
+Medido depois do conserto:
+
+```
+sem cidade, sem link padrão  -> bloqueia, e o motivo diz as DUAS saídas
+sem cidade, com link padrão  -> sai, com o link  (a chegada pelo anúncio)
+com cidade que tem grupo     -> o grupo DELA vence o padrão
+a resposta `link-grupo`      -> continua bloqueando sem cidade
+```
+
+A última linha é a que mantém a regra: uma resposta que promete *"o grupo de {{cidade}}"* não pode
+sair com o link geral — e **a trava certa para isso é o TEXTO**, não a falta do link.
+
+### O link de hoje entra por migração, e nunca por cima do dele
+
+`migrarLinkDoGrupoAtual` preenche `defaultGroupLink` **só se estiver vazio**, e marca em `migracoes`.
+Sem a marca, o link que ele trocar amanhã voltaria ao antigo no próximo carregamento do painel.
+
+**Não entrou como default do `DEFAULT_STORE`** por dois motivos, e o segundo decide: o campo pode já
+existir vazio no armazenamento dele (o botão "Salvar grupos" o escreve), e aí o default nunca o
+alcançaria; e default é o que uma instalação nova recebe — link já morto, ressuscitado, é pior que
+campo vazio, porque campo vazio bloqueia com o motivo na tela.
+
+### O que eu fiz a mais e ele cortou
+
+Eu havia criado junto um detector (`cortesia.perguntaAgenda`), a exclusão em
+`RESPONDIDA_POR_PRONTA` e **duas caixas no `fluxoPadrao`**, invocando a regra *"resposta pronta sem
+gatilho é trabalho parado"*. Ele cortou: *"o sistema já existe de mandar modelo por anúncio, não
+creio que precisa fazer nada"*.
+
+Estava certo — o gatilho que ele quer é a **ação do anúncio**, que já existe e é onde ele vai
+cadastrar o anúncio novo. Revertido inteiro (o detector media 23 casos com 0 erros; fica no
+histórico do git se algum dia a pergunta da agenda passar a chegar fora do anúncio).
+
+> **A lição não é "não criar gatilho": é perguntar se já existe um.** E cuidado com a meia-reversão:
+> tirar as caixas e deixar a exclusão em `RESPONDIDA_POR_PRONTA` seria **pior que não ter feito
+> nada** — a pergunta da agenda deixaria de ser tecla 6 e cairia em `conteudo-pedido`, ou seja,
+> material de campanha como resposta a *"qual a agenda?"*.
+
+### O que falta, e é dele
+
+Cadastrar o anúncio em **Config → Anúncios do momento**, com a ação **"mandar resposta pronta" →
+"Agenda: entrar no grupo"**. O link já está preenchido; quando cair, o lugar de trocar é o campo
+*"Link padrão"* na aba Config.
+
+**Arquivos:** `src/lib/store.js` (a resposta), `src/lib/templates.js` (as duas migrações),
+`src/lib/cities.js` (o link padrão sem cidade), `src/lib/vars.js` (a outra metade),
+`tests/vars.test.mjs` (+14), `tests/templates.test.mjs` (+9), `CLAUDE.md` (+3 armadilhas),
+`manifest.json` (2.90.0 → 2.91.0). Quinze suítes e os dois verificadores.
+
+**O quadro dele não muda.**
+
 ---
 
 ## 2026-09-07 — O erro que a caixa não contava (v2.90.0)

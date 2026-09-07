@@ -8,6 +8,8 @@
 import { check, grupo, fim, lib, mem } from './_harness.mjs';
 
 const vars = await lib('vars.js');
+const store = await lib('store.js');
+const templates = await lib('templates.js');
 
 // Dados fictícios de propósito: teste nenhum carrega contato real de eleitor.
 const contact = { name: 'Ana Paula Ribeiro', phonenumberFormatted: '(51) 90000-0001' };
@@ -366,6 +368,70 @@ grupo('nomeDivergeDoInformado: separa para ele conferir, sem trocar nada');
 
   // E o caso que TEM que marcar: dois nomes de gente, diferentes.
   check(nomeDivergeDoInformado('Maria Souza', 'Joana Prado'), 'nomes diferentes divergem');
+}
+
+grupo('a resposta da AGENDA sai sem cidade, pelo link padrao (07/09/2026)');
+{
+  /**
+   * Pedido dele: *"anuncio novo, vou mandar a pessoa entrar no grupo para acompanhar a agenda; so
+   * que o link do grupo cai e eu tenho que trocar, entao tera que ser uma mensagem pronta"*.
+   *
+   * A resposta e mandada pela ACAO DO ANUNCIO, que atende quem **acaba de chegar** — e quem acaba
+   * de chegar nao tem cidade. O `linkFor` devolvia *"Cidade nao definida"* antes de consultar o
+   * link padrao, entao o campo que existe para o caso "nao tenho o grupo desta cidade" nao valia
+   * no caso mais comum de todos: nao ter cidade nenhuma.
+   */
+  const agenda = store.DEFAULT_TEMPLATES.find((t) => t.id === 'agenda-grupo');
+  check(!!agenda, 'a resposta da agenda existe no padrao');
+
+  mem.cityLinks = {};
+  mem.defaultGroupLink = 'https://chat.whatsapp.com/EXEMPLO';
+  const semCidade = vars.render(agenda.text, await vars.buildContext({ contact, cidade: '' }));
+  check(semCidade.missing.length === 0, `sem cidade, nada bloqueia (${JSON.stringify(semCidade.missing)})`);
+  check(semCidade.text.includes('https://chat.whatsapp.com/EXEMPLO'), 'e o link padrao entra no texto');
+
+  // As variantes valem tanto quanto o texto base: o rodizio manda qualquer uma das tres.
+  for (const [i, v] of agenda.variantes.entries()) {
+    const r = vars.render(v, await vars.buildContext({ contact, cidade: '' }));
+    check(r.missing.length === 0 && r.text.includes('EXEMPLO'), `variante ${i + 1} tambem sai`);
+  }
+
+  /**
+   * **Sem link, BLOQUEIA** — e o motivo nomeia as duas saidas.
+   *
+   * E o que impede link morto de sair para eleitor: quando ele cair, a resposta para de sair com o
+   * motivo na tela, em vez de mandar um convite que nao abre.
+   */
+  mem.defaultGroupLink = '';
+  const semLink = vars.render(agenda.text, await vars.buildContext({ contact, cidade: '' }));
+  check(semLink.missing.includes('link_grupo'), 'sem link padrao, o envio bloqueia');
+  const motivo = vars.explainMissing(semLink.missing, semLink.reasons);
+  check(/Cidade ainda não classificada/.test(motivo) && /Link padrão/.test(motivo),
+    'e o motivo diz as DUAS saidas (classificar a cidade, ou preencher o padrao)');
+
+  /**
+   * **O grupo DA CIDADE continua vencendo o padrao**, e a resposta que promete o grupo da cidade
+   * continua exigindo a cidade: uma resposta que diz *"o grupo de {{cidade}}"* nao pode sair com o
+   * link geral, e a trava para isso e o proprio texto.
+   */
+  mem.cityLinks = { 'caxias do sul': { label: 'Caxias do Sul', link: 'https://chat.whatsapp.com/CAXIAS' } };
+  mem.defaultGroupLink = 'https://chat.whatsapp.com/EXEMPLO';
+  const comCidade = vars.render(agenda.text, await vars.buildContext({ contact, cidade: 'Caxias do Sul' }));
+  check(comCidade.text.includes('CAXIAS'), 'com cidade, o grupo dela vence o padrao');
+
+  const porCidade = store.DEFAULT_TEMPLATES.find((t) => t.id === 'link-grupo');
+  const bloqueia = vars.render(porCidade.text, await vars.buildContext({ contact, cidade: '' }));
+  check(bloqueia.missing.includes('cidade'), 'a resposta do grupo POR CIDADE ainda exige a cidade');
+
+  /**
+   * **Nao pede nome e cidade.** Resposta que funde duas coisas nao tem como ser usada pela metade
+   * (a licao das duas de evento, 02/09) — e aqui a fusao faria a rodada ler este texto como o
+   * formulario, por causa do invariante `Nome , Cidade`.
+   */
+  for (const t of [agenda.text, ...agenda.variantes]) {
+    check(!templates.ehPedidoDeDados(t), 'a resposta da agenda NAO e lida como pedido de dados');
+    check(!/\{\{\s*cidade\s*\}\}/.test(t), 'e nao usa {{cidade}}, que bloquearia na chegada');
+  }
 }
 
 fim();

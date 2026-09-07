@@ -152,6 +152,49 @@ export const DEFAULT_TEMPLATES = [
     ],
   },
   {
+    /**
+     * **A AGENDA se acompanha no grupo** — pedido dele (07/09/2026), com a print de um contato do
+     * anúncio *CONVERSE CONOSCO*: *"Olá! Gostaria de saber sobre a agenda do Capitão"*.
+     *
+     * Ele respondeu à mão *"não tenho aqui os detalhes da agenda para te passar com certeza, mas
+     * vou verificar e te aviso assim que tiver uma novidade"* e pediu a resposta pronta:
+     * *"anúncio novo, vou mandar a pessoa entrar no grupo para acompanhar a agenda; só que o link
+     * do grupo cai e eu tenho que trocar, então terá que ser uma mensagem pronta"*.
+     *
+     * **Duas coisas de desenho, e as duas vêm de armadilha registrada:**
+     *
+     *  - **o link é `{{link_grupo}}`, não texto colado.** É o que faz "o link caiu" ser UMA edição
+     *    na Config em vez de três textos reescritos (base + duas variantes). Sem valor, a variável
+     *    BLOQUEIA o envio com o motivo na tela — link morto nunca sai para eleitor;
+     *  - **não pede nome e cidade.** Resposta que funde duas coisas não tem como ser usada pela
+     *    metade (a lição das duas de evento, 02/09), e aqui a fusão seria pior: quem chega pelo
+     *    anúncio recebe o pedido de dados pelo fluxo, na tecla que ele escolher.
+     *
+     * **E não promete retorno.** A resposta dele à mão prometia (*"te aviso assim que tiver"*), e
+     * promessa individual é a família que já virou trava na IA duas vezes. Aqui a frase é
+     * verdadeira sem promessa nenhuma: quem avisa é o grupo.
+     *
+     * Sem `{{cidade}}` de propósito: com ela, a resposta bloquearia justamente na chegada, que é
+     * quando ela é usada.
+     */
+    id: 'agenda-grupo',
+    name: 'Agenda: entrar no grupo',
+    text:
+      '{{saudacao}}! As agendas são avisadas primeiro no nosso grupo do WhatsApp — é por lá que ' +
+      'sai o local e o horário de cada uma:\n\n' +
+      '{{link_grupo}}\n\n' +
+      'Entra que você fica sabendo em primeira mão. 🇧🇷',
+    variantes: [
+      '{{saudacao}}! Toda agenda é avisada no nosso grupo do WhatsApp, com local e horário:\n\n' +
+        '{{link_grupo}}\n\n' +
+        'Vem com a gente que por lá você não perde nenhuma. 🇧🇷',
+      '{{saudacao}}! O melhor jeito de acompanhar a agenda é no nosso grupo do WhatsApp — é onde ' +
+        'avisamos cada compromisso, com dia, hora e lugar:\n\n' +
+        '{{link_grupo}}\n\n' +
+        'Te espero por lá. 🇧🇷',
+    ],
+  },
+  {
     id: 'agradecimento',
     name: 'Agradecer e encerrar',
     text:
