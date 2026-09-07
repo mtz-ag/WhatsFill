@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { rajadaDeAnuncios, naoPodeFalarAgora, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial } from '../src/lib/cortesia.js';
+import { rajadaDeAnuncios, naoPodeFalarAgora, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -2035,6 +2035,108 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
     { texto: 'Meu Pix 01757539005', tipo: 'TEXT', at: 1 },
     { texto: '50 me ajuda muito', tipo: 'TEXT', at: 2 },
   ], null), 'a rajada da Marli continua sendo pega');
+}
+
+/**
+ * **O lote de audio ENCAMINHADO — a print da Irene (07/09/2026).**
+ *
+ * Ela mandou cinco audios que somam quase tres minutos de fala, e os cinco chegaram **em dois
+ * segundos**; eram conversa de outras pessoas, e a IA respondeu uma pergunta que estava dentro de
+ * um deles. O criterio e dele, e e aritmetica: *"realmente nao e possivel audios com aquele tempo
+ * naquele espaco de tempo"*.
+ *
+ * Os numeros abaixo sao os que a API devolveu de verdade (tamanho em bytes e o `timestamp` do
+ * WhatsApp). A conta usa 16.000 bytes por segundo — o DOBRO da densidade medida na plataforma —,
+ * entao a duracao estimada sai pela metade da real e a regra sempre erra para o lado de nao
+ * acusar.
+ *
+ * Metade das assercoes e falso positivo: audio gravado na hora chega espacado pela propria
+ * duracao, e e isso que separa as duas coisas.
+ */
+{
+  grupo('lote de audio encaminhado (a Irene, 07/09)');
+
+  /**
+   * Os TAMANHOS e os `timestamp` sao os que a API devolveu; o TEXTO e enchimento do mesmo
+   * comprimento — transcricao de eleitor real nao entra em arquivo do repositorio. So a frase da
+   * ultima e a do caso, porque e ela que a IA respondeu.
+   */
+  const enche = (n) => 'conversa entre duas outras pessoas. '.repeat(60).slice(0, n);
+  const irene = [
+    { tipo: 'AUDIO', texto: enche(136), ts: '2026-09-07T11:28:22Z', bytes: 136556, transcrito: true },
+    { tipo: 'AUDIO', texto: enche(523), ts: '2026-09-07T11:28:23.001Z', bytes: 384236, transcrito: true },
+    { tipo: 'AUDIO', texto: enche(883), ts: '2026-09-07T11:28:23Z', bytes: 566252, transcrito: true },
+    { tipo: 'AUDIO', texto: enche(317), ts: '2026-09-07T11:28:23.002Z', bytes: 189932, transcrito: true },
+    { tipo: 'AUDIO', texto: 'Nao deu pra ouvir nada que voce botou ali. Ta mudo?', ts: '2026-09-07T11:28:22.001Z', bytes: 73196, transcrito: true },
+  ];
+  const marcados = marcarLoteEncaminhado(irene);
+  check(marcados.every((m) => m.encaminhado), 'os cinco audios da print sao reconhecidos como encaminhados');
+  check(marcados.every((m) => ehRepasse(m)), 'e por isso viram repasse, como o video ja era');
+  check(rajadaEhSoRepasse(marcados, null), 'a rajada inteira e repasse');
+
+  /**
+   * **A pergunta que esta DENTRO do audio encaminhado nao e para nos** — a regra dele de 06/09
+   * (o Eraldo) chegando onde ela ainda nao valia. Sem isto, o *"Ta mudo?"* de uma terceira pessoa
+   * conta como pergunta pendente e a rodada responde a ela.
+   */
+  check(!conversaTemPerguntaAberta(marcados, null), 'o "Ta mudo?" de dentro do repasse deixa de ser pergunta nossa');
+  check(!perguntaPendente(marcados, null), 'e nao segura mais a conclusao');
+
+  /**
+   * **O que NAO muda, e e o desfecho que ele quer para audio:** cinco mensagens continuam pedindo
+   * gente. Marcar como encaminhado nao pode virar atalho para a rodada responder sozinha.
+   */
+  check(!!conversaPedeRespostaPessoal(marcados, null), 'e o caso continua indo para ele ou para a IA');
+
+  const seg = (s) => s * 8000; // ~8 KB/s, a densidade medida na plataforma
+  const t = (s) => new Date(Date.UTC(2026, 8, 7, 12, 0, s)).toISOString();
+  const encaminhou = (lista) => marcarLoteEncaminhado(lista).some((m) => m.encaminhado);
+
+  check(encaminhou([
+    { tipo: 'AUDIO', texto: 'x', ts: t(0), bytes: seg(120) },
+    { tipo: 'AUDIO', texto: 'y', ts: t(1), bytes: seg(120) },
+  ]), 'dois audios de dois minutos entregues juntos: encaminhado');
+
+  // --- os falsos positivos: audio gravado na hora ---
+  check(!encaminhou([
+    { tipo: 'AUDIO', texto: 'x', ts: t(0), bytes: seg(5) },
+    { tipo: 'AUDIO', texto: 'y', ts: t(20), bytes: seg(6) },
+  ]), 'dois audios curtos gravados na hora nao sao encaminhamento');
+
+  check(!encaminhou([
+    { tipo: 'AUDIO', texto: 'x', ts: t(0), bytes: seg(120) },
+    { tipo: 'AUDIO', texto: 'y', ts: t(15), bytes: seg(10) },
+  ]), 'audio longo seguido de um curto tambem nao — o primeiro foi gravado ANTES da janela');
+
+  check(!encaminhou([
+    { tipo: 'AUDIO', texto: 'x', ts: t(0), bytes: seg(30) },
+    { tipo: 'AUDIO', texto: 'y', ts: t(40), bytes: seg(30) },
+    { tipo: 'AUDIO', texto: 'z', ts: t(80), bytes: seg(30) },
+  ]), 'tres audios de 30s, um por minuto: e conversa, nao lote');
+
+  check(!encaminhou([{ tipo: 'AUDIO', texto: 'x', ts: t(0), bytes: seg(600) }]),
+    'audio unico nunca e lote, por mais longo que seja');
+
+  check(!encaminhou([
+    { tipo: 'AUDIO', texto: 'x', ts: t(0), bytes: 0 },
+    { tipo: 'AUDIO', texto: 'y', ts: t(1), bytes: 0 },
+  ]), 'sem o tamanho nao ha duracao: nao se julga');
+
+  check(!encaminhou([
+    { tipo: 'AUDIO', texto: 'x', ts: t(0), bytes: seg(120) },
+    { tipo: 'TEXT', texto: 'oi', ts: t(1) },
+    { tipo: 'AUDIO', texto: 'y', ts: t(2), bytes: seg(120) },
+  ]), 'texto no meio quebra o lote — so audio seguido conta');
+
+  /**
+   * **O relogio e o do WhatsApp, e nao o da plataforma.** Aparelho sem rede entrega tudo junto ao
+   * reconectar: o `at` fica igual para todos, e os `ts` continuam espalhados como as gravacoes
+   * foram. Sem esta distincao, quem grava audio offline seria acusado de encaminhar.
+   */
+  check(!encaminhou([
+    { tipo: 'AUDIO', texto: 'x', ts: t(0), at: t(300), bytes: seg(60) },
+    { tipo: 'AUDIO', texto: 'y', ts: t(90), at: t(300), bytes: seg(60) },
+  ]), 'gravado offline e entregue junto: o ts separa, e nao acusa');
 }
 
 fim();

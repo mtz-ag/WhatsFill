@@ -1467,8 +1467,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   Duas metades: `AVISOS_QUE_IMPEDEM_ENVIO.pediuReenvio` barra o envio automatico (mecanico, porque o
   painel SABE se chegou texto legivel dela — por isso e condicionado a `recebemosDela`: audio sem
   transcricao existe, e ai pedir para reenviar e a resposta CERTA), e a **regra 6** do prompt diz
-  que audio circula. Nao virou sinal do quadro de proposito: tres audios seguidos sao tambem o
-  formato de quem pede socorro (a Dima), e o desfecho e dele.
+  que audio circula. **E o lote passou a ser RECONHECIDO na 2.85, com o criterio que ele nomeou:**
+  *"realmente nao e possivel audios com aquele tempo naquele espaco de tempo"*.
+  `cortesia.marcarLoteEncaminhado` agrupa os audios seguidos e pergunta se o lote CABERIA na janela
+  em que chegou — o primeiro pode ter sido gravado antes da janela, os outros nao, entao o minimo e
+  **a soma das duracoes menos a do primeiro**. Tres coisas a lembrar: a API **nao devolve duracao**
+  (o tempo na tela e o player lendo o arquivo), entao a conta usa `details.file.size` com
+  **16.000 bytes/s**, o DOBRO da densidade medida (~8.200), para sempre errar para o lado de nao
+  acusar; o relogio e o **`timestamp` do WhatsApp** e nao o `createdAt`, porque aparelho sem rede
+  entrega tudo junto ao reconectar e so o `ts` continua espalhado; e vale **so para audio** — video
+  ja e repasse, e a densidade dele acusaria dois videos quaisquer. A marca fica em
+  `prepararEntrantes` (um lugar so) e acende tres coisas: a transcricao vai marcada para a IA,
+  `ehRepasse` passa a valer, e a pergunta de dentro dela deixa de contar (a regra do Eraldo).
+  **`pedeRespostaPessoal` continua verdadeiro de proposito:** reconhecer o encaminhamento nao pode
+  virar atalho para a rodada responder sozinha — o caso continua indo para ele ou para a IA.
 - **A IA inventa no PRESENTE tambem: "temos adesivos e camisetas disponiveis".** Print do Lucas
   Mendes (07/09/2026): ele perguntou *"como faco para conseguir um bone ou acessorio"* e o rascunho
   abriu afirmando o estoque — *"a IA confirmou algo sem saber"*. E a irma do caso da Sandra (06/09)

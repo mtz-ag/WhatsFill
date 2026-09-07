@@ -27,7 +27,7 @@ import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, naoPodeFalarAgora, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, naoPodeFalarAgora, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -7046,6 +7046,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
           // Transcrição vai marcada: quem for ler precisa saber que é fala passada por
           // reconhecimento automático, com os erros disso, e não o que a pessoa escreveu.
+          if (t && m?.encaminhado) return `[${tipo.toLowerCase()} ENCAMINHADO, transcrito] ${t}`;
           if (t && m?.transcrito) return `[${tipo.toLowerCase()} transcrito] ${t}`;
           if (t) return t;
 
@@ -9532,6 +9533,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Ruído da plataforma continua fora: `prepararEntrantes` esvazia o texto dessas mensagens, e
    * o filtro de vazio as descarta aqui — é o conserto do Carlos, preservado.
    */
+  /**
+   * **A marca que vai junto da transcrição, e ela diz DE ONDE aquilo veio.**
+   *
+   * `(áudio, transcrito automaticamente)` existe desde 03/09: transcrição erra palavra, e a IA
+   * precisa saber que não é o que a pessoa escreveu.
+   *
+   * A segunda marca é da print da Irene (07/09/2026): cinco áudios de outra conversa chegaram em
+   * dois segundos e a IA respondeu uma pergunta que estava dentro de um deles. **Sem dizer que é
+   * encaminhado, a transcrição chega indistinguível da fala dela** — e ler o conteúdo é
+   * exatamente o que a IA deve fazer com o que ela disse, e não com o que ela repassou.
+   */
+  function marcaDeAudio(m, texto) {
+    if (m?.encaminhado) return `(áudio ENCAMINHADO de outra conversa, transcrito automaticamente — não é fala dela e não é dirigido a nós) ${texto}`;
+    return m?.transcrito ? `(áudio, transcrito automaticamente) ${texto}` : texto;
+  }
+
   function mensagensParaIA() {
     return (state.entrantes || [])
       .map((m) => {
@@ -9539,7 +9556,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         if (!texto) return null;
         // `{texto, at}` e não string solta: o QUANDO de cada mensagem é metade do relógio — a
         // outra metade é o "agora", que `montarContato` escreve no topo do bloco.
-        return { texto: m?.transcrito ? `(áudio, transcrito automaticamente) ${texto}` : texto, at: m?.at || null };
+        return { texto: marcaDeAudio(m, texto), at: m?.at || null };
       })
       .filter(Boolean);
   }
@@ -9561,7 +9578,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   function conversaParaIA() {
     const dela = (state.entrantes || []).map((m, i) => ({
       de: 'contato',
-      texto: m?.transcrito ? `(áudio, transcrito automaticamente) ${String(m?.texto || '')}` : String(m?.texto || ''),
+      texto: marcaDeAudio(m, String(m?.texto || '')),
       at: m?.at || null,
       ordem: i,
     }));
@@ -11286,7 +11303,13 @@ function pareceCliqueDeAnuncio(texto) {
 
 function prepararEntrantes(entrantes, { veioDeAnuncio = false } = {}) {
   let primeiraDela = true;
-  return (entrantes || []).map((m) => {
+  /**
+   * **O lote de áudio encaminhado é marcado AQUI**, junto do ruído da plataforma e do texto
+   * gerado pelo anúncio: um lugar só, antes de qualquer regra ver. Ver
+   * `cortesia.marcarLoteEncaminhado` — e a print da Irene (07/09/2026), em que cinco áudios de
+   * outra conversa chegaram em dois segundos e a IA respondeu o que estava dentro deles.
+   */
+  return marcarLoteEncaminhado(entrantes || []).map((m) => {
     const marcada = ehMensagemDaPlataforma(m?.texto)
       ? { ...m, texto: '', transcrito: false, sistema: true }
       : { ...m };

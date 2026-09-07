@@ -449,6 +449,23 @@ export async function getConversation(sessionId, pageSize = 50) {
         // nossa última são uma conversa pendente, e é o conjunto delas que decide se cabe
         // resposta pronta. Sem o horário, `entrantes` é uma lista sem antes e depois.
         at: m.createdAt || null,
+        /**
+         * **`ts` e `bytes` existem para uma pergunta só: isto foi GRAVADO agora ou ENCAMINHADO?**
+         *
+         * Print da Irene (07/09/2026): cinco áudios somando quase três minutos de fala entregues
+         * em **dois segundos**. Foi ele quem nomeou o critério: *"realmente não é possível áudios
+         * com aquele tempo naquele espaço de tempo"*. Ver `cortesia.marcarLoteEncaminhado`.
+         *
+         * **`timestamp` é o do WhatsApp e `createdAt` é o da plataforma**, e a diferença importa
+         * exatamente no caso que separa o encaminhamento do falso positivo: aparelho que estava
+         * sem rede entrega tudo junto quando reconecta (mesmo `createdAt`), e aí os `timestamp`
+         * continuam espalhados, como as gravações foram.
+         *
+         * A API não devolve a DURAÇÃO do áudio — o tempo que a tela mostra é o player lendo o
+         * arquivo. `details.file.size` é o que existe, e serve: duração e tamanho crescem juntos.
+         */
+        ts: m.timestamp || m.createdAt || null,
+        bytes: Number(m.details?.file?.size) || 0,
       };
     }),
     ultima: ultima

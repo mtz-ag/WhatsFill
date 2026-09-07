@@ -84,6 +84,15 @@ function ehLegendaDeRepasse(msg) {
    * pergunta; colada num vídeo encaminhado, não.
    */
   if (String(msg?.tipo || 'TEXT').toUpperCase() === 'VIDEO') return true;
+  /**
+   * **A pergunta que está DENTRO de um áudio encaminhado também não é para nós** — print da Irene
+   * (07/09/2026). O último áudio do lote dela é uma pessoa perguntando a outra *"não deu pra ouvir
+   * nada que você botou ali, tá mudo?"*, e a rodada tratou aquilo como pergunta pendente.
+   *
+   * É a regra dele de 06/09 (o Eraldo) aplicada onde ela ainda não chegava: ali o repasse se
+   * reconhecia pelo TIPO da mensagem; aqui, pela aritmética de `marcarLoteEncaminhado`.
+   */
+  if (msg?.encaminhado) return true;
   return LINK.test(String(msg?.texto || ''));
 }
 
@@ -1406,6 +1415,85 @@ export function ehMensagemDaPlataforma(texto) {
 }
 
 /**
+ * **Um teto para a densidade do áudio, e ele é de propósito alto.**
+ *
+ * Medido na conversa da Irene: um áudio de 23 segundos ocupava 189.932 bytes — cerca de 8.200
+ * bytes por segundo, que é o mp3 de voz que a plataforma guarda. Aqui vai o **dobro**, e o dobro
+ * é o que torna a conta segura: com 16.000, a duração estimada sai pela METADE da real, então a
+ * regra sempre erra para o lado de NÃO acusar encaminhamento.
+ */
+const BYTES_POR_SEGUNDO_DE_AUDIO = 16000;
+
+/** Dois áudios seguidos pertencem ao mesmo lote enquanto a distância entre eles for pequena. */
+const LOTE_MS = 60_000;
+
+/**
+ * Folga da conta, em milissegundos. Cobre a imprecisão da estimativa por tamanho e o tempo que a
+ * pessoa leva entre gravar e apertar enviar. Quinze segundos é muito para um erro de arredondamento
+ * e pouco para os quase três minutos de fala que chegaram em dois segundos no caso real.
+ */
+const FOLGA_DE_GRAVACAO_MS = 15_000;
+
+/**
+ * **Marca os áudios que NÃO PODEM ter sido gravados ali: eles foram encaminhados.**
+ *
+ * Print da Irene (07/09/2026). Ela mandou cinco áudios que somam quase três minutos de fala, e os
+ * cinco chegaram **em dois segundos**; o conteúdo era conversa de outras pessoas, e a IA respondeu
+ * uma pergunta que estava dentro de um deles. Foi ele quem nomeou o critério, e ele é aritmética:
+ * *"realmente não é possível áudios com aquele tempo naquele espaço de tempo"*.
+ *
+ * **A conta:** o PRIMEIRO áudio do lote pode ter sido gravado antes da janela começar — os
+ * outros, não. Então o tempo mínimo que o lote levaria para nascer ali é a soma das durações
+ * **menos a do primeiro**. Se a janela de chegada for menor que isso, alguém encaminhou.
+ *
+ * **O relógio é o do WhatsApp (`ts`), não o da plataforma.** É a diferença que separa o
+ * encaminhamento do único falso positivo real: aparelho sem rede entrega tudo junto ao reconectar,
+ * e aí o `createdAt` é o mesmo para todos, mas os `ts` continuam espalhados como as gravações
+ * foram. Sem `ts`, cai no `at`.
+ *
+ * **Só ÁUDIO.** Vídeo já é repasse por `ehRepasse`, e a densidade de bytes por segundo dele é
+ * outra ordem de grandeza — a mesma conta ali acusaria dois vídeos quaisquer.
+ *
+ * Áudio sem tamanho não é julgado: sem os bytes não há duração, e o padrão é não acusar.
+ *
+ * Devolve uma lista nova; não mexe na que recebeu.
+ */
+export function marcarLoteEncaminhado(entrantes) {
+  const lista = (entrantes || []).map((m) => ({ ...m }));
+  const quando = (m) => new Date(m?.ts || m?.at || 0).getTime() || 0;
+
+  let i = 0;
+  while (i < lista.length) {
+    const ehAudio = (m) => String(m?.tipo || '').toUpperCase() === 'AUDIO' && Number(m?.bytes) > 0 && quando(m) > 0;
+    if (!ehAudio(lista[i])) {
+      i++;
+      continue;
+    }
+
+    // O lote: áudios seguidos, cada um perto do anterior.
+    let fim = i;
+    while (fim + 1 < lista.length && ehAudio(lista[fim + 1]) && quando(lista[fim + 1]) - quando(lista[fim]) <= LOTE_MS) {
+      fim++;
+    }
+
+    const lote = lista.slice(i, fim + 1);
+    if (lote.length >= 2) {
+      const duracaoMs = (m) => (Number(m.bytes) / BYTES_POR_SEGUNDO_DE_AUDIO) * 1000;
+      const soma = lote.reduce((t, m) => t + duracaoMs(m), 0);
+      const necessario = soma - duracaoMs(lote[0]);
+      const janela = quando(lote[lote.length - 1]) - quando(lote[0]);
+      if (janela + FOLGA_DE_GRAVACAO_MS < necessario) {
+        for (let k = i; k <= fim; k++) lista[k].encaminhado = true;
+      }
+    }
+
+    i = fim + 1;
+  }
+
+  return lista;
+}
+
+/**
  * Esta mensagem é **repasse** — conteúdo de terceiro que a pessoa encaminhou?
  *
  * Link sozinho e vídeo. É o que ele chamou de ruído em 31/08: *"está confuso quando é rajada de
@@ -1419,6 +1507,13 @@ export function ehMensagemDaPlataforma(texto) {
 export function ehRepasse(msg) {
   const tipo = String(msg?.tipo || 'TEXT').toUpperCase();
   if (tipo === 'VIDEO') return true;
+
+  /**
+   * **Áudio de lote encaminhado é repasse pela mesma razão do vídeo** — ver
+   * `marcarLoteEncaminhado`. A marca vem do painel, num lugar só, antes de qualquer regra ver;
+   * aqui só se lê.
+   */
+  if (msg?.encaminhado) return true;
 
   const texto = String(msg?.texto || '');
   if (!texto.trim()) return false;

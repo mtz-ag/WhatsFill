@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.84.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.85.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -67,6 +67,7 @@ problemas e sem desfecho incoerente.
 | 2.82 | **Material nunca se confirma**, e "material" sem dizer qual vira PERGUNTA. |
 | 2.83 | **"Gabinete" saiu do vocabulário: é equipe ou assessoria** — fábrica, migração das respostas dele e prompt. |
 | 2.84 | **A IA disse que o áudio falhou para quem mandou cinco áudios transcritos** — ela respondeu o conteúdo de um áudio ENCAMINHADO. |
+| 2.85 | **A extensão RECONHECE o lote encaminhado** — áudio que não caberia no tempo em que chegou não foi gravado ali. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -196,6 +197,65 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-07 — Áudio que não cabe no tempo em que chegou foi ENCAMINHADO (v2.85.0)
+
+**Pergunta dele, depois da medição da 2.84:** *"agora vai reconhecer e foi encaminhado então?
+porque realmente não é possível áudios com aquele tempo naquele espaço de tempo"*. Na 2.84 a
+resposta era **não** — havia a trava do envio e a regra do prompt, e nada que dissesse que aquilo
+era repasse. Agora reconhece, e **o critério é o dele, virado aritmética.**
+
+### A conta
+
+`cortesia.marcarLoteEncaminhado` agrupa os áudios seguidos do contato e pergunta uma coisa: **esse
+lote caberia na janela em que chegou?** O primeiro áudio pode ter sido gravado antes da janela
+começar; os outros, não. Então o tempo mínimo para o lote nascer ali é **a soma das durações menos
+a do primeiro**. Janela menor que isso significa que alguém encaminhou.
+
+A API **não devolve a duração** — o tempo que a tela mostra é o player lendo o arquivo. O que
+existe é `details.file.size`, e ele serve, porque duração e tamanho crescem juntos. A densidade
+medida na plataforma foi de ~8.200 bytes por segundo (um áudio de 23s ocupava 189.932 bytes); a
+conta usa **16.000**, o dobro, então a duração estimada sai pela metade da real e a regra **sempre
+erra para o lado de não acusar**.
+
+**O relógio é o do WhatsApp (`timestamp`), e não o da plataforma (`createdAt`)** — é o que separa o
+encaminhamento do único falso positivo real: aparelho sem rede entrega tudo junto ao reconectar,
+e aí o `createdAt` é o mesmo para todos enquanto os `timestamp` continuam espalhados, como as
+gravações foram. Os dois campos passaram a viajar em `entrantes` (`ts` e `bytes`).
+
+**Só áudio.** Vídeo já é repasse por `ehRepasse`, e a densidade de bytes por segundo dele é outra
+ordem de grandeza — a mesma conta ali acusaria dois vídeos quaisquer.
+
+### O que a marca liga
+
+A marcação fica em `prepararEntrantes`, junto do ruído da plataforma e do texto gerado pelo
+anúncio: **um lugar só, antes de qualquer regra ver.** E acende três coisas:
+
+1. **A IA passa a saber**: a transcrição vai marcada *"(áudio ENCAMINHADO de outra conversa —
+   não é fala dela e não é dirigido a nós)"*. Sem isso ela chega indistinguível da fala dela, que
+   foi a causa da print;
+2. **`ehRepasse`** passa a valer para ela, como já valia para vídeo — e com isso
+   `rajadaEhSoRepasse`, que é um sinal do quadro, fica verdadeiro;
+3. **`ehLegendaDeRepasse`**: a pergunta que está DENTRO do áudio encaminhado deixa de contar como
+   pergunta nossa. É a regra dele de 06/09 (o Eraldo) chegando onde ela ainda não valia.
+
+### Medido, no caso real e nos falsos positivos
+
+Com os cinco tamanhos e os cinco `timestamp` que a API devolveu: **os cinco são reconhecidos**, e
+a rajada inteira vira repasse. Os sinais, antes → depois: `perguntaAberta` **true → false**,
+`perguntaPendente` **true → false**, `rajadaEhSoRepasse` **false → true**.
+
+**`pedeRespostaPessoal` continua true**, e isso é de propósito: o caso segue indo para ele ou para
+a IA, que é o desfecho que ele quer para áudio desde 03/09. Reconhecer o encaminhamento não podia
+virar atalho para a rodada responder sozinha.
+
+**Metade das asserções é falso positivo**, que é onde mora o risco — áudio gravado na hora chega
+espaçado pela própria duração, e é isso que separa as duas coisas: dois curtos em 20 segundos,
+um longo seguido de um curto (o longo foi gravado ANTES da janela), três de 30s um por minuto,
+áudio único por mais longo que seja, áudio sem tamanho (não se julga), texto no meio (quebra o
+lote) e o caso do aparelho offline.
 
 ---
 
