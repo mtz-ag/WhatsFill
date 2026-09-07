@@ -309,6 +309,71 @@ const MAX_PAGINAS_DE_MENSAGEM = 2;
  * A ordem que a API devolve é da mais nova para a mais velha, então a página 2 é história mais
  * antiga. Quem chama ordena por `createdAt` de qualquer jeito.
  */
+/**
+ * **O id da sessão ANTERIOR deste contato — o que o botão "Ver conversa anterior" carrega.**
+ *
+ * Pedido dele (07/09/2026): *"veja como abrir a conversa anterior, será necessário quando houver
+ * para não perder o contexto; mas será uma abertura só, tem conversas que podem ter múltiplas
+ * instâncias. Depois de abrir, pegue os dados de cidade e prossiga com a sugestão"*.
+ *
+ * **Lido no bundle do app, não chutado** (a receita registrada no `CLAUDE.md`). O botão é um
+ * `h-button` com `text="Ver conversa anterior"` que emite `loadPreviousEvent`, e quem atende faz
+ * duas coisas, nesta ordem:
+ *
+ *  1. `getPreviousSessionId(session)` → **`GET /chat/v1/session/{id}/previous`**, que devolve o id
+ *     da anterior. O app guarda em `currentPreviousSessionId` e liga o botão com
+ *     `hasMorePrevious = id != null` — ou seja, **o botão na tela é exatamente esta rota**;
+ *  2. `loadPrevious(id)` → `GET /chat/v2/session/{id}`, que traz a sessão anterior inteira.
+ *
+ * **A CADEIA é o que ele chamou de "múltiplas instâncias":** carregada uma, o app pergunta o
+ * `/previous` DAQUELA e o botão volta a aparecer. Aqui vai **um nível só**, de propósito — é a
+ * regra dele, e cada nível a mais é uma requisição a mais por contato numa API que já caiu por
+ * rajada.
+ *
+ * O passo 2 do app não é o que usamos: `GET /chat/v2/session/{id}` traz a sessão com um controle
+ * de paginação próprio, e nós já temos `getMessages(id)`, que pagina, é testado e devolve o
+ * formato que o resto do painel entende. O id é a única coisa que faltava.
+ *
+ * **Não haver anterior é o caso normal**, e a plataforma trata assim: o app pede esta rota com
+ * `suppressError: true`. Aqui, qualquer falha vira `''` — quem chama decide como decidia.
+ */
+export async function getPreviousSessionId(sessionId) {
+  if (!sessionId) return '';
+  let resposta;
+  try {
+    resposta = await apiFetch(`/chat/v1/session/${sessionId}/previous`);
+  } catch (_) {
+    return '';
+  }
+  // O app guarda a resposta INTEIRA como id (`previousSessionIds[id] = resposta`), então ela é o
+  // id cru. `apiFetch` já devolve string quando o corpo não é JSON, e objeto quando é — as duas
+  // formas são aceitas aqui porque o corpo desta rota não foi visto ao vivo, só no código do app.
+  if (!resposta) return '';
+  if (typeof resposta === 'string') return resposta.trim().replace(/^"|"$/g, '');
+  if (typeof resposta === 'object') return String(resposta.id || resposta.sessionId || '').trim();
+  return '';
+}
+
+/**
+ * A conversa ANTERIOR deste contato — uma, e no mesmo formato de `getConversation`.
+ *
+ * Devolve `null` quando não há anterior, quando a leitura falha, ou quando a sessão anterior está
+ * vazia. **Custa duas requisições** (o id e as mensagens), então quem chama tem que ter um motivo:
+ * hoje é "falta a cidade e o botão está na tela".
+ */
+export async function getConversaAnterior(sessionId, pageSize = MENSAGENS_POR_PAGINA) {
+  const anteriorId = await getPreviousSessionId(sessionId);
+  if (!anteriorId || anteriorId === String(sessionId)) return null;
+
+  try {
+    const conversa = await getConversation(anteriorId, pageSize);
+    if (!conversa || (!conversa.incoming?.length && !conversa.entrantes?.length)) return null;
+    return { ...conversa, sessionId: anteriorId };
+  } catch (_) {
+    return null;
+  }
+}
+
 export async function getMessages(sessionId, pageSize = MENSAGENS_POR_PAGINA) {
   const todas = [];
 

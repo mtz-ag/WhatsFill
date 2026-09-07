@@ -136,4 +136,60 @@ grupo('a TRANSCRICAO do audio so existe em entrantes -- nunca em incoming (03/09
   check(t.tipo === 'AUDIO', 'com o tipo junto');
 }
 
+{
+  grupo('a conversa ANTERIOR do contato (07/09/2026)');
+
+  /**
+   * Pedido dele: *"veja como abrir a conversa anterior... sera uma abertura so, tem conversas que
+   * podem ter multiplas instancias; depois de abrir, pegue os dados de cidade"*.
+   *
+   * As rotas foram lidas no bundle do app, nao chutadas: o botao "Ver conversa anterior" chama
+   * `GET /chat/v1/session/{id}/previous` para saber SE existe (e o botao so aparece quando ela
+   * devolve id) e so entao carrega a sessao. Aqui a segunda metade e o `getMessages` que ja
+   * existe.
+   */
+  let ANTERIOR = 'sess-de-julho';
+  let PEDIDOS = [];
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    PEDIDOS.push(u);
+    if (u.includes('/previous')) {
+      if (ANTERIOR === null) return { ok: false, status: 404, text: async () => 'nao ha' };
+      return { ok: true, status: 200, text: async () => JSON.stringify(ANTERIOR) };
+    }
+    if (u.includes('/chat/v1/message')) {
+      const deJulho = u.includes('sess-de-julho');
+      const itens = deJulho ? [doContato('2026-07-20T10:00:00Z', 'moro em Canoas')] : [];
+      return { ok: true, status: 200, text: async () => JSON.stringify({ items: itens, totalItems: itens.length }) };
+    }
+    return { ok: true, status: 200, text: async () => '{}' };
+  };
+
+  const anterior = await api.getConversaAnterior('sess-de-hoje');
+  check(!!anterior, 'achou a conversa anterior');
+  check(anterior?.sessionId === 'sess-de-julho', 'e ela e a sessao que o /previous apontou');
+  check((anterior?.incoming || []).join(' ').includes('Canoas'), 'e traz o que ela escreveu la');
+
+  // UMA ABERTURA SO: a cadeia existe no app (carregada uma, ele pergunta o /previous DAQUELA), e
+  // a regra dele e nao segui-la. Duas requisicoes por contato ja e o teto.
+  const previousPedidos = PEDIDOS.filter((u) => u.includes('/previous'));
+  check(previousPedidos.length === 1, `pediu o anterior UMA vez (foram ${previousPedidos.length})`);
+
+  // FALSO POSITIVO 1 — nao ha anterior: a rota falha, e falhar e o caso NORMAL (o app pede com
+  // suppressError). Quem chama tem que receber null, nunca uma excecao no meio do load().
+  ANTERIOR = null;
+  PEDIDOS = [];
+  check((await api.getConversaAnterior('sess-de-hoje')) === null, 'sem anterior: devolve null, sem lancar');
+  check(!PEDIDOS.some((u) => u.includes('/chat/v1/message')), 'e nem chega a pedir as mensagens');
+
+  // FALSO POSITIVO 2 — a sessao anterior VAZIA nao vira conversa: contar como "ja falamos" uma
+  // sessao sem nada seria inventar historia.
+  ANTERIOR = 'sess-vazia';
+  check((await api.getConversaAnterior('sess-de-hoje')) === null, 'anterior sem mensagem nenhuma: null');
+
+  // FALSO POSITIVO 3 — a rota apontando para a PROPRIA sessao seria um laco.
+  ANTERIOR = 'sess-de-hoje';
+  check((await api.getConversaAnterior('sess-de-hoje')) === null, 'anterior igual a atual: null');
+}
+
 fim();

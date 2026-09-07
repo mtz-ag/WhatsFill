@@ -514,6 +514,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // "Já esteve aqui antes" é do CONTATO: sobreviver à troca faria a primeira vinda de um herdar
     // o histórico do outro. Mesma armadilha do anúncio.
     state.temConversaAnterior = false;
+    // A conversa anterior CARREGADA, pelo mesmo motivo da linha acima: história de outro contato
+    // decidindo o cadastro deste é a armadilha que a pergunta de cidade já custou uma vez.
+    state.conversaAnterior = null;
     state.cidadeRecusada = new Set();
     state.ultimaMensagem = null;
     state.hsmTemplates = [];
@@ -640,6 +643,56 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const transcricoes = state.entrantes.filter((m) => m.transcrito && m.texto).map((m) => m.texto);
       if (transcricoes.length) {
         applyGuesses(rebaixarParaPalpite(await extract(transcricoes)), classify);
+      }
+
+      /**
+       * **A CONVERSA ANTERIOR, quando falta a cidade** — pedido dele (07/09/2026): *"veja como
+       * abrir a conversa anterior, será necessário quando houver para não perder o contexto; mas
+       * será uma abertura só... depois de abrir, pegue os dados de cidade e prossiga com a
+       * sugestão"*.
+       *
+       * `getConversation` é por SESSÃO, e é por isso que quem volta semanas depois chegava aqui
+       * como se nunca tivesse escrito nada — a cidade que ela deu em julho está numa sessão que
+       * ninguém lê. O botão "Ver conversa anterior" é a prova de que existe uma; `api` agora sabe
+       * ir buscá-la (`GET /chat/v1/session/{id}/previous`, lido no bundle do app).
+       *
+       * **Três guardas, e as três são sobre custo e sobre não mudar o que não foi pedido:**
+       *
+       *  - **só quando FALTA a cidade.** É o dado que ele nomeou, é o que decide a etiqueta, e é o
+       *    único que não envelhece: quem morava em Canoas em julho mora em Canoas hoje. Tendo
+       *    cidade, a conversa antiga não acrescenta nada que valha duas requisições por contato —
+       *    e foi rajada de requisição que já derrubou a API e a plataforma junto;
+       *  - **só quando o BOTÃO está na tela** (`state.temConversaAnterior`). Ele custa zero rede, e
+       *    é a mesma pergunta que a rota responde. Falhando a leitura da tela, não se gasta nada e
+       *    o painel decide como decidia — o lado barato do erro;
+       *  - **UMA sessão**, que é a regra dele. A cadeia existe (carregada uma, o app pergunta o
+       *    `/previous` daquela), e cada nível a mais é mais uma requisição.
+       *
+       * **O que entra daqui é SÓ palpite de cadastro, e rebaixado.** A conversa anterior não entra
+       * em `state.incoming` nem em `state.entrantes`: eles são a memória DESTA sessão, e é sobre
+       * eles que a rajada, o tempo (`deOutroDia`, `respondidoHoje`) e o "já respondemos" decidem —
+       * misturar história de julho ali mudaria todos os sinais de uma vez, que não é o que ele
+       * pediu. `rebaixarParaPalpite` faz o resto: a cidade vinda de outra conversa **espera
+       * confirmação** (dele ou da IA) como todo palpite, nunca vai sozinha para o CRM.
+       */
+      const campoCidade = classify.find((f) => f.name === 'Cidade');
+      const cidadeAtual = String(state.draft[campoCidade?.id]?.value || '').trim();
+      const faltaCidade = !cidadeAtual || cities.ehEnderecoDeMaquina(cidadeAtual);
+
+      state.conversaAnterior = null;
+      if (faltaCidade && state.temConversaAnterior) {
+        try {
+          const anterior = await api.getConversaAnterior(sessionId);
+          if (anterior) {
+            state.conversaAnterior = anterior;
+            const textosAntes = (anterior.incoming || []).filter((t) => !ehMensagemDaPlataforma(t));
+            if (textosAntes.length) {
+              applyGuesses(rebaixarParaPalpite(await extract(textosAntes)), classify);
+            }
+          }
+        } catch {
+          state.conversaAnterior = null;
+        }
       }
 
       // O nome que a pessoa ESCREVEU no formulário ganha do apelido do perfil do WhatsApp.

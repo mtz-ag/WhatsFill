@@ -1442,6 +1442,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **A CONVERSA ANTERIOR tem ROTA, e o botao da tela E essa rota.** Lido no bundle em 07/09/2026, a
+  pedido dele: o `h-button` "Ver conversa anterior" emite `loadPreviousEvent`, e quem atende chama
+  **`GET /chat/v1/session/{id}/previous`** (devolve o id da anterior, e e ele que LIGA o botao:
+  `hasMorePrevious = id != null`) e so entao `GET /chat/v2/session/{id}`. **Nao e preciso clicar em
+  nada** — com o id, `getMessages(id)` faz o resto, paginado e testado. **A CADEIA e o que ele
+  chamou de "multiplas instancias"**: carregada uma, o app pergunta o `/previous` DAQUELA e o botao
+  reaparece; a regra dele e **uma abertura so**. O que vem de la e palpite de CADASTRO rebaixado e
+  **nao entra em `state.incoming`/`state.entrantes`** — eles sao a memoria DESTA sessao, e a rajada,
+  o tempo e o "ja respondemos" decidem sobre eles. **O corpo do `/previous` nunca foi visto ao
+  vivo** (a API recusa origem de fora da aba): o leitor aceita string, string entre aspas e objeto
+  com `id`, e qualquer falha vira "nao ha anterior" — que e o caso normal, e o proprio app pede essa
+  rota com `suppressError`.
+
 - **AS TRES RODADAS TEM UM MOTOR SO — e o que envelhece hoje e o AVISO, nao a decisao.** Medido em
   06/09/2026 a pedido dele (*"veja se a automatizacao dos outros esta atualizada"*): **Meus** e
   **Outros** chamam a MESMA funcao (`processarRespondido`), e **Novos** (`processarNovo`) assume e

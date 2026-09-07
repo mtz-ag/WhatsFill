@@ -1,4 +1,4 @@
-## 2026-09-06 — ESTADO DE AGORA (v2.76.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.77.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -183,6 +183,58 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-07 — A conversa ANTERIOR, quando falta a cidade (v2.77.0)
+
+Pedido dele: *"acesse a plataforma pela extensão e veja como abrir a conversa anterior, será
+necessário quando houver para não perder o contexto, mas será uma abertura só — tem conversas que
+podem ter múltiplas instâncias. Após abrir a conversa anterior, pegue os dados de cidade e prossiga
+com a sugestão de mensagem"*.
+
+### Não dá para eu entrar na plataforma logada — o bundle resolveu
+
+A extensão roda no Chrome dele, o servidor de browser do plugin falhou nesta sessão, e a API valida
+`Origin`. O caminho que funciona é o já registrado: **ler o bundle do app**. Achado em
+`main.3f7194fb30521aa0.js`:
+
+- o botão é um `h-button` com `text="Ver conversa anterior"`, que emite `loadPreviousEvent`;
+- quem atende faz **duas** coisas: `getPreviousSessionId(session)` →
+  **`GET /chat/v1/session/{id}/previous`**, que devolve o id da anterior — e é essa rota que LIGA o
+  botão (`hasMorePrevious = id != null`) —, e depois `loadPrevious(id)` → `GET /chat/v2/session/{id}`;
+- **a cadeia é o que ele chamou de "múltiplas instâncias"**: carregada uma, o app pergunta o
+  `/previous` DAQUELA e o botão reaparece.
+
+Ou seja: **não é preciso clicar em nada.** O id vem por rota, e as mensagens saem do `getMessages`
+que já existe — paginado e testado.
+
+### O que entrou
+
+`api.getPreviousSessionId` e `api.getConversaAnterior` (uma sessão, nunca a cadeia), e no `load()`
+o parser roda no que ela escreveu lá. **Três guardas:**
+
+| guarda | por quê |
+|---|---|
+| só quando **falta a cidade** | é o dado que ele nomeou, é o que decide a etiqueta, e é o único que não envelhece |
+| só quando o **botão está na tela** | custa zero rede e é a mesma pergunta que a rota responde; falhando, nada é gasto |
+| **uma** sessão | regra dele — e cada nível a mais é mais uma requisição por contato |
+
+**A conversa anterior não entra em `state.incoming` nem em `state.entrantes`**: eles são a memória
+DESTA sessão, e é sobre eles que a rajada, o tempo e o "já respondemos" decidem. O que vem de lá é
+palpite de cadastro **rebaixado** — espera confirmação dele ou da IA, como todo palpite, e nunca vai
+sozinho para o CRM.
+
+Isto também dá consequência ao `dom.temConversaAnterior`, que estava na lista de pendências dele
+como *"nunca foi visto funcionando"*: agora ele decide se a busca acontece.
+
+### O que não foi visto ao vivo
+
+**O corpo da resposta do `/previous`.** No app ele é guardado inteiro como id
+(`previousSessionIds[id] = resposta`), então é o id cru — o leitor aceita string, string entre aspas
+e objeto com `id`, e qualquer falha vira "não há anterior". Nove asserções novas, quatro delas falso
+positivo (sem anterior, sessão vazia, laço para a própria sessão, e não pedir mensagem à toa).
+15 suítes verdes, os dois verificadores limpos.
 
 ---
 
