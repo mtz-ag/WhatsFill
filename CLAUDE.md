@@ -1454,6 +1454,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   **detector que casa a palavra antiga para de ver o caso**: `SE_APRESENTANDO` ganhou `equipe` e
   `assessoria` no mesmo commit, senao continuaria "funcionando" cego.
 
+- **PROPOSTA COMERCIAL NAO ABRE PORTA, e "procure a coordenacao" e a porta que nao existe.** Regra
+  dele (07/09/2026), sobre o contato que oferecia patrocinio: *"nada sera aceito agora em periodo
+  eleitoral, os contratos que deviam ser feitos ja foram feitos"*. O rascunho tinha explicado a lei
+  e mandado *"conversar direto com a coordenacao"* — e **nao ha coordenacao para conversar**: a
+  frase promete uma conversa que nao vai acontecer, a familia da promessa de entrega. O que se faz
+  no lugar e o que ele aprovou no ChatGPT: **agradecer o apoio e responder o resto**, silencio sobre
+  a oferta. Duas metades: a **regra 7** do prompt e a trava `mandouProcurarNos`. **A trava e maior
+  que o caso, e e por isso que ela e mecanica: quem escreve para o WhatsApp do mandato JA ESTA
+  falando com a equipe** — manda-la procurar a equipe, a coordenacao ou a campanha e devolve-la para
+  onde ela ja esta. A conferencia e **frase a frase** (sem isso, *"vou verificar com a equipe. Se
+  precisar, procure a Secretaria"* casaria por pedacos de duas frases), encaminhar para FORA
+  continua livre (prefeitura, CRAS, SINE) e a **primeira pessoa** tambem (*"vou verificar com a
+  equipe"* e a frase que a regra 5 da como exemplo do que se pode dizer com verdade). Dez das vinte
+  assercoes sao falso positivo.
 - **REGRA QUE VIVE NO MEIO DE UM DOCUMENTO DE 3.804 TOKENS E REGRA QUE O MODELO PEQUENO NAO
   CUMPRE.** Print de 07/09/2026 (o contato que oferecia patrocinio): o rascunho saiu com ~880
   caracteres, virou aula sobre a lei eleitoral, e ele comparou com o ChatGPT — *"o problema e o

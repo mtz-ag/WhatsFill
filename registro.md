@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.86.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.87.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -69,6 +69,7 @@ problemas e sem desfecho incoerente.
 | 2.84 | **A IA disse que o áudio falhou para quem mandou cinco áudios transcritos** — ela respondeu o conteúdo de um áudio ENCAMINHADO. |
 | 2.85 | **A extensão RECONHECE o lote encaminhado** — áudio que não caberia no tempo em que chegou não foi gravado ali. |
 | 2.86 | **A regra de tamanho passou a ser citada onde o modelo lê** — o item 22 do padrão dele estava a 3.804 tokens do pedido. |
+| 2.87 | **Proposta comercial não abre porta** — nada é aceito no período eleitoral, e mandar procurar a coordenação virou trava. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -198,6 +199,53 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-07 — Proposta comercial não abre porta nenhuma (v2.87.0)
+
+**A regra é dele**, respondendo à pergunta que ficou aberta na 2.86 sobre o contato que oferecia
+patrocínio: *"o GPT seguiu o caminho certo porque nada será aceito agora em período eleitoral, os
+contratos que deviam ser feitos já foram feitos"*.
+
+**O que ele decidiu não é "explique melhor": é não abrir porta.** O rascunho que saiu terminava em
+*"a melhor forma é conversar direto com a coordenação. Você pode entrar em contato com a equipe de
+campanha"* — e **não há coordenação para conversar sobre isso**, porque a decisão já está tomada e
+o prazo passou. Mandar a pessoa procurar alguém é prometer uma conversa que não vai acontecer, que
+é a mesma família da promessa de entrega da regra 5.
+
+### Duas metades, como sempre
+
+**A regra 7 do prompt**, que é o que impede o rascunho de nascer assim: proposta comercial
+(patrocínio, publicidade paga, impulsionamento, permuta, parceria, *"tenho espaço para
+apoiadores"*, orçamento) não é assunto de atendimento, e a resposta não é explicar por quê. Sem
+discutir a lei, sem pedir proposta, sem dizer que alguém vai analisar. **O que fazer no lugar é o
+que o ChatGPT fez e ele aprovou:** agradecer o apoio e responder o resto — quem oferece patrocínio
+nesta base quase sempre também está apoiando de verdade, e o contato da print abriu dizendo que já
+trabalha na campanha.
+
+**A trava `mandouProcurarNos`**, e ela é maior que este caso — o que é justamente o que a torna
+mecânica: **quem escreve para o WhatsApp do mandato JÁ ESTÁ falando com a equipe.** Mandá-la
+procurar a equipe, a coordenação ou a campanha é devolver a pessoa para o lugar em que ela já está,
+não importa o assunto.
+
+**A conferência é frase a frase**, com as três condições valendo dentro da MESMA frase: alguém
+sendo mandado, o destino sendo NÓS, e a frase não estar na primeira pessoa. Sem o recorte,
+*"vou verificar com a equipe. Se precisar, procure a Secretaria de Saúde"* casaria por pedaços de
+duas frases diferentes — o oposto do que a regra quer.
+
+**Encaminhar para FORA continua livre** (prefeitura, Secretaria, CRAS, farmácia popular): a lista é
+só do que somos nós. **E a primeira pessoa também** — *"vou verificar com a equipe"* é o mandato
+fazendo, não a pessoa sendo mandada embora, e é a frase que a própria regra 5 dá como exemplo do
+que se pode dizer com verdade.
+
+### Medido
+
+O texto que saiu para ele: **barrado**. 20 asserções, **10 delas falso positivo** — é onde mora o
+risco, porque barrar demais tiraria da automação todo encaminhamento legítimo para fora.
+
+Prompt de 5.094 → **5.290 tokens**; o padrão dele caiu de 75% para 72% do total, e o cache do Haiku
+continua pegando. O custo por rascunho quente não mudou na terceira casa: **US$ 0,0029**.
 
 ---
 

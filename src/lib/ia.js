@@ -812,6 +812,29 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * o caso pediu: a pergunta era sobre patrocínio, e o modelo respondeu explicando a lei e
      * listando alternativas que ninguém pediu.
      */
+    /**
+     * **A regra 7 é dele, ditada em 07/09/2026**, respondendo à pergunta que ficou aberta na 2.86
+     * sobre o contato que oferecia patrocínio: *"o GPT seguiu o caminho certo porque nada será
+     * aceito agora em período eleitoral, os contratos que deviam ser feitos já foram feitos"*.
+     *
+     * **O que ele decidiu não é "explique melhor": é não abrir porta.** O rascunho que saiu dizia
+     * *"a melhor forma é conversar direto com a coordenação"* — e não há coordenação para
+     * conversar sobre isso, porque a decisão já está tomada e o prazo já passou. Mandar a pessoa
+     * procurar alguém é prometer uma conversa que não vai acontecer, que é a mesma família da
+     * promessa de entrega da regra 5.
+     *
+     * A saída é a do ChatGPT que ele aprovou: **agradecer o apoio e responder o resto**. Quem
+     * oferece patrocínio nesta base quase sempre também está apoiando de verdade — o contato da
+     * print abriu dizendo que já trabalha na campanha.
+     */
+    '7. PROPOSTA COMERCIAL (patrocínio, publicidade paga, impulsionamento, permuta, parceria,',
+    '   "tenho espaço para apoiadores", orçamento, tabela de preços) NÃO é assunto de atendimento,',
+    '   e a resposta não é explicar por quê. Nada disso é aceito em período eleitoral e o que tinha',
+    '   de ser contratado já foi. Não discuta a lei, não peça proposta, não diga que alguém vai',
+    '   analisar e NÃO mande procurar a coordenação, a equipe nem a campanha — a pessoa já está',
+    '   falando com a equipe, e não há porta atrás desta.',
+    '   Faça o que faria se ela não tivesse oferecido nada: agradeça o apoio, com sinceridade, e',
+    '   responda o resto da mensagem. Sobre a oferta, silêncio é melhor que uma frase.',
     'TAMANHO: siga o item 22 do padrão, e ele é curto. Mensagem simples: 1 a 3 frases. Isto sai no',
     'WhatsApp, não é ofício.',
     'Não dê aula sobre regra nem sobre lei, e não liste alternativas que ninguém pediu. Quando algo',
@@ -1201,6 +1224,25 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
    * sem transcrição, pedir para reenviar é a resposta certa e não pode ser barrada.
    */
   pediuReenvio: 'diz que o áudio ou a mensagem falhou e pede para reenviar — mas a mensagem dela chegou legível',
+  /**
+   * **Mandar a pessoa procurar quem ela já está procurando.**
+   *
+   * Print de 07/09/2026, o contato que oferecia patrocínio: o rascunho respondeu *"a melhor forma
+   * é conversar direto com a coordenação. Você pode entrar em contato com a equipe de campanha"*.
+   * Ele apagou, e a regra que ditou fecha as duas pontas: *"nada será aceito agora em período
+   * eleitoral, os contratos que deviam ser feitos já foram feitos"*. **Não há coordenação para
+   * conversar** — a frase promete uma conversa que não vai acontecer.
+   *
+   * **E o defeito é maior que este caso, o que é o que o torna mecânico:** quem escreve para o
+   * WhatsApp do mandato JÁ ESTÁ falando com a equipe. Mandá-la procurar a equipe, a coordenação ou
+   * a campanha é devolver a pessoa para o lugar em que ela já está — não importa o assunto.
+   *
+   * **Encaminhar para FORA continua livre** (a prefeitura, a Secretaria de Saúde, o SINE): a lista
+   * é só do que somos nós. E a primeira pessoa também: *"vou falar com a equipe"* é o mandato
+   * fazendo, não a pessoa sendo mandada embora — é a frase que a regra 5 dá como exemplo do que se
+   * pode dizer com verdade.
+   */
+  mandouProcurarNos: 'manda a pessoa procurar a equipe ou a coordenação — ela já está falando com a equipe',
 };
 
 /** O rascunho pode sair sozinho, ou algum aviso exige que uma pessoa leia antes? */
@@ -1329,6 +1371,28 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
   ];
   if (contexto?.recebemosDela && PEDIU_REENVIO.some((re) => re.test(texto))) {
     avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.pediuReenvio);
+  }
+
+  /**
+   * **Mandar procurar a equipe** — ver `AVISOS_QUE_IMPEDEM_ENVIO.mandouProcurarNos`.
+   *
+   * A conferência é **frase a frase**, e as três condições valem dentro da MESMA frase: alguém
+   * sendo mandado (o verbo), o destino sendo NÓS, e a frase não estar na primeira pessoa. Sem o
+   * recorte por frase, *"vou verificar com a equipe. Se precisar, procure a Secretaria de Saúde"*
+   * casaria pelos pedaços de duas frases diferentes — que é o oposto do que a regra quer.
+   */
+  const SOMOS_NOS = /(equipe|coordena[çc][ãa]o|coordenador|assessoria|campanha|mandato|gabinete|deputado)/iu;
+  const MANDA_PROCURAR =
+    /(procur[ae]|procurar|entr[ae]\s+em\s+contato|entrar\s+em\s+contato|contat[ae]|contatar|fal[ae]|falar|convers[ae]|conversar|busqu[ae]|buscar|acion[ae]|acionar|dirij[ae]|dirigir)\s+(direto\s+|diretamente\s+)?(com\s+)?(a|o|à|ao)?\s*(equipe|coordena[çc][ãa]o|coordenador|assessoria|campanha|mandato|gabinete|deputado)/iu;
+  /** Nós fazendo, e não ela sendo mandada. É a frase que a regra 5 dá como exemplo do que se pode dizer. */
+  const NOS_FAZENDO = /(^|[^\p{L}])(vou|vamos|irei|iremos|posso|podemos|consigo|conseguimos|estou|estamos|j[áa])(\s|$)/iu;
+  for (const frase of texto.split(/(?<=[.!?])\s+|\n+/)) {
+    if (!SOMOS_NOS.test(frase)) continue;
+    if (NOS_FAZENDO.test(frase)) continue;
+    if (MANDA_PROCURAR.test(frase)) {
+      avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.mandouProcurarNos);
+      break;
+    }
   }
 
   /**

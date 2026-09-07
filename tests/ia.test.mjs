@@ -980,4 +980,69 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
     'o prompt continua acima do minimo de cache do Haiku');
 }
 
+/**
+ * **PROPOSTA COMERCIAL: a regra dele, 07/09/2026.**
+ *
+ * Um contato ofereceu patrocinio (*"tenho espaco p/ mais Apoiadores com patrocinio"*) e o rascunho
+ * respondeu explicando a lei eleitoral e mandando *"conversar direto com a coordenacao"*. Ele
+ * apagou e ditou a regra: *"o GPT seguiu o caminho certo porque nada sera aceito agora em periodo
+ * eleitoral, os contratos que deviam ser feitos ja foram feitos"*.
+ *
+ * **Nao e "explique melhor": e nao abrir porta.** Nao ha coordenacao para conversar sobre isso, e
+ * mandar procurar alguem promete uma conversa que nao vai acontecer — a familia da promessa de
+ * entrega da regra 5.
+ *
+ * O defeito e maior que este caso, e e isso que o torna mecanico: **quem escreve para o WhatsApp
+ * do mandato JA ESTA falando com a equipe.** Dez das quatorze assercoes sao falso positivo —
+ * encaminhar para FORA (prefeitura, Secretaria, CRAS) continua livre, e a primeira pessoa
+ * (*"vou verificar com a equipe"*) e a frase que a propria regra 5 da como exemplo do que se pode
+ * dizer com verdade.
+ */
+{
+  grupo('proposta comercial: nao mandar procurar a coordenacao (07/09)');
+
+  const agora = new Date('2026-09-07T19:07:00Z');
+  const saiu =
+    'Boa tarde! Fico muito feliz em saber que você está apoiando essa caminhada conosco. ' +
+    'Se você tem interesse em contribuir, a melhor forma é conversar direto com a coordenação. ' +
+    'Você pode entrar em contato com a equipe de campanha.';
+  const r = revisarRascunho(saiu, agora, {});
+  check(r.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.mandouProcurarNos),
+    'o texto que saiu para ele agora levanta a mao');
+  check(rascunhoPodeSairSozinho(r.avisos) === false, 'e nao sai mais sozinho');
+
+  const pega = (t) => revisarRascunho(t, agora, {}).avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.mandouProcurarNos);
+
+  for (const t of [
+    'A melhor forma é conversar direto com a coordenação.',
+    'Você pode entrar em contato com a equipe de campanha.',
+    'Procure a coordenação da campanha.',
+    'Fale com a assessoria do deputado.',
+  ]) {
+    check(pega(t), `pega tambem: "${t}"`);
+  }
+
+  /** Encaminhar para FORA continua livre — a lista e so do que somos NOS. */
+  for (const t of [
+    'Vou verificar isso com a equipe e te retorno por aqui.',
+    'Sua mensagem chegou aqui na equipe.',
+    'Procure a Secretaria de Saúde do seu município.',
+    'Se precisar, procure o CRAS mais perto de você.',
+    'Você pode comparecer nos eventos que a campanha divulga.',
+    'Fale comigo por aqui quando precisar.',
+    'Conte sempre com a gente.',
+    'Estou falando com a equipe sobre isso.',
+    'A equipe agradece muito o seu apoio.',
+    'Vou verificar com a equipe. Se precisar de remédio, procure a farmácia popular.',
+  ]) {
+    check(!pega(t), `nao pega: "${t}"`);
+  }
+
+  /** A outra metade: a regra 7 do prompt, que e o que impede o rascunho de nascer assim. */
+  const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(p.includes('PROPOSTA COMERCIAL'), 'o prompt trata proposta comercial');
+  check(p.includes('NÃO mande procurar a coordenação'), 'e proibe mandar procurar a coordenacao');
+  check(p.includes('agradeça o apoio'), 'e diz o que fazer no lugar: agradecer o apoio');
+}
+
 fim();
