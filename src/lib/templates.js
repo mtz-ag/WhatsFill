@@ -31,6 +31,9 @@ export async function list() {
     await migrarPedirDadosAntesDeTudo();
     await migrarRespostaBoasVindas();
     await migrarBoasVindasTemDados();
+    // Por ÚLTIMO de propósito: as de cima acrescentam respostas novas, e o texto de fábrica delas
+    // já vem sem "gabinete" — mas as antigas, que ele editou, só são alcançadas por esta.
+    await migrarGabineteParaEquipe();
   }
   return store.get('templates');
 }
@@ -89,6 +92,76 @@ async function garantirRespostas(ids, flag) {
 
 export const migrarRespostasNovas = () =>
   garantirRespostas(['pedido-ajuda', 'saudacao-fe'], 'respostasGabinete');
+
+/**
+ * **"Gabinete" saiu do vocabulário: é ASSESSORIA ou EQUIPE** — decisão dele (07/09/2026):
+ * *"não se refira mais a gabinete do Capitão Martim, se refira como assessoria ou equipe; a IA
+ * deve ficar ciente também, veja nas respostas prontas"*.
+ *
+ * **Trocar só o texto de fábrica não faria a regra chegar nele.** É a armadilha registrada em
+ * 04/09 (o `-contato-assessor` que virou valor padrão e nunca alcançou quem já tinha o campo
+ * salvo): `store.get` só mescla default em chave que FALTA, e as respostas dele estão gravadas —
+ * editadas, com variantes próprias. Sem esta passada, o texto novo valeria para uma instalação
+ * nova e para mais ninguém.
+ *
+ * **A concordância é metade do trabalho.** Trocar a palavra e deixar o artigo é o que produz
+ * *"falando com o equipe"* — mensagem que sai para eleitor com erro de português. Por isso a lista
+ * casa a preposição junto, e o plural vira **mandatos**: *"vale para todos os gabinetes"* fala dos
+ * OUTROS parlamentares, e "todas as equipes" ali não quer dizer nada.
+ */
+const TROCAS_DE_GABINETE = [
+  [/\bdo\s+gabinete\b/gi, 'da equipe'],
+  [/\bno\s+gabinete\b/gi, 'na equipe'],
+  [/\bao\s+gabinete\b/gi, 'à equipe'],
+  [/\bnosso\s+gabinete\b/gi, 'nossa equipe'],
+  [/\beste\s+gabinete\b/gi, 'esta equipe'],
+  [/\besse\s+gabinete\b/gi, 'essa equipe'],
+  [/\bum\s+gabinete\b/gi, 'uma equipe'],
+  [/\bo\s+gabinete\b/gi, 'a equipe'],
+  [/\bgabinetes\b/gi, 'mandatos'],
+  [/\bgabinete\b/gi, 'equipe'],
+];
+
+/** Mantém a inicial MAIÚSCULA quando a palavra trocada abria a frase. */
+function comAInicialDe(original, novo) {
+  const abreMaiuscula = /^[A-ZÀ-Ý]/.test(original);
+  if (!abreMaiuscula) return novo;
+  return novo.charAt(0).toUpperCase() + novo.slice(1);
+}
+
+export function semGabinete(texto) {
+  let saida = String(texto || '');
+  for (const [re, novo] of TROCAS_DE_GABINETE) {
+    saida = saida.replace(re, (achado) => comAInicialDe(achado, novo));
+  }
+  return saida;
+}
+
+/**
+ * Passa `semGabinete` nas respostas que ELE já tem gravadas — uma vez só.
+ *
+ * **Só mexe no que contém a palavra**, e devolve o que mudou para a tela poder dizer. Roda uma vez
+ * (flag própria, nunca a de outra migração): reaproveitar flag faria reescrever texto que ele
+ * ajustou depois.
+ */
+export async function migrarGabineteParaEquipe() {
+  const migracoes = await store.get('migracoes');
+  if (migracoes.gabineteViraEquipe) return [];
+
+  const templates = await store.get('templates');
+  const mudadas = [];
+  const novos = templates.map((t) => {
+    const text = semGabinete(t.text);
+    const variantes = (t.variantes || []).map((v) => semGabinete(v));
+    const mudou = text !== t.text || variantes.some((v, i) => v !== (t.variantes || [])[i]);
+    if (mudou) mudadas.push(t.name || t.id);
+    return mudou ? { ...t, text, variantes } : t;
+  });
+
+  if (mudadas.length) await store.set('templates', novos);
+  await store.set('migracoes', { ...migracoes, gabineteViraEquipe: true });
+  return mudadas;
+}
 
 /**
  * Flag própria, e não a mesma dos anteriores: reaproveitar a flag antiga faria voltar resposta

@@ -134,7 +134,7 @@ export function montarSistema({ templates = [], regras = '', gabinete = '' } = {
      *
      * Está no prompt de sistema, que é o cacheado: custa uma vez e 10% nas seguintes.
      */
-    gabinete ? `Quem é quem neste mandato (informação do gabinete — use-a como fonte e não invente o que não estiver aqui):\n${gabinete}\n` : '',
+    gabinete ? `Quem é quem neste mandato (informação da assessoria — use-a como fonte e não invente o que não estiver aqui):\n${gabinete}\n` : '',
     regras ? `Instruções adicionais do Thiago:\n${regras}\n` : '',
     'Respostas prontas disponíveis:',
     '',
@@ -652,6 +652,18 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '1. NÃO chame a pessoa pelo nome. É regra do mandato: o cadastro erra o nome com frequência',
     '   alta demais, e errar o nome de alguém é pior do que não usar nenhum.',
     /**
+     * **"Gabinete" saiu do vocabulário** — decisão dele (07/09/2026): *"não se refira mais a
+     * gabinete do Capitão Martim, se refira como assessoria ou equipe; a IA deve ficar ciente
+     * também"*.
+     *
+     * Vale para os dois lados do prompt: aqui, para o que a IA ESCREVE; e no bloco "Quem é quem",
+     * cuja própria etiqueta dizia *"informação do gabinete"* — a palavra estava sendo ensinada a
+     * ela pelo texto que a instrui.
+     */
+    '   E NUNCA escreva "gabinete". Quem fala aqui é a EQUIPE ou a ASSESSORIA do Capitão Martim —',
+    '   é assim que este mandato se apresenta. Vale para qualquer forma: "o gabinete", "nosso',
+    '   gabinete", "gabinete do deputado".',
+    /**
      * **Gênero: na dúvida, neutro** — regra dele (06/09/2026), com a print da Marli.
      *
      * A IA escreveu *"Você está **coberto** de razão em cobrar"* para uma contato chamada Marli.
@@ -772,7 +784,7 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * poderia calar. Com o bloco, ela responde com o que o gabinete informou — e a regra passa a
      * dizer exatamente isso: conversa e este bloco, nada além.
      */
-    gabinete ? `Quem é quem neste mandato (informação do gabinete — use-a como fonte e não invente o que não estiver aqui):\n${gabinete}\n` : '',
+    gabinete ? `Quem é quem neste mandato (informação da assessoria — use-a como fonte e não invente o que não estiver aqui):\n${gabinete}\n` : '',
     /**
      * **As instruções dele mandam sobre o ESTILO, e nunca sobre as proibições** — escrito assim
      * depois de ele perguntar *"a IA não segue todas as instruções?"* (05/09/2026). O que é
@@ -1058,7 +1070,12 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
  * é a rede que mostra quando ele não foi obedecido.
  */
 const SE_APRESENTANDO = [
-  /\bgabinete d[oa]\b/i,
+  /**
+   * `equipe`/`assessoria` entraram junto em 07/09/2026, quando "gabinete" saiu do vocabulário
+   * (decisão dele). Sem isso, a apresentação passaria a escapar exatamente na redação nova — o
+   * detector continuaria "funcionando" e deixaria de ver o caso que existe para ver.
+   */
+  /\b(gabinete|equipe|assessoria) d[oa]\b/i,
   /\b(bem[- ]vind[oa]s?|seja bem[- ]vind[oa])\b/i,
   /\baqui (é|e) o\b/i,
   /\b(voc[êe]|vc) est[áa] falando com\b/i,

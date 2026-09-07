@@ -203,7 +203,7 @@ export const DEFAULT_TEMPLATES = [
       'Li com atenção.\n\n' +
       'Preciso te responder com sinceridade: um mandato não pode doar dinheiro, cestas, ' +
       'remédios ou qualquer bem a eleitores. Não é falta de vontade — a lei eleitoral proíbe, ' +
-      'e vale para todos os gabinetes, o ano inteiro.\n\n' +
+      'e vale para todos os mandatos, o ano inteiro.\n\n' +
       'O caminho certo para esse apoio é a assistência social do seu município, que é gratuita ' +
       'e feita para isso:\n\n' +
       '• CRAS do seu bairro — orienta e faz o seu Cadastro Único\n' +
@@ -238,7 +238,7 @@ export const DEFAULT_TEMPLATES = [
       'Procurar trabalho cansa, e eu li a sua mensagem com atenção.\n\n' +
       'Preciso te responder com sinceridade: um mandato não pode arrumar emprego, indicar para ' +
       'vaga nem prometer contratação a eleitor. A lei eleitoral proíbe isso expressamente, e ' +
-      'vale para todos os gabinetes, o ano inteiro — não é falta de vontade.\n\n' +
+      'vale para todos os mandatos, o ano inteiro — não é falta de vontade.\n\n' +
       'O caminho certo, e que é gratuito, é este:\n\n' +
       '• Agência do SINE/FGTAS da sua cidade — encaminha para as vagas abertas e resolve o ' +
       'seguro-desemprego (leve os documentos e a Carteira de Trabalho Digital)\n' +
@@ -261,7 +261,7 @@ export const DEFAULT_TEMPLATES = [
     /**
      * **Quem chega sem anúncio e só cumprimenta** — decisão dele (04/09/2026), na revisão caixa a
      * caixa da chegada: *"se ela chegou cumprimentando, podemos mandar uma mensagem: bem-vindo,
-     * você está falando com o gabinete do Capitão Martim, em quê podemos ajudar? E se puder nos
+     * você está falando com a equipe do Capitão Martim, em quê podemos ajudar? E se puder nos
      * forneça seu nome e cidade para melhor atendê-lo — e então concluir até o contato responder"*.
      *
      * Ela existe porque o formulário seco é a primeira coisa que essa pessoa lê de nós, e ela não
@@ -274,13 +274,13 @@ export const DEFAULT_TEMPLATES = [
     id: 'boas-vindas',
     name: 'Boas-vindas (chegou sem anúncio)',
     text:
-      '{{saudacao}}! Bem-vindo. Você está falando com o gabinete do Capitão Martim.\n\n' +
+      '{{saudacao}}! Bem-vindo. Você está falando com a equipe do Capitão Martim.\n\n' +
       'Em que podemos ajudar?\n\n' +
       'E, se puder, nos informe para melhor atendê-lo:\n\n' +
       'Nome , Cidade\n\n' +
       '(exemplo: Pedro Silva , Porto Alegre)',
     variantes: [
-      '{{saudacao}}! Seja bem-vindo — aqui é o gabinete do Capitão Martim.\n\n' +
+      '{{saudacao}}! Seja bem-vindo — aqui é a assessoria do Capitão Martim.\n\n' +
         'Em que podemos ajudar?\n\n' +
         'E, se puder, nos informe para melhor atendê-lo:\n\n' +
         'Nome , Cidade\n\n' +
@@ -306,10 +306,10 @@ export const DEFAULT_TEMPLATES = [
     id: 'boas-vindas-tem-dados',
     name: 'Boas-vindas (já temos o cadastro)',
     text:
-      '{{saudacao}}! Bem-vindo. Você está falando com o gabinete do Capitão Martim.\n\n' +
+      '{{saudacao}}! Bem-vindo. Você está falando com a equipe do Capitão Martim.\n\n' +
       'Em que podemos ajudar?',
     variantes: [
-      '{{saudacao}}! Seja bem-vindo — aqui é o gabinete do Capitão Martim.\n\n' +
+      '{{saudacao}}! Seja bem-vindo — aqui é a assessoria do Capitão Martim.\n\n' +
         'Em que podemos ajudar?',
     ],
   },

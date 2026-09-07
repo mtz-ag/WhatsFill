@@ -446,7 +446,14 @@ grupo('"Confirmou presenca (so agradecer)": a metade que faltava (02/09/2026)');
   check(!!bv, 'a resposta existe entre as de fabrica');
   check(templates.ehPedidoDeDados(bv.text), 'carrega o invariante "Nome , Cidade"');
   for (const v of bv.variantes || []) check(templates.ehPedidoDeDados(v), 'e a variante tambem');
-  check(/gabinete/i.test(bv.text), 'diz de quem e o gabinete -- e o contexto que faltava');
+  /**
+   * INVERTIDA em 07/09/2026. Ela exigia a palavra "gabinete" — *"diz de quem e o gabinete, e o
+   * contexto que faltava"* —, e o contexto continua sendo obrigatorio: o que mudou foi COMO este
+   * mandato se apresenta. Decisao dele: *"nao se refira mais a gabinete, se refira como assessoria
+   * ou equipe"*. Travar a palavra antiga faria a regra dele voltar atras no proximo teste verde.
+   */
+  check(/(equipe|assessoria) do Capit/i.test(bv.text), 'diz de quem e a equipe -- e o contexto que faltava');
+  check(!/gabinete/i.test(bv.text), 'e nao diz "gabinete", que saiu do vocabulario');
   check(!/(cesta|rem[ée]dio|dinheiro|emprego|vaga|benef[ií]cio)/i.test(bv.text), 'nao promete beneficio nenhum');
 
   /**
@@ -495,9 +502,47 @@ grupo('"Confirmou presenca (so agradecer)": a metade que faltava (02/09/2026)');
   check(templates.ehPedidoDeDados(comPedido.text), 'a de quem NAO tem cadastro continua pedindo');
 
   // As duas dizem a mesma coisa na abertura: e a mesma mensagem, sem o bloco do cadastro.
-  check(semPedido.text.includes('gabinete do Capitao Martim'.replace('Capitao', 'Capitão')),
-    'a metade sem pedido continua se apresentando como o gabinete');
+  // INVERTIDA em 07/09/2026 pelo mesmo motivo da de cima: a apresentacao continua obrigatoria, a
+  // palavra e que mudou.
+  check(/(equipe|assessoria) do Capit/i.test(semPedido.text),
+    'a metade sem pedido continua se apresentando — hoje como equipe/assessoria');
   check(semPedido.text.includes('Em que podemos ajudar?'), 'e continua perguntando em que pode ajudar');
+}
+
+{
+  grupo('"gabinete" saiu do vocabulario (07/09/2026)');
+
+  /**
+   * Decisao dele: *"nao se refira mais a gabinete do Capitao Martim, se refira como assessoria ou
+   * equipe; a IA deve ficar ciente tambem, veja nas respostas prontas"*.
+   *
+   * **A concordancia e metade do trabalho:** trocar a palavra e deixar o artigo produz "falando com
+   * o equipe" — mensagem com erro de portugues saindo para eleitor. Por isso a lista casa a
+   * preposicao junto.
+   */
+  const t = (x) => templates.semGabinete(x);
+  check(t('Voce esta falando com o gabinete do Capitao Martim.') === 'Voce esta falando com a equipe do Capitao Martim.',
+    'o gabinete -> a equipe, com o artigo certo');
+  check(t('Encaminhei ao gabinete') === 'Encaminhei à equipe', 'ao gabinete -> à equipe');
+  check(t('nosso gabinete vai ver') === 'nossa equipe vai ver', 'nosso gabinete -> nossa equipe');
+  check(t('Trabalho no gabinete desde 2023') === 'Trabalho na equipe desde 2023', 'no gabinete -> na equipe');
+  check(t('Gabinete do Capitao Martim, bom dia!').startsWith('Equipe'), 'a inicial MAIUSCULA e preservada');
+
+  /**
+   * O PLURAL vira "mandatos", e nao "equipes": *"vale para todos os gabinetes"* fala dos OUTROS
+   * parlamentares, e "todas as equipes" ali nao quer dizer nada.
+   */
+  check(t('vale para todos os gabinetes, o ano inteiro') === 'vale para todos os mandatos, o ano inteiro',
+    'o plural vira "mandatos", que e o que a frase quer dizer');
+
+  // Nao inventa troca onde a palavra nao esta.
+  check(t('Bem-vindo a equipe do Capitao Martim.') === 'Bem-vindo a equipe do Capitao Martim.',
+    'texto que ja esta certo fica intacto');
+  check(t('') === '' && t(null) === '', 'texto vazio nao quebra');
+
+  // E o texto de FABRICA ja nasce sem a palavra.
+  const defaults = JSON.stringify(store.DEFAULT_TEMPLATES);
+  check(!/gabinete/i.test(defaults), 'nenhuma resposta de fabrica diz "gabinete"');
 }
 
 fim();

@@ -1442,6 +1442,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **"GABINETE" saiu do vocabulario: e EQUIPE ou ASSESSORIA** (decisao dele, 07/09/2026). Trocar so o
+  texto de FABRICA nao faz a regra chegar nele — as respostas dele estao GRAVADAS, e `store.get` so
+  mescla default em chave que falta (a armadilha do `-contato-assessor`, 04/09). Por isso ha
+  `templates.migrarGabineteParaEquipe` na fila do `list()`. **A concordancia e metade do trabalho**:
+  trocar a palavra e deixar o artigo produz *"falando com o equipe"* saindo para eleitor, entao a
+  lista casa a preposicao junto (`do`->`da`, `ao`->`a`, `nosso`->`nossa`), e o PLURAL vira
+  **mandatos** (*"vale para todos os gabinetes"* fala dos outros parlamentares). **Nao foi trocado
+  de proposito:** o nome interno (`store.ia.gabinete`, `gabinete.js`, o dossie) e o detector de
+  `cortesia` que reconhece *"trabalhar no gabinete"* — ali a palavra e o que A PESSOA escreve. E
+  **detector que casa a palavra antiga para de ver o caso**: `SE_APRESENTANDO` ganhou `equipe` e
+  `assessoria` no mesmo commit, senao continuaria "funcionando" cego.
+
 - **A IA inventa no PRESENTE tambem: "temos adesivos e camisetas disponiveis".** Print do Lucas
   Mendes (07/09/2026): ele perguntou *"como faco para conseguir um bone ou acessorio"* e o rascunho
   abriu afirmando o estoque — *"a IA confirmou algo sem saber"*. E a irma do caso da Sandra (06/09)

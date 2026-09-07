@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.82.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.83.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -183,6 +183,59 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-07 — "Gabinete" saiu do vocabulário: é EQUIPE ou ASSESSORIA (v2.83.0)
+
+Decisão dele: *"não se refira mais a gabinete do Capitão Martim, se refira como assessoria ou
+equipe; a IA deve ficar ciente também, veja nas respostas prontas"*.
+
+### Trocar o texto de fábrica não faria a regra chegar nele
+
+É a armadilha de 04/09 (o `-contato-assessor` que virou valor padrão e nunca alcançou quem já tinha
+o campo salvo): `store.get` só mescla default em chave que **falta**, e as respostas dele estão
+gravadas — editadas, com variantes próprias. Sem uma passada no que está salvo, o texto novo valeria
+para uma instalação nova e para mais ninguém.
+
+Por isso são **três frentes**:
+
+| onde | o que mudou |
+|---|---|
+| **respostas de fábrica** (`store.js`) | *"falando com o gabinete do Capitão Martim"* → **a equipe**; a variante → **a assessoria**; *"todos os gabinetes"* → **todos os mandatos** |
+| **respostas gravadas dele** | `migrarGabineteParaEquipe`, na fila do `list()`, roda uma vez e devolve o que trocou |
+| **a IA** | o prompt proíbe a palavra, e o bloco "Quem é quem" deixou de dizer *"informação do gabinete"* — a palavra estava sendo **ensinada a ela pelo texto que a instrui** |
+
+### A concordância é metade do trabalho
+
+Trocar a palavra e deixar o artigo produz *"falando com o equipe"* — erro de português numa mensagem
+que sai para eleitor. A lista casa a preposição junto: `do`→`da`, `no`→`na`, `ao`→`à`,
+`nosso`→`nossa`, `o`→`a`, e a inicial maiúscula é preservada.
+
+**O plural virou "mandatos", não "equipes"**: *"vale para todos os gabinetes"* fala dos OUTROS
+parlamentares, e "todas as equipes" ali não quer dizer nada.
+
+### Duas asserções invertidas, e as duas estavam certas em cair
+
+Diziam *"diz de quem é o gabinete — é o contexto que faltava"* e *"a metade sem pedido continua se
+apresentando como o gabinete"*. **A apresentação continua obrigatória**; o que mudou foi como este
+mandato se apresenta. Hoje elas exigem `equipe|assessoria do Capit…` e mais uma exige que
+**nenhuma** resposta de fábrica diga "gabinete".
+
+### O detector que ia parar de ver
+
+`SE_APRESENTANDO` (o aviso de "o rascunho está se apresentando no meio de uma conversa") casava
+`gabinete d[oa]`. Com a redação nova ele continuaria "funcionando" e deixaria de ver exatamente o
+caso que existe para ver — entraram `equipe` e `assessoria` junto.
+
+**O que NÃO foi trocado, de propósito:** o nome interno (`store.ia.gabinete`, `gabinete.js`, o
+dossiê) — é chave de dado e nome de arquivo, não texto que alguém lê; e o detector de
+`cortesia.js` que reconhece *"trabalhar no gabinete"*, porque ali a palavra é o que **a pessoa**
+escreve, não nós.
+
+**Custo:** prompt de 4.758 → **4.862 tokens**, ainda acima do mínimo de cache do Haiku.
+
+Nove asserções novas. 15 suítes verdes, os dois verificadores limpos.
 
 ---
 
