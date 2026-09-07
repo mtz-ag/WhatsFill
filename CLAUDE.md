@@ -1454,6 +1454,21 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   **detector que casa a palavra antiga para de ver o caso**: `SE_APRESENTANDO` ganhou `equipe` e
   `assessoria` no mesmo commit, senao continuaria "funcionando" cego.
 
+- **REGRA QUE VIVE NO MEIO DE UM DOCUMENTO DE 3.804 TOKENS E REGRA QUE O MODELO PEQUENO NAO
+  CUMPRE.** Print de 07/09/2026 (o contato que oferecia patrocinio): o rascunho saiu com ~880
+  caracteres, virou aula sobre a lei eleitoral, e ele comparou com o ChatGPT — *"o problema e o
+  modelo haiku?"*. **Medido: o item 22 do padrao DELE ja manda "mensagem simples: 1 a 3 frases"**, e
+  o padrao e **75% do prompt de sistema** (3.804 de 5.005 tokens), entao a regra fica longe do ponto
+  em que o modelo comeca a escrever. A saida e **citar a regra ao lado do pedido**, nunca reescrever
+  o documento dele — mesma razao pela qual a saudacao e o relogio ficam no fim do bloco do contato.
+  O teste exige que o item 22 continue existindo, senao a citacao vira referencia para o que sumiu.
+  **E antes de culpar o modelo, separe as tres causas:** o que o prompt manda e nao e cumprido (aqui
+  o modelo pesa), o que e OBRIGACAO nossa e o outro lado nao tinha (o pedido de dados sai por regra
+  dele de 05/09), e o que o prompt manda e foi cumprido de forma pesada (o bloco da lei 9.504
+  virando aula). **O custo por rascunho, medido:** Haiku US$ 0,0029 quente / US$ 0,0086 frio;
+  Sonnet 5 o dobro; Opus 5 cinco vezes. A conferencia de cidade e US$ 0,0010 e nao cacheia (410
+  tokens, muito abaixo dos 4.096). Trocar de modelo nao e a alavanca do gasto — volume de chamadas
+  e, e o numero real esta no painel.
 - **AUDIO ENCAMINHADO E CONVERSA DE OUTRAS PESSOAS, e a transcricao dele chega igual.** Print da
   Irene (07/09/2026): *"falhou em pegar o texto da transcricao"* — a rodada respondera sozinha
   *"deve ter dado ruim no audio, pode enviar de novo?"*. **Medido na API antes de mexer, e a leitura

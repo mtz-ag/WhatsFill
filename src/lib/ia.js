@@ -797,6 +797,26 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     'ou qualquer bem ou benefício, e vale o ano inteiro. Negar com respeito é o item 9 do padrão',
     'acima; prometer, nunca — nem "vou ver o que consigo".',
     '',
+    /**
+     * **O TAMANHO já estava no padrão dele, e o modelo não o cumpria** — print do contato que
+     * ofereceu patrocínio (07/09/2026). Ele comparou com o que o ChatGPT escreveu para a mesma
+     * conversa: *"deu uma resposta mais de acordo"*. A do rascunho tinha ~880 caracteres e virou
+     * aula sobre a lei eleitoral.
+     *
+     * O item 22 do documento dele diz *"mensagem simples: 1 a 3 frases"* — e está a **3.804
+     * tokens** de distância do ponto em que o modelo começa a escrever, no meio de um documento de
+     * 37 seções. Repetir a regra ao lado do pedido é o que a torna visível para um modelo pequeno:
+     * é o mesmo motivo pelo qual a saudação e o relógio ficam no fim do bloco do contato.
+     *
+     * **Não é reescrever o documento dele** — é citá-lo onde ele é lido. E a segunda frase é o que
+     * o caso pediu: a pergunta era sobre patrocínio, e o modelo respondeu explicando a lei e
+     * listando alternativas que ninguém pediu.
+     */
+    'TAMANHO: siga o item 22 do padrão, e ele é curto. Mensagem simples: 1 a 3 frases. Isto sai no',
+    'WhatsApp, não é ofício.',
+    'Não dê aula sobre regra nem sobre lei, e não liste alternativas que ninguém pediu. Quando algo',
+    'não for possível, uma frase basta — e o resto da mensagem é para a pessoa, não para o assunto.',
+    '',
     'Responda SÓ com o texto do rascunho. Sem aspas, sem título, sem explicação.',
     '',
     /**

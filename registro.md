@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.85.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.86.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -68,6 +68,7 @@ problemas e sem desfecho incoerente.
 | 2.83 | **"Gabinete" saiu do vocabulário: é equipe ou assessoria** — fábrica, migração das respostas dele e prompt. |
 | 2.84 | **A IA disse que o áudio falhou para quem mandou cinco áudios transcritos** — ela respondeu o conteúdo de um áudio ENCAMINHADO. |
 | 2.85 | **A extensão RECONHECE o lote encaminhado** — áudio que não caberia no tempo em que chegou não foi gravado ali. |
+| 2.86 | **A regra de tamanho passou a ser citada onde o modelo lê** — o item 22 do padrão dele estava a 3.804 tokens do pedido. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -197,6 +198,54 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-07 — A regra de tamanho citada onde o modelo lê, e a conta do custo (v2.86.0)
+
+**A print e a pergunta dele:** um contato que se apresenta como criador de conteúdo mandou *"Sim
+Eu Sou PL, já estou trabalhando na Campanha"*, um link do YouTube, *"Veja aí quem é meus
+Patrocinadores Oficial"* e *"Tenho espaço p/ mais Apoiadores com patrocínio"*. O rascunho respondeu
+com ~880 caracteres explicando que a lei eleitoral regula patrocínio e listando como contribuir
+legalmente. Ele apagou, comparou com o que o ChatGPT escreveu para a mesma conversa (*"deu uma
+resposta mais de acordo"*) e perguntou: ***"o problema é o modelo haiku? estou achando o custo alto
+também"***.
+
+### Medido: são três causas, e só uma é o modelo
+
+**1. A regra de tamanho existia e não foi cumprida.** O item 22 do padrão DELE diz *"mensagem
+simples: 1 a 3 frases"*. Ela está no prompt — e está a **3.804 tokens** do ponto em que o modelo
+começa a escrever, no meio de um documento de 37 seções. Medido: o padrão dele é **75% do prompt de
+sistema** (3.804 de 5.005 tokens). Repetir a regra ao lado do pedido é o que a torna visível para
+um modelo pequeno, e é a mesma razão pela qual a saudação e o relógio ficam no fim do bloco do
+contato. **O documento não foi tocado** — a linha nova cita o item 22, e o teste exige que o item
+continue existindo, senão a citação vira referência para o que sumiu.
+
+**2. O pedido de dados é obrigação nossa, e o ChatGPT não a tinha.** Aquele bloco final (`Nome ,
+Cidade` com o exemplo) sai por regra dele de 05/09 (*"faltou detalhes, não pediu dados"*) sempre que
+`pedirDadosNaoCabe` for falso. Boa parte do que separa as duas respostas é isso, e não julgamento
+do modelo.
+
+**3. O bloco da lei 9.504/97 está no prompt, e "patrocínio" o acendeu.** O modelo aplicou a regra
+certa da forma errada: virou aula. A linha nova proíbe explicitamente — *"não dê aula sobre regra
+nem sobre lei, e não liste alternativas que ninguém pediu"*.
+
+### O custo, com número
+
+Medido com o prompt de hoje (5.094 tokens de sistema, ~890 do bloco do contato, ~300 de saída):
+
+| modelo | cache | por rascunho (quente) | frio | por 100 rascunhos |
+|---|---|---|---|---|
+| Haiku 4.5 | pega | **US$ 0,0029** | US$ 0,0086 | **US$ 0,29** |
+| Sonnet 5 | pega | US$ 0,0058 | US$ 0,0173 | US$ 0,58 |
+| Opus 5 | pega | US$ 0,0145 | US$ 0,0432 | US$ 1,45 |
+
+A conferência de cidade é outra chamada, e é barata: **US$ 0,0010** no Haiku (prompt de 410
+tokens, que não cacheia — fica muito abaixo dos 4.096).
+
+**Trocar para o Sonnet 5 dobra o preço do rascunho e continua abaixo de US$ 1 por 100 respostas.**
+Se o gasto do mês dele estiver alto, a conta não fecha pelo rascunho: o suspeito é o **volume de
+chamadas**, e o número real está na tela — o painel mostra o gasto do mês, e o teto é `ia.tetoUsd`.
 
 ---
 

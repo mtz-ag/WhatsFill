@@ -952,4 +952,32 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
   check(p.includes('NUNCA diga que o áudio falhou'), 'e proibe dizer que o audio falhou');
 }
 
+/**
+ * **O tamanho estava no documento dele e o modelo nao o cumpria** — print do contato que ofereceu
+ * patrocinio (07/09/2026), comparada com o que o ChatGPT escreveu para a mesma conversa.
+ *
+ * O item 22 do padrao diz *"mensagem simples: 1 a 3 frases"*, e fica a 3.804 tokens do ponto em
+ * que o modelo comeca a escrever. A regra e citada de novo ao lado do pedido — o mesmo motivo
+ * pelo qual a saudacao e o relogio ficam no fim do bloco do contato.
+ */
+{
+  grupo('o tamanho do rascunho e citado onde o modelo le');
+
+  const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(p.includes('TAMANHO: siga o item 22 do padrão'), 'a regra de tamanho aparece perto do pedido');
+  check(p.includes('1 a 3 frases'), 'com o numero, e nao so a referencia');
+  check(p.includes('Não dê aula sobre regra nem sobre lei'), 'e proibe a aula sobre a lei, que foi o que saiu');
+
+  /**
+   * **O item 22 continua sendo dele, e nao foi reescrito.** Se o documento sumir daqui, esta
+   * repeticao vira uma referencia para um item que nao existe.
+   */
+  check(PADRAO_DE_ATENDIMENTO.includes('## 22. Tamanho e linguagem'),
+    'e o item 22 do documento dele continua no prompt (a repeticao aponta para ele)');
+
+  /** O prompt cresceu; o cache do Haiku so pega acima de 4.096. */
+  check(vaiCachear(tokensAproximados(p), 'claude-haiku-4-5'),
+    'o prompt continua acima do minimo de cache do Haiku');
+}
+
 fim();
