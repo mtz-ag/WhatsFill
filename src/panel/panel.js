@@ -3571,6 +3571,121 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }, CONTADOR_ESPERA_MS);
   }
 
+  /**
+   * **O controle flutuante da rodada: ⏹ parar e ▶ continuar** — pedido dele (07/09/2026).
+   *
+   * *"crie um botão popup de parar a automação e continuar... o de parar vermelho e o de continuar
+   * verde, simples, com ícone play e stop, mesmo estilo de poder arrastar pela tela; ele deve
+   * aparecer sempre que a automação for iniciada"* — e, logo depois: *"atribua o esc para o stop"*.
+   *
+   * **Parar aqui é PAUSAR, e é o que faz o "continuar" existir.** `state.auto.parar` já existia e
+   * ENCERRA a rodada: a fila é perdida e a única saída é começar de novo — não há o que continuar
+   * depois dele. O par play/stop só tem sentido com um estado que segura a rodada onde ela está,
+   * então o botão vermelho levanta `state.auto.pausada` e o laço espera. **"Parar a rodada" (o
+   * encerramento de verdade) continua no cartão da aba Automatizado**, e o rodapé desta janelinha
+   * diz isso — dois botões parecidos com desfechos diferentes é o tipo de coisa que só se resolve
+   * escrevendo qual é qual.
+   *
+   * Ela segue o molde do contador (`wf-pergunta` + `wf-contador`): irmã do painel para sobreviver
+   * ao `transform` que o esconde, arrastável pelo título, com a posição gravada em `controlePos`.
+   */
+  let controleDaRodada = null;
+
+  function abrirControleDaRodada() {
+    if (controleDaRodada) {
+      controleDaRodada.pintar();
+      return;
+    }
+
+    const caixa = h('div', { class: 'wf-pergunta wf-contador wf-controle' });
+    const fundo = h('div', { class: 'wf-pergunta-fundo' }, [caixa]);
+    const barra = h('div', { class: 'wf-pergunta-titulo' }, 'Rodada');
+    caixa.append(barra);
+
+    const estado = h('div', { class: 'wf-controle-estado' }, 'Andando…');
+    caixa.append(estado);
+
+    const linha = h('div', { class: 'wf-pergunta-botoes wf-controle-botoes' });
+    const parar = h('button', { class: 'wf-btn wf-controle-parar', type: 'button', title: 'Parar (Esc)' }, '■ Parar');
+    const seguir = h('button', { class: 'wf-btn wf-controle-seguir', type: 'button', title: 'Continuar' }, '▶ Continuar');
+    linha.append(parar, seguir);
+    caixa.append(linha);
+
+    caixa.append(
+      h('div', { class: 'wf-pergunta-dica' },
+        'Parar aqui SEGURA a rodada onde ela está — nada é enviado até você continuar. Para ' +
+          'encerrar de vez e perder a fila, use "Parar a rodada" na aba Automatizado.')
+    );
+
+    function pintar() {
+      const pausada = !!state.auto.pausada;
+      estado.textContent = pausada ? 'PAUSADA — nada está sendo enviado' : 'Andando…';
+      estado.classList.toggle('wf-controle-pausada', pausada);
+      parar.disabled = pausada;
+      seguir.disabled = !pausada;
+    }
+
+    parar.addEventListener('click', () => {
+      state.auto.pausada = true;
+      pintar();
+      registrarNaRodada('rodada', 'pulado', 'você pausou a rodada (nada sai até continuar).');
+    });
+    seguir.addEventListener('click', () => {
+      state.auto.pausada = false;
+      pintar();
+      registrarNaRodada('rodada', 'pulado', 'você mandou continuar.');
+    });
+
+    /**
+     * **Esc pausa, e só enquanto a rodada anda.**
+     *
+     * Na BOLHA e conferindo `defaultPrevented` de propósito: os editores da Config e o da resposta
+     * escutam Esc na CAPTURA para fechar sem salvar, e a caixa da pergunta já usa Esc como "parar".
+     * Quem tratou primeiro marcou o evento — roubar a tecla deles faria Esc fechar um diálogo E
+     * pausar a rodada com um toque só. Campo de texto continua de fora, pela mesma razão de sempre.
+     */
+    function aoTeclar(ev) {
+      if (ev.key !== 'Escape' || ev.defaultPrevented) return;
+      if (!state.auto.rodando || state.auto.pausada) return;
+      if (ehCampoDeTexto(ev.composedPath?.()[0] || ev.target)) return;
+      ev.preventDefault();
+      state.auto.pausada = true;
+      pintar();
+      registrarNaRodada('rodada', 'pulado', 'você pausou a rodada pelo Esc.');
+    }
+    document.addEventListener('keydown', aoTeclar);
+
+    destinoDaCaixa().append(fundo);
+    tornarArrastavel(caixa, barra, 'controlePos');
+    pintar();
+
+    controleDaRodada = {
+      pintar,
+      fechar() {
+        document.removeEventListener('keydown', aoTeclar);
+        fundo.remove();
+        controleDaRodada = null;
+      },
+    };
+  }
+
+  function fecharControleDaRodada() {
+    controleDaRodada?.fechar();
+  }
+
+  /**
+   * Segura o laço enquanto ela estiver pausada — a metade do botão que fica no motor.
+   *
+   * O `keepalive` já está ligado durante a rodada, então este laço continua rodando com a aba
+   * escondida (aba escondida é aba CONGELADA, e sem áudio nem `setTimeout` dispara). Encerrar a
+   * rodada de verdade continua vencendo a pausa: `state.auto.parar` sai daqui na hora.
+   */
+  async function esperarEnquantoPausada() {
+    while (state.auto.pausada && !state.auto.parar) {
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+
   async function abrirContadorFlutuante() {
     if (contadorFlutuante) return; // uma só: duas janelinhas contando dão dois números
 
@@ -3924,6 +4039,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     let totalDaLista = 0;
 
     while (enviados < limite && !state.auto.parar) {
+      // Pausada pelo ⏹ (ou pelo Esc): segura AQUI, antes de abrir o próximo contato, que é o
+      // único ponto em que a rodada ainda não começou a mexer em ninguém.
+      await esperarEnquantoPausada();
+      if (state.auto.parar) break;
+
       // Diálogo do Material é MODAL: com ele aberto, o clique no item da fila não chega ao item
       // e a rodada terminava dizendo "a fila acabou". Acontecia toda vez que você anexava uma
       // figura no meio da resposta à mão. Esperar é melhor que fechar — o diálogo é seu.
@@ -4082,9 +4202,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.auto.automatico = !!automatico;
     state.auto.rodando = true;
     state.auto.parar = false;
+    // Rodada nova nasce ANDANDO: uma pausa esquecida da rodada anterior faria a próxima parecer
+    // travada, e o motivo estaria numa janelinha que ele fechou.
+    state.auto.pausada = false;
     state.auto.log = [];
     state.auto.semRegra = new Map();
     state.auto.avisouConfirmacao = false;
+    // Pedido dele: aparece SEMPRE que a automação começa, em qualquer uma das rodadas.
+    abrirControleDaRodada();
     renderAll();
 
     // Aba escondida é aba CONGELADA — timer nenhum roda, nem o da plataforma. Sem isto, a
@@ -4117,6 +4242,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // Zerado aqui e não onde foi ligado: o `automatico` vale para a rodada, e uma rodada que
       // termina por erro deixaria a próxima andando sozinha sem ninguém ter marcado nada.
       state.auto.automatico = false;
+      // A janelinha some junto com a rodada — controle de uma coisa que acabou é botão que mente.
+      // No `finally` pelo mesmo motivo do `automatico`: rodada que morre por erro deixaria um ⏹
+      // flutuando na tela para sempre.
+      state.auto.pausada = false;
+      fecharControleDaRodada();
     }
 
     const conta = (tipo) => state.auto.log.filter((l) => l.resultado === tipo).length;

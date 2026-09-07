@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.77.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.78.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -183,6 +183,46 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-07 — O controle da rodada: ⏹ parar e ▶ continuar (v2.78.0)
+
+Pedido dele: *"crie um botão popup de parar a automação e continuar, faça o botão de parar vermelho
+e o botão de continuar verde e simples com ícone play e stop, mesmo estilo de poder arrastar pela
+tela; ele deve aparecer sempre que a automação for iniciada"* — e, em seguida: *"atribua o esc para
+o stop"*.
+
+### "Parar" aqui é PAUSAR, e é o que faz o "continuar" existir
+
+`state.auto.parar` já existia e **encerra**: a fila é perdida e a única saída é começar de novo —
+não há o que continuar depois dele. O par play/stop só tem sentido com um estado que segura a
+rodada onde ela está, então o botão vermelho levanta `state.auto.pausada` e o laço espera **antes de
+abrir o próximo contato**, que é o único ponto em que ainda não se mexeu em ninguém.
+
+**"Parar a rodada" (o encerramento de verdade) continua no cartão da aba Automatizado**, e o rodapé
+da janelinha diz isso: dois botões parecidos com desfechos diferentes só se resolvem escrevendo qual
+é qual.
+
+### Esc
+
+Na BOLHA e conferindo `defaultPrevented`, **não** na captura. Três coisas já escutam Esc: os dois
+editores (Config e resposta) fecham sem salvar, e a caixa da pergunta já usa Esc como "parar".
+Roubar a tecla deles faria um toque fechar o diálogo **e** pausar a rodada. Campo de texto continua
+de fora, pela razão de sempre.
+
+### O resto
+
+Herda `wf-pergunta` + `wf-contador` — a mesma família da janelinha que fica aberta por cima da
+conversa —, então já vem com cor, tema escuro, título que é alça e limite de tela; a posição fica em
+`controlePos`. Os botões são **preenchidos** e não só com a letra colorida: `.wf-danger` pinta o
+texto, e texto vermelho num botão pequeno se perde em cima da conversa.
+
+Aparece no `rodar()`, que é o caminho das três rodadas, e some no `finally` — rodada que morre por
+erro deixaria um ⏹ flutuando para sempre. Rodada nova nasce andando: pausa esquecida faria a
+seguinte parecer travada.
+
+15 suítes verdes, os dois verificadores limpos.
 
 ---
 

@@ -546,3 +546,42 @@
 .wf-pergunta-obs-aviso { font-size: 11.5px; }
 .wf-pergunta-obs-aviso.bom { color: var(--wf-ok, #15803d); }
 .wf-pergunta-obs-aviso.ruim { color: var(--wf-err); font-weight: 600; }
+
+/*
+  O CONTROLE DA RODADA: ⏹ parar e ▶ continuar, arrastável, aberto enquanto a automação anda.
+
+  Pedido dele (07/09/2026): *"crie um botão popup de parar a automação e continuar... o de parar
+  vermelho e o de continuar verde e simples com ícone play e stop, mesmo estilo de poder arrastar
+  pela tela"*.
+
+  Herda `wf-pergunta` + `wf-contador` de propósito: é a mesma família da janelinha que fica ABERTA
+  por cima da conversa, então já vem com a cor, o tema escuro, o título que é alça e o limite de
+  tela. O que muda aqui é só a largura (menor: são dois botões) e as duas cores, que precisam ser
+  reconhecíveis de canto de olho — é para isso que ele os quis coloridos.
+
+  Os botões são PREENCHIDOS e não só coloridos no texto: `.wf-danger` do painel pinta a letra, e
+  letra vermelha num botão pequeno se perde em cima da conversa.
+*/
+.wf-controle.wf-pergunta-solta { width: min(200px, calc(100vw - 32px)); }
+.wf-controle .wf-controle-estado { margin: 6px 0 2px; color: var(--wf-muted); }
+.wf-controle .wf-controle-estado.wf-controle-pausada { color: var(--wf-err); font-weight: 600; }
+.wf-controle .wf-controle-botoes { display: flex; gap: 8px; }
+.wf-controle .wf-controle-botoes button { flex: 1; }
+
+.wf-pergunta-fundo button.wf-controle-parar {
+  background: var(--wf-err);
+  border-color: var(--wf-err);
+  color: #ffffff;
+}
+.wf-pergunta-fundo button.wf-controle-seguir {
+  background: var(--wf-ok);
+  border-color: var(--wf-ok);
+  color: #ffffff;
+}
+/* Desabilitado continua LEGÍVEL: o par diz em que estado a rodada está, e um botão apagado ao
+   ponto de sumir transformaria a janelinha em "só tem um botão". */
+.wf-pergunta-fundo button.wf-controle-parar:disabled,
+.wf-pergunta-fundo button.wf-controle-seguir:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
