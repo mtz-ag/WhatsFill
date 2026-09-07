@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.92.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.93.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,15 +10,15 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.92.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v2.93.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**38 arquivos**),
 **64 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
 tabela. Prompt de sistema do rascunho: **5.290 tokens**, dos quais **72% é o `PADRAO_DE_ATENDIMENTO`
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
-Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **dezessete em
-07/09** (2.76 a 2.92).
+Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **dezoito em
+07/09** (2.76 a 2.93).
 
 ### O que mudou em 07/09, em uma linha cada
 
@@ -41,6 +41,7 @@ Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2
 | 2.90 | **"A IA não escreveu nada" escondia a causa** — o motivo vinha em `avisos` e o painel o jogava fora. |
 | 2.91 | **Resposta da AGENDA: entrar no grupo** — e o link padrão, que era inalcançável sem cidade. |
 | 2.92 | **O dossiê ganhou a chapa inteira e os projetos** — a arte dele confirmou o 10122, e a IA não pesquisa na internet. |
+| 2.93 | **A Cidade que é endereço de máquina é APAGADA do CRM** — a extensão nunca tinha apagado nada. |
 
 As versões de 05 e 06/09 (2.42 a 2.75) estão nas entradas próprias, abaixo. O fio de 07/09 tem duas
 metades: **o controle da rodada** (2.76 a 2.80, que terminou no Esc que a própria extensão apertava)
@@ -97,12 +98,16 @@ reescrever o texto de um aviso sem reescrever a trava a faria deixar de casar em
    seco. **Desde a 2.91 é aqui que a resposta da agenda entra:** cadastrar o anúncio novo em
    Config → *Anúncios do momento* com a ação **"mandar resposta pronta" → "Agenda: entrar no
    grupo"*. O link já está no campo *"Link padrão"*, e é lá que ele troca quando cair.
-4. **A Cidade de quem já foi contaminado — a entrada está fechada desde a 2.88, o passado não.**
-   O aviso *"Cidade escrita fora do padrão"* continua no cabeçalho de quem já tem lixo no campo.
-   Metade se conserta sozinha desde a 2.69 (campo com endereço de máquina + ela mencionando a
-   cidade de novo = o palpite passa a valer) — e **só metade**, porque `ehEnderecoDeMaquina` olha a
-   FORMA, e `mais Apoiadores com patrocínio` não tem forma nenhuma. Quem nunca mais escrever a
-   cidade só se acha pela aba Cidades.
+4. **A Cidade de quem já foi contaminado — a entrada fechou na 2.88, e o passado fecha na 2.93.**
+   Quem tem **endereço de máquina** no campo (`www.threads.com`, `faq.whatsapp.com`,
+   `vt.tiktok.com`) é limpo sozinho na próxima vez que a rodada concluir o contato — não precisa de
+   nada dele. **O que continua precisando dele** é o lixo que não tem FORMA de endereço:
+   `mais Apoiadores com patrocínio` pode ser cidade de outro estado ou abreviação, e apagar por
+   conta própria seria destruir o que alguém preencheu. Esses saem pela aba Cidades, que lista o
+   que não casa com os 497 municípios.
+
+   > **Confira o primeiro que passar.** `writeOne` manda `valueString: ''` e o 200 não prova nada
+   > — se a API ignorar o vazio, o Andamento vai dizer *"a API aceitou mas não gravou"*.
 5. **Config → "Modelo por conteúdo", linha `ADS = Campanha Martim`**: não é mais necessário limpar
    (o código tem o piso `tags.ORIGEM_SEMPRE`), mas continua confundindo a leitura.
 6. **A chave da OpenAI, se ele for usar o ChatGPT.** A 2.89 implementou a API; o que falta é
@@ -250,6 +255,69 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-07 — A cidade errada passou a ser APAGADA (v2.93.0)
+
+Print do **José** — contato do anúncio, etiqueta ADS, campo Cidade valendo **`www.threads.com`**. A
+rodada passou por ele, concluiu, gravou a data de conclusão e **não tocou na Cidade**:
+
+> *"passou por ele, não removeu a cidade errada"*
+
+### Ele apontou o que faltava, não um defeito novo
+
+A 2.88 fechou a **entrada** — palpite pendente não chega mais ao CRM. O que ficou aberto foi o
+**passado**, e a razão é que **a extensão nunca apagou nada**: ela preenche buraco e, desde a 2.69,
+SUBSTITUI o lixo quando a pessoa menciona uma cidade de verdade.
+
+O José não menciona cidade nenhuma — ele mandou o texto do anúncio e um link do Facebook. Então não
+havia o que substituir, e sem "apagar" no vocabulário da extensão o lixo ficava para sempre. **E o
+lixo é nosso**: veio do vazamento que a 2.88 fechou.
+
+### Uma escrita de valor vazio, e só uma
+
+`fields.deveGravarEntrada` passou a aceitar a entrada `limpar`, montada por
+`marcarCidadeParaLimpar`. **Quatro guardas, e cada uma tira um jeito de isto dar errado:**
+
+1. **O critério é a FORMA**, `cities.ehEnderecoDeMaquina`: URL, domínio, e-mail, sequência longa de
+   dígitos. Nenhum dos 497 municípios é nada disso — então apagar não pode apagar dado bom.
+2. **Frase comum NÃO entra.** `mais Apoiadores com patrocínio` (a print de hoje de manhã) pode ser
+   cidade de outro estado, abreviação, ou nome que o parser não conhece. Apagar ali seria destruir o
+   que alguém preencheu, e o lugar disso é a aba Cidades — com ele olhando.
+3. **Roda depois de todo palpite.** Cidade reconhecida na conversa vence a limpeza: **substituir é
+   melhor que apagar.**
+4. **Fica fora da gravação automática** (`somenteExatos`), que dispara a cada abertura de contato.
+   Apagar é destrutivo e pede ato deliberado — a conclusão, ou o Salvar. Todo contato que a rodada
+   trata é concluído, então a limpeza acontece de qualquer jeito.
+
+Metade das asserções do teste é sobre o que **não** pode ser apagado. É onde mora o risco.
+
+### Dois defeitos que o conserto teria criado
+
+**`mesmoValor` devolvia FALSO para vazio.** A conferência relê o contato e comparava
+`doCrm == null` como *"não gravou"* — campo apagado volta ausente, então a limpeza que
+**funcionou** seria reportada como falha. Alarme falso na única escrita que apaga dado é o pior
+lugar possível para um.
+
+**O cabeçalho ficaria mudo.** Com o valor virando vazio, a linha "Cidade:" some e o aviso de grafia
+some junto — enquanto o CRM continua com o lixo até a conclusão gravar. Hoje o cabeçalho diz
+*"Cidade `www.threads.com` vai ser APAGADA do CRM ao concluir"*, e o Andamento registra
+`apagando do CRM: Cidade ("www.threads.com")`.
+
+### O que não dá para saber daqui
+
+**Se a API aceita apagar.** `writeOne` manda `valueString: ''` e o 200 não prova nada — é a
+armadilha do topo do `CLAUDE.md`. O que responde é a conferência, que relê o contato: se a API
+ignorar o vazio, a linha *"a API aceitou mas não gravou"* aparece **no primeiro contato**, e não em
+silêncio. **Confira o primeiro que passar.**
+
+**Arquivos:** `src/lib/fields.js` (a entrada `limpar`), `src/panel/panel.js`
+(`marcarCidadeParaLimpar`, o `mesmoValor`, a linha do cabeçalho, o log e o palpite vencendo a
+marca), `tests/contract.test.mjs` (+14), `CLAUDE.md` (+3 armadilhas), `manifest.json`
+(2.92.0 → 2.93.0). Quinze suítes e os dois verificadores.
+
+**O quadro dele não muda.**
+
 ---
 
 ## 2026-09-07 — A chapa inteira e os projetos entram no dossiê (v2.92.0)

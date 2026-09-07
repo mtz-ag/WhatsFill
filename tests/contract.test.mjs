@@ -230,6 +230,56 @@ grupo('palpite PENDENTE nunca vai para o CRM');
   );
 }
 
+grupo('a LIMPEZA e a unica escrita de valor vazio (07/09/2026)');
+{
+  const { deveGravarEntrada } = await lib('fields.js');
+  const cities = await lib('cities.js');
+
+  /**
+   * Print do Jose: o campo Cidade dele valia `www.threads.com`, a rodada passou e concluiu —
+   * *"passou por ele, nao removeu a cidade errada"*.
+   *
+   * A extensao nunca apagou nada: preenche buraco e, desde a 2.69, substitui lixo quando a pessoa
+   * menciona uma cidade de verdade. Quem nunca mais menciona ficava com o lixo para sempre — e o
+   * lixo foi escrito pela propria extensao, no vazamento que a 2.88 fechou.
+   */
+  const limpar = { value: '', from: 'limpar', limpar: true, limpando: 'www.threads.com' };
+  check(deveGravarEntrada(limpar), 'a limpeza grava, mesmo com valor vazio');
+  check(
+    !deveGravarEntrada(limpar, { somenteExatos: true }),
+    'mas NAO na gravacao automatica: apagar e destrutivo e pede ato deliberado'
+  );
+
+  // Vazio que nao e limpeza continua sendo "nada para gravar".
+  check(!deveGravarEntrada({ value: '', from: 'manual' }), 'campo vazio sem a marca nao grava');
+
+  /**
+   * **O criterio e a FORMA, e e isso que torna apagar seguro.** Nenhum dos 497 municipios e URL,
+   * dominio, e-mail ou sequencia de digitos — entao apagar nao pode apagar dado bom.
+   */
+  for (const lixo of ['www.threads.com', 'faq.whatsapp.com', 'vt.tiktok.com', 'https://x.com/a', '51999649102']) {
+    check(await cities.ehEnderecoDeMaquina(lixo), `apaga: ${lixo}`);
+  }
+
+  /**
+   * **E o que NAO pode ser apagado** — metade do teste, porque e onde mora o risco.
+   *
+   * Frase comum que nao casa com municipio (a print de 07/09 de manha) fica: pode ser cidade de
+   * outro estado, abreviacao, ou nome que o parser nao conhece. Apagar ali seria destruir o que
+   * alguem preencheu, e o lugar disso e a aba Cidades — com ele olhando.
+   */
+  for (const bom of [
+    'mais Apoiadores com patrocínio',
+    'Curitiba',
+    'S.do Livramento',
+    'Santo Antônio da Patrulha',
+    'Porto Alegre',
+    'nao sei',
+  ]) {
+    check(!(await cities.ehEnderecoDeMaquina(bom)), `NAO apaga: ${bom}`);
+  }
+}
+
 grupo('sem contrato próprio, tipo delicado recusa em vez de cair no de texto');
 {
   const { contractFor } = await lib('fields.js');

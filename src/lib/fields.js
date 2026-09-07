@@ -102,6 +102,27 @@ export function deveGravarEntrada(entry, { somenteExatos = false } = {}) {
   if (entry.from === 'crm') return false;
   // Palpite esperando confirmação: dele, ou da IA. Nunca gravado sozinho.
   if (entry.pendente) return false;
+
+  /**
+   * **A LIMPEZA é a única escrita de valor vazio que existe** — print do José (07/09/2026), cujo
+   * campo Cidade valia `www.threads.com`: *"passou por ele, não removeu a cidade errada"*.
+   *
+   * A extensão nunca APAGOU nada: ela preenche buraco e, desde a 2.69, substitui lixo quando a
+   * pessoa menciona uma cidade de verdade. Quem nunca mais menciona ficava com o lixo para sempre
+   * — e o lixo foi escrito pela própria extensão (o vazamento fechado na 2.88).
+   *
+   * **Só vale para o que é lixo por FORMA** (`cities.ehEnderecoDeMaquina`): URL, domínio, e-mail,
+   * sequência longa de dígitos. Nenhum dos 497 municípios é nada disso, então apagar não pode
+   * apagar dado bom. Frase comum que não casa com município (*"mais Apoiadores com patrocínio"*)
+   * **não entra**: pode ser cidade de outro estado, abreviação ou nome que o parser não conhece, e
+   * apagar aí seria destruir o que alguém preencheu.
+   *
+   * **Fica fora da gravação automática** (`somenteExatos`), que roda a cada abertura de contato:
+   * apagar é destrutivo, e destrutivo pede ato deliberado — a conclusão, ou o Salvar. Todo contato
+   * que a rodada trata é concluído, então a limpeza acontece de qualquer jeito.
+   */
+  if (entry.limpar) return !somenteExatos;
+
   if (somenteExatos && !(entry.from === 'palpite' && entry.confidence === 'exata')) return false;
   const valor = entry.value;
   if (valor == null || valor === '') return false;

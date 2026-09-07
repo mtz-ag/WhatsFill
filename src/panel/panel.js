@@ -715,6 +715,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
       // Depois do parser: o que a pessoa escreveu vale mais que o formato do cadastro.
       await corrigirNomeComCidade(nomeField);
+      marcarCidadeParaLimpar(classify);
       await refreshTagSuggestions();
 
       // Modelos aprovados: falha aqui não pode derrubar o carregamento do contato.
@@ -1294,6 +1295,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /**
+   * **Cidade que é endereço de máquina vai ser APAGADA do CRM.**
+   *
+   * Print do José (07/09/2026): campo Cidade valendo `www.threads.com`, a rodada passou por ele e
+   * concluiu — *"passou por ele, não removeu a cidade errada"*. Estava certo: a extensão nunca
+   * apagou nada. Ela preenche buraco, e desde a 2.69 substitui lixo **quando a pessoa menciona uma
+   * cidade de verdade**. Quem nunca mais menciona ficava com o lixo para sempre.
+   *
+   * E o lixo é nosso: veio do vazamento que a 2.88 fechou. Isto é o conserto do passado que aquela
+   * entrada deixou aberto.
+   *
+   * **Roda DEPOIS de todo palpite**, de propósito: cidade reconhecida na conversa vence a limpeza,
+   * porque substituir é melhor que apagar. Chegando aqui, ninguém tinha nada melhor a pôr.
+   *
+   * O valor antigo fica em `limpando` para a tela e o log poderem nomear o que saiu — `value` já é
+   * vazio, e log que não diz o que apagou é log que não serve.
+   */
+  function marcarCidadeParaLimpar(classify) {
+    const campo = (classify || state.classify).find((f) => f.name === 'Cidade');
+    const atual = campo && state.draft[campo.id];
+    if (!atual || atual.from !== 'crm') return;
+    if (!cities.ehEnderecoDeMaquina(atual.value)) return;
+
+    state.draft[campo.id] = { value: '', from: 'limpar', limpar: true, limpando: atual.value };
+  }
+
+  /**
    * O aviso de troca de cidade, para a pergunta da rodada. Vazio quando não houve troca.
    *
    * Substituir cidade é a única coisa que a extensão reescreve por cima do CRM — então ela
@@ -1337,7 +1364,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * E abrir a porta **não grava nada**: o palpite entra como `pendente`, e quem decide continua
      * sendo a IA (no automatizado) ou a caixa, que é a regra dele desde sempre.
      */
-    const lixoNoCampo = atual.from === 'crm' && cities.ehEnderecoDeMaquina(atual.value);
+    /**
+     * `from: 'limpar'` conta como lixo aqui, e a linha existe por causa do
+     * `reexaminarMensagens`: na segunda passada o campo já está marcado para apagar, e sem isto uma
+     * cidade que ela mencionasse depois deixaria de substituir — o conserto da 2.69 valeria só na
+     * primeira leitura. **Substituir é sempre melhor que apagar.**
+     */
+    const lixoNoCampo =
+      atual.from === 'limpar' || (atual.from === 'crm' && cities.ehEnderecoDeMaquina(atual.value));
     if (!guess.informada && !lixoNoCampo) return false;
 
     return cities.normalize(atual.value) !== cities.normalize(guess.value);
@@ -1436,6 +1470,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     const cidade = valueNamed('Cidade');
     if (cidade) header.append(h('div', { class: 'wf-sub' }, [document.createTextNode('Cidade: '), ...cidadeMarcada()]));
+
+    /**
+     * **A limpeza da cidade tem que APARECER.** Sem esta linha o cabeçalho ficava MUDO: a linha
+     * "Cidade:" some (o valor virou vazio) e o aviso de grafia some junto — e o CRM continua com o
+     * lixo até a conclusão gravar. Estado invisível numa escrita que APAGA é o pior lugar possível
+     * para esconder algo.
+     */
+    const paraLimpar = (() => {
+      const campo = fieldNamed('Cidade');
+      const e = campo && state.draft[campo.id];
+      return e?.limpar ? e.limpando : '';
+    })();
+    if (paraLimpar) {
+      header.append(
+        h('div', { class: 'wf-block' },
+          `Cidade "${paraLimpar}" vai ser APAGADA do CRM ao concluir — não é nome de lugar, é ` +
+            'endereço de máquina. Se a pessoa disser de onde é, a cidade dela entra no lugar.')
+      );
+    }
 
     /**
      * Aviso de grafia, no cabeçalho — que é onde ele olha ao abrir o atendimento.
@@ -8416,9 +8469,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // Quem decide o que entra é `fields.deveGravarEntrada` — inclusive a guarda do `pendente`,
     // que faltava aqui e por onde um palpite de cidade chegou ao CRM sem ninguém confirmar.
     const changes = {};
+    const limpando = [];
     for (const field of state.classify) {
       const entry = state.draft[field.id];
-      if (fieldsLib.deveGravarEntrada(entry, { somenteExatos })) changes[field.id] = entry.value;
+      if (!fieldsLib.deveGravarEntrada(entry, { somenteExatos })) continue;
+      changes[field.id] = entry.value;
+      if (entry.limpar) limpando.push(`${field.name} ("${entry.limpando}")`);
+    }
+    /**
+     * A limpeza é a única escrita que APAGA, então ela é dita — na tela e no Andamento. Escrita
+     * destrutiva silenciosa é o que faria ele descobrir pela ausência do dado.
+     */
+    if (limpando.length && state.auto?.rodando) {
+      registrarNaRodada(
+        state.contact?.name || 'contato',
+        'aviso',
+        `apagando do CRM: ${limpando.join(', ')} — não é nome de lugar`
+      );
     }
 
     // Data de conclusão só preenche buraco, nunca reescreve: um contato concluído em 05/08 não
@@ -8576,6 +8643,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
   /** Data volta com hora, múltipla escolha volta fora de ordem — nada disso é diferença real. */
   function mesmoValor(doCrm, esperado) {
+    /**
+     * **Vazio esperado, vazio no CRM: gravou.**
+     *
+     * `doCrm == null` devolvia `false` antes desta linha, e a limpeza da cidade escreve `''` — o
+     * campo apagado volta do CRM como ausente ou vazio, e a conferência acusaria
+     * *"a API aceitou mas não gravou"* justamente quando funcionou. Alarme falso na única escrita
+     * que apaga dado é o pior lugar possível para um.
+     */
+    const vazio = (v) => v == null || v === '' || (Array.isArray(v) && !v.length);
+    if (vazio(esperado)) return vazio(doCrm);
+
     if (doCrm == null) return false;
     if (Array.isArray(esperado) || Array.isArray(doCrm)) {
       const a = [...(Array.isArray(doCrm) ? doCrm : [doCrm])].sort();

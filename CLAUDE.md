@@ -2584,6 +2584,28 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   de problema, e no Haiku isso apareceria em 100% das chamadas estando tudo certo. **Alarme que
   toca sempre é alarme que se aprende a ignorar** — e aí não toca no dia em que é de verdade.
   Mexeu no tamanho do prompt ou no modelo? O teste de `vaiCachear` trava os dois lados.
+- **A EXTENSAO NUNCA APAGOU NADA, e o lixo que ela mesma gravou ficava para sempre.** Print do Jose
+  (07/09/2026), campo Cidade valendo `www.threads.com`: *"passou por ele, nao removeu a cidade
+  errada"*. Ela preenche buraco e, desde a 2.69, SUBSTITUI lixo quando a pessoa menciona uma cidade
+  de verdade — quem nunca mais menciona nao tinha conserto nenhum. Hoje `fields.deveGravarEntrada`
+  aceita **uma** escrita de valor vazio, a entrada `limpar`, e ela e montada por
+  `marcarCidadeParaLimpar`. **Quatro guardas:** o criterio e a FORMA
+  (`cities.ehEnderecoDeMaquina` — nenhum dos 497 municipios e URL, dominio, e-mail ou sequencia de
+  digitos, entao apagar nao pode apagar dado bom); **frase comum NAO entra** (*"mais Apoiadores com
+  patrocinio"* pode ser cidade de outro estado ou abreviacao, e o lugar dela e a aba Cidades, com
+  ele olhando); roda **depois de todo palpite**, porque substituir e melhor que apagar; e fica
+  **fora do `somenteExatos`**, que dispara a cada abertura de contato — apagar pede ato deliberado.
+  Metade das assercoes do teste e sobre o que NAO pode ser apagado.
+- **`mesmoValor` devolvia FALSO para vazio, e isso daria alarme na unica escrita que apaga.** A
+  conferencia relê o contato e comparava `doCrm == null` como "nao gravou" — campo apagado volta
+  ausente, entao a limpeza que FUNCIONOU seria reportada como falha. E **a conferencia e o que
+  responde se a API aceita apagar**: `writeOne` manda `valueString: ''` e o 200 nao prova nada
+  (a armadilha registrada no topo deste arquivo). Se a API ignorar o vazio, a linha
+  *"a API aceitou mas nao gravou"* aparece no primeiro contato — e nao em silencio.
+- **Escrita que APAGA tem que aparecer na tela.** Sem a linha nova no cabecalho ele ficava mudo: a
+  linha "Cidade:" some (o valor virou vazio) e o aviso de grafia some junto, enquanto o CRM
+  continua com o lixo ate a conclusao gravar. Hoje o cabecalho diz o que vai ser apagado, e o
+  Andamento registra `apagando do CRM: <campo> ("<valor>")`.
 - **A IA NAO PESQUISA NA INTERNET, e o dossie e o lugar onde a pesquisa entra REVISADA.** Pergunta
   dele (07/09/2026): *"a ia nao pesquisa na internet quando falta informacoes?"*. Nao — zero
   `tools` nos tres corpos de requisicao, e e uma chamada so. O que existe e `src/data/gabinete.md`,
