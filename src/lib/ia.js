@@ -282,6 +282,93 @@ export function montarContato({ mensagens = [], campos = {}, etiquetas = [], ago
  */
 const MODELOS_COM_ESFORCO = new Set(['claude-opus-5', 'claude-sonnet-5', 'claude-fable-5']);
 
+// ---------------------------------------------------------------------------
+// Provedor — Anthropic ou OpenAI
+// ---------------------------------------------------------------------------
+
+/**
+ * **O provedor sai do NOME DO MODELO, e não de uma segunda configuração.**
+ *
+ * Pedido dele (07/09/2026): *"faça agora a implementação para utilizar a api do chatgpt"*, depois
+ * de comparar os custos — *"o chatgpt continua dando respostas melhores"*.
+ *
+ * Poderia ser um campo "provedor" na Config ao lado do campo "modelo". Não é, e a razão está
+ * registrada no `CLAUDE.md` duas vezes: **dois controles para a mesma coisa divergem**, e a
+ * divergência aqui seria muda — provedor Anthropic com modelo `gpt-5` dá 400, e o painel diria
+ * *"a API recusou"* sem dizer que o problema é a combinação. O nome do modelo já identifica a casa
+ * sem ambiguidade, então ele é a única escolha.
+ *
+ * **`o1`/`o3` entram** porque a família de raciocínio da OpenAI não começa com `gpt`. Nada mais é
+ * reconhecido: modelo com nome estranho cai em Anthropic, que é onde a chave dele já está.
+ */
+export const PROVEDOR_ANTHROPIC = 'anthropic';
+export const PROVEDOR_OPENAI = 'openai';
+
+export function provedorDoModelo(modelo) {
+  return /^(gpt-|o[1-9]|chatgpt)/i.test(String(modelo || '').trim()) ? PROVEDOR_OPENAI : PROVEDOR_ANTHROPIC;
+}
+
+/**
+ * Onde a chave de cada provedor mora no armazenamento.
+ *
+ * **`iaChave` continua sendo a da Anthropic** — renomear apagaria a chave que ele já tem salva,
+ * porque `store.get` só mescla o padrão em chave que FALTA (a armadilha do `-contato-assessor`).
+ * As duas convivem: trocar de modelo não pode obrigar a colar chave de novo.
+ */
+export const CHAVE_DO_PROVEDOR = {
+  [PROVEDOR_ANTHROPIC]: 'iaChave',
+  [PROVEDOR_OPENAI]: 'iaChaveOpenai',
+};
+
+/** O nome que aparece na tela, por provedor. */
+export const NOME_DO_PROVEDOR = {
+  [PROVEDOR_ANTHROPIC]: 'Anthropic (Claude)',
+  [PROVEDOR_OPENAI]: 'OpenAI (ChatGPT)',
+};
+
+/**
+ * Modelos da OpenAI que aceitam `reasoning_effort`.
+ *
+ * **Lista de permissão, pela lição do `effort` da Anthropic:** o Haiku 4.5 RECUSA o parâmetro com
+ * 400, e a lista inversa faria todo modelo futuro nascer quebrado. Quem não está aqui roda sem o
+ * parâmetro — que é o padrão do modelo, e não uma degradação. Vale também para o modelo que ele
+ * digitar à mão: nascer sem o parâmetro é o lado barato do erro.
+ */
+const MODELOS_COM_RACIOCINIO = new Set(['gpt-5', 'gpt-5-mini', 'gpt-5-nano']);
+
+/**
+ * O esquema JSON no formato que o **strict mode** da OpenAI exige.
+ *
+ * Duas exigências que os nossos esquemas não cumprem, e por isso esta função existe:
+ *
+ *  - **toda propriedade tem que estar em `required`.** Os três esquemas daqui deixam campos
+ *    opcionais de propósito (`templateId` só vale quando a ação é responder, `cidade` só quando é
+ *    corrigir, `motivo` é enfeite útil) — e o strict mode recusa o esquema inteiro por causa
+ *    disso, com 400. Exigir tudo não muda nada do nosso lado: `validarDecisao`, `validarCidade` e
+ *    `validarRascunho` já tratam campo vazio, porque a IA sempre pôde mandar string vazia;
+ *  - **`additionalProperties: false` em todo objeto**, inclusive nos aninhados.
+ *
+ * **`enum` vazio é removido.** `esquemaDaDecisao([])` produz `enum: []`, que não casa com valor
+ * nenhum: o modelo não teria o que responder e a chamada seria paga para nada.
+ *
+ * Não muta a entrada — o esquema original continua servindo a Anthropic na mesma chamada.
+ */
+export function esquemaEstrito(schema) {
+  if (!schema || typeof schema !== 'object') return schema;
+  if (Array.isArray(schema)) return schema.map(esquemaEstrito);
+
+  const out = {};
+  for (const [k, v] of Object.entries(schema)) {
+    if (k === 'enum' && Array.isArray(v) && !v.length) continue;
+    out[k] = v && typeof v === 'object' ? esquemaEstrito(v) : v;
+  }
+  if (out.type === 'object' && out.properties && typeof out.properties === 'object') {
+    out.additionalProperties = false;
+    out.required = Object.keys(out.properties);
+  }
+  return out;
+}
+
 /**
  * Prefixo mínimo, em tokens, para o `cache_control` valer alguma coisa em cada modelo.
  *
@@ -298,6 +385,12 @@ export const CACHE_MINIMO_TOKENS = {
   'claude-opus-5': 512,
   'claude-sonnet-5': 1024,
   'claude-haiku-4-5': 4096,
+  // Na OpenAI o cache é AUTOMÁTICO e o mínimo é 1.024 para todos — não se pede, não se paga para
+  // escrever, e o desconto de leitura é o mesmo 10%. Com o prompt de hoje (~5.300 tokens) pega
+  // em qualquer um dos três.
+  'gpt-5': 1024,
+  'gpt-5-mini': 1024,
+  'gpt-5-nano': 1024,
 };
 
 /** Tamanho aproximado do prompt de sistema hoje, em tokens. Português: ~3,5 chars por token. */
@@ -320,14 +413,72 @@ export function vaiCachear(modelo, tokensDoSistema) {
 function saida(modelo, esforco, format) {
   return MODELOS_COM_ESFORCO.has(modelo) ? { effort: esforco, format } : { format };
 }
-export function montarRequisicao({ sistema, contato, ids, modelo = MODELO_PADRAO }) {
+
+/**
+ * **O corpo da requisição, para as duas casas** — um lugar só, porque os três pedidos (decisão,
+ * rascunho, cidade) diferem apenas no esquema, no teto de saída e no esforço.
+ *
+ * O que é IGUAL nos dois e não aparece aqui: o texto. `montarSistema*` e `montarContato*` são
+ * português puro e não sabem de provedor nenhum — é o que torna a troca de API contida.
+ *
+ * **As quatro diferenças que importam:**
+ *
+ *  1. o sistema vai em `messages[0]` com `role: 'system'`, e não num campo próprio;
+ *  2. o esquema vai em `response_format.json_schema` com `strict: true` — e por isso passa pelo
+ *     `esquemaEstrito`;
+ *  3. **`max_completion_tokens`, nunca `max_tokens`**: a família GPT-5 RECUSA o nome antigo com
+ *     400. É a mesma classe de armadilha do `effort` no Haiku;
+ *  4. **nada de `cache_control`**: na OpenAI o cache é automático a partir de 1.024 tokens de
+ *     prefixo, não se pede e **não se paga para escrever**. Mandar o campo daria 400.
+ */
+function corpo({ sistema, contato, modelo, esquema, nome, esforco, maxTokens }) {
+  if (provedorDoModelo(modelo) === PROVEDOR_OPENAI) {
+    const body = {
+      model: modelo,
+      messages: [
+        { role: 'system', content: sistema },
+        { role: 'user', content: contato },
+      ],
+      max_completion_tokens: maxTokens,
+      response_format: {
+        type: 'json_schema',
+        json_schema: { name: nome, strict: true, schema: esquemaEstrito(esquema) },
+      },
+    };
+    /**
+     * **O raciocínio é cobrado como SAÍDA e cabe DENTRO do teto** — a armadilha do Opus 5, que
+     * custou uma sessão de diagnóstico, na casa da OpenAI. Com os 512 da conferência de cidade, o
+     * raciocínio consome a cota e o JSON sai truncado: **chamada paga que devolve nada**.
+     *
+     * O piso é seguro porque teto não é gasto: paga-se pelo token produzido, não pelo limite. E é
+     * o `reasoning_effort: 'low'` que segura a conta de verdade.
+     */
+    if (MODELOS_COM_RACIOCINIO.has(modelo)) {
+      body.reasoning_effort = esforco;
+      body.max_completion_tokens = Math.max(maxTokens, 2048);
+    }
+    return body;
+  }
+
   return {
     model: modelo,
-    max_tokens: 2048,
+    max_tokens: maxTokens,
     system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: contato }],
-    output_config: saida(modelo, 'low', { type: 'json_schema', schema: esquemaDaDecisao(ids) }),
+    output_config: saida(modelo, esforco, { type: 'json_schema', schema: esquema }),
   };
+}
+
+export function montarRequisicao({ sistema, contato, ids, modelo = MODELO_PADRAO }) {
+  return corpo({
+    sistema,
+    contato,
+    modelo,
+    esquema: esquemaDaDecisao(ids),
+    nome: 'decisao',
+    esforco: 'low',
+    maxTokens: 2048,
+  });
 }
 
 /**
@@ -515,15 +666,17 @@ export function montarContatoCidade({ mensagens = [], candidato = '', origem = '
 }
 
 export function montarRequisicaoCidade({ sistema, contato, modelo = MODELO_PADRAO }) {
-  return {
-    model: modelo,
+  return corpo({
+    sistema,
+    contato,
+    modelo,
+    esquema: esquemaDaCidade(),
+    nome: 'cidade',
+    esforco: 'low',
     // Conferência de um campo: a saída são três palavras e uma frase. Teto baixo é economia real
     // quando isto roda uma vez por contato da fila.
-    max_tokens: 512,
-    system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
-    messages: [{ role: 'user', content: contato }],
-    output_config: saida(modelo, 'low', { type: 'json_schema', schema: esquemaDaCidade() }),
-  };
+    maxTokens: 512,
+  });
 }
 
 /** Sem acento e sem caixa — o fallback de `validarCidade` quando ninguém passa o do `cities.js`. */
@@ -919,13 +1072,15 @@ export function esquemaDoRascunho() {
 }
 
 export function montarRequisicaoRascunho({ sistema, contato, modelo = MODELO_PADRAO }) {
-  return {
-    model: modelo,
-    max_tokens: 4096,
-    system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
-    messages: [{ role: 'user', content: contato }],
-    output_config: saida(modelo, 'medium', { type: 'json_schema', schema: esquemaDoRascunho() }),
-  };
+  return corpo({
+    sistema,
+    contato,
+    modelo,
+    esquema: esquemaDoRascunho(),
+    nome: 'rascunho',
+    esforco: 'medium',
+    maxTokens: 4096,
+  });
 }
 
 /**
@@ -1521,6 +1676,18 @@ export const PRECOS_USD_POR_MTOK = {
   'claude-opus-5': { entrada: 5, saida: 25 },
   'claude-sonnet-5': { entrada: 2, saida: 10 },
   'claude-haiku-4-5': { entrada: 1, saida: 5 },
+
+  /**
+   * OpenAI — preços lidos na página oficial em 07/09/2026, e é a mesma tabela com que a
+   * comparação foi entregue a ele naquele dia.
+   *
+   * **Escrever no cache é de graça** (`cacheEscrita: 0`), ao contrário da Anthropic, que cobra
+   * 1,25×. É o que faz a coluna FRIA — o caso comum numa rodada espaçada — favorecer mais a
+   * OpenAI do que a quente.
+   */
+  'gpt-5': { entrada: 1.25, saida: 10, cacheEscrita: 0 },
+  'gpt-5-mini': { entrada: 0.25, saida: 2, cacheEscrita: 0 },
+  'gpt-5-nano': { entrada: 0.05, saida: 0.4, cacheEscrita: 0 },
 };
 
 /** Leitura de cache custa 10% da entrada; escrita custa 1,25× (TTL de 5 min). */
@@ -1542,10 +1709,15 @@ export function custoEmDolares(uso, modelo = MODELO_PADRAO) {
     PRECOS_USD_POR_MTOK[modelo] ||
     Object.values(PRECOS_USD_POR_MTOK).reduce((a, b) => (b.saida > a.saida ? b : a));
 
+  // Os fatores de cache são POR MODELO, com o da Anthropic como padrão: na OpenAI escrever no
+  // cache não custa nada, e cobrar 1,25× por isso inflaria o teto sem nenhum erro aparecer.
+  const fEscrita = p.cacheEscrita === undefined ? FATOR_CACHE_ESCRITA : p.cacheEscrita;
+  const fLeitura = p.cacheLeitura === undefined ? FATOR_CACHE_LEITURA : p.cacheLeitura;
+
   const M = 1e6;
   const entrada = (Number(uso.entrada) || 0) * p.entrada;
-  const escrito = (Number(uso.cacheEscrito) || 0) * p.entrada * FATOR_CACHE_ESCRITA;
-  const lido = (Number(uso.cacheLido) || 0) * p.entrada * FATOR_CACHE_LEITURA;
+  const escrito = (Number(uso.cacheEscrito) || 0) * p.entrada * fEscrita;
+  const lido = (Number(uso.cacheLido) || 0) * p.entrada * fLeitura;
   const saida = (Number(uso.saida) || 0) * p.saida;
 
   return (entrada + escrito + lido + saida) / M;

@@ -269,6 +269,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     ia: { ligada: false, modelo: 'claude-opus-5', regras: '' },
     /** Só se EXISTE chave, nunca a chave: chave visível no painel é chave que aparece em print. */
     iaTemChave: false,
+    /**
+     * Quais provedores têm chave salva — `{anthropic, openai}`.
+     *
+     * `iaTemChave` continua existindo e significa **"há chave para o modelo ESCOLHIDO"**, que é a
+     * pergunta que os cinco pontos de decisão do painel fazem. Ter a chave do outro provedor não
+     * ajuda em nada: cada uma é recusada pela outra API.
+     */
+    iaChaves: { anthropic: false, openai: false },
     busy: false,
     lastSendAt: 0,
     error: null,
@@ -527,7 +535,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.auto.cfg = await store.get('auto');
     state.ia = await store.get('ia');
     state.fluxo = await store.get('fluxo');
-    state.iaTemChave = !!(await store.get('iaChave'));
+    await lerChavesDaIA();
     state.templates = await templatesLib.list();
     renderAll();
 
@@ -1333,6 +1341,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!guess.informada && !lixoNoCampo) return false;
 
     return cities.normalize(atual.value) !== cities.normalize(guess.value);
+  }
+
+  /**
+   * Lê quais provedores têm chave e resolve `iaTemChave` para o modelo escolhido.
+   *
+   * **Um lugar só, porque a conta é feita em três** (a carga inicial, a releitura da Config e a
+   * troca de modelo) — e três leituras separadas divergem na primeira caixa nova, que é a lição
+   * do `rodadaAutomatica()`.
+   */
+  async function lerChavesDaIA() {
+    state.iaChaves = {
+      anthropic: !!(await store.get('iaChave')),
+      openai: !!(await store.get('iaChaveOpenai')),
+    };
+    state.iaTemChave = !!state.iaChaves[iaLib.provedorDoModelo(state.ia?.modelo || iaLib.MODELO_PADRAO)];
   }
 
   function fieldNamed(name) {
@@ -2825,9 +2848,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // Caixa marcada que não faz nada é a armadilha que este painel já pagou: sem chave, a IA não
     // roda, e a rodada segue só com as regras.
     if (state.ia?.ligada && !state.iaTemChave) {
+      // Diz o PROVEDOR: com dois, "não há chave salva" manda procurar no campo errado — e o campo
+      // do outro pode estar cheio, o que faz o aviso parecer defeito do painel.
+      const prov = iaLib.NOME_DO_PROVEDOR[iaLib.provedorDoModelo(state.ia?.modelo || iaLib.MODELO_PADRAO)];
       card.append(
         h('div', { class: 'wf-block' },
-          'A IA está ligada mas não há chave salva — cadastre na aba Config, senão ela não escreve nada.')
+          `A IA está ligada mas não há chave da ${prov} salva — o modelo escolhido é dessa casa. ` +
+            'Cadastre na aba Config, senão ela não escreve nada.')
       );
     }
     return card;
@@ -9802,16 +9829,87 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           : 'A avaliação por IA está DESLIGADA. O interruptor fica na aba Automatizado, junto do botão de começar.')
     );
 
+    /**
+     * **O MODELO vem antes da chave nesta tela, e a ordem é a explicação.**
+     *
+     * São dois provedores desde 07/09/2026 (pedido dele: *"faça agora a implementação para
+     * utilizar a api do chatgpt"*), e o que decide a casa é o modelo escolhido — não há um campo
+     * "provedor", porque dois controles para a mesma coisa divergem. Então o campo da chave que
+     * aparece embaixo é o do provedor DESTE modelo: trocar o modelo troca o campo.
+     */
+    const modeloAtual = cfg.modelo || iaLib.MODELO_PADRAO;
+    const provedorAtual = iaLib.provedorDoModelo(modeloAtual);
+
+    const selModelo = h('select', {});
+    for (const [casa, modelos] of [
+      ['Anthropic (Claude)', [
+        ['claude-haiku-4-5', 'Haiku 4.5 — o mais barato (~US$ 2,50 por mil contatos)'],
+        ['claude-sonnet-5', 'Sonnet 5 — meio-termo (~US$ 4,50 por mil)'],
+        ['claude-opus-5', 'Opus 5 — o mais capaz (~US$ 11 por mil)'],
+      ]],
+      ['OpenAI (ChatGPT)', [
+        ['gpt-5', 'gpt-5 — o grande; raciocina (~US$ 11 por mil)'],
+        ['gpt-5-mini', 'gpt-5-mini — um terço do Haiku (~US$ 2 por mil)'],
+        ['gpt-5-nano', 'gpt-5-nano — o mais barato de todos (~US$ 0,45 por mil)'],
+      ]],
+    ]) {
+      const grupo = h('optgroup', { label: casa });
+      for (const [id, rotulo] of modelos) {
+        const opt = h('option', { value: id }, rotulo);
+        if (id === modeloAtual) opt.selected = true;
+        grupo.append(opt);
+      }
+      selModelo.append(grupo);
+    }
+    // Modelo que ele digitou à mão (ou de uma versão futura) não pode sumir do seletor: sem esta
+    // opção o `select` mostraria outro modelo e a próxima mexida na tela salvaria esse outro.
+    if (!['claude-haiku-4-5', 'claude-sonnet-5', 'claude-opus-5', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano'].includes(modeloAtual)) {
+      const opt = h('option', { value: modeloAtual }, `${modeloAtual} (escolhido à mão)`);
+      opt.selected = true;
+      selModelo.append(opt);
+    }
+    selModelo.addEventListener('change', () =>
+      withBusy(async () => {
+        await salvarIA({ modelo: selModelo.value });
+        // `iaTemChave` é por PROVEDOR: trocar de modelo pode deixar a IA sem chave, e o aviso da
+        // aba Automatizado tem que refletir isso na hora.
+        await lerChavesDaIA();
+        renderAll();
+      })
+    );
+    body.append(
+      h('label', { class: 'wf-field' }, [h('span', {}, 'Modelo'), selModelo]),
+      h('div', { class: 'wf-origin' }, avisoDoModelo(cfg))
+    );
+
     // A chave fica no armazenamento e NUNCA é relida para a tela: campo de senha, e o que se
     // mostra é se existe ou não. Chave visível no painel é chave que aparece em print.
-    const campoChave = h('input', { type: 'password', placeholder: state.iaTemChave ? '•••••• (já salva)' : 'sk-ant-…' });
+    const chaveDoProvedor = iaLib.CHAVE_DO_PROVEDOR[provedorAtual];
+    const temEsta = !!state.iaChaves?.[provedorAtual];
+    const prefixo = provedorAtual === iaLib.PROVEDOR_OPENAI ? 'sk-…' : 'sk-ant-…';
+    const campoChave = h('input', { type: 'password', placeholder: temEsta ? '•••••• (já salva)' : prefixo });
     const salvarChave = h('button', { class: 'wf-btn', type: 'button' }, 'Salvar chave');
     salvarChave.addEventListener('click', () =>
       withBusy(async () => {
         const valor = campoChave.value.trim();
         if (!valor) return setStatus('Cole a chave antes de salvar.', 'err');
-        await store.set('iaChave', valor);
-        state.iaTemChave = true;
+        /**
+         * **Chave colada no provedor errado é o erro mais provável desta tela**, e ele custaria
+         * uma rodada inteira devolvendo 401 — que o painel traduz como *"a chave da API foi
+         * recusada"*, mandando conferir a chave que está certa. O prefixo é o que separa as duas
+         * sem chamar nenhuma API, então a conferência é de graça.
+         */
+        const pareceAnthropic = /^sk-ant-/i.test(valor);
+        const esperaAnthropic = provedorAtual === iaLib.PROVEDOR_ANTHROPIC;
+        if (pareceAnthropic !== esperaAnthropic) {
+          return setStatus(
+            `Essa chave não parece ser da ${iaLib.NOME_DO_PROVEDOR[provedorAtual]}: as da Anthropic ` +
+              'começam com "sk-ant-" e as da OpenAI não. Troque o modelo antes, ou confira a chave.',
+            'err'
+          );
+        }
+        await store.set(chaveDoProvedor, valor);
+        await lerChavesDaIA();
         campoChave.value = '';
         setStatus('Chave salva. Ela fica só no armazenamento da extensão e não passa pela página.');
         renderAll();
@@ -9820,37 +9918,33 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const apagarChave = h('button', { class: 'wf-btn', type: 'button' }, 'Apagar chave');
     apagarChave.addEventListener('click', () =>
       withBusy(async () => {
-        await store.set('iaChave', '');
-        state.iaTemChave = false;
+        await store.set(chaveDoProvedor, '');
+        await lerChavesDaIA();
         setStatus('Chave apagada.');
         renderAll();
       })
     );
     body.append(
-      h('label', { class: 'wf-field' }, [h('span', {}, 'Chave da API (Anthropic)'), campoChave]),
+      h('label', { class: 'wf-field' }, [
+        h('span', {}, `Chave da API — ${iaLib.NOME_DO_PROVEDOR[provedorAtual]}`),
+        campoChave,
+      ]),
       h('div', { class: 'wf-row' }, [salvarChave, apagarChave]),
+      h('div', { class: temEsta ? 'wf-origin' : 'wf-block' },
+        temEsta
+          ? `Há chave salva para a ${iaLib.NOME_DO_PROVEDOR[provedorAtual]}, que é a casa do modelo escolhido.`
+          : `NÃO há chave salva para a ${iaLib.NOME_DO_PROVEDOR[provedorAtual]} — sem ela a IA não ` +
+              'escreve nada, e a rodada segue só com o fluxo.'),
+      // As duas guardadas, porque trocar de modelo troca o campo: sem esta linha, a chave do outro
+      // provedor fica invisível e parece perdida.
+      h('div', { class: 'wf-origin' },
+        `Guardadas: Anthropic ${state.iaChaves?.anthropic ? '✓' : '—'} · OpenAI ${state.iaChaves?.openai ? '✓' : '—'}. ` +
+          'As duas convivem: trocar de modelo não obriga a colar chave de novo.'),
       h('div', { class: 'wf-origin' },
         'A chave fica no armazenamento da extensão e a chamada sai do service worker — ela NÃO ' +
           'entra na página do mobiliza. Isso importa: o gancho da extensão roda no mesmo ' +
           'contexto do código deles, e o que está na página, a plataforma lê. Ela também fica ' +
           'fora do backup exportado.')
-    );
-
-    const selModelo = h('select', {});
-    for (const [id, rotulo] of [
-      ['claude-haiku-4-5', 'Haiku 4.5 — o mais barato (~US$ 2,50 por mil contatos)'],
-      ['claude-sonnet-5', 'Sonnet 5 — meio-termo (~US$ 4,50 por mil)'],
-      ['claude-opus-5', 'Opus 5 — o mais capaz (~US$ 11 por mil)'],
-    ]) {
-      const opt = h('option', { value: id }, rotulo);
-      if (id === (cfg.modelo || iaLib.MODELO_PADRAO)) opt.selected = true;
-      selModelo.append(opt);
-    }
-    selModelo.addEventListener('change', () => salvarIA({ modelo: selModelo.value }).then(renderAll));
-    body.append(
-      h('label', { class: 'wf-field' }, [h('span', {}, 'Modelo'), selModelo]),
-      h('div', { class: 'wf-origin' },
-        avisoDoModelo(cfg))
     );
     montarTetoDeGasto(cfg);
 
@@ -10015,10 +10109,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     body.append(
       h('div', { class: 'wf-block' },
-        'A chave da API NÃO usa a sua assinatura do Claude (Pro/Max). São duas cobranças ' +
-          'diferentes: a assinatura é do claude.ai e do Claude Code; a API é pré-paga por token, ' +
-          'com fatura própria no console.anthropic.com. Ligar a IA aqui gera gasto NOVO em cima ' +
-          'do que você já paga — o teto abaixo é o que impede esse gasto de surpreender.')
+        'A chave da API NÃO usa assinatura nenhuma — nem o Claude Pro/Max, nem o ChatGPT Plus. ' +
+          'São cobranças diferentes: a assinatura é do site e do app; a API é pré-paga por token, ' +
+          'com fatura própria no console do provedor. Ligar a IA aqui gera gasto NOVO em cima do ' +
+          'que você já paga — o teto abaixo é o que impede esse gasto de surpreender. E o teto é ' +
+          'UM só, somando os dois provedores: o que interessa é quanto saiu do bolso no mês.')
     );
 
     const linha = teto > 0
@@ -11173,7 +11268,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   (async () => {
     try {
       state.ia = await store.get('ia');
-      state.iaTemChave = !!(await store.get('iaChave'));
+      await lerChavesDaIA();
       renderAll();
     } catch (err) {
       console.warn('[WhatsFill+IA] não consegui ler a configuração da IA:', err.message);

@@ -14,7 +14,14 @@ import { RPC } from './lib/rpc.js';
 import { MSG_ENERGIA } from './lib/keepalive.js';
 import { MSG_FLUXO } from './lib/fluxo-msg.js';
 import { MSG_IA, atender } from './lib/ia-cliente.js';
-import { podeGastar, acumularGasto, custoEmDolares, MODELO_PADRAO } from './lib/ia.js';
+import {
+  podeGastar,
+  acumularGasto,
+  custoEmDolares,
+  provedorDoModelo,
+  CHAVE_DO_PROVEDOR,
+  MODELO_PADRAO,
+} from './lib/ia.js';
 import * as store from './lib/store.js';
 
 const BOUNDS_KEY = 'windowBounds';
@@ -51,7 +58,20 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
   (async () => {
     try {
-      const { iaChave } = await chrome.storage.local.get('iaChave');
+      /**
+       * **A chave é a do provedor DESTE modelo** — são duas, e as duas convivem.
+       *
+       * Quem decide é `provedorDoModelo`, a mesma função que o `ia-cliente` usa para escolher o
+       * endpoint: uma fonte de verdade. Guardar o provedor à parte do modelo daria a combinação
+       * impossível (chave da Anthropic mandada para a OpenAI) com um 401 de mensagem inútil.
+       *
+       * A leitura é `chrome.storage.local` direto e não `store.get` de propósito: credencial não
+       * passa pela mescla de defaults nem pelo backup exportado.
+       */
+      const modeloDoPedido = msg.modelo || MODELO_PADRAO;
+      const nomeDaChave = CHAVE_DO_PROVEDOR[provedorDoModelo(modeloDoPedido)];
+      const guardado = await chrome.storage.local.get(nomeDaChave);
+      const chave = guardado[nomeDaChave];
 
       // O teto ANTES da chamada. Este é o único ponto por onde sai dinheiro, e é por isso que a
       // trava mora aqui e não no painel: nenhum caminho novo lá consegue passar por fora.
@@ -62,13 +82,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         return;
       }
 
-      const r = await atender(msg, iaChave);
+      const r = await atender(msg, chave);
 
       // Contabiliza o que a chamada custou, mesmo que a decisão tenha vindo inútil: a API cobra
       // pela chamada, não pelo acerto. Gasto que só conta o que deu certo subestima a fatura.
       if (r?.custo) {
-        const modelo = msg.modelo || MODELO_PADRAO;
-        const usd = custoEmDolares(r.custo, modelo);
+        const usd = custoEmDolares(r.custo, modeloDoPedido);
         const tokens =
           (r.custo.entrada || 0) + (r.custo.cacheEscrito || 0) + (r.custo.cacheLido || 0) + (r.custo.saida || 0);
         const gasto = acumularGasto(conf.gasto, usd, Date.now(), tokens);

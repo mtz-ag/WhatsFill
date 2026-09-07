@@ -1,5 +1,5 @@
 /**
- * ia-cliente.js — a ponte entre o painel e a API da Anthropic.
+ * ia-cliente.js — a ponte entre o painel e a API do modelo (Anthropic ou OpenAI).
  *
  * **A chave da API nunca entra na página, e essa é a razão de este arquivo existir.**
  * O `page-hook.js` roda no mundo MAIN, o mesmo contexto JS do Angular do mobiliza. Tudo o que
@@ -24,12 +24,97 @@ import {
   montarRequisicaoCidade,
   validarCidade,
   MODELO_PADRAO,
+  PROVEDOR_OPENAI,
+  NOME_DO_PROVEDOR,
+  provedorDoModelo,
 } from './ia.js';
 
 export const MSG_IA = 'whatsfill-ia';
 
-const ENDPOINT = 'https://api.anthropic.com/v1/messages';
 const VERSAO_API = '2023-06-01';
+
+/**
+ * **As duas casas, lado a lado** — endpoint, cabeçalhos, onde está o texto e onde está a conta.
+ *
+ * Tudo o que difere entre a Anthropic e a OpenAI cabe nesta tabela: o resto do arquivo (e todo o
+ * `ia.js` que monta prompt) não sabe qual das duas está atendendo. Foi a estimativa dada a ele em
+ * 07/09 — *"a troca de API é contida: são 7 pontos"* — e é isto aqui.
+ */
+export const PROVEDORES = {
+  anthropic: {
+    url: 'https://api.anthropic.com/v1/messages',
+    /**
+     * `anthropic-dangerous-direct-browser-access` é necessário porque a origem aqui é a da
+     * extensão, não um servidor. O nome do cabeçalho é um aviso legítimo — chamar a API direto do
+     * navegador expõe a chave a quem tiver acesso ao navegador. Vale aqui porque a extensão é
+     * interna, é carregada descompactada e a chave fica no armazenamento da própria extensão, que
+     * outra extensão não lê. **Não vale para nada que seja distribuído.**
+     */
+    cabecalhos: (chave) => ({
+      'content-type': 'application/json',
+      'x-api-key': chave,
+      'anthropic-version': VERSAO_API,
+      'anthropic-dangerous-direct-browser-access': 'true',
+    }),
+    // A decisão vem como texto no primeiro bloco; o esquema garante que é JSON válido, mas quem
+    // decide se dá para usar é o `validar*` do lado do painel.
+    texto: (dados) => (dados.content || []).find((b) => b.type === 'text')?.text ?? null,
+    /**
+     * `cache_read` separado de propósito: é o número que diz se o cache está funcionando. Zero
+     * nele em chamadas seguidas significa que alguma coisa no prompt de sistema passou a variar, e
+     * a conta fica 3,5× maior sem nenhum erro aparecer.
+     */
+    uso: (u) => ({
+      entrada: u.input_tokens || 0,
+      cacheEscrito: u.cache_creation_input_tokens || 0,
+      cacheLido: u.cache_read_input_tokens || 0,
+      saida: u.output_tokens || 0,
+    }),
+    truncou: (dados) => (dados.stop_reason || '') === 'max_tokens',
+  },
+
+  openai: {
+    // Chat Completions, e não a Responses API: é a rota com o formato mais estável para
+    // `response_format: json_schema`, que é a trava de formato deste projeto.
+    url: 'https://api.openai.com/v1/chat/completions',
+    cabecalhos: (chave) => ({
+      'content-type': 'application/json',
+      authorization: `Bearer ${chave}`,
+    }),
+    /**
+     * `refusal` vira `null`, e `null` vira `incerto` do outro lado.
+     *
+     * O strict mode tem um canal próprio para o modelo se recusar a responder, e ele NÃO vem em
+     * `content`: ler só o `content` deixaria uma recusa parecer resposta vazia. `incerto` é o
+     * painel se comportando como antes da IA existir, que é o desfecho certo.
+     */
+    texto: (dados) => {
+      const m = dados.choices?.[0]?.message;
+      if (!m || m.refusal) return null;
+      return m.content ?? null;
+    },
+    /**
+     * **`prompt_tokens` INCLUI o que veio do cache; `input_tokens` da Anthropic NÃO.**
+     *
+     * É a diferença mais fácil de errar entre as duas contas, e errar aqui cobra o prompt inteiro
+     * duas vezes: com ~5.300 tokens de sistema, cada chamada cacheada apareceria quase 10× mais
+     * caro do que é — e o teto de gasto, que é a única trava de dinheiro do projeto, fecharia
+     * sozinho no meio de uma rodada. Por isso a subtração.
+     */
+    uso: (u) => {
+      const lido = u.prompt_tokens_details?.cached_tokens || 0;
+      return {
+        entrada: Math.max(0, (u.prompt_tokens || 0) - lido),
+        // Não existe: na OpenAI o cache é automático e escrever nele não custa nada.
+        cacheEscrito: 0,
+        cacheLido: lido,
+        // Já inclui os tokens de raciocínio, que é como a OpenAI os cobra.
+        saida: u.completion_tokens || 0,
+      };
+    },
+    truncou: (dados) => (dados.choices?.[0]?.finish_reason || '') === 'length',
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Lado do painel
@@ -171,18 +256,23 @@ export async function conferirCidade({ regras, mensagens, candidato, origem, sub
 /**
  * Faz a chamada de verdade. Só o service worker executa isto.
  *
- * `anthropic-dangerous-direct-browser-access` é necessário porque a origem aqui é a da extensão,
- * não um servidor. O nome do cabeçalho é um aviso legítimo — chamar a API direto do navegador
- * expõe a chave a quem tiver acesso ao navegador. Vale aqui porque a extensão é interna, é
- * carregada descompactada e a chave fica no armazenamento da própria extensão, que outra
- * extensão não lê. **Não vale para nada que seja distribuído.**
+ * **Quem escolhe a casa é o MODELO** (`provedorDoModelo`), e não um parâmetro à parte: o service
+ * worker usa a mesma função para saber qual chave ler. Uma fonte de verdade — a alternativa
+ * (provedor guardado separado do modelo) diverge em silêncio e o sintoma é um 400 sem explicação.
  *
  * @param {object} pedido    o que o painel montou
- * @param {string} chave     a chave da API, lida do armazenamento pelo chamador
+ * @param {string} chave     a chave da API do provedor deste modelo, lida pelo chamador
  * @returns {Promise<{ok:boolean, decisao?:object, custo?:object, motivo?:string}>}
  */
 export async function atender(pedido, chave) {
-  if (!chave) return { ok: false, motivo: 'sem chave da API — preencha na aba Config' };
+  const provedor = provedorDoModelo(pedido.modelo || MODELO_PADRAO);
+  const casa = PROVEDORES[provedor];
+
+  // Diz QUAL chave falta: com dois provedores, "sem chave da API" mandaria procurar no campo
+  // errado — e o campo do outro provedor pode estar preenchido, o que faz parecer defeito.
+  if (!chave) {
+    return { ok: false, motivo: `sem a chave da ${NOME_DO_PROVEDOR[provedor]} — preencha na aba Config` };
+  }
 
   // Três formas de pedido pelo mesmo canal: decisão (JSON com esquema), rascunho (texto) e
   // conferência de cidade (JSON, esquema próprio e teto de saída baixo).
@@ -200,14 +290,9 @@ export async function atender(pedido, chave) {
 
   let resposta;
   try {
-    resposta = await fetch(ENDPOINT, {
+    resposta = await fetch(casa.url, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': chave,
-        'anthropic-version': VERSAO_API,
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
+      headers: casa.cabecalhos(chave),
       body: JSON.stringify(corpo),
     });
   } catch (err) {
@@ -226,38 +311,43 @@ export async function atender(pedido, chave) {
     return { ok: false, motivo: 'a API devolveu algo que não é JSON' };
   }
 
-  // A decisão vem como texto no primeiro bloco; o esquema garante que é JSON válido, mas quem
-  // decide se dá para usar é `validarDecisao`, do lado do painel.
-  const bloco = (dados.content || []).find((b) => b.type === 'text');
-  return {
-    ok: true,
-    decisao: bloco?.text ?? null,
-    custo: resumoDeCusto(dados.usage),
-  };
-}
+  const custo = dados.usage ? casa.uso(dados.usage) : null;
 
-/**
- * O que a chamada custou, em tokens, para a tela poder mostrar.
- *
- * `cache_read` separado de propósito: é o número que diz se o cache está funcionando. Zero nele
- * em chamadas seguidas significa que alguma coisa no prompt de sistema passou a variar, e a
- * conta fica 3,5× maior sem nenhum erro aparecer.
- */
-function resumoDeCusto(usage) {
-  if (!usage) return null;
-  return {
-    entrada: usage.input_tokens || 0,
-    cacheEscrito: usage.cache_creation_input_tokens || 0,
-    cacheLido: usage.cache_read_input_tokens || 0,
-    saida: usage.output_tokens || 0,
-  };
+  /**
+   * **Truncada é chamada PAGA que devolve nada — e o `custo` vai junto do erro.**
+   *
+   * `background.js` contabiliza sempre que houver `custo`, independentemente do `ok`: a API cobra
+   * pela chamada, não pelo acerto. Gasto que só conta o que deu certo subestima a fatura, e este
+   * é justamente o caso em que ela cresce sem nada aparecer na tela.
+   *
+   * Nos modelos que raciocinam o teto é o suspeito número um, porque o raciocínio é cobrado como
+   * saída e cabe DENTRO dele — a armadilha do Opus 5, que aqui tem o piso de 2.048 como defesa.
+   */
+  if (casa.truncou(dados)) {
+    return { ok: false, motivo: 'a resposta foi truncada no teto de saída — nada dela pôde ser usado', custo };
+  }
+
+  return { ok: true, decisao: casa.texto(dados), custo };
 }
 
 /** Erro de API vira frase que diz o que fazer, não código HTTP. */
 function traduzirErro(status, texto) {
   if (status === 401) return 'a chave da API foi recusada — confira na aba Config';
+  // `insufficient_quota` é 429 na OpenAI e significa conta sem saldo, não excesso de velocidade:
+  // "espere um pouco" mandaria esperar por uma coisa que não passa sozinha.
+  if (/insufficient_quota/i.test(texto)) return 'a conta da API está sem saldo — recarregue no painel do provedor';
   if (status === 429) return 'limite de uso da API atingido — espere um pouco';
   if (status === 400 && /credit balance|insufficient/i.test(texto)) return 'a conta da API está sem crédito';
+  /**
+   * **Modelo que não existe é o erro esperado ao trocar de provedor**, e a mensagem crua não diz
+   * o que fazer: as duas APIs respondem 404/400 com "model not found" para o nome da outra casa.
+   */
+  if (/model.*(not found|does not exist)|invalid.*model/i.test(texto)) {
+    return 'esse modelo não existe nesta API — confira o modelo escolhido na aba Config';
+  }
+  if (/unsupported_parameter|unknown_parameter|unrecognized/i.test(texto)) {
+    return `a API recusou um parâmetro que mandamos (${status}) — o modelo escolhido não aceita algo do pedido`;
+  }
   if (status >= 500) return `a API está com problema (${status}) — tente de novo daqui a pouco`;
 
   let detalhe = '';

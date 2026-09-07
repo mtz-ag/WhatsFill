@@ -9,6 +9,7 @@
  */
 import { check, grupo, fim } from './_harness.mjs';
 import { PADRAO_DE_ATENDIMENTO } from '../src/lib/atendimento.js';
+import { PROVEDORES } from '../src/lib/ia-cliente.js';
 import {
   montarSistemaRascunho,
   montarContatoRascunho,
@@ -38,6 +39,11 @@ import {
   validarCidade,
   montarContatoCidade,
   montarSistemaCidade,
+  provedorDoModelo,
+  esquemaEstrito,
+  CHAVE_DO_PROVEDOR,
+  PROVEDOR_OPENAI,
+  PROVEDOR_ANTHROPIC,
   montarRequisicaoCidade,
 } from '../src/lib/ia.js';
 
@@ -1043,6 +1049,199 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
   check(p.includes('PROPOSTA COMERCIAL'), 'o prompt trata proposta comercial');
   check(p.includes('NÃO mande procurar a coordenação'), 'e proibe mandar procurar a coordenacao');
   check(p.includes('agradeça o apoio'), 'e diz o que fazer no lugar: agradecer o apoio');
+}
+
+grupo('as duas casas: o provedor sai do NOME DO MODELO');
+{
+  check(provedorDoModelo('gpt-5') === PROVEDOR_OPENAI, 'gpt-5 e da OpenAI');
+  check(provedorDoModelo('gpt-5-mini') === PROVEDOR_OPENAI, 'gpt-5-mini tambem');
+  check(provedorDoModelo('o3') === PROVEDOR_OPENAI, 'a familia o-N e da OpenAI, e nao comeca com gpt');
+  check(provedorDoModelo('claude-haiku-4-5') === PROVEDOR_ANTHROPIC, 'claude e da Anthropic');
+
+  /**
+   * **Modelo desconhecido cai em Anthropic**, que e onde a chave dele ja esta.
+   *
+   * Nao ha desfecho neutro: um deles tem que ser o padrao. Errar para o lado da casa que ja tem
+   * chave da 404 "modelo nao existe" (que o painel traduz); errar para o outro daria 401 "chave
+   * recusada", mandando conferir uma chave que esta certa.
+   */
+  check(provedorDoModelo('modelo-estranho') === PROVEDOR_ANTHROPIC, 'nome desconhecido: Anthropic');
+  check(provedorDoModelo('') === PROVEDOR_ANTHROPIC, 'vazio: Anthropic');
+  check(provedorDoModelo(undefined) === PROVEDOR_ANTHROPIC, 'ausente nao quebra');
+
+  // A chave da Anthropic continua em `iaChave`: renomear apagaria a que ele ja tem salva.
+  check(CHAVE_DO_PROVEDOR[PROVEDOR_ANTHROPIC] === 'iaChave', 'a chave da Anthropic nao mudou de lugar');
+  check(CHAVE_DO_PROVEDOR[PROVEDOR_OPENAI] === 'iaChaveOpenai', 'a da OpenAI tem lugar proprio');
+}
+
+grupo('esquemaEstrito: o que o strict mode da OpenAI exige');
+{
+  const base = esquemaDaDecisao(['a', 'b']);
+  const e = esquemaEstrito(base);
+
+  /**
+   * **Toda propriedade em `required`** — sem isto o strict mode recusa o esquema INTEIRO com 400,
+   * e os tres esquemas daqui deixam campos opcionais de proposito.
+   */
+  check(
+    e.required.length === Object.keys(e.properties).length,
+    `required cobre todas as propriedades (${e.required.length} de ${Object.keys(e.properties).length})`
+  );
+  check(e.required.includes('templateId'), 'templateId, que era opcional, entrou');
+  check(e.additionalProperties === false, 'additionalProperties: false');
+
+  // Nao muta: o esquema original continua servindo a Anthropic na MESMA chamada.
+  check(base.required.length === 3 && !base.required.includes('templateId'), 'o original fica intacto');
+
+  // `enum: []` nao casa com valor nenhum: o modelo nao teria o que responder e a chamada seria
+  // paga para nada. Sem ids permitidos, o enum sai.
+  const vazio = esquemaEstrito(esquemaDaDecisao([]));
+  check(vazio.properties.templateId.enum === undefined, 'enum vazio e removido');
+  check(esquemaEstrito(esquemaDaDecisao(['x'])).properties.templateId.enum.length === 1, 'enum com item fica');
+
+  // Objeto aninhado tambem.
+  const aninhado = esquemaEstrito({
+    type: 'object',
+    properties: { dentro: { type: 'object', properties: { x: { type: 'string' } } } },
+  });
+  check(aninhado.properties.dentro.additionalProperties === false, 'o objeto de dentro tambem fecha');
+  check(aninhado.properties.dentro.required[0] === 'x', 'e exige o campo de dentro');
+}
+
+grupo('o corpo da requisicao para a OpenAI');
+{
+  const r = montarRequisicaoRascunho({ sistema: 'S', contato: 'C', modelo: 'gpt-5' });
+
+  /**
+   * **`max_completion_tokens`, nunca `max_tokens`**: a familia GPT-5 recusa o nome antigo com 400.
+   * A mesma classe de armadilha do `effort` no Haiku, e ela nao aparece em teste de tela nenhum.
+   */
+  check(r.max_completion_tokens === 4096, 'o teto de saida vai no nome novo');
+  check(r.max_tokens === undefined, 'e o nome antigo NAO vai');
+
+  check(r.messages[0].role === 'system' && r.messages[0].content === 'S', 'o sistema vai como messages[0]');
+  check(r.messages[1].role === 'user' && r.messages[1].content === 'C', 'e o contato como user');
+  check(r.system === undefined, 'nada do campo `system` da Anthropic');
+  check(r.output_config === undefined, 'nem do `output_config`');
+
+  check(r.response_format?.type === 'json_schema', 'o formato da resposta e json_schema');
+  check(r.response_format.json_schema.strict === true, 'em strict mode');
+  check(!!r.response_format.json_schema.name, 'com nome, que o strict mode exige');
+  const props = r.response_format.json_schema.schema.properties;
+  check(
+    r.response_format.json_schema.schema.required.length === Object.keys(props).length,
+    'e com o esquema estrito'
+  );
+
+  // Nada de `cache_control`: na OpenAI o cache e automatico, e mandar o campo daria 400.
+  check(!JSON.stringify(r).includes('cache_control'), 'nenhum cache_control no corpo');
+
+  check(r.reasoning_effort === 'medium', 'o esforco vai no nome da casa');
+
+  /**
+   * **O piso de 2.048 na conferencia de cidade** — o raciocinio e cobrado como SAIDA e cabe DENTRO
+   * do teto: com os 512 originais, ele consome a cota e o JSON sai truncado. Chamada paga que
+   * devolve nada, que e a armadilha do Opus 5 na casa da OpenAI.
+   */
+  const cidade = montarRequisicaoCidade({ sistema: 'S', contato: 'C', modelo: 'gpt-5' });
+  check(cidade.max_completion_tokens === 2048, 'a conferencia de cidade ganha piso de saida');
+  check(
+    montarRequisicaoCidade({ sistema: 'S', contato: 'C', modelo: 'claude-haiku-4-5' }).max_tokens === 512,
+    'e na Anthropic o teto baixo continua, que e economia real'
+  );
+
+  // Modelo fora da lista de permissao roda SEM o parametro, e nao quebrado.
+  const aMao = montarRequisicaoRascunho({ sistema: 'S', contato: 'C', modelo: 'gpt-6-turbo' });
+  check(aMao.reasoning_effort === undefined, 'modelo desconhecido da OpenAI nao recebe reasoning_effort');
+  check(aMao.max_completion_tokens === 4096, 'e fica com o teto pedido, sem piso');
+}
+
+grupo('o corpo da Anthropic nao mudou');
+{
+  const r = montarRequisicaoRascunho({ sistema: 'S', contato: 'C', modelo: 'claude-haiku-4-5' });
+  check(r.max_tokens === 4096, 'max_tokens continua');
+  check(r.system?.[0]?.cache_control?.type === 'ephemeral', 'o cache_control continua no sistema');
+  check(r.system[0].text === 'S', 'o sistema continua em campo proprio');
+  check(r.output_config?.format?.type === 'json_schema', 'e o esquema no output_config');
+  check(r.response_format === undefined, 'sem response_format');
+  check(r.max_completion_tokens === undefined, 'sem max_completion_tokens');
+
+  const opus = montarRequisicao({ sistema: 'S', contato: 'C', ids: ['x'], modelo: 'claude-opus-5' });
+  check(opus.output_config.effort === 'low', 'o effort do Opus continua onde estava');
+  check(
+    montarRequisicao({ sistema: 'S', contato: 'C', ids: ['x'], modelo: 'claude-haiku-4-5' }).output_config.effort === undefined,
+    'e o Haiku continua sem ele, que e o 400 conhecido'
+  );
+}
+
+grupo('a conta dos dois provedores');
+{
+  // Escrever no cache e de graca na OpenAI, e 1,25x na Anthropic. Cobrar 1,25x nos dois inflaria
+  // o teto de gasto — a unica trava de dinheiro do projeto — sem nenhum erro aparecer.
+  const uso = { entrada: 1000, cacheEscrito: 5000, cacheLido: 0, saida: 300 };
+  const openai = custoEmDolares(uso, 'gpt-5');
+  const semEscrita = (1000 * 1.25 + 0 + 300 * 10) / 1e6;
+  check(Math.abs(openai - semEscrita) < 1e-9, `escrita de cache nao custa na OpenAI (US$ ${openai.toFixed(5)})`);
+
+  const anthropic = custoEmDolares(uso, 'claude-haiku-4-5');
+  check(anthropic > custoEmDolares({ ...uso, cacheEscrito: 0 }, 'claude-haiku-4-5'), 'na Anthropic custa');
+
+  // Leitura continua sendo 10% nas duas.
+  const lido = custoEmDolares({ entrada: 0, cacheEscrito: 0, cacheLido: 10000, saida: 0 }, 'gpt-5');
+  check(Math.abs(lido - (10000 * 1.25 * 0.1) / 1e6) < 1e-9, 'ler do cache custa 10% nas duas');
+
+  // Modelo desconhecido cobra pelo mais CARO da tabela: preco que a extensao nao conhece nao pode
+  // virar gasto invisivel, e superestimar so faz o teto chegar mais cedo.
+  const caro = Math.max(...Object.values(PRECOS_USD_POR_MTOK).map((x) => x.saida));
+  check(caro === 25, 'o mais caro da tabela continua sendo o Opus, e nao um preco da OpenAI');
+
+  // O prompt de hoje cacheia nos tres da OpenAI: o minimo la e 1.024 para todos.
+  check(vaiCachear('gpt-5', 5000), 'com 5.000 tokens o cache pega no gpt-5');
+  check(!vaiCachear('gpt-5', 900), 'com 900 nao, e o painel tem que poder dizer isso');
+  check(CACHE_MINIMO_TOKENS['gpt-5-nano'] === 1024, 'o minimo da OpenAI e 1.024, e nao cresce com o modelo');
+}
+
+grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
+{
+  /**
+   * **A diferenca mais facil de errar entre as duas contas.**
+   *
+   * `input_tokens` da Anthropic EXCLUI o que veio do cache; `prompt_tokens` da OpenAI INCLUI.
+   * Somar os dois campos na OpenAI cobraria o prompt inteiro duas vezes — com ~5.300 tokens de
+   * sistema, cada chamada cacheada apareceria quase 10x mais caro do que e, e o teto de gasto
+   * fecharia sozinho no meio de uma rodada.
+   */
+  const oa = PROVEDORES.openai.uso({
+    prompt_tokens: 5500,
+    prompt_tokens_details: { cached_tokens: 5000 },
+    completion_tokens: 300,
+  });
+  check(oa.entrada === 500, `entrada = prompt_tokens - cacheado (${oa.entrada})`);
+  check(oa.cacheLido === 5000, 'o cacheado vai para o campo do cache');
+  check(oa.cacheEscrito === 0, 'e escrita de cache nao existe na OpenAI');
+  check(oa.saida === 300, 'a saida ja inclui o raciocinio, que e como a OpenAI cobra');
+
+  // Sem detalhes de cache (chamada fria), tudo e entrada.
+  const fria = PROVEDORES.openai.uso({ prompt_tokens: 5500, completion_tokens: 300 });
+  check(fria.entrada === 5500 && fria.cacheLido === 0, 'chamada fria: tudo entrada');
+
+  // Do lado da Anthropic os campos sao somados, porque nao se sobrepoem.
+  const an = PROVEDORES.anthropic.uso({
+    input_tokens: 500,
+    cache_read_input_tokens: 5000,
+    cache_creation_input_tokens: 0,
+    output_tokens: 300,
+  });
+  check(an.entrada === 500 && an.cacheLido === 5000, 'na Anthropic os dois campos convivem');
+
+  // Truncada e chamada paga que devolve nada, e os dois provedores dizem isso de formas diferentes.
+  check(PROVEDORES.openai.truncou({ choices: [{ finish_reason: 'length' }] }), 'OpenAI: finish_reason length');
+  check(!PROVEDORES.openai.truncou({ choices: [{ finish_reason: 'stop' }] }), 'e stop nao e truncada');
+  check(PROVEDORES.anthropic.truncou({ stop_reason: 'max_tokens' }), 'Anthropic: stop_reason max_tokens');
+
+  // `refusal` e canal proprio do strict mode: ler so o `content` faria recusa parecer vazio.
+  check(PROVEDORES.openai.texto({ choices: [{ message: { refusal: 'nao' } }] }) === null, 'recusa vira null');
+  check(PROVEDORES.openai.texto({ choices: [{ message: { content: '{}' } }] }) === '{}', 'e o texto normal passa');
 }
 
 fim();

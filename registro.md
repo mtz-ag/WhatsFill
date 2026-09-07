@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.88.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.89.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,15 +10,15 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.88.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v2.89.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**38 arquivos**),
 **64 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
 tabela. Prompt de sistema do rascunho: **5.290 tokens**, dos quais **72% é o `PADRAO_DE_ATENDIMENTO`
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
-Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **treze em
-07/09** (2.76 a 2.88).
+Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **catorze em
+07/09** (2.76 a 2.89).
 
 ### O que mudou em 07/09, em uma linha cada
 
@@ -37,6 +37,7 @@ Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2
 | 2.86 | **A regra de tamanho passou a ser citada onde o modelo lê** — o item 22 do padrão dele estava a 3.804 tokens do pedido. |
 | 2.87 | **Proposta comercial não abre porta** — nada é aceito no período eleitoral, e mandar procurar a coordenação virou trava. |
 | 2.88 | **Palpite PENDENTE ia para o CRM** — quem pergunta respeitava a marca, quem escreve não sabia dela. A Cidade contaminada tem causa. |
+| 2.89 | **A API da OpenAI (ChatGPT) entrou** — o modelo escolhe a casa, e as duas chaves convivem. |
 
 As versões de 05 e 06/09 (2.42 a 2.75) estão nas entradas próprias, abaixo. O fio de 07/09 tem duas
 metades: **o controle da rodada** (2.76 a 2.80, que terminou no Esc que a própria extensão apertava)
@@ -99,6 +100,12 @@ reescrever o texto de um aviso sem reescrever a trava a faria deixar de casar em
    cidade só se acha pela aba Cidades.
 5. **Config → "Modelo por conteúdo", linha `ADS = Campanha Martim`**: não é mais necessário limpar
    (o código tem o piso `tags.ORIGEM_SEMPRE`), mas continua confundindo a leitura.
+6. **A chave da OpenAI, se ele for usar o ChatGPT.** A 2.89 implementou a API; o que falta é
+   humano: gerar a chave em `platform.openai.com`, **escolher o modelo** na aba Config (é o modelo
+   que decide a casa) e colar a chave no campo, que passa a ser o da OpenAI. A chave da Anthropic
+   fica guardada — as duas convivem, e voltar é trocar o modelo de novo. **Nenhuma chamada de
+   verdade foi feita ainda:** o formato do corpo e a leitura do `usage` estão por teste, não por
+   resposta da API.
 
 ### A Cidade contaminada: RESOLVIDA na 2.88 — havia buraco aberto
 
@@ -238,6 +245,116 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-07 — A API da OpenAI (ChatGPT) entrou (v2.89.0)
+
+Pedido dele: *"faça agora a implementação para utilizar a api do chatgpt"*, depois de comparar os
+custos — *"o chatgpt continua dando respostas melhores"*.
+
+### O que decide a casa é o MODELO
+
+Não há campo "provedor" na Config, e a ausência é a decisão de desenho. `ia.provedorDoModelo` lê o
+nome: `gpt-`, `o1`…`o9` e `chatgpt` vão para a OpenAI, o resto para a Anthropic. A **mesma função**
+escolhe o endpoint (`ia-cliente.PROVEDORES`) e a chave (`CHAVE_DO_PROVEDOR`, lida no
+`background.js`).
+
+Dois controles para a mesma coisa divergem — está registrado duas vezes no `CLAUDE.md` —, e a
+divergência aqui seria **muda**: provedor Anthropic com modelo `gpt-5` dá 401, que o painel traduz
+como *"a chave da API foi recusada"*, mandando conferir uma chave que está certa.
+
+**As duas chaves convivem.** `iaChave` continua sendo a da Anthropic (renomear apagaria a que ele já
+tem salva, porque `store.get` só mescla default em chave que FALTA) e `iaChaveOpenai` é a nova.
+Trocar de modelo não obriga a colar chave de novo, e a linha *"Guardadas: Anthropic ✓ · OpenAI —"*
+existe para a chave do outro provedor não parecer perdida quando o campo troca.
+
+### As cinco diferenças de formato, e as três armadilhas
+
+O texto **não muda**: `montarSistema*` e `montarContato*` são português puro e não sabem de provedor
+nenhum. É o que tornou a troca contida, como a estimativa dizia.
+
+| | Anthropic | OpenAI |
+|---|---|---|
+| sistema | campo `system` | `messages[0].role = 'system'` |
+| esquema | `output_config.format` | `response_format.json_schema` + `strict: true` |
+| teto | `max_tokens` | **`max_completion_tokens`** |
+| esforço | `output_config.effort` | `reasoning_effort` |
+| cache | `cache_control` + 1,25× para escrever | automático, ≥1.024, **de graça** para escrever |
+
+**1. `max_tokens` na família GPT-5 dá 400.** Mesma classe do `effort` no Haiku, e não aparece em
+teste de tela nenhum.
+
+**2. O raciocínio cabe DENTRO do teto** — o gêmeo da armadilha do Opus 5. A conferência de cidade
+tem `max_tokens: 512` (economia real, roda uma vez por contato); com raciocínio, esses 512 são
+consumidos pelo pensamento e o JSON sai **truncado**: chamada paga que devolve nada. Por isso o
+**piso de 2.048** nos modelos que raciocinam. Teto não é gasto — paga-se pelo token produzido —,
+então o piso é seguro; quem segura a conta é o `reasoning_effort`.
+
+**3. O strict mode exige TODA propriedade em `required`**, e os três esquemas daqui deixam campos
+opcionais de propósito (`templateId` só vale respondendo, `cidade` só corrigindo). Sem transformar,
+ele recusa o esquema **inteiro** com 400. `ia.esquemaEstrito` resolve sem mutar o original — a
+Anthropic usa o mesmo esquema na mesma chamada — e **remove `enum` vazio**, que não casaria com
+valor nenhum.
+
+E `refusal` é canal próprio do strict mode: ler só o `content` faria uma recusa parecer resposta
+vazia. Vira `null`, que vira `incerto`.
+
+### A conta: `prompt_tokens` INCLUI o cacheado
+
+É a diferença mais fácil de errar entre as duas APIs. `input_tokens` da Anthropic **exclui** o que
+veio do cache; `prompt_tokens` da OpenAI **inclui**. Somar os dois campos cobraria o prompt duas
+vezes: com 5.290 tokens de sistema, cada chamada cacheada apareceria quase 10× mais caro do que é —
+e o **teto de gasto**, a única trava de dinheiro do projeto, fecharia sozinho no meio de uma rodada.
+
+O teto é **um só**, somando os dois provedores: o que interessa é quanto saiu do bolso no mês.
+
+### Custo remedido, e uma correção da tabela de ontem
+
+**A tabela que entreguei a ele em 07/09 supunha 300 tokens de saída para todos.** Isso subestima
+modelo que raciocina, e a família GPT-5 raciocina por padrão — no rascunho mandamos
+`reasoning_effort: 'medium'`. Com 900 tokens de saída, que é o número honesto:
+
+| modelo | quente | frio |
+|---|---|---|
+| Haiku 4.5 (o de hoje) | $5,92 | $12,00 |
+| Sonnet 5 | $11,84 | $24,00 |
+| Opus 5 | $29,59 | $60,01 |
+| **gpt-5** | **$10,77** | **$16,73** |
+| gpt-5-mini | $2,15 | $3,34 |
+| gpt-5-nano | $0,43 | $0,67 |
+
+Por **mil rascunhos**, com o prompt real de hoje (5.290 de sistema + 890 de contato). O gpt-5 fica
+entre o Haiku e o Sonnet; o **gpt-5-mini custa um terço do Haiku**.
+
+> **Um erro meu no meio da medição, que vale registrar:** modelei a chamada FRIA da OpenAI com
+> `cacheEscrito` e o custo saiu **menor que o quente** — impossível. Na OpenAI não existe campo de
+> escrita: o prefixo frio é entrada normal. O código estava certo (`entrada = prompt_tokens -
+> cached`); era o script de medição que estava errado.
+
+### O que NÃO foi testado, e é o que importa saber
+
+**Nenhuma chamada de verdade foi feita.** O corpo da requisição, a leitura do `usage` e as três
+travas de formato estão cobertos por **49 asserções novas** — mas por teste, não por resposta da
+API. O primeiro rascunho com o gpt-5 é a verificação de verdade, e o que ele vai dizer se algo
+estiver errado está traduzido: modelo inexistente, parâmetro recusado, conta sem saldo e resposta
+truncada têm cada um a sua frase.
+
+### De brinde: a descrição do manifesto era mentira
+
+Ela dizia *"a IA escolhe entre as respostas prontas, nunca escreve para o eleitor"* — verdade até
+06/09 de manhã, quando o papel da IA mudou (2.58) e o rascunho passou a poder sair sozinho (2.60).
+Aparece em `chrome://extensions`. É a armadilha da descrição que envelhece e continua parecendo
+verdade, a mesma que a aba Config pagou.
+
+**Arquivos:** `src/lib/ia.js` (provedor, `esquemaEstrito`, corpo único, preços, mínimos de cache),
+`src/lib/ia-cliente.js` (a tabela dos dois provedores, `atender`, erros), `src/background.js` (a
+chave por provedor), `src/lib/store.js` (`iaChaveOpenai`, e ela fora do backup), `src/panel/panel.js`
+(seletor com as duas casas, campo da chave por provedor, avisos), `manifest.json`
+(`api.openai.com`, descrição, 2.88.0 → 2.89.0), `tests/ia.test.mjs` (+49). Quinze suítes e os dois
+verificadores.
+
+**O quadro dele não muda.**
+
 ---
 
 ## 2026-09-07 — O palpite PENDENTE ia para o CRM (v2.88.0)

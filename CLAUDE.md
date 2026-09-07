@@ -2584,6 +2584,44 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   de problema, e no Haiku isso apareceria em 100% das chamadas estando tudo certo. **Alarme que
   toca sempre é alarme que se aprende a ignorar** — e aí não toca no dia em que é de verdade.
   Mexeu no tamanho do prompt ou no modelo? O teste de `vaiCachear` trava os dois lados.
+- **DUAS APIS AGORA, e quem escolhe a casa e o NOME DO MODELO.** Implementado em 07/09/2026 a
+  pedido dele (*"faca agora a implementacao para utilizar a api do chatgpt"*), depois da comparacao
+  de custo. `ia.provedorDoModelo` decide: `gpt-`, `o1..o9` e `chatgpt` vao para a OpenAI, o resto
+  para a Anthropic. **Nao existe campo "provedor"** de proposito — dois controles para a mesma
+  coisa divergem, e a divergencia aqui seria muda (chave da Anthropic mandada para a OpenAI da 401
+  *"chave recusada"*, mandando conferir uma chave que esta certa). A mesma funcao escolhe o
+  endpoint (`ia-cliente.PROVEDORES`) e a chave (`CHAVE_DO_PROVEDOR`, lida no `background.js`):
+  **uma fonte de verdade**. `iaChave` continua sendo a da Anthropic — renomear apagaria a que ele
+  ja tem salva, porque `store.get` so mescla default em chave que FALTA.
+- **`prompt_tokens` da OpenAI INCLUI o cacheado; `input_tokens` da Anthropic NAO.** E a diferenca
+  mais facil de errar entre as duas contas, e errar cobra o prompt inteiro DUAS vezes: com ~5.300
+  tokens de sistema, cada chamada cacheada apareceria quase 10x mais caro do que e, e o **teto de
+  gasto** — a unica trava de dinheiro do projeto — fecharia sozinho no meio de uma rodada. Por isso
+  `entrada = prompt_tokens - cached_tokens`. Tem teste.
+- **Na OpenAI nao existe ESCRITA de cache, e por isso a chamada fria e relativamente mais barata.**
+  O cache e automatico a partir de 1.024 tokens de prefixo, nao se pede (`cache_control` daria 400)
+  e escrever nao custa nada; na Anthropic escrever custa **1,25x**. Consequencia na conta, medida:
+  do frio para o quente o Haiku vai de $12,00 para $5,92 por mil rascunhos, e o gpt-5 de $16,73
+  para $10,77 — a coluna FRIA, que e o caso comum numa rodada espacada, favorece a OpenAI. Os
+  fatores sao POR MODELO em `PRECOS_USD_POR_MTOK` (`cacheEscrita: 0`), com o da Anthropic como
+  padrao. **Cuidado ao MEDIR:** eu modelei a chamada fria da OpenAI com `cacheEscrito` e o custo
+  saiu MENOR que o quente — na OpenAI o prefixo frio e entrada normal, e nao ha campo de escrita.
+- **`max_completion_tokens`, NUNCA `max_tokens`: a familia GPT-5 recusa o nome antigo com 400.** E
+  a mesma classe da armadilha do `effort` no Haiku, e nao aparece em teste de tela nenhum. Junto
+  vem o gemeo do Opus 5: **o raciocinio e cobrado como saida e cabe DENTRO do teto**, entao a
+  conferencia de cidade (512 na Anthropic) ganhou **piso de 2.048** nos modelos que raciocinam —
+  sem ele o raciocinio consome a cota e o JSON sai truncado, que e chamada paga devolvendo nada.
+  Teto nao e gasto: paga-se pelo token produzido. Quem segura a conta e o `reasoning_effort`.
+- **O strict mode da OpenAI exige TODA propriedade em `required`** — e os tres esquemas deste
+  projeto deixam campos opcionais de proposito (`templateId` so vale respondendo, `cidade` so
+  corrigindo, `motivo` e enfeite util). Sem transformar, ele recusa o esquema INTEIRO com 400.
+  `ia.esquemaEstrito` faz isso sem mutar o original (a Anthropic usa o mesmo esquema na mesma
+  chamada) e **remove `enum` vazio**: `esquemaDaDecisao([])` produziria `enum: []`, que nao casa com
+  valor nenhum. Exigir tudo nao muda nada do nosso lado — os tres `validar*` sempre trataram campo
+  vazio.
+- **`refusal` e canal PROPRIO do strict mode, e nao vem em `content`.** Ler so o `content` faria
+  uma recusa do modelo parecer resposta vazia. Vira `null`, que vira `incerto` — o painel se
+  comportando como antes da IA existir.
 - **A assinatura Claude Pro/Max NÃO cobre a API.** São faturas separadas: a assinatura é do
   claude.ai e do Claude Code; a chave `sk-ant-…` é pré-paga por token no console. "Uso meu plano"
   foi a suposição dele em 29/08 e não existe — cada avaliação é despesa NOVA em cima do plano.
