@@ -1454,6 +1454,21 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   **detector que casa a palavra antiga para de ver o caso**: `SE_APRESENTANDO` ganhou `equipe` e
   `assessoria` no mesmo commit, senao continuaria "funcionando" cego.
 
+- **AUDIO ENCAMINHADO E CONVERSA DE OUTRAS PESSOAS, e a transcricao dele chega igual.** Print da
+  Irene (07/09/2026): *"falhou em pegar o texto da transcricao"* — a rodada respondera sozinha
+  *"deve ter dado ruim no audio, pode enviar de novo?"*. **Medido na API antes de mexer, e a leitura
+  estava invertida:** os cinco audios chegaram COM transcricao (1.909 caracteres somados,
+  `processing: false`, `error` vazio), e ela chegou inteira a IA. O que a IA fez foi **responder o
+  conteudo de DENTRO de um audio encaminhado** — o ultimo do lote e uma pessoa dizendo a outra *"nao
+  deu pra ouvir nada que voce botou ali, ta mudo?"*. **A assinatura do encaminhamento e o tempo:**
+  cinco gravacoes de minutos entregues em dois segundos nao foram gravadas ali. E a mesma classe da
+  legenda de repasse (o Eraldo, 06/09) — **pergunta que veio dentro do material que circula nao e
+  pergunta para nos** —, so que aqui o que denuncia esta no conteudo, e nao no tipo da mensagem.
+  Duas metades: `AVISOS_QUE_IMPEDEM_ENVIO.pediuReenvio` barra o envio automatico (mecanico, porque o
+  painel SABE se chegou texto legivel dela — por isso e condicionado a `recebemosDela`: audio sem
+  transcricao existe, e ai pedir para reenviar e a resposta CERTA), e a **regra 6** do prompt diz
+  que audio circula. Nao virou sinal do quadro de proposito: tres audios seguidos sao tambem o
+  formato de quem pede socorro (a Dima), e o desfecho e dele.
 - **A IA inventa no PRESENTE tambem: "temos adesivos e camisetas disponiveis".** Print do Lucas
   Mendes (07/09/2026): ele perguntou *"como faco para conseguir um bone ou acessorio"* e o rascunho
   abriu afirmando o estoque — *"a IA confirmou algo sem saber"*. E a irma do caso da Sandra (06/09)

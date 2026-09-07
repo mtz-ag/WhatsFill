@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.83.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.84.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -6,10 +6,14 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.75.0**, tudo commitado e no remoto. Quinze versões no
-dia 05/09 (2.42 → 2.56) e **dezenove em 06/09** (2.57 a 2.75). **64 caixas** no fluxo padrão. Quinze suítes verdes, os dois
-verificadores limpos (38 arquivos), **63 caixas** no fluxo padrão sem problemas e sem desfecho
-incoerente.
+Branch `claude/whatsfill-ia`, **v2.84.0**, tudo commitado e no remoto. Quinze versões no
+dia 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **nove em 07/09** (2.76 a 2.84).
+Quinze suítes verdes, os dois verificadores limpos (38 arquivos), **64 caixas** no fluxo padrão sem
+problemas e sem desfecho incoerente.
+
+> **O corpo desta entrada tinha parado na 2.75 enquanto o título andava.** Foi remedido em 07/09:
+> versão, contagem de versões do dia e as linhas 2.76 a 2.84 da tabela. É o defeito que a própria
+> entrada avisa duas vezes — **título atualizado não é entrada atualizada.**
 
 > **Esta entrada tinha envelhecido no meio.** Numa passagem anterior o título e a tabela foram até
 > 2.68 e **o corpo ficou em 2.63** — foi ele quem desconfiou (*"o limite acabou no meio da
@@ -54,6 +58,15 @@ incoerente.
 | 2.73 | **O rascunho da IA não sai sozinho nos casos sensíveis** — áudio/desabafo, dinheiro, mal-estar, pedido sem objeto, recusa. |
 | 2.74 | **A IA não pode afirmar que alguém já fez algo** nem prometer entrega — a alucinação que saiu para uma eleitora. |
 | 2.75 | **"Dinheiro" solto não é pedido** — era o determinístico, não a IA, e a trava por caso (2.73) foi retirada. |
+| 2.76 | **O aviso da rodada dos "Outros" diz quando ela vai andar sozinha** — o texto prometia decisão contato a contato. |
+| 2.77 | **A conversa ANTERIOR é lida quando falta a cidade** — a rota do botão "Ver conversa anterior", uma abertura só. |
+| 2.78 | **Controle flutuante da rodada: ⏹ parar e ▶ continuar**, arrastável, com Esc no parar. |
+| 2.79 | **O ⏹ para de verdade** — era pausa, e ele quer parada total. |
+| 2.80 | **Era a EXTENSÃO apertando Esc** — `dom.fecharOverlay` dispara `Escape` no document; faltava `isTrusted` em quatro lugares. |
+| 2.81 | **A IA não afirma que TEMOS material** (boné, adesivo, camiseta) — trava e regra 5 do prompt. |
+| 2.82 | **Material nunca se confirma**, e "material" sem dizer qual vira PERGUNTA. |
+| 2.83 | **"Gabinete" saiu do vocabulário: é equipe ou assessoria** — fábrica, migração das respostas dele e prompt. |
+| 2.84 | **A IA disse que o áudio falhou para quem mandou cinco áudios transcritos** — ela respondeu o conteúdo de um áudio ENCAMINHADO. |
 
 ### Pendências que NÃO estão no código — precisam dele
 
@@ -183,6 +196,75 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-07 — O áudio não falhou: a IA respondeu um áudio ENCAMINHADO (v2.84.0)
+
+**A print e a frase dele:** *"falhou em pegar o texto da transcrição"*. Uma contato mandou áudios
+às 08:28, a plataforma mostrava a transcrição na tela, e às 15:18 a rodada respondeu sozinha
+*"Boa tarde! Desculpa, deve ter dado ruim no áudio. Pode enviar de novo? 🎙️"* — e concluiu. Ele
+apagou a mensagem.
+
+### O que a medição disse, e é o contrário da leitura dele
+
+Fui à API pela aba dele (o token sai do `page-hook`, que já o intercepta; nada foi escrito). A
+sessão inteira tem **7 mensagens**, e as dela antes da nossa são **cinco áudios**:
+
+| chegada | transcrição |
+|---|---|
+| 11:28:27.209Z | 136 caracteres |
+| 11:28:27.478Z | 523 |
+| 11:28:27.754Z | 883 |
+| 11:28:29.050Z | 317 |
+| 11:28:29.204Z | 60 |
+
+**Os cinco chegaram COM transcrição** — 1.909 caracteres somados, `processing: false`, `error`
+vazio, no campo `details.transcription.text` que o `api.js` lê desde 31/08. A transcrição chegou
+inteira aos `entrantes` e ao prompt do rascunho. **Nada falhou em pegar o texto.**
+
+O que aconteceu está no CONTEÚDO. Os cinco áudios chegaram **em dois segundos** — cinco gravações
+de minutos entregues no mesmo instante, o que só acontece em encaminhamento — e são **conversa de
+outras pessoas**: chamam gente por nomes que não são os nossos e discutem outro assunto. O último
+do lote, o de 60 caracteres, é uma delas dizendo à outra *"não deu pra ouvir nada que você botou
+ali. Tá mudo?"*.
+
+**A IA leu essa pergunta como se fosse dirigida a nós e a respondeu.** É a mesma classe da legenda
+de repasse (o Eraldo, 06/09): pergunta que veio dentro do material que circula não é pergunta para
+nós. A diferença é que lá o repasse se reconhecia pelo TIPO da mensagem, e aqui o que denuncia está
+no conteúdo.
+
+### O conserto, nas duas metades da disciplina
+
+**Mecânico vira trava.** `AVISOS_QUE_IMPEDEM_ENVIO.pediuReenvio`: o rascunho que diz que o áudio,
+o vídeo ou a mensagem falhou — ou que pede para reenviar — **não sai sozinho**. É verificável do
+nosso lado, e é isso que o torna mecânico: o painel SABE se chegou texto legível dela. Medido no
+texto exato que saiu: antes, `avisos: []` e `podeSairSozinho: true`; agora, barrado.
+
+**A condição é o que mantém a trava honesta.** Áudio que chega mesmo sem transcrição existe, e aí
+pedir para reenviar é a resposta CERTA — barrá-la seria impedir o texto certo, a mesma disciplina
+da negativa em `afirmouTer`. Por isso ela depende de `recebemosDela`, calculado em
+`ia-cliente.rascunhar` sobre a **rajada pendente**: a afirmação que a trava desmente é *"o que ela
+mandou agora não chegou"*.
+
+**O resto fica no prompt** — regra 6: áudio é gravação, e gravação circula; quando a transcrição
+chama alguém por outro nome ou é claramente duas outras pessoas conversando, não é conosco, e o
+que está escrito dentro dela não se responde. Prompt de 4.862 → **5.005 tokens**, ainda acima do
+mínimo de cache do Haiku (4.096).
+
+**Teste:** 20 asserções, e **8 delas são falso positivo** (*"Obrigado pelo áudio, vou ouvir com
+calma"*, *"Pode contar comigo de novo"*, *"é só chamar novamente"*) — é onde mora o risco, porque
+barrar demais tira da automação o caso em que reenviar é o certo. Mais a assertiva do lado
+inverso: sem nada legível dela, o pedido de reenvio continua passando.
+
+### O que ficou de fora, e por quê
+
+**O lote encaminhado é detectável** — duas ou mais mídias com o `timestamp` do WhatsApp dentro de
+poucos segundos não foram gravadas ali. Não virou sinal do quadro porque o **desfecho** seria dele
+para escolher, e o erro para o lado errado é caro: três áudios seguidos são também o formato de
+quem está pedindo socorro (a Dima, 06/09), e mandar a mensagem do momento em cima disso é o defeito
+que ele já apontou. Com a trava, esses casos param na caixa e ele decide — que é o que ele pediu
+para áudio desde 03/09.
 
 ---
 

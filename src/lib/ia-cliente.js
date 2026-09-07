@@ -109,8 +109,23 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     // `jaFalamos` liga o aviso de apresentação repetida: a mesma conversa que o prompt usa para
     // pedir a VOZ de continuação (05/09/2026, *"está agindo como uma terceira pessoa"*).
     const jaFalamos = (mensagens || []).some((m) => m && typeof m === 'object' && m.de === 'nos');
+    /**
+     * **Chegou texto legível dela no que ainda não respondemos?**
+     *
+     * É o que condiciona `AVISOS_QUE_IMPEDEM_ENVIO.pediuReenvio` — print da Irene (07/09/2026), em
+     * que a rodada respondeu *"deve ter dado ruim no áudio, pode enviar de novo?"* a quem tinha
+     * mandado cinco áudios, todos transcritos.
+     *
+     * A conta é sobre a **rajada pendente**, e não sobre a conversa inteira: "o que ela mandou
+     * agora chegou legível" é a afirmação que a trava desmente. Quem monta a lista já descartou
+     * texto vazio (mídia sem transcrição não chega aqui), então a presença da mensagem é a prova.
+     */
+    const lista = (mensagens || []).filter((m) => m && typeof m === 'object' && String(m.texto || '').trim());
+    let ultimaNossa = -1;
+    lista.forEach((m, i) => { if (m.de === 'nos') ultimaNossa = i; });
+    const recebemosDela = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa);
     return {
-      ...validarRascunho(r.decisao, agora, { jaFalamos }),
+      ...validarRascunho(r.decisao, agora, { jaFalamos, recebemosDela }),
       custo: r.custo,
       custoUsd: r.custoUsd,
       gastoMes: r.gastoMes,

@@ -877,4 +877,79 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
     'e manda NAO perguntar de novo quando ela ja nomeou o item (o caso do Lucas)');
 }
 
+/**
+ * **A print da Irene (07/09/2026): "falhou em pegar o texto da transcricao".**
+ *
+ * Ela encaminhou cinco audios de uma vez as 08:28 e a rodada respondeu, sozinha, *"Boa tarde!
+ * Desculpa, deve ter dado ruim no audio. Pode enviar de novo?"*. Ele apagou a mensagem.
+ *
+ * **A leitura estava invertida, e foi medido na API antes de mexer:** os cinco chegaram COM
+ * transcricao (1.909 caracteres somados, `processing: false`, `error` vazio) e a transcricao
+ * chegou inteira a IA. O que ela fez foi responder o conteudo de DENTRO de um audio encaminhado —
+ * o ultimo do lote e uma pessoa dizendo a outra *"nao deu pra ouvir nada que voce botou ali, ta
+ * mudo?"*.
+ *
+ * A trava e mecanica porque a afirmacao e sobre o NOSSO lado: o painel sabe se chegou texto
+ * legivel dela. Metade das assercoes daqui e falso positivo — e onde mora o risco, porque barrar
+ * demais tiraria da automacao o caso em que pedir para reenviar e a resposta certa.
+ */
+{
+  grupo('rascunho que diz que o audio falhou (a Irene, 07/09)');
+
+  const agora = new Date('2026-09-07T18:18:00Z');
+  const saiu = 'Boa tarde! Desculpa, deve ter dado ruim no áudio. Pode enviar de novo?';
+
+  const comTexto = revisarRascunho(saiu, agora, { recebemosDela: true });
+  check(comTexto.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.pediuReenvio),
+    'a mensagem que saiu para ela agora levanta a mao');
+  check(rascunhoPodeSairSozinho(comTexto.avisos) === false,
+    'e nao sai mais sozinha: o caso volta para ele');
+
+  /**
+   * **A metade que sustenta a trava: audio SEM transcricao existe.** Quando nada legivel chegou,
+   * pedir para reenviar e o texto CERTO, e barra-lo seria impedir a resposta certa — a mesma
+   * disciplina da negativa em `afirmouTer`.
+   */
+  const semTexto = revisarRascunho(saiu, agora, { recebemosDela: false });
+  check(semTexto.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.pediuReenvio) === false,
+    'sem nada legivel dela, pedir para reenviar continua passando');
+
+  const casa = [
+    'não consegui ouvir o áudio, pode mandar de novo?',
+    'O áudio não chegou aqui.',
+    'Seu áudio veio mudo.',
+    'Deu problema no vídeo, consegue enviar novamente?',
+    'Não recebi sua mensagem.',
+    'Manda de novo, por favor.',
+  ];
+  for (const t of casa) {
+    check(revisarRascunho(t, agora, { recebemosDela: true }).avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.pediuReenvio),
+      `pega tambem: "${t}"`);
+  }
+
+  /** Os falsos positivos: frases normais de atendimento que NAO podem barrar o envio. */
+  const naoCasa = [
+    'Sua mensagem chegou aqui. Vou verificar isso com a equipe.',
+    'Obrigado pelo áudio, vou ouvir com calma.',
+    'Recebi seu áudio, muito obrigado pelo carinho.',
+    'Pode contar comigo de novo quando precisar.',
+    'Se precisar de mais alguma coisa, é só chamar novamente.',
+    'Vamos conversar de novo em breve.',
+    'Me diga sua cidade para eu registrar.',
+    'O material que você mandou é ótimo, obrigado por compartilhar.',
+  ];
+  for (const t of naoCasa) {
+    check(revisarRascunho(t, agora, { recebemosDela: true }).avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.pediuReenvio) === false,
+      `nao pega: "${t}"`);
+  }
+
+  /**
+   * A outra metade do conserto: a regra 6 do prompt. A trava barra o ENVIO; a regra e o que
+   * impede o rascunho de nascer respondendo o que esta dentro de um audio de outra conversa.
+   */
+  const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(p.includes('Áudio é GRAVAÇÃO'), 'o prompt explica que audio circula, e pode ser de outra conversa');
+  check(p.includes('NUNCA diga que o áudio falhou'), 'e proibe dizer que o audio falhou');
+}
+
 fim();
