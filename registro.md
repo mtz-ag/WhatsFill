@@ -4,60 +4,26 @@ Entrada de passagem de contexto, e a única do arquivo que descreve o **presente
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
 confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
+> **Ela já envelheceu no MEIO duas vezes** — título e tabela andando enquanto o corpo ficava parado
+> (2.68 sobre um corpo de 2.63; 2.83 sobre um corpo de 2.75). Nas duas foi ele quem desconfiou. Ao
+> reescrevê-la, **remeça cada número** em vez de confiar no que está escrito.
+
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.84.0**, tudo commitado e no remoto. Quinze versões no
-dia 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **nove em 07/09** (2.76 a 2.84).
-Quinze suítes verdes, os dois verificadores limpos (38 arquivos), **64 caixas** no fluxo padrão sem
-problemas e sem desfecho incoerente.
+Branch `claude/whatsfill-ia`, **v2.87.0**, tudo commitado e no remoto (último: `802a8c2`).
 
-> **O corpo desta entrada tinha parado na 2.75 enquanto o título andava.** Foi remedido em 07/09:
-> versão, contagem de versões do dia e as linhas 2.76 a 2.84 da tabela. É o defeito que a própria
-> entrada avisa duas vezes — **título atualizado não é entrada atualizada.**
+Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**38 arquivos**),
+**64 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
+tabela. Prompt de sistema do rascunho: **5.290 tokens**, dos quais **72% é o `PADRAO_DE_ATENDIMENTO`
+dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
-> **Esta entrada tinha envelhecido no meio.** Numa passagem anterior o título e a tabela foram até
-> 2.68 e **o corpo ficou em 2.63** — foi ele quem desconfiou (*"o limite acabou no meio da
-> atualização"*). Reescrito em 06/09 com os fatos remedidos: versão, contagem de arquivos, o quadro
-> comparado contra o de 2.56, e as decisões abertas que a mudança de papel da IA tornou falsas.
+Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **doze em
+07/09** (2.76 a 2.87).
 
-### O que mudou hoje, em uma linha cada
+### O que mudou em 07/09, em uma linha cada
 
 | v | o que |
 |---|---|
-| 2.42 | **Material pedido não vence com o dia** — exceção em `contexto-de-outro-dia` e em `respondeu-os-dados`, na CONDIÇÃO. |
-| 2.43 | **Boas-vindas não pedem o cadastro de quem já tem** — nasceu `boas-vindas-tem-dados`, e a conta virou `sugestao.pedirDadosNaoCabe`. |
-| 2.44 | **"trabalhar NA campanha"** — a lista colava preposição e artigo, e as três formas mais naturais nunca casavam. |
-| 2.45 | **Link não é pergunta nem conversa** (a query string tinha o "?"), e o rascunho passou a pedir o cadastro que falta. |
-| 2.46 | **Etiqueta de ADS conta como "veio de anúncio"** — `session.utm` só sabe da sessão de agora. |
-| 2.47 | **Xingamento no imperativo é hostilidade**, e o traço eme virou conserto em vez de pedido. |
-| 2.48 | **"Aguardando mensagem" é ruído da plataforma** — o link do FAQ estava virando CIDADE no CRM. |
-| 2.49 | **Já atendida antes não recebe as boas-vindas de novo** — o sinal do retorno lia só a sessão, e o CRM é quem tem memória. |
-| 2.50 | **"Ver conversa anterior" virou o sinal do retorno** — e a Data de conclusão, que eu tinha posto ali, saiu: concluir não é entregar. |
-| 2.51 | **Conversa longa não é "sem interesse"** — recusa de verdade é curta; texto longo vai para ele ou para a IA. |
-| 2.52 | **Botão "Chamar a IA" na aba Respostas**, e os cartões passaram a dizer a tecla. O cartão antigo era uma cópia, três consertos atrás. |
-| 2.53 | **Mal-estar não é ignorado nem concluído** — e "Estou com infecção" tinha virado apoio. |
-| 2.54 | **Rajada de cliques em anúncio → mensagem do momento**, não o modelo de um deles. |
-| 2.55 | **O rascunho é a próxima mensagem DELE**, não a de um terceiro — e o que ele já respondeu passou a ter marca. |
-| 2.56 | **A janela do fluxo diz de qual versão é o quadro**, e quantas caixas do padrão de hoje faltam nele. |
-| 2.57 | **A IA confere a cidade na rodada normal** (antes só na automática). |
-| 2.58 | **A IA ESCREVE onde o determinístico não resolve** — a tecla 0 e a escolha de resposta pronta por ela saíram. |
-| 2.59 | **Um interruptor só** (o da Config saiu), a tela parou de descrever a IA antiga, e o custo mudou-se para o rascunho. |
-| 2.60 | **O rascunho da IA é ENVIADO sozinho** com "Automatizar" marcada, e o interruptor dela subiu para o topo da aba. |
-| 2.61 | **As três negativas saem uma vez por contato**; repetida, o caso desce para você ou para a IA. |
-| 2.62 | **O padrão de atendimento dele virou o prompt do rascunho** — e o prompt cruzou o mínimo de cache do Haiku. |
-| 2.63 | **Gênero: na dúvida, neutro** — e o nome do cadastro não serve para deduzir. |
-| 2.64 | **A legenda de um vídeo/link encaminhado não conta como pergunta** — vai para a mensagem do momento. |
-| 2.65 | **Quem respondeu o cadastro não é concluído com pergunta em aberto**, e recebe o agradecimento da INFORMAÇÃO. |
-| 2.66 | **A perda de contexto conclui em vez de escorregar para o modelo** quando não há momento para mandar. |
-| 2.67 | **Quem retorna e escreveu em outro dia recebe a do momento, e não o modelo do anúncio.** |
-| 2.68 | **Link ou figura no fim não apaga a pergunta que ficou** — e "qual partido" e "gostaria de saber" passaram a ser reconhecidos. |
-| 2.69 | **Endereço de máquina nunca é cidade**, e link gravado no campo deixa de bloquear a correção — a IA passa a resolver esses casos. |
-| 2.70 | **O clique no anúncio só vale enquanto não for respondido**, e o modelo não sai se já falamos hoje. A chegada ganhou FECHO. |
-| 2.71 | **O id da caixa não é o id da regra** — o agradecimento pela informação (2.65) nunca decidiu nada no quadro. |
-| 2.72 | **Voto de boa vontade só conta se for a mensagem inteira** — 15 falsos positivos em 19 viraram zero. |
-| 2.73 | **O rascunho da IA não sai sozinho nos casos sensíveis** — áudio/desabafo, dinheiro, mal-estar, pedido sem objeto, recusa. |
-| 2.74 | **A IA não pode afirmar que alguém já fez algo** nem prometer entrega — a alucinação que saiu para uma eleitora. |
-| 2.75 | **"Dinheiro" solto não é pedido** — era o determinístico, não a IA, e a trava por caso (2.73) foi retirada. |
 | 2.76 | **O aviso da rodada dos "Outros" diz quando ela vai andar sozinha** — o texto prometia decisão contato a contato. |
 | 2.77 | **A conversa ANTERIOR é lida quando falta a cidade** — a rota do botão "Ver conversa anterior", uma abertura só. |
 | 2.78 | **Controle flutuante da rodada: ⏹ parar e ▶ continuar**, arrastável, com Esc no parar. |
@@ -71,121 +37,149 @@ problemas e sem desfecho incoerente.
 | 2.86 | **A regra de tamanho passou a ser citada onde o modelo lê** — o item 22 do padrão dele estava a 3.804 tokens do pedido. |
 | 2.87 | **Proposta comercial não abre porta** — nada é aceito no período eleitoral, e mandar procurar a coordenação virou trava. |
 
+As versões de 05 e 06/09 (2.42 a 2.75) estão nas entradas próprias, abaixo. O fio de 07/09 tem duas
+metades: **o controle da rodada** (2.76 a 2.80, que terminou no Esc que a própria extensão apertava)
+e **o que a IA escreve** (2.81 a 2.87, quatro travas novas em `revisarRascunho` e três regras novas
+de prompt).
+
+### As travas do rascunho, hoje
+
+`AVISOS_QUE_IMPEDEM_ENVIO` tem **seis** entradas, e cada uma nasceu de uma mensagem que saiu para
+eleitor real e ele apagou. Elas barram o envio AUTOMÁTICO; o rascunho continua no campo, e ele lê.
+
+| trava | a print |
+|---|---|
+| `marcador` | `{{primeiro_nome}}` iria literal para a tela |
+| `promessa` | promete entregar (Lei 9.504/97) |
+| `afirmouAcao` | *"já encaminhei seu pedido ao assessor"* — a Sandra, 06/09 |
+| `afirmouTer` | *"temos adesivos e camisetas disponíveis"* — o Lucas, 07/09 |
+| `pediuReenvio` | *"deve ter dado ruim no áudio"* para quem mandou cinco áudios transcritos — 07/09 |
+| `mandouProcurarNos` | *"conversar direto com a coordenação"* — quem escreve JÁ está falando com a equipe — 07/09 |
+
+**A disciplina que decide onde uma regra nova mora:** mecânico e sem julgamento vira **conserto**
+(a saudação errada, o traço eme); verificável vira **aviso** que barra o envio; o resto fica no
+**prompt**. E `rascunhoPodeSairSozinho` compara os avisos por IDENTIDADE com as constantes —
+reescrever o texto de um aviso sem reescrever a trava a faria deixar de casar em silêncio.
+
 ### Pendências que NÃO estão no código — precisam dele
 
-1. **A Cidade de quem já foi contaminado: metade se conserta sozinha agora.** O aviso *"Cidade
-   escrita fora do padrão"* continua aparecendo no cabeçalho. O que mudou em **2.69**: quando o
-   campo tem um endereço de máquina (`vt.tiktok.com`, `faq.whatsapp.com`) **e ela menciona a cidade
-   de novo**, o palpite passa a valer e a IA — ou a caixa — corrige. **Não conserta quem nunca mais
-   escrever a cidade**: para esses, a aba Cidades lista o que não casa com os 497 municípios, e é
-   por ali que se acha o resto.
-2. **IMPORTAR O FLUXO — e o arquivo que ele tem JÁ É o quadro de hoje.** O último entregue foi o
-   `fluxopadrao2.67.0.json` (06/09, 14:13). **Medido, comparando caixa a caixa com o `fluxoPadrao`
-   de agora: era idêntico até a 2.69** — 63 caixas, mesma ordem, mesmas condições. **A 2.70 mudou
-   isso:** a chegada ganhou uma caixa (o FECHO, `ja-respondemos-antes`), e o padrão passou a ter
-   **64**. O arquivo dele voltou a ficar uma caixa atrás.
+1. **IMPORTAR O FLUXO.** O último arquivo entregue a ele é o `fluxopadrao2.67.0.json` (06/09,
+   14:13), com **63 caixas**. O padrão de hoje tem **64** — a 2.70 acrescentou o FECHO da chegada
+   (`ja-respondemos-antes`). Nenhuma versão de 2.71 a 2.87 mexeu na estrutura do `fluxoPadrao`:
+   foram detectores, prompt e travas.
 
-   > **Uma passagem anterior desta entrada dizia que o último era o `fluxo-padrao-2.56.0.json` e que
-   > o arquivo dele estava velho.** Estava errado: o 2.67.0 foi gerado depois, e já traz a ordem
-   > nova da 2.67 (`contexto-de-outro-dia` acima do grupo do anúncio reconhecido, nos dois ramos).
-   > Foi ele quem corrigiu, mandando o arquivo. **Antes de afirmar que o quadro dele está atrasado,
-   > compare com o arquivo que ele tem — não com o último que este registro menciona.**
+   > **Antes de afirmar que o quadro dele está atrasado, compare com o ARQUIVO que ele tem** — não
+   > com o último que este registro menciona. Já errei nisso, e foi ele quem corrigiu mandando o
+   > arquivo.
 
-   **O que falta saber é se ele IMPORTOU.** Se importou, está em dia e a janela do fluxo diz isso
-   sozinha (é o que a 2.56 resolveu: a linha de versão mais quantas caixas do padrão de hoje faltam
-   no quadro dele). Se não importou, o quadro continua sendo o de **2.41.0** (60 caixas), e três
-   coisas não decidem — medido:
-   - **`nao-pode-falar-agora`** (2.53) entrou como `tambemQuando` de uma caixa que ele já tem — mas
-     `tambemQuando` é conteúdo da caixa, e o quadro dele é uma cópia. Simulando o quadro de 2.41, o
-     caso da Elenir **continua recebendo o modelo (tecla 1)** em vez da tecla 6. E não vale como
-     proteção do código: `arvore.PROTECOES` só cobre efeito `silencio`, e esta é `gente`;
-   - **`rajada-de-anuncios`** (2.54), caixa nova em três lugares;
-   - **a ordem da 2.67**, que é prioridade.
+   **O que falta saber é se ele IMPORTOU.** Se importou, está a uma caixa do padrão. Se não, o
+   quadro continua no arranjo **2.41.0** (60 caixas), e três coisas não decidem: `nao-pode-falar-agora`
+   (2.53, que entrou como `tambemQuando` de uma caixa que ele já tem — e `tambemQuando` é conteúdo
+   da caixa, então não chega numa cópia), `rajada-de-anuncios` (2.54) e **a ordem da 2.67**, que é
+   prioridade. A janela do fluxo diz isso sozinha desde a 2.56: a linha de versão mais quantas
+   caixas do padrão de hoje faltam no quadro dele.
 
-   Regenerar, quando precisar: `node tools/exportar-fluxo.mjs <saida.json>`, saída FORA do
-   repositório.
-3. **Aba Automatizado → "Etiquetas que a rodada aplica": as três continuam vazias.**
-   - **SEM INTERESSE** — a rodada não marca, e na visita seguinte precisa redescobrir a hostilidade
-     do zero. Ficou mais caro hoje: `semInteresse` passou a pegar o xingamento no imperativo, e sem
-     a etiqueta nada disso fica registrado.
-   - **PEDIU DINHEIRO OU EMPREGO** — ele quer `🔴Procura emprego ou dinheiro`.
-   - **MANDOU ENDEREÇO** — a lista de material a enviar; é o que faz a rodada pular o contato até ele
-     transferir a conversa.
-4. **Os MODELOS PADRÃO estão vazios**, e o anúncio *CONVERSE CONOSCO* não está cadastrado. Sem um dos
-   dois não existe modelo nenhum para quem chega por ele: pede material e recebe o formulário seco.
-5. **Config → "Modelo por conteúdo", linha `ADS = Campanha Martim`**: não é mais necessário limpar (o
-   código tem o piso `tags.ORIGEM_SEMPRE`), mas continua confundindo a leitura.
+   Regenerar: `node tools/exportar-fluxo.mjs <saida.json>`, saída **FORA** do repositório, e nunca
+   commitar o arquivo.
+2. **Aba Automatizado → "Etiquetas que a rodada aplica": as três continuam vazias.**
+   - **SEM INTERESSE** — sem ela a rodada não marca, e na visita seguinte precisa redescobrir a
+     hostilidade do zero;
+   - **PEDIU DINHEIRO OU EMPREGO** — ele quer `🔴Procura emprego ou dinheiro`;
+   - **MANDOU ENDEREÇO** — a lista de material a enviar; é o que faz a rodada pular o contato até
+     ele transferir a conversa.
+3. **Os MODELOS PADRÃO estão vazios**, e o anúncio *CONVERSE CONOSCO* não está cadastrado. Sem um
+   dos dois não existe modelo nenhum para quem chega por ele: pede material e recebe o formulário
+   seco.
+4. **A Cidade de quem já foi contaminado.** O aviso *"Cidade escrita fora do padrão"* continua no
+   cabeçalho. Metade se conserta sozinha desde a 2.69 (campo com endereço de máquina + ela
+   mencionando a cidade de novo = o palpite passa a valer). Quem nunca mais escrever a cidade só
+   se acha pela aba Cidades.
+5. **Config → "Modelo por conteúdo", linha `ADS = Campanha Martim`**: não é mais necessário limpar
+   (o código tem o piso `tags.ORIGEM_SEMPRE`), mas continua confundindo a leitura.
 
 ### Aberto, esperando decisão dele
 
-- **A IA mudou de papel em 06/09, e isto substitui o item que estava aqui.** Ela não escolhe mais
-  resposta pronta (2.58: a tecla 0 e `enviarEscolhaDaIA` foram removidas); nas três portas dela o
-  desfecho é **um só, o rascunho no campo**. Com "Automatizar" marcada junto, **o rascunho é enviado
-  sem perguntar** (2.60, pedido dele) — é a única coisa do projeto que sai para eleitor sem ele ter
-  lido, e as duas travas que ficam são `rascunhoPodeSairSozinho`: marcador esquecido e promessa de
-  entregar. **Nada aqui espera decisão: está como ele pediu.** O que continua valendo a pena
-  observar é se o rascunho automático produz mensagem que ele não teria mandado — se produzir, a
-  decisão é dele, como foi em 03/09.
-- **Áudio antigo sem pergunta: gente ou tempo?** Hoje cai em `ultima-pede-resposta-pessoal` (tecla 6).
-- **Casamento aproximado de cidade ainda abre a caixa "Cidade a gravar."**
-- **O "me liga" não aplica etiqueta nenhuma** — é um id a mais em `ETIQUETA_PEDIDO_IDS` se ele quiser.
+- **O MODELO e o CUSTO.** Ele levantou em 07/09: *"estou achando o custo alto também e creio que
+  vou botar outra api"*. Medido, por rascunho com cache quente: **Haiku 4.5 US$ 0,0029** (o de
+  hoje), Sonnet 5 US$ 0,0058, Opus 5 US$ 0,0145 — e a conferência de cidade é **US$ 0,0010**, com
+  prompt de 410 tokens que **não cacheia**. **Trocar de modelo não é a alavanca do gasto**; volume
+  de chamadas é, e o número real está no painel (gasto do mês, teto em `ia.tetoUsd`). **Ficou
+  pendente ele dizer esse número** — e ver se a 2.86 encurtou os rascunhos, que é o que decide se
+  vale subir para o Sonnet.
+- **Lote de áudio encaminhado: só marca, não decide.** A 2.85 reconhece; o desfecho continua
+  `pedeRespostaPessoal` (tecla 6), de propósito — três áudios seguidos são também o formato de
+  quem pede socorro (a Dima, 06/09). Se ele quiser desfecho próprio, é ele quem escolhe qual.
+- **O rascunho SAI SOZINHO com "Automatizar" marcada** (2.60, pedido dele). É a única coisa do
+  projeto que chega a eleitor sem ele ter lido. Nada aqui espera decisão: está como ele pediu — o
+  que vale observar é se produz mensagem que ele não teria mandado. Nos dias 06 e 07 produziu
+  quatro, e as quatro viraram trava.
+- **O sinal "Ver conversa anterior" (2.50) nunca foi visto funcionando.** `dom.temConversaAnterior`
+  lê o DOM por TEXTO e nenhuma suíte alcança isso. Falhando, devolve `false` e quem volta SEM
+  cidade deixa de ser reconhecido como retorno. **Continua sendo a primeira coisa a conferir com
+  ele numa sessão nova** — e vale para o `getConversaAnterior` da 2.77 também, cujo corpo do
+  `/previous` nunca foi visto ao vivo.
+- **Áudio antigo sem pergunta: gente ou tempo?** Hoje cai em `ultima-pede-resposta-pessoal`.
+- **Casamento aproximado de cidade ainda abre a caixa "Cidade a gravar".**
+- **O "me liga" não aplica etiqueta nenhuma** — é um id a mais em `ETIQUETA_PEDIDO_IDS`.
 - **Teclas 7, 9 e `i` como caixas do quadro** — oferecido em 04/09, não decidido.
-- **"Com link de grupo" desceu para o fim da aba Respostas (2.52) e NÃO foi removido.** Não
-  corresponde a tecla nenhuma e o quadro não o alcança. Foi oferecido remover; ele não respondeu.
-- **O sinal "Ver conversa anterior" (2.50) não foi visto funcionando.** Ele lê o DOM da plataforma
-  por TEXTO e nenhuma suíte alcança isso. Se o botão tiver outro rótulo, o sinal devolve `false` e o
-  comportamento volta ao de 2.49 — o caso da Rosa continua consertado pela etiqueta de cidade, mas
-  quem volta SEM cidade deixa de ser reconhecido como retorno. **É a primeira coisa a conferir com
-  ele numa sessão nova.**
+- **"Com link de grupo" desceu para o fim da aba Respostas (2.52) e NÃO foi removido.**
+- **Oferecido e não pedido:** transformar *"que tipo de material você precisa?"* em resposta pronta
+  com tecla — exigiria o texto escrito por ele.
 
 ### O que foi medido e o que não foi
 
-**Nada dos dias 05 e 06/09 foi testado na tela** — tudo medido em Node, contra o fluxo padrão e com
-o contexto reconstruído de cada print. As correções são de CONDIÇÃO e de detector, que é o que
-permite medir sem navegador.
+**Quase tudo foi medido em Node**, contra o fluxo padrão e com o contexto reconstruído de cada
+print. As correções são de CONDIÇÃO e de detector, que é o que permite medir sem navegador.
 
-**O que NÃO tem como ser provado aqui**, e está dito nos commits:
+**A exceção de 07/09, e ela vale registrar:** o caso do áudio (2.84/2.85) foi medido **na API de
+verdade**, pela aba dele. O token sai do `page-hook`, que já o intercepta — do lado da página basta
+um `postMessage({__whatsfill:'cs', type:'ping'})` e escutar a resposta `type:'token'`. Foi o que
+provou que a leitura dele (*"falhou em pegar o texto da transcrição"*) estava invertida: a
+transcrição chegou inteira, e o que a IA respondeu era conteúdo de um áudio encaminhado. **Nada foi
+escrito por ali** — só leitura, e nenhum dado de eleitor entrou em arquivo do repositório.
 
-- **`dom.temConversaAnterior`** (2.50) lê o DOM da plataforma. **É a primeira coisa a conferir com
-  ele** — ver a linha nas decisões abertas;
-- **toda a interface** — os botões da aba Respostas (2.52), o interruptor único da IA (2.59, 2.60),
-  a linha de versão da janela do fluxo (2.56). Nenhuma suíte importa o `panel.js` nem o `fluxo.js`,
-  que precisam de `window`;
-- **os prompts** (2.55, 2.62, 2.63): prompt é pedido, não regra. O que os testes provam é o texto
-  que sai daqui, nunca o que o modelo faz com ele. O caminho, quando falha, é o do traço eme — o que
-  for mecânico vira conserto em `revisarRascunho`; o que exige julgamento fica como aviso;
-- **o rascunho ENVIADO sozinho** (2.60) nunca foi visto saindo. As travas são testadas; o efeito num
-  eleitor real, não.
+**O que NÃO tem como ser provado aqui:**
+
+- **`dom.temConversaAnterior`** e o corpo de `/chat/v1/session/{id}/previous` — DOM e rota;
+- **toda a interface** — o controle da rodada (2.78 a 2.80), os botões da aba Respostas, a linha de
+  versão da janela do fluxo. Nenhuma suíte importa `panel.js` nem `fluxo.js`, que precisam de
+  `window`;
+- **os prompts** (2.81, 2.82, 2.83, 2.86, 2.87): prompt é pedido, não regra. Os testes provam o
+  texto que sai daqui, nunca o que o modelo faz com ele — e foi por isso que quatro regras de
+  prompt ganharam trava mecânica junto;
+- **o rascunho ENVIADO sozinho** (2.60) nunca foi visto saindo. As travas são testadas; o efeito
+  num eleitor real, não.
 
 **Um caso não foi reproduzido**: o texto de 927 caracteres que virou "sem interesse" (2.51) devolve
-`null` no detector, inteiro e em nove pedaços. O gatilho está no que a print não mostra. A guarda que
-entrou cobre a CLASSE (conversa longa não é decidida por aquela regra) sem depender de achar o
-padrão — se aparecer um terceiro caso, é preciso a conversa INTEIRA, não a print.
+`null` no detector, inteiro e em nove pedaços. O gatilho está no que a print não mostra. A guarda
+que entrou cobre a CLASSE sem depender de achar o padrão — se aparecer um terceiro caso, é preciso
+a conversa INTEIRA, não a print.
 
 ### O ritmo desta sessão, para quem entrar agora
 
-Ele manda **uma print e uma frase curta** ("não pegou o contexto", "chegou hostilizando e extensão
-não reconheceu"). O trabalho é sempre o mesmo, nesta ordem: **reproduzir com uma medição antes de
-mexer** — várias vezes o defeito era maior que o relatado: no caso da hostilidade, *"vai tomar no
-cu"* e *"você é um desgraçado"* também passavam batido —, achar a causa, consertar, **medir o
-desfecho no fluxo padrão**, escrever o teste de regressão **com os falsos positivos junto**,
-registrar aqui e no `CLAUDE.md`, subir a versão e commitar. Uma versão por print.
+Ele manda **uma print e uma frase curta** (*"não pegou o contexto"*, *"a ia confirmou algo sem
+saber"*, *"falhou em pegar o texto da transcrição"*). O trabalho é sempre o mesmo, nesta ordem:
+**reproduzir com uma medição ANTES de mexer**, achar a causa, consertar, **medir o desfecho**,
+escrever o teste de regressão **com os falsos positivos junto**, registrar aqui e no `CLAUDE.md`,
+subir a versão do `manifest.json` e commitar e empurrar sem perguntar. **Uma versão por print.**
 
-**Armadilhas do ambiente, que custaram tempo nestes dois dias:**
+**A medição antes de mexer é o passo que mais paga**, e 07/09 deu o exemplo mais caro: a frase dele
+apontava para a transcrição e a causa era outra. Duas vezes neste dia o defeito relatado era metade
+do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a ele, com o número junto,
+é o que ele espera** (ver a memória `dizer-quando-ele-esta-errado`).
 
-- escrita de arquivo por script Python às vezes **não persiste** (o script diz que escreveu e o
-  arquivo não muda) — quando acontecer, use a ferramenta Edit;
-- escape de `\n` dentro de string JS escrita por script vira quebra de linha de verdade, o que
-  quebra o arquivo em silêncio até o `checar-modulos` acusar;
-- **heredoc do bash com conteúdo grande trunca sem erro claro** — o aviso é `here-document delimited
-  by end-of-file`, e o `.py` fica pela metade. Para script longo, escreva o arquivo com a ferramenta
-  Write e só então rode.
+**Armadilhas do ambiente, que custaram tempo:**
 
-**E a armadilha desta própria entrada:** ela pode envelhecer no MEIO. Numa passagem anterior o
-título e a tabela foram até 2.68 e o corpo ficou em 2.63 — ao reescrevê-la, **remeça** cada número
-em vez de confiar no que está escrito: a versão, a contagem de arquivos dos verificadores, as caixas
-do quadro (e o quadro comparado contra o último arquivo entregue a ele) e as decisões abertas que
-uma mudança de comportamento pode ter tornado falsas.
+- escrita de arquivo por script Python às vezes **não persiste** — quando acontecer, use a
+  ferramenta Edit;
+- **heredoc do bash corrompe UTF-8**: acento vira `Voc?`, e o `assert` cai por um motivo que não
+  tem nada a ver com o teste. **Qualquer texto com acento vai pela ferramenta Edit ou Write**;
+- escape de `\n` dentro de string JS escrita por script vira quebra de linha de verdade, e o
+  arquivo quebra em silêncio até o `checar-modulos` acusar;
+- **`checar-referencias.mjs` não lida com identificador acentuado** — uma variável `começar` chegou
+  ao verificador como `ar()` e virou falso positivo. Nomes de variável em ASCII;
+- **script de apoio vai para a pasta de rascunho FORA do repositório**: a pasta do repositório É a
+  extensão que o Chrome carrega.
 
 ### Onde as coisas moram
 
@@ -199,7 +193,6 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
-
 ---
 
 ## 2026-09-07 — Proposta comercial não abre porta nenhuma (v2.87.0)

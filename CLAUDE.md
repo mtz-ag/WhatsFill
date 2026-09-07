@@ -7,19 +7,19 @@
 > Conserto que vale para os dois: faça no branch normal e traga para cá com merge. Duplicar
 > `panel.js` (6.000+ linhas) é como as duas versões divergem em uma semana.
 >
-> **A série da versão diz qual das duas está carregada: produção é `0.x`, este branch é `1.x`.**
+> **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
+> for `0.x`.** Conferido em 07/09/2026: produção é `WhatsFill` **0.63.0**, e este branch é
+> `WhatsFill+IA` **2.87.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
 > "versão sempre maior na IA" e quebrou no primeiro dia em que as duas subiram (31/08): regra que
 > exige alguém lembrar não é regra.
-
-> **Este é o branch `claude/extensao-claude-analise-i9spxw`** — a ferramenta de produção dele, e
-> onde o trabalho normal acontece.
 >
-> **Existe um segundo branch: `claude/whatsfill-ia`** (WhatsFill+IA), que soma uma avaliação de
-> contexto por IA. Ele não vai para produção e **nada de IA entra aqui** — a regra "Sem IA na
-> extração" continua valendo neste branch. Conserto que vale para os dois: faça AQUI e leve para
-> lá com merge. Duplicar `panel.js` (6.000+ linhas) é como as duas versões divergem em uma semana.
+> **Havia um segundo bloco aqui, vindo do outro branch por merge**, dizendo *"este é o branch
+> `claude/extensao-claude-analise-i9spxw`"* e *"nada de IA entra aqui"* — **falso neste arquivo**,
+> e era a primeira coisa que uma sessão nova lia. Removido em 07/09/2026. Se ele voltar num merge,
+> remova de novo: o cabeçalho tem que dizer de qual branch É este arquivo.
 
 ## PROTOCOLO OBRIGATÓRIO ANTES DE QUALQUER EXECUÇÃO
 
