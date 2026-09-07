@@ -1454,6 +1454,30 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   **detector que casa a palavra antiga para de ver o caso**: `SE_APRESENTANDO` ganhou `equipe` e
   `assessoria` no mesmo commit, senao continuaria "funcionando" cego.
 
+- **DA PARA MEDIR NA API DE VERDADE, pela aba dele — e "a tela mostra" nao e "o CRM tem".** Feito em
+  07/09/2026, duas vezes, e as duas mudaram o diagnostico. **A receita:** o `page-hook` ja intercepta
+  o Bearer; do lado da pagina, `postMessage({__whatsfill:'cs', type:'ping'}, location.origin)` e
+  escutar a resposta `{__whatsfill:'page', type:'token'}` devolve o token — `window.postMessage`
+  atravessa os mundos, entao funciona de qualquer contexto. Dai: `GET /chat/v1/message?sessionId=…`
+  para as mensagens cruas, `POST /core/v1/contact/filter` com `{name:'<trecho>'}` para achar o
+  contato e `GET /core/v1/contact/{id}?isToIncludeCustomFields=true` para ver **o que esta gravado**.
+  **Foi assim que a leitura dele sobre a transcricao se mostrou invertida** e que a Cidade
+  contaminada deixou de ser suspeita e virou fato. Duas disciplinas: **so leitura** (nunca escrever
+  por ali), e **nenhum dado de eleitor entra em arquivo do repositorio** — o que se registra e a
+  FORMA (chaves, tamanhos, confianca), nunca o conteudo. A API e lenta e tem limitador: ~10s por
+  sessao, com pausa entre chamadas, e nada de varredura.
+- **PALPITE `nao-reconhecida` CHEGOU AO CRM, e e a TERCEIRA vez desta familia.** Print de 07/09/2026
+  (o contato que oferecia patrocinio): o campo Cidade dele tem **`mais Apoiadores com patrocinio`**,
+  confirmado na API — o unico campo preenchido do contato. Medido no parser de hoje com as quatro
+  mensagens daquela conversa: ele devolve esse texto como cidade `nao-reconhecida` **nos DOIS
+  modos**, e nao so no generoso do `respostaAoPedido`. Pelas regras isso nao deveria chegar la:
+  palpite `nao-reconhecida` nao grava sozinho e, desde 04/09, **nao pode nem virar a pergunta
+  "Cidade a gravar"**. Ou o valor e anterior aquele conserto, ou **ha um buraco aberto**. As duas
+  vezes anteriores (`faq.whatsapp.com` em 05/09, `vt.tiktok.com` em 06/09) foram consertadas cada
+  uma na sua origem, e `cities.ehEnderecoDeMaquina` cobre so o que TEM FORMA de endereco — aqui e
+  texto comum. **Antes de consertar, prove por onde entrou** (a licao de 06/09: antes de por trava
+  na IA, prove que foi a IA): os candidatos sao `saveClassification`, o aceite da caixa de cidade e
+  o caminho da IA da 2.69.
 - **PROPOSTA COMERCIAL NAO ABRE PORTA, e "procure a coordenacao" e a porta que nao existe.** Regra
   dele (07/09/2026), sobre o contato que oferecia patrocinio: *"nada sera aceito agora em periodo
   eleitoral, os contratos que deviam ser feitos ja foram feitos"*. O rascunho tinha explicado a lei

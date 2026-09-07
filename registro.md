@@ -97,15 +97,69 @@ reescrever o texto de um aviso sem reescrever a trava a faria deixar de casar em
 5. **Config → "Modelo por conteúdo", linha `ADS = Campanha Martim`**: não é mais necessário limpar
    (o código tem o piso `tags.ORIGEM_SEMPRE`), mas continua confundindo a leitura.
 
+### PRIMEIRA COISA A RESOLVER numa aba nova: a Cidade contaminada, DE NOVO
+
+Achado em 07/09 no print dele, e **confirmado na API**: o contato que ofereceu patrocínio está com
+**`mais Apoiadores com patrocínio` gravado no campo Cidade do CRM** — é o único campo preenchido
+dele. Não é palpite na tela: está no contato.
+
+**Medido no parser de hoje**, com as quatro mensagens daquela conversa:
+
+```
+extract([...])                          -> cidade "mais Apoiadores com patrocínio", nao-reconhecida
+extract([...], {respostaAoPedido:true}) -> a mesma coisa
+```
+
+**Nos DOIS modos**, e não só no generoso. Pelas regras isso não deveria chegar ao CRM: palpite
+`nao-reconhecida` não grava sozinho e, desde 04/09, **não pode nem virar a pergunta "Cidade a
+gravar"**. Então ou o valor é anterior àquele conserto, ou **há um buraco aberto** — e é a terceira
+vez desta família (o Instagram em 02/09, o `faq.whatsapp.com` em 05/09, o `vt.tiktok.com` em 06/09).
+
+**O que falta é achar o CAMINHO da escrita**, e é por aí que a próxima sessão começa: quem grava
+Cidade (`saveClassification`, `confirmarCidadeSePendente`, o aceite da caixa, a IA da 2.69) contra
+`confidence: 'nao-reconhecida'`. **Antes de consertar, prove por onde entrou** — a lição de 06/09
+(*"antes de por trava na IA, PROVE que foi a IA"*).
+
 ### Aberto, esperando decisão dele
 
-- **O MODELO e o CUSTO.** Ele levantou em 07/09: *"estou achando o custo alto também e creio que
-  vou botar outra api"*. Medido, por rascunho com cache quente: **Haiku 4.5 US$ 0,0029** (o de
-  hoje), Sonnet 5 US$ 0,0058, Opus 5 US$ 0,0145 — e a conferência de cidade é **US$ 0,0010**, com
-  prompt de 410 tokens que **não cacheia**. **Trocar de modelo não é a alavanca do gasto**; volume
-  de chamadas é, e o número real está no painel (gasto do mês, teto em `ia.tetoUsd`). **Ficou
-  pendente ele dizer esse número** — e ver se a 2.86 encurtou os rascunhos, que é o que decide se
-  vale subir para o Sonnet.
+- **TROCAR A API — ele está avaliando, e a conta está feita.** Em 07/09: *"o chatgpt continua dando
+  respostas melhores, compare os custos de usar a api do chatgpt"*. Medido com os tokens reais do
+  prompt de hoje (5.290 de sistema + 890 de contato + 300 de saída):
+
+  | modelo | quente | frio | por 100 rascunhos |
+  |---|---|---|---|
+  | **Anthropic Haiku 4.5** (o de hoje) | $0,0029 | $0,0090 | **$0,29** |
+  | Anthropic Sonnet 5 | $0,0058 | $0,0180 | $0,58 |
+  | Anthropic Opus 5 | $0,0146 | $0,0450 | $1,46 |
+  | **OpenAI gpt-5** | $0,0048 | $0,0107 | **$0,48** |
+  | OpenAI gpt-5-mini | $0,0010 | $0,0021 | $0,10 |
+  | OpenAI gpt-5-nano | $0,0002 | $0,0004 | $0,02 |
+  | OpenAI gpt-5.6-luna | $0,0006 | $0,0016 | $0,06 |
+  | OpenAI gpt-5.4 | $0,0080 | $0,0199 | $0,80 |
+
+  **O gpt-5 inteiro custa MENOS que o Sonnet 5** e 1,6× o Haiku; o gpt-5-mini custa um terço do
+  Haiku. Preços lidos em 07/09/2026 na página oficial da OpenAI (gpt-5 $1,25 entrada / $0,125
+  cacheada / $10 saída; mini $0,25/$0,025/$2; nano $0,05/$0,005/$0,40).
+
+  **Duas coisas mudam essa aritmética:** raciocínio é cobrado como SAÍDA (a família GPT-5 pensa por
+  padrão — 900 tokens de saída levam o gpt-5 a $0,0108, empatando com o Sonnet), e **o cache da
+  OpenAI é automático e de graça para escrever**, enquanto o da Anthropic custa 1,25× — o que faz a
+  coluna FRIA, que é o caso comum numa rodada espaçada, favorecer mais a OpenAI.
+
+  **Ele não está comparando as duas APIs:** está comparando o ChatGPT (modelo grande, com
+  raciocínio) contra o **Haiku 4.5, o mais barato do nosso seletor**. O equivalente honesto é o
+  gpt-5 ou o Sonnet 5, e nenhum dos dois foi testado aqui.
+
+  **A ordem recomendada a ele:** (1) trocar o seletor para **Sonnet 5** e rodar uma rodada — zero
+  código, mesma chave; (2) só então avaliar a OpenAI; (3) antes das duas, **dizer o gasto do mês que
+  o painel mostra**, porque trocar de modelo mexe em centavos por chamada e gasto alto vem de
+  VOLUME.
+
+  **A troca de API é contida:** são **7 pontos** — endpoint e dois cabeçalhos em `ia-cliente.js`, o
+  formato do body (`system` + `output_config` viram `messages` + `response_format`), a leitura do
+  `usage` (`prompt_tokens_details.cached_tokens`), `PRECOS_USD_POR_MTOK` e o host no
+  `manifest.json`. **É o caminho por onde o dinheiro sai e por onde o texto chega ao eleitor**, então
+  o teto (`podeGastar`, obrigado no `background.js`) e as travas entram testados antes de ligar.
 - **Lote de áudio encaminhado: só marca, não decide.** A 2.85 reconhece; o desfecho continua
   `pedeRespostaPessoal` (tecla 6), de propósito — três áudios seguidos são também o formato de
   quem pede socorro (a Dima, 06/09). Se ele quiser desfecho próprio, é ele quem escolhe qual.
@@ -137,6 +191,11 @@ um `postMessage({__whatsfill:'cs', type:'ping'})` e escutar a resposta `type:'to
 provou que a leitura dele (*"falhou em pegar o texto da transcrição"*) estava invertida: a
 transcrição chegou inteira, e o que a IA respondeu era conteúdo de um áudio encaminhado. **Nada foi
 escrito por ali** — só leitura, e nenhum dado de eleitor entrou em arquivo do repositório.
+
+**A mesma receita provou a Cidade contaminada** no fim do dia: `POST /core/v1/contact/filter` com
+`{name: '<trecho>'}` acha o contato, e `GET /core/v1/contact/{id}?isToIncludeCustomFields=true`
+mostra o que está gravado. **É a diferença entre "a tela mostra" e "o CRM tem"** — e neste projeto
+essas duas coisas já divergiram várias vezes.
 
 **O que NÃO tem como ser provado aqui:**
 
