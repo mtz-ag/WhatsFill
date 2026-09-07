@@ -3086,7 +3086,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       fundo.remove();
     }
     function aoTeclar(ev) {
-      if (ev.key !== 'Escape') return;
+      // Esc SINTÉTICO não fecha nada: a extensão dispara um para fechar menu e diálogo do Material
+      // (`dom.fecharOverlay`, `hsm`), e ele borbulha até aqui — fecharia o editor no meio da
+      // digitação, perdendo o texto. Só teclado de verdade traz `isTrusted`.
+      if (ev.key !== 'Escape' || !ev.isTrusted) return;
       ev.preventDefault();
       fechar();
     }
@@ -3677,6 +3680,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      */
     function aoTeclar(ev) {
       if (ev.key !== 'Escape' || ev.defaultPrevented) return;
+      /**
+       * **O Esc que a EXTENSÃO dispara não é dele — e era ele que parava a rodada.**
+       *
+       * Relato dele (07/09/2026), com a print e o log junto: *"mesmo erro, começou e parou sem eu
+       * mandar"*, e o Andamento dizia **"você parou a rodada pelo Esc"** numa rodada em que ele não
+       * tocou no teclado. A culpa é nossa e está escrita em dois lugares do próprio projeto:
+       * `dom.fecharOverlay` e `hsm` **disparam `new KeyboardEvent('keydown', {key:'Escape'})` no
+       * document** para fechar menu e diálogo do Material — é assim que a rodada fecha o diálogo do
+       * modelo, ou seja, **em toda passada que envia**. Esse evento borbulha, e o atalho o lia como
+       * dedo dele.
+       *
+       * `isTrusted` é a única leitura exata: só evento gerado pelo navegador a partir de teclado de
+       * verdade vem `true`; tudo o que sai de `dispatchEvent` vem `false`. Vale também para o Esc
+       * que a própria plataforma vier a disparar amanhã.
+       *
+       * **Atalho que age em evento sintético é atalho que a extensão aperta sozinha.**
+       */
+      if (!ev.isTrusted) return;
       if (!state.auto.rodando) return;
       if (ehCampoDeTexto(ev.composedPath?.()[0] || ev.target)) return;
       ev.preventDefault();
@@ -6867,6 +6888,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // A caixa mostra a letra em MAIÚSCULA (ver `sugestao.mostrarTecla`), então o Shift junto
         // tem que valer: caixa que ensina uma tecla e recusa o jeito óbvio de apertá-la é pior
         // que caixa sem atalho. As teclas em si continuam minúsculas — o que muda é só a leitura.
+        // O Esc que a EXTENSÃO dispara para fechar overlay do Material chega aqui como qualquer
+        // outro, e aqui Esc significa PARAR A RODADA — foi assim que ela parou sozinha (07/09).
+        if (ev.key === 'Escape' && !ev.isTrusted) return;
         const apertada = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
         const opcao = opcoes.find((o) => o.tecla === apertada);
         if (!opcao && ev.key !== 'Escape') return;
@@ -10832,7 +10856,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       fundo.remove();
     }
     function aoTeclar(ev) {
-      if (ev.key !== 'Escape') return;
+      // Esc SINTÉTICO não fecha nada: a extensão dispara um para fechar menu e diálogo do Material
+      // (`dom.fecharOverlay`, `hsm`), e ele borbulha até aqui — fecharia o editor no meio da
+      // digitação, perdendo o texto. Só teclado de verdade traz `isTrusted`.
+      if (ev.key !== 'Escape' || !ev.isTrusted) return;
       ev.preventDefault();
       fechar();
     }

@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.79.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.80.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -183,6 +183,45 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-07 — Era a EXTENSÃO apertando Esc (v2.80.0)
+
+*"Mesmo erro, começou e parou sem eu mandar"* — e desta vez a print trouxe o log junto, com a frase
+que resolve tudo: **"você parou a rodada pelo Esc"**, numa rodada em que ele não tocou no teclado.
+
+### A causa está escrita em dois lugares do próprio projeto
+
+`dom.fecharOverlay` e `hsm` **disparam `new KeyboardEvent('keydown', {key:'Escape'})` no document**
+para fechar menu e diálogo do Material — é assim que a rodada fecha o diálogo do modelo, ou seja,
+**em toda passada que envia**. O evento borbulha, e o atalho novo o lia como dedo dele. Por isso o
+sintoma era *"a cada rodada"*: quanto mais a rodada trabalhava, mais cedo ela se parava.
+
+**`isTrusted` é a leitura exata**: só evento gerado pelo navegador a partir de teclado de verdade
+vem `true`; tudo que sai de `dispatchEvent` vem `false`.
+
+### E o mesmo defeito estava em mais três Esc
+
+Conserto que muda ONDE se procura vale para todos os caminhos que procuram — os outros três já
+existiam antes desta janelinha e tinham o mesmo buraco:
+
+| onde | o que o Esc sintético fazia |
+|---|---|
+| **caixa da pergunta da rodada** | Esc ali significa **parar a rodada** desde sempre |
+| **editor da Config** | fecharia o diálogo no meio da digitação |
+| **editor de resposta** | idem, perdendo o texto |
+
+A regra que fica: **atalho que age em evento sintético é atalho que a extensão aperta sozinha.**
+
+### Os botões
+
+*"Estão largos e feios"* — estavam: `flex: 1` os esticava com a janelinha, virando duas barras
+coloridas gigantes por cima da conversa. Ícone não precisa de largura, precisa de alvo: hoje são
+**36×32 fixos**, glifo em 15px, cantos arredondados, e a janelinha encolheu para 150px — cabem os
+dois e mais nada.
+
+15 suítes verdes, os dois verificadores limpos.
 
 ---
 

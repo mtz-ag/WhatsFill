@@ -1442,6 +1442,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **A EXTENSAO DISPARA `Escape` NO DOCUMENT — entao atalho de Esc que nao confere `isTrusted` e
+  atalho que ela aperta sozinha.** Relato dele (07/09/2026): *"mesmo erro, comecou e parou sem eu
+  mandar"*, com o log dizendo **"voce parou a rodada pelo Esc"** numa rodada em que ele nao tocou no
+  teclado. A causa esta escrita no proprio projeto: `dom.fecharOverlay` e `hsm` fazem
+  `document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape'}))` para fechar menu e dialogo
+  do Material — **em toda passada que envia**. O evento borbulha e chega em todo mundo que escuta.
+  **`isTrusted` e a leitura exata**: teclado de verdade vem `true`, `dispatchEvent` vem `false`.
+  Estava faltando em QUATRO lugares (o controle da rodada, a caixa da pergunta — onde Esc significa
+  parar a rodada desde sempre —, o editor da Config e o editor de resposta), e vale tambem para o
+  Esc que a plataforma vier a disparar amanha.
+
 - **A CONVERSA ANTERIOR tem ROTA, e o botao da tela E essa rota.** Lido no bundle em 07/09/2026, a
   pedido dele: o `h-button` "Ver conversa anterior" emite `loadPreviousEvent`, e quem atende chama
   **`GET /chat/v1/session/{id}/previous`** (devolve o id da anterior, e e ele que LIGA o botao:

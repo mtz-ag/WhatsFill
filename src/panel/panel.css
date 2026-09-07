@@ -548,33 +548,40 @@
 .wf-pergunta-obs-aviso.ruim { color: var(--wf-err); font-weight: 600; }
 
 /*
-  O CONTROLE DA RODADA: ⏹ parar e ▶ continuar, arrastável, aberto enquanto a automação anda.
+  O CONTROLE DA RODADA: ⏹ parar e ▶ começar de novo, arrastável, aberto enquanto a automação anda.
 
   Pedido dele (07/09/2026): *"crie um botão popup de parar a automação e continuar... o de parar
   vermelho e o de continuar verde e simples com ícone play e stop, mesmo estilo de poder arrastar
-  pela tela"*.
+  pela tela"*; depois, vendo na tela: *"os botões só preciso do ícone um pouco maior sem texto"* e
+  *"melhore o design dos botões, estão largos e feios"*.
 
   Herda `wf-pergunta` + `wf-contador` de propósito: é a mesma família da janelinha que fica ABERTA
   por cima da conversa, então já vem com a cor, o tema escuro, o título que é alça e o limite de
-  tela. O que muda aqui é só a largura (menor: são dois botões) e as duas cores, que precisam ser
-  reconhecíveis de canto de olho — é para isso que ele os quis coloridos.
+  tela.
 
-  Os botões são PREENCHIDOS e não só coloridos no texto: `.wf-danger` do painel pinta a letra, e
-  letra vermelha num botão pequeno se perde em cima da conversa.
+  **Os botões são QUADRADOS e do tamanho do dedo, não da caixa.** A primeira versão dava `flex: 1`
+  aos dois, e eles esticavam com a janelinha — duas barras coloridas gigantes por cima da conversa,
+  que foi o que ele viu. Ícone não precisa de largura: precisa de alvo. Daí `36px` fixos, o glifo
+  em 15px e a janelinha estreita o bastante para caber os dois e mais nada.
 */
-.wf-controle.wf-pergunta-solta { width: min(200px, calc(100vw - 32px)); }
-.wf-controle .wf-controle-estado { margin: 6px 0 2px; color: var(--wf-muted); }
+.wf-controle.wf-pergunta-solta { width: min(150px, calc(100vw - 32px)); }
+.wf-controle { padding: 8px 10px; }
+.wf-controle .wf-pergunta-titulo { margin-bottom: 4px; }
+.wf-controle .wf-controle-estado { margin: 0 0 8px; color: var(--wf-muted); font-size: 12px; }
 .wf-controle .wf-controle-estado.wf-controle-pausada { color: var(--wf-err); font-weight: 600; }
-.wf-controle .wf-controle-botoes { display: flex; gap: 8px; }
-/* Pedido dele (07/09/2026): *"os botões só preciso do ícone um pouco maior sem texto"*. O nome vai
-   no `title`/`aria-label` — botão sem texto que também não se anuncia é botão que só quem o viu
-   nascer sabe usar. A altura fixa existe para os dois ficarem do mesmo tamanho: ▶ e ■ têm largura
-   diferente na fonte, e sem ela um botão sai maior que o outro. */
+
+.wf-controle .wf-controle-botoes { display: flex; gap: 8px; margin: 0; }
 .wf-controle .wf-controle-botoes button {
-  flex: 1;
-  font-size: 18px;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 32px;
+  padding: 0;
+  font-size: 15px;
   line-height: 1;
-  padding: 8px 0;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .wf-pergunta-fundo button.wf-controle-parar {
@@ -591,6 +598,6 @@
    ponto de sumir transformaria a janelinha em "só tem um botão". */
 .wf-pergunta-fundo button.wf-controle-parar:disabled,
 .wf-pergunta-fundo button.wf-controle-seguir:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: default;
 }
