@@ -836,8 +836,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      *
      * A pergunta continua valendo para `aproximada` — ali o parser achou um município de verdade e
      * a dúvida é se é ESTE. Aqui não há município nenhum.
+     *
+     * **E não oferecer nunca quis dizer gravar.** Este `return` deixava o palpite no rascunho, e a
+     * gravação logo abaixo não olhava `pendente`: o valor ia para o campo Cidade sem passar por
+     * caixa nenhuma — print dele de 07/09/2026, com `"mais Apoiadores com patrocínio"` gravado num
+     * contato novo. Quem fecha isso agora é `fields.deveGravarEntrada`, no ponto de escrita.
      */
-    if (entry.confidence === 'nao-reconhecida') return;
+    if (entry.confidence === 'nao-reconhecida') {
+      if (state.auto?.rodando) {
+        registrarNaRodada(
+          state.contact?.name || 'contato',
+          'aviso',
+          `cidade "${entry.value}" não gravada: não é município do RS — corrija na aba Dados se for o caso`
+        );
+      }
+      return;
+    }
 
     /**
      * **Com a IA ligada, quem responde esta caixa é ela** — e responde ANTES de a caixa existir.
@@ -8372,13 +8386,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return false;
     }
 
+    // Quem decide o que entra é `fields.deveGravarEntrada` — inclusive a guarda do `pendente`,
+    // que faltava aqui e por onde um palpite de cidade chegou ao CRM sem ninguém confirmar.
     const changes = {};
     for (const field of state.classify) {
       const entry = state.draft[field.id];
-      if (!entry || entry.from === 'crm') continue; // não reescreve o que já estava lá
-      if (somenteExatos && !(entry.from === 'palpite' && entry.confidence === 'exata')) continue;
-      const empty = entry.value == null || entry.value === '' || (Array.isArray(entry.value) && !entry.value.length);
-      if (!empty) changes[field.id] = entry.value;
+      if (fieldsLib.deveGravarEntrada(entry, { somenteExatos })) changes[field.id] = entry.value;
     }
 
     // Data de conclusão só preenche buraco, nunca reescreve: um contato concluído em 05/08 não

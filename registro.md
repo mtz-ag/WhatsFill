@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.87.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.88.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,15 +10,15 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.87.0**, tudo commitado e no remoto (último: `802a8c2`).
+Branch `claude/whatsfill-ia`, **v2.88.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**38 arquivos**),
 **64 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
 tabela. Prompt de sistema do rascunho: **5.290 tokens**, dos quais **72% é o `PADRAO_DE_ATENDIMENTO`
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
-Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **doze em
-07/09** (2.76 a 2.87).
+Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **treze em
+07/09** (2.76 a 2.88).
 
 ### O que mudou em 07/09, em uma linha cada
 
@@ -36,6 +36,7 @@ Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2
 | 2.85 | **A extensão RECONHECE o lote encaminhado** — áudio que não caberia no tempo em que chegou não foi gravado ali. |
 | 2.86 | **A regra de tamanho passou a ser citada onde o modelo lê** — o item 22 do padrão dele estava a 3.804 tokens do pedido. |
 | 2.87 | **Proposta comercial não abre porta** — nada é aceito no período eleitoral, e mandar procurar a coordenação virou trava. |
+| 2.88 | **Palpite PENDENTE ia para o CRM** — quem pergunta respeitava a marca, quem escreve não sabia dela. A Cidade contaminada tem causa. |
 
 As versões de 05 e 06/09 (2.42 a 2.75) estão nas entradas próprias, abaixo. O fio de 07/09 tem duas
 metades: **o controle da rodada** (2.76 a 2.80, que terminou no Esc que a própria extensão apertava)
@@ -90,35 +91,20 @@ reescrever o texto de um aviso sem reescrever a trava a faria deixar de casar em
 3. **Os MODELOS PADRÃO estão vazios**, e o anúncio *CONVERSE CONOSCO* não está cadastrado. Sem um
    dos dois não existe modelo nenhum para quem chega por ele: pede material e recebe o formulário
    seco.
-4. **A Cidade de quem já foi contaminado.** O aviso *"Cidade escrita fora do padrão"* continua no
-   cabeçalho. Metade se conserta sozinha desde a 2.69 (campo com endereço de máquina + ela
-   mencionando a cidade de novo = o palpite passa a valer). Quem nunca mais escrever a cidade só
-   se acha pela aba Cidades.
+4. **A Cidade de quem já foi contaminado — a entrada está fechada desde a 2.88, o passado não.**
+   O aviso *"Cidade escrita fora do padrão"* continua no cabeçalho de quem já tem lixo no campo.
+   Metade se conserta sozinha desde a 2.69 (campo com endereço de máquina + ela mencionando a
+   cidade de novo = o palpite passa a valer) — e **só metade**, porque `ehEnderecoDeMaquina` olha a
+   FORMA, e `mais Apoiadores com patrocínio` não tem forma nenhuma. Quem nunca mais escrever a
+   cidade só se acha pela aba Cidades.
 5. **Config → "Modelo por conteúdo", linha `ADS = Campanha Martim`**: não é mais necessário limpar
    (o código tem o piso `tags.ORIGEM_SEMPRE`), mas continua confundindo a leitura.
 
-### PRIMEIRA COISA A RESOLVER numa aba nova: a Cidade contaminada, DE NOVO
+### A Cidade contaminada: RESOLVIDA na 2.88 — havia buraco aberto
 
-Achado em 07/09 no print dele, e **confirmado na API**: o contato que ofereceu patrocínio está com
-**`mais Apoiadores com patrocínio` gravado no campo Cidade do CRM** — é o único campo preenchido
-dele. Não é palpite na tela: está no contato.
-
-**Medido no parser de hoje**, com as quatro mensagens daquela conversa:
-
-```
-extract([...])                          -> cidade "mais Apoiadores com patrocínio", nao-reconhecida
-extract([...], {respostaAoPedido:true}) -> a mesma coisa
-```
-
-**Nos DOIS modos**, e não só no generoso. Pelas regras isso não deveria chegar ao CRM: palpite
-`nao-reconhecida` não grava sozinho e, desde 04/09, **não pode nem virar a pergunta "Cidade a
-gravar"**. Então ou o valor é anterior àquele conserto, ou **há um buraco aberto** — e é a terceira
-vez desta família (o Instagram em 02/09, o `faq.whatsapp.com` em 05/09, o `vt.tiktok.com` em 06/09).
-
-**O que falta é achar o CAMINHO da escrita**, e é por aí que a próxima sessão começa: quem grava
-Cidade (`saveClassification`, `confirmarCidadeSePendente`, o aceite da caixa, a IA da 2.69) contra
-`confidence: 'nao-reconhecida'`. **Antes de consertar, prove por onde entrou** — a lição de 06/09
-(*"antes de por trava na IA, PROVE que foi a IA"*).
+Era a primeira coisa a resolver, e ele a provou: *"contato novo e esse erro de cidade foi feito
+agora"*. O valor não era anterior a conserto nenhum — a escrita estava aberta. Causa e conserto na
+entrada de 07/09 abaixo; a **entrada** está fechada, o **passado** não (pendência 4).
 
 ### Aberto, esperando decisão dele
 
@@ -252,6 +238,84 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-07 — O palpite PENDENTE ia para o CRM (v2.88.0)
+
+### Ele fechou a pergunta que estava aberta
+
+*"Contato novo, e esse erro de cidade foi feito agora."*
+
+O contato que ofereceu patrocínio estava com **`mais Apoiadores com patrocínio` no campo Cidade** —
+um trecho da própria mensagem dele. O registro de ontem listava duas hipóteses: *"ou o valor é
+anterior àquele conserto, ou há um buraco aberto"*. Com a frase dele só sobra a segunda.
+
+### A cadeia, medida ponta a ponta
+
+1. **`extract.cityPositionGuess`** pega o **segundo pedaço depois da vírgula** e o devolve como
+   palpite `nao-reconhecida`, sem casar com município nenhum. Reproduzido byte a byte:
+
+   ```
+   'Veja aí quem é meus Patrocinadores Oficial, mais Apoiadores com patrocínio'
+     -> { value: 'mais Apoiadores com patrocínio', confidence: 'nao-reconhecida', ... }
+   ```
+
+   > Minha medição de ontem dizia que ele saiu **nos dois modos** do parser. Estava errada: eu havia
+   > reconstruído as mensagens de memória, e nenhuma das minhas reconstruções devolvia nada. O que
+   > produz este valor é a **vírgula**, e o caminho é o palpite de POSIÇÃO — nada a ver com o modo
+   > generoso.
+
+2. **`panel.applyGuesses`** marca toda cidade com `pendente: true`.
+3. **`confirmarCidadeSePendente` desiste em três situações e volta sem mexer no rascunho:** palpite
+   que não é município (04/09), rodada automática sem IA para conferir (03/09) e a pergunta que
+   outra instância já está fazendo.
+4. **E o laço que monta o `changes` não olhava `pendente`.** Medido: a palavra aparecia num lugar
+   só do `panel.js` inteiro — dentro de quem PERGUNTA.
+
+**Quem pergunta respeitava a marca; quem escreve não sabia dela.**
+
+### A guarda que abriu o buraco foi criada para proteger
+
+A de 04/09 nasceu de uma anotação dele — a caixa *"Cidade a gravar"* abriu com **"Mathias"**, o
+sobrenome da contato — e a resposta certa foi **não oferecer**. Só que antes dela a caixa abria, e o
+Esc **apagava o rascunho**. Tirando a caixa da frente sem apagar o rascunho, o valor passou a ir
+direto: **não oferecer nunca quis dizer gravar.**
+
+E a de 03/09 era pior de ler: ela escreve *"cidade X não gravada: é palpite e a rodada está
+automática"* no Andamento **e gravava**. Log que mentia — agora é verdade.
+
+### O conserto: no ponto Único de escrita
+
+A regra inteira virou **`fields.deveGravarEntrada`**, ao lado de `deveCarimbarData` e pelo mesmo
+motivo (lá fora dá para testar). O laço do `changes` virou uma linha.
+
+**Por que aí e não em cada saída de `confirmarCidadeSePendente`:** são três hoje, e cada nova seria
+mais um vazamento. `pendente` só é posto na Cidade e é zerado por toda resposta que aceita ou
+corrige — nenhum outro campo muda de comportamento.
+
+**O palpite de posição continua existindo**, de propósito: ele aparece em amarelo na aba Dados (como
+*"não reconhecido"*) e alimenta a revisão da aba Cidades. O que ele não faz mais é chegar ao CRM.
+E, quando a rodada está andando, agora **escreve no Andamento** que não gravou e por quê.
+
+### A diferença das duas vezes anteriores
+
+`faq.whatsapp.com` (05/09) e `vt.tiktok.com` (06/09) foram consertados **na origem**, e
+`cities.ehEnderecoDeMaquina` só alcança o que tem **forma** de endereço. `mais Apoiadores com
+patrocínio` é frase comum — não tinha origem para consertar, e a origem certa era a escrita.
+
+### O que muda para ele
+
+Numa **rodada automática com a IA desligada**, nenhuma cidade de palpite é mais gravada — que é o
+que o log já dizia. Com a IA ligada (como está no print dele) nada muda: ela confere e o `pendente`
+cai. Rodando contato a contato, também nada muda: a caixa abre.
+
+**Arquivos:** `src/lib/fields.js` (`deveGravarEntrada`), `src/panel/panel.js` (o laço do `changes` e
+a linha no Andamento), `tests/contract.test.mjs` (+11), `tests/parser.test.mjs` (+1, travando a
+confiança do palpite de posição), `CLAUDE.md` (a armadilha reescrita com a causa provada),
+`manifest.json` (2.87.0 → 2.88.0). Quinze suítes e os dois verificadores.
+
+**O quadro dele não muda.**
+
 ---
 
 ## 2026-09-07 — Proposta comercial não abre porta nenhuma (v2.87.0)

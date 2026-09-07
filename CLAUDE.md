@@ -1466,18 +1466,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   por ali), e **nenhum dado de eleitor entra em arquivo do repositorio** — o que se registra e a
   FORMA (chaves, tamanhos, confianca), nunca o conteudo. A API e lenta e tem limitador: ~10s por
   sessao, com pausa entre chamadas, e nada de varredura.
-- **PALPITE `nao-reconhecida` CHEGOU AO CRM, e e a TERCEIRA vez desta familia.** Print de 07/09/2026
-  (o contato que oferecia patrocinio): o campo Cidade dele tem **`mais Apoiadores com patrocinio`**,
-  confirmado na API — o unico campo preenchido do contato. Medido no parser de hoje com as quatro
-  mensagens daquela conversa: ele devolve esse texto como cidade `nao-reconhecida` **nos DOIS
-  modos**, e nao so no generoso do `respostaAoPedido`. Pelas regras isso nao deveria chegar la:
-  palpite `nao-reconhecida` nao grava sozinho e, desde 04/09, **nao pode nem virar a pergunta
-  "Cidade a gravar"**. Ou o valor e anterior aquele conserto, ou **ha um buraco aberto**. As duas
-  vezes anteriores (`faq.whatsapp.com` em 05/09, `vt.tiktok.com` em 06/09) foram consertadas cada
-  uma na sua origem, e `cities.ehEnderecoDeMaquina` cobre so o que TEM FORMA de endereco — aqui e
-  texto comum. **Antes de consertar, prove por onde entrou** (a licao de 06/09: antes de por trava
-  na IA, prove que foi a IA): os candidatos sao `saveClassification`, o aceite da caixa de cidade e
-  o caminho da IA da 2.69.
+- **QUEM PERGUNTA RESPEITAVA O `pendente`; QUEM ESCREVE NAO SABIA DA MARCA.** Print de 07/09/2026,
+  com ele dizendo *"contato novo e esse erro de cidade foi feito agora"*: o campo Cidade valia
+  **`mais Apoiadores com patrocinio`** — um trecho da mensagem dele —, num contato aberto e
+  concluido no mesmo dia. A cadeia, medida ponta a ponta: `extract.cityPositionGuess` devolve o
+  **segundo pedaco depois da virgula** como palpite `nao-reconhecida` (sem casar com municipio
+  nenhum, de proposito — ele existe para virar sugestao na tela e revisao na aba Cidades);
+  `applyGuesses` marca `pendente: true`; **`confirmarCidadeSePendente` desiste em tres situacoes e
+  volta sem mexer no rascunho** (palpite que nao e municipio, da 04/09; rodada automatica sem IA,
+  da 03/09; e a pergunta que outra instancia ja esta fazendo); e o laco do `changes` **nao olhava
+  `pendente`**. Medido: a palavra aparecia num lugar so do `panel.js`, dentro de quem PERGUNTA.
+  **A guarda de 04/09 foi criada para PROTEGER** — tirar o palpite ruim da caixa — **e foi ela que
+  abriu isto**: antes dela a caixa abria e o Esc apagava o rascunho. Hoje a regra inteira e
+  `fields.deveGravarEntrada`, no **ponto unico de escrita**, com teste: saida nova de
+  `confirmarCidadeSePendente` nao vira vazamento novo. Duas coisas a lembrar: a de 03/09 escrevia
+  *"nao gravada"* no Andamento **e gravava** — log que mentia, e agora e verdade; e as duas vezes
+  anteriores desta familia (`faq.whatsapp.com` em 05/09, `vt.tiktok.com` em 06/09) foram
+  consertadas cada uma na sua ORIGEM, o que so funciona enquanto o valor tem FORMA que
+  `cities.ehEnderecoDeMaquina` reconheca — aqui e frase comum, e **a origem certa do conserto era
+  a escrita**. A licao de 06/09 (*antes de por trava na IA, prove que foi a IA*) valeu de novo: os
+  candidatos que eu listei eram tres, e o culpado era o que eu tinha listado primeiro.
 - **PROPOSTA COMERCIAL NAO ABRE PORTA, e "procure a coordenacao" e a porta que nao existe.** Regra
   dele (07/09/2026), sobre o contato que oferecia patrocinio: *"nada sera aceito agora em periodo
   eleitoral, os contratos que deviam ser feitos ja foram feitos"*. O rascunho tinha explicado a lei

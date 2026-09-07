@@ -177,6 +177,59 @@ grupo('data de conclusão na gravação automática');
   );
 }
 
+grupo('palpite PENDENTE nunca vai para o CRM');
+{
+  const { deveGravarEntrada } = await lib('fields.js');
+
+  /**
+   * Print dele (07/09/2026): contato NOVO, aberto e concluído no mesmo dia, com o campo Cidade
+   * valendo `"mais Apoiadores com patrocínio"` — um trecho da própria mensagem dele.
+   *
+   * `cityPositionGuess` devolve o segundo pedaço depois da vírgula como palpite
+   * `nao-reconhecida`; `confirmarCidadeSePendente` desiste de perguntar por ele desde 04/09 e
+   * volta **sem apagar o rascunho**; e a gravação não olhava `pendente`.
+   */
+  const palpiteRuim = {
+    value: 'mais Apoiadores com patrocínio',
+    from: 'palpite',
+    confidence: 'nao-reconhecida',
+    pendente: true,
+  };
+  check(!deveGravarEntrada(palpiteRuim), 'palpite que não é município não é gravado');
+  check(
+    !deveGravarEntrada(palpiteRuim, { somenteExatos: true }),
+    'nem na gravação automática'
+  );
+
+  // A outra saída que voltava sem mexer no rascunho: rodada automática sem IA para conferir.
+  // Ela escreve "não gravada" no Andamento desde 03/09 — e agora isso é verdade.
+  check(
+    !deveGravarEntrada({ value: 'Canoas', from: 'palpite', confidence: 'exata', pendente: true }),
+    'cidade que casa EXATO com o IBGE também espera confirmação'
+  );
+
+  // O que a confirmação faz é zerar a marca — as três respostas que gravam passam por aqui.
+  check(
+    deveGravarEntrada({ value: 'Canoas', from: 'palpite', confidence: 'exata', pendente: false, confirmada: true }),
+    'confirmada por ele ou pela IA: grava'
+  );
+
+  // O resto da regra, que já existia solta dentro de saveClassification.
+  check(!deveGravarEntrada(undefined), 'campo sem rascunho');
+  check(!deveGravarEntrada({ value: 'Canoas', from: 'crm' }), 'valor do CRM nunca é reescrito');
+  check(!deveGravarEntrada({ value: '', from: 'manual' }), 'vazio não é gravação');
+  check(!deveGravarEntrada({ value: [], from: 'manual' }), 'multiselect vazio não é gravação');
+  check(deveGravarEntrada({ value: 'Canoas', from: 'manual' }), 'digitado por ele: grava');
+  check(
+    !deveGravarEntrada({ value: 'Canoas', from: 'manual' }, { somenteExatos: true }),
+    'a gravação automática leva só palpite exato'
+  );
+  check(
+    !deveGravarEntrada({ value: 'Caxias', from: 'palpite', confidence: 'aproximada' }, { somenteExatos: true }),
+    'palpite aproximado fica de fora do automático'
+  );
+}
+
 grupo('sem contrato próprio, tipo delicado recusa em vez de cair no de texto');
 {
   const { contractFor } = await lib('fields.js');

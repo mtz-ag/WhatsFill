@@ -63,6 +63,52 @@ export function deveCarimbarData({ dataVazia, temExato, temEtiqueta, temCidade }
   return !!(temExato || temEtiqueta || temCidade);
 }
 
+/**
+ * Esta entrada do rascunho vai para o CRM nesta gravação?
+ *
+ * Estava escrita solta dentro de `saveClassification`, e **faltava a linha mais importante**:
+ * nada olhava `pendente`. Print dele (07/09/2026): um contato novo, aberto e concluído no mesmo
+ * dia, ficou com o campo **Cidade** valendo `"mais Apoiadores com patrocínio"` — um trecho da
+ * própria mensagem dele.
+ *
+ * A cadeia, medida:
+ *
+ * 1. `extract.cityPositionGuess` pega o **segundo pedaço** depois da vírgula e devolve como
+ *    palpite `nao-reconhecida` — sem casar com município nenhum, de propósito: ele existe para
+ *    virar popup com sugestões e para alimentar a revisão da aba Cidades;
+ * 2. `panel.applyGuesses` marca toda cidade com `pendente: true`;
+ * 3. `confirmarCidadeSePendente` **desiste** em três situações e volta sem mexer no rascunho —
+ *    palpite que não é município (04/09), rodada automática sem IA (03/09, que ainda escreve
+ *    *"não gravada"* no Andamento) e a pergunta que outra instância já está fazendo;
+ * 4. e a gravação, sem esta guarda, escrevia o palpite mesmo assim.
+ *
+ * **A regra dele é uma frase: nenhuma cidade de palpite vai para o CRM sem confirmação.** Quem
+ * pergunta respeitava; quem escreve não sabia da marca. Por isso a guarda mora **aqui**, no ponto
+ * único de escrita: cada saída nova de `confirmarCidadeSePendente` seria mais um vazamento, e a
+ * de 04/09 — criada para PROTEGER, tirando o palpite ruim da caixa — foi justamente a que abriu
+ * este. É a terceira vez que texto solto chega ao campo Cidade (`faq.whatsapp.com` em 05/09,
+ * `vt.tiktok.com` em 06/09); as duas primeiras foram consertadas na origem, e esta não tinha
+ * origem para consertar — é frase comum, sem forma que `cities.ehEnderecoDeMaquina` reconheça.
+ *
+ * `pendente` só é posto na Cidade (`applyGuesses`, `corrigirNomeComCidade`) e é zerado por toda
+ * resposta que aceita ou corrige, então nenhum outro campo muda de comportamento.
+ *
+ * @param {object|undefined} entry entrada de `state.draft`
+ * @param {boolean} somenteExatos a gravação em curso só leva palpite exato (a automática)
+ */
+export function deveGravarEntrada(entry, { somenteExatos = false } = {}) {
+  if (!entry) return false;
+  // Não reescreve o que já estava lá.
+  if (entry.from === 'crm') return false;
+  // Palpite esperando confirmação: dele, ou da IA. Nunca gravado sozinho.
+  if (entry.pendente) return false;
+  if (somenteExatos && !(entry.from === 'palpite' && entry.confidence === 'exata')) return false;
+  const valor = entry.value;
+  if (valor == null || valor === '') return false;
+  if (Array.isArray(valor) && !valor.length) return false;
+  return true;
+}
+
 let schemaCache = null;
 
 export async function loadSchema({ force = false } = {}) {

@@ -121,6 +121,21 @@ const casos = [
     msgs: ['Olá! Eu aceito receber conteúdos do Zucco e do Cap Martim.'],
     esperado: { vazio: true },
   },
+  {
+    /**
+     * Print dele (07/09/2026): este trecho foi **gravado no campo Cidade** de um contato novo.
+     *
+     * O palpite em si está certo e continua: `cityPositionGuess` devolve o segundo pedaço depois
+     * da vírgula sem casar com município nenhum, para virar sugestão na tela e revisão na aba
+     * Cidades. O que estava errado era a GRAVAÇÃO — ver `fields.deveGravarEntrada`.
+     *
+     * Esta asserção trava a confiança: enquanto for `nao-reconhecida`, a guarda da escrita o
+     * segura. Virasse `exata` por algum "conserto" no parser, ele passaria a gravar sozinho.
+     */
+    titulo: 'trecho da própria mensagem no lugar da cidade fica como palpite, nunca como certeza',
+    msgs: ['Veja aí quem é meus Patrocinadores Oficial, mais Apoiadores com patrocínio'],
+    esperado: { cidadeNaoReconhecida: true },
+  },
 ];
 
 for (const caso of casos) {
