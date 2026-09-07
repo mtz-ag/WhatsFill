@@ -1442,6 +1442,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `validarRascunho` e chamava `revisarRascunho` com o OBJETO (`[object Object]`), entao nenhum aviso
   jamais apareceu na tela.
 
+- **A IA inventa no PRESENTE tambem: "temos adesivos e camisetas disponiveis".** Print do Lucas
+  Mendes (07/09/2026): ele perguntou *"como faco para conseguir um bone ou acessorio"* e o rascunho
+  abriu afirmando o estoque — *"a IA confirmou algo sem saber"*. E a irma do caso da Sandra (06/09)
+  com o verbo trocado de tempo: la a invencao era sobre o passado (*"ja encaminhei"*), aqui e sobre
+  o que EXISTE. Nada no prompt fala de material fisico, e a pergunta era justamente como conseguir.
+  Hoje ha `AVISOS_QUE_IMPEDEM_ENVIO.afirmouTer` e a proibicao escrita na regra 5. **A guarda que
+  sustenta a regra e a NEGATIVA**: *"nao temos adesivos para enviar"* e o texto CERTO para esse
+  caso, entao a negacao vence e e testada antes. E **"material" ficou de fora de proposito**: nesta
+  base *"quero receber o material"* e conteudo DIGITAL, o pedido mais comum que chega.
+
 - **A EXTENSAO DISPARA `Escape` NO DOCUMENT — entao atalho de Esc que nao confere `isTrusted` e
   atalho que ela aperta sozinha.** Relato dele (07/09/2026): *"mesmo erro, comecou e parou sem eu
   mandar"*, com o log dizendo **"voce parou a rodada pelo Esc"** numa rodada em que ele nao tocou no

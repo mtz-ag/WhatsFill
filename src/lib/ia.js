@@ -706,6 +706,22 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '   "sua mensagem chegou aqui", "me diga o endereço para eu ver o que é possível".',
     '   Entrega de material físico depende de endereço e de gente — se a pessoa não deu o endereço,',
     '   pedir o endereço é a resposta; prometer a entrega não é.',
+    /**
+     * **A outra metade da regra 5, e é sobre o PRESENTE** — print do Lucas Mendes (07/09/2026).
+     *
+     * Ele perguntou como conseguir um boné, e o rascunho abriu com *"Temos adesivos e camisetas da
+     * campanha disponíveis"*. Ele apagou: *"a IA confirmou algo sem saber"*. Nada no prompt fala de
+     * estoque — nem quais itens existem, nem se existem —, então qualquer frase dessas é invenção.
+     *
+     * Escrito como PROIBIÇÃO com o exemplo do caso real, que é a forma que funcionou nas outras
+     * quatro regras: mandar "não invente" sem mostrar a frase inventada não muda o que o modelo faz.
+     */
+    '   E NUNCA diga que TEMOS alguma coisa. Você não sabe o que existe: ninguém te contou de',
+    '   estoque, de boné, de adesivo, de camiseta nem de bandeira. Proibido escrever: "temos',
+    '   adesivos disponíveis", "temos camisetas", "o boné está disponível".',
+    '   Quem pergunta como conseguir material físico quer saber de quem pegar — e isso é com ele.',
+    '   O rascunho diz que a mensagem chegou e pede o que falta (cidade, endereço), sem afirmar que',
+    '   o item existe.',
     '',
     /**
      * **O "encaminhe para o CRAS" SAIU daqui, e é um conflito real com o documento dele.**
@@ -1066,6 +1082,26 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
    * conserta lendo depois**, porque a mensagem já saiu.
    */
   afirmouAcao: 'afirma que alguém já providenciou algo — confira, porque ninguém fez isso',
+  /**
+   * **A IA afirmou que TEMOS uma coisa** — print do Lucas Mendes (07/09/2026).
+   *
+   * Ele perguntou *"Como faço para conseguir um boné ou acessório do CAP MARTIM"*, e o rascunho
+   * respondeu: *"Temos adesivos e camisetas da campanha disponíveis. Para te enviar, preciso saber
+   * sua cidade."* Ele apagou a mensagem: *"a IA confirmou algo sem saber"*.
+   *
+   * **É a irmã do caso da Sandra (06/09), e a diferença é o tempo do verbo.** Lá a alucinação era
+   * sobre o PASSADO (*"já encaminhei seu pedido"*); aqui é sobre o PRESENTE — o que existe no
+   * estoque. Ninguém disse à IA que há boné, adesivo ou camiseta: nada no prompt fala de material
+   * físico, e a pergunta dele era justamente **como conseguir**. A resposta inventou a resposta.
+   *
+   * O dano é o mesmo e é pior que tom errado: a pessoa passa a esperar um item que talvez não
+   * exista, e dito assim vira a expectativa que a Lei 9.504/97 trata.
+   *
+   * **A lista é de item FÍSICO, e "material" ficou de fora de propósito**: nesta base *"quero
+   * receber o material"* é conteúdo DIGITAL — a frase mais comum que chega, e que a rodada
+   * responde com modelo. Avisar nela seria alarme em cima do caso normal.
+   */
+  afirmouTer: 'afirma que temos material (boné, adesivo, camiseta) — ninguém disse isso à IA',
 };
 
 /** O rascunho pode sair sozinho, ou algum aviso exige que uma pessoa leia antes? */
@@ -1141,6 +1177,23 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
   ];
   if (AFIRMOU_ACAO.some((re) => re.test(texto))) {
     avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.afirmouAcao);
+  }
+
+  /**
+   * **Afirmar que TEMOS material físico** — ver `AVISOS_QUE_IMPEDEM_ENVIO.afirmouTer`.
+   *
+   * A guarda que sustenta isto é a NEGATIVA: *"não temos adesivos para enviar"* é exatamente o que
+   * a resposta honesta diz, e barrá-la seria impedir o texto certo. Por isso a negação vence,
+   * testada antes.
+   */
+  const ITEM_FISICO = 'adesivo|camiseta|bon[ée]|bandeira|panfleto|santinho|chaveiro|brinde|folder|cartaz|faixa|colete|caneta';
+  const AFIRMOU_TER = [
+    new RegExp(`(^|[^\p{L}])(temos|tenho|dispomos\s+de|disponibilizamos)\s+[^.!?]{0,40}?(${ITEM_FISICO})`, 'iu'),
+    new RegExp(`(${ITEM_FISICO})[^.!?]{0,30}(dispon[íi]ve(l|is)|em\s+estoque)`, 'iu'),
+  ];
+  const NEGA_TER = /(^|[^\p{L}])n[ãa]o\s+(temos|tenho|dispomos|h[áa])/iu;
+  if (!NEGA_TER.test(texto) && AFIRMOU_TER.some((re) => re.test(texto))) {
+    avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.afirmouTer);
   }
 
   /**

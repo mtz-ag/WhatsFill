@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.80.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.81.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -183,6 +183,47 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-07 — A IA afirmou que TEMOS boné e camiseta (v2.81.0)
+
+Print do Lucas Mendes: ele escreveu *"Oi"* e *"Como faço para conseguir um boné ou acessório do CAP
+MARTIM"*. O rascunho saiu com *"Bom dia! **Temos adesivos e camisetas da campanha disponíveis.**
+Para te enviar, preciso saber sua cidade."* — e ele apagou a mensagem: *"a IA confirmou algo sem
+saber"*.
+
+### É a irmã do caso da Sandra, e a diferença é o tempo do verbo
+
+Em 06/09 a invenção era sobre o **passado** (*"já encaminhei seu pedido ao assessor"*). Aqui é sobre
+o **presente**: o que existe no estoque. **Nada no prompt fala de material físico** — nem quais
+itens existem, nem se existem. E a pergunta dele era justamente *como conseguir*: a resposta
+inventou a resposta.
+
+Medido antes de mexer: `revisarRascunho` devolvia **zero avisos** para a frase, então ela podia sair
+sozinha no automático. Hoje há `AVISOS_QUE_IMPEDEM_ENVIO.afirmouTer`, e o prompt ganhou a outra
+metade da regra 5, escrita como proibição com a frase do caso real.
+
+### A guarda que sustenta a regra é a NEGATIVA
+
+*"Não temos adesivos para enviar"* é **exatamente o texto certo** para quem pergunta por material
+físico. Barrá-la seria impedir a resposta honesta, então a negação vence e é testada antes.
+
+Sete asserções novas, quatro delas falso positivo: a negativa, *"você gostaria de receber
+adesivos?"*, *"temos um grupo no WhatsApp"* e — a que importa nesta base — **"material" ficou de
+fora**: aqui *"quero receber o material"* é conteúdo DIGITAL, o pedido mais comum que chega, e
+avisar nele seria alarme em cima do caso normal.
+
+### Ainda no log: quinze "você parou a rodada pelo Esc"
+
+A rodada da print encerrou com *"Parada por você"* e quinze linhas dessas. **É o defeito consertado
+na 2.80** (a extensão dispara Esc para fechar o diálogo do Material, e o atalho lia como dedo dele);
+o painel mostrava 2.80.0 no cabeçalho, mas **recarregar a extensão órfã as abas abertas** — armadilha
+registrada: sem **F5 na aba do mobiliza**, o content script continua com o código anterior. As quatro
+guardas de `isTrusted` estão no lugar e não há outra fonte de Esc sintético no `src/`. Se acontecer
+depois de um F5, o defeito é outro e eu preciso do log de novo.
+
+15 suítes verdes, os dois verificadores limpos.
 
 ---
 

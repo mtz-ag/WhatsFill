@@ -825,4 +825,42 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
     'e o prompt proibe afirmar acao, com todas as letras');
 }
 
+{
+  grupo('a IA nao afirma que TEMOS material (07/09/2026)');
+
+  /**
+   * Print do Lucas Mendes: ele perguntou *"Como faco para conseguir um bone ou acessorio do CAP
+   * MARTIM"* e o rascunho abriu com *"Temos adesivos e camisetas da campanha disponiveis. Para te
+   * enviar, preciso saber sua cidade."* Ele apagou: *"a IA confirmou algo sem saber"*.
+   *
+   * E a irma do caso da Sandra (06/09) com o verbo no PRESENTE: la a invencao era sobre o passado
+   * ("ja encaminhei"), aqui e sobre o estoque. Nada no prompt fala de material fisico.
+   */
+  const agora = new Date('2026-09-07T11:00:00');
+  const aviso = AVISOS_QUE_IMPEDEM_ENVIO.afirmouTer;
+  const avisa = (t) => revisarRascunho(t, agora).avisos.includes(aviso);
+
+  const doLucas = 'Bom dia! Temos adesivos e camisetas da campanha disponiveis. Para te enviar, preciso saber sua cidade.';
+  check(avisa(doLucas), 'a frase da print e barrada');
+  check(!rascunhoPodeSairSozinho(revisarRascunho(doLucas, agora).avisos),
+    'e ela NAO sai sozinha no automatico');
+  check(avisa('O bone esta disponivel no comite'), 'item + "disponivel" tambem conta');
+
+  /**
+   * **Os falsos positivos sao a metade cara, e o primeiro e o mais importante:** a NEGATIVA e
+   * exatamente o texto certo para quem pergunta por material fisico. Barra-la seria impedir a
+   * resposta honesta.
+   */
+  check(!avisa('Nao temos adesivos para enviar no momento'), 'a NEGATIVA passa — e o texto certo');
+  check(!avisa('Voce gostaria de receber adesivos?'), 'perguntar sobre o item nao e afirmar que temos');
+  check(!avisa('Temos um grupo no WhatsApp, quer entrar?'), '"temos" com objeto que nao e material fisico passa');
+  check(!avisa('Quero te mandar o material do Capitao'),
+    '"material" ficou de fora: nesta base e conteudo DIGITAL, o pedido mais comum que chega');
+
+  check(
+    montarSistemaRascunho({ templates: [], regras: '', gabinete: '' }).includes('NUNCA diga que TEMOS'),
+    'e o prompt proibe afirmar que temos, com todas as letras'
+  );
+}
+
 fim();
