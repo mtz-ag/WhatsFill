@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.78.0) — leia isto primeiro numa sessão nova
+## 2026-09-07 — ESTADO DE AGORA (v2.79.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -183,6 +183,53 @@ uma mudança de comportamento pode ter tornado falsas.
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+
+---
+
+## 2026-09-07 — O ⏹ para de verdade, e o ▶ recomeça (v2.79.0)
+
+Três correções dele sobre a janelinha da 2.78: *"os botões só preciso do ícone um pouco maior sem
+texto, e está pausando sem eu mandar a cada rodada, e eu quero que pare totalmente não pause"*.
+
+### A pausa saiu inteira
+
+Era o desenho da 2.78 (⏹ segurava a rodada, ▶ retomava de onde estava) e ele cortou. Hoje o ⏹ faz
+`state.auto.parar = true` — **o mesmo caminho do botão "Parar a rodada" do cartão**, que já existia,
+é lido em cinco pontos do laço (inclusive dentro da espera entre envios) e é testado pelo uso
+diário. O estado que a pausa exigia (`state.auto.pausada`) e a espera que ela pedia
+(`esperarEnquantoPausada`) foram apagados: **um caminho a menos para a rodada travar**.
+
+**O ▶ virou "começar de novo"**, e chama o `runLote*` por onde ela entrou — nunca o `rodar()`
+direto: os confirms de "Outros" (atendimento de OUTRO operador) e de "Novos" (assumir tira o contato
+da fila) moram nos `runLote*`, e pular um deles seria decidir no lugar dele. A fila é relida do
+zero, que é o que "parar totalmente" significa; contato já tratado não recebe duas vezes porque
+`hsm.decidirReenvio` pergunta à CONVERSA e vale entre rodadas.
+
+Com isso a janelinha passou a ter duas vidas: **acabando sozinha ela some** (controle de coisa que
+terminou é botão que mente), **parada por ele ela fica** — é aí que o ▶ tem o que fazer.
+
+### Sobre o "pausando sem eu mandar"
+
+**Não reproduzi, e a causa mais provável é o Esc.** Nada no código levantava `pausada` sozinho: ela
+nascia `false` a cada rodada, não era gravada no storage e só subia por clique ou por Esc. O que
+encaixa com "a cada rodada" é o **hábito de apertar Esc** — que na caixa da pergunta já significava
+"parar" desde antes de tudo isso, e que fora dela passou a pausar na 2.78.
+
+Hoje Esc **encerra**, que é o que ele pediu e é o mesmo desfecho dos dois lugares. Some a
+possibilidade de a rodada ficar segurada sem nada na tela explicando.
+
+### O ícone
+
+Só o glifo (■ e ▶), 18px, com altura fixa para os dois ficarem do mesmo tamanho — as duas formas têm
+largura diferente na fonte. O nome foi para `title` e `aria-label`: botão sem texto que também não
+se anuncia é botão que só quem o viu nascer sabe usar.
+
+15 suítes verdes, os dois verificadores limpos.
+
+**Achado de ferramenta:** `checar-referencias.mjs` **não lida com identificador acentuado** — uma
+variável `começar` chegou lá como `ar()` e virou um falso "chamada sem declaração". O conserto foi
+renomear (o projeto já escreve sem acento em nome de variável); fica registrado para o próximo não
+perder tempo procurando a função que "sumiu".
 
 ---
 

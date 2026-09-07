@@ -3578,18 +3578,26 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * verde, simples, com ícone play e stop, mesmo estilo de poder arrastar pela tela; ele deve
    * aparecer sempre que a automação for iniciada"* — e, logo depois: *"atribua o esc para o stop"*.
    *
-   * **Parar aqui é PAUSAR, e é o que faz o "continuar" existir.** `state.auto.parar` já existia e
-   * ENCERRA a rodada: a fila é perdida e a única saída é começar de novo — não há o que continuar
-   * depois dele. O par play/stop só tem sentido com um estado que segura a rodada onde ela está,
-   * então o botão vermelho levanta `state.auto.pausada` e o laço espera. **"Parar a rodada" (o
-   * encerramento de verdade) continua no cartão da aba Automatizado**, e o rodapé desta janelinha
-   * diz isso — dois botões parecidos com desfechos diferentes é o tipo de coisa que só se resolve
-   * escrevendo qual é qual.
+   * **⏹ ENCERRA a rodada, e ▶ começa de novo** — decisão dele no mesmo dia: *"eu quero que pare
+   * totalmente, não pause"*. A primeira versão pausava (e o ▶ retomava de onde estava); com a pausa
+   * saiu o estado que ela exigia, e o que sobra é `state.auto.parar`, que já existia e é o mesmo do
+   * botão "Parar a rodada" do cartão.
+   *
+   * **Por isso a janelinha SOBREVIVE ao stop**: acabando sozinha ela some, mas parada por ele fica,
+   * porque é aí que o ▶ tem o que fazer.
    *
    * Ela segue o molde do contador (`wf-pergunta` + `wf-contador`): irmã do painel para sobreviver
    * ao `transform` que o esconde, arrastável pelo título, com a posição gravada em `controlePos`.
    */
   let controleDaRodada = null;
+  /**
+   * Como recomeçar a rodada que ele parou — o ▶ precisa saber por onde ela entrou.
+   *
+   * Guarda o `runLote*`, e não o `rodar()`, de propósito: os confirms de "Outros" (atendimento de
+   * OUTRO operador) e de "Novos" (assumir tira o contato da fila) moram nos `runLote*`, e um ▶ que
+   * chamasse `rodar` direto pularia os dois.
+   */
+  let recomecarRodada = null;
 
   function abrirControleDaRodada() {
     if (controleDaRodada) {
@@ -3605,53 +3613,76 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const estado = h('div', { class: 'wf-controle-estado' }, 'Andando…');
     caixa.append(estado);
 
+    /**
+     * **Só o ícone, e maior** — pedido dele (07/09/2026): *"os botões só preciso do ícone um pouco
+     * maior sem texto"*. O `title` e o `aria-label` carregam o nome: botão sem texto que também
+     * não se anuncia é botão que só quem o viu nascer sabe usar.
+     */
     const linha = h('div', { class: 'wf-pergunta-botoes wf-controle-botoes' });
-    const parar = h('button', { class: 'wf-btn wf-controle-parar', type: 'button', title: 'Parar (Esc)' }, '■ Parar');
-    const seguir = h('button', { class: 'wf-btn wf-controle-seguir', type: 'button', title: 'Continuar' }, '▶ Continuar');
+    const parar = h(
+      'button',
+      { class: 'wf-btn wf-controle-parar', type: 'button', title: 'Parar a rodada (Esc)', 'aria-label': 'Parar a rodada' },
+      '■'
+    );
+    const seguir = h(
+      'button',
+      { class: 'wf-btn wf-controle-seguir', type: 'button', title: 'Começar de novo', 'aria-label': 'Começar de novo' },
+      '▶'
+    );
     linha.append(parar, seguir);
     caixa.append(linha);
 
-    caixa.append(
-      h('div', { class: 'wf-pergunta-dica' },
-        'Parar aqui SEGURA a rodada onde ela está — nada é enviado até você continuar. Para ' +
-          'encerrar de vez e perder a fila, use "Parar a rodada" na aba Automatizado.')
-    );
-
     function pintar() {
-      const pausada = !!state.auto.pausada;
-      estado.textContent = pausada ? 'PAUSADA — nada está sendo enviado' : 'Andando…';
-      estado.classList.toggle('wf-controle-pausada', pausada);
-      parar.disabled = pausada;
-      seguir.disabled = !pausada;
+      const rodando = !!state.auto.rodando;
+      estado.textContent = rodando ? 'Andando…' : 'PARADA';
+      estado.classList.toggle('wf-controle-pausada', !rodando);
+      parar.disabled = !rodando;
+      seguir.disabled = rodando || !recomecarRodada;
     }
 
+    /**
+     * **PARAR é encerrar, e foi ele que decidiu** (07/09/2026): *"eu quero que pare totalmente, não
+     * pause"*.
+     *
+     * A primeira versão pausava, para o ▶ poder retomar de onde estava. Ele cortou, e com a pausa
+     * saiu o estado novo que ela exigia (`state.auto.pausada`) — o que sobra é `state.auto.parar`,
+     * que já existia, é o mesmo do botão "Parar a rodada" do cartão e é lido em cinco pontos do
+     * laço, inclusive dentro da espera entre envios. Menos um caminho para a rodada travar.
+     *
+     * **O ▶ passa a ser "começar de novo"**, pelo mesmo botão por onde ela entrou. A fila é relida
+     * do zero — é o que "parar totalmente" significa —, e o contato já tratado não recebe duas
+     * vezes: quem impede é `hsm.decidirReenvio`, que pergunta à CONVERSA e vale entre rodadas.
+     */
     parar.addEventListener('click', () => {
-      state.auto.pausada = true;
+      if (!state.auto.rodando) return;
+      state.auto.parar = true;
       pintar();
-      registrarNaRodada('rodada', 'pulado', 'você pausou a rodada (nada sai até continuar).');
+      registrarNaRodada('rodada', 'pulado', 'você parou a rodada.');
     });
     seguir.addEventListener('click', () => {
-      state.auto.pausada = false;
-      pintar();
-      registrarNaRodada('rodada', 'pulado', 'você mandou continuar.');
+      if (state.auto.rodando || !recomecarRodada) return;
+      // Sem acento no nome: `checar-referencias` lê a chamada por expressão regular e um
+      // identificador acentuado chega lá partido ("ar()"), virando um falso "sem declaração".
+      const iniciar = recomecarRodada;
+      iniciar();
     });
 
     /**
-     * **Esc pausa, e só enquanto a rodada anda.**
+     * **Esc para a rodada, e só enquanto ela anda.**
      *
      * Na BOLHA e conferindo `defaultPrevented` de propósito: os editores da Config e o da resposta
      * escutam Esc na CAPTURA para fechar sem salvar, e a caixa da pergunta já usa Esc como "parar".
      * Quem tratou primeiro marcou o evento — roubar a tecla deles faria Esc fechar um diálogo E
-     * pausar a rodada com um toque só. Campo de texto continua de fora, pela mesma razão de sempre.
+     * parar a rodada com um toque só. Campo de texto continua de fora, pela mesma razão de sempre.
      */
     function aoTeclar(ev) {
       if (ev.key !== 'Escape' || ev.defaultPrevented) return;
-      if (!state.auto.rodando || state.auto.pausada) return;
+      if (!state.auto.rodando) return;
       if (ehCampoDeTexto(ev.composedPath?.()[0] || ev.target)) return;
       ev.preventDefault();
-      state.auto.pausada = true;
+      state.auto.parar = true;
       pintar();
-      registrarNaRodada('rodada', 'pulado', 'você pausou a rodada pelo Esc.');
+      registrarNaRodada('rodada', 'pulado', 'você parou a rodada pelo Esc.');
     }
     document.addEventListener('keydown', aoTeclar);
 
@@ -3671,19 +3702,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
   function fecharControleDaRodada() {
     controleDaRodada?.fechar();
-  }
-
-  /**
-   * Segura o laço enquanto ela estiver pausada — a metade do botão que fica no motor.
-   *
-   * O `keepalive` já está ligado durante a rodada, então este laço continua rodando com a aba
-   * escondida (aba escondida é aba CONGELADA, e sem áudio nem `setTimeout` dispara). Encerrar a
-   * rodada de verdade continua vencendo a pausa: `state.auto.parar` sai daqui na hora.
-   */
-  async function esperarEnquantoPausada() {
-    while (state.auto.pausada && !state.auto.parar) {
-      await new Promise((r) => setTimeout(r, 250));
-    }
   }
 
   async function abrirContadorFlutuante() {
@@ -4039,11 +4057,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     let totalDaLista = 0;
 
     while (enviados < limite && !state.auto.parar) {
-      // Pausada pelo ⏹ (ou pelo Esc): segura AQUI, antes de abrir o próximo contato, que é o
-      // único ponto em que a rodada ainda não começou a mexer em ninguém.
-      await esperarEnquantoPausada();
-      if (state.auto.parar) break;
-
       // Diálogo do Material é MODAL: com ele aberto, o clique no item da fila não chega ao item
       // e a rodada terminava dizendo "a fila acabou". Acontecia toda vez que você anexava uma
       // figura no meio da resposta à mão. Esperar é melhor que fechar — o diálogo é seu.
@@ -4202,9 +4215,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.auto.automatico = !!automatico;
     state.auto.rodando = true;
     state.auto.parar = false;
-    // Rodada nova nasce ANDANDO: uma pausa esquecida da rodada anterior faria a próxima parecer
-    // travada, e o motivo estaria numa janelinha que ele fechou.
-    state.auto.pausada = false;
     state.auto.log = [];
     state.auto.semRegra = new Map();
     state.auto.avisouConfirmacao = false;
@@ -4242,11 +4252,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // Zerado aqui e não onde foi ligado: o `automatico` vale para a rodada, e uma rodada que
       // termina por erro deixaria a próxima andando sozinha sem ninguém ter marcado nada.
       state.auto.automatico = false;
-      // A janelinha some junto com a rodada — controle de uma coisa que acabou é botão que mente.
-      // No `finally` pelo mesmo motivo do `automatico`: rodada que morre por erro deixaria um ⏹
-      // flutuando na tela para sempre.
-      state.auto.pausada = false;
-      fecharControleDaRodada();
+      /**
+       * **A janelinha só FICA quando foi ele que parou** — aí o ▶ tem o que fazer.
+       *
+       * Acabando sozinha (fila no fim, limite atingido, erro de ambiente), ela some: controle de
+       * uma coisa que terminou é botão que mente, e janelinha que nunca sai vira lixo por cima da
+       * conversa. No `finally` pelo mesmo motivo do `automatico`: rodada que morre por erro
+       * deixaria um ⏹ flutuando para sempre.
+       */
+      if (state.auto.parar) controleDaRodada?.pintar();
+      else fecharControleDaRodada();
     }
 
     const conta = (tipo) => state.auto.log.filter((l) => l.resultado === tipo).length;
@@ -4347,6 +4362,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!state.settings.autoSend) {
       return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
     }
+    // O ▶ do controle flutuante recomeça POR AQUI, e não por `rodar` direto: os confirms
+    // desta rodada moram nesta função, e pular um deles seria decidir no lugar dele.
+    recomecarRodada = runLoteEmMeus;
     await rodar({ aba: 'Meus', processar: (sessionId, ctx) => processarSemRetornoEmMeus(sessionId, modelo, ctx) });
   }
 
@@ -4365,6 +4383,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return setStatus('Rodada cancelada.');
     }
 
+    // O ▶ do controle flutuante recomeça POR AQUI, e não por `rodar` direto: os confirms
+    // desta rodada moram nesta função, e pular um deles seria decidir no lugar dele.
+    recomecarRodada = runLoteReabrir;
     await rodar({ aba: ABA_CONCLUIDOS, processar: processarReabrir });
   }
 
@@ -4423,6 +4444,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return setStatus('Nenhum modelo aprovado carregado. Abra um atendimento e clique em Recarregar.', 'err');
     }
 
+    // O ▶ do controle flutuante recomeça POR AQUI, e não por `rodar` direto: os confirms
+    // desta rodada moram nesta função, e pular um deles seria decidir no lugar dele.
+    recomecarRodada = runLoteRespondidos;
     await rodar({ aba: 'Meus', processar: processarRespondido });
   }
 
@@ -4469,6 +4493,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return setStatus('Rodada cancelada.');
     }
 
+    // O ▶ do controle flutuante recomeça POR AQUI, e não por `rodar` direto: os confirms
+    // desta rodada moram nesta função, e pular um deles seria decidir no lugar dele.
+    recomecarRodada = runLoteOutros;
     await rodar({ aba: 'Outros', processar: processarRespondido });
   }
 
@@ -4499,6 +4526,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return setStatus('Rodada cancelada.');
     }
 
+    // O ▶ do controle flutuante recomeça POR AQUI, e não por `rodar` direto: os confirms
+    // desta rodada moram nesta função, e pular um deles seria decidir no lugar dele.
+    recomecarRodada = runLoteNovos;
     await rodar({ aba: 'Novos', processar: processarNovo, automatico: !!state.auto.cfg.automaticoNovos });
   }
 

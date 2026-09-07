@@ -566,7 +566,16 @@
 .wf-controle .wf-controle-estado { margin: 6px 0 2px; color: var(--wf-muted); }
 .wf-controle .wf-controle-estado.wf-controle-pausada { color: var(--wf-err); font-weight: 600; }
 .wf-controle .wf-controle-botoes { display: flex; gap: 8px; }
-.wf-controle .wf-controle-botoes button { flex: 1; }
+/* Pedido dele (07/09/2026): *"os botões só preciso do ícone um pouco maior sem texto"*. O nome vai
+   no `title`/`aria-label` — botão sem texto que também não se anuncia é botão que só quem o viu
+   nascer sabe usar. A altura fixa existe para os dois ficarem do mesmo tamanho: ▶ e ■ têm largura
+   diferente na fonte, e sem ela um botão sai maior que o outro. */
+.wf-controle .wf-controle-botoes button {
+  flex: 1;
+  font-size: 18px;
+  line-height: 1;
+  padding: 8px 0;
+}
 
 .wf-pergunta-fundo button.wf-controle-parar {
   background: var(--wf-err);
