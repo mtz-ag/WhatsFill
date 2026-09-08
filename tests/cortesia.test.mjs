@@ -2431,4 +2431,40 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
     'e a recusa de CONTATO com xingamento nao e mais engolida');
 }
 
+/**
+ * **"Casa" sozinha nao e endereco** — print da Geci carvalho (08/09/2026), com a etiqueta de
+ * material num contato que nunca mandou endereco nenhum: *"nao sei porque tem etiqueta de
+ * material"*.
+ *
+ * Ela escreveu *"ontem eu fui **na casa** nos **bairro** pedir voto para voces"* — militancia de
+ * rua. Medido: `BAIRRO` contava uma marca e `COMPLEMENTO` a outra por causa de "casa", davam as
+ * duas exigidas, e o contato foi **marcado e pulado**.
+ *
+ * **"Casa" e a palavra mais ambigua desta lista**, e como complemento ela existe — mas ai vem com
+ * o que a torna complemento: um numero ou "dos fundos".
+ */
+{
+  grupo('"casa" sozinha nao e endereco (a Geci, 08/09)');
+
+  const m = (t) => [{ texto: t, tipo: 'TEXT', at: 1 }];
+  const end = (t) => !!informouEndereco(m(t), null);
+
+  check(!end('Ola meu amigo vamos trabalhar a favor do nosso Brasil eu moro no Rio grande do Sul cidade de Sapiranga pois tenho lutado muito ja consegui bastante voto para voce ontem eu fui na casa nos bairro pedir voto para voces'),
+    'a mensagem da print deixa de virar endereco');
+  for (const t of ['eu fui na casa nos bairro pedir voto', 'fui de casa em casa no bairro', 'na minha casa somos todos do PL']) {
+    check(!end(t), `nao e endereco: "${t}"`);
+  }
+
+  /** O endereco de verdade continua sendo reconhecido — e "casa" como complemento tambem. */
+  for (const t of [
+    'Rua das Flores, 120, bairro Sao Jose',
+    'meu endereco e Av Brasil 500, apto 3',
+    'CEP 90000-000',
+    'Rua das Flores, casa 2, bairro Centro',
+    'Av Brasil, casa dos fundos, bairro Sao Jose',
+  ]) {
+    check(end(t), `continua sendo endereco: "${t}"`);
+  }
+}
+
 fim();

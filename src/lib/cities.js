@@ -307,6 +307,25 @@ const EXPRESSOES_QUE_NAO_SAO_CIDADE = [
    * gravava **cidade Feliz** com confiança exata, que é a que grava sem clique.
    */
   /\bfeliz natal\b/g,
+  /**
+   * **Estado civil e ocupação, que a pessoa escreve no cadastro** — print da Dileta Pase
+   * (08/09/2026): o cabeçalho do painel mostrava **Cidade: Chapada (aproximada) ← de "casada"**.
+   *
+   * Medido: `matchCity('casada')` devolve **Chapada** por distância 2, e o caminho da resposta ao
+   * formulário aceita `aproximada` — é ele que faz *"Sao lourenso"* virar São Lourenço do Sul.
+   *
+   * A tolerância existe para o erro de digitação **na posição da cidade**; estas palavras estão
+   * nessa posição o tempo todo (*"Dileta, casada, aposentada"*) e não são erro de nada. Saem antes
+   * de casar, como o vocabulário da campanha.
+   */
+  /**
+   * As duas exceções saíram da prova contra os 6.068 municípios (Brasil + RS): **Ilha Solteira**
+   * (SP) e **Olho d'Água do Casado** (AL) são nomes de verdade, e sem as guardas de contexto eles
+   * deixariam de ser reconhecidos. Ninguém escreve "ilha" antes do estado civil.
+   */
+  /(?<!ilha\s)\bsolteir[oa]\b/g,
+  /(?<!\bdo\s)\bcasad[oa]\b/g,
+  /\b(viuv[oa]|divorciad[oa]|separad[oa]|aposentad[oa]|pensionista)\b/g,
 ];
 
 /**

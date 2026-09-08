@@ -2336,7 +2336,24 @@ const BAIRRO = /(^|[^\p{L}])bairro(\s|:|$)/iu;
 
 const DIZ_ENDERECO = /(^|[^\p{L}])(endereco|end\.)(\s|:|$)/iu;
 
-const COMPLEMENTO = /(^|[^\p{L}])(apto|apartamento|ap\.|bloco|casa|lote|quadra|qd\.?|km|fundos|complemento|s\/n)(\s|\.|,|:|$)/iu;
+/**
+ * **"Casa" SOZINHA saiu da lista** — print da Geci carvalho (08/09/2026), com a etiqueta de material
+ * num contato que nunca mandou endereço nenhum. Ele: *"não sei porque tem etiqueta de material"*.
+ *
+ * Ela escreveu *"ontem eu fui **na casa** nos **bairro** pedir voto para vocês"* — militância de rua,
+ * não cadastro. Medido: `BAIRRO` contava uma marca e `COMPLEMENTO` contava a outra por causa de
+ * "casa", davam as duas exigidas, e o contato foi **marcado e pulado**.
+ *
+ * **"Casa" é a palavra mais ambígua desta lista inteira**: *"na minha casa"*, *"de casa em casa"*,
+ * *"fui na casa dela"* são fala comum aqui, e quem manda o endereço escreve rua, avenida ou CEP.
+ * Como complemento ela existe — mas então vem com o que a torna complemento: um **número** ou
+ * **"dos fundos"**.
+ *
+ * É a mesma disciplina do `NUMERO_DA_CASA` logo abaixo, e a lição repetida deste arquivo: a marca
+ * que sozinha é ambígua precisa do que a desambigua ao lado.
+ */
+const COMPLEMENTO =
+  /(^|[^\p{L}])(apto|apartamento|ap\.|bloco|lote|quadra|qd\.?|km|fundos|complemento|s\/n)(\s|\.|,|:|$)|(^|[^\p{L}])casa\s*(n[º°]?\s*)?(\d|dos\s+fundos|de\s+fundos)/iu;
 
 /**
  * O NÚMERO da casa — e ele é a marca mais delicada da lista, porque dígito solto é qualquer coisa.

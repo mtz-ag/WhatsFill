@@ -1223,4 +1223,35 @@ grupo('endereco de maquina nunca e cidade (06/09/2026)');
   check(ruim.ok === false, 'e erro de digitacao continua sendo acusado');
 }
 
+/**
+ * **"Casada" virava Chapada** — print da Dileta Pase (08/09/2026), com o cabecalho do painel
+ * mostrando *Cidade: Chapada (aproximada) <- de "casada"*.
+ *
+ * Medido: `matchCity('casada')` devolvia **Chapada** por distancia 2, e o caminho da resposta ao
+ * formulario aceita `aproximada` — e ele que faz *"Sao lourenso"* virar Sao Lourenco do Sul. A
+ * tolerancia existe para o erro de digitacao NA POSICAO da cidade; estado civil e ocupacao estao
+ * nessa posicao o tempo todo (*"Dileta, casada, aposentada"*) e nao sao erro de nada.
+ */
+{
+  grupo('estado civil nao e cidade (a Dileta, 08/09)');
+
+  for (const t of ['casada', 'sou casada', 'Dileta, casada, aposentada', 'solteiro', 'viúva', 'pensionista', 'sou casado']) {
+    check((await cities.matchCity(t)) === null, `nao vira cidade: "${t}"`);
+  }
+
+  /**
+   * **As duas excecoes sairam da prova contra os 6.068 municipios** (Brasil + RS): sem as guardas de
+   * contexto, estes dois nomes de verdade deixariam de ser reconhecidos.
+   */
+  check((await cities.matchCityComContexto('moro em Ilha Solteira'))?.city === 'Ilha Solteira',
+    'Ilha Solteira (SP) continua sendo reconhecida');
+  check((await cities.matchForaDoRS("Olho d'Água do Casado"))?.city === "Olho d'Água do Casado",
+    "Olho d'Agua do Casado (AL) tambem");
+
+  /** E o municipio que a palavra roubava continua sendo achado quando e ele mesmo. */
+  check((await cities.matchCity('Chapada'))?.confidence === 'exata', 'Chapada continua sendo Chapada');
+  check((await cities.matchCity('Sao lourenso'))?.city === 'São Lourenço do Sul',
+    'e a tolerancia a erro de digitacao continua valendo');
+}
+
 fim();

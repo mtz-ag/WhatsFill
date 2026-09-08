@@ -2673,6 +2673,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   com zero. A IA pode dizer o numero de UM candidato perguntado diretamente (dado confirmado, esta
   na tabela); montar a chapa inteira e cartao. **O modelo da colinha e dele** (*"vou criar um modelo
   de mensagem pra ela"*).
+- **A MARCA AMBIGUA PRECISA DO QUE A DESAMBIGUA AO LADO — "casa" e "casada", 08/09/2026.** Duas
+  prints, a mesma frase dele: *"nao sei porque tem etiqueta de material"*. **A Geci** escreveu
+  *"ontem eu fui NA CASA nos BAIRRO pedir voto"* — militancia de rua — e `informouEndereco` somou
+  as duas marcas exigidas (`BAIRRO` + `COMPLEMENTO`, este por causa de "casa"): etiqueta de material
+  e contato PULADO. **"Casa" e a palavra mais ambigua daquela lista** (*"na minha casa"*, *"de casa
+  em casa"*); como complemento ela existe, mas ai vem com numero ou "dos fundos". **A Dileta** tinha
+  no cabecalho *Cidade: Chapada (aproximada) <- de "casada"*: `matchCity('casada')` da **Chapada** por
+  distancia 2, e o caminho da resposta ao formulario aceita `aproximada`. Estado civil e ocupacao
+  saem antes de casar, como o vocabulario da campanha. **A prova contra os 6.068 municipios (Brasil
+  + RS) achou duas excecoes reais** — `Ilha Solteira` (SP) e `Olho d'Agua do Casado` (AL) —, as duas
+  com guarda de contexto. **Rode essa prova sempre que apagar palavra do texto antes de casar.**
 - **A PROMESSA MUDA DE PESSOA, NAO DE NATUREZA — e a lista so conhecia a primeira.** Print da Jonice
   (08/09/2026), com a pergunta dele *"esse erro de confirmar algo ja foi resolvido?"*: a mensagem
   dizia *"a gente consegue providenciar"* e, medido, tinha **zero avisos**. `PROMESSA` conhecia

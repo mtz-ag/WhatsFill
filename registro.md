@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v3.2.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v3.3.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -256,6 +256,45 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
 ---
+
+## 2026-09-08 — "Casa" não é endereço, e "casada" não é Chapada (v3.3.0)
+
+Duas prints, a mesma frase dele: ***"não sei porque tem etiqueta de material"***.
+
+### A Geci: "fui na casa nos bairro pedir voto"
+
+Ela escreveu *"Olá meu amigo vamos trabalhar a favor do nosso Brasil… ontem eu fui **na casa** nos
+**bairro** pedir voto para vocês com a minha dignidade"* — militância de rua, nenhum endereço.
+
+**Medido:** `BAIRRO` contava uma marca e `COMPLEMENTO` contava a outra por causa de **"casa"**;
+davam as duas exigidas, e o contato foi **marcado com a etiqueta de material e PULADO**.
+
+**"Casa" é a palavra mais ambígua daquela lista inteira** — *"na minha casa"*, *"de casa em casa"*,
+*"fui na casa dela"* são fala comum aqui, e quem manda o endereço escreve rua, avenida ou CEP. Como
+complemento ela existe, mas então vem com o que a torna complemento: um **número** ou **"dos
+fundos"**. É a mesma disciplina que o `NUMERO_DA_CASA` já seguia logo abaixo, e a lição repetida
+deste arquivo: **a marca que sozinha é ambígua precisa do que a desambigua ao lado.**
+
+### A Dileta: "Cidade: Chapada (aproximada) ← de 'casada'"
+
+Na outra print, o cabeçalho do painel mostrava isso. **Medido:** `matchCity('casada')` devolve
+**Chapada** por distância 2, e o caminho da resposta ao formulário aceita `aproximada` — é ele que
+faz *"Sao lourenso"* virar São Lourenço do Sul.
+
+A tolerância existe para o erro de digitação **na posição da cidade**; estado civil e ocupação estão
+nessa posição o tempo todo (*"Dileta, casada, aposentada"*) e não são erro de nada. Saíram antes de
+casar, como o vocabulário da campanha.
+
+**E a prova contra os 6.068 municípios (Brasil + RS) encontrou duas exceções reais:** **Ilha
+Solteira** (SP) e **Olho d'Água do Casado** (AL). As duas ganharam guarda de contexto e continuam
+sendo reconhecidas — ninguém escreve "ilha" antes do estado civil.
+
+### O que a etiqueta da Dileta NÃO explicou
+
+Medido: nem `informouEndereco` nem `pedeMaterial` casam no que ela escreveu, e **nenhum texto de
+fábrica** casa `ehPedidoDeEndereco`. Então a etiqueta dela veio de outro caminho — uma mensagem
+nossa que não aparece na print, ou o pulo manual. **A da Geci está reproduzida e consertada; a da
+Dileta continua sem causa provada**, e é o que eu diria antes de mexer em mais alguma coisa.
 
 ## 2026-09-08 — "A gente consegue providenciar" — a promessa em terceira pessoa (v3.2.0)
 
