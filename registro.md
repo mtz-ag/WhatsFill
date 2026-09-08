@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v3.8.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v3.9.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.8.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.9.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
@@ -18,7 +18,7 @@ tabela. Prompt de sistema do rascunho: **5.556 tokens**, dos quais **68% é o `P
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
 Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75), **dezoito em
-07/09** (2.76 a 2.93) e **quinze em 08/09** (2.94 a 3.8).
+07/09** (2.76 a 2.93) e **dezesseis em 08/09** (2.94 a 3.9).
 
 ### O que mudou em 08/09, em uma linha cada
 
@@ -30,7 +30,7 @@ Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2
 | 3.3–3.4 | **"Casa" não é endereço e "casada" não é Chapada**; e a **IA pendurava** — não havia timeout em lugar nenhum, nem no `fetch` nem na ponte. |
 | 3.5–3.6 | **O failsafe** (falhou o titular, tenta o reserva, no service worker junto do teto) e o **botão do padrão** na Config. |
 | 3.7 | **O padrão abre em janela própria** (16px, coluna de 78 caracteres), e explicação longa nasce fechada com um "ver mais". |
-| 3.8 | **Van Hattem virou deputado federal** — trava de cargo e número da chapa; e o log passou a dizer **quem** atendeu e **por que** o titular falhou. |
+| 3.8–3.9 | **Van Hattem virou deputado federal** — trava de cargo e número da chapa; e o log passou a dizer **quem** atendeu e **por que** o titular falhou — em vermelho. |
 
 ### O que mudou em 07/09, em uma linha cada
 
@@ -267,6 +267,45 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-08 — A linha da IA em vermelho no Andamento (v3.9.0)
+
+Pedido dele: *"os dados com IA no log bote em vermelho"*. O Andamento é uma parede de cinza de 12px,
+e o que ele procura ali é o que a IA fez e quanto custou — a cor é o que torna isso achável sem ler
+tudo.
+
+**A conferência é `IA` como PALAVRA**, no nome ou no motivo, num lugar só (`renderAutoLog`). Não
+virou marca em cada chamador porque **são 31 pontos que registram no log**, e vários deles não
+registram direto: devolvem `{nome, resultado, motivo}` para quem percorre a fila, então a marca
+teria que atravessar o resultado inteiro.
+
+> **Casar por texto é seguro AQUI porque o texto é nosso** — é código do `panel.js`, não resposta que
+> ele edita. A armadilha registrada (*"case pelo invariante, nunca pelo texto"*) é sobre o texto
+> DELE, que muda sem passar por nós. E o custo de um erro aqui é uma linha cinza, não uma mensagem
+> errada.
+
+A palavra inteira é obrigatória (`\bIA\b` com fronteira de letra e a flag `u`): sem isso "família" e
+"MARIA" pintariam metade do log. Medido contra as onze linhas reais da print, incluindo os cinco
+falsos positivos plausíveis desta base.
+
+**A ambiguidade que fica, e é conhecida:** é o mesmo vermelho do erro, porque o painel tem um só.
+Quem diz se deu certo continua sendo o sinal do começo da linha (`✓`, `⚠`, `·`).
+
+### E o failsafe respondeu à pergunta de ontem
+
+Na mesma print, agora que a 3.8 repassa o motivo: **`o titular gpt-5-mini falhou: a conta da API está
+sem saldo — recarregue no painel do provedor`**. A pergunta dele (*"por que a IA do ChatGPT não
+mandou mensagem antes de ir pro failsafe"*) tem resposta: **a conta da OpenAI está sem crédito**, e
+o reserva (Haiku) atendeu todas as chamadas. Enquanto não recarregar, **cada rascunho custa duas
+chamadas** — a que falha e a que atende.
+
+### Arquivos
+
+`src/panel/panel.js` (`ehLinhaDeIA`, `LINHA_DE_IA`), `src/panel/panel.css` (`.wf-log-ia`). Sem teste
+de suíte: `panel.js` precisa de `window` e nenhuma suíte o importa — a regra foi medida à parte,
+como a da 3.7.
+
 ---
 
 ## 2026-09-08 — Van Hattem virou deputado federal, e o failsafe não dizia quem falhou (v3.8.0)

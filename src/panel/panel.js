@@ -4068,6 +4068,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   let logNode = null;
 
   /** Só o log é redesenhado durante a rodada: renderAll roubaria o foco dos campos. */
+  /**
+   * **A linha do Andamento fala da IA?** — pedido dele (08/09/2026): *"os dados com IA no log bote
+   * em vermelho"*.
+   *
+   * O Andamento é uma parede de cinza de 12px, e o que ele procura ali é o que a IA fez e quanto
+   * custou. A cor é o que faz isso achável sem ler tudo.
+   *
+   * **A conferência é `IA` como PALAVRA**, no nome ou no motivo. Fica aqui, num lugar só, e não
+   * numa marca em cada chamador: são 31 pontos que registram no log, e vários deles não registram
+   * direto — devolvem `{nome, resultado, motivo}` para quem percorre a fila, então a marca teria
+   * que atravessar o resultado inteiro. Casar por palavra é o caminho barato E é seguro **porque o
+   * texto é nosso**: é código deste arquivo, não resposta que ele edita — a armadilha do "compare
+   * pelo invariante" é sobre o texto DELE.
+   *
+   * A palavra inteira é obrigatória (`\bIA\b` com fronteira de letra, e a flag `u`): sem ela,
+   * "família" e "MARIA" pintariam metade do log de vermelho.
+   *
+   * **O sinal do começo continua sendo quem diz se deu certo** (`✓`, `⚠`, `·`). O vermelho aqui é
+   * "isto é da IA", e não "isto falhou" — é a mesma cor do erro, e essa é a única ambiguidade.
+   */
+  const LINHA_DE_IA = /(^|[^\p{L}])IA([^\p{L}]|$)/u;
+  const ehLinhaDeIA = (linha) => LINHA_DE_IA.test(`${linha?.nome || ''} ${linha?.motivo || ''}`);
+
   function renderAutoLog() {
     if (!logNode || !logNode.isConnected) return;
     logNode.replaceChildren();
@@ -4077,9 +4100,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
     for (const linha of state.auto.log) {
       const sinal = SINAL_RODADA[linha.resultado] || '·';
-      logNode.append(
-        h('div', { class: 'wf-preview' }, `${sinal} ${linha.nome}${linha.motivo ? ` — ${linha.motivo}` : ''}`)
-      );
+      const texto = `${sinal} ${linha.nome}${linha.motivo ? ` — ${linha.motivo}` : ''}`;
+      logNode.append(h('div', { class: `wf-preview${ehLinhaDeIA(linha) ? ' wf-log-ia' : ''}` }, texto));
     }
   }
 
