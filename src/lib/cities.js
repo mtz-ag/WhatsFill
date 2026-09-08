@@ -92,6 +92,18 @@ export async function conferirGrafia(valor) {
 
   const casou = await matchCity(bruto);
   if (!casou) {
+    /**
+     * **Munic\u00edpio de fora do RS n\u00e3o \u00e9 grafia errada** \u2014 pedido dele (08/09/2026), com a etiqueta
+     * *"Fora do RS"*.
+     *
+     * O aviso vermelho existe para cadastro digitado errado, e dizer *"n\u00e3o casa com nenhum dos 497"*
+     * sobre **Curitiba** \u00e9 verdade e n\u00e3o \u00e9 \u00fatil: n\u00e3o h\u00e1 grafia a corrigir, a pessoa mora l\u00e1. Com a
+     * lista nacional d\u00e1 para dizer o que aquilo \u00e9, e o caso vira etiqueta em vez de alarme.
+     */
+    const uf = await ufForaDoRS(bruto);
+    if (uf) {
+      return { ok: true, oficial: bruto, confianca: 'exata', foraDoRS: uf, motivo: '' };
+    }
     return {
       ok: false,
       oficial: null,
@@ -285,6 +297,16 @@ const EXPRESSOES_QUE_NAO_SAO_CIDADE = [
   /\bflavio bolsonaro\b/g,
   /\bbolsonaro\b/g,
   /\bhiago\b/g,
+  /**
+   * **"Feliz Natal" é felicitação, e é DUAS cidades ao mesmo tempo** — achado medindo a lista
+   * nacional em 08/09/2026. `Feliz` é município do RS e `Feliz Natal` é município do MT, então a
+   * mensagem *"Feliz Natal!"* casava exata pelos dois lados e ia para o campo Cidade.
+   *
+   * **O defeito do lado do RS já existia antes da lista nacional:** a mensagem cabe nos 30
+   * caracteres da porta do texto curto e `Feliz` está contido nela — ou seja, `"Feliz Natal!"`
+   * gravava **cidade Feliz** com confiança exata, que é a que grava sem clique.
+   */
+  /\bfeliz natal\b/g,
 ];
 
 /**
@@ -600,6 +622,28 @@ export async function matchCityComContexto(text) {
    * cidade — e esse palpite estava virando etiqueta permanente no CRM.
    */
   if (bruto.trim().length <= TEXTO_CURTO) {
+    /**
+     * **A mensagem que é EXATAMENTE um município de fora vence o palpite do RS** — medido em
+     * 08/09/2026: *"São Paulo"* virava **São Paulo das Missões**, porque o caminho do "sufixo
+     * omitido" existe para *"São Lourenço"* → São Lourenço do Sul e não sabe distinguir os dois
+     * casos. Quem responde o formulário com o nome exato de uma capital não está abreviando o nome
+     * de um município do interior gaúcho.
+     *
+     * Só o casamento LITERAL do texto inteiro passa por aqui; qualquer coisa menos que isso segue
+     * para o RS, que continua sendo a lista de casa.
+     */
+    const exataDeFora = await matchForaDoRS(bruto);
+    if (exataDeFora && normalize(exataDeFora.matched) === formaCanonica(bruto)) {
+      const doRs = await matchCity(bruto);
+      // Compara o NOME DO MUNICIPIO, e nao o `matched`: no caminho do sufixo omitido o `matched` e
+      // o pedaco do texto, entao "Sao Paulo" batia consigo mesmo e o RS vencia com
+      // "Sao Paulo das Missoes". O que decide e se o municipio do RS E o que ela escreveu.
+      const rsLiteral = doRs && normalize(doRs.city) === formaCanonica(bruto);
+      if (!rsLiteral) {
+        return { city: exataDeFora.city, confidence: 'exata', matched: exataDeFora.matched, foraDoRS: exataDeFora.uf };
+      }
+    }
+
     const curto = await matchCity(bruto);
     if (curto?.confidence === 'exata') return curto;
     /**
@@ -612,6 +656,20 @@ export async function matchCityComContexto(text) {
      */
     if (curto?.confidence === 'aproximada' && normalize(curto.matched || '') === formaCanonica(bruto)) {
       return curto;
+    }
+
+    /**
+     * **Fora do RS, nesta porta, só quando a mensagem INTEIRA é a cidade** — print da Lenir
+     * (08/09/2026), que respondeu o formulário com *"Curitiba"*.
+     *
+     * A guarda é a mesma do casamento aproximado logo acima, e aqui ela é ainda mais necessária:
+     * a lista nacional tem 4.828 nomes e muitos são palavra comum. *"Feliz Natal!"* cabe nos 30
+     * caracteres desta porta e contém **Natal** — exigir que o casamento consuma a mensagem toda é
+     * o que separa uma resposta de cadastro de uma frase qualquer.
+     */
+    const fora = await matchForaDoRS(bruto);
+    if (fora && normalize(fora.matched) === formaCanonica(bruto)) {
+      return { city: fora.city, confidence: 'exata', matched: fora.matched, foraDoRS: fora.uf };
     }
   }
 
@@ -661,11 +719,101 @@ export async function matchCityComContexto(text) {
     let m;
     while ((m = pista.exec(bruto)) !== null) {
       const inicio = m.index + m[0].length;
-      const hit = await matchCity(bruto.slice(inicio, inicio + ALCANCE_DA_PISTA));
+      const trecho = bruto.slice(inicio, inicio + ALCANCE_DA_PISTA);
+      const hit = await matchCity(trecho);
       if (hit) return { ...hit, pista: m[0].trim() };
+
+      /**
+       * **Depois da pista, fora do RS também vale** — *"moro em Curitiba"*, *"sou de Florianópolis"*.
+       *
+       * Aqui não é preciso consumir a mensagem inteira: quem escreveu *"moro em"* já disse que o
+       * que vem a seguir é onde mora. É a mesma autorização que o RS usa nesta porta — a diferença
+       * é só qual lista responde, e o RS responde primeiro.
+       */
+      const fora = await matchForaDoRS(trecho);
+      if (fora) {
+        return { city: fora.city, confidence: 'exata', matched: fora.matched, foraDoRS: fora.uf, pista: m[0].trim() };
+      }
     }
   }
   return null;
+}
+
+/**
+ * **Os municípios do Brasil FORA do RS** — pedido dele (08/09/2026), com a print da etiqueta
+ * *"Fora do RS"* que ele criou: *"quando for o caso marcar com a etiqueta da print"*.
+ *
+ * Veio da print da Lenir, que respondeu o formulário com *"Curitiba"* e ficou sem cadastro nenhum:
+ * a extensão só conhece os 497 do RS, então quem mora fora era invisível.
+ *
+ * **Lista SEPARADA da do RS, e nunca misturada**, por três razões:
+ *
+ *  1. **o RS tem que vencer sempre** — só se consulta esta quando a busca no RS não achou nada, e
+ *     por construção: os 497 não estão aqui dentro;
+ *  2. **a etiqueta é outra.** Município do RS vira etiqueta de cidade e de COREDE, que é o filtro
+ *     dele; município de fora vira a etiqueta "Fora do RS" e mais nada — o mapa de COREDEs é
+ *     estadual, e criar etiqueta de cidade de outro estado partiria o filtro em duas coisas;
+ *  3. **o casamento é EXATO e sem tolerância.** São 4.828 nomes, e muitos são palavra comum
+ *     ("Natal", "Serra", "Barra", "Bonito", "Vitória", "Progresso"). Com Levenshtein por cima disso
+ *     qualquer frase viraria cidade.
+ *
+ * Nome repetido em mais de um estado guarda só a primeira UF — ela serve para mostrar na tela, não
+ * para decidir nada.
+ */
+let foraDoRsCache = null;
+
+async function municipiosForaDoRS() {
+  if (foraDoRsCache) return foraDoRsCache;
+  try {
+    const res = await fetch(chrome.runtime.getURL('src/data/municipios-br.json'));
+    const dados = await res.json();
+    foraDoRsCache = dados?.municipios || {};
+  } catch (err) {
+    console.warn('[WhatsFill] não consegui ler a lista de municípios do Brasil:', err.message);
+    foraDoRsCache = {};
+  }
+  return foraDoRsCache;
+}
+
+/**
+ * O texto contém um município de FORA do RS? Casamento exato, sem tolerância.
+ *
+ * Devolve `{ city, uf, matched }` ou `null`. **Quem chama decide se aquele lugar do texto autoriza
+ * a leitura** — é a mesma disciplina do RS: cidade só sai de contexto, nunca de menção solta.
+ */
+export async function matchForaDoRS(text) {
+  const norm = prepararTexto(text);
+  if (!norm) return null;
+  if (naoPodeSerNomeDeLugar(text)) return null;
+
+  const municipios = await municipiosForaDoRS();
+  let best = null;
+  for (const city of Object.keys(municipios)) {
+    const n = normalize(city);
+    // O piso de 5 é mais alto que o do RS (4): aqui não há a curadoria de `cidadesIgnoradas`, e
+    // nome de três ou quatro letras ("Icó", "Uru", "Ibiá") casaria dentro de palavra comum.
+    if (n.length >= 5 && norm.includes(n)) {
+      if (!best || n.length > normalize(best).length) best = city;
+    }
+  }
+  return best ? { city: best, uf: municipios[best], matched: best } : null;
+}
+
+/**
+ * **O valor do campo Cidade É, exatamente, um município de fora do RS?** Devolve a UF, ou `''`.
+ *
+ * Quem pergunta é o painel, para a etiqueta *"Fora do RS"* e para o aviso de grafia. Exige o valor
+ * INTEIRO — *"Rua Natal, 300"* não é Natal, e o campo é texto livre digitado à mão há anos.
+ */
+export async function ufForaDoRS(valor) {
+  const bruto = String(valor || '').trim();
+  if (!bruto) return '';
+  const fora = await matchForaDoRS(bruto);
+  if (!fora || normalize(fora.matched) !== formaCanonica(bruto)) return '';
+  // O RS vence sempre: se o mesmo texto também é um município daqui, não é caso de "fora".
+  const doRs = await matchCity(bruto);
+  if (doRs && normalize(doRs.city) === formaCanonica(bruto)) return '';
+  return fora.uf;
 }
 
 export async function matchCity(text) {

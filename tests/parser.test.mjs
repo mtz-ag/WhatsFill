@@ -517,8 +517,17 @@ grupo('conferirGrafia: avisa cidade escrita errada, sem reclamar de acento');
 
   const fora = await cities.conferirGrafia('não sei');
   check(!fora.ok && fora.oficial === null, 'texto que não é cidade não tem grafia a sugerir');
+  /**
+   * **Esta assercao foi INVERTIDA em 08/09/2026, com o motivo.** Ela dizia que Curitiba nao tem
+   * grafia a sugerir — verdade, e o aviso vermelho dizia *"nao casa com nenhum dos 497"*, o que
+   * tambem e verdade e nao e util: nao ha o que corrigir, a pessoa mora la.
+   *
+   * Com a lista nacional (a print da etiqueta "Fora do RS"), o caso deixou de ser alarme e virou
+   * ETIQUETA. Erro de digitacao continua sendo acusado, e e a assercao logo acima.
+   */
   const outroEstado = await cities.conferirGrafia('Curitiba');
-  check(!outroEstado.ok && outroEstado.oficial === null, 'município de outro estado idem');
+  check(outroEstado.ok && outroEstado.foraDoRS === 'PR',
+    `municipio de outro estado nao e erro de grafia: e "${outroEstado.foraDoRS}"`);
 }
 
 grupo('semAcentoNemCaixa NAO expande abreviacao');
@@ -1141,6 +1150,77 @@ grupo('endereco de maquina nunca e cidade (06/09/2026)');
    * "nao casou com os 497": "Curitiba" nao casa e e onde a pessoa mora.
    */
   check(!cities.naoPodeSerNomeDeLugar('Curitiba'), 'Curitiba nao e apagavel — nao casar com o RS nao e o criterio');
+}
+
+/**
+ * **Cidade de FORA do RS — a print da etiqueta "Fora do RS" (08/09/2026).**
+ *
+ * Veio da Lenir, que respondeu o formulario com *"Curitiba"* e ficava sem cadastro nenhum: a
+ * extensao so conhecia os 497 do RS. A lista nacional (`municipios-br.json`, 4.828 municipios) entra
+ * por **duas portas so** e com casamento EXATO, sem tolerancia — muitos nomes sao palavra comum
+ * ("Natal", "Serra", "Barra", "Bonito", "Vitoria").
+ *
+ * **Metade das assercoes e sobre o que NAO pode virar cidade**, e sobre o RS continuar vencendo.
+ */
+{
+  grupo('cidade de fora do RS (a Lenir, 08/09)');
+
+  const contexto = async (t) => await cities.matchCityComContexto(t);
+
+  for (const [texto, uf] of [
+    ['Curitiba', 'PR'],
+    ['moro em Curitiba', 'PR'],
+    ['sou de Florianópolis', 'SC'],
+    ['aqui em Belo Horizonte', 'MG'],
+  ]) {
+    const r = await contexto(texto);
+    check(r?.foraDoRS === uf, `"${texto}" -> ${r?.city} (${r?.foraDoRS})`);
+  }
+
+  /**
+   * **"São Paulo" virava São Paulo das Missões** — medido antes de mexer. O caminho do sufixo
+   * omitido existe para *"São Lourenço"* -> São Lourenço do Sul e nao sabe distinguir os dois
+   * casos. Quem escreve o nome exato de uma capital nao esta abreviando o nome de um municipio do
+   * interior gaucho.
+   */
+  const sp = await contexto('São Paulo');
+  check(sp?.city === 'São Paulo' && sp?.foraDoRS === 'SP', `"São Paulo" -> ${sp?.city} (${sp?.foraDoRS})`);
+
+  /** O RS vence sempre, e sem marca de fora. */
+  for (const t of ['Porto Alegre', 'moro em Canoas', 'Caxias do Sul', 'Viamão']) {
+    const r = await contexto(t);
+    check(r && !r.foraDoRS, `o RS continua vencendo: "${t}" -> ${r?.city}`);
+  }
+
+  /**
+   * **"Feliz Natal!" casava pelos DOIS lados** — `Feliz` e municipio do RS e `Feliz Natal` e
+   * municipio do MT. O defeito do lado do RS ja existia antes desta lista: a mensagem cabe nos 30
+   * caracteres da porta do texto curto, e a cidade **Feliz** ia para o campo com confianca exata.
+   */
+  check((await contexto('Feliz Natal!')) === null, '"Feliz Natal!" nao e cidade nenhuma');
+
+  for (const t of [
+    'Boa tarde, tudo bem?',
+    'que Deus abençoe',
+    'Obrigada pela atenção',
+    'Vitória será nossa',
+    'quero receber o material',
+  ]) {
+    const r = await contexto(t);
+    check(!r?.foraDoRS, `nao vira cidade de fora: "${t}"`);
+  }
+
+  /** O valor do CAMPO: e por ele que a etiqueta e decidida, e ele exige o texto inteiro. */
+  check((await cities.ufForaDoRS('Curitiba')) === 'PR', 'o campo com "Curitiba" devolve PR');
+  check((await cities.ufForaDoRS('Porto Alegre')) === '', 'municipio do RS nao e "fora"');
+  check((await cities.ufForaDoRS('Rua Natal, 300')) === '', 'endereco com nome de cidade dentro nao conta');
+  check((await cities.ufForaDoRS('Feliz')) === '', 'municipio do RS vence o de fora com o mesmo nome');
+
+  /** E o aviso vermelho para de mentir: Curitiba nao e grafia errada. */
+  const g = await cities.conferirGrafia('Curitiba');
+  check(g.ok === true && g.foraDoRS === 'PR', `conferirGrafia("Curitiba") -> ok ${g.ok}, ${g.foraDoRS}`);
+  const ruim = await cities.conferirGrafia('Caxias do Sull');
+  check(ruim.ok === false, 'e erro de digitacao continua sendo acusado');
 }
 
 fim();

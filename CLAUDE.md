@@ -2673,6 +2673,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   com zero. A IA pode dizer o numero de UM candidato perguntado diretamente (dado confirmado, esta
   na tabela); montar a chapa inteira e cartao. **O modelo da colinha e dele** (*"vou criar um modelo
   de mensagem pra ela"*).
+- **CIDADE DE FORA DO RS TEM LISTA SEPARADA E ETIQUETA PROPRIA.** Pedido dele (08/09/2026), com a
+  print da etiqueta *"Fora do RS"*. `src/data/municipios-br.json` traz os **4.828 municipios do
+  Brasil fora do RS** (IBGE), e ela **nunca se mistura com a do RS**: o RS vence por construcao (os
+  497 nao estao nela), a etiqueta e outra (cidade e COREDE sao estaduais) e o casamento e **EXATO,
+  sem Levenshtein** — muitos nomes sao palavra comum (*Natal*, *Serra*, *Barra*, *Bonito*,
+  *Vitoria*). **Duas portas so**, as mesmas do RS: a mensagem que E a cidade (exigindo o texto
+  inteiro) e a mencao depois de PISTA. A UF e lida do **valor do campo Cidade** (`cities.ufForaDoRS`)
+  e nao do palpite, para alcancar tambem quem ja tem "Curitiba" gravado. **Dois defeitos que a
+  medicao achou de brinde:** *"Sao Paulo"* virava **Sao Paulo das Missoes** (o caminho do sufixo
+  omitido; hoje o nome literal de fora vence, e a comparacao e pelo NOME do municipio, nao pelo
+  trecho casado), e *"Feliz Natal!"* gravava **cidade Feliz** com confianca exata — a mensagem cabe
+  na porta do texto curto e `Feliz` esta contido nela.
+- **O `fetch` DO NODE NAO ABRE `file://`, e o harness tem uma ponte para isso.** A extensao le os
+  dados do pacote com `chrome.runtime.getURL` + `fetch`; nos testes isso falhava com *"fetch
+  failed"* e a lista chegava **vazia** — teste verde medindo lista sem nomes. Nao incomodava antes
+  porque a unica leitura em arquivo era a do RS, que os testes plantam no storage.
 - **"NAO ACHEI O CADASTRO" NAO E "ELA NAO RESPONDEU" — e CIDADE DE OUTRO ESTADO e invisivel.** Print
   da Lenir (08/09/2026): ela respondeu o formulario com *"Lenir"* e *"Curitiba"*, em duas mensagens,
   e no dia seguinte recebeu a mensagem do momento COM o pedido de novo. **Medido: `extract(['Lenir',

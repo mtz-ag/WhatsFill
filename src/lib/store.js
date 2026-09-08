@@ -892,6 +892,16 @@ const DEFAULTS = {
      * nada. Vazia, a regra continua pulando e diz no log que não marcou.
      */
     etiquetaEndereco: '',
+    /**
+     * **A etiqueta de quem mora FORA do Rio Grande do Sul** — pedido dele (08/09/2026), com a print
+     * da etiqueta que ele criou no CRM: *"quando for o caso marcar com a etiqueta da print"*.
+     *
+     * Nasce PREENCHIDA, ao contrário das três de cima: ele criou a etiqueta com este nome exato e
+     * mandou a print, então o valor não é palpite meu. `auto` está na lista de mescla do
+     * `store.get`, então o default alcança quem já tem a chave salva — e `tags.ETIQUETA_FORA_DO_RS`
+     * é o piso no código, para o caso de o campo ser apagado.
+     */
+    etiquetaForaDoRS: 'Fora do RS',
   },
 
 

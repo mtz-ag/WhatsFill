@@ -488,4 +488,41 @@ grupo('a etiqueta de ORIGEM nao vira conteudo pela REGRA dele (04/09/2026)');
   check(!nomeada.some((x) => x.origem === 'conteúdo'), 'a etiqueta de origem que ele nomeou tambem nao vira conteudo');
 }
 
+/**
+ * **Quem mora FORA do RS recebe uma etiqueta so** — pedido dele (08/09/2026), com a print da
+ * etiqueta *"Fora do RS"* que ele criou: *"quando for o caso marcar com a etiqueta da print"*.
+ *
+ * Veio da Lenir, que respondeu o formulario com *"Curitiba"* e ficava sem cadastro nenhum.
+ *
+ * **Nem cidade, nem COREDE**, de proposito: as duas sao estaduais. A etiqueta de cidade serve ao
+ * filtro dele, que e do RS, e o mapa de COREDEs nao tem onde encaixar Curitiba.
+ */
+{
+  grupo('etiqueta de quem mora fora do RS (08/09)');
+
+  const deFora = await tags.suggest({ city: 'Curitiba', foraDoRS: 'PR', texts: [] });
+  const origens = deFora.map((t) => t.origem);
+  check(origens.includes('fora do rs'), `sugere a etiqueta de fora (${JSON.stringify(origens)})`);
+  check(!origens.includes('cidade'), 'e NAO cria etiqueta de cidade');
+  check(!origens.includes('região'), 'e NAO cria etiqueta de COREDE');
+
+  const daFora = deFora.find((t) => t.origem === 'fora do rs');
+  check(daFora?.nome === tags.ETIQUETA_FORA_DO_RS, `usa o nome que ele criou (${daFora?.nome})`);
+  check(/PR/.test(daFora?.motivo || ''), 'e o motivo diz de qual estado');
+
+  /** O RS continua como era: cidade e COREDE, e nenhuma etiqueta de fora. */
+  const daqui = await tags.suggest({ city: 'Porto Alegre', texts: [] });
+  const daquiOrigens = daqui.map((t) => t.origem);
+  check(daquiOrigens.includes('cidade') && daquiOrigens.includes('região'),
+    'municipio do RS continua com cidade e COREDE');
+  check(!daquiOrigens.includes('fora do rs'), 'e sem a etiqueta de fora');
+
+  /**
+   * Sem UF, o comportamento e o de antes: o aviso de "nao esta na tabela oficial". E o que continua
+   * valendo para lixo no campo, que nao e cidade de lugar nenhum.
+   */
+  const lixo = await tags.suggest({ city: 'transformar nosso pais', texts: [] });
+  check(lixo.some((t) => t.origem === 'região' && !t.nome), 'valor que nao e cidade continua so avisando');
+}
+
 fim();

@@ -195,7 +195,23 @@ function achatarRotulo(texto) {
     .toLowerCase();
 }
 
-export async function suggest({ city, texts = [], extra = '', interesse = null, veioDeAnuncio = false, nomeDivergente = false, etiquetasDoAnuncio = [] }) {
+/**
+ * **O piso da etiqueta "Fora do RS"** — ele criou a etiqueta com esse nome e mandou a print
+ * (08/09/2026). O campo da Config manda; vazio cai aqui.
+ *
+ * É a lição do `-contato-assessor` (04/09) e do `ORIGEM_SEMPRE`: **regra dele vira comportamento no
+ * CÓDIGO, não em valor padrão**. `auto` está na lista de mescla do `store.get`, então o default até
+ * alcançaria quem já tem a chave salva — mas basta ele apagar o campo uma vez para a regra sumir, e
+ * a etiqueta existe no CRM dele com este nome exato.
+ */
+export const ETIQUETA_FORA_DO_RS = 'Fora do RS';
+
+async function nomeDaEtiquetaForaDoRS() {
+  const auto = await store.get('auto');
+  return String(auto?.etiquetaForaDoRS || '').trim() || ETIQUETA_FORA_DO_RS;
+}
+
+export async function suggest({ city, foraDoRS = '', texts = [], extra = '', interesse = null, veioDeAnuncio = false, nomeDivergente = false, etiquetasDoAnuncio = [] }) {
   const out = [];
 
   /**
@@ -323,6 +339,32 @@ export async function suggest({ city, texts = [], extra = '', interesse = null, 
       tag: await resolveTag(corede),
       motivo: `${city} pertence ao COREDE ${corede}`,
     });
+  } else if (city && foraDoRS) {
+    /**
+     * **Mora FORA do RS: uma etiqueta só, e nenhuma de cidade** — pedido dele (08/09/2026), com a
+     * print da etiqueta *"Fora do RS"* que ele criou: *"quando for o caso marcar com a etiqueta da
+     * print"*.
+     *
+     * Veio da Lenir, que respondeu o formulário com *"Curitiba"* e ficava sem cadastro nenhum — a
+     * extensão só conhecia os 497 do RS.
+     *
+     * **Nem cidade, nem COREDE**, de propósito: as duas são estaduais. A etiqueta de cidade existe
+     * para o filtro dele, que é do RS, e o mapa de COREDEs não tem onde encaixar Curitiba —
+     * criá-las partiria o filtro em duas coisas diferentes com o mesmo nome.
+     *
+     * O nome sai da Config (`auto.etiquetaForaDoRS`), com piso no código: **regra dele vira
+     * comportamento no código, não em valor padrão** — a lição do `-contato-assessor` (04/09), em
+     * que o default nunca alcançou quem já tinha o campo salvo.
+     */
+    const nomeFora = await nomeDaEtiquetaForaDoRS();
+    if (nomeFora) {
+      out.push({
+        origem: 'fora do rs',
+        nome: nomeFora,
+        tag: await resolveTag(nomeFora),
+        motivo: `${city} é de ${foraDoRS}, fora do Rio Grande do Sul`,
+      });
+    }
   } else if (city) {
     out.push({
       origem: 'região',

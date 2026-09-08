@@ -170,6 +170,12 @@ export async function extract(texts, { respostaAoPedido = false } = {}) {
         confidence: hit.confidence,
         source: hit.matched,
         informada: !!soCidade,
+        /**
+         * **A UF, quando o município é de FORA do RS** — pedido dele (08/09/2026), print da
+         * etiqueta *"Fora do RS"*. É o que faz `tags.suggest` marcar essa etiqueta em vez de criar
+         * etiqueta de cidade e de COREDE, que são estaduais. Ausente para os 497 do RS.
+         */
+        ...(hit.foraDoRS ? { foraDoRS: hit.foraDoRS } : {}),
       };
     }
   }

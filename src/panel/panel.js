@@ -1189,8 +1189,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         anunciosDoMomento
       );
 
+      /**
+       * **A UF de quem mora fora do RS** — pedido dele (08/09/2026), print da etiqueta
+       * *"Fora do RS"*. Lida do VALOR DO CAMPO, e nao do palpite do parser: assim ela tambem
+       * alcanca quem ja tem "Curitiba" gravado no CRM desde antes, na primeira passada da rodada.
+       */
+      const ufDeFora = await cities.ufForaDoRS(valueNamed('Cidade'));
+
       const sugeridas = await tagsLib.suggest({
         city: valueNamed('Cidade'),
+        foraDoRS: ufDeFora,
         texts: state.incoming,
         // Tudo que a plataforma conta sobre a origem entra no texto das regras dele: antes só
         // `campaign` ia, então uma regra com "facebook" ou com o link do anúncio nunca casava.
@@ -3253,11 +3261,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         'Quem escreve um endereço — rua com número, bairro ou CEP — é marcado com ela e PULADO, ' +
           'com o atendimento deixado aberto para você transferir a conversa ao responsável pelo ' +
           'envio. É a única etiqueta que a rodada aplica ao pular: nos outros casos, pular não ' +
-          'grava nada. O endereço sozinho basta porque você só o pede para mandar material.')
+          'grava nada. O endereço sozinho basta porque você só o pede para mandar material.'),
+      campoTexto('Etiqueta de quem mora FORA DO RS', cfg.etiquetaForaDoRS, (v) =>
+        salvarAuto({ etiquetaForaDoRS: v.trim() }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Quando a cidade do contato é um município do Brasil que não é do RS (Curitiba, ' +
+          'Florianópolis, São Paulo), ele recebe ESTA etiqueta — e nenhuma de cidade nem de ' +
+          'COREDE, que são estaduais. Já vem preenchida com "Fora do RS"; apagando o campo, o ' +
+          'código usa esse mesmo nome.')
     );
 
     if (!cfg.etiquetaSemInteresse && !cfg.etiquetaPedidoAjuda && !cfg.etiquetaEndereco) {
-      card.append(h('div', { class: 'wf-block' }, 'Nenhuma das três está preenchida — a rodada não vai marcar ninguém.'));
+      card.append(h('div', { class: 'wf-block' }, 'Nenhuma das três primeiras está preenchida — nesses casos a rodada não marca ninguém.'));
     }
     return card;
   }

@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v2.99.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v3.0.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -256,6 +256,56 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
 ---
+
+## 2026-09-08 — Quem mora fora do RS ganha etiqueta própria (v3.0.0)
+
+Pedido dele, com a print da etiqueta **"Fora do RS"** que ele criou no CRM: *"quando for o caso
+marcar com a etiqueta da print"*. Fecha o que ficou aberto na 2.99 — a Lenir respondeu o formulário
+com *"Curitiba"* e ficava sem cadastro nenhum, porque a extensão só conhecia os 497 do RS.
+
+### A lista nacional é SEPARADA, e nunca misturada
+
+`src/data/municipios-br.json` — **4.828 municípios do Brasil fora do RS**, do IBGE (a mesma lista
+que provou a peneira da 2.94). Três razões para não juntar com a do RS:
+
+1. **o RS tem que vencer sempre**, e vence por construção: os 497 não estão nela;
+2. **a etiqueta é outra.** Município do RS vira etiqueta de cidade **e** de COREDE, que é o filtro
+   dele; de fora vira "Fora do RS" e mais nada — o mapa de COREDEs é estadual;
+3. **o casamento é EXATO, sem tolerância.** Muitos nomes são palavra comum (*Natal*, *Serra*,
+   *Barra*, *Bonito*, *Vitória*), e Levenshtein por cima disso faria qualquer frase virar cidade.
+
+**Duas portas só**, as mesmas que o RS já usa: a mensagem que **é** a cidade (aí exigindo o
+casamento do texto inteiro — *"Feliz Natal!"* cabe nos 30 caracteres e contém **Natal**) e a menção
+**depois de uma pista** (*"moro em Curitiba"*).
+
+### Dois defeitos que a medição encontrou de brinde
+
+- **"São Paulo" virava São Paulo das Missões.** O caminho do sufixo omitido existe para
+  *"São Lourenço"* → São Lourenço do Sul e não sabe distinguir os dois casos. Hoje a mensagem que é
+  **literalmente** um município de fora vence o palpite do RS — e a comparação é pelo NOME do
+  município, não pelo trecho casado, que era o que fazia o RS ganhar de si mesmo;
+- **"Feliz Natal!" gravava cidade Feliz (RS), com confiança exata** — ou seja, sem clique. O
+  defeito é anterior à lista nacional: a mensagem cabe na porta do texto curto e `Feliz` está
+  contido nela. A expressão entrou na lista das que nunca são cidade.
+
+### O que a etiqueta faz, e o que ela NÃO faz
+
+`tags.suggest` recebe a UF e sugere **uma** etiqueta: nem cidade, nem COREDE. O nome sai da Config
+(campo novo na aba Automatizado, **já preenchido** com "Fora do RS" — ele criou a etiqueta com esse
+nome), com piso em `tags.ETIQUETA_FORA_DO_RS` para o caso de o campo ser apagado.
+
+**A UF é lida do VALOR DO CAMPO Cidade**, e não do palpite do parser: assim a etiqueta alcança
+também quem já tem "Curitiba" gravado no CRM desde antes, na primeira passada da rodada.
+
+**E o aviso vermelho parou de mentir:** *"não casa com nenhum dos 497"* sobre **Curitiba** é verdade
+e não é útil — não há grafia a corrigir. Uma asserção de teste foi invertida por isso, com o motivo
+escrito; erro de digitação continua sendo acusado.
+
+### O harness ganhou uma ponte, e ela evitou um teste verde mentindo
+
+O `fetch` do Node não abre `file://`, que é como a extensão lê os dados do pacote. Sem a ponte, a
+lista nacional chegava **vazia** e o teste passaria medindo uma lista sem nomes. Não incomodava
+antes porque a única leitura em arquivo era a do RS, que os testes já plantam no storage.
 
 ## 2026-09-08 — Ela respondeu, e o formulário foi pedido de novo (v2.99.0)
 
