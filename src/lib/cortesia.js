@@ -2460,6 +2460,53 @@ const INSULTO_AO_ALIADO =
   /\b(bolso\s*bosta|bolsobosta|bostanaro|bolsonazi|bolsolixo|bolsomerda|bozo|capitao\s+cloroquina|milician[oa])\b/i;
 
 /**
+ * **Falar mal do PL ou do Republicanos é hostilidade CONTRA NÓS** — regra dele (08/09/2026):
+ * *"falar mal do pl ou republicanos é hostilidade contra nós, falar mal de pt está do nosso lado"*.
+ *
+ * É a mesma natureza do `INSULTO_AO_ALIADO` e vale pelo mesmo motivo: **não é ambíguo de direção.**
+ * A lista `AGRESSAO` sozinha é, e por isso ela exige segunda pessoa — apoiador xinga o adversário o
+ * dia inteiro, e é a mensagem mais comum desta base. Aqui o alvo está escrito.
+ *
+ * **A segunda metade da regra dele é a guarda desta:** xingar o PT continua sendo apoio, e o
+ * caminho normal já cuidava disso (insulto em terceira pessoa, sem segunda pessoa, devolve null).
+ * O que este bloco não pode fazer é quebrar isso — e quebra fácil, porque as duas siglas aparecem na
+ * MESMA frase o tempo todo (*"o PL é bem melhor que o PT, que é um bando de ladrões"*). Daí o
+ * `SEM_ADVERSARIO_NO_MEIO`: entre a nossa sigla e o xingamento não pode haver o nome do outro lado.
+ *
+ * A janela é curta (30 caracteres) porque o que qualifica é o insulto estar **colado** na sigla, e
+ * não apenas conviver com ela na mesma mensagem.
+ *
+ * `\bpl\b` é a peça arriscada — *"sou PL desde que foi criado"* é fala comum aqui —, e o que a
+ * segura é a exigência do xingamento ao lado. Custo de errar: etiqueta permanente no CRM de um
+ * apoiador, que é o preço mais alto deste arquivo.
+ */
+const NOSSO_PARTIDO = '(pl|partido\\s+liberal|republicanos|republicano)';
+const ADVERSARIO = /\b(pt|petista|lula|psol|pc\s*do\s*b|pdt|pcb|comunist[ao]s?|esquerd)/i;
+
+const INSULTO_AO_NOSSO_PARTIDO = [
+  new RegExp(`\\b${NOSSO_PARTIDO}\\b(?<meio>[^.!?]{0,30}?)${AGRESSAO.source.replace(/\\b/g, '')}`, 'i'),
+  /**
+   * A ordem inversa (*"esse bando de safados do PL"*) precisa olhar **antes** do xingamento, e não
+   * só entre ele e a sigla: *"comunista é ladrão, PL nunca"* casava — o adversário está na frente do
+   * insulto, e o meio (", ") estava limpo. Foi o único falso positivo da medição.
+   */
+  new RegExp(
+    `(?<antes>[^.!?]{0,25})${AGRESSAO.source.replace(/\\b/g, '')}(?<meio>[^.!?]{0,30}?)\\b${NOSSO_PARTIDO}\\b`,
+    'i'
+  ),
+];
+
+function insultouNossoPartido(norm) {
+  for (const re of INSULTO_AO_NOSSO_PARTIDO) {
+    const m = re.exec(norm);
+    // Sem esta limpeza, "o PL é melhor que o PT, um bando de ladrões" viraria hostilidade — e é
+    // exatamente o oposto do que ele disse.
+    if (m && !ADVERSARIO.test(m.groups?.meio || '') && !ADVERSARIO.test(m.groups?.antes || '')) return true;
+  }
+  return false;
+}
+
+/**
  * O contato não tem interesse — ou recusou, ou veio hostilizar.
  *
  * Pedido dele (01/09/2026): *"falando mal do bolsonaro e martim é aliado do bolsonaro, esse tipo
@@ -2574,6 +2621,14 @@ function umaMensagemRecusa(msg) {
    * lado seguro é o que ele já decidiu para o evento.
    */
   if (INSULTO_AO_ALIADO.test(norm)) return { motivo: 'chamou nosso aliado por apelido pejorativo — não é público do mandato' };
+
+  /**
+   * Xingou o PL ou o Republicanos — ver `INSULTO_AO_NOSSO_PARTIDO`. Vale sozinho, como o apelido do
+   * aliado: o alvo está escrito, então não há ambiguidade de direção para resolver.
+   */
+  if (insultouNossoPartido(norm)) {
+    return { motivo: 'falou mal do nosso partido — não é público do mandato' };
+  }
 
   // O número do adversário, declarado — ver `VOTO_NO_ADVERSARIO`.
   if (VOTO_NO_ADVERSARIO.some((re) => re.test(norm))) {

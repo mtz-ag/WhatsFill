@@ -2673,6 +2673,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   com zero. A IA pode dizer o numero de UM candidato perguntado diretamente (dado confirmado, esta
   na tabela); montar a chapa inteira e cartao. **O modelo da colinha e dele** (*"vou criar um modelo
   de mensagem pra ela"*).
+- **FALAR MAL DO PL OU DO REPUBLICANOS E HOSTILIDADE CONTRA NOS; falar mal do PT esta do nosso
+  lado.** Regra dele (08/09/2026), literal. Dispensa a segunda pessoa pelo mesmo motivo do
+  `INSULTO_AO_ALIADO`: **o alvo esta escrito**, e o que torna `AGRESSAO` ambigua e nao saber a
+  direcao. **A segunda metade da regra e a GUARDA da primeira, e e ai que se erra:** as duas siglas
+  aparecem na MESMA frase o tempo todo (*"o PL e bem melhor que o PT, que e um bando de ladroes"*).
+  Duas travas — janela de 30 caracteres (o insulto tem que estar COLADO na sigla) e **nem o meio nem
+  o que vem ANTES do xingamento pode ter o adversario**. A segunda nasceu da medicao: *"comunista e
+  ladrao, PL nunca"* casava na ordem inversa, com o meio limpo. `\bpl\b` e a peca arriscada
+  (*"sou PL"* e fala comum aqui) e o que a segura e o xingamento ao lado. **18 das 24 assercoes sao
+  falso positivo** — `semInteresse` aplica etiqueta permanente e conclui em silencio.
 - **DADO QUE FALTA NO DOSSIE PRECISA DE GATILHO, senao o dossie nem e consultado.** Print de
   08/09/2026: a contato perguntou *"E CRISTAO OU COMUNISTA?"* e o rascunho respondeu so a metade do
   partido, abrindo com *"nao vou te passar uma informacao que nao tenho certeza"*. **A IA acertou o

@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v2.97.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v2.98.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -256,6 +256,46 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
 ---
+
+## 2026-09-08 — Falar mal do PL é contra nós; falar mal do PT é do nosso lado (v2.98.0)
+
+Regra dele, ditada depois da print da contato de São Leopoldo, que escreveu *"POIS PT QUE PARA MIM É
+PP PARTIDO DOS PREGUIÇOSOS!"*:
+
+> *"falar mal do pl ou republicanos é hostilidade contra nós, falar mal de pt está do nosso lado"*
+
+### Por que isto dispensa a segunda pessoa
+
+`AGRESSAO` sozinha é ambígua de direção, e por isso exige `DIRIGIDA_A_NOS` — apoiador xinga o
+adversário o dia inteiro, e essa é a mensagem mais comum desta base. **Aqui o alvo está escrito.**
+É a mesma natureza do `INSULTO_AO_ALIADO` (o *"bolso bosta"* da susana, 03/09), que também vale
+sozinho: não há ambiguidade a resolver.
+
+### A segunda metade da regra é a GUARDA da primeira
+
+Xingar o PT continua sendo apoio — e isso quebra fácil, porque **as duas siglas aparecem na mesma
+frase o tempo todo**: *"o PL é bem melhor que o PT, que é um bando de ladrões"*. Duas travas:
+
+- **a janela é curta (30 caracteres):** o que qualifica é o insulto estar **colado** na sigla, não
+  conviver com ela na mensagem;
+- **nem o meio nem o que vem ANTES do xingamento pode ter o adversário.** A segunda metade nasceu da
+  medição: *"comunista é ladrão, PL nunca"* casava com a ordem inversa — o adversário estava na
+  frente do insulto e o meio (`", "`) estava limpo. Foi o único falso positivo da primeira versão.
+
+`pl` é a peça arriscada — *"sou PL desde que foi criado"* é fala comum aqui —, e o que a
+segura é a exigência do xingamento ao lado.
+
+### Medido
+
+6 frases hostis, todas pegas. **18 falsos positivos, todos limpos**, em três famílias: xingar o PT,
+comparar os dois partidos na mesma frase, e a sigla sozinha (*"Sim Eu Sou PL"*, *"me manda o
+material do PL"*, *"PL 22 sempre"*).
+
+**O custo de errar aqui é o mais alto do arquivo** — `semInteresse` aplica etiqueta permanente no CRM
+e conclui em silêncio —, e é por isso que três quartos das asserções novas são sobre o que NÃO pode
+acusar.
+
+Saiu junto uma constante órfã (`XINGAMENTO`) que eu tinha criado e não usei.
 
 ## 2026-09-08 — O dossiê não sabia que ele é católico (v2.97.0)
 

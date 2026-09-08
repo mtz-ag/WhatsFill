@@ -2243,4 +2243,60 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   }
 }
 
+/**
+ * **Falar mal do PL ou do Republicanos e hostilidade CONTRA NOS** — regra dele (08/09/2026):
+ * *"falar mal do pl ou republicanos e hostilidade contra nos, falar mal de pt esta do nosso lado"*.
+ *
+ * **A segunda metade da regra e a guarda da primeira, e e onde mora o risco.** As duas siglas
+ * aparecem na MESMA frase o tempo todo nesta base (*"o PL e bem melhor que o PT, que e um bando de
+ * ladroes"*), e `semInteresse` e a regra mais destrutiva do arquivo: etiqueta permanente no CRM
+ * mais conclusao em silencio. Dezoito das vinte e quatro assercoes sao falso positivo.
+ */
+{
+  grupo('falar mal do nosso partido (regra dele, 08/09)');
+
+  const msg = (t) => [{ texto: t, tipo: 'TEXT', at: 1 }];
+  const hostil = (t) => !!semInteresse(msg(t), null);
+
+  for (const t of [
+    'O PL e um partido de ladroes',
+    'Republicanos sao uns corruptos',
+    'esse bando de safados do PL',
+    'o PL virou lixo',
+    'partido liberal e uma vergonha, so tem pilantra',
+    'Republicanos e um partido de vagabundos',
+  ]) {
+    check(hostil(t), `e hostilidade: "${t}"`);
+  }
+
+  /** Xingar o PT continua sendo apoio — e e o que a regra dele diz na segunda metade. */
+  for (const t of [
+    'PT que para mim e PP partido dos preguicosos!',
+    'o PT e um bando de ladroes',
+    'Lula e corrupto e safado',
+    'esses petistas sao uns vagabundos',
+    'o PL e bem melhor que o PT, que e um bando de ladroes',
+    'prefiro o PL, o PT so tem corrupto',
+    'comunista e ladrao, PL nunca',
+    'o PT e ladrao, ja o PL e serio',
+    'esquerda so tem corrupto, PL e diferente',
+    'o Lula e um presidiario, PL o melhor',
+  ]) {
+    check(!hostil(t), `esta do nosso lado: "${t}"`);
+  }
+
+  /** E a sigla sozinha nao e nada: "sou PL" e a fala mais comum desta base. */
+  for (const t of [
+    'sou PL desde que foi criado o PL',
+    'Sim Eu Sou PL, ja estou trabalhando na Campanha',
+    'voces do PL estao fazendo um bom trabalho',
+    'o Republicanos e o partido do Martim, certo?',
+    'aqui em casa e tudo PL',
+    'me manda o material do PL por favor',
+    'PL 22 sempre',
+  ]) {
+    check(!hostil(t), `a sigla sozinha nao acusa: "${t}"`);
+  }
+}
+
 fim();
