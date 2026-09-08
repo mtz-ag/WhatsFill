@@ -239,6 +239,47 @@ export const DEFAULT_TEMPLATES = [
       + 'por aqui mesmo.',
   },
   {
+    /**
+     * **"Gostaria de falar com o deputado"** — pedido dele (08/09/2026), com o print do pastor que
+     * escreveu exatamente isso e a resposta que ele digitou à mão:
+     *
+     * > *"neste momento de eleições somente se encontrando com ele em algum evento da agenda,
+     * > pedimos desculpas mas nada é repassado para o whats pessoal do capitão por motivos de
+     * > segurança"*
+     *
+     * **A Assembleia ficou de FORA de propósito**, e é a segunda metade do que ele disse: *"fora de
+     * eleições tem a opção de encontrar na assembleia mas agora está fora de questão"*. Oferecer um
+     * caminho que não vale agora é a mesma coisa que mandar procurar a coordenação (07/09) —
+     * prometer uma porta que não abre.
+     *
+     * **Sem o link do grupo, também de propósito.** A agenda mora em `agenda-grupo`, e resposta
+     * pronta que funde duas coisas não tem como ser usada pela metade (a lição das duas de evento,
+     * 02/09). Some-se que `{{link_grupo}}` BLOQUEIA o envio quando está vazio — e o recado central
+     * aqui (o WhatsApp pessoal não é repassado) não pode depender de um campo da Config.
+     */
+    id: 'falar-com-deputado',
+    name: 'Quer falar com o deputado (encontro na agenda, sem WhatsApp pessoal)',
+    text:
+      '{{saudacao}}! Obrigado por querer falar com ele.\n\n' +
+      'Neste período de eleições, o jeito de encontrá-lo pessoalmente é nos *eventos da agenda* — ' +
+      'é onde ele está com as pessoas, e todo mundo é bem-vindo.\n\n' +
+      'Sobre o WhatsApp pessoal do Capitão, peço desculpas: ele não é repassado, por motivos de ' +
+      'segurança. O que você precisar tratar, pode escrever por aqui — eu leio tudo e respondo ' +
+      'por este canal.',
+    variantes: [
+      '{{saudacao}}! Fico contente que queira falar com ele.\n\n' +
+        'Em período eleitoral, o encontro pessoal acontece nos *eventos da agenda* — é lá que ele ' +
+        'está com o pessoal, e você pode chegar junto.\n\n' +
+        'Já o WhatsApp pessoal do Capitão a gente não repassa, por segurança. Desculpe. Pode me ' +
+        'contar por aqui o que você precisa, que eu leio e respondo por este canal.',
+      '{{saudacao}}! Obrigado pelo contato.\n\n' +
+        'Agora, em campanha, quem quer falar com ele pessoalmente encontra nos *eventos da ' +
+        'agenda*.\n\n' +
+        'O número pessoal do Capitão não é repassado, por motivos de segurança — peço desculpas. ' +
+        'Aqui por este canal eu leio tudo o que você escrever e respondo.',
+    ],
+  },
+  {
     id: 'pedido-ajuda',
     name: 'Pedido de ajuda financeira (negar com respeito)',
     text:

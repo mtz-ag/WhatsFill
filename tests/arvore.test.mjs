@@ -1173,7 +1173,9 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   // (pedido dele: "junte todas as situacoes que sao usadas na mesma tecla").
   // 20 desde 05/09, com "so clicou em varios anuncios" (print da Irene).
   // 21 desde 06/09, com o FECHO ("ja falamos hoje: conclui") -- ver o grupo da Sirlene.
-  check(chegada.filhos.length === 21, 'e a chegada tem 21 caixas, nao 22');
+  // 22 desde 08/09, com "quer falar com o deputado" (print do pastor): a terceira resposta que
+  // NEGA um pedido que o atendimento nao pode atender, ao lado do emprego e da ligacao.
+  check(chegada.filhos.length === 22, 'e a chegada tem 22 caixas, nao 21');
 
   /**
    * **"Nada legivel dela" entrou em 03/09** (print do Tilin: dois avisos de tipo nao suportado,
@@ -1973,6 +1975,9 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
     { informouEndereco: true },
     { pedeAjudaFinanceira: { motivo: 'x' } }, { pedeEmprego: { motivo: 'x' } },
     { pedeLigacao: { motivo: 'x' } },
+    // Quer falar com o deputado (o pastor, 08/09): sem ele aqui, as duas caixas novas aparecem
+    // como mortas.
+    { pedeFalarComDeputado: { motivo: 'x' } },
     { pedeAlgoIndefinido: { motivo: 'x', trecho: 'x' } }, { perguntaAberta: { termo: 'x' } },
     { pedeRespostaPessoal: { motivo: 'x' } }, { soCortesia: { motivo: 'x' }, podeMandarMomento: true },
     { ultimaEhSoReacao: true, podeMandarMomento: true }, { ultimaEhDespedida: true },

@@ -62,6 +62,7 @@ export const SINAIS = [
   { id: 'pedeAjudaFinanceira', rotulo: 'Pediu dinheiro, cesta básica ou remédio', nao: 'Não pediu dinheiro nem o básico' },
   { id: 'pedeEmprego', rotulo: 'Perguntou como trabalhar no mandato', nao: 'Não perguntou sobre trabalhar aqui' },
   { id: 'pedeLigacao', rotulo: 'Pediu que a gente ligasse para ela', nao: 'Não pediu ligação' },
+  { id: 'pedeFalarComDeputado', rotulo: 'Quer falar com o deputado em pessoa, ou o contato dele', nao: 'Não pediu para falar com ele' },
   { id: 'naoPodeFalarAgora', rotulo: 'Está passando mal, ou fala depois', nao: 'Não avisou nada disso' },
   { id: 'rajadaDeAnuncios', rotulo: 'Só clicou em vários anúncios seguidos', nao: 'Não é rajada de cliques' },
   { id: 'soCortesia', rotulo: 'Só cumprimentou (e nada mais)', nao: 'Escreveu mais que um cumprimento' },
@@ -720,6 +721,18 @@ export function fluxoPadrao() {
       acao: { tecla: null, resposta: 'pedido-ligacao' } },
 
     /**
+     * **"Gostaria de falar com o deputado"** — pedido dele (08/09/2026), com o print do pastor.
+     *
+     * Mesma família do "me liga", do pedido de emprego e do pedido de ajuda: é um pedido que o
+     * atendimento **não pode atender**, e o texto diz o que É possível (encontrar nos eventos da
+     * agenda) sem prometer o que não vai acontecer. Concluir em silêncio deixa a pessoa esperando
+     * um contato que não vem.
+     */
+    { ...noVazio('quer falar com o deputado'),
+      condicao: { sinal: 'pedeFalarComDeputado', negar: false, palavras: [], onde: 'ultima' },
+      acao: { tecla: null, resposta: 'falar-com-deputado' } },
+
+    /**
      * **Texto longo vem ANTES das caixas de palavra** — print da Cris (02/09/2026).
      *
      * Ela escreveu 437 caracteres de desabafo: sem esperança nas eleições, urnas, *"tudo tempo
@@ -1032,6 +1045,9 @@ export function fluxoPadrao() {
     { ...noVazio('pediu que a gente ligasse'), id: 'chegada-ligacao',
       condicao: { sinal: 'pedeLigacao', negar: false, palavras: [], onde: 'ultima' },
       acao: { tecla: null, resposta: 'pedido-ligacao' } },
+    { ...noVazio('quer falar com o deputado'), id: 'chegada-falar-deputado',
+      condicao: { sinal: 'pedeFalarComDeputado', negar: false, palavras: [], onde: 'ultima' },
+      acao: { tecla: null, resposta: 'falar-com-deputado' } },
 
     { ...r('pediu-algo-sem-dizer-o-que', 'você responde: pedido sem objeto, ou pergunta', 'chegada-antes'),
       tambemQuando: ['pergunta-aberta'] },
@@ -2142,6 +2158,7 @@ const SINAIS_QUE_A_RESPOSTA_APAGA = new Set([
   'soCortesia',
   'pedeEmprego',
   'pedeLigacao',
+  'pedeFalarComDeputado',
   'naoPodeFalarAgora',
   'rajadaDeAnuncios',
   'pedeAlgoIndefinido',

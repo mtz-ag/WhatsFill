@@ -1536,6 +1536,78 @@ export function marcarLoteEncaminhado(entrantes) {
 }
 
 /**
+ * **Quer falar com o DEPUTADO em pessoa, ou quer o contato dele.**
+ *
+ * Pedido dele (08/09/2026), com o print do pastor que escreveu *"Gostaria de falar com deputado sou
+ * pastor Cesar de santa Maria"* e a resposta que ele digitou à mão: em período eleitoral o encontro
+ * é nos eventos da agenda, e o WhatsApp pessoal não é repassado por segurança.
+ *
+ * **O que qualifica é o OBJETO ser ELE**, e não a vontade de falar. *"Quero falar com você"* é a
+ * conversa que já está acontecendo; *"vou falar com o prefeito"* é ela falando com outra pessoa;
+ * *"falei com o deputado ontem"* é passado. O que casa é pedir para falar **com ele**, ou pedir o
+ * número/contato **dele**.
+ *
+ * A ordem interna importa: o pedido de CONTATO é testado junto do de encontro, porque *"me passa o
+ * whats dele"* não tem verbo de falar nenhum e é o mesmo pedido.
+ */
+const ELE_MESMO = '(ele|dele|deputado|capitao|martim|vereador|senador|candidato)';
+
+const QUER_FALAR_COM_ELE = [
+  // "gostaria de falar com o deputado", "queria conversar com ele", "quero encontrar o capitão"
+  new RegExp(
+    // `(muito\s+)?(de\s+)?` nesta ordem: "gostaria MUITO DE encontrar" tem as duas no meio, e foi
+    // o único caso que a primeira versão deixou passar.
+    `(^|[^\\p{L}])(quero|queria|gostaria|preciso|precisava|pretendo|posso)\\s+` +
+      `(muito\\s+)?(de\\s+)?(falar|conversar|encontrar|encontrar-me|me\\s+encontrar|ver)\\s+` +
+      `(com\\s+)?(o\\s+|a\\s+)?${ELE_MESMO}`,
+    'iu'
+  ),
+  // "como faço para falar com ele", "tem como conversar com o deputado", "da pra falar com ele"
+  new RegExp(
+    `(^|[^\\p{L}])(como\\s+(faco|fazer|posso|consigo)|tem\\s+como|da\\s+pra|ha\\s+como|qual\\s+a\\s+forma\\s+de)\\s+` +
+      `[^.!?]{0,20}?(falar|conversar|encontrar|ver)\\s+(com\\s+)?(o\\s+|a\\s+)?${ELE_MESMO}`,
+    'iu'
+  ),
+  // O pedido de CONTATO: "me passa o whats dele", "tem o número do capitão?"
+  new RegExp(
+    `(^|[^\\p{L}])(me\\s+passa|me\\s+manda|passa|manda|voces?\\s+tem|tem|qual\\s+e?|qual\\s+o)\\s+` +
+      `[^.!?]{0,15}?(whats|whatsapp|numero|telefone|contato|zap)\\s+` +
+      `(pessoal\\s+)?(do|dele|da|de)\\s*(o\\s+)?${ELE_MESMO}?`,
+    'iu'
+  ),
+];
+
+/**
+ * **A guarda: falar com NÓS não é falar com ELE.** *"Gostaria de falar com vocês"*, *"quero falar
+ * com a equipe"* e *"posso falar com alguém aí?"* são a conversa que já está em curso — responder
+ * com a negativa do WhatsApp pessoal seria negar o que ninguém pediu.
+ */
+const FALAR_CONOSCO = /(^|[^\p{L}])(falar|conversar)\s+(com\s+)?(voces?|vcs?|contigo|com\s+a\s+(equipe|assessoria)|com\s+alguem)/iu;
+
+/** Ela contando que falou, ou que vai falar com um terceiro — não é pedido para nós. */
+const NAO_E_PEDIDO = [
+  /(^|[^\p{L}])(falei|conversei|encontrei|vi)\s+(com\s+)?(o\s+)?(ele|deputado|capitao|martim)/iu,
+  /(^|[^\p{L}])(vou|irei|vamos)\s+falar\s+com\s+(o\s+)?(prefeito|vereador\s+da|secretario|delegado)/iu,
+];
+
+export function pedeFalarComDeputado(entrantes, nossaUltimaAt) {
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  if (!rajada.length) return null;
+
+  for (const msg of rajada) {
+    if (msg?.sistema || ehMensagemDeAnuncio(msg)) continue;
+    const texto = semLinks(msg?.texto);
+    if (!texto.trim()) continue;
+    if (NAO_E_PEDIDO.some((re) => re.test(texto))) continue;
+    if (FALAR_CONOSCO.test(texto)) continue;
+    if (QUER_FALAR_COM_ELE.some((re) => re.test(texto))) {
+      return { motivo: 'quer falar com o deputado em pessoa — o encontro é na agenda, e o número pessoal não é repassado' };
+    }
+  }
+  return null;
+}
+
+/**
  * Esta mensagem é **repasse** — conteúdo de terceiro que a pessoa encaminhou?
  *
  * Link sozinho e vídeo. É o que ele chamou de ruído em 31/08: *"está confuso quando é rajada de

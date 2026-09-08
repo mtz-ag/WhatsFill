@@ -1454,6 +1454,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   **detector que casa a palavra antiga para de ver o caso**: `SE_APRESENTANDO` ganhou `equipe` e
   `assessoria` no mesmo commit, senao continuaria "funcionando" cego.
 
+- **"QUERO FALAR COM O DEPUTADO": o encontro e na AGENDA, e a Assembleia esta fora de questao.**
+  Regra dele (08/09/2026), com o print do pastor e o texto que ele digitou a mao: *"neste momento de
+  eleicoes somente se encontrando com ele em algum evento da agenda, pedimos desculpas mas nada e
+  repassado para o whats pessoal do capitao por motivos de seguranca"*. **A segunda metade e a que
+  se erra sozinho:** *"fora de eleicoes tem a opcao de encontrar na assembleia mas agora esta fora de
+  questao"* — oferece-la agora e abrir porta que nao abre, a familia do "procure a coordenacao"
+  (07/09). A resposta pronta e `falar-com-deputado`, e o teste trava as tres AUSENCIAS dela: sem
+  Assembleia, sem promessa de levar recado, e **sem `{{link_grupo}}`** (a agenda mora em
+  `agenda-grupo`, e a variavel vazia BLOQUEIA o envio — o recado central nao pode depender de um
+  campo da Config). O gatilho e `cortesia.pedeFalarComDeputado`, e **o que qualifica e o OBJETO ser
+  ELE**: *"falar com voces"* e a conversa em curso, *"falei com o deputado ontem"* e passado, e
+  *"me passa o whats dele"* nao tem verbo de falar e e o mesmo pedido.
 - **QUALIFICADOR EM GRUPO OPCIONAL E QUALIFICADOR QUE NAO EXISTE.** Anotacao da Geci (06/09/2026):
   *"Tamo junto estaremos de maos dadas e venceremos amem"* fez a rodada PULA-LA como quem confirma
   presenca em evento — *"nao e evento, os termos estao muito vagos e sendo aplicados em contextos

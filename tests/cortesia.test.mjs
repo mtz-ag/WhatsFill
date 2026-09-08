@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { rajadaDeAnuncios, naoPodeFalarAgora, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado } from '../src/lib/cortesia.js';
+import { rajadaDeAnuncios, naoPodeFalarAgora, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado, pedeFalarComDeputado } from '../src/lib/cortesia.js';
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -2196,6 +2196,51 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
     'audio de verdade sem transcricao continua pedindo voce');
   check(!!pedeRespostaPessoal({ texto: '', tipo: 'DOCUMENT', at: 1 }),
     'e o arquivo tambem');
+}
+
+/**
+ * **Quer falar com o DEPUTADO em pessoa** — pedido dele (08/09/2026), print do pastor que escreveu
+ * *"Gostaria de falar com deputado sou pastor Cesar de santa Maria"*.
+ *
+ * **O que qualifica e o OBJETO ser ELE**, e nao a vontade de falar — e e ai que mora o risco:
+ * *"gostaria de falar com voces"* e a conversa que ja esta acontecendo, e responder com a negativa
+ * do WhatsApp pessoal seria negar o que ninguem pediu. Metade das assercoes e falso positivo.
+ */
+{
+  grupo('quer falar com o deputado (o pastor, 08/09)');
+
+  const msg = (t) => [{ texto: t, tipo: 'TEXT', at: 1 }];
+  const pega = (t) => !!pedeFalarComDeputado(msg(t), null);
+
+  for (const t of [
+    'Gostaria de falar com deputado sou pastor Cesar de santa Maria',
+    'Quero falar com o Capitao Martim',
+    'queria conversar com ele',
+    'Como faco para falar com o deputado?',
+    'Tem como falar com ele pessoalmente?',
+    'gostaria muito de encontrar o capitao',
+    'Me passa o whats dele',
+    'Voces tem o numero do capitao?',
+    'me manda o contato dele por favor',
+  ]) {
+    check(pega(t), `pega: "${t}"`);
+  }
+
+  /** Falar com NOS nao e falar com ELE — e e a conversa que ja esta em curso. */
+  for (const t of [
+    'Gostaria de falar com voces',
+    'quero falar com a equipe',
+    'posso falar com alguem ai?',
+    'falei com o deputado ontem no evento',
+    'conversei com ele semana passada',
+    'vou falar com o prefeito da minha cidade',
+    'quero falar sobre a seguranca publica',
+    'gostaria de saber qual a agenda',
+    'me passa o link do grupo',
+    'tem como voces me ajudarem?',
+  ]) {
+    check(!pega(t), `nao pega: "${t}"`);
+  }
 }
 
 fim();

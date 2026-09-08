@@ -988,6 +988,24 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '   falando com a equipe, e não há porta atrás desta.',
     '   Faça o que faria se ela não tivesse oferecido nada: agradeça o apoio, com sinceridade, e',
     '   responda o resto da mensagem. Sobre a oferta, silêncio é melhor que uma frase.',
+    /**
+     * **A regra 8 é dele, ditada em 08/09/2026**, com o print do pastor que escreveu *"Gostaria de
+     * falar com deputado"* e o texto que ele digitou à mão para responder.
+     *
+     * Duas metades, e a segunda é a que a IA erraria sozinha: *"fora de eleições tem a opção de
+     * encontrar na assembleia mas agora está fora de questão"*. **Oferecer a Assembleia agora seria
+     * abrir uma porta que não abre**, exatamente como o *"procure a coordenação"* da regra 7.
+     *
+     * A resposta pronta `falar-com-deputado` cobre o caso quando a rodada o reconhece; isto aqui é
+     * para quando o pedido vem embrulhado em outra coisa e o caso chega à IA.
+     */
+    '8. QUEM QUER FALAR COM O DEPUTADO EM PESSOA: em período eleitoral, o único caminho é encontrá-lo',
+    '   nos EVENTOS DA AGENDA. O WhatsApp e o telefone pessoais dele NÃO são repassados, por motivo',
+    '   de segurança — diga isso com desculpas e sem rodeio, é uma frase.',
+    '   NÃO ofereça a Assembleia, o gabinete parlamentar nem "marcar uma reunião": fora de eleição',
+    '   isso existe, agora está fora de questão, e prometer é abrir porta que não abre.',
+    '   E não diga que vai passar o recado para ele. O que você pode dizer com verdade é que a',
+    '   mensagem chegou e é lida por aqui.',
     'TAMANHO: siga o item 22 do padrão, e ele é curto. Mensagem simples: 1 a 3 frases. Isto sai no',
     'WhatsApp, não é ofício.',
     'Não dê aula sobre regra nem sobre lei, e não liste alternativas que ninguém pediu. Quando algo',

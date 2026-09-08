@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v2.95.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v2.96.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -256,6 +256,60 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
 ---
+
+## 2026-09-08 — "Gostaria de falar com o deputado" (v2.96.0)
+
+Pedido dele, com o print do pastor que escreveu *"Gostaria de falar com deputado sou pastor Cesar de
+santa Maria"* e **a resposta que ele digitou à mão**, às 11:04:
+
+> *"neste momento de eleições somente se encontrando com ele em algum evento da agenda, pedimos
+> desculpas mas nada é repassado para o whats pessoal do capitão por motivos de segurança"*
+
+E a segunda metade, que é a que a IA erraria sozinha: *"fora de eleições tem a opção de encontrar na
+assembleia mas agora está fora de questão"*.
+
+### A resposta pronta, e o que ela NÃO diz
+
+`falar-com-deputado`, com base e duas variantes. Diz duas coisas: o encontro pessoal é **nos eventos
+da agenda**, e o WhatsApp pessoal **não é repassado, por segurança**, com o pedido de desculpas.
+
+Três ausências, todas de propósito e travadas no teste:
+
+- **a Assembleia não aparece.** Fora de eleição ela existe; agora está fora de questão, e oferecer é
+  abrir uma porta que não abre — a mesma família do *"procure a coordenação"* de 07/09;
+- **não promete levar o recado.** É a regra 5 aplicada ao texto pronto: o que dá para dizer com
+  verdade é que a mensagem é lida por aqui;
+- **não carrega `{{link_grupo}}`.** A agenda mora em `agenda-grupo`, e resposta pronta que funde duas
+  coisas não se usa pela metade (a lição das duas de evento, 02/09). Some-se que a variável
+  **bloqueia o envio** quando o campo está vazio, e o recado central aqui não pode depender de um
+  campo da Config.
+
+### O gatilho entra no mesmo commit
+
+É a regra registrada em 02/09 (o `pedido-emprego`, que existia escrito e sem ninguém acioná-lo):
+**resposta pronta sem gatilho é trabalho parado.** São quatro peças:
+
+1. **`cortesia.pedeFalarComDeputado`** — o detector. **O que qualifica é o OBJETO ser ELE**, e não a
+   vontade de falar: *"gostaria de falar com vocês"* é a conversa que já está acontecendo, *"falei
+   com o deputado ontem"* é passado, *"vou falar com o prefeito"* é ela falando com outra pessoa.
+   Pega também o pedido de CONTATO (*"me passa o whats dele"*), que não tem verbo de falar nenhum e
+   é o mesmo pedido. **Metade das 19 asserções é falso positivo**;
+2. **duas caixas no quadro**, ao lado do "me liga" — nos DOIS ramos, que é a lição de que regra que
+   vive num lado só é regra pela metade;
+3. **o sinal no painel**, com a trava `negativaJaSaiu`: dizer *"o número não é repassado"* duas vezes
+   não é responder, é repetir (a regra da Cleonice, 06/09);
+4. **a regra 8 do prompt**, para quando o pedido vem embrulhado em outra coisa e o caso chega à IA.
+   Ela diz o mesmo, e proíbe explicitamente a Assembleia, o gabinete parlamentar e o "marcar uma
+   reunião". Prompt de 5.290 → **5.452 tokens**, ainda acima do mínimo de cache do Haiku.
+
+### O que ele precisa fazer
+
+**A caixa nova só decide depois que ele IMPORTAR o quadro** — o quadro é uma cópia, e caixa nova
+nunca chega nele sozinha. A resposta pronta, essa chega: a migração `respostaFalarComDeputado`
+acrescenta o texto na lista dele no primeiro carregamento, e ela fica disponível na aba Respostas de
+imediato. Sem o import, o caso continua caindo onde caía — e a resposta está a um clique.
+
+A chegada foi de 21 para **22 caixas**.
 
 ## 2026-09-08 — Dois sinais disparando onde não deviam (v2.95.0)
 

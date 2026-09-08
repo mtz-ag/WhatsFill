@@ -579,4 +579,38 @@ grupo('o link do grupo entra uma vez, e nunca por cima do dele (07/09/2026)');
   check(!(await templates.migrarRespostaAgendaGrupo()), 'e nao acrescenta duas vezes');
 }
 
+/**
+ * **"Gostaria de falar com o deputado"** — pedido dele (08/09/2026), com o print do pastor e a
+ * resposta que ele digitou a mao.
+ *
+ * O que este grupo trava e o CONTEUDO da decisao dele, que uma reescrita futura pode desfazer sem
+ * querer: a Assembleia ficou de fora ("fora de eleicoes tem a opcao de encontrar na assembleia mas
+ * agora esta fora de questao"), e o texto nao promete levar recado nem pede dados.
+ */
+{
+  grupo('a resposta de "falar com o deputado" (o pastor, 08/09)');
+
+  const pronta = store.DEFAULT_TEMPLATES.find((t) => t.id === 'falar-com-deputado');
+  check(!!pronta, 'a resposta existe de fabrica');
+  const textos = [pronta.text, ...(pronta.variantes || [])];
+  check(textos.length === 3, `tem base e duas variantes (${textos.length})`);
+
+  for (const t of textos) {
+    check(/agenda/i.test(t), 'diz que o encontro e nos eventos da agenda');
+    check(/seguran/i.test(t), 'e diz por que o numero pessoal nao e repassado');
+    /**
+     * **A Assembleia NAO pode aparecer** — e a metade da regra dele que a IA e uma reescrita
+     * errariam: fora de eleicao ela existe, agora esta fora de questao, e oferecer e abrir porta
+     * que nao abre (a mesma familia do "procure a coordenacao", 07/09).
+     */
+    check(!/assembleia|gabinete\s+parlamentar|marcar\s+(uma\s+)?reuniao/i.test(t),
+      'e NAO oferece a assembleia nem reuniao');
+    /** Nao promete levar recado: e a regra 5, e vale para o texto pronto tambem. */
+    check(!/(levo|vou\s+levar|passo|vou\s+passar)\s+(o\s+)?(recado|para\s+ele)/i.test(t),
+      'e nao promete levar o recado ate ele');
+    /** Texto que FUNDE duas coisas nao se usa pela metade: o link do grupo mora em `agenda-grupo`. */
+    check(!/\{\{link_grupo\}\}/.test(t), 'e nao carrega o link do grupo (que bloquearia o envio)');
+  }
+}
+
 fim();

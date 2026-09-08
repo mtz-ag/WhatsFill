@@ -33,6 +33,7 @@ export async function list() {
     await migrarBoasVindasTemDados();
     await migrarRespostaAgendaGrupo();
     await migrarLinkDoGrupoAtual();
+    await migrarRespostaFalarComDeputado();
     // Por ÚLTIMO de propósito: as de cima acrescentam respostas novas, e o texto de fábrica delas
     // já vem sem "gabinete" — mas as antigas, que ele editou, só são alcançadas por esta.
     await migrarGabineteParaEquipe();
@@ -195,6 +196,17 @@ export const migrarRespostaBoasVindas = () => garantirRespostas(['boas-vindas'],
  */
 export const migrarRespostaAgendaGrupo = () =>
   garantirRespostas(['agenda-grupo'], 'respostaAgendaGrupo');
+
+/**
+ * **"Gostaria de falar com o deputado"** — pedido dele (08/09/2026). Ver o texto em
+ * `store.DEFAULT_TEMPLATES`, id `falar-com-deputado`.
+ *
+ * Precisa da migracao pelo motivo de sempre: `store.get` so mescla default em chave que FALTA, e a
+ * lista de respostas dele esta gravada — sem esta passada, a resposta nova valeria para uma
+ * instalacao nova e para mais ninguem.
+ */
+export const migrarRespostaFalarComDeputado = () =>
+  garantirRespostas(['falar-com-deputado'], 'respostaFalarComDeputado');
 
 /**
  * **O link do grupo de hoje, uma vez só e nunca por cima do dele.**

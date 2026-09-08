@@ -27,7 +27,7 @@ import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, naoPodeFalarAgora, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado } from '../lib/cortesia.js';
+import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -5763,6 +5763,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * esperando o telefone tocar.
          */
         pedeLigacao: negativaJaSaiu('pedido-ligacao') ? null : pedeLigacao(state.entrantes, state.nossaUltimaAt),
+        /**
+         * **"Gostaria de falar com o deputado"** — pedido dele (08/09/2026), print do pastor.
+         *
+         * Entra com a mesma trava das outras negativas (`negativaJaSaiu`): dizer *"o WhatsApp
+         * pessoal não é repassado"* duas vezes não é responder, é repetir — a regra da Cleonice
+         * (06/09). Barrada a repetição, o caso desce para quem o alcançar, que é o desfecho certo.
+         */
+        pedeFalarComDeputado: negativaJaSaiu('falar-com-deputado')
+          ? null
+          : pedeFalarComDeputado(state.entrantes, state.nossaUltimaAt),
         naoPodeFalarAgora: naoPodeFalarAgora(state.entrantes, state.nossaUltimaAt),
         rajadaDeAnuncios: rajadaDeAnuncios(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
         /**
