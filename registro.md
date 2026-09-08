@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v2.96.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v2.97.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -256,6 +256,52 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
 ---
+
+## 2026-09-08 — O dossiê não sabia que ele é católico (v2.97.0)
+
+Print da contato de São Leopoldo: *"ESTÁ BEM! OBRIGADA É CRISTÃO OU COMUNISTA?"* e, na seguinte,
+*"POIS PT QUE PARA MIM É PP PARTIDO DOS PREGUIÇOSOS!"*. O rascunho respondeu **só a metade do
+partido** — Republicanos, centro-direita — e abriu dizendo *"não vou te passar uma informação que
+não tenho certeza"*. Ele: *"faltou informações no dossiê, martim é católico ou seja cristão e seu
+público normalmente é cristão"*.
+
+**A IA acertou o comportamento e faltava o dado.** A regra 4 do prompt manda usar só a conversa e o
+bloco "Quem é quem", e o dossiê não tinha uma linha sobre fé — então calar era o certo. É o desenho
+funcionando: **vazio faz escalar, errado faz agir com confiança**, que é o que o cabeçalho do
+arquivo já dizia.
+
+### O que entrou no dossiê
+
+Seção **Fé**, com a fonte que este projeto trata como a mais forte — ele:
+
+- **Capitão Martim é católico**, e portanto **cristão** `[CONFIRMADO]`
+- **O público desta base é, em geral, cristão** — católicos e evangélicos `[CONFIRMADO]`
+
+E o **como responder**, que é a parte que a IA erraria sozinha:
+
+- *"é cristão?"* → sim, e pode dizer que é católico;
+- *"é evangélico?"* → **não diga que é**. Ele é católico, cristão. A maior parte desta base é
+  evangélica, e é exatamente aí que a tentação de agradar existe — dado religioso errado sobre o
+  candidato é o tipo de coisa que a pessoa repassa para o grupo dela;
+- a fé **não vira promessa nem ataque**;
+- *"cristão ou comunista?"* são **duas perguntas**: a da fé está respondida, e a outra sai do que já
+  estava no arquivo, sem adjetivar adversário.
+
+Foi para a lista do **que a IA NUNCA deve afirmar**: que ele é evangélico, e a fé de qualquer outra
+pessoa da chapa — só a dele está no arquivo.
+
+### E o gatilho, que é a metade que faltaria
+
+**Foi o *"partido"* da segunda mensagem que puxou o dossiê nesse caso.** A pergunta da fé sozinha
+não puxaria nada — e ela é das mais diretas que chegam aqui. `GATILHOS` ganhou
+`cristao|catolic|evangelic|religi|igreja|pastor|padre`.
+
+**`deus` e `fe` ficaram de FORA de propósito**, e o teste trava isso: *"Deus abençoe"* e *"tenha
+fé"* fecham boa parte das mensagens desta base, e com elas na lista o dossiê entraria em quase toda
+chamada — ele existe justamente para entrar só quando a conversa pede (pedido dele, 01/09).
+
+O dossiê foi de 2.523 para **3.052 tokens injetados** (o arquivo tem 15.035 caracteres; o que vai
+para o prompt são 10.682, depois do corte do bloco de revisão).
 
 ## 2026-09-08 — "Gostaria de falar com o deputado" (v2.96.0)
 

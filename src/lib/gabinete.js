@@ -132,6 +132,16 @@ const GATILHOS = [
   /\bmartim\b|\bzucco\b|\bcovatti\b|\bcapitao\b/,
   // Pergunta sobre quem é quem
   /\bquem (e|sao|eh)\b|\bconhec(e|o)\b|\bapoi(a|o|ar)\b.*\bquem\b/,
+  /**
+   * **Fé** — print de 08/09/2026: a contato perguntou *"É CRISTÃO OU COMUNISTA?"* e, na mensagem
+   * seguinte, falou de partido. Foi o *"partido"* que puxou o dossiê; a pergunta da fé sozinha não
+   * puxaria nada, e é a mais direta que existe nesta base.
+   *
+   * **`deus` e `fe` ficaram de FORA de propósito.** *"Deus abençoe"* e *"tenha fé"* são o fecho de
+   * uma boa parte das mensagens daqui — com elas na lista o dossiê entraria em quase toda chamada,
+   * e ele existe justamente para entrar só quando a conversa pede (pedido dele, 01/09).
+   */
+  /\bcristao\b|\bcatolic|\bevangelic|\breligi|\bigreja\b|\bpastor\b|\bpadre\b/,
 ];
 
 /**

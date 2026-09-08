@@ -2673,6 +2673,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   com zero. A IA pode dizer o numero de UM candidato perguntado diretamente (dado confirmado, esta
   na tabela); montar a chapa inteira e cartao. **O modelo da colinha e dele** (*"vou criar um modelo
   de mensagem pra ela"*).
+- **DADO QUE FALTA NO DOSSIE PRECISA DE GATILHO, senao o dossie nem e consultado.** Print de
+  08/09/2026: a contato perguntou *"E CRISTAO OU COMUNISTA?"* e o rascunho respondeu so a metade do
+  partido, abrindo com *"nao vou te passar uma informacao que nao tenho certeza"*. **A IA acertou o
+  comportamento e faltava o dado** — o dossie nao tinha uma linha sobre fe. Ele: *"martim e catolico
+  ou seja cristao e seu publico normalmente e cristao"*. Duas metades: a secao **Fé** no dossie (com
+  o *como responder*, porque *"e evangelico?"* e onde a IA erraria sozinha — a base e majoritariamente
+  evangelica e a tentacao de agradar mora ai; foi para a lista do que ela NUNCA afirma), e o
+  **gatilho** em `gabinete.GATILHOS`, sem o qual a pergunta da fe sozinha nao puxa o arquivo. Neste
+  caso quem puxou foi o *"partido"* da mensagem SEGUINTE — por acidente. **`deus` e `fe` ficaram de
+  FORA da lista de proposito e ha teste travando**: sao o fecho de boa parte das mensagens desta
+  base, e com elas o dossie entraria em quase toda chamada, contra o pedido dele de 01/09.
 - **`[CONFERIR]` E O QUE TORNA SEGURO PESQUISAR.** A regra 4 do dossie diz que linha `[CONFERIR]`
   nao e afirmada ao contato, entao pesquisa nova entra INERTE e vira util quando ele confirma — e
   riscar o que esta errado vale tanto quanto confirmar o certo. Foi assim que os projetos do Martim

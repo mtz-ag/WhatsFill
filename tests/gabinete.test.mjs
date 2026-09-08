@@ -46,4 +46,40 @@ grupo('acento não pode furar o gatilho');
   check(precisaDoDossie(['CAPITÃO MARTIM']), 'caixa alta com acento');
 }
 
+/**
+ * **A pergunta de FÉ puxa o dossiê** — print de 08/09/2026.
+ *
+ * A contato escreveu *"ESTÁ BEM! OBRIGADA É CRISTÃO OU COMUNISTA?"* e, na mensagem seguinte, falou
+ * de partido. Foi o "partido" que puxou o dossie; a pergunta da fe sozinha nao puxaria nada — e ela
+ * e das mais diretas que chegam nesta base.
+ */
+{
+  grupo('fe: a pergunta puxa o dossie (08/09)');
+
+  for (const t of [
+    'É CRISTÃO OU COMUNISTA?',
+    'ele é católico?',
+    'voces sao evangelicos?',
+    'qual a religião dele',
+    'ele frequenta alguma igreja?',
+    'sou pastor e queria saber',
+  ]) {
+    check(precisaDoDossie([t]), `puxa: "${t}"`);
+  }
+
+  /**
+   * **"Deus" e "fé" ficaram de FORA de proposito.** Sao o fecho de boa parte das mensagens desta
+   * base — com elas na lista o dossie entraria em quase toda chamada, e ele existe para entrar so
+   * quando a conversa pede (pedido dele, 01/09). Estas asercoes travam essa decisao.
+   */
+  for (const t of [
+    'Deus abençoe você e sua família',
+    'tenha fé, vai dar tudo certo',
+    'amém, que Deus te proteja',
+    'Bom dia, tudo bem?',
+  ]) {
+    check(!precisaDoDossie([t]), `NAO puxa (e nao pode puxar): "${t}"`);
+  }
+}
+
 fim();

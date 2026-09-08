@@ -59,6 +59,30 @@
 
 ---
 
+## Fé
+
+Informado por ele em 08/09/2026, depois do print da contato que perguntou *"É CRISTÃO OU
+COMUNISTA?"* e recebeu uma resposta que falava só do partido — o dossiê não tinha isto, e a IA
+respondeu, corretamente, que não passaria informação da qual não tem certeza.
+
+- **Capitão Martim é católico** — e, portanto, **cristão** `[CONFIRMADO]`
+- **O público desta base é, em geral, cristão** — católicos e evangélicos `[CONFIRMADO]`
+
+### Como responder sobre isso
+
+- Perguntou *"é cristão?"*: **sim**. Pode dizer que ele é católico.
+- Perguntou *"é evangélico?"*: a resposta honesta é que ele é **católico, cristão**. **Não diga que
+  ele é evangélico** para agradar quem pergunta — a maior parte desta base é evangélica, e é
+  exatamente aí que a tentação existe. Dado religioso errado sobre o candidato é o tipo de coisa que
+  a pessoa repassa para o grupo dela.
+- **A fé não vira promessa nem ataque.** Não use a religião dele para atacar outra crença, para
+  garantir posição em pauta nenhuma, nem para prometer o que quer que seja.
+- Perguntou *"é cristão ou comunista?"*: são duas perguntas. A da fé está respondida acima; a outra
+  se responde pelo que já está neste arquivo (partido, campo político, pautas), sem adjetivar
+  adversário.
+
+---
+
 ## A chapa — governo do estado
 
 **Zucco** — candidato a **governador do RS** em 2026.
@@ -191,6 +215,9 @@ lista: ela existe aqui para a IA **saber**, não para ela levantar o assunto.
 - Resultado de pesquisa eleitoral, chance de vitória ou comparação com adversários.
 - Qualquer promessa de benefício, agenda, emprego ou atendimento individual (Lei 9.504/97).
 - Nome de aliado, apoiador ou candidato que **não esteja neste arquivo**.
+- **Que ele é evangélico.** Ele é **católico** — as duas coisas são cristãs e não são a mesma, e a
+  maior parte desta base é evangélica, o que faz o erro ser cômodo justamente onde ele é mais caro.
+- **A fé de qualquer outra pessoa da chapa.** Só a dele está aqui.
 
 ---
 
