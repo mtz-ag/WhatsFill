@@ -9881,7 +9881,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const cacheOk = c.cacheLido > 0 ? `cache ${c.cacheLido}` : podia ? 'SEM CACHE' : 'sem cache (esperado)';
       const usd = rascunho.custoUsd ? ` · US$ ${rascunho.custoUsd.toFixed(4)}` : '';
       const mes = rascunho.gastoMes ? ` · mês US$ ${(rascunho.gastoMes.usd || 0).toFixed(2)}` : '';
-      registrarNaRodada('IA', 'pulado', `rascunho · ${cacheOk} · entrada ${c.entrada} · saída ${c.saida}${usd}${mes}`);
+      /**
+       * **Quem atendeu, quando o titular falhou.** Sem esta marca o log fala de tokens e de custo de
+       * um modelo que não é o escolhido na tela — e a conta parece errada quando está certa.
+       */
+      const reserva = rascunho.usouReserva ? ` · RESERVA: ${rascunho.usouReserva}` : '';
+      registrarNaRodada('IA', 'pulado', `rascunho · ${cacheOk} · entrada ${c.entrada} · saída ${c.saida}${usd}${mes}${reserva}`);
     }
 
     const bruto = String(rascunho?.texto || '').trim();
@@ -10047,6 +10052,48 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(
       h('label', { class: 'wf-field' }, [h('span', {}, 'Modelo'), selModelo]),
       h('div', { class: 'wf-origin' }, avisoDoModelo(cfg))
+    );
+
+    /**
+     * **O modelo RESERVA** — pedido dele (08/09/2026), depois de a IA pendurar duas vezes: *"se for
+     * algo comum tem que ter um failsafe; eu já quero botar o chatgpt, então o padrão seria chatgpt
+     * atender, se ele falhar tenta com o claude"*.
+     *
+     * A troca acontece no service worker (as duas chamadas passam pelo teto de gasto). Aqui é só a
+     * escolha — e o aviso que diz quando ela NÃO vale.
+     */
+    const selReserva = h('select', {});
+    const reservaAtual = String(cfg.modeloReserva || '');
+    selReserva.append(h('option', { value: '' }, 'Sem reserva — se falhar, falhou'));
+    for (const [casa, modelos] of [
+      ['Anthropic (Claude)', [
+        ['claude-haiku-4-5', 'Haiku 4.5'],
+        ['claude-sonnet-5', 'Sonnet 5'],
+        ['claude-opus-5', 'Opus 5'],
+      ]],
+      ['OpenAI (ChatGPT)', [
+        ['gpt-5', 'gpt-5'],
+        ['gpt-5-mini', 'gpt-5-mini'],
+        ['gpt-5-nano', 'gpt-5-nano'],
+      ]],
+    ]) {
+      const g = h('optgroup', { label: casa });
+      for (const [id, rotulo] of modelos) {
+        const opt = h('option', { value: id }, rotulo);
+        if (id === reservaAtual) opt.selected = true;
+        g.append(opt);
+      }
+      selReserva.append(g);
+    }
+    selReserva.addEventListener('change', () =>
+      withBusy(async () => {
+        await salvarIA({ modeloReserva: selReserva.value });
+        renderAll();
+      })
+    );
+    body.append(
+      h('label', { class: 'wf-field' }, [h('span', {}, 'Modelo reserva (failsafe)'), selReserva]),
+      h('div', { class: 'wf-origin' }, avisoDoReserva(cfg, state.iaChaves))
     );
 
     // A chave fica no armazenamento e NUNCA é relida para a tela: campo de senha, e o que se
@@ -10248,6 +10295,33 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * certo** — o prompt tem ~1.300 tokens e o mínimo dele para cachear é 4.096. Alarme que toca
    * sempre é alarme que se aprende a ignorar, e aí ele não toca no dia em que é de verdade.
    */
+  /**
+   * O que a tela diz sobre o RESERVA — e ela precisa dizer quando ele NÃO vale.
+   *
+   * São três jeitos de o failsafe estar desligado sem parecer: vazio, igual ao titular (repetir a
+   * mesma casa não é failsafe) e sem chave do provedor dele. Os três com o campo preenchido na
+   * tela, que é o pior tipo de configuração — a que parece feita.
+   */
+  function avisoDoReserva(cfg, chaves) {
+    const titular = cfg.modelo || iaLib.MODELO_PADRAO;
+    const reserva = String(cfg.modeloReserva || '').trim();
+    if (!reserva) {
+      return 'Sem reserva: se a casa do modelo acima não responder, a rodada segue sem a IA.';
+    }
+    if (reserva === titular) {
+      return 'O reserva é o MESMO modelo do titular — repetir a mesma casa não é failsafe. Escolha ' +
+        'um da outra casa (se o titular é ChatGPT, um Claude).';
+    }
+    const provedor = iaLib.provedorDoModelo(reserva);
+    if (!chaves?.[provedor]) {
+      return `O reserva é ${reserva}, e não há chave da ${iaLib.NOME_DO_PROVEDOR[provedor]} salva ` +
+        '— sem ela o failsafe não roda. Preencha a chave abaixo.';
+    }
+    return `Se ${titular} falhar (sem resposta, chave recusada, fila cheia, apagão), a mesma ` +
+      `pergunta é refeita em ${reserva}. As duas chamadas passam pelo teto de gasto e as duas ` +
+      'entram na conta. O Andamento diz quando o reserva atendeu.';
+  }
+
   function avisoDoModelo(cfg) {
     const modelo = cfg.modelo || iaLib.MODELO_PADRAO;
     const tks = iaLib.tokensAproximados(iaLib.montarSistema({ templates: state.templates, regras: cfg.regras }));

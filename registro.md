@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v3.4.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v3.5.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -256,6 +256,46 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
 ---
+
+## 2026-09-08 — O failsafe: falhou o titular, tenta o reserva (v3.5.0)
+
+Pedido dele, logo depois do timeout: ***"se for algo comum tem que ter um failsafe; eu já quero botar
+o chatgpt, então o padrão seria chatgpt atender, se ele falhar tenta com o claude"***.
+
+### Onde mora, e por quê
+
+**No service worker**, no mesmo lugar do teto de gasto — e pela mesma razão: **este é o único ponto
+por onde o dinheiro passa.** As duas chamadas entram na conta, e a segunda não escapa do teto.
+Failsafe no painel seria trava que um caminho novo esquece de chamar.
+
+### Quando tenta, e quando não
+
+**Tenta em QUALQUER falha do titular** (`ok: false`), de propósito: 401, 429, 500, timeout e sem rede
+são todos *"esta casa não atendeu"*, e é isso que o reserva cobre. O teto de gasto não chega lá — ele
+barra antes.
+
+**Não tenta** em três casos, e a tela diz os três, porque todos parecem configurados:
+
+- sem reserva escolhido;
+- **reserva igual ao titular** — repetir a mesma casa não é failsafe;
+- **sem chave do provedor do reserva** — é o mais traiçoeiro, porque o campo do modelo está
+  preenchido e o do outro provedor está vazio.
+
+### Os relógios tiveram de ser reajustados
+
+Com o failsafe, uma chamada ruim vira **duas**. O `fetch` foi de 60s para **45s** e a ponte de 75s
+para **100s**: `45 + 45 = 90 < 100`. Sem isso o painel desistiria antes de o reserva responder, e o
+failsafe **nunca chegaria à tela** — o conserto de meia hora atrás teria desligado o de agora.
+
+### O que aparece para ele
+
+O Andamento marca `RESERVA: <modelo>` na linha do custo — sem isso o log fala de tokens e de preço
+de um modelo que não é o escolhido na tela, e a conta parece errada estando certa. Falhando as duas,
+o motivo traz **as duas casas**: esconder o primeiro faria a tela culpar a errada.
+
+Padrão: `modeloReserva: 'claude-haiku-4-5'`. `ia` está na lista de mescla do `store.get`, então ele
+alcança quem já usa — e **quando ele puser o ChatGPT como titular, o failsafe já estará de pé**, que
+é o que ele pediu.
 
 ## 2026-09-08 — A IA pendurava, e pendurar é pior que falhar (v3.4.0)
 

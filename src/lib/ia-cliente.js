@@ -52,9 +52,15 @@ const VERSAO_API = '2023-06-01';
  * O da PONTE é maior que o do `fetch` de propósito: assim o motivo específico ("a API demorou
  * demais", "conta sem crédito") chega à tela quando o worker está vivo, e o genérico só aparece
  * quando o worker morreu.
+ *
+ * **Os dois relógios foram reajustados na 3.5.0** para o RESERVA caber: com o failsafe, uma
+ * chamada ruim pode virar duas (o titular e o reserva), e a ponte tem que esperar as duas — senão o
+ * painel desiste antes de o reserva responder, e o failsafe nunca chega à tela.
+ *
+ *     45s (titular) + 45s (reserva) = 90s  <  100s da ponte
  */
-const TIMEOUT_FETCH_MS = 60_000;
-const TIMEOUT_PONTE_MS = 75_000;
+const TIMEOUT_FETCH_MS = 45_000;
+const TIMEOUT_PONTE_MS = 100_000;
 
 /**
  * Pede ao service worker e **desiste na hora certa**, em vez de esperar para sempre.
@@ -210,7 +216,7 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
     if (!r?.ok) {
       return { acao: 'incerto', templateId: '', motivo: '', confianca: 0, aviso: r?.motivo || 'a IA não respondeu' };
     }
-    return { ...validarDecisao(r.decisao, ids), custo: r.custo, custoUsd: r.custoUsd, gastoMes: r.gastoMes };
+    return { ...validarDecisao(r.decisao, ids), custo: r.custo, custoUsd: r.custoUsd, gastoMes: r.gastoMes, usouReserva: r.usouReserva };
   } catch (err) {
     return { acao: 'incerto', templateId: '', motivo: '', confianca: 0, aviso: err?.message || String(err) };
   }
@@ -261,6 +267,9 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
       custo: r.custo,
       custoUsd: r.custoUsd,
       gastoMes: r.gastoMes,
+      // Quem atendeu, quando o titular falhou: a linha do Andamento tem que dizer, senão o log
+      // fala de um modelo que não é o que está escolhido na tela.
+      usouReserva: r.usouReserva,
     };
   } catch (err) {
     return { texto: '', avisos: [err?.message || String(err)], custo: null };
@@ -290,7 +299,7 @@ export async function conferirCidade({ regras, mensagens, candidato, origem, sub
     if (!r?.ok) {
       return { acao: 'incerto', cidade: '', motivo: '', confianca: 0, aviso: r?.motivo || 'a IA não respondeu' };
     }
-    return { ...validarCidade(r.decisao, { municipios, normalizar }), custo: r.custo, custoUsd: r.custoUsd, gastoMes: r.gastoMes };
+    return { ...validarCidade(r.decisao, { municipios, normalizar }), custo: r.custo, custoUsd: r.custoUsd, gastoMes: r.gastoMes, usouReserva: r.usouReserva };
   } catch (err) {
     return { acao: 'incerto', cidade: '', motivo: '', confianca: 0, aviso: err?.message || String(err) };
   }

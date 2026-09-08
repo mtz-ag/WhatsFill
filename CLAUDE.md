@@ -2673,6 +2673,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   com zero. A IA pode dizer o numero de UM candidato perguntado diretamente (dado confirmado, esta
   na tabela); montar a chapa inteira e cartao. **O modelo da colinha e dele** (*"vou criar um modelo
   de mensagem pra ela"*).
+- **O FAILSAFE DA IA MORA NO SERVICE WORKER, junto do teto — e nao no painel.** Pedido dele
+  (08/09/2026): *"se for algo comum tem que ter um failsafe; eu ja quero botar o chatgpt, entao o
+  padrao seria chatgpt atender, se ele falhar tenta com o claude"*. Falhou o titular
+  (`ok: false` — 401, 429, 500, timeout, sem rede), a MESMA pergunta e refeita em `ia.modeloReserva`.
+  **Fica no worker pela mesma razao do teto: e o unico ponto por onde o dinheiro passa**, entao as
+  duas chamadas entram na conta e a segunda nao escapa do limite. **Nao tenta em tres casos, e a
+  tela diz os tres** (sem reserva; reserva IGUAL ao titular, que nao e failsafe; sem chave do
+  provedor do reserva) — todos parecem configurados. **E os relogios tiveram de ser reajustados:**
+  uma chamada ruim virou DUAS, entao o `fetch` foi de 60s para 45s e a ponte de 75s para 100s
+  (45+45 < 100). Sem isso o painel desistiria antes de o reserva responder — **o conserto do timeout
+  teria desligado o failsafe**. O Andamento marca `RESERVA: <modelo>`, senao o log fala de tokens e
+  preco de um modelo que nao e o escolhido na tela.
 - **PENDURAR E PIOR QUE FALHAR: a chamada da IA nao tinha TIMEOUT nenhum.** Relato dele
   (08/09/2026): *"IA travou em dois casos, nao carrega a resposta"*, com a rodada parada em
   "Andando…" e nenhuma linha de erro. **Sao dois jeitos de pendurar:** a API nao responder (o

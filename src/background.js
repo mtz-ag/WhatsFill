@@ -69,9 +69,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
        * passa pela mescla de defaults nem pelo backup exportado.
        */
       const modeloDoPedido = msg.modelo || MODELO_PADRAO;
-      const nomeDaChave = CHAVE_DO_PROVEDOR[provedorDoModelo(modeloDoPedido)];
-      const guardado = await chrome.storage.local.get(nomeDaChave);
-      const chave = guardado[nomeDaChave];
+      const chaveDe = async (modelo) => {
+        const nome = CHAVE_DO_PROVEDOR[provedorDoModelo(modelo)];
+        const guardado = await chrome.storage.local.get(nome);
+        return guardado[nome];
+      };
+      const chave = await chaveDe(modeloDoPedido);
 
       // O teto ANTES da chamada. Este é o único ponto por onde sai dinheiro, e é por isso que a
       // trava mora aqui e não no painel: nenhum caminho novo lá consegue passar por fora.
@@ -82,18 +85,64 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         return;
       }
 
-      const r = await atender(msg, chave);
+      /**
+       * **O FAILSAFE: falhou o titular, tenta o reserva** — pedido dele (08/09/2026), depois de a
+       * IA pendurar duas vezes: *"se for algo comum tem que ter um failsafe; eu já quero botar o
+       * chatgpt, então o padrão seria chatgpt atender, se ele falhar tenta com o claude"*.
+       *
+       * **Mora AQUI, e não no painel**, pela mesma razão que o teto: este é o único ponto por onde
+       * o dinheiro passa. As duas chamadas são contabilizadas, e a segunda não escapa do teto —
+       * ela é feita depois de o teto já ter sido conferido nesta mesma passada, e o gasto das duas
+       * entra na conta.
+       *
+       * **Quando NÃO tenta:** sem modelo reserva configurado, reserva igual ao titular (repetir a
+       * mesma casa não é failsafe), ou sem chave do provedor do reserva. Nesses casos a falha do
+       * titular é a resposta, como era antes.
+       *
+       * **Tenta em qualquer falha do titular** (`ok: false`), de propósito: 401, 429, 500, timeout
+       * e sem rede são todos "esta casa não atendeu", e é isso que o reserva existe para cobrir. Só
+       * o teto de gasto não chega aqui — ele barra antes, lá em cima.
+       */
+      const contabilizar = async (resultado, modelo, base) => {
+        if (!resultado?.custo) return base;
+        const usd = custoEmDolares(resultado.custo, modelo);
+        const c = resultado.custo;
+        const tokens = (c.entrada || 0) + (c.cacheEscrito || 0) + (c.cacheLido || 0) + (c.saida || 0);
+        const gasto = acumularGasto(base, usd, Date.now(), tokens);
+        resultado.custoUsd = usd;
+        return gasto;
+      };
 
-      // Contabiliza o que a chamada custou, mesmo que a decisão tenha vindo inútil: a API cobra
-      // pela chamada, não pelo acerto. Gasto que só conta o que deu certo subestima a fatura.
-      if (r?.custo) {
-        const usd = custoEmDolares(r.custo, modeloDoPedido);
-        const tokens =
-          (r.custo.entrada || 0) + (r.custo.cacheEscrito || 0) + (r.custo.cacheLido || 0) + (r.custo.saida || 0);
-        const gasto = acumularGasto(conf.gasto, usd, Date.now(), tokens);
+      let r = await atender(msg, chave);
+      let gasto = await contabilizar(r, modeloDoPedido, conf.gasto);
+
+      const reserva = String(conf.modeloReserva || '').trim();
+      if (!r?.ok && reserva && reserva !== modeloDoPedido) {
+        const chaveReserva = await chaveDe(reserva);
+        if (chaveReserva) {
+          const motivoDoTitular = r?.motivo || 'sem motivo';
+          const segunda = await atender({ ...msg, modelo: reserva }, chaveReserva);
+          gasto = await contabilizar(segunda, reserva, gasto);
+          /**
+           * O motivo do titular vai junto **nos dois desfechos**: se o reserva salvou, ele explica
+           * por que o log fala de outro modelo; se os dois falharam, esconder o primeiro faria a
+           * tela culpar a casa errada.
+           */
+          if (segunda?.ok) {
+            r = { ...segunda, usouReserva: reserva, motivoDoTitular };
+          } else {
+            r = {
+              ...segunda,
+              usouReserva: reserva,
+              motivo: `${modeloDoPedido}: ${motivoDoTitular} — e o reserva ${reserva}: ${segunda?.motivo || 'sem motivo'}`,
+            };
+          }
+        }
+      }
+
+      if (gasto !== conf.gasto) {
         await store.set('ia', { ...conf, gasto });
         r.gastoMes = gasto;
-        r.custoUsd = usd;
       }
 
       sendResponse(r);

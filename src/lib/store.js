@@ -1100,6 +1100,20 @@ const DEFAULTS = {
     ligada: false,
     modelo: 'claude-haiku-4-5',
     /**
+     * **O modelo RESERVA: se o titular falhar, a chamada é refeita com este** — pedido dele
+     * (08/09/2026), depois de a IA pendurar duas vezes: *"se for algo comum tem que ter um
+     * failsafe; eu já quero botar o chatgpt, então o padrão seria chatgpt atender, se ele falhar
+     * tenta com o claude"*.
+     *
+     * **A troca é feita no service worker**, que é o único ponto por onde o dinheiro passa: assim
+     * as DUAS chamadas passam pelo teto de gasto e as DUAS entram na conta. Trava que mora no
+     * painel é trava que um caminho novo esquece de chamar.
+     *
+     * O padrão é um Claude porque é o que ele descreveu — e porque o reserva de outra casa é o que
+     * cobre a falha inteira de um provedor (chave recusada, 429, apagão). Vazio desliga o failsafe.
+     */
+    modeloReserva: 'claude-haiku-4-5',
+    /**
      * Instruções extras dele, somadas ao prompt de sistema.
      *
      * Existe porque a campanha muda mais rápido que o código: "esta semana quem falar em agenda
