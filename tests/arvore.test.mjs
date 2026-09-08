@@ -279,8 +279,15 @@ grupo('o desenho do QUADRO dele: as protecoes ficam acima da bifurcacao');
   const bomDia = arv.decidir({ jaRespondemosAntes: true, soCortesia: { motivo: 'cumprimentou' } }, quadro);
   check(bomDia?.tecla === '5', `saudacao escrita manda a mensagem do momento (${bomDia?.tecla})`);
 
+  /**
+   * **Desde 08/09/2026 o pedido de dinheiro vai para a IA**, a pedido dele: *"o deterministico com
+   * relacao ao pedido de emprego e dinheiro tem dado errado; quando as palavras chaves referentes
+   * aparecerem mande a IA analisar e ela envia"*. O que a caixa protege nao mudou -- o caso continua
+   * saindo da fila de quem recebe modelo -- e quem escreve deixou de ser a resposta pronta.
+   */
   const financeiro = arv.decidir({ jaRespondemosAntes: true, pedeAjudaFinanceira: { motivo: 'pix' } }, quadro);
-  check(financeiro?.resposta === 'pedido-ajuda', `pedido financeiro tem resposta pronta (${financeiro?.resposta})`);
+  check(financeiro?.ia === true, `pedido financeiro vai para a IA (ia=${financeiro?.ia})`);
+  check(!financeiro?.tecla && !financeiro?.resposta, 'e nao manda resposta pronta nenhuma');
 
   /**
    * **Quem chega agora nao entra no ramo de quem esta voltando.** "anúncio — pessoa nova" tem a
@@ -833,11 +840,13 @@ grupo('a CHEGADA pelo anuncio: modelo, dados, pendencia (02/09/2026)');
    * errada mesmo quando o texto e inofensivo.
    */
   const remedio = { pedeAjudaFinanceira: { motivo: 'remedio' }, textos: [ad, 'preciso de remedio'], ultimoTexto: 'preciso de remedio' };
-  check(arv.decidir({ ...chega, ...remedio }, q)?.resposta === 'pedido-ajuda',
-    'quem pediu ajuda recebe a NEGATIVA antes do recibo');
+  // Desde 08/09 quem responde e a IA (pedido dele). A POSICAO e o que este bloco trava, e ela nao
+  // mudou: o pedido continua acima do recibo do anuncio.
+  check(arv.decidir({ ...chega, ...remedio }, q)?.ia === true,
+    'quem pediu ajuda vai para a IA antes do recibo');
   check(tecla({ ...chega, ...remedio }) !== 'a', 'e nao o modelo + pedido de dados');
-  check(arv.decidir({ ...chega, ...remedio, modeloJaNaConversa: true, temEtiquetaDeCidade: true }, q)?.resposta === 'pedido-ajuda',
-    'quem ja tinha cidade tambem recebe a negativa');
+  check(arv.decidir({ ...chega, ...remedio, modeloJaNaConversa: true, temEtiquetaDeCidade: true }, q)?.ia === true,
+    'quem ja tinha cidade tambem vai para a IA');
   check(tecla({ ...chega, perguntaAberta: true }) === '6', 'pergunta de posicao: gente, nao modelo (print da Clair)');
   // Desde 03/09 a tecla e 6 (decisao dele: "pedido e algo dificil de ser identificado, sera pra mim
   // ou IA responder"). O que a caixa protege nao mudou: ela continua acima do recibo.
@@ -1266,7 +1275,7 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
   const bomDia = arv.decidir({ ...b, soCortesia: { motivo: 'cumprimentou' } }, q);
   check(bomDia?.tecla === '5', 'quem chega e diz "bom dia" ainda recebe a mensagem do momento');
   const remedio = arv.decidir({ ...b, pedeAjudaFinanceira: { motivo: 'remedio' }, textos: [ad, 'preciso de remedio'], ultimoTexto: 'preciso de remedio' }, q);
-  check(remedio?.resposta === 'pedido-ajuda', 'e quem pede remedio ainda recebe a negativa');
+  check(remedio?.ia === true, 'e quem pede remedio ainda sai da fila do modelo -- hoje pela IA');
 }
 
 
@@ -2357,11 +2366,11 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   check(!!base.pedeRespostaPessoal, 'e reconhece que e conversa longa');
 
   const primeira = arv.decidir({ ...base, pedeAjudaFinanceira: pedeDinheiro }, fluxo, {});
-  check(primeira?.resposta === 'pedido-ajuda', 'na PRIMEIRA vez, a negativa sai');
+  check(primeira?.ia === true, 'na PRIMEIRA vez, o caso vai para a IA (era a negativa pronta ate 08/09)');
 
   const segunda = arv.decidir({ ...base, pedeAjudaFinanceira: null }, fluxo, {});
   check(segunda?.tecla === '6', `ja tendo negado, o caso vai para voce ou para a IA (tecla ${segunda?.tecla})`);
-  check(segunda?.resposta !== 'pedido-ajuda', 'e a negativa NAO sai de novo');
+  check(!segunda?.ia, 'e nao volta para a IA pelo pedido de dinheiro');
 }
 
 {

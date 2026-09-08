@@ -685,10 +685,25 @@ export function fluxoPadrao() {
      * Palavra a palavra a lista nunca fecha, e o que decide aqui manda uma NEGATIVA para eleitor.
      * `cortesia.pedeAjudaFinanceira` e testada, olha a rajada inteira (a chave vem numa mensagem e
      * o valor na seguinte) e separa pedir de agradecer -- "voces me ajudaram muito" nao casa.
+     *
+     * **O DESFECHO passou a ser a IA em 08/09/2026, a pedido dele:** *"o deterministico com relacao
+     * ao pedido de emprego e dinheiro tem dado errado; quando as palavras chaves referentes
+     * aparecerem mande a IA analisar e ela envia"*. Ele esta apontando o limite da deteccao por
+     * palavra num assunto que nao cabe em lista: "dinheiro" solto e o vocabulario politico desta
+     * base (a Elenir, 06/09), e "preciso de" sem objeto ja obrigou a mesma correcao (a Odete,
+     * 03/09). Duas vezes o conserto foi estreitar a lista; a terceira e trocar quem decide.
+     *
+     * **O que continua segurando o texto:** as secoes **9** e **13** do padrao DELE dizem o que
+     * responder (negar com respeito, nunca prometer pagamento nem contratacao), e
+     * `AVISOS_QUE_IMPEDEM_ENVIO.promessa` barra o envio automatico de rascunho que prometa mandar,
+     * dar ou providenciar. **`ia.RESTRITOS` NAO segura mais nada aqui**: ele impedia a IA de
+     * ESCOLHER estes dois textos, e a IA deixou de escolher texto pronto em 06/09.
+     *
+     * O texto `pedido-ajuda` continua existindo e a um clique na caixa da rodada.
      */
     { ...noVazio('pediu dinheiro, cesta basica ou remedio'),
       condicao: { sinal: 'pedeAjudaFinanceira', negar: false, palavras: [], onde: 'ultima' },
-      acao: { tecla: null, resposta: 'pedido-ajuda' } },
+      acao: { tecla: null, resposta: null, ia: true } },
 
     /**
      * **Quer trabalhar para o mandato** — anotação do Kelvem Marinho (02/09/2026).
@@ -701,10 +716,13 @@ export function fluxoPadrao() {
      * mandato **não pode atender**, e os dois têm um texto que explica e nega com respeito. Deixar
      * a pergunta sem resposta, ou respondê-la com um agradecimento genérico, é o que faz
      * *"vocês pagam?"* parecer um sim — e prometer emprego a eleitor é proibido pela Lei 9.504/97.
+     *
+     * **Também passou a ser a IA em 08/09** — mesma decisão dele, e pela mesma razão: a lista de
+     * formas de perguntar não fecha. Ver a caixa do pedido de dinheiro, logo acima.
      */
     { ...noVazio('quer trabalhar para o mandato'),
       condicao: { sinal: 'pedeEmprego', negar: false, palavras: [], onde: 'ultima' },
-      acao: { tecla: null, resposta: 'pedido-emprego' } },
+      acao: { tecla: null, resposta: null, ia: true } },
 
     /**
      * **"Me liga"** — pedido dele (04/09/2026, anotação da Jucileia).
@@ -1023,11 +1041,15 @@ export function fluxoPadrao() {
      * real mostrou é outra coisa: mandar propaganda como primeira resposta a quem escreve que não
      * consegue pagar as contas é a resposta errada mesmo quando o texto é inofensivo.
      *
-     * A negativa (`pedido-ajuda`) sai aqui, e o modelo sai na passada seguinte.
+     * A resposta ao pedido sai aqui, e o modelo sai na passada seguinte.
+     *
+     * **Desde 08/09 quem escreve essa resposta é a IA** (pedido dele) — o que não mudou é a
+     * POSIÇÃO: o pedido continua acima do recibo do anúncio, porque mandar propaganda como
+     * primeira resposta a quem escreve que não consegue pagar as contas é o dano, não o atraso.
      */
     { ...noVazio('pediu dinheiro, cesta basica ou remedio'), id: 'chegada-ajuda',
       condicao: { sinal: 'pedeAjudaFinanceira', negar: false, palavras: [], onde: 'ultima' },
-      acao: { tecla: null, resposta: 'pedido-ajuda' } },
+      acao: { tecla: null, resposta: null, ia: true } },
 
     /**
      * **As outras DUAS respostas que negam também valem na chegada** — relato dele (04/09/2026):
@@ -1041,7 +1063,7 @@ export function fluxoPadrao() {
      */
     { ...noVazio('quer trabalhar para o mandato'), id: 'chegada-emprego',
       condicao: { sinal: 'pedeEmprego', negar: false, palavras: [], onde: 'ultima' },
-      acao: { tecla: null, resposta: 'pedido-emprego' } },
+      acao: { tecla: null, resposta: null, ia: true } },
     { ...noVazio('pediu que a gente ligasse'), id: 'chegada-ligacao',
       condicao: { sinal: 'pedeLigacao', negar: false, palavras: [], onde: 'ultima' },
       acao: { tecla: null, resposta: 'pedido-ligacao' } },

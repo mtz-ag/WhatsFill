@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v3.9.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v3.10.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.9.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.10.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
@@ -18,7 +18,7 @@ tabela. Prompt de sistema do rascunho: **5.556 tokens**, dos quais **68% é o `P
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
 Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75), **dezoito em
-07/09** (2.76 a 2.93) e **dezesseis em 08/09** (2.94 a 3.9).
+07/09** (2.76 a 2.93) e **dezessete em 08/09** (2.94 a 3.10).
 
 ### O que mudou em 08/09, em uma linha cada
 
@@ -30,7 +30,7 @@ Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2
 | 3.3–3.4 | **"Casa" não é endereço e "casada" não é Chapada**; e a **IA pendurava** — não havia timeout em lugar nenhum, nem no `fetch` nem na ponte. |
 | 3.5–3.6 | **O failsafe** (falhou o titular, tenta o reserva, no service worker junto do teto) e o **botão do padrão** na Config. |
 | 3.7 | **O padrão abre em janela própria** (16px, coluna de 78 caracteres), e explicação longa nasce fechada com um "ver mais". |
-| 3.8–3.9 | **Van Hattem virou deputado federal** — trava de cargo e número da chapa; e o log passou a dizer **quem** atendeu e **por que** o titular falhou — em vermelho. |
+| 3.8–3.10 | **Van Hattem virou deputado federal** — trava de cargo e número da chapa; o log passou a dizer **quem** atendeu e **por que** o titular falhou (em vermelho); e **pedido de dinheiro e de emprego passaram para a IA**. |
 
 ### O que mudou em 07/09, em uma linha cada
 
@@ -82,9 +82,10 @@ reescrever o texto de um aviso sem reescrever a trava a faria deixar de casar em
 
 ### Pendências que NÃO estão no código — precisam dele
 
-1. **IMPORTAR O FLUXO.** O último arquivo entregue a ele é o `fluxopadrao2.96.0.json` (08/09), com
-   **67 caixas** — que é o padrão de hoje, remedido. **Nenhuma versão de 2.97 a 3.8 mexeu na
-   estrutura do `fluxoPadrao`**: foram detectores, prompt, travas e tela.
+1. **IMPORTAR O FLUXO.** O último arquivo entregue a ele é o `fluxopadrao3.10.0.json` (08/09), com
+   **67 caixas** — o padrão de hoje. **A 3.10 MEXEU no `fluxoPadrao`** (pedido de dinheiro e de
+   emprego passaram a chamar a IA), então sem importar o quadro dele continua mandando a negativa
+   pronta nesses dois casos.
 
    > **Antes de afirmar que o quadro dele está atrasado, compare com o ARQUIVO que ele tem** — não
    > com o último que este registro menciona. Já errei nisso, e foi ele quem corrigiu mandando o
@@ -267,6 +268,75 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-08 — Pedido de dinheiro e de emprego passam para a IA (v3.10.0)
+
+Pedido dele: *"o determinístico com relação ao pedido de emprego e dinheiro tem dado errado; quando
+as palavras chaves referentes aparecerem mande a IA analisar e ela envia"*.
+
+**Ele está apontando o limite da detecção por palavra num assunto que não cabe em lista**, e o
+histórico deste arquivo dá razão a ele: *"dinheiro"* solto é o vocabulário político desta base (a
+Elenir, 06/09 — 858 caracteres criticando auxílios, e ela recebeu a negativa de ajuda financeira), e
+*"preciso de"* sem objeto obrigou a mesma correção (a Odete, 03/09 — *"Preciso do nome de um deputado
+federal que seja de direita"*, e a rodada perguntou em que ela precisava de ajuda). **Duas vezes o
+conserto foi estreitar a lista. A terceira é trocar quem decide.**
+
+### O que mudou
+
+As **quatro caixas** do `fluxoPadrao` — duas no ramo de quem volta, duas na chegada — trocaram
+`acao.resposta` por `acao.ia`:
+
+| caixa | antes | agora |
+|---|---|---|
+| pediu dinheiro, cesta básica ou remédio | resposta `pedido-ajuda` | a IA assume e responde |
+| quer trabalhar para o mandato | resposta `pedido-emprego` | a IA assume e responde |
+| `chegada-ajuda` | resposta `pedido-ajuda` | a IA assume e responde |
+| `chegada-emprego` | resposta `pedido-emprego` | a IA assume e responde |
+
+**Os detectores não foram tocados** (`pedeAjudaFinanceira`, `pedeEmprego`): eles continuam sendo o
+gatilho, e continuam com as guardas que têm. O que mudou é o desfecho.
+
+**A POSIÇÃO também não mudou**, e é ela que este bloco de testes trava: o pedido continua acima do
+recibo do anúncio, porque mandar propaganda como primeira resposta a quem escreve que não consegue
+pagar as contas é o dano, não o atraso (decisão dele de 03/09).
+
+`pedeLigacao` e `pedeFalarComDeputado` **ficaram como estavam** — ele nomeou dois casos, não a
+família.
+
+### O que segura o texto agora
+
+1. **O padrão DELE já cobre os dois casos.** Seção **9** (*"não prometa pagamento nem invente
+   recurso. Negue com respeito"*) e seção **13** (*"nunca prometa contratação"*), com a frase de
+   exemplo escrita.
+2. **`AVISOS_QUE_IMPEDEM_ENVIO.promessa`** barra o envio automático de rascunho que prometa mandar,
+   dar, arrumar ou providenciar — que é exatamente o risco da Lei 9.504/97.
+
+> **`ia.RESTRITOS` NÃO segura mais nada aqui, e é bom não confiar nele.** Ele impedia a IA de
+> **escolher** `pedido-ajuda`/`pedido-emprego`, e **a IA deixou de escolher texto pronto em 06/09** —
+> nada chama `iaCliente.avaliar` desde então. A trava está inerte; quem protege é a lista acima.
+
+> **O aviso `cita bem ou benefício` vai disparar em quase todos** (a palavra "dinheiro" ou "cesta"
+> aparece na própria negativa), e ele **não barra** o envio — é aviso de tela. Barrar por menção
+> faria a IA nunca responder estes casos, que é o oposto do pedido.
+
+### Os dois custos, ditos a ele
+
+- **Com a IA DESLIGADA, estes contatos param na caixa** em vez de receber a negativa pronta
+  sozinhos: `iaEntra` exige `state.ia.ligada`, e a automação determinística pula caixa que chama a
+  IA. O texto continua a uma tecla na caixa da rodada.
+- **Passa a haver chamada de IA (dinheiro) onde antes não havia** — este era um dos casos que o
+  fluxo resolvia de graça.
+
+### Arquivos
+
+`src/lib/arvore.js` (as quatro caixas e os comentários), `tests/arvore.test.mjs` (cinco asserções
+passaram a travar o desfecho novo, mantendo a posição). 15 suítes verdes, verificadores limpos,
+**67 caixas**, 0 problemas.
+
+**Arquivo entregue a ele: `fluxopadrao3.10.0.json`** — 67 caixas, todas sobrevivendo à importação.
+Sem importar, o quadro dele continua mandando a negativa pronta.
+
 ---
 
 ## 2026-09-08 — A linha da IA em vermelho no Andamento (v3.9.0)

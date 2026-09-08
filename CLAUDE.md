@@ -2652,6 +2652,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   linha "Cidade:" some (o valor virou vazio) e o aviso de grafia some junto, enquanto o CRM
   continua com o lixo ate a conclusao gravar. Hoje o cabecalho diz o que vai ser apagado, e o
   Andamento registra `apagando do CRM: <campo> ("<valor>")`.
+- **PEDIDO DE DINHEIRO E DE EMPREGO PASSARAM PARA A IA — a terceira correcao da mesma lista trocou
+  quem decide.** Pedido dele (08/09/2026): *"o deterministico com relacao ao pedido de emprego e
+  dinheiro tem dado errado; quando as palavras chaves referentes aparecerem mande a IA analisar e
+  ela envia"*. As duas correcoes anteriores foram ESTREITAR a lista — "dinheiro" solto e vocabulario
+  politico desta base (a Elenir, 06/09) e *"preciso de"* sem objeto pega quem ja explicou (a Odete,
+  03/09). **Os detectores continuam sendo o GATILHO; o que mudou e o desfecho:** as quatro caixas do
+  `fluxoPadrao` (duas no retorno, duas na chegada) trocaram `acao.resposta` por `acao.ia`. A POSICAO
+  nao mudou — o pedido continua acima do recibo do anuncio. `pedeLigacao` e `pedeFalarComDeputado`
+  ficaram como estavam: ele nomeou dois casos, nao a familia.
+  **O que segura o texto agora sao duas coisas, e nenhuma delas e a que parece:** as secoes **9** e
+  **13** do padrao DELE (negar com respeito, nunca prometer pagamento nem contratacao) e
+  `AVISOS_QUE_IMPEDEM_ENVIO.promessa`. **`ia.RESTRITOS` esta INERTE** — ele impedia a IA de ESCOLHER
+  esses dois textos, e a IA deixou de escolher texto pronto em 06/09 (nada chama `iaCliente.avaliar`
+  desde entao). O aviso `cita bem ou beneficio` dispara em quase todos e **nao barra**: barrar por
+  mencao faria a IA nunca responder o caso, que e o oposto do pedido.
+  **Custo dito a ele:** com a IA DESLIGADA esses contatos PARAM na caixa, porque `iaEntra` exige
+  `state.ia.ligada` e a automacao deterministica pula caixa que chama a IA.
 - **O MODELO TEM SABER PROPRIO QUE CONTRADIZ A CHAPA, e contra prior assim o prompt e so pedido.**
   Print da Nara (08/09/2026): ela perguntou pelos candidatos a **deputado federal** e o rascunho
   respondeu *"nossa chapa tem o Felipe Pedri (numero 2228) e o Marcel Van Hattem (numero 300)"* —
