@@ -1329,4 +1329,38 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   globalThis.chrome = antes;
 }
 
+/**
+ * **O padrao dele vai INTEIRO para as duas casas** — pergunta dele (08/09/2026): *"a IA do chatgpt
+ * tem acesso ao mesmo padrao de comportamento que passei pro claude?"*.
+ *
+ * A resposta e sim, e o que a torna verdadeira e o desenho: quem monta o prompt (`montarSistema*`)
+ * nao sabe qual casa vai atender — o que muda e so a FORMA do pedido (`system` na Anthropic,
+ * `messages[0].role = 'system'` na OpenAI), e o texto e o mesmo objeto.
+ *
+ * **Este teste existe porque a igualdade e invisivel:** se um dia a montagem da OpenAI passar a
+ * cortar o sistema (por tamanho, por engano), nada na tela mudaria — e o modelo passaria a
+ * responder sem o padrao.
+ */
+{
+  grupo('o padrao dele vai igual para as duas casas (08/09)');
+
+  const sistema = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  const trecho = PADRAO_DE_ATENDIMENTO.slice(0, 200);
+
+  for (const modelo of ['claude-haiku-4-5', 'gpt-5', 'gpt-5-mini']) {
+    const req = montarRequisicaoRascunho({ sistema, contato: 'ELA: oi', modelo });
+    const doSistema =
+      typeof req.system === 'string'
+        ? req.system
+        : Array.isArray(req.system)
+        ? req.system.map((b) => b.text || '').join('')
+        : (req.messages || []).filter((m) => m.role === 'system').map((m) => m.content).join('');
+    check(doSistema.includes(trecho), `${modelo}: o padrao esta no prompt de sistema`);
+  }
+
+  /** E ele continua sendo a maior parte do prompt — se encolher de repente, alguem o cortou. */
+  check(tokensAproximados(PADRAO_DE_ATENDIMENTO) > tokensAproximados(sistema) / 2,
+    'e e mais da metade do prompt de sistema');
+}
+
 fim();

@@ -2673,6 +2673,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   com zero. A IA pode dizer o numero de UM candidato perguntado diretamente (dado confirmado, esta
   na tabela); montar a chapa inteira e cartao. **O modelo da colinha e dele** (*"vou criar um modelo
   de mensagem pra ela"*).
+- **O PADRAO DELE VAI IGUAL PARA AS DUAS CASAS, e ha teste porque a igualdade e INVISIVEL.**
+  Pergunta dele (08/09/2026): *"a IA do chatgpt tem acesso ao mesmo padrao de comportamento que
+  passei pro claude?"*. Sim — medido montando a requisicao dos tres modelos: o texto esta em
+  `system` na Anthropic e em `messages[0].role='system'` na OpenAI. **O que torna isso verdade e o
+  desenho:** `montarSistema*` nao sabe qual casa vai atender; o que muda e so a FORMA do pedido. O
+  teste existe porque, se um dia a montagem da OpenAI passar a cortar o sistema, **nada na tela
+  mudaria** e o modelo responderia sem o padrao. Junto veio o botao na Config
+  (*"Ver o padrao de atendimento que a IA segue"*), **somente leitura**: o documento e dele, vive em
+  `atendimento.js` com historico no git, e editor ali convidaria a mexer sem o `git diff` que
+  protege cada mudanca — o que muda toda semana vai nas Instrucoes extras.
 - **O FAILSAFE DA IA MORA NO SERVICE WORKER, junto do teto — e nao no painel.** Pedido dele
   (08/09/2026): *"se for algo comum tem que ter um failsafe; eu ja quero botar o chatgpt, entao o
   padrao seria chatgpt atender, se ele falhar tenta com o claude"*. Falhou o titular

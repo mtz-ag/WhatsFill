@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v3.5.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v3.6.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -256,6 +256,45 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
 ---
+
+## 2026-09-08 — O padrão de atendimento, visível na Config (v3.6.0)
+
+Pergunta e pedido dele: ***"a IA do chatgpt tem acesso ao mesmo padrão de comportamento que passei
+pro claude? crie um botão nas configurações para o padrão de comportamento para eu visualizar e
+saber que está lá"***.
+
+### A resposta é sim, e foi medida
+
+Montei a requisição de verdade para os três modelos e procurei o texto dele dentro do corpo:
+
+| modelo | onde o padrão aparece |
+|---|---|
+| `claude-haiku-4-5` | `system` (Anthropic) |
+| `gpt-5` | `messages[0].role = 'system'` (OpenAI) |
+| `gpt-5-mini` | idem |
+
+**O que torna isso verdade é o desenho:** quem monta o prompt não sabe qual casa vai atender — o
+que muda entre as duas é só a FORMA do pedido, e o texto é o mesmo objeto. São **3.804 dos 5.556
+tokens** do prompt de sistema, ou seja a maior parte dele.
+
+**E virou teste**, porque a igualdade é invisível: se um dia a montagem da OpenAI passar a cortar o
+sistema — por tamanho, por engano —, nada na tela mudaria e o modelo passaria a responder sem o
+padrão. O teste confere as três montagens e ainda que o padrão continue sendo mais da metade do
+prompt.
+
+### O botão
+
+Na aba Config, abaixo do modelo: **"Ver o padrão de atendimento que a IA segue (27 seções)"**, um
+`<details>` fechado por padrão com o texto inteiro e rolagem própria (são 13.313 caracteres — sem a
+altura máxima ele empurraria o resto da aba para fora da tela).
+
+**Somente leitura, de propósito.** O documento é dele e vive em `atendimento.js`, com histórico no
+git; a regra escrita no `CLAUDE.md` é *"não altere sem ele pedir"*. Um editor ali convidaria a mexer
+sem o `git diff` que hoje protege cada mudança — e o que muda toda semana já tem lugar: as
+**Instruções extras**, logo abaixo no mesmo cartão.
+
+A linha acima do texto diz as três coisas que ele quis saber: que vai **inteiro**, que é **o mesmo
+nas duas casas**, e **quanto do prompt ele ocupa**.
 
 ## 2026-09-08 — O failsafe: falhou o titular, tenta o reserva (v3.5.0)
 

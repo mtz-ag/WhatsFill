@@ -27,6 +27,7 @@ import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
+import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
@@ -10095,6 +10096,36 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       h('label', { class: 'wf-field' }, [h('span', {}, 'Modelo reserva (failsafe)'), selReserva]),
       h('div', { class: 'wf-origin' }, avisoDoReserva(cfg, state.iaChaves))
     );
+
+    /**
+     * **O padrão de atendimento, para ele VER** — pedido dele (08/09/2026): *"a IA do chatgpt tem
+     * acesso ao mesmo padrão de comportamento que passei pro claude? crie um botão nas
+     * configurações para o padrão de comportamento para eu visualizar e saber que está lá"*.
+     *
+     * A resposta à pergunta é sim, e é medível: o prompt é montado por `montarSistemaRascunho`, que
+     * não sabe qual casa vai atender — o que muda entre as duas é só a FORMA do pedido
+     * (`system` na Anthropic, `messages[0].role = 'system'` na OpenAI), e o texto é o mesmo objeto.
+     *
+     * **Somente leitura, de propósito.** O documento é dele e mora em `atendimento.js`; a regra
+     * escrita no `CLAUDE.md` é *"não altere sem ele pedir"*. Um editor aqui convidaria a mexer sem
+     * o `git diff` que hoje protege cada mudança — e ele já tem onde escrever o que muda toda
+     * semana: as Instruções extras, logo abaixo.
+     */
+    const verPadrao = h('details', { class: 'wf-ver-padrao' });
+    const tokensDoPadrao = iaLib.tokensAproximados(PADRAO_DE_ATENDIMENTO);
+    const tokensDoPrompt = iaLib.tokensAproximados(
+      iaLib.montarSistemaRascunho({ templates: state.templates, regras: cfg.regras })
+    );
+    verPadrao.append(
+      h('summary', {}, `Ver o padrão de atendimento que a IA segue (${(PADRAO_DE_ATENDIMENTO.match(/^## /gm) || []).length} seções)`),
+      h('div', { class: 'wf-origin' },
+        `Vai INTEIRO no prompt de sistema, e é o mesmo texto nas duas casas — Claude e ChatGPT. ` +
+          `São ${tokensDoPadrao} dos ${tokensDoPrompt} tokens do prompt, ou seja a maior parte dele. ` +
+          'Aqui é só leitura: este documento é seu e vive no código, com histórico. O que muda toda ' +
+          'semana vai nas Instruções extras, abaixo.'),
+      h('pre', { class: 'wf-padrao' }, PADRAO_DE_ATENDIMENTO)
+    );
+    body.append(verPadrao);
 
     // A chave fica no armazenamento e NUNCA é relida para a tela: campo de senha, e o que se
     // mostra é se existe ou não. Chave visível no painel é chave que aparece em print.

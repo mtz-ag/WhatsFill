@@ -601,3 +601,36 @@
   opacity: 0.4;
   cursor: default;
 }
+
+/**
+ * O padrão de atendimento, para ele conferir que está lá — pedido dele (08/09/2026).
+ *
+ * `<details>` nativo: o estado de aberto é do navegador, sem estado nosso para sincronizar (a mesma
+ * razão das respostas rápidas na caixa da rodada). Fechado por padrão, porque são 27 seções.
+ *
+ * O `pre` tem altura máxima e rolagem PRÓPRIA: sem isso ele empurraria o resto da aba Config para
+ * fora da tela — são ~13 mil caracteres.
+ */
+.wf-root details.wf-ver-padrao {
+  margin-top: 8px;
+  border: 1px solid var(--wf-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+.wf-root details.wf-ver-padrao > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+}
+.wf-root pre.wf-padrao {
+  margin: 6px 0 0;
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  line-height: 1.45;
+  background: var(--wf-bg-soft, rgba(127, 127, 127, 0.08));
+  border-radius: 4px;
+  padding: 8px;
+}
