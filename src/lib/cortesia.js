@@ -2192,6 +2192,36 @@ export function rajadaDeAnuncios(entrantes, nossaUltimaAt, padroesDeAnuncio = []
   const rajada = rajadaFinal(entrantes, nossaUltimaAt).filter((m) => String(m?.texto || '').trim());
   if (rajada.length < 2) return null;
   if (!rajada.every((m) => ehMensagemDeAnuncio(m, padroesDeAnuncio))) return null;
+
+  /**
+   * **Clicar DUAS VEZES no MESMO anúncio não é navegar: é insistir no mesmo pedido.**
+   *
+   * Print da Aldina (08/09/2026): dois cliques em *"Olá! Eu quero receber o Material da Direita"*,
+   * nada escrito, e a rodada mandou a mensagem do momento. Ele: *"ignorou o modelo que é
+   * prioritário de pedido de material, a pessoa mandou duas vezes"*.
+   *
+   * **O argumento que sustenta esta regra some quando o anúncio é o mesmo.** Ele é *"o modelo de um
+   * deles responde a um terço do que ela fez"* — verdade com a Irene, que clicou em três anúncios
+   * DIFERENTES; falso aqui, onde há um pedido só e o modelo daquele anúncio responde a ele inteiro.
+   * A segunda vez é a pessoa repetindo por não ter sido atendida.
+   *
+   * Anúncios diferentes são textos diferentes: o texto pré-preenchido é a identidade do anúncio na
+   * conversa. Exigir **dois textos distintos** é a mesma conferência, mecânica, e devolve o caso
+   * dela para `pedeMaterial`, que é a exceção que ele já tinha nomeado em 05/09 (*"o modelo de
+   * material é uma exceção, ele sempre tem que ser mandado quando requisitado"*).
+   */
+  const distintos = new Set(
+    rajada.map((m) =>
+      semLinks(m?.texto)
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase()
+    )
+  );
+  if (distintos.size < 2) return null;
+
   return {
     quantos: rajada.length,
     motivo: `clicou em ${rajada.length} anúncios seguidos e não escreveu nada — a mensagem do momento serve para todos`,

@@ -1859,6 +1859,32 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
 
   check(!rajadaDeAnuncios([irene[0]], null, []), 'um clique so e a chegada normal, nao rajada');
   check(!rajadaDeAnuncios([], null, []), 'conversa vazia nao casa');
+
+  /**
+   * **A ALDINA (08/09/2026): dois cliques no MESMO anuncio nao sao navegacao, sao insistencia.**
+   *
+   * Ela clicou duas vezes em *"Ola! Eu quero receber o Material da Direita"*, nao escreveu nada, e a
+   * rodada mandou a mensagem do momento -- *"ignorou o modelo que e prioritario de pedido de
+   * material, a pessoa mandou duas vezes"*.
+   *
+   * **O argumento desta regra some quando o anuncio e o mesmo:** ele e *"o modelo de um deles
+   * responde a um terco do que ela fez"*, verdade com a Irene e falso aqui, onde ha um pedido so e o
+   * modelo daquele anuncio o responde inteiro.
+   */
+  const aldina = [
+    clique('Ola! Eu quero receber o Material da Direita', 1),
+    clique('Ola! Eu quero receber o Material da Direita', 2),
+  ];
+  check(!rajadaDeAnuncios(aldina, null, []), 'dois cliques no MESMO anuncio nao sao rajada');
+  check(!rajadaDeAnuncios([...aldina, clique('Ola! Eu quero receber o Material da Direita', 3)], null, []),
+    'nem tres vezes o mesmo');
+
+  /** Acento e caixa nao fazem dois anuncios de um. */
+  check(!rajadaDeAnuncios([clique('Olá! Eu quero receber o Material da Direita', 1), clique('OLA! EU QUERO RECEBER O MATERIAL DA DIREITA', 2)], null, []),
+    'acento e caixa nao transformam o mesmo anuncio em dois');
+
+  /** Basta UM diferente para voltar a ser navegacao. */
+  check(!!rajadaDeAnuncios([...aldina, irene[0]], null, []), 'o mesmo duas vezes MAIS um outro volta a ser rajada');
 }
 
 {

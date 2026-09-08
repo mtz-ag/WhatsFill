@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v3.11.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v3.12.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.11.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.12.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
@@ -18,7 +18,7 @@ tabela. Prompt de sistema do rascunho: **5.556 tokens**, dos quais **68% é o `P
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
 Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75), **dezoito em
-07/09** (2.76 a 2.93) e **dezoito em 08/09** (2.94 a 3.11).
+07/09** (2.76 a 2.93) e **dezenove em 08/09** (2.94 a 3.12).
 
 ### O que mudou em 08/09, em uma linha cada
 
@@ -30,7 +30,7 @@ Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2
 | 3.3–3.4 | **"Casa" não é endereço e "casada" não é Chapada**; e a **IA pendurava** — não havia timeout em lugar nenhum, nem no `fetch` nem na ponte. |
 | 3.5–3.6 | **O failsafe** (falhou o titular, tenta o reserva, no service worker junto do teto) e o **botão do padrão** na Config. |
 | 3.7 | **O padrão abre em janela própria** (16px, coluna de 78 caracteres), e explicação longa nasce fechada com um "ver mais". |
-| 3.8–3.11 | **Van Hattem virou deputado federal** — trava de cargo e número da chapa; o log passou a dizer **quem** atendeu e **por que** o titular falhou (em vermelho); e **pedido de dinheiro e de emprego passaram para a IA**; o **texto do anúncio deixou de ser fala dela** para a IA. |
+| 3.8–3.12 | **Van Hattem virou deputado federal** — trava de cargo e número da chapa; o log passou a dizer **quem** atendeu e **por que** o titular falhou (em vermelho); e **pedido de dinheiro e de emprego passaram para a IA**; o **texto do anúncio deixou de ser fala dela** para a IA; e clicar duas vezes no MESMO anúncio deixou de ser navegação. |
 
 ### O que mudou em 07/09, em uma linha cada
 
@@ -268,6 +268,66 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-08 — Clicar duas vezes no mesmo anúncio não é navegar (v3.12.0)
+
+Print da **Aldina** (08/09/2026): dois cliques em *"Olá! Eu quero receber o Material da Direita"*,
+nada escrito, e a rodada mandou a mensagem do momento. Ele: *"ignorou o modelo que é prioritário de
+pedido de material, a pessoa mandou duas vezes"*.
+
+**Reproduzido antes de mexer**, com o texto exato:
+
+```
+rajadaDeAnuncios -> { quantos: 2, motivo: "clicou em 2 anúncios seguidos..." }
+pedeMaterial     -> { motivo: "ela pediu o material — o modelo tem que sair..." }
+DECISÃO          -> r:rajada-de-anuncios:chegada, tecla 5
+```
+
+Os dois sinais eram verdadeiros, e `rajada-de-anuncios` fica **acima das duas portas do modelo** —
+posição que ela ganhou em 05/09, na print da Irene.
+
+### Por que a regra da Irene não vale aqui
+
+**O argumento que sustenta `rajadaDeAnuncios` some quando o anúncio é o mesmo.** Ele está escrito na
+própria função: *"o modelo de um deles responde a um terço do que ela fez, escolhido pela ordem"* —
+verdade com a Irene, que clicou em **três anúncios diferentes**; falso com a Aldina, onde há **um
+pedido só** e o modelo daquele anúncio o responde inteiro. A segunda vez é a pessoa repetindo por
+não ter sido atendida.
+
+**A conferência é mecânica:** anúncios diferentes são textos diferentes — o texto pré-preenchido é a
+identidade do anúncio dentro da conversa. A regra passou a exigir **dois textos distintos** na
+rajada (sem acento e sem caixa, senão a mesma frase viraria duas).
+
+### Medido depois
+
+| caso | rajada? | desfecho |
+|---|---|---|
+| Aldina — 2× o MESMO anúncio de material | não | tecla `a` (modelo do anúncio + pedido de dados) |
+| Irene — 3 anúncios DIFERENTES | sim | tecla 5 (mensagem do momento) — **não mudou** |
+| 2 anúncios diferentes | sim | tecla 5 — não mudou |
+| 2× o mesmo anúncio, não material | não | tecla `a` |
+
+A última linha é consequência assumida: **repetir o mesmo clique é insistir, seja qual for o
+anúncio**. O critério é a repetição, não o assunto — amarrá-lo a "material" faria a regra depender
+de um detector para decidir sobre outro.
+
+> **Isto não muda a decisão da Eroni** (03/09): quem ESCREVEU além de clicar continua fora desta
+> regra, e o teste dela segue no lugar.
+
+### O que fica em aberto
+
+**Material misturado com outros anúncios numa rajada de verdade** — três cliques, um deles no
+anúncio de material — continua caindo em `rajada-de-anuncios` e recebendo a mensagem do momento. A
+regra dele de 05/09 (*"o modelo de material é uma exceção, ele sempre tem que ser mandado quando
+requisitado"*) diria que o material ganha; a da Irene diria que é navegação. **Não decidi por ele**:
+o caso não apareceu, e as duas leituras são defensáveis.
+
+### Arquivos
+
+`src/lib/cortesia.js` (`rajadaDeAnuncios`), `tests/cortesia.test.mjs` (**4 asserções novas**, três
+delas falso positivo). 15 suítes verdes, verificadores limpos.
+
 ---
 
 ## 2026-09-08 — O texto do anúncio deixou de ser fala dela para a IA (v3.11.0)

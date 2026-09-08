@@ -2652,6 +2652,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   linha "Cidade:" some (o valor virou vazio) e o aviso de grafia some junto, enquanto o CRM
   continua com o lixo ate a conclusao gravar. Hoje o cabecalho diz o que vai ser apagado, e o
   Andamento registra `apagando do CRM: <campo> ("<valor>")`.
+- **O ARGUMENTO DE UMA REGRA E O LIMITE DELA — clicar duas vezes no MESMO anuncio nao e navegar.**
+  Print da Aldina (08/09/2026): dois cliques em *"Ola! Eu quero receber o Material da Direita"*, nada
+  escrito, e saiu a mensagem do momento — *"ignorou o modelo que e prioritario de pedido de material,
+  a pessoa mandou duas vezes"*. Reproduzido: os dois sinais (`rajadaDeAnuncios` e `pedeMaterial`)
+  eram verdadeiros, e a rajada fica **acima das duas portas do modelo**. **O argumento escrito na
+  propria funcao e o que a limita:** *"o modelo de um deles responde a um terco do que ela fez"* —
+  verdade com a Irene (tres anuncios DIFERENTES, 05/09), falso aqui, onde ha um pedido so e o modelo
+  daquele anuncio o responde inteiro. A rajada passou a exigir **dois textos distintos** (o texto
+  pre-preenchido e a identidade do anuncio na conversa). **O criterio e a REPETICAO, nao o assunto**:
+  amarra-lo a "material" faria uma regra depender de outro detector para decidir. Fica em aberto, e
+  foi dito a ele: material MISTURADO numa rajada de verdade continua recebendo a mensagem do momento.
+  **Ao achar que uma regra pegou demais, releia o argumento com que ela foi escrita — em geral ele ja
+  diz onde ela para.**
 - **A MARCA QUE TODO DETECTOR RESPEITA PODE NAO CHEGAR A IA — e o texto do anuncio nao chegava.**
   Pergunta dele (08/09/2026): *"atualmente a IA ignora o texto do anuncio?"*. **Medido: nao
   ignorava — lia como fala dela.** `prepararEntrantes` marca `geradaPeloAnuncio` desde 04/09 e
