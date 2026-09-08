@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v3.0.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v3.1.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -256,6 +256,69 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
 ---
+
+## 2026-09-08 — O pedido de dados saiu DUAS vezes na mesma mensagem (v3.1.0)
+
+Print do **Luiz Cavalheiro**, com a pergunta dele: ***"alucinou?"***. A mensagem que saiu tinha o
+bloco `Nome , Cidade` **duas vezes**, a segunda cópia idêntica à primeira.
+
+**Não foi a IA, e a prova está na própria mensagem:** texto de modelo não se repete byte a byte. É
+concatenação — a extensão anexou o pedido de dados a um texto que **já terminava com o pedido de
+dados**.
+
+O texto combinado (mensagem do momento + pedido, do pedido dele de 04/09) conferia se o campo
+`pedidoJuntoDoMomento` **é** um pedido válido, e a tela avisa quando não é. Faltava o outro lado:
+ninguém conferia se a mensagem do momento **já** era um. Hoje `momentoJaPede` usa o mesmo invariante
+`ehPedidoDeDados` — e não a comparação com a redação atual, que é a armadilha registrada desde
+01/09.
+
+**O que a print NÃO explica, e eu não vou adivinhar:** a primeira metade do texto está com espaços
+no meio das palavras (*"Am ém"*, *"D eus"*, *"conf iança"*), e a segunda está limpa. Isso não vem
+de nenhum caminho de código que eu conheça — o mesmo texto sairia igual nas duas metades. É para
+conferir na aba Respostas, no texto salvo.
+
+## 2026-09-08 — A transcrição volta a decidir, pelo caminho forte (v3.1.0)
+
+Print do **Sergio Nunes**: dois áudios chamando o mandato e os aliados de *"assassino, bandido,
+traidor, ladrão"* e, em segunda pessoa, *"ou tu é sem vergonha, ou tu é ordinário, tu é cafajeste"*.
+A rodada ofereceu **responder à mão**. Ele: *"claramente sem interesse"*.
+
+### Três coisas somadas, e as três foram medidas
+
+**1. A transcrição estava fora da regra inteira.** É a decisão dele de 03/09 (o lopezp4295), e ela
+continua valendo **onde nasceu**: naquele caso o gatilho era a NEGATIVA, e a fala vinha cheia de
+"não" solto (*"eu não tenho, eu não tenho, né, nenhum…"*) com um *"mas eu vou ir votar, sim"* na
+mesma mensagem. **Reconhecimento automático produz negativa falsa o tempo todo; não produz "tu é
+cafajeste".** Hoje a fala decide pelos caminhos em que o alvo está escrito — insulto em segunda
+pessoa, apelido do aliado, xingamento do nosso lado — e **nunca** pela negativa nem pelo número do
+adversário.
+
+**2. Xingar o nosso lado pelo NOME não contava.** Só os apelidos pejorativos (*"bolso bosta"*)
+contavam, e a regra dele de 01/09 é mais larga: *"falando mal do Bolsonaro, e Martim é aliado do
+Bolsonaro, esse tipo nós botamos etiqueta sem interesse"*. Os nomes entraram na mesma mecânica do
+partido (2.98): o xingamento tem que estar **colado** no nome, e o adversário não pode aparecer no
+meio **nem antes** — o `antes` passou a valer nas duas ordens, porque *"o PT chamou o Bolsonaro de
+ladrão mas é mentira"* casava.
+
+**3. `RECUSA_DE_PRESENCA` engolia a recusa de CONTATO.** O áudio abria com *"Só que não, eu nunca
+vou apoiar essa gente"*, e a guarda casava (`não` … `vou`) devolvendo **null antes de qualquer
+xingamento ser olhado** — o oposto do que ela existe para fazer. É a lição que `confirmaPresenca`
+aprendeu quatro vezes: **verbo sozinho é vocabulário de campanha.** Hoje o verbo genérico precisa
+vir com o que o torna presença, e *"não vou"* sozinho continua sendo recusa de evento **como
+mensagem inteira** — a asserção do Ze (01/09) segurou essa ponta e me obrigou a escrever a guarda
+certa.
+
+Entraram na lista de xingamentos `assassino`, `bandido` e `traidor`, que faltavam.
+
+### Medido
+
+O caso do Sergio dispara pelos **dois** áudios, cada um por um caminho: o primeiro por xingar o
+nosso lado pelo nome, o segundo pelo insulto em segunda pessoa. A classe do lopezp4295 continua
+devolvendo null em cinco formas de negativa falada. As cinco frases de recusa de evento continuam
+protegidas.
+
+**A regra mais destrutiva do arquivo ficou mais larga**, e por isso 17 das 29 asserções novas são
+falso positivo.
 
 ## 2026-09-08 — Quem mora fora do RS ganha etiqueta própria (v3.0.0)
 

@@ -3118,6 +3118,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       card.append(h('div', { class: 'wf-block' },
         'Falta a linha "Nome , Cidade" neste texto. Sem ela a extensão não reconhece a resposta ' +
           'do contato como resposta ao pedido, e vai pedir de novo.'));
+
     }
 
     // Mesmo tratamento das respostas prontas: reveza entre variações a cada envio de verdade,
@@ -5348,7 +5349,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         !escreveuDepoisDoPedido &&
         !(state.nomeInformado && state.cidadeInformada?.value && state.cidadeInformada.confidence !== 'nao-reconhecida');
       const pedidoJunto = String(state.auto.cfg.pedidoJuntoDoMomento || '').trim();
-      if (momento && faltaCadastro && pedidoJunto) {
+      /**
+       * **O texto do momento pode JÁ TER o pedido dentro** — print do Luiz Cavalheiro (08/09/2026),
+       * em que a mensagem saiu com o bloco `Nome , Cidade` **duas vezes**, a segunda cópia idêntica
+       * à primeira. Ele perguntou se a IA tinha alucinado; não tinha — texto de modelo não se
+       * repete byte a byte, isto é concatenação.
+       *
+       * A conferência é o mesmo invariante que o resto do projeto usa (`ehPedidoDeDados`), e não a
+       * comparação com o texto atual do campo: ele pode ter escrito o pedido no momento com outra
+       * redação, e comparar redação é a armadilha registrada desde 01/09.
+       *
+       * A tela já avisava quando o campo `pedidoJuntoDoMomento` **não** é um pedido de dados; o que
+       * faltava era o outro lado — o momento que já é um.
+       */
+      const momentoJaPede = momento && templatesLib.ehPedidoDeDados(momento.text);
+      if (momento && faltaCadastro && pedidoJunto && !momentoJaPede) {
         momento.name = 'Mensagem do momento + pedir nome e cidade';
         momento.text = `${momento.text}\n\n${pedidoJunto}`;
         momento.variantes = (momento.variantes || []).map((v) => `${String(v || '').trim()}\n\n${pedidoJunto}`);

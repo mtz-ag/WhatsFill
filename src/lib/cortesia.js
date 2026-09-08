@@ -2067,8 +2067,27 @@ const NEGATIVA_BENIGNA =
  * ainda gastou tempo respondendo. `confirmaPresenca` já trata isso, e a tecla 4 já manda "não tem
  * problema" + pede os dados. O que faltava era esta regra sair da frente.
  */
-const RECUSA_DE_PRESENCA =
-  /\bnao\b[^.!?]{0,40}\b(ir|vou|voy|comparecer|participar|estar (la|presente)|conseguirei|poderei|consigo|posso|da pra mim|vai dar)\b/i;
+/**
+ * **O verbo tem que ser de COMPARECER** — e `vou`, `posso` e `consigo` soltos saíram em 08/09/2026.
+ *
+ * Print do Sergio Nunes: o áudio abria com *"Só que não, eu nunca vou apoiar essa gente"* e seguia
+ * chamando o mandato e os aliados de *"assassino, bandido, traidor, ladrão"*. Esta guarda casava
+ * (`não` … `vou`) e **devolvia null antes de qualquer xingamento ser olhado** — a recusa de evento
+ * engolindo a recusa de contato, que é o oposto do que ela existe para fazer.
+ *
+ * É a mesma lição que `confirmaPresenca` aprendeu quatro vezes: **verbo sozinho é vocabulário de
+ * campanha, não resposta ao convite.** Aqui o verbo genérico precisa vir com o que o torna
+ * presença; sozinhos, só ficam os que já significam comparecer.
+ */
+const RECUSA_DE_PRESENCA = new RegExp(
+  '\\bnao\\b[^.!?]{0,40}\\b(ir|comparecer|participar|estar (la|presente)|conseguirei|poderei|da pra mim|vai dar)\\b' +
+    '|\\bnao\\b[^.!?]{0,40}\\b(vou|voy|posso|consigo)\\s+(ir|comparecer|participar|estar)\\b' +
+    // **"Não vou" SOZINHO continua sendo recusa de evento**, e é a resposta seca ao convite — a
+    // mesma guarda que `confirmaPresenca` usa do outro lado. Só vale como a mensagem INTEIRA:
+    // dentro de uma frase longa, "nunca vou apoiar essa gente" não fala de comparecer.
+    '|^\\s*(nao|nunca)\\s+(vou|irei|posso|consigo|da)\\s*[!.]*\\s*$',
+  'i'
+);
 
 /** Começa negando? É onde mora a resposta a uma pergunta fechada. */
 const COMECA_NEGANDO = /^\s*(nao|nunca|jamais|nada|negativo|dispenso)\b/i;
@@ -2101,7 +2120,7 @@ const NEGACAO_COM_OBJETO =
 // O `s?` no fim é obrigatório: sem ele "vocês são uns idiotas mentirosos" passava batido, porque
 // `\b` depois de "idiota" não casa com "idiotas". Xingamento vem no plural com frequência.
 const AGRESSAO =
-  /\b(mentiros[oa]|idiota|imbecil|burr[oa]|lesma|otari[oa]|vagabund[oa]|corrupt[oa]|ladr(ao|a|oes)|safad[oa]|nojent[oa]|palhac[oa]|lixo|verme|fascista|golpista|presidiari[oa]|genocida|cretin[oa]|babaca|desgracad[oa]|canalha|escrot[oa]|arrombad[oa]|cuzao|pilantra|picareta|energumen[oa]|sem[- ]vergonha|filho\s+d[ae]\s+puta|fdp)s?\b/i;
+  /\b(mentiros[oa]|idiota|imbecil|burr[oa]|lesma|otari[oa]|vagabund[oa]|corrupt[oa]|ladr(ao|a|oes)|safad[oa]|nojent[oa]|palhac[oa]|lixo|verme|fascista|golpista|presidiari[oa]|genocida|cretin[oa]|babaca|desgracad[oa]|canalha|escrot[oa]|arrombad[oa]|cuzao|pilantra|picareta|energumen[oa]|assassin[oa]|bandid[oa]|traidor(a|es)?|sem[- ]vergonha|filho\s+d[ae]\s+puta|fdp)s?\b/i;
 
 /**
  * Fala dirigida a NÓS. É o que separa "vocês são mentirosos" de "o adversário é mentiroso".
@@ -2480,18 +2499,36 @@ const INSULTO_AO_ALIADO =
  * segura é a exigência do xingamento ao lado. Custo de errar: etiqueta permanente no CRM de um
  * apoiador, que é o preço mais alto deste arquivo.
  */
-const NOSSO_PARTIDO = '(pl|partido\\s+liberal|republicanos|republicano)';
+/**
+ * **O nosso lado é o partido E a gente.** Os NOMES entraram em 08/09/2026, com a print do Sergio
+ * Nunes — *"Essa gente do Bolsonaro, assassino, bandido, traidor, ladrão"* —, e são a regra dele de
+ * 01/09 chegando onde ela ainda não valia: *"falando mal do Bolsonaro, e Martim é aliado do
+ * Bolsonaro, esse tipo nós botamos etiqueta sem interesse"*. Até aqui só os APELIDOS pejorativos
+ * contavam (`INSULTO_AO_ALIADO`); xingar pelo nome próprio passava batido.
+ *
+ * A mecânica é a mesma do partido, e é ela que segura o risco: o xingamento tem que estar COLADO no
+ * nome, e o adversário não pode aparecer no meio nem antes.
+ */
+const NOSSO_PARTIDO = '(pl|partido\\s+liberal|republicanos|republicano|bolsonaro|capitao\\s+martim|martim|zucco)';
 const ADVERSARIO = /\b(pt|petista|lula|psol|pc\s*do\s*b|pdt|pcb|comunist[ao]s?|esquerd)/i;
 
 const INSULTO_AO_NOSSO_PARTIDO = [
-  new RegExp(`\\b${NOSSO_PARTIDO}\\b(?<meio>[^.!?]{0,30}?)${AGRESSAO.source.replace(/\\b/g, '')}`, 'i'),
+  /**
+   * O `antes` existe nas DUAS ordens desde 08/09/2026: *"o PT chamou o Bolsonaro de ladrão mas é
+   * mentira"* casava aqui — o adversário está antes do nosso nome, e tanto o meio (" de ") quanto o
+   * resto estavam limpos. Quem cita o que o outro lado disse não está xingando ninguém.
+   */
+  new RegExp(
+    `(?<antes>[^.!?]{0,35})\\b${NOSSO_PARTIDO}\\b(?<meio>[^.!?]{0,30}?)${AGRESSAO.source.replace(/\\b/g, '')}`,
+    'i'
+  ),
   /**
    * A ordem inversa (*"esse bando de safados do PL"*) precisa olhar **antes** do xingamento, e não
    * só entre ele e a sigla: *"comunista é ladrão, PL nunca"* casava — o adversário está na frente do
    * insulto, e o meio (", ") estava limpo. Foi o único falso positivo da medição.
    */
   new RegExp(
-    `(?<antes>[^.!?]{0,25})${AGRESSAO.source.replace(/\\b/g, '')}(?<meio>[^.!?]{0,30}?)\\b${NOSSO_PARTIDO}\\b`,
+    `(?<antes>[^.!?]{0,35})${AGRESSAO.source.replace(/\\b/g, '')}(?<meio>[^.!?]{0,30}?)\\b${NOSSO_PARTIDO}\\b`,
     'i'
   ),
 ];
@@ -2558,10 +2595,19 @@ export function semInteresse(entrantes, nossaUltimaAt) {
    * da anotação dizia, na MESMA mensagem, *"mas eu vou ir votar, sim"*.
    *
    * É a disciplina que o parser já segue desde 31/08: transcrição entra rebaixada e nunca grava
-   * sozinha. Aqui o rebaixamento é total — ela não conta, e o áudio vira caso de
-   * `ultima-pede-resposta-pessoal`, que é dele ou da IA. **Recusa de verdade a pessoa escreve.**
+   * sozinha.
+   *
+   * **O rebaixamento era TOTAL e passou a ser PARCIAL em 08/09/2026** — print do Sergio Nunes, com
+   * dois áudios chamando o mandato de *"assassino, bandido, traidor, ladrão"* e, em segunda pessoa,
+   * *"ou tu é sem vergonha, ou tu é ordinário, tu é cafajeste"*. A rodada ofereceu responder à mão,
+   * e ele: *"claramente sem interesse"*.
+   *
+   * A regra dele de 03/09 continua valendo onde nasceu: **a transcrição não decide pela NEGATIVA**,
+   * que é o que o reconhecimento automático erra. Ela decide pelos caminhos em que o alvo está
+   * escrito — ver `falada` em `umaMensagemRecusa`. Reconhecimento de fala produz "não" solto o
+   * tempo todo; não produz *"tu é cafajeste"*.
    */
-  const comTexto = lista.filter((m) => String(m?.texto || '').trim() && !m?.transcrito);
+  const comTexto = lista.filter((m) => String(m?.texto || '').trim());
   if (!comTexto.length) return null;
 
   /**
@@ -2588,6 +2634,25 @@ export function semInteresse(entrantes, nossaUltimaAt) {
 
 /** Uma mensagem só, com todas as guardas — é aqui que mora a regra. */
 function umaMensagemRecusa(msg) {
+  /**
+   * **A transcrição só decide pelo caminho FORTE** — pedido dele (08/09/2026), print do Sergio
+   * Nunes: dois áudios chamando o mandato e os aliados de *"assassino, bandido, traidor, ladrão"*
+   * e, em segunda pessoa, *"ou tu é sem vergonha, ou tu é ordinário, tu é cafajeste"*. A rodada
+   * ofereceu responder à mão. Ele: *"claramente sem interesse"*.
+   *
+   * **Isto AJUSTA a regra dele de 03/09** (o lopezp4295), que tirou a transcrição inteira daqui —
+   * e ela continua valendo onde nasceu. Naquele caso o que disparava era a NEGATIVA: a fala vinha
+   * cheia de "não" solto (*"eu não tenho, eu não tenho, né, nenhum…"*) e, na mesma mensagem,
+   * *"mas eu vou ir votar, sim"*. Reconhecimento automático produz negativa falsa o tempo todo;
+   * não produz *"tu é cafajeste"*.
+   *
+   * Então a fala passa pelos caminhos em que o alvo está ESCRITO — insulto em segunda pessoa,
+   * apelido do aliado, xingamento do nosso partido — e **nunca** pelo `COMECA_NEGANDO`, que é o
+   * que a transcrição erra. `RECUSA` explícita (*"me tira da lista"*) fica de fora pelo mesmo
+   * motivo: é uma frase curta que a transcrição embaralha.
+   */
+  const falada = !!msg?.transcrito;
+
   const texto = String(msg?.texto || '');
   const norm = texto
     .normalize('NFD')
@@ -2596,7 +2661,7 @@ function umaMensagemRecusa(msg) {
     .trim();
   if (!norm) return null;
 
-  if (RECUSA.test(norm) && !NEGATIVA_BENIGNA.test(norm)) {
+  if (!falada && RECUSA.test(norm) && !NEGATIVA_BENIGNA.test(norm)) {
     return { motivo: 'pediu para não receber mais' };
   }
 
@@ -2630,8 +2695,9 @@ function umaMensagemRecusa(msg) {
     return { motivo: 'falou mal do nosso partido — não é público do mandato' };
   }
 
-  // O número do adversário, declarado — ver `VOTO_NO_ADVERSARIO`.
-  if (VOTO_NO_ADVERSARIO.some((re) => re.test(norm))) {
+  // O número do adversário, declarado — ver `VOTO_NO_ADVERSARIO`. Fora da fala: "13" dito em voz
+  // alta é hora, idade e troco, e a transcrição escreve número o tempo todo.
+  if (!falada && VOTO_NO_ADVERSARIO.some((re) => re.test(norm))) {
     return { motivo: 'declarou voto no adversário — não é público do mandato' };
   }
 
@@ -2646,7 +2712,7 @@ function umaMensagemRecusa(msg) {
   const agride = AGRESSAO.test(norm) && (DIRIGIDA_A_NOS.test(norm) || mandouEmbora);
   if (agride || soOImperativo) return { motivo: 'veio hostilizar, não é público do mandato' };
 
-  const negativaVale = norm.trim().length <= NEGATIVA_CURTA || NEGACAO_COM_OBJETO.test(norm);
+  const negativaVale = !falada && (norm.trim().length <= NEGATIVA_CURTA || NEGACAO_COM_OBJETO.test(norm));
   if (COMECA_NEGANDO.test(norm) && negativaVale && !NEGATIVA_BENIGNA.test(norm)) {
     // A negativa de abertura vale porque a pergunta era fechada. Se ela vier junto de agressão, o
     // motivo é o mais forte dos dois — é o que aparece na tela e no log.

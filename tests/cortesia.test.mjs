@@ -2299,6 +2299,34 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   ]) {
     check(!hostil(t), `a sigla sozinha nao acusa: "${t}"`);
   }
+
+  /**
+   * **Os NOMES do nosso lado entraram em 08/09**, com a print do Sergio Nunes — e sao a regra dele
+   * de 01/09 chegando onde ela ainda nao valia: ate aqui so os APELIDOS pejorativos contavam, e
+   * xingar pelo nome proprio passava batido.
+   */
+  for (const t of [
+    'o Bolsonaro e um genocida',
+    'Martim e um safado',
+    'Zucco e um picareta',
+    'esse ladrao do Bolsonaro',
+    'Essa gente do Bolsonaro, assassino, bandido, traidor, ladrao',
+  ]) {
+    check(hostil(t), `xingar o nosso lado pelo nome: "${t}"`);
+  }
+
+  /** E o mesmo cuidado do partido: citar o que o outro lado diz nao e xingar. */
+  for (const t of [
+    'Lula e ladrao, Bolsonaro e honesto',
+    'o PT chamou o Bolsonaro de ladrao mas e mentira',
+    'apoio o Bolsonaro e o Capitao Martim',
+    'esses petistas chamam o Bolsonaro de tudo',
+    'quero material do Capitao Martim',
+    'esquerda so tem corrupto, Bolsonaro nunca',
+    'o comunista e ladrao, Martim e serio',
+  ]) {
+    check(!hostil(t), `nao pega: "${t}"`);
+  }
 }
 
 /**
@@ -2340,6 +2368,67 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(!escreveu([]), 'silencio nao e resposta');
   check(!escreveu([{ texto: '', tipo: 'AUDIO', sistema: true, at: '2026-09-07T20:41:00Z' }]),
     'aviso da plataforma nao e resposta dela');
+}
+
+/**
+ * **A transcricao passou a decidir pelo caminho FORTE** — print do Sergio Nunes (08/09/2026): dois
+ * audios chamando o mandato e os aliados de *"assassino, bandido, traidor, ladrao"* e, em segunda
+ * pessoa, *"ou tu e sem vergonha, ou tu e ordinario, tu e cafajeste"*. A rodada ofereceu responder
+ * a mao. Ele: *"claramente sem interesse"*.
+ *
+ * **Isto AJUSTA a regra dele de 03/09** (o lopezp4295), que tirou a transcricao inteira daqui — e
+ * ela continua valendo onde nasceu: naquele caso o gatilho era a NEGATIVA, e a fala vinha cheia de
+ * "nao" solto. Reconhecimento automatico produz negativa falsa o tempo todo; nao produz
+ * *"tu e cafajeste"*.
+ */
+{
+  grupo('transcricao decide pelo caminho forte (o Sergio, 08/09)');
+
+  const audio = (t) => [{ texto: t, tipo: 'AUDIO', transcrito: true, at: 1 }];
+  const escrito = (t) => [{ texto: t, tipo: 'TEXT', at: 1 }];
+
+  check(!!semInteresse(audio('Cara, ou tu e sem vergonha, ou tu e ordinario, tu e cafajeste. Eu odeio essa gente ai.'), null),
+    'audio com xingamento em segunda pessoa decide');
+  check(!!semInteresse(audio('Essa gente do Bolsonaro, assassino, bandido, traidor, ladrao, ninguem presta'), null),
+    'e audio xingando o nosso lado pelo nome tambem');
+
+  /** **A regra de 03/09 continua valendo:** a transcricao NAO decide pela negativa. */
+  for (const t of [
+    'eu nao tenho, eu nao tenho, ne, nenhum dos numeros dos candidatos, mas eu vou ir votar, sim',
+    'nao sei',
+    'nao tenho interesse',
+    'nao quero receber nada disso',
+    'nao, obrigado',
+  ]) {
+    check(!semInteresse(audio(t), null), `falado NAO decide pela negativa: "${t}"`);
+  }
+
+  /** E escrito continua decidindo pelos dois caminhos, como sempre decidiu. */
+  check(!!semInteresse(escrito('nao tenho interesse'), null), 'escrito continua valendo pela negativa');
+  check(!!semInteresse(escrito('voces sao uns mentirosos'), null), 'e pelo xingamento');
+}
+
+/**
+ * **"Nunca vou apoiar essa gente" nao e recusa de EVENTO** — mesmo print do Sergio.
+ *
+ * `RECUSA_DE_PRESENCA` casava (`nao` … `vou`) e devolvia null ANTES de qualquer xingamento ser
+ * olhado: a recusa de evento engolindo a recusa de contato, que e o oposto do que ela existe para
+ * fazer. E a mesma licao que `confirmaPresenca` aprendeu quatro vezes — verbo sozinho e vocabulario
+ * de campanha.
+ */
+{
+  grupo('recusa de evento exige verbo de comparecer (08/09)');
+
+  const si = (t) => semInteresse([{ texto: t, tipo: 'TEXT', at: 1 }], null);
+
+  /** O que a guarda protege — e cada uma destas ja quebrou uma vez. */
+  for (const t of ['Não conseguirei ir!', 'Nao vou poder ir', 'Não posso ir dessa vez', 'não vou', 'nao da pra mim']) {
+    check(!si(t), `continua sem ser sem interesse: "${t}"`);
+  }
+
+  /** O que ela deixou de engolir. */
+  check(!!si('So que nao, eu nunca vou apoiar essa gente. Essa gente do Bolsonaro, assassino, ladrao'),
+    'e a recusa de CONTATO com xingamento nao e mais engolida');
 }
 
 fim();

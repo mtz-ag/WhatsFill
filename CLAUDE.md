@@ -2673,6 +2673,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   com zero. A IA pode dizer o numero de UM candidato perguntado diretamente (dado confirmado, esta
   na tabela); montar a chapa inteira e cartao. **O modelo da colinha e dele** (*"vou criar um modelo
   de mensagem pra ela"*).
+- **TEXTO REPETIDO BYTE A BYTE NAO E ALUCINACAO: E CONCATENACAO.** Print do Luiz Cavalheiro
+  (08/09/2026), com o bloco `Nome , Cidade` saindo DUAS vezes na mesma mensagem e a pergunta dele —
+  *"alucinou?"*. **Modelo nao repete um paragrafo identico**; o que repete e codigo que anexa. A
+  causa: o texto combinado (momento + pedido, 04/09) conferia se o campo `pedidoJuntoDoMomento` E um
+  pedido valido, e a tela avisa quando nao e — **faltava o outro lado**, ninguem conferia se a
+  mensagem do momento **ja** era um. Hoje ha `momentoJaPede`, pelo invariante `ehPedidoDeDados`.
+  **Antes de acusar a IA, olhe se as duas metades sao identicas.**
+- **A TRANSCRICAO DECIDE "SEM INTERESSE" PELO CAMINHO FORTE, e nunca pela NEGATIVA.** Print do
+  Sergio Nunes (08/09/2026): dois audios chamando o mandato de *"assassino, bandido, traidor,
+  ladrao"* e, em segunda pessoa, *"ou tu e sem vergonha, ou tu e ordinario, tu e cafajeste"* — e a
+  rodada ofereceu responder a mao. Ele: *"claramente sem interesse"*. **Isto AJUSTA a regra dele de
+  03/09** (o lopezp4295), que continua valendo onde nasceu: la o gatilho era a negativa, e a fala
+  vinha cheia de "nao" solto. **Reconhecimento automatico produz negativa falsa o tempo todo; nao
+  produz "tu e cafajeste".** Junto entraram duas coisas: **xingar o nosso lado pelo NOME** (ate
+  entao so os apelidos contavam, e a regra dele de 01/09 e mais larga), com a mesma mecanica do
+  partido e com o `antes` valendo nas DUAS ordens (*"o PT chamou o Bolsonaro de ladrao mas e
+  mentira"* casava); e a poda de `RECUSA_DE_PRESENCA`, que casava em *"nunca vou apoiar essa gente"*
+  e **devolvia null antes de qualquer xingamento ser olhado** — a recusa de evento engolindo a
+  recusa de contato. Verbo generico agora exige o que o torna presenca; *"nao vou"* sozinho continua
+  valendo como MENSAGEM INTEIRA.
 - **CIDADE DE FORA DO RS TEM LISTA SEPARADA E ETIQUETA PROPRIA.** Pedido dele (08/09/2026), com a
   print da etiqueta *"Fora do RS"*. `src/data/municipios-br.json` traz os **4.828 municipios do
   Brasil fora do RS** (IBGE), e ela **nunca se mistura com a do RS**: o RS vence por construcao (os
