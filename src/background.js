@@ -13,6 +13,7 @@
 import { RPC } from './lib/rpc.js';
 import { MSG_ENERGIA } from './lib/keepalive.js';
 import { MSG_FLUXO } from './lib/fluxo-msg.js';
+import { MSG_PADRAO } from './lib/padrao-msg.js';
 import { MSG_IA, atender } from './lib/ia-cliente.js';
 import {
   podeGastar,
@@ -271,6 +272,49 @@ function clamp(value, min, max) {
  * fluxo gravando na mesma chave seria a última a salvar ganhando, sem ninguém entender por quê.
  */
 let janelaDoFluxoId = null;
+
+/**
+ * A janela do PADRÃO DE ATENDIMENTO — pedido dele (08/09/2026): *"faça para que abra em popup, as
+ * letras estão pequenas demais para ler"*.
+ *
+ * Mesma mecânica da do fluxo, e pela mesma razão: `chrome.windows` só existe em contexto de
+ * extensão, e o painel roda em content script. Uma janela por vez — a segunda cópia do mesmo texto
+ * só ocuparia tela.
+ */
+let janelaDoPadraoId = null;
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (!msg || msg.type !== MSG_PADRAO) return undefined;
+
+  (async () => {
+    try {
+      if (janelaDoPadraoId !== null) {
+        const existe = await chrome.windows.get(janelaDoPadraoId).catch(() => null);
+        if (existe) {
+          await chrome.windows.update(janelaDoPadraoId, { focused: true });
+          sendResponse({ ok: true, focada: true });
+          return;
+        }
+        janelaDoPadraoId = null;
+      }
+
+      const win = await chrome.windows.create({
+        url: chrome.runtime.getURL('src/padrao.html'),
+        type: 'popup',
+        focused: true,
+        // Estreita e alta: é texto corrido, e a coluna de leitura é limitada no CSS.
+        width: 820,
+        height: 900,
+      });
+      janelaDoPadraoId = win.id;
+      sendResponse({ ok: true });
+    } catch (err) {
+      sendResponse({ ok: false, motivo: String(err?.message || err) });
+    }
+  })();
+
+  return true;
+});
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || msg.type !== MSG_FLUXO) return undefined;

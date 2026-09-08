@@ -2673,6 +2673,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   com zero. A IA pode dizer o numero de UM candidato perguntado diretamente (dado confirmado, esta
   na tabela); montar a chapa inteira e cartao. **O modelo da colinha e dele** (*"vou criar um modelo
   de mensagem pra ela"*).
+- **TEXTO LONGO NO PAINEL DE 380px NAO E LEITURA, E EXPLICACAO LONGA VIRA MURO.** Pedido dele
+  (08/09/2026), uma hora depois de eu por o padrao num `<details>` da Config: *"faca para que abra em
+  popup, as letras estao pequenas demais para ler, e o frontend esta muito poluido... deixar as
+  informacoes basicas e outra forma de ler o resto"*. **Duas licoes:** documento para LER abre em
+  janela propria (`src/padrao.html`, aberta pelo service worker como a do fluxo — `chrome.windows`
+  nao existe em content script), com corpo de 16px e coluna limitada; e as **58** explicacoes
+  `.wf-origin` do painel passaram a nascer cortadas em tres linhas, por um PASSE no fim do
+  `renderAll` (`encolherExplicacoes`) e nao por 58 edicoes — a medida e o `scrollHeight` DEPOIS do
+  desenho, porque so o navegador sabe quantas linhas o texto ocupou, e assim a regra vale para a
+  proxima explicacao que alguem escrever. **A conversao de Markdown da janela virou teste**: ela
+  quebra em silencio (o texto sai como um bloco so, com os asteriscos a mostra) e ninguem olha o
+  console de uma tela de leitura — a primeira versao fazia **132 paragrafos de meia frase**, porque
+  cada linha do arquivo virava um `<p>`.
 - **O PADRAO DELE VAI IGUAL PARA AS DUAS CASAS, e ha teste porque a igualdade e INVISIVEL.**
   Pergunta dele (08/09/2026): *"a IA do chatgpt tem acesso ao mesmo padrao de comportamento que
   passei pro claude?"*. Sim — medido montando a requisicao dos tres modelos: o texto esta em

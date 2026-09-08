@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WhatsFill+IA",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "description": "WhatsFill com IA: o fluxo decide 94% dos contatos, e a IA escreve o rascunho do resto e confere a cidade.",
   "permissions": [
     "storage",
@@ -50,7 +50,10 @@
         "src/data/*",
         "src/fluxo.html",
         "src/fluxo.js",
-        "src/fluxo.css"
+        "src/fluxo.css",
+        "src/padrao.html",
+        "src/padrao.js",
+        "src/padrao.css"
       ],
       "matches": [
         "https://mobiliza.app/*"

@@ -28,6 +28,7 @@ import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
 import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
+import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
@@ -1424,6 +1425,44 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     else if (state.tab === 'dados') renderDados();
     else if (state.tab === 'cidades') renderCidades();
     else renderConfig();
+    encolherExplicacoes();
+  }
+
+  /**
+   * **As explicações longas passam a ficar atrás de um toque** — pedido dele (08/09/2026): *"o
+   * frontend está muito poluído; as informações de configurações devem ser exibidas de outra forma,
+   * deixar as informações básicas para não ficar poluído e outra forma de ler o resto"*.
+   *
+   * Cada campo da Config e do Automatizado tem, embaixo, um parágrafo que explica POR QUE ele
+   * existe — e vários deles têm oito, dez linhas. Juntos, empurram o campo seguinte para fora da
+   * tela e transformam a aba num muro de texto cinza.
+   *
+   * **Um passe depois de desenhar, e não 58 edições.** As explicações são criadas em 58 lugares
+   * como `.wf-origin`; mexer em cada chamada seria 58 chances de errar e nenhuma garantia para a
+   * próxima que alguém escrever. Aqui a regra é uma só: **explicação que passa de três linhas
+   * nasce fechada, com um "ver mais"**. As curtas — que são a maioria e servem de rótulo — não são
+   * tocadas, senão a tela ganharia um botão para esconder uma linha.
+   *
+   * A medida é o `scrollHeight` DEPOIS do desenho, porque só o navegador sabe quantas linhas o
+   * texto ocupou na largura de agora. Por isso é um passe, e não uma decisão na hora de criar.
+   */
+  const LIMITE_DE_LINHAS = 3;
+
+  function encolherExplicacoes() {
+    for (const alvo of body.querySelectorAll('.wf-origin')) {
+      if (alvo.dataset.encolhido) continue;
+      const linha = parseFloat(getComputedStyle(alvo).lineHeight) || 15;
+      if (alvo.scrollHeight <= linha * (LIMITE_DE_LINHAS + 0.5)) continue;
+
+      alvo.dataset.encolhido = '1';
+      alvo.classList.add('wf-cortado');
+      const mais = h('button', { class: 'wf-mais', type: 'button' }, 'ver mais');
+      mais.addEventListener('click', () => {
+        const aberto = alvo.classList.toggle('wf-cortado');
+        mais.textContent = aberto ? 'ver mais' : 'ver menos';
+      });
+      alvo.after(mais);
+    }
   }
 
   /**
@@ -10111,21 +10150,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * o `git diff` que hoje protege cada mudança — e ele já tem onde escrever o que muda toda
      * semana: as Instruções extras, logo abaixo.
      */
-    const verPadrao = h('details', { class: 'wf-ver-padrao' });
-    const tokensDoPadrao = iaLib.tokensAproximados(PADRAO_DE_ATENDIMENTO);
-    const tokensDoPrompt = iaLib.tokensAproximados(
-      iaLib.montarSistemaRascunho({ templates: state.templates, regras: cfg.regras })
+    /**
+     * **O padrão de atendimento abre em JANELA** — pedido dele (08/09/2026): *"faça para que abra em
+     * popup, as letras estão pequenas demais para ler"*.
+     *
+     * A primeira versão era um `<details>` aqui dentro, e ele estava certo: o painel tem 380px e o
+     * texto saía em 11px numa caixa de 320px de altura. Dava para conferir que o documento estava
+     * lá — não para lê-lo, que era o pedido original.
+     *
+     * `chrome.windows` não existe em content script (a armadilha já registrada), então a abertura é
+     * uma mensagem para o service worker, igual à da janela do fluxo.
+     */
+    const btnPadrao = h('button', { class: 'wf-btn', type: 'button' }, 'Ver o padrão de atendimento ↗');
+    btnPadrao.addEventListener('click', () =>
+      withBusy(async () => {
+        const r = await chrome.runtime.sendMessage({ type: MSG_PADRAO });
+        if (!r?.ok) setStatus(`Não consegui abrir a janela: ${r?.motivo || 'sem motivo'}`, 'err');
+      })
     );
-    verPadrao.append(
-      h('summary', {}, `Ver o padrão de atendimento que a IA segue (${(PADRAO_DE_ATENDIMENTO.match(/^## /gm) || []).length} seções)`),
+    body.append(
+      btnPadrao,
       h('div', { class: 'wf-origin' },
-        `Vai INTEIRO no prompt de sistema, e é o mesmo texto nas duas casas — Claude e ChatGPT. ` +
-          `São ${tokensDoPadrao} dos ${tokensDoPrompt} tokens do prompt, ou seja a maior parte dele. ` +
-          'Aqui é só leitura: este documento é seu e vive no código, com histórico. O que muda toda ' +
-          'semana vai nas Instruções extras, abaixo.'),
-      h('pre', { class: 'wf-padrao' }, PADRAO_DE_ATENDIMENTO)
+        `${(PADRAO_DE_ATENDIMENTO.match(/^## /gm) || []).length} seções, e vai INTEIRO no prompt — ` +
+          'o mesmo texto no Claude e no ChatGPT.')
     );
-    body.append(verPadrao);
 
     // A chave fica no armazenamento e NUNCA é relida para a tela: campo de senha, e o que se
     // mostra é se existe ou não. Chave visível no painel é chave que aparece em print.

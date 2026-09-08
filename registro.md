@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v3.6.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v3.7.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -256,6 +256,48 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
 ---
+
+## 2026-09-08 — O padrão em janela própria, e a Config parou de ser um muro (v3.7.0)
+
+Pedido dele, uma hora depois do botão: ***"faça para que abra em popup, as letras estão pequenas
+demais para ler, e o frontend está muito poluído; as informações de configurações devem ser exibidas
+de outra forma, deixar as informações básicas para não ficar poluído e outra forma de ler o resto"***.
+
+Ele estava certo nas duas. O `<details>` que eu tinha feito mostrava as 27 seções em **11px numa
+caixa de 320px de altura**, dentro de um painel de 380px — dava para **conferir** que o documento
+estava lá, não para **lê-lo**, que era o pedido original.
+
+### A janela
+
+`src/padrao.html` + `.css` + `.js`, aberta pelo service worker como a do fluxo (`chrome.windows` não
+existe em content script — a armadilha já registrada). Corpo em **16px**, linha 1,7, coluna limitada
+a 78 caracteres. O Markdown é convertido à mão, para o pouco que o documento usa.
+
+**Dois defeitos que a medição pegou na própria conversão:**
+
+- **132 parágrafos de meia frase.** O documento quebra a linha em ~100 colunas, e eu fazia um `<p>`
+  por linha do arquivo — a mesma poluição que a janela existe para desfazer. Hoje as linhas seguidas
+  viram um parágrafo só, e são **50**;
+- **o traço de seção estava no `h2`**, mas o `#` do arquivo vira o título e são os 27 `##` que são as
+  seções. O separador foi para o `h3`.
+
+A conversão **virou teste**, porque ela quebra em silêncio: o texto sairia como um bloco só, com os
+asteriscos à mostra, e ninguém olha o console de uma janela de leitura. O teste trava as 27 seções,
+a tabela, as listas, a ausência de marcador — e os 50 parágrafos.
+
+### O muro de texto
+
+Cada campo da Config e do Automatizado tem, embaixo, um parágrafo explicando por que ele existe. São
+**58 no painel**, vários com oito ou dez linhas: juntos empurram o campo seguinte para fora da tela.
+
+**Um passe depois de desenhar, e não 58 edições.** `encolherExplicacoes` roda no fim do `renderAll`
+e aplica uma regra só: **explicação que passa de três linhas nasce fechada, com um "ver mais"**. As
+curtas — a maioria, que servem de rótulo — não são tocadas, senão a tela ganharia um botão para
+esconder uma linha.
+
+A medida é o `scrollHeight` **depois** do desenho, porque só o navegador sabe quantas linhas o texto
+ocupou na largura de agora. É por isso que é um passe, e não uma decisão na hora de criar — e é o que
+faz a regra valer para a próxima explicação que alguém escrever, sem ninguém lembrar dela.
 
 ## 2026-09-08 — O padrão de atendimento, visível na Config (v3.6.0)
 

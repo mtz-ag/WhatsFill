@@ -10,6 +10,7 @@
 import { check, grupo, fim } from './_harness.mjs';
 import { PADRAO_DE_ATENDIMENTO } from '../src/lib/atendimento.js';
 import { PROVEDORES, pedirAoWorker } from '../src/lib/ia-cliente.js';
+import { paraHtml } from '../src/padrao.js';
 import {
   montarSistemaRascunho,
   montarContatoRascunho,
@@ -1361,6 +1362,39 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   /** E ele continua sendo a maior parte do prompt — se encolher de repente, alguem o cortou. */
   check(tokensAproximados(PADRAO_DE_ATENDIMENTO) > tokensAproximados(sistema) / 2,
     'e e mais da metade do prompt de sistema');
+}
+
+/**
+ * **A janela do padrao converte o Markdown, e isso quebra em silencio** — pedido dele (08/09/2026):
+ * *"faca para que abra em popup, as letras estao pequenas demais para ler"*.
+ *
+ * A conversao e logica de verdade (titulos, listas, tabela, negrito), e quando ela erra o texto sai
+ * como um bloco so, com os asteriscos a mostra — e ninguem olha o console de uma janela de leitura.
+ *
+ * **A primeira versao fazia um `<p>` por LINHA DO ARQUIVO**: o documento quebra em ~100 colunas,
+ * entao davam 132 paragrafos de meia frase, com espaco entre eles. Exatamente a poluicao que a
+ * janela existe para desfazer. Hoje sao 50, e e a assercao de baixo que trava isso.
+ */
+{
+  grupo('a janela do padrao converte o documento dele (08/09)');
+
+  const html = paraHtml(PADRAO_DE_ATENDIMENTO);
+
+  check((html.match(/<h3>/g) || []).length === 27, `as 27 secoes viram titulo (${(html.match(/<h3>/g) || []).length})`);
+  check((html.match(/<table>/g) || []).length === 1, 'a tabela do documento vira tabela');
+  check((html.match(/<li>/g) || []).length > 0, 'e as listas viram lista');
+
+  /** Nenhum marcador de Markdown pode sobrar na tela. */
+  check(!/\*\*/.test(html), 'nao sobra ** na tela');
+  check(!/(^|\n)#/.test(html), 'nem # de titulo');
+
+  /** Linha do arquivo NAO e paragrafo: o documento quebra em ~100 colunas. */
+  const paragrafos = (html.match(/<p>/g) || []).length;
+  check(paragrafos < 80, `as linhas seguidas viram um paragrafo so (${paragrafos}, e nao 132)`);
+
+  /** O `<` do texto dele nao pode virar tag. */
+  check(!/<script/i.test(html), 'nada de script');
+  check(paraHtml('um <b>teste</b> aqui').includes('&lt;b&gt;'), 'o HTML do texto e escapado');
 }
 
 fim();

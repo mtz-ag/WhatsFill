@@ -1,0 +1,94 @@
+/**
+ * A janela do padrão de atendimento — pedido dele (08/09/2026): *"faça para que abra em popup, as
+ * letras estão pequenas demais para ler"*.
+ *
+ * A única razão de esta janela existir é ser LEGÍVEL: o painel tem 380px e vive espremido na borda
+ * da página, e o mesmo texto lá sai em 11px dentro de uma caixa de 320px de altura. Aqui o corpo é
+ * 16px, a linha tem 1,7 de altura e a coluna é limitada a 70 caracteres — que é o que faz um texto
+ * longo ser lido em vez de varrido.
+ */
+:root {
+  color-scheme: light dark;
+  --fundo: #ffffff;
+  --texto: #111827;
+  --suave: #6b7280;
+  --borda: #e5e7eb;
+  --destaque: #1d4ed8;
+  --codigo: rgba(127, 127, 127, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo: #111827;
+    --texto: #e5e7eb;
+    --suave: #9ca3af;
+    --borda: #374151;
+    --destaque: #93c5fd;
+    --codigo: rgba(255, 255, 255, 0.08);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font: 16px/1.7 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+header {
+  position: sticky;
+  top: 0;
+  background: var(--fundo);
+  border-bottom: 1px solid var(--borda);
+  padding: 18px 32px 12px;
+  z-index: 2;
+}
+
+h1 { margin: 0; font-size: 20px; }
+
+#resumo {
+  margin: 6px 0 0;
+  color: var(--suave);
+  font-size: 13px;
+  max-width: 70ch;
+}
+
+main {
+  padding: 24px 32px 64px;
+  max-width: 78ch;
+}
+
+/**
+ * Os títulos do documento dele. O `#` do arquivo vira `h2` (o título) e os 27 `##` viram `h3` — que
+ * são as SEÇÕES, e por isso é neles que fica o traço de separação.
+ */
+main h2 { font-size: 19px; margin: 0 0 4px; }
+
+main h3 {
+  font-size: 16px;
+  margin: 30px 0 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--borda);
+}
+main h3:first-of-type { border-top: 0; padding-top: 0; margin-top: 18px; }
+main p { margin: 0 0 12px; }
+main ul, main ol { margin: 0 0 12px; padding-left: 22px; }
+main li { margin-bottom: 4px; }
+
+main strong { font-weight: 650; }
+
+/* Aspas do documento (as frases de exemplo) ficam destacadas do texto que as explica. */
+main em { color: var(--destaque); font-style: normal; }
+
+main table { border-collapse: collapse; margin: 0 0 16px; font-size: 14px; }
+main th, main td { border: 1px solid var(--borda); padding: 5px 9px; text-align: left; }
+main th { background: var(--codigo); }
+
+main code {
+  background: var(--codigo);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.92em;
+}
