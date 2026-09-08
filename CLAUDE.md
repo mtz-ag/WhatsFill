@@ -1454,6 +1454,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   **detector que casa a palavra antiga para de ver o caso**: `SE_APRESENTANDO` ganhou `equipe` e
   `assessoria` no mesmo commit, senao continuaria "funcionando" cego.
 
+- **"NAO E LUGAR" NAO E O MESMO QUE "NAO RECONHECO", e a peneira que separa os dois e o
+  VOCABULARIO.** Print do Sabino (08/09/2026): campo Cidade valendo **`transformar nosso pais`** —
+  *"a extensao esta falhando em limpar ou corrigir cidades erradas"*. A limpeza da 2.93 so tratava
+  lixo por FORMA (`ehEnderecoDeMaquina`), e frase comum ficava de fora com o argumento de que podia
+  ser cidade de outro estado. **Verdade para "Curitiba"; falsa para uma frase com verbo dentro.**
+  `cities.naoPodeSerNomeDeLugar` soma a segunda peneira: nome de municipio e substantivo proprio
+  mais conector, e verbo, pronome e adverbio nunca aparecem. **A PROVA E CONTRA OS 5.571 MUNICIPIOS
+  DO BRASIL, nunca contra os 497 do RS** — e foi ela que salvou a lista: contra o RS caia 1 falso
+  positivo, contra o Brasil **21**, em tres classes que ninguem adivinha. **`Para` normaliza para
+  `para`** e colidia com a preposicao (12 municipios); **`Patrocinio` E municipio** em MG, SP e PR;
+  **`Sem-Peixe`** tirou `sem`; **`Nossa Senhora ...`** obrigou a guardar `nossa` e **`Mariano Moro`**
+  a guardar `moro`. Depois: 0 em 5.571. `curl` na
+  `servicodados.ibge.gov.br/api/v1/localidades/municipios` traz a lista inteira em um pedido — **rode
+  a prova antes de acrescentar palavra**, o erro dela apaga a cidade de um eleitor real. A peneira
+  vale em QUATRO pontos (a origem no `naoPodeSerCidade`, a limpeza, a substituicao e a leitura da
+  conversa anterior), e continua fora do `somenteExatos`: apagar pede ato deliberado.
 - **DA PARA MEDIR NA API DE VERDADE, pela aba dele — e "a tela mostra" nao e "o CRM tem".** Feito em
   07/09/2026, duas vezes, e as duas mudaram o diagnostico. **A receita:** o `page-hook` ja intercepta
   o Bearer; do lado da pagina, `postMessage({__whatsfill:'cs', type:'ping'}, location.origin)` e

@@ -1,4 +1,4 @@
-## 2026-09-07 — ESTADO DE AGORA (v2.93.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v2.94.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -256,6 +256,68 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
 ---
+
+## 2026-09-08 — "Não é lugar" não é o mesmo que "não reconheço" (v2.94.0)
+
+Print do **Sabino** — contato do anúncio, campo Cidade valendo **`transformar nosso país`**, com o
+aviso vermelho do painel ao lado dizendo que não casa com nenhum dos 497 municípios. Ele: *"a
+extensão está falhando em limpar ou corrigir cidades erradas"*.
+
+**A limpeza da 2.93 não alcançava, e por escolha escrita.** Ela só tratava lixo por FORMA
+(`ehEnderecoDeMaquina`: URL, domínio, e-mail, sequência de dígitos), e frase comum ficou de fora
+com um argumento que continua valendo pela metade: *"pode ser cidade de outro estado, e apagar
+seria destruir o que alguém preencheu"*. Verdade para **Curitiba**; falsa para uma frase com verbo
+dentro.
+
+### O que separa os dois não é a lista de municípios — é o vocabulário
+
+`cities.naoPodeSerNomeDeLugar` tem duas peneiras, e **nenhuma delas é "não casou com os 497"**: a
+FORMA, que já existia, e o VOCABULÁRIO. Nome de município é substantivo próprio mais conector;
+verbo, pronome e advérbio nunca aparecem. Assim *"Curitiba"* passa (não é reconhecida, mas é um
+lugar) e *"transformar nosso país"* não.
+
+### A prova foi contra o BRASIL, e é ela que vale registrar
+
+A lista foi rodada contra os **5.571 municípios do IBGE**, não contra os 497 do RS — e foi essa
+passada que a salvou. Contra o RS aparecia **um** falso positivo; contra o Brasil inteiro,
+**21**, em três classes que eu não teria imaginado:
+
+| o que caiu | por quê |
+|---|---|
+| **Pará de Minas**, *Santa Maria do Pará*, *Grão-Pará* e mais 9 | `Pará` normaliza para `para` e colidia com a preposição |
+| **Patrocínio** (MG), *Patrocínio Paulista*, *São Jorge do Patrocínio* | `patrocínio` **é município** — e era a palavra mais óbvia do caso de 07/09 |
+| **Sem-Peixe** (MG) | tirou `sem` |
+| **Nossa Senhora do Socorro** e as outras | obrigou a guardar `nossa` (só conta solta) |
+| **Mariano Moro** (RS) | obrigou a guardar `moro` (só conta antes de "em/no/na/aqui") |
+
+Depois dos cortes: **0 falsos positivos em 5.571**. Quem acrescentar palavra ali roda a mesma
+prova — ela custa um segundo, e o erro dela apaga a cidade de um eleitor real.
+
+### Onde a peneira nova entrou
+
+São quatro pontos, e os quatro liam `ehEnderecoDeMaquina`:
+
+1. **`cities.naoPodeSerCidade`** — a ORIGEM. O parser não oferece mais esses trechos como cidade,
+   então o vazamento para de nascer;
+2. **`marcarCidadeParaLimpar`** — o campo é apagado, que é o "limpar" que ele pediu;
+3. **`podeSubstituirCidade`** — uma cidade de verdade mencionada depois passa por cima, que é o
+   "corrigir";
+4. **a leitura da conversa anterior** — o campo com lixo conta como "falta cidade".
+
+**O custo, dito com todas as letras:** contato cujo campo Cidade tem uma frase dessas passa a ter
+o campo **apagado** quando a rodada passar por ele. Continua fora da gravação automática
+(`somenteExatos`) — apagar é destrutivo e pede ato deliberado, a conclusão ou o Salvar.
+
+### Duas asserções antigas mudaram, com o motivo escrito
+
+- *"trecho da própria mensagem no lugar da cidade fica como palpite"* (escrita em 07/09) foi
+  **invertida**: hoje o trecho não é nem oferecido. **Não oferecer é melhor que oferecer e
+  segurar** — era justamente esse palpite que chegava ao CRM pelos caminhos sem guarda;
+- a cidade inventada de um caso antigo era *"Vila Nova do Nada"*, e `nada` entrou na lista. Trocada
+  por um nome que só não existe, que é o que o caso quer provar.
+
+**Metade das asserções novas é sobre o que NÃO pode ser apagado** — os cinco municípios de verdade
+que caíram nas versões anteriores da lista, mais Curitiba e São Paulo.
 
 ## 2026-09-07 — A cidade errada passou a ser APAGADA (v2.93.0)
 

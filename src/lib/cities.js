@@ -334,9 +334,84 @@ export function ehEnderecoDeMaquina(texto) {
   return ENDERECO_DE_MAQUINA.some((re) => re.test(bruto));
 }
 
+/**
+ * **Palavras que NENHUM município brasileiro tem no nome.**
+ *
+ * Print do Sabino (08/09/2026): o campo Cidade dele valia **`transformar nosso país`**, e a
+ * extensão não limpava nem corrigia. *"a extensão está falhando em limpar ou corrigir cidades
+ * erradas"*. `ehEnderecoDeMaquina` não alcança — aquilo não tem forma de endereço, é frase comum,
+ * e a limpeza de 07/09 foi escrita de propósito só para a FORMA.
+ *
+ * O que faltava era um segundo jeito de dizer "isto não é nome de lugar" sem depender de casar
+ * com uma lista de municípios — porque cidade de outro estado **também** não casa, e apagá-la
+ * seria destruir dado bom. A resposta é o VOCABULÁRIO: nome de município é substantivo próprio
+ * mais conector; verbo, pronome e advérbio nunca aparecem.
+ *
+ * **A lista foi provada contra os 5.571 municípios do Brasil** (IBGE, baixado em 08/09/2026),
+ * não contra os 497 do RS — e foi essa passada que a salvou. Contra o RS só aparecia
+ * *"Mariano Moro"*; contra o Brasil inteiro apareceram mais **20**, e três classes que eu não
+ * teria imaginado:
+ *
+ *  - **`Pará` normaliza para `para`** e colidia com a preposição — 12 municípios
+ *    (*"Pará de Minas"*, *"Santa Maria do Pará"*, *"Grão-Pará"*);
+ *  - **`Patrocínio` É município** em MG, SP e PR — e era a palavra mais óbvia do caso da print;
+ *  - **`Sem-Peixe`** (MG) tirou `sem`, e **`Nossa Senhora ...`** obrigou a guardar `nossa`.
+ *
+ * Hoje: **0 falsos positivos em 5.571**. Quem for acrescentar palavra aqui roda a mesma prova
+ * antes — a lista de baixo custa uma passada de um segundo, e o erro dela apaga a cidade de um
+ * eleitor real.
+ */
+const PALAVRAS_QUE_NAO_SAO_LUGAR = new Set([
+  // pronomes e possessivos
+  'nosso', 'nossos', 'nossas', 'meu', 'minha', 'meus', 'minhas', 'seu', 'sua', 'seus', 'suas',
+  'teu', 'tua', 'voce', 'vcs', 'eu', 'ele', 'ela', 'isso', 'isto', 'comigo', 'contigo', 'conosco',
+  // advérbios e quantificadores
+  'mais', 'menos', 'muito', 'muita', 'tudo', 'nada', 'sempre', 'nunca', 'ja', 'tambem', 'apenas',
+  'agora', 'hoje', 'ontem', 'amanha',
+  // conectores que não são de toponímia ("para" saiu: colide com Pará; "sem" também: Sem-Peixe)
+  'com', 'pra', 'pelo', 'pela', 'que', 'quem', 'quando', 'onde', 'porque', 'pq', 'mas', 'como',
+  // verbos
+  'transformar', 'mudar', 'apoiar', 'ajudar', 'votar', 'receber', 'quero', 'queria', 'preciso',
+  'precisa', 'sou', 'somos', 'estou', 'estamos', 'tenho', 'vamos', 'vou', 'fazer', 'trabalhar',
+  'trabalho', 'conte', 'manda', 'mandar', 'enviar', 'falar', 'conversar', 'apoio', 'apoiam',
+  'juntos',
+  // vocabulário desta base ("patrocinio" saiu: é município em MG, SP e PR)
+  'apoiador', 'apoiadores', 'voto', 'votos', 'urna', 'pais', 'politica', 'direita', 'esquerda',
+  'material', 'conteudo', 'whatsapp', 'instagram', 'facebook', 'tiktok', 'youtube', 'link',
+  'obrigado', 'obrigada', 'oi', 'ola', 'abraco', 'amem',
+]);
+
+/** `Nossa Senhora ...` e `Nossa Senhora Aparecida ...` são nomes de município; "nossa" solto não. */
+const NOSSA_DE_MUNICIPIO = /(^|[^a-z])nossa\s+(senhora|aparecida)/;
+const NOSSA_SOLTA = /(^|[^a-z])nossa(\s|$)/;
+/** `Mariano Moro` é município; "moro em Canoas" não é nome de lugar. O que separa é o que vem depois. */
+const MORO_EM = /(^|[^a-z])mor[ao]\s+(em|no|na|aqui|perto)/;
+
+/**
+ * **Este texto não pode ser nome de lugar, em hipótese nenhuma?**
+ *
+ * Duas peneiras, e nenhuma delas é "não casou com a lista de municípios": a FORMA
+ * (`ehEnderecoDeMaquina` — link, e-mail, sequência de dígitos) e o VOCABULÁRIO
+ * (`PALAVRAS_QUE_NAO_SAO_LUGAR`).
+ *
+ * **É o que separa "não reconheço" de "não é".** *"Curitiba"* não casa com os 497 do RS e é um
+ * lugar de verdade — passa aqui, e continua protegida contra a limpeza e contra a substituição.
+ * *"transformar nosso país"* não é lugar em lugar nenhum.
+ */
+export function naoPodeSerNomeDeLugar(texto) {
+  const bruto = String(texto || '').trim();
+  if (!bruto) return false;
+  if (ehEnderecoDeMaquina(bruto)) return true;
+
+  const plano = bruto.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+  if (MORO_EM.test(plano)) return true;
+  if (NOSSA_SOLTA.test(plano) && !NOSSA_DE_MUNICIPIO.test(plano)) return true;
+  return plano.split(/[^a-z0-9]+/).filter(Boolean).some((p) => PALAVRAS_QUE_NAO_SAO_LUGAR.has(p));
+}
+
 export async function naoPodeSerCidade(texto) {
-  // Antes de tudo, e sem depender de lista: link, e-mail ou número não é lugar.
-  if (ehEnderecoDeMaquina(texto)) return true;
+  // Antes de tudo, e sem depender de lista: link, e-mail, número — ou vocabulário de conversa.
+  if (naoPodeSerNomeDeLugar(texto)) return true;
 
   const norm = normalize(texto);
   if (!norm) return true;

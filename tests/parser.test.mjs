@@ -94,8 +94,13 @@ const casos = [
     esperado: { cidade: 'Bagé', nome: 'Ana' },
   },
   {
+    /**
+     * A cidade inventada deste caso era "Vila Nova do Nada", e ela deixou de servir em 08/09/2026:
+     * "nada" entrou em `PALAVRAS_QUE_NAO_SAO_LUGAR`, entao o trecho passou a ser peneirado ANTES
+     * de virar sugestao. Trocada por um nome que so nao existe -- que e o que o caso quer provar.
+     */
     titulo: 'cidade inexistente vira sugestão, não invenção',
-    msgs: ['Carlos / Vila Nova do Nada / apoiador'],
+    msgs: ['Carlos / Vila Nova do Xarquinho / apoiador'],
     esperado: { cidadeNaoReconhecida: true },
   },
   {
@@ -125,16 +130,18 @@ const casos = [
     /**
      * Print dele (07/09/2026): este trecho foi **gravado no campo Cidade** de um contato novo.
      *
-     * O palpite em si está certo e continua: `cityPositionGuess` devolve o segundo pedaço depois
-     * da vírgula sem casar com município nenhum, para virar sugestão na tela e revisão na aba
-     * Cidades. O que estava errado era a GRAVAÇÃO — ver `fields.deveGravarEntrada`.
+     * **A asserção era `cidadeNaoReconhecida` e foi INVERTIDA em 08/09/2026, com o motivo.** Ela
+     * dizia que o palpite estava certo em existir — bastava a guarda da escrita segurá-lo, porque
+     * `cityPositionGuess` devolve o pedaço depois da vírgula para virar revisão na aba Cidades.
      *
-     * Esta asserção trava a confiança: enquanto for `nao-reconhecida`, a guarda da escrita o
-     * segura. Virasse `exata` por algum "conserto" no parser, ele passaria a gravar sozinho.
+     * Com `naoPodeSerNomeDeLugar` (a print do Sabino), o trecho é peneirado ANTES: ele tem "mais",
+     * "com" e "Apoiadores" dentro, e nenhum dos 5.571 municípios do Brasil tem essas palavras no
+     * nome. **Não oferecer é melhor que oferecer e segurar** — era este palpite que chegava ao CRM
+     * pelos caminhos que ainda não tinham guarda.
      */
-    titulo: 'trecho da própria mensagem no lugar da cidade fica como palpite, nunca como certeza',
+    titulo: 'trecho da própria mensagem no lugar da cidade não é nem oferecido',
     msgs: ['Veja aí quem é meus Patrocinadores Oficial, mais Apoiadores com patrocínio'],
-    esperado: { cidadeNaoReconhecida: true },
+    esperado: { vazio: true },
   },
 ];
 
@@ -1072,6 +1079,68 @@ grupo('endereco de maquina nunca e cidade (06/09/2026)');
   );
   check(dela.cidade?.value === 'Cachoeirinha', `e a cidade que ela escreveu continua sendo achada (${dela.cidade?.value})`);
   check(dela.cidade?.confidence === 'exata', 'com confianca exata, que e o que permite corrigir o campo');
+}
+
+/**
+ * **"transformar nosso pais" no campo Cidade — a print do Sabino (08/09/2026).**
+ *
+ * *"a extensao esta falhando em limpar ou corrigir cidades erradas"*. `ehEnderecoDeMaquina` nao
+ * alcanca: aquilo nao tem forma de endereco, e a limpeza de 07/09 foi escrita so para a FORMA.
+ *
+ * A peneira nova e o VOCABULARIO — nome de municipio e substantivo proprio mais conector, e verbo,
+ * pronome e adverbio nunca aparecem. **A lista foi provada contra os 5.571 municipios do Brasil**
+ * (IBGE), e nao contra os 497 do RS: foi essa passada que tirou `para` (colide com **Pará**),
+ * `patrocinio` (**é município** em MG, SP e PR), `sem` (**Sem-Peixe**), e que obrigou a guardar
+ * `nossa` (**Nossa Senhora do Socorro**) e `moro` (**Mariano Moro**).
+ *
+ * **Metade das assercoes e sobre o que NAO pode ser apagado** — apagar cidade de eleitor real e o
+ * defeito oposto, e "nao reconheco" nunca pode virar "nao e".
+ */
+{
+  grupo('o que nao pode ser nome de lugar (o Sabino, 08/09)');
+
+  for (const t of [
+    'transformar nosso país',
+    'mais Apoiadores com patrocínio',
+    'quero receber o material',
+    'ja estou trabalhando na campanha',
+    'conte comigo',
+    'moro em Canoas',
+    'vt.tiktok.com',
+    'www.threads.com',
+  ]) {
+    check(cities.naoPodeSerNomeDeLugar(t), `nao pode ser lugar: ${t}`);
+    check(await cities.naoPodeSerCidade(t), `e o parser nao oferece mais: ${t}`);
+  }
+
+  /**
+   * **O que a peneira NAO pode pegar.** Os cinco primeiros sao municipios de verdade que caiam em
+   * versoes anteriores da lista — cada um tirou uma palavra dela.
+   */
+  for (const t of [
+    'Pará de Minas',
+    'Santa Maria do Pará',
+    'Patrocínio',
+    'São Jorge do Patrocínio',
+    'Sem-Peixe',
+    'Nossa Senhora do Socorro',
+    'Mariano Moro',
+    'Curitiba',
+    'São Paulo',
+    'Cachoeirinha',
+    'Santo Antônio da Patrulha',
+    'S.do Livramento',
+    'Não sei',
+    'Mathias',
+  ]) {
+    check(!cities.naoPodeSerNomeDeLugar(t), `continua podendo ser lugar: ${t}`);
+  }
+
+  /**
+   * **Cidade de outro estado continua protegida**, que e a razao pela qual a peneira nao pode ser
+   * "nao casou com os 497": "Curitiba" nao casa e e onde a pessoa mora.
+   */
+  check(!cities.naoPodeSerNomeDeLugar('Curitiba'), 'Curitiba nao e apagavel — nao casar com o RS nao e o criterio');
 }
 
 fim();

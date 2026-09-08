@@ -111,11 +111,16 @@ export function deveGravarEntrada(entry, { somenteExatos = false } = {}) {
    * pessoa menciona uma cidade de verdade. Quem nunca mais menciona ficava com o lixo para sempre
    * — e o lixo foi escrito pela própria extensão (o vazamento fechado na 2.88).
    *
-   * **Só vale para o que é lixo por FORMA** (`cities.ehEnderecoDeMaquina`): URL, domínio, e-mail,
-   * sequência longa de dígitos. Nenhum dos 497 municípios é nada disso, então apagar não pode
-   * apagar dado bom. Frase comum que não casa com município (*"mais Apoiadores com patrocínio"*)
-   * **não entra**: pode ser cidade de outro estado, abreviação ou nome que o parser não conhece, e
-   * apagar aí seria destruir o que alguém preencheu.
+   * **Só vale para o que NÃO PODE SER LUGAR** (`cities.naoPodeSerNomeDeLugar`), por duas peneiras:
+   * a FORMA (URL, domínio, e-mail, sequência longa de dígitos) e o VOCABULÁRIO (verbo, pronome,
+   * advérbio — palavras que nenhum dos 5.571 municípios do Brasil tem no nome).
+   *
+   * **A segunda peneira entrou em 08/09/2026, com a print do Sabino** (campo Cidade valendo
+   * *"transformar nosso país"*): *"a extensão está falhando em limpar ou corrigir cidades
+   * erradas"*. Até ali a limpeza era só de forma, e frase comum ficava de fora com o argumento de
+   * que podia ser cidade de outro estado — verdade para *"Curitiba"*, falsa para uma frase com
+   * verbo dentro. **O que separa os dois não é casar com a lista de municípios, é o vocabulário**,
+   * e "Curitiba" continua protegida.
    *
    * **Fica fora da gravação automática** (`somenteExatos`), que roda a cada abertura de contato:
    * apagar é destrutivo, e destrutivo pede ato deliberado — a conclusão, ou o Salvar. Todo contato

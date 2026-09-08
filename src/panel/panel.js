@@ -685,7 +685,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       const campoCidade = classify.find((f) => f.name === 'Cidade');
       const cidadeAtual = String(state.draft[campoCidade?.id]?.value || '').trim();
-      const faltaCidade = !cidadeAtual || cities.ehEnderecoDeMaquina(cidadeAtual);
+      const faltaCidade = !cidadeAtual || cities.naoPodeSerNomeDeLugar(cidadeAtual);
 
       state.conversaAnterior = null;
       if (faltaCidade && state.temConversaAnterior) {
@@ -1315,7 +1315,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const campo = (classify || state.classify).find((f) => f.name === 'Cidade');
     const atual = campo && state.draft[campo.id];
     if (!atual || atual.from !== 'crm') return;
-    if (!cities.ehEnderecoDeMaquina(atual.value)) return;
+    if (!cities.naoPodeSerNomeDeLugar(atual.value)) return;
 
     state.draft[campo.id] = { value: '', from: 'limpar', limpar: true, limpando: atual.value };
   }
@@ -1354,7 +1354,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      *
      * **A regra de não sobrescrever o CRM continua inteira.** Ela existe para não apagar o que
      * alguém preencheu certo — e um endereço de máquina não é isso: não é nome de lugar em hipótese
-     * nenhuma, e `cities.ehEnderecoDeMaquina` reconhece a FORMA, sem depender de lista.
+     * nenhuma, e `cities.naoPodeSerNomeDeLugar` reconhece isso por FORMA e por VOCABULÁRIO, sem
+     * depender de casar com lista de município — ver a print do Sabino (08/09/2026), cujo campo
+     * valia *"transformar nosso país"*: não tem forma de endereço e não é lugar em lugar nenhum.
      *
      * **Cidade de outro estado NÃO entra aqui, de propósito.** "Curitiba" não casa com os 497
      * municípios, mas é um lugar de verdade e pode ser onde a pessoa mora — trocá-la por uma cidade
@@ -1371,7 +1373,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * primeira leitura. **Substituir é sempre melhor que apagar.**
      */
     const lixoNoCampo =
-      atual.from === 'limpar' || (atual.from === 'crm' && cities.ehEnderecoDeMaquina(atual.value));
+      atual.from === 'limpar' || (atual.from === 'crm' && cities.naoPodeSerNomeDeLugar(atual.value));
     if (!guess.informada && !lixoNoCampo) return false;
 
     return cities.normalize(atual.value) !== cities.normalize(guess.value);
