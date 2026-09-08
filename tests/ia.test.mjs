@@ -9,7 +9,7 @@
  */
 import { check, grupo, fim } from './_harness.mjs';
 import { PADRAO_DE_ATENDIMENTO } from '../src/lib/atendimento.js';
-import { PROVEDORES } from '../src/lib/ia-cliente.js';
+import { PROVEDORES, pedirAoWorker } from '../src/lib/ia-cliente.js';
 import {
   montarSistemaRascunho,
   montarContatoRascunho,
@@ -1293,6 +1293,40 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   // `refusal` e canal proprio do strict mode: ler so o `content` faria recusa parecer vazio.
   check(PROVEDORES.openai.texto({ choices: [{ message: { refusal: 'nao' } }] }) === null, 'recusa vira null');
   check(PROVEDORES.openai.texto({ choices: [{ message: { content: '{}' } }] }) === '{}', 'e o texto normal passa');
+}
+
+/**
+ * **A IA pendurada** — relato dele (08/09/2026): *"IA travou em dois casos, nao carrega a
+ * resposta"*, com a rodada parada em "Andando…".
+ *
+ * **Nao havia timeout em lugar nenhum** — nem no `fetch` do service worker, nem na ponte
+ * painel->worker. Sao dois jeitos de pendurar com a mesma cara na tela, e o segundo e o que so o
+ * lado do painel resolve: **o service worker do MV3 e encerrado no meio da chamada**, e ai o
+ * `sendMessage` nunca recebe resposta — a promessa fica pendente, sem erro nenhum.
+ *
+ * A regra do projeto e *"falha de IA nunca para a rodada"*, e **pendurar e pior que falhar**:
+ * falha vira linha de aviso e a fila anda; pendurar nao vira nada.
+ */
+{
+  grupo('a IA pendurada desiste em vez de travar a rodada (08/09)');
+
+  const antes = globalThis.chrome;
+  globalThis.chrome = { ...antes, runtime: { ...antes?.runtime, sendMessage: () => new Promise(() => {}) } };
+
+  const t0 = Date.now();
+  const r = await pedirAoWorker({ type: 'x' }, 30);
+  const levou = Date.now() - t0;
+
+  check(r?.ok === false, 'a promessa RESOLVE em vez de ficar pendente');
+  check(/nao respondeu a tempo|não respondeu a tempo/.test(r?.motivo || ''), `e diz por que (${r?.motivo})`);
+  check(levou < 2000, `e desiste no prazo (${levou}ms)`);
+
+  /** Worker vivo continua passando direto — o relogio nao pode atrasar o caminho normal. */
+  globalThis.chrome = { ...antes, runtime: { ...antes?.runtime, sendMessage: async () => ({ ok: true, decisao: 'x' }) } };
+  const bom = await pedirAoWorker({ type: 'x' }, 30);
+  check(bom?.ok === true, 'e a resposta normal continua chegando');
+
+  globalThis.chrome = antes;
 }
 
 fim();

@@ -2673,6 +2673,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   com zero. A IA pode dizer o numero de UM candidato perguntado diretamente (dado confirmado, esta
   na tabela); montar a chapa inteira e cartao. **O modelo da colinha e dele** (*"vou criar um modelo
   de mensagem pra ela"*).
+- **PENDURAR E PIOR QUE FALHAR: a chamada da IA nao tinha TIMEOUT nenhum.** Relato dele
+  (08/09/2026): *"IA travou em dois casos, nao carrega a resposta"*, com a rodada parada em
+  "Andando…" e nenhuma linha de erro. **Sao dois jeitos de pendurar:** a API nao responder (o
+  `fetch` do worker esperava para sempre) e — o que so o lado do PAINEL resolve — **o service worker
+  do MV3 ser encerrado no meio da chamada**, quando o `chrome.runtime.sendMessage` nunca recebe
+  resposta e a promessa fica pendente, sem erro. A regra *"falha de IA nunca para a rodada"* ja
+  existia e nao estava sendo cumprida: **falha vira aviso e a fila anda; pendurar nao vira nada.**
+  Hoje sao dois relogios — 60s no `fetch` (`AbortController`) e 75s na ponte (`pedirAoWorker`), o da
+  ponte maior para o motivo especifico chegar quando o worker esta vivo. **Toda ponte para o service
+  worker precisa de relogio**, e o teste tem que travar as duas pontas: desiste no prazo E o caminho
+  normal passa direto.
 - **A MARCA AMBIGUA PRECISA DO QUE A DESAMBIGUA AO LADO — "casa" e "casada", 08/09/2026.** Duas
   prints, a mesma frase dele: *"nao sei porque tem etiqueta de material"*. **A Geci** escreveu
   *"ontem eu fui NA CASA nos BAIRRO pedir voto"* — militancia de rua — e `informouEndereco` somou

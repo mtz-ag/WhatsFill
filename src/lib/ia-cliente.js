@@ -34,6 +34,53 @@ export const MSG_IA = 'whatsfill-ia';
 const VERSAO_API = '2023-06-01';
 
 /**
+ * **Quanto tempo a IA pode demorar antes de virar falha** — relato dele (08/09/2026): *"IA travou
+ * em dois casos, não carrega a resposta"*, com a rodada parada em "Andando…".
+ *
+ * **Não havia timeout em lugar nenhum** — nem no `fetch` do service worker, nem na ponte
+ * painel→worker. E são dois jeitos de pendurar, com a mesma cara na tela:
+ *
+ *  1. a API não responde (rede pendurada, servidor sem resposta): o `fetch` espera para sempre;
+ *  2. **o service worker do MV3 é encerrado no meio da chamada** — e aí o
+ *     `chrome.runtime.sendMessage` **nunca recebe resposta**, e a promessa do painel fica pendente
+ *     sem erro nenhum. É o caso que só o timeout do lado do painel resolve, porque não há mais
+ *     ninguém do outro lado para responder.
+ *
+ * A regra deste projeto é *"falha de IA nunca para a rodada"* — e **pendurar é pior que falhar**:
+ * falha vira linha de aviso e a fila anda; pendurar não vira nada.
+ *
+ * O da PONTE é maior que o do `fetch` de propósito: assim o motivo específico ("a API demorou
+ * demais", "conta sem crédito") chega à tela quando o worker está vivo, e o genérico só aparece
+ * quando o worker morreu.
+ */
+const TIMEOUT_FETCH_MS = 60_000;
+const TIMEOUT_PONTE_MS = 75_000;
+
+/**
+ * Pede ao service worker e **desiste na hora certa**, em vez de esperar para sempre.
+ *
+ * Devolve `{ok:false, motivo}` no lugar de lançar: os três chamadores já tratam isso como falha de
+ * IA, que é exatamente o que um timeout é.
+ *
+ * `prazo` é parâmetro para o teste poder provar a corrida em milissegundos em vez de em minutos —
+ * o valor de produção é o padrão, e ninguém o passa.
+ */
+export async function pedirAoWorker(mensagem, prazo = TIMEOUT_PONTE_MS) {
+  let acabou;
+  const relogio = new Promise((res) => {
+    acabou = setTimeout(
+      () => res({ ok: false, motivo: 'a IA não respondeu a tempo (o serviço da extensão pode ter sido encerrado) — tente de novo' }),
+      prazo
+    );
+  });
+  try {
+    return await Promise.race([chrome.runtime.sendMessage(mensagem), relogio]);
+  } finally {
+    clearTimeout(acabou);
+  }
+}
+
+/**
  * **As duas casas, lado a lado** — endpoint, cabeçalhos, onde está o texto e onde está a conta.
  *
  * Tudo o que difere entre a Anthropic e a OpenAI cabe nesta tabela: o resto do arquivo (e todo o
@@ -152,7 +199,7 @@ export const PROVEDORES = {
 export async function avaliar({ templates, regras, gabinete, mensagens, campos, etiquetas, modelo, agora }) {
   const ids = (templates || []).map((t) => t.id);
   try {
-    const r = await chrome.runtime.sendMessage({
+    const r = await pedirAoWorker({
       type: MSG_IA,
       sistema: montarSistema({ templates, regras, gabinete }),
       contato: montarContato({ mensagens, campos, etiquetas, agora }),
@@ -179,7 +226,7 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  */
 export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados }) {
   try {
-    const r = await chrome.runtime.sendMessage({
+    const r = await pedirAoWorker({
       type: MSG_IA,
       modo: 'rascunho',
       sistema: montarSistemaRascunho({ templates, regras, gabinete }),
@@ -232,7 +279,7 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
  */
 export async function conferirCidade({ regras, mensagens, candidato, origem, substituiria, municipios, normalizar, modelo }) {
   try {
-    const r = await chrome.runtime.sendMessage({
+    const r = await pedirAoWorker({
       type: MSG_IA,
       modo: 'cidade',
       sistema: montarSistemaCidade({ regras }),
@@ -289,14 +336,29 @@ export async function atender(pedido, chave) {
         });
 
   let resposta;
+  /**
+   * **O `fetch` desiste** — ver `TIMEOUT_FETCH_MS`. Sem o abort, a chamada que a API deixa pendurada
+   * segura a rodada inteira: o painel espera o worker, e o worker espera a rede.
+   */
+  const corta = new AbortController();
+  const relogio = setTimeout(() => corta.abort(), TIMEOUT_FETCH_MS);
   try {
     resposta = await fetch(casa.url, {
       method: 'POST',
       headers: casa.cabecalhos(chave),
       body: JSON.stringify(corpo),
+      signal: corta.signal,
     });
   } catch (err) {
-    return { ok: false, motivo: `não consegui falar com a API: ${err?.message || err}` };
+    const demorou = err?.name === 'AbortError';
+    return {
+      ok: false,
+      motivo: demorou
+        ? `a API não respondeu em ${Math.round(TIMEOUT_FETCH_MS / 1000)}s — tente de novo`
+        : `não consegui falar com a API: ${err?.message || err}`,
+    };
+  } finally {
+    clearTimeout(relogio);
   }
 
   if (!resposta.ok) {

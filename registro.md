@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v3.3.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v3.4.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -256,6 +256,38 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
 ---
+
+## 2026-09-08 — A IA pendurava, e pendurar é pior que falhar (v3.4.0)
+
+Relato dele: ***"IA travou em dois casos, não carrega a resposta"***, com a rodada parada em
+"Andando…" e a caixa vazia.
+
+**Medido no código: não havia timeout em lugar nenhum** — nem no `fetch` do service worker, nem na
+ponte painel→worker. São dois jeitos de pendurar, com a mesma cara na tela:
+
+1. **a API não responde** (rede pendurada, servidor sem resposta): o `fetch` espera para sempre;
+2. **o service worker do MV3 é encerrado no meio da chamada** — e aí o `chrome.runtime.sendMessage`
+   **nunca recebe resposta**. A promessa do painel fica pendente, sem erro nenhum, sem linha no
+   Andamento, sem nada.
+
+O segundo é o que só o lado do painel resolve: não há mais ninguém do outro lado para responder.
+
+### A regra que já existia e não estava sendo cumprida
+
+*"Falha de IA nunca para a rodada"* está escrita no `CLAUDE.md` desde o começo. **Pendurar é pior
+que falhar:** falha vira linha de aviso e a fila anda; pendurar não vira nada — e foi por isso que
+ele viu a rodada parada sem mensagem de erro.
+
+Hoje são dois relógios: **60s no `fetch`** (com `AbortController`) e **75s na ponte**. O da ponte é
+maior de propósito, para o motivo específico (*"conta sem crédito"*, *"a API não respondeu em 60s"*)
+chegar à tela quando o worker está vivo, e o genérico só aparecer quando ele morreu.
+
+### Medido
+
+Com um `sendMessage` que nunca resolve, a chamada **resolve em 75s** com o motivo, em vez de ficar
+pendente. O teste prova a corrida em 30ms (o prazo é parâmetro) e trava as duas pontas: desiste no
+prazo, **e o caminho normal continua passando direto** — relógio que atrasa o caso bom seria o
+conserto errado.
 
 ## 2026-09-08 — "Casa" não é endereço, e "casada" não é Chapada (v3.3.0)
 
