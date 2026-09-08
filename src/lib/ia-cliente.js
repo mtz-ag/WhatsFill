@@ -216,7 +216,7 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
     if (!r?.ok) {
       return { acao: 'incerto', templateId: '', motivo: '', confianca: 0, aviso: r?.motivo || 'a IA não respondeu' };
     }
-    return { ...validarDecisao(r.decisao, ids), custo: r.custo, custoUsd: r.custoUsd, gastoMes: r.gastoMes, usouReserva: r.usouReserva };
+    return { ...validarDecisao(r.decisao, ids), custo: r.custo, custoUsd: r.custoUsd, gastoMes: r.gastoMes, usouReserva: r.usouReserva, motivoDoTitular: r.motivoDoTitular };
   } catch (err) {
     return { acao: 'incerto', templateId: '', motivo: '', confianca: 0, aviso: err?.message || String(err) };
   }
@@ -230,7 +230,7 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  *
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
-export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados }) {
+export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa }) {
   try {
     const r = await pedirAoWorker({
       type: MSG_IA,
@@ -263,13 +263,20 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     lista.forEach((m, i) => { if (m.de === 'nos') ultimaNossa = i; });
     const recebemosDela = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa);
     return {
-      ...validarRascunho(r.decisao, agora, { jaFalamos, recebemosDela }),
+      /**
+       * `chapa` liga a conferência de cargo e número — ver `ia.conferirChapa`. Ela **não depende
+       * de `dossieAtivo`**: o modelo tem saber próprio sobre estes nomes, e foi ele que trocou o
+       * cargo do Van Hattem na print da Nara. Trava não pode depender de uma caixa marcada.
+       */
+      ...validarRascunho(r.decisao, agora, { jaFalamos, recebemosDela, chapa }),
       custo: r.custo,
       custoUsd: r.custoUsd,
       gastoMes: r.gastoMes,
       // Quem atendeu, quando o titular falhou: a linha do Andamento tem que dizer, senão o log
-      // fala de um modelo que não é o que está escolhido na tela.
+      // fala de um modelo que não é o que está escolhido na tela. E `motivoDoTitular` é o POR QUÊ
+      // — sem ele a tela mostra "RESERVA" e ninguém sabe o que houve com a casa escolhida.
       usouReserva: r.usouReserva,
+      motivoDoTitular: r.motivoDoTitular,
     };
   } catch (err) {
     return { texto: '', avisos: [err?.message || String(err)], custo: null };
@@ -299,7 +306,7 @@ export async function conferirCidade({ regras, mensagens, candidato, origem, sub
     if (!r?.ok) {
       return { acao: 'incerto', cidade: '', motivo: '', confianca: 0, aviso: r?.motivo || 'a IA não respondeu' };
     }
-    return { ...validarCidade(r.decisao, { municipios, normalizar }), custo: r.custo, custoUsd: r.custoUsd, gastoMes: r.gastoMes, usouReserva: r.usouReserva };
+    return { ...validarCidade(r.decisao, { municipios, normalizar }), custo: r.custo, custoUsd: r.custoUsd, gastoMes: r.gastoMes, usouReserva: r.usouReserva, motivoDoTitular: r.motivoDoTitular };
   } catch (err) {
     return { acao: 'incerto', cidade: '', motivo: '', confianca: 0, aviso: err?.message || String(err) };
   }

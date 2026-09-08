@@ -9887,6 +9887,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          */
         campos: { Nome: valueNamed('Nome') || state.contact?.name || '', Cidade: valueNamed('Cidade') },
         pedirDados: pedirDadosNoRascunho,
+        /**
+         * **A chapa, para a trava de cargo e número** — print da Nara (08/09/2026).
+         *
+         * Vem do dossiê, que é a fonte, e **não passa por `dossieAtivo`**: a tabela pode não estar
+         * no prompt e o modelo escrever os nomes do mesmo jeito, do saber dele — que foi o que
+         * aconteceu. Ver `ia.conferirChapa`.
+         */
+        chapa: await gabineteLib.chapa(),
       });
     } catch (err) {
       return { ok: false, enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };
@@ -9922,11 +9930,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const usd = rascunho.custoUsd ? ` · US$ ${rascunho.custoUsd.toFixed(4)}` : '';
       const mes = rascunho.gastoMes ? ` · mês US$ ${(rascunho.gastoMes.usd || 0).toFixed(2)}` : '';
       /**
-       * **Quem atendeu, quando o titular falhou.** Sem esta marca o log fala de tokens e de custo de
-       * um modelo que não é o escolhido na tela — e a conta parece errada quando está certa.
+       * **QUEM atendeu, sempre — e POR QUE, quando não foi o titular.**
+       *
+       * Pedido dele (08/09/2026), com a print em que o log dizia só *"RESERVA: claude-haiku-4-5"*:
+       * *"preciso saber o porquê que a IA do ChatGPT não mandou mensagem antes de ir pro failsafe,
+       * tem que ficar distinto qual está mandando"*. Duas coisas faltavam, e as duas são desta
+       * linha:
+       *
+       *  1. **o motivo do titular existia e era jogado fora.** O `background.js` já o punha em
+       *     `motivoDoTitular`; `ia-cliente` não o repassava. É a família do log que mentia e do
+       *     *"a IA não escreveu nada"* que escondia a causa: **mensagem que descreve o sintoma
+       *     esconde a causa**, e a causa estava a um campo de distância.
+       *  2. **o modelo só aparecia quando falhava.** Dando certo, a linha não dizia quem tinha
+       *     atendido — e com duas casas configuradas *"qual está mandando"* vira adivinhação.
        */
-      const reserva = rascunho.usouReserva ? ` · RESERVA: ${rascunho.usouReserva}` : '';
-      registrarNaRodada('IA', 'pulado', `rascunho · ${cacheOk} · entrada ${c.entrada} · saída ${c.saida}${usd}${mes}${reserva}`);
+      const titular = state.ia.modelo || iaLib.MODELO_PADRAO;
+      const quem = rascunho.usouReserva
+        ? ` · RESERVA ${rascunho.usouReserva} (o titular ${titular} falhou: ${rascunho.motivoDoTitular || 'sem motivo'})`
+        : ` · ${titular}`;
+      registrarNaRodada('IA', 'pulado', `rascunho · ${cacheOk} · entrada ${c.entrada} · saída ${c.saida}${usd}${mes}${quem}`);
     }
 
     const bruto = String(rascunho?.texto || '').trim();
@@ -9950,7 +9972,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * campos, quem chama tem que ler os dois.
        */
       const porque = (rascunho?.avisos || []).map((a) => String(a || '').trim()).filter(Boolean).join('; ');
-      return { ok: false, enviado: false, motivo: porque || 'a IA não escreveu nada e não disse por quê' };
+      // O modelo entra no motivo pelo mesmo pedido de 08/09: com duas casas configuradas, "a IA
+      // falhou" não diz QUAL falhou — e é o que decide se o problema é a chave, o crédito ou a rota.
+      const casa = state.ia.modelo || iaLib.MODELO_PADRAO;
+      return { ok: false, enviado: false, motivo: `${casa}: ${porque || 'a IA não escreveu nada e não disse por quê'}` };
     }
 
     /**

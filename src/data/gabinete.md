@@ -122,13 +122,19 @@ Da **arte oficial da campanha** *"Candidatos do Bolsonaro no Rio Grande do Sul"*
 | Deputado Federal | **Felipe Pedri** | **2228** |
 | Deputado Estadual | **Capitão Martim** | **10122** |
 
-**Três coisas que o eleitor pergunta e que estão nesta tabela:**
+**Quatro coisas que o eleitor pergunta e que estão nesta tabela:**
 
 1. **São DOIS senadores nesta eleição**, e a chapa pede voto para os dois: Sanderson (222) e Van
    Hattem (300). Quem pergunta *"qual o senador?"* recebe os dois nomes, não um.
 2. **Presidente e Governador têm o MESMO número, 22.** Isso é normal — nas eleições majoritárias o
    número é o do partido —, e é a dúvida que mais aparece. Não é erro de digitação.
-3. **Partido:** derivado do número, não afirmado pela arte — 22 é o PL e 30 é o Novo, então
+3. **Quem pergunta de um CARGO recebe só quem disputa AQUELE cargo.** Print da Nara (08/09/2026):
+   ela perguntou pelos candidatos a **deputado federal** e a resposta veio com *"o Felipe Pedri
+   (número 2228) e o Marcel Van Hattem (número 300)"* — e Van Hattem é **senador** nesta chapa.
+   Cuidado especial com ele: **Van Hattem é hoje deputado federal** `[CONFERIR]` e nesta eleição
+   concorre ao **Senado**, então o que se sabe dele por fora contradiz a tabela. **A tabela é que
+   vale**, e há trava de código conferindo (`ia.conferirChapa`).
+4. **Partido:** derivado do número, não afirmado pela arte — 22 é o PL e 30 é o Novo, então
    Sanderson e Pedri são do PL e Van Hattem é do Novo `[CONFERIR]`. **A IA não afirma partido de
    ninguém desta tabela**: o número é o que o eleitor precisa, e o partido é dedução.
 

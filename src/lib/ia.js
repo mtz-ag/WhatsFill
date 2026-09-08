@@ -1434,7 +1434,180 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
    * pode dizer com verdade.
    */
   mandouProcurarNos: 'manda a pessoa procurar a equipe ou a coordenação — ela já está falando com a equipe',
+  /**
+   * **Cargo ou número de outro candidato da chapa** — ver `conferirChapa`, print da Nara
+   * (08/09/2026). Barra o envio automático porque é o erro que **manda o eleitor votar em outra
+   * pessoa**, e mensagem de WhatsApp não volta.
+   */
+  chapaTrocada: 'atribui a alguém da chapa um cargo ou número que não é dele — confira na colinha',
 };
+
+// ---------------------------------------------------------------------------
+// A chapa: cargo trocado e número de outro
+// ---------------------------------------------------------------------------
+
+/** Sem acento e em minúscula — a comparação é de nome próprio, e acento não é diferença. */
+const semAcentoIA = (s) =>
+  String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+/**
+ * Como cada cargo aparece ESCRITO numa mensagem. As chaves são as da tabela do dossiê.
+ *
+ * **"Deputado" sozinho não conta como cargo nenhum**, de propósito: sem o qualificador ele é
+ * ambíguo, e contá-lo como um dos dois faria a trava acusar a metade das frases certas.
+ */
+const CARGOS_ESCRITOS = [
+  { chave: 'presidente', re: /(^|[^\p{L}])(presidente|presid[êe]ncia)/iu },
+  { chave: 'governador', re: /(^|[^\p{L}])(governador|governo do estado)/iu },
+  { chave: 'senador', re: /(^|[^\p{L}])(senador|senadora|senado)(\P{L}|$)/iu },
+  { chave: 'deputado federal', re: /(deputad[oa]s?\s+federa|c[âa]mara\s+federal|c[âa]mara\s+dos\s+deputados)/iu },
+  { chave: 'deputado estadual', re: /(deputad[oa]s?\s+estadua|assembleia\s+legislativa)/iu },
+];
+
+/**
+ * Sobrenome que NÃO serve como apelido: significa outra pessoa com a mesma frequência.
+ *
+ * `bolsonaro` sozinho é o Jair na fala desta base, não o Flávio da chapa. `zucco` é o caso que o
+ * próprio dossiê nomeia como *"o erro mais provável"* — há o Luciano (governador) e o Delegado
+ * (estadual) —, e por isso ele tem guarda própria mais abaixo em vez de sair da lista: "Zucco" é
+ * o nome inteiro dele na tabela, e tirá-lo deixaria o governador sem conferência nenhuma.
+ */
+const SOBRENOME_AMBIGUO = new Set(['bolsonaro']);
+
+/** Como este nome pode aparecer escrito: o nome inteiro, e o sobrenome quando ele identifica. */
+function apelidosDaChapa(nome) {
+  const inteiro = semAcentoIA(nome).replace(/\s+/g, ' ').trim();
+  const partes = inteiro.split(' ');
+  const lista = [inteiro];
+  const ultimo = partes[partes.length - 1];
+  if (partes.length > 1 && ultimo.length >= 5 && !SOBRENOME_AMBIGUO.has(ultimo)) lista.push(ultimo);
+  return lista;
+}
+
+/** Nome que vira pedaço de expressão: o dossiê é editável, e um ponto ali quebraria a busca. */
+const escaparParaRegex = (s) => String(s).replace(/[^\p{L}\p{N}\s]/gu, (c) => `\\${c}`);
+
+/** Onde este nome aparece no texto já normalizado. Vazio quando não aparece. */
+function ondeAparece(texto, nome) {
+  const posicoes = [];
+  for (const apelido of apelidosDaChapa(nome)) {
+    const re = new RegExp(`(^|[^\\p{L}])${escaparParaRegex(apelido)}(\\P{L}|$)`, 'giu');
+    let m;
+    while ((m = re.exec(texto))) {
+      /**
+       * **O DELEGADO Zucco não é o Zucco da chapa.** O dossiê chama isto de *"o erro mais provável"*:
+       * são irmãos, do mesmo campo, na mesma eleição — um disputa o governo e o outro a reeleição
+       * a deputado estadual. Sem esta guarda, a frase certa sobre o Delegado seria acusada.
+       */
+      const antes = texto.slice(Math.max(0, m.index - 12), m.index + m[1].length);
+      if (/delegad[oa]\s*$/.test(antes)) continue;
+      const ini = m.index + m[1].length;
+      posicoes.push({ ini, fim: ini + apelido.length });
+    }
+  }
+  return posicoes;
+}
+
+/**
+ * De quem é este número — o que está ANTES dele, ou o que vem DEPOIS?
+ *
+ * **Proximidade pura não serve, e a medição pegou isto.** Em *"Para senador são dois: Sanderson
+ * (222) e Marcel Van Hattem (300)"*, o `222` está a 11 caracteres de "Sanderson" e a 6 de "Marcel"
+ * — o dono certo é o mais LONGE. O que decide é o que está no meio: `" ("` liga, `" e "` separa,
+ * porque o "e" começa outro item da lista.
+ *
+ * Por isso a ligação é por FORMA, nas duas ordens que o português usa: *"Sanderson (222)"* e
+ * *"Martim, número 10122"* (o nome antes), *"vote 22 no Zucco"* (o nome depois). Não achando
+ * nenhuma das duas, o número fica sem dono e nada é acusado — errar para o lado de não acusar.
+ */
+const LIGA_ANTES = /^[\s,;:–—-]*\(?\s*(n[uú]mero|n[ºo°]\.?)?\s*$/;
+const LIGA_DEPOIS = /^[\s,;:)–—-]*(no|na|em|para|pelo|pela|e o|e a)?\s*$/;
+
+function deQuemEEsteNumero(texto, ini, fim, mencoes) {
+  let antes = null;
+  let depois = null;
+  for (const men of mencoes) {
+    if (men.fim <= ini && ini - men.fim <= 40 && LIGA_ANTES.test(texto.slice(men.fim, ini))) {
+      if (!antes || men.fim > antes.fim) antes = men;
+    }
+    if (men.ini >= fim && men.ini - fim <= 40 && LIGA_DEPOIS.test(texto.slice(fim, men.ini))) {
+      if (!depois || men.ini < depois.ini) depois = men;
+    }
+  }
+  return (antes || depois)?.pessoa || null;
+}
+
+/**
+ * **O rascunho atribuiu a alguém da chapa um cargo ou um número que não é dele?**
+ *
+ * Print da Nara (08/09/2026): ela perguntou quem eram os candidatos a **deputado federal**, e o
+ * rascunho respondeu *"nossa chapa tem o Felipe Pedri (número 2228) e o Marcel Van Hattem (número
+ * 300)"*. Ele: *"marcou van hattem para deputado federal sendo que é senador"*. A tabela do dossiê
+ * está **certa** (Senador | Marcel Van Hattem | 300) e foi mandada inteira no prompt — o que houve
+ * é que o modelo tem um saber próprio que CONTRADIZ a chapa: Van Hattem é hoje deputado federal, e
+ * nesta eleição concorre ao Senado. Contra prior assim, instrução no prompt é pedido; isto é regra.
+ *
+ * **É a pior classe de erro deste projeto**, pior que tom ou contexto: manda o eleitor votar em
+ * outra pessoa, e a mensagem não volta. Por isso entra em `AVISOS_QUE_IMPEDEM_ENVIO`.
+ *
+ * **Duas conferências, e as duas erram para o lado de não acusar:**
+ *
+ * 1. **Cargo** — frase a frase (o mesmo recorte de `mandouProcurarNos`): se um nome da chapa
+ *    aparece numa frase que fala de um cargo, e o cargo DELE não aparece em lugar nenhum daquela
+ *    frase, é troca. Uma frase que diga os dois (*"é deputado federal hoje e agora vai ao Senado"*)
+ *    passa, porque a frase está certa.
+ * 2. **Número** — só onde o texto está claramente dando um número de urna (depois de "número",
+ *    "vote", "digite" ou entre parênteses), e o número é atribuído ao **nome mais próximo**. Sem o
+ *    "mais próximo", *"vote 22 no Zucco e 10122 no Martim"* acusaria; sem o contexto de voto,
+ *    *"o Martim estará dia 22 em Canoas"* acusaria.
+ *
+ * @param {string} texto o rascunho
+ * @param {{cargo:string,nome:string,numero:string}[]} chapa a tabela do dossiê
+ * @returns {string} o problema, em uma linha; vazio quando não há
+ */
+export function conferirChapa(texto, chapa) {
+  const lista = (chapa || []).filter((p) => p && p.nome && p.cargo);
+  if (!lista.length) return '';
+  const cru = String(texto || '');
+  if (!cru.trim()) return '';
+
+  // 1) Cargo trocado.
+  for (const frase of cru.split(/(?<=[.!?])\s+|\n+/)) {
+    const f = semAcentoIA(frase);
+    const cargosAqui = CARGOS_ESCRITOS.filter((c) => c.re.test(frase)).map((c) => c.chave);
+    if (!cargosAqui.length) continue;
+    for (const pessoa of lista) {
+      if (!ondeAparece(f, pessoa.nome).length) continue;
+      const dele = semAcentoIA(pessoa.cargo);
+      if (!cargosAqui.includes(dele)) {
+        return `${pessoa.nome} aparece como "${cargosAqui[0]}" e é ${pessoa.cargo.toLowerCase()}`;
+      }
+    }
+  }
+
+  // 2) Número de outro.
+  const f = semAcentoIA(cru);
+  const mencoes = [];
+  for (const pessoa of lista) for (const onde of ondeAparece(f, pessoa.nome)) mencoes.push({ ...onde, pessoa });
+  if (mencoes.length) {
+    for (const pessoa of lista) {
+      if (!pessoa.numero) continue;
+      const re = new RegExp(`(?<!\\d)${pessoa.numero}(?!\\d)`, 'g');
+      let m;
+      while ((m = re.exec(f))) {
+        // Só onde o texto está dando um número de urna — ver o comentário acima.
+        const antes = f.slice(Math.max(0, m.index - 18), m.index);
+        if (!/(numero|n[.ºo]\s*|vote|voto|votar|digite|\()\s*$/.test(antes)) continue;
+        const dono = deQuemEEsteNumero(f, m.index, m.index + pessoa.numero.length, mencoes);
+        if (dono && dono.numero !== pessoa.numero) {
+          return `o número ${pessoa.numero} aparece colado em ${dono.nome}, e é de ${pessoa.nome}`;
+        }
+      }
+    }
+  }
+
+  return '';
+}
 
 /** O rascunho pode sair sozinho, ou algum aviso exige que uma pessoa leia antes? */
 /**
@@ -1625,6 +1798,24 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
   if (/\b(cesta|rem[ée]dio|dinheiro|pix|emprego|vaga|passagem)\b/i.test(texto)) {
     avisos.push('cita bem ou benefício (cesta, remédio, dinheiro, emprego) — a lei eleitoral proíbe prometer');
   }
+  /**
+   * **Cargo ou número trocado na chapa** — ver `conferirChapa`.
+   *
+   * Vai em DUAS linhas de propósito: a constante é o que `rascunhoPodeSairSozinho` compara por
+   * identidade (barrar depende da igualdade exata), e a segunda diz **qual** troca é, que é o que
+   * ele precisa para conferir sem reler a colinha inteira.
+   *
+   * Sem chapa (dossiê não empacotado, tabela renomeada) não confere nada: inventar a resposta seria
+   * pior que não ter a trava.
+   */
+  if (contexto?.chapa?.length) {
+    const trocado = conferirChapa(texto, contexto.chapa);
+    if (trocado) {
+      avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.chapaTrocada);
+      avisos.push(`na chapa: ${trocado}`);
+    }
+  }
+
   if (texto.length > 1500) avisos.push('ficou longo para WhatsApp — vale cortar');
 
   /**

@@ -2652,6 +2652,36 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   linha "Cidade:" some (o valor virou vazio) e o aviso de grafia some junto, enquanto o CRM
   continua com o lixo ate a conclusao gravar. Hoje o cabecalho diz o que vai ser apagado, e o
   Andamento registra `apagando do CRM: <campo> ("<valor>")`.
+- **O MODELO TEM SABER PROPRIO QUE CONTRADIZ A CHAPA, e contra prior assim o prompt e so pedido.**
+  Print da Nara (08/09/2026): ela perguntou pelos candidatos a **deputado federal** e o rascunho
+  respondeu *"nossa chapa tem o Felipe Pedri (numero 2228) e o Marcel Van Hattem (numero 300)"* —
+  *"marcou van hattem para deputado federal sendo que e senador"*. **Medido: a tabela do dossie esta
+  CERTA e foi mandada inteira no prompt.** Van Hattem **e hoje deputado federal** e nesta eleicao
+  concorre ao Senado — o que o modelo sabe por fora briga com a tabela, e ganha. Por isso virou
+  **trava** (`ia.conferirChapa` + `AVISOS_QUE_IMPEDEM_ENVIO.chapaTrocada`) e nao so linha de dossie:
+  e o erro que **manda o eleitor votar em outra pessoa**. **A chapa sai de `gabinete.chapaDoDossie`,
+  lendo o proprio `.md`** — copia em codigo divergiria na primeira troca de nome. E a trava **nao
+  depende de `dossieAtivo`**: a tabela pode nao estar no prompt e o modelo escrever os nomes igual.
+  **Proximidade pura nao serve para dizer de quem e um numero**, e foi a medicao que pegou: em
+  *"Sanderson (222) e Marcel Van Hattem (300)"* o `222` esta a 11 caracteres de "Sanderson" e a 6 de
+  "Marcel" — o dono e o mais LONGE, porque `" ("` liga e `" e "` separa. Guardas que a medicao
+  obrigou: **"deputado" sozinho nao e cargo** (sem qualificador acusaria metade das frases certas),
+  **o Delegado Zucco nao e o Zucco da chapa** (o dossie chama isto de *"o erro mais provavel"*),
+  **`bolsonaro` nao vale como apelido** (sozinho e o Jair nesta base) e **numero fora de contexto de
+  voto e data** (*"dia 22 em Canoas"*). 14 das 19 assercoes sao falso positivo.
+- **AVISO QUE BARRA VAI EM DUAS LINHAS: a CONSTANTE e o detalhe.** `rascunhoPodeSairSozinho` compara
+  por IDENTIDADE, entao acrescentar o detalhe dentro da constante faria a trava deixar de barrar em
+  silencio. A constante barra; a segunda linha (*"na chapa: X aparece como Y e e Z"*) e o que ele le
+  sem reabrir a colinha.
+- **O FAILSAFE dizia QUE trocou de casa e nao POR QUE — e o motivo estava a um campo de distancia.**
+  Print dele (08/09/2026), com o log dizendo so `RESERVA: claude-haiku-4-5`: *"preciso saber o
+  porque que a ia do chatgpt nao mandou mensagem antes de ir pro failsafe, tem que ficar distinto
+  qual esta mandando"*. O `background.js` ja punha `motivoDoTitular` desde a 3.5; **`ia-cliente` nao
+  o repassava em nenhum dos tres caminhos**. Familia do *"a IA nao escreveu nada"* (2.90) e do log
+  que mentia sobre a cidade (03/09): **mensagem que descreve o sintoma esconde a causa.** E o modelo
+  **so aparecia quando falhava** — com duas casas configuradas, *"qual esta mandando"* vira
+  adivinhacao, entao a linha diz sempre quem atendeu. **Motivo descartado nao se reconstroi:** o
+  daquela chamada esta perdido.
 - **A IA NAO PESQUISA NA INTERNET, e o dossie e o lugar onde a pesquisa entra REVISADA.** Pergunta
   dele (07/09/2026): *"a ia nao pesquisa na internet quando falta informacoes?"*. Nao — zero
   `tools` nos tres corpos de requisicao, e e uma chamada so. O que existe e `src/data/gabinete.md`,

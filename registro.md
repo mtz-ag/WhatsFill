@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v3.7.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v3.8.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,15 +10,27 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v2.93.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.8.0**, tudo commitado e no remoto.
 
-Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**38 arquivos**),
-**64 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
-tabela. Prompt de sistema do rascunho: **5.290 tokens**, dos quais **72% é o `PADRAO_DE_ATENDIMENTO`
+Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
+**67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
+tabela. Prompt de sistema do rascunho: **5.556 tokens**, dos quais **68% é o `PADRAO_DE_ATENDIMENTO`
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
-Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75) e **dezoito em
-07/09** (2.76 a 2.93).
+Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75), **dezoito em
+07/09** (2.76 a 2.93) e **quinze em 08/09** (2.94 a 3.8).
+
+### O que mudou em 08/09, em uma linha cada
+
+| v | o que |
+|---|---|
+| 2.94–2.98 | **Cidades erradas**: frase comum não é lugar (a prova é contra os 5.571 municípios do Brasil), "quero falar com o deputado" virou resposta pronta, o dossiê ganhou **Fé**, e falar mal do PL ou do Republicanos passou a ser hostilidade. |
+| 2.99–3.0 | **"Não achei o cadastro" não é "ela não respondeu"** (a Lenir, que respondeu *Curitiba*), e **cidade de fora do RS** ganhou lista e etiqueta próprias. |
+| 3.1–3.2 | **Texto repetido byte a byte é concatenação, não alucinação**, e a transcrição decide "sem interesse" pelo caminho FORTE (o xingamento), nunca pela negativa. |
+| 3.3–3.4 | **"Casa" não é endereço e "casada" não é Chapada**; e a **IA pendurava** — não havia timeout em lugar nenhum, nem no `fetch` nem na ponte. |
+| 3.5–3.6 | **O failsafe** (falhou o titular, tenta o reserva, no service worker junto do teto) e o **botão do padrão** na Config. |
+| 3.7 | **O padrão abre em janela própria** (16px, coluna de 78 caracteres), e explicação longa nasce fechada com um "ver mais". |
+| 3.8 | **Van Hattem virou deputado federal** — trava de cargo e número da chapa; e o log passou a dizer **quem** atendeu e **por que** o titular falhou. |
 
 ### O que mudou em 07/09, em uma linha cada
 
@@ -50,7 +62,7 @@ de prompt).
 
 ### As travas do rascunho, hoje
 
-`AVISOS_QUE_IMPEDEM_ENVIO` tem **seis** entradas, e cada uma nasceu de uma mensagem que saiu para
+`AVISOS_QUE_IMPEDEM_ENVIO` tem **sete** entradas, e cada uma nasceu de uma mensagem que saiu para
 eleitor real e ele apagou. Elas barram o envio AUTOMÁTICO; o rascunho continua no campo, e ele lê.
 
 | trava | a print |
@@ -61,6 +73,7 @@ eleitor real e ele apagou. Elas barram o envio AUTOMÁTICO; o rascunho continua 
 | `afirmouTer` | *"temos adesivos e camisetas disponíveis"* — o Lucas, 07/09 |
 | `pediuReenvio` | *"deve ter dado ruim no áudio"* para quem mandou cinco áudios transcritos — 07/09 |
 | `mandouProcurarNos` | *"conversar direto com a coordenação"* — quem escreve JÁ está falando com a equipe — 07/09 |
+| `chapaTrocada` | *"deputado federal … Marcel Van Hattem"* — ele é senador na chapa — a Nara, 08/09 |
 
 **A disciplina que decide onde uma regra nova mora:** mecânico e sem julgamento vira **conserto**
 (a saudação errada, o traço eme); verificável vira **aviso** que barra o envio; o resto fica no
@@ -69,10 +82,9 @@ reescrever o texto de um aviso sem reescrever a trava a faria deixar de casar em
 
 ### Pendências que NÃO estão no código — precisam dele
 
-1. **IMPORTAR O FLUXO.** O último arquivo entregue a ele é o `fluxopadrao2.67.0.json` (06/09,
-   14:13), com **63 caixas**. O padrão de hoje tem **64** — a 2.70 acrescentou o FECHO da chegada
-   (`ja-respondemos-antes`). Nenhuma versão de 2.71 a 2.87 mexeu na estrutura do `fluxoPadrao`:
-   foram detectores, prompt e travas.
+1. **IMPORTAR O FLUXO.** O último arquivo entregue a ele é o `fluxopadrao2.96.0.json` (08/09), com
+   **67 caixas** — que é o padrão de hoje, remedido. **Nenhuma versão de 2.97 a 3.8 mexeu na
+   estrutura do `fluxoPadrao`**: foram detectores, prompt, travas e tela.
 
    > **Antes de afirmar que o quadro dele está atrasado, compare com o ARQUIVO que ele tem** — não
    > com o último que este registro menciona. Já errei nisso, e foi ele quem corrigiu mandando o
@@ -255,6 +267,89 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-08 — Van Hattem virou deputado federal, e o failsafe não dizia quem falhou (v3.8.0)
+
+Duas coisas na mesma print da **Nara** (08/09/2026), e as duas dele:
+*"marcou van hattem para deputado federal sendo que é senador"* e *"preciso saber o porquê que a IA
+do ChatGPT não mandou mensagem antes de ir pro failsafe, tem que ficar distinto qual está mandando"*.
+
+### 1. O cargo trocado
+
+**Medido antes de mexer: a tabela do dossiê está CERTA** — `| Senador | Marcel Van Hattem | 300 |` —
+e ela foi mandada inteira no prompt (a pergunta era sobre deputado federal, e `\bdeputad` é gatilho
+do dossiê). O rascunho respondeu *"nossa chapa tem o Felipe Pedri (número 2228) e o Marcel Van
+Hattem (número 300)"*: **o número está certo, o cargo não**.
+
+**Por que o prompt não bastou:** Van Hattem **é hoje deputado federal** e nesta eleição concorre ao
+Senado. O modelo tem saber próprio que CONTRADIZ a chapa, e contra prior assim instrução no prompt é
+pedido. Foi por isso que virou **trava**, e não só linha de dossiê — a mesma disciplina do relógio
+(04/09) e da saudação: *mecânico e verificável vira regra; pedido fica no prompt*.
+
+`ia.conferirChapa` faz duas conferências, e a chapa sai de `gabinete.chapaDoDossie` — **do próprio
+`.md`, nunca de uma cópia em código**: duas listas divergem na primeira vez que ele trocar um nome, e
+a cópia que ninguém olha é a que decide errado.
+
+1. **Cargo** — frase a frase (o recorte de `mandouProcurarNos`): nome da chapa numa frase que fala de
+   um cargo, sem o cargo DELE aparecer em lugar nenhum daquela frase. Uma frase que diga os dois
+   (*"é deputado federal hoje e agora vai ao Senado"*) passa, porque está certa.
+2. **Número** — só onde o texto está claramente dando número de urna (depois de "número", "vote",
+   "digite" ou entre parênteses), atribuído ao dono pela FORMA.
+
+> **Proximidade pura não serve, e foi a medição que pegou.** Em *"Para senador são dois: Sanderson
+> (222) e Marcel Van Hattem (300)"* o `222` está a **11 caracteres** de "Sanderson" e a **6** de
+> "Marcel" — o dono certo é o mais LONGE. O que decide é o que está no meio: `" ("` liga, `" e "`
+> separa, porque o "e" começa outro item da lista. Por isso a ligação é por forma, nas duas ordens
+> que o português usa: *"Sanderson (222)"* e *"vote 22 no Zucco"*.
+
+**Guardas que a medição obrigou** (14 das 19 asserções são falso positivo):
+
+- **"Deputado" sozinho não é cargo nenhum.** Sem o qualificador ele é ambíguo, e contá-lo como um
+  dos dois acusaria metade das frases certas.
+- **O Delegado Zucco não é o Zucco da chapa** — o próprio dossiê chama isto de *"o erro mais
+  provável"*: são irmãos, do mesmo campo, na mesma eleição, e um disputa a reeleição a estadual.
+- **`bolsonaro` não vale como apelido**: sozinho é o Jair na fala desta base, não o Flávio da chapa.
+  O nome inteiro continua valendo.
+- **Número fora de contexto de voto é data, hora e idade** — *"estará dia 22 em Canoas"*.
+
+Barra o **envio automático** (`AVISOS_QUE_IMPEDEM_ENVIO.chapaTrocada`, a sétima trava): é o erro que
+manda o eleitor votar em outra pessoa, e mensagem de WhatsApp não volta. Vai em **duas linhas** — a
+constante, que `rascunhoPodeSairSozinho` compara por identidade, e o detalhe (*"na chapa: Marcel Van
+Hattem aparece como 'deputado federal' e é senador"*), que é o que ele lê sem reabrir a colinha.
+
+**A trava NÃO depende de `dossieAtivo`**: a tabela pode não estar no prompt e o modelo escrever os
+nomes do mesmo jeito, do saber dele — que é exatamente o que aconteceu.
+
+No dossiê entrou o item **3** da colinha, com o caso e o aviso sobre o cargo atual dele
+(`[CONFERIR]`, porque não foi conferido em fonte primária nesta sessão).
+
+### 2. Quem está mandando, e por que o titular falhou
+
+O log dizia só `RESERVA: claude-haiku-4-5`. Duas coisas faltavam:
+
+- **O motivo do titular existia e era jogado fora.** O `background.js` já o punha em
+  `motivoDoTitular` desde a 3.5; `ia-cliente` não o repassava em nenhum dos três caminhos. É a
+  família do *"a IA não escreveu nada"* (2.90) e do log que mentia sobre a cidade (03/09):
+  **mensagem que descreve o sintoma esconde a causa**, e a causa estava a um campo de distância.
+- **O modelo só aparecia quando falhava.** Dando certo, a linha não dizia quem tinha atendido — e
+  com duas casas configuradas *"qual está mandando"* vira adivinhação.
+
+Agora a linha do Andamento diz sempre `· <modelo>`, e quando o reserva salvou diz
+`· RESERVA <reserva> (o titular <titular> falhou: <motivo>)`. O caminho da falha total também passou
+a nomear a casa.
+
+**O motivo daquela chamada não dá para reconstruir** — ele foi descartado. Da próxima aparece, e
+`atender` já distingue o caso mais provável de quem acabou de configurar o ChatGPT: *"sem a chave da
+OpenAI — preencha na aba Config"*.
+
+### Arquivos
+
+`src/lib/ia.js` (`conferirChapa`, `deQuemEEsteNumero`, `chapaTrocada`), `src/lib/gabinete.js`
+(`chapaDoDossie`, `chapa`), `src/lib/ia-cliente.js` (`chapa` e `motivoDoTitular` nos três caminhos),
+`src/panel/panel.js` (passa a chapa; a linha do log), `src/data/gabinete.md`, `tests/ia.test.mjs`
+(**23 asserções novas**). 15 suítes verdes, verificadores limpos (40 arquivos).
+
 ---
 
 ## 2026-09-08 — O padrão em janela própria, e a Config parou de ser um muro (v3.7.0)

@@ -11,6 +11,7 @@ import { check, grupo, fim } from './_harness.mjs';
 import { PADRAO_DE_ATENDIMENTO } from '../src/lib/atendimento.js';
 import { PROVEDORES, pedirAoWorker } from '../src/lib/ia-cliente.js';
 import { paraHtml } from '../src/padrao.js';
+import { chapaDoDossie } from '../src/lib/gabinete.js';
 import {
   montarSistemaRascunho,
   montarContatoRascunho,
@@ -18,6 +19,7 @@ import {
   saudacaoDeAgora,
   montarRequisicaoRascunho,
   revisarRascunho,
+  conferirChapa,
   rascunhoPodeSairSozinho,
   AVISOS_QUE_IMPEDEM_ENVIO,
   validarRascunho,
@@ -1395,6 +1397,114 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   /** O `<` do texto dele nao pode virar tag. */
   check(!/<script/i.test(html), 'nada de script');
   check(paraHtml('um <b>teste</b> aqui').includes('&lt;b&gt;'), 'o HTML do texto e escapado');
+}
+
+/**
+ * A CHAPA: cargo trocado e numero de outro — print da Nara (08/09/2026).
+ *
+ * Ela perguntou quem eram os candidatos a **deputado federal** e o rascunho respondeu *"nossa chapa
+ * tem o Felipe Pedri (numero 2228) e o Marcel Van Hattem (numero 300)"*. Ele: *"marcou van hattem
+ * para deputado federal sendo que e senador"*.
+ *
+ * **A tabela do dossie esta certa e foi mandada inteira no prompt.** O que houve e que o modelo tem
+ * saber proprio que CONTRADIZ a chapa — Van Hattem e hoje deputado federal e nesta eleicao concorre
+ * ao Senado. Contra prior assim, instrucao no prompt e pedido; isto e regra.
+ *
+ * **Onde mora o risco desta trava e o falso positivo**, como em toda deteccao deste projeto: acusar
+ * a frase certa faz a rodada parar em quem estava certo. Por isso a maior parte das assercoes
+ * abaixo e disso.
+ */
+{
+  grupo('a chapa: cargo trocado e numero de outro (08/09)');
+
+  const chapa = [
+    { cargo: 'Presidente', nome: 'Flavio Bolsonaro', numero: '22' },
+    { cargo: 'Governador', nome: 'Zucco', numero: '22' },
+    { cargo: 'Senador', nome: 'Sanderson', numero: '222' },
+    { cargo: 'Senador', nome: 'Marcel Van Hattem', numero: '300' },
+    { cargo: 'Deputado Federal', nome: 'Felipe Pedri', numero: '2228' },
+    { cargo: 'Deputado Estadual', nome: 'Capitao Martim', numero: '10122' },
+  ];
+  const acusa = (t) => !!conferirChapa(t, chapa);
+
+  // O caso real, palavra por palavra.
+  check(
+    acusa('Boa tarde! Sobre deputado federal, nossa chapa tem o Felipe Pedri (numero 2228) e o Marcel Van Hattem (numero 300). Ambos sao fortes candidatos nesta eleicao.'),
+    'o caso da Nara: Van Hattem como deputado federal'
+  );
+
+  // Cargo trocado, nas outras direcoes.
+  check(acusa('Para deputado federal temos o Capitao Martim.'), 'Martim como federal');
+  check(acusa('Para governador o nosso candidato e o Sanderson.'), 'Sanderson como governador');
+  check(acusa('O Felipe Pedri e candidato a senador.'), 'Pedri como senador');
+
+  // Numero de outro.
+  check(acusa('O Capitao Martim, numero 2228, e o nosso candidato.'), 'o numero do Pedri colado no Martim');
+  check(acusa('Vote 300 no Capitao Martim.'), 'o numero do Van Hattem no Martim');
+
+  /**
+   * FALSOS POSITIVOS — e onde mora o risco.
+   */
+  check(!acusa('Para deputado federal a nossa chapa tem o Felipe Pedri, numero 2228.'), 'o cargo certo passa');
+  check(!acusa('Para deputado estadual temos o Capitao Martim, numero 10122.'), 'o estadual certo passa');
+  check(!acusa('O Zucco e candidato a governador, numero 22.'), 'o governador certo passa');
+
+  /**
+   * **Proximidade pura nao serve, e foi a medicao que pegou.** Aqui o `222` esta a 11 caracteres de
+   * "Sanderson" e a 6 de "Marcel" — o dono certo e o mais LONGE. O que decide e o que esta no meio:
+   * `" ("` liga, `" e "` separa.
+   */
+  check(!acusa('Para senador sao dois: Sanderson (222) e Marcel Van Hattem (300).'), 'os dois senadores, cada um com o seu numero');
+  check(!acusa('Vote 22 no Zucco e 10122 no Capitao Martim.'), 'a lista com o nome DEPOIS do numero');
+  check(
+    !acusa('Flavio Bolsonaro 22, Zucco 22, Sanderson 222, Marcel Van Hattem 300, Felipe Pedri 2228 e Capitao Martim 10122.'),
+    'a chapa inteira, em ordem, passa'
+  );
+
+  /** Frase verdadeira sobre o cargo de HOJE: a frase diz os dois cargos, entao esta certa. */
+  check(!acusa('O Van Hattem e deputado federal hoje e nesta eleicao concorre ao Senado.'), 'o cargo de hoje mais o que ele disputa');
+
+  /**
+   * **O DELEGADO Zucco nao e o Zucco da chapa** — o proprio dossie chama isto de *"o erro mais
+   * provavel"*: sao irmaos, do mesmo campo, na mesma eleicao, e um disputa a reeleicao a estadual.
+   */
+  check(!acusa('O Delegado Zucco disputa a reeleicao a deputado estadual.'), 'o Delegado Zucco nao e o candidato a governador');
+
+  /** "Deputado" sozinho nao e cargo: sem o qualificador, conta-lo acusaria metade das frases certas. */
+  check(!acusa('O deputado Capitao Martim vai estar la.'), '"deputado" sem qualificar nao decide nada');
+
+  /** Numero fora de contexto de voto e data, hora, idade — nao e urna. */
+  check(!acusa('O Capitao Martim estara dia 22 em Canoas.'), 'dia 22 na agenda nao e numero de urna');
+
+  check(!acusa('O Capitao Martim agradece o seu apoio.'), 'sem cargo e sem numero, nada a conferir');
+  check(!acusa('Presidente e governador tem o mesmo numero: 22.'), 'o 22 repetido da chapa nao e troca');
+
+  /** Sem chapa nao ha o que conferir — inventar a resposta seria pior que nao ter a trava. */
+  check(!conferirChapa('Para deputado federal temos o Capitao Martim.', []), 'sem chapa, nao acusa nada');
+
+  /**
+   * A trava BARRA O ENVIO AUTOMATICO: e o erro que manda o eleitor votar em outra pessoa, e
+   * mensagem de WhatsApp nao volta.
+   */
+  const r = revisarRascunho(
+    'Sobre deputado federal, temos o Marcel Van Hattem.',
+    new Date('2026-09-08T14:00:00'),
+    { chapa }
+  );
+  check(r.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.chapaTrocada), 'o aviso entra na revisao do rascunho');
+  check(!rascunhoPodeSairSozinho(r.avisos), 'e o rascunho nao sai sozinho');
+  check(r.avisos.some((a) => /na chapa: /.test(a)), 'e a segunda linha diz QUAL e a troca');
+
+  /**
+   * **A chapa sai do dossie, e nao de uma copia em codigo.** Duas listas separadas divergem na
+   * primeira vez que ele trocar um nome — e a copia que ninguem olha e a que decide errado.
+   */
+  const doArquivo = chapaDoDossie(
+    '| cargo | nome | numero |\n|---|---|---|\n| Senador | **Marcel Van Hattem** | **300** |\n\noutra coisa'
+  );
+  check(doArquivo.length === 1, 'a tabela do dossie e lida');
+  check(doArquivo[0].nome === 'Marcel Van Hattem' && doArquivo[0].numero === '300', 'com nome e numero limpos');
+  check(chapaDoDossie('nenhuma tabela aqui').length === 0, 'sem tabela, lista vazia');
 }
 
 fim();

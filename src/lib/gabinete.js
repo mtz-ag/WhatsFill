@@ -175,3 +175,41 @@ export async function estado() {
     caracteresTextarea: String(cfg?.gabinete || '').trim().length,
   };
 }
+
+// ---------------------------------------------------------------------------
+// A chapa, como DADO
+// ---------------------------------------------------------------------------
+
+/**
+ * A tabela da "colinha" lida do próprio dossiê — cargo, nome e número, um por linha.
+ *
+ * **Por que sai daqui e não de uma constante:** o arquivo é a fonte, tem `git diff` e é ele que vai
+ * no prompt. Uma segunda cópia em código divergiria na primeira vez que ele trocasse um nome, e a
+ * cópia que ninguém olha é a que decide errado — é a armadilha registrada quatro vezes no
+ * `CLAUDE.md` (duas listas separadas divergem).
+ *
+ * Falha em achar a tabela devolve lista vazia, e quem usa trata vazio como "não confere nada": sem
+ * chapa não há como saber que um cargo está trocado, e inventar a resposta seria pior.
+ */
+export function chapaDoDossie(texto) {
+  const linhas = String(texto || '').split('\n');
+  const cabecalho = linhas.findIndex((l) => /^\|\s*cargo\s*\|\s*nome\s*\|\s*n[úu]mero\s*\|/i.test(l.trim()));
+  if (cabecalho < 0) return [];
+
+  const fora = [];
+  for (let i = cabecalho + 2; i < linhas.length; i++) {
+    const linha = linhas[i].trim();
+    if (!linha.startsWith('|')) break; // a tabela acabou
+    const celulas = linha.split('|').slice(1, -1).map((c) => c.replace(/\*/g, '').trim());
+    if (celulas.length < 3) continue;
+    const [cargo, nome, numero] = celulas;
+    if (!cargo || !nome) continue;
+    fora.push({ cargo, nome, numero: (String(numero).match(/\d+/) || [''])[0] });
+  }
+  return fora;
+}
+
+/** A chapa do arquivo empacotado. Não depende de `dossieAtivo` — ver `ia.conferirChapa`. */
+export async function chapa() {
+  return chapaDoDossie(await lerArquivo());
+}
