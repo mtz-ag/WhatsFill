@@ -2673,6 +2673,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   com zero. A IA pode dizer o numero de UM candidato perguntado diretamente (dado confirmado, esta
   na tabela); montar a chapa inteira e cartao. **O modelo da colinha e dele** (*"vou criar um modelo
   de mensagem pra ela"*).
+- **A PROMESSA MUDA DE PESSOA, NAO DE NATUREZA — e a lista so conhecia a primeira.** Print da Jonice
+  (08/09/2026), com a pergunta dele *"esse erro de confirmar algo ja foi resolvido?"*: a mensagem
+  dizia *"a gente consegue providenciar"* e, medido, tinha **zero avisos**. `PROMESSA` conhecia
+  `vou|vamos|posso|podemos|consigo|conseguimos` — a primeira pessoa. Entraram a impessoal (*"da para
+  providenciar"*) e o sujeito de fora (*"a equipe manda"*, *"eles enviam"*). E a irma da voz dela
+  (*"voce deve receber"*, a Sandra, 06/09). **E a regra dele para o caso, que era o que faltava:**
+  *"iremos repassar para a equipe responsavel dos materiais apos fornecer o endereco, e eles entram
+  em contato sobre o que tem ou nao tem e se podem entregar"* — as regras anteriores diziam o que
+  NAO afirmar e o rascunho preenchia o vazio sozinho. **A unica promessa que cabe e a de REPASSAR.**
+  Fronteira com a regra 7: mandar a pessoa PROCURAR a equipe e devolve-la para onde ja esta; dizer
+  que NOS repassamos e o mandato fazendo o proprio trabalho. **Trava que fecha o caminho certo junto
+  com o errado e defeito que se paga sem perceber** — o teste exige as quatro variantes do caminho
+  certo passando.
 - **TEXTO REPETIDO BYTE A BYTE NAO E ALUCINACAO: E CONCATENACAO.** Print do Luiz Cavalheiro
   (08/09/2026), com o bloco `Nome , Cidade` saindo DUAS vezes na mesma mensagem e a pergunta dele —
   *"alucinou?"*. **Modelo nao repete um paragrafo identico**; o que repete e codigo que anexa. A

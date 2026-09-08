@@ -1051,6 +1051,57 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
   check(p.includes('agradeça o apoio'), 'e diz o que fazer no lugar: agradecer o apoio');
 }
 
+/**
+ * **A promessa em TERCEIRA PESSOA passava batido** — print da Jonice Terezinha (08/09/2026), com a
+ * pergunta dele: *"esse erro de confirmar algo ja foi resolvido?"*.
+ *
+ * A mensagem que saiu dizia *"a gente consegue providenciar"*, e a resposta medida era **nao**: zero
+ * avisos, sairia sozinha. A lista so conhecia a primeira pessoa (`vou`, `vamos`, `posso`,
+ * `consigo`). E a licao da voz dela (a Sandra, 06/09) outra vez — **a promessa muda de pessoa, nao
+ * de natureza**.
+ *
+ * E a regra dele para o caso: *"iremos repassar para a equipe responsavel dos materiais apos
+ * fornecer o endereco, e eles entram em contato sobre o que tem ou nao tem e se podem entregar"*.
+ * **A unica promessa que cabe e a de REPASSAR** — e o teste exige que ela continue passando, senao
+ * a trava fecharia o caminho certo junto com o errado.
+ */
+{
+  grupo('promessa de material em terceira pessoa (a Jonice, 08/09)');
+
+  const agora = new Date('2026-09-08T19:00:00Z');
+  const rev = (t) => revisarRascunho(t, agora, { recebemosDela: true });
+
+  const saiu =
+    'Boa tarde! Sobre o material do Bolsonaro para o carro - a gente consegue providenciar, mas ' +
+    'preciso do seu endereço em Cachoeira do Sul para a gente ver o que é possível enviar.';
+  check(rascunhoPodeSairSozinho(rev(saiu).avisos) === false, 'o texto que saiu agora e barrado');
+
+  for (const t of [
+    'A gente consegue providenciar o material para você.',
+    'A equipe manda o boné para o seu endereço.',
+    'Dá para providenciar, é só me passar o endereço.',
+    'Eles enviam o adesivo assim que você mandar a rua.',
+  ]) {
+    check(rascunhoPodeSairSozinho(rev(t).avisos) === false, `barra tambem: "${t}"`);
+  }
+
+  /** **O caminho CERTO tem que continuar passando** — e e o que ele ditou. */
+  for (const t of [
+    'Me passe seu endereço completo que eu repasso para a equipe responsável pelos materiais. Eles entram em contato sobre o que há disponível e sobre a entrega.',
+    'Me diga seu endereço completo que iremos repassar para a equipe responsável pelos materiais.',
+    'A equipe responsável pelo material entra em contato com você sobre disponibilidade e entrega.',
+    'Me passe rua, número, bairro e cidade que a equipe dos materiais retorna sobre o que é possível.',
+  ]) {
+    check(rascunhoPodeSairSozinho(rev(t).avisos), `o caminho certo passa: "${t.slice(0, 60)}…"`);
+  }
+
+  /** E o prompt diz o que fazer, e nao so o que nao dizer. */
+  const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(p.includes('EQUIPE RESPONSÁVEL PELOS MATERIAIS'), 'o prompt nomeia a equipe dos materiais');
+  check(p.includes('PEÇA O ENDEREÇO COMPLETO'), 'e manda pedir o endereco completo');
+  check(p.includes('promessa que você pode fazer é a de REPASSAR'), 'e diz qual e a unica promessa que cabe');
+}
+
 grupo('as duas casas: o provedor sai do NOME DO MODELO');
 {
   check(provedorDoModelo('gpt-5') === PROVEDOR_OPENAI, 'gpt-5 e da OpenAI');

@@ -903,9 +903,27 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      */
     '   MATERIAL é o assunto em que você NUNCA confirma nada — nem que existe, nem que sai, nem',
     '   quando. Duas situações, e elas se respondem diferente:',
+    /**
+     * **O caminho do material, ditado por ele em 08/09/2026** (print da Jonice Terezinha):
+     * *"nessas situações o certo é falar que iremos repassar para a equipe responsável dos
+     * materiais após fornecer o endereço, e eles entram em contato sobre o que tem ou não tem de
+     * material e se podem entregar"*.
+     *
+     * É o que faltava: as regras anteriores diziam o que NÃO afirmar, e o rascunho preenchia o vazio
+     * com *"a gente consegue providenciar"*. **A única promessa que cabe aqui é a de REPASSAR** —
+     * quem sabe o que existe e o que dá para entregar é aquela equipe, e é ela que responde.
+     *
+     * Note a diferença para a regra 7: mandar a pessoa **procurar** a equipe é devolvê-la para onde
+     * ela já está; dizer que **nós** repassamos é o mandato fazendo o próprio trabalho.
+     */
     '   (a) ela DISSE qual item quer (boné, adesivo, camiseta, bandeira, panfleto): não pergunte de',
-    '       novo o que ela quer. Diga que a mensagem chegou e peça o que falta para o pessoal ver',
-    '       (cidade, endereço) — sem dizer que temos e sem dizer que ela vai receber.',
+    '       novo o que ela quer. PEÇA O ENDEREÇO COMPLETO e diga que, com ele, o pedido vai para a',
+    '       EQUIPE RESPONSÁVEL PELOS MATERIAIS — e que é ELA quem entra em contato sobre o que há e',
+    '       sobre a entrega.',
+    '       **A única promessa que você pode fazer é a de REPASSAR.** Nunca diga que temos o item,',
+    '       que "a gente consegue", que "dá para providenciar" nem que ela vai receber: quem sabe o',
+    '       que existe e o que dá para entregar é aquela equipe.',
+    '       E não mande ela PROCURAR a equipe (regra 7) — quem repassa somos nós.',
     '   (b) ela falou em "material" sem dizer qual: PERGUNTE que tipo de material ela precisa,',
     '       antes de qualquer outra coisa. Não ofereça uma lista de itens: você não sabe o que há.',
     /**
@@ -1584,6 +1602,22 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
     /\b(j[áa]\s+)?est[áa]\s+a\s+caminho\b/i,
     /\b(em\s+breve|nos\s+pr[óo]ximos\s+dias)\b[^.!?]{0,40}\b(receber|chegar|entregar|mandar|enviar)/i,
     /\b(estou|estamos)\s+providenciando\b/i,
+    /**
+     * **A promessa em TERCEIRA PESSOA e na impessoal** — print da Jonice Terezinha (08/09/2026),
+     * com a pergunta dele: *"esse erro de confirmar algo já foi resolvido?"*.
+     *
+     * A mensagem que saiu era *"Sobre o material do Bolsonaro para o carro — **a gente consegue
+     * providenciar**, mas preciso do seu endereço"*. Medido: **zero avisos**, sairia sozinha. O
+     * padrão de cima só conhece a primeira pessoa (`vou`, `vamos`, `posso`, `consigo`), e a forma
+     * que saiu foi *"a gente consegue"*.
+     *
+     * É a mesma lição da voz dela (a Sandra, 06/09): **a promessa muda de pessoa, não de natureza.**
+     * Aqui entram a impessoal (*"dá para providenciar"*) e o sujeito de fora (*"a equipe manda"*,
+     * *"eles enviam"*) — este último é o que a regra dele de 08/09 proíbe de propósito: quem diz o
+     * que a equipe dos materiais vai fazer é a equipe dos materiais.
+     */
+    /\b(a\s+gente|voc[êe]s|eles|elas|a\s+equipe|o\s+pessoal)\s+(consegue[m]?|arruma[m]?|providencia[m]?|manda[m]?|envia[m]?|d[áa]|dão)\b[^.!?]{0,30}\b(mandar|enviar|dar|arrumar|conseguir|providenciar|material|adesivo|camiseta|bon[ée]|bandeira)?/i,
+    /\bd[áa]\s+(pra|para)\s+(mandar|enviar|arrumar|conseguir|providenciar)\b/i,
   ];
   if (PROMESSA.some((re) => re.test(texto))) {
     avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.promessa);

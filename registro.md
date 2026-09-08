@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v3.1.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v3.2.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -256,6 +256,44 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
 ---
+
+## 2026-09-08 — "A gente consegue providenciar" — a promessa em terceira pessoa (v3.2.0)
+
+Print da **Jonice Terezinha**, e a pergunta dele: ***"esse erro de confirmar algo já foi
+resolvido?"***. A mensagem que saiu em 07/09 dizia:
+
+> *"Sobre o material do Bolsonaro para o carro — **a gente consegue providenciar**, mas preciso do
+> seu endereço em Cachoeira do Sul para a gente ver o que é possível enviar."*
+
+**Medido, e a resposta era NÃO: zero avisos, sairia sozinha.** A lista da promessa só conhecia a
+primeira pessoa (`vou`, `vamos`, `posso`, `consigo`), e a forma que saiu foi *"a gente consegue"*.
+
+É a lição da voz dela (a Sandra, 06/09) outra vez: **a promessa muda de pessoa, não de natureza.**
+Entraram a impessoal (*"dá para providenciar"*) e o sujeito de fora (*"a equipe manda"*, *"eles
+enviam"*).
+
+### E a regra que ele ditou junto, que é o que faltava
+
+> *"nessas situações o certo é falar que iremos repassar para a equipe responsável dos materiais
+> após fornecer o endereço, e eles entram em contato sobre o que tem ou não tem de material e se
+> podem entregar"*
+
+As regras anteriores diziam o que **não** afirmar, e o rascunho preenchia o vazio sozinho — foi
+assim que nasceu o *"a gente consegue providenciar"*. Agora o prompt diz o caminho: **peça o
+endereço completo, diga que o pedido vai para a equipe responsável pelos materiais, e que é ELA quem
+entra em contato** sobre o que há e sobre a entrega. **A única promessa que cabe é a de repassar.**
+
+Note a fronteira com a regra 7 (07/09): mandar a pessoa **procurar** a equipe é devolvê-la para onde
+ela já está; dizer que **nós** repassamos é o mandato fazendo o próprio trabalho. As duas coisas
+convivem, e o prompt diz isso com todas as letras.
+
+### Medido nos dois sentidos
+
+O texto que saiu está **barrado**, e mais quatro formas da mesma promessa. E as **quatro variantes
+do caminho certo passam limpas** — a trava não podia fechar o caminho certo junto com o errado, que
+é o defeito que se paga sem perceber.
+
+Prompt de 5.452 → **5.556 tokens**, ainda acima do mínimo de cache do Haiku.
 
 ## 2026-09-08 — O pedido de dados saiu DUAS vezes na mesma mensagem (v3.1.0)
 
