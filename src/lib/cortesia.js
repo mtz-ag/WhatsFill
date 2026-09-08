@@ -358,6 +358,28 @@ export function pedeRespostaPessoal(msg) {
    */
   const temTranscricao = !!msg?.transcrito && !!texto.trim();
 
+  /**
+   * **Não há o que abrir quando foi a PLATAFORMA que avisou que não deu.**
+   *
+   * Anotação do Clovis (07/09/2026, v2.93): a conversa inteira era
+   * *"*Atenção:* o tipo da mensagem enviada pelo contato não é suportado."*, e a caixa recomendou a
+   * tecla 6 dizendo *"mandou um áudio — só dá para responder depois de abrir"*. Ele: *"mandar
+   * mensagem do momento"*.
+   *
+   * O ruído da plataforma **já era** reconhecido — `prepararEntrantes` esvazia o texto e marca
+   * `sistema: true` (o conserto do Carlos e da Vera, 02/09). O que faltava era esta metade: a
+   * mensagem continua carregando o `tipo`, e o teste de formato disparava por ele.
+   *
+   * **E o motivo alegado era falso na tela**, que é a mesma razão do conserto do áudio transcrito
+   * três parágrafos acima: não existe áudio para abrir — a plataforma disse que **não conseguiu
+   * entregar** a mensagem. Medido no fluxo padrão: com este sinal falso, o caso desce para
+   * `contexto-de-outro-dia` e recebe a **tecla 5**, que é o que ele pediu.
+   *
+   * `sistema` não some do resto: a mensagem continua na lista com o tipo dela, e quem quiser
+   * saber que houve algo ali continua vendo — o que ela não é é um arquivo esperando alguém abrir.
+   */
+  if (msg?.sistema) return null;
+
   if (TIPOS_QUE_PEDEM_VOCE.has(tipo) && !temTranscricao) {
     const comoChama = NOME_DO_TIPO[tipo] || 'um arquivo';
     return { motivo: `mandou ${comoChama} — só dá para responder depois de abrir` };
@@ -962,7 +984,27 @@ export function confirmaPresenca(entrantes, nossaUltimaAt) {
     /(^|[^\p{L}])(vou|irei|vamos)\s+sim(\s|$|!|,|\.)/u,
     /(^|[^\p{L}])(vou|irei|vamos)\s+(estar|comparecer|participar|ao\s+evento|na\s+agenda)/u,
     /(^|[^\p{L}])(vou|irei|vamos)\s+(la|ai)(\s|$|!|,|\.)/u,
-    /(^|[^\p{L}])(estarei|estaremos)(\s+(la|ai|presente|junto|com\s+voces))?(\s|$|!|,|\.)/u,
+    /**
+     * **"Estaremos" SOZINHO saiu daqui, e é a QUARTA vez que esta lista aprende a mesma coisa.**
+     *
+     * Anotação da Geci (06/09/2026): *"Tamo junto estaremos de mãos dadas e venceremos amém"* — e
+     * a rodada a PULOU como quem confirma presença em evento. Ele: *"não é evento, olhar os termos,
+     * provavelmente estão muito vagos e sendo aplicados em contextos demais"*.
+     *
+     * O padrão tinha o qualificador em grupo OPCIONAL (`(\s+(la|ai|presente|junto|com voces))?`),
+     * então o verbo sozinho bastava — e nesta base *"estaremos juntos"*, *"estaremos firmes"* e
+     * *"estaremos de mãos dadas"* são grito de campanha, não resposta ao convite.
+     *
+     * Antes dela saíram **"vamos"/"vou"** (02/09, a Eliane e a Mary), **"confirmado"** (04/09, a
+     * Nice) e **"pode contar comigo"** (04/09, o Guilherme). A regra que fica, e que já está escrita
+     * três vezes acima: **vocabulário de campanha não é resposta ao convite.**
+     *
+     * **`junto` saiu junto dos qualificadores**, de propósito: *"estarei junto"* é a mesma frase que
+     * `EXPRESSOES_DE_APOIO` reconhece como apoio, e foi por isso que o "pode contar comigo" foi
+     * removido daqui. O que fica é o que só cabe num evento — um lugar, ou a presença dita.
+     */
+    /^\s*(estarei|estaremos)\s*[!.]*\s*$/u,
+    /(^|[^\p{L}])(estarei|estaremos)\s+(la|ai|presente|presentes|com\s+voces|no\s+evento|na\s+agenda)(\s|$|!|,|\.)/u,
     /**
      * **"Confirmado" sozinho NÃO é confirmação de presença** — anotação da Nice (04/09/2026).
      *

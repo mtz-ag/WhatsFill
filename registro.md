@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v2.94.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v2.95.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -256,6 +256,68 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
 ---
+
+## 2026-09-08 — Dois sinais disparando onde não deviam (v2.95.0)
+
+Do relatório de observações que ele mandou (7 anotações, 5 regras). **Antes de mexer, medi as sete
+contra o código de hoje** — a disciplina registrada de comparar a `v` da anotação com o que já está
+consertado. Três já estavam resolvidas: a Elisabeth (2.67, o tempo vencendo o anúncio reconhecido),
+a Luiza, e o rascunho do Erenato, que hoje não sairia sozinho (levanta *"afirma que alguém já
+providenciou algo"*). Estas duas continuavam.
+
+### A Geci: "estaremos" sozinho não é presença — a QUARTA vez desta lista
+
+Ela escreveu *"Tamo junto estaremos de mãos dadas e venceremos amém"* e a rodada a **pulou** como
+quem confirma presença em evento. Ele: *"não é evento, olhar os termos, provavelmente estão muito
+vagos e sendo aplicados em contextos demais"*.
+
+O padrão tinha o qualificador num grupo **opcional**
+(`(estarei|estaremos)(\s+(la|ai|presente|junto|com voces))?`), então o verbo sozinho bastava — e
+nesta base *"estaremos juntos"*, *"estaremos firmes"* e *"estaremos de mãos dadas"* são grito de
+campanha.
+
+Antes dela saíram **"vamos"/"vou"** (02/09), **"confirmado"** (04/09) e **"pode contar comigo"**
+(04/09). **A regra que fica, escrita agora pela quarta vez: vocabulário de campanha não é resposta
+ao convite.** E `junto` saiu dos qualificadores junto, de propósito — *"estarei junto"* é a mesma
+frase que `EXPRESSOES_DE_APOIO` reconhece, e foi por isso que o "pode contar comigo" foi removido.
+
+### O Clovis: aviso da plataforma não é um arquivo esperando alguém abrir
+
+A conversa inteira era *"*Atenção:* o tipo da mensagem enviada pelo contato não é suportado."*, e a
+caixa recomendou a tecla 6 dizendo *"mandou um áudio — só dá para responder depois de abrir"*. Ele:
+*"mandar mensagem do momento"*.
+
+**O ruído da plataforma já era reconhecido** — `prepararEntrantes` esvazia o texto e marca
+`sistema: true` desde 02/09 (o Carlos e a Vera). O que faltava era a outra metade: a mensagem
+continua carregando o `tipo`, e o teste de formato disparava por ele.
+
+**E o motivo alegado era falso na tela** — a mesma razão do conserto do áudio transcrito (01/09):
+não existe áudio para abrir, a plataforma disse que **não conseguiu entregar** a mensagem.
+
+### Medido, antes e depois
+
+| caso | antes | depois |
+|---|---|---|
+| Geci | `confirmou-presenca-evento` → tecla 2 (pula) | `contexto-de-outro-dia` → **tecla 5** |
+| Clovis | `ultima-pede-resposta-pessoal` → tecla 6 | `contexto-de-outro-dia` → **tecla 5** |
+
+Os dois caem na mensagem do momento, que é o que ele pediu para o Clovis e o desfecho natural para
+a Geci. **O que a poda NÃO pode levar junto** está no teste: *"Estarei lá"*, *"Estarei presente"*,
+*"Estaremos com vocês no evento"* e o verbo como mensagem inteira continuam sendo presença; áudio de
+verdade sem transcrição e arquivo continuam pedindo gente.
+
+### As duas que sobraram do relatório, e por quê
+
+- **Joel** (*"não pegou cidade"*): medido, o parser não devolve nada de *"Joel cezimbra Duarte
+  VIAMAO Augusta fiel"* — nem cidade nem nome. Duas guardas somadas, as duas por desenho: sem pista,
+  a cidade só conta em mensagem curta (≤30 caracteres, e esta tem 39); e no modo generoso a sobra
+  precisa parecer nome de gente, e sobram cinco palavras contra o limite de quatro. **Conserto tem
+  risco de parser e fica para uma passada própria.**
+- **ADAHYR** (*"é só uma mensagem de apoio"*): medido, `soExpressaApoio` dá **null** — ela passou um
+  telefone e falou de material de propaganda, então não é só apoio. E **mesmo que desse `sim`, a
+  tecla continuaria 6**, porque `ultima-pede-resposta-pessoal` fica acima do apoio. Virar
+  agradecimento exige escolha DELE: alargar o detector, ou mudar a ordem — e mudar a ordem tira da
+  mesa dele todo áudio de quem está pedindo socorro.
 
 ## 2026-09-08 — "Não é lugar" não é o mesmo que "não reconheço" (v2.94.0)
 

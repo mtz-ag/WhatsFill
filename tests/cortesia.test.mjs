@@ -2139,4 +2139,63 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   ]), 'gravado offline e entregue junto: o ts separa, e nao acusa');
 }
 
+/**
+ * **"Estaremos" sozinho nao e confirmacao de presenca — a anotacao da Geci (06/09/2026).**
+ *
+ * *"Tamo junto estaremos de maos dadas e venceremos amem"* fez a rodada PULA-LA como quem confirma
+ * presenca em evento. Ele: *"nao e evento, olhar os termos, provavelmente estao muito vagos e sendo
+ * aplicados em contextos demais"*.
+ *
+ * O qualificador estava num grupo OPCIONAL, entao o verbo sozinho bastava. **E a QUARTA vez que
+ * esta lista aprende a mesma coisa**, depois de "vamos"/"vou" (02/09), "confirmado" (04/09) e
+ * "pode contar comigo" (04/09): vocabulario de campanha nao e resposta ao convite.
+ */
+{
+  grupo('"estaremos" sozinho nao e presenca (a Geci, 06/09)');
+
+  const msg = (t) => [{ texto: t, tipo: 'TEXT', at: 1 }];
+  check(confirmaPresenca(msg('Tamo junto estaremos de maos dadas e venceremos amem'), null) === null,
+    'a frase da print deixa de contar como presenca confirmada');
+  for (const t of [
+    'Estaremos juntos nessa luta',
+    'Estaremos firmes ate o fim',
+    'Estarei sempre torcendo por voces',
+  ]) {
+    check(confirmaPresenca(msg(t), null) === null, `e tambem: "${t}"`);
+  }
+
+  /** O que a poda NAO pode levar junto: a resposta de verdade ao convite. */
+  for (const t of ['Estarei la!', 'Estaremos la sim', 'Estarei presente', 'Estarei', 'Estaremos com voces no evento']) {
+    check(confirmaPresenca(msg(t), null) === 'sim', `continua sendo presenca: "${t}"`);
+  }
+  check(confirmaPresenca(msg('Nao vou poder ir'), null) === 'nao', 'e a recusa continua sendo recusa');
+}
+
+/**
+ * **Aviso da plataforma nao e um arquivo esperando alguem abrir — a anotacao do Clovis
+ * (07/09/2026).**
+ *
+ * A conversa inteira era *"*Atencao:* o tipo da mensagem enviada pelo contato nao e suportado."*, e
+ * a caixa recomendou a tecla 6 dizendo *"mandou um audio — so da para responder depois de abrir"*.
+ * Ele: *"mandar mensagem do momento"*.
+ *
+ * O ruido da plataforma JA era reconhecido (`prepararEntrantes` esvazia o texto e marca
+ * `sistema: true`); o que faltava era esta metade — a mensagem continua carregando o `tipo`, e o
+ * teste de formato disparava por ele. **E o motivo alegado era falso na tela:** nao existe audio
+ * para abrir, a plataforma disse que nao conseguiu entregar.
+ */
+{
+  grupo('aviso da plataforma nao pede resposta pessoal (o Clovis, 07/09)');
+
+  const aviso = { texto: '', tipo: 'AUDIO', sistema: true, at: 1 };
+  check(pedeRespostaPessoal(aviso) === null, 'a mensagem de sistema deixa de pedir resposta a mao');
+  check(conversaPedeRespostaPessoal([aviso], null) === null, 'e a conversa inteira tambem');
+
+  /** O audio DE VERDADE sem transcricao continua pedindo gente — e o que a regra existe para pegar. */
+  check(!!pedeRespostaPessoal({ texto: '', tipo: 'AUDIO', at: 1 }),
+    'audio de verdade sem transcricao continua pedindo voce');
+  check(!!pedeRespostaPessoal({ texto: '', tipo: 'DOCUMENT', at: 1 }),
+    'e o arquivo tambem');
+}
+
 fim();

@@ -1454,6 +1454,24 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   **detector que casa a palavra antiga para de ver o caso**: `SE_APRESENTANDO` ganhou `equipe` e
   `assessoria` no mesmo commit, senao continuaria "funcionando" cego.
 
+- **QUALIFICADOR EM GRUPO OPCIONAL E QUALIFICADOR QUE NAO EXISTE.** Anotacao da Geci (06/09/2026):
+  *"Tamo junto estaremos de maos dadas e venceremos amem"* fez a rodada PULA-LA como quem confirma
+  presenca em evento — *"nao e evento, os termos estao muito vagos e sendo aplicados em contextos
+  demais"*. O padrao era `(estarei|estaremos)(\s+(la|ai|presente|junto|com voces))?`: o `?` no fim
+  torna o verbo sozinho suficiente, e a lista de qualificadores vira enfeite. **E a QUARTA vez que
+  `confirmaPresenca` aprende isto** — sairam "vamos"/"vou" soltos (02/09), "confirmado" solto
+  (04/09) e "pode contar comigo" (04/09). **Vocabulario de campanha nao e resposta ao convite**, e o
+  verbo sozinho so vale como a MENSAGEM INTEIRA. Ao escrever padrao assim, pergunte o que ele casa
+  com o grupo opcional vazio.
+- **AVISO DA PLATAFORMA NAO E ARQUIVO ESPERANDO ALGUEM ABRIR.** Anotacao do Clovis (07/09/2026): a
+  conversa era so *"*Atencao:* o tipo da mensagem enviada pelo contato nao e suportado."* e a caixa
+  mandou responder a mao, *"mandou um audio — so da para responder depois de abrir"*. O ruido da
+  plataforma **ja era** reconhecido (`prepararEntrantes` esvazia o texto e marca `sistema: true`,
+  02/09); faltava a outra metade — a mensagem continua com o `tipo`, e `pedeRespostaPessoal`
+  disparava por ele. Hoje `msg.sistema` devolve `null` ali. **Esvaziar o texto num lugar so nao
+  basta se outro sinal decidir pelo TIPO** — e o motivo na tela era falso, que e a mesma razao do
+  conserto do audio transcrito (01/09): nao ha audio para abrir, a plataforma disse que nao
+  conseguiu entregar.
 - **"NAO E LUGAR" NAO E O MESMO QUE "NAO RECONHECO", e a peneira que separa os dois e o
   VOCABULARIO.** Print do Sabino (08/09/2026): campo Cidade valendo **`transformar nosso pais`** —
   *"a extensao esta falhando em limpar ou corrigir cidades erradas"*. A limpeza da 2.93 so tratava
