@@ -2652,6 +2652,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   linha "Cidade:" some (o valor virou vazio) e o aviso de grafia some junto, enquanto o CRM
   continua com o lixo ate a conclusao gravar. Hoje o cabecalho diz o que vai ser apagado, e o
   Andamento registra `apagando do CRM: <campo> ("<valor>")`.
+- **A MARCA QUE TODO DETECTOR RESPEITA PODE NAO CHEGAR A IA — e o texto do anuncio nao chegava.**
+  Pergunta dele (08/09/2026): *"atualmente a IA ignora o texto do anuncio?"*. **Medido: nao
+  ignorava — lia como fala dela.** `prepararEntrantes` marca `geradaPeloAnuncio` desde 04/09 e
+  **todo detector deterministico a respeita**; `conversaParaIA` e `mensagensParaIA` jogavam a marca
+  fora. Efeito: o pedido do EIXO manda responder *"a mais recente que pede ou pergunta alguma
+  coisa"*, "bom dia" e descartado como cortesia, e **o eixo caia no texto que a campanha escreveu**.
+  **O lugar de dizer a NATUREZA de uma mensagem a IA e `marcaDaMensagem`** (ex-`marcaDeAudio`): sao
+  tres — audio transcrito (31/08), audio ENCAMINHADO (a Irene, 07/09) e agora o anuncio. **A IA
+  recebe texto: tudo o que o painel sabe e nao escreve ali, ela nao sabe.** O NOME do anuncio vai
+  junto, e **so na mensagem que da para nomear** (`anuncioDaSessao`): a identidade vem do `utm`, que
+  e da SESSAO, entao pertence ao clique que a abriu — o segundo e o terceiro sao reconhecidos pela
+  FORMA e podem ser de outro anuncio (a Irene clicou em tres). Em `ia.js` o clique **saiu da
+  contagem** e **nao recebe marca nenhuma** (nem `SEM RESPOSTA` nem `ja respondida`) — sem isso a
+  instrucao fica ambigua: duas linhas marcadas e a frase no singular embaixo, **achado lendo o bloco
+  gerado, nao por teste**. E ha o caso de ela **so clicar e nao escrever nada**, que antes recebia
+  *"a ultima fala da conversa e NOSSA"* — mentira.
 - **PEDIDO DE DINHEIRO E DE EMPREGO PASSARAM PARA A IA — a terceira correcao da mesma lista trocou
   quem decide.** Pedido dele (08/09/2026): *"o deterministico com relacao ao pedido de emprego e
   dinheiro tem dado errado; quando as palavras chaves referentes aparecerem mande a IA analisar e

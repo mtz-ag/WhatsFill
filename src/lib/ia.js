@@ -1171,7 +1171,23 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
    */
   let ultimaNossa = -1;
   lista.forEach((m, i) => { if (m.de === 'nos') ultimaNossa = i; });
-  const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).length;
+  /**
+   * **O clique no anúncio não conta como mensagem que ela escreveu** (08/09/2026).
+   *
+   * `m.anuncio` chega do painel, que sabe disso desde 04/09 e não estava contando à IA. Sem a
+   * distinção, *"Olá! Eu apoio as Escolas Cívico-Militares"* + *"Bom dia"* vira **"ela escreveu 2
+   * mensagens"**, e o pedido do EIXO logo abaixo manda pegar *"a mais recente que pede ou pergunta
+   * alguma coisa"* — com "bom dia" descartado como cortesia, o eixo cai no texto do anúncio, e a
+   * resposta inteira nasce em cima de uma frase escrita pela campanha.
+   *
+   * Os dois números são necessários: `pendentesDela` é o que a IA responde, e a diferença entre
+   * eles é o caso em que ela **só clicou e não escreveu nada** — que existe e é comum (a Irene,
+   * 05/09, clicou em três anúncios seguidos sem digitar uma palavra). Dizer "a última fala é
+   * NOSSA" ali seria mentira.
+   */
+  const pendentesTotal = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).length;
+  const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio).length;
+  const soCliques = pendentes === 0 && pendentesTotal > 0;
 
   /**
    * **O que JÁ foi respondido leva marca própria** — relato dele (05/09/2026): *"a IA pegou o
@@ -1184,8 +1200,16 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
   const conversa = lista
     .map((m, i) => {
       const quem = m.de === 'nos' ? 'NÓS' : 'ELA';
-      const pendente = m.de !== 'nos' && i > ultimaNossa;
-      const jaRespondida = m.de !== 'nos' && ultimaNossa >= 0 && i < ultimaNossa;
+      /**
+       * **O clique no anúncio não recebe marca nenhuma.** Nem "← SEM RESPOSTA" (não é pergunta
+       * dela esperando resposta) nem "← já respondida" (ela não disse aquilo). O que ele é já está
+       * escrito no começo da própria linha, e é a única coisa verdadeira a dizer sobre ele.
+       *
+       * Sem isto a instrução fica ambígua no caso mais comum: anúncio + "bom dia" davam **duas**
+       * linhas marcadas "← SEM RESPOSTA" com a frase no singular logo abaixo.
+       */
+      const pendente = m.de !== 'nos' && i > ultimaNossa && !m.anuncio;
+      const jaRespondida = m.de !== 'nos' && ultimaNossa >= 0 && i < ultimaNossa && !m.anuncio;
       const marca = pendente ? '   ← SEM RESPOSTA' : jaRespondida ? '   ← já respondida' : '';
       // O horário de cada fala — é o que permite o rascunho reconhecer que a conversa esfriou.
       const q = quandoFoi(m.at, agora);
@@ -1262,7 +1286,11 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * mudou é a forma — a resposta tem um eixo, e o resto entra reconhecido de passagem, em vez de
      * virar um relatório que responde item por item.
      */
-    pendentes === 0
+    soCliques
+      ? 'Ela NÃO ESCREVEU nada: o que há sem resposta é só clique em anúncio, e o texto daquelas ' +
+        'mensagens é da campanha. Não agradeça o que a campanha escreveu nem trate aquilo como ' +
+        'declaração dela. Responda ao que ela pediu AO CLICAR, de forma curta e acolhedora.'
+      : pendentes === 0
       ? 'A última fala da conversa é NOSSA: ela não deixou nada sem resposta. Se for escrever, que ' +
         'seja um complemento curto ao que já dissemos — nunca uma repetição.'
       : pendentes > 1

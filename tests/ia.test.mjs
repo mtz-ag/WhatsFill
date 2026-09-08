@@ -1507,4 +1507,71 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   check(chapaDoDossie('nenhuma tabela aqui').length === 0, 'sem tabela, lista vazia');
 }
 
+/**
+ * O TEXTO DO ANUNCIO nao e fala dela — pergunta dele (08/09/2026): *"atualmente a IA ignora o texto
+ * do anuncio?"*.
+ *
+ * **Medido antes de mexer: nao ignorava — lia como fala dela, sem marca nenhuma.** O painel sabe
+ * disso desde 04/09 (`geradaPeloAnuncio`, respeitada por TODO detector deterministico), e os dois
+ * montadores de mensagem para a IA jogavam a marca fora. Com "bom dia" descartado como cortesia, o
+ * EIXO da resposta caia no texto que a campanha escreveu.
+ */
+{
+  grupo('o texto do anuncio nao e fala dela (08/09)');
+
+  const agora = new Date('2026-09-08T14:00:00');
+  const clique = (t) => ({
+    de: 'contato',
+    texto: `(texto do ANÚNCIO "Escolas Cívico-Militares" em que ela clicou — escrito pela campanha, não por ela) ${t}`,
+    at: '2026-09-08T09:12:00',
+    anuncio: true,
+  });
+  const bloco = (mensagens) => montarContatoRascunho({ mensagens, campos: {}, agora, pedirDados: false });
+
+  /**
+   * **O clique nao entra na CONTAGEM.** Antes, anuncio + "bom dia" dizia *"Ela escreveu 2
+   * mensagens"* — e uma delas ela nao escreveu.
+   */
+  const doisTextos = bloco([clique('Olá! Eu apoio as Escolas'), { de: 'contato', texto: 'Bom dia', at: '2026-09-08T09:13:00' }]);
+  check(!/escreveu 2 mensagens/.test(doisTextos), 'o clique nao conta como mensagem que ela escreveu');
+  check(/Responda à mensagem marcada/.test(doisTextos), 'sobra UMA pendente, e a instrucao e a do singular');
+
+  /**
+   * **E nao recebe marca nenhuma.** Nem "SEM RESPOSTA" (nao e pergunta dela esperando resposta) nem
+   * "ja respondida" (ela nao disse aquilo). Sem isto, as duas linhas vinham marcadas e a frase
+   * abaixo falava no singular.
+   */
+  const linhaDoClique = doisTextos.split('\n').find((l) => l.includes('ANÚNCIO'));
+  check(!!linhaDoClique, 'a linha do anuncio esta la');
+  check(!/←/.test(linhaDoClique || ''), 'e nao carrega marca de pendente nem de respondida');
+
+  /** O nome do anuncio chega junto: e o que ela pediu ao clicar. */
+  check(/ANÚNCIO "Escolas Cívico-Militares"/.test(doisTextos), 'o nome do anuncio vai no texto');
+
+  /**
+   * **So clicou e nao escreveu nada** — comum nesta base (a Irene, 05/09, clicou em tres anuncios
+   * seguidos sem digitar uma palavra). Dizer "a ultima fala e NOSSA" ali seria mentira.
+   */
+  const soClique = bloco([clique('Olá! Eu quero receber o Material')]);
+  check(/NÃO ESCREVEU nada/.test(soClique), 'so clique: a IA e avisada de que ela nao escreveu');
+  check(!/última fala da conversa é NOSSA/.test(soClique), 'e nao recebe a frase de quem ja foi respondida');
+  check(/Não agradeça o que a campanha escreveu/.test(soClique), 'com a instrucao de nao agradecer o que a campanha escreveu');
+
+  /** Conversa de verdade depois do clique: nada disto atrapalha o caminho normal. */
+  const depois = bloco([
+    clique('Olá! Eu apoio'),
+    { de: 'nos', texto: 'Bom dia! Me diga seu Nome, Cidade', at: '2026-09-08T10:00:00' },
+    { de: 'contato', texto: 'Maria, Canoas. Voces tem material?', at: '2026-09-08T11:00:00' },
+  ]);
+  check(/Maria, Canoas[^\n]*← SEM RESPOSTA/.test(depois), 'a pergunta DELA continua sendo a pendente');
+  check(!/NÃO ESCREVEU nada/.test(depois), 'e o aviso de "so clicou" nao aparece quando ela escreveu');
+
+  /** Sem a marca, tudo se comporta como antes — a mudanca nao alcanca quem nao veio de anuncio. */
+  const semAnuncio = bloco([
+    { de: 'contato', texto: 'Bom dia', at: '2026-09-08T09:12:00' },
+    { de: 'contato', texto: 'Voces tem material?', at: '2026-09-08T09:13:00' },
+  ]);
+  check(/escreveu 2 mensagens/.test(semAnuncio), 'quem nao veio de anuncio conta as duas, como antes');
+}
+
 fim();

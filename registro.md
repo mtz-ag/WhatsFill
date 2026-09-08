@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v3.10.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v3.11.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.10.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.11.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
@@ -18,7 +18,7 @@ tabela. Prompt de sistema do rascunho: **5.556 tokens**, dos quais **68% é o `P
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
 Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75), **dezoito em
-07/09** (2.76 a 2.93) e **dezessete em 08/09** (2.94 a 3.10).
+07/09** (2.76 a 2.93) e **dezoito em 08/09** (2.94 a 3.11).
 
 ### O que mudou em 08/09, em uma linha cada
 
@@ -30,7 +30,7 @@ Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2
 | 3.3–3.4 | **"Casa" não é endereço e "casada" não é Chapada**; e a **IA pendurava** — não havia timeout em lugar nenhum, nem no `fetch` nem na ponte. |
 | 3.5–3.6 | **O failsafe** (falhou o titular, tenta o reserva, no service worker junto do teto) e o **botão do padrão** na Config. |
 | 3.7 | **O padrão abre em janela própria** (16px, coluna de 78 caracteres), e explicação longa nasce fechada com um "ver mais". |
-| 3.8–3.10 | **Van Hattem virou deputado federal** — trava de cargo e número da chapa; o log passou a dizer **quem** atendeu e **por que** o titular falhou (em vermelho); e **pedido de dinheiro e de emprego passaram para a IA**. |
+| 3.8–3.11 | **Van Hattem virou deputado federal** — trava de cargo e número da chapa; o log passou a dizer **quem** atendeu e **por que** o titular falhou (em vermelho); e **pedido de dinheiro e de emprego passaram para a IA**; o **texto do anúncio deixou de ser fala dela** para a IA. |
 
 ### O que mudou em 07/09, em uma linha cada
 
@@ -268,6 +268,66 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-08 — O texto do anúncio deixou de ser fala dela para a IA (v3.11.0)
+
+Pergunta dele: *"atualmente a IA ignora o texto do anúncio?"*. **Medido: não ignorava — lia como
+fala dela, e sem saber de qual anúncio.** Ele mandou fazer as duas coisas.
+
+### O que estava acontecendo
+
+Este era o bloco que a IA recebia de quem chega pelo anúncio e escreve em seguida:
+
+```
+ELA [hoje 09:12]: Olá! Eu apoio as Escolas Cívico-Militares   ← SEM RESPOSTA
+ELA [hoje 09:13]: Bom dia   ← SEM RESPOSTA
+...
+Ela escreveu 2 mensagens sem resposta. O EIXO da sua resposta é a mais recente que pede ou
+pergunta alguma coisa. Se a última for só cortesia ("obrigada", "bom dia"), o eixo é a anterior.
+```
+
+**O eixo caía no texto do anúncio** — a resposta inteira nascia em cima de uma frase que a campanha
+escreveu, e a contagem dizia "2 mensagens" onde ela escreveu uma.
+
+**O painel já sabia disso.** `prepararEntrantes` marca `geradaPeloAnuncio` desde 04/09, e **todo
+detector determinístico respeita a marca** — foi ela que impediu o agradecimento pelo apoio de sair
+para quem só clicou num botão. `conversaParaIA` e `mensagensParaIA` jogavam a marca fora.
+
+> **O contraste que mostra que era defeito:** `marcaDeAudio` existe exatamente para dizer à IA a
+> NATUREZA da mensagem — `(áudio, transcrito automaticamente)` desde 31/08, e
+> `(áudio ENCAMINHADO de outra conversa — não é fala dela e não é dirigido a nós)` desde 07/09. O
+> anúncio é a mesma classe de coisa e ficou de fora. A função virou `marcaDaMensagem`, com as três.
+
+### Os dois consertos
+
+1. **A marca:** `(texto do ANÚNCIO "X" em que ela clicou — escrito pela campanha, não por ela)`.
+2. **O nome:** vem de `state.anuncio.anuncio.nome` (o que ELE cadastrou na Config), caindo para
+   `utm.headline` e depois `utm.campaign`.
+
+**O nome só vai na mensagem que dá para nomear.** A identidade vem do `utm`, que é da SESSÃO — então
+pertence ao clique que a abriu (`anuncioDaSessao`, novo). O segundo e o terceiro clique são
+reconhecidos pela FORMA do texto e podem ser de outro anúncio: a Irene (05/09) clicou em três.
+Rotular todos igual seria inventar.
+
+### O que mudou no bloco do contato (`ia.js`)
+
+- **O clique saiu da contagem** (`pendentes`), e por isso não vira eixo.
+- **O clique não recebe marca nenhuma** — nem `← SEM RESPOSTA` (não é pergunta dela esperando) nem
+  `← já respondida` (ela não disse aquilo). Sem isso a instrução ficava ambígua no caso mais comum:
+  duas linhas marcadas e a frase no singular logo abaixo. **Peguei lendo o bloco gerado, não por
+  teste.**
+- **Caso novo: ela SÓ clicou e não escreveu nada** — comum aqui, e antes recebia *"a última fala da
+  conversa é NOSSA"*, que é mentira. Agora recebe *"Ela NÃO ESCREVEU nada… não agradeça o que a
+  campanha escreveu… responda ao que ela pediu AO CLICAR"*.
+
+### Arquivos
+
+`src/panel/panel.js` (`marcaDaMensagem`, `nomeDoAnuncioDaSessao`, `anuncioDaSessao` em
+`prepararEntrantes`, `anuncio` em `conversaParaIA`), `src/lib/ia.js` (`pendentes`, `soCliques`, a
+marca por linha), `tests/ia.test.mjs` (**11 asserções novas**, com o caso de quem não veio de
+anúncio travando que nada mudou para ele). 15 suítes verdes, verificadores limpos.
+
 ---
 
 ## 2026-09-08 — Pedido de dinheiro e de emprego passam para a IA (v3.10.0)

@@ -9792,19 +9792,66 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * encaminhado, a transcrição chega indistinguível da fala dela** — e ler o conteúdo é
    * exatamente o que a IA deve fazer com o que ela disse, e não com o que ela repassou.
    */
-  function marcaDeAudio(m, texto) {
+  /**
+   * **A NATUREZA da mensagem, escrita para a IA ler.**
+   *
+   * A IA recebe texto; tudo o que o painel sabe sobre uma mensagem e não escrever aqui, ela não
+   * sabe. São três coisas hoje, e as três nasceram de uma print:
+   *
+   *  - **áudio transcrito** (31/08): sem a marca, a IA discute a redação de uma fala que ninguém
+   *    digitou;
+   *  - **áudio ENCAMINHADO** (a Irene, 07/09): cinco áudios de outra conversa chegaram em dois
+   *    segundos e a IA respondeu o que estava DENTRO deles;
+   *  - **texto do ANÚNCIO** (08/09) — ver abaixo.
+   *
+   * **O anúncio era o buraco.** `prepararEntrantes` marca `geradaPeloAnuncio` desde 04/09 e **todo
+   * detector determinístico respeita a marca** (foi ela que impediu o agradecimento pelo apoio de
+   * sair para quem só clicou num botão), mas os dois montadores de mensagem para a IA jogavam a
+   * marca fora: o texto pré-preenchido pelo Facebook chegava como fala dela, sem distinção. Pior,
+   * o pedido do EIXO manda responder *"a mais recente que pede ou pergunta alguma coisa"* — com
+   * "bom dia" contando como cortesia, o eixo caía no **texto do anúncio**, e a resposta inteira
+   * era construída em cima de uma frase que a campanha escreveu.
+   *
+   * **O NOME do anúncio entra junto, e só na mensagem que dá para nomear.** A identidade vem do
+   * `utm` da SESSÃO, então ela vale para o clique que abriu a sessão (`anuncioDaSessao`) — o
+   * segundo e o terceiro clique são reconhecidos pela forma do texto e podem ser de outro anúncio
+   * (a Irene, 05/09, clicou em três). Nomear todos com o mesmo rótulo seria inventar.
+   */
+  function marcaDaMensagem(m, texto, nomeDoAnuncio = '') {
+    if (m?.geradaPeloAnuncio) {
+      const qual = m?.anuncioDaSessao && nomeDoAnuncio ? ` "${nomeDoAnuncio}"` : '';
+      return `(texto do ANÚNCIO${qual} em que ela clicou — escrito pela campanha, não por ela) ${texto}`;
+    }
     if (m?.encaminhado) return `(áudio ENCAMINHADO de outra conversa, transcrito automaticamente — não é fala dela e não é dirigido a nós) ${texto}`;
     return m?.transcrito ? `(áudio, transcrito automaticamente) ${texto}` : texto;
   }
 
+  /**
+   * Como o anúncio desta sessão se chama, para a IA.
+   *
+   * A ordem é do mais específico para o mais genérico: o **nome que ELE cadastrou** na Config diz o
+   * que aquele anúncio é; o `headline` é a promessa que a pessoa leu antes de clicar; o `campaign`
+   * é o nome interno. Nenhum dos três existindo, a mensagem sai marcada sem nome — que continua
+   * sendo melhor que sair como fala dela.
+   */
+  function nomeDoAnuncioDaSessao() {
+    return String(
+      state.anuncio?.anuncio?.nome ||
+        state.session?.utm?.headline ||
+        state.session?.utm?.campaign ||
+        ''
+    ).trim();
+  }
+
   function mensagensParaIA() {
+    const doAnuncio = nomeDoAnuncioDaSessao();
     return (state.entrantes || [])
       .map((m) => {
         const texto = String(m?.texto || '').trim();
         if (!texto) return null;
         // `{texto, at}` e não string solta: o QUANDO de cada mensagem é metade do relógio — a
         // outra metade é o "agora", que `montarContato` escreve no topo do bloco.
-        return { texto: marcaDeAudio(m, texto), at: m?.at || null };
+        return { texto: marcaDaMensagem(m, texto, doAnuncio), at: m?.at || null };
       })
       .filter(Boolean);
   }
@@ -9824,10 +9871,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * ordem em que já estava, que é a ordem da própria plataforma.
    */
   function conversaParaIA() {
+    const doAnuncio = nomeDoAnuncioDaSessao();
     const dela = (state.entrantes || []).map((m, i) => ({
       de: 'contato',
-      texto: marcaDeAudio(m, String(m?.texto || '')),
+      texto: marcaDaMensagem(m, String(m?.texto || ''), doAnuncio),
       at: m?.at || null,
+      // `anuncio` NÃO é decoração: é o que tira o clique da CONTAGEM de mensagens sem resposta.
+      // Sem ele, "ela escreveu 2 mensagens" conta uma que ela não escreveu.
+      anuncio: !!m?.geradaPeloAnuncio,
       ordem: i,
     }));
     const nossa = (state.nossas || []).map((m, i) => ({
@@ -9841,7 +9892,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0) || a.ordem - b.ordem)
       // O `at` VAI JUNTO: sem ele a IA sabe a ordem e não sabe o tempo, e foi disso que ele
       // reclamou em 04/09 — "a IA está sem acesso a data e hora atual".
-      .map(({ de, texto, at }) => ({ de, texto, at }));
+      .map(({ de, texto, at, anuncio }) => ({ de, texto, at, anuncio }));
   }
   /**
    * Rascunha com a IA e **deixa o texto no campo de mensagem, para ele mandar.**
@@ -11791,6 +11842,13 @@ function prepararEntrantes(entrantes, { veioDeAnuncio = false } = {}) {
     const temTexto = !marcada.sistema && String(marcada.texto || '').trim();
     if (primeiraDela && veioDeAnuncio && temTexto) {
       marcada.geradaPeloAnuncio = true;
+      /**
+       * **Só ESTA dá para nomear.** A identidade do anúncio vem do `utm`, que é da SESSÃO — então
+       * ela pertence ao clique que abriu a sessão, e não ao segundo nem ao terceiro, que são
+       * reconhecidos pela FORMA do texto e podem ser de outro anúncio (a Irene clicou em três,
+       * 05/09). Ver `marcaDaMensagem`.
+       */
+      marcada.anuncioDaSessao = true;
       primeiraDela = false;
     } else if (veioDeAnuncio && temTexto && pareceCliqueDeAnuncio(marcada.texto)) {
       marcada.geradaPeloAnuncio = true;
