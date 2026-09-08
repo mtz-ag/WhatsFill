@@ -9,7 +9,9 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { rajadaDeAnuncios, naoPodeFalarAgora, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado, pedeFalarComDeputado } from '../src/lib/cortesia.js';
+import { rajadaDeAnuncios, naoPodeFalarAgora, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos } from '../src/lib/cortesia.js';
+
+const templates = await lib('templates.js');
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -2297,6 +2299,47 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   ]) {
     check(!hostil(t), `a sigla sozinha nao acusa: "${t}"`);
   }
+}
+
+/**
+ * **Quem ESCREVEU depois do formulario nao o ignorou** — print da Lenir (08/09/2026).
+ *
+ * Ela recebeu o pedido em 07/09 e respondeu em duas mensagens: *"Lenir"* e *"Curitiba"*. No dia
+ * seguinte a rodada mandou a mensagem do momento COM o pedido de novo. Ele: *"pediu dados
+ * novamente"*.
+ *
+ * **Medido: o parser nao devolve nada dessas duas mensagens** — Curitiba nao esta entre os 497
+ * municipios do RS, e o nome sozinho numa mensagem propria nao e alcancado pelo modo generoso. O
+ * cadastro dela e invisivel para a extensao.
+ *
+ * O texto combinado existe para quem IGNOROU o formulario (pedido dele de 04/09, a figura de bom
+ * dia que recebeu o formulario seco treze horas depois). **Estas assercoes travam a fronteira entre
+ * as duas coisas**, e sao a mesma conta que o painel faz em `faltaCadastro`.
+ */
+{
+  grupo('escreveu depois do formulario (a Lenir, 08/09)');
+
+  const PEDIDO = 'ATENCAO! Para eu poder salvar seu contato me diga seu:\n\nNome , Cidade\n\n(exemplo: Pedro Silva , Porto Alegre)';
+  const nossas = [{ texto: PEDIDO, at: '2026-09-07T20:00:00Z' }];
+  const escreveu = (entrantes) =>
+    (respostasApos(entrantes, nossas, templates.ehPedidoDeDados) || [])
+      .some((m) => String(m?.texto || '').trim() && !m?.sistema && !ehSoReacao(m));
+
+  check(templates.ehPedidoDeDados(PEDIDO), 'o formulario e reconhecido pelo invariante');
+
+  check(escreveu([
+    { texto: 'Lenir', tipo: 'TEXT', at: '2026-09-07T20:41:00Z' },
+    { texto: 'Curitiba', tipo: 'TEXT', at: '2026-09-07T20:41:30Z' },
+  ]), 'ela respondeu — mesmo com cidade de outro estado, que o parser nao ve');
+
+  /** O caso de 04/09, que o texto combinado existe para atender: ela NAO respondeu. */
+  check(!escreveu([{ texto: '', tipo: 'IMAGE', at: '2026-09-07T20:41:00Z' }]),
+    'figura sem legenda nao e resposta');
+  check(!escreveu([{ texto: '\u{1F44D}', tipo: 'TEXT', at: '2026-09-07T20:41:00Z' }]),
+    'emoji solto nao e resposta');
+  check(!escreveu([]), 'silencio nao e resposta');
+  check(!escreveu([{ texto: '', tipo: 'AUDIO', sistema: true, at: '2026-09-07T20:41:00Z' }]),
+    'aviso da plataforma nao e resposta dela');
 }
 
 fim();

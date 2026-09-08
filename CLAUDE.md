@@ -2673,6 +2673,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   com zero. A IA pode dizer o numero de UM candidato perguntado diretamente (dado confirmado, esta
   na tabela); montar a chapa inteira e cartao. **O modelo da colinha e dele** (*"vou criar um modelo
   de mensagem pra ela"*).
+- **"NAO ACHEI O CADASTRO" NAO E "ELA NAO RESPONDEU" — e CIDADE DE OUTRO ESTADO e invisivel.** Print
+  da Lenir (08/09/2026): ela respondeu o formulario com *"Lenir"* e *"Curitiba"*, em duas mensagens,
+  e no dia seguinte recebeu a mensagem do momento COM o pedido de novo. **Medido: `extract(['Lenir',
+  'Curitiba'])` devolve NADA** — Curitiba nao esta entre os 497 municipios do RS (a extensao so
+  conhece os daqui, de proposito: a etiqueta serve ao filtro estadual dele), e nome sozinho numa
+  mensagem propria nao e alcancado pelo modo generoso, que espera nome e cidade juntos. Com os dois
+  vazios, `faltaCadastro` concluia que o formulario tinha sido ignorado. **O texto combinado existe
+  para quem IGNOROU** (pedido dele de 04/09), e quem respondeu nao ignorou — mesmo que a resposta
+  seja invisivel para o parser. Hoje ha `escreveuDepoisDoPedido`, lido da CONVERSA por
+  `respostasApos(..., templates.ehPedidoDeDados)`, **exigindo texto de verdade**: figura, emoji e
+  aviso da plataforma continuam contando como ignorado, que e o que preserva o caso de 04/09.
 - **FALAR MAL DO PL OU DO REPUBLICANOS E HOSTILIDADE CONTRA NOS; falar mal do PT esta do nosso
   lado.** Regra dele (08/09/2026), literal. Dispensa a segunda pessoa pelo mesmo motivo do
   `INSULTO_AO_ALIADO`: **o alvo esta escrito**, e o que torna `AGRESSAO` ambigua e nao saber a

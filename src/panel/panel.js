@@ -27,7 +27,7 @@ import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
-import { ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado } from '../lib/cortesia.js';
+import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -5302,9 +5302,34 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * casa: sem ele, a resposta dela deixaria de ser lida como resposta ao formulário e a rodada
        * pediria os dados outra vez. Tem teste.
        */
+      /**
+       * **Quem ESCREVEU depois do formulário não o ignorou** — print da Lenir (08/09/2026).
+       *
+       * Ela recebeu o pedido em 07/09 e respondeu, em duas mensagens: *"Lenir"* e *"Curitiba"*. No
+       * dia seguinte a rodada mandou a mensagem do momento **com o pedido de novo**. Ele: *"pediu
+       * dados novamente"*.
+       *
+       * **Medido: o parser não devolve NADA dessas duas mensagens** — nem nome, nem cidade. Curitiba
+       * não está entre os 497 municípios do RS (a extensão só conhece os daqui), e o nome sozinho
+       * numa mensagem própria não é alcançado pelo modo generoso, que espera nome e cidade juntos.
+       * Então `state.nomeInformado` e `state.cidadeInformada` ficam vazios e o cadastro parece não
+       * ter chegado.
+       *
+       * **O texto combinado existe para quem IGNOROU o formulário** — é o pedido dele de 04/09, com
+       * a print da figura de bom dia que recebeu o formulário seco treze horas depois. Quem
+       * respondeu não ignorou, mesmo que a resposta seja invisível para o parser; e pedir de novo a
+       * quem acabou de responder é o pior efeito possível deste texto.
+       *
+       * A conferência exige TEXTO de verdade: figura e emoji soltos não contam como resposta, que é
+       * o que preserva o caso de 04/09.
+       */
+      const escreveuDepoisDoPedido = (respostasApos(state.entrantes, state.nossas, templatesLib.ehPedidoDeDados) || [])
+        .some((m) => String(m?.texto || '').trim() && !m?.sistema && !ehSoReacao(m));
+
       const faltaCadastro =
         jaPediramDados &&
         !temEtiquetaDeCidade &&
+        !escreveuDepoisDoPedido &&
         !(state.nomeInformado && state.cidadeInformada?.value && state.cidadeInformada.confidence !== 'nao-reconhecida');
       const pedidoJunto = String(state.auto.cfg.pedidoJuntoDoMomento || '').trim();
       if (momento && faltaCadastro && pedidoJunto) {

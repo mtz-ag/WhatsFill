@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v2.98.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v2.99.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -256,6 +256,50 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
 ---
+
+## 2026-09-08 — Ela respondeu, e o formulário foi pedido de novo (v2.99.0)
+
+Print da **Lenir**: recebeu o pedido de dados em 07/09 e respondeu, em duas mensagens — *"Lenir"* e
+*"Curitiba"*. No dia seguinte a rodada mandou a mensagem do momento **com o pedido junto**, e o
+Andamento registrou o envio automático. Ele: *"pediu dados novamente"*.
+
+### Medido: o cadastro dela é invisível para a extensão
+
+`extract(['Lenir', 'Curitiba'])` devolve **nada** — nem nome, nem cidade. Dois motivos somados:
+
+- **Curitiba não está entre os 497 municípios do RS.** A extensão só conhece os daqui, e é assim de
+  propósito: a etiqueta de cidade existe para o filtro dele, que é estadual;
+- **o nome sozinho, numa mensagem própria, não é alcançado** pelo modo generoso do parser, que
+  espera nome e cidade juntos (*"maria cachoeirinha"*).
+
+Então `nomeInformado` e `cidadeInformada` ficam vazios, e `faltaCadastro` conclui que o formulário
+foi ignorado.
+
+### O conserto: quem ESCREVEU não ignorou
+
+O texto combinado (mensagem do momento + pedido) existe para **quem ignorou o formulário** — é o
+pedido dele de 04/09, com a print da figura de bom dia que recebeu o formulário seco treze horas
+depois. **Quem respondeu não ignorou, mesmo que a resposta seja invisível para o parser** — e pedir
+de novo a quem acabou de responder é o pior efeito possível desse texto.
+
+`faltaCadastro` ganhou `!escreveuDepoisDoPedido`, que lê a conversa por
+`respostasApos(..., templates.ehPedidoDeDados)` — pelo INVARIANTE, como sempre, e não pelo texto
+atual do template.
+
+**A conferência exige TEXTO de verdade**, e é o que preserva o caso de 04/09: figura sem legenda,
+emoji solto, silêncio e aviso da plataforma **continuam** contando como formulário ignorado. Medido
+nos cinco cenários, e travado no teste.
+
+### O que NÃO foi consertado, e é decisão dele
+
+**Cidade de outro estado continua invisível.** A Lenir é de Curitiba (o telefone é 41), e isso
+significa que ela nunca vai ter etiqueta de cidade nem o campo Cidade preenchido — o parser casa
+contra os 497 do RS. Hoje isso custa o cadastro dela ficar vazio para sempre.
+
+Já existe a lista dos **5.571 municípios do Brasil** (baixada do IBGE em 08/09 para provar a peneira
+da 2.94). Reconhecer cidade de fora do RS é possível, mas mexe na etiqueta — e o filtro dele é
+estadual. **É escolha dele**, e o custo de errar é criar etiqueta de município que não pertence ao
+mapa de COREDEs.
 
 ## 2026-09-08 — Falar mal do PL é contra nós; falar mal do PT é do nosso lado (v2.98.0)
 
