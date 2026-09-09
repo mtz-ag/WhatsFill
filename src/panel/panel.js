@@ -9968,6 +9968,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * aconteceu. Ver `ia.conferirChapa`.
          */
         chapa: await gabineteLib.chapa(),
+        /**
+         * **O sinal que diz se ela pediu material de CAMPANHA** — print da Cleo (08/09/2026).
+         *
+         * Liga a trava `enderecoSemMaterial`: o rascunho não pode pedir endereço de entrega a quem
+         * pediu um bem que teria de ser comprado. `false` explícito e não `undefined` — a trava
+         * distingue "ela não pediu" de "ninguém mediu", e fora da rodada não há sinais.
+         */
+        pedeMaterial: state.sinais ? !!state.sinais.pedeMaterial : undefined,
       });
     } catch (err) {
       return { ok: false, enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };

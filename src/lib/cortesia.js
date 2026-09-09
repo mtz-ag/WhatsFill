@@ -1197,6 +1197,20 @@ const MARCADORES_DE_DINHEIRO = [
  * um valor concreto ("R$ 200", "200 reais", "mil reais"). É a mesma disciplina que separou o voto de
  * boa vontade da declaração de apoio, algumas horas antes.
  */
+/**
+ * **Alguém pedindo que NÓS gastemos dinheiro** — ver o bloco em `pedeAjudaFinanceira`.
+ *
+ * Os verbos são os de gastar por outro (comprar, pagar, custear, bancar, doar); o que os qualifica
+ * é o SUJEITO ser nós, em três formas: o subjuntivo do pedido (*"preciso que compre"*), a segunda
+ * pessoa direta (*"você pode comprar"*) e o pronome oblíquo (*"me compra"*, *"compra pra mim"*).
+ */
+const PEDIDO_PARA_A_GENTE_GASTAR = [
+  /(^|[^\p{L}])(?:precis\w+|queria|quero|gostaria|seria|pe[çc]o|pedia)\s+(?:muito\s+)?que\s+(?:voc[êe]s?\s+|vcs?\s+|o\s+senhor\s+|a\s+senhora\s+|tu\s+|a\s+campanha\s+|o\s+mandato\s+)?(?:compre|comprem|comprasse|comprassem|pague|paguem|pagasse|pagassem|custeie|custeiem|banque|banquem|doe|doem|doasse|doassem)/iu,
+  /(^|[^\p{L}])(?:voc[êe]s?|vcs?|o\s+senhor|a\s+senhora|tu)\s+(?:n[ãa]o\s+)?(?:pode|podem|poderia|poderiam|consegue|conseguem|conseguiria|conseguiriam)\s+(?:me\s+)?(?:comprar|pagar|custear|bancar|doar)/iu,
+  /(^|[^\p{L}])tem\s+como\s+(?:voc[êe]s?\s+)?(?:me\s+)?(?:comprar|pagar|custear|bancar|doar)/iu,
+  /(^|[^\p{L}])(?:me\s+(?:compra|comprar|compre|paga|pagar|pague)|(?:compra|comprar|compre|paga|pagar|pague|doa|doar|doe)\s+(?:pra|para)\s+mim)/iu,
+];
+
 const DINHEIRO_QUE_PRECISA_DO_VERBO = [
   /\bdinheiro\b/i,
   /\bgrana\b/i,
@@ -1274,6 +1288,38 @@ export function pedeAjudaFinanceira(entrantes, nossaUltimaAt) {
     if (m) {
       return {
         motivo: `pediu ajuda financeira (escreveu "${m[0].trim()}") — vale a resposta que nega com respeito`,
+        trecho: conversa.slice(0, 160),
+      };
+    }
+  }
+
+  /**
+   * **Pedir que a gente COMPRE alguma coisa — sem lista de objetos, de propósito.**
+   *
+   * Print da Cleo (08/09/2026): *"Eu preciso que compre um encosto Rumer ali na ortoponto aí em
+   * Porto Alegre"* e *"Uma Loja de venda de cadeira de Roda aí em Porto Alegre"*. Medido antes de
+   * mexer: **os oito detectores devolveram null** — o verbo dispara (`preciso`), mas o OBJETO tem
+   * que estar em `NECESSIDADES`, e encosto ortopédico e cadeira de rodas não estão. O pedido dela é
+   * mais explícito que os que estão na lista: ela diz *"preciso que compre"* e nomeia a loja.
+   *
+   * **Acrescentar os dois objetos seria a quarta vez que esta base aprende que a lista não fecha**
+   * (as formas de perguntar, o vocabulário de campanha, o que é "material"). O invariante aqui não é
+   * o item: é a CONSTRUÇÃO — alguém pedindo que NÓS gastemos dinheiro. Ela vale para geladeira,
+   * colchão, consulta e cadeira de rodas sem que ninguém precise prever o item.
+   *
+   * **As duas guardas que sustentam isto, e é nelas que mora o risco:**
+   *
+   *  - **o sujeito é NÓS.** *"preciso comprar um encosto"* (ela compra), *"onde posso comprar"*,
+   *    *"vou comprar"* e *"comprei"* não casam — o que casa é `que compre`, `você pode comprar`,
+   *    `me compra`. Note que `posso` não bate em `pode` por causa da fronteira de palavra.
+   *  - **é PEDIDO, não notícia.** *"eles compram votos"* é fala política desta base e fica de fora,
+   *    porque a terceira pessoa não é nenhuma das formas acima.
+   */
+  for (const padrao of PEDIDO_PARA_A_GENTE_GASTAR) {
+    const m = padrao.exec(conversa);
+    if (m) {
+      return {
+        motivo: `pediu que a gente pagasse por algo ("${m[0].trim()}") — vale a resposta que nega com respeito`,
         trecho: conversa.slice(0, 160),
       };
     }

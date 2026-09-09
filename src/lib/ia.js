@@ -30,6 +30,12 @@
  * propriedade que importa continua de pé: dá para testar a decisão inteira offline.
  */
 import * as atendimento from './atendimento.js';
+/**
+ * `ehPedidoDeEndereco` vem de lá e não é reescrito aqui: é o INVARIANTE do nosso pedido de
+ * endereço, e a regra deste projeto é que duas cópias de um invariante divergem na primeira
+ * reescrita do texto. Ver `AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial`.
+ */
+import { ehPedidoDeEndereco } from './templates.js';
 
 /**
  * O modelo padrão.
@@ -901,7 +907,37 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * não pode ser perguntado de novo o que quer — isso é fazer a pessoa repetir o que acabou de
      * escrever. Quem só disse "material" é que precisa da pergunta.
      */
-    '   MATERIAL é o assunto em que você NUNCA confirma nada — nem que existe, nem que sai, nem',
+    /**
+     * **O ESCOPO da regra faltava, e sem ele ela alcançou uma cadeira de rodas.**
+     *
+     * Print da Cleo (08/09/2026): *"preciso que compre um encosto Rumer ali na ortoponto"* e *"uma
+     * loja de venda de cadeira de roda"*. O rascunho abriu dizendo, corretamente, que *"um mandato
+     * não pode comprar nem doar bens a eleitor por causa da lei eleitoral"* — e **em seguida pediu o
+     * endereço completo e prometeu o repasse à equipe de materiais**, abrindo a porta que a frase
+     * anterior tinha fechado. Ele: *"IA confundindo entrega de material com pedido de ajuda"*.
+     *
+     * **Ela DIFERENCIOU e mesmo assim errou o caminho, e a culpa é da regra:**
+     *
+     *  - a condição escrita era a FORMA do pedido (*"ela disse qual item quer"*), nunca a CATEGORIA
+     *    do item — e um encosto ortopédico é um item que ela disse que quer;
+     *  - medido no prompt: a palavra "material" aparecia cinco vezes e **`"material de campanha"`
+     *    nenhuma** — eu nunca escrevi a fronteira;
+     *  - e a POSIÇÃO decide: esta regra está na linha 298 de 350, colada no pedido, enquanto a seção
+     *    9 do padrão dele (pedido de dinheiro) está na linha 80. É a armadilha de 07/09 outra vez —
+     *    **regra que vive longe do ponto em que o modelo começa a escrever não é cumprida** —, com o
+     *    agravante de que a regra PERTO era a errada, e é a única das duas que diz o que FAZER.
+     */
+    '   MATERIAL aqui significa MATERIAL DE CAMPANHA: adesivo, santinho, panfleto, folder, bandeira,',
+    '   camiseta, boné, card e conteúdo digital. Nada além disso entra nesta regra.',
+    '   **BEM QUE PRECISA SER COMPRADO NÃO É MATERIAL** — cadeira de rodas, órtese, muleta, remédio,',
+    '   óculos, colchão, eletrodoméstico, móvel, passagem, exame, consulta. Pedido assim é a seção 9',
+    '   do padrão (pedido de dinheiro): NEGUE com respeito, sem humilhar, e PARE aí. Não peça',
+    '   endereço, não fale em equipe de materiais e não prometa repasse — repassar um pedido de',
+    '   compra é abrir a porta que a lei fecha.',
+    '   **E nunca na mesma mensagem:** se você disse que o mandato não pode comprar nem doar bens,',
+    '   está proibido pedir endereço ou prometer encaminhamento depois disso. As duas coisas juntas',
+    '   se contradizem, e quem lê fica esperando a entrega.',
+    '   Para o material de campanha, você NUNCA confirma nada — nem que existe, nem que sai, nem',
     '   quando. Duas situações, e elas se respondem diferente:',
     /**
      * **O caminho do material, ditado por ele em 08/09/2026** (print da Jonice Terezinha):
@@ -1468,6 +1504,25 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
    * pessoa**, e mensagem de WhatsApp não volta.
    */
   chapaTrocada: 'atribui a alguém da chapa um cargo ou número que não é dele — confira na colinha',
+  /**
+   * **Pede o endereço de entrega sem ninguém ter pedido material de campanha** — print da Cleo
+   * (08/09/2026), que pediu que comprássemos um encosto ortopédico e uma cadeira de rodas.
+   *
+   * **É a metade mecânica de um erro que o prompt sozinho não segura.** As outras duas metades
+   * (o detector e o escopo da regra 5) reduzem a frequência; esta barra o envio. E ela é mecânica
+   * de verdade porque **o painel SABE as duas coisas**: `pedeMaterial` é sinal calculado do que ela
+   * escreveu, e `templates.ehPedidoDeEndereco` é o invariante do nosso pedido de endereço — o mesmo
+   * que aplica a etiqueta de material desde 04/09.
+   *
+   * **Pedir o endereço é o passo irreversível deste assunto:** ele cria a expectativa de entrega,
+   * que é a expectativa que a Lei 9.504/97 trata. Medido no rascunho que saiu para ela: os avisos
+   * eram um só, cosmético, e `rascunhoPodeSairSozinho` devolvia **true** — com "Automatizar"
+   * marcada aquela mensagem sairia sozinha.
+   *
+   * Condicionado, como o `pediuReenvio`: quem PEDIU material de campanha tem que receber o pedido
+   * de endereço, que é o caminho certo dele desde a print da Jonice.
+   */
+  enderecoSemMaterial: 'pede o endereço de entrega, e ela não pediu material de campanha — confira o que ela pediu',
 };
 
 // ---------------------------------------------------------------------------
@@ -1826,6 +1881,18 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
   if (/\b(cesta|rem[ée]dio|dinheiro|pix|emprego|vaga|passagem)\b/i.test(texto)) {
     avisos.push('cita bem ou benefício (cesta, remédio, dinheiro, emprego) — a lei eleitoral proíbe prometer');
   }
+  /**
+   * **Endereço de entrega pedido a quem não pediu material de campanha** — ver
+   * `AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial`.
+   *
+   * `contexto.pedeMaterial` chega do painel (o sinal da rodada). **Sem o contexto, não confere
+   * nada**: `undefined` não é "ela não pediu" — é "ninguém mediu", e barrar por isso pararia o
+   * rascunho pedido a mão, onde não há sinais.
+   */
+  if (contexto?.pedeMaterial === false && ehPedidoDeEndereco(texto)) {
+    avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial);
+  }
+
   /**
    * **Cargo ou número trocado na chapa** — ver `conferirChapa`.
    *

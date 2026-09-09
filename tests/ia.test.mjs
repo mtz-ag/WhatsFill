@@ -878,8 +878,21 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
    * fechar um caminho sem escrever a saida troca o defeito por uma resposta muda.
    */
   const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
-  check(prompt.includes('MATERIAL é o assunto em que você NUNCA confirma nada'),
-    'o prompt diz que material nao se confirma');
+  check(prompt.includes('você NUNCA confirma nada'), 'o prompt diz que material nao se confirma');
+
+  /**
+   * **O ESCOPO da regra, que faltava — print da Cleo (08/09/2026).** Ela pediu que comprassemos um
+   * encosto ortopedico, e o rascunho entrou pelo caminho do material: pediu o endereco e prometeu o
+   * repasse. Medido no prompt daquele dia: "material" aparecia cinco vezes e **"material de
+   * campanha" nenhuma** — a condicao escrita era a FORMA do pedido, nunca a CATEGORIA do item.
+   */
+  check(/MATERIAL DE CAMPANHA/.test(prompt), 'o prompt diz de que material esta falando');
+  check(/BEM QUE PRECISA SER COMPRADO NÃO É MATERIAL/.test(prompt), 'e diz o que NAO entra na regra');
+  check(/cadeira de rodas/i.test(prompt), 'com o exemplo do caso real');
+  check(/Não peça\s+endereço/.test(prompt) || /não peça\s+endereço/i.test(prompt),
+    'mandando NAO pedir endereco nesses casos');
+  /** A contradicao que a mensagem dela tinha: negar a doacao e pedir o endereco no mesmo texto. */
+  check(/nunca na mesma mensagem/i.test(prompt), 'e proibindo as duas coisas na mesma mensagem');
   check(prompt.includes('PERGUNTE que tipo de material ela precisa'),
     'e manda PERGUNTAR o tipo quando ela nao disse qual');
   check(prompt.includes('não pergunte de'),
@@ -1572,6 +1585,55 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
     { de: 'contato', texto: 'Voces tem material?', at: '2026-09-08T09:13:00' },
   ]);
   check(/escreveu 2 mensagens/.test(semAnuncio), 'quem nao veio de anuncio conta as duas, como antes');
+}
+
+/**
+ * ENDERECO DE ENTREGA PEDIDO A QUEM NAO PEDIU MATERIAL — print da Cleo (08/09/2026).
+ *
+ * Ela pediu que comprassemos um encosto ortopedico e uma cadeira de rodas. O rascunho abriu
+ * dizendo, corretamente, que *"um mandato nao pode comprar nem doar bens a eleitor por causa da lei
+ * eleitoral"* — e em seguida **pediu o endereco completo e prometeu o repasse a equipe de
+ * materiais**, abrindo a porta que a frase anterior fechou.
+ *
+ * **Medido no texto que saiu: um aviso so, cosmetico, e `rascunhoPodeSairSozinho` devolvia TRUE.**
+ * Com "Automatizar" marcada aquela mensagem sairia sozinha; ele apagou a mao.
+ *
+ * A trava e mecanica porque o painel SABE as duas coisas: `pedeMaterial` e sinal calculado do que
+ * ela escreveu, e `templates.ehPedidoDeEndereco` e o invariante do NOSSO pedido de endereco.
+ */
+{
+  grupo('endereco de entrega sem pedido de material (08/09)');
+
+  const agora = new Date('2026-09-08T17:06:00');
+  const oQueSaiu =
+    'Entendo a sua necessidade e sinto muito por essa dificuldade. Como ja informei, um mandato nao ' +
+    'pode comprar nem doar bens a eleitor por causa da lei eleitoral. O que posso fazer e repassar ' +
+    'seu pedido para a equipe responsavel pelos materiais. Para eu encaminhar, por favor me passe ' +
+    'seu endereco completo (rua, numero, bairro e CEP). Com esses dados, o pedido vai para a equipe ' +
+    'de materiais - e e ela quem entra em contato com voce.';
+  const barra = (texto, ctx) =>
+    revisarRascunho(texto, agora, ctx).avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial);
+
+  check(barra(oQueSaiu, { pedeMaterial: false }), 'o texto que saiu para ela e barrado');
+  check(!rascunhoPodeSairSozinho(revisarRascunho(oQueSaiu, agora, { pedeMaterial: false }).avisos),
+    'e nao sai sozinho');
+
+  /**
+   * **A guarda que sustenta a trava:** quem PEDIU material de campanha tem que receber o pedido de
+   * endereco — e o caminho certo dele desde a print da Jonice (08/09). Barrar os dois casos trocaria
+   * um defeito por outro.
+   */
+  check(!barra(oQueSaiu, { pedeMaterial: true }), 'quem pediu material continua recebendo o pedido de endereco');
+
+  /**
+   * **`undefined` nao e "ela nao pediu": e "ninguem mediu".** Fora da rodada nao ha sinais, e
+   * barrar ali pararia o rascunho pedido a mao.
+   */
+  check(!barra(oQueSaiu, {}), 'sem sinais, nao confere nada');
+
+  /** A resposta CERTA para o caso dela — a seccao 9 do padrao — passa. */
+  check(!barra('Nao precisa se desculpar por ter pedido. Infelizmente nao posso assumir esse tipo de ajuda, mas agradeco a confianca em falar comigo.', { pedeMaterial: false }),
+    'a negativa com respeito passa');
 }
 
 fim();

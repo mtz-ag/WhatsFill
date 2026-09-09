@@ -230,7 +230,7 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  *
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
-export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa }) {
+export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial }) {
   try {
     const r = await pedirAoWorker({
       type: MSG_IA,
@@ -268,7 +268,7 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
        * de `dossieAtivo`**: o modelo tem saber próprio sobre estes nomes, e foi ele que trocou o
        * cargo do Van Hattem na print da Nara. Trava não pode depender de uma caixa marcada.
        */
-      ...validarRascunho(r.decisao, agora, { jaFalamos, recebemosDela, chapa }),
+      ...validarRascunho(r.decisao, agora, { jaFalamos, recebemosDela, chapa, pedeMaterial }),
       custo: r.custo,
       custoUsd: r.custoUsd,
       gastoMes: r.gastoMes,

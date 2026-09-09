@@ -2493,4 +2493,52 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   }
 }
 
+/**
+ * PEDIR QUE A GENTE COMPRE — print da Cleo (08/09/2026).
+ *
+ * *"Eu preciso que compre um encosto Rumer ali na ortoponto ai em Porto Alegre"* e *"Uma Loja de
+ * venda de cadera de Roda ai em Porto Alegre"*. **Medido antes de mexer: os OITO detectores
+ * devolveram null** — o verbo dispara (`preciso`), mas o objeto tem que estar em NECESSIDADES, e
+ * encosto ortopedico e cadeira de rodas nao estao la.
+ *
+ * **O invariante nao e o item, e sim a CONSTRUCAO**: alguem pedindo que NOS gastemos dinheiro.
+ * Acrescentar os dois objetos seria a quarta vez que esta base aprende que a lista nao fecha.
+ */
+{
+  grupo('pedir que a gente COMPRE alguma coisa (08/09)');
+
+  const um = (t) => [{ texto: t, tipo: 'TEXT', at: '2026-09-08T14:35:00' }];
+  const acusa = (t) => !!pedeAjudaFinanceira(um(t), null);
+
+  check(acusa('Eu preciso que compre um encosto Rumer ali na ortoponto ai em Porto Alegre'),
+    'o caso da Cleo: "preciso que compre"');
+  check(acusa('Voce pode comprar uma cadeira de rodas pra mim?'), 'segunda pessoa: "voce pode comprar"');
+  check(acusa('Tem como voces pagarem a minha consulta?'), '"tem como voces pagarem"');
+  check(acusa('Me compra um colchao novo pelo amor de Deus'), 'pronome oblíquo: "me compra"');
+  check(acusa('Compra pra mim uma geladeira'), '"compra pra mim"');
+  check(acusa('Queria que voces doassem uma cadeira de rodas'), 'doar tambem conta');
+  check(acusa('Peco que a campanha custeie o meu tratamento'), 'custear tambem conta');
+
+  /**
+   * FALSOS POSITIVOS — e e aqui que mora o risco, porque esta regra manda uma NEGATIVA para
+   * eleitor. **O sujeito tem que ser NOS**: quando e ELA quem compra, nao ha pedido nenhum.
+   */
+  check(!acusa('Eu preciso comprar um encosto novo'), 'ela e quem precisa comprar');
+  check(!acusa('Onde posso comprar a camiseta de voces?'), '"posso" nao e "pode"');
+  check(!acusa('Vou comprar o material e distribuir aqui no bairro'), 'ela vai comprar para ajudar');
+  check(!acusa('Ja comprei os adesivos, obrigada'), 'passado nao e pedido');
+  check(!acusa('Quero comprar uma bandeira do Capitao Martim'), 'ela quer comprar de nos');
+  check(!acusa('Como faco pra comprar camiseta da campanha?'), 'pergunta de como comprar');
+
+  /** Fala politica: e o vocabulario desta base, e a terceira pessoa nao e nenhuma das formas. */
+  check(!acusa('Esses politicos compram votos com cesta basica, e uma vergonha'), '"compram votos" e critica');
+  check(!acusa('Meu voto nao se compra'), '"nao se compra" e declaracao de apoio');
+  check(!acusa('O governo paga pouco para os professores'), 'terceiro pagando nao e pedido');
+  check(!acusa('Comprei a ideia de voces, estou junto'), '"comprei a ideia" e apoio');
+
+  /** Quem OFERECE nao esta pedindo — a guarda que o detector ja tinha. */
+  check(!acusa('Se precisar eu pago a impressao dos santinhos'), 'ela oferece pagar');
+  check(!acusa('Quero doar um pouco do meu tempo para a campanha'), 'ela quer doar');
+}
+
 fim();

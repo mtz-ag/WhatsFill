@@ -2652,6 +2652,32 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   linha "Cidade:" some (o valor virou vazio) e o aviso de grafia some junto, enquanto o CRM
   continua com o lixo ate a conclusao gravar. Hoje o cabecalho diz o que vai ser apagado, e o
   Andamento registra `apagando do CRM: <campo> ("<valor>")`.
+- **REGRA SEM ESCOPO E CUMPRIDA ATE ONDE ELA NAO DEVIA IR — e o modelo DIFERENCIOU antes de errar.**
+  Print da Cleo (08/09/2026): *"preciso que compre um encosto Rumer ali na ortoponto"* e *"uma loja de
+  venda de cadeira de roda"*, e o rascunho pediu o **endereco completo** prometendo repasse a equipe
+  de materiais. Pergunta dele: *"a IA deveria saber pelo contexto que nao tem relacao com material de
+  campanha, por que ela nao diferenciou?"* — **ela diferenciou**: a primeira frase da mensagem e *"um
+  mandato nao pode comprar nem doar bens a eleitor por causa da lei eleitoral"*, que e a secao 9 do
+  padrao dele aplicada certo. **Foi erro de ROTEAMENTO, e a culpa e da regra.** Tres medicoes: a
+  condicao escrita era a FORMA do pedido (*"ela DISSE qual item quer"*) e nunca a CATEGORIA do item;
+  "material" aparecia 5 vezes no prompt e **"material de campanha" ZERO** (eu nunca escrevi a
+  fronteira); e a POSICAO decide — regra do material na linha **298** de 350, colada no pedido, secao
+  9 na **80**, dentro do documento dele. E a armadilha de 07/09 (o item 22 do tamanho) **com o
+  agravante de que a regra PERTO era a errada, e e a unica das duas que diz o que FAZER**: a secao 9
+  fecha, a regra 5 abre um procedimento em maiusculas. **Entre uma regra que fecha e uma que abre um
+  procedimento, o modelo pega a que abre.** Ao escrever regra com passo concreto, escreva junto onde
+  ela PARA e para onde o caso desvia.
+  **Os oito detectores devolveram null** — `pedeAjudaFinanceira` porque o verbo dispara (`preciso`) e
+  o OBJETO tem que estar em `NECESSIDADES`. **O conserto nao foi acrescentar os objetos** (quarta vez
+  que esta base aprende que a lista nao fecha): o invariante e a CONSTRUCAO — alguem pedindo que NOS
+  gastemos dinheiro (`preciso que compre`, `voce pode comprar`, `me compra`), que vale para geladeira,
+  colchao e consulta sem prever o item. **A guarda e o SUJEITO ser NOS**: *"eu preciso comprar"*,
+  *"onde posso comprar"* (`posso` nao bate em `pode`), *"vou comprar"* e *"esses politicos compram
+  votos"* ficam de fora. 12 das 19 assercoes sao falso positivo.
+  **E a trava usa o invariante que ja existia:** `enderecoSemMaterial` barra o envio quando
+  `templates.ehPedidoDeEndereco` casa e o sinal `pedeMaterial` e **false** — **pedir o endereco e o
+  passo irreversivel**, e cria a expectativa que a Lei 9.504/97 trata. Medido no texto que saiu: um
+  aviso cosmetico e `rascunhoPodeSairSozinho` **true**.
 - **O ARGUMENTO DE UMA REGRA E O LIMITE DELA — clicar duas vezes no MESMO anuncio nao e navegar.**
   Print da Aldina (08/09/2026): dois cliques em *"Ola! Eu quero receber o Material da Direita"*, nada
   escrito, e saiu a mensagem do momento — *"ignorou o modelo que e prioritario de pedido de material,

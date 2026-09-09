@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v3.12.0) — leia isto primeiro numa sessão nova
+## 2026-09-08 — ESTADO DE AGORA (v3.13.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.12.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.13.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
@@ -18,7 +18,7 @@ tabela. Prompt de sistema do rascunho: **5.556 tokens**, dos quais **68% é o `P
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
 Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75), **dezoito em
-07/09** (2.76 a 2.93) e **dezenove em 08/09** (2.94 a 3.12).
+07/09** (2.76 a 2.93) e **vinte em 08/09** (2.94 a 3.13).
 
 ### O que mudou em 08/09, em uma linha cada
 
@@ -30,7 +30,7 @@ Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2
 | 3.3–3.4 | **"Casa" não é endereço e "casada" não é Chapada**; e a **IA pendurava** — não havia timeout em lugar nenhum, nem no `fetch` nem na ponte. |
 | 3.5–3.6 | **O failsafe** (falhou o titular, tenta o reserva, no service worker junto do teto) e o **botão do padrão** na Config. |
 | 3.7 | **O padrão abre em janela própria** (16px, coluna de 78 caracteres), e explicação longa nasce fechada com um "ver mais". |
-| 3.8–3.12 | **Van Hattem virou deputado federal** — trava de cargo e número da chapa; o log passou a dizer **quem** atendeu e **por que** o titular falhou (em vermelho); e **pedido de dinheiro e de emprego passaram para a IA**; o **texto do anúncio deixou de ser fala dela** para a IA; e clicar duas vezes no MESMO anúncio deixou de ser navegação. |
+| 3.8–3.13 | **Van Hattem virou deputado federal** — trava de cargo e número da chapa; o log passou a dizer **quem** atendeu e **por que** o titular falhou (em vermelho); e **pedido de dinheiro e de emprego passaram para a IA**; o **texto do anúncio deixou de ser fala dela** para a IA; clicar duas vezes no MESMO anúncio deixou de ser navegação; e **cadeira de rodas deixou de ser material de campanha**. |
 
 ### O que mudou em 07/09, em uma linha cada
 
@@ -62,7 +62,7 @@ de prompt).
 
 ### As travas do rascunho, hoje
 
-`AVISOS_QUE_IMPEDEM_ENVIO` tem **sete** entradas, e cada uma nasceu de uma mensagem que saiu para
+`AVISOS_QUE_IMPEDEM_ENVIO` tem **oito** entradas, e cada uma nasceu de uma mensagem que saiu para
 eleitor real e ele apagou. Elas barram o envio AUTOMÁTICO; o rascunho continua no campo, e ele lê.
 
 | trava | a print |
@@ -74,6 +74,7 @@ eleitor real e ele apagou. Elas barram o envio AUTOMÁTICO; o rascunho continua 
 | `pediuReenvio` | *"deve ter dado ruim no áudio"* para quem mandou cinco áudios transcritos — 07/09 |
 | `mandouProcurarNos` | *"conversar direto com a coordenação"* — quem escreve JÁ está falando com a equipe — 07/09 |
 | `chapaTrocada` | *"deputado federal … Marcel Van Hattem"* — ele é senador na chapa — a Nara, 08/09 |
+| `enderecoSemMaterial` | pediu o endereço de entrega a quem pediu uma cadeira de rodas — a Cleo, 08/09 |
 
 **A disciplina que decide onde uma regra nova mora:** mecânico e sem julgamento vira **conserto**
 (a saudação errada, o traço eme); verificável vira **aviso** que barra o envio; o resto fica no
@@ -268,6 +269,93 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-08 — Cadeira de rodas não é material de campanha (v3.13.0)
+
+Print da **Cleo** (08/09/2026): *"Eu preciso que compre um encosto Rumer ali na ortoponto aí em Porto
+Alegre"* e *"Uma Loja de venda de cadeira de Roda aí em Porto Alegre"*. O rascunho pediu o **endereço
+completo** e prometeu repassar à **equipe de materiais**. Ele apagou a mensagem: *"IA confundindo
+entrega de material com pedido de ajuda"*, e depois: *"a IA deveria saber pelo contexto que o
+material não tem relação nenhuma com material de campanha, por que ela não diferenciou?"*
+
+### Medido antes de mexer — os OITO detectores devolveram null
+
+```
+pedeAjudaFinanceira  null      pedeAlgoIndefinido           null
+pedeMaterial         null      conversaPedeRespostaPessoal  null
+informouEndereco     null      conversaTemPerguntaAberta    null
+semInteresse         null      pedeEmprego                  null
+```
+
+**O determinístico não classificou como material — não classificou como nada.** `pedeMaterial` null
+está certo (encosto e cadeira de rodas não estão em `OBJETO_DE_MATERIAL`); `pedeAjudaFinanceira` null
+é o defeito — o verbo dispara (`preciso`), mas o **objeto** tem de estar em `NECESSIDADES`.
+
+### A resposta à pergunta dele: ela DIFERENCIOU
+
+A primeira frase da mensagem é *"um mandato não pode comprar nem doar bens a eleitor por causa da lei
+eleitoral"* — a seção 9 do padrão dele, lembrada e aplicada. **Foi erro de roteamento, não de
+compreensão**, e a culpa é da regra que eu escrevi em 08/09 (o caso da Jonice). Três medições:
+
+- **A condição era a FORMA do pedido** (*"ela DISSE qual item quer"*), nunca a CATEGORIA do item — e
+  um encosto ortopédico é um item que ela disse que quer.
+- **A fronteira nunca foi escrita:** "material" aparecia 5 vezes no prompt e `"material de campanha"`
+  **zero**.
+- **A posição decide.** No prompt de 350 linhas, a regra do material está na **298** (colada no
+  pedido) e a seção 9 na **80**. É a armadilha de 07/09 (o item 22 do tamanho), com o agravante de
+  que a regra PERTO era a errada — e é a única das duas que diz o que **fazer**: a seção 9 fecha, a
+  regra 5 abre um procedimento em maiúsculas (*"PEÇA O ENDEREÇO COMPLETO"*).
+- E quem atendeu foi o **Haiku**, pelo failsafe (conta da OpenAI sem saldo).
+
+### E nenhuma trava barrou
+
+```
+avisos: ["abriu repetindo o que ela disse"]      pode sair sozinho? true
+```
+
+Cosmético. **Com "Automatizar" marcada aquela mensagem sairia sozinha.** A trava de `promessa` não vê
+nada porque promessa de *repassar* foi liberada em 08/09, e ela não sabe que o item não é de campanha.
+
+### Os três consertos
+
+**1. O detector, pela CONSTRUÇÃO e não pela lista.** Acrescentar "encosto" e "cadeira de rodas" seria
+a quarta vez que esta base aprende que a lista não fecha. O invariante é *alguém pedindo que NÓS
+gastemos dinheiro*, em três formas: subjuntivo do pedido (*"preciso que compre"*), segunda pessoa
+(*"você pode comprar"*) e oblíquo (*"me compra"*, *"compra pra mim"*). Verbos: comprar, pagar,
+custear, bancar, doar. **12 das 19 asserções são falso positivo** — *"eu preciso comprar"*, *"onde
+posso comprar"* (`posso` não bate em `pode`), *"vou comprar"*, *"já comprei"*, *"esses políticos
+compram votos"*, *"meu voto não se compra"*, *"comprei a ideia de vocês"*.
+
+**2. O escopo e o desvio na regra 5.** Material passou a ser definido (**material de CAMPANHA**), com
+a lista do que NÃO entra (cadeira de rodas, órtese, muleta, remédio, óculos, colchão, eletrodoméstico,
+móvel, passagem, exame, consulta) e o desvio explícito para a seção 9. Mais a proibição da
+contradição: **negar a doação e pedir endereço não podem estar na mesma mensagem.**
+
+**3. A trava, pelo invariante que já existia.** `enderecoSemMaterial` (a oitava) barra o envio
+automático quando `templates.ehPedidoDeEndereco(texto)` é verdadeiro e o sinal `pedeMaterial` é
+**false**. É mecânica de verdade: o painel sabe as duas coisas, e **pedir o endereço é o passo
+irreversível** — cria a expectativa de entrega, que é o que a Lei 9.504/97 trata.
+
+> **Condicionada, como o `pediuReenvio`:** quem PEDIU material de campanha continua recebendo o
+> pedido de endereço, que é o caminho certo dele desde a Jonice. E `undefined` não é "ela não pediu",
+> é "ninguém mediu" — fora da rodada não há sinais, e barrar ali pararia o rascunho pedido à mão.
+
+### Medido depois
+
+| | antes | agora |
+|---|---|---|
+| `pedeAjudaFinanceira` | null | *"pediu que a gente pagasse por algo (preciso que compre)"* |
+| quadro | `ja-respondemos-antes`, tecla 5 | **a IA assume e responde** |
+| o texto que saiu | sai sozinho | **barrado** |
+
+### Arquivos
+
+`src/lib/cortesia.js` (`PEDIDO_PARA_A_GENTE_GASTAR`), `src/lib/ia.js` (o escopo da regra 5,
+`enderecoSemMaterial`, o import do invariante), `src/lib/ia-cliente.js` e `src/panel/panel.js` (o
+sinal), `tests/cortesia.test.mjs` (**19 asserções**, 12 falso positivo) e `tests/ia.test.mjs`
+(**10 asserções**). 15 suítes verdes, verificadores limpos.
+
 ---
 
 ## 2026-09-08 — Clicar duas vezes no mesmo anúncio não é navegar (v3.12.0)
