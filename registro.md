@@ -1,4 +1,4 @@
-## 2026-09-09 — ESTADO DE AGORA (v3.15.0) — leia isto primeiro numa sessão nova
+## 2026-09-09 — ESTADO DE AGORA (v3.16.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.15.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.16.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
@@ -83,9 +83,10 @@ reescrever o texto de um aviso sem reescrever a trava a faria deixar de casar em
 
 ### Pendências que NÃO estão no código — precisam dele
 
-1. **IMPORTAR O FLUXO.** O último arquivo entregue a ele é o `fluxopadrao3.15.0.json` (09/09), com
-   **67 caixas** — o padrão de hoje. Mudou duas vezes: a 3.10 mandou dinheiro e emprego para a IA,
-   e a 3.15 **devolveu o emprego à resposta pronta** (o dinheiro segue na IA).
+1. **IMPORTAR O FLUXO.** O último arquivo VÁLIDO é o `fluxopadrao3.10.0.json`, com **67 caixas**
+   — a estrutura do padrão de hoje. **O `3.15.0.json` que mandei está errado e não deve ser
+   importado**: eu tinha trocado as caixas de emprego para a resposta pronta sem ele pedir, e a 3.16
+   desfez. Dinheiro e emprego entregam o caso à IA, como na 3.10.
 
    > **Antes de afirmar que o quadro dele está atrasado, compare com o ARQUIVO que ele tem** — não
    > com o último que este registro menciona. Já errei nisso, e foi ele quem corrigiu mandando o
@@ -268,6 +269,87 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-09 — A lista de material virou de PERMISSÃO (v3.16.0)
+
+Print do **Oseias** (09/09/2026): *"Viu se vc conseguir uma bota de gaúcho, número 42, eu fico muito
+feliz, pois tenho tudo, o traje está faltando só a bota"*. O rascunho ofereceu **o endereço completo
+e o repasse à equipe responsável pelos materiais** — o caso da Cleo (08/09) se repetindo com outro
+objeto, um dia depois.
+
+Regra dele, com a razão junto:
+
+> *"nossa lista é pequena do que podemos dar, que é (folhetos, adesivos etc); todo o resto entra como
+> pedido de emprego, ajuda, doação"*
+
+### O que eu tinha feito errado na 3.13
+
+Escrevi o escopo como **lista de BLOQUEIO** — cadeira de rodas, órtese, remédio, colchão, móvel. Bota
+não estava nela, e **nenhuma lista de bloqueio fecha**. É a disciplina que já está escrita neste
+projeto desde `MODELOS_COM_ESFORCO`: **lista de permissão, nunca de bloqueio — a inversa faz todo
+item novo nascer aceito até alguém notar.** Aqui o item que nascia aceito era um bem que o mandato
+não pode dar a eleitor.
+
+### A lista, agora fechada e única
+
+```
+adesivo · santinho · panfleto · folheto · folder · card · arte · informativo
+cartilha · bandeira · camiseta · boné · conteúdo digital
+```
+
+**"Folheto" entrou porque ele o nomeou.** E ela é a **mesma lista** nos dois lugares — o prompt e
+`cortesia.OBJETO_DE_MATERIAL`, que decide o sinal `pedeMaterial`. Há teste exigindo item a item, para
+duas listas não divergirem na primeira vez que ele acrescentar algo.
+
+A regra de fechamento é o que a torna de permissão: *"se você não encontrar o item NA LISTA, ele não
+é material"*.
+
+### E o determinístico ganhou o caso
+
+`pedeAjudaFinanceira` passou a reconhecer **pedir que a gente CONSIGA uma coisa** (conseguir,
+arrumar, arranjar, doar). Antes: os três detectores devolviam null.
+
+**A guarda que torna isso seguro sem enumerar objetos é a própria lista de permissão** — havendo
+palavra de material na rajada, esta regra não decide nada e `pedeMaterial` resolve. Mais duas de
+forma: o verbo tem de ser de **obter** (*"consegue verificar"* é fazer, não obter) e o que vem depois
+tem de ser **coisa**, nunca informação (*"consegue o link"*, *"consegue o número"*).
+
+> **O sujeito é obrigatório, e foi a medição que obrigou:** sem ele, *"vamos conseguir a vitória"*
+> virava pedido de doação. **É a quinta vez que este arquivo aprende a mesma coisa** — o "vamos", o
+> "confirmado", o "pode contar comigo", o "estarei". Verbo sozinho é fala de campanha.
+
+Das 17 asserções, 13 são falso positivo.
+
+### A trava de ontem funcionou
+
+Medido no rascunho que saiu: `enderecoSemMaterial` **barrou** o envio automático. Ela não impediu o
+texto de ser escrito — impediu que ele fosse mandado sozinho, que é o que ela existe para fazer.
+
+### E eu desfiz o que mudei sem ele pedir
+
+Na 3.15 troquei as caixas de emprego de `acao.ia` para a resposta pronta. Ele: *"eu não pedi por
+isso, só queria a resposta aproximada do que falei"*. **Ele estava falando do TEXTO** — *"a resposta
+rápida sobre trabalhar na campanha bastava"* descrevia o conteúdo que faltava, não um pedido para
+tirar o caso da IA. As caixas voltaram para `acao.ia`, e a decisão de 08/09 continua de pé.
+
+> **A lição, que fica:** frase dele sobre o CONTEÚDO de uma resposta não é decisão sobre QUEM decide
+> o caso. Quando as duas leituras existem, é para perguntar — e eu não perguntei.
+
+**O que da 3.15 fica**, porque é o texto que ele pediu: a resposta `trabalhar-na-campanha`, o `tipo`
+de `pedeEmprego` e a troca no painel. Ela continua alcançável de duas formas — pelas respostas
+rápidas da caixa, e **pelo quadro DELE**, que está no arranjo 2.96.0 e ainda manda `pedido-emprego`.
+
+### Arquivos
+
+`src/lib/cortesia.js` (`PEDIR_QUE_A_GENTE_CONSIGA`, `NAO_E_COISA`, `folheto` na lista),
+`src/lib/ia.js` (a lista de permissão na regra 5), `src/lib/arvore.js` (as caixas de volta),
+`tests/cortesia.test.mjs` (**17 asserções**), `tests/ia.test.mjs` (a lista item a item). 15 suítes
+verdes, 67 caixas, 0 problemas.
+
+**O `fluxopadrao3.15.0.json` que mandei está DESATUALIZADO** — não importe. O padrão de hoje é igual
+ao `3.10.0` na estrutura.
+
 ---
 
 ## 2026-09-09 — Trabalhar para a campanha não é procurar emprego (v3.15.0)

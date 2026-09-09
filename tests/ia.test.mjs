@@ -886,8 +886,28 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
    * repasse. Medido no prompt daquele dia: "material" aparecia cinco vezes e **"material de
    * campanha" nenhuma** — a condicao escrita era a FORMA do pedido, nunca a CATEGORIA do item.
    */
-  check(/MATERIAL DE CAMPANHA/.test(prompt), 'o prompt diz de que material esta falando');
-  check(/BEM QUE PRECISA SER COMPRADO NÃO É MATERIAL/.test(prompt), 'e diz o que NAO entra na regra');
+  /**
+   * **A lista e de PERMISSAO, e a de bloqueio durou um dia.** Na 3.13 eu escrevi o escopo como uma
+   * lista do que NAO e material; no dia seguinte veio o print do Oseias pedindo **uma bota de
+   * gaucho**, e o rascunho ofereceu o endereco e o repasse outra vez. Regra dele: *"nossa lista e
+   * pequena do que podemos dar, que e (folhetos, adesivos etc); todo o resto entra como pedido de
+   * emprego, ajuda, doacao"*.
+   */
+  check(/MATERIAL é uma LISTA FECHADA/.test(prompt), 'o material e uma lista fechada');
+  check(/folheto/.test(prompt), 'com o folheto que ele nomeou');
+  check(/QUALQUER OUTRA COISA está FORA desta regra/.test(prompt), 'e tudo o mais esta fora dela');
+  check(/Se você não encontrar o item NA LISTA, ele não é material/.test(prompt),
+    'com a regra de fechamento, que e o que faz a lista ser de permissao');
+  check(/PEDIDO DE AJUDA OU DOAÇÃO/.test(prompt), 'e o resto vira pedido de ajuda ou doacao');
+
+  /**
+   * **As duas listas sao a MESMA.** A do prompt e a de `cortesia.OBJETO_DE_MATERIAL`, que decide o
+   * sinal `pedeMaterial` — duas listas separadas divergiriam na primeira vez que ele acrescentasse
+   * um item.
+   */
+  for (const item of ['adesivo', 'santinho', 'panfleto', 'folheto', 'bandeira', 'camiseta', 'boné']) {
+    check(prompt.includes(item), `a lista do prompt tem "${item}"`);
+  }
   check(/cadeira de rodas/i.test(prompt), 'com o exemplo do caso real');
   check(/Não peça\s+endereço/.test(prompt) || /não peça\s+endereço/i.test(prompt),
     'mandando NAO pedir endereco nesses casos');

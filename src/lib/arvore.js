@@ -717,21 +717,18 @@ export function fluxoPadrao() {
      * a pergunta sem resposta, ou respondê-la com um agradecimento genérico, é o que faz
      * *"vocês pagam?"* parecer um sim — e prometer emprego a eleitor é proibido pela Lei 9.504/97.
      *
-     * **Passou a ser a IA em 08/09 e VOLTOU para a resposta pronta em 09/09** — decisão dele, com o
-     * print do Luciano: *"aqui a resposta rápida sobre trabalhar na campanha bastava"*.
+     * **Também passou a ser a IA em 08/09** — mesma decisão dele, e pela mesma razão: a lista de
+     * formas de perguntar não fecha. Ver a caixa do pedido de dinheiro, logo acima.
      *
-     * **As duas decisões são coerentes, e medi para ter certeza.** Em 08/09 a queixa era o
-     * detector **errando**; aqui ele estava **mudo** — `pedeEmprego` devolvia null para *"Posso
-     * trabalhar aqui para o Capitão Martim"*, porque o nome dele não estava na lista de objetos e
-     * `trabalhar` tinha de vir colado na preposição. O caso caiu em `ultima-pede-resposta-pessoal`,
-     * foi para a IA, e ela escreveu seis linhas negociando remuneração.
-     *
-     * **Só o EMPREGO voltou; o pedido de dinheiro continua com a IA** — ele nomeou um caso, não a
-     * família.
+     * > **Eu troquei esta caixa de volta para a resposta pronta na 3.15 e ele desfez na hora:**
+     * > *"eu não pedi por isso, só queria a resposta aproximada do que falei"*. Ele estava falando
+     * > do TEXTO — *"a resposta rápida sobre trabalhar na campanha bastava"* descrevia o conteúdo
+     * > que faltava, não um pedido para tirar o caso da IA. **Frase dele sobre o CONTEÚDO de uma
+     * > resposta não é decisão sobre QUEM decide o caso**, e a decisão de 08/09 continua de pé.
      */
     { ...noVazio('quer trabalhar para o mandato'),
       condicao: { sinal: 'pedeEmprego', negar: false, palavras: [], onde: 'ultima' },
-      acao: { tecla: null, resposta: 'pedido-emprego' } },
+      acao: { tecla: null, resposta: null, ia: true } },
 
     /**
      * **"Me liga"** — pedido dele (04/09/2026, anotação da Jucileia).
@@ -1072,7 +1069,7 @@ export function fluxoPadrao() {
      */
     { ...noVazio('quer trabalhar para o mandato'), id: 'chegada-emprego',
       condicao: { sinal: 'pedeEmprego', negar: false, palavras: [], onde: 'ultima' },
-      acao: { tecla: null, resposta: 'pedido-emprego' } },
+      acao: { tecla: null, resposta: null, ia: true } },
     { ...noVazio('pediu que a gente ligasse'), id: 'chegada-ligacao',
       condicao: { sinal: 'pedeLigacao', negar: false, palavras: [], onde: 'ultima' },
       acao: { tecla: null, resposta: 'pedido-ligacao' } },

@@ -927,13 +927,35 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      *    **regra que vive longe do ponto em que o modelo começa a escrever não é cumprida** —, com o
      *    agravante de que a regra PERTO era a errada, e é a única das duas que diz o que FAZER.
      */
-    '   MATERIAL aqui significa MATERIAL DE CAMPANHA: adesivo, santinho, panfleto, folder, bandeira,',
-    '   camiseta, boné, card e conteúdo digital. Nada além disso entra nesta regra.',
-    '   **BEM QUE PRECISA SER COMPRADO NÃO É MATERIAL** — cadeira de rodas, órtese, muleta, remédio,',
-    '   óculos, colchão, eletrodoméstico, móvel, passagem, exame, consulta. Pedido assim é a seção 9',
-    '   do padrão (pedido de dinheiro): NEGUE com respeito, sem humilhar, e PARE aí. Não peça',
-    '   endereço, não fale em equipe de materiais e não prometa repasse — repassar um pedido de',
-    '   compra é abrir a porta que a lei fecha.',
+    /**
+     * **A LISTA VIROU DE PERMISSÃO, e a de bloqueio durou um dia.**
+     *
+     * Na 3.13 (o caso da Cleo) eu escrevi o escopo como uma lista do que NÃO é material — cadeira de
+     * rodas, órtese, remédio, colchão. No dia seguinte veio o print do Oseias pedindo **uma bota de
+     * gaúcho número 42**, e o rascunho ofereceu o endereço e o repasse à equipe de materiais outra
+     * vez: bota não estava na lista, e nenhuma lista de bloqueio fecha.
+     *
+     * Ele deu a regra e a razão dela: *"nossa lista é pequena do que podemos dar, que é (folhetos,
+     * adesivos etc); todo o resto entra como pedido de emprego, ajuda, doação"*.
+     *
+     * **É a mesma disciplina de `MODELOS_COM_ESFORCO`, e está escrita no CLAUDE.md desde então:**
+     * lista de permissão, nunca de bloqueio — a inversa faz todo item novo nascer aceito até alguém
+     * notar. Aqui o item novo que nasce aceito é um bem que o mandato não pode dar a eleitor.
+     *
+     * **A lista é curta porque o estoque é curto**, e ela é a mesma de `cortesia.OBJETO_DE_MATERIAL`
+     * — a mesma que decide o sinal `pedeMaterial`. Duas listas separadas divergiriam na primeira vez
+     * que ele acrescentasse um item.
+     */
+    '   MATERIAL é uma LISTA FECHADA, e ela é curta — é o que a campanha tem para dar:',
+    '   adesivo, santinho, panfleto, folheto, folder, card, arte, informativo, cartilha, bandeira,',
+    '   camiseta, boné e conteúdo digital.',
+    '   **QUALQUER OUTRA COISA está FORA desta regra**, sem exceção e sem precisar estar em lista',
+    '   nenhuma: bota, roupa, calçado, cadeira de rodas, órtese, muleta, remédio, óculos, colchão,',
+    '   eletrodoméstico, móvel, cesta básica, passagem, exame, consulta — e tudo o que não estiver',
+    '   nomeado na lista de cima. Se você não encontrar o item NA LISTA, ele não é material.',
+    '   Pedido assim é PEDIDO DE AJUDA OU DOAÇÃO, e vai para a seção 9 do padrão: NEGUE com respeito,',
+    '   sem humilhar, e PARE aí. Não peça endereço, não fale em equipe de materiais e não prometa',
+    '   repasse — repassar um pedido de doação é abrir a porta que a lei fecha.',
     '   **E nunca na mesma mensagem:** se você disse que o mandato não pode comprar nem doar bens,',
     '   está proibido pedir endereço ou prometer encaminhamento depois disso. As duas coisas juntas',
     '   se contradizem, e quem lê fica esperando a entrega.',

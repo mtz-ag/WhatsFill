@@ -2610,4 +2610,49 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(!pedeMat('preciso de informacao sobre a agenda'), 'nem informacao');
 }
 
+/**
+ * PEDIR QUE A GENTE CONSIGA UMA COISA E PEDIDO DE DOACAO — print do Oseias (09/09/2026).
+ *
+ * *"Viu se vc conseguir uma bota de gaucho, numero 42"*, e o rascunho ofereceu o endereco e o
+ * repasse a equipe de materiais — o caso da Cleo (08/09) se repetindo com outro objeto. Regra dele:
+ * *"nossa lista e pequena do que podemos dar, que e (folhetos, adesivos etc); todo o resto entra
+ * como pedido de emprego, ajuda, doacao"*.
+ *
+ * **A guarda que faz esta regra ser segura sem enumerar objetos e a LISTA DE PERMISSAO do
+ * material** — havendo palavra de material na rajada, isto nao decide nada e `pedeMaterial` resolve.
+ */
+{
+  grupo('pedir que a gente consiga uma coisa (o Oseias, 09/09)');
+
+  const um = (t) => [{ texto: t, tipo: 'TEXT', at: 1 }];
+  const acusa = (t) => !!pedeAjudaFinanceira(um(t), null);
+
+  check(acusa('Viu se vc conseguir uma bota de gaucho , numero 42 ,eu fico muito feliz'), 'a frase exata da print');
+  check(acusa('voce consegue uma cadeira de rodas pra mim'), 'cadeira de rodas');
+  check(acusa('vcs conseguem um colchao?'), 'colchao');
+  check(acusa('me arruma uma cesta basica'), '"me arruma"');
+
+  /** A LISTA DE PERMISSAO ganha: o que a campanha tem para dar nao e pedido de doacao. */
+  check(!acusa('voce consegue uns adesivos pra mim'), 'adesivo e material');
+  check(!acusa('vcs conseguem uma bandeira'), 'bandeira tambem');
+  check(!acusa('me arruma uns folhetos'), 'e folheto, que ele nomeou');
+
+  /** O verbo tem que ser de OBTER, e o que vem depois tem que ser COISA. */
+  check(!acusa('voce consegue verificar isso pra mim?'), 'verificar e fazer, nao obter');
+  check(!acusa('voce consegue falar com a prefeitura?'), 'falar tambem');
+  check(!acusa('vc consegue o numero dele?'), 'numero nao e coisa');
+  check(!acusa('voces conseguem o link do grupo?'), 'link tambem nao');
+  check(!acusa('se voces conseguirem uma resposta me avisem'), 'nem resposta');
+
+  /**
+   * **O SUJEITO e obrigatorio, e foi a medicao que obrigou** — sem ele, *"vamos conseguir a
+   * vitoria"* virava pedido de doacao. E a quinta vez que este arquivo aprende que verbo sozinho e
+   * fala de campanha.
+   */
+  check(!acusa('vamos conseguir a vitoria'), 'grito de campanha nao e pedido');
+  check(!acusa('juntos vamos conseguir um Brasil melhor'), 'nem este');
+  check(!acusa('espero que voces consigam muitos votos'), 'nem torcida');
+  check(!acusa('consegui uma vaga, obrigado'), 'passado nao e pedido');
+}
+
 fim();

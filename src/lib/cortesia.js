@@ -1211,6 +1211,26 @@ const PEDIDO_PARA_A_GENTE_GASTAR = [
   /(^|[^\p{L}])(?:me\s+(?:compra|comprar|compre|paga|pagar|pague)|(?:compra|comprar|compre|paga|pagar|pague|doa|doar|doe)\s+(?:pra|para)\s+mim)/iu,
 ];
 
+/**
+ * **Pedir que a gente CONSIGA uma coisa** — ver o bloco em `pedeAjudaFinanceira`.
+ *
+ * `NAO_E_COISA` são as palavras que se pede à equipe sem pedir um bem: informação e contato. Ela é
+ * curta e fechada de propósito — o que ela protege é a diferença entre *"consegue uma bota"* e
+ * *"consegue o número dele"*.
+ */
+const NAO_E_COISA =
+  /^(?:link|numero|contato|telefone|whats|whatsapp|endereco|informacao|informacoes|data|horario|agenda|nome|resposta|retorno|resultado|comprovante|documento)\b/;
+
+/**
+ * **O sujeito é OBRIGATÓRIO, e foi a medição que obrigou.** Sem ele, *"vamos conseguir a vitória"* —
+ * grito de campanha, o vocabulário mais comum desta base — virava pedido de doação. É a quinta vez
+ * que este arquivo aprende a mesma coisa (o "vamos", o "confirmado", o "pode contar comigo", o
+ * "estarei"): **verbo sozinho é fala de campanha; o que faz dele um pedido é ele ser dirigido a
+ * NÓS.**
+ */
+const PEDIR_QUE_A_GENTE_CONSIGA =
+  /(^|[^\p{L}])(?:(?:voc[êe]s?|vcs?|o\s+senhor|a\s+senhora|tu)\s+|se\s+(?:voc[êe]s?|vcs?)\s+|me\s+)(?:consegue|conseguem|conseguir|conseguiria|conseguiriam|arruma|arrumar|arranja|arranjar|doa|doar)\s+(?:me\s+)?(?:um|uma|uns|umas|o|a|os|as)\s+(\p{L}{3,})/iu;
+
 const DINHEIRO_QUE_PRECISA_DO_VERBO = [
   /\bdinheiro\b/i,
   /\bgrana\b/i,
@@ -1315,6 +1335,31 @@ export function pedeAjudaFinanceira(entrantes, nossaUltimaAt) {
    *  - **é PEDIDO, não notícia.** *"eles compram votos"* é fala política desta base e fica de fora,
    *    porque a terceira pessoa não é nenhuma das formas acima.
    */
+  /**
+   * **"Viu se vc conseguir uma bota de gaúcho, número 42"** — print do Oseias (09/09/2026).
+   *
+   * Pedir que a gente CONSIGA uma coisa é pedir doação, e a regra é dele: *"nossa lista é pequena do
+   * que podemos dar, que é (folhetos, adesivos etc); todo o resto entra como pedido de emprego,
+   * ajuda, doação"*. Medido antes: os três detectores devolviam null, e o rascunho ofereceu o
+   * endereço e o repasse à equipe de materiais — o caso da Cleo se repetindo com outro objeto.
+   *
+   * **A guarda é a LISTA DE PERMISSÃO do material**, e é ela que faz esta regra ser segura sem
+   * enumerar objetos: havendo palavra de material na rajada, isto não decide nada e `pedeMaterial`
+   * resolve. É o mesmo par de listas do prompt, e são a MESMA lista.
+   *
+   * **Duas guardas de forma, e é nelas que mora o risco:** o verbo tem que ser de OBTER (conseguir,
+   * arrumar, arranjar, doar) — *"você consegue verificar"* é fazer, não obter —, e o que vem depois
+   * tem que ser **artigo + coisa**, nunca informação (*"consegue o link"*, *"consegue o número"*).
+   */
+  const consiga = OBJETO_DE_MATERIAL.test(conversa) ? null : PEDIR_QUE_A_GENTE_CONSIGA.exec(conversa);
+  if (consiga && !NAO_E_COISA.test(consiga[2] || '')) {
+    const m = consiga;
+    return {
+      motivo: `pediu que a gente conseguisse um bem ("${m[0].trim()}") — vale a resposta que nega com respeito`,
+      trecho: conversa.slice(0, 160),
+    };
+  }
+
   for (const padrao of PEDIDO_PARA_A_GENTE_GASTAR) {
     const m = padrao.exec(conversa);
     if (m) {
@@ -2582,7 +2627,7 @@ const VERBO_DE_PEDIR_MATERIAL = [
 
 /** O que se pede. Literal de propósito: é o vocabulário desta campanha, e não uma categoria. */
 const OBJETO_DE_MATERIAL =
-  /(?:materia(?:l|is)|conteudos?|adesivos?|santinhos?|panfletos?|folders?|artes?|cards?|informativos?|cartilhas?|bandeiras?|camisetas?|bones?)/;
+  /(?:materia(?:l|is)|conteudos?|adesivos?|santinhos?|panfletos?|folhetos?|folders?|artes?|cards?|informativos?|cartilhas?|bandeiras?|camisetas?|bones?)/;
 
 /**
  * Verbo, até duas palavras no meio, e o objeto. As peças ficam separadas acima porque é assim que

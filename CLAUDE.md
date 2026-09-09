@@ -2652,6 +2652,29 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   linha "Cidade:" some (o valor virou vazio) e o aviso de grafia some junto, enquanto o CRM
   continua com o lixo ate a conclusao gravar. Hoje o cabecalho diz o que vai ser apagado, e o
   Andamento registra `apagando do CRM: <campo> ("<valor>")`.
+- **A LISTA DO QUE PODEMOS DAR E DE PERMISSAO, E E CURTA — a de bloqueio durou UM DIA.** Print do
+  Oseias (09/09/2026): *"Viu se vc conseguir uma bota de gaucho, numero 42"*, e o rascunho ofereceu o
+  endereco e o repasse a equipe de materiais — o caso da Cleo (08/09) repetido com outro objeto, um
+  dia depois. **Eu tinha escrito o escopo como lista de BLOQUEIO** (cadeira de rodas, remedio,
+  colchao) e bota nao estava nela. Regra dele: *"nossa lista e pequena do que podemos dar, que e
+  (folhetos, adesivos etc); todo o resto entra como pedido de emprego, ajuda, doacao"*. **E a
+  disciplina que ja estava escrita aqui em `MODELOS_COM_ESFORCO`: lista de permissao, nunca de
+  bloqueio — a inversa faz todo item novo nascer aceito ate alguem notar**, e aqui o que nascia
+  aceito era um bem que o mandato nao pode dar a eleitor. A lista e **uma so** (o prompt e
+  `cortesia.OBJETO_DE_MATERIAL`) e tem teste item a item; a regra de fechamento — *"se voce nao
+  encontrar o item NA LISTA, ele nao e material"* — e o que a torna de permissao.
+  `pedeAjudaFinanceira` ganhou **pedir que a GENTE consiga uma coisa**, e o que a torna segura sem
+  enumerar objetos e a propria lista de permissao (havendo palavra de material, ela nao decide nada).
+  **O sujeito e obrigatorio**, senao *"vamos conseguir a vitoria"* vira pedido de doacao — **quinta
+  vez que este arquivo aprende que verbo sozinho e fala de campanha**.
+- **FRASE DELE SOBRE O CONTEUDO DE UMA RESPOSTA NAO E DECISAO SOBRE QUEM DECIDE O CASO.** Em 09/09 ele
+  escreveu *"aqui a resposta rapida sobre trabalhar na campanha bastava"* e eu troquei as caixas de
+  emprego de `acao.ia` para a resposta pronta, desfazendo metade da decisao de 08/09. Ele desfez na
+  hora: *"eu nao pedi por isso, so queria a resposta aproximada do que falei"*. **Ele estava falando
+  do TEXTO.** Quando as duas leituras existem — mudar o texto, ou mudar quem decide —, e para
+  perguntar; mudar o quadro ainda custa a ele importar um arquivo. O que ficou da tentativa foi o que
+  ele pediu: a resposta `trabalhar-na-campanha`, o `tipo` de `pedeEmprego` e a troca de texto no
+  painel.
 - **TRABALHAR PARA A CAMPANHA NAO E PROCURAR EMPREGO — dois casos com respostas OPOSTAS num sinal
   so.** Print do Luciano (09/09/2026): *"Posso trabalhar aqui para o Capitao Martim"*, *"Mais preciso
   de material"*, *"E combinarmos quanto vou ganhar"* — militante se oferecendo. `pedido-emprego`
