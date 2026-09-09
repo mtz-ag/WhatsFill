@@ -29,7 +29,7 @@ import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
 import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
-import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado } from '../lib/cortesia.js';
+import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -5892,6 +5892,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           ? null
           : pedeFalarComDeputado(state.entrantes, state.nossaUltimaAt),
         naoPodeFalarAgora: naoPodeFalarAgora(state.entrantes, state.nossaUltimaAt),
+        /**
+         * **Ela reclama de não ter sido atendida** — pedido dele (09/09/2026), sobre o print do
+         * Maicon. Fica ao lado do `naoPodeFalarAgora` porque as duas dizem a mesma coisa: aqui
+         * precisa de gente, e as duas dividem a caixa de `ultima-pede-resposta-pessoal`.
+         */
+        reclamaSemResposta: reclamaSemResposta(state.entrantes, state.nossaUltimaAt),
         rajadaDeAnuncios: rajadaDeAnuncios(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
         /**
          * **Só cumprimentou, e nada mais.** Substitui a caixa de palavras "bom dia", que casava por

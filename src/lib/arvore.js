@@ -773,7 +773,7 @@ export function fluxoPadrao() {
      * escolheu para sair sozinha. O resto do que é longo passa a ser conversa.
      */
     { ...r('ultima-pede-resposta-pessoal', 'você responde: áudio, texto longo, ou ela está passando mal', onde),
-      tambemQuando: ['nao-pode-falar-agora'] },
+      tambemQuando: ['nao-pode-falar-agora', 'reclama-sem-resposta'] },
 
     /**
      * **"Só cumprimentou" virou SINAL, e não lista de palavras.**
@@ -1104,7 +1104,7 @@ export function fluxoPadrao() {
      * longo deixa de receber o recibo do anúncio nessa passada e vai para você. Foi dito a ele.
      */
     { ...r('ultima-pede-resposta-pessoal', 'você responde: áudio, texto longo, denúncia, ou ela está passando mal', 'chegada-antes'),
-      tambemQuando: ['respondeu-nossa-pergunta', 'nao-pode-falar-agora'] },
+      tambemQuando: ['respondeu-nossa-pergunta', 'nao-pode-falar-agora', 'reclama-sem-resposta'] },
 
     /**
      * **A DENÚNCIA respondida à nossa própria pergunta — a quarta pendência que fica acima do

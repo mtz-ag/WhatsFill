@@ -2446,6 +2446,63 @@ const NAO_POSSO_FALAR = [
  * @param {string|null} nossaUltimaAt
  * @returns {{motivo:string}|null}
  */
+/**
+ * **Ela reclama de não ter sido atendida** — pedido dele (09/09/2026), sobre o print do Maicon:
+ * *"Ninguém quis entrar em contato comigo"*, escrito quatro minutos depois de ele chegar pelo
+ * anúncio. Perguntado se isso deveria virar tecla 6, ele respondeu: *"virar tecla 6"*.
+ *
+ * **Por que não tem resposta pronta:** o que a pessoa está dizendo é que nós falhamos com ela. Texto
+ * automático em cima disso confirma a queixa — e concluir em silêncio, mais ainda. É a mesma família
+ * de `naoPodeFalarAgora` e de `ultima-pede-resposta-pessoal`: aqui precisa de gente, e por isso as
+ * três dividem a mesma caixa.
+ *
+ * **A guarda é o ALVO ser NÓS, e é ela que sustenta a regra.** Nesta base a frase *"ninguém me
+ * respondeu"* é dita o tempo todo sobre a prefeitura, o posto de saúde, o INSS e o banco — e aí ela
+ * é o oposto: é o caso que o mandato existe para encaminhar, e que já tem caminho próprio. Por isso
+ * a reclamação com um terceiro nomeado por perto **não casa**.
+ *
+ * @param {Array<{texto?:string, at?:string}>} entrantes
+ * @param {string|null} nossaUltimaAt
+ * @returns {{motivo:string, trecho:string}|null}
+ */
+const RECLAMA_SEM_RESPOSTA = [
+  /(^|[^\p{L}])(ninguem|nenhuma\s+pessoa)\s+[^.!?]{0,22}?(respondeu|responde|me\s+atendeu|me\s+atende|entrar\s+em\s+contato|entrou\s+em\s+contato|me\s+chamou|me\s+retornou|falou\s+comigo)/iu,
+  /(^|[^\p{L}])(voces|vcs|ninguem)\s+(nunca|nao|jamais)\s+[^.!?]{0,15}?(respond|retorn|atend|dao\s+retorno|deram\s+retorno)/iu,
+  /(^|[^\p{L}])(nao|nunca)\s+(fui|sou|me)\s+[^.!?]{0,12}?(respondid|atendid|retornad)/iu,
+  /(^|[^\p{L}])(mandei|escrevi|chamei|falei)\s+[^.!?]{0,30}?(e\s+)?(ninguem|nao)\s+[^.!?]{0,12}?(respond|retorn|atend)/iu,
+  /**
+   * *"já faz uma semana sem retorno nenhum"* — a primeira versão exigia uma palavra de TEMPO depois
+   * de *"sem retorno"*, e ela vem antes. Hoje a espera sozinha basta (`sem resposta`, `sem retorno`);
+   * `esperando`/`aguardando` continuam precisando do objeto, senão *"estou esperando o evento"* casa.
+   */
+  /(^|[^\p{L}])(sem\s+(resposta|retorno))(\s|$)/iu,
+  /(^|[^\p{L}])(estou|to|faz|ja\s+faz)\s+[^.!?]{0,20}?(esperando|aguardando)\s+[^.!?]{0,15}?(resposta|retorno|contato|ser\s+atendid)/iu,
+  /(^|[^\p{L}])(fui|estou|me\s+sinto)\s+(ignorad|abandonad|esquecid)/iu,
+];
+
+/**
+ * O terceiro nomeado que muda o sentido da queixa: *"ninguém me respondeu na prefeitura"* é o caso
+ * que o mandato encaminha, e não uma reclamação contra nós.
+ */
+const A_QUEIXA_E_DE_OUTRO =
+  /(prefeitura|cras|sine|inss|hospital|posto\s+de\s+saude|upa|secretaria|banco|delegacia|escola|creche|medico|clinica|operadora|empresa|patrao|sindicato|cartorio|detran|ipe|correios)/i;
+
+export function reclamaSemResposta(entrantes, nossaUltimaAt) {
+  for (const msg of rajadaFinal(entrantes, nossaUltimaAt)) {
+    const texto = semAcentos(msg?.texto);
+    if (!texto) continue;
+    if (A_QUEIXA_E_DE_OUTRO.test(texto)) continue;
+    const achou = RECLAMA_SEM_RESPOSTA.find((re) => re.test(texto));
+    if (achou) {
+      return {
+        motivo: 'ela reclama de não ter sido atendida — mensagem automática em cima disso confirma a queixa',
+        trecho: String(msg?.texto || '').slice(0, 160),
+      };
+    }
+  }
+  return null;
+}
+
 export function naoPodeFalarAgora(entrantes, nossaUltimaAt) {
   for (const msg of rajadaFinal(entrantes, nossaUltimaAt)) {
     const texto = semAcentos(msg?.texto);

@@ -2652,6 +2652,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   linha "Cidade:" some (o valor virou vazio) e o aviso de grafia some junto, enquanto o CRM
   continua com o lixo ate a conclusao gravar. Hoje o cabecalho diz o que vai ser apagado, e o
   Andamento registra `apagando do CRM: <campo> ("<valor>")`.
+- **RECLAMAR DE NAO TER SIDO ATENDIDA E TECLA 6** — decisao dele (09/09/2026), sobre a frase do
+  Maicon *"Ninguem quis entrar em contato comigo"*: **"virar tecla 6"**. **Nao tem resposta pronta e
+  escrever uma seria pior:** o que ela esta dizendo e que NOS falhamos com ela — texto automatico em
+  cima disso **confirma a queixa**, e concluir em silencio confirma duas vezes. Mesma familia de
+  `nao-pode-falar-agora`, e pela regra de 04/09 (uma caixa por desfecho) as tres dividem a caixa de
+  `ultima-pede-resposta-pessoal` por `tambemQuando`. **A guarda e o ALVO ser NOS**: nesta base
+  *"ninguem me respondeu"* e dito o tempo todo sobre a prefeitura, o CRAS, o INSS e o banco, e ai e o
+  OPOSTO — e o caso que o mandato encaminha. 12 das 22 assercoes sao falso positivo, tres delas
+  vocabulario com "ninguem" dentro (*"ninguem merece esse governo"*, *"ninguem vai nos parar"*).
+  **`semAcentos` NAO ABAIXA A CAIXA**, e sem o `i` a guarda do terceiro ficava desligada justo para
+  as SIGLAS (*"fui no CRAS"*, *"do INSS"*) — que e como essas instituicoes sao escritas. Confira a
+  caixa ao escrever guarda nova neste arquivo.
 - **QUEM QUER MARCAR PEDE A COISA, NAO USA O VERBO — e a lista era toda de verbos.** Print do Maicon
   (09/09/2026): *"Queria uma reuniao com deputado"*, e **os OITO detectores devolveram null**; a
   rodada mandou a saudacao de fe — *"pedido de contato foi ignorado e mandou bom dia"*. `QUER_FALAR_

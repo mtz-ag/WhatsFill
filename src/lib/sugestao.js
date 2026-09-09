@@ -279,6 +279,26 @@ export const REGRAS = [
     motivo: (c) => c.naoPodeFalarAgora.motivo,
   },
   {
+    id: 'reclama-sem-resposta',
+    tecla: '6',
+    /**
+     * **Ela reclama de não ter sido atendida → você ou a IA.** Decisão dele (09/09/2026), sobre o
+     * print do Maicon: *"Ninguém quis entrar em contato comigo"*, escrito quatro minutos depois de
+     * ele chegar pelo anúncio. Perguntado se aquilo devia virar tecla 6: *"virar tecla 6"*.
+     *
+     * **Não existe resposta pronta para isto, e escrever uma seria pior.** O que a pessoa está
+     * dizendo é que nós falhamos com ela; texto automático em cima disso **confirma a queixa**, e
+     * concluir em silêncio confirma duas vezes. É a mesma família de `nao-pode-falar-agora`: aqui
+     * precisa de gente, e por isso as duas dividem a caixa de `ultima-pede-resposta-pessoal`.
+     *
+     * **A guarda é o ALVO ser NÓS**, e é ela que sustenta a regra: nesta base *"ninguém me
+     * respondeu"* é dito o tempo todo sobre a prefeitura, o CRAS, o INSS e o banco — e aí é o
+     * OPOSTO, é o caso que o mandato existe para encaminhar. 12 das 22 asserções são falso positivo.
+     */
+    quando: (c) => !!c.reclamaSemResposta,
+    motivo: (c) => c.reclamaSemResposta.motivo,
+  },
+  {
     id: 'ultima-pede-resposta-pessoal',
     tecla: '6',
     /**
@@ -1232,6 +1252,15 @@ export const SOBRE = {
       'Ela falou de si — que está doente, internada, em recuperação — ou avisou que não pode falar ' +
       'agora e volta depois. Material de campanha em cima disso é a resposta errada, e concluir é ' +
       'pior: ela disse que voltaria.',
+  },
+  'reclama-sem-resposta': {
+    rotulo: 'Reclama de não ter sido atendida',
+    efeito: 'gente',
+    quando:
+      'Ela diz que ninguém respondeu, que está esperando há dias ou que foi ignorada — e a queixa é ' +
+      'com NÓS. Mensagem automática em cima disso confirma o que ela está dizendo, e concluir em ' +
+      'silêncio confirma duas vezes. Queixa sobre a prefeitura, o CRAS ou o INSS não conta: aquilo ' +
+      'é o que o mandato encaminha.',
   },
   'ultima-pede-resposta-pessoal': {
     rotulo: 'Áudio sem transcrição, arquivo, ou texto longo',

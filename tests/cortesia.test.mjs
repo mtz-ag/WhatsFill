@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { rajadaDeAnuncios, naoPodeFalarAgora, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos } from '../src/lib/cortesia.js';
+import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos } from '../src/lib/cortesia.js';
 
 const templates = await lib('templates.js');
 
@@ -2677,6 +2677,53 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(!acusa('juntos vamos conseguir um Brasil melhor'), 'nem este');
   check(!acusa('espero que voces consigam muitos votos'), 'nem torcida');
   check(!acusa('consegui uma vaga, obrigado'), 'passado nao e pedido');
+}
+
+/**
+ * RECLAMAR DE NAO TER SIDO ATENDIDA E TECLA 6 — decisao dele (09/09/2026), sobre o print do Maicon:
+ * *"Ninguem quis entrar em contato comigo"*, escrito quatro minutos depois de ele chegar pelo
+ * anuncio. Perguntado se aquilo devia virar tecla 6: *"virar tecla 6"*.
+ *
+ * **Nao existe resposta pronta para isto, e escrever uma seria pior:** o que a pessoa esta dizendo e
+ * que NOS falhamos com ela. Texto automatico em cima disso confirma a queixa, e concluir em silencio
+ * confirma duas vezes.
+ */
+{
+  grupo('reclama de nao ter sido atendida (o Maicon, 09/09)');
+
+  const um = (t) => [{ texto: t, tipo: 'TEXT', at: 1 }];
+  const acusa = (t) => !!reclamaSemResposta(um(t), null);
+
+  check(acusa('Ninguem quis entrar em contato comigo'), 'a frase exata da print');
+  check(acusa('ninguem me respondeu ate agora'), 'ninguem me respondeu');
+  check(acusa('ninguem me atendeu'), 'ninguem me atendeu');
+  check(acusa('voces nunca respondem'), 'a queixa dirigida a nos');
+  check(acusa('mandei mensagem semana passada e ninguem respondeu'), 'mandei e ninguem respondeu');
+  check(acusa('estou esperando resposta ha dias'), 'a espera');
+  check(acusa('ja faz uma semana sem retorno nenhum'), 'sem retorno');
+  check(acusa('ate hoje sem resposta'), 'sem resposta');
+  check(acusa('me sinto ignorado'), 'ignorado');
+  check(acusa('nao fui atendido ate hoje'), 'nao fui atendido');
+
+  /**
+   * **A GUARDA e o alvo ser NOS, e e ela que sustenta a regra.** Nesta base *"ninguem me respondeu"*
+   * e dito o tempo todo sobre a prefeitura, o CRAS, o INSS e o banco — e ai e o OPOSTO: e o caso que
+   * o mandato existe para encaminhar, e que tem caminho proprio.
+   */
+  check(!acusa('ninguem me respondeu na prefeitura'), 'a queixa e da prefeitura');
+  check(!acusa('fui no CRAS e ninguem me atendeu'), 'e do CRAS');
+  check(!acusa('estou esperando resposta do INSS ha meses'), 'e do INSS');
+  check(!acusa('liguei no posto de saude e ninguem respondeu'), 'e do posto de saude');
+  check(!acusa('o banco nunca responde'), 'e do banco');
+
+  /** E o vocabulario comum que tem "ninguem" e "esperando" dentro. */
+  check(!acusa('ninguem merece esse governo'), '"ninguem merece" e fala politica');
+  check(!acusa('ninguem quer trabalhar mais hoje em dia'), 'nem esta');
+  check(!acusa('ninguem vai nos parar'), 'nem grito de campanha');
+  check(!acusa('obrigado por responder rapido'), 'elogio nao e queixa');
+  check(!acusa('voces sempre respondem, parabens'), 'nem este');
+  check(!acusa('estou esperando o evento com ansiedade'), 'esperar o EVENTO nao e esperar resposta');
+  check(!acusa('vou esperando a resposta do medico'), 'nem a resposta do medico');
 }
 
 fim();

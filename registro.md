@@ -1,4 +1,4 @@
-## 2026-09-09 — ESTADO DE AGORA (v3.18.0) — leia isto primeiro numa sessão nova
+## 2026-09-09 — ESTADO DE AGORA (v3.19.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,10 +10,10 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.18.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.19.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
-**67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
+**67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **27 regras** na
 tabela. Prompt de sistema do rascunho: **6.282 tokens**, dos quais **61% é o `PADRAO_DE_ATENDIMENTO`
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
@@ -83,10 +83,10 @@ reescrever o texto de um aviso sem reescrever a trava a faria deixar de casar em
 
 ### Pendências que NÃO estão no código — precisam dele
 
-1. **IMPORTAR O FLUXO.** O último arquivo VÁLIDO é o `fluxopadrao3.10.0.json`, com **67 caixas**
-   — a estrutura do padrão de hoje. **O `3.15.0.json` que mandei está errado e não deve ser
-   importado**: eu tinha trocado as caixas de emprego para a resposta pronta sem ele pedir, e a 3.16
-   desfez. Dinheiro e emprego entregam o caso à IA, como na 3.10.
+1. **IMPORTAR O FLUXO.** O último arquivo entregue é o `fluxopadrao3.19.0.json`, com **67 caixas**
+   — o padrão de hoje. **O `3.15.0.json` está errado e não deve ser importado** (eu tinha trocado as
+   caixas de emprego sem ele pedir; a 3.16 desfez). Sem importar o 3.19, a regra
+   `reclama-sem-resposta` não chega ao quadro dele: `tambemQuando` é conteúdo da caixa.
 
    > **Antes de afirmar que o quadro dele está atrasado, compare com o ARQUIVO que ele tem** — não
    > com o último que este registro menciona. Já errei nisso, e foi ele quem corrigiu mandando o
@@ -269,6 +269,59 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-09 — Reclamar de não ter sido atendida virou tecla 6 (v3.19.0)
+
+Decisão dele sobre o que ficou em aberto na 3.18 — a frase do Maicon *"Ninguém quis entrar em contato
+comigo"*, escrita quatro minutos depois de ele chegar pelo anúncio: **"virar tecla 6"**.
+
+### Por que não tem resposta pronta
+
+**O que a pessoa está dizendo é que NÓS falhamos com ela.** Texto automático em cima disso confirma a
+queixa, e concluir em silêncio confirma duas vezes. É a mesma família de `nao-pode-falar-agora`
+(05/09) e de `ultima-pede-resposta-pessoal`: aqui precisa de gente — e, pela regra de 04/09 (**uma
+caixa por desfecho**), as três dividem a mesma caixa por `tambemQuando`, em vez de criar uma quarta.
+
+### A guarda é o ALVO ser NÓS, e é ela que sustenta a regra
+
+Nesta base *"ninguém me respondeu"* é dito o tempo todo sobre a **prefeitura, o CRAS, o INSS, o posto
+de saúde e o banco** — e aí é o **oposto**: é o caso que o mandato existe para encaminhar, e que já
+tem caminho próprio. Reclamação com um terceiro nomeado por perto não casa.
+
+**12 das 22 asserções são falso positivo**, e três delas são vocabulário desta base que tem "ninguém"
+dentro: *"ninguém merece esse governo"*, *"ninguém quer trabalhar mais hoje em dia"*, *"ninguém vai
+nos parar"*. Mais *"estou esperando o evento com ansiedade"*.
+
+### Dois defeitos que a medição pegou na primeira versão
+
+- **`semAcentos` NÃO abaixa a caixa**, e os meus padrões não tinham o `i`: *"fui no CRAS"* e *"do
+  INSS"* escapavam da guarda do terceiro — ou seja, **a guarda mais importante da regra estava
+  desligada para as siglas**, que é justamente como essas instituições são escritas.
+- **`"já faz uma semana sem retorno nenhum"` não casava**: eu exigia a palavra de tempo DEPOIS de
+  *"sem retorno"*, e ela vem antes. A espera sozinha passou a bastar; `esperando`/`aguardando`
+  continuam precisando do objeto, senão *"estou esperando o evento"* casa.
+
+### Medido depois
+
+```
+sinal  -> ela reclama de não ter sido atendida
+QUADRO -> ultima-pede-resposta-pessoal, tecla 6
+TABELA -> tecla 6
+```
+
+Os dois motores concordam, 0 problemas e 0 desfechos incoerentes.
+
+### Arquivos
+
+`src/lib/cortesia.js` (`reclamaSemResposta`, `RECLAMA_SEM_RESPOSTA`, `A_QUEIXA_E_DE_OUTRO`),
+`src/lib/sugestao.js` (a regra e o verbete), `src/lib/arvore.js` (juntada nas duas caixas de "aqui
+precisa de gente"), `src/panel/panel.js` (o sinal), `tests/cortesia.test.mjs` (**22 asserções**). 15
+suítes verdes, 67 caixas.
+
+**Arquivo entregue: `fluxopadrao3.19.0.json`.** `tambemQuando` é conteúdo da caixa, então **sem
+importar a regra não chega ao quadro dele** — é a armadilha registrada desde a 2.53.
+
 ---
 
 ## 2026-09-09 — "Queria uma reunião com deputado" não casava com nada (v3.18.0)
