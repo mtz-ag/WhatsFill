@@ -337,6 +337,51 @@ export const DEFAULT_TEMPLATES = [
   },
   {
     /**
+     * **"Posso trabalhar aqui para o Capitão Martim... e combinarmos quanto vou ganhar"** — print do
+     * Luciano (09/09/2026), militante experiente se oferecendo. A resposta é a regra dele, dada no
+     * mesmo dia:
+     *
+     * > *"lembrar que trabalhamos somente com voluntários sem remuneração e caso tenha interesse
+     * > dar o endereço; se ele não tiver interesse ele vai encerrar a conversa, caso contrário é
+     * > marcado como pedido de material"*
+     *
+     * **Ela existe porque `pedido-emprego` responde OUTRA coisa.** Aquele texto manda para o SINE, o
+     * CRAS e o Emprega Brasil — o caminho de quem procura trabalho, e que não tem nada a ver com
+     * quem quer fazer militância. Eram dois casos com respostas opostas num sinal só; hoje
+     * `pedeEmprego` devolve `tipo`, e quem escolhe o TEXTO é o painel, como a tecla 4 faz com o
+     * evento.
+     *
+     * **O pedido de endereço é de propósito, e ele é o desfecho.** `templates.ehPedidoDeEndereco`
+     * casa nesta redação, então mandar esta resposta **aplica a etiqueta de material** (a mecânica de
+     * 04/09) e deixa o atendimento aberto — que é exatamente o que ele descreveu: sem interesse, a
+     * pessoa encerra; com interesse, o caso vira pedido de material e ele transfere no fim do dia.
+     *
+     * **Sem promessa de entrega:** quem confirma o que existe e combina a entrega é a equipe dos
+     * materiais (a regra da Jonice, 08/09). E sem `{{link_grupo}}` nem qualquer variável de Config —
+     * o recado central não pode depender de um campo preenchido.
+     */
+    id: 'trabalhar-na-campanha',
+    name: 'Quer trabalhar para a campanha (voluntário, sem remuneração)',
+    text:
+      '{{saudacao}}! Que bom que você quer somar com a gente — obrigado de verdade pela ' +
+      'disposição.\n\n' +
+      'Preciso ser sincero antes de qualquer coisa: aqui a gente trabalha *só com voluntários*. ' +
+      'Não há remuneração, contratação nem ajuda de custo — vale para todo mundo, inclusive para ' +
+      'quem já ajudou em outras campanhas.\n\n' +
+      'Se mesmo assim você quiser somar, é muito bem-vindo. Me manda o seu *endereço completo* ' +
+      '(rua, número, bairro, cidade e CEP) que eu encaminho para a equipe responsável pelos ' +
+      'materiais — é ela que confirma o que há disponível e combina a entrega com você.',
+    variantes: [
+      '{{saudacao}}! Obrigado por querer somar com a gente, de coração.\n\n' +
+        'Vou ser sincero com você desde já: o trabalho aqui é *voluntário*, sem remuneração, sem ' +
+        'contratação e sem ajuda de custo. É assim para todo mundo.\n\n' +
+        'Se ainda assim fizer sentido para você, será muito bem-vindo. Me passa o seu *endereço ' +
+        'completo* (rua, número, bairro, cidade e CEP) que eu encaminho para a equipe dos ' +
+        'materiais, e é ela quem confirma o que tem e combina a entrega.',
+    ],
+  },
+  {
+    /**
      * Saudação de abertura. Teor católico a pedido do Thiago — o Capitão Martim é religioso.
      *
      * Termina sem pergunta de propósito: convite a responder vira atendimento, e o gabinete não

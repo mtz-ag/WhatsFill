@@ -6334,9 +6334,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * A conta de "não há o que pedir" é a de `sugestao.pedirDadosNaoCabe`, a mesma que guarda o
        * formulário: duas cópias divergem na primeira guarda nova.
        */
+      /**
+       * **A segunda troca de texto, e pela mesma razão** — print do Luciano (09/09/2026).
+       *
+       * `pedido-emprego` manda para o SINE, o CRAS e o Emprega Brasil: é o caminho de quem procura
+       * TRABALHO. Quem se oferece para fazer MILITÂNCIA precisa da outra resposta — a regra dele:
+       * *"trabalhamos somente com voluntários sem remuneração e caso tenha interesse dar o
+       * endereço"*. Quem separa os dois é `pedeEmprego().tipo`, e a escolha é do TEXTO e não da
+       * caixa, como acima.
+       */
       const respostaDoFluxo =
         sugestao?.resposta === 'boas-vindas' && sugestaoLib.pedirDadosNaoCabe(sinaisDoContato)
           ? 'boas-vindas-tem-dados'
+          : sugestao?.resposta === 'pedido-emprego' && sinaisDoContato?.pedeEmprego?.tipo === 'campanha'
+          ? 'trabalhar-na-campanha'
           : sugestao?.resposta;
       const doFluxo = respostaDoFluxo ? state.templates.find((tpl) => tpl.id === respostaDoFluxo) : null;
       const doFluxoTrava = doFluxo

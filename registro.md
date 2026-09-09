@@ -1,4 +1,4 @@
-## 2026-09-09 — ESTADO DE AGORA (v3.14.0) — leia isto primeiro numa sessão nova
+## 2026-09-09 — ESTADO DE AGORA (v3.15.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.14.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.15.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
@@ -83,10 +83,9 @@ reescrever o texto de um aviso sem reescrever a trava a faria deixar de casar em
 
 ### Pendências que NÃO estão no código — precisam dele
 
-1. **IMPORTAR O FLUXO.** O último arquivo entregue a ele é o `fluxopadrao3.10.0.json` (08/09), com
-   **67 caixas** — o padrão de hoje. **A 3.10 MEXEU no `fluxoPadrao`** (pedido de dinheiro e de
-   emprego passaram a chamar a IA), então sem importar o quadro dele continua mandando a negativa
-   pronta nesses dois casos.
+1. **IMPORTAR O FLUXO.** O último arquivo entregue a ele é o `fluxopadrao3.15.0.json` (09/09), com
+   **67 caixas** — o padrão de hoje. Mudou duas vezes: a 3.10 mandou dinheiro e emprego para a IA,
+   e a 3.15 **devolveu o emprego à resposta pronta** (o dinheiro segue na IA).
 
    > **Antes de afirmar que o quadro dele está atrasado, compare com o ARQUIVO que ele tem** — não
    > com o último que este registro menciona. Já errei nisso, e foi ele quem corrigiu mandando o
@@ -269,6 +268,86 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-09 — Trabalhar para a campanha não é procurar emprego (v3.15.0)
+
+Print do **Luciano** (09/09/2026), militante experiente de São Sepé: *"Posso trabalhar aqui para o
+Capitão Martim"*, *"Já trabalhei para outros candidatos e consegui muitos votos"*, *"Mais preciso de
+material"*, *"Para poder trabalhar"*, *"E combinarmos quanto vou ganhar"*. O rascunho da IA saiu
+negociando: *"você pretende atuar como voluntária ou está buscando vaga remunerada?"*, em seis
+linhas. A regra dele:
+
+> *"aqui a resposta rápida sobre trabalhar na campanha bastava; lembrar que trabalhamos somente com
+> voluntários sem remuneração e caso tenha interesse dar o endereço. Se ele não tiver interesse ele
+> vai encerrar a conversa; caso contrário é marcado como pedido de material."*
+
+### Medido: DOIS detectores estavam mudos
+
+```
+pedeEmprego   -> null
+pedeMaterial  -> null
+```
+
+**`pedeEmprego`**, por duas razões que já são lições deste arquivo: **o NOME do candidato não estava
+na lista de objetos** (só `deputado` e `candidato` — a mesma correção que `INSULTO_AO_ALIADO` levou
+em 08/09), e **`trabalhar` tinha de vir colado na preposição**, enquanto ele escreveu *"trabalhar
+AQUI para"*. Sem o sinal, o caso caiu em `ultima-pede-resposta-pessoal` e foi para a IA.
+
+**`pedeMaterial`**, porque `preciso de` só era aceito **seguido de** receber/ter/pegar/adquirir —
+ou seja, *"preciso de receber material"*, que ninguém escreve. *"Mais preciso de material"*,
+*"preciso dos adesivos"*, *"estou precisando de material"* e *"necessito de material"* passavam
+batido.
+
+> **Foi a trava de ontem que revelou o segundo.** `enderecoSemMaterial` acusou o rascunho por pedir
+> o endereço sem pedido de material — **certa sobre a forma e errada sobre o caso**, porque ele
+> tinha pedido. Trava nova que acusa onde não devia é onde o detector está mudo.
+
+### Eram DOIS casos com respostas opostas num sinal só
+
+`pedido-emprego` manda para o **SINE, o CRAS e o Emprega Brasil** — o caminho de quem procura
+trabalho, e que não tem nada a ver com quem quer fazer militância. Hoje `pedeEmprego` devolve
+`tipo`:
+
+| tipo | quando | resposta |
+|---|---|---|
+| `campanha` | quer trabalhar PARA NÓS, ou fala em quanto vai ganhar | **`trabalhar-na-campanha`** (nova) |
+| `emprego` | procura trabalho, vaga, emprego | `pedido-emprego` (o SINE) |
+
+**A troca é do TEXTO e não da caixa**, como a tecla 4 faz com o evento e a tecla 5 com o pedido junto
+do momento — duas caixas para a mesma situação divergem na primeira semana.
+
+### A resposta nova, com as três metades dele
+
+Voluntário e sem remuneração; se tiver interesse, o **endereço completo**; e quem confirma o que há e
+combina a entrega é a **equipe dos materiais** (a regra da Jonice, 08/09), sem promessa de entrega.
+
+**O pedido de endereço é o desfecho, e é de propósito:** `templates.ehPedidoDeEndereco` casa nesta
+redação, então mandá-la **aplica a etiqueta de material** (a mecânica de 04/09) e deixa o
+atendimento aberto — exatamente o que ele descreveu.
+
+### A REVERSÃO da 3.10, e por que as duas decisões são coerentes
+
+As caixas de emprego voltaram de `acao.ia` para a resposta pronta. **Em 08/09 a queixa era o
+detector ERRANDO; aqui ele estava MUDO** — e o que a IA fez com o caso foi pior que a resposta
+pronta. **Só o emprego voltou: o pedido de dinheiro continua com a IA**, porque ele nomeou um caso e
+não a família.
+
+### Uma regressão minha, pega pelo próprio teste
+
+`trabalh\w*` pegava o **substantivo**: *"o trabalho de vocês é ótimo"* virou pedido de emprego. A
+guarda que já existia acusou na hora, e o padrão passou a aceitar só `trabalhar|trabalhando`.
+
+### Arquivos
+
+`src/lib/cortesia.js` (`TRABALHAR_PARA_NOS`, `MENCIONA_REMUNERACAO`, o `tipo`, o `preciso de` do
+material), `src/lib/store.js` (a resposta `trabalhar-na-campanha`), `src/lib/arvore.js` (as duas
+caixas), `src/panel/panel.js` (a troca do texto), `tests/cortesia.test.mjs` (**21 asserções**, 10
+falso positivo). 15 suítes verdes, 67 caixas, 0 problemas.
+
+**Arquivo entregue: `fluxopadrao3.15.0.json`** — as caixas de emprego voltaram para a resposta
+pronta; as de dinheiro seguem na IA.
+
 ---
 
 ## 2026-09-09 — Exemplo de estilo virou banco de respostas (v3.14.0)

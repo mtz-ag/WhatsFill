@@ -2551,4 +2551,63 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(!acusa('Quero doar um pouco do meu tempo para a campanha'), 'ela quer doar');
 }
 
+/**
+ * TRABALHAR PARA A CAMPANHA NAO E PROCURAR EMPREGO — print do Luciano (09/09/2026).
+ *
+ * *"Posso trabalhar aqui para o Capitao Martim"*, *"Ja trabalhei para outros candidatos e consegui
+ * muitos votos"*, *"Mais preciso de material"*, *"E combinarmos quanto vou ganhar"*. A rodada
+ * mandou para a IA, que escreveu seis linhas negociando remuneracao. Ele: *"aqui a resposta rapida
+ * sobre trabalhar na campanha bastava; trabalhamos somente com voluntarios sem remuneracao e caso
+ * tenha interesse dar o endereco"*.
+ *
+ * **Medido: DOIS detectores estavam mudos.**
+ */
+{
+  grupo('quer trabalhar para a campanha (o Luciano, 09/09)');
+
+  const um = (t) => [{ texto: t, tipo: 'TEXT', at: 1 }];
+  const tipo = (t) => { const r = pedeEmprego(um(t), null); return r ? r.tipo : null; };
+
+  /**
+   * **O nome do candidato nao estava na lista de objetos**, so `deputado` e `candidato` — a mesma
+   * correcao que `INSULTO_AO_ALIADO` levou em 08/09. E `trabalhar` tinha de vir COLADO na
+   * preposicao, e ele escreveu *"trabalhar AQUI para"*.
+   */
+  check(tipo('Posso trabalhar aqui para o Capitao Martim') === 'campanha', 'o caso do Luciano, com o NOME e a palavra no meio');
+  check(tipo('trabalhar para o martim') === 'campanha', 'so o sobrenome tambem');
+  check(tipo('E combinarmos quanto vou ganhar') === 'campanha', 'falar em quanto vai ganhar e a mesma conversa');
+  check(tipo('quero trabalhar na campanha') === 'campanha', 'a forma que ja casava continua casando');
+
+  /** Procurar TRABALHO e o outro caso, e a resposta dele e o SINE. */
+  check(tipo('preciso de emprego') === 'emprego', 'quem procura emprego continua sendo "emprego"');
+  check(tipo('tem alguma vaga ai') === 'emprego', 'a pergunta pela vaga tambem');
+  check(tipo('estou procurando trabalho') === 'emprego', 'e quem procura trabalho');
+
+  /** As guardas continuam: e a metade cara desta regra. */
+  check(!pedeEmprego(um('sou voluntaria e quero ajudar de graca'), null), 'quem se oferece de graca nao esta pedindo');
+  check(!pedeEmprego(um('vamos trabalhar juntos por um Brasil melhor'), null), 'grito de campanha nao e pedido');
+  check(!pedeEmprego(um('obrigado pelo trabalho de voces'), null), 'elogio ao trabalho nao e pedido');
+  check(!pedeEmprego(um('vou trabalhar amanha cedo'), null), 'a rotina dela nao e pedido');
+  check(!pedeEmprego(um('o governo tem que gerar emprego'), null), 'fala politica sobre emprego nao e pedido');
+
+  /**
+   * **"Mais preciso de material" nunca casou** — o padrao aceitava `preciso de` so quando seguido de
+   * receber/ter/pegar, ou seja *"preciso de receber material"*, que ninguem escreve. **Foi a trava
+   * `enderecoSemMaterial` de ontem que revelou o buraco**: ela acusou o rascunho que pedia o
+   * endereco, certa sobre a forma e errada sobre o caso, porque ele TINHA pedido material.
+   */
+  const pedeMat = (t) => !!pedeMaterial(um(t), null);
+  check(pedeMat('Mais preciso de material'), 'a frase exata da print');
+  check(pedeMat('preciso dos adesivos'), 'e o objeto especifico');
+  check(pedeMat('estou precisando de material'), 'e o gerundio');
+  check(pedeMat('necessito de material'), 'e "necessito"');
+
+  /** O OBJETO e o que guarda: "preciso de" sozinho e a frase mais comum desta base. */
+  check(!pedeMat('preciso de ajuda'), 'preciso de AJUDA nao e material');
+  check(!pedeMat('preciso de uma cesta basica'), 'nem cesta basica');
+  check(!pedeMat('preciso de emprego'), 'nem emprego');
+  check(!pedeMat('preciso do numero dele'), 'nem o numero dele');
+  check(!pedeMat('preciso de informacao sobre a agenda'), 'nem informacao');
+}
+
 fim();

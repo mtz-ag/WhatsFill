@@ -2652,6 +2652,27 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   linha "Cidade:" some (o valor virou vazio) e o aviso de grafia some junto, enquanto o CRM
   continua com o lixo ate a conclusao gravar. Hoje o cabecalho diz o que vai ser apagado, e o
   Andamento registra `apagando do CRM: <campo> ("<valor>")`.
+- **TRABALHAR PARA A CAMPANHA NAO E PROCURAR EMPREGO — dois casos com respostas OPOSTAS num sinal
+  so.** Print do Luciano (09/09/2026): *"Posso trabalhar aqui para o Capitao Martim"*, *"Mais preciso
+  de material"*, *"E combinarmos quanto vou ganhar"* — militante se oferecendo. `pedido-emprego`
+  manda para o SINE, o CRAS e o Emprega Brasil, que nao tem nada a ver. Hoje `pedeEmprego` devolve
+  `tipo` (`campanha` | `emprego`) e **quem escolhe o TEXTO e o painel**, como a tecla 4 faz com o
+  evento. A resposta nova e a regra dele: *"trabalhamos somente com voluntarios sem remuneracao e
+  caso tenha interesse dar o endereco; se ele nao tiver interesse ele vai encerrar a conversa, caso
+  contrario e marcado como pedido de material"* — e **o pedido de endereco E o desfecho**, porque
+  `ehPedidoDeEndereco` casa e aplica a etiqueta de material (04/09).
+  **DOIS detectores estavam mudos, e as duas causas ja sao licoes daqui:** `pedeEmprego` nao tinha o
+  NOME do candidato na lista de objetos (so `deputado`/`candidato` — mesma correcao de 08/09 no
+  `INSULTO_AO_ALIADO`) e exigia `trabalhar` COLADO na preposicao (*"trabalhar AQUI para"*);
+  `pedeMaterial` so aceitava `preciso de` seguido de receber/ter/pegar, ou seja *"preciso de receber
+  material"*, que ninguem escreve. **Foi a trava `enderecoSemMaterial` da vespera que revelou o
+  segundo** — ela acusou o rascunho, certa sobre a FORMA e errada sobre o CASO: **trava nova que
+  acusa onde nao devia e onde um detector esta mudo.**
+  **E a 3.15 REVERTEU metade da 3.10**, a pedido dele: as caixas de emprego voltaram de `acao.ia`
+  para a resposta pronta. As duas decisoes sao coerentes — em 08/09 a queixa era o detector
+  **errando**, aqui ele estava **mudo**. **So o emprego voltou; dinheiro segue na IA.**
+  Cuidado ao alargar `trabalh\w*`: ele pega o SUBSTANTIVO (*"o trabalho de voces e otimo"*), e a
+  guarda existente acusou na hora — vale `trabalhar|trabalhando`.
 - **AS RESPOSTAS PRONTAS ENTRAM NO PROMPT COMO EXEMPLO DE ESTILO, E O MODELO AS USA COMO BANCO DE
   RESPOSTAS.** Print de 09/09/2026: a contato escreveu *"Posso falar com algum representante?"* e o
   rascunho respondeu, em cinco frases, que *"no periodo eleitoral nao e possivel disponibilizar o

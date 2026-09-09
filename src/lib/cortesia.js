@@ -1358,8 +1358,41 @@ export function pedeAjudaFinanceira(entrantes, nossaUltimaAt) {
  * **Lê a rajada inteira**, pelo mesmo motivo de `pedeAjudaFinanceira`: o pedido vem partido — a
  * pergunta numa mensagem e o "vocês pagam" na seguinte, que foi exatamente o caso dele.
  */
+/**
+ * **Quem se oferece para trabalhar PARA NÓS** — ver o `tipo` em `pedeEmprego`.
+ *
+ * Print do Luciano (09/09/2026): *"Posso trabalhar aqui para o Capitão Martim"*. Duas coisas
+ * faltavam, e as duas são lições já registradas neste arquivo:
+ *
+ *  - **o NOME do candidato não estava na lista de objetos** (só `deputado` e `candidato`) — é a
+ *    mesma correção que `INSULTO_AO_ALIADO` levou em 08/09, onde só os apelidos contavam;
+ *  - **`trabalhar` tinha de vir COLADO na preposição**, e ele escreveu *"trabalhar AQUI para"*.
+ */
+/**
+ * **Só o VERBO, nunca o substantivo.** `trabalh\w*` pegava *"o trabalho de vocês é ótimo"* — que é
+ * elogio, e é uma das frases mais comuns desta base. O teste da guarda acusou na hora.
+ */
+const TRABALHAR_PARA_NOS =
+  /(^|[^\p{L}])(trabalhar|trabalhando)\s+(\S+\s+)?(para|pra|com|no|na|em|de)\s+(o\s+|a\s+|um\s+|uma\s+)?(voce|voces|vc|vcs|ti|mandato|gabinete|campanha|deputado|candidato|capitao|martim)/u;
+
+/**
+ * **"E combinarmos quanto vou ganhar"** — a metade que torna a oferta remunerada, e a que a regra
+ * dele responde: *"trabalhamos somente com voluntários sem remuneração"*.
+ *
+ * Sozinha ela não decide nada: só é lida depois de `QUER_TRABALHAR` já ter casado.
+ */
+const MENCIONA_REMUNERACAO =
+  /(^|[^\p{L}])(quanto\s+(vou|vamos|eu)\s+(ganh|receb)|quanto\s+(voces\s+)?(paga|pagam)|qual\s+(o\s+)?(salario|valor|pagamento)|combinar\w*\s+(o\s+)?(valor|quanto|pagamento)|remunera|ser\s+pago|sou\s+pago)/u;
+
 const QUER_TRABALHAR = [
   /(^|[^\p{L}])(como|onde)\s+(faz|faco|fazer|posso|consigo)\s+.{0,20}?trabalhar/u,
+  /**
+   * **"Posso trabalhar aqui para o Capitão Martim"** — a oferta direta, que não casava com nada.
+   * O padrão de baixo exige `trabalhar` colado na preposição e não conhece o NOME dele.
+   */
+  TRABALHAR_PARA_NOS,
+  /** Falar de quanto vai ganhar, depois de falar em trabalhar, é a mesma conversa. */
+  MENCIONA_REMUNERACAO,
   /**
    * **O ARTIGO estava colado no substantivo, e isso apagava as tres formas mais naturais.**
    *
@@ -1435,8 +1468,28 @@ export function pedeEmprego(entrantes, nossaUltimaAt) {
   for (const padrao of QUER_TRABALHAR) {
     const m = padrao.exec(conversa);
     if (m) {
+      /**
+       * **São DOIS casos com respostas opostas, e eles viviam num sinal só.**
+       *
+       * Print do Luciano (09/09/2026): *"Posso trabalhar aqui para o Capitão Martim"*, *"Já
+       * trabalhei para outros candidatos e consegui muitos votos"*, *"Mais preciso de material"*,
+       * *"E combinarmos quanto vou ganhar"*. Ele é MILITANTE se oferecendo — e a resposta pronta
+       * que existia manda para o SINE, o CRAS e o Emprega Brasil, que não tem nada a ver.
+       *
+       *  - **`campanha`**: quer trabalhar PARA NÓS. A resposta é a dele, de 09/09: *"trabalhamos
+       *    somente com voluntários, sem remuneração; e caso tenha interesse, dar o endereço"*.
+       *  - **`emprego`**: procura trabalho, e aí o caminho é o SINE.
+       *
+       * O sinal continua sendo um só (duas caixas para a mesma situação divergem na primeira
+       * semana); quem escolhe o TEXTO é o painel, como a tecla 4 faz com o evento.
+       */
+      const tipo = MENCIONA_REMUNERACAO.test(conversa) || TRABALHAR_PARA_NOS.test(conversa) ? 'campanha' : 'emprego';
       return {
-        motivo: `perguntou sobre trabalhar no mandato ("${m[0].trim()}") — vale a resposta que explica e nega`,
+        tipo,
+        motivo:
+          tipo === 'campanha'
+            ? `quer trabalhar para a campanha ("${m[0].trim()}") — vale a resposta do trabalho voluntário`
+            : `perguntou sobre trabalhar no mandato ("${m[0].trim()}") — vale a resposta que explica e nega`,
         trecho: conversa.slice(0, 160),
       };
     }
@@ -2509,6 +2562,19 @@ const NEGA_O_PEDIDO = /(^|[^\p{L}])nao\s+(quero|queria|preciso|desejo|me\s+(mand
 
 const VERBO_DE_PEDIR_MATERIAL = [
   /(?:quero|queria|gostaria\s+de|desejo|preciso\s+d[eo]s?|como\s+fa[cç]o\s+p(?:ara|ra)|onde\s+consigo)\s+(?:receber|ter|pegar|adquirir|conseguir)/,
+  /**
+   * **"Mais preciso de material" — a forma mais natural de todas, e ela nunca casou.**
+   *
+   * Print do Luciano (09/09/2026). O padrão de cima aceita `preciso de` **só quando vem seguido de
+   * receber/ter/pegar/adquirir/conseguir** — ou seja, *"preciso de receber material"*, que ninguém
+   * escreve. Medido: *"preciso de material"*, *"preciso dos adesivos"*, *"estou precisando de
+   * material"* e *"necessito de material"* passavam batido, e o objeto vem logo em seguida.
+   *
+   * **O falso negativo tinha custo dobrado**, e foi a trava de ontem que o revelou: sem
+   * `pedeMaterial`, a trava `enderecoSemMaterial` acusou o rascunho que pedia o endereço — a
+   * acusação estava certa sobre a forma e errada sobre o caso, porque ele TINHA pedido material.
+   */
+  /(?:preciso|precisava|precisando|necessito|necessitava)\s+d[eo]s?/,
   /(?:pode|poderia|podem|poderiam|tem\s+como|teria\s+como)\s+(?:me\s+)?(?:mandar|enviar|passar|repassar|disponibilizar)/,
   /(?:me\s+)?(?:manda|mande|mandem|envia|envie|enviem|passa|passe|repassa|repasse)/,
   /(?:quero|queria|gostaria\s+de)/,
