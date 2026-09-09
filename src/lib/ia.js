@@ -777,9 +777,30 @@ export function validarCidade(bruto, { municipios = [], normalizar = soLetras } 
  * que o modelo pode adiantar se souber com que voz escrever.
  */
 export function montarSistemaRascunho({ templates = [], regras = '', gabinete = '' } = {}) {
+  /**
+   * **As respostas prontas iam SEM NOME e cortadas em oito** — print da nicce (09/09/2026).
+   *
+   * Ela escreveu *"Trabalho com divulgação de campanha nas redes sociais… gostaria de saber se não
+   * precisa de alguém pra trabalhar"* e o rascunho perguntou se ela queria *"trabalho remunerado ou
+   * voluntário"*, pediu portfólio e prometeu *"registrar sua mensagem para que a equipe responsável
+   * analise"*. Ele: *"a IA deve usar como base a nossa resposta pra esses casos"* — e a resposta
+   * existe desde a 3.15, com o texto que ele ditou (voluntário, sem remuneração, endereço de quem
+   * tiver interesse).
+   *
+   * **Medido: ela era a NONA da lista, e o corte era `slice(0, 8)`. A IA nunca a viu.** Somando, 13
+   * das 21 respostas de fábrica ficavam de fora — entre elas as de evento, as de boas-vindas e a de
+   * perguntar em que pode ajudar.
+   *
+   * **E as oito que entravam iam SEM O NOME**, o que as tornava inutilizáveis como base: oito textos
+   * soltos não dizem a que caso cada um serve, e escolher entre eles vira adivinhação — foi assim
+   * que o texto do "falar com o deputado" saiu para quem perguntou por um *representante* (3.14).
+   *
+   * O `name` é o que separa "use a que serve" de "não copie as outras", e é por isso que as duas
+   * regras podem conviver agora.
+   */
   const exemplos = templates
-    .slice(0, 8)
-    .map((t) => `— ${umaLinha(t.text, 500)}`)
+    .slice(0, 24)
+    .map((t) => `— **${umaLinha(t.name || 'sem nome', 90)}**: ${umaLinha(t.text, 500)}`)
     .join('\n');
 
   return [
@@ -1205,10 +1226,25 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * O rótulo agora separa as duas coisas, que é a única correção possível no prompt: eles ensinam
      * a VOZ (tom, tamanho, pontuação), e o assunto vem sempre do que ESTA pessoa escreveu.
      */
-    'Exemplos do JEITO DE ESCREVER da equipe — leia-os para pegar o TOM, o TAMANHO e a pontuação.',
-    '**Eles não são um banco de respostas.** NUNCA copie o assunto nem o conteúdo de um deles: se o',
-    'exemplo fala de um tema que esta pessoa não trouxe, ele não tem nada a ver com esta conversa.',
-    'O assunto da sua resposta vem SEMPRE do que esta pessoa escreveu.',
+    'AS RESPOSTAS PRONTAS DA EQUIPE, cada uma com o NOME do caso que ela atende. Servem a duas',
+    'coisas, e o nome é o que separa uma da outra:',
+    '',
+    '1. **TOM e TAMANHO, sempre.** É assim que a equipe escreve: curto, humano, sem discurso.',
+    '2. **CONTEÚDO, quando uma delas atende o caso DESTA pessoa.** Aí ela é a BASE da sua resposta:',
+    '   diga o que ela diz, com as suas palavras, ajustado ao que esta pessoa escreveu. **Não invente',
+    '   outra resposta para um caso que a equipe já respondeu** — nem faça perguntas que a resposta',
+    '   pronta já dispensa.',
+    '',
+    '**Se NENHUMA atender esta pessoa, não copie o conteúdo de nenhuma.** Exemplo que fala de um tema',
+    'que ela não trouxe não tem nada a ver com esta conversa, e o assunto vem SEMPRE do que ela',
+    'escreveu. Olhe o NOME antes de usar: é ele que diz a que caso a resposta serve.',
+    /**
+     * **A regra 3 citada onde a tentação está**, e é a lição de 07/09: regra que vive longe do ponto
+     * em que o modelo escreve não é cumprida. Os textos dele são cheios de `{{saudacao}}`, e agora
+     * são 21 deles colados no pedido — a regra 3 fica lá em cima, no começo das instruções.
+     */
+    '**As respostas prontas têm {{variáveis}} dentro; você NÃO.** Escreva a saudação por extenso e o',
+    'texto final, pronto para enviar — é a regra 3, e ela vale principalmente aqui.',
     '',
     exemplos,
   ]

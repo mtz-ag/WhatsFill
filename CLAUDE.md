@@ -2767,6 +2767,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   **errando**, aqui ele estava **mudo**. **So o emprego voltou; dinheiro segue na IA.**
   Cuidado ao alargar `trabalh\w*`: ele pega o SUBSTANTIVO (*"o trabalho de voces e otimo"*), e a
   guarda existente acusou na hora — vale `trabalhar|trabalhando`.
+- **AS RESPOSTAS PRONTAS IAM SEM NOME E CORTADAS EM OITO — a IA nunca viu 13 das 21.** Print da
+  nicce (09/09/2026): ela se ofereceu para divulgar a campanha nas redes e o rascunho perguntou se
+  queria *"trabalho remunerado ou voluntario"*, pediu portfolio e prometeu *"registrar sua mensagem
+  para que a equipe analise"*. Ele: *"a IA deve usar como base a nossa resposta pra esses casos"* — e
+  a resposta existia desde a 3.15, com o texto que ele ditou. **Medido: ela era a NONA e o corte era
+  `slice(0, 8)`.** Ficavam de fora tambem as duas de evento, as de boas-vindas e a de perguntar em
+  que pode ajudar.
+  **O `name` e o que torna as duas regras compativeis.** Na 3.14 eu escrevi *"nao sao um banco de
+  respostas, NUNCA copie o conteudo"* (certo para o caso do "representante"); aqui ele pede o
+  contrario. As duas convivem porque agora existe o NOME: **tom e tamanho sempre; conteudo quando o
+  NOME diz que a resposta atende ESTE caso** — ai ela e a BASE, e a IA nao inventa outra nem faz
+  perguntas que a resposta pronta dispensa; **nao atendendo, nao copia nada**. Sem o nome, oito
+  textos soltos nao dizem a que caso servem, e escolher vira adivinhacao.
+  **Cuidado de borda:** os textos dele sao cheios de `{{saudacao}}`, e agora sao 21 colados no
+  pedido — a regra 3 (nunca use variaveis) fica no comeco das instrucoes, entao ela foi CITADA ao
+  lado dos exemplos. **Custo medido:** prompt de 6.469 para 8.370 tokens, +US$ 0,19 por mil rascunhos
+  quentes e +US$ 2,37 por mil frios; continua cacheando no Haiku.
 - **AS RESPOSTAS PRONTAS ENTRAM NO PROMPT COMO EXEMPLO DE ESTILO, E O MODELO AS USA COMO BANCO DE
   RESPOSTAS.** Print de 09/09/2026: a contato escreveu *"Posso falar com algum representante?"* e o
   rascunho respondeu, em cinco frases, que *"no periodo eleitoral nao e possivel disponibilizar o

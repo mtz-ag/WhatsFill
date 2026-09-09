@@ -1,4 +1,4 @@
-## 2026-09-09 — ESTADO DE AGORA (v3.21.0) — leia isto primeiro numa sessão nova
+## 2026-09-09 — ESTADO DE AGORA (v3.22.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,11 +10,11 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.21.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.22.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **27 regras** na
-tabela. Prompt de sistema do rascunho: **6.469 tokens**, dos quais **59% é o `PADRAO_DE_ATENDIMENTO`
+tabela. Prompt de sistema do rascunho: **8.370 tokens** (com as 21 respostas prontas), dos quais **45% é o `PADRAO_DE_ATENDIMENTO`
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
 Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75), **dezoito em
@@ -269,6 +269,69 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-09 — A IA usa a nossa resposta como base (v3.22.0)
+
+Print da **nicce** (09/09/2026): *"Trabalho com divulgação de campanha nas redes sociais, mi chamo
+nice, cidade Camaquã, gostaria de saber se não precisa de alguém pra trabalhar"*. O rascunho
+perguntou se ela queria *"trabalho remunerado ou apoio voluntário"*, pediu **portfólio e links de
+Instagram, reels, cards, página**, e prometeu *"registrar sua mensagem para que a equipe responsável
+analise"*. Ele: *"a IA deve usar como base a nossa resposta pra esses casos"*.
+
+**A resposta existe desde a 3.15**, com o texto que ele ditou: voluntário, sem remuneração, e o
+endereço de quem tiver interesse.
+
+### Medido: a IA nunca a viu
+
+```
+Quer trabalhar para a campanha  ->  a NONA da lista
+o corte                         ->  slice(0, 8)
+```
+
+**13 das 21 respostas de fábrica ficavam de fora** — entre elas as duas de evento, as de boas-vindas
+e a de perguntar em que pode ajudar.
+
+**E as oito que entravam iam SEM O NOME.** Oito textos soltos não dizem a que caso cada um serve, e
+escolher entre eles vira adivinhação — foi assim que o texto do *"falar com o deputado"* saiu para
+quem perguntou por um **representante** (3.14).
+
+### O `name` é o que torna as duas regras compatíveis
+
+Na 3.14 eu escrevi *"eles não são um banco de respostas, NUNCA copie o conteúdo"*, e estava certo
+para aquele caso. Hoje ele pede o contrário para o caso dele — e as duas coisas convivem **porque
+agora existe o nome**:
+
+1. **TOM e TAMANHO, sempre.**
+2. **CONTEÚDO, quando o NOME diz que a resposta atende o caso desta pessoa** — aí ela é a BASE:
+   diga o que ela diz, com as suas palavras. **Não invente outra resposta para um caso que a equipe
+   já respondeu, nem faça perguntas que a resposta pronta dispensa.**
+3. **Não atendendo, não copie o conteúdo de nenhuma** — a guarda da 3.14, intacta.
+
+### Uma coisa que a mudança criou, e que precisou de linha própria
+
+Os textos dele são cheios de `{{saudacao}}`, e agora são **21 deles colados no pedido**. A regra 3
+(*"nunca use {{variáveis}}"*) fica no começo das instruções — longe. **É a armadilha de 07/09**, e a
+citei ao lado dos exemplos: *"as respostas prontas têm {{variáveis}} dentro; você NÃO"*. A trava
+`marcador` continua sendo a rede embaixo.
+
+### O custo, medido
+
+O prompt foi de **6.469 para 8.370 tokens** (+29%), e continua cacheando no Haiku. Por mil rascunhos:
+
+| | antes | depois |
+|---|---|---|
+| cache quente | US$ 2,55 | **US$ 2,74** |
+| cache frio | US$ 9,99 | **US$ 12,36** |
+
+**+US$ 0,19 por mil quentes.** O caso comum na rodada é o frio, e ali são +US$ 2,37 por mil.
+
+### Arquivos
+
+`src/lib/ia.js` (o corte, o nome e o bloco de regras dos exemplos), `tests/ia.test.mjs` (**18
+asserções**; as três da 3.14 foram reescritas para a redação nova, com a nota de que a proteção
+ficou). 15 suítes verdes. **Só código: não precisa importar o fluxo.**
+
 ---
 
 ## 2026-09-09 — A confirmação de presença fica pendente até alguém tratar (v3.21.0)

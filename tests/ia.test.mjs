@@ -12,6 +12,7 @@ import { PADRAO_DE_ATENDIMENTO } from '../src/lib/atendimento.js';
 import { PROVEDORES, pedirAoWorker } from '../src/lib/ia-cliente.js';
 import { paraHtml } from '../src/padrao.js';
 import { chapaDoDossie, precisaDoDossie } from '../src/lib/gabinete.js';
+import { DEFAULT_TEMPLATES } from '../src/lib/store.js';
 import {
   montarSistemaRascunho,
   montarContatoRascunho,
@@ -1675,9 +1676,16 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
 
   const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
 
-  check(/JEITO DE ESCREVER/.test(prompt), 'o rotulo diz que os exemplos sao de JEITO DE ESCREVER');
-  check(/banco de respostas/i.test(prompt), 'e diz que eles nao sao um banco de respostas');
-  check(/O assunto da sua resposta vem SEMPRE do que esta pessoa escreveu/.test(prompt),
+  /**
+   * **A REDACAO mudou na 3.22 e a PROTECAO ficou.** Ali ele mandou a IA usar as respostas prontas
+   * como BASE (print da nicce), e o rotulo deixou de dizer que elas "nao sao um banco de respostas"
+   * — passaram a ser, **quando o NOME diz que atendem o caso**. O que este bloco guarda continua
+   * sendo o caso do "representante": exemplo que fala de tema que ela nao trouxe nao entra.
+   */
+  check(/TOM e TAMANHO/.test(prompt), 'o rotulo diz que as respostas prontas ensinam tom e tamanho');
+  check(/Se NENHUMA atender esta pessoa, não copie o conteúdo de nenhuma/.test(prompt),
+    'e que nao atendendo o caso, o conteudo nao se copia');
+  check(/o assunto vem SEMPRE do que ela\s+escreveu/.test(prompt),
     'com o assunto vindo do que ESTA pessoa escreveu');
 
   /**
@@ -1803,6 +1811,51 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   const linhas = prompt.split('\n');
   const onze = linhas.findIndex((l) => /^11\. DEPOIS DE APONTAR/.test(l));
   check(onze > linhas.length * 0.8, `a regra 11 fica no fim do prompt (${onze} de ${linhas.length})`);
+}
+
+/**
+ * A IA USA A NOSSA RESPOSTA COMO BASE — regra dele (09/09/2026), com o print da nicce.
+ *
+ * Ela escreveu *"Trabalho com divulgacao de campanha nas redes sociais... gostaria de saber se nao
+ * precisa de alguem pra trabalhar"* e o rascunho perguntou se ela queria *"trabalho remunerado ou
+ * voluntario"*, pediu portfolio e prometeu *"registrar sua mensagem para que a equipe analise"*.
+ * Ele: *"a IA deve usar como base a nossa resposta pra esses casos"* — e a resposta existe desde a
+ * 3.15, com o texto que ele ditou.
+ *
+ * **Medido: ela era a NONA da lista e o corte era `slice(0, 8)`. A IA nunca a viu** — e 13 das 21
+ * respostas de fabrica ficavam de fora. As oito que entravam iam **sem o NOME**, o que as tornava
+ * inutilizaveis como base: oito textos soltos nao dizem a que caso cada um serve.
+ */
+{
+  grupo('a IA usa a nossa resposta como base (a nicce, 09/09)');
+
+  const prompt = montarSistemaRascunho({ templates: DEFAULT_TEMPLATES, regras: '', gabinete: '' });
+  const linhas = prompt.split('\n').filter((l) => /^— \*\*/.test(l));
+
+  check(linhas.length === DEFAULT_TEMPLATES.length, `as ${DEFAULT_TEMPLATES.length} respostas prontas chegam a IA (${linhas.length})`);
+  check(/Quer trabalhar para a campanha/.test(prompt), 'inclusive a que ele mandou usar como base');
+  check(/Confirmou presença/.test(prompt), 'e as de evento, que tambem ficavam de fora');
+
+  /** **O NOME e o que separa "use a que serve" de "nao copie as outras".** */
+  for (const t of DEFAULT_TEMPLATES.slice(0, 10)) {
+    check(prompt.includes(t.name), `a resposta "${t.name.slice(0, 34)}" vai com o NOME`);
+  }
+
+  /** As duas metades da regra, e as duas precisam existir juntas. */
+  check(/ela é a BASE da sua resposta/.test(prompt), 'a resposta que atende o caso e a BASE');
+  check(/Não invente\s+outra resposta para um caso que a equipe já respondeu/.test(prompt),
+    'e a IA nao inventa outra para um caso ja respondido');
+  check(/Se NENHUMA atender esta pessoa, não copie o conteúdo de nenhuma/.test(prompt),
+    'mas a guarda de 3.14 continua: nao atendendo, nao copie');
+
+  /**
+   * **A regra das variaveis citada onde a tentacao esta.** Os textos dele sao cheios de
+   * `{{saudacao}}`, e agora sao 21 deles colados no pedido; a regra 3 fica no comeco das instrucoes.
+   * E a licao de 07/09 — regra longe do ponto em que o modelo escreve nao e cumprida.
+   */
+  check(/\{\{saudacao\}\}/.test(prompt), 'os exemplos levam as variaveis dele mesmo');
+  check(/você NÃO\.\*\* Escreva a saudação por extenso/.test(prompt) || /têm \{\{variáveis\}\} dentro; você NÃO/.test(prompt),
+    'e a proibicao de copia-las fica ao lado deles');
 }
 
 fim();
