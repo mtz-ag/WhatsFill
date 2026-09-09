@@ -2250,6 +2250,19 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
     'Me passa o whats dele',
     'Voces tem o numero do capitao?',
     'me manda o contato dele por favor',
+    /**
+     * **O ENCONTRO pedido como SUBSTANTIVO** — print do Maicon (09/09/2026): *"Queria uma reuniao
+     * com deputado"*, e os OITO detectores devolveram null. A rodada mandou a saudacao de fe —
+     * *"pedido de contato foi ignorado e mandou bom dia"*. A lista inteira era de VERBOS (falar,
+     * conversar, encontrar, ver), e quem quer marcar pede a COISA.
+     */
+    'Queria uma reuniao com deputado',
+    'queria um encontro com o capitao',
+    'quero uma audiencia com ele',
+    'gostaria de uma visita do deputado',
+    'da pra marcar um horario com o Martim?',
+    'queria agendar com o capitao',
+    'ele pode me receber?',
   ]) {
     check(pega(t), `pega: "${t}"`);
   }
@@ -2269,6 +2282,17 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
     'Posso falar com um atendente?',
     'tem alguem ai?',
     'isso e robo ou tem alguem?',
+    /**
+     * **O verbo de QUERER e obrigatorio na familia do encontro**, e foi a medicao que obrigou:
+     * sem ele, *"na reuniao com o deputado ontem, ele disse..."* viraria pedido, e a resposta
+     * nega um encontro que ninguem pediu — o erro do "representante", dois dias antes.
+     */
+    'na reuniao com o deputado ontem ele disse isso',
+    'a visita do deputado a nossa cidade foi otima',
+    'tive uma reuniao com o prefeito ontem',
+    'queria uma reuniao com a prefeitura',
+    'vou marcar uma consulta com o medico',
+    'que horario voces atendem?',
     'falei com o deputado ontem no evento',
     'conversei com ele semana passada',
     'vou falar com o prefeito da minha cidade',

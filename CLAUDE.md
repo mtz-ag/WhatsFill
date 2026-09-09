@@ -2652,6 +2652,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   linha "Cidade:" some (o valor virou vazio) e o aviso de grafia some junto, enquanto o CRM
   continua com o lixo ate a conclusao gravar. Hoje o cabecalho diz o que vai ser apagado, e o
   Andamento registra `apagando do CRM: <campo> ("<valor>")`.
+- **QUEM QUER MARCAR PEDE A COISA, NAO USA O VERBO — e a lista era toda de verbos.** Print do Maicon
+  (09/09/2026): *"Queria uma reuniao com deputado"*, e **os OITO detectores devolveram null**; a
+  rodada mandou a saudacao de fe — *"pedido de contato foi ignorado e mandou bom dia"*. `QUER_FALAR_
+  COM_ELE` conhecia *falar*, *conversar*, *encontrar*, *ver* e o pedido do numero; nao conhecia
+  **reuniao, encontro, audiencia, visita, horario**, nem *"marcar/agendar com ele"*, nem *"ele pode
+  me receber?"*. **Mesmo defeito do "trabalhar NA campanha" (05/09) e do "gostaria DE saber"
+  (06/09): a forma existe, e a mais natural, e a lista nao a tinha.** Sem sinal nenhum o caso desce
+  ate a caixa que manda a mensagem do momento — **a caixa nao errou, ela foi a ultima que sobrou**.
+  **A guarda que a medicao obrigou:** o verbo de QUERER e obrigatorio, senao *"na reuniao com o
+  deputado ontem, ele disse..."* vira pedido e a resposta nega um encontro que ninguem pediu — o erro
+  do "representante" pela outra porta. 12 das 23 assercoes sao falso positivo.
+  **Fica em aberto e foi dito a ele:** *"Ninguem quis entrar em contato comigo"* (a reclamacao de nao
+  ter sido atendido) continua sem detector.
 - **A COLINHA VAI DIGITADA DESDE 09/09/2026, E NAO E MATERIAL** — decisao dele: *"quando pedir a
   colinha so passe a lista com os numeros e o que cada um e, nao entra como material"*. **Isto
   SUBSTITUI a regra de 07/09** (*"quem pergunta em quem votar recebe a ARTE, nao a lista digitada"*),

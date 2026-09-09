@@ -1712,6 +1712,34 @@ const QUER_FALAR_COM_ELE = [
       `[^.!?]{0,20}?(falar|conversar|encontrar|ver)\\s+(com\\s+)?(o\\s+|a\\s+)?${ELE_MESMO}`,
     'iu'
   ),
+  /**
+   * **O ENCONTRO pedido como SUBSTANTIVO** — print do Maicon (09/09/2026): *"Queria uma reunião com
+   * deputado"*, e nenhum dos oito detectores viu nada. A rodada mandou a saudação de fé — *"pedido
+   * de contato foi ignorado e mandou bom dia"*.
+   *
+   * A lista inteira era de VERBOS (falar, conversar, encontrar, ver), e é assim que a maior parte
+   * das pessoas escreve. Quem quer marcar pede a COISA: uma reunião, um encontro, uma audiência, uma
+   * visita, um horário. **É o mesmo defeito do "trabalhar NA campanha" e do "gostaria DE saber": a
+   * forma existe, a lista não a tinha.**
+   *
+   * `[^.!?]{0,25}?` cobre *"uma reunião rápida com o deputado"* sem atravessar a frase seguinte, e o
+   * objeto continua tendo de ser ELE — reunião com a prefeitura não é assunto desta regra.
+   */
+  new RegExp(
+    // O verbo de QUERER é obrigatório: sem ele, *"na reunião com o deputado ontem, ele disse..."*
+    // viraria pedido, e a resposta nega um encontro que ninguém pediu — o erro do "representante".
+    `(^|[^\\p{L}])(quero|queria|gostaria|preciso|precisava|pretendo|posso|tem\\s+como|da\\s+pra|` +
+      `e\\s+possivel|seria\\s+possivel|como\\s+(faco|fazer|consigo))\\s+` +
+      `[^.!?]{0,20}?(reuniao|encontro|audiencia|visita|agendamento|horario)\\s+` +
+      `[^.!?]{0,25}?(com|do|da|de)\\s+(o\\s+|a\\s+|meu\\s+)?${ELE_MESMO}`,
+    'iu'
+  ),
+  /** *"queria marcar com o deputado"*, *"dá para agendar uma visita dele"*, *"ele pode me receber?"* */
+  new RegExp(
+    `(^|[^\\p{L}])(marcar|agendar|remarcar)\\s+[^.!?]{0,25}?(com\\s+)?(o\\s+|a\\s+)?${ELE_MESMO}`,
+    'iu'
+  ),
+  new RegExp(`(^|[^\\p{L}})]?)${ELE_MESMO}\\s+(pode|poderia|consegue)\\s+me\\s+receber`, 'iu'),
   // O pedido de CONTATO: "me passa o whats dele", "tem o número do capitão?"
   new RegExp(
     `(^|[^\\p{L}])(me\\s+passa|me\\s+manda|passa|manda|voces?\\s+tem|tem|qual\\s+e?|qual\\s+o)\\s+` +

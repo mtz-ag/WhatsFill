@@ -1,4 +1,4 @@
-## 2026-09-09 — ESTADO DE AGORA (v3.17.0) — leia isto primeiro numa sessão nova
+## 2026-09-09 — ESTADO DE AGORA (v3.18.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.17.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.18.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
@@ -269,6 +269,70 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-09 — "Queria uma reunião com deputado" não casava com nada (v3.18.0)
+
+Print do **Maicon** (09/09/2026): chegou pelo anúncio às 02:56 e escreveu, em seguida, *"Ninguém quis
+entrar em contato comigo"* e *"Queria uma reunião com deputado"*. Às 11:11 ele recebeu a **saudação
+de fé** — *"Que esta quarta-feira seja abençoada..."*. Ele: *"pedido de contato foi ignorado e mandou
+bom dia"*.
+
+### Medido: os OITO detectores devolveram null
+
+```
+pedeFalarComDeputado         null      soCortesia            null
+conversaTemPerguntaAberta    null      soExpressaApoio       null
+perguntaPendente             null      pedeAlgoIndefinido    null
+conversaPedeRespostaPessoal  null      pedeMaterial          null
+```
+
+Sem sinal nenhum, o caso desceu até a caixa que manda a mensagem do momento — e a mensagem do momento
+dele, nesta semana, é a saudação de fé. **A caixa não errou: ela foi a última que sobrou.**
+
+### A causa: a lista era toda de VERBOS
+
+`QUER_FALAR_COM_ELE` conhecia *falar*, *conversar*, *encontrar*, *ver* e o pedido do número. **Quem
+quer marcar não usa verbo: pede a COISA** — uma reunião, um encontro, uma audiência, uma visita, um
+horário.
+
+**É o mesmo defeito do *"trabalhar NA campanha"* (05/09) e do *"gostaria DE saber"* (06/09):** a
+forma existe, é a mais natural, e a lista não a tinha. Entraram junto *"marcar/agendar com ele"* e
+*"ele pode me receber?"*.
+
+### A guarda que a medição obrigou
+
+A primeira versão aceitava o substantivo **sem verbo de querer**, e aí *"na reunião com o deputado
+ontem, ele disse..."* virava pedido — e a resposta nega um encontro que ninguém pediu. **É o erro do
+"representante", de dois dias atrás, pela outra porta.** Hoje o verbo de querer é obrigatório
+(quero, queria, gostaria, preciso, pretendo, posso, tem como, dá pra, é possível, como faço).
+
+Das 23 asserções, **12 são falso positivo**: *"tive uma reunião com o prefeito"*, *"a reunião do PL
+foi ótima"*, *"queria uma reunião com a prefeitura"*, *"vou marcar uma consulta com o médico"*, *"a
+visita do deputado à nossa cidade foi ótima"*, *"que horário vocês atendem?"*.
+
+### Medido depois
+
+```
+pedeFalarComDeputado -> quer falar com o deputado em pessoa
+QUADRO -> chegada-falar-deputado, resposta "falar-com-deputado"
+```
+
+Que é a resposta que ele escreveu à mão em 08/09: o encontro é nos eventos da agenda, e o WhatsApp
+pessoal não é repassado.
+
+### O que fica em aberto
+
+*"Ninguém quis entrar em contato comigo"* — a **reclamação de não ter sido atendido** — continua sem
+detector. Aqui ela não muda o desfecho (o pedido de reunião decide), mas é uma frase que aparece
+sozinha e, quando aparece, qualquer mensagem automática em cima dela soa pior do que o silêncio. Não
+inventei regra: é decisão dele se vira caso de tecla 6.
+
+### Arquivos
+
+`src/lib/cortesia.js` (`QUER_FALAR_COM_ELE`), `tests/cortesia.test.mjs` (13 asserções novas). 15
+suítes verdes, verificadores limpos.
+
 ---
 
 ## 2026-09-09 — A colinha vai digitada, e não é material (v3.17.0)
