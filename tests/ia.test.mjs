@@ -13,6 +13,7 @@ import { PROVEDORES, pedirAoWorker } from '../src/lib/ia-cliente.js';
 import { paraHtml } from '../src/padrao.js';
 import { chapaDoDossie, precisaDoDossie } from '../src/lib/gabinete.js';
 import { DEFAULT_TEMPLATES } from '../src/lib/store.js';
+import { pedeMaterial } from '../src/lib/cortesia.js';
 import {
   montarSistemaRascunho,
   montarContatoRascunho,
@@ -894,12 +895,18 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
    * pequena do que podemos dar, que e (folhetos, adesivos etc); todo o resto entra como pedido de
    * emprego, ajuda, doacao"*.
    */
-  check(/MATERIAL é uma LISTA FECHADA/.test(prompt), 'o material e uma lista fechada');
-  check(/folheto/.test(prompt), 'com o folheto que ele nomeou');
-  check(/QUALQUER OUTRA COISA está FORA desta regra/.test(prompt), 'e tudo o mais esta fora dela');
-  check(/Se você não encontrar o item NA LISTA, ele não é material/.test(prompt),
-    'com a regra de fechamento, que e o que faz a lista ser de permissao');
-  check(/PEDIDO DE AJUDA OU DOAÇÃO/.test(prompt), 'e o resto vira pedido de ajuda ou doacao');
+  /**
+   * **A REDACAO mudou na 3.23, e o que ela guarda ficou.** Na 3.16 a lista era FECHADA e tudo o que
+   * nao estivesse nela virava pedido de ajuda — e no dia seguinte a Sirlei pediu uma **placa**, que
+   * e propaganda da campanha, e recebeu uma recusa. **A lista fechada virou lista de estoque, e ela
+   * nao e isso.** O criterio passou a ser a MARCA (leva o nome, o numero ou a marca da campanha?), e
+   * o que este bloco continua guardando e a fronteira que a 3.13 e a 3.16 abriram: **bem de uso
+   * pessoal, que teria de ser comprado, nao e material.**
+   */
+  check(/folheto/.test(prompt), 'a lista tem o folheto que ele nomeou');
+  check(/bem de uso PESSOAL/.test(prompt), 'e o bem de uso pessoal fica FORA da regra do material');
+  check(/AJUDA OU DOAÇÃO/.test(prompt), 'virando pedido de ajuda ou doacao');
+  check(/seção 9 do padrão/.test(prompt), 'que e a secao 9 do padrao dele');
 
   /**
    * **As duas listas sao a MESMA.** A do prompt e a de `cortesia.OBJETO_DE_MATERIAL`, que decide o
@@ -1856,6 +1863,69 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   check(/\{\{saudacao\}\}/.test(prompt), 'os exemplos levam as variaveis dele mesmo');
   check(/você NÃO\.\*\* Escreva a saudação por extenso/.test(prompt) || /têm \{\{variáveis\}\} dentro; você NÃO/.test(prompt),
     'e a proibicao de copia-las fica ao lado deles');
+}
+
+/**
+ * QUEM DECIDE O QUE TEM E A EQUIPE DOS MATERIAIS, NAO A IA — print da Sirlei (09/09/2026).
+ *
+ * Ela mandou nome, cidade, rua e numero — o endereco inteiro — e pediu uma **placa**. O rascunho
+ * respondeu *"nao e possivel fornecer placas nem doar esse tipo de bem, a lei eleitoral proibe"* e
+ * **recitou a lista do prompt para ela**. Regra dele: *"a pessoa se expressou mal e falou placa,
+ * seria banner ou algo do tipo; provavelmente nao temos, mas isso e melhor encaminhar para a equipe
+ * do material como todo o resto, e a equipe do material decide o que tem e nao tem"*.
+ *
+ * **Dois defeitos meus:** a lista fechada da 3.16 virou lista de ESTOQUE (ela nasceu para separar
+ * propaganda de bem que precisa ser comprado), e ela foi para dentro da mensagem palavra por palavra.
+ */
+{
+  grupo('quem decide o que tem e a equipe dos materiais (a Sirlei, 09/09)');
+
+  const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+
+  /**
+   * **O criterio deixou de ser a lista e passou a ser a MARCA**, que resolve o item que ninguem
+   * previu sem precisar prever — que e o que uma lista nunca faz.
+   */
+  check(/leva o NOME, o NÚMERO ou a MARCA/.test(prompt), 'o criterio e a marca da campanha');
+  check(/A lista é exemplo, não é estoque/.test(prompt), 'e a lista e exemplo, nao estoque');
+  check(/VOCÊ NUNCA DIZ SE TEMOS OU NÃO/.test(prompt), 'a IA nao diz se temos');
+  check(/Na dúvida entre recusar e repassar, REPASSE/.test(prompt), 'e na duvida ela repassa');
+
+  /** O segundo defeito: texto de prompt nao e texto para eleitor. */
+  check(/NUNCA liste os itens para o contato/.test(prompt), 'e nunca recita a lista para o contato');
+
+  /** A fronteira da 3.13 e da 3.16 continua de pe: bem de uso pessoal e a secao 9. */
+  check(/bem de uso PESSOAL/.test(prompt), 'bem de uso pessoal continua fora do material');
+  check(/cadeira de rodas/.test(prompt) && /colchão/.test(prompt), 'com os exemplos da Cleo e do Oseias');
+  check(/AJUDA OU DOAÇÃO/.test(prompt) && /seção 9 do padrão/.test(prompt),
+    'e continua indo para a secao 9');
+}
+
+/**
+ * E o DETECTOR passou a reconhecer a propaganda que nao estava na lista: sem sinal, o caso nao
+ * chegava ao caminho do material e a IA improvisava.
+ */
+{
+  grupo('propaganda de rua tambem e material (09/09)');
+
+  const um = (t) => [{ texto: t, tipo: 'TEXT', at: 1 }];
+  const pede = (t) => !!pedeMaterial(um(t), null);
+
+  for (const t of ['quero uma placa da campanha', 'me manda um banner', 'preciso de uma faixa',
+    'quero um cartaz', 'me arruma umas placas para por na rua', 'gostaria de uma camisa da campanha',
+    'me manda um chaveiro', 'voce consegue uns adesivos']) {
+    check(pede(t), `pega: "${t}"`);
+  }
+
+  /** **A placa que NAO e da campanha** — o verbo de pedir e o que separa. */
+  check(!pede('a placa do meu carro esta vencida'), 'a placa do carro nao e material');
+  check(!pede('tem uma placa de pare quebrada na minha rua'), 'nem a placa de transito');
+  check(!pede('a faixa de pedestre sumiu aqui'), 'nem a faixa de pedestre');
+  check(!pede('ja recebi os adesivos, obrigado'), 'nem quem ja recebeu');
+
+  /** E o bem de uso pessoal continua fora do caminho do material. */
+  check(!pede('quero uma cadeira de rodas'), 'cadeira de rodas nao e material');
+  check(!pede('preciso de um colchao'), 'nem colchao');
 }
 
 fim();

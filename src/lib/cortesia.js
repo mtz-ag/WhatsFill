@@ -2753,13 +2753,13 @@ const VERBO_DE_PEDIR_MATERIAL = [
    */
   /(?:preciso|precisava|precisando|necessito|necessitava)\s+d[eo]s?/,
   /(?:pode|poderia|podem|poderiam|tem\s+como|teria\s+como)\s+(?:me\s+)?(?:mandar|enviar|passar|repassar|disponibilizar)/,
-  /(?:me\s+)?(?:manda|mande|mandem|envia|envie|enviem|passa|passe|repassa|repasse)/,
+  /(?:me\s+)?(?:manda|mande|mandem|envia|envie|enviem|passa|passe|repassa|repasse|arruma|arrume|arranja|arranje|consegue|consiga)/,
   /(?:quero|queria|gostaria\s+de)/,
 ];
 
 /** O que se pede. Literal de propósito: é o vocabulário desta campanha, e não uma categoria. */
 const OBJETO_DE_MATERIAL =
-  /(?:materia(?:l|is)|conteudos?|adesivos?|santinhos?|panfletos?|folhetos?|folders?|artes?|cards?|informativos?|cartilhas?|bandeiras?|camisetas?|bones?)/;
+  /(?:materia(?:l|is)|conteudos?|adesivos?|santinhos?|panfletos?|folhetos?|folders?|artes?|cards?|informativos?|cartilhas?|bandeiras?|bandeirinhas?|camisetas?|camisas?|coletes?|bones?|placas?|plaquinhas?|banners?|faixas?|cartaz(?:es)?|chaveiros?|botons?|bottons?)/;
 
 /**
  * Verbo, até duas palavras no meio, e o objeto. As peças ficam separadas acima porque é assim que

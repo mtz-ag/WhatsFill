@@ -967,16 +967,47 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * — a mesma que decide o sinal `pedeMaterial`. Duas listas separadas divergiriam na primeira vez
      * que ele acrescentasse um item.
      */
-    '   MATERIAL é uma LISTA FECHADA, e ela é curta — é o que a campanha tem para dar:',
-    '   adesivo, santinho, panfleto, folheto, folder, card, arte, informativo, cartilha, bandeira,',
-    '   camiseta, boné e conteúdo digital.',
-    '   **QUALQUER OUTRA COISA está FORA desta regra**, sem exceção e sem precisar estar em lista',
-    '   nenhuma: bota, roupa, calçado, cadeira de rodas, órtese, muleta, remédio, óculos, colchão,',
-    '   eletrodoméstico, móvel, cesta básica, passagem, exame, consulta — e tudo o que não estiver',
-    '   nomeado na lista de cima. Se você não encontrar o item NA LISTA, ele não é material.',
-    '   Pedido assim é PEDIDO DE AJUDA OU DOAÇÃO, e vai para a seção 9 do padrão: NEGUE com respeito,',
-    '   sem humilhar, e PARE aí. Não peça endereço, não fale em equipe de materiais e não prometa',
-    '   repasse — repassar um pedido de doação é abrir a porta que a lei fecha.',
+    /**
+     * **O CRITÉRIO deixou de ser a lista e passou a ser a MARCA** — print da Sirlei (09/09/2026).
+     *
+     * Ela mandou nome, cidade, rua e número — o endereço inteiro — e pediu uma **placa**. O rascunho
+     * respondeu *"não é possível fornecer placas nem doar esse tipo de bem, a lei eleitoral
+     * proíbe"* e **recitou a minha lista para ela**: *"posso informar quais materiais de campanha
+     * trabalhamos (adesivo, santinho, panfleto, folder, card, informativo, cartilha, bandeira,
+     * camiseta, boné e conteúdo digital)"*.
+     *
+     * Regra dele: *"a pessoa se expressou mal e falou placa, seria banner ou algo do tipo.
+     * Provavelmente não temos, mas isso é melhor encaminhar para equipe do material como todo o
+     * resto, e a equipe do material decide o que tem e não tem."*
+     *
+     * **Dois defeitos meus, e o segundo é pior:**
+     *
+     *  1. **A lista fechada da 3.16 virou lista de ESTOQUE, e ela não é isso.** Ela nasceu para
+     *     separar propaganda de bem que precisa ser comprado (a cadeira de rodas, a bota) — e eu a
+     *     escrevi de um jeito que fez a IA **recusar propaganda** que talvez exista. **Quem decide o
+     *     que tem é a equipe dos materiais**, e é a regra da Jonice (08/09) desde o começo.
+     *  2. **A lista foi para dentro da mensagem, palavra por palavra.** Texto de prompt não é texto
+     *     para eleitor, e nada dizia isso.
+     *
+     * **O critério que fica é melhor que qualquer lista: a coisa leva o NOME, o NÚMERO ou a MARCA da
+     * campanha?** Placa, banner e faixa levam; cadeira de rodas e bota não. Isso resolve o item que
+     * ninguém previu sem precisar prever, que é o que uma lista nunca faz.
+     */
+    '   **MATERIAL DE CAMPANHA é tudo o que leva o NOME, o NÚMERO ou a MARCA da campanha** — impresso,',
+    '   vestível ou de rua: adesivo, santinho, panfleto, folheto, folder, card, arte, informativo,',
+    '   cartilha, bandeira, faixa, banner, placa, cartaz, camiseta, camisa, colete, boné, chaveiro e',
+    '   conteúdo digital. **A lista é exemplo, não é estoque:** item de campanha que não esteja nela',
+    '   é material do mesmo jeito.',
+    '   **VOCÊ NUNCA DIZ SE TEMOS OU NÃO, nem que não é possível fornecer.** Quem sabe o que existe e',
+    '   o que dá para entregar é a EQUIPE DOS MATERIAIS — o seu trabalho é pedir o endereço e',
+    '   repassar. Na dúvida entre recusar e repassar, REPASSE.',
+    '   **E NUNCA liste os itens para o contato.** Não ofereça catálogo, não enumere o que existe e',
+    '   não pergunte qual dos itens ela quer entre uma lista: você não sabe o que há em estoque.',
+    '   **O que fica FORA desta regra é o bem de uso PESSOAL, que teria de ser comprado** e não leva a',
+    '   marca da campanha: cadeira de rodas, órtese, muleta, remédio, óculos, colchão, eletrodoméstico,',
+    '   móvel, cesta básica, passagem, exame, consulta, calçado e roupa comum. Aí sim é PEDIDO DE',
+    '   AJUDA OU DOAÇÃO, e vai para a seção 9 do padrão: NEGUE com respeito, sem humilhar, e PARE aí —',
+    '   sem endereço, sem equipe de materiais e sem promessa de repasse.',
     '   **E nunca na mesma mensagem:** se você disse que o mandato não pode comprar nem doar bens,',
     '   está proibido pedir endereço ou prometer encaminhamento depois disso. As duas coisas juntas',
     '   se contradizem, e quem lê fica esperando a entrega.',

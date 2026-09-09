@@ -2723,6 +2723,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   "vote" e o parentese, mas nao o traco: **`Capitao Martim - 2228` passava**. **Ao liberar uma regra
   citando uma trava como a protecao que a torna segura, MEÇA a trava contra a saida que a regra
   produz.**
+- **A LISTA DE MATERIAL VIROU LISTA DE ESTOQUE NA MINHA MAO, E ELA NAO E ISSO — o criterio e a
+  MARCA.** Print da Sirlei (09/09/2026): ela mandou o endereco inteiro e pediu uma **placa**, e o
+  rascunho respondeu *"nao e possivel fornecer placas nem doar esse tipo de bem"* e **recitou a minha
+  lista para ela**. Regra dele: *"provavelmente nao temos, mas isso e melhor encaminhar para a equipe
+  do material como todo o resto, e a equipe do material decide o que tem e nao tem"*. **Dois defeitos
+  meus:** a lista fechada da 3.16 nasceu para separar propaganda de BEM QUE PRECISA SER COMPRADO (a
+  cadeira de rodas, a bota) e eu a escrevi de um jeito que fez a IA **recusar propaganda que talvez
+  exista**, contra a regra da Jonice; e **texto de prompt foi para dentro da mensagem palavra por
+  palavra** — nada dizia que nao podia.
+  **O criterio que fica e melhor que qualquer lista: a coisa leva o NOME, o NUMERO ou a MARCA da
+  campanha?** Placa, banner e faixa levam; cadeira de rodas e bota nao. **Resolve o item que ninguem
+  previu sem precisar prever.** A regra passou a dizer: a lista e EXEMPLO e nao estoque; a IA **nunca
+  diz se temos**; **na duvida entre recusar e repassar, REPASSE**; e **nunca liste os itens para o
+  contato**. **Ao escrever lista no prompt, diga se ela pode ser dita ao eleitor.**
 - **A LISTA DO QUE PODEMOS DAR E DE PERMISSAO, E E CURTA — a de bloqueio durou UM DIA.** Print do
   Oseias (09/09/2026): *"Viu se vc conseguir uma bota de gaucho, numero 42"*, e o rascunho ofereceu o
   endereco e o repasse a equipe de materiais — o caso da Cleo (08/09) repetido com outro objeto, um

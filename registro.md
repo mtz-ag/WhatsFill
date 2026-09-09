@@ -1,4 +1,4 @@
-## 2026-09-09 — ESTADO DE AGORA (v3.22.0) — leia isto primeiro numa sessão nova
+## 2026-09-09 — ESTADO DE AGORA (v3.23.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.22.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.23.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **27 regras** na
@@ -269,6 +269,65 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-09 — Quem decide o que tem é a equipe dos materiais, não a IA (v3.23.0)
+
+Print da **Sirlei** (09/09/2026): ela mandou nome, cidade, rua e número — **o endereço inteiro** — e
+pediu uma **placa**. O rascunho respondeu:
+
+> *"não é possível fornecer placas nem doar esse tipo de bem — a lei eleitoral proíbe. Se quiser,
+> posso informar quais materiais de campanha trabalhamos (adesivo, santinho, panfleto, folder, card,
+> informativo, cartilha, bandeira, camiseta, boné e conteúdo digital)."*
+
+Regra dele: *"a pessoa se expressou mal e falou placa, seria banner ou algo do tipo. Provavelmente
+não temos, mas isso é melhor encaminhar para a equipe do material como todo o resto, e a equipe do
+material decide o que tem e não tem."*
+
+### Dois defeitos meus, e o segundo é pior
+
+**1. A lista fechada da 3.16 virou lista de ESTOQUE, e ela não é isso.** Ela nasceu para separar
+propaganda de **bem que precisa ser comprado** — a cadeira de rodas da Cleo, a bota do Oseias. Eu a
+escrevi de um jeito que fez a IA **recusar propaganda que talvez exista**, contra a regra da Jonice
+(08/09), que é justamente: *quem sabe o que há é a equipe*.
+
+**2. A lista foi para dentro da mensagem, palavra por palavra.** Texto de prompt não é texto para
+eleitor, e nada dizia isso.
+
+### O critério deixou de ser a lista e passou a ser a MARCA
+
+> **A coisa leva o NOME, o NÚMERO ou a MARCA da campanha?**
+
+Placa, banner e faixa levam. Cadeira de rodas e bota não. **Isso resolve o item que ninguém previu
+sem precisar prever**, que é o que uma lista nunca faz — e mantém a fronteira que a 3.13 e a 3.16
+abriram.
+
+A regra passou a dizer, com todas as letras: **a lista é exemplo, não é estoque**; **você nunca diz
+se temos ou não**; **na dúvida entre recusar e repassar, REPASSE**; e **nunca liste os itens para o
+contato**.
+
+### E o detector estava mudo
+
+```
+pedeMaterial("quero uma placa da campanha")  ->  false
+pedeAjudaFinanceira(mesma frase)             ->  false
+```
+
+Sem sinal, o caso não chegava ao caminho do material e a IA improvisou. Entraram **placa,
+plaquinha, banner, faixa, cartaz, camisa, colete, chaveiro, bóton e bandeirinha**, mais os verbos
+*arruma*, *arranja* e *consegue*.
+
+**A guarda é o verbo de pedir**, e é ela que separa a placa da campanha da outra: *"a placa do meu
+carro está vencida"*, *"tem uma placa de pare quebrada na minha rua"* e *"a faixa de pedestre sumiu
+aqui"* continuam passando. 6 das 16 asserções são falso positivo.
+
+### Arquivos
+
+`src/lib/cortesia.js` (`OBJETO_DE_MATERIAL` e os verbos), `src/lib/ia.js` (o critério da marca na
+regra 5), `tests/ia.test.mjs` (**22 asserções**; as da 3.16 foram reescritas, com a nota de que a
+fronteira do bem de uso pessoal ficou). 15 suítes verdes. Prompt: **6.779 tokens**. **Só código: não
+precisa importar o fluxo.**
+
 ---
 
 ## 2026-09-09 — A IA usa a nossa resposta como base (v3.22.0)
