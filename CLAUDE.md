@@ -2723,6 +2723,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   "vote" e o parentese, mas nao o traco: **`Capitao Martim - 2228` passava**. **Ao liberar uma regra
   citando uma trava como a protecao que a torna segura, MEÇA a trava contra a saida que a regra
   produz.**
+- **O PADRAO DE ATENDIMENTO FOI EDITADO PELA PRIMEIRA VEZ EM 09/09/2026, A PEDIDO DELE.** Ele
+  estranhou a frase *"nao precisa se desculpar"* (*"nao lembro de pedir"*), e o **git respondeu**: a
+  frase existe so em `atendimento.js`, o arquivo nasceu no commit `17ee6fe` de 06/09 e **nunca tinha
+  sido editado** — veio dentro do documento que ele entregou. Perguntado entre a troca cirurgica e a
+  ampla, ele disse **"troque"**, e a ampla e a que ataca a causa: **cinco ocorrencias, quatro
+  apresentando a frase como algo que se diz e UMA escrevendo a condicao**. Sairam as das secoes 2, 9
+  e 27; **ficaram as duas da secao 24, que sao as que trazem a condicao junto**. 4 linhas, nada mais
+  do texto dele tocado.
+  **Ao ser questionado sobre a origem de um comportamento, RASTREIE no git antes de responder** — foi
+  `git log --diff-filter=A` e `-S` que mostraram que nem eu nem ele "implementaram" a frase. E
+  **proporcao dentro do documento e causa**: regra que aparece quatro vezes solta e uma vez
+  condicionada e cumprida solta.
 - **FRASE PRONTA CARREGA UMA PREMISSA, E A PREMISSA NAO VEM JUNTO.** Print da Dileta (09/09/2026):
   ela escreveu duas linhas — *"Bom dia"* e *"Preciso de uma ajuda sua"* — e o rascunho respondeu
   *"nao precisa se desculpar"*. Ele: *"de onde saiu que ela pediu desculpas?"* **Medido: a frase

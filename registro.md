@@ -1,4 +1,4 @@
-## 2026-09-09 — ESTADO DE AGORA (v3.24.0) — leia isto primeiro numa sessão nova
+## 2026-09-09 — ESTADO DE AGORA (v3.25.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.24.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.25.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **27 regras** na
@@ -270,6 +270,58 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-09 — "Não precisa se desculpar" saiu de três das cinco seções (v3.25.0)
+
+Pedido dele, depois de rastrearmos a origem da frase: *"não estou ciente de quando foi implementado
+isso… não lembro de pedir"* → **"troque"**.
+
+### A origem, rastreada no git antes de mexer
+
+```
+a frase existe em:        src/lib/atendimento.js  (só ali)
+o arquivo nasceu em:      17ee6fe, 06/09/2026
+commits no arquivo:       UM. Nunca foi editado.
+```
+
+**Ela veio dentro do documento dele**, entregue em 06/09 com a frase *"a IA deve seguir esse padrão
+para responder"* — não foi implementada como funcionalidade, por mim nem por ele. O `CLAUDE.md` diz
+que o documento é dele e não se altera sem pedido, e o git confirma que eu nunca o tinha tocado.
+
+### A proporção era a causa
+
+Cinco ocorrências: **quatro apresentavam a frase como algo que se diz**, e **uma escrevia a
+condição**. Foi essa proporção que fez o modelo usá-la como abertura de pedido de ajuda — o caso da
+Dileta caía na seção 9, e a frase de exemplo da própria seção 9 já vinha com ela embutida.
+
+### O que saiu, e o que ficou
+
+| seção | antes | agora |
+|---|---|---|
+| 2. Personalidade | na lista "Prefira:" | **removida** |
+| 9. Pedido de dinheiro | abria a frase de exemplo | **removida** — o exemplo começa em *"Eu entendo que você esteja passando por uma situação difícil"* |
+| 24. "vamos deixar quieto" | com a condição escrita | **fica** |
+| 24. "Ela se desculpa por ter pedido algo" | é a condição | **fica** |
+| 27. Princípio final | na lista de frases simples | **removida** |
+
+**As duas que ficaram são as duas que trazem a condição junto.** 4 linhas trocadas, nada mais do
+texto dele foi tocado; 27 seções intactas e o item 22 (o tamanho) no lugar.
+
+### A trava da 3.24 continua
+
+`desculpaInexistente` não foi removida. As duas coisas se somam: o documento deixou de **sugerir** a
+frase fora de contexto, e a trava continua barrando se ela aparecer mesmo assim — de uma reescrita
+futura, do que ele digitar nas Instruções extras, ou do saber próprio do modelo.
+
+### Arquivos
+
+`src/lib/atendimento.js` (4 linhas). 15 suítes verdes, verificadores limpos. Prompt: **6.874
+tokens**. **Só código: não precisa importar o fluxo.**
+
+> **Reversível em um comando**, e o diff está no commit: se ele quiser qualquer uma das três de
+> volta, é `git show` nesta versão.
+
 ---
 
 ## 2026-09-09 — A desculpa que ninguém pediu (v3.24.0)
