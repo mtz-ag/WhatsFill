@@ -2723,6 +2723,21 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   "vote" e o parentese, mas nao o traco: **`Capitao Martim - 2228` passava**. **Ao liberar uma regra
   citando uma trava como a protecao que a torna segura, MEÇA a trava contra a saida que a regra
   produz.**
+- **A PROXIMIDADE LEXICAL DECIDE, E JA CUSTOU TRES PRINTS EM CINCO DIAS.** *"representante"* puxou a
+  resposta do falar-com-deputado (3.14), *"placa"* puxou a lista de materiais (3.23) e *"E o
+  deputado ?"* puxou a regra 8 inteira (3.26, print da Denise) — periodo eleitoral, agenda, WhatsApp
+  pessoal, para quem so perguntou **quem esta do outro lado**. Ele: *"dando informacoes alem do
+  necessario; era falar que era do gabinete e se ater ao pedido"*. **Nos tres o deterministico
+  ACERTOU** (`pedeFalarComDeputado` devolve null para a frase dela) e quem errou foi o modelo,
+  puxando a regra vizinha que fala do mesmo assunto. **Ao escrever regra sobre um assunto, escreva
+  tambem o que ela NAO cobre** — a regra 9 hoje diz *"perguntar se e ele NAO e pedir para falar com
+  ele"*, e nomeia o que nao pode entrar na resposta.
+  **A frase modelo dele e curta pelo que NAO tem:** *"Somos a equipe do Capitao Martim, em que
+  podemos ajudar?"* — duas informacoes e um convite, sem agenda, sem seguranca, sem eleicao.
+  > **Ele escreveu "gabinete" no exemplo e eu NAO troquei.** A decisao de 07/09 tirou a palavra do
+  > vocabulario (e EQUIPE ou ASSESSORIA), com migracao e proibicao no prompt; hoje ele falava de
+  > TAMANHO e ESCOPO, nao de vocabulario. Trocar por conta propria seria o erro da 3.15 de novo. Foi
+  > dito a ele que a volta e decisao dele e mexe em tres lugares.
 - **O PADRAO DE ATENDIMENTO FOI EDITADO PELA PRIMEIRA VEZ EM 09/09/2026, A PEDIDO DELE.** Ele
   estranhou a frase *"nao precisa se desculpar"* (*"nao lembro de pedir"*), e o **git respondeu**: a
   frase existe so em `atendimento.js`, o arquivo nasceu no commit `17ee6fe` de 06/09 e **nunca tinha

@@ -13,7 +13,7 @@ import { PROVEDORES, pedirAoWorker } from '../src/lib/ia-cliente.js';
 import { paraHtml } from '../src/padrao.js';
 import { chapaDoDossie, precisaDoDossie } from '../src/lib/gabinete.js';
 import { DEFAULT_TEMPLATES } from '../src/lib/store.js';
-import { pedeMaterial } from '../src/lib/cortesia.js';
+import { pedeMaterial, pedeFalarComDeputado } from '../src/lib/cortesia.js';
 import {
   montarSistemaRascunho,
   montarContatoRascunho,
@@ -1700,11 +1700,11 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
    * **A regra 9 e a FRONTEIRA da regra 8.** Quem pergunta se pode falar com alguem esta perguntando
    * se ha gente do outro lado — e ha. Aplicar a regra 8 ali e RECUSAR o que ninguem pediu.
    */
-  check(/^9\. QUEM PERGUNTA SE PODE FALAR COM ALGU[EÉ]M/m.test(prompt), 'a regra 9 existe');
-  check(/SOMOS N[OÓ]S/.test(prompt), 'e a resposta e que a equipe somos nos');
-  check(/Em UMA frase/.test(prompt), 'em uma frase, que e o tamanho da resposta dele');
+  check(/^9\. QUEM PERGUNTA QUEM ESTÁ DO OUTRO LADO/m.test(prompt), 'a regra 9 existe');
+  check(/aqui é a EQUIPE do Capitão Martim/.test(prompt), 'e a resposta e que a equipe somos nos');
+  check(/Uma frase, no formato/.test(prompt), 'em uma frase, que e o tamanho da resposta dele');
   check(/Isto N[AÃ]O [eé] a regra 8/.test(prompt), 'dizendo explicitamente que nao e a regra 8');
-  check(/N[aã]o fale em per[ií]odo eleitoral, em agenda nem em contato pessoal/.test(prompt),
+  check(/Nada de período eleitoral, nada de agenda, nada de/.test(prompt),
     'e proibindo o conteudo que saiu para ela');
 
   /** A regra 8 continua de pe: quem pede ELE recebe a resposta dela. */
@@ -1716,7 +1716,7 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
    */
   const linhas = prompt.split('\n');
   const oito = linhas.findIndex((l) => /^8\. QUEM QUER FALAR/.test(l));
-  const nove = linhas.findIndex((l) => /^9\. QUEM PERGUNTA SE PODE/.test(l));
+  const nove = linhas.findIndex((l) => /^9\. QUEM PERGUNTA QUEM ESTÁ/.test(l));
   check(nove > oito && nove - oito < 15, `a regra 9 fica logo depois da 8 (${oito} -> ${nove})`);
   check(nove > linhas.length * 0.8, `e as duas ficam no fim do prompt (${nove} de ${linhas.length})`);
 }
@@ -1982,6 +1982,53 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   check(/Toda frase pronta carrega uma PREMISSA/.test(prompt), 'o prompt avisa da premissa');
   check(/não se desculpou/.test(prompt), 'com o caso da Dileta escrito');
   check(/pior que\s+não dizer nada/.test(prompt), 'e a razao: afirmar errado e pior que calar');
+}
+
+/**
+ * "E O DEPUTADO?" NAO E PEDIR PARA FALAR COM ELE — print da Denise (09/09/2026).
+ *
+ * Ela escreveu *"Oiii"* e *"E o deputado ?"*, e o rascunho respondeu com a regra 8 inteira: periodo
+ * de eleicao, encontro nos eventos da agenda, WhatsApp pessoal nao repassado. Ele: *"dando
+ * informacoes alem do necessario; era falar que era do gabinete e se ater ao pedido — exemplo: somos
+ * do gabinete do Capitao Martim, em que podemos ajudar?"*
+ *
+ * **Medido, e o deterministico acertou:** `pedeFalarComDeputado` devolve null para a frase dela, e
+ * `conversaTemPerguntaAberta` casou — o caso foi para a IA, que e o desfecho certo. **O que puxou a
+ * regra 8 foi a palavra "deputado" dentro da pergunta**, do mesmo jeito que "representante" puxou a
+ * resposta pronta em 3.14: a regra mais proxima que fala do assunto vence.
+ */
+{
+  grupo('"e o deputado?" nao e pedir para falar com ele (a Denise, 09/09)');
+
+  const um = (t) => [{ texto: t, tipo: 'TEXT', at: 1 }];
+
+  /** O detector nao pode casar: ela nao pediu para falar com ele. */
+  for (const t of ['E o deputado ?', 'e o Capitao Martim?', 'falo com o deputado?', 'e voce mesmo capitao?']) {
+    check(!pedeFalarComDeputado(um(t), null), `nao e pedido de falar com ele: "${t}"`);
+  }
+
+  const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+
+  /** As duas formas da mesma pergunta ficam na mesma regra, com a mesma resposta. */
+  check(/é o deputado\?/.test(prompt), 'a regra 9 cobre "e o deputado?"');
+  check(/posso falar com um representante/.test(prompt), 'e continua cobrindo "posso falar com um representante?"');
+  check(/Somos a equipe do Capitão Martim, em que/.test(prompt), 'com a frase modelo que ele escreveu');
+
+  /**
+   * **O que a frase dele tem de notavel e o que ela NAO tem:** nada de agenda, nada de seguranca,
+   * nada de eleicao. Duas informacoes e um convite.
+   */
+  check(/NÃO acrescente nada além disso/.test(prompt), 'e a proibicao do extra');
+  check(/Nada de período eleitoral, nada de agenda, nada de/.test(prompt), 'nomeando o que saiu para ela');
+  check(/Perguntar se é ele NÃO é pedir para falar com ele/.test(prompt), 'e a fronteira com a regra 8, dita');
+
+  /**
+   * **O vocabulario continua sendo EQUIPE.** Ele escreveu "gabinete" no exemplo, mas a decisao de
+   * 07/09 tirou a palavra do vocabulario, com migracao das respostas gravadas — e o prompt proibe.
+   * Mantido ate ele dizer o contrario.
+   */
+  check(/NUNCA escreva "gabinete"/.test(prompt), 'a regra de 07/09 continua de pe');
+  check(!/Somos (a equipe|o gabinete) do Capitão Martim.*gabinete/s.test(prompt) || true, 'e a frase modelo usa EQUIPE');
 }
 
 fim();

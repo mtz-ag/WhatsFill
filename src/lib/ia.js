@@ -1152,13 +1152,36 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * O que separa as duas regras é o OBJETO, e é o mesmo critério de `cortesia.pedeFalarComDeputado`
      * — que, medido, devolve **null** para a frase dela, corretamente.
      */
-    '9. QUEM PERGUNTA SE PODE FALAR COM ALGUÉM ("posso falar com um representante?", "tem alguém',
-    '   aí?", "isso é robô?", "posso falar com um atendente?") está perguntando se existe gente do',
-    '   outro lado — e existe: SOMOS NÓS. Confirme que aqui é a equipe do Capitão Martim e pergunte',
-    '   do que ela precisa. Em UMA frase.',
-    '   Isto NÃO é a regra 8: ela só vale quando a pessoa pede ELE — pelo nome, pelo cargo ou pelo',
-    '   contato pessoal dele. Aplicar a regra 8 aqui é RECUSAR o que ninguém pediu, e sai como se ela',
-    '   tivesse pedido demais. Não fale em período eleitoral, em agenda nem em contato pessoal.',
+    /**
+     * **A regra 9 ganhou a segunda forma da mesma pergunta** — print da Denise (09/09/2026). Ela
+     * escreveu *"Oiii"* e *"É o deputado ?"*, e o rascunho respondeu com a regra 8 inteira: período
+     * de eleição, encontro nos eventos da agenda, WhatsApp pessoal não repassado.
+     *
+     * Ele: *"dando informações além do necessário; era falar que era do gabinete e se ater ao
+     * pedido — exemplo: somos do gabinete do Capitão Martim, em que podemos ajudar?"*
+     *
+     * **Medido, e o determinístico acertou:** `pedeFalarComDeputado` devolve **null** para a frase
+     * dela, corretamente — ela não pediu para falar com ele, perguntou **quem está do outro lado**.
+     * `conversaTemPerguntaAberta` casou e o caso foi para a IA, que é o desfecho certo. **O que puxou
+     * a regra 8 foi a palavra "deputado" dentro da pergunta** — a regra mais próxima que fala dela
+     * venceu, exatamente como o "representante" (3.14) puxou a resposta pronta.
+     *
+     * A frase que ele escreveu é o modelo, e o que ela tem de notável é o que NÃO tem: nada de
+     * agenda, nada de segurança, nada de eleição. **Duas informações e um convite.**
+     */
+    '9. QUEM PERGUNTA QUEM ESTÁ DO OUTRO LADO. Duas formas da mesma pergunta:',
+    '   (a) "posso falar com um representante?", "tem alguém aí?", "isso é robô?", "tem uma pessoa',
+    '       falando comigo?" — ela quer saber se existe gente aqui;',
+    '   (b) "é o deputado?", "é o Capitão Martim?", "falo com ele mesmo?", "é você mesmo?" — ela quer',
+    '       saber se é ELE quem está escrevendo.',
+    '   **A resposta é a mesma nos dois casos, e é curta:** diga que aqui é a EQUIPE do Capitão Martim',
+    '   e pergunte em que pode ajudar. Uma frase, no formato "Somos a equipe do Capitão Martim, em que',
+    '   podemos ajudar?".',
+    '   **NÃO acrescente nada além disso.** Nada de período eleitoral, nada de agenda, nada de',
+    '   WhatsApp pessoal, nada de explicar por que não é ele. Ela perguntou uma coisa só.',
+    '   Isto NÃO é a regra 8: ela só vale quando a pessoa PEDE ele — para falar, para encontrar, ou o',
+    '   contato pessoal dele. Perguntar se é ele NÃO é pedir para falar com ele. Aplicar a regra 8',
+    '   aqui é RECUSAR o que ninguém pediu, e sai como se ela tivesse pedido demais.',
     /**
      * **A COLINHA não é material** — decisão dele (09/09/2026): *"quando pedir a colinha só passe a
      * lista com os números e o que cada um é, não entra como material"*.

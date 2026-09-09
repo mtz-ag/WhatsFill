@@ -1,4 +1,4 @@
-## 2026-09-09 — ESTADO DE AGORA (v3.25.0) — leia isto primeiro numa sessão nova
+## 2026-09-09 — ESTADO DE AGORA (v3.26.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.25.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.26.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **27 regras** na
@@ -270,6 +270,65 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-09 — "É o deputado?" não é pedir para falar com ele (v3.26.0)
+
+Print da **Denise** (09/09/2026). Ela escreveu duas linhas:
+
+```
+Oiii
+É o deputado ?
+```
+
+E recebeu a **regra 8 inteira**: *"Neste período de eleição, o jeito de falar com ele pessoalmente é
+nos eventos da agenda; o WhatsApp pessoal do Capitão não é repassado por questões de segurança."*
+
+Ele: *"dando informações além do necessário; era falar que era do gabinete e se ater ao pedido —
+exemplo: somos do gabinete do Capitão Martim, em que podemos ajudar?"*
+
+### Medido: o determinístico acertou
+
+```
+pedeFalarComDeputado("É o deputado ?")  ->  null      (certo: ela não pediu para falar com ele)
+conversaTemPerguntaAberta               ->  casou     (certo: vai para a IA)
+```
+
+**O que puxou a regra 8 foi a palavra "deputado" dentro da pergunta.** A regra mais próxima que fala
+do assunto venceu — exatamente como *"representante"* puxou a resposta pronta do falar-com-deputado
+em 3.14, e como *"placa"* puxou a lista de materiais em 3.23. **Terceira vez que a proximidade
+lexical decide, e a terceira em cinco dias.**
+
+### A regra 9 passou a ter as duas formas da mesma pergunta
+
+| | exemplo |
+|---|---|
+| (a) tem gente aí? | *"posso falar com um representante?"*, *"isso é robô?"* |
+| (b) é ELE mesmo? | *"é o deputado?"*, *"é o Capitão Martim?"*, *"falo com ele mesmo?"* |
+
+**A resposta é a mesma nos dois casos**, e é a frase dele: *"Somos a equipe do Capitão Martim, em que
+podemos ajudar?"*
+
+**O que essa frase tem de notável é o que ela NÃO tem** — nada de agenda, nada de segurança, nada de
+eleição. Duas informações e um convite. A regra agora diz isso com todas as letras, nomeando o que
+saiu para ela, e fecha a fronteira: **perguntar se é ele não é pedir para falar com ele.**
+
+### Uma coisa que EU NÃO mudei, e é decisão dele
+
+Ele escreveu **"gabinete"** duas vezes no exemplo. A decisão de **07/09** tirou a palavra do
+vocabulário — *"é EQUIPE ou ASSESSORIA"* —, com migração das respostas já gravadas e proibição
+escrita no prompt. **Mantive "equipe"**, porque hoje ele estava falando de TAMANHO e ESCOPO, não de
+vocabulário, e trocar isso por conta própria seria o erro da 3.15 outra vez.
+
+**Se ele quiser "gabinete" de volta, é decisão dele e desfaz a de 07/09** — e aí são três lugares: o
+prompt, a migração e as respostas prontas.
+
+### Arquivos
+
+`src/lib/ia.js` (regra 9), `tests/ia.test.mjs` (**13 asserções**; as da 3.14 foram reescritas para a
+redação nova). 15 suítes verdes. Prompt: **6.998 tokens**. **Só código: não precisa importar o
+fluxo.**
+
 ---
 
 ## 2026-09-09 — "Não precisa se desculpar" saiu de três das cinco seções (v3.25.0)
