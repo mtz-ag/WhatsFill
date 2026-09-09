@@ -1,4 +1,4 @@
-## 2026-09-09 — ESTADO DE AGORA (v3.23.0) — leia isto primeiro numa sessão nova
+## 2026-09-09 — ESTADO DE AGORA (v3.24.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.23.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.24.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **27 regras** na
@@ -62,7 +62,7 @@ de prompt).
 
 ### As travas do rascunho, hoje
 
-`AVISOS_QUE_IMPEDEM_ENVIO` tem **oito** entradas, e cada uma nasceu de uma mensagem que saiu para
+`AVISOS_QUE_IMPEDEM_ENVIO` tem **nove** entradas, e cada uma nasceu de uma mensagem que saiu para
 eleitor real e ele apagou. Elas barram o envio AUTOMÁTICO; o rascunho continua no campo, e ele lê.
 
 | trava | a print |
@@ -75,6 +75,7 @@ eleitor real e ele apagou. Elas barram o envio AUTOMÁTICO; o rascunho continua 
 | `mandouProcurarNos` | *"conversar direto com a coordenação"* — quem escreve JÁ está falando com a equipe — 07/09 |
 | `chapaTrocada` | *"deputado federal … Marcel Van Hattem"* — ele é senador na chapa — a Nara, 08/09 |
 | `enderecoSemMaterial` | pediu o endereço de entrega a quem pediu uma cadeira de rodas — a Cleo, 08/09 |
+| `desculpaInexistente` | *"não precisa se desculpar"* a quem não se desculpou — a Dileta, 09/09 |
 
 **A disciplina que decide onde uma regra nova mora:** mecânico e sem julgamento vira **conserto**
 (a saudação errada, o traço eme); verificável vira **aviso** que barra o envio; o resto fica no
@@ -269,6 +270,71 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-09 — A desculpa que ninguém pediu (v3.24.0)
+
+Print da **Dileta** (09/09/2026). Ela escreveu **duas linhas**:
+
+```
+Bom dia
+Preciso de uma ajuda sua
+```
+
+E o rascunho respondeu *"Entendo que você precisa de ajuda — **não precisa se desculpar**. Para eu
+entender direito e responder com sinceridade: em que você precisa de ajuda?"*. Ele: *"de onde saiu
+que ela pediu desculpas?"*
+
+### Medido: saiu do padrão dele, e a repetição venceu a condição
+
+```
+"não precisa se desculpar"  ->  5 ocorrências em atendimento.js
+a condição que a libera      ->  1
+```
+
+A condição está escrita, e é explícita: *"**Ela se desculpa por ter pedido algo**: 'Não precisa se
+desculpar.'"*. **Uma linha contra cinco.**
+
+### É a terceira invenção da mesma família em três dias — e a pior
+
+| | o que a IA copiou | de onde |
+|---|---|---|
+| 3.14 | a resposta do *falar com o deputado* | um exemplo que não era daquele caso |
+| 3.23 | a lista de materiais, recitada | texto de prompt que virou texto para eleitor |
+| **3.24** | *"não precisa se desculpar"* | uma frase cuja **premissa não aconteceu** |
+
+As duas primeiras soam fora de contexto. **Esta afirma um fato sobre o que a pessoa fez** — e quem
+lê entende, corretamente, que não foi lida.
+
+### A trava
+
+`desculpaInexistente` (a nona) barra o envio automático quando o rascunho diz *"não precisa se
+desculpar"* e **nada nas mensagens dela é uma desculpa**. É mecânica de verdade: a conversa está
+aqui, e desculpa é palavra, não julgamento.
+
+**Condicionada como o `pediuReenvio`:** quando ela SE desculpa, dizer que não precisava é o texto
+CERTO — está no padrão dele — e continua passando. `undefined` não confere nada: fora da rodada não
+há conversa medida.
+
+Lê a **conversa inteira** dela, e não a rajada: quem se desculpou no começo continua tendo se
+desculpado, e a frase que reconhece isso é a certa mais tarde também.
+
+### E a regra geral, colada nos exemplos
+
+> **Toda frase pronta carrega uma PREMISSA sobre o que a pessoa fez.** Antes de usar uma, confira se
+> aquilo aconteceu NESTA conversa. Não diga *"não precisa se desculpar"* a quem não se desculpou,
+> *"obrigado por avisar"* a quem não avisou, *"que pena que não vai poder ir"* a quem não recusou
+> nada. **Afirmar o que ela fez, errado, é pior que não dizer nada.**
+
+**Ela mora colada no bloco dos exemplos de propósito:** foi a instrução de usá-los como BASE (3.22)
+que abriu isto, e regra que corrige o efeito de outra tem que morar ao lado dela.
+
+### Arquivos
+
+`src/lib/ia.js` (`desculpaInexistente`, `DIZ_QUE_NAO_PRECISA_DESCULPAR`, `ELA_SE_DESCULPOU`, a regra
+da premissa), `src/lib/ia-cliente.js` (o sinal), `tests/ia.test.mjs` (**18 asserções**, oito delas
+guardas). 15 suítes verdes. **Só código: não precisa importar o fluxo.**
+
 ---
 
 ## 2026-09-09 — Quem decide o que tem é a equipe dos materiais, não a IA (v3.23.0)

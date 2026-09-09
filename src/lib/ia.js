@@ -1276,6 +1276,23 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      */
     '**As respostas prontas têm {{variáveis}} dentro; você NÃO.** Escreva a saudação por extenso e o',
     'texto final, pronto para enviar — é a regra 3, e ela vale principalmente aqui.',
+    /**
+     * **Frase de exemplo carrega uma PREMISSA, e a premissa não vem junto** — print da Dileta
+     * (09/09/2026). Ela escreveu *"Bom dia"* e *"Preciso de uma ajuda sua"*, e o rascunho respondeu
+     * *"não precisa se desculpar"*. Ele: *"de onde saiu que ela pediu desculpas?"*
+     *
+     * **Medido: a frase aparece cinco vezes no padrão dele e a condição que a libera, uma.** A
+     * repetição venceu a condição.
+     *
+     * Fica AQUI, colado nos exemplos, porque foi a instrução de usar as respostas prontas como BASE
+     * (3.22) que abriu isto — e uma regra que corrige o efeito de outra tem que morar ao lado dela.
+     */
+    '',
+    '**Toda frase pronta carrega uma PREMISSA sobre o que a pessoa fez.** Antes de usar uma, confira',
+    'se aquilo aconteceu NESTA conversa. Não diga "não precisa se desculpar" a quem não se desculpou,',
+    '"obrigado por avisar" a quem não avisou, "que pena que não vai poder ir" a quem não recusou nada,',
+    'nem "obrigado pela paciência" a quem não esperou. **Afirmar o que ela fez, errado, é pior que',
+    'não dizer nada**: a pessoa lê que você não a leu.',
     '',
     exemplos,
   ]
@@ -1713,6 +1730,24 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
    * de endereço, que é o caminho certo dele desde a print da Jonice.
    */
   enderecoSemMaterial: 'pede o endereço de entrega, e ela não pediu material de campanha — confira o que ela pediu',
+  /**
+   * **"Não precisa se desculpar" para quem não se desculpou** — print da Dileta (09/09/2026). Ela
+   * escreveu duas linhas, *"Bom dia"* e *"Preciso de uma ajuda sua"*, e o rascunho respondeu
+   * *"Entendo que você precisa de ajuda — não precisa se desculpar"*. Ele: *"de onde saiu que ela
+   * pediu desculpas?"*
+   *
+   * **Medido: a frase aparece CINCO vezes no padrão dele**, e a condição que a libera — *"ela se
+   * desculpa por ter pedido algo"* — aparece **uma**. A repetição venceu a condição.
+   *
+   * **É a terceira invenção da mesma família em três dias**, e as três vêm de copiar texto pronto
+   * sem conferir a premissa: a resposta do "falar com o deputado" para quem pediu um representante
+   * (3.14), a lista de materiais recitada (3.23), e agora uma frase que **afirma um fato sobre o que
+   * ela fez**. Esta é a pior das três: as outras soam fora de contexto, esta diz à pessoa que ela se
+   * comportou de um jeito que não se comportou.
+   *
+   * **Mecânica de verdade:** a conversa está aqui, e desculpa é palavra, não julgamento.
+   */
+  desculpaInexistente: 'diz "não precisa se desculpar" e ela não se desculpou — tire a frase',
 };
 
 // ---------------------------------------------------------------------------
@@ -1756,6 +1791,19 @@ function apelidosDaChapa(nome) {
   if (partes.length > 1 && ultimo.length >= 5 && !SOBRENOME_AMBIGUO.has(ultimo)) lista.push(ultimo);
   return lista;
 }
+
+/**
+ * Como o rascunho diz que ela não precisava se desculpar, e como ELA se desculpa.
+ *
+ * As duas listas vivem juntas porque uma só faz sentido contra a outra: a primeira é o que a IA
+ * escreve, a segunda é o que tem de existir na conversa para aquilo ser verdade.
+ */
+const DIZ_QUE_NAO_PRECISA_DESCULPAR =
+  /(^|[^\p{L}])(n[ãa]o\s+(precisa|precisava|precisa\s+ficar)\s+(se\s+)?(desculp|pedir\s+desculp|se\s+sentir\s+mal)|sem\s+necessidade\s+de\s+(se\s+)?desculp|n[ãa]o\s+tem\s+(do\s+)?que\s+(se\s+)?desculp)/iu;
+
+/** Ela se desculpou de verdade. "Desculpa" solto como "com licença" conta: é a mesma intenção. */
+export const ELA_SE_DESCULPOU =
+  /(^|[^\p{L}])(desculp|perd[ãa]o|me\s+perdoe|foi\s+mal|sinto\s+muito\s+(por|em)\s+(incomodar|pedir)|vergonha\s+de\s+(pedir|estar\s+pedindo)|n[ãa]o\s+queria\s+(te\s+)?incomodar|incomodar\s+voc[êe])/iu;
 
 /** Nome que vira pedaço de expressão: o dossiê é editável, e um ponto ali quebraria a busca. */
 const escaparParaRegex = (s) => String(s).replace(/[^\p{L}\p{N}\s]/gu, (c) => `\\${c}`);
@@ -2094,6 +2142,17 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
    */
   if (contexto?.pedeMaterial === false && ehPedidoDeEndereco(texto)) {
     avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial);
+  }
+
+  /**
+   * **A desculpa que ninguém pediu** — ver `AVISOS_QUE_IMPEDEM_ENVIO.desculpaInexistente`.
+   *
+   * Condicionada como o `pediuReenvio`: quando ela SE desculpa, dizer que não precisava é o texto
+   * certo, e está escrito no padrão dele. `undefined` não confere nada — fora da rodada não há
+   * conversa medida, e barrar ali pararia o rascunho pedido à mão.
+   */
+  if (contexto?.elaSeDesculpou === false && DIZ_QUE_NAO_PRECISA_DESCULPAR.test(texto)) {
+    avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.desculpaInexistente);
   }
 
   /**

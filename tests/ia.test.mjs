@@ -22,6 +22,7 @@ import {
   montarRequisicaoRascunho,
   revisarRascunho,
   conferirChapa,
+  ELA_SE_DESCULPOU,
   rascunhoPodeSairSozinho,
   AVISOS_QUE_IMPEDEM_ENVIO,
   validarRascunho,
@@ -1926,6 +1927,61 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   /** E o bem de uso pessoal continua fora do caminho do material. */
   check(!pede('quero uma cadeira de rodas'), 'cadeira de rodas nao e material');
   check(!pede('preciso de um colchao'), 'nem colchao');
+}
+
+/**
+ * A DESCULPA QUE NINGUEM PEDIU — print da Dileta (09/09/2026).
+ *
+ * Ela escreveu duas linhas — *"Bom dia"* e *"Preciso de uma ajuda sua"* — e o rascunho respondeu
+ * *"Entendo que voce precisa de ajuda - nao precisa se desculpar"*. Ele: *"de onde saiu que ela
+ * pediu desculpas?"*
+ *
+ * **Medido: a frase aparece CINCO vezes no padrao dele**, e a condicao que a libera — *"ela se
+ * desculpa por ter pedido algo"* — aparece **uma**. A repeticao venceu a condicao.
+ *
+ * **Terceira invencao da mesma familia em tres dias**, e a pior: as outras soam fora de contexto,
+ * esta AFIRMA um fato sobre o que a pessoa fez. Quem le entende que nao foi lida.
+ */
+{
+  grupo('a desculpa que ninguem pediu (a Dileta, 09/09)');
+
+  const agora = new Date('2026-09-09T13:16:00');
+  const oQueSaiu =
+    'Boa tarde. Entendo que voce precisa de ajuda - nao precisa se desculpar. Para eu entender ' +
+    'direito e responder com sinceridade: em que voce precisa de ajuda?';
+  const barra = (texto, ctx) =>
+    revisarRascunho(texto, agora, ctx).avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.desculpaInexistente);
+
+  check(barra(oQueSaiu, { elaSeDesculpou: false }), 'o texto que saiu para ela e barrado');
+  check(!rascunhoPodeSairSozinho(revisarRascunho(oQueSaiu, agora, { elaSeDesculpou: false }).avisos),
+    'e nao sai sozinho');
+  check(barra('Voce nao tem que se desculpar por nada.', { elaSeDesculpou: false }), 'outra forma da frase');
+  check(barra('Nao precisa pedir desculpas, viu?', { elaSeDesculpou: false }), 'e mais uma');
+
+  /**
+   * **A guarda: quando ela SE desculpa, a frase e a CERTA** — esta escrita no padrao dele, e barrar
+   * os dois casos trocaria um defeito por outro.
+   */
+  check(!barra(oQueSaiu, { elaSeDesculpou: true }), 'quem se desculpou continua ouvindo que nao precisava');
+  check(!barra(oQueSaiu, {}), 'sem conversa medida, nao confere nada');
+  check(!barra('Boa tarde! Em que voce precisa de ajuda?', { elaSeDesculpou: false }), 'texto sem a frase passa');
+
+  /** O que conta como ELA se desculpando, e o que nao conta. */
+  for (const t of ['desculpa incomodar', 'me perdoe', 'foi mal', 'tenho vergonha de pedir', 'nao queria te incomodar']) {
+    check(ELA_SE_DESCULPOU.test(t), `conta como desculpa: "${t}"`);
+  }
+  for (const t of ['Bom dia', 'Preciso de uma ajuda sua', 'quero receber o material']) {
+    check(!ELA_SE_DESCULPOU.test(t), `NAO conta: "${t}"`);
+  }
+
+  /**
+   * **A regra geral fica colada nos exemplos**, porque foi a instrucao de usa-los como BASE (3.22)
+   * que abriu isto — regra que corrige o efeito de outra mora ao lado dela.
+   */
+  const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/Toda frase pronta carrega uma PREMISSA/.test(prompt), 'o prompt avisa da premissa');
+  check(/não se desculpou/.test(prompt), 'com o caso da Dileta escrito');
+  check(/pior que\s+não dizer nada/.test(prompt), 'e a razao: afirmar errado e pior que calar');
 }
 
 fim();

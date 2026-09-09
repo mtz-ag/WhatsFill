@@ -19,6 +19,7 @@ import {
   montarContatoRascunho,
   montarRequisicaoRascunho,
   validarRascunho,
+  ELA_SE_DESCULPOU,
   montarSistemaCidade,
   montarContatoCidade,
   montarRequisicaoCidade,
@@ -262,13 +263,19 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     let ultimaNossa = -1;
     lista.forEach((m, i) => { if (m.de === 'nos') ultimaNossa = i; });
     const recebemosDela = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa);
+    /**
+     * Ela se desculpou em algum momento desta conversa? Liga a trava desculpaInexistente.
+     * Le a CONVERSA INTEIRA dela, e nao a rajada: quem se desculpou no comeco continua tendo se
+     * desculpado, e a frase que reconhece isso e a certa mais tarde tambem.
+     */
+    const elaSeDesculpou = lista.some((m) => m.de !== 'nos' && ELA_SE_DESCULPOU.test(String(m.texto || '')));
     return {
       /**
        * `chapa` liga a conferência de cargo e número — ver `ia.conferirChapa`. Ela **não depende
        * de `dossieAtivo`**: o modelo tem saber próprio sobre estes nomes, e foi ele que trocou o
        * cargo do Van Hattem na print da Nara. Trava não pode depender de uma caixa marcada.
        */
-      ...validarRascunho(r.decisao, agora, { jaFalamos, recebemosDela, chapa, pedeMaterial }),
+      ...validarRascunho(r.decisao, agora, { jaFalamos, recebemosDela, chapa, pedeMaterial, elaSeDesculpou }),
       custo: r.custo,
       custoUsd: r.custoUsd,
       gastoMes: r.gastoMes,

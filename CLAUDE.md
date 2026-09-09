@@ -2723,6 +2723,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   "vote" e o parentese, mas nao o traco: **`Capitao Martim - 2228` passava**. **Ao liberar uma regra
   citando uma trava como a protecao que a torna segura, MEÇA a trava contra a saida que a regra
   produz.**
+- **FRASE PRONTA CARREGA UMA PREMISSA, E A PREMISSA NAO VEM JUNTO.** Print da Dileta (09/09/2026):
+  ela escreveu duas linhas — *"Bom dia"* e *"Preciso de uma ajuda sua"* — e o rascunho respondeu
+  *"nao precisa se desculpar"*. Ele: *"de onde saiu que ela pediu desculpas?"* **Medido: a frase
+  aparece CINCO vezes no padrao dele e a condicao que a libera (*"ela se desculpa por ter pedido
+  algo"*) aparece UMA. A repeticao venceu a condicao.** **Terceira invencao da mesma familia em tres
+  dias, e a pior:** a resposta do "falar com o deputado" para quem pediu um representante (3.14) e a
+  lista de materiais recitada (3.23) soam fora de contexto; **esta AFIRMA um fato sobre o que a
+  pessoa fez**, e quem le entende que nao foi lida. Virou a trava `desculpaInexistente` (mecanica de
+  verdade: a conversa esta ali, e desculpa e palavra, nao julgamento), condicionada como o
+  `pediuReenvio` — quem SE desculpa continua ouvindo que nao precisava, porque ai a frase e a certa.
+  **E a regra geral mora COLADA nos exemplos**, porque foi a instrucao de usa-los como BASE (3.22)
+  que abriu isto: **regra que corrige o efeito de outra tem que morar ao lado dela.**
 - **A LISTA DE MATERIAL VIROU LISTA DE ESTOQUE NA MINHA MAO, E ELA NAO E ISSO — o criterio e a
   MARCA.** Print da Sirlei (09/09/2026): ela mandou o endereco inteiro e pediu uma **placa**, e o
   rascunho respondeu *"nao e possivel fornecer placas nem doar esse tipo de bem"* e **recitou a minha
