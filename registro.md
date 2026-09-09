@@ -1,4 +1,4 @@
-## 2026-09-08 — ESTADO DE AGORA (v3.13.0) — leia isto primeiro numa sessão nova
+## 2026-09-09 — ESTADO DE AGORA (v3.14.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,11 +10,11 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.13.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.14.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
-tabela. Prompt de sistema do rascunho: **5.556 tokens**, dos quais **68% é o `PADRAO_DE_ATENDIMENTO`
+tabela. Prompt de sistema do rascunho: **6.054 tokens**, dos quais **63% é o `PADRAO_DE_ATENDIMENTO`
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
 Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75), **dezoito em
@@ -269,6 +269,81 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-09 — Exemplo de estilo virou banco de respostas (v3.14.0)
+
+Print de 09/09/2026: a contato chegou por anúncio do Instagram e escreveu *"Posso falar com algum
+representante?"*. O rascunho respondeu, em cinco frases, que *"no período eleitoral não é possível
+disponibilizar o contato pessoal do deputado; a forma de falar com ele pessoalmente é nos eventos
+públicos da agenda"* — e ainda pediu o cadastro. Ele apagou e digitou, à mão:
+
+> *"bom dia, somos da equipe do capitão martim do que precisa?"*
+
+**Uma linha contra cinco frases, e respondendo outra pergunta.**
+
+### Medido: o determinístico estava certo, e a IA também sabia
+
+```
+pedeFalarComDeputado("Posso falar com algum representante?")  ->  null
+```
+
+Correto — o que qualifica aquela regra é o **objeto ser ELE**. Os vizinhos continuam casando
+(*"quero falar com o deputado"*, *"me passa o whats dele"*) e os do outro lado continuam passando
+(*"posso falar com alguém aí?"*, *"queria falar com vocês"*). O quadro mandou o caso para a IA, que
+é o desfecho certo: nenhuma resposta pronta serve.
+
+**O defeito estava no prompt, e é estrutural.** As respostas prontas dele entram no prompt de sistema
+como exemplo de voz — `.slice(0, 8)`, texto inteiro até 500 caracteres. **`falar-com-deputado` é a
+6ª delas.** E o rótulo dizia apenas:
+
+```
+Exemplos do jeito de escrever da equipe:
+```
+
+**"Exemplo" convida a copiar**, e *"representante"* está perto o bastante de *"deputado"* para o
+modelo recuperar o vizinho errado e entregá-lo como resposta. O rascunho é a resposta pronta
+parafraseada, frase por frase.
+
+### Os dois consertos, os dois no prompt
+
+**1. O rótulo separa VOZ de CONTEÚDO.** Os exemplos passaram a dizer que ensinam tom, tamanho e
+pontuação, que **não são um banco de respostas**, e que o assunto vem sempre do que ESTA pessoa
+escreveu — com a frase que fecha o buraco: *"se o exemplo fala de um tema que esta pessoa não
+trouxe, ele não tem nada a ver com esta conversa"*.
+
+**2. A regra 9 é a FRONTEIRA da regra 8.** Quem pergunta se pode falar com alguém está perguntando
+**se há gente do outro lado** — e há. A resposta é confirmar que aqui é a equipe e perguntar do que
+ela precisa, **em uma frase**, que é o tamanho da resposta dele. A regra diz explicitamente que isto
+não é a regra 8, e proíbe falar em período eleitoral, agenda e contato pessoal nesse caso.
+
+> **Recusar o que ninguém pediu é a irmã de abrir a porta que não existe** (a regra 7, do 07/09). As
+> duas respondem uma pergunta que a pessoa não fez — e esta ainda dá a impressão de que ela pediu
+> demais logo na primeira mensagem.
+
+**E a posição foi escolhida, não herdada:** a regra 9 fica na linha 348 de 370, colada na 8 (341) e
+no fim do prompt. É a lição de 07/09 e a de ontem (o caso da Cleo) — regra longe do ponto em que o
+modelo começa a escrever não é cumprida, e há teste travando a posição.
+
+### O que NÃO fiz, e por quê
+
+**Não criei detector nem resposta pronta para "posso falar com alguém?".** Este arquivo registra
+quatro vezes que **a lista de formas de perguntar não fecha** (a Teresinha, o Paulo Quevedo, a Ieda,
+a Maria Antonia), e esta classe é feita de formas: *"tem alguém aí?"*, *"isso é robô?"*, *"fala uma
+pessoa comigo?"*. O caso já chega à IA pelo caminho certo; o que faltava era ela saber o que
+responder.
+
+### Custo
+
+O prompt foi de **5.556 para 6.054 tokens** (+9%), e continua acima do mínimo de cache do Haiku
+(4.096) — `vaiCachear` mede `true`.
+
+### Arquivos
+
+`src/lib/ia.js` (o rótulo dos exemplos e a regra 9), `tests/ia.test.mjs` (**11 asserções**, duas
+delas sobre a POSIÇÃO da regra), `tests/cortesia.test.mjs` (4 guardas novas travando que o detector
+NÃO deve casar — para ninguém "consertar" no lugar errado). 15 suítes verdes, verificadores limpos.
+
 ---
 
 ## 2026-09-08 — Cadeira de rodas não é material de campanha (v3.13.0)

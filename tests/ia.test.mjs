@@ -1636,4 +1636,53 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
     'a negativa com respeito passa');
 }
 
+/**
+ * EXEMPLO DE ESTILO NAO E BANCO DE RESPOSTAS — print de 09/09/2026.
+ *
+ * A contato escreveu *"Posso falar com algum representante?"* e o rascunho respondeu, em cinco
+ * frases, que *"no periodo eleitoral nao e possivel disponibilizar o contato pessoal do deputado; a
+ * forma de falar com ele pessoalmente e nos eventos publicos da agenda"* — a resposta pronta
+ * `falar-com-deputado` parafraseada. Ele apagou e escreveu, a mao:
+ * *"bom dia, somos da equipe do capitao martim do que precisa?"*
+ *
+ * **Medido: o deterministico estava certo.** `pedeFalarComDeputado` devolve null para a frase dela
+ * (o objeto tem que ser ELE) e o quadro mandou o caso para a IA, que e o desfecho correto. O que
+ * falhou foi o prompt: `falar-com-deputado` e a **6a das 8** respostas que entram como exemplo, com
+ * o texto inteiro, sob um rotulo que dizia so *"exemplos"* — e "exemplo" convida a copiar.
+ */
+{
+  grupo('exemplo de estilo nao e banco de respostas (09/09)');
+
+  const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+
+  check(/JEITO DE ESCREVER/.test(prompt), 'o rotulo diz que os exemplos sao de JEITO DE ESCREVER');
+  check(/banco de respostas/i.test(prompt), 'e diz que eles nao sao um banco de respostas');
+  check(/O assunto da sua resposta vem SEMPRE do que esta pessoa escreveu/.test(prompt),
+    'com o assunto vindo do que ESTA pessoa escreveu');
+
+  /**
+   * **A regra 9 e a FRONTEIRA da regra 8.** Quem pergunta se pode falar com alguem esta perguntando
+   * se ha gente do outro lado — e ha. Aplicar a regra 8 ali e RECUSAR o que ninguem pediu.
+   */
+  check(/^9\. QUEM PERGUNTA SE PODE FALAR COM ALGU[EÉ]M/m.test(prompt), 'a regra 9 existe');
+  check(/SOMOS N[OÓ]S/.test(prompt), 'e a resposta e que a equipe somos nos');
+  check(/Em UMA frase/.test(prompt), 'em uma frase, que e o tamanho da resposta dele');
+  check(/Isto N[AÃ]O [eé] a regra 8/.test(prompt), 'dizendo explicitamente que nao e a regra 8');
+  check(/N[aã]o fale em per[ií]odo eleitoral, em agenda nem em contato pessoal/.test(prompt),
+    'e proibindo o conteudo que saiu para ela');
+
+  /** A regra 8 continua de pe: quem pede ELE recebe a resposta dela. */
+  check(/^8\. QUEM QUER FALAR COM O DEPUTADO EM PESSOA/m.test(prompt), 'a regra 8 continua existindo');
+
+  /**
+   * **A POSICAO importa, e e a licao de 07/09** (o item 22 do tamanho): regra que vive longe do
+   * ponto em que o modelo comeca a escrever nao e cumprida. A 9 tem que ficar ao lado da 8, no fim.
+   */
+  const linhas = prompt.split('\n');
+  const oito = linhas.findIndex((l) => /^8\. QUEM QUER FALAR/.test(l));
+  const nove = linhas.findIndex((l) => /^9\. QUEM PERGUNTA SE PODE/.test(l));
+  check(nove > oito && nove - oito < 15, `a regra 9 fica logo depois da 8 (${oito} -> ${nove})`);
+  check(nove > linhas.length * 0.8, `e as duas ficam no fim do prompt (${nove} de ${linhas.length})`);
+}
+
 fim();

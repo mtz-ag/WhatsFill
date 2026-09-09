@@ -2652,6 +2652,24 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   linha "Cidade:" some (o valor virou vazio) e o aviso de grafia some junto, enquanto o CRM
   continua com o lixo ate a conclusao gravar. Hoje o cabecalho diz o que vai ser apagado, e o
   Andamento registra `apagando do CRM: <campo> ("<valor>")`.
+- **AS RESPOSTAS PRONTAS ENTRAM NO PROMPT COMO EXEMPLO DE ESTILO, E O MODELO AS USA COMO BANCO DE
+  RESPOSTAS.** Print de 09/09/2026: a contato escreveu *"Posso falar com algum representante?"* e o
+  rascunho respondeu, em cinco frases, que *"no periodo eleitoral nao e possivel disponibilizar o
+  contato pessoal do deputado; a forma de falar com ele e nos eventos da agenda"* — a resposta pronta
+  `falar-com-deputado` parafraseada. Ele apagou e digitou **uma linha**: *"bom dia, somos da equipe do
+  capitao martim do que precisa?"*. **Medido: `pedeFalarComDeputado` devolve null para a frase dela
+  (o objeto tem que ser ELE) e o quadro mandou para a IA — o deterministico estava certo.** O defeito
+  e `montarSistemaRascunho`: os oito primeiros templates entram com o TEXTO INTEIRO (500 chars) sob o
+  rotulo *"Exemplos do jeito de escrever"*, e `falar-com-deputado` e o SEXTO. **"Exemplo" convida a
+  copiar**, e "representante" esta perto de "deputado" o bastante para o modelo recuperar o vizinho
+  errado. Hoje o rotulo separa VOZ de CONTEUDO e diz que eles **nao sao um banco de respostas**.
+  **RECUSAR O QUE NINGUEM PEDIU e a irma de abrir a porta que nao existe** (a regra 7): as duas
+  respondem uma pergunta que a pessoa nao fez, e esta ainda faz parecer que ela pediu demais na
+  primeira mensagem. A regra 9 e a FRONTEIRA da 8 — quem pergunta se pode falar com ALGUEM esta
+  perguntando se ha gente do outro lado, e a resposta e "somos nos, do que precisa?", em uma frase.
+  **Nao criei detector nem resposta pronta**: este arquivo ja registra quatro vezes que a lista de
+  formas de perguntar nao fecha, e o caso ja chegava a IA pelo caminho certo — faltava ela saber o que
+  responder. E a POSICAO da regra e testada (linha 348 de 370, colada na 8): e a licao de 07/09.
 - **REGRA SEM ESCOPO E CUMPRIDA ATE ONDE ELA NAO DEVIA IR — e o modelo DIFERENCIOU antes de errar.**
   Print da Cleo (08/09/2026): *"preciso que compre um encosto Rumer ali na ortoponto"* e *"uma loja de
   venda de cadeira de roda"*, e o rascunho pediu o **endereco completo** prometendo repasse a equipe

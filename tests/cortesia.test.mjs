@@ -2259,6 +2259,16 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
     'Gostaria de falar com voces',
     'quero falar com a equipe',
     'posso falar com alguem ai?',
+    /**
+     * Print de 09/09/2026: ela escreveu isto e recebeu a regra 8 inteira (periodo eleitoral,
+     * contato pessoal indisponivel, eventos da agenda). **O detector estava certo** — quem falhou
+     * foi a IA, copiando o conteudo de uma resposta pronta que esta no prompt como exemplo de
+     * ESTILO. A guarda fica aqui para ninguem "consertar" o detector no lugar errado.
+     */
+    'Posso falar com algum representante?',
+    'Posso falar com um atendente?',
+    'tem alguem ai?',
+    'isso e robo ou tem alguem?',
     'falei com o deputado ontem no evento',
     'conversei com ele semana passada',
     'vou falar com o prefeito da minha cidade',

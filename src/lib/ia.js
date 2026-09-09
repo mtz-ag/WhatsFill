@@ -1060,6 +1060,31 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '   isso existe, agora está fora de questão, e prometer é abrir porta que não abre.',
     '   E não diga que vai passar o recado para ele. O que você pode dizer com verdade é que a',
     '   mensagem chegou e é lida por aqui.',
+    /**
+     * **A regra 9 é a FRONTEIRA da regra 8, e nasceu de ela ter sido cruzada** — print de
+     * 09/09/2026. A contato escreveu *"Posso falar com algum representante?"* e recebeu a regra 8
+     * inteira: período eleitoral, contato pessoal indisponível, eventos da agenda. **Ela não pediu
+     * ele.** Perguntou se há gente do outro lado — e há, somos nós.
+     *
+     * A resposta dele, digitada à mão depois de apagar a da IA, é a regra: *"bom dia, somos da
+     * equipe do capitão martim do que precisa?"* — **uma linha**, e é por isso que o tamanho está
+     * escrito aqui dentro em vez de ficar só no item 22: a mensagem que saiu tinha cinco frases e
+     * mais o pedido de cadastro.
+     *
+     * **Recusar o que ninguém pediu é a irmã de abrir a porta que não existe** (a regra 7): as duas
+     * respondem uma pergunta que a pessoa não fez, e esta ainda dá a impressão de que ela pediu
+     * demais logo na primeira mensagem.
+     *
+     * O que separa as duas regras é o OBJETO, e é o mesmo critério de `cortesia.pedeFalarComDeputado`
+     * — que, medido, devolve **null** para a frase dela, corretamente.
+     */
+    '9. QUEM PERGUNTA SE PODE FALAR COM ALGUÉM ("posso falar com um representante?", "tem alguém',
+    '   aí?", "isso é robô?", "posso falar com um atendente?") está perguntando se existe gente do',
+    '   outro lado — e existe: SOMOS NÓS. Confirme que aqui é a equipe do Capitão Martim e pergunte',
+    '   do que ela precisa. Em UMA frase.',
+    '   Isto NÃO é a regra 8: ela só vale quando a pessoa pede ELE — pelo nome, pelo cargo ou pelo',
+    '   contato pessoal dele. Aplicar a regra 8 aqui é RECUSAR o que ninguém pediu, e sai como se ela',
+    '   tivesse pedido demais. Não fale em período eleitoral, em agenda nem em contato pessoal.',
     'TAMANHO: siga o item 22 do padrão, e ele é curto. Mensagem simples: 1 a 3 frases. Isto sai no',
     'WhatsApp, não é ofício.',
     'Não dê aula sobre regra nem sobre lei, e não liste alternativas que ninguém pediu. Quando algo',
@@ -1085,7 +1110,29 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     regras
       ? `Instruções da equipe, a seguir LITERALMENTE (elas mandam sobre as regras de estilo acima, e nunca sobre a lista do que você não pode escrever):\n${regras}\n`
       : '',
-    'Exemplos do jeito de escrever da equipe:',
+    /**
+     * **O modelo usou um EXEMPLO DE ESTILO como banco de respostas** — print de 09/09/2026.
+     *
+     * A contato escreveu *"Posso falar com algum representante?"* e o rascunho respondeu, em cinco
+     * frases, que *"no período eleitoral não é possível disponibilizar o contato pessoal do
+     * deputado; a forma de falar com ele pessoalmente é nos eventos públicos da agenda"* — que é a
+     * resposta pronta `falar-com-deputado` parafraseada. Ele apagou e escreveu, à mão:
+     * *"bom dia, somos da equipe do capitão martim do que precisa?"*
+     *
+     * **Medido, e o determinístico estava certo:** `pedeFalarComDeputado` devolve **null** para a
+     * frase dela (o objeto tem que ser ELE), e o quadro mandou o caso para a IA, que é o desfecho
+     * correto — nenhuma resposta pronta serve. O que falhou foi o que a IA fez com o prompt:
+     * `falar-com-deputado` é a **6ª das 8** respostas que entram aqui, com o texto inteiro, e o
+     * rótulo dizia só *"exemplos"*. **"Exemplo" convida a copiar**, e "representante" está perto de
+     * "deputado" o bastante para o modelo recuperar o vizinho errado.
+     *
+     * O rótulo agora separa as duas coisas, que é a única correção possível no prompt: eles ensinam
+     * a VOZ (tom, tamanho, pontuação), e o assunto vem sempre do que ESTA pessoa escreveu.
+     */
+    'Exemplos do JEITO DE ESCREVER da equipe — leia-os para pegar o TOM, o TAMANHO e a pontuação.',
+    '**Eles não são um banco de respostas.** NUNCA copie o assunto nem o conteúdo de um deles: se o',
+    'exemplo fala de um tema que esta pessoa não trouxe, ele não tem nada a ver com esta conversa.',
+    'O assunto da sua resposta vem SEMPRE do que esta pessoa escreveu.',
     '',
     exemplos,
   ]
