@@ -1767,4 +1767,42 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   check(!conferirChapa('O Capitao Martim estara la dia 22', chapa), 'nem data solta');
 }
 
+/**
+ * ENCAMINHOU AO ORGAO? PARE — regra dele (09/09/2026), com o print da Bia.
+ *
+ * O rascunho apontou o SINE e o Emprega Brasil (certo — e o que a resposta pronta dele faz) e
+ * **emendou**: *"se quiser, eu anoto aqui que voce busca panfletagem e posso te ajudar a montar um
+ * curriculo rapido"*. Ele apagou: *"so encaminhe pro orgao responsavel, evite oferecer servicos fora
+ * da nossa alcada como fazer curriculo; isso faz a pessoa retornar varias vezes para pedir outras
+ * coisas e nao e nosso foco"*.
+ *
+ * **Medido no texto que saiu: um aviso so, nao bloqueante, e `rascunhoPodeSairSozinho` = true.**
+ */
+{
+  grupo('encaminhou ao orgao? PARE (a Bia, 09/09)');
+
+  const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+
+  check(/^11\. DEPOIS DE APONTAR O ÓRGÃO RESPONSÁVEL/m.test(prompt), 'a regra 11 existe');
+  check(/montar ou revisar currículo/.test(prompt), 'e nomeia o curriculo, que foi o exemplo dele');
+  check(/eu anoto aqui/.test(prompt), 'e o "eu anoto aqui" que saiu na mensagem');
+  check(/não tem braço/.test(prompt), 'com a razao dele: o atendimento nao tem braco');
+
+  /**
+   * **A ULTIMA LINHA da regra e a guarda dela.** Quem ja procurou o orgao e nao foi atendido e caso
+   * de cobrar o poder publico — esta na propria resposta pronta dele desde sempre, e fechar isso
+   * junto seria trocar um defeito por outro.
+   */
+  check(/cobrar o poder público/.test(prompt), 'o que CONTINUA sendo nosso trabalho fica escrito');
+  check(/JÁ procurou o órgão e NÃO foi atendida/.test(prompt), 'com a condicao que o libera');
+
+  /**
+   * **A POSICAO e a licao de 07/09**: regra longe do ponto em que o modelo comeca a escrever nao e
+   * cumprida. A 11 fecha o bloco das regras, no fim do prompt.
+   */
+  const linhas = prompt.split('\n');
+  const onze = linhas.findIndex((l) => /^11\. DEPOIS DE APONTAR/.test(l));
+  check(onze > linhas.length * 0.8, `a regra 11 fica no fim do prompt (${onze} de ${linhas.length})`);
+}
+
 fim();

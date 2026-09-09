@@ -2652,6 +2652,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   linha "Cidade:" some (o valor virou vazio) e o aviso de grafia some junto, enquanto o CRM
   continua com o lixo ate a conclusao gravar. Hoje o cabecalho diz o que vai ser apagado, e o
   Andamento registra `apagando do CRM: <campo> ("<valor>")`.
+- **ENCAMINHOU AO ORGAO RESPONSAVEL? PARE AI — servico fora da alcada nao se oferece nem de graca.**
+  Print da Bia (09/09/2026): o rascunho fez a parte certa (negou a contratacao, apontou o SINE e o
+  Emprega Brasil) e **emendou** *"eu anoto aqui que voce busca panfletagem e posso te ajudar a montar
+  um curriculo rapido"*. Ele: *"so encaminhe pro orgao responsavel, evite oferecer servicos fora da
+  nossa alcada como fazer curriculo; isso faz a pessoa retornar varias vezes para pedir outras coisas
+  e nao e nosso foco"*. **A razao e OPERACIONAL:** cada oferta dessas abre uma porta que alguem vai
+  ter de atender depois, e o atendimento nao tem braco. **E a irma do "procure a coordenacao"
+  (regra 7) com o sinal trocado** — la a porta prometida nao existia; aqui ela existe e custa caro.
+  **A guarda e a ultima linha da regra:** quem JA procurou o orgao e NAO foi atendida continua sendo
+  caso de cobrar o poder publico — esta na resposta pronta dele desde sempre, e fechar isso junto
+  trocaria um defeito por outro. **Ficou no PROMPT e nao virou trava** porque decidir se a oferta esta
+  dentro da alcada exige saber qual e a alcada, e isso e julgamento. Medido no texto que saiu: um
+  aviso so, nao bloqueante, e `rascunhoPodeSairSozinho` **true**.
 - **RECLAMAR DE NAO TER SIDO ATENDIDA E TECLA 6** — decisao dele (09/09/2026), sobre a frase do
   Maicon *"Ninguem quis entrar em contato comigo"*: **"virar tecla 6"**. **Nao tem resposta pronta e
   escrever uma seria pior:** o que ela esta dizendo e que NOS falhamos com ela — texto automatico em

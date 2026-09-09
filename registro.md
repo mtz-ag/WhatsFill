@@ -1,4 +1,4 @@
-## 2026-09-09 — ESTADO DE AGORA (v3.19.0) — leia isto primeiro numa sessão nova
+## 2026-09-09 — ESTADO DE AGORA (v3.20.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,11 +10,11 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.19.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.20.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **27 regras** na
-tabela. Prompt de sistema do rascunho: **6.282 tokens**, dos quais **61% é o `PADRAO_DE_ATENDIMENTO`
+tabela. Prompt de sistema do rascunho: **6.469 tokens**, dos quais **59% é o `PADRAO_DE_ATENDIMENTO`
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
 Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75), **dezoito em
@@ -269,6 +269,60 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-09 — Encaminhou ao órgão? Pare aí (v3.20.0)
+
+Print da **Bia** (09/09/2026), que perguntou sobre trabalho. O rascunho fez a parte certa — negou a
+contratação e apontou o **SINE/FGTAS de Canoas** e o **Emprega Brasil**, que é o que a resposta pronta
+dele faz — e então **emendou**:
+
+> *"Se quiser, eu anoto aqui que você busca panfletagem e posso te ajudar a montar um currículo
+> rápido."*
+
+Ele apagou:
+
+> *"só encaminhe pro órgão responsável, evite oferecer serviços fora da nossa alçada como fazer
+> currículo; isso faz a pessoa retornar várias vezes para pedir outras coisas e não é nosso foco"*
+
+### Medido no texto que saiu
+
+```
+avisos: ["cita bem ou benefício (cesta, remédio, dinheiro, emprego)"]
+sai sozinho? true
+```
+
+**Um aviso só, e ele não bloqueia.** Aquela mensagem sairia sozinha com "Automatizar" marcada.
+
+### A regra 11
+
+Depois de apontar o órgão responsável, **PARE**. Nada de montar ou revisar currículo, preencher
+cadastro, agendar consulta, acompanhar processo, *"eu anoto aqui"*, *"posso te ajudar a..."*.
+
+**A razão é operacional e é dele:** cada oferta dessas abre uma porta que alguém vai ter de atender
+depois, e o atendimento não tem braço. **É a irmã do *"procure a coordenação"* (regra 7) com o sinal
+trocado** — lá a porta prometida não existia; aqui ela existe e custa caro.
+
+**A última linha da regra é a guarda dela:** quem **já** procurou o órgão e **não** foi atendida
+continua sendo caso de cobrar o poder público — está na própria resposta pronta dele desde sempre, e
+fechar isso junto seria trocar um defeito por outro. Há teste exigindo as duas metades.
+
+### Por que ficou no prompt e não virou trava
+
+Decidir se uma oferta está **dentro da alçada** exige saber qual é a alçada — e isso é julgamento. A
+disciplina deste arquivo é a de sempre: **mecânico → conserto, verificável → aviso, o resto →
+prompt.**
+
+> Se ele quiser que isto BARRE o envio automático, dá para fazer: a forma
+> *"posso te ajudar a &lt;verbo&gt;"* é mecanicamente distinguível de *"em que posso ajudar?"*. Não fiz
+> por conta própria porque a trava pegaria também ofertas que estão dentro da alçada
+> (*"posso te ajudar a encontrar o grupo da sua cidade"*), e parar a rodada nelas tem custo.
+
+### Arquivos
+
+`src/lib/ia.js` (a regra 11), `tests/ia.test.mjs` (7 asserções, duas sobre a guarda e uma sobre a
+posição). 15 suítes verdes. Prompt: **6.469 tokens**, ainda acima do mínimo de cache do Haiku.
+
 ---
 
 ## 2026-09-09 — Reclamar de não ter sido atendida virou tecla 6 (v3.19.0)

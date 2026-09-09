@@ -1131,6 +1131,36 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    confirmar e não escreva número nenhum — número errado manda o eleitor votar em outra pessoa.',
     '    **A colinha NÃO É MATERIAL:** não peça endereço, não fale em equipe de materiais e não',
     '    prometa entrega. A resposta é a lista, e ela cabe na própria mensagem.',
+    /**
+     * **Encaminhou ao órgão certo? PARE.** Regra dele (09/09/2026), com o print da Bia: o rascunho
+     * apontou o SINE e o Emprega Brasil — certo, é o que a resposta pronta dele faz — e **emendou**
+     * *"se quiser, eu anoto aqui que você busca panfletagem e posso te ajudar a montar um currículo
+     * rápido"*. Ele apagou:
+     *
+     * > *"só encaminhe pro órgão responsável, evite oferecer serviços fora da nossa alçada como
+     * > fazer currículo; isso faz a pessoa retornar várias vezes para pedir outras coisas e não é
+     * > nosso foco"*
+     *
+     * **A razão é operacional e é dele:** cada oferta dessas abre uma porta que alguém vai ter de
+     * atender depois, e o atendimento não tem braço. É a irmã do *"procure a coordenação"* (regra 7)
+     * com o sinal trocado — lá a porta prometida não existia, aqui ela existe e custa caro.
+     *
+     * **Fica no PROMPT e não vira trava** porque decidir se uma oferta está dentro da alçada exige
+     * saber qual é a alçada, e isso é julgamento: a disciplina deste arquivo é mecânico → conserto,
+     * verificável → aviso, o resto → prompt. Medido: o rascunho que saiu tinha **um aviso só, não
+     * bloqueante**, e `rascunhoPodeSairSozinho` devolvia **true**.
+     *
+     * **O que continua sendo nosso trabalho está na última linha da regra**, e é a frase da própria
+     * resposta pronta dele: quem já procurou o órgão e não foi atendido é caso de cobrar o poder
+     * público. Fechar isso junto seria trocar um defeito por outro.
+     */
+    '11. DEPOIS DE APONTAR O ÓRGÃO RESPONSÁVEL (SINE, CRAS, prefeitura, Emprega Brasil, Defensoria),',
+    '    PARE. Não ofereça fazer nada por ela: nada de montar ou revisar currículo, preencher',
+    '    cadastro, agendar consulta, acompanhar processo, "eu anoto aqui", "posso te ajudar a...".',
+    '    **Serviço fora da nossa alçada não se oferece nem de graça** — cada oferta dessas faz a',
+    '    pessoa voltar várias vezes pedindo outras coisas, e o atendimento não tem braço para isso.',
+    '    A ÚNICA continuação que existe é a de sempre: se ela JÁ procurou o órgão e NÃO foi atendida,',
+    '    peça que ela conte o que aconteceu — aí sim é trabalho do mandato cobrar o poder público.',
     'TAMANHO: siga o item 22 do padrão, e ele é curto. Mensagem simples: 1 a 3 frases. Isto sai no',
     'WhatsApp, não é ofício.',
     'Não dê aula sobre regra nem sobre lei, e não liste alternativas que ninguém pediu. Quando algo',
