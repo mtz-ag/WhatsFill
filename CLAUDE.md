@@ -2652,6 +2652,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   linha "Cidade:" some (o valor virou vazio) e o aviso de grafia some junto, enquanto o CRM
   continua com o lixo ate a conclusao gravar. Hoje o cabecalho diz o que vai ser apagado, e o
   Andamento registra `apagando do CRM: <campo> ("<valor>")`.
+- **A COLINHA VAI DIGITADA DESDE 09/09/2026, E NAO E MATERIAL** — decisao dele: *"quando pedir a
+  colinha so passe a lista com os numeros e o que cada um e, nao entra como material"*. **Isto
+  SUBSTITUI a regra de 07/09** (*"quem pergunta em quem votar recebe a ARTE, nao a lista digitada"*),
+  e o que mudou foi a PROTECAO EXISTIR: naquele dia o argumento era que seis numeros redigitados sao
+  seis chances de mandar o eleitor votar em outra pessoa, e nada conferia; desde 08/09
+  `conferirChapa` confere e barra o envio. **A arte continua melhor havendo modelo aprovado dela** —
+  ele disse em 07/09 que ia criar um e nao existe. Foi a **terceira vez em dois dias** que o caminho
+  do material engoliu um pedido que nao era dele (a Cleo, o Oseias, a colinha); `enderecoSemMaterial`
+  barrou as tres.
+  **Duas coisas que a medicao pegou ANTES de a regra ir para o ar, e as duas sao a mesma licao:**
+  *"quero a colinha"* **nao puxava o dossie** (so *"colinha dos candidatos"*, por "candidat") — e
+  **regra que manda a IA COPIAR um dado exige que o dado esteja no prompt**, senao ela escreve de
+  cabeca, que e o erro do Van Hattem; e **a trava nao cobria o formato que a propria regra produz** —
+  a colinha sai como `Capitao Martim - 10122`, e o filtro de contexto de voto conhecia "numero",
+  "vote" e o parentese, mas nao o traco: **`Capitao Martim - 2228` passava**. **Ao liberar uma regra
+  citando uma trava como a protecao que a torna segura, MEÇA a trava contra a saida que a regra
+  produz.**
 - **A LISTA DO QUE PODEMOS DAR E DE PERMISSAO, E E CURTA — a de bloqueio durou UM DIA.** Print do
   Oseias (09/09/2026): *"Viu se vc conseguir uma bota de gaucho, numero 42"*, e o rascunho ofereceu o
   endereco e o repasse a equipe de materiais — o caso da Cleo (08/09) repetido com outro objeto, um

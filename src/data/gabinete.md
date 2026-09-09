@@ -140,14 +140,27 @@ Da **arte oficial da campanha** *"Candidatos do Bolsonaro no Rio Grande do Sul"*
 
 ### A regra da colinha
 
-**Quem pergunta em quem votar recebe a ARTE, não a lista digitada pela IA.** Decisão dele
-(07/09/2026): *"essa colinha deve ser mandada pra quem pede, vou criar um modelo de mensagem pra
-ela"*.
+**Quem pede a colinha recebe A LISTA, com o cargo, o nome e o número de cada um** — decisão dele de
+**09/09/2026**: *"quando pedir a colinha só passe a lista com os números e o que cada um é"*.
 
-O motivo é o de sempre neste projeto: **número errado manda o eleitor votar em outra pessoa**, e
-seis números redigitados por um modelo são seis chances de errar — a arte é a mesma coisa sem
-nenhuma. A IA pode dizer **o número de UM candidato** quando perguntam dele especificamente (é dado
-confirmado, está na tabela acima); montar a chapa inteira é o cartão.
+**A lista é COPIADA da tabela acima, nunca escrita de memória.** É a tabela que vale, e a IA não
+sabe estes números por fora — o print da Nara (08/09) provou o contrário: o que ela sabe da internet
+contradiz a chapa.
+
+**E colinha NÃO é material.** Não peça endereço, não fale em equipe de materiais e não prometa
+entrega: a resposta é a própria lista, na mesma mensagem. Pedir endereço para mandar uma lista de
+números é criar uma entrega que não existe.
+
+> **Isto substitui a decisão de 07/09** (*"quem pergunta em quem votar recebe a ARTE, não a lista
+> digitada"*), e o que mudou entre as duas foi a proteção existir. Naquele dia o argumento era que
+> **seis números redigitados por um modelo são seis chances de mandar o eleitor votar em outra
+> pessoa**, e não havia nada conferindo. Desde 08/09 há: `ia.conferirChapa` lê esta tabela e **barra
+> o envio automático** de qualquer rascunho que cole um número no nome errado ou dê a alguém o cargo
+> de outro. O risco que sustentava a regra antiga passou a ser mecânico.
+>
+> **A arte continua sendo o melhor caminho quando existir modelo para ela** — ele disse em 07/09 que
+> ia criar um, e ele não existe até hoje. Havendo modelo aprovado da colinha, mandá-lo é melhor que
+> qualquer lista digitada.
 
 ---
 

@@ -11,7 +11,7 @@ import { check, grupo, fim } from './_harness.mjs';
 import { PADRAO_DE_ATENDIMENTO } from '../src/lib/atendimento.js';
 import { PROVEDORES, pedirAoWorker } from '../src/lib/ia-cliente.js';
 import { paraHtml } from '../src/padrao.js';
-import { chapaDoDossie } from '../src/lib/gabinete.js';
+import { chapaDoDossie, precisaDoDossie } from '../src/lib/gabinete.js';
 import {
   montarSistemaRascunho,
   montarContatoRascunho,
@@ -1703,6 +1703,68 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   const nove = linhas.findIndex((l) => /^9\. QUEM PERGUNTA SE PODE/.test(l));
   check(nove > oito && nove - oito < 15, `a regra 9 fica logo depois da 8 (${oito} -> ${nove})`);
   check(nove > linhas.length * 0.8, `e as duas ficam no fim do prompt (${nove} de ${linhas.length})`);
+}
+
+/**
+ * A COLINHA VAI DIGITADA, E NAO E MATERIAL — decisao dele (09/09/2026): *"quando pedir a colinha so
+ * passe a lista com os numeros e o que cada um e, nao entra como material"*.
+ *
+ * Print do mesmo dia: a contato pediu a colinha dos candidatos e o rascunho respondeu *"me passe o
+ * endereco completo para que o pedido va para a equipe responsavel pelos materiais"* — a TERCEIRA
+ * vez em dois dias que o caminho do material engoliu um pedido que nao era dele (a Cleo, o Oseias, e
+ * agora uma lista de numeros). A trava `enderecoSemMaterial` barrou o envio.
+ *
+ * **Isto substitui a regra de 07/09** (*"quem pergunta em quem votar recebe a ARTE"*), e o que mudou
+ * foi a protecao existir: naquele dia nada conferia numero; desde 08/09 `conferirChapa` confere.
+ */
+{
+  grupo('a colinha vai digitada, e nao e material (09/09)');
+
+  const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/^10\. QUEM PEDE A COLINHA/m.test(prompt), 'a regra 10 existe');
+  check(/A colinha NÃO É MATERIAL/.test(prompt), 'e diz que colinha nao e material');
+  check(/COPIE da tabela do dossiê, nunca de memória/.test(prompt), 'mandando copiar da tabela');
+  check(/não escreva número nenhum/.test(prompt), 'e nao escrever numero nenhum sem a tabela');
+
+  /**
+   * **A tabela tem que ESTAR no prompt para a regra valer.** Medido antes de mexer: *"me manda uma
+   * colinha dos candidatos"* puxava o dossie (por "candidat"), mas *"quero a colinha"* NAO — e sem a
+   * tabela a IA escreveria os seis numeros de cabeca, que e o erro do Van Hattem (08/09).
+   */
+  for (const t of ['quero a colinha', 'manda a colinha por favor', 'me passa a colinha dos numeros']) {
+    check(precisaDoDossie([t]), `"${t}" puxa a tabela da chapa`);
+  }
+
+  /**
+   * **A trava tem que cobrir o FORMATO QUE A REGRA PRODUZ.** A colinha sai como
+   * `Deputado Estadual: Capitao Martim - 10122`, e medindo descobri que **`Capitao Martim - 2228`
+   * passava**: o filtro de contexto de voto so conhecia "numero", "vote" e o parentese. Eu ia
+   * liberar a regra citando esta trava como a protecao que a torna segura.
+   */
+  const chapa = [
+    { cargo: 'Presidente', nome: 'Flavio Bolsonaro', numero: '22' },
+    { cargo: 'Governador', nome: 'Zucco', numero: '22' },
+    { cargo: 'Senador', nome: 'Sanderson', numero: '222' },
+    { cargo: 'Senador', nome: 'Marcel Van Hattem', numero: '300' },
+    { cargo: 'Deputado Federal', nome: 'Felipe Pedri', numero: '2228' },
+    { cargo: 'Deputado Estadual', nome: 'Capitao Martim', numero: '10122' },
+  ];
+  const certa =
+    'Anota ai a nossa colinha:\n\nPresidente: Flavio Bolsonaro - 22\nGovernador: Zucco - 22\n' +
+    'Senador: Sanderson - 222\nSenador: Marcel Van Hattem - 300\n' +
+    'Deputado Federal: Felipe Pedri - 2228\nDeputado Estadual: Capitao Martim - 10122';
+
+  check(!conferirChapa(certa, chapa), 'a colinha inteira e certa passa');
+  check(!!conferirChapa(certa.replace('Capitao Martim - 10122', 'Capitao Martim - 2228'), chapa),
+    'numero trocado no formato de LISTA e barrado');
+  check(!!conferirChapa('Capitao Martim: 2228', chapa), 'e com dois-pontos tambem');
+  check(!!conferirChapa(certa.replace('Senador: Marcel Van Hattem', 'Deputado Federal: Marcel Van Hattem'), chapa),
+    'cargo trocado continua sendo barrado');
+
+  /** E o traco nao pode transformar data em numero de urna. */
+  check(!conferirChapa('O Capitao Martim estara em Canoas - 22 de setembro', chapa),
+    'data depois de traco nao e numero de urna');
+  check(!conferirChapa('O Capitao Martim estara la dia 22', chapa), 'nem data solta');
 }
 
 fim();

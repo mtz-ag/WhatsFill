@@ -124,6 +124,15 @@ export function precisaDoDossie(mensagens) {
 const GATILHOS = [
   // Voto, urna e número
   /\bvot(o|ar|ei|arei|acao)\b|\burna\b|\bnumero\b|\bteclar\b|\bdigit(o|ar)\b/,
+  /**
+   * **`colinha` é obrigatório desde 09/09/2026**, quando ele decidiu que quem a pede recebe a LISTA
+   * digitada. Medido: *"me manda uma colinha dos candidatos"* já puxava o dossiê (por "candidat"),
+   * mas *"quero a colinha"* e *"manda a colinha"* **não puxavam** — e sem a tabela no prompt a IA
+   * escreveria os seis números de cabeça, que é exatamente o erro do Van Hattem (08/09).
+   *
+   * **Regra que manda a IA copiar um dado exige que o dado esteja no prompt.**
+   */
+  /\bcolinha\b/,
   // Eleição e cargo
   /\beleic|\bcandidat|\bdeputad|\bgovernador|\bsenador|\bprefeit|\bvereador|\bchapa\b|\bmandato\b/,
   // Partido e sigla

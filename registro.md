@@ -1,4 +1,4 @@
-## 2026-09-09 — ESTADO DE AGORA (v3.16.0) — leia isto primeiro numa sessão nova
+## 2026-09-09 — ESTADO DE AGORA (v3.17.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,11 +10,11 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.16.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.17.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **26 regras** na
-tabela. Prompt de sistema do rascunho: **6.054 tokens**, dos quais **63% é o `PADRAO_DE_ATENDIMENTO`
+tabela. Prompt de sistema do rascunho: **6.282 tokens**, dos quais **61% é o `PADRAO_DE_ATENDIMENTO`
 dele** — acima do mínimo de cache do Haiku (4.096), que é o que segura o custo.
 
 Ritmo: quinze versões em 05/09 (2.42 → 2.56), **dezenove em 06/09** (2.57 a 2.75), **dezoito em
@@ -269,6 +269,61 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-09 — A colinha vai digitada, e não é material (v3.17.0)
+
+Decisão dele: *"quando pedir a colinha só passe a lista com os números e o que cada um é, não entra
+como material"*.
+
+Print do mesmo dia: a contato pediu a colinha dos candidatos e o rascunho respondeu *"me passe o
+endereço completo para que o pedido vá para a equipe responsável pelos materiais"*. **É a TERCEIRA
+vez em dois dias que o caminho do material engoliu um pedido que não era dele** — a Cleo (cadeira de
+rodas), o Oseias (bota) e agora uma lista de números. A trava `enderecoSemMaterial` barrou o envio
+nas três.
+
+### Isto substitui a regra de 07/09, e o que mudou foi a proteção existir
+
+Naquele dia a regra era **a arte, nunca a lista digitada**, e o argumento era duro: *"seis números
+redigitados por um modelo são seis chances de mandar o eleitor votar em outra pessoa"*. **Não havia
+nada conferindo.** Desde 08/09 há: `conferirChapa` lê a mesma tabela do dossiê e barra o envio
+automático de número colado no nome errado ou de cargo trocado. O risco que sustentava a regra antiga
+virou mecânico.
+
+> **A arte continua sendo melhor quando existir modelo aprovado dela.** Ele disse em 07/09 que ia
+> criar um; não existe até hoje. Havendo, mandá-lo é melhor que qualquer lista digitada.
+
+### Duas coisas que a medição pegou antes de a regra ir para o ar
+
+**1. `"quero a colinha"` não puxava a tabela.** Só *"colinha dos candidatos"* puxava, por causa de
+"candidat". Uma regra que manda a IA **copiar** um dado exige que o dado esteja no prompt — sem a
+tabela, ela escreveria os seis números de cabeça, que é exatamente o erro do Van Hattem. `colinha`
+entrou em `gabinete.GATILHOS` no mesmo commit.
+
+**2. A trava não cobria o formato que a própria regra produz.** A colinha sai como
+`Deputado Estadual: Capitão Martim - 10122`, e medindo descobri que **`Capitão Martim - 2228`
+passava**: o filtro de contexto de voto conhecia "número", "vote" e o parêntese, e não o traço nem os
+dois-pontos.
+
+> **Eu ia liberar a regra citando esta trava como a proteção que a torna segura.** Ela não cobria o
+> formato. Ampliar foi seguro porque quem decide o dono continua sendo `deQuemEEsteNumero`: em *"o
+> Capitão Martim estará em Canoas - 22 de setembro"* o traço casa, mas entre o nome e o número há
+> palavras, então o número fica sem dono e nada é acusado — e há teste para isso.
+
+### A regra 10
+
+Quem pede a colinha recebe **a lista na mesma mensagem**: cargo, nome e número, um por linha,
+**copiados da tabela**. Sem a tabela no prompt, a IA diz que vai confirmar e **não escreve número
+nenhum**. E não é material: **sem endereço, sem equipe de materiais, sem promessa de entrega** —
+pedir endereço para mandar uma lista de números é criar uma entrega que não existe.
+
+### Arquivos
+
+`src/lib/ia.js` (a regra 10 e o contexto de voto da `conferirChapa`), `src/lib/gabinete.js` (o
+gatilho), `src/data/gabinete.md` (a regra da colinha reescrita, com a de 07/09 e o porquê da troca),
+`tests/ia.test.mjs` (**16 asserções**). 15 suítes verdes. Prompt: **6.282 tokens**, ainda acima do
+mínimo de cache do Haiku.
+
 ---
 
 ## 2026-09-09 — A lista de material virou de PERMISSÃO (v3.16.0)

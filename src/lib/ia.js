@@ -1107,6 +1107,30 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '   Isto NÃO é a regra 8: ela só vale quando a pessoa pede ELE — pelo nome, pelo cargo ou pelo',
     '   contato pessoal dele. Aplicar a regra 8 aqui é RECUSAR o que ninguém pediu, e sai como se ela',
     '   tivesse pedido demais. Não fale em período eleitoral, em agenda nem em contato pessoal.',
+    /**
+     * **A COLINHA não é material** — decisão dele (09/09/2026): *"quando pedir a colinha só passe a
+     * lista com os números e o que cada um é, não entra como material"*.
+     *
+     * Print do mesmo dia: a contato pediu a colinha dos candidatos e o rascunho respondeu *"me passe
+     * o endereço completo para que o pedido vá para a equipe responsável pelos materiais"* — a
+     * TERCEIRA vez em dois dias que o caminho do material engoliu um pedido que não era dele (a
+     * Cleo, o Oseias, e agora uma lista de números). A trava `enderecoSemMaterial` barrou o envio.
+     *
+     * **Isto substitui a regra de 07/09** (*"quem pergunta em quem votar recebe a ARTE, não a lista
+     * digitada pela IA"*), e o que mudou foi a proteção existir: naquele dia o argumento era que
+     * seis números redigitados são seis chances de mandar o eleitor votar em outra pessoa, e nada
+     * conferia. **Desde 08/09 `conferirChapa` confere**, lendo a mesma tabela, e barra o envio
+     * automático de número colado no nome errado. O risco virou mecânico.
+     *
+     * **A tabela tem que ESTAR no prompt para esta regra valer**, e por isso `colinha` entrou nos
+     * gatilhos do dossiê no mesmo commit — *"quero a colinha"* não o puxava.
+     */
+    '10. QUEM PEDE A COLINHA (a lista dos candidatos, "em quem votar", "os números de vocês") recebe',
+    '    A LISTA, na mesma mensagem: o CARGO, o NOME e o NÚMERO de cada um, um por linha.',
+    '    **COPIE da tabela do dossiê, nunca de memória.** Se a tabela não estiver aqui, diga que vai',
+    '    confirmar e não escreva número nenhum — número errado manda o eleitor votar em outra pessoa.',
+    '    **A colinha NÃO É MATERIAL:** não peça endereço, não fale em equipe de materiais e não',
+    '    prometa entrega. A resposta é a lista, e ela cabe na própria mensagem.',
     'TAMANHO: siga o item 22 do padrão, e ele é curto. Mensagem simples: 1 a 3 frases. Isto sai no',
     'WhatsApp, não é ofício.',
     'Não dê aula sobre regra nem sobre lei, e não liste alternativas que ninguém pediu. Quando algo',
@@ -1747,9 +1771,22 @@ export function conferirChapa(texto, chapa) {
       const re = new RegExp(`(?<!\\d)${pessoa.numero}(?!\\d)`, 'g');
       let m;
       while ((m = re.exec(f))) {
-        // Só onde o texto está dando um número de urna — ver o comentário acima.
+        /**
+         * Só onde o texto está dando um número de urna — ver o comentário acima.
+         *
+         * **O traço e os dois-pontos entraram em 09/09/2026**, quando ele decidiu que a colinha vai
+         * DIGITADA (*"só passe a lista com os números e o que cada um é"*). O formato de lista é
+         * `Deputado Estadual: Capitão Martim - 10122`, e medindo a trava contra ele descobri que
+         * **`Capitão Martim - 2228` passava**: o filtro só conhecia "número", "vote" e o parêntese.
+         * Eu ia liberar a regra citando esta trava como a proteção que a torna segura, e ela não
+         * cobria o formato que a regra produz.
+         *
+         * Ampliar aqui é seguro porque **quem decide o dono continua sendo `deQuemEEsteNumero`**:
+         * em *"o Capitão Martim estará em Canoas - 22 de setembro"* o traço casa, mas entre o nome e
+         * o número há palavras, então o número fica sem dono e nada é acusado.
+         */
         const antes = f.slice(Math.max(0, m.index - 18), m.index);
-        if (!/(numero|n[.ºo]\s*|vote|voto|votar|digite|\()\s*$/.test(antes)) continue;
+        if (!/(numero|n[.ºo]\s*|vote|voto|votar|digite|\(|[-–—:])\s*$/.test(antes)) continue;
         const dono = deQuemEEsteNumero(f, m.index, m.index + pessoa.numero.length, mencoes);
         if (dono && dono.numero !== pessoa.numero) {
           return `o número ${pessoa.numero} aparece colado em ${dono.nome}, e é de ${pessoa.nome}`;
