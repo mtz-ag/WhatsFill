@@ -862,8 +862,24 @@ export const REGRAS = [
      * que perguntou *"Você é candidato daqui do RS?"* e disse *"Boa tarde!"* depois: a pergunta não
      * deixou de estar pendente por causa do cumprimento.
      */
+    /**
+     * **O MATERIAL pedido entrou aqui em 09/09/2026** — print da Sadra: *"Quero umas. Camisetas"* e
+     * *"Dos meus candidatos"*, e o atendimento foi **concluído sem nada sair**. Ele: *"não
+     * identificou que ela queria algo"*.
+     *
+     * **Medido, e o detector estava certo:** `pedeMaterial` casou (o ponto no meio de *"Quero umas.
+     * Camisetas"* não atrapalha). O caso morreu aqui: já tínhamos respondido hoje, e esta caixa
+     * conclui.
+     *
+     * **`conteudo-pedido` não salva porque ela exige `podeEnviar`** — um modelo aprovado para
+     * mandar —, e camiseta não tem modelo: o que existe para material FÍSICO é o caminho da Jonice
+     * (08/09), que é pedir o endereço e repassar à equipe. Nenhuma caixa levava a ele.
+     *
+     * **A guarda decide o DESFECHO e não se a caixa casa** — é a lição da Noeli (06/09), e é o que
+     * `perguntaPendente` já fazia na linha de cima. Tecla 6: ele ou a IA, que então aplica a regra 5.
+     */
     tecla: (c) => {
-      if (c.perguntaPendente) return '6';
+      if (c.perguntaPendente || c.pedeMaterial) return '6';
       return c.respondidoHoje || c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5';
     },
     /**
@@ -1391,7 +1407,7 @@ export const SOBRE = {
     rotulo: 'Já entregamos algo antes',
     efeito: 'depende',
     ramos: [
-      { tecla: '6', se: 'a última coisa que ela escreveu foi uma pergunta' },
+      { tecla: '6', se: 'ela deixou uma pergunta, ou pediu material que ainda não saiu' },
       { tecla: '5', se: 'nada saiu hoje e a do momento ainda não foi' },
       { tecla: '3', se: 'já respondemos hoje, ou a do momento já saiu' },
     ],

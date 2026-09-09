@@ -925,4 +925,48 @@ grupo('engajado: ja respondi hoje, nao manda nada (04/09/2026)');
   check(!regra.quando({ ...base, temEtiquetaDeCidade: true }), 'e nao casa para quem ja tem etiqueta de cidade');
 }
 
+/**
+ * MATERIAL PEDIDO NAO SE CONCLUI EM SILENCIO — print da Sadra (09/09/2026).
+ *
+ * Ela escreveu *"Quero umas. Camisetas"* e *"Dos meus candidatos"*, e o atendimento foi **concluido
+ * sem nada sair**. Ele: *"nao identificou que ela queria algo"*.
+ *
+ * **Medido, e o detector estava certo:** `pedeMaterial` casou — o ponto no meio de *"Quero umas.
+ * Camisetas"* nao atrapalha. O caso morreu em `ja-respondemos-antes`, porque ja tinhamos respondido
+ * hoje e aquela caixa conclui.
+ *
+ * **`conteudo-pedido` nao salvava porque exige `podeEnviar`** — um modelo aprovado para mandar —, e
+ * camiseta nao tem modelo: o que existe para material FISICO e o caminho da Jonice (08/09), pedir o
+ * endereco e repassar a equipe. Nenhuma caixa levava a ele.
+ *
+ * **A guarda decide o DESFECHO e nao se a caixa casa** — licao da Noeli (06/09), e o que
+ * `perguntaPendente` ja fazia na linha de cima.
+ */
+{
+  grupo('material pedido nao se conclui em silencio (a Sadra, 09/09)');
+
+  const base = {
+    jaRespondemosAntes: true, respondidoHoje: true, momentoJaEnviado: true,
+    podeMandarMomento: true, temEtiquetaDeCidade: true,
+  };
+  const tecla = (extra) => sugerirAcao({ ...base, ...extra })?.tecla;
+
+  check(tecla({ pedeMaterial: { motivo: 'ela pediu o material' } }) === '6',
+    'com material pedido, o caso vai para voce ou para a IA');
+
+  /** Os outros ramos da mesma caixa continuam intactos. */
+  check(tecla({}) === '3', 'sem material, ja respondemos hoje: conclui');
+  check(tecla({ perguntaPendente: { motivo: 'x' } }) === '6', 'pergunta pendente continua sendo 6');
+  check(tecla({ respondidoHoje: false, momentoJaEnviado: false }) === '5',
+    'nada saiu hoje: manda a do momento');
+
+  /**
+   * **O verbete tem que dizer o mesmo que a funcao faz** — senao a janela do fluxo promete um
+   * desfecho que o codigo nao produz, e e olhando essa janela que ele decide a ordem.
+   */
+  const ramos = sugestaoLib.SOBRE['ja-respondemos-antes'].ramos;
+  check(ramos.some((r) => r.tecla === '6' && /material/.test(r.se)), 'e o verbete nomeia o material');
+  check(sugestaoLib.regrasComDesfechoIncoerente().length === 0, 'nenhum desfecho incoerente');
+}
+
 fim();

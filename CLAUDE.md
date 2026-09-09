@@ -2723,6 +2723,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   "vote" e o parentese, mas nao o traco: **`Capitao Martim - 2228` passava**. **Ao liberar uma regra
   citando uma trava como a protecao que a torna segura, MEÇA a trava contra a saida que a regra
   produz.**
+- **EXCECAO ESCRITA DENTRO DE UMA REGRA SO VALE ONDE AQUELA REGRA ALCANCA.** Print da Sadra
+  (09/09/2026): *"Quero umas. Camisetas"* e *"Dos meus candidatos"*, e o atendimento foi **concluido
+  sem nada sair** — *"nao identificou que ela queria algo"*. **Medido: `pedeMaterial` CASOU** (o ponto
+  no meio nao atrapalha); o caso morreu em `ja-respondemos-antes`, porque ja tinhamos respondido
+  hoje. **A excecao do material de 05/09 foi escrita dentro de `conteudo-pedido`, que exige
+  `podeEnviar`** — um modelo aprovado —, e camiseta nao tem modelo: o caminho de material FISICO e
+  pedir o endereco e repassar a equipe (a Jonice, 08/09), e **nenhuma caixa levava a ele**.
+  **O conserto e a licao da Noeli (06/09): a guarda decide o DESFECHO, nao se a caixa casa** — virou
+  `if (c.perguntaPendente || c.pedeMaterial) return '6'`, ao lado do que a pergunta pendente ja
+  fazia. **Ao escrever excecao, pergunte em quais regras ela precisa existir, nao so naquela em que o
+  caso apareceu.** E o `ramos` do verbete entra no mesmo commit.
 - **A PROXIMIDADE LEXICAL DECIDE, E JA CUSTOU TRES PRINTS EM CINCO DIAS.** *"representante"* puxou a
   resposta do falar-com-deputado (3.14), *"placa"* puxou a lista de materiais (3.23) e *"E o
   deputado ?"* puxou a regra 8 inteira (3.26, print da Denise) — periodo eleitoral, agenda, WhatsApp

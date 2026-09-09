@@ -1,4 +1,4 @@
-## 2026-09-09 — ESTADO DE AGORA (v3.26.0) — leia isto primeiro numa sessão nova
+## 2026-09-09 — ESTADO DE AGORA (v3.27.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.26.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.27.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **27 regras** na
@@ -270,6 +270,76 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-09 — Material pedido não se conclui em silêncio (v3.27.0)
+
+Print da **Sadra** (09/09/2026). Ela escreveu, às 13:49:
+
+```
+Quero umas. Camisetas
+Dos meus candidatos
+```
+
+E às 13:55 o atendimento foi **concluído sem nada sair**. Ele: *"não identificou que ela queria
+algo"*.
+
+### Medido: o detector estava certo
+
+```
+pedeMaterial("Quero umas. Camisetas" + "Dos meus candidatos")  ->  casou
+```
+
+O ponto no meio de *"Quero umas. Camisetas"* não atrapalha — testei as sete variações. **O caso
+morreu depois do detector**, em `ja-respondemos-antes`: já tínhamos respondido hoje (a mensagem do
+momento saiu às 12:40), e aquela caixa conclui.
+
+### Por que `conteudo-pedido` não salvou
+
+**Ela exige `podeEnviar`** — um modelo aprovado para mandar. Camiseta não tem modelo: o que existe
+para material FÍSICO é o caminho da Jonice (08/09) — pedir o endereço e repassar à equipe dos
+materiais. **Nenhuma caixa levava a ele.**
+
+A exceção de 05/09 (*"o modelo de material é uma exceção, ele sempre tem que ser mandado quando
+requisitado"*) foi escrita dentro de `conteudo-pedido`, e por isso só valia quando havia modelo. Para
+material físico, o pedido continuava sendo enterrado.
+
+### O conserto: a guarda decide o DESFECHO
+
+**É a lição da Noeli (06/09)** — *"antes de pôr uma guarda na condição, pergunte quem decide quando
+ela barrar; se a resposta for uma caixa que envia (ou que conclui), a guarda tem que virar
+desfecho"*. E é o que `perguntaPendente` já fazia na linha de cima da mesma função.
+
+```js
+tecla: (c) => {
+  if (c.perguntaPendente || c.pedeMaterial) return '6';
+  return c.respondidoHoje || c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5';
+}
+```
+
+Tecla 6 — ele ou a IA —, que então aplica a **regra 5**: pede o endereço completo e diz que o pedido
+vai para a equipe responsável pelos materiais.
+
+**O `ramos` do verbete entrou no mesmo commit**, como manda a regra: a janela do fluxo prometeria um
+desfecho que o código não produz, e é olhando essa janela que ele decide a ordem.
+
+### Medido depois
+
+| contexto | antes | agora |
+|---|---|---|
+| material pedido | tecla 3 (conclui) | **tecla 6** |
+| sem material, já respondemos hoje | 3 | 3 |
+| pergunta pendente | 6 | 6 |
+| nada saiu hoje | 5 | 5 |
+
+Quadro e tabela concordam, e `regrasComDesfechoIncoerente` continua em 0.
+
+### Arquivos
+
+`src/lib/sugestao.js` (a tecla-função e o `ramos` do verbete), `tests/sugestao.test.mjs` (6
+asserções, quatro delas provando que os outros ramos não mudaram). 15 suítes verdes. **Só código:
+a caixa já existe no quadro dele, então não precisa importar o fluxo.**
+
 ---
 
 ## 2026-09-09 — "É o deputado?" não é pedir para falar com ele (v3.26.0)
