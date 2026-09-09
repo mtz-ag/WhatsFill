@@ -446,6 +446,28 @@ export function deOutroDia(entrantes, agora = new Date()) {
   return false;
 }
 
+/**
+ * **Tudo o que ela escreveu desde a NOSSA última mensagem** — sem o corte de tempo da rajada.
+ *
+ * É a metade de `rajadaFinal` que responde *"o que ainda não respondemos?"*. A outra metade dela —
+ * o buraco de 30 minutos — responde *"o que ela digitou de uma vez?"*, e as duas perguntas são
+ * diferentes: uma mensagem de 40 minutos atrás continua pendente, mesmo não sendo da mesma rajada.
+ *
+ * Use esta quando o sinal for um ESTADO que fica esperando (confirmou presença, pediu material) e
+ * `rajadaFinal` quando for uma FALA do momento (só cumprimentou, mandou só uma reação).
+ */
+export function desdeNossaUltima(entrantes, nossaUltimaAt) {
+  const lista = Array.isArray(entrantes) ? entrantes : [];
+  if (!lista.length) return [];
+  const corte = nossaUltimaAt ? new Date(nossaUltimaAt).getTime() : NaN;
+  if (!Number.isFinite(corte)) return lista.slice();
+  return lista.filter((m) => {
+    const t = m?.at ? new Date(m.at).getTime() : NaN;
+    // Mensagem sem horário fica: descartá-la esconderia fala que ninguém respondeu.
+    return !Number.isFinite(t) || t > corte;
+  });
+}
+
 export function rajadaFinal(entrantes, nossaUltimaAt) {
   const lista = Array.isArray(entrantes) ? entrantes : [];
   if (!lista.length) return [];
@@ -912,7 +934,32 @@ const EXPRESSOES_DE_APOIO = [
  * @returns {'sim'|'nao'|null}
  */
 export function confirmaPresenca(entrantes, nossaUltimaAt) {
-  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+  /**
+   * **Aqui é TUDO o que ela escreveu desde a nossa última fala, e não a última RAJADA.**
+   *
+   * Print do Dair (09/09/2026): *"Quero confirmar minha presença no evento: AMIGOS CAPITÃO MARTIM E
+   * GUSTAVO VICTORINO"* às **09:02**, e um link do Facebook às **09:45**. A rodada mandou a mensagem
+   * do momento e concluiu — *"era pra pular e concluiu por causa do link"*.
+   *
+   * **Medido:** `confirmaPresenca` devolvia `"sim"` com a confirmação sozinha e **`null`** com o
+   * link junto. A causa não é o link: é que `rajadaFinal` corta em **30 minutos**
+   * (`INTERVALO_DA_RAJADA_MS`), e 43 minutos separam as duas — então a confirmação virou "rajada
+   * anterior" e sumiu, **sem nunca ter sido respondida**.
+   *
+   * **O corte de tempo está certo para quem ele foi escrito** (a pessoa digitando de uma vez, três
+   * mensagens em dois minutos) **e errado para este sinal**, porque confirmar presença não é uma
+   * fala do momento: é um ESTADO que fica pendente até alguém tratar. Mesma família do
+   * `pedeMaterial`, que lê a conversa inteira porque *"o pedido não vence com o dia"* (05/09).
+   *
+   * **O limite continua sendo a NOSSA última mensagem**, e não a conversa inteira: respondida, a
+   * confirmação deixa de estar pendente — senão quem confirmou em julho seria pulado para sempre.
+   *
+   * **E o desfecho é o que torna esta troca barata:** presença confirmada é a tecla 2, *pular*, que
+   * não manda nada e não conclui. Falso positivo aqui custa um contato na fila dele; falso negativo
+   * custou o que a print mostra — a pessoa recebeu uma bênção genérica e o atendimento foi fechado,
+   * tirando-a da lista que ele atende no fim.
+   */
+  const rajada = desdeNossaUltima(entrantes, nossaUltimaAt);
   if (!rajada.length) return null;
 
   const texto = rajada

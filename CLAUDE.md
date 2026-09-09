@@ -2652,6 +2652,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   linha "Cidade:" some (o valor virou vazio) e o aviso de grafia some junto, enquanto o CRM
   continua com o lixo ate a conclusao gravar. Hoje o cabecalho diz o que vai ser apagado, e o
   Andamento registra `apagando do CRM: <campo> ("<valor>")`.
+- **`rajadaFinal` FAZ DUAS COISAS, E SO UMA DELAS SERVE PARA SINAL QUE FICA PENDENTE.** Print do Dair
+  (09/09/2026): *"Quero confirmar minha presenca no evento"* as **09:02** e um link as **09:45**; a
+  rodada mandou a mensagem do momento e concluiu — *"era pra pular e concluiu por causa do link"*.
+  **Medido, e nao foi o link:** com a confirmacao sozinha o sinal e `"sim"`, com o link junto e
+  `null`, e invertendo a ordem volta a ser `"sim"`. **A causa e o RELOGIO** —
+  `INTERVALO_DA_RAJADA_MS` corta em **30 minutos** e 43 separam as duas, entao a confirmacao virou
+  "rajada anterior" **sem nunca ter sido respondida**. As duas metades de `rajadaFinal` respondem
+  perguntas diferentes: o corte na NOSSA ultima fala responde *"o que ainda nao respondemos?"*; o
+  buraco de 30 minutos responde *"o que ela digitou de uma vez?"*. **Nasceu `desdeNossaUltima`, e a
+  regra de escolha esta escrita nela: ESTADO que fica esperando (confirmou presenca, pediu material)
+  usa `desdeNossaUltima`; FALA do momento (so cumprimentou, so uma reacao) usa `rajadaFinal`.** As
+  guardas: o limite continua sendo a nossa ultima mensagem (senao quem confirmou em julho seria
+  pulado para sempre) e a negativa posterior continua vencendo. **A troca e barata porque o desfecho
+  e a tecla 2** — pular nao manda nada e nao conclui; o falso negativo e que custou a print.
+  **Os outros 16 detectores continuam em `rajadaFinal`** — mudar todos de uma vez seria trocar um
+  defeito conhecido por dezesseis desconhecidos.
 - **ENCAMINHOU AO ORGAO RESPONSAVEL? PARE AI — servico fora da alcada nao se oferece nem de graca.**
   Print da Bia (09/09/2026): o rascunho fez a parte certa (negou a contratacao, apontou o SINE e o
   Emprega Brasil) e **emendou** *"eu anoto aqui que voce busca panfletagem e posso te ajudar a montar

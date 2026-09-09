@@ -1,4 +1,4 @@
-## 2026-09-09 — ESTADO DE AGORA (v3.20.0) — leia isto primeiro numa sessão nova
+## 2026-09-09 — ESTADO DE AGORA (v3.21.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.20.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.21.0**, tudo commitado e no remoto.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **27 regras** na
@@ -269,6 +269,70 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-09 — A confirmação de presença fica pendente até alguém tratar (v3.21.0)
+
+Print do **Dair** (09/09/2026): *"Quero confirmar minha presença no evento: AMIGOS CAPITÃO MARTIM E
+GUSTAVO VICTORINO"* às **09:02**, e um link do Facebook às **09:45**. A rodada mandou a mensagem do
+momento e **concluiu**. Ele: *"era pra pular e concluiu por causa do link"*.
+
+### Medido: não foi o link
+
+```
+confirmaPresenca([confirmação])         -> "sim"
+confirmaPresenca([confirmação, link])   -> null
+confirmaPresenca([link, confirmação])   -> "sim"
+```
+
+A ordem muda o resultado, o que descarta o link como causa. **A causa é o RELÓGIO:** `rajadaFinal`
+corta em **30 minutos** (`INTERVALO_DA_RAJADA_MS`) e **43 minutos** separam as duas mensagens. A
+confirmação virou "rajada anterior" e sumiu do sinal — **sem nunca ter sido respondida.**
+
+### A distinção que faltava
+
+`rajadaFinal` faz duas coisas ao mesmo tempo, e elas respondem perguntas diferentes:
+
+| corte | pergunta que responde |
+|---|---|
+| na NOSSA última mensagem | *o que ainda não respondemos?* |
+| no buraco de 30 minutos | *o que ela digitou de uma vez?* |
+
+**O corte de tempo está certo para o que ele foi escrito** — a pessoa digitando de uma vez, o caso
+que o criou foram três mensagens em dois minutos — **e errado para este sinal**. Confirmar presença
+não é uma fala do momento: é um **estado que fica pendente até alguém tratar**. É a mesma família do
+`pedeMaterial`, que lê a conversa inteira porque *"o pedido não vence com o dia"* (05/09).
+
+Nasceu `cortesia.desdeNossaUltima`, que corta só na nossa última fala, e `confirmaPresenca` passou a
+usá-la. **A regra para escolher entre as duas está escrita na função:** ESTADO que fica esperando →
+`desdeNossaUltima`; FALA do momento (só cumprimentou, mandou só uma reação) → `rajadaFinal`.
+
+### As duas guardas
+
+- **O limite continua sendo a NOSSA última mensagem**, e não a conversa inteira — respondida, a
+  confirmação deixa de estar pendente. Senão quem confirmou em julho seria pulado para sempre.
+- **A negativa posterior continua vencendo:** quem confirmou e depois escreveu *"infelizmente não vou
+  poder ir"* conta como **não**.
+
+### Por que a troca é barata
+
+O desfecho de presença confirmada é a **tecla 2 — pular**, que não manda nada e não conclui. Falso
+positivo custa um contato na fila dele; **falso negativo custou o que a print mostra**: a pessoa
+recebeu uma bênção genérica e o atendimento foi fechado, tirando-a da lista que ele atende no fim.
+
+### Medido depois
+
+```
+QUADRO -> confirmou-presenca-evento, tecla 2
+motivo -> "confirmou presença no evento — pulei para você atender no fim, com a lista na mão"
+```
+
+### Arquivos
+
+`src/lib/cortesia.js` (`desdeNossaUltima`, e `confirmaPresenca` passando a usá-la),
+`tests/cortesia.test.mjs` (**9 asserções**, quatro delas guardas). 15 suítes verdes, verificadores
+limpos. **Só código: não precisa importar o fluxo.**
+
 ---
 
 ## 2026-09-09 — Encaminhou ao órgão? Pare aí (v3.20.0)

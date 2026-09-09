@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos } from '../src/lib/cortesia.js';
+import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos } from '../src/lib/cortesia.js';
 
 const templates = await lib('templates.js');
 
@@ -2724,6 +2724,55 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(!acusa('voces sempre respondem, parabens'), 'nem este');
   check(!acusa('estou esperando o evento com ansiedade'), 'esperar o EVENTO nao e esperar resposta');
   check(!acusa('vou esperando a resposta do medico'), 'nem a resposta do medico');
+}
+
+/**
+ * A CONFIRMACAO FICA PENDENTE ATE ALGUEM TRATAR — print do Dair (09/09/2026).
+ *
+ * *"Quero confirmar minha presenca no evento: AMIGOS CAPITAO MARTIM E GUSTAVO VICTORINO"* as 09:02,
+ * e um link do Facebook as 09:45. A rodada mandou a mensagem do momento e concluiu — *"era pra pular
+ * e concluiu por causa do link"*.
+ *
+ * **Medido: nao foi o link.** `confirmaPresenca` devolvia "sim" com a confirmacao sozinha e **null**
+ * com o link junto, porque `rajadaFinal` corta em **30 minutos** e 43 separam as duas: a confirmacao
+ * virou "rajada anterior" e sumiu, **sem nunca ter sido respondida**.
+ *
+ * O corte de tempo esta certo para o que ele foi escrito (a pessoa digitando de uma vez) e errado
+ * para este sinal, que e um ESTADO pendente. O limite passou a ser so a NOSSA ultima mensagem.
+ */
+{
+  grupo('a confirmacao fica pendente ate alguem tratar (o Dair, 09/09)');
+
+  const conf = { texto: 'Quero confirmar minha presenca no evento: AMIGOS CAPITAO MARTIM E GUSTAVO VICTORINO', tipo: 'TEXT', at: '2026-09-09T09:02:00' };
+  const link = { texto: 'https://www.facebook.com/share/r/19WE1ghYgg/', tipo: 'TEXT', at: '2026-09-09T09:45:00' };
+
+  check(confirmaPresenca([conf, link], null) === 'sim', 'o caso da print: 43 minutos depois, ainda vale');
+  check(confirmaPresenca([conf], null) === 'sim', 'a confirmacao sozinha continua valendo');
+  check(confirmaPresenca([conf, { texto: 'ok', tipo: 'TEXT', at: '2026-09-09T09:45:00' }], null) === 'sim',
+    'qualquer mensagem depois nao apaga a confirmacao');
+
+  /**
+   * **O limite e a NOSSA ultima mensagem, e nao a conversa inteira** — senao quem confirmou em julho
+   * seria pulado para sempre.
+   */
+  check(confirmaPresenca([conf, { texto: 'https://x.com/y', tipo: 'TEXT', at: '2026-09-09T10:30:00' }], '2026-09-09T10:00:00') === null,
+    'respondida, a confirmacao deixa de estar pendente');
+
+  /** A negativa posterior continua vencendo: e a ressalva que decide. */
+  check(confirmaPresenca([conf, { texto: 'infelizmente nao vou poder ir', tipo: 'TEXT', at: '2026-09-09T09:45:00' }], null) === 'nao',
+    'quem confirmou e depois desistiu conta como NAO');
+
+  /**
+   * **`desdeNossaUltima` e `rajadaFinal` respondem perguntas DIFERENTES**, e e por isso que as duas
+   * existem: uma diz o que ainda nao respondemos, a outra o que ela digitou de uma vez.
+   */
+  const distantes = [conf, link];
+  check(rajadaFinal(distantes, null).length === 1, 'a rajada final continua cortando em 30 minutos');
+  check(desdeNossaUltima(distantes, null).length === 2, 'e o pendente pega as duas');
+  check(desdeNossaUltima(distantes, '2026-09-09T09:30:00').length === 1, 'cortando na nossa ultima fala');
+
+  /** Mensagem sem horario fica: descarta-la esconderia fala que ninguem respondeu. */
+  check(desdeNossaUltima([{ texto: 'sem hora' }], '2026-09-09T09:30:00').length === 1, 'mensagem sem horario nao some');
 }
 
 fim();
