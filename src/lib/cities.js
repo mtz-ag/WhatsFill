@@ -93,6 +93,23 @@ export async function conferirGrafia(valor) {
   const casou = await matchCity(bruto);
   if (!casou) {
     /**
+     * **Município IGNORADO continua sendo município** — print da Nelci (10/09/2026): Cidade
+     * "Capitão" no cadastro e o aviso vermelho *"'Capitão' não casa com nenhum dos 497 municípios do
+     * RS"*, com ele mandando a página da Prefeitura Municipal de Capitão.
+     *
+     * `cidadesIgnoradas` existe para o TEXTO LIVRE — "Capitão" é a patente do candidato e apareceria
+     * em toda mensagem como cidade (01/09). `matchCity` usa a lista sem os ignorados, e é certo que use
+     * lá. **Aqui o valor já está no campo Cidade**: não há patente a confundir, e a etiqueta de cidade e
+     * o COREDE dele saem da planilha oficial, que tem Capitão. Só o aviso mentia.
+     *
+     * Exige o nome EXATO (sem acento e caixa): igualdade, não parecença.
+     */
+    const exato = (await loadMunicipios()).find((m) => semAcentoNemCaixa(m) === semAcentoNemCaixa(bruto));
+    if (exato) {
+      return { ok: true, oficial: exato, confianca: 'exata', motivo: '' };
+    }
+
+    /**
      * **Munic\u00edpio de fora do RS n\u00e3o \u00e9 grafia errada** \u2014 pedido dele (08/09/2026), com a etiqueta
      * *"Fora do RS"*.
      *

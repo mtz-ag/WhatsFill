@@ -528,6 +528,18 @@ grupo('conferirGrafia: avisa cidade escrita errada, sem reclamar de acento');
   const outroEstado = await cities.conferirGrafia('Curitiba');
   check(outroEstado.ok && outroEstado.foraDoRS === 'PR',
     `municipio de outro estado nao e erro de grafia: e "${outroEstado.foraDoRS}"`);
+
+  /**
+   * **Municipio IGNORADO continua sendo municipio no CAMPO** — print da Nelci (10/09/2026): Cidade
+   * "Capitao" e o aviso *"nao casa com nenhum dos 497"*, com ele mandando a pagina da Prefeitura
+   * Municipal de Capitao. A lista de ignoradas e para o TEXTO LIVRE (a patente do candidato).
+   */
+  const capitao = await cities.conferirGrafia('Capitão');
+  check(capitao.ok && capitao.oficial === 'Capitão', `"Capitão" no campo nao e erro de grafia (${capitao.motivo || 'ok'})`);
+  check(await ok('capitao'), 'nem sem acento');
+  /** **A guarda: no texto livre ele continua ignorado** — senao "Capitao Martim" vira cidade de novo. */
+  check((await cities.matchCity('Capitão')) === null, 'no texto livre, "Capitão" continua sem casar');
+  check((await cities.conferirGrafia('Capitã')).ok === false, 'e parecido nao e igual: so o nome EXATO passa');
 }
 
 grupo('semAcentoNemCaixa NAO expande abreviacao');

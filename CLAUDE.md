@@ -2749,6 +2749,11 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **A LISTA DE CIDADES IGNORADAS E DO TEXTO LIVRE, NAO DO CAMPO.** Print da Nelci (10/09/2026): Cidade
+  "Capitao" com o aviso *"nao casa com nenhum dos 497"* — e Capitao e municipio do RS. `cidadesIgnoradas`
+  (a patente do candidato) vale em `matchCity`, e `conferirGrafia` julgava o valor JA GRAVADO com ela.
+  Hoje, sem casamento, ela procura o nome EXATO na lista inteira antes de acusar; `matchCity("Capitao")`
+  continua null. **Guarda feita para o parser nao pode julgar o dado que o operador ja gravou.**
 - **OFERECER O VOTO POR DINHEIRO E SEM INTERESSE** (regra dele, 10/09/2026, print da Simone: *"Quer meu
   voto?"* + *"Faz um pix pra mim"*). `semInteresse` le mensagem a mensagem, e a oferta vem PARTIDA em
   duas — nenhuma das duas sozinha e venda, e o "pix" mandava o caso para a negativa de ajuda. Hoje a

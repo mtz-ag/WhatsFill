@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.41.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.42.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,13 +10,13 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.41.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.42.0**, tudo commitado e no remoto.
 
-> **Os números abaixo são da 3.27.** Da 3.41, remedido: **16 suítes** (entrou `detalhes.test.mjs`) (41 arquivos nos verificadores, com
+> **Os números abaixo são da 3.27.** Da 3.42, remedido: **16 suítes** (entrou `detalhes.test.mjs`) (41 arquivos nos verificadores, com
 > `panel/detalhes.js`): o prompt de sistema tem **~9.372 tokens** com
 > as 21 respostas de fábrica e **~7.602** sem elas; o padrão dele é **49,6%** do segundo. Antes: 15 suítes verdes, 40 arquivos limpos, e o
 > prompt de sistema do rascunho com **~9.017 tokens** sem dossiê (o dossiê injetado soma ~3.351).
-> **Em 10/09 foram catorze versões** (a 3.41: **oferecer o voto por dinheiro é sem interesse**; a 3.40: **a etiqueta de material sai com o modelo de material, e com o pedido fora do anúncio**; a 3.39: **"Rua X 120, Bairro" é endereço**; a 3.38: **log e conteúdo não vão para "detalhes"**; a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
+> **Em 10/09 foram quinze versões** (a 3.42: **"Capitão" no campo Cidade não é erro de grafia**; a 3.41: **oferecer o voto por dinheiro é sem interesse**; a 3.40: **a etiqueta de material sai com o modelo de material, e com o pedido fora do anúncio**; a 3.39: **"Rua X 120, Bairro" é endereço**; a 3.38: **log e conteúdo não vão para "detalhes"**; a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
 > 3.33: **"o senhor é senador?" identifica e responde o cargo**; a 3.34: **pergunta retórica não é
 > pedido**, e "gabinete" no rascunho é trocado): 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
 > nova), 3.29 (o que ele foi está no dossiê), 3.30 (não há chance de ser contratado) e 3.31 (**não
@@ -287,6 +287,31 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — "Capitão" no campo Cidade não é erro de grafia (v3.42.0)
+
+Prints do mesmo recado da Simone: a Nelci com **Cidade: Capitão** e o aviso vermelho *"'Capitão' não casa
+com nenhum dos 497 municípios do RS"*, e ao lado a página do Google da **Prefeitura Municipal de
+Capitão** — município do RS, no Vale do Taquari.
+
+### Medido
+
+- `store.cidadesIgnoradas` nasce com `['Capitão']` (01/09): **"Capitão" é a patente do candidato**, e
+  sem isso toda mensagem com "Capitão Martim" gravaria a cidade Capitão com confiança exata.
+- A lista vale em `municipiosValidos`, que alimenta `matchCity` — e `conferirGrafia` usa `matchCity`.
+  Então **o valor que JÁ está no campo** era julgado com a lista de texto livre, e o município sumia.
+- **A etiqueta de cidade e o COREDE não eram afetados**: `tags.suggest` usa `coredeFor`, que lê a
+  planilha oficial direto, e ela tem Capitão. Só o aviso mentia.
+
+### O conserto
+
+`conferirGrafia`, quando nada casou, procura o nome **exato** (sem acento e caixa) na lista inteira de
+municípios antes de acusar. **No texto livre nada muda**: `matchCity("Capitão")` continua null — é a
+guarda do 01/09, e o teste trava as duas pontas. Parecido não passa (*"Capitã"* segue sendo erro).
+
+16 suítes verdes (+4 asserções), verificadores limpos.
+
 ---
 
 ## 2026-09-10 — Oferecer o voto por dinheiro é sem interesse (v3.41.0)
