@@ -2749,6 +2749,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **PERGUNTA COM DUAS PARTES: A REGRA QUE SO CONHECE UMA CORTA A OUTRA.** Print da Juscelia
+  (10/09/2026): *"O senhor e senador?"* recebeu so *"Somos a equipe do Capitao Martim, em que podemos
+  ajudar?"*. Ele: *"a resposta correta seria o Capitao Martim e deputado estadual; as pessoas assumem
+  que estao falando com o capitao, ate ai nao tem problema; no momento que perguntam, identificar como
+  equipe"*. A regra 9 dizia *"NAO acrescente nada"* — e foi cumprida. **Ao escrever "nao acrescente
+  nada", diga o que CONTA como parte da pergunta.** Junto: `conferirChapa` exigia nome e cargo na
+  mesma frase, e *"...Capitao Martim. Ele e deputado federal."* passava — **meça a trava contra a
+  forma que a regra nova produz** (a licao da colinha, 09/09, de novo). Ele escreveu "federal" e
+  corrigiu: o Martim e deputado ESTADUAL.
 - **O APOIO SO CONTA SE FOR PARA OS SEIS DA COLINHA** (regra dele, 10/09/2026, com a arte). Print do
   odone: *"PARA NAO VOTAREM NO RIGOTTO... AJUDEM A DIVULGAR"* recebeu o agradecimento pelo apoio,
   porque o padrao de voto aceitava `votarem no` + QUALQUER nome e ignorava o "nao". Medido, o mesmo

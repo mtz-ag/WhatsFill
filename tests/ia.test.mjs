@@ -1704,7 +1704,7 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
    */
   check(/^9\. QUEM PERGUNTA QUEM ESTÁ DO OUTRO LADO/m.test(prompt), 'a regra 9 existe');
   check(/aqui é a EQUIPE do Capitão Martim/.test(prompt), 'e a resposta e que a equipe somos nos');
-  check(/Uma frase, no formato/.test(prompt), 'em uma frase, que e o tamanho da resposta dele');
+  check(/no formato\s+"Somos a equipe do Capitão Martim, em que/.test(prompt), 'no formato da frase dele, curta e inteira');
   check(/Isto N[AÃ]O [eé] a regra 8/.test(prompt), 'dizendo explicitamente que nao e a regra 8');
   check(/Nada de período eleitoral, nada de agenda, nada de/.test(prompt),
     'e proibindo o conteudo que saiu para ela');
@@ -2162,6 +2162,38 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   const linhas = c.split('\n');
   const regra = linhas.findIndex((l) => l.startsWith('NÃO SOMOS CANAL'));
   check(regra >= 0 && regra === linhas.length - 2, 'e repetida no bloco do contato, logo antes do pedido');
+}
+
+/**
+ * "O SENHOR E SENADOR?" — IDENTIFICA E RESPONDE O CARGO — print da Juscelia (10/09/2026). O rascunho
+ * saiu *"Somos a equipe do Capitao Martim, em que podemos ajudar?"* e parou: a regra 9 mandava nao
+ * acrescentar nada. Ele: *"a resposta correta seria o Capitao Martim e deputado estadual; as pessoas
+ * assumem que estao falando com o capitao, ate ai nao tem problema; ja no momento que elas perguntam
+ * eu tenho que me identificar como sendo da equipe"*.
+ */
+{
+  grupo('"o senhor e senador?": identifica e responde o cargo (a Juscelia, 10/09)');
+  const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/o senhor é\s+senador\?/.test(p), 'a regra 9 cobre a forma da print');
+  check(/Achar que fala com ele NÃO é problema/.test(p), 'achar que fala com ele nao e problema');
+  check(/não corrija quem não perguntou/.test(p), 'e so se corrige quem pergunta');
+  check(/responda isso na\s+mesma mensagem/.test(p), 'o cargo perguntado e respondido na mesma mensagem');
+  check(/Ele é deputado estadual\./.test(p), 'com o exemplo certo: deputado ESTADUAL');
+  check(!/Martim[^\n]{0,40}deputado federal/i.test(p), 'e nada no prompt chama o Martim de federal');
+
+  /** **A trava da chapa pega o cargo dito com "Ele" na frase seguinte.** */
+  const chapa = [
+    { cargo: 'Deputado Estadual', nome: 'Capitão Martim', numero: '10122' },
+    { cargo: 'Governador', nome: 'Zucco', numero: '22' },
+  ];
+  check(!!conferirChapa('Somos a equipe do Capitão Martim. Ele é deputado federal.', chapa),
+    '"Ele e deputado federal" logo depois do nome e acusado');
+  check(!conferirChapa('Somos a equipe do Capitão Martim. Ele é deputado estadual.', chapa),
+    'com o cargo certo, nada');
+  check(!conferirChapa('O Capitão Martim apoia o Zucco. Ele é governador.', chapa),
+    'com duas pessoas na frase anterior, "ele" e ambiguo e nada e acusado');
+  check(!conferirChapa('Somos a equipe do Capitão Martim. Obrigado pelo contato. Ele é senador?', chapa),
+    'o pronome so herda da frase imediatamente anterior');
 }
 
 /**

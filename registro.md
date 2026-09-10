@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.32.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.33.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,11 +10,12 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.32.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.33.0**, tudo commitado e no remoto.
 
-> **Os números abaixo são da 3.27.** Da 3.32, remedido: 15 suítes verdes, 40 arquivos limpos, e o
+> **Os números abaixo são da 3.27.** Da 3.33, remedido: 15 suítes verdes, 40 arquivos limpos, e o
 > prompt de sistema do rascunho com **~9.017 tokens** sem dossiê (o dossiê injetado soma ~3.351).
-> **Em 10/09 foram cinco versões** (a 3.32: **o apoio só conta se for para os seis da colinha**): 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
+> **Em 10/09 foram seis versões** (a 3.32: **o apoio só conta se for para os seis da colinha**; a
+> 3.33: **"o senhor é senador?" identifica e responde o cargo**): 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
 > nova), 3.29 (o que ele foi está no dossiê), 3.30 (não há chance de ser contratado) e 3.31 (**não
 > somos canal de resolução de problemas** — a regra 11 reescrita, repetida no bloco do contato, e as
 > frases que convidam a contar o caso tiradas dos exemplos que a IA lê; **sem trava, a pedido dele**).
@@ -283,6 +284,46 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — "O senhor é senador?": identifica e responde o cargo (v3.33.0)
+
+Print da Juscelia (Itacurubi, 10/09). Ela perguntou *"O senhor é senador?"* e o rascunho saiu *"Somos
+a equipe do Capitão Martim, em que podemos ajudar?"* — e parou. Ele apagou:
+
+> *"a resposta correta seria o Capitão Martim é deputado estadual; as pessoas assumem que estão
+> falando com o capitão, até aí não tem problema se elas assumirem isso, já no momento que elas
+> perguntam eu tenho que me identificar como sendo da equipe"*
+
+(Ele escreveu "federal" e corrigiu logo em seguida: *"eu escrevi errado, Capitão Martim é deputado
+estadual"* — que é o que o dossiê e a colinha dizem.)
+
+### Medido
+
+- **O dossiê entrava**: `precisaDoDossie("O senhor é senador?")` → true (por "senador"), e as outras
+  três formas também. O cargo estava no prompt.
+- **Quem cortou foi a regra 9**, escrita na 3.26 (a Denise, *"é o deputado?"*): *"Uma frase… NÃO
+  acrescente nada além disso"*. Ela foi cumprida ao pé da letra — a pergunta tinha duas partes (é
+  você? e é senador?), e a regra só conhecia a primeira.
+- **A trava da chapa tinha um buraco na forma que a resposta certa pede:** *"Somos a equipe do
+  Capitão Martim. Ele é deputado federal."* passava — `conferirChapa` exigia nome e cargo na MESMA
+  frase.
+
+### O conserto
+
+1. **Regra 9 reescrita:** achar que fala com ele não é problema e não se corrige quem não perguntou;
+   perguntou, identifica como equipe; **e se a pergunta também quer saber algo DELE (cargo, partido,
+   número), responde na mesma mensagem com o dado do dossiê**. O exemplo é o dele: *"Somos a equipe do
+   Capitão Martim. Ele é deputado estadual."* A proibição do extra (agenda, período eleitoral,
+   WhatsApp pessoal) continua. A frase modelo ficou numa linha só — quebrada em duas, ela deixava de
+   ser a frase.
+2. **`conferirChapa` herda o nome para "Ele/Ela" na frase IMEDIATAMENTE seguinte**, só quando a
+   anterior nomeia uma pessoa: com duas, "ele" é ambíguo e nada é acusado. Medido depois: o "federal"
+   com "Ele" é acusado, o "estadual" passa.
+
+15 suítes verdes (+10 asserções, 3 delas sobre o que NÃO pode acusar), verificadores limpos. **Sem
+importação de fluxo.**
+
 ---
 
 ## 2026-09-10 — O apoio só conta se for para os seis da colinha (v3.32.0)

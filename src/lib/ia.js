@@ -1173,13 +1173,16 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '9. QUEM PERGUNTA QUEM ESTÁ DO OUTRO LADO. Duas formas da mesma pergunta:',
     '   (a) "posso falar com um representante?", "tem alguém aí?", "isso é robô?", "tem uma pessoa',
     '       falando comigo?" — ela quer saber se existe gente aqui;',
-    '   (b) "é o deputado?", "é o Capitão Martim?", "falo com ele mesmo?", "é você mesmo?" — ela quer',
-    '       saber se é ELE quem está escrevendo.',
-    '   **A resposta é a mesma nos dois casos, e é curta:** diga que aqui é a EQUIPE do Capitão Martim',
-    '   e pergunte em que pode ajudar. Uma frase, no formato "Somos a equipe do Capitão Martim, em que',
-    '   podemos ajudar?".',
+    '   (b) "é o deputado?", "é o Capitão Martim?", "falo com ele mesmo?", "é você mesmo?", "o senhor é',
+    '       senador?" — ela acha que é ELE quem está escrevendo.',
+    '   **Achar que fala com ele NÃO é problema** — não corrija quem não perguntou. Só quando ela',
+    '   PERGUNTAR, diga que aqui é a EQUIPE do Capitão Martim, no formato',
+    '   "Somos a equipe do Capitão Martim, em que podemos ajudar?".',
+    '   **Se a pergunta também quer saber algo DELE — o cargo, o partido, o número —, responda isso na',
+    '   mesma mensagem**, com o dado do bloco "Quem é quem". A "o senhor é senador?": "Somos a equipe do',
+    '   Capitão Martim. Ele é deputado estadual." Sem o bloco, não escreva cargo nem número.',
     '   **NÃO acrescente nada além disso.** Nada de período eleitoral, nada de agenda, nada de',
-    '   WhatsApp pessoal, nada de explicar por que não é ele. Ela perguntou uma coisa só.',
+    '   WhatsApp pessoal, nada de explicar por que não é ele.',
     '   Isto NÃO é a regra 8: ela só vale quando a pessoa PEDE ele — para falar, para encontrar, ou o',
     '   contato pessoal dele. Perguntar se é ele NÃO é pedir para falar com ele. Aplicar a regra 8',
     '   aqui é RECUSAR o que ninguém pediu, e sai como se ela tivesse pedido demais.',
@@ -2057,12 +2060,22 @@ export function conferirChapa(texto, chapa) {
   if (!cru.trim()) return '';
 
   // 1) Cargo trocado.
+  /**
+   * **"Ele é" na frase seguinte também é cargo dele** — print da Juscelia (10/09/2026). A pergunta
+   * *"O senhor é senador?"* passou a pedir identificação E o cargo, e a forma natural é *"Somos a
+   * equipe do Capitão Martim. Ele é deputado estadual."* Medido: com "federal" no lugar, a trava não
+   * acusava — o nome e o cargo estavam em frases diferentes. O pronome só herda o nome da frase
+   * IMEDIATAMENTE anterior, e só quando ela nomeia uma pessoa: com duas, "ele" é ambíguo.
+   */
+  let doAnterior = null;
   for (const frase of cru.split(/(?<=[.!?])\s+|\n+/)) {
     const f = semAcentoIA(frase);
+    const nomeados = lista.filter((p) => ondeAparece(f, p.nome).length);
     const cargosAqui = CARGOS_ESCRITOS.filter((c) => c.re.test(frase)).map((c) => c.chave);
+    const alvo = nomeados.length ? nomeados : doAnterior && /^\s*(ele|ela)\b/.test(f) ? [doAnterior] : [];
+    doAnterior = nomeados.length === 1 ? nomeados[0] : null;
     if (!cargosAqui.length) continue;
-    for (const pessoa of lista) {
-      if (!ondeAparece(f, pessoa.nome).length) continue;
+    for (const pessoa of alvo) {
       const dele = semAcentoIA(pessoa.cargo);
       if (!cargosAqui.includes(dele)) {
         return `${pessoa.nome} aparece como "${cargosAqui[0]}" e é ${pessoa.cargo.toLowerCase()}`;
