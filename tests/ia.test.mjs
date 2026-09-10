@@ -23,6 +23,7 @@ import {
   revisarRascunho,
   conferirChapa,
   ELA_SE_DESCULPOU,
+  ELA_FALOU_DE_TRABALHO,
   rascunhoPodeSairSozinho,
   AVISOS_QUE_IMPEDEM_ENVIO,
   validarRascunho,
@@ -1982,6 +1983,85 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   check(/Toda frase pronta carrega uma PREMISSA/.test(prompt), 'o prompt avisa da premissa');
   check(/não se desculpou/.test(prompt), 'com o caso da Dileta escrito');
   check(/pior que\s+não dizer nada/.test(prompt), 'e a razao: afirmar errado e pior que calar');
+}
+
+/**
+ * APOIO NAO E PEDIDO DE TRABALHO, E SESSAO NOVA NAO E PESSOA NOVA — anotacao de 10/09/2026.
+ *
+ * Um audio de apoio (*"tu precisava fazer uma visita aqui... pra poder te ajudar na votacao... o meu
+ * voto e certo pra ti"*), de quem tem etiqueta de cidade no CRM, recebeu *"Somos a equipe do Capitao
+ * Martim... estamos trabalhando apenas com voluntarios nao remunerados... mande o endereco
+ * completo"*. Ele: *"e praticamente uma mensagem de apoio"* e *"se identificar e quando a pessoa e
+ * nova no WhatsApp ou ela perguntou"*.
+ *
+ * **Medido: os nove detectores deram null e a tecla 6 estava certa.** As duas metades erradas eram
+ * do rascunho: a resposta pronta do voluntariado usada como base, e o bloco do contato dizendo "e a
+ * primeira coisa que o atendimento diz a esta pessoa" a quem ja nos conhecia.
+ */
+{
+  grupo('apoio nao e pedido de trabalho, e sessao nova nao e pessoa nova (10/09)');
+
+  const agora = new Date('2026-09-10T10:18:00');
+  const oQueSaiu =
+    'Bom dia! Somos a equipe do Capitao Martim. Obrigado pelo audio e pela confianca. Ficamos felizes ' +
+    'em saber que voce e seus amigos querem ajudar. So para avisar: estamos trabalhando apenas com ' +
+    'voluntarios nao remunerados. Se for do seu interesse, por favor nos mande o endereco completo.';
+  const avisos = (texto, ctx) => revisarRascunho(texto, agora, ctx).avisos;
+  const barra = (texto, ctx) => avisos(texto, ctx).includes(AVISOS_QUE_IMPEDEM_ENVIO.trabalhoInexistente);
+
+  check(barra(oQueSaiu, { elaFalouDeTrabalho: false }), 'o texto que saiu e barrado');
+  check(!rascunhoPodeSairSozinho(avisos(oQueSaiu, { elaFalouDeTrabalho: false })), 'e nao sai sozinho');
+  check(barra('Aqui a gente trabalha so com voluntarios.', { elaFalouDeTrabalho: false }), 'outra forma');
+  check(barra('Nao ha remuneracao nem ajuda de custo.', { elaFalouDeTrabalho: false }), 'e mais uma');
+
+  /** **A guarda: quem falou em trabalhar ou em ganhar TEM que ouvir isso** — regra dele de 09/09. */
+  check(!barra(oQueSaiu, { elaFalouDeTrabalho: true }), 'quem pediu trabalho continua ouvindo que e voluntario');
+  check(!barra(oQueSaiu, {}), 'sem conversa medida, nao confere nada');
+  check(!barra('Obrigado pelo apoio e pela confianca, conte com a gente!', { elaFalouDeTrabalho: false }),
+    'agradecer o apoio passa');
+
+  /** O que conta como ELA falando de trabalho — e o que e apoio. */
+  const falou = (t) => ELA_FALOU_DE_TRABALHO.test(t);
+  for (const t of [
+    'posso trabalhar na sua campanha',
+    'e combinarmos quanto vou ganhar',
+    'voces pagam?',
+    'tem alguma vaga?',
+    'posso divulgar a campanha nas minhas redes',
+    'sou voluntaria faz tempo',
+    'queria fazer panfletagem',
+  ]) {
+    check(falou(t), `conta como trabalho: "${t}"`);
+  }
+  for (const t of [
+    'Pra poder te ajudar, ne? Na votacao. O meu voto e certo pra ti',
+    'Tu precisava fazer uma visita aqui, temos amigos ali',
+    'vamos ganhar essa eleicao',
+    'Que precisar de mim, ta na mao',
+    'Deus abencoe, forca capitao',
+    'vagabundo e quem vota no PT',
+  ]) {
+    check(!falou(t), `NAO conta (e apoio): "${t}"`);
+  }
+
+  /** **Sessao nova nao e pessoa nova.** */
+  const fala = [{ de: 'contato', texto: 'Pra poder te ajudar na votacao, o meu voto e certo pra ti' }];
+  const conhece = montarContatoRascunho({ mensagens: fala, jaNosConhece: true });
+  check(conhece.includes('JÁ CONHECE'), 'quem ja nos conhece: o prompt diz isso');
+  check(!conhece.includes('primeira coisa que o atendimento diz'), 'e nao diz mais que e o primeiro contato');
+  check(/NÃO se apresente/.test(conhece), 'e manda nao se apresentar');
+  check(/regra 9/.test(conhece), 'com a excecao de ela perguntar quem fala');
+  const nova = montarContatoRascunho({ mensagens: fala });
+  check(/equipe do Capitão Martim/.test(nova), 'pessoa nova de verdade: pode se identificar');
+
+  const apresenta = (ctx) => avisos(oQueSaiu, ctx).some((a) => /já conversou conosco antes/.test(a));
+  check(apresenta({ jaNosConhece: true }), 'se apresentar a quem ja nos conhece gera aviso');
+  check(!apresenta({ jaNosConhece: false }), 'a quem e novo, nao');
+  check(!avisos(oQueSaiu, { jaFalamos: true, jaNosConhece: true }).some((a) => /já conversou conosco antes/.test(a)),
+    'com conversa nesta sessao o aviso e o antigo, um so');
+
+  const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/está APOIANDO/.test(prompt), 'o prompt diz que ajudar na votacao e apoio');
 }
 
 /**

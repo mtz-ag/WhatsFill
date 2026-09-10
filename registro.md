@@ -1,4 +1,4 @@
-## 2026-09-09 — ESTADO DE AGORA (v3.27.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.28.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,10 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.27.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.28.0**, tudo commitado e no remoto.
+
+> **Os números abaixo são da 3.27.** Da 3.28, remedido: 15 suítes verdes, 40 arquivos limpos, e o
+> prompt de sistema do rascunho com **8.846 tokens** (as 21 respostas prontas de fábrica).
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **27 regras** na
@@ -62,7 +65,7 @@ de prompt).
 
 ### As travas do rascunho, hoje
 
-`AVISOS_QUE_IMPEDEM_ENVIO` tem **nove** entradas, e cada uma nasceu de uma mensagem que saiu para
+`AVISOS_QUE_IMPEDEM_ENVIO` tem **dez** entradas, e cada uma nasceu de uma mensagem que saiu para
 eleitor real e ele apagou. Elas barram o envio AUTOMÁTICO; o rascunho continua no campo, e ele lê.
 
 | trava | a print |
@@ -76,6 +79,7 @@ eleitor real e ele apagou. Elas barram o envio AUTOMÁTICO; o rascunho continua 
 | `chapaTrocada` | *"deputado federal … Marcel Van Hattem"* — ele é senador na chapa — a Nara, 08/09 |
 | `enderecoSemMaterial` | pediu o endereço de entrega a quem pediu uma cadeira de rodas — a Cleo, 08/09 |
 | `desculpaInexistente` | *"não precisa se desculpar"* a quem não se desculpou — a Dileta, 09/09 |
+| `trabalhoInexistente` | *"só voluntários não remunerados, mande o endereço"* para um áudio de apoio — 10/09 |
 
 **A disciplina que decide onde uma regra nova mora:** mecânico e sem julgamento vira **conserto**
 (a saudação errada, o traço eme); verificável vira **aviso** que barra o envio; o resto fica no
@@ -270,6 +274,66 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — Apoio não é pedido de trabalho, e sessão nova não é pessoa nova (v3.28.0)
+
+Anotação da rodada (10/09, duas linhas sobre o mesmo contato). Um áudio transcrito de apoio — sugere
+uma visita do candidato à cidade dele, *"pra poder te ajudar na votação"*, *"o meu voto é certo pra
+ti"* — recebeu de rascunho: *"Somos a equipe do Capitão Martim… estamos trabalhando apenas com
+voluntários não remunerados… mande o endereço completo… repassada ao assessor da região"*.
+
+Ele: *"avaliou como pedido de material, é praticamente uma mensagem de apoio; o rascunho foi
+totalmente errado, me explique o que houve"* e *"não tem necessidade de se identificar como a equipe
+do Martim sempre; se identificar é quando a pessoa é nova no WhatsApp ou ela perguntou"*.
+
+### O que houve — medido
+
+- **A decisão estava certa.** Os nove detectores (`pedeEmprego`, `pedeMaterial`,
+  `pedeAjudaFinanceira`, `pedeFalarComDeputado`, `soExpressaApoio`, `semInteresse`,
+  `reclamaSemResposta`, `pedeLigacao`, `naoPodeFalarAgora`) devolveram **null**. O caso foi para a
+  tecla 6 por ser áudio longo, e a IA rascunhou. **Não foi avaliado como pedido de material** —
+  `pedeMaterial` é false, e por isso a trava `enderecoSemMaterial` disparou e o texto não sairia
+  sozinho.
+- **O voluntariado veio da resposta pronta `trabalhar-na-campanha`**, que desde a 3.22 a IA usa como
+  BASE "quando o nome diz que atende o caso". *"Te ajudar"* perto de *"votação"* pareceu oferta de
+  trabalho. **É a quarta vez da proximidade lexical** (representante, placa, "é o deputado?", e agora
+  esta), e é a família da desculpa da Dileta: **a frase carrega uma premissa** — "ela falou em
+  trabalhar ou em ganhar" — que nesta conversa não existia.
+- **A apresentação veio do bloco do contato, que MENTIA.** Ele tem etiqueta de cidade, então já
+  falou conosco; mas voltou sozinho e abriu sessão nova, sem nenhuma fala NÓS — e o bloco dizia
+  *"é a primeira coisa que o atendimento diz a esta pessoa"*. **É a armadilha da Rosa (05/09) do lado
+  da IA:** a conversa é a memória da sessão, o CRM é a memória de verdade. O aviso de apresentação
+  (`jaFalamos`) também só olhava a sessão, então ficou calado.
+
+### O conserto
+
+1. **`jaNosConhece`** — o painel manda o `jaRespondemosAntes` da rodada (ou o botão "Ver conversa
+   anterior", fora dela). O bloco do contato passa a ter três VOZES: conversa em curso (emende),
+   **já nos conhece (não se apresente)** e pessoa nova de verdade (pode dizer, numa frase, que é a
+   equipe). Nas duas primeiras, a exceção é ela perguntar quem fala — a regra 9. O aviso de
+   apresentação passou a acender também para quem já nos conhece. **Não barra**: é tom.
+2. **A trava `trabalhoInexistente`** (a décima): o rascunho fala de voluntariado, remuneração ou
+   ajuda de custo e ela **não** falou em trabalhar nem em ganhar → não sai sozinho. Mecânica como a
+   desculpa: a conversa está ali. `ELA_FALOU_DE_TRABALHO` é larga de propósito (trabalho, vaga,
+   currículo, salário, contratação, divulgação, panfletagem…), com **duas palavras fora, e são elas a
+   razão da trava**: `ajudar` (*"te ajudar na votação"* é apoio) e `ganhar` solto (*"vamos ganhar
+   essa"* é o grito de campanha mais comum daqui).
+3. **A regra da premissa**, colada nos exemplos, ganhou o caso: quem diz que vai votar, ajudar na
+   votação ou convida o candidato para uma visita está **apoiando**, e apoio se agradece curto.
+
+### Medido depois, no rascunho que saiu
+
+| | avisos | sai sozinho? |
+|---|---|---|
+| antes | `enderecoSemMaterial` | não |
+| depois | apresentação + `enderecoSemMaterial` + **`trabalhoInexistente`** | não |
+
+O que muda para ele não é a trava — o texto já não sairia sozinho —, é o **prompt**: o bloco do
+contato deixou de dizer que era o primeiro contato, e a premissa do voluntariado está escrita ao lado
+dos exemplos. Prompt de sistema: 8.846 tokens. 15 suítes verdes (+29 asserções, 12 delas sobre o
+que NÃO pode acusar), verificadores limpos. **Sem importação de fluxo:** nada no quadro mudou.
+
 ---
 
 ## 2026-09-09 — Material pedido não se conclui em silêncio (v3.27.0)

@@ -1316,6 +1316,9 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '"obrigado por avisar" a quem não avisou, "que pena que não vai poder ir" a quem não recusou nada,',
     'nem "obrigado pela paciência" a quem não esperou. **Afirmar o que ela fez, errado, é pior que',
     'não dizer nada**: a pessoa lê que você não a leu.',
+    'O mesmo com "aqui é só voluntário, sem remuneração" e o pedido de endereço: é a resposta de quem',
+    'PEDIU para trabalhar ou falou em ganhar. Quem diz que vai votar, que vai ajudar na votação ou',
+    'convida o candidato para uma visita está APOIANDO — e apoio se agradece, curto.',
     '',
     exemplos,
   ]
@@ -1402,7 +1405,7 @@ export const PEDIDO_DE_DADOS_NO_RASCUNHO = [
 ].join('\n');
 
 /** O bloco do contato para o rascunho: a conversa com folga, porque é dela que ele precisa. */
-export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false } = {}) {
+export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false } = {}) {
   /**
    * **A conversa INTEIRA, com os dois lados e com a pendência marcada.**
    *
@@ -1536,12 +1539,28 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * recapitulando, se apresentando de novo, tratando cada fala dela como um item de lista. O que
      * ele manda é a próxima mensagem DELE numa conversa que já estava em curso.
      */
+    /**
+     * **Sessão nova não é pessoa nova** — anotação de 10/09/2026, sobre um áudio de apoio de quem
+     * tem etiqueta de cidade no CRM: o rascunho abriu com *"Somos a equipe do Capitão Martim"*. Ele:
+     * *"se identificar é quando a pessoa é nova no WhatsApp ou ela perguntou"*.
+     *
+     * **A IA não tinha como acertar:** quem volta sozinho abre sessão nova, sem nenhuma fala NÓS, e
+     * este bloco dizia *"é a primeira coisa que o atendimento diz a esta pessoa"* — mentira. É a
+     * armadilha da Rosa (05/09) do lado da IA: **a conversa é a memória da sessão; o CRM é a memória
+     * de verdade.** `jaNosConhece` vem do painel, e é o `jaRespondemosAntes` da rodada.
+     */
     ultimaNossa >= 0
       ? 'VOZ: você é a MESMA pessoa que escreveu as falas marcadas "NÓS". Esta mensagem é a ' +
         'PRÓXIMA da conversa, não uma resposta de fora. Não se apresente de novo, não recapitule o ' +
         'que já dissemos e não abra saudação como se fosse o primeiro contato — emende de onde nós ' +
-        'paramos.'
-      : 'VOZ: é a primeira coisa que o atendimento diz a esta pessoa.',
+        'paramos. Só diga quem somos se ela PERGUNTAR quem está do outro lado (regra 9).'
+      : jaNosConhece
+      ? 'VOZ: esta pessoa JÁ CONHECE o atendimento — conversou conosco em outro dia, e a conversa ' +
+        'de antes só não aparece aqui. NÃO se apresente: nada de "somos a equipe do Capitão Martim", ' +
+        '"aqui é", "seja bem-vindo". Só diga quem somos se ela PERGUNTAR quem está do outro lado ' +
+        '(regra 9).'
+      : 'VOZ: é a primeira coisa que o atendimento diz a esta pessoa. Pode dizer, numa frase curta, ' +
+        'que aqui é a equipe do Capitão Martim — e nada mais sobre nós.',
     '',
     /**
      * **O eixo é a ÚLTIMA sem resposta** — mesma conversa de 05/09: *"eu queria que ela ficasse
@@ -1771,7 +1790,42 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
    * **Mecânica de verdade:** a conversa está aqui, e desculpa é palavra, não julgamento.
    */
   desculpaInexistente: 'diz "não precisa se desculpar" e ela não se desculpou — tire a frase',
+  /**
+   * **"Aqui é só voluntário, sem remuneração" para quem não pediu trabalho** — anotação de
+   * 10/09/2026. Um áudio de apoio (*"tu precisava fazer uma visita aqui... pra poder te ajudar na
+   * votação... o meu voto é certo pra ti"*) recebeu *"estamos trabalhando apenas com voluntários não
+   * remunerados; se for do seu interesse, mande o endereço completo"*. Ele: *"é praticamente uma
+   * mensagem de apoio, o rascunho foi totalmente errado"*.
+   *
+   * **Medido: os nove detectores deram null, e a decisão (tecla 6, IA) estava certa.** Quem errou foi
+   * o modelo, usando a resposta pronta `trabalhar-na-campanha` como BASE (a instrução de 3.22) para
+   * uma fala que só PARECIA oferta — "te ajudar" perto de "votação". É a quarta vez da proximidade
+   * lexical, e a mesma família do `desculpaInexistente`: **frase pronta carrega uma premissa**, e a
+   * premissa desta é *"ela falou em trabalhar ou em ganhar"*. Dizer "não há remuneração" a quem não
+   * pediu nada afirma que ela pediu.
+   *
+   * **Mecânica:** a conversa está aqui, e o que libera a frase é vocabulário de trabalho ou de
+   * pagamento dito POR ELA (`ELA_FALOU_DE_TRABALHO`, lida em `ia-cliente`).
+   */
+  trabalhoInexistente: 'fala de trabalho voluntário ou remuneração, e ela não falou em trabalhar nem em ganhar — confira o que ela disse',
 };
+
+/**
+ * **Ela falou em TRABALHAR ou em GANHAR?** — o que libera `AVISOS_QUE_IMPEDEM_ENVIO.trabalhoInexistente`.
+ *
+ * Larga de propósito, porque aqui o erro barato é o falso NEGATIVO da trava: qualquer menção a
+ * trabalho, emprego, vaga, currículo, salário, contratação, serviço, divulgação ou panfletagem
+ * libera a frase. **Duas palavras ficaram de fora e são a razão da trava:** `ajudar` (*"pra poder te
+ * ajudar na votação"* é apoio, e é o caso da anotação) e `ganhar` solto (*"vamos ganhar essa"* é o
+ * grito de campanha mais comum desta base) — ganhar só conta como *"quanto vou ganhar"* ou *"vou
+ * ganhar"*.
+ */
+export const ELA_FALOU_DE_TRABALHO =
+  /(^|[^\p{L}])(trabalh|emprego|vagas?([^\p{L}]|$)|curr[íi]culo|sal[áa]ri|remunera|contrat|servi[çc]o|freela|cach[êe]|ajuda\s+de\s+custo|volunt[áa]ri|divulg|panflet|cabo\s+eleitoral|or[çc]amento|quanto\s+.{0,15}?(ganh|receb|pag)|vou\s+ganhar|(voc[êe]s|vcs)\s+pagam)/iu;
+
+/** O rascunho fala de trabalho voluntário ou de remuneração — a frase de `trabalhar-na-campanha`. */
+const FALA_DE_REMUNERACAO =
+  /(^|[^\p{L}])(remunera|volunt[áa]ri|ajuda\s+de\s+custo|n[ãa]o\s+(pagamos|contratamos|h[áa]\s+contrata))/iu;
 
 // ---------------------------------------------------------------------------
 // A chapa: cargo trocado e número de outro
@@ -1999,6 +2053,14 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
 
   if (contexto?.jaFalamos && SE_APRESENTANDO.some((re) => re.test(texto))) {
     avisos.push('o rascunho se apresenta como primeiro contato, e vocês já conversaram — leia a abertura');
+  } else if (contexto?.jaNosConhece && SE_APRESENTANDO.some((re) => re.test(texto))) {
+    /**
+     * **Sessão nova não é pessoa nova** — anotação de 10/09/2026: *"não tem necessidade de se
+     * identificar como a equipe do Martim sempre; se identificar é quando a pessoa é nova no
+     * WhatsApp ou ela perguntou"*. `jaFalamos` só olha ESTA sessão, e quem volta sozinho abre
+     * sessão vazia — a armadilha da Rosa (05/09), agora do lado da IA.
+     */
+    avisos.push('o rascunho se apresenta, e esta pessoa já conversou conosco antes — só se identifique se ela perguntou quem fala');
   }
 
   /**
@@ -2176,6 +2238,15 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
    */
   if (contexto?.elaSeDesculpou === false && DIZ_QUE_NAO_PRECISA_DESCULPAR.test(texto)) {
     avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.desculpaInexistente);
+  }
+
+  /**
+   * **O voluntariado que ninguém pediu** — ver `AVISOS_QUE_IMPEDEM_ENVIO.trabalhoInexistente`.
+   * Condicionada como a desculpa: quem falou em trabalhar ou em ganhar tem que ouvir que aqui é só
+   * voluntário, que é a regra dele de 09/09. `undefined` não confere nada.
+   */
+  if (contexto?.elaFalouDeTrabalho === false && FALA_DE_REMUNERACAO.test(texto)) {
+    avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.trabalhoInexistente);
   }
 
   /**

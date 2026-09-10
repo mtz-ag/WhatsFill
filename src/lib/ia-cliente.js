@@ -20,6 +20,7 @@ import {
   montarRequisicaoRascunho,
   validarRascunho,
   ELA_SE_DESCULPOU,
+  ELA_FALOU_DE_TRABALHO,
   montarSistemaCidade,
   montarContatoCidade,
   montarRequisicaoCidade,
@@ -231,13 +232,13 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  *
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
-export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial }) {
+export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece }) {
   try {
     const r = await pedirAoWorker({
       type: MSG_IA,
       modo: 'rascunho',
       sistema: montarSistemaRascunho({ templates, regras, gabinete }),
-      contato: montarContatoRascunho({ mensagens, campos, agora, pedirDados }),
+      contato: montarContatoRascunho({ mensagens, campos, agora, pedirDados, jaNosConhece }),
       modelo: modelo || MODELO_PADRAO,
     });
 
@@ -269,13 +270,18 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
      * desculpado, e a frase que reconhece isso e a certa mais tarde tambem.
      */
     const elaSeDesculpou = lista.some((m) => m.de !== 'nos' && ELA_SE_DESCULPOU.test(String(m.texto || '')));
+    /**
+     * Ela falou em trabalhar ou em ganhar? Liga a trava trabalhoInexistente. Conversa inteira e sem
+     * o clique do anúncio: o texto do anúncio é da campanha, não dela.
+     */
+    const elaFalouDeTrabalho = lista.some((m) => m.de !== 'nos' && !m.anuncio && ELA_FALOU_DE_TRABALHO.test(String(m.texto || '')));
     return {
       /**
        * `chapa` liga a conferência de cargo e número — ver `ia.conferirChapa`. Ela **não depende
        * de `dossieAtivo`**: o modelo tem saber próprio sobre estes nomes, e foi ele que trocou o
        * cargo do Van Hattem na print da Nara. Trava não pode depender de uma caixa marcada.
        */
-      ...validarRascunho(r.decisao, agora, { jaFalamos, recebemosDela, chapa, pedeMaterial, elaSeDesculpou }),
+      ...validarRascunho(r.decisao, agora, { jaFalamos, jaNosConhece, recebemosDela, chapa, pedeMaterial, elaSeDesculpou, elaFalouDeTrabalho }),
       custo: r.custo,
       custoUsd: r.custoUsd,
       gastoMes: r.gastoMes,

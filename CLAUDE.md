@@ -2734,7 +2734,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `if (c.perguntaPendente || c.pedeMaterial) return '6'`, ao lado do que a pergunta pendente ja
   fazia. **Ao escrever excecao, pergunte em quais regras ela precisa existir, nao so naquela em que o
   caso apareceu.** E o `ramos` do verbete entra no mesmo commit.
-- **A PROXIMIDADE LEXICAL DECIDE, E JA CUSTOU TRES PRINTS EM CINCO DIAS.** *"representante"* puxou a
+- **SESSAO NOVA NAO E PESSOA NOVA — tambem para a IA.** Anotacao de 10/09/2026: um audio de apoio de
+  quem tem etiqueta de cidade recebeu *"Somos a equipe do Capitao Martim"* e ele: *"se identificar e
+  quando a pessoa e nova no WhatsApp ou ela perguntou"*. **O bloco do contato MENTIA:** quem volta
+  sozinho abre sessao sem fala NOS, e `montarContatoRascunho` dizia *"e a primeira coisa que o
+  atendimento diz a esta pessoa"*; o aviso `jaFalamos` tambem so olhava a sessao. E a armadilha da
+  Rosa (05/09), que foi consertada na RODADA e nunca chegou a IA. Hoje o painel passa `jaNosConhece`
+  (o `jaRespondemosAntes`), com tres vozes no bloco. **Todo sinal que a rodada aprendeu sobre o
+  contato e que muda o que se ESCREVE tem que ir no bloco do contato** — a IA so sabe o que esta
+  escrito ali.
+- **A FRASE PRONTA DO VOLUNTARIADO TEM PREMISSA, E VIROU A DECIMA TRAVA.** Mesmo caso: *"pra poder te
+  ajudar na votacao"* recebeu *"so voluntarios nao remunerados, mande o endereco"* — a resposta
+  `trabalhar-na-campanha` usada como base (3.22) para quem so apoiava. `trabalhoInexistente` barra o
+  envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
+  ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
+  — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **A PROXIMIDADE LEXICAL DECIDE, E JA CUSTOU QUATRO PRINTS EM SEIS DIAS** (o quarto: *"te ajudar na
+  votacao"* puxou o voluntariado, 10/09). *"representante"* puxou a
   resposta do falar-com-deputado (3.14), *"placa"* puxou a lista de materiais (3.23) e *"E o
   deputado ?"* puxou a regra 8 inteira (3.26, print da Denise) — periodo eleitoral, agenda, WhatsApp
   pessoal, para quem so perguntou **quem esta do outro lado**. Ele: *"dando informacoes alem do

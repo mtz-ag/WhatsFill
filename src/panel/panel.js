@@ -9993,6 +9993,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * distingue "ela não pediu" de "ninguém mediu", e fora da rodada não há sinais.
          */
         pedeMaterial: state.sinais ? !!state.sinais.pedeMaterial : undefined,
+        /**
+         * **Sessão nova não é pessoa nova** (10/09/2026): sem isto o prompt dizia "é a primeira coisa
+         * que o atendimento diz a esta pessoa" a quem tem cidade no CRM, e o rascunho se apresentava.
+         * É o `jaRespondemosAntes` da rodada; fora dela, o botão "Ver conversa anterior".
+         */
+        jaNosConhece: !!(state.sinais?.jaRespondemosAntes || state.temConversaAnterior),
       });
     } catch (err) {
       return { ok: false, enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };
