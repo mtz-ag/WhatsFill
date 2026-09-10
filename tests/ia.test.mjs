@@ -24,6 +24,7 @@ import {
   conferirChapa,
   ELA_SE_DESCULPOU,
   ELA_FALOU_DE_TRABALHO,
+  semConviteAoCaso,
   rascunhoPodeSairSozinho,
   AVISOS_QUE_IMPEDEM_ENVIO,
   validarRascunho,
@@ -1800,25 +1801,25 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
 
   const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
 
-  check(/^11\. DEPOIS DE APONTAR O ÓRGÃO RESPONSÁVEL/m.test(prompt), 'a regra 11 existe');
-  check(/montar ou revisar currículo/.test(prompt), 'e nomeia o curriculo, que foi o exemplo dele');
+  check(/^11\. NÃO SOMOS UM CANAL DE RESOLUÇÃO DE PROBLEMAS/m.test(prompt), 'a regra 11 existe');
+  check(/montar\s+currículo/.test(prompt), 'e nomeia o curriculo, que foi o exemplo dele');
   check(/eu anoto aqui/.test(prompt), 'e o "eu anoto aqui" que saiu na mensagem');
   check(/não tem braço/.test(prompt), 'com a razao dele: o atendimento nao tem braco');
 
   /**
-   * **A ULTIMA LINHA da regra e a guarda dela.** Quem ja procurou o orgao e nao foi atendido e caso
-   * de cobrar o poder publico — esta na propria resposta pronta dele desde sempre, e fechar isso
-   * junto seria trocar um defeito por outro.
+   * **A ULTIMA LINHA da regra SAIU em 10/09/2026, por decisao dele** (print da Irema): *"nos nao
+   * somos um canal de resolucao de problemas, a intencao e ganhar votos"*. Ela mandava pedir que a
+   * pessoa contasse o que aconteceu — e virou triagem de INSS saindo sozinha. A assercao se inverteu.
    */
-  check(/cobrar o poder público/.test(prompt), 'o que CONTINUA sendo nosso trabalho fica escrito');
-  check(/JÁ procurou o órgão e NÃO foi atendida/.test(prompt), 'com a condicao que o libera');
+  check(!/JÁ procurou o órgão e NÃO foi atendida/.test(prompt), 'a linha que mandava pedir o caso saiu');
+  check(!/peça que ela conte o que aconteceu/.test(prompt), 'e nada no prompt manda pedir que ela conte o caso');
 
   /**
    * **A POSICAO e a licao de 07/09**: regra longe do ponto em que o modelo comeca a escrever nao e
    * cumprida. A 11 fecha o bloco das regras, no fim do prompt.
    */
   const linhas = prompt.split('\n');
-  const onze = linhas.findIndex((l) => /^11\. DEPOIS DE APONTAR/.test(l));
+  const onze = linhas.findIndex((l) => /^11\. NÃO SOMOS UM CANAL/.test(l));
   check(onze > linhas.length * 0.8, `a regra 11 fica no fim do prompt (${onze} de ${linhas.length})`);
 }
 
@@ -2097,9 +2098,70 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   check(/ninguém é contratado pelo WhatsApp/.test(p), 'e que ninguem e contratado pelo WhatsApp');
   check(/impressão de que existe chance/.test(p), 'e proibe insinuar chance');
   check(/contratações são limitadas/.test(p), 'com a frase do caso escrita');
-  const i11 = p.indexOf('11. DEPOIS DE APONTAR');
+  const i11 = p.indexOf('11. NÃO SOMOS UM CANAL');
   const i12 = p.indexOf('12. QUEM QUER TRABALHAR');
   check(i11 >= 0 && i12 > i11 && i12 < p.indexOf('TAMANHO:'), 'a regra 12 vem logo depois da 11, antes do TAMANHO');
+}
+
+/**
+ * NAO SOMOS CANAL DE RESOLUCAO DE PROBLEMAS — print da Irema (10/09/2026).
+ *
+ * Uma preocupacao com aposentadoria recebeu, SOZINHA: *"voce ja deu entrada no INSS ou teve o
+ * beneficio negado? Esta faltando documentacao, tem pericia marcada? Se voce ja tentou e nao foi
+ * atendida, conte o que aconteceu que a gente ve como orientar. Fico no aguardo"*. Ele: *"nos nao
+ * somos um canal de resolucao de problemas, a intencao e ganhar votos"*.
+ *
+ * **Medido: zero avisos e `rascunhoPodeSairSozinho` = true.** Metade do texto veio da ultima linha da
+ * regra 11 (escrita por mim) e metade das respostas prontas dele usadas como base.
+ */
+{
+  grupo('nao somos canal de resolucao de problemas (a Irema, 10/09)');
+
+  /** **Sem aviso** — decisao dele: *"eu nao quero aviso, quero que o comportamento da IA mude"*. */
+  check(!('abreCaso' in AVISOS_QUE_IMPEDEM_ENVIO), 'nao ha trava para isto: o que muda e o que a IA le');
+
+  /**
+   * **As frases saem das respostas prontas que a IA le como base** — metade do texto da Irema veio
+   * delas. O texto pronto dele continua intocado; o que muda e o exemplo.
+   */
+  const p = montarSistemaRascunho({ templates: DEFAULT_TEMPLATES, regras: '', gabinete: '' });
+  check(DEFAULT_TEMPLATES.some((t) => /me conta o que aconteceu/.test(t.text)), 'a frase continua no texto pronto dele');
+  check(!/me conta o que aconteceu/.test(p), 'mas nao chega mais a IA como exemplo');
+  check(!/trabalho nosso/.test(p), 'nem o "ai sim e trabalho nosso"');
+  check(/Agência do SINE/.test(p), 'e o resto da resposta pronta (onde se resolve) continua la');
+
+  const tira = (t) => semConviteAoCaso(t) !== t.trim();
+  for (const t of [
+    'Se voce ja procurou e nao foi atendido, me conta o que aconteceu.',
+    'Me explica melhor a sua situacao.',
+    'Fico no aguardo.',
+    'Aguardo seu retorno!',
+    'Me conta mais sobre o seu caso.',
+    'Para eu te orientar, qual o numero do processo?',
+  ]) {
+    check(tira(t), `sai do exemplo: "${t}"`);
+  }
+  /** **O que NAO pode sair** — perguntar o que ela quer, agradecer e dizer onde se resolve. */
+  for (const t of [
+    'Somos a equipe do Capitao Martim, em que podemos ajudar?',
+    'Para eu entender direito e te responder com sinceridade: em que voce precisa de ajuda?',
+    'Obrigado pela confianca! Conte com a gente.',
+    'Pode contar com o Capitao Martim.',
+    'Isso se resolve direto no INSS, pelo 135 ou pelo aplicativo Meu INSS.',
+    'Voce trabalha com o que?',
+  ]) {
+    check(!tira(t), `fica no exemplo: "${t}"`);
+  }
+  check(semConviteAoCaso('Sinto muito. Me conta o que aconteceu. Obrigado pela confianca.') ===
+    'Sinto muito. Obrigado pela confianca.', 'sai a frase inteira, e as vizinhas ficam');
+
+  /** **A regra, nos dois lugares:** no sistema e colada no pedido, onde o modelo escreve. */
+  check(/NÃO SOMOS UM CANAL DE RESOLUÇÃO DE PROBLEMAS/.test(p), 'o prompt de sistema diz com as palavras dele');
+  check(/gostando\s+do Capitão Martim/.test(p), 'e para que a conversa serve');
+  const c = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'estou preocupada com a aposentadoria' }] });
+  const linhas = c.split('\n');
+  const regra = linhas.findIndex((l) => l.startsWith('NÃO SOMOS CANAL'));
+  check(regra >= 0 && regra === linhas.length - 2, 'e repetida no bloco do contato, logo antes do pedido');
 }
 
 /**

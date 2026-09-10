@@ -800,7 +800,8 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
    */
   const exemplos = templates
     .slice(0, 24)
-    .map((t) => `— **${umaLinha(t.name || 'sem nome', 90)}**: ${umaLinha(t.text, 500)}`)
+    // `semConviteAoCaso`: as frases que abrem atendimento do caso não chegam à IA (a Irema, 10/09).
+    .map((t) => `— **${umaLinha(t.name || 'sem nome', 90)}**: ${umaLinha(semConviteAoCaso(t.text), 500)}`)
     .join('\n');
 
   return [
@@ -1225,17 +1226,29 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * verificável → aviso, o resto → prompt. Medido: o rascunho que saiu tinha **um aviso só, não
      * bloqueante**, e `rascunhoPodeSairSozinho` devolvia **true**.
      *
-     * **O que continua sendo nosso trabalho está na última linha da regra**, e é a frase da própria
-     * resposta pronta dele: quem já procurou o órgão e não foi atendido é caso de cobrar o poder
-     * público. Fechar isso junto seria trocar um defeito por outro.
+     * **A última linha desta regra SAIU em 10/09/2026, por decisão dele.** Ela dizia *"se ela JÁ
+     * procurou o órgão e NÃO foi atendida, peça que ela conte o que aconteceu"* — eu a tirei da
+     * resposta pronta dele, e ela virou triagem. Print da Irema: uma preocupação com aposentadoria
+     * recebeu, sozinha e com zero avisos, *"você já deu entrada no INSS ou teve o benefício negado?
+     * Está faltando documentação, tem perícia marcada? Se você já tentou e não foi atendida, conte o
+     * que aconteceu que a gente vê como orientar. Fico no aguardo"*. Ele:
+     *
+     * > *"nós não somos um canal de resolução de problemas, a intenção é ganhar votos"*
+     *
+     * O que a mensagem faz agora é o que ele descreveu: a pessoa sai gostando do Capitão Martim, e o
+     * caso vai para quem resolve. **Ele não quis aviso** (*"quero que o comportamento da IA mude"*):
+     * a regra vai aqui, repetida no fim do bloco do contato, e as frases que convidavam a contar o
+     * caso SAÍRAM das respostas prontas que a IA lê como base (`semConviteAoCaso`).
      */
-    '11. DEPOIS DE APONTAR O ÓRGÃO RESPONSÁVEL (SINE, CRAS, prefeitura, Emprega Brasil, Defensoria),',
-    '    PARE. Não ofereça fazer nada por ela: nada de montar ou revisar currículo, preencher',
-    '    cadastro, agendar consulta, acompanhar processo, "eu anoto aqui", "posso te ajudar a...".',
-    '    **Serviço fora da nossa alçada não se oferece nem de graça** — cada oferta dessas faz a',
-    '    pessoa voltar várias vezes pedindo outras coisas, e o atendimento não tem braço para isso.',
-    '    A ÚNICA continuação que existe é a de sempre: se ela JÁ procurou o órgão e NÃO foi atendida,',
-    '    peça que ela conte o que aconteceu — aí sim é trabalho do mandato cobrar o poder público.',
+    '11. NÃO SOMOS UM CANAL DE RESOLUÇÃO DE PROBLEMAS — a conversa existe para a pessoa sair gostando',
+    '    do Capitão Martim, não para abrir um atendimento do caso dela. Diante de um problema pessoal',
+    '    (INSS, aposentadoria, benefício, saúde, emprego, prefeitura): acolha em UMA frase, diga em UMA',
+    '    frase onde aquilo se resolve (INSS, SINE, CRAS, prefeitura, Defensoria) e agradeça a',
+    '    confiança. **E PARE.** Nada de perguntas sobre o caso ("já deu entrada?", "foi negado?", "tem',
+    '    perícia?"), nada de "conte o que aconteceu", "me explica melhor", "para eu te orientar",',
+    '    "fico no aguardo", "a gente vê como resolver". Não ofereça fazer nada por ela: nada de montar',
+    '    currículo, preencher cadastro, agendar consulta, acompanhar processo, "eu anoto aqui".',
+    '    **Cada pergunta dessas faz a pessoa voltar com o caso inteiro**, e o atendimento não tem braço.',
     /**
      * **Não dê a impressão de que há chance** — anotação da Solange (08/09/2026, lida em 10/09). Ela
      * pediu para trabalhar na campanha e ajuda para ir embora para São Paulo, e o rascunho respondeu
@@ -1645,6 +1658,14 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
           PEDIDO_DE_DADOS_NO_RASCUNHO,
         ].join('\n')
       : '',
+    /**
+     * **A regra 11, colada no pedido** — print da Irema (10/09/2026): *"nós não somos um canal de
+     * resolução de problemas, a intenção é ganhar votos"*. No sistema ela está a milhares de tokens
+     * daqui, e regra longe do ponto em que o modelo escreve não é cumprida (07/09).
+     */
+    'NÃO SOMOS CANAL DE RESOLUÇÃO DE PROBLEMAS: se ela trouxe um problema, acolha em uma frase, diga ' +
+      'onde aquilo se resolve e agradeça a confiança — sem perguntas sobre o caso, sem pedir que ela ' +
+      'conte mais e sem "fico no aguardo". A mensagem é para ela sair gostando do Capitão Martim.',
     'Escreva o rascunho da resposta.',
   ]
     .filter(Boolean)
@@ -1839,6 +1860,42 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
    */
   trabalhoInexistente: 'fala de trabalho voluntário ou remuneração, e ela não falou em trabalhar nem em ganhar — confira o que ela disse',
 };
+
+/**
+ * **As frases que abrem um atendimento do caso** — print da Irema (10/09/2026). Uma preocupação com
+ * aposentadoria recebeu *"você já deu entrada no INSS ou teve o benefício negado?… Se você já tentou e
+ * não foi atendida, conte o que aconteceu que a gente vê como orientar. Fico no aguardo"*. Ele: *"nós
+ * não somos um canal de resolução de problemas, a intenção é ganhar votos"* — e, perguntado por aviso,
+ * *"eu não quero aviso, quero que o comportamento da IA mude"*.
+ *
+ * **De onde veio, medido:** da última linha da regra 11, escrita por mim (*"peça que ela conte o que
+ * aconteceu"*). As respostas prontas `pedido-ajuda` e `pedido-emprego` também terminam com *"me conta o
+ * que aconteceu. Aí sim é trabalho nosso"* — mas os exemplos entram cortados em 500 caracteres e essa
+ * frase fica DEPOIS do corte: a IA nunca a leu ali. Tirá-la dos exemplos é **garantia**, para o dia em
+ * que o corte mudar ou uma resposta pronta curta disser o mesmo; o texto pronto dele fica intocado.
+ *
+ * **O que fica é o CONVITE, não a pergunta:** *"em que podemos ajudar?"* é a pergunta certa para quem
+ * não disse o que quer, e continua lá.
+ */
+const CONVIDA_A_CONTAR_O_CASO = [
+  /(^|[^\p{L}])trabalho\s+nosso/iu,
+  /(^|[^\p{L}])(me\s+)?(conta|conte|contar|explica|explique|explicar|detalha|detalhe|detalhar)\s+(pra\s+mim\s+|para\s+mim\s+)?(o\s+que\s+aconteceu|melhor|mais|os\s+detalhes|a\s+sua\s+situa[çc][ãa]o|o\s+seu\s+caso)/iu,
+  /(^|[^\p{L}])fico\s+no\s+aguardo/iu,
+  /(^|[^\p{L}])aguardo\s+(o\s+|a\s+)?(seu|sua|teu|tua)\s+(retorno|resposta|mensagem|contato)/iu,
+  /(^|[^\p{L}])(a\s+gente|eu|n[óo]s)\s+(v[êe]|vejo|vemos|v[êe]\s+aqui)\s+como\s+(orientar|resolver|ajudar|encaminhar)/iu,
+  /(^|[^\p{L}])para\s+(eu|a\s+gente|que\s+eu)\s+(te\s+|lhe\s+)?(orientar|encaminhar|ver\s+como)/iu,
+];
+
+/**
+ * O texto de uma resposta pronta sem as frases que convidam a contar o caso — é o que a IA lê como
+ * exemplo. Frase a frase: tirar a frase inteira é o que não deixa meia oração pendurada.
+ */
+export function semConviteAoCaso(texto) {
+  return String(texto || '')
+    .split(/(?<=[.!?])\s+|\n+/)
+    .filter((f) => f.trim() && !CONVIDA_A_CONTAR_O_CASO.some((re) => re.test(f)))
+    .join(' ');
+}
 
 /**
  * **Ela falou em TRABALHAR ou em GANHAR?** — o que libera `AVISOS_QUE_IMPEDEM_ENVIO.trabalhoInexistente`.
@@ -2278,7 +2335,6 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
   if (contexto?.elaFalouDeTrabalho === false && FALA_DE_REMUNERACAO.test(texto)) {
     avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.trabalhoInexistente);
   }
-
   /**
    * **Cargo ou número trocado na chapa** — ver `conferirChapa`.
    *

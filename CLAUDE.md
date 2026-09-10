@@ -2676,9 +2676,9 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   e nao e nosso foco"*. **A razao e OPERACIONAL:** cada oferta dessas abre uma porta que alguem vai
   ter de atender depois, e o atendimento nao tem braco. **E a irma do "procure a coordenacao"
   (regra 7) com o sinal trocado** — la a porta prometida nao existia; aqui ela existe e custa caro.
-  **A guarda e a ultima linha da regra:** quem JA procurou o orgao e NAO foi atendida continua sendo
-  caso de cobrar o poder publico — esta na resposta pronta dele desde sempre, e fechar isso junto
-  trocaria um defeito por outro. **Ficou no PROMPT e nao virou trava** porque decidir se a oferta esta
+  ~~A guarda e a ultima linha da regra: quem JA procurou o orgao e NAO foi atendida continua sendo
+  caso de cobrar o poder publico~~ — **desfeito em 10/09/2026 por decisao dele** (a Irema: *"nos nao
+  somos um canal de resolucao de problemas"*); ver a entrada da Irema abaixo. **Ficou no PROMPT e nao virou trava** porque decidir se a oferta esta
   dentro da alcada exige saber qual e a alcada, e isso e julgamento. Medido no texto que saiu: um
   aviso so, nao bloqueante, e `rascunhoPodeSairSozinho` **true**.
 - **RECLAMAR DE NAO TER SIDO ATENDIDA E TECLA 6** — decisao dele (09/09/2026), sobre a frase do
@@ -2749,6 +2749,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **NAO SOMOS CANAL DE RESOLUCAO DE PROBLEMAS — A INTENCAO E GANHAR VOTOS** (decisao dele,
+  10/09/2026, print da Irema). Uma preocupacao com aposentadoria recebeu, sozinha e com zero avisos,
+  triagem de INSS (*"ja deu entrada? foi negado? tem pericia? conte o que aconteceu... fico no
+  aguardo"*). **O convite veio da ultima linha da regra 11, escrita por MIM** a partir da resposta
+  pronta dele. Eu culpei tambem as respostas prontas `pedido-ajuda`/`pedido-emprego` (terminam com
+  *"me conta o que aconteceu"*) e a medicao desmentiu: **os exemplos entram cortados em 500
+  caracteres e a frase fica depois do corte** — antes de culpar um exemplo, confira o que do exemplo
+  CHEGA ao prompt. Eu fiz uma trava e ele cortou: *"eu nao quero aviso, quero que o comportamento da
+  IA mude"*. **Quando ele descreve um COMPORTAMENTO, o conserto e o que a IA le, nao uma trava
+  depois:** a regra 11 foi reescrita e repetida no fim do bloco do contato; tirar as frases dos
+  exemplos (`semConviteAoCaso`) ficou como garantia, com o texto pronto dele intocado.
 - **NAO HA CHANCE DE SER CONTRATADO, E A IA NAO PODE INSINUAR** (anotacao da Solange, 08/09, lida
   em 10/09): *"as contratacoes sao bem limitadas e as decisoes saem da assessoria"*. Regra dele:
   *"contratos de eleicao sao decididos na pre-campanha, nunca iremos contratar ninguem pelo

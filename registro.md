@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.30.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.31.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,13 +10,19 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.30.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.31.0**, tudo commitado e no remoto.
 
-> **Os números abaixo são da 3.27.** Da 3.30, remedido: 15 suítes verdes, 40 arquivos limpos, e o
+> **Os números abaixo são da 3.27.** Da 3.31, remedido: 15 suítes verdes, 40 arquivos limpos, e o
 > prompt de sistema do rascunho com **~9.017 tokens** sem dossiê (o dossiê injetado soma ~3.351).
-> **Em 10/09 foram três versões a partir de um lote de observações e uma print:** 3.28 (apoio não é
-> pedido de trabalho; sessão nova não é pessoa nova), 3.29 (o que ele foi está no dossiê) e 3.30
-> (não há chance de ser contratado).
+> **Em 10/09 foram quatro versões:** 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
+> nova), 3.29 (o que ele foi está no dossiê), 3.30 (não há chance de ser contratado) e 3.31 (**não
+> somos canal de resolução de problemas** — a regra 11 reescrita, repetida no bloco do contato, e as
+> frases que convidam a contar o caso tiradas dos exemplos que a IA lê; **sem trava, a pedido dele**).
+>
+> **Decisão aberta com ele (3.31):** as respostas prontas `pedido-ajuda` e `pedido-emprego` (dele)
+> terminam com *"me conta o que aconteceu. Aí sim é trabalho nosso: cobrar o poder público"* — o
+> contrário do que ele disse em 10/09. A IA não vê mais essas frases; o texto pronto, se sair por
+> tecla ou por anúncio, continua dizendo. Não mexi: o texto é dele.
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **27 regras** na
@@ -277,6 +283,52 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — Não somos canal de resolução de problemas (v3.31.0)
+
+Print da Irema (10/09, saiu sozinha às 10:58 e concluiu). Ela falou de uma preocupação com a
+aposentadoria e recebeu: *"Para eu entender melhor e te orientar com sinceridade: você já deu entrada
+no INSS ou teve o benefício negado? Está faltando documentação, tem perícia marcada ou outro problema?
+Se você já tentou e não foi atendida, conte o que aconteceu que a gente vê como orientar. Agradeço a
+mensagem. Fico no aguardo para poder ajudar da melhor forma."* Ele:
+
+> *"nós não somos um canal de resolução de problemas, a intenção é ganhar votos"*
+
+### Medido
+
+- **Zero avisos, e `rascunhoPodeSairSozinho` = true.** Nada no texto promete, afirma ou pede endereço.
+- **O convite a contar o caso veio da regra 11, escrita por mim** na 3.21 (a Bia): a última linha
+  mandava *"se ela JÁ procurou o órgão e NÃO foi atendida, peça que ela conte o que aconteceu"*. Eu a
+  tirei da resposta pronta dele e a chamei de "guarda".
+- **As respostas prontas dele NÃO foram a fonte**, embora digam o mesmo (*"me conta o que aconteceu.
+  Aí sim é trabalho nosso"*): os exemplos entram cortados em **500 caracteres**, e a frase fica depois
+  do corte. Eu havia escrito o contrário antes de medir, e corrigi.
+
+### O conserto — sem trava, a pedido dele
+
+Eu tinha feito uma trava (`abreCaso`) e ele cortou: *"eu não quero aviso, quero que o comportamento
+da IA mude para o que falei"*. Ela foi retirada. O que muda é o que a IA lê:
+
+1. **A regra 11 reescrita** com as palavras dele: não somos canal de resolução de problemas, a
+   conversa existe para a pessoa sair gostando do Capitão Martim. Diante de problema pessoal: acolha
+   em uma frase, diga onde se resolve em uma frase, agradeça — e pare. As frases do caso vão escritas
+   como proibidas. A linha do "conte o que aconteceu" **saiu**.
+2. **A mesma regra no fim do bloco do contato**, logo antes de "Escreva o rascunho" — a do sistema
+   fica a milhares de tokens do ponto em que o modelo escreve.
+3. **Garantia nos exemplos:** `semConviteAoCaso` tira das respostas prontas, frase a frase, os
+   convites a contar o caso antes de a IA ler. Hoje não muda nada (o corte já os escondia); protege o
+   dia em que o corte mudar. O texto pronto dele continua intocado.
+
+> **Decisão aberta com ele:** `pedido-ajuda` e `pedido-emprego` terminam com *"me conta o que
+> aconteceu. Aí sim é trabalho nosso: cobrar o poder público"*. Quando saem por tecla ou por anúncio,
+> dizem o contrário do que ele decidiu hoje. Não mexi: o texto é dele.
+
+**O que isto NÃO garante:** nenhuma trava confere o texto que volta, por decisão dele. A mudança é de
+prompt, medida lendo o prompt gerado — não há como medir a resposta do modelo daqui.
+
+15 suítes verdes, verificadores limpos. Prompt de sistema: ~9.075 tokens. **Sem importação de fluxo.**
+
 ---
 
 ## 2026-09-10 — Trabalhar na campanha: não há chance, e a IA não insinua (v3.30.0)
