@@ -1253,6 +1253,16 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      */
     gabinete ? `Quem é quem neste mandato (informação da assessoria — use-a como fonte e não invente o que não estiver aqui):\n${gabinete}\n` : '',
     /**
+     * **"Vou verificar e volto" para o que está no bloco acima** — print do Fernando Britto
+     * (10/09/2026). Perguntaram se ele foi bombeiro e comandante dos salva-vidas; o rascunho disse que
+     * ia verificar. Ele: *"se não tem nenhuma informação a respeito é só falar o que ele foi e deu"*.
+     * A regra está no dossiê (item 2) e é repetida aqui, colada no bloco, porque regra longe do ponto
+     * em que o modelo escreve não é cumprida.
+     */
+    gabinete
+      ? 'Perguntaram o que o Capitão Martim FOI ou FEZ e o bloco acima não fala disso? Diga o que o bloco diz sobre a carreira dele e PARE — sem "vou verificar", sem "volto a responder", sem confirmar nem negar o resto.\n'
+      : '',
+    /**
      * **As instruções dele mandam sobre o ESTILO, e nunca sobre as proibições** — escrito assim
      * depois de ele perguntar *"a IA não segue todas as instruções?"* (05/09/2026). O que é
      * mecânico (o traço eme) virou conserto em `revisarRascunho`; o que depende de julgamento

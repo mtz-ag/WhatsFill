@@ -2065,6 +2065,20 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
 }
 
 /**
+ * "VOU VERIFICAR E VOLTO" PARA O QUE ESTA NO DOSSIE — print do Fernando Britto (10/09/2026). A regra
+ * vai colada no bloco do dossie, e so quando ele esta no prompt.
+ */
+{
+  grupo('o que ele foi: diga o que o dossie diz e pare (o Fernando, 10/09)');
+  const com = montarSistemaRascunho({ templates: [], regras: '', gabinete: 'Carreira: Marinha do Brasil' });
+  const sem = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/FOI ou FEZ/.test(com), 'com o dossie, a regra vai junto');
+  check(com.indexOf('FOI ou FEZ') > com.indexOf('Carreira: Marinha'), 'e vai DEPOIS do bloco, colada nele');
+  check(/sem "vou verificar"/.test(com), 'proibindo o "vou verificar"');
+  check(!/FOI ou FEZ/.test(sem), 'sem dossie, a regra nao entra (nao ha o que dizer)');
+}
+
+/**
  * "E O DEPUTADO?" NAO E PEDIR PARA FALAR COM ELE — print da Denise (09/09/2026).
  *
  * Ela escreveu *"Oiii"* e *"E o deputado ?"*, e o rascunho respondeu com a regra 8 inteira: periodo

@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.28.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.29.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,10 +10,11 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.28.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.29.0**, tudo commitado e no remoto.
 
-> **Os números abaixo são da 3.27.** Da 3.28, remedido: 15 suítes verdes, 40 arquivos limpos, e o
-> prompt de sistema do rascunho com **8.846 tokens** (as 21 respostas prontas de fábrica).
+> **Os números abaixo são da 3.27.** Da 3.29, remedido: 15 suítes verdes, 40 arquivos limpos, e o
+> prompt de sistema do rascunho com **8.846 tokens** sem dossiê e **~12.289** com ele (o dossiê
+> injetado tem 11.730 caracteres, ~3.351 tokens).
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **27 regras** na
@@ -274,6 +275,47 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — "O que ele foi" está no dossiê: diga e pare (v3.29.0)
+
+Print do Fernando Britto (10/09). Ele perguntou se o Capitão Martim foi dos bombeiros e comandante
+dos salva-vidas em Imbé, e o rascunho respondeu *"Não quero te passar informação errada. Vou
+verificar se ele foi bombeiro e comandante dos salva-vidas em Imbé e volto a responder por aqui"*.
+Ele apagou: *"essa informação não está no dossiê? se não tem nenhuma informação a respeito é só
+falar o que ele foi e deu"*.
+
+### Medido
+
+- **Está no dossiê**, desde 01/09 e `[CONFIRMADO]`: *Marinha do Brasil (2005–2020), operações
+  especiais e contraterrorismo; atuou nos Jogos Olímpicos de 2016*. Nada sobre bombeiros.
+- **Duas causas, e qualquer uma basta para a print:**
+  1. **A pergunta sem o nome dele não puxava o dossiê.** `precisaDoDossie("ele era dos bombeiros,
+     foi cmt dos salva vidas no Imbe?")` → **false**; com "O capitão era…" → true. Não dá para saber
+     qual das duas formas ele escreveu (a print corta a linha de cima), então as duas foram tratadas.
+  2. **Com o dossiê, a regra 2 dele mandava ESCALAR** o que não estivesse escrito — linguagem do
+     tempo em que a IA escolhia resposta pronta. No rascunho, "escalar" vira *"vou verificar e
+     volto"*: uma promessa de retorno que ninguém vai cumprir, para uma pergunta cuja resposta útil
+     estava no próprio bloco.
+
+### O conserto
+
+1. **Gatilho de carreira** em `gabinete.GATILHOS`: bombeiro, Marinha, Exército, fuzileiro,
+   salva-vidas, `cmt`, comandante, profissão, carreira, trajetória, "formado em", "antes de ser
+   deputado", "o que ele fazia/fez/era/foi" e `militar` — **nunca depois de hífen**, porque o anúncio
+   *"Escolas Cívico-Militares"* chega em quase toda conversa e puxaria o dossiê para todas. `polícia`
+   e `brigada` ficaram de fora pelo mesmo motivo: segurança é a pauta dele.
+2. **A exceção no item 2 do dossiê**: perguntaram o que ele FOI ou FEZ e não está escrito? Diga o que
+   ESTÁ escrito sobre a carreira e pare — sem confirmar nem negar o resto, sem "vou verificar".
+3. **A mesma frase colada logo depois do bloco do dossiê no prompt** (só quando ele entra), porque
+   regra longe do ponto em que o modelo escreve não é cumprida.
+
+A resposta que ele descreveu cabe numa linha: *"ele foi da Marinha do Brasil, de 2005 a 2020, em
+operações especiais"* — responde a pergunta sem negar nada que não esteja escrito.
+
+15 suítes verdes (+17 asserções, 3 delas sobre o que NÃO pode puxar), verificadores limpos. **Sem
+importação de fluxo.**
+
 ---
 
 ## 2026-09-10 — Apoio não é pedido de trabalho, e sessão nova não é pessoa nova (v3.28.0)

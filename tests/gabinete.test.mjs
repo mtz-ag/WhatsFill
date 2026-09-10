@@ -82,4 +82,45 @@ grupo('acento não pode furar o gatilho');
   }
 }
 
+/**
+ * **O que ele FOI puxa o dossie** — print do Fernando Britto (10/09/2026): perguntaram se ele foi
+ * bombeiro e comandante dos salva-vidas, e o rascunho respondeu *"vou verificar e volto"*. A carreira
+ * (Marinha, 2005-2020) esta no dossie desde 01/09 — e a pergunta sem o nome dele nao o puxava.
+ */
+{
+  grupo('carreira: o que ele foi puxa o dossie (o Fernando, 10/09)');
+
+  for (const t of [
+    'ele era dos bombeiros, foi cmt dos salva vidas no Imbe?',
+    'ele foi bombeiro?',
+    'era da Marinha ou do Exército?',
+    'ele é militar?',
+    'qual a profissão dele antes de ser deputado?',
+    'o que ele fazia antes?',
+    'foi comandante de onde?',
+  ]) {
+    check(precisaDoDossie([t]), `puxa: "${t}"`);
+  }
+
+  /**
+   * **O anuncio das Escolas Civico-Militares chega em quase toda conversa** — `militar` depois de
+   * hifen nao pode puxar, senao o dossie entra em toda chegada. Estas asercoes travam isso.
+   */
+  for (const t of [
+    'Olá! Eu apoio as Escolas Cívico-Militares 🤝',
+    'sou a favor da escola cívico-militar',
+    'obrigado pelo trabalho, bom dia',
+  ]) {
+    check(!precisaDoDossie([t]), `NAO puxa (e nao pode puxar): "${t}"`);
+  }
+
+  /** **E a regra de o que responder esta na parte do arquivo que chega a IA** (linhas `> ` saem). */
+  const { readFileSync } = await import('node:fs');
+  const md = readFileSync(new URL('../src/data/gabinete.md', import.meta.url), 'utf8')
+    .split('\n').filter((l) => !l.startsWith('> ')).join('\n').split('## Espaço do Thiago')[0];
+  check(/Marinha do Brasil \(2005–2020\)/.test(md), 'a carreira dele esta no que vai para o prompt');
+  check(/o que o Capitão Martim FOI ou FEZ/.test(md), 'e a regra de responder com ela, tambem');
+  check(/não diga que vai verificar e voltar/.test(md), 'sem "vou verificar e volto"');
+}
+
 fim();

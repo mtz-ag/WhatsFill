@@ -151,6 +151,18 @@ const GATILHOS = [
    * e ele existe justamente para entrar só quando a conversa pede (pedido dele, 01/09).
    */
   /\bcristao\b|\bcatolic|\bevangelic|\breligi|\bigreja\b|\bpastor\b|\bpadre\b/,
+  /**
+   * **O que ele FOI** — print do Fernando Britto (10/09/2026): *"…bombeiros, foi cmt dos salva-vidas
+   * no Imbé?"*, e o rascunho respondeu *"vou verificar se ele foi bombeiro e volto a responder"*. Ele:
+   * *"essa informação não está no dossiê?"* — **está**: a carreira dele (Marinha, 2005–2020) é
+   * `[CONFIRMADO]` desde 01/09. Medido: a pergunta sem o nome dele (*"ele era dos bombeiros?"*) **não
+   * puxava o dossiê**, e a IA escreveu sem saber nada.
+   *
+   * **`militar` não pode vir depois de hífen:** o anúncio *"Escolas Cívico-Militares"* chega em
+   * quase toda conversa, e puxaria o dossiê para todas. `policia` e `brigada` ficaram de fora pelo
+   * mesmo motivo — segurança é a pauta dele, e aparecem em metade das falas.
+   */
+  /\bbombeir|\bmarinha\b|\bexercito\b|\bfuzileir|\bsalva.?vidas\b|\bcmt\b|\bcomandante\b|\bprofiss|\bcarreira\b|\btrajetoria\b|\bformad[oa] em\b|antes de ser (deputad|politic)|o que ele (fazia|fez|era|foi)\b|(^|[^-a-z])militar\b/,
 ];
 
 /**

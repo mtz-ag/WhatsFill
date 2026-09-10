@@ -2749,6 +2749,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **"ESCALAR" NO DOSSIE VIRAVA "VOU VERIFICAR E VOLTO" NO RASCUNHO.** Print do Fernando Britto
+  (10/09/2026): perguntaram se ele foi bombeiro e comandante dos salva-vidas, e o rascunho prometeu
+  verificar e voltar — com a carreira dele (Marinha, 2005–2020) `[CONFIRMADO]` no dossiê desde 01/09.
+  Ele: *"se não tem nenhuma informação a respeito é só falar o que ele foi e deu"*. **Duas causas:**
+  a pergunta sem o NOME dele não puxava o dossiê (os gatilhos eram nomes, cargos e partidos), e a
+  regra 2 do dossiê mandava *escalar* — linguagem de quando a IA escolhia resposta pronta, que no
+  rascunho vira promessa de retorno. **Ao reler instrução antiga para a IA, confira se o verbo ainda
+  existe no caminho de hoje.** E `militar` no gatilho nunca depois de hífen: o anúncio *"Escolas
+  Cívico-Militares"* chega em quase toda conversa.
 - **A PROXIMIDADE LEXICAL DECIDE, E JA CUSTOU QUATRO PRINTS EM SEIS DIAS** (o quarto: *"te ajudar na
   votacao"* puxou o voluntariado, 10/09). *"representante"* puxou a
   resposta do falar-com-deputado (3.14), *"placa"* puxou a lista de materiais (3.23) e *"E o
