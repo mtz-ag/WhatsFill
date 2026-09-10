@@ -1999,6 +1999,33 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(!ap('vamos vencer essa doenca'), 'mas "vencer essa doenca" nao e apoio');
   check(!ap('vamos ganhar coragem'), 'nem "ganhar coragem"');
 
+  /**
+   * **O voto tem de ser em NOS, e o "nao" colado desfaz** — print do odone (10/09/2026): *"PRECISAMOS
+   * AVISAR TODOS PARA NAO VOTAREM NO RIGOTTO, porque ele apoiou o Lula em 2022... AJUDEM A
+   * DIVULGAR"* recebeu o agradecimento pelo apoio. Ele: *"de onde saiu mensagem de apoio? nesse caso
+   * era mensagem do momento"*. O padrao aceitava `votarem no` + qualquer nome.
+   */
+  check(!ap('PRECISAMOS AVISAR TODOS PARA NÃO VOTAREM NO RIGOTTO, porque ele apoiou o Lula em 2022. Está empatado com Sanderson. AJUDEM A DIVULGAR.'),
+    'a corrente do odone nao e apoio');
+  /**
+   * **O apoio conta so se for para OS DA COLINHA** — regra dele, com a arte: *"se o apoio nao for para
+   * eles a regra de mandar obrigado pelo apoio nao deve contar"*. Partido e "direita" sozinhos nao
+   * sao eles.
+   */
+  for (const t of ['votem no Lula', 'vou votar na Manuela', 'ninguem deve votar no PT', 'nao votem nele',
+    'nunca vou votar no senhor', 'nao apoio esse governo', 'eu apoio o Lula', 'meu voto e do Lula',
+    'vou votar no PL', 'vamos votar na direita', 'voto no Republicanos', 'eu apoio a greve dos professores']) {
+    check(!ap(t), `NAO e apoio: "${t}"`);
+  }
+  for (const t of ['estou falando com minhas amigas para votarem no Senhor', 'vou votar nele pq confio',
+    'voto no 22', 'votamos no capitao', 'vou votar em voces', 'nao tenho duvida, vou votar no senhor',
+    'Não vejo a hora de votar em vocês', 'eu apoio', 'meu voto e seu', 'nosso voto',
+    'votem no Zucco', 'vou votar no Sanderson', 'voto no Van Hattem', 'vou votar no Felipe Pedri',
+    'voto no 10122', 'eu apoio o Flavio, Zucco e Capitao Martim', 'meu voto e do capitao',
+    'sou Bolsonaro desde sempre']) {
+    check(ap(t), `continua sendo apoio: "${t}"`);
+  }
+
   // "eleitor" precisa do SEU: "sou eleitor de X" e endereco.
   check(ap('sou seu eleitor'), '"sou seu eleitor" e apoio');
   check(ap('sou eleitor'), 'e sozinho tambem');

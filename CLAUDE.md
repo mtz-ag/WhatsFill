@@ -2749,6 +2749,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **O APOIO SO CONTA SE FOR PARA OS SEIS DA COLINHA** (regra dele, 10/09/2026, com a arte). Print do
+  odone: *"PARA NAO VOTAREM NO RIGOTTO... AJUDEM A DIVULGAR"* recebeu o agradecimento pelo apoio,
+  porque o padrao de voto aceitava `votarem no` + QUALQUER nome e ignorava o "nao". Medido, o mesmo
+  furo estava em `vou votar na Manuela`, `meu voto e do Lula` e `eu apoio o Lula`. Hoje os padroes
+  COM objeto so contam se o objeto estiver em `NOS_OS_DA_COLINHA` (os seis + "o senhor", "voces",
+  "a chapa"), e `NEGACAO_LOGO_ANTES` desfaz a expressao. **Partido e "direita" sozinhos nao contam**
+  — o Ciro continua apoio pelo *"sou Bolsonaro"*. **E a quinta vez da mesma licao: o que qualifica o
+  apoio e o OBJETO**, e ao consertar um padrao confira os vizinhos com o mesmo formato. A lista e
+  copia da chapa de `gabinete.md`: mudou a colinha, mudam os dois.
 - **NAO SOMOS CANAL DE RESOLUCAO DE PROBLEMAS — A INTENCAO E GANHAR VOTOS** (decisao dele,
   10/09/2026, print da Irema). Uma preocupacao com aposentadoria recebeu, sozinha e com zero avisos,
   triagem de INSS (*"ja deu entrada? foi negado? tem pericia? conte o que aconteceu... fico no

@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.31.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.32.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,11 +10,11 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.31.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.32.0**, tudo commitado e no remoto.
 
-> **Os números abaixo são da 3.27.** Da 3.31, remedido: 15 suítes verdes, 40 arquivos limpos, e o
+> **Os números abaixo são da 3.27.** Da 3.32, remedido: 15 suítes verdes, 40 arquivos limpos, e o
 > prompt de sistema do rascunho com **~9.017 tokens** sem dossiê (o dossiê injetado soma ~3.351).
-> **Em 10/09 foram quatro versões:** 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
+> **Em 10/09 foram cinco versões** (a 3.32: **o apoio só conta se for para os seis da colinha**): 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
 > nova), 3.29 (o que ele foi está no dossiê), 3.30 (não há chance de ser contratado) e 3.31 (**não
 > somos canal de resolução de problemas** — a regra 11 reescrita, repetida no bloco do contato, e as
 > frases que convidam a contar o caso tiradas dos exemplos que a IA lê; **sem trava, a pedido dele**).
@@ -283,6 +283,52 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — O apoio só conta se for para os seis da colinha (v3.32.0)
+
+Print do odone (Passo Fundo, 10/09). Links do Facebook na noite anterior e, às 09:53, uma corrente:
+*"PRECISAMOS AVISAR TODOS PARA NÃO VOTAREM NO RIGOTTO, porque ele apoiou o Lula em 2022. Está
+empatado com Sanderson. AJUDEM A DIVULGAR. Esse cara está dividindo os votos da Direita e corremos o
+risco de eleger a Manuela"*. Às 11:48 saiu *"Muito obrigado pelo apoio e pelo carinho — palavra como
+a sua dá força para seguir"* — ele apagou: *"de onde saiu mensagem de apoio? nesse caso era mensagem
+do momento"*. E, com a arte "Candidatos do Bolsonaro no Rio Grande do Sul": *"se o apoio não for
+para eles a regra de mandar obrigado pelo apoio não deve contar"*.
+
+### Medido
+
+- **O texto é byte a byte a resposta pronta `agradecer-apoio`** — foi o determinístico, tecla `i`,
+  não a IA.
+- **Quem casou foi `soExpressaApoio`, pelo trecho "PARA NÃO VOTAREM NO RIGOTTO".** O padrão de
+  declaração de voto (nascido da Maria Bernardete, *"para votarem no Senhor"*) aceitava `votarem no`
+  seguido de QUALQUER nome e não olhava o "não" antes. As outras três frases não casavam.
+- **O critério de tempo não salvou** porque `deOutroDia` olha a ÚLTIMA mensagem, e a corrente era de
+  hoje (09:53).
+- **Sem o apoio falso, a tabela e o quadro dão tecla 5 (mensagem do momento)**, porque o modelo já
+  tinha saído — ele estava certo. Só daria o modelo (tecla 1) para quem nunca o recebeu.
+- **A mesma falha em mais dois padrões**, achada escrevendo o teste: `vou votar na Manuela` e
+  `meu voto é do Lula` também eram apoio, e `eu apoio o Lula` idem.
+
+### O conserto
+
+1. **`NOS_OS_DA_COLINHA`** — lista de PERMISSÃO com os seis da arte (Flávio Bolsonaro 22, Zucco 22,
+   Sanderson 222, Marcel Van Hattem 300, Felipe Pedri 2228, Capitão Martim 10122) e as formas de
+   falar com NÓS (o senhor, vocês, a chapa, a campanha, o mandato). Os quatro padrões com objeto
+   (`eu apoio o X`, `vou votar no X`, `votarem no X`, `meu voto é do X`) só contam se X estiver nela;
+   sem objeto (*"eu apoio"*, *"vou votar"*, *"meu voto"*) continuam valendo.
+2. **Partido e "direita" sozinhos deixaram de contar** (*"vou votar no PL"*): pela regra dele, apoio
+   que não é para eles não conta. **O Ciro (31/08) continua sendo apoio** — além do PL ele escreveu
+   *"sou Bolsonaro desde sempre"*, que passou a valer como *"sou bolsonarista"*.
+3. **Negação colada desfaz a expressão** (`NEGACAO_LOGO_ANTES`): "não", "nunca", "jamais" ou "nem"
+   logo antes, com no máximo uma palavra no meio. *"Não tenho dúvida, vou votar no senhor"* continua
+   apoio.
+
+> **A lista mora em `cortesia.js` e a chapa em `gabinete.md`** — `cortesia` é puro e síncrono e não
+> lê arquivo. Mudou a colinha, mudam os dois.
+
+15 suítes verdes (+31 asserções, 13 delas sobre o que NÃO pode contar como apoio), verificadores
+limpos. **Sem importação de fluxo.**
+
 ---
 
 ## 2026-09-10 — Não somos canal de resolução de problemas (v3.31.0)

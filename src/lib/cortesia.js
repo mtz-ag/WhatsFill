@@ -821,8 +821,23 @@ const PEDIDO_DE_MATERIAL = /(^|[^\p{L}])(manda|mande|envia|envie|me\s+passa|quer
 const DESPEDIDA_AMARGA =
   /(^|[^\p{L}])(obrigad[oa]\s+por\s+nada|valeu\s+por\s+nada|deixa\s+(pra|para)\s+la|deixa\s+quieto|esquece\s+entao)/iu;
 
+/**
+ * **PARA QUEM é o apoio — os seis da colinha, e ninguém mais.** Regra dele (10/09/2026), com a arte
+ * "Candidatos do Bolsonaro no Rio Grande do Sul": *"se o apoio não for para eles a regra de mandar
+ * obrigado pelo apoio não deve contar"*. Nasceu da print do odone: *"PARA NÃO VOTAREM NO RIGOTTO"*
+ * recebeu o agradecimento pelo apoio, porque os padrões de voto aceitavam qualquer nome depois da
+ * preposição.
+ *
+ * **Lista de PERMISSÃO**: Flávio Bolsonaro (22), Zucco (22), Sanderson (222), Marcel Van Hattem (300),
+ * Felipe Pedri (2228) e Capitão Martim (10122), mais as formas de falar com NÓS (o senhor, vocês, a
+ * chapa, a campanha, o mandato). **Partido e "direita" ficaram de fora**: apoio a partido não é apoio
+ * a eles. É a mesma chapa de `gabinete.md` — mudou a colinha, muda aqui.
+ */
+const NOS_OS_DA_COLINHA = String.raw`(o\s+|a\s+)?(senhor|senhora|capit[aã]o|martim|voc[eê]s?|vcs?|chapa|campanha|mandato|fl[aá]vio|bolsonaro|zucco|sanderson|van\s+hattem|hattem|marcel|felipe|pedri|10122|2228|300|222|22)([^\p{L}\d]|$)`;
+
 const EXPRESSOES_DE_APOIO = [
-  /(^|[^\p{L}])(eu\s+)?apoio(\s|$|,|!|\.)/iu
+  /** "eu apoio" sozinho é apoio; "eu apoio o Lula" não — com objeto, o objeto tem de ser eles. */
+  new RegExp(String.raw`(^|[^\p{L}])(eu\s+)?apoio(?!\s+(o|a|os|as|ao|aos|à|às)\s+(?!${NOS_OS_DA_COLINHA}))(\s|$|,|!|\.)`, 'iu')
 ,
   /**
    * **"junto" vale sozinho; "com" precisa do OBJETO** — print da Elenir (05/09/2026).
@@ -870,7 +885,11 @@ const EXPRESSOES_DE_APOIO = [
    */
   /(^|[^\p{L}])(n[oó]s\s+)?vamos\s+(vencer|ganhar)(\s+(essa|esta|a)\s+(elei[çc][ãa]o|disputa|campanha|batalha))?(\s*[!.,]*\s*$)/iu,
   /(^|[^\p{L}])(n[oó]s\s+)?vamos\s+(vencer|ganhar)\s+(essa|esta|a)\s+(elei[çc][ãa]o|disputa|campanha)/iu,
-  /(^|[^\p{L}])(vou|vamos)\s+votar(\s|$)/iu,
+  /**
+   * **"vou votar" sozinho é apoio; "vou votar NA MANUELA" não** (o odone, 10/09/2026) — o mesmo
+   * defeito do padrão do objeto, mais abaixo: com preposição, o voto tem de ser em nós.
+   */
+  new RegExp(String.raw`(^|[^\p{L}])(vou|vamos)\s+votar(?!\s+(no|na|em|pro|pra|para)\s+(?!${NOS_OS_DA_COLINHA}))(\s|$)`, 'iu'),
   /**
    * **"eleitor" e "fã" precisam do SEU — "sou eleitor de Caxias do Sul" é endereço, não apoio.**
    *
@@ -879,7 +898,8 @@ const EXPRESSOES_DE_APOIO = [
    */
   /(^|[^\p{L}])sou\s+(seu|sua)\s+(eleitor|eleitora|f[aã])(\s|$|!|,|\.)/iu,
   /(^|[^\p{L}])sou\s+(eleitor|eleitora|f[aã])\s*(seu|de\s+voc[eê]s?|do\s+senhor|do\s+capit[ãa]o|do\s+martim)?\s*[!.,]*\s*$/iu,
-  /(^|[^\p{L}])sou\s+bolsonarist[ao]\b/iu,
+  // "sou Bolsonaro desde sempre" (o Ciro, 31/08) é o mesmo que "sou bolsonarista": os candidatos são dele.
+  /(^|[^\p{L}])sou\s+(bolsonarist[ao]|bolsonaro)\b/iu,
 
   /**
    * **Declaração de VOTO é declaração de apoio** — três anotações antes de eu ver o padrão.
@@ -898,11 +918,25 @@ const EXPRESSOES_DE_APOIO = [
    * a mensagem ("22 com toda certeza") ou colado num verbo de votar.
    */
   // `vot\w*` cobre "votarem", "votassem", "votando" — a conjugação real não cabe numa lista.
-  /(^|[^\p{L}])vot\w*\s+(no|na|em|pro|pra|neste|nesse|nele|nela|neles|nelas|voc[eê]s?)(\s|$)/iu,
-  /(^|[^\p{L}])(meu|nosso|meus|nossos)\s+votos?(\s|$|!|,|\.)/iu,
+  /**
+   * **O voto tem de ser em NÓS** — print do odone (10/09/2026): *"PRECISAMOS AVISAR TODOS PARA NÃO
+   * VOTAREM NO RIGOTTO, porque ele apoiou o Lula... AJUDEM A DIVULGAR"* recebeu o agradecimento pelo
+   * APOIO. Ele: *"de onde saiu mensagem de apoio?"*. Medido: casava aqui, porque o padrão aceitava
+   * `votarem no` seguido de QUALQUER nome — o do adversário inclusive. É a lição do "estou com"
+   * (05/09) no voto: **o que qualifica é o objeto ser NÓS.** Os pronomes ficam (*"vou votar nele"* é
+   * dito do candidato a nós), e a negação logo antes é conferida em `soExpressaApoio`.
+   *
+   * **Para quem conta é a colinha** (`NOS_OS_DA_COLINHA`, regra dele de 10/09).
+   */
+  new RegExp(String.raw`(^|[^\p{L}])vot\w*\s+((no|na|em|pro|pra|para)\s+${NOS_OS_DA_COLINHA}|(neste|nesse|nele|nela|neles|nelas|voc[eê]s?)(\s|$|!|,|\.))`, 'iu'),
+  /** "meu voto" sozinho é apoio; "meu voto é do Lula" não. */
+  new RegExp(String.raw`(^|[^\p{L}])(meu|nosso|meus|nossos)\s+votos?(?!\s+(é\s+|e\s+|vai\s+(ser\s+)?|ser[aá]\s+|est[aá]\s+)?(do|da|dos|pro|pra|no|na|para|em)\s+(?!${NOS_OS_DA_COLINHA}))(\s|$|!|,|\.)`, 'iu'),
   /(^|[^\p{L}])(vot(o|a|ar|am|em|amos)|somos|sou|[eé])\s*(no\s+)?22(\s|$|!|,|\.)/iu,
   /^\s*22(\s|$|!|,|\.)/u,
 ];
+
+/** "não", "nunca", "jamais", "nem" no fim do trecho — com no máximo uma palavra depois. */
+const NEGACAO_LOGO_ANTES = /(^|[^\p{L}])(n[ãa]o|nunca|jamais|nem)([^\p{L}]+\p{L}+)?[^\p{L}]*$/iu;
 
 /**
  * Ela disse que VAI ou que NÃO VAI ao evento?
@@ -2037,7 +2071,13 @@ export function soExpressaApoio(entrantes, nossaUltimaAt, padroesDeAnuncio = [])
   if (PEDIDO_DE_MATERIAL.test(dela)) return null;
 
   for (const padrao of EXPRESSOES_DE_APOIO) {
-    if (padrao.test(dela)) {
+    const achou = padrao.exec(dela);
+    /**
+     * **A negação logo antes desfaz a expressão** — *"para NÃO votarem no..."*, *"não apoio"* (o
+     * odone, 10/09/2026). Só conta o "não" colado, com no máximo uma palavra no meio: *"não tenho
+     * dúvida, vou votar no senhor"* continua sendo apoio.
+     */
+    if (achou && !NEGACAO_LOGO_ANTES.test(dela.slice(0, achou.index + 1))) {
       return { motivo: 'escreveu apoio em mensagem própria — responda a ela antes do material' };
     }
   }
