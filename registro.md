@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.42.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.43.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,13 +10,15 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.42.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.43.0**, tudo commitado e no remoto.
 
-> **Os números abaixo são da 3.27.** Da 3.42, remedido: **16 suítes** (entrou `detalhes.test.mjs`) (41 arquivos nos verificadores, com
+> **Dossiê na 3.43:** ~6.345 tokens injetados (era ~3.351); o prompt de sistema com ele fica em ~15.809.
+>
+> **Os números abaixo são da 3.27.** Da 3.43, remedido: **16 suítes** (entrou `detalhes.test.mjs`) (41 arquivos nos verificadores, com
 > `panel/detalhes.js`): o prompt de sistema tem **~9.372 tokens** com
 > as 21 respostas de fábrica e **~7.602** sem elas; o padrão dele é **49,6%** do segundo. Antes: 15 suítes verdes, 40 arquivos limpos, e o
 > prompt de sistema do rascunho com **~9.017 tokens** sem dossiê (o dossiê injetado soma ~3.351).
-> **Em 10/09 foram quinze versões** (a 3.42: **"Capitão" no campo Cidade não é erro de grafia**; a 3.41: **oferecer o voto por dinheiro é sem interesse**; a 3.40: **a etiqueta de material sai com o modelo de material, e com o pedido fora do anúncio**; a 3.39: **"Rua X 120, Bairro" é endereço**; a 3.38: **log e conteúdo não vão para "detalhes"**; a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
+> **Em 10/09 foram dezesseis versões** (a 3.43: **o dossiê ganhou emendas, leis e projetos do material do mandato**; a 3.42: **"Capitão" no campo Cidade não é erro de grafia**; a 3.41: **oferecer o voto por dinheiro é sem interesse**; a 3.40: **a etiqueta de material sai com o modelo de material, e com o pedido fora do anúncio**; a 3.39: **"Rua X 120, Bairro" é endereço**; a 3.38: **log e conteúdo não vão para "detalhes"**; a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
 > 3.33: **"o senhor é senador?" identifica e responde o cargo**; a 3.34: **pergunta retórica não é
 > pedido**, e "gabinete" no rascunho é trocado): 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
 > nova), 3.29 (o que ele foi está no dossiê), 3.30 (não há chance de ser contratado) e 3.31 (**não
@@ -287,6 +289,54 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — O dossiê ganhou emendas, leis e projetos do material do mandato (v3.43.0)
+
+Pedido dele, com o PDF *"Emendas, Projetos e Menções — Capitão Martim"* (MARTIM — Mandato 360, 14
+páginas): *"atualize o dossiê e substitua o que for necessário com essas informações"*.
+
+### Como o PDF foi lido
+
+O leitor de PDF precisa do `pdftoppm`, que não está instalado, e não há `pypdf` no Python. O arquivo é
+do ReportLab com Helvetica/WinAnsi, então um extrator em Node **sem dependência** (descomprime os
+streams e lê `Tj`/`TJ`) tirou as 14 páginas inteiras. Script e texto ficaram **fora do repositório**.
+**As emendas foram somadas por script**: 39 cidades, e a soma de cada uma bate com o total que o PDF dá.
+
+### O que entrou (substituindo a pesquisa de 07/09, que era toda `[CONFERIR]`)
+
+- **Emendas por cidade**: **R$ 6,95 milhões em 39 municípios** (R$ 2 mi em 2024, R$ 2 mi em 2025, R$ 2,95
+  mi em 2026), em lista — uma linha por cidade, com destino, valor e ano. **Regra nova**: responder a
+  cidade perguntada; *"o mandato destinou"*, nunca *"o Capitão deu"*; cidade fora da lista não "não
+  recebeu nada"; **nunca prometer emenda nem ligar emenda a voto**.
+- **9 leis aprovadas** — Patrulha Maria da Penha (16.487), Colégio Tiradentes patrimônio (16.469), Escolas
+  Cívico-Militares (16.128), barragens (16.456), Defesa Civil na Escola (16.510) e mais quatro.
+- **52 projetos apresentados**, agrupados por tema. **Regra**: *"apresentou"*, nunca *"aprovou"*.
+- **Atuação e posições públicas** (as menções na imprensa), condensadas, com a regra de a IA **saber e
+  não levantar** — várias são carregadas (aborto, gênero, MST, impeachment).
+
+### Três inconsistências DO PRÓPRIO PDF, marcadas `[CONFERIR]`
+
+1. **O número 16.515/2026 aparece para duas leis diferentes** (carteira do agente socioeducativo e
+   programa de órfãos da segurança pública).
+2. **As leis 16.206 e 16.246 vêm como 2026**, mas o próprio PDF cita a Lei Complementar **16.263 de
+   dezembro de 2024** — pela numeração, são anteriores.
+3. **Aprovado × apresentado**: o título "APROVADOS" só precede as leis numeradas; a lista de PLs vem
+   depois, sem título. Tratei os PLs como **apresentados** — o que bate com os três casos conferíveis (PL
+   424, 434 e 77 aparecem como LEI; PL 325 segue como PL).
+
+Nas linhas marcadas, a IA cita a lei **pelo tema**, sem número e sem ano.
+
+### Gatilho e custo
+
+- **Gatilho novo em `gabinete.GATILHOS`**: emenda, projeto, lei, *"o que o deputado/vocês fez"*, *"fez
+  pela/por"*. Sem ele, *"tem alguma emenda pra minha cidade?"* não puxaria o dossiê.
+- **Dossiê injetado: ~6.345 tokens (era ~3.351).** Só entra quando a conversa pede. A mais, no Haiku, por
+  mil rascunhos que o usam: **~US$ 3,74 frio / ~US$ 0,30 quente**.
+- `chapaDoDossie` continua lendo os seis da colinha (as emendas vão em lista, não em tabela, de propósito).
+
+16 suítes verdes (+16 asserções no `gabinete`), verificadores limpos.
+
 ---
 
 ## 2026-09-10 — "Capitão" no campo Cidade não é erro de grafia (v3.42.0)

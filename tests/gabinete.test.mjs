@@ -123,4 +123,37 @@ grupo('acento não pode furar o gatilho');
   check(/não diga que vai verificar e voltar/.test(md), 'sem "vou verificar e volto"');
 }
 
+/**
+ * **Emendas, leis e projetos do material do mandato** (10/09/2026). O conteudo tem que chegar ao
+ * prompt, e a pergunta sobre ele tem que PUXAR o dossie.
+ */
+{
+  grupo('emendas, leis e projetos: o material do mandato (10/09)');
+
+  for (const t of [
+    'tem alguma emenda pra minha cidade?',
+    'quais projetos ele tem?',
+    'ele fez alguma lei?',
+    'o que o deputado fez por Caxias?',
+    'o que vocês fizeram pela segurança',
+  ]) {
+    check(precisaDoDossie([t]), `puxa: "${t}"`);
+  }
+  for (const t of ['Amém, Deus abençoe', 'bom dia, tudo bem?', 'obrigado pelo material']) {
+    check(!precisaDoDossie([t]), `NAO puxa: "${t}"`);
+  }
+
+  const { readFileSync } = await import('node:fs');
+  const md = readFileSync(new URL('../src/data/gabinete.md', import.meta.url), 'utf8')
+    .split('\n').filter((l) => !l.startsWith('> ')).join('\n').split('## Espaço do Thiago')[0];
+  check(/R\$ 6,95 milhões em 39 municípios/.test(md), 'o total das emendas chega ao prompt');
+  check(/\*\*Caxias do Sul\*\* — R\$ 500 mil/.test(md), 'e a emenda de cada cidade');
+  check((md.match(/^- \*\*[^*]+\*\* — R\$ /gm) || []).length === 39, 'as 39 cidades, nem uma a mais');
+  check(/Lei 16\.487\/2026/.test(md), 'as leis aprovadas');
+  check(/nunca\s+\*"aprovou"\*/.test(md), 'e a regra: projeto apresentado nao e lei aprovada');
+  check(/Nunca prometa emenda/.test(md) && /nem ligue emenda a\s+voto/.test(md), 'emenda nunca e prometida nem ligada a voto');
+  check(/16\.515\/2026\*\* a esta lei e à de baixo/.test(md), 'o numero repetido esta marcado para conferir');
+  check(!/PL 424\/2023\*\* \| \*\*Programa Defesa Civil/.test(md), 'a tabela antiga, toda [CONFERIR], saiu');
+}
+
 fim();

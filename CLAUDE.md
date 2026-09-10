@@ -2749,6 +2749,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **O DOSSIE TEM EMENDAS, LEIS E PROJETOS DO MATERIAL DO MANDATO** (10/09/2026). Tres coisas para quem
+  mexer nele: **(1)** o PDF dele tinha inconsistencias proprias (um numero de lei repetido, anos que a
+  numeracao desmente) — **leia o material com a mesma desconfianca da internet** e marque `[CONFERIR]`
+  em vez de corrigir por conta propria; **(2)** conteudo novo no dossie precisa de GATILHO em
+  `gabinete.GATILHOS`, senao a pergunta sobre ele nao puxa o arquivo; **(3)** tabela nova no dossie pode
+  confundir `chapaDoDossie` — por isso as emendas vao em LISTA. Sem `pdftoppm` nem `pypdf`, PDF do
+  ReportLab se le com um extrator Node sem dependencia (streams Flate + `Tj`/`TJ`), fora do repositorio.
 - **A LISTA DE CIDADES IGNORADAS E DO TEXTO LIVRE, NAO DO CAMPO.** Print da Nelci (10/09/2026): Cidade
   "Capitao" com o aviso *"nao casa com nenhum dos 497"* — e Capitao e municipio do RS. `cidadesIgnoradas`
   (a patente do candidato) vale em `matchCity`, e `conferirGrafia` julgava o valor JA GRAVADO com ela.

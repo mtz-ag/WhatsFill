@@ -163,6 +163,13 @@ const GATILHOS = [
    * mesmo motivo — segurança é a pauta dele, e aparecem em metade das falas.
    */
   /\bbombeir|\bmarinha\b|\bexercito\b|\bfuzileir|\bsalva.?vidas\b|\bcmt\b|\bcomandante\b|\bprofiss|\bcarreira\b|\btrajetoria\b|\bformad[oa] em\b|antes de ser (deputad|politic)|o que ele (fazia|fez|era|foi)\b|(^|[^-a-z])militar\b/,
+  /**
+   * **O que o mandato FEZ** — o dossiê ganhou emendas por cidade, leis e projetos (material do mandato,
+   * 10/09/2026). Sem gatilho, *"tem alguma emenda pra minha cidade?"* não puxaria nada, e a IA
+   * escreveria sem os dados. "lei" solto entra de propósito (erra para incluir): *"lei eleitoral"* puxa
+   * o dossiê à toa, e isso custa centavos.
+   */
+  /\bemendas?\b|\bprojetos?\b|\bleis?\b|\bo que (o deputado|o mandato|voces|vcs) (fez|fizeram|faz|fazem)\b|\bfez (pel[ao]|por) /,
 ];
 
 /**

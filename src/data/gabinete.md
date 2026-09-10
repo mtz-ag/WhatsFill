@@ -3,8 +3,9 @@
 > **Este arquivo vai para o prompt de sistema da IA da extensão.** É a fonte dela sobre o mandato,
 > a chapa, os números de urna e as pautas — para ela não decidir sobre nomes que não conhece.
 >
-> **Status: LIGADO** (`ia.dossieAtivo`), revisado por ele. Pesquisa de 01/09/2026 mais o material
-> oficial da campanha que ele mandou em 07/09/2026 — as fontes de cada bloco estão em `## Fontes`.
+> **Status: LIGADO** (`ia.dossieAtivo`), revisado por ele. Pesquisa de 01/09/2026, mais o material
+> oficial da campanha que ele mandou em 07/09/2026 e o material do mandato (emendas, leis, projetos e
+> menções) de 10/09/2026 — as fontes de cada bloco estão em `## Fontes`.
 >
 > **A fonte mais forte deste arquivo é o material da campanha**, e não a internet: quem está na
 > chapa e com que número é decisão dele, não fato público a pesquisar.
@@ -187,42 +188,166 @@ possa ser o **Delegado Zucco** (por exemplo citando deputado estadual), **não d
 
 ---
 
-## O que o mandato FEZ — projetos
+## O que o mandato FEZ — emendas, leis e projetos
 
-Lacuna que ele nomeou em 07/09/2026 (*"falta informações de projetos do martim"*). Pesquisa daquele
-dia, e **tudo aqui está `[CONFERIR]`** — a Assembleia (`al.rs.gov.br`) e o site dele (`martim.rs`)
-não abriram na pesquisa, então nada foi conferido na fonte primária.
+**Fonte: o material do próprio mandato** — *"Mandato Capitão Martim: Emendas Parlamentares, Projetos
+de Lei e Principais Menções Publicadas"* (MARTIM — Mandato 360), mandado por ele em 10/09/2026. Ele
+**substitui** a pesquisa de notícias de 07/09, que era toda `[CONFERIR]`. **O que está aqui é
+`[CONFIRMADO]` pelo material**, salvo as linhas marcadas.
 
-**Enquanto estiver `[CONFERIR]`, a IA não afirma nada disto a um eleitor** (regra 4 do topo). É de
-propósito: projeto atribuído errado, ou descrito errado, é afirmação falsa sobre o trabalho do
-mandato — a mesma família do *"já encaminhei ao assessor"*. Ele confirma linha a linha, e o que ele
-riscar sai.
+### Emendas parlamentares por cidade (2024–2026)
 
-### Com número de projeto
+**R$ 6,95 milhões em 39 municípios** — R$ 2 milhões em 2024, R$ 2 milhões em 2025 e R$ 2,95 milhões
+em 2026. A soma de cada cidade confere com o total que o próprio material dá.
 
-| projeto | tema | situação |
-|---|---|---|
-| **PL 424/2023** | **Programa Defesa Civil na Escola** — preparar a comunidade escolar para emergências e desastres. Protocolado depois da participação dele no resgate das enchentes do Vale do Taquari (nov/2023) | aprovado na Assembleia `[CONFERIR]` |
-| **PL 77/2025** | **Patrulha Maria da Penha** como política pública permanente do RS | aprovado por unanimidade, 45 votos `[CONFERIR]` |
-| **PL 434/2023** | **Transparência na operação, manutenção e segurança de barragens** | aprovado na CCJ `[CONFERIR]` |
-| **PL 325/2024** | **Economia do oceano e das águas interiores** — setor náutico e hidroviário | em tramitação `[CONFERIR]` |
+- **Araricá** — R$ 50 mil · 2026: Município 50 mil
+- **Arroio dos Ratos** — R$ 50 mil · 2026: Defesa Civil 50 mil
+- **Cachoeira do Sul** — R$ 450 mil · 2025: Hospital de Caridade 250 mil, Academia Cachoeirense de Letras 50 mil · 2026: SUS Municipal 100 mil, CTG José Bonifácio Gomes 50 mil
+- **Cachoeirinha** — R$ 50 mil · 2026: Rotary Club 50 mil
+- **Camaquã** — R$ 300 mil · 2025: Hospital Nossa Senhora Aparecida 250 mil · 2026: Clube Velez 50 mil
+- **Campina das Missões** — R$ 100 mil · 2026: Hospital Campina 100 mil
+- **Carlos Barbosa** — R$ 50 mil · 2026: cadeiras para o Ginásio Municipal 50 mil
+- **Casca** — R$ 100 mil · 2026: SUS Municipal 100 mil
+- **Caxias do Sul** — R$ 500 mil · 2024: Colégio Tiradentes 50 mil · 2025: Hospital Geral 250 mil, Colégio Tiradentes 50 mil, Guarda Municipal 100 mil · 2026: ECM Alexandre Zattera 50 mil
+- **Crissiumal** — R$ 50 mil · 2026: Município 50 mil
+- **Encantado** — R$ 100 mil · 2026: Corpo de Bombeiros Militar 100 mil
+- **Erechim** — R$ 150 mil · 2026: UBS São Cristóvão 100 mil, Artes Marciais 50 mil
+- **Farroupilha** — R$ 350 mil · 2025: Hospital São Carlos 250 mil, Defesa Civil 50 mil · 2026: EMEF 1º de Maio 50 mil
+- **Fontoura Xavier** — R$ 50 mil · 2026: Município 50 mil
+- **Guaporé** — R$ 150 mil · 2026: SUS Municipal 150 mil
+- **Ijuí** — R$ 350 mil · 2024: Hospital Bom Pastor 100 mil, Colégio Tiradentes 100 mil · 2025: Colégio Tiradentes 50 mil · 2026: Colégio Tiradentes 100 mil
+- **Itaqui** — R$ 50 mil · 2026: APAE 50 mil
+- **Júlio de Castilhos** — R$ 50 mil · 2026: ECM Miguel Waihrich Filho 50 mil
+- **Lajeado** — R$ 200 mil · 2025: Defesa Civil 100 mil · 2026: Corpo de Bombeiros Militar 100 mil
+- **Nova Prata** — R$ 100 mil · 2026: SUS Municipal 100 mil
+- **Passo Fundo** — R$ 250 mil · 2024: Colégio Tiradentes 100 mil · 2025: Colégio Tiradentes 50 mil · 2026: Colégio Tiradentes 100 mil
+- **Pelotas** — R$ 100 mil · 2024: Colégio Tiradentes 50 mil · 2025: Colégio Tiradentes 50 mil
+- **Porto Alegre** — R$ 1,35 milhão · 2024: Casa dos Raros 250 mil, Santa Casa de Misericórdia 250 mil, Colégio Tiradentes 100 mil, BOPE 150 mil, 1º Batalhão de Polícia de Choque 100 mil, Federação Gaúcha de Surf 100 mil · 2025: Colégio Tiradentes 50 mil, BOPE 200 mil · 2026: BOPE 50 mil, CORE da Polícia Civil 50 mil, equipamento de mergulho do CBMRS 50 mil
+- **Rio Grande** — R$ 250 mil · 2024: Santa Casa 100 mil · 2025: Escola E.F. Cel. Juvêncio Lemos 50 mil · 2026: UPA Junção 100 mil
+- **Rosário do Sul** — R$ 50 mil · 2026: Corpo de Bombeiros Militar 50 mil
+- **Santa Maria** — R$ 200 mil · 2024: Colégio Tiradentes 50 mil · 2025: Colégio Tiradentes 50 mil · 2026: Guarda Municipal 100 mil
+- **Santa Rosa** — R$ 100 mil · 2026: ECM Coronel Raul de Oliveira 100 mil
+- **Santana do Livramento** — R$ 50 mil · 2026: APAE 50 mil
+- **Santo Ângelo** — R$ 100 mil · 2024: Colégio Tiradentes 50 mil · 2025: Colégio Tiradentes 50 mil
+- **Sapiranga** — R$ 50 mil · 2026: Defesa Civil 50 mil
+- **São Gabriel** — R$ 200 mil · 2024: Colégio Tiradentes 50 mil · 2025: Colégio Tiradentes 50 mil · 2026: 3º Pelotão BM / 10º BBM 50 mil, ECM Menino Jesus Caic 50 mil
+- **São Marcos** — R$ 50 mil · 2026: Banda Marcial Escolar 50 mil
+- **Taquara** — R$ 100 mil · 2026: ECM Emílio Leichtveis 50 mil, ECM ECIM 50 mil
+- **Torres** — R$ 100 mil · 2026: Hospital N. Sra. dos Navegantes 100 mil
+- **Três Passos** — R$ 50 mil · 2026: ECM João Padilha do Nascimento 50 mil
+- **Três de Maio** — R$ 50 mil · 2025: Secretaria Municipal de Educação 50 mil
+- **Tucunduva** — R$ 50 mil · 2026: Associação dos Amigos dos Animais 50 mil
+- **Tupanciretã** — R$ 100 mil · 2024: Hospital de Caridade Brasilina Terra 100 mil
+- **Viamão** — R$ 500 mil · 2024: UPA 100 mil, Instituto de Cardiologia 100 mil, Escola E.E. João Barbosa 50 mil, Escola E.M. Dr. Genésio Pires 50 mil · 2026: Hospital de Viamão 150 mil, Escola E.M. Dr. Genésio Pires 50 mil
 
-### Sem número (não achei o projeto, só a notícia)
+### A regra das emendas
 
-- Proibir música com **apologia ao crime ou às drogas** em evento financiado com dinheiro público
-  `[CONFERIR]`
-- **Identificação de gênero obrigatória em banheiro escolar** — aprovado na CCJ em junho/2024
-  `[CONFERIR]`
-- Propostas de **prevenção e resposta a desastres naturais** `[CONFERIR]`
-- **Emendas parlamentares de R$ 2 milhões em 2023**, para 11 municípios `[CONFERIR]`
-- Integrante da **Frente Parlamentar de Proteção e Defesa Civil** `[CONFERIR]`
-- Representante da Assembleia no **atendimento aos desabrigados pelas cheias** `[CONFERIR]`
+1. **Responda a cidade que foi perguntada.** Quem pergunta o que o mandato fez pela cidade dela recebe
+   as emendas DAQUELA cidade — destino e valor, como estão aqui. Não recite as 39.
+2. **Emenda é recurso público indicado pelo deputado, não dinheiro dele.** Diga *"o mandato destinou
+   uma emenda de R$ 250 mil ao Hospital Geral"*; nunca *"o Capitão deu"*.
+3. **Cidade que não está na lista:** não diga que ela "não recebeu nada" — a lista é o que o material
+   traz, não todo recurso que chegou lá. Fale das áreas em que o mandato mais destinou emendas: saúde
+   (hospitais e SUS municipal), segurança (Brigada, bombeiros, guarda municipal), Colégio Tiradentes e
+   escolas cívico-militares, e Defesa Civil.
+4. **Nunca prometa emenda** — nova, futura ou para a cidade de quem pergunta —, **nem ligue emenda a
+   voto**. Isso é o que a Lei 9.504/97 trata.
 
-### A regra dos projetos
+### Leis aprovadas
 
-**Responda o que foi perguntado; não recite a lista.** Contato que pergunta de um tema recebe o que
-o mandato fez NAQUELE tema; ninguém pediu um currículo. E há pauta politicamente carregada nesta
-lista: ela existe aqui para a IA **saber**, não para ela levantar o assunto.
+- **Lei 16.487/2026** — Patrulha Maria da Penha como política pública permanente no RS (era o PL
+  77/2025, aprovado por unanimidade, 45 votos)
+- **Lei 16.469/2026** — Colégio Tiradentes da Brigada Militar reconhecido como patrimônio cultural do RS
+- **Lei 16.128/2024** — Programa das Escolas Cívico-Militares do RS (aprovado por 30 votos a 14, mesmo
+  após decisões judiciais contrárias ao modelo)
+- **Lei 16.456/2026** — transparência na operação, manutenção e segurança das barragens (era o PL
+  434/2023)
+- **Lei 16.510/2026** — Programa Defesa Civil na Escola (era o PL 424/2023, protocolado depois das
+  enchentes do Vale do Taquari)
+- **Carteira de Identificação Funcional do Agente Socioeducativo** — `[CONFERIR]` o número: o material
+  dá **16.515/2026** a esta lei e à de baixo, e as duas não podem ter o mesmo
+- **Programa de atendimento aos órfãos de servidores da segurança pública mortos em serviço** —
+  `[CONFERIR]` o número (o mesmo 16.515/2026 da de cima)
+- **Auxílio entre municípios afetados por catástrofes naturais** — Lei 16.206, `[CONFERIR]` o ano: o
+  material diz 2026, mas a Lei Complementar 16.263 é de dezembro de 2024, então a numeração é anterior
+- **Sistema de Alerta Sonoro contra Inundações** — Lei 16.246, `[CONFERIR]` o ano, pelo mesmo motivo
+
+**Nas linhas `[CONFERIR]`, cite a lei pelo TEMA, sem número e sem ano.** O tema está confirmado; o que
+está em dúvida é o número ou o ano.
+
+### Projetos apresentados
+
+**O material não diz que estes foram aprovados.** Diga *"o deputado apresentou um projeto"* — nunca
+*"aprovou"* ou *"é lei"*, e nunca prometa que vai ser aprovado.
+
+- **Segurança pública:** PL 337/2023 (armas e munições apreendidas aproveitadas pelas polícias); PL
+  363/2023 (assistência jurídica gratuita a agentes da segurança); PL 440/2023 (militares da reserva
+  como monitores em escolas); PL 488/2025 (Brigada Militar como patrimônio imaterial do RS); PL 95/2026
+  (novas unidades do Colégio Tiradentes da BM); PL 68/2025 (atualização e abertura do cadastro de
+  pedófilos); PL 489/2023 (certidão de antecedentes para quem atende crianças, adolescentes e idosos);
+  PL 92/2026 (divulgação de pessoas desaparecidas)
+- **Educação:** PL 26/2023 (Fundo de Fomento às Escolas Cívico-Militares); PL 209/2023 (vigilância e
+  monitoramento da rede estadual de ensino); PL 332/2023 (identificação de gênero masculino ou feminino
+  nos banheiros das escolas); PL 403/2023 (proibir nas escolas música com apologia ao crime, às drogas
+  ou conteúdo sexual); PL 104/2024 (a Bíblia como recurso paradidático nas escolas)
+- **Defesa Civil e desastres:** PL 422/2023 (auxílio a municípios com coordenação de Defesa Civil); PL
+  127/2024 (planos de contingência nos municípios afetados por catástrofes); PL 129/2024 (doação de
+  material de construção a vítimas de desastres); PL 134/2024 (Secretaria de Proteção Civil); PLC
+  136/2024 (aparelhamento da Defesa Civil, PIADC); PL 202/2024 (Sistema Estadual de Proteção e Defesa
+  Civil); PL 236/2024 (plano de evacuação obrigatório nos municípios); PLC 193/2025 (altera a Política
+  Estadual de Proteção e Defesa Civil); PL 56/2025 (Maio, Mês da Proteção e Defesa Civil); PL 87/2024
+  (Semana em Memória das Vítimas da inundação do Vale do Taquari)
+- **Mulher, família e infância:** PL 61/2026 (competências da Secretaria da Mulher); PL 62/2026
+  (filmes de advertência contra a violência à mulher e o Ligue 180 antes das sessões de cinema); PL
+  63/2026 (Família Acolhedora, com possibilidade de auxílio às famílias); PL 450/2023 (Dia da Família,
+  8 de dezembro); PL 277/2023 (veda hormonioterapia e cirurgia de transição de gênero em menores); PL
+  278/2023 (sexo biológico como critério nas competições esportivas)
+- **Propriedade e invasões:** PL 486/2023 (veda compra pública de produtos de terras invadidas); PL
+  88/2024 (Cadastro Estadual de Invasores de propriedades); PL 414/2024 (procedimento de remoção de
+  invasores de terras rurais e urbanas); PL 42/2025 (Abril Amarelo, em defesa da propriedade rural); PL
+  417/2023 (controle do javali, fauna invasora)
+- **Saúde e idosos:** PL 406/2023 (formação superior em saúde para o responsável técnico de instituição
+  de longa permanência para idosos); PL 557/2023 (empreendedorismo da pessoa idosa); PL 90/2024 (Semana
+  de Conscientização das Doenças Raras); PL 1/2025 (protocolo para intoxicação alimentar em hospitais e
+  postos); PL 228/2024 (altera a lei antifumo)
+- **Economia, turismo e outros:** PL 325/2024 (Economia do Mar e Águas Interiores); PL 43/2025 (Rio
+  Grande, Capital Marítima do RS); PL 91/2026 (Torres, Capital do Surf); PL 358/2024 (Rota do Surf); PL
+  41/2025 (retira do Executivo a autonomia para conceder rodovias); PL 44/2025 (altera a lei do
+  DETRAN/RS); PL 52/2025 (divulgação de patrocínio público a eventos); PL 482/2023 (desconto para
+  voluntariado); PL 451/2023 (Semana da Juventude Cristã); PL 76/2025 (Semana dos Legendários); PL
+  93/2026 (FuelTech & Chimarrão no calendário oficial); PL 94/2026 (Paleta Atlântida no calendário
+  oficial); PL 45/2025 (Rótula Aristilda Antonieta Rechia, em Santa Maria)
+
+### Atuação e posições públicas (menções na imprensa)
+
+- Criou a **Frente Parlamentar de Proteção e Defesa Civil** na Assembleia — citada como referência pela
+  Câmara de Porto Alegre depois das enchentes (2025).
+- **Enchentes de maio de 2024:** atuou pessoalmente em resgates, articulou a doação de jet skis e
+  embarcações para Canoas e agradeceu publicamente a Luciano Hang pela cessão de aeronaves.
+- Criou a **Frente Parlamentar contra Doutrinação Ideológica no Ensino**, com coordenadores regionais no
+  interior (jan/2024).
+- Atuou pela lei que **reinstituiu as Escolas Cívico-Militares** no RS (abr/2024).
+- Criticou o **decreto do governo Lula que restringiu armas e munições** para civis e CACs (jul/2023).
+- Liderou **abaixo-assinado de deputados gaúchos contra o STF julgar a descriminalização do aborto**
+  (ADPF 442, set/2023).
+- Defendeu publicamente o **deputado federal Zucco na CPI do MST** (2023).
+- **Denunciou à Polícia Civil** o uso de máquinas da prefeitura de Pedras Altas numa invasão do MST, o
+  que abriu inquérito (dez/2024).
+- Protocolou **pedido de impeachment do governador Eduardo Leite**, com 12 denúncias, entre elas gastos
+  com publicidade e a gestão pós-enchentes (jun/2025).
+- Participou da **CPI dos Pedágios**, questionando o governador sobre as concessões de rodovias (2026).
+- Fez a caminhada **"Acorda Rio Grande. Acorda Brasil!"**, 200 km de Porto Alegre a Torres (jan–fev/
+  2026), inspirada na do deputado federal Nikolas Ferreira e concluída em Torres com o vereador Coronel
+  Ustra.
+
+### A regra dos projetos e das menções
+
+**Responda o que foi perguntado; não recite a lista.** Quem pergunta de um tema recebe o que o mandato
+fez NAQUELE tema. **Lei é lei, projeto é projeto**: só o que está em "Leis aprovadas" foi aprovado.
+
+**As menções existem para a IA SABER, não para levantar o assunto.** Várias são politicamente
+carregadas (aborto, gênero, MST, impeachment). Perguntaram sobre uma delas: o fato, curto, sem
+adjetivo e sem atacar ninguém — nem adversário, nem governo, nem imprensa.
 
 ---
 
@@ -230,8 +355,10 @@ lista: ela existe aqui para a IA **saber**, não para ela levantar o assunto.
 
 - **Nenhum número de urna marcado `[CONFERIR]`.** Número errado é o pior erro possível: manda o
   eleitor votar em outra pessoa. (Hoje todos os seis estão `[CONFIRMADO]` pela arte da campanha.)
-- **Projeto de lei, lei ou realização do mandato marcado `[CONFERIR]`** — e hoje isso é a lista
-  INTEIRA da seção "O que o mandato FEZ". Perguntaram de projeto e nada está confirmado? **Escale.**
+- **Projeto apresentado como se fosse lei aprovada.** Só o que está em "Leis aprovadas" foi aprovado;
+  o resto foi apresentado, e nenhum projeto tem aprovação garantida.
+- **Número ou ano de lei marcado `[CONFERIR]`** — cite essas leis pelo tema.
+- **Emenda prometida, ou emenda ligada a voto.** O que está na lista já foi destinado; nada além disso.
 - **Partido de quem está na chapa**: a arte dá o número, não o partido.
 - Que Zucco é do Republicanos. **Ele saiu do Republicanos em 2023 e hoje é PL** — o partido apenas
   o apoia.
@@ -253,9 +380,9 @@ inteira, que agora tem seção própria acima. As duas linhas saíram daqui.
 
 **O que falta, em ordem de valor:**
 
-- **Confirmar os projetos da seção acima** — é a maior lacuna do arquivo hoje. Tudo está
-  `[CONFERIR]`, então a IA não fala de nenhum deles. Riscar o que estiver errado vale tanto quanto
-  confirmar o que está certo.
+- **Resolvido em 10/09/2026, com o material do mandato:** emendas, leis e projetos. **Falta conferir:**
+  o número **16.515/2026**, que o material dá a duas leis diferentes, e o ano das leis **16.206** e
+  **16.246**, que pela numeração não são de 2026.
 - Projeto ou lei que ficou de fora da lista, e que o eleitor pergunta:
 - Bases eleitorais e regiões prioritárias:
 - Pautas do mandato que o eleitor mais pergunta:
@@ -274,20 +401,11 @@ Pesquisa de 01/09/2026, mais o material da campanha e a pesquisa de projetos de 
 - **Headline do anúncio** *CONVERSE CONOSCO* no Instagram (*"Vote Capitão Martim, deputado
   estadual. 10122"*).
 
-Sobre os **projetos** (todos `[CONFERIR]`), de 07/09/2026:
-
-- Rádio Difusora, Programa Defesa Civil na Escola aprovado (PL 424/2023):
-  https://rd3.net.br/noticia/22037/programa-defesa-civil-na-escola-e-aprovado-na-assembleia-legislativa
-- Rádio Missioneira, pacote contra feminicídio e violência contra a mulher (PL 77/2025, Patrulha
-  Maria da Penha): https://www.radiomissioneira.com/assembleia-aprova-pacote-de-projetos-para-combater-feminicidios-e-violencia-conta-a-mulher/
-- Site do deputado, transparência sobre segurança de barragens (PL 434/2023):
-  https://martim.rs/aprovado-na-ccj-o-projeto-de-lei-de-transparencia-sobre-seguranca-das-barragens-no-rs/
-- Defesa em Foco, projetos estratégicos com o Com5ºDN:
-  https://www.defesaemfoco.com.br/deputado-capitao-martim-debate-projetos-estrategicos-com-com5odn/
-
-> **Não conferido na fonte primária:** `al.rs.gov.br` não foi alcançado e `martim.rs` não resolveu
-> na pesquisa de 07/09. É por isso que os projetos estão todos `[CONFERIR]` — e a conferência mais
-> rápida é ele abrir o próprio site.
+Sobre **emendas, leis, projetos e menções**: o **material do mandato** *"Emendas, Projetos e Menções —
+Capitão Martim"* (MARTIM — Mandato 360, 14 páginas), mandado por ele em 10/09/2026. Ele substitui a
+pesquisa de notícias de 07/09. As menções citam, entre outros: Agência ALRS, Sul21, Extra Classe,
+Gazeta do Povo, Porto Alegre 24 Horas, Jornal O Sul, Brasil de Fato, Leouve, Rádio Missioneira, Clic
+Camaquã, Metrópoles, Revista Oeste, Pleno News, Terra e registros no X.
 
 Cada bloco `[CONFIRMADO]` da pesquisa de 01/09 veio de pelo menos uma destas:
 
