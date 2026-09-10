@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.39.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.40.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,13 +10,13 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.39.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.40.0**, tudo commitado e no remoto.
 
-> **Os números abaixo são da 3.27.** Da 3.39, remedido: **16 suítes** (entrou `detalhes.test.mjs`) (41 arquivos nos verificadores, com
+> **Os números abaixo são da 3.27.** Da 3.40, remedido: **16 suítes** (entrou `detalhes.test.mjs`) (41 arquivos nos verificadores, com
 > `panel/detalhes.js`): o prompt de sistema tem **~9.372 tokens** com
 > as 21 respostas de fábrica e **~7.602** sem elas; o padrão dele é **49,6%** do segundo. Antes: 15 suítes verdes, 40 arquivos limpos, e o
 > prompt de sistema do rascunho com **~9.017 tokens** sem dossiê (o dossiê injetado soma ~3.351).
-> **Em 10/09 foram doze versões** (a 3.39: **"Rua X 120, Bairro" é endereço**; a 3.38: **log e conteúdo não vão para "detalhes"**; a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
+> **Em 10/09 foram treze versões** (a 3.40: **a etiqueta de material sai com o modelo de material, e com o pedido fora do anúncio**; a 3.39: **"Rua X 120, Bairro" é endereço**; a 3.38: **log e conteúdo não vão para "detalhes"**; a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
 > 3.33: **"o senhor é senador?" identifica e responde o cargo**; a 3.34: **pergunta retórica não é
 > pedido**, e "gabinete" no rascunho é trocado): 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
 > nova), 3.29 (o que ele foi está no dossiê), 3.30 (não há chance de ser contratado) e 3.31 (**não
@@ -287,6 +287,50 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — A etiqueta de material sai com o modelo de material (v3.40.0)
+
+Regra dele, depois da print da Natalia: *"a etiqueta de material será colocada agora quando o modelo de
+material sair, como prioridade, e em caso de exceção quando a pessoa pedir material fora do anúncio"*.
+
+### Medido antes de mexer
+
+- **Não existia "modelo de material" no código** — nenhum campo, nome ou lista.
+- **O modelo aprovado nunca aplicou a etiqueta.** A marca por `ehPedidoDeEndereco` morava só em
+  `sendTemplate` (respostas prontas) e no caminho da IA; **`enviarModelo`, por onde sai TODO modelo
+  aprovado, não a tinha**. É a segunda metade da Natalia: mesmo com o campo preenchido, o modelo do
+  anúncio de material pedia o endereço e não marcava ninguém.
+
+### O conserto
+
+1. **Prioridade — o modelo de material marca no envio.** `enviarModelo` aplica a etiqueta quando o texto
+   do modelo pede o endereço (`ehPedidoDeEndereco`) — o mesmo critério das respostas prontas, porque a
+   redação é da plataforma e o nome do modelo muda. O status diz o que foi marcado.
+2. **Exceção — ela pediu material por escrito, fora do anúncio.** `cortesia.pedeMaterialForaDoAnuncio`:
+   - **ignora o clique no anúncio** (marca e lista) — quem o responde é o modelo, e o modelo já marca;
+   - **só material físico e a palavra "material"** — conteúdo, arte, card e informativo ficam de fora,
+     porque nesta base são pedido do modelo digital, e **a etiqueta de material é o que manda pular**:
+     marcar errado tiraria a pessoa da fila para sempre.
+   Em `processarRespondido` a marca entra **depois da decisão** daquela passada: antes, a etiqueta
+   decidiria a passada (pular) e o modelo de material nunca sairia, contra a prioridade que ele deu.
+   A linha vai para o Andamento.
+
+### Um defeito meu, pego antes de entregar
+
+A primeira versão do gancho testava `!etiquetaDeEndereco()` sem `await` — e `etiquetaDaLista` é
+**assíncrona**: testava uma promessa, sempre verdadeira, e **a exceção nunca marcaria ninguém, em
+silêncio**. As 16 suítes e os dois verificadores passaram assim, porque nenhum roda o painel. Achado
+lendo a definição, depois de ver `await etiquetaDeEndereco()` em `enderecoParaMaterial`.
+
+### Dependência que continua dele
+
+As duas marcas usam o campo **"Etiqueta de quem MANDOU ENDEREÇO"** do Automatizado. Vazio, nada é
+marcado e o status/Andamento diz *"sem etiqueta de endereço configurada"*.
+
+16 suítes verdes (+12 asserções, 7 sobre o que NÃO marca), verificadores limpos. **Sem importação de
+fluxo** — nenhuma caixa mudou.
+
 ---
 
 ## 2026-09-10 — "Rua X 120, Bairro" é endereço (v3.39.0)

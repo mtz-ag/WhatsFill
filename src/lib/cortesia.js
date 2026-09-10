@@ -2870,6 +2870,52 @@ export function pedeMaterial(entrantes) {
 }
 
 /**
+ * **O que marca material FORA do anúncio** — só o que é físico, mais a palavra que ele usou.
+ *
+ * `OBJETO_DE_MATERIAL` tem também o vocabulário do conteúdo DIGITAL (conteúdo, arte, card,
+ * informativo), e nesta base *"quero receber o conteúdo"* é pedido do modelo, não de coisa para
+ * entregar. Marcar isso como material faria a rodada PULAR a pessoa para sempre — a etiqueta de
+ * material é o que manda pular. Então aqui ficam de fora.
+ */
+const OBJETO_DE_MATERIAL_FISICO =
+  /(?:materia(?:l|is)|adesivos?|santinhos?|panfletos?|folhetos?|folders?|cartilhas?|bandeiras?|bandeirinhas?|camisetas?|camisas?|coletes?|bones?|placas?|plaquinhas?|banners?|faixas?|cartaz(?:es)?|chaveiros?|botons?|bottons?)/;
+
+const PEDIDO_DE_MATERIAL_FISICO = VERBO_DE_PEDIR_MATERIAL.map(
+  (verbo) =>
+    new RegExp(
+      String.raw`(^|[^\p{L}])(?:${verbo.source})(?:\s+\S+){0,2}\s+(?:${OBJETO_DE_MATERIAL_FISICO.source})(?![\p{L}])`,
+      'iu'
+    )
+);
+
+/**
+ * **Ela pediu material FORA do anúncio?** — regra dele (10/09/2026): *"a etiqueta de material será
+ * colocada agora quando o modelo de material sair, como prioridade, e em caso de exceção quando a
+ * pessoa pedir material fora do anúncio"*.
+ *
+ * **O clique no anúncio NÃO conta aqui**, e é o oposto de `pedeMaterial`: lá o clique é o pedido e o
+ * modelo o responde — e é o modelo que marca (a prioridade). Aqui é o que ELA escreveu, sem modelo que
+ * a atenda. `ehMensagemDeAnuncio` tira a mensagem do anúncio pela marca e pela lista.
+ *
+ * Roda na conversa inteira pelo mesmo motivo do `pedeMaterial`: o pedido não vence com o dia. Quem
+ * impede a repetição é a etiqueta — marcada uma vez, quem chama não marca de novo.
+ *
+ * @returns {{motivo:string}|null}
+ */
+export function pedeMaterialForaDoAnuncio(entrantes, padroesDeAnuncio = []) {
+  for (const msg of entrantes || []) {
+    if (msg?.sistema || ehMensagemDeAnuncio(msg, padroesDeAnuncio)) continue;
+    const texto = semAcentos(msg?.texto);
+    if (!texto) continue;
+    if (NEGA_O_PEDIDO.test(texto)) continue;
+    if (PEDIDO_DE_MATERIAL_FISICO.some((re) => re.test(texto))) {
+      return { motivo: 'pediu material fora do anúncio — é material a enviar' };
+    }
+  }
+  return null;
+}
+
+/**
  * **Declarar voto no ADVERSÁRIO** — anotação da Rosa Maria (04/09/2026).
  *
  * Ela escreveu *"SOU APOSENTADA RURAL. MINHA CONCIENCIA DIZ QUE TENHO QUE SER 13"* e, na mensagem

@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos } from '../src/lib/cortesia.js';
+import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos } from '../src/lib/cortesia.js';
 
 const templates = await lib('templates.js');
 
@@ -2876,6 +2876,34 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
     'a rua 13 de maio está linda',
   ]) {
     check(!end(t), `NAO e endereco: "${t}"`);
+  }
+}
+
+/**
+ * A EXCECAO DA ETIQUETA DE MATERIAL — regra dele (10/09/2026): *"a etiqueta de material sera colocada
+ * quando o modelo de material sair, como prioridade, e em caso de excecao quando a pessoa pedir material
+ * fora do anuncio"*. O clique no anuncio nao conta (quem o responde e o modelo, e o modelo marca), e o
+ * vocabulario de conteudo DIGITAL fica de fora: a etiqueta manda pular.
+ */
+{
+  grupo('pediu material fora do anuncio (regra de 10/09)');
+  const pede = (texto, extra = {}, padroes = []) =>
+    !!pedeMaterialForaDoAnuncio([{ texto, tipo: 'TEXT', ...extra }], padroes);
+
+  for (const t of ['quero uns adesivos', 'me manda material de campanha', 'queria uma bandeira do capitao',
+    'preciso de santinhos para distribuir', 'tem como me mandar uma camiseta?']) {
+    check(pede(t), `marca: "${t}"`);
+  }
+
+  /** **O clique no anuncio nao e excecao** — pela marca e pela lista. */
+  const doAnuncio = 'Olá! Eu quero receber o Material da Direita';
+  check(!pede(doAnuncio, { geradaPeloAnuncio: true }), 'o clique no anuncio (marcado) nao marca');
+  check(!pede(doAnuncio, {}, ['Olá! Eu quero receber o Material da Direita']), 'nem pelo texto cadastrado');
+
+  /** **Conteudo digital e agradecimento nao marcam** — a etiqueta faria a rodada pular para sempre. */
+  for (const t of ['quero receber o conteúdo', 'me manda o card', 'obrigada pelo material', 'não quero material nenhum',
+    'quero uma arte para compartilhar']) {
+    check(!pede(t), `NAO marca: "${t}"`);
   }
 }
 

@@ -30,7 +30,7 @@ import { MSG_FLUXO } from '../lib/fluxo-msg.js';
 import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
-import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado } from '../lib/cortesia.js';
+import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, marcarLoteEncaminhado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -2056,7 +2056,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (resultado?.sent) {
       state.lastSendAt = Date.now();
       await templatesLib.markSent(alvo.id, hsmKey(modelo), { nome: alvo.name });
-      setStatus(`Modelo enviado: ${modelo.name}`, 'ok');
+      /**
+       * **O modelo de MATERIAL marca a etiqueta de material no envio** — regra dele (10/09/2026): *"a
+       * etiqueta de material será colocada agora quando o modelo de material sair, como prioridade"*.
+       *
+       * Print da Natalia, no mesmo dia: o modelo do anúncio de material pediu o endereço e o contato
+       * ficou SEM etiqueta. Medido: a marca existia só em `sendTemplate` (respostas prontas) — este
+       * caminho, que é por onde sai TODO modelo aprovado, nunca a aplicou. **Mesmo critério do outro
+       * caminho**: o modelo é "de material" quando o TEXTO dele pede o endereço
+       * (`ehPedidoDeEndereco`), porque a redação é da plataforma e o nome do modelo muda.
+       */
+      const marcaMaterial = templatesLib.ehPedidoDeEndereco(modelo.text || '') ? await etiquetarEndereco(alvo) : '';
+      setStatus(`Modelo enviado: ${modelo.name}${marcaMaterial}`, 'ok');
       return true;
     } else {
       setStatus(
@@ -5994,6 +6005,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       state.sinais = sinaisDoContato;
       let sugestao = sugerirAcaoComFluxo(sinaisDoContato);
+
+      /**
+       * **A EXCEÇÃO da etiqueta de material: ela pediu material fora do anúncio** — regra dele
+       * (10/09/2026): *"a etiqueta de material será colocada agora quando o modelo de material sair,
+       * como prioridade, e em caso de exceção quando a pessoa pedir material fora do anúncio"*. A
+       * prioridade mora em `enviarModelo`; esta é a outra metade.
+       *
+       * **Depois da decisão, de propósito.** Marcar antes faria a etiqueta decidir ESTA passada (ela é
+       * o que manda pular), e o modelo de material nunca sairia — contra a prioridade que ele deu. Assim
+       * esta passada segue como seria, e a etiqueta passa a valer da próxima em diante.
+       *
+       * Só quem ainda não tem a etiqueta: marcada uma vez, não se marca de novo.
+       *
+       * **O `await` é obrigatório**: `etiquetaDaLista` é assíncrona, e `!etiquetaDeEndereco()` sem ele
+       * testa uma PROMESSA — sempre verdadeira —, então a exceção nunca marcaria ninguém, e em silêncio.
+       * Escrevi assim na primeira versão; testes e verificadores passaram, porque nenhum roda o painel.
+       */
+      if (!(await etiquetaDeEndereco())) {
+        const pediuMaterial = pedeMaterialForaDoAnuncio(state.entrantes, state.padroesDeAnuncio);
+        if (pediuMaterial) {
+          const aviso = await etiquetarEndereco(state.contact);
+          registrarNaRodada(nome, 'info', `${pediuMaterial.motivo} — marquei a etiqueta de material${aviso}`);
+        }
+      }
 
       /**
        * **A tecla `i` tem TRÊS textos, e quem respondeu o cadastro recebe o da INFORMAÇÃO.**

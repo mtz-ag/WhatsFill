@@ -2749,6 +2749,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **A ETIQUETA DE MATERIAL: PRIORIDADE NO MODELO, EXCECAO NO PEDIDO FORA DO ANUNCIO** (regra dele,
+  10/09/2026). **`enviarModelo` nunca aplicava a etiqueta** — a marca por `ehPedidoDeEndereco` morava so
+  em `sendTemplate` e no caminho da IA, e todo modelo aprovado sai por `enviarModelo`. **Ao por uma
+  marca "no ponto unico por onde tudo sai", confira que sao DOIS pontos: resposta pronta e modelo
+  aprovado.** A excecao (`pedeMaterialForaDoAnuncio`) ignora o clique no anuncio e o vocabulario de
+  conteudo digital (a etiqueta manda PULAR) e marca DEPOIS da decisao da passada, para o modelo continuar
+  com prioridade. **E `etiquetaDaLista`/`etiquetaDeEndereco` sao ASSINCRONAS**: `!etiquetaDeEndereco()`
+  sem `await` testa uma promessa e e sempre falso — nenhum teste nem verificador pega isso.
 - **"RUA X 120, BAIRRO" NAO ERA ENDERECO — a forma mais comum ficava de fora.** Print da Natalia
   (10/09/2026): ela respondeu o pedido de endereco com o numero COLADO no nome da rua, antes da
   virgula, e a rodada agradeceu e concluiu em vez de pular e marcar. `NUMERO_DA_CASA` so aceitava o
