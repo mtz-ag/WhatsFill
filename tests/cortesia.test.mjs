@@ -2815,4 +2815,34 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(desdeNossaUltima([{ texto: 'sem hora' }], '2026-09-09T09:30:00').length === 1, 'mensagem sem horario nao some');
 }
 
+/**
+ * O TEXTO DO ANUNCIO NAO E PERGUNTA DELA — print da Lidia (10/09/2026). Ela clicou no anuncio
+ * *"Ola! Posso ter mais informacoes sobre isso?"*, cadastrado com a acao "mandar o modelo", e o
+ * quadro deu tecla 6 (pergunta pendente) em vez do recibo. Ele: *"nao reconheceu o anuncio"* — e
+ * reconheceu: `ehMensagemDeAnuncio` dava true. Quem nao olhava a marca eram os detectores de pergunta.
+ */
+{
+  grupo('o texto do anuncio nao e pergunta dela (a Lidia, 10/09)');
+  const at = Date.parse('2026-09-10T13:15:00-03:00');
+  const doAnuncio = 'Olá! Posso ter mais informações sobre isso?';
+  const P = ['Olá! Posso ter mais informações sobre isso?'];
+  const pergunta = (ents, padroes = []) => !!conversaTemPerguntaAberta(ents, null, padroes);
+  const pendente = (ents, padroes = []) => perguntaPendente(ents, null, padroes);
+
+  const marcada = [{ texto: doAnuncio, tipo: 'TEXT', at, geradaPeloAnuncio: true }];
+  check(!pergunta(marcada), 'com a marca de gerada pelo anuncio: nao e pergunta aberta');
+  check(!pendente(marcada), 'nem pergunta pendente');
+  const cadastrada = [{ texto: doAnuncio, tipo: 'TEXT', at }];
+  check(!pergunta(cadastrada, P), 'com o texto cadastrado na Config: nao e pergunta aberta');
+  check(!pendente(cadastrada, P), 'nem pergunta pendente');
+
+  /** **A guarda: o que ELA escreve continua sendo pergunta.** */
+  check(pergunta(cadastrada), 'sem marca e sem cadastro, a mesma frase continua sendo pergunta');
+  const depois = [...marcada, { texto: 'qual o número dele?', tipo: 'TEXT', at: at + 30000 }];
+  check(pergunta(depois), 'pergunta escrita por ela DEPOIS do clique continua valendo');
+  check(pendente(depois), 'e continua pendente');
+  const mesmoTexto = [...marcada, { texto: 'Posso ter mais informações sobre isso?', tipo: 'TEXT', at: at + 30000 }];
+  check(pendente(mesmoTexto), 'ela repetindo a pergunta com as proprias palavras tambem conta');
+}
+
 fim();

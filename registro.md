@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.35.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.36.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,13 +10,13 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.35.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.36.0**, tudo commitado e no remoto.
 
-> **Os números abaixo são da 3.27.** Da 3.35, remedido (41 arquivos nos verificadores, com
+> **Os números abaixo são da 3.27.** Da 3.36, remedido (41 arquivos nos verificadores, com
 > `panel/detalhes.js`): o prompt de sistema tem **~9.372 tokens** com
 > as 21 respostas de fábrica e **~7.602** sem elas; o padrão dele é **49,6%** do segundo. Antes: 15 suítes verdes, 40 arquivos limpos, e o
 > prompt de sistema do rascunho com **~9.017 tokens** sem dossiê (o dossiê injetado soma ~3.351).
-> **Em 10/09 foram oito versões** (a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
+> **Em 10/09 foram nove versões** (a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
 > 3.33: **"o senhor é senador?" identifica e responde o cargo**; a 3.34: **pergunta retórica não é
 > pedido**, e "gabinete" no rascunho é trocado): 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
 > nova), 3.29 (o que ele foi está no dossiê), 3.30 (não há chance de ser contratado) e 3.31 (**não
@@ -287,6 +287,45 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — O texto do anúncio não é pergunta dela (v3.36.0)
+
+Print da Lídia (10/09, painel na v3.34). Ela chegou pelo anúncio do Facebook e a única mensagem era o
+texto pré-preenchido: *"Olá! Posso ter mais informações sobre isso?"*. O anúncio está cadastrado na
+Config ("Informações", ação **mandar o modelo aprovado "Campanha Martim3"**), e a caixa mostrava
+*"Conteúdo pedido: anúncio: Informações"* e o modelo disponível — mas o fluxo mandou a tecla 6,
+*"fez uma pergunta que nenhuma resposta pronta responde"*, e a IA rascunhou. Ele: *"não reconheceu o
+anúncio"*.
+
+### Medido
+
+- **O anúncio FOI reconhecido**: `ehMensagemDeAnuncio` = true, pela marca `geradaPeloAnuncio` e pelo
+  texto cadastrado.
+- **Quem não sabia disso eram os dois detectores de pergunta**: `conversaTemPerguntaAberta` e
+  `perguntaPendente` não recebiam a lista de anúncios nem olhavam a marca — e o texto do anúncio
+  termina em "?". Com a marca ligada e o padrão cadastrado, os dois davam pergunta.
+- **No quadro isso vence o recibo**: na chegada, a pergunta pendente fica ACIMA do modelo (decisão de
+  02/09, certa para pergunta dela). Medido: com a pergunta falsa, **tecla 6**; sem ela, **tecla `a`**
+  (modelo do anúncio + pedido de nome e cidade). A tabela já dava `a`.
+- É o buraco que o registro de 08/09 dizia fechado: *"todo detector determinístico respeita a
+  marca"*. Estes dois não respeitavam.
+
+### O conserto
+
+Os dois detectores recebem `padroesDeAnuncio` e **pulam a mensagem do anúncio** por
+`ehMensagemDeAnuncio` (marca primeiro, lista depois) — o painel passa `state.padroesDeAnuncio`, e
+`soExpressaApoio`, que chama um deles por dentro, repassa a lista. **O clique é o pedido, e quem o
+responde é a ação do anúncio** — mesma leitura do `pedeMaterial` (05/09).
+
+**A guarda fica testada:** sem marca e sem cadastro, a mesma frase continua sendo pergunta; pergunta
+escrita por ela depois do clique continua valendo — inclusive ela repetindo a do anúncio com as
+próprias palavras. A janela do fluxo (`fluxo.js`), que simula com texto colado, não tem anúncios e
+continua como antes.
+
+15 suítes verdes (+9 asserções, 4 delas sobre o que CONTINUA sendo pergunta), verificadores limpos.
+**Sem importação de fluxo.**
+
 ---
 
 ## 2026-09-10 — O excesso de texto do painel fica atrás de "ⓘ detalhes" (v3.35.0)

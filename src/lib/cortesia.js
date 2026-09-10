@@ -770,8 +770,17 @@ const RETIROU_A_PERGUNTA =
  * exclusões que ele já tinha decidido, medido antes de desistir do caminho. Este faz uma coisa só:
  * **impedir o desfecho irreversível.**
  */
-export function perguntaPendente(entrantes, nossaUltimaAt) {
-  const rajada = rajadaFinal(entrantes, nossaUltimaAt).filter((m) => String(m?.texto || '').trim());
+export function perguntaPendente(entrantes, nossaUltimaAt, padroesDeAnuncio = []) {
+  /**
+   * **O texto do ANÚNCIO não é pergunta dela** — print da Lídia (10/09/2026). Ela clicou no anúncio
+   * *"Olá! Posso ter mais informações sobre isso?"*, cadastrado na Config com a ação "mandar o modelo
+   * Campanha Martim3", e o quadro deu tecla 6 em vez do recibo. Medido: `ehMensagemDeAnuncio` dava
+   * true e esta função, que não olhava nem a marca nem a lista, dava pergunta pendente. **O clique é
+   * o pedido, e quem o responde é a ação do anúncio** — mesma leitura do `pedeMaterial` (05/09).
+   */
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt)
+    .filter((m) => String(m?.texto || '').trim())
+    .filter((m) => !ehMensagemDeAnuncio(m, padroesDeAnuncio));
   if (!rajada.length) return false;
 
   // O link sai antes de tudo: a query string (`?igsh=`, `?v=`) fazia todo vídeo repassado virar
@@ -2046,7 +2055,7 @@ export function soExpressaApoio(entrantes, nossaUltimaAt, padroesDeAnuncio = [])
     if (pedeRespostaPessoal({ tipo: msg?.tipo })) return null;
   }
 
-  if (conversaTemPerguntaAberta(entrantes, nossaUltimaAt)) return null;
+  if (conversaTemPerguntaAberta(entrantes, nossaUltimaAt, padroesDeAnuncio)) return null;
 
   const texto = rajada.map((m) => String(m?.texto || '')).join(' ').trim();
   if (!texto) return null;
@@ -2141,8 +2150,9 @@ const RESPONDIDA_POR_PRONTA = [
   /(^|[^\p{L}])(como|em\s+que|no\s+que)\s+(eu\s+)?posso\s+(ajudar|contribuir|colaborar)/iu,
 ];
 
-export function conversaTemPerguntaAberta(entrantes, nossaUltimaAt) {
-  const rajada = rajadaFinal(entrantes, nossaUltimaAt);
+export function conversaTemPerguntaAberta(entrantes, nossaUltimaAt, padroesDeAnuncio = []) {
+  // O texto do anúncio não é pergunta dela (a Lídia, 10/09) — ver `perguntaPendente`.
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt).filter((m) => !ehMensagemDeAnuncio(m, padroesDeAnuncio));
   if (!rajada.length) return null;
 
   /**

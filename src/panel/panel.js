@@ -5789,7 +5789,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         pedeRespostaPessoal: conversaPedeRespostaPessoal(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
         // Pergunta de razão ou de posição: nenhuma resposta pronta responde, e mandar o modelo
         // vira material de campanha em cima da pergunta dela (print da Clair, 31/08).
-        perguntaAberta: conversaTemPerguntaAberta(state.entrantes, state.nossaUltimaAt),
+        perguntaAberta: conversaTemPerguntaAberta(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
         // Só apoio, sem pergunta e sem pedido: agradecer é o desfecho (print do Ciro, 31/08).
         // A tecla só é oferecida se o texto do agradecimento não estiver travado por variável.
         // Os padrões do anúncio vêm da Config: é por eles que a mensagem gerada pelo anúncio
@@ -5834,7 +5834,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * `cortesia.perguntaPendente`, que olha a RAJADA inteira. Não é `perguntaAberta`, que
          * decide o desfecho.
          */
-        perguntaPendente: perguntaPendente(state.entrantes, state.nossaUltimaAt),
+        perguntaPendente: perguntaPendente(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
         etiquetaQueDispensa: await etiquetaQueDispensaDaFila(),
         // "É da casa": conclui e não manda nada. Lista própria — ver `etiquetaQueSoConclui`.
         etiquetaSoConclui: await etiquetaQueSoConclui(),

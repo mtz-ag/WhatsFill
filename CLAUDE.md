@@ -2749,6 +2749,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **"TODO DETECTOR RESPEITA A MARCA DO ANUNCIO" ERA FALSO PARA OS DE PERGUNTA.** Print da Lidia
+  (10/09/2026): o texto pre-preenchido *"Ola! Posso ter mais informacoes sobre isso?"* — anuncio
+  cadastrado, modelo disponivel, `ehMensagemDeAnuncio` = true — virou pergunta pendente, e na chegada
+  a pergunta fica ACIMA do recibo: tecla 6 em vez de `a`. Ele: *"nao reconheceu o anuncio"*.
+  `conversaTemPerguntaAberta` e `perguntaPendente` nao recebiam `padroesDeAnuncio` nem olhavam a
+  marca. **Detector novo que le a conversa pula `ehMensagemDeAnuncio(m, padroes)` no primeiro passo**
+  — e ao afirmar que "todos respeitam", grep por quem recebe `padroesDeAnuncio` e confira os que
+  ficaram de fora.
 - **EXPLICACAO DE MAIS DE UMA LINHA FICA ATRAS DE "ⓘ DETALHES"** (pedido dele, 10/09/2026: *"o
   frontend continua poluído"*). O corte em tres linhas da 3.7 nao bastou. `panel/detalhes.js` recolhe
   todo `.wf-origin`/`.wf-hint` de mais de uma linha, juntando vizinhas num botao so, e lembra o que
