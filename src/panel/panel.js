@@ -2386,6 +2386,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    */
   async function etiquetarPedidoDeAjuda(template, alvo) {
     if (!ETIQUETA_PEDIDO_IDS.includes(template.id)) return '';
+    return aplicarEtiquetaDePedido(alvo);
+  }
+
+  /**
+   * A etiqueta de quem pediu dinheiro ou emprego, sem depender de QUAL texto saiu — desde 10/09/2026
+   * a rodada marca pelo sinal (`sugestao.motivoDaEtiquetaDePedido`), porque quem responde esses casos
+   * é a IA, e texto livre não tem id de resposta pronta.
+   */
+  async function aplicarEtiquetaDePedido(alvo) {
     const nome = String(state.auto.cfg.etiquetaPedidoAjuda || '').trim();
     if (!nome || !alvo?.id) return '';
 
@@ -3328,9 +3337,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         salvarAuto({ etiquetaPedidoAjuda: v.trim() }).then(renderAll)
       ),
       h('div', { class: 'wf-origin' },
-        'Aplicada assim que sai uma das duas respostas que negam — "Pedido de ajuda financeira" ou ' +
-          '"Pedido de emprego" —, por qualquer caminho: a rodada, um ramo do quadro, a escolha da ' +
-          'IA ou a resposta rápida da caixa. Ex.: "🔴Procura emprego ou dinheiro".'),
+        'Aplicada quando a rodada reconhece o pedido de dinheiro, ajuda financeira ou emprego — ' +
+          'seja quem for que responda: a IA, um ramo do quadro ou a resposta rápida. Quem quer ' +
+          'trabalhar como voluntário na campanha não é marcado. Ex.: "🔴Procura emprego ou dinheiro".'),
       campoTexto('Etiqueta de quem MANDOU ENDEREÇO (material para enviar)', cfg.etiquetaEndereco, (v) =>
         salvarAuto({ etiquetaEndereco: v.trim() }).then(renderAll)
       ),
@@ -6028,6 +6037,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           const aviso = await etiquetarEndereco(state.contact);
           registrarNaRodada(nome, 'info', `${pediuMaterial.motivo} — marquei a etiqueta de material${aviso}`);
         }
+      }
+
+      /**
+       * **A etiqueta de quem PEDIU DINHEIRO OU EMPREGO sai pelo SINAL** — pedido dele (10/09/2026):
+       * *"como a IA atende pedido de ajuda e dinheiro, a etiqueta não está sendo colocada"*. Ver
+       * `sugestao.motivoDaEtiquetaDePedido`. Depois da decisão pelo mesmo motivo do material, e a
+       * etiqueta que o contato já tem não é aplicada de novo (`aplicarEtiquetaDePedido` confere).
+       */
+      const motivoDoPedido = sugestaoLib.motivoDaEtiquetaDePedido(sinaisDoContato);
+      if (motivoDoPedido && String(state.auto.cfg.etiquetaPedidoAjuda || '').trim()) {
+        const marca = await aplicarEtiquetaDePedido(state.contact);
+        if (marca) registrarNaRodada(nome, 'info', `${motivoDoPedido} — etiqueta de pedido${marca}`);
       }
 
       /**

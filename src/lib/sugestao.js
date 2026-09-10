@@ -36,6 +36,26 @@
  *
  * `jaPediramDados` entra junto de propósito — pedir duas vezes soa a robô, mesmo sem resposta.
  */
+/**
+ * **O contato deve ganhar a etiqueta de quem PEDIU DINHEIRO OU EMPREGO?** — pedido dele (10/09/2026):
+ * *"como a IA atende pedido de ajuda e dinheiro, a etiqueta não está sendo colocada"*.
+ *
+ * A etiqueta era aplicada só quando saía uma das duas respostas prontas que negam
+ * (`pedido-ajuda`, `pedido-emprego`). Desde a 3.10 (08/09) quem responde esses casos é a IA, que
+ * escreve texto livre — nenhuma resposta pronta sai, e a marca nunca era posta. **Agora quem decide é o
+ * SINAL, não a resposta**: reconhecido o pedido, marca, seja quem for que responda.
+ *
+ * **Quem quer TRABALHAR NA CAMPANHA fica de fora** (`pedeEmprego` com `tipo: 'campanha'`): é militância
+ * voluntária, não procura de emprego, e a etiqueta é permanente no CRM.
+ *
+ * @returns {string|null} o motivo, para o Andamento, ou `null`
+ */
+export function motivoDaEtiquetaDePedido(c) {
+  if (c?.pedeAjudaFinanceira) return 'pediu dinheiro ou ajuda financeira';
+  if (c?.pedeEmprego && c.pedeEmprego.tipo !== 'campanha') return 'procura emprego';
+  return null;
+}
+
 export const pedirDadosNaoCabe = (c) =>
   !!(c?.jaDeuNomeECidade || c?.jaPediramDados || c?.temEtiquetaDeCidade);
 

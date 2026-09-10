@@ -969,4 +969,22 @@ grupo('engajado: ja respondi hoje, nao manda nada (04/09/2026)');
   check(sugestaoLib.regrasComDesfechoIncoerente().length === 0, 'nenhum desfecho incoerente');
 }
 
+/**
+ * A ETIQUETA DE QUEM PEDIU DINHEIRO OU EMPREGO SAI PELO SINAL — pedido dele (10/09/2026): *"como a IA
+ * atende pedido de ajuda e dinheiro, a etiqueta nao esta sendo colocada"*. A marca dependia de sair a
+ * resposta pronta que nega, e desde a 3.10 quem responde e a IA, em texto livre.
+ */
+{
+  grupo('etiqueta de pedido sai pelo sinal, nao pela resposta pronta (10/09)');
+  const { motivoDaEtiquetaDePedido } = sugestaoLib;
+
+  check(!!motivoDaEtiquetaDePedido({ pedeAjudaFinanceira: { motivo: 'escreveu pix' } }), 'pedido de dinheiro marca');
+  check(!!motivoDaEtiquetaDePedido({ pedeEmprego: { tipo: 'emprego' } }), 'procura de emprego marca');
+  check(!motivoDaEtiquetaDePedido({ pedeEmprego: { tipo: 'campanha' } }), 'quem quer ser voluntario na campanha NAO e marcado');
+  check(!motivoDaEtiquetaDePedido({ pedeAjudaFinanceira: null, pedeEmprego: null }),
+    'sinais vazios (a negativa pronta ja saiu e ja marcou) nao marcam de novo');
+  check(!motivoDaEtiquetaDePedido({}), 'sem sinal, nada');
+  check(motivoDaEtiquetaDePedido(null) === null, 'sem contexto nao quebra');
+}
+
 fim();

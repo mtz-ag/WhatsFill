@@ -2749,6 +2749,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **ETIQUETA AMARRADA A QUAL TEXTO SAIU MORRE QUANDO O CAMINHO DE RESPOSTA MUDA** — pela segunda vez no
+  mesmo dia. A de pedido de dinheiro/emprego so marcava quando saia a resposta pronta que nega
+  (`ETIQUETA_PEDIDO_IDS`), e desde a 3.10 esses casos sao respondidos pela IA em texto livre: nunca mais
+  marcou (*"como a IA atende pedido de ajuda e dinheiro, a etiqueta nao esta sendo colocada"*, 10/09).
+  Hoje a marca sai pelo SINAL (`sugestao.motivoDaEtiquetaDePedido`), na rodada, depois da decisao — e
+  voluntario na campanha nao e marcado. **Ao mudar QUEM responde um caso, procure toda marca que
+  dependia do texto antigo** (a outra foi o material no modelo aprovado, 3.40).
 - **"ENCAMINHAMOS" E PRESENTE, FUTURO E PASSADO — a trava `afirmouAcao` so via o passado.** Print de
   10/09/2026: *"e so mandar seu endereco que encaminhamos ao assessor"* (o repasse condicionado, a unica
   promessa permitida) foi barrado, e ele: *"resposta correta, ja nao tem necessidade de parar"*. Hoje a
