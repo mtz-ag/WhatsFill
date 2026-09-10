@@ -2749,6 +2749,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **NEM TODO ANUNCIO TEM TEXTO PRONTO — e a marca "primeira mensagem = clique" apagava a fala dela.**
+  Print do Rodrigo (10/09/2026): o anuncio CONVERSE CONOSCO nao preenche texto, a primeira mensagem era
+  o pedido da colinha, e `prepararEntrantes` a marcava como `geradaPeloAnuncio` — todo detector pulou.
+  Hoje so marca com cara de texto pronto (`pareceTextoProntoDeAnuncio`: abre com "Ola", ate 160). **Regra
+  que presume o formato de TODO anuncio quebra no primeiro anuncio de outro formato.** E **regra que so
+  existe no prompt precisa de um sinal que leve o caso ate a IA**: a colinha (regra 10) nao tinha, e
+  virou `pedeColinha`.
 - **O DOSSIE TEM EMENDAS, LEIS E PROJETOS DO MATERIAL DO MANDATO** (10/09/2026). Tres coisas para quem
   mexer nele: **(1)** o PDF dele tinha inconsistencias proprias (um numero de lei repetido, anos que a
   numeracao desmente) — **leia o material com a mesma desconfianca da internet** e marque `[CONFERIR]`

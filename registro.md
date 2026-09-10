@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.43.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.44.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.43.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.44.0**, tudo commitado e no remoto.
 
 > **Dossiê na 3.43:** ~6.345 tokens injetados (era ~3.351); o prompt de sistema com ele fica em ~15.809.
 >
@@ -18,7 +18,7 @@ Branch `claude/whatsfill-ia`, **v3.43.0**, tudo commitado e no remoto.
 > `panel/detalhes.js`): o prompt de sistema tem **~9.372 tokens** com
 > as 21 respostas de fábrica e **~7.602** sem elas; o padrão dele é **49,6%** do segundo. Antes: 15 suítes verdes, 40 arquivos limpos, e o
 > prompt de sistema do rascunho com **~9.017 tokens** sem dossiê (o dossiê injetado soma ~3.351).
-> **Em 10/09 foram dezesseis versões** (a 3.43: **o dossiê ganhou emendas, leis e projetos do material do mandato**; a 3.42: **"Capitão" no campo Cidade não é erro de grafia**; a 3.41: **oferecer o voto por dinheiro é sem interesse**; a 3.40: **a etiqueta de material sai com o modelo de material, e com o pedido fora do anúncio**; a 3.39: **"Rua X 120, Bairro" é endereço**; a 3.38: **log e conteúdo não vão para "detalhes"**; a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
+> **Em 10/09 foram dezessete versões** (a 3.44: **o pedido da colinha vai para a IA, e o anúncio sem texto pronto não apaga a primeira mensagem**; a 3.43: **o dossiê ganhou emendas, leis e projetos do material do mandato**; a 3.42: **"Capitão" no campo Cidade não é erro de grafia**; a 3.41: **oferecer o voto por dinheiro é sem interesse**; a 3.40: **a etiqueta de material sai com o modelo de material, e com o pedido fora do anúncio**; a 3.39: **"Rua X 120, Bairro" é endereço**; a 3.38: **log e conteúdo não vão para "detalhes"**; a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
 > 3.33: **"o senhor é senador?" identifica e responde o cargo**; a 3.34: **pergunta retórica não é
 > pedido**, e "gabinete" no rascunho é trocado): 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
 > nova), 3.29 (o que ele foi está no dossiê), 3.30 (não há chance de ser contratado) e 3.31 (**não
@@ -289,6 +289,40 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — O pedido da colinha vai para a IA (v3.44.0)
+
+Print do Rodrigo (10/09). Chegou pelo anúncio **CONVERSE CONOSCO** (Instagram) e escreveu: *"Eu gostaria
+que me mandasse a sequência para votação com os números do time de direita inteiro para eu passar para
+minha família inteira"*. O atendimento foi concluído com o modelo do anúncio. Ele: *"o pedido foi
+ignorado e concluído"* — e perguntou se o dossiê é usado sempre (**não**: só quando a conversa toca no
+tema; a trava da chapa é que vale sempre).
+
+### Medido — dois defeitos somados
+
+1. **Nenhum detector reconhecia o pedido.** Os sete (`conversaTemPerguntaAberta`, `perguntaPendente`,
+   `pedeAlgoIndefinido`, `pedeMaterial`, `soExpressaApoio`, `conversaPedeRespostaPessoal`,
+   `pedeAjudaFinanceira`) davam null. A regra da colinha (09/09) mora no PROMPT (regra 10), e nada levava
+   o pedido até a IA: sem "?", não é material, não é dinheiro. O dossiê seria puxado ("votação",
+   "números") — o que faltava era o caminho.
+2. **A mensagem dele estava marcada como "gerada pelo anúncio".** `prepararEntrantes` marca a PRIMEIRA
+   mensagem de toda sessão com `utm` (04/09), e todo detector a pula. O CONVERSE CONOSCO **não traz texto
+   pronto**: a primeira mensagem era ele falando. Mesmo com detector, o pedido teria sumido.
+
+### O conserto
+
+- **`cortesia.pedeColinha`**: "colinha", "cola eleitoral", e verbo de pedir + números/lista/sequência/nomes
+  + candidatos/chapa/votação/direita. Vale como **pergunta aberta** (tecla 6, a IA manda a lista com a
+  tabela) e como **pendência** (não conclui). **Guarda: o verbo de pedir** — *"já tenho os números dos
+  candidatos"* e *"não tenho nenhum dos números, mas vou votar"* (o lopezp4295, 03/09) não pedem.
+- **`cortesia.pareceTextoProntoDeAnuncio`**: a primeira mensagem só é marcada como do anúncio se abrir
+  com **"Olá"** e tiver até 160 caracteres — que é o formato de todo texto pronto desta campanha e do
+  padrão do Facebook (*"Olá! Posso ter mais informações sobre isso?"*, a Lídia). Não tendo cara, é fala
+  dela. A fronteira depois de "Olá" é `(?![\p{L}])`, porque `\b` não fecha depois de acento.
+
+16 suítes verdes (+19 asserções, 9 sobre o que NÃO pode casar), verificadores limpos.
+
 ---
 
 ## 2026-09-10 — O dossiê ganhou emendas, leis e projetos do material do mandato (v3.43.0)

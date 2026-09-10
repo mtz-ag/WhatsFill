@@ -30,7 +30,7 @@ import { MSG_FLUXO } from '../lib/fluxo-msg.js';
 import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
-import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, marcarLoteEncaminhado } from '../lib/cortesia.js';
+import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -11932,7 +11932,15 @@ function prepararEntrantes(entrantes, { veioDeAnuncio = false } = {}) {
       ? { ...m, texto: '', transcrito: false, sistema: true }
       : { ...m };
     const temTexto = !marcada.sistema && String(marcada.texto || '').trim();
-    if (primeiraDela && veioDeAnuncio && temTexto) {
+    /**
+     * **Só marca a primeira se ela tiver cara de texto pronto** — print do Rodrigo (10/09/2026): o
+     * anúncio CONVERSE CONOSCO não traz texto, a primeira mensagem era o pedido DELE, e a marca o
+     * apagava de todos os detectores. Ver `cortesia.pareceTextoProntoDeAnuncio`. Não tendo cara, a
+     * mensagem é dela, e a "primeira" acaba ali.
+     */
+    if (primeiraDela && veioDeAnuncio && temTexto && !pareceTextoProntoDeAnuncio(marcada.texto)) {
+      primeiraDela = false;
+    } else if (primeiraDela && veioDeAnuncio && temTexto) {
       marcada.geradaPeloAnuncio = true;
       /**
        * **Só ESTA dá para nomear.** A identidade do anúncio vem do `utm`, que é da SESSÃO — então

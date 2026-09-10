@@ -770,6 +770,45 @@ const RETIROU_A_PERGUNTA =
  * exclusões que ele já tinha decidido, medido antes de desistir do caminho. Este faz uma coisa só:
  * **impedir o desfecho irreversível.**
  */
+/**
+ * **O pedido da COLINHA** — print do Rodrigo (10/09/2026): *"Eu gostaria que me mandasse a sequência
+ * para votação com os números do time de direita inteiro para eu passar para minha família inteira"*.
+ * O atendimento foi concluído com o modelo do anúncio, e ele: *"o pedido foi ignorado e concluído"*.
+ *
+ * **Medido: os sete detectores davam null.** A regra de mandar a colinha (09/09, *"só passe a lista com
+ * os números e o que cada um é"*) mora no PROMPT da IA — a regra 10 —, e nada levava o pedido até a
+ * IA: não tem "?", não é material, não é pedido de dinheiro.
+ *
+ * **A guarda é o VERBO de pedir junto do objeto**: *"já tenho os números dos candidatos"* e *"não tenho
+ * nenhum dos números dos candidatos, mas vou votar"* (o lopezp4295, 03/09) não pedem nada.
+ */
+const PEDE_COLINHA = [
+  /(^|[^\p{L}])colinha\b/iu,
+  /(^|[^\p{L}])cola\s+(eleitoral|pra\s+votar|para\s+votar|dos\s+candidatos|de\s+votacao|da\s+eleicao)/iu,
+  /(^|[^\p{L}])(manda|mande|mandar|mandasse|mandem|envia|envie|enviar|enviasse|passa|passe|passar|passasse|quero|queria|gostaria|preciso|precisava|tem\s+como|pode|poderia|me\s+(da|de|diz|diga|fala|fale))\s+(?:\S+\s+){0,6}?(os\s+|a\s+|as\s+|o\s+)?(numeros?|numeracao|lista|sequencia|nomes)\s+(?:\S+\s+){0,3}?(d[oa]s?\s+|para\s+|pra\s+)?(candidatos?|chapa|time|votar|votacao|direita|deputados?|senadores?|governador|presidente|eleicao)/iu,
+];
+
+/**
+ * **A primeira mensagem de uma sessão de anúncio só é o texto PRONTO se tiver cara de texto pronto** —
+ * mesma print do Rodrigo (10/09/2026). O painel marcava como "gerada pelo anúncio" a PRIMEIRA mensagem
+ * de toda sessão com `utm` (04/09), e todo detector a pula. Só que o anúncio *CONVERSE CONOSCO* não traz
+ * texto pronto: a primeira mensagem ERA dele, o pedido da colinha — e sumiu antes de qualquer regra ver.
+ *
+ * **O texto pronto desta campanha abre com "Olá"** (*"Olá! Eu apoio…"*, *"Olá! Posso ter mais
+ * informações sobre isso?"*, que é o padrão do Facebook) e é curto. A fronteira depois de "Olá" não é
+ * `\b`: ela não fecha depois de letra acentuada (armadilha do `CLAUDE.md`).
+ */
+export function pareceTextoProntoDeAnuncio(texto) {
+  const t = String(texto || '').trim();
+  return !!t && t.length <= 160 && /^ol[áa](?![\p{L}])/iu.test(t);
+}
+
+/** Pediu a colinha? Texto já sem acento. */
+export function pedeColinha(texto) {
+  const t = String(texto || '');
+  return PEDE_COLINHA.some((re) => re.test(t));
+}
+
 export function perguntaPendente(entrantes, nossaUltimaAt, padroesDeAnuncio = []) {
   /**
    * **O texto do ANÚNCIO não é pergunta dela** — print da Lídia (10/09/2026). Ela clicou no anúncio
@@ -799,7 +838,9 @@ export function perguntaPendente(entrantes, nossaUltimaAt, padroesDeAnuncio = []
     const semAcento = plano(rajada[i]);
     if (!semAcento) continue;
 
-    const ehPergunta = texto.includes('?') || ABRE_PERGUNTANDO.test(semAcento) || PERGUNTA_DECLARADA.test(semAcento);
+    // O pedido da colinha é pendência como uma pergunta: tem resposta, e ela é a lista (a regra 10).
+    const ehPergunta =
+      texto.includes('?') || ABRE_PERGUNTANDO.test(semAcento) || PERGUNTA_DECLARADA.test(semAcento) || pedeColinha(semAcento);
     if (!ehPergunta) continue;
 
     // Retirada por uma mensagem POSTERIOR dela, na mesma rajada.
@@ -2196,6 +2237,15 @@ export function conversaTemPerguntaAberta(entrantes, nossaUltimaAt, padroesDeAnu
      * está no **começo** dela ("pq nao tem material aqui"). Quem pergunta abre a mensagem com a
      * pergunta ou a marca com "?"; quem explica põe o "pq" no meio do que está contando.
      */
+    /**
+     * **O pedido da colinha vai para a IA** — ver `PEDE_COLINHA` (o Rodrigo, 10/09/2026). Vem antes das
+     * exclusões de "resposta pronta": nenhuma resposta pronta manda a lista, quem manda é a IA com a
+     * tabela do dossiê.
+     */
+    if (pedeColinha(semAcentos(texto))) {
+      return { motivo: 'pediu a colinha — a lista de candidatos e números sai pela IA, com a tabela do dossiê' };
+    }
+
     const temInterrogacao = texto.includes('?');
 
     // As inequívocas valem em qualquer posição — ver `PERGUNTAS_INEQUIVOCAS`.

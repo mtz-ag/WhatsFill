@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos } from '../src/lib/cortesia.js';
+import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos } from '../src/lib/cortesia.js';
 
 const templates = await lib('templates.js');
 
@@ -2928,6 +2928,46 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
     check(!sem(t), `NAO e venda: "${t}"`);
   }
   check(!sem('Quer meu voto?', 'meu voto não se compra, é pela segurança'), 'quem pergunta e diz que nao vende, nao vende');
+}
+
+/**
+ * O PEDIDO DA COLINHA — print do Rodrigo (10/09/2026): *"Eu gostaria que me mandasse a sequencia para
+ * votacao com os numeros do time de direita inteiro para eu passar para minha familia inteira"*, e o
+ * atendimento foi concluido com o modelo. Os sete detectores davam null.
+ */
+{
+  grupo('o pedido da colinha vai para a IA (o Rodrigo, 10/09)');
+  const um = (texto) => [{ texto, tipo: 'TEXT', at: 1 }];
+  const daPrint = 'Eu gostaria que me mandasse a sequência para votação com os números do time de direita inteiro para eu passar para minha família inteira';
+
+  check(!!conversaTemPerguntaAberta(um(daPrint), null), 'a frase da print vira pergunta aberta (tecla 6, a IA)');
+  check(perguntaPendente(um(daPrint), null) === true, 'e pendencia: o atendimento nao conclui em cima dela');
+
+  const pede = (t) => pedeColinha(t.normalize('NFD').replace(/\p{Diacritic}/gu, ''));
+  for (const t of ['me manda a colinha', 'tem como passar os números dos candidatos?', 'queria a lista da chapa pra votar',
+    'pode me mandar os nomes dos deputados', 'preciso da cola eleitoral']) {
+    check(pede(t), `pede a colinha: "${t}"`);
+  }
+
+  /** **A guarda: sem verbo de pedir, e fala de voto, nao sao pedido.** */
+  for (const t of ['já tenho os números dos candidatos', 'eu não tenho nenhum dos números dos candidatos, mas vou votar',
+    'o número do capitão é 10122 né', 'a lista de presença do evento', 'passa a cola aqui que o cano quebrou']) {
+    check(!pede(t), `NAO pede: "${t}"`);
+  }
+
+  /**
+   * **A primeira mensagem da sessao de anuncio so e texto pronto com cara de texto pronto.** O anuncio
+   * CONVERSE CONOSCO nao traz texto, e o pedido dele era a primeira mensagem — marcado como do anuncio,
+   * sumia de todo detector.
+   */
+  for (const t of ['Olá! Posso ter mais informações sobre isso?', 'Olá! Eu apoio as Escolas Cívico-Militares 🤝',
+    'Ola! Eu quero receber o Material da Direita']) {
+    check(pareceTextoProntoDeAnuncio(t), `e texto pronto: "${t}"`);
+  }
+  for (const t of [daPrint, 'Boa tarde, queria saber como faço pra ajudar', 'Olavo aqui, de Canoas',
+    'Olá, ' + 'eu queria contar uma coisa que aconteceu na minha cidade e que precisa de atenção do deputado, porque a gente está sem resposta faz tempo e ninguém faz nada']) {
+    check(!pareceTextoProntoDeAnuncio(t), `NAO e texto pronto: "${t.slice(0, 50)}"`);
+  }
 }
 
 fim();
