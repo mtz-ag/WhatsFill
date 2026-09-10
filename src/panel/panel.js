@@ -1996,7 +1996,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const midia = modelo.fileType ? ` · ${String(modelo.fileType).toLowerCase()}` : '';
     card.append(
       h('h4', {}, `${modelo.name}${midia}`),
-      h('div', { class: 'wf-preview' }, modelo.text || '(modelo sem texto)')
+      h('div', { class: 'wf-preview', 'data-fica': '1' }, modelo.text || '(modelo sem texto)')
     );
 
     const enviar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Enviar');
@@ -2228,7 +2228,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
   function renderTemplateCard(template) {
     const card = h('div', { class: 'wf-card' });
-    const preview = h('div', { class: 'wf-preview' }, '…');
+    const preview = h('div', { class: 'wf-preview', 'data-fica': '1' }, '…');
     const sendBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Enviar');
     const insertBtn = h('button', { class: 'wf-btn', type: 'button' }, 'Só inserir');
 
@@ -2650,7 +2650,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * padrão que uma sozinha não mostra.
      */
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Observações para o Claude'));
-    const obsNode = h('div', {});
+    // `data-fica`: as anotações são DADO (a contagem de novas, o caso copiado) — nada aqui vai para
+    // "detalhes" (10/09, "tenha discernimento").
+    const obsNode = h('div', { 'data-fica': '1' });
     body.append(obsNode);
 
     async function desenharObservacoes() {
@@ -2774,7 +2776,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     desenharObservacoes();
 
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Andamento'));
-    logNode = h('div', {});
+    // `data-fica`: o log é DADO — cada linha é um contato e o motivo. O resumo da 3.37 cortava cada
+    // linha no travessão e escondia o motivo (print dele, 10/09: "aplicou detalhes até no log").
+    logNode = h('div', { 'data-fica': '1' });
     body.append(logNode);
     renderAutoLog();
   }
@@ -3458,7 +3462,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
 
     comecar.disabled = state.auto.rodando || impedimentos.length > 0;
-    for (const motivo of impedimentos) card.append(h('div', { class: 'wf-block' }, motivo));
+    for (const motivo of impedimentos) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, motivo));
     return card;
   }
 
@@ -3544,7 +3548,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       trava.push('Sem a etiqueta acima, a rodada não sabe quem é sem retorno dentro de "Meus".');
     }
     emMeus.disabled = state.auto.rodando || trava.length > 0;
-    for (const motivo of trava) card.append(h('div', { class: 'wf-block' }, motivo));
+    for (const motivo of trava) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, motivo));
 
     return card;
   }
@@ -3588,7 +3592,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     card.append(select);
 
     if (modelo) {
-      card.append(h('div', { class: 'wf-preview' }, modelo.text || '(modelo sem texto)'));
+      card.append(h('div', { class: 'wf-preview', 'data-fica': '1' }, modelo.text || '(modelo sem texto)'));
       if (modelo.params?.length) {
         card.append(h('div', { class: 'wf-block' }, `Este modelo ${hsmLib.PARAMS_NAO_APRENDIDOS}`));
       }
@@ -3650,7 +3654,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!state.settings.autoSend) impedimentos.push('Precisa do "Enviar automático" ligado (acima).');
 
     comecar.disabled = state.auto.rodando || impedimentos.length > 0;
-    for (const motivo of impedimentos) card.append(h('div', { class: 'wf-block' }, motivo));
+    for (const motivo of impedimentos) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, motivo));
     return card;
   }
 
@@ -4028,7 +4032,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             'carrega 50 por vez, então ela quase nunca mostra tudo.')
       );
     }
-    if (estado.erro) card.append(h('div', { class: 'wf-block' }, estado.erro));
+    if (estado.erro) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, estado.erro));
 
     return card;
   }
@@ -4057,7 +4061,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             'carregado — use o "Ver mais" da plataforma para trazer o resto.')
       );
       for (const item of state.auto.fila.slice(0, 6)) {
-        card.append(h('div', { class: 'wf-preview' }, item.texto));
+        card.append(h('div', { class: 'wf-preview', 'data-fica': '1' }, item.texto));
       }
       if (state.auto.fila.length > 6) {
         card.append(h('p', { class: 'wf-hint' }, `… e mais ${state.auto.fila.length - 6}.`));
@@ -9244,7 +9248,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Andamento'));
     // Mais recente primeiro: numa passada longa é o fim da lista que interessa.
     for (const linha of [...c.log].reverse().slice(0, 60)) {
-      body.append(h('div', { class: linha.erro ? 'wf-block' : 'wf-origin' }, linha.texto));
+      // Log é dado: nunca vai para "detalhes" (ver o log do Automatizado, 10/09).
+      body.append(h('div', { class: linha.erro ? 'wf-block' : 'wf-origin', 'data-fica': '1' }, linha.texto));
     }
   }
 
@@ -11072,7 +11077,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         );
         card.append(etiquetas);
 
-        card.append(h('div', { class: 'wf-preview' }, `→ ${anunciosLib.desfechoEmPortugues(anuncio)}`));
+        card.append(h('div', { class: 'wf-preview', 'data-fica': '1' }, `→ ${anunciosLib.desfechoEmPortugues(anuncio)}`));
         anunciosNode.append(card);
       }
 

@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.37.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.38.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,13 +10,13 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.37.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.38.0**, tudo commitado e no remoto.
 
-> **Os números abaixo são da 3.27.** Da 3.37, remedido: **16 suítes** (entrou `detalhes.test.mjs`) (41 arquivos nos verificadores, com
+> **Os números abaixo são da 3.27.** Da 3.38, remedido: **16 suítes** (entrou `detalhes.test.mjs`) (41 arquivos nos verificadores, com
 > `panel/detalhes.js`): o prompt de sistema tem **~9.372 tokens** com
 > as 21 respostas de fábrica e **~7.602** sem elas; o padrão dele é **49,6%** do segundo. Antes: 15 suítes verdes, 40 arquivos limpos, e o
 > prompt de sistema do rascunho com **~9.017 tokens** sem dossiê (o dossiê injetado soma ~3.351).
-> **Em 10/09 foram dez versões** (a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
+> **Em 10/09 foram onze versões** (a 3.38: **log e conteúdo não vão para "detalhes"**; a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
 > 3.33: **"o senhor é senador?" identifica e responde o cargo**; a 3.34: **pergunta retórica não é
 > pedido**, e "gabinete" no rascunho é trocado): 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
 > nova), 3.29 (o que ele foi está no dossiê), 3.30 (não há chance de ser contratado) e 3.31 (**não
@@ -287,6 +287,40 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — Log e conteúdo não vão para "detalhes" (v3.38.0)
+
+Print dele, logo depois da 3.37: o Andamento da rodada com cada linha partida — *"⚠ Soledade - Paulo
+Quevedo"*, um botão "ⓘ detalhes", e o motivo escondido atrás dele. Ele: *"aplicou detalhes até no log
+do automatizado, tenha discernimento"*.
+
+### Causa
+
+As linhas do Andamento são `.wf-preview` com o texto `"<sinal> <nome> — <motivo>"`, a MESMA classe das
+descrições de cartão. O resumo da 3.37 cortava cada uma no travessão. **E a marca `data-fica` só
+protegia o próprio elemento**: um log é um bloco, e não havia como proteger o bloco inteiro.
+
+### O conserto
+
+- **`data-fica` num contêiner protege tudo o que está dentro** (`protegido` em `panel/detalhes.js`, nas
+  três passadas: rótulo, descrição/aviso e recolhimento).
+- **Marcados como DADO**, depois de passar pelas 33 criações de `.wf-preview` e as 12 de `.wf-block`
+  com texto montado a partir de variável:
+  - o **Andamento** do Automatizado (o contêiner) e cada linha do Andamento da aba **Cidades**;
+  - a área das **anotações da rodada** (a contagem de novas estava numa dica que seria recolhida);
+  - o **texto do modelo aprovado** nos cartões (Respostas e Automatizado) e a **prévia** de envio;
+  - os **itens da fila** e o **desfecho de cada anúncio** na Config;
+  - os **motivos que impedem a rodada de começar** e o **erro** do cartão de abertos.
+- **O critério que fica:** texto fixo escrito no código é explicação e pode ser resumido; **texto montado
+  a partir do estado (nome, motivo, erro, contagem, conteúdo de modelo) é dado e fica inteiro**.
+
+### Medido
+
+No painel real montado a 380px, com três linhas no formato da print injetadas no Andamento: **0 botões
+no log**, as quatro linhas inteiras e visíveis, nenhuma marcada como resumida — e o resto da aba
+continua resumido (24 botões). 16 suítes verdes, verificadores limpos.
+
 ---
 
 ## 2026-09-10 — O painel resume rótulos e avisos; o resto vai para "ⓘ detalhes" (v3.37.0)

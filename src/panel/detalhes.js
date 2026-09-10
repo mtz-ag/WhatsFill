@@ -114,6 +114,14 @@ function detalheDe(resto) {
 const soTexto = (el) => el.childElementCount === 0 && el.textContent.trim();
 
 /**
+ * **Dentro de uma área marcada, NADA é tocado** — nem resumido, nem recolhido. Print dele (10/09/2026):
+ * *"aplicou detalhes até no log do automatizado, tenha discernimento"*. As linhas do Andamento são
+ * `.wf-preview` com `"⚠ nome — motivo"`, e o resumo cortava cada uma no travessão. A marca olhava só o
+ * PRÓPRIO elemento; um log é um bloco, e quem marca o bloco protege tudo o que está dentro.
+ */
+const protegido = (el) => !!el.closest('[data-fica]');
+
+/**
  * **O resumo** — ver a regra 2 no topo. Devolve os elementos que devem ir INTEIROS para os detalhes
  * (descrição cuja cabeça ainda seria longa demais).
  */
@@ -138,7 +146,8 @@ function resumir(raiz) {
    * ("o reserva é o MESMO modelo do titular") continua na tela; a explicação dele não precisa.
    */
   for (const el of raiz.querySelectorAll('.wf-origin[data-fica]')) {
-    if (el.dataset.resumido || !soTexto(el)) continue;
+    // Linha de um BLOCO protegido (um log) não se resume: só o aviso marcado sozinho.
+    if (el.dataset.resumido || !soTexto(el) || (el.parentElement && protegido(el.parentElement))) continue;
     el.dataset.resumido = '1';
     if (!ehLonga(el)) continue;
     const p = partir(el.textContent);
@@ -149,7 +158,7 @@ function resumir(raiz) {
 
   // Descrições de cartão e avisos: a primeira frase fica, o resto vai.
   for (const el of raiz.querySelectorAll('.wf-preview, .wf-block')) {
-    if (el.dataset.resumido || el.dataset.fica || !soTexto(el)) continue;
+    if (el.dataset.resumido || protegido(el) || !soTexto(el)) continue;
     el.dataset.resumido = '1';
     if (!ehLonga(el)) continue;
     const p = partir(el.textContent);
@@ -176,7 +185,7 @@ export function recolherExplicacoes(raiz, abertos = new Set(), opcoes = {}) {
   const inteiros = new Set(opcoes.resumir ? resumir(raiz) : []);
 
   const candidatos = [...raiz.querySelectorAll(`${SELETOR_EXPLICACAO}, .wf-preview`)].filter(
-    (el) => !el.dataset.fica && !el.dataset.recolhido && !el.closest('.wf-detalhes')
+    (el) => !protegido(el) && !el.dataset.recolhido && !el.closest('.wf-detalhes')
   );
   const vaiParaDetalhes = new Set(
     candidatos.filter((el) =>

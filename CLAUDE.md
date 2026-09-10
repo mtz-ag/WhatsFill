@@ -2761,7 +2761,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   frontend continua poluído"*). O corte em tres linhas da 3.7 nao bastou. `panel/detalhes.js` recolhe
   todo `.wf-origin`/`.wf-hint` de mais de uma linha, juntando vizinhas num botao so, e lembra o que
   foi aberto (o painel redesenha a cada `setStatus`). **Ao criar texto que e DADO ou AVISO — nao
-  explicacao —, marque `'data-fica': '1'`**, senao ele some atras do botao. E texto novo de
+  explicacao —, marque `'data-fica': '1'`**, senao ele some atras do botao. **Num CONTEINER a marca
+  protege tudo o que esta dentro** — e foi preciso: na 3.37 as linhas do Andamento (`.wf-preview`
+  com `"nome — motivo"`) eram cortadas no travessao, e ele: *"aplicou detalhes ate no log, tenha
+  discernimento"*. **O criterio:** texto FIXO escrito no codigo e explicacao; texto montado de
+  VARIAVEL (nome, motivo, erro, contagem, texto de modelo) e dado — log, lista ou area nova de dado
+  nasce com `data-fica` no conteiner. E texto novo de
   explicacao nao precisa de nada: o passe depois do desenho pega sozinho.
   **Na 3.37 (mesmo dia, *"pode resumir mais"*) nas abas Automatizado e Config tambem se resumem os
   ROTULOS, as descricoes (`.wf-preview`) e os avisos (`.wf-block`)**: fica a cabeca, o resto vai. Rotulo
