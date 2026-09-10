@@ -2239,6 +2239,42 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
 }
 
 /**
+ * "ENCAMINHAMOS" CONDICIONADO NAO E AFIRMAR QUE JA FEZ — print de 10/09/2026. O rascunho *"se tiver
+ * interesse mesmo assim, e so mandar seu endereco que encaminhamos ao assessor da regiao"* era o certo e
+ * foi barrado por `afirmouAcao`. Ele: *"resposta correta, ja nao tem necessidade de parar"*.
+ */
+{
+  grupo('"encaminhamos" condicionado nao e afirmar que ja fez (10/09)');
+  const agora = new Date('2026-09-10T16:55:00');
+  const barra = (t) => revisarRascunho(t, agora, {}).avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.afirmouAcao);
+
+  const daPrint =
+    'Boa tarde. Que bom que queira ajudar, mas tenho que lhe avisar que so estamos trabalhando com voluntarios nao remunerados.\n\n' +
+    'Se tiver interesse mesmo assim, é só mandar seu endereço que encaminhamos o assessor da região para entregar material.';
+  check(!barra(daPrint), 'o rascunho da print nao e barrado');
+  for (const t of [
+    'Se tiver interesse, é só mandar seu endereço que encaminhamos.',
+    'Assim que você mandar o endereço, repassamos para a equipe dos materiais.',
+    'Me manda seu endereço que encaminhamos seu pedido para a equipe.',
+    'Com o endereço, repassamos à equipe responsável.',
+    'Vou encaminhar para a equipe.',
+  ]) {
+    check(!barra(t), `NAO barra (repasse condicionado ou futuro): "${t}"`);
+  }
+
+  /** **A guarda: afirmar que JA fez continua barrado** — a Sandra (06/09) e as formas vizinhas. */
+  for (const t of [
+    'Já encaminhei seu pedido ao assessor da sua região para providenciar o material.',
+    'Encaminhei seu pedido.',
+    'Já encaminhamos para a equipe.',
+    'Registramos seu pedido e em breve alguém entra em contato.',
+    'Seu pedido foi encaminhado ao assessor.',
+  ]) {
+    check(barra(t), `barra (afirma que ja fez): "${t}"`);
+  }
+}
+
+/**
  * "E O DEPUTADO?" NAO E PEDIR PARA FALAR COM ELE — print da Denise (09/09/2026).
  *
  * Ela escreveu *"Oiii"* e *"E o deputado ?"*, e o rascunho respondeu com a regra 8 inteira: periodo

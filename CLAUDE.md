@@ -2749,6 +2749,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **"ENCAMINHAMOS" E PRESENTE, FUTURO E PASSADO — a trava `afirmouAcao` so via o passado.** Print de
+  10/09/2026: *"e so mandar seu endereco que encaminhamos ao assessor"* (o repasse condicionado, a unica
+  promessa permitida) foi barrado, e ele: *"resposta correta, ja nao tem necessidade de parar"*. Hoje a
+  forma em -EI barra sempre; a em -AMOS so com "ja" antes ou "seu pedido" depois; e condicao antes do
+  verbo na mesma frase desfaz. **Trava de verbo em portugues tem de olhar o tempo — e a forma de 1a
+  pessoa do plural nao tem tempo sozinha.** Essa trava nasceu sem teste nenhum de falso positivo.
 - **NEM TODO ANUNCIO TEM TEXTO PRONTO — e a marca "primeira mensagem = clique" apagava a fala dela.**
   Print do Rodrigo (10/09/2026): o anuncio CONVERSE CONOSCO nao preenche texto, a primeira mensagem era
   o pedido da colinha, e `prepararEntrantes` a marcava como `geradaPeloAnuncio` — todo detector pulou.

@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.44.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.45.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,7 +10,7 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.44.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.45.0**, tudo commitado e no remoto.
 
 > **Dossiê na 3.43:** ~6.345 tokens injetados (era ~3.351); o prompt de sistema com ele fica em ~15.809.
 >
@@ -18,7 +18,7 @@ Branch `claude/whatsfill-ia`, **v3.44.0**, tudo commitado e no remoto.
 > `panel/detalhes.js`): o prompt de sistema tem **~9.372 tokens** com
 > as 21 respostas de fábrica e **~7.602** sem elas; o padrão dele é **49,6%** do segundo. Antes: 15 suítes verdes, 40 arquivos limpos, e o
 > prompt de sistema do rascunho com **~9.017 tokens** sem dossiê (o dossiê injetado soma ~3.351).
-> **Em 10/09 foram dezessete versões** (a 3.44: **o pedido da colinha vai para a IA, e o anúncio sem texto pronto não apaga a primeira mensagem**; a 3.43: **o dossiê ganhou emendas, leis e projetos do material do mandato**; a 3.42: **"Capitão" no campo Cidade não é erro de grafia**; a 3.41: **oferecer o voto por dinheiro é sem interesse**; a 3.40: **a etiqueta de material sai com o modelo de material, e com o pedido fora do anúncio**; a 3.39: **"Rua X 120, Bairro" é endereço**; a 3.38: **log e conteúdo não vão para "detalhes"**; a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
+> **Em 10/09 foram dezoito versões** (a 3.45: **"encaminhamos" condicionado não barra mais o rascunho**; a 3.44: **o pedido da colinha vai para a IA, e o anúncio sem texto pronto não apaga a primeira mensagem**; a 3.43: **o dossiê ganhou emendas, leis e projetos do material do mandato**; a 3.42: **"Capitão" no campo Cidade não é erro de grafia**; a 3.41: **oferecer o voto por dinheiro é sem interesse**; a 3.40: **a etiqueta de material sai com o modelo de material, e com o pedido fora do anúncio**; a 3.39: **"Rua X 120, Bairro" é endereço**; a 3.38: **log e conteúdo não vão para "detalhes"**; a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
 > 3.33: **"o senhor é senador?" identifica e responde o cargo**; a 3.34: **pergunta retórica não é
 > pedido**, e "gabinete" no rascunho é trocado): 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
 > nova), 3.29 (o que ele foi está no dossiê), 3.30 (não há chance de ser contratado) e 3.31 (**não
@@ -289,6 +289,35 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — "Encaminhamos" condicionado não barra mais o rascunho (v3.45.0)
+
+Print de 10/09. Chegou pelo anúncio do Material da Direita e escreveu *"Como faço pra trabalhar na
+campanha"*. A IA escreveu o rascunho certo — só voluntários, sem remuneração, *"se tiver interesse
+mesmo assim, é só mandar seu endereço que encaminhamos ao assessor da região"* — e a rodada **parou**:
+*"afirma que alguém já providenciou algo — confira, porque ninguém fez isso"*. Ele: *"resposta correta,
+já não tem necessidade de parar"*.
+
+### Medido
+
+- **O único aviso era `afirmouAcao`**, e o gatilho era **"encaminhamos"**.
+- Em português, a forma em **-amos** é presente, futuro próximo **e** passado. Numa frase condicionada
+  (*"é só mandar… que encaminhamos"*) ela é a **promessa de repasse** — a única que a regra dele de
+  08/09 (a Jonice) permite. A forma em **-ei** (*"encaminhei"*, a Sandra de 06/09) só pode ser passado.
+- **Não havia teste nenhum desta trava** — ela nasceu sem os falsos positivos escritos.
+
+### O conserto
+
+- A forma em **-ei** continua barrando sempre.
+- A forma em **-amos** só barra com **"já"** antes ou **"seu pedido / sua solicitação / seu cadastro…"**
+  logo depois.
+- **Condição antes do verbo, na mesma frase, desfaz**: *se, caso, assim que, quando, depois que, basta,
+  é só, me manda/envia/passa, mande, envie*. Por isso a conferência passou a ser frase a frase.
+
+Medido depois: o rascunho da print tem **zero avisos** e pode sair sozinho; *"Já encaminhei seu pedido ao
+assessor"* continua barrado. 16 suítes verdes (+11 asserções, 6 sobre o que NÃO pode barrar).
+
 ---
 
 ## 2026-09-10 — O pedido da colinha vai para a IA (v3.44.0)

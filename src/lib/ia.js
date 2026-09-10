@@ -2230,13 +2230,36 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
    * conversa, *"já encaminhei ao assessor"* é uma afirmação sobre o mundo. O `já` não é obrigatório
    * — *"encaminhei seu pedido"* diz a mesma coisa.
    */
+  /**
+   * **"Encaminhamos" é presente e futuro também — e a trava o lia só como passado.** Print de 10/09/2026
+   * (quem perguntou *"como faço pra trabalhar na campanha"*): o rascunho dizia *"se tiver interesse
+   * mesmo assim, é só mandar seu endereço que encaminhamos ao assessor da região"* — o texto certo, o
+   * repasse condicionado que é a única promessa que a regra dele (08/09) permite —, e foi BARRADO com
+   * *"afirma que alguém já providenciou algo"*. Ele: *"resposta correta, já não tem necessidade de
+   * parar"*. Medido: era o único aviso.
+   *
+   * **A forma em -EI só pode ser passado** (*"encaminhei"*, a Sandra de 06/09) e continua barrando
+   * sempre. **A forma em -AMOS é ambígua**, e só vale como afirmação com o que a torna passado: *"já"*
+   * antes, ou *"seu pedido"* logo depois. E **frase com condição antes do verbo** (*"se"*, *"é só"*,
+   * *"assim que"*, *"me manda… que"*) é promessa de repasse, não afirmação de feito.
+   */
   const AFIRMOU_ACAO = [
-    /\b(j[áa]\s+)?(encaminhei|encaminhamos|repassei|repassamos|solicitei|solicitamos|providenciei|providenciamos|registrei|registramos|anotei|anotamos)\b/i,
+    /\b(j[áa]\s+)?(encaminhei|repassei|solicitei|providenciei|registrei|anotei)\b/i,
+    /\bj[áa]\s+(encaminhamos|repassamos|solicitamos|providenciamos|registramos|anotamos)\b/i,
+    /\b(encaminhamos|repassamos|solicitamos|providenciamos|registramos|anotamos)\s+(o\s+|a\s+)?(seu|sua|teu|tua)\s+(pedido|solicita[çc][ãa]o|contato|cadastro|endere[çc]o|dados|mensagem|caso)\b/i,
     /\bj[áa]\s+(pedi|pedimos|avisei|avisamos|separei|separamos|enviei|enviamos|mandei|mandamos)\b/i,
     /\b(seu|o)\s+pedido\s+(foi|j[áa]\s+foi)\s+(encaminhado|repassado|registrado|anotado|enviado)/i,
     /\bfoi\s+(encaminhado|repassado)\s+(ao|para|pro)\b/i,
   ];
-  if (AFIRMOU_ACAO.some((re) => re.test(texto))) {
+  const CONDICAO_ANTES =
+    /(^|[^\p{L}])(se|caso|assim\s+que|quando|depois\s+que|basta|[ée]\s+s[óo]|me\s+(manda|mande|envia|envie|passa|passe)|mande|envie)([^\p{L}]|$)/iu;
+  const afirmouFeito = texto.split(/(?<=[.!?])\s+|\n+/).some((frase) =>
+    AFIRMOU_ACAO.some((re) => {
+      const achado = re.exec(frase);
+      return !!achado && !CONDICAO_ANTES.test(frase.slice(0, achado.index));
+    })
+  );
+  if (afirmouFeito) {
     avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.afirmouAcao);
   }
 
