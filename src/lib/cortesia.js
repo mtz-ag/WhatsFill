@@ -2724,10 +2724,33 @@ const COMPLEMENTO =
  * `nº` explícito. Aceitar dígito em qualquer posição faria *"a rua aqui está esburacada há 20
  * anos"* — reclamação, não endereço, e comum nesta base — virar endereço com a marca da via junto.
  */
+/**
+ * O número colado no nome da rua — ver o comentário dentro de `NUMERO_DA_CASA`. Separado para ser
+ * conferido também no texto ORIGINAL: a normalização junta a quebra de linha num espaço, e *"Travessa
+ * dos Pinheiros 45⏎Igrejinha"* perdia o separador. Por isso as palavras da guarda vêm também com
+ * acento ("está", "há", "não").
+ */
+const NUMERO_COLADO_NA_RUA =
+  /(^|[^\p{L}])(rua|r\.|avenida|av\.?|travessa|trav\.?|estrada|rodovia|rod\.?|beco|alameda|al\.|servid[aã]o|passagem|pra[cç]a)\s+(?:(?!(?:aqui|ali|l[aá]|est[aá]|t[aá]|h[aá]|faz|fez|tem|foi|era|fica|ficou|n[aã]o|sem|mais|muito|toda|todo|desde|depois|antes|onde|que|e)\s)[\p{L}.'-]+\s+){1,4}\d{1,5}[ \t]*(,|-|;|\n)/iu;
+
 const NUMERO_DA_CASA = [
   /,\s*\d{1,5}(\D|$)/,
   /(^|[^\p{L}])n[º°o]?\.?\s*\d{1,5}(\D|$)/iu,
   /\d{1,5}\s*$/,
+  /**
+   * **O número COLADO no nome da rua, antes da vírgula** — print da Natalia (10/09/2026): ela
+   * respondeu ao pedido de endereço com *"Rua <nome> 1254, <bairro> <cidade>"*, e a rodada agradeceu
+   * e CONCLUIU em vez de pular e marcar. Ele: *"concluiu em vez de pular, não marcou com a etiqueta de
+   * material"*. Medido: `informouEndereco` dava null — e dava null também para *"Rua das Flores 120,
+   * Centro, Canoas"*, que é a forma mais comum de escrever endereço no Brasil. As três formas acima só
+   * aceitam o número DEPOIS da vírgula, no FIM da mensagem ou com "nº".
+   *
+   * **A guarda é a mesma disciplina de sempre — a marca ambígua precisa do que a desambigua:** tipo
+   * de via, de uma a quatro palavras de NOME, o número, e logo depois vírgula, traço, ponto e vírgula
+   * ou quebra de linha. E as palavras do meio não podem ser as da reclamação (*"a rua aqui está
+   * esburacada há 20, ninguém arruma"*) nem as do tempo (*"moro nessa rua desde 2010, …"*).
+   */
+  NUMERO_COLADO_NA_RUA,
 ];
 
 /**
@@ -2758,7 +2781,7 @@ export function informouEndereco(entrantes, nossaUltimaAt) {
       (BAIRRO.test(texto) ? 1 : 0) +
       (DIZ_ENDERECO.test(texto) ? 1 : 0) +
       (COMPLEMENTO.test(texto) ? 1 : 0) +
-      (NUMERO_DA_CASA.some((re) => re.test(texto)) ? 1 : 0);
+      (NUMERO_DA_CASA.some((re) => re.test(texto)) || NUMERO_COLADO_NA_RUA.test(String(msg?.texto || '')) ? 1 : 0);
 
     if (marcas >= 2) return { motivo: 'ela mandou o endereço — é o material para enviar' };
   }

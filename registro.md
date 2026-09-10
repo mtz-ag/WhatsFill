@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.38.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.39.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,13 +10,13 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.38.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.39.0**, tudo commitado e no remoto.
 
-> **Os números abaixo são da 3.27.** Da 3.38, remedido: **16 suítes** (entrou `detalhes.test.mjs`) (41 arquivos nos verificadores, com
+> **Os números abaixo são da 3.27.** Da 3.39, remedido: **16 suítes** (entrou `detalhes.test.mjs`) (41 arquivos nos verificadores, com
 > `panel/detalhes.js`): o prompt de sistema tem **~9.372 tokens** com
 > as 21 respostas de fábrica e **~7.602** sem elas; o padrão dele é **49,6%** do segundo. Antes: 15 suítes verdes, 40 arquivos limpos, e o
 > prompt de sistema do rascunho com **~9.017 tokens** sem dossiê (o dossiê injetado soma ~3.351).
-> **Em 10/09 foram onze versões** (a 3.38: **log e conteúdo não vão para "detalhes"**; a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
+> **Em 10/09 foram doze versões** (a 3.39: **"Rua X 120, Bairro" é endereço**; a 3.38: **log e conteúdo não vão para "detalhes"**; a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
 > 3.33: **"o senhor é senador?" identifica e responde o cargo**; a 3.34: **pergunta retórica não é
 > pedido**, e "gabinete" no rascunho é trocado): 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
 > nova), 3.29 (o que ele foi está no dossiê), 3.30 (não há chance de ser contratado) e 3.31 (**não
@@ -287,6 +287,39 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — "Rua X 120, Bairro" é endereço (v3.39.0)
+
+Print da Natalia (10/09). A rodada mandou o modelo do anúncio de material, que pede o endereço, e o
+pedido de nome e cidade. Ela respondeu *"Rua <nome> 1254, <bairro> <cidade>"* e, um minuto depois, nome
+e cidade. O atendimento foi **concluído**, sem etiqueta de material. Ele: *"concluiu em vez de pular,
+não marcou com a etiqueta de material"*.
+
+### Medido
+
+- **`informouEndereco` dava null para o endereço dela** — e também para *"Rua das Flores 120, Centro,
+  Canoas"*, a forma mais comum de escrever endereço no Brasil. O número da casa só era aceito DEPOIS
+  de vírgula, FECHANDO a mensagem ou com "nº".
+- **No quadro**, sem o sinal: `respondeu-os-dados`, **tecla i** (agradece e conclui) — que é a print.
+  Com o sinal: **tecla 2** (pula, deixa aberto e marca), no quadro e na tabela.
+- **A etiqueta no ENVIO do pedido de endereço** sai por `ehPedidoDeEndereco` no texto do modelo e
+  depende do campo *"Etiqueta de quem MANDOU ENDEREÇO"* do Automatizado. Vazio, o log diz *"sem
+  etiqueta de endereço configurada"* e nada é marcado. **Não dá para ver o campo dele daqui** — é a
+  pendência 2 desta entrada desde 07/09.
+
+### O conserto
+
+`NUMERO_COLADO_NA_RUA`: tipo de via + uma a quatro palavras de nome + número + vírgula, traço, ponto e
+vírgula ou quebra de linha. **A guarda é o que fica no meio**: as palavras da reclamação e do tempo
+(*aqui, está, há, tem, ficou, desde…*) não contam como nome — *"a rua aqui está esburacada há 20,
+ninguém arruma"* e *"moro nessa rua desde 2010, …"* continuam não sendo endereço. É conferido também
+no texto ORIGINAL, porque `semAcentos` junta a quebra de linha num espaço e *"Travessa dos Pinheiros
+45⏎Igrejinha"* perdia o separador — achado pelo próprio teste.
+
+16 suítes verdes (+12 asserções, 6 sobre o que NÃO pode ser endereço), verificadores limpos. **Sem
+importação de fluxo.**
+
 ---
 
 ## 2026-09-10 — Log e conteúdo não vão para "detalhes" (v3.38.0)

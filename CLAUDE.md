@@ -2749,6 +2749,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **"RUA X 120, BAIRRO" NAO ERA ENDERECO — a forma mais comum ficava de fora.** Print da Natalia
+  (10/09/2026): ela respondeu o pedido de endereco com o numero COLADO no nome da rua, antes da
+  virgula, e a rodada agradeceu e concluiu em vez de pular e marcar. `NUMERO_DA_CASA` so aceitava o
+  numero depois de virgula, no fim ou com "no". Hoje ha `NUMERO_COLADO_NA_RUA`, com a guarda no MEIO
+  (palavras de reclamacao e de tempo nao contam como nome da rua). **`semAcentos` junta toda quebra de
+  linha num espaco** — padrao que depende de `\n` tem de ser conferido no texto original. E a etiqueta
+  do pedido de endereco depende do campo "Etiqueta de quem MANDOU ENDERECO" preenchido: vazio, nada e
+  marcado, e o log diz isso.
 - **"TODO DETECTOR RESPEITA A MARCA DO ANUNCIO" ERA FALSO PARA OS DE PERGUNTA.** Print da Lidia
   (10/09/2026): o texto pre-preenchido *"Ola! Posso ter mais informacoes sobre isso?"* — anuncio
   cadastrado, modelo disponivel, `ehMensagemDeAnuncio` = true — virou pergunta pendente, e na chegada

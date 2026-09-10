@@ -2845,4 +2845,38 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(pendente(mesmoTexto), 'ela repetindo a pergunta com as proprias palavras tambem conta');
 }
 
+/**
+ * O NUMERO COLADO NO NOME DA RUA — print da Natalia (10/09/2026). Ela respondeu ao pedido de endereco
+ * com "Rua <nome> <numero>, <bairro> <cidade>" e a rodada agradeceu e concluiu em vez de pular e
+ * marcar. `informouEndereco` so aceitava o numero depois da virgula, no fim ou com "no". Enderecos
+ * abaixo sao ficticios.
+ */
+{
+  grupo('numero colado no nome da rua e endereco (a Natalia, 10/09)');
+  const end = (t) => !!informouEndereco([{ texto: t, tipo: 'TEXT' }], null);
+
+  for (const t of [
+    'Rua das Acácias 845, Vila Nova Cachoeira do Sul',
+    'Rua das Flores 120, Centro, Canoas',
+    'rua sete de setembro 1998, centro',
+    'Av Brasil 900 - Centro',
+    'Avenida Getúlio Vargas 3100; bairro São José',
+    'Travessa dos Pinheiros 45\nIgrejinha',
+  ]) {
+    check(end(t), `e endereco: "${t.replace(/\n/g, ' / ')}"`);
+  }
+
+  /** **A guarda: reclamacao de rua e tempo nao sao endereco.** */
+  for (const t of [
+    'a rua aqui está esburacada há 20, ninguém arruma',
+    'moro nessa rua desde 2010, nunca vi um asfalto',
+    'a rua ficou 3 meses sem luz',
+    'na minha rua tem 15 casas sem agua',
+    'fui na rua do mercado e voltei',
+    'a rua 13 de maio está linda',
+  ]) {
+    check(!end(t), `NAO e endereco: "${t}"`);
+  }
+}
+
 fim();
