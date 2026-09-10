@@ -3025,6 +3025,24 @@ function insultouNossoPartido(norm) {
  * @param {Array<{texto?:string, tipo?:string}>} entrantes
  * @returns {{motivo:string}|null}
  */
+/**
+ * **Venda de voto** — ver o bloco em `semInteresse` (a Simone, 10/09/2026). Texto já sem acento e em
+ * minúscula. **O objeto é o voto DELA** (meu, nosso): *"o PT compra voto com bolsa família"* é crítica
+ * a terceiro, e fala de campanha nesta base.
+ */
+const VENDA_DE_VOTO = [
+  /(^|[^\p{L}])(vendo|vendendo|vender|vende|troco|trocar|troca)\s+(o\s+)?(meu|meus|nosso|nossos)\s+votos?/u,
+  /(^|[^\p{L}])(compra|compram|comprar|compre|compraria)\s+(o\s+)?(meu|meus|nosso|nossos)\s+votos?/u,
+  /(^|[^\p{L}])(quanto|qto|quantos)\s+(voces\s+|vcs\s+|o\s+senhor\s+)?(paga|pagam|pagaria|da|dao|daria|oferece|oferecem)\s+(pel[oa]s?|por|no|pelo\s+meu)\s+(meu\s+|o\s+)?votos?/u,
+  /(^|[^\p{L}])(meu|nosso)\s+votos?\s+(por|em\s+troca\s+de|a\s+troco\s+de|so\s+com|so\s+por)\s+(um\s+|uns\s+)?(pix|dinheiro|grana|r\$|\d)/u,
+];
+/** "Quer meu voto?" — a oferta, que só é venda com dinheiro na mesma rajada. */
+const OFERECE_O_VOTO = /(^|[^\p{L}])(quer|querem|queres|precisa|precisam|quiser|quiserem)\s+(d?o\s+)?(meu|meus|nosso|nossos)\s+votos?/u;
+/** O dinheiro que acompanha a oferta. "Pix" é o marcador desta base (a Marli, 02/09). */
+const DINHEIRO_PELO_VOTO = /(^|[^\p{L}])(pix|dinheiro|grana|r\$\s*\d|\d+\s*(reais|conto|pila)|me\s+paga|pagar|pague|paguem)([^\p{L}]|$)/u;
+/** A negativa que desfaz: quem diz que o voto não se vende está do lado contrário. */
+const NAO_VENDE_O_VOTO = /(^|[^\p{L}])(meu|nosso)\s+votos?\s+(nao\s+(se\s+)?(compra|vende|tem\s+preco|esta\s+a\s+venda)|e\s+de\s+graca)/u;
+
 export function semInteresse(entrantes, nossaUltimaAt) {
   /**
    * **A RAJADA, e não só a última mensagem** — anotação da susana (03/09/2026), a segunda vez que
@@ -3069,6 +3087,26 @@ export function semInteresse(entrantes, nossaUltimaAt) {
    */
   const comTexto = lista.filter((m) => String(m?.texto || '').trim());
   if (!comTexto.length) return null;
+
+  /**
+   * **Oferecer o VOTO em troca de dinheiro é "sem interesse"** — print da Simone (10/09/2026). Ela
+   * clicou no anúncio e escreveu *"Quer meu voto?"* e *"Faz um pix pra mim"*; a rodada mandou a IA, que
+   * respondeu com a negativa de ajuda financeira. Ele: *"estava praticamente propondo venda de votos,
+   * ela sabe que é ilegal, é pessoa sem interesse"*.
+   *
+   * **Medido: `semInteresse` dava null** — nada ali é insulto nem recusa — e `pedeAjudaFinanceira`
+   * casava pelo "pix". **Lê a rajada JUNTA**, e é a única coisa desta função que faz isso: a oferta vem
+   * partida em duas mensagens (a pergunta do voto numa, o dinheiro na outra), e mensagem a mensagem
+   * nenhuma das duas é venda.
+   */
+  const rajadaJunta = semAcentos(comTexto.map((m) => String(m?.texto || '')).join(' \n ')).toLowerCase();
+  if (!NAO_VENDE_O_VOTO.test(rajadaJunta)) {
+    const direta = VENDA_DE_VOTO.some((re) => re.test(rajadaJunta));
+    const oferta = OFERECE_O_VOTO.test(rajadaJunta) && DINHEIRO_PELO_VOTO.test(rajadaJunta);
+    if (direta || oferta) {
+      return { motivo: 'ofereceu o voto em troca de dinheiro — compra de voto é crime, e ela sabe' };
+    }
+  }
 
   /**
    * **Da mais recente para a mais antiga, e uma retratação MAIS NOVA cancela.**

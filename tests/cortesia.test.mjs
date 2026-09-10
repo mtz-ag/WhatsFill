@@ -2907,4 +2907,27 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   }
 }
 
+/**
+ * VENDA DE VOTO E SEM INTERESSE — print da Simone (10/09/2026): *"Quer meu voto?"* e *"Faz um pix pra
+ * mim"*, e a IA respondeu com a negativa de ajuda. Ele: *"estava praticamente propondo venda de votos,
+ * ela sabe que e ilegal, e pessoa sem interesse"*. A oferta vem PARTIDA em duas mensagens.
+ */
+{
+  grupo('venda de voto e sem interesse (a Simone, 10/09)');
+  const sem = (...textos) => semInteresse(textos.map((texto, i) => ({ texto, tipo: 'TEXT', at: 1000 + i })), null);
+
+  check(!!sem('Quer meu voto?', 'Fas um pix pra mim🤑'), 'a rajada da print, partida em duas mensagens');
+  for (const t of ['vendo meu voto', 'quanto vocês pagam pelo meu voto?', 'meu voto por um pix', 'compra meu voto?',
+    'quer meu voto? me manda 50 reais']) {
+    check(!!sem(t), `e venda: "${t}"`);
+  }
+
+  /** **A guarda: a oferta sem dinheiro, a negativa e a critica a terceiro nao sao venda.** */
+  for (const t of ['meu voto não se compra', 'quer meu voto? então trabalha pela nossa cidade', 'o PT compra voto com bolsa família',
+    'já tem meu voto, capitão', 'faz um pix pra mim, to precisando']) {
+    check(!sem(t), `NAO e venda: "${t}"`);
+  }
+  check(!sem('Quer meu voto?', 'meu voto não se compra, é pela segurança'), 'quem pergunta e diz que nao vende, nao vende');
+}
+
 fim();

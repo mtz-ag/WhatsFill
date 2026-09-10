@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.40.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.41.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,13 +10,13 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.40.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.41.0**, tudo commitado e no remoto.
 
-> **Os números abaixo são da 3.27.** Da 3.40, remedido: **16 suítes** (entrou `detalhes.test.mjs`) (41 arquivos nos verificadores, com
+> **Os números abaixo são da 3.27.** Da 3.41, remedido: **16 suítes** (entrou `detalhes.test.mjs`) (41 arquivos nos verificadores, com
 > `panel/detalhes.js`): o prompt de sistema tem **~9.372 tokens** com
 > as 21 respostas de fábrica e **~7.602** sem elas; o padrão dele é **49,6%** do segundo. Antes: 15 suítes verdes, 40 arquivos limpos, e o
 > prompt de sistema do rascunho com **~9.017 tokens** sem dossiê (o dossiê injetado soma ~3.351).
-> **Em 10/09 foram treze versões** (a 3.40: **a etiqueta de material sai com o modelo de material, e com o pedido fora do anúncio**; a 3.39: **"Rua X 120, Bairro" é endereço**; a 3.38: **log e conteúdo não vão para "detalhes"**; a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
+> **Em 10/09 foram catorze versões** (a 3.41: **oferecer o voto por dinheiro é sem interesse**; a 3.40: **a etiqueta de material sai com o modelo de material, e com o pedido fora do anúncio**; a 3.39: **"Rua X 120, Bairro" é endereço**; a 3.38: **log e conteúdo não vão para "detalhes"**; a 3.37: **o painel resume rótulos e avisos, e o texto visível caiu 60%**; a 3.36: **o texto do anúncio não é pergunta dela**; a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
 > 3.33: **"o senhor é senador?" identifica e responde o cargo**; a 3.34: **pergunta retórica não é
 > pedido**, e "gabinete" no rascunho é trocado): 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
 > nova), 3.29 (o que ele foi está no dossiê), 3.30 (não há chance de ser contratado) e 3.31 (**não
@@ -287,6 +287,35 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — Oferecer o voto por dinheiro é sem interesse (v3.41.0)
+
+Print da Simone (10/09). Ela clicou no anúncio e escreveu *"Quer meu voto?"* e *"Faz um pix pra mim"*.
+A rodada mandou a IA, que respondeu com a negativa de ajuda financeira (lei eleitoral, CRAS) — ele
+apagou. *"Estava praticamente propondo venda de votos, ela sabe que é ilegal, é pessoa sem interesse."*
+
+### Medido
+
+- **`semInteresse` dava null**: nada ali é insulto nem recusa. **`pedeAjudaFinanceira` casava pelo
+  "pix"**, e no quadro o caso ia para `chegada-ajuda` — a IA.
+- **A oferta vem PARTIDA em duas mensagens** (o voto numa, o dinheiro na outra): mensagem a mensagem,
+  que é como `semInteresse` lê, nenhuma das duas é venda.
+- Com o sinal: **tecla `s`** no quadro e na tabela — etiqueta de sem interesse e conclui sem responder.
+
+### O conserto
+
+Dentro de `semInteresse`, antes do laço mensagem a mensagem, **a rajada é lida JUNTA** para a venda:
+
+- **direta**: *"vendo/troco meu voto"*, *"compra meu voto?"*, *"quanto vocês pagam pelo meu voto"*,
+  *"meu voto por um pix"*;
+- **oferta + dinheiro**: *"quer meu voto?"* com pix, dinheiro, grana, R$ ou "N reais" na mesma rajada.
+
+**As guardas**: o voto tem de ser DELA (meu, nosso) — *"o PT compra voto com bolsa família"* é crítica a
+terceiro; a oferta sem dinheiro não é venda (*"quer meu voto? então trabalha pela nossa cidade"*); pix
+sem voto continua sendo pedido de ajuda; e *"meu voto não se compra"* desfaz tudo, inclusive na mesma
+rajada da oferta. 16 suítes verdes (+12 asserções, 6 sobre o que NÃO é venda).
+
 ---
 
 ## 2026-09-10 — A etiqueta de material sai com o modelo de material (v3.40.0)

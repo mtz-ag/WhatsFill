@@ -2749,6 +2749,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **OFERECER O VOTO POR DINHEIRO E SEM INTERESSE** (regra dele, 10/09/2026, print da Simone: *"Quer meu
+  voto?"* + *"Faz um pix pra mim"*). `semInteresse` le mensagem a mensagem, e a oferta vem PARTIDA em
+  duas — nenhuma das duas sozinha e venda, e o "pix" mandava o caso para a negativa de ajuda. Hoje a
+  rajada e lida JUNTA para a venda de voto, antes do laco. **Detector cujo caso vem partido em
+  mensagens tem de ler a rajada junta** — e as guardas continuam por objeto: o voto e DELA, oferta sem
+  dinheiro nao e venda, e "meu voto nao se compra" desfaz.
 - **A ETIQUETA DE MATERIAL: PRIORIDADE NO MODELO, EXCECAO NO PEDIDO FORA DO ANUNCIO** (regra dele,
   10/09/2026). **`enviarModelo` nunca aplicava a etiqueta** — a marca por `ehPedidoDeEndereco` morava so
   em `sendTemplate` e no caminho da IA, e todo modelo aprovado sai por `enviarModelo`. **Ao por uma
