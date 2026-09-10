@@ -2763,6 +2763,11 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   foi aberto (o painel redesenha a cada `setStatus`). **Ao criar texto que e DADO ou AVISO — nao
   explicacao —, marque `'data-fica': '1'`**, senao ele some atras do botao. E texto novo de
   explicacao nao precisa de nada: o passe depois do desenho pega sozinho.
+  **Na 3.37 (mesmo dia, *"pode resumir mais"*) nas abas Automatizado e Config tambem se resumem os
+  ROTULOS, as descricoes (`.wf-preview`) e os avisos (`.wf-block`)**: fica a cabeca, o resto vai. Rotulo
+  novo: ponha o NOME do controle antes de ": " ou " — ", que o resto vira detalhe sozinho. **Para medir
+  texto do painel, monte-o a 380px** — a 800px tudo cabe numa linha e a medicao diz que nada precisa
+  recolher (foi o meu primeiro erro).
 - **PERGUNTA RETORICA NAO E PEDIDO — e a proximidade lexical pela QUINTA vez.** Print da Eloiza
   (10/09/2026): *"nao gosto de politica"*, *"e so promessa"*, *"se eu pedisse ajuda pro senhor,
   poderiam me ajudar? nao, ne?"* recebeu a negativa inteira da ajuda financeira (lei, CRAS, Cadastro
@@ -3408,10 +3413,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
 > `src/` e reclama só de `SyntaxError`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as quinze suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as dezesseis suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

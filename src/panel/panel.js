@@ -1453,9 +1453,37 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * com `data-fica` onde é criado.
    */
   const detalhesAbertos = new Set();
+  let observadorDeDetalhes = null;
+  let detalhesAgendado = false;
 
   function encolherExplicacoes() {
-    recolherExplicacoes(body, detalhesAbertos);
+    /**
+     * **Resumir só nas abas de ajuste** (10/09/2026, *"pode resumir mais e botar o resto pros
+     * detalhes"*): lá o texto é rótulo e explicação; em Respostas e Dados ele é conteúdo — o texto
+     * do modelo, o campo do contato — e não pode ser encurtado.
+     */
+    recolherExplicacoes(body, detalhesAbertos, {
+      resumir: state.tab === 'automatizado' || state.tab === 'config',
+    });
+
+    /**
+     * **E de novo quando o corpo muda** — parte do conteúdo chega DEPOIS do desenho, e esse pedaço
+     * ficava inteiro na tela até o redesenho seguinte. O passe é idempotente (marca o que já tratou),
+     * então a mudança que ele mesmo causa não gera outra.
+     */
+    if (!observadorDeDetalhes && typeof MutationObserver === 'function') {
+      observadorDeDetalhes = new MutationObserver(() => {
+        if (detalhesAgendado) return;
+        detalhesAgendado = true;
+        // `setTimeout` e não `requestAnimationFrame`: sem a janela desenhando, o quadro de animação
+        // não chega, e o pedaço que entrou depois ficava inteiro (visto medindo, 10/09).
+        setTimeout(() => {
+          detalhesAgendado = false;
+          encolherExplicacoes();
+        }, 0);
+      });
+      observadorDeDetalhes.observe(body, { childList: true, subtree: true });
+    }
   }
 
   /**
