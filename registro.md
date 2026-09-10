@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.34.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.35.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,12 +10,13 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.34.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.35.0**, tudo commitado e no remoto.
 
-> **Os números abaixo são da 3.27.** Da 3.34, remedido: o prompt de sistema tem **~9.372 tokens** com
+> **Os números abaixo são da 3.27.** Da 3.35, remedido (41 arquivos nos verificadores, com
+> `panel/detalhes.js`): o prompt de sistema tem **~9.372 tokens** com
 > as 21 respostas de fábrica e **~7.602** sem elas; o padrão dele é **49,6%** do segundo. Antes: 15 suítes verdes, 40 arquivos limpos, e o
 > prompt de sistema do rascunho com **~9.017 tokens** sem dossiê (o dossiê injetado soma ~3.351).
-> **Em 10/09 foram sete versões** (a 3.32: **o apoio só conta se for para os seis da colinha**; a
+> **Em 10/09 foram oito versões** (a 3.35: **o excesso de texto do painel foi para "ⓘ detalhes"**; a 3.32: **o apoio só conta se for para os seis da colinha**; a
 > 3.33: **"o senhor é senador?" identifica e responde o cargo**; a 3.34: **pergunta retórica não é
 > pedido**, e "gabinete" no rascunho é trocado): 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
 > nova), 3.29 (o que ele foi está no dossiê), 3.30 (não há chance de ser contratado) e 3.31 (**não
@@ -286,6 +287,40 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — O excesso de texto do painel fica atrás de "ⓘ detalhes" (v3.35.0)
+
+Pedido dele: *"o frontend continua poluído, crie botões para mais detalhes e bote todo o excesso de
+texto lá"*. A 3.7 (08/09) cortava as explicações em **três linhas** com um "ver mais", e a aba
+Automatizado continuava um muro — cada campo seguia com três linhas cinza embaixo, e o degradê do
+corte ainda puxava o olho para o texto (visível nos prints do dia).
+
+### O que mudou
+
+- **`src/panel/detalhes.js`** (novo): toda explicação (`.wf-origin`, `.wf-hint`) que passa de **uma**
+  linha some atrás de um botão **"ⓘ detalhes"**. As de uma linha ficam, porque são rótulo.
+- **Vizinhas vão juntas**: três parágrafos seguidos sob o mesmo campo viram UM botão.
+- **O que foi aberto continua aberto** quando o painel redesenha — e ele redesenha o tempo todo
+  (`renderAll` a cada `setStatus`). A memória é por texto e só em memória.
+- **Dado e aviso ficam à vista** (`data-fica` onde são criados): a origem de cada sugestão e de cada
+  campo do contato, as duas listas de exemplos da aba Cidades e os avisos de modelo e de reserva da
+  IA. Esconder isso seria esconder o que ele precisa ver para decidir.
+- Continua sendo **um passe depois do desenho**, e não 60 edições: só o navegador sabe quantas linhas
+  o texto ocupou, e a regra vale para a próxima explicação que alguém escrever.
+
+### Medido no navegador
+
+Página de teste (fora do repositório) com o `panel.css` real e um cartão no formato do Automatizado:
+**3 botões**; fechado, **só a linha curta e o aviso marcado** ficam à vista; um clique mostra o grupo
+de três parágrafos; **depois de redesenhar, o bloco aberto continuava aberto** (mesma contagem, rótulo
+"ocultar detalhes"). O primeiro teste mostrou o botão grudado ao lado do campo de cima — virou
+`display: block; width: fit-content`.
+
+**O que NÃO foi medido:** o painel de verdade dentro do mobiliza — as suítes não carregam `panel.js`
+(precisa de `window`). Os dois verificadores passam (41 arquivos), e a conferência final é ele
+recarregar e olhar a aba Automatizado e a Config.
+
 ---
 
 ## 2026-09-10 — Pergunta retórica não é pedido (v3.34.0)

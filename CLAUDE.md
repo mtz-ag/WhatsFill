@@ -2749,6 +2749,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **EXPLICACAO DE MAIS DE UMA LINHA FICA ATRAS DE "ⓘ DETALHES"** (pedido dele, 10/09/2026: *"o
+  frontend continua poluído"*). O corte em tres linhas da 3.7 nao bastou. `panel/detalhes.js` recolhe
+  todo `.wf-origin`/`.wf-hint` de mais de uma linha, juntando vizinhas num botao so, e lembra o que
+  foi aberto (o painel redesenha a cada `setStatus`). **Ao criar texto que e DADO ou AVISO — nao
+  explicacao —, marque `'data-fica': '1'`**, senao ele some atras do botao. E texto novo de
+  explicacao nao precisa de nada: o passe depois do desenho pega sozinho.
 - **PERGUNTA RETORICA NAO E PEDIDO — e a proximidade lexical pela QUINTA vez.** Print da Eloiza
   (10/09/2026): *"nao gosto de politica"*, *"e so promessa"*, *"se eu pedisse ajuda pro senhor,
   poderiam me ajudar? nao, ne?"* recebeu a negativa inteira da ajuda financeira (lei, CRAS, Cadastro

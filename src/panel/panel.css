@@ -612,28 +612,35 @@
 }
 
 /**
- * As explicações longas nascem cortadas — pedido dele (08/09/2026): *"o frontend está muito
- * poluído... deixar as informações básicas e outra forma de ler o resto"*.
+ * O excesso de texto fica atrás de "ⓘ detalhes" — pedido dele (10/09/2026): *"o frontend continua
+ * poluído, crie botões para mais detalhes e bote todo o excesso de texto lá"*. Substitui o corte em
+ * três linhas de 08/09. Quem decide o que recolhe é `panel/detalhes.js`, medindo depois do desenho.
  *
- * O corte é em três linhas e quem decide é o JS (`encolherExplicacoes`), medindo o texto DEPOIS de
- * desenhado: só o navegador sabe quantas linhas ele ocupou na largura de agora. As curtas — a
- * maioria, que servem de rótulo — não ganham botão nenhum.
+ * O botão é pequeno e discreto de propósito: ele marca que há mais, sem competir com o campo.
  */
-.wf-root .wf-origin.wf-cortado {
-  max-height: calc(3 * 1.35em);
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(180deg, #000 60%, transparent 100%);
-  mask-image: linear-gradient(180deg, #000 60%, transparent 100%);
-}
 .wf-root .wf-origin { line-height: 1.35; }
-.wf-root button.wf-mais {
+/* Linha própria sempre: inline, ele grudava ao lado do campo de cima (visto no teste de 10/09). */
+.wf-root button.wf-detalhes-botao {
+  display: block;
+  width: fit-content;
   background: none;
-  border: 0;
-  padding: 0;
-  margin-top: 2px;
-  color: var(--wf-accent, #2563eb);
-  font-size: 11px;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  padding: 1px 8px;
+  margin: 3px 0 2px;
+  color: var(--wf-muted);
+  font-size: 10.5px;
   font-weight: 600;
+  line-height: 1.5;
   cursor: pointer;
 }
-.wf-root button.wf-mais:hover { text-decoration: underline; }
+.wf-root button.wf-detalhes-botao:hover,
+.wf-root button.wf-detalhes-botao[aria-expanded="true"] {
+  color: var(--wf-accent, #2563eb);
+  border-color: var(--wf-accent, #2563eb);
+}
+.wf-root .wf-detalhes {
+  margin: 2px 0 6px;
+  padding: 2px 0 2px 8px;
+  border-left: 2px solid var(--wf-border);
+}

@@ -29,6 +29,7 @@ import * as arvoreLib from '../lib/arvore.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
 import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
+import { recolherExplicacoes } from './detalhes.js';
 import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, marcarLoteEncaminhado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
@@ -1445,24 +1446,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *
    * A medida é o `scrollHeight` DEPOIS do desenho, porque só o navegador sabe quantas linhas o
    * texto ocupou na largura de agora. Por isso é um passe, e não uma decisão na hora de criar.
+   *
+   * **10/09/2026: três linhas com "ver mais" não bastou** — *"o frontend continua poluído, crie
+   * botões para mais detalhes e bote todo o excesso de texto lá"*. Hoje tudo o que passa de UMA
+   * linha fica atrás de "ⓘ detalhes" (ver `panel/detalhes.js`), e o que é dado ou aviso é marcado
+   * com `data-fica` onde é criado.
    */
-  const LIMITE_DE_LINHAS = 3;
+  const detalhesAbertos = new Set();
 
   function encolherExplicacoes() {
-    for (const alvo of body.querySelectorAll('.wf-origin')) {
-      if (alvo.dataset.encolhido) continue;
-      const linha = parseFloat(getComputedStyle(alvo).lineHeight) || 15;
-      if (alvo.scrollHeight <= linha * (LIMITE_DE_LINHAS + 0.5)) continue;
-
-      alvo.dataset.encolhido = '1';
-      alvo.classList.add('wf-cortado');
-      const mais = h('button', { class: 'wf-mais', type: 'button' }, 'ver mais');
-      mais.addEventListener('click', () => {
-        const aberto = alvo.classList.toggle('wf-cortado');
-        mais.textContent = aberto ? 'ver mais' : 'ver menos';
-      });
-      alvo.after(mais);
-    }
+    recolherExplicacoes(body, detalhesAbertos);
   }
 
   /**
@@ -8305,7 +8298,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         if (sug.nome) linha.append(renderTagPicker(sug));
       }
 
-      linha.append(h('div', { class: 'wf-origin' }, `${sug.origem}: ${sug.motivo}`));
+      linha.append(h('div', { class: 'wf-origin', 'data-fica': '1' }, `${sug.origem}: ${sug.motivo}`));
       body.append(linha);
     }
   }
@@ -8404,7 +8397,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             ? 'palpite (aproximado)'
             : 'não reconhecido';
       wrap.append(
-        h('div', { class: 'wf-origin' }, `${rotulo}${entry.source ? ` — de “${truncate(entry.source, 50)}”` : ''}`)
+        h('div', { class: 'wf-origin', 'data-fica': '1' }, `${rotulo}${entry.source ? ` — de “${truncate(entry.source, 50)}”` : ''}`)
       );
     }
     return wrap;
@@ -9034,7 +9027,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'A primeira versão criava a etiqueta como "CIDADE: CAXIAS DO SUL". Renomear no CRM ' +
             'conserta TODOS os contatos que já a receberam de uma vez — a etiqueta é a mesma, ' +
             'muda só o nome. Nenhum contato é tocado.'),
-        h('div', { class: 'wf-origin' }, comPrefixo.slice(0, 10).map((x) => `${x.de} → ${x.para}`).join(' · ')),
+        h('div', { class: 'wf-origin', 'data-fica': '1' }, comPrefixo.slice(0, 10).map((x) => `${x.de} → ${x.para}`).join(' · ')),
       ]);
       const btnFix = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Renomear agora');
       btnFix.disabled = c.lendo || c.gravando;
@@ -9128,7 +9121,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
               'Gravar vai somar o certo e deixar o errado — o contato passa a aparecer no filtro ' +
               'das duas regiões. Não removo nada sozinho: pode ser a cidade que está errada, e ' +
               'não a etiqueta. Confira alguns antes de gravar.'),
-          h('div', { class: 'wf-origin' }, exemplos.join(' · ')),
+          h('div', { class: 'wf-origin', 'data-fica': '1' }, exemplos.join(' · ')),
         ])
       );
     }
@@ -10220,7 +10213,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
     body.append(
       h('label', { class: 'wf-field' }, [h('span', {}, 'Modelo'), selModelo]),
-      h('div', { class: 'wf-origin' }, avisoDoModelo(cfg))
+      h('div', { class: 'wf-origin', 'data-fica': '1' }, avisoDoModelo(cfg))
     );
 
     /**
@@ -10262,7 +10255,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
     body.append(
       h('label', { class: 'wf-field' }, [h('span', {}, 'Modelo reserva (failsafe)'), selReserva]),
-      h('div', { class: 'wf-origin' }, avisoDoReserva(cfg, state.iaChaves))
+      h('div', { class: 'wf-origin', 'data-fica': '1' }, avisoDoReserva(cfg, state.iaChaves))
     );
 
     /**
