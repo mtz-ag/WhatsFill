@@ -2749,6 +2749,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **NAO HA CHANCE DE SER CONTRATADO, E A IA NAO PODE INSINUAR** (anotacao da Solange, 08/09, lida
+  em 10/09): *"as contratacoes sao bem limitadas e as decisoes saem da assessoria"*. Regra dele:
+  *"contratos de eleicao sao decididos na pre-campanha, nunca iremos contratar ninguem pelo
+  WhatsApp"*. **Frase que nao promete nada escapa de toda trava e ainda assim abre porta** — por isso
+  a regra 12 escreve as frases proibidas. E `TRABALHAR_PARA_NOS` nao via *"na SUA campanha"*:
+  **preposicao, artigo e possessivo sao pecas separadas.**
 - **"ESCALAR" NO DOSSIE VIRAVA "VOU VERIFICAR E VOLTO" NO RASCUNHO.** Print do Fernando Britto
   (10/09/2026): perguntaram se ele foi bombeiro e comandante dos salva-vidas, e o rascunho prometeu
   verificar e voltar — com a carreira dele (Marinha, 2005–2020) `[CONFIRMADO]` no dossiê desde 01/09.

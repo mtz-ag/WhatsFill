@@ -1236,6 +1236,26 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    pessoa voltar várias vezes pedindo outras coisas, e o atendimento não tem braço para isso.',
     '    A ÚNICA continuação que existe é a de sempre: se ela JÁ procurou o órgão e NÃO foi atendida,',
     '    peça que ela conte o que aconteceu — aí sim é trabalho do mandato cobrar o poder público.',
+    /**
+     * **Não dê a impressão de que há chance** — anotação da Solange (08/09/2026, lida em 10/09). Ela
+     * pediu para trabalhar na campanha e ajuda para ir embora para São Paulo, e o rascunho respondeu
+     * *"em período eleitoral as contratações são bem limitadas e as decisões saem da assessoria com
+     * base em necessidades pontuais; o melhor é entrar em contato direto com a equipe"*. Ele:
+     * *"contratos de eleição e essas decisões são tomadas na pré-campanha, nunca iremos contratar
+     * ninguém assim pelo WhatsApp; a IA deu impressão que tem chance"*.
+     *
+     * **A metade "procure a equipe" já estava barrada** (`mandouProcurarNos`, 07/09) — medido: o texto
+     * que saiu hoje não sairia sozinho. **A outra metade não tinha regra nenhuma:** "limitadas",
+     * "pontuais" e "a assessoria decide" não prometem nada e por isso nenhuma trava as pega — é
+     * julgamento, e fica no prompt. É a irmã da regra 7 (o que tinha de ser contratado já foi) do lado
+     * de quem quer ser contratado.
+     */
+    '12. QUEM QUER TRABALHAR NA CAMPANHA — pedindo pagamento ou sem dizer: a equipe paga foi fechada na',
+    '    PRÉ-CAMPANHA, e ninguém é contratado pelo WhatsApp. **Não dê a impressão de que existe chance**:',
+    '    nada de "as contratações são limitadas", "depende da necessidade", "vou registrar seu interesse",',
+    '    "a assessoria avalia", "mande seu currículo" nem "procure a equipe". A base é a resposta pronta',
+    '    "Quer trabalhar para a campanha": aqui é só voluntário, sem remuneração. Se ela pediu mais alguma',
+    '    coisa (dinheiro, passagem, ajuda), responda essa parte pelo item 9 do padrão, numa frase.',
     'TAMANHO: siga o item 22 do padrão, e ele é curto. Mensagem simples: 1 a 3 frases. Isto sai no',
     'WhatsApp, não é ofício.',
     'Não dê aula sobre regra nem sobre lei, e não liste alternativas que ninguém pediu. Quando algo',

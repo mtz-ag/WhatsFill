@@ -2079,6 +2079,30 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
 }
 
 /**
+ * NAO DE A IMPRESSAO DE QUE HA CHANCE — anotacao da Solange (08/09, lida em 10/09). O rascunho disse
+ * que *"as contratacoes sao bem limitadas e as decisoes saem da assessoria"*. Ele: *"contratos de
+ * eleicao sao decididos na pre-campanha, nunca iremos contratar ninguem pelo WhatsApp"*.
+ */
+{
+  grupo('trabalhar na campanha: nao ha chance, e a IA nao insinua (a Solange, 10/09)');
+  const agora = new Date('2026-09-08T13:58:00');
+  const oQueSaiu =
+    'Boa tarde! Sobre trabalhar na campanha, preciso ser honesto: em periodo eleitoral as contratacoes ' +
+    'sao bem limitadas. O melhor e voce entrar em contato direto com a equipe de campanha.';
+  check(!rascunhoPodeSairSozinho(revisarRascunho(oQueSaiu, agora, {}).avisos),
+    'a metade "procure a equipe" ja era barrada (mandouProcurarNos)');
+
+  const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/PRÉ-CAMPANHA/.test(p), 'o prompt diz que a equipe paga foi fechada na pre-campanha');
+  check(/ninguém é contratado pelo WhatsApp/.test(p), 'e que ninguem e contratado pelo WhatsApp');
+  check(/impressão de que existe chance/.test(p), 'e proibe insinuar chance');
+  check(/contratações são limitadas/.test(p), 'com a frase do caso escrita');
+  const i11 = p.indexOf('11. DEPOIS DE APONTAR');
+  const i12 = p.indexOf('12. QUEM QUER TRABALHAR');
+  check(i11 >= 0 && i12 > i11 && i12 < p.indexOf('TAMANHO:'), 'a regra 12 vem logo depois da 11, antes do TAMANHO');
+}
+
+/**
  * "E O DEPUTADO?" NAO E PEDIR PARA FALAR COM ELE — print da Denise (09/09/2026).
  *
  * Ela escreveu *"Oiii"* e *"E o deputado ?"*, e o rascunho respondeu com a regra 8 inteira: periodo

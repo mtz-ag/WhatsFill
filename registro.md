@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.29.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.30.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,11 +10,13 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.29.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.30.0**, tudo commitado e no remoto.
 
-> **Os números abaixo são da 3.27.** Da 3.29, remedido: 15 suítes verdes, 40 arquivos limpos, e o
-> prompt de sistema do rascunho com **8.846 tokens** sem dossiê e **~12.289** com ele (o dossiê
-> injetado tem 11.730 caracteres, ~3.351 tokens).
+> **Os números abaixo são da 3.27.** Da 3.30, remedido: 15 suítes verdes, 40 arquivos limpos, e o
+> prompt de sistema do rascunho com **~9.017 tokens** sem dossiê (o dossiê injetado soma ~3.351).
+> **Em 10/09 foram três versões a partir de um lote de observações e uma print:** 3.28 (apoio não é
+> pedido de trabalho; sessão nova não é pessoa nova), 3.29 (o que ele foi está no dossiê) e 3.30
+> (não há chance de ser contratado).
 
 Remedido agora, e não copiado: **15 suítes verdes**, os dois verificadores limpos (**40 arquivos**),
 **67 caixas** no fluxo padrão, **0 problemas** e **0 desfechos incoerentes**, **27 regras** na
@@ -275,6 +277,46 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — Trabalhar na campanha: não há chance, e a IA não insinua (v3.30.0)
+
+Anotação da Solange (08/09, v3.7.0, lida no lote de 10/09). Ela chegou pelo anúncio e escreveu que é
+pobre, não mora aqui, quer ir embora para São Paulo, *"pode me ajudar, posso trabalhar na sua
+campanha"*. O rascunho: *"em período eleitoral as contratações são bem limitadas e as decisões saem
+da assessoria com base em necessidades pontuais. O melhor é você entrar em contato direto com a
+equipe de campanha"*. Ele: *"contratos de eleição e essas decisões são tomadas na pré-campanha, nunca
+iremos contratar ninguém assim pelo WhatsApp; a IA deu impressão que tem chance"*.
+
+### Medido contra a versão de hoje (a anotação é da 3.7)
+
+- **A metade "procure a equipe" já estava fechada**: `mandouProcurarNos` (07/09) barra o texto que
+  saiu — ele não sairia sozinho hoje.
+- **A outra metade não tinha regra nenhuma.** "Limitadas", "pontuais" e "a assessoria decide" não
+  prometem nada, então nenhuma trava as pega. É julgamento, e fica no prompt.
+- **E um detector estava mudo:** `pedeEmprego("...posso trabalhar na sua campanha")` → **null**. O
+  possessivo entre a preposição e o substantivo não estava previsto — a lição do "trabalhar NA
+  campanha" (05/09) uma peça adiante. O desfecho dela não mudava (as duas portas vão para a IA desde
+  a 3.10), mas o sinal alimenta a etiqueta de quem pediu emprego e a troca de texto do painel.
+
+### O conserto
+
+1. **Regra 12 do prompt**, logo depois da 11: a equipe paga foi fechada na pré-campanha, ninguém é
+   contratado pelo WhatsApp, e é proibido insinuar chance — as frases do caso vão escritas
+   ("contratações limitadas", "depende da necessidade", "vou registrar seu interesse", "a assessoria
+   avalia", "mande seu currículo", "procure a equipe"). A base é a resposta pronta do voluntariado, e
+   o resto do pedido (dinheiro, passagem) responde-se pelo item 9 do padrão, numa frase.
+2. **`TRABALHAR_PARA_NOS` aceita o possessivo** (`sua`, `seu`, `tua`, `teu`), com as guardas de
+   sempre: *"trabalhar na sua cidade"* não é pedido, e *"vamos trabalhar juntos pela sua campanha"*
+   continua sendo grito de campanha.
+
+> **Não mexi no item 13 do padrão dele**, que para pedido de EMPREGO sugere *"vou registrar sua
+> mensagem"*. Ele fala de quem procura emprego (o caminho do SINE), não de quem quer trabalhar na
+> campanha — e o documento é dele.
+
+15 suítes verdes (+13 asserções, 2 delas sobre o que NÃO pode casar), verificadores limpos. **Sem
+importação de fluxo.**
+
 ---
 
 ## 2026-09-10 — "O que ele foi" está no dossiê: diga e pare (v3.29.0)

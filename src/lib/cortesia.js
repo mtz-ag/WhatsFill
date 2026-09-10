@@ -1464,8 +1464,13 @@ export function pedeAjudaFinanceira(entrantes, nossaUltimaAt) {
  * **Só o VERBO, nunca o substantivo.** `trabalh\w*` pegava *"o trabalho de vocês é ótimo"* — que é
  * elogio, e é uma das frases mais comuns desta base. O teste da guarda acusou na hora.
  */
+/**
+ * **O POSSESSIVO também é peça separada** — anotação da Solange (08/09/2026, lida em 10/09):
+ * *"posso trabalhar na SUA campanha"* devolvia null. É a lição do "trabalhar NA campanha" (05/09)
+ * uma peça adiante: preposição, artigo e possessivo não vêm colados.
+ */
 const TRABALHAR_PARA_NOS =
-  /(^|[^\p{L}])(trabalhar|trabalhando)\s+(\S+\s+)?(para|pra|com|no|na|em|de)\s+(o\s+|a\s+|um\s+|uma\s+)?(voce|voces|vc|vcs|ti|mandato|gabinete|campanha|deputado|candidato|capitao|martim)/u;
+  /(^|[^\p{L}])(trabalhar|trabalhando)\s+(\S+\s+)?(para|pra|com|no|na|em|de)\s+(o\s+|a\s+|um\s+|uma\s+)?(sua\s+|seu\s+|tua\s+|teu\s+)?(voce|voces|vc|vcs|ti|mandato|gabinete|campanha|deputado|candidato|capitao|martim)/u;
 
 /**
  * **"E combinarmos quanto vou ganhar"** — a metade que torna a oferta remunerada, e a que a regra

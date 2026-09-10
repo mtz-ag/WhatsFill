@@ -2615,6 +2615,19 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(!pedeEmprego(um('o governo tem que gerar emprego'), null), 'fala politica sobre emprego nao e pedido');
 
   /**
+   * **O POSSESSIVO entre a preposicao e o substantivo** — anotacao da Solange (08/09, lida em 10/09):
+   * *"posso trabalhar na sua campanha"* devolvia null. E a licao do "trabalhar NA campanha" (05/09)
+   * de novo: preposicao, artigo e possessivo sao pecas separadas.
+   */
+  check(tipo('posso trabalhar na sua campanha') === 'campanha', 'o caso da Solange: "na SUA campanha"');
+  check(tipo('Capitao sou pobre nao moro aqui quero ir embora pra Sao paulo pode me ajudar posso trabalhar na sua campanha') === 'campanha',
+    'a frase inteira dela');
+  check(tipo('quero trabalhar para o seu mandato') === 'campanha', '"o SEU mandato"');
+  check(tipo('da pra trabalhar com a tua campanha?') === 'campanha', '"a TUA campanha"');
+  check(!pedeEmprego(um('vou trabalhar na sua cidade amanha'), null), 'possessivo com outro objeto nao e pedido');
+  check(!pedeEmprego(um('vamos trabalhar juntos pela sua campanha'), null), 'o grito de campanha continua de fora');
+
+  /**
    * **"Mais preciso de material" nunca casou** — o padrao aceitava `preciso de` so quando seguido de
    * receber/ter/pegar, ou seja *"preciso de receber material"*, que ninguem escreve. **Foi a trava
    * `enderecoSemMaterial` de ontem que revelou o buraco**: ela acusou o rascunho que pedia o
