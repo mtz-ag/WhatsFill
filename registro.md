@@ -1,4 +1,4 @@
-## 2026-09-10 — ESTADO DE AGORA (v3.33.0) — leia isto primeiro numa sessão nova
+## 2026-09-10 — ESTADO DE AGORA (v3.34.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
 mudança. Ela envelhece: se a versão do `manifest.json` for maior que a do título, confira antes de
@@ -10,12 +10,14 @@ confiar, e **reescreva-a** em vez de acrescentar uma segunda.
 
 ### O que está no ar
 
-Branch `claude/whatsfill-ia`, **v3.33.0**, tudo commitado e no remoto.
+Branch `claude/whatsfill-ia`, **v3.34.0**, tudo commitado e no remoto.
 
-> **Os números abaixo são da 3.27.** Da 3.33, remedido: 15 suítes verdes, 40 arquivos limpos, e o
+> **Os números abaixo são da 3.27.** Da 3.34, remedido: o prompt de sistema tem **~9.372 tokens** com
+> as 21 respostas de fábrica e **~7.602** sem elas; o padrão dele é **49,6%** do segundo. Antes: 15 suítes verdes, 40 arquivos limpos, e o
 > prompt de sistema do rascunho com **~9.017 tokens** sem dossiê (o dossiê injetado soma ~3.351).
-> **Em 10/09 foram seis versões** (a 3.32: **o apoio só conta se for para os seis da colinha**; a
-> 3.33: **"o senhor é senador?" identifica e responde o cargo**): 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
+> **Em 10/09 foram sete versões** (a 3.32: **o apoio só conta se for para os seis da colinha**; a
+> 3.33: **"o senhor é senador?" identifica e responde o cargo**; a 3.34: **pergunta retórica não é
+> pedido**, e "gabinete" no rascunho é trocado): 3.28 (apoio não é pedido de trabalho; sessão nova não é pessoa
 > nova), 3.29 (o que ele foi está no dossiê), 3.30 (não há chance de ser contratado) e 3.31 (**não
 > somos canal de resolução de problemas** — a regra 11 reescrita, repetida no bloco do contato, e as
 > frases que convidam a contar o caso tiradas dos exemplos que a IA lê; **sem trava, a pedido dele**).
@@ -284,6 +286,45 @@ do defeito real, e uma vez a leitura dele estava invertida — **dizer isso a el
 - **A memória do Claude** (fora do repositório) guarda como trabalhar com ele, não regras do
   projeto: `thiago-opera-a-rodada`, `remover-quando-conflita`, `dizer-quando-ele-esta-errado`,
   `quadro-separado-por-categoria`.
+---
+
+## 2026-09-10 — Pergunta retórica não é pedido (v3.34.0)
+
+Print da Eloiza (10/09). Três áudios transcritos: *"Desculpe, minha amiga, simplesmente não gosto de
+política"*, *"É só promessa"* e *"Se eu pedisse ajuda pro senhor e a senhorinha, poderiam me ajudar,
+capitão? Não, né?"*. Às 12:41 saiu a negativa inteira da ajuda financeira — *"um mandato não pode
+doar dinheiro, cestas, remédios… procure o CRAS do seu bairro… Cadastro Único"* — e ele apagou. O
+rascunho seguinte, no campo, dizia *"Se a senhora precisasse de alguma orientação, o gabinete
+procuraria ajudar"*. Ele: *"a IA ignorou o contexto, a pergunta foi retórica"*.
+
+### Medido
+
+- **Nenhum detector leu pedido de dinheiro**: `pedeAjudaFinanceira` = null. Casaram
+  `conversaTemPerguntaAberta` e `pedeAlgoIndefinido`, que dão tecla 6 — a IA, que é o desfecho certo.
+- **Quem errou foi a IA**, respondendo a hipótese ao pé da letra com a resposta pronta "Pedido de
+  ajuda financeira" como base (o texto que saiu é a paráfrase dela). **Quinta vez da proximidade
+  lexical**: "pedisse ajuda" puxou a resposta de quem pede ajuda.
+- **O segundo rascunho escreveu "gabinete"**, três dias depois de a palavra sair do vocabulário, com
+  a proibição escrita no prompt.
+
+### O conserto
+
+1. **Regra 13 do prompt**: descrença e pergunta retórica (*"é só promessa"*, *"político é tudo
+   igual"*, *"se eu pedisse ajuda, vocês não iam ajudar, né?"*) não são pedido. Não se responde ao pé
+   da letra — nada de lei, do que o mandato pode doar, de CRAS ou de "se precisar, a equipe procura
+   ajudar". Uma ou duas frases curtas: respeitar a opinião e agradecer.
+2. **A premissa da negativa, colada nos exemplos**, antes da resposta pronta que foi copiada: ela é a
+   resposta de quem PEDIU; *"se eu pedisse"* é hipótese.
+3. **"Gabinete" no rascunho é consertado, não avisado** — a mesma tabela `templates.semGabinete` que
+   migrou as respostas prontas, com a concordância (*"o gabinete procuraria"* → *"a equipe
+   procuraria"*). Gabinete de OUTRA pessoa (*"do prefeito"*, *"do vereador"*) fica.
+
+**Dois testes antigos usavam "gabinete" como texto de exemplo** e foram trocados para "equipe" — o
+que eles conferem (nenhum aviso; o aviso de apresentação) não mudou. **E um terceiro caiu sem nada
+estar errado**: exigia que o padrão dele fosse mais da metade do prompt, e com as regras 11, 12 e 13
+ele passou a 49,6%. Proporção cai sozinha a cada regra nova; o teste agora exige o padrão INTEIRO no
+prompt (que é o corte que ele queria pegar) e um piso de 35%.
+
 ---
 
 ## 2026-09-10 — "O senhor é senador?": identifica e responde o cargo (v3.33.0)

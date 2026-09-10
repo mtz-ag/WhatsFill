@@ -2749,6 +2749,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   envio quando o rascunho fala de voluntariado/remuneracao e ELA nao falou em trabalhar nem em
   ganhar. **`ajudar` e `ganhar` solto ficam fora de `ELA_FALOU_DE_TRABALHO` e sao a razao da trava**
   — *"vamos ganhar essa"* e o grito de campanha mais comum daqui.
+- **PERGUNTA RETORICA NAO E PEDIDO — e a proximidade lexical pela QUINTA vez.** Print da Eloiza
+  (10/09/2026): *"nao gosto de politica"*, *"e so promessa"*, *"se eu pedisse ajuda pro senhor,
+  poderiam me ajudar? nao, ne?"* recebeu a negativa inteira da ajuda financeira (lei, CRAS, Cadastro
+  Unico). Ele: *"a IA ignorou o contexto, a pergunta foi retorica"*. **Medido: nenhum detector leu
+  pedido** — foi tecla 6 por pergunta aberta, o desfecho certo; a IA respondeu a hipotese ao pe da
+  letra com a resposta pronta de pedido de ajuda como base. Regra 13 no prompt + a premissa da
+  negativa colada nos exemplos. **"Gabinete" no rascunho agora e trocado mecanicamente**
+  (`templates.semGabinete`), porque a proibicao no prompt nao bastou. **E teste de PROPORCAO do
+  prompt cai sozinho quando o prompt cresce** — o do padrao exigia "mais da metade" e passou a 49,6%
+  sem corte nenhum; exija o texto INTEIRO, que e o corte que se quer pegar.
 - **PERGUNTA COM DUAS PARTES: A REGRA QUE SO CONHECE UMA CORTA A OUTRA.** Print da Juscelia
   (10/09/2026): *"O senhor e senador?"* recebeu so *"Somos a equipe do Capitao Martim, em que podemos
   ajudar?"*. Ele: *"a resposta correta seria o Capitao Martim e deputado estadual; as pessoas assumem

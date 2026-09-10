@@ -244,7 +244,8 @@ grupo('rascunho: a conversa longa entra inteira — é o caso de uso');
 
 grupo('rascunho: a revisão levanta a mão, mas nunca esconde o texto');
 {
-  const limpo = revisarRascunho('Recebi seu áudio e entendi o ponto. Vou levar ao gabinete.');
+  // "equipe" e nao "gabinete": a palavra saiu do vocabulario em 07/09 e hoje e trocada (10/09).
+  const limpo = revisarRascunho('Recebi seu áudio e entendi o ponto. Vou levar à equipe.');
   check(limpo.texto.length > 0 && limpo.avisos.length === 0, 'texto normal passa sem aviso');
 
   const marcador = revisarRascunho('Olá {{primeiro_nome}}, tudo bem?');
@@ -620,11 +621,12 @@ grupo('o rascunho nao pode se apresentar de novo (05/09/2026)');
    * o mecanico (a saudacao errada, o traco eme).
    */
   const meioDia = new Date('2026-09-05T12:00:00');
-  const abertura = 'Boa tarde! Bem-vindo. Voce esta falando com o gabinete do Capitao Martim. Em que podemos ajudar?';
+  // "equipe" e nao "gabinete": desde 10/09 "gabinete" e trocado, e aqui o que se testa e o AVISO.
+  const abertura = 'Boa tarde! Bem-vindo. Voce esta falando com a equipe do Capitao Martim. Em que podemos ajudar?';
 
   const comHistorico = revisarRascunho(abertura, meioDia, { jaFalamos: true });
   check(comHistorico.avisos.some((a) => /se apresenta/.test(a)), 'ja tendo conversado, a apresentacao repetida vira aviso');
-  check(comHistorico.texto.includes('gabinete'), 'mas o texto NAO e mexido -- quem decide e ele');
+  check(comHistorico.texto.includes('Bem-vindo. Voce esta falando com a equipe'), 'mas o texto NAO e mexido -- quem decide e ele');
 
   const primeiraVez = revisarRascunho(abertura, meioDia, { jaFalamos: false });
   check(!primeiraVez.avisos.some((a) => /se apresenta/.test(a)), 'no primeiro contato a apresentacao e o certo, e nao avisa');
@@ -1405,9 +1407,15 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
     check(doSistema.includes(trecho), `${modelo}: o padrao esta no prompt de sistema`);
   }
 
-  /** E ele continua sendo a maior parte do prompt — se encolher de repente, alguem o cortou. */
-  check(tokensAproximados(PADRAO_DE_ATENDIMENTO) > tokensAproximados(sistema) / 2,
-    'e e mais da metade do prompt de sistema');
+  /**
+   * **E ele vai INTEIRO.** Ate 10/09 isto era "mais da metade do prompt de sistema" — e caiu sem
+   * ninguem cortar nada: as regras 11, 12 e 13 fizeram o prompt crescer, e o padrao passou a 49,6%.
+   * Proporcao cai sozinha a cada regra nova; o que o teste queria pegar e o CORTE, e o corte se pega
+   * pedindo o texto inteiro.
+   */
+  check(sistema.includes(PADRAO_DE_ATENDIMENTO), 'e vai inteiro, sem corte');
+  check(tokensAproximados(PADRAO_DE_ATENDIMENTO) > tokensAproximados(sistema) * 0.35,
+    'e continua sendo uma parte grande do prompt (piso de 35%, medido 49,6% em 10/09)');
 }
 
 /**
@@ -2194,6 +2202,40 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
     'com duas pessoas na frase anterior, "ele" e ambiguo e nada e acusado');
   check(!conferirChapa('Somos a equipe do Capitão Martim. Obrigado pelo contato. Ele é senador?', chapa),
     'o pronome so herda da frase imediatamente anterior');
+}
+
+/**
+ * PERGUNTA RETORICA NAO E PEDIDO — print da Eloiza (10/09/2026). *"Nao gosto de politica"*, *"E so
+ * promessa"*, *"Se eu pedisse ajuda pro senhor... poderiam me ajudar, capitao? Nao, ne?"* — e o
+ * rascunho respondeu com a negativa inteira da ajuda financeira. Ele: *"a IA ignorou o contexto, a
+ * pergunta foi retorica"*.
+ */
+{
+  grupo('pergunta retorica nao e pedido (a Eloiza, 10/09)');
+  const p = montarSistemaRascunho({ templates: DEFAULT_TEMPLATES, regras: '', gabinete: '' });
+  check(/^13\. DESCRENÇA E PERGUNTA RETÓRICA NÃO SÃO PEDIDO/m.test(p), 'a regra 13 existe');
+  check(/"É só promessa"/.test(p) && /se eu pedisse ajuda/.test(p), 'com as frases do caso');
+  check(/NÃO responda a pergunta ao pé da letra/.test(p), 'e manda nao responder ao pe da letra');
+  check(/nada de CRAS/.test(p), 'nomeando o que saiu para ela');
+  const i12 = p.indexOf('12. QUEM QUER TRABALHAR');
+  const i13 = p.indexOf('13. DESCRENÇA');
+  check(i12 >= 0 && i13 > i12 && i13 < p.indexOf('TAMANHO:'), 'a 13 vem logo depois da 12, antes do TAMANHO');
+  /** **A premissa da negativa fica colada nos exemplos**, onde mora a resposta pronta que a IA copiou. */
+  const iPremissa = p.indexOf('é a resposta de quem PEDIU');
+  check(iPremissa > 0 && iPremissa < p.indexOf('Pedido de ajuda financeira'), 'a premissa vem antes da resposta pronta que foi copiada');
+
+  /**
+   * **O segundo rascunho dela saiu com "o gabinete procuraria ajudar"** — a palavra saiu do
+   * vocabulario em 07/09. Conserto mecanico, com a mesma tabela das respostas prontas.
+   */
+  const agora = new Date('2026-09-10T12:45:00');
+  const r = revisarRascunho('Entendemos e respeitamos sua posição. O gabinete procuraria ajudar dentro do nosso alcance.', agora, {});
+  check(!/gabinete/i.test(r.texto), '"gabinete" nao chega ao eleitor');
+  check(/A equipe procuraria/.test(r.texto), 'com a concordancia e a maiuscula: "A equipe"');
+  check(r.avisos.some((a) => /troquei por "equipe"/.test(a)), 'e a troca e dita');
+  check(!rascunhoPodeSairSozinho(r.avisos) === false, 'a troca nao barra o envio');
+  const outro = revisarRascunho('Isso quem resolve é o gabinete do prefeito.', agora, {});
+  check(/gabinete do prefeito/.test(outro.texto), 'gabinete de OUTRA pessoa fica como esta');
 }
 
 /**

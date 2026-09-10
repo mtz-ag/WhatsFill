@@ -35,7 +35,7 @@ import * as atendimento from './atendimento.js';
  * endereço, e a regra deste projeto é que duas cópias de um invariante divergem na primeira
  * reescrita do texto. Ver `AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial`.
  */
-import { ehPedidoDeEndereco } from './templates.js';
+import { ehPedidoDeEndereco, semGabinete } from './templates.js';
 
 /**
  * O modelo padrão.
@@ -1272,6 +1272,24 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    "a assessoria avalia", "mande seu currículo" nem "procure a equipe". A base é a resposta pronta',
     '    "Quer trabalhar para a campanha": aqui é só voluntário, sem remuneração. Se ela pediu mais alguma',
     '    coisa (dinheiro, passagem, ajuda), responda essa parte pelo item 9 do padrão, numa frase.',
+    /**
+     * **Pergunta retórica não é pedido** — print da Eloiza (10/09/2026). Três áudios: *"Desculpe,
+     * minha amiga, simplesmente não gosto de política"*, *"É só promessa"* e *"Se eu pedisse ajuda pro
+     * senhor e a senhorinha, poderiam me ajudar, capitão? Não, né?"*. O rascunho respondeu com a
+     * negativa inteira da ajuda financeira — lei eleitoral, CRAS, Cadastro Único. Ele: *"a IA ignorou
+     * o contexto, a pergunta foi retórica"*.
+     *
+     * **Medido: nenhum detector leu pedido de dinheiro** (`pedeAjudaFinanceira` = null); o caso foi
+     * para a IA como pergunta em aberto, que é o desfecho certo. O que a IA fez foi responder a
+     * hipótese ao pé da letra, com a resposta pronta "Pedido de ajuda financeira" como base — a
+     * proximidade lexical, pela quinta vez.
+     */
+    '13. DESCRENÇA E PERGUNTA RETÓRICA NÃO SÃO PEDIDO. "É só promessa", "político é tudo igual", "não',
+    '    gosto de política", "se eu pedisse ajuda, vocês não iam ajudar, né?" — ela está dizendo o que',
+    '    pensa, não pedindo nada. **NÃO responda a pergunta ao pé da letra:** nada de explicar a lei,',
+    '    nada de dizer o que o mandato pode ou não doar, nada de CRAS, nada de "se precisar, a equipe',
+    '    procura ajudar". Responda em UMA ou DUAS frases curtas: respeite a opinião dela e agradeça por',
+    '    ela ter escrito. Sem discurso sobre política e sem tentar convencer.',
     'TAMANHO: siga o item 22 do padrão, e ele é curto. Mensagem simples: 1 a 3 frases. Isto sai no',
     'WhatsApp, não é ofício.',
     'Não dê aula sobre regra nem sobre lei, e não liste alternativas que ninguém pediu. Quando algo',
@@ -1365,6 +1383,8 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     'O mesmo com "aqui é só voluntário, sem remuneração" e o pedido de endereço: é a resposta de quem',
     'PEDIU para trabalhar ou falou em ganhar. Quem diz que vai votar, que vai ajudar na votação ou',
     'convida o candidato para uma visita está APOIANDO — e apoio se agradece, curto.',
+    'E a negativa de ajuda ("um mandato não pode doar…", CRAS) é a resposta de quem PEDIU. "Se eu',
+    'pedisse ajuda, vocês ajudariam?" é hipótese, e quase sempre descrença — é a regra 13, não o pedido.',
     '',
     exemplos,
   ]
@@ -2179,6 +2199,23 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
   if (abertura && abertura[1].toLowerCase() !== certa.toLowerCase()) {
     texto = texto.replace(SAUDACAO_NO_COMECO, certa);
     avisos.push(`a IA abriu com "${abertura[1]}" e agora é ${certa.toLowerCase()} — troquei`);
+  }
+
+  /**
+   * **"Gabinete" é consertado, não avisado** — o segundo rascunho da Eloiza (10/09/2026) saiu com
+   * *"o gabinete procuraria ajudar"*, três dias depois de a palavra sair do vocabulário (decisão dele,
+   * 07/09) e com a proibição escrita no prompt. É mecânico como a saudação: a MESMA tabela que migrou
+   * as respostas prontas dele, com a concordância (`o gabinete` → `a equipe`).
+   *
+   * **Gabinete de OUTRA pessoa fica** — *"fui no gabinete do prefeito"* é um lugar, e trocar mudaria o
+   * sentido.
+   */
+  if (!/gabinetes?\s+d[oa]s?\s+(prefeit|vereador|governador|secret|ministr|juiz|presiden)/i.test(texto)) {
+    const trocado = semGabinete(texto);
+    if (trocado !== texto) {
+      texto = trocado;
+      avisos.push('a IA escreveu "gabinete", que saiu do vocabulário — troquei por "equipe"');
+    }
   }
 
   // Marcador esquecido: iria como está para o eleitor e apareceria literalmente na conversa.
