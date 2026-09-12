@@ -2805,6 +2805,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   conteudo digital (a etiqueta manda PULAR) e marca DEPOIS da decisao da passada, para o modelo continuar
   com prioridade. **E `etiquetaDaLista`/`etiquetaDeEndereco` sao ASSINCRONAS**: `!etiquetaDeEndereco()`
   sem `await` testa uma promessa e e sempre falso — nenhum teste nem verificador pega isso.
+- **"VOU LA" SOLTO NAO E CONFIRMACAO DE PRESENCA — QUINTA vez desta lista, 12/09/2026.** Print da
+  Laura, audio de 1min16 de militancia e oracao: *"estao botando os folhetos do 3 na minha tela, EU
+  VOU LA, rasgo tudo, boto no lixo"* — e a rodada PULOU. Relato dele: *"pulando sem motivo, nao sei
+  dizer o porque"*. **Medido: `confirmaPresenca` devolvia "sim"** pelo padrao `(vou|irei|vamos) +
+  (la|ai)` em qualquer posicao, e `confirmou-presenca-evento` e a tecla 2. **"Vou la" e fala do dia a
+  dia** (*"vou la no CRAS"*, *"vou la ver se resolvo"*): dos nove casos comuns do teste, cinco
+  casavam. Hoje ela vale so como a MENSAGEM INTEIRA, e *"vou la sim"* em qualquer posicao (o que
+  afirma e o "sim"). Antes dela sairam "vamos"/"vou" soltos (02/09), "confirmado" (04/09), "pode
+  contar comigo" (04/09) e "estaremos" (06/09).
+- **PULAR NAO DEIXA RASTRO, ENTAO A LINHA DO LOG E TUDO — e ela dizia "voce pulou".** Mesma print.
+  O Andamento ja trazia `automatico pelo fluxo ("<regra>", caminho ...)` uma linha acima, mas a
+  linha do pulo culpava ELE mesmo quando a decisao foi do fluxo: **duas linhas discordando sobre
+  quem decidiu fazem a primeira parecer de outro contato.** Hoje ela diz `pulei pelo fluxo
+  ("<regra>")` no caminho automatico. **Ao escrever a linha de um desfecho que nao grava nada,
+  diga QUEM decidiu** — e nunca escreva "voce" num caminho que a maquina tambem percorre.
+
 - **REPETICAO E O MAIOR SINAL DE MAQUINA — e a trava contra ela estava cega, 12/09/2026.** Duas
   prints do mesmo contato: a negativa de ajuda saiu as 10:20 escrita pela IA, ela reescreveu pedindo
   o Pix, e as 14:22 saiu **a mesma negativa outra vez**. Ele: *"IA se repetindo, ja vi outros casos;

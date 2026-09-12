@@ -1,3 +1,44 @@
+## 2026-09-12 — v3.56.0 — "vou lá" não é confirmação de presença, e o pulo diz quem decidiu
+
+**Relato dele**, com a print da Laura (áudio de 1min16): *"pulando sem motivo, não sei dizer o
+porquê"*.
+
+**Medido na transcrição, antes de mexer:** de dez sinais, **`confirmaPresenca` devolvia `"sim"`** — e
+`confirmou-presenca-evento` é a **tecla 2**, *pular* (regra dele de 03/09: *"não é para responder, é
+para pular e eu atendo no final"*).
+
+**O que casou:** *"estão botando os folhetos do 3 na minha tela, **eu vou lá**, rasgo tudo, boto no
+lixo"*. O padrão aceitava `(vou|irei|vamos) + (lá|aí)` em qualquer posição — e **"vou lá" é fala do
+dia a dia**, não resposta a convite: *"vou lá no CRAS amanhã"*, *"vou lá ver se resolvo"*, *"vou lá e
+falo com o prefeito"*. Medido: dos nove casos de fala comum do teste, **cinco** casavam.
+
+**É a QUINTA vez que esta função aprende a mesma coisa** — saíram "vamos"/"vou" soltos (02/09),
+"confirmado" solto (04/09), "pode contar comigo" (04/09) e "estaremos" solto (06/09). A regra que
+fica: **vocabulário de campanha — e agora também fala do dia a dia — não é resposta ao convite.**
+
+**O que mudou:** "vou lá" só vale como a **mensagem inteira** (aí é a resposta seca a *"você vai?"*),
+e *"vou lá sim"* continua valendo em qualquer posição, porque o que afirma é o "sim". De brinde, a
+mensagem inteira passou a aceitar o pronome: **"eu vou"** era falso negativo.
+
+**Remedido no caso da print:** `confirmaPresenca` = **null**, e o que sobra é *conversa longa* +
+*pergunta pendente* → **tecla 6**, que é o desfecho certo para um áudio de 1min16.
+
+**A segunda metade do relato — "não sei dizer o porquê" — era a LINHA DO LOG.** O Andamento já
+trazia `automático pelo fluxo ("<regra>", caminho …)` uma linha acima, mas a linha do pulo dizia
+**"você pulou"** mesmo quando foi o fluxo: duas linhas discordando sobre quem decidiu fazem a
+primeira parecer de outro contato. **Pular é o único desfecho que não deixa rastro nenhum** — não
+manda nada, não conclui, não grava —, então a linha do log é tudo o que existe para explicá-lo. Hoje
+ela diz `pulei pelo fluxo ("<regra>")` quando a decisão foi automática.
+
+**Custo:** quem responde ao convite com *"vou lá"* no meio de uma frase maior deixa de ser pulado e
+cai no que o quadro decidir (em geral a tecla 6, você responde). É o lado barato — pular não manda
+nada, e o falso positivo tirava da lista que você atende no fim.
+
+**Arquivos:** `src/lib/cortesia.js`, `src/panel/panel.js`, `tests/cortesia.test.mjs` (+15),
+`CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-12 — v3.55.0 — a IA não repete a negativa, e "pix pra votar" é venda de voto
 
 **Relato dele**, com duas prints do mesmo contato: a negativa de ajuda saiu às **10:20** escrita pela

@@ -1110,11 +1110,30 @@ export function confirmaPresenca(entrantes, nossaUltimaAt) {
    * fez o pedido de dados ser reconhecido por invariante.
    */
   const VAI = [
-    // A mensagem INTEIRA é o verbo: a resposta seca a "você vai?".
-    /^\s*(vou|irei|vamos)\s*[!.]*\s*$/u,
+    /**
+     * **A mensagem INTEIRA é o verbo: a resposta seca a "você vai?"** — e "lá"/"sim" entram AQUI,
+     * dentro dela, desde 12/09/2026.
+     *
+     * **"vou lá" solto SAIU da lista, e é a QUINTA vez que esta função aprende a mesma coisa.**
+     * Print da Laura (12/09/2026), áudio de 1min16 de militância e oração: *"estão botando os
+     * folhetos do 3 na minha tela, **eu vou lá**, rasgo tudo, boto no lixo"* — e a rodada PULOU o
+     * contato. Relato dele: *"pulando sem motivo, não sei dizer o porquê"*, e não havia como saber:
+     * pular não manda nada e não conclui, então a única pista era a tecla 2 na caixa.
+     *
+     * **"vou lá" é fala comum**, e não resposta a convite: *"vou lá no CRAS amanhã"*, *"vou lá ver
+     * se resolvo"*, *"vou lá e falo com o prefeito"*. Medido: dos nove casos de fala comum do teste,
+     * **cinco** casavam. Como MENSAGEM INTEIRA ela continua valendo — aí é a resposta seca — e
+     * *"vou lá sim"* continua valendo em qualquer posição, porque o "sim" é que afirma.
+     *
+     * Antes dela saíram "vamos"/"vou" soltos (02/09), "confirmado" solto (04/09), "pode contar
+     * comigo" (04/09) e "estaremos" solto (06/09). **A regra que fica: vocabulário de campanha —
+     * e agora também fala do dia a dia — não é resposta ao convite.**
+     */
+    /^\s*(eu\s+)?(vou|irei|vamos)(\s+(la|ai|sim))?\s*[!.]*\s*$/u,
     /(^|[^\p{L}])(vou|irei|vamos)\s+sim(\s|$|!|,|\.)/u,
     /(^|[^\p{L}])(vou|irei|vamos)\s+(estar|comparecer|participar|ao\s+evento|na\s+agenda)/u,
-    /(^|[^\p{L}])(vou|irei|vamos)\s+(la|ai)(\s|$|!|,|\.)/u,
+    // "vou la SIM": o que afirma e o "sim", entao ele vale em qualquer posicao.
+    /(^|[^\p{L}])(vou|irei|vamos)\s+(la|ai)\s+sim(\s|$|!|,|\.)/u,
     /**
      * **"Estaremos" SOZINHO saiu daqui, e é a QUARTA vez que esta lista aprende a mesma coisa.**
      *

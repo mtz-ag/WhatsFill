@@ -3016,4 +3016,43 @@ grupo('venda de voto pelo VERBO: "pix pra votar" (12/09/2026)');
   check(!rajada(['vou votar 10122']), 'nem a declaracao de voto sozinha');
 }
 
+grupo('"vou la" solto nao e confirmacao de presenca (12/09/2026)');
+{
+  /**
+   * Print da Laura: audio de 1min16 de militancia e oracao -- *"estao botando os folhetos do 3 na
+   * minha tela, EU VOU LA, rasgo tudo, boto no lixo"* -- e a rodada PULOU o contato. Relato dele:
+   * *"pulando sem motivo, nao sei dizer o porque"*, e nao havia como saber: pular nao manda nada e
+   * nao conclui.
+   *
+   * **Medido: `confirmaPresenca` devolvia "sim"**, e `confirmou-presenca-evento` e a tecla 2
+   * (pular, regra dele de 03/09). Dos nove casos de fala comum deste grupo, **cinco** casavam.
+   *
+   * **QUINTA vez que esta funcao aprende a mesma coisa** — sairam "vamos"/"vou" soltos (02/09),
+   * "confirmado" solto (04/09), "pode contar comigo" (04/09) e "estaremos" solto (06/09).
+   */
+  const presenca = (t) => confirmaPresenca([{ texto: t, tipo: 'TEXT' }], null);
+
+  const transcricao =
+    'estao botando os folhetos do 3 na minha tela, eu vou la, rasgo tudo, boto no lixo. ' +
+    'So Jesus na casa, irmao, vai dar tudo certo, ne?';
+  check(presenca(transcricao) !== 'sim', 'a transcricao da print NAO e confirmacao de presenca');
+
+  check(!presenca('vou la ver se resolvo isso'), '"vou la ver se resolvo" nao e presenca');
+  check(!presenca('vou la no CRAS amanha pedir ajuda'), 'nem "vou la no CRAS"');
+  check(!presenca('amanha vou la na prefeitura cobrar'), 'nem "vou la na prefeitura"');
+  check(!presenca('vou la e falo com o prefeito'), 'nem "vou la e falo com o prefeito"');
+  check(!presenca('semana que vem eu vou para a rua trabalhar para ela'), 'nem a militancia de rua');
+
+  /** **O que CONTINUA valendo**: a mensagem inteira, e o "sim" em qualquer posicao. */
+  check(presenca('vou') === 'sim', 'a mensagem inteira "vou" continua sendo presenca');
+  check(presenca('eu vou') === 'sim', 'e "eu vou" tambem (era falso negativo antes)');
+  check(presenca('vou la') === 'sim', '"vou la" como a mensagem INTEIRA continua valendo');
+  check(presenca('vou la!') === 'sim', 'com pontuacao tambem');
+  check(presenca('vou sim') === 'sim', '"vou sim" em qualquer posicao');
+  check(presenca('vou la sim') === 'sim', 'e "vou la sim" tambem');
+  check(presenca('vou estar la') === 'sim', '"vou estar la" continua');
+  check(presenca('vou comparecer') === 'sim', 'e "vou comparecer"');
+  check(presenca('nao vou poder ir') === 'nao', 'e a recusa continua vencendo');
+}
+
 fim();

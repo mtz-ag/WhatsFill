@@ -6894,7 +6894,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           const aviso = dela.jaMarcada ? '' : await etiquetarEndereco(state.contact);
           return { nome, resultado: 'pulado', motivo: `${dela.motivo} — pulei para você transferir${aviso}` };
         }
-        return { nome, resultado: 'pulado', motivo: 'você pulou — nada gravado, atendimento aberto' };
+        /**
+         * **A linha do pulo dizia "você pulou" mesmo quando foi o fluxo** — relato dele
+         * (12/09/2026, print da Laura): *"pulando sem motivo, não sei dizer o porquê"*.
+         *
+         * O Andamento JÁ trazia `automático pelo fluxo ("<regra>", caminho …)` uma linha acima —
+         * mas a linha seguinte dizia *"você pulou"*, e duas linhas discordando sobre quem decidiu
+         * fazem a primeira parecer de outro contato. **Pular é o único desfecho que não deixa
+         * rastro nenhum** (não manda nada, não conclui, não grava), então a linha do log é tudo o
+         * que existe para explicá-lo.
+         */
+        return {
+          nome,
+          resultado: 'pulado',
+          motivo:
+            escolhaAutomatica != null
+              ? `pulei pelo fluxo ("${sugestao?.id || 'sem regra'}") — nada gravado, atendimento aberto`
+              : 'você pulou — nada gravado, atendimento aberto',
+        };
       }
 
       /**
