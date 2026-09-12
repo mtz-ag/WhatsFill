@@ -36,6 +36,7 @@ import * as atendimento from './atendimento.js';
  * reescrita do texto. Ver `AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial`.
  */
 import { ehPedidoDeEndereco, semGabinete } from './templates.js';
+import { ehPedidoDeRoupa } from './cortesia.js';
 
 /**
  * O modelo padrão.
@@ -994,11 +995,21 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * campanha?** Placa, banner e faixa levam; cadeira de rodas e bota não. Isso resolve o item que
      * ninguém previu sem precisar prever, que é o que uma lista nunca faz.
      */
-    '   **MATERIAL DE CAMPANHA é tudo o que leva o NOME, o NÚMERO ou a MARCA da campanha** — impresso,',
-    '   vestível ou de rua: adesivo, santinho, panfleto, folheto, folder, card, arte, informativo,',
-    '   cartilha, bandeira, faixa, banner, placa, cartaz, camiseta, camisa, colete, boné, chaveiro e',
-    '   conteúdo digital. **A lista é exemplo, não é estoque:** item de campanha que não esteja nela',
-    '   é material do mesmo jeito.',
+    '   **MATERIAL DE CAMPANHA é tudo o que leva o NOME, o NÚMERO ou a MARCA da campanha** — impresso',
+    '   ou de rua: adesivo, santinho, panfleto, folheto, folder, card, arte, informativo, cartilha,',
+    '   bandeira, faixa, banner, placa, cartaz, chaveiro e conteúdo digital.',
+    '   **A lista é exemplo, não é estoque:** item de campanha que não esteja nela é material do mesmo jeito.',
+    /**
+     * **Roupa saiu do material em 12/09/2026, por regra dele** — *"não fornecemos nenhuma roupa"* —,
+     * e a lei confirma: Lei 9.504/97, art. 39, § 6º veda distribuir camisetas, bonés e brindes. Até
+     * então camiseta e boné estavam NESTA lista, e o rascunho pedia o endereço e prometia o repasse.
+     */
+    '   **ROUPA NÃO É MATERIAL, E NÃO FORNECEMOS NENHUMA:** camiseta, camisa, boné, colete, blusa,',
+    '   uniforme ou qualquer peça de vestir, com ou sem a marca da campanha. A lei eleitoral proíbe a',
+    '   campanha de distribuir camiseta, boné e brinde (Lei 9.504/97, art. 39, § 6º). Diga em UMA',
+    '   frase gentil que não temos roupa nem boné para enviar e PARE: sem pedir endereço, sem repassar',
+    '   à equipe, sem "vou verificar" e sem sugerir onde comprar. Se ela pediu outro material junto',
+    '   (adesivo, bandeira), siga a regra do material só para ESSE item.',
     '   **VOCÊ NUNCA DIZ SE TEMOS OU NÃO, nem que não é possível fornecer.** Quem sabe o que existe e',
     '   o que dá para entregar é a EQUIPE DOS MATERIAIS — o seu trabalho é pedir o endereço e',
     '   repassar. Na dúvida entre recusar e repassar, REPASSE.',
@@ -1027,7 +1038,7 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * Note a diferença para a regra 7: mandar a pessoa **procurar** a equipe é devolvê-la para onde
      * ela já está; dizer que **nós** repassamos é o mandato fazendo o próprio trabalho.
      */
-    '   (a) ela DISSE qual item quer (boné, adesivo, camiseta, bandeira, panfleto): não pergunte de',
+    '   (a) ela DISSE qual item quer (adesivo, bandeira, panfleto, santinho): não pergunte de',
     '       novo o que ela quer. PEÇA O ENDEREÇO COMPLETO e diga que, com ele, o pedido vai para a',
     '       EQUIPE RESPONSÁVEL PELOS MATERIAIS — e que é ELA quem entra em contato sobre o que há e',
     '       sobre a entrega.',
@@ -1597,6 +1608,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
    */
   const temCliqueDeAnuncio = lista.some((m) => m.anuncio);
   const temAudioOuvido = lista.some((m) => m.transcrito);
+  const pediuRoupa = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && ehPedidoDeRoupa(m.texto));
   const pendentesTotal = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).length;
   const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio).length;
   const soCliques = pendentes === 0 && pendentesTotal > 0;
@@ -1800,11 +1812,21 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'clique e não responda àquele texto — responda o que ela escreveu por conta própria.'
       : '',
     /**
+     * **A regra da ROUPA, colada no pedido** (12/09/2026) — mesma razão das de cima: regra longe do
+     * ponto em que o modelo escreve não é cumprida. Só entra quando ela pediu roupa e ainda não
+     * respondemos, para o "não temos" não se repetir.
+     */
+    pediuRoupa
+      ? 'ROUPA: ela pediu camiseta, boné ou outra peça de vestir — NÃO fornecemos nenhuma, e a lei ' +
+        'eleitoral proíbe a campanha de distribuir. Diga isso em uma frase gentil e pare: sem pedir ' +
+        'endereço, sem repassar à equipe, sem prometer verificar e sem indicar onde comprar.'
+      : '',
+    /**
      * **A regra do endereço, colada no pedido** — mesma razão da regra 11 acima, e mesma decisão
      * dele (12/09/2026): o conserto é o que a IA lê, não uma trava que para a rodada depois.
      */
     'ENDEREÇO: só peça o endereço dela se ela pediu MATERIAL DE CAMPANHA (folheto, adesivo, bandeira, ' +
-      'camiseta) ou se já disse que aceita ser voluntária sem pagamento. Quem pediu dinheiro, emprego ' +
+      'santinho) ou se já disse que aceita ser voluntária sem pagamento. Quem pediu dinheiro, emprego ' +
       'ou um bem para comprar NÃO recebe pedido de endereço — pedir endereço é prometer uma entrega.',
     /**
      * **A regra 11, colada no pedido** — print da Irema (10/09/2026): *"nós não somos um canal de

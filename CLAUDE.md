@@ -2821,6 +2821,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   ("<regra>")` no caminho automatico. **Ao escrever a linha de um desfecho que nao grava nada,
   diga QUEM decidiu** — e nunca escreva "voce" num caminho que a maquina tambem percorre.
 
+- **ROUPA NAO E MATERIAL — a lei veda e ele nao fornece** (12/09/2026): *"nao fornecemos nenhuma
+  roupa"*. Lei 9.504/97, art. 39, § 6o veda distribuir **camisetas, chaveiros, bones, canetas e
+  brindes**. Camiseta, camisa, colete e bone moravam em `OBJETO_DE_MATERIAL`, entao o pedido de roupa
+  punha a **etiqueta de material (que PULA o contato)** e o rascunho **pedia endereco e prometia
+  repasse**. Hoje e `cortesia.pedeRoupa`, somado ao sinal `pedeRespostaPessoal` no painel (tecla 6
+  alta nos dois ramos, **sem precisar importar o quadro**) e com a regra no sistema e colada no
+  pedido. **Ao tirar item de uma lista de permissao, confira quem mais a consulta como GUARDA** —
+  `pedeAjudaFinanceira` usava `OBJETO_DE_MATERIAL` para se calar, e "me arruma um bone" passou a ser
+  pedido de dinheiro; e aquela `conversa` NAO passa por `semAcentos`, entao "bone" nao casava "boné".
+  **Chaveiro continua na lista do material** — mesma lei, decisao dele.
+
 - **REPETICAO E O MAIOR SINAL DE MAQUINA — e a trava contra ela estava cega, 12/09/2026.** Duas
   prints do mesmo contato: a negativa de ajuda saiu as 10:20 escrita pela IA, ela reescreveu pedindo
   o Pix, e as 14:22 saiu **a mesma negativa outra vez**. Ele: *"IA se repetindo, ja vi outros casos;

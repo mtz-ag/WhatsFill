@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos } from '../src/lib/cortesia.js';
+import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, ehPedidoDeRoupa, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos } from '../src/lib/cortesia.js';
 
 const templates = await lib('templates.js');
 
@@ -2891,7 +2891,7 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
     !!pedeMaterialForaDoAnuncio([{ texto, tipo: 'TEXT', ...extra }], padroes);
 
   for (const t of ['quero uns adesivos', 'me manda material de campanha', 'queria uma bandeira do capitao',
-    'preciso de santinhos para distribuir', 'tem como me mandar uma camiseta?']) {
+    'preciso de santinhos para distribuir', 'tem como me mandar uns folhetos?']) {
     check(pede(t), `marca: "${t}"`);
   }
 
@@ -3053,6 +3053,47 @@ grupo('"vou la" solto nao e confirmacao de presenca (12/09/2026)');
   check(presenca('vou estar la') === 'sim', '"vou estar la" continua');
   check(presenca('vou comparecer') === 'sim', 'e "vou comparecer"');
   check(presenca('nao vou poder ir') === 'nao', 'e a recusa continua vencendo');
+}
+
+grupo('roupa nao e material, e tem detector proprio (12/09/2026)');
+{
+  /**
+   * Regra dele: *"nao fornecemos nenhuma roupa"*, e a lei confirma (9.504/97, art. 39, § 6o: camisetas,
+   * bones e brindes vedados). **Medido antes:** todo pedido de roupa ligava `pedeMaterial` e
+   * `pedeMaterialForaDoAnuncio` — a etiqueta de material, que manda PULAR o contato, e o pedido de
+   * endereco no rascunho. Metade das assercoes e falso positivo: "vestir a camisa" e militancia.
+   */
+  const um = (t) => [{ texto: t, tipo: 'TEXT' }];
+  const roupa = (t) => !!pedeRoupa(um(t), null, []);
+
+  for (const t of ['Quero uma camiseta do Capitão Martim', 'Quero umas. Camisetas', 'tem como me mandar uma camiseta?',
+    'como faço para conseguir um boné', 'me arruma um boné da campanha', 'queria um colete',
+    'vcs tem camisa do capitao?', 'quero adesivos e uma camiseta', 'onde compro a camiseta de vocês?',
+    'manda umas camisetas pra gente', 'tem boné?']) {
+    check(roupa(t), `roupa: "${t}"`);
+    check(!pedeMaterialForaDoAnuncio(um(t), []) || /adesivo/.test(t), `e nao marca material: "${t}"`);
+  }
+  check(!pedeAjudaFinanceira(um('me arruma um boné da campanha'), null),
+    '"me arruma um bone" nao vira pedido de ajuda financeira (nem a etiqueta dele)');
+  check(!!pedeMaterial(um('quero adesivos e uma camiseta')), 'o adesivo pedido junto continua sendo material');
+
+  for (const t of ['eu visto a camisa do capitão', 'quero vestir a camisa dessa campanha', 'vamos suar a camisa',
+    'obrigada pela camiseta', 'não quero camiseta nenhuma', 'fui de camiseta verde e amarela no desfile',
+    'quero uns adesivos', 'comprei uma camiseta ontem', 'meu filho tem uma camisa do grêmio',
+    'quero receber o material']) {
+    check(!roupa(t), `nao e pedido de roupa: "${t}"`);
+  }
+
+  /** **So o que ainda nao respondemos** — o "nao temos" nao se repete. */
+  const conversa = [
+    { texto: 'quero uma camiseta', tipo: 'TEXT', at: '2026-09-12T10:00:00' },
+    { texto: 'ok', tipo: 'TEXT', at: '2026-09-12T10:30:00' },
+  ];
+  check(!!pedeRoupa(conversa, '2026-09-12T09:00:00'), 'antes da nossa resposta, pendente');
+  check(!pedeRoupa(conversa, '2026-09-12T10:10:00'), 'depois da nossa resposta, nao volta');
+  check(!pedeRoupa([{ texto: 'Olá! Quero uma camiseta', tipo: 'TEXT', geradaPeloAnuncio: true }], null),
+    'o clique no anuncio nao e pedido dela');
+  check(ehPedidoDeRoupa('QUERO UM BONÉ'), 'caixa alta e acento nao atrapalham');
 }
 
 fim();

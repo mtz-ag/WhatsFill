@@ -1,3 +1,44 @@
+## 2026-09-12 — v3.57.0 — roupa não é material: a IA diz que não temos, sem endereço
+
+**Pedido dele:** *"veja se roupas se encaixa na lei eleitoral, se não já corte de qualquer maneira
+quando alguém pedir, pois não fornecemos nenhuma roupa"*.
+
+**A lei:** não se encaixa. Lei 9.504/97, art. 39, § 6º (incluído pela Lei 11.300/2006) veda na
+campanha *"a confecção, utilização, distribuição por comitê, candidato, ou com a sua autorização, de
+camisetas, chaveiros, bonés, canetas, brindes, cestas básicas ou quaisquer outros bens ou materiais
+que possam proporcionar vantagem ao eleitor"*. Camiseta e boné estão nomeados.
+
+**Medido antes de mexer:** camiseta, camisa, colete e boné estavam em `cortesia.OBJETO_DE_MATERIAL`
+(e na versão física), então **todo pedido de roupa era material**: ligava `pedeMaterial` e
+`pedeMaterialForaDoAnuncio` — **a etiqueta de material, que manda a rodada PULAR o contato** — e o
+prompt da IA listava camiseta e boné como material, mandando **pedir o endereço e prometer o repasse
+à equipe**. Uma entrega que a lei proíbe e que não existe. De 8 pedidos de roupa, 7 viravam material;
+*"me arruma um boné"* ainda virava pedido de ajuda financeira (e a etiqueta dele).
+
+**O que mudou:**
+- Roupa **saiu das duas listas de material** e ganhou `cortesia.pedeRoupa` / `ehPedidoDeRoupa`: verbo
+  de pedir + a peça (camiseta, camisa, boné, colete, blusa, moletom, jaqueta, uniforme…), mais *"vocês
+  têm camiseta?"* e *"onde compro?"*. Lê desde a nossa última fala, então o "não temos" não se repete.
+- No painel ela entra no sinal `pedeRespostaPessoal` → **tecla 6 alta nos dois ramos**, a IA responde.
+  Entrou nesse sinal para valer **sem você importar o quadro**.
+- No prompt: regra **ROUPA NÃO É MATERIAL, E NÃO FORNECEMOS NENHUMA** com a lei nomeada, e a mesma
+  regra **colada no pedido** quando ela pediu roupa — uma frase gentil dizendo que não temos, sem
+  endereço, sem repasse, sem "vou verificar", sem indicar onde comprar. Pediu adesivo junto, o adesivo
+  segue o caminho do material.
+- `pedeAjudaFinanceira` não pega mais "me arruma um boné".
+
+**Falsos positivos medidos e barrados:** *"vestir a camisa"*, *"suar a camisa"* (militância),
+*"obrigada pela camiseta"*, *"meu filho tem uma camisa do Grêmio"* (o "tem" só conta com "vocês" ou
+abrindo a mensagem), *"comprei uma camiseta ontem"*, *"não quero camiseta nenhuma"*.
+
+**Fica para ele decidir:** o mesmo parágrafo da lei veda **chaveiro, caneta e brinde**, e *chaveiro*
+continua na lista do material (a IA pede endereço). Não mexi porque o pedido foi roupa.
+
+**Arquivos:** `src/lib/cortesia.js`, `src/lib/ia.js`, `src/panel/panel.js`, `tests/cortesia.test.mjs`
+(+38), `tests/ia.test.mjs` (+13), `CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-12 — v3.56.0 — "vou lá" não é confirmação de presença, e o pulo diz quem decidiu
 
 **Relato dele**, com a print da Laura (áudio de 1min16): *"pulando sem motivo, não sei dizer o

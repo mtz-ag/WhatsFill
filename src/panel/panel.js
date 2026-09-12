@@ -30,7 +30,7 @@ import { MSG_FLUXO } from '../lib/fluxo-msg.js';
 import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
-import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado } from '../lib/cortesia.js';
+import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -5931,7 +5931,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // igual a uma longa de 450 (print dele, 31/08).
         // Os padroes do anuncio entram para a mensagem GERADA pelo anuncio nao contar como
         // mensagem propria dela -- mesmo criterio de `soExpressaApoio`, logo abaixo.
-        pedeRespostaPessoal: conversaPedeRespostaPessoal(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
+        // ROUPA (12/09/2026): não fornecemos e a lei proíbe (9.504/97, art. 39 § 6º). Entra NESTE
+        // sinal para ser tecla 6 alta nos dois ramos sem ele importar o quadro — a IA responde que
+        // não temos. Antes era "material": etiqueta que pula e pedido de endereço.
+        pedeRespostaPessoal:
+          conversaPedeRespostaPessoal(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio) ||
+          pedeRoupa(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
         // Pergunta de razão ou de posição: nenhuma resposta pronta responde, e mandar o modelo
         // vira material de campanha em cima da pergunta dela (print da Clair, 31/08).
         perguntaAberta: conversaTemPerguntaAberta(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),

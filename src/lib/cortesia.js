@@ -1501,7 +1501,10 @@ export function pedeAjudaFinanceira(entrantes, nossaUltimaAt) {
    * arrumar, arranjar, doar) — *"você consegue verificar"* é fazer, não obter —, e o que vem depois
    * tem que ser **artigo + coisa**, nunca informação (*"consegue o link"*, *"consegue o número"*).
    */
-  const consiga = OBJETO_DE_MATERIAL.test(conversa) ? null : PEDIR_QUE_A_GENTE_CONSIGA.exec(conversa);
+  // Roupa tem detector proprio (`pedeRoupa`) e resposta propria: nao e pedido de doacao comum.
+  const consiga = OBJETO_DE_MATERIAL.test(conversa) || new RegExp(OBJETO_DE_ROUPA.source, 'i').test(semAcentos(conversa))
+    ? null
+    : PEDIR_QUE_A_GENTE_CONSIGA.exec(conversa);
   if (consiga && !NAO_E_COISA.test(consiga[2] || '')) {
     const m = consiga;
     return {
@@ -2906,7 +2909,7 @@ const VERBO_DE_PEDIR_MATERIAL = [
 
 /** O que se pede. Literal de propósito: é o vocabulário desta campanha, e não uma categoria. */
 const OBJETO_DE_MATERIAL =
-  /(?:materia(?:l|is)|conteudos?|adesivos?|santinhos?|panfletos?|folhetos?|folders?|artes?|cards?|informativos?|cartilhas?|bandeiras?|bandeirinhas?|camisetas?|camisas?|coletes?|bones?|placas?|plaquinhas?|banners?|faixas?|cartaz(?:es)?|chaveiros?|botons?|bottons?)/;
+  /(?:materia(?:l|is)|conteudos?|adesivos?|santinhos?|panfletos?|folhetos?|folders?|artes?|cards?|informativos?|cartilhas?|bandeiras?|bandeirinhas?|placas?|plaquinhas?|banners?|faixas?|cartaz(?:es)?|chaveiros?|botons?|bottons?)/;
 
 /**
  * Verbo, até duas palavras no meio, e o objeto. As peças ficam separadas acima porque é assim que
@@ -2947,7 +2950,7 @@ export function pedeMaterial(entrantes) {
  * material é o que manda pular. Então aqui ficam de fora.
  */
 const OBJETO_DE_MATERIAL_FISICO =
-  /(?:materia(?:l|is)|adesivos?|santinhos?|panfletos?|folhetos?|folders?|cartilhas?|bandeiras?|bandeirinhas?|camisetas?|camisas?|coletes?|bones?|placas?|plaquinhas?|banners?|faixas?|cartaz(?:es)?|chaveiros?|botons?|bottons?)/;
+  /(?:materia(?:l|is)|adesivos?|santinhos?|panfletos?|folhetos?|folders?|cartilhas?|bandeiras?|bandeirinhas?|placas?|plaquinhas?|banners?|faixas?|cartaz(?:es)?|chaveiros?|botons?|bottons?)/;
 
 const PEDIDO_DE_MATERIAL_FISICO = VERBO_DE_PEDIR_MATERIAL.map(
   (verbo) =>
@@ -2979,6 +2982,84 @@ export function pedeMaterialForaDoAnuncio(entrantes, padroesDeAnuncio = []) {
     if (NEGA_O_PEDIDO.test(texto)) continue;
     if (PEDIDO_DE_MATERIAL_FISICO.some((re) => re.test(texto))) {
       return { motivo: 'pediu material fora do anúncio — é material a enviar' };
+    }
+  }
+  return null;
+}
+
+/**
+ * **ROUPA NÃO É MATERIAL, e não fornecemos nenhuma** — regra dele (12/09/2026): *"veja se roupas se
+ * encaixa na lei eleitoral, se não já corte de qualquer maneira quando alguém pedir, pois não
+ * fornecemos nenhuma roupa"*.
+ *
+ * **A lei confirma:** Lei 9.504/97, art. 39, § 6º (incluído pela Lei 11.300/2006) veda na campanha
+ * *"a confecção, utilização, distribuição por comitê, candidato, ou com a sua autorização, de
+ * camisetas, chaveiros, bonés, canetas, brindes, cestas básicas…"*. Camiseta e boné estão NOMEADOS.
+ *
+ * **Medido antes:** camiseta, camisa, colete e boné estavam em `OBJETO_DE_MATERIAL`, então todo pedido
+ * de roupa ligava `pedeMaterial` e `pedeMaterialForaDoAnuncio` — **a etiqueta de material (que manda
+ * PULAR o contato)** e, no rascunho, **o pedido de endereço com repasse à equipe**: uma entrega que a
+ * lei proíbe e que não existe. Saíram das duas listas e ganharam esta.
+ *
+ * **O que qualifica é o mesmo par do material: verbo de pedir + a peça.** A guarda que a medição
+ * pede é a metáfora: *"vestir a camisa"*, *"suar a camisa"* é militância, não pedido — some antes
+ * de casar.
+ */
+const OBJETO_DE_ROUPA =
+  /(?:roupas?|camisetas?|camisas?|coletes?|bones?|blusas?|blusoes?|moletons?|moletom|jaquetas?|agasalhos?|uniformes?|bermudas?|calcas?|chapeus?|toucas?|viseiras?|abadas?)/;
+
+const VERBO_DE_PEDIR_ROUPA = [
+  ...VERBO_DE_PEDIR_MATERIAL,
+  /**
+   * **"Tem camiseta?" só com o sujeito sendo NÓS, ou abrindo a mensagem.** Sem essa guarda, *"meu
+   * filho tem uma camisa do Grêmio"* virava pedido — medido.
+   */
+  /(?:voces|vcs|vc|voce)\s+(?:tem|teria|terao|vai\s+ter|vao\s+ter|distribuem|distribui|vendem|vende)/,
+  /^\s*(?:tem|teria|vai\s+ter)/,
+  /(?:como|onde)\s+(?:eu\s+)?(?:consigo|conseguir|compro|comprar|pego|pegar|adquiro)/,
+].map((re) => re.source);
+
+const PEDIDO_DE_ROUPA = VERBO_DE_PEDIR_ROUPA.map(
+  (verbo) =>
+    new RegExp(
+      String.raw`(^|[^\p{L}])(?:${verbo})(?:\s+\S+){0,2}\s+(?:${OBJETO_DE_ROUPA.source})(?![\p{L}])`,
+      'iu'
+    )
+);
+
+const CAMISA_DE_METAFORA = /(vestir|visto|veste|vestimos|vestindo|vista|suar|suando|suo|suamos)\s+(a\s+)?camisa/giu;
+
+/** O texto pede roupa? Puro, para o prompt da IA usar a MESMA leitura da rodada. */
+export function ehPedidoDeRoupa(texto) {
+  const t = semAcentos(texto).replace(CAMISA_DE_METAFORA, ' ');
+  if (!t.trim() || NEGA_O_PEDIDO.test(t)) return false;
+  if (PEDIDO_DE_ROUPA.some((re) => re.test(t))) return true;
+  /**
+   * **A roupa na LISTA de um pedido de material** — *"quero adesivos e uma camiseta"*: o verbo fica
+   * a três palavras da camiseta e o par acima não alcança. Vale só quando há pedido de material de
+   * verdade na mesma mensagem, e a peça vem emendada por vírgula ou "e".
+   */
+  return PEDIDO_DE_MATERIAL_COMPLETO.some((re) => re.test(t)) && ROUPA_NA_LISTA.test(t);
+}
+
+const ROUPA_NA_LISTA = new RegExp(
+  String.raw`(?:,|\se\s)\s*(?:\S+\s+){0,2}(?:${OBJETO_DE_ROUPA.source})(?![\p{L}])`,
+  'iu'
+);
+
+/**
+ * Ela pediu roupa desde a nossa última fala? Devolve o motivo, ou `null`.
+ *
+ * **`desdeNossaUltima` e não `rajadaFinal`**: é pedido que fica esperando resposta (a regra de
+ * escolha de 09/09), e o corte na nossa fala é o que impede de repetir o "não temos" — a repetição
+ * é o maior sinal de máquina (12/09). O painel soma isto a `pedeRespostaPessoal`, que é tecla 6 alta
+ * nos dois ramos e vale sem ele importar o quadro.
+ */
+export function pedeRoupa(entrantes, nossaUltimaAt, padroesDeAnuncio = []) {
+  for (const msg of desdeNossaUltima(entrantes, nossaUltimaAt)) {
+    if (msg?.sistema || ehMensagemDeAnuncio(msg, padroesDeAnuncio)) continue;
+    if (ehPedidoDeRoupa(msg?.texto)) {
+      return { motivo: 'pediu roupa (camiseta, boné…) — não fornecemos, a lei eleitoral proíbe; a IA responde que não temos' };
     }
   }
   return null;

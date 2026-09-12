@@ -13,7 +13,7 @@ import { PROVEDORES, pedirAoWorker } from '../src/lib/ia-cliente.js';
 import { paraHtml } from '../src/padrao.js';
 import { chapaDoDossie, precisaDoDossie } from '../src/lib/gabinete.js';
 import { DEFAULT_TEMPLATES } from '../src/lib/store.js';
-import { pedeMaterial, pedeFalarComDeputado } from '../src/lib/cortesia.js';
+import { pedeMaterial, pedeFalarComDeputado, pedeRoupa } from '../src/lib/cortesia.js';
 import {
   montarSistemaRascunho,
   montarContatoRascunho,
@@ -922,7 +922,7 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
    * sinal `pedeMaterial` — duas listas separadas divergiriam na primeira vez que ele acrescentasse
    * um item.
    */
-  for (const item of ['adesivo', 'santinho', 'panfleto', 'folheto', 'bandeira', 'camiseta', 'boné']) {
+  for (const item of ['adesivo', 'santinho', 'panfleto', 'folheto', 'bandeira']) {
     check(prompt.includes(item), `a lista do prompt tem "${item}"`);
   }
   check(/cadeira de rodas/i.test(prompt), 'com o exemplo do caso real');
@@ -1951,7 +1951,7 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   const pede = (t) => !!pedeMaterial(um(t), null);
 
   for (const t of ['quero uma placa da campanha', 'me manda um banner', 'preciso de uma faixa',
-    'quero um cartaz', 'me arruma umas placas para por na rua', 'gostaria de uma camisa da campanha',
+    'quero um cartaz', 'me arruma umas placas para por na rua', 'gostaria de um adesivo da campanha',
     'me manda um chaveiro', 'voce consegue uns adesivos']) {
     check(pede(t), `pega: "${t}"`);
   }
@@ -2558,6 +2558,52 @@ grupo('a regra do "NAO REPITA" esta colada no pedido (12/09/2026)');
   });
   check(bloco.includes('N\u00c3O REPITA o que j\u00e1 dissemos'), 'a regra entra no bloco do contato');
   check(/NOS acima/.test(bloco) || /N\u00d3S acima/.test(bloco), 'e manda ler as falas marcadas NOS');
+}
+
+/**
+ * ROUPA NAO E MATERIAL, E NAO FORNECEMOS NENHUMA — regra dele (12/09/2026): *"veja se roupas se
+ * encaixa na lei eleitoral, se nao ja corte de qualquer maneira quando alguem pedir, pois nao
+ * fornecemos nenhuma roupa"*. A lei confirma: Lei 9.504/97, art. 39, § 6o veda distribuir camisetas,
+ * bones e brindes.
+ *
+ * **Medido antes:** camiseta, camisa, colete e bone estavam na lista do MATERIAL, e o prompt mandava
+ * pedir o endereco e prometer o repasse a equipe — uma entrega que a lei proibe e que nao existe.
+ */
+{
+  grupo('roupa nao e material: a IA diz que nao temos, sem endereco (12/09/2026)');
+
+  const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  const linhaDoMaterial = prompt.split('\n').find((l) => /MATERIAL DE CAMPANHA é tudo/.test(l)) || '';
+  const listaDoMaterial = prompt.slice(prompt.indexOf(linhaDoMaterial), prompt.indexOf('A lista é exemplo'));
+  check(!!linhaDoMaterial, 'a regra do material continua no prompt');
+  check(!/camiseta|boné|colete/.test(listaDoMaterial), 'e camiseta, bone e colete SAIRAM da lista do material');
+  check(/ROUPA NÃO É MATERIAL, E NÃO FORNECEMOS NENHUMA/.test(prompt), 'a regra da roupa esta no sistema');
+  check(/art\. 39, § 6º/.test(prompt), 'com a lei nomeada');
+  check(/sem pedir endereço, sem repassar/.test(prompt), 'e sem endereco nem repasse');
+  check(!/qual item quer \([^)]*(camiseta|boné)/.test(prompt), 'o exemplo do "ela disse qual item" nao cita roupa');
+
+  /** **Colada no pedido**, so quando ela pediu roupa e ainda nao respondemos. */
+  const pediu = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'quero uma camiseta do capitão' }] });
+  check(pediu.includes('ROUPA: ela pediu camiseta'), 'pedido de camiseta leva a regra ao bloco do contato');
+  check(!/ENDEREÇO: [^\n]*camiseta/.test(pediu), 'e a regra do endereco nao cita mais camiseta');
+
+  const adesivo = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'quero uns adesivos' }] });
+  check(!adesivo.includes('ROUPA:'), 'pedido de adesivo nao leva a regra da roupa');
+
+  const respondida = montarContatoRascunho({ mensagens: [
+    { de: 'contato', texto: 'quero uma camiseta' },
+    { de: 'nos', texto: 'Não temos camisetas para enviar.' },
+    { de: 'contato', texto: 'ok obrigada' },
+  ] });
+  check(!respondida.includes('ROUPA:'), 'ja respondida, a regra nao volta (nada de repetir o "nao temos")');
+
+  const clique = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'Olá! Quero uma camiseta', anuncio: true }] });
+  check(!clique.includes('ROUPA:'), 'o texto do anuncio nao conta como pedido dela');
+
+  /** Camisa pedida nao liga mais o sinal do material (a trava enderecoSemMaterial passa a avisar). */
+  check(!pedeMaterial([{ texto: 'gostaria de uma camisa da campanha', tipo: 'TEXT', at: 1 }], null),
+    '"gostaria de uma camisa da campanha" nao e mais material');
+  check(!!pedeRoupa([{ texto: 'gostaria de uma camisa da campanha', tipo: 'TEXT', at: 1 }], null), 'e sim roupa');
 }
 
 fim();
