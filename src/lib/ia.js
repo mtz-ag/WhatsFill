@@ -1060,6 +1060,11 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '   E NUNCA diga que o áudio falhou nem peça para reenviar: se a transcrição chegou até você,',
     '   nós ouvimos. Proibido escrever: "deu ruim no áudio", "não consegui ouvir", "pode mandar de',
     '   novo?".',
+    '   **A palavra "transcrição" NUNCA sai no rascunho, e nem a ideia.** Ela é máquina nossa: a pessoa',
+    '   não sabe o que é isso, não precisa saber, e explicar o mecanismo derruba a confiança — ela',
+    '   escreveu para gente. Para ela, nós OUVIMOS: "ouvi seu áudio", "escutei aqui". Proibido escrever',
+    '   "a transcrição do seu áudio chegou", "eu li o que você falou" ou qualquer explicação de como o',
+    '   áudio virou texto.',
     '',
     /**
      * **O "encaminhe para o CRAS" SAIU daqui, e é um conflito real com o documento dele.**
@@ -1481,6 +1486,45 @@ export const PEDIDO_DE_DADOS_NO_RASCUNHO = [
 ].join('\n');
 
 /**
+ * **Tira do rascunho a frase que fala de TRANSCRIÇÃO** — print do Jose Carlos (12/09/2026).
+ *
+ * O rascunho respondeu *"A transcrição do seu áudio chegou aqui e eu li o que você falou."*, e ele:
+ * *"a pessoa nem sabe o que é isso e não precisa saber, é só responder que ouvimos; essa resposta
+ * tirou credibilidade"*.
+ *
+ * **É conserto e não aviso** pela disciplina desta função: mecânico e sem julgamento vira correção
+ * (a saudação errada, o traço eme, "gabinete"), e aqui não há nada a julgar — a palavra é
+ * vocabulário da nossa máquina e **não existe mensagem em que ela caiba** para um eleitor. E não
+ * pode ser trava que barra: ele já cortou isso hoje (*"não parar todo tempo para eu revisar"*).
+ *
+ * **Sai a FRASE inteira, não a palavra:** trocar "transcrição" por "áudio" deixaria *"o áudio do seu
+ * áudio chegou aqui e eu li o que você falou"*. A frase que fala do mecanismo é sempre inteira sobre
+ * o mecanismo, então o que fica em volta continua de pé — medido no texto da print.
+ *
+ * **O piso existe para o texto não virar farelo:** se depois do corte sobrar menos de 40 caracteres,
+ * nada é removido e quem chama recebe `null` (vira aviso). Rascunho pela metade saindo sozinho é
+ * pior que a frase errada.
+ */
+export function semFalarDeTranscricao(texto) {
+  const bruto = String(texto || '');
+  if (!/transcri/i.test(bruto)) return null;
+  let mexeu = false;
+  const linhas = bruto.split('\n').map((linha) => {
+    if (!/transcri/i.test(linha)) return linha;
+    const frases = linha.split(/(?<=[.!?])\s+/);
+    const ficam = frases.filter((f) => !/transcri/i.test(f));
+    // Linha que era SO a frase do mecanismo desaparece inteira -- o piso no fim e que protege
+    // o texto de virar farelo, e foi este `!ficam.length` que deixou o caso da print passar.
+    if (ficam.length === frases.length) return linha;
+    mexeu = true;
+    return ficam.join(' ').trim();
+  });
+  if (!mexeu) return null;
+  const novo = linhas.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  return novo.length >= 40 ? novo : null;
+}
+
+/**
  * **O nome do anúncio, curto** — print da Leonir (12/09/2026).
  *
  * A marca da mensagem diz à IA *"(texto do ANÚNCIO <nome> em que ela clicou — escrito pela campanha,
@@ -1552,6 +1596,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
    * NOSSA" ali seria mentira.
    */
   const temCliqueDeAnuncio = lista.some((m) => m.anuncio);
+  const temAudioOuvido = lista.some((m) => m.transcrito);
   const pendentesTotal = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).length;
   const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio).length;
   const soCliques = pendentes === 0 && pendentesTotal > 0;
@@ -1720,6 +1765,20 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * regra longe do ponto em que o modelo escreve não é cumprida (07/09). Condicional para não
      * gastar as chamadas em que não há clique nenhum.
      */
+    /**
+     * **A regra do áudio, colada no pedido** — print do Jose Carlos (12/09/2026): o rascunho
+     * respondeu *"A transcrição do seu áudio chegou aqui e eu li o que você falou"*, e ele: *"a
+     * pessoa nem sabe o que é isso e não precisa saber, é só responder que ouvimos; essa resposta
+     * tirou credibilidade"*. **A palavra vem do nosso próprio prompt** — a marca da linha diz
+     * "transcrito automaticamente" e a regra 6 fala de transcrição cinco vezes —, e nada dizia que
+     * o vocabulário é interno. É a irmã do nome do anúncio (3.50): marca nossa virando conteúdo da
+     * mensagem. Condicional: só entra quando há áudio na conversa.
+     */
+    temAudioOuvido
+      ? 'ÁUDIO: para ela, nós OUVIMOS o áudio — "ouvi seu áudio", "escutei aqui". A palavra ' +
+        '"transcrição" é máquina nossa e NÃO pode aparecer no rascunho, nem a ideia: nada de "a ' +
+        'transcrição chegou", "eu li o que você falou" ou explicar como o áudio virou texto.'
+      : '',
     temCliqueDeAnuncio
       ? 'O CLIQUE NO ANÚNCIO NÃO É FALA DELA: a linha marcada "(texto do ANÚNCIO…)" foi escrita pela ' +
         'campanha. Não agradeça o apoio que está escrito nela, não a trate como apoiadora por causa do ' +
@@ -2469,6 +2528,19 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
    */
   if (contexto?.elaSeDesculpou === false && DIZ_QUE_NAO_PRECISA_DESCULPAR.test(texto)) {
     avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.desculpaInexistente);
+  }
+
+  /**
+   * **A frase que fala de transcrição é RETIRADA** — ver `semFalarDeTranscricao`, print do Jose
+   * Carlos (12/09/2026). Vocabulário da nossa máquina não vai para o eleitor, e não havia o que
+   * julgar: a correção é mecânica, como a saudação e o "gabinete".
+   */
+  const semTranscricao = semFalarDeTranscricao(texto);
+  if (semTranscricao) {
+    texto = semTranscricao;
+    avisos.push('a IA falou de "transcrição" do áudio — tirei a frase; para ela, nós ouvimos');
+  } else if (/transcri/i.test(texto)) {
+    avisos.push('a IA falou de "transcrição" do áudio — troque por "ouvi seu áudio" antes de mandar');
   }
 
   /**

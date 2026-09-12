@@ -10064,6 +10064,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // `anuncio` NÃO é decoração: é o que tira o clique da CONTAGEM de mensagens sem resposta.
       // Sem ele, "ela escreveu 2 mensagens" conta uma que ela não escreveu.
       anuncio: !!m?.geradaPeloAnuncio,
+      // E `transcrito` liga a regra do ÁUDIO no fim do bloco: a palavra "transcrição" é máquina
+      // nossa e não pode sair no rascunho (print do Jose Carlos, 12/09/2026).
+      transcrito: !!m?.transcrito,
       ordem: i,
     }));
     const nossa = (state.nossas || []).map((m, i) => ({

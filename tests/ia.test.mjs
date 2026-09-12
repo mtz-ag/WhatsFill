@@ -18,6 +18,7 @@ import {
   montarSistemaRascunho,
   montarContatoRascunho,
   nomeCurtoDeAnuncio,
+  semFalarDeTranscricao,
   LIMITE_NOME_DO_ANUNCIO,
   PEDIDO_DE_DADOS_NO_RASCUNHO,
   saudacaoDeAgora,
@@ -2466,6 +2467,77 @@ grupo('o clique no anuncio nao e apoio dela (12/09/2026)');
   const sistema = montarSistemaRascunho({ templates: [], regras: '' });
   check(sistema.includes('o texto do AN\u00daNCIO n\u00e3o \u00e9 apoio dela'),
     'o prompt de sistema diz que o texto do anuncio nao e apoio dela');
+}
+
+grupo('a palavra "transcricao" nao sai no rascunho (12/09/2026)');
+{
+  /**
+   * Print do Jose Carlos (12/09/2026): o rascunho respondeu *"A transcricao do seu audio chegou aqui
+   * e eu li o que voce falou."*. Ele: *"a pessoa nem sabe o que e isso e nao precisa saber, e so
+   * responder que ouvimos; essa resposta tirou credibilidade"*.
+   *
+   * **A palavra vem do nosso proprio prompt:** a marca da linha diz "transcrito automaticamente" e
+   * a regra 6 fala de transcricao cinco vezes -- e nada dizia que o vocabulario e INTERNO. E a irma
+   * do nome do anuncio (3.50): marca nossa virando conteudo da mensagem.
+   *
+   * **E conserto, nao trava.** Ele cortou a trava que para a rodada no mesmo dia (*"nao parar todo
+   * tempo para eu revisar"*), e aqui nao ha o que julgar: a palavra e maquina nossa e nao existe
+   * mensagem em que ela caiba para um eleitor.
+   */
+  const oQueSaiu = [
+    'Bom dia.',
+    '',
+    'Recebemos sim as suas mensagens e escutamos os audios que voce envia para este numero.',
+    '',
+    'A transcricao do seu audio chegou aqui e eu li o que voce falou.',
+    '',
+    'Fique a vontade para mandar texto ou audio, que eu vou ver e responder por aqui.',
+  ].join('\n');
+
+  const limpo = semFalarDeTranscricao(oQueSaiu);
+  check(limpo !== null && !/transcri/i.test(limpo), 'a frase da transcricao sai do rascunho');
+  check(limpo.includes('escutamos os audios'), 'e a frase que diz que NOS OUVIMOS fica');
+  check(limpo.includes('Bom dia.') && limpo.includes('responder por aqui'), 'o resto da mensagem fica de pe');
+  check(!/\n\n\n/.test(limpo), 'e nao sobra buraco de linha em branco onde a frase estava');
+
+  /** **A frase sai mesmo no meio de uma linha**, e as vizinhas ficam. */
+  const meio = semFalarDeTranscricao('Bom dia. A transcricao do seu audio chegou aqui. Fico a disposicao para o que precisar.');
+  check(meio === 'Bom dia. Fico a disposicao para o que precisar.', `sai a frase do meio (${meio})`);
+
+  /**
+   * **O PISO:** rascunho que viraria farelo nao e cortado — quem chama recebe `null` e o caso vira
+   * aviso. Rascunho pela metade saindo sozinho e pior que a frase errada.
+   */
+  check(semFalarDeTranscricao('A transcricao do seu audio chegou aqui.') === null,
+    'mensagem que era SO isso nao e cortada: vira aviso');
+  check(semFalarDeTranscricao('Ouvi seu audio e entendi tudo. Obrigado pela confianca.') === null,
+    'e texto sem a palavra nao e tocado');
+
+  /** **A revisao aplica o corte e DIZ o que fez, sem barrar o envio.** */
+  const r = revisarRascunho(oQueSaiu, new Date('2026-09-12T11:43:00'), { recebemosDela: true });
+  check(!/transcri/i.test(r.texto), 'revisarRascunho devolve o texto ja sem a frase');
+  check(r.avisos.some((a) => /tirei a frase/.test(a)), 'e o aviso diz que tirou');
+  check(rascunhoPodeSairSozinho(r.avisos), 'e NAO barra o envio automatico');
+
+  /** **As duas metades do prompt:** a regra 6 e a linha colada no pedido, so quando ha audio. */
+  const sistema = montarSistemaRascunho({ templates: [], regras: '' });
+  check(sistema.includes('A palavra "transcri\u00e7\u00e3o" NUNCA sai no rascunho'),
+    'a regra 6 proibe a palavra');
+
+  const agora = new Date('2026-09-12T11:43:00');
+  const comAudio = montarContatoRascunho({
+    mensagens: [{ de: 'contato', texto: '(\u00e1udio, transcrito automaticamente) bom dia', at: '2026-09-12T11:00:00', transcrito: true }],
+    campos: {},
+    agora,
+  });
+  check(comAudio.includes('\u00c1UDIO: para ela, n\u00f3s OUVIMOS'), 'havendo audio, a regra entra no bloco do contato');
+
+  const semAudio = montarContatoRascunho({
+    mensagens: [{ de: 'contato', texto: 'bom dia', at: '2026-09-12T11:00:00' }],
+    campos: {},
+    agora,
+  });
+  check(!semAudio.includes('\u00c1UDIO: para ela'), 'sem audio, a regra nao entra');
 }
 
 fim();

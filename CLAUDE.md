@@ -2805,6 +2805,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   conteudo digital (a etiqueta manda PULAR) e marca DEPOIS da decisao da passada, para o modelo continuar
   com prioridade. **E `etiquetaDaLista`/`etiquetaDeEndereco` sao ASSINCRONAS**: `!etiquetaDeEndereco()`
   sem `await` testa uma promessa e e sempre falso — nenhum teste nem verificador pega isso.
+- **VOCABULARIO INTERNO VAZA PARA A MENSAGEM: "transcricao", 12/09/2026.** Print do Jose Carlos: o
+  rascunho respondeu *"A transcricao do seu audio chegou aqui e eu li o que voce falou"*, e ele: *"a
+  pessoa nem sabe o que e isso e nao precisa saber, e so responder que ouvimos; essa resposta tirou
+  credibilidade"*. **Medido: a palavra vem do NOSSO prompt** — a marca da linha diz "transcrito
+  automaticamente", a regra 6 fala de transcricao cinco vezes e o padrao dele tem "Audio
+  transcrito"; nada dizia que aquilo e interno. **Segunda vez no mesmo dia** (o nome do anuncio,
+  3.50): **marca nossa virando conteudo da mensagem.** Hoje `ia.semFalarDeTranscricao` TIRA a frase
+  (conserto, nao trava — ele cortou a trava que para a rodada no mesmo dia), sai a FRASE e nao a
+  palavra (trocar daria *"o audio do seu audio"*), ha PISO de 40 caracteres para o texto nao virar
+  farelo, e a regra esta na regra 6 **e** colada no pedido, so quando ha audio. **Ao escrever marca
+  ou regra que fala da nossa maquina, diga que aquilo NAO pode ser dito ao eleitor** — o modelo
+  reusa o vocabulario que recebe.
+
 - **UM CAMPO CUJO SIGNIFICADO MUDA COM OUTRO CONTROLE E UM CAMPO CONFUSO — a chave da IA,
   12/09/2026.** Pedido dele: *"o armazenamento da key ficou confuso, deixe um espaco de key para cada
   modelo"*. Havia **um campo so**, e ele era da casa do MODELO ESCOLHIDO: para salvar a chave da

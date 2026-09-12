@@ -1,3 +1,48 @@
+## 2026-09-12 — v3.54.0 — a palavra "transcrição" não sai no rascunho
+
+**Relato dele**, com a print do Jose Carlos: o rascunho respondeu *"A transcrição do seu áudio chegou
+aqui e eu li o que você falou."* — *"comentou que nós recebemos transcrição; a pessoa nem sabe o que é
+isso e não precisa saber, é só responder que ouvimos; essa resposta tirou credibilidade"*.
+
+**Medido: a palavra vem do NOSSO prompt.** A marca da linha diz *"(áudio, transcrito
+automaticamente)"* e a regra 6 fala de transcrição cinco vezes — e **nada dizia que o vocabulário é
+interno**. O padrão dele também tem *"Áudio transcrito: o áudio carrega emoção…"*, que é instrução
+sobre como responder, não texto para o eleitor. O modelo repetiu a palavra que recebeu.
+
+**É a irmã do nome do anúncio (3.50), dois consertos atrás:** marca nossa virando conteúdo da
+mensagem. A diferença é o dano — lá entrava propaganda na conversa; aqui a mensagem explica o
+mecanismo, e quem lê entende que falou com uma máquina.
+
+**O que mudou:**
+
+1. **A frase é RETIRADA do rascunho** (`ia.semFalarDeTranscricao`), e o aviso diz que foi retirada.
+   **Conserto e não trava** — ele cortou a trava que para a rodada no mesmo dia (*"não parar todo
+   tempo para eu revisar"*), e aqui não há o que julgar: a palavra é máquina nossa e não existe
+   mensagem em que ela caiba para um eleitor. É a disciplina da saudação errada e do "gabinete".
+2. **Sai a FRASE, não a palavra:** trocar "transcrição" por "áudio" daria *"o áudio do seu áudio
+   chegou aqui"*. A frase que fala do mecanismo é inteira sobre o mecanismo, então o que está em
+   volta continua de pé — medido no texto da print:
+
+   > Bom dia. / Entendo sua dúvida. / **Recebemos sim as suas mensagens e escutamos os áudios que
+   > você envia para este número.** / ~~A transcrição do seu áudio chegou aqui e eu li o que você
+   > falou.~~ / Fique à vontade para mandar texto ou áudio… / Obrigado por confiar em falar com a
+   > gente.
+
+   A frase que diz **que nós ouvimos** fica; só a que explica a máquina sai.
+3. **O PISO:** se depois do corte sobrar menos de 40 caracteres, nada é removido e o caso vira
+   aviso. Rascunho pela metade saindo sozinho é pior que a frase errada.
+4. **A regra no prompt, nos dois lugares:** na regra 6 (*"a palavra 'transcrição' NUNCA sai no
+   rascunho, e nem a ideia; para ela, nós OUVIMOS"*) e **colada no pedido**, no fim do bloco do
+   CONTATO — **só quando há áudio na conversa**, como a regra do anúncio.
+
+**Medido depois:** a frase sai, o resto fica, não sobra buraco de linha em branco, e
+`rascunhoPodeSairSozinho` continua **true** — a rodada não para.
+
+**Arquivos:** `src/lib/ia.js` (+`semFalarDeTranscricao`), `src/panel/panel.js` (`transcrito` chega ao
+bloco), `tests/ia.test.mjs` (+13), `CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-12 — v3.53.0 — uma chave por casa, as duas na tela
 
 **Pedido dele:** *"o armazenamento da key ficou confuso, deixe um espaço de key para cada modelo"*.
