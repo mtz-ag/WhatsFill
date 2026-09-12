@@ -2805,6 +2805,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   conteudo digital (a etiqueta manda PULAR) e marca DEPOIS da decisao da passada, para o modelo continuar
   com prioridade. **E `etiquetaDaLista`/`etiquetaDeEndereco` sao ASSINCRONAS**: `!etiquetaDeEndereco()`
   sem `await` testa uma promessa e e sempre falso — nenhum teste nem verificador pega isso.
+- **ABREVIACAO DE CIDADE SE CORRIGE SOZINHA, E `confianca: 'exata'` NAO E A LINHA DE CORTE.**
+  Decisao dele (12/09/2026): *"isso ja era pra estar sendo corrigido pela IA; se ja escreve a cidade
+  pode reescrever"*. **Nao precisa de IA:** `POA` resolve para Porto Alegre pela tabela de apelidos
+  do `normalize`; e a IA so era consultada havendo palpite PENDENTE, que `POA` no CRM nao gera.
+  **Medido, `exata` levaria `Vitoria -> Vitoria das Missoes` e `Esperanca -> Esperanca do Sul`** — o
+  caminho do SUFIXO OMITIDO, a armadilha do "Sao Paulo" (08/09) por outra porta, trocando a cidade
+  do eleitor com o COREDE junto. **A linha e a IGUALDADE depois de normalizar**
+  (`conferirGrafia().podeCorrigirSozinho`): o escrito tem de resolver para o nome INTEIRO do
+  municipio — apelido, abreviacao, acento, caixa e sigla do estado passam; erro de digitacao e nome
+  parcial continuam pedindo o clique. **Prova no teste: nenhum dos 497 oficiais e reescrito.** Roda
+  ANTES das sugestoes de etiqueta (senao a etiqueta sai de `POA`), entra como `from: 'grafia'` (o
+  Salvar e a conclusao levam, a gravacao automatica recusa) e **o cabecalho diz o que fez** —
+  correcao silenciosa em dado de eleitor e o que ele nao pode ter.
+
 - **BOTAO QUE SO ENCHE O RASCUNHO MANDA SALVAR NUMA ABA QUE NAO ESTA NA TELA — 12/09/2026.**
   Relato dele, print da Cidade valendo `POA`: *"mando corrigir e continua escrito POA em vez de porto
   alegre"*. **Medido: o aviso, o nome oficial e a escrita estavam todos certos** —

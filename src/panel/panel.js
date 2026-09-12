@@ -1104,8 +1104,45 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Recalcula as etiquetas sugeridas. Depende da cidade, então roda de novo quando você
    * corrige a cidade na aba Dados.
    */
+  /**
+   * **Abreviação de cidade se corrige SOZINHA** — decisão dele (12/09/2026): *"isso já era pra
+   * estar sendo corrigido pela IA; se já escreve a cidade pode reescrever"*.
+   *
+   * Ele tem razão nas duas metades. A extensão já escreve o campo Cidade, então reescrever uma
+   * abreviação para o nome oficial não é um poder novo — e **isto não precisa da IA**: o apelido
+   * resolve pela tabela de `normalize` (`poa` → `porto alegre`), sem modelo nenhum. A IA só era
+   * consultada quando havia palpite PENDENTE, e `POA` no CRM sem ninguém falar de cidade na
+   * conversa não gera palpite: ela nunca veria o caso.
+   *
+   * **Corrige só o que é a mesma cidade escrita de outro jeito** (`podeCorrigirSozinho`): apelido,
+   * abreviação, acento, caixa e sigla do estado. Erro de digitação e nome PARCIAL de município
+   * (`Vitoria` → Vitória das Missões) continuam pedindo o clique dele — ali quem resolveu foi a
+   * distância, e reescrever trocaria a cidade do eleitor.
+   *
+   * **Roda ANTES das sugestões de etiqueta**, na mesma passada: com o campo valendo `POA` a
+   * etiqueta de cidade sairia do valor errado. E entra como escrita comum (`from: 'grafia'`), que
+   * `fields.deveGravarEntrada` leva no Salvar e na conclusão e **recusa na gravação automática** —
+   * a que roda a cada abertura de contato.
+   */
+  async function corrigirGrafiaDaCidade() {
+    state.grafiaCorrigida = null;
+    const campo = fieldNamed('Cidade');
+    const cidade = valueNamed('Cidade');
+    if (!campo || !cidade) return;
+    try {
+      const g = await cities.conferirGrafia(cidade);
+      if (!g || g.ok || !g.oficial || !g.podeCorrigirSozinho) return;
+      state.draft[campo.id] = { value: g.oficial, from: 'grafia', confirmada: true };
+      // O cabeçalho tem que DIZER: aviso que desaparece sozinho parece defeito consertado por acaso.
+      state.grafiaCorrigida = { de: cidade, para: g.oficial };
+    } catch (err) {
+      console.warn('[WhatsFill] não consegui corrigir a grafia da cidade:', err.message);
+    }
+  }
+
   async function refreshTagSuggestions() {
     if (!state.contact) return;
+    await corrigirGrafiaDaCidade();
     const jaAplicadas = new Set(state.contact.tagsId || []);
     try {
       // O "sim" só vira etiqueta se a pergunta de interesse tiver saído para ESTE contato —
@@ -1571,6 +1608,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * Só grafia diferente do nome oficial entra aqui. Acento e caixa não — resolvem para o mesmo
      * município e avisar disso treinaria a ignorar o aviso (ver `cities.conferirGrafia`).
      */
+    /**
+     * **A grafia corrigida sozinha aparece, e sem botão** — o aviso amarelo some porque o campo já
+     * vale o nome oficial, e correção silenciosa em dado de eleitor é o que ele não pode ter.
+     */
+    if (state.grafiaCorrigida) {
+      header.append(
+        h('div', { class: 'wf-origin', 'data-fica': '1' },
+          `Cidade: estava "${state.grafiaCorrigida.de}" no CRM — vai gravar "${state.grafiaCorrigida.para}".`)
+      );
+    }
+
     const grafia = state.grafiaDaCidade;
     if (grafia && !grafia.ok) {
       const aviso = h('div', { class: 'wf-block' }, `Cidade escrita fora do padrão: ${grafia.motivo}`);

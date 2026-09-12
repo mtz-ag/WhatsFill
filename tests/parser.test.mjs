@@ -531,6 +531,45 @@ grupo('conferirGrafia: avisa cidade escrita errada, sem reclamar de acento');
   check(fieldsLib.deveGravarEntrada(doBotao), 'a correção dele vai para o CRM');
   check(!fieldsLib.deveGravarEntrada(doBotao, { somenteExatos: true }), 'mas nunca pela gravação automática');
 
+  /**
+   * **ABREVIACAO SE CORRIGE SOZINHA** — decisao dele (12/09/2026): *"isso ja era pra estar sendo
+   * corrigido pela IA; se ja escreve a cidade pode reescrever"*.
+   *
+   * **`confianca: 'exata'` NAO serve como linha de corte**, e foi medir que mostrou: naquele balde
+   * entram `Vitoria -> Vitoria das Missoes` e `Esperanca -> Esperanca do Sul`, que sao o caminho do
+   * SUFIXO OMITIDO (a armadilha do "Sao Paulo" virando Sao Paulo das Missoes, 08/09). Reescrever ali
+   * troca a cidade de um eleitor por outra, levando o COREDE e o link do grupo junto.
+   *
+   * A linha e a IGUALDADE depois de normalizar: o que esta escrito tem de resolver para o nome
+   * INTEIRO do municipio.
+   */
+  const sozinho = async (v) => (await cities.conferirGrafia(v)).podeCorrigirSozinho === true;
+
+  check(await sozinho('POA'), 'apelido: POA vira Porto Alegre sozinho');
+  check(await sozinho('Cxs'), 'abreviacao: Cxs vira Caxias do Sul');
+  check(await sozinho('Sto Angelo'), 'e Sto Angelo vira Santo Angelo');
+  check(await sozinho('Canoas RS'), 'a sigla do estado tambem sai sozinha');
+  check(await sozinho('Novo Hamburgo/RS'), 'com barra tambem');
+
+  /** **O que NAO se corrige sozinho** — e onde mora o risco desta regra. */
+  check(!(await sozinho('Caxias do Sull')), 'erro de digitacao NAO: quem resolveu foi a distancia');
+  check(!(await sozinho('Erechin')), 'nem Erechin -> Erechim');
+  check(!(await sozinho('Vitoria')), 'e NUNCA nome parcial: Vitoria nao vira Vitoria das Missoes sozinho');
+  check(!(await sozinho('Esperanca')), 'nem Esperanca -> Esperanca do Sul');
+  check(!(await sozinho('POA/RS - Zona Norte')), 'nem valor com texto a mais em volta');
+
+  /**
+   * **A prova que sustenta a regra:** nenhum dos 497 nomes OFICIAIS seria reescrito para outro
+   * municipio. E a mesma disciplina da prova contra os 5.571 do Brasil (08/09) — o erro aqui apaga
+   * a cidade de um eleitor real.
+   */
+  let reescritas = 0;
+  for (const m of await cities.loadMunicipios()) {
+    const r = await cities.conferirGrafia(m);
+    if (!r.ok && r.podeCorrigirSozinho && r.oficial !== m) reescritas += 1;
+  }
+  check(reescritas === 0, `nenhum dos 497 nomes oficiais e reescrito sozinho (${reescritas})`);
+
   const digito = await cities.conferirGrafia('Caxias do Sull');
   check(!digito.ok && digito.oficial === 'Caxias do Sul', `erro de digitação é apontado = ${digito.oficial}`);
   check(/nome oficial/.test(digito.motivo), 'o motivo diz qual é o certo');

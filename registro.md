@@ -1,3 +1,52 @@
+## 2026-09-12 — v3.52.0 — a abreviação da cidade se corrige sozinha
+
+**Decisão dele:** *"isso já era pra estar sendo corrigido pela IA; se já escreve a cidade pode
+reescrever"*.
+
+**Ele tem razão nas duas metades, e a segunda é o argumento:** a extensão já escreve o campo Cidade,
+então normalizar uma abreviação para o nome oficial não é poder novo. **E isto não precisa da IA** —
+`POA` resolve para Porto Alegre pela tabela de apelidos do `normalize`, sem modelo nenhum. A IA só
+era consultada quando havia palpite PENDENTE, e `POA` no CRM com ninguém falando de cidade na
+conversa não gera palpite: ela nunca veria o caso.
+
+**A linha de corte NÃO é `confianca: 'exata'`, e medir mostrou por quê.** Naquele balde entram:
+
+| valor | vira | por quê |
+| --- | --- | --- |
+| `POA`, `Cxs`, `Sto Angelo` | Porto Alegre, Caxias do Sul, Santo Ângelo | apelido/abreviação — **seguro** |
+| `Vitoria` | **Vitória das Missões** | sufixo omitido — **troca a cidade do eleitor** |
+| `Esperanca` | **Esperança do Sul** | idem |
+| `Caxias do Sull` | Caxias do Sul | erro de digitação: resolveu por distância |
+
+É a armadilha do *"São Paulo" virando São Paulo das Missões* (08/09) chegando por outra porta.
+
+**A linha que ficou é a IGUALDADE depois de normalizar** (`cities.conferirGrafia` devolve
+`podeCorrigirSozinho`): o que está escrito tem de resolver para o nome **inteiro** do município,
+diferindo só por apelido, abreviação, acento, caixa ou sigla do estado.
+
+- **Corrige sozinho:** `POA`, `poa`, `Cxs`, `Pto Alegre`, `Sto Angelo`, `Sta Maria`, `Canoas RS`,
+  `porto alegre rs`, `Novo Hamburgo/RS`.
+- **Continua pedindo o clique dele:** erro de digitação (`Caxias do Sull`, `Erechin`,
+  `Sao Lourenso`), nome parcial (`Vitoria`, `Esperanca`) e valor com texto em volta
+  (`POA/RS - Zona Norte`).
+- **Prova, no teste:** nenhum dos **497** nomes oficiais é reescrito para outro município.
+
+**Onde roda:** `corrigirGrafiaDaCidade`, no início de `refreshTagSuggestions` — ou seja **antes das
+sugestões de etiqueta**, na mesma passada, senão a etiqueta de cidade sairia de `POA`. Entra como
+escrita comum (`from: 'grafia'`), que `fields.deveGravarEntrada` leva no Salvar e na conclusão e
+**recusa na gravação automática**, a que roda a cada abertura de contato.
+
+**E o cabeçalho DIZ o que fez:** *"Cidade: estava "POA" no CRM — vai gravar "Porto Alegre""*. Sem
+essa linha o aviso amarelo simplesmente desapareceria, e correção silenciosa em dado de eleitor é
+exatamente o que ele não pode ter. O botão "Corrigir para X" continua existindo para os casos que
+pedem o olho dele.
+
+**Arquivos:** `src/lib/cities.js` (+`podeCorrigirSozinho`), `src/panel/panel.js`
+(+`corrigirGrafiaDaCidade`), `tests/parser.test.mjs` (+11), `CLAUDE.md`, `registro.md`,
+`manifest.json`.
+
+---
+
 ## 2026-09-12 — v3.51.0 — "Corrigir para Porto Alegre" grava na hora
 
 **Relato dele**, com a print da Maria Inez (campo Cidade valendo `POA`): *"mando corrigir e continua

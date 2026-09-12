@@ -137,6 +137,25 @@ export async function conferirGrafia(valor) {
   return {
     ok: false,
     oficial: casou.city,
+    /**
+     * **Esta correção pode ser feita SOZINHA?** — decisão dele (12/09/2026): *"isso já era pra
+     * estar sendo corrigido pela IA; se já escreve a cidade pode reescrever"*.
+     *
+     * **`confianca: 'exata'` NÃO serve como linha de corte, e medir mostrou por quê:** naquele
+     * balde entram `Vitoria → Vitória das Missões` e `Esperanca → Esperança do Sul`, que são o
+     * caminho do SUFIXO OMITIDO — a mesma armadilha do *"São Paulo" virando São Paulo das Missões*
+     * (08/09). Reescrever ali troca a cidade de um eleitor por outra, com o COREDE e o link do
+     * grupo junto.
+     *
+     * **A linha é a IGUALDADE depois de normalizar:** o que está escrito tem que resolver para o
+     * nome INTEIRO do município, diferindo só por abreviação, apelido, acento, caixa ou sigla do
+     * estado. `POA`, `Cxs`, `Sto Angelo`, `Sta Maria`, `Canoas RS` passam; **erro de digitação
+     * fica de fora** (`Caxias do Sull`, `Erechin`) porque ali quem resolveu foi a distância, não a
+     * igualdade — e esse caso continua sendo o botão.
+     *
+     * Medido contra os 497 nomes oficiais: **nenhum** seria reescrito para outro município.
+     */
+    podeCorrigirSozinho: normalize(semSufixoDeEstado(bruto)) === normalize(casou.city),
     confianca: casou.confidence,
     motivo:
       casou.confidence === 'exata'
