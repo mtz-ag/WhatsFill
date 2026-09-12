@@ -2805,6 +2805,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   conteudo digital (a etiqueta manda PULAR) e marca DEPOIS da decisao da passada, para o modelo continuar
   com prioridade. **E `etiquetaDaLista`/`etiquetaDeEndereco` sao ASSINCRONAS**: `!etiquetaDeEndereco()`
   sem `await` testa uma promessa e e sempre falso — nenhum teste nem verificador pega isso.
+- **BOTAO QUE SO ENCHE O RASCUNHO MANDA SALVAR NUMA ABA QUE NAO ESTA NA TELA — 12/09/2026.**
+  Relato dele, print da Cidade valendo `POA`: *"mando corrigir e continua escrito POA em vez de porto
+  alegre"*. **Medido: o aviso, o nome oficial e a escrita estavam todos certos** —
+  `conferirGrafia('POA')` aponta "Porto Alegre" e `deveGravarEntrada({from:'manual'})` devolve true.
+  O defeito era de TELA: o botao "Corrigir para X" punha o valor em `state.draft` e dizia *"Salve
+  para gravar no CRM"*, e o **Salvar mora na aba Dados** enquanto o aviso mora no CABECALHO, que
+  aparece em TODAS as abas — fechado o atendimento, a correcao ia embora com o rascunho. Hoje o
+  clique chama `saveClassification()` (sem data de conclusao, sem concluir, sem tirar etiqueta) e
+  **recalcula o aviso**, senao ele fica na tela e parece que nao gravou de novo. **Botao que pede uma
+  segunda acao tem de ter essa acao ao alcance da vista** — e "corrigir a grafia" ja e o ato
+  deliberado que a regra da escrita exige, entao nao ha segunda decisao a tomar.
+
 - **A MARCA DO ANUNCIO CARREGAVA O TEXTO DO ANUNCIO — 12/09/2026, print da Leonir.** Pergunta dele:
   *"vou ter que listar pra IA as frases especificas que sao de anuncio?"*. **NAO:** o clique e
   reconhecido pelo `utm` da SESSAO (dado, nao texto), e `marcaDaMensagem` escreve na linha que aquilo

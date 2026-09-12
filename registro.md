@@ -1,3 +1,40 @@
+## 2026-09-12 — v3.51.0 — "Corrigir para Porto Alegre" grava na hora
+
+**Relato dele**, com a print da Maria Inez (campo Cidade valendo `POA`): *"mando corrigir e continua
+escrito POA em vez de Porto Alegre"*.
+
+**Medido — o aviso e a correção estavam certos; faltava a gravação:**
+
+| o que | resultado |
+| --- | --- |
+| `conferirGrafia('POA')` | avisa, com `oficial: "Porto Alegre"` |
+| `conferirGrafia('Porto Alegre')` | ok — o aviso some depois de corrigido |
+| `deveGravarEntrada({from:'manual', confirmada:true})` | **true** — a escrita sempre aceitou |
+| `deveGravarEntrada(…, {somenteExatos:true})` | false — e está certo: a automática não leva |
+
+**A causa é de TELA.** O botão só punha o valor em `state.draft` e dizia *"Salve para gravar no
+CRM"* — e o **Salvar mora na aba Dados**, enquanto o aviso mora no **cabeçalho**, que aparece em
+todas as abas. Na print ele está na aba Respostas: a frase mandava procurar um botão que não está na
+tela em que ele está. Fechado o atendimento, a correção ia embora com o rascunho. É a família do
+aviso que mandava procurar o interruptor na aba errada (06/09) e da regra registrada aqui — *o que
+ele precisar no meio da rodada tem que estar onde ele está olhando*.
+
+**O que mudou:** clicar em **"Corrigir para X" grava na hora**. `saveClassification()` sem opção
+nenhuma **não carimba data de conclusão, não conclui e não tira etiqueta**: grava o campo e as
+etiquetas de lugar que saem dele, e **confere relendo o contato** — então *"a API aceitou mas não
+gravou"* aparece na hora em vez de virar silêncio. O aviso amarelo é recalculado depois de gravar,
+senão ele fica na tela e parece que não funcionou de novo.
+
+**Por que gravar no clique é seguro:** a regra da escrita pede **ato deliberado**, e clicar em
+"Corrigir para Porto Alegre" é exatamente isso — não há segunda decisão a tomar depois dele. O par
+que sustenta isso está travado por teste: a entrada que o botão monta é aceita pela gravação dele e
+recusada pela automática, que roda a cada abertura de contato.
+
+**Arquivos:** `src/panel/panel.js`, `tests/parser.test.mjs` (+3), `CLAUDE.md`, `registro.md`,
+`manifest.json`.
+
+---
+
 ## 2026-09-12 — v3.50.0 — o clique no anúncio não é apoio dela, e o nome do anúncio era um parágrafo
 
 **Pergunta dele:** *"vou ter que listar pra IA as frases específicas que são de anúncio?"*, com a

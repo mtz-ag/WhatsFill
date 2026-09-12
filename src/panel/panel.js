@@ -1585,7 +1585,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             // e as etiquetas que saem da cidade ficam liberadas, sem outro popup.
             state.draft[campo.id] = { value: grafia.oficial, from: 'manual', confirmada: true };
             await refreshTagSuggestions();
-            setStatus(`Cidade corrigida para "${grafia.oficial}". Salve para gravar no CRM.`, 'ok');
+            /**
+             * **GRAVA NA HORA** — relato dele (12/09/2026), com a print da Cidade valendo `POA`:
+             * *"mando corrigir e continua escrito POA em vez de Porto Alegre"*.
+             *
+             * O botão só punha o valor no rascunho e dizia *"Salve para gravar no CRM"* — e o
+             * Salvar mora na aba **Dados**, enquanto este aviso mora no CABEÇALHO, que aparece em
+             * todas as abas. Ou seja: a frase mandava procurar um botão que não está na tela em
+             * que ele está, e fechar o atendimento antes disso jogava a correção fora. É a família
+             * do aviso que mandava procurar o interruptor na aba errada (06/09).
+             *
+             * **Clicar em "Corrigir para X" já é o ato deliberado** que a regra da escrita exige —
+             * não há segunda decisão a tomar depois dele. `saveClassification()` sem opção nenhuma
+             * não carimba data de conclusão, não conclui e não tira etiqueta: grava o campo e as
+             * etiquetas de lugar que saem dele, e **confere relendo o contato**, então um "a API
+             * aceitou mas não gravou" aparece na hora em vez de virar silêncio.
+             */
+            if (await saveClassification()) {
+              // Sem isto o aviso amarelo fica na tela depois de gravado, e parece que não funcionou.
+              state.grafiaDaCidade = await cities.conferirGrafia(grafia.oficial);
+              renderAll();
+            }
           })
         );
         aviso.append(h('div', { class: 'wf-row', style: 'margin-top:5px' }, [corrigir]));

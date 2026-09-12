@@ -16,6 +16,7 @@
 
 import { readFileSync } from 'node:fs';
 import { check, grupo, fim, lib, mem } from './_harness.mjs';
+import * as fieldsLib from '../src/lib/fields.js';
 
 const coredes = JSON.parse(
   readFileSync(new URL('../src/data/coredes-rs.json', import.meta.url), 'utf8')
@@ -510,6 +511,25 @@ grupo('conferirGrafia: avisa cidade escrita errada, sem reclamar de acento');
 
   const poa = await cities.conferirGrafia('POA');
   check(!poa.ok && poa.oficial === 'Porto Alegre', 'apelido também é apontado');
+
+  /**
+   * **E o nome oficial PASSA, que é o que faz o aviso sumir depois de corrigido.** Relato dele
+   * (12/09/2026), com a print da Cidade valendo `POA`: *"mando corrigir e continua escrito POA em
+   * vez de Porto Alegre"*. O botão "Corrigir para X" só punha o valor no rascunho e mandava
+   * SALVAR -- e o Salvar mora na aba Dados, enquanto o aviso mora no cabeçalho. Hoje o clique
+   * grava na hora; sem esta asserção, um aviso que não desaparecesse faria parecer que não gravou
+   * de novo.
+   */
+  check((await cities.conferirGrafia('Porto Alegre')).ok, 'e o nome oficial passa: o aviso some depois de corrigido');
+
+  /**
+   * **A entrada que o botão monta é aceita pela escrita, e NÃO pela automática.** É este par que
+   * torna correto gravar no clique: o valor entra porque foi ELE que mandou, e continua fora da
+   * gravação que roda a cada abertura de contato.
+   */
+  const doBotao = { value: 'Porto Alegre', from: 'manual', confirmada: true };
+  check(fieldsLib.deveGravarEntrada(doBotao), 'a correção dele vai para o CRM');
+  check(!fieldsLib.deveGravarEntrada(doBotao, { somenteExatos: true }), 'mas nunca pela gravação automática');
 
   const digito = await cities.conferirGrafia('Caxias do Sull');
   check(!digito.ok && digito.oficial === 'Caxias do Sul', `erro de digitação é apontado = ${digito.oficial}`);
