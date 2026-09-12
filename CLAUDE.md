@@ -2817,6 +2817,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   PEDIR + **"seu endereco"**; a guarda e o possessivo ser DELA (*"meu endereco e rua X"*, *"nao
   tenho seu endereco"*, *"o endereco do CRAS"* ficam fora), e 13 das 24 assercoes sao falso
   positivo. **Nenhuma resposta pronta mudou de resultado** — a do voluntariado ja casava.
+  **E A TRAVA DEIXOU DE BARRAR NO MESMO DIA, por correcao dele:** *"eu quero que mude o que a IA diz,
+  nao parar todo tempo para eu revisar; isso tira todo sentido do automatizado"*. Ampliar o
+  invariante estava certo; deixar a trava barrando transformou um aviso raro em **rodada parada em
+  caso comum**. Hoje `enderecoSemMaterial` vive em `AVISOS_QUE_SO_AVISAM` (aparece na tela, nao
+  barra), e a regra do endereco esta na regra 12 **e repetida no fim do bloco do CONTATO**. **E a
+  segunda vez que ele me corrige com a mesma frase** (a Irema, 10/09): **quando ele descreve um
+  COMPORTAMENTO, o conserto e o que a IA le — nunca uma trava depois.** Ao ampliar um detector que
+  alimenta uma trava, MEÇA quantas vezes a trava passa a disparar: trava que para a rodada em caso
+  comum e a automacao desligada.
 - **O CADASTRO NAO FECHA UMA NEGATIVA** (mesmo print). `pedirDadosNoRascunho` tinha uma guarda so —
   `pedirDadosNaoCabe`, que responde *"ja temos o nome e a cidade?"*. Faltava a outra pergunta: *"o
   que vamos dizer agora e um NAO?"*. Hoje ha `sugestao.casoDeNegativa` (`pedeAjudaFinanceira ||

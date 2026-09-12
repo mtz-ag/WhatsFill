@@ -1272,10 +1272,10 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    "a assessoria avalia", "mande seu currículo" nem "procure a equipe". A base é a resposta pronta',
     '    "Quer trabalhar para a campanha": aqui é só voluntário, sem remuneração. Se ela pediu mais alguma',
     '    coisa (dinheiro, passagem, ajuda), responda essa parte pelo item 9 do padrão, numa frase.',
-    '    **O ENDEREÇO só entra DEPOIS de ela dizer que aceita ser voluntária sem pagamento.** Quem pediu',
-    '    pagamento não aceitou nada ainda: pergunte se tem interesse assim, e pare aí. Oferecer o endereço',
-    '    e o assessor na mesma mensagem em que você diz que não há pagamento é dar um passo que ninguém',
-    '    pediu — e pedir endereço é o passo que não volta.',
+    '    **NÃO PEÇA O ENDEREÇO NESTA MENSAGEM.** O endereço e o assessor são o caminho do MATERIAL de',
+    '    campanha, e ela não pediu material: pediu pagamento. Ofereça o voluntariado numa frase e PARE —',
+    '    se ela disser que aceita sem remuneração, o endereço vem na resposta seguinte. Pedir endereço é',
+    '    prometer uma entrega, e é o passo que não volta atrás.',
     /**
      * **Pergunta retórica não é pedido** — print da Eloiza (10/09/2026). Três áudios: *"Desculpe,
      * minha amiga, simplesmente não gosto de política"*, *"É só promessa"* e *"Se eu pedisse ajuda pro
@@ -1689,6 +1689,13 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         ].join('\n')
       : '',
     /**
+     * **A regra do endereço, colada no pedido** — mesma razão da regra 11 acima, e mesma decisão
+     * dele (12/09/2026): o conserto é o que a IA lê, não uma trava que para a rodada depois.
+     */
+    'ENDEREÇO: só peça o endereço dela se ela pediu MATERIAL DE CAMPANHA (folheto, adesivo, bandeira, ' +
+      'camiseta) ou se já disse que aceita ser voluntária sem pagamento. Quem pediu dinheiro, emprego ' +
+      'ou um bem para comprar NÃO recebe pedido de endereço — pedir endereço é prometer uma entrega.',
+    /**
      * **A regra 11, colada no pedido** — print da Irema (10/09/2026): *"nós não somos um canal de
      * resolução de problemas, a intenção é ganhar votos"*. No sistema ela está a milhares de tokens
      * daqui, e regra longe do ponto em que o modelo escreve não é cumprida (07/09).
@@ -1835,25 +1842,6 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
    */
   chapaTrocada: 'atribui a alguém da chapa um cargo ou número que não é dele — confira na colinha',
   /**
-   * **Pede o endereço de entrega sem ninguém ter pedido material de campanha** — print da Cleo
-   * (08/09/2026), que pediu que comprássemos um encosto ortopédico e uma cadeira de rodas.
-   *
-   * **É a metade mecânica de um erro que o prompt sozinho não segura.** As outras duas metades
-   * (o detector e o escopo da regra 5) reduzem a frequência; esta barra o envio. E ela é mecânica
-   * de verdade porque **o painel SABE as duas coisas**: `pedeMaterial` é sinal calculado do que ela
-   * escreveu, e `templates.ehPedidoDeEndereco` é o invariante do nosso pedido de endereço — o mesmo
-   * que aplica a etiqueta de material desde 04/09.
-   *
-   * **Pedir o endereço é o passo irreversível deste assunto:** ele cria a expectativa de entrega,
-   * que é a expectativa que a Lei 9.504/97 trata. Medido no rascunho que saiu para ela: os avisos
-   * eram um só, cosmético, e `rascunhoPodeSairSozinho` devolvia **true** — com "Automatizar"
-   * marcada aquela mensagem sairia sozinha.
-   *
-   * Condicionado, como o `pediuReenvio`: quem PEDIU material de campanha tem que receber o pedido
-   * de endereço, que é o caminho certo dele desde a print da Jonice.
-   */
-  enderecoSemMaterial: 'pede o endereço de entrega, e ela não pediu material de campanha — confira o que ela pediu',
-  /**
    * **"Não precisa se desculpar" para quem não se desculpou** — print da Dileta (09/09/2026). Ela
    * escreveu duas linhas, *"Bom dia"* e *"Preciso de uma ajuda sua"*, e o rascunho respondeu
    * *"Entendo que você precisa de ajuda — não precisa se desculpar"*. Ele: *"de onde saiu que ela
@@ -1926,6 +1914,45 @@ export function semConviteAoCaso(texto) {
     .filter((f) => f.trim() && !CONVIDA_A_CONTAR_O_CASO.some((re) => re.test(f)))
     .join(' ');
 }
+
+/**
+ * **Avisos que NÃO barram o envio automático.**
+ *
+ * Existem porque o painel consegue ver o problema e **não** consegue consertá-lo sem reescrever a
+ * frase — então ele aparece na tela e a rodada segue. A separação é decisão dele, de 12/09/2026:
+ * *"eu quero que mude o que a IA diz, não parar todo tempo para eu revisar; isso tira todo sentido
+ * do automatizado"*. **Trava que para a rodada em caso comum não é proteção: é a automação
+ * desligada.** O que muda comportamento é o prompt; isto é o que mostra quando ele não foi cumprido.
+ */
+export const AVISOS_QUE_SO_AVISAM = {
+  /**
+   * **Pede o endereço de entrega sem ninguém ter pedido material de campanha** — print da Cleo
+   * (08/09/2026), que pediu que comprássemos um encosto ortopédico e uma cadeira de rodas.
+   *
+   * **É a metade mecânica de um erro que o prompt sozinho não segura.** As outras duas metades
+   * (o detector e o escopo da regra 5) reduzem a frequência; esta barra o envio. E ela é mecânica
+   * de verdade porque **o painel SABE as duas coisas**: `pedeMaterial` é sinal calculado do que ela
+   * escreveu, e `templates.ehPedidoDeEndereco` é o invariante do nosso pedido de endereço — o mesmo
+   * que aplica a etiqueta de material desde 04/09.
+   *
+   * **Pedir o endereço é o passo irreversível deste assunto:** ele cria a expectativa de entrega,
+   * que é a expectativa que a Lei 9.504/97 trata. Medido no rascunho que saiu para ela: os avisos
+   * eram um só, cosmético, e `rascunhoPodeSairSozinho` devolvia **true** — com "Automatizar"
+   * marcada aquela mensagem sairia sozinha.
+   *
+   * **DEIXOU DE BARRAR em 12/09/2026, por decisão dele** — *"eu quero que mude o que a IA diz, não
+   * parar todo tempo para eu revisar; isso tira todo sentido do automatizado"*. Enquanto o
+   * invariante só conhecia a redação do modelo aprovado ela quase nunca disparava; reconhecida a
+   * forma curta (*"mande seu endereço"*), ela passou a parar a rodada em caso comum — e rodada que
+   * para não é proteção, é a automação desligada. **O conserto foi para onde a decisão é tomada:**
+   * a regra do endereço está na regra 12 e repetida no fim do bloco do CONTATO, colada no ponto em
+   * que o modelo escreve. Este aviso continua na tela, e é ele que mostra se o prompt não bastou.
+   *
+   * Condicionado, como o `pediuReenvio`: quem PEDIU material de campanha tem que receber o pedido
+   * de endereço, que é o caminho certo dele desde a print da Jonice.
+   */
+  enderecoSemMaterial: 'pede o endereço de entrega, e ela não pediu material de campanha — confira o que ela pediu',
+};
 
 /**
  * **Ela falou em TRABALHAR ou em GANHAR?** — o que libera `AVISOS_QUE_IMPEDEM_ENVIO.trabalhoInexistente`.
@@ -2393,7 +2420,7 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
    * rascunho pedido a mão, onde não há sinais.
    */
   if (contexto?.pedeMaterial === false && ehPedidoDeEndereco(texto)) {
-    avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial);
+    avisos.push(AVISOS_QUE_SO_AVISAM.enderecoSemMaterial);
   }
 
   /**

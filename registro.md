@@ -1,3 +1,50 @@
+## 2026-09-12 — v3.49.0 — a trava do endereço deixou de parar a rodada; o conserto foi para o prompt
+
+**Correção dele, sobre a 3.48:** *"eu quero que mude o que a IA diz, não parar todo tempo para eu
+revisar; isso tira todo sentido do automatizado"*.
+
+**Ele está certo, e o erro é o mesmo que ele já me corrigiu em 10/09** (a Irema: *"eu não quero
+aviso, quero que o comportamento da IA mude para o que falei"*). Na 3.48 eu fiz o invariante
+reconhecer a forma curta do pedido de endereço — o que estava certo — **e deixei a trava de 08/09
+barrando o envio**. Enquanto ela só conhecia a redação do modelo aprovado, quase nunca disparava;
+reconhecida a forma curta, ela passaria a parar a rodada em caso comum. **Rodada que para não é
+proteção: é a automação desligada.**
+
+**O que mudou:**
+
+1. **`enderecoSemMaterial` saiu de `AVISOS_QUE_IMPEDEM_ENVIO`** e virou o primeiro item de
+   **`AVISOS_QUE_SO_AVISAM`**. Ele continua aparecendo na tela — é o que mostra quando o prompt não
+   bastou —, e o rascunho segue. Sobraram **9 avisos que barram** (marcador, promessa, afirmouAcao,
+   afirmouTer, pediuReenvio, mandouProcurarNos, chapaTrocada, desculpaInexistente,
+   trabalhoInexistente).
+2. **A regra do endereço foi escrita onde o modelo decide.** A regra 12 passou a dizer *"NÃO PEÇA O
+   ENDEREÇO NESTA MENSAGEM: ela não pediu material, pediu pagamento; ofereça o voluntariado numa
+   frase e PARE — se ela aceitar sem remuneração, o endereço vem na resposta seguinte"*. E a mesma
+   regra vai **repetida no fim do bloco do CONTATO**, colada no ponto em que o modelo escreve — o
+   desenho que fez a regra 11 da Irema funcionar, e a lição de 07/09 (regra longe de onde se escreve
+   não é cumprida).
+
+**Medido no rascunho da print, depois:** dois avisos na tela, nenhum que barra, e
+`rascunhoPodeSairSozinho` = **true**. A rodada não para mais nesse caso.
+
+**Duas asserções INVERTERAM de propósito**, com o motivo escrito ao lado de cada uma (a de 08/09, da
+Cleo, e a da 3.48): se alguém voltar a exigir que o rascunho não saia sozinho ali, a rodada volta a
+parar. O que a print da Cleo protegia continua protegido pelo prompt e pelo aviso na tela.
+
+**O que fica de pé da 3.48:** o invariante ampliado (é ele que aplica a etiqueta de material no
+pedido em texto livre) e `sugestao.casoDeNegativa`, que **muda o texto** em vez de parar — o
+formulário `Nome , Cidade` não fecha mais uma negativa.
+
+**Risco assumido, dito a ele:** o caso da Cleo (pedir que a gente compre um bem) volta a poder sair
+sozinho se a IA insistir em pedir o endereço. O que segura passou a ser o prompt em dois lugares; o
+aviso na tela é o sinal de que não bastou. Se voltar a aparecer, o passo seguinte é **tirar a frase
+do endereço do rascunho** (conserto mecânico, como a saudação e o "gabinete") em vez de barrar — não
+fiz agora porque cortar frase de um texto que sai sem ninguém ler pode deixar a mensagem pela metade.
+
+**Arquivos:** `src/lib/ia.js`, `tests/ia.test.mjs`, `CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-12 — v3.48.0 — o cadastro não fecha um "não", e o endereço em texto livre voltou a ser visto
 
 **Print dele:** o rascunho negou o Pix, negou a contratação, ofereceu *"mande seu endereço que

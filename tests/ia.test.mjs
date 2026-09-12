@@ -27,6 +27,7 @@ import {
   semConviteAoCaso,
   rascunhoPodeSairSozinho,
   AVISOS_QUE_IMPEDEM_ENVIO,
+  AVISOS_QUE_SO_AVISAM,
   validarRascunho,
   vaiCachear,
   tokensAproximados,
@@ -1651,11 +1652,21 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
     'seu endereco completo (rua, numero, bairro e CEP). Com esses dados, o pedido vai para a equipe ' +
     'de materiais - e e ela quem entra em contato com voce.';
   const barra = (texto, ctx) =>
-    revisarRascunho(texto, agora, ctx).avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial);
+    revisarRascunho(texto, agora, ctx).avisos.includes(AVISOS_QUE_SO_AVISAM.enderecoSemMaterial);
 
-  check(barra(oQueSaiu, { pedeMaterial: false }), 'o texto que saiu para ela e barrado');
-  check(!rascunhoPodeSairSozinho(revisarRascunho(oQueSaiu, agora, { pedeMaterial: false }).avisos),
-    'e nao sai sozinho');
+  check(barra(oQueSaiu, { pedeMaterial: false }), 'o texto que saiu para ela e acusado');
+
+  /**
+   * **E NAO BARRA MAIS o envio — decisao dele, 12/09/2026:** *"eu quero que mude o que a IA diz, nao
+   * parar todo tempo para eu revisar; isso tira todo sentido do automatizado"*. Enquanto o
+   * invariante so conhecia a redacao do modelo aprovado este aviso quase nunca disparava; ao
+   * reconhecer a forma curta ("mande seu endereco") ele passaria a parar a rodada em caso comum.
+   * O conserto mudou de lugar: a regra do endereco esta na regra 12 e repetida no fim do bloco do
+   * CONTATO. **A assercao INVERTEU de proposito** -- se ela voltar a exigir que nao saia sozinho, a
+   * rodada volta a parar.
+   */
+  check(rascunhoPodeSairSozinho(revisarRascunho(oQueSaiu, agora, { pedeMaterial: false }).avisos),
+    'mas o aviso NAO barra o envio automatico (decisao dele, 12/09)');
 
   /**
    * **A guarda que sustenta a trava:** quem PEDIU material de campanha tem que receber o pedido de
@@ -2344,14 +2355,14 @@ grupo('o endereco em texto livre barra o envio sozinho (12/09/2026)');
   const agora = new Date('2026-09-12T09:20:00');
   const semMaterial = revisarRascunho(rascunho, agora, { pedeMaterial: false, elaFalouDeTrabalho: true });
   check(
-    semMaterial.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial),
+    semMaterial.avisos.includes(AVISOS_QUE_SO_AVISAM.enderecoSemMaterial),
     'pedir o endereco em texto livre, sem ela ter pedido material, acusa'
   );
-  check(!rascunhoPodeSairSozinho(semMaterial.avisos, {}), 'e barra o envio automatico');
+  check(rascunhoPodeSairSozinho(semMaterial.avisos), 'e NAO barra o envio: quem muda o texto e o prompt (12/09)');
 
   const comMaterial = revisarRascunho(rascunho, agora, { pedeMaterial: true, elaFalouDeTrabalho: true });
   check(
-    !comMaterial.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial),
+    !comMaterial.avisos.includes(AVISOS_QUE_SO_AVISAM.enderecoSemMaterial),
     'quem PEDIU material continua recebendo o pedido de endereco sem acusar'
   );
 
@@ -2361,9 +2372,22 @@ grupo('o endereco em texto livre barra o envio sozinho (12/09/2026)');
    */
   const sistema = montarSistemaRascunho({ templates: [], regras: '' });
   check(
-    sistema.includes('O ENDERE\u00c7O s\u00f3 entra DEPOIS de ela dizer que aceita ser volunt\u00e1ria sem pagamento'),
-    'o prompt diz que o endereco vem depois de ela aceitar o voluntariado'
+    sistema.includes('N\u00c3O PE\u00c7A O ENDERE\u00c7O NESTA MENSAGEM'),
+    'a regra 12 manda nao pedir o endereco a quem pediu pagamento'
   );
+
+  /**
+   * **E a regra vai REPETIDA no fim do bloco do CONTATO**, colada no ponto em que o modelo escreve
+   * -- a licao de 07/09 (regra longe de onde se escreve nao e cumprida) e o desenho que fez a regra
+   * 11 da Irema funcionar.
+   */
+  const bloco = montarContatoRascunho({
+    mensagens: [{ texto: 'sou pintor, faz um pix pra mim', de: 'ela' }],
+    campos: {},
+    agora,
+  });
+  check(bloco.includes('s\u00f3 pe\u00e7a o endere\u00e7o dela se ela pediu MATERIAL DE CAMPANHA'),
+    'e a mesma regra vai no fim do bloco do contato');
   check(
     sistema.includes('n\u00e3o feche uma NEGATIVA pedindo o cadastro'),
     'e que a negativa nao se fecha com o formulario'
