@@ -630,18 +630,42 @@ function slug(name) {
  * `ehPedidoDeDados`, e vale mais aqui: este pedido sai por MODELO APROVADO, cuja redação é da
  * plataforma e muda sem passar por nós.
  *
- * Duas portas, e as duas literais:
+ * As portas, e todas literais:
  *
- *  - **"endereço completo"** — a forma que ele usa, e que ninguém escreve por acaso;
+ *  - **"endereço completo"** (ou "residencial") — a forma que ele usa, e que ninguém escreve por acaso;
  *  - **a enumeração** `rua` + `número` + `bairro`, que é como se explica o que se quer, com a
- *    palavra "endereço" na mensagem.
+ *    palavra "endereço" na mensagem;
+ *  - **o pedido em texto corrido** — um verbo de pedir mais **"seu endereço"**, e o "endereço de
+ *    entrega". Esta entrou em 12/09/2026, e a razão está abaixo.
+ *
+ * **As duas primeiras são a redação do MODELO APROVADO, e por oito dias foram as únicas — então a
+ * trava `ia.AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial` ficou MUDA para o rascunho da IA**, que
+ * escreve a forma curta. Print de 12/09/2026: o rascunho disse *"mande seu endereço que
+ * encaminhamos o assessor da região"* a quem tinha pedido dinheiro por um serviço de pintura, e
+ * ele: *"ele não pediu material também e ficou sem sentido encaminhar o assessor"*. Medido antes
+ * de mexer: `ehPedidoDeEndereco` devolvia **false** naquele texto, e o rascunho saiu sozinho. É a
+ * lição já registrada duas vezes no `CLAUDE.md` — **meça a trava contra a forma que quem escreve
+ * de verdade produz**, e não só contra a que você tinha em mãos quando a escreveu.
  *
  * Só é aplicada em texto NOSSO, então o risco é o falso negativo (o caso escapa e é concluído),
- * não o falso positivo.
+ * não o falso positivo. Mesmo assim a forma curta é guardada: o verbo de PEDIR é obrigatório e o
+ * possessivo é **dela** — *"meu endereço é rua X"*, *"ainda não tenho seu endereço"* e *"o
+ * endereço do CRAS"* ficam de fora. Treze dos vinte e quatro casos do teste são falso positivo.
  *
  * @param {string} texto uma mensagem que NÓS mandamos
  * @returns {boolean}
  */
+/**
+ * **Um verbo de PEDIR mais "seu endereço"** — a forma curta, que é a que o rascunho da IA escreve.
+ *
+ * O verbo é obrigatório e o possessivo tem de ser DELA: é isso que separa o nosso pedido do
+ * endereço que aparece em toda conversa (*"meu endereço é…"*, *"o endereço do CRAS"*, *"ainda
+ * não tenho seu endereço"*). A janela de 40 caracteres deixa a frase respirar (*"qual o seu
+ * endereço para eu encaminhar"*) sem atravessar ponto nem interrogação, que é onde a frase acaba.
+ */
+const PEDE_O_ENDERECO_DELA =
+  /\b(mande|manda|mandar|envie|envia|enviar|passe|passa|passar|diga|diz|dizer|informe|informa|informar|me de|preciso de|preciso do|confirme|confirma|qual e o|qual o|qual seu|qual sua)\b[^.!?]{0,40}\bs(eu|ua) endereco\b/;
+
 export function ehPedidoDeEndereco(texto) {
   const plano = String(texto || '')
     .normalize('NFD')
@@ -651,6 +675,8 @@ export function ehPedidoDeEndereco(texto) {
     .trim();
   if (!plano.includes('endereco')) return false;
   if (/\bendereco\s+(completo|residencial)\b/.test(plano)) return true;
+  if (PEDE_O_ENDERECO_DELA.test(plano)) return true;
+  if (/\bendereco\s+(de|para)\s+(entrega|envio|remessa)\b/.test(plano)) return true;
   return /\brua\b/.test(plano) && /\b(numero|n[º°]|nro)\b/.test(plano) && /\bbairro\b/.test(plano);
 }
 

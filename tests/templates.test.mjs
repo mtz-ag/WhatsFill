@@ -420,6 +420,36 @@ grupo('"Confirmou presenca (so agradecer)": a metade que faltava (02/09/2026)');
   check(templates.ehPedidoDeEndereco('qual seu endereco? rua, numero e bairro'), 'e a enumeracao rua + numero + bairro');
 
   /**
+   * **A FORMA CURTA, que e a que o rascunho da IA escreve** (12/09/2026).
+   *
+   * As duas portas de cima sao a redacao do MODELO APROVADO, e por oito dias foram as unicas --
+   * entao a trava `enderecoSemMaterial` ficou MUDA para o texto livre da IA. Print: o rascunho
+   * disse *"mande seu endereco que encaminhamos o assessor da regiao"* a quem pediu dinheiro por um
+   * servico, e ele: *"ele nao pediu material tambem e ficou sem sentido encaminhar o assessor"*.
+   * Medido antes de mexer: false, e o rascunho saiu sozinho.
+   */
+  check(templates.ehPedidoDeEndereco('Se tiver interesse, mande seu endereco que encaminhamos o assessor da regiao.'), 'a forma curta do rascunho: "mande seu endereco"');
+  check(templates.ehPedidoDeEndereco('Me manda seu endereco que eu repasso para a equipe dos materiais.'), 'e a mesma com o repasse');
+  check(templates.ehPedidoDeEndereco('Pode me informar seu endereco?'), '"me informar seu endereco"');
+  check(templates.ehPedidoDeEndereco('Qual o seu endereco para eu encaminhar?'), '"qual o seu endereco"');
+  check(templates.ehPedidoDeEndereco('Me diga seu endereco e a gente repassa.'), '"me diga seu endereco"');
+  check(templates.ehPedidoDeEndereco('Preciso do seu endereco para o envio.'), '"preciso do seu endereco"');
+  check(templates.ehPedidoDeEndereco('me passe o endereco de entrega'), 'e o "endereco de entrega", sem possessivo');
+
+  /**
+   * **O que segura a forma curta e o verbo de PEDIR mais o possessivo DELA.** Sem isso, "endereco"
+   * aparece em toda conversa -- e a etiqueta de material e permanente.
+   */
+  check(!templates.ehPedidoDeEndereco('meu endereco e rua das flores 123'), 'o endereco que ELA manda nao e pedido nosso');
+  check(!templates.ehPedidoDeEndereco('vou te mandar meu endereco depois'), 'nem ela prometendo mandar');
+  check(!templates.ehPedidoDeEndereco('ainda nao tenho seu endereco aqui'), 'nem "nao tenho seu endereco" (sem verbo de pedir)');
+  check(!templates.ehPedidoDeEndereco('guardei seu endereco aqui'), 'nem "guardei seu endereco"');
+  check(!templates.ehPedidoDeEndereco('o endereco do evento e na Camara'), 'nem o endereco do EVENTO');
+  check(!templates.ehPedidoDeEndereco('o endereco do CRAS da sua cidade esta no site da prefeitura'), 'nem o endereco de um orgao');
+  check(!templates.ehPedidoDeEndereco('vi que mudou de endereco'), 'nem falar que ela mudou de endereco');
+  check(!templates.ehPedidoDeEndereco('o endereco que voce mandou esta incompleto, pode conferir?'), 'nem pedir para conferir o que ela ja mandou');
+
+  /**
    * **Os falsos negativos importam mais que os positivos aqui**: a funcao so ve texto NOSSO, entao
    * errar para o lado de nao reconhecer significa concluir o atendimento de quem ia mandar o
    * endereco -- que e exatamente a anotacao dele.

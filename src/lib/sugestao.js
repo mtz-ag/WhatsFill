@@ -59,6 +59,29 @@ export function motivoDaEtiquetaDePedido(c) {
 export const pedirDadosNaoCabe = (c) =>
   !!(c?.jaDeuNomeECidade || c?.jaPediramDados || c?.temEtiquetaDeCidade);
 
+/**
+ * **Este caso é uma NEGATIVA?** — o que impede o rascunho de fechar pedindo o cadastro.
+ *
+ * Print de 12/09/2026: alguém se ofereceu como pintor e pediu um Pix, e o rascunho negou o dinheiro,
+ * negou a contratação e **terminou pedindo `Nome , Cidade`**. Ele: *"resposta da IA pedindo dados
+ * fora de contexto; esse é um caso onde a pessoa 90% das vezes não tem interesse, é praticamente
+ * venda de votos"*.
+ *
+ * **O formulário não é errado em si — é errado no fim de um "não".** Ele existe para classificar
+ * quem vai receber conteúdo; grudado numa negativa vira formulário em cima de uma recusa, e quem lê
+ * entende que ninguém leu o que escreveu. É a mesma família das frases prontas com premissa
+ * (a Dileta, 09/09): o que sai afirma algo sobre a conversa que não aconteceu.
+ *
+ * **É separada de `pedirDadosNaoCabe` de propósito, e não uma condição nova dentro dela.** Aquela
+ * responde *"nós já temos o cadastro?"* e guarda também o formulário da RODADA — quem pede dinheiro
+ * continua recebendo o pedido de nome e cidade quando ele sai sozinho, sem negativa colada. Esta
+ * responde *"o que vamos dizer agora é um não?"*, e vale só no rascunho da IA.
+ *
+ * @param {object} c os sinais do contato
+ * @returns {boolean}
+ */
+export const casoDeNegativa = (c) => !!(c?.pedeAjudaFinanceira || c?.pedeEmprego);
+
 export const REGRAS = [
   {
     id: 'sem-interesse',

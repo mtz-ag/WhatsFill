@@ -10033,8 +10033,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * A conta é a MESMA que guarda o formulário da rodada (`pedirDadosNaoCabe`), lida dos sinais
      * deste contato: duas definições divergiriam, e a que ninguém olha é a que pede o cadastro de
      * quem já o deu. Sem sinais (rascunho pedido fora da rodada), não pede — o lado seguro.
+     *
+     * **E não se fecha uma NEGATIVA com o formulário** (`casoDeNegativa`, 12/09/2026): quem acabou
+     * de ouvir que não podemos dar dinheiro nem contratar não vai entender um "me diga seu nome e
+     * cidade" no fim. Está lá e não aqui porque é conta pura e tem teste.
      */
-    const pedirDadosNoRascunho = !!state.sinais && !sugestaoLib.pedirDadosNaoCabe(state.sinais);
+    const pedirDadosNoRascunho =
+      !!state.sinais &&
+      !sugestaoLib.pedirDadosNaoCabe(state.sinais) &&
+      !sugestaoLib.casoDeNegativa(state.sinais);
 
     let rascunho;
     try {

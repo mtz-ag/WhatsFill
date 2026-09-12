@@ -1,3 +1,71 @@
+## 2026-09-12 — v3.48.0 — o cadastro não fecha um "não", e o endereço em texto livre voltou a ser visto
+
+**Print dele:** o rascunho negou o Pix, negou a contratação, ofereceu *"mande seu endereço que
+encaminhamos o assessor da região"* e terminou pedindo `Nome , Cidade`. Dois recados: *"resposta da
+IA pedindo dados fora de contexto; esse é um caso onde a pessoa 90% das vezes não tem interesse, é
+praticamente venda de votos"* e *"ele não pediu material também e ficou sem sentido encaminhar o
+assessor"*.
+
+**Medido antes de mexer, no texto exato que saiu:**
+
+| o que | antes |
+| --- | --- |
+| `templates.ehPedidoDeEndereco(rascunho)` | **false** |
+| avisos de `revisarRascunho` com `pedeMaterial: false` | 1, nenhum que barra |
+| `rascunhoPodeSairSozinho` | **true** — saiu sozinho |
+| o bloco literal `PEDIDO_DE_DADOS_NO_RASCUNHO` no texto | **sim** |
+
+**Causa 1 — a trava existia e estava MUDA.** `AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial` nasceu
+em 08/09 (a Cleo) exatamente para isto: o rascunho não pede endereço de entrega a quem não pediu
+material de campanha. Ela pergunta por `templates.ehPedidoDeEndereco`, que só conhecia **a redação
+do MODELO APROVADO** — "endereço completo"/"residencial", ou a enumeração rua + número + bairro.
+O rascunho escreve a forma curta (*"mande seu endereço"*), que não casava com nenhuma das duas.
+É a terceira vez que este projeto paga a mesma lição: **meça a trava contra a forma que quem escreve
+de verdade produz** (a colinha em 09/09, o `conferirChapa` em 10/09).
+
+**Causa 2 — nada perguntava se o cadastro cabia NESTA mensagem.** `pedirDadosNoRascunho` tinha uma
+guarda só, `pedirDadosNaoCabe` = *"nós já temos o nome e a cidade?"*. Não havia a outra pergunta:
+*"o que vamos dizer agora é um não?"* — e o formulário grudado numa negativa é formulário em cima de
+uma recusa.
+
+**O que mudou:**
+
+1. **`ehPedidoDeEndereco` reconhece o pedido em texto corrido** — um verbo de pedir mais **"seu
+   endereço"**, mais o "endereço de entrega". A guarda é o verbo de PEDIR e o possessivo ser DELA:
+   *"meu endereço é rua X"*, *"ainda não tenho seu endereço"*, *"o endereço do CRAS"* e *"o endereço
+   do evento"* ficam de fora. **Treze das vinte e quatro asserções são falso positivo.**
+   Medido depois: a trava acusa e `rascunhoPodeSairSozinho` = **false** — aquela mensagem não teria
+   saído sozinha.
+2. **`sugestao.casoDeNegativa`** (novo, puro, testado): `pedeAjudaFinanceira || pedeEmprego`. Com
+   ele o painel não manda a IA fechar com o formulário e **o piso não o acrescenta**.
+   **É separado de `pedirDadosNaoCabe` de propósito** — aquele guarda também o formulário da RODADA,
+   e quem pede dinheiro continua recebendo o pedido de nome e cidade quando ele sai sozinho, sem
+   negativa colada. Tem asserção travando isso.
+3. **Duas regras no prompt.** Na regra 12: *"o ENDEREÇO só entra DEPOIS de ela dizer que aceita ser
+   voluntária sem pagamento"* — quem pediu pagamento não aceitou nada, e pedir endereço é o passo
+   que não volta. Colada nos exemplos: *"não feche uma NEGATIVA pedindo o cadastro"*.
+
+**Efeito colateral medido:** das respostas prontas de fábrica, **nenhuma** mudou de resultado no
+`ehPedidoDeEndereco` (a de voluntariado já casava, por "endereço completo"). Então a etiqueta de
+material continua sendo aplicada exatamente onde era.
+
+**Custo dito a ele:** rascunho que oferece o endereço a quem se ofereceu para trabalhar e **não**
+pediu material passa a acusar e a parar para ele, em vez de sair sozinho. É o lado conservador, e é
+o caso da própria print.
+
+**O que NÃO foi feito, e é decisão dele:** ele disse que nesse caso *"90% das vezes a pessoa não tem
+interesse, é praticamente venda de votos"*. **Não marquei ninguém como sem interesse** — aquela
+etiqueta é permanente no CRM e conclui em silêncio, e 90% não é 100%. Em 10/09, na print da Simone,
+ele foi categórico (*"é pessoa sem interesse"*) e a venda de voto entrou no `semInteresse`; aqui a
+frase é uma probabilidade. Se ele quiser o mesmo desfecho para quem oferece serviço em troca de
+dinheiro, é uma linha.
+
+**Arquivos:** `src/lib/templates.js`, `src/lib/sugestao.js` (+`casoDeNegativa`), `src/panel/panel.js`,
+`src/lib/ia.js` (prompt), `tests/templates.test.mjs` (+15), `tests/sugestao.test.mjs` (+8),
+`tests/ia.test.mjs` (+5), `CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-12 — v3.47.0 — o fluxo entrou no GitHub, e um teste não deixa envelhecer
 
 **Pedido dele:** *"o fluxo ficou fora do GitHub"*, logo depois de pedir *"me dê o link do último

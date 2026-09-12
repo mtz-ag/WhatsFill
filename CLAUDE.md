@@ -2805,6 +2805,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   conteudo digital (a etiqueta manda PULAR) e marca DEPOIS da decisao da passada, para o modelo continuar
   com prioridade. **E `etiquetaDaLista`/`etiquetaDeEndereco` sao ASSINCRONAS**: `!etiquetaDeEndereco()`
   sem `await` testa uma promessa e e sempre falso — nenhum teste nem verificador pega isso.
+- **A TRAVA CONHECIA A REDACAO DO MODELO E NAO A QUE A IA ESCREVE — `ehPedidoDeEndereco`,
+  12/09/2026.** Print: o rascunho negou o Pix, negou a contratacao, emendou *"mande seu endereco que
+  encaminhamos o assessor da regiao"* e fechou pedindo `Nome , Cidade`. Ele: *"pedindo dados fora de
+  contexto"* e *"ele nao pediu material tambem e ficou sem sentido encaminhar o assessor"*.
+  **`enderecoSemMaterial` existe desde 08/09 para exatamente isso e estava MUDA:** o invariante so
+  conhecia "endereco completo" e a enumeracao rua+numero+bairro, que sao a redacao do MODELO
+  APROVADO — e o rascunho escreve a forma curta. Medido: `false` no texto que saiu, e
+  `rascunhoPodeSairSozinho` **true**. **Terceira vez da mesma licao (a colinha 09/09, a chapa
+  10/09): meca a trava contra a forma que quem escreve de verdade produz.** Hoje entra o verbo de
+  PEDIR + **"seu endereco"**; a guarda e o possessivo ser DELA (*"meu endereco e rua X"*, *"nao
+  tenho seu endereco"*, *"o endereco do CRAS"* ficam fora), e 13 das 24 assercoes sao falso
+  positivo. **Nenhuma resposta pronta mudou de resultado** — a do voluntariado ja casava.
+- **O CADASTRO NAO FECHA UMA NEGATIVA** (mesmo print). `pedirDadosNoRascunho` tinha uma guarda so —
+  `pedirDadosNaoCabe`, que responde *"ja temos o nome e a cidade?"*. Faltava a outra pergunta: *"o
+  que vamos dizer agora e um NAO?"*. Hoje ha `sugestao.casoDeNegativa` (`pedeAjudaFinanceira ||
+  pedeEmprego`), **separada de proposito**: `pedirDadosNaoCabe` guarda tambem o formulario da RODADA,
+  e quem pede dinheiro continua recebendo o pedido de nome e cidade quando ele sai sozinho, sem
+  negativa colada. **Guarda nova que nasce dentro de uma conta existente muda todos os caminhos que
+  a leem** — a conta nova vai ao lado, com nome que diz o que ela pergunta.
+
 - **"RUA X 120, BAIRRO" NAO ERA ENDERECO — a forma mais comum ficava de fora.** Print da Natalia
   (10/09/2026): ela respondeu o pedido de endereco com o numero COLADO no nome da rua, antes da
   virgula, e a rodada agradeceu e concluiu em vez de pular e marcar. `NUMERO_DA_CASA` so aceitava o

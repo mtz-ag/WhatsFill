@@ -987,4 +987,28 @@ grupo('engajado: ja respondi hoje, nao manda nada (04/09/2026)');
   check(motivoDaEtiquetaDePedido(null) === null, 'sem contexto nao quebra');
 }
 
+grupo('casoDeNegativa: o cadastro nao fecha um "nao" (12/09/2026)');
+{
+  /**
+   * Print de 12/09/2026: alguem se ofereceu como pintor e pediu um Pix, e o rascunho negou o
+   * dinheiro, negou a contratacao e terminou pedindo `Nome , Cidade`. Ele: *"resposta da IA pedindo
+   * dados fora de contexto; esse e um caso onde a pessoa 90% das vezes nao tem interesse"*.
+   */
+  check(sugestaoLib.casoDeNegativa({ pedeAjudaFinanceira: true }), 'quem pediu dinheiro: o rascunho nao fecha pedindo o cadastro');
+  check(sugestaoLib.casoDeNegativa({ pedeEmprego: { tipo: 'emprego' } }), 'nem quem procura emprego');
+  check(sugestaoLib.casoDeNegativa({ pedeEmprego: { tipo: 'campanha' } }), 'nem quem quer trabalhar na campanha (a resposta e "so voluntario")');
+
+  check(!sugestaoLib.casoDeNegativa({ soCortesia: true }), 'quem so cumprimentou continua recebendo o pedido de cadastro');
+  check(!sugestaoLib.casoDeNegativa({ pedeMaterial: true }), 'e quem pediu material tambem');
+  check(!sugestaoLib.casoDeNegativa({}), 'sem sinal nenhum, nao e negativa');
+  check(!sugestaoLib.casoDeNegativa(null), 'e nao quebra sem contato');
+
+  /**
+   * **E ela e SEPARADA de `pedirDadosNaoCabe`, que guarda o formulario da RODADA.** Se as duas
+   * fossem a mesma conta, quem pede dinheiro deixaria de receber o pedido de nome e cidade tambem
+   * quando ele sai sozinho, sem negativa colada -- que nao foi o que ele pediu.
+   */
+  check(!sugestaoLib.pedirDadosNaoCabe({ pedeAjudaFinanceira: true }), 'pedir dinheiro nao dispensa o formulario da rodada');
+}
+
 fim();

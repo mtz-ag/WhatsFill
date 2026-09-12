@@ -2321,4 +2321,53 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   check(!/Somos (a equipe|o gabinete) do Capitão Martim.*gabinete/s.test(prompt) || true, 'e a frase modelo usa EQUIPE');
 }
 
+grupo('o endereco em texto livre barra o envio sozinho (12/09/2026)');
+{
+  /**
+   * Print de 12/09/2026: o rascunho negou o dinheiro, negou a contratacao e emendou *"mande seu
+   * endereco que encaminhamos o assessor da regiao"* -- para quem nao pediu material nenhum. Ele:
+   * *"ele nao pediu material tambem e ficou sem sentido encaminhar o assessor"*.
+   *
+   * **A trava `enderecoSemMaterial` existe desde 08/09 e estava MUDA**, porque
+   * `templates.ehPedidoDeEndereco` so conhecia a redacao do modelo aprovado ("endereco completo",
+   * ou rua + numero + bairro). Medido antes do conserto: zero avisos que barram, e
+   * `rascunhoPodeSairSozinho` = true.
+   */
+  const rascunho = [
+    'Agradecemos muito o apoio e por se colocar a disposicao - gente assim faz diferenca.',
+    'Um mandato nao pode doar dinheiro nem fazer Pix a eleitores. Para esse tipo de apoio, o caminho',
+    'e a assistencia social da sua cidade (CRAS).',
+    'Sobre ajudar na campanha: so trabalhamos com voluntarios nao remunerados. Se tiver interesse,',
+    'mande seu endereco que encaminhamos o assessor da regiao.',
+  ].join('\n');
+
+  const agora = new Date('2026-09-12T09:20:00');
+  const semMaterial = revisarRascunho(rascunho, agora, { pedeMaterial: false, elaFalouDeTrabalho: true });
+  check(
+    semMaterial.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial),
+    'pedir o endereco em texto livre, sem ela ter pedido material, acusa'
+  );
+  check(!rascunhoPodeSairSozinho(semMaterial.avisos, {}), 'e barra o envio automatico');
+
+  const comMaterial = revisarRascunho(rascunho, agora, { pedeMaterial: true, elaFalouDeTrabalho: true });
+  check(
+    !comMaterial.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial),
+    'quem PEDIU material continua recebendo o pedido de endereco sem acusar'
+  );
+
+  /**
+   * **As duas regras novas do prompt.** Regra que corrige o efeito de outra mora ao lado dela --
+   * a do endereco esta na regra 12 (quem quer trabalhar) e a do cadastro, colada nos exemplos.
+   */
+  const sistema = montarSistemaRascunho({ templates: [], regras: '' });
+  check(
+    sistema.includes('O ENDERE\u00c7O s\u00f3 entra DEPOIS de ela dizer que aceita ser volunt\u00e1ria sem pagamento'),
+    'o prompt diz que o endereco vem depois de ela aceitar o voluntariado'
+  );
+  check(
+    sistema.includes('n\u00e3o feche uma NEGATIVA pedindo o cadastro'),
+    'e que a negativa nao se fecha com o formulario'
+  );
+}
+
 fim();

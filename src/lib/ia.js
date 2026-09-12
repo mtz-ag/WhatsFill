@@ -1272,6 +1272,10 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    "a assessoria avalia", "mande seu currículo" nem "procure a equipe". A base é a resposta pronta',
     '    "Quer trabalhar para a campanha": aqui é só voluntário, sem remuneração. Se ela pediu mais alguma',
     '    coisa (dinheiro, passagem, ajuda), responda essa parte pelo item 9 do padrão, numa frase.',
+    '    **O ENDEREÇO só entra DEPOIS de ela dizer que aceita ser voluntária sem pagamento.** Quem pediu',
+    '    pagamento não aceitou nada ainda: pergunte se tem interesse assim, e pare aí. Oferecer o endereço',
+    '    e o assessor na mesma mensagem em que você diz que não há pagamento é dar um passo que ninguém',
+    '    pediu — e pedir endereço é o passo que não volta.',
     /**
      * **Pergunta retórica não é pedido** — print da Eloiza (10/09/2026). Três áudios: *"Desculpe,
      * minha amiga, simplesmente não gosto de política"*, *"É só promessa"* e *"Se eu pedisse ajuda pro
@@ -1385,6 +1389,9 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     'convida o candidato para uma visita está APOIANDO — e apoio se agradece, curto.',
     'E a negativa de ajuda ("um mandato não pode doar…", CRAS) é a resposta de quem PEDIU. "Se eu',
     'pedisse ajuda, vocês ajudariam?" é hipótese, e quase sempre descrença — é a regra 13, não o pedido.',
+    '**E não feche uma NEGATIVA pedindo o cadastro.** Quem acabou de ouvir que não podemos dar dinheiro',
+    'nem contratar não vai entender um "me diga seu nome e cidade" no fim da mensagem: soa a formulário',
+    'em cima de um não. Peça o cadastro só quando o bloco do CONTATO mandar pedir.',
     '',
     exemplos,
   ]
