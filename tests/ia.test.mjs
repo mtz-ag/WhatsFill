@@ -2540,4 +2540,24 @@ grupo('a palavra "transcricao" nao sai no rascunho (12/09/2026)');
   check(!semAudio.includes('\u00c1UDIO: para ela'), 'sem audio, a regra nao entra');
 }
 
+grupo('a regra do "NAO REPITA" esta colada no pedido (12/09/2026)');
+{
+  /**
+   * Regra dele, com a print do "Silva pinturas": *"IA se repetindo, ja vi outros casos; esse e o
+   * maior sinal de maquina respondendo, repeticao, nao pode acontecer isso"*.
+   *
+   * O conserto deterministico do caso e a guarda da negativa (pelo invariante, em
+   * `templates.ehNegativaDeAjuda`); esta linha cobre a CLASSE. Vai no bloco do CONTATO pela razao
+   * de 07/09 -- regra longe do ponto em que o modelo escreve nao e cumprida -- e a conversa inteira
+   * esta acima dela, com as nossas falas marcadas NOS, entao o modelo TEM como saber.
+   */
+  const bloco = montarContatoRascunho({
+    mensagens: [{ de: 'contato', texto: 'quero um pix', at: '2026-09-12T10:21:00' }],
+    campos: {},
+    agora: new Date('2026-09-12T14:22:00'),
+  });
+  check(bloco.includes('N\u00c3O REPITA o que j\u00e1 dissemos'), 'a regra entra no bloco do contato');
+  check(/NOS acima/.test(bloco) || /N\u00d3S acima/.test(bloco), 'e manda ler as falas marcadas NOS');
+}
+
 fim();

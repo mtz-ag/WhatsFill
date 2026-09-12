@@ -3090,6 +3090,41 @@ const VENDA_DE_VOTO = [
 const OFERECE_O_VOTO = /(^|[^\p{L}])(quer|querem|queres|precisa|precisam|quiser|quiserem)\s+(d?o\s+)?(meu|meus|nosso|nossos)\s+votos?/u;
 /** O dinheiro que acompanha a oferta. "Pix" é o marcador desta base (a Marli, 02/09). */
 const DINHEIRO_PELO_VOTO = /(^|[^\p{L}])(pix|dinheiro|grana|r\$\s*\d|\d+\s*(reais|conto|pila)|me\s+paga|pagar|pague|paguem)([^\p{L}]|$)/u;
+/**
+ * **O DINHEIRO COMO CONDIÇÃO DO VOTO — e aqui o voto é VERBO, não substantivo.** Print do
+ * "Silva pinturas" (12/09/2026): *"Tem que enxerga nos num pix antes tenho 29 piao pra votar"* e, no
+ * dia seguinte, *"Nao eu que quero um pix para votar em vcs"*.
+ *
+ * **Medido: `semInteresse` devolvia null nas duas rajadas.** Os padrões da Simone (10/09) exigem o
+ * OBJETO *"meu/nosso voto"* — e a forma mais natural de propor a venda não usa o substantivo: usa
+ * o verbo com um elo de finalidade (*"pix pra votar"*, *"me paga pra votar"*, *"eu voto se mandarem
+ * um pix"*). É a lição do *"queria uma reunião"* (09/09) invertida: lá a lista só tinha verbos e ela
+ * pediu a coisa; aqui a lista só tinha a coisa e ela usou o verbo.
+ *
+ * **O que qualifica é o elo vir COLADO no verbo de votar** (`pra votar`, `antes de votar`): sem
+ * isso, *"preciso de um pix pra pagar a luz, e vou votar em vocês"* — que é pedido de ajuda mais
+ * apoio — viraria venda de voto, com etiqueta permanente e conclusão em silêncio. Nove das vinte e
+ * três asserções são falso positivo, e duas guardas sustentam o resto: **terceiro** (*"o PT dá pix
+ * pra pobre votar neles"* é crítica) e **negação** (*"não vendo meu voto por pix nenhum"*).
+ */
+const DINHEIRO_ANTES_DO_VOTO =
+  /(^|[^\p{L}])(pix|dinheiro|grana|rB$|\d+\s*(reais|conto|pila)|me\s+paga|pagam|paga|pagar)[^.!?]{0,45}?(para|pra|pro|antes\s+de|antes)\s+(eu\s+|nos\s+|a\s+gente\s+)?(votar|voto)([^\p{L}]|$)/u;
+
+/**
+ * A ordem inversa — *"eu voto se mandarem um pix"*. **Janela curta e sem "vou":** *"vou votar em
+ * vocês e depois, se puder, me ajuda com um pix"* é apoio + pedido, e o voto ali não é condicionado.
+ */
+const VOTO_SE_PAGAR =
+  /(^|[^\p{L}])(?<!vou\s)(?<!irei\s)(?<!ja\s)(votar|voto)[^.!?]{0,12}(se|caso|quando)\s[^.!?]{0,25}(pix|dinheiro|grana|rB$|\d+\s\*reais|pagar|paga|pagarem|mandarem)/u;
+
+/** Quem fala do ADVERSÁRIO comprando voto está criticando — e isso é metade da fala desta base. */
+const VENDA_POR_TERCEIRO =
+  /(^|[^\p{L}])(o\s+pt|do\s+pt|o\s+lula|eles|elas|esses\s+politicos|os\s+politicos|o\s+prefeito|a\s+prefeitura|petista|partido)/u;
+
+/** A negação desfaz, como o `NEGACAO_LOGO_ANTES` do apoio (3.32). */
+const VENDA_NEGADA =
+  /(^|[^\p{L}])(nao|nunca|jamais|nem)\s+((se\s+)?(vendo|vende|compra|troco|troca)|quero|aceito|precisa|preciso)/u;
+
 /** A negativa que desfaz: quem diz que o voto não se vende está do lado contrário. */
 const NAO_VENDE_O_VOTO = /(^|[^\p{L}])(meu|nosso)\s+votos?\s+(nao\s+(se\s+)?(compra|vende|tem\s+preco|esta\s+a\s+venda)|e\s+de\s+graca)/u;
 
@@ -3153,7 +3188,22 @@ export function semInteresse(entrantes, nossaUltimaAt) {
   if (!NAO_VENDE_O_VOTO.test(rajadaJunta)) {
     const direta = VENDA_DE_VOTO.some((re) => re.test(rajadaJunta));
     const oferta = OFERECE_O_VOTO.test(rajadaJunta) && DINHEIRO_PELO_VOTO.test(rajadaJunta);
-    if (direta || oferta) {
+    /**
+     * **A forma com VERBO** — ver `DINHEIRO_ANTES_DO_VOTO`. As duas guardas ficam aqui e não dentro
+     * dos padrões porque valem para a rajada inteira: basta a crítica ao adversário ou a negação
+     * aparecerem em qualquer mensagem para o caso deixar de ser venda.
+     */
+    const condicionada =
+      (DINHEIRO_ANTES_DO_VOTO.test(rajadaJunta) || VOTO_SE_PAGAR.test(rajadaJunta)) &&
+      !VENDA_POR_TERCEIRO.test(rajadaJunta);
+    /**
+     * **A NEGAÇÃO desfaz os três caminhos, e não só o novo.** Medido em 12/09/2026, escrevendo o
+     * teste: *"não vendo meu voto por pix nenhum"* — um APOIADOR dizendo que não se vende — casava
+     * em `VENDA_DE_VOTO` por *"vendo … meu voto"*, e `NAO_VENDE_O_VOTO` não cobre essa redação
+     * (ela exige *"meu voto não se vende"*, com o voto antes). Etiqueta permanente e conclusão em
+     * silêncio em quem mais apoia: o defeito mais caro deste arquivo.
+     */
+    if ((direta || oferta || condicionada) && !VENDA_NEGADA.test(rajadaJunta)) {
       return { motivo: 'ofereceu o voto em troca de dinheiro — compra de voto é crime, e ela sabe' };
     }
   }

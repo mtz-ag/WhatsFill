@@ -2970,4 +2970,50 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   }
 }
 
+grupo('venda de voto pelo VERBO: "pix pra votar" (12/09/2026)');
+{
+  /**
+   * Print do "Silva pinturas": *"Tem que enxerga nos num pix antes tenho 29 piao pra votar"* e, no
+   * dia seguinte, *"Nao eu que quero um pix para votar em vcs"*.
+   *
+   * **Medido antes de mexer: `semInteresse` devolvia null nas duas rajadas** e
+   * `pedeAjudaFinanceira` casava pelo "pix" -- entao o caso foi para a IA, que respondeu com a
+   * negativa de ajuda. Os padroes da Simone (10/09) exigem o OBJETO "meu/nosso voto", e a forma
+   * mais natural de propor a venda usa o VERBO com um elo de finalidade. E a licao do "queria uma
+   * reuniao" (09/09) invertida.
+   */
+  const rajada = (textos) => semInteresse(textos.map((t) => ({ texto: t, tipo: 'TEXT' })));
+
+  check(!!rajada(['Tem que enxerga nos num pix antes tenho 29 piao pra votar']), 'pix ANTES de votar e venda de voto');
+  check(!!rajada(['Nao eu que quero um pix para votar em vcs']), '"um pix para votar em vcs" tambem');
+  check(!!rajada(['manda um pix pra eu votar']), '"pix pra eu votar"');
+  check(!!rajada(['quanto voces pagam pra votar']), '"quanto pagam pra votar"');
+  check(!!rajada(['eu voto se mandarem um pix']), 'e a ordem inversa: "voto se mandarem um pix"');
+  check(!!rajada(['Quer meu voto?', 'Faz um pix pra mim']), 'a forma da Simone (10/09) continua valendo');
+
+  /**
+   * **Onde mora o risco:** `semInteresse` aplica etiqueta PERMANENTE no CRM e conclui em silencio.
+   * Nove das assercoes deste grupo sao falso positivo, e duas guardas sustentam o resto -- o
+   * TERCEIRO (critica ao adversario) e a NEGACAO.
+   */
+  /**
+   * **Medido: este caso NAO e da venda de voto** — quem dispara e a RECUSA EXPLICITA, por "nao
+   * quero nada", que e outro caminho de `semInteresse` e mais antigo que este bloco. Fica anotado
+   * em vez de travado: mexer na lista de recusa a partir de um caso que a print nao mostra seria
+   * alargar a regra mais destrutiva do arquivo sem ele ter pedido.
+   */
+  check(
+    !!rajada(['vou votar em voces, nao quero nada nem pix']),
+    'FICA EM ABERTO: "nao quero nada" ainda decide sozinho, por outro caminho'
+  );
+  check(!rajada(['o PT da pix pra pobre votar neles']), 'critica ao adversario comprando voto nao e venda');
+  check(!rajada(['esses politicos compram voto com dinheiro, e um absurdo']), 'nem a critica generica');
+  check(!rajada(['nao vendo meu voto por pix nenhum']), 'nem a negativa explicita');
+  check(!rajada(['meu voto nao se compra']), 'nem "meu voto nao se compra"');
+  check(!rajada(['preciso de um pix pra pagar a luz, e vou votar em voces']), 'pedido de ajuda + apoio NAO e venda');
+  check(!rajada(['vou votar em voces e depois se puder me ajuda com um pix']), 'nem apoio com pedido depois');
+  check(!rajada(['me manda um pix que eu preciso de remedio']), 'nem pedido de dinheiro sem falar de voto');
+  check(!rajada(['vou votar 10122']), 'nem a declaracao de voto sozinha');
+}
+
 fim();

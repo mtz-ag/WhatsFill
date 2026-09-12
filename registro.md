@@ -1,3 +1,66 @@
+## 2026-09-12 — v3.55.0 — a IA não repete a negativa, e "pix pra votar" é venda de voto
+
+**Relato dele**, com duas prints do mesmo contato: a negativa de ajuda saiu às **10:20** escrita pela
+IA; ela respondeu *"Nao eu que quero um pix para votar em vcs"* às 10:21; e às **14:22** saiu **a
+mesma negativa outra vez** — ele apagou. *"IA se repetindo, já vi outros casos; esse é o maior sinal
+de máquina respondendo, repetição, não pode acontecer isso."*
+
+**Medido antes de mexer, nas mensagens dela:**
+
+| o que | antes |
+| --- | --- |
+| `semInteresse` (1ª e 2ª rajada) | **null** — a venda de voto não era vista |
+| `pedeAjudaFinanceira` | casava, pelo "pix" |
+| `negativaJaSaiu('pedido-ajuda')` | **false** — a guarda de 06/09 estava cega |
+
+**Causa 1 — a guarda contra repetir a negativa procurava o TEXTO DA RESPOSTA PRONTA.**
+`jaSaiuNaConversa` pega o **maior pedaço literal** do texto pronto — medido: **815 caracteres** — e
+procura numa das nossas mensagens. Desde a 3.10 o pedido de dinheiro é respondido pela **IA em texto
+livre**, que nunca contém aquele pedaço: a guarda passou a devolver `false` sempre, e a negativa
+podia sair todo dia.
+
+**É a TERCEIRA vez da mesma classe** — marca amarrada a QUAL texto saiu morre quando o caminho de
+resposta muda (a etiqueta de material na 3.40, a de pedido de dinheiro na 3.46). E a saída é sempre
+a mesma: reconhecer pelo **invariante** do que foi dito.
+
+**Causa 2 — a venda de voto só era vista pelo SUBSTANTIVO.** Os padrões da Simone (10/09) exigem o
+objeto *"meu/nosso voto"*; ela usou o **verbo** com um elo de finalidade — *"pix antes … pra votar"*,
+*"um pix para votar em vcs"*. É a lição do *"queria uma reunião"* (09/09) **invertida**: lá a lista só
+tinha verbos e ela pediu a coisa; aqui a lista só tinha a coisa e ela usou o verbo.
+
+**O que mudou:**
+
+1. **`templates.ehNegativaDeAjuda` e `ehNegativaDeTrabalho`** (novos, puros, testados): o invariante
+   é a frase que não muda entre as redações — *"não pode doar / dar dinheiro / fazer Pix / benefício"*
+   e *"só voluntários / não há remuneração"*. `negativaJaSaiu` passou a perguntar **pelos dois
+   caminhos**: o texto pronto literal (como antes) **e** o invariante em qualquer coisa que nós
+   tenhamos mandado. Medido: os **dois** rascunhos da IA e a resposta pronta são reconhecidos, e
+   nenhuma das seis mensagens inocentes do teste é.
+2. **Venda de voto pela CONSTRUÇÃO** (`DINHEIRO_ANTES_DO_VOTO`, `VOTO_SE_PAGAR`): o que qualifica é o
+   elo vir **colado no verbo de votar**. Sem isso, *"preciso de um pix pra pagar a luz, e vou votar em
+   vocês"* — pedido de ajuda mais apoio — viraria venda de voto, com etiqueta permanente e conclusão
+   em silêncio. **Nove das vinte e três asserções são falso positivo.**
+   **Medido depois: o caso da print vira `sem interesse` nas DUAS rajadas** — ou seja, nem o primeiro
+   rascunho teria saído.
+3. **Um falso positivo ANTIGO caiu junto**, achado escrevendo o teste: *"não vendo meu voto por pix
+   nenhum"* — um **apoiador** dizendo que não se vende — casava em `VENDA_DE_VOTO` por *"vendo … meu
+   voto"*, e `NAO_VENDE_O_VOTO` não cobre essa redação. A negação agora desfaz **os três caminhos**.
+4. **A regra no prompt, colada no pedido:** *"NÃO REPITA o que já dissemos… dizer a mesma coisa duas
+   vezes é o que denuncia uma máquina"*, com o que fazer quando ela insiste (responder o que há de
+   NOVO). A conversa inteira já está no bloco com as nossas falas marcadas `NÓS:`, então o modelo tem
+   como saber — o que faltava era a instrução, e ela vai onde ele escreve (a lição de 07/09).
+
+**Fica em aberto, e está anotado no teste:** *"vou votar em vocês, não quero nada nem pix"* ainda é
+lido como **recusa** — por *"não quero nada"*, que é outro caminho de `semInteresse`, mais antigo que
+este bloco. Mexer na lista de recusa a partir de um caso que a print não mostra seria alargar a regra
+mais destrutiva do arquivo sem ele ter pedido.
+
+**Arquivos:** `src/lib/cortesia.js`, `src/lib/templates.js` (+2 invariantes), `src/panel/panel.js`,
+`src/lib/ia.js` (prompt), `tests/cortesia.test.mjs` (+15), `tests/templates.test.mjs` (+12),
+`tests/ia.test.mjs` (+2), `CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-12 — v3.54.0 — a palavra "transcrição" não sai no rascunho
 
 **Relato dele**, com a print do Jose Carlos: o rascunho respondeu *"A transcrição do seu áudio chegou

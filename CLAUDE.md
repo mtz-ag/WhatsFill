@@ -2805,6 +2805,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   conteudo digital (a etiqueta manda PULAR) e marca DEPOIS da decisao da passada, para o modelo continuar
   com prioridade. **E `etiquetaDaLista`/`etiquetaDeEndereco` sao ASSINCRONAS**: `!etiquetaDeEndereco()`
   sem `await` testa uma promessa e e sempre falso — nenhum teste nem verificador pega isso.
+- **REPETICAO E O MAIOR SINAL DE MAQUINA — e a trava contra ela estava cega, 12/09/2026.** Duas
+  prints do mesmo contato: a negativa de ajuda saiu as 10:20 escrita pela IA, ela reescreveu pedindo
+  o Pix, e as 14:22 saiu **a mesma negativa outra vez**. Ele: *"IA se repetindo, ja vi outros casos;
+  esse e o maior sinal de maquina respondendo, repeticao, nao pode acontecer isso"*. **Medido:
+  `negativaJaSaiu` procura o maior pedaco LITERAL da resposta pronta — 815 caracteres** — e desde a
+  3.10 o dinheiro e respondido pela IA em texto livre, que nunca contem aquele pedaco: a guarda de
+  06/09 devolvia `false` sempre. **TERCEIRA vez da mesma classe** (etiqueta de material 3.40, de
+  pedido 3.46): **marca amarrada a QUAL texto saiu morre quando o caminho de resposta muda**, e a
+  saida e sempre reconhecer pelo INVARIANTE (`templates.ehNegativaDeAjuda`,
+  `ehNegativaDeTrabalho`). Junto entrou a regra no prompt, colada no pedido: *"nao repita o que ja
+  dissemos"*, com o que fazer quando ela insiste.
+- **VENDA DE VOTO PELO VERBO: "pix pra votar".** Mesmo print. Os padroes da Simone (10/09) exigem o
+  OBJETO *"meu/nosso voto"*, e ela escreveu *"pix antes... pra votar"* e *"um pix para votar em
+  vcs"* — **a licao do "queria uma reuniao" (09/09) INVERTIDA**: la a lista era toda de verbos e ela
+  pediu a coisa; aqui era toda da coisa e ela usou o verbo. O que qualifica e o **elo de finalidade
+  colado no verbo de votar**; sem isso *"preciso de um pix pra pagar a luz, e vou votar em voces"*
+  viraria venda. 9 das 23 assercoes sao falso positivo. **E um falso positivo ANTIGO caiu junto:**
+  *"nao vendo meu voto por pix nenhum"* — apoiador — casava por *"vendo... meu voto"*, porque
+  `NAO_VENDE_O_VOTO` exige o voto ANTES da negacao; hoje a negacao desfaz os tres caminhos.
+
 - **VOCABULARIO INTERNO VAZA PARA A MENSAGEM: "transcricao", 12/09/2026.** Print do Jose Carlos: o
   rascunho respondeu *"A transcricao do seu audio chegou aqui e eu li o que voce falou"*, e ele: *"a
   pessoa nem sabe o que e isso e nao precisa saber, e so responder que ouvimos; essa resposta tirou

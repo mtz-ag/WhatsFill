@@ -680,6 +680,65 @@ export function ehPedidoDeEndereco(texto) {
   return /\brua\b/.test(plano) && /\b(numero|n[º°]|nro)\b/.test(plano) && /\bbairro\b/.test(plano);
 }
 
+/**
+ * Esta mensagem NOSSA é a NEGATIVA de ajuda financeira? (em qualquer redação, dela ou da IA)
+ *
+ * **Existe porque a trava contra repetir a negativa estava cega.** Regra dele de 06/09 (a Cleonice):
+ * *"a negativa só deve ser mandada uma vez"*, e a guarda `negativaJaSaiu` do painel procura na
+ * conversa o **maior pedaço literal da resposta pronta** — 815 caracteres, medido. Desde a 3.10 o
+ * pedido de dinheiro é respondido pela **IA em texto livre**, que nunca contém aquele pedaço: a
+ * guarda passou a devolver `false` sempre.
+ *
+ * Print do "Silva pinturas" (12/09/2026): a negativa saiu às 10:20 pela IA, ela reescreveu pedindo
+ * o Pix, e às 14:22 saiu **a mesma negativa outra vez** — ele apagou. *"IA se repetindo, já vi
+ * outros casos; esse é o maior sinal de máquina respondendo, repetição, não pode acontecer isso."*
+ *
+ * **É a TERCEIRA vez que uma marca amarrada ao texto que saiu morre quando o caminho de resposta
+ * muda** (a etiqueta de material na 3.40, a de pedido de dinheiro na 3.46) — e a saída é sempre a
+ * mesma: reconhecer pelo INVARIANTE do que foi dito, como `ehPedidoDeDados` e `ehPedidoDeEndereco`.
+ *
+ * O invariante é a frase que não muda entre as redações: **não podemos dar dinheiro ou bem**. Ela
+ * aparece na resposta pronta dele (*"um mandato não pode doar dinheiro, cestas, remédios ou
+ * qualquer bem"*) e nos dois rascunhos da IA (*"não pode doar dinheiro nem fazer Pix"*, *"não pode
+ * doar dinheiro, fazer Pix ou oferecer qualquer benefício financeiro"*).
+ *
+ * @param {string} texto uma mensagem que NÓS mandamos
+ * @returns {boolean}
+ */
+export function ehNegativaDeAjuda(texto) {
+  const plano = String(texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!/\bnao (pode|podemos|posso|e possivel|consigo|conseguimos)\b/.test(plano)) return false;
+  return /\bnao (pode|podemos|posso|e possivel|consigo|conseguimos)\b[^.!?]{0,70}(doar|doacao|dar dinheiro|fazer (um )?pix|pix|beneficio financeiro|ajuda financeira|dar (cesta|cestas|remedio|remedios)|comprar)/.test(
+    plano
+  );
+}
+
+/**
+ * Esta mensagem NOSSA é a negativa de TRABALHO? (só voluntário, sem remuneração)
+ *
+ * Mesma razão da anterior, e o mesmo invariante de duas metades: negar o pagamento **ou** afirmar
+ * que aqui é só voluntário. A IA usa a resposta pronta `trabalhar-na-campanha` como base (3.22),
+ * então a redação varia e o texto literal não serve.
+ */
+export function ehNegativaDeTrabalho(texto) {
+  const plano = String(texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (/\b(so|somente|apenas) (com )?voluntari/.test(plano)) return true;
+  if (/\bnao (ha|tem|existe) (remunera|pagamento|contrata|vaga)/.test(plano)) return true;
+  return /\bnao (pode|podemos|posso|contratamos|pagamos)\b[^.!?]{0,60}(contrat|remunera|pagar|emprego|vaga|arrumar (um )?emprego|indicar)/.test(
+    plano
+  );
+}
+
 export function ehPedidoDeDados(texto) {
   const plano = String(texto || '')
     .normalize('NFD')

@@ -1759,6 +1759,21 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         ].join('\n')
       : '',
     /**
+     * **NÃO REPETIR é regra dele, e a mais curta de justificar** (12/09/2026, print do "Silva
+     * pinturas"): *"IA se repetindo, já vi outros casos; esse é o maior sinal de máquina
+     * respondendo, repetição, não pode acontecer isso"*.
+     *
+     * A conversa inteira está no bloco acima, com as nossas falas marcadas `NÓS:` — então o modelo
+     * TEM como saber. Vai colada no pedido pela razão de 07/09: regra longe do ponto em que ele
+     * escreve não é cumprida. O conserto determinístico do caso da print é a guarda da negativa
+     * (`negativaJaSaiu` pelo invariante); esta linha é o que cobre a classe inteira.
+     */
+    'NÃO REPITA o que já dissemos: leia as falas marcadas NÓS acima e nunca reescreva uma mensagem ' +
+      'que já saiu, nem com outras palavras. Dizer a mesma coisa duas vezes é o que denuncia uma ' +
+      'máquina, e a segunda vez não acrescenta nada. Se a resposta certa já foi dada e ela insiste, ' +
+      'responda o que há de NOVO na fala dela — e se não houver nada novo, escreva uma linha curta ' +
+      'que reconheça o que ela disse, sem repetir o conteúdo.',
+    /**
      * **A regra do anúncio, colada no pedido, e só quando há clique na conversa** — print da Leonir
      * (12/09/2026): o rascunho agradeceu *"o seu apoio ao Flávio, ao Zucco e ao Capitão Martim"* a
      * quem só clicou no anúncio que diz isso. A marca na linha existe desde 08/09 e não bastou —

@@ -643,4 +643,50 @@ grupo('o link do grupo entra uma vez, e nunca por cima do dele (07/09/2026)');
   }
 }
 
+grupo('a NEGATIVA e reconhecida no texto livre da IA (12/09/2026)');
+{
+  /**
+   * Print do "Silva pinturas": a negativa de ajuda saiu as 10:20 escrita pela IA, ela reescreveu
+   * pedindo o Pix, e as 14:22 saiu **a mesma negativa outra vez** -- ele apagou. *"IA se repetindo,
+   * ja vi outros casos; esse e o maior sinal de maquina respondendo, repeticao, nao pode acontecer
+   * isso."*
+   *
+   * **Medido: a guarda de 06/09 (`negativaJaSaiu`) procura o maior pedaco LITERAL da resposta
+   * pronta -- 815 caracteres** -- e desde a 3.10 o pedido de dinheiro e respondido pela IA em texto
+   * livre, que nunca contem aquele pedaco. **Terceira vez da mesma classe:** marca amarrada a QUAL
+   * texto saiu morre quando o caminho de resposta muda (3.40 e 3.46).
+   */
+  const saiu1 =
+    'Bom dia! Somos a equipe do Capitao Martim. Agradecemos muito o apoio e por se colocar a ' +
+    'disposicao como pintor - gente assim faz diferenca. Preciso responder com sinceridade: um ' +
+    'mandato nao pode doar dinheiro nem fazer Pix a eleitores.';
+  const saiu2 =
+    'Entendo o que voce esta pedindo, mas preciso responder com sinceridade: um mandato nao pode ' +
+    'doar dinheiro, fazer Pix ou oferecer qualquer beneficio financeiro a eleitores.';
+
+  check(templates.ehNegativaDeAjuda(saiu1), 'o rascunho das 10:20 conta como negativa');
+  check(templates.ehNegativaDeAjuda(saiu2), 'e o das 14:22 tambem');
+
+  const prontas = await templates.list();
+  const ajuda = prontas.find((t) => t.id === 'pedido-ajuda');
+  check(templates.ehNegativaDeAjuda(ajuda.text), 'a resposta PRONTA dele continua sendo reconhecida');
+
+  const emprego = prontas.find((t) => t.id === 'pedido-emprego');
+  const voluntario = prontas.find((t) => t.id === 'trabalhar-na-campanha');
+  check(templates.ehNegativaDeTrabalho(emprego.text), 'a negativa de emprego e reconhecida');
+  check(templates.ehNegativaDeTrabalho(voluntario.text), 'e a do voluntariado tambem');
+
+  /**
+   * **O falso positivo aqui APAGA um sinal:** reconhecer negativa onde nao houve faria
+   * `pedeAjudaFinanceira` voltar nulo e o pedido de verdade ficar sem resposta.
+   */
+  check(!templates.ehNegativaDeAjuda('Bom dia! Em que podemos ajudar?'), 'cumprimento nao e negativa');
+  check(!templates.ehNegativaDeAjuda('Obrigado pelo apoio! Vamos juntos.'), 'nem o agradecimento');
+  check(!templates.ehNegativaDeAjuda('Vou verificar com a equipe e te respondo.'), 'nem "vou verificar"');
+  check(!templates.ehNegativaDeAjuda('O CRAS da sua cidade atende esse tipo de caso.'), 'nem citar o CRAS sozinho');
+  check(!templates.ehNegativaDeAjuda('Me manda seu endereco que a equipe dos materiais entra em contato.'), 'nem o pedido de endereco');
+  check(!templates.ehNegativaDeAjuda(''), 'texto vazio nao quebra');
+  check(!templates.ehNegativaDeTrabalho('Obrigado por querer somar com a gente!'), 'nem o agradecimento pela disposicao');
+}
+
 fim();

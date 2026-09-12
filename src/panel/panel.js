@@ -5710,10 +5710,35 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * longo cai em "você responde" — que é a outra metade do que ele pediu: *"o contexto também
        * pedia resposta minha ou de IA por ser conversa extensa"*.
        */
+      /**
+       * **E ela pergunta pelo INVARIANTE também, não só pelo texto da resposta pronta.**
+       *
+       * Print do "Silva pinturas" (12/09/2026): a negativa de ajuda saiu às 10:20 escrita pela IA,
+       * ela reescreveu pedindo o Pix, e às 14:22 saiu **a mesma negativa outra vez**. Ele: *"IA se
+       * repetindo, já vi outros casos; esse é o maior sinal de máquina respondendo, repetição, não
+       * pode acontecer isso."*
+       *
+       * **Medido: `jaSaiuNaConversa` procura o maior pedaço LITERAL da resposta pronta — 815
+       * caracteres** — e desde a 3.10 o pedido de dinheiro é respondido pela IA em texto livre, que
+       * nunca contém aquele pedaço. A guarda de 06/09 devolvia `false` sempre.
+       *
+       * **Terceira vez da mesma classe:** marca amarrada a QUAL texto saiu morre quando o caminho
+       * de resposta muda (a etiqueta de material na 3.40, a de pedido de dinheiro na 3.46).
+       */
+      const INVARIANTE_DA_NEGATIVA = {
+        'pedido-ajuda': templatesLib.ehNegativaDeAjuda,
+        'pedido-emprego': templatesLib.ehNegativaDeTrabalho,
+        'trabalhar-na-campanha': templatesLib.ehNegativaDeTrabalho,
+      };
+
       const negativaJaSaiu = (id) => {
         const pronta = state.templates.find((t) => t.id === id);
-        if (!pronta) return false;
-        return [pronta.text, ...(pronta.variantes || [])].some((texto) => jaSaiuNaConversa(texto));
+        if (pronta && [pronta.text, ...(pronta.variantes || [])].some((texto) => jaSaiuNaConversa(texto))) {
+          return true;
+        }
+        const invariante = INVARIANTE_DA_NEGATIVA[id];
+        if (!invariante) return false;
+        return (state.nossas || []).some((m) => invariante(m?.texto || ''));
       };
 
       /**
