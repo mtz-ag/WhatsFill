@@ -9934,12 +9934,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * sendo melhor que sair como fala dela.
    */
   function nomeDoAnuncioDaSessao() {
-    return String(
+    const bruto = String(
       state.anuncio?.anuncio?.nome ||
         state.session?.utm?.headline ||
         state.session?.utm?.campaign ||
         ''
     ).trim();
+    /**
+     * **O nome tem que ser um NOME, e o `headline` do Facebook é um parágrafo** — print da Leonir
+     * (12/09/2026). Ela clicou num anúncio e mandou um áudio; o rascunho abriu agradecendo *"o seu
+     * apoio ao Flávio, ao Zucco e ao Capitão Martim"*, apoio que ela nunca declarou. Pergunta dele:
+     * *"vou ter que listar pra IA as frases específicas que são de anúncio?"*
+     *
+     * **Medido: a marca funcionava e o nome tinha 277 caracteres.** O `headline` daquele anúncio é
+     * *"Sou o candidato a deputado estadual de Flávio Bolsonaro… Tenho orgulho de contar com esse
+     * apoio… Vote Capitão Martim, deputado estadual. 10122"* — e ele entrava INTEIRO dentro da marca,
+     * no meio da linha da conversa. A linha que existe para dizer *"isto não é fala dela"* passou a
+     * injetar a peça de campanha no lugar onde a IA lê o que a pessoa disse, com a palavra "apoio"
+     * duas vezes. **Marca que carrega o texto que ela deveria ignorar não avisa: abastece.**
+     *
+     * O corte é de tamanho porque o nome serve a uma coisa só — dizer QUAL anúncio. Ele continua
+     * vindo do que ele cadastrou na Config quando existe, que é sempre curto. A conta mora em
+     * `ia.nomeCurtoDeAnuncio`, que é pura e tem teste — aqui nenhuma suíte alcança.
+     */
+    return iaLib.nomeCurtoDeAnuncio(bruto);
   }
 
   function mensagensParaIA() {

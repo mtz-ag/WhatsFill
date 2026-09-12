@@ -1,3 +1,55 @@
+## 2026-09-12 — v3.50.0 — o clique no anúncio não é apoio dela, e o nome do anúncio era um parágrafo
+
+**Pergunta dele:** *"vou ter que listar pra IA as frases específicas que são de anúncio?"*, com a
+print da Leonir — ela chegou pelo anúncio do Facebook, a primeira mensagem era o texto pronto
+*"Olá! Eu apoio o Flávio, Zucco e Capitão Martim"*, depois veio um áudio de 2min41 sobre a mudança no
+auxílio de R$600, e o rascunho abriu **agradecendo "o seu apoio ao Flávio, ao Zucco e ao Capitão
+Martim"** — apoio que ela nunca declarou.
+
+**A resposta é NÃO, e ele não precisa listar nada.** O clique é reconhecido pelo **dado da
+plataforma** — o `utm` da sessão —, não por texto: `prepararEntrantes` marca a primeira mensagem de
+uma sessão que veio de anúncio, e `marcaDaMensagem` escreve na linha que aquilo foi escrito pela
+campanha. A lista de padrões que ele cadastra na Config é só reforço para o **segundo clique** dentro
+da mesma sessão, onde não há `utm` novo para consultar.
+
+**Medido: a marca chegava, e o defeito era o NOME do anúncio dentro dela.** Sem anúncio cadastrado na
+Config, o nome cai no `headline` do Facebook — e o daquele anúncio tem **277 caracteres**:
+
+> *"Sou o candidato a deputado estadual de Flávio Bolsonaro aqui no Rio Grande do Sul. **Tenho orgulho
+> de contar com esse apoio** e sigo firme na missão de representar os valores que acreditamos e
+> defender o nosso povo. **Vote Capitão Martim, deputado estadual. 10122** Siga @CapitaoMartim"*
+
+Ele entrava **inteiro** dentro da marca, no meio da linha da conversa. A linha que existe para dizer
+*"isto não é fala dela"* passou a **injetar a peça de campanha** no lugar onde a IA lê o que a pessoa
+disse — com a palavra "apoio" ali dentro. **Marca que carrega o texto que a IA deveria ignorar não
+avisa: abastece.**
+
+**O que mudou:**
+
+1. **`ia.nomeCurtoDeAnuncio`** (novo, puro, testado): o nome é cortado em **60 caracteres**. Medido:
+   277 → 60, e o número de urna e o *"orgulho de contar com esse apoio"* deixam de entrar na linha.
+   A conta ficou em `ia.js` e não no painel porque nenhuma suíte importa `panel.js`.
+2. **A regra no prompt, nos dois lugares.** No sistema, colada na frase que manda agradecer o apoio:
+   *"o texto do ANÚNCIO não é apoio dela… não a chame de apoiadora por causa dele"*. E no **bloco do
+   CONTATO**, onde o modelo escreve — **só quando há clique na conversa**, para não gastar as
+   chamadas em que não há nenhum. É a lição de 07/09 (regra longe de onde se escreve não é cumprida)
+   e o desenho que fez a regra 11 da Irema funcionar.
+
+**Um teste caiu sozinho e foi trocado:** a asserção de que as regras 8 e 9 ficam *"no fim do prompt"*
+era `> 80% das linhas` e passou a 79,8% só porque o rodapé cresceu — **nada tinha mudado de lugar**.
+É a mesma decadência do teste de proporção do padrão (10/09). Hoje a conta é **contra as regras
+numeradas**, não contra o prompt inteiro: a 9 tem de estar na segunda metade da lista.
+
+**O que a print também mostra, e não foi tocado:** o cabeçalho traz `Cidade: Faxinal do Soturno
+(aproximada) ← de "Afinal — ouvido no áudio"`. Medido: `matchCity('afinal')` devolve **vazio** — não
+é essa a origem. Palpite aproximado de transcrição **não grava sozinho** (regra de 31/08), então ele
+está pendente, não no CRM. Fica como pendência a investigar com a transcrição na mão.
+
+**Arquivos:** `src/lib/ia.js`, `src/panel/panel.js`, `tests/ia.test.mjs`, `CLAUDE.md`, `registro.md`,
+`manifest.json`.
+
+---
+
 ## 2026-09-12 — v3.49.0 — a trava do endereço deixou de parar a rodada; o conserto foi para o prompt
 
 **Correção dele, sobre a 3.48:** *"eu quero que mude o que a IA diz, não parar todo tempo para eu

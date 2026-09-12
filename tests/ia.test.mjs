@@ -17,6 +17,8 @@ import { pedeMaterial, pedeFalarComDeputado } from '../src/lib/cortesia.js';
 import {
   montarSistemaRascunho,
   montarContatoRascunho,
+  nomeCurtoDeAnuncio,
+  LIMITE_NOME_DO_ANUNCIO,
   PEDIDO_DE_DADOS_NO_RASCUNHO,
   saudacaoDeAgora,
   montarRequisicaoRascunho,
@@ -1739,7 +1741,21 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   const oito = linhas.findIndex((l) => /^8\. QUEM QUER FALAR/.test(l));
   const nove = linhas.findIndex((l) => /^9\. QUEM PERGUNTA QUEM ESTÁ/.test(l));
   check(nove > oito && nove - oito < 15, `a regra 9 fica logo depois da 8 (${oito} -> ${nove})`);
-  check(nove > linhas.length * 0.8, `e as duas ficam no fim do prompt (${nove} de ${linhas.length})`);
+  /**
+   * **A conta e contra as REGRAS, nao contra o prompt inteiro** (12/09/2026).
+   *
+   * A assercao era `nove > linhas.length * 0.8` e caiu sozinha ao crescer o rodape do prompt: 356
+   * de 446 linhas, ou seja 79,8%. **Nada tinha mudado de lugar** — e a mesma decadencia que o teste
+   * de proporcao do padrao sofreu em 10/09. O que se quer proteger e a POSICAO RELATIVA entre as
+   * regras: a 9 tem que estar na segunda metade da lista, ao lado da 8. Isso nao muda quando alguem
+   * acrescenta texto depois da lista.
+   */
+  const numeradas = linhas
+    .map((l, i) => (/^\d+\. /.test(l) ? i : -1))
+    .filter((i) => i >= 0);
+  const posicaoDaNove = numeradas.indexOf(nove);
+  check(posicaoDaNove > numeradas.length / 2,
+    `e a 9 fica na segunda metade das regras (${posicaoDaNove + 1}a de ${numeradas.length})`);
 }
 
 /**
@@ -2392,6 +2408,64 @@ grupo('o endereco em texto livre barra o envio sozinho (12/09/2026)');
     sistema.includes('n\u00e3o feche uma NEGATIVA pedindo o cadastro'),
     'e que a negativa nao se fecha com o formulario'
   );
+}
+
+grupo('o clique no anuncio nao e apoio dela (12/09/2026)');
+{
+  /**
+   * Print da Leonir (12/09/2026): ela chegou pelo anuncio do Facebook, a primeira mensagem era o
+   * texto pronto *"Ola! Eu apoio o Flavio, Zucco e Capitao Martim"* e em seguida veio um audio de
+   * 2min41 sobre a mudanca no auxilio de R$600. O rascunho abriu agradecendo *"o seu apoio ao
+   * Flavio, ao Zucco e ao Capitao Martim"*. Pergunta dele: *"vou ter que listar pra IA as frases
+   * especificas que sao de anuncio?"*
+   *
+   * **Nao: a marca ja chegava.** `prepararEntrantes` reconhece o clique pelo DADO da plataforma (o
+   * `utm` da sessao), e `marcaDaMensagem` escreve na linha que aquilo foi escrito pela campanha.
+   * **Medido, o defeito era o NOME do anuncio:** sem anuncio cadastrado na Config o nome cai no
+   * `headline`, que naquele caso tinha 277 caracteres e dizia "Tenho orgulho de contar com esse
+   * apoio... Vote Capitao Martim, deputado estadual. 10122". A marca injetava a peca de campanha
+   * dentro da linha da conversa.
+   */
+  const headline =
+    'Sou o candidato a deputado estadual de Flavio Bolsonaro aqui no Rio Grande do Sul. Tenho orgulho ' +
+    'de contar com esse apoio e sigo firme na missao de representar os valores que acreditamos e ' +
+    'defender o nosso povo. Vote Capitao Martim, deputado estadual. 10122 Siga @CapitaoMartim';
+  check(headline.length > 200, 'o headline do Facebook e um paragrafo, nao um nome');
+  check(nomeCurtoDeAnuncio(headline).length === LIMITE_NOME_DO_ANUNCIO,
+    `o nome do anuncio e cortado em ${LIMITE_NOME_DO_ANUNCIO} caracteres`);
+  check(!/10122|Vote |orgulho/.test(nomeCurtoDeAnuncio(headline)),
+    'e o numero de urna e o "orgulho de contar com esse apoio" NAO entram na linha da conversa');
+  check(nomeCurtoDeAnuncio('CLICK AQUI') === 'CLICK AQUI', 'nome curto passa inteiro');
+  check(nomeCurtoDeAnuncio('  Material  da   Direita ') === 'Material da Direita', 'e o espaco em excesso sai');
+  check(nomeCurtoDeAnuncio(null) === '', 'e nao quebra sem nome');
+
+  /**
+   * **A regra vai no bloco do CONTATO, e SO quando ha clique na conversa.** A marca na linha existe
+   * desde 08/09 e nao bastou -- regra longe do ponto em que o modelo escreve nao e cumprida
+   * (07/09). Condicional para nao gastar as chamadas em que nao ha clique nenhum.
+   */
+  const agora = new Date('2026-09-12T10:44:00');
+  const comClique = montarContatoRascunho({
+    mensagens: [
+      { de: 'contato', texto: '(texto do ANUNCIO "X" em que ela clicou) Ola! Eu apoio o Flavio', at: '2026-09-12T02:39:00', anuncio: true },
+      { de: 'contato', texto: 'Boa noite, queria falar do auxilio', at: '2026-09-12T02:41:00' },
+    ],
+    campos: {},
+    agora,
+  });
+  check(comClique.includes('O CLIQUE NO AN\u00daNCIO N\u00c3O \u00c9 FALA DELA'), 'havendo clique, a regra entra no bloco do contato');
+
+  const semClique = montarContatoRascunho({
+    mensagens: [{ de: 'contato', texto: 'bom dia, tudo bem?', at: '2026-09-12T09:00:00' }],
+    campos: {},
+    agora,
+  });
+  check(!semClique.includes('O CLIQUE NO AN\u00daNCIO'), 'sem clique, a regra nao entra');
+
+  /** E a mesma regra fica escrita no sistema, colada na frase que manda agradecer o apoio. */
+  const sistema = montarSistemaRascunho({ templates: [], regras: '' });
+  check(sistema.includes('o texto do AN\u00daNCIO n\u00e3o \u00e9 apoio dela'),
+    'o prompt de sistema diz que o texto do anuncio nao e apoio dela');
 }
 
 fim();

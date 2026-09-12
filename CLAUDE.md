@@ -2805,6 +2805,24 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   conteudo digital (a etiqueta manda PULAR) e marca DEPOIS da decisao da passada, para o modelo continuar
   com prioridade. **E `etiquetaDaLista`/`etiquetaDeEndereco` sao ASSINCRONAS**: `!etiquetaDeEndereco()`
   sem `await` testa uma promessa e e sempre falso — nenhum teste nem verificador pega isso.
+- **A MARCA DO ANUNCIO CARREGAVA O TEXTO DO ANUNCIO — 12/09/2026, print da Leonir.** Pergunta dele:
+  *"vou ter que listar pra IA as frases especificas que sao de anuncio?"*. **NAO:** o clique e
+  reconhecido pelo `utm` da SESSAO (dado, nao texto), e `marcaDaMensagem` escreve na linha que aquilo
+  foi escrito pela campanha; a lista da Config e reforco para o SEGUNDO clique da mesma sessao.
+  **Medido, o defeito era o NOME dentro da marca:** sem anuncio cadastrado o nome cai no `headline` do
+  Facebook, que tinha **277 caracteres** e dizia *"Tenho orgulho de contar com esse apoio... Vote
+  Capitao Martim, deputado estadual. 10122"* — e entrava inteiro no meio da linha da conversa. O
+  rascunho agradeceu *"o seu apoio ao Flavio, ao Zucco e ao Capitao Martim"*, apoio que ela nunca
+  declarou. **Marca que carrega o texto que a IA deveria ignorar nao avisa: abastece.** Hoje
+  `ia.nomeCurtoDeAnuncio` corta em 60, e a regra *"o clique nao e fala dela"* vai no sistema E no
+  bloco do CONTATO, so quando ha clique na conversa. **Ao escrever marca que cita um dado do
+  ambiente, meca o TAMANHO do dado real** — `headline`, `campaign` e `referralUrl` sao texto de
+  campanha, nao rotulo.
+- **TESTE DE PROPORCAO DO PROMPT CAI SOZINHO — pela segunda vez** (10/09 o do padrao, 12/09 o da
+  posicao das regras 8 e 9: `> 80% das linhas` virou 79,8% porque o rodape cresceu, sem nada mudar de
+  lugar). **Conta a proporcao contra a LISTA que se quer proteger** (as regras numeradas), nunca
+  contra o arquivo inteiro.
+
 - **A TRAVA CONHECIA A REDACAO DO MODELO E NAO A QUE A IA ESCREVE — `ehPedidoDeEndereco`,
   12/09/2026.** Print: o rascunho negou o Pix, negou a contratacao, emendou *"mande seu endereco que
   encaminhamos o assessor da regiao"* e fechou pedindo `Nome , Cidade`. Ele: *"pedindo dados fora de

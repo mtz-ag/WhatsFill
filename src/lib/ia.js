@@ -1387,6 +1387,9 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     'O mesmo com "aqui é só voluntário, sem remuneração" e o pedido de endereço: é a resposta de quem',
     'PEDIU para trabalhar ou falou em ganhar. Quem diz que vai votar, que vai ajudar na votação ou',
     'convida o candidato para uma visita está APOIANDO — e apoio se agradece, curto.',
+    '**Mas o texto do ANÚNCIO não é apoio dela.** A linha marcada "(texto do ANÚNCIO…)" foi escrita pela',
+    'campanha e ela só clicou num botão: não agradeça o apoio que está ali, não a chame de apoiadora por',
+    'causa dele e não construa a resposta em cima dele. Responda o que ELA escreveu.',
     'E a negativa de ajuda ("um mandato não pode doar…", CRAS) é a resposta de quem PEDIU. "Se eu',
     'pedisse ajuda, vocês ajudariam?" é hipótese, e quase sempre descrença — é a regra 13, não o pedido.',
     '**E não feche uma NEGATIVA pedindo o cadastro.** Quem acabou de ouvir que não podemos dar dinheiro',
@@ -1477,6 +1480,27 @@ export const PEDIDO_DE_DADOS_NO_RASCUNHO = [
   '(exemplo: Pedro Silva , Porto Alegre)',
 ].join('\n');
 
+/**
+ * **O nome do anúncio, curto** — print da Leonir (12/09/2026).
+ *
+ * A marca da mensagem diz à IA *"(texto do ANÚNCIO <nome> em que ela clicou — escrito pela campanha,
+ * não por ela)"*, e o nome vem do que ele cadastrou na Config ou, faltando isso, do `headline` do
+ * Facebook. **O `headline` é um parágrafo de campanha**: no caso medido tinha 277 caracteres e dizia
+ * *"Tenho orgulho de contar com esse apoio… Vote Capitão Martim, deputado estadual. 10122"* — e
+ * entrava inteiro dentro da marca, no meio da linha da conversa. O rascunho abriu agradecendo *"o seu
+ * apoio ao Flávio, ao Zucco e ao Capitão Martim"*, apoio que ela nunca declarou.
+ *
+ * **Marca que carrega o texto que a IA deveria ignorar não avisa: abastece.** O nome serve a uma
+ * coisa só — dizer QUAL anúncio —, então o corte é de tamanho, e é aqui (puro e testado) em vez de
+ * no painel, que nenhuma suíte importa.
+ */
+export const LIMITE_NOME_DO_ANUNCIO = 60;
+
+export function nomeCurtoDeAnuncio(bruto) {
+  const t = String(bruto || '').replace(/\s+/g, ' ').trim();
+  return t.length > LIMITE_NOME_DO_ANUNCIO ? t.slice(0, LIMITE_NOME_DO_ANUNCIO - 1) + '\u2026' : t;
+}
+
 /** O bloco do contato para o rascunho: a conversa com folga, porque é dela que ele precisa. */
 export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false } = {}) {
   /**
@@ -1527,6 +1551,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
    * 05/09, clicou em três anúncios seguidos sem digitar uma palavra). Dizer "a última fala é
    * NOSSA" ali seria mentira.
    */
+  const temCliqueDeAnuncio = lista.some((m) => m.anuncio);
   const pendentesTotal = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).length;
   const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio).length;
   const soCliques = pendentes === 0 && pendentesTotal > 0;
@@ -1687,6 +1712,18 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
           '',
           PEDIDO_DE_DADOS_NO_RASCUNHO,
         ].join('\n')
+      : '',
+    /**
+     * **A regra do anúncio, colada no pedido, e só quando há clique na conversa** — print da Leonir
+     * (12/09/2026): o rascunho agradeceu *"o seu apoio ao Flávio, ao Zucco e ao Capitão Martim"* a
+     * quem só clicou no anúncio que diz isso. A marca na linha existe desde 08/09 e não bastou —
+     * regra longe do ponto em que o modelo escreve não é cumprida (07/09). Condicional para não
+     * gastar as chamadas em que não há clique nenhum.
+     */
+    temCliqueDeAnuncio
+      ? 'O CLIQUE NO ANÚNCIO NÃO É FALA DELA: a linha marcada "(texto do ANÚNCIO…)" foi escrita pela ' +
+        'campanha. Não agradeça o apoio que está escrito nela, não a trate como apoiadora por causa do ' +
+        'clique e não responda àquele texto — responda o que ela escreveu por conta própria.'
       : '',
     /**
      * **A regra do endereço, colada no pedido** — mesma razão da regra 11 acima, e mesma decisão
