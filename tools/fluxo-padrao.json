@@ -1,0 +1,1162 @@
+{
+  "formato": "whatsfill-fluxo",
+  "versao": 1,
+  "extensao": "3.47.0",
+  "nome": "fluxo padrão 3.47.0",
+  "salvoEm": "2026-09-12T13:04:09.010Z",
+  "teclas": {},
+  "arvore": [
+    {
+      "id": "g:anuncio-pessoa-nova",
+      "rotulo": "anúncio — pessoa nova",
+      "regra": null,
+      "condicao": {
+        "sinal": "jaRespondemosAntes",
+        "negar": true,
+        "palavras": [],
+        "onde": "ultima"
+      },
+      "excecao": {
+        "sinal": "",
+        "negar": false,
+        "palavras": [],
+        "onde": "ultima"
+      },
+      "acao": null,
+      "nota": "",
+      "desligado": false,
+      "filhos": [
+        {
+          "id": "r:sem-interesse",
+          "rotulo": "Recusou ou veio hostilizar",
+          "regra": "sem-interesse",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 0
+        },
+        {
+          "id": "r:etiqueta-so-conclui:chegada",
+          "rotulo": "não mandar nada: é da casa, ou a última é nossa",
+          "regra": "etiqueta-so-conclui",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "tambemQuando": [
+            "ultima-e-nossa"
+          ],
+          "x": 350,
+          "y": 166
+        },
+        {
+          "id": "r:confirmou-presenca-evento:chegada",
+          "rotulo": "pular: confirmou presença, ou mandou o endereço",
+          "regra": "confirmou-presenca-evento",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "tambemQuando": [
+            "informou-endereco"
+          ],
+          "x": 350,
+          "y": 332
+        },
+        {
+          "id": "r:etiqueta-dispensa-da-fila:chegada",
+          "rotulo": "Tem a etiqueta que dispensa da fila",
+          "regra": "etiqueta-dispensa-da-fila",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 498
+        },
+        {
+          "id": "chegada-ajuda",
+          "rotulo": "pediu dinheiro, cesta basica ou remedio",
+          "regra": null,
+          "condicao": {
+            "sinal": "pedeAjudaFinanceira",
+            "negar": false,
+            "palavras": [],
+            "onde": "ultima"
+          },
+          "excecao": {
+            "sinal": "",
+            "negar": false,
+            "palavras": [],
+            "onde": "ultima"
+          },
+          "acao": {
+            "tecla": null,
+            "resposta": null,
+            "ia": true
+          },
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 664
+        },
+        {
+          "id": "chegada-emprego",
+          "rotulo": "quer trabalhar para o mandato",
+          "regra": null,
+          "condicao": {
+            "sinal": "pedeEmprego",
+            "negar": false,
+            "palavras": [],
+            "onde": "ultima"
+          },
+          "excecao": {
+            "sinal": "",
+            "negar": false,
+            "palavras": [],
+            "onde": "ultima"
+          },
+          "acao": {
+            "tecla": null,
+            "resposta": null,
+            "ia": true
+          },
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 830
+        },
+        {
+          "id": "chegada-ligacao",
+          "rotulo": "pediu que a gente ligasse",
+          "regra": null,
+          "condicao": {
+            "sinal": "pedeLigacao",
+            "negar": false,
+            "palavras": [],
+            "onde": "ultima"
+          },
+          "excecao": {
+            "sinal": "",
+            "negar": false,
+            "palavras": [],
+            "onde": "ultima"
+          },
+          "acao": {
+            "tecla": null,
+            "resposta": "pedido-ligacao"
+          },
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 996
+        },
+        {
+          "id": "chegada-falar-deputado",
+          "rotulo": "quer falar com o deputado",
+          "regra": null,
+          "condicao": {
+            "sinal": "pedeFalarComDeputado",
+            "negar": false,
+            "palavras": [],
+            "onde": "ultima"
+          },
+          "excecao": {
+            "sinal": "",
+            "negar": false,
+            "palavras": [],
+            "onde": "ultima"
+          },
+          "acao": {
+            "tecla": null,
+            "resposta": "falar-com-deputado"
+          },
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 1162
+        },
+        {
+          "id": "r:pediu-algo-sem-dizer-o-que:chegada-antes",
+          "rotulo": "você responde: pedido sem objeto, ou pergunta",
+          "regra": "pediu-algo-sem-dizer-o-que",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "tambemQuando": [
+            "pergunta-aberta"
+          ],
+          "x": 350,
+          "y": 1328
+        },
+        {
+          "id": "r:ultima-pede-resposta-pessoal:chegada-antes",
+          "rotulo": "você responde: áudio, texto longo, denúncia, ou ela está passando mal",
+          "regra": "ultima-pede-resposta-pessoal",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "tambemQuando": [
+            "respondeu-nossa-pergunta",
+            "nao-pode-falar-agora",
+            "reclama-sem-resposta"
+          ],
+          "x": 350,
+          "y": 1494
+        },
+        {
+          "id": "chegada-boas-vindas",
+          "rotulo": "chegou sem anúncio e só cumprimentou",
+          "regra": null,
+          "condicao": {
+            "sinal": "soCortesia",
+            "negar": false,
+            "palavras": [],
+            "onde": "ultima"
+          },
+          "excecao": {
+            "sinal": "",
+            "negar": false,
+            "palavras": [],
+            "onde": "ultima"
+          },
+          "acao": {
+            "tecla": null,
+            "resposta": "boas-vindas"
+          },
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "maisCondicoes": [
+            {
+              "sinal": "veioDeAnuncio",
+              "negar": true,
+              "palavras": [],
+              "onde": "ultima"
+            }
+          ],
+          "x": 350,
+          "y": 1660
+        },
+        {
+          "id": "r:rajada-de-anuncios:chegada",
+          "rotulo": "só clicou em vários anúncios: mensagem do momento",
+          "regra": "rajada-de-anuncios",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 1826
+        },
+        {
+          "id": "r:anuncio-modelo-e-dados:chegada",
+          "rotulo": "modelo + pedir os dados",
+          "regra": "anuncio-modelo-e-dados",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 1992
+        },
+        {
+          "id": "r:ultima-e-so-reacao:chegada",
+          "rotulo": "mandou figura, emoji, sticker ou link",
+          "regra": "ultima-e-so-reacao",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 2158
+        },
+        {
+          "id": "r:ultima-e-despedida:chegada",
+          "rotulo": "Só se despediu",
+          "regra": "ultima-e-despedida",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 2324
+        },
+        {
+          "id": "r:contexto-de-outro-dia:chegada",
+          "rotulo": "a última dela é de outro dia",
+          "regra": "contexto-de-outro-dia",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 2490
+        },
+        {
+          "id": "r:respondeu-os-dados:chegada",
+          "rotulo": "respondeu o nome e a cidade",
+          "regra": "respondeu-os-dados",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 2656
+        },
+        {
+          "id": "r:conteudo-pedido:chegada",
+          "rotulo": "manda só o modelo (ela já tem cidade)",
+          "regra": "conteudo-pedido",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 2822
+        },
+        {
+          "id": "r:nada-legivel-dela:chegada",
+          "rotulo": "ela não mandou nada legível",
+          "regra": "nada-legivel-dela",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 2988
+        },
+        {
+          "id": "r:nunca-pediram-dados:chegada",
+          "rotulo": "ainda não temos nome e cidade",
+          "regra": "nunca-pediram-dados",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 3154
+        },
+        {
+          "id": "r:so-expressa-apoio:chegada",
+          "rotulo": "só expressou apoio (não sobrou o que mandar)",
+          "regra": "so-expressa-apoio",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 3320
+        },
+        {
+          "id": "r:ja-respondemos-antes:chegada",
+          "rotulo": "já falamos hoje: conclui",
+          "regra": "ja-respondemos-antes",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 3486
+        }
+      ],
+      "x": 0,
+      "y": 1743
+    },
+    {
+      "id": "g:pessoa-retornando",
+      "rotulo": "pessoa retornando",
+      "regra": null,
+      "condicao": {
+        "sinal": "",
+        "negar": false,
+        "palavras": [],
+        "onde": "ultima"
+      },
+      "excecao": {
+        "sinal": "",
+        "negar": false,
+        "palavras": [],
+        "onde": "ultima"
+      },
+      "acao": null,
+      "nota": "",
+      "desligado": false,
+      "filhos": [
+        {
+          "id": "r:sem-interesse:volta",
+          "rotulo": "Recusou ou veio hostilizar",
+          "regra": "sem-interesse",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 3652
+        },
+        {
+          "id": "r:etiqueta-so-conclui:volta",
+          "rotulo": "não mandar nada: é da casa, ou a última é nossa",
+          "regra": "etiqueta-so-conclui",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "tambemQuando": [
+            "ultima-e-nossa"
+          ],
+          "x": 350,
+          "y": 3818
+        },
+        {
+          "id": "r:confirmou-presenca-evento:volta",
+          "rotulo": "pular: confirmou presença, ou mandou o endereço",
+          "regra": "confirmou-presenca-evento",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "tambemQuando": [
+            "informou-endereco"
+          ],
+          "x": 350,
+          "y": 3984
+        },
+        {
+          "id": "r:etiqueta-dispensa-da-fila:volta",
+          "rotulo": "Tem a etiqueta que dispensa da fila",
+          "regra": "etiqueta-dispensa-da-fila",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 4150
+        },
+        {
+          "id": "g:sem-etiqueta-de-cidade",
+          "rotulo": "sem etiqueta de cidade",
+          "regra": null,
+          "condicao": {
+            "sinal": "temEtiquetaDeCidade",
+            "negar": true,
+            "palavras": [],
+            "onde": "ultima"
+          },
+          "excecao": {
+            "sinal": "",
+            "negar": false,
+            "palavras": [],
+            "onde": "ultima"
+          },
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [
+            {
+              "id": "r:voltou-por-outro-anuncio",
+              "rotulo": "Ignorou o pedido e voltou por outro anúncio",
+              "regra": "voltou-por-outro-anuncio",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 4316
+            },
+            {
+              "id": "g:pediu-dinheiro-cesta-basica-ou-remedio",
+              "rotulo": "pediu dinheiro, cesta basica ou remedio",
+              "regra": null,
+              "condicao": {
+                "sinal": "pedeAjudaFinanceira",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "excecao": {
+                "sinal": "",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "acao": {
+                "tecla": null,
+                "resposta": null,
+                "ia": true
+              },
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 4482
+            },
+            {
+              "id": "g:quer-trabalhar-para-o-mandato",
+              "rotulo": "quer trabalhar para o mandato",
+              "regra": null,
+              "condicao": {
+                "sinal": "pedeEmprego",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "excecao": {
+                "sinal": "",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "acao": {
+                "tecla": null,
+                "resposta": null,
+                "ia": true
+              },
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 4648
+            },
+            {
+              "id": "g:pediu-que-a-gente-ligasse",
+              "rotulo": "pediu que a gente ligasse",
+              "regra": null,
+              "condicao": {
+                "sinal": "pedeLigacao",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "excecao": {
+                "sinal": "",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "acao": {
+                "tecla": null,
+                "resposta": "pedido-ligacao"
+              },
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 4814
+            },
+            {
+              "id": "g:quer-falar-com-o-deputado",
+              "rotulo": "quer falar com o deputado",
+              "regra": null,
+              "condicao": {
+                "sinal": "pedeFalarComDeputado",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "excecao": {
+                "sinal": "",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "acao": {
+                "tecla": null,
+                "resposta": "falar-com-deputado"
+              },
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 4980
+            },
+            {
+              "id": "r:ultima-pede-resposta-pessoal:sem-cidade",
+              "rotulo": "você responde: áudio, texto longo, ou ela está passando mal",
+              "regra": "ultima-pede-resposta-pessoal",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "tambemQuando": [
+                "nao-pode-falar-agora",
+                "reclama-sem-resposta"
+              ],
+              "x": 700,
+              "y": 5146
+            },
+            {
+              "id": "r:ultima-e-so-reacao:sem-cidade",
+              "rotulo": "mandou figura, emoji, sticker ou link",
+              "regra": "ultima-e-so-reacao",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 5312
+            },
+            {
+              "id": "g:so-cumprimentou-e-nada-mais",
+              "rotulo": "só cumprimentou, e nada mais",
+              "regra": null,
+              "condicao": {
+                "sinal": "soCortesia",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "excecao": {
+                "sinal": "momentoJaEnviado",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "acao": {
+                "tecla": "5",
+                "resposta": null
+              },
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 5478
+            },
+            {
+              "id": "r:pediu-algo-sem-dizer-o-que:sem-cidade",
+              "rotulo": "você responde: pedido sem objeto, ou pergunta",
+              "regra": "pediu-algo-sem-dizer-o-que",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "tambemQuando": [
+                "pergunta-aberta"
+              ],
+              "x": 700,
+              "y": 5644
+            },
+            {
+              "id": "r:ultima-e-despedida:sem-cidade",
+              "rotulo": "Só se despediu",
+              "regra": "ultima-e-despedida",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 5810
+            },
+            {
+              "id": "r:respondeu-nossa-pergunta:sem-cidade",
+              "rotulo": "Você perguntou em que podia ajudar e ela respondeu",
+              "regra": "respondeu-nossa-pergunta",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 5976
+            },
+            {
+              "id": "r:rajada-de-anuncios:sem-cidade",
+              "rotulo": "só clicou em vários anúncios: mensagem do momento",
+              "regra": "rajada-de-anuncios",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 6142
+            },
+            {
+              "id": "r:contexto-de-outro-dia:sem-cidade",
+              "rotulo": "a última dela é de outro dia",
+              "regra": "contexto-de-outro-dia",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 6308
+            },
+            {
+              "id": "g:veio-de-um-anuncio-que-eu-reconheco",
+              "rotulo": "veio de um anúncio que eu reconheço",
+              "regra": null,
+              "condicao": {
+                "sinal": "anuncioReconhecido",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "excecao": {
+                "sinal": "",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [
+                {
+                  "id": "r:conteudo-pedido:sem-cidade-anuncio",
+                  "rotulo": "manda o modelo daquele anúncio",
+                  "regra": "conteudo-pedido",
+                  "condicao": null,
+                  "acao": null,
+                  "nota": "",
+                  "desligado": false,
+                  "filhos": [],
+                  "x": 1050,
+                  "y": 6474
+                }
+              ],
+              "x": 700,
+              "y": 6474
+            },
+            {
+              "id": "r:respondeu-os-dados:sem-cidade",
+              "rotulo": "agradecer: respondeu os dados, ou só expressou apoio",
+              "regra": "respondeu-os-dados",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "tambemQuando": [
+                "so-expressa-apoio"
+              ],
+              "x": 700,
+              "y": 6640
+            },
+            {
+              "id": "r:conteudo-pedido:sem-cidade",
+              "rotulo": "pediu conteúdo e há modelo mapeado",
+              "regra": "conteudo-pedido",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 6806
+            },
+            {
+              "id": "g:veio-de-um-anuncio-que-eu-reconheco-2",
+              "rotulo": "veio de um anúncio que eu reconheço",
+              "regra": null,
+              "condicao": {
+                "sinal": "anuncioReconhecido",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "excecao": {
+                "sinal": "",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [
+                {
+                  "id": "r:nunca-pediram-dados:anuncio-conhecido",
+                  "rotulo": "ainda não temos nome e cidade",
+                  "regra": "nunca-pediram-dados",
+                  "condicao": null,
+                  "acao": null,
+                  "nota": "",
+                  "desligado": false,
+                  "filhos": [],
+                  "x": 1050,
+                  "y": 6972
+                }
+              ],
+              "x": 700,
+              "y": 6972
+            },
+            {
+              "id": "r:ja-respondemos-antes:sem-cidade",
+              "rotulo": "já entregamos algo antes",
+              "regra": "ja-respondemos-antes",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 7138
+            }
+          ],
+          "x": 350,
+          "y": 5727
+        },
+        {
+          "id": "g:com-etiqueta-de-cidade",
+          "rotulo": "com etiqueta de cidade",
+          "regra": null,
+          "condicao": {
+            "sinal": "temEtiquetaDeCidade",
+            "negar": false,
+            "palavras": [],
+            "onde": "ultima"
+          },
+          "excecao": {
+            "sinal": "",
+            "negar": false,
+            "palavras": [],
+            "onde": "ultima"
+          },
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [
+            {
+              "id": "g:pediu-dinheiro-cesta-basica-ou-remedio-2",
+              "rotulo": "pediu dinheiro, cesta basica ou remedio",
+              "regra": null,
+              "condicao": {
+                "sinal": "pedeAjudaFinanceira",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "excecao": {
+                "sinal": "",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "acao": {
+                "tecla": null,
+                "resposta": null,
+                "ia": true
+              },
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 7304
+            },
+            {
+              "id": "g:quer-trabalhar-para-o-mandato-2",
+              "rotulo": "quer trabalhar para o mandato",
+              "regra": null,
+              "condicao": {
+                "sinal": "pedeEmprego",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "excecao": {
+                "sinal": "",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "acao": {
+                "tecla": null,
+                "resposta": null,
+                "ia": true
+              },
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 7470
+            },
+            {
+              "id": "g:pediu-que-a-gente-ligasse-2",
+              "rotulo": "pediu que a gente ligasse",
+              "regra": null,
+              "condicao": {
+                "sinal": "pedeLigacao",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "excecao": {
+                "sinal": "",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "acao": {
+                "tecla": null,
+                "resposta": "pedido-ligacao"
+              },
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 7636
+            },
+            {
+              "id": "g:quer-falar-com-o-deputado-2",
+              "rotulo": "quer falar com o deputado",
+              "regra": null,
+              "condicao": {
+                "sinal": "pedeFalarComDeputado",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "excecao": {
+                "sinal": "",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "acao": {
+                "tecla": null,
+                "resposta": "falar-com-deputado"
+              },
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 7802
+            },
+            {
+              "id": "r:ultima-pede-resposta-pessoal:com-cidade",
+              "rotulo": "você responde: áudio, texto longo, ou ela está passando mal",
+              "regra": "ultima-pede-resposta-pessoal",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "tambemQuando": [
+                "nao-pode-falar-agora",
+                "reclama-sem-resposta"
+              ],
+              "x": 700,
+              "y": 7968
+            },
+            {
+              "id": "r:ultima-e-so-reacao:com-cidade",
+              "rotulo": "mandou figura, emoji, sticker ou link",
+              "regra": "ultima-e-so-reacao",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 8134
+            },
+            {
+              "id": "g:so-cumprimentou-e-nada-mais-2",
+              "rotulo": "só cumprimentou, e nada mais",
+              "regra": null,
+              "condicao": {
+                "sinal": "soCortesia",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "excecao": {
+                "sinal": "momentoJaEnviado",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "acao": {
+                "tecla": "5",
+                "resposta": null
+              },
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 8300
+            },
+            {
+              "id": "r:pediu-algo-sem-dizer-o-que:com-cidade",
+              "rotulo": "você responde: pedido sem objeto, ou pergunta",
+              "regra": "pediu-algo-sem-dizer-o-que",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "tambemQuando": [
+                "pergunta-aberta"
+              ],
+              "x": 700,
+              "y": 8466
+            },
+            {
+              "id": "r:ultima-e-despedida:com-cidade",
+              "rotulo": "Só se despediu",
+              "regra": "ultima-e-despedida",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 8632
+            },
+            {
+              "id": "r:respondeu-nossa-pergunta:com-cidade",
+              "rotulo": "Você perguntou em que podia ajudar e ela respondeu",
+              "regra": "respondeu-nossa-pergunta",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 8798
+            },
+            {
+              "id": "r:rajada-de-anuncios:com-cidade",
+              "rotulo": "só clicou em vários anúncios: mensagem do momento",
+              "regra": "rajada-de-anuncios",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 8964
+            },
+            {
+              "id": "r:contexto-de-outro-dia:com-cidade",
+              "rotulo": "a última dela é de outro dia",
+              "regra": "contexto-de-outro-dia",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 9130
+            },
+            {
+              "id": "g:veio-de-um-anuncio-que-eu-reconheco-3",
+              "rotulo": "veio de um anúncio que eu reconheço",
+              "regra": null,
+              "condicao": {
+                "sinal": "anuncioReconhecido",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "excecao": {
+                "sinal": "",
+                "negar": false,
+                "palavras": [],
+                "onde": "ultima"
+              },
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [
+                {
+                  "id": "r:conteudo-pedido:com-cidade-anuncio",
+                  "rotulo": "manda o modelo daquele anúncio",
+                  "regra": "conteudo-pedido",
+                  "condicao": null,
+                  "acao": null,
+                  "nota": "",
+                  "desligado": false,
+                  "filhos": [],
+                  "x": 1050,
+                  "y": 9296
+                }
+              ],
+              "x": 700,
+              "y": 9296
+            },
+            {
+              "id": "r:respondeu-os-dados:com-cidade",
+              "rotulo": "agradecer: respondeu os dados, ou só expressou apoio",
+              "regra": "respondeu-os-dados",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "tambemQuando": [
+                "so-expressa-apoio"
+              ],
+              "x": 700,
+              "y": 9462
+            },
+            {
+              "id": "r:conteudo-pedido:com-cidade",
+              "rotulo": "pediu conteúdo e há modelo mapeado",
+              "regra": "conteudo-pedido",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 9628
+            },
+            {
+              "id": "r:ja-respondemos-antes",
+              "rotulo": "já entregamos algo antes",
+              "regra": "ja-respondemos-antes",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 9794
+            }
+          ],
+          "x": 350,
+          "y": 8549
+        }
+      ],
+      "x": 0,
+      "y": 6101
+    }
+  ]
+}

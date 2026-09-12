@@ -1,3 +1,46 @@
+## 2026-09-12 — v3.47.0 — o fluxo entrou no GitHub, e um teste não deixa envelhecer
+
+**Pedido dele:** *"o fluxo ficou fora do GitHub"*, logo depois de pedir *"me dê o link do último
+fluxo"* e eu responder com um caminho no `Downloads` dele.
+
+**Ele estava certo, e o argumento que mantinha o arquivo fora era meu.** O gerador existe desde
+03/09 e escrevia FORA do repositório de propósito, com a razão escrita no `CLAUDE.md`: *"não commite
+um retrato: snapshot envelhece no primeiro commit que mexe no padrão, e fluxo velho é pior que
+nenhum — ele reimporta e volta no tempo sem perceber"*. A razão é verdadeira e tem um custo que
+apareceu hoje: **o único jeito de ele ter o fluxo era eu lembrar de gerar e mandar**, e o histórico
+do quadro não existia em lugar nenhum.
+
+**O que mudou:**
+
+1. **`tools/fluxo-padrao.json` é versionado**, em caminho FIXO — é o link que ele guarda.
+2. **`tests/arvore.test.mjs` confere que o arquivo é o `fluxoPadrao` de agora.** É isto que derruba
+   o argumento antigo: arquivo velho não passa nos testes, então não chega a ser commitado.
+   Medido: apaguei uma caixa do arquivo à mão e a suíte caiu com *"o quadro do codigo mudou e o
+   arquivo nao"*; regerando, voltou a passar.
+3. **As caixas de AGRUPAMENTO ganharam id estável** (`g:pessoa-retornando`, `g:com-etiqueta-de-cidade`)
+   — só na exportação, porque `arvore.fluxoPadrao()` é documento dele. Antes elas usavam `novoId()`,
+   que carrega o relógio: **dois exports do mesmo quadro davam arquivos diferentes**, e o `git diff`
+   acusaria mudança em todo commit. Agora o diff só mexe quando o quadro mexe — que é o que torna o
+   arquivo útil no GitHub. As caixas de regra já tinham id falante (`r:conteudo-pedido:chegada`).
+4. **A conferência compara só a ÁRVORE, nunca o carimbo da versão.** Senão todo bump de manifesto
+   obrigaria a regerar, e o carimbo deixaria de dizer QUANDO o quadro mudou — que é o que a janela
+   do fluxo mostra.
+
+**Medição do estado:** o quadro não muda desde a **3.19.0** (`045a028`, o último commit que tocou
+`src/lib/arvore.js`). Comparei o `fluxopadrao3.19.0.json` que está no `Downloads` dele com o padrão
+de agora: **árvore idêntica**, só os ids diferiam. O arquivo entra carimbado **3.47.0**, que é
+quando ele passou a ser versionado; daqui em diante o carimbo diz em que versão o quadro mudou pela
+última vez.
+
+**Nada de comportamento mudou** — nenhum arquivo de `src/` foi tocado. 16 suítes verdes, os dois
+verificadores limpos.
+
+**Arquivos:** `tools/exportar-fluxo.mjs` (reescrito: `gerar()`, `conferir()`, ids estáveis, modo
+`--conferir`), `tools/fluxo-padrao.json` (novo, versionado), `tests/arvore.test.mjs` (+1 grupo),
+`CLAUDE.md` (regra reescrita), `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-10 — ESTADO DE AGORA (v3.46.0) — leia isto primeiro numa sessão nova
 
 Entrada de passagem de contexto, e a única do arquivo que descreve o **presente** em vez de uma
@@ -119,8 +162,8 @@ reescrever o texto de um aviso sem reescrever a trava a faria deixar de casar em
    prioridade. A janela do fluxo diz isso sozinha desde a 2.56: a linha de versão mais quantas
    caixas do padrão de hoje faltam no quadro dele.
 
-   Regenerar: `node tools/exportar-fluxo.mjs <saida.json>`, saída **FORA** do repositório, e nunca
-   commitar o arquivo.
+   **Desde a 3.47 o arquivo está no repositório**, em `tools/fluxo-padrao.json` — link fixo, e o
+   `tests/arvore.test.mjs` não deixa envelhecer. Regenerar: `node tools/exportar-fluxo.mjs`.
 2. **Aba Automatizado → "Etiquetas que a rodada aplica": as três continuam vazias.**
    - **SEM INTERESSE** — sem ela a rodada não marca, e na visita seguinte precisa redescobrir a
      hostilidade do zero;

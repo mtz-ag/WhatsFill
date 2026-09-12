@@ -409,15 +409,25 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   quando ja mandamos" sao caixas diferentes, e trata-las como a mesma faria o cartao "O padrao
   mudou?" dizer que ele ja tem uma guarda que nao tem.
 
-- **Mexeu no `fluxoPadrao`? Gere o arquivo e MANDE para ele no mesmo turno.** Combinado de
-  03/09/2026: *"arrume o ramo, eu vou importar. Todas as mudancas feitas aqui, se afetarem o ramo,
-  voce deve me passar o ramo atual"*. `node tools/exportar-fluxo.mjs <saida.json>` escreve o padrao
-  de agora no formato que a janela importa, **confere relendo** (a peneira do `deArquivo` descarta
-  regra que sumiu, sinal desconhecido e tecla inventada — arquivo que perde ramo na importacao
-  chegaria a ele como "veio faltando pedaco") e imprime o fluxo em texto para conferir antes de
-  mandar. **A saida vai FORA do repositorio**, que e a pasta que o Chrome carrega. E **nao commite
-  um retrato**: snapshot envelhece no primeiro commit que mexe no padrao, e fluxo velho e pior que
-  nenhum — ele reimporta e volta no tempo sem perceber. O gerador e versionado; o arquivo, nao.
+- **Mexeu no `fluxoPadrao`? Rode `node tools/exportar-fluxo.mjs` e commite `tools/fluxo-padrao.json`
+  junto.** Combinado de 03/09/2026: *"arrume o ramo, eu vou importar. Todas as mudancas feitas aqui,
+  se afetarem o ramo, voce deve me passar o ramo atual"*. O gerador escreve o padrao de agora no
+  formato que a janela importa, **confere relendo** (a peneira do `deArquivo` descarta regra que
+  sumiu, sinal desconhecido e tecla inventada — arquivo que perde ramo na importacao chegaria a ele
+  como "veio faltando pedaco") e imprime o fluxo em texto.
+  **O ARQUIVO E VERSIONADO desde 12/09/2026, a pedido dele** (*"o fluxo ficou fora do GitHub"*) — o
+  caminho e FIXO porque e o link que ele guarda. Ate entao a saida ia para fora do repositorio, com
+  o argumento de que **retrato commitado envelhece** no primeiro commit que mexe no padrao, e fluxo
+  velho e pior que nenhum: ele reimporta e volta no tempo sem perceber. **O argumento era verdadeiro
+  e deixou de ser** — `tests/arvore.test.mjs` chama `conferir()` e cai quando o arquivo nao e o
+  `fluxoPadrao` de agora, entao **arquivo velho nao passa nos testes e nao chega a ser commitado**.
+  Duas coisas a lembrar: as caixas de AGRUPAMENTO recebem id derivado do rotulo (`g:<slug>`) so na
+  exportacao, porque `novoId()` carrega o relogio e faria o `git diff` acusar mudanca onde nao
+  houve — **o diff so mexe quando o quadro mexe, e e isso que torna o arquivo util no GitHub**; e a
+  conferencia compara **so a arvore**, nunca o carimbo da versao, senao todo bump de manifesto
+  obrigaria a regerar e o carimbo deixaria de dizer QUANDO o quadro mudou. Passar um caminho
+  (`node tools/exportar-fluxo.mjs <saida.json>`) continua escrevendo noutro lugar, para mandar a ele
+  a mao — **fora do repositorio**, que e a pasta que o Chrome carrega.
 
 - **PROTECAO do codigo vale mesmo fora do quadro dele — e este foi o custo de "nada entra
   sozinho".** O quadro e uma COPIA do padrao, e regra nova nunca chega nele: desenho certo, porque

@@ -18,6 +18,7 @@ import * as arv from '../src/lib/arvore.js';
 import * as cortesia from '../src/lib/cortesia.js';
 import { sugerirAcao, REGRAS } from '../src/lib/sugestao.js';
 import * as sugestaoLib from '../src/lib/sugestao.js';
+import { conferir as conferirFluxoNoDisco } from '../tools/exportar-fluxo.mjs';
 
 /** As bandeiras que as dezesseis regras leem. A bateria liga e desliga estas. */
 const BANDEIRAS = [
@@ -2576,6 +2577,22 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   const noQuadro = arv.todosOsNos(fluxo).find(({ no }) => no.id === d.id)?.no;
   check((noQuadro?.tambemQuando || []).includes('so-expressa-apoio'),
     'e ela esta JUNTADA com "so expressa apoio", que tem outro texto');
+}
+
+grupo('o arquivo do fluxo no GitHub e o quadro de AGORA (12/09/2026)');
+{
+  /**
+   * **Por que este teste existe.** O arquivo do fluxo passou a ser versionado a pedido dele
+   * (*"o fluxo ficou fora do GitHub"*). O argumento que o mantinha fora era bom — retrato
+   * commitado envelhece no primeiro commit que mexe no fluxoPadrao, e fluxo velho e pior que
+   * nenhum: ele reimporta e volta no tempo sem perceber. **Este teste e o que derruba o
+   * argumento**: arquivo velho nao passa, entao nao chega a ser commitado.
+   *
+   * A comparacao e so da ARVORE, e nao do carimbo da versao: bump de manifesto nao mexe no
+   * quadro, e obrigar a regerar faria o carimbo deixar de dizer quando o quadro mudou.
+   */
+  const r = conferirFluxoNoDisco();
+  check(r.ok, r.ok ? 'tools/fluxo-padrao.json esta em dia com arvore.fluxoPadrao()' : r.erro);
 }
 
 fim();
