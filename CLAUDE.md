@@ -2805,6 +2805,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   conteudo digital (a etiqueta manda PULAR) e marca DEPOIS da decisao da passada, para o modelo continuar
   com prioridade. **E `etiquetaDaLista`/`etiquetaDeEndereco` sao ASSINCRONAS**: `!etiquetaDeEndereco()`
   sem `await` testa uma promessa e e sempre falso — nenhum teste nem verificador pega isso.
+- **UM CAMPO CUJO SIGNIFICADO MUDA COM OUTRO CONTROLE E UM CAMPO CONFUSO — a chave da IA,
+  12/09/2026.** Pedido dele: *"o armazenamento da key ficou confuso, deixe um espaco de key para cada
+  modelo"*. Havia **um campo so**, e ele era da casa do MODELO ESCOLHIDO: para salvar a chave da
+  OpenAI era preciso trocar o modelo, salvar e trocar de volta — e o failsafe precisa das DUAS de uma
+  vez. A linha *"Guardadas: Anthropic ✓ · OpenAI —"* era remendo: ela existia porque o campo escondia
+  a outra chave. Hoje sao **dois campos visiveis**, cada um dizendo se esta salva, **quais modelos
+  atende** e **para que serve agora**. **E por CASA e nao por modelo** — a mesma chave da Anthropic
+  atende Haiku, Sonnet e Opus, entao um campo por modelo seria a mesma chave colada seis vezes; o que
+  faltava era o campo DIZER quais modelos ele atende. O armazenamento nao mudou (`iaChave` e
+  `iaChaveOpenai`, pela razao de 07/09), a guarda do prefixo ficou e passou a dizer **em qual campo**
+  a chave vai, e a lista de modelos virou uma so (`CASAS`), usada pelo seletor e pelos campos.
+
 - **ABREVIACAO DE CIDADE SE CORRIGE SOZINHA, E `confianca: 'exata'` NAO E A LINHA DE CORTE.**
   Decisao dele (12/09/2026): *"isso ja era pra estar sendo corrigido pela IA; se ja escreve a cidade
   pode reescrever"*. **Nao precisa de IA:** `POA` resolve para Porto Alegre pela tabela de apelidos

@@ -10356,20 +10356,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const modeloAtual = cfg.modelo || iaLib.MODELO_PADRAO;
     const provedorAtual = iaLib.provedorDoModelo(modeloAtual);
 
-    const selModelo = h('select', {});
-    for (const [casa, modelos] of [
-      ['Anthropic (Claude)', [
+    /**
+     * **As casas e os modelos de cada uma, numa lista só** — ela monta o seletor E os campos de
+     * chave logo abaixo. Duas listas divergiriam no primeiro modelo novo, e a que ninguém olha
+     * seria a que diz para qual chave o modelo escolhido vai.
+     */
+    const CASAS = [
+      [iaLib.PROVEDOR_ANTHROPIC, [
         ['claude-haiku-4-5', 'Haiku 4.5 — o mais barato (~US$ 2,50 por mil contatos)'],
         ['claude-sonnet-5', 'Sonnet 5 — meio-termo (~US$ 4,50 por mil)'],
         ['claude-opus-5', 'Opus 5 — o mais capaz (~US$ 11 por mil)'],
       ]],
-      ['OpenAI (ChatGPT)', [
+      [iaLib.PROVEDOR_OPENAI, [
         ['gpt-5', 'gpt-5 — o grande; raciocina (~US$ 11 por mil)'],
         ['gpt-5-mini', 'gpt-5-mini — um terço do Haiku (~US$ 2 por mil)'],
         ['gpt-5-nano', 'gpt-5-nano — o mais barato de todos (~US$ 0,45 por mil)'],
       ]],
-    ]) {
-      const grupo = h('optgroup', { label: casa });
+    ];
+
+    const selModelo = h('select', {});
+    for (const [casaId, modelos] of CASAS) {
+      const grupo = h('optgroup', { label: iaLib.NOME_DO_PROVEDOR[casaId] });
       for (const [id, rotulo] of modelos) {
         const opt = h('option', { value: id }, rotulo);
         if (id === modeloAtual) opt.selected = true;
@@ -10479,64 +10486,102 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'o mesmo texto no Claude e no ChatGPT.')
     );
 
-    // A chave fica no armazenamento e NUNCA é relida para a tela: campo de senha, e o que se
-    // mostra é se existe ou não. Chave visível no painel é chave que aparece em print.
-    const chaveDoProvedor = iaLib.CHAVE_DO_PROVEDOR[provedorAtual];
-    const temEsta = !!state.iaChaves?.[provedorAtual];
-    const prefixo = provedorAtual === iaLib.PROVEDOR_OPENAI ? 'sk-…' : 'sk-ant-…';
-    const campoChave = h('input', { type: 'password', placeholder: temEsta ? '•••••• (já salva)' : prefixo });
-    const salvarChave = h('button', { class: 'wf-btn', type: 'button' }, 'Salvar chave');
-    salvarChave.addEventListener('click', () =>
-      withBusy(async () => {
-        const valor = campoChave.value.trim();
-        if (!valor) return setStatus('Cole a chave antes de salvar.', 'err');
-        /**
-         * **Chave colada no provedor errado é o erro mais provável desta tela**, e ele custaria
-         * uma rodada inteira devolvendo 401 — que o painel traduz como *"a chave da API foi
-         * recusada"*, mandando conferir a chave que está certa. O prefixo é o que separa as duas
-         * sem chamar nenhuma API, então a conferência é de graça.
-         */
-        const pareceAnthropic = /^sk-ant-/i.test(valor);
-        const esperaAnthropic = provedorAtual === iaLib.PROVEDOR_ANTHROPIC;
-        if (pareceAnthropic !== esperaAnthropic) {
-          return setStatus(
-            `Essa chave não parece ser da ${iaLib.NOME_DO_PROVEDOR[provedorAtual]}: as da Anthropic ` +
-              'começam com "sk-ant-" e as da OpenAI não. Troque o modelo antes, ou confira a chave.',
-            'err'
-          );
-        }
-        await store.set(chaveDoProvedor, valor);
-        await lerChavesDaIA();
-        campoChave.value = '';
-        setStatus('Chave salva. Ela fica só no armazenamento da extensão e não passa pela página.');
-        renderAll();
-      })
-    );
-    const apagarChave = h('button', { class: 'wf-btn', type: 'button' }, 'Apagar chave');
-    apagarChave.addEventListener('click', () =>
-      withBusy(async () => {
-        await store.set(chaveDoProvedor, '');
-        await lerChavesDaIA();
-        setStatus('Chave apagada.');
-        renderAll();
-      })
-    );
+    /**
+     * **UMA CHAVE POR CASA, as duas na tela ao mesmo tempo** — pedido dele (12/09/2026): *"o
+     * armazenamento da key ficou confuso, deixe um espaço de key para cada modelo"*.
+     *
+     * Havia **um campo só**, e o que ele significava mudava com o modelo escolhido: para salvar a
+     * chave da OpenAI era preciso trocar o modelo primeiro, salvar, e trocar de volta. Pior com o
+     * failsafe, que precisa das DUAS chaves de uma vez — titular numa casa, reserva na outra. A
+     * linha *"Guardadas: Anthropic ✓ · OpenAI —"* era remendo em cima disso: ela existia porque o
+     * campo escondia a outra chave.
+     *
+     * **É por CASA e não por modelo, e a razão é o que a chave é:** uma chave da Anthropic atende
+     * Haiku, Sonnet e Opus; uma da OpenAI atende os três gpt-5. Um campo por modelo seria a mesma
+     * chave colada seis vezes — mais confuso, não menos. Cada campo diz quais modelos ele atende,
+     * que é a informação que faltava.
+     *
+     * A chave continua **nunca sendo relida para a tela**: campo de senha, e o que se mostra é se
+     * existe. Chave visível no painel é chave que aparece em print.
+     */
+    const provedorDoReserva = String(cfg.modeloReserva || '').trim()
+      ? iaLib.provedorDoModelo(cfg.modeloReserva)
+      : null;
+
+    for (const [casaId, modelos] of CASAS) {
+      const nomeDaCasa = iaLib.NOME_DO_PROVEDOR[casaId];
+      const chaveDaCasa = iaLib.CHAVE_DO_PROVEDOR[casaId];
+      const tem = !!state.iaChaves?.[casaId];
+      const prefixo = casaId === iaLib.PROVEDOR_OPENAI ? 'sk-…' : 'sk-ant-…';
+
+      const campoChave = h('input', { type: 'password', placeholder: tem ? '•••••• (já salva)' : prefixo });
+      const salvarChave = h('button', { class: 'wf-btn', type: 'button' }, 'Salvar');
+      salvarChave.addEventListener('click', () =>
+        withBusy(async () => {
+          const valor = campoChave.value.trim();
+          if (!valor) return setStatus(`Cole a chave da ${nomeDaCasa} antes de salvar.`, 'err');
+          /**
+           * **Chave colada no campo errado custaria uma rodada inteira devolvendo 401** — que o
+           * painel traduz como *"a chave da API foi recusada"*, mandando conferir a chave que está
+           * certa. O prefixo separa as duas sem chamar API nenhuma, então a conferência é de graça.
+           *
+           * Com um campo por casa o aviso mudou de recado: antes mandava **trocar o modelo**;
+           * agora diz em qual dos dois campos aquela chave vai.
+           */
+          const pareceAnthropic = /^sk-ant-/i.test(valor);
+          const esperaAnthropic = casaId === iaLib.PROVEDOR_ANTHROPIC;
+          if (pareceAnthropic !== esperaAnthropic) {
+            const outra = iaLib.NOME_DO_PROVEDOR[
+              casaId === iaLib.PROVEDOR_ANTHROPIC ? iaLib.PROVEDOR_OPENAI : iaLib.PROVEDOR_ANTHROPIC
+            ];
+            return setStatus(
+              `Essa chave não parece ser da ${nomeDaCasa}: as da Anthropic começam com "sk-ant-" e ` +
+                `as da OpenAI não. Ela vai no campo da ${outra}.`,
+              'err'
+            );
+          }
+          await store.set(chaveDaCasa, valor);
+          await lerChavesDaIA();
+          campoChave.value = '';
+          setStatus(`Chave da ${nomeDaCasa} salva. Ela fica só no armazenamento da extensão e não passa pela página.`);
+          renderAll();
+        })
+      );
+
+      const apagarChave = h('button', { class: 'wf-btn', type: 'button' }, 'Apagar');
+      apagarChave.disabled = !tem;
+      apagarChave.addEventListener('click', () =>
+        withBusy(async () => {
+          await store.set(chaveDaCasa, '');
+          await lerChavesDaIA();
+          setStatus(`Chave da ${nomeDaCasa} apagada.`);
+          renderAll();
+        })
+      );
+
+      // Para que ESTA chave serve agora — é o que responde "preciso das duas?" sem adivinhação.
+      const usos = [];
+      if (casaId === provedorAtual) usos.push('o modelo escolhido');
+      if (casaId === provedorDoReserva) usos.push('o reserva do failsafe');
+
+      body.append(
+        h('label', { class: 'wf-field' }, [h('span', {}, `Chave da ${nomeDaCasa}`), campoChave]),
+        h('div', { class: 'wf-row' }, [salvarChave, apagarChave]),
+        h('div', { class: tem || !usos.length ? 'wf-origin' : 'wf-block', 'data-fica': '1' },
+          (tem ? 'Salva ✓' : 'NÃO salva') +
+            ` — atende ${modelos.map(([id]) => id).join(', ')}.` +
+            (usos.length
+              ? ` Hoje ela atende ${usos.join(' e ')}${tem ? '.' : ' — sem ela a IA não escreve nada.'}`
+              : ' Nenhum modelo escolhido agora usa esta casa.'))
+      );
+    }
+
     body.append(
-      h('label', { class: 'wf-field' }, [
-        h('span', {}, `Chave da API — ${iaLib.NOME_DO_PROVEDOR[provedorAtual]}`),
-        campoChave,
-      ]),
-      h('div', { class: 'wf-row' }, [salvarChave, apagarChave]),
-      h('div', { class: temEsta ? 'wf-origin' : 'wf-block' },
-        temEsta
-          ? `Há chave salva para a ${iaLib.NOME_DO_PROVEDOR[provedorAtual]}, que é a casa do modelo escolhido.`
-          : `NÃO há chave salva para a ${iaLib.NOME_DO_PROVEDOR[provedorAtual]} — sem ela a IA não ` +
-              'escreve nada, e a rodada segue só com o fluxo.'),
-      // As duas guardadas, porque trocar de modelo troca o campo: sem esta linha, a chave do outro
-      // provedor fica invisível e parece perdida.
       h('div', { class: 'wf-origin' },
-        `Guardadas: Anthropic ${state.iaChaves?.anthropic ? '✓' : '—'} · OpenAI ${state.iaChaves?.openai ? '✓' : '—'}. ` +
-          'As duas convivem: trocar de modelo não obriga a colar chave de novo.'),
+        'Uma chave por CASA, e não por modelo: a mesma chave da Anthropic atende Haiku, Sonnet e ' +
+          'Opus, e a da OpenAI atende os três gpt-5. As duas convivem — trocar de modelo não ' +
+          'obriga a colar chave de novo, e o failsafe precisa das duas quando titular e reserva ' +
+          'são de casas diferentes.'),
       h('div', { class: 'wf-origin' },
         'A chave fica no armazenamento da extensão e a chamada sai do service worker — ela NÃO ' +
           'entra na página do mobiliza. Isso importa: o gancho da extensão roda no mesmo ' +

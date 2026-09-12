@@ -1,3 +1,48 @@
+## 2026-09-12 — v3.53.0 — uma chave por casa, as duas na tela
+
+**Pedido dele:** *"o armazenamento da key ficou confuso, deixe um espaço de key para cada modelo"*.
+
+**O que estava confuso, e ele está certo:** havia **um campo só**, e o que ele significava mudava com
+o modelo escolhido. Para salvar a chave da OpenAI era preciso **trocar o modelo primeiro**, salvar, e
+trocar de volta. Pior com o failsafe, que precisa das **duas** chaves ao mesmo tempo — titular numa
+casa, reserva na outra. A linha *"Guardadas: Anthropic ✓ · OpenAI —"* era remendo em cima disso:
+ela só existia porque o campo escondia a outra chave.
+
+**O que mudou:** dois campos, sempre visíveis — **"Chave da Anthropic (Claude)"** e **"Chave da
+OpenAI (ChatGPT)"** —, cada um com Salvar e Apagar próprios e uma linha dizendo:
+
+- **se está salva ou não** (`Salva ✓` / `NÃO salva`);
+- **quais modelos ela atende** (`claude-haiku-4-5, claude-sonnet-5, claude-opus-5`);
+- **para que ela serve agora** (*"Hoje ela atende o modelo escolhido e o reserva do failsafe"*), que é
+  o que responde "preciso das duas?" sem adivinhação.
+
+**Por casa e não por modelo, e a razão é o que a chave É:** uma chave da Anthropic atende Haiku,
+Sonnet e Opus; uma da OpenAI atende os três gpt-5. Um campo por modelo seria a mesma chave colada
+seis vezes — mais confuso, não menos. O que faltava não era um campo por modelo: era **cada campo
+dizer quais modelos ele atende**, e isso está escrito na tela agora.
+
+**Nada mudou no armazenamento:** continuam duas chaves, `iaChave` (Anthropic) e `iaChaveOpenai`, pelo
+mesmo motivo de 07/09 — renomear apagaria a que ele já tem salva, porque `store.get` só mescla
+default em chave que FALTA. As duas seguem fora do backup exportado.
+
+**A guarda do prefixo ficou e trocou de recado:** chave colada no campo errado é o erro mais provável
+desta tela e custaria uma rodada devolvendo 401. Antes o aviso mandava **trocar o modelo**; agora diz
+**em qual dos dois campos** aquela chave vai.
+
+**A lista de modelos virou uma só** (`CASAS`), usada pelo seletor E pelos campos de chave: duas listas
+divergiriam no primeiro modelo novo, e a que ninguém olha seria justamente a que diz para qual chave
+o modelo escolhido vai.
+
+**Medido no painel a 380px** (a largura real), com o harness que monta o painel de verdade: **zero
+erros de JavaScript**, os dois campos de senha presentes com os rótulos e os prefixos certos
+(`sk-ant-…` e `sk-…`), e as duas linhas de estado visíveis — nenhuma delas recolhida atrás do
+"ⓘ detalhes", porque o estado é DADO e leva `data-fica`.
+
+**Arquivos:** `src/panel/panel.js`, `CLAUDE.md`, `registro.md`, `manifest.json`. Sem mudança em
+`src/lib/` — as 16 suítes seguem verdes e os dois verificadores limpos.
+
+---
+
 ## 2026-09-12 — v3.52.0 — a abreviação da cidade se corrige sozinha
 
 **Decisão dele:** *"isso já era pra estar sendo corrigido pela IA; se já escreve a cidade pode
