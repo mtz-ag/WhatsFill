@@ -30,6 +30,7 @@ import { MSG_FLUXO } from '../lib/fluxo-msg.js';
 import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
+import { criarGuardaDeRolagem, TECLAS_QUE_ROLAM } from './rolagem.js';
 import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
@@ -292,6 +293,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   const body = h('div', { class: 'wf-body' });
   const status = h('div', { class: 'wf-status' });
   root.append(header, nav, body, status);
+
+  /**
+   * **O painel não perde o lugar quando um botão redesenha a aba** — relato dele (13/09/2026):
+   * *"vários botões ao serem clicados rolam a página da extensão e eu tenho que procurar toda vez
+   * onde eu estava"*. Quem puxava a rolagem era o conteúdo que chega DEPOIS do desenho (o corpo fica
+   * curto por um instante). Ver `panel/rolagem.js`. Roda, toque, tecla de rolar e a barra de rolagem
+   * soltam a guarda: a posição passa a ser dele.
+   */
+  const rolagem = criarGuardaDeRolagem(body);
+  body.addEventListener('wheel', () => rolagem.soltar(), { passive: true });
+  body.addEventListener('touchstart', () => rolagem.soltar(), { passive: true });
+  body.addEventListener('keydown', (e) => {
+    if (TECLAS_QUE_ROLAM.has(e.key)) rolagem.soltar();
+  });
+  // Clique na BARRA de rolagem tem o próprio corpo como alvo; clique num botão, não.
+  body.addEventListener('pointerdown', (e) => {
+    if (e.target === body) rolagem.soltar();
+  });
 
   if (docked) {
     root.style.setProperty('--wf-width', `${initialWidth}px`);
@@ -1457,6 +1476,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   function renderAll() {
     for (const btn of nav.children) btn.classList.toggle('wf-active', btn.dataset.tab === state.tab);
     renderHeader();
+    rolagem.antesDeDesenhar(state.tab);
     body.replaceChildren();
     if (state.tab === 'respostas') renderRespostas();
     else if (state.tab === 'automatizado') renderAutomatizado();
@@ -1502,6 +1522,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     recolherExplicacoes(body, detalhesAbertos, {
       resumir: state.tab === 'automatizado' || state.tab === 'config',
     });
+    // Depois de recolher (que muda a altura) e a cada pedaço de conteúdo que chegar atrasado.
+    rolagem.devolver();
 
     /**
      * **E de novo quando o corpo muda** — parte do conteúdo chega DEPOIS do desenho, e esse pedaço

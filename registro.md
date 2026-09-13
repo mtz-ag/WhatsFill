@@ -1,3 +1,40 @@
+## 2026-09-13 — v3.58.0 — o painel não perde o lugar quando um botão redesenha a aba
+
+**Relato dele:** *"vários botões da extensão ao serem clicados rolam página da extensão e eu tenho que
+procurar toda vez onde eu estava"*.
+
+**Medido num navegador antes de mexer, e a primeira hipótese caiu.** Eu suspeitava do
+`body.replaceChildren()` do `renderAll()`, que esvazia o corpo e desenha de novo. **Isso sozinho não
+perde nada:** feito na mesma tarefa, o navegador nunca vê o corpo vazio (rolagem 1500 → 1500). O que
+perde é o conteúdo que chega **depois** do desenho: com uma parte desenhada na hora e o resto logo
+em seguida, a rolagem foi de **1500 para 240** e ficou lá.
+
+**E é assim que as abas Automatizado e Config se desenham:** vários pedaços esperam o armazenamento,
+a lista de etiquetas ou as observações. Nesse intervalo o corpo fica curto, o navegador puxa a
+rolagem para o que cabe, e quando o resto chega ela não volta. Todo botão passa por `withBusy`, que
+redesenha no `finally` — daí *"vários botões"*.
+
+**O conserto** (`src/panel/rolagem.js`): guardar a posição antes de desenhar e devolvê-la enquanto o
+conteúdo cresce, por uma janela de 4 s.
+- **Queda sem ninguém tocar é o navegador encolhendo** — nada no corpo do painel rola sozinho (não há
+  `scrollIntoView`, e os dois `focus()` ficam nas caixas flutuantes).
+- **Dois desenhos seguidos não trocam o alvo pelo valor encolhido** — cada clique redesenha mais de
+  uma vez.
+- **Quem manda é ele:** roda do mouse, toque, tecla de rolar ou a barra de rolagem soltam a guarda na
+  hora. **Trocar de aba começa do topo.**
+
+**Remedido com o conserto, no navegador:** 1500 → 240 enquanto curto → **1500** quando o resto chega;
+e rolando durante o carregamento, a posição dele (30) fica.
+
+**O que não foi medido:** a extensão de verdade, na aba do mobiliza. A página de teste imita o corpo
+do painel (mesmo CSS de rolagem) e o jeito de desenhar; se algum botão continuar pulando, a print dele
+diz qual, e o suspeito passa a ser outra coisa.
+
+**Arquivos:** `src/panel/rolagem.js` (novo), `src/panel/panel.js`, `tests/rolagem.test.mjs` (novo,
+17ª suíte), `CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-12 — v3.57.0 — roupa não é material: a IA diz que não temos, sem endereço
 
 **Pedido dele:** *"veja se roupas se encaixa na lei eleitoral, se não já corte de qualquer maneira

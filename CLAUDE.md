@@ -2146,6 +2146,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **REDESENHAR NAO PERDE A ROLAGEM; O CONTEUDO QUE CHEGA DEPOIS PERDE** (13/09/2026). Relato dele:
+  *"varios botoes ao serem clicados rolam a pagina da extensao"*. Medido: `replaceChildren` + desenho
+  na mesma tarefa mantem a rolagem (1500 → 1500); desenho curto com o resto chegando depois a leva
+  para 240 e ela nao volta — e as abas Automatizado e Config tem pedacos que esperam o armazenamento.
+  Hoje `panel/rolagem.js` guarda antes de `renderAll` e devolve a cada mudanca do corpo (no mesmo
+  passe do `encolherExplicacoes`), por 4 s, soltando na roda/toque/tecla/barra. **Nao ponha
+  `scrollIntoView` nem `focus()` DENTRO do corpo** sem soltar a guarda antes: dentro da janela, a
+  guarda le qualquer queda da rolagem como o navegador encolhendo e puxa de volta.
 - **`store.get` só mescla defaults em ALGUMAS chaves.** Chave nova dentro de um objeto já salvo
   (`settings`, `auto`, `ia`, …) chega como `undefined` em quem já usava, e o default nunca o
   alcança. Custou um teto de gasto que nasceria desligado justamente em quem mais usa. Campo novo
@@ -3627,10 +3635,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
 > `src/` e reclama só de `SyntaxError`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as dezesseis suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as dezessete suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,
