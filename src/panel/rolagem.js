@@ -15,10 +15,15 @@
  * **O conserto guarda a posição antes de desenhar e a devolve enquanto o conteúdo cresce**, por uma
  * janela curta. Três regras:
  *
- *  1. **Queda sem ninguém tocar é o navegador encolhendo.** Nada no corpo do painel rola sozinho
- *     (não há `scrollIntoView`, e os dois `focus()` do painel ficam nas caixas flutuantes, fora do
- *     corpo) — então, dentro da janela, rolagem menor que a guardada só pode ser o corpo curto.
- *  2. **Dois desenhos seguidos não trocam o alvo pelo valor encolhido** — `withBusy` e `setStatus`
+ *  1. **Mudança sem ninguém tocar é o navegador mexendo.** Para cima é o corpo curto; **para baixo é a
+ *     ANCORAGEM do Chrome** (13/09/2026, *"ao adicionar anúncio novo ele rola toda vez pro fim"*): a lista
+ *     de anúncios some e volta ACIMA do que está na tela, e o navegador empurra a rolagem junto com o que
+ *     ficou visível (medido: 1764 → 2765). A v3.58 só devolvia a queda e deixava passar este. Hoje o corpo
+ *     tem `overflow-anchor: none` e a guarda devolve nos dois sentidos — uma cobre a falha da outra.
+ *     Nada no corpo do painel rola sozinho (não há `scrollIntoView`, e os dois `focus()` do painel
+ *     ficam nas caixas flutuantes, fora do corpo) — então, dentro da janela, rolagem diferente da
+ *     guardada só pode ser o navegador.
+ *  2. **Dois desenhos seguidos não trocam o alvo pelo valor que o navegador mexeu** — `withBusy` e `setStatus`
  *     redesenham várias vezes por clique, e o segundo leria a posição já puxada para cima.
  *  3. **Quem manda é ele:** roda do mouse, toque, tecla de rolar ou a barra de rolagem soltam o alvo
  *     na hora. E **trocar de aba começa do topo** — devolver a posição de uma aba em outra seria
@@ -40,7 +45,8 @@ export function criarGuardaDeRolagem(el, { agora = () => Date.now(), janelaMs = 
   let alvo = null;
   let chaveAtual = null;
 
-  const encolhida = () => !!alvo && el.scrollTop < alvo.top - 1;
+  // Nos DOIS sentidos: para cima e o corpo curto, para baixo e a ancoragem do navegador.
+  const deslocada = () => !!alvo && Math.abs(el.scrollTop - alvo.top) > 1;
 
   return {
     /** Chame ANTES de esvaziar o corpo, com a aba que vai ser desenhada. */
@@ -53,8 +59,8 @@ export function criarGuardaDeRolagem(el, { agora = () => Date.now(), janelaMs = 
         if (!primeira) el.scrollTop = 0;
         return;
       }
-      // Um desenho anterior ainda espera o conteúdo: a posição de agora é a encolhida, não a dele.
-      if (alvo && t <= alvo.ate && encolhida()) {
+      // Um desenho anterior ainda espera o conteúdo: a posição de agora é a que o navegador mexeu, não a dele.
+      if (alvo && t <= alvo.ate && deslocada()) {
         alvo.ate = t + janelaMs;
         return;
       }
@@ -68,7 +74,7 @@ export function criarGuardaDeRolagem(el, { agora = () => Date.now(), janelaMs = 
         alvo = null;
         return false;
       }
-      if (!encolhida()) return false;
+      if (!deslocada()) return false;
       el.scrollTop = alvo.top;
       return true;
     },

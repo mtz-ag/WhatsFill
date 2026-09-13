@@ -2153,7 +2153,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   Hoje `panel/rolagem.js` guarda antes de `renderAll` e devolve a cada mudanca do corpo (no mesmo
   passe do `encolherExplicacoes`), por 4 s, soltando na roda/toque/tecla/barra. **Nao ponha
   `scrollIntoView` nem `focus()` DENTRO do corpo** sem soltar a guarda antes: dentro da janela, a
-  guarda le qualquer queda da rolagem como o navegador encolhendo e puxa de volta.
+  guarda le qualquer mudanca da rolagem como o navegador mexendo e puxa de volta.
+  **E o navegador empurra para BAIXO tambem (v3.59, mesmo dia):** *"ao adicionar anuncio novo ele rola
+  toda vez pro fim"* — a ANCORAGEM de rolagem do Chrome segura na tela o que estava visivel quando o
+  conteudo ACIMA muda de altura, e a lista de anuncios some e volta acima do resto (1764 → 2765). A
+  guarda da v3.58 so devolvia a queda. Hoje `.wf-body` tem `overflow-anchor: none` e a guarda devolve
+  nos dois sentidos. **Ao medir defeito de rolagem, meca os DOIS sentidos**: a primeira medicao so
+  procurava a queda, e o caso dele era o contrario.
 - **`store.get` só mescla defaults em ALGUMAS chaves.** Chave nova dentro de um objeto já salvo
   (`settings`, `auto`, `ia`, …) chega como `undefined` em quem já usava, e o default nunca o
   alcança. Custou um teto de gasto que nasceria desligado justamente em quem mais usa. Campo novo

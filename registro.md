@@ -1,3 +1,40 @@
+## 2026-09-13 — v3.59.0 — anúncio novo não joga mais a Config para o fim
+
+**Relato dele, depois da v3.58:** *"continua o mesmo problema, principalmente ao adicionar anúncio novo
+nas configurações; ele rola toda vez pro fim"*.
+
+**A v3.58 consertou metade, e a medição de ontem não pegava a outra.** Ela devolvia a rolagem quando o
+navegador a puxava para CIMA (corpo curto enquanto o conteúdo carrega). O relato é o contrário: a
+rolagem vai para BAIXO.
+
+**Medido numa página com o corpo do painel (mesmo CSS) e o caminho do botão** — `withBusy(gravar)`
+redesenha a lista de anúncios e o `finally` redesenha a aba inteira, com a lista chegando depois:
+
+| cenário | rolagem depois do clique |
+|---|---|
+| hoje, sem guarda | 1764 → **2765** (botão 595 px acima da tela) |
+| guarda da v3.58 (só queda) | 1764 → **2765** |
+| `overflow-anchor: none` | 1764 → 1764 |
+| guarda nos dois sentidos | 1764 → 1764 |
+| as duas juntas | 1764 → 1764 |
+
+**A causa é a ANCORAGEM de rolagem do Chrome:** quando o conteúdo ACIMA do que está na tela muda de
+altura, o navegador ajusta a rolagem para manter visível o que estava visível. A lista de anúncios fica
+acima do resto da Config; no redesenho ela some (o que estava abaixo sobe e vira a âncora) e depois volta
+— e o navegador empurra a rolagem para baixo junto com a âncora. Cada clique repete.
+
+**O conserto são as duas coisas juntas**, uma cobrindo a falha da outra: `overflow-anchor: none` no
+`.wf-body`, e a guarda de `panel/rolagem.js` devolvendo a posição nos **dois sentidos** (dentro da janela
+de 4 s e sem ele ter rolado). Roda, toque, tecla e barra continuam soltando a guarda.
+
+**O que não foi medido:** a extensão de verdade, na aba do mobiliza. Se ainda pular, a print dirá qual
+botão.
+
+**Arquivos:** `src/panel/panel.css`, `src/panel/rolagem.js`, `tests/rolagem.test.mjs` (+3), `CLAUDE.md`,
+`registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-13 — v3.58.0 — o painel não perde o lugar quando um botão redesenha a aba
 
 **Relato dele:** *"vários botões da extensão ao serem clicados rolam página da extensão e eu tenho que

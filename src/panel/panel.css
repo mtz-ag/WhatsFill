@@ -196,7 +196,14 @@
 }
 .wf-root nav button.wf-active { color: var(--wf-accent); border-bottom-color: var(--wf-accent); }
 
-.wf-body { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; padding: 10px 12px 20px; }
+/*
+  overflow-anchor: none — relato dele (13/09/2026): "ao adicionar anuncio novo nas configuracoes ele rola
+  toda vez pro fim". A ANCORAGEM de rolagem do Chrome segura na tela o elemento que estava visivel quando o
+  conteudo ACIMA dele muda de altura; a lista de anuncios some e volta no redesenho, e o navegador
+  empurrava a rolagem para baixo junto com o que ficou visivel. Medido: 1764 -> 2765 sem isto, 1764 com.
+  Quem cuida da posicao aqui e panel/rolagem.js.
+*/
+.wf-body { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; overflow-anchor: none; padding: 10px 12px 20px; }
 
 .wf-card {
   border: 1px solid var(--wf-border);

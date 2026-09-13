@@ -142,4 +142,32 @@ grupo('a janela acaba');
   check(JANELA_MS >= 2000 && JANELA_MS <= 10000, 'a janela e curta, mas cobre uma leitura lenta do armazenamento');
 }
 
+grupo('a ancoragem do navegador empurra para BAIXO, e a guarda devolve (13/09/2026)');
+{
+  /**
+   * Relato dele: *"ao adicionar anuncio novo nas configuracoes ele rola toda vez pro fim"*. Medido numa
+   * pagina com o corpo do painel: a lista de anuncios some e volta ACIMA do que esta na tela, e a
+   * ancoragem do Chrome leva a rolagem de 1764 para 2765. A guarda da v3.58 so devolvia a QUEDA.
+   */
+  const el = caixa({ conteudo: 5000 });
+  const r = relogio();
+  const g = criarGuardaDeRolagem(el, { agora: r.agora });
+  g.antesDeDesenhar('config');
+  el.scrollTop = 1764;
+  g.antesDeDesenhar('config');
+  el.scrollTop = 2765; // a ancoragem empurrou
+  check(g.devolver() === true && el.scrollTop === 1764, 'a rolagem empurrada para baixo volta ao lugar');
+
+  // segundo desenho enquanto empurrada: o alvo continua o dele
+  g.antesDeDesenhar('config');
+  el.scrollTop = 2765;
+  g.devolver();
+  check(el.scrollTop === 1764, 'e um segundo desenho nao troca o alvo pelo valor empurrado');
+
+  // ele rola para baixo por conta propria: a guarda solta e nao puxa
+  g.soltar();
+  el.scrollTop = 3000;
+  check(g.devolver() === false && el.scrollTop === 3000, 'rolagem dele para baixo nao e desfeita');
+}
+
 fim();
