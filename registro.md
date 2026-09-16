@@ -1,3 +1,31 @@
+## 2026-09-16 — v3.66.0 — o treino não para mais a rodada automática
+
+**Relato dele:** *"o modo treino interrompeu o fluxo de mandar modelo ao aparecer anúncio"*.
+
+**Medido no código antes de mexer.** A passada é fluxo → ação do anúncio → IA, e a IA só entra quando
+o fluxo manda o caso para a tecla 6 ou para ela. **Com o fluxo mandando o modelo (tecla 1 ou `a`), o
+treino não troca o modelo por rascunho no mesmo contato.** O que ele interrompia era a FILA: desde a
+v3.63 a janela de escolha abria também na rodada automática, e a rodada ficava esperando — nenhum
+contato seguinte era aberto, inclusive quem chegou pelo anúncio e receberia o modelo. Fechar a janela
+caía na tecla 6, que também espera.
+
+**Foi erro meu na v3.63, e dá para dizer exatamente qual:** ao consertar o *"o modo de treino falhou"*
+mudei duas coisas juntas — o esquema que a API recusava com 400 (a causa de verdade) e a exclusão da
+rodada automática, que eu tomei como segunda causa e não era.
+
+**Conserto:** na rodada automática a janela não abre — a IA escreve um rascunho só (o modo antigo, com o
+que já aprendeu) e a fila segue. A janela abre onde a decisão já é dele: rodada contato a contato,
+tecla 8 e aba Respostas. A decisão virou função pura (`aprendizado.abreJanelaDeTreino`) com teste,
+porque já foi invertida duas vezes em dois dias. O texto da caixa de treino diz isso.
+
+**Fica em aberto, oferecido a ele:** quem roda sempre no automático não treina nunca. Dá para a rodada
+seguir sem esperar e guardar as escolhas para ele fazer depois, numa lista.
+
+**Arquivos:** `src/lib/aprendizado.js`, `src/panel/panel.js`, `tests/aprendizado.test.mjs` (+5),
+`CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-16 — v3.65.0 — a IA confere se é mesmo caso de material antes de pôr a etiqueta
 
 **Pedido dele:** *"etiqueta de material continua problemática; quando o determinístico identificar

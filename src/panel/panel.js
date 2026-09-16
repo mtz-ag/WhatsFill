@@ -3168,10 +3168,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         ),
         h('div', { class: 'wf-origin' },
           state.ia?.treinando
-            ? 'Ligado, a janela das três opções abre em TODO rascunho — também na rodada automática, que ' +
-              'espera a sua escolha. Desligado, volta a ser um rascunho só, que roda sozinho e já sai com ' +
-              'tudo o que ela aprendeu. O treino custa a saída de dois textos a mais: US$ 2,04 → 3,39 por ' +
-              'mil rascunhos no Haiku (medido).'
+            ? 'Ligado, a janela das três opções abre quando a decisão é sua: rodada contato a contato, ' +
+              'tecla 8 e aba Respostas. Na rodada AUTOMÁTICA ela não abre — a IA escreve um rascunho só, ' +
+              'com o que já aprendeu, e a fila segue (esperar a escolha ali parava a rodada inteira). O ' +
+              'treino custa a saída de dois textos a mais: US$ 2,04 → 3,39 por mil rascunhos no Haiku.'
             : 'Um rascunho por chamada, com as regras aprendidas dentro do prompt. Ligue o treino ' +
               'quando quiser ensinar de novo — depois de mudar o padrão de resposta, por exemplo.'),
         /**
@@ -10546,11 +10546,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * três jeitos de pedir um rascunho (a tecla 8, a escalada do fluxo e o cartão da aba Respostas)
      * — três cópias divergiriam na primeira semana, que é o defeito mais registrado deste projeto.
      *
-     * **Treino ligado, a janela abre SEMPRE — também na rodada automática** (16/09/2026). A v3.62
-     * pulava a escolha na rodada automática, e ele roda automático: o treino não fazia nada no jeito
-     * dele de trabalhar. A regra *"toda pergunta que pode abrir dentro da rodada precisa de um jeito
-     * de não abrir"* continua valendo, e o jeito é o interruptor dele: **desligar o treino é o modo
-     * antigo, que roda sozinho.** Ligado, ele disse que quer escolher.
+     * **Na rodada AUTOMÁTICA a janela não abre** — ver `treinandoAgora()`. A v3.63 a abria e a rodada
+     * parava esperando (16/09/2026, *"o modo treino interrompeu o fluxo de mandar modelo"*): *"toda
+     * pergunta que pode abrir dentro da rodada precisa de resposta automática ou de um jeito de não
+     * abrir"*.
      */
     const opcoes = (rascunho?.opcoes || []).filter((o) => String(o?.texto || '').trim());
     let escolhida = opcoes[0] || { texto: bruto, avisos: rascunho?.avisos || [] };
@@ -10656,12 +10655,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * API, quem escolhe entre as opções e o que a tela promete), e três leituras separadas divergem
    * na primeira caixa nova. É o mesmo desenho de `rodadaAutomatica()`.
    *
-   * **Treino ligado vale também na rodada automática** (16/09/2026, *"o modo de treino falhou"*): a
-   * v3.62 excluía a rodada automática, e é assim que ele roda — o treino não abria nunca. Quem quer a
-   * rodada andando sozinha desliga o treino: é o modo antigo, com o que já foi aprendido no prompt.
+   * **A rodada AUTOMÁTICA nunca treina — e isto foi desfeito e refeito no mesmo dia.** A v3.63 abriu a
+   * janela também na rodada automática, e a rodada passou a ESPERAR a escolha: relato dele
+   * (16/09/2026), *"o modo treino interrompeu o fluxo de mandar modelo ao aparecer anúncio"*. Medido no
+   * código, o treino não trocava o modelo por rascunho no mesmo contato (a IA só entra quando o fluxo
+   * manda para a tecla 6 ou para ela); o que parava era a FILA — com a janela aberta nenhum contato
+   * seguinte era aberto, e fechá-la caía na tecla 6, que também espera. **O "falhou" da v3.62 era o
+   * erro 400 do esquema, não esta exclusão**: eu mudei as duas coisas juntas e a segunda era errada.
+   *
+   * Na automática, a IA escreve UM rascunho (o modo antigo, com o que já foi aprendido) e a rodada
+   * segue. A janela abre onde a decisão já é dele: rodada contato a contato, tecla 8, aba Respostas.
    */
   function treinandoAgora() {
-    return !!state.ia?.treinando;
+    return aprendizadoLib.abreJanelaDeTreino({ treinando: state.ia?.treinando, rodadaAutomatica: rodadaAutomatica() });
   }
 
   /**

@@ -2627,9 +2627,11 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `ia.treinando` decide: **tres rascunhos + caixa de escolha** (treino) ou **um rascunho direto no
   campo** (o antigo) — e **o antigo leva as licoes aprendidas no prompt do mesmo jeito**, que e a
   parte que ele quis preservar. **O modo decide o ESQUEMA (`esquemaDoRascunho(quantas)`), e nao so a
-  tela**: pedir tres para usar uma pagaria a saida das outras duas em toda chamada. **Treino ligado
-  abre a janela SEMPRE, tambem na rodada automatica** (16/09/2026): a v3.62 pulava a escolha ali, e e
-  assim que ele roda — o treino nao abria nunca. Quem quer a rodada andando sozinha desliga o treino.
+  tela**: pedir tres para usar uma pagaria a saida das outras duas em toda chamada. **A rodada
+  AUTOMATICA nunca treina** (`aprendizado.abreJanelaDeTreino`, com teste): a v3.63 abriu a janela ali e a
+  rodada PAROU de abrir contatos esperando a escolha — *"o modo treino interrompeu o fluxo de mandar
+  modelo ao aparecer anuncio"*. **Ja foi invertida duas vezes; ao consertar um "falhou", mude UMA coisa
+  por vez** — a v3.63 mudou o esquema (a causa) e a exclusao (que nao era causa) juntos.
   **A "taxa baixa de erro" e MEDIDA e tem um nome exato:** de quantas vezes a PRIMEIRA opcao foi a
   escolhida — a primeira e o que a IA mandaria sem treino nenhum. Com 10 escolhas e 80% a tela avisa
   que da para desligar; **quem desliga e ele**, porque trocar o modo sozinho mudaria o que sai para

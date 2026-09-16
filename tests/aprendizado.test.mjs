@@ -20,6 +20,7 @@ import {
   TAXA_PARA_SOLTAR,
   taxaDePrimeira,
   prontaParaRodarSozinha,
+  abreJanelaDeTreino,
   DIMENSOES,
 } from '../src/lib/aprendizado.js';
 
@@ -199,6 +200,20 @@ grupo('a taxa que diz quando soltar a IA sozinha');
   const semIndice = registrarEscolha(vazio(), { escolhido: 'Um.', descartados: ['Dois.'] });
   check(taxaDePrimeira(semIndice).total === 0, 'escolha sem posicao nao entra na taxa');
   check(semIndice.escolhas === 1, 'mas continua ensinando as dimensoes');
+}
+
+grupo('a rodada automatica nunca espera a janela de treino (16/09/2026)');
+{
+  /**
+   * Relato dele: *"o modo treino interrompeu o fluxo de mandar modelo ao aparecer anuncio"*. Com a janela
+   * aberta a rodada automatica parava de abrir contatos. Esta decisao ja foi invertida duas vezes;
+   * a terceira tem de cair aqui.
+   */
+  check(abreJanelaDeTreino({ treinando: true, rodadaAutomatica: false }) === true, 'treino ligado, contato a contato: abre');
+  check(abreJanelaDeTreino({ treinando: true, rodadaAutomatica: true }) === false, 'treino ligado, rodada AUTOMATICA: NAO abre');
+  check(abreJanelaDeTreino({ treinando: false, rodadaAutomatica: false }) === false, 'treino desligado: nao abre');
+  check(abreJanelaDeTreino({ treinando: undefined, rodadaAutomatica: false }) === false, 'sem a chave gravada: nao abre');
+  check(abreJanelaDeTreino() === false, 'sem nada: nao abre');
 }
 
 fim();

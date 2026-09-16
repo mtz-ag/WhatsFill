@@ -296,3 +296,17 @@ export function blocoParaOPrompt(estado) {
     ...lista.map((l) => `- ${l.regra}`),
   ].join('\n');
 }
+
+/**
+ * **Abre a janela dos três rascunhos NESTA passada?** — `treinando` ligado E a rodada NÃO automática.
+ *
+ * Pura e testada porque já foi invertida duas vezes em dois dias: a v3.62 excluía a rodada automática;
+ * a v3.63 a incluiu achando que era a causa do *"o modo de treino falhou"* (a causa era o erro 400 do
+ * esquema); e a v3.66 voltou a excluir, porque com a janela aberta a rodada automática PARAVA de abrir
+ * contatos — *"o modo treino interrompeu o fluxo de mandar modelo ao aparecer anúncio"* (16/09/2026).
+ * Na automática ninguém está olhando para escolher, e a regra deste projeto é que pergunta dentro da
+ * rodada precisa de um jeito de não abrir.
+ */
+export function abreJanelaDeTreino({ treinando = false, rodadaAutomatica = false } = {}) {
+  return !!treinando && !rodadaAutomatica;
+}
