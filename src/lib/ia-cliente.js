@@ -232,13 +232,16 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  *
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
-export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece }) {
+export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece, aprendidas }) {
   try {
     const r = await pedirAoWorker({
       type: MSG_IA,
       modo: 'rascunho',
       sistema: montarSistemaRascunho({ templates, regras, gabinete }),
-      contato: montarContatoRascunho({ mensagens, campos, agora, pedirDados, jaNosConhece }),
+      // `aprendidas` é o que ele ensinou escolhendo entre os três rascunhos — ver `aprendizado.js`.
+      // Vai no bloco do CONTATO (não cacheado) de propósito: lição nova no sistema invalidaria o
+      // cache de todo mundo, e é aqui, colado no pedido, que o modelo a cumpre.
+      contato: montarContatoRascunho({ mensagens, campos, agora, pedirDados, jaNosConhece, aprendidas }),
       modelo: modelo || MODELO_PADRAO,
     });
 

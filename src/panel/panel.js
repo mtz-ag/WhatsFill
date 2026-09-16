@@ -31,6 +31,7 @@ import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
 import { criarGuardaDeRolagem, TECLAS_QUE_ROLAM } from './rolagem.js';
+import * as aprendizadoLib from '../lib/aprendizado.js';
 import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
@@ -10246,6 +10247,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * É o `jaRespondemosAntes` da rodada; fora dela, o botão "Ver conversa anterior".
          */
         jaNosConhece: !!(state.sinais?.jaRespondemosAntes || state.temConversaAnterior),
+        /**
+         * **O que ele ensinou escolhendo entre os três rascunhos** — pedido dele (15/09/2026):
+         * *"ela deve ir aprendendo com minhas escolhas"*. Sai de `aprendizado.blocoParaOPrompt`,
+         * que devolve string vazia enquanto não houver evidência medida — e string vazia some do
+         * prompt sozinha (`.filter(Boolean)`), então antes da quinta escolha nada muda.
+         */
+        aprendidas: aprendizadoLib.blocoParaOPrompt(state.ia?.aprendizado),
       });
     } catch (err) {
       return { ok: false, enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };
@@ -10338,8 +10346,47 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * fora e chamava `revisarRascunho(rascunho)` de novo — com o OBJETO, que vira
      * `[object Object]`. Nenhum aviso jamais apareceu, e a revisão foi feita duas vezes.
      */
-    const avisos = [...(rascunho?.avisos || [])];
-    let texto = bruto;
+    /**
+     * **SÃO TRÊS RASCUNHOS, E QUEM ESCOLHE É ELE** — pedido dele (15/09/2026): *"faça ela criar 3
+     * diferentes e vou escolher qual eu quero, e ela deve ir aprendendo com minhas escolhas"*.
+     *
+     * A escolha mora AQUI, e não em cada chamador, porque `rascunharParaEle` é o caminho único dos
+     * três jeitos de pedir um rascunho (a tecla 8, a escalada do fluxo e o cartão da aba Respostas)
+     * — três cópias divergiriam na primeira semana, que é o defeito mais registrado deste projeto.
+     *
+     * **Na rodada AUTOMÁTICA ninguém vai escolher, e a caixa não pode abrir:** *"toda pergunta que
+     * pode abrir dentro da rodada precisa de resposta automática ou de um jeito de não abrir"*.
+     * Ali quem decide é `aprendizado.melhorOpcao`, com o que ele já ensinou — e **essa escolha não
+     * ensina nada**: aprender com a própria preferência é o laço que faz um viés pequeno virar
+     * regra.
+     */
+    const opcoes = (rascunho?.opcoes || []).filter((o) => String(o?.texto || '').trim());
+    let escolhida = opcoes[0] || { texto: bruto, avisos: rascunho?.avisos || [] };
+    let ensinou = null;
+
+    if (opcoes.length > 1) {
+      if (rodadaAutomatica()) {
+        const i = aprendizadoLib.melhorOpcao(opcoes.map((o) => o.texto), state.ia?.aprendizado);
+        escolhida = opcoes[i >= 0 ? i : 0];
+      } else {
+        /**
+         * **O contato pode trocar enquanto a caixa está aberta** — a armadilha da pergunta de
+         * cidade, que já gravou a cidade de um contato em outro. Aqui o estrago seria pôr o
+         * rascunho DELA no campo de mensagem de outra pessoa, e o próximo Enter mandaria.
+         */
+        const alvoId = state.contact?.id;
+        const r = await escolherEntreRascunhos(opcoes);
+        if (r.parou) return { ok: false, enviado: false, motivo: 'você fechou a escolha dos rascunhos' };
+        if (state.contact?.id !== alvoId) {
+          return { ok: false, enviado: false, motivo: 'o atendimento mudou enquanto você escolhia — não pus nada no campo' };
+        }
+        escolhida = opcoes[r.indice];
+        ensinou = { escolhido: escolhida.texto, descartados: opcoes.filter((_, i) => i !== r.indice).map((o) => o.texto) };
+      }
+    }
+
+    const avisos = [...(escolhida?.avisos || [])];
+    let texto = String(escolhida?.texto || bruto);
 
     /**
      * **O PISO do pedido de dados.** O prompt manda copiar o bloco; se a IA não copiar, o painel o
@@ -10360,6 +10407,37 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return { ok: false, enviado: false, motivo: `não consegui pôr o rascunho no campo: ${err?.message || err}` };
     }
 
+    /**
+     * **A escolha dele vira número** — e só depois de o texto estar no campo: gravar uma preferência
+     * a partir de uma escolha que não chegou a lugar nenhum ensinaria o erro.
+     *
+     * **Nenhum texto de eleitor é guardado** — `aprendizado.registrarEscolha` mede FORMA (abriu com
+     * saudação? fez pergunta? agradeceu?) e guarda contadores. Guardar o texto escolhido e
+     * devolvê-lo ao prompt faria a cidade ou o caso de um eleitor aparecer na mensagem de outro:
+     * é a proximidade lexical, que este projeto já pagou cinco vezes.
+     *
+     * Falhar aqui **não** estraga o rascunho, que já está no campo — é a mesma prioridade da
+     * etiqueta que não bloqueia o envio.
+     */
+    if (ensinou) {
+      try {
+        const antes = state.ia?.aprendizado;
+        const depois = aprendizadoLib.registrarEscolha(antes, ensinou);
+        await salvarIA({ aprendizado: depois });
+        const novas = aprendizadoLib.licoes(depois).length - aprendizadoLib.licoes(antes).length;
+        registrarNaRodada(
+          'IA',
+          'info',
+          // Sem "regra(s)" nem "escolha(s)": `checar-referencias` lê `nome(` como chamada, e o
+          // plural entre parênteses vira uma função que não existe. Custou um alarme falso.
+          `você escolheu entre ${ensinou.descartados.length + 1} rascunhos — ` +
+            `${depois.escolhas} escolhas aprendidas${novas > 0 ? `, e mais ${novas} no prompt` : ''}`
+        );
+      } catch (err) {
+        registrarNaRodada('IA', 'aviso', `não consegui guardar o que a escolha ensinou: ${err?.message || err}`);
+      }
+    }
+
     registrarNaRodada(
       state.contact?.name || 'contato',
       'refinar',
@@ -10370,6 +10448,105 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return { ok: true, enviado: false, motivo: 'rascunho pronto no campo de mensagem', texto, avisos };
   }
 
+
+  /**
+   * **O que a IA aprendeu com ele, na tela e apagável** — pedido dele (15/09/2026): *"ela deve ir
+   * aprendendo com minhas escolhas"*.
+   *
+   * **Aprendizado invisível é aprendizado em que não se confia.** O que está escrito aqui é,
+   * palavra por palavra, o que vai para o prompt: se uma regra estiver errada — porque ele escolheu
+   * por outro motivo cinco vezes seguidas —, ele vê e apaga. Sem esta tela, o rascunho mudaria de
+   * jeito sozinho e a única explicação seria "a IA piorou".
+   *
+   * **O botão zera TUDO e não tem meio-termo**, de propósito: apagar uma lição só deixaria os
+   * contadores dizendo uma coisa e o prompt dizendo outra — e na passada seguinte ela voltaria.
+   */
+  function montarOQueElaAprendeu(cfg) {
+    const estado = cfg?.aprendizado;
+    const lista = aprendizadoLib.licoes(estado);
+    const escolhas = Number(estado?.escolhas) || 0;
+
+    body.append(h('h3', { class: 'wf-h' }, 'O que ela aprendeu com você'));
+
+    if (!lista.length) {
+      body.append(
+        h('div', { class: 'wf-preview', 'data-fica': '1' },
+          escolhas
+            ? `${escolhas} escolhas registradas — ainda não dá para afirmar nada.`
+            : 'Nada ainda. A cada rascunho a IA escreve TRÊS opções; a que você escolher ensina.'),
+        h('div', { class: 'wf-origin' },
+          `Uma regra só nasce com ${aprendizadoLib.MINIMO_DE_ESCOLHAS} escolhas em que as opções ` +
+            'DIFERIAM naquilo, e com maioria clara. Lição tirada de duas escolhas é ruído virando ' +
+            'regra — e regra daqui muda o que sai para eleitor.')
+      );
+      return;
+    }
+
+    const linhas = h('div', { class: 'wf-preview', 'data-fica': '1' },
+      lista.map((l) => h('div', {}, `• ${l.regra}  (${l.quantas} de ${l.total})`)));
+    const btn = h('button', { class: 'wf-btn', type: 'button' }, 'Esquecer tudo o que aprendeu');
+    btn.addEventListener('click', () =>
+      withBusy(async () => {
+        await salvarIA({ aprendizado: aprendizadoLib.vazio() });
+        setStatus('Zerado: a IA volta a escrever sem preferência aprendida.');
+        renderAll();
+      })
+    );
+    body.append(
+      linhas,
+      h('div', { class: 'wf-origin' },
+        `Medido em ${escolhas} escolhas${estado?.desde ? `, desde ${estado.desde}` : ''}. Estas ` +
+          'linhas vão no prompt de cada rascunho, coladas no pedido. O que fica guardado é a FORMA ' +
+          '(tamanho, saudação, pergunta) — nenhum texto de contato é gravado.'),
+      btn
+    );
+  }
+
+  /**
+   * **A caixa em que ele escolhe entre os três rascunhos** — pedido dele (15/09/2026).
+   *
+   * Reusa `perguntarNaRodada`, que já é arrastável, não escurece a conversa (ele precisa ler o que
+   * a pessoa escreveu para escolher) e já ignora o Esc que a própria extensão dispara.
+   *
+   * **Os três textos vão no `pergunta`**, que é o único slot com `white-space: pre-wrap`: rascunho
+   * tem quebra de linha, e numa `linha` comum as três viriam coladas numa tira só.
+   *
+   * **Teclas 1, 2 e 3** — os dígitos têm outro significado na caixa da rodada, e aqui não há
+   * conflito porque as duas nunca estão na tela juntas; e o pior que esta faz é pôr um texto no
+   * campo de mensagem: não manda, não conclui, não grava no CRM.
+   *
+   * @returns {Promise<{indice:number, parou:boolean}>}
+   */
+  async function escolherEntreRascunhos(opcoes) {
+    const corpo = opcoes
+      .map((o, i) => {
+        const motivo = String(o.motivo || '').trim();
+        const barrado = (o.avisos || []).length ? `\n   ⚠ ${(o.avisos || []).join('; ')}` : '';
+        return `${i + 1})${motivo ? ` ${motivo}` : ''}\n${String(o.texto || '').trim()}${barrado}`;
+      })
+      .join('\n\n───\n\n');
+
+    const escolha = await perguntarNaRodada({
+      titulo: `Escolha o rascunho — ${state.contact?.name || 'contato'}`,
+      linhas: [
+        'A IA escreveu três. O que você escolher ensina o que ela deve fazer nas próximas — ' +
+          'ela guarda a FORMA (tamanho, saudação, pergunta), nunca o texto.',
+      ],
+      pergunta: corpo,
+      opcoes: opcoes.map((o, i) => ({
+        tecla: String(i + 1),
+        valor: `op:${i}`,
+        rotulo: `Usar a ${i + 1}${o.motivo ? ` — ${String(o.motivo).slice(0, 40)}` : ''}`,
+        primaria: i === 0,
+      })),
+      dica: 'Esc fecha sem pôr nada no campo',
+    });
+
+    if (typeof escolha === 'string' && escolha.startsWith('op:')) {
+      return { indice: Number(escolha.slice(3)) || 0, parou: false };
+    }
+    return { indice: 0, parou: true };
+  }
 
   function renderConfigIA() {
     const cfg = state.ia || {};
@@ -10673,6 +10850,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         'Somam-se às regras de fábrica, nunca as substituem: a de não escrever texto e a de ' +
           'escalar pedido de ajuda ficam de pé mesmo que você escreva o contrário aqui.')
     );
+
+    montarOQueElaAprendeu(cfg);
 
     /**
      * Quem é quem: a chapa, os números, as pautas.

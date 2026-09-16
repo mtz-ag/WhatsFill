@@ -1208,6 +1208,19 @@ const DEFAULTS = {
     tetoUsd: 20,
     /** Gasto do mês corrente: `{ mes, usd, chamadas, tokens }`. Zera sozinho na virada. */
     gasto: { mes: '', usd: 0, chamadas: 0, tokens: 0 },
+    /**
+     * **O que a IA aprendeu com as escolhas dele entre os três rascunhos** — pedido dele
+     * (15/09/2026): *"ela deve ir aprendendo com minhas escolhas"*. Ver `lib/aprendizado.js`.
+     *
+     * **São contadores, e nunca texto de eleitor.** O que fica guardado é quantas vezes o rascunho
+     * escolhido abria com saudação, fazia pergunta, agradecia — forma, não conteúdo. Guardar o
+     * texto escolhido e devolvê-lo ao prompt faria a cidade ou o caso de um eleitor aparecer na
+     * mensagem de outro, que é a **proximidade lexical** que este projeto já pagou cinco vezes.
+     *
+     * Está na lista de mescla do `get` por ser chave nova dentro de objeto já salvo — sem isso ela
+     * chegaria `undefined` em quem já usa a IA, que é justamente quem tem escolhas a ensinar.
+     */
+    aprendizado: { escolhas: 0, dimensoes: {}, tamanho: { curta: 0, longa: 0, meio: 0 }, desde: null },
   },
   /** { "<contactId>|<templateId>": timestamp } para o aviso de duplicata. */
   sentLog: {},

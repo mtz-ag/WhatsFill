@@ -1,3 +1,77 @@
+## 2026-09-15 — v3.61.0 — a IA escreve TRÊS rascunhos, você escolhe, e ela aprende com a escolha
+
+**Pedido dele:** *"o ideal seria a IA ir aprendendo sozinha qual tipo de resposta eu quero; no
+momento parece que isso não está acontecendo. Quando a IA for fazer rascunho, faça ela criar 3
+diferentes e vou escolher qual eu quero, e ela deve ir aprendendo com minhas escolhas"*.
+
+### Não existe treinar modelo aqui — e fingir que existe seria o pior desenho possível
+
+O que existe é **uma chamada de API por rascunho, com um prompt**. Então "aprender" só pode
+significar uma coisa honesta: **medir o que separa o rascunho que você escolheu dos que você
+descartou, e escrever isso no prompt**, em português, como as regras que você mesmo dita.
+
+### Como funciona
+
+1. **Três rascunhos numa chamada só.** O prompt de sistema tem 9.891 tokens e é cacheado — três
+   chamadas pagariam a entrada três vezes para dizer a mesma coisa. E o modelo, vendo as três de
+   uma vez, consegue torná-las diferentes de propósito, que é a coisa toda.
+2. **Cada uma passa pelas travas sozinha.** A que promete entrega é barrada; a limpa ao lado
+   continua limpa. Opção vazia ou repetida não vira botão.
+3. **Você escolhe pela tecla 1, 2 ou 3**, lendo as três na caixa (ela não escurece a conversa).
+   O texto escolhido vai para o campo de mensagem, como sempre — a extensão não manda.
+4. **A escolha vira número.** Só conta onde os textos DIFERIAM: se as três abrirem com saudação,
+   escolher uma não ensina nada sobre saudação — você não teve alternativa.
+5. **Com 5 escolhas informativas e maioria clara, nasce uma regra** e ela entra no prompt do
+   rascunho seguinte, colada no pedido.
+
+### O que ela pode aprender
+
+Tamanho (entre as opções, você pega a mais curta?), abrir ou não com saudação, fechar ou não com
+pergunta, usar emoji, agradecer ou ir direto ao ponto, tratar por "você" ou "o senhor", quebrar em
+parágrafos. **Só forma — nenhum texto de contato é guardado em lugar nenhum.**
+
+**E isso é regra de segurança, não de gosto.** Guardar o texto escolhido e devolvê-lo ao prompt
+como exemplo faria a cidade de um eleitor, ou o caso dele, aparecer na mensagem de outro: é a
+**proximidade lexical**, o defeito que este projeto já pagou cinco vezes (o "representante", a
+"placa", o *"É o deputado?"*, o *"te ajudar na votação"*, a pergunta retórica da Eloiza).
+
+### Na aba Config: "O que ela aprendeu com você"
+
+As regras aprendidas aparecem escritas, com a contagem de cada uma (*"7 de 8"*), e há um botão para
+zerar. **Aprendizado invisível é aprendizado em que não se confia**: se uma regra estiver errada —
+porque você escolheu por outro motivo cinco vezes seguidas —, você vê e apaga. Sem essa tela, o
+rascunho mudaria de jeito sozinho e a única explicação possível seria "a IA piorou".
+
+### Na rodada AUTOMÁTICA, a caixa não abre
+
+Regra deste projeto desde 31/08: *"toda pergunta que pode abrir dentro da rodada precisa de resposta
+automática ou de um jeito de não abrir"*. Com "Automatizar" marcada, quem escolhe entre as três é
+`aprendizado.melhorOpcao`, pelo que você já ensinou — e **essa escolha não ensina nada**: aprender
+com a própria preferência é o laço que faz um viés pequeno virar regra.
+
+### Custo, medido (Haiku 4.5, por mil rascunhos)
+
+| | 1 rascunho | 3 rascunhos |
+|---|---|---|
+| cache quente | US$ 2,04 | **US$ 3,39** |
+| cache frio | US$ 23,30 | **US$ 24,65** |
+
+O que multiplica é a **saída**, que é a parte pequena. Três chamadas separadas custariam ~US$ 70
+frios — daí a chamada única.
+
+**Nada muda antes da quinta escolha:** sem lição medida, `blocoParaOPrompt` devolve string vazia e
+o prompt é o de ontem.
+
+**O que não foi medido:** uma chamada paga de verdade. Se as três vierem parecidas demais, é sinal
+de que as regras do prompt só permitem um jeito de responder — e a instrução manda cumprir as
+regras antes de variar, de propósito.
+
+**Arquivos:** `src/lib/aprendizado.js` (novo), `src/lib/ia.js`, `src/lib/ia-cliente.js`,
+`src/lib/store.js`, `src/panel/panel.js`, `tests/aprendizado.test.mjs` (nova, 18ª suíte, +40),
+`tests/ia.test.mjs` (+14), `CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-15 — v3.60.0 — a IA para de se repetir, e "material" sozinho não marca mais a etiqueta
 
 **Relato dele, dois defeitos numa mensagem:** *"a IA tem agradecido múltiplas vezes pelo apoio e dado

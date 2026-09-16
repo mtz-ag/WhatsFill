@@ -2601,6 +2601,34 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **SAO TRES RASCUNHOS, E O QUE ELE ESCOLHE VIRA REGRA MEDIDA NO PROMPT** (15/09/2026). Pedido dele:
+  *"faca ela criar 3 diferentes e vou escolher qual eu quero, e ela deve ir aprendendo com minhas
+  escolhas"*. **Nao existe treinar modelo aqui** — o que existe e uma chamada com um prompt —, entao
+  "aprender" so pode ser: medir o que separa o escolhido dos descartados e escrever isso no prompt.
+  `lib/aprendizado.js` faz isso, e as guardas sao o arquivo inteiro:
+  **(1) so conta onde os textos DIFERIAM** (tres com saudacao nao ensinam nada sobre saudacao);
+  **(2) so FORMA, nunca conteudo** — guardar o texto escolhido e devolve-lo ao prompt faria a cidade
+  de um eleitor aparecer na mensagem de outro, que e a proximidade lexical ja paga cinco vezes;
+  **(3) cinco escolhas informativas e maioria de 70%** — licao tirada de duas escolhas e ruido
+  promovido a regra, e regra daqui muda o que sai para eleitor;
+  **(4) o tamanho e aprendido por POSICAO** ("das opcoes que teve, pegou a mais curta?"), nunca em
+  numero de frases, que depende do caso;
+  **(5) na rodada AUTOMATICA a caixa nao abre** (`melhorOpcao` decide) **e essa escolha nao ensina
+  nada** — aprender com a propria preferencia e o laco que faz um vies virar regra.
+  **A escolha mora em `rascunharParaEle`**, que e o caminho unico dos tres jeitos de pedir rascunho
+  (tecla 8, escalada do fluxo, cartao da aba Respostas) — tres copias divergiriam na primeira semana.
+  **As licoes vao no bloco do CONTATO e nao no sistema**: o sistema leva `cache_control`, e licao
+  nova ali invalidaria o cache de todo mundo. **Custo medido no Haiku, por mil rascunhos:** quente
+  US$ 2,04 -> 3,39; frio US$ 23,30 -> 24,65 — o que multiplica e a SAIDA. Tres chamadas separadas
+  custariam ~US$ 70 frios, e e por isso que e UMA chamada com tres textos.
+- **`validarRascunho` DEVOLVE `opcoes`, E `texto` CONTINUA SENDO A PRIMEIRA.** Quem so sabia ler um
+  rascunho (o log, o cartao da aba Respostas, o envio automatico) nao mudou. **Cada opcao e revisada
+  por conta propria** — as travas valem por TEXTO, e uma opcao limpa nao faz a outra ficar limpa. **A
+  forma antiga (`{texto, confianca}` sem array) continua aceita**: trocar esquema e o momento em que
+  o modelo do outro lado devolve o de ontem, e cair com "a IA nao devolveu rascunho" esconderia isso.
+- **`checar-referencias.mjs` LE `nome(` COMO CHAMADA — entao "regra(s)" num texto vira alarme falso.**
+  Custou um `regra() — chamada sem declaracao` em 15/09/2026. Plural entre parenteses em string do
+  painel: escreva por extenso.
 - **A IA escolhe, não escreve.** Ela devolve o id de uma resposta pronta ou "escalar". O texto
   que sai é, byte a byte, um que ele escreveu. Essa fronteira é o que torna o erro recuperável:
   o pior caso é a resposta pronta errada, não uma frase inventada num mandato.
@@ -3667,10 +3695,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
 > `src/` e reclama só de `SyntaxError`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as dezessete suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as dezoito suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/aprendizado.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

@@ -28,6 +28,7 @@ import {
   ELA_SE_DESCULPOU,
   ELA_FALOU_DE_TRABALHO,
   semConviteAoCaso,
+  esquemaDoRascunho,
   semSaudacao,
   semRepetirONosso,
   soRepeteONosso,
@@ -2681,6 +2682,66 @@ grupo('a IA nao repete o que acabamos de dizer (15/09/2026)');
   check(!/a correta agora é/.test(bloco), 'e nao convida com a saudacao certa');
   const primeiro = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi', at: h('14:20:00') }], agora });
   check(/a correta agora é "Boa tarde"/.test(primeiro), 'primeira fala do dia: a saudacao certa continua dita');
+}
+
+grupo('sao TRES rascunhos, e ele escolhe (15/09/2026)');
+{
+  /**
+   * Pedido dele: *"faca ela criar 3 diferentes e vou escolher qual eu quero, e ela deve ir
+   * aprendendo com minhas escolhas"*.
+   *
+   * O que esta suite protege aqui e o que chega ao CAMPO DE MENSAGEM: cada opcao passa pelas travas
+   * por conta propria (uma opcao limpa nao faz a outra ficar limpa), opcao vazia ou repetida nao
+   * vira botao, e a forma antiga continua aceita — trocar esquema e o momento em que o modelo do
+   * outro lado pode devolver o de ontem.
+   */
+  const agora = new Date('2026-09-15T14:30:00-03:00');
+  const tres = JSON.stringify({
+    opcoes: [
+      { texto: 'Anotado por aqui, pode contar com a nossa atencao.', confianca: 0.9, precisaDeRevisao: false, motivo: 'curta' },
+      { texto: 'Boa tarde! Obrigado pela mensagem, vamos acompanhar essa pauta.', confianca: 0.9, precisaDeRevisao: false, motivo: 'cordial' },
+      { texto: 'Ja encaminhei seu pedido ao assessor da regiao.', confianca: 0.9, precisaDeRevisao: false, motivo: 'promete' },
+    ],
+  });
+  const r = validarRascunho(tres, agora, {});
+  check(r.opcoes.length === 3, 'as tres chegam');
+  check(r.texto === r.opcoes[0].texto, 'e `texto` continua sendo a primeira (quem so le uma nao quebra)');
+  check(!r.opcoes[0].avisos.length && !r.opcoes[1].avisos.length, 'as duas boas passam sem aviso');
+  check(r.opcoes[2].avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.afirmouAcao),
+    'e a terceira e barrada sozinha — a trava vale por TEXTO, nao pelo lote');
+  check(!rascunhoPodeSairSozinho(r.opcoes[2].avisos) && rascunhoPodeSairSozinho(r.opcoes[0].avisos),
+    'uma opcao limpa nao faz a outra ficar limpa');
+
+  /** **Forma antiga:** um texto so continua virando rascunho, com uma opcao. */
+  const velho = validarRascunho(JSON.stringify({ texto: 'Um texto so.', confianca: 0.9, precisaDeRevisao: false }), agora, {});
+  check(velho.opcoes.length === 1 && velho.texto === 'Um texto so.', 'o esquema antigo ainda produz rascunho');
+
+  /** **Vazia nao vira botao, repetida tambem nao** — botao que poe string vazia no campo e pior que dois botoes. */
+  const sujo = validarRascunho(JSON.stringify({ opcoes: [{ texto: 'Igual.' }, { texto: '   ' }, { texto: ' igual. ' }] }), agora, {});
+  check(sujo.opcoes.length === 1, 'vazia e repetida sao descartadas');
+  check(validarRascunho(JSON.stringify({ opcoes: [{ texto: '' }] }), agora, {}).texto === '',
+    'so vazias devolve o rascunho vazio, como antes');
+
+  /** **O esquema pede exatamente tres, e sobrevive ao modo estrito da OpenAI.** */
+  const e = esquemaDoRascunho();
+  check(e.properties.opcoes.minItems === 3 && e.properties.opcoes.maxItems === 3, 'o esquema pede tres');
+  check(/JEITO/.test(e.properties.opcoes.description), 'e diz que tem de ser diferentes no JEITO');
+  const estrito = esquemaEstrito(e);
+  check(estrito.properties.opcoes.items.required.includes('motivo'),
+    'no modo estrito TODA propriedade entra em required, inclusive nas aninhadas');
+
+  /** **O bloco do contato pede as tres e carrega o que ele ensinou.** */
+  const bloco = montarContatoRascunho({
+    mensagens: [{ de: 'contato', texto: 'oi', at: agora.getTime() }],
+    agora,
+    aprendidas: 'O QUE ELE ESCOLHEU:\n- Escreva CURTO.',
+  });
+  check(/Escreva TRÊS rascunhos DIFERENTES/.test(bloco), 'o pedido das tres esta no bloco do contato');
+  check(/Escreva CURTO/.test(bloco), 'e as licoes aprendidas tambem');
+  check(bloco.indexOf('Escreva CURTO') < bloco.indexOf('Escreva TRÊS'),
+    'as licoes ficam coladas no pedido, no fim — regra longe do ponto em que o modelo escreve nao e cumprida');
+  check(!/O QUE ELE ESCOLHEU/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora })),
+    'sem licao aprendida, nada entra no prompt');
 }
 
 fim();

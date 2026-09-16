@@ -1438,8 +1438,22 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
  * canal para ela **se autodenunciar** — é barato perguntar, e uma IA que hesita é exatamente o
  * caso que não pode sair sozinho.
  */
+/**
+ * **SÃO TRÊS RASCUNHOS, e a diferença entre eles é o que vale** — pedido dele (15/09/2026): *"o
+ * ideal seria a IA ir aprendendo sozinha qual tipo de resposta eu quero… faça ela criar 3
+ * diferentes e vou escolher qual eu quero, e ela deve ir aprendendo com minhas escolhas"*.
+ *
+ * **Numa chamada só, e não três.** O prompt de sistema é ~8.000 tokens e leva `cache_control`:
+ * três chamadas pagariam a entrada três vezes para dizer a mesma coisa. Aqui o que multiplica é a
+ * SAÍDA, que é a parte pequena — e, mais importante, o modelo vê as três de uma vez e consegue
+ * torná-las diferentes de propósito, que é a coisa toda.
+ *
+ * **Três versões da mesma frase não servem para nada.** A escolha dele só ensina onde os textos
+ * DIFERIAM (ver `aprendizado.registrarEscolha`), então a instrução é de ABORDAGEM — e ela está
+ * escrita aqui, no `description` que o modelo lê junto do esquema, além do bloco do contato.
+ */
 export function esquemaDoRascunho() {
-  return {
+  const opcao = {
     type: 'object',
     additionalProperties: false,
     required: ['texto', 'confianca', 'precisaDeRevisao'],
@@ -1462,7 +1476,26 @@ export function esquemaDoRascunho() {
       },
       motivo: {
         type: 'string',
-        description: 'Uma frase curta dizendo por que escolheu esse tom/conteúdo. Aparece na tela.',
+        description: 'Em até 5 palavras, o que diferencia ESTA opção das outras duas. Aparece na tela.',
+      },
+    },
+  };
+
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['opcoes'],
+    properties: {
+      opcoes: {
+        type: 'array',
+        minItems: 3,
+        maxItems: 3,
+        description:
+          'TRÊS respostas para a mesma mensagem, e elas têm de ser diferentes no JEITO — não três ' +
+          'versões da mesma frase. Varie o que dá para variar: o tamanho, abrir ou não com ' +
+          'saudação, fechar ou não com pergunta, agradecer ou ir direto ao ponto. As três têm de ' +
+          'estar CERTAS e prontas para enviar: ele vai escolher uma e mandar como está.',
+        items: opcao,
       },
     },
   };
@@ -1668,7 +1701,7 @@ export function nomeCurtoDeAnuncio(bruto) {
 }
 
 /** O bloco do contato para o rascunho: a conversa com folga, porque é dela que ele precisa. */
-export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false } = {}) {
+export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false, aprendidas = '' } = {}) {
   /**
    * **A conversa INTEIRA, com os dois lados e com a pendência marcada.**
    *
@@ -1968,7 +2001,26 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
     'NÃO SOMOS CANAL DE RESOLUÇÃO DE PROBLEMAS: se ela trouxe um problema, acolha em uma frase, diga ' +
       'onde aquilo se resolve e agradeça a confiança — sem perguntas sobre o caso, sem pedir que ela ' +
       'conte mais e sem "fico no aguardo". A mensagem é para ela sair gostando do Capitão Martim.',
-    'Escreva o rascunho da resposta.',
+    /**
+     * **O que ele vem escolhendo, colado no pedido** — pedido dele (15/09/2026): *"ela deve ir
+     * aprendendo com minhas escolhas"*.
+     *
+     * Vem pronto de `aprendizado.blocoParaOPrompt`, que só emite regra com evidência medida. Fica
+     * AQUI e não no sistema por duas razões: é a lição do item 22 (*regra longe do ponto em que o
+     * modelo escreve não é cumprida*), e o sistema leva `cache_control` — uma lição nova ali
+     * invalidaria o cache de todas as chamadas no dia em que ele escolhesse diferente.
+     */
+    String(aprendidas || '').trim(),
+    /**
+     * **São TRÊS, e a diferença entre elas é o que ele vai escolher.** Repetido aqui além do
+     * `description` do esquema pelo mesmo motivo de sempre: o esquema é lido longe do ponto em que
+     * o texto nasce.
+     */
+    'Escreva TRÊS rascunhos DIFERENTES para esta mesma mensagem — diferentes no JEITO, não na ' +
+      'redação: varie o tamanho, abrir ou não com saudação, fechar ou não com pergunta, agradecer ou ' +
+      'ir direto ao ponto. As três têm de estar certas e prontas para enviar, porque ele escolhe uma ' +
+      'e manda como está. Se as regras acima só permitirem um jeito de responder, cumpra as regras: ' +
+      'antes três parecidas do que uma errada.',
   ]
     .filter(Boolean)
     .join('\n');
@@ -2851,18 +2903,54 @@ export function validarRascunho(bruto, agora, contexto = {}) {
   }
   if (!d || typeof d !== 'object') return vazio;
 
-  const revisao = revisarRascunho(d.texto, agora, contexto);
-  const precisaDeRevisao = d.precisaDeRevisao !== false; // ausente = sim, por segurança
-  const avisos = [...revisao.avisos];
-  if (precisaDeRevisao) avisos.push('a própria IA pediu revisão humana');
-
-  return {
-    texto: revisao.texto,
-    confianca: Number.isFinite(d.confianca) ? Math.min(1, Math.max(0, d.confianca)) : 0,
-    motivo: String(d.motivo || '').trim().slice(0, 300),
-    avisos,
-    precisaDeRevisao,
+  /**
+   * **Cada opção é revisada por conta própria** — as travas (a chapa trocada, a promessa, a
+   * repetição) valem por TEXTO, e uma opção limpa não faz a outra ficar limpa. Sem isto, escolher a
+   * segunda mandaria um texto que ninguém conferiu.
+   *
+   * **A forma antiga continua aceita**, e é de propósito: um modelo que devolva `{texto, confianca}`
+   * sem o array ainda produz rascunho. Trocar esquema é o momento em que o de fora pode devolver o
+   * de ontem, e cair com "a IA não devolveu rascunho" esconderia isso.
+   */
+  const uma = (o) => {
+    const revisao = revisarRascunho(o?.texto, agora, contexto);
+    const precisaDeRevisao = o?.precisaDeRevisao !== false;
+    const avisos = [...revisao.avisos];
+    if (precisaDeRevisao) avisos.push('a própria IA pediu revisão humana');
+    return {
+      texto: revisao.texto,
+      confianca: Number.isFinite(o?.confianca) ? Math.min(1, Math.max(0, o.confianca)) : 0,
+      motivo: String(o?.motivo || '').trim().slice(0, 300),
+      avisos,
+      precisaDeRevisao,
+    };
   };
+
+  const brutas = Array.isArray(d.opcoes) && d.opcoes.length ? d.opcoes : [d];
+  /**
+   * **Opção vazia não vira opção na tela.** O modelo pode devolver três e escrever duas; oferecer
+   * um botão que põe string vazia no campo de mensagem seria pior que oferecer duas.
+   *
+   * **Nem opção REPETIDA.** Três versões da mesma frase não dão escolha nenhuma, e ainda ensinariam
+   * `aprendizado` que ele "preferiu" algo que não teve alternativa — a comparação é por texto
+   * revisado, porque é ele que vai para a conversa.
+   */
+  const vistos = new Set();
+  const opcoes = brutas
+    .map(uma)
+    .filter((o) => {
+      const chave = o.texto.replace(/\s+/g, ' ').trim().toLowerCase();
+      if (!chave || vistos.has(chave)) return false;
+      vistos.add(chave);
+      return true;
+    })
+    .slice(0, 3);
+
+  if (!opcoes.length) return vazio;
+
+  // `texto`, `avisos` e companhia continuam sendo os da PRIMEIRA: quem só sabia ler um rascunho
+  // (o cartão da aba Respostas, o log, as travas de envio) continua funcionando sem mudar nada.
+  return { ...opcoes[0], opcoes };
 }
 
 // ---------------------------------------------------------------------------
