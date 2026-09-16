@@ -29,6 +29,12 @@ import {
   ELA_FALOU_DE_TRABALHO,
   semConviteAoCaso,
   marcaDeMidia,
+  esquemaDoMaterial,
+  montarSistemaMaterial,
+  montarContatoMaterial,
+  montarRequisicaoMaterial,
+  validarMaterial,
+  CONFIANCA_MATERIAL,
   ANTERIOR_MAX_FALAS,
   ANTERIOR_MAX_CARACTERES,
   esquemaDoRascunho,
@@ -2801,6 +2807,7 @@ grupo('nenhum esquema manda palavra-chave que a API recusa com 400 (16/09/2026)'
     cidade: esquemaDaCidade(),
     rascunhoTreino: esquemaDoRascunho(3),
     rascunhoAntigo: esquemaDoRascunho(1),
+    material: esquemaDoMaterial(),
   };
   for (const [nome, esq] of Object.entries(esquemas)) {
     const fora = acusar(esq, nome, []);
@@ -2862,6 +2869,43 @@ grupo('a IA ve a midia sem texto e o atendimento anterior (16/09/2026)');
   const cortado = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora, anterior: muitas });
   check(!/fala 49 /.test(cortado) && /fala 50 /.test(cortado) && /fala 79 /.test(cortado), `so as ultimas ${ANTERIOR_MAX_FALAS} falas vao`);
   check(!new RegExp(`x{${ANTERIOR_MAX_CARACTERES + 1}}`).test(cortado), `e cada uma cortada em ${ANTERIOR_MAX_CARACTERES} caracteres`);
+}
+
+grupo('a IA confere a etiqueta de material antes de marcar (16/09/2026)');
+{
+  /**
+   * Pedido dele: *"quando o deterministico identificar material, a IA assume e confere se realmente e
+   * uma situacao de pedido de material para entao etiquetar"*. A etiqueta manda PULAR para sempre, entao
+   * o que esta suite protege e o lado de NAO marcar: so `material` com certeza marca; `nao`, ilegivel,
+   * fora das opcoes e certeza baixa viram "nao marca".
+   */
+  check(validarMaterial(JSON.stringify({ acao: 'material', motivo: 'pediu adesivos', confianca: 0.9 })).acao === 'material',
+    'material com certeza alta marca');
+  check(validarMaterial({ acao: 'material', motivo: 'x', confianca: CONFIANCA_MATERIAL - 0.01 }).acao === 'incerto',
+    'material com certeza baixa NAO marca');
+  check(validarMaterial({ acao: 'nao', motivo: 'conteudo digital', confianca: 0.4 }).acao === 'nao',
+    '"nao" vale com qualquer certeza — e o lado seguro');
+  check(validarMaterial('isto nao e json').acao === 'incerto', 'resposta ilegivel nao marca');
+  check(validarMaterial({ acao: 'talvez', confianca: 1 }).acao === 'incerto', 'opcao inventada nao marca');
+  check(validarMaterial(null).acao === 'incerto', 'nada nao marca');
+
+  const sistema = montarSistemaMaterial({});
+  for (const trecho of ['conteúdo DIGITAL', 'roupa', 'cadeira de rodas', 'reclamação de rua', 'Na dúvida, "nao"', '(texto do ANÚNCIO…)']) {
+    check(sistema.includes(trecho), `o prompt da conferencia fala de: ${trecho}`);
+  }
+  check(/Instruções adicionais do Thiago/.test(montarSistemaMaterial({ regras: 'x' })), 'as instrucoes extras dele entram');
+
+  const bloco = montarContatoMaterial({
+    mensagens: [{ de: 'contato', texto: 'quero uns adesivos' }],
+    gatilho: 'a resposta pronta que acabou de sair pede o endereco',
+    acabamosDeMandar: 'Mande seu endereco que repassamos a equipe.',
+  });
+  check(/O que o programa viu: a resposta pronta/.test(bloco), 'o gatilho vai no bloco');
+  check(/NÓS \(agora\): Mande seu endereco/.test(bloco), 'e a nossa mensagem que acabou de sair tambem — ela ainda nao esta na conversa');
+  check(bloco.indexOf('quero uns adesivos') < bloco.indexOf('NÓS (agora)'), 'depois da conversa, na ordem');
+
+  const req = montarRequisicaoMaterial({ sistema: 's', contato: 'c' });
+  check(req.output_config.format.schema.properties.acao.enum.join() === 'material,nao', 'o esquema so tem as duas saidas');
 }
 
 fim();

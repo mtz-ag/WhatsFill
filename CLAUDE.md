@@ -2887,6 +2887,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   rajada e lida JUNTA para a venda de voto, antes do laco. **Detector cujo caso vem partido em
   mensagens tem de ler a rajada junta** — e as guardas continuam por objeto: o voto e DELA, oferta sem
   dinheiro nao e venda, e "meu voto nao se compra" desfaz.
+- **A ETIQUETA DE MATERIAL PASSA PELA IA ANTES DE ENTRAR** (16/09/2026, pedido dele: *"quando o
+  deterministico identificar material, a IA assume e confere"*). Os cinco caminhos que a acendem (modelo,
+  resposta pronta e rascunho que pedem endereco; pedido fora do anuncio; endereco dela no pulo) passam
+  por `etiquetarEndereco`, e e LA que `iaCliente.conferirMaterial` roda — **conferencia nova de etiqueta
+  entra nesse ponto unico, nunca nos chamadores**. So `material` com `CONFIANCA_MATERIAL` marca; `nao` e
+  `incerto` nao marcam. **Com a IA desligada, marca como antes.** A mensagem NOSSA que acendeu a
+  etiqueta vai em `acabamosDeMandar`: ela saiu agora e ainda nao esta em `state.nossas`, e sem ela a
+  IA julgaria um pedido de endereco que nao ve.
 - **"MATERIAL" SOZINHO NAO E COISA PARA ENTREGAR, e a lista fisica o tinha dentro** (15/09/2026).
   Relato dele: *"me mostre como a etiqueta de material esta sendo colocada porque tem dado bastante
   erro"*. **Medido: 6 falsos positivos em 16, todos a mesma palavra** — `materia(l|is)` em

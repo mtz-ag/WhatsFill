@@ -1,3 +1,56 @@
+## 2026-09-16 — v3.65.0 — a IA confere se é mesmo caso de material antes de pôr a etiqueta
+
+**Pedido dele:** *"etiqueta de material continua problemática; quando o determinístico identificar
+material, a IA assume e confere se realmente é uma situação de pedido de material para então
+etiquetar"*.
+
+**Por que ali vale uma chamada:** a etiqueta manda PULAR o contato em toda passada, para sempre, e o
+põe na lista de entrega. As portas que a acendem por texto erraram em série — "material" solto (3.60),
+a "casa" do endereço (08/09) e, desde 12/09, **qualquer rascunho da IA que diga "mande seu endereço"**,
+inclusive para quem não pediu material nenhum.
+
+### Como ficou
+
+**Cinco caminhos acendem a etiqueta, e os cinco passam por `etiquetarEndereco`** — é lá que a
+conferência mora, uma vez só:
+
+| caminho | o que o determinístico viu |
+|---|---|
+| modelo aprovado que sai | o texto dele pede o endereço |
+| resposta pronta que sai | o texto dela pede o endereço |
+| rascunho da IA que sai | o texto pede o endereço |
+| pedido fora do anúncio | ela escreveu um pedido de material físico |
+| pular (tecla 2) | ela mandou um endereço |
+
+Com a **IA ligada e chave cadastrada**, antes de marcar a IA lê a conversa (e a mensagem nossa que
+acabou de sair, que ainda não está nela) e responde `material` ou `nao`. **Só `material` com 70% de
+certeza marca**; `nao`, resposta ilegível, falha e certeza baixa **não marcam**, e a linha diz por quê.
+O prompt diz o que É (quer receber material físico, mandou o endereço para receber, aceitou ser
+voluntária) e o que NÃO é (conteúdo digital do anúncio, roupa, bem para comprar, dinheiro, endereço
+citado por outro motivo, e **nós termos pedido o endereço sem ela ter pedido nada**).
+
+**Com a IA desligada, a etiqueta segue como antes** — ele pediu que a IA assuma, não que a lista de
+material deixe de existir sem ela. Foi dito a ele.
+
+**Uma conferência por situação**: o pulo de quem mandou endereço acende de novo a cada passada, e a
+resposta fica guardada (em memória) por contato + última mensagem dela + gatilho. Resultado `incerto`
+não é guardado — tenta de novo na passada seguinte.
+
+**Custo medido:** ~850 tokens por conferência, **US$ 1,15 por mil** no Haiku; só acontece quando o
+determinístico já acendeu a etiqueta.
+
+**O que não foi medido:** o julgamento da IA numa chamada paga. O Andamento passa a ter uma linha
+`material · nao · <motivo>` em cada conferência — é por ela que se vê se ela está recusando o que devia
+marcar.
+
+**Efeito colateral dito a ele:** no pulo (tecla 2), a IA dizendo `nao` tira a ETIQUETA, não o pulo —
+o contato fica aberto e sem marca, e volta ao fluxo quando ela escrever de novo.
+
+**Arquivos:** `src/lib/ia.js`, `src/lib/ia-cliente.js`, `src/panel/panel.js`, `tests/ia.test.mjs` (+22),
+`CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-16 — v3.64.0 — a IA passa a ver a mídia e o atendimento anterior (não era o fluxo)
 
 **Pedido dele:** marcar as mídias para a IA *"e faça ela ignorar o fluxo para responder, creio que o

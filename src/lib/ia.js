@@ -672,6 +672,125 @@ export function montarContatoCidade({ mensagens = [], candidato = '', origem = '
     .join('\n');
 }
 
+// ---------------------------------------------------------------------------
+// Conferência da etiqueta de MATERIAL
+// ---------------------------------------------------------------------------
+
+/**
+ * **A IA confere se é mesmo caso de material antes da etiqueta** — pedido dele (16/09/2026): *"etiqueta
+ * de material continua problemática; quando o determinístico identificar material, a IA assume e
+ * confere se realmente é uma situação de pedido de material para então etiquetar"*.
+ *
+ * **Por que a etiqueta é o lugar certo para gastar uma chamada:** ela manda PULAR o contato em toda
+ * passada, para sempre, e o põe na lista de quem espera ENTREGA. É a escrita mais cara de errar da
+ * rodada depois de "sem interesse" — e as três portas que a acendem por texto erraram em série: a
+ * palavra "material" solta (3.60), a "casa" do endereço (08/09) e o rascunho da IA que pede endereço a
+ * quem não pediu nada (a forma curta, 12/09).
+ *
+ * Mesmo molde da conferência de cidade: prompt curto e próprio, esquema pequeno, e **`incerto` não
+ * marca** — a dúvida não vira etiqueta permanente.
+ */
+export function esquemaDoMaterial() {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['acao', 'motivo', 'confianca'],
+    properties: {
+      acao: {
+        type: 'string',
+        enum: ['material', 'nao'],
+        description: 'material = é caso de ENVIO de material físico de campanha; nao = não é',
+      },
+      motivo: { type: 'string', description: 'Uma frase curta, em português, dizendo por quê. Vai para o log.' },
+      confianca: { type: 'number', description: 'De 0 a 1. Abaixo de 0,7 o painel não marca nada.' },
+    },
+  };
+}
+
+/** Abaixo disto a resposta "material" não marca — a etiqueta faz pular para sempre. */
+export const CONFIANCA_MATERIAL = 0.7;
+
+export function montarSistemaMaterial({ regras = '' } = {}) {
+  return [
+    'Você confere uma etiqueta no atendimento de WhatsApp de um mandato parlamentar no Rio Grande do Sul.',
+    '',
+    'Um programa achou que esta conversa é um caso de MATERIAL DE CAMPANHA a ENVIAR, e vai pôr uma',
+    'etiqueta que tira o contato da fila e o manda para a equipe que entrega material. Sua tarefa é',
+    'dizer se ele acertou. Você não escreve mensagem e não fala com ninguém.',
+    '',
+    'É "material" quando:',
+    '- a pessoa quer RECEBER material de campanha FÍSICO — adesivo, bandeira, santinho, panfleto,',
+    '  folheto, placa, banner, faixa, cartaz, bottom — para usar ou distribuir; ou',
+    '- ela mandou o endereço PARA RECEBER esse material; ou',
+    '- ela aceitou ser voluntária sem pagamento e nós pedimos o endereço para mandar o material.',
+    '',
+    'NÃO é "material":',
+    '- conteúdo DIGITAL: "quero receber o material" de um anúncio, vídeo, PDF, arte ou card para',
+    '  compartilhar no grupo ou nas redes;',
+    '- roupa (camiseta, boné, colete): não fornecemos;',
+    '- bem que teria de ser comprado (remédio, cadeira de rodas, cesta), dinheiro ou emprego;',
+    '- endereço citado por outro motivo: reclamação de rua, onde mora, local de evento;',
+    '- NÓS termos pedido o endereço sem ela ter pedido material nem aceitado ser voluntária.',
+    '',
+    'Linhas marcadas "(texto do ANÚNCIO…)" foram escritas pela campanha, não por ela: o clique',
+    'num anúncio de material digital não é pedido de material físico.',
+    '',
+    'Na dúvida, "nao". A etiqueta faz o contato ser pulado para sempre e aparecer na lista de entrega;',
+    'não marcar custa uma linha no log.',
+    '',
+    regras ? `Instruções adicionais do Thiago:\n${regras}\n` : '',
+  ].join('\n');
+}
+
+/**
+ * O bloco sobre este contato. `gatilho` é o que o programa viu; `acabamosDeMandar` é a mensagem
+ * NOSSA que acendeu a etiqueta — ela saiu agora e ainda não está na conversa que o painel tem.
+ */
+export function montarContatoMaterial({ mensagens = [], gatilho = '', acabamosDeMandar = '' } = {}) {
+  const conversa = (mensagens || [])
+    .map((m) => {
+      const texto = umaLinha(typeof m === 'string' ? m : m?.texto || '', 800);
+      const nos = typeof m !== 'string' && m?.de === 'nos';
+      return texto ? `${nos ? 'NÓS' : 'ELA'}: ${texto}` : '';
+    })
+    .filter(Boolean)
+    .slice(-40);
+  if (String(acabamosDeMandar || '').trim()) conversa.push(`NÓS (agora): ${umaLinha(acabamosDeMandar, 800)}`);
+  return [
+    `O que o programa viu: ${gatilho || '(não informado)'}`,
+    '',
+    'A conversa, na ordem ("NÓS" é o atendimento):',
+    conversa.length ? conversa.join('\n') : '(vazia)',
+  ].join('\n');
+}
+
+export function montarRequisicaoMaterial({ sistema, contato, modelo = MODELO_PADRAO }) {
+  return corpo({ sistema, contato, modelo, esquema: esquemaDoMaterial(), nome: 'material', esforco: 'low', maxTokens: 512 });
+}
+
+/**
+ * `{acao: 'material'|'nao'|'incerto', motivo, confianca, aviso}`. **Só `material` marca**, e só com
+ * `CONFIANCA_MATERIAL`; ilegível, falho ou abaixo do corte vira `incerto`, que NÃO marca.
+ */
+export function validarMaterial(bruto) {
+  const vazio = { acao: 'incerto', motivo: '', confianca: 0, aviso: '' };
+  let d = bruto;
+  if (typeof d === 'string') {
+    try {
+      d = JSON.parse(d);
+    } catch (_) {
+      return { ...vazio, aviso: 'a IA respondeu num formato que não deu para ler' };
+    }
+  }
+  if (!d || typeof d !== 'object') return { ...vazio, aviso: 'a IA não devolveu conferência' };
+  const motivo = String(d.motivo || '').trim().slice(0, 300);
+  const confianca = Number.isFinite(d.confianca) ? Math.min(1, Math.max(0, d.confianca)) : 0;
+  if (d.acao === 'nao') return { acao: 'nao', motivo, confianca, aviso: '' };
+  if (d.acao === 'material' && confianca >= CONFIANCA_MATERIAL) return { acao: 'material', motivo, confianca, aviso: '' };
+  if (d.acao === 'material') return { ...vazio, motivo, confianca, aviso: `a IA achou que sim, mas com ${Math.round(confianca * 100)}% de certeza` };
+  return { ...vazio, aviso: 'a IA devolveu uma resposta fora das opções' };
+}
+
 export function montarRequisicaoCidade({ sistema, contato, modelo = MODELO_PADRAO }) {
   return corpo({
     sistema,

@@ -27,6 +27,10 @@ import {
   montarContatoCidade,
   montarRequisicaoCidade,
   validarCidade,
+  montarSistemaMaterial,
+  montarContatoMaterial,
+  montarRequisicaoMaterial,
+  validarMaterial,
   MODELO_PADRAO,
   PROVEDOR_OPENAI,
   NOME_DO_PROVEDOR,
@@ -383,6 +387,26 @@ export async function conferirCidade({ regras, mensagens, candidato, origem, sub
   }
 }
 
+/**
+ * **A IA confere se é mesmo caso de MATERIAL antes da etiqueta** — pedido dele (16/09/2026). Ver
+ * `ia.montarSistemaMaterial`. Nunca lança: falha vira `incerto`, e `incerto` não marca.
+ */
+export async function conferirMaterial({ regras, mensagens, gatilho, acabamosDeMandar, modelo }) {
+  try {
+    const r = await pedirAoWorker({
+      type: MSG_IA,
+      modo: 'material',
+      sistema: montarSistemaMaterial({ regras }),
+      contato: montarContatoMaterial({ mensagens, gatilho, acabamosDeMandar }),
+      modelo: modelo || MODELO_PADRAO,
+    });
+    if (!r?.ok) return { acao: 'incerto', motivo: '', confianca: 0, aviso: r?.motivo || 'a IA não respondeu' };
+    return { ...validarMaterial(r.decisao), custoUsd: r.custoUsd };
+  } catch (err) {
+    return { acao: 'incerto', motivo: '', confianca: 0, aviso: err?.message || String(err) };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Lado do service worker
 // ---------------------------------------------------------------------------
@@ -415,6 +439,8 @@ export async function atender(pedido, chave) {
       ? montarRequisicaoRascunho({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo, quantas: pedido.quantas })
       : pedido.modo === 'cidade'
       ? montarRequisicaoCidade({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
+      : pedido.modo === 'material'
+      ? montarRequisicaoMaterial({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
       : montarRequisicao({
           sistema: pedido.sistema,
           contato: pedido.contato,

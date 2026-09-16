@@ -2158,7 +2158,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * caminho**: o modelo é "de material" quando o TEXTO dele pede o endereço
        * (`ehPedidoDeEndereco`), porque a redação é da plataforma e o nome do modelo muda.
        */
-      const marcaMaterial = templatesLib.ehPedidoDeEndereco(modelo.text || '') ? await etiquetarEndereco(alvo) : '';
+      const marcaMaterial = templatesLib.ehPedidoDeEndereco(modelo.text || '')
+        ? await etiquetarEndereco(alvo, { gatilho: `o modelo aprovado "${modelo.name}" que acabou de sair pede o endereço`, acabamosDeMandar: modelo.text || '' })
+        : '';
       setStatus(`Modelo enviado: ${modelo.name}${marcaMaterial}`, 'ok');
       return true;
     } else {
@@ -2453,7 +2455,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * Casa pelo TEXTO RENDERIZADO, não pelo id: o pedido dele sai por modelo aprovado, cuja
      * redação é da plataforma.
      */
-    const marcaEndereco = templatesLib.ehPedidoDeEndereco(text) ? await etiquetarEndereco(alvo) : '';
+    const marcaEndereco = templatesLib.ehPedidoDeEndereco(text)
+      ? await etiquetarEndereco(alvo, { gatilho: `a resposta pronta "${template.name}" que acabou de sair pede o endereço`, acabamosDeMandar: text })
+      : '';
     setStatus(`Enviado: ${template.name}${marca}${marcaEndereco}`, 'ok');
     return true;
   }
@@ -2542,10 +2546,59 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *
    * Falhar aqui **nunca** impede o pulo: etiqueta é organização interna, e o aviso vai para o log.
    */
-  async function etiquetarEndereco(alvo) {
+  /** Conferências de material já feitas nesta abertura do painel — ver `etiquetarEndereco`. */
+  const conferenciasDeMaterial = new Map();
+
+  async function etiquetarEndereco(alvo, { gatilho = '', acabamosDeMandar = '' } = {}) {
     const nome = String(state.auto.cfg.etiquetaEndereco || '').trim();
     if (!nome) return ' (sem etiqueta de endereço configurada na aba Automatizado)';
     if (!alvo?.id) return '';
+
+    /**
+     * **A IA CONFERE ANTES DE MARCAR** — pedido dele (16/09/2026): *"etiqueta de material continua
+     * problemática; quando o determinístico identificar material, a IA assume e confere se realmente
+     * é uma situação de pedido de material para então etiquetar"*.
+     *
+     * **Aqui, e não em cada caminho**, porque os cinco que acendem a etiqueta passam por esta função:
+     * o modelo aprovado e a resposta pronta que pedem o endereço, o rascunho da IA que o pede, o pedido
+     * de material fora do anúncio e o endereço que ela mandou. Cinco cópias da conferência divergiriam
+     * na primeira semana.
+     *
+     * **Só com a IA ligada e chave cadastrada.** Com ela desligada a etiqueta segue como antes — ele
+     * pediu que a IA assuma, não que a lista de material deixe de existir sem ela. **Com a IA ligada,
+     * só `material` marca**: `nao` e `incerto` (falha, resposta ilegível, certeza baixa) não marcam, e
+     * a linha diz por quê — dúvida não vira etiqueta que faz pular para sempre.
+     *
+     * **Uma conferência por situação**: o pulo de quem mandou endereço volta a acender a cada passada
+     * enquanto ninguém responde, e perguntar de novo à IA a mesma coisa seria dinheiro por nada. A
+     * chave é o contato, a última mensagem dela e o gatilho — mudou qualquer um, confere de novo.
+     *
+     * **E o contato tem de ser o que está aberto**: a conferência lê a conversa da tela, e conferir
+     * a conversa de um para marcar outro é a armadilha da pergunta de cidade.
+     */
+    if (state.ia?.ligada && state.iaTemChave) {
+      if (alvo.id !== state.contact?.id) return ' (a IA não conferiu: o atendimento mudou — não marquei)';
+      const ultimaDela = (state.entrantes || []).map((m) => m?.at).filter(Boolean).pop() || '';
+      const chave = `${alvo.id}|${ultimaDela}|${gatilho}|${String(acabamosDeMandar || '').length}`;
+      let c = conferenciasDeMaterial.get(chave);
+      if (!c) {
+        c = await iaCliente.conferirMaterial({
+          regras: state.ia.regras,
+          mensagens: conversaParaIA(),
+          gatilho,
+          acabamosDeMandar,
+          modelo: state.ia.modelo,
+        });
+        if (c.acao !== 'incerto') conferenciasDeMaterial.set(chave, c);
+        registrarNaRodada(
+          'IA',
+          'pulado',
+          `material · ${c.acao}${c.custoUsd ? ` · US$ ${c.custoUsd.toFixed(4)}` : ''}${c.motivo ? ` · ${c.motivo}` : ''}${c.aviso ? ` · ${c.aviso}` : ''}`
+        );
+      }
+      if (c.acao === 'nao') return ` (a IA conferiu e NÃO é pedido de material: ${c.motivo || 'sem motivo dado'} — não marquei)`;
+      if (c.acao !== 'material') return ` (a IA não confirmou que é material${c.aviso ? `: ${c.aviso}` : ''} — não marquei)`;
+    }
 
     try {
       const tag = await tagsLib.resolveTag(nome);
@@ -6226,8 +6279,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (!(await etiquetaDeEndereco())) {
         const pediuMaterial = pedeMaterialForaDoAnuncio(state.entrantes, state.padroesDeAnuncio);
         if (pediuMaterial) {
-          const aviso = await etiquetarEndereco(state.contact);
-          registrarNaRodada(nome, 'info', `${pediuMaterial.motivo} — marquei a etiqueta de material${aviso}`);
+          const aviso = await etiquetarEndereco(state.contact, { gatilho: `ela escreveu um pedido de material: ${pediuMaterial.motivo}` });
+          registrarNaRodada(nome, 'info', `${pediuMaterial.motivo} — etiqueta de material${aviso || ' marcada'}`);
         }
       }
 
@@ -6504,7 +6557,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
            * de entrar nela.
            */
           const marcaEndereco = templatesLib.ehPedidoDeEndereco(rascunho.texto)
-            ? await etiquetarEndereco(state.contact)
+            ? await etiquetarEndereco(state.contact, { gatilho: 'o rascunho da IA que acabou de sair pede o endereço', acabamosDeMandar: rascunho.texto })
             : '';
           const comoFoi = `IA escreveu e mandou${marcaEndereco} (${porQue})`;
           const fechou = await concluirPeloPainel();
@@ -6990,7 +7043,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
            * Marcar vale também quando é ELE que aperta a tecla: a situação é a mesma, e gravar só
            * no automático faria a marca depender de quem apertou.
            */
-          const aviso = dela.jaMarcada ? '' : await etiquetarEndereco(state.contact);
+          const aviso = dela.jaMarcada ? '' : await etiquetarEndereco(state.contact, { gatilho: `ela mandou um endereço: ${dela.motivo}` });
           return { nome, resultado: 'pulado', motivo: `${dela.motivo} — pulei para você transferir${aviso}` };
         }
         /**
