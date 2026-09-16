@@ -2146,6 +2146,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **A IA VE O CONTEXTO; QUEM REPETIA ERA `revisarRascunho`** (15/09/2026). Relato dele: *"a IA tem
+  agradecido multiplas vezes pelo apoio e dado boa tarde multiplas vezes, uma mensagem apos a
+  outra"*. Medido: o bloco do contato ja manda a conversa inteira com NOS/ELA, ja marca
+  `← ja respondida`, a VOZ ja manda emendar e a regra de 12/09 ja manda nao repetir — e o rascunho
+  repetido saiu com **zero avisos**; pior, a saudacao ERRADA era **consertada**, ou seja, a segunda
+  "boa tarde" do dia saia bem-formada. A linha *"se abrir com saudacao, a correta agora e X"* e a
+  **segunda** do bloco e a VOZ vem depois da conversa: **licao do item 22 (07/09) outra vez**. Hoje
+  `ia.semSaudacao` TIRA a saudacao quando `jaFalamosHoje`, e `ia.semRepetirONosso` tira a frase que
+  reescreve a nossa ultima fala (80% das palavras de conteudo). **Tres guardas:** pergunta nunca sai,
+  frase com menos de duas palavras de conteudo nao conta, e piso de 40 caracteres — sobrando so a
+  repeticao, o texto FICA e `sopraRepeticao` barra o envio automatico. **Sem contexto nao confere
+  nada** (rascunho pedido a mao). **Ao por regra nova no prompt, ponha-a onde o modelo escreve — e
+  pergunte se ela nao e mecanica.**
 - **REDESENHAR NAO PERDE A ROLAGEM; O CONTEUDO QUE CHEGA DEPOIS PERDE** (13/09/2026). Relato dele:
   *"varios botoes ao serem clicados rolam a pagina da extensao"*. Medido: `replaceChildren` + desenho
   na mesma tarefa mantem a rolagem (1500 → 1500); desenho curto com o resto chegando depois a leva
@@ -2811,6 +2824,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   rajada e lida JUNTA para a venda de voto, antes do laco. **Detector cujo caso vem partido em
   mensagens tem de ler a rajada junta** — e as guardas continuam por objeto: o voto e DELA, oferta sem
   dinheiro nao e venda, e "meu voto nao se compra" desfaz.
+- **"MATERIAL" SOZINHO NAO E COISA PARA ENTREGAR, e a lista fisica o tinha dentro** (15/09/2026).
+  Relato dele: *"me mostre como a etiqueta de material esta sendo colocada porque tem dado bastante
+  erro"*. **Medido: 6 falsos positivos em 16, todos a mesma palavra** — `materia(l|is)` em
+  `OBJETO_DE_MATERIAL_FISICO`, entao *"quero receber o material"* (a frase mais comum desta base, e
+  DIGITAL) marcava a etiqueta que manda **PULAR o contato para sempre**. **O projeto ja dizia o
+  contrario em dois lugares** — o comentario da propria constante e
+  `ia.AVISOS_QUE_IMPEDEM_ENVIO.afirmouTer` (*"'material' ficou de fora de proposito"*). **Duas listas
+  com doutrinas opostas divergem no primeiro caso real: ao escrever a segunda lista, grep pela
+  primeira.** Hoje "material" so marca com o qualificador fisico (impresso, de rua, para
+  distribuir/colar/panfletar) e nunca em contexto digital. **Os QUATRO pontos que aplicam a etiqueta
+  sao `enviarModelo`, `sendTemplate`, o envio do rascunho da IA e a excecao da rodada** — os tres
+  primeiros pelo invariante `templates.ehPedidoDeEndereco` do texto que SAI, o quarto pelo que ELA
+  escreveu.
 - **A ETIQUETA DE MATERIAL: PRIORIDADE NO MODELO, EXCECAO NO PEDIDO FORA DO ANUNCIO** (regra dele,
   10/09/2026). **`enviarModelo` nunca aplicava a etiqueta** — a marca por `ehPedidoDeEndereco` morava so
   em `sendTemplate` e no caminho da IA, e todo modelo aprovado sai por `enviarModelo`. **Ao por uma

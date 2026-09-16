@@ -1536,6 +1536,117 @@ export function semFalarDeTranscricao(texto) {
 }
 
 /**
+ * **A SAUDACAO ABRE O CONTATO, NAO CADA MENSAGEM** — relato dele (15/09/2026): *"a IA tem
+ * agradecido multiplas vezes pelo apoio e dado boa tarde multiplas vezes, uma mensagem apos a
+ * outra; ela nao consegue ver o contexto da conversa?"*.
+ *
+ * **Medido: ela ve, e esta funcao e que era a maquina de repetir.** O bloco do contato ja manda a
+ * conversa inteira com "NOS"/"ELA", ja marca o que foi respondido, a VOZ ja diz *"nao abra saudacao
+ * como se fosse o primeiro contato"* e a regra de 12/09 ja diz *"NAO REPITA o que ja dissemos"*.
+ * Mesmo assim o rascunho que repetia *"Boa tarde! Obrigado pelo apoio"* saiu com **zero avisos** —
+ * e, quando a IA abria com a saudacao ERRADA, `revisarRascunho` a **consertava**: o unico efeito
+ * dela nesse caso era deixar a segunda saudacao do dia bem-formada.
+ *
+ * Somava-se a posicao: a linha *"se abrir com saudacao, a correta agora e X"* e a **segunda** do
+ * bloco, e a VOZ so aparece depois da conversa inteira. E a licao do item 22 (07/09) outra vez —
+ * **regra longe do ponto em que o modelo escreve nao e cumprida** —, e a saida e a mesma da saudacao
+ * errada, do "gabinete" e da transcricao: **mecanico vira conserto.**
+ *
+ * @param {string} texto
+ * @returns {string|null} o texto sem a abertura, ou `null` se nao havia saudacao
+ */
+const ABERTURA_DE_SAUDACAO = /^\s*(bom\s+dia|boa\s+tarde|boa\s+noite)\b[\s,!.:;–—-]*/i;
+
+export function semSaudacao(texto) {
+  const bruto = String(texto || '');
+  if (!ABERTURA_DE_SAUDACAO.test(bruto)) return null;
+  const novo = bruto.replace(ABERTURA_DE_SAUDACAO, '').trimStart();
+  if (!novo) return null;
+  return novo.charAt(0).toUpperCase() + novo.slice(1);
+}
+
+/** Palavras que nao carregam conteudo — duas frases que so as compartilham nao dizem o mesmo. */
+const PALAVRAS_SEM_CONTEUDO = new Set(
+  (
+    'a o as os um uma uns umas de do da dos das e em no na nos nas por para pra com que se ' +
+    'sua seu suas seus nosso nossa nossos nossas isso isto muito mais ja aqui ao aos eu voce ' +
+    'nao sim tem ter esta estao foi sao te lhe me'
+  ).split(/\s+/)
+);
+
+const conteudoDaFrase = (f) =>
+  semAcentoIA(f)
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w && !PALAVRAS_SEM_CONTEUDO.has(w));
+
+const emFrases = (t) =>
+  String(t || '')
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((f) => f.trim())
+    .filter(Boolean);
+
+/**
+ * **A frase que reescreve o que nos acabamos de dizer SAI** — a outra metade do mesmo relato: o
+ * *"obrigado pelo apoio"* mandado duas vezes seguidas.
+ *
+ * **A regra e a de 12/09 (*"repeticao e o maior sinal de maquina"*), agora mecanica.** A comparacao
+ * e por PALAVRA DE CONTEUDO contra a NOSSA ULTIMA fala: uma frase do rascunho sai quando 80% das
+ * palavras que ela carrega ja estao numa frase que acabou de sair. Nao e semelhanca de assunto — e
+ * a mesma frase com outra roupa, que e exatamente o que o modelo escreve quando nao tem o que
+ * acrescentar.
+ *
+ * **Tres guardas, e sao elas que tornam isto seguro:**
+ * - **Pergunta nunca sai** — perguntar de novo e uma acao (o endereco que veio errado, a cidade que
+ *   faltou), e nao repeticao de cortesia.
+ * - **Frase com menos de duas palavras de conteudo nao conta** — senao *"Claro!"* casaria com
+ *   qualquer coisa.
+ * - **Piso de 40 caracteres**, como em `semFalarDeTranscricao`: se tirar deixasse farelo, o texto
+ *   fica inteiro e o aviso diz que ele repete — quem decide ai e ele.
+ *
+ * Olha so a NOSSA ULTIMA mensagem, e nao a conversa inteira: retomar em outro dia o que se disse
+ * semana passada e conversa; dizer de novo o que acabou de sair e maquina.
+ *
+ * @param {string} texto o rascunho
+ * @param {string} nossaUltima a ultima mensagem que NOS mandamos
+ * @returns {string|null} o texto sem as frases repetidas, ou `null` se nada saiu
+ */
+export function semRepetirONosso(texto, nossaUltima) {
+  const bruto = String(texto || '');
+  const nossas = emFrases(nossaUltima)
+    .map((f) => new Set(conteudoDaFrase(f)))
+    .filter((c) => c.size >= 2);
+  if (!bruto.trim() || !nossas.length) return null;
+
+  const frases = emFrases(bruto);
+  const ficam = frases.filter((f) => {
+    if (f.includes('?')) return true;
+    const palavras = conteudoDaFrase(f);
+    if (palavras.length < 2) return true;
+    return !nossas.some((c) => palavras.filter((w) => c.has(w)).length / palavras.length >= 0.8);
+  });
+  if (ficam.length === frases.length) return null;
+  const novo = ficam.join(' ').trim();
+  return novo.length >= 40 ? novo : null;
+}
+
+/** O rascunho inteiro e a nossa ultima mensagem outra vez? (o caso em que nao sobra nada a tirar) */
+export function soRepeteONosso(texto, nossaUltima) {
+  const frases = emFrases(texto);
+  if (!frases.length) return false;
+  const nossas = emFrases(nossaUltima)
+    .map((f) => new Set(conteudoDaFrase(f)))
+    .filter((c) => c.size >= 2);
+  if (!nossas.length) return false;
+  return frases.every((f) => {
+    if (f.includes('?')) return false;
+    const palavras = conteudoDaFrase(f);
+    if (palavras.length < 2) return true;
+    return nossas.some((c) => palavras.filter((w) => c.has(w)).length / palavras.length >= 0.8);
+  });
+}
+
+/**
  * **O nome do anúncio, curto** — print da Leonir (12/09/2026).
  *
  * A marca da mensagem diz à IA *"(texto do ANÚNCIO <nome> em que ela clicou — escrito pela campanha,
@@ -1606,6 +1717,24 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
    * 05/09, clicou em três anúncios seguidos sem digitar uma palavra). Dizer "a última fala é
    * NOSSA" ali seria mentira.
    */
+  /**
+   * **Já falamos com ela HOJE?** — o que troca o convite à saudação pela proibição dela.
+   *
+   * A linha *"se abrir com saudação, a correta agora é X"* é a SEGUNDA do bloco, e a VOZ que manda
+   * emendar de onde paramos só aparece depois da conversa inteira. Com a saudação convidada no
+   * topo, o modelo abria "Boa tarde" pela segunda vez no mesmo dia — relato dele de 15/09/2026. É a
+   * lição do item 22 (07/09): **regra longe do ponto em que o modelo escreve não é cumprida.**
+   *
+   * Quem garante é `revisarRascunho`, que TIRA a saudação repetida; esta linha é para o modelo não
+   * gastar a abertura com ela.
+   */
+  const mesmoDia = (a, b) => {
+    const x = a ? new Date(a) : null;
+    const y = b ? new Date(b) : new Date();
+    return !!x && !Number.isNaN(x.getTime()) && x.toDateString() === y.toDateString();
+  };
+  const falamosHoje = ultimaNossa >= 0 && mesmoDia(lista[ultimaNossa].at, agora);
+
   const temCliqueDeAnuncio = lista.some((m) => m.anuncio);
   const temAudioOuvido = lista.some((m) => m.transcrito);
   const pediuRoupa = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && ehPedidoDeRoupa(m.texto));
@@ -1679,7 +1808,10 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * que ele errou.
      */
     agoraEmPortugues(agora),
-    `Se abrir com saudação, a correta agora é "${saudacaoDeAgora(agora)}" — não deduza pelo horário das mensagens.`,
+    falamosHoje
+      ? 'NÃO abra com saudação: nós já falamos com ela hoje, e "bom dia/boa tarde" duas vezes no ' +
+        'mesmo dia é o que denuncia uma máquina. Emende de onde nós paramos.'
+      : `Se abrir com saudação, a correta agora é "${saudacaoDeAgora(agora)}" — não deduza pelo horário das mensagens.`,
     '',
     'A conversa inteira, da mais antiga para a mais recente. "NÓS" é o atendimento:',
     '',
@@ -2010,6 +2142,17 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
    * pagamento dito POR ELA (`ELA_FALOU_DE_TRABALHO`, lida em `ia-cliente`).
    */
   trabalhoInexistente: 'fala de trabalho voluntário ou remuneração, e ela não falou em trabalhar nem em ganhar — confira o que ela disse',
+  /**
+   * **O rascunho inteiro é a nossa última mensagem de novo** — relato dele (15/09/2026): *"a IA tem
+   * agradecido múltiplas vezes pelo apoio e dado boa tarde múltiplas vezes, uma mensagem após a
+   * outra"*, e a regra de 12/09: *"esse é o maior sinal de máquina respondendo, repetição, não pode
+   * acontecer isso"*.
+   *
+   * `semRepetirONosso` tira a parte repetida quando sobra mensagem; quando **não sobra nada**, não há
+   * o que consertar — o que a IA escreveu não acrescenta nada à conversa, e mandar de novo é o defeito
+   * que ele apagou na tela duas vezes. Então este barra o envio automático e o rascunho fica com ele.
+   */
+  sopraRepeticao: 'o rascunho só repete a nossa última mensagem — não há nada novo nele',
 };
 
 /**
@@ -2363,9 +2506,41 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
    */
   const certa = saudacaoDeAgora(agora);
   const abertura = SAUDACAO_NO_COMECO.exec(texto);
-  if (abertura && abertura[1].toLowerCase() !== certa.toLowerCase()) {
+  /**
+   * **Já falamos hoje: a saudação SAI, não é corrigida** — ver `semSaudacao`. Enquanto a correção
+   * vinha sozinha, o efeito desta função no caso repetido era deixar a segunda "Boa tarde" do dia
+   * bem-formada.
+   *
+   * `contexto.jaFalamosHoje` chega do `ia-cliente`, que tem a conversa e o relógio. `undefined` não
+   * confere nada: fora da rodada não há conversa medida, e tirar a saudação de um rascunho pedido à
+   * mão seria decidir sem saber.
+   */
+  if (abertura && contexto?.jaFalamosHoje === true) {
+    const sem = semSaudacao(texto);
+    if (sem) {
+      texto = sem;
+      avisos.push('nós já falamos com ela hoje — tirei a saudação repetida da abertura');
+    }
+  } else if (abertura && abertura[1].toLowerCase() !== certa.toLowerCase()) {
     texto = texto.replace(SAUDACAO_NO_COMECO, certa);
     avisos.push(`a IA abriu com "${abertura[1]}" e agora é ${certa.toLowerCase()} — troquei`);
+  }
+
+  /**
+   * **O que a nossa última mensagem já dizia sai** — ver `semRepetirONosso`. Depois da saudação de
+   * propósito: a abertura já foi resolvida por quem sabe que ela é uma saudação.
+   *
+   * **Sobrando só a repetição, o texto fica e o aviso avisa.** É o piso do `semFalarDeTranscricao`:
+   * devolver farelo ao eleitor é pior que devolver a repetição para ele ler.
+   */
+  if (contexto?.nossaUltima) {
+    const semRepetir = semRepetirONosso(texto, contexto.nossaUltima);
+    if (semRepetir) {
+      texto = semRepetir;
+      avisos.push('o rascunho repetia o que a nossa última mensagem já dizia — tirei a parte repetida');
+    } else if (soRepeteONosso(texto, contexto.nossaUltima)) {
+      avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.sopraRepeticao);
+    }
   }
 
   /**

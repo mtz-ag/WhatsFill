@@ -1,3 +1,91 @@
+## 2026-09-15 — v3.60.0 — a IA para de se repetir, e "material" sozinho não marca mais a etiqueta
+
+**Relato dele, dois defeitos numa mensagem:** *"a IA tem agradecido múltiplas vezes pelo apoio e dado
+boa tarde múltiplas vezes, uma mensagem após a outra; ela não consegue ver o contexto da conversa? E
+me mostre como a etiqueta de material está sendo colocada, porque tem dado bastante erro"*.
+
+---
+
+### 1. A repetição — ela VÊ o contexto; quem repetia era a nossa revisão
+
+**Medido antes de mexer.** O bloco que a IA lê já manda a conversa inteira com `NÓS:`/`ELA:`, já
+marca `← já respondida`, a VOZ já diz *"não abra saudação como se fosse o primeiro contato"* e a regra
+de 12/09 já diz *"NÃO REPITA o que já dissemos"*. Com tudo isso no prompt, o rascunho
+*"Boa tarde! Obrigado pelo apoio e pela confiança"* — em cima de um *"Bom dia! Obrigado de coração
+pelo apoio"* nosso da mesma manhã — passou por `revisarRascunho` com **zero avisos**.
+
+**E havia pior:** quando a IA abria com a saudação ERRADA (*"Bom dia"* às 14h), `revisarRascunho`
+**consertava** para *"Boa tarde"*. O único efeito dela naquele caso era deixar a segunda saudação do
+dia bem-formada.
+
+**Por que o prompt não bastou:** a linha *"se abrir com saudação, a correta agora é X"* é a **segunda**
+do bloco, e a VOZ só aparece depois da conversa inteira. É a lição do item 22 (07/09) — **regra longe
+do ponto em que o modelo escreve não é cumprida** —, e a saída é a de sempre: **mecânico vira
+conserto.**
+
+**O que passou a acontecer** (`src/lib/ia.js`, `src/lib/ia-cliente.js`):
+
+| situação | antes | agora |
+|---|---|---|
+| já falamos hoje e o rascunho abre com saudação | corrigia a palavra | **tira a saudação** |
+| frase que reescreve o que nossa última mensagem disse | saía inteira | **sai do texto** |
+| o rascunho INTEIRO é a nossa última mensagem | saía sozinho | fica, e **o aviso barra o envio** |
+| pergunta (*"pode confirmar seu endereço?"*) | — | **nunca sai**, é ação e não cortesia |
+| conteúdo novo | — | passa inteiro, sem aviso |
+| falamos ONTEM, ou rascunho pedido à mão (sem contexto) | — | **nada muda** |
+
+A comparação é por palavra de conteúdo contra a **nossa última fala** (80% das palavras da frase já
+ditas), com piso de 40 caracteres — devolver farelo ao eleitor é pior que devolver a repetição para
+ele ler. O bloco do contato também deixou de convidar a saudação quando já falamos hoje.
+
+---
+
+### 2. A etiqueta de material — uma palavra, 6 falsos positivos em 16
+
+**Os quatro pontos que aplicam a etiqueta** (nenhum mudou; a lista é a resposta à pergunta dele):
+
+| onde | quando aplica |
+|---|---|
+| `enviarModelo` | o **modelo aprovado** que sai pede o endereço (`ehPedidoDeEndereco` no texto) |
+| `sendTemplate` | a **resposta pronta** que sai pede o endereço |
+| rascunho da IA enviado | o **texto livre** que saiu pede o endereço |
+| a exceção da rodada | **ela** pediu material físico fora do anúncio (`pedeMaterialForaDoAnuncio`) |
+
+**O erro estava no quarto.** Medido contra 16 frases desta base: **6 falsos positivos, todos a mesma
+palavra** — `materia(l|is)` estava dentro de `OBJETO_DE_MATERIAL_FISICO`. Então
+*"quero receber o material"*, *"me manda o material"* e *"preciso do material para divulgar nas
+redes"* marcavam a etiqueta — **e a etiqueta de material manda PULAR o contato em toda passada, para
+sempre**, além de levá-lo para a lista de quem espera entrega. Ninguém esperava entrega nenhuma.
+
+**O projeto já sabia disso em dois lugares, e esta lista discordava dos dois:** o comentário logo
+acima dela diz que o vocabulário DIGITAL fica de fora, e `ia.AVISOS_QUE_IMPEDEM_ENVIO.afirmouTer` diz
+com todas as letras que *"'material' ficou de fora de propósito: nesta base 'quero receber o material'
+é conteúdo DIGITAL — a frase mais comum que chega"*. **Duas listas com doutrinas opostas divergem no
+primeiro caso real.**
+
+**O conserto é o qualificador:** "material" volta a marcar com o que o torna físico — *impresso*,
+*de rua*, *para distribuir/entregar/colar/panfletar* — e nunca quando o contexto é digital
+(*compartilhar*, *divulgar nas redes*, *no grupo*). Lista de permissão, como sempre: o falso negativo
+custa uma etiqueta que o **modelo** de material aplica no envio (a prioridade dele, de 10/09); o falso
+positivo custa um eleitor pulado para sempre.
+
+**Remedido: 6 → 0 falsos positivos em 16**, com os quatro casos físicos qualificados marcando.
+**`pedeMaterial` não foi tocado**: quem pede "o material" continua recebendo o modelo.
+
+---
+
+**O que não foi medido:** a conversa real na aba do mobiliza. A repetição foi medida no prompt gerado
+e na revisão, não numa chamada paga à API — se o rascunho ainda repetir de outra forma, a print dirá
+qual frase.
+
+**A etiqueta que já foi aplicada errado não se desfaz sozinha** — quem estiver marcado continua sendo
+pulado até ele tirar a etiqueta no CRM.
+
+**Arquivos:** `src/lib/cortesia.js`, `src/lib/ia.js`, `src/lib/ia-cliente.js`, `tests/cortesia.test.mjs`
+(+17), `tests/ia.test.mjs` (+17), `CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-13 — v3.59.0 — anúncio novo não joga mais a Config para o fim
 
 **Relato dele, depois da v3.58:** *"continua o mesmo problema, principalmente ao adicionar anúncio novo

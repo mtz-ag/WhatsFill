@@ -2890,10 +2890,43 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   const pede = (texto, extra = {}, padroes = []) =>
     !!pedeMaterialForaDoAnuncio([{ texto, tipo: 'TEXT', ...extra }], padroes);
 
-  for (const t of ['quero uns adesivos', 'me manda material de campanha', 'queria uma bandeira do capitao',
+  for (const t of ['quero uns adesivos', 'queria uma bandeira do capitao',
     'preciso de santinhos para distribuir', 'tem como me mandar uns folhetos?']) {
     check(pede(t), `marca: "${t}"`);
   }
+
+  /**
+   * **"MATERIAL" SOZINHO NAO MARCA** — relato dele (15/09/2026): *"me mostre como a etiqueta de
+   * material esta sendo colocada porque tem dado bastante erro"*. Medido: **6 falsos positivos em
+   * 16**, todos por `materia(l|is)` estar na lista FISICA. Nesta base *"quero receber o material"* e
+   * conteudo DIGITAL — a frase mais comum que chega, e que o MODELO responde. Marcando, o contato e
+   * PULADO em toda passada, para sempre, e entra na lista de quem espera entrega.
+   *
+   * O comentario da propria constante ja dizia que o vocabulario digital ficava de fora, e
+   * `ia.AVISOS_QUE_IMPEDEM_ENVIO.afirmouTer` diz que *"'material' ficou de fora de proposito"*:
+   * **duas listas com doutrinas opostas divergem no primeiro caso real.**
+   */
+  for (const t of ['quero receber o material', 'me manda material de campanha', 'quero receber o material',
+    'gostaria de receber o material de voces', 'me manda o material por favor',
+    'preciso do material para divulgar nas redes', 'queria o material para compartilhar no grupo',
+    'quero receber conteudo de voces', 'obrigada pelo material, ja recebi',
+    'vi o material de voces e achei otimo', 'tem algum material para eu compartilhar?']) {
+    check(!pede(t), `"material" sozinho NAO marca: "${t}"`);
+  }
+
+  /** **Com o que o torna fisico, volta a marcar** — lista de permissao, como sempre. */
+  for (const t of ['quero material impresso para distribuir no meu bairro',
+    'preciso de material para distribuir aqui na rua', 'tem como mandar material impresso?',
+    'quero material de rua para a caminhada']) {
+    check(pede(t), `material qualificado marca: "${t}"`);
+  }
+  /** E o DIGITAL vence o qualificador: quem vai compartilhar nao esta esperando entrega. */
+  check(!pede('quero material impresso para compartilhar no grupo'),
+    'o contexto digital desfaz o qualificador');
+
+  /** **O MODELO nao mudou**: quem pede "o material" continua recebendo o modelo (a prioridade dele). */
+  check(!!pedeMaterial([{ texto: 'quero receber o material', tipo: 'TEXT' }]),
+    'o modelo de material continua saindo para quem pede "o material"');
 
   /** **O clique no anuncio nao e excecao** — pela marca e pela lista. */
   const doAnuncio = 'Olá! Eu quero receber o Material da Direita';

@@ -275,13 +275,31 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
      * o clique do anúncio: o texto do anúncio é da campanha, não dela.
      */
     const elaFalouDeTrabalho = lista.some((m) => m.de !== 'nos' && !m.anuncio && ELA_FALOU_DE_TRABALHO.test(String(m.texto || '')));
+    /**
+     * **A NOSSA última fala, e se ela foi HOJE** — relato dele (15/09/2026): *"a IA tem agradecido
+     * múltiplas vezes pelo apoio e dado boa tarde múltiplas vezes, uma mensagem após a outra"*.
+     *
+     * São os dois campos que tornam a regra de 12/09 (*"não repita o que já dissemos"*) mecânica em
+     * vez de pedido no prompt: `nossaUltima` é o texto contra o qual `ia.semRepetirONosso` compara, e
+     * `jaFalamosHoje` é o que faz a saudação SAIR em vez de ser corrigida (`ia.semSaudacao`).
+     *
+     * **O corte é o DIA LOCAL**, como em `cortesia.deOutroDia`: é o que ele lê na tela, e "boa tarde"
+     * repetido às 14h depois de um "bom dia" às 9h é o caso que ele mandou. Sem `at` na nossa última
+     * mensagem, `jaFalamosHoje` é falso — inventar a hora faria a saudação sumir por dedução.
+     */
+    const nossaUltima = ultimaNossa >= 0 ? String(lista[ultimaNossa].texto || '') : '';
+    const quandoFalamos = ultimaNossa >= 0 ? lista[ultimaNossa].at : null;
+    const jaFalamosHoje =
+      !!quandoFalamos &&
+      !Number.isNaN(new Date(quandoFalamos).getTime()) &&
+      new Date(quandoFalamos).toDateString() === new Date(agora || Date.now()).toDateString();
     return {
       /**
        * `chapa` liga a conferência de cargo e número — ver `ia.conferirChapa`. Ela **não depende
        * de `dossieAtivo`**: o modelo tem saber próprio sobre estes nomes, e foi ele que trocou o
        * cargo do Van Hattem na print da Nara. Trava não pode depender de uma caixa marcada.
        */
-      ...validarRascunho(r.decisao, agora, { jaFalamos, jaNosConhece, recebemosDela, chapa, pedeMaterial, elaSeDesculpou, elaFalouDeTrabalho }),
+      ...validarRascunho(r.decisao, agora, { jaFalamos, jaNosConhece, recebemosDela, chapa, pedeMaterial, elaSeDesculpou, elaFalouDeTrabalho, nossaUltima, jaFalamosHoje }),
       custo: r.custo,
       custoUsd: r.custoUsd,
       gastoMes: r.gastoMes,

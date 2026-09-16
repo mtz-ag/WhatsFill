@@ -2950,7 +2950,38 @@ export function pedeMaterial(entrantes) {
  * material é o que manda pular. Então aqui ficam de fora.
  */
 const OBJETO_DE_MATERIAL_FISICO =
-  /(?:materia(?:l|is)|adesivos?|santinhos?|panfletos?|folhetos?|folders?|cartilhas?|bandeiras?|bandeirinhas?|placas?|plaquinhas?|banners?|faixas?|cartaz(?:es)?|chaveiros?|botons?|bottons?)/;
+  /(?:adesivos?|santinhos?|panfletos?|folhetos?|folders?|cartilhas?|bandeiras?|bandeirinhas?|placas?|plaquinhas?|banners?|faixas?|cartaz(?:es)?|chaveiros?|botons?|bottons?)/;
+
+/**
+ * **"MATERIAL" SOZINHO NAO E COISA PARA ENTREGAR — e era a palavra mais comum desta base.**
+ *
+ * Relato dele (15/09/2026): *"me mostre como a etiqueta de material esta sendo colocada porque tem
+ * dado bastante erro"*. **Medido antes de mexer: 6 falsos positivos em 16 frases, e todos a mesma
+ * palavra.** `materia(l|is)` estava nesta lista, entao *"quero receber o material"*, *"me manda o
+ * material"* e *"preciso do material para divulgar nas redes"* marcavam a etiqueta — **e a etiqueta
+ * de material manda PULAR o contato em toda passada, para sempre**, alem de leva-lo para a lista que
+ * ele transfere para quem entrega. Ninguem estava esperando entrega nenhuma.
+ *
+ * **O projeto ja sabia disso em dois lugares e esta lista discordava dos dois:** o comentario logo
+ * acima diz que o vocabulario DIGITAL fica de fora, e `ia.AVISOS_QUE_IMPEDEM_ENVIO.afirmouTer` diz
+ * com todas as letras que *"'material' ficou de fora de proposito: nesta base 'quero receber o
+ * material' e conteudo DIGITAL — a frase mais comum que chega"*. **Duas listas com doutrinas opostas
+ * divergem no primeiro caso real.**
+ *
+ * **O que fica e o qualificador**: "material" volta a contar quando vem com o que o torna fisico —
+ * impresso, de rua, para distribuir/entregar/colar/panfletar. Lista de PERMISSAO, como sempre: o
+ * falso negativo custa uma etiqueta que o MODELO de material aplica no envio (a prioridade dele, de
+ * 10/09); o falso positivo custa um eleitor pulado para sempre.
+ */
+const MATERIAL_QUALIFICADO =
+  /(?:materia(?:l|is)(?:\s+\S+){0,3}\s+(?:impress\w+|de\s+rua|p(?:ara|ra)\s+(?:distribuir|entregar|colar|panfletar|espalhar))|(?:impress\w+|de\s+rua)\s+materia(?:l|is))/;
+
+/**
+ * O que diz que aquele "material" e DIGITAL — e ai ele nunca e caso de entrega. Vale so para a
+ * palavra "material": adesivo e bandeira sao fisicos esteja o que estiver em volta.
+ */
+const MATERIAL_DIGITAL =
+  /(?:compartilh|divulgar?(?:\s+\S+){0,2}\s+(?:nas?\s+redes|no\s+(?:grupo|whats|face|insta))|redes\s+sociais|whatsapp|no\s+grupo|pdf|videos?|link)/;
 
 const PEDIDO_DE_MATERIAL_FISICO = VERBO_DE_PEDIR_MATERIAL.map(
   (verbo) =>
@@ -2982,6 +3013,14 @@ export function pedeMaterialForaDoAnuncio(entrantes, padroesDeAnuncio = []) {
     if (NEGA_O_PEDIDO.test(texto)) continue;
     if (PEDIDO_DE_MATERIAL_FISICO.some((re) => re.test(texto))) {
       return { motivo: 'pediu material fora do anúncio — é material a enviar' };
+    }
+    // "Material" com o qualificador que o torna físico — ver `MATERIAL_QUALIFICADO`.
+    if (
+      !MATERIAL_DIGITAL.test(texto) &&
+      MATERIAL_QUALIFICADO.test(texto) &&
+      PEDIDO_DE_MATERIAL_COMPLETO.some((re) => re.test(texto))
+    ) {
+      return { motivo: 'pediu material impresso fora do anúncio — é material a enviar' };
     }
   }
   return null;

@@ -28,6 +28,9 @@ import {
   ELA_SE_DESCULPOU,
   ELA_FALOU_DE_TRABALHO,
   semConviteAoCaso,
+  semSaudacao,
+  semRepetirONosso,
+  soRepeteONosso,
   rascunhoPodeSairSozinho,
   AVISOS_QUE_IMPEDEM_ENVIO,
   AVISOS_QUE_SO_AVISAM,
@@ -2604,6 +2607,80 @@ grupo('a regra do "NAO REPITA" esta colada no pedido (12/09/2026)');
   check(!pedeMaterial([{ texto: 'gostaria de uma camisa da campanha', tipo: 'TEXT', at: 1 }], null),
     '"gostaria de uma camisa da campanha" nao e mais material');
   check(!!pedeRoupa([{ texto: 'gostaria de uma camisa da campanha', tipo: 'TEXT', at: 1 }], null), 'e sim roupa');
+}
+
+grupo('a IA nao repete o que acabamos de dizer (15/09/2026)');
+{
+  /**
+   * Relato dele: *"a IA tem agradecido multiplas vezes pelo apoio e dado boa tarde multiplas vezes,
+   * uma mensagem apos a outra; ela nao consegue ver o contexto da conversa?"*.
+   *
+   * **Medido: ela ve.** O bloco do contato manda a conversa inteira com NOS/ELA, marca o que ja foi
+   * respondido, a VOZ manda emendar de onde paramos e a regra de 12/09 manda nao repetir — e o
+   * rascunho que repetia *"Boa tarde! Obrigado pelo apoio"* saia com **zero avisos**. Pior:
+   * `revisarRascunho` CONSERTAVA a saudacao errada, ou seja, deixava a segunda "boa tarde" do dia
+   * bem-formada. **Prompt e pedido; o que muda comportamento aqui e o conserto mecanico.**
+   */
+  const agora = new Date('2026-09-15T14:30:00-03:00');
+  const nossa = 'Bom dia! Obrigado de coracao pelo apoio e pela confianca - e isso que sustenta o trabalho.';
+  const ctx = { nossaUltima: nossa, jaFalamosHoje: true, jaFalamos: true };
+
+  const r1 = revisarRascunho(
+    'Boa tarde! Obrigado pelo apoio e pela confianca. Que bom saber que voce esta divulgando no bairro, isso ajuda demais.',
+    agora, ctx);
+  check(!/boa tarde/i.test(r1.texto), 'a saudacao repetida no mesmo dia SAI');
+  check(!/obrigado pelo apoio/i.test(r1.texto), 'e o agradecimento que ja saiu tambem');
+  check(/divulgando no bairro/.test(r1.texto), 'o que era NOVO fica');
+  check(r1.texto.startsWith('Que bom'), 'e a frase que sobra comeca com maiuscula');
+
+  /** **Nao sobrando nada, o texto FICA e o aviso barra** — farelo para eleitor e pior. */
+  const r2 = revisarRascunho('Boa tarde! Obrigado pelo apoio e pela confianca.', agora, ctx);
+  check(/obrigado pelo apoio/i.test(r2.texto), 'rascunho que so repete nao vira farelo');
+  check(r2.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.sopraRepeticao), 'e o aviso da repeticao aparece');
+  check(!rascunhoPodeSairSozinho(r2.avisos), 'e ele NAO sai sozinho');
+
+  /** **Pergunta nunca sai**: perguntar de novo e acao, nao cortesia repetida. */
+  const r3 = revisarRascunho('Boa tarde! Voce pode me confirmar o seu endereco completo?', agora, ctx);
+  check(/endereco completo\?/.test(r3.texto), 'a pergunta fica');
+  check(!/boa tarde/i.test(r3.texto), 'so a saudacao sai');
+
+  /** **O que e novo nao e tocado.** */
+  const r4 = revisarRascunho('O Capitao Martim e deputado estadual, e o numero na urna e 10122.', agora, ctx);
+  check(r4.texto === 'O Capitao Martim e deputado estadual, e o numero na urna e 10122.', 'conteudo novo passa inteiro');
+  check(!r4.avisos.length, 'e sem aviso nenhum');
+
+  /**
+   * **Sem contexto nao confere nada** — fora da rodada nao ha conversa medida, e tirar a saudacao
+   * por deducao seria decidir sem saber. A correcao antiga continua valendo ali.
+   */
+  const r5 = revisarRascunho('Bom dia! Obrigado pelo apoio.', agora, {});
+  check(/^Boa tarde/.test(r5.texto), 'sem contexto, a saudacao errada continua sendo CORRIGIDA');
+
+  /** **Falamos ONTEM: a saudacao fica** — retomar em outro dia e conversa, nao maquina. */
+  const r6 = revisarRascunho('Boa tarde! Obrigado pelo apoio.', agora, { nossaUltima: nossa, jaFalamosHoje: false });
+  check(/^Boa tarde/.test(r6.texto), 'de um dia para o outro a saudacao continua');
+
+  // As pecas puras, no detalhe.
+  check(semSaudacao('Boa tarde! Tudo certo por aqui.') === 'Tudo certo por aqui.', 'semSaudacao tira e capitaliza');
+  check(semSaudacao('Tudo certo por aqui.') === null, 'sem saudacao, devolve null');
+  check(semRepetirONosso('Coisa nova aqui na conversa de hoje.', nossa) === null, 'nada repetido, nada sai');
+  check(soRepeteONosso('Obrigado pelo apoio e pela confianca.', nossa), 'a repeticao inteira e reconhecida');
+  check(!soRepeteONosso('Qual o seu endereco?', nossa), 'pergunta nao conta como repeticao');
+
+  /** **O prompt tambem deixa de convidar a saudacao** — a linha e a SEGUNDA do bloco. */
+  const h = (t) => new Date(`2026-09-15T${t}-03:00`).getTime();
+  const bloco = montarContatoRascunho({
+    mensagens: [
+      { de: 'contato', texto: 'bom dia!', at: h('09:00:00') },
+      { de: 'nos', texto: nossa, at: h('09:40:00') },
+      { de: 'contato', texto: 'amem', at: h('14:20:00') },
+    ],
+    agora,
+  });
+  check(/NÃO abra com saudação/.test(bloco), 'falamos hoje: o bloco PROIBE a saudacao');
+  check(!/a correta agora é/.test(bloco), 'e nao convida com a saudacao certa');
+  const primeiro = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi', at: h('14:20:00') }], agora });
+  check(/a correta agora é "Boa tarde"/.test(primeiro), 'primeira fala do dia: a saudacao certa continua dita');
 }
 
 fim();
