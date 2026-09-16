@@ -17,6 +17,10 @@ import {
   blocoParaOPrompt,
   melhorOpcao,
   MINIMO_DE_ESCOLHAS,
+  MINIMO_PARA_TAXA,
+  TAXA_PARA_SOLTAR,
+  taxaDePrimeira,
+  prontaParaRodarSozinha,
   DIMENSOES,
 } from '../src/lib/aprendizado.js';
 
@@ -173,6 +177,48 @@ grupo('as dimensões dizem as DUAS frases, e são mecânicas');
     check(typeof d.de('texto qualquer') === 'boolean', `"${d.id}" mede sem julgar`);
   }
   check(new Set(DIMENSOES.map((d) => d.id)).size === DIMENSOES.length, 'nenhum id repetido');
+}
+
+grupo('a taxa que diz quando soltar a IA sozinha');
+{
+  /**
+   * Pedido dele (15/09/2026): *"deixe o antigo, que ira rodar sozinho ja com o conhecimento, quando
+   * estiver com taxa baixa de erro"*.
+   *
+   * **A taxa mede uma coisa so, e e preciso dizer qual:** de quantas vezes a PRIMEIRA opcao — a que
+   * a IA mandaria se ele nao estivesse treinando — foi a escolhida. Alta, o modo antigo manda o
+   * texto que ele escolheria de qualquer jeito.
+   */
+  const um = (i) => ({
+    escolhido: ['Primeira.', 'Segunda.', 'Terceira.'][i],
+    descartados: ['Primeira.', 'Segunda.', 'Terceira.'].filter((_, j) => j !== i),
+    indice: i,
+  });
+
+  let e = vazio();
+  check(taxaDePrimeira(e).total === 0, 'sem escolha, a taxa nao existe');
+  check(!prontaParaRodarSozinha(e).pronta, 'e nada esta pronto para soltar');
+
+  for (let i = 0; i < MINIMO_PARA_TAXA; i += 1) e = registrarEscolha(e, um(0));
+  const t = taxaDePrimeira(e);
+  check(t.sim === MINIMO_PARA_TAXA && t.proporcao === 1, 'escolhendo sempre a primeira, taxa cheia');
+  check(prontaParaRodarSozinha(e).pronta, 'com a taxa cheia, a tela pode avisar que da para soltar');
+
+  let meio = vazio();
+  for (let i = 0; i < 6; i += 1) meio = registrarEscolha(meio, um(0));
+  for (let i = 0; i < 6; i += 1) meio = registrarEscolha(meio, um(2));
+  check(taxaDePrimeira(meio).proporcao === 0.5, 'metade e metade da meio');
+  check(!prontaParaRodarSozinha(meio).pronta, `e ${Math.round(TAXA_PARA_SOLTAR * 100)}% e o corte, entao ainda nao solta`);
+
+  let poucas = vazio();
+  for (let i = 0; i < MINIMO_PARA_TAXA - 1; i += 1) poucas = registrarEscolha(poucas, um(0));
+  check(!prontaParaRodarSozinha(poucas).pronta,
+    `${MINIMO_PARA_TAXA - 1} acertos em ${MINIMO_PARA_TAXA - 1} ainda nao soltam: taxa de amostra pequena e ruido`);
+
+  /** **Indice ausente nao empurra a taxa para lado nenhum** — quem nao sabe a posicao nao vota. */
+  const semIndice = registrarEscolha(vazio(), { escolhido: 'Um.', descartados: ['Dois.'] });
+  check(taxaDePrimeira(semIndice).total === 0, 'escolha sem posicao nao entra na taxa');
+  check(semIndice.escolhas === 1, 'mas continua ensinando as dimensoes');
 }
 
 fim();

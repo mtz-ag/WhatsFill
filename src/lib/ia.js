@@ -1452,7 +1452,19 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
  * DIFERIAM (ver `aprendizado.registrarEscolha`), então a instrução é de ABORDAGEM — e ela está
  * escrita aqui, no `description` que o modelo lê junto do esquema, além do bloco do contato.
  */
-export function esquemaDoRascunho() {
+/**
+ * **SÃO DOIS MODOS, e o interruptor é dele** — pedido dele (15/09/2026): *"deixe o antigo, que irá
+ * rodar sozinho já com o conhecimento, quando estiver com taxa baixa de erro, e crie o modo de
+ * treino da IA, que foi o que fizemos agora"*.
+ *
+ * `quantas = 1` é o modo antigo: um rascunho, sem caixa de escolha, **com as lições já aprendidas
+ * dentro do prompt** — é essa a parte que ele quis preservar. `quantas = 3` é o treino.
+ *
+ * **O modo decide o ESQUEMA, e não só a tela**: pedir três e usar uma pagaria a saída das outras
+ * duas em toda chamada, para sempre. Medido: US$ 2,04 → 3,39 por mil rascunhos no Haiku quente.
+ */
+export function esquemaDoRascunho(quantas = 3) {
+  const n = Number(quantas) === 1 ? 1 : 3;
   const opcao = {
     type: 'object',
     additionalProperties: false,
@@ -1488,25 +1500,27 @@ export function esquemaDoRascunho() {
     properties: {
       opcoes: {
         type: 'array',
-        minItems: 3,
-        maxItems: 3,
+        minItems: n,
+        maxItems: n,
         description:
-          'TRÊS respostas para a mesma mensagem, e elas têm de ser diferentes no JEITO — não três ' +
-          'versões da mesma frase. Varie o que dá para variar: o tamanho, abrir ou não com ' +
-          'saudação, fechar ou não com pergunta, agradecer ou ir direto ao ponto. As três têm de ' +
-          'estar CERTAS e prontas para enviar: ele vai escolher uma e mandar como está.',
+          n === 1
+            ? 'UMA resposta para a mensagem dela, pronta para enviar.'
+            : 'TRÊS respostas para a mesma mensagem, e elas têm de ser diferentes no JEITO — não três ' +
+              'versões da mesma frase. Varie o que dá para variar: o tamanho, abrir ou não com ' +
+              'saudação, fechar ou não com pergunta, agradecer ou ir direto ao ponto. As três têm de ' +
+              'estar CERTAS e prontas para enviar: ele vai escolher uma e mandar como está.',
         items: opcao,
       },
     },
   };
 }
 
-export function montarRequisicaoRascunho({ sistema, contato, modelo = MODELO_PADRAO }) {
+export function montarRequisicaoRascunho({ sistema, contato, modelo = MODELO_PADRAO, quantas = 3 }) {
   return corpo({
     sistema,
     contato,
     modelo,
-    esquema: esquemaDoRascunho(),
+    esquema: esquemaDoRascunho(quantas),
     nome: 'rascunho',
     esforco: 'medium',
     maxTokens: 4096,
@@ -1701,7 +1715,7 @@ export function nomeCurtoDeAnuncio(bruto) {
 }
 
 /** O bloco do contato para o rascunho: a conversa com folga, porque é dela que ele precisa. */
-export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false, aprendidas = '' } = {}) {
+export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false, aprendidas = '', quantas = 3 } = {}) {
   /**
    * **A conversa INTEIRA, com os dois lados e com a pendência marcada.**
    *
@@ -2012,15 +2026,19 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      */
     String(aprendidas || '').trim(),
     /**
-     * **São TRÊS, e a diferença entre elas é o que ele vai escolher.** Repetido aqui além do
-     * `description` do esquema pelo mesmo motivo de sempre: o esquema é lido longe do ponto em que
-     * o texto nasce.
+     * **São TRÊS no modo de TREINO, uma no modo normal.** Repetido aqui além do `description` do
+     * esquema pelo mesmo motivo de sempre: o esquema é lido longe do ponto em que o texto nasce.
+     *
+     * **As lições acima valem nos dois modos** — é o que ele pediu ao separá-los: *"deixe o antigo,
+     * que irá rodar sozinho já com o conhecimento"*.
      */
-    'Escreva TRÊS rascunhos DIFERENTES para esta mesma mensagem — diferentes no JEITO, não na ' +
-      'redação: varie o tamanho, abrir ou não com saudação, fechar ou não com pergunta, agradecer ou ' +
-      'ir direto ao ponto. As três têm de estar certas e prontas para enviar, porque ele escolhe uma ' +
-      'e manda como está. Se as regras acima só permitirem um jeito de responder, cumpra as regras: ' +
-      'antes três parecidas do que uma errada.',
+    Number(quantas) === 1
+      ? 'Escreva o rascunho da resposta.'
+      : 'Escreva TRÊS rascunhos DIFERENTES para esta mesma mensagem — diferentes no JEITO, não na ' +
+        'redação: varie o tamanho, abrir ou não com saudação, fechar ou não com pergunta, agradecer ' +
+        'ou ir direto ao ponto. As três têm de estar certas e prontas para enviar, porque ele escolhe ' +
+        'uma e manda como está. Se as regras acima só permitirem um jeito de responder, cumpra as ' +
+        'regras: antes três parecidas do que uma errada.',
   ]
     .filter(Boolean)
     .join('\n');

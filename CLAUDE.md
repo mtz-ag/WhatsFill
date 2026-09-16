@@ -2601,7 +2601,21 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
-- **SAO TRES RASCUNHOS, E O QUE ELE ESCOLHE VIRA REGRA MEDIDA NO PROMPT** (15/09/2026). Pedido dele:
+- **SAO DOIS MODOS, E O INTERRUPTOR E DELE** (15/09/2026): *"deixe o antigo, que ira rodar sozinho
+  ja com o conhecimento, quando estiver com taxa baixa de erro, e crie o modo de treino"*.
+  `ia.treinando` decide: **tres rascunhos + caixa de escolha** (treino) ou **um rascunho direto no
+  campo** (o antigo) — e **o antigo leva as licoes aprendidas no prompt do mesmo jeito**, que e a
+  parte que ele quis preservar. **O modo decide o ESQUEMA (`esquemaDoRascunho(quantas)`), e nao so a
+  tela**: pedir tres para usar uma pagaria a saida das outras duas em toda chamada. **A rodada
+  AUTOMATICA nunca treina** (`treinandoAgora()` = `ia.treinando && !rodadaAutomatica()`): ninguem
+  esta olhando para escolher, e escolha da maquina nao ensina nada.
+  **A "taxa baixa de erro" e MEDIDA e tem um nome exato:** de quantas vezes a PRIMEIRA opcao foi a
+  escolhida — a primeira e o que a IA mandaria sem treino nenhum. Com 10 escolhas e 80% a tela avisa
+  que da para desligar; **quem desliga e ele**, porque trocar o modo sozinho mudaria o que sai para
+  eleitor sem ninguem escolher. **Limite da medida, e esta escrito na tela:** ela diz se o primeiro
+  texto AGRADA, nao se ele esta CERTO — nao serve para decidir envio automatico, que continua sendo
+  a caixa "Automatizar" mais `rascunhoPodeSairSozinho`.
+- **AS TRES OPCOES E O QUE ELE ESCOLHE VIRA REGRA MEDIDA NO PROMPT** (15/09/2026). Pedido dele:
   *"faca ela criar 3 diferentes e vou escolher qual eu quero, e ela deve ir aprendendo com minhas
   escolhas"*. **Nao existe treinar modelo aqui** — o que existe e uma chamada com um prompt —, entao
   "aprender" so pode ser: medir o que separa o escolhido dos descartados e escrever isso no prompt.

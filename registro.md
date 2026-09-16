@@ -1,3 +1,57 @@
+## 2026-09-15 — v3.62.0 — os dois modos separados: treino e o antigo, que roda com o aprendido
+
+**Pergunta e pedido dele:** *"os modos foram separados? Deixe o antigo, que irá rodar sozinho já com
+o conhecimento, quando estiver com taxa baixa de erro, e crie o modo — se necessário — de treino da
+IA, que foi o que fizemos agora"*.
+
+**A resposta honesta era NÃO.** Na 3.61 a IA pedia três *sempre*; o que mudava era só quem escolhia
+(na rodada automática o painel, fora dela ele). Consequências: não havia como desligar o treino, e a
+saída das três era paga mesmo nas chamadas em que ninguém ia escolher.
+
+### Agora são dois modos, com interruptor
+
+| | **Treino** (novo) | **Antigo** (o que ele quis preservar) |
+|---|---|---|
+| a IA escreve | 3 rascunhos | 1 rascunho |
+| quem escolhe | ele, pela tecla 1/2/3 | ninguém — o texto vai direto para o campo |
+| o que ela aprendeu | vai no prompt | **vai no prompt igual** |
+| ensina | sim | não |
+| custo/mil (Haiku quente) | US$ 3,39 | US$ 2,04 |
+
+**O modo decide o ESQUEMA, e não só a tela:** pedir três para usar uma pagaria a saída das outras
+duas em toda chamada, para sempre.
+
+**A rodada AUTOMÁTICA nunca treina**, mesmo com a caixa marcada — ninguém está olhando para
+escolher, e escolha da máquina não ensina nada. Quem responde isso é `treinandoAgora()`, um lugar só,
+porque três pontos perguntam (o que se pede à API, quem escolhe, o que a tela promete).
+
+**Nasce LIGADO** porque hoje não há nada aprendido: com zero lições o modo antigo é exatamente o que
+já existia antes da 3.61.
+
+### A "taxa baixa de erro" que ele pediu, medida
+
+**De quantas vezes a PRIMEIRA opção foi a escolhida.** A primeira é o que a IA mandaria se ele não
+estivesse treinando — então taxa alta quer dizer, literalmente, *"o modo antigo já mandaria o texto
+que eu escolheria"*. Aparece na aba Automatizado, embaixo da caixa de treino:
+
+> Taxa de acerto de primeira: 84% (21 de 25). Já dá para desligar o treino.
+
+O aviso acende com **10 escolhas e 80%**. Amostra pequena é ruído: 9 acertos em 9 não soltam.
+
+**A tela avisa; quem desliga é ele.** Trocar o modo sozinho mudaria o que sai para eleitor sem
+ninguém escolher — a mesma razão pela qual caixa nova não entra no quadro dele sozinha.
+
+**Limite da medida, dito:** ela mede se o primeiro texto agrada, não se ele está CERTO. Um caso em
+que as três estavam erradas e ele pegou a primeira conta como acerto. Por isso o número é um sinal
+para desligar o treino, nunca para ligar o envio automático — quem governa isso continua sendo a
+caixa "Automatizar a rodada" e as travas de `rascunhoPodeSairSozinho`.
+
+**Arquivos:** `src/lib/aprendizado.js`, `src/lib/ia.js`, `src/lib/ia-cliente.js`, `src/lib/store.js`,
+`src/panel/panel.js`, `tests/aprendizado.test.mjs` (+10), `tests/ia.test.mjs` (+7), `CLAUDE.md`,
+`registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-15 — v3.61.0 — a IA escreve TRÊS rascunhos, você escolhe, e ela aprende com a escolha
 
 **Pedido dele:** *"o ideal seria a IA ir aprendendo sozinha qual tipo de resposta eu quero; no

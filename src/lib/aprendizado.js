@@ -120,7 +120,44 @@ export function medir(texto) {
 
 /** O estado zerado. `store.ia.aprendizado` nasce assim. */
 export function vazio() {
-  return { escolhas: 0, dimensoes: {}, tamanho: { curta: 0, longa: 0, meio: 0 }, desde: null };
+  return { escolhas: 0, dimensoes: {}, tamanho: { curta: 0, longa: 0, meio: 0 }, primeira: { sim: 0, nao: 0 }, desde: null };
+}
+
+/**
+ * **Quantas escolhas antes de a taxa de acerto querer dizer alguma coisa**, e a partir de que
+ * proporção o treino já pagou o que tinha para pagar.
+ *
+ * Pedido dele (15/09/2026): *"deixe o antigo, que irá rodar sozinho já com o conhecimento, quando
+ * estiver com taxa baixa de erro"*. **A taxa mede uma coisa só, e é preciso dizer qual:** de quantas
+ * vezes o PRIMEIRO rascunho — o que a IA escreveria se você não estivesse treinando — foi o que ele
+ * escolheu. Alta, o modo antigo manda o texto que ele escolheria de qualquer jeito.
+ */
+export const MINIMO_PARA_TAXA = 10;
+export const TAXA_PARA_SOLTAR = 0.8;
+
+/**
+ * **De quantas vezes a primeira opção foi a escolhida.** É a "taxa de erro" dele, pelo avesso.
+ *
+ * @returns {{sim:number, total:number, proporcao:number}}
+ */
+export function taxaDePrimeira(estado) {
+  const p = (estado && typeof estado === 'object' && estado.primeira) || {};
+  const sim = Number(p.sim) || 0;
+  const nao = Number(p.nao) || 0;
+  const total = sim + nao;
+  return { sim, total, proporcao: total ? sim / total : 0 };
+}
+
+/**
+ * **Já dá para desligar o treino?** — `{pronta, taxa}`.
+ *
+ * Nunca desliga nada sozinho: quem decide é ele, e a tela só diz que o número chegou lá. Trocar o
+ * modo por conta própria mudaria o que sai para eleitor sem ninguém escolher — a mesma razão pela
+ * qual caixa nova não entra no quadro dele sozinha.
+ */
+export function prontaParaRodarSozinha(estado) {
+  const taxa = taxaDePrimeira(estado);
+  return { pronta: taxa.total >= MINIMO_PARA_TAXA && taxa.proporcao >= TAXA_PARA_SOLTAR, taxa };
 }
 
 const somar = (estado) => {
@@ -129,6 +166,7 @@ const somar = (estado) => {
     escolhas: Number.isFinite(e.escolhas) ? e.escolhas : 0,
     dimensoes: e.dimensoes && typeof e.dimensoes === 'object' ? { ...e.dimensoes } : {},
     tamanho: { curta: 0, longa: 0, meio: 0, ...(e.tamanho || {}) },
+    primeira: { sim: 0, nao: 0, ...(e.primeira || {}) },
     desde: e.desde || null,
   };
 };
@@ -141,7 +179,7 @@ const somar = (estado) => {
  * @returns {object} o estado novo — **não muta o que entrou**, porque quem chama grava o resultado
  *   e gravar um objeto que já foi mexido esconde a diferença quando a gravação falha.
  */
-export function registrarEscolha(estado, { escolhido, descartados = [], quando = null } = {}) {
+export function registrarEscolha(estado, { escolhido, descartados = [], quando = null, indice = null } = {}) {
   const novo = somar(estado);
   const texto = String(escolhido || '').trim();
   const outros = (descartados || []).map((t) => String(t || '').trim()).filter(Boolean);
@@ -149,6 +187,17 @@ export function registrarEscolha(estado, { escolhido, descartados = [], quando =
 
   novo.escolhas += 1;
   novo.desde = novo.desde || quando || new Date().toISOString().slice(0, 10);
+
+  /**
+   * **A PRIMEIRA opção é o que a IA mandaria sem treino nenhum** — então escolhê-la é a medida de
+   * *"o modo antigo já acertaria este caso"*. É a taxa que ele pediu para decidir quando soltar a
+   * IA sozinha.
+   *
+   * `indice` nulo não conta para lado nenhum: chamador que não sabe a posição não pode empurrar a
+   * taxa para cima nem para baixo por omissão.
+   */
+  if (indice === 0) novo.primeira.sim += 1;
+  else if (Number.isInteger(indice) && indice > 0) novo.primeira.nao += 1;
 
   const meu = medir(texto);
   const deles = outros.map(medir);

@@ -232,7 +232,7 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  *
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
-export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece, aprendidas }) {
+export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece, aprendidas, quantas = 3 }) {
   try {
     const r = await pedirAoWorker({
       type: MSG_IA,
@@ -241,8 +241,13 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
       // `aprendidas` é o que ele ensinou escolhendo entre os três rascunhos — ver `aprendizado.js`.
       // Vai no bloco do CONTATO (não cacheado) de propósito: lição nova no sistema invalidaria o
       // cache de todo mundo, e é aqui, colado no pedido, que o modelo a cumpre.
-      contato: montarContatoRascunho({ mensagens, campos, agora, pedirDados, jaNosConhece, aprendidas }),
+      //
+      // `quantas` é o MODO: 3 treina, 1 é o modo antigo — e o modo antigo continua levando as
+      // lições, que é o que ele pediu ao separar os dois. Vai junto para o worker porque é lá que
+      // o esquema é montado, e pedir três para usar uma pagaria a saída das outras duas.
+      contato: montarContatoRascunho({ mensagens, campos, agora, pedirDados, jaNosConhece, aprendidas, quantas }),
       modelo: modelo || MODELO_PADRAO,
+      quantas,
     });
 
     if (!r?.ok) return { texto: '', avisos: [r?.motivo || 'a IA não respondeu'], custo: null };
@@ -375,7 +380,7 @@ export async function atender(pedido, chave) {
   // conferência de cidade (JSON, esquema próprio e teto de saída baixo).
   const corpo =
     pedido.modo === 'rascunho'
-      ? montarRequisicaoRascunho({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
+      ? montarRequisicaoRascunho({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo, quantas: pedido.quantas })
       : pedido.modo === 'cidade'
       ? montarRequisicaoCidade({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
       : montarRequisicao({

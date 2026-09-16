@@ -2730,6 +2730,32 @@ grupo('sao TRES rascunhos, e ele escolhe (15/09/2026)');
   check(estrito.properties.opcoes.items.required.includes('motivo'),
     'no modo estrito TODA propriedade entra em required, inclusive nas aninhadas');
 
+  /**
+   * **SAO DOIS MODOS** — pedido dele (15/09/2026): *"deixe o antigo, que ira rodar sozinho ja com o
+   * conhecimento, e crie o modo de treino"*. O modo decide o ESQUEMA e nao so a tela: pedir tres
+   * para usar uma pagaria a saida das outras duas em toda chamada.
+   */
+  const umSo = esquemaDoRascunho(1);
+  check(umSo.properties.opcoes.minItems === 1 && umSo.properties.opcoes.maxItems === 1,
+    'modo antigo: o esquema pede UMA');
+  check(!/TRÊS/.test(umSo.properties.opcoes.description), 'e nao fala em tres');
+  check(/Escreva o rascunho da resposta\./.test(
+    montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora, quantas: 1 })),
+    'e o bloco do contato volta a pedir UM rascunho');
+  check(!/Escreva TRÊS/.test(
+    montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora, quantas: 1 })),
+    'sem pedir tres');
+  /** **E o modo antigo continua levando o que ela aprendeu** — a parte que ele quis preservar. */
+  check(/Escreva CURTO/.test(
+    montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora, quantas: 1, aprendidas: 'Escreva CURTO.' })),
+    'o modo antigo roda COM o conhecimento aprendido');
+  check(montarRequisicaoRascunho({ sistema: 's', contato: 'c', quantas: 1 })
+    .output_config.format.schema.properties.opcoes.maxItems === 1,
+    'e a requisicao leva o esquema do modo escolhido');
+  check(montarRequisicaoRascunho({ sistema: 's', contato: 'c' })
+    .output_config.format.schema.properties.opcoes.maxItems === 3,
+    'e sem dizer o modo, o padrao continua sendo o treino');
+
   /** **O bloco do contato pede as tres e carrega o que ele ensinou.** */
   const bloco = montarContatoRascunho({
     mensagens: [{ de: 'contato', texto: 'oi', at: agora.getTime() }],

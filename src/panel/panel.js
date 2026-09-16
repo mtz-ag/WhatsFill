@@ -3074,6 +3074,63 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       )
     );
 
+    /**
+     * **O interruptor do modo de TREINO** — pedido dele (15/09/2026): *"deixe o antigo, que irá
+     * rodar sozinho já com o conhecimento, quando estiver com taxa baixa de erro, e crie o modo de
+     * treino da IA, que foi o que fizemos agora"*.
+     *
+     * Fica ao lado do interruptor da IA, na aba em que ele aperta "Começar" — a mesma razão pela
+     * qual a caixa da IA desceu da Config para cá em 06/09: controle longe do botão que o usa é
+     * controle que ninguém encontra (ele perguntou duas vezes onde estava).
+     */
+    if (state.ia?.ligada) {
+      const pronto = aprendizadoLib.prontaParaRodarSozinha(state.ia?.aprendizado);
+      card.append(
+        checkbox(
+          'Modo de treino: a IA escreve TRÊS e você escolhe (a escolha ensina)',
+          !!state.ia?.treinando,
+          async (v) => {
+            await salvarIA({ treinando: v });
+            setStatus(
+              v
+                ? 'Treino ligado: três rascunhos por vez, e o que você escolher vira regra no prompt.'
+                : 'Treino desligado: um rascunho por vez, já com o que ela aprendeu com você.',
+              'ok'
+            );
+            renderAll();
+          }
+        ),
+        h('div', { class: 'wf-origin' },
+          state.ia?.treinando
+            ? 'Desligado, volta a ser um rascunho só por chamada — e ele já sai com tudo o que ela ' +
+              'aprendeu com você. O treino custa a saída de dois textos a mais: US$ 2,04 → 3,39 por ' +
+              'mil rascunhos no Haiku (medido).'
+            : 'Um rascunho por chamada, com as regras aprendidas dentro do prompt. Ligue o treino ' +
+              'quando quiser ensinar de novo — depois de mudar o padrão de resposta, por exemplo.'),
+        /**
+         * **A taxa que ELE pediu para decidir quando soltar** — de quantas vezes a PRIMEIRA opção
+         * (a que a IA mandaria sem treino) foi a escolhida. Alta, o modo antigo manda o texto que
+         * ele escolheria de qualquer jeito.
+         *
+         * **A tela avisa; quem desliga é ele.** Trocar o modo sozinho mudaria o que sai para
+         * eleitor sem ninguém escolher — a mesma razão pela qual caixa nova não entra no quadro
+         * dele sozinha.
+         */
+        pronto.taxa.total
+          ? h('div', { class: pronto.pronta ? 'wf-block' : 'wf-origin', 'data-fica': '1' },
+              `Taxa de acerto de primeira: ${Math.round(pronto.taxa.proporcao * 100)}% ` +
+                `(${pronto.taxa.sim} de ${pronto.taxa.total}). ` +
+                (pronto.pronta
+                  ? 'Já dá para desligar o treino: na maioria das vezes você fica com o primeiro texto, ' +
+                    'que é justamente o que o modo antigo mandaria.'
+                  : `Com ${aprendizadoLib.MINIMO_PARA_TAXA} escolhas e ` +
+                    `${Math.round(aprendizadoLib.TAXA_PARA_SOLTAR * 100)}% eu aviso aqui que dá para soltar.`))
+          : h('div', { class: 'wf-origin' },
+              'A taxa de acerto aparece aqui depois da primeira escolha — é ela que diz quando o ' +
+                'treino já pagou o que tinha para pagar.')
+      );
+    }
+
     card.append(
       h('div', { class: 'wf-origin' },
         'Ligada, ela faz duas coisas e só elas: ESCREVE a resposta nos casos que o fluxo passa ' +
@@ -10254,6 +10311,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * prompt sozinha (`.filter(Boolean)`), então antes da quinta escolha nada muda.
          */
         aprendidas: aprendizadoLib.blocoParaOPrompt(state.ia?.aprendizado),
+        /**
+         * **O MODO** — pedido dele (15/09/2026): *"deixe o antigo, que irá rodar sozinho já com o
+         * conhecimento… e crie o modo de treino"*. Três treina, uma é o modo antigo.
+         *
+         * **Vai no pedido e não só na tela**: pedir três e usar uma pagaria a saída das outras duas
+         * em toda chamada, para sempre. E **na rodada automática não se treina** — ninguém está
+         * olhando para escolher, então pedir três ali seria gastar por uma escolha que a máquina
+         * faria sozinha (e escolha da máquina não ensina nada).
+         */
+        quantas: treinandoAgora() ? 3 : 1,
       });
     } catch (err) {
       return { ok: false, enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };
@@ -10365,7 +10432,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     let ensinou = null;
 
     if (opcoes.length > 1) {
-      if (rodadaAutomatica()) {
+      if (!treinandoAgora()) {
+        /**
+         * **Modo antigo, e o modelo devolveu três mesmo assim.** Não deveria acontecer (o esquema
+         * pede uma), mas o que vem da API é entrada não confiável: usar a primeira é o desfecho
+         * certo, e abrir a caixa num modo em que ele desligou o treino seria a extensão pedindo o
+         * que ele disse que não queria dar.
+         */
+        escolhida = opcoes[0];
+      } else if (rodadaAutomatica()) {
         const i = aprendizadoLib.melhorOpcao(opcoes.map((o) => o.texto), state.ia?.aprendizado);
         escolhida = opcoes[i >= 0 ? i : 0];
       } else {
@@ -10381,7 +10456,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           return { ok: false, enviado: false, motivo: 'o atendimento mudou enquanto você escolhia — não pus nada no campo' };
         }
         escolhida = opcoes[r.indice];
-        ensinou = { escolhido: escolhida.texto, descartados: opcoes.filter((_, i) => i !== r.indice).map((o) => o.texto) };
+        ensinou = {
+          escolhido: escolhida.texto,
+          descartados: opcoes.filter((_, i) => i !== r.indice).map((o) => o.texto),
+          // A POSIÇÃO é o que mede a taxa: a primeira opção é o que a IA mandaria sem treino nenhum.
+          indice: r.indice,
+        };
       }
     }
 
@@ -10448,6 +10528,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return { ok: true, enviado: false, motivo: 'rascunho pronto no campo de mensagem', texto, avisos };
   }
 
+
+  /**
+   * **Está treinando AGORA?** — um lugar só, porque três pontos perguntam isso (o que se pede à
+   * API, quem escolhe entre as opções e o que a tela promete), e três leituras separadas divergem
+   * na primeira caixa nova. É o mesmo desenho de `rodadaAutomatica()`.
+   *
+   * **A rodada automática nunca treina**, mesmo com a caixa marcada: ninguém está olhando para
+   * escolher, e escolha da máquina não ensina nada — pedir três ali seria pagar a saída de duas
+   * opções que ninguém vai ler.
+   */
+  function treinandoAgora() {
+    return !!state.ia?.treinando && !rodadaAutomatica();
+  }
 
   /**
    * **O que a IA aprendeu com ele, na tela e apagável** — pedido dele (15/09/2026): *"ela deve ir
