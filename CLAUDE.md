@@ -2601,14 +2601,28 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **ESQUEMA DE SAIDA ESTRUTURADA VAI LITERAL: `minItems` so 0 ou 1, `maxItems` NAO EXISTE — e o erro e
+  400** (16/09/2026). Relato dele: *"o modo de treino falhou"*. A v3.61 mandava `minItems: 3,
+  maxItems: 3` e **todo rascunho numa casa Claude voltou erro por dois dias, nos dois modos**. Nada
+  acusou: o JSON e valido, nenhum teste chama a API, e **os SDKs Python/TS tiram essas restricoes
+  sozinhos** — esta extensao usa `fetch` cru. Tambem recusados: `minLength`, `maxLength`, `minimum`,
+  `maximum`, `multipleOf`. **Contagem e tamanho moram no texto do pedido e no `validar*`**, e
+  `tests/ia.test.mjs` varre os tres esquemas nas duas formas. **Ao mexer num esquema, confira a lista
+  de limitacoes da documentacao, nao o que o JSON Schema aceita.**
+- **"O QUE A IA LEU" E O PROMPT DE VERDADE, nao uma lista escrita** (16/09/2026, *"qual a visao da IA
+  sobre a conversa"*). `ia-cliente.rascunhar` devolve `lidoPelaIA` (o bloco do contato inteiro + o
+  resumo do sistema), montado ANTES da chamada para aparecer tambem quando ela falha; o painel guarda em
+  `state.lidoPelaIA`, **so em memoria** e zerado no `load()`. **O que ela NAO ve e o que surpreende:**
+  figura, figurinha, video, documento e audio sem transcricao somem por inteiro (`conversaParaIA`
+  filtra o que nao tem texto), e a conversa de sessoes anteriores nao entra.
 - **SAO DOIS MODOS, E O INTERRUPTOR E DELE** (15/09/2026): *"deixe o antigo, que ira rodar sozinho
   ja com o conhecimento, quando estiver com taxa baixa de erro, e crie o modo de treino"*.
   `ia.treinando` decide: **tres rascunhos + caixa de escolha** (treino) ou **um rascunho direto no
   campo** (o antigo) — e **o antigo leva as licoes aprendidas no prompt do mesmo jeito**, que e a
   parte que ele quis preservar. **O modo decide o ESQUEMA (`esquemaDoRascunho(quantas)`), e nao so a
-  tela**: pedir tres para usar uma pagaria a saida das outras duas em toda chamada. **A rodada
-  AUTOMATICA nunca treina** (`treinandoAgora()` = `ia.treinando && !rodadaAutomatica()`): ninguem
-  esta olhando para escolher, e escolha da maquina nao ensina nada.
+  tela**: pedir tres para usar uma pagaria a saida das outras duas em toda chamada. **Treino ligado
+  abre a janela SEMPRE, tambem na rodada automatica** (16/09/2026): a v3.62 pulava a escolha ali, e e
+  assim que ele roda — o treino nao abria nunca. Quem quer a rodada andando sozinha desliga o treino.
   **A "taxa baixa de erro" e MEDIDA e tem um nome exato:** de quantas vezes a PRIMEIRA opcao foi a
   escolhida — a primeira e o que a IA mandaria sem treino nenhum. Com 10 escolhas e 80% a tela avisa
   que da para desligar; **quem desliga e ele**, porque trocar o modo sozinho mudaria o que sai para

@@ -747,6 +747,9 @@ const DEFAULTS = {
      * para todas as rodadas, não para uma configuração de rodada.
      */
     perguntaPos: null,
+    // A janela dos três rascunhos guarda a posição à parte: as duas não abrem juntas, mas no mesmo
+    // lugar uma herdaria o canto da outra (16/09/2026).
+    escolhaPos: null,
     /** Posição da janelinha do contador. Própria, senão ela e a pergunta se empurram. */
     contadorPos: null,
   },

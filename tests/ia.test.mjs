@@ -49,6 +49,7 @@ import {
   montarRequisicao,
   validarDecisao,
   esquemaDaDecisao,
+  esquemaDaCidade,
   RESTRITOS,
   CONFIANCA_MINIMA,
   MODELO_PADRAO,
@@ -2724,7 +2725,7 @@ grupo('sao TRES rascunhos, e ele escolhe (15/09/2026)');
 
   /** **O esquema pede exatamente tres, e sobrevive ao modo estrito da OpenAI.** */
   const e = esquemaDoRascunho();
-  check(e.properties.opcoes.minItems === 3 && e.properties.opcoes.maxItems === 3, 'o esquema pede tres');
+  check(/TRÊS respostas/.test(e.properties.opcoes.description), 'o esquema pede tres');
   check(/JEITO/.test(e.properties.opcoes.description), 'e diz que tem de ser diferentes no JEITO');
   const estrito = esquemaEstrito(e);
   check(estrito.properties.opcoes.items.required.includes('motivo'),
@@ -2736,8 +2737,7 @@ grupo('sao TRES rascunhos, e ele escolhe (15/09/2026)');
    * para usar uma pagaria a saida das outras duas em toda chamada.
    */
   const umSo = esquemaDoRascunho(1);
-  check(umSo.properties.opcoes.minItems === 1 && umSo.properties.opcoes.maxItems === 1,
-    'modo antigo: o esquema pede UMA');
+  check(/UMA resposta/.test(umSo.properties.opcoes.description), 'modo antigo: o esquema pede UMA');
   check(!/TRÊS/.test(umSo.properties.opcoes.description), 'e nao fala em tres');
   check(/Escreva o rascunho da resposta\./.test(
     montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora, quantas: 1 })),
@@ -2749,11 +2749,11 @@ grupo('sao TRES rascunhos, e ele escolhe (15/09/2026)');
   check(/Escreva CURTO/.test(
     montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora, quantas: 1, aprendidas: 'Escreva CURTO.' })),
     'o modo antigo roda COM o conhecimento aprendido');
-  check(montarRequisicaoRascunho({ sistema: 's', contato: 'c', quantas: 1 })
-    .output_config.format.schema.properties.opcoes.maxItems === 1,
+  check(/UMA resposta/.test(montarRequisicaoRascunho({ sistema: 's', contato: 'c', quantas: 1 })
+    .output_config.format.schema.properties.opcoes.description),
     'e a requisicao leva o esquema do modo escolhido');
-  check(montarRequisicaoRascunho({ sistema: 's', contato: 'c' })
-    .output_config.format.schema.properties.opcoes.maxItems === 3,
+  check(/TRÊS respostas/.test(montarRequisicaoRascunho({ sistema: 's', contato: 'c' })
+    .output_config.format.schema.properties.opcoes.description),
     'e sem dizer o modo, o padrao continua sendo o treino');
 
   /** **O bloco do contato pede as tres e carrega o que ele ensinou.** */
@@ -2768,6 +2768,46 @@ grupo('sao TRES rascunhos, e ele escolhe (15/09/2026)');
     'as licoes ficam coladas no pedido, no fim — regra longe do ponto em que o modelo escreve nao e cumprida');
   check(!/O QUE ELE ESCOLHEU/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora })),
     'sem licao aprendida, nada entra no prompt');
+}
+
+grupo('nenhum esquema manda palavra-chave que a API recusa com 400 (16/09/2026)');
+{
+  /**
+   * Relato dele: *"o modo de treino falhou"*. Causa: `minItems: 3` e `maxItems: 3` no esquema do
+   * rascunho. As saidas estruturadas da Anthropic aceitam `minItems` so com 0 ou 1 e NAO aceitam
+   * `maxItems`, nem restricao de numero (`minimum`, `maximum`, `multipleOf`) nem de tamanho de texto
+   * (`minLength`, `maxLength`) — e respondem 400. Os SDKs limpam isso sozinhos; esta extensao usa
+   * `fetch` cru e manda literal. **Todo rascunho numa casa Claude falhou por dois dias**, e nada acusou
+   * porque o JSON e valido e nenhum teste chama a API.
+   *
+   * A varredura e sobre os TRES esquemas e as DUAS formas (a original e a estrita da OpenAI), porque o
+   * proximo esquema a ganhar uma restricao nao vai ser este.
+   */
+  const PROIBIDAS = ['maxItems', 'minLength', 'maxLength', 'minimum', 'maximum', 'multipleOf', 'exclusiveMinimum', 'exclusiveMaximum'];
+  const acusar = (no, caminho, fora) => {
+    if (!no || typeof no !== 'object') return fora;
+    for (const [k, v] of Object.entries(no)) {
+      if (PROIBIDAS.includes(k)) fora.push(`${caminho}.${k}`);
+      if (k === 'minItems' && !(v === 0 || v === 1)) fora.push(`${caminho}.minItems=${v}`);
+      if (v && typeof v === 'object') acusar(v, `${caminho}.${k}`, fora);
+    }
+    return fora;
+  };
+  const esquemas = {
+    decisao: esquemaDaDecisao(['pedir-dados']),
+    cidade: esquemaDaCidade(),
+    rascunhoTreino: esquemaDoRascunho(3),
+    rascunhoAntigo: esquemaDoRascunho(1),
+  };
+  for (const [nome, esq] of Object.entries(esquemas)) {
+    const fora = acusar(esq, nome, []);
+    check(!fora.length, `"${nome}" sem palavra-chave recusada${fora.length ? ` — achei: ${fora.join(', ')}` : ''}`);
+    const estrito = acusar(esquemaEstrito(esq), `${nome}(estrito)`, []);
+    check(!estrito.length, `"${nome}" na forma estrita tambem${estrito.length ? ` — achei: ${estrito.join(', ')}` : ''}`);
+  }
+  /** E a contagem continua valendo, so que no lugar certo: quem corta e `validarRascunho`. */
+  const cinco = JSON.stringify({ opcoes: ['Um.', 'Dois.', 'Tres.', 'Quatro.', 'Cinco.'].map((texto) => ({ texto })) });
+  check(validarRascunho(cinco, new Date(), {}).opcoes.length === 3, 'sem maxItems, quem corta em tres e o codigo');
 }
 
 fim();

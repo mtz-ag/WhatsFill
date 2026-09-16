@@ -15,7 +15,6 @@ import {
   registrarEscolha,
   licoes,
   blocoParaOPrompt,
-  melhorOpcao,
   MINIMO_DE_ESCOLHAS,
   MINIMO_PARA_TAXA,
   TAXA_PARA_SOLTAR,
@@ -145,25 +144,6 @@ grupo('nada acontece sem escolha de verdade');
   const antes = vazio();
   const depois = registrarEscolha(antes, { escolhido: 'Oi. Tudo certo.', descartados: ['Tudo certo.'] });
   check(antes.escolhas === 0 && depois.escolhas === 1, 'o estado velho fica intacto');
-}
-
-grupo('a rodada automática escolhe pelo que ele ensinou');
-{
-  let e = vazio();
-  for (let i = 0; i < 6; i += 1) {
-    e = registrarEscolha(e, {
-      escolhido: 'Está anotado por aqui e vamos acompanhar.',
-      descartados: ['Boa tarde! Está anotado por aqui e vamos acompanhar.', 'Bom dia! Obrigado. 🙏'],
-    });
-  }
-  const opcoes = [
-    'Boa tarde! Está tudo anotado por aqui.',
-    'Está tudo anotado por aqui, pode deixar.',
-    'Bom dia! Obrigado pela confiança. 🙏',
-  ];
-  check(melhorOpcao(opcoes, e) === 1, 'sem lição aprendida a opção sem saudação ganha');
-  check(melhorOpcao(opcoes, vazio()) === 0, 'sem nada aprendido, fica a primeira');
-  check(melhorOpcao([], e) === -1, 'sem opção nenhuma, -1');
 }
 
 grupo('as dimensões dizem as DUAS frases, e são mecânicas');

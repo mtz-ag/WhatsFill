@@ -1,3 +1,63 @@
+## 2026-09-16 — v3.63.0 — o treino volta a funcionar, abre numa janela, e mostra o que a IA leu
+
+**Relato dele:** *"o modo de treino falhou, preciso que ele abra as 3 opções em popup, e preciso saber
+também qual a visão da IA sobre a conversa, o que ela tem acesso e o que não tem"*.
+
+### A causa: a API recusava o esquema — e nos DOIS modos
+
+**Confirmado na documentação das saídas estruturadas da Anthropic:** `minItems` só aceita **0 ou 1**,
+`maxItems` **não é aceito**, e o que vem é **400**. A v3.61 mandava `minItems: 3, maxItems: 3`; a v3.62
+mandava `1`/`1` no modo antigo. **Desde a v3.61, todo rascunho numa casa Claude voltava erro — o treino
+e o modo antigo.** Nada acusou: o esquema é JSON válido, nenhum teste chama a API, e os SDKs Python e
+TypeScript tiram essas restrições sozinhos antes de mandar (por isso o erro não aparece em exemplo
+nenhum) — **esta extensão usa `fetch` cru**, e o esquema vai literal.
+
+Conserto: as duas palavras saíram; a contagem continua no texto do pedido e em `validarRascunho`, que
+corta em três e descarta vazia e repetida. **Teste novo varre os TRÊS esquemas** (decisão, cidade e
+rascunho, nas formas normal e estrita) atrás de `maxItems`, `minItems` acima de 1, `minLength`,
+`maxLength`, `minimum`, `maximum` e `multipleOf` — o próximo esquema a ganhar uma restrição não vai ser
+este.
+
+### A segunda causa: o treino nunca abria na rodada automática — e é assim que ele roda
+
+A v3.62 pulava a escolha na rodada automática. **Agora treino ligado abre a janela SEMPRE**, também na
+rodada automática, que espera a escolha e depois manda o texto escolhido (as travas continuam valendo).
+Quem quer a rodada andando sozinha desliga o treino: é o modo antigo, com o que já foi aprendido no
+prompt. `aprendizado.melhorOpcao` ficou sem chamador e saiu junto.
+
+### A janela
+
+Três **cartões lado a lado**, cada um com o texto inteiro, o que diferencia a opção e os avisos DAQUELE
+texto; teclas 1, 2 e 3, Esc fecha sem pôr nada no campo. Não escurece a conversa e é arrastável, com a
+posição guardada à parte da caixa da rodada. **Medido num navegador com o CSS do painel:** a 1366 px,
+caixa de 1040 px e cartões de 329 px com texto a 14 px; a 820 px, os cartões viram 2 + 1 e a caixa
+termina em 646 de 700 px de altura.
+
+### "O que a IA leu"
+
+Na própria janela (recolhido) e, para o modo antigo, num botão no cartão da IA da aba Automatizado:
+**o bloco EXATO que foi mandado sobre aquele contato**, mais o resumo do resto do prompt (quantos tokens,
+quantas respostas prontas, se o dossiê entrou, quantas lições). Montado antes da chamada, então aparece
+também quando ela falha. **Só em memória** e zerado ao trocar de contato — tem dado de eleitor.
+
+**O que a IA TEM, lido no código:** a conversa desta sessão inteira (os dois lados, com hora, marcando o
+que está sem resposta e o que já foi respondido), a transcrição dos áudios (marcada), o áudio
+encaminhado e o clique no anúncio (marcados), a hora de agora e a saudação certa, Nome e Cidade do
+cadastro e se a pessoa já nos conhece; no sistema, o padrão dele, as regras fixas, as respostas prontas
+(até 500 caracteres cada), as instruções extras, o dossiê quando a conversa puxa e as lições aprendidas.
+
+**O que a IA NÃO TEM:** **figura, figurinha, vídeo, documento e áudio sem transcrição — a mensagem nem
+aparece para ela** (`conversaParaIA` filtra o que não tem texto); a conversa de sessões anteriores (só
+o "já nos conhece", sim ou não); etiquetas e os outros campos do CRM; qual caixa do fluxo mandou o caso
+para ela; e internet. Oferecido a ele e **não feito**: marcar as mídias sem texto na conversa, para ela
+saber que chegou uma imagem.
+
+**Arquivos:** `src/lib/ia.js`, `src/lib/ia-cliente.js`, `src/lib/aprendizado.js`, `src/lib/store.js`,
+`src/panel/panel.js`, `src/panel/panel.css`, `tests/ia.test.mjs` (+9), `tests/aprendizado.test.mjs`,
+`CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-15 — v3.62.0 — os dois modos separados: treino e o antigo, que roda com o aprendido
 
 **Pergunta e pedido dele:** *"os modos foram separados? Deixe o antigo, que irá rodar sozinho já com

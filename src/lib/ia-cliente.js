@@ -19,6 +19,7 @@ import {
   montarContatoRascunho,
   montarRequisicaoRascunho,
   validarRascunho,
+  tokensAproximados,
   ELA_SE_DESCULPOU,
   ELA_FALOU_DE_TRABALHO,
   montarSistemaCidade,
@@ -233,11 +234,35 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
 export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece, aprendidas, quantas = 3 }) {
+  /**
+   * **O QUE A IA LEU, guardado para a tela mostrar** — pergunta dele (16/09/2026): *"preciso saber
+   * qual a visão da IA sobre a conversa, o que ela tem acesso e o que não tem"*.
+   *
+   * A resposta honesta não é uma lista escrita por mim: é o TEXTO que foi mandado. `contato` vai
+   * inteiro (é a parte que muda de contato para contato, e é nela que mora a conversa); o sistema,
+   * que tem ~10 mil tokens e é igual para todos, vai como RESUMO do que contém. **Montado aqui, antes
+   * da chamada**, para aparecer também quando a chamada falha — é justamente aí que ele mais precisa
+   * ver o que foi pedido.
+   *
+   * Fica só em memória, no painel. Nunca vai para armazenamento nem para arquivo: tem dado de eleitor.
+   */
+  const sistema = montarSistemaRascunho({ templates, regras, gabinete });
+  const contato = montarContatoRascunho({ mensagens, campos, agora, pedirDados, jaNosConhece, aprendidas, quantas });
+  const lidoPelaIA = {
+    contato,
+    sistemaTokens: tokensAproximados(sistema),
+    contatoTokens: tokensAproximados(contato),
+    respostasProntas: (templates || []).length,
+    instrucoesExtras: !!String(regras || '').trim(),
+    dossie: !!String(gabinete || '').trim(),
+    licoes: String(aprendidas || '').split(/\r?\n/).filter((l) => l.startsWith('- ')).length,
+    quantas,
+  };
   try {
     const r = await pedirAoWorker({
       type: MSG_IA,
       modo: 'rascunho',
-      sistema: montarSistemaRascunho({ templates, regras, gabinete }),
+      sistema,
       // `aprendidas` é o que ele ensinou escolhendo entre os três rascunhos — ver `aprendizado.js`.
       // Vai no bloco do CONTATO (não cacheado) de propósito: lição nova no sistema invalidaria o
       // cache de todo mundo, e é aqui, colado no pedido, que o modelo a cumpre.
@@ -245,12 +270,12 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
       // `quantas` é o MODO: 3 treina, 1 é o modo antigo — e o modo antigo continua levando as
       // lições, que é o que ele pediu ao separar os dois. Vai junto para o worker porque é lá que
       // o esquema é montado, e pedir três para usar uma pagaria a saída das outras duas.
-      contato: montarContatoRascunho({ mensagens, campos, agora, pedirDados, jaNosConhece, aprendidas, quantas }),
+      contato,
       modelo: modelo || MODELO_PADRAO,
       quantas,
     });
 
-    if (!r?.ok) return { texto: '', avisos: [r?.motivo || 'a IA não respondeu'], custo: null };
+    if (!r?.ok) return { texto: '', avisos: [r?.motivo || 'a IA não respondeu'], custo: null, lidoPelaIA };
     // `validarRascunho` e não `revisarRascunho`: o rascunho passou a vir com esquema (texto +
     // confianca + precisaDeRevisao), e é a confiança que o envio automático precisa. Resposta
     // sem esquema ainda vira rascunho: o texto continua servindo para ele ler e mandar.
@@ -316,9 +341,10 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
       // — sem ele a tela mostra "RESERVA" e ninguém sabe o que houve com a casa escolhida.
       usouReserva: r.usouReserva,
       motivoDoTitular: r.motivoDoTitular,
+      lidoPelaIA,
     };
   } catch (err) {
-    return { texto: '', avisos: [err?.message || String(err)], custo: null };
+    return { texto: '', avisos: [err?.message || String(err)], custo: null, lidoPelaIA };
   }
 }
 

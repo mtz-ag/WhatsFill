@@ -1498,10 +1498,22 @@ export function esquemaDoRascunho(quantas = 3) {
     additionalProperties: false,
     required: ['opcoes'],
     properties: {
+      /**
+       * **SEM `minItems` NEM `maxItems` — e foi isto que derrubou o treino** (16/09/2026). Relato dele:
+       * *"o modo de treino falhou"*. A documentação das saídas estruturadas da Anthropic diz, com
+       * todas as letras: `minItems` só aceita **0 ou 1**, e `maxItems` **não é aceito**; qualquer outra
+       * coisa volta **400**. A v3.61 mandava `minItems: 3, maxItems: 3` e a v3.62 `1`/`1` — **nos dois
+       * modos, todo rascunho numa casa Claude voltava erro.** Nenhum teste pegou porque nenhum teste
+       * chama a API; nenhum verificador pegou porque o esquema é JSON válido.
+       *
+       * **Os SDKs Python e TypeScript tiram essas restrições sozinhos antes de mandar** — e é por isso
+       * que o erro não aparece nos exemplos de lugar nenhum. **Esta extensão usa `fetch` cru**, então
+       * o que se escreve aqui vai literal. A contagem mora em dois lugares que a API não recusa: o
+       * `description` (e o bloco do contato) e `validarRascunho`, que corta em três e descarta vazia e
+       * repetida. `tests/ia.test.mjs` varre os três esquemas atrás de palavra-chave proibida.
+       */
       opcoes: {
         type: 'array',
-        minItems: n,
-        maxItems: n,
         description:
           n === 1
             ? 'UMA resposta para a mensagem dela, pronta para enviar.'

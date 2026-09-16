@@ -651,3 +651,40 @@
   padding: 2px 0 2px 8px;
   border-left: 2px solid var(--wf-border);
 }
+
+/*
+  A JANELA DE ESCOLHA DOS TRÊS RASCUNHOS (16/09/2026) — pedido dele: "preciso que ele abra as 3 opções
+  em popup". Herda tudo de .wf-pergunta (cores, tema escuro, fundo que não bloqueia a conversa, limite
+  de altura calculado pelo JS) e só alarga: a caixa da rodada tem 460px, e três textos para LER não
+  cabem ali — a lição de 08/09 sobre texto longo em caixa estreita.
+*/
+.wf-pergunta.wf-escolha { max-width: min(1040px, calc(100vw - 32px)); }
+.wf-escolha-cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+  margin: 10px 0;
+}
+.wf-escolha-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--wf-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-width: 0;
+}
+.wf-escolha-cabeca { font-size: 12px; font-weight: 600; color: var(--wf-muted); }
+.wf-escolha-texto { font-size: 14px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; flex: 1 1 auto; }
+.wf-escolha-lido { margin: 6px 0 4px; font-size: 12px; }
+.wf-escolha-lido summary { cursor: pointer; font-weight: 600; }
+.wf-escolha-prompt {
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  padding: 8px;
+  border: 1px solid var(--wf-border);
+  border-radius: 6px;
+}
