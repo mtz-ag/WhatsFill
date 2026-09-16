@@ -1,3 +1,38 @@
+## 2026-09-16 — v3.67.0 — as três opções não oferecem o que ela não pediu, e não repetem o conteúdo
+
+**Relato dele, com a print da janela de escolha:** *"nesse caso ela sugeriu colinha sem motivo nenhum
+nas 3 e eu não queria isso; a variação não pode se repetir nas 3 opções"*. A contato só tinha mandado
+carinho, e as três opções ofereciam a colinha (uma ainda oferecia o link do grupo).
+
+**Medido no prompt gerado, as duas causas eram minhas:**
+
+1. **Nada proibia oferecer o que ela não pediu.** Havia proibições pontuais (não ofereça catálogo, não
+   ofereça a Assembleia, não ofereça fazer nada por ela) e nenhuma regra geral. E a instrução das três
+   opções mandava variar *"fechar ou não com pergunta"* — para fechar com pergunta sem ter o que
+   perguntar, o modelo inventa uma oferta (*"quer que eu te mande a lista?"*). A lição aprendida da
+   pergunta dizia *"feche com uma pergunta que convide a resposta dela"*, que empurra o mesmo.
+2. **A instrução pedia diferença só de FORMA** (*"diferentes no JEITO, não na redação"*). O conteúdo — a
+   oferta — foi copiado nas três, e ele não tinha como escolher uma sem ela.
+
+**Conserto, no que a IA lê (colado no pedido, nos dois modos, e repetido no esquema):**
+- **NÃO OFEREÇA O QUE ELA NÃO PEDIU** — colinha, lista, link de grupo, agenda, material e conteúdo só
+  entram se ela pediu ou perguntou; nada de *"quer que eu te mande…?"* para criar assunto; pergunta no
+  fim é sobre o que ELA trouxe.
+- **A variação não se repete nas três** — o que não é resposta ao que ela disse (pergunta, informação a
+  mais, convite) não pode estar nas três, e pelo menos uma responde só o que ela disse e para.
+- A lição da pergunta passou a dizer *"sobre o que ELA trouxe — nunca oferecendo algo que ela não
+  pediu"*.
+
+**Não virou trava**, pela decisão dele de 12/09 (*"quero que mude o que a IA diz, não parar todo tempo
+para eu revisar"*): decidir se uma oferta foi pedida é julgamento. **O que não foi medido:** o
+comportamento numa chamada paga — se as três ainda vierem com a mesma oferta, "O que a IA leu" na
+janela mostra o que chegou a ela.
+
+**Arquivos:** `src/lib/ia.js`, `src/lib/aprendizado.js`, `tests/ia.test.mjs` (+8), `CLAUDE.md`,
+`registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-16 — v3.66.0 — o treino não para mais a rodada automática
 
 **Relato dele:** *"o modo treino interrompeu o fluxo de mandar modelo ao aparecer anúncio"*.

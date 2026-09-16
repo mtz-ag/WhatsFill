@@ -2638,6 +2638,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   eleitor sem ninguem escolher. **Limite da medida, e esta escrito na tela:** ela diz se o primeiro
   texto AGRADA, nao se ele esta CERTO — nao serve para decidir envio automatico, que continua sendo
   a caixa "Automatizar" mais `rascunhoPodeSairSozinho`.
+- **INSTRUCAO DE VARIAR FAZ O MODELO INVENTAR CONTEUDO — e "varie so a forma" faz o conteudo inventado
+  se repetir nas tres** (16/09/2026, print da Margarida: a colinha oferecida nas tres opcoes a quem so
+  mandou carinho). *"fechar ou nao com pergunta"* virou *"quer que eu te mande a lista?"*, e *"diferentes
+  no JEITO, nao na redacao"* copiou a oferta nas tres. Hoje o pedido proibe oferecer o que ela nao pediu
+  (nos dois modos) e exige que o que nao e resposta ao que ela disse NAO esteja nas tres. **Ao pedir
+  variacao a um modelo, diga o que NAO pode variar para dentro** — variar sem ter o que variar e
+  inventar.
 - **AS TRES OPCOES E O QUE ELE ESCOLHE VIRA REGRA MEDIDA NO PROMPT** (15/09/2026). Pedido dele:
   *"faca ela criar 3 diferentes e vou escolher qual eu quero, e ela deve ir aprendendo com minhas
   escolhas"*. **Nao existe treinar modelo aqui** — o que existe e uma chamada com um prompt —, entao

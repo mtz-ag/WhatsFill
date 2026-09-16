@@ -1636,10 +1636,10 @@ export function esquemaDoRascunho(quantas = 3) {
         description:
           n === 1
             ? 'UMA resposta para a mensagem dela, pronta para enviar.'
-            : 'TRÊS respostas para a mesma mensagem, e elas têm de ser diferentes no JEITO — não três ' +
-              'versões da mesma frase. Varie o que dá para variar: o tamanho, abrir ou não com ' +
-              'saudação, fechar ou não com pergunta, agradecer ou ir direto ao ponto. As três têm de ' +
-              'estar CERTAS e prontas para enviar: ele vai escolher uma e mandar como está.',
+            : 'TRÊS respostas para a mesma mensagem, diferentes na forma E no conteúdo — não três ' +
+              'versões da mesma frase. O que não é a resposta ao que ela disse (pergunta, informação a ' +
+              'mais, convite) não pode estar nas três, e nenhuma oferece o que ela não pediu. As três ' +
+              'têm de estar CERTAS e prontas para enviar: ele vai escolher uma e mandar como está.',
         items: opcao,
       },
     },
@@ -2249,13 +2249,37 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * **As lições acima valem nos dois modos** — é o que ele pediu ao separá-los: *"deixe o antigo,
      * que irá rodar sozinho já com o conhecimento"*.
      */
+    /**
+     * **NÃO OFEREÇA O QUE ELA NÃO PEDIU** — print da Margarida (16/09/2026): as três opções ofereciam a
+     * colinha (*"quer que eu te mande a lista com os candidatos?"*, *"posso te encaminhar a colinha ou o
+     * link do grupo?"*) a quem só tinha mandado carinho. Ele: *"sugeriu colinha sem motivo nenhum nas 3,
+     * e eu não queria isso"*.
+     *
+     * **Medido no prompt gerado: nada proibia oferta sem pedido** — havia proibições pontuais (não
+     * ofereça catálogo, não ofereça a Assembleia) e nenhuma geral. E o empurrão veio de mim: a instrução
+     * das três opções mandava variar *"fechar ou não com pergunta"*, e para fechar com pergunta sem ter
+     * o que perguntar o modelo inventa uma oferta. Vale nos dois modos, então fica fora do ternário.
+     */
+    'NÃO OFEREÇA O QUE ELA NÃO PEDIU: colinha, lista de candidatos, link de grupo, agenda, material ou ' +
+      'conteúdo só entram se ela pediu ou perguntou por isso. Nada de "quer que eu te mande…?", "posso ' +
+      'te encaminhar…?" ou "qual prefere?" para criar assunto. Se fechar com pergunta, a pergunta é ' +
+      'sobre o que ELA trouxe.',
+    /**
+     * **A VARIAÇÃO NÃO SE REPETE NAS TRÊS** — mesma print, a outra metade: *"a variação não pode se
+     * repetir nas 3 opções"*. A instrução anterior pedia diferença só de FORMA (*"no JEITO, não na
+     * redação"*), então o CONTEÚDO — a oferta — foi copiado nas três, e ele não tinha como escolher uma
+     * sem ela. Agora o que não é a resposta ao que ela disse (uma oferta, uma pergunta, uma informação a
+     * mais) não pode estar nas três: pelo menos uma responde só o que ela disse.
+     */
     Number(quantas) === 1
       ? 'Escreva o rascunho da resposta.'
-      : 'Escreva TRÊS rascunhos DIFERENTES para esta mesma mensagem — diferentes no JEITO, não na ' +
-        'redação: varie o tamanho, abrir ou não com saudação, fechar ou não com pergunta, agradecer ' +
-        'ou ir direto ao ponto. As três têm de estar certas e prontas para enviar, porque ele escolhe ' +
-        'uma e manda como está. Se as regras acima só permitirem um jeito de responder, cumpra as ' +
-        'regras: antes três parecidas do que uma errada.',
+      : 'Escreva TRÊS rascunhos DIFERENTES para esta mesma mensagem. Varie a forma (tamanho, saudação, ' +
+        'agradecer ou ir direto ao ponto) E o conteúdo: tudo o que NÃO é a resposta ao que ela disse — ' +
+        'uma pergunta, uma informação a mais, um convite — NÃO pode aparecer nas três; pelo menos uma ' +
+        'responde só o que ela disse e para aí. O que é resposta ao que ela disse pode se repetir. As ' +
+        'três têm de estar certas e prontas para enviar, porque ele escolhe uma e manda como está. Se ' +
+        'as regras acima só permitirem um jeito de responder, cumpra as regras: antes três parecidas ' +
+        'do que uma errada.',
   ]
     .filter(Boolean)
     .join('\n');

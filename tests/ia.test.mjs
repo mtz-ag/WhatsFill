@@ -2211,7 +2211,9 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   const c = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'estou preocupada com a aposentadoria' }] });
   const linhas = c.split('\n');
   const regra = linhas.findIndex((l) => l.startsWith('NÃO SOMOS CANAL'));
-  check(regra >= 0 && regra === linhas.length - 2, 'e repetida no bloco do contato, logo antes do pedido');
+  // Colada no pedido: entre ela e o pedido pode haver outras regras do fim do bloco (a de NAO OFERECER
+  // entrou ali em 16/09/2026) — o que se protege e a distancia do ponto em que o modelo escreve.
+  check(regra >= 0 && regra >= linhas.length - 4, 'e repetida no bloco do contato, logo antes do pedido');
 }
 
 /**
@@ -2735,7 +2737,7 @@ grupo('sao TRES rascunhos, e ele escolhe (15/09/2026)');
   /** **O esquema pede exatamente tres, e sobrevive ao modo estrito da OpenAI.** */
   const e = esquemaDoRascunho();
   check(/TRÊS respostas/.test(e.properties.opcoes.description), 'o esquema pede tres');
-  check(/JEITO/.test(e.properties.opcoes.description), 'e diz que tem de ser diferentes no JEITO');
+  check(/forma E no conteúdo/.test(e.properties.opcoes.description), 'e diz que tem de ser diferentes na forma E no conteudo');
   const estrito = esquemaEstrito(e);
   check(estrito.properties.opcoes.items.required.includes('motivo'),
     'no modo estrito TODA propriedade entra em required, inclusive nas aninhadas');
@@ -2906,6 +2908,27 @@ grupo('a IA confere a etiqueta de material antes de marcar (16/09/2026)');
 
   const req = montarRequisicaoMaterial({ sistema: 's', contato: 'c' });
   check(req.output_config.format.schema.properties.acao.enum.join() === 'material,nao', 'o esquema so tem as duas saidas');
+}
+
+grupo('as tres opcoes nao oferecem o que ela nao pediu, e o conteudo nao se repete nas tres (16/09/2026)');
+{
+  /**
+   * Print da Margarida: as tres opcoes ofereciam a colinha a quem so tinha mandado carinho, e ele: *"a
+   * variacao nao pode se repetir nas 3 opcoes"*. Medido: nada proibia oferta sem pedido, e a instrucao
+   * das tres mandava variar "fechar ou nao com pergunta" e so a FORMA — o conteudo era copiado.
+   */
+  const msgs = [{ de: 'contato', texto: 'Estou com voces com muita energia!' }];
+  const tres = montarContatoRascunho({ mensagens: msgs, quantas: 3 });
+  const uma = montarContatoRascunho({ mensagens: msgs, quantas: 1 });
+  check(/NÃO OFEREÇA O QUE ELA NÃO PEDIU/.test(tres) && /NÃO OFEREÇA O QUE ELA NÃO PEDIU/.test(uma), 'a proibicao vale nos dois modos');
+  check(/colinha/.test(tres.slice(tres.indexOf('NÃO OFEREÇA'))), 'e nomeia a colinha');
+  check(/quer que eu te mande/.test(tres), 'e a frase que inventa a oferta');
+  check(/NÃO pode aparecer nas três/.test(tres), 'o que nao e resposta ao que ela disse nao se repete nas tres');
+  check(/pelo menos uma\s+responde só o que ela disse/.test(tres.replace(/\s+/g, ' ')), 'e uma delas responde so o que ela disse');
+  check(!/fechar ou não com pergunta/.test(tres), 'o convite a fechar com pergunta saiu');
+  const linhas = tres.split('\n');
+  check(linhas.findIndex((l) => l.startsWith('NÃO OFEREÇA')) >= linhas.length - 3, 'a regra fica colada no pedido');
+  check(/não pode estar nas três/.test(esquemaDoRascunho(3).properties.opcoes.description), 'o esquema diz o mesmo');
 }
 
 fim();

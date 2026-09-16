@@ -66,7 +66,9 @@ export const DIMENSOES = [
     id: 'pergunta',
     rotulo: 'terminar fazendo uma pergunta',
     de: (t) => /\?/.test(String(t || '')),
-    com: 'FECHE com uma pergunta que convide a resposta dela.',
+    // Sobre o que ELA trouxe: a versão anterior ("que convide a resposta") empurrava a oferta sem pedido
+    // — a colinha oferecida nas três opções da Margarida (16/09/2026).
+    com: 'FECHE com uma pergunta sobre o que ELA trouxe — nunca oferecendo algo que ela não pediu.',
     sem: 'NÃO faça pergunta: responda e encerre. Pergunta abre um atendimento que não temos braço para dar.',
   },
   {
