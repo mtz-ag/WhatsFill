@@ -2609,6 +2609,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `maximum`, `multipleOf`. **Contagem e tamanho moram no texto do pedido e no `validar*`**, e
   `tests/ia.test.mjs` varre os tres esquemas nas duas formas. **Ao mexer num esquema, confira a lista
   de limitacoes da documentacao, nao o que o JSON Schema aceita.**
+- **O FLUXO DECIDE SE A IA E CHAMADA, NAO O QUE ELA LE** (16/09/2026). Ele: *"creio que o fluxo esta
+  barrando ela de ler o contexto"*. Medido: a conversa vai inteira venha o caso de qualquer caixa; o que
+  cortava era a **midia sem texto** (sumia no `filter` de `conversaParaIA`) e a **SESSAO** (quem volta
+  abre atendimento novo). Hoje `ia.marcaDeMidia` poe a linha e o atendimento anterior vai num bloco
+  proprio, antes e SEM marca de pendente. **E o ultimo `map` de `conversaParaIA` descartava
+  `transcrito`**: a regra do audio no pedido nunca ligou. **Campo novo que a IA precisa ler tem de
+  passar por ESSE `map`** — ele e o ultimo filtro, depois de o campo ter sido montado.
 - **"O QUE A IA LEU" E O PROMPT DE VERDADE, nao uma lista escrita** (16/09/2026, *"qual a visao da IA
   sobre a conversa"*). `ia-cliente.rascunhar` devolve `lidoPelaIA` (o bloco do contato inteiro + o
   resumo do sistema), montado ANTES da chamada para aparecer tambem quando ela falha; o painel guarda em

@@ -28,6 +28,9 @@ import {
   ELA_SE_DESCULPOU,
   ELA_FALOU_DE_TRABALHO,
   semConviteAoCaso,
+  marcaDeMidia,
+  ANTERIOR_MAX_FALAS,
+  ANTERIOR_MAX_CARACTERES,
   esquemaDoRascunho,
   semSaudacao,
   semRepetirONosso,
@@ -2808,6 +2811,57 @@ grupo('nenhum esquema manda palavra-chave que a API recusa com 400 (16/09/2026)'
   /** E a contagem continua valendo, so que no lugar certo: quem corta e `validarRascunho`. */
   const cinco = JSON.stringify({ opcoes: ['Um.', 'Dois.', 'Tres.', 'Quatro.', 'Cinco.'].map((texto) => ({ texto })) });
   check(validarRascunho(cinco, new Date(), {}).opcoes.length === 3, 'sem maxItems, quem corta em tres e o codigo');
+}
+
+grupo('a IA ve a midia sem texto e o atendimento anterior (16/09/2026)');
+{
+  /**
+   * Pedido dele: *"creio que o fluxo esta barrando ela de ler o contexto"*. Medido, nao era o fluxo:
+   * a conversa vai inteira venha o caso de qualquer caixa. O que cortava era (1) midia sem texto, que
+   * sumia, e (2) a SESSAO: quem volta abre atendimento novo e a IA via so o de hoje.
+   */
+  const agora = new Date('2026-09-16T14:30:00-03:00');
+  const h = (t) => new Date(`2026-09-16T${t}-03:00`).getTime();
+
+  check(marcaDeMidia({ tipo: 'IMAGE', texto: '' }) === '(ela mandou uma IMAGEM — o conteúdo não aparece aqui)', 'imagem vira linha');
+  check(/FIGURINHA/.test(marcaDeMidia({ tipo: 'STICKER' })), 'figurinha tambem');
+  check(/VÍDEO/.test(marcaDeMidia({ tipo: 'VIDEO' })) && /DOCUMENTO/.test(marcaDeMidia({ tipo: 'DOCUMENT' })), 'video e documento tambem');
+  check(/ÁUDIO/.test(marcaDeMidia({ tipo: 'AUDIO', texto: '' })), 'audio sem transcricao tambem');
+  check(marcaDeMidia({ tipo: 'IMAGE', texto: 'olha isso' }) === '', 'com legenda, vai o texto e nao a marca');
+  check(marcaDeMidia({ tipo: 'TEXT', texto: '' }) === '', 'texto vazio sem tipo de midia nao inventa linha');
+  check(/não chegou legível/.test(marcaDeMidia({ tipo: 'AUDIO', sistema: true })), 'aviso da plataforma vira "nao chegou legivel"');
+
+  const comMidia = montarContatoRascunho({
+    mensagens: [
+      { de: 'contato', texto: marcaDeMidia({ tipo: 'IMAGE' }), semConteudo: true, at: h('14:00:00') },
+      { de: 'contato', texto: 'olha isso', at: h('14:01:00') },
+    ],
+    agora,
+  });
+  check(/ela mandou uma IMAGEM/.test(comMidia), 'a imagem aparece na conversa que ela le');
+  check(/MÍDIA:/.test(comMidia) && /NUNCA diga\s+que não viu/.test(comMidia.replace(/\s+/g, ' ')), 'e a regra proibe dizer que nao viu');
+  check(!/MÍDIA:/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora })), 'sem midia, sem a regra');
+
+  /** **O audio transcrito liga a regra do audio** — o painel jogava `transcrito` fora e ela nunca ligava. */
+  check(/ÁUDIO: para ela, nós OUVIMOS/.test(montarContatoRascunho({
+    mensagens: [{ de: 'contato', texto: '(áudio, transcrito automaticamente) oi', transcrito: true }], agora,
+  })), 'com `transcrito`, a regra do audio entra');
+
+  const anterior = [
+    { de: 'contato', texto: 'sou de Canoas e quero adesivo', at: new Date('2026-08-20T10:00:00-03:00').getTime() },
+    { de: 'nos', texto: 'Anotado!', at: new Date('2026-08-20T10:05:00-03:00').getTime() },
+  ];
+  const b = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi de novo', at: h('14:00:00') }], agora, anterior });
+  check(/ATENDIMENTO ANTERIOR — já encerrado/.test(b), 'o atendimento anterior entra em bloco proprio');
+  check(b.indexOf('ATENDIMENTO ANTERIOR') < b.indexOf('A conversa inteira'), 'e ANTES da conversa de hoje');
+  const trecho = b.slice(b.indexOf('ATENDIMENTO ANTERIOR'), b.indexOf('— fim do atendimento anterior —'));
+  check(/sou de Canoas/.test(trecho) && !/SEM RESPOSTA/.test(trecho), 'as falas antigas vao SEM a marca de pendente');
+  check(!/ATENDIMENTO ANTERIOR/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora })), 'sem anterior, sem bloco');
+
+  const muitas = Array.from({ length: 80 }, (_, i) => ({ de: 'contato', texto: `fala ${i} ${'x'.repeat(2000)}` }));
+  const cortado = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora, anterior: muitas });
+  check(!/fala 49 /.test(cortado) && /fala 50 /.test(cortado) && /fala 79 /.test(cortado), `so as ultimas ${ANTERIOR_MAX_FALAS} falas vao`);
+  check(!new RegExp(`x{${ANTERIOR_MAX_CARACTERES + 1}}`).test(cortado), `e cada uma cortada em ${ANTERIOR_MAX_CARACTERES} caracteres`);
 }
 
 fim();

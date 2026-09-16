@@ -10200,7 +10200,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const doAnuncio = nomeDoAnuncioDaSessao();
     const dela = (state.entrantes || []).map((m, i) => ({
       de: 'contato',
-      texto: marcaDaMensagem(m, String(m?.texto || ''), doAnuncio),
+      /**
+       * **Mídia sem texto vira LINHA, em vez de sumir** — pedido dele (16/09/2026). Até aqui o
+       * `filter` do fim tirava figura, vídeo, documento e áudio sem transcrição: quem mandava uma
+       * foto e escrevia *"olha isso"* chegava à IA só com o *"olha isso"*. `iaLib.marcaDeMidia` é a
+       * linha, e ela é pura e testada.
+       */
+      texto: marcaDaMensagem(m, String(m?.texto || ''), doAnuncio) || iaLib.marcaDeMidia(m),
+      semConteudo: !String(m?.texto || '').trim() && !!iaLib.marcaDeMidia(m),
       at: m?.at || null,
       // `anuncio` NÃO é decoração: é o que tira o clique da CONTAGEM de mensagens sem resposta.
       // Sem ele, "ela escreveu 2 mensagens" conta uma que ela não escreveu.
@@ -10221,7 +10228,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0) || a.ordem - b.ordem)
       // O `at` VAI JUNTO: sem ele a IA sabe a ordem e não sabe o tempo, e foi disso que ele
       // reclamou em 04/09 — "a IA está sem acesso a data e hora atual".
-      .map(({ de, texto, at, anuncio }) => ({ de, texto, at, anuncio }));
+      /**
+       * **`transcrito` e `semConteudo` PASSAM** (16/09/2026). Este `map` jogava `transcrito` fora, e
+       * por isso a regra do áudio colada no pedido (*"para ela, nós OUVIMOS"*, 3.51) **nunca foi
+       * ligada**: `montarContatoRascunho` pergunta `m.transcrito` e recebia sempre `undefined`. Achado
+       * lendo o código para responder *"o que a IA vê"*. É a lição do `conversaPedeRespostaPessoal`
+       * que passava só o tipo: função testada não garante nada se quem chama filtrar os campos que ela
+       * lê — e aqui o filtro estava no ÚLTIMO passo, depois de o campo ter sido montado.
+       */
+      .map(({ de, texto, at, anuncio, transcrito, semConteudo }) => ({ de, texto, at, anuncio, transcrito, semConteudo }));
   }
   /**
    * Rascunha com a IA e **deixa o texto no campo de mensagem, para ele mandar.**
@@ -10272,6 +10287,39 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       !!state.sinais &&
       !sugestaoLib.pedirDadosNaoCabe(state.sinais) &&
       !sugestaoLib.casoDeNegativa(state.sinais);
+
+    /**
+     * **O ATENDIMENTO ANTERIOR vai para a IA** — pedido dele (16/09/2026): *"creio que o fluxo está
+     * barrando ela de ler o contexto"*. Medido, não era o fluxo: era a SESSÃO. Quem volta sozinho
+     * abre atendimento novo, e a IA via só o de hoje.
+     *
+     * **As guardas de custo são as de 07/09:** só quando o botão "Ver conversa anterior" está na
+     * tela (custa zero rede), **uma** sessão, e reaproveita o que o `load()` já buscou para a cidade.
+     * A busca é aqui, no momento em que a IA vai escrever (~5% dos contatos), e não em todo contato
+     * aberto — rajada de requisição já derrubou a API e a plataforma junto.
+     *
+     * **Não entra em `state.entrantes`**: aquele é a memória desta sessão, e a rajada, o tempo e o
+     * "já respondemos" decidem sobre ele. Vai só para o prompt, num bloco separado que diz que nada
+     * ali espera resposta. Falhar a busca não impede o rascunho.
+     */
+    if (!state.conversaAnterior && state.temConversaAnterior && state.pageState?.sessionId) {
+      try {
+        state.conversaAnterior = (await api.getConversaAnterior(state.pageState.sessionId)) || null;
+      } catch {
+        state.conversaAnterior = null;
+      }
+    }
+    const anteriorParaIA = (() => {
+      const c = state.conversaAnterior;
+      if (!c) return [];
+      const dela = (c.entrantes || [])
+        .filter((m) => !ehMensagemDaPlataforma(m?.texto))
+        .map((m) => ({ de: 'contato', texto: String(m?.texto || '') || iaLib.marcaDeMidia(m), at: m?.at || null }));
+      const nossa = (c.nossas || []).map((m) => ({ de: 'nos', texto: String(m?.texto || ''), at: m?.at || null }));
+      return [...dela, ...nossa]
+        .filter((m) => m.texto.trim())
+        .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
+    })();
 
     let rascunho;
     try {
@@ -10335,6 +10383,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * faria sozinha (e escolha da máquina não ensina nada).
          */
         quantas: treinandoAgora() ? 3 : 1,
+        anterior: anteriorParaIA,
       });
     } catch (err) {
       return { ok: false, enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };
@@ -10742,6 +10791,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       lido.instrucoesExtras ? 'as suas instruções extras' : null,
       lido.dossie ? 'o dossiê do mandato (a conversa puxou)' : 'o dossiê NÃO entrou (a conversa não puxou)',
       lido.licoes ? `${lido.licoes} regras aprendidas com as suas escolhas` : 'nenhuma regra aprendida ainda',
+      lido.anterior ? `${lido.anterior} falas do atendimento anterior` : 'nenhum atendimento anterior',
     ].filter(Boolean);
     const detalhe = h('details', { class: 'wf-escolha-lido' }, [
       h('summary', {}, 'O que a IA leu para escrever isto'),

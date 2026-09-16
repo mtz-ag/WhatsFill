@@ -1,3 +1,43 @@
+## 2026-09-16 — v3.64.0 — a IA passa a ver a mídia e o atendimento anterior (não era o fluxo)
+
+**Pedido dele:** marcar as mídias para a IA *"e faça ela ignorar o fluxo para responder, creio que o
+fluxo está barrando ela de ler o contexto"*.
+
+### Medido antes: o fluxo NÃO corta o que a IA lê
+
+Quando a IA escreve, `rascunharParaEle` manda `conversaParaIA()` — a sessão inteira, os dois lados —
+venha o caso de qualquer caixa. Do fluxo só entram três sinais (pedir o cadastro?, ela pediu material?,
+já nos conhece?), e nenhum tira mensagem. **O fluxo decide SE a IA é chamada (~5% dos contatos), não o
+que ela lê.** Por isso "ignorar o fluxo" no sentido literal (a IA respondendo todo contato) **não foi
+feito**: mudaria o desfecho de ~95% dos contatos, com texto livre saindo sozinho na rodada automática, e
+não resolveria o que ele descreveu. Foi dito a ele.
+
+### O que cortava o contexto de verdade — três coisas, as três consertadas
+
+1. **Mídia sem texto sumia.** Figura, figurinha, vídeo, documento e áudio sem transcrição: o `filter` de
+   `conversaParaIA` os tirava, e *"olha isso"* chegava sem a foto. Hoje viram linha
+   (`ia.marcaDeMidia`: *"(ela mandou uma IMAGEM — o conteúdo não aparece aqui)"*), com regra colada no
+   pedido: não descrever, não adivinhar e **nunca dizer que não viu** (a lição da "transcrição": o modelo
+   reusa o vocabulário que recebe). A mídia **não conta** como "chegou texto legível dela" na trava do
+   pedido de reenvio — áudio sem transcrição continua podendo pedir para reenviar.
+2. **O atendimento anterior nunca chegava à IA.** Quem volta sozinho abre sessão nova, e a IA via só o
+   de hoje. Hoje, quando a IA vai escrever e o botão "Ver conversa anterior" está na tela, o anterior é
+   buscado (uma sessão, reaproveitando o que o `load()` já buscou para a cidade) e entra **antes** da
+   conversa de hoje, num bloco que diz que nada ali espera resposta — sem a marca `← SEM RESPOSTA`, para
+   ela não responder um pedido de agosto. Custo: as últimas 30 falas, até 600 caracteres cada — no
+   pior caso ~US$ 0,005 por rascunho no Haiku; uma requisição a mais só nos ~5% em que a IA escreve.
+   **Não entra em `state.entrantes`**: a rajada, o tempo e o "já respondemos" continuam sobre a sessão.
+3. **Defeito achado lendo o código para responder "o que a IA vê":** o último `map` de `conversaParaIA`
+   descartava `transcrito`, então a regra *"para ela, nós OUVIMOS o áudio"* (3.51) **nunca foi ligada**.
+   A troca mecânica que tira a frase da "transcrição" continuava funcionando e escondia isso.
+
+"O que a IA leu" (3.63) passou a dizer quantas falas do atendimento anterior foram junto.
+
+**Arquivos:** `src/lib/ia.js`, `src/lib/ia-cliente.js`, `src/panel/panel.js`, `tests/ia.test.mjs` (+20),
+`CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-16 — v3.63.0 — o treino volta a funcionar, abre numa janela, e mostra o que a IA leu
 
 **Relato dele:** *"o modo de treino falhou, preciso que ele abra as 3 opções em popup, e preciso saber

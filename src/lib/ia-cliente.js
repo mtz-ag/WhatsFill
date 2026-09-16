@@ -20,6 +20,7 @@ import {
   montarRequisicaoRascunho,
   validarRascunho,
   tokensAproximados,
+  ANTERIOR_MAX_FALAS,
   ELA_SE_DESCULPOU,
   ELA_FALOU_DE_TRABALHO,
   montarSistemaCidade,
@@ -233,7 +234,7 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  *
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
-export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece, aprendidas, quantas = 3 }) {
+export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece, aprendidas, quantas = 3, anterior = [] }) {
   /**
    * **O QUE A IA LEU, guardado para a tela mostrar** — pergunta dele (16/09/2026): *"preciso saber
    * qual a visão da IA sobre a conversa, o que ela tem acesso e o que não tem"*.
@@ -247,11 +248,13 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
    * Fica só em memória, no painel. Nunca vai para armazenamento nem para arquivo: tem dado de eleitor.
    */
   const sistema = montarSistemaRascunho({ templates, regras, gabinete });
-  const contato = montarContatoRascunho({ mensagens, campos, agora, pedirDados, jaNosConhece, aprendidas, quantas });
+  const contato = montarContatoRascunho({ mensagens, campos, agora, pedirDados, jaNosConhece, aprendidas, quantas, anterior });
   const lidoPelaIA = {
     contato,
     sistemaTokens: tokensAproximados(sistema),
     contatoTokens: tokensAproximados(contato),
+    // Quantas falas do atendimento anterior foram junto - zero quando nao havia ou nao foi buscado.
+    anterior: Math.min((anterior || []).length, ANTERIOR_MAX_FALAS),
     respostasProntas: (templates || []).length,
     instrucoesExtras: !!String(regras || '').trim(),
     dossie: !!String(gabinete || '').trim(),
@@ -296,18 +299,21 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     const lista = (mensagens || []).filter((m) => m && typeof m === 'object' && String(m.texto || '').trim());
     let ultimaNossa = -1;
     lista.forEach((m, i) => { if (m.de === 'nos') ultimaNossa = i; });
-    const recebemosDela = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa);
+    // A MIDIA sem texto (a linha "ela mandou uma IMAGEM") NAO conta: audio sem transcricao existe, e
+    // ai pedir para reenviar e a resposta certa - contar a marca como "chegou legivel" barraria o texto
+    // certo (16/09/2026).
+    const recebemosDela = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.semConteudo);
     /**
      * Ela se desculpou em algum momento desta conversa? Liga a trava desculpaInexistente.
      * Le a CONVERSA INTEIRA dela, e nao a rajada: quem se desculpou no comeco continua tendo se
      * desculpado, e a frase que reconhece isso e a certa mais tarde tambem.
      */
-    const elaSeDesculpou = lista.some((m) => m.de !== 'nos' && ELA_SE_DESCULPOU.test(String(m.texto || '')));
+    const elaSeDesculpou = lista.some((m) => m.de !== 'nos' && !m.semConteudo && ELA_SE_DESCULPOU.test(String(m.texto || '')));
     /**
      * Ela falou em trabalhar ou em ganhar? Liga a trava trabalhoInexistente. Conversa inteira e sem
      * o clique do anúncio: o texto do anúncio é da campanha, não dela.
      */
-    const elaFalouDeTrabalho = lista.some((m) => m.de !== 'nos' && !m.anuncio && ELA_FALOU_DE_TRABALHO.test(String(m.texto || '')));
+    const elaFalouDeTrabalho = lista.some((m) => m.de !== 'nos' && !m.anuncio && !m.semConteudo && ELA_FALOU_DE_TRABALHO.test(String(m.texto || '')));
     /**
      * **A NOSSA última fala, e se ela foi HOJE** — relato dele (15/09/2026): *"a IA tem agradecido
      * múltiplas vezes pelo apoio e dado boa tarde múltiplas vezes, uma mensagem após a outra"*.

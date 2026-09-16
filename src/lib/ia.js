@@ -1727,7 +1727,64 @@ export function nomeCurtoDeAnuncio(bruto) {
 }
 
 /** O bloco do contato para o rascunho: a conversa com folga, porque é dela que ele precisa. */
-export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false, aprendidas = '', quantas = 3 } = {}) {
+/**
+ * **Quanto do atendimento anterior vai.** O fim dele, que é o que tem a ver com hoje, e cortado: a
+ * sessão comum tem dezenas de mensagens (uma medida em 30/08 tinha 168), e o bloco do contato não é
+ * cacheado — cada linha aqui é paga em toda chamada. 30 falas de até 600 caracteres somam no máximo
+ * ~5 mil tokens, US$ 0,005 por rascunho no Haiku; o caso comum fica muito abaixo disso.
+ */
+export const ANTERIOR_MAX_FALAS = 30;
+export const ANTERIOR_MAX_CARACTERES = 600;
+
+/**
+ * **Como uma mensagem SEM TEXTO aparece para a IA** — pedido dele (16/09/2026), depois de ver que
+ * figura, vídeo, documento e áudio sem transcrição sumiam da conversa que ela lê.
+ *
+ * Devolve a linha a pôr no lugar do texto, ou `''` quando a mensagem tem texto (aí ela vai como é).
+ * O aviso da plataforma (`sistema`) também vira linha: *"ela mandou algo e não chegou"* é diferente
+ * de *"ela não mandou nada"* — a lição do Carlos (02/09), agora do lado da IA.
+ *
+ * @param {{tipo?:string, texto?:string, sistema?:boolean}} m
+ */
+export function marcaDeMidia(m) {
+  if (String(m?.texto || '').trim()) return '';
+  if (m?.sistema) return '(ela mandou uma mensagem que não chegou legível até aqui)';
+  const tipo = String(m?.tipo || '').toUpperCase();
+  const nome = {
+    IMAGE: 'uma IMAGEM',
+    STICKER: 'uma FIGURINHA',
+    VIDEO: 'um VÍDEO',
+    DOCUMENT: 'um DOCUMENTO',
+    AUDIO: 'um ÁUDIO (sem texto)',
+  }[tipo];
+  return nome ? `(ela mandou ${nome} — o conteúdo não aparece aqui)` : '';
+}
+
+/** O bloco do atendimento anterior — vazio quando não há nada a mostrar. */
+function blocoDoAtendimentoAnterior(anterior, agora) {
+  const falas = (anterior || [])
+    .map((m) => (typeof m === 'string' ? { de: 'contato', texto: m } : m))
+    .filter((m) => String(m?.texto || '').trim())
+    .slice(-ANTERIOR_MAX_FALAS);
+  if (!falas.length) return [];
+  return [
+    'ATENDIMENTO ANTERIOR — já encerrado. É CONTEXTO: serve para você saber quem ela é e o que já ' +
+      'conversamos. Nada daqui espera resposta, e não retome pedido nem assunto dali a menos que ela ' +
+      'volte a ele hoje:',
+    '',
+    falas
+      .map((m) => {
+        const q = quandoFoi(m.at, agora);
+        return `${m.de === 'nos' ? 'NÓS' : 'ELA'}${q ? ` [${q}]` : ''}: ${umaLinha(m.texto, ANTERIOR_MAX_CARACTERES)}`;
+      })
+      .join('\n\n'),
+    '',
+    '— fim do atendimento anterior —',
+    '',
+  ];
+}
+
+export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false, aprendidas = '', quantas = 3, anterior = [] } = {}) {
   /**
    * **A conversa INTEIRA, com os dois lados e com a pendência marcada.**
    *
@@ -1796,6 +1853,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
 
   const temCliqueDeAnuncio = lista.some((m) => m.anuncio);
   const temAudioOuvido = lista.some((m) => m.transcrito);
+  const temMidiaSemTexto = lista.some((m) => m.semConteudo);
   const pediuRoupa = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && ehPedidoDeRoupa(m.texto));
   const pendentesTotal = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).length;
   const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio).length;
@@ -1872,6 +1930,18 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'mesmo dia é o que denuncia uma máquina. Emende de onde nós paramos.'
       : `Se abrir com saudação, a correta agora é "${saudacaoDeAgora(agora)}" — não deduza pelo horário das mensagens.`,
     '',
+    /**
+     * **O ATENDIMENTO ANTERIOR, quando existe** — pedido dele (16/09/2026): *"creio que o fluxo está
+     * barrando ela de ler o contexto"*. Medido, não era o fluxo: era a SESSÃO. Quem volta sozinho
+     * abre atendimento novo, e a IA via só o de hoje — a cidade, o pedido e a conversa de semana
+     * passada ficavam do outro lado de um botão que ninguém apertava por ela.
+     *
+     * **Vai ANTES e em bloco separado, com o aviso de que nada ali espera resposta.** É a lição da
+     * Maria Geny e da Janete ao contrário: o que separa pendente de respondido é a marca, e uma pilha
+     * de falas antigas sem marca seria lida como rajada — a IA responderia um pedido de agosto.
+     * Por isso as linhas daqui NÃO recebem `← SEM RESPOSTA`.
+     */
+    ...blocoDoAtendimentoAnterior(anterior, agora),
     'A conversa inteira, da mais antiga para a mais recente. "NÓS" é o atendimento:',
     '',
     conversa || '(nada)',
@@ -1996,6 +2066,22 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
       ? 'ÁUDIO: para ela, nós OUVIMOS o áudio — "ouvi seu áudio", "escutei aqui". A palavra ' +
         '"transcrição" é máquina nossa e NÃO pode aparecer no rascunho, nem a ideia: nada de "a ' +
         'transcrição chegou", "eu li o que você falou" ou explicar como o áudio virou texto.'
+      : '',
+    /**
+     * **A regra da MÍDIA, colada no pedido** — pedido dele (16/09/2026). Até aqui figura, vídeo,
+     * documento e áudio sem transcrição sumiam da conversa, e a IA respondia *"olha isso"* sem saber
+     * que havia uma foto. Agora a linha existe, e esta regra diz o que fazer com ela.
+     *
+     * **A metade que se erra sozinha é a segunda frase.** A marca é vocabulário NOSSO, e a lição da
+     * "transcrição" (3.51) é que o modelo reusa o vocabulário que recebe: sem proibir, sai *"não
+     * consegui abrir a imagem"* para um eleitor — que é mentira (a imagem chegou) e ainda denuncia a
+     * máquina.
+     */
+    temMidiaSemTexto
+      ? 'MÍDIA: as linhas "(ela mandou uma IMAGEM…)", "(…um VÍDEO…)" etc. são coisas que chegaram e cujo ' +
+        'conteúdo você NÃO vê. Não descreva, não comente e não adivinhe o que tem nelas. E NUNCA diga ' +
+        'que não viu, não abriu ou não carregou — para ela, recebemos. Responda pelo que ela escreveu; ' +
+        'se ela só mandou a mídia, reconheça o envio em poucas palavras.'
       : '',
     temCliqueDeAnuncio
       ? 'O CLIQUE NO ANÚNCIO NÃO É FALA DELA: a linha marcada "(texto do ANÚNCIO…)" foi escrita pela ' +
