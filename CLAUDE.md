@@ -3162,6 +3162,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   — o Ciro continua apoio pelo *"sou Bolsonaro"*. **E a quinta vez da mesma licao: o que qualifica o
   apoio e o OBJETO**, e ao consertar um padrao confira os vizinhos com o mesmo formato. A lista e
   copia da chapa de `gabinete.md`: mudou a colinha, mudam os dois.
+- **O CRAS SO PARA QUEM DISSE A DIFICULDADE, e e a mesma causa das TRES OPCOES IGUAIS** (17/09/2026).
+  A regra 11 manda dizer "onde aquilo se resolve", e nada separava quem contou uma dificuldade de quem so
+  escreveu "faz um pix": obrigada a citar o CRAS, a IA escreve a mesma mensagem tres vezes. Hoje o
+  encaminhamento depende de ELA dizer a dificuldade concreta, e sem isso e uma frase de "nao podemos" e
+  para. **Toda regra que obriga um CONTEUDO e uma hipotese de tres opcoes iguais** — as outras quatro
+  estao no registro da v3.76, e a que sobra e medida por `ia.paresParecidos` (Andamento e janela de
+  escolha). **Licao aprendida tambem achata: ela vale a risca so na PRIMEIRA opcao.**
 - **SAUDE E A EXCECAO DA REGRA 11, E FOI ELE QUEM A ABRIU** (17/09/2026): *"em saude a situacao sempre e
   mais complicada; ao menos teria que perguntar qual o problema"*. A regra 11 (dele, a Irema) manda acolher
   em uma frase, dizer onde se resolve e PARAR — e era ela que despachava a pessoa doente para o posto **e

@@ -36,7 +36,7 @@ import * as atendimento from './atendimento.js';
  * reescrita do texto. Ver `AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial`.
  */
 import { ehPedidoDeEndereco, semGabinete } from './templates.js';
-import { ehPedidoDeRoupa, falouDeSaude } from './cortesia.js';
+import { ehPedidoDeRoupa, falouDeSaude, pedeAjudaFinanceira } from './cortesia.js';
 
 /**
  * O modelo padrão.
@@ -1972,19 +1972,35 @@ export function perguntaComoEleEsta(texto) {
 }
 
 export function semelhancaDasOpcoes(opcoes = []) {
-  const conjuntos = (Array.isArray(opcoes) ? opcoes : [])
-    .map((o) => new Set(conteudoDaFrase(String((typeof o === 'string' ? o : o?.texto) || ''))))
-    .filter((c) => c.size);
-  let maior = 0;
+  return paresParecidos(opcoes, 0).reduce((maior, p) => Math.max(maior, p.valor), 0);
+}
+
+/**
+ * **Quais opções dizem quase a mesma coisa** — `[{a, b, valor}]`, com as posições em base 1 e o maior
+ * primeiro. Pedido dele em 17/09/2026: *"novamente as 3 respostas são iguais, revise todas as hipóteses
+ * para que isso pare de acontecer"*. As hipóteses do prompt estão no bloco do contato; esta é a que
+ * sobra depois delas — **o modelo pode parafrasear de qualquer jeito**, e o que o programa pode fazer é
+ * MOSTRAR, na janela e no log, em vez de deixar ele descobrir lendo.
+ *
+ * **Não descarta a opção parecida**: duas opções na tela seriam a escolha empobrecida em silêncio, e a
+ * comparação é por palavra de conteúdo — ela erra para os dois lados em texto curto.
+ */
+export function paresParecidos(opcoes = [], corte = 0.6) {
+  const conjuntos = (Array.isArray(opcoes) ? opcoes : []).map(
+    (o) => new Set(conteudoDaFrase(String((typeof o === 'string' ? o : o?.texto) || '')))
+  );
+  const pares = [];
   for (let i = 0; i < conjuntos.length; i += 1) {
     for (let j = i + 1; j < conjuntos.length; j += 1) {
       const a = conjuntos[i];
       const b = conjuntos[j];
+      if (!a.size || !b.size) continue;
       const comum = [...a].filter((w) => b.has(w)).length;
-      maior = Math.max(maior, comum / (a.size + b.size - comum));
+      const valor = comum / (a.size + b.size - comum);
+      if (valor >= corte) pares.push({ a: i + 1, b: j + 1, valor });
     }
   }
-  return maior;
+  return pares.sort((x, y) => y.valor - x.valor);
 }
 
 export function semRepetirONosso(texto, nossaUltima) {
@@ -2180,6 +2196,15 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
     .filter((m) => m.de !== 'nos' && !m.anuncio)
     .map((m) => falouDeSaude(m.texto))
     .find(Boolean);
+  /**
+   * **Pediu dinheiro?** — a mesma leitura do painel (rajada desde a nossa última fala), porque a regra
+   * do CRAS é sobre o que ela acabou de pedir. 17/09/2026: *"a IA não está identificando quando realmente
+   * a pessoa precisa ir pro CRAS; muitas pedem dinheiro sem esclarecer que estão com dificuldades"*.
+   */
+  const pediuDinheiro = !!pedeAjudaFinanceira(
+    lista.filter((m) => m.de !== 'nos' && !m.anuncio),
+    ultimaNossa >= 0 ? lista[ultimaNossa].at : null
+  );
   const perguntouComoEleEsta = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && perguntaComoEleEsta(m.texto));
   const pendentesTotal = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).length;
   const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio).length;
@@ -2465,6 +2490,26 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * a primeira. Vale para as três opções, porque foi assim que ele viu o defeito: *"as 3 respostas
      * estavam iguais"* — sem nada a acolher nem a perguntar, as três viram o mesmo despacho.
      */
+    /**
+     * **O CRAS não é para todo mundo que fala de dinheiro** — regra dele (17/09/2026): *"a IA não está
+     * identificando quando realmente a pessoa precisa ir pro CRAS ou assistência social; muitas pedem
+     * dinheiro sem esclarecer que realmente estão com dificuldades"*.
+     *
+     * Medido: nada no prompt separava os dois casos — a regra 11 manda *"diga em UMA frase onde aquilo se
+     * resolve"*, e o resultado é a aula sobre CRAS e Cadastro Único para quem só escreveu *"faz um pix"*.
+     * **É também metade do problema das três opções iguais:** obrigada a citar o CRAS, a IA escreve a
+     * mesma mensagem três vezes.
+     */
+    pediuDinheiro
+      ? 'DINHEIRO — O CRAS NÃO É PARA TODO MUNDO: só aponte CRAS, assistência social, Cadastro Único ou ' +
+        'Defensoria se ELA DISSER a dificuldade concreta (está desempregada, sem comida, com aluguel ou ' +
+        'luz atrasados, ameaçada de despejo, com criança pequena sem o que comer, com benefício cortado ' +
+        'ou negado, doença na família). Se ela só pediu dinheiro, PIX ou um valor, sem dizer nada disso: ' +
+        'diga em UMA frase gentil que o mandato não pode fazer isso e PARE — sem CRAS, sem lista de ' +
+        'órgãos, sem aula sobre a lei eleitoral e sem perguntar do caso. Assistência social é para quem ' +
+        'está em vulnerabilidade; mandar todo mundo para lá é resposta de máquina, e erra com quem ' +
+        'precisa de verdade.'
+      : '',
     saude
       ? `SAÚDE — EXCEÇÃO À REGRA ACIMA: ela ${saude.motivo}. Doença não se despacha. Acolha ` +
         'com cuidado, no tempo dela, e PERGUNTE o que está acontecendo (o que ela tem, como está o ' +
@@ -2484,6 +2529,16 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * invalidaria o cache de todas as chamadas no dia em que ele escolhesse diferente.
      */
     String(aprendidas || '').trim(),
+    /**
+     * **As lições não podem achatar as três** (17/09/2026). Com várias lições medidas — *"não abra com
+     * saudação"*, *"escreva CURTO"*, *"não feche com pergunta"* — o espaço de resposta fecha e as três
+     * viram o mesmo texto seco. A saída preserva o que a taxa de acerto mede: a PRIMEIRA cumpre tudo.
+     */
+    String(aprendidas || '').trim() && Number(quantas) !== 1
+      ? 'As lições acima descrevem o que ele costuma ESCOLHER: a PRIMEIRA das três as cumpre à risca. Nas ' +
+        'outras duas, quando uma lição for justamente o que impede a opção de ser diferente, deixe de ' +
+        'cumpri-la — é para isso que servem as três.'
+      : '',
     /**
      * **São TRÊS no modo de TREINO, uma no modo normal.** Repetido aqui além do `description` do
      * esquema pelo mesmo motivo de sempre: o esquema é lido longe do ponto em que o texto nasce.
@@ -2539,6 +2594,9 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         '(c) LIGA AO CAPITÃO MARTIM: responde e conecta o assunto dela ao que o Capitão Martim defende ou ' +
         'faz, usando só o que está escrito neste pedido e nas instruções (nunca dado inventado); se não ' +
         'houver nada escrito sobre o assunto, ligue à causa em comum que ela mostrou.\n' +
+        'Se alguma regra acima obrigar um conteúdo (negar o pedido, pedir o cadastro), esse conteúdo pode ' +
+        'repetir-se, mas a abordagem NÃO: aí a (a) é uma frase só, a (b) acolhe antes de responder e a ' +
+        '(c) liga ao Capitão Martim. Nunca devolva duas opções que dizem a mesma coisa.\n' +
         'Tudo o que NÃO é a resposta ao que ela disse — uma pergunta, uma informação a mais, um convite — ' +
         'NÃO pode aparecer nas três; pelo menos uma responde só o que ela disse e para aí. A PRIMEIRA das ' +
         'três é a que você mandaria se fosse uma só (qualquer abordagem). Antes de devolver, leia as três: ' +

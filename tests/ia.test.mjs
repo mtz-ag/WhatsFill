@@ -45,6 +45,7 @@ import {
   ANTERIOR_MAX_CARACTERES,
   esquemaDoRascunho,
   semelhancaDasOpcoes,
+  paresParecidos,
   perguntaComoEleEsta,
   semSaudacao,
   semRepetirONosso,
@@ -3102,6 +3103,46 @@ grupo('saude nao se despacha: a excecao da regra 11 (17/09/2026)');
       { de: 'contato', texto: 'obrigada' },
     ],
   })), 'a excecao vale na conversa inteira');
+}
+
+grupo('o CRAS nao e para todo mundo que fala de dinheiro (17/09/2026)');
+{
+  /**
+   * Regra dele: *"a IA nao esta identificando quando realmente a pessoa precisa ir pro CRAS ou
+   * assistencia social; muitas pedem dinheiro sem esclarecer que realmente estao com dificuldades"* — e
+   * *"novamente as 3 respostas sao iguais"*: obrigada a citar o CRAS, a IA escreve a mesma mensagem tres
+   * vezes.
+   */
+  const pix = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'faz um pix pra mim por favor' }] });
+  check(/DINHEIRO — O CRAS NÃO É PARA TODO MUNDO/.test(pix), 'a regra entra quando ela pede dinheiro');
+  check(/só aponte CRAS, assistência social, Cadastro Único ou Defensoria se ELA DISSER a dificuldade/.test(pix.replace(/\s+/g, ' ')),
+    'e condiciona o encaminhamento a ela dizer a dificuldade');
+  check(/diga em UMA frase gentil que o mandato não pode fazer isso e PARE/.test(pix.replace(/\s+/g, ' ')), 'sem dificuldade dita, nega e para');
+  check(!/DINHEIRO —/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'bom dia, tudo bem?' }] })),
+    'quem nao pediu dinheiro nao recebe a regra');
+  /** Dificuldade dita + dinheiro: a regra entra e e ela que AUTORIZA o CRAS. */
+  const dificuldade = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'estou desempregada com tres filhos e preciso de dinheiro para comida' }] });
+  check(/DINHEIRO —/.test(dificuldade), 'com dificuldade dita a regra tambem entra — e la ela permite o CRAS');
+
+  /** A licao aprendida nao pode achatar as tres. */
+  const comLicao = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'obrigada' }], aprendidas: 'O QUE ELE ESCOLHEU:\n- Escreva CURTO.' });
+  check(/a PRIMEIRA das três as cumpre à risca/.test(comLicao), 'as licoes valem a risca na primeira');
+  check(!/a PRIMEIRA das três as cumpre à risca/.test(
+    montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'obrigada' }], aprendidas: 'O QUE ELE ESCOLHEU:\n- Escreva CURTO.', quantas: 1 })
+  ), 'no modo antigo a ressalva nao entra: la nao ha tres');
+  const tres = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'faz um pix' }], quantas: 3 });
+  check(/esse conteúdo pode repetir-se, mas a abordagem NÃO/.test(tres.replace(/\s+/g, ' ')), 'conteudo obrigatorio pode repetir, abordagem nao');
+  check(/Nunca devolva duas opções que dizem a mesma coisa/.test(tres), 'e a proibicao direta');
+
+  /** A medida que mostra o defeito quando ele acontecer de novo. */
+  const pares = paresParecidos([
+    { texto: 'Obrigado pela mensagem, seguimos juntos.' },
+    { texto: 'Obrigado pela sua mensagem, seguimos juntos!' },
+    { texto: 'O Capitao Martim trabalha pela seguranca nas escolas.' },
+  ]);
+  check(pares.length === 1 && pares[0].a === 1 && pares[0].b === 2, 'aponta QUAIS opcoes se repetem');
+  check(paresParecidos([{ texto: 'Uma.' }, { texto: 'Outra bem diferente disso aqui.' }]).length === 0, 'diferentes nao entram');
+  check(paresParecidos([]).length === 0 && semelhancaDasOpcoes([]) === 0, 'sem opcoes, nada');
 }
 
 fim();

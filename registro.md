@@ -1,3 +1,42 @@
+## 2026-09-17 — v3.76.0 — o CRAS só para quem disse a dificuldade, e as três hipóteses das opções iguais
+
+**Relato dele:** *"a IA não está identificando quando realmente a pessoa precisa ir pro CRAS ou assistência
+social, muitas pedem dinheiro sem esclarecer que realmente estão com dificuldades, e novamente as 3
+respostas são iguais; revise todas as hipóteses para que isso pare de acontecer"*.
+
+**Medido: as duas metades do relato têm a MESMA causa.** A regra 11 (dele) manda *"diga em UMA frase onde
+aquilo se resolve"*, e nada no prompt separava quem contou uma dificuldade de quem só escreveu *"faz um
+pix"*. Obrigada a citar o CRAS, a IA escreve a mesma mensagem — e **três vezes**, porque a regra tira o que
+havia para variar. Foi a mesma mecânica do caso de saúde (v3.75).
+
+**1. O CRAS deixou de ser automático** (`pediuDinheiro`, a mesma leitura da rodada):
+- só aponta CRAS, assistência social, Cadastro Único ou Defensoria se **ela disser** a dificuldade concreta
+  (desempregada, sem comida, aluguel ou luz atrasados, despejo, criança pequena, benefício cortado, doença
+  na família);
+- só pediu dinheiro, PIX ou um valor? **uma frase gentil de "não podemos" e PARE** — sem CRAS, sem lista de
+  órgãos, sem aula sobre a lei eleitoral, sem perguntar do caso;
+- a razão, escrita no prompt: *"mandar todo mundo para lá é resposta de máquina, e erra com quem precisa de
+  verdade"*.
+
+**2. As hipóteses das três iguais, revisadas — as cinco:**
+| hipótese | o que foi feito |
+|---|---|
+| conteúdo obrigatório (negar, CRAS, formulário) não deixa nada a variar | a regra do CRAS acima; e o pedido passou a dizer que o conteúdo obrigatório **pode** repetir-se, mas a abordagem não — aí a (a) é uma frase, a (b) acolhe antes e a (c) liga ao Martim |
+| paráfrase autorizada | já tratada na v3.70 (*"antes três parecidas"* saiu) |
+| o cadastro obrigatório nas três | já tratado na v3.71 (vai na primeira, uma vem sem) |
+| **as lições aprendidas achatam as três** (várias lições fecham o espaço: sem saudação + curto + sem pergunta = um só texto possível) | a PRIMEIRA cumpre as lições à risca; nas outras duas, a lição que for justamente o que impede a opção de ser diferente deixa de valer |
+| o modelo parafraseia de qualquer jeito | **medir e mostrar**: `ia.paresParecidos` diz QUAIS opções se repetem e quanto; vai no Andamento sempre (inclusive na rodada automática) e numa linha de aviso na janela de escolha |
+
+**Não descarto a opção parecida:** duas opções na tela seriam a escolha empobrecida em silêncio, e a
+comparação por palavra de conteúdo erra para os dois lados em texto curto.
+
+**Não medido com chamada paga.** Testes: `tests/ia.test.mjs` (+12).
+
+**Arquivos:** `src/lib/ia.js`, `src/panel/panel.js`, `tests/ia.test.mjs`, `CLAUDE.md`, `registro.md`,
+`manifest.json`.
+
+---
+
 ## 2026-09-17 — v3.75.0 — saúde não se despacha: a exceção que ele abriu na regra de "não somos canal"
 
 **Regra dele:** *"uma pessoa chegou pedindo ajuda por estar doente, a IA descartou rapidamente para posto

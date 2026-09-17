@@ -10660,6 +10660,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * abrir"*.
      */
     const opcoes = (rascunho?.opcoes || []).filter((o) => String(o?.texto || '').trim());
+    /**
+     * **A semelhança entre as opções vai para o log SEMPRE** — pedido dele (17/09/2026): *"novamente as 3
+     * respostas são iguais, revise todas as hipóteses"*. As hipóteses do prompt estão em `ia.js`; esta é
+     * a que sobra: **medir e mostrar**, em vez de ele descobrir lendo as três. Fica fora do `if (ensinou)`
+     * porque a rodada automática também devolve três e não passa por lá.
+     */
+    const parecidas = opcoes.length > 1 ? iaLib.paresParecidos(opcoes) : [];
+    if (parecidas.length) {
+      registrarNaRodada(
+        'IA',
+        'aviso',
+        `as opções ${parecidas.map((p) => `${p.a} e ${p.b} (${Math.round(p.valor * 100)}%)`).join(', ')} dizem quase a mesma coisa — se repetir, me avise: é defeito do pedido`
+      );
+    }
     let escolhida = opcoes[0] || { texto: bruto, avisos: rascunho?.avisos || [] };
     let ensinou = null;
 
@@ -10679,7 +10693,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * rascunho DELA no campo de mensagem de outra pessoa, e o próximo Enter mandaria.
          */
         const alvoId = state.contact?.id;
-        const r = await escolherEntreRascunhos(opcoes, rascunho?.lidoPelaIA);
+        const r = await escolherEntreRascunhos(opcoes, rascunho?.lidoPelaIA, parecidas);
         if (r.parou) return { ok: false, enviado: false, motivo: 'você fechou a escolha dos rascunhos' };
         if (state.contact?.id !== alvoId) {
           return { ok: false, enviado: false, motivo: 'o atendimento mudou enquanto você escolhia — não pus nada no campo' };
@@ -10861,7 +10875,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *
    * @returns {Promise<{indice:number, parou:boolean}>}
    */
-  function escolherEntreRascunhos(opcoes, lido) {
+  function escolherEntreRascunhos(opcoes, lido, parecidas = []) {
     return new Promise((resolve) => {
       const caixa = h('div', { class: 'wf-pergunta wf-escolha' });
       const fundo = h('div', { class: 'wf-pergunta-fundo' }, [caixa]);
@@ -10876,6 +10890,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           ? 'Rodada automática: a que você escolher SAI e a rodada segue. A escolha ensina '
           : 'A que você escolher vai para o campo de mensagem, e quem manda é você. A escolha ensina ') +
           'a FORMA — tamanho, saudação, pergunta — nunca o texto.'));
+
+      /** Parecidas: dito na cara dele, com o número, em vez de ele comparar três textos na tela. */
+      if (parecidas.length) {
+        caixa.append(
+          h('div', { class: 'wf-pergunta-linha wf-pergunta-aviso', 'data-fica': '1' },
+            `⚠ ${parecidas.map((p) => `${p.a} e ${p.b} têm ${Math.round(p.valor * 100)}% das palavras em comum`).join('; ')} — é defeito do pedido à IA, me avise`)
+        );
+      }
 
       const cartoes = h('div', { class: 'wf-escolha-cartoes' });
       opcoes.forEach((o, i) => {
