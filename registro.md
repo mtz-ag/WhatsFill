@@ -1,3 +1,36 @@
+## 2026-09-17 — v3.74.0 — a etiqueta de MATERIAL só entra pela IA: duas portas que a punham antes foram fechadas
+
+**Relato dele, corrigindo a v3.73:** *"não estava me referindo às outras, mas à de material exclusivamente;
+se a etiqueta é colocada antes, a IA nunca é chamada"*. **Eu li o relato anterior como "todas as etiquetas"
+e mexi nas de pedido e sem interesse, que ele não pediu** — está perguntado a ele se fica ou se volta.
+
+**Medido no painel:** a conferência da IA mora em `etiquetarEndereco`, e havia DOIS jeitos de o contato ter
+"a etiqueta de material" sem passar por ali — e, tendo, a rodada PULA em toda passada e a IA nunca é chamada:
+
+1. **O teste de "já tem a etiqueta" casava por TRECHO CONTIDO.** `etiquetaDeEndereco` usava
+   `etiquetaDaLista`, feita para as listas de engajado/assessor. Com o campo valendo "Material", qualquer
+   etiqueta com "material" no nome (a do anúncio *Material da Direita*, uma de conteúdo) contava como a de
+   endereço → contato pulado sem conferência nenhuma.
+2. **As sugestões de etiqueta gravavam a de material direto.** `refreshTagSuggestions` junta as regras de
+   etiqueta da Config, as etiquetas do anúncio e a tabela de conteúdo; qualquer uma apontando para a
+   etiqueta de endereço entrava marcada e era gravada na conclusão.
+
+**Conserto:**
+- `etiquetaDeEndereco` compara o **rótulo exato** (normalizado, com os apelidos do `resolveTag`), nunca trecho.
+- Nas sugestões, a de material aparece **desmarcada**, dizendo que só entra depois de a IA conferir; o que a
+  regra achou vai para `state.materialPelaRegra` (zerado no `load()`), e a rodada o entrega a
+  `etiquetarEndereco` depois da decisão da passada — a mesma conferência dos outros cinco caminhos.
+
+**O que não foi feito:** contatos que já receberam a etiqueta por essas portas continuam com ela, e continuam
+sendo pulados. Tirar etiqueta é destrutivo; fica oferecido.
+
+**Não medido com chamada paga, e não vi a Config dele** — não sei qual das duas portas era a dele; as duas
+estão fechadas. Painel não tem teste em Node; suítes e verificadores passando.
+
+**Arquivos:** `src/panel/panel.js`, `CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-17 — v3.73.0 — a IA confere as etiquetas de PEDIDO e SEM INTERESSE antes de marcar
 
 **Relato dele:** *"o determinístico está botando etiqueta antes da IA confirmar qualquer coisa"*.

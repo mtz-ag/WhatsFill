@@ -2916,6 +2916,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   rajada e lida JUNTA para a venda de voto, antes do laco. **Detector cujo caso vem partido em
   mensagens tem de ler a rajada junta** — e as guardas continuam por objeto: o voto e DELA, oferta sem
   dinheiro nao e venda, e "meu voto nao se compra" desfaz.
+- **A ETIQUETA DE MATERIAL TINHA DUAS PORTAS FORA DA IA, e com ela no contato a IA nunca era chamada**
+  (17/09/2026, *"se a etiqueta e colocada antes, a IA nunca e chamada"*). (1) `etiquetaDeEndereco` casava por
+  TRECHO CONTIDO (`etiquetaDaLista`), entao "Material da Direita" contava como a de endereco e o contato era
+  PULADO; hoje e rotulo exato. (2) `refreshTagSuggestions` gravava a de material quando uma regra de
+  etiqueta, o anuncio ou a tabela de conteudo apontava para ela; hoje ela fica desmarcada e vai para a IA
+  por `state.materialPelaRegra`. **Conferencia que mora num ponto unico so vale se NENHUM outro caminho
+  grava a mesma etiqueta — procure tambem quem LE a etiqueta para decidir pular.**
 - **AS ETIQUETAS DE PEDIDO E SEM INTERESSE TAMBEM PASSAM PELA IA** (17/09/2026, *"o deterministico esta
   botando etiqueta antes da IA confirmar qualquer coisa"*). Material ja conferia; estas duas nao.
   `conferirEtiquetaComIA(tipo, ...)` com `ia.TIPOS_DE_ETIQUETA`. **Sem interesse escolhido pelo FLUXO sem

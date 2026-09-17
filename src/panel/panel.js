@@ -540,6 +540,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      */
     state.anuncio = null;
     state.lidoPelaIA = null;
+    state.materialPelaRegra = null;
     state.anuncioSemResposta = null;
     // Os sinais do contato anterior decidiriam o rascunho deste. Mesma armadilha do anuncio.
     state.sinais = null;
@@ -1292,10 +1293,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const nomesVistos = new Set(sugeridas.map((s) => cities.normalize(s.nome || '')));
       const completas = [...sugeridas, ...jaNoCrm.filter((c) => !nomesVistos.has(cities.normalize(c.nome)))];
 
+      /**
+       * **A etiqueta de MATERIAL não sai por aqui — só pela conferência da IA** (17/09/2026). Relato
+       * dele: *"o determinístico está botando etiqueta antes da IA confirmar; se a etiqueta é colocada
+       * antes, a IA nunca é chamada"*. Esta lista vem das regras de etiqueta da Config, das etiquetas
+       * do anúncio e da tabela de conteúdo — qualquer uma delas apontando para a etiqueta de endereço a
+       * gravava direto, e marcada ela faz a rodada PULAR sem nunca chegar a `etiquetarEndereco`.
+       *
+       * A sugestão continua na tela, **desmarcada** e dizendo por quê; o que a regra achou vai para
+       * `state.materialPelaRegra`, e a rodada o entrega à IA depois da decisão da passada.
+       */
+      const tagMaterial = await rotuloDaEtiquetaDeEndereco();
+      const ehMaterial = (s) =>
+        !!tagMaterial && cities.semAcentoNemCaixa(s.tag?.label || s.nome || '') === cities.semAcentoNemCaixa(tagMaterial.label);
+      const materialPelaRegra = completas.find((s) => ehMaterial(s) && !(s.tag && jaAplicadas.has(s.tag.id)));
+      state.materialPelaRegra = materialPelaRegra ? { motivo: materialPelaRegra.motivo || materialPelaRegra.origem || 'uma regra de etiqueta' } : null;
+
       state.tagSuggestions = completas.map((s) => ({
         ...s,
+        ...(ehMaterial(s) ? { motivo: `${s.motivo || ''} — a de material só entra depois de a IA conferir, na rodada`.replace(/^ — /, '') } : {}),
         jaTem: !!s.tag && jaAplicadas.has(s.tag.id),
-        marcada: !!s.tag && !jaAplicadas.has(s.tag.id) && state.settings.autoTags,
+        marcada: !!s.tag && !jaAplicadas.has(s.tag.id) && state.settings.autoTags && !ehMaterial(s),
       }));
     } catch (err) {
       state.tagSuggestions = [];
@@ -2532,8 +2550,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /** A etiqueta de endereço que o contato JÁ tem no CRM — `null` sem o campo preenchido. */
-  function etiquetaDeEndereco() {
-    return etiquetaDaLista(String(state.auto.cfg.etiquetaEndereco || '').trim());
+  /**
+   * **Pelo RÓTULO EXATO, e não por trecho contido** (17/09/2026). Relato dele: *"se a etiqueta é colocada
+   * antes, a IA nunca é chamada"*. `etiquetaDaLista` casa por trecho CONTIDO — certo para as listas de
+   * engajado e assessor, errado aqui: com o campo valendo "Material", qualquer etiqueta com "material"
+   * no nome (a do anúncio do Material da Direita, uma de conteúdo) contava como a de endereço, o contato
+   * era PULADO em toda passada e `etiquetarEndereco` — onde a IA confere — nunca rodava. Comparação por
+   * rótulo e não por id: o CRM tem rótulo repetido.
+   */
+  async function etiquetaDeEndereco() {
+    const tag = await rotuloDaEtiquetaDeEndereco();
+    if (!tag) return null;
+    const alvo = cities.semAcentoNemCaixa(tag.label);
+    const doCrm = new Set(state.contact?.tagsId || []);
+    const rotulos = (await tagsLib.allTags().catch(() => [])).filter((t) => doCrm.has(t.id)).map((t) => t.label);
+    return rotulos.find((r) => cities.semAcentoNemCaixa(r) === alvo) || null;
+  }
+
+  /** A etiqueta de endereço como está no CRM (`resolveTag` aplica os apelidos) — `null` sem o campo. */
+  async function rotuloDaEtiquetaDeEndereco() {
+    const nome = String(state.auto.cfg.etiquetaEndereco || '').trim();
+    return nome ? tagsLib.resolveTag(nome).catch(() => null) : null;
   }
 
   /**
@@ -6323,6 +6360,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         if (pediuMaterial) {
           const aviso = await etiquetarEndereco(state.contact, { gatilho: `ela escreveu um pedido de material: ${pediuMaterial.motivo}` });
           registrarNaRodada(nome, 'info', `${pediuMaterial.motivo} — etiqueta de material${aviso || ' marcada'}`);
+        } else if (state.materialPelaRegra) {
+          /**
+           * **Uma regra de etiqueta da Config apontou para a de material** (17/09/2026) — ela não é mais
+           * gravada direto (ver `refreshTagSuggestions`); passa pela mesma conferência da IA.
+           */
+          const aviso = await etiquetarEndereco(state.contact, { gatilho: `uma regra de etiqueta achou material: ${state.materialPelaRegra.motivo}` });
+          registrarNaRodada(nome, 'info', `regra de etiqueta (${state.materialPelaRegra.motivo}) — etiqueta de material${aviso || ' marcada'}`);
         }
       }
 
