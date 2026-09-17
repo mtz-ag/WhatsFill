@@ -1,3 +1,30 @@
+## 2026-09-17 — v3.71.0 — no treino, o pedido de cadastro não vai nas três opções
+
+**Relato dele:** *"melhorou, mas continua mantendo obrigatório algumas coisas: no último exemplo, em todas
+as opções ele pediu os dados, então se eu quero uma opção sem pedir dados fico sem escolha"*.
+
+**Medido, eram duas obrigações escritas para o rascunho ÚNICO e herdadas pelas três:**
+1. **O pedido** (`montarContatoRascunho`, desde 05/09): com o cadastro incompleto, *"FECHE a mensagem com
+   este bloco"* — cumprido em cada uma das três.
+2. **O piso do painel** (`rascunharParaEle`): se o texto escolhido não tivesse o bloco `Nome , Cidade`, o
+   painel o acrescentava. Mesmo que a IA mandasse uma opção sem, a escolha dele voltaria com o pedido.
+
+**Conserto:**
+- No treino, o bloco vai **na primeira** (a que a IA mandaria sozinha) e em no máximo mais uma, e **pelo
+  menos uma vem sem** o bloco e sem pedir nome ou cidade de outro jeito.
+- O piso só age quando **ele não escolheu** (modo antigo). Escolheu a sem pedido, sai sem pedido.
+- Modo antigo (uma resposta): nada mudou, o pedido continua obrigatório.
+
+**Custo, dito a ele:** mandando a opção sem o pedido, a conversa não tem o `Nome , Cidade`, e o fluxo pode
+pedir o cadastro numa passada seguinte (`nunca-pediram-dados`).
+
+**Não medido com chamada paga.** Testes: `tests/ia.test.mjs` (+4).
+
+**Arquivos:** `src/lib/ia.js`, `src/panel/panel.js`, `tests/ia.test.mjs`, `CLAUDE.md`, `registro.md`,
+`manifest.json`.
+
+---
+
 ## 2026-09-17 — v3.70.0 — as três opções do treino FAZEM coisas diferentes: direta, acolhe, liga ao Capitão Martim
 
 **Relato dele:** *"já tínhamos visto isso antes e de novo aconteceu: a IA fez o rascunho de 3 respostas

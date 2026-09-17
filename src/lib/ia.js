@@ -2166,12 +2166,25 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * (`sugestao.pedirDadosNaoCabe`): duas definições divergiriam, e a que ninguém olha é a que
      * pede o cadastro de quem já o deu.
      */
+    /**
+     * **No treino, o cadastro NÃO vai nas três** — relato dele (17/09/2026): *"em todas as opções ele
+     * pediu os dados, então se eu quero uma opção sem pedir dados fico sem escolha"*. Obrigação escrita
+     * para o rascunho único vale igual para cada uma das três, e escolha sem alternativa não é escolha
+     * (nem ensina nada). A PRIMEIRA leva o bloco, porque é a que a IA mandaria sozinha — o mesmo que o
+     * modo antigo faz.
+     */
     pedirDados
       ? [
-          'O cadastro desta pessoa está incompleto. Depois de responder o que ela escreveu, FECHE a',
+          Number(quantas) === 1
+            ? 'O cadastro desta pessoa está incompleto. Depois de responder o que ela escreveu, FECHE a'
+            : 'O cadastro desta pessoa está incompleto. Na PRIMEIRA das três opções, e em no máximo mais ' +
+              'uma, depois de responder o que ela escreveu, FECHE a',
           'mensagem com este bloco, copiado exatamente assim (sem reescrever) — copie-o inteiro mesmo',
           'que o nome já apareça acima: é o formulário padrão do gabinete, e é por ele que o sistema',
           'reconhece que o pedido saiu.',
+          ...(Number(quantas) === 1
+            ? []
+            : ['PELO MENOS UMA das três vem SEM o bloco e sem pedir nome ou cidade de outro jeito — ele precisa poder escolher uma sem o pedido.']),
           '',
           PEDIDO_DE_DADOS_NO_RASCUNHO,
         ].join('\n')

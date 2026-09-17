@@ -717,6 +717,18 @@ grupo('o rascunho nao pode se apresentar de novo (05/09/2026)');
   check(/copie-o inteiro mesmo/.test(pedindo.replace(/\s+/g, ' ')),
     'e diz para copiar mesmo com o nome conhecido -- senao os dois blocos se contradizem');
 
+  /**
+   * 17/09/2026: *"em todas as opcoes ele pediu os dados, entao se eu quero uma opcao sem pedir dados fico
+   * sem escolha"*. No treino (tres, o padrao) a primeira leva o bloco e pelo menos uma vem sem.
+   */
+  const plano = (t) => t.replace(/\s+/g, ' ');
+  check(/Na PRIMEIRA das três opções/.test(plano(pedindo)), 'no treino, o bloco vai na primeira');
+  check(/PELO MENOS UMA das três vem SEM o bloco/.test(pedindo), 'e pelo menos uma vem sem o pedido');
+  const umSoPedindo = montarContatoRascunho({ mensagens: conversa, agora, pedirDados: true, quantas: 1 });
+  check(umSoPedindo.includes(PEDIDO_DE_DADOS_NO_RASCUNHO) && !/PELO MENOS UMA/.test(umSoPedindo),
+    'no modo antigo continua obrigatorio, como sempre');
+  check(/Depois de responder o que ela escreveu, FECHE a/.test(umSoPedindo), 'com o texto de antes');
+
   const semPedir = montarContatoRascunho({ mensagens: conversa, campos: { Nome: 'X', Cidade: 'Canoas' }, agora });
   check(!semPedir.includes(PEDIDO_DE_DADOS_NO_RASCUNHO), 'com o cadastro completo, nao manda pedir nada');
   check(/NAO peca nada que ja esteja nesta linha/.test(semPedir.normalize('NFD').replace(/[̀-ͯ]/g, '')),

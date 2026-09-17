@@ -10605,7 +10605,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * na passada seguinte. Acrescentar TEXTO NOSSO, fixo e já revisado, é diferente de escrever no
      * lugar da IA — que continua sendo o motivo de a saudação ausente não ser inventada.
      */
-    if (pedirDadosNoRascunho && !templatesLib.ehPedidoDeDados(texto)) {
+    /*
+     * **Só quando ELE não escolheu** (17/09/2026): *"se eu quero uma opção sem pedir dados fico sem
+     * escolha"*. No treino as três já vêm pedidas com e sem o cadastro; se ele escolheu a sem, o piso
+     * poria de volta o que ele acabou de recusar. O custo, dito a ele: sem o invariante na conversa, o
+     * fluxo pode pedir nome e cidade numa passada seguinte.
+     */
+    if (pedirDadosNoRascunho && !ensinou && !templatesLib.ehPedidoDeDados(texto)) {
       texto = [texto, '', iaLib.PEDIDO_DE_DADOS_NO_RASCUNHO].join('\n');
       avisos.push('a IA não pediu o cadastro — acrescentei o formulário no fim');
     }

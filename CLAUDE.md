@@ -2640,6 +2640,11 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   eleitor sem ninguem escolher. **Limite da medida, e esta escrito na tela:** ela diz se o primeiro
   texto AGRADA, nao se ele esta CERTO — nao serve para decidir envio automatico, que continua sendo
   a caixa "Automatizar" mais `rascunhoPodeSairSozinho`.
+- **OBRIGACAO ESCRITA PARA O RASCUNHO UNICO VIRA OBRIGACAO NAS TRES** (17/09/2026, *"em todas as opcoes
+  ele pediu os dados, entao se eu quero uma opcao sem pedir dados fico sem escolha"*). O "FECHE com o
+  formulario" e o PISO do painel foram escritos antes do treino. Hoje, no treino, o bloco vai na
+  primeira e pelo menos uma vem sem, e o piso so age quando ELE nao escolheu. **Ao escrever instrucao
+  obrigatoria no bloco do contato, diga como ela vale nas tres — e confira se ha piso no painel.**
 - **"VARIE" SEM DIZER EM QUE DEIXA O MODELO ESCOLHER O EIXO MAIS BARATO: TROCAR AS PALAVRAS** (17/09/2026,
   *"3 respostas praticamente iguais, so variando o metodo de escrita"*). A v3.67 fechou os eixos que
   inventavam oferta e deixou escrito *"antes tres parecidas do que uma errada"* — com as proibicoes do
