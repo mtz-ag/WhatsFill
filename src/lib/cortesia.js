@@ -2724,6 +2724,40 @@ export function falouDeSaude(texto) {
   return null;
 }
 
+/**
+ * **Ela se oferece para fazer algo PELA campanha e quer que a gente entre com alguma coisa** — caso dele
+ * (17/09/2026): *"a pessoa quer apoiar a campanha fazendo uma janta e quer que participemos com comida"*,
+ * e a IA mandou o CRAS três vezes.
+ *
+ * **É o oposto de pedir ajuda:** quem organiza uma janta, um café, um bingo ou uma carreata pela campanha
+ * está DANDO trabalho e dinheiro do próprio bolso. Tratar isso como pedido de assistência social é o erro
+ * mais caro que a proximidade lexical produz — a mensagem diz à apoiadora que ela parece necessitada.
+ *
+ * **Precisa das DUAS metades:** o evento pela campanha E o pedido de que a gente entre com algo. Só o
+ * evento é convite (e convite tem outro caminho); só o pedido é pedido.
+ */
+const EVENTO_PELA_CAMPANHA =
+  // O gerúndio é a forma mais comum ("estou organizando"), e faltava: sem ele o caso real dele não casava.
+  /(^|[^\p{L}])(vou|quero|pretendo|estou|estamos|vamos|penso\s+em|gostaria\s+de)\s+[^.!?]{0,30}?(fazer|fazendo|organizar|organizando|promover|promovendo|realizar|realizando|montar|montando)\s+[^.!?]{0,25}?(jantar|janta|almo[çc]o|caf[ée]|churrasco|bingo|rifa|festa|baile|carreata|passeata|reuni[ãa]o|encontro|evento|confraterniza[çc][ãa]o|pedal|torneio)/iu;
+
+const NOS_ENTRAMOS_COM =
+  /(^|[^\p{L}])(voc[êe]s|vcs|o\s+mandato|a\s+campanha|o\s+capit[ãa]o|voce)\s+[^.!?]{0,30}?(participa|participam|participar|entra|entram|entrar|ajuda|ajudam|ajudar|contribui|contribuem|manda|mandam|d[ãa]o|colabora|colaboram|bancam|patrocinam)\s*[^.!?]{0,25}?(com|de|na|no|a)?\s*(comida|alimento|bebida|carne|lanche|som|espa[çc]o|gr[áa]fica|material|dinheiro|custo|despesa|parte)/iu;
+
+const PEDE_CONTRIBUICAO =
+  /(^|[^\p{L}])(precisamos|preciso|precisaria|queria|gostaria|seria\s+bom|d[áa]\s+pra|da\s+pra|tem\s+como|poderiam|podem)\s+[^.!?]{0,30}?(comida|alimento|bebida|carne|lanche|som|gr[áa]fica|ajuda\s+com\s+a\s+comida|contribui[çc][ãa]o|apoio\s+com)/iu;
+
+export function ofereceEventoPelaCampanha(entrantes, nossaUltimaAt) {
+  const rajada = desdeNossaUltima(entrantes, nossaUltimaAt);
+  const conversa = rajada
+    .map((m) => semAcentos(m?.texto))
+    .filter(Boolean)
+    .join(' \n ');
+  if (!conversa) return null;
+  if (!EVENTO_PELA_CAMPANHA.test(conversa)) return null;
+  if (!NOS_ENTRAMOS_COM.test(conversa) && !PEDE_CONTRIBUICAO.test(conversa)) return null;
+  return { motivo: 'ela quer fazer um evento PELA campanha e pediu que a gente entre com alguma coisa' };
+}
+
 export function naoPodeFalarAgora(entrantes, nossaUltimaAt) {
   for (const msg of rajadaFinal(entrantes, nossaUltimaAt)) {
     const texto = semAcentos(msg?.texto);

@@ -43,6 +43,7 @@ import {
   pedeEmprego,
   pedeAlgoIndefinido,
   reclamaSemResposta,
+  ofereceEventoPelaCampanha,
 } from './cortesia.js';
 
 /**
@@ -2001,6 +2002,68 @@ export function semelhancaDasOpcoes(opcoes = []) {
  * **Não descarta a opção parecida**: duas opções na tela seriam a escolha empobrecida em silêncio, e a
  * comparação é por palavra de conteúdo — ela erra para os dois lados em texto curto.
  */
+/**
+ * **As três opções estão todas ancoradas na MESMA resposta pronta?** — hipótese dele (17/09/2026): *"o
+ * acesso às nossas mensagens rápidas parece estar limitando o escopo de respostas"*.
+ *
+ * **Ele está certo, e é medível.** As 21 respostas prontas vão inteiras no prompt como exemplo de voz e
+ * como base de conteúdo; quando o caso não está entre elas, o modelo puxa a mais PARECIDA no vocabulário
+ * — foi o que pôs o CRAS em quem oferecia uma janta pela campanha (a proximidade lexical, o defeito mais
+ * repetido deste projeto). Com as três puxando a mesma, as três dizem a mesma coisa.
+ *
+ * Devolve `{nome, valor}` quando TODAS as opções passam do corte contra o mesmo texto pronto — é isso
+ * que distingue "usou a resposta certa" (legítimo, e aí ele escolhe entre formas dela) de "não havia
+ * resposta para este caso e as três foram para a mesma".
+ */
+export function ancoraNaMesmaPronta(opcoes = [], templates = [], corte = 0.3) {
+  const textos = (Array.isArray(opcoes) ? opcoes : [])
+    .map((o) => new Set(conteudoDaFrase(String((typeof o === 'string' ? o : o?.texto) || ''))))
+    .filter((c) => c.size);
+  if (textos.length < 2) return null;
+  let achado = null;
+  for (const t of Array.isArray(templates) ? templates : []) {
+    const pronta = new Set(conteudoDaFrase(String(t?.text || '')));
+    if (pronta.size < 5) continue;
+    let menor = 1;
+    for (const o of textos) {
+      const comum = [...o].filter((w) => pronta.has(w)).length;
+      menor = Math.min(menor, comum / o.size);
+    }
+    if (menor >= corte && (!achado || menor > achado.valor)) achado = { nome: String(t?.name || t?.id || 'uma resposta pronta'), valor: menor };
+  }
+  return achado;
+}
+
+/**
+ * **O bloco que REFAZ o pedido quando a medida acusa** — relato dele (17/09/2026): *"mesmo que não case,
+ * já deixei explícito para as mensagens serem diferentes uma da outra"*.
+ *
+ * Ele está certo: o pedido já manda, e mandar de novo com outras palavras seria a quinta tentativa de
+ * consertar por prompt o que é **verificável**. A disciplina deste arquivo é *mecânico vira conserto*:
+ * mede-se a saída, e quando ela repete, a chamada é REFEITA mostrando ao modelo o que ele acabou de
+ * escrever — que é a única coisa que ele não tinha ao escrever a primeira vez.
+ */
+export function blocoDeRefazer({ repetidas = [], pronta = '' } = {}) {
+  const textos = (repetidas || []).map((t) => umaLinha(t, 400)).filter(Boolean);
+  if (!textos.length) return '';
+  return [
+    '',
+    'ATENÇÃO — VOCÊ JÁ RESPONDEU ESTE PEDIDO E AS OPÇÕES SAÍRAM IGUAIS. Isto é o que você escreveu:',
+    ...textos.map((t, i) => `(${i + 1}) ${t}`),
+    '',
+    pronta
+      ? `As três foram escritas a partir da resposta pronta "${pronta}". Se o caso desta pessoa NÃO é o ` +
+        'caso daquela resposta, ela não serve: esqueça-a e escreva do zero, a partir do que ELA escreveu.'
+      : '',
+    'Escreva de novo as TRÊS, e agora elas têm de dizer coisas diferentes: a primeira responde em uma ou ' +
+      'duas frases e encerra; a segunda começa pela pessoa (o que ela trouxe, o esforço, a iniciativa) e ' +
+      'só depois responde; a terceira liga o assunto dela ao que o Capitão Martim defende ou faz. Nenhuma ' +
+      'pode ser a de cima com outras palavras. O que as regras proíbem continua proibido.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
 export function paresParecidos(opcoes = [], corte = 0.6) {
   const conjuntos = (Array.isArray(opcoes) ? opcoes : []).map(
     (o) => new Set(conteudoDaFrase(String((typeof o === 'string' ? o : o?.texto) || '')))
@@ -2230,13 +2293,20 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
    * agradeceu, e aí as três opções não tinham por onde diferir. Ela continua inteira no prompt de
    * sistema (é regra dele, vale sempre); o que passou a depender do caso é a repetição colada no pedido.
    */
+  /**
+   * **Ela OFERECE um evento pela campanha e pede que a gente entre com algo** (17/09/2026). Não é
+   * problema pessoal nem pedido de ajuda: é apoio. Por isso também DESLIGA a regra 11 abaixo — foi ela,
+   * somada à resposta pronta de ajuda financeira, que pôs o CRAS em quem oferecia uma janta.
+   */
+  const eventoPelaCampanha = ofereceEventoPelaCampanha(dela, desdeNossa);
   const trouxeProblema =
-    pediuDinheiro ||
+    !eventoPelaCampanha &&
+    (pediuDinheiro ||
     !!saude ||
     !!pedeEmprego(dela, desdeNossa) ||
     !!pedeAlgoIndefinido(dela, desdeNossa) ||
     !!reclamaSemResposta(dela, desdeNossa) ||
-    dela.some((m) => PROBLEMA_PESSOAL.test(String(m?.texto || '')));
+      dela.some((m) => PROBLEMA_PESSOAL.test(String(m?.texto || ''))));
   const perguntouComoEleEsta = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && perguntaComoEleEsta(m.texto));
   const pendentesTotal = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).length;
   const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio).length;
@@ -2543,6 +2613,25 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'órgãos, sem aula sobre a lei eleitoral e sem perguntar do caso. Assistência social é para quem ' +
         'está em vulnerabilidade; mandar todo mundo para lá é resposta de máquina, e erra com quem ' +
         'precisa de verdade.'
+      : '',
+    /**
+     * **Apoio com evento NÃO é pedido de ajuda** — caso dele (17/09/2026): *"a pessoa quer apoiar a
+     * campanha fazendo uma janta e quer que participemos com comida"*, e saíram três mensagens mandando
+     * para o CRAS. Medido: nenhum detector casou, e o CRAS veio da resposta pronta mais parecida no
+     * vocabulário (comida, ajuda) — a proximidade lexical.
+     *
+     * **O que a campanha pode dizer com verdade:** agradecer a iniciativa e dizer que não entra com
+     * comida, bebida nem custo. O repasse do convite é a única promessa que cabe (a regra da Jonice,
+     * 08/09), e é ele que dá um desfecho em vez de um "não" seco.
+     */
+    eventoPelaCampanha
+      ? 'APOIO COM EVENTO — NÃO É PEDIDO DE AJUDA: ' + eventoPelaCampanha.motivo + '. Ela está do NOSSO ' +
+        'lado, gastando tempo e dinheiro dela. É proibido tratar isso como pedido de ajuda: NADA de CRAS, ' +
+        'assistência social, Cadastro Único ou "não podemos ajudar com dinheiro". Agradeça a iniciativa ' +
+        'pelo nome (a janta, o café, o bingo), diga com franqueza que a campanha não entra com comida, ' +
+        'bebida, som nem custo — a lei eleitoral e a prestação de contas não permitem —, e que o apoio ' +
+        'dela vale do jeito que ela puder fazer. Se ela convidar o Capitão Martim, pode dizer que repassa ' +
+        'o convite para a equipe da agenda; nada além disso, e sem prometer presença.'
       : '',
     saude
       ? `SAÚDE — EXCEÇÃO À REGRA ACIMA: ela ${saude.motivo}. Doença não se despacha. Acolha ` +

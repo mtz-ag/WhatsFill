@@ -46,6 +46,8 @@ import {
   esquemaDoRascunho,
   semelhancaDasOpcoes,
   paresParecidos,
+  ancoraNaMesmaPronta,
+  blocoDeRefazer,
   perguntaComoEleEsta,
   semSaudacao,
   semRepetirONosso,
@@ -3171,6 +3173,58 @@ grupo('as tres iguais: TODA hipotese revista, situacao por situacao (17/09/2026)
     'variar a abordagem nao libera dizer o proibido');
   check(!/são a opção \(a\)/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], quantas: 1 })),
     'no modo antigo nada disso entra');
+}
+
+grupo('opcoes iguais: conserto mecanico, com a ancora na resposta pronta medida (17/09/2026)');
+{
+  /**
+   * Ele: *"nada mudou, 3 mensagens mandando para o CRAS novamente"* — num caso em que NENHUM detector
+   * casou (uma pessoa oferecendo uma janta pela campanha) —, *"mesmo que nao case, ja deixei explicito
+   * para as mensagens serem diferentes uma da outra"* e *"o acesso as nossas mensagens rapidas parece
+   * estar limitando o escopo de respostas"*.
+   */
+  const prontas = [
+    { id: 'pedido-ajuda', name: 'Pedido de ajuda financeira', text: 'Infelizmente o mandato nao pode ajudar com dinheiro. Procure o CRAS da sua cidade e o Cadastro Unico, que atendem assistencia social.' },
+    { id: 'agradecer-apoio', name: 'Agradecer o apoio', text: 'Obrigado de coracao pelo apoio e pela confianca de sempre.' },
+  ];
+  const tresNoCras = [
+    { texto: 'O mandato nao pode ajudar com dinheiro; procure o CRAS da sua cidade e o Cadastro Unico.' },
+    { texto: 'Nao podemos ajudar com dinheiro. O CRAS e o Cadastro Unico atendem assistencia social na sua cidade.' },
+    { texto: 'Dinheiro o mandato nao pode; a assistencia social do CRAS e o Cadastro Unico sao o caminho.' },
+  ];
+  const a = ancoraNaMesmaPronta(tresNoCras, prontas);
+  check(!!a && /Pedido de ajuda/.test(a.nome), 'a ancora aponta QUAL resposta pronta puxou as tres');
+
+  const variadas = [
+    { texto: 'Que iniciativa bonita, obrigado! A campanha nao pode entrar com comida nem bens.' },
+    { texto: 'Obrigado pelo carinho de sempre.' },
+    { texto: 'O Capitao Martim trabalha pela seguranca nas escolas, e apoio assim da forca.' },
+  ];
+  check(!ancoraNaMesmaPronta(variadas, prontas), 'tres respostas diferentes nao acusam ancora');
+  check(!ancoraNaMesmaPronta([{ texto: 'so uma' }], prontas), 'com uma opcao nao ha ancora');
+  check(!ancoraNaMesmaPronta(tresNoCras, []), 'sem respostas prontas nao ha ancora');
+
+  const bloco = blocoDeRefazer({ repetidas: tresNoCras.map((o) => o.texto), pronta: 'Pedido de ajuda financeira' });
+  check(/AS OPÇÕES SAÍRAM IGUAIS/.test(bloco), 'o bloco diz o que aconteceu');
+  check(/\(1\) O mandato nao pode ajudar/.test(bloco), 'e mostra ao modelo o que ele escreveu');
+  check(/esqueça-a e escreva do zero/.test(bloco), 'e manda esquecer a resposta pronta que puxou');
+  check(/a primeira responde em uma ou duas frases/.test(bloco), 'com as tres abordagens de novo');
+  check(/O que as regras proíbem continua proibido/.test(bloco), 'sem liberar o proibido');
+  check(blocoDeRefazer({}) === '' && blocoDeRefazer() === '', 'sem repetidas, bloco vazio');
+  check(!/esqueça-a/.test(blocoDeRefazer({ repetidas: ['um texto'] })), 'sem ancora, nao fala de resposta pronta');
+}
+
+grupo('a janta pela campanha nao recebe CRAS (17/09/2026)');
+{
+  const janta = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'Vou fazer uma janta para a campanha, voces participam com a comida?' }], quantas: 3 });
+  check(/APOIO COM EVENTO — NÃO É PEDIDO DE AJUDA/.test(janta), 'a regra do apoio com evento entra');
+  check(/NADA de CRAS, assistência social, Cadastro Único/.test(janta), 'e proibe o CRAS com todas as letras');
+  check(/a campanha não entra com comida, bebida, som nem custo/.test(janta.replace(/\s+/g, ' ')), 'e diz o que responder');
+  check(/repassa o convite para a equipe da agenda/.test(janta), 'o repasse do convite e a unica promessa que cabe');
+  check(!/NÃO SOMOS CANAL/.test(janta), 'e a regra 11 NAO entra: apoio nao e problema pessoal');
+  check(!/DINHEIRO —/.test(janta), 'nem a regra do dinheiro');
+  check(/NÃO SOMOS CANAL/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'faz um pix pra mim' }] })),
+    'quem pede dinheiro de verdade continua com a regra 11');
 }
 
 fim();

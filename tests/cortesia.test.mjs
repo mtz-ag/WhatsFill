@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, ehPedidoDeRoupa, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos, falouDeSaude } from '../src/lib/cortesia.js';
+import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, ehPedidoDeRoupa, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos, falouDeSaude, ofereceEventoPelaCampanha } from '../src/lib/cortesia.js';
 
 const templates = await lib('templates.js');
 
@@ -3164,6 +3164,35 @@ grupo('saude: a excecao que ele abriu na regra de nao ser canal (17/09/2026)');
 
   check(/fam[íi]lia/.test(falouDeSaude('minha mae esta com cancer').motivo), 'o motivo distingue familia');
   check(/dela/.test(falouDeSaude('estou com febre alta').motivo), 'e o dela');
+}
+
+grupo('apoio com EVENTO nao e pedido de ajuda (17/09/2026)');
+{
+  /**
+   * Caso dele: *"a pessoa quer apoiar a campanha fazendo uma janta e quer que participemos com comida"*, e
+   * a IA mandou o CRAS tres vezes. Precisa das DUAS metades: o evento pela campanha E o pedido de que a
+   * gente entre com algo — so o evento e convite, so o pedido e pedido.
+   */
+  const ev = (t) => ofereceEventoPelaCampanha([{ texto: t }], null);
+  for (const t of [
+    'Vou fazer uma janta para a campanha, voces participam com a comida?',
+    'quero organizar um jantar de apoio ao capitao, voces entram com a carne?',
+    'estou organizando uma janta pra campanha, precisamos de comida',
+    'vamos fazer um bingo pro capitao, o mandato ajuda com o som?',
+    'vou promover um cafe de apoio, da pra voces mandarem comida?',
+  ]) check(!!ev(t), `apoio com evento: "${t.slice(0, 45)}"`);
+
+  for (const t of [
+    'faz um pix pra mim',
+    'quero fazer uma janta com a familia',
+    'preciso de comida em casa, estou passando fome',
+    'quero convidar o capitao para uma reuniao aqui',
+    'voces participam do evento da igreja?',
+    'estou organizando uma janta na minha casa',
+    'vou fazer um bolo pro meu filho',
+    'vou fazer uma carreata no domingo',
+    '',
+  ]) check(!ev(t), `nao e apoio com evento: "${t.slice(0, 45)}"`);
 }
 
 fim();

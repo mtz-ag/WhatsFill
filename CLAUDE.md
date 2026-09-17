@@ -3162,6 +3162,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   — o Ciro continua apoio pelo *"sou Bolsonaro"*. **E a quinta vez da mesma licao: o que qualifica o
   apoio e o OBJETO**, e ao consertar um padrao confira os vizinhos com o mesmo formato. A lista e
   copia da chapa de `gabinete.md`: mudou a colinha, mudam os dois.
+- **OPCAO REPETIDA E VERIFICAVEL, ENTAO E CONSERTO E NAO PROMPT** (17/09/2026: *"mesmo que nao case, ja
+  deixei explicito para as mensagens serem diferentes"*). Foram quatro tentativas por texto. Hoje
+  `ia.paresParecidos` mede, `ia.ancoraNaMesmaPronta` diz QUAL resposta pronta puxou as tres (hipotese
+  dele: *"o acesso as nossas mensagens rapidas parece estar limitando o escopo"*) e a chamada e REFEITA
+  com `ia.blocoDeRefazer`, mostrando ao modelo o que ele escreveu. **Uma refeita por rascunho**; nao
+  melhorou, fica a primeira e o numero vai para o Andamento. **Quando a quarta tentativa de prompt falha,
+  o conserto e medir a saida e refazer, nunca reescrever a regra de novo.**
+- **APOIO COM EVENTO NAO E PEDIDO DE AJUDA** (17/09/2026, a janta pela campanha que recebeu CRAS tres
+  vezes). **Nenhum detector casou**: o CRAS veio da resposta pronta mais PARECIDA no vocabulario.
+  `cortesia.ofereceEventoPelaCampanha` exige evento pela campanha E pedido de contribuicao, desliga a
+  regra 11 e proibe o vocabulario de assistencia social. **Antes de culpar detector, meca se algum
+  casou** — quando nenhum casa, quem decide e a proximidade lexical das respostas prontas.
 - **REGRA DE FORMA MANDADA ONDE O CASO NAO PEDE COME O ESPACO DAS TRES** (17/09/2026, *"falei de todas as
   situacoes"*). Varri o prompt de 15 situacoes e achei a regra 11 (*"acolha em UMA frase... e PARE"*) sendo
   escrita em TODA chamada, inclusive para quem so agradeceu: sem problema a acolher, as tres viram o mesmo

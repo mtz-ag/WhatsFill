@@ -242,7 +242,7 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  *
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
-export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece, aprendidas, quantas = 3, anterior = [] }) {
+export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece, aprendidas, quantas = 3, anterior = [], refazer = '' }) {
   /**
    * **O QUE A IA LEU, guardado para a tela mostrar** — pergunta dele (16/09/2026): *"preciso saber
    * qual a visão da IA sobre a conversa, o que ela tem acesso e o que não tem"*.
@@ -256,7 +256,14 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
    * Fica só em memória, no painel. Nunca vai para armazenamento nem para arquivo: tem dado de eleitor.
    */
   const sistema = montarSistemaRascunho({ templates, regras, gabinete });
-  const contato = montarContatoRascunho({ mensagens, campos, agora, pedirDados, jaNosConhece, aprendidas, quantas, anterior });
+  /**
+   * **`refazer` é o bloco do conserto mecânico** (17/09/2026, `ia.blocoDeRefazer`): quando a medida
+   * acusa que as opções saíram iguais, a chamada é refeita com o que o modelo escreveu — e ele vai no
+   * FIM do bloco do contato, colado no pedido, porque é ali que se cumpre.
+   */
+  const contato =
+    montarContatoRascunho({ mensagens, campos, agora, pedirDados, jaNosConhece, aprendidas, quantas, anterior }) +
+    (String(refazer || '').trim() ? `\n${refazer}` : '');
   const lidoPelaIA = {
     contato,
     sistemaTokens: tokensAproximados(sistema),
@@ -268,6 +275,7 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     dossie: !!String(gabinete || '').trim(),
     licoes: String(aprendidas || '').split(/\r?\n/).filter((l) => l.startsWith('- ')).length,
     quantas,
+    refazendo: !!String(refazer || '').trim(),
   };
   try {
     const r = await pedirAoWorker({

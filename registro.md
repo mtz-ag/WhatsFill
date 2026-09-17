@@ -1,3 +1,47 @@
+## 2026-09-17 — v3.78.0 — as opções iguais viraram CONSERTO (a chamada é refeita), e a janta pela campanha não recebe CRAS
+
+**Relato dele, em três partes:** *"nada mudou, 3 mensagens mandando para o CRAS novamente no mesmo caso, a
+pessoa quer apoiar a campanha fazendo uma janta e quer que participemos com comida"*; *"mesmo que não case,
+já deixei explícito para as mensagens serem diferentes uma da outra"*; *"o acesso às nossas mensagens
+rápidas parece estar limitando o escopo de respostas"*.
+
+**Medido, e as três estavam certas:**
+- **nenhum detector casou** com o texto da janta (rodei os oito: ajuda financeira, algo indefinido,
+  material, emprego, apoio, saúde, roupa, colinha — todos `null`), então nem a regra do CRAS da v3.76 nem
+  a regra 11 da v3.77 entraram. **O CRAS veio da resposta pronta mais parecida no vocabulário** (comida,
+  ajuda) — a proximidade lexical, o defeito mais repetido deste projeto;
+- **o pedido já mandava as três serem diferentes** desde a v3.70. Mandar de novo com outras palavras seria
+  a quinta tentativa de consertar por prompt o que é **verificável**.
+
+**1. O conserto mecânico (é a mudança de fundo).** Repetição entre textos se mede e se conserta:
+- `ia.paresParecidos` mede; `ia.ancoraNaMesmaPronta` diz **qual resposta pronta** puxou as três (a
+  hipótese dele, agora medida);
+- acusando, a chamada é **REFEITA** com `ia.blocoDeRefazer`: o modelo recebe o que ele mesmo acabou de
+  escrever — a única coisa que ele não tinha na primeira vez — e, quando houve âncora, o nome da resposta
+  pronta com a ordem de esquecê-la;
+- **uma refeita por rascunho**, só quando a medida acusa (~meio centavo). Não melhorou? fica a primeira,
+  com o número no Andamento. As duas chamadas aparecem no log (`rascunho` e `rascunho (refeito)`).
+
+**2. O caso da janta virou regra.** `cortesia.ofereceEventoPelaCampanha` exige as duas metades — evento
+PELA campanha (janta, café, churrasco, bingo, rifa, carreata…) **e** o pedido de que a gente entre com algo
+—, porque só o evento é convite e só o pedido é pedido. Com ela, o bloco diz: **é apoio, não pedido de
+ajuda**; nada de CRAS, assistência social ou *"não podemos ajudar com dinheiro"*; agradecer a iniciativa
+pelo nome, dizer com franqueza que a campanha não entra com comida, bebida, som nem custo (lei eleitoral e
+prestação de contas), e que o apoio dela vale do jeito que ela puder fazer. Convite ao Capitão Martim:
+**repassar à equipe da agenda** é a única promessa que cabe (a regra da Jonice), sem prometer presença.
+E ela **desliga a regra 11** — apoio não é problema pessoal. 9 das 14 asserções do detector são falso
+positivo.
+
+**Fica em aberto, e é decisão dele:** se a campanha pode entrar com algo nesses eventos (comida, som,
+espaço), a regra muda em uma linha — hoje a IA diz que não pode.
+
+**Não medido com chamada paga.** Testes: `tests/ia.test.mjs` (+15), `tests/cortesia.test.mjs` (+14).
+
+**Arquivos:** `src/lib/ia.js`, `src/lib/ia-cliente.js`, `src/lib/cortesia.js`, `src/panel/panel.js`,
+`tests/ia.test.mjs`, `tests/cortesia.test.mjs`, `CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-17 — v3.77.0 — as três iguais: a varredura de TODAS as situações, e a regra 11 deixou de ir sempre
 
 **Correção dele à v3.76:** *"conferiu todas as hipóteses das 3 mensagens se repetirem em todas as situações

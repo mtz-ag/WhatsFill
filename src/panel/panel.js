@@ -10481,9 +10481,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
     })();
 
-    let rascunho;
-    try {
-      rascunho = await iaCliente.rascunhar({
+    /**
+     * **A chamada virou função porque pode acontecer DUAS vezes** (17/09/2026): quando a medida acusa
+     * que as opções saíram iguais, ela é refeita com o bloco de `ia.blocoDeRefazer`. Um lugar só, senão
+     * a segunda chamada envelhece em relação à primeira — é o defeito mais registrado deste projeto.
+     */
+    // `async` é obrigatório: há `await` no meio dos argumentos (o dossiê e a chapa saem de funções).
+    const chamarIA = async (refazer = '') =>
+      iaCliente.rascunhar({
         templates: state.templates,
         regras: state.ia.regras,
         gabinete: await gabineteLib.paraOPrompt(dela),
@@ -10544,7 +10549,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          */
         quantas: aprendizadoLib.quantosRascunhos({ treinando: state.ia?.treinando }),
         anterior: anteriorParaIA,
+        refazer,
       });
+
+    let rascunho;
+    try {
+      rascunho = await chamarIA();
     } catch (err) {
       return { ok: false, enviado: false, motivo: `falha ao rascunhar: ${err?.message || err}` };
     }
@@ -10569,8 +10579,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * O `vaiCachear` estima com o prompt do RASCUNHO, que é o que saiu — estimar com o da decisão
      * (que não existe mais) faria a tela dizer "SEM CACHE" sobre um prompt que ninguém mandou.
      */
-    if (rascunho?.custo) {
-      const c = rascunho.custo;
+    const logarCusto = async (r, marca = 'rascunho') => {
+      if (!r?.custo) return;
+      const c = r.custo;
       // "SEM CACHE" só é alarme onde o cache PODERIA ter pego. No Haiku 4.5 o prompt não alcança
       // o mínimo de 4.096 tokens, então o zero é o normal — e alarme que toca sempre se aprende
       // a ignorar.
@@ -10585,8 +10596,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         )
       );
       const cacheOk = c.cacheLido > 0 ? `cache ${c.cacheLido}` : podia ? 'SEM CACHE' : 'sem cache (esperado)';
-      const usd = rascunho.custoUsd ? ` · US$ ${rascunho.custoUsd.toFixed(4)}` : '';
-      const mes = rascunho.gastoMes ? ` · mês US$ ${(rascunho.gastoMes.usd || 0).toFixed(2)}` : '';
+      const usd = r.custoUsd ? ` · US$ ${r.custoUsd.toFixed(4)}` : '';
+      const mes = r.gastoMes ? ` · mês US$ ${(r.gastoMes.usd || 0).toFixed(2)}` : '';
       /**
        * **QUEM atendeu, sempre — e POR QUE, quando não foi o titular.**
        *
@@ -10603,11 +10614,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        *     atendido — e com duas casas configuradas *"qual está mandando"* vira adivinhação.
        */
       const titular = state.ia.modelo || iaLib.MODELO_PADRAO;
-      const quem = rascunho.usouReserva
-        ? ` · RESERVA ${rascunho.usouReserva} (o titular ${titular} falhou: ${rascunho.motivoDoTitular || 'sem motivo'})`
+      const quem = r.usouReserva
+        ? ` · RESERVA ${r.usouReserva} (o titular ${titular} falhou: ${r.motivoDoTitular || 'sem motivo'})`
         : ` · ${titular}`;
-      registrarNaRodada('IA', 'pulado', `rascunho · ${cacheOk} · entrada ${c.entrada} · saída ${c.saida}${usd}${mes}${quem}`);
-    }
+      registrarNaRodada('IA', 'pulado', `${marca} · ${cacheOk} · entrada ${c.entrada} · saída ${c.saida}${usd}${mes}${quem}`);
+    };
+    await logarCusto(rascunho);
 
     const bruto = String(rascunho?.texto || '').trim();
     if (!bruto) {
@@ -10659,20 +10671,55 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * pergunta que pode abrir dentro da rodada precisa de resposta automática ou de um jeito de não
      * abrir"*.
      */
-    const opcoes = (rascunho?.opcoes || []).filter((o) => String(o?.texto || '').trim());
     /**
-     * **A semelhança entre as opções vai para o log SEMPRE** — pedido dele (17/09/2026): *"novamente as 3
-     * respostas são iguais, revise todas as hipóteses"*. As hipóteses do prompt estão em `ia.js`; esta é
-     * a que sobra: **medir e mostrar**, em vez de ele descobrir lendo as três. Fica fora do `if (ensinou)`
-     * porque a rodada automática também devolve três e não passa por lá.
+     * **AS OPÇÕES IGUAIS VIRARAM CONSERTO, E NÃO AVISO** — relato dele (17/09/2026): *"mesmo que não
+     * case, já deixei explícito para as mensagens serem diferentes uma da outra"*, depois de *"nada
+     * mudou, 3 mensagens mandando para o CRAS novamente"* num caso em que **nenhum detector casou** (uma
+     * pessoa oferecendo uma janta pela campanha).
+     *
+     * Ele está certo, e é a disciplina deste projeto: o pedido já manda as três serem diferentes, então
+     * mandar de novo com outras palavras seria a quinta tentativa de consertar por prompt o que é
+     * **verificável**. Repetição entre textos se MEDE (`ia.paresParecidos`) e se CONSERTA: a chamada é
+     * refeita mostrando ao modelo o que ele acabou de escrever — a única coisa que ele não tinha na
+     * primeira vez — e, quando as três saíram da mesma resposta pronta (`ia.ancoraNaMesmaPronta`, a
+     * hipótese dele: *"o acesso às nossas mensagens rápidas parece estar limitando o escopo"*), o bloco
+     * diz o nome dela e manda esquecê-la.
+     *
+     * **Uma refeita por rascunho**, e só quando a medida acusa: é meio centavo, e laço de refeita sem
+     * teto é dinheiro sem dono. Não melhorou? Fica a PRIMEIRA resposta, com o número no Andamento — o
+     * pior desfecho é ele ficar sem rascunho nenhum.
      */
-    const parecidas = opcoes.length > 1 ? iaLib.paresParecidos(opcoes) : [];
-    if (parecidas.length) {
+    let opcoes = (rascunho?.opcoes || []).filter((o) => String(o?.texto || '').trim());
+    let parecidas = opcoes.length > 1 ? iaLib.paresParecidos(opcoes) : [];
+    let ancora = opcoes.length > 1 ? iaLib.ancoraNaMesmaPronta(opcoes, state.templates) : null;
+
+    if (opcoes.length > 1 && (parecidas.length || ancora)) {
+      const antes = parecidas.length ? Math.round(parecidas[0].valor * 100) : 0;
       registrarNaRodada(
         'IA',
         'aviso',
-        `as opções ${parecidas.map((p) => `${p.a} e ${p.b} (${Math.round(p.valor * 100)}%)`).join(', ')} dizem quase a mesma coisa — se repetir, me avise: é defeito do pedido`
+        `as opções saíram parecidas${parecidas.length ? ` (${antes}% das palavras em comum)` : ''}` +
+          `${ancora ? `, todas em cima da resposta pronta "${ancora.nome}"` : ''} — refazendo o pedido`
       );
+      try {
+        const denovo = await chamarIA(iaLib.blocoDeRefazer({ repetidas: opcoes.map((o) => o.texto), pronta: ancora?.nome || '' }));
+        await logarCusto(denovo, 'rascunho (refeito)');
+        const novas = (denovo?.opcoes || []).filter((o) => String(o?.texto || '').trim());
+        const p2 = novas.length > 1 ? iaLib.paresParecidos(novas) : [];
+        const melhorou = novas.length > 1 && (!p2.length || !parecidas.length || p2[0].valor < parecidas[0].valor);
+        if (melhorou) {
+          rascunho = denovo;
+          opcoes = novas;
+          parecidas = p2;
+          ancora = iaLib.ancoraNaMesmaPronta(novas, state.templates);
+          state.lidoPelaIA = denovo?.lidoPelaIA || state.lidoPelaIA;
+          registrarNaRodada('IA', 'info', `refiz e agora as opções são diferentes${p2.length ? ` (${Math.round(p2[0].valor * 100)}%)` : ''}`);
+        } else {
+          registrarNaRodada('IA', 'aviso', 'refiz e vieram parecidas de novo — ficou a primeira resposta; me avise, é defeito do pedido');
+        }
+      } catch (err) {
+        registrarNaRodada('IA', 'aviso', `não consegui refazer o pedido: ${err?.message || err} — ficou a primeira resposta`);
+      }
     }
     let escolhida = opcoes[0] || { texto: bruto, avisos: rascunho?.avisos || [] };
     let ensinou = null;
