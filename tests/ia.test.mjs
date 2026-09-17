@@ -3145,4 +3145,32 @@ grupo('o CRAS nao e para todo mundo que fala de dinheiro (17/09/2026)');
   check(paresParecidos([]).length === 0 && semelhancaDasOpcoes([]) === 0, 'sem opcoes, nada');
 }
 
+grupo('as tres iguais: TODA hipotese revista, situacao por situacao (17/09/2026)');
+{
+  /**
+   * Ele: *"conferiu todas as hipoteses das 3 mensagens se repetirem em todas as situacoes que nao
+   * envolvem CRAS? quando pedi pra verificar isso falei de todas as situacoes"*.
+   *
+   * **A hipotese que faltava:** a regra 11 (*"acolha em uma frase... e PARE"*) era escrita em TODA
+   * chamada, inclusive para quem so agradeceu — e aí nao havia por onde as tres diferirem.
+   */
+  const bloco3 = (texto) => montarContatoRascunho({ mensagens: [{ de: 'contato', texto }], quantas: 3 });
+
+  for (const t of ['obrigada pelo trabalho de voces', 'estou com voces, vamos vencer!', 'o capitao e de qual partido?', 'me manda a colinha dos candidatos']) {
+    check(!/NÃO SOMOS CANAL/.test(bloco3(t)), `sem problema pessoal, a regra 11 nao entra: "${t}"`);
+  }
+  for (const t of ['estou preocupada com a aposentadoria', 'faz um pix pra mim', 'estou doente e preciso de ajuda', 'preciso de um emprego urgente', 'ninguem me respondeu ainda', 'preciso de uma ajuda sua', 'meu beneficio foi cortado', 'estou desempregada']) {
+    check(/NÃO SOMOS CANAL/.test(bloco3(t)), `com problema pessoal, a regra 11 entra: "${t}"`);
+  }
+
+  /** E as regras de "uma frase e pare" passaram a ter endereco: a opcao (a). */
+  const qualquer = bloco3('bom dia, tudo bem?');
+  check(/são a opção \(a\)/.test(qualquer.replace(/\s+/g, ' ')), 'as regras de uma frase valem para a (a)');
+  check(/Em nenhuma situação as três podem ser o mesmo texto/.test(qualquer), 'e a proibicao vale em toda situacao');
+  check(/o conteúdo obrigatório é o MESMO e o que não pode entrar continua não podendo/.test(qualquer.replace(/\s+/g, ' ')),
+    'variar a abordagem nao libera dizer o proibido');
+  check(!/são a opção \(a\)/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], quantas: 1 })),
+    'no modo antigo nada disso entra');
+}
+
 fim();

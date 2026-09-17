@@ -36,7 +36,23 @@ import * as atendimento from './atendimento.js';
  * reescrita do texto. Ver `AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial`.
  */
 import { ehPedidoDeEndereco, semGabinete } from './templates.js';
-import { ehPedidoDeRoupa, falouDeSaude, pedeAjudaFinanceira } from './cortesia.js';
+import {
+  ehPedidoDeRoupa,
+  falouDeSaude,
+  pedeAjudaFinanceira,
+  pedeEmprego,
+  pedeAlgoIndefinido,
+  reclamaSemResposta,
+} from './cortesia.js';
+
+/**
+ * **Órgão ou benefício citado: é problema pessoal mesmo sem verbo de pedir.** Serve a uma coisa só —
+ * decidir se a regra 11 (*"não somos canal de resolução de problemas"*) entra no bloco do contato.
+ * Errar aqui não manda nada para ninguém: no máximo a regra não é repetida colada no pedido, e ela
+ * continua no prompt de sistema.
+ */
+const PROBLEMA_PESSOAL =
+  /(inss|aposentadoria|aposentad[oa]|benef[íi]cio|bpc|loas|aux[íi]lio|bolsa\s+fam[íi]lia|cadastro\s+[úu]nico|cras|creche|vaga\s+na\s+escola|despejo|desempregad|sem\s+emprego|conta\s+atrasada|luz\s+cortada|[áa]gua\s+cortada|fila\s+d[ao]\s+(sus|cirurgia)|pens[ãa]o|per[íi]cia)/i;
 
 /**
  * O modelo padrão.
@@ -2201,10 +2217,26 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
    * do CRAS é sobre o que ela acabou de pedir. 17/09/2026: *"a IA não está identificando quando realmente
    * a pessoa precisa ir pro CRAS; muitas pedem dinheiro sem esclarecer que estão com dificuldades"*.
    */
-  const pediuDinheiro = !!pedeAjudaFinanceira(
-    lista.filter((m) => m.de !== 'nos' && !m.anuncio),
-    ultimaNossa >= 0 ? lista[ultimaNossa].at : null
-  );
+  const dela = lista.filter((m) => m.de !== 'nos' && !m.anuncio);
+  const desdeNossa = ultimaNossa >= 0 ? lista[ultimaNossa].at : null;
+  const pediuDinheiro = !!pedeAjudaFinanceira(dela, desdeNossa);
+  /**
+   * **Ela trouxe um PROBLEMA PESSOAL?** — a regra 11 era escrita em TODA chamada, e é ela que manda
+   * *"acolha em uma frase… e PARE"*. Relato dele (17/09/2026): *"conferiu todas as hipóteses das 3
+   * mensagens se repetirem em todas as situações… quando pedi pra verificar isso falei de todas as
+   * situações"*.
+   *
+   * **Medido: era a hipótese que faltava.** Mandada sempre, ela encurtava a resposta de quem só
+   * agradeceu, e aí as três opções não tinham por onde diferir. Ela continua inteira no prompt de
+   * sistema (é regra dele, vale sempre); o que passou a depender do caso é a repetição colada no pedido.
+   */
+  const trouxeProblema =
+    pediuDinheiro ||
+    !!saude ||
+    !!pedeEmprego(dela, desdeNossa) ||
+    !!pedeAlgoIndefinido(dela, desdeNossa) ||
+    !!reclamaSemResposta(dela, desdeNossa) ||
+    dela.some((m) => PROBLEMA_PESSOAL.test(String(m?.texto || '')));
   const perguntouComoEleEsta = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && perguntaComoEleEsta(m.texto));
   const pendentesTotal = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).length;
   const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio).length;
@@ -2481,9 +2513,11 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * resolução de problemas, a intenção é ganhar votos"*. No sistema ela está a milhares de tokens
      * daqui, e regra longe do ponto em que o modelo escreve não é cumprida (07/09).
      */
-    'NÃO SOMOS CANAL DE RESOLUÇÃO DE PROBLEMAS: se ela trouxe um problema, acolha em uma frase, diga ' +
-      'onde aquilo se resolve e agradeça a confiança — sem perguntas sobre o caso, sem pedir que ela ' +
-      'conte mais e sem "fico no aguardo". A mensagem é para ela sair gostando do Capitão Martim.',
+    trouxeProblema
+      ? 'NÃO SOMOS CANAL DE RESOLUÇÃO DE PROBLEMAS: ela trouxe um problema — acolha em uma frase, diga ' +
+        'onde aquilo se resolve e agradeça a confiança, sem perguntas sobre o caso, sem pedir que ela ' +
+        'conte mais e sem "fico no aguardo". A mensagem é para ela sair gostando do Capitão Martim.'
+      : '',
     /**
      * **SAÚDE: a exceção, colada na regra que a excepciona** (17/09/2026). A linha de cima é a razão de
      * a resposta ter saído seca; pôr a exceção longe dela seria escrever as duas para o modelo escolher
@@ -2597,6 +2631,11 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'Se alguma regra acima obrigar um conteúdo (negar o pedido, pedir o cadastro), esse conteúdo pode ' +
         'repetir-se, mas a abordagem NÃO: aí a (a) é uma frase só, a (b) acolhe antes de responder e a ' +
         '(c) liga ao Capitão Martim. Nunca devolva duas opções que dizem a mesma coisa.\n' +
+        'As regras que mandam responder em UMA frase e PARAR (a do deputado, a de quem pergunta quem ' +
+        'está do outro lado, a da colinha, a do problema pessoal, a do dinheiro, a da proposta comercial, ' +
+        'a do trabalho na campanha) são a opção (a). Nas (b) e (c) o conteúdo obrigatório é o MESMO e o ' +
+        'que não pode entrar continua não podendo — o que muda é acolher antes ou ligar ao Capitão ' +
+        'Martim depois. Em nenhuma situação as três podem ser o mesmo texto.\n' +
         'Tudo o que NÃO é a resposta ao que ela disse — uma pergunta, uma informação a mais, um convite — ' +
         'NÃO pode aparecer nas três; pelo menos uma responde só o que ela disse e para aí. A PRIMEIRA das ' +
         'três é a que você mandaria se fosse uma só (qualquer abordagem). Antes de devolver, leia as três: ' +

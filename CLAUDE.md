@@ -3162,6 +3162,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   — o Ciro continua apoio pelo *"sou Bolsonaro"*. **E a quinta vez da mesma licao: o que qualifica o
   apoio e o OBJETO**, e ao consertar um padrao confira os vizinhos com o mesmo formato. A lista e
   copia da chapa de `gabinete.md`: mudou a colinha, mudam os dois.
+- **REGRA DE FORMA MANDADA ONDE O CASO NAO PEDE COME O ESPACO DAS TRES** (17/09/2026, *"falei de todas as
+  situacoes"*). Varri o prompt de 15 situacoes e achei a regra 11 (*"acolha em UMA frase... e PARE"*) sendo
+  escrita em TODA chamada, inclusive para quem so agradeceu: sem problema a acolher, as tres viram o mesmo
+  agradecimento curto. Hoje a repeticao colada no pedido e condicional (`trouxeProblema`) e as regras de
+  "uma frase e pare" tem endereco: sao a opcao (a). **As linhas que PROIBEM continuam em toda chamada** —
+  proibicao nao obriga forma. **Ao por regra colada no pedido, pergunte se ela vale NESTE caso; ao ver tres
+  opcoes iguais, monte o prompt de varias situacoes e leia, em vez de conferir a que a print mostrou.**
 - **O CRAS SO PARA QUEM DISSE A DIFICULDADE, e e a mesma causa das TRES OPCOES IGUAIS** (17/09/2026).
   A regra 11 manda dizer "onde aquilo se resolve", e nada separava quem contou uma dificuldade de quem so
   escreveu "faz um pix": obrigada a citar o CRAS, a IA escreve a mesma mensagem tres vezes. Hoje o

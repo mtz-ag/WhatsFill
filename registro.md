@@ -1,3 +1,46 @@
+## 2026-09-17 — v3.77.0 — as três iguais: a varredura de TODAS as situações, e a regra 11 deixou de ir sempre
+
+**Correção dele à v3.76:** *"conferiu todas as hipóteses das 3 mensagens se repetirem em todas as situações
+que não envolvem CRAS ou algo do tipo? Quando pedi pra verificar isso falei de todas as situações"*. Estava
+certo: eu tinha atacado o caso do dinheiro e listado as hipóteses, sem VARRER situação por situação.
+
+**A varredura, feita montando o prompt de doze situações** (só agradeceu, só apoio, pergunta simples,
+colinha, roupa, material, emprego, ligação, falar com o deputado, representante, patrocínio, retórica,
+grupo, evento, áudio) **e lendo o que chegava ao modelo em cada uma**. Achado:
+
+**A regra 11 (*"não somos canal de resolução de problemas: acolha em UMA frase… e PARE"*) era escrita em
+TODA chamada**, inclusive para quem só agradeceu, só declarou apoio ou fez uma pergunta simples. Ela é a
+maior força de encurtamento do bloco — e, sem um problema para acolher, as três opções não tinham por onde
+diferir: viravam o mesmo agradecimento curto. **É a mesma mecânica do CRAS (v3.76) e da saúde (v3.75), pela
+terceira vez: regra que obriga uma FORMA, mandada onde o caso não pede, come o espaço das três.**
+
+**Conserto 1 — a regra 11 colada no pedido virou condicional** (`trouxeProblema`): dinheiro, saúde,
+emprego, pedido sem objeto, reclamação de não ter sido atendida, ou uma palavra de órgão/benefício (INSS,
+aposentadoria, BPC, auxílio, Cadastro Único, CRAS, creche, despejo, desemprego, conta atrasada, perícia,
+pensão). **Ela continua inteira no prompt de sistema** — é regra dele e vale sempre; o que passou a
+depender do caso é a repetição colada no pedido, que é o que muda o comportamento.
+
+**Conserto 2 — as regras de "responda em UMA frase e PARE" ganharam endereço:** elas são a opção **(a)**.
+Nas (b) e (c) o conteúdo obrigatório é o MESMO e o proibido continua proibido; o que muda é acolher antes
+ou ligar ao Capitão Martim depois. E, explícito: *"em nenhuma situação as três podem ser o mesmo texto"*.
+Isso cobre de uma vez as situações que têm resposta obrigatória: deputado, representante, colinha,
+patrocínio, trabalho na campanha, roupa, ligação, dinheiro, problema pessoal.
+
+**O que ficou como está, de propósito:** as linhas que PROÍBEM (não ofereça o que ela não pediu, não peça
+endereço, não repita o que já dissemos, não use variáveis) continuam em toda chamada — proibição não
+obriga forma, e tirá-las devolveria defeitos que já custaram print.
+
+**Hipóteses agora fechadas, todas com teste:** conteúdo obrigatório (v3.76), paráfrase autorizada (v3.70),
+cadastro nas três (v3.71), lições que achatam (v3.76), regra de forma mandada fora do caso (esta), e a que
+não se conserta por prompt — o modelo parafraseando — medida por `ia.paresParecidos` no Andamento e na
+janela.
+
+**Não medido com chamada paga.** Testes: `tests/ia.test.mjs` (+16).
+
+**Arquivos:** `src/lib/ia.js`, `tests/ia.test.mjs`, `CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-17 — v3.76.0 — o CRAS só para quem disse a dificuldade, e as três hipóteses das opções iguais
 
 **Relato dele:** *"a IA não está identificando quando realmente a pessoa precisa ir pro CRAS ou assistência
