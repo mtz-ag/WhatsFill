@@ -46,6 +46,8 @@ import {
   esquemaDoRascunho,
   semelhancaDasOpcoes,
   paresParecidos,
+  PERFIS_DO_RASCUNHO,
+  rotuloDoPerfil,
   ancoraNaMesmaPronta,
   blocoDeRefazer,
   perguntaComoEleEsta,
@@ -2238,7 +2240,7 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   // entrou ali em 16/09/2026) — o que se protege e a distancia do ponto em que o modelo escreve.
   // Medido contra a linha do PEDIDO, e nao contra o fim do arquivo: o pedido das tres ganhou linhas
   // proprias em 17/09/2026 e a conta pelo fim caiu sozinha (a licao do teste de proporcao, de novo).
-  const pedidoC = linhas.findIndex((l) => l.startsWith('Escreva TRÊS'));
+  const pedidoC = linhas.findIndex((l) => l.startsWith('TRÊS PESSOAS DA EQUIPE'));
   check(regra >= 0 && pedidoC - regra <= 3 && pedidoC > regra, 'e repetida no bloco do contato, logo antes do pedido');
 }
 
@@ -2763,7 +2765,7 @@ grupo('sao TRES rascunhos, e ele escolhe (15/09/2026)');
   /** **O esquema pede exatamente tres, e sobrevive ao modo estrito da OpenAI.** */
   const e = esquemaDoRascunho();
   check(/TRÊS respostas/.test(e.properties.opcoes.description), 'o esquema pede tres');
-  check(/forma E no conteúdo/.test(e.properties.opcoes.description), 'e diz que tem de ser diferentes na forma E no conteudo');
+  check(/TRÊS PESSOAS DIFERENTES da equipe/.test(e.properties.opcoes.description), 'e diz que sao tres pessoas diferentes');
   const estrito = esquemaEstrito(e);
   check(estrito.properties.opcoes.items.required.includes('motivo'),
     'no modo estrito TODA propriedade entra em required, inclusive nas aninhadas');
@@ -2799,9 +2801,9 @@ grupo('sao TRES rascunhos, e ele escolhe (15/09/2026)');
     agora,
     aprendidas: 'O QUE ELE ESCOLHEU:\n- Escreva CURTO.',
   });
-  check(/Escreva TRÊS rascunhos que FAÇAM coisas diferentes/.test(bloco), 'o pedido das tres esta no bloco do contato');
+  check(/TRÊS PESSOAS DA EQUIPE vão responder/.test(bloco), 'o pedido das tres esta no bloco do contato');
   check(/Escreva CURTO/.test(bloco), 'e as licoes aprendidas tambem');
-  check(bloco.indexOf('Escreva CURTO') < bloco.indexOf('Escreva TRÊS'),
+  check(bloco.indexOf('Escreva CURTO') < bloco.indexOf('TRÊS PESSOAS DA EQUIPE'),
     'as licoes ficam coladas no pedido, no fim — regra longe do ponto em que o modelo escreve nao e cumprida');
   check(!/O QUE ELE ESCOLHEU/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora })),
     'sem licao aprendida, nada entra no prompt');
@@ -2950,11 +2952,11 @@ grupo('as tres opcoes nao oferecem o que ela nao pediu, e o conteudo nao se repe
   check(/NÃO OFEREÇA O QUE ELA NÃO PEDIU/.test(tres) && /NÃO OFEREÇA O QUE ELA NÃO PEDIU/.test(uma), 'a proibicao vale nos dois modos');
   check(/colinha/.test(tres.slice(tres.indexOf('NÃO OFEREÇA'))), 'e nomeia a colinha');
   check(/quer que eu te mande/.test(tres), 'e a frase que inventa a oferta');
-  check(/NÃO pode aparecer nas três/.test(tres), 'o que nao e resposta ao que ela disse nao se repete nas tres');
-  check(/pelo menos uma\s+responde só o que ela disse/.test(tres.replace(/\s+/g, ' ')), 'e uma delas responde so o que ela disse');
+  check(/NÃO pode aparecer nos três/.test(tres), 'o que nao e resposta ao que ela disse nao se repete nas tres');
+  check(/pelo menos um\s+responde só o que ela disse/.test(tres.replace(/\s+/g, ' ')), 'e um deles responde so o que ela disse');
   check(!/fechar ou não com pergunta/.test(tres), 'o convite a fechar com pergunta saiu');
   const linhas = tres.split('\n');
-  check(linhas.findIndex((l) => l.startsWith('NÃO OFEREÇA')) === linhas.findIndex((l) => l.startsWith('Escreva TRÊS')) - 1, 'a regra fica colada no pedido');
+  check(linhas.findIndex((l) => l.startsWith('NÃO OFEREÇA')) === linhas.findIndex((l) => l.startsWith('TRÊS PESSOAS DA EQUIPE')) - 1, 'a regra fica colada no pedido');
   check(/não pode estar nas três/.test(esquemaDoRascunho(3).properties.opcoes.description), 'o esquema diz o mesmo');
 }
 
@@ -2969,13 +2971,14 @@ grupo('as tres opcoes FAZEM coisas diferentes, e a semelhanca e medida (17/09/20
   const tres = montarContatoRascunho({ mensagens: msgs, quantas: 3 });
   check(!/antes três parecidas/.test(tres), 'a saida para tres parecidas saiu do pedido');
   check(!/pode se repetir/.test(tres), 'e a licenca para repetir a resposta tambem');
-  check(/\(a\) DIRETA/.test(tres) && /\(b\) ACOLHE/.test(tres) && /\(c\) LIGA AO CAPITÃO MARTIM/.test(tres), 'as tres abordagens tem nome');
-  check(/trocar as palavras da mesma mensagem NÃO conta/.test(tres), 'e parafrase nao conta como diferente');
-  check(/nunca dado inventado/.test(tres), 'a abordagem do Martim nao autoriza inventar posicao');
-  check(/A PRIMEIRA das três é a que você mandaria se fosse uma só/.test(tres.replace(/\s+/g, ' ')), 'a primeira continua sendo a que a taxa mede');
+  check(/\(1\) CAPITÃO MARTIM/.test(tres) && /\(2\) A ASSESSORA DO ATENDIMENTO/.test(tres) && /\(3\) O MILITANTE DA CAMPANHA/.test(tres),
+    'os tres perfis tem nome');
+  check(/não é a mesma resposta com outras palavras nem com as frases em outra ordem/.test(tres.replace(/\s+/g, ' ')),
+    'e parafrase nem reordenar contam como diferente');
+  check(/Fala do que defende \(segurança, escolas, o RS\)/.test(tres), 'o perfil do Martim diz do que ele fala');
   const uma = montarContatoRascunho({ mensagens: msgs, quantas: 1 });
-  check(!/DIRETA|ACOLHE/.test(uma), 'o modo antigo nao recebe as abordagens');
-  check(/ACOLHE/.test(esquemaDoRascunho(3).properties.opcoes.description), 'o esquema diz o mesmo');
+  check(!/CAPITÃO MARTIM —|MILITANTE DA CAMPANHA/.test(uma), 'o modo antigo nao recebe os perfis');
+  check(/Capitão Martim/.test(esquemaDoRascunho(3).properties.opcoes.description), 'o esquema nomeia os perfis');
 
   // A medida: parafrase da numero alto, abordagens diferentes dao numero baixo.
   const parafrase = semelhancaDasOpcoes([
@@ -3133,8 +3136,9 @@ grupo('o CRAS nao e para todo mundo que fala de dinheiro (17/09/2026)');
     montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'obrigada' }], aprendidas: 'O QUE ELE ESCOLHEU:\n- Escreva CURTO.', quantas: 1 })
   ), 'no modo antigo a ressalva nao entra: la nao ha tres');
   const tres = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'faz um pix' }], quantas: 3 });
-  check(/esse conteúdo pode repetir-se, mas a abordagem NÃO/.test(tres.replace(/\s+/g, ' ')), 'conteudo obrigatorio pode repetir, abordagem nao');
-  check(/Nunca devolva duas opções que dizem a mesma coisa/.test(tres), 'e a proibicao direta');
+  check(/os três cumprem — o que muda é o que cada um acha importante dizer junto/.test(tres.replace(/\s+/g, ' ')),
+    'conteudo obrigatorio vale para os tres; muda o que cada um acha importante');
+  check(/Em nenhuma situação os três podem ser o mesmo texto/.test(tres), 'e a proibicao direta');
 
   /** A medida que mostra o defeito quando ele acontecer de novo. */
   const pares = paresParecidos([
@@ -3167,11 +3171,12 @@ grupo('as tres iguais: TODA hipotese revista, situacao por situacao (17/09/2026)
 
   /** E as regras de "uma frase e pare" passaram a ter endereco: a opcao (a). */
   const qualquer = bloco3('bom dia, tudo bem?');
-  check(/são a opção \(a\)/.test(qualquer.replace(/\s+/g, ' ')), 'as regras de uma frase valem para a (a)');
-  check(/Em nenhuma situação as três podem ser o mesmo texto/.test(qualquer), 'e a proibicao vale em toda situacao');
-  check(/o conteúdo obrigatório é o MESMO e o que não pode entrar continua não podendo/.test(qualquer.replace(/\s+/g, ' ')),
-    'variar a abordagem nao libera dizer o proibido');
-  check(!/são a opção \(a\)/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], quantas: 1 })),
+  check(/manda responder em UMA frase e parar, os três cumprem/.test(qualquer.replace(/\s+/g, ' ')),
+    'as regras de uma frase valem para os tres perfis');
+  check(/Em nenhuma situação os três podem ser o mesmo texto/.test(qualquer), 'e a proibicao vale em toda situacao');
+  check(/o que as regras proíbem continua proibido para os três/.test(qualquer.replace(/\s+/g, ' ')),
+    'trocar de perfil nao libera dizer o proibido');
+  check(!/TRÊS PESSOAS DA EQUIPE/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], quantas: 1 })),
     'no modo antigo nada disso entra');
 }
 
@@ -3208,7 +3213,7 @@ grupo('opcoes iguais: conserto mecanico, com a ancora na resposta pronta medida 
   check(/AS OPÇÕES SAÍRAM IGUAIS/.test(bloco), 'o bloco diz o que aconteceu');
   check(/\(1\) O mandato nao pode ajudar/.test(bloco), 'e mostra ao modelo o que ele escreveu');
   check(/esqueça-a e escreva do zero/.test(bloco), 'e manda esquecer a resposta pronta que puxou');
-  check(/a primeira responde em uma ou duas frases/.test(bloco), 'com as tres abordagens de novo');
+  check(/cada uma é de uma PESSOA diferente da equipe/.test(bloco), 'com os tres perfis de novo');
   check(/O que as regras proíbem continua proibido/.test(bloco), 'sem liberar o proibido');
   check(blocoDeRefazer({}) === '' && blocoDeRefazer() === '', 'sem repetidas, bloco vazio');
   check(!/esqueça-a/.test(blocoDeRefazer({ repetidas: ['um texto'] })), 'sem ancora, nao fala de resposta pronta');
@@ -3227,7 +3232,7 @@ grupo('a janta pela campanha nao recebe CRAS (17/09/2026)');
     'quem pede dinheiro de verdade continua com a regra 11');
 }
 
-grupo('a abordagem vem ANTES do texto no esquema (17/09/2026)');
+grupo('o PERFIL vem ANTES do texto no esquema, e sao pessoas (17/09/2026)');
 {
   /**
    * Pergunta dele: *"por que nao e usado um prompt diferente ja de inicio para cada mensagem gerada?"*.
@@ -3237,25 +3242,29 @@ grupo('a abordagem vem ANTES do texto no esquema (17/09/2026)');
    */
   const e3 = esquemaDoRascunho(3);
   const campos = Object.keys(e3.properties.opcoes.items.properties);
-  check(campos[0] === 'abordagem', 'a abordagem e o primeiro campo');
-  check(campos.indexOf('abordagem') < campos.indexOf('texto'), 'e vem antes do texto');
-  check(e3.properties.opcoes.items.required.includes('abordagem'), 'e e obrigatoria');
-  check(e3.properties.opcoes.items.properties.abordagem.enum.join() === 'direta,acolhe,liga-ao-martim',
-    'com as tres abordagens do pedido, e nada mais');
+  check(campos[0] === 'perfil', 'o perfil e o primeiro campo');
+  check(campos.indexOf('perfil') < campos.indexOf('texto'), 'e vem antes do texto');
+  check(e3.properties.opcoes.items.required.includes('perfil'), 'e e obrigatorio');
+  check(e3.properties.opcoes.items.properties.perfil.enum.join() === PERFIS_DO_RASCUNHO.map((x) => x.id).join(),
+    'com os tres perfis do pedido, e nada mais');
+  check(PERFIS_DO_RASCUNHO.length === 3 && PERFIS_DO_RASCUNHO.every((x) => x.id && x.rotulo && x.como),
+    'cada perfil tem id, rotulo e o que ele considera importante');
 
   const e1 = esquemaDoRascunho(1);
-  check(!Object.keys(e1.properties.opcoes.items.properties).includes('abordagem'), 'no modo antigo nao ha abordagem');
-  check(!e1.properties.opcoes.items.required.includes('abordagem'), 'nem obrigatoria');
+  check(!Object.keys(e1.properties.opcoes.items.properties).includes('perfil'), 'no modo antigo nao ha perfil');
+  check(!e1.properties.opcoes.items.required.includes('perfil'), 'nem obrigatorio');
 
   /** Estrito (OpenAI) continua valido: todo campo em `required`. */
   const est = esquemaEstrito(e3);
   check(est.properties.opcoes.items.required.length === Object.keys(est.properties.opcoes.items.properties).length,
     'na forma estrita, todos os campos entram em required');
 
-  const v = validarRascunho(JSON.stringify({ opcoes: [{ abordagem: 'acolhe', texto: 'Que iniciativa bonita!', confianca: 0.9, precisaDeRevisao: false }] }), new Date(), {});
-  check(v.opcoes[0].abordagem === 'acolhe', 'a abordagem sobrevive a validacao — e o rotulo do cartao');
-  const semAbordagem = validarRascunho(JSON.stringify({ opcoes: [{ texto: 'Um texto.', confianca: 0.5, precisaDeRevisao: true }] }), new Date(), {});
-  check(semAbordagem.opcoes[0].abordagem === '', 'sem abordagem nao quebra (a forma antiga continua aceita)');
+  const v = validarRascunho(JSON.stringify({ opcoes: [{ perfil: 'martim', texto: 'Que iniciativa bonita!', confianca: 0.9, precisaDeRevisao: false }] }), new Date(), {});
+  check(v.opcoes[0].perfil === 'Capitão Martim', 'o perfil volta com o rotulo bonito — e o do cartao');
+  check(rotuloDoPerfil('militancia') === 'o militante da campanha', 'traduz o id do militante');
+  check(rotuloDoPerfil('inventado') === 'inventado', 'id desconhecido volta como veio');
+  const semPerfil = validarRascunho(JSON.stringify({ opcoes: [{ texto: 'Um texto.', confianca: 0.5, precisaDeRevisao: true }] }), new Date(), {});
+  check(semPerfil.opcoes[0].perfil === '', 'sem perfil nao quebra (a forma antiga continua aceita)');
 }
 
 fim();

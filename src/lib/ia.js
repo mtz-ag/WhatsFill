@@ -1754,35 +1754,75 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
  * **O modo decide o ESQUEMA, e não só a tela**: pedir três e usar uma pagaria a saída das outras
  * duas em toda chamada, para sempre. Medido: US$ 2,04 → 3,39 por mil rascunhos no Haiku quente.
  */
+/**
+ * **TRÊS PERFIS, e não três tons** — pedido dele (17/09/2026): *"esses perfis direto, acolhedor etc não
+ * mudam a resposta; preciso que sejam como se fossem pessoas diferentes com pontos de vista diferentes:
+ * perfil Capitão Martim, pessoa X, pessoa Y"*.
+ *
+ * **Ele está certo sobre a causa.** "Direta", "acolhe" e "liga ao Martim" são jeitos de escrever a MESMA
+ * resposta — o modelo cumpria mudando a ordem das frases. Ponto de vista é outra coisa: muda **o que a
+ * pessoa considera importante responder**, e aí os textos divergem no conteúdo sem ninguém inventar nada.
+ *
+ * **Os três são do mesmo lado e falam pelo mandato** — o que muda é a cabeça de cada um. Nenhum diz quem
+ * é (a regra 9 continua: quem pergunta ouve "somos a equipe do Capitão Martim"), e nenhum é uma pessoa
+ * real com nome: são papéis.
+ */
+export const PERFIS_DO_RASCUNHO = [
+  {
+    id: 'martim',
+    rotulo: 'Capitão Martim',
+    como:
+      'o CAPITÃO MARTIM respondendo do jeito dele: militar, direto, sem rodeio. O que importa para ele é ' +
+      'o trabalho e a palavra dada — diz o que é, o que dá e o que não dá, sem enfeite e sem prometer. ' +
+      'Fala do que defende (segurança, escolas, o RS) quando o assunto dela encosta nisso. Fecha firme.',
+  },
+  {
+    id: 'atendimento',
+    rotulo: 'a assessora do atendimento',
+    como:
+      'a ASSESSORA que atende todo dia: o que importa para ela é a pessoa do outro lado e o próximo passo ' +
+      'concreto. Repara no que a pessoa está vivendo, responde o que ela perguntou e resolve a pendência ' +
+      '(o cadastro que falta, o endereço, o que precisa chegar a ela). Nada de discurso.',
+  },
+  {
+    id: 'militancia',
+    rotulo: 'o militante da campanha',
+    como:
+      'o MILITANTE que faz campanha na rua: o que importa para ele é o voto e a mobilização. Trata a ' +
+      'pessoa como quem está do mesmo lado, valoriza o que ela faz pela campanha e puxa para junto — sem ' +
+      'pedir nada que ela não ofereceu, sem oferecer o que ela não pediu e sem grito de comício.',
+  },
+];
+
 export function esquemaDoRascunho(quantas = 3) {
   const n = Number(quantas) === 1 ? 1 : 3;
   const opcao = {
     type: 'object',
     additionalProperties: false,
-    required: n === 1 ? ['texto', 'confianca', 'precisaDeRevisao'] : ['abordagem', 'texto', 'confianca', 'precisaDeRevisao'],
+    required: n === 1 ? ['texto', 'confianca', 'precisaDeRevisao'] : ['perfil', 'texto', 'confianca', 'precisaDeRevisao'],
     properties: {
       /**
-       * **A ABORDAGEM VEM ANTES DO TEXTO, e a ordem é o conserto** (17/09/2026). Pergunta dele: *"por que
-       * não é usado um prompt diferente já de início para cada mensagem gerada?"* — medido, três chamadas
+       * **O PERFIL VEM ANTES DO TEXTO, e a ordem é o conserto** (17/09/2026). Pergunta dele: *"por que não
+       * é usado um prompt diferente já de início para cada mensagem gerada?"* — medido, três chamadas
        * separadas custam US$ 8,66 por mil contra US$ 4,59 (o prompt de sistema é pago três vezes).
        *
        * O que dá o mesmo efeito de graça é a ORDEM dos campos: o modelo escreve o JSON na ordem em que ele
-       * está declarado, então **declarar a abordagem primeiro o obriga a se comprometer com ela antes de
-       * escrever o texto** — e é muito mais difícil escrever três textos iguais depois de ter dito que um
-       * é direto, um acolhe e um liga ao Capitão Martim. Custa três palavras de saída por opção.
+       * está declarado, então **declarar o perfil primeiro o obriga a assumir aquela cabeça antes de
+       * escrever o texto**. Custa três palavras de saída por opção.
        *
        * Fica fora do modo antigo (`n === 1`): lá não há o que diferenciar.
        */
       ...(n === 1
         ? {}
         : {
-            abordagem: {
+            perfil: {
               type: 'string',
-              enum: ['direta', 'acolhe', 'liga-ao-martim'],
+              enum: PERFIS_DO_RASCUNHO.map((p) => p.id),
               description:
-                'A abordagem DESTA opção, escolhida antes de escrever o texto. Uma de cada nas três: ' +
-                'direta = responde e encerra; acolhe = começa pela pessoa; liga-ao-martim = conecta ao que ' +
-                'o Capitão Martim defende ou faz.',
+                'QUEM está escrevendo esta opção, escolhido antes de escrever o texto — um de cada nas ' +
+                'três: ' +
+                PERFIS_DO_RASCUNHO.map((p) => `${p.id} = ${p.rotulo}`).join('; ') +
+                '.',
             },
           }),
       texto: {
@@ -1804,8 +1844,8 @@ export function esquemaDoRascunho(quantas = 3) {
       motivo: {
         type: 'string',
         description:
-          'A abordagem desta opção (direta, acolhe ou liga ao Capitão Martim) e, em até 5 palavras, o que ' +
-          'ela faz de diferente das outras duas. Aparece na tela.',
+          'Em até 5 palavras, o que ESTE perfil considerou importante responder e as outras duas não. ' +
+          'Aparece na tela.',
       },
     },
   };
@@ -1834,12 +1874,13 @@ export function esquemaDoRascunho(quantas = 3) {
         description:
           n === 1
             ? 'UMA resposta para a mensagem dela, pronta para enviar.'
-            : 'TRÊS respostas para a mesma mensagem, diferentes na forma E no conteúdo — não três ' +
-              'versões da mesma frase: uma DIRETA, uma que ACOLHE a pessoa e uma que LIGA AO CAPITÃO ' +
-              'MARTIM, a primeira sendo a que você mandaria se fosse uma só. O que não é a resposta ao ' +
-              'que ela disse (pergunta, informação a mais, convite) não pode estar nas três, e nenhuma ' +
-              'oferece o que ela não pediu. As três têm de estar CERTAS e prontas para enviar: ele vai ' +
-              'escolher uma e mandar como está.',
+            : 'TRÊS respostas para a mesma mensagem, escritas por TRÊS PESSOAS DIFERENTES da equipe, que ' +
+              'não pensam igual sobre o que importa responder: ' +
+              PERFIS_DO_RASCUNHO.map((p, i) => `(${i + 1}) ${p.rotulo}`).join(', ') +
+              '. Cada uma escreve a sua, sem ver a das outras. O que não é a resposta ao que ela disse ' +
+              '(pergunta, informação a mais, convite) não pode estar nas três, e nenhuma oferece o que ela ' +
+              'não pediu. As três têm de estar CERTAS e prontas para enviar: ele vai escolher uma e ' +
+              'mandar como está.',
         items: opcao,
       },
     },
@@ -2079,10 +2120,10 @@ export function blocoDeRefazer({ repetidas = [], pronta = '' } = {}) {
       ? `As três foram escritas a partir da resposta pronta "${pronta}". Se o caso desta pessoa NÃO é o ` +
         'caso daquela resposta, ela não serve: esqueça-a e escreva do zero, a partir do que ELA escreveu.'
       : '',
-    'Escreva de novo as TRÊS, e agora elas têm de dizer coisas diferentes: a primeira responde em uma ou ' +
-      'duas frases e encerra; a segunda começa pela pessoa (o que ela trouxe, o esforço, a iniciativa) e ' +
-      'só depois responde; a terceira liga o assunto dela ao que o Capitão Martim defende ou faz. Nenhuma ' +
-      'pode ser a de cima com outras palavras. O que as regras proíbem continua proibido.',
+    'Escreva de novo as TRÊS, e agora cada uma é de uma PESSOA diferente da equipe, que pensa diferente ' +
+      'sobre o que importa responder: ' +
+      PERFIS_DO_RASCUNHO.map((p, i) => `(${i + 1}) ${p.rotulo}`).join(', ') +
+      '. Nenhuma pode ser a de cima com outras palavras. O que as regras proíbem continua proibido.',
   ]
     .filter(Boolean)
     .join('\n');
@@ -2716,44 +2757,32 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * mais) não pode estar nas três: pelo menos uma responde só o que ela disse.
      */
     /**
-     * **TRÊS ABORDAGENS COM NOME, e não "varie"** — relato dele (17/09/2026): *"já tínhamos visto isso
-     * antes e de novo aconteceu: a IA fez o rascunho de 3 respostas praticamente iguais, só variando o
-     * método de escrita"*.
+     * **TRÊS PESSOAS, e não três tons** — pedido dele (17/09/2026): *"esses perfis direto, acolhedor etc
+     * não mudam a resposta; preciso que sejam como se fossem pessoas diferentes com pontos de vista
+     * diferentes: perfil Capitão Martim, pessoa X, pessoa Y"*.
      *
-     * **Medido no texto que eu escrevi na v3.67, a causa estava nele:** *"O que é resposta ao que ela
-     * disse pode se repetir"* e *"antes três parecidas do que uma errada"*. Somadas às proibições do
-     * bloco (não ofereça, não pergunte sobre o caso, não prometa), a única variação que sobrava segura
-     * era trocar as palavras — e a instrução autorizava. **Pedir "variação" sem dizer EM QUÊ deixa o
-     * modelo escolher o eixo mais barato.** Agora cada opção tem uma abordagem que muda o que a mensagem
-     * FAZ, e nenhuma delas precisa inventar nada: encerrar curto, acolher a pessoa, ligar ao Capitão
-     * Martim (a razão de a mensagem existir, regra 11).
+     * **Ele está certo sobre a causa, e é a terceira vez que este pedido é reescrito.** "Varie" (v3.67)
+     * fez o modelo trocar palavras; "abordagens" (v3.70) fez ele trocar a ordem das frases — as duas
+     * pedem jeitos de escrever a MESMA resposta. **Ponto de vista muda o que a pessoa considera
+     * importante responder**, e é daí que sai conteúdo diferente sem ninguém inventar nada.
      *
-     * **A PRIMEIRA continua sendo a que a IA mandaria se fosse uma só** — é o que a taxa de acerto do
-     * treino mede (`aprendizado.taxaDePrimeira`), então a ordem é da confiança, não das abordagens.
+     * Os perfis estão em `PERFIS_DO_RASCUNHO`, num lugar só, porque o esquema também os nomeia.
      */
     Number(quantas) === 1
       ? 'Escreva o rascunho da resposta.'
-      : 'Escreva TRÊS rascunhos que FAÇAM coisas diferentes — trocar as palavras da mesma mensagem NÃO ' +
-        'conta como diferente. Use uma abordagem em cada:\n' +
-        '(a) DIRETA: responde só o que ela disse, em uma ou duas frases, e encerra.\n' +
-        '(b) ACOLHE: começa pela pessoa — o que ela sentiu, o esforço, a confiança ou a preocupação que ' +
-        'mostrou — e só então responde.\n' +
-        '(c) LIGA AO CAPITÃO MARTIM: responde e conecta o assunto dela ao que o Capitão Martim defende ou ' +
-        'faz, usando só o que está escrito neste pedido e nas instruções (nunca dado inventado); se não ' +
-        'houver nada escrito sobre o assunto, ligue à causa em comum que ela mostrou.\n' +
-        'Se alguma regra acima obrigar um conteúdo (negar o pedido, pedir o cadastro), esse conteúdo pode ' +
-        'repetir-se, mas a abordagem NÃO: aí a (a) é uma frase só, a (b) acolhe antes de responder e a ' +
-        '(c) liga ao Capitão Martim. Nunca devolva duas opções que dizem a mesma coisa.\n' +
-        'As regras que mandam responder em UMA frase e PARAR (a do deputado, a de quem pergunta quem ' +
-        'está do outro lado, a da colinha, a do problema pessoal, a do dinheiro, a da proposta comercial, ' +
-        'a do trabalho na campanha) são a opção (a). Nas (b) e (c) o conteúdo obrigatório é o MESMO e o ' +
-        'que não pode entrar continua não podendo — o que muda é acolher antes ou ligar ao Capitão ' +
-        'Martim depois. Em nenhuma situação as três podem ser o mesmo texto.\n' +
+      : 'TRÊS PESSOAS DA EQUIPE vão responder esta mensagem, cada uma com a sua cabeça. Elas não pensam ' +
+        'igual sobre o que importa dizer, e é por isso que os três textos têm de ser diferentes no ' +
+        'CONTEÚDO — não é a mesma resposta com outras palavras nem com as frases em outra ordem.\n' +
+        PERFIS_DO_RASCUNHO.map((p, i) => `(${i + 1}) ${p.rotulo.toUpperCase()} — escreva como ${p.como}`).join('\n') +
+        '\nCada um escreve como se não tivesse visto o texto dos outros dois, e os três obedecem às regras ' +
+        'acima: se alguma regra obriga um conteúdo (negar o pedido, pedir o cadastro) ou manda responder ' +
+        'em UMA frase e parar, os três cumprem — o que muda é o que cada um acha importante dizer junto, ' +
+        'e o que as regras proíbem continua proibido para os três. Em nenhuma situação os três podem ser ' +
+        'o mesmo texto.\n' +
         'Tudo o que NÃO é a resposta ao que ela disse — uma pergunta, uma informação a mais, um convite — ' +
-        'NÃO pode aparecer nas três; pelo menos uma responde só o que ela disse e para aí. A PRIMEIRA das ' +
-        'três é a que você mandaria se fosse uma só (qualquer abordagem). Antes de devolver, leia as três: ' +
-        'se duas disserem a mesma coisa com outras palavras, reescreva uma. As três têm de estar certas e ' +
-        'prontas para enviar, porque ele escolhe uma e manda como está.',
+        'NÃO pode aparecer nos três; pelo menos um responde só o que ela disse e para aí. Antes de ' +
+        'devolver, leia os três: se dois disserem a mesma coisa, reescreva um. Os três têm de estar ' +
+        'certos e prontos para enviar, porque ele escolhe um e manda como está.',
   ]
     .filter(Boolean)
     .join('\n');
@@ -3619,6 +3648,14 @@ function umaLinha(texto, limite = 400) {
  *
  * @returns {{texto:string, confianca:number, motivo:string, avisos:string[], precisaDeRevisao:boolean}}
  */
+/** `martim` -> `Capitão Martim`. Id desconhecido volta como veio: a tela mostra o que o modelo disse. */
+export function rotuloDoPerfil(id) {
+  const chave = String(id || '').trim();
+  if (!chave) return '';
+  const achado = PERFIS_DO_RASCUNHO.find((p) => p.id === chave.toLowerCase());
+  return achado ? achado.rotulo : chave.slice(0, 40);
+}
+
 export function validarRascunho(bruto, agora, contexto = {}) {
   const vazio = { texto: '', confianca: 0, motivo: '', avisos: ['a IA não devolveu rascunho'], precisaDeRevisao: true };
 
@@ -3653,9 +3690,9 @@ export function validarRascunho(bruto, agora, contexto = {}) {
     return {
       texto: revisao.texto,
       confianca: Number.isFinite(o?.confianca) ? Math.min(1, Math.max(0, o.confianca)) : 0,
-      // A abordagem é o compromisso que o modelo assumiu antes de escrever (ver `esquemaDoRascunho`): vai
-      // para o cartão da janela, porque é ela que diz ao Thiago o que cada opção tenta fazer.
-      abordagem: String(o?.abordagem || '').trim().slice(0, 40),
+      // O PERFIL é quem escreveu (ver `PERFIS_DO_RASCUNHO`): vai para o cartão da janela, porque é ele
+      // que diz ao Thiago de qual cabeça saiu aquele texto.
+      perfil: rotuloDoPerfil(o?.perfil),
       motivo: String(o?.motivo || '').trim().slice(0, 300),
       avisos,
       precisaDeRevisao,

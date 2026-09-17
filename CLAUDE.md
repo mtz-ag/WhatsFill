@@ -3162,6 +3162,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   — o Ciro continua apoio pelo *"sou Bolsonaro"*. **E a quinta vez da mesma licao: o que qualifica o
   apoio e o OBJETO**, e ao consertar um padrao confira os vizinhos com o mesmo formato. A lista e
   copia da chapa de `gabinete.md`: mudou a colinha, mudam os dois.
+- **TOM NAO MUDA A RESPOSTA; PONTO DE VISTA MUDA** (17/09/2026: *"esses perfis direto, acolhedor etc nao
+  mudam a resposta; preciso que sejam como se fossem pessoas diferentes com pontos de vista diferentes"*).
+  Terceira reescrita do pedido das tres: *"varie"* trocou palavras, *"abordagens"* trocou a ordem das
+  frases — as duas pedem jeitos de escrever a MESMA resposta. Hoje sao tres PERFIS
+  (`ia.PERFIS_DO_RASCUNHO`: Capitao Martim, a assessora do atendimento, o militante da campanha), e o que
+  muda e **o que cada um considera importante responder**. Sao papeis, nao pessoas reais, e nenhum diz
+  quem e. **Ao pedir variacao a um modelo, varie a CABECA, nao o tom.**
 - **A ORDEM DOS CAMPOS DO ESQUEMA E UMA ALAVANCA DE GRACA** (17/09/2026): `abordagem` declarada ANTES de
   `texto` faz o modelo se comprometer com ela antes de escrever, e tres textos iguais ficam muito mais
   dificeis. **Medido, por mil rascunhos no Haiku: 1 chamada com tres = US$ 4,59; TRES chamadas separadas

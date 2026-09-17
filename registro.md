@@ -1,3 +1,45 @@
+## 2026-09-17 — v3.80.0 — três PESSOAS escrevem os rascunhos, e não três tons
+
+**Pedido dele:** *"problema desses perfis direto, acolhedor etc: não mudam a resposta. Preciso que sejam
+como se fossem pessoas diferentes com pontos de vista diferentes — perfil Capitão Martim, pessoa X,
+pessoa Y"*.
+
+**Ele está certo sobre a causa, e é a terceira reescrita deste pedido:** *"varie"* (v3.67) fez o modelo
+trocar as palavras; *"abordagens"* (v3.70: direta, acolhe, liga ao Martim) fez ele trocar a ordem das
+frases. **As duas pedem jeitos de escrever a MESMA resposta.** Ponto de vista é outra coisa: muda **o que
+a pessoa considera importante responder**, e é daí que sai conteúdo diferente sem ninguém inventar nada.
+
+**Os três perfis** (`ia.PERFIS_DO_RASCUNHO`, um lugar só — o pedido e o esquema leem de lá):
+
+| # | quem | o que importa para ele |
+|---|---|---|
+| 1 | **Capitão Martim** | militar, direto, sem rodeio: o trabalho e a palavra dada; diz o que dá e o que não dá, fala do que defende (segurança, escolas, o RS) quando o assunto encosta nisso, e fecha firme |
+| 2 | **a assessora do atendimento** | a pessoa do outro lado e o próximo passo concreto: repara no que ela está vivendo, responde o que ela perguntou e resolve a pendência (cadastro, endereço) |
+| 3 | **o militante da campanha** | o voto e a mobilização: trata como quem está do mesmo lado, valoriza o que ela faz pela campanha e puxa para junto, sem grito de comício |
+
+**São papéis, não pessoas reais**, e nenhum diz quem é — a regra 9 continua valendo (*"somos a equipe do
+Capitão Martim"*). Os três obedecem às mesmas regras: conteúdo obrigatório, "uma frase e pare", o que é
+proibido — o que muda é o que cada um acha importante dizer junto.
+
+**No esquema, o campo `perfil` (enum) substituiu `abordagem` e continua sendo o PRIMEIRO**, pela razão da
+v3.79: o modelo escreve o JSON na ordem declarada, então ele assume a cabeça antes de escrever o texto.
+**O perfil aparece no cabeçalho do cartão da janela**, então ele vê de qual cabeça saiu cada texto —
+`rotuloDoPerfil` traduz `martim` em *Capitão Martim*, e id desconhecido volta como veio.
+
+**Custo:** o bloco do contato foi de ~800 para ~1.040 tokens (entrada não cacheada), ~US$ 0,24 por mil
+rascunhos no Haiku. O modo antigo (uma resposta) não recebe nada disto.
+
+**Fica em aberto, e é decisão dele:** os perfis 2 e 3 fui eu que escolhi (a assessora e o militante). Se
+ele quiser outros — um deputado aliado, um eleitor, o coordenador da cidade —, é uma linha em
+`PERFIS_DO_RASCUNHO`; e dá para virar campo na Config se ele quiser trocá-los sem mim.
+
+**Não medido com chamada paga.** Testes: `tests/ia.test.mjs` (os do pedido e do esquema foram reescritos).
+
+**Arquivos:** `src/lib/ia.js`, `src/panel/panel.js`, `tests/ia.test.mjs`, `CLAUDE.md`, `registro.md`,
+`manifest.json`.
+
+---
+
 ## 2026-09-17 — v3.79.0 — a abordagem vem ANTES do texto: o efeito de três prompts, de graça
 
 **Pergunta dele:** *"essa solução acabou de dobrar meu uso de tokens, não é? Está reescrevendo toda vez…

@@ -10953,7 +10953,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         usar.addEventListener('click', () => fechar(i));
         cartoes.append(
           h('div', { class: 'wf-escolha-cartao' }, [
-            h('div', { class: 'wf-escolha-cabeca' }, `${i + 1}${o.abordagem ? ` · ${o.abordagem}` : ''}${o.motivo ? ` · ${o.motivo}` : ''}`),
+            h('div', { class: 'wf-escolha-cabeca' }, `${i + 1}${o.perfil ? ` · ${o.perfil}` : ''}${o.motivo ? ` · ${o.motivo}` : ''}`),
             h('div', { class: 'wf-escolha-texto' }, String(o.texto || '').trim()),
             ...(avisos.length ? [h('div', { class: 'wf-pergunta-linha wf-pergunta-aviso' }, `⚠ ${avisos.join('; ')}`)] : []),
             usar,
