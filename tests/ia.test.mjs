@@ -38,6 +38,7 @@ import {
   ANTERIOR_MAX_FALAS,
   ANTERIOR_MAX_CARACTERES,
   esquemaDoRascunho,
+  semelhancaDasOpcoes,
   semSaudacao,
   semRepetirONosso,
   soRepeteONosso,
@@ -2213,7 +2214,10 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   const regra = linhas.findIndex((l) => l.startsWith('NÃO SOMOS CANAL'));
   // Colada no pedido: entre ela e o pedido pode haver outras regras do fim do bloco (a de NAO OFERECER
   // entrou ali em 16/09/2026) — o que se protege e a distancia do ponto em que o modelo escreve.
-  check(regra >= 0 && regra >= linhas.length - 4, 'e repetida no bloco do contato, logo antes do pedido');
+  // Medido contra a linha do PEDIDO, e nao contra o fim do arquivo: o pedido das tres ganhou linhas
+  // proprias em 17/09/2026 e a conta pelo fim caiu sozinha (a licao do teste de proporcao, de novo).
+  const pedidoC = linhas.findIndex((l) => l.startsWith('Escreva TRÊS'));
+  check(regra >= 0 && pedidoC - regra <= 3 && pedidoC > regra, 'e repetida no bloco do contato, logo antes do pedido');
 }
 
 /**
@@ -2773,7 +2777,7 @@ grupo('sao TRES rascunhos, e ele escolhe (15/09/2026)');
     agora,
     aprendidas: 'O QUE ELE ESCOLHEU:\n- Escreva CURTO.',
   });
-  check(/Escreva TRÊS rascunhos DIFERENTES/.test(bloco), 'o pedido das tres esta no bloco do contato');
+  check(/Escreva TRÊS rascunhos que FAÇAM coisas diferentes/.test(bloco), 'o pedido das tres esta no bloco do contato');
   check(/Escreva CURTO/.test(bloco), 'e as licoes aprendidas tambem');
   check(bloco.indexOf('Escreva CURTO') < bloco.indexOf('Escreva TRÊS'),
     'as licoes ficam coladas no pedido, no fim — regra longe do ponto em que o modelo escreve nao e cumprida');
@@ -2927,8 +2931,43 @@ grupo('as tres opcoes nao oferecem o que ela nao pediu, e o conteudo nao se repe
   check(/pelo menos uma\s+responde só o que ela disse/.test(tres.replace(/\s+/g, ' ')), 'e uma delas responde so o que ela disse');
   check(!/fechar ou não com pergunta/.test(tres), 'o convite a fechar com pergunta saiu');
   const linhas = tres.split('\n');
-  check(linhas.findIndex((l) => l.startsWith('NÃO OFEREÇA')) >= linhas.length - 3, 'a regra fica colada no pedido');
+  check(linhas.findIndex((l) => l.startsWith('NÃO OFEREÇA')) === linhas.findIndex((l) => l.startsWith('Escreva TRÊS')) - 1, 'a regra fica colada no pedido');
   check(/não pode estar nas três/.test(esquemaDoRascunho(3).properties.opcoes.description), 'o esquema diz o mesmo');
+}
+
+grupo('as tres opcoes FAZEM coisas diferentes, e a semelhanca e medida (17/09/2026)');
+{
+  /**
+   * Relato dele: *"3 respostas praticamente iguais, so variando o metodo de escrita"*. Medido: o pedido
+   * da v3.67 dizia *"o que e resposta ao que ela disse pode se repetir"* e *"antes tres parecidas do que
+   * uma errada"* — com as proibicoes do bloco, trocar as palavras era a unica variacao autorizada.
+   */
+  const msgs = [{ de: 'contato', texto: 'Estou com voces com muita energia!' }];
+  const tres = montarContatoRascunho({ mensagens: msgs, quantas: 3 });
+  check(!/antes três parecidas/.test(tres), 'a saida para tres parecidas saiu do pedido');
+  check(!/pode se repetir/.test(tres), 'e a licenca para repetir a resposta tambem');
+  check(/\(a\) DIRETA/.test(tres) && /\(b\) ACOLHE/.test(tres) && /\(c\) LIGA AO CAPITÃO MARTIM/.test(tres), 'as tres abordagens tem nome');
+  check(/trocar as palavras da mesma mensagem NÃO conta/.test(tres), 'e parafrase nao conta como diferente');
+  check(/nunca dado inventado/.test(tres), 'a abordagem do Martim nao autoriza inventar posicao');
+  check(/A PRIMEIRA das três é a que você mandaria se fosse uma só/.test(tres.replace(/\s+/g, ' ')), 'a primeira continua sendo a que a taxa mede');
+  const uma = montarContatoRascunho({ mensagens: msgs, quantas: 1 });
+  check(!/DIRETA|ACOLHE/.test(uma), 'o modo antigo nao recebe as abordagens');
+  check(/ACOLHE/.test(esquemaDoRascunho(3).properties.opcoes.description), 'o esquema diz o mesmo');
+
+  // A medida: parafrase da numero alto, abordagens diferentes dao numero baixo.
+  const parafrase = semelhancaDasOpcoes([
+    'Obrigado pela energia! Seguimos juntos na campanha.',
+    'Muito obrigado pela energia, seguimos juntos nessa campanha!',
+    'Agradecemos a energia! Juntos seguimos na campanha.',
+  ]);
+  const diferentes = semelhancaDasOpcoes([
+    'Obrigado pela energia!',
+    'Que alegria ler isso, gente como voce faz a diferenca no dia a dia.',
+    'O Capitao Martim trabalha pela seguranca das escolas, e apoio assim da forca.',
+  ]);
+  check(parafrase >= 0.5, `parafrase mede alto (${parafrase.toFixed(2)})`);
+  check(diferentes < 0.2, `abordagens diferentes medem baixo (${diferentes.toFixed(2)})`);
+  check(semelhancaDasOpcoes([]) === 0 && semelhancaDasOpcoes([{ texto: 'so uma' }]) === 0, 'sem par, zero');
 }
 
 fim();

@@ -2640,6 +2640,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   eleitor sem ninguem escolher. **Limite da medida, e esta escrito na tela:** ela diz se o primeiro
   texto AGRADA, nao se ele esta CERTO — nao serve para decidir envio automatico, que continua sendo
   a caixa "Automatizar" mais `rascunhoPodeSairSozinho`.
+- **"VARIE" SEM DIZER EM QUE DEIXA O MODELO ESCOLHER O EIXO MAIS BARATO: TROCAR AS PALAVRAS** (17/09/2026,
+  *"3 respostas praticamente iguais, so variando o metodo de escrita"*). A v3.67 fechou os eixos que
+  inventavam oferta e deixou escrito *"antes tres parecidas do que uma errada"* — com as proibicoes do
+  bloco, a parafrase era a unica variacao segura e a instrucao a autorizava. Hoje sao tres ABORDAGENS
+  com nome (direta, acolhe, liga ao Capitao Martim) e `ia.semelhancaDasOpcoes` mede no Andamento.
+  **Ao fechar um eixo de variacao, de outro no lugar — e nunca escreva a licenca para parecidas.**
 - **INSTRUCAO DE VARIAR FAZ O MODELO INVENTAR CONTEUDO — e "varie so a forma" faz o conteudo inventado
   se repetir nas tres** (16/09/2026, print da Margarida: a colinha oferecida nas tres opcoes a quem so
   mandou carinho). *"fechar ou nao com pergunta"* virou *"quer que eu te mande a lista?"*, e *"diferentes

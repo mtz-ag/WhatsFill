@@ -1607,7 +1607,9 @@ export function esquemaDoRascunho(quantas = 3) {
       },
       motivo: {
         type: 'string',
-        description: 'Em até 5 palavras, o que diferencia ESTA opção das outras duas. Aparece na tela.',
+        description:
+          'A abordagem desta opção (direta, acolhe ou liga ao Capitão Martim) e, em até 5 palavras, o que ' +
+          'ela faz de diferente das outras duas. Aparece na tela.',
       },
     },
   };
@@ -1637,9 +1639,11 @@ export function esquemaDoRascunho(quantas = 3) {
           n === 1
             ? 'UMA resposta para a mensagem dela, pronta para enviar.'
             : 'TRÊS respostas para a mesma mensagem, diferentes na forma E no conteúdo — não três ' +
-              'versões da mesma frase. O que não é a resposta ao que ela disse (pergunta, informação a ' +
-              'mais, convite) não pode estar nas três, e nenhuma oferece o que ela não pediu. As três ' +
-              'têm de estar CERTAS e prontas para enviar: ele vai escolher uma e mandar como está.',
+              'versões da mesma frase: uma DIRETA, uma que ACOLHE a pessoa e uma que LIGA AO CAPITÃO ' +
+              'MARTIM, a primeira sendo a que você mandaria se fosse uma só. O que não é a resposta ao ' +
+              'que ela disse (pergunta, informação a mais, convite) não pode estar nas três, e nenhuma ' +
+              'oferece o que ela não pediu. As três têm de estar CERTAS e prontas para enviar: ele vai ' +
+              'escolher uma e mandar como está.',
         items: opcao,
       },
     },
@@ -1789,6 +1793,28 @@ const emFrases = (t) =>
  * @param {string} nossaUltima a ultima mensagem que NOS mandamos
  * @returns {string|null} o texto sem as frases repetidas, ou `null` se nada saiu
  */
+/**
+ * **Quão parecidas são as opções do treino** — a MEDIDA do relato de 17/09/2026 (*"3 respostas
+ * praticamente iguais, só variando o método de escrita"*): o maior Jaccard das palavras de conteúdo entre
+ * dois textos, de 0 a 1. Não barra nem esconde nada — vai para o Andamento, para dar para saber se o
+ * pedido das três abordagens está sendo cumprido sem depender de print.
+ */
+export function semelhancaDasOpcoes(opcoes = []) {
+  const conjuntos = (Array.isArray(opcoes) ? opcoes : [])
+    .map((o) => new Set(conteudoDaFrase(String((typeof o === 'string' ? o : o?.texto) || ''))))
+    .filter((c) => c.size);
+  let maior = 0;
+  for (let i = 0; i < conjuntos.length; i += 1) {
+    for (let j = i + 1; j < conjuntos.length; j += 1) {
+      const a = conjuntos[i];
+      const b = conjuntos[j];
+      const comum = [...a].filter((w) => b.has(w)).length;
+      maior = Math.max(maior, comum / (a.size + b.size - comum));
+    }
+  }
+  return maior;
+}
+
 export function semRepetirONosso(texto, nossaUltima) {
   const bruto = String(texto || '');
   const nossas = emFrases(nossaUltima)
@@ -2271,15 +2297,37 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * sem ela. Agora o que não é a resposta ao que ela disse (uma oferta, uma pergunta, uma informação a
      * mais) não pode estar nas três: pelo menos uma responde só o que ela disse.
      */
+    /**
+     * **TRÊS ABORDAGENS COM NOME, e não "varie"** — relato dele (17/09/2026): *"já tínhamos visto isso
+     * antes e de novo aconteceu: a IA fez o rascunho de 3 respostas praticamente iguais, só variando o
+     * método de escrita"*.
+     *
+     * **Medido no texto que eu escrevi na v3.67, a causa estava nele:** *"O que é resposta ao que ela
+     * disse pode se repetir"* e *"antes três parecidas do que uma errada"*. Somadas às proibições do
+     * bloco (não ofereça, não pergunte sobre o caso, não prometa), a única variação que sobrava segura
+     * era trocar as palavras — e a instrução autorizava. **Pedir "variação" sem dizer EM QUÊ deixa o
+     * modelo escolher o eixo mais barato.** Agora cada opção tem uma abordagem que muda o que a mensagem
+     * FAZ, e nenhuma delas precisa inventar nada: encerrar curto, acolher a pessoa, ligar ao Capitão
+     * Martim (a razão de a mensagem existir, regra 11).
+     *
+     * **A PRIMEIRA continua sendo a que a IA mandaria se fosse uma só** — é o que a taxa de acerto do
+     * treino mede (`aprendizado.taxaDePrimeira`), então a ordem é da confiança, não das abordagens.
+     */
     Number(quantas) === 1
       ? 'Escreva o rascunho da resposta.'
-      : 'Escreva TRÊS rascunhos DIFERENTES para esta mesma mensagem. Varie a forma (tamanho, saudação, ' +
-        'agradecer ou ir direto ao ponto) E o conteúdo: tudo o que NÃO é a resposta ao que ela disse — ' +
-        'uma pergunta, uma informação a mais, um convite — NÃO pode aparecer nas três; pelo menos uma ' +
-        'responde só o que ela disse e para aí. O que é resposta ao que ela disse pode se repetir. As ' +
-        'três têm de estar certas e prontas para enviar, porque ele escolhe uma e manda como está. Se ' +
-        'as regras acima só permitirem um jeito de responder, cumpra as regras: antes três parecidas ' +
-        'do que uma errada.',
+      : 'Escreva TRÊS rascunhos que FAÇAM coisas diferentes — trocar as palavras da mesma mensagem NÃO ' +
+        'conta como diferente. Use uma abordagem em cada:\n' +
+        '(a) DIRETA: responde só o que ela disse, em uma ou duas frases, e encerra.\n' +
+        '(b) ACOLHE: começa pela pessoa — o que ela sentiu, o esforço, a confiança ou a preocupação que ' +
+        'mostrou — e só então responde.\n' +
+        '(c) LIGA AO CAPITÃO MARTIM: responde e conecta o assunto dela ao que o Capitão Martim defende ou ' +
+        'faz, usando só o que está escrito neste pedido e nas instruções (nunca dado inventado); se não ' +
+        'houver nada escrito sobre o assunto, ligue à causa em comum que ela mostrou.\n' +
+        'Tudo o que NÃO é a resposta ao que ela disse — uma pergunta, uma informação a mais, um convite — ' +
+        'NÃO pode aparecer nas três; pelo menos uma responde só o que ela disse e para aí. A PRIMEIRA das ' +
+        'três é a que você mandaria se fosse uma só (qualquer abordagem). Antes de devolver, leia as três: ' +
+        'se duas disserem a mesma coisa com outras palavras, reescreva uma. As três têm de estar certas e ' +
+        'prontas para enviar, porque ele escolhe uma e manda como está.',
   ]
     .filter(Boolean)
     .join('\n');

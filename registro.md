@@ -1,3 +1,41 @@
+## 2026-09-17 — v3.70.0 — as três opções do treino FAZEM coisas diferentes: direta, acolhe, liga ao Capitão Martim
+
+**Relato dele:** *"já tínhamos visto isso antes e de novo aconteceu: a IA fez o rascunho de 3 respostas
+praticamente iguais, só variando o método de escrita"*.
+
+**Medido no pedido que eu escrevi na v3.67 — a causa estava nele:** *"O que é resposta ao que ela disse
+pode se repetir"* e *"Se as regras acima só permitirem um jeito de responder… antes três parecidas do que
+uma errada"*. Somadas às proibições coladas no mesmo bloco (não ofereça, não pergunte sobre o caso, não
+prometa, não repita), trocar as palavras era a única variação segura **e a instrução a autorizava**. A v3.67
+fechou os eixos de conteúdo que inventavam oferta e não deu nenhum eixo novo no lugar.
+
+**Conserto, no que a IA lê (pedido e esquema):**
+- Três abordagens com nome, uma em cada opção: **(a) DIRETA** (responde só o que ela disse e encerra),
+  **(b) ACOLHE** (começa pela pessoa — o que sentiu, o esforço, a confiança — e depois responde),
+  **(c) LIGA AO CAPITÃO MARTIM** (conecta o assunto ao que ele defende ou faz, **só com o que está escrito
+  no prompt**; sem isso, à causa em comum que ela mostrou). Nenhuma precisa inventar oferta.
+- *"Trocar as palavras da mesma mensagem NÃO conta como diferente"*, e antes de devolver: se duas
+  disserem a mesma coisa, reescreva uma. As duas licenças saíram.
+- **A primeira continua sendo a que a IA mandaria se fosse uma só** — é o que a taxa de acerto mede, então
+  a ordem é por confiança, não pelas abordagens.
+- O modo antigo (uma resposta) não recebe nada disto.
+
+**Medida nova, no Andamento:** a linha *"você escolheu entre 3 rascunhos"* passa a dizer *"as mais
+parecidas têm X% das palavras em comum"* (`ia.semelhancaDasOpcoes`, Jaccard das palavras de conteúdo). No
+teste, paráfrase mede 86% e abordagens diferentes 9%. Não barra nada: serve para saber, sem print, se o
+pedido está sendo cumprido.
+
+**Risco dito a ele:** a abordagem (c) é a que pode tentar afirmar posição do Martim que não existe. A
+instrução proíbe dado inventado e as travas da chapa continuam valendo, mas é onde olhar primeiro.
+
+**Não medido com chamada paga.** Testes: `tests/ia.test.mjs` (+12, e três testes de posição passaram a
+medir contra a linha do pedido, não contra o fim do bloco).
+
+**Arquivos:** `src/lib/ia.js`, `src/panel/panel.js`, `tests/ia.test.mjs`, `CLAUDE.md`, `registro.md`,
+`manifest.json`.
+
+---
+
 ## 2026-09-17 — v3.69.0 — no treino a trava é ele: a janela abre sempre, e na automática a escolha dele é o envio
 
 **Decisão dele, respondendo à v3.68:** *"quando a primeira resposta passa nas travas? estamos treinando a

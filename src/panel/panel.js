@@ -10640,8 +10640,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'info',
           // Sem "regra(s)" nem "escolha(s)": `checar-referencias` lê `nome(` como chamada, e o
           // plural entre parênteses vira uma função que não existe. Custou um alarme falso.
+          // A semelhança é a MEDIDA de "três praticamente iguais" (17/09/2026): o número no Andamento
+          // diz se o pedido das três abordagens está sendo cumprido, sem depender de print.
           `você escolheu entre ${ensinou.descartados.length + 1} rascunhos — ` +
-            `${depois.escolhas} escolhas aprendidas${novas > 0 ? `, e mais ${novas} no prompt` : ''}`
+            `${depois.escolhas} escolhas aprendidas${novas > 0 ? `, e mais ${novas} no prompt` : ''} · ` +
+            `as mais parecidas têm ${Math.round(iaLib.semelhancaDasOpcoes(opcoes) * 100)}% das palavras em comum`
         );
       } catch (err) {
         registrarNaRodada('IA', 'aviso', `não consegui guardar o que a escolha ensinou: ${err?.message || err}`);
