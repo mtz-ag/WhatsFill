@@ -3162,6 +3162,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   — o Ciro continua apoio pelo *"sou Bolsonaro"*. **E a quinta vez da mesma licao: o que qualifica o
   apoio e o OBJETO**, e ao consertar um padrao confira os vizinhos com o mesmo formato. A lista e
   copia da chapa de `gabinete.md`: mudou a colinha, mudam os dois.
+- **SAUDE E A EXCECAO DA REGRA 11, E FOI ELE QUEM A ABRIU** (17/09/2026): *"em saude a situacao sempre e
+  mais complicada; ao menos teria que perguntar qual o problema"*. A regra 11 (dele, a Irema) manda acolher
+  em uma frase, dizer onde se resolve e PARAR — e era ela que despachava a pessoa doente para o posto **e
+  deixava as tres opcoes iguais** (sem nada a acolher nem a perguntar, as tres viram o mesmo
+  encaminhamento). Hoje `cortesia.falouDeSaude` (mais largo que `MAL_ESTAR`: familia conta, e le a conversa
+  inteira) acende a excecao, COLADA na regra que ela excepciona nos dois lugares. **Pedido de dinheiro sem
+  doenca continua negado de uma vez.** **Ao ver tres opcoes iguais, olhe que regra do prompt tirou o que
+  havia para variar.**
 - **NAO SOMOS CANAL DE RESOLUCAO DE PROBLEMAS — A INTENCAO E GANHAR VOTOS** (decisao dele,
   10/09/2026, print da Irema). Uma preocupacao com aposentadoria recebeu, sozinha e com zero avisos,
   triagem de INSS (*"ja deu entrada? foi negado? tem pericia? conte o que aconteceu... fico no

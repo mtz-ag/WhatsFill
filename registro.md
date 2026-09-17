@@ -1,3 +1,39 @@
+## 2026-09-17 — v3.75.0 — saúde não se despacha: a exceção que ele abriu na regra de "não somos canal"
+
+**Regra dele:** *"uma pessoa chegou pedindo ajuda por estar doente, a IA descartou rapidamente para posto
+de saúde ou algo do tipo e as 3 respostas estavam iguais; ficou algo muito seco e direto para uma pessoa
+doente, ao menos teria que perguntar qual o problema. Quando é pessoa pedindo diretamente dinheiro não tem
+problema de descartar rápido a hipótese de apoio financeiro, mas em saúde a situação sempre é mais
+complicada"*.
+
+**Medido: a IA cumpriu a regra 11, que é dele** (a Irema, 10/09/2026) — *"acolha em UMA frase, diga em UMA
+frase onde aquilo se resolve e PARE; nada de perguntas sobre o caso"*. É ela que produz o despacho para o
+posto de saúde. **E é ela que explica as três iguais:** sem nada a acolher e nada a perguntar, as três
+opções viram o mesmo encaminhamento — o eixo de variação some.
+
+**Conserto — a exceção é estreita (saúde, e só) e mora COLADA na regra que ela excepciona**, no sistema e
+no bloco do contato (separadas, a de cima ganha por vir antes):
+- doença dela ou da família: **não despachar**; acolher com cuidado e **PERGUNTAR o que está acontecendo**
+  — a única situação em que perguntar sobre o caso é o certo;
+- **nada de posto de saúde, UPA, CRAS ou Cadastro Único nesta mensagem**, e não negar ajuda que ela não pediu;
+- pediu dinheiro ou remédio? o *"não podemos"* vem **depois** de ela contar o que tem;
+- **nas três opções, nenhuma pode ser só encaminhamento**, e ao menos uma pergunta o que aconteceu;
+- pedido de dinheiro sem doença continua sendo negado de uma vez, como ele disse.
+
+**O detector** (`cortesia.falouDeSaude`) é mais largo que `MAL_ESTAR` de propósito: aquele decide se o caso
+vai para a tecla 6 e exige a pessoa falando de si; este decide o TOM de uma mensagem que já vai ser
+escrita, então doença de mãe, filho ou marido conta igual. A guarda é a especificidade (possessivo ou
+primeira pessoa), e não uma lista de exclusão: *"a saúde pública é um caos"* e *"o Brasil está doente"* não
+casam, mas *"a saúde pública é um caos, minha mãe está na fila da cirurgia"* casa. **Lê a conversa inteira**
+— quem contou ontem que está doente continua doente hoje. 10 das 22 asserções são falso positivo.
+
+**Não medido com chamada paga.** Testes: `tests/cortesia.test.mjs` (+22), `tests/ia.test.mjs` (+11).
+
+**Arquivos:** `src/lib/cortesia.js`, `src/lib/ia.js`, `tests/cortesia.test.mjs`, `tests/ia.test.mjs`,
+`CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-17 — v3.74.0 — a etiqueta de MATERIAL só entra pela IA: duas portas que a punham antes foram fechadas
 
 **Relato dele, corrigindo a v3.73:** *"não estava me referindo às outras, mas à de material exclusivamente;

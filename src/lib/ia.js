@@ -36,7 +36,7 @@ import * as atendimento from './atendimento.js';
  * reescrita do texto. Ver `AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial`.
  */
 import { ehPedidoDeEndereco, semGabinete } from './templates.js';
-import { ehPedidoDeRoupa } from './cortesia.js';
+import { ehPedidoDeRoupa, falouDeSaude } from './cortesia.js';
 
 /**
  * O modelo padrão.
@@ -1528,6 +1528,21 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    currículo, preencher cadastro, agendar consulta, acompanhar processo, "eu anoto aqui".',
     '    **Cada pergunta dessas faz a pessoa voltar com o caso inteiro**, e o atendimento não tem braço.',
     /**
+     * **A exceção de SAÚDE, aberta por ele em 17/09/2026** — uma pessoa chegou pedindo ajuda por estar
+     * doente e as três opções despacharam para o posto de saúde: *"ficou algo muito seco e direto para
+     * uma pessoa doente; ao menos teria que perguntar qual o problema. Quando é pessoa pedindo
+     * diretamente dinheiro não tem problema de descartar rápido, mas em saúde a situação sempre é mais
+     * complicada"*.
+     *
+     * **A regra 11 acima é dele (a Irema, 10/09) e continua valendo para o resto.** Esta é a exceção
+     * estreita que ele abriu, e mora COLADA nela: separadas, a de cima ganha por estar antes.
+     */
+    '    EXCEÇÃO — SAÚDE: se o problema é doença, dela ou de alguém da família, NÃO despache. Acolha com',
+    '    cuidado e PERGUNTE o que está acontecendo ("o que você tem?", "o que os médicos disseram?") —',
+    '    é a única situação em que perguntar sobre o caso é certo. Não mande posto de saúde, UPA, CRAS',
+    '    nem Cadastro Único na primeira resposta, e não negue ajuda que ela não pediu. Pedido de dinheiro',
+    '    por outro motivo continua sendo negado de uma vez; doença, não.',
+    /**
      * **Não dê a impressão de que há chance** — anotação da Solange (08/09/2026, lida em 10/09). Ela
      * pediu para trabalhar na campanha e ajuda para ir embora para São Paulo, e o rascunho respondeu
      * *"em período eleitoral as contratações são bem limitadas e as decisões saem da assessoria com
@@ -2157,6 +2172,14 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
   const temAudioOuvido = lista.some((m) => m.transcrito);
   const temMidiaSemTexto = lista.some((m) => m.semConteudo);
   const pediuRoupa = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && ehPedidoDeRoupa(m.texto));
+  /**
+   * **Saúde é a exceção da regra 11, e ela vale na conversa INTEIRA** (17/09/2026) — não só na rajada:
+   * quem contou ontem que está doente continua doente hoje, e a resposta seca não deixa de ser seca.
+   */
+  const saude = lista
+    .filter((m) => m.de !== 'nos' && !m.anuncio)
+    .map((m) => falouDeSaude(m.texto))
+    .find(Boolean);
   const perguntouComoEleEsta = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && perguntaComoEleEsta(m.texto));
   const pendentesTotal = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).length;
   const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio).length;
@@ -2436,6 +2459,21 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
     'NÃO SOMOS CANAL DE RESOLUÇÃO DE PROBLEMAS: se ela trouxe um problema, acolha em uma frase, diga ' +
       'onde aquilo se resolve e agradeça a confiança — sem perguntas sobre o caso, sem pedir que ela ' +
       'conte mais e sem "fico no aguardo". A mensagem é para ela sair gostando do Capitão Martim.',
+    /**
+     * **SAÚDE: a exceção, colada na regra que a excepciona** (17/09/2026). A linha de cima é a razão de
+     * a resposta ter saído seca; pôr a exceção longe dela seria escrever as duas para o modelo escolher
+     * a primeira. Vale para as três opções, porque foi assim que ele viu o defeito: *"as 3 respostas
+     * estavam iguais"* — sem nada a acolher nem a perguntar, as três viram o mesmo despacho.
+     */
+    saude
+      ? `SAÚDE — EXCEÇÃO À REGRA ACIMA: ela ${saude.motivo}. Doença não se despacha. Acolha ` +
+        'com cuidado, no tempo dela, e PERGUNTE o que está acontecendo (o que ela tem, como está o ' +
+        'tratamento, o que os médicos disseram) — aqui perguntar sobre o caso é o certo. NÃO mande posto ' +
+        'de saúde, UPA, CRAS nem Cadastro Único nesta mensagem, e não negue ajuda que ela não pediu. Se ' +
+        'ela pediu dinheiro ou remédio, o "não podemos" vem DEPOIS de ela contar o que tem, nunca na ' +
+        'primeira resposta. Nas três opções, NENHUMA pode ser só encaminhamento, e ao menos uma pergunta ' +
+        'o que aconteceu.'
+      : '',
     /**
      * **O que ele vem escolhendo, colado no pedido** — pedido dele (15/09/2026): *"ela deve ir
      * aprendendo com minhas escolhas"*.

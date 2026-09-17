@@ -3066,4 +3066,42 @@ grupo('a IA confere as etiquetas de PEDIDO e SEM INTERESSE antes de marcar (17/0
   check(validarEtiqueta(null).acao === 'incerto', 'vazio nao marca');
 }
 
+grupo('saude nao se despacha: a excecao da regra 11 (17/09/2026)');
+{
+  /**
+   * Relato dele: uma pessoa chegou pedindo ajuda por estar doente, a IA despachou para o posto de saude
+   * e *"as 3 respostas estavam iguais"*. A causa e a regra 11 (dele, a Irema 10/09), que manda acolher em
+   * uma frase, dizer onde se resolve e PARAR, sem perguntas sobre o caso.
+   */
+  const sistema = montarSistemaRascunho({});
+  check(/EXCEÇÃO — SAÚDE/.test(sistema), 'a excecao esta no sistema');
+  const linhas11 = sistema.split('\n');
+  const regra11 = linhas11.findIndex((l) => /^11\. NÃO SOMOS UM CANAL/.test(l));
+  const excecao = linhas11.findIndex((l) => /EXCEÇÃO — SAÚDE/.test(l));
+  check(regra11 >= 0 && excecao > regra11 && excecao - regra11 <= 10, 'e COLADA na regra que ela excepciona');
+
+  const doente = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'Boa tarde, estou doente e preciso de ajuda' }] });
+  const l = doente.split('\n');
+  const iCanal = l.findIndex((x) => x.startsWith('NÃO SOMOS CANAL'));
+  const iSaude = l.findIndex((x) => x.startsWith('SAÚDE — EXCEÇÃO'));
+  check(iCanal >= 0 && iSaude === iCanal + 1, 'no bloco do contato a excecao vem logo depois da regra');
+  check(/PERGUNTE o que está acontecendo/.test(doente), 'e manda perguntar o que ela tem');
+  check(/NÃO mande posto de saúde, UPA, CRAS/.test(doente), 'e proibe o despacho nesta mensagem');
+  check(/NENHUMA pode ser só encaminhamento/.test(doente), 'e cobre as tres opcoes iguais');
+  check(/"não podemos" vem DEPOIS/.test(doente), 'a negativa vem depois de ela contar');
+
+  check(!/SAÚDE — EXCEÇÃO/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'preciso de ajuda com o aluguel' }] })),
+    'pedido de dinheiro sem doenca continua sem a excecao — ele disse que ali pode descartar rapido');
+  check(!/SAÚDE — EXCEÇÃO/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'a saude publica e um caos' }] })),
+    'fala politica sobre saude nao abre a excecao');
+  /** A doenca de ontem continua valendo hoje: a excecao le a conversa inteira, nao so a rajada. */
+  check(/SAÚDE — EXCEÇÃO/.test(montarContatoRascunho({
+    mensagens: [
+      { de: 'contato', texto: 'minha mae esta internada' },
+      { de: 'nos', texto: 'Sentimos muito.' },
+      { de: 'contato', texto: 'obrigada' },
+    ],
+  })), 'a excecao vale na conversa inteira');
+}
+
 fim();

@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, ehPedidoDeRoupa, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos } from '../src/lib/cortesia.js';
+import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, ehPedidoDeRoupa, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos, falouDeSaude } from '../src/lib/cortesia.js';
 
 const templates = await lib('templates.js');
 
@@ -3127,6 +3127,43 @@ grupo('roupa nao e material, e tem detector proprio (12/09/2026)');
   check(!pedeRoupa([{ texto: 'Olá! Quero uma camiseta', tipo: 'TEXT', geradaPeloAnuncio: true }], null),
     'o clique no anuncio nao e pedido dela');
   check(ehPedidoDeRoupa('QUERO UM BONÉ'), 'caixa alta e acento nao atrapalham');
+}
+
+grupo('saude: a excecao que ele abriu na regra de nao ser canal (17/09/2026)');
+{
+  /**
+   * Regra dele: *"em saude a situacao sempre e mais complicada; ao menos teria que perguntar qual o
+   * problema"*. O detector decide o TOM de uma mensagem que ja vai ser escrita, entao e mais largo que
+   * `MAL_ESTAR` (que manda o caso para a tecla 6): doenca na familia conta igual.
+   */
+  for (const f of [
+    'Estou doente e preciso de ajuda',
+    'to com muita dor nas costas ha meses',
+    'Faco tratamento de quimioterapia em Porto Alegre',
+    'preciso de remedio que a farmacia do posto nao tem',
+    'minha mae esta internada na UTI',
+    'meu filho e autista e nao consigo o tratamento',
+    'minha pressao esta muito alta',
+    'vou fazer uma cirurgia semana que vem',
+    'sou cadeirante',
+    'estou precisando de uma consulta com cardiologista',
+  ]) check(!!falouDeSaude(f), `saude: "${f}"`);
+
+  for (const f of [
+    'a saude publica desse pais e um caos',
+    'o Brasil esta doente',
+    'a fila do SUS e uma vergonha',
+    'precisamos de mais investimento na saude',
+    'quero receber o material de campanha',
+    'preciso de ajuda para pagar o aluguel',
+    'minha mae vai votar em voces',
+    'meu filho quer trabalhar na campanha',
+    'estou com uma duvida sobre o horario do evento',
+    '',
+  ]) check(!falouDeSaude(f), `nao e caso de saude: "${f}"`);
+
+  check(/fam[íi]lia/.test(falouDeSaude('minha mae esta com cancer').motivo), 'o motivo distingue familia');
+  check(/dela/.test(falouDeSaude('estou com febre alta').motivo), 'e o dela');
 }
 
 fim();

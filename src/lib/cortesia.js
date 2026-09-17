@@ -2677,6 +2677,53 @@ export function reclamaSemResposta(entrantes, nossaUltimaAt) {
   return null;
 }
 
+/**
+ * **Ela trouxe um problema de SAÚDE — dela ou de alguém da família** — regra dele (17/09/2026), com o
+ * caso de uma pessoa que chegou pedindo ajuda por estar doente e recebeu as três opções iguais,
+ * despachando para o posto de saúde:
+ *
+ * > *"ficou algo muito seco e direto para uma pessoa doente; ao menos teria que perguntar qual o
+ * > problema ou algo do tipo. Quando é pessoa pedindo diretamente dinheiro não tem problema de descartar
+ * > rápido a hipótese de apoio financeiro, mas em saúde a situação sempre é mais complicada."*
+ *
+ * **É a EXCEÇÃO que ele abriu na própria regra dele de 10/09** (*"não somos um canal de resolução de
+ * problemas… sem perguntas sobre o caso"*, a Irema): em saúde, perguntar o que está acontecendo passou a
+ * ser o certo. As duas convivem porque esta é estreita — saúde, e só.
+ *
+ * **Mais larga que `MAL_ESTAR` de propósito:** aquele exige a pessoa falando de si, porque decide se o
+ * caso vai para a tecla 6. Aqui o que se decide é o TOM de uma mensagem que já vai ser escrita, então a
+ * doença de um filho, de uma mãe ou o tratamento que ela faz contam igual. As guardas são a fala política
+ * (*"a saúde pública é um caos"*, *"o Brasil está doente"*) e o terceiro genérico.
+ *
+ * @param {string} texto
+ * @returns {{motivo:string}|null}
+ */
+const SAUDE_DELA = [
+  /(^|[^\p{L}])(estou|est[oô]|t[oô]|fa[çc]o|fiz|vou\s+fazer|preciso\s+de|estou\s+fazendo|comecei)\s+[^.!?]{0,20}?(tratamento|quimioterapia|radioterapia|hemodi[áa]lise|fisioterapia|cirurgia|transplante|exame|consulta|rem[ée]dio|medica[çc][ãa]o)/iu,
+  /(^|[^\p{L}])(estou|est[oô]|t[oô])\s+(precisando|necessitando)\s+[^.!?]{0,20}?(rem[ée]dio|medica[çc][ãa]o|tratamento|cirurgia|consulta|exame|m[ée]dico)/iu,
+  /(^|[^\p{L}])(meu|minha)\s+(problema\s+de\s+sa[úu]de|doen[çc]a|c[âa]ncer|diabet|press[ãa]o|cora[çc][ãa]o|coluna|rim|perna|vis[ãa]o)/iu,
+  /(^|[^\p{L}])(sou|estou)\s+(cadeirante|acamad[ao]|paciente)/iu,
+];
+
+const SAUDE_DA_FAMILIA =
+  /(^|[^\p{L}])(meu|minha|nosso|nossa)\s+(m[ãa]e|pai|filh[oa]|filhinh[oa]|esposa|marido|mulher|companheir[ao]|irm[ãa]o?|av[óo]|v[óo]|neto|neta|sogr[ao]|tio|tia|sobrinh[oa])\s+[^.!?]{0,40}?(doente|adoentad|internad|no\s+hospital|na\s+uti|c[âa]ncer|cirurgia|avc|infarto|quimioterapia|tratamento|acamad|paralisia|autist|s[íi]ndrome|deficien|rem[ée]dio|diabet|derrame|transplante|faleceu|luta\s+contra)/iu;
+
+/**
+ * **A guarda contra a fala política é a PRÓPRIA especificidade dos padrões**, e não uma lista de
+ * exclusão: *"a saúde pública é um caos"*, *"o Brasil está doente"* e *"a fila do SUS é uma vergonha"*
+ * não têm o possessivo nem o verbo em primeira pessoa que estes padrões exigem. Lista de exclusão aqui
+ * erraria para o lado caro — *"a saúde pública é um caos, minha mãe está na fila da cirurgia"* É o caso
+ * dela.
+ */
+export function falouDeSaude(texto) {
+  const t = semAcentos(texto);
+  if (!t) return null;
+  const dela = SAUDE_DELA.some((re) => re.test(t)) || MAL_ESTAR.some((re) => re.test(t));
+  if (dela) return { motivo: 'contou um problema de saúde dela' };
+  if (SAUDE_DA_FAMILIA.test(t)) return { motivo: 'contou um problema de saúde na família' };
+  return null;
+}
+
 export function naoPodeFalarAgora(entrantes, nossaUltimaAt) {
   for (const msg of rajadaFinal(entrantes, nossaUltimaAt)) {
     const texto = semAcentos(msg?.texto);
