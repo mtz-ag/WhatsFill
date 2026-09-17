@@ -1,3 +1,40 @@
+## 2026-09-17 — v3.73.0 — a IA confere as etiquetas de PEDIDO e SEM INTERESSE antes de marcar
+
+**Relato dele:** *"o determinístico está botando etiqueta antes da IA confirmar qualquer coisa"*.
+
+**Medido no painel — todas as escritas de etiqueta que dependem de julgamento de texto:**
+| etiqueta | passava pela IA? |
+|---|---|
+| material (endereço) | **sim**, desde a v3.65 (`etiquetarEndereco`) |
+| pedido de dinheiro/emprego | **não** — saía pelo sinal, *antes* de a IA escrever o rascunho do mesmo caso |
+| sem interesse | **não** — saía com a tecla `s` do fluxo, junto da conclusão sem resposta |
+
+As de cidade, COREDE, conteúdo e origem (ADS) são regras dele ou dado da plataforma, e ficaram fora.
+
+**Conserto (mesmo molde da de material, que não foi mexida):**
+- `ia.TIPOS_DE_ETIQUETA` (pedido, seminteresse), com prompt curto que diz o que É e o que NÃO é — os
+  falsos positivos já registrados: dinheiro em crítica política, voluntária sem pagamento, xingar o
+  adversário, recusar evento, piada, áudio confuso. Esquema `sim`/`nao`, confiança mínima 0,7.
+- `iaCliente.conferirEtiqueta` + modo `etiqueta` no service worker.
+- `conferirEtiquetaComIA` no painel: só com a IA ligada e chave (desligada, marca como antes); só `sim`
+  marca; uma conferência por situação; contato tem de ser o aberto.
+- **Pedido:** a conferência roda dentro de `aplicarEtiquetaDePedido`, pelos dois caminhos (o sinal da rodada
+  e a resposta pronta que nega).
+- **Sem interesse:** quando foi o FLUXO que escolheu a tecla `s`, sem o `sim` da IA não se marca **nem se
+  conclui** — o contato fica aberto para ele (resultado `pulado`, com o motivo). Quando foi ELE quem
+  apertou `s`, não se confere: a IA não passa por cima de decisão dele.
+
+**Custo:** ~410 tokens de sistema por conferência, como a de material (~US$ 1,15 por mil no Haiku), só
+quando a etiqueta ainda falta no contato.
+
+**Não medido com chamada paga.** Testes: `tests/ia.test.mjs` (+20, e o esquema novo entrou na varredura das
+palavras-chave que a API recusa).
+
+**Arquivos:** `src/lib/ia.js`, `src/lib/ia-cliente.js`, `src/panel/panel.js`, `tests/ia.test.mjs`,
+`CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-17 — v3.72.0 — "como está o capitão?" é carinho: ele está bem e na correria da campanha
 
 **Relato dele:** *"me perguntaram como está o capitão e a IA respondeu 3 vezes que não sabe; a resposta

@@ -791,6 +791,134 @@ export function validarMaterial(bruto) {
   return { ...vazio, aviso: 'a IA devolveu uma resposta fora das opções' };
 }
 
+// ---------------------------------------------------------------------------
+// Conferência das OUTRAS etiquetas de julgamento: pedido e sem interesse
+// ---------------------------------------------------------------------------
+
+/**
+ * **A IA confere antes de o determinístico pôr etiqueta** — relato dele (17/09/2026): *"o determinístico
+ * está botando etiqueta antes da IA confirmar qualquer coisa"*.
+ *
+ * **Medido no painel: a de MATERIAL já passava pela IA desde 16/09; estas duas não.** A de pedido de
+ * dinheiro/emprego saía pelo SINAL antes de a IA escrever uma linha — no mesmo caso que a IA ia
+ * responder —, e a de sem interesse saía com a tecla `s` do fluxo. As duas são de detector de TEXTO, que
+ * este projeto já corrigiu dezenas de vezes (o "dinheiro" da Elenir, a piada do Alfredo, o áudio do
+ * lopezp4295), e as duas ficam PERMANENTES no CRM.
+ *
+ * **Material não entrou aqui de propósito**: ela já funciona, tem o próprio prompt afinado, e mexer nas
+ * três ao mesmo tempo é a lição da v3.63. O molde é o mesmo: prompt curto, esquema pequeno, e
+ * **`incerto` não marca**.
+ */
+export const TIPOS_DE_ETIQUETA = {
+  pedido: {
+    rotulo: 'PEDIU DINHEIRO OU EMPREGO',
+    efeito: 'marca o contato, para sempre, como quem pediu ajuda financeira ou emprego ao mandato',
+    sim: [
+      'ela pede dinheiro, PIX, empréstimo, ajuda para pagar conta, aluguel, remédio, cesta, cirurgia ou',
+      '  outro bem que teria de ser COMPRADO, para ela ou para alguém da família; ou',
+      'ela pede emprego, vaga, contratação ou trabalho REMUNERADO (inclusive "trabalhar na campanha"',
+      '  querendo ganhar).',
+    ],
+    nao: [
+      '"dinheiro", "auxílio" ou "emprego" citados em crítica ou opinião política, sem pedir nada;',
+      'contar uma dificuldade sem pedir nada ao mandato;',
+      'oferecer-se como voluntária, sem pagamento;',
+      'pedir material de campanha (adesivo, bandeira, santinho) — isso não é pedido de dinheiro;',
+      'perguntar sobre projeto, lei ou programa de emprego;',
+      'pergunta retórica ("se eu pedisse ajuda, vocês ajudariam? não, né").',
+    ],
+  },
+  seminteresse: {
+    rotulo: 'SEM INTERESSE',
+    efeito:
+      'marca o contato, para sempre, como SEM INTERESSE e conclui o atendimento SEM responder nada — ele ' +
+      'nunca mais recebe mensagem da campanha',
+    sim: [
+      'ela pede para não receber mais mensagens, sair da lista ou parar de ser procurada; ou',
+      'ela recusa a campanha de forma clara ("não tenho interesse", "não voto em vocês"); ou',
+      'ela ofende NÓS: o Capitão Martim, a campanha, o atendimento, o PL, o Republicanos ou os aliados',
+      '  da chapa; ou',
+      'ela oferece o voto em troca de dinheiro.',
+    ],
+    nao: [
+      'criticar ou xingar o ADVERSÁRIO (PT, Lula, esquerda) — quem faz isso está do nosso lado;',
+      'recusar ir a um EVENTO — não é recusar a campanha;',
+      'desabafo ou raiva com a política em geral, com o governo ou com a prefeitura;',
+      'piada, ironia sobre si mesma, reclamação de que não foi atendida, "não posso falar agora";',
+      'texto longo de opinião: quem escreve nove linhas está conversando;',
+      'áudio transcrito confuso, com "não" solto no meio.',
+    ],
+  },
+};
+
+export function esquemaDaEtiqueta() {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['acao', 'motivo', 'confianca'],
+    properties: {
+      acao: {
+        type: 'string',
+        enum: ['sim', 'nao'],
+        description: 'sim = a etiqueta está certa para esta conversa; nao = não está',
+      },
+      motivo: { type: 'string', description: 'Uma frase curta, em português, dizendo por quê. Vai para o log.' },
+      confianca: { type: 'number', description: 'De 0 a 1. Abaixo de 0,7 o painel não marca nada.' },
+    },
+  };
+}
+
+/** Abaixo disto "sim" não marca — as duas etiquetas são permanentes, e uma delas conclui sem responder. */
+export const CONFIANCA_ETIQUETA = 0.7;
+
+export function montarSistemaEtiqueta({ tipo, regras = '' } = {}) {
+  const t = TIPOS_DE_ETIQUETA[tipo];
+  if (!t) return '';
+  return [
+    'Você confere uma etiqueta no atendimento de WhatsApp de um mandato parlamentar no Rio Grande do Sul.',
+    '',
+    `Um programa leu palavras nesta conversa e vai pôr a etiqueta "${t.rotulo}", que ${t.efeito}.`,
+    'Sua tarefa é dizer se ele acertou. Você não escreve mensagem e não fala com ninguém.',
+    '',
+    'É "sim" quando:',
+    ...t.sim.map((l) => (l.startsWith('  ') ? l : `- ${l}`)),
+    '',
+    'É "nao" quando:',
+    ...t.nao.map((l) => `- ${l}`),
+    '',
+    'Linhas marcadas "(texto do ANÚNCIO…)" foram escritas pela campanha, não por ela.',
+    'Julgue o que ELA escreveu, não o que nós escrevemos.',
+    '',
+    'Na dúvida, "nao". A etiqueta fica no CRM para sempre; não marcar custa uma linha no log.',
+    '',
+    regras ? `Instruções adicionais do Thiago:\n${regras}\n` : '',
+  ].join('\n');
+}
+
+export function montarRequisicaoEtiqueta({ sistema, contato, modelo = MODELO_PADRAO }) {
+  return corpo({ sistema, contato, modelo, esquema: esquemaDaEtiqueta(), nome: 'etiqueta', esforco: 'low', maxTokens: 512 });
+}
+
+/** `{acao: 'sim'|'nao'|'incerto', motivo, confianca, aviso}` — só `sim` com a confiança mínima marca. */
+export function validarEtiqueta(bruto) {
+  const vazio = { acao: 'incerto', motivo: '', confianca: 0, aviso: '' };
+  let d = bruto;
+  if (typeof d === 'string') {
+    try {
+      d = JSON.parse(d);
+    } catch (_) {
+      return { ...vazio, aviso: 'a IA respondeu num formato que não deu para ler' };
+    }
+  }
+  if (!d || typeof d !== 'object') return { ...vazio, aviso: 'a IA não devolveu conferência' };
+  const motivo = String(d.motivo || '').trim().slice(0, 300);
+  const confianca = Number.isFinite(d.confianca) ? Math.min(1, Math.max(0, d.confianca)) : 0;
+  if (d.acao === 'nao') return { acao: 'nao', motivo, confianca, aviso: '' };
+  if (d.acao === 'sim' && confianca >= CONFIANCA_ETIQUETA) return { acao: 'sim', motivo, confianca, aviso: '' };
+  if (d.acao === 'sim') return { ...vazio, motivo, confianca, aviso: `a IA achou que sim, mas com ${Math.round(confianca * 100)}% de certeza` };
+  return { ...vazio, aviso: 'a IA devolveu uma resposta fora das opções' };
+}
+
 export function montarRequisicaoCidade({ sistema, contato, modelo = MODELO_PADRAO }) {
   return corpo({
     sistema,

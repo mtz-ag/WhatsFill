@@ -30,6 +30,12 @@ import {
   semConviteAoCaso,
   marcaDeMidia,
   esquemaDoMaterial,
+  esquemaDaEtiqueta,
+  montarSistemaEtiqueta,
+  montarRequisicaoEtiqueta,
+  validarEtiqueta,
+  TIPOS_DE_ETIQUETA,
+  CONFIANCA_ETIQUETA,
   montarSistemaMaterial,
   montarContatoMaterial,
   montarRequisicaoMaterial,
@@ -2827,6 +2833,7 @@ grupo('nenhum esquema manda palavra-chave que a API recusa com 400 (16/09/2026)'
     rascunhoTreino: esquemaDoRascunho(3),
     rascunhoAntigo: esquemaDoRascunho(1),
     material: esquemaDoMaterial(),
+    etiqueta: esquemaDaEtiqueta(),
   };
   for (const [nome, esq] of Object.entries(esquemas)) {
     const fora = acusar(esq, nome, []);
@@ -3026,6 +3033,37 @@ grupo('"como esta o capitao?" e carinho: ele esta bem e na correria (17/09/2026)
   check(!/COMO ELE ESTÁ:/.test(respondida), 'ja respondida, a linha nao entra de novo');
   check(!/COMO ELE ESTÁ:/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'como está a campanha?' }] })),
     'sem a pergunta, nada entra');
+}
+
+grupo('a IA confere as etiquetas de PEDIDO e SEM INTERESSE antes de marcar (17/09/2026)');
+{
+  /**
+   * Relato dele: *"o deterministico esta botando etiqueta antes da IA confirmar qualquer coisa"*. Medido:
+   * a de material ja passava pela IA; estas duas saiam so pelo detector de texto.
+   */
+  const pedido = montarSistemaEtiqueta({ tipo: 'pedido' });
+  const semInt = montarSistemaEtiqueta({ tipo: 'seminteresse', regras: 'regra extra dele' });
+  check(/"PEDIU DINHEIRO OU EMPREGO"/.test(pedido), 'o prompt do pedido nomeia a etiqueta');
+  check(/crítica ou opinião política/.test(pedido), 'e o falso positivo mais caro: dinheiro em critica politica (a Elenir)');
+  check(/voluntária, sem pagamento/.test(pedido), 'voluntaria nao e pedido de emprego');
+  check(/"SEM INTERESSE"/.test(semInt) && /SEM responder nada/.test(semInt), 'o de sem interesse diz que conclui sem responder');
+  check(/ADVERSÁRIO \(PT, Lula, esquerda\)/.test(semInt), 'e que xingar o adversario e estar do nosso lado');
+  check(/recusar ir a um EVENTO/.test(semInt), 'e que recusar evento nao e recusar a campanha');
+  check(/Na dúvida, "nao"/.test(pedido) && /Na dúvida, "nao"/.test(semInt), 'na duvida, nao marca');
+  check(/regra extra dele/.test(semInt), 'as instrucoes dele entram');
+  check(montarSistemaEtiqueta({ tipo: 'inventado' }) === '', 'tipo desconhecido nao monta prompt');
+  check(Object.keys(TIPOS_DE_ETIQUETA).sort().join() === 'pedido,seminteresse', 'material continua na conferencia propria');
+
+  const req = montarRequisicaoEtiqueta({ sistema: 's', contato: 'c' });
+  check(req.output_config.format.schema.properties.acao.enum.join() === 'sim,nao', 'o esquema so tem sim e nao');
+
+  const j = (o) => JSON.stringify(o);
+  check(validarEtiqueta(j({ acao: 'sim', motivo: 'pediu PIX', confianca: 0.9 })).acao === 'sim', 'sim com certeza marca');
+  check(validarEtiqueta(j({ acao: 'sim', motivo: 'talvez', confianca: CONFIANCA_ETIQUETA - 0.01 })).acao === 'incerto', 'sim com pouca certeza NAO marca');
+  check(validarEtiqueta(j({ acao: 'nao', motivo: 'critica politica', confianca: 0.3 })).acao === 'nao', 'nao vale com qualquer certeza');
+  check(validarEtiqueta('isto nao e json').acao === 'incerto', 'ilegivel nao marca');
+  check(validarEtiqueta(j({ acao: 'talvez' })).acao === 'incerto', 'resposta fora das opcoes nao marca');
+  check(validarEtiqueta(null).acao === 'incerto', 'vazio nao marca');
 }
 
 fim();

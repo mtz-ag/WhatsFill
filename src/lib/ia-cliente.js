@@ -31,6 +31,10 @@ import {
   montarContatoMaterial,
   montarRequisicaoMaterial,
   validarMaterial,
+  montarSistemaEtiqueta,
+  montarRequisicaoEtiqueta,
+  validarEtiqueta,
+  TIPOS_DE_ETIQUETA,
   MODELO_PADRAO,
   PROVEDOR_OPENAI,
   NOME_DO_PROVEDOR,
@@ -407,6 +411,28 @@ export async function conferirMaterial({ regras, mensagens, gatilho, acabamosDeM
   }
 }
 
+/**
+ * A IA confere a etiqueta de PEDIDO ou de SEM INTERESSE antes de o painel a pôr (17/09/2026) — ver
+ * `ia.TIPOS_DE_ETIQUETA`. O bloco do contato é o mesmo da conferência de material. Nunca lança: falha
+ * vira `incerto`, e `incerto` não marca.
+ */
+export async function conferirEtiqueta({ tipo, regras, mensagens, gatilho, modelo }) {
+  if (!TIPOS_DE_ETIQUETA[tipo]) return { acao: 'incerto', motivo: '', confianca: 0, aviso: `tipo de etiqueta desconhecido: ${tipo}` };
+  try {
+    const r = await pedirAoWorker({
+      type: MSG_IA,
+      modo: 'etiqueta',
+      sistema: montarSistemaEtiqueta({ tipo, regras }),
+      contato: montarContatoMaterial({ mensagens, gatilho }),
+      modelo: modelo || MODELO_PADRAO,
+    });
+    if (!r?.ok) return { acao: 'incerto', motivo: '', confianca: 0, aviso: r?.motivo || 'a IA não respondeu' };
+    return { ...validarEtiqueta(r.decisao), custoUsd: r.custoUsd };
+  } catch (err) {
+    return { acao: 'incerto', motivo: '', confianca: 0, aviso: err?.message || String(err) };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Lado do service worker
 // ---------------------------------------------------------------------------
@@ -441,6 +467,8 @@ export async function atender(pedido, chave) {
       ? montarRequisicaoCidade({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
       : pedido.modo === 'material'
       ? montarRequisicaoMaterial({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
+      : pedido.modo === 'etiqueta'
+      ? montarRequisicaoEtiqueta({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
       : montarRequisicao({
           sistema: pedido.sistema,
           contato: pedido.contato,

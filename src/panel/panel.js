@@ -2482,7 +2482,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    */
   async function etiquetarPedidoDeAjuda(template, alvo) {
     if (!ETIQUETA_PEDIDO_IDS.includes(template.id)) return '';
-    return aplicarEtiquetaDePedido(alvo);
+    return aplicarEtiquetaDePedido(alvo, { gatilho: `a resposta pronta "${template.name}" que acabou de sair nega o pedido` });
   }
 
   /**
@@ -2490,7 +2490,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * a rodada marca pelo sinal (`sugestao.motivoDaEtiquetaDePedido`), porque quem responde esses casos
    * é a IA, e texto livre não tem id de resposta pronta.
    */
-  async function aplicarEtiquetaDePedido(alvo) {
+  async function aplicarEtiquetaDePedido(alvo, { gatilho = '' } = {}) {
     const nome = String(state.auto.cfg.etiquetaPedidoAjuda || '').trim();
     if (!nome || !alvo?.id) return '';
 
@@ -2498,6 +2498,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const tag = await tagsLib.resolveTag(nome);
       if (!tag) return ` (a etiqueta "${nome}" não existe no CRM — não marquei)`;
       if ((alvo.tagsId || []).includes(tag.id)) return '';
+      // A IA confere ANTES (17/09/2026) — depois de saber que a etiqueta existe e falta, para não pagar
+      // uma chamada por um contato que já está marcado.
+      const recusa = await conferirEtiquetaComIA('pedido', alvo, gatilho);
+      if (recusa) return recusa;
       const r = await tagsLib.applyTags(alvo, [tag.id]);
       return r?.ok ? ` + etiqueta "${tag.label}"` : ` (não consegui aplicar "${nome}")`;
     } catch (err) {
@@ -2548,6 +2552,44 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    */
   /** Conferências de material já feitas nesta abertura do painel — ver `etiquetarEndereco`. */
   const conferenciasDeMaterial = new Map();
+
+  /**
+   * **A IA confere as etiquetas de PEDIDO e de SEM INTERESSE antes de o determinístico pô-las** — relato
+   * dele (17/09/2026): *"o determinístico está botando etiqueta antes da IA confirmar qualquer coisa"*.
+   * Medido: a de material já passava pela IA (`etiquetarEndereco`, 16/09); estas duas saíam só pelo
+   * detector de texto. Ver `ia.TIPOS_DE_ETIQUETA`.
+   *
+   * Devolve **string vazia quando pode marcar**, e a frase do porquê quando não pode. Mesmas regras da
+   * de material: só com a IA ligada e chave (desligada, marca como antes); só `sim` marca; `nao` e
+   * `incerto` não marcam; uma conferência por situação (contato + última fala dela + gatilho); e o
+   * contato tem de ser o que está aberto, porque a conversa lida é a da tela.
+   */
+  const conferenciasDeEtiqueta = new Map();
+  async function conferirEtiquetaComIA(tipo, alvo, gatilho = '') {
+    if (!(state.ia?.ligada && state.iaTemChave)) return '';
+    if (alvo?.id !== state.contact?.id) return ' (a IA não conferiu: o atendimento mudou — não marquei)';
+    const ultimaDela = (state.entrantes || []).map((m) => m?.at).filter(Boolean).pop() || '';
+    const chave = `${tipo}|${alvo.id}|${ultimaDela}|${gatilho}`;
+    let c = conferenciasDeEtiqueta.get(chave);
+    if (!c) {
+      c = await iaCliente.conferirEtiqueta({
+        tipo,
+        regras: state.ia.regras,
+        mensagens: conversaParaIA(),
+        gatilho,
+        modelo: state.ia.modelo,
+      });
+      if (c.acao !== 'incerto') conferenciasDeEtiqueta.set(chave, c);
+      registrarNaRodada(
+        'IA',
+        'pulado',
+        `${tipo === 'seminteresse' ? 'sem interesse' : 'pedido'} · ${c.acao}${c.custoUsd ? ` · US$ ${c.custoUsd.toFixed(4)}` : ''}${c.motivo ? ` · ${c.motivo}` : ''}${c.aviso ? ` · ${c.aviso}` : ''}`
+      );
+    }
+    if (c.acao === 'sim') return '';
+    if (c.acao === 'nao') return ` (a IA conferiu e NÃO é o caso: ${c.motivo || 'sem motivo dado'} — não marquei)`;
+    return ` (a IA não confirmou${c.aviso ? `: ${c.aviso}` : ''} — não marquei)`;
+  }
 
   async function etiquetarEndereco(alvo, { gatilho = '', acabamosDeMandar = '' } = {}) {
     const nome = String(state.auto.cfg.etiquetaEndereco || '').trim();
@@ -6292,7 +6334,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       const motivoDoPedido = sugestaoLib.motivoDaEtiquetaDePedido(sinaisDoContato);
       if (motivoDoPedido && String(state.auto.cfg.etiquetaPedidoAjuda || '').trim()) {
-        const marca = await aplicarEtiquetaDePedido(state.contact);
+        const marca = await aplicarEtiquetaDePedido(state.contact, { gatilho: motivoDoPedido });
         if (marca) registrarNaRodada(nome, 'info', `${motivoDoPedido} — etiqueta de pedido${marca}`);
       }
 
@@ -7214,6 +7256,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * log, onde dá para conferir depois.
        */
       if (escolha === 'seminteresse') {
+        /**
+         * **Quando foi o FLUXO que escolheu, a IA confere antes** (17/09/2026, *"o determinístico está
+         * botando etiqueta antes da IA confirmar qualquer coisa"*). Esta é a mais destrutiva da rodada —
+         * etiqueta permanente E conclusão sem resposta —, então sem o `sim` não se faz NENHUMA das duas:
+         * o contato fica aberto para ele. **Quando foi ELE quem apertou a tecla, não se confere**: a
+         * escolha é dele, e a IA não passa por cima de decisão dele.
+         */
+        if (escolhaAutomatica) {
+          const recusa = await conferirEtiquetaComIA('seminteresse', state.contact, `o fluxo decidiu sem interesse ("${sugestao?.id || ''}"): ${sugestao?.motivo || ''}`);
+          if (recusa) {
+            return { nome, resultado: 'pulado', motivo: `o fluxo pediu "sem interesse"${recusa.replace('não marquei', 'não marquei nem concluí, fica para você')}` };
+          }
+        }
         let avisoEtiqueta = '';
         if (etiquetaSemInteresse) {
           const tag = await tagsLib.resolveTag(etiquetaSemInteresse);

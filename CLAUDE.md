@@ -2916,6 +2916,11 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   rajada e lida JUNTA para a venda de voto, antes do laco. **Detector cujo caso vem partido em
   mensagens tem de ler a rajada junta** — e as guardas continuam por objeto: o voto e DELA, oferta sem
   dinheiro nao e venda, e "meu voto nao se compra" desfaz.
+- **AS ETIQUETAS DE PEDIDO E SEM INTERESSE TAMBEM PASSAM PELA IA** (17/09/2026, *"o deterministico esta
+  botando etiqueta antes da IA confirmar qualquer coisa"*). Material ja conferia; estas duas nao.
+  `conferirEtiquetaComIA(tipo, ...)` com `ia.TIPOS_DE_ETIQUETA`. **Sem interesse escolhido pelo FLUXO sem
+  o `sim` nao marca NEM conclui** (fica aberto); apertado por ELE, nao se confere. **Etiqueta nova que
+  depende de julgamento de texto entra em `TIPOS_DE_ETIQUETA`, nunca direto no `applyTags`.**
 - **A ETIQUETA DE MATERIAL PASSA PELA IA ANTES DE ENTRAR** (16/09/2026, pedido dele: *"quando o
   deterministico identificar material, a IA assume e confere"*). Os cinco caminhos que a acendem (modelo,
   resposta pronta e rascunho que pedem endereco; pedido fora do anuncio; endereco dela no pulo) passam
