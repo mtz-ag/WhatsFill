@@ -203,27 +203,18 @@ grupo('a taxa que diz quando soltar a IA sozinha');
   check(semIndice.escolhas === 1, 'mas continua ensinando as dimensoes');
 }
 
-grupo('a rodada automatica so abre a janela de treino quando ia parar de qualquer jeito');
+grupo('no treino a trava e ele: a janela abre sempre, tambem na rodada automatica');
 {
   /**
-   * Relato dele: *"o modo treino interrompeu o fluxo de mandar modelo ao aparecer anuncio"*. Com a janela
-   * aberta a rodada automatica parava de abrir contatos. Esta decisao ja foi invertida duas vezes;
-   * a terceira tem de cair aqui.
+   * Decisao dele (17/09/2026): *"estamos treinando a IA, entao a trava no modo treino sou eu"*. Esta
+   * decisao ja mudou quatro vezes (v3.62, v3.63, v3.66, v3.68); a quinta tem de cair aqui. O que impede
+   * a fila de parar (a queixa da v3.63) nao mora aqui: e a escolha dele virar envio na automatica.
    */
-  check(abreJanelaDeTreino({ treinando: true, rodadaAutomatica: false }) === true, 'treino ligado, contato a contato: abre');
-  check(abreJanelaDeTreino({ treinando: true, rodadaAutomatica: true }) === false, 'treino ligado, rodada AUTOMATICA: NAO abre');
-  check(abreJanelaDeTreino({ treinando: false, rodadaAutomatica: false }) === false, 'treino desligado: nao abre');
-  check(abreJanelaDeTreino({ treinando: undefined, rodadaAutomatica: false }) === false, 'sem a chave gravada: nao abre');
+  check(abreJanelaDeTreino({ treinando: true }) === true, 'treino ligado: abre');
+  check(abreJanelaDeTreino({ treinando: true, rodadaAutomatica: true }) === true, 'treino ligado, rodada AUTOMATICA: abre tambem');
+  check(abreJanelaDeTreino({ treinando: false, rodadaAutomatica: true }) === false, 'treino desligado: nao abre (o modo antigo manda sozinho)');
+  check(abreJanelaDeTreino({ treinando: undefined }) === false, 'sem a chave gravada: nao abre');
   check(abreJanelaDeTreino() === false, 'sem nada: nao abre');
-
-  /**
-   * v3.68 (17/09/2026): *"mandou sem me dar as 3 opcoes e agora parou e me deu uma opcao so"*. Na
-   * automatica a janela abre SO quando a rodada ia parar de qualquer jeito (primeira opcao barrada).
-   */
-  check(abreJanelaDeTreino({ treinando: true, rodadaAutomatica: true, vaiParar: true }) === true, 'automatica e a rodada ia parar: abre');
-  check(abreJanelaDeTreino({ treinando: true, rodadaAutomatica: true, vaiParar: false }) === false, 'automatica e a primeira pode sair: NAO abre (a fila segue)');
-  check(abreJanelaDeTreino({ treinando: false, rodadaAutomatica: true, vaiParar: true }) === false, 'treino desligado e a rodada parou: nao abre');
-  check(abreJanelaDeTreino({ treinando: true, rodadaAutomatica: false, vaiParar: true }) === true, 'contato a contato: abre, com ou sem parada');
 }
 
 grupo('quantosRascunhos: tres com o treino ligado, tambem na automatica');

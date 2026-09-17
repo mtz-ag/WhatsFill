@@ -1,3 +1,34 @@
+## 2026-09-17 — v3.69.0 — no treino a trava é ele: a janela abre sempre, e na automática a escolha dele é o envio
+
+**Decisão dele, respondendo à v3.68:** *"quando a primeira resposta passa nas travas? estamos treinando a
+IA, então a trava no modo treino sou eu"*.
+
+**O que mudou:**
+- Com o treino ligado, a janela das três abre **sempre** que a IA escreve, também na rodada automática
+  (`aprendizado.abreJanelaDeTreino` só olha o treino).
+- **Na rodada automática, a escolha dele é o envio:** a opção escolhida sai, o atendimento é concluído e a
+  rodada segue (`escolheuEle` libera o envio em `processarRespondido`, mesmo com aviso — ele viu os avisos
+  de cada opção na janela). O Andamento diz *"você escolheu entre os três rascunhos e mandei"*.
+- Esc na janela devolve o contato para a caixa da rodada, como antes.
+- Fora da rodada automática (contato a contato, tecla 8, aba Respostas) nada mudou: a escolha vai para o
+  campo e quem manda é ele.
+
+**Por que isto não é a v3.63 de novo** (que também abria sempre e ouviu *"o modo treino interrompeu o
+fluxo de mandar modelo ao aparecer anúncio"*): lá a escolha ia para o campo e a rodada ficava parada na
+caixa da tecla 6 esperando outra decisão. Agora a fila espera **só o tempo de escolher**. **O custo que
+continua, e foi dito a ele:** com automático + treino, a rodada não anda sem ele enquanto a janela estiver
+aberta — quem quer a rodada andando sem ninguém olhando desliga o treino.
+
+**A decisão já mudou quatro vezes em dois dias** (v3.62, v3.63, v3.66, v3.68); o teste agora trava a regra
+dele pelo nome.
+
+**Não medido com chamada paga.** Testes: `tests/aprendizado.test.mjs`.
+
+**Arquivos:** `src/lib/aprendizado.js`, `src/panel/panel.js`, `tests/aprendizado.test.mjs`, `CLAUDE.md`,
+`registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-17 — v3.68.0 — treino na rodada automática: a janela das três abre quando a rodada ia parar mesmo
 
 **Relato dele:** *"o modo treino está ativo em novos e meus? estou fazendo os novos com treino ligado e

@@ -2627,13 +2627,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `ia.treinando` decide: **tres rascunhos + caixa de escolha** (treino) ou **um rascunho direto no
   campo** (o antigo) — e **o antigo leva as licoes aprendidas no prompt do mesmo jeito**, que e a
   parte que ele quis preservar. **O modo decide o ESQUEMA (`esquemaDoRascunho(quantas)`), e nao so a
-  tela**: pedir tres para usar uma pagaria a saida das outras duas em toda chamada. **Na rodada
-  AUTOMATICA a janela so abre quando a rodada ia PARAR de qualquer jeito** (a primeira opcao barrada —
-  `abreJanelaDeTreino({ vaiParar })`, 17/09/2026: *"parou e me deu uma opcao so"*); por isso com treino
-  ligado a automatica tambem pede TRES, e o texto escolhido na janela NAO sai sozinho (`escolheuEle`).
-  A janela nunca e o que para a fila: a v3.63 abriu a janela sempre e a
-  rodada PAROU de abrir contatos esperando a escolha — *"o modo treino interrompeu o fluxo de mandar
-  modelo ao aparecer anuncio"*. **Ja foi invertida duas vezes; ao consertar um "falhou", mude UMA coisa
+  tela**: pedir tres para usar uma pagaria a saida das outras duas em toda chamada. **No treino a trava
+  e ELE, tambem na rodada automatica** (17/09/2026: *"a trava no modo treino sou eu"*): a janela abre
+  sempre e, na automatica, **a escolha dele E o envio** (`escolheuEle` libera o envio em
+  `processarRespondido`, mesmo com aviso) e a rodada segue. A v3.63 abria e punha a escolha no CAMPO, e
+  a rodada parava na caixa da tecla 6 — *"o modo treino interrompeu o fluxo"*. **Ja mudou quatro vezes;
+  ao consertar um "falhou", mude UMA coisa
   por vez** — a v3.63 mudou o esquema (a causa) e a exclusao (que nao era causa) juntos.
   **A "taxa baixa de erro" e MEDIDA e tem um nome exato:** de quantas vezes a PRIMEIRA opcao foi a
   escolhida — a primeira e o que a IA mandaria sem treino nenhum. Com 10 escolhas e 80% a tela avisa

@@ -3168,10 +3168,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         ),
         h('div', { class: 'wf-origin' },
           state.ia?.treinando
-            ? 'Ligado, vale para Novos, Meus e Outros. A janela das três opções abre quando a decisão é sua: ' +
-              'rodada contato a contato, tecla 8 e aba Respostas. Na rodada AUTOMÁTICA a primeira opção sai ' +
-              'sozinha e a fila segue; a janela só abre quando essa opção é barrada e a rodada ia parar ' +
-              'nela de qualquer jeito. O ' +
+            ? 'Ligado, vale para Novos, Meus e Outros, e a janela das três abre SEMPRE que a IA escreve — a ' +
+              'trava é você. Na rodada AUTOMÁTICA a que você escolher sai e a rodada segue (ela espera só a ' +
+              'sua escolha); Esc devolve o contato para a caixa da rodada. O ' +
               'treino custa a saída de dois textos a mais: US$ 2,04 → 3,39 por mil rascunhos no Haiku.'
             : 'Um rascunho por chamada, com as regras aprendidas dentro do prompt. Ligue o treino ' +
               'quando quiser ensinar de novo — depois de mudar o padrão de resposta, por exemplo.'),
@@ -6531,7 +6530,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * (*"volte a mensagem automática da IA"*): eu a criei diagnosticando como alucinação da IA
          * uma mensagem que era do determinístico. Ver `rascunhoPodeSairSozinho`.
          */
-        if (rascunho.ok && !rascunho.escolheuEle && rodadaAutomatica() && iaLib.rascunhoPodeSairSozinho(rascunho.avisos)) {
+        /**
+         * **No treino, a escolha dele libera o envio** (17/09/2026: *"a trava no modo treino sou eu"*):
+         * ele leu as três, com os avisos de cada uma na janela, e escolheu. Sem isto a rodada
+         * automática pararia na caixa depois da escolha, que foi o que a v3.63 fez.
+         */
+        if (rascunho.ok && rodadaAutomatica() && (rascunho.escolheuEle || iaLib.rascunhoPodeSairSozinho(rascunho.avisos))) {
           if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) {
             return { nome, resultado: 'erro', motivo: 'a classificação não gravou; não enviei o rascunho' };
           }
@@ -6560,7 +6564,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           const marcaEndereco = templatesLib.ehPedidoDeEndereco(rascunho.texto)
             ? await etiquetarEndereco(state.contact, { gatilho: 'o rascunho da IA que acabou de sair pede o endereço', acabamosDeMandar: rascunho.texto })
             : '';
-          const comoFoi = `IA escreveu e mandou${marcaEndereco} (${porQue})`;
+          const comoFoi = rascunho.escolheuEle
+            ? `você escolheu entre os três rascunhos e mandei${marcaEndereco} (${porQue})`
+            : `IA escreveu e mandou${marcaEndereco} (${porQue})`;
           const fechou = await concluirPeloPainel();
           if (!fechou.ok) return { nome, resultado: 'enviado', parar: true, motivo: `${comoFoi}, mas ${fechou.reason}` };
           return { nome, resultado: 'enviado', motivo: `${comoFoi} — e concluí` };
@@ -10548,8 +10554,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * três jeitos de pedir um rascunho (a tecla 8, a escalada do fluxo e o cartão da aba Respostas)
      * — três cópias divergiriam na primeira semana, que é o defeito mais registrado deste projeto.
      *
-     * **Na rodada AUTOMÁTICA a janela só abre quando a rodada ia parar mesmo** (a primeira opção
-     * barrada, 17/09/2026) — ver `treinandoAgora()`. A v3.63 a abria sempre e a rodada
+     * **Na rodada AUTOMÁTICA a janela abre também, e a escolha dele é o envio** (17/09/2026) — ver
+     * `treinandoAgora()`. A v3.63 a abria e punha a escolha no campo, e a rodada
      * parava esperando (16/09/2026, *"o modo treino interrompeu o fluxo de mandar modelo"*): *"toda
      * pergunta que pode abrir dentro da rodada precisa de resposta automática ou de um jeito de não
      * abrir"*.
@@ -10559,13 +10565,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     let ensinou = null;
 
     if (opcoes.length > 1) {
-      /**
-       * **A rodada automática vai parar neste contato?** — a MESMA conta que `processarRespondido` faz
-       * depois para decidir se manda sozinho. Os avisos que o painel acrescenta abaixo (o piso do
-       * cadastro) não barram, então conferir só os da primeira opção dá o mesmo resultado.
-       */
-      const vaiParar = rodadaAutomatica() && !iaLib.rascunhoPodeSairSozinho(opcoes[0]?.avisos || []);
-      if (!treinandoAgora({ vaiParar })) {
+      if (!treinandoAgora()) {
         /**
          * **Modo antigo, e o modelo devolveu três mesmo assim.** Não deveria acontecer (o esquema
          * pede uma), mas o que vem da API é entrada não confiável: usar a primeira é o desfecho
@@ -10655,8 +10655,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
     // `texto` e `avisos` existem para o cartão da aba Respostas MOSTRAR o que foi para o campo.
     // A rodada só olha `ok`/`motivo`, e continua funcionando igual.
-    // `escolheuEle`: o texto no campo foi escolhido por ELE, e a rodada automática não pode mandá-lo
-    // sozinha só porque a opção escolhida não tem aviso — na janela ele escolhe, quem manda é ele.
+    // `escolheuEle`: o texto foi escolhido por ELE na janela do treino. Na rodada automática a escolha
+    // dele É a aprovação — sai mesmo com aviso, porque no treino a trava é ele (17/09/2026).
     return { ok: true, enviado: false, motivo: 'rascunho pronto no campo de mensagem', texto, avisos, escolheuEle: !!ensinou };
   }
 
@@ -10666,20 +10666,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * API, quem escolhe entre as opções e o que a tela promete), e três leituras separadas divergem
    * na primeira caixa nova. É o mesmo desenho de `rodadaAutomatica()`.
    *
-   * **A rodada AUTOMÁTICA nunca treina — e isto foi desfeito e refeito no mesmo dia.** A v3.63 abriu a
-   * janela também na rodada automática, e a rodada passou a ESPERAR a escolha: relato dele
-   * (16/09/2026), *"o modo treino interrompeu o fluxo de mandar modelo ao aparecer anúncio"*. Medido no
-   * código, o treino não trocava o modelo por rascunho no mesmo contato (a IA só entra quando o fluxo
-   * manda para a tecla 6 ou para ela); o que parava era a FILA — com a janela aberta nenhum contato
-   * seguinte era aberto, e fechá-la caía na tecla 6, que também espera. **O "falhou" da v3.62 era o
-   * erro 400 do esquema, não esta exclusão**: eu mudei as duas coisas juntas e a segunda era errada.
-   *
-   * Na automática, a primeira das três sai sozinha e a rodada segue. A janela abre onde a decisão já é
-   * dele: rodada contato a contato, tecla 8, aba Respostas — e na automática quando a primeira opção é
-   * barrada, porque aí a rodada para no contato de qualquer jeito (`vaiParar`, 17/09/2026).
+   * **No treino a trava é ELE, também na rodada automática** — decisão dele (17/09/2026): *"estamos
+   * treinando a IA, então a trava no modo treino sou eu"*. Histórico, porque isto já mudou quatro vezes:
+   * a v3.62 não abria na automática; a v3.63 abria e a fila PARAVA (*"o modo treino interrompeu o
+   * fluxo"*) — a escolha ia para o campo e a rodada ficava na caixa da tecla 6; a v3.66 deixou de abrir;
+   * a v3.68 abria só com a primeira opção barrada. **Hoje abre sempre, e na automática a escolha dele
+   * É o envio** (`escolheuEle` em `processarRespondido`): a fila espera só o tempo de escolher.
    */
-  function treinandoAgora({ vaiParar = false } = {}) {
-    return aprendizadoLib.abreJanelaDeTreino({ treinando: state.ia?.treinando, rodadaAutomatica: rodadaAutomatica(), vaiParar });
+  function treinandoAgora() {
+    return aprendizadoLib.abreJanelaDeTreino({ treinando: state.ia?.treinando });
   }
 
   /**
@@ -10769,7 +10764,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       tornarArrastavel(caixa, barra, 'escolhaPos');
 
       caixa.append(h('div', { class: 'wf-pergunta-linha' },
-        'A que você escolher vai para o campo de mensagem, e quem manda é você. A escolha ensina ' +
+        (rodadaAutomatica()
+          ? 'Rodada automática: a que você escolher SAI e a rodada segue. A escolha ensina '
+          : 'A que você escolher vai para o campo de mensagem, e quem manda é você. A escolha ensina ') +
           'a FORMA — tamanho, saudação, pergunta — nunca o texto.'));
 
       const cartoes = h('div', { class: 'wf-escolha-cartoes' });
