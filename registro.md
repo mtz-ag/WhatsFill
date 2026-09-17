@@ -1,3 +1,31 @@
+## 2026-09-17 — v3.72.0 — "como está o capitão?" é carinho: ele está bem e na correria da campanha
+
+**Relato dele:** *"me perguntaram como está o capitão e a IA respondeu 3 vezes que não sabe; a resposta
+deveria ser enrolar dizendo que está bem e na correria por causa das eleições etc. Se tiver um
+acontecimento eu ponho a informação no dossiê ou instruções extras"*.
+
+**Medido no prompt:** duas regras, lidas ao pé da letra, transformavam a cortesia em pedido de dado:
+- a **regra 4** do sistema (*"sobre o candidato, use SÓ o que estiver na conversa e no Quem é quem"*);
+- a **seção 20 do documento dele** (*"nunca invente… informação pessoal do candidato. Não sabendo: 'Não
+  quero te passar uma informação errada. Vou verificar esse ponto.'"*) — que é exatamente o que saiu.
+Nada no prompt dizia que perguntar como ele está não é pedir informação.
+
+**Conserto, no que a IA lê (o documento dele não foi tocado):**
+- **Exceção na regra 4:** perguntar COMO ELE ESTÁ é carinho — responda que está bem e na correria da
+  campanha, nunca "não sei" nem "vou verificar"; se as instruções ou o dossiê trouxerem notícia dele, a
+  notícia vence.
+- **A mesma regra colada no pedido** quando a pergunta está na conversa sem resposta
+  (`ia.perguntaComoEleEsta`), pela lição do item 22.
+- O detector só casa a pergunta pelo ESTADO dele: *"como está o capitão nas pesquisas?"*, *"como vai o
+  deputado votar?"*, *"como está a campanha?"* e *"como ele está?"* ficam de fora (9 das 16 asserções são
+  falso positivo). Mesmo quando não casar, a exceção do sistema continua valendo.
+
+**Não medido com chamada paga.** Testes: `tests/ia.test.mjs` (+22).
+
+**Arquivos:** `src/lib/ia.js`, `tests/ia.test.mjs`, `CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-17 — v3.71.0 — no treino, o pedido de cadastro não vai nas três opções
 
 **Relato dele:** *"melhorou, mas continua mantendo obrigatório algumas coisas: no último exemplo, em todas

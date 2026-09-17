@@ -997,6 +997,18 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '   "Quem é quem" abaixo. É a mesma regra do documento ("não invente informação"), dita aqui',
     '   porque aqui está a fonte.',
     /**
+     * **"Como está o capitão?" é carinho, não pedido de informação** — relato dele (17/09/2026): as três
+     * opções responderam que não sabem, e ele: *"a resposta deveria ser enrolar dizendo que está bem e
+     * na correria por causa das eleições; se tiver um acontecimento eu ponho no dossiê ou nas instruções
+     * extras"*. A causa era esta regra somada à seção 20 do documento dele (*"informação pessoal do
+     * candidato… Não sabendo: não quero te passar uma informação errada"*) — lidas ao pé da letra, uma
+     * pergunta de cortesia virou pedido de dado pessoal. O documento dele não foi tocado.
+     */
+    '   EXCEÇÃO: perguntar COMO ELE ESTÁ ("como está o capitão?", "o Martim está bem?") não é pedido',
+    '   de informação, é carinho. Responda que ele está bem e na correria da campanha — nunca "não sei",',
+    '   "não tenho essa informação" nem "vou verificar". Se as instruções ou o "Quem é quem" trouxerem',
+    '   notícia dele (viagem, saúde, acontecimento), use a notícia no lugar.',
+    /**
      * **A regra 5 nasceu da print da Sandra Grandini (06/09/2026)**, e é a alucinação mais cara que
      * este projeto viu: ela escreveu só *"E a respeito do material?"* e o rascunho respondeu *"Já
      * encaminhei seu pedido ao assessor da sua região para providenciar o material. Você deve
@@ -1799,6 +1811,23 @@ const emFrases = (t) =>
  * dois textos, de 0 a 1. Não barra nem esconde nada — vai para o Andamento, para dar para saber se o
  * pedido das três abordagens está sendo cumprido sem depender de print.
  */
+/**
+ * **Ela perguntou como o Capitão Martim ESTÁ?** (17/09/2026) — cortesia, não pedido de dado. Casa só a
+ * pergunta pelo estado dele: o nome tem de vir colado no verbo e a frase tem de acabar ali (ou em "bem",
+ * "hoje", "de saúde"), senão *"como está o capitão nas pesquisas?"* e *"como vai o deputado votar?"*
+ * virariam carinho. `ele` sozinho fica de fora: sem o nome, não se sabe de quem é.
+ */
+export function perguntaComoEleEsta(texto) {
+  const t = semAcentoIA(String(texto || '')).toLowerCase();
+  const ELE = '(?:o\\s+)?(?:nosso\\s+)?(?:capitao|martim|deputado)(?:\\s+martim)?';
+  const FIM = '\\s*(?:$|[?!.,]|\\s+(?:hoje|ai|bem|de saude)\\b)';
+  return (
+    new RegExp(`(?:^|[^a-z])como\\s+(?:e\\s+que\\s+)?(?:esta|ta|vai|anda)\\s+${ELE}${FIM}`).test(t) ||
+    new RegExp(`(?:^|[^a-z])${ELE}\\s+(?:esta|ta|anda)\\s+bem\\s*(?:$|[?!.,])`).test(t) ||
+    new RegExp(`(?:^|[^a-z])tudo\\s+(?:bem|certo|tranquilo)\\s+com\\s+${ELE}\\s*(?:$|[?!.,])`).test(t)
+  );
+}
+
 export function semelhancaDasOpcoes(opcoes = []) {
   const conjuntos = (Array.isArray(opcoes) ? opcoes : [])
     .map((o) => new Set(conteudoDaFrase(String((typeof o === 'string' ? o : o?.texto) || ''))))
@@ -2000,6 +2029,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
   const temAudioOuvido = lista.some((m) => m.transcrito);
   const temMidiaSemTexto = lista.some((m) => m.semConteudo);
   const pediuRoupa = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && ehPedidoDeRoupa(m.texto));
+  const perguntouComoEleEsta = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && perguntaComoEleEsta(m.texto));
   const pendentesTotal = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).length;
   const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio).length;
   const soCliques = pendentes === 0 && pendentesTotal > 0;
@@ -2255,6 +2285,13 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
       ? 'ROUPA: ela pediu camiseta, boné ou outra peça de vestir — NÃO fornecemos nenhuma, e a lei ' +
         'eleitoral proíbe a campanha de distribuir. Diga isso em uma frase gentil e pare: sem pedir ' +
         'endereço, sem repassar à equipe, sem prometer verificar e sem indicar onde comprar.'
+      : '',
+    /** A exceção da regra 4, colada no pedido quando a pergunta está na conversa (17/09/2026). */
+    perguntouComoEleEsta
+      ? 'COMO ELE ESTÁ: ela perguntou como está o Capitão Martim. É carinho, não pedido de informação — ' +
+        'NÃO diga que não sabe, que não tem a informação nem que vai verificar. Diga que ele está bem e na ' +
+        'correria da campanha, e agradeça a lembrança. Se as instruções ou o "Quem é quem" trouxerem ' +
+        'notícia dele, use a notícia no lugar.'
       : '',
     /**
      * **A regra do endereço, colada no pedido** — mesma razão da regra 11 acima, e mesma decisão

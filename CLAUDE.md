@@ -2640,6 +2640,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   eleitor sem ninguem escolher. **Limite da medida, e esta escrito na tela:** ela diz se o primeiro
   texto AGRADA, nao se ele esta CERTO — nao serve para decidir envio automatico, que continua sendo
   a caixa "Automatizar" mais `rascunhoPodeSairSozinho`.
+- **"NAO INVENTE" LIDO AO PE DA LETRA VIRA "NAO SEI" PARA CORTESIA** (17/09/2026, *"perguntaram como esta
+  o capitao e a IA respondeu 3 vezes que nao sabe"*). A regra 4 e a secao 20 do documento dele
+  (*"informacao pessoal do candidato… Nao sabendo: vou verificar"*) nao distinguiam pergunta de carinho
+  de pedido de dado. Hoje ha EXCECAO na regra 4 e a linha colada no pedido (`ia.perguntaComoEleEsta`):
+  ele esta bem e na correria da campanha; noticia dele no dossie ou nas instrucoes vence. **Ao escrever
+  regra que proibe inventar, diga tambem o que NAO e pedido de informacao** — o modelo prefere o "nao
+  sei" seguro a julgar.
 - **OBRIGACAO ESCRITA PARA O RASCUNHO UNICO VIRA OBRIGACAO NAS TRES** (17/09/2026, *"em todas as opcoes
   ele pediu os dados, entao se eu quero uma opcao sem pedir dados fico sem escolha"*). O "FECHE com o
   formulario" e o PISO do painel foram escritos antes do treino. Hoje, no treino, o bloco vai na

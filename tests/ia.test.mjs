@@ -39,6 +39,7 @@ import {
   ANTERIOR_MAX_CARACTERES,
   esquemaDoRascunho,
   semelhancaDasOpcoes,
+  perguntaComoEleEsta,
   semSaudacao,
   semRepetirONosso,
   soRepeteONosso,
@@ -2980,6 +2981,51 @@ grupo('as tres opcoes FAZEM coisas diferentes, e a semelhanca e medida (17/09/20
   check(parafrase >= 0.5, `parafrase mede alto (${parafrase.toFixed(2)})`);
   check(diferentes < 0.2, `abordagens diferentes medem baixo (${diferentes.toFixed(2)})`);
   check(semelhancaDasOpcoes([]) === 0 && semelhancaDasOpcoes([{ texto: 'so uma' }]) === 0, 'sem par, zero');
+}
+
+grupo('"como esta o capitao?" e carinho: ele esta bem e na correria (17/09/2026)');
+{
+  /**
+   * Relato dele: as tres opcoes responderam que nao sabem. *"a resposta deveria ser enrolar dizendo que
+   * esta bem e na correria por causa das eleicoes; se tiver um acontecimento eu ponho no dossie ou nas
+   * instrucoes extras"*. Causa: a regra 4 + a secao 20 do documento dele lidas ao pe da letra.
+   */
+  for (const f of [
+    'Como está o capitão?',
+    'E aí, como tá o Capitão Martim?',
+    'como vai o nosso deputado',
+    'Como anda o Martim hoje?',
+    'O capitão está bem?',
+    'tudo bem com o Capitão?',
+    'Boa tarde! Como está o capitão, de saúde?',
+  ]) check(perguntaComoEleEsta(f), `pergunta pelo estado dele: "${f}"`);
+
+  for (const f of [
+    'Como está o capitão nas pesquisas?',
+    'como vai o deputado votar nesse projeto?',
+    'como está a campanha?',
+    'como você está?',
+    'o capitão está bem colocado',
+    'como ele está?',
+    'Estou bem, obrigado capitão',
+    'como faço para falar com o capitão?',
+    '',
+  ]) check(!perguntaComoEleEsta(f), `nao e pergunta pelo estado dele: "${f}"`);
+
+  const sistema = montarSistemaRascunho({});
+  check(/EXCEÇÃO: perguntar COMO ELE ESTÁ/.test(sistema), 'a excecao esta na regra 4 do sistema');
+  check(/nunca "não sei"/.test(sistema), 'e proibe o "nao sei"');
+
+  const com = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'Como está o capitão?' }] });
+  check(/COMO ELE ESTÁ:/.test(com), 'a regra vai colada no pedido quando ela pergunta');
+  check(/está bem e na\s+correria da campanha/.test(com.replace(/\s+/g, ' ')), 'com a resposta que ele quer');
+  check(/notícia dele/.test(com), 'e a noticia do dossie ou das instrucoes vence');
+  const respondida = montarContatoRascunho({
+    mensagens: [{ de: 'contato', texto: 'Como está o capitão?' }, { de: 'nos', texto: 'Está bem, na correria!' }, { de: 'contato', texto: 'que bom' }],
+  });
+  check(!/COMO ELE ESTÁ:/.test(respondida), 'ja respondida, a linha nao entra de novo');
+  check(!/COMO ELE ESTÁ:/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'como está a campanha?' }] })),
+    'sem a pergunta, nada entra');
 }
 
 fim();
