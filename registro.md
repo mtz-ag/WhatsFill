@@ -1,3 +1,41 @@
+## 2026-09-17 — v3.79.0 — a abordagem vem ANTES do texto: o efeito de três prompts, de graça
+
+**Pergunta dele:** *"essa solução acabou de dobrar meu uso de tokens, não é? Está reescrevendo toda vez…
+por que não é usado um prompt diferente já de início para cada mensagem gerada?"*
+
+**Medido, com os preços do próprio código (Haiku 4.5, por mil rascunhos):**
+
+| desenho | quente | frio |
+|---|---|---|
+| 1 chamada, 1 rascunho (modo antigo) | US$ 2,89 | — |
+| 1 chamada, 3 rascunhos (hoje) | **US$ 4,59** | US$ 14,21 |
+| hoje + a refeita, **em toda chamada** (pior caso) | US$ 9,17 | — |
+| **3 chamadas separadas, uma por abordagem** (a proposta dele) | **US$ 8,66** | US$ 18,29 |
+
+**Duas respostas:** a refeita **não** dobra o uso — ela só acontece quando a medida acusa repetição, então
+o custo real é 4,59 × (1 + taxa de repetição). E **três prompts desde o início custam mais** (US$ 8,66),
+porque o que pesa é a ENTRADA: o prompt de sistema tem ~8.400 tokens e seria pago três vezes, enquanto a
+saída é a mesma. Três chamadas só ganhariam se a repetição acontecesse em mais de 100% dos rascunhos.
+
+**O que dá o efeito que ele quis, de graça: a ORDEM dos campos do esquema.** O modelo escreve o JSON na
+ordem declarada, então declarar `abordagem` **antes** de `texto` o obriga a se comprometer com a abordagem
+(`direta` | `acolhe` | `liga-ao-martim`) antes de escrever — e é muito mais difícil escrever três textos
+iguais depois de ter dito que um é direto, um acolhe e um liga ao Capitão Martim. Custa três palavras de
+saída por opção (~US$ 0,02 por mil) e não existe no modo antigo, onde não há o que diferenciar.
+
+A abordagem escolhida **aparece no cartão da janela**, então ele vê o que cada opção tentou fazer. Quem
+devolver a forma antiga (sem o campo) continua funcionando.
+
+**Consequência esperada:** menos refeitas, que é o único lugar onde o gasto dobrava. Se elas continuarem
+frequentes, o Andamento mostra — cada refeita tem linha própria (`rascunho (refeito)`).
+
+**Não medido com chamada paga.** Testes: `tests/ia.test.mjs` (+9).
+
+**Arquivos:** `src/lib/ia.js`, `src/panel/panel.js`, `tests/ia.test.mjs`, `CLAUDE.md`, `registro.md`,
+`manifest.json`.
+
+---
+
 ## 2026-09-17 — v3.78.0 — as opções iguais viraram CONSERTO (a chamada é refeita), e a janta pela campanha não recebe CRAS
 
 **Relato dele, em três partes:** *"nada mudou, 3 mensagens mandando para o CRAS novamente no mesmo caso, a

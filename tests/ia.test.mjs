@@ -3227,4 +3227,35 @@ grupo('a janta pela campanha nao recebe CRAS (17/09/2026)');
     'quem pede dinheiro de verdade continua com a regra 11');
 }
 
+grupo('a abordagem vem ANTES do texto no esquema (17/09/2026)');
+{
+  /**
+   * Pergunta dele: *"por que nao e usado um prompt diferente ja de inicio para cada mensagem gerada?"*.
+   * Medido: tres chamadas separadas custam US$ 8,66 por mil contra US$ 4,59 de uma chamada com tres (o
+   * prompt de sistema e pago tres vezes). O que da o mesmo efeito de graca e a ORDEM dos campos: o modelo
+   * escreve o JSON na ordem declarada, entao ele se COMPROMETE com a abordagem antes de escrever o texto.
+   */
+  const e3 = esquemaDoRascunho(3);
+  const campos = Object.keys(e3.properties.opcoes.items.properties);
+  check(campos[0] === 'abordagem', 'a abordagem e o primeiro campo');
+  check(campos.indexOf('abordagem') < campos.indexOf('texto'), 'e vem antes do texto');
+  check(e3.properties.opcoes.items.required.includes('abordagem'), 'e e obrigatoria');
+  check(e3.properties.opcoes.items.properties.abordagem.enum.join() === 'direta,acolhe,liga-ao-martim',
+    'com as tres abordagens do pedido, e nada mais');
+
+  const e1 = esquemaDoRascunho(1);
+  check(!Object.keys(e1.properties.opcoes.items.properties).includes('abordagem'), 'no modo antigo nao ha abordagem');
+  check(!e1.properties.opcoes.items.required.includes('abordagem'), 'nem obrigatoria');
+
+  /** Estrito (OpenAI) continua valido: todo campo em `required`. */
+  const est = esquemaEstrito(e3);
+  check(est.properties.opcoes.items.required.length === Object.keys(est.properties.opcoes.items.properties).length,
+    'na forma estrita, todos os campos entram em required');
+
+  const v = validarRascunho(JSON.stringify({ opcoes: [{ abordagem: 'acolhe', texto: 'Que iniciativa bonita!', confianca: 0.9, precisaDeRevisao: false }] }), new Date(), {});
+  check(v.opcoes[0].abordagem === 'acolhe', 'a abordagem sobrevive a validacao — e o rotulo do cartao');
+  const semAbordagem = validarRascunho(JSON.stringify({ opcoes: [{ texto: 'Um texto.', confianca: 0.5, precisaDeRevisao: true }] }), new Date(), {});
+  check(semAbordagem.opcoes[0].abordagem === '', 'sem abordagem nao quebra (a forma antiga continua aceita)');
+}
+
 fim();

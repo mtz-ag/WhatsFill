@@ -3162,6 +3162,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   — o Ciro continua apoio pelo *"sou Bolsonaro"*. **E a quinta vez da mesma licao: o que qualifica o
   apoio e o OBJETO**, e ao consertar um padrao confira os vizinhos com o mesmo formato. A lista e
   copia da chapa de `gabinete.md`: mudou a colinha, mudam os dois.
+- **A ORDEM DOS CAMPOS DO ESQUEMA E UMA ALAVANCA DE GRACA** (17/09/2026): `abordagem` declarada ANTES de
+  `texto` faz o modelo se comprometer com ela antes de escrever, e tres textos iguais ficam muito mais
+  dificeis. **Medido, por mil rascunhos no Haiku: 1 chamada com tres = US\$ 4,59; TRES chamadas separadas
+  (uma por abordagem) = US\$ 8,66** — o que pesa e a ENTRADA (o sistema tem ~8.400 tokens e seria pago
+  tres vezes), nao a saida. **Antes de propor N chamadas, meca: o prompt de sistema e o custo, e ele
+  cacheia.**
 - **OPCAO REPETIDA E VERIFICAVEL, ENTAO E CONSERTO E NAO PROMPT** (17/09/2026: *"mesmo que nao case, ja
   deixei explicito para as mensagens serem diferentes"*). Foram quatro tentativas por texto. Hoje
   `ia.paresParecidos` mede, `ia.ancoraNaMesmaPronta` diz QUAL resposta pronta puxou as tres (hipotese

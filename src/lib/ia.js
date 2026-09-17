@@ -1759,8 +1759,32 @@ export function esquemaDoRascunho(quantas = 3) {
   const opcao = {
     type: 'object',
     additionalProperties: false,
-    required: ['texto', 'confianca', 'precisaDeRevisao'],
+    required: n === 1 ? ['texto', 'confianca', 'precisaDeRevisao'] : ['abordagem', 'texto', 'confianca', 'precisaDeRevisao'],
     properties: {
+      /**
+       * **A ABORDAGEM VEM ANTES DO TEXTO, e a ordem é o conserto** (17/09/2026). Pergunta dele: *"por que
+       * não é usado um prompt diferente já de início para cada mensagem gerada?"* — medido, três chamadas
+       * separadas custam US$ 8,66 por mil contra US$ 4,59 (o prompt de sistema é pago três vezes).
+       *
+       * O que dá o mesmo efeito de graça é a ORDEM dos campos: o modelo escreve o JSON na ordem em que ele
+       * está declarado, então **declarar a abordagem primeiro o obriga a se comprometer com ela antes de
+       * escrever o texto** — e é muito mais difícil escrever três textos iguais depois de ter dito que um
+       * é direto, um acolhe e um liga ao Capitão Martim. Custa três palavras de saída por opção.
+       *
+       * Fica fora do modo antigo (`n === 1`): lá não há o que diferenciar.
+       */
+      ...(n === 1
+        ? {}
+        : {
+            abordagem: {
+              type: 'string',
+              enum: ['direta', 'acolhe', 'liga-ao-martim'],
+              description:
+                'A abordagem DESTA opção, escolhida antes de escrever o texto. Uma de cada nas três: ' +
+                'direta = responde e encerra; acolhe = começa pela pessoa; liga-ao-martim = conecta ao que ' +
+                'o Capitão Martim defende ou faz.',
+            },
+          }),
       texto: {
         type: 'string',
         description: 'A resposta pronta para enviar, no tom do Thiago. Sem marcador, sem colchete.',
@@ -3629,6 +3653,9 @@ export function validarRascunho(bruto, agora, contexto = {}) {
     return {
       texto: revisao.texto,
       confianca: Number.isFinite(o?.confianca) ? Math.min(1, Math.max(0, o.confianca)) : 0,
+      // A abordagem é o compromisso que o modelo assumiu antes de escrever (ver `esquemaDoRascunho`): vai
+      // para o cartão da janela, porque é ela que diz ao Thiago o que cada opção tenta fazer.
+      abordagem: String(o?.abordagem || '').trim().slice(0, 40),
       motivo: String(o?.motivo || '').trim().slice(0, 300),
       avisos,
       precisaDeRevisao,
