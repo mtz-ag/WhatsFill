@@ -309,6 +309,24 @@ export function blocoParaOPrompt(estado) {
  * Na automática ninguém está olhando para escolher, e a regra deste projeto é que pergunta dentro da
  * rodada precisa de um jeito de não abrir.
  */
-export function abreJanelaDeTreino({ treinando = false, rodadaAutomatica = false } = {}) {
-  return !!treinando && !rodadaAutomatica;
+export function abreJanelaDeTreino({ treinando = false, rodadaAutomatica = false, vaiParar = false } = {}) {
+  /**
+   * **`vaiParar`: na automática, a janela abre quando a rodada IA PARAR de qualquer jeito** — relato
+   * dele (17/09/2026): *"mandou sem me dar as 3 opções e agora parou e me deu uma opção só"*. Quando a
+   * primeira opção não pode sair sozinha (`ia.rascunhoPodeSairSozinho`), a caixa da rodada abre e
+   * espera por ele: a janela não acrescenta parada nenhuma, e sem ela ele recebia UM rascunho num modo
+   * que promete três. A regra da v3.66 continua de pé onde ela vale — a janela nunca é o que para a fila.
+   */
+  return !!treinando && (!rodadaAutomatica || !!vaiParar);
+}
+
+/**
+ * **Quantos rascunhos pedir** — com o treino ligado, três SEMPRE, também na rodada automática.
+ *
+ * Até a v3.67 a automática pedia um, e aí não havia o que mostrar quando o rascunho era barrado e a
+ * rodada parava nele. O custo é a saída de dois textos a mais por rascunho (US$ 2,04 → 3,39 por mil no
+ * Haiku, quente); quem não quer pagar isso desliga o treino, que é o modo antigo.
+ */
+export function quantosRascunhos({ treinando = false } = {}) {
+  return treinando ? 3 : 1;
 }

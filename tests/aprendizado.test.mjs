@@ -21,6 +21,7 @@ import {
   taxaDePrimeira,
   prontaParaRodarSozinha,
   abreJanelaDeTreino,
+  quantosRascunhos,
   DIMENSOES,
 } from '../src/lib/aprendizado.js';
 
@@ -202,7 +203,7 @@ grupo('a taxa que diz quando soltar a IA sozinha');
   check(semIndice.escolhas === 1, 'mas continua ensinando as dimensoes');
 }
 
-grupo('a rodada automatica nunca espera a janela de treino (16/09/2026)');
+grupo('a rodada automatica so abre a janela de treino quando ia parar de qualquer jeito');
 {
   /**
    * Relato dele: *"o modo treino interrompeu o fluxo de mandar modelo ao aparecer anuncio"*. Com a janela
@@ -214,6 +215,22 @@ grupo('a rodada automatica nunca espera a janela de treino (16/09/2026)');
   check(abreJanelaDeTreino({ treinando: false, rodadaAutomatica: false }) === false, 'treino desligado: nao abre');
   check(abreJanelaDeTreino({ treinando: undefined, rodadaAutomatica: false }) === false, 'sem a chave gravada: nao abre');
   check(abreJanelaDeTreino() === false, 'sem nada: nao abre');
+
+  /**
+   * v3.68 (17/09/2026): *"mandou sem me dar as 3 opcoes e agora parou e me deu uma opcao so"*. Na
+   * automatica a janela abre SO quando a rodada ia parar de qualquer jeito (primeira opcao barrada).
+   */
+  check(abreJanelaDeTreino({ treinando: true, rodadaAutomatica: true, vaiParar: true }) === true, 'automatica e a rodada ia parar: abre');
+  check(abreJanelaDeTreino({ treinando: true, rodadaAutomatica: true, vaiParar: false }) === false, 'automatica e a primeira pode sair: NAO abre (a fila segue)');
+  check(abreJanelaDeTreino({ treinando: false, rodadaAutomatica: true, vaiParar: true }) === false, 'treino desligado e a rodada parou: nao abre');
+  check(abreJanelaDeTreino({ treinando: true, rodadaAutomatica: false, vaiParar: true }) === true, 'contato a contato: abre, com ou sem parada');
+}
+
+grupo('quantosRascunhos: tres com o treino ligado, tambem na automatica');
+{
+  check(quantosRascunhos({ treinando: true }) === 3, 'treino ligado: tres');
+  check(quantosRascunhos({ treinando: false }) === 1, 'treino desligado: um (o modo antigo)');
+  check(quantosRascunhos() === 1, 'sem nada: um');
 }
 
 fim();

@@ -1,3 +1,40 @@
+## 2026-09-17 — v3.68.0 — treino na rodada automática: a janela das três abre quando a rodada ia parar mesmo
+
+**Relato dele:** *"o modo treino está ativo em novos e meus? estou fazendo os novos com treino ligado e
+automático ligado, mas mandou sem me dar as 3 opções e agora parou e me deu uma opção só"*.
+
+**Resposta à pergunta:** o treino é uma chave só (`ia.treinando`) e vale para Novos, Meus e Outros — as
+três rodadas passam por `processarRespondido`.
+
+**Medido no código, as duas metades do relato eram a v3.66 funcionando como escrita:**
+1. *"mandou sem me dar as 3 opções"* — na rodada automática a janela não abria (é a correção de
+   *"o modo treino interrompeu o fluxo"*), e o rascunho saía sozinho.
+2. *"parou e me deu uma opção só"* — **este era o buraco.** Na automática o pedido à API era de UM
+   rascunho; quando ele era barrado (`rascunhoPodeSairSozinho` falso), a rodada parava no contato com
+   uma opção só, num modo que promete três.
+
+**Conserto (uma coisa só, a lição da v3.63):**
+- Com o treino ligado, a API recebe o pedido de TRÊS também na automática (`aprendizado.quantosRascunhos`).
+- A primeira opção continua saindo sozinha quando pode — a fila não espera.
+- Quando ela é barrada, a rodada ia parar de qualquer jeito: aí a janela das três abre
+  (`abreJanelaDeTreino({ vaiParar })`), e a escolha dele ensina como qualquer outra.
+- O texto escolhido vai para o campo e **quem manda é ele** (`escolheuEle`): a rodada não o envia sozinha
+  só porque a opção escolhida não tem aviso.
+
+**Não mudou:** a janela nunca abre num contato em que a rodada automática seguiria. Então o *"mandou sem me
+dar as 3"* continua acontecendo nos casos em que o rascunho passa nas travas — é o que impede a fila de
+parar. Oferecido de novo: guardar essas três para ele escolher depois, numa lista, sem parar a rodada.
+
+**Custo:** com treino ligado, a automática passa a pagar a saída de três textos por rascunho
+(US$ 2,04 → 3,39 por mil no Haiku, quente). Desligar o treino volta a um.
+
+**Não medido com chamada paga.** Testes: `tests/aprendizado.test.mjs` (+7).
+
+**Arquivos:** `src/lib/aprendizado.js`, `src/panel/panel.js`, `tests/aprendizado.test.mjs`, `CLAUDE.md`,
+`registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-16 — v3.67.0 — as três opções não oferecem o que ela não pediu, e não repetem o conteúdo
 
 **Relato dele, com a print da janela de escolha:** *"nesse caso ela sugeriu colinha sem motivo nenhum
