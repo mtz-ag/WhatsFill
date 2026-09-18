@@ -634,7 +634,7 @@ grupo('o modelo nao pode ficar preso atras da pendencia (01/09/2026)');
   check(tecla({ ...base, respondidoHoje: true, momentoJaEnviado: true }) === '3', 'ja tendo respondido hoje, conclui em vez de mandar o modelo');
   check(tecla({ ...base, respondidoHoje: false, momentoJaEnviado: true }) === '1', 'no dia seguinte o modelo sai -- ele nao fica preso');
   check(tecla({ ...base, respondidoHoje: true, momentoJaEnviado: true, anuncioReconhecido: true }) === '1', 'e sai HOJE se houver clique de anuncio esperando resposta');
-  check(tecla({ ...base, respondidoHoje: true, momentoJaEnviado: true, pedeMaterial: { motivo: 'quero o material' } }) === '1', 'e tambem se ela pediu material (05/09)');
+  check(tecla({ ...base, respondidoHoje: true, momentoJaEnviado: true, materialPendente: true }) === '1', 'e tambem se ela pediu material (05/09)');
 
   check(tecla({ ...base, respondidoHoje: false, textos: [], ultimoTexto: '' }) === '1', 'quem chega sem pendencia recebe o modelo direto');
 

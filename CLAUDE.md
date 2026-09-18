@@ -2146,6 +2146,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **REGRA QUE LE CHAVE QUE O PAINEL NAO ESCREVE ESTA MORTA, E O TESTE NAO VE** (18/09/2026, a Rita:
+  pediu adesivo e bandeira, recebeu a mensagem do momento e bloqueou o numero). A guarda do material em
+  `sugestao.js` lia `c.pedeMaterial`; o painel escreve `materialPendente`. Duas regras mortas por DUAS
+  SEMANAS, com testes verdes, porque os testes montavam o contexto a mao com o nome que a regra lia.
+  **Ao escrever `c.<chave>` numa regra, procure a mesma chave no objeto que o painel monta** — e o teste
+  de regressao se monta com o contexto que o PAINEL produz, nunca com o nome que a regra espera.
 - **A IA VE O CONTEXTO; QUEM REPETIA ERA `revisarRascunho`** (15/09/2026). Relato dele: *"a IA tem
   agradecido multiplas vezes pelo apoio e dado boa tarde multiplas vezes, uma mensagem apos a
   outra"*. Medido: o bloco do contato ja manda a conversa inteira com NOS/ELA, ja marca

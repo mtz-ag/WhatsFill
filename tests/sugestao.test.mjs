@@ -951,7 +951,7 @@ grupo('engajado: ja respondi hoje, nao manda nada (04/09/2026)');
   };
   const tecla = (extra) => sugerirAcao({ ...base, ...extra })?.tecla;
 
-  check(tecla({ pedeMaterial: { motivo: 'ela pediu o material' } }) === '6',
+  check(tecla({ materialPendente: true }) === '6',
     'com material pedido, o caso vai para voce ou para a IA');
 
   /** Os outros ramos da mesma caixa continuam intactos. */
@@ -1009,6 +1009,41 @@ grupo('casoDeNegativa: o cadastro nao fecha um "nao" (12/09/2026)');
    * quando ele sai sozinho, sem negativa colada -- que nao foi o que ele pediu.
    */
   check(!sugestaoLib.pedirDadosNaoCabe({ pedeAjudaFinanceira: true }), 'pedir dinheiro nao dispensa o formulario da rodada');
+}
+
+/**
+ * **A Rita (18/09/2026)**: chegou pelo anuncio, ja tinha sido atendida antes, pediu adesivo e bandeira,
+ * nao havia modelo para mandar — e recebeu a mensagem do momento; ela bloqueou o numero. A guarda
+ * existia desde 09/09 e lia `c.pedeMaterial`, que o painel NUNCA preencheu: o painel escreve
+ * `materialPendente`. O contexto abaixo e o que o PAINEL monta, com a frase trocada por uma parecida.
+ */
+{
+  grupo('quem pediu material nao recebe a mensagem do momento (a Rita, 18/09)');
+  const ctx = {
+    veioDeAnuncio: true, jaRespondemosAntes: true, temEtiquetaDeCidade: true, podeEnviar: false,
+    respondidoHoje: false, momentoJaEnviado: false, podeMandarMomento: true, enviadoHoje: false,
+    modeloJaNaConversa: false, materialPendente: true,
+    textos: ['preciso de adesivo e bandeira do Capitao'], ultimoTexto: 'preciso de adesivo e bandeira do Capitao',
+  };
+  check(sugerirAcao(ctx)?.tecla === '6', 'vai para voce ou para a IA, nunca a tecla 5');
+  check(sugerirAcao({ ...ctx, materialPendente: false })?.tecla === '5', 'sem o pedido, a mensagem do momento continua (falso positivo)');
+  check(sugerirAcao({ ...ctx, podeEnviar: true, respondidoHoje: true })?.tecla !== '5', 'ja respondido hoje e com modelo: tambem nunca a mensagem do momento');
+
+  /**
+   * **O defeito da classe: regra lendo chave que o painel nao escreve.** Toda `c.<nome>` lida em
+   * `sugestao.js` tem de aparecer como chave no `panel.js` — senao a regra fica morta e o teste que
+   * monta o contexto a mao nunca percebe.
+   * **Rede fraca, e medida:** ela NAO teria pego a Rita, porque `pedeMaterial:` aparece no painel em
+   * outro objeto (a chamada da IA). Pega a chave que nao existe em lugar nenhum; o que pegou este caso
+   * foram os testes acima, montados com o contexto que o painel produz.
+   */
+  const fs = await import('node:fs');
+  const semComentario = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const regras = semComentario(fs.readFileSync(new URL('../src/lib/sugestao.js', import.meta.url), 'utf8'));
+  const painel = semComentario(fs.readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8'));
+  const lidas = [...new Set([...regras.matchAll(/c\.(\w+)/g)].map((m) => m[1]))];
+  const mortas = lidas.filter((k) => !new RegExp(`(^|[\s{,])${k}\s*(:|,|\n)`, 'm').test(painel));
+  check(!mortas.length, `toda chave que as regras leem o painel escreve${mortas.length ? ` — faltam: ${mortas.join(', ')}` : ''}`);
 }
 
 fim();

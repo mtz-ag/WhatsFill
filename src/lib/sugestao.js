@@ -921,8 +921,16 @@ export const REGRAS = [
      * **A guarda decide o DESFECHO e não se a caixa casa** — é a lição da Noeli (06/09), e é o que
      * `perguntaPendente` já fazia na linha de cima. Tecla 6: ele ou a IA, que então aplica a regra 5.
      */
+    /**
+     * **`materialPendente`, e não `pedeMaterial`** — print da Rita (18/09/2026): *"pediu material e
+     * não foi respondido, saiu a resposta do momento... e a pessoa nos bloqueou"*. O painel preenche
+     * `materialPendente` (o pedido ainda não entregue); `pedeMaterial` NUNCA chegou ao contexto, então
+     * esta guarda e a exceção de `conteudo-pedido` estavam mortas desde que nasceram. Os testes passavam
+     * porque montavam o contexto à mão com o nome errado — o teste de `sugestao.test.mjs` que cruza as
+     * chaves lidas aqui com as que o painel escreve existe para isto não voltar.
+     */
     tecla: (c) => {
-      if (c.perguntaPendente || c.pedeMaterial) return '6';
+      if (c.perguntaPendente || c.materialPendente) return '6';
       return c.respondidoHoje || c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5';
     },
     /**
@@ -1045,7 +1053,7 @@ export const REGRAS = [
       c.podeEnviar &&
       !c.enviadoHoje &&
       !c.modeloJaNaConversa &&
-      (!c.respondidoHoje || !!c.anuncioReconhecido || !!c.pedeMaterial),
+      (!c.respondidoHoje || !!c.anuncioReconhecido || !!c.materialPendente),
     motivo: (c) => `pediu "${c.conteudoPedido || 'conteúdo'}" e há modelo mapeado — mande.`,
   },
   {

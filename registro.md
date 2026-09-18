@@ -1,3 +1,39 @@
+## 2026-09-18 — v3.86.0 — quem pede material não recebe mais a mensagem do momento (a Rita)
+
+**O caso:** print dele, *"um contato que pediu material e não foi respondido, saiu a resposta do momento e
+o pedido foi ignorado, e a pessoa nos bloqueou por causa disso"*. Ela chegou pelo anúncio e escreveu, com
+as palavras dela, que precisava de adesivo e bandeira; às 11:24 a rodada dos Novos mandou a mensagem do
+momento.
+
+**Medido, em ordem:**
+1. O detector ACERTOU: `pedeMaterial` reconhece a frase, e a etiqueta de material entrou no contato.
+2. O quadro dele é o padrão (3.19.0, "em dia" com a 3.85.0).
+3. Simulado no padrão: com ela JÁ ATENDIDA ANTES e sem modelo para mandar, a caixa
+   `ja-respondemos-antes` escolhe a **tecla 5**.
+
+**A causa: a guarda lia uma chave que o painel nunca escreveu.** O painel preenche `materialPendente`
+(pedido ainda não entregue); a guarda da Sadra (09/09) em `ja-respondemos-antes` e a exceção do material
+em `conteudo-pedido` (05/09) liam **`c.pedeMaterial`**, que nunca chegou ao contexto. As duas estavam
+mortas desde que nasceram, e os testes passavam porque montavam o contexto à mão com o nome errado. A
+mesma chave morta alimentava a trava `enderecoSemMaterial` do rascunho (`state.sinais.pedeMaterial`).
+
+**O conserto:** as duas regras leem `materialPendente` (que já tem a guarda da entrega — sem ela o pedido,
+que fica na conversa para sempre, forçaria a tecla 6 em toda passada); a chamada da IA lê o pedido da
+conversa. Resultado no caso dela: tecla 6 (ele ou a IA, que pede o endereço pela regra 5).
+
+**Testes:** o caso da Rita com o contexto que o PAINEL monta (e o falso positivo: sem o pedido, a tecla 5
+continua), mais uma verificação que cruza toda `c.<chave>` de `sugestao.js` com as chaves do painel —
+**rede fraca, medida: ela não teria pego este caso**, porque `pedeMaterial:` aparece no painel em outro
+objeto. Varri as outras chaves à mão: esta era a única morta.
+
+**Fica em aberto, perguntado a ele:** no padrão, quem pede material FÍSICO e tem modelo disponível
+recebe o modelo digital (tecla 1), e não o pedido de endereço da regra de 08/09.
+
+**Arquivos:** `src/lib/sugestao.js`, `src/panel/panel.js`, `tests/sugestao.test.mjs`,
+`tests/arvore.test.mjs`, `CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-18 — v3.85.0 — o Qwen3.7 Plus entra pelo OpenRouter, a terceira casa
 
 **Decisão dele**, perguntado: **OpenRouter** (empresa americana) em vez da Alibaba direto, e o **Qwen3.7

@@ -10462,7 +10462,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * pediu um bem que teria de ser comprado. `false` explícito e não `undefined` — a trava
          * distingue "ela não pediu" de "ninguém mediu", e fora da rodada não há sinais.
          */
-        pedeMaterial: state.sinais ? !!state.sinais.pedeMaterial : undefined,
+        // `state.sinais.pedeMaterial` nunca existiu (18/09/2026, a Rita): o pedido é lido da conversa.
+        pedeMaterial: state.sinais ? !!pedeMaterial(state.entrantes) : undefined,
         /**
          * **Sessão nova não é pessoa nova** (10/09/2026): sem isto o prompt dizia "é a primeira coisa
          * que o atendimento diz a esta pessoa" a quem tem cidade no CRM, e o rascunho se apresentava.
