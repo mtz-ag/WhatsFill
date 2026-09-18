@@ -1,3 +1,33 @@
+## 2026-09-18 — v3.81.0 — o tamanho do desabafo volta a ser o dele, e o perfil do Martim fala dele e não por ele
+
+**O caso:** duas prints do mesmo contato (o Adair, áudio de 58 s de desabafo sobre salário, imposto e o
+campo). A resposta que ele pegou no ChatGPT tinha dois parágrafos e conversava com o que a pessoa disse;
+as três da extensão (gpt-5-mini) abriram com *"Bom dia."* sozinho, uma frase por parágrafo, genéricas.
+
+**Comparadas lado a lado, seis diferenças; duas são defeito meu e foram consertadas aqui:**
+1. **A linha do TAMANHO citava o item 22 dele pela metade** — só *"mensagem simples: 1 a 3 frases"*. O
+   item 22 diz também *"dúvida comum: 3 a 6 frases; desabafo: 1 a 4 parágrafos curtos"*. O ChatGPT
+   respondeu dentro da regra DELE; nós, dentro do meu resumo. Hoje a linha cita as três faixas.
+2. **O perfil do Martim (v3.80) escrevia como o candidato**: *"prioridades minhas e da nossa disputa
+   política"*. Eu tinha escrito "escreva como o Capitão Martim", o que contradiz "somos a equipe". Hoje é
+   alguém da equipe que pensa como ele, falando dele na terceira pessoa.
+
+**As outras quatro ficam em aberto:** o modelo (gpt-5-mini contra o ChatGPT completo — teste proposto a
+ele: trocar para gpt-5 por um dia, 5× o preço, com o teto de US$ 5 subindo junto); a regra 4 + "não dê
+aula" deixando o modelo sem coragem de conversar com o conteúdo; a FORMA copiada das respostas prontas
+(`{{saudacao}}!` numa linha); e **"Porto Alegre" inventado duas vezes** (*"Somos a equipe do Capitão
+Martim, aqui de Porto Alegre"*, também na print do Romário). Suspeita: a pronta de boas-vindas diz
+"equipe do Capitão Martim" e, logo abaixo, *"(exemplo: Pedro Silva , Porto Alegre)"*; o dossiê diz que ele
+nasceu em Porto Alegre. **Não mexido sem medir.**
+
+**Proibições:** listadas a ele (umas 40 fora do padrão); resposta dele: *"todas são úteis"*. Ficam.
+
+**Não medido com chamada paga.** Testes: `tests/ia.test.mjs`.
+
+**Arquivos:** `src/lib/ia.js`, `tests/ia.test.mjs`, `CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-17 — v3.80.0 — três PESSOAS escrevem os rascunhos, e não três tons
 
 **Pedido dele:** *"problema desses perfis direto, acolhedor etc: não mudam a resposta. Preciso que sejam

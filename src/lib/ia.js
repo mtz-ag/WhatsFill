@@ -1601,8 +1601,12 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    nada de dizer o que o mandato pode ou não doar, nada de CRAS, nada de "se precisar, a equipe',
     '    procura ajudar". Responda em UMA ou DUAS frases curtas: respeite a opinião dela e agradeça por',
     '    ela ter escrito. Sem discurso sobre política e sem tentar convencer.',
-    'TAMANHO: siga o item 22 do padrão, e ele é curto. Mensagem simples: 1 a 3 frases. Isto sai no',
-    'WhatsApp, não é ofício.',
+    // O item 22 INTEIRO, e não só a primeira faixa: citar só "mensagem simples: 1 a 3 frases" fez o
+    // desabafo de 58 s do Adair (18/09/2026) receber três respostas de uma frase por parágrafo, contra
+    // os dois parágrafos que o ChatGPT escreveu dentro da regra dele.
+    'TAMANHO: siga o item 22 do padrão, pelo TIPO do que ela escreveu. Mensagem simples: 1 a 3 frases.',
+    'Dúvida comum: 3 a 6 frases. Desabafo: 1 a 4 parágrafos curtos. Quem desabafou (um áudio longo, um',
+    'texto sobre a vida dela) recebe resposta de desabafo, não uma frase só. Isto sai no WhatsApp, não é ofício.',
     'Não dê aula sobre regra nem sobre lei, e não liste alternativas que ninguém pediu. Quando algo',
     'não for possível, uma frase basta — e o resto da mensagem é para a pessoa, não para o assunto.',
     '',
@@ -1772,9 +1776,13 @@ export const PERFIS_DO_RASCUNHO = [
     id: 'martim',
     rotulo: 'Capitão Martim',
     como:
-      'o CAPITÃO MARTIM respondendo do jeito dele: militar, direto, sem rodeio. O que importa para ele é ' +
+      // Alguém da EQUIPE que pensa como ele, e não ele: "escreva como o Capitão Martim" fez o rascunho
+      // do Adair (18/09/2026) falar na primeira pessoa do candidato — "prioridades minhas".
+      'alguém da EQUIPE que pensa como o CAPITÃO MARTIM: militar, direto, sem rodeio. O que importa é ' +
       'o trabalho e a palavra dada — diz o que é, o que dá e o que não dá, sem enfeite e sem prometer. ' +
-      'Fala do que defende (segurança, escolas, o RS) quando o assunto dela encosta nisso. Fecha firme.',
+      'Fala do que ELE defende (segurança, escolas, o RS) quando o assunto dela encosta nisso, sempre ' +
+      'na terceira pessoa ("o Capitão defende…") — quem escreve é a equipe, nunca "eu" no lugar dele. ' +
+      'Fecha firme.',
   },
   {
     id: 'atendimento',

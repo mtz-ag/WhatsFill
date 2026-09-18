@@ -3169,6 +3169,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   (`ia.PERFIS_DO_RASCUNHO`: Capitao Martim, a assessora do atendimento, o militante da campanha), e o que
   muda e **o que cada um considera importante responder**. Sao papeis, nao pessoas reais, e nenhum diz
   quem e. **Ao pedir variacao a um modelo, varie a CABECA, nao o tom.**
+- **CITAR REGRA DELE PELA METADE E REESCREVE-LA** (18/09/2026, o Adair: o ChatGPT respondeu um desabafo
+  em dois paragrafos e nos em uma frase por paragrafo). A linha do TAMANHO citava so a primeira faixa do
+  item 22 (*"mensagem simples: 1 a 3 frases"*) e deixava o *"desabafo: 1 a 4 paragrafos"* longe, no
+  documento — a repeticao perto do pedido vence. **Ao repetir uma regra do padrao dele perto do pedido,
+  repita-a inteira.** E perfil de rascunho nunca "escreve como" uma pessoa real: o do Martim passou a
+  falar na primeira pessoa do candidato.
 - **A ORDEM DOS CAMPOS DO ESQUEMA E UMA ALAVANCA DE GRACA** (17/09/2026): `abordagem` declarada ANTES de
   `texto` faz o modelo se comprometer com ela antes de escrever, e tres textos iguais ficam muito mais
   dificeis. **Medido, por mil rascunhos no Haiku: 1 chamada com tres = US$ 4,59; TRES chamadas separadas

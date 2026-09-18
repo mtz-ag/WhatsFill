@@ -1064,6 +1064,11 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
   const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
   check(p.includes('TAMANHO: siga o item 22 do padrão'), 'a regra de tamanho aparece perto do pedido');
   check(p.includes('1 a 3 frases'), 'com o numero, e nao so a referencia');
+  // 18/09/2026, o Adair: citar so a primeira faixa encolheu o desabafo para uma frase.
+  check(p.includes('Desabafo: 1 a 4 parágrafos curtos') && p.includes('Dúvida comum: 3 a 6 frases'),
+    'o item 22 vai inteiro, com o desabafo');
+  check(PADRAO_DE_ATENDIMENTO.includes('Desabafo: 1 a 4 parágrafos curtos'),
+    'e a faixa citada e a mesma do documento dele');
   check(p.includes('Não dê aula sobre regra nem sobre lei'), 'e proibe a aula sobre a lei, que foi o que saiu');
 
   /**
@@ -2975,7 +2980,9 @@ grupo('as tres opcoes FAZEM coisas diferentes, e a semelhanca e medida (17/09/20
     'os tres perfis tem nome');
   check(/não é a mesma resposta com outras palavras nem com as frases em outra ordem/.test(tres.replace(/\s+/g, ' ')),
     'e parafrase nem reordenar contam como diferente');
-  check(/Fala do que defende \(segurança, escolas, o RS\)/.test(tres), 'o perfil do Martim diz do que ele fala');
+  check(/Fala do que ELE defende \(segurança, escolas, o RS\)/.test(tres), 'o perfil do Martim diz do que ele fala');
+  check(/alguém da EQUIPE que pensa como o CAPITÃO MARTIM/.test(tres) && /nunca "eu" no lugar dele/.test(tres),
+    'e quem escreve e a equipe, na terceira pessoa (o Adair, 18/09)');
   const uma = montarContatoRascunho({ mensagens: msgs, quantas: 1 });
   check(!/CAPITÃO MARTIM —|MILITANTE DA CAMPANHA/.test(uma), 'o modo antigo nao recebe os perfis');
   check(/Capitão Martim/.test(esquemaDoRascunho(3).properties.opcoes.description), 'o esquema nomeia os perfis');
