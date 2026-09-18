@@ -327,9 +327,18 @@ const MODELOS_COM_ESFORCO = new Set(['claude-opus-5', 'claude-sonnet-5', 'claude
  */
 export const PROVEDOR_ANTHROPIC = 'anthropic';
 export const PROVEDOR_OPENAI = 'openai';
+/**
+ * **A terceira casa: OpenRouter, para o Qwen** — decisão dele (18/09/2026), escolhendo o OpenRouter
+ * (empresa americana) em vez da Alibaba direto. O modelo do OpenRouter tem o nome com a BARRA do
+ * fabricante (`qwen/qwen3.7-plus`), e é a barra que identifica a casa: nenhum modelo da Anthropic ou
+ * da OpenAI tem barra no nome.
+ */
+export const PROVEDOR_OPENROUTER = 'openrouter';
 
 export function provedorDoModelo(modelo) {
-  return /^(gpt-|o[1-9]|chatgpt)/i.test(String(modelo || '').trim()) ? PROVEDOR_OPENAI : PROVEDOR_ANTHROPIC;
+  const m = String(modelo || '').trim();
+  if (m.includes('/')) return PROVEDOR_OPENROUTER;
+  return /^(gpt-|o[1-9]|chatgpt)/i.test(m) ? PROVEDOR_OPENAI : PROVEDOR_ANTHROPIC;
 }
 
 /**
@@ -342,12 +351,14 @@ export function provedorDoModelo(modelo) {
 export const CHAVE_DO_PROVEDOR = {
   [PROVEDOR_ANTHROPIC]: 'iaChave',
   [PROVEDOR_OPENAI]: 'iaChaveOpenai',
+  [PROVEDOR_OPENROUTER]: 'iaChaveOpenrouter',
 };
 
 /** O nome que aparece na tela, por provedor. */
 export const NOME_DO_PROVEDOR = {
   [PROVEDOR_ANTHROPIC]: 'Anthropic (Claude)',
   [PROVEDOR_OPENAI]: 'OpenAI (ChatGPT)',
+  [PROVEDOR_OPENROUTER]: 'OpenRouter (Qwen)',
 };
 
 /**
@@ -416,6 +427,9 @@ export const CACHE_MINIMO_TOKENS = {
   'gpt-5-mini': 1024,
   'gpt-5-nano': 1024,
   'gpt-5.6-luna': 1024,
+  // Não se sabe se o OpenRouter cacheia o Qwen: sem cache é o esperado, e o "cache N" no log diz se
+  // pegou. Alarme de "SEM CACHE" por desconhecimento treinaria a ignorar o alarme.
+  'qwen/qwen3.7-plus': Number.POSITIVE_INFINITY,
 };
 
 /** Tamanho aproximado do prompt de sistema hoje, em tokens. Português: ~3,5 chars por token. */
@@ -457,6 +471,32 @@ function saida(modelo, esforco, format) {
  *     prefixo, não se pede e **não se paga para escrever**. Mandar o campo daria 400.
  */
 function corpo({ sistema, contato, modelo, esquema, nome, esforco, maxTokens }) {
+  /**
+   * **OpenRouter: o formato da OpenAI, com duas travas a mais** (18/09/2026).
+   *
+   *  - `provider.require_parameters`: só servidores que aceitam TODOS os parâmetros — sem isto o
+   *    pedido pode cair num servidor que ignora o esquema, e o JSON volta solto;
+   *  - `provider.data_collection: 'deny'`: só servidores que não guardam nem treinam com o que
+   *    mandamos. É conversa de eleitor, e foi a condição para o Qwen entrar.
+   *
+   * `max_tokens` (o OpenRouter aceita os dois nomes) e sem parâmetro de raciocínio: o Qwen3.7 Plus
+   * não está na lista de quem raciocina, e o padrão do modelo é o lado barato do erro.
+   */
+  if (provedorDoModelo(modelo) === PROVEDOR_OPENROUTER) {
+    return {
+      model: modelo,
+      messages: [
+        { role: 'system', content: sistema },
+        { role: 'user', content: contato },
+      ],
+      max_tokens: maxTokens,
+      response_format: {
+        type: 'json_schema',
+        json_schema: { name: nome, strict: true, schema: esquemaEstrito(esquema) },
+      },
+      provider: { require_parameters: true, data_collection: 'deny' },
+    };
+  }
   if (provedorDoModelo(modelo) === PROVEDOR_OPENAI) {
     const body = {
       model: modelo,
@@ -3479,6 +3519,8 @@ export const PRECOS_USD_POR_MTOK = {
   // Lido na página oficial em 18/09/2026: a geração nova, mais barata que o mini e, no índice da
   // Artificial Analysis, acima do gpt-5 (38 contra 23). Pedido dele, para o rascunho.
   'gpt-5.6-luna': { entrada: 0.2, saida: 1.2, cacheEscrita: 0 },
+  // Página do modelo no OpenRouter, 18/09/2026. Índice 32 na Artificial Analysis (gpt-5: 23).
+  'qwen/qwen3.7-plus': { entrada: 0.32, saida: 1.28, cacheEscrita: 0 },
 };
 
 /** Leitura de cache custa 10% da entrada; escrita custa 1,25× (TTL de 5 min). */

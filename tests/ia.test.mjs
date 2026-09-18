@@ -76,6 +76,7 @@ import {
   esquemaEstrito,
   CHAVE_DO_PROVEDOR,
   PROVEDOR_OPENAI,
+  PROVEDOR_OPENROUTER,
   PROVEDOR_ANTHROPIC,
   montarRequisicaoCidade,
 } from '../src/lib/ia.js';
@@ -3002,6 +3003,21 @@ grupo('o gpt-5.6-luna entra como modelo da OpenAI que raciocina (18/09/2026)');
   check(PRECOS_USD_POR_MTOK['gpt-5.6-luna'].entrada === 0.2 && PRECOS_USD_POR_MTOK['gpt-5.6-luna'].saida === 1.2,
     'com o preco da pagina oficial');
   check(CACHE_MINIMO_TOKENS['gpt-5.6-luna'] === 1024, 'e o minimo de cache da OpenAI');
+}
+
+grupo('o Qwen entra pelo OpenRouter, sem guardar dado (18/09/2026)');
+{
+  check(provedorDoModelo('qwen/qwen3.7-plus') === PROVEDOR_OPENROUTER, 'a barra no nome e o OpenRouter');
+  check(provedorDoModelo('gpt-5.6-luna') === PROVEDOR_OPENAI && provedorDoModelo('claude-haiku-4-5') !== PROVEDOR_OPENROUTER,
+    'e nao rouba os modelos das outras casas');
+  check(CHAVE_DO_PROVEDOR[PROVEDOR_OPENROUTER] === 'iaChaveOpenrouter', 'com chave propria');
+  const r = montarRequisicaoRascunho({ sistema: 'S', contato: 'C', modelo: 'qwen/qwen3.7-plus' });
+  check(r.provider?.data_collection === 'deny', 'so servidores que nao guardam a conversa');
+  check(r.provider?.require_parameters === true, 'e so os que respeitam o esquema');
+  check(r.response_format?.json_schema?.strict === true && r.messages?.[0]?.role === 'system', 'formato da OpenAI, esquema estrito');
+  check(r.max_tokens === 8192 && r.reasoning_effort === undefined && r.system === undefined, 'max_tokens, sem raciocinio e sem campo da Anthropic');
+  check(PRECOS_USD_POR_MTOK['qwen/qwen3.7-plus'].saida === 1.28, 'com o preco da pagina do modelo');
+  check(!vaiCachear('qwen/qwen3.7-plus', 99999), 'sem cache e o esperado, nao alarme');
 }
 
 fim();

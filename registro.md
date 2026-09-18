@@ -1,3 +1,31 @@
+## 2026-09-18 — v3.85.0 — o Qwen3.7 Plus entra pelo OpenRouter, a terceira casa
+
+**Decisão dele**, perguntado: **OpenRouter** (empresa americana) em vez da Alibaba direto, e o **Qwen3.7
+Plus** (índice 32 na Artificial Analysis, gpt-5: 23; US$ 0,32 / 1,28 por milhão) em vez do Flash — o
+Flash não aceita esquema JSON estrito, e o nosso formato depende dele.
+
+**Como entrou:**
+- `PROVEDOR_OPENROUTER`; a casa sai do nome do modelo, como sempre: **a barra** (`qwen/qwen3.7-plus`)
+  é o OpenRouter, porque nenhum modelo das outras duas casas tem barra;
+- chave própria (`iaChaveOpenrouter`, prefixo `sk-or-`), fora do backup como as outras; o campo da
+  Config reconhece as três pelo prefixo e diz em qual campo a chave colada vai;
+- corpo no formato da OpenAI com **`provider.data_collection: 'deny'`** (só servidores que não guardam
+  nem treinam com a conversa — a condição para mandar conversa de eleitor) e
+  **`provider.require_parameters: true`** (só servidores que respeitam o esquema);
+- `https://openrouter.ai/*` no `host_permissions`;
+- na lista do rascunho, das conferências e do reserva.
+
+**O que falta dele:** criar a conta no OpenRouter, pôr crédito e colar a chave `sk-or-…` na Config. Sem a
+chave, escolher o Qwen faz a chamada falhar e cair no reserva.
+
+**Não sabido e não medido:** se o OpenRouter cacheia o Qwen (a tela trata "sem cache" como esperado, e o
+log mostra `cache N` se pegar), e a qualidade em português — nada foi chamado.
+
+**Arquivos:** `src/lib/ia.js`, `src/lib/ia-cliente.js`, `src/lib/store.js`, `src/panel/panel.js`,
+`manifest.json`, `tests/ia.test.mjs`, `CLAUDE.md`, `registro.md`.
+
+---
+
 ## 2026-09-18 — v3.84.0 — o gpt-5.6-luna entra nas listas de modelo
 
 **Pedido dele:** *"adicione o luna e também o qwen"*, depois da pesquisa de preços.

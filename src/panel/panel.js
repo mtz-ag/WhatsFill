@@ -1476,6 +1476,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.iaChaves = {
       anthropic: !!(await store.get('iaChave')),
       openai: !!(await store.get('iaChaveOpenai')),
+      openrouter: !!(await store.get('iaChaveOpenrouter')),
     };
     state.iaTemChave = !!state.iaChaves[iaLib.provedorDoModelo(state.ia?.modelo || iaLib.MODELO_PADRAO)];
   }
@@ -10746,6 +10747,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         ['gpt-5-nano', 'gpt-5-nano — o mais barato de todos (~US$ 0,45 por mil)'],
         ['gpt-5.6-luna', 'gpt-5.6-luna — geração nova, acima do gpt-5 nos testes (~US$ 2 por mil)'],
       ]],
+      [iaLib.PROVEDOR_OPENROUTER, [
+        ['qwen/qwen3.7-plus', 'Qwen3.7 Plus — pelo OpenRouter, acima do gpt-5 nos testes (~US$ 2,50 por mil)'],
+      ]],
     ];
 
     const seletorDeModelo = (atual) => {
@@ -10830,6 +10834,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         ['gpt-5-mini', 'gpt-5-mini'],
         ['gpt-5-nano', 'gpt-5-nano'],
         ['gpt-5.6-luna', 'gpt-5.6-luna'],
+      ]],
+      ['OpenRouter (Qwen)', [
+        ['qwen/qwen3.7-plus', 'Qwen3.7 Plus'],
       ]],
     ]) {
       const g = h('optgroup', { label: casa });
@@ -10916,7 +10923,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const nomeDaCasa = iaLib.NOME_DO_PROVEDOR[casaId];
       const chaveDaCasa = iaLib.CHAVE_DO_PROVEDOR[casaId];
       const tem = !!state.iaChaves?.[casaId];
-      const prefixo = casaId === iaLib.PROVEDOR_OPENAI ? 'sk-…' : 'sk-ant-…';
+      const prefixo = { anthropic: 'sk-ant-…', openai: 'sk-…', openrouter: 'sk-or-…' }[casaId] || 'sk-…';
 
       const campoChave = h('input', { type: 'password', placeholder: tem ? '•••••• (já salva)' : prefixo });
       const salvarChave = h('button', { class: 'wf-btn', type: 'button' }, 'Salvar');
@@ -10932,15 +10939,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
            * Com um campo por casa o aviso mudou de recado: antes mandava **trocar o modelo**;
            * agora diz em qual dos dois campos aquela chave vai.
            */
-          const pareceAnthropic = /^sk-ant-/i.test(valor);
-          const esperaAnthropic = casaId === iaLib.PROVEDOR_ANTHROPIC;
-          if (pareceAnthropic !== esperaAnthropic) {
-            const outra = iaLib.NOME_DO_PROVEDOR[
-              casaId === iaLib.PROVEDOR_ANTHROPIC ? iaLib.PROVEDOR_OPENAI : iaLib.PROVEDOR_ANTHROPIC
-            ];
+          // Três casas desde 18/09/2026: o prefixo diz de qual é — "sk-ant-" Anthropic, "sk-or-"
+          // OpenRouter, o resto OpenAI.
+          const casaDaChave = /^sk-ant-/i.test(valor)
+            ? iaLib.PROVEDOR_ANTHROPIC
+            : /^sk-or-/i.test(valor)
+              ? iaLib.PROVEDOR_OPENROUTER
+              : iaLib.PROVEDOR_OPENAI;
+          if (casaDaChave !== casaId) {
             return setStatus(
-              `Essa chave não parece ser da ${nomeDaCasa}: as da Anthropic começam com "sk-ant-" e ` +
-                `as da OpenAI não. Ela vai no campo da ${outra}.`,
+              `Essa chave não parece ser da ${nomeDaCasa}: as da Anthropic começam com "sk-ant-", as do ` +
+                `OpenRouter com "sk-or-" e as da OpenAI com "sk-". Ela vai no campo da ` +
+                `${iaLib.NOME_DO_PROVEDOR[casaDaChave]}.`,
               'err'
             );
           }
@@ -10965,7 +10975,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // Para que ESTA chave serve agora — é o que responde "preciso das duas?" sem adivinhação.
       const usos = [];
-      if (casaId === provedorAtual) usos.push('o modelo escolhido');
+      if (casaId === provedorAtual) usos.push('as conferências');
+      if (casaId === iaLib.provedorDoModelo(rascunhoAtual)) usos.push('o rascunho');
       if (casaId === provedorDoReserva) usos.push('o reserva do failsafe');
 
       body.append(
@@ -10983,9 +10994,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(
       h('div', { class: 'wf-origin' },
         'Uma chave por CASA, e não por modelo: a mesma chave da Anthropic atende Haiku, Sonnet e ' +
-          'Opus, e a da OpenAI atende os três gpt-5. As duas convivem — trocar de modelo não ' +
-          'obriga a colar chave de novo, e o failsafe precisa das duas quando titular e reserva ' +
-          'são de casas diferentes.'),
+          'Opus, a da OpenAI atende os gpt-5, e a do OpenRouter atende o Qwen. Elas convivem — ' +
+          'trocar de modelo não obriga a colar chave de novo. O OpenRouter é pedido só a servidores ' +
+          'que não guardam nem treinam com as conversas.'),
       h('div', { class: 'wf-origin' },
         'A chave fica no armazenamento da extensão e a chamada sai do service worker — ela NÃO ' +
           'entra na página do mobiliza. Isso importa: o gancho da extensão roda no mesmo ' +

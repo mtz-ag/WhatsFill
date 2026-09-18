@@ -181,6 +181,21 @@ export const PROVEDORES = {
   },
 };
 
+/**
+ * **OpenRouter fala o formato da OpenAI** — a resposta, a conta (`prompt_tokens` inclui o cacheado)
+ * e o fim por tamanho são lidos igual. Muda o endereço, e só.
+ */
+PROVEDORES.openrouter = {
+  ...PROVEDORES.openai,
+  url: 'https://openrouter.ai/api/v1/chat/completions',
+  cabecalhos: (chave) => ({
+    'content-type': 'application/json',
+    authorization: `Bearer ${chave}`,
+    // Identifica a origem no painel do OpenRouter; não carrega dado nenhum.
+    'X-Title': 'WhatsFill',
+  }),
+};
+
 // ---------------------------------------------------------------------------
 // Lado do painel
 // ---------------------------------------------------------------------------

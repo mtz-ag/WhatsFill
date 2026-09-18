@@ -2601,6 +2601,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **SAO TRES CASAS DESDE 18/09/2026: Anthropic, OpenAI e OpenRouter (o Qwen).** A casa continua saindo
+  do NOME do modelo: **barra no nome e OpenRouter** (`qwen/qwen3.7-plus`). O corpo do OpenRouter leva
+  `provider: { data_collection: 'deny', require_parameters: true }` — **nao tire o `deny`**: foi a
+  condicao para conversa de eleitor ir a um revendedor que roteia para varios servidores. Chave nova
+  de provedor sai do `exportJson` junto com as outras.
+
 - **SAO DOIS MODELOS DESDE 18/09/2026: o do RASCUNHO e o das CONFERENCIAS.** Decisao dele: *"o problema
   realmente e a capacidade desses modelos mais baratos"*. `ia.modeloRascunho` (padrao gpt-5) escreve o
   texto que o eleitor le; `ia.modelo` faz cidade e etiquetas. **Quem le o modelo do rascunho e

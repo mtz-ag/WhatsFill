@@ -1140,6 +1140,7 @@ const DEFAULTS = {
   // A chave da OpenAI, separada da da Anthropic: trocar de modelo não pode obrigar a colar chave
   // de novo, e cada provedor recusa a chave do outro.
   iaChaveOpenai: '',
+  iaChaveOpenrouter: '',
   /**
    * A avaliação por IA. Desligada por padrão — ligar é decisão dele, e custa dinheiro por
    * contato avaliado.
@@ -1436,6 +1437,7 @@ export async function exportJson() {
   delete data.observacoes;
   delete data.iaChave; // credencial: backup é arquivo que circula
   delete data.iaChaveOpenai; // idem — são duas chaves desde 07/09/2026
+  delete data.iaChaveOpenrouter; // e três desde 18/09/2026
   return JSON.stringify(data, null, 2);
 }
 
