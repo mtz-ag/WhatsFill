@@ -44,12 +44,6 @@ import {
   ANTERIOR_MAX_FALAS,
   ANTERIOR_MAX_CARACTERES,
   esquemaDoRascunho,
-  semelhancaDasOpcoes,
-  paresParecidos,
-  PERFIS_DO_RASCUNHO,
-  rotuloDoPerfil,
-  ancoraNaMesmaPronta,
-  blocoDeRefazer,
   perguntaComoEleEsta,
   semSaudacao,
   semRepetirONosso,
@@ -729,17 +723,10 @@ grupo('o rascunho nao pode se apresentar de novo (05/09/2026)');
   check(/copie-o inteiro mesmo/.test(pedindo.replace(/\s+/g, ' ')),
     'e diz para copiar mesmo com o nome conhecido -- senao os dois blocos se contradizem');
 
-  /**
-   * 17/09/2026: *"em todas as opcoes ele pediu os dados, entao se eu quero uma opcao sem pedir dados fico
-   * sem escolha"*. No treino (tres, o padrao) a primeira leva o bloco e pelo menos uma vem sem.
-   */
-  const plano = (t) => t.replace(/\s+/g, ' ');
-  check(/Na PRIMEIRA das três opções/.test(plano(pedindo)), 'no treino, o bloco vai na primeira');
-  check(/PELO MENOS UMA das três vem SEM o bloco/.test(pedindo), 'e pelo menos uma vem sem o pedido');
-  const umSoPedindo = montarContatoRascunho({ mensagens: conversa, agora, pedirDados: true, quantas: 1 });
-  check(umSoPedindo.includes(PEDIDO_DE_DADOS_NO_RASCUNHO) && !/PELO MENOS UMA/.test(umSoPedindo),
-    'no modo antigo continua obrigatorio, como sempre');
-  check(/Depois de responder o que ela escreveu, FECHE a/.test(umSoPedindo), 'com o texto de antes');
+  // O treino saiu (18/09/2026): o rascunho e um so, e o bloco do cadastro e obrigatorio nele.
+  check(pedindo.includes(PEDIDO_DE_DADOS_NO_RASCUNHO) && !/PELO MENOS UMA|das três/.test(pedindo),
+    'o bloco do cadastro e obrigatorio, sem ressalva de tres opcoes');
+  check(/Depois de responder o que ela escreveu, FECHE a/.test(pedindo), 'com o texto de antes');
 
   const semPedir = montarContatoRascunho({ mensagens: conversa, campos: { Nome: 'X', Cidade: 'Canoas' }, agora });
   check(!semPedir.includes(PEDIDO_DE_DADOS_NO_RASCUNHO), 'com o cadastro completo, nao manda pedir nada');
@@ -2243,9 +2230,8 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   const regra = linhas.findIndex((l) => l.startsWith('NÃO SOMOS CANAL'));
   // Colada no pedido: entre ela e o pedido pode haver outras regras do fim do bloco (a de NAO OFERECER
   // entrou ali em 16/09/2026) — o que se protege e a distancia do ponto em que o modelo escreve.
-  // Medido contra a linha do PEDIDO, e nao contra o fim do arquivo: o pedido das tres ganhou linhas
-  // proprias em 17/09/2026 e a conta pelo fim caiu sozinha (a licao do teste de proporcao, de novo).
-  const pedidoC = linhas.findIndex((l) => l.startsWith('TRÊS PESSOAS DA EQUIPE'));
+  // Medido contra a linha do PEDIDO, e nao contra o fim do arquivo (a licao do teste de proporcao).
+  const pedidoC = linhas.findIndex((l) => l.startsWith('Escreva o rascunho da resposta.'));
   check(regra >= 0 && pedidoC - regra <= 3 && pedidoC > regra, 'e repetida no bloco do contato, logo antes do pedido');
 }
 
@@ -2729,91 +2715,6 @@ grupo('a IA nao repete o que acabamos de dizer (15/09/2026)');
   check(/a correta agora é "Boa tarde"/.test(primeiro), 'primeira fala do dia: a saudacao certa continua dita');
 }
 
-grupo('sao TRES rascunhos, e ele escolhe (15/09/2026)');
-{
-  /**
-   * Pedido dele: *"faca ela criar 3 diferentes e vou escolher qual eu quero, e ela deve ir
-   * aprendendo com minhas escolhas"*.
-   *
-   * O que esta suite protege aqui e o que chega ao CAMPO DE MENSAGEM: cada opcao passa pelas travas
-   * por conta propria (uma opcao limpa nao faz a outra ficar limpa), opcao vazia ou repetida nao
-   * vira botao, e a forma antiga continua aceita — trocar esquema e o momento em que o modelo do
-   * outro lado pode devolver o de ontem.
-   */
-  const agora = new Date('2026-09-15T14:30:00-03:00');
-  const tres = JSON.stringify({
-    opcoes: [
-      { texto: 'Anotado por aqui, pode contar com a nossa atencao.', confianca: 0.9, precisaDeRevisao: false, motivo: 'curta' },
-      { texto: 'Boa tarde! Obrigado pela mensagem, vamos acompanhar essa pauta.', confianca: 0.9, precisaDeRevisao: false, motivo: 'cordial' },
-      { texto: 'Ja encaminhei seu pedido ao assessor da regiao.', confianca: 0.9, precisaDeRevisao: false, motivo: 'promete' },
-    ],
-  });
-  const r = validarRascunho(tres, agora, {});
-  check(r.opcoes.length === 3, 'as tres chegam');
-  check(r.texto === r.opcoes[0].texto, 'e `texto` continua sendo a primeira (quem so le uma nao quebra)');
-  check(!r.opcoes[0].avisos.length && !r.opcoes[1].avisos.length, 'as duas boas passam sem aviso');
-  check(r.opcoes[2].avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.afirmouAcao),
-    'e a terceira e barrada sozinha — a trava vale por TEXTO, nao pelo lote');
-  check(!rascunhoPodeSairSozinho(r.opcoes[2].avisos) && rascunhoPodeSairSozinho(r.opcoes[0].avisos),
-    'uma opcao limpa nao faz a outra ficar limpa');
-
-  /** **Forma antiga:** um texto so continua virando rascunho, com uma opcao. */
-  const velho = validarRascunho(JSON.stringify({ texto: 'Um texto so.', confianca: 0.9, precisaDeRevisao: false }), agora, {});
-  check(velho.opcoes.length === 1 && velho.texto === 'Um texto so.', 'o esquema antigo ainda produz rascunho');
-
-  /** **Vazia nao vira botao, repetida tambem nao** — botao que poe string vazia no campo e pior que dois botoes. */
-  const sujo = validarRascunho(JSON.stringify({ opcoes: [{ texto: 'Igual.' }, { texto: '   ' }, { texto: ' igual. ' }] }), agora, {});
-  check(sujo.opcoes.length === 1, 'vazia e repetida sao descartadas');
-  check(validarRascunho(JSON.stringify({ opcoes: [{ texto: '' }] }), agora, {}).texto === '',
-    'so vazias devolve o rascunho vazio, como antes');
-
-  /** **O esquema pede exatamente tres, e sobrevive ao modo estrito da OpenAI.** */
-  const e = esquemaDoRascunho();
-  check(/TRÊS respostas/.test(e.properties.opcoes.description), 'o esquema pede tres');
-  check(/TRÊS PESSOAS DIFERENTES da equipe/.test(e.properties.opcoes.description), 'e diz que sao tres pessoas diferentes');
-  const estrito = esquemaEstrito(e);
-  check(estrito.properties.opcoes.items.required.includes('motivo'),
-    'no modo estrito TODA propriedade entra em required, inclusive nas aninhadas');
-
-  /**
-   * **SAO DOIS MODOS** — pedido dele (15/09/2026): *"deixe o antigo, que ira rodar sozinho ja com o
-   * conhecimento, e crie o modo de treino"*. O modo decide o ESQUEMA e nao so a tela: pedir tres
-   * para usar uma pagaria a saida das outras duas em toda chamada.
-   */
-  const umSo = esquemaDoRascunho(1);
-  check(/UMA resposta/.test(umSo.properties.opcoes.description), 'modo antigo: o esquema pede UMA');
-  check(!/TRÊS/.test(umSo.properties.opcoes.description), 'e nao fala em tres');
-  check(/Escreva o rascunho da resposta\./.test(
-    montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora, quantas: 1 })),
-    'e o bloco do contato volta a pedir UM rascunho');
-  check(!/Escreva TRÊS/.test(
-    montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora, quantas: 1 })),
-    'sem pedir tres');
-  /** **E o modo antigo continua levando o que ela aprendeu** — a parte que ele quis preservar. */
-  check(/Escreva CURTO/.test(
-    montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora, quantas: 1, aprendidas: 'Escreva CURTO.' })),
-    'o modo antigo roda COM o conhecimento aprendido');
-  check(/UMA resposta/.test(montarRequisicaoRascunho({ sistema: 's', contato: 'c', quantas: 1 })
-    .output_config.format.schema.properties.opcoes.description),
-    'e a requisicao leva o esquema do modo escolhido');
-  check(/TRÊS respostas/.test(montarRequisicaoRascunho({ sistema: 's', contato: 'c' })
-    .output_config.format.schema.properties.opcoes.description),
-    'e sem dizer o modo, o padrao continua sendo o treino');
-
-  /** **O bloco do contato pede as tres e carrega o que ele ensinou.** */
-  const bloco = montarContatoRascunho({
-    mensagens: [{ de: 'contato', texto: 'oi', at: agora.getTime() }],
-    agora,
-    aprendidas: 'O QUE ELE ESCOLHEU:\n- Escreva CURTO.',
-  });
-  check(/TRÊS PESSOAS DA EQUIPE vão responder/.test(bloco), 'o pedido das tres esta no bloco do contato');
-  check(/Escreva CURTO/.test(bloco), 'e as licoes aprendidas tambem');
-  check(bloco.indexOf('Escreva CURTO') < bloco.indexOf('TRÊS PESSOAS DA EQUIPE'),
-    'as licoes ficam coladas no pedido, no fim — regra longe do ponto em que o modelo escreve nao e cumprida');
-  check(!/O QUE ELE ESCOLHEU/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora })),
-    'sem licao aprendida, nada entra no prompt');
-}
-
 grupo('nenhum esquema manda palavra-chave que a API recusa com 400 (16/09/2026)');
 {
   /**
@@ -2851,9 +2752,10 @@ grupo('nenhum esquema manda palavra-chave que a API recusa com 400 (16/09/2026)'
     const estrito = acusar(esquemaEstrito(esq), `${nome}(estrito)`, []);
     check(!estrito.length, `"${nome}" na forma estrita tambem${estrito.length ? ` — achei: ${estrito.join(', ')}` : ''}`);
   }
-  /** E a contagem continua valendo, so que no lugar certo: quem corta e `validarRascunho`. */
+  /** E a contagem continua valendo, so que no lugar certo: quem corta e `validarRascunho` (uma, desde 18/09). */
   const cinco = JSON.stringify({ opcoes: ['Um.', 'Dois.', 'Tres.', 'Quatro.', 'Cinco.'].map((texto) => ({ texto })) });
-  check(validarRascunho(cinco, new Date(), {}).opcoes.length === 3, 'sem maxItems, quem corta em tres e o codigo');
+  const v5 = validarRascunho(cinco, new Date(), {});
+  check(v5.opcoes.length === 1 && v5.texto === 'Um.', 'sem maxItems, quem corta e o codigo — fica a primeira');
 }
 
 grupo('a IA ve a midia sem texto e o atendimento anterior (16/09/2026)');
@@ -2942,65 +2844,6 @@ grupo('a IA confere a etiqueta de material antes de marcar (16/09/2026)');
 
   const req = montarRequisicaoMaterial({ sistema: 's', contato: 'c' });
   check(req.output_config.format.schema.properties.acao.enum.join() === 'material,nao', 'o esquema so tem as duas saidas');
-}
-
-grupo('as tres opcoes nao oferecem o que ela nao pediu, e o conteudo nao se repete nas tres (16/09/2026)');
-{
-  /**
-   * Print da Margarida: as tres opcoes ofereciam a colinha a quem so tinha mandado carinho, e ele: *"a
-   * variacao nao pode se repetir nas 3 opcoes"*. Medido: nada proibia oferta sem pedido, e a instrucao
-   * das tres mandava variar "fechar ou nao com pergunta" e so a FORMA — o conteudo era copiado.
-   */
-  const msgs = [{ de: 'contato', texto: 'Estou com voces com muita energia!' }];
-  const tres = montarContatoRascunho({ mensagens: msgs, quantas: 3 });
-  const uma = montarContatoRascunho({ mensagens: msgs, quantas: 1 });
-  check(/NÃO OFEREÇA O QUE ELA NÃO PEDIU/.test(tres) && /NÃO OFEREÇA O QUE ELA NÃO PEDIU/.test(uma), 'a proibicao vale nos dois modos');
-  check(/colinha/.test(tres.slice(tres.indexOf('NÃO OFEREÇA'))), 'e nomeia a colinha');
-  check(/quer que eu te mande/.test(tres), 'e a frase que inventa a oferta');
-  check(/NÃO pode aparecer nos três/.test(tres), 'o que nao e resposta ao que ela disse nao se repete nas tres');
-  check(/pelo menos um\s+responde só o que ela disse/.test(tres.replace(/\s+/g, ' ')), 'e um deles responde so o que ela disse');
-  check(!/fechar ou não com pergunta/.test(tres), 'o convite a fechar com pergunta saiu');
-  const linhas = tres.split('\n');
-  check(linhas.findIndex((l) => l.startsWith('NÃO OFEREÇA')) === linhas.findIndex((l) => l.startsWith('TRÊS PESSOAS DA EQUIPE')) - 1, 'a regra fica colada no pedido');
-  check(/não pode estar nas três/.test(esquemaDoRascunho(3).properties.opcoes.description), 'o esquema diz o mesmo');
-}
-
-grupo('as tres opcoes FAZEM coisas diferentes, e a semelhanca e medida (17/09/2026)');
-{
-  /**
-   * Relato dele: *"3 respostas praticamente iguais, so variando o metodo de escrita"*. Medido: o pedido
-   * da v3.67 dizia *"o que e resposta ao que ela disse pode se repetir"* e *"antes tres parecidas do que
-   * uma errada"* — com as proibicoes do bloco, trocar as palavras era a unica variacao autorizada.
-   */
-  const msgs = [{ de: 'contato', texto: 'Estou com voces com muita energia!' }];
-  const tres = montarContatoRascunho({ mensagens: msgs, quantas: 3 });
-  check(!/antes três parecidas/.test(tres), 'a saida para tres parecidas saiu do pedido');
-  check(!/pode se repetir/.test(tres), 'e a licenca para repetir a resposta tambem');
-  check(/\(1\) CAPITÃO MARTIM/.test(tres) && /\(2\) A ASSESSORA DO ATENDIMENTO/.test(tres) && /\(3\) O MILITANTE DA CAMPANHA/.test(tres),
-    'os tres perfis tem nome');
-  check(/não é a mesma resposta com outras palavras nem com as frases em outra ordem/.test(tres.replace(/\s+/g, ' ')),
-    'e parafrase nem reordenar contam como diferente');
-  check(/Fala do que ELE defende \(segurança, escolas, o RS\)/.test(tres), 'o perfil do Martim diz do que ele fala');
-  check(/alguém da EQUIPE que pensa como o CAPITÃO MARTIM/.test(tres) && /nunca "eu" no lugar dele/.test(tres),
-    'e quem escreve e a equipe, na terceira pessoa (o Adair, 18/09)');
-  const uma = montarContatoRascunho({ mensagens: msgs, quantas: 1 });
-  check(!/CAPITÃO MARTIM —|MILITANTE DA CAMPANHA/.test(uma), 'o modo antigo nao recebe os perfis');
-  check(/Capitão Martim/.test(esquemaDoRascunho(3).properties.opcoes.description), 'o esquema nomeia os perfis');
-
-  // A medida: parafrase da numero alto, abordagens diferentes dao numero baixo.
-  const parafrase = semelhancaDasOpcoes([
-    'Obrigado pela energia! Seguimos juntos na campanha.',
-    'Muito obrigado pela energia, seguimos juntos nessa campanha!',
-    'Agradecemos a energia! Juntos seguimos na campanha.',
-  ]);
-  const diferentes = semelhancaDasOpcoes([
-    'Obrigado pela energia!',
-    'Que alegria ler isso, gente como voce faz a diferenca no dia a dia.',
-    'O Capitao Martim trabalha pela seguranca das escolas, e apoio assim da forca.',
-  ]);
-  check(parafrase >= 0.5, `parafrase mede alto (${parafrase.toFixed(2)})`);
-  check(diferentes < 0.2, `abordagens diferentes medem baixo (${diferentes.toFixed(2)})`);
-  check(semelhancaDasOpcoes([]) === 0 && semelhancaDasOpcoes([{ texto: 'so uma' }]) === 0, 'sem par, zero');
 }
 
 grupo('"como esta o capitao?" e carinho: ele esta bem e na correria (17/09/2026)');
@@ -3100,7 +2943,6 @@ grupo('saude nao se despacha: a excecao da regra 11 (17/09/2026)');
   check(iCanal >= 0 && iSaude === iCanal + 1, 'no bloco do contato a excecao vem logo depois da regra');
   check(/PERGUNTE o que está acontecendo/.test(doente), 'e manda perguntar o que ela tem');
   check(/NÃO mande posto de saúde, UPA, CRAS/.test(doente), 'e proibe o despacho nesta mensagem');
-  check(/NENHUMA pode ser só encaminhamento/.test(doente), 'e cobre as tres opcoes iguais');
   check(/"não podemos" vem DEPOIS/.test(doente), 'a negativa vem depois de ela contar');
 
   check(!/SAÚDE — EXCEÇÃO/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'preciso de ajuda com o aluguel' }] })),
@@ -3136,99 +2978,11 @@ grupo('o CRAS nao e para todo mundo que fala de dinheiro (17/09/2026)');
   const dificuldade = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'estou desempregada com tres filhos e preciso de dinheiro para comida' }] });
   check(/DINHEIRO —/.test(dificuldade), 'com dificuldade dita a regra tambem entra — e la ela permite o CRAS');
 
-  /** A licao aprendida nao pode achatar as tres. */
-  const comLicao = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'obrigada' }], aprendidas: 'O QUE ELE ESCOLHEU:\n- Escreva CURTO.' });
-  check(/a PRIMEIRA das três as cumpre à risca/.test(comLicao), 'as licoes valem a risca na primeira');
-  check(!/a PRIMEIRA das três as cumpre à risca/.test(
-    montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'obrigada' }], aprendidas: 'O QUE ELE ESCOLHEU:\n- Escreva CURTO.', quantas: 1 })
-  ), 'no modo antigo a ressalva nao entra: la nao ha tres');
-  const tres = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'faz um pix' }], quantas: 3 });
-  check(/os três cumprem — o que muda é o que cada um acha importante dizer junto/.test(tres.replace(/\s+/g, ' ')),
-    'conteudo obrigatorio vale para os tres; muda o que cada um acha importante');
-  check(/Em nenhuma situação os três podem ser o mesmo texto/.test(tres), 'e a proibicao direta');
-
-  /** A medida que mostra o defeito quando ele acontecer de novo. */
-  const pares = paresParecidos([
-    { texto: 'Obrigado pela mensagem, seguimos juntos.' },
-    { texto: 'Obrigado pela sua mensagem, seguimos juntos!' },
-    { texto: 'O Capitao Martim trabalha pela seguranca nas escolas.' },
-  ]);
-  check(pares.length === 1 && pares[0].a === 1 && pares[0].b === 2, 'aponta QUAIS opcoes se repetem');
-  check(paresParecidos([{ texto: 'Uma.' }, { texto: 'Outra bem diferente disso aqui.' }]).length === 0, 'diferentes nao entram');
-  check(paresParecidos([]).length === 0 && semelhancaDasOpcoes([]) === 0, 'sem opcoes, nada');
-}
-
-grupo('as tres iguais: TODA hipotese revista, situacao por situacao (17/09/2026)');
-{
-  /**
-   * Ele: *"conferiu todas as hipoteses das 3 mensagens se repetirem em todas as situacoes que nao
-   * envolvem CRAS? quando pedi pra verificar isso falei de todas as situacoes"*.
-   *
-   * **A hipotese que faltava:** a regra 11 (*"acolha em uma frase... e PARE"*) era escrita em TODA
-   * chamada, inclusive para quem so agradeceu — e aí nao havia por onde as tres diferirem.
-   */
-  const bloco3 = (texto) => montarContatoRascunho({ mensagens: [{ de: 'contato', texto }], quantas: 3 });
-
-  for (const t of ['obrigada pelo trabalho de voces', 'estou com voces, vamos vencer!', 'o capitao e de qual partido?', 'me manda a colinha dos candidatos']) {
-    check(!/NÃO SOMOS CANAL/.test(bloco3(t)), `sem problema pessoal, a regra 11 nao entra: "${t}"`);
-  }
-  for (const t of ['estou preocupada com a aposentadoria', 'faz um pix pra mim', 'estou doente e preciso de ajuda', 'preciso de um emprego urgente', 'ninguem me respondeu ainda', 'preciso de uma ajuda sua', 'meu beneficio foi cortado', 'estou desempregada']) {
-    check(/NÃO SOMOS CANAL/.test(bloco3(t)), `com problema pessoal, a regra 11 entra: "${t}"`);
-  }
-
-  /** E as regras de "uma frase e pare" passaram a ter endereco: a opcao (a). */
-  const qualquer = bloco3('bom dia, tudo bem?');
-  check(/manda responder em UMA frase e parar, os três cumprem/.test(qualquer.replace(/\s+/g, ' ')),
-    'as regras de uma frase valem para os tres perfis');
-  check(/Em nenhuma situação os três podem ser o mesmo texto/.test(qualquer), 'e a proibicao vale em toda situacao');
-  check(/o que as regras proíbem continua proibido para os três/.test(qualquer.replace(/\s+/g, ' ')),
-    'trocar de perfil nao libera dizer o proibido');
-  check(!/TRÊS PESSOAS DA EQUIPE/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], quantas: 1 })),
-    'no modo antigo nada disso entra');
-}
-
-grupo('opcoes iguais: conserto mecanico, com a ancora na resposta pronta medida (17/09/2026)');
-{
-  /**
-   * Ele: *"nada mudou, 3 mensagens mandando para o CRAS novamente"* — num caso em que NENHUM detector
-   * casou (uma pessoa oferecendo uma janta pela campanha) —, *"mesmo que nao case, ja deixei explicito
-   * para as mensagens serem diferentes uma da outra"* e *"o acesso as nossas mensagens rapidas parece
-   * estar limitando o escopo de respostas"*.
-   */
-  const prontas = [
-    { id: 'pedido-ajuda', name: 'Pedido de ajuda financeira', text: 'Infelizmente o mandato nao pode ajudar com dinheiro. Procure o CRAS da sua cidade e o Cadastro Unico, que atendem assistencia social.' },
-    { id: 'agradecer-apoio', name: 'Agradecer o apoio', text: 'Obrigado de coracao pelo apoio e pela confianca de sempre.' },
-  ];
-  const tresNoCras = [
-    { texto: 'O mandato nao pode ajudar com dinheiro; procure o CRAS da sua cidade e o Cadastro Unico.' },
-    { texto: 'Nao podemos ajudar com dinheiro. O CRAS e o Cadastro Unico atendem assistencia social na sua cidade.' },
-    { texto: 'Dinheiro o mandato nao pode; a assistencia social do CRAS e o Cadastro Unico sao o caminho.' },
-  ];
-  const a = ancoraNaMesmaPronta(tresNoCras, prontas);
-  check(!!a && /Pedido de ajuda/.test(a.nome), 'a ancora aponta QUAL resposta pronta puxou as tres');
-
-  const variadas = [
-    { texto: 'Que iniciativa bonita, obrigado! A campanha nao pode entrar com comida nem bens.' },
-    { texto: 'Obrigado pelo carinho de sempre.' },
-    { texto: 'O Capitao Martim trabalha pela seguranca nas escolas, e apoio assim da forca.' },
-  ];
-  check(!ancoraNaMesmaPronta(variadas, prontas), 'tres respostas diferentes nao acusam ancora');
-  check(!ancoraNaMesmaPronta([{ texto: 'so uma' }], prontas), 'com uma opcao nao ha ancora');
-  check(!ancoraNaMesmaPronta(tresNoCras, []), 'sem respostas prontas nao ha ancora');
-
-  const bloco = blocoDeRefazer({ repetidas: tresNoCras.map((o) => o.texto), pronta: 'Pedido de ajuda financeira' });
-  check(/AS OPÇÕES SAÍRAM IGUAIS/.test(bloco), 'o bloco diz o que aconteceu');
-  check(/\(1\) O mandato nao pode ajudar/.test(bloco), 'e mostra ao modelo o que ele escreveu');
-  check(/esqueça-a e escreva do zero/.test(bloco), 'e manda esquecer a resposta pronta que puxou');
-  check(/cada uma é de uma PESSOA diferente da equipe/.test(bloco), 'com os tres perfis de novo');
-  check(/O que as regras proíbem continua proibido/.test(bloco), 'sem liberar o proibido');
-  check(blocoDeRefazer({}) === '' && blocoDeRefazer() === '', 'sem repetidas, bloco vazio');
-  check(!/esqueça-a/.test(blocoDeRefazer({ repetidas: ['um texto'] })), 'sem ancora, nao fala de resposta pronta');
 }
 
 grupo('a janta pela campanha nao recebe CRAS (17/09/2026)');
 {
-  const janta = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'Vou fazer uma janta para a campanha, voces participam com a comida?' }], quantas: 3 });
+  const janta = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'Vou fazer uma janta para a campanha, voces participam com a comida?' }] });
   check(/APOIO COM EVENTO — NÃO É PEDIDO DE AJUDA/.test(janta), 'a regra do apoio com evento entra');
   check(/NADA de CRAS, assistência social, Cadastro Único/.test(janta), 'e proibe o CRAS com todas as letras');
   check(/a campanha não entra com comida, bebida, som nem custo/.test(janta.replace(/\s+/g, ' ')), 'e diz o que responder');
@@ -3237,41 +2991,6 @@ grupo('a janta pela campanha nao recebe CRAS (17/09/2026)');
   check(!/DINHEIRO —/.test(janta), 'nem a regra do dinheiro');
   check(/NÃO SOMOS CANAL/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'faz um pix pra mim' }] })),
     'quem pede dinheiro de verdade continua com a regra 11');
-}
-
-grupo('o PERFIL vem ANTES do texto no esquema, e sao pessoas (17/09/2026)');
-{
-  /**
-   * Pergunta dele: *"por que nao e usado um prompt diferente ja de inicio para cada mensagem gerada?"*.
-   * Medido: tres chamadas separadas custam US$ 8,66 por mil contra US$ 4,59 de uma chamada com tres (o
-   * prompt de sistema e pago tres vezes). O que da o mesmo efeito de graca e a ORDEM dos campos: o modelo
-   * escreve o JSON na ordem declarada, entao ele se COMPROMETE com a abordagem antes de escrever o texto.
-   */
-  const e3 = esquemaDoRascunho(3);
-  const campos = Object.keys(e3.properties.opcoes.items.properties);
-  check(campos[0] === 'perfil', 'o perfil e o primeiro campo');
-  check(campos.indexOf('perfil') < campos.indexOf('texto'), 'e vem antes do texto');
-  check(e3.properties.opcoes.items.required.includes('perfil'), 'e e obrigatorio');
-  check(e3.properties.opcoes.items.properties.perfil.enum.join() === PERFIS_DO_RASCUNHO.map((x) => x.id).join(),
-    'com os tres perfis do pedido, e nada mais');
-  check(PERFIS_DO_RASCUNHO.length === 3 && PERFIS_DO_RASCUNHO.every((x) => x.id && x.rotulo && x.como),
-    'cada perfil tem id, rotulo e o que ele considera importante');
-
-  const e1 = esquemaDoRascunho(1);
-  check(!Object.keys(e1.properties.opcoes.items.properties).includes('perfil'), 'no modo antigo nao ha perfil');
-  check(!e1.properties.opcoes.items.required.includes('perfil'), 'nem obrigatorio');
-
-  /** Estrito (OpenAI) continua valido: todo campo em `required`. */
-  const est = esquemaEstrito(e3);
-  check(est.properties.opcoes.items.required.length === Object.keys(est.properties.opcoes.items.properties).length,
-    'na forma estrita, todos os campos entram em required');
-
-  const v = validarRascunho(JSON.stringify({ opcoes: [{ perfil: 'martim', texto: 'Que iniciativa bonita!', confianca: 0.9, precisaDeRevisao: false }] }), new Date(), {});
-  check(v.opcoes[0].perfil === 'Capitão Martim', 'o perfil volta com o rotulo bonito — e o do cartao');
-  check(rotuloDoPerfil('militancia') === 'o militante da campanha', 'traduz o id do militante');
-  check(rotuloDoPerfil('inventado') === 'inventado', 'id desconhecido volta como veio');
-  const semPerfil = validarRascunho(JSON.stringify({ opcoes: [{ texto: 'Um texto.', confianca: 0.5, precisaDeRevisao: true }] }), new Date(), {});
-  check(semPerfil.opcoes[0].perfil === '', 'sem perfil nao quebra (a forma antiga continua aceita)');
 }
 
 fim();

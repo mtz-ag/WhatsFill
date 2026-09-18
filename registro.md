@@ -1,3 +1,45 @@
+## 2026-09-18 — v3.82.0 — o modo de treino saiu: a IA volta a escrever UM rascunho
+
+**Pedido dele:** *"o sistema de treino ficou irrelevante, estou gastando tokens e as respostas não variam
+de verdade; retire o treino, a IA terá que ser refinada de outra forma"*.
+
+**Ele está certo nos dois números.** Quatro reescritas do pedido das três (v3.67 "varie", v3.70
+"abordagens", v3.80 "perfis", e a refeita mecânica da v3.78) não fizeram as opções divergirem de
+verdade — a print do Romário tinha a mesma frase, byte a byte, nas três —, e cada rascunho pagava a saída
+de três textos e às vezes uma segunda chamada inteira.
+
+**O que saiu:**
+- as três opções: o esquema pede UMA, e `validarRascunho` corta em uma;
+- a janela "Escolha o rascunho" e o envio pela escolha dele na rodada automática (`escolheuEle`) — na
+  automática voltam a valer só as travas de `rascunhoPodeSairSozinho`, como antes do treino;
+- a refeita das opções iguais (`paresParecidos`, `ancoraNaMesmaPronta`, `blocoDeRefazer`,
+  `semelhancaDasOpcoes`);
+- os perfis (`PERFIS_DO_RASCUNHO`, `rotuloDoPerfil`) — o conserto do perfil do Martim da v3.81 sai junto;
+- as lições medidas: `lib/aprendizado.js` e o teste dele foram apagados, a tela "O que ela aprendeu com
+  você" e a linha das lições no prompt saíram, e as chaves `treinando`/`aprendizado` saíram do padrão.
+  **O que já estava gravado no armazenamento dele não foi apagado** (apagar é destrutivo e ninguém lê
+  mais aquilo); o prompt não o usa mais.
+
+**O que ficou:** o "O que a IA leu no último rascunho", a revisão mecânica (saudação, repetição,
+transcrição, gabinete, traço eme), o piso do cadastro e as travas de envio. O pedido de dados voltou a ser
+obrigatório no rascunho quando falta cadastro — a ressalva "pelo menos uma das três vem sem" não tem mais
+onde valer.
+
+**Custo:** volta ao de um rascunho (US$ 2,89 por mil no Haiku quente, antes US$ 4,59 com três e até
+US$ 9,17 com a refeita).
+
+**"Refinada de outra forma" fica com ele.** Os caminhos já na mesa: testar o gpt-5 no lugar do gpt-5-mini
+(a diferença mais provável para o ChatGPT, v3.81), e o teste lado a lado com o prompt reduzido.
+
+**Não medido com chamada paga.** 17 suítes verdes (a do aprendizado saiu), `checar-modulos` e
+`checar-referencias` verdes.
+
+**Arquivos:** `src/lib/ia.js`, `src/lib/ia-cliente.js`, `src/lib/store.js`, `src/panel/panel.js`,
+`src/lib/aprendizado.js` (apagado), `tests/ia.test.mjs`, `tests/aprendizado.test.mjs` (apagado),
+`CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-18 — v3.81.0 — o tamanho do desabafo volta a ser o dele, e o perfil do Martim fala dele e não por ele
 
 **O caso:** duas prints do mesmo contato (o Adair, áudio de 58 s de desabafo sobre salário, imposto e o

@@ -2601,6 +2601,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **O MODO DE TREINO FOI RETIRADO em 18/09/2026, a pedido dele** (*"o sistema de treino ficou irrelevante,
+  estou gastando tokens e as respostas nao variam de verdade; retire o treino, a IA tera que ser refinada
+  de outra forma"*). Sairam: as tres opcoes, a janela de escolha, a refeita das opcoes iguais, os PERFIS,
+  as licoes medidas (`lib/aprendizado.js` apagado) e o interruptor. **O rascunho e UM, sempre.** As
+  entradas abaixo que falam de "tres opcoes", "perfis", "refazer" e "licoes" descrevem codigo que NAO
+  EXISTE MAIS — ficam pelo que ensinaram (variar pedindo nao funciona; perfil nao muda conteudo; a medida
+  de semelhanca pela media esconde frase identica), nao como instrucao. **Nao religue nada disso sem
+  ele pedir.** O que ficou: o "O que a IA leu", a revisao mecanica e as travas de envio.
+
 - **ESQUEMA DE SAIDA ESTRUTURADA VAI LITERAL: `minItems` so 0 ou 1, `maxItems` NAO EXISTE — e o erro e
   400** (16/09/2026). Relato dele: *"o modo de treino falhou"*. A v3.61 mandava `minItems: 3,
   maxItems: 3` e **todo rascunho numa casa Claude voltou erro por dois dias, nos dois modos**. Nada
@@ -3832,10 +3841,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
 > `src/` e reclama só de `SyntaxError`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as dezoito suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as dezessete suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/aprendizado.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

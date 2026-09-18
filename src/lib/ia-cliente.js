@@ -242,7 +242,7 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  *
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
-export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece, aprendidas, quantas = 3, anterior = [], refazer = '' }) {
+export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece, anterior = [] }) {
   /**
    * **O QUE A IA LEU, guardado para a tela mostrar** — pergunta dele (16/09/2026): *"preciso saber
    * qual a visão da IA sobre a conversa, o que ela tem acesso e o que não tem"*.
@@ -256,14 +256,7 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
    * Fica só em memória, no painel. Nunca vai para armazenamento nem para arquivo: tem dado de eleitor.
    */
   const sistema = montarSistemaRascunho({ templates, regras, gabinete });
-  /**
-   * **`refazer` é o bloco do conserto mecânico** (17/09/2026, `ia.blocoDeRefazer`): quando a medida
-   * acusa que as opções saíram iguais, a chamada é refeita com o que o modelo escreveu — e ele vai no
-   * FIM do bloco do contato, colado no pedido, porque é ali que se cumpre.
-   */
-  const contato =
-    montarContatoRascunho({ mensagens, campos, agora, pedirDados, jaNosConhece, aprendidas, quantas, anterior }) +
-    (String(refazer || '').trim() ? `\n${refazer}` : '');
+  const contato = montarContatoRascunho({ mensagens, campos, agora, pedirDados, jaNosConhece, anterior });
   const lidoPelaIA = {
     contato,
     sistemaTokens: tokensAproximados(sistema),
@@ -273,25 +266,14 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     respostasProntas: (templates || []).length,
     instrucoesExtras: !!String(regras || '').trim(),
     dossie: !!String(gabinete || '').trim(),
-    licoes: String(aprendidas || '').split(/\r?\n/).filter((l) => l.startsWith('- ')).length,
-    quantas,
-    refazendo: !!String(refazer || '').trim(),
   };
   try {
     const r = await pedirAoWorker({
       type: MSG_IA,
       modo: 'rascunho',
       sistema,
-      // `aprendidas` é o que ele ensinou escolhendo entre os três rascunhos — ver `aprendizado.js`.
-      // Vai no bloco do CONTATO (não cacheado) de propósito: lição nova no sistema invalidaria o
-      // cache de todo mundo, e é aqui, colado no pedido, que o modelo a cumpre.
-      //
-      // `quantas` é o MODO: 3 treina, 1 é o modo antigo — e o modo antigo continua levando as
-      // lições, que é o que ele pediu ao separar os dois. Vai junto para o worker porque é lá que
-      // o esquema é montado, e pedir três para usar uma pagaria a saída das outras duas.
       contato,
       modelo: modelo || MODELO_PADRAO,
-      quantas,
     });
 
     if (!r?.ok) return { texto: '', avisos: [r?.motivo || 'a IA não respondeu'], custo: null, lidoPelaIA };
@@ -470,7 +452,7 @@ export async function atender(pedido, chave) {
   // conferência de cidade (JSON, esquema próprio e teto de saída baixo).
   const corpo =
     pedido.modo === 'rascunho'
-      ? montarRequisicaoRascunho({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo, quantas: pedido.quantas })
+      ? montarRequisicaoRascunho({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
       : pedido.modo === 'cidade'
       ? montarRequisicaoCidade({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
       : pedido.modo === 'material'

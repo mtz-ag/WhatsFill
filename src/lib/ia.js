@@ -1733,106 +1733,12 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
  * canal para ela **se autodenunciar** — é barato perguntar, e uma IA que hesita é exatamente o
  * caso que não pode sair sozinho.
  */
-/**
- * **SÃO TRÊS RASCUNHOS, e a diferença entre eles é o que vale** — pedido dele (15/09/2026): *"o
- * ideal seria a IA ir aprendendo sozinha qual tipo de resposta eu quero… faça ela criar 3
- * diferentes e vou escolher qual eu quero, e ela deve ir aprendendo com minhas escolhas"*.
- *
- * **Numa chamada só, e não três.** O prompt de sistema é ~8.000 tokens e leva `cache_control`:
- * três chamadas pagariam a entrada três vezes para dizer a mesma coisa. Aqui o que multiplica é a
- * SAÍDA, que é a parte pequena — e, mais importante, o modelo vê as três de uma vez e consegue
- * torná-las diferentes de propósito, que é a coisa toda.
- *
- * **Três versões da mesma frase não servem para nada.** A escolha dele só ensina onde os textos
- * DIFERIAM (ver `aprendizado.registrarEscolha`), então a instrução é de ABORDAGEM — e ela está
- * escrita aqui, no `description` que o modelo lê junto do esquema, além do bloco do contato.
- */
-/**
- * **SÃO DOIS MODOS, e o interruptor é dele** — pedido dele (15/09/2026): *"deixe o antigo, que irá
- * rodar sozinho já com o conhecimento, quando estiver com taxa baixa de erro, e crie o modo de
- * treino da IA, que foi o que fizemos agora"*.
- *
- * `quantas = 1` é o modo antigo: um rascunho, sem caixa de escolha, **com as lições já aprendidas
- * dentro do prompt** — é essa a parte que ele quis preservar. `quantas = 3` é o treino.
- *
- * **O modo decide o ESQUEMA, e não só a tela**: pedir três e usar uma pagaria a saída das outras
- * duas em toda chamada, para sempre. Medido: US$ 2,04 → 3,39 por mil rascunhos no Haiku quente.
- */
-/**
- * **TRÊS PERFIS, e não três tons** — pedido dele (17/09/2026): *"esses perfis direto, acolhedor etc não
- * mudam a resposta; preciso que sejam como se fossem pessoas diferentes com pontos de vista diferentes:
- * perfil Capitão Martim, pessoa X, pessoa Y"*.
- *
- * **Ele está certo sobre a causa.** "Direta", "acolhe" e "liga ao Martim" são jeitos de escrever a MESMA
- * resposta — o modelo cumpria mudando a ordem das frases. Ponto de vista é outra coisa: muda **o que a
- * pessoa considera importante responder**, e aí os textos divergem no conteúdo sem ninguém inventar nada.
- *
- * **Os três são do mesmo lado e falam pelo mandato** — o que muda é a cabeça de cada um. Nenhum diz quem
- * é (a regra 9 continua: quem pergunta ouve "somos a equipe do Capitão Martim"), e nenhum é uma pessoa
- * real com nome: são papéis.
- */
-export const PERFIS_DO_RASCUNHO = [
-  {
-    id: 'martim',
-    rotulo: 'Capitão Martim',
-    como:
-      // Alguém da EQUIPE que pensa como ele, e não ele: "escreva como o Capitão Martim" fez o rascunho
-      // do Adair (18/09/2026) falar na primeira pessoa do candidato — "prioridades minhas".
-      'alguém da EQUIPE que pensa como o CAPITÃO MARTIM: militar, direto, sem rodeio. O que importa é ' +
-      'o trabalho e a palavra dada — diz o que é, o que dá e o que não dá, sem enfeite e sem prometer. ' +
-      'Fala do que ELE defende (segurança, escolas, o RS) quando o assunto dela encosta nisso, sempre ' +
-      'na terceira pessoa ("o Capitão defende…") — quem escreve é a equipe, nunca "eu" no lugar dele. ' +
-      'Fecha firme.',
-  },
-  {
-    id: 'atendimento',
-    rotulo: 'a assessora do atendimento',
-    como:
-      'a ASSESSORA que atende todo dia: o que importa para ela é a pessoa do outro lado e o próximo passo ' +
-      'concreto. Repara no que a pessoa está vivendo, responde o que ela perguntou e resolve a pendência ' +
-      '(o cadastro que falta, o endereço, o que precisa chegar a ela). Nada de discurso.',
-  },
-  {
-    id: 'militancia',
-    rotulo: 'o militante da campanha',
-    como:
-      'o MILITANTE que faz campanha na rua: o que importa para ele é o voto e a mobilização. Trata a ' +
-      'pessoa como quem está do mesmo lado, valoriza o que ela faz pela campanha e puxa para junto — sem ' +
-      'pedir nada que ela não ofereceu, sem oferecer o que ela não pediu e sem grito de comício.',
-  },
-];
-
-export function esquemaDoRascunho(quantas = 3) {
-  const n = Number(quantas) === 1 ? 1 : 3;
+export function esquemaDoRascunho() {
   const opcao = {
     type: 'object',
     additionalProperties: false,
-    required: n === 1 ? ['texto', 'confianca', 'precisaDeRevisao'] : ['perfil', 'texto', 'confianca', 'precisaDeRevisao'],
+    required: ['texto', 'confianca', 'precisaDeRevisao'],
     properties: {
-      /**
-       * **O PERFIL VEM ANTES DO TEXTO, e a ordem é o conserto** (17/09/2026). Pergunta dele: *"por que não
-       * é usado um prompt diferente já de início para cada mensagem gerada?"* — medido, três chamadas
-       * separadas custam US$ 8,66 por mil contra US$ 4,59 (o prompt de sistema é pago três vezes).
-       *
-       * O que dá o mesmo efeito de graça é a ORDEM dos campos: o modelo escreve o JSON na ordem em que ele
-       * está declarado, então **declarar o perfil primeiro o obriga a assumir aquela cabeça antes de
-       * escrever o texto**. Custa três palavras de saída por opção.
-       *
-       * Fica fora do modo antigo (`n === 1`): lá não há o que diferenciar.
-       */
-      ...(n === 1
-        ? {}
-        : {
-            perfil: {
-              type: 'string',
-              enum: PERFIS_DO_RASCUNHO.map((p) => p.id),
-              description:
-                'QUEM está escrevendo esta opção, escolhido antes de escrever o texto — um de cada nas ' +
-                'três: ' +
-                PERFIS_DO_RASCUNHO.map((p) => `${p.id} = ${p.rotulo}`).join('; ') +
-                '.',
-            },
-          }),
       texto: {
         type: 'string',
         description: 'A resposta pronta para enviar, no tom do Thiago. Sem marcador, sem colchete.',
@@ -1852,8 +1758,7 @@ export function esquemaDoRascunho(quantas = 3) {
       motivo: {
         type: 'string',
         description:
-          'Em até 5 palavras, o que ESTE perfil considerou importante responder e as outras duas não. ' +
-          'Aparece na tela.',
+          'Em até 5 palavras, o que você considerou importante responder. Aparece na tela.',
       },
     },
   };
@@ -1879,28 +1784,19 @@ export function esquemaDoRascunho(quantas = 3) {
        */
       opcoes: {
         type: 'array',
-        description:
-          n === 1
-            ? 'UMA resposta para a mensagem dela, pronta para enviar.'
-            : 'TRÊS respostas para a mesma mensagem, escritas por TRÊS PESSOAS DIFERENTES da equipe, que ' +
-              'não pensam igual sobre o que importa responder: ' +
-              PERFIS_DO_RASCUNHO.map((p, i) => `(${i + 1}) ${p.rotulo}`).join(', ') +
-              '. Cada uma escreve a sua, sem ver a das outras. O que não é a resposta ao que ela disse ' +
-              '(pergunta, informação a mais, convite) não pode estar nas três, e nenhuma oferece o que ela ' +
-              'não pediu. As três têm de estar CERTAS e prontas para enviar: ele vai escolher uma e ' +
-              'mandar como está.',
+        description: 'UMA resposta para a mensagem dela, pronta para enviar.',
         items: opcao,
       },
     },
   };
 }
 
-export function montarRequisicaoRascunho({ sistema, contato, modelo = MODELO_PADRAO, quantas = 3 }) {
+export function montarRequisicaoRascunho({ sistema, contato, modelo = MODELO_PADRAO }) {
   return corpo({
     sistema,
     contato,
     modelo,
-    esquema: esquemaDoRascunho(quantas),
+    esquema: esquemaDoRascunho(),
     nome: 'rascunho',
     esforco: 'medium',
     maxTokens: 4096,
@@ -2014,6 +1910,23 @@ const emFrases = (t) =>
     .filter(Boolean);
 
 /**
+ * **Ela perguntou como o Capitão Martim ESTÁ?** (17/09/2026) — cortesia, não pedido de dado. Casa só a
+ * pergunta pelo estado dele: o nome tem de vir colado no verbo e a frase tem de acabar ali (ou em "bem",
+ * "hoje", "de saúde"), senão *"como está o capitão nas pesquisas?"* e *"como vai o deputado votar?"*
+ * virariam carinho. `ele` sozinho fica de fora: sem o nome, não se sabe de quem é.
+ */
+export function perguntaComoEleEsta(texto) {
+  const t = semAcentoIA(String(texto || '')).toLowerCase();
+  const ELE = '(?:o\\s+)?(?:nosso\\s+)?(?:capitao|martim|deputado)(?:\\s+martim)?';
+  const FIM = '\\s*(?:$|[?!.,]|\\s+(?:hoje|ai|bem|de saude)\\b)';
+  return (
+    new RegExp(`(?:^|[^a-z])como\\s+(?:e\\s+que\\s+)?(?:esta|ta|vai|anda)\\s+${ELE}${FIM}`).test(t) ||
+    new RegExp(`(?:^|[^a-z])${ELE}\\s+(?:esta|ta|anda)\\s+bem\\s*(?:$|[?!.,])`).test(t) ||
+    new RegExp(`(?:^|[^a-z])tudo\\s+(?:bem|certo|tranquilo)\\s+com\\s+${ELE}\\s*(?:$|[?!.,])`).test(t)
+  );
+}
+
+/**
  * **A frase que reescreve o que nos acabamos de dizer SAI** — a outra metade do mesmo relato: o
  * *"obrigado pelo apoio"* mandado duas vezes seguidas.
  *
@@ -2038,123 +1951,6 @@ const emFrases = (t) =>
  * @param {string} nossaUltima a ultima mensagem que NOS mandamos
  * @returns {string|null} o texto sem as frases repetidas, ou `null` se nada saiu
  */
-/**
- * **Quão parecidas são as opções do treino** — a MEDIDA do relato de 17/09/2026 (*"3 respostas
- * praticamente iguais, só variando o método de escrita"*): o maior Jaccard das palavras de conteúdo entre
- * dois textos, de 0 a 1. Não barra nem esconde nada — vai para o Andamento, para dar para saber se o
- * pedido das três abordagens está sendo cumprido sem depender de print.
- */
-/**
- * **Ela perguntou como o Capitão Martim ESTÁ?** (17/09/2026) — cortesia, não pedido de dado. Casa só a
- * pergunta pelo estado dele: o nome tem de vir colado no verbo e a frase tem de acabar ali (ou em "bem",
- * "hoje", "de saúde"), senão *"como está o capitão nas pesquisas?"* e *"como vai o deputado votar?"*
- * virariam carinho. `ele` sozinho fica de fora: sem o nome, não se sabe de quem é.
- */
-export function perguntaComoEleEsta(texto) {
-  const t = semAcentoIA(String(texto || '')).toLowerCase();
-  const ELE = '(?:o\\s+)?(?:nosso\\s+)?(?:capitao|martim|deputado)(?:\\s+martim)?';
-  const FIM = '\\s*(?:$|[?!.,]|\\s+(?:hoje|ai|bem|de saude)\\b)';
-  return (
-    new RegExp(`(?:^|[^a-z])como\\s+(?:e\\s+que\\s+)?(?:esta|ta|vai|anda)\\s+${ELE}${FIM}`).test(t) ||
-    new RegExp(`(?:^|[^a-z])${ELE}\\s+(?:esta|ta|anda)\\s+bem\\s*(?:$|[?!.,])`).test(t) ||
-    new RegExp(`(?:^|[^a-z])tudo\\s+(?:bem|certo|tranquilo)\\s+com\\s+${ELE}\\s*(?:$|[?!.,])`).test(t)
-  );
-}
-
-export function semelhancaDasOpcoes(opcoes = []) {
-  return paresParecidos(opcoes, 0).reduce((maior, p) => Math.max(maior, p.valor), 0);
-}
-
-/**
- * **Quais opções dizem quase a mesma coisa** — `[{a, b, valor}]`, com as posições em base 1 e o maior
- * primeiro. Pedido dele em 17/09/2026: *"novamente as 3 respostas são iguais, revise todas as hipóteses
- * para que isso pare de acontecer"*. As hipóteses do prompt estão no bloco do contato; esta é a que
- * sobra depois delas — **o modelo pode parafrasear de qualquer jeito**, e o que o programa pode fazer é
- * MOSTRAR, na janela e no log, em vez de deixar ele descobrir lendo.
- *
- * **Não descarta a opção parecida**: duas opções na tela seriam a escolha empobrecida em silêncio, e a
- * comparação é por palavra de conteúdo — ela erra para os dois lados em texto curto.
- */
-/**
- * **As três opções estão todas ancoradas na MESMA resposta pronta?** — hipótese dele (17/09/2026): *"o
- * acesso às nossas mensagens rápidas parece estar limitando o escopo de respostas"*.
- *
- * **Ele está certo, e é medível.** As 21 respostas prontas vão inteiras no prompt como exemplo de voz e
- * como base de conteúdo; quando o caso não está entre elas, o modelo puxa a mais PARECIDA no vocabulário
- * — foi o que pôs o CRAS em quem oferecia uma janta pela campanha (a proximidade lexical, o defeito mais
- * repetido deste projeto). Com as três puxando a mesma, as três dizem a mesma coisa.
- *
- * Devolve `{nome, valor}` quando TODAS as opções passam do corte contra o mesmo texto pronto — é isso
- * que distingue "usou a resposta certa" (legítimo, e aí ele escolhe entre formas dela) de "não havia
- * resposta para este caso e as três foram para a mesma".
- */
-export function ancoraNaMesmaPronta(opcoes = [], templates = [], corte = 0.3) {
-  const textos = (Array.isArray(opcoes) ? opcoes : [])
-    .map((o) => new Set(conteudoDaFrase(String((typeof o === 'string' ? o : o?.texto) || ''))))
-    .filter((c) => c.size);
-  if (textos.length < 2) return null;
-  let achado = null;
-  for (const t of Array.isArray(templates) ? templates : []) {
-    const pronta = new Set(conteudoDaFrase(String(t?.text || '')));
-    if (pronta.size < 5) continue;
-    let menor = 1;
-    for (const o of textos) {
-      const comum = [...o].filter((w) => pronta.has(w)).length;
-      menor = Math.min(menor, comum / o.size);
-    }
-    if (menor >= corte && (!achado || menor > achado.valor)) achado = { nome: String(t?.name || t?.id || 'uma resposta pronta'), valor: menor };
-  }
-  return achado;
-}
-
-/**
- * **O bloco que REFAZ o pedido quando a medida acusa** — relato dele (17/09/2026): *"mesmo que não case,
- * já deixei explícito para as mensagens serem diferentes uma da outra"*.
- *
- * Ele está certo: o pedido já manda, e mandar de novo com outras palavras seria a quinta tentativa de
- * consertar por prompt o que é **verificável**. A disciplina deste arquivo é *mecânico vira conserto*:
- * mede-se a saída, e quando ela repete, a chamada é REFEITA mostrando ao modelo o que ele acabou de
- * escrever — que é a única coisa que ele não tinha ao escrever a primeira vez.
- */
-export function blocoDeRefazer({ repetidas = [], pronta = '' } = {}) {
-  const textos = (repetidas || []).map((t) => umaLinha(t, 400)).filter(Boolean);
-  if (!textos.length) return '';
-  return [
-    '',
-    'ATENÇÃO — VOCÊ JÁ RESPONDEU ESTE PEDIDO E AS OPÇÕES SAÍRAM IGUAIS. Isto é o que você escreveu:',
-    ...textos.map((t, i) => `(${i + 1}) ${t}`),
-    '',
-    pronta
-      ? `As três foram escritas a partir da resposta pronta "${pronta}". Se o caso desta pessoa NÃO é o ` +
-        'caso daquela resposta, ela não serve: esqueça-a e escreva do zero, a partir do que ELA escreveu.'
-      : '',
-    'Escreva de novo as TRÊS, e agora cada uma é de uma PESSOA diferente da equipe, que pensa diferente ' +
-      'sobre o que importa responder: ' +
-      PERFIS_DO_RASCUNHO.map((p, i) => `(${i + 1}) ${p.rotulo}`).join(', ') +
-      '. Nenhuma pode ser a de cima com outras palavras. O que as regras proíbem continua proibido.',
-  ]
-    .filter(Boolean)
-    .join('\n');
-}
-
-export function paresParecidos(opcoes = [], corte = 0.6) {
-  const conjuntos = (Array.isArray(opcoes) ? opcoes : []).map(
-    (o) => new Set(conteudoDaFrase(String((typeof o === 'string' ? o : o?.texto) || '')))
-  );
-  const pares = [];
-  for (let i = 0; i < conjuntos.length; i += 1) {
-    for (let j = i + 1; j < conjuntos.length; j += 1) {
-      const a = conjuntos[i];
-      const b = conjuntos[j];
-      if (!a.size || !b.size) continue;
-      const comum = [...a].filter((w) => b.has(w)).length;
-      const valor = comum / (a.size + b.size - comum);
-      if (valor >= corte) pares.push({ a: i + 1, b: j + 1, valor });
-    }
-  }
-  return pares.sort((x, y) => y.valor - x.valor);
-}
-
 export function semRepetirONosso(texto, nossaUltima) {
   const bruto = String(texto || '');
   const nossas = emFrases(nossaUltima)
@@ -2269,7 +2065,7 @@ function blocoDoAtendimentoAnterior(anterior, agora) {
   ];
 }
 
-export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false, aprendidas = '', quantas = 3, anterior = [] } = {}) {
+export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false, anterior = [] } = {}) {
   /**
    * **A conversa INTEIRA, com os dois lados e com a pendência marcada.**
    *
@@ -2547,25 +2343,12 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * (`sugestao.pedirDadosNaoCabe`): duas definições divergiriam, e a que ninguém olha é a que
      * pede o cadastro de quem já o deu.
      */
-    /**
-     * **No treino, o cadastro NÃO vai nas três** — relato dele (17/09/2026): *"em todas as opções ele
-     * pediu os dados, então se eu quero uma opção sem pedir dados fico sem escolha"*. Obrigação escrita
-     * para o rascunho único vale igual para cada uma das três, e escolha sem alternativa não é escolha
-     * (nem ensina nada). A PRIMEIRA leva o bloco, porque é a que a IA mandaria sozinha — o mesmo que o
-     * modo antigo faz.
-     */
     pedirDados
       ? [
-          Number(quantas) === 1
-            ? 'O cadastro desta pessoa está incompleto. Depois de responder o que ela escreveu, FECHE a'
-            : 'O cadastro desta pessoa está incompleto. Na PRIMEIRA das três opções, e em no máximo mais ' +
-              'uma, depois de responder o que ela escreveu, FECHE a',
+          'O cadastro desta pessoa está incompleto. Depois de responder o que ela escreveu, FECHE a',
           'mensagem com este bloco, copiado exatamente assim (sem reescrever) — copie-o inteiro mesmo',
           'que o nome já apareça acima: é o formulário padrão do gabinete, e é por ele que o sistema',
           'reconhece que o pedido saiu.',
-          ...(Number(quantas) === 1
-            ? []
-            : ['PELO MENOS UMA das três vem SEM o bloco e sem pedir nome ou cidade de outro jeito — ele precisa poder escolher uma sem o pedido.']),
           '',
           PEDIDO_DE_DADOS_NO_RASCUNHO,
         ].join('\n')
@@ -2712,36 +2495,8 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'tratamento, o que os médicos disseram) — aqui perguntar sobre o caso é o certo. NÃO mande posto ' +
         'de saúde, UPA, CRAS nem Cadastro Único nesta mensagem, e não negue ajuda que ela não pediu. Se ' +
         'ela pediu dinheiro ou remédio, o "não podemos" vem DEPOIS de ela contar o que tem, nunca na ' +
-        'primeira resposta. Nas três opções, NENHUMA pode ser só encaminhamento, e ao menos uma pergunta ' +
-        'o que aconteceu.'
+        'primeira resposta.'
       : '',
-    /**
-     * **O que ele vem escolhendo, colado no pedido** — pedido dele (15/09/2026): *"ela deve ir
-     * aprendendo com minhas escolhas"*.
-     *
-     * Vem pronto de `aprendizado.blocoParaOPrompt`, que só emite regra com evidência medida. Fica
-     * AQUI e não no sistema por duas razões: é a lição do item 22 (*regra longe do ponto em que o
-     * modelo escreve não é cumprida*), e o sistema leva `cache_control` — uma lição nova ali
-     * invalidaria o cache de todas as chamadas no dia em que ele escolhesse diferente.
-     */
-    String(aprendidas || '').trim(),
-    /**
-     * **As lições não podem achatar as três** (17/09/2026). Com várias lições medidas — *"não abra com
-     * saudação"*, *"escreva CURTO"*, *"não feche com pergunta"* — o espaço de resposta fecha e as três
-     * viram o mesmo texto seco. A saída preserva o que a taxa de acerto mede: a PRIMEIRA cumpre tudo.
-     */
-    String(aprendidas || '').trim() && Number(quantas) !== 1
-      ? 'As lições acima descrevem o que ele costuma ESCOLHER: a PRIMEIRA das três as cumpre à risca. Nas ' +
-        'outras duas, quando uma lição for justamente o que impede a opção de ser diferente, deixe de ' +
-        'cumpri-la — é para isso que servem as três.'
-      : '',
-    /**
-     * **São TRÊS no modo de TREINO, uma no modo normal.** Repetido aqui além do `description` do
-     * esquema pelo mesmo motivo de sempre: o esquema é lido longe do ponto em que o texto nasce.
-     *
-     * **As lições acima valem nos dois modos** — é o que ele pediu ao separá-los: *"deixe o antigo,
-     * que irá rodar sozinho já com o conhecimento"*.
-     */
     /**
      * **NÃO OFEREÇA O QUE ELA NÃO PEDIU** — print da Margarida (16/09/2026): as três opções ofereciam a
      * colinha (*"quer que eu te mande a lista com os candidatos?"*, *"posso te encaminhar a colinha ou o
@@ -2757,40 +2512,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
       'conteúdo só entram se ela pediu ou perguntou por isso. Nada de "quer que eu te mande…?", "posso ' +
       'te encaminhar…?" ou "qual prefere?" para criar assunto. Se fechar com pergunta, a pergunta é ' +
       'sobre o que ELA trouxe.',
-    /**
-     * **A VARIAÇÃO NÃO SE REPETE NAS TRÊS** — mesma print, a outra metade: *"a variação não pode se
-     * repetir nas 3 opções"*. A instrução anterior pedia diferença só de FORMA (*"no JEITO, não na
-     * redação"*), então o CONTEÚDO — a oferta — foi copiado nas três, e ele não tinha como escolher uma
-     * sem ela. Agora o que não é a resposta ao que ela disse (uma oferta, uma pergunta, uma informação a
-     * mais) não pode estar nas três: pelo menos uma responde só o que ela disse.
-     */
-    /**
-     * **TRÊS PESSOAS, e não três tons** — pedido dele (17/09/2026): *"esses perfis direto, acolhedor etc
-     * não mudam a resposta; preciso que sejam como se fossem pessoas diferentes com pontos de vista
-     * diferentes: perfil Capitão Martim, pessoa X, pessoa Y"*.
-     *
-     * **Ele está certo sobre a causa, e é a terceira vez que este pedido é reescrito.** "Varie" (v3.67)
-     * fez o modelo trocar palavras; "abordagens" (v3.70) fez ele trocar a ordem das frases — as duas
-     * pedem jeitos de escrever a MESMA resposta. **Ponto de vista muda o que a pessoa considera
-     * importante responder**, e é daí que sai conteúdo diferente sem ninguém inventar nada.
-     *
-     * Os perfis estão em `PERFIS_DO_RASCUNHO`, num lugar só, porque o esquema também os nomeia.
-     */
-    Number(quantas) === 1
-      ? 'Escreva o rascunho da resposta.'
-      : 'TRÊS PESSOAS DA EQUIPE vão responder esta mensagem, cada uma com a sua cabeça. Elas não pensam ' +
-        'igual sobre o que importa dizer, e é por isso que os três textos têm de ser diferentes no ' +
-        'CONTEÚDO — não é a mesma resposta com outras palavras nem com as frases em outra ordem.\n' +
-        PERFIS_DO_RASCUNHO.map((p, i) => `(${i + 1}) ${p.rotulo.toUpperCase()} — escreva como ${p.como}`).join('\n') +
-        '\nCada um escreve como se não tivesse visto o texto dos outros dois, e os três obedecem às regras ' +
-        'acima: se alguma regra obriga um conteúdo (negar o pedido, pedir o cadastro) ou manda responder ' +
-        'em UMA frase e parar, os três cumprem — o que muda é o que cada um acha importante dizer junto, ' +
-        'e o que as regras proíbem continua proibido para os três. Em nenhuma situação os três podem ser ' +
-        'o mesmo texto.\n' +
-        'Tudo o que NÃO é a resposta ao que ela disse — uma pergunta, uma informação a mais, um convite — ' +
-        'NÃO pode aparecer nos três; pelo menos um responde só o que ela disse e para aí. Antes de ' +
-        'devolver, leia os três: se dois disserem a mesma coisa, reescreva um. Os três têm de estar ' +
-        'certos e prontos para enviar, porque ele escolhe um e manda como está.',
+    'Escreva o rascunho da resposta.',
   ]
     .filter(Boolean)
     .join('\n');
@@ -3656,14 +3378,6 @@ function umaLinha(texto, limite = 400) {
  *
  * @returns {{texto:string, confianca:number, motivo:string, avisos:string[], precisaDeRevisao:boolean}}
  */
-/** `martim` -> `Capitão Martim`. Id desconhecido volta como veio: a tela mostra o que o modelo disse. */
-export function rotuloDoPerfil(id) {
-  const chave = String(id || '').trim();
-  if (!chave) return '';
-  const achado = PERFIS_DO_RASCUNHO.find((p) => p.id === chave.toLowerCase());
-  return achado ? achado.rotulo : chave.slice(0, 40);
-}
-
 export function validarRascunho(bruto, agora, contexto = {}) {
   const vazio = { texto: '', confianca: 0, motivo: '', avisos: ['a IA não devolveu rascunho'], precisaDeRevisao: true };
 
@@ -3698,9 +3412,6 @@ export function validarRascunho(bruto, agora, contexto = {}) {
     return {
       texto: revisao.texto,
       confianca: Number.isFinite(o?.confianca) ? Math.min(1, Math.max(0, o.confianca)) : 0,
-      // O PERFIL é quem escreveu (ver `PERFIS_DO_RASCUNHO`): vai para o cartão da janela, porque é ele
-      // que diz ao Thiago de qual cabeça saiu aquele texto.
-      perfil: rotuloDoPerfil(o?.perfil),
       motivo: String(o?.motivo || '').trim().slice(0, 300),
       avisos,
       precisaDeRevisao,
@@ -3709,12 +3420,8 @@ export function validarRascunho(bruto, agora, contexto = {}) {
 
   const brutas = Array.isArray(d.opcoes) && d.opcoes.length ? d.opcoes : [d];
   /**
-   * **Opção vazia não vira opção na tela.** O modelo pode devolver três e escrever duas; oferecer
-   * um botão que põe string vazia no campo de mensagem seria pior que oferecer duas.
-   *
-   * **Nem opção REPETIDA.** Três versões da mesma frase não dão escolha nenhuma, e ainda ensinariam
-   * `aprendizado` que ele "preferiu" algo que não teve alternativa — a comparação é por texto
-   * revisado, porque é ele que vai para a conversa.
+   * **Opção vazia não vira rascunho**: o modelo pode devolver o array com um texto em branco, e pôr
+   * string vazia no campo de mensagem é pior que dizer que a IA não escreveu nada.
    */
   const vistos = new Set();
   const opcoes = brutas
@@ -3725,7 +3432,7 @@ export function validarRascunho(bruto, agora, contexto = {}) {
       vistos.add(chave);
       return true;
     })
-    .slice(0, 3);
+    .slice(0, 1);
 
   if (!opcoes.length) return vazio;
 
