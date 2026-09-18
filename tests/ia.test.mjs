@@ -2993,4 +2993,15 @@ grupo('a janta pela campanha nao recebe CRAS (17/09/2026)');
     'quem pede dinheiro de verdade continua com a regra 11');
 }
 
+grupo('o gpt-5.6-luna entra como modelo da OpenAI que raciocina (18/09/2026)');
+{
+  check(provedorDoModelo('gpt-5.6-luna') === PROVEDOR_OPENAI, 'vai para a OpenAI, com a chave que ja existe');
+  const r = montarRequisicaoRascunho({ sistema: 'S', contato: 'C', modelo: 'gpt-5.6-luna' });
+  check(r.reasoning_effort === 'medium' && r.max_completion_tokens === 8192 && r.max_tokens === undefined,
+    'recebe reasoning_effort e o teto no nome novo, como a familia GPT-5');
+  check(PRECOS_USD_POR_MTOK['gpt-5.6-luna'].entrada === 0.2 && PRECOS_USD_POR_MTOK['gpt-5.6-luna'].saida === 1.2,
+    'com o preco da pagina oficial');
+  check(CACHE_MINIMO_TOKENS['gpt-5.6-luna'] === 1024, 'e o minimo de cache da OpenAI');
+}
+
 fim();

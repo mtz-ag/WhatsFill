@@ -10744,6 +10744,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         ['gpt-5', 'gpt-5 — o grande; raciocina (~US$ 11 por mil)'],
         ['gpt-5-mini', 'gpt-5-mini — um terço do Haiku (~US$ 2 por mil)'],
         ['gpt-5-nano', 'gpt-5-nano — o mais barato de todos (~US$ 0,45 por mil)'],
+        ['gpt-5.6-luna', 'gpt-5.6-luna — geração nova, acima do gpt-5 nos testes (~US$ 2 por mil)'],
       ]],
     ];
 
@@ -10828,6 +10829,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         ['gpt-5', 'gpt-5'],
         ['gpt-5-mini', 'gpt-5-mini'],
         ['gpt-5-nano', 'gpt-5-nano'],
+        ['gpt-5.6-luna', 'gpt-5.6-luna'],
       ]],
     ]) {
       const g = h('optgroup', { label: casa });

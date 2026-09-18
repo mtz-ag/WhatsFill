@@ -358,7 +358,7 @@ export const NOME_DO_PROVEDOR = {
  * parâmetro — que é o padrão do modelo, e não uma degradação. Vale também para o modelo que ele
  * digitar à mão: nascer sem o parâmetro é o lado barato do erro.
  */
-const MODELOS_COM_RACIOCINIO = new Set(['gpt-5', 'gpt-5-mini', 'gpt-5-nano']);
+const MODELOS_COM_RACIOCINIO = new Set(['gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-5.6-luna']);
 
 /**
  * O esquema JSON no formato que o **strict mode** da OpenAI exige.
@@ -415,6 +415,7 @@ export const CACHE_MINIMO_TOKENS = {
   'gpt-5': 1024,
   'gpt-5-mini': 1024,
   'gpt-5-nano': 1024,
+  'gpt-5.6-luna': 1024,
 };
 
 /** Tamanho aproximado do prompt de sistema hoje, em tokens. Português: ~3,5 chars por token. */
@@ -3475,6 +3476,9 @@ export const PRECOS_USD_POR_MTOK = {
   'gpt-5': { entrada: 1.25, saida: 10, cacheEscrita: 0 },
   'gpt-5-mini': { entrada: 0.25, saida: 2, cacheEscrita: 0 },
   'gpt-5-nano': { entrada: 0.05, saida: 0.4, cacheEscrita: 0 },
+  // Lido na página oficial em 18/09/2026: a geração nova, mais barata que o mini e, no índice da
+  // Artificial Analysis, acima do gpt-5 (38 contra 23). Pedido dele, para o rascunho.
+  'gpt-5.6-luna': { entrada: 0.2, saida: 1.2, cacheEscrita: 0 },
 };
 
 /** Leitura de cache custa 10% da entrada; escrita custa 1,25× (TTL de 5 min). */

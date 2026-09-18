@@ -1,3 +1,27 @@
+## 2026-09-18 — v3.84.0 — o gpt-5.6-luna entra nas listas de modelo
+
+**Pedido dele:** *"adicione o luna e também o qwen"*, depois da pesquisa de preços.
+
+**O luna:** geração nova da OpenAI, US$ 0,20 / 1,20 por milhão (página oficial, lida hoje) — mais barato
+que o gpt-5-mini — e, no índice da Artificial Analysis, **38 contra 23 do gpt-5**. Usa a chave da OpenAI
+que ele já tem. Entrou nas duas listas (modelo do rascunho e das conferências) e na do reserva, em
+`MODELOS_COM_RACIOCINIO` (recebe `reasoning_effort` e o teto no nome novo), na tabela de preço e no mínimo
+de cache (1.024). **O padrão do rascunho continua gpt-5**: ele escolhe na Config.
+
+**Ressalva dita a ele:** a medição pública deu 168 s até a primeira palavra no raciocínio MÁXIMO. O
+rascunho usa o médio, mas a chamada desiste em 45 s e cai no reserva — a linha "RESERVA" no Andamento
+diz se isso está acontecendo.
+
+**O Qwen fica para a próxima, esperando decisão dele:** exige provedor novo (Alibaba Model Studio ou
+OpenRouter), conta e chave novas, e é onde vão conversas de eleitor. Só o Qwen3.7 Plus (e acima) aceita
+esquema JSON estrito; o Flash não, e quebraria o nosso formato.
+
+**Não medido com chamada paga.** 17 suítes verdes.
+
+**Arquivos:** `src/lib/ia.js`, `src/panel/panel.js`, `tests/ia.test.mjs`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-18 — v3.83.0 — o rascunho tem modelo próprio (gpt-5); as conferências ficam no barato
 
 **Decisão dele:** *"o problema realmente é a capacidade desses modelos mais baratos"*, depois de comparar
