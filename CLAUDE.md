@@ -2601,6 +2601,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **SAO DOIS MODELOS DESDE 18/09/2026: o do RASCUNHO e o das CONFERENCIAS.** Decisao dele: *"o problema
+  realmente e a capacidade desses modelos mais baratos"*. `ia.modeloRascunho` (padrao gpt-5) escreve o
+  texto que o eleitor le; `ia.modelo` faz cidade e etiquetas. **Quem le o modelo do rascunho e
+  `modeloDoRascunho()` no painel, nunca `state.ia.modelo`** — `iaTemChave` continua sendo do modelo das
+  conferencias. Ao criar chamada nova de IA, decida de qual dos dois ela e.
+
 - **O MODO DE TREINO FOI RETIRADO em 18/09/2026, a pedido dele** (*"o sistema de treino ficou irrelevante,
   estou gastando tokens e as respostas nao variam de verdade; retire o treino, a IA tera que ser refinada
   de outra forma"*). Sairam: as tres opcoes, a janela de escolha, a refeita das opcoes iguais, os PERFIS,

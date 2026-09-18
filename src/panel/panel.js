@@ -10429,7 +10429,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         templates: state.templates,
         regras: state.ia.regras,
         gabinete: await gabineteLib.paraOPrompt(dela),
-        modelo: state.ia.modelo,
+        modelo: modeloDoRascunho(),
         // Rascunhar precisa dos DOIS lados — ver `conversaParaIA`.
         mensagens: conversaParaIA(),
         // O relógio: sem ele a IA não sabe se a conversa é de agora ou da semana passada.
@@ -10505,7 +10505,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // o mínimo de 4.096 tokens, então o zero é o normal — e alarme que toca sempre se aprende
       // a ignorar.
       const podia = iaLib.vaiCachear(
-        state.ia.modelo || iaLib.MODELO_PADRAO,
+        modeloDoRascunho(),
         iaLib.tokensAproximados(
           iaLib.montarSistemaRascunho({
             templates: state.templates,
@@ -10532,7 +10532,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        *  2. **o modelo só aparecia quando falhava.** Dando certo, a linha não dizia quem tinha
        *     atendido — e com duas casas configuradas *"qual está mandando"* vira adivinhação.
        */
-      const titular = state.ia.modelo || iaLib.MODELO_PADRAO;
+      const titular = modeloDoRascunho();
       const quem = r.usouReserva
         ? ` · RESERVA ${r.usouReserva} (o titular ${titular} falhou: ${r.motivoDoTitular || 'sem motivo'})`
         : ` · ${titular}`;
@@ -10563,7 +10563,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const porque = (rascunho?.avisos || []).map((a) => String(a || '').trim()).filter(Boolean).join('; ');
       // O modelo entra no motivo pelo mesmo pedido de 08/09: com duas casas configuradas, "a IA
       // falhou" não diz QUAL falhou — e é o que decide se o problema é a chave, o crédito ou a rota.
-      const casa = state.ia.modelo || iaLib.MODELO_PADRAO;
+      const casa = modeloDoRascunho();
       return { ok: false, enviado: false, motivo: `${casa}: ${porque || 'a IA não escreveu nada e não disse por quê'}` };
     }
 
@@ -10747,23 +10747,52 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       ]],
     ];
 
-    const selModelo = h('select', {});
-    for (const [casaId, modelos] of CASAS) {
-      const grupo = h('optgroup', { label: iaLib.NOME_DO_PROVEDOR[casaId] });
-      for (const [id, rotulo] of modelos) {
-        const opt = h('option', { value: id }, rotulo);
-        if (id === modeloAtual) opt.selected = true;
-        grupo.append(opt);
+    const seletorDeModelo = (atual) => {
+      const sel = h('select', {});
+      for (const [casaId, modelos] of CASAS) {
+        const grupo = h('optgroup', { label: iaLib.NOME_DO_PROVEDOR[casaId] });
+        for (const [id, rotulo] of modelos) {
+          const opt = h('option', { value: id }, rotulo);
+          if (id === atual) opt.selected = true;
+          grupo.append(opt);
+        }
+        sel.append(grupo);
       }
-      selModelo.append(grupo);
-    }
-    // Modelo que ele digitou à mão (ou de uma versão futura) não pode sumir do seletor: sem esta
-    // opção o `select` mostraria outro modelo e a próxima mexida na tela salvaria esse outro.
-    if (!['claude-haiku-4-5', 'claude-sonnet-5', 'claude-opus-5', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano'].includes(modeloAtual)) {
-      const opt = h('option', { value: modeloAtual }, `${modeloAtual} (escolhido à mão)`);
-      opt.selected = true;
-      selModelo.append(opt);
-    }
+      // Modelo que ele digitou à mão (ou de uma versão futura) não pode sumir do seletor: sem esta
+      // opção o `select` mostraria outro modelo e a próxima mexida na tela salvaria esse outro.
+      if (!CASAS.some(([, modelos]) => modelos.some(([id]) => id === atual))) {
+        const opt = h('option', { value: atual }, `${atual} (escolhido à mão)`);
+        opt.selected = true;
+        sel.append(opt);
+      }
+      return sel;
+    };
+
+    /**
+     * **Dois modelos, duas tarefas** (18/09/2026). O RASCUNHO é o texto que o eleitor lê, e é onde o
+     * modelo barato falha; as CONFERÊNCIAS são sim ou não com esquema fechado, e o barato dá conta.
+     */
+    const rascunhoAtual = cfg.modeloRascunho || modeloAtual;
+    const selRascunho = seletorDeModelo(rascunhoAtual);
+    selRascunho.addEventListener('change', () =>
+      withBusy(async () => {
+        await salvarIA({ modeloRascunho: selRascunho.value });
+        renderAll();
+      })
+    );
+    const semChaveDoRascunho = !state.iaChaves?.[iaLib.provedorDoModelo(rascunhoAtual)];
+    body.append(
+      h('label', { class: 'wf-field' }, [h('span', {}, 'Modelo do rascunho (o texto que o eleitor lê)'), selRascunho]),
+      semChaveDoRascunho
+        ? h('div', { class: 'wf-block', 'data-fica': '1' },
+            `Sem a chave da ${iaLib.NOME_DO_PROVEDOR[iaLib.provedorDoModelo(rascunhoAtual)]}: o rascunho vai falhar ` +
+              '(e cair no reserva, se houver). Salve a chave abaixo.')
+        : h('div', { class: 'wf-origin' },
+            'Um modelo forte aqui: é o único texto que sai para o eleitor, e a IA só escreve nos ~5% de ' +
+              'contatos que o fluxo não resolve. Suba o teto de gasto junto.')
+    );
+
+    const selModelo = seletorDeModelo(modeloAtual);
     selModelo.addEventListener('change', () =>
       withBusy(async () => {
         await salvarIA({ modelo: selModelo.value });
@@ -10774,7 +10803,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       })
     );
     body.append(
-      h('label', { class: 'wf-field' }, [h('span', {}, 'Modelo'), selModelo]),
+      h('label', { class: 'wf-field' }, [h('span', {}, 'Modelo das conferências (cidade e etiquetas)'), selModelo]),
       h('div', { class: 'wf-origin', 'data-fica': '1' }, avisoDoModelo(cfg))
     );
 
@@ -11121,6 +11150,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return `Se ${titular} falhar (sem resposta, chave recusada, fila cheia, apagão), a mesma ` +
       `pergunta é refeita em ${reserva}. As duas chamadas passam pelo teto de gasto e as duas ` +
       'entram na conta. O Andamento diz quando o reserva atendeu.';
+  }
+
+  /**
+   * **O modelo que ESCREVE** — separado do das conferências em 18/09/2026 (ver `store.ia.modeloRascunho`).
+   * Um lugar só: a chamada, o log de custo e a mensagem de falha perguntam isto, e três leituras
+   * separadas divergem no primeiro modelo novo.
+   */
+  function modeloDoRascunho() {
+    return state.ia?.modeloRascunho || state.ia?.modelo || iaLib.MODELO_PADRAO;
   }
 
   function avisoDoModelo(cfg) {

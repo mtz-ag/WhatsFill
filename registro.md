@@ -1,3 +1,32 @@
+## 2026-09-18 — v3.83.0 — o rascunho tem modelo próprio (gpt-5); as conferências ficam no barato
+
+**Decisão dele:** *"o problema realmente é a capacidade desses modelos mais baratos"*, depois de comparar
+o que o ChatGPT escreveu para o Adair com o que o gpt-5-mini escreveu.
+
+**Até aqui um modelo só fazia as quatro tarefas da IA.** Hoje são dois campos na Config:
+- **Modelo do rascunho** (`ia.modeloRascunho`, padrão **gpt-5**): o único texto que o eleitor lê.
+- **Modelo das conferências** (`ia.modelo`, o de sempre): cidade, material, pedido e sem interesse — sim
+  ou não com esquema fechado, onde o barato dá conta.
+
+`modeloDoRascunho()` é o lugar único que a chamada, o log de custo e a mensagem de falha consultam. `ia`
+está na lista de mescla do `store.get`, então o padrão alcança quem já usa a IA sem ele mexer. O failsafe
+continua valendo para os dois (troca no service worker, pelo teto). A tela avisa quando falta a chave da
+casa do modelo do rascunho.
+
+**O teto de saída do rascunho foi de 4096 para 8192**: no gpt-5 o raciocínio cabe DENTRO do teto (a
+armadilha do Opus 5), e com ~10 mil tokens de prompt 4096 arriscava o texto sair truncado. Teto não é
+gasto.
+
+**Custo estimado, não medido:** ~US$ 10 a 15 por mês no uso dele de setembro (523 chamadas em 18 dias,
+somando todas as tarefas). **O teto dele está em US$ 5 e vai estourar** — dito a ele para subir.
+
+**Não medido com chamada paga.** 17 suítes verdes, `checar-modulos` e `checar-referencias` verdes.
+
+**Arquivos:** `src/lib/store.js`, `src/lib/ia.js`, `src/panel/panel.js`, `tests/ia.test.mjs`,
+`CLAUDE.md`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-18 — v3.82.0 — o modo de treino saiu: a IA volta a escrever UM rascunho
 
 **Pedido dele:** *"o sistema de treino ficou irrelevante, estou gastando tokens e as respostas não variam

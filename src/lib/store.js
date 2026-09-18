@@ -1146,7 +1146,15 @@ const DEFAULTS = {
    */
   ia: {
     ligada: false,
+    /** O modelo das CONFERÊNCIAS (cidade e etiquetas): pergunta de sim ou não, o barato dá conta. */
     modelo: 'claude-haiku-4-5',
+    /**
+     * **O modelo do RASCUNHO, separado** — decisão dele (18/09/2026): *"o problema realmente é a
+     * capacidade desses modelos mais baratos"*. O rascunho é o único texto que o eleitor lê, e é nele
+     * que a falta de capacidade aparece; as conferências continuam no barato. `ia` está na lista de
+     * mescla do `get`, então este padrão alcança quem já usa a IA.
+     */
+    modeloRascunho: 'gpt-5',
     /**
      * **O modelo RESERVA: se o titular falhar, a chamada é refeita com este** — pedido dele
      * (08/09/2026), depois de a IA pendurar duas vezes: *"se for algo comum tem que ter um

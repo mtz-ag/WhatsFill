@@ -1799,7 +1799,10 @@ export function montarRequisicaoRascunho({ sistema, contato, modelo = MODELO_PAD
     esquema: esquemaDoRascunho(),
     nome: 'rascunho',
     esforco: 'medium',
-    maxTokens: 4096,
+    // 8192 desde 18/09/2026, quando o rascunho passou para um modelo forte (gpt-5): o raciocínio
+    // cabe DENTRO do teto e, com ~10 mil tokens de prompt, 4096 arriscava o texto sair truncado.
+    // Teto não é gasto — paga-se o que o modelo produz.
+    maxTokens: 8192,
   });
 }
 

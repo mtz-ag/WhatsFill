@@ -1251,7 +1251,7 @@ grupo('o corpo da requisicao para a OpenAI');
    * **`max_completion_tokens`, nunca `max_tokens`**: a familia GPT-5 recusa o nome antigo com 400.
    * A mesma classe de armadilha do `effort` no Haiku, e ela nao aparece em teste de tela nenhum.
    */
-  check(r.max_completion_tokens === 4096, 'o teto de saida vai no nome novo');
+  check(r.max_completion_tokens === 8192, 'o teto de saida vai no nome novo');
   check(r.max_tokens === undefined, 'e o nome antigo NAO vai');
 
   check(r.messages[0].role === 'system' && r.messages[0].content === 'S', 'o sistema vai como messages[0]');
@@ -1288,13 +1288,13 @@ grupo('o corpo da requisicao para a OpenAI');
   // Modelo fora da lista de permissao roda SEM o parametro, e nao quebrado.
   const aMao = montarRequisicaoRascunho({ sistema: 'S', contato: 'C', modelo: 'gpt-6-turbo' });
   check(aMao.reasoning_effort === undefined, 'modelo desconhecido da OpenAI nao recebe reasoning_effort');
-  check(aMao.max_completion_tokens === 4096, 'e fica com o teto pedido, sem piso');
+  check(aMao.max_completion_tokens === 8192, 'e fica com o teto pedido, sem piso');
 }
 
 grupo('o corpo da Anthropic nao mudou');
 {
   const r = montarRequisicaoRascunho({ sistema: 'S', contato: 'C', modelo: 'claude-haiku-4-5' });
-  check(r.max_tokens === 4096, 'max_tokens continua');
+  check(r.max_tokens === 8192, 'max_tokens continua');
   check(r.system?.[0]?.cache_control?.type === 'ephemeral', 'o cache_control continua no sistema');
   check(r.system[0].text === 'S', 'o sistema continua em campo proprio');
   check(r.output_config?.format?.type === 'json_schema', 'e o esquema no output_config');
