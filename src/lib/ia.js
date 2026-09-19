@@ -1648,6 +1648,7 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     'TAMANHO: siga o item 22 do padrão, pelo TIPO do que ela escreveu. Mensagem simples: 1 a 3 frases.',
     'Dúvida comum: 3 a 6 frases. Desabafo: 1 a 4 parágrafos curtos. Quem desabafou (um áudio longo, um',
     'texto sobre a vida dela) recebe resposta de desabafo, não uma frase só. Isto sai no WhatsApp, não é ofício.',
+    'E, do mesmo item: uma linha em branco depois de todo ponto final — cada frase no seu parágrafo.',
     'Não dê aula sobre regra nem sobre lei, e não liste alternativas que ninguém pediu. Quando algo',
     'não for possível, uma frase basta — e o resto da mensagem é para a pessoa, não para o assunto.',
     '',

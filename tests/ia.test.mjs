@@ -3020,4 +3020,17 @@ grupo('o Qwen entra pelo OpenRouter, sem guardar dado (18/09/2026)');
   check(!vaiCachear('qwen/qwen3.7-plus', 99999), 'sem cache e o esperado, nao alarme');
 }
 
+grupo('as quatro instrucoes dele entraram no padrao (19/09/2026)');
+{
+  const pad = PADRAO_DE_ATENDIMENTO;
+  check(/chegou por um ANÚNCIO da campanha/.test(pad), 'as pessoas chegam por anuncio (secao 1)');
+  check(/FECHE perguntando se ela quer saber mais sobre algum ponto específico/.test(pad.replace(/\s+/g, ' ')),
+    'quem quer saber do Capitao recebe o convite para mais detalhes (secao 21)');
+  check(/Uma linha em branco depois de todo ponto final/.test(pad), 'linha em branco apos ponto final (secao 22)');
+  check(/Não comece a mensagem confirmando o que a pessoa disse/.test(pad), 'nao abrir confirmando (secao 23)');
+  const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/linha em branco depois de todo ponto final/.test(p.slice(p.indexOf('TAMANHO:'))),
+    'e a linha em branco e citada tambem perto do pedido');
+}
+
 fim();

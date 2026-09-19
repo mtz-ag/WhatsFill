@@ -1,3 +1,35 @@
+## 2026-09-19 — v3.88.0 — quatro instruções dele entram no padrão de atendimento
+
+**Pedido dele:** *"pule uma linha após todo ponto final, não comece as mensagens confirmando as
+informações, quando a pessoa quiser saber sobre o Capitão Martim pergunte ao final se ela quer mais
+detalhes sobre algo específico, as pessoas chegam por anúncio no nosso WhatsApp — adicione ao padrão de
+atendimento"*, e *"arrume caso esteja mal escrito para melhor entendimento da IA"*.
+
+**Onde cada uma entrou** (`src/lib/atendimento.js`, documento dele, editado a pedido dele — a segunda vez,
+depois de 09/09), na seção do assunto, e não num bloco novo solto:
+- **seção 1** (identidade): quase todos chegam por anúncio, e a primeira mensagem costuma ser o texto
+  pronto dele — o que ela quer vem depois;
+- **seção 21** (pergunta objetiva): quem quer saber do Capitão recebe a resposta e o fecho *"Quer saber
+  mais sobre algum assunto em especial?"* — escrito que a pergunta é sobre ELE, para não virar porta para
+  material/colinha/grupo (a regra do "não ofereça o que ela não pediu" continua valendo);
+- **seção 22** (tamanho e linguagem): uma linha em branco depois de todo ponto final, com a ressalva de
+  ponto dentro de número, sigla e abreviação (R$ 1.500, Sr., Dr.) — sem ela o modelo quebraria o valor;
+- **seção 23** (não repetir a pessoa): não abrir confirmando o que ela disse, com três exemplos.
+
+**A linha em branco também foi citada perto do pedido**, junto da citação do item 22 que já existe em
+`montarSistemaRascunho` — é a lição de 18/09: regra do padrão repetida perto do pedido vai INTEIRA, e
+regra longe do ponto em que o modelo escreve não é cumprida.
+
+**Oferecido a ele, não feito:** a linha em branco é MECÂNICA e poderia virar conserto em
+`revisarRascunho` (como o travessão), garantindo em vez de pedir.
+
+**Testes:** `tests/ia.test.mjs` (as quatro no padrão e a citação perto do pedido). 17 suítes verdes.
+
+**Arquivos:** `src/lib/atendimento.js`, `src/lib/ia.js`, `tests/ia.test.mjs`, `registro.md`,
+`manifest.json`.
+
+---
+
 ## 2026-09-19 — v3.87.0 — pedido de material ESCRITO na chegada não recebe mais só o recibo (o Jair)
 
 **O caso:** print dele, *"fluxo ignorou pedido de material novamente"*, um dia depois da Rita. O contato
