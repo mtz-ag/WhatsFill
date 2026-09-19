@@ -415,4 +415,14 @@ grupo('path.js');
   check(Array.isArray(novo.x.y) && novo.x.y[0] === 'v', 'setByPath cria array quando precisa');
 }
 
+grupo('palpite confirmado entra na gravacao automatica (IA pega a cidade sozinha, 19/09/2026)');
+{
+  const { deveGravarEntrada } = await lib('fields.js');
+  const aproximada = { value: 'Tres Passos', from: 'palpite', confidence: 'aproximada' };
+  check(!deveGravarEntrada(aproximada, { somenteExatos: true }), 'aproximado sem confirmacao continua fora');
+  check(deveGravarEntrada({ ...aproximada, confirmada: true }, { somenteExatos: true }), 'confirmado pela IA ou por ele entra');
+  check(!deveGravarEntrada({ ...aproximada, confirmada: true, pendente: true }, { somenteExatos: true }),
+    'pendente continua fora mesmo com a marca');
+}
+
 fim();

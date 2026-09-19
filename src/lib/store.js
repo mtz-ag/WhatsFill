@@ -1157,6 +1157,13 @@ const DEFAULTS = {
      */
     modeloRascunho: 'gpt-5',
     /**
+     * **A IA pega a cidade sozinha, também FORA da rodada** — pedido dele (19/09/2026): *"faça com que a
+     * cidade seja colocada pela IA fora do automatizado também; bote a opção nas configurações"*. Marcada,
+     * a conferência de cidade roda ao abrir o contato e na gravação automática, sem rodada andando. Nasce
+     * desligada: cada conferência é uma chamada paga.
+     */
+    cidadeSozinha: false,
+    /**
      * **O modelo RESERVA: se o titular falhar, a chamada é refeita com este** — pedido dele
      * (08/09/2026), depois de a IA pendurar duas vezes: *"se for algo comum tem que ter um
      * failsafe; eu já quero botar o chatgpt, então o padrão seria chatgpt atender, se ele falhar

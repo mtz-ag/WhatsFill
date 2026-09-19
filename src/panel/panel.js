@@ -855,7 +855,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const entry = campo && state.draft[campo.id];
     if (!entry?.pendente || entry.from !== 'palpite') return;
     if (entry.value == null || entry.value === '') return;
-    if (somenteExatos && entry.confidence !== 'exata') return;
+    // Com "IA pega a cidade sozinha", o palpite aproximado também vai para ela na gravação automática —
+    // a IA confirma, corrige para outro município do IBGE ou não grava nada.
+    if (somenteExatos && entry.confidence !== 'exata' && !(state.ia?.cidadeSozinha && state.iaTemChave)) return;
 
     /**
      * **Palpite que não é município NÃO vira pergunta** — anotação dele (04/09/2026): a caixa
@@ -1017,7 +1019,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * só roda dentro da rodada. Incerta, ela devolve `false` e a caixa abre para ele, como antes.
    */
   async function cidadeConferidaPelaIA(campo, entry) {
-    if (!state.auto?.rodando || !state.ia?.ligada) return false;
+    // Na rodada, com a IA ligada; fora dela, só com "IA pega a cidade sozinha" marcada (19/09/2026).
+    const pode = (state.auto?.rodando && state.ia?.ligada) || !!state.ia?.cidadeSozinha;
+    if (!pode || !state.iaTemChave) return false;
 
     const municipios = await cities.loadMunicipios();
     if (!municipios?.length) {
@@ -8855,7 +8859,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     const temExato = state.classify.some((f) => {
       const e = state.draft[f.id];
-      return e?.from === 'palpite' && e.confidence === 'exata';
+      if (e?.from !== 'palpite') return false;
+      if (e.confidence === 'exata') return true;
+      // "IA pega a cidade sozinha": a cidade aproximada também abre a gravação, e a IA decide dentro dela.
+      return f.name === 'Cidade' && e.confidence === 'aproximada' && !!state.ia?.cidadeSozinha && state.iaTemChave;
     });
     const temEtiqueta = state.tagSuggestions.some((s) => s.marcada && s.tag && etiquetaConfiavel(s));
 
@@ -10817,6 +10824,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(
       h('label', { class: 'wf-field' }, [h('span', {}, 'Modelo das conferências (cidade e etiquetas)'), selModelo]),
       h('div', { class: 'wf-origin', 'data-fica': '1' }, avisoDoModelo(cfg))
+    );
+
+    body.append(
+      checkbox('IA pega a cidade sozinha (também fora da rodada)', !!cfg.cidadeSozinha, async (v) => {
+        await salvarIA({ cidadeSozinha: v });
+        setStatus(
+          v
+            ? 'Ligado: ao abrir um contato, a IA confere a cidade que o parser achou e grava sozinha.'
+            : 'Desligado: fora da rodada, a cidade volta a esperar o seu clique.',
+          'ok'
+        );
+        renderAll();
+      }),
+      h('div', { class: 'wf-origin' },
+        'Marcada, a cidade que o parser achou na conversa é conferida pela IA ao abrir o contato, sem ' +
+          'rodada andando: ela confirma, corrige para outro município do IBGE ou não grava nada. ' +
+          'Cada conferência é uma chamada paga (~US$ 0,001). Na rodada ela já confere com a IA ligada.')
     );
 
     /**

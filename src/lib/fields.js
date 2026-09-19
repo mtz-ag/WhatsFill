@@ -128,7 +128,9 @@ export function deveGravarEntrada(entry, { somenteExatos = false } = {}) {
    */
   if (entry.limpar) return !somenteExatos;
 
-  if (somenteExatos && !(entry.from === 'palpite' && entry.confidence === 'exata')) return false;
+  // Confirmado por ele ou pela IA (19/09/2026, "IA pega a cidade sozinha") vale como exato: a dúvida que
+  // `somenteExatos` protege é a do palpite, e ela acabou de ser respondida.
+  if (somenteExatos && !(entry.from === 'palpite' && (entry.confidence === 'exata' || entry.confirmada))) return false;
   const valor = entry.value;
   if (valor == null || valor === '') return false;
   if (Array.isArray(valor) && !valor.length) return false;

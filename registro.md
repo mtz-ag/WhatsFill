@@ -1,3 +1,33 @@
+## 2026-09-19 — v3.89.0 — "IA pega a cidade sozinha": a conferência de cidade também fora da rodada
+
+**Pedido dele:** *"faça com que a cidade seja colocada pela IA fora do automatizado também, bote a opção
+nas configurações para marcar: IA pega a cidade sozinha"*.
+
+**Até aqui** `cidadeConferidaPelaIA` só rodava com a rodada andando e a IA ligada (decisão de 06/09: fora
+da rodada cada chamada é dinheiro). Abrindo o contato à mão, a cidade de palpite esperava o clique dele —
+e a APROXIMADA nem chegava a ser gravada pela gravação automática (`somenteExatos`).
+
+**Agora há a caixa na Config** (seção da IA, abaixo do modelo das conferências), `ia.cidadeSozinha`,
+**nascendo desligada**. Marcada:
+- a conferência roda sem rodada, ao abrir o contato (`aplicarAutomatico` → `saveClassification` →
+  `confirmarCidadeSePendente`), inclusive para o palpite APROXIMADO;
+- a IA confirma, corrige para outro município do IBGE ou não grava nada — as travas de `validarCidade`
+  não mudaram, e `incerto` devolve a caixa para ele;
+- `fields.deveGravarEntrada` passou a aceitar palpite **confirmado** (`confirmada: true`, por ele ou pela
+  IA) na gravação automática — a dúvida que `somenteExatos` protege é a do palpite, e ela foi respondida.
+  Pendente continua fora, com teste.
+
+**Custo dito a ele:** ~US$ 0,001 por contato aberto com cidade pendente. Depende de "Aplicar sozinho"
+(ligado por padrão) e da chave da casa do modelo das conferências.
+
+**Testes:** `tests/contract.test.mjs` (confirmado entra, aproximado sem confirmação e pendente ficam
+fora). 17 suítes verdes.
+
+**Arquivos:** `src/lib/store.js`, `src/lib/fields.js`, `src/panel/panel.js`, `tests/contract.test.mjs`,
+`registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-19 — v3.88.0 — quatro instruções dele entram no padrão de atendimento
 
 **Pedido dele:** *"pule uma linha após todo ponto final, não comece as mensagens confirmando as
