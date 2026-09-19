@@ -1,3 +1,36 @@
+## 2026-09-19 — v3.87.0 — pedido de material ESCRITO na chegada não recebe mais só o recibo (o Jair)
+
+**O caso:** print dele, *"fluxo ignorou pedido de material novamente"*, um dia depois da Rita. O contato
+chegou pelo anúncio CLICK AQUI (não cadastrado) e escreveu *"consegue mandar um material pra nós aqui em
+<cidade>"*. O Andamento dizia: `automatico pelo fluxo ("r:anuncio-modelo-e-dados:chegada")`: modelo PADRÃO
+(o recibo) + pedido de dados, e concluiu.
+
+**Medido:** `pedeMaterial` casou e `materialPendente` era verdadeiro; o conserto da v3.86 não alcança este
+caso porque ele mora em `ja-respondemos-antes` (quem VOLTA). Na CHEGADA, o recibo
+(`anuncio-modelo-e-dados`) fica acima de tudo, e o recibo do anúncio padrão não responde a um pedido de
+material — manda um cartão genérico e fecha a conversa em cima da pergunta.
+
+**Causa de fundo:** `pedeMaterial` não separa o CLIQUE no anúncio do que ELA escreveu. Precisa ser assim
+para o anúncio de material (o clique é o pedido, e o modelo daquele anúncio o responde), e por isso não
+serve para dizer *"ela pediu algo que o recibo não responde"*.
+
+**O conserto:** `cortesia.pedeMaterialEscrito` — o pedido que ela DIGITOU desde a nossa última fala, sem a
+mensagem do anúncio — entra no sinal `pedeRespostaPessoal`, o mesmo caminho da roupa (12/09): tecla 6 ALTA
+nos dois ramos (na chegada, acima do recibo), **sem ele precisar importar o quadro**. Só vale **sem anúncio
+reconhecido esperando resposta** — clicando num anúncio cadastrado, o modelo dele é o que ela pediu.
+Simulado no padrão: antes tecla `a`, agora tecla 6 (a IA pergunta qual material ou pede o endereço).
+
+**Fica em aberto, dito a ele:** a cidade *"Três Passos"* foi recusada pela conferência da IA ("parece
+expressão de modo/tempo") — é município do RS, e *"aqui em"* é pista. Não mexido: é outra mudança.
+
+**Testes:** `tests/cortesia.test.mjs` (o caso, e os falsos positivos: o clique, agradecer o material,
+negar, e o pedido já respondido). 17 suítes verdes.
+
+**Arquivos:** `src/lib/cortesia.js`, `src/panel/panel.js`, `tests/cortesia.test.mjs`, `CLAUDE.md`,
+`registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-18 — v3.86.0 — quem pede material não recebe mais a mensagem do momento (a Rita)
 
 **O caso:** print dele, *"um contato que pediu material e não foi respondido, saiu a resposta do momento e

@@ -3175,6 +3175,31 @@ const ROUPA_NA_LISTA = new RegExp(
  * é o maior sinal de máquina (12/09). O painel soma isto a `pedeRespostaPessoal`, que é tecla 6 alta
  * nos dois ramos e vale sem ele importar o quadro.
  */
+/**
+ * **Ela ESCREVEU pedindo material, e isso ainda não foi respondido** — print do Jair (19/09/2026): chegou
+ * pelo anúncio e escreveu *"consegue mandar um material pra nós aqui em <cidade>"*; a rodada mandou o
+ * modelo PADRÃO (o recibo) + o formulário e concluiu. Ele: *"fluxo ignorou pedido de material
+ * novamente"* — o dia seguinte ao da Rita.
+ *
+ * **Não é `pedeMaterial`**, e a diferença é a razão desta função: aquele lê a conversa INTEIRA e conta o
+ * CLIQUE no anúncio (*"Olá! Eu quero receber o Material da Direita"*), porque lá o clique é o pedido e o
+ * modelo daquele anúncio o responde. Aqui é o que ELA digitou, desde a nossa última fala (estado que
+ * espera, como a presença — `desdeNossaUltima`), sem a mensagem do anúncio.
+ *
+ * @returns {{motivo:string}|null}
+ */
+export function pedeMaterialEscrito(entrantes, nossaUltimaAt, padroesDeAnuncio = []) {
+  for (const msg of desdeNossaUltima(entrantes, nossaUltimaAt)) {
+    if (msg?.sistema || msg?.geradaPeloAnuncio || ehMensagemDeAnuncio(msg, padroesDeAnuncio)) continue;
+    const texto = semAcentos(msg?.texto);
+    if (!texto || NEGA_O_PEDIDO.test(texto)) continue;
+    if (PEDIDO_DE_MATERIAL_COMPLETO.some((re) => re.test(texto))) {
+      return { motivo: 'ela escreveu pedindo material — o recibo do anúncio não responde isso; a IA responde (pergunta qual ou pede o endereço)' };
+    }
+  }
+  return null;
+}
+
 export function pedeRoupa(entrantes, nossaUltimaAt, padroesDeAnuncio = []) {
   for (const msg of desdeNossaUltima(entrantes, nossaUltimaAt)) {
     if (msg?.sistema || ehMensagemDeAnuncio(msg, padroesDeAnuncio)) continue;

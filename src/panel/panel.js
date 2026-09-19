@@ -31,7 +31,7 @@ import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
 import { criarGuardaDeRolagem, TECLAS_QUE_ROLAM } from './rolagem.js';
-import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado } from '../lib/cortesia.js';
+import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -6111,9 +6111,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // ROUPA (12/09/2026): não fornecemos e a lei proíbe (9.504/97, art. 39 § 6º). Entra NESTE
         // sinal para ser tecla 6 alta nos dois ramos sem ele importar o quadro — a IA responde que
         // não temos. Antes era "material": etiqueta que pula e pedido de endereço.
+        //
+        // MATERIAL ESCRITO POR ELA (19/09/2026, o Jair): o mesmo caminho da roupa, e pela mesma razão —
+        // entrar aqui torna o caso tecla 6 ALTA nos dois ramos (na chegada, acima do recibo) sem ele
+        // importar o quadro. **Só sem anúncio reconhecido esperando resposta:** se ela clicou num
+        // anúncio cadastrado, o modelo DELE é o que ela pediu, e o recibo responde.
         pedeRespostaPessoal:
           conversaPedeRespostaPessoal(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio) ||
-          pedeRoupa(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
+          pedeRoupa(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio) ||
+          (!state.anuncioSemResposta && pedeMaterialEscrito(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio)),
         // Pergunta de razão ou de posição: nenhuma resposta pronta responde, e mandar o modelo
         // vira material de campanha em cima da pergunta dela (print da Clair, 31/08).
         perguntaAberta: conversaTemPerguntaAberta(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),

@@ -3195,4 +3195,23 @@ grupo('apoio com EVENTO nao e pedido de ajuda (17/09/2026)');
   ]) check(!ev(t), `nao e apoio com evento: "${t.slice(0, 45)}"`);
 }
 
+grupo('material ESCRITO por ela, e nao o clique do anuncio (o Jair, 19/09/2026)');
+{
+  const { pedeMaterialEscrito } = await import('../src/lib/cortesia.js');
+  const clique = { texto: 'Ola! Eu apoio o Flavio, Zucco e Capitao Martim', geradaPeloAnuncio: true };
+  const pede = (texto, extra = []) => pedeMaterialEscrito([clique, ...extra, { texto }], null, []);
+  check(!!pede('Consegue mandar um material pra nos aqui na minha cidade'), 'o caso dele');
+  check(!!pede('quero receber adesivo e bandeira'), 'material fisico escrito');
+  // Falsos positivos: o clique nao conta; agradecer nao e pedir; negar nao e pedir.
+  check(!pedeMaterialEscrito([{ texto: 'Ola! Eu quero receber o Material da Direita', geradaPeloAnuncio: true }], null, []),
+    'o clique no anuncio de material nao e pedido escrito');
+  check(!pede('obrigada pelo material, ficou lindo'), 'agradecer o material nao e pedir');
+  check(!pede('nao quero receber material nenhum'), 'negar nao e pedir');
+  check(!pede('bom dia, estamos juntos'), 'conversa comum');
+  // O que ja respondemos nao conta de novo.
+  const antes = new Date('2026-09-18T12:00:00Z').toISOString();
+  check(!pedeMaterialEscrito([{ texto: 'me manda o material', at: '2026-09-18T11:00:00Z' }], antes, []),
+    'pedido anterior a nossa ultima fala ja foi respondido');
+}
+
 fim();

@@ -2146,6 +2146,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **O CLIQUE NO ANUNCIO E O PEDIDO ESCRITO SAO SINAIS DIFERENTES** (19/09/2026, o Jair: escreveu pedindo
+  material na chegada e recebeu so o recibo). `pedeMaterial` conta o clique de proposito (o anuncio de
+  material E o pedido); para dizer "ela pediu algo que o recibo nao responde" o sinal e
+  `pedeMaterialEscrito`, que entra em `pedeRespostaPessoal` como a roupa. **Conserto de uma caixa do ramo
+  de quem VOLTA nao alcanca a CHEGADA** — a v3.86 consertou `ja-respondemos-antes` e o mesmo pedido caiu
+  no recibo um dia depois.
 - **REGRA QUE LE CHAVE QUE O PAINEL NAO ESCREVE ESTA MORTA, E O TESTE NAO VE** (18/09/2026, a Rita:
   pediu adesivo e bandeira, recebeu a mensagem do momento e bloqueou o numero). A guarda do material em
   `sugestao.js` lia `c.pedeMaterial`; o painel escreve `materialPendente`. Duas regras mortas por DUAS
