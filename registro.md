@@ -1,3 +1,32 @@
+## 2026-09-20 — v3.93.0 — espera longa deixou de sequestrar o painel (o botao dos Novos morto)
+
+**Print dele:** *"travou para começar os novos, o botão bloqueou e continua a mensagem de aviso"* — com o
+aprendizado do envio de imagem JÁ CONCLUÍDO na tela (*"Envio aprendido em 20/09/2026, 10:25:35, 6
+passos"*).
+
+**Causa raiz, medida:** o laço que espera ele mandar a imagem à mão roda dentro de `withBusy`, e
+`withBusy` é um interruptor **único** do painel — a primeira linha dele é `if (state.busy) return`. Ou
+seja: durante os até **200 s** de espera, **todo** botão do painel devolvia em silêncio, inclusive
+"Começar pelos Novos". E a espera é justamente aquela em que ele precisa das duas coisas ao mesmo tempo:
+a plataforma para mandar a imagem e o painel para seguir trabalhando.
+
+**A forma veio do aprendizado do contrato de escrita**, que faz o mesmo há meses (150 s dentro do
+`withBusy`) e nunca incomodou porque é botão de uso raro, em tela escondida. Os três botões dele
+(`Cidade`, `Etiquetas`, `data`) foram junto para o caminho novo.
+
+**Conserto:** `semTravarOPainel(chave, fn)`, ao lado do `withBusy`. A trava passa a ser **por tarefa** —
+só impede começar a MESMA espera duas vezes — e o resto do painel continua vivo. A gravação da imagem
+ganhou **botão "Parar a gravação"** e a rodada é **numerada**: parar e recomeçar em seguida deixaria o
+laço antigo vivo por até 2 s, e ao acabar ele desligaria a gravação que a rodada nova acabou de ligar.
+
+**Segundo defeito da mesma print:** o aviso *"falta o passo de aprender o envio com você mandando uma
+imagem à mão uma vez"* continuava na tela **depois de aprendido** — texto que não envelhece com o que já
+foi feito. Hoje ele lê `state.contratoImagem` e diz a única metade que continua verdadeira: aprendido ou
+não, **a imagem ainda não sai** (falta eu ligar o envio a partir do que foi gravado).
+
+**Pendência dele:** o contrato de 6 passos está gravado na máquina dele. Falta ele me avisar para eu ler
+o formato capturado e ligar o envio de verdade.
+
 ## 2026-09-20 — v3.92.0 — a extensão aprende o envio de imagem observando ele mandar uma vez
 
 **Continuação do pedido dele.** O formato da cadeia de upload não dá para ler inteiro no pacote: sabe-se

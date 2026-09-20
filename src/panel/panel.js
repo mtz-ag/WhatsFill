@@ -285,6 +285,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     imagens: { imagemMomentoArquivo: null, imagemPedidoDadosArquivo: null },
     /** O envio de imagem aprendido observando a plataforma — ver `recorder.aprenderEnvioDeImagem`. */
     contratoImagem: null,
+    /** Esperas longas em curso, por tarefa — ver `semTravarOPainel`. NUNCA use `state.busy` para elas. */
+    esperando: {},
     busy: false,
     lastSendAt: 0,
     error: null,
@@ -8616,9 +8618,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * vez — a mesma disciplina do contrato de escrita no CRM (`recorder.js`).
      */
     if (ligada && (guardada || (caminho && !doDisco))) {
+      /**
+       * **Aviso que não envelhece com o que já foi feito é aviso que mente** — ele aprendeu o envio e o
+       * texto continuava mandando aprender (print de 20/09/2026). O que continua verdade é só a segunda
+       * metade: aprendido ou não, a imagem ainda não sai.
+       */
       linhas.push(h('div', { class: 'wf-block', 'data-fica': '1' },
-        'Guardado. A extensão ainda não manda a imagem sozinha: falta o passo de aprender o envio ' +
-          'com você mandando uma imagem à mão uma vez. Até lá, o texto sai sem ela.'));
+        state.contratoImagem
+          ? 'Guardado, e o envio já foi aprendido. Falta eu ligar o envio de verdade a partir do que ' +
+            'foi gravado — até lá o texto sai sem a imagem.'
+          : 'Guardado. A extensão ainda não manda a imagem sozinha: falta o passo de aprender o envio ' +
+            'com você mandando uma imagem à mão uma vez. Até lá, o texto sai sem ela.'));
     }
     return linhas;
   }
@@ -8632,46 +8642,75 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    */
   function aprenderEnvioDeImagemUI() {
     const contrato = state.contratoImagem;
+    const gravando = !!state.esperando.imagem;
     const linhas = [];
     const btn = h('button', { class: 'wf-btn', type: 'button' },
-      contrato ? 'Aprender de novo o envio de imagem' : 'Aprender envio de imagem');
-    btn.addEventListener('click', () =>
-      withBusy(async () => {
-        setStatus('Gravando: mande UMA imagem com legenda pela plataforma, no seu contato de teste.');
-        try {
-          await page.aprenderImagemStart();
-          // Espera em passos de 2 s: quem termina é ele, mandando a imagem na outra metade da tela.
-          for (let i = 0; i < 100; i += 1) {
-            await new Promise((ok) => setTimeout(ok, 2000));
-            const r = await page.aprenderImagemStatus();
-            if (r?.status === 'done') {
-              state.contratoImagem = r.contrato;
-              setStatus(`Aprendi o envio em ${r.contrato.passos.length} passos.`);
-              break;
-            }
-            if (r?.status === 'error') {
-              setStatus(r.error || 'não consegui aprender', 'err');
-              break;
-            }
-          }
-        } catch (err) {
-          setStatus(err?.message || String(err), 'err');
-        } finally {
-          await page.recorderStop().catch(() => {});
-          renderAll();
-        }
-      })
-    );
+      gravando
+        ? 'Parar a gravação'
+        : contrato
+          ? 'Aprender de novo o envio de imagem'
+          : 'Aprender envio de imagem');
+    btn.addEventListener('click', () => (gravando ? pararDeAprenderImagem() : aprenderEnvioDeImagem()));
     linhas.push(h('div', { class: 'wf-row' }, [btn]));
     linhas.push(
-      h('div', { class: contrato ? 'wf-origin' : 'wf-block', 'data-fica': '1' },
-        contrato
-          ? `Envio aprendido em ${new Date(contrato.aprendidoEm).toLocaleString('pt-BR')}, ` +
-            `${contrato.passos.length} passos. Me avise para eu ligar o envio automático.`
-          : 'A extensão ainda não sabe mandar imagem. Clique aqui, mande UMA imagem com legenda à mão ' +
-            'no contato de teste, e ela copia o formato. Nada é enviado para fora: fica no seu navegador.')
+      h('div', { class: contrato && !gravando ? 'wf-origin' : 'wf-block', 'data-fica': '1' },
+        gravando
+          ? 'Gravando. Mande UMA imagem com legenda à mão, pela plataforma, no seu contato de teste. ' +
+            'O painel continua funcionando; se você não mandar, eu paro sozinho em 3 minutos.'
+          : contrato
+            ? `Envio aprendido em ${new Date(contrato.aprendidoEm).toLocaleString('pt-BR')}, ` +
+              `${contrato.passos.length} passos. Me avise para eu ligar o envio automático.`
+            : 'A extensão ainda não sabe mandar imagem. Clique aqui, mande UMA imagem com legenda à mão ' +
+              'no contato de teste, e ela copia o formato. Nada é enviado para fora: fica no seu navegador.')
     );
     return linhas;
+  }
+
+  /**
+   * **Quem termina esta espera é ELE, na outra metade da tela** — por isso ela fica fora do `withBusy`
+   * (ver `semTravarOPainel`) e tem botão de parar.
+   *
+   * A rodada é numerada porque parar e recomeçar em seguida deixaria o laço antigo vivo por até 2 s: ao
+   * acabar, ele desligaria a gravação que a rodada NOVA acabou de ligar.
+   */
+  let rodadaDeImagem = 0;
+
+  async function aprenderEnvioDeImagem() {
+    const minha = (rodadaDeImagem += 1);
+    return semTravarOPainel('imagem', async () => {
+      setStatus('Gravando: mande UMA imagem com legenda pela plataforma, no seu contato de teste.');
+      try {
+        await page.aprenderImagemStart();
+        // Espera em passos de 2 s, por até ~3 min — o mesmo prazo do gravador.
+        for (let i = 0; i < 100 && rodadaDeImagem === minha; i += 1) {
+          await new Promise((ok) => setTimeout(ok, 2000));
+          if (rodadaDeImagem !== minha) return;
+          const r = await page.aprenderImagemStatus();
+          if (r?.status === 'done') {
+            state.contratoImagem = r.contrato;
+            setStatus(`Aprendi o envio em ${r.contrato.passos.length} passos.`, 'ok');
+            return;
+          }
+          if (r?.status === 'error') {
+            setStatus(r.error || 'não consegui aprender o envio', 'err');
+            return;
+          }
+        }
+        if (rodadaDeImagem === minha) {
+          setStatus('Parei de gravar: não vi envio de imagem nenhum. Clique de novo quando for mandar.', 'err');
+        }
+      } finally {
+        if (rodadaDeImagem === minha) await page.recorderStop().catch(() => {});
+      }
+    });
+  }
+
+  function pararDeAprenderImagem() {
+    rodadaDeImagem += 1; // o laço em curso vê o número mudado e encerra sem desligar nada de ninguém
+    state.esperando.imagem = false;
+    page.recorderStop().catch(() => {});
+    setStatus('Parei de gravar.');
+    renderAll();
   }
 
   function campoTexto(rotulo, valor, onChange) {
@@ -12346,7 +12385,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     const learnText = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Aprender campo de texto (Cidade)');
     learnText.addEventListener('click', () =>
-      withBusy(() =>
+      // Espera longa: fora do `withBusy`, senão o painel inteiro morre enquanto ele altera o campo pela
+      // plataforma — é o mesmo defeito que travou "Começar pelos Novos" (20/09/2026).
+      semTravarOPainel('contrato', () =>
         learn(
           'Cidade',
           [SENTINEL],
@@ -12360,10 +12401,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // O suporte a MULTISELECT continua em contract.js (com teste) — só não há campo usando.
 
     const learnTags = h('button', { class: 'wf-btn', type: 'button' }, 'Aprender etiquetas');
-    learnTags.addEventListener('click', () => withBusy(learnTagContract));
+    learnTags.addEventListener('click', () => semTravarOPainel('contrato', learnTagContract));
 
     const learnDate = h('button', { class: 'wf-btn', type: 'button' }, 'Aprender data (conclusão)');
-    learnDate.addEventListener('click', () => withBusy(learnDateContract));
+    learnDate.addEventListener('click', () => semTravarOPainel('contrato', learnDateContract));
 
     body.append(h('div', { class: 'wf-row' }, [learnText, learnTags, learnDate]));
 
@@ -12528,6 +12569,36 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * mortos e continuavam assim: era o bug de "as respostas rápidas ficaram obsoletas depois de
    * enviar, só voltaram recarregando".
    */
+  /**
+   * **Espera longa NAO pode passar por `withBusy`.**
+   *
+   * Print dele (20/09/2026): *"travou para começar os novos, o botão bloqueou"*. `withBusy` é um
+   * interruptor **único** do painel (`if (state.busy) return`), então enquanto a extensão esperava ele
+   * mandar a imagem à mão — até 200 s —, **todo** botão do painel morria em silêncio, inclusive
+   * "Começar pelos Novos". E aprender é justamente a espera em que ele precisa das duas coisas: a
+   * plataforma para agir e o painel para seguir trabalhando.
+   *
+   * Aqui a trava é por TAREFA, e é só isto que ela impede: começar a MESMA espera duas vezes.
+   */
+  async function semTravarOPainel(chave, fn) {
+    if (state.esperando[chave]) return undefined;
+    state.esperando[chave] = true;
+    renderAll();
+    try {
+      return await fn();
+    } catch (err) {
+      setStatus(err?.message || String(err), 'err');
+      return undefined;
+    } finally {
+      state.esperando[chave] = false;
+      try {
+        renderAll();
+      } catch (err) {
+        console.warn('[WhatsFill] falha ao redesenhar o painel:', err);
+      }
+    }
+  }
+
   async function withBusy(fn) {
     if (state.busy) return;
     state.busy = true;

@@ -2146,6 +2146,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **ESPERA LONGA NAO PODE PASSAR POR `withBusy` — ela sequestra o painel inteiro** (20/09/2026, *"travou
+  para começar os novos, o botão bloqueou"*). `withBusy` abre com `if (state.busy) return`: é um
+  interruptor ÚNICO, então o laço que esperava ele mandar a imagem à mão (até 200 s) matava TODO botão do
+  painel em silêncio, inclusive "Começar pelos Novos". Pior: a espera é exatamente aquela em que ele
+  precisa da plataforma **e** do painel. A forma veio do aprendizado do contrato de escrita, que faz o
+  mesmo desde sempre (150 s) e não incomodava por ser botão raro. Hoje o caminho é
+  **`semTravarOPainel(chave, fn)`**, com trava por TAREFA, e quem espera tem botão de PARAR e **rodada
+  numerada** — parar e recomeçar deixa o laço antigo vivo por até 2 s, e ao acabar ele desligaria a
+  gravação que a rodada nova ligou. **Regra: `withBusy` é para ação que o painel termina sozinho; espera
+  que quem termina é ELE, na outra metade da tela, nunca.**
+- **AVISO QUE NAO ENVELHECE COM O QUE JA FOI FEITO E AVISO QUE MENTE** (mesma print). O texto *"falta o
+  passo de aprender o envio"* continuava na tela com o envio já aprendido, porque não consultava
+  `state.contratoImagem`. É a família do aviso que mandava procurar o interruptor na aba errada (06/09) e
+  do log que dizia *"não gravada"* e gravava (07/09). **Ao escrever aviso de "falta fazer X", escreva
+  junto o que ele diz DEPOIS de X feito** — e deixe só a parte que continua verdadeira.
+
 - **O CLIQUE NO ANUNCIO E O PEDIDO ESCRITO SAO SINAIS DIFERENTES** (19/09/2026, o Jair: escreveu pedindo
   material na chegada e recebeu so o recibo). `pedeMaterial` conta o clique de proposito (o anuncio de
   material E o pedido); para dizer "ela pediu algo que o recibo nao responde" o sinal e
