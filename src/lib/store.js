@@ -725,6 +725,20 @@ const DEFAULTS = {
    * sobrescrito** — escolha dele em 31/08, entre trocar sozinho e separar.
    */
   etiquetaNomeDivergente: '',
+  /**
+   * **AS IMAGENS QUE VÃO JUNTO, guardadas dentro da extensão** — 20/09/2026.
+   *
+   * Ele pediu o CAMINHO do disco (`C:\…`) porque é assim que ele manda pela plataforma. **Nenhuma
+   * extensão pode fazer isso**: preencher campo de arquivo a partir de um caminho é justamente o que
+   * o navegador proíbe, e a janela de escolher arquivo é do Windows. O que funciona é ele escolher a
+   * imagem UMA vez aqui (a janela abre a partir do clique DELE, que é permitido) e a extensão montar
+   * o arquivo na hora do envio — para a plataforma fica idêntico a ter vindo do disco.
+   *
+   * Cada uma é `{ nome, mime, dados }`, com `dados` em base64. **Chaves de TOPO e não dentro de
+   * `auto`**: são grandes, e `auto` vai inteiro no backup que ele manda por aí.
+   */
+  imagemMomentoArquivo: null,
+  imagemPedidoDadosArquivo: null,
   /** { "santo angelo": "https://chat.whatsapp.com/..." } — chave sempre normalizada. */
   cityLinks: {},
   /** Usado quando a cidade não tem grupo próprio. Vazio = bloqueia o envio. */
@@ -1457,6 +1471,10 @@ export async function exportJson() {
   delete data.iaChave; // credencial: backup é arquivo que circula
   delete data.iaChaveOpenai; // idem — são duas chaves desde 07/09/2026
   delete data.iaChaveOpenrouter; // e três desde 18/09/2026
+  // As imagens saem do backup por TAMANHO, não por segredo: uma arte em base64 tem centenas de
+  // milhares de caracteres, e o backup existe para ele mandar as configurações, não os arquivos.
+  delete data.imagemMomentoArquivo;
+  delete data.imagemPedidoDadosArquivo;
   return JSON.stringify(data, null, 2);
 }
 

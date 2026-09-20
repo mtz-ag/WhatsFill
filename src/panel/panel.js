@@ -281,6 +281,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * ajuda em nada: cada uma é recusada pela outra API.
      */
     iaChaves: { anthropic: false, openai: false },
+    /** As imagens que vão junto da mensagem, lidas do armazenamento — ver `campoDeImagem`. */
+    imagens: { imagemMomentoArquivo: null, imagemPedidoDadosArquivo: null },
     busy: false,
     lastSendAt: 0,
     error: null,
@@ -1477,6 +1479,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * do `rodadaAutomatica()`.
    */
   async function lerChavesDaIA() {
+    state.imagens = {
+      imagemMomentoArquivo: await store.get('imagemMomentoArquivo'),
+      imagemPedidoDadosArquivo: await store.get('imagemPedidoDadosArquivo'),
+    };
     state.iaChaves = {
       anthropic: !!(await store.get('iaChave')),
       openai: !!(await store.get('iaChaveOpenai')),
@@ -3414,11 +3420,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     ]);
 
     card.append(...campoDeImagem({
-      rotulo: 'Imagem junto da mensagem do momento (link https)',
+      rotulo: 'Imagem junto da mensagem do momento',
       valor: cfg.imagemMomento,
       ligada: cfg.imagemMomentoLigada,
       aoMudar: (v) => salvarAuto({ imagemMomento: v }).then(renderAll),
       aoLigar: (v) => salvarAuto({ imagemMomentoLigada: v }).then(renderAll),
+      chaveDoArquivo: 'imagemMomentoArquivo',
     }));
 
     const area = h('textarea', { rows: '4', placeholder: 'Ex.: {{saudacao}}! Feliz Dia dos Pais…' });
@@ -3447,11 +3454,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'depois, chega sem contexto. Deixe vazio para a tecla 5 mandar só a mensagem do momento.')
     );
     card.append(...campoDeImagem({
-      rotulo: 'Imagem junto do pedido de dados (link https)',
+      rotulo: 'Imagem junto do pedido de dados',
       valor: cfg.imagemPedidoDados,
       ligada: cfg.imagemPedidoDadosLigada,
       aoMudar: (v) => salvarAuto({ imagemPedidoDados: v }).then(renderAll),
       aoLigar: (v) => salvarAuto({ imagemPedidoDadosLigada: v }).then(renderAll),
+      chaveDoArquivo: 'imagemPedidoDadosArquivo',
     }));
 
     const pedido = h('textarea', { rows: '4', placeholder: 'Deixe vazio para não pedir junto' });
@@ -8524,24 +8532,85 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * **Caminho do disco (`C:\...`) não serve, e o aviso diz isso na hora**: a extensão roda dentro da
    * página e não lê arquivo do computador; o que ela consegue buscar é um endereço público.
    */
-  function campoDeImagem({ rotulo, valor, ligada, aoMudar, aoLigar }) {
+  function campoDeImagem({ rotulo, valor, ligada, aoMudar, aoLigar, chaveDoArquivo }) {
     const caminho = String(valor || '').trim();
     const doDisco = /^[a-z]:\\/i.test(caminho) || caminho.startsWith('\\\\') || caminho.startsWith('file:');
-    const linhas = [
-      checkbox(`${rotulo.split(' (')[0]}: mandar junto`, !!ligada, aoLigar),
-      campoTexto(rotulo, caminho, aoMudar),
-    ];
+    const guardada = state.imagens?.[chaveDoArquivo] || null;
+    const nome = rotulo.split(' (')[0];
+    const linhas = [checkbox(`${nome}: mandar junto`, !!ligada, aoLigar)];
+
+    /**
+     * **Escolher o arquivo é o caminho principal** (20/09/2026). A janela do Windows abre a partir do
+     * clique DELE — é o único jeito de um arquivo do disco entrar no navegador —, e o que fica guardado
+     * são os BYTES, não o caminho: mover ou renomear a arte depois não quebra o envio.
+     */
+    const escolher = h('input', { type: 'file', accept: 'image/*', style: 'display:none' });
+    escolher.addEventListener('change', () =>
+      withBusy(async () => {
+        const arquivo = escolher.files && escolher.files[0];
+        if (!arquivo) return;
+        // Teto de 2 MB: o armazenamento da extensão é limitado e uma arte de WhatsApp cabe folgada.
+        if (arquivo.size > 2 * 1024 * 1024) {
+          return setStatus(`A imagem tem ${(arquivo.size / 1024 / 1024).toFixed(1)} MB. Use uma de até 2 MB.`, 'err');
+        }
+        const dados = await new Promise((ok, falhou) => {
+          const leitor = new FileReader();
+          leitor.onerror = () => falhou(new Error('não consegui ler o arquivo'));
+          leitor.onload = () => ok(String(leitor.result || '').split(',')[1] || '');
+          leitor.readAsDataURL(arquivo);
+        });
+        if (!dados) return setStatus('Não consegui ler a imagem.', 'err');
+        await store.set(chaveDoArquivo, { nome: arquivo.name, mime: arquivo.type || 'image/jpeg', dados });
+        state.imagens[chaveDoArquivo] = { nome: arquivo.name, mime: arquivo.type || 'image/jpeg', dados };
+        setStatus(`Imagem "${arquivo.name}" guardada.`);
+        renderAll();
+      })
+    );
+    const btnEscolher = h('button', { class: 'wf-btn', type: 'button' }, guardada ? 'Trocar a imagem' : 'Escolher imagem');
+    btnEscolher.addEventListener('click', () => escolher.click());
+    const botoes = [btnEscolher];
+    if (guardada) {
+      const btnTirar = h('button', { class: 'wf-btn wf-mini', type: 'button' }, 'Tirar');
+      btnTirar.addEventListener('click', () =>
+        withBusy(async () => {
+          await store.set(chaveDoArquivo, null);
+          state.imagens[chaveDoArquivo] = null;
+          setStatus('Imagem removida.');
+          renderAll();
+        })
+      );
+      botoes.push(btnTirar);
+    }
+    linhas.push(h('div', { class: 'wf-row' }, [...botoes, escolher]));
+
+    if (guardada) {
+      const mini = h('img', {
+        src: `data:${guardada.mime};base64,${guardada.dados}`,
+        alt: guardada.nome,
+        style: 'max-height:64px;max-width:120px;border-radius:6px;display:block',
+      });
+      const tamanho = Math.round((guardada.dados.length * 3) / 4 / 1024);
+      linhas.push(
+        h('div', { class: 'wf-row', 'data-fica': '1' }, [
+          mini,
+          h('div', { class: 'wf-preview', 'data-fica': '1' }, `${guardada.nome} · ${tamanho} KB`),
+        ])
+      );
+    }
+
+    linhas.push(campoTexto(`${nome}: link da imagem (opcional, https)`, caminho, aoMudar));
     if (doDisco) {
       linhas.push(h('div', { class: 'wf-block', 'data-fica': '1' },
-        'Isto é um caminho do computador, e a extensão não lê arquivo do disco. Ponha o link da ' +
-          'imagem (https://…) — o mesmo endereço que abre no navegador.'));
+        'Isto é um caminho do computador, e nenhuma extensão pode usá-lo: preencher campo de arquivo ' +
+          'a partir de um caminho é o que o navegador proíbe. Use o botão "Escolher imagem" aqui em ' +
+          'cima — a janela do Windows abre a partir do seu clique, e a extensão guarda a imagem.'));
     }
     /**
      * **A extensão ainda NÃO manda a imagem**, e o campo dizer isso é a diferença entre um controle
      * que espera conserto e um que mente. Falta aprender o envio observando a plataforma fazer uma
      * vez — a mesma disciplina do contrato de escrita no CRM (`recorder.js`).
      */
-    if (ligada && caminho && !doDisco) {
+    if (ligada && (guardada || (caminho && !doDisco))) {
       linhas.push(h('div', { class: 'wf-block', 'data-fica': '1' },
         'Guardado. A extensão ainda não manda a imagem sozinha: falta o passo de aprender o envio ' +
           'com você mandando uma imagem à mão uma vez. Até lá, o texto sai sem ela.'));

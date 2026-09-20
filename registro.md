@@ -1,3 +1,33 @@
+## 2026-09-20 — v3.91.0 — a imagem se ESCOLHE, e o caminho do disco não existe para extensão nenhuma
+
+**Correção dele:** *"precisa ser pelo C:\ — ao mandar imagem pela plataforma ela pega do disco"*, e a
+ideia de eu alcançar o arquivo pela Claude no Chrome.
+
+**Medido no pacote da plataforma:** ao anexar, ela cria um `<input type="file" accept="image/*">` e lê o
+arquivo do `onchange` (`uploadInput.nativeElement.click()`). Ou seja: o que ela recebe são BYTES, e não um
+caminho.
+
+**Por que o caminho não serve para NENHUMA extensão** (nem a WhatsFill, nem a Claude no Chrome): preencher
+campo de arquivo a partir de um caminho é exatamente o que o navegador proíbe — se desse, qualquer site
+leria o disco de quem o abre —, e a janela de "escolher arquivo" é do Windows, fora do navegador.
+
+**O que funciona, e é o que entrou:** botão **"Escolher imagem"** em cada um dos dois campos (momento e
+pedido de dados). A janela abre a partir do CLIQUE DELE, que é o caminho permitido; a extensão guarda os
+BYTES (`imagemMomentoArquivo` / `imagemPedidoDadosArquivo`, `{nome, mime, dados}` em base64), mostra a
+miniatura com nome e tamanho, e tem "Tirar". Guardar os bytes e não o caminho tem um ganho de lado: mover
+ou renomear a arte depois não quebra o envio. Teto de 2 MB, com o motivo na tela. O campo de LINK continua,
+para arte já publicada, e o caminho `C:\…` colado ali passou a explicar por que não dá.
+
+**As imagens são chaves de TOPO e saem do `exportJson`** — por tamanho, não por segredo: base64 de uma arte
+tem centenas de milhares de caracteres, e o backup existe para levar configuração, não arquivo.
+
+**Continua faltando o envio**, e a tela diz isso com a imagem escolhida: falta aprender o formato
+observando a plataforma mandar uma vez.
+
+**Arquivos:** `src/lib/store.js`, `src/panel/panel.js`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-20 — v3.90.0 — os campos da imagem que vai junto (o envio ainda falta)
 
 **Pedido dele:** *"preciso da opção de mandar imagem e na descrição mandar mensagem do momento ou pedir
