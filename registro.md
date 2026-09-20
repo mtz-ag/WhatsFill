@@ -1,3 +1,31 @@
+## 2026-09-20 — v3.92.0 — a extensão aprende o envio de imagem observando ele mandar uma vez
+
+**Continuação do pedido dele.** O formato da cadeia de upload não dá para ler inteiro no pacote: sabe-se
+que existe (`POST /core/v1/file/upload`, o upload, a mensagem com o arquivo), não o corpo de cada passo.
+Chutar aqui é mandar coisa errada para eleitor — então vale a disciplina do contrato de escrita: a
+extensão OBSERVA ele fazer uma vez e copia.
+
+**Três peças:**
+1. **O gravador passou a capturar a RESPOSTA**, e só com a gravação ligada (`page-hook` + `bus`). Sem
+   isso a cadeia fica cega no meio: é a resposta do primeiro passo que diz para onde o arquivo sobe.
+2. **E passou a capturar o UPLOAD**, que sai para outro endereço (armazenamento assinado) e por isso não
+   casava com o filtro antigo `url.startsWith(API)`.
+3. **`recorder.aprenderEnvioDeImagem`** liga a gravação, espera o primeiro passo da cadeia e continua
+   gravando por 20 s; guarda os passos (método, URL, corpo e resposta, recortados em 1.500 caracteres)
+   em `contratoImagem`. O botão **"Aprender envio de imagem"** está no cartão da mensagem do momento, e
+   vai pela ponte `page.js` (`aprenderImagemStart`/`Status`) — no modo janela o painel não roda na aba.
+
+**Nada sai da máquina dele:** o contrato fica no armazenamento da extensão e **fora do `exportJson`** (o
+corpo capturado pode ter pedaço de conversa).
+
+**O que ainda NÃO existe:** o envio em si. Com o contrato aprendido a tela diz que está aprendido e pede
+para me avisar — o passo seguinte é eu ler o formato capturado e ligar o envio de verdade.
+
+**Arquivos:** `src/page-hook.js`, `src/lib/bus.js`, `src/lib/recorder.js`, `src/lib/page.js`,
+`src/lib/rpc-host.js`, `src/panel/panel.js`, `src/lib/store.js`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-20 — v3.91.0 — a imagem se ESCOLHE, e o caminho do disco não existe para extensão nenhuma
 
 **Correção dele:** *"precisa ser pelo C:\ — ao mandar imagem pela plataforma ela pega do disco"*, e a

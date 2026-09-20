@@ -64,12 +64,28 @@
   XMLHttpRequest.prototype.send = function (body) {
     try {
       const info = this.__wf;
-      if (recording && info && info.url.startsWith(API) && info.method !== 'GET') {
+      if (recording && info && interessa(info.url) && info.method !== 'GET') {
         send('request', {
           method: info.method,
           url: info.url,
           body: serializeBody(body),
           at: Date.now(),
+        });
+        /**
+         * **A RESPOSTA também, e só gravando** (20/09/2026, o envio de imagem). O upload de arquivo
+         * é uma cadeia: a primeira chamada devolve a URL assinada, e sem ler a resposta não há como
+         * saber para onde o arquivo vai. O contrato de escrita no CRM nunca precisou disto — ali o
+         * pedido bastava —, então a captura da resposta nasce agora, e **só com a gravação ligada**.
+         */
+        this.addEventListener('load', () => {
+          try {
+            send('response', {
+              url: info.url,
+              status: this.status,
+              body: String(this.responseText || '').slice(0, 4000),
+              at: Date.now(),
+            });
+          } catch (_) {}
         });
       }
     } catch (_) {}
@@ -89,12 +105,31 @@
           send('token', { token: auth });
         }
       }
-      if (recording && url && String(url).startsWith(API) && method !== 'GET') {
+      if (recording && url && interessa(String(url)) && method !== 'GET') {
         send('request', { method, url: String(url), body: serializeBody(init && init.body), at: Date.now() });
+        return origFetch.apply(this, arguments).then((r) => {
+          try {
+            r.clone()
+              .text()
+              .then((t) => send('response', { url: String(url), status: r.status, body: String(t || '').slice(0, 4000), at: Date.now() }))
+              .catch(() => {});
+          } catch (_) {}
+          return r;
+        });
       }
     } catch (_) {}
     return origFetch.apply(this, arguments);
   };
+
+  /**
+   * **O que entra na gravação.** A API do mobiliza, como sempre — e agora o UPLOAD, que sai para
+   * outro endereço (o armazenamento assinado). Sem ele a cadeia da imagem fica com um buraco no meio,
+   * e é justamente o passo que leva os bytes.
+   */
+  function interessa(url) {
+    const u = String(url || '');
+    return u.startsWith(API) || /(amazonaws\.com|storage\.googleapis\.com|blob\.core\.windows\.net)/i.test(u);
+  }
 
   function serializeBody(body) {
     if (body == null) return null;

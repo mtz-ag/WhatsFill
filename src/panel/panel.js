@@ -283,6 +283,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     iaChaves: { anthropic: false, openai: false },
     /** As imagens que vão junto da mensagem, lidas do armazenamento — ver `campoDeImagem`. */
     imagens: { imagemMomentoArquivo: null, imagemPedidoDadosArquivo: null },
+    /** O envio de imagem aprendido observando a plataforma — ver `recorder.aprenderEnvioDeImagem`. */
+    contratoImagem: null,
     busy: false,
     lastSendAt: 0,
     error: null,
@@ -1479,6 +1481,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * do `rodadaAutomatica()`.
    */
   async function lerChavesDaIA() {
+    state.contratoImagem = await store.get('contratoImagem');
     state.imagens = {
       imagemMomentoArquivo: await store.get('imagemMomentoArquivo'),
       imagemPedidoDadosArquivo: await store.get('imagemPedidoDadosArquivo'),
@@ -3478,6 +3481,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'do contato como resposta ao pedido, e vai pedir de novo.'));
 
     }
+
+    card.append(...aprenderEnvioDeImagemUI());
 
     // Mesmo tratamento das respostas prontas: reveza entre variações a cada envio de verdade,
     // para não repetir a mesma frase mandada em massa para quem recebe a mensagem do momento.
@@ -8615,6 +8620,57 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         'Guardado. A extensão ainda não manda a imagem sozinha: falta o passo de aprender o envio ' +
           'com você mandando uma imagem à mão uma vez. Até lá, o texto sai sem ela.'));
     }
+    return linhas;
+  }
+
+  /**
+   * **O botão que aprende o envio de imagem** — a extensão observa ELE mandando uma vez e copia o
+   * formato, em vez de adivinhar a cadeia de upload (a mesma disciplina do contrato de escrita).
+   *
+   * Enquanto não houver contrato, a linha diz que a imagem não sai — controle que promete o que não
+   * faz é pior que controle nenhum.
+   */
+  function aprenderEnvioDeImagemUI() {
+    const contrato = state.contratoImagem;
+    const linhas = [];
+    const btn = h('button', { class: 'wf-btn', type: 'button' },
+      contrato ? 'Aprender de novo o envio de imagem' : 'Aprender envio de imagem');
+    btn.addEventListener('click', () =>
+      withBusy(async () => {
+        setStatus('Gravando: mande UMA imagem com legenda pela plataforma, no seu contato de teste.');
+        try {
+          await page.aprenderImagemStart();
+          // Espera em passos de 2 s: quem termina é ele, mandando a imagem na outra metade da tela.
+          for (let i = 0; i < 100; i += 1) {
+            await new Promise((ok) => setTimeout(ok, 2000));
+            const r = await page.aprenderImagemStatus();
+            if (r?.status === 'done') {
+              state.contratoImagem = r.contrato;
+              setStatus(`Aprendi o envio em ${r.contrato.passos.length} passos.`);
+              break;
+            }
+            if (r?.status === 'error') {
+              setStatus(r.error || 'não consegui aprender', 'err');
+              break;
+            }
+          }
+        } catch (err) {
+          setStatus(err?.message || String(err), 'err');
+        } finally {
+          await page.recorderStop().catch(() => {});
+          renderAll();
+        }
+      })
+    );
+    linhas.push(h('div', { class: 'wf-row' }, [btn]));
+    linhas.push(
+      h('div', { class: contrato ? 'wf-origin' : 'wf-block', 'data-fica': '1' },
+        contrato
+          ? `Envio aprendido em ${new Date(contrato.aprendidoEm).toLocaleString('pt-BR')}, ` +
+            `${contrato.passos.length} passos. Me avise para eu ligar o envio automático.`
+          : 'A extensão ainda não sabe mandar imagem. Clique aqui, mande UMA imagem com legenda à mão ' +
+            'no contato de teste, e ela copia o formato. Nada é enviado para fora: fica no seu navegador.')
+    );
     return linhas;
   }
 

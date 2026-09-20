@@ -737,6 +737,8 @@ const DEFAULTS = {
    * Cada uma é `{ nome, mime, dados }`, com `dados` em base64. **Chaves de TOPO e não dentro de
    * `auto`**: são grandes, e `auto` vai inteiro no backup que ele manda por aí.
    */
+  /** A cadeia do envio de imagem, aprendida observando a plataforma (ver `recorder`). */
+  contratoImagem: null,
   imagemMomentoArquivo: null,
   imagemPedidoDadosArquivo: null,
   /** { "santo angelo": "https://chat.whatsapp.com/..." } — chave sempre normalizada. */
@@ -1475,6 +1477,7 @@ export async function exportJson() {
   // milhares de caracteres, e o backup existe para ele mandar as configurações, não os arquivos.
   delete data.imagemMomentoArquivo;
   delete data.imagemPedidoDadosArquivo;
+  delete data.contratoImagem; // pode ter pedaco de conversa dentro
   return JSON.stringify(data, null, 2);
 }
 

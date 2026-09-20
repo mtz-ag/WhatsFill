@@ -6,7 +6,7 @@
  */
 
 const ORIGIN = window.location.origin;
-const listeners = { token: [], request: [] };
+const listeners = { token: [], request: [], response: [] };
 
 let token = null;
 
@@ -20,6 +20,8 @@ window.addEventListener('message', (ev) => {
     listeners.token.forEach((fn) => fn(token));
   } else if (msg.type === 'request') {
     listeners.request.forEach((fn) => fn(msg.payload));
+  } else if (msg.type === 'response') {
+    listeners.response.forEach((fn) => fn(msg.payload));
   }
 });
 
@@ -48,6 +50,11 @@ export function waitForToken(timeoutMs = 20000) {
     // Só depois de registrar o ouvinte: o hook pode já ter o token de antes do painel subir.
     toPage('ping', {});
   });
+}
+
+/** A RESPOSTA da requisição gravada — só existe com a gravação ligada (ver `page-hook`). */
+export function onRecordedResponse(fn) {
+  listeners.response.push(fn);
 }
 
 export function onRecordedRequest(fn) {

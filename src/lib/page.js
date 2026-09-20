@@ -288,6 +288,31 @@ export const learnStart = IS_IN_PAGE
 export const learnStatus = IS_IN_PAGE ? local(() => learnLocal) : () => call('learnStatus');
 
 /**
+ * **Aprender o envio de IMAGEM** — em duas etapas pela mesma razão do contrato de escrita: entre
+ * começar e terminar, ele vai até a plataforma e manda a imagem à mão. No modo JANELA o painel não
+ * roda na aba, então o gravador só é alcançável por esta ponte.
+ */
+let imagemLocal = { status: 'idle' };
+
+export const aprenderImagemStart = IS_IN_PAGE
+  ? local(() => {
+      imagemLocal = { status: 'waiting' };
+      recorder
+        .aprenderEnvioDeImagem({})
+        .then((contrato) => {
+          imagemLocal = { status: 'done', contrato };
+        })
+        .catch((err) => {
+          imagemLocal = { status: 'error', error: err?.message || String(err) };
+        })
+        .finally(() => recorder.setEnabled(false));
+      return true;
+    })
+  : () => call('aprenderImagemStart');
+
+export const aprenderImagemStatus = IS_IN_PAGE ? local(() => imagemLocal) : () => call('aprenderImagemStatus');
+
+/**
  * O canal deste atendimento está fora do ar?
  *
  * Junta as duas leituras da tela — a tarja de desconexão e o número da instância da conversa —
