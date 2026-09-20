@@ -1,3 +1,17 @@
+## 2026-09-20 — v3.94.0 — o envio aprendido sai do navegador dele para mim, por decisao dele
+
+**Para eu escrever o envio de verdade eu preciso LER os 6 passos gravados** — e eles moram no
+armazenamento da extensao, na maquina dele. Nao alcanco de fora, e e assim que tem que ser.
+
+O caminho e o mesmo das observacoes da rodada: **"Copiar o envio aprendido"** poe o formato em texto na
+area de transferencia (e "Ver o que foi gravado" mostra na tela, para ele olhar antes). Recusada a area
+de transferencia, o texto fica SELECIONADO e o Ctrl+C dele resolve — o botao nunca fica mudo.
+
+**O aviso fica ao lado, e e o que torna isto seguro:** os corpos gravados podem levar a legenda que ele
+digitou e o id do contato, e foi por isso que o aprendizado foi no contato de TESTE.
+
+Nada e enviado por aqui: quem decide o que sai do navegador e ele, colando.
+
 ## 2026-09-20 — v3.93.0 — espera longa deixou de sequestrar o painel (o botao dos Novos morto)
 
 **Print dele:** *"travou para começar os novos, o botão bloqueou e continua a mensagem de aviso"* — com o

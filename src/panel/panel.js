@@ -8663,7 +8663,70 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             : 'A extensão ainda não sabe mandar imagem. Clique aqui, mande UMA imagem com legenda à mão ' +
               'no contato de teste, e ela copia o formato. Nada é enviado para fora: fica no seu navegador.')
     );
+    if (contrato && !gravando) linhas.push(...montarEnvioAprendido(contrato));
     return linhas;
+  }
+
+  /**
+   * **O que foi gravado, em texto, para ele me mandar.**
+   *
+   * O contrato mora no armazenamento da extensão, na máquina dele — eu não o alcanço daqui, e é assim
+   * que tem que ser. Para eu escrever o envio de verdade preciso LER os passos, então o caminho é o
+   * mesmo das observações da rodada: um botão que copia e uma caixa que mostra, para ele decidir o que
+   * sai do navegador dele.
+   *
+   * **O aviso é obrigatório:** os corpos gravados podem levar a legenda que ele digitou e o id do
+   * contato. Por isso o aprendizado é no contato de TESTE, e a caixa diz isso de novo aqui.
+   */
+  function montarEnvioAprendido(contrato) {
+    const texto = envioAprendidoEmTexto(contrato);
+    const caixa = h('textarea', { rows: '6', class: 'wf-mono', readonly: 'readonly' });
+    caixa.value = texto;
+    caixa.style.display = 'none';
+
+    const ver = h('button', { class: 'wf-btn wf-mini', type: 'button' }, 'Ver o que foi gravado');
+    ver.addEventListener('click', () => {
+      const escondido = caixa.style.display === 'none';
+      caixa.style.display = escondido ? '' : 'none';
+      ver.textContent = escondido ? 'Esconder' : 'Ver o que foi gravado';
+    });
+
+    const copiar = h('button', { class: 'wf-btn wf-mini', type: 'button' }, 'Copiar o envio aprendido');
+    copiar.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(texto);
+        setStatus('Copiado. Cole na conversa com o Claude para eu ligar o envio da imagem.', 'ok');
+      } catch (_) {
+        // Mesma saída das observações: recusada a área de transferência, o Ctrl+C dele resolve.
+        caixa.style.display = '';
+        ver.textContent = 'Esconder';
+        caixa.select();
+        setStatus('Não consegui copiar sozinho — o texto está selecionado, use Ctrl+C.', 'err');
+      }
+    });
+
+    return [
+      h('div', { class: 'wf-row' }, [copiar, ver]),
+      h('div', { class: 'wf-origin' },
+        'Isto é o formato que a plataforma usou, não a imagem. Pode levar a legenda que você digitou e ' +
+          'o id do contato — foi por isso que o aprendizado foi no contato de teste.'),
+      caixa,
+    ];
+  }
+
+  /** Os passos gravados em texto corrido: é o que eu leio para escrever o envio. */
+  function envioAprendidoEmTexto(contrato) {
+    const cabeca = `Envio de imagem aprendido em ${contrato.aprendidoEm}, ${contrato.passos.length} passos.`;
+    const corpo = contrato.passos
+      .map((passo, i) =>
+        [
+          `--- passo ${i + 1}: ${passo.metodo} ${passo.url}`,
+          `corpo: ${passo.corpo || '(vazio)'}`,
+          `resposta: ${passo.resposta || '(nao capturada)'}`,
+        ].join('\n')
+      )
+      .join('\n\n');
+    return `${cabeca}\n\n${corpo}\n`;
   }
 
   /**
