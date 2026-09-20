@@ -21,6 +21,7 @@ import * as iaLib from '../lib/ia.js';
 import * as gabineteLib from '../lib/gabinete.js';
 import * as anunciosLib from '../lib/anuncios.js';
 import * as observacoesLib from '../lib/observacoes.js';
+import * as imagemLib from '../lib/imagem.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
@@ -287,6 +288,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     contratoImagem: null,
     /** Esperas longas em curso, por tarefa — ver `semTravarOPainel`. NUNCA use `state.busy` para elas. */
     esperando: {},
+    /** De onde a plataforma manda neste atendimento, lido da conversa — ver `imagem.corpoDaMensagem`. */
+    senderId: '',
     busy: false,
     lastSendAt: 0,
     error: null,
@@ -500,6 +503,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       });
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.nossas = conversa.nossas || [];
+      // De onde a plataforma manda neste atendimento — o envio de imagem exige (ver `imagem.js`).
+      state.senderId = conversa.senderId || '';
       state.ultimaMensagem = conversa.ultima;
 
       // Sinal disparado por mensagem NOSSA (ou mídia): nada novo do contato para analisar.
@@ -621,6 +626,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       });
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.nossas = conversa.nossas || [];
+      // De onde a plataforma manda neste atendimento — o envio de imagem exige (ver `imagem.js`).
+      state.senderId = conversa.senderId || '';
       state.ultimaMensagem = conversa.ultima;
 
       /**
@@ -2469,7 +2476,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     await throttle();
     setStatus('Enviando…');
-    await page.sendText(text);
+    /**
+     * **A IMAGEM vai primeiro, e este texto é a legenda dela** (20/09/2026, pedido dele: *"preciso
+     * da opção de mandar imagem e na descrição mandar mensagem do momento ou pedir dados"*).
+     *
+     * Duas coisas que a ordem garante: falha de imagem **nunca** impede a mensagem (mesma prioridade
+     * de "falha de etiqueta nunca bloqueia o envio" — o que o contato recebe vem primeiro), e a
+     * legenda só é dada por entregue quando a plataforma a devolve na resposta. Não voltando, o
+     * texto sai do jeito de sempre: o pior caso é o contato receber duas mensagens, nunca uma
+     * imagem muda.
+     */
+    const comImagem = await mandarImagemSeLigada(template, text);
+    if (!comImagem.legendaFoi) await page.sendText(text);
     state.lastSendAt = Date.now();
     await templatesLib.markSent(alvo.id, template.id, { nome: alvo.name });
     await templatesLib.avancarVariante(template);
@@ -2491,8 +2509,46 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const marcaEndereco = templatesLib.ehPedidoDeEndereco(text)
       ? await etiquetarEndereco(alvo, { gatilho: `a resposta pronta "${template.name}" que acabou de sair pede o endereço`, acabamosDeMandar: text })
       : '';
-    setStatus(`Enviado: ${template.name}${marca}${marcaEndereco}`, 'ok');
+    setStatus(`Enviado: ${template.name}${comImagem.marca}${marca}${marcaEndereco}`, 'ok');
     return true;
+  }
+
+  /**
+   * **A imagem que acompanha este texto, se ele tiver uma ligada.**
+   *
+   * Quem decide QUAL é `imagem.imagemDoEnvio`, que é pura e testada — o momento casa pelo id e o
+   * pedido de dados pelo invariante do texto, que é como o resto do projeto o reconhece.
+   *
+   * Nunca lança: devolve `legendaFoi: false` e uma marca para o status. Imagem é acompanhamento;
+   * a mensagem é o que o contato precisa receber.
+   */
+  async function mandarImagemSeLigada(template, texto) {
+    const escolha = imagemLib.imagemDoEnvio({
+      templateId: template?.id,
+      ehPedidoDeDados: templatesLib.ehPedidoDeDados(texto),
+      cfg: state.auto?.cfg,
+      imagens: state.imagens,
+    });
+    if (!escolha) return { legendaFoi: false, marca: '' };
+
+    const chave = escolha.arquivo === state.imagens.imagemMomentoArquivo
+      ? 'imagemMomentoArquivo'
+      : 'imagemPedidoDadosArquivo';
+    try {
+      const r = await page.enviarImagem({
+        sessionId: state.pageState.sessionId,
+        senderId: state.senderId,
+        chave,
+        legenda: texto,
+      });
+      const comoFoi = r.legendaFoi ? '(legenda junto)' : '— a legenda foi como mensagem separada';
+      registrarNaRodada(state.contact?.name || 'contato', 'aviso', `imagem enviada com ${escolha.de} ${comoFoi}`);
+      return { legendaFoi: !!r.legendaFoi, marca: r.legendaFoi ? ' + imagem' : ' + imagem (legenda à parte)' };
+    } catch (err) {
+      const motivo = err?.message || String(err);
+      registrarNaRodada(state.contact?.name || 'contato', 'erro', `a imagem de ${escolha.de} NAO saiu: ${motivo}`);
+      return { legendaFoi: false, marca: ` — a imagem não saiu (${motivo})` };
+    }
   }
 
   /**
@@ -8551,7 +8607,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * clique DELE — é o único jeito de um arquivo do disco entrar no navegador —, e o que fica guardado
      * são os BYTES, não o caminho: mover ou renomear a arte depois não quebra o envio.
      */
-    const escolher = h('input', { type: 'file', accept: 'image/*', style: 'display:none' });
+    const escolher = h('input', { type: 'file', accept: imagemLib.MIMES_ACEITOS, style: 'display:none' });
     escolher.addEventListener('change', () =>
       withBusy(async () => {
         const arquivo = escolher.files && escolher.files[0];
@@ -8559,6 +8615,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // Teto de 2 MB: o armazenamento da extensão é limitado e uma arte de WhatsApp cabe folgada.
         if (arquivo.size > 2 * 1024 * 1024) {
           return setStatus(`A imagem tem ${(arquivo.size / 1024 / 1024).toFixed(1)} MB. Use uma de até 2 MB.`, 'err');
+        }
+        // Formato fora do que a plataforma mostrou como manda: recusa com o motivo, em vez de
+        // guardar uma imagem que o envio vai rejeitar depois, na hora em que ele não está olhando.
+        if (!imagemLib.conversaoDe(arquivo.type)) {
+          return setStatus(
+            `Por enquanto só JPEG: foi o formato que a plataforma mostrou como manda. ` +
+              `Para liberar "${arquivo.type || 'este formato'}", mande um à mão com "Aprender de novo o envio de imagem".`,
+            'err'
+          );
         }
         const dados = await new Promise((ok, falhou) => {
           const leitor = new FileReader();
@@ -8705,13 +8770,62 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
     });
 
+    const testar = h('button', { class: 'wf-btn wf-mini', type: 'button' }, 'Mandar a imagem no contato aberto (teste)');
+    testar.addEventListener('click', () => testarEnvioDeImagem());
+
     return [
       h('div', { class: 'wf-row' }, [copiar, ver]),
       h('div', { class: 'wf-origin' },
         'Isto é o formato que a plataforma usou, não a imagem. Pode levar a legenda que você digitou e ' +
           'o id do contato — foi por isso que o aprendizado foi no contato de teste.'),
       caixa,
+      h('div', { class: 'wf-row' }, [testar]),
+      h('div', { class: 'wf-origin' },
+        'A sonda: manda a imagem do momento AGORA, no atendimento que estiver aberto, com a mensagem ' +
+          'do momento como legenda. Use no seu contato de teste antes de deixar a rodada mandar.'),
     ];
+  }
+
+  /**
+   * **A sonda do envio de imagem** — "toda escrita em massa precisa de sonda que relê".
+   *
+   * Aqui a sonda é ele mandando UMA, no contato de teste, antes de a rodada mandar para eleitor. Pede
+   * confirmação com o nome do contato na frente, porque isto escreve em produção de verdade — e a
+   * resposta diz o que mais importa saber: **a legenda foi junto da imagem ou não?**
+   */
+  async function testarEnvioDeImagem() {
+    const arquivo = state.imagens?.imagemMomentoArquivo;
+    if (!arquivo) return setStatus('Escolha primeiro a imagem da mensagem do momento.', 'err');
+    if (!state.contact || !state.pageState.sessionId) {
+      return setStatus('Abra um atendimento (o seu contato de teste) antes de testar.', 'err');
+    }
+
+    const bruto = String(state.auto?.cfg?.mensagemMomento || '').trim();
+    const rendido = bruto ? vars.render(bruto, await currentVarContext()) : null;
+    // Variável sem valor bloquearia o envio de verdade; no teste ela vira um texto próprio, para a
+    // sonda medir o que ela existe para medir (a legenda chega junto?) e não a Config.
+    const legenda = rendido && !rendido.missing.length ? rendido.text : 'Teste de envio de imagem pela extensão.';
+
+    if (!confirm(
+      `Mandar a imagem "${arquivo.nome}" AGORA para ${state.contact.name}?\n\n` +
+        `A legenda será:\n${legenda.slice(0, 200)}\n\nIsto envia de verdade.`
+    )) return setStatus('Teste cancelado.');
+
+    return semTravarOPainel('imagem-teste', async () => {
+      setStatus('Mandando a imagem…');
+      const r = await page.enviarImagem({
+        sessionId: state.pageState.sessionId,
+        senderId: state.senderId,
+        chave: 'imagemMomentoArquivo',
+        legenda,
+      });
+      setStatus(
+        r.legendaFoi
+          ? 'Imagem enviada COM a legenda junto — é assim que vai sair na rodada.'
+          : 'Imagem enviada, mas a plataforma não guardou a legenda: na rodada o texto sai como mensagem separada.',
+        'ok'
+      );
+    });
   }
 
   /** Os passos gravados em texto corrido: é o que eu leio para escrever o envio. */

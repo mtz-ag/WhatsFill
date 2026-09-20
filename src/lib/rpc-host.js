@@ -46,6 +46,7 @@ const methods = {
   learnStatus: () => page.learnStatus(),
   aprenderImagemStart: () => page.aprenderImagemStart(),
   aprenderImagemStatus: () => page.aprenderImagemStatus(),
+  enviarImagem: (args) => page.enviarImagem(args),
   recorderBuffer: () => page.recorderBuffer(),
   recorderStop: () => page.recorderStop(),
   togglePanel: () => togglePanel(),

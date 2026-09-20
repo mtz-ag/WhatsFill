@@ -16,6 +16,8 @@ import * as composer from './composer.js';
 import * as recorder from './recorder.js';
 import * as hsm from './hsm.js';
 import { apiFetch } from './api.js';
+import * as imagem from './imagem.js';
+import * as store from './store.js';
 
 /** Estamos rodando dentro da aba do mobiliza? */
 export const IS_IN_PAGE = location.hostname === 'mobiliza.app';
@@ -311,6 +313,35 @@ export const aprenderImagemStart = IS_IN_PAGE
   : () => call('aprenderImagemStart');
 
 export const aprenderImagemStatus = IS_IN_PAGE ? local(() => imagemLocal) : () => call('aprenderImagemStatus');
+
+/**
+ * **Manda a imagem guardada, com a legenda** — a cadeia inteira está em `imagem.js`, gravada
+ * observando a plataforma (20/09/2026).
+ *
+ * Roda SEMPRE na aba, nos dois modos, por duas razões que se somam: a API recusa qualquer origem
+ * que não seja a do mobiliza, e os BYTES não atravessam ponte nenhuma — o que viaja é a CHAVE do
+ * armazenamento, e quem lê a imagem é quem vai usá-la (a aba, para o nome e o tipo; o service
+ * worker, para subir).
+ */
+export const enviarImagem = IS_IN_PAGE
+  ? local(async ({ sessionId, senderId, chave, legenda }) => {
+      const arquivo = await store.get(chave);
+      return imagem.enviarImagem({
+        sessionId,
+        senderId,
+        arquivo,
+        legenda,
+        api: apiFetch,
+        subirBytes: (url, mime) => subirBytesPeloWorker({ url, mime, chave }),
+      });
+    })
+  : (args) => call('enviarImagem', [args]);
+
+async function subirBytesPeloWorker({ url, mime, chave }) {
+  const r = await chrome.runtime.sendMessage({ type: imagem.MSG_UPLOAD, url, mime, chave });
+  if (!r?.ok) throw new Error(r?.erro || 'não consegui subir a imagem');
+  return r;
+}
 
 /**
  * O canal deste atendimento está fora do ar?

@@ -15,6 +15,7 @@ import { MSG_ENERGIA } from './lib/keepalive.js';
 import { MSG_FLUXO } from './lib/fluxo-msg.js';
 import { MSG_PADRAO } from './lib/padrao-msg.js';
 import { MSG_IA, atender } from './lib/ia-cliente.js';
+import { MSG_UPLOAD } from './lib/imagem.js';
 import {
   podeGastar,
   acumularGasto,
@@ -153,6 +154,39 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     }
   })();
   return true;
+});
+
+/**
+ * **Os BYTES da imagem sobem DAQUI, e não da aba** (20/09/2026).
+ *
+ * O endereço assinado do arquivo é de outro domínio, e requisição de content script para fora do
+ * host da página esbarra no CORS — o service worker não, porque é ele que carrega as permissões de
+ * host. É a mesma razão pela qual a chamada da IA mora aqui, com o bônus de os bytes nunca
+ * atravessarem a página: o worker lê a imagem do armazenamento pela CHAVE.
+ */
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (!msg || msg.type !== MSG_UPLOAD) return undefined;
+
+  (async () => {
+    try {
+      const arquivo = await store.get(msg.chave);
+      if (!arquivo?.dados) throw new Error('a imagem escolhida não está mais guardada na extensão');
+      // base64 → bytes: `fetch` com string mandaria o base64 como texto, e o arquivo chegaria ilegível.
+      const bytes = Uint8Array.from(atob(arquivo.dados), (c) => c.charCodeAt(0));
+      const res = await fetch(msg.url, {
+        method: 'PUT',
+        // O endereço é assinado com `content-type` entre os cabeçalhos: mandar outro devolve 403.
+        headers: { 'Content-Type': msg.mime || arquivo.mime || 'image/jpeg' },
+        body: bytes,
+      });
+      if (!res.ok) throw new Error(`o armazenamento recusou o arquivo (${res.status})`);
+      sendResponse({ ok: true, bytes: bytes.length });
+    } catch (err) {
+      sendResponse({ ok: false, erro: err?.message || String(err) });
+    }
+  })();
+
+  return true; // resposta assíncrona
 });
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

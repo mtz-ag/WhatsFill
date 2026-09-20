@@ -67,6 +67,7 @@ src/lib/bus.js          ponte mundo MAIN <-> ISOLATED (token só em memória)
 src/lib/api.js          rotas da API, transporte plugável
 src/lib/contract.js     contrato de escrita aprendido (puro, testado)
 src/lib/recorder.js     captura as requisições que ensinam o contrato
+src/lib/imagem.js       envio de IMAGEM com legenda, na cadeia gravada da plataforma (puro, testado)
 src/lib/fields.js       schema, leitura e escrita de campos personalizados
 src/lib/extract.js      parser determinístico
 src/lib/cities.js       municípios do IBGE, normalização, cidade -> link
@@ -2146,6 +2147,35 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **A IMAGEM SAI POR CINCO PASSOS, E CADA METADE TEM QUE SAIR DE UM LUGAR DIFERENTE** (20/09/2026,
+  gravado observando ele mandar uma à mão). `POST /core/v1/file/upload` → **`PUT` dos bytes no
+  endereço assinado do S3** → `POST /core/v1/file/transform` → `PUT /core/v1/file` (devolve o
+  `fileId`) → `PUT /chat/v1/session/{id}/message` com `type: 'IMAGE'`. **Os quatro na API do mobiliza
+  saem da ABA** (ela valida o `Origin`) e **o PUT no S3 sai do SERVICE WORKER** — requisição de
+  content script para outro host esbarra no CORS, e quem carrega `host_permissions` é o worker. O
+  que atravessa a ponte é a CHAVE do armazenamento, nunca os bytes. Duas coisas a lembrar: o
+  endereço assinado leva `X-Amz-SignedHeaders=content-type`, então **o `Content-Type` do PUT tem que
+  ser o mesmo que foi assinado**, senão volta 403; e o `POST .../read` que aparece na gravação é a
+  plataforma marcando a conversa como lida, **não** faz parte do envio.
+- **A LEGENDA É O `text` DA MENSAGEM DE IMAGEM, E SÓ CONTA SE VOLTAR NA RESPOSTA.** O envio gravado
+  tinha `text: null` (ele mandou sem legenda), então **que o campo aceita legenda é hipótese** — e
+  hipótese aqui é imagem muda chegando em eleitor. Por isso `legendaEntrou` relê a resposta e, não
+  voltando, `sendTemplate` manda o texto do jeito de sempre: o pior caso vira duas mensagens. É a
+  armadilha mais antiga do projeto (*a API responde 200 e ignora*) aplicada a um campo novo.
+- **FORMATO DE IMAGEM É LISTA DE PERMISSÃO: só JPEG, porque só JPEG foi observado.** O passo do
+  `transform` é o único cujo valor não se deriva (`.jpeg` → `jpg`); o que a plataforma faz com PNG
+  **ninguém viu**. A lista inversa faria todo formato novo nascer aceito até alguém notar — e o
+  "notar" seria uma arte que não chega. Para liberar outro: mandar um à mão com o gravador ligado.
+- **O VERIFICADOR DE REFERÊNCIAS NÃO ENTENDIA `'\\\\'`, e isso vale nos DOIS sentidos**
+  (20/09/2026). Ele acusou **61 problemas inventados** — `Anthropic()`, `cadastro()`, `bastante()`,
+  todas palavras de dentro de comentário. Causa: o fim de string era `c === fecho && anterior !== '\\'`,
+  e numa string de duas barras escapadas a aspa de fechamento parece escapada; a string "não
+  fechava", o pareamento de aspas saía deslocado dali em diante e comentário virava código à vista.
+  **O outro lado é pior e é silencioso:** deslocado, o pareamento também apaga código de verdade, e
+  aí o verificador deixa de ver a chamada que sumiu — que é a única coisa que ele existe para ver.
+  Hoje a barra invertida consome o par, como já fazia na regex. **Se ele começar a acusar dezenas de
+  palavras em português, o defeito é dele, não do código** — procure a string que não fechou.
+
 - **ESPERA LONGA NAO PODE PASSAR POR `withBusy` — ela sequestra o painel inteiro** (20/09/2026, *"travou
   para começar os novos, o botão bloqueou"*). `withBusy` abre com `if (state.busy) return`: é um
   interruptor ÚNICO, então o laço que esperava ele mandar a imagem à mão (até 200 s) matava TODO botão do
@@ -3881,10 +3911,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
 > `src/` e reclama só de `SyntaxError`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as dezessete suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as dezoito suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

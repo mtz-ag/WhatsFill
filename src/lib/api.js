@@ -493,6 +493,15 @@ export async function getConversation(sessionId, pageSize = 50) {
      * resposta escrita à mão, que é a maioria das respostas de verdade, não deixa rastro ali.
      */
     nossaUltimaAt: [...ordenadas].reverse().find((m) => !doContato(m))?.createdAt || null,
+    /**
+     * **De onde a plataforma manda neste atendimento.** Toda mensagem da sessão carrega o mesmo
+     * `senderId`, e é ele que o corpo do envio de imagem exige (ver `imagem.corpoDaMensagem`).
+     *
+     * Sai daqui, e não de uma requisição própria, porque a conversa já é lida a cada contato — e
+     * nesta API o que derruba a plataforma é NÚMERO de requisições. Prefere uma mensagem NOSSA:
+     * é o papel que vamos ocupar ao mandar.
+     */
+    senderId: String(([...ordenadas].reverse().find((m) => !doContato(m)) || ultima)?.senderId || ''),
   };
 }
 

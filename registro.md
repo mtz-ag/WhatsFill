@@ -1,3 +1,49 @@
+## 2026-09-20 — v3.95.0 — a imagem sai de verdade, na cadeia que a plataforma mostrou
+
+**Com os 6 passos gravados na mão dele, a cadeia ficou clara** — e ela tem cinco passos de verdade (o
+`POST .../read` era a plataforma marcando a conversa como lida):
+
+1. `POST /core/v1/file/upload` `{name, type:'IMAGE', mimeType}` → devolve `keyS3` e a **urlUpload
+   assinada**;
+2. **`PUT` dos bytes** no endereço assinado;
+3. `POST /core/v1/file/transform` — a resposta do passo 1 inteira + `newExtension`/`newMimeType`;
+4. `PUT /core/v1/file` → devolve o **`id`**, que é o `fileId`;
+5. `PUT /chat/v1/session/{id}/message` com `type: 'IMAGE'` e o `fileId`. **A legenda é o `text`.**
+
+**A fronteira que custou desenho:** os quatro passos na API saem da ABA (ela valida o `Origin`) e o
+PUT no S3 sai do **service worker** — content script para outro host esbarra no CORS, e quem carrega
+`host_permissions` é o worker. O que atravessa a ponte é a CHAVE do armazenamento; **os bytes nunca
+passam pela página**. Entrou `wts-storage.s3.sa-east-1.amazonaws.com` no manifesto, e endereço
+diferente disso **para com o motivo escrito** em vez de virar erro de rede.
+
+**A legenda é hipótese conferida, não fé:** o envio gravado tinha `text: null` (ele mandou sem
+legenda), então a resposta é relida — voltando, a mensagem sai numa peça só; não voltando, o texto sai
+como sempre. O pior caso é o contato receber duas mensagens, nunca uma imagem muda.
+
+**Só JPEG, e isso é decisão e não limitação técnica:** a conversão do passo 3 (`.jpeg` → `jpg`) é o
+único valor que não se deriva, e o que a plataforma faz com PNG ninguém viu. Lista de PERMISSÃO, como
+`MODELOS_COM_ESFORCO`. Para liberar outro formato, basta mandar um à mão com o gravador ligado.
+
+**No envio:** a imagem vai ANTES, dentro do `sendTemplate` — o ponto único por onde as respostas
+prontas saem. Falha de imagem **nunca** impede a mensagem (mesma prioridade de "falha de etiqueta não
+bloqueia envio"), e o Andamento registra as duas coisas. Quem decide QUAL imagem é
+`imagem.imagemDoEnvio`: o momento casa pelo id, o pedido de dados pelo invariante do texto, e o
+momento ganha quando os dois valem.
+
+**A sonda:** botão **"Mandar a imagem no contato aberto (teste)"**, com confirmação trazendo o nome do
+contato e a legenda. É ele mandando UMA, no contato de teste, antes de a rodada mandar para eleitor.
+
+**Suíte nova (`tests/imagem.test.mjs`, a 18ª)** com os corpos do envio gravado, os recusos e a cadeia
+inteira com uma API de mentira.
+
+**De brinde, um defeito do VERIFICADOR:** ele acusou 61 problemas inventados (palavras de dentro de
+comentário) porque não entendia string com duas barras escapadas — a aspa de fechamento parecia
+escapada, o pareamento saía deslocado e comentário virava código à vista. **O outro lado é pior:**
+deslocado, ele também apaga código de verdade e deixa de ver a chamada que sumiu. Corrigido: a barra
+invertida consome o par, como já fazia na regex.
+
+**Falta ele testar.** Recarregar, F5, e apertar a sonda no Thiago Tim.
+
 ## 2026-09-20 — v3.94.0 — o envio aprendido sai do navegador dele para mim, por decisao dele
 
 **Para eu escrever o envio de verdade eu preciso LER os 6 passos gravados** — e eles moram no

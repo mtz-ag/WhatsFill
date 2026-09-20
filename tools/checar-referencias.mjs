@@ -86,7 +86,7 @@ function soCodigo(src) {
   for (let i = 0; i < src.length; i++) {
     const c = src[i];
     const prox = src[i + 1];
-    const anterior = src[i - 1];
+    // (o caractere anterior deixou de ser lido quando a barra invertida passou a consumir o par)
 
     if (estado === 'codigo') {
       if (c === '/' && prox === '/') { estado = 'linha'; saida += '  '; i++; continue; }
@@ -133,7 +133,19 @@ function soCodigo(src) {
     }
 
     // texto: aspas, apóstrofo ou template
-    if (c === fecho && anterior !== '\\') { estado = 'codigo'; saida += ' '; continue; }
+    /**
+     * **A barra invertida consome o PAR, como na regex** — sem isso o verificador acusou 61
+     * problemas inventados em 20/09/2026, todos palavras de dentro de comentario (`Anthropic()`,
+     * `cadastro()`, `bastante()`).
+     *
+     * A causa: uma string com DUAS barras escapadas termina em barra antes da aspa, e o teste
+     * `anterior !== barra` lia a aspa de fechamento como escapada. A string nao fechava, o
+     * pareamento de aspas saia deslocado dali para a frente e o comentario seguinte virava codigo
+     * a vista. **Pior que o falso positivo e o outro lado**: deslocado, o pareamento tambem apaga
+     * codigo de verdade, e ai o verificador deixa de ver a chamada que sumiu.
+     */
+    if (c === '\\') { saida += '  '; i++; continue; }
+    if (c === fecho) { estado = 'codigo'; saida += ' '; continue; }
     saida += c === '\n' ? c : ' ';
   }
   return saida;
