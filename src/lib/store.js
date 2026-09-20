@@ -781,6 +781,16 @@ const DEFAULTS = {
      */
     mensagemMomento: '',
     /**
+     * **A IMAGEM que vai junto** — pedido dele (20/09/2026): *"preciso da opção de mandar imagem e na
+     * descrição mandar mensagem do momento ou pedir dados"*, e *"a imagem é liga e desliga"*.
+     *
+     * São duas, uma por texto, porque a arte do momento e a do cadastro não são a mesma. O CAMINHO é
+     * um link `https://` (a extensão não lê arquivo do disco dele), e a caixa liga sem apagar o
+     * caminho: desligar e religar não exige colar o link de novo.
+     */
+    imagemMomento: '',
+    imagemMomentoLigada: false,
+    /**
      * Reescritas alternativas de `mensagemMomento`, mesmo mecanismo de `templates.variantes`:
      * `sendTemplate` reveza entre o texto principal e estas a cada envio de verdade, para não
      * repetir a mesma frase mandada em massa. Editável no popup do cartão da mensagem do momento.
@@ -803,6 +813,8 @@ const DEFAULTS = {
      * Editável na aba Automatizado, junto da mensagem do momento. Vazio, a tecla 5 volta a mandar
      * só a mensagem do momento.
      */
+    imagemPedidoDados: '',
+    imagemPedidoDadosLigada: false,
     pedidoJuntoDoMomento:
       'Ah, e aproveitando: notei que ainda não tenho o seu nome aqui nos meus contatos, e também ' +
       'não sei de onde você é. Pode me passar:\n\nNome , Cidade\n\n(exemplo: Pedro Silva , ' +

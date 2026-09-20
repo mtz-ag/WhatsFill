@@ -3413,6 +3413,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'na pergunta da rodada, envia e conclui. Deixe vazio para a tecla 5 não aparecer.'),
     ]);
 
+    card.append(...campoDeImagem({
+      rotulo: 'Imagem junto da mensagem do momento (link https)',
+      valor: cfg.imagemMomento,
+      ligada: cfg.imagemMomentoLigada,
+      aoMudar: (v) => salvarAuto({ imagemMomento: v }).then(renderAll),
+      aoLigar: (v) => salvarAuto({ imagemMomentoLigada: v }).then(renderAll),
+    }));
+
     const area = h('textarea', { rows: '4', placeholder: 'Ex.: {{saudacao}}! Feliz Dia dos Pais…' });
     area.value = cfg.mensagemMomento || '';
     area.addEventListener('change', () => salvarAuto({ mensagemMomento: area.value }).then(renderAll));
@@ -3438,6 +3446,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'manda a mensagem do momento com este pedido no fim — o formulário sozinho, dias ' +
           'depois, chega sem contexto. Deixe vazio para a tecla 5 mandar só a mensagem do momento.')
     );
+    card.append(...campoDeImagem({
+      rotulo: 'Imagem junto do pedido de dados (link https)',
+      valor: cfg.imagemPedidoDados,
+      ligada: cfg.imagemPedidoDadosLigada,
+      aoMudar: (v) => salvarAuto({ imagemPedidoDados: v }).then(renderAll),
+      aoLigar: (v) => salvarAuto({ imagemPedidoDadosLigada: v }).then(renderAll),
+    }));
+
     const pedido = h('textarea', { rows: '4', placeholder: 'Deixe vazio para não pedir junto' });
     pedido.value = cfg.pedidoJuntoDoMomento || '';
     pedido.addEventListener('change', () => salvarAuto({ pedidoJuntoDoMomento: pedido.value }).then(renderAll));
@@ -8496,6 +8512,41 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return { congelou: true, gasto };
     }
     return { congelou: false, gasto };
+  }
+
+  /**
+   * **O campo da imagem que vai junto do texto** — pedido dele (20/09/2026). Devolve as linhas para
+   * o cartão: a caixa de ligar, o caminho e o aviso do que a extensão ainda não faz.
+   *
+   * **A caixa e o caminho são separados de propósito:** desligar não apaga o link, então religar no
+   * feriado seguinte não custa colar de novo — é o mesmo desenho do modelo reserva.
+   *
+   * **Caminho do disco (`C:\...`) não serve, e o aviso diz isso na hora**: a extensão roda dentro da
+   * página e não lê arquivo do computador; o que ela consegue buscar é um endereço público.
+   */
+  function campoDeImagem({ rotulo, valor, ligada, aoMudar, aoLigar }) {
+    const caminho = String(valor || '').trim();
+    const doDisco = /^[a-z]:\\/i.test(caminho) || caminho.startsWith('\\\\') || caminho.startsWith('file:');
+    const linhas = [
+      checkbox(`${rotulo.split(' (')[0]}: mandar junto`, !!ligada, aoLigar),
+      campoTexto(rotulo, caminho, aoMudar),
+    ];
+    if (doDisco) {
+      linhas.push(h('div', { class: 'wf-block', 'data-fica': '1' },
+        'Isto é um caminho do computador, e a extensão não lê arquivo do disco. Ponha o link da ' +
+          'imagem (https://…) — o mesmo endereço que abre no navegador.'));
+    }
+    /**
+     * **A extensão ainda NÃO manda a imagem**, e o campo dizer isso é a diferença entre um controle
+     * que espera conserto e um que mente. Falta aprender o envio observando a plataforma fazer uma
+     * vez — a mesma disciplina do contrato de escrita no CRM (`recorder.js`).
+     */
+    if (ligada && caminho && !doDisco) {
+      linhas.push(h('div', { class: 'wf-block', 'data-fica': '1' },
+        'Guardado. A extensão ainda não manda a imagem sozinha: falta o passo de aprender o envio ' +
+          'com você mandando uma imagem à mão uma vez. Até lá, o texto sai sem ela.'));
+    }
+    return linhas;
   }
 
   function campoTexto(rotulo, valor, onChange) {

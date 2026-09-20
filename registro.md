@@ -1,3 +1,35 @@
+## 2026-09-20 — v3.90.0 — os campos da imagem que vai junto (o envio ainda falta)
+
+**Pedido dele:** *"preciso da opção de mandar imagem e na descrição mandar mensagem do momento ou pedir
+dados"*, e depois: *"a imagem é liga e desliga, crie um campo acima da mensagem do momento para o caminho
+da imagem e no pedido de dados"*.
+
+**Lido no pacote da plataforma antes de desenhar** (`main.<hash>.js`, baixado direto — é estático):
+o envio de imagem tem `POST /core/v1/file/upload` ({name, type, mimeType}, que devolve a URL de upload),
+o upload em si, e a mensagem com o arquivo — **o texto vai junto, como legenda**, que é o que ele quer.
+Pela tela, o clipe do rodapé (`dom.getAnexoButton`) abre o menu de anexos, que a extensão já conhece dos
+modelos aprovados.
+
+**O que entrou agora:** no cartão da mensagem do momento, ACIMA de cada texto, uma caixa "mandar junto" e
+um campo de caminho — um para a mensagem do momento, outro para o pedido de dados
+(`auto.cfg.imagemMomento` / `imagemPedidoDados`, com `...Ligada` separado). **A caixa não apaga o
+caminho**: religar no feriado seguinte não exige colar o link de novo.
+
+**Duas coisas que a tela diz, e são o que impede um controle mentiroso:**
+- **caminho do disco (`C:\…`) não serve** — a extensão roda dentro da página e não lê arquivo do
+  computador; o campo avisa e pede o link `https://`;
+- **a extensão ainda NÃO manda a imagem.** Falta aprender o envio observando a plataforma fazer uma vez,
+  como o contrato de escrita no CRM (`recorder.js`). Com a caixa ligada e o link preenchido, a tela diz
+  isso; o texto continua saindo sem imagem.
+
+**Próximo passo, dito a ele:** o botão "Aprender envio de imagem" e ele mandando uma imagem com legenda à
+mão no contato de teste. **Limite do WhatsApp, dito antes:** imagem com legenda livre só chega dentro da
+janela de 24h; para quem está sem responder há dias continua valendo só modelo aprovado.
+
+**Arquivos:** `src/lib/store.js`, `src/panel/panel.js`, `registro.md`, `manifest.json`.
+
+---
+
 ## 2026-09-19 — v3.89.0 — "IA pega a cidade sozinha": a conferência de cidade também fora da rodada
 
 **Pedido dele:** *"faça com que a cidade seja colocada pela IA fora do automatizado também, bote a opção
