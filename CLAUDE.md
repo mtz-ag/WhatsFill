@@ -2684,6 +2684,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **QUEM ATENDE E A EQUIPE, E O RASCUNHO NAO SE APRESENTA POR HABITO** (22/09/2026, print dele:
+  *"era pra estar equipe ou assessoria do capitao martim e nesse caso nem era necessario se
+  identificar"*). A licenca *"pode dizer que este e o WhatsApp dele"* era MINHA, escrita junto com a
+  voz do Capitao (v3.99). **Julgamento fica no prompt** (as tres VOZES mandam nao se apresentar, com
+  a excecao da regra 9); **o NOME errado e mecanico** — `ia.semDizerQueEOWhatsAppDele`, na revisao.
+  A guarda e o WhatsApp **pessoal** dele, que e a frase certa do `falar-com-deputado`. E a moldura
+  era `(?:é|e)\b`: **`\b` nao fecha depois de letra acentuada**, entao a frase da print — a mais
+  comum — escapava. **Ao dar voz ou papel a IA, nao invente junto uma frase de apresentacao.**
+
 - **CORTE POR TAMANHO PARTE EMOJI, E O CORPO VIRA JSON INVÁLIDO** (22/09/2026): as DUAS casas
   devolveram 400 no mesmo pedido (*"failed to parse JSON value"*, *"no low surrogate in string"*), e
   nenhuma das mensagens fala em emoji. Emoji é um PAR de caracteres; `slice` no meio dele deixa meia

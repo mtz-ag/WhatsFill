@@ -21,6 +21,7 @@ import {
   cortar,
   semSurrogateSolto,
   semFalarDeTranscricao,
+  semDizerQueEOWhatsAppDele,
   LIMITE_NOME_DO_ANUNCIO,
   PEDIDO_DE_DADOS_NO_RASCUNHO,
   saudacaoDeAgora,
@@ -2135,8 +2136,12 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   check(/NÃO se apresente/.test(conhece), 'e manda nao se apresentar');
   check(/regra 9/.test(conhece), 'com a excecao de ela perguntar quem fala');
   const nova = montarContatoRascunho({ mensagens: fala });
-  check(/WhatsApp dele/.test(nova), 'pessoa nova de verdade: pode dizer que este e o WhatsApp dele');
-  check(/Escreva como o Capitão Martim/.test(nova), 'e a voz e a do Capitao, na primeira pessoa (22/09/2026)');
+  check(/Escreva como o Capitão Martim/.test(nova), 'pessoa nova: a voz e a do Capitao, na primeira pessoa');
+  /** **Nem para quem e nova o rascunho se apresenta** — print dele de 22/09/2026. */
+  check(/NÃO se apresente por hábito/.test(nova), 'e nem a ela o rascunho se apresenta por habito');
+  check(/regra 9/.test(nova) && /a equipe do Capitão/.test(nova),
+    'perguntando, o nome e a EQUIPE — nunca "o WhatsApp dele"');
+  check(!/WhatsApp dele" *\+|este é o WhatsApp/.test(nova), 'a licenca antiga saiu do prompt');
 
   const apresenta = (ctx) => avisos(oQueSaiu, ctx).some((a) => /já conversou conosco antes/.test(a));
   check(apresenta({ jaNosConhece: true }), 'se apresentar a quem ja nos conhece gera aviso');
@@ -3085,6 +3090,45 @@ grupo('emoji cortado ao meio derruba a chamada (22/09/2026, as DUAS casas com 40
     gabinete: '',
   });
   check(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(comEmoji), 'nem o prompt de sistema, onde o corte e 500');
+}
+
+grupo('quem atende e a EQUIPE, nao "o WhatsApp do Capitao Martim" (22/09/2026)');
+{
+  const t = (x) => semDizerQueEOWhatsAppDele(x);
+
+  /** A print dele: a abertura que ele nao quis, e as outras formas da mesma frase. */
+  check(t('Boa tarde! Aqui é o WhatsApp do Capitão Martim.\nA campanha trabalha apenas com voluntários.')
+    === 'Boa tarde! Aqui é a equipe do Capitão Martim.\nA campanha trabalha apenas com voluntários.',
+    'a frase da print vira "a equipe", e o resto do rascunho fica igual');
+  check(t('Este é o WhatsApp do Capitão Martim, em que posso ajudar?')
+    === 'Aqui é a equipe do Capitão Martim, em que posso ajudar?',
+    '"Este é" vira "Aqui é" — "Este é a equipe" nao concorda');
+  check(t('Você está falando com o WhatsApp do Capitão Martim.')
+    === 'Você está falando com a equipe do Capitão Martim.', 'a moldura do "falando com" tambem');
+  check(t('Oi! Aqui é o WhatsApp dele.') === 'Oi! Aqui é a equipe do Capitão Martim.',
+    '"o WhatsApp dele" tem o mesmo destino');
+  check(t('Aqui é o Whats oficial do Capitão Martim.') === 'Aqui é a equipe do Capitão Martim.',
+    'abreviado e "oficial" no meio nao escapam');
+
+  /** **Metade do teste e falso positivo**: o WhatsApp PESSOAL dele e a frase CERTA. */
+  for (const bom of [
+    'No período eleitoral não passamos o WhatsApp pessoal do Capitão Martim.',
+    'Não repassamos o WhatsApp particular dele por segurança.',
+    'Não posso te passar o WhatsApp dele, mas eu te respondo por aqui.',
+    'Me manda o número do WhatsApp dele que eu falo com ele.',
+    'Aqui é a equipe do Capitão Martim, em que posso ajudar?',
+    'Obrigado por escrever. Vou verificar isso com a equipe.',
+    'Fui no gabinete do prefeito e mandei mensagem no WhatsApp da prefeitura.',
+  ]) {
+    check(t(bom) === null, `intacto: "${bom.slice(0, 42)}…"`);
+  }
+
+  /** E a revisao troca sozinha, com o aviso dizendo o que fez. */
+  const r = validarRascunho({ texto: 'Aqui é o WhatsApp do Capitão Martim. Vou verificar isso com a equipe.' }, {});
+  check(/a equipe do Capitão Martim/.test(r.texto) && !/WhatsApp/.test(r.texto),
+    'revisarRascunho troca o texto que sai');
+  check(r.avisos.some((a) => /se apresentou como "o WhatsApp do Capitão Martim"/.test(a)),
+    'e avisa qual foi a troca');
 }
 
 fim();

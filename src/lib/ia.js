@@ -1892,6 +1892,56 @@ export function semFalarDeTranscricao(texto) {
 }
 
 /**
+ * **"AQUI É O WHATSAPP DO CAPITÃO MARTIM" NÃO É COMO NOS APRESENTAMOS** — print dele
+ * (22/09/2026), com o rascunho abrindo assim para quem chegou pelo anúncio perguntando de vaga:
+ * *"a mensagem mudou para whatsapp do capitão martim, não gostei, era pra estar equipe ou
+ * assessoria do capitão martim e nesse caso nem era necessário se identificar"*.
+ *
+ * **São duas correções e elas moram em lugares diferentes.** *"Nem era necessário"* é julgamento
+ * — quando cabe apresentação e quando não cabe —, e isso ficou no prompt (a VOZ da pessoa nova, e
+ * a regra 9). **Já O NOME está errado sempre**: quem atende é a equipe, e é o que a regra 9 manda
+ * dizer desde 09/09 — então é mecânico, como o "gabinete" e a transcrição.
+ *
+ * **O WhatsApp PESSOAL dele continua intocado** (*"não passamos o WhatsApp pessoal do Capitão
+ * Martim"* é a resposta `falar-com-deputado`, e é a frase certa): a troca exige a moldura de
+ * apresentação na mesma frase e desiste havendo "pessoal"/"particular".
+ */
+const SE_APRESENTA_COMO_O_WHATSAPP =
+  /\b(?:aqui|est[ae]|isto|isso)\s+(?:é|e)(?=\s)|\bfalando\s+com\b|\bvoc[êe]\s+(?:está|esta)\s+n[oa]\b/i;
+const O_WHATSAPP_DELE =
+  /\bo\s+whats(?:app)?\s+(?:oficial\s+)?(?:do\s+(?:capit[ãa]o\s+)?martim|dele)\b/gi;
+const NAO_E_APRESENTACAO = /\bpessoal\b|\bparticular\b|\bn[úu]mero\b/i;
+const ABRE_COM_ESTE_E = /^(?:este|esse|isto|isso)\s+(é|e)(?=\s)/i;
+
+export function semDizerQueEOWhatsAppDele(texto) {
+  const bruto = String(texto || '');
+  if (!O_WHATSAPP_DELE.test(bruto)) {
+    O_WHATSAPP_DELE.lastIndex = 0;
+    return null;
+  }
+  O_WHATSAPP_DELE.lastIndex = 0;
+  let mexeu = false;
+  const linhas = bruto.split('\n').map((linha) =>
+    linha
+      .split(/(?<=[.!?])\s+/)
+      .map((frase) => {
+        if (NAO_E_APRESENTACAO.test(frase)) return frase;
+        if (!SE_APRESENTA_COMO_O_WHATSAPP.test(frase)) return frase;
+        O_WHATSAPP_DELE.lastIndex = 0;
+        if (!O_WHATSAPP_DELE.test(frase)) return frase;
+        O_WHATSAPP_DELE.lastIndex = 0;
+        mexeu = true;
+        // "Este é a equipe" nao concorda; quem se apresenta diz "Aqui e".
+        return frase
+          .replace(ABRE_COM_ESTE_E, (_m, verbo) => `Aqui ${verbo}`)
+          .replace(O_WHATSAPP_DELE, 'a equipe do Capitão Martim');
+      })
+      .join(' ')
+  );
+  return mexeu ? linhas.join('\n') : null;
+}
+
+/**
  * **A SAUDACAO ABRE O CONTATO, NAO CADA MENSAGEM** — relato dele (15/09/2026): *"a IA tem
  * agradecido multiplas vezes pelo apoio e dado boa tarde multiplas vezes, uma mensagem apos a
  * outra; ela nao consegue ver o contexto da conversa?"*.
@@ -2339,8 +2389,9 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         '"aqui é", "seja bem-vindo". Só diga quem somos se ela PERGUNTAR quem está do outro lado ' +
         '(regra 9).'
       : 'VOZ: é a primeira coisa que o atendimento diz a esta pessoa. Escreva como o Capitão Martim, ' +
-        'na primeira pessoa; pode dizer, numa frase curta, que este é o WhatsApp dele — e nada mais ' +
-        'sobre nós.',
+        'na primeira pessoa. NÃO se apresente por hábito: responda o que ela trouxe. Só diga quem ' +
+        'somos se ela PERGUNTAR quem está do outro lado (regra 9), e aí é "a equipe do Capitão ' +
+        'Martim" ou "a assessoria do Capitão Martim" — nunca "o WhatsApp dele".',
     '',
     /**
      * **O eixo é a ÚLTIMA sem resposta** — mesma conversa de 05/09: *"eu queria que ela ficasse
@@ -3146,6 +3197,16 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
       texto = trocado;
       avisos.push('a IA escreveu "gabinete", que saiu do vocabulário — troquei por "equipe"');
     }
+  }
+
+  /**
+   * **Quem atende é a EQUIPE, e a apresentação errada é mecânica** — ver
+   * `semDizerQueEOWhatsAppDele`, print dele de 22/09/2026.
+   */
+  const semOWhatsAppDele = semDizerQueEOWhatsAppDele(texto);
+  if (semOWhatsAppDele) {
+    texto = semOWhatsAppDele;
+    avisos.push('a IA se apresentou como "o WhatsApp do Capitão Martim" — troquei por "a equipe dele"');
   }
 
   // Marcador esquecido: iria como está para o eleitor e apareceria literalmente na conversa.

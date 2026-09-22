@@ -1,3 +1,40 @@
+## 2026-09-22 — v3.105.0 — quem atende é a EQUIPE, e o rascunho não se apresenta por hábito
+
+**Print dele**, com o rascunho abrindo *"Boa tarde! Aqui é o WhatsApp do Capitão Martim."* para quem
+chegou pelo anúncio perguntando de vaga: *"a mensagem mudou para whatsapp do capitão martim, não
+gostei, era pra estar equipe ou assessoria do capitão martim e nesse caso nem era necessário se
+identificar"*.
+
+**A frase era minha, da v3.99.0.** Ao escrever a voz do Capitão na primeira pessoa (pedido dele:
+*"a ia assumir o papel de capitao martim ao responder"*) eu dei junto uma licença que ele nunca
+pediu — *"pode dizer, numa frase curta, que este é o WhatsApp dele"*. **São dois erros no mesmo
+lugar:** o NOME (quem atende é a equipe, e é o que a regra 9 manda dizer desde 09/09) e a
+APRESENTAÇÃO existir (ela perguntou de vaga; ninguém pediu para saber com quem falava).
+
+**As duas correções moram em lugares diferentes, de propósito:**
+
+1. **"Nem era necessário" é julgamento**, então ficou no PROMPT. A VOZ da pessoa nova era a única
+   das três que autorizava apresentação; hoje as três dizem o mesmo — *"NÃO se apresente por
+   hábito: responda o que ela trouxe"* —, com a exceção da regra 9 (ela perguntar quem está do
+   outro lado). A voz do Capitão na primeira pessoa fica como ele pediu.
+2. **O NOME está errado sempre**, então é MECÂNICO, como o "gabinete" e a "transcrição":
+   `ia.semDizerQueEOWhatsAppDele` troca por *"a equipe do Capitão Martim"* dentro de
+   `revisarRascunho`, com o aviso dizendo o que trocou. **"Este é" vira "Aqui é"** — *"Este é a
+   equipe"* não concorda.
+
+**A guarda é o WhatsApp PESSOAL dele**, que é a frase CERTA da resposta `falar-com-deputado`
+(*"não passamos o WhatsApp pessoal do Capitão Martim"*): a troca exige a moldura de apresentação na
+mesma frase e desiste havendo "pessoal"/"particular"/"número". Sete das doze asserções são falso
+positivo.
+
+**E a armadilha do `É nós` apareceu de novo, do lado que fecha:** a moldura era
+`(?:é|e)\b`, e **`\b` não fecha depois de letra acentuada** — `é` não é `\w` —, então a frase da
+print, que é a mais comum de todas, passava batida enquanto *"falando com o WhatsApp do Capitão
+Martim"* era trocada. Peguei medindo os cinco casos reais antes de escrever o teste; a regra está no
+`CLAUDE.md` desde 31/08 e vale nas DUAS pontas da palavra.
+
+Também no padrão de atendimento dele (seção 1), que é de onde a regra sai, em quatro linhas.
+
 ## 2026-09-22 — v3.104.0 — emoji cortado ao meio derrubava a chamada da IA (as duas casas, 400)
 
 **Print dele**, com o titular E o reserva recusando o MESMO pedido:
