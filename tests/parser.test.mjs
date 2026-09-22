@@ -1325,4 +1325,34 @@ grupo('endereco de maquina nunca e cidade (06/09/2026)');
     'e a tolerancia a erro de digitacao continua valendo');
 }
 
+grupo('o APOSTROFO some, e nao vira espaco (22/09/2026, Sant Ana do Livramento)');
+{
+  const ci = await lib('cities.js');
+  /**
+   * Relato dele: *"conflito entre forma de escrever na cidade e etiqueta, acabou ficando sem etiqueta"*.
+   * O nome oficial e `Sant'Ana do Livramento` e a etiqueta no CRM e `SANTANA DO LIVRAMENTO`: com o
+   * apostrofo virando espaco, as duas eram nomes DIFERENTES.
+   */
+  check(ci.semAcentoNemCaixa("Sant'Ana do Livramento") === ci.semAcentoNemCaixa('SANTANA DO LIVRAMENTO'),
+    'as duas formas viram a mesma chave');
+  check(ci.normalize("Sant'Ana do Livramento") === ci.normalize('Santana do Livramento'),
+    'e o mesmo vale para a chave da etiqueta');
+  /**
+   * **As duas fontes escrevem diferente, e isso é parte do caso:** o IBGE devolve
+   * `Sant'Ana do Livramento` e o `coredes-rs.json` que vem no pacote traz `Santana do Livramento`.
+   * Por isso a asserção é sobre a CONFIANÇA e sobre as duas caírem no MESMO município, nunca sobre a
+   * grafia — que muda com a fonte que estiver no ar.
+   */
+  const oficial = await ci.matchCity("Sant'Ana do Livramento");
+  check(oficial?.confidence === 'exata', 'o nome com apostrofo casa EXATO (era aproximada)');
+  const crm = await ci.matchCity('Santana do Livramento');
+  check(crm?.confidence === 'exata', 'e a forma sem apostrofo tambem');
+  check(crm?.city === oficial?.city, 'e as duas caem no mesmo municipio');
+  const grafia = await ci.conferirGrafia('SANTANA DO LIVRAMENTO');
+  check(grafia.ok, 'escrever sem o apostrofo nao e erro de grafia');
+  // o ponto e o hifen continuam virando ESPACO — a licao do "S.do Livramento" (01/09)
+  check(ci.normalize('S.do Livramento') === 'sao do livramento' || /livramento/.test(ci.normalize('S.do Livramento')),
+    'o ponto continua separando palavras');
+}
+
 fim();

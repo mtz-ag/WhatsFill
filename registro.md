@@ -1,3 +1,27 @@
+## 2026-09-22 — v3.103.0 — o apóstrofo some em vez de virar espaço (Sant'Ana do Livramento)
+
+**Relato dele:** *"conflito entre forma de escrever na cidade e etiqueta, acabou ficando sem etiqueta e
+botei agora"* — campo Cidade `Sant'Ana do Livramento`, etiqueta no CRM `SANTANA DO LIVRAMENTO`.
+
+**Medido:** `semAcentoNemCaixa` trocava TODA pontuação por espaço, então `sant ana do livramento` e
+`santana do livramento` eram chaves **diferentes**. Dois efeitos, e o primeiro é o mais caro:
+- `matchCity("Sant'Ana do Livramento")` — o próprio nome oficial — voltava **`aproximada`**, e
+  aproximada é a confiança que NÃO grava sozinha;
+- a etiqueta dele não casava com o município, então nem era aplicada nem era reconhecida como
+  existente (e a aba Cidades a trataria como "falta criar", duplicando).
+
+**Conserto:** o apóstrofo (e as variantes `’ \` ´`) **some**, em vez de virar espaço — o contrário do
+ponto e do hífen, que separam palavras de propósito (a lição do `S.do Livramento`, 01/09): ali o
+separador está ENTRE palavras, aqui está DENTRO de uma.
+
+**A prova, contra os 5.325 municípios dos dois arquivos:** 45 têm apóstrofo (`D'Oeste`, `D'Água`,
+`Sant'Ana`) e as colisões continuam sendo as **mesmas 8** de antes — todas pré-existentes e só de
+acento (Araçoiaba/Aracoiaba, Goianá/Goiana…), nenhuma criada por isto.
+
+**De brinde, uma divergência achada ao escrever o teste:** o IBGE escreve `Sant'Ana do Livramento` e o
+`coredes-rs.json` que vem no pacote escreve `Santana do Livramento`. Com o conserto as duas viram a
+mesma chave, e o teste passou a exigir a CONFIANÇA e o mesmo município, nunca a grafia.
+
 ## 2026-09-22 — v3.102.0 — a negativa volta a dizer o motivo: a lei eleitoral proíbe
 
 **Print dele:** *"Vc não consegue me ajudar comprar as fitas HGT"* e *"a diabete dele está muito alta, às

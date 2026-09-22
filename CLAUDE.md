@@ -314,6 +314,11 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `POST /core/v1/tag/{id}` (sim: `POST` atualiza, `PUT` cria) muda o rótulo, e todos que a têm
   passam a mostrar o nome novo — uma requisição, em vez de duas por contato, e sem janela em que o
   contato fica sem etiqueta. Passe as cores ATUAIS no body: omitir reseta a cor sem querer.
+- **O APÓSTROFO SOME, O PONTO VIRA ESPAÇO** (22/09/2026). `Sant'Ana do Livramento` (IBGE) e a etiqueta
+  dele `SANTANA DO LIVRAMENTO` eram chaves diferentes, então o nome OFICIAL casava como `aproximada` — a
+  confiança que não grava — e a etiqueta não era reconhecida. Separador ENTRE palavras (ponto, hífen) vira
+  espaço; DENTRO de uma palavra (apóstrofo) some. **Mexeu em `semAcentoNemCaixa`? Rode a prova de colisão
+  contra os dois arquivos de municípios** — as 8 colisões que existem são de acento e são antigas.
 - **`normalize` NÃO serve para conferir grafia** — ela aplica os ALIASES ("sto" → "santo", "poa" →
   "porto alegre"), então "Sto Angelo" e "Santo Ângelo" ficam idênticos e o campo abreviado passa
   por correto. Para comparar o que está ESCRITO use `cities.semAcentoNemCaixa`.

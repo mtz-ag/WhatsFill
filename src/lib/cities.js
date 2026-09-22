@@ -63,6 +63,19 @@ export function semAcentoNemCaixa(value) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // tira acento (marcas combinantes)
     .toLowerCase()
+    /**
+     * **O AP\u00d3STROFO SOME, e n\u00e3o vira espa\u00e7o** (22/09/2026, relato dele: *"conflito entre forma de
+     * escrever na cidade e etiqueta, acabou ficando sem etiqueta"*).
+     *
+     * `Sant'Ana do Livramento` \u00e9 o nome oficial no IBGE, e a etiqueta dele no CRM \u00e9
+     * `SANTANA DO LIVRAMENTO`. Virando espa\u00e7o, as duas ficavam `sant ana\u2026` e `santana\u2026` \u2014 **nomes
+     * diferentes**: a etiqueta n\u00e3o casava, e o pr\u00f3prio nome oficial casava como `aproximada`, que \u00e9 a
+     * confian\u00e7a que N\u00c3O grava sozinha. Apagando, as duas formas viram a mesma coisa.
+     *
+     * \u00c9 o contr\u00e1rio do ponto e do h\u00edfen, que viram espa\u00e7o de prop\u00f3sito (a li\u00e7\u00e3o do `S.do Livramento`,
+     * 01/09): ali o separador existe ENTRE palavras; aqui ele est\u00e1 DENTRO de uma.
+     */
+    .replace(/['\u2019`\u00b4]/g, '')
     .replace(/[^a-z0-9\s.]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
