@@ -1,3 +1,18 @@
+## 2026-09-22 — v3.101.0 — a retribuição ("igualmente") fecha a conversa, não abre para a IA
+
+**Print dele:** respondemos e concluímos às 12:17; às 12:19 ela escreveu *"Obrigado amigo igualmente
+para o senhor e sua família"* e um 🙏, e a IA pôs *"Amém! Um abraço."* no campo. *"A pessoa finalizou a
+conversa, não tem necessidade de mandar abraço novamente."*
+
+**Medido, era o sinal da v3.96:** `falouAlgoProprio` contou três palavras de conteúdo (*amigo*,
+*igualmente*, *família*) e mandou o caso para a tecla 6. Nem `ehDespedida` nem `mensagemDeCortesia`
+reconheciam a RETRIBUIÇÃO — devolver o voto que nós fizemos.
+
+**Conserto:** `ehRetribuicao` (*"igualmente"*, *"pra você também"*, *"o senhor também"*, curta e sem
+pergunta) sai da conta, e o VOCATIVO (amigo, amiga, irmão, querida, capitão, Martim) passou a ser palavra
+sem conteúdo. Depois: o caso cai em `ultima-e-so-reacao` → **tecla 3, conclui sem mandar nada.** Com
+pergunta junto (*"igualmente, mas e o remédio?"*) continua sendo fala dela.
+
 ## 2026-09-22 — v3.100.0 — adesivo entra no que temos
 
 **Pedido dele:** *"inclua adesivo, é algo comum que é pedido"*. O que temos passa a ser folheto

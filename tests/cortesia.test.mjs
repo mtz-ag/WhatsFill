@@ -3238,6 +3238,12 @@ grupo('falouAlgoProprio: a fala DELA que ninguem respondeu (22/09/2026, os dois 
   check(!f('🙏🙏👍'), 'reacao');
   check(!f('Deus abençoe o senhor e sua família'), 'a bencao e carinho, nao assunto');
   check(!f('Amém, que Deus proteja vocês'), 'amem');
+  // a retribuicao fecha a conversa (22/09/2026): responder puxa o que ela encerrou
+  check(!depois('Obrigado amigo igualmente para o senhor e sua família'), 'retribuicao: "igualmente" e despedida');
+  check(!depois('Muito obrigada, pra você também'), '"pra voce tambem"');
+  check(!depois('Amém, o senhor também capitão'), '"o senhor tambem" com vocativo');
+  check(!!depois('Obrigado, igualmente. Mas e o remédio que eu pedi?'), 'com pergunta junto, continua sendo fala dela');
+  check(!!depois('Obrigada amiga, minha família está passando fome'), 'o vocativo sai, o desabafo fica');
   check(!f('Tamo junto capitão, contem comigo nessa luta pelo Rio Grande'), 'so apoio tem desfecho proprio (agradecer)');
   check(!f('Força capitão, estamos juntos sempre'), 'apoio curto');
   check(!f('Olha isso gente compartilhem com todos https://youtu.be/x'), 'legenda de link repassado (a regra do Eraldo)');

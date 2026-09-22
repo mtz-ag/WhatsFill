@@ -3616,9 +3616,27 @@ const PALAVRAS_SEM_CONTEUDO = new Set(
     'obg brigado brigada valeu grato grata tudo bem beleza blz ok okay certo sim claro ta amem ' +
     'nome cidade moro mora sobrenome rs rgs rgds sul grande estado ' +
     // a benção, que nesta base fecha metade das mensagens e é carinho, não assunto
-    'deus abencoe abencoa abencoar abencoado abencoada proteja ilumine guarde senhor senhora'
+    'deus abencoe abencoa abencoar abencoado abencoada proteja ilumine guarde senhor senhora ' +
+    // o vocativo — quem ela chama, e não o que ela diz
+    'amigo amiga amigos amigas irmao irma querido querida capitao martim martins deputado'
   ).split(/\s+/)
 );
+
+/**
+ * **A RETRIBUIÇÃO fecha a conversa** (22/09/2026, print dele: *"Obrigado amigo igualmente para o senhor
+ * e sua família"* + 🙏, e a IA escreveu *"Amém! Um abraço."* — *"a pessoa finalizou a conversa, não tem
+ * necessidade de mandar abraço novamente"*). Quem responde "igualmente" / "pra você também" está
+ * devolvendo o voto que nós fizemos: é despedida, e responder puxa a conversa que ela encerrou.
+ *
+ * Só vale sem pergunta e em mensagem curta — *"obrigado, igualmente, mas e o remédio?"* continua sendo
+ * fala dela.
+ */
+const RETRIBUICAO =
+  /(^|[^\p{L}])(igualmente|(pra|para) (voce|vc|voces|vcs|o senhor|a senhora|sua familia)( e sua familia)? tambem|(voce|vc|voces|o senhor|a senhora) tambem)([^\p{L}]|$)/iu;
+function ehRetribuicao(msg) {
+  const texto = semAcentos(msg?.texto).toLowerCase();
+  return !!texto && texto.length <= 120 && !texto.includes('?') && RETRIBUICAO.test(texto);
+}
 
 /**
  * **Ela escreveu algo DELA que ninguém respondeu** — pedido dele (22/09/2026): *"no início temos a
@@ -3666,7 +3684,7 @@ export function falouAlgoProprio(entrantes, nossaUltimaAt, padroesDeAnuncio = []
     .filter((v) => v.length > 1);
 
   for (const msg of pendentes) {
-    if (ehSoReacao(msg) || mensagemDeCortesia(msg) || ehDespedida(msg)) continue;
+    if (ehSoReacao(msg) || mensagemDeCortesia(msg) || ehDespedida(msg) || ehRetribuicao(msg)) continue;
     // A legenda de um REPASSE (vídeo, link, áudio encaminhado) não é fala dela para nós — a regra do
     // Eraldo (06/09), que já manda repasse para a mensagem do momento ou o agradecimento.
     if (ehLegendaDeRepasse(msg)) continue;
