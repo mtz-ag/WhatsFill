@@ -3248,8 +3248,27 @@ grupo('falouAlgoProprio: a fala DELA que ninguem respondeu (22/09/2026, os dois 
   check(!depois('Maria Souza da Silva, Canoas. Obrigada!', { jaSabemos: ['Maria Souza da Silva', 'Canoas'] }), 'cadastro + obrigada');
   check(!depois('Obrigada pelo material'), 'agradecer o material nao pede resposta');
   check(!f('', {}, { sistema: true }), 'aviso da plataforma');
+  // a regressao da v3.96 (a Cleusa, 22/09): a recusa virou "fala dela" e a protecao do topo se calou
+  check(!falouAlgoProprio([
+    dela('Não me interesso'),
+    dela('Pago multa e não dou voto'),
+    dela('Depois que ganha as eleições só pensa na família e o povo que se ferra'),
+  ], null, []), 'quem RECUSOU nao esta falando algo: sem-interesse decide, e so decide com pedeRespostaPessoal falso');
   check(!falouAlgoProprio([anuncio, { texto: 'Sou professora e queria entender a proposta', at: '2026-09-22T12:00:00Z' }], antes, []),
     'fala ANTERIOR a nossa ultima mensagem ja foi respondida');
+}
+
+grupo('semInteresse: "nao recebi" e cobranca, nao recusa (22/09/2026)');
+{
+  const um = (t) => semInteresse([{ texto: t, tipo: 'TEXT' }]);
+  check(!um('Não recebi o material ainda'), 'quem cobra o material nao e sem interesse');
+  check(!um('Não recebi'), 'nem seco');
+  check(!um('Não chegou nada ainda'), 'nao chegou');
+  check(!um('Não tenho whatsapp'), 'whatsapp, e nao so "whats"');
+  check(!um('Não me mandaram nada'), 'nao me mandaram');
+  check(!!um('Não me interesso'), 'a recusa de verdade continua sendo recusa');
+  check(!!um('Não quero receber mais nada'), 'recusa explicita continua');
+  check(!!um('Não'), 'o nao seco a pergunta fechada continua');
 }
 
 fim();

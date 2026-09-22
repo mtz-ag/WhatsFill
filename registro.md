@@ -1,3 +1,27 @@
+## 2026-09-22 — v3.98.0 — sem interesse volta a concluir calado, e negativa não fecha com o formulário
+
+**Print dele:** a contato escreveu *"Não me interesso"*, *"Pago multa e não dou voto"* e uma crítica, e a
+IA respondeu (ele apagou) terminando com o pedido de *Nome , Cidade*. *"Casos de sem interesse e de
+pessoas procurando emprego ou dinheiro não faz sentido perguntar os dados, a pessoa não vai dar."*
+
+**Medido, eram duas coisas, e a primeira foi REGRESSÃO MINHA da v3.96:**
+1. `semInteresse` reconhecia a recusa (*"pediu para não receber mais"*), mas a regra `sem-interesse` só
+   decide com `!pedeRespostaPessoal` — a guarda da conversa longa (05/09). O sinal novo
+   `falouAlgoProprio` entra em `pedeRespostaPessoal`, e a recusa tinha cinco palavras de conteúdo:
+   virou "fala dela", **a proteção do topo se calou** e o caso foi para a IA. Hoje `falouAlgoProprio`
+   devolve nada quando `semInteresse` reconhece a recusa.
+2. `casoDeNegativa` (que tira o formulário do rascunho e do PISO) cobria dinheiro e emprego. Passou a
+   cobrir **sem interesse** também — para o caso que ainda chega à IA (conversa longa).
+
+**Achado de brinde, e antigo:** `semInteresse` dava recusa para *"Não recebi o material ainda"*, *"Não
+chegou nada ainda"* e *"Não tenho whatsapp"* — pela negativa na abertura de mensagem curta. Quem estava
+COBRANDO o que pediu recebia etiqueta permanente e conclusão calada. Entraram em `NEGATIVA_BENIGNA`
+(e `tenho whats` passou a aceitar "whatsapp").
+
+**Para ele conferir:** a contato já tinha a etiqueta SEM INTERESSE, e a proteção por etiqueta
+(`etiqueta-so-conclui`) só lê essa etiqueta se o campo *"Etiqueta de SEM INTERESSE"* da aba
+Automatizado estiver preenchido com o nome dela.
+
 ## 2026-09-22 — v3.97.0 — engasgo de rede espera e segue, em vez de derrubar a rodada
 
 **Relato dele:** *"tenho tido bastante problemas de fetch failed, está parando bastante o

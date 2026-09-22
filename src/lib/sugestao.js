@@ -80,7 +80,9 @@ export const pedirDadosNaoCabe = (c) =>
  * @param {object} c os sinais do contato
  * @returns {boolean}
  */
-export const casoDeNegativa = (c) => !!(c?.pedeAjudaFinanceira || c?.pedeEmprego);
+// SEM INTERESSE também (22/09/2026, a Cleusa): *"casos de sem interesse e de pessoas procurando emprego
+// ou dinheiro não faz sentido perguntar os dados, a pessoa não vai dar"*.
+export const casoDeNegativa = (c) => !!(c?.pedeAjudaFinanceira || c?.pedeEmprego || c?.semInteresse);
 
 export const REGRAS = [
   {

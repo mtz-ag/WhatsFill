@@ -998,6 +998,8 @@ grupo('casoDeNegativa: o cadastro nao fecha um "nao" (12/09/2026)');
   check(sugestaoLib.casoDeNegativa({ pedeEmprego: { tipo: 'emprego' } }), 'nem quem procura emprego');
   check(sugestaoLib.casoDeNegativa({ pedeEmprego: { tipo: 'campanha' } }), 'nem quem quer trabalhar na campanha (a resposta e "so voluntario")');
 
+  check(sugestaoLib.casoDeNegativa({ semInteresse: { motivo: 'pediu para nao receber mais' } }),
+    'nem quem recusou (a Cleusa, 22/09): quem nao quer nada nao vai dar nome e cidade');
   check(!sugestaoLib.casoDeNegativa({ soCortesia: true }), 'quem so cumprimentou continua recebendo o pedido de cadastro');
   check(!sugestaoLib.casoDeNegativa({ pedeMaterial: true }), 'e quem pediu material tambem');
   check(!sugestaoLib.casoDeNegativa({}), 'sem sinal nenhum, nao e negativa');

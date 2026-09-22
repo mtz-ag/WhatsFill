@@ -2403,8 +2403,14 @@ const RECUSA = new RegExp(RECUSA_EXPLICITA, 'i');
  *
  * Mesma coisa com *"não sei"* na posição da cidade e *"não moro mais lá"*.
  */
+/**
+ * **"Não recebi" e "não chegou" são QUEIXA de quem quer, nunca recusa** (22/09/2026). Medido ao escrever
+ * `falouAlgoProprio`: *"Não recebi o material ainda"*, *"Não chegou nada ainda"* e *"Não tenho
+ * whatsapp"* davam `semInteresse` — etiqueta permanente e conclusão em silêncio para quem estava
+ * COBRANDO o que pediu. `tenho whats` exigia a palavra acabar ali, e "whatsapp" não acaba.
+ */
 const NEGATIVA_BENIGNA =
-  /\bnao (sei|lembro|faco parte|participo|estou em|tenho grupo|tenho whats|moro|sou de|consigo|entendi)\b|\bnenhum grupo\b|\bnao tenho nenhum\b|\b(nunca|nao) (ouvi|conheco|conhecia|vi) \b/i;
+  /\bnao (sei|lembro|faco parte|participo|estou em|tenho grupo|tenho whats\w*|tenho zap|tenho (celular|internet|e-?mail)|moro|sou de|consigo|entendi|recebi|recebemos|chegou|chegaram|veio|vieram|apareceu|abriu|abre|funciona|carregou)\b|\bnenhum grupo\b|\bnao tenho nenhum\b|\b(nunca|nao) (ouvi|conheco|conhecia|vi) \b|\bnao (me |nos )?(mandaram|enviaram|responderam)\b/i;
 
 /**
  * Negativa sobre IR ao evento — resposta ao convite, nunca recusa de contato.
@@ -3644,6 +3650,14 @@ export function falouAlgoProprio(entrantes, nossaUltimaAt, padroesDeAnuncio = []
     (m) => !m?.sistema && !m?.geradaPeloAnuncio && !ehMensagemDeAnuncio(m, padroesDeAnuncio)
   );
   if (!pendentes.length) return null;
+  /**
+   * **Quem RECUSOU não está "falando algo" — e sem esta linha a recusa perdia a proteção** (22/09/2026,
+   * a Cleusa: *"Não me interesso"*, *"Pago multa e não dou voto"*). `sem-interesse` só decide com
+   * `!pedeRespostaPessoal` (a guarda da conversa LONGA, 05/09), e este sinal entra em
+   * `pedeRespostaPessoal`: a frase da recusa tinha cinco palavras de conteúdo, virou "fala dela", a
+   * proteção do topo se calou e a IA escreveu fechando com o pedido de nome e cidade.
+   */
+  if (semInteresse(entrantes, nossaUltimaAt)) return null;
   // Só apoio tem desfecho próprio (agradecer), decidido por ele em 31/08.
   if (soExpressaApoio(entrantes, nossaUltimaAt, padroesDeAnuncio)) return null;
 

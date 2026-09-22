@@ -2147,6 +2147,11 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **SINAL NOVO EM `pedeRespostaPessoal` CALA A PROTEÇÃO `sem-interesse`** (22/09/2026, regressão da
+  v3.96). A regra só decide com `!pedeRespostaPessoal`; pôr ali um sinal que liga com fala curta fez a
+  recusa *"Pago multa e não dou voto"* virar caso da IA, que fechou pedindo o cadastro. **Ao somar um
+  sinal a `pedeRespostaPessoal`, confira quem lê esse sinal como GUARDA** — e a recusa tem de desligá-lo.
+
 - **ENGASGO DE REDE NÃO PARA A RODADA; DEFEITO PARA** (22/09/2026, *"fetch failed está parando bastante o
   automatizado"*). Qualquer `erro` parava o laço, inclusive o `Failed to fetch` do limitador de taxa, cuja
   ação certa é esperar. Hoje `api.ehErroDeRede` separa os dois, o engasgo espera (30 s / 1 min / 2 min) e
