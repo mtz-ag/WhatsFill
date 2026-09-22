@@ -905,7 +905,7 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
     '"material" ficou de fora: nesta base e conteudo DIGITAL, o pedido mais comum que chega');
 
   check(
-    montarSistemaRascunho({ templates: [], regras: '', gabinete: '' }).includes('NUNCA diga que TEMOS'),
+    montarSistemaRascunho({ templates: [], regras: '', gabinete: '' }).includes('NUNCA diga que temos o que não está na lista'),
     'e o prompt proibe afirmar que temos, com todas as letras'
   );
 
@@ -916,7 +916,7 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
    * fechar um caminho sem escrever a saida troca o defeito por uma resposta muda.
    */
   const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
-  check(prompt.includes('você NUNCA confirma nada'), 'o prompt diz que material nao se confirma');
+  check(prompt.includes('Nunca diga que ela vai receber'), 'o prompt diz que a entrega nao se confirma');
 
   /**
    * **O ESCOPO da regra, que faltava — print da Cleo (08/09/2026).** Ela pediu que comprassemos um
@@ -957,7 +957,7 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
     'mandando NAO pedir endereco nesses casos');
   /** A contradicao que a mensagem dela tinha: negar a doacao e pedir o endereco no mesmo texto. */
   check(/nunca na mesma mensagem/i.test(prompt), 'e proibindo as duas coisas na mesma mensagem');
-  check(prompt.includes('PERGUNTE que tipo de material ela precisa'),
+  check(prompt.includes('falou em "material" sem dizer qual: pergunte o que ela precisa'),
     'e manda PERGUNTAR o tipo quando ela nao disse qual');
   check(prompt.includes('não pergunte de'),
     'e manda NAO perguntar de novo quando ela ja nomeou o item (o caso do Lucas)');
@@ -1470,7 +1470,7 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
 
   const html = paraHtml(PADRAO_DE_ATENDIMENTO);
 
-  check((html.match(/<h3>/g) || []).length === 27, `as 27 secoes viram titulo (${(html.match(/<h3>/g) || []).length})`);
+  check((html.match(/<h3>/g) || []).length === 29, `as 29 secoes viram titulo (${(html.match(/<h3>/g) || []).length})`);
   check((html.match(/<table>/g) || []).length === 1, 'a tabela do documento vira tabela');
   check((html.match(/<li>/g) || []).length > 0, 'e as listas viram lista');
 
@@ -1949,7 +1949,7 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
  * propaganda de bem que precisa ser comprado), e ela foi para dentro da mensagem palavra por palavra.
  */
 {
-  grupo('quem decide o que tem e a equipe dos materiais (a Sirlei, 09/09)');
+  grupo('so folheto e colinha: o estoque e conhecido (22/09/2026 — SUBSTITUI a regra da Sirlei, 09/09)');
 
   const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
 
@@ -1957,13 +1957,16 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
    * **O criterio deixou de ser a lista e passou a ser a MARCA**, que resolve o item que ninguem
    * previu sem precisar prever — que e o que uma lista nunca faz.
    */
-  check(/leva o NOME, o NÚMERO ou a MARCA/.test(prompt), 'o criterio e a marca da campanha');
-  check(/A lista é exemplo, não é estoque/.test(prompt), 'e a lista e exemplo, nao estoque');
-  check(/VOCÊ NUNCA DIZ SE TEMOS OU NÃO/.test(prompt), 'a IA nao diz se temos');
-  check(/Na dúvida entre recusar e repassar, REPASSE/.test(prompt), 'e na duvida ela repassa');
-
-  /** O segundo defeito: texto de prompt nao e texto para eleitor. */
-  check(/NUNCA liste os itens para o contato/.test(prompt), 'e nunca recita a lista para o contato');
+  /**
+   * **Regra dele de 22/09: "nao fornecemos nenhum material alem de folhetos e colinhas".** Ate entao o
+   * estoque era desconhecido e tudo ia para a equipe dos materiais decidir; agora o que existe esta
+   * escrito, e o resto se nega numa frase — repassar um adesivo que nao existe cria a expectativa.
+   */
+  check(prompt.includes('FOLHETO (santinho, panfleto'), 'o que temos e o folheto');
+  check(prompt.includes('e a COLINHA com os números'), 'e a colinha');
+  check(prompt.includes('chaveiro — NÃO temos'), 'o resto nao temos, dito em uma frase');
+  check(!prompt.includes('Na dúvida entre recusar e repassar, REPASSE'), 'e a regra antiga do "repasse tudo" SAIU');
+  check(!prompt.includes('VOCÊ NUNCA DIZ SE TEMOS OU NÃO'), 'e o "nunca diga se temos" tambem');
 
   /** A fronteira da 3.13 e da 3.16 continua de pe: bem de uso pessoal e a secao 9. */
   check(/bem de uso PESSOAL/.test(prompt), 'bem de uso pessoal continua fora do material');
@@ -2121,7 +2124,8 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   check(/NÃO se apresente/.test(conhece), 'e manda nao se apresentar');
   check(/regra 9/.test(conhece), 'com a excecao de ela perguntar quem fala');
   const nova = montarContatoRascunho({ mensagens: fala });
-  check(/equipe do Capitão Martim/.test(nova), 'pessoa nova de verdade: pode se identificar');
+  check(/WhatsApp dele/.test(nova), 'pessoa nova de verdade: pode dizer que este e o WhatsApp dele');
+  check(/Escreva como o Capitão Martim/.test(nova), 'e a voz e a do Capitao, na primeira pessoa (22/09/2026)');
 
   const apresenta = (ctx) => avisos(oQueSaiu, ctx).some((a) => /já conversou conosco antes/.test(a));
   check(apresenta({ jaNosConhece: true }), 'se apresentar a quem ja nos conhece gera aviso');
@@ -2609,10 +2613,10 @@ grupo('a regra do "NAO REPITA" esta colada no pedido (12/09/2026)');
   grupo('roupa nao e material: a IA diz que nao temos, sem endereco (12/09/2026)');
 
   const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
-  const linhaDoMaterial = prompt.split('\n').find((l) => /MATERIAL DE CAMPANHA é tudo/.test(l)) || '';
-  const listaDoMaterial = prompt.slice(prompt.indexOf(linhaDoMaterial), prompt.indexOf('A lista é exemplo'));
+  const linhaDoMaterial = prompt.split('\n').find((l) => /O QUE TEMOS PARA ENVIAR/.test(l)) || '';
+  const listaDoMaterial = prompt.slice(prompt.indexOf(linhaDoMaterial), prompt.indexOf('Nada além disso'));
   check(!!linhaDoMaterial, 'a regra do material continua no prompt');
-  check(!/camiseta|boné|colete/.test(listaDoMaterial), 'e camiseta, bone e colete SAIRAM da lista do material');
+  check(!/camiseta|boné|colete/.test(listaDoMaterial), 'e camiseta, bone e colete nao estao no que temos');
   check(/ROUPA NÃO É MATERIAL, E NÃO FORNECEMOS NENHUMA/.test(prompt), 'a regra da roupa esta no sistema');
   check(/art\. 39, § 6º/.test(prompt), 'com a lei nomeada');
   check(/sem pedir endereço, sem repassar/.test(prompt), 'e sem endereco nem repasse');
@@ -2785,8 +2789,15 @@ grupo('a IA ve a midia sem texto e o atendimento anterior (16/09/2026)');
     agora,
   });
   check(/ela mandou uma IMAGEM/.test(comMidia), 'a imagem aparece na conversa que ela le');
-  check(/MÍDIA:/.test(comMidia) && /NUNCA diga\s+que não viu/.test(comMidia.replace(/\s+/g, ' ')), 'e a regra proibe dizer que nao viu');
-  check(!/MÍDIA:/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora })), 'sem midia, sem a regra');
+  check(/MÍDIA E LINK:/.test(comMidia) && /NUNCA diga que não viu/.test(comMidia.replace(/\s+/g, ' ')), 'e a regra proibe dizer que nao viu');
+  check(/NÃO pergunte o que é/.test(comMidia), 'e proibe PERGUNTAR o que e (22/09/2026: desconversar)');
+  check(!/MÍDIA E LINK:/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], agora })), 'sem midia, sem a regra');
+  check(/MÍDIA E LINK:/.test(montarContatoRascunho({
+    mensagens: [{ de: 'contato', texto: 'olha isso https://youtu.be/x', at: h('14:00:00') }], agora,
+  })), 'LINK tambem leva a regra');
+  check(/MÍDIA E LINK:/.test(montarContatoRascunho({
+    mensagens: [{ de: 'contato', texto: 'vejam que coisa', midia: true, at: h('14:00:00') }], agora,
+  })), 'e figura COM legenda tambem');
 
   /** **O audio transcrito liga a regra do audio** — o painel jogava `transcrito` fora e ela nunca ligava. */
   check(/ÁUDIO: para ela, nós OUVIMOS/.test(montarContatoRascunho({

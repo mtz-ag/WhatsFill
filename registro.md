@@ -1,3 +1,43 @@
+## 2026-09-22 — v3.99.0 — a IA fala como o Capitão, desconversa de mídia e só oferece folheto
+
+**Pedidos dele, num recado só**, com a lista para o padrão de atendimento (*"ignore o que for
+repetição"*) e, depois, *"faltou uma instrução que é a IA assumir o papel de capitão martim ao
+responder"*.
+
+**Já estavam no padrão (v3.88), e ficaram como estavam:** linha em branco após todo ponto (seção 22),
+não abrir confirmando o que ela disse (23), fechar o assunto do Capitão perguntando se quer saber mais
+de algo (21), as pessoas chegam por anúncio (1).
+
+**Entraram no padrão DELE (`atendimento.js`), a pedido dele:**
+- **Seção 1 — a voz é a do Capitão Martim**, na primeira pessoa. Duas guardas escritas junto, e ditas a
+  ele: falar como ele não é inventar a vida dele (onde está, que vai visitar, ligar, resolver
+  pessoalmente) — é a trava de promessa com outro sujeito —, e **quem PERGUNTAR diretamente se é ele
+  ouve a verdade**: é a equipe dele que atende. É a regra 9, dele mesmo (a Juscelia, 10/09), que continua
+  valendo; mentir sobre quem escreve a quem perguntou é o que não se faz.
+- **Seção 23 — não confirmar o áudio nem a mensagem** (*"ouvi seu áudio"*, *"recebi sua mensagem"*).
+  A regra 6 das instruções mandava o contrário (*"para ela, nós OUVIMOS: 'ouvi seu áudio'"*): **trocada**,
+  e a linha colada no pedido também.
+- **Seção 24 (nova) — imagem, vídeo e link não são o assunto:** não pergunte o que é, desconverse.
+- **Seção 25 (nova) — material: só folheto e colinha.** As seções 24–27 antigas viraram 26–29.
+
+**Nas instruções da IA (`ia.js`), para não brigar com o padrão** (regra perto do pedido vence a longe —
+lição do item 22, 07/09):
+- **O material foi reescrito, e isto SUBSTITUI a regra da Sirlei (09/09)** — lá o estoque era
+  desconhecido e tudo ia para a equipe dos materiais decidir; agora ele disse o que existe. Folheto
+  (santinho, panfleto) e colinha impressa: endereço + repasse, como sempre. Todo o resto: *"não temos, o
+  que temos são folhetos"*, numa frase, sem repassar. **O texto manda escrever "o que temos são folhetos"
+  e não "consigo te mandar"** — medido: a segunda forma dispara a trava de promessa e para a rodada.
+- **A conferência da etiqueta de material** (`montarSistemaMaterial`) passou a contar só folheto e
+  colinha: adesivo pedido não é mais caso para a equipe do material.
+- **A regra MÍDIA agora vale também para LINK e figura COM legenda** (antes, só mídia sem texto), e
+  proíbe PERGUNTAR o que é. O painel passa a marca `midia` no último `map` de `conversaParaIA`.
+- A voz da pessoa nova deixou de ser *"aqui é a equipe"*: é *"este é o WhatsApp dele"*.
+
+**Ficou de fora, e foi dito a ele:** o detector determinístico (`cortesia.OBJETO_DE_MATERIAL`) continua
+contando adesivo e bandeira como pedido de material — ele leva o caso para a IA (que agora responde
+"não temos") e é guarda de `pedeAjudaFinanceira`; mexer nele é outra frente. Com a IA DESLIGADA, a
+etiqueta de material ainda pode ser marcada num pedido de adesivo.
+
 ## 2026-09-22 — v3.98.0 — sem interesse volta a concluir calado, e negativa não fecha com o formulário
 
 **Print dele:** a contato escreveu *"Não me interesso"*, *"Pago multa e não dou voto"* e uma crítica, e a

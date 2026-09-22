@@ -2679,6 +2679,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **A VOZ É A DO CAPITÃO MARTIM, E O MATERIAL É SÓ FOLHETO E COLINHA** (decisões dele, 22/09/2026). A
+  primeira pessoa do Capitão mora na seção 1 do padrão dele, com duas guardas que não saem: não inventar
+  a vida dele (onde está, visita, ligação) e **dizer que é a equipe quando PERGUNTAREM** (regra 9). O
+  material **substituiu a regra da Sirlei (09/09)**: o estoque agora é conhecido, e o resto se nega numa
+  frase — **escrita como "o que temos são folhetos"**, porque *"consigo te mandar"* dispara a trava de
+  promessa. **Ao mudar regra do padrão dele, procure a regra das instruções que diz o contrário** — a
+  regra 6 mandava dizer *"ouvi seu áudio"*, que ele acabou de proibir.
+
 - **SAO TRES CASAS DESDE 18/09/2026: Anthropic, OpenAI e OpenRouter (o Qwen).** A casa continua saindo
   do NOME do modelo: **barra no nome e OpenRouter** (`qwen/qwen3.7-plus`). O corpo do OpenRouter leva
   `provider: { data_collection: 'deny', require_parameters: true }` — **nao tire o `deny`**: foi a

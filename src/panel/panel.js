@@ -10780,6 +10780,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       texto: marcaDaMensagem(m, String(m?.texto || ''), doAnuncio) || iaLib.marcaDeMidia(m),
       semConteudo: !String(m?.texto || '').trim() && !!iaLib.marcaDeMidia(m),
+      // Figura/vídeo COM legenda: a legenda chega como texto, e sem esta marca a IA não sabe que houve
+      // mídia — e pergunta o que é (22/09/2026).
+      midia: ['IMAGE', 'VIDEO', 'STICKER', 'DOCUMENT'].includes(String(m?.tipo || '').toUpperCase()),
       at: m?.at || null,
       // `anuncio` NÃO é decoração: é o que tira o clique da CONTAGEM de mensagens sem resposta.
       // Sem ele, "ela escreveu 2 mensagens" conta uma que ela não escreveu.
@@ -10808,7 +10811,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * que passava só o tipo: função testada não garante nada se quem chama filtrar os campos que ela
        * lê — e aqui o filtro estava no ÚLTIMO passo, depois de o campo ter sido montado.
        */
-      .map(({ de, texto, at, anuncio, transcrito, semConteudo }) => ({ de, texto, at, anuncio, transcrito, semConteudo }));
+      .map(({ de, texto, at, anuncio, transcrito, semConteudo, midia }) => ({ de, texto, at, anuncio, transcrito, semConteudo, midia }));
   }
   /**
    * Rascunha com a IA e **deixa o texto no campo de mensagem, para ele mandar.**

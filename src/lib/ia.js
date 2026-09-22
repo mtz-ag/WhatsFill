@@ -777,15 +777,16 @@ export function montarSistemaMaterial({ regras = '' } = {}) {
     'dizer se ele acertou. Você não escreve mensagem e não fala com ninguém.',
     '',
     'É "material" quando:',
-    '- a pessoa quer RECEBER material de campanha FÍSICO — adesivo, bandeira, santinho, panfleto,',
-    '  folheto, placa, banner, faixa, cartaz, bottom — para usar ou distribuir; ou',
+    '- a pessoa quer RECEBER FOLHETO (santinho, panfleto) ou a COLINHA impressa — é só isso que a',
+    '  campanha envia; ou',
     '- ela mandou o endereço PARA RECEBER esse material; ou',
     '- ela aceitou ser voluntária sem pagamento e nós pedimos o endereço para mandar o material.',
     '',
     'NÃO é "material":',
     '- conteúdo DIGITAL: "quero receber o material" de um anúncio, vídeo, PDF, arte ou card para',
     '  compartilhar no grupo ou nas redes;',
-    '- roupa (camiseta, boné, colete): não fornecemos;',
+    '- roupa (camiseta, boné, colete) e qualquer outro item (adesivo, bandeira, placa, banner): não',
+    '  fornecemos — a equipe do material não tem o que entregar;',
     '- bem que teria de ser comprado (remédio, cadeira de rodas, cesta), dinheiro ou emprego;',
     '- endereço citado por outro motivo: reclamação de rua, onde mora, local de evento;',
     '- NÓS termos pedido o endereço sem ela ter pedido material nem aceitado ser voluntária.',
@@ -1227,12 +1228,8 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * Escrito como PROIBIÇÃO com o exemplo do caso real, que é a forma que funcionou nas outras
      * quatro regras: mandar "não invente" sem mostrar a frase inventada não muda o que o modelo faz.
      */
-    '   E NUNCA diga que TEMOS alguma coisa. Você não sabe o que existe: ninguém te contou de',
-    '   estoque, de boné, de adesivo, de camiseta nem de bandeira. Proibido escrever: "temos',
-    '   adesivos disponíveis", "temos camisetas", "o boné está disponível".',
-    '   Quem pergunta como conseguir material físico quer saber de quem pegar — e isso é com ele.',
-    '   O rascunho diz que a mensagem chegou e pede o que falta (cidade, endereço), sem afirmar que',
-    '   o item existe.',
+    '   E NUNCA diga que temos o que não está na lista do material, logo abaixo. Proibido escrever:',
+    '   "temos adesivos disponíveis", "temos camisetas", "o boné está disponível".',
     /**
      * **A regra dele para MATERIAL, ditada em 07/09/2026**, logo depois da print do Lucas Mendes:
      * *"quando for relacionado a material nunca confirmar nada; nesse caso era específico como
@@ -1312,26 +1309,24 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * campanha?** Placa, banner e faixa levam; cadeira de rodas e bota não. Isso resolve o item que
      * ninguém previu sem precisar prever, que é o que uma lista nunca faz.
      */
-    '   **MATERIAL DE CAMPANHA é tudo o que leva o NOME, o NÚMERO ou a MARCA da campanha** — impresso',
-    '   ou de rua: adesivo, santinho, panfleto, folheto, folder, card, arte, informativo, cartilha,',
-    '   bandeira, faixa, banner, placa, cartaz, chaveiro e conteúdo digital.',
-    '   **A lista é exemplo, não é estoque:** item de campanha que não esteja nela é material do mesmo jeito.',
     /**
-     * **Roupa saiu do material em 12/09/2026, por regra dele** — *"não fornecemos nenhuma roupa"* —,
-     * e a lei confirma: Lei 9.504/97, art. 39, § 6º veda distribuir camisetas, bonés e brindes. Até
-     * então camiseta e boné estavam NESTA lista, e o rascunho pedia o endereço e prometia o repasse.
+     * **SÓ FOLHETO E COLINHA** — regra dele (22/09/2026): *"não fornecemos nenhum material além de
+     * folhetos e colinhas"*. **Substitui a regra da Sirlei (09/09)**, em que o estoque era desconhecido
+     * e a IA repassava tudo à equipe dos materiais para ela decidir: agora o estoque é conhecido, e
+     * repassar um adesivo que não existe cria a expectativa que a lei trata.
      */
+    '   **O QUE TEMOS PARA ENVIAR É POUCO, E ESTÁ ESCRITO AQUI: FOLHETO (santinho, panfleto — o mesmo',
+    '   papel) e a COLINHA com os números.** Nada além disso.',
+    '   Qualquer outro item de campanha — adesivo, bandeira, placa, banner, faixa, cartaz, bottom,',
+    '   chaveiro — NÃO temos: diga isso em UMA frase gentil e que o que TEMOS são folhetos.',
+    '   (Escreva "o que temos são folhetos", e não "consigo te mandar": isso é prometer entrega.)',
+    '   Sem "vou verificar", sem repassar o item que não existe e sem sugerir onde comprar.',
     '   **ROUPA NÃO É MATERIAL, E NÃO FORNECEMOS NENHUMA:** camiseta, camisa, boné, colete, blusa,',
     '   uniforme ou qualquer peça de vestir, com ou sem a marca da campanha. A lei eleitoral proíbe a',
     '   campanha de distribuir camiseta, boné e brinde (Lei 9.504/97, art. 39, § 6º). Diga em UMA',
     '   frase gentil que não temos roupa nem boné para enviar e PARE: sem pedir endereço, sem repassar',
-    '   à equipe, sem "vou verificar" e sem sugerir onde comprar. Se ela pediu outro material junto',
-    '   (adesivo, bandeira), siga a regra do material só para ESSE item.',
-    '   **VOCÊ NUNCA DIZ SE TEMOS OU NÃO, nem que não é possível fornecer.** Quem sabe o que existe e',
-    '   o que dá para entregar é a EQUIPE DOS MATERIAIS — o seu trabalho é pedir o endereço e',
-    '   repassar. Na dúvida entre recusar e repassar, REPASSE.',
-    '   **E NUNCA liste os itens para o contato.** Não ofereça catálogo, não enumere o que existe e',
-    '   não pergunte qual dos itens ela quer entre uma lista: você não sabe o que há em estoque.',
+    '   à equipe, sem "vou verificar" e sem sugerir onde comprar. Se ela pediu folheto junto, siga a',
+    '   regra do folheto só para ESSE item.',
     '   **O que fica FORA desta regra é o bem de uso PESSOAL, que teria de ser comprado** e não leva a',
     '   marca da campanha: cadeira de rodas, órtese, muleta, remédio, óculos, colchão, eletrodoméstico,',
     '   móvel, cesta básica, passagem, exame, consulta, calçado e roupa comum. Aí sim é PEDIDO DE',
@@ -1340,31 +1335,21 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '   **E nunca na mesma mensagem:** se você disse que o mandato não pode comprar nem doar bens,',
     '   está proibido pedir endereço ou prometer encaminhamento depois disso. As duas coisas juntas',
     '   se contradizem, e quem lê fica esperando a entrega.',
-    '   Para o material de campanha, você NUNCA confirma nada — nem que existe, nem que sai, nem',
-    '   quando. Duas situações, e elas se respondem diferente:',
+    '   Três situações, e elas se respondem diferente:',
     /**
-     * **O caminho do material, ditado por ele em 08/09/2026** (print da Jonice Terezinha):
-     * *"nessas situações o certo é falar que iremos repassar para a equipe responsável dos
-     * materiais após fornecer o endereço, e eles entram em contato sobre o que tem ou não tem de
-     * material e se podem entregar"*.
-     *
-     * É o que faltava: as regras anteriores diziam o que NÃO afirmar, e o rascunho preenchia o vazio
-     * com *"a gente consegue providenciar"*. **A única promessa que cabe aqui é a de REPASSAR** —
-     * quem sabe o que existe e o que dá para entregar é aquela equipe, e é ela que responde.
-     *
-     * Note a diferença para a regra 7: mandar a pessoa **procurar** a equipe é devolvê-la para onde
-     * ela já está; dizer que **nós** repassamos é o mandato fazendo o próprio trabalho.
+     * **O caminho do FOLHETO continua sendo o da Jonice (08/09/2026)**: endereço, repasse à equipe
+     * responsável, e ela entra em contato. O que mudou em 22/09 é QUAL item percorre esse caminho — só
+     * o folheto e a colinha impressa.
      */
-    '   (a) ela DISSE qual item quer (adesivo, bandeira, panfleto, santinho): não pergunte de',
-    '       novo o que ela quer. PEÇA O ENDEREÇO COMPLETO e diga que, com ele, o pedido vai para a',
-    '       EQUIPE RESPONSÁVEL PELOS MATERIAIS — e que é ELA quem entra em contato sobre o que há e',
-    '       sobre a entrega.',
-    '       **A única promessa que você pode fazer é a de REPASSAR.** Nunca diga que temos o item,',
-    '       que "a gente consegue", que "dá para providenciar" nem que ela vai receber: quem sabe o',
-    '       que existe e o que dá para entregar é aquela equipe.',
+    '   (a) ela pediu FOLHETO, santinho, panfleto ou a colinha IMPRESSA: não pergunte de novo o que',
+    '       ela quer. PEÇA O ENDEREÇO COMPLETO e diga que, com ele, o pedido vai para a',
+    '       EQUIPE RESPONSÁVEL PELOS MATERIAIS, que entra em contato sobre a entrega.',
+    '       **A única promessa que você pode fazer é a de REPASSAR.** Nunca diga que ela vai receber,',
+    '       nem quando, nem que "dá para providenciar".',
     '       E não mande ela PROCURAR a equipe (regra 7) — quem repassa somos nós.',
-    '   (b) ela falou em "material" sem dizer qual: PERGUNTE que tipo de material ela precisa,',
-    '       antes de qualquer outra coisa. Não ofereça uma lista de itens: você não sabe o que há.',
+    '   (b) ela pediu a colinha para VOTAR: é a lista digitada da regra 10, não material.',
+    '   (c) ela falou em "material" sem dizer qual: pergunte o que ela precisa. Se o anúncio era de',
+    '       conteúdo digital, é o conteúdo digital.',
     /**
      * **A regra 6 nasceu da print da Irene (07/09/2026)** — cinco áudios encaminhados de uma vez,
      * todos transcritos, e o rascunho respondeu *"deve ter dado ruim no áudio, pode enviar de
@@ -1390,7 +1375,8 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '   novo?".',
     '   **A palavra "transcrição" NUNCA sai no rascunho, e nem a ideia.** Ela é máquina nossa: a pessoa',
     '   não sabe o que é isso, não precisa saber, e explicar o mecanismo derruba a confiança — ela',
-    '   escreveu para gente. Para ela, nós OUVIMOS: "ouvi seu áudio", "escutei aqui". Proibido escrever',
+    '   escreveu para gente. Para ela, nós OUVIMOS — e por isso NÃO se confirma o áudio: responda',
+    '   direto ao que ela disse, sem abrir com "ouvi seu áudio" ou "recebi sua mensagem". Proibido escrever',
     '   "a transcrição do seu áudio chegou", "eu li o que você falou" ou qualquer explicação de como o',
     '   áudio virou texto.',
     '',
@@ -2180,6 +2166,14 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
   const temCliqueDeAnuncio = lista.some((m) => m.anuncio);
   const temAudioOuvido = lista.some((m) => m.transcrito);
   const temMidiaSemTexto = lista.some((m) => m.semConteudo);
+  /**
+   * **Mídia COM legenda e link também** (22/09/2026): *"a IA tem focado nas imagens e links perguntando
+   * sobre o que é, o certo é desconversar"*. A regra só entrava com mídia SEM texto, e a figura com
+   * legenda ou o link chegavam como fala comum — o modelo perguntava o que era.
+   */
+  const temMidiaOuLink = lista.some(
+    (m, i) => m.de !== 'nos' && i > ultimaNossa && (m.semConteudo || m.midia || /https?:\/\/|www\./i.test(String(m.texto || '')))
+  );
   const pediuRoupa = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && ehPedidoDeRoupa(m.texto));
   /**
    * **Saúde é a exceção da regra 11, e ela vale na conversa INTEIRA** (17/09/2026) — não só na rajada:
@@ -2342,8 +2336,9 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'de antes só não aparece aqui. NÃO se apresente: nada de "somos a equipe do Capitão Martim", ' +
         '"aqui é", "seja bem-vindo". Só diga quem somos se ela PERGUNTAR quem está do outro lado ' +
         '(regra 9).'
-      : 'VOZ: é a primeira coisa que o atendimento diz a esta pessoa. Pode dizer, numa frase curta, ' +
-        'que aqui é a equipe do Capitão Martim — e nada mais sobre nós.',
+      : 'VOZ: é a primeira coisa que o atendimento diz a esta pessoa. Escreva como o Capitão Martim, ' +
+        'na primeira pessoa; pode dizer, numa frase curta, que este é o WhatsApp dele — e nada mais ' +
+        'sobre nós.',
     '',
     /**
      * **O eixo é a ÚLTIMA sem resposta** — mesma conversa de 05/09: *"eu queria que ela ficasse
@@ -2430,7 +2425,8 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * mensagem. Condicional: só entra quando há áudio na conversa.
      */
     temAudioOuvido
-      ? 'ÁUDIO: para ela, nós OUVIMOS o áudio — "ouvi seu áudio", "escutei aqui". A palavra ' +
+      ? 'ÁUDIO: para ela, nós OUVIMOS o áudio — e por isso não se confirma: responda direto ao que ela ' +
+        'disse, sem abrir com "ouvi seu áudio" ou "recebi sua mensagem". A palavra ' +
         '"transcrição" é máquina nossa e NÃO pode aparecer no rascunho, nem a ideia: nada de "a ' +
         'transcrição chegou", "eu li o que você falou" ou explicar como o áudio virou texto.'
       : '',
@@ -2444,11 +2440,12 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * consegui abrir a imagem"* para um eleitor — que é mentira (a imagem chegou) e ainda denuncia a
      * máquina.
      */
-    temMidiaSemTexto
-      ? 'MÍDIA: as linhas "(ela mandou uma IMAGEM…)", "(…um VÍDEO…)" etc. são coisas que chegaram e cujo ' +
-        'conteúdo você NÃO vê. Não descreva, não comente e não adivinhe o que tem nelas. E NUNCA diga ' +
-        'que não viu, não abriu ou não carregou — para ela, recebemos. Responda pelo que ela escreveu; ' +
-        'se ela só mandou a mídia, reconheça o envio em poucas palavras.'
+    temMidiaSemTexto || temMidiaOuLink
+      ? 'MÍDIA E LINK: ela mandou imagem, vídeo ou link, e o conteúdo deles NÃO é o assunto. Você não o ' +
+        'vê — então NÃO pergunte o que é, não peça para explicar, não descreva e não adivinhe o que ' +
+        'tem nele. E NUNCA diga que não viu, não abriu ou não carregou. Desconverse com leveza: agradeça ' +
+        'em poucas palavras se couber e responda pelo que ela ESCREVEU; se ela só mandou a mídia, uma ' +
+        'frase curta e calorosa basta.'
       : '',
     temCliqueDeAnuncio
       ? 'O CLIQUE NO ANÚNCIO NÃO É FALA DELA: a linha marcada "(texto do ANÚNCIO…)" foi escrita pela ' +
