@@ -1,3 +1,28 @@
+## 2026-09-22 — v3.97.0 — engasgo de rede espera e segue, em vez de derrubar a rodada
+
+**Relato dele:** *"tenho tido bastante problemas de fetch failed, está parando bastante o
+automatizado"*.
+
+**Causa, lida no código:** toda falha de rede dentro de um contato virava `resultado: 'erro'`, e o laço
+de `percorrerFila` PARAVA em qualquer `erro`. O próprio texto que ele lia já dizia que a ação certa é
+**esperar**, não repetir na hora — e quem esperava era ele, recomeçando à mão.
+
+**Conserto:**
+1. `api.ehErroDeRede` separa o ENGASGO (`Failed to fetch`, 429, 502, 503, 504) do DEFEITO (400, 401,
+   404, erro de tela). Defeito continua parando.
+2. Engasgo **espera 30 s, 1 min, 2 min** (pela `pausarRodada`, que respeita o Parar e acusa
+   congelamento) e **segue para o PRÓXIMO contato**. Três seguidos: aí para, com o motivo.
+3. **O contato que falhou NÃO é refeito**: o erro pode ter vindo depois de a mensagem sair (na
+   gravação, na conclusão), e refazer seria mandar de novo. Ele fica na fila, e a próxima rodada lê na
+   conversa o que já saiu.
+4. **O `Failed to fetch` passa a dizer a ROTA** (`GET /chat/v1/message → sem resposta`). Cru ele não
+   dizia nada, e sem saber se o excesso vem da conversa, do contato ou da gravação não há como medir
+   de onde ele vem.
+
+**O que NÃO foi feito, e por quê:** diminuir o número de requisições. Isso exige saber QUAL rota
+falha, que é justamente o que o item 4 passa a mostrar no Andamento. Com duas ou três linhas dessas,
+dá para medir.
+
 ## 2026-09-22 — v3.96.0 — o que ela ESCREVE depois do anúncio e depois do pedido passa a ser respondido
 
 **Relato dele, dois casos:** (1) na chegada, o texto do anúncio e em seguida *"a pessoa fala algo ou faz

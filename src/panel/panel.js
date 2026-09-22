@@ -4577,12 +4577,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * importa porque a ação é outra: não adianta repetir na hora, tem que esperar.
    */
   function traduzirErroDeRede(mensagem) {
-    if (!/failed to fetch|networkerror|load failed/i.test(String(mensagem || ''))) return mensagem;
+    if (!ehErroDeRede(mensagem)) return mensagem;
+    // A rota vai junto (api.js a põe na frente): é ela que diz de onde vem o excesso.
+    const rota = String(mensagem).match(/^([A-Z]+ \/\S+)/)?.[1];
     return (
-      'a API parou de responder (provável limite de requisições do servidor). ' +
-      'Espere alguns minutos, dê F5 e recomece com uma pausa maior.'
+      'a API parou de responder (provável limite de requisições do servidor)' +
+      (rota ? ` em ${rota}` : '') +
+      '. Espere alguns minutos, dê F5 e recomece com uma pausa maior.'
     );
   }
+
+  /**
+   * **Engasgo de rede, e não defeito** — o que a rodada ESPERA e segue, em vez de parar.
+   *
+   * O navegador recusando a requisição (`Failed to fetch`, o preflight que o limitador de taxa
+   * derruba) e os status de servidor sobrecarregado (429, 502, 503, 504). Todo o resto — 400, 401,
+   * 404, erro de tela — continua parando a rodada: aquilo é defeito, e insistir não conserta.
+   */
+  function ehErroDeRede(mensagem) {
+    return api.ehErroDeRede(mensagem);
+  }
+
+  /** Quanto a rodada espera a cada engasgo seguido: 30 s, 1 min, 2 min — e na quarta, para. */
+  const ESPERAS_DE_REDE_MS = [30000, 60000, 120000];
 
   /**
    * Espera a tela ficar sem diálogo aberto, para o próximo clique na fila valer.
@@ -4629,6 +4646,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     let enviados = 0;
     let carregamentos = 0;
     let interrompida = '';
+    // Engasgos de rede SEGUIDOS — ver `ESPERAS_DE_REDE_MS`. Zera no primeiro contato que dá certo.
+    let falhasDeRede = 0;
     // Quantos itens a lista tinha da última vez que olhamos. Serve para o veredito saber se a
     // rodada percorreu a fila inteira ou parou no meio dela — ver o `restaram` lá embaixo.
     let totalDaLista = 0;
@@ -4701,10 +4720,49 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const r = await processar(aberto.sessionId, { contatosTratados });
       registrarNaRodada(r.nome, r.resultado, r.motivo);
 
+      /**
+       * **Engasgo de rede ESPERA e segue; só três seguidos param a rodada** (22/09/2026, relato dele:
+       * *"tenho tido bastante problemas de fetch failed, está parando bastante o automatizado"*).
+       *
+       * Até aqui todo `Failed to fetch` encerrava a rodada — e o próprio texto que ele lia dizia que
+       * a ação certa é ESPERAR, não repetir na hora. Agora a rodada faz isso sozinha: espera
+       * (30 s, 1 min, 2 min), confere com uma leitura barata se a plataforma voltou, e segue para o
+       * PRÓXIMO contato.
+       *
+       * **O contato que falhou NÃO é refeito, de propósito**: o erro pode ter vindo depois de a
+       * mensagem sair (na gravação, na conclusão), e refazer seria mandar de novo. Ele continua na
+       * fila e é pego na próxima rodada, onde a conversa diz o que já saiu.
+       */
+      if (r.resultado === 'erro' && r.rede) {
+        falhasDeRede++;
+        if (falhasDeRede > ESPERAS_DE_REDE_MS.length) {
+          interrompida = `Parei em ${r.nome}: a plataforma não voltou depois de ${falhasDeRede - 1} esperas. ${r.motivo}`;
+          break;
+        }
+        const espera = ESPERAS_DE_REDE_MS[falhasDeRede - 1];
+        registrarNaRodada(
+          'rede',
+          'pulado',
+          `engasgo de rede (${falhasDeRede}º seguido) — espero ${espera / 1000}s e sigo para o próximo; ${r.nome} fica para a próxima rodada`
+        );
+        setStatus(`Engasgo de rede: esperando ${espera / 1000}s antes de seguir…`);
+        const folga = await pausarRodada(espera);
+        if (state.auto.parar) break;
+        if (folga.congelou) {
+          const gelo = await lidarComCongelamento(espera, folga.gasto);
+          if (gelo.parar) {
+            interrompida = gelo.motivo;
+            break;
+          }
+        }
+        posicao++;
+        continue;
+      }
       if (r.resultado === 'erro') {
         interrompida = `Parei em ${r.nome}: ${r.motivo}`;
         break;
       }
+      falhasDeRede = 0;
 
       const contou = CONTA_NO_LIMITE.has(r.resultado);
       if (contou) enviados++;
@@ -5162,7 +5220,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
     } catch (err) {
       await page.closeOverlay().catch(() => {});
-      return { nome: 'contato', resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
+      return { nome: 'contato', resultado: 'erro', motivo: traduzirErroDeRede(err.message), rede: ehErroDeRede(err.message) };
     }
 
     const r = await processarRespondido(alvo, ctx);
@@ -7511,7 +7569,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return { nome, resultado: 'enviado' };
     } catch (err) {
       await page.closeOverlay().catch(() => {});
-      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
+      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message), rede: ehErroDeRede(err.message) };
     }
   }
 
@@ -8229,7 +8287,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return { nome, resultado: 'reiniciado', motivo: 'reaberto — está em "Meus" esperando você' };
     } catch (err) {
       await page.closeOverlay().catch(() => {});
-      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
+      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message), rede: ehErroDeRede(err.message) };
     }
   }
 
@@ -8406,7 +8464,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return await fecharSemRetorno(nome, `mandei ${rotulo}, tirei a etiqueta e concluí`, 'enviado');
     } catch (err) {
       await page.closeOverlay().catch(() => {});
-      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
+      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message), rede: ehErroDeRede(err.message) };
     }
   }
 
@@ -8561,7 +8619,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       };
     } catch (err) {
       await page.closeOverlay().catch(() => {});
-      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message) };
+      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message), rede: ehErroDeRede(err.message) };
     }
   }
 

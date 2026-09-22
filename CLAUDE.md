@@ -2147,6 +2147,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **ENGASGO DE REDE NÃO PARA A RODADA; DEFEITO PARA** (22/09/2026, *"fetch failed está parando bastante o
+  automatizado"*). Qualquer `erro` parava o laço, inclusive o `Failed to fetch` do limitador de taxa, cuja
+  ação certa é esperar. Hoje `api.ehErroDeRede` separa os dois, o engasgo espera (30 s / 1 min / 2 min) e
+  segue para o PRÓXIMO, e três seguidos param. **Não refaça o contato que falhou**: o erro pode ter vindo
+  depois do envio. E o transporte põe a ROTA na frente do `Failed to fetch` — é por ela que se mede de
+  onde vem o excesso.
+
 - **"ELA FALOU ALGO" É A INVERSÃO, NÃO MAIS UMA LISTA DE PERGUNTAS** (22/09/2026). A pergunta sem "?"
   que não abre a mensagem (*"E quais os projetos dele"*) CONCLUÍA, e a fala que não é pergunta
   (*"queria entender a proposta"*) recebia o modelo. `cortesia.falouAlgoProprio` lista o que NÃO pede

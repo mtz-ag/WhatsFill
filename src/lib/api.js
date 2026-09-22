@@ -24,6 +24,18 @@ export function setTransport(fn) {
   transport = fn;
 }
 
+/**
+ * **Engasgo de rede, e não defeito** (22/09/2026) — o que a rodada ESPERA e segue, em vez de parar.
+ *
+ * O navegador recusando a requisição (`Failed to fetch`, o preflight que o limitador de taxa derruba)
+ * e os status de servidor sobrecarregado (429, 502, 503, 504). Todo o resto — 400, 401, 404, erro de
+ * tela — continua parando a rodada: aquilo é defeito, e insistir não conserta.
+ */
+export function ehErroDeRede(mensagem) {
+  const m = String(mensagem || '');
+  return /failed to fetch|networkerror|load failed|sem resposta/i.test(m) || /→ (429|502|503|504)\b/.test(m);
+}
+
 export function apiFetch(path, opts = {}) {
   if (!transport) throw new Error('WhatsFill: transporte da API não configurado.');
   return transport(path, opts);
@@ -45,11 +57,23 @@ export function createFetchTransport(tokenProvider) {
     const headers = { Authorization: cached };
     if (body != null) headers['Content-Type'] = 'application/json';
 
-    const res = await fetch(url, {
-      method,
-      headers,
-      body: body == null ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
-    });
+    /**
+     * **O `Failed to fetch` passa a dizer QUAL rota falhou** (22/09/2026). Cru, ele não traz nada: o
+     * navegador recusa a requisição antes de haver status, e o Andamento dizia só "a API parou de
+     * responder" — sem saber se era a conversa, o contato ou a gravação, não há como medir de onde
+     * vem o excesso. O texto "Failed to fetch" fica dentro, porque é por ele que o painel reconhece.
+     */
+    let res;
+    try {
+      res = await fetch(url, {
+        method,
+        headers,
+        body: body == null ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
+      });
+    } catch (err) {
+      const rota = path.split('?')[0];
+      throw new Error(`${method} ${rota} → sem resposta (${err?.message || 'Failed to fetch'})`);
+    }
 
     if (res.status === 401 && retry) {
       // Token expirou: descarta o cache e pede de novo, já que o app renova o dele sozinho.

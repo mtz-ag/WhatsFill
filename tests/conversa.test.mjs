@@ -192,4 +192,29 @@ grupo('a TRANSCRICAO do audio so existe em entrantes -- nunca em incoming (03/09
   check((await api.getConversaAnterior('sess-de-hoje')) === null, 'anterior igual a atual: null');
 }
 
+grupo('engasgo de rede espera e segue; defeito para (22/09/2026)');
+{
+  check(api.ehErroDeRede('Failed to fetch'), 'o preflight recusado');
+  check(api.ehErroDeRede('GET /chat/v1/message → sem resposta (Failed to fetch)'), 'a forma nova, com a rota');
+  check(api.ehErroDeRede('GET /core/v1/contact/1 → 429 too many'), '429');
+  check(api.ehErroDeRede('PUT /core/v1/contact/1 → 503 '), '503');
+  check(!api.ehErroDeRede('PUT /core/v1/contact/1 → 400 bad request'), '400 e defeito: continua parando');
+  check(!api.ehErroDeRede('GET /core/v1/contact/1 → 401 '), '401 continua parando');
+  check(!api.ehErroDeRede('o campo de mensagem nao apareceu'), 'erro de tela continua parando');
+  check(!api.ehErroDeRede(''), 'vazio nao e rede');
+
+  // o transporte passa a dizer QUAL rota falhou
+  const antes = globalThis.fetch;
+  globalThis.fetch = async () => { throw new TypeError('Failed to fetch'); };
+  let msg = '';
+  try {
+    await api.createFetchTransport(() => 'Bearer x')('/chat/v1/message?sessionId=1', {});
+  } catch (e) {
+    msg = e.message;
+  }
+  globalThis.fetch = antes;
+  check(msg.startsWith('GET /chat/v1/message → sem resposta'), 'a rota vem na frente, sem a query');
+  check(api.ehErroDeRede(msg), 'e continua sendo reconhecida como rede');
+}
+
 fim();
