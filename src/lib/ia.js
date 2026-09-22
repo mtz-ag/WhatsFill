@@ -1397,6 +1397,8 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     'A lei eleitoral (9.504/97) proíbe prometer dinheiro, cesta, remédio, passagem, emprego, vaga',
     'ou qualquer bem ou benefício, e vale o ano inteiro. Negar com respeito é o item 9 do padrão',
     'acima; prometer, nunca — nem "vou ver o que consigo".',
+    'Ao NEGAR dinheiro, compra, pagamento ou doação, diga SEMPRE o motivo, numa frase curta: "a lei',
+    'eleitoral me proíbe" — sem citar artigo e sem aula. Sem o motivo, o "não" soa como má vontade.',
     '',
     /**
      * **O TAMANHO já estava no padrão dele, e o modelo não o cumpria** — print do contato que
@@ -2507,8 +2509,8 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'Defensoria se ELA DISSER a dificuldade concreta (está desempregada, sem comida, com aluguel ou ' +
         'luz atrasados, ameaçada de despejo, com criança pequena sem o que comer, com benefício cortado ' +
         'ou negado, doença na família). Se ela só pediu dinheiro, PIX ou um valor, sem dizer nada disso: ' +
-        'diga em UMA frase gentil que o mandato não pode fazer isso e PARE — sem CRAS, sem lista de ' +
-        'órgãos, sem aula sobre a lei eleitoral e sem perguntar do caso. Assistência social é para quem ' +
+        'diga em UMA frase gentil que a lei eleitoral me proíbe de fazer isso e PARE — sem CRAS, sem lista ' +
+        'de órgãos, sem citar artigo nem dar aula, e sem perguntar do caso. Assistência social é para quem ' +
         'está em vulnerabilidade; mandar todo mundo para lá é resposta de máquina, e erra com quem ' +
         'precisa de verdade.'
       : '',

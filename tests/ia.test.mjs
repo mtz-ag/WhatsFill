@@ -2992,7 +2992,9 @@ grupo('o CRAS nao e para todo mundo que fala de dinheiro (17/09/2026)');
   check(/DINHEIRO — O CRAS NÃO É PARA TODO MUNDO/.test(pix), 'a regra entra quando ela pede dinheiro');
   check(/só aponte CRAS, assistência social, Cadastro Único ou Defensoria se ELA DISSER a dificuldade/.test(pix.replace(/\s+/g, ' ')),
     'e condiciona o encaminhamento a ela dizer a dificuldade');
-  check(/diga em UMA frase gentil que o mandato não pode fazer isso e PARE/.test(pix.replace(/\s+/g, ' ')), 'sem dificuldade dita, nega e para');
+  check(/diga em UMA frase gentil que a lei eleitoral me proíbe de fazer isso e PARE/.test(pix.replace(/\s+/g, ' ')), 'sem dificuldade dita, nega com o motivo (a lei) e para');
+  check(/diga SEMPRE o motivo, numa frase curta: "a lei eleitoral me proíbe"/.test(montarSistemaRascunho({ templates: [], regras: '', gabinete: '' }).replace(/\s+/g, ' ')),
+    'e a negativa diz sempre o motivo: a lei (22/09/2026)');
   check(!/DINHEIRO —/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'bom dia, tudo bem?' }] })),
     'quem nao pediu dinheiro nao recebe a regra');
   /** Dificuldade dita + dinheiro: a regra entra e e ela que AUTORIZA o CRAS. */

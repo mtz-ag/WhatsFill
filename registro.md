@@ -1,3 +1,22 @@
+## 2026-09-22 — v3.102.0 — a negativa volta a dizer o motivo: a lei eleitoral proíbe
+
+**Print dele:** *"Vc não consegue me ajudar comprar as fitas HGT"* e *"a diabete dele está muito alta, às
+vezes vai 500"*. A IA negou (*"não consigo comprar as fitas HGT nem assumir essa despesa"*) e deu a
+orientação de urgência — mas sem o motivo. *"Parou de utilizar a resposta que somos proibidos por lei."*
+
+**Medido, eram três coisas:**
+1. **`pedeAjudaFinanceira` não viu o pedido**: as formas conheciam *"você pode comprar"* e *"me compra"*,
+   não *"me AJUDAR (a) comprar"*. O caso chegou à IA só pela conversa, sem a linha DINHEIRO colada. Hoje
+   *"me ajuda/ajudar/ajudaria (a) comprar/pagar"* conta, com o sujeito NÓS (*"vou ajudar a pagar a conta
+   da minha mãe"* e *"me ajuda a divulgar"* ficam de fora).
+2. **`falouDeSaude` não viu a doença**: exigia possessivo em primeira pessoa. Entraram os termos clínicos
+   que não aparecem em fala política (diabete, glicose, insulina, HGT, hemodiálise).
+3. **E a instrução mandava negar SEM o motivo:** a linha DINHEIRO dizia *"o mandato não pode fazer isso…
+   sem aula sobre a lei eleitoral"* (17/09), e o exemplo da seção 9 do padrão dele não citava a lei. Hoje
+   as duas dizem *"a lei eleitoral me proíbe"* — **numa frase, sem artigo e sem aula** (a proibição da
+   aula continua), e o sistema ganhou a regra geral: ao negar dinheiro, compra, pagamento ou doação, o
+   motivo vai sempre.
+
 ## 2026-09-22 — v3.101.0 — a retribuição ("igualmente") fecha a conversa, não abre para a IA
 
 **Print dele:** respondemos e concluímos às 12:17; às 12:19 ela escreveu *"Obrigado amigo igualmente

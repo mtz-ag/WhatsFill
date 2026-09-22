@@ -3277,4 +3277,18 @@ grupo('semInteresse: "nao recebi" e cobranca, nao recusa (22/09/2026)');
   check(!!um('Não'), 'o nao seco a pergunta fechada continua');
 }
 
+grupo('me AJUDAR a comprar e pedido; termo clinico e saude (22/09/2026)');
+{
+  const pede = (t) => !!pedeAjudaFinanceira([{ texto: t, tipo: 'TEXT' }], null);
+  check(pede('Vc não consegue me ajudar comprar as fitas HGT'), 'o caso real: "me ajudar comprar", sem o "a"');
+  check(pede('me ajuda a comprar as fraldas dele'), 'imperativo');
+  check(pede('você pode me ajudar a pagar o aluguel'), 'com o "a"');
+  check(!pede('vou ajudar a pagar a conta da minha mãe'), 'ela ajudando alguem nao e pedido');
+  check(!pede('quero ajudar a campanha'), 'oferta de ajuda nao e pedido');
+  check(!pede('me ajuda a divulgar'), 'ajudar a divulgar nao e gastar');
+  check(!!falouDeSaude('a diabete dele está muito alta, às vezes vai 500'), 'termo clinico sem possessivo');
+  check(!!falouDeSaude('meu filho usa insulina'), 'insulina');
+  check(!falouDeSaude('esse governo é uma doença'), 'fala politica continua de fora');
+}
+
 fim();

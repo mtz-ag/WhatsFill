@@ -1358,6 +1358,12 @@ const PEDIDO_PARA_A_GENTE_GASTAR = [
   /(^|[^\p{L}])(?:precis\w+|queria|quero|gostaria|seria|pe[çc]o|pedia)\s+(?:muito\s+)?que\s+(?:voc[êe]s?\s+|vcs?\s+|o\s+senhor\s+|a\s+senhora\s+|tu\s+|a\s+campanha\s+|o\s+mandato\s+)?(?:compre|comprem|comprasse|comprassem|pague|paguem|pagasse|pagassem|custeie|custeiem|banque|banquem|doe|doem|doasse|doassem)/iu,
   /(^|[^\p{L}])(?:voc[êe]s?|vcs?|o\s+senhor|a\s+senhora|tu)\s+(?:n[ãa]o\s+)?(?:pode|podem|poderia|poderiam|consegue|conseguem|conseguiria|conseguiriam)\s+(?:me\s+)?(?:comprar|pagar|custear|bancar|doar)/iu,
   /(^|[^\p{L}])tem\s+como\s+(?:voc[êe]s?\s+)?(?:me\s+)?(?:comprar|pagar|custear|bancar|doar)/iu,
+  /**
+   * **"Me AJUDAR a comprar"** (22/09/2026, print dele: *"Vc não consegue me ajudar comprar as fitas
+   * HGT"*). O verbo de ajudar no meio fazia as formas de cima não casarem, e o "a" sumido também. O
+   * sujeito continua sendo NÓS: *"ajudar a pagar"* dito por ela sobre o filho não é pedido.
+   */
+  /(^|[^\p{L}])(?:(?:voc[êe]s?|vcs?|o\s+senhor|a\s+senhora|tu)\s+(?:n[ãa]o\s+)?(?:pode|podem|poderia|poderiam|consegue|conseguem|conseguiria|conseguiriam)\s+)?me\s+(?:ajuda|ajudar|ajudaria|ajude)\s+(?:a\s+)?(?:comprar|pagar|custear|bancar)/iu,
   /(^|[^\p{L}])(?:me\s+(?:compra|comprar|compre|paga|pagar|pague)|(?:compra|comprar|compre|paga|pagar|pague|doa|doar|doe)\s+(?:pra|para)\s+mim)/iu,
 ];
 
@@ -2709,6 +2715,12 @@ const SAUDE_DELA = [
   /(^|[^\p{L}])(estou|est[oô]|t[oô])\s+(precisando|necessitando)\s+[^.!?]{0,20}?(rem[ée]dio|medica[çc][ãa]o|tratamento|cirurgia|consulta|exame|m[ée]dico)/iu,
   /(^|[^\p{L}])(meu|minha)\s+(problema\s+de\s+sa[úu]de|doen[çc]a|c[âa]ncer|diabet|press[ãa]o|cora[çc][ãa]o|coluna|rim|perna|vis[ãa]o)/iu,
   /(^|[^\p{L}])(sou|estou)\s+(cadeirante|acamad[ao]|paciente)/iu,
+  /**
+   * **Termo clínico que não aparece em fala política** (22/09/2026): *"a diabete dele está muito alta,
+   * às vezes vai 500"* não tinha possessivo em primeira pessoa e passava batido. Diabete, glicose,
+   * insulina, HGT e hemodiálise só se escrevem por causa de uma doença.
+   */
+  /(^|[^\p{L}])(diabete|diabetes|diabetic[oa]|glicose|glicemia|insulina|hgt|hemodi[áa]lise)([^\p{L}]|$)/iu,
 ];
 
 const SAUDE_DA_FAMILIA =
