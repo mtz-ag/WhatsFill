@@ -18,6 +18,8 @@ import {
   montarSistemaRascunho,
   montarContatoRascunho,
   nomeCurtoDeAnuncio,
+  cortar,
+  semSurrogateSolto,
   semFalarDeTranscricao,
   LIMITE_NOME_DO_ANUNCIO,
   PEDIDO_DE_DADOS_NO_RASCUNHO,
@@ -3053,6 +3055,36 @@ grupo('as quatro instrucoes dele entraram no padrao (19/09/2026)');
   const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
   check(/linha em branco depois de todo ponto final/.test(p.slice(p.indexOf('TAMANHO:'))),
     'e a linha em branco e citada tambem perto do pedido');
+}
+
+grupo('emoji cortado ao meio derruba a chamada (22/09/2026, as DUAS casas com 400)');
+{
+  const emoji = '\u{1F64F}'; // um par de substitutos, como quase todo emoji
+  const t = `abc${emoji}def`;
+  check(t.length === 8, 'o emoji ocupa DOIS caracteres em JavaScript');
+  check(cortar(t, 4) === 'abc', 'o corte recua quando a faca cai no meio do par');
+  check(cortar(t, 5) === `abc${emoji}`, 'e nao recua quando o par cabe inteiro');
+  check(cortar(t, 3) === 'abc' && cortar('abc', 10) === 'abc', 'corte normal e texto curto seguem iguais');
+
+  check(semSurrogateSolto(t) === t, 'texto inteiro nao perde o emoji');
+  check(semSurrogateSolto(t.slice(0, 4)) === 'abc', 'meia letra que sobrou de um corte some');
+  check(semSurrogateSolto(t.slice(4)) === 'def', 'e o outro meio tambem');
+  check(semSurrogateSolto('') === '' && semSurrogateSolto(null) === '', 'vazio e nulo nao quebram');
+
+  /** O que a API recusava: corpo com meio par escapado. E o que sai depois da limpeza. */
+  const sujo = JSON.stringify({ a: t.slice(0, 4) });
+  check(/ud83d/i.test(sujo), 'antes: o corpo leva meio par escapado — o 400 das duas casas');
+  check(!/ud83d/i.test(JSON.stringify({ a: semSurrogateSolto(t.slice(0, 4)) })), 'depois: nao leva');
+
+  /** E os cortes do prompt passam a ser seguros de ponta a ponta. */
+  const nome = nomeCurtoDeAnuncio(`${'x'.repeat(58)}${emoji}fim`);
+  check(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(nome), 'o nome do anuncio nao termina em meio emoji');
+  const comEmoji = montarSistemaRascunho({
+    templates: [{ id: 'x', name: 'com emoji', text: `${'a'.repeat(499)}${emoji} fim` }],
+    regras: '',
+    gabinete: '',
+  });
+  check(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(comEmoji), 'nem o prompt de sistema, onde o corte e 500');
 }
 
 fim();

@@ -2037,7 +2037,7 @@ export const LIMITE_NOME_DO_ANUNCIO = 60;
 
 export function nomeCurtoDeAnuncio(bruto) {
   const t = String(bruto || '').replace(/\s+/g, ' ').trim();
-  return t.length > LIMITE_NOME_DO_ANUNCIO ? t.slice(0, LIMITE_NOME_DO_ANUNCIO - 1) + '\u2026' : t;
+  return t.length > LIMITE_NOME_DO_ANUNCIO ? cortar(t, LIMITE_NOME_DO_ANUNCIO - 1) + '\u2026' : t;
 }
 
 /** O bloco do contato para o rascunho: a conversa com folga, porque é dela que ele precisa. */
@@ -3416,9 +3416,57 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
 const ABRE_REPETINDO = /^\s*(entendi|entendo|compreendo|entendemos|percebi|vi que|li sua|recebi sua)\b/i;
 
 /** Achata para uma linha e corta: conversa longa não pode dominar o prompt nem o custo. */
+/**
+ * **EMOJI CORTADO AO MEIO DERRUBA A CHAMADA INTEIRA** — print dele (22/09/2026), com os DOIS modelos
+ * recusando o mesmo pedido: o gpt-5.6-luna com *"Invalid body: failed to parse JSON value"* e o
+ * claude-haiku-4-5 com *"no low surrogate in string: line 1 column 38311"*.
+ *
+ * Emoji ocupa DOIS caracteres em JavaScript (um par substituto). Todo corte por tamanho — o texto das
+ * respostas prontas em 500, o nome do anúncio em 60, o atendimento anterior em 600 — podia cair no meio
+ * do par e deixar meia letra na string: JSON que nenhuma das duas casas aceita. E a base dele é cheia
+ * de emoji.
+ *
+ * `cortar` recua um caractere quando a faca cai no meio do par. **A segunda camada é
+ * `semSurrogateSolto`**, aplicada no envio: corte novo que alguém escrever amanhã não volta a derrubar
+ * a chamada.
+ */
+export function cortar(texto, limite) {
+  const t = String(texto || '');
+  if (t.length <= limite) return t;
+  const c = t.charCodeAt(limite - 1);
+  // Terminou num substituto ALTO: o par ficaria partido, então corta um antes.
+  const fim = c >= 0xd800 && c <= 0xdbff ? limite - 1 : limite;
+  return t.slice(0, fim);
+}
+
+/**
+ * **Meio par de substitutos não é texto, e é o que a API recusa.** Tira o que sobrou de um emoji
+ * partido — por corte nosso, ou por já ter chegado assim da plataforma.
+ */
+export function semSurrogateSolto(texto) {
+  const t = String(texto == null ? '' : texto);
+  let saida = '';
+  for (let i = 0; i < t.length; i += 1) {
+    const c = t.charCodeAt(i);
+    const alto = c >= 0xd800 && c <= 0xdbff;
+    const baixo = c >= 0xdc00 && c <= 0xdfff;
+    if (alto) {
+      const prox = t.charCodeAt(i + 1);
+      if (prox >= 0xdc00 && prox <= 0xdfff) {
+        saida += t[i] + t[i + 1];
+        i += 1;
+      }
+      continue; // alto sem o par: some
+    }
+    if (baixo) continue; // baixo sem o alto antes: some
+    saida += t[i];
+  }
+  return saida;
+}
+
 function umaLinha(texto, limite = 400) {
   const t = String(texto || '').replace(/\s+/g, ' ').trim();
-  return t.length > limite ? `${t.slice(0, limite)}…` : t;
+  return t.length > limite ? `${cortar(t, limite)}…` : t;
 }
 
 /**

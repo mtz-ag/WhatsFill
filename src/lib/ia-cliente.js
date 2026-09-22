@@ -39,6 +39,7 @@ import {
   PROVEDOR_OPENAI,
   NOME_DO_PROVEDOR,
   provedorDoModelo,
+  semSurrogateSolto,
 } from './ia.js';
 
 export const MSG_IA = 'whatsfill-ia';
@@ -492,7 +493,14 @@ export async function atender(pedido, chave) {
     resposta = await fetch(casa.url, {
       method: 'POST',
       headers: casa.cabecalhos(chave),
-      body: JSON.stringify(corpo),
+      /**
+       * **Nenhum meio-emoji sai daqui** (22/09/2026): as duas casas recusaram o mesmo pedido com 400
+       * por causa de um par de substitutos partido. O `replacer` cobre TODA string do corpo —
+       * prompt, conversa, esquema —, e este e o ponto unico por onde toda chamada passa.
+       */
+      body: JSON.stringify(corpo, (_chave, valor) =>
+        typeof valor === 'string' ? semSurrogateSolto(valor) : valor
+      ),
       signal: corta.signal,
     });
   } catch (err) {
