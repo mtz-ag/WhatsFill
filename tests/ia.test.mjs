@@ -1965,6 +1965,15 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   check(prompt.includes('FOLHETO (santinho, panfleto'), 'o que temos e o folheto');
   check(prompt.includes('e a COLINHA com os números'), 'e a colinha');
   check(prompt.includes('chaveiro — NÃO temos'), 'o resto nao temos, dito em uma frase');
+  /** "Inclua adesivo, e algo comum que e pedido" (22/09/2026). */
+  check(prompt.includes('ADESIVO e a COLINHA com os números'), 'adesivo esta entre o que temos');
+  const naoTemos = prompt.split('\n').find((l) => l.includes('Qualquer outro item de campanha')) || '';
+  check(!!naoTemos && !/adesivo/i.test(naoTemos), 'e saiu da lista do que NAO temos');
+  const semTrava = (t) => rascunhoPodeSairSozinho(revisarRascunho(t, {}).avisos);
+  check(semTrava('Bandeira não temos, o que temos são folhetos e adesivos.'), 'a frase certa passa na trava');
+  check(semTrava('Temos adesivos sim, me passa seu endereço completo.'), '"temos adesivos" agora e verdade');
+  check(!semTrava('Temos bandeira sim.'), 'bandeira continua barrada — e a primeira expressao voltou a casar');
+  check(!semTrava('Temos bonés disponíveis.'), 'bone tambem');
   check(!prompt.includes('Na dúvida entre recusar e repassar, REPASSE'), 'e a regra antiga do "repasse tudo" SAIU');
   check(!prompt.includes('VOCÊ NUNCA DIZ SE TEMOS OU NÃO'), 'e o "nunca diga se temos" tambem');
 

@@ -1,3 +1,16 @@
+## 2026-09-22 — v3.100.0 — adesivo entra no que temos
+
+**Pedido dele:** *"inclua adesivo, é algo comum que é pedido"*. O que temos passa a ser folheto
+(santinho, panfleto), **adesivo** e colinha — no padrão dele (seção 25), nas instruções do rascunho
+(pede o endereço e repassa, como o folheto) e na conferência da etiqueta de material.
+
+**A trava `afirmouTer` tinha de acompanhar, e o conserto achou um defeito antigo nela.** Ela barrava
+*"temos adesivos"* — que agora é verdade. Folheto, santinho, panfleto, folder e adesivo saíram da lista
+dela; bandeira, placa, banner, boné e camiseta continuam barrados. **E a primeira das duas expressões
+nunca tinha casado desde 07/09:** estava num template literal comum, onde `\s` vira `s` e `\p{L}` vira
+`p{L}` — era `temoss+...`. Quem barrava o caso do Lucas era só a segunda, a do "disponível". Hoje as
+duas usam `String.raw`, e *"Temos bandeira sim"* passou a ser barrado como devia.
+
 ## 2026-09-22 — v3.99.0 — a IA fala como o Capitão, desconversa de mídia e só oferece folheto
 
 **Pedidos dele, num recado só**, com a lista para o padrão de atendimento (*"ignore o que for

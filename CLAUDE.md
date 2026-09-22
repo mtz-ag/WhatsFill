@@ -2679,6 +2679,11 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **REGEX MONTADA EM TEMPLATE LITERAL PERDE AS BARRAS — use `String.raw`** (22/09/2026). Em
+  `` new RegExp(`...\s...\p{L}...`) `` o `\s` vira `s` e o `\p{L}` vira `p{L}`, sem erro nenhum: a
+  primeira expressão de `afirmouTer` era `temoss+` e **nunca casou em duas semanas**, com teste verde
+  porque a segunda expressão cobria o caso testado. Ao montar regex com `${...}`, `String.raw` sempre.
+
 - **A VOZ É A DO CAPITÃO MARTIM, E O MATERIAL É SÓ FOLHETO E COLINHA** (decisões dele, 22/09/2026). A
   primeira pessoa do Capitão mora na seção 1 do padrão dele, com duas guardas que não saem: não inventar
   a vida dele (onde está, visita, ligação) e **dizer que é a equipe quando PERGUNTAREM** (regra 9). O
