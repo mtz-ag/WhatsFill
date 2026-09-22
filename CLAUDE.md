@@ -2147,6 +2147,14 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **"ELA FALOU ALGO" É A INVERSÃO, NÃO MAIS UMA LISTA DE PERGUNTAS** (22/09/2026). A pergunta sem "?"
+  que não abre a mensagem (*"E quais os projetos dele"*) CONCLUÍA, e a fala que não é pergunta
+  (*"queria entender a proposta"*) recebia o modelo. `cortesia.falouAlgoProprio` lista o que NÃO pede
+  resposta e o resto com 3+ palavras de conteúdo vai para `pedeRespostaPessoal` (tecla 6). **O
+  `jaSabemos` é obrigatório**: sem o nome e a cidade que o parser tirou, a resposta ao formulário
+  viraria caso da IA. **Ao mexer em `PALAVRAS_SEM_CONTEUDO`, "não" fica de fora** — é a negação que faz
+  *"não recebi o material"* pedir resposta.
+
 - **A IMAGEM SAI POR CINCO PASSOS, E CADA METADE TEM QUE SAIR DE UM LUGAR DIFERENTE** (20/09/2026,
   gravado observando ele mandar uma à mão). `POST /core/v1/file/upload` → **`PUT` dos bytes no
   endereço assinado do S3** → `POST /core/v1/file/transform` → `PUT /core/v1/file` (devolve o

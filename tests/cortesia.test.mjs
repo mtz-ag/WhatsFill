@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, ehPedidoDeRoupa, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos, falouDeSaude, ofereceEventoPelaCampanha } from '../src/lib/cortesia.js';
+import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, ehPedidoDeRoupa, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos, falouDeSaude, ofereceEventoPelaCampanha, falouAlgoProprio } from '../src/lib/cortesia.js';
 
 const templates = await lib('templates.js');
 
@@ -3212,6 +3212,44 @@ grupo('material ESCRITO por ela, e nao o clique do anuncio (o Jair, 19/09/2026)'
   const antes = new Date('2026-09-18T12:00:00Z').toISOString();
   check(!pedeMaterialEscrito([{ texto: 'me manda o material', at: '2026-09-18T11:00:00Z' }], antes, []),
     'pedido anterior a nossa ultima fala ja foi respondido');
+}
+
+grupo('falouAlgoProprio: a fala DELA que ninguem respondeu (22/09/2026, os dois casos dele)');
+{
+  const agora = '2026-09-22T14:00:00Z';
+  const antes = '2026-09-22T13:00:00Z';
+  const anuncio = { texto: 'Olá! Eu quero receber o Material da Direita', geradaPeloAnuncio: true, at: '2026-09-22T12:59:00Z' };
+  const dela = (texto, extra = {}) => ({ texto, tipo: 'TEXT', at: agora, ...extra });
+  const f = (texto, opcoes, extra) => falouAlgoProprio([anuncio, dela(texto, extra)], null, [], opcoes);
+  const depois = (texto, opcoes) => falouAlgoProprio([anuncio, dela(texto)], antes, [], opcoes);
+
+  // o que escapava, medido no quadro padrao
+  check(!!f('Sou professora e queria entender a proposta para educação'), 'caso 1: fala sem pergunta na chegada — recebia o modelo');
+  check(!!depois('E quais os projetos dele pra saúde'), 'caso 2: pergunta sem "?" que nao abre a mensagem — CONCLUIA');
+  check(!!depois('Não recebi o material ainda'), 'o "nao" conta: e ele que pede a resposta');
+  check(!!depois('Meu filho está desempregado faz tempo'), 'desabafo curto');
+  check(!!depois('Maria Souza, Canoas. Sou professora e quero ajudar na campanha', { jaSabemos: ['Maria Souza', 'Canoas'] }),
+    'cadastro com mais alguma coisa: a mais alguma coisa pede resposta');
+
+  // o que NAO pode virar caso da IA — a maioria, porque e aqui que mora o risco
+  check(!falouAlgoProprio([anuncio], null, []), 'so o texto do anuncio nao e fala dela');
+  check(!f('Boa tarde, tudo bem?'), 'cortesia');
+  check(!f('ok obrigado'), 'agradecimento seco');
+  check(!f('🙏🙏👍'), 'reacao');
+  check(!f('Deus abençoe o senhor e sua família'), 'a bencao e carinho, nao assunto');
+  check(!f('Amém, que Deus proteja vocês'), 'amem');
+  check(!f('Tamo junto capitão, contem comigo nessa luta pelo Rio Grande'), 'so apoio tem desfecho proprio (agradecer)');
+  check(!f('Força capitão, estamos juntos sempre'), 'apoio curto');
+  check(!f('Olha isso gente compartilhem com todos https://youtu.be/x'), 'legenda de link repassado (a regra do Eraldo)');
+  check(!f('Vejam esse video compartilhem', {}, { tipo: 'VIDEO' }), 'legenda de video repassado');
+  check(!depois('Maria Souza, Canoas', { jaSabemos: ['Maria Souza', 'Canoas'] }), 'a resposta ao formulario e o cadastro, nao fala');
+  check(!depois('Bom dia, meu nome é Maria Souza e sou de Canoas RS', { jaSabemos: ['Maria Souza', 'Canoas'] }),
+    'o vocabulario do formulario tambem nao conta');
+  check(!depois('Maria Souza da Silva, Canoas. Obrigada!', { jaSabemos: ['Maria Souza da Silva', 'Canoas'] }), 'cadastro + obrigada');
+  check(!depois('Obrigada pelo material'), 'agradecer o material nao pede resposta');
+  check(!f('', {}, { sistema: true }), 'aviso da plataforma');
+  check(!falouAlgoProprio([anuncio, { texto: 'Sou professora e queria entender a proposta', at: '2026-09-22T12:00:00Z' }], antes, []),
+    'fala ANTERIOR a nossa ultima mensagem ja foi respondida');
 }
 
 fim();

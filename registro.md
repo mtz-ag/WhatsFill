@@ -1,3 +1,34 @@
+## 2026-09-22 — v3.96.0 — o que ela ESCREVE depois do anúncio e depois do pedido passa a ser respondido
+
+**Relato dele, dois casos:** (1) na chegada, o texto do anúncio e em seguida *"a pessoa fala algo ou faz
+uma pergunta"* — saía o modelo e concluía; (2) depois do modelo + pedido de dados, *"respondem os dados
+ou nem respondem e fazem uma pergunta e não são respondidas; o fluxo não identifica o que a pessoa quer
+e conclui"*.
+
+**Medido antes de mexer, no quadro padrão, com os detectores de verdade** (20 conversas fictícias): as
+perguntas COM "?" já iam para a tecla 6 nos dois casos. **Escapavam as duas formas que nenhuma lista
+cobre:** a pergunta sem interrogação que não ABRE a mensagem (*"E quais os projetos dele pra saúde"* —
+tecla 3, CONCLUÍA) e a fala que não é pergunta nenhuma (*"Sou professora e queria entender a proposta
+para educação"* — tecla `a`, modelo + pedido por cima). Os dois detectores de pergunta devolviam falso.
+
+**Causa: é a lição das formas de perguntar outra vez** (04/09) — lista do que pede resposta não fecha.
+**O conserto é a inversão:** `cortesia.falouAlgoProprio` lista o que NÃO pede resposta — cortesia,
+reação, despedida, bênção, só apoio (que tem desfecho próprio), legenda de repasse, o texto do anúncio
+e o próprio cadastro (`jaSabemos`: nome e cidade que o parser tirou) — e o que sobra com **três ou mais
+palavras de conteúdo** é fala dela. Entra no sinal `pedeRespostaPessoal`, o mesmo da roupa e do
+material escrito: **tecla 6 alta nos dois ramos, e na chegada acima do recibo, sem ele importar o
+quadro.** Com a IA ligada, é ela que responde; desligada, a rodada para na caixa.
+
+**Depois, nas mesmas 20:** todas as falas e perguntas vão para a tecla 6; a resposta ao formulário
+(com ou sem "bom dia, meu nome é…", com ou sem "obrigada") continua na tecla `i`; "obrigada pelo
+material" continua concluindo. 16 das 23 asserções novas são falso positivo.
+
+**Custos, ditos a ele:** (a) quem chega pelo anúncio e escreve algo não recebe o recibo NESSA passada —
+a IA responde primeiro; o modelo de material sai na passada seguinte (`materialPendente`); (b) fala de
+duas palavras (*"Não recebi"*) passa batido pelo corte; (c) cadastro que o parser NÃO leu vira caso da
+IA em vez de agradecimento — melhor que concluir em cima; (d) *"Boa tarde, tudo bem?"* continua sendo
+cortesia, decisão dele de 03/09.
+
 ## 2026-09-20 — v3.95.0 — a imagem sai de verdade, na cadeia que a plataforma mostrou
 
 **Com os 6 passos gravados na mão dele, a cadeia ficou clara** — e ela tem cinco passos de verdade (o

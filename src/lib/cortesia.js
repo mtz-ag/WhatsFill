@@ -3591,3 +3591,81 @@ export function respostasApos(entrantes, nossas, reconhecer) {
   const depois = comTexto.filter((m) => m.at && new Date(m.at) > new Date(nossa.at));
   return depois.length ? depois : null;
 }
+
+/**
+ * **Palavras que não dizem nada por conta própria** — o que sobra depois delas é o que ela QUIS dizer.
+ *
+ * Três famílias: a gramática (artigo, preposição, pronome, conectivo), a cortesia (saudação,
+ * agradecimento, "tudo bem") e o vocabulário de quem responde o FORMULÁRIO ("meu nome é", "sou de",
+ * "moro em", a sigla do estado). **"não" fica FORA de propósito**: *"não recebi o material"* pede
+ * resposta, e é a negação que diz isso.
+ */
+const PALAVRAS_SEM_CONTEUDO = new Set(
+  (
+    'a o as os um uma uns umas de do da dos das no na nos nas em ao aos pra pro pras pros para por pelo ' +
+    'pela pelos pelas com sem e ou mas que se ja so tambem aqui ai la isso isto esse essa este esta ' +
+    'eu tu voce voces vc vcs ele ela eles elas me te lhe nos meu minha meus minhas seu sua seus suas ' +
+    'dele dela deles delas e eh sou somos estou esta tou to tamo foi era ser estar tem ter vai vou ' +
+    'bom boa bons boas dia dias tarde tardes noite noites oi ola ole opa obrigado obrigada obrigadao ' +
+    'obg brigado brigada valeu grato grata tudo bem beleza blz ok okay certo sim claro ta amem ' +
+    'nome cidade moro mora sobrenome rs rgs rgds sul grande estado ' +
+    // a benção, que nesta base fecha metade das mensagens e é carinho, não assunto
+    'deus abencoe abencoa abencoar abencoado abencoada proteja ilumine guarde senhor senhora'
+  ).split(/\s+/)
+);
+
+/**
+ * **Ela escreveu algo DELA que ninguém respondeu** — pedido dele (22/09/2026): *"no início temos a
+ * mensagem do anúncio e na sequência, quando a pessoa fala algo ou faz uma pergunta, tem sido ignorado
+ * e mandado o modelo e concluído"*, e *"após mandar o modelo e pedir dados, as pessoas respondem os
+ * dados ou nem respondem e fazem uma pergunta e não são respondidas; o fluxo não identifica o que a
+ * pessoa quer e conclui"*.
+ *
+ * **Medido antes de mexer, no quadro padrão:** as perguntas COM "?" já iam para a tecla 6. Escapavam
+ * as duas formas que nenhuma lista cobre — a pergunta sem interrogação que não ABRE a mensagem
+ * (*"E quais os projetos dele pra saúde"*, que CONCLUÍA) e a fala que não é pergunta nenhuma
+ * (*"Sou professora e queria entender a proposta para educação"*, que recebia o modelo). É a lição
+ * das formas de perguntar outra vez: **lista do que pede resposta não fecha; a inversão fecha.** Aqui
+ * se lista o que NÃO pede — cortesia, reação, link, despedida, só apoio, o texto do anúncio e o
+ * próprio cadastro — e o que sobra com conteúdo é fala dela.
+ *
+ * `jaSabemos` são o nome e a cidade que o parser já tirou da resposta: sem isso *"Maria Souza,
+ * Canoas"* contaria três palavras e a resposta ao formulário viraria caso da IA. **O corte é de três
+ * palavras de conteúdo**, e o custo foi dito a ele: *"Não recebi"* sozinho (duas) passa batido.
+ *
+ * @param {Array<{texto?:string,tipo?:string,at?:string,sistema?:boolean,geradaPeloAnuncio?:boolean}>} entrantes
+ * @param {string|null} nossaUltimaAt
+ * @param {Array} [padroesDeAnuncio]
+ * @param {{jaSabemos?: string[]}} [opcoes]
+ * @returns {{motivo:string}|null}
+ */
+export function falouAlgoProprio(entrantes, nossaUltimaAt, padroesDeAnuncio = [], opcoes = {}) {
+  const pendentes = desdeNossaUltima(entrantes, nossaUltimaAt).filter(
+    (m) => !m?.sistema && !m?.geradaPeloAnuncio && !ehMensagemDeAnuncio(m, padroesDeAnuncio)
+  );
+  if (!pendentes.length) return null;
+  // Só apoio tem desfecho próprio (agradecer), decidido por ele em 31/08.
+  if (soExpressaApoio(entrantes, nossaUltimaAt, padroesDeAnuncio)) return null;
+
+  const retirar = ((opcoes || {}).jaSabemos || [])
+    .map((v) => semAcentos(v).toLowerCase())
+    .filter((v) => v.length > 1);
+
+  for (const msg of pendentes) {
+    if (ehSoReacao(msg) || mensagemDeCortesia(msg) || ehDespedida(msg)) continue;
+    // A legenda de um REPASSE (vídeo, link, áudio encaminhado) não é fala dela para nós — a regra do
+    // Eraldo (06/09), que já manda repasse para a mensagem do momento ou o agradecimento.
+    if (ehLegendaDeRepasse(msg)) continue;
+    let texto = ` ${semAcentos(semLinks(msg?.texto)).toLowerCase()} `;
+    if (!texto.trim()) continue;
+    for (const conhecido of retirar) texto = texto.split(conhecido).join(' ');
+    const conteudo = texto
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((p) => p.length > 1 && !/^\d+$/.test(p) && !PALAVRAS_SEM_CONTEUDO.has(p));
+    if (conteudo.length >= 3) {
+      const trecho = String(msg?.texto || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+      return { motivo: `escreveu algo que ninguém respondeu ("${trecho}") — a IA responde antes de qualquer modelo` };
+    }
+  }
+  return null;
+}
