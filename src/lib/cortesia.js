@@ -2024,7 +2024,9 @@ export function ehMensagemDeAnuncio(msg, padroes = []) {
    */
   if (msg?.geradaPeloAnuncio) return true;
 
-  for (const bruto of padroes) {
+  // `null` chega de quem lê o armazenamento, e o padrão `= []` só cobre `undefined` (armadilha da
+  // ponte de mensagens): sem isto o `for...of` estoura no meio do cálculo dos sinais da rodada.
+  for (const bruto of padroes || []) {
     try {
       if (new RegExp(String(bruto), 'i').test(texto)) return true;
     } catch (_) {

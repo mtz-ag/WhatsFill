@@ -3373,4 +3373,12 @@ grupo('denuncia e acusacao politica nao se discute (23/09/2026)');
     'maiuscula casa igual — a armadilha do semAcentos');
 }
 
+grupo('null nos padroes de anuncio nao pode estourar (23/09/2026)');
+{
+  check(ehMensagemDeAnuncio({ texto: 'oi' }, null) === false, 'null nos padroes devolve falso em vez de estourar');
+  check(ehMensagemDeAnuncio({ texto: 'oi', geradaPeloAnuncio: true }, null) === true, 'e a marca continua valendo');
+  check(falouAlgoProprio([{ de: 'contato', texto: 'quero saber dos projetos de voces', at: 9 }], 8, null) !== undefined,
+    'falouAlgoProprio com null nos padroes tambem nao estoura');
+}
+
 fim();

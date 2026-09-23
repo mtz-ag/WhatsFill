@@ -2694,6 +2694,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **A MARCA DO CLIQUE SO VALIA NA PRIMEIRA MENSAGEM, E COM A REDACAO ANTIGA** (23/09/2026, *"ignorou
+  o anuncio"*, com o anuncio no ar e o texto igual ao cadastrado). **Medido: `reconhecer`, o modelo e
+  a decisao (tecla `a`) estavam TODOS certos** — o que faltava era a mensagem chegar marcada. Havia
+  **duas funcoes decidindo a mesma coisa**: a da primeira mensagem aceita qualquer "Ola" curto; a do
+  segundo clique exigia **"Ola! EU ..."**, e este anuncio diz *"Ola! Quero saber mais..."*. Sem marca,
+  o texto do anuncio virou fala dela, `falouAlgoProprio` disparou e o caso subiu para a tecla 6.
+  Hoje o criterio e o **texto que ELE cadastrou** (`anuncios.ehOTextoDoAnuncio`), com guarda de
+  **cobertura de 60%** para o pedido dela colado no texto do anuncio nao sumir. **Ao criar segunda
+  regra para reconhecer a mesma coisa, use o dado que ele cadastra, nao a redacao.** E
+  `ehMensagemDeAnuncio` estourava com `null` nos padroes (o `= []` so cobre `undefined`) — erro ali
+  PARA a rodada.
+
 - **DENUNCIA E ACUSACAO POLITICA NAO SE DISCUTE** (regra dele, 23/09/2026: *"nao entramos em
   detalhes pois essas informacoes nao podem ser verificadas, so agradecemos e desconversamos"*). O
   rascunho respondeu DUAS vezes que *"as denuncias sao serias e precisam ser tratadas com fatos e

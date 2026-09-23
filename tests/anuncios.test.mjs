@@ -492,4 +492,29 @@ grupo('o modelo PADRAO so na primeira vinda pelo anuncio (04/09/2026)');
   }
 }
 
+grupo('o texto CADASTRADO reconhece o clique em qualquer posicao (23/09/2026)');
+{
+  const texto = 'Olá! Quero saber mais sobre a Lei de Alerta Sonoro contra inundações';
+  const lista = [{ nome: 'lei alerta sonoro', ligado: true, trechos: [texto], acao: 'modelo', valor: 'Lei da Sirene' }];
+
+  check(anuncios.ehOTextoDoAnuncio(texto, lista), 'o texto igual ao cadastrado e clique de anuncio');
+  check(anuncios.ehOTextoDoAnuncio('Bom dia! ' + texto, lista), 'com um cumprimento na frente, ainda e');
+
+  /**
+   * **A redacao deste anuncio nao tem "eu"**, e era isso que a regra de posicao exigia — o defeito
+   * da print. O cadastro dele nao depende de redacao nenhuma.
+   */
+  check(!/^\s*ol[áa]!?[\s,]+eu\s+\S/i.test(texto), 'e ele NAO casa com a forma "Ola! Eu ..." da regra antiga');
+
+  /** **A guarda e a COBERTURA**: o pedido dela colado no texto do anuncio nao pode sumir. */
+  check(!anuncios.ehOTextoDoAnuncio(texto + '. Minha mae perdeu tudo na enchente e preciso de ajuda com remedio', lista),
+    'texto do anuncio + pedido dela NAO e marcado — a fala dela continua visivel');
+  check(!anuncios.ehOTextoDoAnuncio('vi a lei de alerta sonoro na tv, queria saber como funciona aqui', lista),
+    'fala dela que so cita o assunto nao e clique');
+  check(!anuncios.ehOTextoDoAnuncio('', lista) && !anuncios.ehOTextoDoAnuncio(texto, []), 'vazio e lista vazia devolvem falso');
+
+  /** Anuncio desligado nao marca nada — a mesma regra do `reconhecer`. */
+  check(!anuncios.ehOTextoDoAnuncio(texto, [{ ...lista[0], ligado: false }]), 'anuncio desligado nao reconhece');
+}
+
 fim();

@@ -1,3 +1,49 @@
+## 2026-09-23 — v3.109.0 — o texto do anúncio só era reconhecido na PRIMEIRA mensagem, e com a redação antiga
+
+**Print dele:** o anúncio *"lei alerta sonoro"* estava **no ar na Config**, com o texto que
+reconhece igual ao que ela escreveu e a ação *"Mandar o modelo aprovado: Lei da Sirene"*. A rodada
+respondeu com um texto da IA sobre a lei — *"não quero te passar o número ou o ano sem confirmar"* —
+em vez do modelo. Ele: *"ignorou o anúncio"*.
+
+**Medido, um pedaço de cada vez:** `reconhecer` casa o texto ✅, `modeloDoAnuncio` devolve *Lei da
+Sirene* ✅, e a decisão com o sinal ligado é **tecla `a`** (modelo + pedido de dados) ✅. Ou seja, a
+cadeia inteira funciona — **desde que a mensagem dela chegue marcada como texto do anúncio.** E era
+aí que quebrava.
+
+**Havia DUAS funções decidindo a mesma coisa com critérios diferentes:**
+
+- a da **primeira** mensagem da sessão (`pareceTextoProntoDeAnuncio`): abre com "Olá" e é curta;
+- a do **segundo clique em diante** (`pareceCliqueDeAnuncio`): exigia **`"Olá! EU ..."`**.
+
+O texto deste anúncio é *"Olá! **Quero** saber mais sobre a Lei de Alerta Sonoro contra
+inundações"* — **sem o "eu"**. Fora da primeira posição a marca não era posta, o texto do anúncio
+contava como fala dela, `falouAlgoProprio` disparava e o caso subia para a **tecla 6 — a IA**, que é
+o texto da print.
+
+**É a lição de 04/09 outra vez: o anúncio muda de redação e a lista não.** Por isso o critério novo
+não é redação nenhuma — é o **texto que ELE cadastrou** (`anuncios.ehOTextoDoAnuncio`), o mesmo que
+já escolhe o modelo. Marca e modelo passam a concordar por construção, em qualquer posição.
+
+**A guarda é a COBERTURA:** o trecho cadastrado tem que ser **pelo menos 60% da mensagem**. Sem ela,
+quem cola o texto do anúncio e emenda o próprio pedido — *"…contra inundações. Minha mãe perdeu tudo
+na enchente e preciso de ajuda"* — teria a mensagem INTEIRA apagada de todos os detectores, que é o
+defeito oposto e mais caro. Tem teste.
+
+**E um estouro latente, achado enquanto eu media:** `ehMensagemDeAnuncio(msg, padroes)` fazia
+`for...of` no argumento — com **`null`** vindo do armazenamento (o padrão `= []` só cobre
+`undefined`, a armadilha da ponte de mensagens) ele **lança no meio do cálculo dos sinais**, e erro
+ali PARA a rodada. Uma linha, com teste.
+
+**Fica em aberto, e é o que ele pode conferir na próxima:** se o caso voltar a acontecer com o
+anúncio cadastrado, a linha do **Andamento** diz qual caixa decidiu — e a linha do conteúdo na caixa
+diz por qual das três portas o modelo veio (`anúncio: <nome>`, `anúncio não reconhecido — modelo
+padrão`, `Conteúdo pedido: <etiqueta>`).
+
+**Sobre a resposta em si:** o dossiê TEM a lei (*Sistema de Alerta Sonoro contra Inundações*), com o
+**ano marcado `[CONFERIR]`** — e linha `[CONFERIR]` não é afirmada ao contato, por regra do próprio
+dossiê. Foi por isso que a IA se recusou a dar o número. **Confirmando o ano com ele, a recusa some
+sozinha.**
+
 ## 2026-09-23 — v3.108.0 — denúncia e acusação política não se discute: agradece e desconversa
 
 **Regra dele**, com a print de duas respostas seguidas entrando no assunto: *"em caso de denúncias

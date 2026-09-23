@@ -500,6 +500,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.incoming = conversa.incoming.filter((t) => !ehMensagemDaPlataforma(t));
       state.entrantes = prepararEntrantes(conversa.entrantes, {
         veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
+        anuncios: await carregarAnuncios(),
       });
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.nossas = conversa.nossas || [];
@@ -623,6 +624,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.incoming = conversa.incoming.filter((t) => !ehMensagemDaPlataforma(t));
       state.entrantes = prepararEntrantes(conversa.entrantes, {
         veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
+        anuncios: await carregarAnuncios(),
       });
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.nossas = conversa.nossas || [];
@@ -13036,7 +13038,7 @@ function pareceCliqueDeAnuncio(texto) {
   return ABERTURA_DE_ANUNCIO.test(t);
 }
 
-function prepararEntrantes(entrantes, { veioDeAnuncio = false } = {}) {
+function prepararEntrantes(entrantes, { veioDeAnuncio = false, anuncios = [] } = {}) {
   let primeiraDela = true;
   /**
    * **O lote de áudio encaminhado é marcado AQUI**, junto do ruído da plataforma e do texto
@@ -13067,7 +13069,7 @@ function prepararEntrantes(entrantes, { veioDeAnuncio = false } = {}) {
        */
       marcada.anuncioDaSessao = true;
       primeiraDela = false;
-    } else if (veioDeAnuncio && temTexto && pareceCliqueDeAnuncio(marcada.texto)) {
+    } else if (veioDeAnuncio && temTexto && (pareceCliqueDeAnuncio(marcada.texto) || anunciosLib.ehOTextoDoAnuncio(marcada.texto, anuncios))) {
       marcada.geradaPeloAnuncio = true;
     }
     return marcada;

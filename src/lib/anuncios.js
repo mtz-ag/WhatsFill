@@ -205,6 +205,35 @@ export function reconhecer(textos, anuncios) {
  * ainda não abriu atendimento) o nome do modelo **não** é conferido: acusar o que não se pode
  * verificar treina a ignorar o aviso.
  */
+/**
+ * **O TEXTO QUE ELE CADASTROU reconhece o clique em qualquer posição e em qualquer redação** —
+ * print de 23/09/2026, com o anúncio *"lei alerta sonoro"* no ar na Config, a mensagem dela igual
+ * ao texto cadastrado, e a rodada respondendo pela IA em vez de mandar o modelo aprovado: *"ignorou
+ * o anúncio"*.
+ *
+ * **Medido: havia DUAS funções decidindo a mesma coisa com critérios diferentes.** A da PRIMEIRA
+ * mensagem (`pareceTextoProntoDeAnuncio`) aceita qualquer texto curto que abra com "Olá"; a do
+ * segundo clique em diante exigia `"Olá! EU ..."` — e o texto deste anúncio é *"Olá! Quero saber
+ * mais sobre a Lei de Alerta Sonoro contra inundações"*, **sem o "eu"**. Fora da primeira posição
+ * a marca não era posta, o texto do anúncio contava como fala dela, `falouAlgoProprio` disparava e
+ * o caso subia para a tecla 6 — a IA. É a lição registrada de 04/09 outra vez: **o anúncio muda de
+ * redação e a lista não.**
+ *
+ * **O cadastro dele é o critério que não envelhece**: é o mesmo texto que `anuncios.reconhecer`
+ * usa para escolher o modelo, então a marca e o modelo passam a concordar por construção.
+ *
+ * **A guarda é a COBERTURA:** o trecho cadastrado tem que ser a maior parte da mensagem. Sem ela,
+ * quem cola o texto do anúncio e emenda o próprio pedido — *"…contra inundações. Minha mãe perdeu
+ * tudo na enchente e preciso de ajuda"* — teria a mensagem INTEIRA apagada de todos os detectores,
+ * que é o defeito oposto e mais caro.
+ */
+export function ehOTextoDoAnuncio(texto, anuncios) {
+  const t = String(texto || '').trim();
+  if (!t) return false;
+  const achado = reconhecer([t], anuncios || []);
+  return !!achado && String(achado.trecho || '').trim().length >= t.length * 0.6;
+}
+
 export function conferir(anuncios, opcoes) {
   const { modelos, respostas } = opcoes || {};
   const avisos = [];
