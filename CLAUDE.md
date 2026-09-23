@@ -2152,6 +2152,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **O ENDERECO VEM PARTIDO PORQUE NOS PEDIMOS PARTIDO** (23/09/2026: o modelo pede *"rua, numero,
+  bairro e cidade"*, ela respondeu em TRES mensagens, e a rodada concluiu sem etiquetar —
+  *"a instrucao e deixar aberto para eu transferir depois"*). **Medido: `informouEndereco` devolvia
+  null para as tres, e para as tres JUNTAS** — a conta das duas marcas era dentro de UMA mensagem, a
+  rua veio sem a palavra "rua" e "CIDADE:" nao era marca. O resto da cadeia estava certo: com o sinal
+  ligado a decisao e tecla 2 (pula, deixa aberto); sem ele, `ja-respondemos-antes` CONCLUI. Hoje
+  `respondendoNossoPedido` (a NOSSA ultima mensagem ser o pedido) soma os campos na rajada. **Pela
+  ULTIMA e nao por "ja pedimos": a etiqueta e permanente e manda pular para sempre.** E a conta e de
+  **campos DISTINTOS** — somar ocorrencias fazia "cidade" duas vezes bastar, e o teste pegou.
+
 - **SINAL NOVO EM `pedeRespostaPessoal` CALA A PROTEÇÃO `sem-interesse`** (22/09/2026, regressão da
   v3.96). A regra só decide com `!pedeRespostaPessoal`; pôr ali um sinal que liga com fala curta fez a
   recusa *"Pago multa e não dou voto"* virar caso da IA, que fechou pedindo o cadastro. **Ao somar um

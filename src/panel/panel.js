@@ -2616,7 +2616,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   async function enderecoParaMaterial() {
     const marcada = await etiquetaDeEndereco();
     if (marcada) return { motivo: `tem a etiqueta "${marcada}" — é material a enviar`, jaMarcada: true };
-    const dela = informouEndereco(state.entrantes, state.nossaUltimaAt);
+    /**
+     * **A nossa ÚLTIMA mensagem ter sido o pedido de endereço abre a janela do detector** — print
+     * de 23/09/2026, em que o endereço veio em três mensagens (cidade, rua com número, bairro) e
+     * nada foi etiquetado. Ver `cortesia.informouEndereco`.
+     *
+     * **Pela última e não por "já pedimos alguma vez"**: o pedido some da nossa fala assim que
+     * respondemos, e sem isso qualquer rajada futura com um "bairro" dentro viraria endereço — a
+     * etiqueta é permanente e manda PULAR o contato para sempre. Quem carrega o caso adiante depois
+     * de marcado é a etiqueta, como a regra dele (04/09) manda.
+     */
+    const nossaUltima = [...(state.nossas || [])].reverse().find((m) => String(m?.texto || '').trim());
+    const respondendoNossoPedido = templatesLib.ehPedidoDeEndereco(nossaUltima?.texto || '');
+    const dela = informouEndereco(state.entrantes, state.nossaUltimaAt, { respondendoNossoPedido });
     return dela ? { ...dela, jaMarcada: false } : null;
   }
 

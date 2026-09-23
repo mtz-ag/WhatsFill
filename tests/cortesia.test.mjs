@@ -3291,4 +3291,45 @@ grupo('me AJUDAR a comprar e pedido; termo clinico e saude (22/09/2026)');
   check(!falouDeSaude('esse governo é uma doença'), 'fala politica continua de fora');
 }
 
+grupo('o endereco vem PARTIDO porque nos pedimos partido (23/09/2026)');
+{
+  /** A forma da print: tres mensagens, a rua SEM a palavra "rua", o numero colado. Dados ficticios. */
+  const tres = [
+    { de: 'contato', texto: 'CIDADE: SAO BORJA / RS', at: 3 },
+    { de: 'contato', texto: 'PEDRO ALVARES 712', at: 4 },
+    { de: 'contato', texto: 'BAIRRO CENTRO', at: 5 },
+  ];
+  const respondendo = { respondendoNossoPedido: true };
+
+  check(!informouEndereco(tres, 2), 'sem a janela, a conta das duas marcas e por MENSAGEM — e nenhuma tem duas');
+  check(!!informouEndereco(tres, 2, respondendo),
+    'respondendo ao NOSSO pedido, as marcas somam na rajada e o endereco e reconhecido');
+  check(/nosso pedido/.test(informouEndereco(tres, 2, respondendo).motivo),
+    'e o motivo diz por que foi aceito');
+
+  /** A forma de uma linha so continua valendo SEM janela nenhuma. */
+  check(!!informouEndereco([{ de: 'contato', texto: 'Rua Pedro Alvares, 712, bairro Centro' }], 2),
+    'quem escreve tudo numa linha nao depende da janela');
+
+  /** **As duas marcas e o LUGAR continuam de pe** — a guarda que a print da Geci (08/09) pagou. */
+  check(!informouEndereco([{ de: 'contato', texto: 'ontem eu fui na casa nos bairro pedir voto para voces' }], 2, respondendo),
+    'militancia de rua nao vira endereco nem com a janela aberta');
+  check(!informouEndereco([{ de: 'contato', texto: 'nao sei o bairro' }], 2, respondendo),
+    'uma marca so nao basta: "nao sei o bairro"');
+  check(!informouEndereco([{ de: 'contato', texto: 'a rua aqui esta esburacada ha 20 anos' }], 2, respondendo),
+    'reclamacao de rua continua fora');
+  check(!informouEndereco([{ de: 'contato', texto: 'minha cidade e linda' }, { de: 'contato', texto: 'a cidade esta abandonada' }], 2, respondendo),
+    '"cidade" repetida em fala solta nao faz endereco sem nenhum outro campo');
+
+  /** E o rotulo "cidade" so conta DENTRO da janela: em fala solta ele esta em tudo. */
+  check(!informouEndereco([{ de: 'contato', texto: 'CIDADE: SAO BORJA' }, { de: 'contato', texto: 'BAIRRO CENTRO' }], 2),
+    'fora da janela, cidade + bairro nao bastam');
+  check(!!informouEndereco([{ de: 'contato', texto: 'CIDADE: SAO BORJA' }, { de: 'contato', texto: 'BAIRRO CENTRO' }], 2, respondendo),
+    'dentro dela, os dois rotulos do formulario bastam');
+
+  /** Mensagem da plataforma nao conta, como antes. */
+  check(!informouEndereco([{ de: 'contato', texto: 'BAIRRO CENTRO', sistema: true }, { de: 'contato', texto: 'CIDADE: X', sistema: true }], 2, respondendo),
+    'ruido da plataforma nao vira endereco');
+}
+
 fim();

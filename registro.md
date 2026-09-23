@@ -1,3 +1,45 @@
+## 2026-09-23 — v3.107.0 — o endereço vem PARTIDO porque nós pedimos partido
+
+**Print dele:** o modelo aprovado pediu *"seu endereço completo (rua, número, bairro e cidade)"*, o
+contato respondeu em **três mensagens** — a cidade, o nome da rua com o número, o bairro —, a rodada
+agradeceu dizendo que ia repassar à equipe de materiais e **concluiu o atendimento, sem etiquetar**.
+Ele: *"não etiquetou e concluiu sendo que a instrução é deixar aberto para eu transferir depois"*.
+
+**Medido antes de mexer, e a causa é uma só:** `informouEndereco` devolve **null** para as três
+mensagens — e devolve null também **para as três juntas numa linha**. A conta das duas marcas era
+feita DENTRO de uma mensagem, e nenhuma delas tinha duas:
+
+- *"CIDADE: SÃO BORJA / RS"* — **"cidade" não era marca nenhuma**;
+- o nome da rua com o número — **sem a palavra "rua"**, que ninguém escreve quando o rótulo já foi
+  pedido, então não havia "lugar" e a mensagem era descartada antes de contar;
+- *"BAIRRO …"* — uma marca só.
+
+**A regra estava certa para quem escreve tudo numa linha e cega para quem responde ao formulário na
+forma que o próprio formulário sugere.** E o resto da cadeia estava certo: medido, o modelo casa com
+`ehPedidoDeEndereco`, e com o sinal verdadeiro a decisão é **tecla 2 — pula e deixa aberto**; com ele
+falso, o caso desce até `ja-respondemos-antes`, que é **tecla 3, conclui**. É exatamente a print.
+
+**O conserto abre a janela só onde a resposta é ao NOSSO pedido.** `informouEndereco` ganhou
+`respondendoNossoPedido`, que o painel calcula da **nossa última mensagem** ter sido o pedido de
+endereço; aí os campos são somados na **rajada inteira** e o rótulo "cidade" passa a contar.
+
+**Pela última mensagem e não por "já pedimos alguma vez"**: o pedido some da nossa fala assim que
+respondemos, e sem esse recorte qualquer rajada futura com um "bairro" dentro viraria endereço — a
+etiqueta é permanente e manda **PULAR o contato para sempre**. Quem carrega o caso adiante depois de
+marcado continua sendo a etiqueta, como a regra dele de 04/09 manda.
+
+**As guardas que sustentam o detector continuam de pé, e uma delas o teste obrigou a reescrever:**
+
+- **duas marcas, e uma tem que ser um LUGAR** — *"ontem fui na casa nos bairro pedir voto"* (a Geci,
+  08/09) continua fora, com a janela aberta ou não;
+- **a conta virou de CAMPOS DISTINTOS, não de ocorrências.** A primeira versão somava marcas e
+  *"minha cidade é linda"* + *"a cidade está abandonada"* chegava a duas com **um campo só**. O teste
+  pegou; endereço é uma lista de campos DIFERENTES, e é assim que ele conta agora.
+
+**Fica em aberto, e é o que ele tem de conferir:** a etiqueta só entra com o campo **"Etiqueta de
+quem MANDOU ENDEREÇO"** preenchido na aba Automatizado — vazio, nada é marcado e o Andamento diz
+isso. E, com a IA ligada, ela confere a etiqueta antes de entrar (`conferirMaterial`).
+
 ## 2026-09-23 — v3.106.0 — "não tenho essa informação" não é a resposta: falta o dado, responde-se o TEMA
 
 **Print dele**, com o mesmo contato em três telas: ele chegou pelo anúncio, disse que é caminhoneiro

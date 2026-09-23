@@ -2936,26 +2936,78 @@ const NUMERO_DA_CASA = [
  * quase sempre volta por extenso e não casa, então incluí-la custa quase nada e pega o raro caso em
  * que a pessoa ditou o endereço já formatado.
  */
-export function informouEndereco(entrantes, nossaUltimaAt) {
-  for (const msg of rajadaFinal(entrantes, nossaUltimaAt)) {
-    if (msg?.sistema) continue;
-    const texto = semAcentos(msg?.texto);
-    if (!texto) continue;
+/**
+ * **O RÓTULO DO CAMPO, que só vale respondendo ao NOSSO pedido.** Em fala solta "cidade" está em
+ * tudo (*"minha cidade está abandonada"*, *"sou da cidade vizinha"*); logo depois de pedirmos
+ * *"rua, número, bairro e cidade"*, uma linha escrita `CIDADE: <nome>` é o formulário preenchido.
+ */
+const ROTULO_DE_CIDADE = /(^|[^\p{L}])cidade(\s|:|$)/iu;
 
-    if (CEP.test(texto)) return { motivo: 'ela mandou um CEP — é endereço para enviar material' };
-
-    const temLugar = TIPO_DE_VIA.test(texto) || BAIRRO.test(texto) || DIZ_ENDERECO.test(texto);
-    if (!temLugar) continue;
-
-    const marcas =
-      (TIPO_DE_VIA.test(texto) ? 1 : 0) +
-      (BAIRRO.test(texto) ? 1 : 0) +
-      (DIZ_ENDERECO.test(texto) ? 1 : 0) +
-      (COMPLEMENTO.test(texto) ? 1 : 0) +
-      (NUMERO_DA_CASA.some((re) => re.test(texto)) || NUMERO_COLADO_NA_RUA.test(String(msg?.texto || '')) ? 1 : 0);
-
-    if (marcas >= 2) return { motivo: 'ela mandou o endereço — é o material para enviar' };
+/**
+ * Os CAMPOS de endereço que uma mensagem traz — um conjunto, e não uma contagem.
+ *
+ * **Somar ocorrências deixa a mesma palavra valer duas vezes**, e o teste pegou isso: *"minha
+ * cidade é linda"* + *"a cidade está abandonada"* chegava a duas marcas com um campo só. Endereço é
+ * uma LISTA DE CAMPOS DIFERENTES — rua, número, bairro, cidade —, então o que conta é quantos tipos
+ * distintos apareceram.
+ */
+function camposDeEndereco(msg, comRotuloDeCidade) {
+  const texto = semAcentos(msg?.texto);
+  const campos = new Set();
+  if (!texto) return { campos, cep: false };
+  if (TIPO_DE_VIA.test(texto)) campos.add('via');
+  if (BAIRRO.test(texto)) campos.add('bairro');
+  if (DIZ_ENDERECO.test(texto)) campos.add('endereco');
+  if (comRotuloDeCidade && ROTULO_DE_CIDADE.test(texto)) campos.add('cidade');
+  if (COMPLEMENTO.test(texto)) campos.add('complemento');
+  if (NUMERO_DA_CASA.some((re) => re.test(texto)) || NUMERO_COLADO_NA_RUA.test(String(msg?.texto || ''))) {
+    campos.add('numero');
   }
+  return { campos, cep: CEP.test(texto) };
+}
+
+/** Um dos campos tem que dizer que ali há um LUGAR — a guarda que a print da Geci (08/09) pagou. */
+const CAMPOS_DE_LUGAR = ['via', 'bairro', 'endereco', 'cidade'];
+const temLugar = (campos) => CAMPOS_DE_LUGAR.some((c) => campos.has(c));
+
+export function informouEndereco(entrantes, nossaUltimaAt, opcoes) {
+  /**
+   * **O ENDEREÇO VEM PARTIDO PORQUE NÓS PEDIMOS PARTIDO** — print do contato de fronteira
+   * (23/09/2026): o modelo pediu *"seu endereço completo (rua, número, bairro e cidade)"* e ele
+   * respondeu em TRÊS mensagens — a cidade, o nome da rua com o número, o bairro. A rodada
+   * respondeu, **não etiquetou e concluiu**; ele: *"a instrução é deixar aberto para eu transferir
+   * depois"*.
+   *
+   * **Medido: o detector devolvia `null`, e devolvia para as três juntas também.** A conta das duas
+   * marcas era feita DENTRO de uma mensagem, e nenhuma delas tinha duas: a da rua nem a palavra
+   * "rua" trazia (ninguém a escreve quando o rótulo já foi pedido), e "CIDADE:" não era marca
+   * nenhuma. A regra estava certa para quem escreve tudo numa linha só e cega para quem responde
+   * ao formulário na forma que o próprio formulário sugere.
+   *
+   * **A janela se abre só quando a resposta é ao NOSSO pedido** (`respondendoNossoPedido`, que o
+   * painel calcula da nossa ÚLTIMA mensagem). Aí as marcas são somadas na rajada inteira e o rótulo
+   * "cidade" conta. **As duas marcas e o "tem que haver um lugar" continuam de pé** — é o que separa
+   * endereço de reclamação de rua, e é a guarda que a print da Geci (08/09) pagou.
+   */
+  const { respondendoNossoPedido = false } = opcoes || {};
+  const rajada = rajadaFinal(entrantes, nossaUltimaAt).filter((m) => m && !m.sistema);
+
+  for (const msg of rajada) {
+    const { campos, cep } = camposDeEndereco(msg, false);
+    if (cep) return { motivo: 'ela mandou um CEP — é endereço para enviar material' };
+    if (temLugar(campos) && campos.size >= 2) {
+      return { motivo: 'ela mandou o endereço — é o material para enviar' };
+    }
+  }
+
+  if (respondendoNossoPedido) {
+    const campos = new Set();
+    for (const msg of rajada) for (const c of camposDeEndereco(msg, true).campos) campos.add(c);
+    if (temLugar(campos) && campos.size >= 2) {
+      return { motivo: 'ela respondeu o nosso pedido de endereço — é o material para enviar' };
+    }
+  }
+
   return null;
 }
 
