@@ -39,6 +39,7 @@ import { ehPedidoDeEndereco, semGabinete } from './templates.js';
 import {
   ehPedidoDeRoupa,
   falouDeSaude,
+  trouxeDenuncia,
   pedeAjudaFinanceira,
   pedeEmprego,
   pedeAlgoIndefinido,
@@ -1642,6 +1643,16 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    Mensagem que é só "não tenho essa informação" (ainda mais duas vezes) é porta fechada na cara',
     '    de quem escreveu. Isso NÃO autoriza inventar: projeto, lei, posição tomada, número e promessa',
     '    de resolver continuam valendo só se estiverem na conversa ou no "Quem é quem".',
+    /**
+     * **A regra 15 é dele, de 23/09/2026** — ver a linha colada no pedido, no bloco do contato. Aqui
+     * ela fica por ser PROIBIÇÃO: proibição não obriga forma, então vale em toda chamada (17/09), e
+     * a colada só aparece quando o detector reconhece a acusação.
+     */
+    '15. DENÚNCIA E ACUSAÇÃO POLÍTICA NÃO SE DISCUTE. Corrupção, roubo, desvio, fraude, esquema,',
+    '    denúncia contra prefeito, governo, partido ou adversário: nós NÃO temos como verificar nada',
+    '    disso. Agradeça as informações, diga que estamos atentos e acompanhando, e PARE. Nunca diga',
+    '    que a denúncia é séria ou grave, nunca diga o que deveria ser apurado, nunca fale de provas,',
+    '    fatos, responsabilidade ou direitos de ninguém, e nunca prometa levar o caso adiante.',
     // O item 22 INTEIRO, e não só a primeira faixa: citar só "mensagem simples: 1 a 3 frases" fez o
     // desabafo de 58 s do Adair (18/09/2026) receber três respostas de uma frase por parágrafo, contra
     // os dois parágrafos que o ChatGPT escreveu dentro da regra dele.
@@ -2248,6 +2259,15 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
     .map((m) => falouDeSaude(m.texto))
     .find(Boolean);
   /**
+   * **Denúncia e acusação política: na conversa INTEIRA, pela mesma razão da saúde.** Quem trouxe a
+   * acusação ontem segue falando dela hoje — na print de 23/09/2026 a mensagem da vez era só *"é
+   * assim mesmo que está ocorrendo"*, e foi o SEGUIMENTO que virou lição de moral.
+   */
+  const denuncia = lista
+    .filter((m) => m.de !== 'nos' && !m.anuncio)
+    .map((m) => trouxeDenuncia(m.texto))
+    .find(Boolean);
+  /**
    * **Pediu dinheiro?** — a mesma leitura do painel (rajada desde a nossa última fala), porque a regra
    * do CRAS é sobre o que ela acabou de pedir. 17/09/2026: *"a IA não está identificando quando realmente
    * a pessoa precisa ir pro CRAS; muitas pedem dinheiro sem esclarecer que estão com dificuldades"*.
@@ -2533,6 +2553,22 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'NÃO diga que não sabe, que não tem a informação nem que vai verificar. Diga que ele está bem e na ' +
         'correria da campanha, e agradeça a lembrança. Se as instruções ou o "Quem é quem" trouxerem ' +
         'notícia dele, use a notícia no lugar.'
+      : '',
+    /**
+     * **DENÚNCIA E ACUSAÇÃO POLÍTICA — colada no pedido** (23/09/2026). Regra dele: *"em caso de
+     * denúncias políticas e acusações etc nós não entramos em detalhes pois essas informações não
+     * podem ser verificadas, só agradecemos as informações e desconversamos sem entrar em
+     * detalhes"*. Ver `cortesia.trouxeDenuncia`.
+     *
+     * **Fica FORA de quem trouxe um problema pessoal**, como a regra da pauta: quem foi roubada ou
+     * teve o benefício fraudado não recebe "obrigado, estamos atentos" — a regra 11 é quem atende.
+     */
+    denuncia && !trouxeProblema
+      ? 'DENÚNCIA OU ACUSAÇÃO POLÍTICA — NÃO ENTRE NO MÉRITO: nós não temos como verificar essas ' +
+        'informações, então NÃO diga se é grave, se é séria, o que precisa ser apurado, nem dê aula ' +
+        'sobre fatos, provas, responsabilidade ou direitos. Agradeça as informações em UMA frase e ' +
+        'diga que estamos atentos e acompanhando o assunto — e PARE. Nada de opinião sobre o caso, ' +
+        'nada de prometer levar adiante, nada de pedir detalhes.'
       : '',
     /**
      * **A regra do endereço, colada no pedido** — mesma razão da regra 11 acima, e mesma decisão

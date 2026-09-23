@@ -3168,4 +3168,21 @@ grupo('faltar o dado nao e a resposta (22/09/2026, o caminhoneiro de fronteira)'
     'e "levar as demandas" nao e lido como promessa de entregar');
 }
 
+grupo('a regra da denuncia vai colada no pedido (23/09/2026)');
+{
+  const tem = (msgs) => /DENÚNCIA OU ACUSAÇÃO POLÍTICA/.test(montarContatoRascunho({ mensagens: msgs }));
+  const den = { de: 'contato', texto: 'o prefeito daqui desviou verba da saude, e um esquema' };
+
+  check(tem([den, { de: 'contato', texto: 'É assim mesmo que está ocorrendo no Brasil' }]),
+    'a acusacao na conversa INTEIRA acende a linha, mesmo com a fala da vez sendo o seguimento');
+  check(!tem([{ de: 'contato', texto: 'bom dia, quero o material' }]), 'conversa comum nao acende');
+  check(!tem([den, { de: 'contato', texto: 'e estou desempregada, sem dinheiro para comida' }]),
+    'trouxe problema pessoal junto: vence a regra 11, para nao mandarem o oposto');
+
+  const sis = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/15\. DENÚNCIA E ACUSAÇÃO POLÍTICA NÃO SE DISCUTE/.test(sis), 'a regra 15 esta no sistema');
+  check(/estamos atentos e acompanhando/.test(montarContatoRascunho({ mensagens: [den] })),
+    'e a linha diz o que FAZER, com as palavras dele');
+}
+
 fim();

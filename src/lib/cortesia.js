@@ -2743,6 +2743,49 @@ export function falouDeSaude(texto) {
 }
 
 /**
+ * **DENÚNCIA E ACUSAÇÃO POLÍTICA: NÃO SE ENTRA NO MÉRITO** — regra dele (23/09/2026), com a print
+ * de duas respostas seguidas discutindo o assunto: *"em caso de denúncias políticas e acusações
+ * etc nós não entramos em detalhes pois essas informações não podem ser verificadas, só
+ * agradecemos as informações e desconversamos sem entrar em detalhes"*.
+ *
+ * **O que saiu** foi o oposto — *"as denúncias que você menciona são sérias e precisam ser tratadas
+ * com fatos, responsabilidade e respeito aos direitos de todos"* —, e onze minutos depois a mesma
+ * lição de moral com outras palavras. O risco não é o tom: **é o mandato opinando sobre acusação
+ * que ninguém conferiu**, em texto que fica no WhatsApp de um eleitor.
+ *
+ * **Lê a conversa INTEIRA**, como `falouDeSaude`: quem trouxe a denúncia ontem continua falando
+ * dela hoje ("é assim mesmo que está ocorrendo"), e é justamente o seguimento que sai do assunto.
+ *
+ * **A guarda é o CRIME CONTRA ELA.** *"Roubaram minha moto"*, *"fui assaltado"*, *"fraudaram meu
+ * benefício"* são problema pessoal e têm outro caminho (a regra 11) — desconversar ali seria frio
+ * com quem está contando o que sofreu. Metade das asserções do teste é sobre isso.
+ */
+const ACUSACAO_POLITICA = [
+  /(^|[^\p{L}])(denuncia(s|r|ram|ndo)?|denunciei)([^\p{L}]|$)/iu,
+  /(^|[^\p{L}])(corrup[cç][aã]o|corrupto?s?|propina|caixa\s*dois|superfatura\w*|lavagem\s+de\s+dinheiro)([^\p{L}]|$)/iu,
+  /(^|[^\p{L}])(desvi(o|os|aram|ando)|fraud(e|es|aram|ou|ando)|esquema|m[aá]fia|quadrilha|conluio)([^\p{L}]|$)/iu,
+  /(^|[^\p{L}])(rouba(m|ram|ndo|r)?|ladr(ao|oes|ão|ões)|bandidagem|safade\w+|pilantr\w+)([^\p{L}]|$)/iu,
+  /(^|[^\p{L}])(crimes?|criminos\w+|ilegalidades?|ilegal|irregularidades?)([^\p{L}]|$)/iu,
+];
+
+/** O que está sendo acusado tem que ser PÚBLICO — é o que separa denúncia de crime contra ela. */
+const ALVO_PUBLICO =
+  /(^|[^\p{L}])(governo|governador|prefeit\w+|vereador\w*|deputad\w+|senador\w*|ministr\w+|president\w+|politic\w+|partidos?|pt|pl|stf|tse|tre|justica|juiz|delegad\w+|secretari\w+|camara|assembleia|prefeitura|orgaos?|public[oa]s?|verbas?|licitac(ao|oes)|imprensa|midia|urnas?|elei(cao|coes)|lula|bolsonaro|dilma|xandao|moraes)([^\p{L}]|$)/iu;
+
+/** O crime foi contra ELA: é problema pessoal, e a regra 11 é quem atende. */
+const CRIME_CONTRA_ELA =
+  /(^|[^\p{L}])(rouba(ram|m)?|furtaram|levaram|fraudaram|invadiram|assaltaram)\s+(a\s+)?(minha|meu|meus|minhas|nossa\s+casa)([^\p{L}]|$)|(^|[^\p{L}])(fui|fomos)\s+(roubad\w+|assaltad\w+|furtad\w+|lesad\w+|fraudad\w+)([^\p{L}]|$)|(^|[^\p{L}])(meu|minha)\s+(beneficio|aposentadoria|salario|conta|cartao|inss|pix)\s+\w*\s*(foi|esta)?\s*(fraudad\w+|roubad\w+|clonad\w+)/iu;
+
+export function trouxeDenuncia(texto) {
+  const t = semAcentos(texto);
+  if (!t) return null;
+  if (CRIME_CONTRA_ELA.test(t)) return null;
+  if (!ACUSACAO_POLITICA.some((re) => re.test(t))) return null;
+  if (!ALVO_PUBLICO.test(t)) return null;
+  return { motivo: 'trouxe denúncia ou acusação política' };
+}
+
+/**
  * **Ela se oferece para fazer algo PELA campanha e quer que a gente entre com alguma coisa** — caso dele
  * (17/09/2026): *"a pessoa quer apoiar a campanha fazendo uma janta e quer que participemos com comida"*,
  * e a IA mandou o CRAS três vezes.

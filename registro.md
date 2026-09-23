@@ -1,3 +1,45 @@
+## 2026-09-23 — v3.108.0 — denúncia e acusação política não se discute: agradece e desconversa
+
+**Regra dele**, com a print de duas respostas seguidas entrando no assunto: *"em caso de denúncias
+políticas e acusações etc nós não entramos em detalhes pois essas informações não podem ser
+verificadas, só agradecemos as informações e desconversamos sem entrar em detalhes — exemplo:
+obrigado pelas informações, estamos atentos também com esse assunto, estamos acompanhando"*.
+
+**O que saiu foi o oposto:** *"as denúncias que você menciona são sérias e precisam ser tratadas com
+fatos, responsabilidade e respeito aos direitos de todos"* às 12:19 e, onze minutos depois, a mesma
+lição de moral com outras palavras — *"um tema tão sério precisa ser discutido com fatos e
+responsabilidade, sem ignorar os direitos de ninguém"*. **O risco não é o tom: é o mandato opinando
+sobre acusação que ninguém conferiu**, num texto que fica no WhatsApp de um eleitor.
+
+**Medido antes de mexer:**
+
+- **o roteamento estava certo** — `falouAlgoProprio` levou o caso à tecla 6, que é a IA;
+- **a guarda de repetição não alcança** e não é o conserto: `semRepetirONosso` devolve `null` para a
+  segunda contra a primeira, porque as palavras mudaram e a IDEIA é que se repetiu. Baixar o corte
+  dela para pegar paráfrase apagaria frase legítima em toda conversa — a repetição some quando a
+  regra tira o que havia para repetir.
+
+**Duas metades, como sempre:** a **regra 15** no sistema (é PROIBIÇÃO, e proibição não obriga forma,
+então vale em toda chamada) e a **linha colada no pedido** quando `cortesia.trouxeDenuncia` reconhece
+a acusação — as duas com as palavras dele: agradecer, dizer que estamos atentos e acompanhando, e
+**parar**. Nada sobre ser grave, o que apurar, provas, fatos, responsabilidade ou direitos, e nada de
+prometer levar adiante.
+
+**O detector lê a conversa INTEIRA**, como o de saúde: na print, a mensagem da vez era só *"é assim
+mesmo que está ocorrendo no Brasil"* — que sozinha não é acusação nenhuma. Foi o **seguimento** que
+virou lição de moral, e é ele que a regra precisa alcançar.
+
+**Duas guardas, e as duas foram medidas em 20 frases desta base (0 erros):**
+
+- **o alvo tem que ser PÚBLICO** — prefeito, governo, partido, urna, licitação, adversário;
+- **crime CONTRA ELA fica de fora** (*"roubaram minha moto"*, *"fui assaltado"*, *"meu benefício foi
+  fraudado"*), e a linha colada ainda exige `!trouxeProblema`: quem trouxe problema pessoal é da
+  regra 11, e as duas na mesma mensagem mandariam o oposto sobre perguntar.
+
+**E a armadilha registrada cobrou de novo: `semAcentos` NÃO abaixa a caixa.** Sem o `i`, *"o LULA é
+um ladrão"* e *"o TSE não fez nada"* escapavam — três das oito frases que devem casar. Peguei
+medindo, antes de escrever o teste.
+
 ## 2026-09-23 — v3.107.0 — o endereço vem PARTIDO porque nós pedimos partido
 
 **Print dele:** o modelo aprovado pediu *"seu endereço completo (rua, número, bairro e cidade)"*, o

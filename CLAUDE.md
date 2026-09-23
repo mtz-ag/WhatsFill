@@ -2694,6 +2694,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **DENUNCIA E ACUSACAO POLITICA NAO SE DISCUTE** (regra dele, 23/09/2026: *"nao entramos em
+  detalhes pois essas informacoes nao podem ser verificadas, so agradecemos e desconversamos"*). O
+  rascunho respondeu DUAS vezes que *"as denuncias sao serias e precisam ser tratadas com fatos e
+  responsabilidade"* — **o mandato opinando sobre acusacao que ninguem conferiu**. Hoje: **regra 15**
+  (proibicao, vale sempre) + a linha **colada** quando `cortesia.trouxeDenuncia` casa. **Le a conversa
+  INTEIRA** — na print a fala da vez era so *"e assim mesmo que esta ocorrendo"*, e o SEGUIMENTO e que
+  errou. Guardas: alvo PUBLICO, crime contra ELA fora, e `!trouxeProblema`. **A repeticao nao se
+  conserta baixando o corte de `semRepetirONosso`** (medido: null, porque as PALAVRAS mudaram) — ela
+  some quando a regra tira o que havia para repetir. E `semAcentos` nao abaixa a caixa: sem o `i`,
+  "LULA" e "TSE" escapavam.
+
 - **"NAO TENHO ESSA INFORMACAO" NAO E A RESPOSTA — falta o dado, responde-se o TEMA** (22/09/2026,
   o caminhoneiro de fronteira: perguntou projeto e agenda, o rascunho saiu com DUAS negativas e nada
   mais). **Medido: nenhuma trava disparou, o dossie FOI puxado e nao cobria o tema** — a IA cumpriu a

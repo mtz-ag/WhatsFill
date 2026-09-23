@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, ehPedidoDeRoupa, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos, falouDeSaude, ofereceEventoPelaCampanha, falouAlgoProprio } from '../src/lib/cortesia.js';
+import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, ehPedidoDeRoupa, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos, falouDeSaude, ofereceEventoPelaCampanha, falouAlgoProprio, trouxeDenuncia } from '../src/lib/cortesia.js';
 
 const templates = await lib('templates.js');
 
@@ -3330,6 +3330,47 @@ grupo('o endereco vem PARTIDO porque nos pedimos partido (23/09/2026)');
   /** Mensagem da plataforma nao conta, como antes. */
   check(!informouEndereco([{ de: 'contato', texto: 'BAIRRO CENTRO', sistema: true }, { de: 'contato', texto: 'CIDADE: X', sistema: true }], 2, respondendo),
     'ruido da plataforma nao vira endereco');
+}
+
+grupo('denuncia e acusacao politica nao se discute (23/09/2026)');
+{
+  for (const t of [
+    'quero denunciar o prefeito daqui, tem desvio de verba na saude',
+    'esses politicos sao tudo ladrao, roubam o povo',
+    'o Lula e um ladrao safado, golpista',
+    'tem um esquema de propina na prefeitura, tenho provas',
+    'as irregularidades na licitacao do governo ninguem investiga',
+    'a imprensa esconde os crimes desse governo',
+    'fraude nas urnas, o TSE nao fez nada',
+    'o vereador daqui e corrupto',
+  ]) {
+    check(!!trouxeDenuncia(t), `acusacao politica: "${t.slice(0, 44)}…"`);
+  }
+
+  /** **A guarda e o CRIME CONTRA ELA** — problema pessoal tem outro caminho (a regra 11). */
+  for (const t of [
+    'roubaram minha moto ontem na frente de casa',
+    'fui assaltado duas vezes esse ano',
+    'meu beneficio foi fraudado e o INSS nao resolve',
+    'bom dia, tudo bem com voces?',
+    'quero receber o material da campanha',
+    'a rua aqui esta esburacada ha 20 anos',
+    'preciso de ajuda para comprar remedio',
+    'obrigado pelas informacoes, vou acompanhar',
+    'estou com medo da violencia no meu bairro',
+    'meu vizinho e um safado, joga lixo no meu terreno',
+    'quero trabalhar na campanha de voces',
+    'parabens pelo trabalho, voces sao honestos',
+  ]) {
+    check(!trouxeDenuncia(t), `NAO e denuncia politica: "${t.slice(0, 44)}…"`);
+  }
+
+  /**
+   * **A caixa importa** — `semAcentos` NAO abaixa a caixa, e sem o `i` "Lula" e "TSE" escapavam.
+   * Peguei medindo, antes de escrever o teste.
+   */
+  check(!!trouxeDenuncia('O LULA E UM LADRAO') && !!trouxeDenuncia('Fraude nas Urnas, o TSE calado'),
+    'maiuscula casa igual — a armadilha do semAcentos');
 }
 
 fim();
