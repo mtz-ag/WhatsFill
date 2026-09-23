@@ -2684,6 +2684,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **"NAO TENHO ESSA INFORMACAO" NAO E A RESPOSTA — falta o dado, responde-se o TEMA** (22/09/2026,
+  o caminhoneiro de fronteira: perguntou projeto e agenda, o rascunho saiu com DUAS negativas e nada
+  mais). **Medido: nenhuma trava disparou, o dossie FOI puxado e nao cobria o tema** — a IA cumpriu a
+  regra 4 ao pe da letra. E a forma do *"como esta o capitao"* (17/09) num assunto novo: **"nao
+  invente" nao significa "nao responda"**. Hoje a **regra 14** e a linha **colada** no pedido, com a
+  condicao sendo o DOSSIE TER SIDO PUXADO (a conta que ja existia — nenhuma lista nova de formas de
+  perguntar). **Fica fora de quem trouxe problema pessoal**, senao ela e a regra 11 mandam o oposto
+  sobre perguntar. **TERCEIRA assercao de PROPORCAO que cai sozinha** (a 9 virou "9a de 16" sem nada
+  mudar de lugar): proporcao decai a cada regra nova — o invariante e a ADJACENCIA da 8 com a 9.
+
 - **QUEM ATENDE E A EQUIPE, E O RASCUNHO NAO SE APRESENTA POR HABITO** (22/09/2026, print dele:
   *"era pra estar equipe ou assessoria do capitao martim e nesse caso nem era necessario se
   identificar"*). A licenca *"pode dizer que este e o WhatsApp dele"* era MINHA, escrita junto com a

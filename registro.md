@@ -1,3 +1,47 @@
+## 2026-09-23 — v3.106.0 — "não tenho essa informação" não é a resposta: falta o dado, responde-se o TEMA
+
+**Print dele**, com o mesmo contato em três telas: ele chegou pelo anúncio, disse que é caminhoneiro
+autônomo, perguntou **que projeto o mandato tem para eles** e se haveria uma **agenda do Flávio** na
+cidade antes das eleições. O nosso rascunho saiu com **duas negativas e mais nada** (*"não tenho essa
+confirmação"*, *"também não tenho uma informação detalhada"*) e ele apagou. No lugar mandou a resposta
+que escreveu no ChatGPT: a fronteira e o transporte como pauta, as dificuldades que ele quer conhecer,
+e a falta da agenda em **uma frase**. Diagnóstico dele: *"os dois modelos são iguais mas as respostas
+diferem totalmente; o nosso poderia ter seguido o mesmo caminho mesmo que não conheça nenhum
+projeto"*.
+
+**Medido antes de mexer, e isto decidiu a forma do conserto:**
+
+- **Nenhuma trava disparou nos dois textos** — o dele e o nosso saem sozinhos, zero avisos que barram.
+  Não havia o que barrar: **é o que a IA lê**, que é a correção que ele já me fez duas vezes (a Irema
+  10/09, o endereço 12/09).
+- **O dossiê FOI puxado** (`precisaDoDossie` = true) e não cobre caminhoneiro, rodovia nem ponto de
+  parada — então a IA **cumpriu** a regra 4 (*"use SÓ o que estiver na conversa e no bloco"*) e a
+  seção 20 do documento dele. Sem o dado, o que sobrava era a negativa.
+
+**É a forma do "como está o capitão" (17/09) num assunto novo: "não invente" lido ao pé da letra vira
+"não sei".** Lá a exceção foi escrita para a pergunta de carinho; aqui para a pergunta de PAUTA.
+
+**Duas metades, como manda a lição da posição (07/09):**
+
+1. **Regra 14** no prompt de sistema — a falta do dado é UMA frase; o tema é o resto da mensagem.
+2. **A linha COLADA no pedido**, que é onde o modelo escreve. A condição é **o dossiê ter sido
+   puxado**, ou seja a conta que já existia para dizer "ela perguntou do mandato" — **sem lista nova
+   de formas de perguntar**, que é o defeito que este arquivo já registrou cinco vezes.
+
+**A guarda que a colisão obrigou:** a linha fica **fora de quem trouxe problema pessoal**. A regra 11
+(dele, a Irema) manda **não** perguntar do caso, e esta manda dizer que quer conhecer o que ela vive —
+as duas na mesma mensagem seriam duas ordens opostas, e o modelo pega a mais próxima. **Custo dito a
+ele:** quem mistura desemprego com pergunta de pauta continua recebendo a resposta seca.
+
+**E nada disso autoriza inventar:** projeto, lei, posição tomada, número e promessa de resolver
+continuam valendo só se estiverem na conversa ou no "Quem é quem" — está escrito dentro da própria
+regra 14, porque regra que abre uma porta tem que dizer onde ela para.
+
+**TERCEIRA vez que uma asserção de PROPORÇÃO cai sozinha** (10/09 a do padrão, 12/09 a das regras
+contra o prompt inteiro, hoje a das regras contra a lista): a 14 entrou no fim e a 9 virou "9ª de 16",
+com **nada tendo mudado de lugar**. Trocada pelo invariante que não decai — **adjacência**: a 9 é a
+regra seguinte à 8, sem nada no meio, e é o que a lição diz (a 9 é a fronteira da 8).
+
 ## 2026-09-22 — v3.105.0 — quem atende é a EQUIPE, e o rascunho não se apresenta por hábito
 
 **Print dele**, com o rascunho abrindo *"Boa tarde! Aqui é o WhatsApp do Capitão Martim."* para quem

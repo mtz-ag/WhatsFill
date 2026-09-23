@@ -272,7 +272,15 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
    * Fica só em memória, no painel. Nunca vai para armazenamento nem para arquivo: tem dado de eleitor.
    */
   const sistema = montarSistemaRascunho({ templates, regras, gabinete });
-  const contato = montarContatoRascunho({ mensagens, campos, agora, pedirDados, jaNosConhece, anterior });
+  /**
+   * **`perguntaDoMandato` é "o dossê foi puxado"** — `gabinete` só vem preenchido quando
+   * `precisaDoDossie` reconheceu que a conversa pergunta do candidato, da chapa ou das pautas.
+   * Reaproveitar a conta existente evita a lista nova de formas de perguntar, que nunca fecha.
+   */
+  const contato = montarContatoRascunho({
+    mensagens, campos, agora, pedirDados, jaNosConhece, anterior,
+    perguntaDoMandato: !!String(gabinete || '').trim(),
+  });
   const lidoPelaIA = {
     contato,
     sistemaTokens: tokensAproximados(sistema),

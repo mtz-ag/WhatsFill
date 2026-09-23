@@ -1778,20 +1778,19 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   const nove = linhas.findIndex((l) => /^9\. QUEM PERGUNTA QUEM ESTÁ/.test(l));
   check(nove > oito && nove - oito < 15, `a regra 9 fica logo depois da 8 (${oito} -> ${nove})`);
   /**
-   * **A conta e contra as REGRAS, nao contra o prompt inteiro** (12/09/2026).
+   * **TERCEIRA vez que uma assercao de PROPORCAO cai sozinha** (10/09 a do padrao, 12/09 esta
+   * contra o prompt inteiro, e 22/09 esta contra a lista): a regra 14 entrou no fim e a 9 virou a
+   * "9a de 16" — nada mudou de lugar, e o teste acusou. **Proporcao decai a cada regra nova.**
    *
-   * A assercao era `nove > linhas.length * 0.8` e caiu sozinha ao crescer o rodape do prompt: 356
-   * de 446 linhas, ou seja 79,8%. **Nada tinha mudado de lugar** — e a mesma decadencia que o teste
-   * de proporcao do padrao sofreu em 10/09. O que se quer proteger e a POSICAO RELATIVA entre as
-   * regras: a 9 tem que estar na segunda metade da lista, ao lado da 8. Isso nao muda quando alguem
-   * acrescenta texto depois da lista.
+   * O invariante de verdade e a ADJACENCIA, e e o que a licao diz: a 9 e a FRONTEIRA da 8 (quem
+   * pergunta quem esta do outro lado NAO esta pedindo para falar com ele). Uma nao pode ser lida
+   * sem a outra, e isso continua verdade com vinte regras na lista.
    */
   const numeradas = linhas
     .map((l, i) => (/^\d+\. /.test(l) ? i : -1))
     .filter((i) => i >= 0);
-  const posicaoDaNove = numeradas.indexOf(nove);
-  check(posicaoDaNove > numeradas.length / 2,
-    `e a 9 fica na segunda metade das regras (${posicaoDaNove + 1}a de ${numeradas.length})`);
+  check(numeradas.indexOf(nove) === numeradas.indexOf(oito) + 1,
+    `e a 9 e a regra seguinte a 8, sem nada no meio (${numeradas.indexOf(oito) + 1}a e ${numeradas.indexOf(nove) + 1}a de ${numeradas.length})`);
 }
 
 /**
@@ -3129,6 +3128,44 @@ grupo('quem atende e a EQUIPE, nao "o WhatsApp do Capitao Martim" (22/09/2026)')
     'revisarRascunho troca o texto que sai');
   check(r.avisos.some((a) => /se apresentou como "o WhatsApp do Capitão Martim"/.test(a)),
     'e avisa qual foi a troca');
+}
+
+grupo('faltar o dado nao e a resposta (22/09/2026, o caminhoneiro de fronteira)');
+{
+  const pauta = [{ de: 'contato', texto: 'sou caminhoneiro autonomo, o que tem de projeto pra nos? e ele vem aqui antes das eleicoes?' }];
+  const colada = (ctx) => /PERGUNTOU DO MANDATO E FALTA O DADO/.test(montarContatoRascunho(ctx));
+
+  check(colada({ mensagens: pauta, perguntaDoMandato: true }),
+    'perguntou do mandato: a linha vai COLADA no pedido');
+  check(/responda o TEMA/.test(montarContatoRascunho({ mensagens: pauta, perguntaDoMandato: true })),
+    'e ela manda responder o TEMA, com a falta em uma frase');
+  check(!colada({ mensagens: pauta, perguntaDoMandato: false }),
+    'sem dossie puxado, a linha nao aparece — a conta e a que ja existia');
+
+  /** **Fica FORA de quem trouxe problema pessoal**: a regra 11 manda NAO perguntar do caso. */
+  check(!colada({
+    mensagens: [{ de: 'contato', texto: 'estou desempregada e sem comida em casa, voces tem projeto pra isso?' }],
+    perguntaDoMandato: true,
+  }), 'trouxe problema pessoal: vence a regra 11, e as duas nao se contradizem na mesma mensagem');
+
+  /** A regra 14 existe no sistema, para o caso que o dossie nao cobre. */
+  const sis = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/14\. NÃO TENHO O DADO NÃO É A RESPOSTA/.test(sis), 'a regra 14 esta no prompt de sistema');
+  check(/continuam valendo só se estiverem na conversa ou no "Quem é quem"/.test(sis),
+    'e ela repete a trava: isto nao autoriza inventar');
+
+  /** **A resposta que ELE mandou no lugar passa pelas travas** — medido antes de escrever a regra. */
+  const dele =
+    'Olá! Obrigado pela mensagem, companheiro. A região é estratégica para o nosso Estado, ' +
+    'especialmente pelo transporte rodoviário.\n\nComo caminhoneiro autônomo, você traz uma pauta ' +
+    'importante: infraestrutura das rodovias, segurança e os pontos de parada precisam estar no ' +
+    'debate. Quero conhecer as principais dificuldades que vocês enfrentam aí.\n\nSobre uma agenda ' +
+    'dele por aí, ainda não tenho confirmação. Se houver agenda oficial, vamos divulgar pelos ' +
+    'nossos canais.\n\nUm abraço e obrigado pelo apoio!';
+  const r = validarRascunho({ texto: dele, confianca: 0.9 }, { recebemosDela: true });
+  check(rascunhoPodeSairSozinho(r.avisos, {}), 'o texto que ele aprovou sai sozinho: nenhuma trava barra');
+  check(!r.avisos.some((a) => /promessa|afirmou/i.test(a)),
+    'e "levar as demandas" nao e lido como promessa de entregar');
 }
 
 fim();

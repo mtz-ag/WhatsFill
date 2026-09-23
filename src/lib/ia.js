@@ -1630,6 +1630,18 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    nada de dizer o que o mandato pode ou não doar, nada de CRAS, nada de "se precisar, a equipe',
     '    procura ajudar". Responda em UMA ou DUAS frases curtas: respeite a opinião dela e agradeça por',
     '    ela ter escrito. Sem discurso sobre política e sem tentar convencer.',
+    /**
+     * **A regra 14 nasceu do caminhoneiro de fronteira (22/09/2026)** — ver a linha colada no pedido,
+     * no bloco do contato. Aqui ela fica pelo mesmo motivo das outras: a colada só aparece quando o
+     * dossiê foi puxado, e a falta de dado acontece também fora disso (uma pergunta de agenda, um
+     * número que não temos, um tema que o dossiê não cobre).
+     */
+    '14. NÃO TENHO O DADO NÃO É A RESPOSTA. Perguntaram um projeto, uma lei, um número ou uma agenda',
+    '    que você não tem: diga isso em UMA frase e responda o TEMA no resto da mensagem — por que',
+    '    aquilo importa, o que precisa estar no debate, e que você quer conhecer o que ela vive nisso.',
+    '    Mensagem que é só "não tenho essa informação" (ainda mais duas vezes) é porta fechada na cara',
+    '    de quem escreveu. Isso NÃO autoriza inventar: projeto, lei, posição tomada, número e promessa',
+    '    de resolver continuam valendo só se estiverem na conversa ou no "Quem é quem".',
     // O item 22 INTEIRO, e não só a primeira faixa: citar só "mensagem simples: 1 a 3 frases" fez o
     // desabafo de 58 s do Adair (18/09/2026) receber três respostas de uma frase por parágrafo, contra
     // os dois parágrafos que o ChatGPT escreveu dentro da regra dele.
@@ -2148,7 +2160,7 @@ function blocoDoAtendimentoAnterior(anterior, agora) {
   ];
 }
 
-export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false, anterior = [] } = {}) {
+export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false, anterior = [], perguntaDoMandato = false } = {}) {
   /**
    * **A conversa INTEIRA, com os dois lados e com a pendência marcada.**
    *
@@ -2529,6 +2541,34 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
     'ENDEREÇO: só peça o endereço dela se ela pediu MATERIAL DE CAMPANHA (folheto, adesivo, bandeira, ' +
       'santinho) ou se já disse que aceita ser voluntária sem pagamento. Quem pediu dinheiro, emprego ' +
       'ou um bem para comprar NÃO recebe pedido de endereço — pedir endereço é prometer uma entrega.',
+    /**
+     * **FALTAR O DADO NÃO É A RESPOSTA** — print do caminhoneiro de fronteira (22/09/2026). Ele
+     * perguntou o que o mandato tem de projeto para caminhoneiros e se haveria uma agenda do Flávio
+     * na cidade dele; o rascunho saiu com DUAS negativas e mais nada, e ele apagou. Ao lado, a
+     * resposta que ele mandou no lugar (escrita no ChatGPT, com o MESMO modelo) respondeu o TEMA —
+     * a fronteira, as rodovias, os pontos de parada — e pôs a falta da agenda em uma frase.
+     *
+     * *"Os dois modelos são iguais mas as respostas diferem totalmente; o nosso poderia ter seguido
+     * o mesmo caminho mesmo que não conheça nenhum projeto."*
+     *
+     * **Medido: nenhuma trava disparou nos dois textos** — não é caso de barrar nada, é o que a IA
+     * lê. A regra 4 (*"use SÓ o que estiver na conversa e no bloco"*) e a seção 20 do documento dele
+     * estavam sendo cumpridas ao pé da letra: sem o dado, o modelo só tinha a negativa. É a mesma
+     * forma do *"como está o capitão"* (17/09) num assunto novo — **"não invente" não significa
+     * "não responda"**.
+     *
+     * **A condição é o DOSSIÊ ter sido puxado**, que é exatamente "ela perguntou do mandato": não
+     * há lista nova de formas de perguntar, e a conta já existia. E fica FORA de quem trouxe um
+     * problema pessoal, senão esta linha e a regra 11 mandariam coisas opostas sobre perguntar.
+     */
+    perguntaDoMandato && !trouxeProblema
+      ? 'PERGUNTOU DO MANDATO E FALTA O DADO: se você não tem o projeto, a lei, o número ou a agenda ' +
+        'que ela pediu, a falta é UMA frase da mensagem — nunca a mensagem inteira. Antes dela, ' +
+        'responda o TEMA que ela trouxe: por que aquilo importa para o Estado e o que precisa estar ' +
+        'no debate, e diga que quer conhecer o que ELA vive naquele tema. Isso é conversa de ' +
+        'campanha, não é "me conte seu caso". Sem inventar projeto, lei, posição tomada nem ' +
+        'promessa de resolver.'
+      : '',
     /**
      * **A regra 11, colada no pedido** — print da Irema (10/09/2026): *"nós não somos um canal de
      * resolução de problemas, a intenção é ganhar votos"*. No sistema ela está a milhares de tokens
