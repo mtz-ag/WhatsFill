@@ -1,3 +1,53 @@
+## 2026-09-24 — v3.112.0 — a etiqueta de material saía do NOSSO pedido de endereço do voluntariado
+
+**Pergunta dele**, com cinco prints de uma contato de 13/09 que nunca pediu material: *"de onde saiu
+a etiqueta de material dessa conversa?"*
+
+**Medido, e a resposta é que ela saiu da NOSSA mensagem:**
+
+- `pedeMaterial` → `null` e `pedeMaterialEscrito` → `null` em tudo o que ela escreveu;
+- quem casou foi `pedeEmprego`, tipo `campanha` (*"pra trabalhar na campanha dele"* + *"Estou a
+  disposição"*), então saiu a resposta `trabalhar-na-campanha`;
+- o texto dela diz *"pode me enviar seu **endereço completo (rua, número e bairro)**"*, e
+  `ehPedidoDeEndereco` casa — a marca é por **invariante do texto que SAI** (04/09: *"quem abre o
+  caso de material é o NOSSO pedido de endereço"*), dentro do `sendTemplate`.
+
+**O que isso custou:** duas horas depois ela **recusou** o voluntariado (*"não posso trabalhar
+querido"*) e nunca mandou endereço — medido, `informouEndereco` é `null` na recusa. A etiqueta
+ficou. E `enderecoParaMaterial` confere a etiqueta **antes de tudo**: quem a tem é pulado em toda
+passada, para sempre, até ele tirar. Onze dias depois ela escreveu de novo e a rodada não a viu.
+
+**Decisão dele (24/09/2026), perguntado entre três saídas: neste caminho a marca espera ela MANDAR
+o endereço.** Nada é entregue enquanto ela não aceitar a condição, então a etiqueta só passa a
+significar o que sempre significou — *"tem endereço para o assessor"* — depois da resposta dela. **O
+caminho do MATERIAL continua marcando no nosso pedido**, como a regra de 04/09 manda.
+
+**O invariante que separa os dois já existia e já era testado: `ehNegativaDeTrabalho`.** Medido nos
+textos de fábrica, `trabalhar-na-campanha` é o **único** em que `ehPedidoDeEndereco` é verdadeiro, e
+nele a negativa de trabalho também é; o modelo aprovado do material e a forma curta que a IA escreve
+dão `false`. Nasceu `templates.abreCasoDeMaterial`, que é a conjunção — **por invariante e não por
+id**, porque a IA usa essa resposta pronta como BASE e reescreve a redação (3.22).
+
+**Mudaram só os TRÊS pontos que MARCAM** (`enviarModelo`, `sendTemplate`, o envio do rascunho da
+IA). Continuam com `ehPedidoDeEndereco` puro os três em que a pergunta é outra — *"nós pedimos o
+endereço?"*:
+
+- `respondendoNossoPedido`, que abre a janela do detector quando ela responde (senão o endereço que
+  ela mandar não seria reconhecido, e aí a marca nunca chegaria);
+- `vaiPedirEndereco`, que **deixa o atendimento ABERTO** — vale para os dois pedidos;
+- o aviso `enderecoSemMaterial` do rascunho. **Este ficou de fora de propósito**: ele nasceu do
+  print do "Silva pinturas" (12/09), em que o rascunho **negou a contratação** e emendou o pedido de
+  endereço a quem tinha pedido dinheiro. Silenciá-lo pelo mesmo invariante apagaria justamente o
+  caso que o criou — e ele só avisa, não barra.
+
+**A guarda de cobertura está no teste:** silenciar por invariante só é seguro enquanto ele silencia
+UM texto. Se uma reescrita futura puser a negativa de trabalho dentro da resposta do material, a
+etiqueta sumiria e o caso sairia da lista que ele transfere no fim do dia — o teste varre as
+respostas prontas e exige que o único calado seja `trabalhar-na-campanha`.
+
+**Fica na mão dele:** a etiqueta que já está no CRM não sai sozinha (remover etiqueta é destrutivo).
+Os contatos que pegaram a marca por esse caminho continuam pulados até ele tirar à mão.
+
 ## 2026-09-24 — v3.111.0 — a janelinha do contador custava duas contagens por contato concluído
 
 **Print dele:** a rodada parou às 11:18 com *"a API parou de responder (provável limite de

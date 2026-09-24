@@ -2167,6 +2167,21 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   recusa *"Pago multa e não dou voto"* virar caso da IA, que fechou pedindo o cadastro. **Ao somar um
   sinal a `pedeRespostaPessoal`, confira quem lê esse sinal como GUARDA** — e a recusa tem de desligá-lo.
 
+- **A ETIQUETA DE MATERIAL SAIA DO NOSSO PEDIDO DE ENDERECO DO VOLUNTARIADO** (24/09/2026, pergunta
+  dele: *"de onde saiu a etiqueta de material dessa conversa?"*). **Medido: `pedeMaterial` e
+  `pedeMaterialEscrito` = `null`** — ela nunca pediu nada; quem casou foi `pedeEmprego` (tipo
+  `campanha`), saiu a resposta `trabalhar-na-campanha`, e o texto DELA pede *"endereco completo (rua,
+  numero e bairro)"*: `ehPedidoDeEndereco` casou no que **NOS** mandamos e a marca do envio etiquetou.
+  Ela recusou o voluntariado e nunca mandou endereco — e a etiqueta **manda PULAR em toda passada,
+  para sempre**. **Decisao dele: neste caminho a marca espera ela MANDAR o endereco**; o caminho do
+  MATERIAL continua marcando no nosso pedido (04/09). O invariante que separa os dois ja existia:
+  `ehNegativaDeTrabalho`, e a conjuncao e `templates.abreCasoDeMaterial`. **So os TRES pontos que
+  MARCAM mudaram** — `respondendoNossoPedido`, `vaiPedirEndereco` (deixar ABERTO) e o aviso
+  `enderecoSemMaterial` continuam com `ehPedidoDeEndereco` puro, porque ali a pergunta e outra
+  (*"nos pedimos o endereco?"*), e silenciar o aviso apagaria o caso do "Silva pinturas" (12/09), que
+  o criou. **Ao silenciar um invariante, ponha a guarda de COBERTURA no teste**: so e seguro enquanto
+  ele cala UM texto, e a proxima reescrita do texto do material apagaria a etiqueta em silencio.
+
 - **A JANELINHA DO CONTADOR CUSTAVA DUAS CONTAGENS POR CONTATO CONCLUIDO** (24/09/2026, a rodada
   parada por limite de requisicoes em `GET /chat/v6/session` com **222 concluidos no dia**).
   `contarMeuDia` pede a MESMA rota duas vezes com **`skipCount=false`**, o parametro que manda a API

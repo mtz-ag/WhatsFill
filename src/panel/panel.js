@@ -2215,7 +2215,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * caminho**: o modelo é "de material" quando o TEXTO dele pede o endereço
        * (`ehPedidoDeEndereco`), porque a redação é da plataforma e o nome do modelo muda.
        */
-      const marcaMaterial = templatesLib.ehPedidoDeEndereco(modelo.text || '')
+      // `abreCasoDeMaterial` e nao `ehPedidoDeEndereco`: o pedido de endereco do VOLUNTARIADO
+      // pede igual e nao e material (24/09/2026) — ver `templates.abreCasoDeMaterial`.
+      const marcaMaterial = templatesLib.abreCasoDeMaterial(modelo.text || '')
         ? await etiquetarEndereco(alvo, { gatilho: `o modelo aprovado "${modelo.name}" que acabou de sair pede o endereço`, acabamosDeMandar: modelo.text || '' })
         : '';
       setStatus(`Modelo enviado: ${modelo.name}${marcaMaterial}`, 'ok');
@@ -2523,7 +2525,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * Casa pelo TEXTO RENDERIZADO, não pelo id: o pedido dele sai por modelo aprovado, cuja
      * redação é da plataforma.
      */
-    const marcaEndereco = templatesLib.ehPedidoDeEndereco(text)
+    // `abreCasoDeMaterial`: a resposta do voluntariado pede o endereço do mesmo jeito e NÃO é
+    // material — a marca dela espera ela mandar o endereço (24/09/2026).
+    const marcaEndereco = templatesLib.abreCasoDeMaterial(text)
       ? await etiquetarEndereco(alvo, { gatilho: `a resposta pronta "${template.name}" que acabou de sair pede o endereço`, acabamosDeMandar: text })
       : '';
     setStatus(`Enviado: ${template.name}${comImagem.marca}${marca}${marcaEndereco}`, 'ok');
@@ -6820,7 +6824,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
            * fim do dia. `jaPediramDados` não precisa de nada: ele lê a CONVERSA, e o texto acabou
            * de entrar nela.
            */
-          const marcaEndereco = templatesLib.ehPedidoDeEndereco(rascunho.texto)
+          // `abreCasoDeMaterial`: a IA usa a resposta do voluntariado como BASE, então o rascunho
+          // dela pede o endereço com a negativa de trabalho junto — e aquilo não é material.
+          const marcaEndereco = templatesLib.abreCasoDeMaterial(rascunho.texto)
             ? await etiquetarEndereco(state.contact, { gatilho: 'o rascunho da IA que acabou de sair pede o endereço', acabamosDeMandar: rascunho.texto })
             : '';
           const comoFoi = `IA escreveu e mandou${marcaEndereco} (${porQue})`;

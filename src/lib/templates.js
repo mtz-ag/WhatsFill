@@ -739,6 +739,43 @@ export function ehNegativaDeTrabalho(texto) {
   );
 }
 
+/**
+ * Este pedido de endereço NOSSO abre o caso de MATERIAL?
+ *
+ * **Não quando ele é o do VOLUNTARIADO** — pergunta dele em 24/09/2026 sobre a etiqueta de material
+ * numa contato que nunca pediu material: *"de onde saiu a etiqueta de material dessa conversa?"*.
+ *
+ * **Medido:** `pedeMaterial` e `pedeMaterialEscrito` devolvem `null` para tudo o que ela escreveu;
+ * quem casou foi `pedeEmprego` (tipo `campanha`), o fluxo mandou a resposta `trabalhar-na-campanha`,
+ * e o texto dela diz *"pode me enviar seu endereço completo (rua, número e bairro)"* — então
+ * `ehPedidoDeEndereco` casou no que **NÓS** mandamos e a etiqueta entrou pela marca do envio. Ela
+ * recusou o voluntariado duas horas depois e nunca mandou endereço nenhum; a etiqueta ficou, e a
+ * etiqueta manda **PULAR o contato em toda passada** até ele tirá-la à mão. Onze dias depois ela
+ * escreveu de novo e a rodada não a viu.
+ *
+ * **Decisão dele (24/09/2026): neste caminho a marca espera ela MANDAR o endereço.** Nada é
+ * entregue enquanto ela não aceitar a condição, então a etiqueta só passa a significar o que ela
+ * sempre significou — *"tem endereço para o assessor"* — depois da resposta. O caminho do MATERIAL
+ * continua marcando no NOSSO pedido, como a regra de 04/09 manda.
+ *
+ * **O invariante que separa os dois já existia e é testado:** `ehNegativaDeTrabalho`. Medido nos
+ * textos de fábrica, `trabalhar-na-campanha` é o ÚNICO em que `ehPedidoDeEndereco` é verdadeiro, e
+ * nele a negativa de trabalho também é — o modelo aprovado do material e a forma curta que a IA
+ * escreve dão `false`. **Por invariante e não por id**, pelo motivo de sempre: a IA usa esta
+ * resposta pronta como BASE e reescreve a redação.
+ *
+ * **Só vale para MARCAR.** Reconhecer que ela está respondendo ao nosso pedido
+ * (`respondendoNossoPedido`), deixar o atendimento ABERTO (`vaiPedirEndereco`) e o aviso do
+ * rascunho continuam usando `ehPedidoDeEndereco` puro: nos três a pergunta é *"nós pedimos o
+ * endereço?"*, e o voluntariado pede igual.
+ *
+ * @param {string} texto uma mensagem que NÓS mandamos
+ * @returns {boolean}
+ */
+export function abreCasoDeMaterial(texto) {
+  return ehPedidoDeEndereco(texto) && !ehNegativaDeTrabalho(texto);
+}
+
 export function ehPedidoDeDados(texto) {
   const plano = String(texto || '')
     .normalize('NFD')

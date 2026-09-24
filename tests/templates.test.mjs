@@ -689,4 +689,42 @@ grupo('a NEGATIVA e reconhecida no texto livre da IA (12/09/2026)');
   check(!templates.ehNegativaDeTrabalho('Obrigado por querer somar com a gente!'), 'nem o agradecimento pela disposicao');
 }
 
+grupo('o pedido de endereco do VOLUNTARIADO nao abre caso de material (24/09/2026)');
+{
+  /**
+   * Pergunta dele sobre uma contato que nunca pediu material: *"de onde saiu a etiqueta de material
+   * dessa conversa?"*. Medido: casou `pedeEmprego` (tipo campanha), saiu a resposta
+   * `trabalhar-na-campanha`, e o texto dela pede o endereco completo — entao a marca do ENVIO
+   * etiquetou. Ela recusou o voluntariado e nunca mandou endereco; a etiqueta ficou, e a etiqueta
+   * manda PULAR o contato para sempre.
+   */
+  const voluntariado =
+    'Que bom saber que voce quer ajudar. Preciso avisar que a campanha trabalha apenas com ' +
+    'voluntarios nao remunerados. Se voce aceita nessa condicao, pode me enviar seu endereco ' +
+    'completo (rua, numero e bairro) para que eu o encaminhe ao assessor da sua regiao.';
+  const doMaterial =
+    'Para encaminharmos seu pedido ao assessor responsavel pela sua regiao, por favor, me informe ' +
+    'seu endereco completo (rua, numero, bairro e cidade).';
+  const curtoDaIA = 'Me manda seu endereco que encaminhamos ao assessor da regiao.';
+
+  check(templates.ehPedidoDeEndereco(voluntariado), 'o voluntariado PEDE o endereco — e isso nao muda');
+  check(!templates.abreCasoDeMaterial(voluntariado), 'mas nao abre caso de material: nada sera entregue');
+  check(templates.abreCasoDeMaterial(doMaterial), 'o modelo aprovado do material continua abrindo');
+  check(templates.abreCasoDeMaterial(curtoDaIA), 'e a forma curta que a IA escreve tambem');
+  check(!templates.abreCasoDeMaterial('Bom dia! Que esta quinta-feira seja de paz.'), 'texto sem endereco nao abre nada');
+  check(!templates.abreCasoDeMaterial(''), 'vazio nao quebra');
+
+  /**
+   * **A guarda de COBERTURA**: silenciar por invariante so e seguro enquanto ele silencia UM texto.
+   * Se uma reescrita futura puser a negativa de trabalho dentro da resposta do material, a etiqueta
+   * some e ninguem percebe — e o caso de material sai da lista que ele transfere no fim do dia.
+   */
+  const lista = await templates.list();
+  const pedem = lista.filter((t) => templates.ehPedidoDeEndereco(t.text));
+  const calados = pedem.filter((t) => !templates.abreCasoDeMaterial(t.text)).map((t) => t.id);
+  check(pedem.length > 0, 'ha resposta pronta que pede o endereco');
+  check(calados.length === 1 && calados[0] === 'trabalhar-na-campanha',
+    `so o voluntariado deixa de marcar (hoje: ${calados.join(', ') || 'nenhum'})`);
+}
+
 fim();
