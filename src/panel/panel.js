@@ -6700,6 +6700,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const iaEntra = !!state.ia?.ligada && (!sugestao || regraPedeGente || ramoChamaIA);
       /** Vira uma linha da caixa, para ele ver POR QUE o caso esta com ele e o que ela escreveu. */
       let escalouParaVoce = '';
+      /** A IA leu e disse que não há o que responder — ver `rascunharParaEle` e a regra 16. */
+      let semOQueResponder = false;
       if (iaEntra) {
         /**
          * **O `try` nao e decoracao.** Sem ele, um defeito aqui dentro vira `resultado: 'erro'` la
@@ -6783,7 +6785,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             ? ` — NÃO mandei sozinho: ${(rascunho.avisos || []).join('; ')}`
             : '';
 
-        escalouParaVoce = rascunho.ok
+        /**
+         * **Não achou o que responder: o desfecho é a mensagem do momento** (regra dele, 24/09/2026).
+         * A escolha é aplicada mais abaixo, junto da automação do fluxo, para reusar o MESMO caminho
+         * de envio da tecla 5 — duas cópias do "manda e conclui" divergem na primeira semana.
+         */
+        semOQueResponder = !!rascunho.naoHaOQueResponder;
+
+        escalouParaVoce = semOQueResponder
+          ? `${porQue} — a IA não achou o que responder nisso; o desfecho é a mensagem do momento (tecla 5)`
+          : rascunho.ok
           ? `${porQue} — a IA escreveu um rascunho no campo de mensagem; leia e mande${barrado}`
           : `${porQue} — a IA não conseguiu rascunhar (${rascunho.motivo || 'sem motivo'})`;
         /**
@@ -6792,7 +6803,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * faria a mesma coisa aparecer duas vezes no Andamento. O motivo de o caso estar com ele
          * vai para a CAIXA, que é onde ele está olhando.
          */
-        if (!rascunho.ok) registrarNaRodada(nome, 'aviso', escalouParaVoce);
+        // A abstenção já tem as duas linhas dela (a de `rascunharParaEle` e a do desfecho, mais
+        // abaixo): repetir aqui faria o mesmo evento aparecer três vezes no Andamento.
+        if (!rascunho.ok && !semOQueResponder) registrarNaRodada(nome, 'aviso', escalouParaVoce);
       }
 
       const opcoes = [];
@@ -7120,6 +7133,31 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             : '';
           registrarNaRodada(nome, 'aviso', `automático pelo fluxo ("${sugestao.id}"${sugestao.caminho ? `, caminho ${sugestao.caminho.join(' > ')}` : ''}): ${alvo.rotulo}${empate}`);
           escolhaAutomatica = alvo.valor;
+        }
+      }
+
+      /**
+       * **A IA não achou o que responder → mensagem do momento** (regra dele, 24/09/2026:
+       * *"quando for o caso mandar a mensagem do momento"*).
+       *
+       * Fica DEPOIS da automação do fluxo e só age com ela em branco: o caso chegou aqui pela tecla
+       * 6 (ou por nenhuma caixa ter decidido), então não há escolha do quadro para atropelar — e a
+       * guarda da pergunta pendente já foi aplicada em `rascunharParaEle`.
+       *
+       * **Só na rodada automática.** Contato a contato a caixa abre com a linha do `escalouParaVoce`
+       * dizendo qual é o desfecho, e quem aperta é ele: mandar sozinho num modo em que ele escolhe
+       * tecla a tecla seria decidir no lugar dele.
+       *
+       * **Sem a mensagem do momento disponível** (travada por variável, ou já enviada hoje) o caso
+       * volta a ser dele, com o motivo no log — inventar outro desfecho aqui seria a caixa muda.
+       */
+      if (semOQueResponder && escolhaAutomatica == null && rodadaAutomatica()) {
+        const alvoMomento = opcoes.find((o) => o.valor === 'momento');
+        if (alvoMomento) {
+          registrarNaRodada(nome, 'aviso', `a IA não achou o que responder — mandando ${alvoMomento.rotulo}`);
+          escolhaAutomatica = alvoMomento.valor;
+        } else {
+          registrarNaRodada(nome, 'aviso', 'a IA não achou o que responder, e a mensagem do momento não está disponível agora — decida você');
         }
       }
 
@@ -11027,6 +11065,54 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       registrarNaRodada('IA', 'pulado', `${marca} · ${cacheOk} · entrada ${c.entrada} · saída ${c.saida}${usd}${mes}${quem}`);
     };
     await logarCusto(rascunho);
+
+    /**
+     * **A IA PODE DIZER QUE NÃO HÁ O QUE RESPONDER** — regra dele, 24/09/2026, com a print de uma
+     * contato que chegou pelo anúncio e escreveu só *"As outras de Venâncio Aires capital do
+     * chimarrão"*: *"não fez sentido nenhum o que a pessoa falou, não tem contexto e a IA tentou
+     * arrumar uma resposta; quando for o caso, mandar a mensagem do momento"*.
+     *
+     * **Medido antes de mexer:** dos dezesseis detectores, só `falouAlgoProprio` casou — e ele é a
+     * INVERSÃO (tudo o que não é cortesia, reação, apoio, despedida ou o texto do anúncio é fala
+     * dela), então cinco palavras de conteúdo bastaram para o caso subir à tecla 6. Com o sinal
+     * desligado o quadro decide `contexto-de-outro-dia`, **tecla 5 — a mensagem do momento**, que é
+     * exatamente o desfecho que ele pediu.
+     *
+     * **Por que a decisão é da IA e não de um detector:** "isto faz sentido?" é JULGAMENTO, e a lista
+     * de frases sem contexto não fecha — pior, ela erraria na direção cara, apagando a fala de quem
+     * falou de verdade. A única coisa na cadeia que lê a conversa inteira é quem escreve o rascunho.
+     * É a mesma razão de `precisaDeRevisao` existir: **é barato perguntar.**
+     *
+     * **A guarda é mecânica e é uma só: PERGUNTA PENDENTE.** É o sinal criado em 04/09 para dizer o
+     * que ainda não foi respondido, e é o falso positivo caro desta trava — a mensagem do momento
+     * CONCLUI, e concluir em cima de uma pergunta é o defeito que ele reportou três vezes. Lida da
+     * conversa e não de `state.sinais`, porque o rascunho também é pedido fora da rodada (a tecla 8,
+     * o cartão da aba Respostas), e ali os sinais não existem.
+     *
+     * **Nada vai para o campo de mensagem**: pôr um texto que a própria IA disse não valer seria
+     * devolver o problema com mais um passo.
+     */
+    if (rascunho?.naoHaOQueResponder) {
+      const pendente = perguntaPendente(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio);
+      if (!pendente) {
+        registrarNaRodada(
+          state.contact?.name || 'contato',
+          'aviso',
+          'a IA leu e não achou o que responder: a fala dela não pede nada e não diz a que se refere'
+        );
+        return {
+          ok: false,
+          enviado: false,
+          naoHaOQueResponder: true,
+          motivo: 'a IA não achou o que responder — mande a mensagem do momento (tecla 5)',
+        };
+      }
+      registrarNaRodada(
+        state.contact?.name || 'contato',
+        'aviso',
+        'a IA disse que não há o que responder, mas há PERGUNTA PENDENTE na conversa — mantive o rascunho'
+      );
+    }
 
     const bruto = String(rascunho?.texto || '').trim();
     if (!bruto) {

@@ -2694,6 +2694,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **NAO HA O QUE RESPONDER: A IA ABSTEM, E SAI A MENSAGEM DO MOMENTO** (regra dele, 24/09/2026, com
+  a print de *"As outras de Venancio Aires capital do chimarrao"* e o rascunho devolvendo as palavras
+  dela: *"nao fez sentido nenhum o que a pessoa falou, nao tem contexto e a IA tentou arrumar uma
+  resposta; quando for o caso mandar a mensagem do momento"*). **Medido: dos dezesseis detectores so
+  `falouAlgoProprio` casou** — a INVERSAO de 22/09 —, e com ele desligado o quadro ja decide
+  `contexto-de-outro-dia`, **tecla 5**. **O conserto NAO e detector:** "isto faz sentido?" e
+  JULGAMENTO, a lista nao fecha e erraria apagando a fala de quem falou de verdade. Hoje: **regra 16**
+  (proibicao, vale sempre) + o campo **`naoHaOQueResponder`** no esquema, irmao do `precisaDeRevisao`
+  — **e barato perguntar**. **A FRONTEIRA mora dentro da regra**: faltar o dado continua sendo a
+  regra 14, e assunto dificil continua sendo para responder; sem ela "nao entendi" vira a saida facil
+  para toda pergunta incomoda. **A guarda mecanica e uma so: PERGUNTA PENDENTE** — a mensagem do
+  momento CONCLUI. **`=== true` e nao `!== false`**: modelo que ignore o campo escreve o rascunho como
+  sempre, em vez de calar a resposta de todo mundo em silencio. O envio reusa o caminho da tecla 5.
+
 - **A MARCA DO CLIQUE SO VALIA NA PRIMEIRA MENSAGEM, E COM A REDACAO ANTIGA** (23/09/2026, *"ignorou
   o anuncio"*, com o anuncio no ar e o texto igual ao cadastrado). **Medido: `reconhecer`, o modelo e
   a decisao (tecla `a`) estavam TODOS certos** — o que faltava era a mensagem chegar marcada. Havia

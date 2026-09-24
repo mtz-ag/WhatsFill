@@ -1653,6 +1653,25 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    disso. Agradeça as informações, diga que estamos atentos e acompanhando, e PARE. Nunca diga',
     '    que a denúncia é séria ou grave, nunca diga o que deveria ser apurado, nunca fale de provas,',
     '    fatos, responsabilidade ou direitos de ninguém, e nunca prometa levar o caso adiante.',
+    /**
+     * **A regra 16 é dele, de 24/09/2026** — print de uma contato que chegou pelo anúncio e escreveu
+     * só *"As outras de Venâncio Aires capital do chimarrão"*, um pedaço de frase que não pede nada
+     * e não diz a que se refere. O rascunho devolveu *"Venâncio Aires, a capital do chimarrão. Um
+     * abraço para todos daí!"* — as palavras dela de volta, sem responder nada —, e ele apagou:
+     * *"não fez sentido nenhum o que a pessoa falou, não tem contexto e a IA tentou arrumar uma
+     * resposta; quando for o caso, mandar a mensagem do momento"*.
+     *
+     * **A fronteira está escrita na própria regra, e é ela que a torna segura:** faltar o DADO é a
+     * regra 14 (responde o tema) e assunto difícil continua sendo para responder — isto vale só
+     * quando não há o que responder. Sem a fronteira, "não entendi" vira a saída fácil para toda
+     * pergunta incômoda, que é o defeito que a regra 14 nasceu para consertar.
+     */
+    '16. NÃO SE RESPONDE O QUE NÃO SE ENTENDEU. Quando a fala dela não pede nada e não dá para saber',
+    '    a que se refere — um pedaço de frase, um comentário solto, algo que parece de outra conversa —,',
+    '    NÃO invente resposta em cima disso e NÃO devolva as palavras dela para parecer que entendeu.',
+    '    Marque o campo naoHaOQueResponder da sua resposta (é um campo do JSON, nunca uma frase para',
+    '    ela) e o atendimento manda a mensagem do dia no seu lugar. Isto NÃO vale quando ela pergunta',
+    '    ou pede alguma coisa e falta o dado — aí é a regra 14 — nem quando o assunto é difícil.',
     // O item 22 INTEIRO, e não só a primeira faixa: citar só "mensagem simples: 1 a 3 frases" fez o
     // desabafo de 58 s do Adair (18/09/2026) receber três respostas de uma frase por parágrafo, contra
     // os dois parágrafos que o ChatGPT escreveu dentro da regra dele.
@@ -1790,7 +1809,7 @@ export function esquemaDoRascunho() {
   const opcao = {
     type: 'object',
     additionalProperties: false,
-    required: ['texto', 'confianca', 'precisaDeRevisao'],
+    required: ['texto', 'confianca', 'precisaDeRevisao', 'naoHaOQueResponder'],
     properties: {
       texto: {
         type: 'string',
@@ -1812,6 +1831,25 @@ export function esquemaDoRascunho() {
         type: 'string',
         description:
           'Em até 5 palavras, o que você considerou importante responder. Aparece na tela.',
+      },
+      /**
+       * **O canal para ela dizer que não há o que responder** — regra 16, de 24/09/2026.
+       *
+       * É o irmão de `precisaDeRevisao`: os dois existem porque **é barato perguntar**, e a única
+       * coisa na cadeia que consegue dizer *"isto não faz sentido"* é quem leu a conversa. Um
+       * detector para "a fala dela não tem contexto" seria a lista que não fecha — e na direção
+       * cara, porque errar apaga a fala de quem falou de verdade.
+       *
+       * **`texto` continua obrigatório**: o painel só honra a abstenção quando não há pergunta
+       * pendente e a mensagem do momento está disponível, e nos outros casos o texto é o que sai.
+       */
+      naoHaOQueResponder: {
+        type: 'boolean',
+        description:
+          'true quando a fala dela não pede nada e não dá para saber a que se refere (pedaço de ' +
+          'frase, comentário solto, texto que parece de outra conversa). NÃO marque quando ela ' +
+          'pergunta ou pede algo e falta o dado, nem quando o assunto é difícil. Mesmo marcando, ' +
+          'escreva em texto a melhor resposta segura que conseguir.',
       },
     },
   };
@@ -3616,7 +3654,7 @@ function umaLinha(texto, limite = 400) {
  * @returns {{texto:string, confianca:number, motivo:string, avisos:string[], precisaDeRevisao:boolean}}
  */
 export function validarRascunho(bruto, agora, contexto = {}) {
-  const vazio = { texto: '', confianca: 0, motivo: '', avisos: ['a IA não devolveu rascunho'], precisaDeRevisao: true };
+  const vazio = { texto: '', confianca: 0, motivo: '', avisos: ['a IA não devolveu rascunho'], precisaDeRevisao: true, naoHaOQueResponder: false };
 
   let d = bruto;
   if (typeof d === 'string') {
@@ -3627,7 +3665,7 @@ export function validarRascunho(bruto, agora, contexto = {}) {
       // um modelo que ignore o esquema ainda produz rascunho — só nunca automático, porque sem
       // `confianca` ele não passa do limiar.
       const cru = revisarRascunho(bruto, agora, contexto);
-      return { texto: cru.texto, confianca: 0, motivo: '', avisos: cru.avisos, precisaDeRevisao: true };
+      return { texto: cru.texto, confianca: 0, motivo: '', avisos: cru.avisos, precisaDeRevisao: true, naoHaOQueResponder: false };
     }
   }
   if (!d || typeof d !== 'object') return vazio;
@@ -3652,6 +3690,13 @@ export function validarRascunho(bruto, agora, contexto = {}) {
       motivo: String(o?.motivo || '').trim().slice(0, 300),
       avisos,
       precisaDeRevisao,
+      /**
+       * **A abstenção da regra 16** — `=== true` e não `!== false`, ao contrário de
+       * `precisaDeRevisao`: aquele erra para o lado de PEDIR revisão, e este erra para o lado de
+       * RESPONDER. Um modelo que ignore o campo (ou devolva o formato antigo, sem `opcoes`) escreve
+       * o rascunho como sempre, em vez de calar a resposta de todo mundo em silêncio.
+       */
+      naoHaOQueResponder: o?.naoHaOQueResponder === true,
     };
   };
 

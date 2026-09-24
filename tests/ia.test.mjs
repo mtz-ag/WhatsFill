@@ -3185,4 +3185,50 @@ grupo('a regra da denuncia vai colada no pedido (23/09/2026)');
     'e a linha diz o que FAZER, com as palavras dele');
 }
 
+grupo('a IA pode dizer que NAO HA O QUE RESPONDER (24/09/2026)');
+{
+  /**
+   * Print dele: a contato chegou pelo anuncio e escreveu so *"As outras de Venancio Aires capital do
+   * chimarrao"* — um pedaco de frase que nao pede nada e nao diz a que se refere. O rascunho devolveu
+   * as palavras dela de volta e ele apagou: *"nao fez sentido nenhum o que a pessoa falou, nao tem
+   * contexto e a IA tentou arrumar uma resposta; quando for o caso, mandar a mensagem do momento"*.
+   */
+  const esq = esquemaDoRascunho();
+  const campo = esq.properties.opcoes.items.properties.naoHaOQueResponder;
+  check(campo?.type === 'boolean', 'o esquema tem o campo naoHaOQueResponder');
+  check(esq.properties.opcoes.items.required.includes('naoHaOQueResponder'),
+    'e ele e obrigatorio — a IA decide em toda chamada, como o precisaDeRevisao');
+  check(esquemaEstrito(esq).properties.opcoes.items.required.includes('naoHaOQueResponder'),
+    'o strict mode da OpenAI continua exigindo tudo');
+
+  const v = (o) => validarRascunho(JSON.stringify(o), new Date('2026-09-24T09:45:00-03:00'), {});
+  const opcao = (extra) => ({ opcoes: [{ texto: 'Bom dia!', confianca: 0.5, precisaDeRevisao: false, ...extra }] });
+
+  check(v(opcao({ naoHaOQueResponder: true })).naoHaOQueResponder === true, 'a abstencao chega a quem chama');
+
+  /**
+   * **`=== true` e nao `!== false`**, ao contrario do `precisaDeRevisao`: aquele erra para o lado de
+   * PEDIR revisao, e este erra para o lado de RESPONDER. Modelo que ignore o campo, ou que devolva o
+   * formato antigo, escreve o rascunho como sempre — em vez de calar a resposta de todo mundo em
+   * silencio, que e o defeito caro desta trava.
+   */
+  check(v(opcao({ naoHaOQueResponder: false })).naoHaOQueResponder === false, 'false e false');
+  check(v(opcao({})).naoHaOQueResponder === false, 'campo ausente NAO abstem');
+  check(v(opcao({ naoHaOQueResponder: 'sim' })).naoHaOQueResponder === false, 'string nao conta como true');
+  check(v({ texto: 'Bom dia!', confianca: 0.5, precisaDeRevisao: false }).naoHaOQueResponder === false,
+    'a forma antiga (sem opcoes) nao abstem');
+  check(validarRascunho('isto nao e json', new Date()).naoHaOQueResponder === false, 'resposta ilegivel nao abstem');
+  check(validarRascunho(null, new Date()).naoHaOQueResponder === false, 'resposta vazia nao abstem');
+
+  const sis = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/16\. NÃO SE RESPONDE O QUE NÃO SE ENTENDEU/.test(sis), 'a regra 16 esta no sistema');
+  /**
+   * **A FRONTEIRA e o que torna a regra segura**, e e a licao registrada de 09/09: ao escrever regra
+   * sobre um assunto, escreva tambem o que ela NAO cobre. Sem a linha da regra 14, "nao entendi" vira
+   * a saida facil para toda pergunta incomoda — que e o defeito que a regra 14 nasceu para consertar.
+   */
+  check(/16\. NÃO SE RESPONDE[\s\S]{0,800}?regra 14/.test(sis),
+    'e ela diz o que NAO cobre: faltar o dado continua sendo a regra 14');
+}
+
 fim();

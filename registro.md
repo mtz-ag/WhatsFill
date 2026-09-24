@@ -1,3 +1,61 @@
+## 2026-09-24 — v3.110.0 — a IA pode dizer que não há o que responder, e aí sai a mensagem do momento
+
+**Print dele:** a contato chegou pelo anúncio *CONVERSE CONOSCO* às 21:06 e escreveu, um minuto
+depois, só *"As outras de Venâncio Aires capital do chimarrão"* — um pedaço de frase que não pede
+nada e não diz a que se refere. Na manhã seguinte o rascunho saiu com *"Venâncio Aires, a capital do
+chimarrão. Um abraço para todos daí!"* — **as palavras dela de volta, sem responder coisa nenhuma** —
+e ele apagou a mensagem: *"não fez sentido nenhum o que a pessoa falou, não tem contexto e a IA
+tentou arrumar uma resposta; quando for o caso, mandar a mensagem do momento"*.
+
+**Medido antes de mexer, os dezesseis detectores na frase dela:** só **um** casou —
+`falouAlgoProprio`. Os outros quinze (pergunta, material, ajuda, apoio, cortesia, reação, despedida,
+saúde, denúncia, repasse…) devolveram nulo. E `falouAlgoProprio` é a **inversão** de 22/09: tudo o
+que não é cortesia, reação, apoio, despedida ou o texto do anúncio conta como fala dela, e cinco
+palavras de conteúdo bastam. Daí a tecla 6 — a IA.
+
+**Medido o outro lado, no quadro padrão:** com esse sinal desligado a decisão é
+`contexto-de-outro-dia`, **tecla 5 — a mensagem do momento**. Ou seja, **o desfecho que ele pediu já
+existe e está no lugar certo**; o que faltava era o caso não subir para a IA.
+
+**Por que o conserto NÃO é um detector.** *"Isto faz sentido?"* é julgamento, e a lista de frases sem
+contexto não fecha — este arquivo registra isso cinco vezes. Pior: ela erraria na direção cara,
+apagando a fala de quem falou de verdade. A única coisa na cadeia que lê a conversa inteira é quem
+escreve o rascunho. **Então quem decide é a IA**, e é a mesma razão de `precisaDeRevisao` existir:
+**é barato perguntar.**
+
+**As duas metades, como sempre:**
+
+- a **regra 16** no sistema — é PROIBIÇÃO (*"não invente resposta em cima do que você não entendeu, e
+  não devolva as palavras dela para parecer que entendeu"*), então vale em toda chamada;
+- o campo **`naoHaOQueResponder`** no esquema de saída, obrigatório como o `precisaDeRevisao`.
+
+**A FRONTEIRA está escrita dentro da regra, e é ela que a torna segura:** faltar o dado continua
+sendo a **regra 14** (responde o tema) e assunto difícil continua sendo para responder. Sem essa
+linha, *"não entendi"* vira a saída fácil para toda pergunta incômoda — exatamente o defeito que a
+regra 14 nasceu para consertar, dois dias atrás. Tem teste exigindo a fronteira.
+
+**A guarda mecânica é uma só: PERGUNTA PENDENTE.** A mensagem do momento **CONCLUI**, e concluir em
+cima de uma pergunta é o defeito que ele reportou três vezes (a Mari, o Paulo Quevedo, a Ieda). Com
+pergunta pendente na conversa a abstenção é ignorada, o rascunho vai para o campo como sempre, e o
+log diz que foi ignorada. A guarda é lida da CONVERSA e não de `state.sinais`, porque rascunho também
+se pede fora da rodada (a tecla 8, o cartão da aba Respostas), e ali não há sinais.
+
+**O envio reusa o caminho da tecla 5**, em vez de um "manda e conclui" próprio: duas cópias divergem
+na primeira semana. Na rodada automática a escolha é aplicada junto da automação do fluxo; **contato
+a contato a caixa abre** com a linha dizendo qual é o desfecho, e quem aperta é ele. Sem a mensagem
+do momento disponível (travada por variável), o caso volta a ser dele com o motivo no log.
+
+**`=== true` e não `!== false`** — ao contrário do `precisaDeRevisao`, que erra para o lado de PEDIR
+revisão. Este erra para o lado de RESPONDER: modelo que ignore o campo, ou que devolva o formato
+antigo sem `opcoes`, escreve o rascunho como sempre, em vez de calar a resposta de todo mundo em
+silêncio.
+
+**Custo:** +137 tokens no prompt de sistema (cacheado) e +95 no esquema. Nada mensurável.
+
+**Uma armadilha de ferramenta, para o próximo:** neste shell o heredoc **come a barra dupla**, mesmo
+com o delimitador entre aspas — `\n` virou quebra de linha de verdade dentro de um script e o teste
+não compilou. Script que escreve regex vai com `String.fromCharCode(92)` ou barra simples.
+
 ## 2026-09-23 — v3.109.0 — o texto do anúncio só era reconhecido na PRIMEIRA mensagem, e com a redação antiga
 
 **Print dele:** o anúncio *"lei alerta sonoro"* estava **no ar na Config**, com o texto que
