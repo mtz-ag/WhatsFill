@@ -1630,8 +1630,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     if (!state.contact) {
       header.append(h('div', { class: 'wf-who' }, 'WhatsFill'));
+      /**
+       * **"Carregando…" para sempre era mentira** — print dele de 24/09/2026, com a plataforma
+       * recusando `GET /chat/v1/session/{id}` por limite de requisições: o `load()` caiu no
+       * `catch`, o erro foi para o rodapé e o cabeçalho continuou dizendo que estava carregando.
+       * É a família do aviso que não envelhece com o que já aconteceu (20/09): **ao escrever
+       * "estou fazendo X", escreva junto o que ele diz quando X falhou.**
+       */
       header.append(
-        h('div', { class: 'wf-sub' }, state.pageState.sessionId ? 'Carregando…' : 'Nenhum atendimento aberto')
+        h(
+          'div',
+          { class: 'wf-sub' },
+          state.error
+            ? 'não carreguei este atendimento — o motivo está no rodapé; clique em Recarregar'
+            : state.pageState.sessionId
+              ? 'Carregando…'
+              : 'Nenhum atendimento aberto'
+        )
       );
       return;
     }
@@ -4070,6 +4085,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   /** Espera antes de recontar depois de trocar de atendimento. */
   const CONTADOR_ESPERA_MS = 2500;
 
+  /**
+   * **O PISO entre duas contagens — e ele nasceu de uma conta feia** (24/09/2026).
+   *
+   * Print dele com a rodada parada por limite de requisições em `GET /chat/v6/session`, depois de
+   * **222 conclusões no dia**. Medido: com a janelinha aberta, `agendarContagem` dispara a cada
+   * conclusão e cada medição custa **DUAS** requisições naquela rota, as duas com
+   * `skipCount=false` (a API tem que CONTAR — é a consulta mais cara do painel, e a plataforma
+   * pede a dela com `skipCount=true` para não pagá-la). Em 222 contatos isso é ~444 requisições
+   * **só para manter um número na tela**, em cima do tráfego da própria rodada.
+   *
+   * Com o piso, o gatilho por conclusão continua existindo — ele é o que mantém o número fresco
+   * quando ele conclui um contato à mão — mas nunca mais de uma vez por meio minuto. O botão
+   * "Atualizar" passa por cima (`forcado`): ali quem pediu foi ele.
+   */
+  const CONTADOR_PISO_MS = 30000;
+
   let contadorTimer = null;
 
   /**
@@ -4299,8 +4330,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     caixa.append(linhaBotoes);
 
     let timer = null;
+    /**
+     * Quando a última contagem SAIU — marcada antes da resposta, de propósito: a requisição já foi
+     * gasta, e insistir na hora é o que piora um limitador de taxa.
+     */
+    let ultimaMedicao = 0;
 
-    async function medir() {
+    async function medir({ forcado = false } = {}) {
+      if (!forcado && Date.now() - ultimaMedicao < CONTADOR_PISO_MS) return;
+      ultimaMedicao = Date.now();
       try {
         const { abertos, concluidosHoje } = await api.contarMeuDia();
         const total = abertos;
@@ -4325,7 +4363,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       } catch (err) {
         // Erro não fecha a janelinha nem apaga o último número bom: some com o dado justamente
         // quando a rede está ruim, que é quando você mais quer saber onde estava.
-        carimbo.textContent = `Falhou às ${new Date().toLocaleTimeString('pt-BR')}: ${traduzirErroDeRede(err.message)}`;
+        carimbo.textContent =
+          `Falhou às ${new Date().toLocaleTimeString('pt-BR')}: ` +
+          traduzirErroDeRede(err.message, 'O número acima é o da última contagem boa; tento de novo sozinho.');
       }
     }
 
@@ -4339,7 +4379,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       renderAll();
     }
 
-    atualizar.addEventListener('click', () => medir());
+    atualizar.addEventListener('click', () => medir({ forcado: true }));
     fechar.addEventListener('click', encerrar);
 
     contadorFlutuante = { encerrar, medir };
@@ -4347,8 +4387,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     destinoDaCaixa().append(fundo);
     aplicarPosicao(caixa, state.settings.contadorPos);
 
-    await medir();
-    timer = setInterval(medir, CONTADOR_INTERVALO_MS);
+    await medir({ forcado: true });
+    // `() => medir()` e não `medir`: o `setInterval` passa o id do timer como primeiro argumento,
+    // e ele viraria o objeto de opções — com `forcado` indefinido dá no mesmo hoje, mas a próxima
+    // opção que nascer aqui seria lida de um número.
+    timer = setInterval(() => medir(), CONTADOR_INTERVALO_MS);
     renderAll();
   }
 
@@ -4590,14 +4633,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * tipicamente o preflight CORS recusado, que é o que um limitador de taxa devolve. Traduzir
    * importa porque a ação é outra: não adianta repetir na hora, tem que esperar.
    */
-  function traduzirErroDeRede(mensagem) {
+  /**
+   * `comoSeguir` é o que fazer A SEGUIR, e quem chama decide — a rodada parada pede F5 e um
+   * recomeço; a janelinha do contador, que tenta sozinha de novo, não pede nada. Print de
+   * 24/09/2026: a contagem falhou e mandou ele dar F5 e "recomeçar com uma pausa maior", conselho
+   * de uma rodada que não estava rodando. É a família do aviso que manda procurar o interruptor na
+   * aba errada: **mensagem que descreve o sintoma certo e a ação errada custa uma sessão.**
+   */
+  function traduzirErroDeRede(mensagem, comoSeguir = 'Espere alguns minutos, dê F5 e recomece com uma pausa maior.') {
     if (!ehErroDeRede(mensagem)) return mensagem;
     // A rota vai junto (api.js a põe na frente): é ela que diz de onde vem o excesso.
     const rota = String(mensagem).match(/^([A-Z]+ \/\S+)/)?.[1];
     return (
       'a API parou de responder (provável limite de requisições do servidor)' +
       (rota ? ` em ${rota}` : '') +
-      '. Espere alguns minutos, dê F5 e recomece com uma pausa maior.'
+      (comoSeguir ? `. ${comoSeguir}` : '.')
     );
   }
 

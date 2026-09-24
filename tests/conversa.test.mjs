@@ -217,4 +217,40 @@ grupo('engasgo de rede espera e segue; defeito para (22/09/2026)');
   check(api.ehErroDeRede(msg), 'e continua sendo reconhecida como rede');
 }
 
+grupo('as duas contagens do dia NAO saem juntas (24/09/2026)');
+{
+  /**
+   * Print dele com a rodada parada por limite de requisicoes em `GET /chat/v6/session`, depois de
+   * 222 conclusoes no dia. As duas contagens usam a MESMA rota com `skipCount=false`, que manda a
+   * API CALCULAR o total — a consulta mais cara do painel, e a que a plataforma pede com
+   * `skipCount=true` para nao pagar. Mandar as duas no mesmo instante e rajada de dois contra o
+   * limitador; serializar nao custa nada, porque e um numero na tela.
+   */
+  const antes = globalThis.fetch;
+  let emVoo = 0, maximo = 0;
+  const rotas = [];
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    emVoo++;
+    maximo = Math.max(maximo, emVoo);
+    await new Promise((r) => setTimeout(r, 5));
+    emVoo--;
+    if (u.includes('/core/v1/agent/me')) {
+      return { ok: true, status: 200, text: async () => JSON.stringify({ userId: 'u-1' }) };
+    }
+    if (u.includes('/chat/v6/session')) {
+      rotas.push(u.includes('COMPLETED') ? 'concluidos' : 'abertos');
+      return { ok: true, status: 200, text: async () => JSON.stringify({ totalItems: 7 }) };
+    }
+    return { ok: true, status: 200, text: async () => '{}' };
+  };
+
+  const dia = await api.contarMeuDia();
+  globalThis.fetch = antes;
+
+  check(maximo === 1, `nunca duas requisicoes no ar ao mesmo tempo (maximo foi ${maximo})`);
+  check(rotas.length === 2, 'sao duas contagens, uma de cada status');
+  check(dia.abertos === 7 && dia.concluidosHoje === 7, 'e os dois numeros continuam chegando');
+}
+
 fim();

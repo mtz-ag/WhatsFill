@@ -628,9 +628,20 @@ export async function contarConcluidosHoje() {
   return Number(corpo?.totalItems ?? 0);
 }
 
-/** Os dois números do dia numa chamada só de quem chama. */
+/**
+ * Os dois números do dia numa chamada só de quem chama.
+ *
+ * **UMA DE CADA VEZ, e não `Promise.all`** (24/09/2026). As duas são a MESMA rota
+ * (`/chat/v6/session`) com `skipCount=false`, que manda a API **calcular o total** — é a consulta
+ * mais cara que este painel faz, e a plataforma pede a dela com `skipCount=true` justamente para
+ * não pagar isso. Mandar as duas no mesmo instante é uma rajada de dois contra o limitador de
+ * taxa, e foi numa delas que a conta dele estourou depois de 222 conclusões no dia.
+ *
+ * Serializar não custa nada aqui: é um número na tela, não o caminho de uma mensagem.
+ */
 export async function contarMeuDia() {
-  const [abertos, concluidosHoje] = await Promise.all([contarMeusAbertos(), contarConcluidosHoje()]);
+  const abertos = await contarMeusAbertos();
+  const concluidosHoje = await contarConcluidosHoje();
   return { abertos: abertos.total, concluidosHoje };
 }
 

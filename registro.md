@@ -1,3 +1,50 @@
+## 2026-09-24 — v3.111.0 — a janelinha do contador custava duas contagens por contato concluído
+
+**Print dele:** a rodada parou às 11:18 com *"a API parou de responder (provável limite de
+requisições do servidor) em `GET /chat/v6/session`"*, com **222 concluídos hoje** e 50 ainda
+abertos; o painel ficou preso em *"Carregando…"* e o rodapé dizia
+`GET /chat/v1/session/{id} → sem resposta (Failed to fetch)`. Ele: *"novo erro"*.
+
+**Esta é a linha do Andamento que eu tinha pedido em 22/09** (*"me mande duas ou três linhas de
+engasgo para ver qual rota está sobrecarregando"*) — e ela nomeou a rota. A partir dela, medido:
+
+**A janelinha "Meus abertos" pede DUAS requisições por medição, as duas em `/chat/v6/session` com
+`skipCount=false`** — o parâmetro que manda a API **calcular o total**. É a consulta mais cara que
+este painel faz, e é exatamente a que a plataforma evita: o app dela pede a mesma rota com
+`skipCount=true` justamente para não pagá-la (está registrado aqui desde 30/08).
+
+**E `agendarContagem` dispara a cada conclusão.** Com a janelinha aberta numa rodada, isso é uma
+medição por contato. Simulado com os números da print (222 contatos, ~10 s cada, 37 min):
+
+| | medições | requisições em `/chat/v6/session` |
+|---|---|---|
+| antes | 271 | **542** |
+| depois | 74 | **148** (−73%) |
+
+**O conserto é um PISO entre medições (30 s), não tirar o gatilho.** O gatilho por conclusão é o
+que mantém o número fresco quando ele conclui um contato à mão — o pedido dele de quando a
+janelinha nasceu. O que não faz sentido é ele valer 222 vezes seguidas. O botão **"Atualizar"
+passa por cima** (`forcado`): ali quem pediu foi ele.
+
+**E as duas contagens deixaram de sair juntas.** Era `Promise.all` — duas consultas de contagem no
+mesmo instante, na mesma rota, contra um limitador de taxa. Serializar não custa nada: é um número
+na tela, não o caminho de uma mensagem. **Tem teste**, e ele conta quantas requisições ficam no ar
+ao mesmo tempo (com `Promise.all` de volta, o máximo é 2 e o teste cai).
+
+**Duas telas que mentiam, e as duas são da mesma família registrada:**
+
+- **o cabeçalho dizia "Carregando…" para sempre.** O `load()` caiu no `catch`, o erro foi para o
+  rodapé e o cabeçalho continuou anunciando um carregamento que tinha acabado — em erro. Hoje ele
+  diz *"não carreguei este atendimento — o motivo está no rodapé; clique em Recarregar"*, que é a
+  lição de 20/09: **ao escrever "estou fazendo X", escreva junto o que ele diz quando X falhou.**
+- **a falha da contagem dava conselho de RODADA:** *"Espere alguns minutos, dê F5 e recomece com uma
+  pausa maior"* — para uma janelinha que tem botão de Atualizar, tenta sozinha de novo e não estava
+  rodando nada. `traduzirErroDeRede` passou a receber o *como seguir* de quem chama.
+
+**O que continua na mão dele, e não tem conserto de código:** 222 conclusões num dia é volume de
+verdade, e o limitador é da plataforma. A alavanca é a **pausa entre contatos** da rodada — o
+conselho da mensagem da rodada continua certo lá.
+
 ## 2026-09-24 — v3.110.0 — a IA pode dizer que não há o que responder, e aí sai a mensagem do momento
 
 **Print dele:** a contato chegou pelo anúncio *CONVERSE CONOSCO* às 21:06 e escreveu, um minuto

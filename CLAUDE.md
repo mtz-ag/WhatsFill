@@ -2167,6 +2167,25 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   recusa *"Pago multa e não dou voto"* virar caso da IA, que fechou pedindo o cadastro. **Ao somar um
   sinal a `pedeRespostaPessoal`, confira quem lê esse sinal como GUARDA** — e a recusa tem de desligá-lo.
 
+- **A JANELINHA DO CONTADOR CUSTAVA DUAS CONTAGENS POR CONTATO CONCLUIDO** (24/09/2026, a rodada
+  parada por limite de requisicoes em `GET /chat/v6/session` com **222 concluidos no dia**).
+  `contarMeuDia` pede a MESMA rota duas vezes com **`skipCount=false`**, o parametro que manda a API
+  **CALCULAR o total** — a consulta mais cara deste painel, e a que a plataforma evita pedindo a dela
+  com `skipCount=true` (registrado em 30/08). E `agendarContagem` dispara **a cada conclusao**:
+  simulado com os numeros da print, 271 medicoes = **542 requisicoes** numa rodada de 37 min. Hoje ha
+  **piso de 30 s** entre medicoes (74 medicoes, −73%), o botao "Atualizar" passa por cima
+  (`forcado`), e as duas contagens **deixaram de sair em `Promise.all`** — duas consultas de contagem
+  no mesmo instante e rajada contra o limitador. **Ao por um gatilho "atualiza a cada X", pergunte
+  quanto X acontece numa RODADA** — uma vez por conclusao a mao e barato; 222 vezes seguidas, nao. O
+  teste conta quantas requisicoes ficam no ar ao mesmo tempo.
+- **"CARREGANDO..." PARA SEMPRE: o cabecalho nao envelhecia com o `catch` do `load()`** (mesma
+  print). O erro ia para o rodape e o cabecalho continuava anunciando um carregamento que tinha
+  terminado em falha; o painel parecia travado. E a falha da CONTAGEM mandava *"de F5 e recomece com
+  uma pausa maior"* — conselho de rodada, numa janelinha que tem botao de Atualizar e nao estava
+  rodando nada: `traduzirErroDeRede` passou a receber o *como seguir* de quem chama. **Mensagem que
+  acerta o sintoma e erra a acao custa uma sessao de diagnostico** — e a licao de 20/09 vale de novo:
+  ao escrever "estou fazendo X", escreva junto o que a tela diz quando X falhou.
+
 - **ENGASGO DE REDE NÃO PARA A RODADA; DEFEITO PARA** (22/09/2026, *"fetch failed está parando bastante o
   automatizado"*). Qualquer `erro` parava o laço, inclusive o `Failed to fetch` do limitador de taxa, cuja
   ação certa é esperar. Hoje `api.ehErroDeRede` separa os dois, o engasgo espera (30 s / 1 min / 2 min) e
