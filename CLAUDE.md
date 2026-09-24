@@ -2728,6 +2728,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **O FORMULARIO SO TINHA TRAVAS DE "JA TEMOS", NENHUMA DE "CABE AGORA"** (24/09/2026, uma contato de
+  Minas Gerais que se despediu e recebeu `Nome , Cidade` no fim: *"continua saindo o pedido de dados
+  sem contexto"*). **Medido: `pedirDadosNaoCabe` e `casoDeNegativa` falsos, e `ehDespedida`,
+  `soExpressaApoio`, `soCortesia` e `perguntaPendente` todos falsos** — as tres travas respondem a
+  MESMA pergunta (*"nos ja temos o cadastro?"*) e nao havia como aquilo nao sair. **Ele escolheu duas
+  saidas, e elas se somam:** (1) o campo **`naoCabePedirOCadastro`** no esquema, irmao do
+  `naoHaOQueResponder` — *"cabe pedir agora?"* e JULGAMENTO —, com a licenca **colada na ordem de
+  pedir** (ela CONTRADIZ a ordem duas linhas acima, entao tem de estar do lado dela) e, marcando, o
+  PISO se cala e `ia.semOFormulario` tira o bloco LITERAL (parafrase passa de proposito); e (2)
+  **`cortesia.disseQueEDeOutroEstado`** dentro de `sugestao.pedirDadosNaoCabe`, valendo nos DOIS
+  caminhos — o cadastro serve ao filtro ESTADUAL. **A PRIMEIRA PESSOA e a guarda e foi medida na
+  propria print**: *"aqui tem muita gente que e do rio grande do sul"* esta na MESMA mensagem que
+  casa. Fora de proposito: **o Para** (normaliza para a preposicao `para` — a armadilha de 08/09),
+  **as siglas** (`sp`, `mg`, `ba` em processo e placa) e **"daqui" sozinho** (*"nao sou daqui, sou de
+  Cachoeirinha"* e gente do RS falando da CIDADE). 9 casando e 14 falsos positivos barrados.
+
 - **UM "?" NO MEIO DE UM RABISCO DESLIGAVA A ABSTENCAO DA IA** (24/09/2026, *"escreveu algo
   totalmente sem contexto e ininteligivel"*, o texto sendo `Cla?nique..graca.gonho.olho.pranos`).
   **Medido: `perguntaPendente` e `conversaTemPerguntaAberta` davam PERGUNTA** pelo "?" no meio de

@@ -3809,6 +3809,70 @@ function ehRetribuicao(msg) {
  * @param {{jaSabemos?: string[]}} [opcoes]
  * @returns {{motivo:string}|null}
  */
+/**
+ * **Os 26 estados MENOS o Rio Grande do Sul**, por extenso e sem acento.
+ *
+ * **O Pará ficou de fora de propósito**, e a razão está registrada desde 08/09: `Pará` normaliza
+ * para `para`, que é a preposição mais comum do português — foi ela que derrubou a primeira lista
+ * de palavras que não podem ser lugar, com 12 municípios de falso positivo. Perder *"sou do Pará"*
+ * custa um caso raro; confundir uma preposição custa o cadastro de quem é daqui.
+ *
+ * Sem siglas: `sp`, `mg`, `ba` e `pa` soltas aparecem em número de processo, placa e nome de
+ * empresa, e este detector decide **não pedir o cadastro** — errar aqui é ficar sem a pessoa.
+ */
+const OUTROS_ESTADOS =
+  '(rio grande do norte|mato grosso do sul|mato grosso|minas gerais|santa catarina|espirito santo|' +
+  'rio de janeiro|distrito federal|sao paulo|pernambuco|maranhao|paraiba|parana|rondonia|roraima|' +
+  'tocantins|amazonas|alagoas|sergipe|amapa|bahia|ceara|piaui|goias|acre)';
+
+/**
+ * **Ela disse que NÃO é do Rio Grande do Sul.**
+ *
+ * Print dele (24/09/2026): a contato chegou pelo anúncio, escreveu *"eu não sou do sul .só de Minas
+ * gerais… boa sorte a vcs do sul… o meu respeito é carinho a vocês"*, e o rascunho agradeceu e
+ * emendou o formulário `Nome , Cidade`. Ele apagou: *"continua saindo o pedido de dados sem
+ * contexto"*. **Medido: nenhum dos detectores viu nada** — `ehDespedida`, `soExpressaApoio`,
+ * `soCortesia` e `perguntaPendente` todos falsos, e o parser não tira cidade dela (Minas Gerais não
+ * está entre os 497 do RS).
+ *
+ * **O cadastro serve ao filtro ESTADUAL dele** — a etiqueta de cidade e o COREDE só existem para o
+ * RS. Pedir nome e cidade a quem acabou de dizer que mora em outro estado não classifica ninguém e
+ * soa como se ninguém tivesse lido a mensagem.
+ *
+ * **Duas portas, e as duas exigem PRIMEIRA PESSOA** — é ela que separa *"eu não sou do sul"* de
+ * *"aqui tem muita gente que é do rio grande do sul"*, que está na MESMA mensagem da print:
+ *
+ *  - **negar ser daqui**: *"não sou do sul"*, *"não sou gaúcha"*, *"não moro no RS"*;
+ *  - **afirmar o outro estado** com um verbo de morar/ser/votar, ou com o "aqui" dêitico.
+ *
+ * **"daqui" sozinho ficou de fora**: *"não sou daqui, sou de Caxias"* é gente do RS falando da
+ * CIDADE, e barrar o cadastro dela é o erro caro.
+ *
+ * Lê a conversa INTEIRA, como o de saúde: dizer de onde se é não deixa de ser verdade com o tempo.
+ *
+ * @returns {{motivo:string}|null}
+ */
+const NAO_SOU_DAQUI =
+  /(^|[^\p{L}])nao (sou|somos|moro|moramos) (de |do |da |no |na |em )?(sul|gaucho|gaucha|gauchos|gauchas|rio grande do sul|rio grande|rs)([^\p{L}]|$)/iu;
+const SOU_DE_OUTRO_ESTADO = new RegExp(
+  String.raw`(^|[^p{L}])(sou|somos|moro|moramos|vivo|vivemos|voto|votamos|nasci|aqui) (de |do |da |em |no |na |aqui em |aqui no |aqui na )` +
+    OUTROS_ESTADOS +
+    String.raw`([^p{L}]|$)`,
+  'iu'
+);
+
+export function disseQueEDeOutroEstado(entrantes) {
+  for (const msg of Array.isArray(entrantes) ? entrantes : []) {
+    if (msg?.sistema || msg?.geradaPeloAnuncio) continue;
+    const texto = semAcentos(String(msg?.texto || ''));
+    if (!texto) continue;
+    if (NAO_SOU_DAQUI.test(texto)) return { motivo: 'ela disse que não é do Rio Grande do Sul' };
+    const achou = texto.match(SOU_DE_OUTRO_ESTADO);
+    if (achou) return { motivo: `ela disse que é de outro estado ("${achou[0].trim()}")` };
+  }
+  return null;
+}
+
 export function falouAlgoProprio(entrantes, nossaUltimaAt, padroesDeAnuncio = [], opcoes = {}) {
   const pendentes = desdeNossaUltima(entrantes, nossaUltimaAt).filter(
     (m) => !m?.sistema && !m?.geradaPeloAnuncio && !ehMensagemDeAnuncio(m, padroesDeAnuncio)

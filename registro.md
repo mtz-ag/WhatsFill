@@ -1,3 +1,66 @@
+## 2026-09-24 — v3.114.0 — o formulário só tinha travas de "já temos", nenhuma de "cabe agora"
+
+**Print dele:** uma contato chegou pelo anúncio e escreveu *"eu não sou do sul .só de Minas gerais
+embora respeito muito os sulista… boa sorte a vcs do sul… o meu respeito é carinho a vocês"*. O
+rascunho agradeceu bem — e emendou **`Nome , Cidade`**. Ele apagou: *"continua saindo o pedido de
+dados sem contexto, o que podemos fazer para reverter isso, quais as opções?"*
+
+**Medido antes de oferecer as opções**, e é isto que explica a recorrência:
+
+| | |
+|---|---|
+| `pedirDadosNaoCabe` | **false** (não sabemos nome nem cidade, nunca pedimos, sem etiqueta de cidade) |
+| `casoDeNegativa` | **false** |
+| `ehDespedida`, `soExpressaApoio`, `soCortesia`, `perguntaPendente` | todos **falsos** |
+| `extract` na mensagem dela | **`{}`** — Minas Gerais não está entre os 497 do RS |
+
+Ou seja: **as três travas do formulário respondem todas a mesma pergunta — "nós já temos o
+cadastro?"** — e nenhuma responde *"cabe pedir agora?"*. Não havia como aquilo não sair.
+
+**Ele escolheu DUAS das três opções que ofereci**, e elas se somam:
+
+### 1. A IA decide se cabe pedir
+
+Campo **`naoCabePedirOCadastro`** no esquema, irmão do `naoHaOQueResponder` de ontem: *"cabe pedir
+agora?"* é **julgamento**, e quem julga é quem leu a conversa. A licença vai **colada na ordem de
+pedir**, dentro do bloco do contato — a lição do item 22 (07/09), e aqui ela pesa mais porque a
+exceção **contradiz** a ordem que está duas linhas acima. Sem `pedirDados`, a licença nem aparece:
+não há ordem a excepcionar.
+
+Marcando, **o PISO se cala e o bloco literal sai** do fim do texto (`ia.semOFormulario`), caso ela o
+tenha escrito mesmo assim — o bloco é ditado por nós palavra por palavra, então tirá-lo é mecânico,
+como a saudação errada e a frase da transcrição. **Paráfrase continua passando, de propósito:**
+apagar frase por semelhança é o começo de reescrever no lugar dela.
+
+**`=== true` e não `!== false`**, como ontem: erra para o lado de PEDIR. Modelo que ignore o campo,
+ou que devolva o formato antigo, pede o cadastro como sempre.
+
+### 2. Nunca pedir a quem disse ser de outro estado
+
+`cortesia.disseQueEDeOutroEstado`, somado em **`sugestao.pedirDadosNaoCabe`** — então vale nos
+**dois** caminhos (*"nunca pedir"*): o formulário da rodada e o fecho do rascunho leem a mesma
+conta. **O cadastro serve ao filtro ESTADUAL** — etiqueta de cidade e COREDE só existem para o RS.
+
+**A PRIMEIRA PESSOA é a guarda, e ela foi medida na própria print:** *"aqui tem muita gente que é do
+rio grande do sul"* está na **mesma mensagem** que casa, e sozinha não pode casar. Duas portas —
+negar ser daqui (*"não sou do sul"*, *"não sou gaúcha"*) e afirmar o outro estado com verbo de
+morar/ser/votar ou com o "aqui" dêitico. **Medido: 9 de 9 casando, 14 de 14 falsos positivos
+barrados.**
+
+Duas exclusões deliberadas:
+
+- **o Pará ficou de fora.** `Pará` normaliza para `para`, a preposição mais comum do português — é a
+  armadilha registrada em 08/09, que derrubou a primeira lista de "palavras que não podem ser
+  lugar" com 12 municípios de falso positivo.
+- **nada de siglas.** `sp`, `mg`, `ba` soltas aparecem em número de processo, placa e nome de
+  empresa. Este detector decide **não pedir**: errar aqui é ficar sem a pessoa.
+- **"daqui" sozinho ficou fora**: *"não sou daqui, sou de Cachoeirinha"* é gente do RS falando da
+  CIDADE.
+
+**A opção que ele NÃO escolheu**, e fica registrada: tirar a obrigação do rascunho e deixar o
+cadastro só com as teclas 4 e 5. Teria desfeito o pedido dele de 05/09 (*"faltou detalhes, não pediu
+dados"*).
+
 ## 2026-09-24 — v3.113.0 — um "?" no meio de um rabisco desligava a abstenção da IA
 
 **Print dele**, no dia seguinte à regra: a contato clicou no anúncio às 13:21 e às 13:23 escreveu

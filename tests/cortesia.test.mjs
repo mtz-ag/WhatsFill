@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, ehPedidoDeRoupa, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos, falouDeSaude, ofereceEventoPelaCampanha, falouAlgoProprio, trouxeDenuncia, semInterrogacaoColada } from '../src/lib/cortesia.js';
+import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, ehPedidoDeRoupa, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos, falouDeSaude, ofereceEventoPelaCampanha, falouAlgoProprio, trouxeDenuncia, semInterrogacaoColada, disseQueEDeOutroEstado } from '../src/lib/cortesia.js';
 
 const templates = await lib('templates.js');
 
@@ -3418,6 +3418,62 @@ grupo('interrogacao colada entre letras e rabisco, nao pergunta (24/09/2026)');
   check(semInterrogacaoColada('Qual o partido?') === 'Qual o partido?', 'o "?" do fim fica');
   check(semInterrogacaoColada('') === '', 'vazio nao quebra');
   check(semInterrogacaoColada(null) === '', 'null nao quebra');
+}
+
+grupo('ela disse que nao e do Rio Grande do Sul (24/09/2026)');
+{
+  /**
+   * Print dele: a contato chegou pelo anuncio, escreveu *"eu nao sou do sul .so de Minas gerais…"*
+   * e recebeu o agradecimento com o formulario `Nome , Cidade` colado no fim — *"continua saindo o
+   * pedido de dados sem contexto"*. O cadastro serve ao filtro ESTADUAL dele: pedir nome e cidade a
+   * quem mora em outro estado nao classifica ninguem.
+   */
+  const so = (t) => [{ de: 'contato', texto: t }];
+  const f = (t) => disseQueEDeOutroEstado(so(t));
+
+  for (const t of [
+    'Foi sem querer eu nao sou do sul .so de Minas gerais embora respeito muito os sulista aqui tem muita gente que e do rio grande do sul mais votamos em minas gerais',
+    'eu nao sou do sul',
+    'Nao sou gaucha, sou de Santa Catarina',
+    'moro em Minas Gerais',
+    'sou do Parana',
+    'aqui no Rio de Janeiro esta um calor',
+    'nasci na Bahia mas apoio voces',
+    'nao moro no RS',
+    'votamos em minas gerais',
+  ]) {
+    check(!!f(t), `e de outro estado: "${t.slice(0, 44)}…"`);
+  }
+
+  /**
+   * **A PRIMEIRA PESSOA e a guarda, e ela e medida na propria print**: *"aqui tem muita gente que e
+   * do rio grande do sul"* esta na MESMA mensagem que casa, e sozinha nao pode casar. Quatorze das
+   * vinte e tres assercoes sao falso positivo — este detector decide NAO pedir o cadastro, entao
+   * errar aqui e ficar sem a pessoa.
+   */
+  for (const t of [
+    'aqui tem muita gente que e do rio grande do sul',
+    'sou de Caxias do Sul',
+    'nao sou daqui, sou de Cachoeirinha',
+    'minha filha mora em Minas Gerais',
+    'o pessoal de Santa Catarina apoia o Zucco',
+    'vou para Sao Paulo semana que vem',
+    'sou do Rio Grande do Sul',
+    'moro no sul do estado',
+    'bom dia, tudo bem?',
+    'quero receber o material',
+    'meu genro mora em Santiago',
+    'sou gaucho de coracao',
+    'voto no 22 para presidente',
+    'trabalhei no Parana ha 10 anos',
+  ]) {
+    check(!f(t), `NAO e de outro estado: "${t.slice(0, 44)}…"`);
+  }
+
+  /** O texto do anuncio nao e fala dela — a marca de sempre. */
+  check(!disseQueEDeOutroEstado([{ de: 'contato', texto: 'sou de Minas Gerais', geradaPeloAnuncio: true }]),
+    'o texto gerado pelo anuncio nao conta');
+  check(!disseQueEDeOutroEstado(null), 'lista nula nao estoura');
 }
 
 fim();

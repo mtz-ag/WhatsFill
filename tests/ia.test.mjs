@@ -47,6 +47,7 @@ import {
   ANTERIOR_MAX_FALAS,
   ANTERIOR_MAX_CARACTERES,
   esquemaDoRascunho,
+  semOFormulario,
   perguntaComoEleEsta,
   semSaudacao,
   semRepetirONosso,
@@ -3229,6 +3230,50 @@ grupo('a IA pode dizer que NAO HA O QUE RESPONDER (24/09/2026)');
    */
   check(/16\. NÃO SE RESPONDE[\s\S]{0,800}?regra 14/.test(sis),
     'e ela diz o que NAO cobre: faltar o dado continua sendo a regra 14');
+}
+
+grupo('a IA pode dizer que o CADASTRO nao cabe (24/09/2026)');
+{
+  /**
+   * Print dele: uma contato de Minas Gerais se despediu desejando boa sorte e o rascunho agradeceu
+   * bem e emendou o formulario. *"Continua saindo o pedido de dados sem contexto."* Medido: as tres
+   * travas que existiam sao todas sobre *"ja temos"* — nenhuma sobre *"cabe agora?"*.
+   */
+  const esq = esquemaDoRascunho();
+  const campo = esq.properties.opcoes.items.properties.naoCabePedirOCadastro;
+  check(campo?.type === 'boolean', 'o esquema tem o campo naoCabePedirOCadastro');
+  check(esq.properties.opcoes.items.required.includes('naoCabePedirOCadastro'), 'e ele e obrigatorio');
+  check(esquemaEstrito(esq).properties.opcoes.items.required.includes('naoCabePedirOCadastro'),
+    'o strict mode da OpenAI continua exigindo tudo');
+
+  const v = (extra) => validarRascunho(
+    JSON.stringify({ opcoes: [{ texto: 'Bom dia!', confianca: 0.5, precisaDeRevisao: false, ...extra }] }),
+    new Date('2026-09-24T18:16:00-03:00'), {}
+  );
+  check(v({ naoCabePedirOCadastro: true }).naoCabePedirOCadastro === true, 'a marca chega a quem chama');
+  /** Mesma polaridade do irmao de ontem: erra para o lado de PEDIR. */
+  check(v({}).naoCabePedirOCadastro === false, 'campo ausente NAO cala o formulario');
+  check(v({ naoCabePedirOCadastro: 'sim' }).naoCabePedirOCadastro === false, 'string nao conta como true');
+  check(validarRascunho('isto nao e json', new Date()).naoCabePedirOCadastro === false, 'resposta ilegivel nao cala');
+
+  /**
+   * **A EXCECAO mora colada na ordem de pedir** — a licao do item 22 (07/09): regra longe do ponto
+   * em que o modelo escreve nao e cumprida, e esta CONTRADIZ a ordem que esta logo acima.
+   */
+  const comPedido = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }], pedirDados: true });
+  const semPedido = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'oi' }] });
+  check(comPedido.includes('naoCabePedirOCadastro'), 'a excecao esta no bloco do contato');
+  check(comPedido.indexOf('naoCabePedirOCadastro') > comPedido.indexOf('FECHE a'), 'e vem DEPOIS da ordem que ela excepciona');
+  check(!semPedido.includes('naoCabePedirOCadastro'), 'sem pedirDados a licenca nem aparece — nao ha ordem a excepcionar');
+
+  /**
+   * **O corte e MECANICO porque o bloco e nosso, palavra por palavra.** Parafrase continua
+   * passando de proposito: apagar frase por semelhanca e o comeco de reescrever no lugar dela.
+   */
+  const comBloco = ['Fico muito agradecido pelo carinho.', '', PEDIDO_DE_DADOS_NO_RASCUNHO].join('\n');
+  check(semOFormulario(comBloco) === 'Fico muito agradecido pelo carinho.', 'o bloco literal sai e o resto fica');
+  check(semOFormulario('Bom dia!') === 'Bom dia!', 'texto sem o bloco nao e tocado');
+  check(semOFormulario('') === '', 'vazio nao quebra');
 }
 
 fim();

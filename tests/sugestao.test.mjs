@@ -1048,4 +1048,16 @@ grupo('casoDeNegativa: o cadastro nao fecha um "nao" (12/09/2026)');
   check(!mortas.length, `toda chave que as regras leem o painel escreve${mortas.length ? ` — faltam: ${mortas.join(', ')}` : ''}`);
 }
 
+grupo('quem e de outro estado nao recebe o formulario (24/09/2026)');
+{
+  const { pedirDadosNaoCabe } = sugestaoLib;
+  check(pedirDadosNaoCabe({ deOutroEstado: { motivo: 'disse que e de Minas' } }),
+    'ela dizer que e de outro estado cala o pedido de cadastro');
+  check(!pedirDadosNaoCabe({}), 'e sem nenhum dos quatro o pedido continua saindo');
+  /** As tres de sempre continuam valendo — a conta so ganhou um quarto motivo. */
+  check(pedirDadosNaoCabe({ jaDeuNomeECidade: true }), 'ja deu nome e cidade');
+  check(pedirDadosNaoCabe({ jaPediramDados: true }), 'ja pedimos');
+  check(pedirDadosNaoCabe({ temEtiquetaDeCidade: true }), 'ja tem etiqueta de cidade');
+}
+
 fim();

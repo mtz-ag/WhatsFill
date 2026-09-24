@@ -32,7 +32,7 @@ import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
 import { criarGuardaDeRolagem, TECLAS_QUE_ROLAM } from './rolagem.js';
-import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado } from '../lib/cortesia.js';
+import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -6391,6 +6391,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * decide o desfecho.
          */
         perguntaPendente: perguntaPendente(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
+        /**
+         * **Ela disse que não é do RS** — 24/09/2026. Entra em `sugestao.pedirDadosNaoCabe`, então
+         * cala o formulário nos DOIS caminhos (a rodada e o fecho do rascunho). Lê a conversa
+         * INTEIRA: dizer de onde se é não deixa de ser verdade com o tempo.
+         */
+        deOutroEstado: disseQueEDeOutroEstado(state.entrantes),
         etiquetaQueDispensa: await etiquetaQueDispensaDaFila(),
         // "É da casa": conclui e não manda nada. Lista própria — ver `etiquetaQueSoConclui`.
         etiquetaSoConclui: await etiquetaQueSoConclui(),
@@ -11224,7 +11230,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * na passada seguinte. Acrescentar TEXTO NOSSO, fixo e já revisado, é diferente de escrever no
      * lugar da IA — que continua sendo o motivo de a saudação ausente não ser inventada.
      */
-    if (pedirDadosNoRascunho && !templatesLib.ehPedidoDeDados(texto)) {
+    /**
+     * **A IA pode dizer que o formulário não cabe** — decisão dele de 24/09/2026, com a print da
+     * contato de Minas Gerais que se despediu e recebeu `Nome , Cidade` no fim. As três travas que
+     * existiam respondem *"já temos o cadastro?"*; esta responde *"cabe pedir agora?"*, que é
+     * julgamento — e quem julga é quem leu a conversa. Ver a EXCEÇÃO no bloco do contato.
+     *
+     * **Marcando, o PISO se cala E o bloco literal sai**, caso ela o tenha escrito mesmo assim: o
+     * texto é ditado por nós palavra por palavra, então tirá-lo é mecânico (`ia.semOFormulario`) e
+     * não é reescrever no lugar dela. Paráfrase continua passando, de propósito.
+     */
+    if (escolhida?.naoCabePedirOCadastro) {
+      const limpo = iaLib.semOFormulario(texto);
+      if (limpo !== texto) {
+        texto = limpo;
+        avisos.push('a IA disse que o cadastro não cabe aqui — tirei o formulário do fim');
+      }
+    } else if (pedirDadosNoRascunho && !templatesLib.ehPedidoDeDados(texto)) {
       texto = [texto, '', iaLib.PEDIDO_DE_DADOS_NO_RASCUNHO].join('\n');
       avisos.push('a IA não pediu o cadastro — acrescentei o formulário no fim');
     }

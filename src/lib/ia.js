@@ -1809,7 +1809,7 @@ export function esquemaDoRascunho() {
   const opcao = {
     type: 'object',
     additionalProperties: false,
-    required: ['texto', 'confianca', 'precisaDeRevisao', 'naoHaOQueResponder'],
+    required: ['texto', 'confianca', 'precisaDeRevisao', 'naoHaOQueResponder', 'naoCabePedirOCadastro'],
     properties: {
       texto: {
         type: 'string',
@@ -1843,6 +1843,21 @@ export function esquemaDoRascunho() {
        * **`texto` continua obrigatório**: o painel só honra a abstenção quando não há pergunta
        * pendente e a mensagem do momento está disponível, e nos outros casos o texto é o que sai.
        */
+      /**
+       * **O canal para ela dizer que o formulário não cabe** — 24/09/2026, ver a EXCEÇÃO no bloco do
+       * contato. Irmão do `naoHaOQueResponder`: as três travas que existiam respondem *"já temos o
+       * cadastro?"*, e nenhuma respondia *"cabe pedir agora?"*.
+       *
+       * **Sem efeito nenhum quando o painel não ia pedir**: a ordem do formulário só entra no prompt
+       * com `pedirDados`, então marcar isto numa conversa em que ninguém ia pedir não muda nada.
+       */
+      naoCabePedirOCadastro: {
+        type: 'boolean',
+        description:
+          'true quando pedir o nome e a cidade agora soaria como se ninguém tivesse lido o que ' +
+          'ela escreveu: despedida, só carinho, ela dizendo que não é do Rio Grande do Sul. Na ' +
+          'dúvida, deixe false e peça.',
+      },
       naoHaOQueResponder: {
         type: 'boolean',
         description:
@@ -1912,6 +1927,23 @@ export const PEDIDO_DE_DADOS_NO_RASCUNHO = [
   '',
   '(exemplo: Pedro Silva , Porto Alegre)',
 ].join('\n');
+
+/**
+ * **Tira do fim do rascunho o formulário LITERAL**, quando a própria IA disse que ele não cabe.
+ *
+ * O bloco é ditado por nós, palavra por palavra (`PEDIDO_DE_DADOS_NO_RASCUNHO`), e é o mesmo que o
+ * PISO do painel acrescenta — então tirá-lo é mecânico, como a saudação errada e a frase da
+ * transcrição, e não é reescrever no lugar da IA.
+ *
+ * **Só o literal.** Uma paráfrase dela continua passando: reconhecer "isto é um pedido de cadastro
+ * escrito de outro jeito" é `templates.ehPedidoDeDados`, e apagar frase por semelhança é o começo
+ * de reescrever o texto — a fronteira que este projeto segura desde o começo.
+ */
+export function semOFormulario(texto) {
+  const t = String(texto || '');
+  if (!t.includes(PEDIDO_DE_DADOS_NO_RASCUNHO)) return t;
+  return t.split(PEDIDO_DE_DADOS_NO_RASCUNHO).join('').replace(/\n{3,}/g, '\n\n').trim();
+}
 
 /**
  * **Tira do rascunho a frase que fala de TRANSCRIÇÃO** — print do Jose Carlos (12/09/2026).
@@ -2514,6 +2546,25 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
           'reconhece que o pedido saiu.',
           '',
           PEDIDO_DE_DADOS_NO_RASCUNHO,
+          '',
+          /**
+           * **A licença de NÃO pedir, colada na ordem de pedir** — print dele de 24/09/2026: uma
+           * contato de Minas Gerais se despediu desejando boa sorte, e o rascunho agradeceu bem e
+           * emendou o formulário; ele apagou. *"Continua saindo o pedido de dados sem contexto."*
+           *
+           * **Medido: as três travas que existiam são todas sobre "já temos"** (nome e cidade,
+           * pedido já enviado, etiqueta de cidade) — nenhuma sobre *"cabe agora?"*, que é
+           * julgamento. Decisão dele (24/09): **quem julga é quem leu a conversa.**
+           *
+           * Vai AQUI e não no sistema pela razão de 07/09: regra longe do ponto em que o modelo
+           * escreve não é cumprida — e esta contradiz a ordem que está duas linhas acima, então
+           * tem de estar do lado dela.
+           */
+          'EXCEÇÃO: se a conversa não der abertura para isso — ela está se despedindo, mandou só',
+          'carinho, disse que não é do Rio Grande do Sul, ou qualquer coisa em que o formulário',
+          'soaria como se ninguém tivesse lido o que ela escreveu —, NÃO escreva o bloco e marque',
+          'o campo naoCabePedirOCadastro (é um campo do JSON, nunca uma frase para ela). Na dúvida,',
+          'peça: o cadastro é o que põe a pessoa no filtro dele.',
         ].join('\n')
       : '',
     /**
@@ -3654,7 +3705,7 @@ function umaLinha(texto, limite = 400) {
  * @returns {{texto:string, confianca:number, motivo:string, avisos:string[], precisaDeRevisao:boolean}}
  */
 export function validarRascunho(bruto, agora, contexto = {}) {
-  const vazio = { texto: '', confianca: 0, motivo: '', avisos: ['a IA não devolveu rascunho'], precisaDeRevisao: true, naoHaOQueResponder: false };
+  const vazio = { texto: '', confianca: 0, motivo: '', avisos: ['a IA não devolveu rascunho'], precisaDeRevisao: true, naoHaOQueResponder: false, naoCabePedirOCadastro: false };
 
   let d = bruto;
   if (typeof d === 'string') {
@@ -3665,7 +3716,7 @@ export function validarRascunho(bruto, agora, contexto = {}) {
       // um modelo que ignore o esquema ainda produz rascunho — só nunca automático, porque sem
       // `confianca` ele não passa do limiar.
       const cru = revisarRascunho(bruto, agora, contexto);
-      return { texto: cru.texto, confianca: 0, motivo: '', avisos: cru.avisos, precisaDeRevisao: true, naoHaOQueResponder: false };
+      return { texto: cru.texto, confianca: 0, motivo: '', avisos: cru.avisos, precisaDeRevisao: true, naoHaOQueResponder: false, naoCabePedirOCadastro: false };
     }
   }
   if (!d || typeof d !== 'object') return vazio;
@@ -3697,6 +3748,8 @@ export function validarRascunho(bruto, agora, contexto = {}) {
        * o rascunho como sempre, em vez de calar a resposta de todo mundo em silêncio.
        */
       naoHaOQueResponder: o?.naoHaOQueResponder === true,
+      /** Mesma polaridade do irmão acima, e pela mesma razão: erra para o lado de PEDIR. */
+      naoCabePedirOCadastro: o?.naoCabePedirOCadastro === true,
     };
   };
 

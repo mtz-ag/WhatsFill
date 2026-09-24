@@ -56,8 +56,20 @@ export function motivoDaEtiquetaDePedido(c) {
   return null;
 }
 
+/**
+ * **E DE OUTRO ESTADO entrou aqui em 24/09/2026**, e com isso a pergunta desta conta deixou de ser
+ * só *"já temos o cadastro?"* e passou a ser *"há o que pedir, e vale pedir?"*.
+ *
+ * Decisão dele, com a print da contato de Minas Gerais que se despediu e recebeu o formulário:
+ * *"continua saindo o pedido de dados sem contexto"*. **O cadastro serve ao filtro ESTADUAL** — a
+ * etiqueta de cidade e o COREDE só existem para o RS —, então pedir nome e cidade a quem acabou de
+ * dizer que mora em outro estado não classifica ninguém.
+ *
+ * **Vale nos DOIS caminhos de propósito** (*"nunca pedir"*): o formulário da RODADA e o fecho do
+ * rascunho da IA leem esta mesma conta, e é isso que impede as duas metades de divergirem.
+ */
 export const pedirDadosNaoCabe = (c) =>
-  !!(c?.jaDeuNomeECidade || c?.jaPediramDados || c?.temEtiquetaDeCidade);
+  !!(c?.jaDeuNomeECidade || c?.jaPediramDados || c?.temEtiquetaDeCidade || c?.deOutroEstado);
 
 /**
  * **Este caso é uma NEGATIVA?** — o que impede o rascunho de fechar pedindo o cadastro.
