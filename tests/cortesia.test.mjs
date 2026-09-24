@@ -9,7 +9,7 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
-import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, ehPedidoDeRoupa, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos, falouDeSaude, ofereceEventoPelaCampanha, falouAlgoProprio, trouxeDenuncia } from '../src/lib/cortesia.js';
+import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, ehPedidoDeRoupa, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos, falouDeSaude, ofereceEventoPelaCampanha, falouAlgoProprio, trouxeDenuncia, semInterrogacaoColada } from '../src/lib/cortesia.js';
 
 const templates = await lib('templates.js');
 
@@ -3379,6 +3379,45 @@ grupo('null nos padroes de anuncio nao pode estourar (23/09/2026)');
   check(ehMensagemDeAnuncio({ texto: 'oi', geradaPeloAnuncio: true }, null) === true, 'e a marca continua valendo');
   check(falouAlgoProprio([{ de: 'contato', texto: 'quero saber dos projetos de voces', at: 9 }], 8, null) !== undefined,
     'falouAlgoProprio com null nos padroes tambem nao estoura');
+}
+
+grupo('interrogacao colada entre letras e rabisco, nao pergunta (24/09/2026)');
+{
+  /**
+   * Print dele: a contato clicou no anuncio e escreveu *"Cla?niquê..graca.gonho.olho.pranos"* —
+   * *"escreveu algo totalmente sem contexto e ininteligivel"*. Medido: os DOIS detectores de
+   * pergunta davam verdadeiro pelo "?" no meio de `Cla?nique`, e `perguntaPendente` e justamente a
+   * guarda mecanica da abstencao da IA (v3.110) — o rabisco desligava a regra dele no caso que a
+   * regra existe para resolver.
+   */
+  const so = (texto) => [{ de: 'contato', texto, at: '2026-09-24T16:23:00Z' }];
+  const pendente = (texto) => perguntaPendente(so(texto), null, []);
+  const aberta = (texto) => !!conversaTemPerguntaAberta(so(texto), null, []);
+
+  check(!pendente('Cla?niquê..graca.gonho.olho.pranos'), 'o rabisco da print nao e pergunta pendente');
+  check(!aberta('Cla?niquê..graca.gonho.olho.pranos'), 'nem pergunta aberta');
+  check(!pendente('kkk?kkk'), 'e nem a risada com "?" no meio');
+
+  /** **As perguntas de verdade continuam** — o lado caro desta guarda. */
+  check(pendente('Qual é o partido?'), 'o "?" no fim continua valendo');
+  check(pendente('Tudo bem? Queria saber dos projetos dele'), 'com espaco depois, tambem');
+  check(pendente('E aí?!'), 'e com pontuacao depois');
+  check(aberta('Voce e candidato daqui do RS?'), 'a pergunta da Ieda (04/09) continua de pe');
+
+  /**
+   * **A MAIUSCULA e a peca que a medicao obrigou.** Na primeira versao o corte era so "letra dos
+   * dois lados", e `"O senhor e senador?Obrigada"` — pergunta de verdade com o espaco comido, uma
+   * das formas mais comuns desta base (a Juscelia, 10/09) — deixava de contar. Maiuscula depois do
+   * "?" e frase nova; minuscula colada e rabisco.
+   */
+  check(pendente('O senhor e senador?Obrigada'), 'pergunta com o espaco comido e MAIUSCULA depois continua pergunta');
+  check(aberta('O senhor e senador?Obrigada'), 'idem na pergunta aberta');
+
+  /** A funcao sozinha: troca por ESPACO, nunca apaga — pontuacao que some cola as palavras. */
+  check(semInterrogacaoColada('Cla?nique') === 'Cla nique', 'vira espaco, nao some');
+  check(semInterrogacaoColada('Qual o partido?') === 'Qual o partido?', 'o "?" do fim fica');
+  check(semInterrogacaoColada('') === '', 'vazio nao quebra');
+  check(semInterrogacaoColada(null) === '', 'null nao quebra');
 }
 
 fim();

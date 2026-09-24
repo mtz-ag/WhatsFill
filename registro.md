@@ -1,3 +1,47 @@
+## 2026-09-24 — v3.113.0 — um "?" no meio de um rabisco desligava a abstenção da IA
+
+**Print dele**, no dia seguinte à regra: a contato clicou no anúncio às 13:21 e às 13:23 escreveu
+*"Cla?niquê..graca.gonho.olho.pranos"*. Às 13:36 saiu *"Estou por aqui, pode escrever. E, se puder,
+me diga seu: Nome , Cidade"*. Ele: *"mesmo caso anterior — ela escreveu algo totalmente sem contexto
+e ininteligível"*.
+
+**Medido, e a causa é um caractere:**
+
+| | antes |
+|---|---|
+| `perguntaPendente` | **true** |
+| `conversaTemPerguntaAberta` | **"fez uma pergunta que nenhuma resposta pronta responde"** |
+| `falouAlgoProprio` | casou (é a inversão, como no caso de ontem) |
+| todo o resto (apoio, material, cortesia, reação, sem interesse…) | `null` |
+
+O "?" está no meio de **`Cla?niquê`**. E `perguntaPendente` é **exatamente a guarda mecânica da
+abstenção da v3.110**: com ela verdadeira, a IA pode dizer *"não há o que responder"* e o painel
+ignora, pondo o rascunho no campo. **O rabisco desligava a regra dele no caso que a regra nasceu
+para resolver** — e, de quebra, fazia `pergunta-aberta` tratar aquilo como pergunta.
+
+**É a terceira vez que um "?" que ninguém digitou como pergunta custa uma print.** As duas
+anteriores foram a query string do link (`?igsh=`, `?v=`, 05/09), consertada com `semLinks`. O
+invariante aqui é o mesmo tipo de coisa: **ninguém escreve uma pergunta com letra colada dos dois
+lados do "?"**. Nasceu `cortesia.semInterrogacaoColada`, aplicada nos dois detectores de pergunta,
+logo depois do corte do link.
+
+**Vira ESPAÇO e não some** — a lição de 01/09: pontuação que some COLA as palavras e destrói a
+fronteira que os padrões usam.
+
+**A MAIÚSCULA é a peça que a medição obrigou.** A primeira versão cortava com "letra dos dois
+lados", e a medição contra oito frases mostrou o preço: ***"O senhor e senador?Obrigada"*** —
+pergunta de verdade com o espaço comido, e uma das formas mais comuns desta base (a Juscelia,
+10/09) — deixava de contar. Hoje o corte exige **minúscula ou dígito depois**: maiúscula depois do
+"?" é frase nova; minúscula colada é rabisco. Depois: 8 de 8.
+
+**O falso negativo que sobra** é a pergunta emendada em minúscula (*"qual o partido?nao sei se voce
+viu"*), e ele custa pouco: o texto continua sendo fala dela, e `falouAlgoProprio` o leva para a
+tecla 6 do mesmo jeito — só perde a proteção que impede concluir.
+
+**Nada foi feito para "reconhecer rabisco".** Continua valendo o desenho de ontem: *"isto faz
+sentido?"* é julgamento, e quem decide é a IA. O que este conserto fez foi **tirar o que impedia a
+resposta dela de valer**.
+
 ## 2026-09-24 — v3.112.0 — a etiqueta de material saía do NOSSO pedido de endereço do voluntariado
 
 **Pergunta dele**, com cinco prints de uma contato de 13/09 que nunca pediu material: *"de onde saiu

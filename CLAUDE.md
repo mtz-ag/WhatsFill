@@ -2728,6 +2728,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **UM "?" NO MEIO DE UM RABISCO DESLIGAVA A ABSTENCAO DA IA** (24/09/2026, *"escreveu algo
+  totalmente sem contexto e ininteligivel"*, o texto sendo `Cla?nique..graca.gonho.olho.pranos`).
+  **Medido: `perguntaPendente` e `conversaTemPerguntaAberta` davam PERGUNTA** pelo "?" no meio de
+  `Cla?nique` — e `perguntaPendente` e **a unica guarda mecanica da abstencao da v3.110**: com ela
+  verdadeira, a IA diz *"nao ha o que responder"* e o painel ignora. **O rabisco desligava a regra
+  dele no caso que a regra nasceu para resolver.** TERCEIRA vez que um "?" que ninguem digitou como
+  pergunta custa uma print (as duas anteriores foram a query string do link, 05/09). Hoje
+  `cortesia.semInterrogacaoColada` troca por ESPACO (pontuacao que some cola as palavras) o "?" com
+  letra colada dos dois lados, **exigindo MINUSCULA ou digito depois** — a peca que a medicao
+  obrigou: `"O senhor e senador?Obrigada"` e pergunta de verdade com o espaco comido, e maiuscula
+  depois do "?" e frase nova. **Ao por uma guarda mecanica numa regra nova, meca a guarda contra o
+  caso que a regra existe para pegar** — aqui a guarda e a regra estavam no mesmo texto.
+
 - **NAO HA O QUE RESPONDER: A IA ABSTEM, E SAI A MENSAGEM DO MOMENTO** (regra dele, 24/09/2026, com
   a print de *"As outras de Venancio Aires capital do chimarrao"* e o rascunho devolvendo as palavras
   dela: *"nao fez sentido nenhum o que a pessoa falou, nao tem contexto e a IA tentou arrumar uma

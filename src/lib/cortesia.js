@@ -104,6 +104,40 @@ function semLinks(texto) {
 }
 
 /**
+ * **Interrogação COLADA entre letras não é pergunta: é rabisco.**
+ *
+ * Print dele (24/09/2026): a contato clicou no anúncio e escreveu *"Cla?niquê..graca.gonho.olho.
+ * pranos"* — *"escreveu algo totalmente sem contexto e ininteligível"*. Medido: `perguntaPendente`
+ * e `conversaTemPerguntaAberta` devolviam **pergunta**, pelo "?" no meio de `Cla?niquê`.
+ *
+ * **Isso desligava o conserto da véspera.** A abstenção da IA (v3.110, *"não há o que responder →
+ * mensagem do momento"*) tem UMA guarda mecânica, e é justamente `perguntaPendente`: com ela
+ * verdadeira, a abstenção é ignorada e o rascunho vai para o campo. Ou seja, o rabisco fazia a
+ * regra dele não valer no caso que ele criou a regra para resolver.
+ *
+ * **É a terceira vez que um "?" que ninguém digitou como pergunta custa uma print** — as duas
+ * anteriores foram a query string do link (`?igsh=`, `?v=`, 05/09), consertada com `semLinks`.
+ * O invariante é o mesmo: **ninguém escreve uma pergunta com letra colada dos dois lados do "?"**.
+ *
+ * **Vira ESPAÇO e não some** — a lição de 01/09: pontuação que some COLA as palavras e destrói a
+ * fronteira que os padrões usam.
+ *
+ * **Só o "?" entre letras, e só com MINÚSCULA depois.** `"Qual o partido?"` (fim),
+ * `"Tudo bem? Obrigada"` (espaço depois) e `"E aí?!"` continuam perguntas — e a maiúscula é a
+ * peça que a medição obrigou: **`"O senhor e senador?Obrigada"` é pergunta de verdade com o
+ * espaço comido**, e é uma das formas mais comuns desta base (a Juscelia, 10/09). Maiúscula depois
+ * do "?" é frase nova; minúscula colada é rabisco.
+ *
+ * O falso negativo que sobra é a pergunta emendada em minúscula (*"qual o partido?nao sei se
+ * voce viu"*), e ele custa pouco: o texto continua sendo fala dela, e `falouAlgoProprio` o leva
+ * para a tecla 6 do mesmo jeito.
+ */
+const INTERROGACAO_COLADA = /(?<=[\p{L}\p{N}])\?(?=[\p{Ll}\p{N}])/gu;
+export function semInterrogacaoColada(texto) {
+  return String(texto || '').replace(INTERROGACAO_COLADA, ' ');
+}
+
+/**
  * Só emoji (e o modificador de tom de pele / seletor de variação que costuma vir junto).
  *
  * São DUAS: a com `g` serve para apagar, a sem `g` para testar. `RegExp` com `g` guarda o
@@ -825,7 +859,7 @@ export function perguntaPendente(entrantes, nossaUltimaAt, padroesDeAnuncio = []
   // O link sai antes de tudo: a query string (`?igsh=`, `?v=`) fazia todo vídeo repassado virar
   // pergunta pendente, e pergunta pendente e o que impede concluir. Ver `semLinks`.
   const plano = (m) =>
-    semLinks(m?.texto)
+    semInterrogacaoColada(semLinks(m?.texto))
       .normalize('NFD')
       .replace(/[̀-ͯ]/g, '')
       .replace(/\s+/g, ' ')
@@ -834,7 +868,9 @@ export function perguntaPendente(entrantes, nossaUltimaAt, padroesDeAnuncio = []
   for (let i = 0; i < rajada.length; i++) {
     // Legenda de repasse nao conta como pergunta pendente — ver `ehLegendaDeRepasse`.
     if (ehLegendaDeRepasse(rajada[i])) continue;
-    const texto = semLinks(rajada[i].texto);
+    // O "?" colado entre letras sai junto com o link, e pelo mesmo motivo: não é pergunta de
+    // ninguém. Ver `semInterrogacaoColada` (o rabisco da print de 24/09/2026).
+    const texto = semInterrogacaoColada(semLinks(rajada[i].texto));
     const semAcento = plano(rajada[i]);
     if (!semAcento) continue;
 
@@ -2252,7 +2288,8 @@ export function conversaTemPerguntaAberta(entrantes, nossaUltimaAt, padroesDeAnu
      */
     if (ehLegendaDeRepasse(msg)) continue;
 
-    const texto = semLinks(msg?.texto);
+    // Mesmo corte do link, e pela mesma razão — ver `semInterrogacaoColada`.
+    const texto = semInterrogacaoColada(semLinks(msg?.texto));
     if (!texto) continue;
     if (PEDIDO_DE_MATERIAL.test(texto)) continue;
 
