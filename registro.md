@@ -1,3 +1,36 @@
+## 2026-09-25 — v3.125.0 — o modelo do anúncio não sumia: o `<select>` é que não conseguia mostrá-lo
+
+**Relato dele:** *"ao trocar os perfis está removendo os modelos setados para cada anúncio"*.
+
+**Medido antes de mexer, e o dado nunca foi tocado:**
+
+| | |
+|---|---|
+| gravado como Martim | `campanha_martim_01` |
+| troca para Pedri e volta, três vezes | **`campanha_martim_01`** — intacto |
+| o mesmo anúncio copiado para o Pedri | **`campanha_martim_01`** — intacto |
+| esse nome está entre os modelos do canal do Pedri? | **não** |
+
+**Quem apagava era a TELA.** Os modelos aprovados são do **canal**, e o `<select>` só mostra o que
+está entre as `option`: trocando de candidato, o nome salvo não está na lista daquele canal, o select
+cai no vazio, e a tela diz *"— escolha o modelo aprovado —"* **sobre um valor que está gravado**.
+
+E isso não é só cosmético: **parece apagado, e o primeiro clique em qualquer outro campo daquele
+cartão o apagaria de verdade** — porque o `gravar` monta a linha inteira a partir do que está na tela.
+
+**No cartão dos MODELOS PADRÃO a mentira era maior.** Aquele select **não tem opção vazia**, então o
+navegador marcava o **primeiro modelo do canal** como se fosse o salvo. A tela mostrava um modelo, o
+rodízio usava outro.
+
+**O conserto é o que a caixa do modelo da rodada já fazia desde sempre**, três mil linhas acima no
+mesmo arquivo: mostrar o salvo e **dizer** que ele não é deste canal, em vez de engolir. Agora os dois
+selects mantêm o valor salvo como opção, marcada `(não é deste canal)`, com a linha explicando que ele
+não vai sair enquanto for assim — e o caminho para resolver: escolher um da lista, ou voltar para o
+candidato dono daquele anúncio.
+
+**O teste trava a metade que dá para travar** — o dado: ida e volta entre perfis, a cópia para o outro
+candidato, e `anuncios.normalizar` preservando o `valor`. O `<select>` é DOM e não entra em suíte;
+o que entra é o invariante que ele estava questionando.
 ## 2026-09-25 — v3.124.0 — `perfilAtivo is not defined`: a rodada quebrava em todo contato
 
 **Relato dele:** *"iniciei o automatizado mas não está fazendo nada"*, no perfil do Pedri. **O print

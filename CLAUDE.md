@@ -2153,6 +2153,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **`<select>` SO MOSTRA O QUE ESTA NAS `option`, E POR ISSO ELE PARECE APAGAR O QUE ESTA GRAVADO**
+  (25/09/2026, *"ao trocar os perfis esta removendo os modelos setados para cada anuncio"*).
+  **Medido: o armazenamento nunca foi tocado** — ida e volta entre os candidatos devolvia
+  `campanha_martim_01` intacto. Os modelos aprovados sao do CANAL: trocando de candidato, o nome
+  salvo nao esta entre as `option`, o select cai no vazio e a tela diz *"— escolha o modelo —"* sobre
+  um valor gravado. **E nao e cosmetico: o `gravar` monta a linha inteira a partir da tela, entao o
+  primeiro clique em qualquer outro campo do cartao apaga de verdade.**
+  **No cartao dos MODELOS PADRAO era pior**: aquele select nao tem opcao vazia, entao o navegador
+  marcava o PRIMEIRO modelo do canal como se fosse o salvo — a tela mostrando um e o rodizio usando
+  outro. **A regra: select cujo valor salvo pode nao estar na lista carrega o salvo como opcao
+  propria, marcada, com o aviso do lado** — e o projeto ja fazia isso na caixa do modelo da rodada
+  (*"o modelo salvo nao esta na lista deste canal"*), tres mil linhas acima, no mesmo arquivo.
+  **Ao medir "sumiu", separe o DADO da TELA antes de consertar**: as duas produzem a mesma queixa, e
+  o conserto e em lugares opostos.
 - **FUNCAO DE MODULO NAO ENXERGA NOME DA CLOSURE, E AGORA O VERIFICADOR PEGA** (25/09/2026, *"iniciei
   o automatizado mas nao esta fazendo nada"*, com o Andamento dizendo `perfilAtivo is not defined`).
   `carregarModelosPadrao` e declarada na COLUNA 0 de `panel.js`, fora da closure do painel, e a

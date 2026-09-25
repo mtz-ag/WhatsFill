@@ -12685,6 +12685,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
         if (state.hsmTemplates.length) {
           const sel = h('select', {});
+          /**
+           * **O mesmo cuidado da lista de anúncios, e aqui a mentira era maior:** este `<select>`
+           * não tem opção vazia, então um nome salvo que não está neste canal fazia o navegador
+           * marcar o PRIMEIRO modelo da lista — a tela mostrando um modelo que não é o gravado,
+           * como se fosse. O rodízio continuava usando o salvo.
+           */
+          const foraDoCanal = nome.trim() && !state.hsmTemplates.some((m) => m.name === nome);
+          if (foraDoCanal) {
+            const o = h('option', { value: nome }, `${nome} (não é deste canal)`);
+            o.setAttribute('selected', 'selected');
+            sel.append(o);
+          }
           for (const m of state.hsmTemplates) {
             const o = h('option', { value: m.name }, m.name);
             if (m.name === nome) o.setAttribute('selected', 'selected');
@@ -12694,6 +12706,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             withBusy(() => gravar(lista.map((x, j) => (j === i ? sel.value : x))))
           );
           linha.append(sel);
+          if (foraDoCanal) linha.append(h('span', { class: 'wf-hint' }, '(salvo, mas não sai neste canal)'));
         } else {
           const campo = h('input', { type: 'text', placeholder: 'nome exato do modelo' });
           campo.value = nome;
@@ -12849,6 +12862,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           if (state.hsmTemplates.length) {
             const alvo = h('select', {});
             alvo.append(h('option', { value: '' }, '— escolha o modelo aprovado —'));
+            /**
+             * **O modelo salvo que este canal não tem CONTINUA na lista** — 25/09/2026, relato dele:
+             * *"ao trocar os perfis está removendo os modelos setados para cada anúncio"*.
+             *
+             * Ele não estava sendo removido do armazenamento: o `<select>` só mostra o que está
+             * entre as `option`, e os modelos aprovados são do CANAL. Trocando de candidato, o nome
+             * salvo some da lista, o select cai no vazio e a tela diz "— escolha o modelo —" sobre
+             * um valor que está gravado. **Parece apagado, e o primeiro clique em qualquer outro
+             * campo deste cartão o apagaria de verdade.**
+             *
+             * O conserto é o que a caixa do modelo da rodada já fazia desde sempre, três mil linhas
+             * acima: mostrar o salvo e DIZER que ele não é deste canal, em vez de engolir.
+             */
+            const foraDoCanal = anuncio.valor && !state.hsmTemplates.some((m) => m.name === anuncio.valor);
+            if (foraDoCanal) {
+              const o = h('option', { value: anuncio.valor }, `${anuncio.valor} (não é deste canal)`);
+              o.setAttribute('selected', 'selected');
+              alvo.append(o);
+            }
             for (const m of state.hsmTemplates) {
               const o = h('option', { value: m.name }, m.name);
               if (m.name === anuncio.valor) o.setAttribute('selected', 'selected');
@@ -12858,6 +12890,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
               withBusy(() => gravar(lista.map((x) => (x.id === anuncio.id ? { ...x, valor: alvo.value } : x))))
             );
             card.append(alvo);
+            if (foraDoCanal) {
+              card.append(
+                h('div', { class: 'wf-block' },
+                  `O modelo "${anuncio.valor}" continua salvo, mas não está entre os modelos aprovados ` +
+                    'deste canal — ele não vai sair enquanto for assim. Escolha um da lista, ou volte ' +
+                    'para o candidato dono deste anúncio.')
+              );
+            }
           } else {
             const alvo = h('input', { type: 'text', placeholder: 'nome exato do modelo na plataforma' });
             alvo.value = anuncio.valor;

@@ -280,4 +280,45 @@ grupo('a mensagem do momento e o resto que SAI ficam de cada candidato (25/09/20
   check(!perfis.CHAVES_DO_PERFIL_EM_AUTO.includes('etiquetasQuePulam'), 'e as etiquetas do CRM, que e um so');
 }
 
+grupo('o modelo do anuncio SOBREVIVE a troca de perfil (25/09/2026)');
+{
+  /**
+   * Relato dele: *"ao trocar os perfis esta removendo os modelos setados para cada anuncio"*.
+   *
+   * **Medido: o armazenamento nunca foi tocado** -- ida e volta entre os dois candidatos devolve o
+   * mesmo `valor`. Quem "apagava" era a TELA: os modelos aprovados sao do CANAL, entao o nome salvo
+   * nao esta entre as `option` do outro candidato, e o `<select>` cai no vazio sobre um valor que
+   * esta gravado. **Parece apagado, e um clique em qualquer outro campo do cartao o apagaria de
+   * verdade.**
+   *
+   * Este teste trava a metade que da para travar: o dado. A outra metade e o `<select>`, que hoje
+   * mostra o salvo marcado como "(nao e deste canal)" em vez de engolir -- o mesmo que a caixa do
+   * modelo da rodada ja fazia.
+   */
+  const anuncios = await lib('anuncios.js');
+  for (const k of Object.keys(mem)) delete mem[k];
+
+  const DO_MARTIM = [{ id: 'a1', nome: 'Material da Direita', trechos: ['material da direita'],
+    acao: 'modelo', valor: 'campanha_martim_01', etiquetas: [], ligado: true }];
+  await store.set('anuncios', DO_MARTIM);
+  await perfis.gravar('anuncios', 'pedri', DO_MARTIM);
+
+  const doMartim = anuncios.normalizar(await store.get('anuncios'));
+  const doPedri = anuncios.normalizar(await perfis.ler('anuncios', 'pedri', []));
+  check(doMartim[0].valor === 'campanha_martim_01', 'o modelo do Martim continua gravado');
+  check(doPedri[0].valor === 'campanha_martim_01', 'e o do Pedri tambem, depois da copia');
+
+  /** Ida e volta varias vezes: e o gesto que ele fez e que motivou o relato. */
+  for (let i = 0; i < 3; i++) {
+    await perfis.ler('anuncios', 'martim', []);
+    await perfis.ler('anuncios', 'pedri', []);
+  }
+  check(anuncios.normalizar(await store.get('anuncios'))[0].valor === 'campanha_martim_01',
+    'trocar de perfil ida e volta nao apaga nada');
+
+  /** `normalizar` e quem peneira a entrada do armazenamento -- ela nao pode comer o `valor`. */
+  check(anuncios.normalizar([{ id: 'x', nome: 'n', acao: 'modelo', valor: 'um_modelo' }])[0].valor === 'um_modelo',
+    'normalizar preserva o modelo escolhido');
+}
+
 fim();
