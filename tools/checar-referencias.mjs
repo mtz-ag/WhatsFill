@@ -296,9 +296,65 @@ if (opcoesOrfas.length) {
   problemas += opcoesOrfas.length;
 }
 
+/**
+ * **Função de MÓDULO que chama nome de dentro de uma closure** — `ReferenceError` em produção.
+ *
+ * Foi o defeito da v3.123: `carregarModelosPadrao` mora no nível do arquivo e passou a chamar
+ * `perfilAtivo()`, que vive dentro da closure do painel. O erro estourava em TODO contato, e o
+ * relato dele foi *"iniciei o automatizado mas não está fazendo nada"*. É a mesma classe do
+ * `dom.numeroDaConversa()` chamado do painel, registrada um dia antes.
+ *
+ * **A tentativa LARGA de 03/09 foi abandonada com 33 falsos positivos** — está no CLAUDE.md, e esta
+ * não a desmente: aquela procurava variável fora de escopo em qualquer lugar. Esta compara só o
+ * corpo das funções declaradas na COLUNA 0 contra os nomes declarados INDENTADOS, que são
+ * exatamente os dois escopos que não se enxergam. Rodada contra o commit que quebrou, acusa as duas
+ * chamadas; contra o conserto, cala.
+ */
+const foraDeEscopo = [];
+for (const arquivo of arquivos) {
+  const linhas = readFileSync(arquivo, 'utf8').split('\n');
+  const daClosure = new Set();
+  const deModulo = [];
+  for (let i = 0; i < linhas.length; i++) {
+    let m = /^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/.exec(linhas[i]);
+    if (m) {
+      // O fim é o `}` na coluna 0 — ou a PRÓXIMA função de módulo, se ela vier antes: sem isso o
+      // alcance de uma engole a seguinte e a acusação sai com o dono errado.
+      let fim = linhas.length - 1;
+      for (let j = i + 1; j < linhas.length; j++) {
+        if (linhas[j] === '}' || /^(?:async\s+)?function\s/.test(linhas[j])) { fim = j; break; }
+      }
+      deModulo.push([m[1], i, fim]);
+      continue;
+    }
+    m = /^\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/.exec(linhas[i]);
+    if (m) daClosure.add(m[1]);
+  }
+  const nomesDeModulo = new Set(deModulo.map(([n]) => n));
+  for (const [dono, ini, fim] of deModulo) {
+    for (let i = ini + 1; i <= fim; i++) {
+      if (/^\s*(\*|\/\/)/.test(linhas[i])) continue;
+      const linha = linhas[i].replace(/'[^']*'|"[^"]*"|`[^`]*`/g, '');
+      for (const nome of daClosure) {
+        if (nomesDeModulo.has(nome)) continue;
+        if (new RegExp('(^|[^\\w$.])' + nome + '\\s*\\(').test(linha)) {
+          foraDeEscopo.push({ arquivo, dono, nome, linha: i + 1 });
+        }
+      }
+    }
+  }
+}
+if (foraDeEscopo.length) {
+  console.log('\nFunção de módulo chamando nome que só existe dentro da closure:');
+  for (const f of foraDeEscopo) {
+    console.log(`   ${f.arquivo}:${f.linha}  ${f.dono}() chama ${f.nome}() — ReferenceError em produção`);
+  }
+  problemas += foraDeEscopo.length;
+}
+
 console.log(
   problemas
-    ? `\n=== ${problemas} problema(s): chamada sem declaração ou opção sem ramo ===`
-    : `\n=== ${arquivos.length} arquivo(s), toda chamada declarada e toda opção com ramo ===`
+    ? `\n=== ${problemas} problema(s): chamada sem declaração, opção sem ramo ou nome fora de escopo ===`
+    : `\n=== ${arquivos.length} arquivo(s), toda chamada declarada, toda opção com ramo e nenhum nome fora de escopo ===`
 );
 process.exit(problemas ? 1 : 0);

@@ -2153,6 +2153,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **FUNCAO DE MODULO NAO ENXERGA NOME DA CLOSURE, E AGORA O VERIFICADOR PEGA** (25/09/2026, *"iniciei
+  o automatizado mas nao esta fazendo nada"*, com o Andamento dizendo `perfilAtivo is not defined`).
+  `carregarModelosPadrao` e declarada na COLUNA 0 de `panel.js`, fora da closure do painel, e a
+  v3.123 a fez chamar `perfilAtivo()` — **ReferenceError em todo contato que chega por anuncio**. E a
+  mesma classe do `dom.numeroDaConversa()` chamado do painel, registrada 24 horas antes e no mesmo
+  arquivo. **O conserto ja estava do lado: `carregarAnuncios(perfil)` recebe o perfil por ARGUMENTO,
+  exatamente por isso.**
+  **E o verificador passou a pegar, com a passada ESTREITA que e a unica que funciona:** compara o
+  corpo das funcoes declaradas na coluna 0 contra os nomes declarados INDENTADOS — os dois escopos
+  que nao se enxergam. Medido nos dois sentidos: acusa 2 no commit que quebrou (com dono e linha
+  certos), cala no conserto, **0 falsos positivos em 44 arquivos**. **Isto NAO desmente a tentativa
+  de 03/09**, que era larga (variavel fora de escopo em qualquer lugar) e deu 33 falsos. Cuidado ao
+  mexer: o alcance de uma funcao de modulo termina no `}` da coluna 0 **ou na proxima funcao de
+  modulo, o que vier antes** — sem isso ela engole a seguinte e acusa com o dono errado.
+  **E o VEREDITO da rodada passou a dizer POR QUE nada saiu.** Ele contava (*"0 enviado(s), 37
+  pulado(s)"*) e nao dizia o motivo, entao rodada que pula a fila inteira pela mesma razao (a
+  barreira do canal) parecia rodada que funcionou. So aparece quando NADA foi enviado e 80% dos
+  pulados tem o mesmo motivo: com envio no meio, pular e o normal e a linha viraria alarme que toca
+  sempre. **Ao escrever resumo de laco, pergunte se ele distingue "fez o trabalho" de "nao pode
+  fazer nada".**
 - **A CAIXA QUE CONCLUI EM PRIMEIRO LUGAR E A QUE ENTERRA A PERGUNTA** (25/09/2026, o Nelson:
   etiqueta ENGAJADO, perguntou *"Quais planos mais urgente?"* as 10:18 e a rodada concluiu as 12:26 —
   *"ignorou a pergunta e concluiu, tive que retornar e responder"*). **Medido: os detectores

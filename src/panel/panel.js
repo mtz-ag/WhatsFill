@@ -2547,7 +2547,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         modelo = achado.modelo;
       } else {
         const daVez = anunciosLib.padraoDaVez(
-          await carregarModelosPadrao(),
+          await carregarModelosPadrao(perfilAtivo()),
           Number(await store.get('modeloPadraoIndex')) || 0
         );
         if (daVez) {
@@ -5212,6 +5212,37 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
     }
 
+    /**
+     * **O candidato logado tem com o que trabalhar?** — 25/09/2026, o mesmo relato do *"não está
+     * fazendo nada"*.
+     *
+     * Desde a v3.123 a mensagem do momento, os modelos e o link do grupo são de cada candidato, e
+     * **o candidato novo nasce com tudo vazio, de propósito** (o texto do outro saindo pelo número
+     * dele é o defeito que aquela separação existe para impedir). O efeito colateral é este: a
+     * rodada percorre a fila inteira sem ter o que mandar, e por fora isso é indistinguível de uma
+     * rodada quebrada.
+     *
+     * Dito ANTES da fila e não depois, porque depois já custou uma fila inteira de aberturas na
+     * plataforma — e cada abertura é rede, que é o que derruba a API.
+     *
+     * **Avisa e SEGUE**: a rodada ainda conclui, reabre e etiqueta sem mandar nada, e barrar aqui
+     * transformaria um campo em branco em rodada travada. É a mesma escolha da barreira do canal.
+     */
+    if (perfilAtivo() !== perfisLib.PERFIL_PADRAO) {
+      const faltando = [];
+      if (!String(state.auto.cfg.mensagemMomento || '').trim()) faltando.push('a mensagem do momento');
+      if (!state.templates.length) faltando.push('as respostas prontas');
+      if (!String(state.auto.cfg.templateId || '').trim()) faltando.push('o modelo aprovado da rodada');
+      if (faltando.length) {
+        registrarNaRodada(
+          'rodada',
+          'pulado',
+          `Você está como ${state.perfil?.nome}, e este candidato ainda está sem ${faltando.join(', sem ')} ` +
+            '— o que faltar não sai. Preencha na aba Config/Automatizado com ele logado.'
+        );
+      }
+    }
+
     let resultado = { enviados: 0, interrompida: '', visitados: 0, restaram: 0 };
     let aindaTocando = false;
     try {
@@ -5253,6 +5284,34 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * o painel já sabe seria trabalho a mais para a mesma informação.
      */
     const semRegra = state.auto.semRegra.size;
+
+    /**
+     * **POR QUE nada saiu** — 25/09/2026, relato dele: *"iniciei o automatizado mas não está fazendo
+     * nada"*, logado como o candidato novo.
+     *
+     * O veredito contava (*"0 enviado(s), 37 pulado(s)"*) e **não dizia o motivo**, então uma rodada
+     * que pulou a fila inteira pela MESMA razão — a barreira do canal, o candidato sem mensagem do
+     * momento — parecia uma rodada que funcionou. O motivo existia, uma linha por contato, no
+     * Andamento: cem linhas iguais que ninguém lê uma a uma.
+     *
+     * A conta é do motivo DOMINANTE entre os pulados, e só aparece quando **nada foi enviado**: com
+     * envio no meio, pular é o funcionamento normal e a linha viraria alarme que toca sempre.
+     */
+    const motivoDominante = (() => {
+      if (conta('enviado') || conta('concluido')) return '';
+      const pulados = state.auto.log.filter((l) => l.resultado === 'pulado' && l.motivo);
+      if (pulados.length < 2) return '';
+      const porMotivo = new Map();
+      for (const l of pulados) {
+        // O motivo carrega o nome do candidato e do contato: a CABEÇA dele é o que se repete.
+        const chave = String(l.motivo).split(/ — |, /)[0].slice(0, 90);
+        porMotivo.set(chave, (porMotivo.get(chave) || 0) + 1);
+      }
+      const [chave, quantos] = [...porMotivo.entries()].sort((a, b) => b[1] - a[1])[0];
+      if (quantos < pulados.length * 0.8) return '';
+      return ` NADA foi enviado, e ${quantos} dos ${pulados.length} pulados foi pelo mesmo motivo: ${chave}.`;
+    })();
+
     const resumo =
       `Rodada encerrada: ${conta('enviado')} enviado(s), ${conta('pulado')} pulado(s)` +
       (reabertos ? `, ${reabertos} reaberto(s) em "Meus"` : '') +
@@ -5301,9 +5360,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
     }
 
-    registrarNaRodada('rodada', 'fim', `${resumo}${sobra} ${motivo} ${audio}`);
+    registrarNaRodada('rodada', 'fim', `${resumo}${motivoDominante}${sobra} ${motivo} ${audio}`);
 
-    setStatus(`${resumo}${sobra} ${motivo}`, resultado.interrompida || sobra ? 'err' : 'ok');
+    setStatus(
+      `${resumo}${motivoDominante}${sobra} ${motivo}`,
+      resultado.interrompida || sobra || motivoDominante ? 'err' : 'ok'
+    );
 
     // A rodada trocou de atendimento várias vezes com o observador desligado: resincroniza o
     // painel com o que ficou aberto na tela.
@@ -5865,7 +5927,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * nomeou. Ela clicou pedindo aquilo, e aquilo é conteúdo de verdade, não recibo.
        */
       const modelosPadrao =
-        veioDeUmAnuncio && !temEtiquetaDeCidade && !jaRespondemosAntes ? await carregarModelosPadrao() : [];
+        veioDeUmAnuncio && !temEtiquetaDeCidade && !jaRespondemosAntes ? await carregarModelosPadrao(perfilAtivo()) : [];
       // `anuncioSemResposta`, e não `anuncio`: o modelo do anúncio é a resposta AO CLIQUE, e um
       // clique já respondido não pede nada. Ver o bloco em `load()`.
       const escolhaDeModelo = anunciosLib.modeloDoAnuncio(
@@ -13642,11 +13704,21 @@ async function carregarAnuncios(perfil = null) {
  * perde nada, e não precisou de migração com marca em `migracoes` — a leitura resolve, porque aqui
  * o dado antigo é só o primeiro item do novo.
  */
-async function carregarModelosPadrao() {
-  const lista = await perfisLib.ler('modelosPadraoAnuncio', perfilAtivo(), []);
+/**
+ * **O perfil vem por ARGUMENTO, e isso não é estilo: esta função é de MÓDULO.**
+ *
+ * `perfilAtivo()` mora dentro da closure do painel, e chamá-la daqui é `ReferenceError` em TODO
+ * contato — foi o que a v3.123 fez, e o relato dele foi *"iniciei o automatizado mas não está
+ * fazendo nada"*. É a mesma armadilha do `dom.numeroDaConversa()` chamado do painel (25/09), e o
+ * verificador de referências não pega: ele não vê escopo.
+ *
+ * `carregarAnuncios(perfil)`, logo acima, já recebia o perfil por argumento pela mesma razão.
+ */
+async function carregarModelosPadrao(perfil = null) {
+  const lista = await perfisLib.ler('modelosPadraoAnuncio', perfil, []);
   if (Array.isArray(lista) && lista.length) return lista.map((m) => String(m || '').trim()).filter(Boolean);
 
-  const unico = String((await perfisLib.ler('modeloPadraoAnuncio', perfilAtivo(), '')) || '').trim();
+  const unico = String((await perfisLib.ler('modeloPadraoAnuncio', perfil, '')) || '').trim();
   return unico ? [unico] : [];
 }
 

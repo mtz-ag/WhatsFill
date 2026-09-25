@@ -1,3 +1,50 @@
+## 2026-09-25 — v3.124.0 — `perfilAtivo is not defined`: a rodada quebrava em todo contato
+
+**Relato dele:** *"iniciei o automatizado mas não está fazendo nada"*, no perfil do Pedri. **O print
+respondeu:** o Andamento mostrava `Iurdes de fatima Aquino F — perfilAtivo is not defined`, e
+*"Rodada encerrada: 0 enviado(s), 0 pulado(s)"*.
+
+**Defeito meu, da v3.123.** `carregarModelosPadrao` é função de **MÓDULO** — declarada na coluna 0,
+fora da closure do painel — e eu a fiz chamar `perfilAtivo()`, que só existe **dentro** da closure.
+`ReferenceError` em todo contato que chega por anúncio, ou seja, quase todos.
+
+**É a mesma classe do `dom.numeroDaConversa()` chamado do painel**, registrada 24 horas antes, no
+mesmo arquivo. A correção é a que já estava do lado: `carregarAnuncios(perfil)` recebe o perfil por
+**argumento**, exatamente por isso — e agora `carregarModelosPadrao(perfil)` também.
+
+**E o verificador não pegava, o que é o que torna isso repetível.** Está registrado desde 03/09 que
+ele não vê escopo: eu tentei uma passada LARGA naquele dia, deu **33 falsos positivos**, e o corte
+que a calou não pegava o caso real. Hoje entrou uma passada **estreita**, que é a única forma que
+funciona: compara o corpo das funções declaradas na **coluna 0** contra os nomes declarados
+**indentados** — os dois escopos que não se enxergam.
+
+**Medido nos dois sentidos, que é o que dá confiança nela:**
+
+| | |
+|---|---|
+| contra o commit que quebrou | **acusa 2**, com arquivo, linha e dono certos |
+| contra o conserto | **cala** |
+| falsos positivos em 44 arquivos | **0** |
+
+Ela pegou também um defeito meu na própria varredura: o alcance de uma função de módulo ia até o
+próximo `}` na coluna 0 e **engolia a função seguinte**, então a acusação saía com o dono errado. O
+fim passou a ser o `}` **ou** a próxima função de módulo, o que vier antes.
+
+**Duas coisas entraram junto, porque o mesmo relato as pediu:**
+
+**1. O veredito da rodada passou a dizer POR QUE nada saiu.** Ele contava (*"0 enviado(s), 37
+pulado(s)"*) e não dizia o motivo — uma rodada que pula a fila inteira pela MESMA razão (a barreira
+do canal, por exemplo) parecia uma rodada que funcionou. Agora, **quando nada foi enviado** e 80% dos
+pulados têm o mesmo motivo, ele vai na linha de encerramento e a barra fica vermelha. Com envio no
+meio a linha não aparece: pular é o funcionamento normal, e alarme que toca sempre se aprende a
+ignorar.
+
+**2. A rodada avisa quando o candidato logado está VAZIO.** Desde a v3.123 a mensagem do momento, os
+modelos e o link do grupo são de cada candidato, e o candidato novo nasce sem nada **de propósito**.
+O efeito colateral é este: a rodada percorre a fila sem ter o que mandar, e por fora isso é igual a
+uma rodada quebrada. O aviso sai **antes** da fila — depois já custou uma fila inteira de aberturas
+na plataforma, que é rede — e **avisa sem barrar**, porque campo em branco não pode virar rodada
+travada. É a mesma escolha da barreira do canal.
 ## 2026-09-25 — v3.123.0 — a mensagem do momento (e mais treze coisas) era de todo mundo
 
 **Relato dele:** *"ao trocar o perfil as mensagens não ficam salvas para cada perfil, acabei de
