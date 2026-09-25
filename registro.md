@@ -1,3 +1,40 @@
+## 2026-09-25 — v3.119.0 — a tarja do canal não envelhecia com o número que ele acabara de cadastrar
+
+**Print dele:** a tarja vermelha dizia *"o número deste atendimento não está em nenhum candidato"* —
+com **(51) 98051-0122 já escrito no campo "Números deste candidato"**, e o atendimento sendo
+justamente desse número.
+
+**Medido com os dados da própria print:**
+
+| | resultado |
+|---|---|
+| com o número lido da tela | **`meu`** — nada acende |
+| com a leitura do número VAZIA | **`desconhecido`** — a tarja acende |
+
+Ou seja: **a conta está certa; o defeito é QUANDO ela é feita.** Ela rodava uma vez, no `load()`, e
+nada a refazia — salvar o número na Config redesenhava a tela e deixava a tarja da leitura anterior.
+
+**É a família do aviso que não envelhece com o que já foi feito** (20/09, o *"falta aprender o envio
+de imagem"* que continuava na tela com o envio já aprendido) — e o pior caso dela, porque o aviso
+continuava lá **logo depois de ele fazer exatamente o que o aviso mandava**.
+
+**Três consertos, e o terceiro é o que evita a próxima sessão de diagnóstico:**
+
+1. **A conta virou função única** (`recalcularCanalDoAtendimento`), chamada no `load()`, ao **trocar
+   de candidato** e ao **salvar o cadastro**. Antes, o `entrarComo` remendava o objeto à mão — duas
+   contas para a mesma pergunta, e a que ninguém olha é a que barra a rodada.
+2. **O número lido da tela virou estado** (`state.numeroDoCanal`), para a conta poder ser refeita sem
+   voltar ao DOM.
+3. **A tela passou a DIZER o que foi comparado** — o canal e o número lido, na tarja e no cartão da
+   Config. Sem isso, *"o número não está cadastrado"* e *"eu não consegui ler o número na tela"*
+   parecem a mesma coisa, e é impossível saber qual é sem medir. O cartão agora também diz que
+   **somar o CANAL é o caminho seguro**: ele vem da API e não depende de ler a tela.
+
+**A segunda causa possível continua de pé e agora é visível.** Se `dom.numeroDaConversa()` falhar
+(layout da plataforma), a tarja dirá *"NÃO consegui ler o número na tela desta conversa"* em vez de
+acusar o cadastro. Com o canal somado pelo botão, a leitura da tela deixa de importar — o
+`channelId` vem da API.
+
 ## 2026-09-25 — v3.118.0 — número que não está em candidato nenhum agora BARRA a rodada
 
 **Relato dele**, com a print de um atendimento na *Instância 095ee1* — o anúncio era

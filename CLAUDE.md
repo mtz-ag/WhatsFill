@@ -2776,6 +2776,15 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   na Config viraria rodada travada, e a fila tem os dois numeros misturados), e as duas rodadas
   passam por ali porque `processarNovo` delega. **Ao por aviso de tela para proteger a rodada,
   pergunte se aquela tela esta visivel durante a rodada.**
+  **E A CONTA DO CANAL TEM DE SER REFEITA QUANDO O CADASTRO MUDA** (25/09/2026, no mesmo dia): a
+  tarja dizia *"o numero nao esta em nenhum candidato"* com o numero JA no campo. **Medido: com o
+  numero lido a conta da `meu`; sem ele, `desconhecido`** — a conta estava certa, o defeito era
+  QUANDO. Ela rodava uma vez no `load()` e salvar o cadastro so redesenhava a tela. E o **aviso que
+  nao envelhece com o que ja foi feito** (20/09) no pior caso: continuava la logo depois de ele
+  fazer o que o aviso mandava. Hoje e `recalcularCanalDoAtendimento`, uma funcao so, chamada no
+  `load()`, ao trocar de candidato e ao SALVAR — e a tela **diz o que comparou** (o canal e o numero
+  lido), porque *"nao esta cadastrado"* e *"nao consegui ler a tela"* pareciam a mesma coisa. **Somar
+  o CANAL e o caminho seguro: ele vem da API e nao depende de ler a tela.**
   **O login nao se zera na troca de contato** (login nao cai quando se abre outra conversa); o que
   se zera e a TARJA, que e uma afirmacao sobre o contato aberto.
   **Trocar de candidato RECARREGA na hora** — esperar o proximo `load()` deixaria a tela com as

@@ -209,6 +209,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * esteja na extensão?"*. São quatro estados, e a primeira versão só sabia dois.
      */
     canalDoAtendimento: { estado: 'quieto', dono: null },
+    /**
+     * **O número da instância lido da TELA**, guardado para a conta do canal poder ser refeita sem
+     * voltar ao DOM — e para a tela poder DIZER o que comparou. Vazio quer dizer que a leitura
+     * falhou, e isso precisa aparecer: é a diferença entre "o número não está cadastrado" e "eu não
+     * consegui ler o número".
+     */
+    numeroDoCanal: '',
     /** Expressões que identificam a mensagem gerada pelo anúncio (Config). */
     padroesDeAnuncio: [],
     /** O que NÓS mandamos nesta conversa — para saber o que já foi, mesmo fora do painel. */
@@ -580,6 +587,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * tarja falar de uma conversa que não está mais na tela — a armadilha do `state.anuncio`.
      */
     state.canalDoAtendimento = { estado: 'quieto', dono: null };
+    state.numeroDoCanal = '';
     state.lidoPelaIA = null;
     state.materialPelaRegra = null;
     state.anuncioSemResposta = null;
@@ -648,11 +656,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * chamada direta seria `ReferenceError` no meio do `load()` de todo contato. Falhar aqui não
        * pode custar o atendimento: sem o número, sobra o `channelId`.
        */
-      let numeroDoCanal = '';
       try {
-        numeroDoCanal = (await page.numeroDoCanal()) || '';
+        state.numeroDoCanal = (await page.numeroDoCanal()) || '';
       } catch {
-        numeroDoCanal = '';
+        state.numeroDoCanal = '';
       }
       /**
        * **O canal só AVISA** (decisão dele, 25/09/2026, o modelo de login): quem escolhe o
@@ -663,12 +670,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * atendimento de número não cadastrado, que é quase todos. Alarme que toca sempre se aprende
        * a ignorar.
        */
-      state.canalDoAtendimento = perfisLib.situacaoDoCanal(
-        state.perfis,
-        state.session?.channelId,
-        numeroDoCanal,
-        state.perfil?.id
-      );
+      recalcularCanalDoAtendimento();
 
       const [contact, classify] = await Promise.all([
         api.getContact(state.session.contactId),
@@ -1597,6 +1599,46 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /**
+   * **A conta do canal, num lugar só — e refeita sempre que qualquer das pontas muda.**
+   *
+   * Print dele (25/09/2026): a tarja dizia *"o número deste atendimento não está em nenhum
+   * candidato"* com **(51) 98051-0122 já cadastrado** e o atendimento sendo desse número. Medido:
+   * com o número lido, a conta dá `meu`; **sem ele, dá `desconhecido`** — então o defeito estava em
+   * QUANDO a conta é feita, não em como.
+   *
+   * Ela era feita uma vez, no `load()`, e nada a refazia: salvar o número na Config redesenhava a
+   * tela e deixava a tarja da leitura anterior. É a família do **aviso que não envelhece com o que
+   * já foi feito** (20/09) — e o pior tipo, porque ele acabara de fazer exatamente o que o aviso
+   * mandava.
+   *
+   * Agora é uma função só, chamada no `load()`, ao trocar de candidato e ao salvar o cadastro.
+   */
+  function recalcularCanalDoAtendimento() {
+    state.canalDoAtendimento = perfisLib.situacaoDoCanal(
+      state.perfis,
+      state.session?.channelId,
+      state.numeroDoCanal,
+      state.perfil?.id
+    );
+  }
+
+  /**
+   * **O que a conta do canal COMPAROU** — para a tela dizer, em vez de ele adivinhar.
+   *
+   * O `channelId` é um id opaco e o número vem de LER A TELA, que pode falhar quando a plataforma
+   * mudar o layout — e aí a tarja acusa "número não cadastrado" sobre um número que está lá. Sem
+   * esta linha, o próximo diagnóstico desse caso é outra sessão inteira.
+   */
+  function oQueComparei() {
+    const canal = String(state.session?.channelId || '').trim();
+    const numero = String(state.numeroDoCanal || '').trim();
+    return [
+      canal ? `canal ${canal}` : 'sem canal na sessão',
+      numero ? `número lido da tela: ${numero}` : 'NÃO consegui ler o número na tela desta conversa',
+    ].join(' · ');
+  }
+
+  /**
    * **O LOGIN: como quem você está entrando** — correção dele (25/09/2026), *"eu queria algo como
    * um perfil de login no Windows, aparenta estar tudo misturado"*.
    *
@@ -1638,6 +1680,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           h('div', {},
             `Atenção: este atendimento é do número de ${canal.dono.nome}, e você está como ${state.perfil.nome}. ` +
               'A rodada não vai tratar este contato — o que sair daqui vai com o nome do candidato errado.'),
+          h('div', { class: 'wf-origin', 'data-fica': '1' }, oQueComparei()),
           trocar,
         ])
       );
@@ -1655,10 +1698,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      */
     if (canal.estado === 'desconhecido') {
       onde.append(
-        h('div', { class: 'wf-block wf-err-block', 'data-fica': '1' },
-          `Atenção: o número deste atendimento não está em nenhum candidato, e você está como ` +
-            `${state.perfil.nome}. A rodada não vai tratar este contato — some o número ao candidato ` +
-            'certo na aba Config.')
+        h('div', { class: 'wf-block wf-err-block', 'data-fica': '1' }, [
+          h('div', {},
+            'Atenção: o número deste atendimento não está em nenhum candidato, e você está como ' +
+              `${state.perfil.nome}. A rodada não vai tratar este contato — some o número ao ` +
+              'candidato certo na aba Config.'),
+          h('div', { class: 'wf-origin', 'data-fica': '1' }, oQueComparei()),
+        ])
       );
     }
   }
@@ -1680,20 +1726,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       alvo.id === perfisLib.PERFIL_PADRAO
         ? cfg
         : { ...cfg, regras: String((await perfisLib.ler('iaRegras', alvo.id, '')) || '') };
-    /**
-     * O aviso é sobre o contato aberto, e quem o calcula é o `load()`. Trocando de candidato ele
-     * deixa de valer na hora: a tarja dizia "você está como o outro", e agora você não está mais.
-     *
-     * **Recalcular com a mesma função**, em vez de mexer no objeto à mão: duas contas para a mesma
-     * pergunta divergem na primeira mudança, e a que ninguém olha é a que barra a rodada.
-     */
-    const dono = state.canalDoAtendimento?.dono;
-    state.canalDoAtendimento =
-      state.canalDoAtendimento?.estado === 'desconhecido'
-        ? state.canalDoAtendimento
-        : dono
-          ? { estado: dono.id === alvo.id ? 'meu' : 'outro', dono }
-          : { estado: 'quieto', dono: null };
+    // O aviso é sobre o contato aberto e muda com o login: a tarja dizia "você está como o outro",
+    // e agora você não está mais. Pela função ÚNICA, nunca remendando o objeto à mão.
+    recalcularCanalDoAtendimento();
     renderAll();
     setStatus(`Você está como ${alvo.nome}. As respostas, os anúncios e o dossiê são dele.`, 'ok');
   }
@@ -12213,6 +12248,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       await store.set('perfis', limpa);
       state.perfis = limpa;
       state.perfil = perfisLib.porId(limpa, perfil.id);
+      /**
+       * **Refazer a conta do canal AQUI era o que faltava** — print dele de 25/09/2026, com a tarja
+       * dizendo *"não está em nenhum candidato"* logo depois de ele cadastrar o número. A conta era
+       * feita uma vez, no `load()`, e salvar o cadastro só redesenhava a tela: o aviso continuava
+       * com a resposta de antes, **justo depois de ele fazer o que o aviso mandava**.
+       */
+      recalcularCanalDoAtendimento();
       renderAll();
     };
 
@@ -12241,7 +12283,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (canalAgora) {
       const usar = h('button', { class: 'wf-btn wf-mini', type: 'button' }, 'Somar o canal deste atendimento a este candidato');
       usar.addEventListener('click', () => salvar({ canais: [...new Set([...perfil.canais, canalAgora])] }));
-      card.append(h('div', { class: 'wf-preview', 'data-fica': '1' }, `Atendimento aberto: canal ${canalAgora}`), usar);
+      /**
+       * **Diz o que a conta comparou, e não só o id do canal.** Sem o número lido, "não está
+       * cadastrado" e "não consegui ler a tela" parecem a mesma coisa — e foi exatamente isso que
+       * custou o diagnóstico da print de 25/09.
+       */
+      card.append(
+        h('div', { class: 'wf-preview', 'data-fica': '1' }, `Atendimento aberto — ${oQueComparei()}`),
+        h('div', { class: 'wf-origin' },
+          'Somar o CANAL é o caminho seguro: ele vem da API e não depende de ler a tela. O número ' +
+            'serve para você reconhecer de qual instância é.'),
+        usar
+      );
     } else {
       card.append(h('div', { class: 'wf-hint' }, 'Abra um atendimento para copiar o canal dele para cá.'));
     }
