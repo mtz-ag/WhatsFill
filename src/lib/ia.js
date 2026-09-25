@@ -787,7 +787,7 @@ export function montarSistemaMaterial({ regras = '' } = {}) {
     'NÃO é "material":',
     '- conteúdo DIGITAL: "quero receber o material" de um anúncio, vídeo, PDF, arte ou card para',
     '  compartilhar no grupo ou nas redes;',
-    '- roupa (camiseta, boné, colete) e qualquer outro item (bandeira, placa, banner): não',
+    '- roupa (camiseta, boné, colete) e qualquer outro item (placa, banner, faixa): não',
     '  fornecemos — a equipe do material não tem o que entregar;',
     '- bem que teria de ser comprado (remédio, cadeira de rodas, cesta), dinheiro ou emprego;',
     '- endereço citado por outro motivo: reclamação de rua, onde mora, local de evento;',
@@ -1276,7 +1276,7 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * quatro regras: mandar "não invente" sem mostrar a frase inventada não muda o que o modelo faz.
      */
     '   E NUNCA diga que temos o que não está na lista do material, logo abaixo. Proibido escrever:',
-    '   "temos bandeiras disponíveis", "temos camisetas", "o boné está disponível".',
+    '   "temos placas disponíveis", "temos camisetas", "o boné está disponível".',
     /**
      * **A regra dele para MATERIAL, ditada em 07/09/2026**, logo depois da print do Lucas Mendes:
      * *"quando for relacionado a material nunca confirmar nada; nesse caso era específico como
@@ -1363,10 +1363,12 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * repassar um adesivo que não existe cria a expectativa que a lei trata.
      */
     '   **O QUE TEMOS PARA ENVIAR É POUCO, E ESTÁ ESCRITO AQUI: FOLHETO (santinho, panfleto — o mesmo',
-    '   papel), ADESIVO e a COLINHA com os números.** Nada além disso.',
-    '   Qualquer outro item de campanha — bandeira, placa, banner, faixa, cartaz, bottom,',
-    '   chaveiro — NÃO temos: diga isso em UMA frase gentil e que o que TEMOS são folhetos e adesivos.',
-    '   (Escreva "o que temos são folhetos e adesivos", e não "consigo te mandar": isso é prometer entrega.)',
+    '   papel), ADESIVO, BANDEIRA e a COLINHA com os números.** Nada além disso.',
+    '   Qualquer outro item de campanha — placa, banner, faixa, cartaz, bottom,',
+    '   chaveiro — NÃO temos: diga isso em UMA frase gentil e que o que TEMOS são folhetos, adesivos',
+    '   e bandeiras.',
+    '   (Escreva "o que temos são folhetos, adesivos e bandeiras", e não "consigo te mandar": isso é',
+    '   prometer entrega.)',
     '   Sem "vou verificar", sem repassar o item que não existe e sem sugerir onde comprar.',
     '   **ROUPA NÃO É MATERIAL, E NÃO FORNECEMOS NENHUMA:** camiseta, camisa, boné, colete, blusa,',
     '   uniforme ou qualquer peça de vestir, com ou sem a marca da campanha. A lei eleitoral proíbe a',
@@ -1388,7 +1390,7 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * responsável, e ela entra em contato. O que mudou em 22/09 é QUAL item percorre esse caminho — só
      * o folheto e a colinha impressa.
      */
-    '   (a) ela pediu FOLHETO, santinho, panfleto, ADESIVO ou a colinha IMPRESSA: não pergunte de novo o que',
+    '   (a) ela pediu FOLHETO, santinho, panfleto, ADESIVO, BANDEIRA ou a colinha IMPRESSA: não pergunte de novo o que',
     '       ela quer. PEÇA O ENDEREÇO COMPLETO e diga que, com ele, o pedido vai para a',
     '       EQUIPE RESPONSÁVEL PELOS MATERIAIS, que entra em contato sobre a entrega.',
     '       **A única promessa que você pode fazer é a de REPASSAR.** Nunca diga que ela vai receber,',
@@ -2988,7 +2990,7 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
    * receber o material"* é conteúdo DIGITAL — a frase mais comum que chega, e que a rodada
    * responde com modelo. Avisar nela seria alarme em cima do caso normal.
    */
-  afirmouTer: 'afirma que temos o que não temos (bandeira, boné, camiseta) — só há folheto, adesivo e colinha',
+  afirmouTer: 'afirma que temos o que não temos (placa, boné, camiseta) — só há folheto, adesivo, bandeira e colinha',
   /**
    * **A IA disse que o áudio falhou e pediu para reenviar — e nós tínhamos ouvido tudo.**
    *
@@ -3554,11 +3556,20 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
    * **Só o que NÃO temos** (22/09/2026): folheto, santinho, panfleto, folder e adesivo saíram da lista,
    * porque agora ele disse que existem — "o que temos são folhetos e adesivos" é o texto CERTO.
    *
+   * **E a BANDEIRA saiu em 25/09/2026, a pedido dele** (*"inclua bandeiras na lista que de material
+   * que temos"*). **Medido antes de mexer: a trava barrava a frase certa** — *"o que temos são
+   * folhetos, adesivos e bandeiras"* parava a rodada com o aviso de que afirmamos ter o que não
+   * temos. Mudar o prompt sem mudar a lista aqui seria a correção dele de 12/09 ao contrário: *"eu
+   * quero que mude o que a IA diz, não parar todo tempo para eu revisar"*.
+   *
+   * **Ao tirar um item da lista do que NÃO temos, meça a trava contra a frase que a regra nova
+   * produz** — é a mesma lição da colinha (09/09) e do endereço (12/09).
+   *
    * **E `String.raw` é obrigatório aqui**: em template literal comum `\s` vira `s` e `\p{L}` vira
    * `p{L}`, e a primeira expressão era `temoss+...` — nunca casou desde que nasceu (07/09). Quem
    * barrava o caso do Lucas era só a segunda, a do "disponível".
    */
-  const ITEM_FISICO = 'camiseta|bon[ée]|bandeira|chaveiro|brinde|cartaz|faixa|colete|caneta|placa|banner|bottom';
+  const ITEM_FISICO = 'camiseta|bon[ée]|chaveiro|brinde|cartaz|faixa|colete|caneta|placa|banner|bottom';
   const AFIRMOU_TER = [
     new RegExp(String.raw`(^|[^\p{L}])(temos|tenho|dispomos\s+de|disponibilizamos)\s+[^.!?]{0,40}?(${ITEM_FISICO})`, 'iu'),
     new RegExp(String.raw`(${ITEM_FISICO})[^.!?]{0,30}(dispon[íi]ve(l|is)|em\s+estoque)`, 'iu'),

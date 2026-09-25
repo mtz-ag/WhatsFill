@@ -2741,6 +2741,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **O ESTOQUE DO MATERIAL VIVE EM TRES LUGARES, E A TRAVA E UM DELES** (25/09/2026, *"inclua
+  bandeiras na lista que de material que temos"*). **Medido antes de mexer: a trava barrava a frase
+  certa** — *"o que temos sao folhetos, adesivos e bandeiras"* parava a rodada, porque `bandeira`
+  estava em `ITEM_FISICO` dentro de `AVISOS_QUE_IMPEDEM_ENVIO.afirmouTer`. Mudar so o prompt seria a
+  correcao dele de 12/09 ao contrario (*"eu quero que mude o que a IA diz, nao parar todo tempo para
+  eu revisar"*). Os tres sao a **secao 25 do padrao dele**, a **regra 12 do prompt** e a **trava**, e
+  ha teste exigindo que concordem. **Ao mexer no que TEMOS, meca a trava contra a frase que a regra
+  nova produz, e confira que ela continua barrando alguma coisa** — bone, camiseta e placa ficam,
+  porque trava que nao barra nada e decorativa (art. 39, § 6o da Lei 9.504/97). O DETECTOR nao mudou:
+  `cortesia.OBJETO_DE_MATERIAL` sempre teve bandeira — a contradicao era entre a linha do ENDERECO
+  (que ja mandava pedir o endereco de quem pede bandeira) e a regra 12 (que mandava negar).
 - **XINGAR O ADVERSARIO E APOIO, E APOIO NAO SE CORRIGE** (25/09/2026, print de um apoiador que
   escreveu *"tirar fora esta cambada de esquerdista Ladroes"* e recebeu *"prefiro que esse debate
   seja feito com responsabilidade, sem generalizar acusacoes"* — *"quis dar licao de moral pra um

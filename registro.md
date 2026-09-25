@@ -1,3 +1,42 @@
+## 2026-09-25 — v3.122.0 — a bandeira entrou no estoque, e a trava barrava a frase certa
+
+**Pedido dele:** *"inclua bandeiras na lista que de material que temos"*.
+
+**Medido ANTES de mexer, e é isto que faz a mudança ser de quatro lugares e não de um:**
+
+| frase | antes |
+|---|---|
+| *"O que temos são folhetos, adesivos e bandeiras."* | **BARRADA** |
+| *"Temos bandeiras e adesivos para enviar."* | **BARRADA** |
+| *"Não temos bandeira para enviar."* | passava |
+
+`AVISOS_QUE_IMPEDEM_ENVIO.afirmouTer` tinha `bandeira` dentro de `ITEM_FISICO`. Mudar só o prompt
+transformaria a regra nova em **rodada parada em todo caso de bandeira** — a correção dele de 12/09
+ao contrário: *"eu quero que mude o que a IA diz, não parar todo tempo para eu revisar"*.
+
+**O estoque vive em TRÊS lugares, e eles têm que dizer a mesma coisa:** a seção 25 do padrão dele, a
+regra 12 do prompt e a trava. Divergindo, o prompt manda dizer uma coisa e a trava barra o envio dela.
+Hoje há teste exigindo os três de acordo.
+
+**Mudou:**
+
+- **Seção 25 do padrão dele** — *"Material: folheto, adesivo, bandeira e colinha"*; saiu o *"nem
+  bandeira"* do "nada além disso". **Placa e roupa continuam fora** (a lei, e a decisão dele de 12/09);
+- **regra 12 do prompt** — a lista do que temos, a do que não temos, e o exemplo proibido, que era
+  justamente *"temos bandeiras disponíveis"* e virou *"temos placas disponíveis"*;
+- **o caminho (a)** — quem pede bandeira percorre o mesmo do folheto: peça o endereço, repasse à
+  equipe dos materiais, **sem prometer entrega**;
+- **`ITEM_FISICO`** — a bandeira saiu, e o texto do aviso passou a nomear a placa no lugar dela.
+
+**A metade que sustenta a trava está no teste:** ela continua barrando **boné**, **camiseta** e
+**placa**. Tirar um item não pode esvaziar a lista — trava que não barra nada é trava decorativa, e
+camiseta e boné estão no art. 39, § 6º da Lei 9.504/97.
+
+**Nada mudou no detector**, e isso foi medido: `cortesia.pedeMaterial` já reconhecia
+*"quero uma bandeira de vocês"* e *"me manda uma bandeirinha"* — bandeira sempre esteve na lista de
+permissão do que é material de campanha. **A contradição que existia era entre a rodada e o prompt:**
+a linha do ENDEREÇO já mandava pedir o endereço de quem pede bandeira, e a regra 12 mandava dizer que
+não temos. As duas agora concordam.
 ## 2026-09-25 — v3.121.0 — o engajado que PERGUNTA era concluído em silêncio
 
 **Print dele:** o Nelson tem a etiqueta **ENGAJADO**. Nós mandamos o link do grupo às **09:43**, ele

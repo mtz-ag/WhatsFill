@@ -1977,15 +1977,35 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   check(prompt.includes('FOLHETO (santinho, panfleto'), 'o que temos e o folheto');
   check(prompt.includes('e a COLINHA com os números'), 'e a colinha');
   check(prompt.includes('chaveiro — NÃO temos'), 'o resto nao temos, dito em uma frase');
-  /** "Inclua adesivo, e algo comum que e pedido" (22/09/2026). */
-  check(prompt.includes('ADESIVO e a COLINHA com os números'), 'adesivo esta entre o que temos');
+  /**
+   * **O ESTOQUE e uma lista so, e ela vive em TRES lugares que tem de concordar**: a secao 25 do
+   * padrao dele, a regra 12 do prompt e a trava `afirmouTer`. "Inclua adesivo" foi 22/09; "inclua
+   * bandeiras na lista que de material que temos" foi 25/09.
+   */
+  check(prompt.includes('ADESIVO, BANDEIRA e a COLINHA com os números'), 'adesivo e bandeira estao entre o que temos');
   const naoTemos = prompt.split('\n').find((l) => l.includes('Qualquer outro item de campanha')) || '';
-  check(!!naoTemos && !/adesivo/i.test(naoTemos), 'e saiu da lista do que NAO temos');
+  check(!!naoTemos && !/adesivo/i.test(naoTemos), 'adesivo saiu da lista do que NAO temos');
+  check(!!naoTemos && !/bandeira/i.test(naoTemos), 'e a bandeira saiu junto');
   const semTrava = (t) => rascunhoPodeSairSozinho(revisarRascunho(t, {}).avisos);
-  check(semTrava('Bandeira não temos, o que temos são folhetos e adesivos.'), 'a frase certa passa na trava');
-  check(semTrava('Temos adesivos sim, me passa seu endereço completo.'), '"temos adesivos" agora e verdade');
-  check(!semTrava('Temos bandeira sim.'), 'bandeira continua barrada — e a primeira expressao voltou a casar');
-  check(!semTrava('Temos bonés disponíveis.'), 'bone tambem');
+
+  /**
+   * **A trava tem de deixar passar a frase que a regra NOVA produz.** Medido em 25/09, antes de
+   * mexer: *"o que temos sao folhetos, adesivos e bandeiras"* era BARRADA -- mudar o prompt sem
+   * mudar `ITEM_FISICO` transformaria a regra nova em rodada parada, que e a correcao dele de 12/09
+   * ao contrario.
+   */
+  check(semTrava('O que temos são folhetos, adesivos e bandeiras.'), 'a frase certa de hoje passa na trava');
+  check(semTrava('Temos adesivos sim, me passa seu endereço completo.'), '"temos adesivos" e verdade');
+  check(semTrava('Temos bandeiras, me passa seu endereço completo.'), '"temos bandeiras" passou a ser verdade');
+
+  /**
+   * **E a metade que sustenta a trava: ela continua barrando o que a LEI proibe.** Camiseta e bone
+   * estao no art. 39, § 6o da Lei 9.504/97 -- tirar a bandeira nao pode esvaziar a lista, senao a
+   * trava vira decorativa e nada acusa.
+   */
+  check(!semTrava('Temos bonés disponíveis.'), 'bone continua barrado');
+  check(!semTrava('Temos camisetas sim.'), 'camiseta tambem');
+  check(!semTrava('Temos placas disponíveis.'), 'e a placa, que continua fora do estoque');
   check(!prompt.includes('Na dúvida entre recusar e repassar, REPASSE'), 'e a regra antiga do "repasse tudo" SAIU');
   check(!prompt.includes('VOCÊ NUNCA DIZ SE TEMOS OU NÃO'), 'e o "nunca diga se temos" tambem');
 
@@ -3078,6 +3098,32 @@ grupo('as quatro instrucoes dele entraram no padrao (19/09/2026)');
   const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
   check(/linha em branco depois de todo ponto final/.test(p.slice(p.indexOf('TAMANHO:'))),
     'e a linha em branco e citada tambem perto do pedido');
+}
+
+grupo('a bandeira entrou no estoque, e os TRES lugares concordam (25/09/2026)');
+{
+  /**
+   * Pedido dele: *"inclua bandeiras na lista que de material que temos"*.
+   *
+   * O estoque vive em tres lugares que tem de dizer a mesma coisa -- a secao 25 do padrao DELE, a
+   * regra 12 do prompt e a trava `afirmouTer`. Divergindo, o prompt manda dizer uma coisa e a trava
+   * barra o envio dela: foi o que a medicao pegou antes de mexer.
+   */
+  const pad = PADRAO_DE_ATENDIMENTO;
+  check(/## 25\. Material: folheto, adesivo, bandeira e colinha/.test(pad), 'a secao 25 do padrao dele lista a bandeira');
+  check(/ADESIVO, BANDEIRA e a/.test(pad.replace(/\s+/g, ' ')), 'e o corpo da secao tambem');
+  check(!/nem bandeira/i.test(pad), 'e a bandeira saiu do "nada alem disso"');
+  /** Roupa e placa continuam fora: a lei, e a decisao dele de 12/09. */
+  check(/nem placa, nem roupa/.test(pad.replace(/\s+/g, ' ')), 'placa e roupa continuam fora do estoque');
+
+  const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  const semTrava = (t) => rascunhoPodeSairSozinho(revisarRascunho(t, {}).avisos);
+  check(/ADESIVO, BANDEIRA e a COLINHA/.test(p), 'a regra 12 do prompt diz o mesmo');
+  check(semTrava('O que temos são folhetos, adesivos e bandeiras.'), 'e a trava deixa a frase passar');
+
+  /** Quem pede bandeira entra no caminho (a): endereco e repasse, como o folheto. */
+  check(/\(a\) ela pediu FOLHETO, santinho, panfleto, ADESIVO, BANDEIRA/.test(p),
+    'e ela percorre o caminho do folheto: endereco e repasse');
 }
 
 grupo('emoji cortado ao meio derruba a chamada (22/09/2026, as DUAS casas com 400)');
