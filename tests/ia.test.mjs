@@ -1887,11 +1887,20 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
 
   /**
    * **A POSICAO e a licao de 07/09**: regra longe do ponto em que o modelo comeca a escrever nao e
-   * cumprida. A 11 fecha o bloco das regras, no fim do prompt.
+   * cumprida. O que protege isso e o bloco das regras numeradas vir DEPOIS do padrao dele, que e o
+   * pedaco grande do prompt.
+   *
+   * **A assercao era de PROPORCAO (`> 80% das linhas`) e caiu sozinha pela QUARTA vez** — agora ao
+   * acrescentar a regra 17, sem nada mudar de lugar: a 11 passou de 80,2% para 79,5%. Proporcao
+   * decai a cada regra nova, e ja esta registrado duas vezes no `CLAUDE.md` que o invariante e
+   * ESTRUTURAL, nunca uma fracao do arquivo inteiro.
    */
   const linhas = prompt.split('\n');
   const onze = linhas.findIndex((l) => /^11\. NÃO SOMOS UM CANAL/.test(l));
-  check(onze > linhas.length * 0.8, `a regra 11 fica no fim do prompt (${onze} de ${linhas.length})`);
+  const fimDoPadrao = linhas.findIndex((l) => /item 22 do padrão/.test(l));
+  check(onze > 0, 'a regra 11 existe');
+  check(onze > linhas.findIndex((l) => /^1\. /.test(l)), 'ela esta dentro do bloco das regras numeradas');
+  check(fimDoPadrao < 0 || onze < fimDoPadrao, 'e o bloco inteiro vem antes do fecho, colado no ponto em que o modelo escreve');
 }
 
 /**
@@ -3318,6 +3327,32 @@ grupo('vaga para trabalhar: nega curto, sem contar o porque (25/09/2026)');
     agora,
   });
   check(/NÃO abra com saudação/.test(jaFalamos), 'tendo falado hoje, continua proibido abrir com saudacao');
+}
+
+grupo('xingar o adversario e apoio, e apoio nao se corrige (25/09/2026)');
+{
+  /**
+   * Print dele: um apoiador escreveu *"Vamos todos juntos a um so objetivo, remar juntinho... tirar
+   * fora esta cambada de esquerdista Ladroes"* e recebeu *"Respeito a sua indignacao, mas prefiro
+   * que esse debate seja feito com responsabilidade, sem generalizar acusacoes"*. Ele apagou: *"quis
+   * dar licao de moral pra um apoiador, nao e o que queremos"*.
+   *
+   * **Medido: nenhum detector viu apoio** — `soExpressaApoio` e `trouxeDenuncia` nulos. So
+   * `falouAlgoProprio` levou o caso a tecla 6, e a IA escreveu por conta propria, aplicando a
+   * postura de "nao entre em confronto" das secoes 7 e 14 do padrao — que falam de critica A NOS.
+   */
+  const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/17. XINGAR O ADVERSÁRIO É APOIO/.test(p), 'a regra 17 esta no sistema');
+  check(/NUNCA modere, nunca eduque/.test(p), 'e proibe moderar');
+  check(/sem generalizar/.test(p), 'com as frases do caso real escritas');
+
+  /**
+   * **A FRONTEIRA e o que torna a regra segura** (a licao de 09/09): sem ela, "nao corrija o
+   * apoiador" viraria licenca para nao responder ofensa contra NOS e para a IA xingar junto.
+   */
+  check(/NÃO é licença para você xingar junto/.test(p), 'e diz que nao e licenca para xingar junto');
+  check(/quando a ofensa é contra NÓS/.test(p), 'e que ofensa contra nos tem outro caminho');
+  check(/denúncia com alvo e fato/.test(p), 'e que denuncia continua sendo a regra 15');
 }
 
 fim();

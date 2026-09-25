@@ -2729,6 +2729,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **XINGAR O ADVERSARIO E APOIO, E APOIO NAO SE CORRIGE** (25/09/2026, print de um apoiador que
+  escreveu *"tirar fora esta cambada de esquerdista Ladroes"* e recebeu *"prefiro que esse debate
+  seja feito com responsabilidade, sem generalizar acusacoes"* — *"quis dar licao de moral pra um
+  apoiador, nao e o que queremos"*). **Medido: NENHUM detector viu apoio** — `soExpressaApoio` e
+  `trouxeDenuncia` nulos, `semInteresse` nulo (a guarda de 01/09 funcionou), e so `falouAlgoProprio`
+  levou a tecla 6. **A IA escreveu por conta propria, e a postura veio das secoes 7 e 14 do padrao
+  DELE** — *"nao entre em confronto"*, *"Entendo sua critica"* —, que falam de critica **A NOS** e
+  viram aula de civilidade quando o alvo e o ADVERSARIO.
+  **E a frase certa ja existia no projeto, NO PROMPT ERRADO:** *"criticar ou xingar o ADVERSARIO (PT,
+  Lula, esquerda) — quem faz isso esta do nosso lado"* mora em `TIPOS_DE_ETIQUETA`, que e o prompt
+  da CONFERENCIA DE ETIQUETA; quem escreve o rascunho nunca a viu. **Ao escrever regra sobre o que
+  esta base e, confira em qual dos prompts ela esta** — sao tres (rascunho, cidade, etiqueta).
+  Hoje e a **regra 17**, com a fronteira dentro dela: nao e licenca para a IA xingar junto, ofensa
+  contra NOS continua na secao 14 do padrao, e denuncia com alvo e fato continua na regra 15.
+  **Nenhum detector novo**: forma de expressar apoio nao fecha em lista (quinta vez), e proibicao
+  vale em toda chamada sem gatilho.
+
 - **A REGRA 12 VAZAVA O MOTIVO INTERNO PARA DENTRO DA MENSAGEM** (25/09/2026, a Lizi: *"Oiii tem
   vaga para trabalhar"* recebeu *"A equipe paga da campanha ja foi fechada..."*, e ele reescreveu
   como *"infelizmente nao estamos contratando"*). **A frase estava no prompt palavra por palavra** —
@@ -3401,7 +3418,9 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   bloco do CONTATO, so quando ha clique na conversa. **Ao escrever marca que cita um dado do
   ambiente, meca o TAMANHO do dado real** — `headline`, `campaign` e `referralUrl` sao texto de
   campanha, nao rotulo.
-- **TESTE DE PROPORCAO DO PROMPT CAI SOZINHO — pela segunda vez** (10/09 o do padrao, 12/09 o da
+- **TESTE DE PROPORCAO DO PROMPT CAI SOZINHO — QUATRO vezes ja** (a quarta em 25/09/2026: a
+  regra 11 passou de 80,2% para 79,5% das linhas ao entrar a regra 17, sem nada mudar de lugar; hoje
+  o invariante e ESTRUTURAL — a regra esta dentro do bloco numerado, e o bloco vem antes do fecho) (10/09 o do padrao, 12/09 o da
   posicao das regras 8 e 9: `> 80% das linhas` virou 79,8% porque o rodape cresceu, sem nada mudar de
   lugar). **Conta a proporcao contra a LISTA que se quer proteger** (as regras numeradas), nunca
   contra o arquivo inteiro.

@@ -1,3 +1,49 @@
+## 2026-09-25 — v3.120.0 — xingar o adversário é apoio, e apoio não se corrige
+
+**Print dele:** um apoiador escreveu *"Vamos todos juntos a um só objetivo, remar juntinho pra todos
+querem arrumar o nosso Brasil… tirar fora esta cambada de esquerdista Ladrões tche"*, e o rascunho
+respondeu **"Respeito a sua indignação, mas prefiro que esse debate seja feito com responsabilidade,
+sem generalizar acusações. O Brasil precisa de trabalho, seriedade e compromisso com as pessoas."**
+Ele apagou: *"quis dar lição de moral pra um apoiador, não é o que queremos"*.
+
+**Medido, e nenhum detector viu apoio:**
+
+| | |
+|---|---|
+| `soExpressaApoio` | **null** — a forma dele (*"remar juntinho"*) não está em lista nenhuma |
+| `trouxeDenuncia` | **null** — é raiva política, não acusação com alvo e fato |
+| `semInteresse` | **null** ✅ — a guarda de 01/09 funcionou, xingar o adversário não marca ninguém |
+| `falouAlgoProprio` | casou → **tecla 6, a IA** |
+
+Ou seja: **a IA escreveu por conta própria**, e a postura veio das seções **7** e **14** do padrão
+dele — *"não entre em confronto"*, *"Entendo sua crítica e respeito sua posição"*. As duas falam de
+crítica **a NÓS**. Aplicadas a quem xinga o **adversário**, viram aula de civilidade no apoiador.
+
+**E a frase certa já existia no projeto, no prompt errado.** *"Criticar ou xingar o ADVERSÁRIO (PT,
+Lula, esquerda) — quem faz isso está do nosso lado"* mora em `TIPOS_DE_ETIQUETA`, que é o prompt da
+**conferência de etiqueta**. Quem escreve o rascunho nunca a viu. **Ao escrever uma regra sobre o
+que esta base é, confira em qual dos prompts ela está.**
+
+**A regra 17** diz o que fazer (agradecer o apoio e seguir o que ela disse) e proíbe a classe
+inteira, com as frases do caso escritas: *"prefiro que o debate seja com responsabilidade"*, *"sem
+generalizar"*, *"vamos manter o respeito"*, *"respeito sua indignação, mas"*.
+
+**A fronteira está dentro da regra**, e é ela que a torna segura (a lição de 09/09):
+
+- **não é licença para a IA xingar junto** — ela agradece e segue, sem repetir o xingamento e sem
+  acrescentar adjetivo nenhum sobre o adversário;
+- **ofensa contra NÓS** continua sendo a seção 14 do padrão dele;
+- **denúncia com alvo e fato** continua sendo a regra 15.
+
+**Nenhum detector novo.** A forma de expressar apoio não fecha em lista — este projeto aprendeu isso
+cinco vezes —, e proibição vale em toda chamada sem precisar de gatilho.
+
+**E uma asserção de PROPORÇÃO caiu sozinha pela quarta vez.** A regra 11 passou de 80,2% para 79,5%
+das linhas ao acrescentar a 17, **sem nada mudar de lugar**. Está registrado duas vezes no
+`CLAUDE.md` que proporção decai a cada regra nova; desta vez o invariante virou **estrutural** — a
+11 está dentro do bloco das regras numeradas, e o bloco vem antes do fecho, colado no ponto em que
+o modelo escreve.
+
 ## 2026-09-25 — v3.119.0 — a tarja do canal não envelhecia com o número que ele acabara de cadastrar
 
 **Print dele:** a tarja vermelha dizia *"o número deste atendimento não está em nenhum candidato"* —

@@ -1744,6 +1744,39 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    Marque o campo naoHaOQueResponder da sua resposta (é um campo do JSON, nunca uma frase para',
     '    ela) e o atendimento manda a mensagem do dia no seu lugar. Isto NÃO vale quando ela pergunta',
     '    ou pede alguma coisa e falta o dado — aí é a regra 14 — nem quando o assunto é difícil.',
+    /**
+     * **A REGRA 17 É DELE, DE 25/09/2026** — print de um apoiador que escreveu *"Vamos todos juntos
+     * a um só objetivo, remar juntinho… tirar fora esta cambada de esquerdista Ladrões"*, e recebeu
+     * *"Respeito a sua indignação, mas prefiro que esse debate seja feito com responsabilidade, sem
+     * generalizar acusações"*. Ele apagou: *"quis dar lição de moral pra um apoiador, não é o que
+     * queremos"*.
+     *
+     * **Medido: nenhum detector viu apoio** (`soExpressaApoio` e `trouxeDenuncia` nulos) — só
+     * `falouAlgoProprio`, que levou à tecla 6. Então a IA escreveu por conta própria, e a postura
+     * veio da seção 7 e da seção 14 do padrão DELE, que falam de crítica **a nós** e mandam não
+     * entrar em confronto. Aplicadas a quem xinga o ADVERSÁRIO, viram aula de civilidade no
+     * apoiador.
+     *
+     * **A frase certa já existia no projeto, e no prompt errado:** *"criticar ou xingar o ADVERSÁRIO
+     * (PT, Lula, esquerda) — quem faz isso está do nosso lado"* mora em `TIPOS_DE_ETIQUETA`, que é o
+     * prompt da conferência de etiqueta. Quem ESCREVE o rascunho nunca a viu. **Ao escrever uma
+     * regra sobre o que a base é, confira em qual dos prompts ela está.**
+     *
+     * **A fronteira está escrita na regra** (a lição de 09/09): ofensa a NÓS continua sendo a seção
+     * 14 do padrão dele, denúncia com alvo e fato continua sendo a regra 15, e nada disto autoriza
+     * a IA a xingar junto.
+     */
+    '17. XINGAR O ADVERSÁRIO É APOIO, E APOIO NÃO SE CORRIGE. "Esses ladrões", "essa cambada de',
+    '    esquerdista", "o PT acabou com o país": nesta base isso é a mensagem mais comum que chega, e',
+    '    quem escreve está do NOSSO lado. Agradeça o apoio e siga o que ela disse.',
+    '    **NUNCA modere, nunca eduque, nunca peça responsabilidade.** Nada de "prefiro que o debate',
+    '    seja com responsabilidade", "sem generalizar", "vamos manter o respeito", "respeito sua',
+    '    indignação, mas": tudo isso é lição de moral em quem veio somar, e a pessoa sai da conversa',
+    '    achando que foi repreendida pela campanha que ela apoia.',
+    '    **Isto NÃO é licença para você xingar junto** — você agradece e segue, sem repetir o',
+    '    xingamento e sem acrescentar adjetivo nenhum sobre o adversário.',
+    '    **E não vale quando a ofensa é contra NÓS** (aí é a seção 14 do padrão) nem quando ela traz',
+    '    uma denúncia com alvo e fato (aí é a regra 15).',
     // O item 22 INTEIRO, e não só a primeira faixa: citar só "mensagem simples: 1 a 3 frases" fez o
     // desabafo de 58 s do Adair (18/09/2026) receber três respostas de uma frase por parágrafo, contra
     // os dois parágrafos que o ChatGPT escreveu dentro da regra dele.

@@ -3476,4 +3476,19 @@ grupo('ela disse que nao e do Rio Grande do Sul (24/09/2026)');
   check(!disseQueEDeOutroEstado(null), 'lista nula nao estoura');
 }
 
+grupo('o apoiador que xinga o adversario nao e sem interesse (25/09/2026)');
+{
+  /**
+   * A frase da print, inteira. **`semInteresse` e a regra mais destrutiva do arquivo** — etiqueta
+   * permanente no CRM mais conclusao em silencio — e xingar o ADVERSARIO e a mensagem mais comum
+   * desta base: quem faz isso esta do nosso lado.
+   */
+  const texto = 'Vamos todos juntos a um so objetivo remar juntinho pra todos querem arrumar o nosso Brasil colocar onde ele Deveria estar tirar fora esta cambada de esquerdista Ladroes tche.';
+  const ent = [{ de: 'contato', texto, at: '2026-09-24T20:49:00Z' }];
+  check(!semInteresse(ent, null), 'xingar a esquerda nao marca sem interesse');
+  check(!trouxeDenuncia(texto), 'e nao e denuncia: nao ha alvo com fato, e raiva politica');
+  /** Ele TAMBEM nao casa como apoio — e por isso a regra tem de estar no prompt, nao num detector. */
+  check(!soExpressaApoio(ent, null, []), 'e o detector de apoio nao alcanca esta forma');
+}
+
 fim();
