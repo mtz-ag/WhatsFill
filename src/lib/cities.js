@@ -10,6 +10,7 @@
  */
 
 import * as store from './store.js';
+import * as perfis from './perfis.js';
 
 const IBGE_RS = 'https://servicodados.ibge.gov.br/api/v1/localidades/estados/RS/municipios';
 
@@ -237,7 +238,7 @@ export async function loadMunicipios() {
   }
 
   // Último recurso: as cidades que você já cadastrou na tabela de links.
-  const links = await store.get('cityLinks');
+  const links = await perfis.lerDoAtivo('cityLinks', {});
   municipiosCache = Object.values(links).map((v) => v.label).filter(Boolean);
   return municipiosCache;
 }
@@ -1127,8 +1128,8 @@ export async function suggest(text, n = 3) {
  * poder explicar por que o envio está bloqueado em vez de mandar {{link_grupo}} cru.
  */
 export async function linkFor(city) {
-  const links = await store.get('cityLinks');
-  const fallback = await store.get('defaultGroupLink');
+  const links = await perfis.lerDoAtivo('cityLinks', {});
+  const fallback = await perfis.lerDoAtivo('defaultGroupLink', '');
   const key = normalize(city);
 
   if (key && links[key]?.link) return { link: links[key].link, source: 'cidade' };

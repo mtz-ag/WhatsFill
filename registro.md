@@ -1,3 +1,55 @@
+## 2026-09-25 — v3.123.0 — a mensagem do momento (e mais treze coisas) era de todo mundo
+
+**Relato dele:** *"ao trocar o perfil as mensagens não ficam salvas para cada perfil, acabei de
+trocar a mensagem do momento e ficou com a mensagem do Felipe Pedri; veja se vai acontecer com o
+resto"*.
+
+**Ele estava certo, e era maior que a mensagem do momento. Medido: das 18 coisas que SAEM para o
+eleitor, 14 estavam compartilhadas.**
+
+| | antes | agora |
+|---|---|---|
+| respostas prontas, anúncios, instruções extras, dossiê | por perfil | por perfil |
+| **mensagem do momento** + variações + pedido que vai junto | **compartilhado** | por perfil |
+| **as duas ARTES** (momento e cadastro) + os arquivos delas | **compartilhado** | por perfil |
+| **modelo aprovado escolhido** (`templateId`) | **compartilhado** | por perfil |
+| **link do grupo** (padrão e por cidade) | **compartilhado** | por perfil |
+| **Modelo por conteúdo** | **compartilhado** | por perfil |
+| **modelos padrão do anúncio** | **compartilhado** | por perfil |
+
+A lista de 24/09 cobria **o texto das respostas prontas** e esquecia tudo o que não mora em
+`templates`. O critério continua sendo um só: **entra o que o eleitor recebe, ou o que decide o que
+ele recebe.** O link do grupo vai DENTRO de uma resposta pronta; o modelo aprovado é do CANAL e
+**nem existe no canal do outro**; a arte tem a cara dele.
+
+**`auto` não podia ser separado inteiro**, e esta é a parte do desenho que importa: ele guarda também
+a configuração do **operador** — o limite da rodada, a pausa, "Automatizar", as horas sem resposta e
+as etiquetas do CRM. Separar aquilo faria o interruptor da rodada mudar de estado ao trocar de login.
+Por isso a separação é por **sub-chave** (`CHAVES_DO_PERFIL_EM_AUTO`, nove delas), e `gravarAuto`
+manda cada campo para o lugar dele — **numa escrita por destino**, nunca duas na mesma chave, senão a
+segunda passa por cima da primeira e o campo que ele acabou de digitar some.
+
+**A ARTE é separada pelo NOME DA CHAVE, e não por `porPerfil`.** Quem sobe os bytes é o service
+worker (20/09), que faz `store.get(chave)` e não sabe quem está logado. Com o sufixo
+(`imagemMomentoArquivo:felipe`), o worker não mudou em nada — e **a arte que ele já tem guardada
+continua no lugar**, porque o perfil de fábrica fica com o nome de sempre.
+
+**`padroesDeAnuncio` ficou de fora, e foi a medição que mostrou o porquê.** Parece do candidato e não
+é: o valor é a FORMA do texto pré-preenchido (`^olá!? eu apoio`), não tem editor na tela, e por perfil
+**o candidato novo leria lista vazia** — perdendo o reconhecimento do clique. Quem guarda os anúncios
+DELE é `anuncios`, que já era por perfil. Eu havia separado, medi, e desfiz.
+
+**E o mesmo defeito estava num lugar novo:** `entrarComo` recarregava as respostas prontas e a IA e
+**não recarregava o `auto`** — trocar de login desenharia a mensagem do momento do candidato anterior,
+que é exatamente o que ele viu. O `load()` também teve de mudar de ordem: o login passou para cima do
+`auto`, senão a leitura seria sempre a do perfil de fábrica.
+
+**O invariante da produção continua de pé e tem teste:** o candidato de fábrica lê as chaves de topo,
+então **nada do dado dele foi migrado**. E o oposto também: **sem valor gravado, o candidato novo lê
+VAZIO, nunca o do outro** — as nove sub-chaves são conferidas uma a uma num perfil virgem.
+
+**Três asserções antigas caíram, e as três estavam certas em acusar** — uma usava `cityLinks` como
+exemplo de chave que NÃO é por candidato (e agora é).
 ## 2026-09-25 — v3.122.0 — a bandeira entrou no estoque, e a trava barrava a frase certa
 
 **Pedido dele:** *"inclua bandeiras na lista que de material que temos"*.

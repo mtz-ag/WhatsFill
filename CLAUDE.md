@@ -2833,6 +2833,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   topo (`templates`, `anuncios`), entao **nao houve migracao no dado dele**, e ha teste comparando o
   prompt byte a byte. **Sem valor gravado, o perfil novo le VAZIO e nunca o do outro**: texto do
   Martim saindo pelo numero do Felipe e o defeito que esta tela existe para impedir.
+  **E A LISTA COBRIA SO O TEXTO DAS RESPOSTAS PRONTAS** (25/09/2026: *"ao trocar o perfil as
+  mensagens nao ficam salvas para cada perfil, acabei de trocar a mensagem do momento e ficou com a
+  mensagem do Felipe Pedri; veja se vai acontecer com o resto"*). **Medido: das 18 coisas que SAEM
+  para o eleitor, 14 estavam compartilhadas** — a mensagem do momento e as variacoes, o pedido que vai
+  junto, as duas ARTES, o modelo aprovado escolhido, o link do grupo (padrao e por cidade), o Modelo
+  por conteudo e os modelos padrao do anuncio. **O criterio e um so: entra o que o eleitor recebe, ou
+  o que decide o que ele recebe** — o link do grupo vai DENTRO de uma resposta pronta, e o modelo
+  aprovado e do CANAL, entao o id do Martim nem existe no canal do Felipe.
+  **`auto` NAO pode ser separado inteiro**: ele guarda a configuracao do OPERADOR (limite, pausa,
+  "Automatizar", etiquetas do CRM), e separar aquilo faria o interruptor da rodada mudar de estado ao
+  trocar de login. A separacao e por SUB-CHAVE (`CHAVES_DO_PERFIL_EM_AUTO`), e `gravarAuto` faz **uma
+  escrita por destino** — duas na mesma chave e a segunda passando por cima da primeira.
+  **A ARTE e separada pelo NOME DA CHAVE** (`imagemMomentoArquivo:<perfil>`) e nao por `porPerfil`,
+  porque quem sobe os bytes e o SERVICE WORKER, que faz `store.get(chave)` e nao sabe quem esta
+  logado; o de fabrica fica com o nome de sempre, entao a arte que ele ja tem nao se perde.
+  **`padroesDeAnuncio` ficou de FORA depois de medido:** parece do candidato e e a FORMA do texto
+  pre-preenchido, sem editor na tela — por perfil, o candidato novo leria lista VAZIA.
+  **E o mesmo defeito estava em `entrarComo`**, que recarregava templates e IA e nao o `auto`. **Ao
+  por uma chave nova em `CHAVES_DO_PERFIL`, procure os DOIS lugares que releem: o `load()` e a troca
+  de login** — e no `load()` o bloco do perfil tem de vir ANTES da chave.
   **O documento dele nao foi editado:** `atendimento.PADRAO_DE_ATENDIMENTO` vai intacto para o
   candidato de fabrica e com o NOME trocado na INJECAO para os outros — o arquivo continua sendo
   dele, com o `git diff` que o protege desde 06/09.

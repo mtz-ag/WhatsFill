@@ -38,7 +38,97 @@ export const PERFIL_PADRAO = 'martim';
  * inversa faria toda chave nova nascer separada por perfil até alguém notar, e a maior parte da
  * Config é compartilhada de propósito.
  */
-export const CHAVES_DO_PERFIL = ['templates', 'anuncios', 'iaRegras'];
+export const CHAVES_DO_PERFIL = [
+  'templates',
+  'anuncios',
+  'iaRegras',
+  /**
+   * **O que entrou em 25/09/2026, e por quê** — relato dele: *"ao trocar o perfil as mensagens não
+   * ficam salvas para cada perfil, acabei de trocar a mensagem do momento e ficou com a mensagem do
+   * Felipe Pedri; veja se vai acontecer com o resto"*.
+   *
+   * Medido: das 18 coisas que SAEM para o eleitor, **14 estavam compartilhadas**. A lista de 24/09
+   * cobria o texto das respostas prontas e esquecia tudo o que não mora em `templates`.
+   *
+   * O critério é um só, e é o mesmo do primeiro dia: **entra o que o eleitor recebe ou o que decide
+   * o que ele recebe.** O link do grupo vai DENTRO de uma resposta pronta; o modelo aprovado é do
+   * CANAL do candidato e nem existe no outro; a arte tem a cara dele; e o texto do anúncio é o que
+   * o painel usa para reconhecer o clique.
+   */
+  'defaultGroupLink',
+  'cityLinks',
+  'contentTemplates',
+  'modelosPadraoAnuncio',
+  'modeloPadraoAnuncio',
+];
+
+/**
+ * **`padroesDeAnuncio` ficou de FORA, e foi a medição que mostrou por quê.**
+ *
+ * Ele parece do candidato e não é: o valor é a FORMA do texto pré-preenchido do anúncio
+ * (`^olá!? eu apoio`), não tem editor na tela, e por perfil o candidato novo leria lista VAZIA —
+ * perdendo o reconhecimento do clique que o de fábrica tem. Quem guarda os anúncios DELE é
+ * `anuncios`, que já é por perfil.
+ */
+
+/**
+ * **A arte é separada pelo NOME DA CHAVE, e não por `porPerfil`** — e a razão é o service worker.
+ *
+ * Os bytes da imagem sobem do worker (20/09), que os lê do armazenamento por uma chave que o painel
+ * manda pela ponte. Pondo o arquivo dentro de `porPerfil`, o worker teria de saber quem está logado
+ * — mais um lugar sabendo do login, e a ponte carregando o id em toda subida de imagem.
+ *
+ * Com o sufixo, o worker continua fazendo `store.get(chave)` e nada mudou do lado dele. O perfil de
+ * fábrica fica com o nome de sempre, então **a arte que ele já tem guardada continua no lugar**.
+ *
+ * Chave sufixada não existe no `DEFAULTS`, então ela também não entra no `exportJson` — que é onde
+ * os bytes já eram excluídos de propósito.
+ */
+export function chaveDeImagem(nome, perfilId) {
+  if (!perfilId || perfilId === PERFIL_PADRAO) return nome;
+  return `${nome}:${perfilId}`;
+}
+
+/**
+ * **As chaves do candidato que moram DENTRO de `auto`** — a mensagem do momento entre elas.
+ *
+ * `auto` não pode ser separado inteiro: ele guarda também a configuração do OPERADOR (o limite da
+ * rodada, a pausa, "Automatizar", as horas sem resposta, as etiquetas do CRM), e separar aquilo por
+ * candidato faria o interruptor da rodada mudar de estado ao trocar de login — coisa que não tem
+ * nada a ver com quem é o candidato.
+ *
+ * Por isso a separação é por SUB-CHAVE, e `autoDoPerfil` é quem a faz valer.
+ */
+export const CHAVES_DO_PERFIL_EM_AUTO = [
+  'mensagemMomento',
+  'mensagemMomentoVariantes',
+  'pedidoJuntoDoMomento',
+  'imagemMomento',
+  'imagemMomentoLigada',
+  'imagemPedidoDados',
+  'imagemPedidoDadosLigada',
+  'templateId',
+  'templateName',
+];
+
+/**
+ * **O que "não tem valor gravado" quer dizer em cada uma** — e ele nunca é o valor do outro.
+ *
+ * Escrito aqui e não deduzido do `DEFAULTS` do `store`, porque o default de `auto.etiquetasQuePulam`
+ * é `'engajado'` e o de `mensagemMomento` é vazio: herdar o default cego traria de volta exatamente
+ * o que esta separação existe para impedir.
+ */
+const AUTO_VAZIO = {
+  mensagemMomento: '',
+  mensagemMomentoVariantes: [],
+  pedidoJuntoDoMomento: '',
+  imagemMomento: '',
+  imagemMomentoLigada: false,
+  imagemPedidoDados: '',
+  imagemPedidoDadosLigada: false,
+  templateId: '',
+  templateName: '',
+};
 
 /**
  * O perfil de fábrica, que é o de hoje.
@@ -212,6 +302,83 @@ export async function gravar(chave, perfilId, valor) {
   const todos = { ...((await store.get('porPerfil')) || {}) };
   todos[perfilId] = { ...(todos[perfilId] || {}), [chave]: valor };
   return store.set('porPerfil', todos);
+}
+
+/**
+ * A mesma leitura, para **quem não sabe quem está logado**.
+ *
+ * As bibliotecas (`cities.js`, e quem vier depois) leem o armazenamento sem receber o perfil — e
+ * fazer cada uma pedir o id ao painel seria espalhar a assimetria que `ler`/`gravar` existem para
+ * conter. Aqui ela continua morando em um lugar só.
+ */
+export async function lerDoAtivo(chave, vazio = null) {
+  return ler(chave, await store.get('perfilAtivo'), vazio);
+}
+
+/** A mesma escrita, para quem não sabe quem está logado. */
+export async function gravarNoAtivo(chave, valor) {
+  return gravar(chave, await store.get('perfilAtivo'), valor);
+}
+
+/**
+ * **O `auto` deste candidato** — puro, para dar para testar sem armazenamento.
+ *
+ * O de fábrica recebe o objeto intacto, que é o invariante da produção dele. Para os outros, cada
+ * sub-chave da lista vira o que ELE gravou ou o VAZIO — **nunca a do outro candidato**, que é o
+ * defeito que ele reportou: *"acabei de trocar a mensagem do momento e ficou com a mensagem do
+ * Felipe Pedri"*.
+ *
+ * O que não está na lista passa direto: a configuração da rodada é do operador e é uma só.
+ */
+export function autoDoPerfil(auto, perfilId, gravado) {
+  const base = { ...(auto || {}) };
+  if (!perfilId || perfilId === PERFIL_PADRAO) return base;
+  for (const chave of CHAVES_DO_PERFIL_EM_AUTO) {
+    base[chave] = gravado && Object.prototype.hasOwnProperty.call(gravado, chave)
+      ? gravado[chave]
+      : AUTO_VAZIO[chave];
+  }
+  return base;
+}
+
+/** O `auto` deste candidato, lido do armazenamento. */
+export async function lerAuto(perfilId) {
+  const auto = await store.get('auto');
+  if (!perfilId || perfilId === PERFIL_PADRAO) return auto;
+  const todos = (await store.get('porPerfil')) || {};
+  return autoDoPerfil(auto, perfilId, todos[perfilId]?.auto);
+}
+
+/**
+ * Grava uma mudança em `auto`, mandando **cada campo para o lugar dele**.
+ *
+ * Uma escrita por destino, nunca duas na mesma chave: `store.set('auto', …)` duas vezes no mesmo
+ * instante é a segunda passando por cima da primeira, e o campo que ele acabou de digitar sumiria.
+ *
+ * Devolve o `auto` já composto, porque quem chama guarda isso em memória e desenhar com o valor
+ * anterior é a tela mentindo sobre o que foi salvo.
+ */
+export async function gravarAuto(perfilId, mudanca) {
+  const daFabrica = !perfilId || perfilId === PERFIL_PADRAO;
+  const daCasa = {};
+  const doCandidato = {};
+  for (const [chave, valor] of Object.entries(mudanca || {})) {
+    const separar = !daFabrica && CHAVES_DO_PERFIL_EM_AUTO.includes(chave);
+    (separar ? doCandidato : daCasa)[chave] = valor;
+  }
+
+  if (Object.keys(daCasa).length) {
+    const atual = (await store.get('auto')) || {};
+    await store.set('auto', { ...atual, ...daCasa });
+  }
+  if (Object.keys(doCandidato).length) {
+    const todos = { ...((await store.get('porPerfil')) || {}) };
+    const meu = { ...(todos[perfilId] || {}) };
+    meu.auto = { ...(meu.auto || {}), ...doCandidato };
+    todos[perfilId] = meu;
+    await store.set('porPerfil', todos);
+  }
+  return lerAuto(perfilId);
 }
 
 /**

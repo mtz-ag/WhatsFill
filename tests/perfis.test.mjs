@@ -167,7 +167,7 @@ grupo('a lista de chaves por candidato é de PERMISSÃO, e ela vale');
 {
   let estourou = false;
   try {
-    await perfis.ler('cityLinks', 'pedri');
+    await perfis.ler('fluxo', 'pedri');
   } catch {
     estourou = true;
   }
@@ -209,6 +209,75 @@ grupo('o documento DELE não é editado — só o nome da injeção muda');
   const outro = ia.montarSistemaRascunho({ templates: [], regras: '', gabinete: '', candidato: PEDRI });
   check(/redige a resposta de uma mensagem recebida no WhatsApp do Felipe Pedri/.test(outro),
     'e o que VAI no prompt do outro candidato sai com o nome trocado');
+}
+
+grupo('a mensagem do momento e o resto que SAI ficam de cada candidato (25/09/2026)');
+{
+  /**
+   * Relato dele: *"ao trocar o perfil as mensagens nao ficam salvas para cada perfil, acabei de
+   * trocar a mensagem do momento e ficou com a mensagem do Felipe Pedri; veja se vai acontecer com
+   * o resto"*.
+   *
+   * Medido: das 18 coisas que SAEM para o eleitor, **14 estavam compartilhadas** -- a lista de
+   * 24/09 cobria o texto das respostas prontas e esquecia tudo o que nao mora em `templates`.
+   */
+  for (const k of mem ? Object.keys(mem) : []) delete mem[k];
+  await store.set('auto', { ...(await store.get('auto')), mensagemMomento: 'Texto do MARTIM' });
+
+  check((await perfis.lerAuto('martim')).mensagemMomento === 'Texto do MARTIM', 'o de fabrica le a chave de topo, como sempre');
+  check((await perfis.lerAuto('pedri')).mensagemMomento === '', 'e o outro le VAZIO, nunca a do Martim');
+
+  await perfis.gravarAuto('pedri', { mensagemMomento: 'Texto do FELIPE' });
+  check((await perfis.lerAuto('pedri')).mensagemMomento === 'Texto do FELIPE', 'o que ele grava fica com ele');
+  check((await perfis.lerAuto('martim')).mensagemMomento === 'Texto do MARTIM', 'e a do Martim continua intacta');
+  check((await store.get('auto')).mensagemMomento === 'Texto do MARTIM', 'a chave de topo nao foi tocada');
+
+  /**
+   * **A metade cara: `auto` nao pode ser separado inteiro.** Ele guarda a configuracao do OPERADOR
+   * -- o limite da rodada, a pausa, "Automatizar", as etiquetas -- e separar aquilo faria o
+   * interruptor da rodada mudar de estado ao trocar de login.
+   */
+  await perfis.gravarAuto('pedri', { limite: 44 });
+  check((await perfis.lerAuto('martim')).limite === 44, 'o limite da rodada continua sendo UM so');
+  check((await store.get('auto')).limite === 44, 'e ele foi para a chave de topo');
+
+  /** Escrita com as duas metades juntas: cada campo para o seu lado, e nenhuma perde para a outra. */
+  await perfis.gravarAuto('pedri', { mensagemMomento: 'F2', pausaSeg: 9 });
+  check((await perfis.lerAuto('pedri')).mensagemMomento === 'F2', 'o campo do candidato foi para o candidato');
+  check((await perfis.lerAuto('martim')).pausaSeg === 9, 'e o do operador para o topo, na mesma chamada');
+  check((await perfis.lerAuto('martim')).mensagemMomento === 'Texto do MARTIM', 'sem uma escrita passar por cima da outra');
+
+  /** As nove sub-chaves de `auto` que sao do candidato, uma a uma -- num candidato VIRGEM. */
+  for (const chave of perfis.CHAVES_DO_PERFIL_EM_AUTO) {
+    const vazio = (await perfis.lerAuto('candidato-novo'))[chave];
+    const ehVazio = vazio === '' || vazio === false || (Array.isArray(vazio) && !vazio.length);
+    check(ehVazio, `"${chave}" nasce vazia no candidato novo (veio ${JSON.stringify(vazio)})`);
+  }
+
+  /** E as chaves de TOPO que entraram junto. */
+  await store.set('defaultGroupLink', 'link-do-martim');
+  check((await perfis.ler('defaultGroupLink', 'pedri', '')) === '', 'o link do grupo tambem nao vaza');
+  await perfis.gravar('contentTemplates', 'pedri', { x: 'modelo-do-felipe' });
+  const doMartim = (await perfis.ler('contentTemplates', 'martim', {})) || {};
+  check(!('x' in doMartim), 'e o Modelo por conteudo do Felipe nao aparece no Martim');
+  check('x' in ((await perfis.ler('contentTemplates', 'pedri', {})) || {}), 'mas aparece no dele');
+
+  /**
+   * **A ARTE e separada pelo NOME DA CHAVE**, e nao por `porPerfil`: quem sobe os bytes e o service
+   * worker, que faz `store.get(chave)` e nao sabe quem esta logado.
+   */
+  check(perfis.chaveDeImagem('imagemMomentoArquivo', 'martim') === 'imagemMomentoArquivo',
+    'o de fabrica fica com o nome de sempre -- a arte que ele ja tem nao se perde');
+  check(perfis.chaveDeImagem('imagemMomentoArquivo', 'pedri') === 'imagemMomentoArquivo:pedri',
+    'e o outro ganha sufixo');
+
+  /**
+   * **`padroesDeAnuncio` ficou de FORA, e a medicao mostrou por que:** o valor e a FORMA do texto
+   * pre-preenchido, nao tem editor na tela, e por perfil o candidato novo leria lista vazia.
+   */
+  check(!perfis.CHAVES_DO_PERFIL.includes('padroesDeAnuncio'), 'padroesDeAnuncio continua compartilhado');
+  check(!perfis.CHAVES_DO_PERFIL_EM_AUTO.includes('automatizarComIA'), 'e "Automatizar" tambem');
+  check(!perfis.CHAVES_DO_PERFIL_EM_AUTO.includes('etiquetasQuePulam'), 'e as etiquetas do CRM, que e um so');
 }
 
 fim();

@@ -605,21 +605,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.error = null;
     state.hasContract = !!(await store.get('writeContract'))?.entries?.length;
     state.settings = await store.get('settings');
-    state.padroesDeAnuncio = await store.get('padroesDeAnuncio');
-    state.auto.cfg = await store.get('auto');
-    state.ia = await store.get('ia');
-    state.fluxo = await store.get('fluxo');
-    await lerChavesDaIA();
     /**
      * **QUEM ESTÁ LOGADO** — e é isto que decide tudo o que a tela mostra (25/09/2026).
      *
      * Vem do armazenamento e não do canal: quem escolhe é ele, e a escolha dura até ele trocar.
-     * Carregado ANTES de qualquer outra coisa porque as respostas prontas, os anúncios e as
-     * instruções extras saem daqui — e uma tela que desenha com o candidato errado por um instante
-     * é uma tela em que ele pode clicar.
+     * Carregado ANTES de qualquer outra coisa porque as respostas prontas, os anúncios, as
+     * instruções extras, a mensagem do momento e os modelos saem daqui — e uma tela que desenha com
+     * o candidato errado por um instante é uma tela em que ele pode clicar.
+     *
+     * **Subiu para cima de `auto` em 25/09**, quando a mensagem do momento passou a ser do
+     * candidato: lida antes do login, ela seria sempre a do perfil de fábrica.
      */
     state.perfis = perfisLib.sanitizar(await store.get('perfis'));
     state.perfil = perfisLib.porId(state.perfis, await store.get('perfilAtivo'));
+    state.padroesDeAnuncio = await store.get('padroesDeAnuncio');
+    state.auto.cfg = await perfisLib.lerAuto(state.perfil.id);
+    state.ia = await store.get('ia');
+    state.fluxo = await store.get('fluxo');
+    await lerChavesDaIA();
     state.templates = await templatesLib.list({ perfil: state.perfil.id });
     /**
      * **As instruções extras também são do candidato.**
@@ -1396,7 +1399,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // acharam. Sem isto, etiqueta aplicada à mão (ou aplicada por nós na passada anterior,
       // quando a campanha do anúncio ainda casava) era invisível — e o botão de fechar com
       // conteúdo ficava travado dizendo "nenhum conteúdo reconhecido".
-      const jaNoCrm = await tagsLib.conteudosJaAplicados(state.contact, await store.get('contentTemplates'));
+      const jaNoCrm = await tagsLib.conteudosJaAplicados(state.contact, await lerContentTemplates());
       const nomesVistos = new Set(sugeridas.map((s) => cities.normalize(s.nome || '')));
       const completas = [...sugeridas, ...jaNoCrm.filter((c) => !nomesVistos.has(cities.normalize(c.nome)))];
 
@@ -1583,8 +1586,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   async function lerChavesDaIA() {
     state.contratoImagem = await store.get('contratoImagem');
     state.imagens = {
-      imagemMomentoArquivo: await store.get('imagemMomentoArquivo'),
-      imagemPedidoDadosArquivo: await store.get('imagemPedidoDadosArquivo'),
+      imagemMomentoArquivo: await store.get(perfisLib.chaveDeImagem('imagemMomentoArquivo', perfilAtivo())),
+      imagemPedidoDadosArquivo: await store.get(perfisLib.chaveDeImagem('imagemPedidoDadosArquivo', perfilAtivo())),
     };
     state.iaChaves = {
       anthropic: !!(await store.get('iaChave')),
@@ -1721,6 +1724,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     await store.set('perfilAtivo', alvo.id);
     state.perfil = alvo;
     state.templates = await templatesLib.list({ perfil: alvo.id });
+    /**
+     * **Tudo o que é do candidato é RELIDO aqui** — 25/09/2026, e isto é o relato dele num lugar
+     * novo: trocar de login e desenhar com o `auto` do candidato anterior faria a mensagem do
+     * momento do Felipe aparecer como se fosse do Martim, que é exatamente o que ele viu.
+     *
+     * `lerChavesDaIA` entra junto porque a ARTE também é do candidato, e ela é lida por uma chave
+     * que carrega o id do perfil.
+     */
+    state.auto.cfg = await perfisLib.lerAuto(alvo.id);
+    await lerChavesDaIA();
     const cfg = await store.get('ia');
     state.ia =
       alvo.id === perfisLib.PERFIL_PADRAO
@@ -1730,7 +1743,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // e agora você não está mais. Pela função ÚNICA, nunca remendando o objeto à mão.
     recalcularCanalDoAtendimento();
     renderAll();
-    setStatus(`Você está como ${alvo.nome}. As respostas, os anúncios e o dossiê são dele.`, 'ok');
+    setStatus(`Você está como ${alvo.nome}. As respostas, os anúncios, a mensagem do momento, as artes, os modelos e o dossiê são dele.`, 'ok');
   }
 
   /**
@@ -1744,6 +1757,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    */
   function perfilAtivo() {
     return state.perfil?.id || perfisLib.PERFIL_PADRAO;
+  }
+
+  /**
+   * **"Modelo por conteúdo" é do candidato**, porque o que ele guarda são ids de MODELO APROVADO, e
+   * modelo aprovado é do canal: o id do Martim não existe no canal do Felipe.
+   *
+   * Uma função só para os seis pontos que leem o mapa — seis `perfisLib.ler` espalhados divergiriam
+   * na primeira vez que o vazio mudasse de significado.
+   */
+  function lerContentTemplates() {
+    return perfisLib.ler('contentTemplates', perfilAtivo(), {});
   }
 
   function valueNamed(name) {
@@ -2517,7 +2541,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       let usouPadrao = false;
 
       if (nomeDoConteudo) {
-        const mapa = await store.get('contentTemplates');
+        const mapa = await lerContentTemplates();
         const achado = hsmLib.templateParaConteudo(nomeDoConteudo, mapa, state.hsmTemplates);
         if (achado.erro) return setStatus(achado.erro, 'err');
         modelo = achado.modelo;
@@ -2549,7 +2573,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             );
             return;
           }
-          const mapa = await store.get('contentTemplates');
+          const mapa = await lerContentTemplates();
           const achado = hsmLib.templateParaConteudo(nomeDoConteudo, mapa, state.hsmTemplates);
           if (achado.erro) return setStatus(achado.erro, 'err');
           modelo = achado.modelo;
@@ -2791,9 +2815,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     });
     if (!escolha) return { legendaFoi: false, marca: '' };
 
-    const chave = escolha.arquivo === state.imagens.imagemMomentoArquivo
-      ? 'imagemMomentoArquivo'
-      : 'imagemPedidoDadosArquivo';
+    const chave = perfisLib.chaveDeImagem(
+      escolha.arquivo === state.imagens.imagemMomentoArquivo ? 'imagemMomentoArquivo' : 'imagemPedidoDadosArquivo',
+      perfilAtivo()
+    );
     try {
       const r = await page.enviarImagem({
         sessionId: state.pageState.sessionId,
@@ -3758,7 +3783,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       ligada: cfg.imagemMomentoLigada,
       aoMudar: (v) => salvarAuto({ imagemMomento: v }).then(renderAll),
       aoLigar: (v) => salvarAuto({ imagemMomentoLigada: v }).then(renderAll),
-      chaveDoArquivo: 'imagemMomentoArquivo',
+      chaveDoArquivo: perfisLib.chaveDeImagem('imagemMomentoArquivo', perfilAtivo()),
     }));
 
     const area = h('textarea', { rows: '4', placeholder: 'Ex.: {{saudacao}}! Feliz Dia dos Pais…' });
@@ -3792,7 +3817,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       ligada: cfg.imagemPedidoDadosLigada,
       aoMudar: (v) => salvarAuto({ imagemPedidoDados: v }).then(renderAll),
       aoLigar: (v) => salvarAuto({ imagemPedidoDadosLigada: v }).then(renderAll),
-      chaveDoArquivo: 'imagemPedidoDadosArquivo',
+      chaveDoArquivo: perfisLib.chaveDeImagem('imagemPedidoDadosArquivo', perfilAtivo()),
     }));
 
     const pedido = h('textarea', { rows: '4', placeholder: 'Deixe vazio para não pedir junto' });
@@ -4806,10 +4831,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /** Relê antes de gravar: a Config mexe na mesma chave por outro caminho. */
+  /**
+   * **Cada campo para o lugar dele** (25/09/2026): a mensagem do momento, o pedido que vai junto, as
+   * artes e o modelo aprovado são do CANDIDATO; o limite da rodada, a pausa, "Automatizar" e as
+   * etiquetas são do OPERADOR e continuam sendo uma coisa só.
+   *
+   * Quem separa é `perfis.gravarAuto`, e ele devolve o `auto` já composto — guardar aqui o objeto
+   * que eu mandei faria a tela mostrar o valor do candidato errado até o próximo `load()`.
+   */
   async function salvarAuto(mudanca) {
-    const atual = await store.get('auto');
-    state.auto.cfg = { ...atual, ...mudanca };
-    await store.set('auto', state.auto.cfg);
+    state.auto.cfg = await perfisLib.gravarAuto(perfilAtivo(), mudanca);
   }
 
   /**
@@ -5378,7 +5409,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!state.settings.autoSend) {
       return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
     }
-    const mapa = await store.get('contentTemplates');
+    const mapa = await lerContentTemplates();
     if (!Object.keys(mapa || {}).length) {
       return setStatus('Cadastre a tabela "Modelo por conteúdo" na aba Config: sem ela não há o que enviar.', 'err');
     }
@@ -5883,7 +5914,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         } else {
           conteudoEscolhido = escolha0.conteudo;
           desempatado = !!escolha0.desempatado;
-          const mapa = await store.get('contentTemplates');
+          const mapa = await lerContentTemplates();
           const achado = hsmLib.templateParaConteudo(conteudoEscolhido.nome, mapa, state.hsmTemplates);
           modelo = achado.modelo || null;
           semModelo = achado.erro || '';
@@ -9268,7 +9299,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const r = await page.enviarImagem({
         sessionId: state.pageState.sessionId,
         senderId: state.senderId,
-        chave: 'imagemMomentoArquivo',
+        chave: perfisLib.chaveDeImagem('imagemMomentoArquivo', perfilAtivo()),
         legenda,
       });
       setStatus(
@@ -12427,14 +12458,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     const cityArea = h('textarea', { rows: '7' });
     const defaultInput = h('input', { type: 'text', placeholder: 'link usado quando a cidade não tem grupo' });
-    store.get('cityLinks').then((m) => (cityArea.value = cities.formatCityLinks(m)));
-    store.get('defaultGroupLink').then((v) => (defaultInput.value = v || ''));
+    perfisLib.ler('cityLinks', perfilAtivo(), {}).then((m) => (cityArea.value = cities.formatCityLinks(m)));
+    perfisLib.ler('defaultGroupLink', perfilAtivo(), '').then((v) => (defaultInput.value = v || ''));
 
     const cityBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Salvar grupos');
     cityBtn.addEventListener('click', async () => {
       const parsed = cities.parseCityLinksText(cityArea.value);
-      await store.set('cityLinks', parsed);
-      await store.set('defaultGroupLink', defaultInput.value.trim());
+      await perfisLib.gravar('cityLinks', perfilAtivo(), parsed);
+      await perfisLib.gravar('defaultGroupLink', perfilAtivo(), defaultInput.value.trim());
       setStatus(`${Object.keys(parsed).length} cidade(s) salva(s).`, 'ok');
     });
     body.append(cityArea, h('label', { class: 'wf-field' }, [h('span', {}, 'Link padrão (opcional)'), defaultInput]), cityBtn);
@@ -12552,8 +12583,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * que o gravar descartava na mesma hora, e o botão **não fazia nada, em silêncio**. Peguei
        * abrindo a Config de verdade.
        */
-      const salva = await store.get('modelosPadraoAnuncio');
-      const antigo = String((await store.get('modeloPadraoAnuncio')) || '').trim();
+      const salva = await perfisLib.ler('modelosPadraoAnuncio', perfilAtivo(), []);
+      const antigo = String((await perfisLib.ler('modeloPadraoAnuncio', perfilAtivo(), '')) || '').trim();
       const lista = Array.isArray(salva) && salva.length ? salva : antigo ? [antigo] : [];
       const indice = Number(await store.get('modeloPadraoIndex')) || 0;
 
@@ -12561,7 +12592,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // Guarda como ele digitou (só sem espaço nas pontas). Quem peneira vazio é a leitura da
         // rodada — `carregarModelosPadrao` e `anuncios.padraoDaVez`, os dois com teste.
         const limpa = nova.map((m) => String(m || '').trim());
-        await store.set('modelosPadraoAnuncio', limpa);
+        await perfisLib.gravar('modelosPadraoAnuncio', perfilAtivo(), limpa);
         /**
          * O ponteiro volta para dentro da lista quando ela encolhe.
          *
@@ -12857,7 +12888,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
 
     const mapaArea = h('textarea', { rows: '4' });
-    store.get('contentTemplates').then((m) => (mapaArea.value = hsmLib.formatContentTemplates(m)));
+    lerContentTemplates().then((m) => (mapaArea.value = hsmLib.formatContentTemplates(m)));
     if (state.hsmTemplates.length) {
       body.append(
         h('div', { class: 'wf-origin' }, 'Modelos disponíveis: ' + state.hsmTemplates.map((m) => m.name).join(' · '))
@@ -13010,7 +13041,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     mapaBtn.addEventListener('click', () =>
       withBusy(async () => {
         const parsed = hsmLib.parseContentTemplates(mapaArea.value);
-        await store.set('contentTemplates', parsed);
+        await perfisLib.gravar('contentTemplates', perfilAtivo(), parsed);
         const semModelo = Object.values(parsed).filter(
           (nome) => !state.hsmTemplates.some((m) => m.name.trim().toLowerCase() === nome.trim().toLowerCase())
         );
@@ -13612,10 +13643,10 @@ async function carregarAnuncios(perfil = null) {
  * o dado antigo é só o primeiro item do novo.
  */
 async function carregarModelosPadrao() {
-  const lista = await store.get('modelosPadraoAnuncio');
+  const lista = await perfisLib.ler('modelosPadraoAnuncio', perfilAtivo(), []);
   if (Array.isArray(lista) && lista.length) return lista.map((m) => String(m || '').trim()).filter(Boolean);
 
-  const unico = String((await store.get('modeloPadraoAnuncio')) || '').trim();
+  const unico = String((await perfisLib.ler('modeloPadraoAnuncio', perfilAtivo(), '')) || '').trim();
   return unico ? [unico] : [];
 }
 
