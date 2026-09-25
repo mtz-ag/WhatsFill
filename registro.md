@@ -1,3 +1,65 @@
+## 2026-09-25 — v3.117.0 — os candidatos viraram LOGIN: você entra como um, e o canal só avisa
+
+**Correção dele**, um dia depois da v3.115: *"não gostei do método utilizado para os perfis, eu
+queria algo como um perfil de login no Windows, aparenta estar tudo misturado"*.
+
+**Ele estava certo, e em dois sentidos.** A v3.115 (a) decidia o candidato pelo CANAL, sozinha, e
+trocava por baixo dele sem ele ter escolhido nada; e (b) a Config empilhava **todos** os candidatos,
+com todos os campos de todos na mesma tela. Nada disso parece login — parece configuração misturada.
+
+**O que era o argumento a favor do canal continua verdadeiro** (é dado, não texto; não erra), e foi
+por isso que eu o recomendei. Mas ele responde à pergunta errada: automatizar a escolha é bom para
+uma *regra*; um *login* existe justamente para a pessoa saber quem ela é. **A medição do canal não
+media isso**, do mesmo jeito que a medição dos dois ramos do quadro (04/09) não media o que a
+divisão fazia por ele.
+
+### O desenho de agora
+
+- **Você entra como um candidato** (`store.perfilAtivo`) e fica nele até trocar. O seletor vive no
+  **cabeçalho**, acima de tudo e em toda aba, porque é a pergunta que precede qualquer decisão: *"a
+  mensagem que vai sair é de quem?"*.
+- **Trocar troca a tela inteira** — respostas prontas, anúncios, dossiê e instruções da IA.
+- **O canal só AVISA.** Abrindo um atendimento cujo número pertence a outro candidato, o painel
+  acende uma tarja **vermelha** dizendo que o que sair vai com o nome errado, com o botão *"Entrar
+  como Fulano"* do lado. **Não troca sozinho** — foi isso que ele recusou.
+- **A Config edita UM candidato: o que está logado.** Para mexer no outro, entra-se como ele.
+- **Com um candidato só, nada disso aparece.** Não há login a fazer, e uma linha em 100% das telas é
+  ruído — alarme que toca sempre se aprende a ignorar.
+
+### As decisões que o redesenho obrigou
+
+**`doCanal` foi APAGADO, e o que ficou devolve NULO.** Aquele nunca devolvia nulo, porque ele
+*escolhia*; para o aviso isso é fatal — *"ninguém reivindicou este número"* e *"é do candidato de
+sempre"* seriam a mesma resposta, e a tarja acenderia em quase todo atendimento. `donoDoCanal` só
+responde *"alguém reclamou este canal?"*. E `doCanal` ficou sem chamador, que é a armadilha do
+`pedido-emprego` — função sem gatilho sai.
+
+**O login não se zera na troca de contato.** Ele deixou de ser estado do contato e virou estado da
+sessão de trabalho: login não cai quando se abre outra conversa. O que se zera é a **tarja**, que é
+uma afirmação sobre o contato aberto — sobreviver à troca faria ela falar de uma conversa que não
+está mais na tela (a armadilha do `state.anuncio`).
+
+**Trocar de candidato recarrega na hora.** Esperar o próximo `load()` deixaria a tela com as
+respostas do candidato antigo e o nome do novo no cabeçalho — a pior combinação possível, porque ela
+parece certa.
+
+**Criar um candidato entra nele na hora**, e copia os textos do candidato em que você está (com o
+nome e o número de urna trocados). Criar e continuar no antigo deixaria um candidato novo e vazio
+invisível, e ele editaria os textos errados achando que eram os novos.
+
+**Apagar o candidato em que você está é deslogar:** volta para o de sempre, senão o painel ficaria
+com o nome de alguém que não existe mais.
+
+### O que NÃO mudou
+
+O armazenamento. O candidato de fábrica continua lendo as chaves de topo (`templates`, `anuncios`),
+então **não houve migração nenhuma** e o invariante da v3.115 continua de pé: com um candidato só, o
+prompt sai byte a byte igual. A prova continua no `tests/perfis.test.mjs`.
+
+**Medido ponta a ponta depois do redesenho:** criar o segundo candidato copia as **21** respostas
+com o nome trocado (*"Você está falando com a equipe do Felipe Pedri"*), as do Martim ficam
+intactas, a tarja acende só quando o canal é de outro, e canal não cadastrado não acende nada.
+
 ## 2026-09-25 — v3.116.0 — a regra 12 vazava o motivo interno para dentro da mensagem
 
 **Print da Lizi:** ela chegou pelo anúncio e escreveu *"Oiii tem vaga para trabalhar"*. O rascunho

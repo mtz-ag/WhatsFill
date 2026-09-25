@@ -1356,6 +1356,20 @@ const DEFAULTS = {
    */
   perfis: [],
   /**
+   * **COMO QUEM VOCÊ ESTÁ ENTRANDO** — o candidato ativo, escolhido por ele.
+   *
+   * Correção dele (25/09/2026): *"não gostei do método utilizado para os perfis, eu queria algo
+   * como um perfil de login no Windows, aparenta estar tudo misturado"*. A primeira versão decidia
+   * pelo CANAL, sozinha, e a tela empilhava todos os candidatos — nada disso parece login.
+   *
+   * **Aqui e não em `settings`** porque `store.get` mescla os defaults daquele objeto: uma chave
+   * nova ali chega `undefined` em quem já usava, e a escolha dele nasceria vazia justamente em
+   * quem tem mais de um candidato (a armadilha do `-contato-assessor`, 04/09).
+   *
+   * O canal do atendimento deixou de decidir e passou a só AVISAR — ver `perfis.donoDoCanal`.
+   */
+  perfilAtivo: 'martim',
+  /**
    * Os dados de cada perfil que NÃO é o de fábrica — `{ <id>: { templates, anuncios, … } }`.
    *
    * O de fábrica continua nas chaves de topo de propósito: **não há migração no dado que ele já

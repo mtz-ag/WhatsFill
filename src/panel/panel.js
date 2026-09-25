@@ -188,18 +188,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      */
     anuncio: null,
     /**
-     * **De QUAL candidato é esta conversa** — 24/09/2026, ver `lib/perfis.js`.
+     * **COMO QUEM VOCÊ ESTÁ ENTRANDO** — o candidato ativo (25/09/2026).
      *
-     * Sai do CANAL do atendimento (`session.channelId` e o número da instância na tela), que é
-     * dado e não texto. Zerado na troca de contato como o `state.anuncio`, e pela mesma razão: o
-     * perfil do contato anterior escolheria as respostas prontas deste.
+     * Correção dele: *"eu queria algo como um perfil de login no Windows, aparenta estar tudo
+     * misturado"*. A primeira versão decidia pelo CANAL, sozinha, e trocava por baixo dele. Hoje é
+     * escolha dele, gravada em `store.perfilAtivo`, e **não se zera na troca de contato**: login
+     * não cai quando se abre outra conversa.
      *
-     * Nunca fica nulo depois do `load()`: `perfis.doCanal` sempre devolve alguém, porque painel
-     * sem candidato é painel sem nome para escrever.
+     * Nunca fica nulo depois do `load()`: `perfis.porId` sempre devolve alguém, porque painel sem
+     * candidato é painel sem nome para escrever.
      */
     perfil: null,
-    /** Todos os candidatos cadastrados — a tela da Config e a escolha do perfil leem daqui. */
+    /** Todos os candidatos cadastrados — o seletor de login e a Config leem daqui. */
     perfis: [],
+    /**
+     * **O atendimento aberto é do número de OUTRO candidato?** — o aviso, e só o aviso.
+     *
+     * Decisão dele (25/09/2026): o canal **não troca** o login, porque trocar por baixo foi o que
+     * ele recusou; ele avisa, e o botão de trocar fica a um clique. `null` quer dizer "nada a
+     * dizer", e é o caso normal — número não cadastrado não acende tarja nenhuma.
+     */
+    canalDeOutroCandidato: null,
     /** Expressões que identificam a mensagem gerada pelo anúncio (Config). */
     padroesDeAnuncio: [],
     /** O que NÓS mandamos nesta conversa — para saber o que já foi, mesmo fora do painel. */
@@ -564,9 +573,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * a decisão de um contato executada em outro.
      */
     state.anuncio = null;
-    // O perfil é do CANAL deste atendimento — ver `state.perfil`. Zerar aqui é o que impede a
-    // conversa nova de herdar o candidato da anterior enquanto a sessão não chegou.
-    state.perfil = null;
+    /**
+     * **O candidato ativo NÃO se zera na troca de contato** — ele é o seu login (25/09/2026), e
+     * login não cai quando se abre outra conversa. O que se zera é o AVISO: "este atendimento é do
+     * número do outro candidato" é uma afirmação sobre ESTE contato, e sobreviver à troca faria a
+     * tarja falar de uma conversa que não está mais na tela — a armadilha do `state.anuncio`.
+     */
+    state.canalDeOutroCandidato = null;
     state.lidoPelaIA = null;
     state.materialPelaRegra = null;
     state.anuncioSemResposta = null;
@@ -589,17 +602,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.ia = await store.get('ia');
     state.fluxo = await store.get('fluxo');
     await lerChavesDaIA();
-    state.perfis = perfisLib.sanitizar(await store.get('perfis'));
     /**
-     * **Os textos do PADRÃO primeiro, os do candidato depois da sessão.**
+     * **QUEM ESTÁ LOGADO** — e é isto que decide tudo o que a tela mostra (25/09/2026).
      *
-     * A aba Respostas existe sem atendimento aberto, e sem esta linha ela ficaria vazia até alguém
-     * abrir um contato. Quem sabe de qual candidato é a conversa é o CANAL, e ele só chega no
-     * `getSession` algumas linhas abaixo — então a lista é relida lá quando o perfil não for o de
-     * fábrica. Duas leituras de armazenamento, zero requisição: o que derruba esta API é número de
-     * requisições, não leitura local.
+     * Vem do armazenamento e não do canal: quem escolhe é ele, e a escolha dura até ele trocar.
+     * Carregado ANTES de qualquer outra coisa porque as respostas prontas, os anúncios e as
+     * instruções extras saem daqui — e uma tela que desenha com o candidato errado por um instante
+     * é uma tela em que ele pode clicar.
      */
-    state.templates = await templatesLib.list();
+    state.perfis = perfisLib.sanitizar(await store.get('perfis'));
+    state.perfil = perfisLib.porId(state.perfis, await store.get('perfilAtivo'));
+    state.templates = await templatesLib.list({ perfil: state.perfil.id });
+    /**
+     * **As instruções extras também são do candidato.**
+     *
+     * Sobrescrever `state.ia.regras` em MEMÓRIA, em vez de criar um segundo nome, é o que impede a
+     * armadilha registrada quatro vezes aqui: duas cópias da mesma coisa divergem, e a que ninguém
+     * olha é a que vai para o prompt. Os seis pontos que leem `state.ia.regras` continuam lendo um
+     * campo só, e o `load()` relê o `ia` do armazenamento, então a sobrescrita nunca sobrevive.
+     *
+     * **Em branco quer dizer em branco**, não "herda as do outro".
+     */
+    if (state.perfil.id !== perfisLib.PERFIL_PADRAO) {
+      state.ia = { ...state.ia, regras: String((await perfisLib.ler('iaRegras', state.perfil.id, '')) || '') };
+    }
     renderAll();
 
     if (!sessionId) {
@@ -615,12 +641,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        *
        * O `channelId` é o id opaco que a API usa; o NÚMERO é o que ele lê na tela ("Instância
        * cccad9 · (51) 98051-0122") e o único que ele tem como digitar na Config. Os dois casam
-       * contra a mesma lista — ver `perfis.doCanal`.
+       * contra a mesma lista — ver `perfis.donoDoCanal`.
        */
       /**
        * **Pela PONTE, nunca `dom` direto** — no modo janela o painel não alcança o DOM da aba, e a
        * chamada direta seria `ReferenceError` no meio do `load()` de todo contato. Falhar aqui não
-       * pode custar o atendimento: sem o número, o `channelId` decide sozinho.
+       * pode custar o atendimento: sem o número, sobra o `channelId`.
        */
       let numeroDoCanal = '';
       try {
@@ -628,23 +654,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       } catch {
         numeroDoCanal = '';
       }
-      state.perfil = perfisLib.doCanal(state.perfis, state.session?.channelId, numeroDoCanal);
-      if (state.perfil?.id && state.perfil.id !== perfisLib.PERFIL_PADRAO) {
-        state.templates = await templatesLib.list({ perfil: state.perfil.id });
-        /**
-         * **As instruções extras também são do candidato** (escolha dele, 24/09/2026).
-         *
-         * Sobrescrever `state.ia.regras` em MEMÓRIA, em vez de criar um segundo nome, é o que
-         * impede a armadilha registrada quatro vezes aqui: duas cópias da mesma coisa divergem, e
-         * a que ninguém olha é a que vai para o prompt. Os seis pontos que leem `state.ia.regras`
-         * continuam lendo um campo só, e o `load()` relê o `ia` do armazenamento a cada contato,
-         * então a sobrescrita nunca sobrevive à troca.
-         *
-         * **Em branco quer dizer em branco**, não "herda as do outro": instrução escrita para a
-         * campanha de um candidato aplicada à do outro é exatamente o que esta tela evita.
-         */
-        state.ia = { ...state.ia, regras: String((await perfisLib.ler('iaRegras', state.perfil.id, '')) || '') };
-      }
+      /**
+       * **O canal só AVISA** (decisão dele, 25/09/2026, o modelo de login): quem escolhe o
+       * candidato é ele, e trocar sozinho por baixo foi exatamente o que ele recusou.
+       *
+       * `donoDoCanal` e não `doCanal`: aquele nunca devolve nulo, então "ninguém reivindicou este
+       * número" e "é do candidato de sempre" seriam a mesma resposta — e a tarja apareceria em todo
+       * atendimento de número não cadastrado, que é quase todos. Alarme que toca sempre se aprende
+       * a ignorar.
+       */
+      const dono = perfisLib.donoDoCanal(state.perfis, state.session?.channelId, numeroDoCanal);
+      state.canalDeOutroCandidato = dono && dono.id !== state.perfil?.id ? dono : null;
+
       const [contact, classify] = await Promise.all([
         api.getContact(state.session.contactId),
         fieldsLib.classifyFields(),
@@ -1572,6 +1593,79 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /**
+   * **O LOGIN: como quem você está entrando** — correção dele (25/09/2026), *"eu queria algo como
+   * um perfil de login no Windows, aparenta estar tudo misturado"*.
+   *
+   * Fica no CABEÇALHO, acima de tudo e em toda aba, porque é a pergunta que precede qualquer
+   * decisão: *"a mensagem que vai sair é de quem?"*. Trocar aqui troca a tela inteira — respostas
+   * prontas, anúncios, dossiê e instruções da IA.
+   *
+   * **Com um candidato só, não aparece nada.** Não há login a fazer, e uma linha em 100% das telas
+   * é ruído — alarme que toca sempre se aprende a ignorar.
+   */
+  function montarLoginDoCandidato(onde) {
+    if ((state.perfis || []).length < 2 || !state.perfil) return;
+
+    const seletor = h('select', {});
+    for (const p of state.perfis) {
+      const op = h('option', { value: p.id }, p.nome);
+      if (p.id === state.perfil.id) op.selected = true;
+      seletor.append(op);
+    }
+    seletor.addEventListener('change', () => entrarComo(seletor.value));
+    onde.append(
+      h('div', { class: 'wf-login', 'data-fica': '1' }, [h('span', {}, 'Você está como:'), seletor])
+    );
+
+    /**
+     * **A tarja do canal — o aviso que substituiu a troca automática.**
+     *
+     * Ele recusou o painel trocar de candidato por baixo dele; o que sobra é dizer, alto, que o
+     * atendimento aberto é do número do outro — e deixar o botão a um clique. **Só acende quando
+     * alguém RECLAMOU aquele canal** (ver `perfis.donoDoCanal`): número não cadastrado não acende
+     * nada, senão a tarja apareceria em quase todo atendimento.
+     */
+    if (state.canalDeOutroCandidato) {
+      const outro = state.canalDeOutroCandidato;
+      const trocar = h('button', { class: 'wf-btn wf-mini', type: 'button' }, `Entrar como ${outro.nome}`);
+      trocar.addEventListener('click', () => entrarComo(outro.id));
+      onde.append(
+        h('div', { class: 'wf-block wf-err-block', 'data-fica': '1' }, [
+          h('div', {},
+            `Atenção: este atendimento é do número de ${outro.nome}, e você está como ${state.perfil.nome}. ` +
+              'O que sair daqui vai com as respostas e o nome do candidato errado.'),
+          trocar,
+        ])
+      );
+    }
+  }
+
+  /**
+   * Entra como outro candidato: grava a escolha e recarrega o que é dele.
+   *
+   * **Recarrega em vez de confiar no `load()`**: a troca acontece com um atendimento já aberto, e
+   * esperar o próximo contato deixaria a tela mostrando as respostas do candidato antigo com o nome
+   * do novo no cabeçalho — a pior combinação possível, porque ela parece certa.
+   */
+  async function entrarComo(id) {
+    const alvo = perfisLib.porId(state.perfis, id);
+    await store.set('perfilAtivo', alvo.id);
+    state.perfil = alvo;
+    state.templates = await templatesLib.list({ perfil: alvo.id });
+    const cfg = await store.get('ia');
+    state.ia =
+      alvo.id === perfisLib.PERFIL_PADRAO
+        ? cfg
+        : { ...cfg, regras: String((await perfisLib.ler('iaRegras', alvo.id, '')) || '') };
+    // O aviso é sobre o contato aberto, e quem o calcula é o `load()`. Trocando de candidato ele
+    // deixa de valer na hora: a tarja dizia "você está como o outro", e agora você não está mais.
+    const dono = state.canalDeOutroCandidato;
+    state.canalDeOutroCandidato = dono && dono.id !== alvo.id ? dono : null;
+    renderAll();
+    setStatus(`Você está como ${alvo.nome}. As respostas, os anúncios e o dossiê são dele.`, 'ok');
+  }
+
+  /**
    * **De qual candidato são os textos que esta tela edita** — 24/09/2026, ver `lib/perfis.js`.
    *
    * Um lugar só: as seis escritas da aba Respostas (salvar, apagar, mover duas vezes, restaurar,
@@ -1702,6 +1796,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const abrirFluxo = h('button', { class: 'wf-btn wf-mini wf-fluxo-abrir', type: 'button' }, 'Fluxo de atendimento ↗');
     abrirFluxo.addEventListener('click', () => abrirJanelaDoFluxo());
     header.append(abrirFluxo);
+    montarLoginDoCandidato(header);
 
     if (!state.contact) {
       header.append(h('div', { class: 'wf-who' }, 'WhatsFill'));
@@ -1732,21 +1827,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     header.append(h('div', { class: 'wf-who' }, name));
     header.append(h('div', { class: 'wf-sub' }, phone + (campaign ? ` · ${campaign}` : '')));
 
-    /**
-     * **DE QUEM é esta conversa** — só quando há mais de um candidato cadastrado (24/09/2026).
-     *
-     * Com um perfil a linha não aparece: ela seria ruído em 100% das telas, e alarme que toca
-     * sempre se aprende a ignorar. Com dois, ela é a única coisa que responde *"a resposta que vai
-     * sair é de quem?"* antes de a mensagem sair — e essa é a pergunta cara desta tela.
-     *
-     * O que decide é o CANAL, então a linha diz o canal junto: sem isso, um perfil escolhido errado
-     * parece defeito do painel em vez de número faltando na Config.
-     */
-    if ((state.perfis || []).length > 1 && state.perfil) {
-      header.append(
-        h('div', { class: 'wf-sub', 'data-fica': '1' }, `Candidato: ${state.perfil.nome}`)
-      );
-    }
 
     const cidade = valueNamed('Cidade');
     if (cidade) header.append(h('div', { class: 'wf-sub' }, [document.createTextNode('Cidade: '), ...cidadeMarcada()]));
@@ -12037,131 +12117,127 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.ia = { ...(await store.get('ia')), ...mudanca };
     await store.set('ia', state.ia);
   }
-
   /**
-   * **OS CANDIDATOS** — pedido dele (24/09/2026): *"a extensão trabalha com o foco no Capitão
-   * Martim, ou seja somente um perfil; eu preciso da opção de mais perfis pois tenho agora o Felipe
-   * Pedri, então as respostas devem ser específicas pra ele"*.
+   * **O CANDIDATO EM QUE VOCÊ ESTÁ** — refeito em 25/09/2026 pela correção dele: *"não gostei do
+   * método utilizado para os perfis, eu queria algo como um perfil de login no Windows, aparenta
+   * estar tudo misturado"*.
    *
-   * **Quem decide de quem é a conversa é o CANAL** (escolha dele), e é por isso que o cartão abre
-   * dizendo qual é o canal do atendimento aberto, com o botão que o joga para dentro do perfil: o
-   * `channelId` é um id opaco que ninguém digita de cabeça, e o número da instância é o que ele lê
-   * na tela. Sem essa linha, preencher o canal seria adivinhação.
+   * A primeira versão empilhava TODOS os candidatos nesta tela, com todos os campos de todos ao
+   * mesmo tempo — e era isso que parecia misturado. Aqui se edita **um**: o que está logado. Para
+   * mexer no outro, entra-se como ele pelo seletor do cabeçalho, que é o mesmo gesto do Windows.
    *
-   * **Criar um candidato COPIA os textos do atual com o nome e o número trocados.** Perfil sem
-   * texto é perfil mudo, e mudo numa rodada automática é contato saindo da fila sem receber nada —
-   * ver `perfis.semearTextos`. A cópia é ponto de partida: ele edita na aba Respostas, que passa a
-   * mostrar as do candidato do atendimento aberto.
+   * **O canal não troca mais o login, só avisa** — ver `montarLoginDoCandidato`. O cartão continua
+   * mostrando o canal do atendimento aberto porque o `channelId` é um id opaco que ninguém digita
+   * de cabeça: sem essa linha, preencher o campo seria adivinhação.
    */
   function renderCartaoCandidatos() {
-    const card = h('div', { class: 'wf-card' }, [h('h4', {}, 'Candidatos')]);
+    const perfil = state.perfil || perfisLib.porId(state.perfis, perfisLib.PERFIL_PADRAO);
+    const card = h('div', { class: 'wf-card' }, [h('h4', {}, `Candidato: ${perfil.nome}`)]);
     card.append(
       h('div', { class: 'wf-origin' },
-        'Quem atende cada conversa sai do CANAL do atendimento (a instância/número do WhatsApp). ' +
-          'Cada candidato tem as próprias respostas prontas, o próprio dossiê e os próprios anúncios. ' +
-          'O quadro do fluxo, o parser e as etiquetas de cidade continuam valendo para todos.')
+        'Esta tela edita o candidato em que você está. As respostas prontas, os anúncios, o dossiê ' +
+          'e as instruções da IA são dele; o quadro do fluxo, o parser e as etiquetas de cidade ' +
+          'valem para todos. Para mexer em outro candidato, entre como ele no alto do painel.')
     );
 
-    const salvar = async (lista) => {
-      const limpa = perfisLib.sanitizar(lista);
+    const salvar = async (mudanca) => {
+      const limpa = perfisLib.sanitizar(state.perfis.map((p) => (p.id === perfil.id ? { ...p, ...mudanca } : p)));
       await store.set('perfis', limpa);
       state.perfis = limpa;
-      // O perfil do atendimento aberto pode ter mudado de nome ou de canal agora mesmo.
-      // Pelo `channelId` só: o número da instância é lido da TELA no `load()`, e aqui não há de
-      // onde tirá-lo sem ir à aba. Trocar o canal e reabrir o contato resolve o resto.
-      if (state.session) state.perfil = perfisLib.doCanal(limpa, state.session?.channelId);
+      state.perfil = perfisLib.porId(limpa, perfil.id);
       renderAll();
     };
 
-    /** O canal do atendimento aberto, para ele não ter de adivinhar o que digitar. */
+    card.append(
+      campoTexto('Nome', perfil.nome, (v) => salvar({ nome: v })),
+      campoTexto('Como citá-lo no meio da frase (ex.: o Capitão Martim)', perfil.tratamento, (v) => salvar({ tratamento: v })),
+      campoTexto('Cargo (ex.: deputado estadual)', perfil.cargo, (v) => salvar({ cargo: v })),
+      campoTexto('Número de urna', perfil.numero, (v) => salvar({ numero: v }))
+    );
+
+    const canaisInput = h('input', { type: 'text', value: perfil.canais.join(', '), placeholder: 'ex.: 51980510122, cccad9' });
+    canaisInput.addEventListener('change', () =>
+      salvar({ canais: canaisInput.value.split(',').map((c) => c.trim()).filter(Boolean) }));
+    card.append(
+      h('label', { class: 'wf-field' }, [
+        h('span', {}, 'Números deste candidato (para o painel avisar)'),
+        canaisInput,
+        h('div', { class: 'wf-origin' },
+          'Separe por vírgula: o número que aparece no cabeçalho da conversa (só os dígitos contam) ' +
+            'ou o id da instância. Isto NÃO troca o candidato sozinho — serve para o painel avisar, ' +
+            'em vermelho, quando o atendimento aberto for do número do outro.'),
+      ])
+    );
+
     const canalAgora = String(state.session?.channelId || '').trim();
     if (canalAgora) {
-      const linha = h('div', { class: 'wf-preview', 'data-fica': '1' },
-        `Atendimento aberto: canal ${canalAgora}${state.perfil ? ` — hoje atendido por ${state.perfil.nome}` : ''}`);
-      card.append(linha);
+      const usar = h('button', { class: 'wf-btn wf-mini', type: 'button' }, 'Somar o canal deste atendimento a este candidato');
+      usar.addEventListener('click', () => salvar({ canais: [...new Set([...perfil.canais, canalAgora])] }));
+      card.append(h('div', { class: 'wf-preview', 'data-fica': '1' }, `Atendimento aberto: canal ${canalAgora}`), usar);
     } else {
-      card.append(h('div', { class: 'wf-hint' }, 'Abra um atendimento para ver o canal dele aqui e copiá-lo para o candidato certo.'));
+      card.append(h('div', { class: 'wf-hint' }, 'Abra um atendimento para copiar o canal dele para cá.'));
     }
 
-    for (const perfil of state.perfis) {
-      const bloco = h('div', { class: 'wf-card' }, [h('h4', {}, perfil.nome)]);
-
-      bloco.append(
-        campoTexto('Nome do candidato', perfil.nome, (v) =>
-          salvar(state.perfis.map((p) => (p.id === perfil.id ? { ...p, nome: v } : p)))),
-        campoTexto('Como citá-lo no meio da frase (ex.: o Capitão Martim)', perfil.tratamento, (v) =>
-          salvar(state.perfis.map((p) => (p.id === perfil.id ? { ...p, tratamento: v } : p)))),
-        campoTexto('Cargo (ex.: deputado estadual)', perfil.cargo, (v) =>
-          salvar(state.perfis.map((p) => (p.id === perfil.id ? { ...p, cargo: v } : p)))),
-        campoTexto('Número de urna', perfil.numero, (v) =>
-          salvar(state.perfis.map((p) => (p.id === perfil.id ? { ...p, numero: v } : p))))
-      );
-
-      const canaisInput = h('input', { type: 'text', value: perfil.canais.join(', '),
-        placeholder: 'ex.: 51980510122, cccad9' });
-      canaisInput.addEventListener('change', () =>
-        salvar(state.perfis.map((p) => (p.id === perfil.id
-          ? { ...p, canais: canaisInput.value.split(',').map((c) => c.trim()).filter(Boolean) }
-          : p))));
-      bloco.append(
+    if (perfil.id !== perfisLib.PERFIL_PADRAO) {
+      const dossieArea = h('textarea', { rows: '6', placeholder: 'quem ele é, o que já fez, o que defende — a IA só afirma o que estiver escrito aqui' });
+      dossieArea.value = perfil.dossie || '';
+      dossieArea.addEventListener('change', () => salvar({ dossie: dossieArea.value }));
+      card.append(
         h('label', { class: 'wf-field' }, [
-          h('span', {}, 'Canais deste candidato — número ou id da instância'),
-          canaisInput,
+          h('span', {}, 'Dossiê deste candidato'),
+          dossieArea,
           h('div', { class: 'wf-origin' },
-            'Separe por vírgula. Vale o número que aparece no cabeçalho da conversa (só os dígitos ' +
-              'contam) ou o id do canal. Deixar VAZIO quer dizer "atende tudo o que os outros não ' +
-              'reivindicaram" — é assim que o candidato de sempre continua atendendo a base inteira.'),
+            'O dossiê do Capitão Martim vem empacotado com a extensão e NÃO é usado aqui — mandá-lo ' +
+              'numa conversa de outro candidato seria a IA responder com a biografia de outra ' +
+              'pessoa. Em branco, a IA fica sem dossiê e prefere não afirmar nada, que é o lado seguro.'),
         ])
       );
 
-      if (canalAgora) {
-        const usar = h('button', { class: 'wf-btn wf-mini', type: 'button' }, `Usar o canal deste atendimento em ${perfil.nome}`);
-        usar.addEventListener('click', () =>
-          salvar(state.perfis.map((p) => (p.id === perfil.id
-            ? { ...p, canais: [...new Set([...p.canais, canalAgora])] }
-            : p))));
-        bloco.append(usar);
-      }
+      const apagar = h('button', { class: 'wf-btn wf-mini wf-danger', type: 'button' }, `Apagar ${perfil.nome}`);
+      apagar.addEventListener('click', async () => {
+        if (!window.confirm(`Apagar o candidato "${perfil.nome}"? As respostas prontas e os anúncios dele vão junto.`)) return;
+        const todos = { ...((await store.get('porPerfil')) || {}) };
+        delete todos[perfil.id];
+        await store.set('porPerfil', todos);
+        const limpa = perfisLib.sanitizar(state.perfis.filter((p) => p.id !== perfil.id));
+        await store.set('perfis', limpa);
+        state.perfis = limpa;
+        // Apagar o candidato em que se está é deslogar: entra-se no de sempre, e a tela inteira
+        // volta a ser dele. Sem isto o painel ficaria com o nome de um candidato que não existe.
+        await entrarComo(perfisLib.PERFIL_PADRAO);
+        setStatus(`Candidato "${perfil.nome}" apagado. Você está como ${state.perfil.nome}.`, 'ok');
+      });
+      card.append(apagar);
+    } else {
+      card.append(
+        h('div', { class: 'wf-origin' },
+          'Este é o candidato de sempre: as respostas prontas, os anúncios e o dossiê dele são os ' +
+            'que a extensão já usava, nas mesmas chaves. Por isso nada mudou para ele.')
+      );
+    }
 
-      if (perfil.id !== perfisLib.PERFIL_PADRAO) {
-        const dossieArea = h('textarea', { rows: '6', placeholder: 'quem ele é, o que já fez, o que defende — a IA só afirma o que estiver escrito aqui' });
-        dossieArea.value = perfil.dossie || '';
-        dossieArea.addEventListener('change', () =>
-          salvar(state.perfis.map((p) => (p.id === perfil.id ? { ...p, dossie: dossieArea.value } : p))));
-        bloco.append(
-          h('label', { class: 'wf-field' }, [
-            h('span', {}, 'Dossiê deste candidato'),
-            dossieArea,
-            h('div', { class: 'wf-origin' },
-              'O dossiê do Capitão Martim vem empacotado com a extensão e NÃO é usado aqui — mandá-lo ' +
-                'numa conversa de outro candidato seria a IA responder com a biografia de outra pessoa. ' +
-                'Em branco, a IA fica sem dossiê e prefere não afirmar nada, que é o lado seguro.'),
-          ])
-        );
+    body.append(card);
 
-        const apagar = h('button', { class: 'wf-btn wf-mini wf-danger', type: 'button' }, `Apagar ${perfil.nome}`);
-        apagar.addEventListener('click', async () => {
-          if (!window.confirm(`Apagar o candidato "${perfil.nome}"? As respostas prontas e os anúncios dele são apagados junto.`)) return;
-          const todos = { ...((await store.get('porPerfil')) || {}) };
-          delete todos[perfil.id];
-          await store.set('porPerfil', todos);
-          await salvar(state.perfis.filter((p) => p.id !== perfil.id));
-          setStatus(`Candidato "${perfil.nome}" apagado.`, 'ok');
-        });
-        bloco.append(apagar);
-      } else {
-        bloco.append(
-          h('div', { class: 'wf-origin' },
-            'Este é o candidato de sempre: as respostas prontas, os anúncios e o dossiê dele são os ' +
-              'que a extensão já usava, nas mesmas chaves. Por isso nada mudou para ele.')
-        );
-      }
-
-      card.append(bloco);
+    /**
+     * **Criar é uma tela à parte, e não mais um bloco no meio dos outros.**
+     *
+     * Criar COPIA os textos do candidato em que você está, com o nome e o número de urna trocados:
+     * perfil sem texto é perfil mudo, e mudo numa rodada automática é contato saindo da fila sem
+     * receber nada. Ver `perfis.semearTextos`.
+     */
+    const novoCard = h('div', { class: 'wf-card' }, [h('h4', {}, 'Outro candidato')]);
+    if (state.perfis.length > 1) {
+      novoCard.append(
+        h('div', { class: 'wf-preview', 'data-fica': '1' },
+          `Cadastrados: ${state.perfis.map((p) => p.nome).join(' · ')}`),
+        h('div', { class: 'wf-origin' },
+          'Para editar outro, entre como ele no seletor do alto do painel — a tela inteira passa a ' +
+            'ser dele.')
+      );
     }
 
     const novoNome = h('input', { type: 'text', placeholder: 'ex.: Felipe Pedri' });
-    const criar = h('button', { class: 'wf-btn', type: 'button' }, 'Criar candidato (copiando os textos de hoje)');
+    const criar = h('button', { class: 'wf-btn', type: 'button' }, `Criar candidato (copiando os textos de ${perfil.nome})`);
     criar.addEventListener('click', () =>
       withBusy(async () => {
         const nome = novoNome.value.trim();
@@ -12170,28 +12246,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         if (!id) return setStatus('Esse nome não vira um identificador; use letras.', 'err');
         if (state.perfis.some((p) => p.id === id)) return setStatus(`Já existe um candidato "${nome}".`, 'err');
 
-        const base = perfisLib.porId(state.perfis, perfisLib.PERFIL_PADRAO);
         const novo = { id, nome, tratamento: `o ${nome}`, cargo: '', numero: '', canais: [], dossie: '' };
-        /**
-         * **Os textos vão semeados a partir do candidato de sempre.** Sem isto o perfil nasce mudo,
-         * e mudo na rodada automática é contato saindo da fila sem receber nada. O número de urna
-         * ainda está vazio aqui, então só o NOME é trocado — ele preenche o número e recria, ou
-         * corrige os textos na aba Respostas, que passa a mostrar os dele.
-         */
-        const textos = perfisLib.semearTextos(await store.get('templates'), base, novo);
+        const textos = perfisLib.semearTextos(state.templates, perfil, novo);
         await perfisLib.gravar('templates', id, textos);
-        await salvar([...state.perfis, novo]);
+        const limpa = perfisLib.sanitizar([...state.perfis, novo]);
+        await store.set('perfis', limpa);
+        state.perfis = limpa;
         novoNome.value = '';
+        // Entrar como ele na hora: criar e continuar no outro deixaria a tela mostrando o antigo
+        // com um candidato novo e vazio invisível — e ele iria editar os textos errados.
+        await entrarComo(id);
         setStatus(
-          `Candidato "${nome}" criado com ${textos.length} respostas copiadas. Preencha o canal dele ` +
-            'e o número de urna, e confira os textos na aba Respostas.',
+          `Você está como ${nome}, com ${textos.length} respostas copiadas. Preencha o cargo, o ` +
+            'número de urna e o dossiê, e confira os textos na aba Respostas.',
           'ok'
         );
       })
     );
-    card.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Novo candidato'), novoNome]), criar);
-
-    body.append(card);
+    novoCard.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Nome do novo candidato'), novoNome]), criar);
+    body.append(novoCard);
   }
 
   function renderConfig() {

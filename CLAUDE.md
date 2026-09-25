@@ -2744,15 +2744,29 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   *"esta escrito"* de *"pode ser dito"*. **Ao escrever regra que explica um porque, diga se ele pode
   ser dito ao eleitor.**
 
-- **MAIS DE UM CANDIDATO: quem atende sai do CANAL, e o de fabrica nao migrou nada** (pedido dele,
+- **MAIS DE UM CANDIDATO: e um LOGIN, e o de fabrica nao migrou nada** (pedido dele,
   24/09/2026: *"a extensao trabalha com o foco no Capitao Martim, ou seja somente um perfil; eu
   preciso da opcao de mais perfis pois tenho agora o Felipe Pedri, entao as respostas devem ser
   especificas pra ele"*). **Medido antes de desenhar:** o nome dele vive em CINCO naturezas — as
   respostas de fabrica (`store.js`, 12 trechos), o prompt (`ia.js`, ~20 linhas vivas), **o documento
   dele** (`atendimento.js`), o dossie empacotado e os detectores (`cortesia.js`, `cities.js`,
   `gabinete.js`). E `session.channelId` **ja existia** e o painel ja o usava para os modelos
-  aprovados — por isso o perfil sai do CANAL: e DADO, como a origem do anuncio, e nao ha como mandar
-  a mensagem de um candidato pelo numero do outro.
+  aprovados.
+  **O DESENHO MUDOU NO DIA SEGUINTE, por correcao dele** (25/09/2026): *"nao gostei do metodo
+  utilizado para os perfis, eu queria algo como um perfil de login no Windows, aparenta estar tudo
+  misturado"*. A v3.115 decidia pelo CANAL, sozinha, e a Config empilhava TODOS os candidatos com
+  todos os campos — nada disso parece login. **Hoje ele ENTRA como um candidato**
+  (`store.perfilAtivo`, seletor no cabecalho) e fica ate trocar; **o canal so AVISA**
+  (`perfis.donoDoCanal`, tarja vermelha com o botao de trocar), e a Config edita **um** candidato:
+  o que esta logado.
+  **`donoDoCanal` devolve NULO quando ninguem reivindicou o numero, e isso e o ponto todo** — o
+  `doCanal` antigo nunca devolvia nulo porque ele ESCOLHIA, entao *"ninguem reivindicou"* e *"e do
+  de sempre"* seriam a mesma resposta e a tarja acenderia em quase todo atendimento. Ele foi
+  APAGADO: ficou sem chamador, que e a armadilha do `pedido-emprego`.
+  **O login nao se zera na troca de contato** (login nao cai quando se abre outra conversa); o que
+  se zera e a TARJA, que e uma afirmacao sobre o contato aberto.
+  **Trocar de candidato RECARREGA na hora** — esperar o proximo `load()` deixaria a tela com as
+  respostas do antigo e o nome do novo no cabecalho, que e a pior combinacao porque parece certa.
   **O INVARIANTE que protege a producao: com UM perfil, nada muda** — o de fabrica le as chaves de
   topo (`templates`, `anuncios`), entao **nao houve migracao no dado dele**, e ha teste comparando o
   prompt byte a byte. **Sem valor gravado, o perfil novo le VAZIO e nunca o do outro**: texto do

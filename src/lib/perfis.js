@@ -111,9 +111,22 @@ export function sanitizar(bruto) {
  * **Sem casamento, vence quem não reivindicou canal nenhum** (o de fábrica), e só depois o primeiro
  * da lista. Nunca devolve nulo.
  */
-export function doCanal(perfis, canal, numero = '') {
+/**
+ * **Quem RECLAMOU este canal, e NINGUÉM quando ninguém o reclamou.**
+ *
+ * **Devolver nulo é o ponto todo.** A primeira versão (24/09) tinha um `doCanal` que nunca devolvia
+ * nulo, porque ele ESCOLHIA o candidato — e ele foi apagado em 25/09, quando ele corrigiu o
+ * desenho: *"eu queria algo como um perfil de login no Windows"*. Quem escolhe é ele; isto aqui só
+ * responde *"o atendimento aberto é de outro número?"*, para a tela avisar.
+ *
+ * Com o comportamento antigo, *"ninguém reivindicou este número"* e *"é do candidato de sempre"*
+ * seriam a mesma resposta, e a tarja apareceria em quase todo atendimento — alarme que toca sempre
+ * se aprende a ignorar.
+ */
+export function donoDoCanal(perfis, canal, numero = '') {
   const lista = sanitizar(perfis);
   const chaves = [String(canal || '').trim(), soDigitos(numero)].filter(Boolean);
+  if (!chaves.length) return null;
   for (const p of lista) {
     for (const c of p.canais) {
       const alvo = String(c).trim();
@@ -122,7 +135,7 @@ export function doCanal(perfis, canal, numero = '') {
       if (chaves.includes(alvo) || (digitos && chaves.includes(digitos))) return p;
     }
   }
-  return lista.find((p) => !p.canais.length) || lista[0];
+  return null;
 }
 
 export function porId(perfis, id) {

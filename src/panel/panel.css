@@ -688,3 +688,28 @@
   border: 1px solid var(--wf-border);
   border-radius: 6px;
 }
+
+/**
+ * O LOGIN do candidato, no cabeçalho — correção dele de 25/09/2026 ("um perfil de login no
+ * Windows"). Fica em linha, com o seletor apertado ao lado do rótulo: ele é consulta constante e
+ * não pode roubar a altura do cabeçalho, que já carrega a versão, o fluxo e o nome do contato.
+ */
+.wf-root .wf-login {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--wf-muted);
+}
+.wf-root .wf-login select { width: auto; flex: 1 1 auto; padding: 3px 6px; font-size: 12px; }
+
+/**
+ * A tarja do canal de outro candidato. VERMELHA e não amarela: o `wf-block` amarelo é aviso de
+ * configuração faltando, e este diz que o que sair agora vai com o nome errado para um eleitor.
+ */
+.wf-root .wf-err-block {
+  color: var(--wf-err);
+  background: transparent;
+  border-color: var(--wf-err);
+}

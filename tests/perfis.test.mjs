@@ -41,21 +41,35 @@ grupo('sanitizar: o que vem do armazenamento é entrada NÃO confiável');
   check(limpa[0].tratamento === 'o Felipe Pedri', 'sem tratamento escrito, ele é derivado do nome');
 }
 
-grupo('doCanal: quem atende esta conversa');
+grupo('donoDoCanal: o canal AVISA, nunca escolhe (25/09/2026)');
 {
   const lista = [MARTIM, PEDRI];
-  check(perfis.doCanal(lista, 'cccad9').id === 'pedri', 'pelo id do canal');
-  check(perfis.doCanal(lista, '', '5198051-0122').id === 'pedri', 'pelo NÚMERO, que é o que ele lê na tela');
-  check(perfis.doCanal(lista, '', '51 98051 0122').id === 'pedri', 'e o número casa só por dígitos');
+  check(perfis.donoDoCanal(lista, 'cccad9').id === 'pedri', 'pelo id do canal');
+  check(perfis.donoDoCanal(lista, '', '5198051-0122').id === 'pedri', 'pelo NÚMERO, que é o que ele lê na tela');
+  check(perfis.donoDoCanal(lista, '', '51 98051 0122').id === 'pedri', 'e o número casa só por dígitos');
 
   /**
-   * **Sem casamento vence quem não reivindicou canal nenhum.** É o que impede a base inteira de
-   * ficar sem candidato no dia em que ele criar o segundo perfil e esquecer de preencher o canal do
-   * primeiro — e painel sem candidato é painel sem nome para escrever.
+   * **Devolver NULO é o ponto todo.** Quem escolhe o candidato é ele (o modelo de login); isto só
+   * responde *"este atendimento é do número de outro?"*. Se "ninguém reivindicou" caísse no
+   * candidato de sempre, a tarja apareceria em quase todo atendimento — alarme que toca sempre se
+   * aprende a ignorar.
    */
-  check(perfis.doCanal(lista, 'outro-canal').id === 'martim', 'canal desconhecido cai no de sempre');
-  check(perfis.doCanal(lista, '').id === 'martim', 'sem canal nenhum, idem');
-  check(!!perfis.doCanal([], 'x'), 'nunca devolve nulo');
+  check(perfis.donoDoCanal(lista, 'outro-canal') === null, 'canal que ninguém reivindicou não acende nada');
+  check(perfis.donoDoCanal(lista, '') === null, 'sem canal nenhum, idem');
+  check(perfis.donoDoCanal(lista, '', '') === null, 'e sem número também');
+  check(perfis.donoDoCanal([], 'x') === null, 'lista vazia não estoura');
+
+  /** O candidato de sempre com o canal PREENCHIDO é reivindicação como a de qualquer outro. */
+  const comCanal = [{ ...MARTIM, canais: ['ch-1'] }, PEDRI];
+  check(perfis.donoDoCanal(comCanal, 'ch-1').id === 'martim', 'o de fábrica também pode reivindicar');
+}
+
+grupo('porId: quem está logado');
+{
+  const lista = [MARTIM, PEDRI];
+  check(perfis.porId(lista, 'pedri').id === 'pedri', 'acha pelo id');
+  check(perfis.porId(lista, 'quem').id === 'martim', 'id que não existe cai no primeiro — painel sem candidato não tem nome para escrever');
+  check(perfis.porId(lista, null).id === 'martim', 'null idem');
 }
 
 grupo('trocarONome: a forma completa antes da curta');
