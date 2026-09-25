@@ -2729,6 +2729,21 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **A REGRA 12 VAZAVA O MOTIVO INTERNO PARA DENTRO DA MENSAGEM** (25/09/2026, a Lizi: *"Oiii tem
+  vaga para trabalhar"* recebeu *"A equipe paga da campanha ja foi fechada..."*, e ele reescreveu
+  como *"infelizmente nao estamos contratando"*). **A frase estava no prompt palavra por palavra** —
+  a regra dizia *"a equipe paga foi fechada na PRE-CAMPANHA"*. **Licao da lista de material (09/09)
+  outra vez: texto de prompt vira conteudo da mensagem quando nada diz que nao pode** — e aqui o
+  estrago passa do tom, porque contar que existiu equipe paga responde a pergunta que ela nao fez
+  (*"e quando abre a proxima?"*). Hoje o motivo continua escrito, **dito como motivo INTERNO que nao
+  entra na mensagem**, junto do jeito DELE como modelo e do TAMANHO (sem isso o modelo puxa o texto
+  longo da resposta pronta). **Conserto no prompt e nao em trava**, pela correcao dele de 12/09.
+  **Medido antes: o roteamento estava CERTO** — `falouAlgoProprio` levou a tecla 6, e SEM ele o caso
+  cairia em `nunca-pediram-dados`, que pede nome e cidade a quem perguntou de vaga. **E a assercao
+  que caiu travava justamente a frase vazada**: ela exigia a PRESENCA do motivo e nao distinguia
+  *"esta escrito"* de *"pode ser dito"*. **Ao escrever regra que explica um porque, diga se ele pode
+  ser dito ao eleitor.**
+
 - **MAIS DE UM CANDIDATO: quem atende sai do CANAL, e o de fabrica nao migrou nada** (pedido dele,
   24/09/2026: *"a extensao trabalha com o foco no Capitao Martim, ou seja somente um perfil; eu
   preciso da opcao de mais perfis pois tenho agora o Felipe Pedri, entao as respostas devem ser

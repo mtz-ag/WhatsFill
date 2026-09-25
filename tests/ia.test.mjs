@@ -2182,8 +2182,17 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
     'a metade "procure a equipe" ja era barrada (mandouProcurarNos)');
 
   const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
-  check(/PRÉ-CAMPANHA/.test(p), 'o prompt diz que a equipe paga foi fechada na pre-campanha');
-  check(/ninguém é contratado pelo WhatsApp/.test(p), 'e que ninguem e contratado pelo WhatsApp');
+  /**
+   * **A assercao travava a frase que VAZOU** — print da Lizi (25/09/2026): o rascunho escreveu *"A
+   * equipe paga da campanha ja foi fechada"*, que estava escrita nesta regra palavra por palavra.
+   * Hoje o motivo interno continua no prompt, mas dito como motivo que NAO entra na mensagem.
+   */
+  check(/pré-campanha/i.test(p), 'o motivo interno continua escrito, para a IA entender a regra');
+  check(/motivo INTERNO/.test(p) && /não entra na mensagem/.test(p),
+    'mas dizendo que ele NAO vai para o eleitor — foi por aqui que a frase vazou');
+  // A frase quebra de linha dentro do prompt, então a assercao atravessa a quebra — comparar o
+  // texto corrido com o que o prompt indenta e quebra e a forma de escrever assercao que decai.
+  check(/infelizmente não estamos\s+contratando/.test(p), 'e o jeito dele esta escrito como modelo');
   check(/impressão de que existe chance/.test(p), 'e proibe insinuar chance');
   check(/contratações são limitadas/.test(p), 'com a frase do caso escrita');
   const i11 = p.indexOf('11. NÃO SOMOS UM CANAL');
@@ -3274,6 +3283,41 @@ grupo('a IA pode dizer que o CADASTRO nao cabe (24/09/2026)');
   check(semOFormulario(comBloco) === 'Fico muito agradecido pelo carinho.', 'o bloco literal sai e o resto fica');
   check(semOFormulario('Bom dia!') === 'Bom dia!', 'texto sem o bloco nao e tocado');
   check(semOFormulario('') === '', 'vazio nao quebra');
+}
+
+grupo('vaga para trabalhar: nega curto, sem contar o porque (25/09/2026)');
+{
+  /**
+   * Print da Lizi: *"Oiii tem vaga para trabalhar"* recebeu *"A equipe paga da campanha ja foi
+   * fechada, e aqui so estamos trabalhando com voluntarios, sem remuneracao"*. Ele apagou e
+   * escreveu *"bom dia, infelizmente nao estamos contratando so estamos trabalhando com
+   * voluntarios, sem remuneracao"* — *"faca com que a resposta fique similar a minha"*.
+   *
+   * **Medido: o roteamento estava certo** (com `falouAlgoProprio` o caso e tecla 6, a IA; sem ele
+   * cairia em `nunca-pediram-dados`, que PEDE OS DADOS a quem perguntou de vaga). Quem errou foi o
+   * TEXTO — e a frase estava escrita nesta regra, palavra por palavra.
+   */
+  const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/NUNCA diga POR QUE não há vaga/.test(p), 'a regra 12 proibe explicar por que nao ha vaga');
+  check(/motivo INTERNO/.test(p), 'e diz que o motivo e interno');
+  check(/se tiver\s+interesse nesse formato/i.test(p), 'o fecho dele esta escrito');
+  check(/a resposta é CURTA/.test(p), 'e o tamanho e dito junto — a resposta pronta e longa demais para este caso');
+
+  /**
+   * **A SAUDACAO passou de "se abrir" para "ABRA"** — o rascunho da print nao tinha nenhuma, e a
+   * dele comeca com "bom dia,". A guarda contra repetir continua sendo a mesma linha, do outro
+   * lado do `falamosHoje`, mais o corte mecanico de `semSaudacao`.
+   */
+  const agora = new Date('2026-09-25T09:33:00-03:00');
+  const primeira = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'tem vaga?' }], agora });
+  check(/ABRA a mensagem com a saudação/.test(primeira), 'sem falarmos hoje, manda abrir com a saudacao');
+  check(/"Bom dia"/.test(primeira), 'com a saudacao certa escrita por extenso');
+
+  const jaFalamos = montarContatoRascunho({
+    mensagens: [{ de: 'contato', texto: 'tem vaga?', at: agora }, { de: 'nos', texto: 'ja respondi', at: agora }],
+    agora,
+  });
+  check(/NÃO abra com saudação/.test(jaFalamos), 'tendo falado hoje, continua proibido abrir com saudacao');
 }
 
 fim();

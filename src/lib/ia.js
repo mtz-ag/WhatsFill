@@ -1649,12 +1649,38 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * julgamento, e fica no prompt. É a irmã da regra 7 (o que tinha de ser contratado já foi) do lado
      * de quem quer ser contratado.
      */
-    '12. QUEM QUER TRABALHAR NA CAMPANHA — pedindo pagamento ou sem dizer: a equipe paga foi fechada na',
-    '    PRÉ-CAMPANHA, e ninguém é contratado pelo WhatsApp. **Não dê a impressão de que existe chance**:',
-    '    nada de "as contratações são limitadas", "depende da necessidade", "vou registrar seu interesse",',
-    '    "a assessoria avalia", "mande seu currículo" nem "procure a equipe". A base é a resposta pronta',
-    '    "Quer trabalhar para a campanha": aqui é só voluntário, sem remuneração. Se ela pediu mais alguma',
-    '    coisa (dinheiro, passagem, ajuda), responda essa parte pelo item 9 do padrão, numa frase.',
+    /**
+     * **A REGRA 12 VAZAVA O MOTIVO INTERNO PARA DENTRO DA MENSAGEM** — print da Lizi (25/09/2026).
+     *
+     * Ela escreveu *"Oiii tem vaga para trabalhar"* e o rascunho respondeu *"A equipe paga da
+     * campanha já foi fechada, e aqui só estamos trabalhando com voluntários, sem remuneração."*.
+     * Ele apagou e escreveu *"bom dia, infelizmente não estamos contratando só estamos trabalhando
+     * com voluntários, sem remuneração"*, com o pedido: *"faça com que a resposta fique similar à
+     * minha"*.
+     *
+     * **A frase veio daqui, palavra por palavra:** esta regra dizia *"a equipe paga foi fechada na
+     * PRÉ-CAMPANHA"*. É a lição da lista de material (09/09) outra vez — **texto de prompt vira
+     * conteúdo da mensagem quando nada diz que não pode**. E aqui o estrago é maior que o tom:
+     * contar que existiu uma equipe paga e que ela fechou é informação interna, e responde à
+     * pergunta que ela não fez — *"e quando abre a próxima?"*.
+     *
+     * **Prompt e não trava**, pela correção dele de 12/09: *"eu quero que mude o que a IA diz, não
+     * parar todo tempo para eu revisar"*.
+     */
+    '12. QUEM QUER TRABALHAR NA CAMPANHA — pedindo pagamento ou sem dizer: a resposta é CURTA e fecha',
+    '    a porta SEM explicar por quê. O jeito dele, que é o modelo: "infelizmente não estamos',
+    '    contratando, só estamos trabalhando com voluntários, sem remuneração" e, no fim, "se tiver',
+    '    interesse nesse formato, me avise".',
+    '    **NUNCA diga POR QUE não há vaga.** Que a equipe paga já foi fechada, que os contratos saíram',
+    '    na pré-campanha, que o quadro está completo, que ninguém é contratado pelo WhatsApp: isso é',
+    '    motivo INTERNO, existe para você entender a regra, e não entra na mensagem. Dito a ela, vira',
+    '    "e quando abre a próxima?" — e conta o que não é da conta dela.',
+    '    **Não dê a impressão de que existe chance**: nada de "as contratações são limitadas",',
+    '    "depende da necessidade", "vou registrar seu interesse", "a assessoria avalia", "mande seu',
+    '    currículo" nem "procure a equipe". A resposta pronta "Quer trabalhar para a campanha" dá o',
+    '    CONTEÚDO (só voluntário, sem remuneração) — o TAMANHO é o do item 22, mensagem simples.',
+    '    Se ela pediu mais alguma coisa (dinheiro, passagem, ajuda), responda essa parte pelo item 9',
+    '    do padrão, numa frase.',
     '    **NÃO PEÇA O ENDEREÇO NESTA MENSAGEM.** O endereço e o assessor são o caminho do MATERIAL de',
     '    campanha, e ela não pediu material: pediu pagamento. Ofereça o voluntariado numa frase e PARE —',
     '    se ela disser que aceita sem remuneração, o endereço vem na resposta seguinte. Pedir endereço é',
@@ -2491,7 +2517,20 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
     falamosHoje
       ? 'NÃO abra com saudação: nós já falamos com ela hoje, e "bom dia/boa tarde" duas vezes no ' +
         'mesmo dia é o que denuncia uma máquina. Emende de onde nós paramos.'
-      : `Se abrir com saudação, a correta agora é "${saudacaoDeAgora(agora)}" — não deduza pelo horário das mensagens.`,
+      : /**
+         * **ABRA com a saudação, e não "se abrir"** — print da Lizi (25/09/2026), em que ele
+         * reescreveu o rascunho começando por *"bom dia,"* e pediu a resposta *"similar à minha"*.
+         *
+         * A linha era condicional desde 04/09, quando a decisão foi que o PAINEL não inventa
+         * saudação — e isso continua valendo: quem a escreve é a IA, não o piso. O que mudou é o
+         * pedido, que era morno.
+         *
+         * **A guarda contra a repetição já existe e é a linha de cima**: com `falamosHoje` a ordem
+         * se inverte, e `ia.semSaudacao` ainda TIRA a saudação repetida do texto que voltar. Ou
+         * seja, mandar abrir só alcança a primeira mensagem do dia — que é exatamente o caso da
+         * print.
+         */
+        `ABRA a mensagem com a saudação — a correta agora é "${saudacaoDeAgora(agora)}", e não deduza pelo horário das mensagens.`,
     '',
     /**
      * **O ATENDIMENTO ANTERIOR, quando existe** — pedido dele (16/09/2026): *"creio que o fluxo está

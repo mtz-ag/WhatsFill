@@ -1,3 +1,51 @@
+## 2026-09-25 — v3.116.0 — a regra 12 vazava o motivo interno para dentro da mensagem
+
+**Print da Lizi:** ela chegou pelo anúncio e escreveu *"Oiii tem vaga para trabalhar"*. O rascunho
+respondeu **"A equipe paga da campanha já foi fechada, e aqui só estamos trabalhando com
+voluntários, sem remuneração."**; ele apagou e escreveu **"bom dia, infelizmente não estamos
+contratando só estamos trabalhando com voluntários, sem remuneração"**, com o pedido: *"faça com que
+a resposta fique similar à minha"*.
+
+**Medido, e o roteamento estava CERTO:**
+
+| | |
+|---|---|
+| `pedeEmprego` | `tipo: 'emprego'` — casou em *"tem vaga"* |
+| `falouAlgoProprio` | casou |
+| decisão do quadro | `ultima-pede-resposta-pessoal` → **tecla 6, a IA** |
+| a mesma decisão **sem** `falouAlgoProprio` | `nunca-pediram-dados` → **tecla 4** |
+
+Ou seja: sem a IA, quem pergunta de vaga receberia **o pedido de nome e cidade**. A IA era o caminho
+certo — **quem errou foi o texto.**
+
+**E a frase saiu do meu próprio prompt, palavra por palavra.** A regra 12 dizia *"a equipe paga foi
+fechada na PRÉ-CAMPANHA"*. É a lição da lista de material (09/09) outra vez: **texto de prompt vira
+conteúdo da mensagem quando nada diz que não pode.** Aqui o estrago passa do tom — contar que
+existiu uma equipe paga e que ela fechou é informação interna, e responde à pergunta que ela não
+fez: *"e quando abre a próxima?"*.
+
+**O conserto é no prompt, não em trava** — a correção dele de 12/09: *"eu quero que mude o que a IA
+diz, não parar todo tempo para eu revisar"*. A regra 12 passou a ter três partes:
+
+1. **o jeito dele, escrito como modelo** — *"infelizmente não estamos contratando, só estamos
+   trabalhando com voluntários, sem remuneração"* + *"se tiver interesse nesse formato, me avise"*;
+2. **NUNCA diga POR QUE não há vaga** — equipe paga fechada, contratos da pré-campanha, quadro
+   completo, "ninguém é contratado pelo WhatsApp": tudo isso continua escrito, mas dito como
+   **motivo interno que não entra na mensagem**;
+3. **o TAMANHO junto** — a resposta pronta dá o conteúdo, o tamanho é o do item 22. Sem essa linha o
+   modelo puxa o texto longo da resposta pronta, que é o defeito vizinho.
+
+**A saudação passou de "se abrir" para "ABRA".** O rascunho da print não tinha nenhuma e o dele
+começa com *"bom dia,"*. A linha era condicional desde 04/09, quando a decisão foi que o **painel**
+não inventa saudação — e isso continua valendo, porque quem a escreve é a IA, não o piso. **A guarda
+contra repetir já existia e é a mesma linha do outro lado**: com `falamosHoje` a ordem se inverte
+("NÃO abra com saudação"), e `ia.semSaudacao` ainda corta a repetida do texto que volta. Então
+mandar abrir só alcança a primeira mensagem do dia — que é o caso da print.
+
+**Uma asserção que travava justamente a frase vazada.** O teste exigia `/PRÉ-CAMPANHA/` no prompt, o
+que é verdade e continua sendo — mas ele não distinguia *"está escrito"* de *"pode ser dito"*. Hoje
+exige as duas coisas: o motivo interno presente **e** a linha que o proíbe na mensagem.
+
 ## 2026-09-25 — v3.115.0 — MAIS DE UM CANDIDATO: quem atende sai do canal do atendimento
 
 **Pedido dele:** *"a extensão atualmente trabalha com o foco no Capitão Martim, ou seja somente um
