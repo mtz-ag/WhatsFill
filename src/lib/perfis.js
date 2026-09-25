@@ -138,6 +138,38 @@ export function donoDoCanal(perfis, canal, numero = '') {
   return null;
 }
 
+/**
+ * **DE QUEM É O NÚMERO DESTE ATENDIMENTO** — e as quatro respostas possíveis são quatro, não duas.
+ *
+ * Relato dele (25/09/2026), com a print de um atendimento no número do Felipe Pedri: *"eu só
+ * adicionei os dois números do Martim, não adicionei o número do Felipe Pedri ainda na extensão;
+ * não devia ter uma barreira caso o número não esteja na extensão?"*. Estava certo, e o defeito era
+ * meu: `donoDoCanal` devolve `null` tanto para *"ninguém cadastrou nada ainda"* quanto para *"tem
+ * cadastro, e este número não está nele"* — e o painel tratava os dois como silêncio.
+ *
+ * **A distinção que faltava é se JÁ EXISTE cadastro.** Antes de ele preencher o primeiro número,
+ * acender seria alarme em 100% dos atendimentos — e alarme que toca sempre se aprende a ignorar.
+ * Depois que existe, **a ausência vira informação**: número fora da lista quer dizer *"eu não sei
+ * de quem é esta conversa"*, que é justamente o caso perigoso.
+ *
+ * Uma função e uma resposta, porque três leituras separadas divergem na primeira mudança:
+ *
+ *  - `quieto` — ninguém cadastrou canal nenhum ainda, ou não há número para comparar;
+ *  - `meu` — é do candidato em que você está;
+ *  - `outro` — é de outro candidato cadastrado (vem com o `dono`);
+ *  - `desconhecido` — há cadastro, e este número não está em nenhum.
+ */
+export function situacaoDoCanal(perfis, canal, numero, logadoId) {
+  const lista = sanitizar(perfis);
+  const temCadastro = lista.some((p) => p.canais.length);
+  const chaves = [String(canal || '').trim(), soDigitos(numero)].filter(Boolean);
+  if (!temCadastro || !chaves.length) return { estado: 'quieto', dono: null };
+
+  const dono = donoDoCanal(lista, canal, numero);
+  if (!dono) return { estado: 'desconhecido', dono: null };
+  return dono.id === String(logadoId || '') ? { estado: 'meu', dono } : { estado: 'outro', dono };
+}
+
 export function porId(perfis, id) {
   const lista = sanitizar(perfis);
   return lista.find((p) => p.id === String(id || '')) || lista[0];

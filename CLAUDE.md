@@ -2759,10 +2759,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   (`store.perfilAtivo`, seletor no cabecalho) e fica ate trocar; **o canal so AVISA**
   (`perfis.donoDoCanal`, tarja vermelha com o botao de trocar), e a Config edita **um** candidato:
   o que esta logado.
-  **`donoDoCanal` devolve NULO quando ninguem reivindicou o numero, e isso e o ponto todo** — o
-  `doCanal` antigo nunca devolvia nulo porque ele ESCOLHIA, entao *"ninguem reivindicou"* e *"e do
-  de sempre"* seriam a mesma resposta e a tarja acenderia em quase todo atendimento. Ele foi
-  APAGADO: ficou sem chamador, que e a armadilha do `pedido-emprego`.
+  **`donoDoCanal` devolve NULO quando ninguem reivindicou o numero** — o `doCanal` antigo nunca
+  devolvia nulo porque ele ESCOLHIA, e foi APAGADO: ficou sem chamador, que e a armadilha do
+  `pedido-emprego`.
+  **E NULO SOZINHO NAO BASTA — sao QUATRO estados, nao dois** (25/09/2026, no mesmo dia): *"eu so
+  adicionei os dois numeros do Martim, nao adicionei o numero do Felipe Pedri ainda; nao devia ter
+  uma barreira caso o numero nao esteja na extensao?"*. **Medido: `donoDoCanal` devolvia `null`
+  tanto para "ninguem cadastrou nada" quanto para "tem cadastro e este numero nao esta nele"**, e o
+  painel tratava as duas como silencio — ele ficou logado como Martim num atendimento do Felipe, sem
+  tarja. **A distincao e se JA EXISTE cadastro**: antes disso acender e alarme em 100% dos
+  atendimentos; depois, **a ausencia vira informacao**. Hoje `perfis.situacaoDoCanal` responde
+  `quieto`/`meu`/`outro`/`desconhecido` numa funcao so.
+  **E o aviso virou BARREIRA, porque a tarja mora no CABECALHO — que e o que ele esconde durante a
+  rodada** (*"preciso de espaco na area de trabalho"*, 31/08): o aviso ficava atras da unica tela
+  que ele nao esta olhando. `processarRespondido` PULA o contato (nao para a rodada: numero faltando
+  na Config viraria rodada travada, e a fila tem os dois numeros misturados), e as duas rodadas
+  passam por ali porque `processarNovo` delega. **Ao por aviso de tela para proteger a rodada,
+  pergunte se aquela tela esta visivel durante a rodada.**
   **O login nao se zera na troca de contato** (login nao cai quando se abre outra conversa); o que
   se zera e a TARJA, que e uma afirmacao sobre o contato aberto.
   **Trocar de candidato RECARREGA na hora** — esperar o proximo `load()` deixaria a tela com as

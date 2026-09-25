@@ -64,6 +64,43 @@ grupo('donoDoCanal: o canal AVISA, nunca escolhe (25/09/2026)');
   check(perfis.donoDoCanal(comCanal, 'ch-1').id === 'martim', 'o de fábrica também pode reivindicar');
 }
 
+grupo('situacaoDoCanal: a barreira do numero nao cadastrado (25/09/2026)');
+{
+  /**
+   * Relato dele: *"eu só adicionei os dois números do Martim, não adicionei o número do Felipe
+   * Pedri ainda na extensão; não devia ter uma barreira caso o número não esteja na extensão?"*.
+   *
+   * **O defeito era tratar duas coisas como uma:** `donoDoCanal` devolve nulo tanto para "ninguém
+   * cadastrou nada" quanto para "tem cadastro e este número não está nele". A primeira é silêncio;
+   * a segunda é o caso perigoso.
+   */
+  const comoEstavaHoje = [
+    { id: 'martim', nome: 'Capitão Martim', canais: ['5198051-0122', '51980510123'] },
+    { id: 'pedri', nome: 'Felipe Pedri', canais: [] },
+  ];
+  const doFelipe = perfis.situacaoDoCanal(comoEstavaHoje, '095ee1', '51982175973', 'martim');
+  check(doFelipe.estado === 'desconhecido', 'o número do Felipe, ainda não cadastrado, e DESCONHECIDO — e barra');
+
+  const doMartim = perfis.situacaoDoCanal(comoEstavaHoje, '', '5198051-0122', 'martim');
+  check(doMartim.estado === 'meu', 'o número dele, logado como ele, nao incomoda ninguem');
+
+  const comOsDois = [comoEstavaHoje[0], { ...comoEstavaHoje[1], canais: ['095ee1'] }];
+  const outro = perfis.situacaoDoCanal(comOsDois, '095ee1', '', 'martim');
+  check(outro.estado === 'outro' && outro.dono.id === 'pedri', 'cadastrado e de outro: a tarja diz de quem');
+  check(perfis.situacaoDoCanal(comOsDois, '095ee1', '', 'pedri').estado === 'meu', 'e logado como ele, nao');
+
+  /**
+   * **Antes de existir cadastro, tudo fica QUIETO** — acender ali seria alarme em 100% dos
+   * atendimentos, e alarme que toca sempre se aprende a ignorar. É o estado de quem nunca abriu
+   * esta tela, que é a produção de hoje.
+   */
+  const semCadastro = [{ id: 'martim', nome: 'Capitão Martim', canais: [] }];
+  check(perfis.situacaoDoCanal(semCadastro, 'qualquer', '51999999999', 'martim').estado === 'quieto',
+    'sem NENHUM numero cadastrado, nada acende');
+  check(perfis.situacaoDoCanal(comoEstavaHoje, '', '', 'martim').estado === 'quieto',
+    'e sem canal nem numero para comparar, tambem nao');
+}
+
 grupo('porId: quem está logado');
 {
   const lista = [MARTIM, PEDRI];

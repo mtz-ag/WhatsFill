@@ -1,3 +1,51 @@
+## 2026-09-25 — v3.118.0 — número que não está em candidato nenhum agora BARRA a rodada
+
+**Relato dele**, com a print de um atendimento na *Instância 095ee1* — o anúncio era
+*"FALE COM A EQUIPE DO PEDRI"*: *"eu só adicionei os dois números do Martim, não adicionei o número
+do Felipe Pedri ainda na extensão; não devia ter uma barreira caso o número não esteja na
+extensão?"*
+
+**Ele está certo, e o defeito era meu.** Eu escrevi ontem, com todas as letras, que *"número não
+cadastrado não acende nada, senão a tarja apareceria em quase todo atendimento"*. Isso era verdade
+**enquanto nenhum candidato tivesse canal preenchido** — e deixou de ser no instante em que ele
+preencheu o primeiro.
+
+**Medido, e as duas situações eram indistinguíveis:**
+
+| | `donoDoCanal` |
+|---|---|
+| antes de ele cadastrar qualquer número | `null` |
+| o número do Felipe, com os do Martim já cadastrados | `null` |
+
+O painel tratava as duas como silêncio. Na segunda, ele estava logado como **Capitão Martim** num
+atendimento do **Felipe Pedri**, sem tarja nenhuma — e a rodada responderia com os textos e o nome
+do candidato errado.
+
+**A distinção que faltava é se JÁ EXISTE cadastro.** Depois que existe, **a ausência vira
+informação**: número fora da lista quer dizer *"eu não sei de quem é esta conversa"*, que é
+justamente o caso perigoso. Antes disso, acender seria alarme em 100% dos atendimentos.
+
+`perfis.situacaoDoCanal` passou a responder **quatro** coisas em vez de duas, numa função só —
+`quieto` (ninguém cadastrou nada), `meu`, `outro` (com o dono) e `desconhecido`. Três leituras
+separadas divergiriam na primeira mudança, e a que ninguém olha é a que barra a rodada.
+
+**E o aviso virou BARREIRA, porque a tarja estava no lugar errado para a rodada.** Ela mora no
+cabeçalho — que é exatamente o que ele esconde durante a rodada (*"preciso de espaço na área de
+trabalho"*, 31/08). O aviso ficava atrás da única tela que ele não está olhando. Hoje
+`processarRespondido` **pula o contato** quando o canal é de outro candidato ou desconhecido, com o
+motivo no Andamento, que é onde ele procura o que deu errado.
+
+**Pular, e não parar a rodada**: parar num contato transformaria um número faltando na Config em
+rodada travada, e a fila tem os dois números misturados. Pular não grava, não envia e **deixa o
+atendimento aberto** — o contato volta assim que o cadastro for arrumado.
+
+**As duas rodadas passam pela mesma barreira**, porque `processarNovo` delega para
+`processarRespondido` — é a razão de ela morar no começo dessa função e não em cada chamador.
+
+**O envio à mão continua livre**, com a tarja vermelha na frente dele: ali ele está olhando, e a
+decisão é dele. A tarja também ganhou o segundo texto, para o caso do número desconhecido, com o que
+fazer — *"some o número ao candidato certo na aba Config"*.
+
 ## 2026-09-25 — v3.117.0 — os candidatos viraram LOGIN: você entra como um, e o canal só avisa
 
 **Correção dele**, um dia depois da v3.115: *"não gostei do método utilizado para os perfis, eu

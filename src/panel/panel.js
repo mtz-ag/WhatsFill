@@ -202,13 +202,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     /** Todos os candidatos cadastrados — o seletor de login e a Config leem daqui. */
     perfis: [],
     /**
-     * **O atendimento aberto é do número de OUTRO candidato?** — o aviso, e só o aviso.
+     * **De quem é o número deste atendimento** — `{ estado, dono }`, ver `perfis.situacaoDoCanal`.
      *
-     * Decisão dele (25/09/2026): o canal **não troca** o login, porque trocar por baixo foi o que
-     * ele recusou; ele avisa, e o botão de trocar fica a um clique. `null` quer dizer "nada a
-     * dizer", e é o caso normal — número não cadastrado não acende tarja nenhuma.
+     * O canal **não troca** o login (trocar por baixo foi o que ele recusou), mas ele AVISA e, na
+     * rodada, BARRA — relato dele de 25/09/2026: *"não devia ter uma barreira caso o número não
+     * esteja na extensão?"*. São quatro estados, e a primeira versão só sabia dois.
      */
-    canalDeOutroCandidato: null,
+    canalDoAtendimento: { estado: 'quieto', dono: null },
     /** Expressões que identificam a mensagem gerada pelo anúncio (Config). */
     padroesDeAnuncio: [],
     /** O que NÓS mandamos nesta conversa — para saber o que já foi, mesmo fora do painel. */
@@ -579,7 +579,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * número do outro candidato" é uma afirmação sobre ESTE contato, e sobreviver à troca faria a
      * tarja falar de uma conversa que não está mais na tela — a armadilha do `state.anuncio`.
      */
-    state.canalDeOutroCandidato = null;
+    state.canalDoAtendimento = { estado: 'quieto', dono: null };
     state.lidoPelaIA = null;
     state.materialPelaRegra = null;
     state.anuncioSemResposta = null;
@@ -663,8 +663,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * atendimento de número não cadastrado, que é quase todos. Alarme que toca sempre se aprende
        * a ignorar.
        */
-      const dono = perfisLib.donoDoCanal(state.perfis, state.session?.channelId, numeroDoCanal);
-      state.canalDeOutroCandidato = dono && dono.id !== state.perfil?.id ? dono : null;
+      state.canalDoAtendimento = perfisLib.situacaoDoCanal(
+        state.perfis,
+        state.session?.channelId,
+        numeroDoCanal,
+        state.perfil?.id
+      );
 
       const [contact, classify] = await Promise.all([
         api.getContact(state.session.contactId),
@@ -1618,24 +1622,43 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
 
     /**
-     * **A tarja do canal — o aviso que substituiu a troca automática.**
+     * **A tarja do canal — o aviso que substituiu a troca automática, e a barreira da rodada.**
      *
-     * Ele recusou o painel trocar de candidato por baixo dele; o que sobra é dizer, alto, que o
-     * atendimento aberto é do número do outro — e deixar o botão a um clique. **Só acende quando
-     * alguém RECLAMOU aquele canal** (ver `perfis.donoDoCanal`): número não cadastrado não acende
-     * nada, senão a tarja apareceria em quase todo atendimento.
+     * Ele recusou o painel trocar de candidato por baixo dele; o que sobra é dizer, alto, de quem é
+     * o número — e deixar o botão a um clique. **São DOIS casos**, e a primeira versão só tinha um:
+     * o número é de outro candidato, ou **não está em nenhum**. Ver `perfis.situacaoDoCanal`.
      */
-    if (state.canalDeOutroCandidato) {
-      const outro = state.canalDeOutroCandidato;
-      const trocar = h('button', { class: 'wf-btn wf-mini', type: 'button' }, `Entrar como ${outro.nome}`);
-      trocar.addEventListener('click', () => entrarComo(outro.id));
+    const canal = state.canalDoAtendimento || { estado: 'quieto' };
+
+    if (canal.estado === 'outro' && canal.dono) {
+      const trocar = h('button', { class: 'wf-btn wf-mini', type: 'button' }, `Entrar como ${canal.dono.nome}`);
+      trocar.addEventListener('click', () => entrarComo(canal.dono.id));
       onde.append(
         h('div', { class: 'wf-block wf-err-block', 'data-fica': '1' }, [
           h('div', {},
-            `Atenção: este atendimento é do número de ${outro.nome}, e você está como ${state.perfil.nome}. ` +
-              'O que sair daqui vai com as respostas e o nome do candidato errado.'),
+            `Atenção: este atendimento é do número de ${canal.dono.nome}, e você está como ${state.perfil.nome}. ` +
+              'A rodada não vai tratar este contato — o que sair daqui vai com o nome do candidato errado.'),
           trocar,
         ])
+      );
+    }
+
+    /**
+     * **Número que não está em candidato nenhum** — relato dele (25/09/2026): *"eu só adicionei os
+     * dois números do Martim, não adicionei o número do Felipe Pedri ainda; não devia ter uma
+     * barreira caso o número não esteja na extensão?"*.
+     *
+     * Ele está certo, e o defeito era meu: eu tratei *"ninguém cadastrou nada"* e *"tem cadastro e
+     * este número não está nele"* como a mesma coisa, para não criar alarme constante. **Depois que
+     * o cadastro existe, a ausência vira informação** — e é o caso perigoso, porque não se sabe de
+     * quem é a conversa.
+     */
+    if (canal.estado === 'desconhecido') {
+      onde.append(
+        h('div', { class: 'wf-block wf-err-block', 'data-fica': '1' },
+          `Atenção: o número deste atendimento não está em nenhum candidato, e você está como ` +
+            `${state.perfil.nome}. A rodada não vai tratar este contato — some o número ao candidato ` +
+            'certo na aba Config.')
       );
     }
   }
@@ -1657,10 +1680,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       alvo.id === perfisLib.PERFIL_PADRAO
         ? cfg
         : { ...cfg, regras: String((await perfisLib.ler('iaRegras', alvo.id, '')) || '') };
-    // O aviso é sobre o contato aberto, e quem o calcula é o `load()`. Trocando de candidato ele
-    // deixa de valer na hora: a tarja dizia "você está como o outro", e agora você não está mais.
-    const dono = state.canalDeOutroCandidato;
-    state.canalDeOutroCandidato = dono && dono.id !== alvo.id ? dono : null;
+    /**
+     * O aviso é sobre o contato aberto, e quem o calcula é o `load()`. Trocando de candidato ele
+     * deixa de valer na hora: a tarja dizia "você está como o outro", e agora você não está mais.
+     *
+     * **Recalcular com a mesma função**, em vez de mexer no objeto à mão: duas contas para a mesma
+     * pergunta divergem na primeira mudança, e a que ninguém olha é a que barra a rodada.
+     */
+    const dono = state.canalDoAtendimento?.dono;
+    state.canalDoAtendimento =
+      state.canalDoAtendimento?.estado === 'desconhecido'
+        ? state.canalDoAtendimento
+        : dono
+          ? { estado: dono.id === alvo.id ? 'meu' : 'outro', dono }
+          : { estado: 'quieto', dono: null };
     renderAll();
     setStatus(`Você está como ${alvo.nome}. As respostas, os anúncios e o dossiê são dele.`, 'ok');
   }
@@ -5486,6 +5519,41 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       await load(sessionId);
       if (!state.contact) return { nome, resultado: 'erro', motivo: 'não consegui carregar o contato' };
       nome = state.contact.name || state.contact.nameWhatsapp || 'sem nome';
+
+      /**
+       * **A BARREIRA DO CANAL** — relato dele (25/09/2026): *"eu só adicionei os dois números do
+       * Martim, não adicionei o número do Felipe Pedri ainda na extensão; não devia ter uma
+       * barreira caso o número não esteja na extensão?"*.
+       *
+       * Antes disto o painel avisava na tarja e mais nada — e a tarja **mora no cabeçalho**, que
+       * ele esconde justamente durante a rodada (*"preciso de espaço na área de trabalho"*, 31/08).
+       * Ou seja: o aviso ficava atrás da única tela que ele não está olhando.
+       *
+       * **Pular, e não parar a rodada:** parar num contato transforma um número faltando na Config
+       * em rodada travada, e a fila pode ter os dois números misturados. Pular não grava, não envia
+       * e deixa o atendimento aberto — o contato volta assim que ele arrumar o cadastro.
+       *
+       * **As duas rodadas passam por aqui**, porque `processarNovo` delega para esta função — é a
+       * razão de a barreira morar no começo dela e não em cada chamador.
+       */
+      const canal = state.canalDoAtendimento || { estado: 'quieto' };
+      if (canal.estado === 'outro' && canal.dono) {
+        return {
+          nome,
+          resultado: 'pulado',
+          motivo:
+            `este atendimento é do número de ${canal.dono.nome} e você está como ` +
+            `${state.perfil?.nome || 'o candidato de sempre'} — não tratei para não mandar o texto do candidato errado`,
+        };
+      }
+      if (canal.estado === 'desconhecido') {
+        return {
+          nome,
+          resultado: 'pulado',
+          motivo:
+            'o número deste atendimento não está em candidato nenhum — some o número ao candidato certo na aba Config',
+        };
+      }
 
       // Aqui a marca é por CONTATO TRATADO, não por mensagem enviada como nas outras duas
       // rodadas — e a diferença é de propósito. Esta pergunta contato a contato: você já decidiu
