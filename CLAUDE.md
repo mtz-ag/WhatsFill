@@ -81,6 +81,7 @@ src/lib/ia-cliente.js   ponte painel <-> service worker (a chave nunca entra na 
 src/lib/sugestao.js     tabela de regras da rodada, e os verbetes dela (puro, testado)
 src/lib/arvore.js       o fluxo como ARVORE: sinais, ramos dele, decisao (puro, testado)
 src/lib/anuncios.js     ANUNCIOS do momento: texto que reconhece + o que fazer (puro, testado)
+src/lib/perfis.js       os CANDIDATOS: quem atende cada canal e o que e dele (puro, testado)
 src/lib/observacoes.js  o caderno das sugestoes erradas, com o caso junto (puro, testado)
 src/fluxo.html/.css/.js JANELA do fluxo: o QUADRO (caixas soltas, fios, arrastar, editar)
 src/lib/fluxo-msg.js    a mensagem que pede ao service worker para abrir a janela
@@ -2728,6 +2729,35 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **MAIS DE UM CANDIDATO: quem atende sai do CANAL, e o de fabrica nao migrou nada** (pedido dele,
+  24/09/2026: *"a extensao trabalha com o foco no Capitao Martim, ou seja somente um perfil; eu
+  preciso da opcao de mais perfis pois tenho agora o Felipe Pedri, entao as respostas devem ser
+  especificas pra ele"*). **Medido antes de desenhar:** o nome dele vive em CINCO naturezas — as
+  respostas de fabrica (`store.js`, 12 trechos), o prompt (`ia.js`, ~20 linhas vivas), **o documento
+  dele** (`atendimento.js`), o dossie empacotado e os detectores (`cortesia.js`, `cities.js`,
+  `gabinete.js`). E `session.channelId` **ja existia** e o painel ja o usava para os modelos
+  aprovados — por isso o perfil sai do CANAL: e DADO, como a origem do anuncio, e nao ha como mandar
+  a mensagem de um candidato pelo numero do outro.
+  **O INVARIANTE que protege a producao: com UM perfil, nada muda** — o de fabrica le as chaves de
+  topo (`templates`, `anuncios`), entao **nao houve migracao no dado dele**, e ha teste comparando o
+  prompt byte a byte. **Sem valor gravado, o perfil novo le VAZIO e nunca o do outro**: texto do
+  Martim saindo pelo numero do Felipe e o defeito que esta tela existe para impedir.
+  **O documento dele nao foi editado:** `atendimento.PADRAO_DE_ATENDIMENTO` vai intacto para o
+  candidato de fabrica e com o NOME trocado na INJECAO para os outros — o arquivo continua sendo
+  dele, com o `git diff` que o protege desde 06/09.
+  **CONCORDANCIA e metade do trabalho, pela segunda vez** (a primeira foi "gabinete"->"equipe",
+  07/09): o perfil tem `tratamento` ("o Capitao Martim") **e** a forma contraida `de` ("do Capitao
+  Martim"), porque "a equipe" pede DE+artigo — a medicao pegou *"a equipe o Capitao Martim"* saindo
+  no prompt de HOJE antes de isto ir ao ar.
+  **`CHAVES_DO_PERFIL` e lista de PERMISSAO e `exigirChaveConhecida` a faz valer** — sem isso a
+  constante seria comentario, a armadilha do `pedido-emprego`. Fica de fora de proposito: o QUADRO
+  do fluxo (duas copias divergem numa semana), o parser, as etiquetas de cidade e COREDE, e os
+  modelos aprovados, que a plataforma ja entrega por canal.
+  **`dom` NAO existe no painel** — escrevi `dom.numeroDaConversa()` direto e seria `ReferenceError`
+  no `load()` de TODO contato, no modo janela e no encaixado; o verificador nao pega isso (esta
+  registrado que ele nao ve variavel fora de escopo). A leitura de tela atravessa a ponte
+  (`page.numeroDoCanal`), como o canal caido.
+
 - **O FORMULARIO SO TINHA TRAVAS DE "JA TEMOS", NENHUMA DE "CABE AGORA"** (24/09/2026, uma contato de
   Minas Gerais que se despediu e recebeu `Nome , Cidade` no fim: *"continua saindo o pedido de dados
   sem contexto"*). **Medido: `pedirDadosNaoCabe` e `casoDeNegativa` falsos, e `ehDespedida`,
@@ -4084,10 +4114,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
 > `src/` e reclama só de `SyntaxError`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as dezoito suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as dezenove suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

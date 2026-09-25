@@ -20,6 +20,7 @@ import * as iaCliente from '../lib/ia-cliente.js';
 import * as iaLib from '../lib/ia.js';
 import * as gabineteLib from '../lib/gabinete.js';
 import * as anunciosLib from '../lib/anuncios.js';
+import * as perfisLib from '../lib/perfis.js';
 import * as observacoesLib from '../lib/observacoes.js';
 import * as imagemLib from '../lib/imagem.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
@@ -186,6 +187,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * diferentes assim que um deles olhasse outra lista de mensagens.
      */
     anuncio: null,
+    /**
+     * **De QUAL candidato é esta conversa** — 24/09/2026, ver `lib/perfis.js`.
+     *
+     * Sai do CANAL do atendimento (`session.channelId` e o número da instância na tela), que é
+     * dado e não texto. Zerado na troca de contato como o `state.anuncio`, e pela mesma razão: o
+     * perfil do contato anterior escolheria as respostas prontas deste.
+     *
+     * Nunca fica nulo depois do `load()`: `perfis.doCanal` sempre devolve alguém, porque painel
+     * sem candidato é painel sem nome para escrever.
+     */
+    perfil: null,
+    /** Todos os candidatos cadastrados — a tela da Config e a escolha do perfil leem daqui. */
+    perfis: [],
     /** Expressões que identificam a mensagem gerada pelo anúncio (Config). */
     padroesDeAnuncio: [],
     /** O que NÓS mandamos nesta conversa — para saber o que já foi, mesmo fora do painel. */
@@ -500,7 +514,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.incoming = conversa.incoming.filter((t) => !ehMensagemDaPlataforma(t));
       state.entrantes = prepararEntrantes(conversa.entrantes, {
         veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
-        anuncios: await carregarAnuncios(),
+        anuncios: await carregarAnuncios(perfilAtivo()),
       });
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.nossas = conversa.nossas || [];
@@ -550,6 +564,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * a decisão de um contato executada em outro.
      */
     state.anuncio = null;
+    // O perfil é do CANAL deste atendimento — ver `state.perfil`. Zerar aqui é o que impede a
+    // conversa nova de herdar o candidato da anterior enquanto a sessão não chegou.
+    state.perfil = null;
     state.lidoPelaIA = null;
     state.materialPelaRegra = null;
     state.anuncioSemResposta = null;
@@ -572,6 +589,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.ia = await store.get('ia');
     state.fluxo = await store.get('fluxo');
     await lerChavesDaIA();
+    state.perfis = perfisLib.sanitizar(await store.get('perfis'));
+    /**
+     * **Os textos do PADRÃO primeiro, os do candidato depois da sessão.**
+     *
+     * A aba Respostas existe sem atendimento aberto, e sem esta linha ela ficaria vazia até alguém
+     * abrir um contato. Quem sabe de qual candidato é a conversa é o CANAL, e ele só chega no
+     * `getSession` algumas linhas abaixo — então a lista é relida lá quando o perfil não for o de
+     * fábrica. Duas leituras de armazenamento, zero requisição: o que derruba esta API é número de
+     * requisições, não leitura local.
+     */
     state.templates = await templatesLib.list();
     renderAll();
 
@@ -583,6 +610,41 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     try {
       setStatus('Carregando contato…');
       state.session = await api.getSession(sessionId);
+      /**
+       * **De quem é esta conversa** — pelo CANAL, que é dado (escolha dele, 24/09/2026).
+       *
+       * O `channelId` é o id opaco que a API usa; o NÚMERO é o que ele lê na tela ("Instância
+       * cccad9 · (51) 98051-0122") e o único que ele tem como digitar na Config. Os dois casam
+       * contra a mesma lista — ver `perfis.doCanal`.
+       */
+      /**
+       * **Pela PONTE, nunca `dom` direto** — no modo janela o painel não alcança o DOM da aba, e a
+       * chamada direta seria `ReferenceError` no meio do `load()` de todo contato. Falhar aqui não
+       * pode custar o atendimento: sem o número, o `channelId` decide sozinho.
+       */
+      let numeroDoCanal = '';
+      try {
+        numeroDoCanal = (await page.numeroDoCanal()) || '';
+      } catch {
+        numeroDoCanal = '';
+      }
+      state.perfil = perfisLib.doCanal(state.perfis, state.session?.channelId, numeroDoCanal);
+      if (state.perfil?.id && state.perfil.id !== perfisLib.PERFIL_PADRAO) {
+        state.templates = await templatesLib.list({ perfil: state.perfil.id });
+        /**
+         * **As instruções extras também são do candidato** (escolha dele, 24/09/2026).
+         *
+         * Sobrescrever `state.ia.regras` em MEMÓRIA, em vez de criar um segundo nome, é o que
+         * impede a armadilha registrada quatro vezes aqui: duas cópias da mesma coisa divergem, e
+         * a que ninguém olha é a que vai para o prompt. Os seis pontos que leem `state.ia.regras`
+         * continuam lendo um campo só, e o `load()` relê o `ia` do armazenamento a cada contato,
+         * então a sobrescrita nunca sobrevive à troca.
+         *
+         * **Em branco quer dizer em branco**, não "herda as do outro": instrução escrita para a
+         * campanha de um candidato aplicada à do outro é exatamente o que esta tela evita.
+         */
+        state.ia = { ...state.ia, regras: String((await perfisLib.ler('iaRegras', state.perfil.id, '')) || '') };
+      }
       const [contact, classify] = await Promise.all([
         api.getContact(state.session.contactId),
         fieldsLib.classifyFields(),
@@ -624,7 +686,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.incoming = conversa.incoming.filter((t) => !ehMensagemDaPlataforma(t));
       state.entrantes = prepararEntrantes(conversa.entrantes, {
         veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
-        anuncios: await carregarAnuncios(),
+        anuncios: await carregarAnuncios(perfilAtivo()),
       });
       state.nossaUltimaAt = conversa.nossaUltimaAt || null;
       state.nossas = conversa.nossas || [];
@@ -1190,7 +1252,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const [perguntado, etiquetasInteresse, anunciosDoMomento] = await Promise.all([
         templatesLib.wasSent(state.contact.id, INTEREST_TEMPLATE_ID),
         store.get('etiquetasInteresse'),
-        carregarAnuncios(),
+        carregarAnuncios(perfilAtivo()),
       ]);
 
       /**
@@ -1509,6 +1571,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return state.classify.find((f) => f.name === name) || null;
   }
 
+  /**
+   * **De qual candidato são os textos que esta tela edita** — 24/09/2026, ver `lib/perfis.js`.
+   *
+   * Um lugar só: as seis escritas da aba Respostas (salvar, apagar, mover duas vezes, restaurar,
+   * reler) consultam isto, e espalhar a conta faria uma delas gravar no perfil errado — o texto de
+   * um candidato indo parar no outro.
+   *
+   * **Sem atendimento aberto é o de fábrica**, porque quem decide é o CANAL e ainda não há canal.
+   */
+  function perfilAtivo() {
+    return state.perfil?.id || perfisLib.PERFIL_PADRAO;
+  }
+
   function valueNamed(name) {
     const field = fieldNamed(name);
     const entry = field && state.draft[field.id];
@@ -1656,6 +1731,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const campaign = state.session?.utm?.campaign || state.session?.utm?.source || '';
     header.append(h('div', { class: 'wf-who' }, name));
     header.append(h('div', { class: 'wf-sub' }, phone + (campaign ? ` · ${campaign}` : '')));
+
+    /**
+     * **DE QUEM é esta conversa** — só quando há mais de um candidato cadastrado (24/09/2026).
+     *
+     * Com um perfil a linha não aparece: ela seria ruído em 100% das telas, e alarme que toca
+     * sempre se aprende a ignorar. Com dois, ela é a única coisa que responde *"a resposta que vai
+     * sair é de quem?"* antes de a mensagem sair — e essa é a pergunta cara desta tela.
+     *
+     * O que decide é o CANAL, então a linha diz o canal junto: sem isso, um perfil escolhido errado
+     * parece defeito do painel em vez de número faltando na Config.
+     */
+    if ((state.perfis || []).length > 1 && state.perfil) {
+      header.append(
+        h('div', { class: 'wf-sub', 'data-fica': '1' }, `Candidato: ${state.perfil.nome}`)
+      );
+    }
 
     const cidade = valueNamed('Cidade');
     if (cidade) header.append(h('div', { class: 'wf-sub' }, [document.createTextNode('Cidade: '), ...cidadeMarcada()]));
@@ -11015,7 +11106,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       iaCliente.rascunhar({
         templates: state.templates,
         regras: state.ia.regras,
-        gabinete: await gabineteLib.paraOPrompt(dela),
+        gabinete: await gabineteLib.paraOPrompt(dela, { perfil: state.perfil }),
         modelo: modeloDoRascunho(),
         // Rascunhar precisa dos DOIS lados — ver `conversaParaIA`.
         mensagens: conversaParaIA(),
@@ -11057,6 +11148,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          */
         jaNosConhece: !!(state.sinais?.jaRespondemosAntes || state.temConversaAnterior),
         anterior: anteriorParaIA,
+        /**
+         * **O CANDIDATO desta conversa** — 24/09/2026. Sai do canal do atendimento, e é ele que dá
+         * o nome que a IA escreve. Nulo (sem atendimento aberto) é o de fábrica, então o rascunho
+         * pedido à mão continua como sempre foi.
+         */
+        candidato: state.perfil || null,
       });
 
     let rascunho;
@@ -11098,7 +11195,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           iaLib.montarSistemaRascunho({
             templates: state.templates,
             regras: state.ia.regras,
-            gabinete: await gabineteLib.paraOPrompt(dela),
+            gabinete: await gabineteLib.paraOPrompt(dela, { perfil: state.perfil }),
           })
         )
       );
@@ -11674,10 +11771,26 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     montarTetoDeGasto(cfg);
 
     const areaRegras = h('textarea', { rows: '4', placeholder: 'ex.: quem falar em agenda de Caxias esta semana é para mim' });
-    areaRegras.value = cfg.regras || '';
-    areaRegras.addEventListener('change', () =>
-      salvarIA({ regras: areaRegras.value.trim() }).then(() => setStatus('Instruções salvas.'))
-    );
+    // `state.ia.regras` já vem do candidato do atendimento aberto (ver o `load()`), então o campo
+    // mostra o que vai valer para ELE — e não o que está gravado na chave geral.
+    areaRegras.value = state.ia?.regras || cfg.regras || '';
+    areaRegras.addEventListener('change', () => {
+      const texto = areaRegras.value.trim();
+      const perfil = perfilAtivo();
+      const gravou =
+        perfil === perfisLib.PERFIL_PADRAO
+          ? salvarIA({ regras: texto })
+          : perfisLib.gravar('iaRegras', perfil, texto).then(() => {
+              state.ia = { ...state.ia, regras: texto };
+            });
+      gravou.then(() =>
+        setStatus(
+          state.perfis.length > 1
+            ? `Instruções salvas para ${state.perfil?.nome || 'o candidato de sempre'}.`
+            : 'Instruções salvas.'
+        )
+      );
+    });
     body.append(
       h('label', { class: 'wf-field' }, [h('span', {}, 'Instruções extras para a IA'), areaRegras]),
       h('div', { class: 'wf-origin' },
@@ -11925,7 +12038,164 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     await store.set('ia', state.ia);
   }
 
+  /**
+   * **OS CANDIDATOS** — pedido dele (24/09/2026): *"a extensão trabalha com o foco no Capitão
+   * Martim, ou seja somente um perfil; eu preciso da opção de mais perfis pois tenho agora o Felipe
+   * Pedri, então as respostas devem ser específicas pra ele"*.
+   *
+   * **Quem decide de quem é a conversa é o CANAL** (escolha dele), e é por isso que o cartão abre
+   * dizendo qual é o canal do atendimento aberto, com o botão que o joga para dentro do perfil: o
+   * `channelId` é um id opaco que ninguém digita de cabeça, e o número da instância é o que ele lê
+   * na tela. Sem essa linha, preencher o canal seria adivinhação.
+   *
+   * **Criar um candidato COPIA os textos do atual com o nome e o número trocados.** Perfil sem
+   * texto é perfil mudo, e mudo numa rodada automática é contato saindo da fila sem receber nada —
+   * ver `perfis.semearTextos`. A cópia é ponto de partida: ele edita na aba Respostas, que passa a
+   * mostrar as do candidato do atendimento aberto.
+   */
+  function renderCartaoCandidatos() {
+    const card = h('div', { class: 'wf-card' }, [h('h4', {}, 'Candidatos')]);
+    card.append(
+      h('div', { class: 'wf-origin' },
+        'Quem atende cada conversa sai do CANAL do atendimento (a instância/número do WhatsApp). ' +
+          'Cada candidato tem as próprias respostas prontas, o próprio dossiê e os próprios anúncios. ' +
+          'O quadro do fluxo, o parser e as etiquetas de cidade continuam valendo para todos.')
+    );
+
+    const salvar = async (lista) => {
+      const limpa = perfisLib.sanitizar(lista);
+      await store.set('perfis', limpa);
+      state.perfis = limpa;
+      // O perfil do atendimento aberto pode ter mudado de nome ou de canal agora mesmo.
+      // Pelo `channelId` só: o número da instância é lido da TELA no `load()`, e aqui não há de
+      // onde tirá-lo sem ir à aba. Trocar o canal e reabrir o contato resolve o resto.
+      if (state.session) state.perfil = perfisLib.doCanal(limpa, state.session?.channelId);
+      renderAll();
+    };
+
+    /** O canal do atendimento aberto, para ele não ter de adivinhar o que digitar. */
+    const canalAgora = String(state.session?.channelId || '').trim();
+    if (canalAgora) {
+      const linha = h('div', { class: 'wf-preview', 'data-fica': '1' },
+        `Atendimento aberto: canal ${canalAgora}${state.perfil ? ` — hoje atendido por ${state.perfil.nome}` : ''}`);
+      card.append(linha);
+    } else {
+      card.append(h('div', { class: 'wf-hint' }, 'Abra um atendimento para ver o canal dele aqui e copiá-lo para o candidato certo.'));
+    }
+
+    for (const perfil of state.perfis) {
+      const bloco = h('div', { class: 'wf-card' }, [h('h4', {}, perfil.nome)]);
+
+      bloco.append(
+        campoTexto('Nome do candidato', perfil.nome, (v) =>
+          salvar(state.perfis.map((p) => (p.id === perfil.id ? { ...p, nome: v } : p)))),
+        campoTexto('Como citá-lo no meio da frase (ex.: o Capitão Martim)', perfil.tratamento, (v) =>
+          salvar(state.perfis.map((p) => (p.id === perfil.id ? { ...p, tratamento: v } : p)))),
+        campoTexto('Cargo (ex.: deputado estadual)', perfil.cargo, (v) =>
+          salvar(state.perfis.map((p) => (p.id === perfil.id ? { ...p, cargo: v } : p)))),
+        campoTexto('Número de urna', perfil.numero, (v) =>
+          salvar(state.perfis.map((p) => (p.id === perfil.id ? { ...p, numero: v } : p))))
+      );
+
+      const canaisInput = h('input', { type: 'text', value: perfil.canais.join(', '),
+        placeholder: 'ex.: 51980510122, cccad9' });
+      canaisInput.addEventListener('change', () =>
+        salvar(state.perfis.map((p) => (p.id === perfil.id
+          ? { ...p, canais: canaisInput.value.split(',').map((c) => c.trim()).filter(Boolean) }
+          : p))));
+      bloco.append(
+        h('label', { class: 'wf-field' }, [
+          h('span', {}, 'Canais deste candidato — número ou id da instância'),
+          canaisInput,
+          h('div', { class: 'wf-origin' },
+            'Separe por vírgula. Vale o número que aparece no cabeçalho da conversa (só os dígitos ' +
+              'contam) ou o id do canal. Deixar VAZIO quer dizer "atende tudo o que os outros não ' +
+              'reivindicaram" — é assim que o candidato de sempre continua atendendo a base inteira.'),
+        ])
+      );
+
+      if (canalAgora) {
+        const usar = h('button', { class: 'wf-btn wf-mini', type: 'button' }, `Usar o canal deste atendimento em ${perfil.nome}`);
+        usar.addEventListener('click', () =>
+          salvar(state.perfis.map((p) => (p.id === perfil.id
+            ? { ...p, canais: [...new Set([...p.canais, canalAgora])] }
+            : p))));
+        bloco.append(usar);
+      }
+
+      if (perfil.id !== perfisLib.PERFIL_PADRAO) {
+        const dossieArea = h('textarea', { rows: '6', placeholder: 'quem ele é, o que já fez, o que defende — a IA só afirma o que estiver escrito aqui' });
+        dossieArea.value = perfil.dossie || '';
+        dossieArea.addEventListener('change', () =>
+          salvar(state.perfis.map((p) => (p.id === perfil.id ? { ...p, dossie: dossieArea.value } : p))));
+        bloco.append(
+          h('label', { class: 'wf-field' }, [
+            h('span', {}, 'Dossiê deste candidato'),
+            dossieArea,
+            h('div', { class: 'wf-origin' },
+              'O dossiê do Capitão Martim vem empacotado com a extensão e NÃO é usado aqui — mandá-lo ' +
+                'numa conversa de outro candidato seria a IA responder com a biografia de outra pessoa. ' +
+                'Em branco, a IA fica sem dossiê e prefere não afirmar nada, que é o lado seguro.'),
+          ])
+        );
+
+        const apagar = h('button', { class: 'wf-btn wf-mini wf-danger', type: 'button' }, `Apagar ${perfil.nome}`);
+        apagar.addEventListener('click', async () => {
+          if (!window.confirm(`Apagar o candidato "${perfil.nome}"? As respostas prontas e os anúncios dele são apagados junto.`)) return;
+          const todos = { ...((await store.get('porPerfil')) || {}) };
+          delete todos[perfil.id];
+          await store.set('porPerfil', todos);
+          await salvar(state.perfis.filter((p) => p.id !== perfil.id));
+          setStatus(`Candidato "${perfil.nome}" apagado.`, 'ok');
+        });
+        bloco.append(apagar);
+      } else {
+        bloco.append(
+          h('div', { class: 'wf-origin' },
+            'Este é o candidato de sempre: as respostas prontas, os anúncios e o dossiê dele são os ' +
+              'que a extensão já usava, nas mesmas chaves. Por isso nada mudou para ele.')
+        );
+      }
+
+      card.append(bloco);
+    }
+
+    const novoNome = h('input', { type: 'text', placeholder: 'ex.: Felipe Pedri' });
+    const criar = h('button', { class: 'wf-btn', type: 'button' }, 'Criar candidato (copiando os textos de hoje)');
+    criar.addEventListener('click', () =>
+      withBusy(async () => {
+        const nome = novoNome.value.trim();
+        if (!nome) return setStatus('Escreva o nome do candidato antes de criar.', 'err');
+        const id = nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        if (!id) return setStatus('Esse nome não vira um identificador; use letras.', 'err');
+        if (state.perfis.some((p) => p.id === id)) return setStatus(`Já existe um candidato "${nome}".`, 'err');
+
+        const base = perfisLib.porId(state.perfis, perfisLib.PERFIL_PADRAO);
+        const novo = { id, nome, tratamento: `o ${nome}`, cargo: '', numero: '', canais: [], dossie: '' };
+        /**
+         * **Os textos vão semeados a partir do candidato de sempre.** Sem isto o perfil nasce mudo,
+         * e mudo na rodada automática é contato saindo da fila sem receber nada. O número de urna
+         * ainda está vazio aqui, então só o NOME é trocado — ele preenche o número e recria, ou
+         * corrige os textos na aba Respostas, que passa a mostrar os dele.
+         */
+        const textos = perfisLib.semearTextos(await store.get('templates'), base, novo);
+        await perfisLib.gravar('templates', id, textos);
+        await salvar([...state.perfis, novo]);
+        novoNome.value = '';
+        setStatus(
+          `Candidato "${nome}" criado com ${textos.length} respostas copiadas. Preencha o canal dele ` +
+            'e o número de urna, e confira os textos na aba Respostas.',
+          'ok'
+        );
+      })
+    );
+    card.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Novo candidato'), novoNome]), criar);
+
+    body.append(card);
+  }
+
   function renderConfig() {
+    renderCartaoCandidatos();
     renderConfigIA();
     body.append(h('h3', { class: 'wf-h' }, 'Envio'));
     body.append(
@@ -12194,11 +12464,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * ler. A lista é curta — meia dúzia de anúncios —, então o custo é irrelevante.
      */
     async function desenharAnuncios() {
-      const lista = await carregarAnuncios();
+      const lista = await carregarAnuncios(perfilAtivo());
       anunciosNode.replaceChildren();
 
       const gravar = async (nova) => {
-        await store.set('anuncios', anunciosLib.normalizar(nova));
+        await perfisLib.gravar('anuncios', perfilAtivo(), anunciosLib.normalizar(nova));
         await desenharAnuncios();
       };
 
@@ -12567,7 +12837,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     addBtn.addEventListener('click', async () => {
       const name = prompt('Nome da resposta:');
       if (!name) return;
-      state.templates = await templatesLib.save({ name, text: '' });
+      state.templates = await templatesLib.save({ name, text: '' }, { perfil: perfilAtivo() });
       renderAll();
       // Abre o popup direto: sem isto você criaria a linha vazia e precisaria de mais um
       // clique em "Editar" para escrever o texto pela primeira vez.
@@ -12577,7 +12847,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const resetBtn = h('button', { class: 'wf-btn', type: 'button' }, 'Restaurar padrão');
     resetBtn.addEventListener('click', async () => {
       if (!confirm('Isso descarta suas respostas e volta às originais. Continuar?')) return;
-      state.templates = await templatesLib.restoreDefaults();
+      state.templates = await templatesLib.restoreDefaults({ perfil: perfilAtivo() });
       renderAll();
     });
     body.append(h('div', { class: 'wf-row' }, [addBtn, resetBtn]));
@@ -12604,18 +12874,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     });
     const upBtn = h('button', { class: 'wf-btn wf-mini', type: 'button' }, '↑');
     upBtn.addEventListener('click', async () => {
-      state.templates = await templatesLib.move(template.id, -1);
+      state.templates = await templatesLib.move(template.id, -1, { perfil: perfilAtivo() });
       renderAll();
     });
     const downBtn = h('button', { class: 'wf-btn wf-mini', type: 'button' }, '↓');
     downBtn.addEventListener('click', async () => {
-      state.templates = await templatesLib.move(template.id, 1);
+      state.templates = await templatesLib.move(template.id, 1, { perfil: perfilAtivo() });
       renderAll();
     });
     const delBtn = h('button', { class: 'wf-btn wf-mini wf-danger', type: 'button' }, 'Excluir');
     delBtn.addEventListener('click', async () => {
       if (!confirm(`Excluir "${template.name}"?`)) return;
-      state.templates = await templatesLib.remove(template.id);
+      state.templates = await templatesLib.remove(template.id, { perfil: perfilAtivo() });
       renderAll();
     });
 
@@ -12754,12 +13024,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     salvarBtn.addEventListener('click', () =>
       withBusy(async () => {
         const variantes = listaDeVariantes.valores();
-        state.templates = await templatesLib.save({
-          id: template.id,
-          name: nameInput.value,
-          text: textArea.value,
-          variantes,
-        });
+        state.templates = await templatesLib.save(
+          {
+            id: template.id,
+            name: nameInput.value,
+            text: textArea.value,
+            variantes,
+          },
+          { perfil: perfilAtivo() }
+        );
         setStatus(
           variantes.length
             ? `"${nameInput.value}" salvo, revezando entre ${variantes.length + 1} variações.`
@@ -12937,7 +13210,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     importBtn.addEventListener('click', async () => {
       try {
         await store.importJson(area.value);
-        state.templates = await templatesLib.list();
+        state.templates = await templatesLib.list({ perfil: perfilAtivo() });
         state.settings = await store.get('settings');
         setStatus('Importado.', 'ok');
         renderAll();
@@ -13107,7 +13380,18 @@ function h(tag, props = {}, children = []) {
  * ressuscitaria linhas velhas toda vez que o painel subisse — inclusive as que ele apagou de
  * propósito, que é o pior caso: o anúncio que saiu do ar voltaria a mandar modelo sozinho.
  */
-async function carregarAnuncios() {
+/**
+ * **Os anúncios DESTE candidato** — 24/09/2026, ver `lib/perfis.js`.
+ *
+ * O de fábrica lê a chave de sempre, e a migração da tabela antiga continua valendo só para ele:
+ * `modeloPorTexto` é dado de antes de existirem perfis, e semeá-lo num candidato novo daria a ele
+ * os anúncios do outro. Perfil novo começa com a lista VAZIA — a tela diz isso, e sem anúncio
+ * cadastrado o painel só sabe que a pessoa veio de um anúncio, não de qual.
+ */
+async function carregarAnuncios(perfil = null) {
+  if (perfil && perfil !== perfisLib.PERFIL_PADRAO) {
+    return anunciosLib.normalizar((await perfisLib.ler('anuncios', perfil, [])) || []);
+  }
   const lista = anunciosLib.normalizar(await store.get('anuncios'));
 
   const migracoes = await store.get('migracoes');

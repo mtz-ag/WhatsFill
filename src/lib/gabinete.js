@@ -182,14 +182,28 @@ const GATILHOS = [
  * @param {string[]} [mensagens] o que o contato escreveu; omitir força a inclusão do dossiê
  * @returns {Promise<string>} vazio quando não há nada revisado a mandar
  */
-export async function paraOPrompt(mensagens) {
+export async function paraOPrompt(mensagens, { perfil = null } = {}) {
   const cfg = await store.get('ia');
   const doTexto = String(cfg?.gabinete || '').trim();
 
   const pede = mensagens === undefined || precisaDoDossie(mensagens);
-  const doArquivo = cfg?.dossieAtivo && pede ? await lerArquivo() : '';
 
-  return [doArquivo, doTexto].filter(Boolean).join('\n\n');
+  /**
+   * **O dossiê de OUTRO candidato vem do perfil, nunca do arquivo empacotado** (24/09/2026).
+   *
+   * `src/data/gabinete.md` é o do Capitão Martim — carreira, fé, projetos, a chapa. Mandá-lo numa
+   * conversa do Felipe Pedri seria a IA respondendo com a biografia de outra pessoa, que é pior
+   * que não ter dossiê nenhum. **Perfil com o dossiê em branco vai SEM dossiê**: a IA escala, que
+   * é o comportamento seguro e o mesmo de quando a leitura do arquivo falha.
+   *
+   * O texto livre da Config (`ia.gabinete`) continua compartilhado de propósito — ele é o recado
+   * curto do momento ("estamos em Caxias nesta semana"), não a biografia de ninguém.
+   */
+  const outroCandidato = !!perfil?.id && perfil.id !== 'martim';
+  const doArquivo = cfg?.dossieAtivo && pede && !outroCandidato ? await lerArquivo() : '';
+  const doPerfil = pede && outroCandidato ? String(perfil?.dossie || '').trim() : '';
+
+  return [doArquivo, doPerfil, doTexto].filter(Boolean).join('\n\n');
 }
 
 /** Para a aba Config mostrar o que está valendo, sem adivinhação. */

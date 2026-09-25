@@ -366,6 +366,19 @@ export const canalForaDoAr = IS_IN_PAGE
   : () => call('canalForaDoAr');
 
 /**
+ * **O NÚMERO da instância que atende esta conversa** — o "(51) 9…" ao lado de "Instância cccad9".
+ *
+ * Existe desde 24/09/2026 para escolher o CANDIDATO (ver `lib/perfis.js`): o `channelId` da API é
+ * um id opaco, e o que ele tem como digitar na Config é o número que a tela mostra.
+ *
+ * **Atravessa a ponte como o canal caído**, e não é lido direto: no modo JANELA o painel não
+ * alcança o DOM da aba, e chamar `dom` de lá é `ReferenceError` no meio do `load()` — de todo
+ * contato. Fora da `pageStateLocal` pela mesma razão das duas vizinhas: varre nós de texto, e uma
+ * vez por contato é barato.
+ */
+export const numeroDoCanal = IS_IN_PAGE ? local(() => dom.numeroDaConversa()) : () => call('numeroDoCanal');
+
+/**
  * O contato tem atendimento ANTERIOR? (o botão "Ver conversa anterior" no topo da conversa)
  *
  * Fora da `pageStateLocal` pelo mesmo motivo do canal caído: aquilo é lido a cada 400 ms e isto

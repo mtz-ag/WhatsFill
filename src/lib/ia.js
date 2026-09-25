@@ -36,6 +36,7 @@ import * as atendimento from './atendimento.js';
  * reescrita do texto. Ver `AVISOS_QUE_IMPEDEM_ENVIO.enderecoSemMaterial`.
  */
 import { ehPedidoDeEndereco, semGabinete } from './templates.js';
+import { PERFIL_DE_FABRICA, trocarONome } from './perfis.js';
 import {
   ehPedidoDeRoupa,
   falouDeSaude,
@@ -1084,7 +1085,40 @@ export function validarCidade(bruto, { municipios = [], normalizar = soLetras } 
  * e sai de graça porque já está no prompt cacheado. "Editar para parecer mais humano" é trabalho
  * que o modelo pode adiantar se souber com que voz escrever.
  */
-export function montarSistemaRascunho({ templates = [], regras = '', gabinete = '' } = {}) {
+/**
+ * **O CANDIDATO deste prompt** — 24/09/2026, pedido dele: *"tenho agora o Felipe Pedri, então as
+ * respostas devem ser específicas pra ele"*.
+ *
+ * Tudo o que aqui dizia "Capitão Martim" literal passou a sair daqui. O padrão é o de fábrica, e é
+ * por isso que **com um perfil só o prompt sai byte a byte igual ao de ontem** — tem teste.
+ */
+function quemE(candidato) {
+  const nome = String(candidato?.nome || PERFIL_DE_FABRICA.nome).trim() || PERFIL_DE_FABRICA.nome;
+  const tratamento = String(candidato?.tratamento || `o ${nome}`).trim();
+  return {
+    nome,
+    tratamento,
+    /**
+     * **A forma CONTRAÍDA — "do Capitão Martim", "da Ana"** — e ela existe porque a medição pegou
+     * *"a equipe o Capitão Martim"* saindo no prompt do perfil de HOJE, antes de isto ir ao ar.
+     *
+     * É a lição de 07/09 (a migração de "gabinete" para "equipe"): **concordância é metade do
+     * trabalho**, e trocar o substantivo deixando a preposição produz frase que vai para eleitor.
+     * "a equipe" pede DE + artigo; "escreva como" pede o artigo sozinho — por isso são dois campos.
+     */
+    de: /^o\s/i.test(tratamento)
+      ? `do ${tratamento.slice(2)}`
+      : /^a\s/i.test(tratamento)
+        ? `da ${tratamento.slice(2)}`
+        : `de ${tratamento}`,
+    cargo: String(candidato?.cargo || '').trim(),
+    /** **Só troca o documento DELE quando o candidato é outro** — ver `montarSistemaRascunho`. */
+    ehOPadrao: nome === PERFIL_DE_FABRICA.nome,
+  };
+}
+
+export function montarSistemaRascunho({ templates = [], regras = '', gabinete = '', candidato = null } = {}) {
+  const ELE_E = quemE(candidato);
   /**
    * **As respostas prontas iam SEM NOME e cortadas em oito** — print da nicce (09/09/2026).
    *
@@ -1125,7 +1159,17 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * **Fica no prompt de SISTEMA porque não muda entre contatos** — é ele que leva
      * `cache_control`, e o documento é o mesmo em toda chamada.
      */
-    atendimento.PADRAO_DE_ATENDIMENTO,
+    /**
+     * **O documento DELE vai intacto para o candidato de fábrica, e com o NOME trocado para os
+     * outros** (24/09/2026).
+     *
+     * `atendimento.PADRAO_DE_ATENDIMENTO` é documento dele e **não se edita sem ele pedir** — está
+     * escrito neste projeto desde 06/09. Trocar o nome na INJEÇÃO respeita isso: o arquivo não muda,
+     * o git continua sendo o histórico dele, e o Felipe não recebe um padrão que fala do Martim.
+     */
+    ELE_E.ehOPadrao
+      ? atendimento.PADRAO_DE_ATENDIMENTO
+      : trocarONome(atendimento.PADRAO_DE_ATENDIMENTO, PERFIL_DE_FABRICA.nome, ELE_E.nome),
     '',
     '---',
     '',
@@ -1149,7 +1193,7 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * cuja própria etiqueta dizia *"informação do gabinete"* — a palavra estava sendo ensinada a
      * ela pelo texto que a instrui.
      */
-    '   E NUNCA escreva "gabinete". Quem fala aqui é a EQUIPE ou a ASSESSORIA do Capitão Martim —',
+    `   E NUNCA escreva "gabinete". Quem fala aqui é a EQUIPE ou a ASSESSORIA ${ELE_E.de} —`,
     '   é assim que este mandato se apresenta. Vale para qualquer forma: "o gabinete", "nosso',
     '   gabinete", "gabinete do deputado".',
     /**
@@ -1192,7 +1236,9 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * candidato… Não sabendo: não quero te passar uma informação errada"*) — lidas ao pé da letra, uma
      * pergunta de cortesia virou pedido de dado pessoal. O documento dele não foi tocado.
      */
-    '   EXCEÇÃO: perguntar COMO ELE ESTÁ ("como está o capitão?", "o Martim está bem?") não é pedido',
+    // Os exemplos citam o candidato desta conversa. É a ÚNICA linha do prompt de sistema que mudou
+    // de redação em 24/09/2026 — antes eram "o capitão" e "o Martim", escritos à mão.
+    `   EXCEÇÃO: perguntar COMO ELE ESTÁ ("como está ${ELE_E.tratamento}?", "${ELE_E.tratamento} está bem?") não é pedido`,
     '   de informação, é carinho. Responda que ele está bem e na correria da campanha — nunca "não sei",',
     '   "não tenho essa informação" nem "vou verificar". Se as instruções ou o "Quem é quem" trouxerem',
     '   notícia dele (viagem, saúde, acontecimento), use a notícia no lugar.',
@@ -1495,14 +1541,14 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '9. QUEM PERGUNTA QUEM ESTÁ DO OUTRO LADO. Duas formas da mesma pergunta:',
     '   (a) "posso falar com um representante?", "tem alguém aí?", "isso é robô?", "tem uma pessoa',
     '       falando comigo?" — ela quer saber se existe gente aqui;',
-    '   (b) "é o deputado?", "é o Capitão Martim?", "falo com ele mesmo?", "é você mesmo?", "o senhor é',
+    `   (b) "é o deputado?", "é ${ELE_E.tratamento}?", "falo com ele mesmo?", "é você mesmo?", "o senhor é`,
     '       senador?" — ela acha que é ELE quem está escrevendo.',
     '   **Achar que fala com ele NÃO é problema** — não corrija quem não perguntou. Só quando ela',
-    '   PERGUNTAR, diga que aqui é a EQUIPE do Capitão Martim, no formato',
-    '   "Somos a equipe do Capitão Martim, em que podemos ajudar?".',
+    `   PERGUNTAR, diga que aqui é a EQUIPE ${ELE_E.de}, no formato`,
+    `   "Somos a equipe ${ELE_E.de}, em que podemos ajudar?".`,
     '   **Se a pergunta também quer saber algo DELE — o cargo, o partido, o número —, responda isso na',
     '   mesma mensagem**, com o dado do bloco "Quem é quem". A "o senhor é senador?": "Somos a equipe do',
-    '   Capitão Martim. Ele é deputado estadual." Sem o bloco, não escreva cargo nem número.',
+    `   ${ELE_E.nome}. Ele é ${ELE_E.cargo || 'deputado estadual'}." Sem o bloco, não escreva cargo nem número.`,
     '   **NÃO acrescente nada além disso.** Nada de período eleitoral, nada de agenda, nada de',
     '   WhatsApp pessoal, nada de explicar por que não é ele.',
     '   Isto NÃO é a regra 8: ela só vale quando a pessoa PEDE ele — para falar, para encontrar, ou o',
@@ -1566,7 +1612,7 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * caso SAÍRAM das respostas prontas que a IA lê como base (`semConviteAoCaso`).
      */
     '11. NÃO SOMOS UM CANAL DE RESOLUÇÃO DE PROBLEMAS — a conversa existe para a pessoa sair gostando',
-    '    do Capitão Martim, não para abrir um atendimento do caso dela. Diante de um problema pessoal',
+    `    ${ELE_E.de}, não para abrir um atendimento do caso dela. Diante de um problema pessoal`,
     '    (INSS, aposentadoria, benefício, saúde, emprego, prefeitura): acolha em UMA frase, diga em UMA',
     '    frase onde aquilo se resolve (INSS, SINE, CRAS, prefeitura, Defensoria) e agradeça a',
     '    confiança. **E PARE.** Nada de perguntas sobre o caso ("já deu entrada?", "foi negado?", "tem',
@@ -2006,7 +2052,7 @@ const O_WHATSAPP_DELE =
 const NAO_E_APRESENTACAO = /\bpessoal\b|\bparticular\b|\bn[úu]mero\b/i;
 const ABRE_COM_ESTE_E = /^(?:este|esse|isto|isso)\s+(é|e)(?=\s)/i;
 
-export function semDizerQueEOWhatsAppDele(texto) {
+export function semDizerQueEOWhatsAppDele(texto, candidato = null) {
   const bruto = String(texto || '');
   if (!O_WHATSAPP_DELE.test(bruto)) {
     O_WHATSAPP_DELE.lastIndex = 0;
@@ -2027,7 +2073,7 @@ export function semDizerQueEOWhatsAppDele(texto) {
         // "Este é a equipe" nao concorda; quem se apresenta diz "Aqui e".
         return frase
           .replace(ABRE_COM_ESTE_E, (_m, verbo) => `Aqui ${verbo}`)
-          .replace(O_WHATSAPP_DELE, 'a equipe do Capitão Martim');
+          .replace(O_WHATSAPP_DELE, `a equipe ${quemE(candidato).de}`);
       })
       .join(' ')
   );
@@ -2241,7 +2287,9 @@ function blocoDoAtendimentoAnterior(anterior, agora) {
   ];
 }
 
-export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false, anterior = [], perguntaDoMandato = false } = {}) {
+export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false, anterior = [], perguntaDoMandato = false, candidato = null } = {}) {
+  /** Quem é o candidato desta conversa — 24/09/2026, ver `lib/perfis.js`. */
+  const ELE_E = quemE(candidato);
   /**
    * **A conversa INTEIRA, com os dois lados e com a pendência marcada.**
    *
@@ -2487,13 +2535,15 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'paramos. Só diga quem somos se ela PERGUNTAR quem está do outro lado (regra 9).'
       : jaNosConhece
       ? 'VOZ: esta pessoa JÁ CONHECE o atendimento — conversou conosco em outro dia, e a conversa ' +
-        'de antes só não aparece aqui. NÃO se apresente: nada de "somos a equipe do Capitão Martim", ' +
+        `de antes só não aparece aqui. NÃO se apresente: nada de "somos a equipe ${ELE_E.de}", ` +
         '"aqui é", "seja bem-vindo". Só diga quem somos se ela PERGUNTAR quem está do outro lado ' +
         '(regra 9).'
-      : 'VOZ: é a primeira coisa que o atendimento diz a esta pessoa. Escreva como o Capitão Martim, ' +
+      : `VOZ: é a primeira coisa que o atendimento diz a esta pessoa. Escreva como ${ELE_E.tratamento}, ` +
         'na primeira pessoa. NÃO se apresente por hábito: responda o que ela trouxe. Só diga quem ' +
-        'somos se ela PERGUNTAR quem está do outro lado (regra 9), e aí é "a equipe do Capitão ' +
-        'Martim" ou "a assessoria do Capitão Martim" — nunca "o WhatsApp dele".',
+        // O "do Capitão" vivia COLADO aqui e sobrava como "a equipe do Capitão Felipe Pedri" —
+        // o tratamento já traz o artigo e a patente de quem for. Peguei lendo o prompt gerado.
+        'somos se ela PERGUNTAR quem está do outro lado (regra 9), e aí é "a equipe ' +
+        `${ELE_E.de}" ou "a assessoria ${ELE_E.de}" — nunca "o WhatsApp dele".`,
     '',
     /**
      * **O eixo é a ÚLTIMA sem resposta** — mesma conversa de 05/09: *"eu queria que ela ficasse
@@ -2638,7 +2688,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
       : '',
     /** A exceção da regra 4, colada no pedido quando a pergunta está na conversa (17/09/2026). */
     perguntouComoEleEsta
-      ? 'COMO ELE ESTÁ: ela perguntou como está o Capitão Martim. É carinho, não pedido de informação — ' +
+      ? `COMO ELE ESTÁ: ela perguntou como está ${ELE_E.tratamento}. É carinho, não pedido de informação — ` +
         'NÃO diga que não sabe, que não tem a informação nem que vai verificar. Diga que ele está bem e na ' +
         'correria da campanha, e agradeça a lembrança. Se as instruções ou o "Quem é quem" trouxerem ' +
         'notícia dele, use a notícia no lugar.'
@@ -2702,7 +2752,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
     trouxeProblema
       ? 'NÃO SOMOS CANAL DE RESOLUÇÃO DE PROBLEMAS: ela trouxe um problema — acolha em uma frase, diga ' +
         'onde aquilo se resolve e agradeça a confiança, sem perguntas sobre o caso, sem pedir que ela ' +
-        'conte mais e sem "fico no aguardo". A mensagem é para ela sair gostando do Capitão Martim.'
+        `conte mais e sem "fico no aguardo". A mensagem é para ela sair gostando ${ELE_E.de}.`
       : '',
     /**
      * **SAÚDE: a exceção, colada na regra que a excepciona** (17/09/2026). A linha de cima é a razão de
@@ -2746,7 +2796,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'assistência social, Cadastro Único ou "não podemos ajudar com dinheiro". Agradeça a iniciativa ' +
         'pelo nome (a janta, o café, o bingo), diga com franqueza que a campanha não entra com comida, ' +
         'bebida, som nem custo — a lei eleitoral e a prestação de contas não permitem —, e que o apoio ' +
-        'dela vale do jeito que ela puder fazer. Se ela convidar o Capitão Martim, pode dizer que repassa ' +
+        `dela vale do jeito que ela puder fazer. Se ela convidar ${ELE_E.tratamento}, pode dizer que repassa ` +
         'o convite para a equipe da agenda; nada além disso, e sem prometer presença.'
       : '',
     saude
@@ -3368,7 +3418,9 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
    * **Quem atende é a EQUIPE, e a apresentação errada é mecânica** — ver
    * `semDizerQueEOWhatsAppDele`, print dele de 22/09/2026.
    */
-  const semOWhatsAppDele = semDizerQueEOWhatsAppDele(texto);
+  // O nome de quem atende sai do CANDIDATO desta conversa (24/09/2026) — sem contexto é o de
+  // fábrica, que é como esta troca sempre funcionou.
+  const semOWhatsAppDele = semDizerQueEOWhatsAppDele(texto, contexto?.candidato);
   if (semOWhatsAppDele) {
     texto = semOWhatsAppDele;
     avisos.push('a IA se apresentou como "o WhatsApp do Capitão Martim" — troquei por "a equipe dele"');

@@ -36,6 +36,8 @@ const methods = {
   diagnosticarAbas: () => page.diagnosticarAbas(),
   canalForaDoAr: () => page.canalForaDoAr(),
   temConversaAnterior: () => page.temConversaAnterior(),
+  // O número da instância, para escolher o candidato (24/09/2026) — ver `lib/perfis.js`.
+  numeroDoCanal: () => page.numeroDoCanal(),
   openNextSession: (opts) => page.openNextSession(opts),
   queuePreview: (max) => page.queuePreview(max),
   openQueueSession: (index, opts) => page.openQueueSession(index, opts),

@@ -1342,6 +1342,27 @@ const DEFAULTS = {
    * mesmo motivo — ninguém quer o histórico de outra pessoa junto da configuração.
    */
   fluxoHistorico: [],
+  /**
+   * **OS CANDIDATOS.** Pedido dele (24/09/2026): *"a extensão trabalha com o foco no Capitão
+   * Martim, ou seja somente um perfil; eu preciso da opção de mais perfis pois tenho agora o Felipe
+   * Pedri, então as respostas devem ser específicas pra ele"*.
+   *
+   * **Nasce com UM, que é o de hoje** — e o de fábrica lê as chaves de topo (`templates`,
+   * `anuncios`, …), então esta chave existir não muda nada em quem nunca abrir a tela. Ver
+   * `lib/perfis.js`, que é quem sanitiza e escolhe.
+   *
+   * Array, então FORA da lista de mescla do `get`: mesclar array dá o resultado errado (a mesma
+   * razão de `fluxosSalvos`).
+   */
+  perfis: [],
+  /**
+   * Os dados de cada perfil que NÃO é o de fábrica — `{ <id>: { templates, anuncios, … } }`.
+   *
+   * O de fábrica continua nas chaves de topo de propósito: **não há migração no dado que ele já
+   * tem**, e o dia em que esta tela for desligada o comportamento volta sozinho. Quem lê e escreve
+   * aqui são `perfis.ler` e `perfis.gravar`, e mais ninguém.
+   */
+  porPerfil: {},
   /** Cache da lista de municípios do RS (IBGE). */
   municipios: null,
   /**

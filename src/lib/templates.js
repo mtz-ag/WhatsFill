@@ -3,11 +3,12 @@
  */
 
 import * as store from './store.js';
+import * as perfis from './perfis.js';
 import { semVocativo, usaNome } from './vars.js';
 
 let migrado = false;
 
-export async function list() {
+export async function list({ perfil } = {}) {
   // Uma vez por carregamento do painel: a migração relê o storage, não custa a cada chamada.
   if (!migrado) {
     migrado = true;
@@ -38,7 +39,25 @@ export async function list() {
     // já vem sem "gabinete" — mas as antigas, que ele editou, só são alcançadas por esta.
     await migrarGabineteParaEquipe();
   }
-  return store.get('templates');
+  return doPerfil(perfil);
+}
+
+/**
+ * **As respostas prontas DESTE candidato** — 24/09/2026, ver `lib/perfis.js`.
+ *
+ * O perfil de fábrica lê a chave de sempre, então com um perfil só nada muda. Perfil novo sem
+ * texto gravado devolve lista VAZIA, nunca a do outro candidato: o painel fica sem resposta pronta
+ * (e a tela diz isso), que é infinitamente melhor que mandar o texto do Martim pelo número do
+ * Felipe. É a regra de sempre — na dúvida, recusar com o motivo na tela.
+ */
+async function doPerfil(perfil) {
+  if (!perfil || perfil === perfis.PERFIL_PADRAO) return store.get('templates');
+  return (await perfis.ler('templates', perfil, [])) || [];
+}
+
+/** Grava a lista DESTE perfil. Um lugar só, pela mesma razão do `doPerfil`. */
+async function gravarNoPerfil(perfil, templates) {
+  return perfis.gravar('templates', perfil, templates);
 }
 
 /**
@@ -517,34 +536,34 @@ export async function avancarVariante(template) {
   await store.set('varianteIndex', { ...indices, [template.id]: (atual + 1) % variantes.length });
 }
 
-export async function save(template) {
-  const templates = await list();
+export async function save(template, { perfil } = {}) {
+  const templates = await list({ perfil });
   const idx = templates.findIndex((t) => t.id === template.id);
   if (idx >= 0) templates[idx] = { ...templates[idx], ...template };
   else templates.push({ ...template, id: template.id || slug(template.name) });
-  await store.set('templates', templates);
+  await gravarNoPerfil(perfil, templates);
   return templates;
 }
 
-export async function remove(id) {
-  const templates = (await list()).filter((t) => t.id !== id);
-  await store.set('templates', templates);
+export async function remove(id, { perfil } = {}) {
+  const templates = (await list({ perfil })).filter((t) => t.id !== id);
+  await gravarNoPerfil(perfil, templates);
   return templates;
 }
 
-export async function move(id, delta) {
-  const templates = await list();
+export async function move(id, delta, { perfil } = {}) {
+  const templates = await list({ perfil });
   const i = templates.findIndex((t) => t.id === id);
   const j = i + delta;
   if (i < 0 || j < 0 || j >= templates.length) return templates;
   [templates[i], templates[j]] = [templates[j], templates[i]];
-  await store.set('templates', templates);
+  await gravarNoPerfil(perfil, templates);
   return templates;
 }
 
-export async function restoreDefaults() {
-  await store.set('templates', structuredClone(store.DEFAULT_TEMPLATES));
-  return list();
+export async function restoreDefaults({ perfil } = {}) {
+  await gravarNoPerfil(perfil, structuredClone(store.DEFAULT_TEMPLATES));
+  return list({ perfil });
 }
 
 // --- anti-duplicata --------------------------------------------------------

@@ -258,7 +258,7 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  *
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
-export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece, anterior = [] }) {
+export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece, anterior = [], candidato = null }) {
   /**
    * **O QUE A IA LEU, guardado para a tela mostrar** — pergunta dele (16/09/2026): *"preciso saber
    * qual a visão da IA sobre a conversa, o que ela tem acesso e o que não tem"*.
@@ -271,14 +271,16 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
    *
    * Fica só em memória, no painel. Nunca vai para armazenamento nem para arquivo: tem dado de eleitor.
    */
-  const sistema = montarSistemaRascunho({ templates, regras, gabinete });
+  // O CANDIDATO desta conversa — 24/09/2026. Nulo é o de fábrica, então com um perfil só o
+  // prompt sai como sempre saiu. Ver `lib/perfis.js`.
+  const sistema = montarSistemaRascunho({ templates, regras, gabinete, candidato });
   /**
    * **`perguntaDoMandato` é "o dossê foi puxado"** — `gabinete` só vem preenchido quando
    * `precisaDoDossie` reconheceu que a conversa pergunta do candidato, da chapa ou das pautas.
    * Reaproveitar a conta existente evita a lista nova de formas de perguntar, que nunca fecha.
    */
   const contato = montarContatoRascunho({
-    mensagens, campos, agora, pedirDados, jaNosConhece, anterior,
+    mensagens, campos, agora, pedirDados, jaNosConhece, anterior, candidato,
     perguntaDoMandato: !!String(gabinete || '').trim(),
   });
   const lidoPelaIA = {
@@ -360,7 +362,7 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
        * de `dossieAtivo`**: o modelo tem saber próprio sobre estes nomes, e foi ele que trocou o
        * cargo do Van Hattem na print da Nara. Trava não pode depender de uma caixa marcada.
        */
-      ...validarRascunho(r.decisao, agora, { jaFalamos, jaNosConhece, recebemosDela, chapa, pedeMaterial, elaSeDesculpou, elaFalouDeTrabalho, nossaUltima, jaFalamosHoje }),
+      ...validarRascunho(r.decisao, agora, { jaFalamos, jaNosConhece, recebemosDela, chapa, pedeMaterial, elaSeDesculpou, elaFalouDeTrabalho, nossaUltima, jaFalamosHoje, candidato }),
       custo: r.custo,
       custoUsd: r.custoUsd,
       gastoMes: r.gastoMes,

@@ -1,3 +1,95 @@
+## 2026-09-25 — v3.115.0 — MAIS DE UM CANDIDATO: quem atende sai do canal do atendimento
+
+**Pedido dele:** *"a extensão atualmente trabalha com o foco no Capitão Martim, ou seja somente um
+perfil; eu preciso da opção de mais perfis pois tenho agora o Felipe Pedri, então as respostas devem
+ser específicas pra ele"*.
+
+**Medido antes de desenhar** — o nome dele vive em cinco naturezas diferentes, e só uma é código meu:
+
+| onde | o que é | quanto |
+|---|---|---|
+| `store.js` | as respostas prontas de fábrica | 12 trechos |
+| `ia.js` | o prompt (regras 5, 9, 11, 12, as três VOZES, a revisão) | ~20 linhas vivas |
+| `atendimento.js` | **o padrão que ele escreveu** | 7 linhas |
+| `gabinete.md` | o dossiê (carreira, fé, projetos, a chapa) | 12 |
+| `cortesia.js`, `cities.js`, `gabinete.js` | os detectores | ~8 padrões vivos |
+
+Três medições mudaram o desenho:
+
+1. **`session.channelId` já existia** e o painel já o usava para buscar os modelos aprovados daquele
+   número — então **o candidato sai do CANAL**, que é dado e não texto (a doutrina da origem do
+   anúncio, 31/08). Automático, zero cliques, e sem a chance de mandar a mensagem de um candidato
+   pelo número do outro, que é o erro caro desta tela. **Escolha dele**, entre três.
+2. **"Felipe" e "Pedri" não colidem com nenhum dos 497 municípios** — ao contrário de "Capitão",
+   que é município e por isso tem guarda própria em `cities.js`. Um problema a menos.
+3. **As respostas prontas dele estão GRAVADAS no armazenamento**, e `store.get` só mescla default em
+   chave que falta — a armadilha do `-contato-assessor` (04/09). Trocar o texto de fábrica nunca
+   alcançaria as dele, então o perfil novo precisa carregar o próprio conjunto.
+
+### O invariante que protege a produção
+
+**Com um candidato só, nada muda.** O perfil de fábrica lê as chaves de sempre (`templates`,
+`anuncios`), então **não houve migração nenhuma no dado que ele já tem** — e o dia em que esta tela
+for desligada, o comportamento volta sozinho. `tests/perfis.test.mjs` compara o prompt **byte a
+byte** contra o de passar o candidato de fábrica explicitamente, e o bloco do contato também.
+
+**Uma linha do prompt de sistema mudou de redação, e só ela:** os exemplos da exceção da regra 4
+passaram de *"como está o capitão?", "o Martim está bem?"* (escritos à mão) para os mesmos exemplos
+citando o candidato da conversa. Conferido contra o commit anterior num worktree fora do
+repositório: 328 linhas idênticas, uma diferente.
+
+### O que é por candidato, e o que não é
+
+Por candidato (escolha dele): **as respostas prontas, os anúncios, o dossiê e as instruções extras
+da IA**. Compartilhados: **o quadro do fluxo** (as decisões são as mesmas, e duas cópias do quadro
+divergem numa semana — a lição registrada quatro vezes aqui), o parser, as etiquetas de cidade e
+COREDE, e os modelos aprovados, que a plataforma já entrega por canal.
+
+`perfis.CHAVES_DO_PERFIL` é **lista de permissão**, e `exigirChaveConhecida` a faz valer: chave fora
+dela estoura em vez de criar uma cópia silenciosa. Sem isso a constante seria comentário — a
+armadilha do `pedido-emprego`, que existia sem ninguém acioná-lo.
+
+### As decisões que a medição obrigou
+
+**Perfil sem texto gravado lê VAZIO, nunca o do outro candidato.** Mandar a resposta do Martim pelo
+número do Felipe é exatamente o defeito que esta tela existe para impedir. Por isso **criar um
+candidato COPIA os textos de hoje com o nome e o número de urna trocados** (`semearTextos`): perfil
+mudo numa rodada automática é contato saindo da fila sem receber nada.
+
+**O documento dele não foi editado.** `atendimento.PADRAO_DE_ATENDIMENTO` vai **intacto** para o
+candidato de fábrica e com o nome trocado **na injeção** para os outros — o arquivo continua sendo
+dele, com o `git diff` que o protege desde 06/09.
+
+**O dossiê empacotado não vale para outro candidato.** `gabinete.md` é a biografia do Martim;
+mandá-la numa conversa do Felipe seria a IA respondendo com a vida de outra pessoa. Cada perfil tem
+o seu, em texto, na Config — **em branco vai sem dossiê**, e a IA prefere não afirmar nada, que é o
+lado seguro e o mesmo de quando a leitura do arquivo falha.
+
+**CONCORDÂNCIA é metade do trabalho, pela segunda vez.** A primeira foi "gabinete" → "equipe"
+(07/09). O perfil tem `tratamento` (*"o Capitão Martim"*) **e** a forma contraída `de` (*"do Capitão
+Martim"*), porque *"a equipe"* pede DE + artigo — a medição pegou ***"a equipe o Capitão Martim"***
+saindo no prompt de **hoje**, antes de isto ir ao ar.
+
+**Um erro meu que o verificador não pega:** escrevi `dom.numeroDaConversa()` direto no painel, e
+`dom` não existe lá — seria `ReferenceError` no `load()` de **todo** contato, nos dois modos. Está
+registrado neste projeto que `checar-referencias` não vê variável fora de escopo. Hoje a leitura de
+tela atravessa a ponte (`page.numeroDoCanal`), como o canal caído.
+
+### O que ele precisa fazer
+
+1. Abrir a Config → **Candidatos** → escrever *Felipe Pedri* → **Criar candidato**. Os textos de
+   hoje são copiados com o nome e o número trocados.
+2. Abrir um atendimento **do número do Felipe** e clicar em *"Usar o canal deste atendimento em
+   Felipe Pedri"* — é o que liga o canal ao candidato.
+3. Preencher o **cargo**, o **número de urna** e o **dossiê** dele, e conferir os textos na aba
+   Respostas (ela passa a mostrar os do candidato do atendimento aberto).
+4. O candidato de sempre fica com o campo de canais **vazio** de propósito: vazio quer dizer
+   *"atende tudo o que os outros não reivindicaram"*, e é o que mantém a base inteira funcionando.
+
+**O que NÃO mudou, e é bom saber:** os detectores (apoio, insulto ao aliado, *"trabalhar para o
+Martim"*, *"falar com ele"*) continuam citando o nome dele — eles reconhecem o que **ela** escreve,
+e a chapa é a mesma para os dois. A colinha, o COREDE e as etiquetas de cidade também são comuns.
+
 ## 2026-09-24 — v3.114.0 — o formulário só tinha travas de "já temos", nenhuma de "cabe agora"
 
 **Print dele:** uma contato chegou pelo anúncio e escreveu *"eu não sou do sul .só de Minas gerais
