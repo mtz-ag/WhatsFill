@@ -2153,6 +2153,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **A CAIXA QUE CONCLUI EM PRIMEIRO LUGAR E A QUE ENTERRA A PERGUNTA** (25/09/2026, o Nelson:
+  etiqueta ENGAJADO, perguntou *"Quais planos mais urgente?"* as 10:18 e a rodada concluiu as 12:26 —
+  *"ignorou a pergunta e concluiu, tive que retornar e responder"*). **Medido: os detectores
+  acertaram todos** — `perguntaPendente` true, e SEM a etiqueta o caso dava `pergunta-aberta`
+  (tecla 6). `etiqueta-dispensa-da-fila` decide em SEXTO lugar e `pergunta-aberta` em DECIMO NONO.
+  **Terceira caixa a receber a regra dele de 03/09** (*"tem pergunta nao conclui"*), depois de
+  `ja-respondemos-antes` e `respondeu-os-dados` — e a UNICA das tres que decide no topo, entao era
+  ela que enterrava a pergunta de quem mais fala com o mandato. **A guarda foi para o DESFECHO e nao
+  para o `quando`** (licao da Noeli, 06/09): no `quando`, quem entra no lugar e `ja-respondemos-antes`,
+  que ENVIA. **Ao consertar uma caixa que conclui, confira as OUTRAS que concluem acima dela** — a
+  regra so vale onde foi escrita, e `etiqueta-so-conclui` (assessor) continua de fora de proposito,
+  porque ela e decisao dele sobre quem trabalha no mandato.
 - **O ENDERECO VEM PARTIDO PORQUE NOS PEDIMOS PARTIDO** (23/09/2026: o modelo pede *"rua, numero,
   bairro e cidade"*, ela respondeu em TRES mensagens, e a rodada concluiu sem etiquetar —
   *"a instrucao e deixar aberto para eu transferir depois"*). **Medido: `informouEndereco` devolvia

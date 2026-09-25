@@ -1,3 +1,49 @@
+## 2026-09-25 — v3.121.0 — o engajado que PERGUNTA era concluído em silêncio
+
+**Print dele:** o Nelson tem a etiqueta **ENGAJADO**. Nós mandamos o link do grupo às **09:43**, ele
+perguntou *"Quais planos mais urgente?"* às **10:18**, e a rodada **concluiu às 12:26 sem responder**.
+Ele teve que reiniciar o atendimento e responder à mão às 12:28: *"ignorou a pergunta e concluiu,
+tive que retornar e responder"*.
+
+**Medido, e os detectores estavam todos certos:**
+
+| | |
+|---|---|
+| `perguntaPendente` | **true** |
+| `conversaTemPerguntaAberta` | casou — *"fez uma pergunta que nenhuma resposta pronta responde"* |
+| `falouAlgoProprio` | casou |
+| decisão **com** a etiqueta | `etiqueta-dispensa-da-fila` → **tecla 3** (conclui, nada sai) |
+| decisão **sem** a etiqueta | `pergunta-aberta` → **tecla 6** |
+
+Ou seja: **a pergunta foi vista, e a caixa passou por cima dela.** `etiqueta-dispensa-da-fila`
+decide em **sexto** lugar e `pergunta-aberta` em **décimo nono** — com a etiqueta no contato, a
+pergunta nunca chega a ser olhada.
+
+**É a regra dele de 03/09** (*"tem pergunta não conclui"*), e esta é a **terceira caixa** a recebê-la,
+depois de `ja-respondemos-antes` (03/09) e `respondeu-os-dados` (06/09). É também **a única das três
+que conclui em primeiro lugar** — então era ela que enterrava a pergunta de quem mais fala com o
+mandato, que é exatamente quem carrega essa etiqueta.
+
+**A guarda decide o DESFECHO e não se a caixa casa** — a lição da Noeli (06/09). Pondo-a no `quando`,
+quem entraria no lugar é `ja-respondemos-antes`, que **envia** a mensagem do momento: o oposto do que
+ele pediu. Na tecla, ela troca o desfecho e **vale também no quadro dele, sem ele importar nada**.
+
+`materialPendente` entrou junto, com a mesma forma do `ja-respondemos-antes`: o material pedido não
+vence com o dia (decisão dele, 05/09), e concluir apaga o pedido.
+
+**Quanto muda, medido em 20.000 contextos sorteados com semente fixa:** 742 decisões desta caixa
+(**3,71%**) — **633 vinham da tecla 3** (concluir em silêncio) e **109 da tecla 5** (mandar a do
+momento por cima da pergunta). Todas viraram **tecla 6**.
+
+**E a metade cara está no teste:** sem pergunta e sem material, **nada mudou**. Esta caixa existe para
+o engajado sair da fila, e vazar a guarda devolveria o defeito de 03/09 (o Paulo Cézar) — o engajado
+que manda vídeo o dia inteiro voltando a custar uma abertura por rodada, para sempre, sem receber nada.
+São seis asserções de falso positivo: já respondido hoje, momento já enviado, sem momento configurado,
+primeira vez no dia, só uma reação e só um bom dia.
+
+O `ramos` do verbete entrou no mesmo commit (senão `regrasComDesfechoIncoerente` acusa), e a matriz do
+teste ganhou `materialPendente` — campo novo lido por uma tecla-função entra na matriz, ou o desfecho
+novo nunca aparece e o teste acusa o mapa de inventar.
 ## 2026-09-25 — v3.120.0 — xingar o adversário é apoio, e apoio não se corrige
 
 **Print dele:** um apoiador escreveu *"Vamos todos juntos a um só objetivo, remar juntinho pra todos

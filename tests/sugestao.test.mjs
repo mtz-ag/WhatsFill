@@ -634,13 +634,14 @@ grupo('o mapa RAMIFICADO da janela: cada regra tem os dois galhos (01/09/2026)')
      * foi o que aconteceu com o tempo em 03/09. Campo novo numa tecla-funcao entra aqui.
      */
     const daFuncao = new Set();
-    for (let m = 0; m < 32; m++) {
+    for (let m = 0; m < 64; m++) {
       daFuncao.add(r.tecla({
         respondidoHoje: !!(m & 1),
         momentoJaEnviado: !!(m & 2),
         podeMandarMomento: !!(m & 4),
         deOutroDia: !!(m & 8),
         perguntaPendente: !!(m & 16),
+        materialPendente: !!(m & 32),
       }));
     }
     const noMapa = new Set(ramosDaRegra(r.id).map((x) => x.tecla));
@@ -899,6 +900,62 @@ grupo('engajado: ja respondi hoje, nao manda nada (04/09/2026)');
     'e o motivo diz por que');
   check(com(base)?.tecla === '5', 'sem ter respondido hoje, a mensagem do momento continua saindo');
   check(com({ ...base, momentoJaEnviado: true })?.tecla === '3', 'a guarda antiga continua valendo');
+}
+
+{
+  grupo('o engajado que PERGUNTA nao e concluido em silencio (25/09/2026)');
+
+  /**
+   * Print do Nelson: etiqueta "ENGAJADO", nos mandamos o link do grupo as 09:43, ele perguntou
+   * *"Quais planos mais urgente?"* as 10:18 e a rodada CONCLUIU sem responder. Ele:
+   * *"ignorou a pergunta e concluiu, tive que retornar e responder"*.
+   *
+   * Medido antes de mexer: `perguntaPendente` = true e, SEM a etiqueta, o caso dava
+   * `pergunta-aberta` (tecla 6). Os detectores acertaram; esta caixa passou por cima deles,
+   * porque ela decide em SEXTO lugar e `pergunta-aberta` em decimo nono.
+   *
+   * Terceira caixa a receber a regra dele de 03/09 (*"tem pergunta nao conclui"*), depois de
+   * `ja-respondemos-antes` e `respondeu-os-dados` -- e a unica das tres que conclui em primeiro
+   * lugar, entao era ela que enterrava a pergunta de quem mais fala com o mandato.
+   */
+  const base = { etiquetaQueDispensa: 'Engajado', podeMandarMomento: true };
+
+  const nelson = com({ ...base, respondidoHoje: true, perguntaPendente: true });
+  check(nelson?.id === 'etiqueta-dispensa-da-fila', 'a caixa continua sendo ela = ' + nelson?.id);
+  check(nelson?.tecla === '6', 'mas o desfecho vira "responda" = ' + JSON.stringify(nelson));
+  check(String(nelson?.motivo).includes('pergunta'), 'e o motivo diz por que = ' + nelson?.motivo);
+
+  // A pergunta vence tambem quando a mensagem do momento ainda nao saiu: responder vem antes.
+  check(com({ ...base, perguntaPendente: true })?.tecla === '6', 'pergunta vence a mensagem do momento');
+
+  /**
+   * **Material pedido entra junto**, com a mesma forma de `ja-respondemos-antes`: o pedido de
+   * material nao vence com o dia (decisao dele, 05/09), e concluir apaga o pedido.
+   */
+  check(com({ ...base, respondidoHoje: true, materialPendente: true })?.tecla === '6',
+    'material pedido tambem nao e concluido');
+
+  /**
+   * **A metade cara: sem pergunta e sem material, NADA mudou.** Esta caixa existe para o engajado
+   * sair da fila -- se a guarda vazasse, quem manda video o dia inteiro voltaria a custar uma
+   * abertura por rodada, que foi o defeito que ela nasceu para consertar (03/09, o Paulo Cezar).
+   */
+  check(com({ ...base, respondidoHoje: true })?.tecla === '3', 'ja respondemos hoje: continua concluindo');
+  check(com({ ...base, momentoJaEnviado: true })?.tecla === '3', 'ja recebeu o momento: continua concluindo');
+  check(com({ ...base, podeMandarMomento: false })?.tecla === '3', 'sem momento configurado: continua concluindo');
+  check(com(base)?.tecla === '5', 'primeira vez no dia: a mensagem do momento continua saindo');
+  check(com({ ...base, respondidoHoje: true, ultimaEhSoReacao: true })?.tecla === '3',
+    'so uma reacao nao e pergunta');
+  check(com({ ...base, respondidoHoje: true, soCortesia: { motivo: 'bom dia' } })?.tecla === '3',
+    'so um bom dia nao e pergunta');
+
+  /**
+   * **E a guarda decide o DESFECHO, nunca se a caixa casa** (a licao da Noeli, 06/09). Posta no
+   * `quando`, quem entraria no lugar e `ja-respondemos-antes`, que ENVIA a mensagem do momento --
+   * o oposto do que ele pediu.
+   */
+  check(com({ ...base, respondidoHoje: true, perguntaPendente: true })?.id === 'etiqueta-dispensa-da-fila',
+    'a caixa nao sai da frente: quem entraria envia');
 }
 
 {

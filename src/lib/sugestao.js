@@ -268,8 +268,32 @@ export const REGRAS = [
      *
      * `respondidoHoje` é a mesma guarda que `ultima-e-so-reacao` já usava, e pela mesma razão:
      * mais uma mensagem nossa no mesmo dia é empilhar, não atender.
+     *
+     * **E a pergunta pendente vence os dois** — print do Nelson (25/09/2026): ele tem "ENGAJADO",
+     * nós mandamos o link do grupo às 09:43, ele perguntou *"Quais planos mais urgente?"* às 10:18
+     * e a rodada **concluiu sem responder** — *"ignorou a pergunta e concluiu, tive que retornar e
+     * responder"*.
+     *
+     * Medido: `perguntaPendente` era **true**, `falouAlgoProprio` casou, e sem a etiqueta o caso
+     * dava `pergunta-aberta` (tecla 6). Ou seja, **os detectores acertaram e esta caixa passou por
+     * cima deles** — ela está em SEXTO lugar e `pergunta-aberta` em décimo nono.
+     *
+     * A regra dele é de 03/09 (*"tem pergunta não conclui"*) e já foi aplicada duas vezes, em
+     * `ja-respondemos-antes` e em `respondeu-os-dados`. Esta é a terceira caixa que concluía por
+     * cima de uma pergunta — **e a única das três que conclui em PRIMEIRO lugar**, então ela
+     * enterra a pergunta de quem mais fala com o mandato.
+     *
+     * **A guarda decide o DESFECHO e não se a caixa casa** (a lição da Noeli, 06/09): pondo-a no
+     * `quando`, quem entra no lugar é `ja-respondemos-antes`, que envia. Aqui ela troca a tecla, e
+     * por isso vale também no quadro dele, sem ele importar nada.
+     *
+     * `materialPendente` entra junto, pela mesma razão e com a mesma forma de `ja-respondemos-antes`:
+     * o material pedido não vence com o dia (decisão dele, 05/09), e concluir apaga o pedido.
      */
-    tecla: (c) => (c.respondidoHoje || c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5'),
+    tecla: (c) => {
+      if (c.perguntaPendente || c.materialPendente) return '6';
+      return c.respondidoHoje || c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5';
+    },
     /**
      * Etiqueta que dispensa o contato da rodada (configurável na aba Automatizado).
      *
@@ -306,7 +330,9 @@ export const REGRAS = [
      */
     quando: (c) => !!c.etiquetaQueDispensa,
     motivo: (c) =>
-      c.respondidoHoje
+      c.perguntaPendente || c.materialPendente
+        ? `tem a etiqueta "${c.etiquetaQueDispensa}", mas ${c.perguntaPendente ? 'fez uma pergunta que ninguém respondeu' : 'pediu material'} — responda antes de concluir.`
+        : c.respondidoHoje
         ? `tem a etiqueta "${c.etiquetaQueDispensa}" e você já respondeu hoje — conclua e siga.`
         : c.momentoJaEnviado || !c.podeMandarMomento
           ? `tem a etiqueta "${c.etiquetaQueDispensa}" e já recebeu a mensagem do momento — conclua e siga.`
@@ -1320,8 +1346,12 @@ export const SOBRE = {
   'etiqueta-dispensa-da-fila': {
     rotulo: 'Tem a etiqueta que dispensa da fila',
     efeito: 'depende',
-    quando: 'Já está engajado: manda a mensagem do momento uma vez e conclui; depois, só conclui.',
+    quando:
+      'Já está engajado: manda a mensagem do momento uma vez e conclui; depois, só conclui. ' +
+      'Mas pergunta em aberto e material pedido vêm antes: engajado também faz pergunta, e ' +
+      'concluir em cima dela responde que não precisava.',
     ramos: [
+      { tecla: '6', se: 'ele fez uma pergunta que ninguém respondeu, ou pediu material' },
       { tecla: '5', se: 'a mensagem do momento ainda não saiu para ele' },
       { tecla: '3', se: 'você já respondeu hoje, ele já recebeu a do momento, ou não há uma configurada' },
     ],
