@@ -1,3 +1,51 @@
+## 2026-09-26 — v3.127.0 — a tabela "Modelo por conteúdo" era resquício, e barrava a rodada inteira
+
+**Pergunta dele:** *"em Meus está dando esse erro, isso não é um resquício do padrão anterior? agora
+temos os modelos por anúncio"* — sobre *"Cadastre a tabela 'Modelo por conteúdo' na aba Config: sem
+ela não há o que enviar"*, que **impedia a rodada dos "Meus" de começar**.
+
+**Ele estava certo, e a medição fecha o caso.**
+
+**1. A tabela é a TERCEIRA da fila, não a única.** Quando a trava nasceu, ela era o único jeito de a
+rodada saber qual modelo mandar. A ordem de hoje, lida no código:
+
+| | |
+|---|---|
+| 1º | `anuncios.modeloDoAnuncio` — o modelo que **ele cadastrou no anúncio** |
+| 2º | o **modelo padrão** do anúncio, com rodízio |
+| 3º | a etiqueta de conteúdo + a tabela *Modelo por conteúdo* |
+
+**2. Sem modelo NENHUM, a rodada ainda decide em 100% dos casos.** Medido em 20.000 contextos
+sorteados com semente fixa, com e sem modelo disponível:
+
+| tecla | com modelo | sem modelo |
+|---|---|---|
+| 1 (mandar o modelo) | **6** | 0 |
+| 2, 3, 5, 6, 7, i, s | 19.986 | 19.986 |
+| sem desfecho | 1 | 4 |
+
+Seis casos em vinte mil. A rodada conclui, pula, pede o cadastro, manda a mensagem do momento e chama
+a IA **sem tocar nessa tabela**.
+
+**3. A assimetria já era a prova:** *"Novos"* e *"Outros"* **nunca tiveram** essa trava — e as três
+rodadas usam o mesmo motor (`processarRespondido`, medido em 06/09).
+
+**O que fez o resquício acordar foi a v3.123.** A tabela virou **por candidato**, e a do candidato
+novo nasce vazia de propósito — então a trava, que dormia desde que o anúncio passou a decidir,
+passou a barrar a fila inteira do Pedri.
+
+**A informação não se perdeu: ela desceu para o CONTATO, onde já existia e é melhor.** Sem conteúdo
+reconhecido, a caixa daquele contato já diz o que fazer agora e o que fazer para não repetir
+(cadastrar o anúncio, ou preencher o modelo padrão). Aviso por contato em vez de rodada travada.
+
+**E entrou a outra metade, para não trocar um defeito por outro:** se as **três** fontes estiverem
+vazias, nenhum modelo aprovado pode sair, e isso ele quer saber **antes** de percorrer a fila. A
+rodada escreve a linha no Andamento e **segue** — a mesma escolha da barreira do canal e do aviso do
+candidato vazio.
+
+O teste trava a medição que justificou a remoção: sem modelo, a tabela de regras decide em mais de
+99% dos contextos e a **tecla 1 nunca aparece**. Se isso cair, a rodada voltou a depender de modelo
+e a trava faria sentido de novo.
 ## 2026-09-25 — v3.126.0 — o texto do anúncio que não abre com "Olá" contava como fala dele
 
 **Print do Valdeci:** ele chegou pelo anúncio do Pedri (Instagram, *FALE COM A EQUIPE DO PEDRI*) e

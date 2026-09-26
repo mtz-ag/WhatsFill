@@ -2153,6 +2153,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **PRE-REQUISITO DE RODADA ENVELHECE JUNTO COM O DESENHO QUE O CRIOU** (26/09/2026, pergunta dele:
+  *"em Meus esta dando esse erro, isso nao e um resquicio do padrao anterior? agora temos os modelos
+  por anuncio"*). A rodada dos "Meus" se RECUSAVA a comecar sem a tabela *"Modelo por conteudo"* —
+  trava escrita quando aquela tabela era o UNICO jeito de saber qual modelo mandar. **Hoje ela e a
+  TERCEIRA da fila**, atras de `anuncios.modeloDoAnuncio` e do modelo padrao com rodizio.
+  **Medido em 20.000 contextos: sem modelo NENHUM a rodada ainda decide em 100% deles**, e a tecla 1
+  aparecia em 6 de 20.000 — ela conclui, pula, pede o cadastro, manda a do momento e chama a IA sem
+  tocar na tabela. **A assimetria ja era a prova: "Novos" e "Outros" nunca tiveram essa trava, e as
+  tres usam o mesmo motor.**
+  **O que acordou o resquicio foi a v3.123**: a tabela virou POR CANDIDATO e a do candidato novo
+  nasce vazia — a trava dormia desde que o anuncio passou a decidir e voltou barrando a fila inteira.
+  **Ao separar uma chave por perfil, procure quem a usa como PRE-REQUISITO**: o valor vazio deixa de
+  ser "ainda nao configurei" e vira "nao posso trabalhar".
+  **A informacao desceu para o CONTATO**, onde ja existia e e melhor (a caixa diz o que fazer agora e
+  o que fazer para nao repetir), e a rodada avisa UMA vez, no comeco, quando as TRES fontes estao
+  vazias — avisa e SEGUE, como a barreira do canal. **Ao apagar uma trava, escreva onde a informacao
+  dela passa a aparecer.**
 - **`<select>` SO MOSTRA O QUE ESTA NAS `option`, E POR ISSO ELE PARECE APAGAR O QUE ESTA GRAVADO**
   (25/09/2026, *"ao trocar os perfis esta removendo os modelos setados para cada anuncio"*).
   **Medido: o armazenamento nunca foi tocado** — ida e volta entre os candidatos devolvia

@@ -1117,4 +1117,51 @@ grupo('quem e de outro estado nao recebe o formulario (24/09/2026)');
   check(pedirDadosNaoCabe({ temEtiquetaDeCidade: true }), 'ja tem etiqueta de cidade');
 }
 
+grupo('sem modelo aprovado a rodada AINDA decide (25/09/2026)');
+{
+  /**
+   * Pergunta dele: *"em Meus esta dando esse erro, isso nao e um resquicio do padrao anterior?
+   * agora temos os modelos por anuncio"* -- sobre *"Cadastre a tabela Modelo por conteudo na aba
+   * Config: sem ela nao ha o que enviar"*, que IMPEDIA a rodada dos "Meus" de comecar.
+   *
+   * Era resquicio. Quando a trava nasceu, aquela tabela era o unico jeito de saber qual modelo
+   * mandar; hoje ela e a TERCEIRA da fila, atras do modelo do anuncio e do modelo padrao.
+   *
+   * **Este teste e a medicao que justificou tirar a trava:** sem modelo NENHUM disponivel
+   * (`podeEnviar: false`, que cobre as tres fontes de uma vez), a tabela de regras continua
+   * decidindo -- ela conclui, pula, pede o cadastro, manda a mensagem do momento e chama a IA.
+   * Se isto cair, a rodada passou a depender de modelo para funcionar e a trava faria sentido
+   * de novo.
+   */
+  let semente = 20260925;
+  const rnd = () => ((semente = (semente * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const bit = (p) => rnd() < p;
+  const CHAVES = [
+    'respondidoHoje', 'momentoJaEnviado', 'podeMandarMomento', 'perguntaPendente', 'perguntaAberta',
+    'materialPendente', 'temEtiquetaDeCidade', 'jaRespondemosAntes', 'deOutroDia', 'ultimaEhNossa',
+    'ultimaEhDespedida', 'ultimaEhSoReacao', 'confirmouPresenca', 'informouEndereco',
+    'pedeRespostaPessoal', 'naoPodeFalarAgora', 'reclamaSemResposta', 'respondeuComoAjudar',
+    'pedeAlgoIndefinido', 'voltouPorOutroAnuncio', 'modeloJaNaConversa', 'rajadaDeAnuncios',
+    'podePedirDados', 'pedidoHoje', 'enviadoHoje', 'respondeuOsDados', 'anuncioReconhecido',
+    'veioDeAnuncio', 'jaPediramDados', 'jaDeuNomeECidade', 'nomeSemSentido', 'nadaLegivelDela',
+  ];
+
+  let decidiram = 0;
+  let usaramOModelo = 0;
+  const TOTAL = 5000;
+  for (let i = 0; i < TOTAL; i++) {
+    const c = { podeEnviar: false, textos: ['x'], ultimoTexto: 'x' };
+    for (const k of CHAVES) c[k] = bit(0.35);
+    c.etiquetaQueDispensa = bit(0.2) ? 'Engajado' : null;
+    c.soExpressaApoio = bit(0.15) ? { motivo: 'x' } : null;
+    c.soCortesia = bit(0.15) ? { motivo: 'x' } : null;
+    const d = sugerirAcao(c);
+    if (d) decidiram++;
+    if (d?.tecla === '1') usaramOModelo++;
+  }
+
+  check(decidiram > TOTAL * 0.99, `sem modelo nenhum, a rodada decide em ${decidiram} de ${TOTAL}`);
+  check(usaramOModelo === 0, `e a tecla 1 nunca aparece sem modelo (${usaramOModelo})`);
+}
+
 fim();

@@ -5243,6 +5243,37 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
     }
 
+    /**
+     * **Nenhuma das TRÊS fontes de modelo tem nada?** — 25/09/2026, a outra metade de tirar o
+     * pré-requisito da tabela "Modelo por conteúdo".
+     *
+     * A trava antiga barrava a rodada por UMA das três estar vazia, o que é errado. Mas calar por
+     * completo trocaria um defeito por outro: com as três vazias nenhum modelo aprovado sai desta
+     * rodada, e isso é coisa que ele quer saber ANTES de percorrer a fila.
+     *
+     * **Avisa e SEGUE**, como a barreira do canal e o aviso do candidato vazio: a rodada continua
+     * concluindo, pulando, pedindo o cadastro e chamando a IA — que é 100% do que ela decide,
+     * medido em 20.000 contextos.
+     */
+    try {
+      const temAnuncioComModelo = (await carregarAnuncios(perfilAtivo())).some(
+        (a) => a.ligado && a.acao === 'modelo' && String(a.valor || '').trim()
+      );
+      const temPadrao = (await carregarModelosPadrao(perfilAtivo())).length > 0;
+      const temTabela = Object.keys((await lerContentTemplates()) || {}).length > 0;
+      if (!temAnuncioComModelo && !temPadrao && !temTabela) {
+        registrarNaRodada(
+          'rodada',
+          'pulado',
+          'Nenhum modelo aprovado pode sair nesta rodada: não há anúncio com modelo, nem modelo ' +
+            'padrão, nem a tabela "Modelo por conteúdo". O resto do fluxo continua valendo.'
+        );
+      }
+    } catch (err) {
+      // Aviso é conveniência: falhar aqui não pode impedir a rodada de rodar.
+      registrarNaRodada('rodada', 'pulado', `Não consegui conferir os modelos configurados (${err?.message || err}).`);
+    }
+
     let resultado = { enviados: 0, interrompida: '', visitados: 0, restaram: 0 };
     let aindaTocando = false;
     try {
@@ -5471,10 +5502,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!state.settings.autoSend) {
       return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
     }
-    const mapa = await lerContentTemplates();
-    if (!Object.keys(mapa || {}).length) {
-      return setStatus('Cadastre a tabela "Modelo por conteúdo" na aba Config: sem ela não há o que enviar.', 'err');
-    }
+    /**
+     * **A tabela "Modelo por conteúdo" DEIXOU DE SER pré-requisito** — 25/09/2026, pergunta dele:
+     * *"em Meus está dando esse erro, isso não é um resquício do padrão anterior? agora temos os
+     * modelos por anúncio"*. Estava certo, e era resquício mesmo.
+     *
+     * Quando a trava nasceu, aquela tabela era o ÚNICO jeito de a rodada saber qual modelo mandar.
+     * Hoje ela é a TERCEIRA da fila: quem escolhe é `anuncios.modeloDoAnuncio` (o modelo que ele
+     * cadastrou no anúncio), depois o modelo padrão com rodízio, e só então a etiqueta de conteúdo.
+     *
+     * **Medido em 20.000 contextos: sem modelo NENHUM disponível a rodada ainda decide em 100%
+     * deles** — só 6 em 20.000 usavam a tecla 1. Ela conclui, pula, pede o cadastro, manda a
+     * mensagem do momento e chama a IA sem tocar nessa tabela.
+     *
+     * **A assimetria já era a prova:** "Novos" e "Outros" nunca tiveram esta trava, e as três
+     * rodadas usam o mesmo motor (`processarRespondido`, medido em 06/09).
+     *
+     * O que apareceu na tela dele foi a v3.123 mordendo: a tabela virou POR CANDIDATO, e a do
+     * candidato novo nasce vazia — então o resquício, que dormia desde que o anúncio passou a
+     * decidir, passou a barrar a fila inteira.
+     *
+     * **A informação não se perde: ela desceu para o CONTATO**, onde já existia e é melhor. Sem
+     * conteúdo reconhecido a caixa diz o que fazer agora e o que fazer para não repetir (cadastrar
+     * o anúncio, ou preencher o modelo padrão) — aviso por contato, em vez de rodada travada.
+     */
     if (!state.hsmTemplates.length) {
       return setStatus('Nenhum modelo aprovado carregado. Abra um atendimento e clique em Recarregar.', 'err');
     }
