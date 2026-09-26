@@ -517,4 +517,38 @@ grupo('o texto CADASTRADO reconhece o clique em qualquer posicao (23/09/2026)');
   check(!anuncios.ehOTextoDoAnuncio(texto, [{ ...lista[0], ligado: false }]), 'anuncio desligado nao reconhece');
 }
 
+grupo('o texto cadastrado vence a heuristica do "Ola" (25/09/2026)');
+{
+  /**
+   * Print do Valdeci: ele chegou pelo anuncio do Pedri e escreveu o texto pre-preenchido
+   * *"Gostaria de receber material da direita :"*, cadastrado na Config palavra por palavra com a
+   * acao "mandar o modelo Material de Campanha". **O modelo nao saiu** -- a IA escreveu no lugar.
+   *
+   * **Medido: `ehOTextoDoAnuncio` = true e `pareceTextoProntoDeAnuncio` = false.** A heuristica
+   * exige abrir com "Ola", e este anuncio nao abre; o painel so consultava a heuristica na PRIMEIRA
+   * mensagem, entao o texto do anuncio contou como fala dele e subiu para a tecla 6.
+   *
+   * Este teste trava o lado que da para travar: **o dado que ELE cadastrou reconhece a redacao que
+   * a heuristica recusa**. E a guarda de cobertura de 60% continua impedindo que o pedido dele
+   * emendado no texto do anuncio suma junto.
+   */
+  const cortesia = await import('../src/lib/cortesia.js');
+  const TEXTO = 'Gostaria de receber material da direita :';
+  const lista = anuncios.normalizar([
+    { id: 'a1', nome: 'material', trechos: ['Gostaria de receber material da direita'],
+      acao: 'modelo', valor: 'Material de Campanha', ligado: true },
+  ]);
+
+  check(anuncios.ehOTextoDoAnuncio(TEXTO, lista), 'o texto cadastrado e reconhecido');
+  check(!cortesia.pareceTextoProntoDeAnuncio(TEXTO), 'e a heuristica do "Ola" NAO o reconhece');
+  check(!!anuncios.reconhecer([TEXTO], lista), 'e o anuncio casa, com o modelo junto');
+  check(anuncios.reconhecer([TEXTO], lista).anuncio.valor === 'Material de Campanha',
+    'o modelo do anuncio e o que ele escolheu');
+
+  /** A guarda de cobertura: o pedido DELE colado no texto do anuncio continua sendo fala dele. */
+  check(!anuncios.ehOTextoDoAnuncio(
+    TEXTO + ' e tambem preciso saber se voces tem alguma vaga de trabalho na campanha agora', lista),
+    'com muito texto proprio emendado, deixa de ser so o clique');
+}
+
 fim();

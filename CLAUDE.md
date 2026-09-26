@@ -2775,6 +2775,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **A HEURISTICA DO "OLA" RECUSAVA TEXTO DE ANUNCIO CADASTRADO, E ELE VIRAVA FALA DELE**
+  (25/09/2026, o Valdeci: *"nao mandou o modelo do anuncio"*, com o texto pre-preenchido cadastrado
+  na Config palavra por palavra). **Medido: `ehOTextoDoAnuncio` = true e
+  `pareceTextoProntoDeAnuncio` = false** — e sem a marca `pedeMaterialEscrito` e `falouAlgoProprio`
+  ligam, os dois levam a tecla 6, e a IA escreve no lugar do recibo.
+  **O defeito e de ORDEM dentro de `prepararEntrantes`:** a PRIMEIRA mensagem so passava pela
+  heurística (abre com "Ola", ate 160), e o dado cadastrado so era consultado no terceiro ramo, que
+  nunca e alcancado para ela. **E a guarda do Rodrigo (10/09) mordendo pelo outro lado** — ela existe
+  para nao apagar a fala de quem chega por anuncio SEM texto pronto, e recusava um texto pronto de
+  verdade porque a redacao mudou. **Lista de redacoes nao fecha; o que fecha e o que ELE cadastrou.**
+  A guarda que torna isso seguro ja existia: `ehOTextoDoAnuncio` exige cobertura de **60%**, entao o
+  pedido dele emendado no texto do anuncio continua contando como fala dele.
 - **O ESTOQUE DO MATERIAL VIVE EM TRES LUGARES, E A TRAVA E UM DELES** (25/09/2026, *"inclua
   bandeiras na lista que de material que temos"*). **Medido antes de mexer: a trava barrava a frase
   certa** — *"o que temos sao folhetos, adesivos e bandeiras"* parava a rodada, porque `bandeira`

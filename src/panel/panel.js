@@ -13842,7 +13842,28 @@ function prepararEntrantes(entrantes, { veioDeAnuncio = false, anuncios = [] } =
      * apagava de todos os detectores. Ver `cortesia.pareceTextoProntoDeAnuncio`. Não tendo cara, a
      * mensagem é dela, e a "primeira" acaba ali.
      */
-    if (primeiraDela && veioDeAnuncio && temTexto && !pareceTextoProntoDeAnuncio(marcada.texto)) {
+    /**
+     * **O DADO que ele cadastrou vence a heurística** — 25/09/2026, print do Valdeci.
+     *
+     * Ele chegou pelo anúncio do Pedri e escreveu *"Gostaria de receber material da direita :"* —
+     * o texto pré-preenchido, cadastrado na Config palavra por palavra, com a ação "mandar o
+     * modelo Material de Campanha". **O modelo não saiu**: a IA escreveu um texto que ele apagou.
+     *
+     * Medido: `ehOTextoDoAnuncio` dava **true** e `pareceTextoProntoDeAnuncio` dava **false**,
+     * porque a heurística exige abrir com "Olá" e este anúncio não abre. Sem a marca, o texto do
+     * anúncio contou como fala dele — `pedeMaterialEscrito` e `falouAlgoProprio` ligaram, e os dois
+     * levam à tecla 6. Com a marca, os dois se calam e o caso volta para o recibo.
+     *
+     * **É a guarda do Rodrigo (10/09) mordendo pelo outro lado:** ela existe para não apagar a fala
+     * de quem chega por anúncio SEM texto pronto, e estava rejeitando um texto pronto de verdade só
+     * porque a redação mudou. A lista de redações não fecha — o que fecha é o que ELE cadastrou.
+     *
+     * A guarda que torna isto seguro já existe dentro de `ehOTextoDoAnuncio`: o trecho reconhecido
+     * tem de cobrir **60%** da mensagem, então o pedido dela emendado no texto do anúncio continua
+     * contando como fala dela.
+     */
+    const ehOTextoCadastrado = temTexto && anunciosLib.ehOTextoDoAnuncio(marcada.texto, anuncios);
+    if (primeiraDela && veioDeAnuncio && temTexto && !pareceTextoProntoDeAnuncio(marcada.texto) && !ehOTextoCadastrado) {
       primeiraDela = false;
     } else if (primeiraDela && veioDeAnuncio && temTexto) {
       marcada.geradaPeloAnuncio = true;
@@ -13854,7 +13875,7 @@ function prepararEntrantes(entrantes, { veioDeAnuncio = false, anuncios = [] } =
        */
       marcada.anuncioDaSessao = true;
       primeiraDela = false;
-    } else if (veioDeAnuncio && temTexto && (pareceCliqueDeAnuncio(marcada.texto) || anunciosLib.ehOTextoDoAnuncio(marcada.texto, anuncios))) {
+    } else if (veioDeAnuncio && temTexto && (pareceCliqueDeAnuncio(marcada.texto) || ehOTextoCadastrado)) {
       marcada.geradaPeloAnuncio = true;
     }
     return marcada;

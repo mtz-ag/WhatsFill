@@ -1,3 +1,33 @@
+## 2026-09-25 — v3.126.0 — o texto do anúncio que não abre com "Olá" contava como fala dele
+
+**Print do Valdeci:** ele chegou pelo anúncio do Pedri (Instagram, *FALE COM A EQUIPE DO PEDRI*) e
+escreveu *"Gostaria de receber material da direita :"* — **o texto pré-preenchido, cadastrado na
+Config palavra por palavra**, com a ação *"Mandar o modelo aprovado: Material de Campanha"*. O modelo
+não saiu: a IA escreveu um texto que ele apagou. *"não mandou o modelo do anúncio"*.
+
+**Medido, e a cadeia inteira aparece:**
+
+| | |
+|---|---|
+| `ehOTextoDoAnuncio` (o dado que ELE cadastrou) | **true** |
+| `pareceTextoProntoDeAnuncio` (a heurística do "Olá") | **false** |
+| `reconhecer` → anúncio e modelo | **certos** |
+| **sem** a marca → `pedeMaterialEscrito` / `falouAlgoProprio` | **true / true** → tecla 6, a IA |
+| **com** a marca | **false / false** → o recibo do anúncio |
+
+**O defeito é de ORDEM dentro de `prepararEntrantes`.** A PRIMEIRA mensagem era testada só pela
+heurística — abre com "Olá" e tem até 160 caracteres —, e o dado cadastrado só era consultado no
+terceiro ramo, que **nunca é alcançado para a primeira mensagem**. Este anúncio não abre com "Olá",
+então o texto da campanha virou fala dele.
+
+**É a guarda do Rodrigo (10/09) mordendo pelo outro lado.** Ela existe para não apagar a fala de quem
+chega por anúncio **sem** texto pronto (o CONVERSE CONOSCO, que não preenche nada) — e estava
+rejeitando um texto pronto de verdade só porque a redação mudou. **A lista de redações não fecha; o
+que fecha é o que ele cadastrou.**
+
+Hoje o dado vence a heurística, e **a guarda que torna isso seguro já existia**: `ehOTextoDoAnuncio`
+exige que o trecho reconhecido cubra **60%** da mensagem, então o pedido dele emendado no texto do
+anúncio continua contando como fala dele — está no teste.
 ## 2026-09-25 — v3.125.0 — o modelo do anúncio não sumia: o `<select>` é que não conseguia mostrá-lo
 
 **Relato dele:** *"ao trocar os perfis está removendo os modelos setados para cada anúncio"*.
