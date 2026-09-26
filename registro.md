@@ -51,14 +51,21 @@ pergunta de verdade com gíria dentro continua sendo respondida. A regra 16 pass
 **Junto foi uma otimização no verificador de referências, e a medição corrigiu a minha suspeita.**
 A passada de escopo da v3.124 compilava uma expressão regular por NOME por LINHA — com 247 nomes de
 closure, centenas de milhares de compilações —, e virou uma varredura de chamadas por linha contra um
-`Set`. **Mas ela não era a causa da lentidão:** medido, a versão **anterior à passada de escopo**
-leva **199 s** e a de hoje **195 s**.
+`Set`. **Medidas as três versões em sequência, na mesma máquina:**
 
-**O gargalo é o `soCodigo`** — 10,7 s só no `panel.js` (695 KB), e ele roda duas vezes por arquivo.
-As expressões regulares estão todas abaixo de 20 ms, então **não é nelas que se deve mexer**. Fica
-medido para ninguém refazer a investigação: o verificador leva ~3 min, está verde, e quem for
-acelerá-lo tem de mexer no laço char-a-char do `soCodigo` — que é a função mais delicada do arquivo
-(a armadilha do `'\'`, 20/09).
+| versão | tempo |
+|---|---|
+| antes da passada de escopo (v3.123) | **199 s** |
+| com a passada de escopo, uma regex por nome por linha (v3.125) | **169 s** |
+| com a varredura contra `Set` (hoje) | **122 s** |
+
+Duas leituras, e a primeira desmente a suspeita que me levou a medir: **a passada de escopo nunca foi
+a causa da lentidão** — sem ela o verificador já levava 199 s. E a otimização **valeu**: cortou 28 %.
+
+**O gargalo que sobra é o `soCodigo`** — 10,7 s só no `panel.js` (695 KB), e ele roda duas vezes por
+arquivo. As expressões regulares estão todas abaixo de 20 ms, então **não é nelas que se deve
+mexer**. Fica medido para ninguém refazer a investigação: quem for acelerar tem de mexer no laço
+char-a-char do `soCodigo` — a função mais delicada do arquivo (a armadilha do `'\'`, 20/09).
 ## 2026-09-26 — v3.128.0 — "vocês podem ir para o inferno" não era sem interesse
 
 **Print dele:** áudio de 8 segundos, transcrito — *"A única conversa que eu vou chamar a vista, por

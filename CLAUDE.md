@@ -2812,9 +2812,11 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   explique "galo velho" diz que quem responde nao e daqui. A fronteira mora dentro da regra (nao e
   licenca para imitar o sotaque; pergunta com giria dentro continua sendo respondida), e a 16 passou
   a apontar para a 18.
-- **O `checar-referencias` LEVA ~3 MIN, E NAO SAO AS EXPRESSOES REGULARES** (medido em 26/09/2026,
-  depois de eu suspeitar da passada de escopo da v3.124 e a medicao me desmentir: **199 s ANTES dela,
-  195 s depois**). **O gargalo e o `soCodigo`** — 10,7 s so no `panel.js` (695 KB), e ele roda duas
+- **O `checar-referencias` E LENTO, E NAO SAO AS EXPRESSOES REGULARES** (medido em 26/09/2026, as
+  tres versoes em sequencia na mesma maquina: **199 s** antes da passada de escopo, **169 s** com ela
+  na forma de uma regex por nome por linha, **122 s** com a varredura contra `Set`). Duas leituras, e
+  a primeira desmente a suspeita que me levou a medir: **a passada de escopo nunca foi a causa** — sem
+  ela ja eram 199 s —, e a otimizacao cortou **28%**. **O gargalo que sobra e o `soCodigo`** — 10,7 s so no `panel.js` (695 KB), e ele roda duas
   vezes por arquivo; todas as regex do arquivo ficam abaixo de 20 ms. Fica registrado para ninguem
   refazer a investigacao: acelerar exige mexer no laco char-a-char do `soCodigo`, que e a funcao mais
   delicada dali (a armadilha do `'\\'`, 20/09). A passada de escopo foi otimizada assim mesmo (uma
