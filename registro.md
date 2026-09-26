@@ -80,6 +80,43 @@ lacuna:** aquele campo *só preenche buraco* (contato concluído em agosto não 
 gravado em contato classificado. Quem já tinha sido concluído antes fica fora — e é essa lacuna que
 só a varredura por `endAt` fecha.
 
+### Correção dele, no mesmo dia: dez mensagens iguais já derrubaram um número
+
+Eu havia escrito que *"o que a Meta mede é denúncia e bloqueio, não repetição de texto — variar o
+texto ajuda pouco nisso"*. **Ele desmentiu com uma medição de produção:** *"mentira, porque já
+derrubei o número ao mandar a mesma mensagem em sequência para menos de 10 pessoas que chegaram por
+anúncio"*.
+
+Ele está certo, **e o próprio app separa as duas coisas em eixos diferentes** — fui olhar depois da
+correção:
+
+| campo | valor | o que a tela escreve |
+|---|---|---|
+| `channel.status` | **`FLAGGED`** | *"Este canal (NN) foi sinalizado como enviando **SPAM** pela Meta/WhatsApp."* |
+| `channel.status` | **`RESTRICTED`** | *"Este canal (NN) atingiu o limite conversas iniciadas nas últimas 24 horas."* |
+| `channel.status` | `BANNED` / `DISCONNECTED` / `CONNECTED` | — |
+| `channel.quality` | `MEDIUM` | *"qualidade MÉDIA… Evite disparos em massa para manter este número ativo."* |
+| `channel.quality` | `LOW` | *"qualidade BAIXA… Os contatos estão denunciando suas mensagens."* |
+
+**São TRÊS eixos independentes, e eu tinha juntado tudo num só:** `FLAGGED` é padrão de envio
+(sinalizado como SPAM — nada a ver com denúncia), `RESTRICTED` é o teto de **conversas iniciadas em
+24h**, e `quality` é o eixo da denúncia. O caso dele é o primeiro: dez mensagens não produzem taxa
+de denúncia que mova `quality`, mas produzem padrão. **A lição que fica: texto repetido em sequência
+é medido por si, e o orçamento é muito menor do que eu supus — dez.**
+
+**Isso muda a recomendação, e muda o que vale construir primeiro.** A restrição que manda não é
+achar os concluídos de ontem nem a janela de 24h: **é o número.** Mandar a colinha para ~150 pessoas
+num dia encosta nos dois primeiros eixos de uma vez — volume no `RESTRICTED`, repetição no
+`FLAGGED`. A campanha continua sendo o caminho melhor que a rodada (modelo aprovado, não reabre
+atendimento, tem estimativa antes e existe `POST /chat/v1/channel/{id}/limit` para validar o teto),
+**mas ela não é segura por volume** — e o modelo da colinha é categoria MARKETING, que é a mais
+vigiada e a mais cara.
+
+**O que a extensão não sabia e passa a poder saber:** `GET /chat/v4/channel/my` devolve os canais da
+conta com `status`, `quality` e o número formatado — uma requisição para a saúde de todos. Hoje o
+painel só enxerga o canal caído, e por TEXTO da tarja (`dom.canalDesconectado`); `FLAGGED`,
+`RESTRICTED` e a qualidade passam invisíveis. **Era isto que teria avisado ele antes das dez.**
+
 ### O que ficou na mão dele para decidir
 
 A variação das mensagens não é livre no caminho da campanha: com modelo aprovado, variar é **ter N

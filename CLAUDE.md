@@ -286,6 +286,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   para muita gente, e aqui que se olha** — e a propria tela avisa, mostrando a qualidade do numero
   pela Meta com *"Evite disparos em massa para manter este numero ativo"* (na BAIXA, *"os contatos
   estao denunciando suas mensagens"*); o erro `CHANNEL_TIER_EXCEEDED` e o teto diario do numero.
+- **TEXTO REPETIDO EM SEQUENCIA DERRUBA O NUMERO, E O ORCAMENTO E DEZ** (correcao dele, 26/09/2026:
+  *"mentira, porque ja derrubei o numero ao mandar a mesma mensagem em sequencia para menos de 10
+  pessoas que chegaram por anuncio"*, depois de eu escrever que a Meta mede denuncia e nao repeticao).
+  **Ele esta certo, e o app separa isso em TRES eixos que eu havia juntado num so:**
+  `channel.status` **`FLAGGED`** = *"foi sinalizado como enviando SPAM pela Meta/WhatsApp"* (padrao de
+  envio, NADA a ver com denuncia — e o caso dele); `channel.status` **`RESTRICTED`** = *"atingiu o
+  limite conversas iniciadas nas ultimas 24 horas"* (volume); e `channel.quality` `HIGH|MEDIUM|LOW`,
+  que e o eixo da denuncia (MEDIUM ja diz *"evite disparos em massa"*, LOW diz *"os contatos estao
+  denunciando suas mensagens"*). Os outros `status` sao `CONNECTED`, `BANNED`, `DISCONNECTED`.
+  **Consequencia para qualquer rodada que mande a mesma coisa para muita gente: variacao de texto nao
+  e cosmetica, e o volume por dia e um teto de verdade** — e por isso que a mensagem do momento tem
+  variacoes revezando. **E o painel nao ve nada disso:** ele so enxerga o canal CAIDO, por TEXTO da
+  tarja (`dom.canalDesconectado`). `GET /chat/v4/channel/my` devolve os canais da conta com `status`,
+  `quality` e o numero formatado numa requisicao so, e `POST /chat/v1/channel/{id}/limit` valida o
+  teto antes de disparar. **Ao propor envio em lote, a saude do canal vem ANTES do resto** — e modelo
+  de categoria MARKETING (a colinha e) e o mais vigiado dos dois.
 - **O CONCLUIDO SABE QUANDO FOI CONCLUIDO: o campo e `endAt`.** A tela nao mostra data na lista de
   concluidos e mesmo assim pede a lista **`orderByDesc=endat`**, ordenando os itens por `endAt` —
   entao a lista JA esta em ordem de conclusao e a data vem em cada item. A rota e
