@@ -271,6 +271,40 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   "tem SERRA e ainda NÃO tem a etiqueta de cidade" sem baixar a base.
   **Lição:** rota de tela lazy não está no `main.js` — pegue a lista de chunks no `runtime.*.js`
   e varra todos (são estáticos, não a API: varrer não tem custo de rate limit).
+- **A PLATAFORMA TEM DISPARO EM MASSA PROPRIO, e e `chat/v1/campaign`** (lido no bundle em
+  26/09/2026, quando ele perguntou como mandar a colinha para os concluidos de ontem). Modelo do
+  tipo **Campanha**, descrito por ela mesma como *"disparo em massa de mensagens. Permite o uso de
+  imagens, videos e documentos"*, com criar, `estimate`, `submit`, `pause`, `resume`, `cancel`,
+  `summary`, `submission/export`, duplicar, arquivar e uma tela de **historico de disparo**. O
+  publico (`public.type`) e um de quatro: `ALL`, **`PHONE_LIST`** (`{phoneList:[numeros]}`),
+  **`FILTER`** (o MESMO objeto do filtro de Contatos — `tagsId`, `exceptTagsId`,
+  `customFieldValuesFilters`) e `IMPORT_SPREADSHEET`; teto de 50.000 (10.000 em Sequencia), e so
+  contato com telefone definido conta. **Sendo modelo aprovado, a campanha ATRAVESSA a janela de
+  24h** — que e o que barra texto livre e imagem solta —, **e nao reabre atendimento nenhum**, que
+  e o padrao que ele desligou em 15/08. O status `WAITING_TEMPLATE` ("Aguardando modelo") diz o
+  preco: a campanha espera a aprovacao da Meta. **Antes de escrever rodada que manda a mesma coisa
+  para muita gente, e aqui que se olha** — e a propria tela avisa, mostrando a qualidade do numero
+  pela Meta com *"Evite disparos em massa para manter este numero ativo"* (na BAIXA, *"os contatos
+  estao denunciando suas mensagens"*); o erro `CHANNEL_TIER_EXCEEDED` e o teto diario do numero.
+- **O CONCLUIDO SABE QUANDO FOI CONCLUIDO: o campo e `endAt`.** A tela nao mostra data na lista de
+  concluidos e mesmo assim pede a lista **`orderByDesc=endat`**, ordenando os itens por `endAt` —
+  entao a lista JA esta em ordem de conclusao e a data vem em cada item. A rota e
+  **`/chat/v7/session`** (nossas contagens usam a v6) com `statuses=COMPLETED` e `pageSize=50`, e o
+  item traz `contactId`, `endAt`, `expired` e `lastMessageIn`: **"quem eu concluí ontem e ainda esta
+  dentro da janela de 24h" e uma varredura de paginas, sem abrir contato nenhum.** Cuidado com o
+  `includeDetails`: o enum e `AGENTDETAILS`, `CONTACTDETAILS`, `CHANNELDETAILS`,
+  `CHANNELTYPEDETAILS`, `DEPARTMENTSDETAILS`, `GROUPDETAILS`, `STATUSREASONDETAILS` — **`All`, que e
+  o que a nossa `api.js` manda, NAO esta na lista** e deve estar sendo ignorado (nas contagens nao
+  incomoda, porque so lemos `totalItems`).
+- **`customFieldValuesFilters` FOI DECIFRADO, e e o MESMO corpo do contrato de ESCRITA** (26/09/2026):
+  cada item e `{customFieldId, valueString | valuesInteger[] | valuesFloat[] | valuesId[] |
+  valuesDateTime[] | valueBoolean}`, montado no app pela mesma funcao que monta a gravacao do campo
+  (`generateBodyForUpdateCustomFieldValue`) — ou seja, **o que o `contract.js` aprendeu para gravar
+  vale para filtrar**. Isto corrige o comentario de `api.filterContacts`, que dizia nao decifrado.
+  Consequencia: da para pedir ao servidor "quem tem a Data de conclusao do contato igual a tal dia",
+  e ele consegue isso a mao no filtro de Contatos e no publico da campanha. **A lacuna e do dado, nao
+  da rota:** aquele campo so preenche buraco e so em contato classificado, entao quem ja tinha sido
+  concluido antes fica de fora — essa metade so o `endAt` fecha.
 - **A aba Cidades grava cidade E COREDE na mesma requisição.** O COREDE é derivado da cidade e
   `applyTags` aceita array, então somar não custa escrita a mais. **Cuidado com o apelido:** o nome
   do COREDE na planilha não é sempre o da etiqueta no CRM ("Paranhana Encosta da Serra" está como

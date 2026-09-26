@@ -1,3 +1,93 @@
+## 2026-09-26 — medição (sem mudança de comportamento) — a colinha para os concluídos de ontem: a plataforma tem disparo em massa próprio
+
+**Pergunta dele:** *"eu precisava mandar a colinha para todos os contatos de ontem que eu já
+concluí, mas deve ter variações nas mensagens para não aparentar spam; a plataforma ao concluir não
+separa por data — o que pode ser feito?"*
+
+**Medi antes de propor qualquer coisa, e as três respostas estavam no bundle do app.** Nada de
+código mudou aqui: esta entrada é a medição, porque o caminho certo muda de lugar.
+
+### 1. A data existe: o concluído carrega `endAt`
+
+A tela não mostra data na lista de concluídos — **e mesmo assim pede a lista ordenada por
+conclusão.** Lido em `listCompletedsSessions`:
+
+```
+GET /chat/v7/session
+  { page, pageSize: 50, statuses: [COMPLETED], orderByDesc: "endat",
+    includeDetails: [AGENTDETAILS, CHANNELTYPEDETAILS, CONTACTDETAILS, DEPARTMENTSDETAILS, GROUPDETAILS] }
+→ items, e o app ainda os ordena com  items.sort((a,b) => a.endAt <= b.endAt ? 1 : -1)
+```
+
+Ou seja: **a lista já está em ordem de conclusão e cada item tem `endAt`.** "Quem eu concluí ontem"
+é varrer as páginas até `endAt` passar da meia-noite de ontem — 3 ou 4 requisições para ~150
+contatos, **sem abrir contato nenhum**. O item traz junto `contactId`, `expired` e `lastMessageIn`,
+então dá para separar de graça quem ainda está **dentro da janela de 24h**.
+
+Dois detalhes que custam se ficarem implícitos: a rota da lista é a **v7** (nossas duas contagens
+usam a v6), e **`All` não está no enum de `includeDetails`** — o nosso `includeDetails: 'All'`
+provavelmente está sendo ignorado. Nas contagens não incomoda, porque só lemos `totalItems`.
+
+### 2. O disparo não é trabalho da rodada: existe `chat/v1/campaign`
+
+Esta é a descoberta que muda o desenho. A plataforma tem **Campanha**, descrita por ela mesma como
+*"disparo em massa de mensagens. Permite o uso de imagens, vídeos e documentos"*, com rotas de
+criar, `estimate`, `submit`, `pause`, `resume`, `cancel`, `summary`, `submission/export`, arquivar e
+duplicar, mais uma tela de **histórico de disparo**.
+
+**O público (`public.type`) é um de quatro:**
+
+| tipo | o que é |
+|---|---|
+| `ALL` | a base inteira |
+| `PHONE_LIST` | `{ phoneList: [números] }` — colados, com validação e deduplicação |
+| `FILTER` | **o MESMO objeto do filtro de Contatos**: `tagsId`, `exceptTagsId`, `customFieldValuesFilters`, `origins`, `portfolioIds`… |
+| `IMPORT_SPREADSHEET` | planilha |
+
+Teto de 50.000 por campanha (10.000 em Sequência), e *"em campanhas, apenas contatos com telefone
+definido são considerados"*.
+
+**Por que isto importa mais que o resto:** campanha é **modelo aprovado**, então ela **atravessa a
+janela de 24h** — e a janela é o que barra texto livre e imagem solta para quem escreveu ontem. E
+ela **não reabre atendimento nenhum**, que é exatamente o padrão que ele desligou em 15/08
+(*"reabrir gente fria em sequência é o que mais se parece com disparo em massa para o WhatsApp"*).
+O status `WAITING_TEMPLATE` ("Aguardando modelo") diz o preço: **a campanha espera a aprovação da
+Meta**, então o modelo da colinha tem de ser submetido antes.
+
+**E a própria plataforma dá o aviso que eu daria:** ela mostra a qualidade do número segundo a Meta
+e escreve *"Evite disparos em massa para manter este número ativo"*; na qualidade BAIXA, *"os
+contatos estão denunciando suas mensagens, não faça disparos para contatos desconhecidos"*. Existe
+ainda o erro `CHANNEL_TIER_EXCEEDED`, que é o teto diário do número. **Antes de disparar, a
+qualidade do canal está na tela dele.**
+
+### 3. `customFieldValuesFilters` foi decifrado — e é o corpo do contrato de escrita
+
+O `api.filterContacts` dizia que o formato *"vem de outro componente e não foi decifrado"*. Foi:
+cada item é
+
+```
+{ customFieldId, valueString | valuesInteger[] | valuesFloat[] | valuesId[] | valuesDateTime[] | valueBoolean }
+```
+
+e quem o monta no app é **a mesma função que monta a gravação do campo**
+(`generateBodyForUpdateCustomFieldValue`). Ou seja: **o que o `contract.js` aprendeu para ESCREVER
+vale para FILTRAR.** O comentário foi corrigido.
+
+A consequência é imediata e não precisa de código: a extensão grava **"Data de conclusão do
+contato"** ao concluir, o filtro de Contatos aceita campo personalizado, **e o público da campanha
+usa esse mesmo filtro** — então ele consegue hoje, à mão, o público "concluídos em 25/09". **Com uma
+lacuna:** aquele campo *só preenche buraco* (contato concluído em agosto não vira 25/09) e só é
+gravado em contato classificado. Quem já tinha sido concluído antes fica fora — e é essa lacuna que
+só a varredura por `endAt` fecha.
+
+### O que ficou na mão dele para decidir
+
+A variação das mensagens não é livre no caminho da campanha: com modelo aprovado, variar é **ter N
+modelos aprovados e dividir o público** (a extensão marcaria 2 ou 3 etiquetas alternadas). Texto
+livre com variações — que é o mecanismo que já existe, as variações da mensagem do momento
+revezando a cada envio — só alcança quem **ainda está dentro da janela de 24h**. Foi isso que eu
+perguntei a ele.
+
 ## 2026-09-26 — v3.129.0 — "Temos junto galo veio?" não era apoio, e a IA pediu para ele explicar
 
 **Print dele:** o contato chegou pelo anúncio do Facebook (*CAPITÃO MARTIM*), clicou, e escreveu

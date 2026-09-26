@@ -188,9 +188,15 @@ export async function listContacts({ page = 1, pageSize = 100, status = 'ACTIVE'
  * coisa (o resultado de procurar TEXTO entre as etiquetas).
  *
  * `exceptTagsId` é o que permite pedir ao servidor "quem tem SERRA e ainda **não** tem a etiqueta
- * de cidade" — idempotência sem baixar a base. `customFieldValuesFilters` existe mas o formato
- * vem de outro componente e não foi decifrado; por isso "quem tem cidade preenchida" continua
- * sendo peneirado do nosso lado.
+ * de cidade" — idempotência sem baixar a base.
+ *
+ * **`customFieldValuesFilters` foi decifrado em 26/09/2026, e é o MESMO corpo do contrato de
+ * ESCRITA**: cada item é `{customFieldId, valueString | valuesInteger[] | valuesFloat[] |
+ * valuesId[] | valuesDateTime[] | valueBoolean}`, montado no app pela mesma função que monta a
+ * gravação do campo. Ou seja, o que o `contract.js` aprendeu para gravar vale para filtrar — dá
+ * para pedir ao servidor "quem tem a Data de conclusão do contato igual a tal dia". Esta função
+ * ainda não o manda: "quem tem cidade preenchida" continua peneirado do nosso lado até haver um
+ * caminho que precise dele, porque campo de filtro de terceiro sem uso é aposta não conferida.
  *
  * Mesmo envelope da listagem.
  */
