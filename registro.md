@@ -1,3 +1,46 @@
+## 2026-09-26 — v3.128.0 — "vocês podem ir para o inferno" não era sem interesse
+
+**Print dele:** áudio de 8 segundos, transcrito — *"A única conversa que eu vou chamar a vista, por
+mim vocês podem ir tudo para o inferno, Flávio, Mizuco e tudo junto"*. A rodada respondeu *"Eu
+respeito sua opinião, mesmo sendo uma crítica dura… e, se puder, me diga seu: Nome , Cidade"*, e ele
+apagou: *"claramente sem interesse, não tem necessidade de resposta, não foi etiquetado também"*.
+
+**Medido, e a primeira suspeita estava errada: não era a transcrição.**
+
+| | |
+|---|---|
+| `semInteresse` no áudio transcrito | **null** |
+| `semInteresse` no **mesmo texto digitado** | **null** ← a prova |
+| `falouAlgoProprio` | casou → **tecla 6, a IA** |
+
+A lista de 05/09 só conhecia o **imperativo** — *"vá para o inferno"* —, e ele usou a forma
+perifrástica **com o pronome escrito**, que é *mais* dirigida, não menos. Medido pedaço a pedaço:
+*"vá para o inferno"* casava; *"vocês podem ir para o inferno"* e *"vão tudo para o inferno"*, não.
+
+**É a lição do *"queria uma reunião"* (09/09) pela terceira vez:** a lista era toda de uma forma
+verbal e a pessoa usou outra. **O conserto não é acrescentar formas** — elas não fecham. É separar o
+**DESTINO** do verbo (`DESTINO_DE_XINGAMENTO`) e deixar a direção ser provada por `DIRIGIDA_A_NOS`,
+que é como `AGRESSAO` sempre funcionou. O imperativo sozinho continua valendo como direção, pela
+regra de 05/09.
+
+**A guarda é o ADVERSÁRIO na mesma mensagem, e ela é obrigatória.** Esta base manda o Lula e o PT
+para o inferno o dia inteiro — sem a guarda, a etiqueta (que é **permanente no CRM e conclui em
+silêncio**) cairia em cima de quem mais apoia. É a mecânica do `SEM_ADVERSARIO_NO_MEIO` da regra do
+PL.
+
+**Bateria de 28 casos: 23/28 antes, 28/28 depois.** Os cinco difíceis existem só para provar a
+guarda — têm o pronome **e** o destino, e o alvo é o adversário: *"vocês viram? o Lula foi pro
+inferno"*, *"vocês têm razão, o PT que vá pro inferno"*, *"concordo com vocês, esses comunistas podem
+ir tomar no cu"*. **Nenhum marca.** Dos 22 casos do teste, **14 são falso positivo**.
+
+**E a proteção do topo volta a se calar sozinha:** `falouAlgoProprio` consulta `semInteresse` (a
+lição de 22/09), então o caso deixa de subir para a tecla 6 **sem reordenar nada**. Medido ponta a
+ponta, tabela e quadro concordam: **tecla `s`** — marca e conclui sem responder.
+
+**Sobre "não foi etiquetado": a cadeia da etiqueta estava inteira e nunca foi acionada.** Ela mora na
+tecla `s`, passa pela conferência da IA no caminho automático (decisão dele de 17/09) e depende do
+campo **"Etiqueta de SEM INTERESSE"** estar preenchido na aba Automatizado — vazio, a rodada conclui
+e escreve *"(sem etiqueta configurada na aba Automatizado)"* no motivo.
 ## 2026-09-26 — v3.127.0 — a tabela "Modelo por conteúdo" era resquício, e barrava a rodada inteira
 
 **Pergunta dele:** *"em Meus está dando esse erro, isso não é um resquício do padrão anterior? agora

@@ -2792,6 +2792,25 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **"VOCES PODEM IR PARA O INFERNO" NAO ERA SEM INTERESSE — a lista so tinha o IMPERATIVO**
+  (26/09/2026, audio de 8s: *"por mim voces podem ir tudo para o inferno, Flavio, Mizuco e tudo
+  junto"*, que recebeu *"respeito sua opiniao"* + o pedido de cadastro — *"claramente sem interesse,
+  nao tem necessidade de resposta, nao foi etiquetado tambem"*).
+  **Medido, e a primeira suspeita estava errada: NAO era a transcricao** — o mesmo texto DIGITADO
+  tambem devolvia null. A lista de 05/09 conhecia *"va para o inferno"* e nao a forma perifrastica
+  **com o pronome escrito**, que e MAIS dirigida, nao menos. **Terceira vez da licao do "queria uma
+  reuniao" (09/09): a lista era toda de UMA forma verbal.**
+  **O conserto nao e acrescentar formas — elas nao fecham.** E separar o DESTINO do verbo
+  (`DESTINO_DE_XINGAMENTO`) e deixar a direcao ser provada por `DIRIGIDA_A_NOS`, como `AGRESSAO`
+  sempre fez; o imperativo sozinho continua valendo como direcao (05/09).
+  **A guarda e o ADVERSARIO na mesma mensagem, e e obrigatoria:** esta base manda o Lula e o PT para
+  o inferno o dia inteiro, e sem ela a etiqueta — PERMANENTE no CRM e com conclusao em silencio —
+  cairia em cima de quem mais apoia. Mesma mecanica do `SEM_ADVERSARIO_NO_MEIO` da regra do PL.
+  **Bateria de 28: 23 antes, 28 depois**, com 5 casos que tem o pronome E o destino e mesmo assim
+  nao podem marcar (*"voces viram? o Lula foi pro inferno"*). 14 das 22 assercoes sao falso positivo.
+  **E `falouAlgoProprio` se cala sozinho** porque consulta `semInteresse` (22/09) — o caso deixou de
+  ir para a tecla 6 sem reordenar nada. **A ETIQUETA em si nunca esteve quebrada:** ela mora na tecla
+  `s`, passa pela conferencia da IA (17/09) e depende do campo "Etiqueta de SEM INTERESSE" preenchido.
 - **A HEURISTICA DO "OLA" RECUSAVA TEXTO DE ANUNCIO CADASTRADO, E ELE VIRAVA FALA DELE**
   (25/09/2026, o Valdeci: *"nao mandou o modelo do anuncio"*, com o texto pre-preenchido cadastrado
   na Config palavra por palavra). **Medido: `ehOTextoDoAnuncio` = true e

@@ -3491,4 +3491,62 @@ grupo('o apoiador que xinga o adversario nao e sem interesse (25/09/2026)');
   check(!soExpressaApoio(ent, null, []), 'e o detector de apoio nao alcanca esta forma');
 }
 
+grupo('"voces podem ir para o inferno" tambem e sem interesse (26/09/2026)');
+{
+  /**
+   * Audio de 8 segundos: *"por mim voces podem ir tudo para o inferno, Flavio, Mizuco e tudo
+   * junto"*. A rodada respondeu *"respeito sua opiniao"* + o pedido de cadastro, e ele apagou:
+   * *"claramente sem interesse, nao tem necessidade de resposta, nao foi etiquetado tambem"*.
+   *
+   * **Medido, e NAO era a transcricao:** o mesmo texto digitado tambem devolvia null. A lista de
+   * 05/09 so conhecia o IMPERATIVO (*"va para o inferno"*), e ele usou a forma perifrastica com o
+   * pronome escrito -- que e MAIS dirigida, nao menos.
+   *
+   * Terceira vez da licao do "queria uma reuniao" (09/09): a lista era toda de uma forma verbal.
+   * O conserto nao e acrescentar formas -- elas nao fecham --, e separar o DESTINO do verbo e
+   * deixar a direcao ser provada por `DIRIGIDA_A_NOS`, como `AGRESSAO` sempre fez.
+   */
+  const sem = (t, tipo) => semInteresse([{ texto: t, tipo: tipo || 'TEXT' }], null);
+  const FRASE = 'por mim voces podem ir tudo para o inferno, Flavio, Mizuco e tudo junto';
+
+  check(!!sem(FRASE), 'a frase do print casa');
+  check(!!sem(FRASE, 'AUDIO'), 'e casa igual vindo de audio transcrito: o caminho FORTE nao depende de ter sido escrito');
+  check(!!sem('voces podem ir para o inferno'), 'a forma curta tambem');
+  check(!!sem('vao tudo para o inferno voces'), 'com o pronome no fim');
+  check(!!sem('voces que se fodam'), 'e sem verbo de ir');
+  check(!!sem('tu pode ir pro inferno'), 'na segunda pessoa do singular');
+  check(!!sem('va para o inferno'), 'o imperativo sozinho continua valendo (05/09)');
+
+  /**
+   * **A METADE CARA: esta base manda o Lula e o PT para o inferno o dia inteiro.** A guarda e o
+   * ADVERSARIO na mensagem, e sem ela a etiqueta -- que e permanente no CRM e conclui em silencio
+   * -- cairia em cima de quem mais apoia.
+   */
+  check(!sem('kkkk vai tomar no cu esse Lula'), 'apoiador xingando o adversario: nao');
+  check(!sem('o Lula que va pro inferno'), 'idem, sem pronome');
+  check(!sem('esse PT tem que ir tudo pro inferno'), 'o partido adversario tambem nao');
+  check(!sem('a esquerda que va para o inferno'), 'nem a esquerda');
+
+  /** Os DIFICEIS: tem o pronome E o destino, e o alvo continua sendo o adversario. */
+  check(!sem('voces viram? o Lula foi pro inferno kkkk'), 'com "voces" E o destino, mas o alvo e o Lula');
+  check(!sem('voces tem razao, o PT que va pro inferno'), 'concordando conosco sobre o PT');
+  check(!sem('concordo com voces, esses comunistas podem ir tomar no cu'), 'idem com "comunistas"');
+  check(!sem('voces estao certos, a esquerda que se foda'), 'idem com "esquerda"');
+
+  /** E a fala comum, onde "inferno" e so enfase. */
+  check(!sem('esse calor esta um inferno aqui em Canoas'), 'o calor');
+  check(!sem('o transito hoje foi um inferno'), 'o transito');
+  check(!sem('minha vida virou um inferno depois que perdi o emprego'), 'o desabafo -- este e caso da IA, nunca etiqueta');
+  check(!sem('voces vao no evento de sabado?'), 'pergunta com "voces"');
+  check(!sem('voces podem me mandar o material?'), 'pedido com "voces podem"');
+  check(!sem('vou pro interior amanha'), '"pro interior" nao e "pro inferno"');
+
+  /**
+   * **E a protecao do topo volta a se calar sozinha**: `falouAlgoProprio` consulta `semInteresse`
+   * (a licao de 22/09), entao o caso deixa de subir para a tecla 6 sem ninguem reordenar nada.
+   */
+  check(!falouAlgoProprio([{ texto: FRASE, tipo: 'AUDIO', transcrito: true }], null, [], { jaSabemos: [] }),
+    'e falouAlgoProprio se cala, entao o caso nao vai mais para a IA');
+}
+
 fim();

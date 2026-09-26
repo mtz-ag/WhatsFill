@@ -2541,8 +2541,37 @@ const DIRIGIDA_A_NOS = /\b(voces|voce|vocês|tu|es igual|teu|tua|seu candidato|s
  * como sem interesse deixa rótulo permanente no CRM de quem mais apoia. Com outro xingamento junto
  * — o caso da print — ele vale como direção, e aí a regra de sempre decide.
  */
-const XINGAMENTO_IMPERATIVO =
-  /(^|[^\p{L}])(v[aá]|vai|vaite|vao)\s+(se\s+)?(pa?ra\s+(o\s+)?(inferno|pqp)|toma[r]?\s+n[oa]\s+(cu|c\*+)|fude[rn]|fode[rn]|ferrar|catar|lascar|plantar\s+batata)/iu;
+/**
+ * **O DESTINO do xingamento, sem o verbo** — e `String.raw` porque template literal come as barras
+ * (a armadilha de 22/09: `\s` vira `s` sem erro nenhum).
+ */
+const DESTINO_DE_XINGAMENTO = String.raw`(pa?ra\s+(o\s+)?(inferno|pqp)|pr[oa]\s+(inferno|pqp)|toma[r]?\s+n[oa]\s+(cu|c\*+)|fud[ae][rnm]|fod[ae][rnm]|ferrar|catar|lascar|plantar\s+batata)`;
+
+const XINGAMENTO_IMPERATIVO = new RegExp(
+  String.raw`(^|[^\p{L}])(v[aá]|vai|vaite|vao|vão)\s+(se\s+)?` + DESTINO_DE_XINGAMENTO,
+  'iu'
+);
+
+/**
+ * **"VOCÊS PODEM IR PARA O INFERNO" — a mesma ofensa sem o imperativo** (26/09/2026, áudio de 8s:
+ * *"por mim vocês podem ir tudo para o inferno, Flávio, Mizuco e tudo junto"*, e a rodada respondeu
+ * *"respeito sua opinião"* + o pedido de cadastro, que ele apagou — *"claramente sem interesse, não
+ * tem necessidade de resposta, não foi etiquetado também"*).
+ *
+ * **Medido, e não era a transcrição:** o mesmo texto DIGITADO também devolvia null. A lista de
+ * 05/09 só conhecia o IMPERATIVO (*"vá para o inferno"*), e ele usou a forma perifrástica com o
+ * pronome escrito — que é mais dirigida, não menos.
+ *
+ * **É a lição do "queria uma reunião" (09/09) pela terceira vez:** a lista era toda de UMA forma
+ * verbal, e a pessoa usou outra. Aqui o conserto não é acrescentar formas — elas não fecham —, é
+ * separar o DESTINO do verbo e deixar a direção ser provada por `DIRIGIDA_A_NOS`, como
+ * `AGRESSAO` sempre fez.
+ *
+ * **A guarda é o ADVERSÁRIO na mesma mensagem**, e ela é obrigatória: esta base manda o Lula e o
+ * PT para o inferno o dia inteiro, e *"vocês viram? o Lula foi pro inferno"* tem os dois sinais.
+ * Mesma mecânica do `SEM_ADVERSARIO_NO_MEIO` da regra do PL.
+ */
+const MANDOU_EMBORA_SEM_IMPERATIVO = new RegExp(String.raw`(^|[^\p{L}])` + DESTINO_DE_XINGAMENTO, 'iu');
 
 /**
  * **Apelido pejorativo para quem está do NOSSO lado** — conta sozinho, sem precisar de segunda
@@ -3704,8 +3733,18 @@ function umaMensagemRecusa(msg) {
   const soOImperativo =
     mandouEmbora && norm.replace(XINGAMENTO_IMPERATIVO, ' ').replace(/[^\p{L}\p{N}]+/gu, '').length === 0;
 
+  /**
+   * **Mandar NOS embora sem o imperativo** — ver `MANDOU_EMBORA_SEM_IMPERATIVO` (26/09/2026).
+   *
+   * Exige as duas coisas ao mesmo tempo: o pronome escrito (`DIRIGIDA_A_NOS`) e **nenhum
+   * adversário na mensagem**. Sem a segunda, *"vocês viram? o Lula foi pro inferno"* etiquetaria
+   * como sem interesse justamente quem mais apoia — e a etiqueta é permanente no CRM.
+   */
+  const mandouNosEmbora =
+    MANDOU_EMBORA_SEM_IMPERATIVO.test(norm) && DIRIGIDA_A_NOS.test(norm) && !ADVERSARIO.test(norm);
+
   const agride = AGRESSAO.test(norm) && (DIRIGIDA_A_NOS.test(norm) || mandouEmbora);
-  if (agride || soOImperativo) return { motivo: 'veio hostilizar, não é público do mandato' };
+  if (agride || soOImperativo || mandouNosEmbora) return { motivo: 'veio hostilizar, não é público do mandato' };
 
   const negativaVale = !falada && (norm.trim().length <= NEGATIVA_CURTA || NEGACAO_COM_OBJETO.test(norm));
   if (COMECA_NEGANDO.test(norm) && negativaVale && !NEGATIVA_BENIGNA.test(norm)) {
