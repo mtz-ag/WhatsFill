@@ -1,3 +1,64 @@
+## 2026-09-26 — v3.129.0 — "Temos junto galo veio?" não era apoio, e a IA pediu para ele explicar
+
+**Print dele:** o contato chegou pelo anúncio do Facebook (*CAPITÃO MARTIM*), clicou, e escreveu
+*"Temos junto galo veio?"*. O rascunho respondeu *"Não quero te passar uma informação errada sobre
+isso. Você pode me explicar um pouco melhor o que quis dizer com 'galo veio'?"*, e ele apagou:
+*"não reconheceu gírias gauchescas"*.
+
+**Medido, e eram DUAS causas somadas.**
+
+**1. Faltava a conjugação.** `soExpressaApoio` reconhecia `tamo junto`, `tamos junto`,
+`estamos junto`, `to junto` — e **não** `temos junto`, que é a grafia do *"tamo junto"* falado:
+
+| forma | antes |
+|---|---|
+| `tamo junto` / `tamos junto` / `estamos junto` / `to junto contigo` | **apoio** |
+| **`temos junto`** | **nada** |
+
+**2. E o `?` de "galo veio?" descartava o apoio mesmo depois de a conjugação casar.**
+`soExpressaApoio` se cala quando há pergunta aberta — e *"galo veio?"* tem interrogação. Isso é
+*"tamo junto, meu velho?"*: **confirmação, não pedido**, a mesma família do *"Tudo bem?"* que
+`soCortesia` já exclui. **Quarta vez que um "?" que ninguém digitou como pergunta custa uma print**
+— a query string do link (05/09), o rabisco `Cla?nique` (24/09), e agora o vocativo.
+
+**O conserto muda o DESFECHO, e isso foi medido:**
+
+| | |
+|---|---|
+| antes | `falouAlgoProprio` casou → `pedeRespostaPessoal` → **tecla 6**, e a IA pediu a explicação |
+| depois | `soExpressaApoio` casa → `falouAlgoProprio` **se cala sozinho** → **tecla `a`** |
+
+Tecla `a` é o recibo do anúncio + o pedido de cadastro — o certo para quem chega do anúncio dizendo
+*"tamo junto"*.
+
+**O vocativo sai só do FIM, e nunca leva a frase junto.** `semVocativoDeTratamento` vale **só dentro
+de `soExpressaApoio`**: `conversaTemPerguntaAberta` continua intacta, então *"galo veio, vocês têm
+material?"* continua sendo pergunta e continua indo para quem sabe responder. `veio` e `velho`
+sozinhos ficam fora da lista — *"o veio me disse"* é fala comum.
+
+**E a REGRA 18, que é a metade que cobre a classe inteira.** A regra 16 (*não se responde o que não
+se entendeu*) foi **cumprida ao pé da letra**: a IA não inventou nada e não devolveu as palavras dele
+— ela **perguntou**, que a 16 não proibia. É a forma do *"como está o capitão"* (17/09): **"não
+invente" não significa "não responda"**, e aqui não significa também *"peça para explicar"*.
+
+O dano é específico desta base: quem escreve é do RS e fala assim. **Pedir a um gaúcho que explique
+"galo velho" diz, numa frase, que quem responde não é daqui** — e o mandato é estadual.
+
+A fronteira está dentro da regra, como na 17: **não é licença para a IA imitar o sotaque**, e
+pergunta de verdade com gíria dentro continua sendo respondida. A regra 16 passou a apontar para a
+18, senão as duas mandam coisas opostas sobre o mesmo caso.
+
+**Junto foi uma otimização no verificador de referências, e a medição corrigiu a minha suspeita.**
+A passada de escopo da v3.124 compilava uma expressão regular por NOME por LINHA — com 247 nomes de
+closure, centenas de milhares de compilações —, e virou uma varredura de chamadas por linha contra um
+`Set`. **Mas ela não era a causa da lentidão:** medido, a versão **anterior à passada de escopo**
+leva **199 s** e a de hoje **195 s**.
+
+**O gargalo é o `soCodigo`** — 10,7 s só no `panel.js` (695 KB), e ele roda duas vezes por arquivo.
+As expressões regulares estão todas abaixo de 20 ms, então **não é nelas que se deve mexer**. Fica
+medido para ninguém refazer a investigação: o verificador leva ~3 min, está verde, e quem for
+acelerá-lo tem de mexer no laço char-a-char do `soCodigo` — que é a função mais delicada do arquivo
+(a armadilha do `'\'`, 20/09).
 ## 2026-09-26 — v3.128.0 — "vocês podem ir para o inferno" não era sem interesse
 
 **Print dele:** áudio de 8 segundos, transcrito — *"A única conversa que eu vou chamar a vista, por

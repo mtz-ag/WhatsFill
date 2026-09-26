@@ -3549,4 +3549,47 @@ grupo('"voces podem ir para o inferno" tambem e sem interesse (26/09/2026)');
     'e falouAlgoProprio se cala, entao o caso nao vai mais para a IA');
 }
 
+grupo('giria gaucha: "Temos junto galo veio?" e apoio (26/09/2026)');
+{
+  /**
+   * Print de quem chegou pelo anuncio e escreveu *"Temos junto galo veio?"*. A IA respondeu
+   * *"Voce pode me explicar um pouco melhor o que quis dizer com 'galo veio'?"*, e ele apagou:
+   * *"nao reconheceu girias gauchescas"*.
+   *
+   * **Medido, e eram DUAS causas somadas:**
+   *  1. `soExpressaApoio` conhecia `tamo junto`, `tamos junto`, `estamos junto` e `to junto` --
+   *     nao `temos junto`, que e a grafia do "tamo junto" falado;
+   *  2. mesmo com o apoio casando, o `?` de *"galo veio?"* o descartava, porque a funcao se cala
+   *     havendo pergunta aberta. **Quarta vez que um "?" que ninguem digitou como pergunta custa
+   *     uma print** (a query string em 05/09, o rabisco em 24/09).
+   *
+   * **O desfecho muda de verdade, e foi medido:** com o apoio reconhecido `falouAlgoProprio` se
+   * cala, `pedeRespostaPessoal` cai junto, e o caso sai da tecla 6 (onde a IA pediu a explicacao)
+   * e vai para a tecla `a` -- o recibo do anuncio com o pedido de cadastro.
+   */
+  const apoio = (t) => !!soExpressaApoio([{ texto: t, tipo: 'TEXT' }], null, []);
+  const pergunta = (t) => !!conversaTemPerguntaAberta([{ texto: t, tipo: 'TEXT' }], null, []);
+
+  check(apoio('Temos junto galo veio?'), 'a frase do print e apoio');
+  check(apoio('temos junto'), 'a conjugacao que faltava, sozinha');
+  check(apoio('tamo junto tche?'), 'com outro vocativo e interrogacao');
+  check(apoio('tamo junto'), 'e as formas que ja funcionavam continuam');
+  check(apoio('estamos juntos'), 'idem');
+
+  /**
+   * **A metade cara do vocativo: ele so sai do FIM, e nunca leva a frase junto.** Pergunta de
+   * verdade com giria dentro continua sendo pergunta -- e continua indo para quem sabe responder.
+   */
+  check(pergunta('galo veio, voces tem material?'), 'pergunta com giria na frente continua pergunta');
+  check(!apoio('galo veio, voces tem material?'), 'e nao vira apoio');
+  check(pergunta('tche, qual o numero do capitao?'), 'idem com "tche"');
+  check(pergunta('guri, voces vao vir aqui em Bage?'), 'idem com "guri"');
+  check(!apoio('meu velho, preciso de uma ajuda'), 'vocativo + pedido nao e apoio');
+
+  /** E "temos" fora do apoio continua sendo o verbo TER. */
+  check(!apoio('temos uma reuniao junto com a prefeitura amanha'), '"temos ... junto com" e o verbo ter');
+  check(!apoio('nao temos junto nenhum documento aqui'), 'negado tambem nao');
+  check(!apoio('temos que ir juntos no evento?'), 'e "ir juntos" e presenca, nao apoio');
+}
+
 fim();

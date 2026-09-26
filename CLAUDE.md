@@ -2792,6 +2792,34 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **GIRIA GAUCHA: "TEMOS JUNTO GALO VEIO?" NAO ERA APOIO, E A IA PEDIU PARA ELE EXPLICAR**
+  (26/09/2026, print de quem chegou pelo anuncio e recebeu *"Voce pode me explicar um pouco melhor o
+  que quis dizer com 'galo veio'?"* — *"nao reconheceu girias gauchescas"*). **Duas causas somadas:**
+  `soExpressaApoio` conhecia `tamo junto`, `tamos junto`, `estamos junto` e `to junto` e **nao
+  `temos junto`**, que e a grafia do falado; e, ja casando, o **`?` de *"galo veio?"*** descartava o
+  apoio, porque a funcao se cala havendo pergunta aberta. **QUARTA vez que um "?" que ninguem digitou
+  como pergunta custa uma print** (a query string em 05/09, o rabisco em 24/09).
+  **O conserto muda o DESFECHO, medido:** com o apoio reconhecido `falouAlgoProprio` se cala sozinho
+  (ele consulta `soExpressaApoio`), `pedeRespostaPessoal` cai junto, e o caso sai da tecla 6 para a
+  tecla `a` — o recibo do anuncio com o pedido de cadastro.
+  **`semVocativoDeTratamento` vale SO dentro de `soExpressaApoio`**: `conversaTemPerguntaAberta`
+  fica intacta, entao *"galo veio, voces tem material?"* continua sendo pergunta. `veio` e `velho`
+  sozinhos ficam fora da lista.
+  **E a REGRA 18 e a metade que cobre a classe:** a regra 16 foi CUMPRIDA ao pe da letra — a IA nao
+  inventou e nao devolveu as palavras dele, ela PERGUNTOU, que a 16 nao proibia. E a forma do *"como
+  esta o capitao"* (17/09): **"nao invente" nao significa "nao responda", e aqui nao significa
+  tambem "peca para explicar"**. O dano e desta base: quem escreve e do RS, e pedir a um gaucho que
+  explique "galo velho" diz que quem responde nao e daqui. A fronteira mora dentro da regra (nao e
+  licenca para imitar o sotaque; pergunta com giria dentro continua sendo respondida), e a 16 passou
+  a apontar para a 18.
+- **O `checar-referencias` LEVA ~3 MIN, E NAO SAO AS EXPRESSOES REGULARES** (medido em 26/09/2026,
+  depois de eu suspeitar da passada de escopo da v3.124 e a medicao me desmentir: **199 s ANTES dela,
+  195 s depois**). **O gargalo e o `soCodigo`** — 10,7 s so no `panel.js` (695 KB), e ele roda duas
+  vezes por arquivo; todas as regex do arquivo ficam abaixo de 20 ms. Fica registrado para ninguem
+  refazer a investigacao: acelerar exige mexer no laco char-a-char do `soCodigo`, que e a funcao mais
+  delicada dali (a armadilha do `'\\'`, 20/09). A passada de escopo foi otimizada assim mesmo (uma
+  varredura de chamadas por linha contra um `Set`, em vez de uma regex por nome por linha), porque
+  **verificador lento e verificador que alguem deixa de rodar**.
 - **"VOCES PODEM IR PARA O INFERNO" NAO ERA SEM INTERESSE — a lista so tinha o IMPERATIVO**
   (26/09/2026, audio de 8s: *"por mim voces podem ir tudo para o inferno, Flavio, Mizuco e tudo
   junto"*, que recebeu *"respeito sua opiniao"* + o pedido de cadastro — *"claramente sem interesse,

@@ -938,7 +938,23 @@ const EXPRESSOES_DE_APOIO = [
    *
    * `\s*` e não `\s+`: "Tamojuntos" vem colado, e foi assim que ele apareceu na print.
    */
-  /(^|[^\p{L}])(tamo|tamos|t[oô]|estou|estamos|seguimos|segue)\s*(junto|juntos)\b/iu,
+  /**
+   * **`temos` entrou em 26/09/2026** — print de quem chegou pelo anúncio e escreveu
+   * *"Temos junto galo veio?"*. Ele: *"não reconheceu gírias gauchescas"*.
+   *
+   * **Medido: `tamo junto`, `tamos junto`, `estamos junto` e `to junto` casavam; `temos junto`,
+   * não** — e é a grafia que ele usou. Em português *"temos junto"* é agramatical: ninguém
+   * escreve isso a não ser como o *"tamo junto"* falado, que é o que ele quis dizer.
+   *
+   * **O conserto muda o DESFECHO, e foi medido:** com o apoio reconhecido `falouAlgoProprio` se
+   * cala (ele consulta `soExpressaApoio`), `pedeRespostaPessoal` cai junto, e o caso sai da
+   * tecla 6 — onde a IA pediu para ele explicar a gíria — e vai para a tecla `a`, o recibo do
+   * anúncio com o pedido de cadastro, que é o certo para quem chega dizendo *"tamo junto"*.
+   *
+   * **"galo velho" NÃO entrou aqui, de propósito:** é vocativo, não declaração — *"e aí galo
+   * veio, preciso de uma ajuda"* é pedido, não apoio. Quem trata a gíria é a regra do prompt.
+   */
+  /(^|[^\p{L}])(tamo|tamos|temos|t[oô]|estou|estamos|seguimos|segue)\s*(junto|juntos)\b/iu,
   /(^|[^\p{L}])(tamo|tamos|t[oô]|estou|estamos|seguimos|segue)\s*com\s+(voc[eê]s?|vcs?|o\s+senhor|a\s+senhora|a\s+gente|n[óo]is|n[óo]s|o\s+capit[ãa]o|o\s+martim|a\s+campanha|o\s+mandato)\b/iu,
   /(^|[^\p{L}])(tamo|tamos|t[oô]|estou|estamos)\s*contigo\b/iu,
   /(^|[^\p{L}])tmj\b/iu,
@@ -2140,6 +2156,36 @@ function soVotoDeBoaVontade(texto) {
   return sobra.split(/\s+/).filter(Boolean).length <= 1;
 }
 
+/**
+ * **O VOCATIVO GAUCHO NO FIM NAO FAZ PERGUNTA** — 26/09/2026, print de quem chegou pelo anúncio e
+ * escreveu *"Temos junto galo veio?"*. Ele: *"não reconheceu gírias gauchescas"*.
+ *
+ * **Medido, e a causa era o `?`:** `temos junto` passou a casar como apoio, e `soExpressaApoio`
+ * descartava mesmo assim, porque ele se cala quando há pergunta aberta — e *"galo veio?"* tem
+ * interrogação. Isso é *"tamo junto, meu velho?"*: **confirmação, não pedido**, a mesma família do
+ * *"Tudo bem?"* que `soCortesia` e `terminouComPergunta` já excluem.
+ *
+ * **QUARTA vez que um "?" que ninguém digitou como pergunta custa uma print** — a query string do
+ * link (05/09), o rabisco `Cla?nique` (24/09) e agora o vocativo.
+ *
+ * **Escopo pequeno de propósito: isto vale SÓ dentro de `soExpressaApoio`.**
+ * `conversaTemPerguntaAberta` continua intacta, porque *"galo veio, vocês tem material?"* é
+ * pergunta de verdade — o que sai daqui é o vocativo, nunca o resto da frase.
+ *
+ * Lista curta e literal, como toda lista de permissão deste arquivo. `veio` e `velho` sozinhos
+ * ficam de fora: *"o veio me disse"* e *"meu celular é velho"* são fala comum.
+ */
+const VOCATIVO_NO_FIM =
+  /[,\s]*(\b(galo\s+(veio|velho)|meu\s+(veio|velho)|tch[eê]|guri|guria|china|prenda|cumpadre|compadre|parceiro|patr[aã]o|chefia|negueira)\b[\s,!.]*)+\??\s*$/iu;
+
+/** O texto sem o vocativo do fim — e sem o `?` que era só dele. */
+function semVocativoDeTratamento(texto) {
+  const t = String(texto == null ? '' : texto);
+  const limpo = t.replace(VOCATIVO_NO_FIM, '');
+  // Piso: sobrando farelo, o texto original vale mais que um pedaço solto.
+  return limpo.trim().length >= 3 ? limpo : t;
+}
+
 export function soExpressaApoio(entrantes, nossaUltimaAt, padroesDeAnuncio = []) {
   const rajada = rajadaFinal(entrantes, nossaUltimaAt);
   if (!rajada.length) return null;
@@ -2162,7 +2208,14 @@ export function soExpressaApoio(entrantes, nossaUltimaAt, padroesDeAnuncio = [])
     if (pedeRespostaPessoal({ tipo: msg?.tipo })) return null;
   }
 
-  if (conversaTemPerguntaAberta(entrantes, nossaUltimaAt, padroesDeAnuncio)) return null;
+  /**
+   * O vocativo sai ANTES da conferência de pergunta — ver `semVocativoDeTratamento`. Sem isto,
+   * *"Temos junto galo veio?"* era descartado pelo `?` de um *"meu velho"*.
+   */
+  const semVocativo = (Array.isArray(entrantes) ? entrantes : []).map((m) =>
+    m && typeof m === 'object' ? { ...m, texto: semVocativoDeTratamento(m.texto) } : m
+  );
+  if (conversaTemPerguntaAberta(semVocativo, nossaUltimaAt, padroesDeAnuncio)) return null;
 
   const texto = rajada.map((m) => String(m?.texto || '')).join(' ').trim();
   if (!texto) return null;

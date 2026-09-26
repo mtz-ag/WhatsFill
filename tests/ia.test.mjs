@@ -3126,6 +3126,34 @@ grupo('a bandeira entrou no estoque, e os TRES lugares concordam (25/09/2026)');
     'e ela percorre o caminho do folheto: endereco e repasse');
 }
 
+grupo('a regra 18: giria gaucha nao se pergunta (26/09/2026)');
+{
+  /**
+   * Print de *"Temos junto galo veio?"* respondido com *"Voce pode me explicar um pouco melhor o
+   * que quis dizer com 'galo veio'?"* -- *"nao reconheceu girias gauchescas"*.
+   *
+   * **A regra 16 foi CUMPRIDA ao pe da letra, e por isso precisava da fronteira:** a IA nao
+   * inventou nada e nao devolveu as palavras dele -- ela PERGUNTOU, que a 16 nao proibia. E a
+   * forma do *"como esta o capitao"* (17/09): "nao invente" nao significa "nao responda", e aqui
+   * nao significa tambem "peca para explicar".
+   */
+  const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+
+  check(/18\. G[IÍ]RIA GA[UÚ]CHA N[AÃ]O SE PERGUNTA/.test(p), 'a regra 18 esta no prompt');
+  check(/pode me explicar melhor o que/.test(p), 'com a frase proibida escrita, como nas outras');
+  check(/Rio Grande/.test(p.slice(p.indexOf('18.'))), 'e diz de onde e quem escreve');
+
+  /** A fronteira mora DENTRO da regra, como na 17 -- e e ela que a torna segura. */
+  const regra18 = p.slice(p.indexOf('18. G'), p.indexOf('18. G') + 1400);
+  check(/N[aã]o \*?\*?[eé]\*?\*? licen[çc]a para voc[êe] imitar o sotaque/.test(regra18),
+    'nao e licenca para a IA imitar o sotaque');
+  check(/continua sendo respondida/.test(regra18), 'e pergunta de verdade com giria dentro continua sendo respondida');
+
+  /** A 16 passou a apontar para a 18: sem isso as duas mandam coisas opostas sobre o mesmo caso. */
+  const regra16 = p.slice(p.indexOf('16. N'), p.indexOf('18. G'));
+  check(/regra 18/.test(regra16), 'e a regra 16 aponta para ela');
+}
+
 grupo('emoji cortado ao meio derruba a chamada (22/09/2026, as DUAS casas com 400)');
 {
   const emoji = '\u{1F64F}'; // um par de substitutos, como quase todo emoji

@@ -331,15 +331,25 @@ for (const arquivo of arquivos) {
     if (m) daClosure.add(m[1]);
   }
   const nomesDeModulo = new Set(deModulo.map(([n]) => n));
+  /**
+   * **Uma varredura de CHAMADAS por linha, e o nome conferido num `Set`** — e não uma regex por
+   * nome por linha, que foi como isto nasceu na v3.124.
+   *
+   * Com 247 nomes na closure e milhares de linhas, aquela forma compilava centenas de milhares de
+   * expressões e o verificador passou de segundos para MINUTOS. **Verificador lento é verificador
+   * que alguém deixa de rodar** — e este existe justamente para o defeito que nenhum teste pega.
+   */
+  const CHAMADA = /(^|[^\w$.])([A-Za-z_$][\w$]*)\s*\(/g;
   for (const [dono, ini, fim] of deModulo) {
     for (let i = ini + 1; i <= fim; i++) {
       if (/^\s*(\*|\/\/)/.test(linhas[i])) continue;
       const linha = linhas[i].replace(/'[^']*'|"[^"]*"|`[^`]*`/g, '');
-      for (const nome of daClosure) {
-        if (nomesDeModulo.has(nome)) continue;
-        if (new RegExp('(^|[^\\w$.])' + nome + '\\s*\\(').test(linha)) {
-          foraDeEscopo.push({ arquivo, dono, nome, linha: i + 1 });
-        }
+      CHAMADA.lastIndex = 0;
+      let m;
+      while ((m = CHAMADA.exec(linha))) {
+        const nome = m[2];
+        if (!daClosure.has(nome) || nomesDeModulo.has(nome)) continue;
+        foraDeEscopo.push({ arquivo, dono, nome, linha: i + 1 });
       }
     }
   }

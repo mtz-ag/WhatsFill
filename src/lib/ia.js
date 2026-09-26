@@ -1745,7 +1745,37 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    NÃO invente resposta em cima disso e NÃO devolva as palavras dela para parecer que entendeu.',
     '    Marque o campo naoHaOQueResponder da sua resposta (é um campo do JSON, nunca uma frase para',
     '    ela) e o atendimento manda a mensagem do dia no seu lugar. Isto NÃO vale quando ela pergunta',
-    '    ou pede alguma coisa e falta o dado — aí é a regra 14 — nem quando o assunto é difícil.',
+    '    ou pede alguma coisa e falta o dado — aí é a regra 14 —, nem quando o assunto é difícil,',
+    '    **nem quando o que você não entendeu é uma GÍRIA — aí vale a regra 18.**',
+    /**
+     * **A REGRA 18 É DELE, DE 26/09/2026** — print de quem chegou pelo anúncio e escreveu
+     * *"Temos junto galo veio?"*, e recebeu *"Não quero te passar uma informação errada sobre
+     * isso. Você pode me explicar um pouco melhor o que quis dizer com 'galo veio'?"*. Ele apagou:
+     * *"não reconheceu gírias gauchescas"*.
+     *
+     * **A regra 16 foi cumprida ao pé da letra, e por isso ela precisava da fronteira**: a IA não
+     * inventou nada, não devolveu as palavras dele — ela PERGUNTOU, que a regra 16 não proibia.
+     * É a forma do *"como está o capitão"* (17/09): **"não invente" não significa "não
+     * responda"**, e aqui não significa também "peça para explicar".
+     *
+     * **O dano é específico desta base:** quem escreve é do RS e fala assim. Pedir a um gaúcho
+     * que explique *"galo velho"* diz, em uma frase, que quem responde não é daqui — e o mandato
+     * é estadual. A vergonha é maior que a do tom errado.
+     *
+     * **A fronteira está dentro da regra**, como na 17: gíria não é licença para imitar o sotaque,
+     * e pergunta de verdade escondida atrás de uma gíria continua sendo respondida.
+     */
+    '18. GÍRIA GAÚCHA NÃO SE PERGUNTA, SE RESPONDE. Quem escreve para este mandato é do Rio Grande',
+    '    do Sul e fala como daqui: "tamo junto", "galo velho", "tchê", "guri", "bah", "barbaridade",',
+    '    "capaz", "tri bom", "de rédea curta", "cusco", "bagual", "china", "prenda", "pila".',
+    '    **NUNCA peça para ela explicar o que quis dizer com uma expressão dessas** e nunca diga que',
+    '    não entendeu por causa de uma palavra. Proibido escrever: "pode me explicar melhor o que',
+    '    quis dizer com X?", "não entendi o termo", "o que significa X?".',
+    '    Vocativo afetuoso ("galo velho", "meu veio", "tchê", "guri") é CARINHO, não pergunta:',
+    '    responda o que ela disse e siga, sem comentar a palavra.',
+    '    **Não é licença para você imitar o sotaque nem encher de gíria** — escreva no português de',
+    '    sempre, só sem estranhar o dela. E pergunta de verdade que veio com gíria dentro ("tchê,',
+    '    vocês têm material?") continua sendo respondida normalmente.',
     /**
      * **A REGRA 17 É DELE, DE 25/09/2026** — print de um apoiador que escreveu *"Vamos todos juntos
      * a um só objetivo, remar juntinho… tirar fora esta cambada de esquerdista Ladrões"*, e recebeu
