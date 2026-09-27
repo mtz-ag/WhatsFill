@@ -1,3 +1,68 @@
+## 2026-09-27 — medição (sem mudança de comportamento) — reabrir não é o que o WhatsApp vê, e a janela de 24h é PROPRIEDADE DO CANAL
+
+**Pergunta dele, desmontando um argumento que eu dei:** *"não entendi a relação; estou trabalhando em
+uma plataforma não oficial, então o fato de abrir uma conversa é um ato que só acontece na plataforma,
+as conversas estão abertas no celular normalmente — qual a diferença de eu enviar pelo celular e pela
+plataforma?"*
+
+**Ele está certo, e o argumento era meu.** Eu havia repetido que a campanha é melhor que a rodada
+*"porque não reabre atendimento"* — a frase de 15/08, *"reabrir gente fria em sequência é o padrão que
+mais se parece com disparo em massa para o WhatsApp"*. **Reabrir é status do CRM** (`COMPLETED` →
+`IN_PROGRESS`): o WhatsApp não vê nada disso. O que ele vê são as MENSAGENS — quantas, com que
+intervalo, quão parecidas, para quem. Reabrir era só o passo mecânico antes de cada envio, e culpar
+ele esconde a causa. **A frase de 15/08 fica registrada como imprecisa: o risco daquela rodada era o
+PADRÃO DE ENVIO, não o reabrir.**
+
+### E o app separa os dois mundos, com essas palavras
+
+```js
+whatsAppOfficialChannels   = canais.filter(c => c.type === Dialog360 || c.type === CloudApi)
+whatsAppUnofficialChannels = canais.filter(c => c.type === ZAPI      || c.type === EvolutionAPI)
+```
+
+Os rótulos na tela são **"WhatsApp"** e **"WhatsApp (não oficial)"**. O enum de integração tem
+`WhatsApp` (Cloud API), `WhatsAppQR` (Cloud API via QRCode), `ZAPI`, `EvolutionAPI`, `InstanceQR`,
+`Instagram` e `Internal`.
+
+### A capacidade é POR TIPO DE CANAL, e vem em `channel.typeDetails`
+
+| campo | o que decide |
+|---|---|
+| **`sessionDurationInMinutes`** | **a janela.** O código sai na hora quando vale **`-1`** — ou seja, **tipo de canal sem janela nenhuma** |
+| **`mustUseTemplate`** | se fora da janela só passa modelo aprovado |
+| `canDefineTemplate` | se aquele canal tem modelo aprovado (é o `canSendTemplate` da tela) |
+| **`canSendCampaign`** | **se a Campanha funciona naquele canal** |
+| `canStartNewSession`, `canSendSequence`, `canSendReactions`, `canDeleteMessage`, `allowedAttachments`, `maxFilesPerSend`, `templateProperties` | o resto |
+
+**Isto muda o que eu recomendei ontem, e para melhor.** Num canal **não oficial** não há janela de 24h
+nem modelo aprovado: a colinha pode sair como **texto livre com variações de verdade**, sem esperar
+aprovação da Meta — que era o único pedaço lento do plano. Em troca, `canSendCampaign` pode ser
+**false** ali, e aí a Campanha não é caminho nenhum para aquele número.
+
+**O que continua valendo, e é o que ele mediu na prática:** `channel.status` **`FLAGGED`**
+(*"sinalizado como enviando SPAM"*) **não é conceito da Meta** — é o WhatsApp punindo o padrão, e num
+número não oficial o castigo é a conta, sem instância de recurso. `quality`, `RESTRICTED` e
+`CHANNEL_TIER_EXCEEDED` são da Cloud API e podem não significar nada num canal Z-API.
+
+### Celular contra plataforma: a resposta é "nenhuma diferença de remetente"
+
+Sendo Z-API ou Evolution, a plataforma é um **cliente pareado à conta dele** — para o WhatsApp é o
+mesmo aparelho que está na mão dele. Então não há canal diferente a comparar: **a diferença é só o
+ritmo e a repetição.** Cento e cinquenta mensagens idênticas digitadas no celular derrubariam o número
+do mesmo jeito. **É a segunda vez que ele está certo sobre isto**: a variação que ele pediu na primeira
+mensagem (*"deve ter variações para não aparentar spam"*) é a peça que importa, e eu a tratei como
+cosmética duas vezes.
+
+### O limite desta medição
+
+Eu li o código do app, não a conta dele. **Qual tipo é cada número dele, e quanto vale o
+`sessionDurationInMinutes` de cada tipo, sai de `GET /chat/v4/channel/my` e de
+`chat/v1/channel/type-details`** — uma chamada, e é a primeira coisa que o cartão de saúde do canal
+deve mostrar. Fica em aberto e foi dito a ele: o painel hoje assume a janela de 24h para todo mundo
+(a decisão de agosto, *"na rodada dos concluídos só sai modelo aprovado"*), e `state.session.expired`
+vem da API por sessão — se para canal não oficial ela devolve sempre `false`, o painel acerta por
+acidente; isso precisa ser medido antes de qualquer confiança.
+
 ## 2026-09-26 — medição (sem mudança de comportamento) — a colinha para os concluídos de ontem: a plataforma tem disparo em massa próprio
 
 **Pergunta dele:** *"eu precisava mandar a colinha para todos os contatos de ontem que eu já

@@ -286,6 +286,35 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   para muita gente, e aqui que se olha** — e a propria tela avisa, mostrando a qualidade do numero
   pela Meta com *"Evite disparos em massa para manter este numero ativo"* (na BAIXA, *"os contatos
   estao denunciando suas mensagens"*); o erro `CHANNEL_TIER_EXCEEDED` e o teto diario do numero.
+- **A JANELA DE 24h E PROPRIEDADE DO CANAL, E REABRIR NAO E O QUE O WHATSAPP VE** (27/09/2026, pergunta
+  dele: *"e uma plataforma nao oficial, abrir conversa e ato que so acontece na plataforma; qual a
+  diferenca de eu enviar pelo celular e pela plataforma?"*). **Ele esta certo nas duas metades.**
+  **(1) Reabrir e status do CRM** (`COMPLETED` -> `IN_PROGRESS`) e o WhatsApp nao ve nada disso — a
+  frase de 15/08 (*"reabrir gente fria em sequencia e o padrao que mais se parece com disparo em
+  massa"*) **culpa o ato errado**: o que e visto sao as MENSAGENS (quantas, com que intervalo, quao
+  parecidas, para quem), e reabrir era so o passo antes de cada envio. Nao use "nao reabre atendimento"
+  como argumento de seguranca.
+  **(2) O app separa os canais em dois mundos, com estas palavras:**
+  `whatsAppOfficialChannels = type === Dialog360 || type === CloudApi` e
+  `whatsAppUnofficialChannels = type === ZAPI || type === EvolutionAPI`, rotulados na tela como
+  **"WhatsApp"** e **"WhatsApp (nao oficial)"**. **E a capacidade vem em `channel.typeDetails`:**
+  **`sessionDurationInMinutes`** e a janela — **`-1` significa SEM JANELA** (o codigo sai na hora) —,
+  **`mustUseTemplate`** diz se fora da janela so passa modelo aprovado, `canDefineTemplate` e o
+  `canSendTemplate` da tela, e **`canSendCampaign`** diz se a Campanha funciona naquele canal (mais
+  `canStartNewSession`, `canSendSequence`, `allowedAttachments`, `maxFilesPerSend`,
+  `templateProperties`).
+  **Consequencia:** num canal NAO OFICIAL nao ha janela de 24h nem modelo aprovado — texto livre sai
+  a qualquer hora, sem aprovacao da Meta —, e a Campanha pode nem existir ali. O que NAO muda e o
+  `status` **`FLAGGED`** (*"sinalizado como enviando SPAM"*): ele e o WhatsApp punindo o PADRAO, e num
+  numero nao oficial o castigo e a conta, sem recurso; `quality`, `RESTRICTED` e
+  `CHANNEL_TIER_EXCEEDED` sao da Cloud API e podem nao significar nada num canal Z-API.
+  **Sendo Z-API ou Evolution, a plataforma e um cliente pareado a conta dele** — para o WhatsApp e o
+  mesmo aparelho da mao dele. Entao celular e plataforma nao sao remetentes diferentes: **a diferenca
+  e o ritmo e a repeticao**, e 150 mensagens iguais digitadas no celular derrubariam igual.
+  **Antes de afirmar qualquer coisa sobre janela, modelo aprovado ou campanha, leia o TIPO do canal** —
+  `GET /chat/v4/channel/my` + `chat/v1/channel/type-details`. O painel hoje assume a janela para todo
+  mundo (a decisao de agosto) e `state.session.expired` vem da API por sessao: se para canal nao
+  oficial ela devolve sempre `false`, o painel acerta por acidente — **isso nao foi medido.**
 - **TEXTO REPETIDO EM SEQUENCIA DERRUBA O NUMERO, E O ORCAMENTO E DEZ** (correcao dele, 26/09/2026:
   *"mentira, porque ja derrubei o numero ao mandar a mesma mensagem em sequencia para menos de 10
   pessoas que chegaram por anuncio"*, depois de eu escrever que a Meta mede denuncia e nao repeticao).
