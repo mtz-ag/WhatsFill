@@ -111,4 +111,32 @@ grupo('mandar texto na sessao: mesma rota e envelope do envio de imagem');
   check(acusou, '2xx sem o texto de volta NAO conta como enviado -- a armadilha mais antiga daqui');
 }
 
+grupo('concluir: corpo VAZIO, como o botao "Concluir" da tela');
+{
+  erro = null;
+  resposta = { id: 'sess-7', status: 'COMPLETED' };
+  const r = await api.concluirAtendimento('sess-7');
+  check(r.ok === true, 'conclui');
+  check(ultima.metodo === 'POST', 'POST -- aqui, ao contrario de abrir, nao e PUT');
+  check(ultima.url.includes('/chat/v1/session/sess-7/complete'), 'na rota do complete');
+  check(JSON.stringify(ultima.corpo) === '{}', 'corpo VAZIO: o motivo de conclusao e escolha dele por contato, nao de uma rodada');
+
+  resposta = { id: 'sess-7', status: 'IN_PROGRESS' };
+  let acusou = false;
+  try {
+    await api.concluirAtendimento('sess-7');
+  } catch (_) {
+    acusou = true;
+  }
+  check(acusou, '2xx com o atendimento ainda em andamento NAO conta como concluido');
+
+  let recusou = false;
+  try {
+    await api.concluirAtendimento('');
+  } catch (_) {
+    recusou = true;
+  }
+  check(recusou, 'sem atendimento, recusa antes de gastar requisicao');
+}
+
 fim();

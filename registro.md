@@ -1,3 +1,56 @@
+## 2026-10-01 — v3.133.0 — o lote por etiqueta CONCLUI o atendimento, com a guarda da mensagem em fila
+
+**Decisão dele:** *"sim tem que concluir"*. Sem isso um lote de 200 envios deixa 200 atendimentos
+abertos em "Meus", e as outras rodadas passariam a percorrê-los.
+
+**A rota é `POST /chat/v1/session/{id}/complete` com corpo VAZIO** — lido no bundle: é exatamente o
+que o botão "Concluir" da tela chama (`complete(session.id, {})`). Quem preenche o corpo é a outra
+opção do menu, *"Classificar e concluir"*
+(`{statusReasonId, statusReasonEnum, statusReasonAmount}`), e **isso é escolha dele por contato**,
+não coisa que uma rodada em lote deva inventar.
+
+`concluirPeloPainel` não serve aqui: é DOM, e precisa dos dois cliques do menu da **conversa
+aberta** — e neste lote o atendimento foi criado pela API e não está na tela.
+
+### A guarda que o bundle entregou junto, e que eu não teria achado sozinho
+
+Antes de concluir, a tela chama `validateQueuedMessages()` e mostra o diálogo:
+
+> *"Uma mensagem está aguardando resposta do contato. Se você prosseguir com a conclusão do
+> atendimento, essas mensagens serão canceladas. Tem certeza de que deseja concluir?"*
+
+Esse texto já está registrado no `CLAUDE.md` desde 01/09 — como o diálogo que a **rodada resolve**
+clicando em Concluir. Lido de novo agora, com o lote em mãos, ele diz outra coisa: **concluir
+cancela mensagem que ficou em fila.** E pela API **não há diálogo nenhum** — a conclusão simplesmente
+acontece.
+
+Então a rodada cancelaria o próprio envio e contaria como enviado. Hoje:
+
+- `imagem.enviarImagem` passou a devolver o **`status`** da mensagem;
+- mensagem `QUEUED` **não é concluída** — o atendimento fica aberto e a linha do Andamento diz por
+  quê;
+- qualquer outro status conclui.
+
+**A ordem inteira é abrir → mandar → marcar → concluir**, e cada passo falha sem desfazer o anterior:
+falha ao concluir não apaga o envio nem a etiqueta (a prioridade de 20/08 — a mensagem é o que o
+contato recebe), e a linha diz o que ficou pendente.
+
+### O que esta conclusão NÃO faz
+
+**Não grava a "Data de conclusão do contato".** Aquele campo é escrita nossa no CRM
+(`saveClassification`), e a decisão dele de 31/08 vale: o caminho automático não grava campo nenhum.
+Aqui só o atendimento é fechado, na plataforma — a única escrita no CRM continua sendo a etiqueta do
+lote.
+
+### E a descrição do cartão mentia por um dia
+
+Ela dizia *"não conclui o atendimento e não grava nada no CRM"* — verdade na v3.130, falsa desde a
+v3.131 (a etiqueta) e agora duas vezes falsa. É a família do aviso que não envelhece com o que já
+foi feito, registrada três vezes aqui. Hoje ela descreve os dois caminhos do cartão e o que cada um
+faz, e a linha nova diz o fecho: recebe a arte, é marcado, e o atendimento é concluído.
+
+**Custo:** ~8 requisições por contato (1 abrir + 5 imagem + 1 etiqueta + 1 concluir).
+
 ## 2026-10-01 — v3.132.0 — envio em lote POR ETIQUETA: abre atendimento novo, manda a arte, marca
 
 **Pedido dele:** *"teremos que abrir um novo atendimento e abrir a conversa por lá e mandar a

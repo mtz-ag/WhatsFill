@@ -197,6 +197,17 @@ export async function enviarImagem({ sessionId, senderId, arquivo, legenda, api,
   return {
     fileId: registrado.id,
     mensagemId: String(mensagem?.id || ''),
+    /**
+     * **O status com que a mensagem ficou** — `PROCESSING` é o caminho normal; `QUEUED` quer dizer
+     * que a plataforma a guardou para quando puder entregar.
+     *
+     * Existe por causa de quem CONCLUI depois de mandar (o envio em lote por etiqueta): a própria
+     * tela avisa, antes de concluir, que *"uma mensagem está aguardando resposta do contato; se
+     * você prosseguir com a conclusão, essas mensagens serão canceladas"* — ou seja, **concluir
+     * cancela mensagem em fila**. Sem este campo, a rodada cancelaria o próprio envio e contaria
+     * como enviado.
+     */
+    status: String(mensagem?.status || ''),
     legendaFoi: legendaEntrou(mensagem, legenda),
   };
 }

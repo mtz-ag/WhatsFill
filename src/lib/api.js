@@ -804,6 +804,32 @@ export async function mandarTexto({ sessionId, senderId, texto }) {
   return { id: String(msg?.id || '') };
 }
 
+/**
+ * **Conclui um atendimento pela API** — `POST /chat/v1/session/{id}/complete` com corpo **VAZIO**.
+ *
+ * Lido no bundle em 01/10/2026: o botão "Concluir" da tela chama exatamente
+ * `complete(session.id, {})`. Quem preenche o corpo é a outra opção do menu, "Classificar e
+ * concluir" (`{statusReasonId, statusReasonEnum, statusReasonAmount}`), que é escolha dele por
+ * contato — não é o que uma rodada em lote deve inventar.
+ *
+ * **Existe para o lote por etiqueta**, onde o atendimento foi criado pela API e não está na tela:
+ * `concluirPeloPainel` é DOM e precisa dos dois cliques do menu da conversa aberta.
+ *
+ * **O que esta rota NÃO faz, de propósito:** gravar a "Data de conclusão do contato". Aquele campo
+ * é escrita nossa no CRM (`saveClassification`), e a decisão dele de 31/08 é que o caminho
+ * automático não grava campo nenhum. Aqui só o atendimento é fechado, na plataforma.
+ */
+export async function concluirAtendimento(sessionId) {
+  if (!sessionId) throw new Error('sem atendimento para concluir');
+  const sessao = await apiFetch(`/chat/v1/session/${sessionId}/complete`, { method: 'POST', body: {} });
+  // O 2xx não prova nada: o status tem de voltar concluído.
+  const status = String(sessao?.status || '');
+  if (status && status !== STATUS_CONCLUIDO) {
+    throw new Error(`a plataforma aceitou e o atendimento ficou como ${status}`);
+  }
+  return { ok: true, status };
+}
+
 /** Só o que o contato escreveu, do mais antigo para o mais novo. Base do parser. */
 export async function getIncomingText(sessionId, pageSize = 50) {
   return (await getConversation(sessionId, pageSize)).incoming;

@@ -2389,9 +2389,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   `percorrerContatos` anda pela lista da API. Keepalive, trava de suspensao, janelinha, log e
   veredito nao foram duplicados — *"rodada com motor proprio nao herda conserto"* (03/09). As duas
   pre-conferencias de fila ficam de fora quando ha `percorrer`: ali seriam alarme falso.
-  **Custo: ~7 requisicoes por contato** (1 abrir + 5 imagem + 1 etiqueta) contra ~9 da rodada de
-  fila, porque **esta nao chama `load()`** — a decisao nao depende da conversa e as etiquetas vieram
-  no filtro.
+  **CONCLUIR e `POST /chat/v1/session/{id}/complete` com corpo VAZIO** (decisao dele, 01/10: *"sim
+  tem que concluir"*) — e exatamente o que o botao "Concluir" da tela chama; o corpo cheio
+  (`statusReasonId`, `statusReasonEnum`, `statusReasonAmount`) e a outra opcao do menu,
+  "Classificar e concluir", que e escolha dele por contato. `concluirPeloPainel` nao serve: e DOM e
+  precisa da conversa ABERTA.
+  **E A GUARDA QUE O BUNDLE ENTREGOU JUNTO: concluir CANCELA mensagem em fila.** Antes de concluir, a
+  tela chama `validateQueuedMessages` e avisa que *"essas mensagens serao canceladas"* — o mesmo texto
+  ja registrado em 01/09 como o dialogo que a rodada resolve. Pela API **nao ha dialogo**, entao a
+  rodada cancelaria o proprio envio e contaria como enviado. Hoje `imagem.enviarImagem` devolve o
+  **`status`** da mensagem e `QUEUED` **nao e concluido** — o atendimento fica aberto e a linha diz
+  por que. **Ao concluir por API depois de mandar, confira o status da mensagem.**
+  A ordem e **abrir -> mandar -> marcar -> concluir**, e cada passo falha sem desfazer o anterior.
+  **A conclusao NAO grava a "Data de conclusao do contato"**: aquele campo e escrita nossa
+  (`saveClassification`) e a decisao de 31/08 vale — a unica escrita no CRM deste lote e a etiqueta.
+  **Custo: ~8 requisicoes por contato** (1 abrir + 5 imagem + 1 etiqueta + 1 concluir) contra ~9 da
+  rodada de fila, porque **esta nao chama `load()`** — a decisao nao depende da conversa e as
+  etiquetas vieram no filtro.
 - **ENVIO EM LOTE (imagem + legenda) E UMA RODADA FORA DO QUADRO, E AS PROTECOES CONTINUAM**
   (01/10/2026, pedido dele: *"preciso enviar uma imagem e um texto especifico fora do fluxo... e va
   variando entre umas 4 imagens e descricoes diferentes enquanto manda"*). `lib/lote.js` + o cartao

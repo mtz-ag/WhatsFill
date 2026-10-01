@@ -4167,9 +4167,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const card = h('div', { class: 'wf-card' }, [
       h('h4', {}, 'Envio em lote: imagem + legenda'),
       h('div', { class: 'wf-preview' },
-        'Percorre a lista que você filtrou na esquerda e manda a arte com a legenda, revezando ' +
-          'entre os pares abaixo. Não consulta o fluxo, não conclui o atendimento e não grava nada ' +
-          'no CRM — só manda e segue.'),
+        'Dois caminhos, os dois revezando entre os pares abaixo: percorrer a FILA que você filtrou ' +
+          'na esquerda, ou percorrer os CONTATOS de uma etiqueta, abrindo um atendimento novo em ' +
+          'cada um. Nenhum dos dois consulta o fluxo.'),
       h('div', { class: 'wf-origin' },
         'O par é a imagem COM o texto dela: a descrição de uma arte não serve para outra. Par ' +
           'preenchido pela metade fica fora do revezamento, e quem já recebeu qualquer um dos ' +
@@ -4382,6 +4382,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     comecarPorEtiqueta.disabled = state.auto.rodando || travaEtiqueta.length > 0;
     sonda.disabled = comecarPorEtiqueta.disabled;
     for (const motivo of travaEtiqueta) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, motivo));
+
+    card.append(h('div', { class: 'wf-origin' },
+      'Cada contato recebe a arte, é marcado com a etiqueta do lote e o atendimento é CONCLUÍDO — ' +
+        'sem concluir, um lote de 200 deixa 200 atendimentos abertos em "Meus". Mensagem que ficar ' +
+        'em fila não é concluída: concluir cancelaria o próprio envio.'));
 
     card.append(h('div', { class: 'wf-origin' },
       '"Testar em UM contato" manda para o PRIMEIRO da lista e para — a rota que abre atendimento ' +
@@ -5606,13 +5611,40 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       const marca = await marcarEtiquetaDoLote(contato, tagDoLote);
 
+      /**
+       * **Concluir o atendimento** — decisão dele (01/10/2026): *"sim tem que concluir"*. Sem isso
+       * um lote de 200 envios deixa 200 atendimentos abertos em "Meus", e as outras rodadas
+       * passariam a percorrê-los.
+       *
+       * **A guarda é o status da mensagem, e ela não é teórica:** a própria tela avisa, antes de
+       * concluir, que *"uma mensagem está aguardando resposta do contato; se você prosseguir com a
+       * conclusão, essas mensagens serão canceladas"*. Pela API não há diálogo nenhum — então
+       * mensagem que ficou em FILA não é concluída, porque concluir **cancelaria o próprio envio**
+       * e a rodada contaria como enviado. O atendimento fica aberto e a linha diz por quê.
+       *
+       * **Falha ao concluir não desfaz o envio** (a prioridade de 20/08): a arte saiu e a etiqueta
+       * está no contato. O que não pode é ser silenciosa.
+       */
+      let fecho = '';
+      if (String(r.status || '').toUpperCase() === 'QUEUED') {
+        fecho = ' — deixei ABERTO: a mensagem ficou em fila, e concluir agora a cancelaria';
+      } else {
+        try {
+          await api.concluirAtendimento(aberto.sessionId);
+          fecho = ' + concluido';
+        } catch (err) {
+          fecho = ` — nao consegui concluir (${err?.message || err}); o atendimento ficou aberto`;
+        }
+      }
+
       return {
         nome,
         resultado: 'enviado',
         motivo:
           `par ${par.n} ("${par.arquivo.nome}")` +
           (r.legendaFoi ? ' com a legenda junto' : ' — a legenda foi como mensagem separada') +
-          marca,
+          marca +
+          fecho,
       };
     } catch (err) {
       return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message), rede: ehErroDeRede(err.message) };
@@ -6162,6 +6194,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             ? 'Fora da lista: quem ja tem a etiqueta do lote e quem esta marcado como sem interesse.\n'
             : 'ATENCAO: sem etiqueta de lote nem de sem interesse configuradas, ninguem esta sendo excluido.\n') +
           (nomeEtiquetaLote ? `Cada um que receber e marcado com "${nomeEtiquetaLote}".\n` : '') +
+          'O atendimento e CONCLUIDO depois de mandar.\n' +
           '\nConfirma?'
       )
     ) {
