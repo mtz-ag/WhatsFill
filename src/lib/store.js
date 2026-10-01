@@ -835,6 +835,29 @@ const DEFAULTS = {
       'Ah, e aproveitando: notei que ainda não tenho o seu nome aqui nos meus contatos, e também ' +
       'não sei de onde você é. Pode me passar:\n\nNome , Cidade\n\n(exemplo: Pedro Silva , ' +
       'Porto Alegre)',
+
+    /**
+     * **O ENVIO EM LOTE: quatro pares de IMAGEM + LEGENDA, revezando** (pedido dele, 01/10/2026:
+     * *"preciso enviar uma imagem e um texto especifico fora do fluxo... e va variando entre umas 4
+     * imagens e descricoes diferentes enquanto manda"*).
+     *
+     * **Vazio e o estado normal:** sem par preenchido o botao da rodada nem liga, e nenhuma destas
+     * chaves muda o que as outras rodadas fazem — este lote nao passa pelo quadro.
+     *
+     * `imagemLoteN` e o link opcional (irmao de `imagemMomento`); os BYTES da arte moram fora do
+     * `auto`, em `imagemLoteArquivoN`, porque quem os sobe e o service worker, que le a chave
+     * direto do armazenamento e nao sabe quem esta logado (a razao da `perfis.chaveDeImagem`).
+     *
+     * Ver `lib/lote.js` — inclusive por que o par e imagem+texto junto, e nao 4 cruzados com 4.
+     */
+    imagemLote1: '',
+    legendaLote1: '',
+    imagemLote2: '',
+    legendaLote2: '',
+    imagemLote3: '',
+    legendaLote3: '',
+    imagemLote4: '',
+    legendaLote4: '',
     /**
      * A partir de quantas horas de silêncio a rodada **pergunta** em vez de concluir sozinha,
      * quando a última mensagem da conversa é nossa.

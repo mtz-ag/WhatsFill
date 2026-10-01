@@ -82,6 +82,7 @@ src/lib/sugestao.js     tabela de regras da rodada, e os verbetes dela (puro, te
 src/lib/arvore.js       o fluxo como ARVORE: sinais, ramos dele, decisao (puro, testado)
 src/lib/anuncios.js     ANUNCIOS do momento: texto que reconhece + o que fazer (puro, testado)
 src/lib/perfis.js       os CANDIDATOS: quem atende cada canal e o que e dele (puro, testado)
+src/lib/lote.js         ENVIO EM LOTE: pares de imagem + legenda, revezando (puro, testado)
 src/lib/observacoes.js  o caderno das sugestoes erradas, com o caso junto (puro, testado)
 src/fluxo.html/.css/.js JANELA do fluxo: o QUADRO (caixas soltas, fios, arrastar, editar)
 src/lib/fluxo-msg.js    a mensagem que pede ao service worker para abrir a janela
@@ -2359,6 +2360,27 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   viraria caso da IA. **Ao mexer em `PALAVRAS_SEM_CONTEUDO`, "não" fica de fora** — é a negação que faz
   *"não recebi o material"* pedir resposta.
 
+- **ENVIO EM LOTE (imagem + legenda) E UMA RODADA FORA DO QUADRO, E AS PROTECOES CONTINUAM**
+  (01/10/2026, pedido dele: *"preciso enviar uma imagem e um texto especifico fora do fluxo... e va
+  variando entre umas 4 imagens e descricoes diferentes enquanto manda"*). `lib/lote.js` + o cartao
+  na aba Automatizado + `processarLote`. **Tres coisas para quem mexer:**
+  **(1) O par e imagem COM texto** — cruzar 4 artes com 4 descricoes daria 16 combinacoes e legenda
+  falando de uma imagem que nao e a que foi. Par pela metade fica fora do revezamento; par VAZIO
+  nao e falta.
+  **(2) Fora do quadro NAO e fora das protecoes:** barreira do canal, etiqueta de sem interesse /
+  assessor, e *"ja recebeu QUALQUER par"* — este ultimo e a armadilha do rodizio (02/09), em que a
+  conferencia olhava so o item sorteado e bastava o ponteiro andar para o contato receber de novo.
+  O ponteiro e o `varianteIndex` (id `lote-imagem`) e **so anda depois que a mensagem sai**.
+  **(3) `continuaNaFila: true` era OBRIGATORIO e a falta e invisivel:** `enviado` conta no limite,
+  entao sem a marca `saiuDaLista` da true, a posicao nao anda e a rodada reabre o MESMO contato toda
+  volta — o `visitados` evita o envio duplo ao custo de uma abertura extra por contato, e abertura e
+  o que derruba a API. **Ao escrever rodada que nao conclui nem assume, diga que o contato continua
+  na fila.**
+  **E o custo medido e ~9 requisicoes por contato** (1 abertura + 3 do `load` + **5 do envio de
+  imagem**): 40 contatos sao ~360, e a rodada que estourou o limitador em 24/09 fez 444 — o limite e
+  a pausa sao o freio. **Reaproveitar o `fileId` entre contatos cortaria para ~5 e e HIPOTESE**: o
+  envio gravado tem um `fileId` por mensagem e ninguem observou a plataforma aceitar o mesmo arquivo
+  em duas: a sonda e mandar duas no contato de teste com o mesmo id e reler a resposta.
 - **A IMAGEM SAI POR CINCO PASSOS, E CADA METADE TEM QUE SAIR DE UM LUGAR DIFERENTE** (20/09/2026,
   gravado observando ele mandar uma à mão). `POST /core/v1/file/upload` → **`PUT` dos bytes no
   endereço assinado do S3** → `POST /core/v1/file/transform` → `PUT /core/v1/file` (devolve o
@@ -4418,10 +4440,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
 > `src/` e reclama só de `SyntaxError`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as dezenove suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

@@ -28,6 +28,7 @@ import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
+import * as loteLib from '../lib/lote.js';
 import { MSG_FLUXO } from '../lib/fluxo-msg.js';
 import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
@@ -314,6 +315,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     iaChaves: { anthropic: false, openai: false },
     /** As imagens que vão junto da mensagem, lidas do armazenamento — ver `campoDeImagem`. */
     imagens: { imagemMomentoArquivo: null, imagemPedidoDadosArquivo: null },
+    /** O ponteiro de revezamento dos pares do lote — ver `lote.parDaVez`. */
+    loteIndice: 0,
     /** O envio de imagem aprendido observando a plataforma — ver `recorder.aprenderEnvioDeImagem`. */
     contratoImagem: null,
     /** Esperas longas em curso, por tarefa — ver `semTravarOPainel`. NUNCA use `state.busy` para elas. */
@@ -1589,6 +1592,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       imagemMomentoArquivo: await store.get(perfisLib.chaveDeImagem('imagemMomentoArquivo', perfilAtivo())),
       imagemPedidoDadosArquivo: await store.get(perfisLib.chaveDeImagem('imagemPedidoDadosArquivo', perfilAtivo())),
     };
+    /**
+     * **As quatro artes do envio em lote, no MESMO lugar que as outras duas.**
+     *
+     * Chave nova de imagem lida noutro ponto é a armadilha registrada em 25/09 (*"ao pôr uma chave
+     * nova em `CHAVES_DO_PERFIL`, procure os DOIS lugares que releem: o `load()` e a troca de
+     * login"*) — esta função é chamada pelos dois, e é por isso que elas entram aqui.
+     */
+    for (let n = 1; n <= loteLib.QUANTOS_PARES; n++) {
+      const chave = perfisLib.chaveDeImagem(loteLib.chaveDaImagem(n), perfilAtivo());
+      state.imagens[chave] = await store.get(chave);
+    }
+    state.loteIndice = (await store.get('varianteIndex'))[loteLib.ID_DA_ROTACAO] || 0;
     state.iaChaves = {
       anthropic: !!(await store.get('iaChave')),
       openai: !!(await store.get('iaChaveOpenai')),
@@ -3240,6 +3255,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(renderCartaoFila());
     body.append(renderCartaoNovos(cfg));
     body.append(renderCartaoMomento(cfg));
+    body.append(renderCartaoLote(cfg));
     body.append(renderCartaoRespondidos());
     body.append(renderCartaoEtiquetas(cfg));
     // "Sem retorno" (reabrir em lote + trabalhar em Meus) escondida por decisão do Thiago
@@ -4116,6 +4132,90 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     comecar.disabled = state.auto.rodando || impedimentos.length > 0;
     for (const motivo of impedimentos) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, motivo));
+    return card;
+  }
+
+  /**
+   * **O ENVIO EM LOTE: imagem + legenda, revezando entre quatro pares** (pedido dele, 01/10/2026).
+   *
+   * Esta rodada **não passa pelo quadro**: não há nada a responder, é ele mandando a mesma coisa
+   * para uma lista. O que continua de pé são as PROTEÇÕES (etiqueta de sem interesse, de assessor,
+   * barreira do canal) — a distinção preferência/proteção de 03/09.
+   *
+   * **O revezamento é o ponto, não um enfeite.** A medição é dele (26/09): menos de dez mensagens
+   * IGUAIS em sequência derrubaram um número, e o eixo que pune isso é o padrão de envio
+   * (`channel.status` FLAGGED), não a denúncia. Quatro pares de arte e texto é o que ele pediu e é
+   * o que esta tela existe para tornar fácil.
+   */
+  function renderCartaoLote(cfg) {
+    const porPerfil = (nome) => perfisLib.chaveDeImagem(nome, perfilAtivo());
+    const pares = loteLib.paresProntos({ cfg, imagens: state.imagens, chaveDeImagem: porPerfil });
+    const faltas = loteLib.oQueFalta({ cfg, imagens: state.imagens, chaveDeImagem: porPerfil });
+    const limite = clampInt(cfg.limite, 1, 200);
+    const pausaSeg = clampInt(cfg.pausaSeg, 3, 300);
+
+    const card = h('div', { class: 'wf-card' }, [
+      h('h4', {}, 'Envio em lote: imagem + legenda'),
+      h('div', { class: 'wf-preview' },
+        'Percorre a lista que você filtrou na esquerda e manda a arte com a legenda, revezando ' +
+          'entre os pares abaixo. Não consulta o fluxo, não conclui o atendimento e não grava nada ' +
+          'no CRM — só manda e segue.'),
+      h('div', { class: 'wf-origin' },
+        'O par é a imagem COM o texto dela: a descrição de uma arte não serve para outra. Par ' +
+          'preenchido pela metade fica fora do revezamento, e quem já recebeu qualquer um dos ' +
+          'quatro é pulado — é o conjunto que conta, não o par da vez.'),
+    ]);
+
+    for (let n = 1; n <= loteLib.QUANTOS_PARES; n++) {
+      const bloco = h('div', {}, [h('div', { class: 'wf-sub' }, h('b', {}, `Par ${n}`))]);
+      bloco.append(...campoDeImagem({
+        rotulo: `Imagem do par ${n}`,
+        valor: cfg[loteLib.chaveDoLink(n)],
+        aoMudar: (v) => salvarAuto({ [loteLib.chaveDoLink(n)]: v }).then(renderAll),
+        chaveDoArquivo: porPerfil(loteLib.chaveDaImagem(n)),
+        semInterruptor: true,
+      }));
+      const area = h('textarea', { rows: '3', placeholder: `Legenda do par ${n}` });
+      area.value = cfg[loteLib.chaveDaLegenda(n)] || '';
+      area.addEventListener('change', () =>
+        salvarAuto({ [loteLib.chaveDaLegenda(n)]: area.value }).then(renderAll)
+      );
+      bloco.append(area);
+      card.append(bloco);
+    }
+
+    if (pares.length) {
+      card.append(h('div', { class: 'wf-hint' }, 'Variáveis: ' + vars.KNOWN_VARS.map(([v]) => v).join(' ')));
+      const divisao = loteLib.comoVaiRevezar(pares.length, limite);
+      card.append(h('div', { class: 'wf-preview', 'data-fica': '1' },
+        `${pares.length} par(es) pronto(s). Em ${limite} contatos: ` +
+          divisao.map((q, i) => `${q} com o par ${pares[i].n}`).join(', ') +
+          `. O próximo a sair é o par ${loteLib.parDaVez(pares, state.loteIndice).n}.`));
+    }
+
+    // Par pela metade é o único estado que vale avisar: par vazio é par que ele não usou.
+    for (const falta of faltas) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, falta));
+
+    const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Começar o envio em lote');
+    comecar.addEventListener('click', () => withBusy(runLoteImagem));
+    card.append(h('div', { class: 'wf-row' }, [comecar]));
+
+    const trava = [];
+    if (!pares.length) trava.push('Preencha ao menos um par: a imagem E a legenda dele.');
+    if (!state.settings.autoSend) trava.push('Precisa do "Enviar automático" ligado (aba Config).');
+    if (!state.contratoImagem) {
+      trava.push(
+        'Falta aprender o envio de imagem: mande uma à mão com "Aprender de novo o envio de imagem" ' +
+          'ligado (aba Config). Sem isso a arte não sai.'
+      );
+    }
+    comecar.disabled = state.auto.rodando || trava.length > 0;
+    for (const motivo of trava) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, motivo));
+
+    card.append(h('p', { class: 'wf-hint' },
+      `Vai até ${limite} contato(s), com ${pausaSeg}s entre um envio e outro — o mesmo limite e a ` +
+        'mesma pausa do cartão de ritmo, lá em cima.'));
+
     return card;
   }
 
@@ -5547,6 +5647,157 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * `statuses=IN_PROGRESS` + `exceptUserIds=você`). Concluir ali fecha o atendimento de um
    * colega, então o aviso vai no confirm.
    */
+  /**
+   * **A rodada do ENVIO EM LOTE** — pedido dele (01/10/2026): *"preciso enviar uma imagem e um texto
+   * especifico fora do fluxo, simplesmente vou mandar para os contatos"*.
+   *
+   * **O `confirm` diz os números na frente** porque esta é a rodada que mais se parece com disparo
+   * em massa, e o orçamento medido é pequeno: menos de dez mensagens iguais em sequência já
+   * derrubaram um número dele (26/09). O que ele precisa ler antes de começar é quantos vão, com
+   * que pausa e quantos cada par pega.
+   */
+  async function runLoteImagem() {
+    const porPerfil = (nome) => perfisLib.chaveDeImagem(nome, perfilAtivo());
+    const pares = loteLib.paresProntos({
+      cfg: state.auto.cfg,
+      imagens: state.imagens,
+      chaveDeImagem: porPerfil,
+    });
+    if (!pares.length) return setStatus('Preencha ao menos um par: a imagem E a legenda dele.', 'err');
+    if (!state.settings.autoSend) {
+      return setStatus('Ligue o "Enviar automatico" na aba Config antes de rodar.', 'err');
+    }
+    if (!state.contratoImagem) {
+      return setStatus('Falta aprender o envio de imagem (aba Config) — sem isso a arte nao sai.', 'err');
+    }
+
+    const limite = clampInt(state.auto.cfg.limite, 1, 200);
+    const pausaSeg = clampInt(state.auto.cfg.pausaSeg, 3, 300);
+    const divisao = loteLib.comoVaiRevezar(pares.length, limite);
+
+    if (
+      !confirm(
+        `Vou mandar IMAGEM + LEGENDA para até ${limite} contato(s) da lista que você filtrou, com ` +
+          `${pausaSeg}s entre um e outro.\n\n` +
+          `Revezando entre ${pares.length} par(es): ` +
+          divisao.map((q, i) => `${q} com o par ${pares[i].n}`).join(', ') +
+          '.\n\n' +
+          'Nao consulta o fluxo, nao conclui o atendimento e nao grava nada no CRM. Quem ja ' +
+          'recebeu qualquer um dos pares é pulado, e quem tem etiqueta de sem interesse ou de ' +
+          'assessor também.\n\n' +
+          'Confira que a lista da esquerda é a que você quer percorrer. Confirma?'
+      )
+    ) {
+      return setStatus('Envio em lote cancelado.');
+    }
+
+    // O ▶ do controle flutuante recomeça POR AQUI: o confirm desta rodada mora nesta função.
+    recomecarRodada = runLoteImagem;
+    await rodar({ aba: null, processar: processarLote });
+  }
+
+  /**
+   * **Um contato do envio em lote: manda a arte com a legenda e segue.**
+   *
+   * Fora do quadro de propósito — não há o que responder. O que NÃO é dispensável e continua aqui:
+   *
+   *  - **a barreira do canal**, igual à de `processarRespondido`: mandar o material de um candidato
+   *    pelo número do outro é o defeito que ela existe para impedir;
+   *  - **a etiqueta que só conclui** (sem interesse, assessor): material de campanha para quem
+   *    pediu para não ser mais chamado é a etiqueta permanente do CRM virando dano;
+   *  - **quem já recebeu QUALQUER par**, pela conversa e nunca pelo registro de envios.
+   *
+   * **Não conclui e não escreve nada no CRM** (a decisão dele de 31/08 sobre o pulo), então o
+   * atendimento continua na lista: `continuaNaFila: true` é o que faz a posição andar. Sem isso o
+   * laço reabriria o mesmo contato, e abertura é o que derruba a API.
+   */
+  async function processarLote(sessionId, ctx) {
+    let nome = 'contato';
+    try {
+      await load(sessionId);
+      if (!state.contact) return { nome, resultado: 'erro', motivo: 'nao consegui carregar o contato' };
+      nome = state.contact.name || state.contact.nameWhatsapp || 'sem nome';
+
+      const canal = state.canalDoAtendimento || { estado: 'quieto' };
+      if (canal.estado === 'outro' && canal.dono) {
+        return {
+          nome,
+          resultado: 'pulado',
+          motivo:
+            `este atendimento é do número de ${canal.dono.nome} e você está como ` +
+            `${state.perfil?.nome || 'o candidato de sempre'} — nao mandei para nao sair a arte do candidato errado`,
+        };
+      }
+      if (canal.estado === 'desconhecido') {
+        return {
+          nome,
+          resultado: 'pulado',
+          motivo: 'o número deste atendimento nao está em nenhum candidato da Config — nao mandei nada',
+        };
+      }
+
+      const soConclui = await etiquetaQueSoConclui();
+      if (soConclui) {
+        return { nome, resultado: 'pulado', motivo: `tem a etiqueta "${soConclui}" — nao recebe material` };
+      }
+
+      const porPerfil = (chave) => perfisLib.chaveDeImagem(chave, perfilAtivo());
+      const pares = loteLib.paresProntos({
+        cfg: state.auto.cfg,
+        imagens: state.imagens,
+        chaveDeImagem: porPerfil,
+      });
+      if (!pares.length) {
+        return { nome, resultado: 'erro', motivo: 'nenhum par com imagem E legenda — nada a mandar' };
+      }
+
+      const jaFoi = loteLib.jaRecebeu(pares, state.nossas);
+      if (jaFoi) {
+        return { nome, resultado: 'pulado', motivo: `ja recebeu o par ${jaFoi} deste lote` };
+      }
+
+      const par = loteLib.parDaVez(pares, state.loteIndice);
+      const rendido = vars.render(par.legenda, await currentVarContext());
+      if (rendido.missing.length) {
+        return {
+          nome,
+          resultado: 'pulado',
+          motivo: `a legenda do par ${par.n} usa ${rendido.missing.join(', ')} e este contato nao tem`,
+        };
+      }
+
+      const r = await page.enviarImagem({
+        sessionId,
+        senderId: state.senderId,
+        chave: par.chave,
+        legenda: rendido.text,
+      });
+      // A legenda só é dada por entregue quando a plataforma a devolve. Nao voltando, o texto sai
+      // do jeito de sempre: o pior caso é o contato receber duas mensagens, nunca uma imagem muda.
+      if (!r.legendaFoi) await page.sendText(rendido.text);
+      state.lastSendAt = Date.now();
+
+      /**
+       * **O ponteiro só anda DEPOIS de a mensagem sair** — mesma disciplina de
+       * `templates.avancarVariante`. Queimar a rotação num envio que falhou faria o par seguinte
+       * pular sozinho, e o par que ninguém recebeu seria dado por entregue.
+       */
+      const indices = await store.get('varianteIndex');
+      state.loteIndice = (Number(state.loteIndice) || 0) + 1;
+      await store.set('varianteIndex', { ...indices, [loteLib.ID_DA_ROTACAO]: state.loteIndice });
+
+      registrarNaRodada(
+        nome,
+        'enviado',
+        `par ${par.n} ("${par.arquivo.nome}")` +
+          (r.legendaFoi ? ' com a legenda junto' : ' — a legenda foi como mensagem separada')
+      );
+      return { nome, resultado: 'enviado', continuaNaFila: true };
+    } catch (err) {
+      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message), rede: ehErroDeRede(err.message) };
+    }
+  }
+
   async function runLoteOutros() {
     if (!state.settings.autoSend) {
       return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
@@ -9191,12 +9442,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * **Caminho do disco (`C:\...`) não serve, e o aviso diz isso na hora**: a extensão roda dentro da
    * página e não lê arquivo do computador; o que ela consegue buscar é um endereço público.
    */
-  function campoDeImagem({ rotulo, valor, ligada, aoMudar, aoLigar, chaveDoArquivo }) {
+  function campoDeImagem({ rotulo, valor, ligada, aoMudar, aoLigar, chaveDoArquivo, semInterruptor = false }) {
     const caminho = String(valor || '').trim();
     const doDisco = /^[a-z]:\\/i.test(caminho) || caminho.startsWith('\\\\') || caminho.startsWith('file:');
     const guardada = state.imagens?.[chaveDoArquivo] || null;
     const nome = rotulo.split(' (')[0];
-    const linhas = [checkbox(`${nome}: mandar junto`, !!ligada, aoLigar)];
+    /**
+     * **O interruptor existe onde a imagem ACOMPANHA um texto que sai de qualquer jeito** (a do
+     * momento, a do pedido de dados): ali "mandar junto" e uma escolha. No envio em lote a imagem
+     * E a mensagem — par sem arte nao e par —, entao o controle seria um botao que so desliga a
+     * propria linha, e caixa morta na tela e pior que caixa nenhuma.
+     */
+    const linhas = semInterruptor ? [] : [checkbox(`${nome}: mandar junto`, !!ligada, aoLigar)];
 
     /**
      * **Escolher o arquivo é o caminho principal** (20/09/2026). A janela do Windows abre a partir do
@@ -9278,18 +9535,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * que espera conserto e um que mente. Falta aprender o envio observando a plataforma fazer uma
      * vez — a mesma disciplina do contrato de escrita no CRM (`recorder.js`).
      */
-    if (ligada && (guardada || (caminho && !doDisco))) {
-      /**
-       * **Aviso que não envelhece com o que já foi feito é aviso que mente** — ele aprendeu o envio e o
-       * texto continuava mandando aprender (print de 20/09/2026). O que continua verdade é só a segunda
-       * metade: aprendido ou não, a imagem ainda não sai.
-       */
+    /**
+     * **Aviso que não envelhece com o que já foi feito é aviso que mente** — e este mentia duas
+     * vezes (01/10/2026). Ele dizia *"falta eu ligar o envio de verdade"* **com o envio já ligado**:
+     * a cadeia foi escrita em 20/09 (`imagem.enviarImagem`), e `sendTemplate` manda a arte antes do
+     * texto desde então. O texto velho era verdade por algumas horas e ficou na tela.
+     *
+     * O que continua verdadeiro é só o caso de NÃO haver envio aprendido, e é só ele que fica.
+     */
+    if ((ligada || semInterruptor) && guardada && !state.contratoImagem) {
       linhas.push(h('div', { class: 'wf-block', 'data-fica': '1' },
-        state.contratoImagem
-          ? 'Guardado, e o envio já foi aprendido. Falta eu ligar o envio de verdade a partir do que ' +
-            'foi gravado — até lá o texto sai sem a imagem.'
-          : 'Guardado. A extensão ainda não manda a imagem sozinha: falta o passo de aprender o envio ' +
-            'com você mandando uma imagem à mão uma vez. Até lá, o texto sai sem ela.'));
+        'Guardada. Falta o passo de aprender o envio, com você mandando uma imagem à mão uma vez — ' +
+          'até lá a extensão não tem como mandar a arte sozinha.'));
     }
     return linhas;
   }

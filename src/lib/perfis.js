@@ -109,6 +109,16 @@ export const CHAVES_DO_PERFIL_EM_AUTO = [
   'imagemPedidoDadosLigada',
   'templateId',
   'templateName',
+  // Os quatro pares do envio em lote: a legenda E o que o eleitor le, entao e de cada candidato.
+  // A lista vem de `lote.chavesNoAuto()` e esta escrita aqui para nao haver duas fontes.
+  'imagemLote1',
+  'legendaLote1',
+  'imagemLote2',
+  'legendaLote2',
+  'imagemLote3',
+  'legendaLote3',
+  'imagemLote4',
+  'legendaLote4',
 ];
 
 /**
@@ -128,6 +138,14 @@ const AUTO_VAZIO = {
   imagemPedidoDadosLigada: false,
   templateId: '',
   templateName: '',
+  imagemLote1: '',
+  legendaLote1: '',
+  imagemLote2: '',
+  legendaLote2: '',
+  imagemLote3: '',
+  legendaLote3: '',
+  imagemLote4: '',
+  legendaLote4: '',
 };
 
 /**

@@ -1,3 +1,92 @@
+## 2026-10-01 — v3.130.0 — envio em lote: imagem + legenda, revezando entre quatro pares
+
+**Pedido dele:** *"preciso enviar uma imagem e um texto específico fora do fluxo, simplesmente vou
+mandar para os contatos; preciso que a automatização mande e vá variando entre umas 4 imagens e
+descrições diferentes enquanto manda"*.
+
+**O que entrou:** o cartão **"Envio em lote: imagem + legenda"** na aba Automatizado, com quatro
+pares (arte + legenda), e a rodada que percorre a lista filtrada mandando a arte com a legenda,
+revezando. `src/lib/lote.js` é a parte pura, com suíte própria — as suítes passaram de 19 para 20.
+
+### Três decisões de desenho, e o porquê de cada uma
+
+**1. O par é imagem COM texto, e não 4 artes cruzadas com 4 descrições.** Cruzar daria 16
+combinações e a descrição de uma arte não serve para outra — sairia legenda falando de uma imagem
+que não é a que foi. Par N = arte N + texto N, os dois ou nenhum; par pela metade fica fora do
+revezamento e a tela diz qual metade falta (par VAZIO não é falta: é par que ele não usou).
+
+**2. Fora do quadro, mas as PROTEÇÕES ficam.** Nenhuma regra de `sugestao`/`arvore` é consultada —
+não há o que responder, é ele mandando a mesma coisa para uma lista. O que continua de pé é o que
+não é preferência e sim *"não mande nada"*, a distinção de 03/09:
+
+| guarda | por que não é dispensável |
+|---|---|
+| barreira do canal | arte de um candidato saindo pelo número do outro |
+| etiqueta de sem interesse / assessor | material de campanha para quem pediu para não ser chamado |
+| já recebeu **qualquer** par | a armadilha do rodízio (02/09) |
+
+**3. A anti-duplicata cobre o CONJUNTO, nunca o par da vez.** É a armadilha registrada do modelo
+padrão com rodízio: `modeloJaNaConversa` olhava só o que sairia agora, e bastava o ponteiro andar
+entre duas passadas para o mesmo contato receber de novo. Aqui as quatro legendas dizem a mesma
+coisa de quatro jeitos, então ter recebido uma é ter recebido o lote. Pergunta à **conversa**, nunca
+ao registro de envios — ele manda à mão, e o registro não vê isso.
+
+### O revezamento usa o ponteiro que já existia
+
+`varianteIndex`, o mesmo das variantes das respostas prontas, com o id `lote-imagem`. E **ele só
+anda depois que a mensagem sai de verdade** (a disciplina de `templates.avancarVariante`): queimar a
+rotação num envio que falhou faria o par seguinte pular sozinho, e o par que ninguém recebeu seria
+dado por entregue.
+
+### Duas coisas que a medição obrigou antes de ir ao ar
+
+**`continuaNaFila: true` era obrigatório, e a falta dele é invisível.** O laço calcula
+`saiuDaLista = ... || (contou && !r.continuaNaFila)`, e `enviado` conta no limite — sem a marca a
+posição **não andaria** e a rodada reabriria o mesmo contato em cada volta. O `visitados` protege do
+envio duplo, mas ao custo de uma abertura extra por contato, e abertura é o que derruba a API.
+
+**`etiquetaQueSoConclui` é ASSÍNCRONA.** `!etiquetaQueSoConclui()` sem `await` testa uma promessa e
+é sempre falso — a proteção mais destrutiva do arquivo passaria batido sem nenhum teste nem
+verificador acusar. Já está registrado como armadilha desde 10/09; chamei com `await`.
+
+### O custo em requisições, medido na cadeia
+
+Cada contato custa **~9 requisições**: 1 abertura na plataforma + 3 nossas do `load` + **5 do envio
+de imagem** (`upload`, o `PUT` no S3, `transform`, `PUT /file`, `PUT .../message`). Em 40 contatos
+são **~360** — e a rodada que estourou o limitador em 24/09 fez 444. **O limite e a pausa do cartão
+de ritmo são o freio, e não enfeite.**
+
+**O que ficou de fora de propósito:** reaproveitar o `fileId` entre contatos. A cadeia sobe a arte
+**de novo a cada envio**, e o passo 5 só precisa do `fileId` — então subir cada arte uma vez e reusar
+cortaria de ~9 para ~5 requisições por contato. **Mas isso é hipótese**: o envio gravado em 20/09 tem
+um `fileId` por mensagem, e ninguém observou a plataforma aceitando o mesmo arquivo em duas
+mensagens. É a disciplina do contrato de escrita — para liberar, a sonda é mandar duas no contato de
+teste com o mesmo `fileId` e reler a resposta.
+
+### Um aviso que mentia, no cartão que eu estava reusando
+
+`campoDeImagem` dizia *"Guardado, e o envio já foi aprendido. Falta eu ligar o envio de verdade"* —
+**com o envio ligado desde 20/09**, quando `sendTemplate` passou a mandar a arte antes do texto. O
+texto foi verdade por algumas horas e ficou na tela; reusando o helper quatro vezes, ele apareceria
+quatro vezes mais, num cartão cujo assunto é justamente mandar imagem. Hoje sobra só a metade que
+continua verdadeira: sem envio aprendido, a arte não sai.
+
+E o **interruptor "mandar junto" não aparece** nos pares do lote (`semInterruptor`): ele existe onde
+a imagem ACOMPANHA um texto que sai de qualquer jeito, e aqui a imagem É a mensagem — seria uma
+caixa que só desliga a própria linha.
+
+### O que ele precisa fazer, e o que eu não fiz
+
+1. **Preencher os pares** (aba Automatizado, cartão novo): a arte pelo botão "Escolher imagem" (só
+   JPEG, até 2 MB) e a legenda no campo de baixo.
+2. **"Enviar automático" ligado** (aba Config) e o **envio de imagem aprendido** — o botão pede uma
+   imagem mandada à mão uma vez. Sem isso o botão fica travado com o motivo escrito.
+3. **Filtrar na esquerda a lista que ele quer percorrer**, porque é ela que a rodada percorre.
+
+**Ainda não fiz, e continua sendo o próximo item:** o cartão de saúde do canal (`status`, `quality`,
+`type` e `typeDetails` por número). Esta rodada é exatamente a que mais precisa dele — ela é a que
+mais se parece com disparo em massa —, e hoje o freio é só o limite, a pausa e a variação.
+
 ## 2026-09-27 — medição (sem mudança de comportamento) — reabrir não é o que o WhatsApp vê, e a janela de 24h é PROPRIEDADE DO CANAL
 
 **Pergunta dele, desmontando um argumento que eu dei:** *"não entendi a relação; estou trabalhando em
