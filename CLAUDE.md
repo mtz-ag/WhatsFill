@@ -2233,6 +2233,32 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **O `accept` DO SELETOR E A LISTA DE PERMISSAO DA PLATAFORMA, E O EXPLORER ESCONDE O RESTO**
+  (01/10/2026, *"a extensao ao escolher imagem nao atualiza o explorer, baixei uma imagem nova e ela
+  nao mostra"* — e, perguntado, *"e por ser png"*). **Medido: nao havia nada a atualizar.** O campo
+  era `accept={imagemLib.MIMES_ACEITOS}`, que e `image/jpeg,image/jpg`, entao a janela do Windows
+  **filtrava o arquivo recem-baixado para fora da listagem**. O diagnostico natural ("listagem
+  velha") era o errado, e o certo estava numa linha de `accept`.
+  **O conserto NAO toca na lista da plataforma, e e esse o ponto:** a armadilha de 20/09 continua de
+  pe (o passo do `transform` e o unico valor que nao da para derivar, e o que a plataforma faz com
+  PNG **ninguem viu** — liberar ali seria hipotese, e hipotese aqui e arte muda chegando em eleitor).
+  Hoje o PNG **para antes**: `createImageBitmap` + canvas em `converterParaJpeg`, e o que vai para o
+  armazenamento e JPEG — a cadeia de envio recebe exatamente o que ja recebia. Sao TRES listas agora:
+  `MIMES_ACEITOS` (a plataforma), `CONVERTIVEIS_AQUI` (o navegador, antes dela ver) e
+  `MIMES_DO_SELETOR` (a soma, que e o que o Explorer mostra), e o teste exige que o seletor **nunca
+  mostre menos** que a plataforma aceita.
+  **Quatro coisas para quem mexer:** **fundo BRANCO e obrigatorio** (JPEG nao tem transparencia, e
+  PNG recortado em canvas vazio sai com fundo PRETO); **JPEG que ja cabe vai byte a byte**, porque
+  reconverter perde qualidade de graca; **os dois tetos sao dois de proposito** (guardar 2 MB,
+  escolher 12 MB — PNG e inchado, e recusar pelo tamanho do ORIGINAL recusa o que cabe); e **imagem
+  menor que 1600px nunca e ampliada**, que so gastaria armazenamento. A linha de status **diz o que
+  foi feito com a arte dele** — conversao silenciosa em dado dele nao serve.
+  **E a outra metade de "nao atualiza": campo de arquivo precisa de `value = ''` depois de usar** —
+  sem isso o MESMO arquivo escolhido de novo nao dispara `change`, e o botao fica mudo justo depois
+  de uma recusa ou de ele trocar a arte mantendo o nome.
+  **Global do navegador novo custa uma linha em `GLOBAIS` do `checar-referencias.mjs`**, que acusou
+  `createImageBitmap` como chamada sem declaracao.
+
 - **PRE-REQUISITO DE RODADA ENVELHECE JUNTO COM O DESENHO QUE O CRIOU** (26/09/2026, pergunta dele:
   *"em Meus esta dando esse erro, isso nao e um resquicio do padrao anterior? agora temos os modelos
   por anuncio"*). A rodada dos "Meus" se RECUSAVA a comecar sem a tabela *"Modelo por conteudo"* —

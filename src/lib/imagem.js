@@ -61,8 +61,79 @@ export function conversaoDe(mime) {
   return CONVERSAO_POR_MIME[String(mime || '').trim().toLowerCase()] || null;
 }
 
-/** O que o campo de escolher arquivo aceita, e o que a tela promete: só o que foi observado. */
+/** O que a PLATAFORMA aceita, e o que o passo 3 sabe converter: só o que foi observado. */
 export const MIMES_ACEITOS = Object.keys(CONVERSAO_POR_MIME).join(',');
+
+/**
+ * **O que o NAVEGADOR converte aqui, antes de a plataforma ver** (01/10/2026, relato dele: *"a
+ * extensão ao escolher imagem não atualiza o explorer, baixei uma imagem nova e ela não mostra"*
+ * — era PNG, e o `accept` do seletor era a lista acima, então a janela do Windows **escondia o
+ * arquivo**. Não havia nada a atualizar: o arquivo estava filtrado).
+ *
+ * **A lista de permissão da plataforma NÃO mudou, e é esse o ponto.** O que sobe continua sendo
+ * `image/jpeg`, o único formato que o envio gravado mostrou; o que mudou é onde o PNG para — ele é
+ * desenhado num canvas e sai JPEG **do lado de cá**. Nada novo foi chutado sobre o `transform`, e é
+ * por isso que isto não precisa de gravação nova: a cadeia recebe exatamente o que já recebia.
+ */
+export const CONVERTIVEIS_AQUI = ['image/png', 'image/webp', 'image/gif', 'image/bmp'];
+
+export function podeConverterAqui(mime) {
+  return CONVERTIVEIS_AQUI.includes(String(mime || '').trim().toLowerCase());
+}
+
+/** O que a janela do Windows mostra: o que a plataforma aceita MAIS o que convertemos aqui. */
+export const MIMES_DO_SELETOR = [...Object.keys(CONVERSAO_POR_MIME), ...CONVERTIVEIS_AQUI].join(',');
+
+/**
+ * **Fundo BRANCO, e não é enfeite:** JPEG não tem transparência, e PNG recortado desenhado num
+ * canvas vazio sai com o fundo **PRETO** — a arte com logo vazado chegaria ao eleitor num quadrado
+ * negro. Branco é o fundo em que a colinha foi desenhada para ser lida.
+ */
+export const FUNDO_DO_JPEG = '#ffffff';
+
+/**
+ * **O lado maior.** O WhatsApp recomprime o que passa por ele e entrega ~1600px na imagem padrão:
+ * guardar mais que isso gasta o armazenamento da extensão por um detalhe que não chega ao telefone
+ * de ninguém. Imagem menor que o teto **não é ampliada**.
+ */
+export const LADO_MAXIMO = 1600;
+
+/** A qualidade cai só enquanto não couber: a primeira que cabe é a que vai. */
+export const QUALIDADES_JPEG = [0.92, 0.85, 0.78, 0.7];
+
+/**
+ * **Dois tetos, e por isso são dois.** O de GUARDAR é o armazenamento da extensão (uma arte de
+ * WhatsApp cabe folgada em 2 MB); o de ESCOLHER é maior porque **PNG é inchado** — um print de
+ * 6 MB vira um JPEG de 300 KB, e recusá-lo pelo tamanho do original é recusar o que cabe.
+ */
+export const TETO_GUARDADO_BYTES = 2 * 1024 * 1024;
+export const TETO_ESCOLHIDO_BYTES = 12 * 1024 * 1024;
+
+/** `colinha.png` → `colinha.jpg`: o nome tem que combinar com o que sobe, que é sempre JPEG. */
+export function nomeComoJpeg(nome) {
+  const base = String(nome || '').replace(/\.[a-z0-9]{1,5}$/i, '').trim();
+  return `${base || 'imagem'}.jpg`;
+}
+
+/** Quanto um base64 ocupa de verdade — é o que decide se cabe no armazenamento. */
+export function bytesDoBase64(dados) {
+  const limpo = String(dados || '').replace(/=+$/, '');
+  return Math.floor((limpo.length * 3) / 4);
+}
+
+/** A medida do desenho depois do teto do lado maior, mantendo a proporção. */
+export function medidaParaDesenhar(largura, altura, lado = LADO_MAXIMO) {
+  const l = Math.max(1, Math.round(Number(largura) || 1));
+  const a = Math.max(1, Math.round(Number(altura) || 1));
+  const maior = Math.max(l, a);
+  if (!lado || maior <= lado) return { largura: l, altura: a, reduziu: false };
+  const fator = lado / maior;
+  return {
+    largura: Math.max(1, Math.round(l * fator)),
+    altura: Math.max(1, Math.round(a * fator)),
+    reduziu: true,
+  };
+}
 
 export function corpoDoUpload(arquivo) {
   return { name: arquivo.nome, type: 'IMAGE', mimeType: arquivo.mime };

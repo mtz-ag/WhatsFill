@@ -10,6 +10,17 @@
 import { check, grupo, fim } from './_harness.mjs';
 import {
   conversaoDe,
+  podeConverterAqui,
+  MIMES_DO_SELETOR,
+  MIMES_ACEITOS,
+  nomeComoJpeg,
+  bytesDoBase64,
+  medidaParaDesenhar,
+  LADO_MAXIMO,
+  TETO_GUARDADO_BYTES,
+  TETO_ESCOLHIDO_BYTES,
+  QUALIDADES_JPEG,
+  FUNDO_DO_JPEG,
   corpoDoUpload,
   corpoDoTransform,
   corpoDoRegistro,
@@ -48,6 +59,84 @@ grupo('formatos: lista de PERMISSAO, nunca de bloqueio');
   check(conversaoDe('image/png') === null, 'png NAO foi observado: fica de fora ate alguem gravar um');
   check(conversaoDe('image/webp') === null, 'webp idem');
   check(conversaoDe('') === null && conversaoDe(undefined) === null, 'vazio nao passa');
+}
+
+/**
+ * O PNG escondido no seletor (01/10/2026). O que se protege aqui: a lista da PLATAFORMA nao muda
+ * — quem converte e o navegador, antes de ela ver —, e o seletor passa a MOSTRAR o arquivo.
+ */
+grupo('conversao local: o seletor mostra, mas o que sobe continua sendo JPEG');
+{
+  check(podeConverterAqui('image/png'), 'PNG e convertido aqui -- era o arquivo que a janela escondia');
+  check(podeConverterAqui('IMAGE/WEBP'), 'caixa nao decide formato');
+  check(podeConverterAqui('image/gif') && podeConverterAqui('image/bmp'), 'gif e bmp tambem');
+
+  check(!podeConverterAqui('image/jpeg'), 'JPEG nao precisa de conversao: reconverter perde qualidade de graca');
+  check(!podeConverterAqui('image/svg+xml'), 'SVG fica de fora: desenho vetorial em canvas depende de fonte e tamanho');
+  check(!podeConverterAqui('application/pdf'), 'PDF nao e imagem');
+  check(!podeConverterAqui('image/heic'), 'HEIC fica de fora: o Chrome nao decodifica, e o canvas sairia em branco');
+  check(!podeConverterAqui('') && !podeConverterAqui(undefined), 'vazio nao passa');
+
+  check(MIMES_DO_SELETOR.includes('image/png'), 'o accept do seletor inclui o PNG -- e isto que destrava o explorer');
+  check(MIMES_DO_SELETOR.includes('image/jpeg'), 'e continua incluindo o JPEG');
+  for (const mime of MIMES_ACEITOS.split(',')) {
+    check(MIMES_DO_SELETOR.includes(mime), `o seletor nunca mostra MENOS que a plataforma aceita (${mime})`);
+  }
+  check(!MIMES_DO_SELETOR.includes('svg'), 'e nao mostra o que ninguem sabe converter');
+}
+
+grupo('o nome tem de combinar com o que sobe, que e sempre JPEG');
+{
+  check(nomeComoJpeg('colinha.png') === 'colinha.jpg', 'troca a extensao');
+  check(nomeComoJpeg('colinha.PNG') === 'colinha.jpg', 'em qualquer caixa');
+  check(nomeComoJpeg('colinha.jpeg') === 'colinha.jpg', 'jpeg tambem vira jpg -- e o que o passo 3 devolve');
+  check(nomeComoJpeg('arte 10122 v2.webp') === 'arte 10122 v2.jpg', 'espaco e numero no nome nao incomodam');
+  check(nomeComoJpeg('colinha.final.png') === 'colinha.final.jpg', 'so a ULTIMA extensao sai');
+  check(nomeComoJpeg('colinha') === 'colinha.jpg', 'sem extensao, acrescenta');
+  check(nomeComoJpeg('') === 'imagem.jpg' && nomeComoJpeg(null) === 'imagem.jpg', 'sem nome, um nome qualquer serve');
+}
+
+grupo('o lado maior tem teto, e imagem pequena NAO e ampliada');
+{
+  const grande = medidaParaDesenhar(3000, 1500);
+  check(grande.reduziu === true, 'acima do teto, reduz');
+  check(grande.largura === LADO_MAXIMO, 'o lado maior fica no teto');
+  check(grande.altura === 800, 'e a proporcao e mantida');
+
+  const alta = medidaParaDesenhar(1000, 4000);
+  check(alta.altura === LADO_MAXIMO && alta.largura === 400, 'vale para o lado maior, seja largura ou altura');
+
+  const pequena = medidaParaDesenhar(800, 600);
+  check(pequena.reduziu === false, 'abaixo do teto nao mexe');
+  check(pequena.largura === 800 && pequena.altura === 600, 'e NAO amplia: ampliar nao inventa detalhe, so peso');
+
+  const exata = medidaParaDesenhar(LADO_MAXIMO, 900);
+  check(exata.reduziu === false, 'no teto exato tambem nao mexe');
+
+  const fina = medidaParaDesenhar(5000, 3);
+  check(fina.altura >= 1, 'arredondamento nunca produz altura zero -- canvas de lado 0 lanca');
+  check(medidaParaDesenhar(0, 0).largura === 1, 'medida invalida nao virou canvas de lado 0');
+}
+
+grupo('o tamanho que decide se cabe e o do base64, nao o do arquivo');
+{
+  check(bytesDoBase64('AAAA') === 3, 'quatro caracteres de base64 sao tres bytes');
+  check(bytesDoBase64('AAA=') === 2, 'o "=" nao conta como dado');
+  check(bytesDoBase64('AA==') === 1, 'dois "=" idem');
+  check(bytesDoBase64('') === 0 && bytesDoBase64(null) === 0, 'vazio e zero');
+}
+
+grupo('os dois tetos e as qualidades');
+{
+  check(TETO_ESCOLHIDO_BYTES > TETO_GUARDADO_BYTES,
+    'escolher aceita mais que guardar: PNG e inchado, e recusar pelo tamanho do original recusa o que cabe');
+  check(TETO_GUARDADO_BYTES === 2 * 1024 * 1024, 'o de guardar continua 2 MB');
+  check(QUALIDADES_JPEG.length > 1, 'ha mais de uma tentativa de qualidade');
+  check(QUALIDADES_JPEG.every((q, i) => i === 0 || q < QUALIDADES_JPEG[i - 1]), 'e elas CAEM: a primeira que cabe vai');
+  check(QUALIDADES_JPEG[0] > 0.85, 'a primeira tentativa e de qualidade alta');
+  check(QUALIDADES_JPEG.every((q) => q > 0.5), 'e nenhuma chega a borrar a arte');
+  check(/^#f{3,6}$/i.test(FUNDO_DO_JPEG),
+    'o fundo e BRANCO: sem ele, PNG transparente chega ao eleitor num quadrado preto');
 }
 
 grupo('os corpos sao os do envio gravado');

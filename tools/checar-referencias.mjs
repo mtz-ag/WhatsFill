@@ -39,6 +39,8 @@ const GLOBAIS = new Set([
   'HTMLElement', 'Element', 'getComputedStyle', 'matchMedia', 'localStorage', 'sessionStorage',
   'XMLHttpRequest', 'WebSocket', 'Notification', 'Image', 'Worker', 'TextEncoder', 'TextDecoder',
   'NodeFilter', 'NodeList', 'Text', 'Range', 'Selection',
+  // Decodifica a imagem escolhida para o canvas convertê-la em JPEG (ver `converterParaJpeg`).
+  'createImageBitmap', 'OffscreenCanvas', 'ImageData',
   'navigator', 'location', 'history', 'screen', 'performance', 'crypto', 'atob', 'btoa',
   'TextEncoder', 'TextDecoder', 'AudioContext', 'webkitAudioContext',
   'ArrayBuffer', 'DataView', 'Uint8Array', 'Uint16Array', 'Int8Array', 'Float32Array',

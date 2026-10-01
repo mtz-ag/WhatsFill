@@ -1,3 +1,67 @@
+## 2026-10-01 — v3.134.0 — o PNG estava ESCONDIDO no seletor, e agora é convertido aqui
+
+**Relato dele:** *"a extensão ao escolher imagem não atualiza o explorer, baixei uma imagem nova e
+ela não mostra"*. Perguntado, confirmou: *"é por ser png"*.
+
+**Medido antes de mexer:** não havia nada a atualizar. O seletor é
+`<input type="file" accept={imagemLib.MIMES_ACEITOS}>`, e `MIMES_ACEITOS` é a lista de permissão da
+PLATAFORMA — `image/jpeg,image/jpg`. A janela do Windows **filtrava o PNG para fora da listagem**:
+o arquivo estava lá, recém-baixado, e o Explorer não o mostrava porque a extensão disse que não o
+queria. O diagnóstico natural ("a janela está com listagem velha") era o errado, e o certo estava
+numa linha de `accept`.
+
+### O conserto NÃO toca na lista de permissão da plataforma, e é esse o ponto
+
+A armadilha registrada em 20/09 continua de pé: *"formato de imagem é lista de permissão: só JPEG,
+porque só JPEG foi observado"* — o passo 3 da cadeia (`POST /core/v1/file/transform`) é o único
+pedaço cujo valor não dá para derivar, e o que a plataforma faz com PNG **ninguém viu**. Liberar
+PNG ali seria hipótese, e hipótese aqui é **arte muda chegando em eleitor**.
+
+Então o PNG **para antes**: `createImageBitmap` + canvas, e o que vai para o armazenamento é JPEG.
+A cadeia de envio recebe exatamente o que já recebia, e **nada novo foi chutado** — é por isso que
+isto não precisou de gravação nova com o `recorder`.
+
+| onde | o quê |
+|---|---|
+| `imagem.MIMES_ACEITOS` | **não mudou**: é o que a PLATAFORMA aceita |
+| `imagem.CONVERTIVEIS_AQUI` | PNG, WEBP, GIF, BMP — o que o NAVEGADOR converte antes dela ver |
+| `imagem.MIMES_DO_SELETOR` | a soma dos dois: é isto que o Explorer mostra |
+
+O teste exige que o seletor **nunca mostre menos** que a plataforma aceita, e que não mostre o que
+ninguém sabe converter.
+
+### Quatro decisões que a medição obrigou
+
+- **Fundo BRANCO** (`FUNDO_DO_JPEG`). JPEG não tem transparência, e PNG recortado desenhado num
+  canvas vazio sai com **fundo preto** — a arte com logo vazado chegaria num quadrado negro. Branco
+  é o fundo em que a colinha foi desenhada para ser lida.
+- **JPEG que já cabe vai byte a byte.** Reconverter perderia qualidade de graça. Só é recomprimido
+  quando não cabe no armazenamento.
+- **Dois tetos, e por isso são dois.** Guardar continua em 2 MB; **escolher aceita 12 MB**, porque
+  PNG é inchado: um print de 6 MB vira um JPEG de 300 KB, e recusá-lo pelo tamanho do original é
+  recusar o que cabe. Era o mesmo defeito uma casa adiante.
+- **Teto de 1600px no lado maior**, e **imagem menor nunca é ampliada**: o WhatsApp recomprime o que
+  passa por ele e entrega ~1600px na imagem padrão, então guardar mais gasta armazenamento por um
+  detalhe que não chega a telefone nenhum.
+
+**A qualidade cai só enquanto não couber** (0,92 → 0,85 → 0,78 → 0,70), e a primeira que cabe é a
+que vai. A linha de status **diz o que foi feito com a arte dele** — de que formato veio, quanto
+ficou, se reduziu, com que qualidade: conversão silenciosa em dado dele não serve. GIF diz que
+virou imagem parada, porque o canvas desenha só o primeiro quadro.
+
+### A outra metade de "não atualiza", que o relato também cobre
+
+O campo não era zerado depois de usar. **Escolher o MESMO arquivo duas vezes não dispara `change`**,
+então depois de uma recusa — ou depois de ele trocar a arte mantendo o nome — o botão ficava mudo.
+Hoje `escolher.value = ''` no `finally`.
+
+### Custo
+
+Nenhuma requisição a mais, nenhuma rota nova. A conversão é local e acontece uma vez, no clique
+dele. 21 suítes e os dois verificadores verdes — e `createImageBitmap` entrou na lista `GLOBAIS` do
+`checar-referencias.mjs`, que o acusou como chamada sem declaração (falso positivo de global do
+navegador, que custa uma linha, como o próprio arquivo diz).
+
 ## 2026-10-01 — v3.133.0 — o lote por etiqueta CONCLUI o atendimento, com a guarda da mensagem em fila
 
 **Decisão dele:** *"sim tem que concluir"*. Sem isso um lote de 200 envios deixa 200 atendimentos

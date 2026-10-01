@@ -10043,6 +10043,117 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * **Caminho do disco (`C:\...`) não serve, e o aviso diz isso na hora**: a extensão roda dentro da
    * página e não lê arquivo do computador; o que ela consegue buscar é um endereço público.
    */
+  /** Os bytes de um arquivo em base64, sem o prefixo `data:`. */
+  function base64De(blob) {
+    return new Promise((ok, falhou) => {
+      const leitor = new FileReader();
+      leitor.onerror = () => falhou(new Error('Não consegui ler o arquivo.'));
+      leitor.onload = () => {
+        const dados = String(leitor.result || '').split(',')[1] || '';
+        if (dados) ok(dados);
+        else falhou(new Error('Não consegui ler a imagem.'));
+      };
+      leitor.readAsDataURL(blob);
+    });
+  }
+
+  /**
+   * **Desenha a imagem num canvas e devolve JPEG** — a parte da conversão que precisa do navegador,
+   * e por isso fica aqui e não em `imagem.js`, que é puro e testado. O que é decidível (quais
+   * formatos, qual fundo, qual medida, quais qualidades) mora lá.
+   */
+  async function converterParaJpeg(arquivo) {
+    let bitmap;
+    try {
+      bitmap = await createImageBitmap(arquivo);
+    } catch (_) {
+      throw new Error('O navegador não conseguiu abrir esta imagem — o arquivo pode estar corrompido.');
+    }
+    try {
+      const medida = imagemLib.medidaParaDesenhar(bitmap.width, bitmap.height);
+      const canvas = document.createElement('canvas');
+      canvas.width = medida.largura;
+      canvas.height = medida.altura;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('O navegador não deu um canvas para converter a imagem.');
+      // JPEG não tem transparência: sem pintar o fundo, PNG recortado sai com quadrado PRETO.
+      ctx.fillStyle = imagemLib.FUNDO_DO_JPEG;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+      let feito = null;
+      for (const qualidade of imagemLib.QUALIDADES_JPEG) {
+        const blob = await new Promise((ok) => canvas.toBlob(ok, 'image/jpeg', qualidade));
+        if (!blob) throw new Error('O navegador não converteu a imagem para JPEG.');
+        feito = { blob, qualidade, largura: canvas.width, altura: canvas.height, reduziu: medida.reduziu };
+        if (blob.size <= imagemLib.TETO_GUARDADO_BYTES) break;
+      }
+      return feito;
+    } finally {
+      bitmap.close?.();
+    }
+  }
+
+  /**
+   * **O que é guardado é sempre JPEG** (01/10/2026, relato dele: *"baixei uma imagem nova e ela não
+   * mostra"* — era PNG, escondido pelo `accept` do seletor).
+   *
+   * A lista de permissão da plataforma continua sendo só JPEG, porque é o único formato que o envio
+   * gravado mostrou. O que mudou é que PNG, WEBP, GIF e BMP **param aqui**: são desenhados num
+   * canvas e convertidos antes de ir para o armazenamento, então a cadeia de envio recebe
+   * exatamente o que já recebia e nada foi chutado sobre o passo do `transform`.
+   *
+   * **JPEG que já cabe vai byte a byte**: reconverter perderia qualidade de graça.
+   */
+  async function lerImagemEscolhida(arquivo) {
+    const mime = String(arquivo.type || '').trim().toLowerCase();
+    if (arquivo.size > imagemLib.TETO_ESCOLHIDO_BYTES) {
+      throw new Error(
+        `A imagem tem ${(arquivo.size / 1024 / 1024).toFixed(1)} MB. Use uma de até ` +
+          `${Math.round(imagemLib.TETO_ESCOLHIDO_BYTES / 1024 / 1024)} MB.`
+      );
+    }
+    const jaEhJpeg = !!imagemLib.conversaoDe(mime);
+    if (!jaEhJpeg && !imagemLib.podeConverterAqui(mime)) {
+      throw new Error(
+        `Não sei ler "${mime || 'este formato'}". Escolha JPEG, PNG, WEBP, GIF ou BMP — os quatro ` +
+          'últimos eu converto para JPEG aqui, que é o formato que a plataforma mostrou como manda.'
+      );
+    }
+
+    if (jaEhJpeg && arquivo.size <= imagemLib.TETO_GUARDADO_BYTES) {
+      const dados = await base64De(arquivo);
+      return {
+        arquivo: { nome: arquivo.name, mime: 'image/jpeg', dados },
+        aviso: `Imagem "${arquivo.name}" guardada · ${Math.round(arquivo.size / 1024)} KB.`,
+      };
+    }
+
+    const feito = await converterParaJpeg(arquivo);
+    const dados = await base64De(feito.blob);
+    const kb = Math.round(imagemLib.bytesDoBase64(dados) / 1024);
+    if (imagemLib.bytesDoBase64(dados) > imagemLib.TETO_GUARDADO_BYTES) {
+      throw new Error(
+        `Mesmo convertida e na qualidade mais baixa a imagem ficou com ${kb} KB, acima do teto de ` +
+          `${Math.round(imagemLib.TETO_GUARDADO_BYTES / 1024)} KB. Use uma arte menor.`
+      );
+    }
+    const nome = imagemLib.nomeComoJpeg(arquivo.name);
+    /** A linha diz o que foi FEITO com a arte dele — conversão silenciosa em dado dele não serve. */
+    const partes = [`Imagem "${nome}" guardada · ${kb} KB`];
+    partes.push(
+      jaEhJpeg
+        ? 'recomprimida para caber no armazenamento'
+        : `convertida de ${mime.replace('image/', '').toUpperCase()} para JPEG`
+    );
+    if (mime === 'image/gif') partes.push('GIF virou imagem parada: só o primeiro quadro');
+    if (feito.reduziu) partes.push(`reduzida para ${feito.largura}×${feito.altura}`);
+    if (feito.qualidade < imagemLib.QUALIDADES_JPEG[0]) {
+      partes.push(`qualidade ${Math.round(feito.qualidade * 100)}%`);
+    }
+    return { arquivo: { nome, mime: 'image/jpeg', dados }, aviso: `${partes.join(' · ')}.` };
+  }
+
   function campoDeImagem({ rotulo, valor, ligada, aoMudar, aoLigar, chaveDoArquivo, semInterruptor = false }) {
     const caminho = String(valor || '').trim();
     const doDisco = /^[a-z]:\\/i.test(caminho) || caminho.startsWith('\\\\') || caminho.startsWith('file:');
@@ -10061,35 +10172,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * clique DELE — é o único jeito de um arquivo do disco entrar no navegador —, e o que fica guardado
      * são os BYTES, não o caminho: mover ou renomear a arte depois não quebra o envio.
      */
-    const escolher = h('input', { type: 'file', accept: imagemLib.MIMES_ACEITOS, style: 'display:none' });
+    const escolher = h('input', { type: 'file', accept: imagemLib.MIMES_DO_SELETOR, style: 'display:none' });
     escolher.addEventListener('change', () =>
       withBusy(async () => {
         const arquivo = escolher.files && escolher.files[0];
         if (!arquivo) return;
-        // Teto de 2 MB: o armazenamento da extensão é limitado e uma arte de WhatsApp cabe folgada.
-        if (arquivo.size > 2 * 1024 * 1024) {
-          return setStatus(`A imagem tem ${(arquivo.size / 1024 / 1024).toFixed(1)} MB. Use uma de até 2 MB.`, 'err');
+        try {
+          const lido = await lerImagemEscolhida(arquivo);
+          await store.set(chaveDoArquivo, lido.arquivo);
+          state.imagens[chaveDoArquivo] = lido.arquivo;
+          setStatus(lido.aviso, 'ok');
+          renderAll();
+        } catch (err) {
+          setStatus(err?.message || String(err), 'err');
+        } finally {
+          /**
+           * **Sem zerar, o MESMO arquivo escolhido de novo não dispara `change`** — e escolher de
+           * novo é justamente o que se faz depois de uma recusa, ou depois de trocar a arte
+           * mantendo o nome. O campo ficaria mudo, que é a outra metade de "não atualiza".
+           */
+          escolher.value = '';
         }
-        // Formato fora do que a plataforma mostrou como manda: recusa com o motivo, em vez de
-        // guardar uma imagem que o envio vai rejeitar depois, na hora em que ele não está olhando.
-        if (!imagemLib.conversaoDe(arquivo.type)) {
-          return setStatus(
-            `Por enquanto só JPEG: foi o formato que a plataforma mostrou como manda. ` +
-              `Para liberar "${arquivo.type || 'este formato'}", mande um à mão com "Aprender de novo o envio de imagem".`,
-            'err'
-          );
-        }
-        const dados = await new Promise((ok, falhou) => {
-          const leitor = new FileReader();
-          leitor.onerror = () => falhou(new Error('não consegui ler o arquivo'));
-          leitor.onload = () => ok(String(leitor.result || '').split(',')[1] || '');
-          leitor.readAsDataURL(arquivo);
-        });
-        if (!dados) return setStatus('Não consegui ler a imagem.', 'err');
-        await store.set(chaveDoArquivo, { nome: arquivo.name, mime: arquivo.type || 'image/jpeg', dados });
-        state.imagens[chaveDoArquivo] = { nome: arquivo.name, mime: arquivo.type || 'image/jpeg', dados };
-        setStatus(`Imagem "${arquivo.name}" guardada.`);
-        renderAll();
       })
     );
     const btnEscolher = h('button', { class: 'wf-btn', type: 'button' }, guardada ? 'Trocar a imagem' : 'Escolher imagem');
