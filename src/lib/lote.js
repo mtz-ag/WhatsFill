@@ -173,3 +173,89 @@ export function comoVaiRevezar(quantosPares, limite) {
   const sobra = n % p;
   return Array.from({ length: p }, (_, i) => base + (i < sobra ? 1 : 0));
 }
+
+/**
+ * **O TETO POR NÚMERO, POR DIA** (pedido dele, 01/10/2026: *"limite de 45 por número; quando
+ * chegar em 45 é para trocar por um número seguinte da lista que eu especificar"*).
+ *
+ * **Por DIA e não para sempre**, e isto é a única parte que ele não disse com estas palavras: o
+ * teto que o WhatsApp cobra é o de conversas iniciadas nas últimas 24 horas (o `RESTRICTED`
+ * registrado em 26/09), e contador vitalício queimaria o número no primeiro lote e nunca mais o
+ * liberaria — com o `exceptTagsId` fazendo a lista de amanhã ser de gente nova, os números têm de
+ * voltar a servir. **O corte é o DIA LOCAL**, que é o que ele lê na tela (a disciplina de 03/09).
+ */
+export const TETO_POR_NUMERO = 45;
+
+/** `YYYY-MM-DD` do dia LOCAL — nunca `toISOString`, que é UTC e viraria o dia às 21h daqui. */
+export function diaLocal(agora = new Date()) {
+  const d = agora instanceof Date ? agora : new Date(agora);
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mes}-${dia}`;
+}
+
+/**
+ * **A fila de números, na ordem dele** — e o número único antigo é o fallback.
+ *
+ * Sem este fallback, subir a versão desligaria o lote de quem já o tinha configurado: `loteCanais`
+ * nasce vazio e `loteCanalId` é o que está gravado. Mesma razão pela qual a migração não reescreve
+ * nada — o campo velho continua sendo a resposta certa enquanto ele não escolher a fila.
+ */
+export function filaDeNumeros(cfg = {}) {
+  const lista = Array.isArray(cfg?.loteCanais) ? cfg.loteCanais : [];
+  const limpa = [];
+  for (const id of lista) {
+    const s = String(id || '').trim();
+    if (s && !limpa.includes(s)) limpa.push(s);
+  }
+  if (limpa.length) return limpa;
+  const um = String(cfg?.loteCanalId || '').trim();
+  return um ? [um] : [];
+}
+
+/** Quantos envios saíram por aquele número no dia informado. Dia diferente conta ZERO. */
+export function usadosNoDia(envios, canalId, dia) {
+  const r = envios?.[String(canalId || '')];
+  if (!r || String(r.dia || '') !== String(dia || '')) return 0;
+  return Math.max(0, Number(r.enviados) || 0);
+}
+
+/**
+ * O saldo de cada número da fila, na ordem — é isto que o cartão mostra e o `confirm` soma.
+ * Número que não está mais na conta continua na conta do dia, mas fora da fila: quem decide quais
+ * números existem é a plataforma, e quem decide quais usar é ele.
+ */
+export function saldoDaFila({ fila = [], envios = {}, dia = '', teto = TETO_POR_NUMERO } = {}) {
+  const limite = Math.max(0, Number(teto) || 0);
+  return fila.map((canalId) => {
+    const usados = usadosNoDia(envios, canalId, dia);
+    return { canalId, usados, restam: Math.max(0, limite - usados) };
+  });
+}
+
+/**
+ * **Qual número usar AGORA: o primeiro da fila que ainda tem saldo.**
+ *
+ * É "o primeiro com saldo" e não "o próximo depois do último usado": assim o número que ele move
+ * para o topo passa a ser usado na hora, e uma rodada interrompida recomeça onde parou sem guardar
+ * ponteiro nenhum — o contador do dia já diz tudo.
+ */
+export function numeroDaVez({ fila = [], envios = {}, dia = '', teto = TETO_POR_NUMERO } = {}) {
+  return saldoDaFila({ fila, envios, dia, teto }).find((n) => n.restam > 0) || null;
+}
+
+/** Quantos envios a fila inteira ainda aceita hoje. Zero = a rodada não pode começar. */
+export function saldoTotal(args) {
+  return saldoDaFila(args).reduce((soma, n) => soma + n.restam, 0);
+}
+
+/**
+ * Soma UM envio ao número, devolvendo a contagem nova. **Só é chamado depois de a mensagem sair** —
+ * a mesma disciplina do ponteiro do revezamento, e a razão é a mesma: contar o que não saiu
+ * queimaria saldo do número por uma falha nossa.
+ */
+export function somarEnvio(envios, canalId, dia) {
+  const id = String(canalId || '');
+  if (!id) return { ...(envios || {}) };
+  return { ...(envios || {}), [id]: { dia: String(dia || ''), enviados: usadosNoDia(envios, id, dia) + 1 } };
+}

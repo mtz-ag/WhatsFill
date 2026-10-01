@@ -160,4 +160,87 @@ grupo('as chaves do auto sao as que o perfil tem de separar');
   check(!chaves.includes(lote.chaveDaImagem(1)), 'os BYTES nao moram no auto: a chave deles e separada');
 }
 
+/**
+ * O TETO POR NUMERO e a fila (01/10/2026). O que se protege: o teto e por DIA (numero queimado
+ * para sempre nao voltaria a servir amanha), a fila cai no numero unico antigo (subir a versao
+ * nao pode desligar o lote de quem ja o configurou), e o contador so conta o que SAIU.
+ */
+grupo('a fila de numeros, e o numero unico antigo como fallback');
+{
+  check(lote.filaDeNumeros({ loteCanais: ['a', 'b'] }).join(',') === 'a,b', 'a fila dele, na ordem dele');
+  check(lote.filaDeNumeros({ loteCanais: ['a', 'b', 'a'] }).join(',') === 'a,b', 'id repetido entra uma vez');
+  check(lote.filaDeNumeros({ loteCanais: ['', '  ', 'b'] }).join(',') === 'b', 'vazio nao e numero');
+  check(
+    lote.filaDeNumeros({ loteCanais: [], loteCanalId: 'velho' }).join(',') === 'velho',
+    'sem fila, cai no numero unico: subir a versao NAO pode desligar o lote de quem ja o configurou'
+  );
+  check(
+    lote.filaDeNumeros({ loteCanais: ['a'], loteCanalId: 'velho' }).join(',') === 'a',
+    'tendo fila, ela vence o campo antigo'
+  );
+  check(lote.filaDeNumeros({}).length === 0 && lote.filaDeNumeros().length === 0, 'sem nada, fila vazia');
+}
+
+grupo('o dia e LOCAL, nunca UTC');
+{
+  const d = new Date(2026, 9, 1, 22, 30);
+  check(lote.diaLocal(d) === '2026-10-01', '22:30 de 01/10 ainda e dia 01 -- toISOString daria dia 02');
+  check(lote.diaLocal(new Date(2026, 0, 5)) === '2026-01-05', 'mes e dia com zero na frente');
+}
+
+grupo('o contador: por numero, por dia');
+{
+  const hoje = '2026-10-01';
+  const envios = { a: { dia: hoje, enviados: 44 }, b: { dia: '2026-09-30', enviados: 45 } };
+  check(lote.usadosNoDia(envios, 'a', hoje) === 44, 'conta o que saiu hoje');
+  check(lote.usadosNoDia(envios, 'b', hoje) === 0, 'dia anterior conta ZERO: a contagem zera na virada');
+  check(lote.usadosNoDia(envios, 'nao-existe', hoje) === 0, 'numero sem contagem e zero');
+  check(lote.usadosNoDia({}, 'a', hoje) === 0 && lote.usadosNoDia(null, 'a', hoje) === 0, 'vazio e zero');
+
+  const depois = lote.somarEnvio(envios, 'a', hoje);
+  check(depois.a.enviados === 45, 'somar anda um');
+  check(envios.a.enviados === 44, 'e NAO muta o que recebeu');
+  check(lote.somarEnvio(envios, 'b', hoje).b.enviados === 1, 'numero de outro dia recomeca do 1');
+  check(Object.keys(lote.somarEnvio(envios, '', hoje)).length === 2, 'sem numero, nao inventa linha');
+}
+
+grupo('o teto de 45 e a troca de numero');
+{
+  const hoje = '2026-10-01';
+  check(lote.TETO_POR_NUMERO === 45, 'o teto que ele pediu');
+
+  const fila = ['a', 'b', 'c'];
+  const cheio = { a: { dia: hoje, enviados: 45 } };
+  check(lote.numeroDaVez({ fila, envios: {}, dia: hoje }).canalId === 'a', 'comeca no primeiro da fila');
+  check(lote.numeroDaVez({ fila, envios: cheio, dia: hoje }).canalId === 'b', 'cheio o primeiro, passa para o seguinte');
+  check(
+    lote.numeroDaVez({ fila, envios: { a: { dia: hoje, enviados: 44 } }, dia: hoje }).canalId === 'a',
+    'com 44 ainda e a vez dele: o teto e 45, nao 44'
+  );
+  check(
+    lote.numeroDaVez({ fila, envios: { a: { dia: hoje, enviados: 99 } }, dia: hoje }).canalId === 'b',
+    'passar do teto nao destrava: o saldo nao fica negativo'
+  );
+
+  const todosCheios = {
+    a: { dia: hoje, enviados: 45 },
+    b: { dia: hoje, enviados: 45 },
+    c: { dia: hoje, enviados: 45 },
+  };
+  check(lote.numeroDaVez({ fila, envios: todosCheios, dia: hoje }) === null, 'fila esgotada devolve NULO -- a rodada para');
+  check(lote.numeroDaVez({ fila: [], envios: {}, dia: hoje }) === null, 'sem fila, nulo');
+  check(
+    lote.numeroDaVez({ fila, envios: todosCheios, dia: '2026-10-02' }).canalId === 'a',
+    'no dia seguinte a fila inteira volta a servir'
+  );
+
+  check(lote.saldoTotal({ fila, envios: {}, dia: hoje }) === 135, 'tres numeros vazios cabem 135 hoje');
+  check(lote.saldoTotal({ fila, envios: cheio, dia: hoje }) === 90, 'um cheio tira 45 do total');
+  check(lote.saldoTotal({ fila, envios: todosCheios, dia: hoje }) === 0, 'todos cheios: zero, e a rodada nem comeca');
+
+  const saldo = lote.saldoDaFila({ fila, envios: { b: { dia: hoje, enviados: 10 } }, dia: hoje });
+  check(saldo.length === 3 && saldo[0].canalId === 'a', 'o saldo sai na ORDEM da fila -- e ela que o cartao mostra');
+  check(saldo[1].usados === 10 && saldo[1].restam === 35, 'usados e restam, para a tela e para o confirm');
+}
+
 fim();

@@ -525,4 +525,70 @@ grupo('a etiqueta de ORIGEM nao vira conteudo pela REGRA dele (04/09/2026)');
   check(lixo.some((t) => t.origem === 'região' && !t.nome), 'valor que nao e cidade continua so avisando');
 }
 
+/**
+ * O formato `padrao = Etiqueta`, lido num lugar so (01/10/2026). Duas tabelas o usam agora -- a
+ * de conteudo (o que o CONTATO escreve) e a de palavra no envio (o que NOS mandamos) -- e duas
+ * copias do leitor divergiriam na primeira correcao.
+ */
+grupo('o leitor do formato padrao = Etiqueta');
+{
+  const { regras, invalidas } = tags.lerRegrasDeTexto('colinha = COLINHA\nzucco = Conteudo Zucco');
+  check(regras.length === 2, 'duas linhas, duas regras');
+  check(regras[0].padrao === 'colinha' && regras[0].etiqueta === 'COLINHA', 'parte antes e depois do =');
+  check(invalidas.length === 0, 'nada invalido');
+
+  check(tags.lerRegrasDeTexto('  colinha  =  COLINHA  ').regras[0].etiqueta === 'COLINHA', 'espaco em volta sai');
+  check(tags.lerRegrasDeTexto('# comentario\ncolinha = X').regras.length === 1, 'linha de comentario e ignorada');
+  check(tags.lerRegrasDeTexto('\n\n\n').regras.length === 0, 'linha vazia nao e regra');
+  check(tags.lerRegrasDeTexto('sem igual aqui').regras.length === 0, 'linha sem "=" e ignorada');
+  check(tags.lerRegrasDeTexto('= COLINHA').regras.length === 0, 'sem padrao nao e regra');
+  check(tags.lerRegrasDeTexto('colinha =').regras.length === 0, 'sem etiqueta nao e regra');
+  check(
+    tags.lerRegrasDeTexto('a = B = C').regras[0].etiqueta === 'B = C',
+    'so o PRIMEIRO "=" separa: etiqueta com igual dentro sobrevive'
+  );
+
+  const ruim = tags.lerRegrasDeTexto('colinha = OK\n[ = Quebrada');
+  check(ruim.regras.length === 1, 'regex invalida nao entra');
+  check(ruim.invalidas.length === 1 && ruim.invalidas[0] === '[', 'e e DEVOLVIDA: quem digitou precisa saber qual caiu');
+
+  check(
+    tags.escreverRegrasEmTexto(regras) === 'colinha = COLINHA\nzucco = Conteudo Zucco',
+    'ida e volta sem perder nada'
+  );
+  check(tags.escreverRegrasEmTexto([]) === '' && tags.escreverRegrasEmTexto(null) === '', 'vazio e vazio');
+  check(tags.escreverRegrasEmTexto([{ padrao: 'x' }]) === '', 'regra pela metade nao e escrita');
+}
+
+grupo('a palavra-chave no que NOS mandamos');
+{
+  const regras = [
+    { padrao: 'colinha', etiqueta: 'COLINHA' },
+    { padrao: 'adesivo', etiqueta: 'MATERIAL' },
+  ];
+  const casou = (texto) => tags.regrasQueCasam(regras, texto).map((r) => r.etiqueta);
+
+  check(casou('Olha a colinha dos nossos candidatos').join(',') === 'COLINHA', 'casa a palavra no meio da frase');
+  check(casou('COLINHA').join(',') === 'COLINHA', 'caixa nao decide');
+  check(casou('Mando a colinha e o adesivo').join(',') === 'COLINHA,MATERIAL', 'duas regras casam juntas');
+  check(casou('Bom dia, tudo bem?').length === 0, 'texto sem a palavra nao casa');
+  check(casou('').length === 0 && casou(null).length === 0, 'texto vazio nao casa nada');
+  check(tags.regrasQueCasam([], 'colinha').length === 0, 'sem regras, nada casa');
+  check(tags.regrasQueCasam(null, 'colinha').length === 0, 'lista invalida nao explode');
+
+  check(
+    tags.regrasQueCasam([{ padrao: 'eleic[aã]o', etiqueta: 'X' }], 'na eleição deste ano').length === 1,
+    'expressao regular vale, como na tabela de conteudo'
+  );
+  check(
+    tags.regrasQueCasam([{ padrao: 'eleicao', etiqueta: 'X' }], 'na eleição deste ano').length === 1,
+    'e o acento nao e erro: "eleicao" casa "eleição"'
+  );
+  check(
+    tags.regrasQueCasam([{ padrao: '[', etiqueta: 'X' }], 'qualquer coisa [').length === 0,
+    'regex invalida e ignorada em vez de explodir no meio da rodada'
+  );
+  check(tags.regrasQueCasam([{ padrao: 'x', etiqueta: '' }], 'x').length === 0, 'regra sem etiqueta nao marca nada');
+}
+
 fim();

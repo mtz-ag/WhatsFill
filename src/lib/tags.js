@@ -167,6 +167,97 @@ function casa(re, padrao, haystack, haystackSemAcento) {
 }
 
 /**
+ * **O formato `padrão = Etiqueta`, lido e escrito num lugar só.**
+ *
+ * São DUAS tabelas com este formato — as etiquetas por conteúdo (o que o CONTATO escreve) e as
+ * etiquetas por palavra no envio (o que NÓS mandamos) —, e duas cópias do leitor divergiriam na
+ * primeira correção: é o defeito registrado quatro vezes neste projeto. **Padrão inválido é
+ * DEVOLVIDO e não descartado em silêncio**, porque quem digitou precisa saber qual linha caiu.
+ */
+export function lerRegrasDeTexto(texto) {
+  const regras = [];
+  const invalidas = [];
+  for (const linha of String(texto || '').split('\n')) {
+    const bruta = linha.trim();
+    if (!bruta || bruta.startsWith('#')) continue;
+    const i = bruta.indexOf('=');
+    if (i < 0) continue;
+    const padrao = bruta.slice(0, i).trim();
+    const etiqueta = bruta.slice(i + 1).trim();
+    if (!padrao || !etiqueta) continue;
+    try {
+      new RegExp(padrao, 'i');
+    } catch (_) {
+      invalidas.push(padrao);
+      continue;
+    }
+    regras.push({ padrao, etiqueta });
+  }
+  return { regras, invalidas };
+}
+
+export function escreverRegrasEmTexto(regras) {
+  return (Array.isArray(regras) ? regras : [])
+    .filter((r) => r?.padrao && r?.etiqueta)
+    .map((r) => `${r.padrao} = ${r.etiqueta}`)
+    .join('\n');
+}
+
+/**
+ * **Quais regras casam num texto** — a mesma conferência das etiquetas por conteúdo (regex sem
+ * diferenciar maiúscula, e de novo sem acento), extraída para poder ser usada do outro lado: no
+ * texto que NÓS mandamos.
+ */
+export function regrasQueCasam(regras, texto) {
+  const alvo = String(texto || '');
+  if (!alvo.trim()) return [];
+  const semAcento = semAcentoNemCaixa(alvo);
+  const out = [];
+  for (const regra of Array.isArray(regras) ? regras : []) {
+    if (!regra?.padrao || !regra?.etiqueta) continue;
+    let re;
+    try {
+      re = new RegExp(regra.padrao, 'i');
+    } catch (_) {
+      continue; // regex inválida na configuração: ignora em vez de explodir
+    }
+    if (casa(re, regra.padrao, alvo, semAcento)) out.push(regra);
+  }
+  return out;
+}
+
+/**
+ * **ETIQUETA POR PALAVRA NO QUE NÓS MANDAMOS** (pedido dele, 01/10/2026: *"preciso da opção de que
+ * quando eu enviar uma palavra chave uma etiqueta que eu escolher também seja colocada"*).
+ *
+ * **É o espelho de `tagRules`, e por isso é outra lista:** aquela casa no que o CONTATO escreveu e
+ * decide qual CONTEÚDO ele pediu; esta casa no que SAIU da nossa mão e registra o que NÓS fizemos.
+ * Misturar as duas faria uma palavra do nosso texto decidir qual modelo mandar — a confusão que a
+ * etiqueta ADS custou três vezes.
+ *
+ * **Nasce VAZIA de propósito**, ao contrário de `tagRules`: regra inventada aqui põe etiqueta
+ * permanente em eleitor real sem ninguém ter pedido.
+ *
+ * **Não passa pela conferência da IA** (a regra de 17/09 vale para etiqueta que afirma o que a
+ * PESSOA quis dizer; esta afirma o que NÓS mandamos, que é fato e está escrito no texto) — mesma
+ * razão da etiqueta do lote.
+ */
+export async function etiquetasDoEnvio(texto) {
+  const regras = await store.get('etiquetasPorEnvio');
+  const casaram = regrasQueCasam(regras, texto);
+  const out = [];
+  for (const regra of casaram) {
+    out.push({
+      nome: regra.etiqueta,
+      tag: await resolveTag(regra.etiqueta),
+      padrao: regra.padrao,
+      motivo: `o que mandamos casou com "${regra.padrao}"`,
+    });
+  }
+  return out;
+}
+
+/**
  * Etiquetas sugeridas para o contato.
  *
  * @param {object} ctx

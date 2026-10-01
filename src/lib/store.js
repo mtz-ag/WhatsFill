@@ -894,6 +894,14 @@ const DEFAULTS = {
     loteCanalId: '',
     loteCanalNome: '',
     /**
+     * **A FILA DE NÚMEROS do lote, na ordem dele** — ids de canal (pedido dele, 01/10/2026:
+     * *"quando chegar em 45 é para trocar por um número seguinte da lista que eu especificar"*).
+     *
+     * Vazia, `lote.filaDeNumeros` cai no `loteCanalId` de um número só: quem já configurou o lote
+     * não precisa reconfigurar nada para continuar rodando.
+     */
+    loteCanais: [],
+    /**
      * A partir de quantas horas de silêncio a rodada **pergunta** em vez de concluir sozinha,
      * quando a última mensagem da conversa é nossa.
      *
@@ -1153,6 +1161,32 @@ const DEFAULTS = {
     { padrao: 'zucco', etiqueta: 'Conteúdo Zucco' },
     { padrao: 'fl[áa]vio', etiqueta: 'Conteúdo Flávio' },
   ],
+
+  /**
+   * **Palavra-chave no que NÓS mandamos → etiqueta** (pedido dele, 01/10/2026: *"quando eu enviar
+   * uma palavra chave uma etiqueta que eu escolher também seja colocada"*).
+   *
+   * Mesmo formato de `tagRules` e o espelho dela: aquela casa no texto do CONTATO e decide qual
+   * conteúdo ele pediu; esta casa no texto que SAIU e registra o que nós fizemos. Ver
+   * `tags.etiquetasDoEnvio`.
+   *
+   * **Nasce VAZIA**, ao contrário de `tagRules`: regra inventada aqui põe etiqueta permanente em
+   * eleitor real sem ninguém ter pedido.
+   */
+  etiquetasPorEnvio: [],
+
+  /**
+   * **Quantos envios do LOTE já saíram por cada número, hoje** — `{ '<canalId>': {dia, enviados} }`.
+   *
+   * Pedido dele (01/10/2026): *"o envio das imagens alternando tem que ter um limite de 45 por
+   * número; quando chegar em 45 é para trocar pelo número seguinte da lista"*. Ver
+   * `lote.numeroDaVez`.
+   *
+   * **O corte é o DIA LOCAL** (a disciplina de 03/09: é o que ele lê na tela), e o contador é por
+   * CANAL e não por candidato — o teto é do número, e é o WhatsApp que o cobra. Fica FORA da lista
+   * de merge do `get`: contador não tem default a mesclar, e o que está salvo é a verdade.
+   */
+  loteEnvios: {},
 
   /**
    * Etiqueta de conteúdo → nome do MODELO DE MENSAGEM aprovado que atende aquele pedido.

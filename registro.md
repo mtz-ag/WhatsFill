@@ -1,3 +1,132 @@
+## 2026-10-01 — v3.135.0 — etiqueta por palavra no que NÓS mandamos, teto de 45 por número, e a barreira de canal caído que o lote não tinha
+
+Três pedidos dele no mesmo recado, e o terceiro é um defeito que ele viu em produção.
+
+---
+
+### 1. Etiqueta por palavra no que NÓS mandamos
+
+**Pedido dele:** *"preciso da opção de que quando eu enviar uma palavra chave uma etiqueta que eu
+escolher também seja colocada"*.
+
+**A metade do CONTATO já existia** (`store.tagRules`, "Etiquetas por conteúdo"): ela casa no que a
+pessoa escreveu e decide qual CONTEÚDO mandar. Esta é a do nosso lado — e é a generalização do que
+a etiqueta de material já fazia por um invariante escrito no código (`ehPedidoDeEndereco`, 04/09).
+Agora a palavra e a etiqueta são dele, numa tabela colada na outra, no mesmo formato
+`palavra = Etiqueta`.
+
+**São QUATRO pontos por onde texto nosso sai, não um** — e essa contagem é o que já custou a
+etiqueta de material em 15/09 (*"ao pôr uma marca no ponto único por onde tudo sai, confira que são
+DOIS pontos"*). Os quatro: o **modelo aprovado** (`enviarModelo`), a **resposta pronta**
+(`sendTemplate`), o **rascunho da IA** e a **legenda do envio em lote**. Todos chamam
+`etiquetarPorPalavra`, uma função só.
+
+**Três decisões:**
+
+- **Nasce VAZIA**, ao contrário de `tagRules`, que tem valores de campanha dele desde 15/08: regra
+  inventada aqui põe etiqueta permanente em eleitor real sem ninguém ter pedido.
+- **NÃO passa pela conferência da IA.** A regra de 17/09 vale para etiqueta que afirma o que a
+  PESSOA quis dizer; esta afirma o que NÓS mandamos — é fato, e está escrito no texto. Mesma razão
+  da etiqueta do lote.
+- **Falha de etiqueta nunca bloqueia o envio** (a prioridade de 20/08): ela devolve o sufixo da
+  linha do Andamento, que diz qual palavra casou e qual etiqueta entrou.
+
+**E o leitor do formato virou UM**: `tags.lerRegrasDeTexto` / `escreverRegrasEmTexto`. Eram duas
+tabelas com o mesmo formato e o parser estava escrito dentro do botão da primeira — duas cópias
+divergiriam na primeira correção, que é o defeito registrado quatro vezes neste arquivo. Agora
+padrão inválido é **devolvido** e aparece na tela, em vez de sumir em silêncio.
+
+---
+
+### 2. Teto de 45 por número, com a fila dele
+
+**Pedido dele:** *"o envio atual das imagens alternando tem que ter um limite de 45 por número;
+quando chegar em 45 é para trocar por um número seguinte da lista que eu especificar"*.
+
+Era um `<select>` de **um número só**. Agora é uma **fila**: marcar põe o número no fim dela, a
+posição está escrita em cada linha (`1º`, `2º`) e o `↑` sobe — ordem guardada sem aparecer na tela
+seria a armadilha de 01/09 do quadro, em que a rodada obedecia uma prioridade que ninguém via.
+
+**O teto é POR DIA, e esta é a única parte que ele não disse com estas palavras.** O teto que o
+WhatsApp cobra é o de conversas iniciadas nas últimas 24 horas (o `RESTRICTED` que ele mediu em
+26/09), e **contador vitalício queimaria o número no primeiro lote e nunca mais o liberaria** — com
+o `exceptTagsId` fazendo a lista de amanhã ser de gente nova, os números têm de voltar a servir. O
+corte é o **DIA LOCAL**, que é o que ele lê na tela (a disciplina de 03/09), e a contagem é por
+CANAL e não por candidato: o teto é do número.
+
+**A vez é do primeiro da fila com saldo** — não "o próximo depois do último usado". Assim o número
+que ele sobe passa a ser usado na hora, e rodada interrompida recomeça onde parou sem guardar
+ponteiro nenhum: o contador do dia já diz tudo.
+
+**O contador anda depois de a mensagem SAIR**, pela mesma razão do ponteiro do revezamento — contar
+o que não saiu queimaria saldo por uma falha nossa, e saldo queimado só volta amanhã.
+
+**Fila esgotada não é erro:** a rodada para com `parar: true` e o motivo, e o resto da lista fica
+para amanhã. Esgotada ANTES de começar, ela se recusa a começar (a regra de 01/10: o que falha para
+TODOS barra antes da fila).
+
+A tela diz os números: cada linha mostra `30/45 hoje`, e o `confirm` lista a fila na ordem com
+quanto cabe em cada um.
+
+---
+
+### 3. "Caso caia o número, pare o envio" — e a barreira NÃO EXISTIA aqui
+
+**Relato dele:** *"caso caia o número preciso que pare o envio, anteriormente ficou enviando"*.
+
+**Medido, e a causa é limpa: a barreira do canal caído nunca alcançou esta rodada.**
+`page.canalForaDoAr` junta DUAS leituras do DOM — a tarja de desconexão e **o número da conversa
+ABERTA** — e este lote **não abre conversa nenhuma na tela**: ele cria o atendimento pela API e
+manda pela API. Sem conversa aberta não há número para comparar; e o único ponto do painel que
+chama aquela guarda é o caminho da rodada de fila. **O lote não tinha barreira: tinha a ausência
+dela.**
+
+O que serve aqui é a API — `GET /chat/v4/channel/my` devolve o `status` de cada canal
+(`CONNECTED`, `DISCONNECTED`, `BANNED`, `FLAGGED`, `RESTRICTED`) sem depender de tela alguma, e é a
+mesma leitura que o cartão já fazia para mostrar a saúde do número. **Três lugares conferem agora:**
+
+1. **Antes de começar**, todos os números da fila. Qualquer um fora → não começa, com o nome e o
+   status na tela. Fica aqui, e não só no cartão, porque **a tarja mora no CABEÇALHO — que é a tela
+   que ele esconde durante a rodada** (a lição de 25/09: aviso de tela não protege rodada).
+2. **De dez em dez contatos**, e sempre que a fila troca de número. Dez é o que limita o estrago a
+   dez mensagens ao custo de uma requisição a cada dez contatos (~1% do que a rodada já gasta).
+3. **Na mensagem em FILA**, que é o sinal ao vivo.
+
+**`QUEUED` tem duas causas e desfechos OPOSTOS, e é por isso que o status do canal é consultado
+antes de decidir.** Com o número **no ar**, a fila é passageira e o certo é só não concluir, senão a
+conclusão cancela o próprio envio (a guarda da v3.133). Com o número **fora**, aquela mensagem não
+vai a lugar nenhum, e seguir é exatamente o *"ficou enviando"* que ele relatou.
+
+**E neste caso a etiqueta NÃO é aplicada**, de propósito: ela é o que exclui o contato de todos os
+lotes futuros (`exceptTagsId`), então marcar quem não recebeu nada o apagaria da lista **para
+sempre** — a pior falha possível aqui, silenciosa e com a tela dizendo que deu certo. Sem a marca
+ele volta na lista de amanhã. O preço está escrito na linha: se a mensagem em fila for entregue
+quando o número voltar, esse contato recebe a arte duas vezes.
+
+**Falha ao LER o status não é "o número caiu"**: devolve lista vazia com o aviso no log, como a
+guarda da tela sempre fez. O limitador de taxa recusa requisição com frequência, e parar a rodada
+por uma leitura que não voltou é a automação desligada.
+
+### A pergunta dele: reconectando o número, as mensagens pendentes saem?
+
+**Não foi observado ao vivo, e eu não vou afirmar que sim.** O que o projeto já mediu diz duas
+coisas que apontam para o mesmo lado:
+
+- A plataforma **aceita** o envio com o canal fora e o balão fica na conversa sem entregar
+  (registrado em 31/08) — ela não recusa, ela **guarda**.
+- O diálogo da própria tela, antes de concluir, diz que *"uma mensagem está aguardando resposta do
+  contato; se você prosseguir, essas mensagens serão CANCELADAS"*. **Cancelar é uma operação real
+  sobre elas** — ou seja, elas existem como pendentes com intenção de sair.
+
+Então o provável é que **saiam ao reconectar**, e isso é um risco e não um alívio: 40 mensagens
+iguais disparadas em rajada no instante da reconexão é exatamente o padrão que derrubou o número
+dele com menos de dez (a medição de 26/09). **Concluir o atendimento na plataforma cancela a
+mensagem em fila; deixar aberto a entrega.** A decisão é dele, e a linha do Andamento passou a
+dizer as duas coisas.
+
+**A sonda que resolve isto de vez**, quando acontecer: mandar UMA no contato de teste com o número
+fora, reconectar, e ver se ela chega.
+
 ## 2026-10-01 — v3.134.0 — o PNG estava ESCONDIDO no seletor, e agora é convertido aqui
 
 **Relato dele:** *"a extensão ao escolher imagem não atualiza o explorer, baixei uma imagem nova e

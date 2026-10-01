@@ -318,6 +318,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     /** O ponteiro de revezamento dos pares do lote — ver `lote.parDaVez`. */
     loteIndice: 0,
     /**
+     * Quantos envios do lote saíram por número HOJE — a cópia em memória de `store.loteEnvios`,
+     * para o cartão poder desenhar o saldo sem ler o armazenamento dentro de um `render*`. Quem
+     * decide é sempre a leitura do armazenamento (`saldoDosNumerosDoLote`); esta é só a tela.
+     */
+    loteEnvios: {},
+    /**
      * As EQUIPES e os NÚMEROS da conta, para escolher ao abrir atendimento no envio em lote.
      *
      * `null` é "ainda não carreguei" e `[]` é "carreguei e não veio nada" — a distinção importa,
@@ -1614,6 +1620,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.imagens[chave] = await store.get(chave);
     }
     state.loteIndice = (await store.get('varianteIndex'))[loteLib.ID_DA_ROTACAO] || 0;
+    state.loteEnvios = (await store.get('loteEnvios')) || {};
     state.iaChaves = {
       anthropic: !!(await store.get('iaChave')),
       openai: !!(await store.get('iaChaveOpenai')),
@@ -2508,7 +2515,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const marcaMaterial = templatesLib.abreCasoDeMaterial(modelo.text || '')
         ? await etiquetarEndereco(alvo, { gatilho: `o modelo aprovado "${modelo.name}" que acabou de sair pede o endereço`, acabamosDeMandar: modelo.text || '' })
         : '';
-      setStatus(`Modelo enviado: ${modelo.name}${marcaMaterial}`, 'ok');
+      const marcaPalavra = await etiquetarPorPalavra(alvo, modelo.text || '');
+      setStatus(`Modelo enviado: ${modelo.name}${marcaMaterial}${marcaPalavra}`, 'ok');
       return true;
     } else {
       setStatus(
@@ -2818,7 +2826,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const marcaEndereco = templatesLib.abreCasoDeMaterial(text)
       ? await etiquetarEndereco(alvo, { gatilho: `a resposta pronta "${template.name}" que acabou de sair pede o endereço`, acabamosDeMandar: text })
       : '';
-    setStatus(`Enviado: ${template.name}${comImagem.marca}${marca}${marcaEndereco}`, 'ok');
+    const marcaPalavra = await etiquetarPorPalavra(alvo, text);
+    setStatus(`Enviado: ${template.name}${comImagem.marca}${marca}${marcaEndereco}${marcaPalavra}`, 'ok');
     return true;
   }
 
@@ -3080,6 +3089,58 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return r?.ok ? ` + etiqueta "${tag.label}"` : ` (não consegui aplicar "${nome}")`;
     } catch (err) {
       return ` (não consegui aplicar "${nome}": ${err?.message || err})`;
+    }
+  }
+
+  /**
+   * **AS ETIQUETAS POR PALAVRA NO QUE NÓS MANDAMOS** (pedido dele, 01/10/2026: *"preciso da opção
+   * de que quando eu enviar uma palavra chave uma etiqueta que eu escolher também seja colocada"*).
+   *
+   * **A metade do CONTATO já existia** (`store.tagRules`, as etiquetas por conteúdo); esta é a do
+   * nosso lado, e é a generalização do que a etiqueta de material já fazia por um invariante
+   * escrito no código — aqui a palavra e a etiqueta são dele, na aba Config.
+   *
+   * **Chamada de TODOS os pontos por onde texto nosso sai**, que são quatro e não um: o modelo
+   * aprovado (`enviarModelo`), a resposta pronta (`sendTemplate`), o rascunho da IA e a legenda do
+   * envio em lote. Foi essa contagem que custou a etiqueta de material em 15/09 — *"ao pôr uma
+   * marca no ponto único por onde tudo sai, confira que são DOIS pontos"*.
+   *
+   * **Falha de etiqueta NUNCA bloqueia o envio** (a prioridade de 20/08): isto devolve o sufixo da
+   * linha do Andamento e nada mais. E **não confere com a IA**: o fato é o nosso texto, que está
+   * escrito — não há julgamento sobre o que a pessoa quis dizer.
+   */
+  async function etiquetarPorPalavra(alvo, texto) {
+    if (!alvo?.id || !String(texto || '').trim()) return '';
+    let achadas;
+    try {
+      achadas = await tagsLib.etiquetasDoEnvio(texto);
+    } catch (err) {
+      return ` (não consegui ler as etiquetas por palavra: ${err?.message || err})`;
+    }
+    if (!achadas.length) return '';
+
+    const partes = [];
+    const ids = [];
+    for (const achada of achadas) {
+      if (!achada.tag) {
+        partes.push(`(a etiqueta "${achada.nome}" de "${achada.padrao}" não existe no CRM)`);
+        continue;
+      }
+      // Já está no contato: não é falha, e reaplicar seria uma escrita por nada.
+      if ((alvo.tagsId || []).includes(achada.tag.id) || ids.includes(achada.tag.id)) continue;
+      ids.push(achada.tag.id);
+      partes.push(`"${achada.tag.label}" (casou "${achada.padrao}")`);
+    }
+    if (!ids.length) return partes.length ? ` ${partes.join(' ')}` : '';
+
+    try {
+      const r = await tagsLib.applyTags(alvo, ids);
+      if (!r?.ok) return ` (não consegui aplicar a etiqueta por palavra: ${partes.join(', ')})`;
+      // O contato em memória passa a ter as etiquetas, senão a passada seguinte reaplica.
+      alvo.tagsId = [...(alvo.tagsId || []), ...ids];
+      return ` + etiqueta por palavra: ${partes.join(', ')}`;
+    } catch (err) {
+      return ` (não consegui aplicar a etiqueta por palavra: ${err?.message || err})`;
     }
   }
 
@@ -4301,27 +4362,73 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       });
       card.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Equipe'), selEquipe]));
 
-      const selCanal = h('select', {});
-      selCanal.append(h('option', { value: '' }, 'escolha o numero'));
+      /**
+       * **A FILA DE NÚMEROS, na ordem dele** (pedido dele, 01/10/2026: *"limite de 45 por número;
+       * quando chegar em 45 é para trocar por um número seguinte da lista que eu especificar"*).
+       *
+       * **Era um `<select>` de um número só.** Agora é uma lista: marcar põe o número no fim da
+       * fila, e a POSIÇÃO está escrita em cada linha — ordem guardada sem aparecer na tela seria a
+       * armadilha de 01/09 do quadro, em que a rodada obedecia uma prioridade que ninguém via.
+       *
+       * O saldo do dia vem ao lado, porque é o número que decide quando a fila vira: `30/45` diz
+       * quanto ainda cabe HOJE naquele número.
+       */
+      const fila = loteLib.filaDeNumeros(cfg);
+      const dia = loteLib.diaLocal();
+      card.append(h('div', { class: 'wf-sub' }, h('b', {}, `Números do lote (até ${loteLib.TETO_POR_NUMERO} por número, por dia)`)));
+
       for (const c of state.canais) {
-        const rotulo = [
-          c.numero || c.nome,
-          c.status && c.status !== 'CONNECTED' ? c.status : '',
-          c.qualidade && c.qualidade !== 'HIGH' ? `qualidade ${c.qualidade}` : '',
-        ]
-          .filter(Boolean)
-          .join(' · ');
-        selCanal.append(h('option', { value: c.id }, rotulo));
+        const pos = fila.indexOf(c.id);
+        const usados = loteLib.usadosNoDia(state.loteEnvios, c.id, dia);
+        const restam = Math.max(0, loteLib.TETO_POR_NUMERO - usados);
+        const caido = c.status && c.status !== 'CONNECTED';
+        const rotulo =
+          `${pos >= 0 ? `${pos + 1}º · ` : ''}${c.numero || c.nome}` +
+          ` · ${usados}/${loteLib.TETO_POR_NUMERO} hoje` +
+          (caido ? ` · ${c.status}` : '') +
+          (c.qualidade && c.qualidade !== 'HIGH' ? ` · qualidade ${c.qualidade}` : '') +
+          (pos >= 0 && !restam ? ' · CHEIO hoje' : '');
+
+        const linha = h('div', { class: 'wf-row', 'data-fica': '1' }, [
+          checkbox(rotulo, pos >= 0, (marcado) => {
+            const nova = fila.filter((id) => id !== c.id);
+            if (marcado) nova.push(c.id);
+            salvarAuto({
+              loteCanais: nova,
+              // O campo antigo acompanha o PRIMEIRO da fila: ele é o que a tela guardada mostra
+              // quando os números ainda não foram carregados, e o fallback de quem não tem fila.
+              loteCanalId: nova[0] || '',
+              loteCanalNome: nova[0] ? nomeDoNumero(nova[0]) : '',
+            }).then(renderAll);
+          }),
+        ]);
+        /** Subir um número o faz ser usado AGORA: a vez é do primeiro da fila com saldo. */
+        if (pos > 0) {
+          const subir = h('button', { class: 'wf-btn wf-mini', type: 'button' }, '↑');
+          subir.addEventListener('click', () => {
+            const nova = [...fila];
+            [nova[pos - 1], nova[pos]] = [nova[pos], nova[pos - 1]];
+            salvarAuto({
+              loteCanais: nova,
+              loteCanalId: nova[0] || '',
+              loteCanalNome: nova[0] ? nomeDoNumero(nova[0]) : '',
+            }).then(renderAll);
+          });
+          linha.append(subir);
+        }
+        card.append(linha);
       }
-      selCanal.value = cfg.loteCanalId || '';
-      selCanal.addEventListener('change', () => {
-        const escolhido = state.canais.find((c) => c.id === selCanal.value);
-        salvarAuto({
-          loteCanalId: selCanal.value,
-          loteCanalNome: escolhido ? escolhido.numero || escolhido.nome : '',
-        }).then(renderAll);
-      });
-      card.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Numero (canal)'), selCanal]));
+      card.append(h('div', { class: 'wf-origin' },
+        'Marque os números na ordem em que quer usá-los: a rodada manda pelo primeiro da fila até ' +
+          `ele chegar a ${loteLib.TETO_POR_NUMERO} envios no dia, e então passa para o seguinte. ` +
+          'A contagem zera na virada do dia, porque o teto que o WhatsApp cobra é o das últimas ' +
+          'horas — número queimado para sempre não voltaria a servir amanhã.'));
+
+      if (fila.length) {
+        const saldo = loteLib.saldoTotal({ fila, envios: state.loteEnvios, dia });
+        card.append(h('div', { class: 'wf-preview', 'data-fica': '1' },
+          `Cabem ${saldo} envio(s) hoje na fila de ${fila.length} numero(s).`));
+      }
 
       if (!state.equipes.length || !state.canais.length) {
         card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
@@ -4336,28 +4443,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * PADRÃO de envio; `RESTRICTED` é o teto de conversas iniciadas em 24h, que é exatamente o
        * que esta rodada faz, uma por contato.
        */
-      const canal = state.canais.find((c) => c.id === cfg.loteCanalId);
-      if (canal) {
+      for (const canalId of fila) {
+        const canal = state.canais.find((c) => c.id === canalId);
+        if (!canal) continue;
         const d = canal.detalhes || {};
         const janela = Number(d.sessionDurationInMinutes);
+        const quem = canal.numero || canal.nome || canalId;
         const linhas = [
-          `Tipo: ${canal.tipo || 'nao informado'} · status ${canal.status || '?'} · qualidade ${canal.qualidade || '?'}`,
-          janela === -1
-            ? 'Canal SEM janela de 24h: texto e imagem saem a qualquer hora.'
-            : 'Canal COM janela de 24h — fora dela a plataforma exige modelo aprovado, e esta rodada não manda modelo.',
-          d.canStartNewSession === false ? 'Este canal NAO abre atendimento novo.' : '',
+          `${quem}: ${canal.tipo || 'tipo nao informado'} · status ${canal.status || '?'} · qualidade ${canal.qualidade || '?'}`,
+          janela === -1 ? '' : `${quem}: canal COM janela de 24h — fora dela a plataforma exige modelo aprovado, e esta rodada não manda modelo.`,
+          d.canStartNewSession === false ? `${quem}: este canal NAO abre atendimento novo.` : '',
         ].filter(Boolean);
         for (const linha of linhas) card.append(h('div', { class: 'wf-preview', 'data-fica': '1' }, linha));
         if (canal.status && canal.status !== 'CONNECTED') {
           card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
-            `Este número está ${canal.status}. FLAGGED é "sinalizado como enviando SPAM" e ` +
-              'RESTRICTED é o teto de conversas iniciadas em 24h — nos dois casos, mandar em lote ' +
-              'por aqui agora é apostar o número.'));
+            `${quem} está ${canal.status} — a rodada se recusa a usar este número. DISCONNECTED é ` +
+              'o número fora do ar (a plataforma aceita o envio e a mensagem não chega), FLAGGED é ' +
+              '"sinalizado como enviando SPAM" e RESTRICTED é o teto de conversas iniciadas em 24h.'));
         }
         if (canal.qualidade === 'LOW' || canal.qualidade === 'MEDIUM') {
           card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
-            `Qualidade ${canal.qualidade} pela Meta: a própria plataforma diz para evitar disparo ` +
-              'em massa neste número.'));
+            `${quem}: qualidade ${canal.qualidade} pela Meta — a própria plataforma diz para evitar ` +
+              'disparo em massa neste número.'));
         }
       }
     }
@@ -4374,8 +4481,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!String(cfg.loteEtiquetaFiltro || '').trim()) {
       travaEtiqueta.push('Escolha a etiqueta de quem vai receber.');
     }
-    if (!String(cfg.loteCanalId || '').trim()) {
-      travaEtiqueta.push('Escolha o número (canal) que vai abrir o atendimento.');
+    if (!loteLib.filaDeNumeros(cfg).length) {
+      travaEtiqueta.push('Marque ao menos um número na fila: é por ele que o atendimento abre.');
     }
     if (!state.settings.autoSend) travaEtiqueta.push('Precisa do "Enviar automático" ligado (aba Config).');
     if (!state.contratoImagem) travaEtiqueta.push('Falta aprender o envio de imagem (aba Config).');
@@ -5538,6 +5645,78 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return { enviados, interrompida, visitados, restaram: Math.max(0, contatos.length - visitados) };
   }
 
+  /** O número legível, para a linha do Andamento e para o cartão. */
+  function nomeDoNumero(canalId) {
+    const achado = (state.canais || []).find((c) => c.id === canalId);
+    if (achado) return achado.numero || achado.nome || canalId;
+    if (String(state.auto.cfg.loteCanalId || '') === canalId) return state.auto.cfg.loteCanalNome || canalId;
+    return canalId;
+  }
+
+  /**
+   * **O saldo de hoje de cada número da fila** — um lugar só, lido pelo cartão, pela pré-conferência
+   * e pela rodada. Três leituras separadas divergiriam na primeira correção.
+   */
+  async function saldoDosNumerosDoLote() {
+    const fila = loteLib.filaDeNumeros(state.auto.cfg);
+    const envios = (await store.get('loteEnvios')) || {};
+    const dia = loteLib.diaLocal();
+    return { fila, envios, dia, saldo: loteLib.saldoDaFila({ fila, envios, dia }) };
+  }
+
+  /**
+   * **O CANAL CAÍDO NO LOTE É PERGUNTADO À API, E NÃO À TELA** (relato dele, 01/10/2026: *"caso
+   * caia o número preciso que pare o envio, anteriormente ficou enviando"*).
+   *
+   * **Medido: a barreira do canal caído nunca alcançou esta rodada.** `page.canalForaDoAr` junta
+   * duas leituras do DOM — a tarja de desconexão e **o número da conversa ABERTA** — e este lote
+   * não abre conversa nenhuma na tela: ele cria o atendimento pela API e manda pela API. Sem
+   * conversa aberta não há número para comparar, e o único ponto do painel que chama aquela guarda
+   * é o caminho da rodada de fila. **Então o lote não tinha barreira: tinha a ausência dela.**
+   *
+   * O que serve aqui é `GET /chat/v4/channel/my`, que devolve o `status` de cada canal da conta
+   * (`CONNECTED`, `DISCONNECTED`, `BANNED`, `FLAGGED`, `RESTRICTED`) sem depender de tela alguma —
+   * e é a mesma leitura que o cartão já faz para mostrar a saúde do número.
+   *
+   * **Falha ao LER o status não é "o número caiu"**: devolve lista vazia com o aviso no log, como a
+   * guarda da tela sempre fez. O limitador de taxa recusa requisição com frequência, e parar a
+   * rodada inteira por uma leitura que não voltou é a automação desligada — quem segura o caso de
+   * verdade é a conferência da mensagem em FILA, logo abaixo.
+   */
+  async function numerosForaDoAr(fila) {
+    try {
+      const canais = await api.canaisDaConta();
+      // A tela passa a mostrar o estado novo de graça, já que a leitura foi feita.
+      if (Array.isArray(canais) && canais.length) state.canais = canais;
+      const fora = [];
+      for (const id of fila) {
+        const c = (canais || []).find((x) => x.id === id);
+        if (!c) {
+          fora.push({ id, status: 'nao esta mais na lista de numeros da conta' });
+          continue;
+        }
+        const status = String(c.status || '').toUpperCase();
+        if (status !== 'CONNECTED') fora.push({ id, status: c.status || 'sem status' });
+      }
+      return fora;
+    } catch (err) {
+      registrarNaRodada('canal', 'pulado', `nao consegui conferir o status do numero: ${err?.message || err}`);
+      return [];
+    }
+  }
+
+  /** Quantos contatos passaram desde a última conferência do canal nesta rodada. */
+  let contatosDesdeAConferenciaDoCanal = 0;
+
+  /**
+   * **De quantos em quantos contatos o número é reconferido.** O número pode cair no meio da
+   * rodada, e a conferência reativa (mensagem em fila) só dispara quando a plataforma devolve
+   * `QUEUED` — que é o que ela faz com o canal fora, mas não foi observado ao vivo. Dez é o que
+   * limita o estrago a dez mensagens ao custo de uma requisição a cada dez contatos (~1% do que
+   * a rodada já gasta).
+   */
+  const CONTATOS_ENTRE_CONFERENCIAS_DO_CANAL = 10;
+
   /**
    * **Um contato do envio em lote por etiqueta: abre o atendimento, manda a arte, marca.**
    *
@@ -5568,10 +5747,54 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       const par = loteLib.parDaVez(pares, state.loteIndice);
 
+      /**
+       * **O NÚMERO DA VEZ: o primeiro da fila que ainda não chegou ao teto de hoje** (pedido dele,
+       * 01/10/2026: *"limite de 45 por número; quando chegar em 45 é para trocar por um número
+       * seguinte da lista"*).
+       *
+       * **Fila esgotada PARA a rodada, e não é erro:** não há nada a consertar, e o resto da lista
+       * continua esperando amanhã — `parar: true` com o motivo, que é o canal que `percorrerContatos`
+       * tem para encerrar sem acusar defeito.
+       */
+      const { fila, dia } = await saldoDosNumerosDoLote();
+      const envios = (await store.get('loteEnvios')) || {};
+      const numero = loteLib.numeroDaVez({ fila, envios, dia });
+      if (!numero) {
+        return {
+          nome,
+          resultado: 'pulado',
+          parar: true,
+          motivo: fila.length
+            ? `todos os ${fila.length} numero(s) da fila chegaram ao teto de ${loteLib.TETO_POR_NUMERO} hoje — o resto da lista fica para amanha`
+            : 'nenhum numero escolhido para o lote',
+        };
+      }
+
+      /**
+       * **O número continua no ar?** Conferido de dez em dez contatos e sempre que a fila troca de
+       * número — sem isso, um número que cai no meio da rodada só é notado pela mensagem em fila.
+       */
+      contatosDesdeAConferenciaDoCanal++;
+      if (contatosDesdeAConferenciaDoCanal >= CONTATOS_ENTRE_CONFERENCIAS_DO_CANAL || numero.usados === 0) {
+        contatosDesdeAConferenciaDoCanal = 0;
+        const fora = await numerosForaDoAr([numero.canalId]);
+        if (fora.length) {
+          return {
+            nome,
+            resultado: 'pulado',
+            parar: true,
+            motivo:
+              `PAREI: o numero ${nomeDoNumero(numero.canalId)} esta ${fora[0].status}. ` +
+              'Com o numero fora a plataforma ACEITA o envio e a mensagem nao chega — ' +
+              'reconecte o numero (ou suba outro na fila) e recomece.',
+          };
+        }
+      }
+
       const aberto = await api.abrirAtendimento({
         contactId: contato.id,
         departmentId: String(state.auto.cfg.loteEquipeId || '') || null,
-        channelId: String(state.auto.cfg.loteCanalId || ''),
+        channelId: numero.canalId,
       });
       /**
        * **"Já existe um atendimento" não é defeito** — é o caso que a própria tela da plataforma
@@ -5609,7 +5832,51 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.loteIndice = (Number(state.loteIndice) || 0) + 1;
       await store.set('varianteIndex', { ...indices, [loteLib.ID_DA_ROTACAO]: state.loteIndice });
 
+      /**
+       * **O contador do número anda aqui, pela mesma razão do ponteiro: a mensagem SAIU.** Contar
+       * antes queimaria saldo do número por uma falha nossa — e saldo queimado só volta amanhã.
+       * Relido do armazenamento agora para não escrever em cima de uma contagem mais nova.
+       */
+      const antes = (await store.get('loteEnvios')) || {};
+      state.loteEnvios = loteLib.somarEnvio(antes, numero.canalId, dia);
+      await store.set('loteEnvios', state.loteEnvios);
+      const usados = loteLib.usadosNoDia(antes, numero.canalId, dia) + 1;
+
+      /**
+       * **MENSAGEM EM FILA: aqui é onde o número caído aparece de verdade.**
+       *
+       * `QUEUED` tem duas causas e desfechos OPOSTOS, e é por isso que o status do canal é
+       * consultado antes de decidir: com o número **no ar** a fila é passageira (a mensagem sai em
+       * segundos) e o certo é só não concluir, senão a conclusão CANCELA o próprio envio — a guarda
+       * de 01/10. Com o número **fora**, aquela mensagem não vai a lugar nenhum, e seguir a fila é
+       * exatamente o *"ficou enviando"* que ele relatou.
+       *
+       * **E a etiqueta NÃO é aplicada neste caso**, de propósito: ela é o que exclui o contato de
+       * todos os lotes futuros (`exceptTagsId`), então marcar quem não recebeu nada o apagaria da
+       * lista para sempre — a pior falha possível aqui, silenciosa e com a tela dizendo que deu
+       * certo. Sem a marca ele volta na lista de amanhã. O preço, dito na linha: se a mensagem em
+       * fila for entregue quando o número voltar, esse contato recebe a arte duas vezes.
+       */
+      const status = String(r.status || '').toUpperCase();
+      if (status === 'QUEUED') {
+        const fora = await numerosForaDoAr([numero.canalId]);
+        if (fora.length) {
+          return {
+            nome,
+            resultado: 'pulado',
+            parar: true,
+            motivo:
+              `PAREI: a mensagem ficou em FILA e o numero ${nomeDoNumero(numero.canalId)} esta ` +
+              `${fora[0].status}. NAO marquei a etiqueta — este contato volta na lista. A mensagem ` +
+              'em fila pode ser entregue quando o numero voltar: concluir o atendimento na ' +
+              'plataforma cancela, deixar aberto entrega.',
+          };
+        }
+      }
+
       const marca = await marcarEtiquetaDoLote(contato, tagDoLote);
+      // A palavra-chave vale também aqui: a legenda é texto que ELE escreveu e que o eleitor leu.
+      const marcaPalavra = await etiquetarPorPalavra(contato, par.legenda);
 
       /**
        * **Concluir o atendimento** — decisão dele (01/10/2026): *"sim tem que concluir"*. Sem isso
@@ -5626,7 +5893,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * está no contato. O que não pode é ser silenciosa.
        */
       let fecho = '';
-      if (String(r.status || '').toUpperCase() === 'QUEUED') {
+      if (status === 'QUEUED') {
+        // Chegando aqui, o número está no ar: a fila é passageira e concluir cancelaria o envio.
         fecho = ' — deixei ABERTO: a mensagem ficou em fila, e concluir agora a cancelaria';
       } else {
         try {
@@ -5642,8 +5910,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         resultado: 'enviado',
         motivo:
           `par ${par.n} ("${par.arquivo.nome}")` +
+          // O número e a contagem na linha: sem isso, "trocou de número" é invisível no Andamento.
+          ` pelo ${nomeDoNumero(numero.canalId)} (${usados}/${loteLib.TETO_POR_NUMERO} hoje)` +
           (r.legendaFoi ? ' com a legenda junto' : ' — a legenda foi como mensagem separada') +
           marca +
+          marcaPalavra +
           fecho,
       };
     } catch (err) {
@@ -6117,10 +6388,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
     const nomeFiltro = String(cfg.loteEtiquetaFiltro || '').trim();
     if (!nomeFiltro) return setStatus('Escolha a etiqueta de quem vai receber.', 'err');
-    if (!String(cfg.loteCanalId || '').trim()) {
-      return setStatus('Escolha o numero (canal) que vai abrir o atendimento.', 'err');
+    if (!loteLib.filaDeNumeros(cfg).length) {
+      return setStatus('Marque ao menos um numero na fila do lote.', 'err');
     }
 
+    // Rodada nova zera o relógio da conferência: a pré-conferência abaixo já olha todos os números.
+    contatosDesdeAConferenciaDoCanal = 0;
     setStatus('Montando a lista…');
 
     /**
@@ -6167,7 +6440,40 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
     }
 
-    const quantos = sonda ? 1 : Math.min(limite, contatos.length);
+    /**
+     * **A FILA DE NÚMEROS, conferida ANTES de começar** — os dois jeitos de não poder começar são
+     * o saldo do dia esgotado e o número fora do ar, e os dois falham para TODOS os contatos: a
+     * regra de 01/10 vale aqui (*"etiqueta que não existe no CRM faz a rodada se recusar a começar"*),
+     * ao contrário da falha de UM contato, que só pula.
+     *
+     * **A conferência do canal é por API e acontece aqui** porque a tarja mora no CABEÇALHO, que é
+     * a tela que ele esconde durante a rodada — aviso de tela não protege rodada (a lição de 25/09).
+     */
+    const { fila, envios, dia, saldo } = await saldoDosNumerosDoLote();
+    if (!fila.length) return setStatus('Escolha ao menos um numero para o lote.', 'err');
+
+    setStatus('Conferindo os numeros…');
+    const fora = await numerosForaDoAr(fila);
+    if (fora.length) {
+      renderAll();
+      return setStatus(
+        `Nao comecei: ${fora.map((f) => `${nomeDoNumero(f.id)} esta ${f.status}`).join('; ')}. ` +
+          'Com o numero fora a plataforma aceita o envio e a mensagem nao chega — reconecte, ou ' +
+          'desmarque esse numero da fila.',
+        'err'
+      );
+    }
+
+    const vagas = loteLib.saldoTotal({ fila, envios, dia });
+    if (!vagas) {
+      return setStatus(
+        `Todos os ${fila.length} numero(s) da fila ja mandaram ${loteLib.TETO_POR_NUMERO} hoje. ` +
+          'Marque outro numero na fila ou recomece amanha — a contagem zera na virada do dia.',
+        'err'
+      );
+    }
+
+    const quantos = sonda ? 1 : Math.min(limite, contatos.length, vagas);
     const pausaSeg = clampInt(cfg.pausaSeg, 3, 300);
     const divisao = loteLib.comoVaiRevezar(pares.length, quantos);
 
@@ -6185,9 +6491,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           `Etiqueta: "${tagFiltro.label}" (${contatos.length} contato(s) na lista` +
           (lista.total && lista.total > contatos.length ? `, de ${lista.total} no total` : '') +
           ').\n' +
-          `Numero: ${cfg.loteCanalNome || cfg.loteCanalId}` +
+          `Numeros, nesta ordem: ${saldo
+            .map((n) => `${nomeDoNumero(n.canalId)} (cabem ${n.restam} hoje)`)
+            .join(' → ')}` +
           (cfg.loteEquipeNome ? ` · equipe ${cfg.loteEquipeNome}` : '') +
           '.\n' +
+          `Cada numero manda ate ${loteLib.TETO_POR_NUMERO} por dia; chegando no teto, passo para o seguinte.\n` +
+          (quantos < Math.min(limite, contatos.length)
+            ? `Hoje cabem ${vagas} envio(s) na fila, menos que os ${Math.min(limite, contatos.length)} ` +
+              'que a lista e o limite permitiriam — o resto fica para amanha.\n'
+            : '') +
           (sonda ? '' : `Revezando: ${divisao.map((q, i) => `${q} com o par ${pares[i].n}`).join(', ')}.\n`) +
           '\n' +
           (excluir.length
@@ -8105,7 +8418,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           const marcaEndereco = templatesLib.abreCasoDeMaterial(rascunho.texto)
             ? await etiquetarEndereco(state.contact, { gatilho: 'o rascunho da IA que acabou de sair pede o endereço', acabamosDeMandar: rascunho.texto })
             : '';
-          const comoFoi = `IA escreveu e mandou${marcaEndereco} (${porQue})`;
+          // A palavra-chave vale no texto que SAIU, e aqui quem escreveu foi a IA: a regra é dele,
+          // o texto é o que o eleitor recebeu, e é por isso que ela casa no mesmo lugar.
+          const marcaPalavra = await etiquetarPorPalavra(state.contact, rascunho.texto);
+          const comoFoi = `IA escreveu e mandou${marcaEndereco}${marcaPalavra} (${porQue})`;
           const fechou = await concluirPeloPainel();
           if (!fechou.ok) return { nome, resultado: 'enviado', parar: true, motivo: `${comoFoi}, mas ${fechou.reason}` };
           return { nome, resultado: 'enviado', motivo: `${comoFoi} — e concluí` };
@@ -13555,38 +13871,62 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     const rulesArea = h('textarea', { rows: '4' });
     store.get('tagRules').then((rules) => {
-      rulesArea.value = rules.map((r) => `${r.padrao} = ${r.etiqueta}`).join('\n');
+      rulesArea.value = tagsLib.escreverRegrasEmTexto(rules);
     });
     const rulesBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Salvar regras');
     rulesBtn.addEventListener('click', () =>
       withBusy(async () => {
-        const rules = [];
-        const invalidas = [];
-        for (const linha of rulesArea.value.split('\n')) {
-          const texto = linha.trim();
-          if (!texto || texto.startsWith('#')) continue;
-          const i = texto.indexOf('=');
-          if (i < 0) continue;
-          const padrao = texto.slice(0, i).trim();
-          const etiqueta = texto.slice(i + 1).trim();
-          if (!padrao || !etiqueta) continue;
-          try {
-            new RegExp(padrao, 'i');
-          } catch (_) {
-            invalidas.push(padrao);
-            continue;
-          }
-          rules.push({ padrao, etiqueta });
-        }
-        await store.set('tagRules', rules);
+        // O leitor do formato `padrão = Etiqueta` é de `tags.js`: as DUAS tabelas o usam, e duas
+        // cópias divergiriam na primeira correção.
+        const { regras, invalidas } = tagsLib.lerRegrasDeTexto(rulesArea.value);
+        await store.set('tagRules', regras);
         await refreshTagSuggestions();
         setStatus(
-          `${rules.length} regra(s) salva(s).` + (invalidas.length ? ` Ignorei padrão inválido: ${invalidas.join(', ')}` : ''),
+          `${regras.length} regra(s) salva(s).` + (invalidas.length ? ` Ignorei padrão inválido: ${invalidas.join(', ')}` : ''),
           invalidas.length ? 'err' : 'ok'
         );
       })
     );
     body.append(rulesArea, rulesBtn);
+
+    /**
+     * **ETIQUETA POR PALAVRA NO QUE NÓS MANDAMOS** (pedido dele, 01/10/2026: *"preciso da opção de
+     * que quando eu enviar uma palavra chave uma etiqueta que eu escolher também seja colocada"*).
+     *
+     * **É o espelho da tabela de cima, e por isso fica colada nela:** aquela casa no que o CONTATO
+     * escreve e decide qual conteúdo mandar; esta casa no que SAIU e registra o que nós fizemos.
+     * Mesmo formato, mesmo leitor — o que muda é o lado da conversa.
+     *
+     * Nasce VAZIA de propósito: regra inventada aqui põe etiqueta permanente em eleitor real.
+     */
+    body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Etiquetas por palavra no que EU mando'));
+    body.append(
+      h('p', { class: 'wf-hint' }, [
+        'Uma linha por regra, no formato "palavra = Etiqueta". Quando o texto que SAI (modelo ' +
+          'aprovado, resposta pronta, rascunho da IA ou legenda do envio em lote) contiver a ' +
+          'palavra, a etiqueta é aplicada no contato — ',
+        h('b', {}, 'além'),
+        ' das outras. A tabela de cima é o contrário: ela casa no que o contato escreveu. A ' +
+          'etiqueta precisa existir no CRM, e a linha do Andamento diz qual palavra casou.',
+      ])
+    );
+
+    const envioArea = h('textarea', { rows: '3' });
+    store.get('etiquetasPorEnvio').then((regras) => {
+      envioArea.value = tagsLib.escreverRegrasEmTexto(regras);
+    });
+    const envioBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Salvar etiquetas por palavra');
+    envioBtn.addEventListener('click', () =>
+      withBusy(async () => {
+        const { regras, invalidas } = tagsLib.lerRegrasDeTexto(envioArea.value);
+        await store.set('etiquetasPorEnvio', regras);
+        setStatus(
+          `${regras.length} regra(s) salva(s).` + (invalidas.length ? ` Ignorei padrão inválido: ${invalidas.join(', ')}` : ''),
+          invalidas.length ? 'err' : 'ok'
+        );
+      })
+    );
+    body.append(envioArea, envioBtn);
 
     /**
      * **OS ANÚNCIOS DO MOMENTO.**

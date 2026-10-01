@@ -2233,6 +2233,71 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **A BARREIRA DO CANAL CAIDO LE A TELA, ENTAO ELA NAO EXISTE EM RODADA QUE NAO ABRE CONVERSA**
+  (01/10/2026, *"caso caia o numero preciso que pare o envio, anteriormente ficou enviando"*).
+  **Medido: `page.canalForaDoAr` junta DUAS leituras do DOM** — a tarja de desconexao e **o numero da
+  conversa ABERTA** — e o envio em lote nao abre conversa nenhuma: ele cria o atendimento pela API e
+  manda pela API. Sem conversa aberta nao ha numero para comparar, e o UNICO ponto do painel que
+  chamava aquela guarda era o caminho da rodada de fila. **O lote nao tinha barreira: tinha a
+  ausencia dela.**
+  **O que serve aqui e a API: `GET /chat/v4/channel/my` devolve o `status` de cada canal**
+  (`CONNECTED`, `DISCONNECTED`, `BANNED`, `FLAGGED`, `RESTRICTED`) sem depender de tela, e e a mesma
+  leitura que o cartao ja fazia. Confere em TRES lugares: antes de comecar (toda a fila — e aqui, nao
+  so no cartao, porque **a tarja mora no CABECALHO, que e a tela que ele esconde durante a rodada**),
+  de dez em dez contatos, e na mensagem em FILA.
+  **`QUEUED` tem duas causas e desfechos OPOSTOS, e por isso o status do canal e consultado antes de
+  decidir:** com o numero NO AR a fila e passageira e o certo e so nao concluir (concluir cancelaria
+  o proprio envio, a guarda da v3.133); com o numero FORA aquela mensagem nao vai a lugar nenhum, e
+  seguir e o *"ficou enviando"*.
+  **E nesse caso a ETIQUETA NAO e aplicada**, de proposito: ela exclui o contato de todos os lotes
+  futuros (`exceptTagsId`), entao marcar quem nao recebeu nada o apagaria da lista PARA SEMPRE. Sem a
+  marca ele volta amanha; o preco, dito na linha, e receber duas vezes se a fila for entregue depois.
+  **Falha ao LER o status nao e "o numero caiu"** — devolve vazio com aviso no log, como a guarda da
+  tela sempre fez: o limitador recusa requisicao com frequencia, e parar a rodada por leitura que nao
+  voltou e a automacao desligada.
+  **E A PERGUNTA QUE FICA EM ABERTO: reconectando o numero, a mensagem em fila sai?** Nao foi
+  observado. O que se sabe aponta para SIM — a plataforma ACEITA o envio com o canal fora e o balao
+  fica la (31/08), e o dialogo da tela diz que concluir **CANCELA** as pendentes, ou seja elas existem
+  com intencao de sair. **Isso e risco e nao alivio:** 40 mensagens iguais em rajada no instante da
+  reconexao e o padrao que derrubou o numero dele com menos de dez (26/09). **Concluir cancela;
+  deixar aberto entrega** — a decisao e dele. A sonda e mandar UMA no contato de teste com o numero
+  fora e reconectar.
+
+- **TETO DE 45 POR NUMERO, POR DIA, COM A FILA DELE** (pedido dele, 01/10/2026: *"limite de 45 por
+  numero; quando chegar em 45 e para trocar por um numero seguinte da lista que eu especificar"*).
+  `auto.loteCanais` (ids, na ordem dele) + `store.loteEnvios` (`{canalId: {dia, enviados}}`) +
+  `lote.numeroDaVez`. Era um `<select>` de UM numero.
+  **POR DIA e a unica parte que ele nao disse:** o teto que o WhatsApp cobra e o das ultimas 24h (o
+  `RESTRICTED` de 26/09), e **contador vitalicio queimaria o numero no primeiro lote e nunca mais o
+  liberaria** — com o `exceptTagsId` fazendo a lista de amanha ser de gente nova, os numeros tem de
+  voltar a servir. **O corte e o DIA LOCAL** (03/09), e a contagem e por CANAL e nao por candidato.
+  **A vez e do PRIMEIRO da fila com saldo**, nao "o proximo depois do ultimo": assim o numero que ele
+  sobe passa a ser usado na hora, e rodada interrompida recomeca onde parou **sem ponteiro nenhum
+  guardado** — o contador do dia ja diz tudo.
+  **O contador anda depois de a mensagem SAIR**, como o ponteiro do revezamento: contar o que nao
+  saiu queima saldo por falha nossa, e saldo queimado so volta amanha.
+  **`filaDeNumeros` cai no `loteCanalId` antigo quando a fila esta vazia** — sem isso, subir a versao
+  desligaria o lote de quem ja o tinha configurado. **A POSICAO esta escrita em cada linha** (`1º`,
+  `2º`): ordem guardada sem aparecer na tela e a armadilha de 01/09 do quadro.
+  **Fila esgotada PARA a rodada com `parar: true`** (nao e erro: o resto fica para amanha), e
+  esgotada antes de comecar ela se recusa a comecar.
+
+- **ETIQUETA POR PALAVRA NO QUE NOS MANDAMOS, E SAO QUATRO PONTOS DE SAIDA** (pedido dele,
+  01/10/2026: *"quando eu enviar uma palavra chave uma etiqueta que eu escolher tambem seja
+  colocada"*). `store.etiquetasPorEnvio` + `tags.etiquetasDoEnvio` + `etiquetarPorPalavra` no painel.
+  **E o ESPELHO de `tagRules`, e por isso e outra lista:** aquela casa no que o CONTATO escreveu e
+  decide qual CONTEUDO mandar; esta casa no que SAIU e registra o que NOS fizemos. Misturar faria uma
+  palavra do nosso texto decidir qual modelo enviar — a confusao que a etiqueta ADS custou tres vezes.
+  **Os QUATRO pontos sao `enviarModelo`, `sendTemplate`, o envio do rascunho da IA e a legenda do
+  LOTE** — a mesma contagem que custou a etiqueta de material em 15/09.
+  **Nasce VAZIA** (ao contrario de `tagRules`, que tem valores de campanha dele): regra inventada
+  aqui poe etiqueta permanente em eleitor real. **NAO passa pela conferencia da IA** (a regra de
+  17/09 e para etiqueta que afirma o que a PESSOA quis dizer; esta afirma o que NOS mandamos, e esta
+  escrito no texto). **Falha de etiqueta nao bloqueia o envio** (20/08).
+  **E o leitor do formato `padrao = Etiqueta` virou UM** (`tags.lerRegrasDeTexto`): eram duas tabelas
+  com o mesmo formato e o parser morava dentro do botao da primeira. Padrao invalido agora e
+  DEVOLVIDO e aparece na tela, em vez de sumir em silencio.
+
 - **O `accept` DO SELETOR E A LISTA DE PERMISSAO DA PLATAFORMA, E O EXPLORER ESCONDE O RESTO**
   (01/10/2026, *"a extensao ao escolher imagem nao atualiza o explorer, baixei uma imagem nova e ela
   nao mostra"* — e, perguntado, *"e por ser png"*). **Medido: nao havia nada a atualizar.** O campo
