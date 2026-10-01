@@ -877,6 +877,23 @@ const DEFAULTS = {
      */
     etiquetaLote: 'COLINHA',
     /**
+     * **O envio em lote POR ETIQUETA** (pedido dele, 01/10/2026: *"todos os contatos da lista que
+     * vou filtrar pela etiqueta, com exceção dos sem interesse, devem receber"*).
+     *
+     * A lista sai de `POST /core/v1/contact/filter` com `tagsId: [loteEtiquetaFiltro]` e
+     * `exceptTagsId: [etiquetaSemInteresse, etiquetaLote]` — **o "exceto" é feito pelo SERVIDOR**,
+     * que é o que torna o lote repetível sem mandar duas vezes para ninguém.
+     *
+     * `loteEquipeId` e `loteCanalId` são o que a plataforma pede para ABRIR o atendimento (a equipe
+     * e o número). Ficam aqui, com as outras escolhas do operador, e a tela mostra de quem é o
+     * número para não sair a arte de um candidato pelo número do outro.
+     */
+    loteEtiquetaFiltro: '',
+    loteEquipeId: '',
+    loteEquipeNome: '',
+    loteCanalId: '',
+    loteCanalNome: '',
+    /**
      * A partir de quantas horas de silêncio a rodada **pergunta** em vez de concluir sozinha,
      * quando a última mensagem da conversa é nossa.
      *

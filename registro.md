@@ -1,3 +1,95 @@
+## 2026-10-01 — v3.132.0 — envio em lote POR ETIQUETA: abre atendimento novo, manda a arte, marca
+
+**Pedido dele:** *"teremos que abrir um novo atendimento e abrir a conversa por lá e mandar a
+colinha que são as imagens; para abrir o atendimento tem que ser escolhida a equipe e o número,
+preciso que essa nova função tenha a opção de escolher o número, organize na aba de automação;
+todos os contatos da lista que vou filtrar pela etiqueta com exceção dos sem interesse devem receber
+e ser marcados com a etiqueta colinha"*.
+
+Isto é **outra rodada** e não um ajuste da de ontem: a de ontem anda pela FILA da plataforma; esta
+anda por uma lista de **contatos** achados por etiqueta, e **cria** um atendimento em cada um.
+
+### Quatro coisas lidas no bundle, nenhuma delas chutada
+
+| o que | onde |
+|---|---|
+| **abrir atendimento** | `PUT /chat/v1/session` com `{contactId, templateId, departmentId, channelId, compiledTemplate}` — o `execute()` do diálogo que a plataforma abre no botão `data-cy="button-start-session"` da ficha do contato |
+| **as equipes** | `GET /core/v1/department` |
+| **os números, com a saúde** | `GET /chat/v4/channel/my` — `status`, `quality`, `type` e `typeDetails` |
+| **mandar texto por API** | `PUT /chat/v1/session/{id}/message` com `type: 'TEXT'` — a MESMA rota que o envio de imagem já usa em produção |
+
+**`templateId` e `compiledTemplate` nulos é o caminho sem modelo aprovado**, e é o próprio app que
+monta o corpo assim antes de preenchê-los só quando há modelo. Em canal **não oficial** não existe
+janela de 24h nem modelo, então é por aqui; em canal oficial fora da janela a plataforma vai exigir
+o modelo e recusar — e o motivo volta no erro.
+
+**PUT cria** (em `createTag`, `POST` atualiza). Não troque por POST.
+
+### A correção que destravou tudo: `senderId` não é identidade
+
+`api.js` dizia, desde 20/09: *"toda mensagem da sessão carrega o mesmo `senderId`"*. **É falso.**
+Lido no bundle, o app faz `senderId: uuid()` **a cada mensagem** (`createMessage`,
+`sendFileMessage`, `resendTemplateMessage`), com o módulo de UUID v4 — é um id de **correlação do
+cliente**, não o agente nem o canal.
+
+Isso importa porque a crença antiga tornava este pedido impossível: **atendimento recém-criado não
+tem mensagem nenhuma de onde copiar o `senderId`**, e o envio de imagem exige esse campo. Com a
+leitura correta, basta gerar um (`api.novoSenderId`). O comentário foi corrigido e o teste trava o
+formato.
+
+### O "exceto os sem interesse" é feito pelo SERVIDOR, e é isso que torna o lote repetível
+
+A lista sai de `POST /core/v1/contact/filter` com:
+
+- `tagsId: [a etiqueta que ele escolheu]`
+- `exceptTagsId: [etiqueta de sem interesse, etiqueta do lote]`
+
+**Quem já recebeu carrega a etiqueta do lote e não volta na lista.** Rodar de novo continua de onde
+parou, sem repetir ninguém — e isso o filtro da TELA não daria: ele daria o "sem interesse" e nunca
+o "já recebeu". É por isso que a etiqueta é escolhida no cartão e não filtrada na tela de Contatos.
+
+### A equipe e o número ficam na aba Automatizado, como ele pediu
+
+Carregam **no clique** (*"carregamento de aba nasce do clique"*, 02/09) e ficam guardados. E o
+cartão escreve, ao lado do número escolhido, o que a medição dele de 26/09 obrigou: `status`
+(`FLAGGED` = sinalizado como SPAM, `RESTRICTED` = teto de conversas iniciadas em 24h, que é
+exatamente o que esta rodada faz uma vez por contato), `quality`, e do `typeDetails` o
+`sessionDurationInMinutes` (**-1 = canal sem janela**) e o `canStartNewSession`. **É o cartão de
+saúde do canal que eu vinha adiando**, nascido onde ele é load-bearing.
+
+### "Testar em UM contato", e por que ele existe
+
+`PUT /chat/v1/session` **nunca foi executada**. A disciplina deste projeto para escrita nova é uma,
+conferida, antes das outras (a aba Cidades cria uma etiqueta como sonda; o contrato de escrita
+observa um envio à mão). O botão manda para o **primeiro da lista** e para. E no percurso normal,
+**erro desconhecido no primeiro contato para a rodada** — ninguém mais é tocado.
+
+**"Já existe um atendimento" não é erro:** é o caso que a própria tela trata com um botão. Para a
+rodada é um PULO, porque mandar numa conversa em andamento é entrar no meio do atendimento de
+alguém, e este lote não lê conversa para saber onde está pisando.
+
+### `percorrer` troca o PERCURSO e não o motor
+
+`rodar` ganhou a opção. As cinco rodadas antigas continuam em `percorrerFila`; o lote usa
+`percorrerContatos`. O que é comum — keepalive, trava de suspensão, janelinha de controle, log,
+veredito, `finally` — **não foi duplicado**: *"rodada com motor próprio não herda conserto"* (03/09)
+é o defeito registrado quatro vezes aqui. As duas pré-conferências de fila (candidato vazio, nenhum
+modelo aprovado) ficam de fora quando há `percorrer`: nesta rodada seriam alarme falso.
+
+### O custo caiu, e por um motivo que vale registrar
+
+**~7 requisições por contato** (1 abrir + 5 da imagem + 1 etiqueta) contra ~9 da rodada de ontem.
+A diferença é que **esta não chama `load()`**: a decisão não depende da conversa (é ele mandando a
+mesma coisa) e as etiquetas do contato já vieram no filtro. Em 40 contatos são ~280.
+
+### O que ficou de fora, e é escolha
+
+- **A legenda é texto puro, sem `{{variáveis}}`.** Esta rodada nunca abre o contato, então não há
+  contexto de onde renderizar — e variável pela metade saindo para 200 pessoas é o pior desfecho.
+- **O atendimento fica ABERTO.** Não concluí porque ele não pediu, e concluir é escrita a mais no
+  CRM (a decisão de 31/08). **Dito a ele:** 200 envios deixam 200 atendimentos abertos em "Meus", e
+  as outras rodadas passariam a percorrê-los. Se incomodar, é uma caixa de seleção.
+
 ## 2026-10-01 — v3.131.0 — a etiqueta "COLINHA" no envio em lote, e ela virou a trava do reenvio
 
 **Pedido dele:** *"preciso que ao mandar essa imagem bote a etiqueta COLINHA"*.

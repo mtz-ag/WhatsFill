@@ -2360,6 +2360,38 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   viraria caso da IA. **Ao mexer em `PALAVRAS_SEM_CONTEUDO`, "não" fica de fora** — é a negação que faz
   *"não recebi o material"* pedir resposta.
 
+- **ABRIR ATENDIMENTO NOVO POR API: `PUT /chat/v1/session`, E O `senderId` NAO E IDENTIDADE**
+  (01/10/2026, pedido dele: *"teremos que abrir um novo atendimento e abrir a conversa por la e
+  mandar a colinha... tem que ser escolhida a equipe e o numero"*). Corpo lido no bundle, no
+  `execute()` do dialogo do botao `data-cy="button-start-session"`:
+  `{contactId, templateId: null, departmentId, channelId, compiledTemplate: null}` — **os dois nulos
+  sao o caminho SEM modelo aprovado**, que e o unico possivel em canal nao oficial. **PUT cria**
+  (como em `createTag`, onde POST atualiza). Junto entraram `GET /core/v1/department` (as equipes),
+  `GET /chat/v4/channel/my` (os numeros com `status`, `quality`, `type`, `typeDetails`) e
+  `api.mandarTexto`, que usa a **MESMA rota do envio de imagem** (`PUT .../message`) com
+  `type: 'TEXT'` — `page.sendText` nao serve aqui, porque digita no campo da conversa ABERTA e nesta
+  rodada nao ha conversa na tela.
+  **A CORRECAO QUE DESTRAVOU ISSO: `senderId` e um uuid v4 gerado POR MENSAGEM**, nao a identidade
+  da sessao. O `api.js` dizia *"toda mensagem da sessao carrega o mesmo senderId"* desde 20/09 e e
+  falso — o app faz `senderId: uuid()` em `createMessage`, `sendFileMessage` e
+  `resendTemplateMessage`. A crenca antiga tornava este pedido impossivel: **atendimento
+  recem-criado nao tem mensagem de onde copiar**, e o envio de imagem exige o campo. Hoje ha
+  `api.novoSenderId()`.
+  **"Ja existe um atendimento" NAO e erro** — e o caso que a propria tela trata com um botao; para a
+  rodada e PULO (entrar no meio da conversa de alguem). Erro desconhecido PARA a rodada no primeiro
+  contato, porque **a rota nunca foi executada** e o primeiro e a sonda (o botao "Testar em UM
+  contato" faz isso de proposito).
+  **E o `exceptTagsId` do filtro de contatos e o que torna o lote REPETIVEL:** a lista sai com
+  `tagsId: [etiqueta escolhida]` e `exceptTagsId: [sem interesse, etiqueta do lote]`, entao quem ja
+  recebeu nao volta. O filtro da TELA daria o primeiro e nunca o segundo — e por isso a etiqueta e
+  escolhida no cartao, nao filtrada na tela de Contatos.
+  **`rodar` ganhou `percorrer`, que troca o PERCURSO e nao o motor:** `percorrerFila` anda pela fila,
+  `percorrerContatos` anda pela lista da API. Keepalive, trava de suspensao, janelinha, log e
+  veredito nao foram duplicados — *"rodada com motor proprio nao herda conserto"* (03/09). As duas
+  pre-conferencias de fila ficam de fora quando ha `percorrer`: ali seriam alarme falso.
+  **Custo: ~7 requisicoes por contato** (1 abrir + 5 imagem + 1 etiqueta) contra ~9 da rodada de
+  fila, porque **esta nao chama `load()`** — a decisao nao depende da conversa e as etiquetas vieram
+  no filtro.
 - **ENVIO EM LOTE (imagem + legenda) E UMA RODADA FORA DO QUADRO, E AS PROTECOES CONTINUAM**
   (01/10/2026, pedido dele: *"preciso enviar uma imagem e um texto especifico fora do fluxo... e va
   variando entre umas 4 imagens e descricoes diferentes enquanto manda"*). `lib/lote.js` + o cartao
@@ -4452,10 +4484,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
 > `src/` e reclama só de `SyntaxError`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e uma suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

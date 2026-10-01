@@ -317,6 +317,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     imagens: { imagemMomentoArquivo: null, imagemPedidoDadosArquivo: null },
     /** O ponteiro de revezamento dos pares do lote — ver `lote.parDaVez`. */
     loteIndice: 0,
+    /**
+     * As EQUIPES e os NÚMEROS da conta, para escolher ao abrir atendimento no envio em lote.
+     *
+     * `null` é "ainda não carreguei" e `[]` é "carreguei e não veio nada" — a distinção importa,
+     * porque a segunda é a rota devolvendo vazio (ela nunca foi executada) e a tela tem de dizer
+     * isso em vez de mostrar um seletor vazio como se fosse a verdade. Carregam no CLIQUE, nunca
+     * no desenho: rede disparada de dentro de um `render*` vira uma requisição por redesenho.
+     */
+    equipes: null,
+    canais: null,
     /** O envio de imagem aprendido observando a plataforma — ver `recorder.aprenderEnvioDeImagem`. */
     contratoImagem: null,
     /** Esperas longas em curso, por tarefa — ver `semTravarOPainel`. NUNCA use `state.busy` para elas. */
@@ -4235,6 +4245,148 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     comecar.disabled = state.auto.rodando || trava.length > 0;
     for (const motivo of trava) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, motivo));
 
+
+    /**
+     * **QUEM vai receber: a etiqueta, a equipe e o número** (pedido dele, 01/10/2026).
+     *
+     * **A etiqueta é escolhida AQUI e não filtrada na tela de Contatos** — e isso não é teimosia: é
+     * o que torna o *"com exceção dos sem interesse"* exato. O filtro sai por
+     * `POST /core/v1/contact/filter` com `exceptTagsId`, então quem tem a etiqueta de sem interesse
+     * **e quem já recebeu o lote** são excluídos pelo SERVIDOR, antes de a lista chegar. Ler a lista
+     * da tela daria o primeiro, nunca o segundo — e sem o segundo o lote não é repetível.
+     */
+    card.append(h('hr', { class: 'wf-sep' }));
+    card.append(h('div', { class: 'wf-sub' }, h('b', {}, 'Quem vai receber')));
+    card.append(
+      campoTexto('Etiqueta dos contatos que vão receber', cfg.loteEtiquetaFiltro, (v) =>
+        salvarAuto({ loteEtiquetaFiltro: v.trim() }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Quem tem esta etiqueta recebe, MENOS quem tem a etiqueta de sem interesse (a da aba ' +
+          'Etiquetas) e quem já tem a do lote. As duas exclusões são feitas pelo servidor, então ' +
+          'rodar de novo continua de onde parou, sem repetir ninguém.')
+    );
+
+    /**
+     * **Abrir atendimento exige a EQUIPE e o NÚMERO** — é o que a plataforma pede no diálogo dela,
+     * e por isso os dois são escolhidos aqui. As listas carregam no CLIQUE, nunca no desenho: rede
+     * disparada de dentro de um `render*` vira uma requisição por redesenho.
+     */
+    if (!state.equipes || !state.canais) {
+      const carregar = h('button', { class: 'wf-btn', type: 'button' }, 'Carregar equipes e números');
+      carregar.addEventListener('click', () =>
+        withBusy(async () => {
+          // Uma de cada vez: duas consultas no mesmo instante é rajada contra o limitador (24/09).
+          state.equipes = await api.listarEquipes();
+          state.canais = await api.canaisDaConta();
+          setStatus(`${state.equipes.length} equipe(s) e ${state.canais.length} numero(s).`, 'ok');
+          renderAll();
+        })
+      );
+      card.append(h('div', { class: 'wf-row' }, [carregar]));
+      card.append(h('div', { class: 'wf-origin' },
+        cfg.loteCanalNome
+          ? `Guardado: equipe "${cfg.loteEquipeNome || 'nenhuma'}", numero "${cfg.loteCanalNome}". ` +
+            'Carregue para conferir ou trocar.'
+          : 'Preciso ler as equipes e os números da conta para você escolher — são duas leituras, ' +
+            'feitas só quando você pede.'));
+    } else {
+      const selEquipe = h('select', {});
+      selEquipe.append(h('option', { value: '' }, 'sem equipe'));
+      for (const e of state.equipes) selEquipe.append(h('option', { value: e.id }, e.nome || e.id));
+      selEquipe.value = cfg.loteEquipeId || '';
+      selEquipe.addEventListener('change', () => {
+        const escolhida = state.equipes.find((e) => e.id === selEquipe.value);
+        salvarAuto({ loteEquipeId: selEquipe.value, loteEquipeNome: escolhida?.nome || '' }).then(renderAll);
+      });
+      card.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Equipe'), selEquipe]));
+
+      const selCanal = h('select', {});
+      selCanal.append(h('option', { value: '' }, 'escolha o numero'));
+      for (const c of state.canais) {
+        const rotulo = [
+          c.numero || c.nome,
+          c.status && c.status !== 'CONNECTED' ? c.status : '',
+          c.qualidade && c.qualidade !== 'HIGH' ? `qualidade ${c.qualidade}` : '',
+        ]
+          .filter(Boolean)
+          .join(' · ');
+        selCanal.append(h('option', { value: c.id }, rotulo));
+      }
+      selCanal.value = cfg.loteCanalId || '';
+      selCanal.addEventListener('change', () => {
+        const escolhido = state.canais.find((c) => c.id === selCanal.value);
+        salvarAuto({
+          loteCanalId: selCanal.value,
+          loteCanalNome: escolhido ? escolhido.numero || escolhido.nome : '',
+        }).then(renderAll);
+      });
+      card.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Numero (canal)'), selCanal]));
+
+      if (!state.equipes.length || !state.canais.length) {
+        card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+          'A conta respondeu sem ' + (!state.canais.length ? 'numero' : 'equipe') +
+            ' nenhum. Estas duas rotas nunca foram executadas antes de hoje — me diga o que ' +
+            'apareceu aqui para eu conferir o formato.'));
+      }
+
+      /**
+       * **A saúde do número, escrita ao lado da escolha** — é a medição que ele pagou em 26/09
+       * (menos de dez mensagens iguais derrubaram um número). `FLAGGED` é o WhatsApp punindo o
+       * PADRÃO de envio; `RESTRICTED` é o teto de conversas iniciadas em 24h, que é exatamente o
+       * que esta rodada faz, uma por contato.
+       */
+      const canal = state.canais.find((c) => c.id === cfg.loteCanalId);
+      if (canal) {
+        const d = canal.detalhes || {};
+        const janela = Number(d.sessionDurationInMinutes);
+        const linhas = [
+          `Tipo: ${canal.tipo || 'nao informado'} · status ${canal.status || '?'} · qualidade ${canal.qualidade || '?'}`,
+          janela === -1
+            ? 'Canal SEM janela de 24h: texto e imagem saem a qualquer hora.'
+            : 'Canal COM janela de 24h — fora dela a plataforma exige modelo aprovado, e esta rodada não manda modelo.',
+          d.canStartNewSession === false ? 'Este canal NAO abre atendimento novo.' : '',
+        ].filter(Boolean);
+        for (const linha of linhas) card.append(h('div', { class: 'wf-preview', 'data-fica': '1' }, linha));
+        if (canal.status && canal.status !== 'CONNECTED') {
+          card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+            `Este número está ${canal.status}. FLAGGED é "sinalizado como enviando SPAM" e ` +
+              'RESTRICTED é o teto de conversas iniciadas em 24h — nos dois casos, mandar em lote ' +
+              'por aqui agora é apostar o número.'));
+        }
+        if (canal.qualidade === 'LOW' || canal.qualidade === 'MEDIUM') {
+          card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+            `Qualidade ${canal.qualidade} pela Meta: a própria plataforma diz para evitar disparo ` +
+              'em massa neste número.'));
+        }
+      }
+    }
+
+    const comecarPorEtiqueta = h('button', { class: 'wf-btn wf-primary', type: 'button' },
+      'Mandar para os contatos da etiqueta');
+    comecarPorEtiqueta.addEventListener('click', () => withBusy(() => runLoteContatos({})));
+    const sonda = h('button', { class: 'wf-btn', type: 'button' }, 'Testar em UM contato');
+    sonda.addEventListener('click', () => withBusy(() => runLoteContatos({ sonda: true })));
+    card.append(h('div', { class: 'wf-row' }, [comecarPorEtiqueta, sonda]));
+
+    const travaEtiqueta = [];
+    if (!pares.length) travaEtiqueta.push('Preencha ao menos um par.');
+    if (!String(cfg.loteEtiquetaFiltro || '').trim()) {
+      travaEtiqueta.push('Escolha a etiqueta de quem vai receber.');
+    }
+    if (!String(cfg.loteCanalId || '').trim()) {
+      travaEtiqueta.push('Escolha o número (canal) que vai abrir o atendimento.');
+    }
+    if (!state.settings.autoSend) travaEtiqueta.push('Precisa do "Enviar automático" ligado (aba Config).');
+    if (!state.contratoImagem) travaEtiqueta.push('Falta aprender o envio de imagem (aba Config).');
+    comecarPorEtiqueta.disabled = state.auto.rodando || travaEtiqueta.length > 0;
+    sonda.disabled = comecarPorEtiqueta.disabled;
+    for (const motivo of travaEtiqueta) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, motivo));
+
+    card.append(h('div', { class: 'wf-origin' },
+      '"Testar em UM contato" manda para o PRIMEIRO da lista e para — a rota que abre atendimento ' +
+        'nunca foi executada antes de hoje, e é assim que se prova uma escrita nova neste projeto: ' +
+        'uma, conferida, antes das outras.'));
     card.append(h('p', { class: 'wf-hint' },
       `Vai até ${limite} contato(s), com ${pausaSeg}s entre um envio e outro — o mesmo limite e a ` +
         'mesma pausa do cartão de ritmo, lá em cima.'));
@@ -5291,6 +5443,182 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return { enviados, interrompida, visitados: visitados.size, restaram };
   }
 
+  /**
+   * **O PERCURSO do envio em lote: uma lista de CONTATOS, não a fila da plataforma.**
+   *
+   * Pedido dele (01/10/2026): *"todos os contatos da lista que vou filtrar pela etiqueta, com
+   * exceção dos sem interesse, devem receber e ser marcados com a etiqueta colinha"*.
+   *
+   * **Por que não é a fila:** quem ele quer alcançar pode não ter atendimento aberto nenhum — é
+   * contato da base, achado por etiqueta. Então o percurso não abre item de fila: ele **cria** um
+   * atendimento por contato (`api.abrirAtendimento`), manda e segue.
+   *
+   * **Nenhum `load()`**: a decisão não depende da conversa (é ele mandando a mesma coisa), e as
+   * etiquetas do contato já vieram no filtro. São ~7 requisições por contato em vez de ~10 — e
+   * nesta API o que derruba é número de requisições.
+   *
+   * O respiro, o congelamento e o engasgo de rede seguem a mesma política de `percorrerFila`: três
+   * engasgos seguidos param, um só espera e segue para o próximo.
+   */
+  async function percorrerContatos({ contatos, limite, pausaMs, processar }) {
+    let enviados = 0;
+    let interrompida = '';
+    let falhasDeRede = 0;
+    let visitados = 0;
+
+    for (const contato of contatos) {
+      if (enviados >= limite || state.auto.parar) break;
+      visitados++;
+
+      const r = await processar(contato);
+      registrarNaRodada(r.nome, r.resultado, r.motivo || '');
+
+      if (r.resultado === 'erro' && r.rede) {
+        falhasDeRede++;
+        if (falhasDeRede > ESPERAS_DE_REDE_MS.length) {
+          interrompida = `Parei em ${r.nome}: a plataforma não voltou depois de ${falhasDeRede - 1} esperas. ${r.motivo}`;
+          break;
+        }
+        const espera = ESPERAS_DE_REDE_MS[falhasDeRede - 1];
+        registrarNaRodada(
+          'rede',
+          'pulado',
+          `engasgo de rede (${falhasDeRede}º seguido) — espero ${espera / 1000}s e sigo para o próximo`
+        );
+        const folga = await pausarRodada(espera);
+        if (state.auto.parar) break;
+        if (folga.congelou) {
+          const gelo = await lidarComCongelamento(espera, folga.gasto);
+          if (gelo.parar) {
+            interrompida = gelo.motivo;
+            break;
+          }
+        }
+        continue;
+      }
+      /**
+       * **Erro que NÃO é de rede para a rodada** — a disciplina de sempre. Aqui ela pesa mais: o
+       * primeiro contato é a SONDA da rota de abrir atendimento, que nunca foi executada. Falhando
+       * nele, ninguém mais é tocado.
+       */
+      if (r.resultado === 'erro') {
+        interrompida = `Parei em ${r.nome}: ${r.motivo}`;
+        break;
+      }
+      falhasDeRede = 0;
+
+      if (r.resultado === 'enviado') {
+        enviados++;
+        state.lastSendAt = Date.now();
+      }
+      if (r.parar) {
+        interrompida = r.motivo;
+        break;
+      }
+
+      if (enviados >= limite || state.auto.parar) continue;
+      // A pausa longa protege o NÚMERO; pulo só precisa do respiro curto do servidor.
+      const ms = r.resultado === 'enviado' ? pausaMs : Math.min(pausaMs, PAUSA_PULO_MS);
+      if (r.resultado === 'enviado') setStatus(`${enviados}/${limite}. Pausa de ${ms / 1000}s…`);
+      const pausa = await pausarRodada(ms);
+      if (pausa.congelou) {
+        const gelo = await lidarComCongelamento(ms, pausa.gasto);
+        if (gelo.parar) {
+          interrompida = gelo.motivo;
+          break;
+        }
+      }
+    }
+
+    return { enviados, interrompida, visitados, restaram: Math.max(0, contatos.length - visitados) };
+  }
+
+  /**
+   * **Um contato do envio em lote por etiqueta: abre o atendimento, manda a arte, marca.**
+   *
+   * A ordem é a que torna o erro recuperável: abrir → mandar → marcar. Falhando ao abrir, nada
+   * saiu e nada foi marcado; falhando ao marcar, a arte saiu e a linha do Andamento diz isso (a
+   * prioridade de 20/08 — a mensagem é o que o contato recebe).
+   */
+  async function processarContatoDoLote(contato) {
+    const nome = String(contato?.name || contato?.nameWhatsapp || 'sem nome');
+    try {
+      const porPerfil = (chave) => perfisLib.chaveDeImagem(chave, perfilAtivo());
+      const pares = loteLib.paresProntos({
+        cfg: state.auto.cfg,
+        imagens: state.imagens,
+        chaveDeImagem: porPerfil,
+      });
+      if (!pares.length) return { nome, resultado: 'erro', motivo: 'nenhum par com imagem E legenda' };
+
+      const tagDoLote = await tagDoEnvioEmLote();
+      /**
+       * O filtro já pediu ao servidor para EXCLUIR quem tem a etiqueta do lote e quem tem a de sem
+       * interesse (`exceptTagsId`). Esta segunda conferência é de graça e pega o que o filtro não
+       * pega: a etiqueta aplicada entre o filtro e a vez deste contato, numa lista longa.
+       */
+      if (tagDoLote && (contato.tagsId || []).includes(tagDoLote.id)) {
+        return { nome, resultado: 'pulado', motivo: `já tem a etiqueta "${tagDoLote.label}"` };
+      }
+
+      const par = loteLib.parDaVez(pares, state.loteIndice);
+
+      const aberto = await api.abrirAtendimento({
+        contactId: contato.id,
+        departmentId: String(state.auto.cfg.loteEquipeId || '') || null,
+        channelId: String(state.auto.cfg.loteCanalId || ''),
+      });
+      /**
+       * **"Já existe um atendimento" não é defeito** — é o caso que a própria tela da plataforma
+       * trata com um botão de abrir o que já existe. Para a rodada é um PULO: mandar numa conversa
+       * em andamento é entrar no meio do atendimento de alguém, e este lote não lê conversa para
+       * saber onde está pisando.
+       */
+      if (!aberto.ok) {
+        return {
+          nome,
+          resultado: 'pulado',
+          motivo: 'já tem atendimento aberto neste número — não entrei no meio da conversa',
+        };
+      }
+
+      const r = await page.enviarImagem({
+        sessionId: aberto.sessionId,
+        // Atendimento recém-criado não tem mensagem de onde copiar — e `senderId` é id de
+        // correlação por mensagem, não identidade (a correção de 01/10 em `api.js`).
+        senderId: api.novoSenderId(),
+        chave: par.chave,
+        legenda: par.legenda,
+      });
+      /**
+       * A legenda só é dada por entregue quando a plataforma a devolve. Não voltando, o texto vai
+       * pela API na MESMA sessão — e não por `page.sendText`, que digita no campo da conversa
+       * ABERTA: aqui não há conversa aberta na tela.
+       */
+      if (!r.legendaFoi) {
+        await api.mandarTexto({ sessionId: aberto.sessionId, senderId: api.novoSenderId(), texto: par.legenda });
+      }
+
+      // O ponteiro só anda depois de a mensagem sair de verdade.
+      const indices = await store.get('varianteIndex');
+      state.loteIndice = (Number(state.loteIndice) || 0) + 1;
+      await store.set('varianteIndex', { ...indices, [loteLib.ID_DA_ROTACAO]: state.loteIndice });
+
+      const marca = await marcarEtiquetaDoLote(contato, tagDoLote);
+
+      return {
+        nome,
+        resultado: 'enviado',
+        motivo:
+          `par ${par.n} ("${par.arquivo.nome}")` +
+          (r.legendaFoi ? ' com a legenda junto' : ' — a legenda foi como mensagem separada') +
+          marca,
+      };
+    } catch (err) {
+      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message), rede: ehErroDeRede(err.message) };
+    }
+  }
+
   /** Abre a rodada, roda o percurso e fecha o status. Comum às duas. */
   /**
    * **Esta rodada decide sozinha?**
@@ -5304,7 +5632,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return !!state.auto.cfg.automatizarComIA || !!state.auto.automatico;
   }
 
-  async function rodar({ aba, processar, automatico = false }) {
+  /**
+   * **`percorrer` troca o PERCURSO, não o motor** (01/10/2026, o envio em lote por etiqueta).
+   *
+   * As cinco rodadas antigas andam pela FILA da plataforma (`percorrerFila` + `openQueueSession`);
+   * o envio em lote anda por uma lista de CONTATOS que veio da API, e abre um atendimento novo em
+   * cada um. O percurso é legitimamente outro — o resto (keepalive, trava de suspensão, a
+   * janelinha de controle, o log, o veredito, o `finally`) é o mesmo, e duplicar isso é como as
+   * duas cópias de qualquer coisa neste projeto divergem (*"rodada com motor próprio não herda
+   * conserto"*, 03/09).
+   */
+  async function rodar({ aba, processar, automatico = false, percorrer = null }) {
     const limite = clampInt(state.auto.cfg.limite, 1, 200);
     const pausaMs = clampInt(state.auto.cfg.pausaSeg, 3, 300) * 1000;
 
@@ -5351,7 +5689,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * **Avisa e SEGUE**: a rodada ainda conclui, reabre e etiqueta sem mandar nada, e barrar aqui
      * transformaria um campo em branco em rodada travada. É a mesma escolha da barreira do canal.
      */
-    if (perfilAtivo() !== perfisLib.PERFIL_PADRAO) {
+    if (!percorrer && perfilAtivo() !== perfisLib.PERFIL_PADRAO) {
       const faltando = [];
       if (!String(state.auto.cfg.mensagemMomento || '').trim()) faltando.push('a mensagem do momento');
       if (!state.templates.length) faltando.push('as respostas prontas');
@@ -5378,7 +5716,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * concluindo, pulando, pedindo o cadastro e chamando a IA — que é 100% do que ela decide,
      * medido em 20.000 contextos.
      */
+    // O envio em lote não manda modelo aprovado nenhum: avisar que não há seria alarme falso.
     try {
+      if (percorrer) throw { pular: true };
       const temAnuncioComModelo = (await carregarAnuncios(perfilAtivo())).some(
         (a) => a.ligado && a.acao === 'modelo' && String(a.valor || '').trim()
       );
@@ -5394,13 +5734,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
     } catch (err) {
       // Aviso é conveniência: falhar aqui não pode impedir a rodada de rodar.
-      registrarNaRodada('rodada', 'pulado', `Não consegui conferir os modelos configurados (${err?.message || err}).`);
+      if (!err?.pular) {
+        registrarNaRodada('rodada', 'pulado', `Não consegui conferir os modelos configurados (${err?.message || err}).`);
+      }
     }
 
     let resultado = { enviados: 0, interrompida: '', visitados: 0, restaram: 0 };
     let aindaTocando = false;
     try {
-      resultado = await percorrerFila({ aba, limite, pausaMs, processar });
+      resultado = percorrer
+        ? await percorrer({ limite, pausaMs })
+        : await percorrerFila({ aba, limite, pausaMs, processar });
     } finally {
       // Antes de desligar: se o áudio subiu mas o navegador o pausou no caminho, isso é o dado
       // que distingue "o remédio não foi aplicado" de "o remédio não funciona".
@@ -5711,6 +6055,130 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     } catch (err) {
       return ` (não consegui aplicar "${tag.label}": ${err?.message || err})`;
     }
+  }
+
+  /**
+   * **O envio em lote POR ETIQUETA: abre atendimento novo em cada contato e manda a arte.**
+   *
+   * Pedido dele (01/10/2026): *"teremos que abrir um novo atendimento e abrir a conversa por lá e
+   * mandar a colinha que são as imagens... todos os contatos da lista que vou filtrar pela etiqueta
+   * com exceção dos sem interesse devem receber e ser marcados com a etiqueta colinha"*.
+   *
+   * **O "exceto" é do SERVIDOR** (`exceptTagsId`), e isso é o que torna o lote repetível: quem já
+   * recebeu carrega a etiqueta do lote e não volta na lista. Rodar de novo continua de onde parou.
+   *
+   * **`sonda: true` manda para UM e para.** `PUT /chat/v1/session` foi lido no bundle e **nunca
+   * executado** — a disciplina deste projeto para escrita nova é uma, conferida, antes das outras
+   * (a aba Cidades cria uma etiqueta como sonda; o contrato de escrita observa um envio à mão).
+   */
+  async function runLoteContatos({ sonda = false } = {}) {
+    const cfg = state.auto.cfg;
+    const porPerfil = (chave) => perfisLib.chaveDeImagem(chave, perfilAtivo());
+    const pares = loteLib.paresProntos({ cfg, imagens: state.imagens, chaveDeImagem: porPerfil });
+
+    if (!pares.length) return setStatus('Preencha ao menos um par: a imagem E a legenda dele.', 'err');
+    if (!state.settings.autoSend) {
+      return setStatus('Ligue o "Enviar automatico" na aba Config antes de rodar.', 'err');
+    }
+    if (!state.contratoImagem) {
+      return setStatus('Falta aprender o envio de imagem (aba Config) — sem isso a arte nao sai.', 'err');
+    }
+    const nomeFiltro = String(cfg.loteEtiquetaFiltro || '').trim();
+    if (!nomeFiltro) return setStatus('Escolha a etiqueta de quem vai receber.', 'err');
+    if (!String(cfg.loteCanalId || '').trim()) {
+      return setStatus('Escolha o numero (canal) que vai abrir o atendimento.', 'err');
+    }
+
+    setStatus('Montando a lista…');
+
+    /**
+     * As três etiquetas que decidem a lista. A do lote e a de sem interesse viram `exceptTagsId`;
+     * a do filtro é quem entra. **Etiqueta que não existe no CRM é recusa com o motivo**, nunca um
+     * filtro que devolve a base inteira por engano.
+     */
+    const tagFiltro = await tagsLib.resolveTag(nomeFiltro);
+    if (!tagFiltro) {
+      return setStatus(`A etiqueta "${nomeFiltro}" nao existe no CRM. Confira o nome.`, 'err');
+    }
+    const tagDoLote = await tagDoEnvioEmLote();
+    const nomeEtiquetaLote = String(cfg.etiquetaLote || '').trim();
+    if (nomeEtiquetaLote && !tagDoLote) {
+      return setStatus(
+        `A etiqueta "${nomeEtiquetaLote}" nao existe no CRM. Crie-a la e recomece, ou apague o campo ` +
+          'para mandar sem marcar (ai quem ja recebeu volta na lista).',
+        'err'
+      );
+    }
+    const nomeSemInteresse = String(cfg.etiquetaSemInteresse || '').trim();
+    const tagSemInteresse = nomeSemInteresse ? await tagsLib.resolveTag(nomeSemInteresse) : null;
+
+    const excluir = [tagDoLote?.id, tagSemInteresse?.id].filter(Boolean);
+    const limite = clampInt(cfg.limite, 1, 200);
+
+    let lista;
+    try {
+      lista = await api.filterContacts({
+        tagsId: [tagFiltro.id],
+        exceptTagsId: excluir,
+        pageSize: 200,
+      });
+    } catch (err) {
+      return setStatus(`Nao consegui montar a lista: ${traduzirErroDeRede(err.message, 'Tente de novo em instantes.')}`, 'err');
+    }
+
+    const contatos = (lista.itens || []).filter((c) => c?.id);
+    if (!contatos.length) {
+      return setStatus(
+        `Nenhum contato com a etiqueta "${tagFiltro.label}"` +
+          (excluir.length ? ' que ainda nao tenha recebido e nao esteja marcado como sem interesse.' : '.'),
+        'ok'
+      );
+    }
+
+    const quantos = sonda ? 1 : Math.min(limite, contatos.length);
+    const pausaSeg = clampInt(cfg.pausaSeg, 3, 300);
+    const divisao = loteLib.comoVaiRevezar(pares.length, quantos);
+
+    /**
+     * **O `confirm` com os números na frente** — esta é a rodada que mais se parece com disparo em
+     * massa, e o orçamento medido é pequeno (26/09). O que ele precisa ler antes: quantos, por qual
+     * número, com que pausa, e o que acontece com quem não tem a etiqueta ainda.
+     */
+    if (
+      !confirm(
+        (sonda
+          ? 'TESTE: vou abrir atendimento e mandar para UM contato só — o primeiro da lista.\n\n'
+          : `Vou abrir um atendimento NOVO e mandar IMAGEM + LEGENDA para ${quantos} contato(s), ` +
+            `com ${pausaSeg}s entre um e outro.\n\n`) +
+          `Etiqueta: "${tagFiltro.label}" (${contatos.length} contato(s) na lista` +
+          (lista.total && lista.total > contatos.length ? `, de ${lista.total} no total` : '') +
+          ').\n' +
+          `Numero: ${cfg.loteCanalNome || cfg.loteCanalId}` +
+          (cfg.loteEquipeNome ? ` · equipe ${cfg.loteEquipeNome}` : '') +
+          '.\n' +
+          (sonda ? '' : `Revezando: ${divisao.map((q, i) => `${q} com o par ${pares[i].n}`).join(', ')}.\n`) +
+          '\n' +
+          (excluir.length
+            ? 'Fora da lista: quem ja tem a etiqueta do lote e quem esta marcado como sem interesse.\n'
+            : 'ATENCAO: sem etiqueta de lote nem de sem interesse configuradas, ninguem esta sendo excluido.\n') +
+          (nomeEtiquetaLote ? `Cada um que receber e marcado com "${nomeEtiquetaLote}".\n` : '') +
+          '\nConfirma?'
+      )
+    ) {
+      return setStatus('Envio em lote cancelado.');
+    }
+
+    // O ▶ do controle flutuante recomeça POR AQUI: os confirms desta rodada moram nesta função.
+    recomecarRodada = () => runLoteContatos({ sonda });
+    await rodar({
+      percorrer: ({ limite: teto, pausaMs }) =>
+        percorrerContatos({
+          contatos,
+          limite: sonda ? 1 : teto,
+          pausaMs,
+          processar: processarContatoDoLote,
+        }),
+    });
   }
 
   /**

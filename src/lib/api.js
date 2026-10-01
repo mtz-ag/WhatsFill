@@ -524,12 +524,21 @@ export async function getConversation(sessionId, pageSize = 50) {
      */
     nossaUltimaAt: [...ordenadas].reverse().find((m) => !doContato(m))?.createdAt || null,
     /**
-     * **De onde a plataforma manda neste atendimento.** Toda mensagem da sessão carrega o mesmo
-     * `senderId`, e é ele que o corpo do envio de imagem exige (ver `imagem.corpoDaMensagem`).
+     * **O `senderId` da última mensagem nossa** — o que o corpo do envio de imagem exige (ver
+     * `imagem.corpoDaMensagem`).
      *
-     * Sai daqui, e não de uma requisição própria, porque a conversa já é lida a cada contato — e
-     * nesta API o que derruba a plataforma é NÚMERO de requisições. Prefere uma mensagem NOSSA:
-     * é o papel que vamos ocupar ao mandar.
+     * **CORREÇÃO (01/10/2026): ele NÃO é identidade, e não é o mesmo em toda a sessão.** O que
+     * estava escrito aqui — *"toda mensagem da sessão carrega o mesmo senderId"* — é falso: lido no
+     * bundle, o app faz `senderId: uuid()` **a cada mensagem** (`createMessage`, `sendFileMessage`,
+     * `resendTemplateMessage`), com o módulo de UUID v4. É um id de correlação do cliente, não o
+     * agente nem o canal.
+     *
+     * Isso tem uma consequência prática grande: **atendimento recém-criado não tem mensagem
+     * nenhuma, e mesmo assim dá para mandar** — basta gerar um (`novoSenderId`). A crença antiga
+     * dizia que sem conversa não havia como enviar.
+     *
+     * Reusar o da última mensagem nossa continua certo onde a conversa existe: sai de graça, e
+     * nesta API o que derruba a plataforma é NÚMERO de requisições.
      */
     senderId: String(([...ordenadas].reverse().find((m) => !doContato(m)) || ultima)?.senderId || ''),
   };
@@ -649,6 +658,150 @@ export async function contarMeuDia() {
   const abertos = await contarMeusAbertos();
   const concluidosHoje = await contarConcluidosHoje();
   return { abertos: abertos.total, concluidosHoje };
+}
+
+/**
+ * **Um `senderId` novo** — id de correlação do cliente, um por mensagem, como o app faz.
+ *
+ * Existe para o atendimento que acabou de ser criado: ele não tem mensagem nenhuma de onde copiar.
+ */
+export function novoSenderId() {
+  try {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  } catch (_) {
+    /* segue para o caminho manual */
+  }
+  // Mesmo formato do uuid v4 que o app usa, para o caso de `randomUUID` não existir no contexto.
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.floor(Math.random() * 16);
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+/**
+ * **As EQUIPES (departamentos) da conta** — `GET /core/v1/department`.
+ *
+ * Lida no bundle em 01/10/2026 e **nunca executada**: por isso quem chama trata a lista vazia como
+ * "não consegui ler", e não como "não há equipe". A disciplina é a de `listContacts`/`createTag`
+ * (20/08): ler o código do app não é ter chamado a rota.
+ */
+export async function listarEquipes() {
+  const corpo = await apiFetch('/core/v1/department');
+  const itens = Array.isArray(corpo) ? corpo : corpo?.items || [];
+  return itens
+    .map((d) => ({ id: String(d?.id || ''), nome: String(d?.name || d?.description || '').trim() }))
+    .filter((d) => d.id);
+}
+
+/**
+ * **Os NÚMEROS (canais) da conta, com a saúde de cada um** — `GET /chat/v4/channel/my`.
+ *
+ * É a rota que o app usa para montar a lista de canais, e ela traz o que decide as regras de cada
+ * número (27/09): `status` (`CONNECTED`, `FLAGGED` = sinalizado como SPAM, `RESTRICTED` = teto de
+ * conversas iniciadas em 24h, `BANNED`, `DISCONNECTED`), `quality` (`HIGH`/`MEDIUM`/`LOW`) e
+ * `typeDetails`, onde moram `canStartNewSession`, `mustUseTemplate`, `canSendCampaign` e
+ * `sessionDurationInMinutes` (**-1 = canal sem janela de 24h**).
+ *
+ * `type` separa os dois mundos: `CloudApi`/`Dialog360` são oficiais; `ZAPI`/`EvolutionAPI` não.
+ */
+export async function canaisDaConta() {
+  const corpo = await apiFetch('/chat/v4/channel/my');
+  const itens = Array.isArray(corpo) ? corpo : corpo?.items || [];
+  return itens
+    .map((c) => ({
+      id: String(c?.id || ''),
+      nome: String(c?.name || c?.description || '').trim(),
+      numero: String(c?.numberFormatted || c?.number || '').trim(),
+      tipo: String(c?.type || ''),
+      status: String(c?.status || ''),
+      qualidade: String(c?.quality || ''),
+      detalhes: c?.typeDetails || null,
+    }))
+    .filter((c) => c.id);
+}
+
+/** A plataforma diz que já existe atendimento aberto para este contato neste número. */
+export const JA_EXISTE_ATENDIMENTO = 'ja-existe-atendimento';
+
+/**
+ * **Abre um atendimento NOVO para um contato** — `PUT /chat/v1/session`.
+ *
+ * Corpo lido no bundle (01/10/2026), no `execute()` do diálogo que a plataforma abre ao clicar no
+ * botão `data-cy="button-start-session"` da ficha do contato:
+ *
+ * ```
+ * { contactId, templateId: null, departmentId, channelId, compiledTemplate: null }
+ * ```
+ *
+ * **`templateId`/`compiledTemplate` nulos é o caminho sem modelo aprovado** — o próprio app monta o
+ * corpo assim e só os preenche quando há modelo escolhido. Em canal **não oficial** não há janela de
+ * 24h nem modelo, então é este o caminho; em canal oficial fora da janela a plataforma vai exigir o
+ * modelo, e aí ela recusa (o motivo volta no erro).
+ *
+ * **PUT cria, como em `createTag`** (`POST` ali atualiza) — não troque por POST.
+ *
+ * **Rota NUNCA EXECUTADA:** quem chama manda UMA como sonda antes do lote, e para se ela falhar.
+ *
+ * O caso que a própria tela trata e que a rodada precisa distinguir: a resposta de erro trazendo
+ * *"Já existe um atendimento"* não é defeito — é o contato já ter conversa aberta naquele número.
+ */
+export async function abrirAtendimento({ contactId, departmentId = null, channelId }) {
+  if (!contactId) throw new Error('sem contato para abrir o atendimento');
+  if (!channelId) throw new Error('escolha o número (canal) antes de abrir o atendimento');
+  try {
+    const sessao = await apiFetch('/chat/v1/session', {
+      method: 'PUT',
+      body: {
+        contactId,
+        templateId: null,
+        departmentId: departmentId || null,
+        channelId,
+        compiledTemplate: null,
+      },
+    });
+    const id = String(sessao?.id || '');
+    if (!id) throw new Error('a plataforma não devolveu o atendimento criado');
+    return { ok: true, sessionId: id, sessao };
+  } catch (err) {
+    const texto = String(err?.message || err);
+    if (/j[áa] existe um atendimento/i.test(texto)) {
+      return { ok: false, motivo: JA_EXISTE_ATENDIMENTO, texto };
+    }
+    throw err;
+  }
+}
+
+/**
+ * **Manda TEXTO numa sessão pela API** — `PUT /chat/v1/session/{id}/message`, `type: 'TEXT'`.
+ *
+ * É a MESMA rota e o mesmo envelope que o envio de imagem já usa em produção desde 20/09 (ver
+ * `imagem.corpoDaMensagem`), com `type` trocado — foi lido no `sendMessage` do app em 01/10/2026.
+ *
+ * Existe para o envio em lote, onde a conversa **não está na tela**: `page.sendText` digita no
+ * campo da conversa aberta, e ali não há conversa aberta. Fora desse caso, continue usando o
+ * caminho da tela, que é o que a plataforma renderiza igual ao que uma pessoa faria.
+ */
+export async function mandarTexto({ sessionId, senderId, texto }) {
+  if (!sessionId) throw new Error('sem atendimento para mandar o texto');
+  const agora = new Date().toISOString();
+  const msg = await apiFetch(`/chat/v1/session/${sessionId}/message`, {
+    method: 'PUT',
+    body: {
+      sessionId,
+      senderId: senderId || novoSenderId(),
+      type: 'TEXT',
+      text: String(texto || ''),
+      direction: 'TO_HUB',
+      createdAt: agora,
+      updatedAt: agora,
+      timestamp: agora,
+      status: 'PROCESSING',
+    },
+  });
+  // A armadilha mais antiga daqui: 2xx não prova nada. O texto tem que voltar.
+  if (!String(msg?.text || '').trim()) throw new Error('a plataforma aceitou e não guardou o texto');
+  return { id: String(msg?.id || '') };
 }
 
 /** Só o que o contato escreveu, do mais antigo para o mais novo. Base do parser. */
