@@ -859,6 +859,24 @@ const DEFAULTS = {
     imagemLote4: '',
     legendaLote4: '',
     /**
+     * **A etiqueta que marca quem RECEBEU o lote** (pedido dele, 01/10/2026: *"ao mandar essa
+     * imagem bote a etiqueta COLINHA"*).
+     *
+     * **Nasce preenchida, e isso é de propósito.** `auto` está na lista de mescla do `get`, então
+     * esta chave nova chega a quem já usa com o valor de fábrica — o contrário (campo em branco)
+     * é a armadilha registrada em 04/09: regra que ele dita virando campo vazio nunca chega, e a
+     * marca sumiria em silêncio. Ele renomeia se a etiqueta do CRM tiver outro nome; vazio é a
+     * escolha explícita de mandar sem marcar.
+     *
+     * **Não é por candidato.** O critério de 25/09 é *"entra no perfil o que o eleitor recebe"*, e
+     * etiqueta é organização interna do CRM — mora com as outras (`etiquetaSemInteresse`,
+     * `etiquetaEndereco`), que são configuração do OPERADOR.
+     *
+     * Ela faz DUAS coisas, e a segunda é a que importa mais: marca o recibo **e** é a memória que
+     * impede o reenvio quando o contato volta noutra sessão. Ver `lote.porqueNaoMandar`.
+     */
+    etiquetaLote: 'COLINHA',
+    /**
      * A partir de quantas horas de silêncio a rodada **pergunta** em vez de concluir sozinha,
      * quando a última mensagem da conversa é nossa.
      *

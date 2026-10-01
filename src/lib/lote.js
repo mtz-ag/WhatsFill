@@ -137,6 +137,31 @@ export function jaRecebeu(pares, nossas = []) {
 }
 
 /**
+ * **Por que este contato NAO recebe** — as duas memorias juntas, e a ordem importa.
+ *
+ * `jaRecebeu` pergunta a CONVERSA, e conversa e memoria da SESSAO: quem volta sozinho abre
+ * atendimento novo e `nossas` nasce vazio (a armadilha da Rosa, 05/09). Entao quem recebeu a arte
+ * na semana passada passaria batido e receberia de novo — exatamente o que o revezamento existe
+ * para evitar.
+ *
+ * **A ETIQUETA e a memoria de verdade.** Ela e gravada no envio e nao depende da sessao: por isso
+ * ela e consultada PRIMEIRO e e ela que carrega o lote adiante. A conversa continua valendo como
+ * segunda rede, para o caso de a etiqueta nao estar configurada ou de ele ter mandado a mao.
+ *
+ * `tagDoLote` e `{ id, label }` ou nulo; `tagsDoContato` sao os ids que o contato JA tem no CRM —
+ * `state.contact.tagsId`, nunca a lista da caixa da rodada, que e so o que a rodada sugere.
+ */
+export function porqueNaoMandar({ pares = [], nossas = [], tagsDoContato = [], tagDoLote = null } = {}) {
+  const ids = Array.isArray(tagsDoContato) ? tagsDoContato : [];
+  if (tagDoLote && tagDoLote.id && ids.includes(tagDoLote.id)) {
+    return `ja tem a etiqueta "${tagDoLote.label || tagDoLote.id}" — ja recebeu este lote`;
+  }
+  const n = jaRecebeu(pares, nossas);
+  if (n) return `ja recebeu o par ${n} deste lote`;
+  return null;
+}
+
+/**
  * Quantos contatos cada par vai pegar, para o `confirm` dizer o que vai acontecer de verdade.
  * Com 4 pares e limite 40 são 10 cada — e é esse número que ele precisa ler antes de começar.
  */

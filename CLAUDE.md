@@ -2376,6 +2376,18 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   volta — o `visitados` evita o envio duplo ao custo de uma abertura extra por contato, e abertura e
   o que derruba a API. **Ao escrever rodada que nao conclui nem assume, diga que o contato continua
   na fila.**
+  **(4) A ETIQUETA DO LOTE e a trava do reenvio, e nao so o recibo** (01/10/2026, pedido dele: *"ao
+  mandar essa imagem bote a etiqueta COLINHA"*). `auto.etiquetaLote`, **nasce com `COLINHA`** porque
+  `auto` esta na mescla do `get` e campo em branco nunca chegaria (a armadilha de 04/09); vazio e a
+  escolha explicita de mandar sem marcar. **Ela e consultada ANTES da conversa** em
+  `lote.porqueNaoMandar`: conversa e memoria da SESSAO (a armadilha da Rosa, 05/09) e quem volta dias
+  depois receberia a arte outra vez — a etiqueta e a memoria de verdade. **Nao passa pela conferencia
+  da IA** (a regra de 17/09 e para etiqueta que afirma o que a PESSOA quis dizer; esta afirma o que
+  NOS fizemos) e **nao e por candidato** (etiqueta e organizacao interna, nao o que o eleitor recebe).
+  **Ela BARRA antes da fila e nunca no meio dela:** etiqueta que nao existe no CRM falha para TODOS e
+  a rodada se recusa a comecar — o oposto da regra de 20/08, que vale para a falha de UM contato. A
+  comparacao e por `tag.id` contra `state.contact.tagsId`: por rotulo seria a armadilha do rotulo
+  repetido, e pela lista da caixa da rodada seria a de 31/08.
   **E o custo medido e ~9 requisicoes por contato** (1 abertura + 3 do `load` + **5 do envio de
   imagem**): 40 contatos sao ~360, e a rodada que estourou o limitador em 24/09 fez 444 — o limite e
   a pausa sao o freio. **Reaproveitar o `fileId` entre contatos cortaria para ~5 e e HIPOTESE**: o

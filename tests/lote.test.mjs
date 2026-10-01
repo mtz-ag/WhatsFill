@@ -102,6 +102,46 @@ grupo('legenda curta nao serve de impressao digital');
   );
 }
 
+grupo('a ETIQUETA e a memoria de verdade; a conversa e a segunda rede');
+{
+  const pares = lote.paresProntos({ cfg: cfg(), imagens: imagens() });
+  const colinha = { id: 'tag-9', label: 'COLINHA' };
+
+  check(lote.porqueNaoMandar({ pares, nossas: [] }) === null, 'contato limpo recebe');
+
+  const porEtiqueta = lote.porqueNaoMandar({ pares, nossas: [], tagsDoContato: ['tag-9'], tagDoLote: colinha });
+  check(!!porEtiqueta, 'quem JA TEM a etiqueta nao recebe de novo');
+  check(porEtiqueta.includes('COLINHA'), 'e o motivo diz qual etiqueta foi');
+
+  check(
+    lote.porqueNaoMandar({ pares, nossas: [], tagsDoContato: ['outra'], tagDoLote: colinha }) === null,
+    'etiqueta de outro assunto no contato nao barra'
+  );
+
+  /**
+   * A razao de a etiqueta vir PRIMEIRO: conversa e memoria da sessao. Quem volta sozinho abre
+   * atendimento novo, `nossas` nasce vazio, e so a etiqueta lembra que a arte ja foi.
+   */
+  const voltouNoutraSessao = lote.porqueNaoMandar({
+    pares,
+    nossas: [],
+    tagsDoContato: ['tag-9'],
+    tagDoLote: colinha,
+  });
+  check(!!voltouNoutraSessao, 'sessao nova com a etiqueta no CRM continua barrada');
+
+  const semEtiquetaConfigurada = lote.porqueNaoMandar({
+    pares,
+    nossas: [{ texto: LEGENDA_1 }],
+    tagsDoContato: ['tag-9'],
+    tagDoLote: null,
+  });
+  check(
+    semEtiquetaConfigurada.includes('par 1'),
+    'sem etiqueta configurada a conversa ainda segura quem recebeu nesta sessao'
+  );
+}
+
 grupo('o confirm diz quantos cada par vai pegar');
 {
   const d = lote.comoVaiRevezar(4, 40);

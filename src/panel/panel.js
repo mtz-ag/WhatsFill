@@ -4196,6 +4196,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // Par pela metade é o único estado que vale avisar: par vazio é par que ele não usou.
     for (const falta of faltas) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, falta));
 
+    /**
+     * **A etiqueta do recibo, e a memória que impede o reenvio** (pedido dele, 01/10/2026).
+     *
+     * Fica NESTE cartão, ao lado do que ela marca — a lição de 04/09 é sobre campo que vive no
+     * cartão errado (os dois de etiqueta sumiram dentro de um cartão escondido e ficaram
+     * impossíveis de configurar), não sobre juntar todas as etiquetas num lugar só.
+     */
+    card.append(
+      campoTexto('Etiqueta de quem RECEBEU o lote', cfg.etiquetaLote, (v) =>
+        salvarAuto({ etiquetaLote: v.trim() }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Marcada no CRM a cada envio, e lida antes do próximo: é ela que impede mandar duas vezes ' +
+          'para a mesma pessoa, inclusive quando ela volta dias depois (aí a conversa é outra e só ' +
+          'a etiqueta lembra). A etiqueta precisa existir no CRM — a extensão não cria. Vazio = ' +
+          'manda sem marcar, e sem a trava que ela dá.')
+    );
+    if (!String(cfg.etiquetaLote || '').trim()) {
+      card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+        'Sem etiqueta: quem já recebeu só é reconhecido enquanto a conversa estiver aberta. Voltando ' +
+          'noutro dia, o contato recebe de novo.'));
+    }
+
     const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Começar o envio em lote');
     comecar.addEventListener('click', () => withBusy(runLoteImagem));
     card.append(h('div', { class: 'wf-row' }, [comecar]));
@@ -5648,6 +5671,49 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * colega, então o aviso vai no confirm.
    */
   /**
+   * A etiqueta do lote resolvida no CRM, ou nulo quando o campo está vazio.
+   *
+   * `resolveTag` lê a lista cacheada de etiquetas, então chamar por contato não custa requisição —
+   * e devolver o objeto (e não só o nome) é o que permite comparar por ID com o que o contato já
+   * tem. **Comparar por rótulo aqui seria a armadilha do rótulo repetido** ("1 Sem Retorno" /
+   * "2 Sem Retorno"), e comparar com a lista da caixa da rodada seria a de 31/08: ela é só o que a
+   * rodada sugere, nunca o que o contato tem.
+   */
+  async function tagDoEnvioEmLote() {
+    const nome = String(state.auto.cfg.etiquetaLote || '').trim();
+    if (!nome) return null;
+    try {
+      return await tagsLib.resolveTag(nome);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * **Marca quem recebeu o lote.** Devolve o pedaço que entra na linha do Andamento — nunca lança,
+   * porque quem chama acabou de mandar a imagem e não há o que desfazer.
+   *
+   * **Sem conferência da IA, de propósito.** A regra de 17/09 (*"etiqueta nova que depende de
+   * julgamento de texto entra em `TIPOS_DE_ETIQUETA`"*) vale para etiqueta que afirma algo sobre o
+   * que a pessoa QUIS dizer — material, sem interesse, pedido. Esta afirma o que NÓS fizemos: a
+   * arte saiu para este contato. Não há julgamento a conferir, e pagar uma chamada por contato
+   * para confirmar um fato nosso seria dinheiro por nada.
+   */
+  async function marcarEtiquetaDoLote(alvo, tag) {
+    const nome = String(state.auto.cfg.etiquetaLote || '').trim();
+    if (!nome) return ' (sem etiqueta configurada — não marquei)';
+    if (!tag) return ` (a etiqueta "${nome}" não existe no CRM — não marquei)`;
+    if (!alvo?.id) return '';
+    if ((alvo.tagsId || []).includes(tag.id)) return '';
+    try {
+      const r = await tagsLib.applyTags(alvo, [tag.id]);
+      return r?.ok ? ` + etiqueta "${tag.label}"` : ` (não consegui aplicar "${tag.label}")`;
+    } catch (err) {
+      return ` (não consegui aplicar "${tag.label}": ${err?.message || err})`;
+    }
+  }
+
+  /**
    * **A rodada do ENVIO EM LOTE** — pedido dele (01/10/2026): *"preciso enviar uma imagem e um texto
    * especifico fora do fluxo, simplesmente vou mandar para os contatos"*.
    *
@@ -5689,6 +5755,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       )
     ) {
       return setStatus('Envio em lote cancelado.');
+    }
+
+    /**
+     * **A etiqueta é conferida UMA vez, antes da fila** — e aqui ela BARRA, ao contrário da regra
+     * de 20/08 (*"falha de etiqueta nunca bloqueia o envio da mensagem"*), que vale para a falha
+     * de UM contato no meio da rodada.
+     *
+     * A diferença é o alcance: etiqueta que não existe no CRM falha para TODOS, e ele pediu a
+     * marca justamente para achar essa gente depois. Quarenta artes enviadas sem marca nenhuma é o
+     * trabalho que não dá para refazer — e conferir antes custa zero requisição (a lista de
+     * etiquetas é cacheada). As duas saídas estão escritas no aviso.
+     */
+    const nomeDaEtiqueta = String(state.auto.cfg.etiquetaLote || '').trim();
+    if (nomeDaEtiqueta) {
+      const tag = await tagsLib.resolveTag(nomeDaEtiqueta);
+      if (!tag) {
+        return setStatus(
+          `A etiqueta "${nomeDaEtiqueta}" não existe no CRM. Crie-a lá e recomece, ou apague o campo ` +
+            'para mandar sem marcar (aí quem volta noutro dia recebe de novo).',
+          'err'
+        );
+      }
     }
 
     // O ▶ do controle flutuante recomeça POR AQUI: o confirm desta rodada mora nesta função.
@@ -5751,10 +5839,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return { nome, resultado: 'erro', motivo: 'nenhum par com imagem E legenda — nada a mandar' };
       }
 
-      const jaFoi = loteLib.jaRecebeu(pares, state.nossas);
-      if (jaFoi) {
-        return { nome, resultado: 'pulado', motivo: `ja recebeu o par ${jaFoi} deste lote` };
-      }
+      const tagDoLote = await tagDoEnvioEmLote();
+      const naoMandar = loteLib.porqueNaoMandar({
+        pares,
+        nossas: state.nossas,
+        tagsDoContato: state.contact.tagsId || [],
+        tagDoLote,
+      });
+      if (naoMandar) return { nome, resultado: 'pulado', motivo: naoMandar };
 
       const par = loteLib.parDaVez(pares, state.loteIndice);
       const rendido = vars.render(par.legenda, await currentVarContext());
@@ -5786,11 +5878,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.loteIndice = (Number(state.loteIndice) || 0) + 1;
       await store.set('varianteIndex', { ...indices, [loteLib.ID_DA_ROTACAO]: state.loteIndice });
 
+      /**
+       * **A marca vem DEPOIS do envio, e falhar aqui não desfaz nada** — a prioridade de 20/08:
+       * etiqueta é organização interna, a mensagem é o que o contato recebe. O que não pode é a
+       * falha ser silenciosa, então ela vai para a linha do Andamento junto do envio.
+       */
+      const marca = await marcarEtiquetaDoLote(state.contact, tagDoLote);
+
       registrarNaRodada(
         nome,
         'enviado',
         `par ${par.n} ("${par.arquivo.nome}")` +
-          (r.legendaFoi ? ' com a legenda junto' : ' — a legenda foi como mensagem separada')
+          (r.legendaFoi ? ' com a legenda junto' : ' — a legenda foi como mensagem separada') +
+          marca
       );
       return { nome, resultado: 'enviado', continuaNaFila: true };
     } catch (err) {

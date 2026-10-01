@@ -1,3 +1,71 @@
+## 2026-10-01 — v3.131.0 — a etiqueta "COLINHA" no envio em lote, e ela virou a trava do reenvio
+
+**Pedido dele:** *"preciso que ao mandar essa imagem bote a etiqueta COLINHA"*.
+
+**O lote passou a escrever UMA coisa no CRM**, e é a segunda exceção à decisão dele de 31/08 (*"ao
+pular tem gravado dados no CRM, o que faz eu perder tempo"*) — a primeira foi a etiqueta de quem
+mandou o endereço, em 04/09, e pelo mesmo motivo: **o envio não deixa rastro nenhum, e sem marca ele
+não reencontra essa gente na fila depois.** Nenhum campo, nenhuma data de conclusão, nenhuma
+conclusão: uma escrita de etiqueta, só quando a arte saiu.
+
+### E ela resolveu um buraco que ele não pediu
+
+A anti-duplicata que entrou ontem pergunta à CONVERSA (as quatro legendas), e **conversa é memória
+da SESSÃO** — a armadilha da Rosa (05/09). Quem volta sozinho dias depois abre atendimento novo,
+`state.nossas` nasce vazio, e o contato **receberia a arte outra vez**. A etiqueta não tem esse
+problema: ela fica no CRM.
+
+Então a ordem é essa, e está escrita em `lote.porqueNaoMandar`:
+
+| memória | alcance |
+|---|---|
+| **etiqueta no CRM** (consultada primeiro) | para sempre, atravessa sessão |
+| conversa (as 4 legendas) | só enquanto o atendimento estiver aberto |
+
+A segunda continua existindo como rede: cobre o campo vazio e o que ele mandou à mão.
+
+### Três escolhas, com o porquê
+
+**1. Nasce preenchida com `COLINHA`.** `auto` está na lista de mescla do `get`, então a chave nova
+chega a quem já usa com o valor de fábrica. O contrário — campo em branco esperando ele preencher —
+é a armadilha de 04/09 (*"regra que ele dita não pode virar default de campo que ele já preencheu:
+ela nunca chega"*), e aqui a marca sumiria em silêncio. Renomeia se a etiqueta do CRM tiver outro
+nome; **vazio é a escolha explícita** de mandar sem marcar, e a tela diz o que se perde com isso.
+
+**2. Não é por candidato.** O critério de 25/09 é *"entra no perfil o que o eleitor recebe"* —
+etiqueta é organização interna, e mora com as outras (`etiquetaSemInteresse`, `etiquetaEndereco`),
+que são configuração do operador.
+
+**3. Sem conferência da IA.** A regra de 17/09 manda toda etiqueta nova passar por
+`TIPOS_DE_ETIQUETA`, e ela vale para etiqueta que afirma algo sobre o que a PESSOA quis dizer —
+material, sem interesse, pedido. Esta afirma o que **nós** fizemos: a arte saiu. Não há julgamento a
+conferir, e pagar uma chamada por contato para confirmar um fato nosso seria dinheiro por nada.
+
+### Onde ela BARRA, e onde nunca barra
+
+**Antes da fila, ela barra.** Se a etiqueta não existe no CRM, a rodada **não começa** — e isso
+contraria a regra de 20/08 (*"falha de etiqueta nunca bloqueia o envio da mensagem"*) de propósito,
+porque o alcance é outro: ali é a falha de UM contato no meio da rodada; aqui a etiqueta falta para
+TODOS. Quarenta artes enviadas sem marca nenhuma é o trabalho que não dá para refazer, e conferir
+antes **custa zero requisição** (a lista de etiquetas é cacheada). O aviso traz as duas saídas:
+criar no CRM, ou apagar o campo.
+
+**No meio da rodada, nunca barra.** A marca vem depois do envio e a falha vai para a linha do
+Andamento junto dele — a mensagem é o que o contato recebe, a etiqueta é organização nossa.
+
+**A extensão não cria a etiqueta**, de propósito: etiqueta inventada fica permanente no CRM, e a
+criação tem dono (a aba Cidades, com sonda).
+
+### A comparação é por ID
+
+`resolveTag` devolve o objeto, e a comparação com o que o contato já tem é por `tag.id` contra
+`state.contact.tagsId`. Comparar por rótulo seria a armadilha do rótulo repetido ("1 Sem Retorno" /
+"2 Sem Retorno", e a "Serra" duplicada que produziu 1293 linhas erradas); comparar com a lista da
+caixa da rodada seria a de 31/08 — ela é só o que a rodada sugere, nunca o que o contato tem.
+
+**Custo:** a mesma chamada de escrita que a etiqueta de endereço já fazia, uma por contato que
+recebe — e `resolveTag` não custa rede, porque a lista é cacheada.
+
 ## 2026-10-01 — v3.130.0 — envio em lote: imagem + legenda, revezando entre quatro pares
 
 **Pedido dele:** *"preciso enviar uma imagem e um texto específico fora do fluxo, simplesmente vou
