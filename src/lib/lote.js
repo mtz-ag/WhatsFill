@@ -254,6 +254,67 @@ export function saldoTotal(args) {
  * a mesma disciplina do ponteiro do revezamento, e a razão é a mesma: contar o que não saiu
  * queimaria saldo do número por uma falha nossa.
  */
+/**
+ * **O que BARRA o número, e o que só avisa** (01/10/2026, print dele: a rodada se recusou a
+ * começar porque `status` e `quality` chegaram `UNDEFINED` num canal **Z-API**).
+ *
+ * **Ausência de informação NÃO é evidência de que o número caiu** — foi esse o defeito: `!==
+ * CONNECTED` dava verdadeiro para `undefined`, e a barreira travou a rodada num número que estava
+ * no ar. É a lição de 25/09 outra vez (`donoDoCanal` devolvendo `null` para duas situações
+ * opostas): **estados diferentes precisam de respostas diferentes.**
+ *
+ * **São DOIS campos, de mundos diferentes:**
+ * - **`healthStatus`** é a conexão, e existe nos dois mundos — `DISCONNECTED` ("número de telefone
+ *   foi desconectado") e `CRITICAL` ("crítica a conexão com o WhatsApp") são o número caído.
+ * - **`status`** é da Cloud API e vem VAZIO em canal não oficial. `BANNED` e `DISCONNECTED` são o
+ *   número fora; **`RESTRICTED`** é o teto de conversas iniciadas em 24h, e com ele a plataforma
+ *   recusa — nos três a mensagem não chega, então os três barram.
+ *
+ * **`FLAGGED` não barra, e isso é escolha:** ele significa "sinalizado como enviando SPAM", e a
+ * mensagem **continua chegando** — é risco, e risco é decisão dele, com o aviso vermelho no cartão.
+ * Barrar aqui tiraria dele a escolha de mandar sabendo. `ALERT` e `CHECK` também só avisam: são
+ * "em alerta" e "verificando conexão", não "caiu".
+ */
+export const SAUDE_QUE_BARRA = ['DISCONNECTED', 'CRITICAL'];
+export const STATUS_QUE_BARRA = ['DISCONNECTED', 'BANNED', 'RESTRICTED'];
+export const SAUDE_QUE_AVISA = ['ALERT', 'CHECK'];
+export const STATUS_QUE_AVISA = ['FLAGGED'];
+
+export function porqueNaoUsarONumero(canal) {
+  // Número que sumiu da conta É evidência: não há por onde mandar.
+  if (!canal) return { barra: true, motivo: 'nao esta mais na lista de numeros da conta', aviso: '' };
+
+  const saude = String(canal.saude || '').trim().toUpperCase();
+  const status = String(canal.status || '').trim().toUpperCase();
+
+  if (SAUDE_QUE_BARRA.includes(saude)) return { barra: true, motivo: `a conexao esta ${saude}`, aviso: '' };
+  if (STATUS_QUE_BARRA.includes(status)) return { barra: true, motivo: `o canal esta ${status}`, aviso: '' };
+
+  const avisos = [];
+  if (SAUDE_QUE_AVISA.includes(saude)) avisos.push(`a conexao esta ${saude}`);
+  if (STATUS_QUE_AVISA.includes(status)) avisos.push(`o canal esta ${status} (sinalizado como SPAM)`);
+  /**
+   * **Nenhum dos dois campos veio: segue, dizendo que segue.** Barrar aqui era o defeito; calar
+   * seria pior, porque a barreira existiria sem proteger e ninguém saberia (a família do aviso que
+   * não envelhece com o que já foi feito).
+   */
+  if (!saude && !status) {
+    avisos.push('a plataforma nao informou conexao nem status deste numero — nao da para conferir por aqui');
+  }
+  return { barra: false, motivo: '', aviso: avisos.join('; ') };
+}
+
+/**
+ * A janela de 24h do canal. **Sem `typeDetails` o padrão é `-1` (SEM janela)**, que é o que o
+ * próprio app faz (`typeDetails?.sessionDurationInMinutes ?? -1`) — e é o certo para canal não
+ * oficial, onde `typeDetails` não vem. Ler `NaN` fazia a tela prometer a janela que não existe.
+ */
+export function janelaEmMinutos(canal) {
+  const bruto = canal?.detalhes?.sessionDurationInMinutes;
+  const n = Number(bruto);
+  return Number.isFinite(n) ? n : -1;
+}
+
 export function somarEnvio(envios, canalId, dia) {
   const id = String(canalId || '');
   if (!id) return { ...(envios || {}) };

@@ -243,4 +243,61 @@ grupo('o teto de 45 e a troca de numero');
   check(saldo[1].usados === 10 && saldo[1].restam === 35, 'usados e restam, para a tela e para o confirm');
 }
 
+/**
+ * O VEREDITO DO NUMERO (01/10/2026). O defeito que este grupo existe para travar: `!== CONNECTED`
+ * dava verdadeiro para `undefined`, e a rodada se recusou a comecar num numero Z-API que estava
+ * NO AR -- `status` e `quality` sao da Cloud API e nao existem no canal nao oficial.
+ */
+grupo('o numero so e barrado por informacao que EXISTE');
+{
+  const zapi = { tipo: 'ZAPI_WHATSAPP', saude: '', status: '', qualidade: '' };
+  const v = lote.porqueNaoUsarONumero(zapi);
+  check(v.barra === false, 'canal Z-API sem status nem qualidade NAO e barrado -- foi este o defeito da print');
+  check(!!v.aviso, 'mas a tela diz que nao deu para conferir: barreira que nao protege nao pode ser silenciosa');
+
+  check(lote.porqueNaoUsarONumero({ saude: 'OK' }).barra === false, 'conexao OK passa');
+  check(lote.porqueNaoUsarONumero({ status: 'CONNECTED' }).barra === false, 'status CONNECTED passa');
+  check(lote.porqueNaoUsarONumero({ saude: 'OK', status: 'CONNECTED' }).barra === false, 'os dois bons passam');
+  check(lote.porqueNaoUsarONumero({ saude: 'OK' }).aviso === '', 'e sem aviso: ha informacao e ela e boa');
+}
+
+grupo('o que BARRA: a mensagem nao chega');
+{
+  check(lote.porqueNaoUsarONumero({ saude: 'DISCONNECTED' }).barra, 'numero desconectado -- o caso que ele relatou');
+  check(lote.porqueNaoUsarONumero({ saude: 'CRITICAL' }).barra, 'conexao critica');
+  check(lote.porqueNaoUsarONumero({ status: 'BANNED' }).barra, 'numero banido');
+  check(lote.porqueNaoUsarONumero({ status: 'RESTRICTED' }).barra, 'teto de conversas iniciadas em 24h: a plataforma recusa');
+  check(lote.porqueNaoUsarONumero({ status: 'DISCONNECTED' }).barra, 'desconectado tambem chega pelo status');
+  check(lote.porqueNaoUsarONumero(null).barra, 'numero que sumiu da conta E evidencia: nao ha por onde mandar');
+  check(lote.porqueNaoUsarONumero({ saude: 'disconnected' }).barra, 'caixa nao decide');
+  check(!!lote.porqueNaoUsarONumero({ saude: 'DISCONNECTED' }).motivo, 'e o motivo vai escrito, para a tela e para o log');
+
+  check(
+    lote.porqueNaoUsarONumero({ saude: 'DISCONNECTED', status: 'CONNECTED' }).barra,
+    'conexao caida vence status bom: sao eixos diferentes, e o que decide e a entrega'
+  );
+}
+
+grupo('o que so AVISA: a mensagem chega, e o risco e decisao dele');
+{
+  const flagged = lote.porqueNaoUsarONumero({ status: 'FLAGGED' });
+  check(flagged.barra === false, 'FLAGGED nao barra: "sinalizado como SPAM" ainda entrega');
+  check(flagged.aviso.includes('FLAGGED'), 'mas aparece no aviso');
+
+  const alerta = lote.porqueNaoUsarONumero({ saude: 'ALERT' });
+  check(alerta.barra === false && !!alerta.aviso, 'ALERT e "em alerta", nao "caiu"');
+  check(lote.porqueNaoUsarONumero({ saude: 'CHECK' }).barra === false, 'CHECK e "verificando conexao"');
+}
+
+grupo('a janela de 24h: sem typeDetails o padrao e SEM janela');
+{
+  check(lote.janelaEmMinutos({ detalhes: { sessionDurationInMinutes: -1 } }) === -1, 'canal sem janela');
+  check(lote.janelaEmMinutos({ detalhes: { sessionDurationInMinutes: 1440 } }) === 1440, 'canal com janela de 24h');
+  check(
+    lote.janelaEmMinutos({ detalhes: null }) === -1,
+    'sem detalhes o padrao e -1, como o proprio app faz -- NaN fazia a tela prometer janela que nao existe'
+  );
+  check(lote.janelaEmMinutos({}) === -1 && lote.janelaEmMinutos(null) === -1, 'vazio tambem');
+}
+
 fim();

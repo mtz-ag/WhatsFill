@@ -714,8 +714,23 @@ export async function canaisDaConta() {
       nome: String(c?.name || c?.description || '').trim(),
       numero: String(c?.numberFormatted || c?.number || '').trim(),
       tipo: String(c?.type || ''),
+      /**
+       * **`status` e `quality` são da CLOUD API e vêm VAZIOS em canal não oficial** (medido em
+       * 01/10/2026 no canal `ZAPI_WHATSAPP` dele: os dois chegaram `undefined`, e a tela mostrou
+       * *"status UNDEFINED · qualidade UNDEFINED"*). A armadilha já estava escrita desde 26/09 —
+       * *"quality, RESTRICTED e CHANNEL_TIER_EXCEEDED são da Cloud API e podem não significar nada
+       * num canal Z-API"* — e eu mapeei os dois como se fossem universais.
+       */
       status: String(c?.status || ''),
       qualidade: String(c?.quality || ''),
+      /**
+       * **`healthStatus` é o campo que diz se o NÚMERO CAIU, e é o que existe nos dois mundos.**
+       * Lido no bundle: `ChannelHealthStatus` = `OK` ("Estável"), `CHECK` ("Verificando conexão"),
+       * `ALERT` ("Em alerta"), `CRITICAL` ("Crítica a conexão com o WhatsApp...") e `DISCONNECTED`
+       * ("Número de telefone foi desconectado") — é o que pinta a tarja do cabeçalho da conversa,
+       * que é a mesma informação que a extensão lia por TEXTO desde sempre.
+       */
+      saude: String(c?.healthStatus || ''),
       detalhes: c?.typeDetails || null,
     }))
     .filter((c) => c.id);

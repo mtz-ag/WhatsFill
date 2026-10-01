@@ -4381,12 +4381,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         const pos = fila.indexOf(c.id);
         const usados = loteLib.usadosNoDia(state.loteEnvios, c.id, dia);
         const restam = Math.max(0, loteLib.TETO_POR_NUMERO - usados);
-        const caido = c.status && c.status !== 'CONNECTED';
+        /**
+         * **Campo vazio NÃO vira texto na tela.** O print dele de 01/10 mostrava
+         * *"status UNDEFINED · qualidade UNDEFINED"*: aqueles dois são da Cloud API e não existem
+         * em canal Z-API, e escrever "UNDEFINED" é a tela afirmando que leu algo que não leu.
+         */
+        const veredito = loteLib.porqueNaoUsarONumero(c);
         const rotulo =
           `${pos >= 0 ? `${pos + 1}º · ` : ''}${c.numero || c.nome}` +
           ` · ${usados}/${loteLib.TETO_POR_NUMERO} hoje` +
-          (caido ? ` · ${c.status}` : '') +
+          (c.saude && c.saude !== 'OK' ? ` · conexão ${c.saude}` : '') +
+          (c.status && c.status !== 'CONNECTED' ? ` · ${c.status}` : '') +
           (c.qualidade && c.qualidade !== 'HIGH' ? ` · qualidade ${c.qualidade}` : '') +
+          (veredito.barra ? ' · NÃO USO' : '') +
           (pos >= 0 && !restam ? ' · CHEIO hoje' : '');
 
         const linha = h('div', { class: 'wf-row', 'data-fica': '1' }, [
@@ -4447,19 +4454,31 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         const canal = state.canais.find((c) => c.id === canalId);
         if (!canal) continue;
         const d = canal.detalhes || {};
-        const janela = Number(d.sessionDurationInMinutes);
+        // Sem `typeDetails` o padrão é -1 (SEM janela), que é o que o próprio app faz.
+        const janela = loteLib.janelaEmMinutos(canal);
         const quem = canal.numero || canal.nome || canalId;
+        const veredito = loteLib.porqueNaoUsarONumero(canal);
         const linhas = [
-          `${quem}: ${canal.tipo || 'tipo nao informado'} · status ${canal.status || '?'} · qualidade ${canal.qualidade || '?'}`,
+          // Campo que a plataforma não mandou não vira texto: escrever "?" ou "UNDEFINED" é a tela
+          // afirmando que leu algo que não leu.
+          [
+            `${quem}: ${canal.tipo || 'tipo nao informado'}`,
+            canal.saude ? `conexão ${canal.saude}` : '',
+            canal.status ? `status ${canal.status}` : '',
+            canal.qualidade ? `qualidade ${canal.qualidade}` : '',
+          ].filter(Boolean).join(' · '),
           janela === -1 ? '' : `${quem}: canal COM janela de 24h — fora dela a plataforma exige modelo aprovado, e esta rodada não manda modelo.`,
           d.canStartNewSession === false ? `${quem}: este canal NAO abre atendimento novo.` : '',
         ].filter(Boolean);
         for (const linha of linhas) card.append(h('div', { class: 'wf-preview', 'data-fica': '1' }, linha));
-        if (canal.status && canal.status !== 'CONNECTED') {
+        if (veredito.barra) {
           card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
-            `${quem} está ${canal.status} — a rodada se recusa a usar este número. DISCONNECTED é ` +
-              'o número fora do ar (a plataforma aceita o envio e a mensagem não chega), FLAGGED é ' +
-              '"sinalizado como enviando SPAM" e RESTRICTED é o teto de conversas iniciadas em 24h.'));
+            `${quem}: ${veredito.motivo} — a rodada se recusa a usar este número, porque nesses ` +
+              'casos a plataforma aceita o envio e a mensagem não chega.'));
+        } else if (veredito.aviso) {
+          card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+            `${quem}: ${veredito.aviso}. A rodada NÃO barra por isto — a mensagem continua chegando, ` +
+              'e mandar em lote sabendo disso é decisão sua.'));
         }
         if (canal.qualidade === 'LOW' || canal.qualidade === 'MEDIUM') {
           card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
@@ -5691,12 +5710,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const fora = [];
       for (const id of fila) {
         const c = (canais || []).find((x) => x.id === id);
-        if (!c) {
-          fora.push({ id, status: 'nao esta mais na lista de numeros da conta' });
-          continue;
-        }
-        const status = String(c.status || '').toUpperCase();
-        if (status !== 'CONNECTED') fora.push({ id, status: c.status || 'sem status' });
+        const veredito = loteLib.porqueNaoUsarONumero(c);
+        if (veredito.barra) fora.push({ id, status: veredito.motivo });
+        else if (veredito.aviso) registrarNaRodada('canal', 'pulado', `${nomeDoNumero(id)}: ${veredito.aviso}`);
       }
       return fora;
     } catch (err) {
@@ -5784,7 +5800,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             resultado: 'pulado',
             parar: true,
             motivo:
-              `PAREI: o numero ${nomeDoNumero(numero.canalId)} esta ${fora[0].status}. ` +
+              `PAREI: o numero ${nomeDoNumero(numero.canalId)} — ${fora[0].status}. ` +
               'Com o numero fora a plataforma ACEITA o envio e a mensagem nao chega — ' +
               'reconecte o numero (ou suba outro na fila) e recomece.',
           };
@@ -5866,7 +5882,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             resultado: 'pulado',
             parar: true,
             motivo:
-              `PAREI: a mensagem ficou em FILA e o numero ${nomeDoNumero(numero.canalId)} esta ` +
+              `PAREI: a mensagem ficou em FILA e o numero ${nomeDoNumero(numero.canalId)} — ` +
               `${fora[0].status}. NAO marquei a etiqueta — este contato volta na lista. A mensagem ` +
               'em fila pode ser entregue quando o numero voltar: concluir o atendimento na ' +
               'plataforma cancela, deixar aberto entrega.',
@@ -6457,7 +6473,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (fora.length) {
       renderAll();
       return setStatus(
-        `Nao comecei: ${fora.map((f) => `${nomeDoNumero(f.id)} esta ${f.status}`).join('; ')}. ` +
+        `Nao comecei: ${fora.map((f) => `${nomeDoNumero(f.id)} — ${f.status}`).join('; ')}. ` +
           'Com o numero fora a plataforma aceita o envio e a mensagem nao chega — reconecte, ou ' +
           'desmarque esse numero da fila.',
         'err'

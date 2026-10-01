@@ -1,3 +1,68 @@
+## 2026-10-01 — v3.136.0 — a barreira do canal barrou um número que estava NO AR: `UNDEFINED` não é "caiu"
+
+**Print dele**, minutos depois da v3.135: a rodada se recusou a começar, com a tela dizendo
+*"(51) 9xxxx-xxxx: ZAPI_WHATSAPP · status **UNDEFINED** · qualidade **UNDEFINED**"* e
+*"Não comecei: ... está UNDEFINED"*. **O número estava no ar.**
+
+### A causa, medida no bundle
+
+`numerosForaDoAr` barrava com `status !== 'CONNECTED'`, e **`undefined !== 'CONNECTED'` é
+verdadeiro**. Ausência de informação virou evidência de número caído.
+
+**E a ausência era esperada:** `status` e `quality` são da **Cloud API**, e o canal dele é
+`ZAPI_WHATSAPP` — não oficial. A armadilha já estava escrita neste arquivo desde 26/09:
+*"`quality`, `RESTRICTED` e `CHANNEL_TIER_EXCEEDED` são da Cloud API e podem não significar nada
+num canal Z-API"*. Eu li aquilo, escrevi aquilo, e mapeei os dois como se fossem universais.
+
+**É a lição de 25/09 outra vez** (`donoDoCanal` devolvendo `null` para duas situações opostas —
+"ninguém cadastrou" e "cadastrou e não é este"): **estados diferentes precisam de respostas
+diferentes**, e colapsar "não sei" em "está ruim" trava a rodada.
+
+### O campo certo existe, e é `healthStatus`
+
+Lido no bundle: **`ChannelHealthStatus`** — `OK` ("Estável"), `CHECK` ("Verificando conexão"),
+`ALERT` ("Em alerta"), `CRITICAL` ("Crítica a conexão com o WhatsApp, a equipe de suporte foi
+notificada") e `DISCONNECTED` ("Número de telefone foi desconectado"). **É ele que pinta a tarja
+do cabeçalho** — ou seja, é a mesma informação que a extensão já lia por TEXTO desde sempre, agora
+disponível por API e sem depender de conversa aberta.
+
+`canaisDaConta` passou a trazer `saude` junto de `status` e `qualidade`.
+
+### O que barra, o que avisa, e o que não decide nada
+
+| estado | o que é | a rodada |
+|---|---|---|
+| `healthStatus` **DISCONNECTED**, **CRITICAL** | o número caiu | **barra** |
+| `status` **BANNED**, **DISCONNECTED**, **RESTRICTED** | banido, caído, ou no teto de 24h | **barra** |
+| `status` **FLAGGED** | sinalizado como SPAM — **a mensagem continua chegando** | avisa, não barra |
+| `healthStatus` **ALERT**, **CHECK** | "em alerta", "verificando conexão" | avisa, não barra |
+| os dois vazios | canal não oficial, a plataforma não informou | **segue, dizendo que segue** |
+
+**`FLAGGED` deixou de barrar, e é escolha:** ele é risco, não impedimento — a mensagem chega, e
+decidir mandar sabendo disso é dele, com o aviso vermelho no cartão. Barrar tirava a escolha.
+
+**O critério que fica: barra o que impede a mensagem de CHEGAR.** O resto avisa.
+
+**E "não deu para conferir" aparece na tela.** Calar seria pior que o falso positivo: a barreira
+existiria sem proteger e ninguém saberia — a família do aviso que não envelhece com o que já foi
+feito.
+
+### Dois defeitos menores que a mesma print mostrou
+
+- **A tela escrevia `UNDEFINED`.** Campo que a plataforma não mandou não vira texto: escrever
+  "UNDEFINED" (ou "?") é a tela afirmando que leu algo que não leu. Agora a linha só mostra o que
+  existe.
+- **"canal COM janela de 24h" num canal Z-API, que não tem janela.** `Number(undefined)` é `NaN`,
+  `NaN !== -1`, e a linha saiu. **O próprio app resolve isso com `?? -1`** — sem `typeDetails`, o
+  padrão é SEM janela. Virou `lote.janelaEmMinutos`.
+
+### A lição para a próxima rota lida no bundle
+
+**Ler o bundle dá o NOME do campo; só a execução dá quais campos VÊM.** `canaisDaConta` foi escrita
+em 01/10 e nunca executada — na primeira execução, três dos sete campos vieram vazios. A disciplina
+de "uma sonda antes das outras" vale para LEITURA também, e não só para escrita: o botão
+"Carregar equipes e números" é essa sonda, e foi ele que mostrou isto.
+
 ## 2026-10-01 — v3.135.0 — etiqueta por palavra no que NÓS mandamos, teto de 45 por número, e a barreira de canal caído que o lote não tinha
 
 Três pedidos dele no mesmo recado, e o terceiro é um defeito que ele viu em produção.

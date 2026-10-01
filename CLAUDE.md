@@ -2233,6 +2233,34 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **`UNDEFINED` NAO E "O NUMERO CAIU", E O CAMPO DA CONEXAO E `healthStatus`** (01/10/2026, print
+  dele: a rodada se recusou a comecar com *"status UNDEFINED · qualidade UNDEFINED"* num numero que
+  estava NO AR). A barreira da v3.135 fazia `status !== 'CONNECTED'`, e **`undefined !== 'CONNECTED'`
+  e verdadeiro**: ausencia de informacao virou evidencia.
+  **E a ausencia era ESPERADA:** `status` e `quality` sao da **Cloud API** e o canal dele e
+  `ZAPI_WHATSAPP`. A armadilha ja estava escrita aqui desde 26/09 (*"quality, RESTRICTED e
+  CHANNEL_TIER_EXCEEDED sao da Cloud API e podem nao significar nada num canal Z-API"*) — eu li,
+  escrevi, e mapeei os dois como universais. **E a licao de 25/09 outra vez** (`donoDoCanal`
+  devolvendo `null` para duas situacoes opostas): **estados diferentes precisam de respostas
+  diferentes**, e colapsar "nao sei" em "esta ruim" trava a rodada.
+  **O campo que existe nos DOIS mundos e `channel.healthStatus`** (`ChannelHealthStatus`): `OK`
+  ("Estavel"), `CHECK` ("Verificando conexao"), `ALERT` ("Em alerta"), `CRITICAL` ("Critica a
+  conexao com o WhatsApp") e `DISCONNECTED` ("Numero de telefone foi desconectado"). **E ele que
+  pinta a tarja do cabecalho** — a mesma informacao que a extensao lia por TEXTO, agora por API e
+  sem depender de conversa aberta.
+  **O criterio de `lote.porqueNaoUsarONumero`: BARRA o que impede a mensagem de CHEGAR** —
+  `healthStatus` DISCONNECTED/CRITICAL e `status` BANNED/DISCONNECTED/RESTRICTED. **`FLAGGED` so
+  AVISA**, de proposito: "sinalizado como SPAM" ainda entrega, e mandar sabendo e decisao dele.
+  **Os dois campos vazios tambem so avisam** — e o aviso aparece na tela, porque barreira que nao
+  protege e pior calada.
+  **Campo que a plataforma nao mandou NAO vira texto na tela** ("UNDEFINED", "?" ou "sem status" e
+  a tela afirmando que leu algo que nao leu). E **sem `typeDetails` a janela de 24h e `-1` (SEM
+  janela)**, que e o que o proprio app faz (`?? -1`): `Number(undefined)` e `NaN`, e a linha
+  prometia uma janela que o canal nao tem.
+  **A licao geral: ler o bundle da o NOME do campo; so a execucao diz quais campos VEM.** Na
+  primeira execucao de `canaisDaConta`, tres dos sete campos vieram vazios — a disciplina de "uma
+  sonda antes das outras" vale para LEITURA tambem, e nao so para escrita.
+
 - **A BARREIRA DO CANAL CAIDO LE A TELA, ENTAO ELA NAO EXISTE EM RODADA QUE NAO ABRE CONVERSA**
   (01/10/2026, *"caso caia o numero preciso que pare o envio, anteriormente ficou enviando"*).
   **Medido: `page.canalForaDoAr` junta DUAS leituras do DOM** — a tarja de desconexao e **o numero da
