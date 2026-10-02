@@ -1,3 +1,52 @@
+## 2026-10-02 — v3.138.0 — a etiqueta por palavra passou a ler a CONVERSA: o painel só via o que o painel mandou
+
+**Relato dele:** *"só no automatizado está sendo colocada a etiqueta"*.
+
+### Os dois consertos anteriores atacavam o lugar errado
+
+A v3.135 marcou nos quatro pontos de saída do painel; a v3.137 marcou também nos ramos que só
+INSEREM o texto. **Os dois continuam valendo e os dois são pequenos demais**, porque marcar no
+instante do envio só alcança mensagem que saiu **por aqui** — e sai muita coisa por fora:
+
+- ele digitando direto na conversa da plataforma;
+- as respostas rápidas da **própria plataforma**, que o painel não controla;
+- o chatbot do anúncio;
+- outra pessoa da equipe;
+- o celular na mão dele.
+
+**Era isso que "só no automatizado" estava dizendo:** no automatizado quem manda é o painel, então
+a marca acontecia; em todo o resto, não havia envio nosso para marcar.
+
+### A saída já estava escrita neste projeto, três vezes
+
+*"Marca amarrada a QUAL texto (ou caminho) saiu morre quando o caminho de resposta muda"* — a
+etiqueta de material (3.40), a de pedido (3.46) e a trava da negativa repetida (12/09). A resposta é
+sempre a mesma: **quem precisa saber o que já saiu pergunta à CONVERSA.**
+
+`getConversation().nossas` existe exatamente por isso — está escrito no `api.js` desde 31/08:
+*"`wasSent` só enxerga o que saiu pelo painel; modelo mandado pela automação da plataforma, pelo
+chatbot do anúncio ou à mão por outra pessoa não deixa rastro nenhum ali"*.
+
+Hoje `etiquetarPorPalavraDoQueJaSaiu` roda no `load()`, depois das sugestões de etiqueta, e casa as
+regras dele contra **tudo o que NÓS mandamos nesta conversa**, tenha saído por onde tiver saído.
+
+### As guardas
+
+- **Só ESCREVE quando há regra casada e a etiqueta ainda não está no contato** — abrir o mesmo
+  contato dez vezes não custa escrita nenhuma.
+- **Dentro de `try`**: falha de etiqueta nunca derruba o carregamento do contato (a prioridade de
+  20/08).
+- **Linha no Andamento só quando marcou** (`pelo que já mandamos: + etiqueta "X" (casou "colinha")`)
+  — linha que aparece sempre é linha que se aprende a ignorar.
+- **É a conversa desta SESSÃO**, que é a janela em que a decisão dele faz sentido; quem recebeu em
+  outra sessão já foi marcado na hora do envio.
+
+### O que isso muda na prática
+
+Agora a etiqueta entra **abrindo o contato**, não só mandando por dentro do painel. Em quem já
+recebeu a mensagem com a palavra nesta conversa, ela entra na próxima vez que o contato for aberto —
+inclusive pela rodada, que abre todo mundo.
+
 ## 2026-10-02 — v3.137.0 — COLAR não é ENVIAR: a etiqueta por palavra morava depois do envio de verdade
 
 **Relato dele:** *"estou colando uma mensagem pronta e não está botando a etiqueta por palavra; o

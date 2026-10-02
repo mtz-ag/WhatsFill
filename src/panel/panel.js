@@ -867,6 +867,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       await corrigirNomeComCidade(nomeField);
       marcarCidadeParaLimpar(classify);
       await refreshTagSuggestions();
+      /**
+       * A etiqueta por palavra lida da CONVERSA — pega o que saiu por fora do painel. Dentro de
+       * `try` porque falha de etiqueta nunca pode derrubar o carregamento do contato (20/08).
+       */
+      try {
+        await etiquetarPorPalavraDoQueJaSaiu();
+      } catch (err) {
+        console.warn('[WhatsFill] etiqueta por palavra:', err?.message || err);
+      }
 
       // Modelos aprovados: falha aqui não pode derrubar o carregamento do contato.
       try {
@@ -3159,6 +3168,38 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return ` + etiqueta por palavra: ${partes.join(', ')}`;
     } catch (err) {
       return ` (não consegui aplicar a etiqueta por palavra: ${err?.message || err})`;
+    }
+  }
+
+  /**
+   * **A ETIQUETA POR PALAVRA LIDA DA CONVERSA — porque o painel só vê o que o PAINEL mandou**
+   * (relato dele, 02/10/2026: *"só no automatizado está sendo colocada a etiqueta"*).
+   *
+   * **Medido: os dois consertos anteriores cobriam caminhos do painel, e o buraco é maior que
+   * isso.** Marcar no instante do envio só funciona para mensagem que SAIU POR AQUI — e sai muita
+   * coisa por fora: ele digitando na conversa, as respostas rápidas da PRÓPRIA plataforma, o
+   * chatbot do anúncio, outra pessoa da equipe, o celular na mão dele.
+   *
+   * **A saída é a que este projeto já aprendeu três vezes:** marca amarrada a QUAL caminho enviou
+   * morre quando o caminho muda — quem precisa saber o que já saiu **pergunta à CONVERSA**
+   * (`getConversation().nossas`, que existe exatamente porque `wasSent` só enxerga o painel).
+   *
+   * Roda no `load()`, depois das sugestões de etiqueta. **Só ESCREVE quando há regra casada e a
+   * etiqueta ainda não está no contato**, então abrir o mesmo contato dez vezes não custa escrita
+   * nenhuma — e a conversa é a desta sessão, que é a janela em que a decisão dele faz sentido.
+   */
+  async function etiquetarPorPalavraDoQueJaSaiu() {
+    if (!state.contact?.id) return;
+    const textos = (state.nossas || [])
+      .map((m) => (typeof m === 'string' ? m : String(m?.texto || '')))
+      .filter((t) => t.trim());
+    if (!textos.length) return;
+
+    const marca = await etiquetarPorPalavra(state.contact, textos.join('\n'));
+    // Linha no Andamento só quando houve o que marcar: o log é onde ele descobre por que a
+    // extensão fez alguma coisa, e linha que aparece sempre é linha que se aprende a ignorar.
+    if (marca.trim()) {
+      registrarNaRodada(state.contact?.name || 'contato', 'etiqueta', `pelo que já mandamos:${marca}`);
     }
   }
 

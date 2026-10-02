@@ -2233,6 +2233,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **MARCAR NO INSTANTE DO ENVIO SO ALCANCA O QUE SAIU PELO PAINEL — a verdade do que saiu e a
+  CONVERSA** (02/10/2026, *"so no automatizado esta sendo colocada a etiqueta"*). A v3.135 marcou nos
+  quatro pontos de saida e a v3.137 nos ramos que so INSEREM; **os dois continuam valendo e os dois
+  sao pequenos demais**, porque sai muita coisa por fora: ele digitando na conversa, as respostas
+  rapidas da **propria plataforma**, o chatbot do anuncio, outra pessoa da equipe, o celular.
+  **No automatizado quem manda e o painel — por isso so ali funcionava.**
+  **QUARTA vez da mesma licao** (etiqueta de material 3.40, de pedido 3.46, negativa repetida 12/09):
+  **marca amarrada a QUAL caminho enviou morre quando o caminho muda**, e a resposta e sempre
+  perguntar a CONVERSA. `getConversation().nossas` existe para isto desde 31/08 — o `api.js` ja dizia
+  que `wasSent` so enxerga o painel.
+  Hoje `etiquetarPorPalavraDoQueJaSaiu` roda no `load()`, depois de `refreshTagSuggestions`, contra
+  TUDO o que nos mandamos nesta conversa. **Guardas:** so ESCREVE com regra casada e etiqueta
+  faltando (abrir dez vezes nao custa escrita), fica dentro de `try` (falha de etiqueta nao derruba o
+  `load`), a linha do Andamento so aparece quando marcou, e e a conversa da SESSAO.
+  **Ao criar marca nova que depende do que NOS mandamos, comece pela conversa e nao pelo ponto de
+  envio** — o ponto de envio e otimizacao, a conversa e a verdade.
+
 - **COLAR NAO E ENVIAR, E MARCA QUE MORA DEPOIS DO `page.sendText` NAO ACONTECE EM METADE DOS
   ENVIOS** (02/10/2026, *"estou colando uma mensagem pronta e nao esta botando a etiqueta por
   palavra"*). **Medido: a regra dele casava e a tabela estava salva** — o defeito era o CAMINHO.
