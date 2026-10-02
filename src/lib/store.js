@@ -902,6 +902,20 @@ const DEFAULTS = {
      */
     loteCanais: [],
     /**
+     * **A etiqueta do modo "abrir e atender um por um"** — pedido dele (02/10/2026: *"faça um modo
+     * só para abrir o contato e deixar nos meus sem enviar nada e quando concluir abrir o próximo
+     * contato"*).
+     *
+     * **Campo próprio, e não o `loteEtiquetaFiltro`**: as duas rodadas andam pela mesma rota
+     * (`contact/filter` + `abrirAtendimento`), mas a lista é outra — a do lote é quem recebe a
+     * arte, esta é quem ele vai atender à mão. Com um campo só, alternar entre os dois modos
+     * custaria redigitar a etiqueta a cada vez.
+     *
+     * **Nasce VAZIA de propósito**, ao contrário de `etiquetaLote`: ali o valor de fábrica é uma
+     * etiqueta que ele mesmo ditou; aqui qualquer palpite meu abriria atendimento na lista errada.
+     */
+    atenderEtiqueta: '',
+    /**
      * A partir de quantas horas de silêncio a rodada **pergunta** em vez de concluir sozinha,
      * quando a última mensagem da conversa é nossa.
      *

@@ -2233,6 +2233,63 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **`state.auto.rodando` DESLIGA O PAINEL PARA A CONVERSA QUE ELE ABRE — e isso mata qualquer rodada
+  em que a tela e DELE** (02/10/2026, o modo de so abrir: *"faca um modo so para abrir o contato e
+  deixar nos meus sem enviar nada e quando concluir abrir o proximo contato"*).
+  **Medido:** `applyPageState` devolve antes do `load()` quando `rodando` e verdadeiro, e os dois
+  temporizadores (`load` e `reexame`) desistem pelo mesmo teste. A guarda esta CERTA para as rodadas
+  normais — ali **quem troca de atendimento e a propria rodada**, e um `load()` por fora carregaria
+  o contato duas vezes e gravaria no CRM no meio de um envio.
+  **No modo de so abrir a premissa se inverte:** a rodada cria o atendimento pela API e **nao abre
+  conversa nenhuma na tela**; quem abre e ele. Sem a marca nova (`state.auto.telaEDele`, pedida no
+  `rodar` e zerada no `finally` junto do `automatico`), o painel ficaria **mudo justo no contato que
+  ele acabou de receber** — sem classificacao, sem etiqueta sugerida e sem resposta pronta.
+  **Ao escrever rodada nova, pergunte QUEM abre a conversa na tela** — e `withBusy` continua proibido
+  em espera longa (20/09): esta rodada vai por `semTravarOPainel`, porque ela espera por ELE.
+
+- **"FICOU EM MEUS" ERA HIPOTESE, E AGORA A SONDA LE DE VOLTA** (02/10/2026). `PUT /chat/v1/session`
+  nunca foi executado — o corpo foi lido no bundle em 01/10 —, e **que o atendimento criado caia em
+  `IN_PROGRESS` com ele, e nao `PENDING` na fila dos "Novos", e a hipotese em que o modo de so abrir
+  se apoia inteiro**. Por isso a sessao e RELIDA (`GET /chat/v1/session/{id}`) e
+  `lote.ondeCaiuOAtendimento` da o veredito.
+  **SAO SEIS ESTADOS E NAO DOIS** — a licao de 25/09 (`donoDoCanal` devolvendo `null` para duas
+  situacoes opostas) somada a de 01/10 (`undefined !== 'CONNECTED'` e verdadeiro): `meu`,
+  `em-andamento` (sem dono legivel — SEGUE, dizendo que nao deu para conferir), `pendente`,
+  `de-outro`, `concluido` e `desconhecido`. **Ausencia de informacao nao e evidencia nos DOIS
+  sentidos:** nem "esta tudo bem", nem "deu errado".
+  **O que cai em `pendente`, `de-outro`, `concluido` ou `desconhecido` PARA no primeiro contato**, e o
+  preco de a hipotese estar errada e **um atendimento aberto e nada mais** — sem envio, sem etiqueta,
+  sem escrita no CRM. E a disciplina de "uma sonda antes das outras" aplicada a LEITURA.
+  **A linha da sonda registra as CHAVES da sessao, nunca os valores** (`lote.chavesDaSessao`): a
+  sessao carrega telefone e nome de eleitor, e o que serve para saber o que a rota devolve sao os
+  nomes dos campos — a disciplina de 07/09 de medir na API de verdade.
+
+- **ABRIR CONVERSA CONTA NO TETO DO NUMERO, e aqui o contador anda ANTES de qualquer mensagem**
+  (02/10/2026). No lote de imagem o contador so anda depois de a mensagem sair (contar antes queimaria
+  saldo por falha nossa); no modo de so abrir **o que e contado e a CONVERSA INICIADA, que ja
+  aconteceu** — e `RESTRICTED` e literalmente *"atingiu o limite de conversas iniciadas nas ultimas 24
+  horas"*. Os dois modos dividem o mesmo orcamento de 45 por numero, por dia, na mesma fila.
+  **O que o contador NAO ve e o que ele manda a mao** depois, na conversa aberta — dito a ele.
+
+- **ESPERAR "ELE CONCLUIR" TEM DOIS JEITOS, E O ANTIGO PRESSUPOE A CONVERSA NA TELA** (02/10/2026).
+  `esperarVoceConcluir` trata "voce foi para outro atendimento" como *"deixei este para depois,
+  siga"* — certo quando a RODADA abriu a conversa, e errado quando o atendimento nasceu pela API: ali
+  "nao esta na tela" e o estado NORMAL no comeco da espera, e a rodada abriria o contato seguinte
+  **um segundo depois**. Hoje e a mesma funcao com `trocaSegue: false`, e a conclusao e perguntada em
+  duas portas: a TELA a cada segundo (de graca) e a **API de 30 em 30 segundos** (`perguntarAApi`),
+  para alcancar quem conclui com a tela noutro lugar ou do celular. **Falha de leitura nao e
+  "concluiu" nem "parou"** — e a politica da barreira do canal.
+  **E a linha de status e reescrita a cada leitura**, nao so no comeco: abrindo o contato, o `load()`
+  escreve a barra com o que carregou e o aviso de "atenda e conclua" sumiria justo durante o
+  atendimento.
+
+- **LIMITE QUE SO CONTA `'enviado'` NAO EXISTE EM RODADA QUE NAO ENVIA** (02/10/2026, segunda vez).
+  `percorrerContatos` contava `r.resultado === 'enviado'`, entao o modo de so abrir (`'triado'`)
+  andaria pelos 200 contatos da lista ignorando o numero do cartao de Ritmo. `percorrerFila` ja
+  usava `CONTA_NO_LIMITE` com o comentario explicando a primeira vez (a rodada de so reiniciar) — a
+  conta agora e a mesma nos dois percursos, e `lastSendAt` continua sendo so de envio de verdade,
+  porque ele e o intervalo que protege o numero no WhatsApp.
+
 - **MARCAR NO INSTANTE DO ENVIO SO ALCANCA O QUE SAIU PELO PAINEL — a verdade do que saiu e a
   CONVERSA** (02/10/2026, *"so no automatizado esta sendo colocada a etiqueta"*). A v3.135 marcou nos
   quatro pontos de saida e a v3.137 nos ramos que so INSEREM; **os dois continuam valendo e os dois

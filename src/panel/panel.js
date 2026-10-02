@@ -147,6 +147,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * dono trava a fila inteira em silêncio.
        */
       automatico: false,
+      /**
+       * **Nesta rodada quem troca de atendimento na TELA é ELE** — o modo de só abrir (02/10/2026).
+       *
+       * `rodando` manda o observador da página ignorar a troca de atendimento, e com razão: na
+       * rodada normal quem abre contato é a própria rodada, e um `load()` por fora carregaria o
+       * contato duas vezes e gravaria no CRM no meio de um envio.
+       *
+       * **No modo de só abrir a premissa se inverte:** a rodada não abre conversa nenhuma na tela —
+       * ela cria o atendimento pela API e ESPERA ele atender. Sem esta marca, o painel ficaria mudo
+       * exatamente no contato que ele acabou de receber: sem classificação, sem etiqueta sugerida e
+       * sem resposta pronta. É o mesmo defeito do aviso que manda procurar o controle na aba errada,
+       * com a diferença de que aqui o que falta é o painel inteiro.
+       */
+      telaEDele: false,
       parar: false,
       fila: [], // retrato da fila da plataforma, só para conferência
       meusAbertos: { total: null, erro: '', quando: 0 },
@@ -452,7 +466,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // Durante a rodada automatizada quem troca de atendimento é a própria rodada, uma vez por
     // contato. Deixar o `load()` do observador entrar aqui carregaria o contato duas vezes e
     // ainda dispararia a classificação automática (que GRAVA) no meio de um envio.
-    if (state.auto.rodando) {
+    if (state.auto.rodando && !state.auto.telaEDele) {
       state.pageState = next;
       root.classList.toggle('wf-dark', !!next.dark);
       return;
@@ -508,7 +522,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     timerLoad = setTimeout(() => {
       // A rodada pode ter começado no meio da espera: quem troca de atendimento ali é ela, e
       // um `load()` por fora carregaria o contato duas vezes e gravaria no meio de um envio.
-      if (state.auto.rodando) return;
+      if (state.auto.rodando && !state.auto.telaEDele) return;
       load(sessionId);
     }, ESPERA_LOAD_MS);
   }
@@ -517,7 +531,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   function agendarReexame() {
     clearTimeout(timerReexame);
     timerReexame = setTimeout(() => {
-      if (state.auto.rodando) return;
+      if (state.auto.rodando && !state.auto.telaEDele) return;
       reexaminarMensagens();
     }, ESPERA_REEXAME_MS);
   }
@@ -3363,8 +3377,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     body.append(
       h('p', { class: 'wf-hint' },
-        'Rodadas em lote sobre a fila da esquerda, do jeito que ela está filtrada agora na ' +
-          'plataforma, de cima para baixo. Uma rodada por vez.')
+        'Uma rodada por vez. Duas andam pela FILA da esquerda, do jeito que ela está filtrada agora ' +
+          'na plataforma, de cima para baixo ("Meus" e "Novos"); as outras duas andam pelos ' +
+          'CONTATOS de uma etiqueta, abrindo um atendimento novo em cada um.')
     );
 
     /**
@@ -3380,13 +3395,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * Um interruptor, um lugar, acima dos dois botões de começar.
      */
     body.append(renderCartaoIA());
-    body.append(renderCartaoMeusAbertos());
+
+    /**
+     * **OS BOTÕES DE COMEÇAR FICAM JUNTOS** — relato dele (02/10/2026): *"organize também o
+     * frontend, o automatizado dos meus e novos ficou longe um do outro"*.
+     *
+     * Estava: "Novos" era o 5º cartão e "Meus" o 8º, com o texto da mensagem do momento e o cartão
+     * inteiro do envio em lote no meio — duas telas de rolagem entre os dois botões que ele mais
+     * aperta. A ordem agora tem três blocos, e o critério é o momento de uso: o que vale para
+     * TODAS as rodadas (a IA, o ritmo, a fila da esquerda), depois as rodadas em si, e por último o
+     * que se configura uma vez e não se olha mais (o contador, o texto do momento, as etiquetas).
+     *
+     * É a mesma correção de 06/09, quando a caixa da IA morava dentro do cartão dos Novos: um
+     * controle longe do botão que ele aperta parece ser de outra coisa.
+     */
     body.append(renderCartaoRitmo(cfg));
     body.append(renderCartaoFila());
-    body.append(renderCartaoNovos(cfg));
-    body.append(renderCartaoMomento(cfg));
-    body.append(renderCartaoLote(cfg));
+
+    body.append(h('div', { class: 'wf-sub wf-secao' }, h('b', {}, 'As rodadas')));
     body.append(renderCartaoRespondidos());
+    body.append(renderCartaoNovos(cfg));
+    body.append(renderCartaoLote(cfg));
+    body.append(renderCartaoAtender(cfg));
+
+    body.append(h('div', { class: 'wf-sub wf-secao' }, h('b', {}, 'O que as rodadas usam')));
+    body.append(renderCartaoMeusAbertos());
+    body.append(renderCartaoMomento(cfg));
     body.append(renderCartaoEtiquetas(cfg));
     // "Sem retorno" (reabrir em lote + trabalhar em Meus) escondida por decisão do Thiago
     // (15/08): risco de derrubar o número é grande demais para o uso que ela teria — reabrir
@@ -4590,6 +4624,79 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Fica ANTES do cartão de "reabrir e mandar" de propósito: é o caminho novo, e o de baixo
    * continua existindo só para quando ele quiser o fluxo antigo, tudo num contato só.
    */
+  /**
+   * **O cartão do modo de SÓ ABRIR** — pedido dele (02/10/2026): *"faça um modo só para abrir o
+   * contato e deixar nos meus sem enviar nada e quando concluir abrir o próximo contato"*.
+   *
+   * **Ele fica embaixo do cartão do lote de propósito:** os dois andam pela mesma rota (a lista por
+   * etiqueta + abrir atendimento), e a EQUIPE e a FILA DE NÚMEROS são escolhidas uma vez, lá. Dois
+   * lugares para escolher o mesmo número é como as duas cópias de qualquer coisa neste projeto
+   * divergem — e aqui a divergência seria abrir conversa pelo número do outro candidato.
+   *
+   * A etiqueta é campo PRÓPRIO: a lista de quem recebe a arte não é a lista de quem ele vai atender
+   * à mão, e um campo só obrigaria a redigitar a cada troca de modo.
+   */
+  function renderCartaoAtender(cfg) {
+    const fila = loteLib.filaDeNumeros(cfg);
+    const limite = clampInt(cfg.limite, 1, 200);
+    const card = h('div', { class: 'wf-card' }, [
+      h('h4', {}, 'Atender um por um: só abre, nada sai'),
+      h('div', { class: 'wf-preview' },
+        'Percorre os CONTATOS de uma etiqueta, abre um atendimento novo em cada um e para ali: o ' +
+          'contato fica em "Meus" esperando você. Quando VOCÊ concluir, eu abro o próximo.'),
+      h('div', { class: 'wf-origin' },
+        'Não manda imagem, não manda texto, não aplica etiqueta, não grava nada no CRM e não ' +
+          'conclui. Serve para trabalhar uma lista à mão sem ter que achar cada pessoa na busca — e ' +
+          'alcança quem não tem atendimento nenhum, que não aparece em fila alguma da plataforma.'),
+    ]);
+
+    card.append(
+      campoTexto('Etiqueta dos contatos que você vai atender', cfg.atenderEtiqueta, (v) =>
+        salvarAuto({ atenderEtiqueta: v.trim() }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Quem tem esta etiqueta entra na lista, MENOS quem está marcado como sem interesse (a ' +
+          'etiqueta da aba Etiquetas). Esta rodada não marca ninguém, então recomeçar amanhã começa ' +
+          'a lista do início: quem você já concluiu volta a ser aberto.')
+    );
+
+    const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Abrir e me entregar um por um');
+    comecar.addEventListener('click', () => semTravarOPainel('atender', () => runAtenderContatos({})));
+    const sonda = h('button', { class: 'wf-btn', type: 'button' }, 'Abrir UM só');
+    sonda.addEventListener('click', () => semTravarOPainel('atender', () => runAtenderContatos({ sonda: true })));
+    card.append(h('div', { class: 'wf-row' }, [comecar, sonda]));
+
+    const travas = [];
+    if (!String(cfg.atenderEtiqueta || '').trim()) travas.push('Escolha a etiqueta dos contatos que você vai atender.');
+    if (!fila.length) {
+      travas.push('Marque ao menos um número na fila do cartão de envio em lote, acima: é por ele que o atendimento abre.');
+    }
+    comecar.disabled = state.auto.rodando || !!state.esperando.atender || travas.length > 0;
+    sonda.disabled = comecar.disabled;
+    for (const motivo of travas) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, motivo));
+
+    if (fila.length) {
+      card.append(h('div', { class: 'wf-preview', 'data-fica': '1' },
+        `Abre pelo ${nomeDoNumero(fila[0])}` +
+          (cfg.loteEquipeNome ? `, equipe ${cfg.loteEquipeNome}` : ', sem equipe') +
+          ` — a mesma fila e a mesma equipe do cartão acima. Vai até ${limite} contato(s) (o limite do cartão de Ritmo).`));
+    }
+
+    card.append(h('div', { class: 'wf-origin' },
+      'Abrir a conversa conta no teto do número, junto com o lote de imagem: o que o WhatsApp cobra ' +
+        'em 24h são as CONVERSAS INICIADAS, e é isso que abrir faz — a mensagem vindo da sua mão ' +
+        'depois não muda a conta.'));
+    card.append(h('div', { class: 'wf-origin' },
+      '"Abrir UM só" abre o PRIMEIRO da lista e para. A rota que cria atendimento nunca foi ' +
+        'executada neste projeto, e a rodada confere, relendo, se ele caiu em "Meus" mesmo — caindo ' +
+        'em "Novos" ou com outro operador, ela para no primeiro e diz o que leu.'));
+    card.append(h('p', { class: 'wf-hint' },
+      'Passando 30 minutos sem você concluir, a rodada para e o contato fica em "Meus" do mesmo ' +
+        'jeito — o play do controle flutuante recomeça de onde parou.'));
+
+    return card;
+  }
+
   function renderCartaoReabrir(cfg) {
     const card = h('div', { class: 'wf-card' }, [
       h('h4', {}, 'Sem retorno: só reabrir (em lote)'),
@@ -5235,7 +5342,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * limite que ele digita ("reiniciar determinado número de conversas") nunca seria atingido,
    * porque nela nada é enviado.
    */
-  const CONTA_NO_LIMITE = new Set(['enviado', 'reiniciado']);
+  /**
+   * `'triado'` entrou em 02/10/2026 com o modo de **só abrir e deixar em "Meus"**: lá também nada é
+   * enviado, e sem contar, o limite que ele digita no cartão de Ritmo nunca seria atingido — a
+   * rodada andaria até a lista de contatos acabar. É a mesma lição do "só reiniciar", e o mapa já
+   * tinha o sinal (`→`) e o veredito (*"assumido(s) para triagem em Meus"*) esperando por ela.
+   */
+  const CONTA_NO_LIMITE = new Set(['enviado', 'reiniciado', 'triado']);
   let logNode = null;
 
   /** Só o log é redesenhado durante a rodada: renderAll roubaria o foco dos campos. */
@@ -5697,10 +5810,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
       falhasDeRede = 0;
 
-      if (r.resultado === 'enviado') {
-        enviados++;
-        state.lastSendAt = Date.now();
-      }
+      /**
+       * **O que conta para o limite é o mesmo conjunto de `percorrerFila`** — e não só `'enviado'`,
+       * que era o que estava escrito aqui: o modo de só abrir devolve `'triado'`, e com a conta
+       * presa em "enviado" ele percorreria os 200 contatos da lista ignorando o limite dele.
+       *
+       * **`lastSendAt` continua sendo só de envio de verdade:** ele é o intervalo que protege o
+       * número no WhatsApp, e abrir atendimento não manda mensagem nenhuma.
+       */
+      if (CONTA_NO_LIMITE.has(r.resultado)) enviados++;
+      if (r.resultado === 'enviado') state.lastSendAt = Date.now();
       if (r.parar) {
         interrompida = r.motivo;
         break;
@@ -5997,6 +6116,331 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
   }
 
+  /**
+   * **A RODADA DE SÓ ABRIR: cria o atendimento, deixa em "Meus" e espera VOCÊ concluir** — pedido
+   * dele (02/10/2026): *"faça um modo só para abrir o contato e deixar nos meus sem enviar nada e
+   * quando concluir abrir o próximo contato, utilizando o mesmo método do envio de imagens"*.
+   *
+   * **"O mesmo método do envio de imagens" é o percurso por ETIQUETA**: a lista sai de
+   * `contact/filter` e cada contato ganha um atendimento novo por `PUT /chat/v1/session`. É a única
+   * forma de alcançar quem não tem atendimento nenhum — esse contato não existe em fila nenhuma da
+   * plataforma, então não há item para clicar.
+   *
+   * **O que esta rodada NÃO faz, e é o pedido inteiro:** não manda imagem, não manda texto, não
+   * aplica etiqueta, não grava campo no CRM e **não conclui**. O único efeito é o atendimento
+   * existir, aberto, com você. Por isso ela é a segunda rodada mais barata do painel: 2 requisições
+   * por contato mais uma leitura a cada 30s de espera, contra as ~9 do lote de imagem.
+   *
+   * **A sessão é RELIDA depois de criada, e isso é a sonda.** `PUT /chat/v1/session` nunca foi
+   * executado: que o atendimento criado caia em "Meus" é hipótese lida no bundle, e é a hipótese em
+   * que o modo todo se apoia. Caindo em "Novos" (`PENDING`), ou com outro operador, a rodada PARA no
+   * primeiro contato com o motivo escrito — um atendimento aberto e nada mais, que é o preço mais
+   * barato possível de uma rota nova.
+   *
+   * **O contador do número ANDA aqui, e é a diferença em relação ao lote de imagem.** Lá ele só
+   * anda depois de a mensagem sair; aqui o que é contado é a CONVERSA INICIADA, que já aconteceu —
+   * e `RESTRICTED`, o status que a plataforma devolve quando o número estoura o teto de 24h, é
+   * literalmente *"atingiu o limite de conversas iniciadas nas últimas 24 horas"*. Abrir é o ato que
+   * aquele teto conta, mesmo que a mensagem venha da mão dele depois.
+   */
+  let primeiroAtendimentoDaRodada = true;
+
+  async function processarContatoParaAtender(contato) {
+    const nome = String(contato?.name || contato?.nameWhatsapp || 'sem nome');
+    try {
+      /**
+       * O filtro já pediu ao servidor para excluir quem tem a etiqueta de sem interesse. Esta
+       * segunda conferência é de graça e pega o que o filtro não pega: a etiqueta aplicada entre o
+       * filtro e a vez deste contato, numa lista longa.
+       */
+      const tagSemInteresse = await tagDeSemInteresse();
+      if (tagSemInteresse && (contato.tagsId || []).includes(tagSemInteresse.id)) {
+        return { nome, resultado: 'pulado', motivo: `tem a etiqueta "${tagSemInteresse.label}"` };
+      }
+
+      const { fila, dia } = await saldoDosNumerosDoLote();
+      const envios = (await store.get('loteEnvios')) || {};
+      const numero = loteLib.numeroDaVez({ fila, envios, dia });
+      if (!numero) {
+        return {
+          nome,
+          resultado: 'pulado',
+          parar: true,
+          motivo: fila.length
+            ? `todos os ${fila.length} numero(s) da fila chegaram ao teto de ${loteLib.TETO_POR_NUMERO} conversas hoje — o resto da lista fica para amanha`
+            : 'nenhum numero escolhido na fila do cartao de envio em lote',
+        };
+      }
+
+      /**
+       * **O número continua no ar?** Aqui nada é enviado pelo painel, mas é NELE que ele vai
+       * escrever à mão daqui a um minuto — e com o número fora a plataforma aceita o texto e a
+       * mensagem não chega (a armadilha de 31/08). Abrir vinte atendimentos num número caído é
+       * vinte conversas mudas.
+       */
+      contatosDesdeAConferenciaDoCanal++;
+      if (contatosDesdeAConferenciaDoCanal >= CONTATOS_ENTRE_CONFERENCIAS_DO_CANAL || numero.usados === 0) {
+        contatosDesdeAConferenciaDoCanal = 0;
+        const fora = await numerosForaDoAr([numero.canalId]);
+        if (fora.length) {
+          return {
+            nome,
+            resultado: 'pulado',
+            parar: true,
+            motivo:
+              `PAREI: o numero ${nomeDoNumero(numero.canalId)} — ${fora[0].status}. Abrir atendimento ` +
+              'nele deixaria voce escrevendo numa conversa que nao chega — reconecte o numero (ou ' +
+              'suba outro na fila) e recomece.',
+          };
+        }
+      }
+
+      const aberto = await api.abrirAtendimento({
+        contactId: contato.id,
+        departmentId: String(state.auto.cfg.loteEquipeId || '') || null,
+        channelId: numero.canalId,
+      });
+      // "Já existe um atendimento" é o caso que a própria tela trata com um botão: a conversa já
+      // está em andamento com alguém, e entrar no meio dela não é trabalho desta rodada.
+      if (!aberto.ok) {
+        return {
+          nome,
+          resultado: 'pulado',
+          motivo: 'já tem atendimento aberto neste número — não entrei no meio da conversa',
+        };
+      }
+
+      // A conversa foi INICIADA: o teto de 24h do número conta isso, tenha a mensagem saído ou não.
+      const antes = (await store.get('loteEnvios')) || {};
+      state.loteEnvios = loteLib.somarEnvio(antes, numero.canalId, dia);
+      await store.set('loteEnvios', state.loteEnvios);
+      const usados = loteLib.usadosNoDia(antes, numero.canalId, dia) + 1;
+
+      /** A SONDA: onde o atendimento recém-criado foi parar. */
+      let sessao = null;
+      try {
+        sessao = await api.getSession(aberto.sessionId);
+      } catch (err) {
+        return {
+          nome,
+          resultado: 'pulado',
+          parar: true,
+          motivo:
+            `PAREI: abri o atendimento de ${nome} e nao consegui reler para conferir se ele ficou em ` +
+            `"Meus" (${err?.message || err}). O atendimento existe — confira na plataforma antes de seguir.`,
+        };
+      }
+      const meuUserId = await meuUsuario();
+      const onde = loteLib.ondeCaiuOAtendimento(sessao, meuUserId);
+
+      /**
+       * **As chaves que a rota devolveu, uma vez por rodada.** A FORMA, nunca o conteúdo (a
+       * disciplina de 07/09): a sessão carrega telefone e nome de eleitor, e o que serve para saber
+       * o que esta rota responde são os nomes dos campos.
+       */
+      if (primeiroAtendimentoDaRodada) {
+        primeiroAtendimentoDaRodada = false;
+        registrarNaRodada(
+          'sonda',
+          'info',
+          `o atendimento criado voltou como ${onde.status || 'SEM status'}` +
+            (onde.dono ? ' e com dono legivel' : ' e sem dono legivel') +
+            `. Campos que a plataforma devolveu: ${loteLib.chavesDaSessao(sessao) || 'nenhum'}.`
+        );
+      }
+
+      const barra = [
+        loteLib.ONDE_PENDENTE,
+        loteLib.ONDE_DE_OUTRO,
+        loteLib.ONDE_DESCONHECIDO,
+        loteLib.ONDE_CONCLUIDO,
+      ];
+      if (barra.includes(onde.estado)) {
+        return {
+          nome,
+          resultado: 'pulado',
+          parar: true,
+          motivo:
+            `PAREI no primeiro: ${onde.motivo}. Este modo existe para deixar o contato em "Meus", e ` +
+            `eu nao consigo prometer isso — o atendimento de ${nome} foi criado e esta na plataforma; ` +
+            'nada foi enviado e nada foi marcado.' +
+            (onde.estado === loteLib.ONDE_PENDENTE
+              ? ' Me diga que caiu em "Novos" e eu faco a rodada assumir antes de entregar a voce.'
+              : ''),
+        };
+      }
+
+      registrarNaRodada(
+        nome,
+        'info',
+        `abri o atendimento pelo ${nomeDoNumero(numero.canalId)} (${usados}/${loteLib.TETO_POR_NUMERO} conversas hoje)` +
+          (onde.estado === loteLib.ONDE_SEM_DONO ? ` — ${onde.motivo}` : ' — esta em "Meus"') +
+          '. Atenda e conclua: eu abro o proximo quando voce concluir.'
+      );
+
+      /**
+       * **A espera é a mesma de quando a rodada entrega um contato para ele responder à mão**, com
+       * duas diferenças: a conversa NÃO está na tela quando a espera começa (o atendimento nasceu
+       * pela API), então sair dela não encerra nada; e a conclusão é perguntada à API de 30 em 30
+       * segundos, para alcançar quem conclui com a tela noutro lugar.
+       */
+      const fim = await esperarVoceConcluir(aberto.sessionId, nome, {
+        trocaSegue: false,
+        perguntarAApi: true,
+        meuUserId,
+        aviso: `${nome} esta em "Meus", pelo ${nomeDoNumero(numero.canalId)}. Atenda e conclua — eu abro o proximo quando voce concluir.`,
+      });
+
+      if (fim.resultado === 'concluido') {
+        return { nome, resultado: 'triado', motivo: `abri, voce atendeu e concluiu (${fim.motivo})` };
+      }
+      if (fim.parar) return { ...fim, resultado: 'pulado' };
+      /**
+       * Meia hora e o atendimento seguiu aberto: a rodada PARA em vez de abrir o próximo. Abrir
+       * mais um por cima de um que ele não terminou é encher "Meus" exatamente do jeito que este
+       * modo existe para evitar — e o ▶ do controle recomeça daqui.
+       */
+      return {
+        nome,
+        resultado: 'pulado',
+        parar: true,
+        motivo: `${fim.motivo} — nao abri o proximo: ${nome} continua em "Meus" esperando voce. Conclua e aperte o play.`,
+      };
+    } catch (err) {
+      return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message), rede: ehErroDeRede(err.message) };
+    }
+  }
+
+  /** O seu `userId` na plataforma, para dizer se o atendimento ficou com VOCÊ. Cacheado na `api`. */
+  async function meuUsuario() {
+    try {
+      return String((await api.getAgente())?.userId || '');
+    } catch (err) {
+      console.warn('[WhatsFill] nao consegui descobrir o seu usuario:', err);
+      return '';
+    }
+  }
+
+  /** A etiqueta de sem interesse, resolvida uma vez. Vazia no campo = ninguém é excluído. */
+  async function tagDeSemInteresse() {
+    const nome = String(state.auto.cfg.etiquetaSemInteresse || '').trim();
+    return nome ? await tagsLib.resolveTag(nome) : null;
+  }
+
+  /**
+   * **A rodada de só abrir, começando pela etiqueta.**
+   *
+   * As travas do lote de imagem que NÃO valem aqui: não precisa de par de imagem, não precisa do
+   * "Enviar automático" nem do contrato de envio de imagem — nada sai. As que valem são as duas que
+   * decidem a lista e o número.
+   */
+  async function runAtenderContatos({ sonda = false } = {}) {
+    const cfg = state.auto.cfg;
+    const nomeFiltro = String(cfg.atenderEtiqueta || '').trim();
+    if (!nomeFiltro) return setStatus('Escolha a etiqueta dos contatos que voce vai atender.', 'err');
+    if (!loteLib.filaDeNumeros(cfg).length) {
+      return setStatus(
+        'Marque ao menos um numero na fila (cartao de envio em lote): e por ele que o atendimento abre.',
+        'err'
+      );
+    }
+
+    contatosDesdeAConferenciaDoCanal = 0;
+    primeiroAtendimentoDaRodada = true;
+    setStatus('Montando a lista…');
+
+    const tagFiltro = await tagsLib.resolveTag(nomeFiltro);
+    if (!tagFiltro) return setStatus(`A etiqueta "${nomeFiltro}" nao existe no CRM. Confira o nome.`, 'err');
+    const tagSemInteresse = await tagDeSemInteresse();
+
+    let lista;
+    try {
+      lista = await api.filterContacts({
+        tagsId: [tagFiltro.id],
+        exceptTagsId: [tagSemInteresse?.id].filter(Boolean),
+        pageSize: 200,
+      });
+    } catch (err) {
+      return setStatus(
+        `Nao consegui montar a lista: ${traduzirErroDeRede(err.message, 'Tente de novo em instantes.')}`,
+        'err'
+      );
+    }
+
+    const contatos = (lista.itens || []).filter((c) => c?.id);
+    if (!contatos.length) {
+      return setStatus(
+        `Nenhum contato com a etiqueta "${tagFiltro.label}" fora dos marcados como sem interesse.`,
+        'ok'
+      );
+    }
+
+    const { fila, envios, dia, saldo } = await saldoDosNumerosDoLote();
+    setStatus('Conferindo os numeros…');
+    const fora = await numerosForaDoAr(fila);
+    if (fora.length) {
+      renderAll();
+      return setStatus(
+        `Nao comecei: ${fora.map((f) => `${nomeDoNumero(f.id)} — ${f.status}`).join('; ')}. ` +
+          'Com o numero fora voce escreveria numa conversa que nao chega — reconecte, ou desmarque ' +
+          'esse numero da fila.',
+        'err'
+      );
+    }
+
+    const vagas = loteLib.saldoTotal({ fila, envios, dia });
+    if (!vagas) {
+      return setStatus(
+        `Todos os ${fila.length} numero(s) da fila ja iniciaram ${loteLib.TETO_POR_NUMERO} conversas hoje. ` +
+          'Marque outro numero na fila ou recomece amanha — a contagem zera na virada do dia.',
+        'err'
+      );
+    }
+
+    const quantos = sonda ? 1 : Math.min(clampInt(cfg.limite, 1, 200), contatos.length, vagas);
+
+    if (
+      !confirm(
+        (sonda
+          ? 'TESTE: vou abrir o atendimento de UM contato so — o primeiro da lista — e esperar voce concluir.\n\n'
+          : `Vou abrir o atendimento de ${quantos} contato(s), UM POR VEZ: abro, ele fica em "Meus", ` +
+            'e so abro o proximo quando voce concluir.\n\n') +
+          `Etiqueta: "${tagFiltro.label}" (${contatos.length} contato(s) na lista` +
+          (lista.total && lista.total > contatos.length ? `, de ${lista.total} no total` : '') +
+          ').\n' +
+          `Numeros, nesta ordem: ${saldo
+            .map((n) => `${nomeDoNumero(n.canalId)} (cabem ${n.restam} hoje)`)
+            .join(' → ')}` +
+          (cfg.loteEquipeNome ? ` · equipe ${cfg.loteEquipeNome}` : '') +
+          '.\n\n' +
+          'NAO envio nada, NAO aplico etiqueta, NAO gravo nada no CRM e NAO concluo: quem escreve e ' +
+          'quem conclui e voce, na plataforma.\n' +
+          'Abrir a conversa conta no teto do numero (sao as "conversas iniciadas nas ultimas 24h").\n' +
+          (tagSemInteresse
+            ? `Fora da lista: quem tem a etiqueta "${tagSemInteresse.label}".\n`
+            : 'ATENCAO: sem etiqueta de sem interesse configurada, ninguem esta sendo excluido.\n') +
+          'Esperando voce, a rodada dura o tempo que voce levar — passando 30 min num contato, ela ' +
+          'para e o play recomeca.\n' +
+          '\nConfirma?'
+      )
+    ) {
+      return setStatus('Rodada cancelada.');
+    }
+
+    // O ▶ do controle flutuante recomeça POR AQUI: os confirms desta rodada moram nesta função.
+    recomecarRodada = () => runAtenderContatos({ sonda });
+    await rodar({
+      telaEDele: true,
+      percorrer: ({ limite: teto, pausaMs }) =>
+        percorrerContatos({
+          contatos,
+          limite: sonda ? 1 : teto,
+          pausaMs,
+          processar: processarContatoParaAtender,
+        }),
+    });
+  }
+
   /** Abre a rodada, roda o percurso e fecha o status. Comum às duas. */
   /**
    * **Esta rodada decide sozinha?**
@@ -6020,11 +6464,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * duas cópias de qualquer coisa neste projeto divergem (*"rodada com motor próprio não herda
    * conserto"*, 03/09).
    */
-  async function rodar({ aba, processar, automatico = false, percorrer = null }) {
+  async function rodar({ aba, processar, automatico = false, percorrer = null, telaEDele = false }) {
     const limite = clampInt(state.auto.cfg.limite, 1, 200);
     const pausaMs = clampInt(state.auto.cfg.pausaSeg, 3, 300) * 1000;
 
     state.auto.automatico = !!automatico;
+    // Quem troca de atendimento na tela é ele: o observador da página volta a carregar o contato.
+    state.auto.telaEDele = !!telaEDele;
     state.auto.rodando = true;
     state.auto.parar = false;
     state.auto.log = [];
@@ -6130,8 +6576,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       keepalive.desligar();
       state.auto.rodando = false;
       // Zerado aqui e não onde foi ligado: o `automatico` vale para a rodada, e uma rodada que
-      // termina por erro deixaria a próxima andando sozinha sem ninguém ter marcado nada.
+      // termina por erro deixaria a próxima andando sozinha sem ninguém ter marcado nada. Vale
+      // igual para `telaEDele`: deixá-la ligada faria a próxima rodada carregar o contato duas
+      // vezes, que é o defeito que a guarda do observador existe para impedir.
       state.auto.automatico = false;
+      state.auto.telaEDele = false;
       /**
        * **A janelinha só FICA quando foi ele que parou** — aí o ▶ tem o que fazer.
        *
@@ -9810,11 +10259,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    */
   const LEITURAS_PARA_TROCA = 3;
 
-  async function esperarVoceConcluir(sessionId, nome) {
-    const limite = Date.now() + 30 * 60 * 1000;
-    setStatus(`Responda ${nome} à mão. Quando você concluir, eu retomo daqui.`, 'ok');
+  /** Teto da espera, e de quanto em quanto tempo a API é consultada quando a tela não serve. */
+  const TETO_DA_ESPERA_MS = 30 * 60 * 1000;
+  const ESPERA_ENTRE_LEITURAS_DA_API_MS = 30 * 1000;
+
+  /**
+   * **As duas formas de esperar, numa função só** (02/10/2026, o modo de só abrir e atender).
+   *
+   *  - `trocaSegue: true` (o jeito de sempre) — a conversa JÁ ESTÁ na tela quando a espera começa,
+   *    porque a rodada a abriu; você ir para outro atendimento significa "deixei este para depois",
+   *    e a rodada segue adiante.
+   *  - `trocaSegue: false` (o modo novo) — o atendimento foi criado **pela API** e a tela está onde
+   *    você a deixou: "não está na tela" é o estado NORMAL no começo da espera, e tratá-lo como
+   *    troca de atendimento abriria o contato seguinte em um segundo, que é o oposto do pedido
+   *    (*"quando concluir abrir o próximo"*). Aí a pergunta vai à **API**, de 30 em 30 segundos.
+   *
+   * **A tela é lida de graça e por isso continua sendo a primeira pergunta:** atendendo na
+   * plataforma, a conclusão é notada em um segundo e nenhuma requisição é gasta. A API é a rede de
+   * segurança de quem conclui com a tela noutro lugar — ou do celular.
+   */
+  async function esperarVoceConcluir(sessionId, nome, opcoes = {}) {
+    const { trocaSegue = true, perguntarAApi = false, aviso = '', meuUserId = '' } = opcoes || {};
+    const limite = Date.now() + TETO_DA_ESPERA_MS;
+    setStatus(aviso || `Responda ${nome} à mão. Quando você concluir, eu retomo daqui.`, 'ok');
     let foraDaSessao = 0;
     let semControles = 0;
+    let proximaLeitura = Date.now() + ESPERA_ENTRE_LEITURAS_DA_API_MS;
 
     while (Date.now() < limite) {
       await new Promise((r) => setTimeout(r, 1000));
@@ -9825,6 +10295,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const estado = await page.getState();
       if (estado.concluded && estado.sessionId === sessionId) {
         return { nome, resultado: 'concluido', motivo: 'você respondeu e concluiu' };
+      }
+
+      /**
+       * **A API, quando a tela não responde a pergunta.** Falha ao ler NÃO é "concluiu" nem
+       * "parou": é a mesma política da barreira do canal — o limitador de taxa recusa requisição
+       * com frequência, e desistir da espera por uma leitura que não voltou seria a rodada
+       * morrendo por engasgo de rede.
+       */
+      if (perguntarAApi && Date.now() >= proximaLeitura) {
+        proximaLeitura = Date.now() + ESPERA_ENTRE_LEITURAS_DA_API_MS;
+        try {
+          const onde = loteLib.ondeCaiuOAtendimento(await api.getSession(sessionId), meuUserId);
+          if (onde.estado === loteLib.ONDE_CONCLUIDO) {
+            return { nome, resultado: 'concluido', motivo: 'você concluiu (vi pela API, não pela tela)' };
+          }
+        } catch (err) {
+          console.warn('[WhatsFill] não consegui reler o atendimento durante a espera:', err);
+        }
+        /**
+         * **A linha de status é reescrita a cada leitura, e não só no começo da espera.** Abrindo o
+         * contato na plataforma, o `load()` do painel escreve a barra de status com o que ele
+         * carregou — e o aviso de "atenda e conclua" sumiria justo quando ele está atendendo. Com os
+         * minutos ao lado, a barra também diz que a rodada está viva e quanto falta para o teto.
+         */
+        const minutos = Math.round((TETO_DA_ESPERA_MS - (limite - Date.now())) / 60000);
+        setStatus(`${aviso || `Responda ${nome} à mão.`} (${minutos} min esperando)`, 'ok');
       }
 
       // Rede de segurança: o atendimento ficou sem composer, sem Concluir e sem Iniciar. Isso é
@@ -9847,6 +10343,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       if (estado.sessionId !== sessionId) {
+        if (!trocaSegue) continue;
         if (++foraDaSessao < LEITURAS_PARA_TROCA) continue;
         return { nome, resultado: 'pulado', motivo: 'você abriu outro atendimento — segui daqui' };
       }

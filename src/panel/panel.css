@@ -167,6 +167,9 @@
 .wf-who { font-weight: 600; font-size: 15px; }
 .wf-sub { color: var(--wf-muted); font-size: 12px; margin-top: 2px; }
 .wf-sub b { color: var(--wf-fg); font-weight: 600; }
+/* Cabeca de bloco na aba Automatizado: separa o que vale para todas as rodadas, as rodadas em si e
+   o que elas usam. Nasceu do relato de 02/10/2026 -- "os meus e novos ficou longe um do outro". */
+.wf-secao { margin: 16px 2px 4px; padding-top: 10px; border-top: 1px solid var(--wf-border); }
 
 .wf-root nav {
   display: flex;

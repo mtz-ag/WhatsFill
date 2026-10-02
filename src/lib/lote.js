@@ -320,3 +320,95 @@ export function somarEnvio(envios, canalId, dia) {
   if (!id) return { ...(envios || {}) };
   return { ...(envios || {}), [id]: { dia: String(dia || ''), enviados: usadosNoDia(envios, id, dia) + 1 } };
 }
+
+/**
+ * **ONDE O ATENDIMENTO RECÉM-CRIADO CAIU** — pedido dele (02/10/2026): *"faça um modo só para abrir
+ * o contato e deixar nos meus sem enviar nada"*.
+ *
+ * `PUT /chat/v1/session` **nunca foi executado** (o corpo foi lido no bundle em 01/10), então
+ * *"abrir o atendimento deixa ele em Meus"* é hipótese, não medição — e é a hipótese em que este
+ * modo inteiro se apoia: sem ficar em "Meus", o contato cai em "Novos" e ele teria que assumir cada
+ * um à mão, o oposto do que pediu. Por isso a sessão é **RELIDA** depois de criada, e o que ela
+ * responde decide se a rodada continua.
+ *
+ * **São QUATRO estados e não dois, e é a lição de 25/09** (`donoDoCanal` devolvendo `null` para
+ * "ninguém cadastrou" e para "este número não é de ninguém") somada à de 01/10 (`undefined` não é
+ * "o número caiu"): **ausência de informação não é evidência**, e colapsar "não sei" em "está tudo
+ * bem" faria a rodada prometer "ficou em Meus" sobre um atendimento que ela não conseguiu ler.
+ *
+ *  - `meu` — `IN_PROGRESS` e o dono é você: é o que o modo promete;
+ *  - `em-andamento` — `IN_PROGRESS` e a plataforma não disse de quem (ou não sabemos o seu usuário):
+ *    segue, **dizendo que não deu para conferir**;
+ *  - `de-outro` — `IN_PROGRESS` com outro operador: não entra no atendimento de alguém;
+ *  - `pendente` — `PENDING`, que é a fila dos "Novos" (está escrito em `processarNovo`: *"contato em
+ *    Novos está PENDENTE"*);
+ *  - `concluido` — já fechado;
+ *  - `desconhecido` — sem `status` nenhum, ou um status que não é nenhum dos três.
+ */
+/** Os três status de atendimento, repetidos aqui porque esta lib é pura e não importa a `api`. */
+export const STATUS_EM_ANDAMENTO = 'IN_PROGRESS';
+export const STATUS_PENDENTE = 'PENDING';
+export const STATUS_CONCLUIDO = 'COMPLETED';
+
+export const ONDE_MEU = 'meu';
+export const ONDE_SEM_DONO = 'em-andamento';
+export const ONDE_DE_OUTRO = 'de-outro';
+export const ONDE_PENDENTE = 'pendente';
+export const ONDE_CONCLUIDO = 'concluido';
+export const ONDE_DESCONHECIDO = 'desconhecido';
+
+/**
+ * De quem é a sessão. O campo que a contagem de "Meus" usa é `userId` (vem de
+ * `/core/v1/agent/me`), mas a rota de ler a sessão nunca foi executada — então os apelidos óbvios
+ * são tentados antes de desistir. **Não achar devolve string vazia, nunca um palpite.**
+ */
+export function donoDaSessao(sessao) {
+  const s = sessao || {};
+  const candidatos = [s.userId, s.user?.id, s.user?.userId, s.agent?.userId, s.agent?.id, s.agentId];
+  for (const c of candidatos) {
+    const v = String(c || '').trim();
+    if (v) return v;
+  }
+  return '';
+}
+
+export function ondeCaiuOAtendimento(sessao, meuUserId = '') {
+  const status = String(sessao?.status || '').trim().toUpperCase();
+  const dono = donoDaSessao(sessao);
+  const meu = String(meuUserId || '').trim();
+  const base = { status, dono };
+
+  if (!sessao || typeof sessao !== 'object') {
+    return { ...base, estado: ONDE_DESCONHECIDO, motivo: 'a plataforma nao devolveu o atendimento' };
+  }
+  if (!status) {
+    return { ...base, estado: ONDE_DESCONHECIDO, motivo: 'a plataforma nao devolveu o status do atendimento' };
+  }
+  if (status === STATUS_CONCLUIDO) return { ...base, estado: ONDE_CONCLUIDO, motivo: 'o atendimento esta concluido' };
+  if (status === STATUS_PENDENTE) {
+    return { ...base, estado: ONDE_PENDENTE, motivo: 'o atendimento ficou PENDENTE — isso e a fila "Novos", nao "Meus"' };
+  }
+  if (status !== STATUS_EM_ANDAMENTO) {
+    return { ...base, estado: ONDE_DESCONHECIDO, motivo: `a plataforma devolveu o status ${status}, que nao e nenhum dos tres conhecidos` };
+  }
+  if (!dono) {
+    return { ...base, estado: ONDE_SEM_DONO, motivo: 'esta em andamento, e a plataforma nao disse de quem' };
+  }
+  if (!meu) {
+    return { ...base, estado: ONDE_SEM_DONO, motivo: 'esta em andamento, e eu nao sei o seu usuario para comparar' };
+  }
+  if (dono !== meu) return { ...base, estado: ONDE_DE_OUTRO, motivo: 'esta em andamento com OUTRO operador' };
+  return { ...base, estado: ONDE_MEU, motivo: 'esta em "Meus"' };
+}
+
+/**
+ * **As CHAVES que a sessão trouxe, nunca os valores** — a disciplina de medir na API de verdade
+ * (07/09): *"o que se registra é a FORMA (chaves, tamanhos), nunca o conteúdo"*. A sessão carrega
+ * telefone e nome de eleitor; o que serve para saber o que a rota devolve são os nomes dos campos,
+ * e é só isso que vai para a linha do Andamento.
+ */
+export function chavesDaSessao(sessao, quantas = 25) {
+  if (!sessao || typeof sessao !== 'object') return '';
+  const chaves = Object.keys(sessao);
+  return chaves.slice(0, quantas).join(', ') + (chaves.length > quantas ? `, … (+${chaves.length - quantas})` : '');
+}

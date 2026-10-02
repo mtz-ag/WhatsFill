@@ -11,6 +11,7 @@
 import { check, grupo, fim, lib } from './_harness.mjs';
 
 const api = await lib('api.js');
+import * as lote from '../src/lib/lote.js';
 
 /** O que a plataforma recebeu na ultima chamada, para conferir o corpo. */
 let ultima = null;
@@ -137,6 +138,30 @@ grupo('concluir: corpo VAZIO, como o botao "Concluir" da tela');
     recusou = true;
   }
   check(recusou, 'sem atendimento, recusa antes de gastar requisicao');
+}
+
+grupo('a SONDA do modo de so abrir: reler o atendimento criado');
+{
+  erro = null;
+  resposta = { id: 'sess-99', status: 'IN_PROGRESS', userId: 'u-eu', contactId: 'c-1' };
+  const sessao = await api.getSession('sess-99');
+  check(ultima.metodo === 'GET', 'e uma LEITURA: a sonda nao escreve nada');
+  check(ultima.url.includes('/chat/v1/session/sess-99'), 'na rota da sessao, pelo id que abrir devolveu');
+  check(
+    lote.ondeCaiuOAtendimento(sessao, 'u-eu').estado === lote.ONDE_MEU,
+    'e o veredito le o que voltou -- "ficou em Meus" deixa de ser hipotese'
+  );
+}
+
+grupo('o meu usuario sai de /core/v1/agent/me, e nao do token');
+{
+  resposta = { userId: 'u-eu', name: 'operador' };
+  const agente = await api.getAgente();
+  check(agente.userId === 'u-eu', 'e o campo userId, o mesmo que a contagem de "Meus" usa');
+  check(
+    ultima.url.includes('/core/v1/agent/me'),
+    'descobrir por ali e o que faz funcionar tambem no modo janela, onde o token nao chega ao painel'
+  );
 }
 
 fim();

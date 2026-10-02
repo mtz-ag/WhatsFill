@@ -300,4 +300,84 @@ grupo('a janela de 24h: sem typeDetails o padrao e SEM janela');
   check(lote.janelaEmMinutos({}) === -1 && lote.janelaEmMinutos(null) === -1, 'vazio tambem');
 }
 
+grupo('ONDE o atendimento recem-criado caiu: ausencia de informacao NAO e evidencia');
+{
+  const meu = lote.ondeCaiuOAtendimento({ status: 'IN_PROGRESS', userId: 'u-eu' }, 'u-eu');
+  check(meu.estado === lote.ONDE_MEU, 'em andamento e com o meu usuario: e isto que o modo promete');
+
+  // A armadilha de 01/10 pela outra porta: `undefined !== 'IN_PROGRESS'` tambem e verdadeiro.
+  check(
+    lote.ondeCaiuOAtendimento({}, 'u-eu').estado === lote.ONDE_DESCONHECIDO,
+    'sem status NENHUM e "desconhecido", nunca "caiu em Novos" nem "esta tudo bem"'
+  );
+  check(
+    lote.ondeCaiuOAtendimento(null, 'u-eu').estado === lote.ONDE_DESCONHECIDO,
+    'sessao nula tambem: a rodada para e diz, em vez de prometer o que nao leu'
+  );
+  check(
+    lote.ondeCaiuOAtendimento({ status: 'ARCHIVED' }, 'u-eu').estado === lote.ONDE_DESCONHECIDO,
+    'status que nao e nenhum dos tres conhecidos tambem e desconhecido'
+  );
+
+  check(
+    lote.ondeCaiuOAtendimento({ status: 'PENDING' }, 'u-eu').estado === lote.ONDE_PENDENTE,
+    'PENDING e a fila dos "Novos" -- o modo nao entrega isso como se fosse "Meus"'
+  );
+  check(
+    lote.ondeCaiuOAtendimento({ status: 'COMPLETED', userId: 'u-eu' }, 'u-eu').estado === lote.ONDE_CONCLUIDO,
+    'nascer concluido nao e o que o modo promete'
+  );
+  check(
+    lote.ondeCaiuOAtendimento({ status: 'IN_PROGRESS', userId: 'u-outro' }, 'u-eu').estado === lote.ONDE_DE_OUTRO,
+    'em andamento com OUTRO operador: nao se entra no meio do atendimento de alguem'
+  );
+
+  // Os dois casos em que o estado e "nao da para conferir", e os dois SEGUEM, dizendo que seguem.
+  check(
+    lote.ondeCaiuOAtendimento({ status: 'IN_PROGRESS' }, 'u-eu').estado === lote.ONDE_SEM_DONO,
+    'em andamento sem dono legivel: segue, com o motivo escrito'
+  );
+  check(
+    lote.ondeCaiuOAtendimento({ status: 'IN_PROGRESS', userId: 'u-outro' }, '').estado === lote.ONDE_SEM_DONO,
+    'sem saber o MEU usuario nao da para acusar outro operador -- "de-outro" exigiria comparar'
+  );
+  check(
+    !!lote.ondeCaiuOAtendimento({ status: 'PENDING' }, 'u-eu').motivo,
+    'todo estado leva o motivo escrito, que e o que vai para a linha do Andamento'
+  );
+  check(
+    lote.ondeCaiuOAtendimento({ status: 'in_progress', userId: 'u-eu' }, 'u-eu').estado === lote.ONDE_MEU,
+    'caixa do status nao decide'
+  );
+}
+
+grupo('de quem e a sessao: os apelidos do campo, e desistir em vez de palpitar');
+{
+  check(lote.donoDaSessao({ userId: 'a' }) === 'a', 'userId e o campo que a contagem de "Meus" usa');
+  check(lote.donoDaSessao({ user: { id: 'b' } }) === 'b', 'user.id tambem serve');
+  check(lote.donoDaSessao({ agent: { userId: 'c' } }) === 'c', 'agent.userId tambem');
+  check(lote.donoDaSessao({ agentId: 'd' }) === 'd', 'agentId tambem');
+  check(lote.donoDaSessao({}) === '', 'nao achar devolve VAZIO: palpite aqui viraria "ficou com voce" sem base');
+  check(lote.donoDaSessao(null) === '', 'nulo tambem');
+  check(lote.donoDaSessao({ userId: '   ' }) === '', 'campo em branco nao e dono');
+  check(
+    lote.donoDaSessao({ contactId: 'x', channelId: 'y' }) === '',
+    'contato e canal NAO sao o dono -- seria o campo errado respondendo a pergunta certa'
+  );
+}
+
+grupo('as CHAVES da sessao: a FORMA, nunca o conteudo');
+{
+  const chaves = lote.chavesDaSessao({ id: '1', status: 'IN_PROGRESS', userId: 'u' });
+  check(chaves === 'id, status, userId', 'devolve os nomes dos campos, na ordem em que vieram');
+  check(
+    !lote.chavesDaSessao({ contactPhone: '5199', contactName: 'Fulano' }).includes('5199'),
+    'nenhum VALOR aparece: a sessao carrega telefone e nome de eleitor'
+  );
+  const muitas = {};
+  for (let i = 0; i < 40; i++) muitas[`c${i}`] = i;
+  check(lote.chavesDaSessao(muitas).includes('(+15)'), 'lista longa e cortada, dizendo quantas sobraram');
+  check(lote.chavesDaSessao(null) === '' && lote.chavesDaSessao('x') === '', 'sem objeto nao ha chaves');
+}
+
 fim();

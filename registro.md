@@ -1,3 +1,157 @@
+## 2026-10-02 — v3.139.0 — modo de SÓ ABRIR: o atendimento nasce em "Meus", nada sai, e o próximo espera você concluir
+
+**Pedido dele:** *"faça um modo só para abrir o contato e deixar nos meus sem enviar nada e quando
+concluir abrir o próximo contato, utilizando o mesmo método do envio de imagens"* — e, junto:
+*"organize também o frontend, o automatizado dos meus e novos ficou longe um do outro"*.
+
+### O que o modo faz, e o que ele não faz
+
+Percorre os **contatos de uma etiqueta** (`contact/filter`), abre um atendimento novo em cada um
+(`PUT /chat/v1/session`) e **para ali**: o contato fica em "Meus" esperando ele. Quando ELE conclui,
+a rodada abre o próximo.
+
+**Não manda imagem, não manda texto, não aplica etiqueta, não grava campo no CRM e não conclui.**
+O único efeito é o atendimento existir, aberto, com ele — e é por isso que ela é a segunda rodada
+mais barata do painel, atrás só do "só reabrir": **2 requisições por contato** (abrir + reler) mais
+uma leitura a cada 30 s de espera, contra as ~9 do lote de imagem.
+
+**"O mesmo método do envio de imagens" é o percurso por ETIQUETA**, e ele é o único que alcança
+quem ele quer: contato sem atendimento nenhum **não existe em fila alguma da plataforma**, então não
+há item para clicar — o atendimento tem que ser criado.
+
+### A sonda: "fica em Meus" era hipótese, e agora a rodada confere
+
+`PUT /chat/v1/session` **nunca foi executado** — o corpo foi lido no bundle em 01/10. Que o
+atendimento criado caia em **"Meus"** (`IN_PROGRESS`, com ele) e não em **"Novos"** (`PENDING`) é a
+hipótese em que este modo inteiro se apoia: caindo em Novos, ele teria que assumir cada um à mão,
+que é o oposto do que pediu.
+
+Por isso a sessão é **RELIDA** depois de criada (`GET /chat/v1/session/{id}`), e
+`lote.ondeCaiuOAtendimento` dá o veredito. **São SEIS estados, não dois** — é a lição de 25/09
+(`donoDoCanal` devolvendo `null` para duas situações opostas) somada à de 01/10 (`undefined` não é
+"o número caiu"):
+
+| estado | o que é | o que a rodada faz |
+|---|---|---|
+| `meu` | `IN_PROGRESS` e o dono é ele | segue: é o que o modo promete |
+| `em-andamento` | `IN_PROGRESS` e a plataforma não disse de quem | segue, **dizendo que não deu para conferir** |
+| `pendente` | `PENDING` — a fila dos "Novos" | **para no primeiro**, e oferece fazer a rodada assumir |
+| `de-outro` | `IN_PROGRESS` com outro operador | para |
+| `concluido` | já fechado | para |
+| `desconhecido` | sem `status`, ou um status fora dos três | para, e **diz as chaves que a rota devolveu** |
+
+**Ausência de informação não é evidência**, nos dois sentidos: nem "está tudo bem" nem "deu errado".
+E a linha da sonda registra **a FORMA e nunca o conteúdo** (a disciplina de 07/09): os NOMES dos
+campos que a sessão trouxe, porque ela carrega telefone e nome de eleitor.
+
+**O preço de a hipótese estar errada é um atendimento aberto e nada mais** — sem envio, sem etiqueta,
+sem escrita no CRM. É o mais barato que uma rota nova pode custar aqui.
+
+### A espera é a que já existia, com a premissa invertida
+
+`esperarVoceConcluir` existe desde sempre para quando a rodada entrega um contato para ele responder
+à mão. Ela não servia aqui por um detalhe que é o modo todo: **ela assume que a conversa JÁ ESTÁ na
+tela** quando a espera começa, e trata "você foi para outro atendimento" como *"deixei este para
+depois, siga"*. Neste modo o atendimento nasce **pela API** e a tela está onde ele a deixou — "não
+está na tela" é o estado NORMAL no começo da espera, e com a regra antiga a rodada abriria o contato
+seguinte **um segundo depois**, que é o oposto de *"quando concluir abrir o próximo"*.
+
+Uma função, dois jeitos (`trocaSegue`), em vez de duas cópias que divergem na primeira semana. E a
+conclusão é perguntada em duas portas:
+
+- **a TELA, de graça, a cada segundo** — atendendo na plataforma, a conclusão é notada em um segundo
+  e nenhuma requisição é gasta;
+- **a API, de 30 em 30 segundos** — a rede de segurança de quem conclui com a tela noutro lugar, ou
+  do celular. Falha de leitura **não é "concluiu" nem "parou"**: é a mesma política da barreira do
+  canal, porque desistir por uma requisição que o limitador recusou seria a automação se desligando
+  sozinha.
+
+**Passando 30 min num contato a rodada PARA**, e não abre o próximo: empilhar um por cima de um que
+ele não terminou é encher "Meus" exatamente do jeito que este modo existe para evitar. O ▶ do
+controle flutuante recomeça de onde parou.
+
+### O painel voltou a carregar o contato durante a rodada — e sem isso o modo seria inútil
+
+`state.auto.rodando` manda o observador da página **ignorar a troca de atendimento**, e com razão:
+na rodada normal quem abre contato é a própria rodada, e um `load()` por fora carregaria o contato
+duas vezes e gravaria no CRM no meio de um envio.
+
+**Aqui a premissa se inverte: a rodada não abre conversa nenhuma na tela.** Sem a marca nova
+(`state.auto.telaEDele`), o painel ficaria **mudo justamente no contato que ele acabou de receber** —
+sem classificação, sem etiqueta sugerida, sem resposta pronta. Medido lendo o caminho: `applyPageState`
+retorna antes do `load()`, e os dois temporizadores (`load` e `reexame`) também desistem.
+
+A marca é zerada no `finally` do `rodar`, junto do `automatico`, e pelo mesmo motivo: rodada que
+morre por erro deixaria a próxima carregando o contato duas vezes.
+
+### Abrir conta no teto do número — e esta é a diferença em relação ao lote de imagem
+
+No lote o contador anda **depois de a mensagem sair**: contar antes queimaria saldo por uma falha
+nossa. Aqui o que é contado é a **CONVERSA INICIADA**, que já aconteceu — e `RESTRICTED`, o status
+que a plataforma devolve quando o número estoura o teto de 24 h, é literalmente *"atingiu o limite de
+conversas iniciadas nas últimas 24 horas"*. **Abrir é o ato que aquele teto conta**, mesmo que a
+mensagem venha da mão dele depois.
+
+Então os dois modos dividem o mesmo orçamento diário de 45 por número, na mesma fila e na mesma
+ordem — e a vez continua sendo do primeiro número com saldo.
+
+### As travas, e as que NÃO valem aqui
+
+Valem: a etiqueta tem que existir no CRM, pelo menos um número marcado na fila, **o número tem que
+estar no ar** (nada sai pelo painel, mas é nele que ele vai escrever à mão — e com o número fora a
+plataforma aceita o texto e a mensagem não chega), quem tem a etiqueta de sem interesse fica fora, e
+quem já tem atendimento aberto é pulado sem entrar no meio da conversa de ninguém.
+
+Não valem, porque nada sai: par de imagem, "Enviar automático" e o contrato de envio de imagem.
+
+**E o limite do cartão de Ritmo passou a valer para esta rodada**: `CONTA_NO_LIMITE` era
+`['enviado', 'reiniciado']` e `percorrerContatos` contava só `'enviado'` — a rodada andaria pelos
+200 contatos da lista ignorando o número que ele digitou. É a mesma lição do "só reiniciar", e o
+mapa de sinais já tinha o `→` e o veredito (*"assumido(s) para triagem em Meus"*) esperando.
+
+### O que fica em aberto, dito aqui porque é decisão dele
+
+- **Recomeçar amanhã começa a lista do início.** Esta rodada não marca ninguém, então quem ele já
+  concluiu volta a ser aberto. O conserto é uma etiqueta ("já atendi este") entrando no
+  `exceptTagsId` — um campo —, e não inventei porque etiqueta nova é escrita permanente em eleitor
+  real.
+- **Caindo em "Novos"**, a rodada para e oferece assumir antes de entregar. Assumir é DOM (o botão
+  Iniciar), então exigiria a conversa na tela — dá para fazer, é escolha dele.
+- **O teto de 45 não vê o que ele manda à mão.** O contador conta as conversas que o painel inicia;
+  as mensagens que ele digitar depois, não.
+
+### O frontend da aba Automatizado
+
+**Estava:** "Novos" era o 5º cartão e "Meus" o 8º, com o texto da mensagem do momento e o cartão
+inteiro do envio em lote no meio — duas telas de rolagem entre os dois botões que ele mais aperta.
+É a mesma correção de 06/09, quando a caixa da IA morava dentro do cartão dos Novos: **controle
+longe do botão que ele aperta parece ser de outra coisa.**
+
+A ordem agora tem três blocos, pelo momento de uso:
+
+1. **o que vale para todas** — a IA, o Ritmo, a fila da esquerda;
+2. **as rodadas** — Meus, Novos, o lote de imagem e o modo novo, um atrás do outro;
+3. **o que as rodadas usam** — o contador de abertos, a mensagem do momento, as etiquetas.
+
+O cartão novo fica **embaixo do cartão do lote de propósito**: os dois andam pela mesma rota, e a
+EQUIPE e a FILA DE NÚMEROS são escolhidas uma vez, lá — dois lugares para escolher o mesmo número é
+como as duas cópias de qualquer coisa neste projeto divergem, e aqui a divergência seria abrir
+conversa pelo número do outro candidato. A **etiqueta** é campo próprio (`auto.atenderEtiqueta`,
+nasce vazia): a lista de quem recebe a arte não é a lista de quem ele vai atender à mão, e um campo
+só obrigaria a redigitar a cada troca de modo.
+
+### Medido antes de mexer
+
+- `percorrerContatos` contava só `'enviado'` para o limite → o limite dele não existiria neste modo.
+- `applyPageState` e os dois temporizadores desistem com `state.auto.rodando` → painel mudo durante
+  a espera.
+- `esperarVoceConcluir` devolve `'pulado'` depois de 3 leituras fora da sessão → o próximo contato
+  abriria em ~3 s.
+- `'triado'` não era devolvido por rodada nenhuma (`grep`), mas o sinal e a linha do veredito já
+  existiam — o valor estava reservado desde a rodada de triagem antiga.
+
+As vinte e uma suítes e os dois verificadores passando.
+
 ## 2026-10-02 — v3.138.0 — a etiqueta por palavra passou a ler a CONVERSA: o painel só via o que o painel mandou
 
 **Relato dele:** *"só no automatizado está sendo colocada a etiqueta"*.
