@@ -1,3 +1,63 @@
+## 2026-10-02 — v3.140.0 — o teto por número virou campo: 45 era constante, e a recusa não tinha saída na tela
+
+**Relato dele:** *"a restrição dos contatos deveria ser opcional, bote uma caixa para inserir o
+número desejado, acabou de me bloquear"*.
+
+### O defeito é meu, e é de desenho
+
+O **45** nasceu da frase dele de 01/10 — *"limite de 45 por número; quando chegar em 45 é para
+trocar por um número seguinte da lista"* — e eu o escrevi como **constante**
+(`lote.TETO_POR_NUMERO`). Com isso, **o número que ele ditou num dia virou uma trava que ele não
+alcançava**: a rodada se recusava a começar (*"Todos os N número(s) da fila já iniciaram 45
+conversas hoje"*) e as únicas saídas que a mensagem oferecia eram marcar outro número ou **esperar a
+virada do dia**.
+
+É a família do campo que depende de configuração que não existe na tela, com o agravante de ser uma
+**decisão dele** congelada em código.
+
+### O que mudou
+
+- **`auto.tetoPorNumero`**, com campo no cartão do envio em lote, ao lado da fila de números:
+  *"Máximo de conversas por número, por dia (0 = sem teto)"*.
+- **Nasce com 45**, e não vazio: `auto` está na lista de mescla do `store.get`, então a chave nova
+  chega a quem já usa com o padrão — campo vazio apagaria a proteção para todo mundo (a armadilha de
+  04/09). `TETO_POR_NUMERO` continua existindo: é o PADRÃO, não a regra.
+- **`0` é a escolha explícita de não ter teto** — é o que "opcional" quer dizer aqui. O risco fica
+  escrito do lado, em vermelho: o `RESTRICTED` de 26/09 é o WhatsApp recusando por **conversas
+  iniciadas em 24h**, e menos de dez mensagens iguais em sequência já derrubaram um número dele.
+  Risco é decisão dele, com o aviso na tela — a mesma disciplina do `FLAGGED`, que avisa e não barra.
+- **O campo vale para as DUAS rodadas** que abrem atendimento (a da arte e a de só abrir), porque o
+  teto é do **NÚMERO** e não do que se manda por ele. Um lugar só, lido por
+  `saldoDosNumerosDoLote` — três leituras separadas divergiriam na primeira troca.
+
+### A guarda que faltava ser escrita: lixo no campo NÃO desliga a proteção
+
+`clampInt(v, 0, 5000)` seria o defeito, e eu a usei na primeira versão: **ela devolve o MÍNIMO para
+texto sem dígito**, então um campo apagado ou um *"quarenta"* digitado gravariam **0 = sem teto** —
+a proteção desligada por um escorregão, em silêncio. Hoje texto sem dígito volta ao **padrão**, e
+desligar exige digitar o zero. `lote.tetoDoCfg` repete a guarda do lado da leitura (valor estragado
+no armazenamento também volta a 45), e das doze asserções do teste a metade é sobre isso.
+
+### A recusa passou a dizer a CONTA e onde se mexe
+
+A mensagem que o bloqueou dizia *"já iniciaram 45 conversas hoje"* — sem dizer **qual número**,
+**quantas** cada um já fez, nem **onde** se troca o teto. Agora ela escreve a conta de cada número da
+fila e aponta o campo. É a lição de 25/09 (o veredito da rodada que não dizia por que nada saiu)
+aplicada a uma recusa que acontece ANTES de a rodada começar.
+
+**E se a conta estiver errada, isso é outro defeito:** o cartão mostra `usados/teto` por número, e
+o contador anda uma vez por conversa iniciada (pelo painel — o que ele manda à mão não entra).
+
+### Onde a tela agora diz "sem teto"
+
+`saldoDaFila` com teto desligado devolve `Infinity`, então todo lugar que escrevia um número passou
+por `lote.textoDoTeto`: o subtítulo da lista, o rótulo de cada número (`30/sem teto hoje`), as duas
+linhas do Andamento, os dois `confirm` e a linha do cartão do modo de só abrir. Escrever
+*"cabem Infinity hoje"* num `confirm` de disparo seria a tela afirmando bobagem no pior momento.
+
+**O contador continua contando com o teto desligado** — desligar para de BARRAR, não apaga a
+medida; é o que permite voltar a pôr um número e a conta do dia continuar valendo.
+
 ## 2026-10-02 — v3.139.0 — modo de SÓ ABRIR: o atendimento nasce em "Meus", nada sai, e o próximo espera você concluir
 
 **Pedido dele:** *"faça um modo só para abrir o contato e deixar nos meus sem enviar nada e quando

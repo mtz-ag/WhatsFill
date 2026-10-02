@@ -186,6 +186,38 @@ export function comoVaiRevezar(quantosPares, limite) {
  */
 export const TETO_POR_NUMERO = 45;
 
+/**
+ * **O TETO É DELE, E PODE SER DESLIGADO** — relato dele (02/10/2026): *"a restrição dos contatos
+ * deveria ser opcional, bote uma caixa para inserir o número desejado, acabou de me bloquear"*.
+ *
+ * O 45 nasceu da frase dele de 01/10 (*"limite de 45 por número"*) e virou **constante**, então a
+ * rodada se recusava a começar sem ter como ele dizer outra coisa: o número que ele ditou num dia
+ * passou a ser uma trava que ele não alcançava. `TETO_POR_NUMERO` continua sendo o PADRÃO —
+ * `auto.tetoPorNumero` é o valor dele.
+ *
+ * **`0` é a escolha explícita de não ter teto**, e é o que "opcional" quer dizer aqui. O risco
+ * continua escrito na tela (o `RESTRICTED` de 26/09 é o WhatsApp recusando por conversas iniciadas
+ * em 24h), porque risco é decisão dele — a mesma disciplina do `FLAGGED`, que avisa e não barra.
+ *
+ * **Lixo no campo volta ao PADRÃO, nunca a "sem teto".** Campo com texto estragado desligando a
+ * proteção em silêncio é o defeito oposto, e caro: só o `0` desliga.
+ */
+export const SEM_TETO = Infinity;
+
+export function tetoDoCfg(cfg = {}) {
+  const bruto = cfg?.tetoPorNumero;
+  if (bruto === '' || bruto === null || bruto === undefined) return TETO_POR_NUMERO;
+  const n = Number(bruto);
+  if (!Number.isFinite(n)) return TETO_POR_NUMERO;
+  if (n <= 0) return SEM_TETO;
+  return Math.floor(n);
+}
+
+/** O teto do jeito que se escreve na tela: `45`, ou `sem teto`. */
+export function textoDoTeto(teto) {
+  return Number.isFinite(teto) ? String(teto) : 'sem teto';
+}
+
 /** `YYYY-MM-DD` do dia LOCAL — nunca `toISOString`, que é UTC e viraria o dia às 21h daqui. */
 export function diaLocal(agora = new Date()) {
   const d = agora instanceof Date ? agora : new Date(agora);

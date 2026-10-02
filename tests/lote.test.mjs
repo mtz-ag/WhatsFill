@@ -380,4 +380,50 @@ grupo('as CHAVES da sessao: a FORMA, nunca o conteudo');
   check(lote.chavesDaSessao(null) === '' && lote.chavesDaSessao('x') === '', 'sem objeto nao ha chaves');
 }
 
+grupo('o teto e DELE: 45 e so o padrao, e so o ZERO desliga');
+{
+  check(lote.tetoDoCfg({ tetoPorNumero: 30 }) === 30, 'o numero que ele digitou vale');
+  check(lote.tetoDoCfg({ tetoPorNumero: '30' }) === 30, 'o campo da tela chega como texto');
+  check(lote.tetoDoCfg({}) === lote.TETO_POR_NUMERO, 'sem valor gravado, o padrao de 45 que ele mesmo ditou');
+  check(lote.tetoDoCfg({ tetoPorNumero: '' }) === lote.TETO_POR_NUMERO, 'campo apagado tambem cai no padrao');
+  check(lote.tetoDoCfg({ tetoPorNumero: null }) === lote.TETO_POR_NUMERO, 'nulo tambem');
+  check(lote.tetoDoCfg() === lote.TETO_POR_NUMERO, 'sem cfg nenhuma tambem');
+
+  check(lote.tetoDoCfg({ tetoPorNumero: 0 }) === lote.SEM_TETO, 'ZERO e a escolha explicita de nao ter teto');
+  check(lote.tetoDoCfg({ tetoPorNumero: '0' }) === lote.SEM_TETO, 'o zero digitado tambem');
+
+  // O defeito OPOSTO, e o caro: campo estragado desligando a protecao em silencio.
+  check(
+    lote.tetoDoCfg({ tetoPorNumero: 'quarenta' }) === lote.TETO_POR_NUMERO,
+    'texto sem numero volta ao PADRAO, nunca a "sem teto" -- escorregao nao desliga protecao'
+  );
+  check(lote.tetoDoCfg({ tetoPorNumero: NaN }) === lote.TETO_POR_NUMERO, 'NaN tambem volta ao padrao');
+  check(lote.tetoDoCfg({ tetoPorNumero: 1.9 }) === 1, 'fracao e truncada: teto e contagem de conversas');
+
+  check(lote.textoDoTeto(45) === '45', 'na tela, o numero');
+  check(lote.textoDoTeto(lote.SEM_TETO) === 'sem teto', 'e "sem teto" quando nao ha');
+}
+
+grupo('sem teto, a fila nunca se esgota -- e ela continua na ORDEM dele');
+{
+  const fila = ['ch-1', 'ch-2'];
+  const envios = { 'ch-1': { dia: '2026-10-02', enviados: 900 } };
+  const args = { fila, envios, dia: '2026-10-02', teto: lote.SEM_TETO };
+
+  check(lote.numeroDaVez(args).canalId === 'ch-1', 'com o teto desligado, a vez continua sendo do PRIMEIRO da fila');
+  check(lote.saldoTotal(args) === lote.SEM_TETO, 'e o saldo total nunca chega a zero, entao a rodada nao se recusa a comecar');
+  check(
+    lote.saldoDaFila(args)[0].usados === 900,
+    'o contador continua contando: desligar o teto nao apaga a medida, so para de barrar'
+  );
+  check(lote.textoDoTeto(lote.saldoDaFila(args)[0].restam) === 'sem teto', 'e a tela diz "sem teto" em vez de um numero infinito');
+
+  // Com o teto dele, o mesmo caso troca de numero -- e e por isso que o campo importa.
+  const comTeto = { ...args, teto: 45 };
+  check(lote.numeroDaVez(comTeto).canalId === 'ch-2', 'com teto de 45, o primeiro esta cheio e a vez e do seguinte');
+  const curto = { fila: ['ch-1'], envios, dia: '2026-10-02', teto: 45 };
+  check(lote.numeroDaVez(curto) === null, 'fila de um numero cheio nao tem vez -- a recusa que o bloqueou');
+  check(lote.numeroDaVez({ ...curto, teto: 1000 }).canalId === 'ch-1', 'e levantar o teto resolve, que e o que ele pediu');
+}
+
 fim();

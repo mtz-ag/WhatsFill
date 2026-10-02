@@ -2233,6 +2233,27 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **NUMERO QUE ELE DITOU NUM DIA NAO PODE VIRAR CONSTANTE — ele volta como trava que ele nao
+  alcanca** (02/10/2026: *"a restricao dos contatos deveria ser opcional, bote uma caixa para
+  inserir o numero desejado, acabou de me bloquear"*). O **45** saiu da frase dele de 01/10
+  (*"limite de 45 por numero"*) e eu o escrevi como `lote.TETO_POR_NUMERO`: a rodada se recusava a
+  comecar e as unicas saidas que a mensagem oferecia eram marcar outro numero ou **esperar a virada
+  do dia**. Hoje `auto.tetoPorNumero` e o valor dele e a constante e so o PADRAO.
+  **`0` e a escolha explicita de nao ter teto**, com o aviso do risco do lado (o `RESTRICTED` de
+  26/09 e o WhatsApp recusando por conversas INICIADAS em 24h) — risco e decisao dele, como no
+  `FLAGGED`, que avisa e nao barra.
+  **E `clampInt(v, 0, ...)` E O DEFEITO NESSE CAMPO:** ela devolve o MINIMO para texto sem digito,
+  entao campo apagado ou "quarenta" digitado gravariam **0 = sem teto** — a protecao desligada por
+  um escorregao, em silencio. Texto sem digito volta ao PADRAO, nos dois lados (a tela e
+  `lote.tetoDoCfg`, que peneira o que ja esta no armazenamento); desligar exige digitar o zero.
+  **Teto desligado devolve `Infinity`**, entao todo lugar que escrevia o numero passa por
+  `lote.textoDoTeto` — *"cabem Infinity hoje"* num `confirm` de disparo seria a tela afirmando
+  bobagem no pior momento. E o contador **continua contando**: desligar para de BARRAR, nao apaga a
+  medida.
+  **Ao transformar uma frase dele em limite de codigo, pergunte onde ele troca esse numero** — e a
+  recusa tem de dizer a CONTA de cada numero e ONDE se mexe, senao ela e um muro (a licao de 25/09
+  sobre o veredito que nao dizia por que nada saiu, aplicada antes de a rodada comecar).
+
 - **`state.auto.rodando` DESLIGA O PAINEL PARA A CONVERSA QUE ELE ABRE — e isso mata qualquer rodada
   em que a tela e DELE** (02/10/2026, o modo de so abrir: *"faca um modo so para abrir o contato e
   deixar nos meus sem enviar nada e quando concluir abrir o proximo contato"*).

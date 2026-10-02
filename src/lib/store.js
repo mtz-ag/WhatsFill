@@ -902,6 +902,18 @@ const DEFAULTS = {
      */
     loteCanais: [],
     /**
+     * **Quantas conversas cada número da fila aceita por dia** — o teto que decide quando a fila
+     * vira. Relato dele (02/10/2026): *"a restrição dos contatos deveria ser opcional, bote uma
+     * caixa para inserir o número desejado, acabou de me bloquear"*.
+     *
+     * Nasce com **45**, que foi o número que ele mesmo ditou em 01/10 — valor de fábrica e não
+     * campo vazio, pela razão de 04/09: `auto` está na lista de mescla do `get`, então a chave nova
+     * chega a quem já usa com o padrão, e vazio apagaria a proteção para todo mundo.
+     *
+     * **`0` é a escolha explícita de não ter teto.** Ver `lote.tetoDoCfg`.
+     */
+    tetoPorNumero: 45,
+    /**
      * **A etiqueta do modo "abrir e atender um por um"** — pedido dele (02/10/2026: *"faça um modo
      * só para abrir o contato e deixar nos meus sem enviar nada e quando concluir abrir o próximo
      * contato"*).

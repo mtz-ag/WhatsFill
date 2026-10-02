@@ -4317,6 +4317,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const faltas = loteLib.oQueFalta({ cfg, imagens: state.imagens, chaveDeImagem: porPerfil });
     const limite = clampInt(cfg.limite, 1, 200);
     const pausaSeg = clampInt(cfg.pausaSeg, 3, 300);
+    const teto = loteLib.tetoDoCfg(cfg);
 
     const card = h('div', { class: 'wf-card' }, [
       h('h4', {}, 'Envio em lote: imagem + legenda'),
@@ -4468,12 +4469,46 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       const fila = loteLib.filaDeNumeros(cfg);
       const dia = loteLib.diaLocal();
-      card.append(h('div', { class: 'wf-sub' }, h('b', {}, `Números do lote (até ${loteLib.TETO_POR_NUMERO} por número, por dia)`)));
+      card.append(h('div', { class: 'wf-sub' }, h('b', {}, `Números do lote (${loteLib.textoDoTeto(teto)} por número, por dia)`)));
+
+      /**
+       * **O TETO É DELE** — relato de 02/10/2026: *"a restrição dos contatos deveria ser opcional,
+       * bote uma caixa para inserir o número desejado, acabou de me bloquear"*. O 45 era constante,
+       * então a recusa não tinha saída nenhuma na tela: o número que ele ditou num dia virou uma
+       * trava que ele não alcançava.
+       *
+       * **O campo vale para as DUAS rodadas** (a arte e o "só abrir"), porque o teto é do NÚMERO e
+       * não do que se manda por ele. Zero desliga, e o aviso do risco fica do lado.
+       */
+      card.append(
+        campoNumero('Máximo de conversas por número, por dia (0 = sem teto)', cfg.tetoPorNumero ?? loteLib.TETO_POR_NUMERO, (v) => {
+          /**
+           * **`clampInt` NÃO serve aqui, e com min 0 ela seria o defeito**: ela devolve o mínimo
+           * para texto sem dígito, então um campo apagado ou um "quarenta" digitado gravariam
+           * **0 = sem teto** — a proteção desligada por um escorregão, em silêncio. Texto sem
+           * dígito volta ao PADRÃO; desligar exige digitar o zero.
+           */
+          const so = String(v).replace(/[^\d]/g, '');
+          const valor = so === '' ? loteLib.TETO_POR_NUMERO : Math.min(5000, parseInt(so, 10));
+          salvarAuto({ tetoPorNumero: valor }).then(renderAll);
+        }),
+        h('div', { class: 'wf-origin' },
+          'Vale para as duas rodadas que abrem atendimento por este número — a da arte e a de só ' +
+            'abrir. Chegando no teto, a fila passa para o número seguinte; com 0 não há teto, e aí ' +
+            'quem cuida do número é você: o WhatsApp recusa (status RESTRICTED) quando um número ' +
+            'estoura o limite de conversas iniciadas em 24h, e menos de dez mensagens iguais em ' +
+            'sequência já derrubaram um número seu.')
+      );
+      if (!Number.isFinite(teto)) {
+        card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+          'SEM TETO: a fila nunca troca de número por contagem, e nada aqui vai segurar o volume do ' +
+            'dia. Foi escolha sua — ponha um número no campo acima para voltar a ter o freio.'));
+      }
 
       for (const c of state.canais) {
         const pos = fila.indexOf(c.id);
         const usados = loteLib.usadosNoDia(state.loteEnvios, c.id, dia);
-        const restam = Math.max(0, loteLib.TETO_POR_NUMERO - usados);
+        const restam = Math.max(0, teto - usados);
         /**
          * **Campo vazio NÃO vira texto na tela.** O print dele de 01/10 mostrava
          * *"status UNDEFINED · qualidade UNDEFINED"*: aqueles dois são da Cloud API e não existem
@@ -4482,7 +4517,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         const veredito = loteLib.porqueNaoUsarONumero(c);
         const rotulo =
           `${pos >= 0 ? `${pos + 1}º · ` : ''}${c.numero || c.nome}` +
-          ` · ${usados}/${loteLib.TETO_POR_NUMERO} hoje` +
+          ` · ${usados}/${loteLib.textoDoTeto(teto)} hoje` +
           (c.saude && c.saude !== 'OK' ? ` · conexão ${c.saude}` : '') +
           (c.status && c.status !== 'CONNECTED' ? ` · ${c.status}` : '') +
           (c.qualidade && c.qualidade !== 'HIGH' ? ` · qualidade ${c.qualidade}` : '') +
@@ -4520,14 +4555,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
       card.append(h('div', { class: 'wf-origin' },
         'Marque os números na ordem em que quer usá-los: a rodada manda pelo primeiro da fila até ' +
-          `ele chegar a ${loteLib.TETO_POR_NUMERO} envios no dia, e então passa para o seguinte. ` +
+          `ele chegar a ${loteLib.textoDoTeto(teto)} envios no dia, e então passa para o seguinte. ` +
           'A contagem zera na virada do dia, porque o teto que o WhatsApp cobra é o das últimas ' +
           'horas — número queimado para sempre não voltaria a servir amanhã.'));
 
       if (fila.length) {
-        const saldo = loteLib.saldoTotal({ fila, envios: state.loteEnvios, dia });
+        const saldo = loteLib.saldoTotal({ fila, envios: state.loteEnvios, dia, teto });
         card.append(h('div', { class: 'wf-preview', 'data-fica': '1' },
-          `Cabem ${saldo} envio(s) hoje na fila de ${fila.length} numero(s).`));
+          Number.isFinite(saldo)
+            ? `Cabem ${saldo} envio(s) hoje na fila de ${fila.length} numero(s).`
+            : `Fila de ${fila.length} numero(s), sem teto por numero.`));
       }
 
       if (!state.equipes.length || !state.canais.length) {
@@ -4677,7 +4714,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     if (fila.length) {
       card.append(h('div', { class: 'wf-preview', 'data-fica': '1' },
-        `Abre pelo ${nomeDoNumero(fila[0])}` +
+        `Abre pelo ${nomeDoNumero(fila[0])} (teto de ${loteLib.textoDoTeto(loteLib.tetoDoCfg(cfg))} conversas por numero, por dia)` +
           (cfg.loteEquipeNome ? `, equipe ${cfg.loteEquipeNome}` : ', sem equipe') +
           ` — a mesma fila e a mesma equipe do cartão acima. Vai até ${limite} contato(s) (o limite do cartão de Ritmo).`));
     }
@@ -5858,7 +5895,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const fila = loteLib.filaDeNumeros(state.auto.cfg);
     const envios = (await store.get('loteEnvios')) || {};
     const dia = loteLib.diaLocal();
-    return { fila, envios, dia, saldo: loteLib.saldoDaFila({ fila, envios, dia }) };
+    // O teto é DELE (`auto.tetoPorNumero`); 45 é só o padrão, e 0 é "sem teto". Lido aqui, no ponto
+    // único que responde "quanto cabe hoje" — três leituras separadas divergiriam na primeira troca.
+    const teto = loteLib.tetoDoCfg(state.auto.cfg);
+    return { fila, envios, dia, teto, saldo: loteLib.saldoDaFila({ fila, envios, dia, teto }) };
   }
 
   /**
@@ -5950,16 +5990,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * continua esperando amanhã — `parar: true` com o motivo, que é o canal que `percorrerContatos`
        * tem para encerrar sem acusar defeito.
        */
-      const { fila, dia } = await saldoDosNumerosDoLote();
+      const { fila, dia, teto } = await saldoDosNumerosDoLote();
       const envios = (await store.get('loteEnvios')) || {};
-      const numero = loteLib.numeroDaVez({ fila, envios, dia });
+      const numero = loteLib.numeroDaVez({ fila, envios, dia, teto });
       if (!numero) {
         return {
           nome,
           resultado: 'pulado',
           parar: true,
           motivo: fila.length
-            ? `todos os ${fila.length} numero(s) da fila chegaram ao teto de ${loteLib.TETO_POR_NUMERO} hoje — o resto da lista fica para amanha`
+            ? `todos os ${fila.length} numero(s) da fila chegaram ao teto de ${loteLib.textoDoTeto(teto)} hoje — o resto da lista fica para amanha`
             : 'nenhum numero escolhido para o lote',
         };
       }
@@ -6105,7 +6145,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         motivo:
           `par ${par.n} ("${par.arquivo.nome}")` +
           // O número e a contagem na linha: sem isso, "trocou de número" é invisível no Andamento.
-          ` pelo ${nomeDoNumero(numero.canalId)} (${usados}/${loteLib.TETO_POR_NUMERO} hoje)` +
+          ` pelo ${nomeDoNumero(numero.canalId)} (${usados}/${loteLib.textoDoTeto(teto)} hoje)` +
           (r.legendaFoi ? ' com a legenda junto' : ' — a legenda foi como mensagem separada') +
           marca +
           marcaPalavra +
@@ -6158,16 +6198,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return { nome, resultado: 'pulado', motivo: `tem a etiqueta "${tagSemInteresse.label}"` };
       }
 
-      const { fila, dia } = await saldoDosNumerosDoLote();
+      const { fila, dia, teto } = await saldoDosNumerosDoLote();
       const envios = (await store.get('loteEnvios')) || {};
-      const numero = loteLib.numeroDaVez({ fila, envios, dia });
+      const numero = loteLib.numeroDaVez({ fila, envios, dia, teto });
       if (!numero) {
         return {
           nome,
           resultado: 'pulado',
           parar: true,
           motivo: fila.length
-            ? `todos os ${fila.length} numero(s) da fila chegaram ao teto de ${loteLib.TETO_POR_NUMERO} conversas hoje — o resto da lista fica para amanha`
+            ? `todos os ${fila.length} numero(s) da fila chegaram ao teto de ${loteLib.textoDoTeto(teto)} conversas hoje — o resto da lista fica para amanha`
             : 'nenhum numero escolhido na fila do cartao de envio em lote',
         };
       }
@@ -6273,7 +6313,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       registrarNaRodada(
         nome,
         'info',
-        `abri o atendimento pelo ${nomeDoNumero(numero.canalId)} (${usados}/${loteLib.TETO_POR_NUMERO} conversas hoje)` +
+        `abri o atendimento pelo ${nomeDoNumero(numero.canalId)} (${usados}/${loteLib.textoDoTeto(teto)} conversas hoje)` +
           (onde.estado === loteLib.ONDE_SEM_DONO ? ` — ${onde.motivo}` : ' — esta em "Meus"') +
           '. Atenda e conclua: eu abro o proximo quando voce concluir.'
       );
@@ -6388,11 +6428,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
     }
 
-    const vagas = loteLib.saldoTotal({ fila, envios, dia });
+    /**
+     * **A recusa do teto diz a CONTA de cada numero e onde se troca o teto** — ela foi a que o
+     * bloqueou em 02/10, e dizia so "ja iniciaram 45", sem o numero nem onde mexer.
+     */
+    const vagas = loteLib.saldoTotal({ fila, envios, dia, teto });
     if (!vagas) {
       return setStatus(
-        `Todos os ${fila.length} numero(s) da fila ja iniciaram ${loteLib.TETO_POR_NUMERO} conversas hoje. ` +
-          'Marque outro numero na fila ou recomece amanha — a contagem zera na virada do dia.',
+        `Nao comecei: ${saldo.map((n) => `${nomeDoNumero(n.canalId)} ja iniciou ${n.usados}`).join('; ')} ` +
+          `conversa(s) hoje, e o teto esta em ${loteLib.textoDoTeto(teto)} por numero. Troque o teto no ` +
+          'campo "Maximo de conversas por numero, por dia" (0 = sem teto), marque outro numero na ' +
+          'fila, ou recomece amanha — a contagem zera na virada do dia.',
         'err'
       );
     }
@@ -6409,7 +6455,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           (lista.total && lista.total > contatos.length ? `, de ${lista.total} no total` : '') +
           ').\n' +
           `Numeros, nesta ordem: ${saldo
-            .map((n) => `${nomeDoNumero(n.canalId)} (cabem ${n.restam} hoje)`)
+            .map((n) => `${nomeDoNumero(n.canalId)} (${loteLib.textoDoTeto(n.restam)} hoje)`)
             .join(' → ')}` +
           (cfg.loteEquipeNome ? ` · equipe ${cfg.loteEquipeNome}` : '') +
           '.\n\n' +
@@ -6988,11 +7034,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
     }
 
-    const vagas = loteLib.saldoTotal({ fila, envios, dia });
+    const vagas = loteLib.saldoTotal({ fila, envios, dia, teto });
     if (!vagas) {
       return setStatus(
-        `Todos os ${fila.length} numero(s) da fila ja mandaram ${loteLib.TETO_POR_NUMERO} hoje. ` +
-          'Marque outro numero na fila ou recomece amanha — a contagem zera na virada do dia.',
+        `Nao comecei: ${saldo.map((n) => `${nomeDoNumero(n.canalId)} ja mandou ${n.usados}`).join('; ')} ` +
+          `hoje, e o teto esta em ${loteLib.textoDoTeto(teto)} por numero. Troque o teto no campo ` +
+          '"Maximo de conversas por numero, por dia" (0 = sem teto), marque outro numero na fila, ou ' +
+          'recomece amanha — a contagem zera na virada do dia.',
         'err'
       );
     }
@@ -7016,11 +7064,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           (lista.total && lista.total > contatos.length ? `, de ${lista.total} no total` : '') +
           ').\n' +
           `Numeros, nesta ordem: ${saldo
-            .map((n) => `${nomeDoNumero(n.canalId)} (cabem ${n.restam} hoje)`)
+            .map((n) => `${nomeDoNumero(n.canalId)} (${loteLib.textoDoTeto(n.restam)} hoje)`)
             .join(' → ')}` +
           (cfg.loteEquipeNome ? ` · equipe ${cfg.loteEquipeNome}` : '') +
           '.\n' +
-          `Cada numero manda ate ${loteLib.TETO_POR_NUMERO} por dia; chegando no teto, passo para o seguinte.\n` +
+          `Cada numero manda ate ${loteLib.textoDoTeto(teto)} por dia; chegando no teto, passo para o seguinte.\n` +
           (quantos < Math.min(limite, contatos.length)
             ? `Hoje cabem ${vagas} envio(s) na fila, menos que os ${Math.min(limite, contatos.length)} ` +
               'que a lista e o limite permitiriam — o resto fica para amanha.\n'
