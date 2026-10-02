@@ -2233,6 +2233,28 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **COLAR NAO E ENVIAR, E MARCA QUE MORA DEPOIS DO `page.sendText` NAO ACONTECE EM METADE DOS
+  ENVIOS** (02/10/2026, *"estou colando uma mensagem pronta e nao esta botando a etiqueta por
+  palavra"*). **Medido: a regra dele casava e a tabela estava salva** — o defeito era o CAMINHO.
+  `sendTemplate` tem, logo no comeco, o ramo
+  `if (!send || !state.settings.autoSend) { setComposerText(text); return true; }` — e ele e **DUAS
+  coisas**: o botao "Inserir" da aba Respostas **e TODA resposta pronta quando o "Enviar automatico"
+  esta desligado**, inclusive as da caixa da rodada. Do lado DELE a mensagem sai igual; do lado do
+  painel nunca houve envio para marcar. **`enviarModelo` tem o ramo gemeo** (o dialogo fica pronto e
+  ele aperta "Enviar mensagem").
+  **Ao por marca no "ponto unico por onde tudo sai", conte os RAMOS e nao so as funcoes** — sao duas
+  funcoes com dois ramos cada, e a licao de 15/09 ("confira que sao DOIS pontos") so cobria metade.
+  **O rascunho da IA fica de fora de proposito:** quando ela ENVIA, marca; quando o texto fica no
+  campo para ele ajustar, **o texto ainda vai mudar**, e marcar ali etiqueta uma frase que nao
+  existe.
+  **O preco esta na tela:** colar e nao mandar deixa a etiqueta aplicada — o lado barato, porque
+  etiqueta e organizacao interna e nao marcar quem recebeu some com o caso da lista dele.
+  **E A ETIQUETA DE MATERIAL TEM O BURACO IDENTICO E NAO FOI MEXIDA:** `abreCasoDeMaterial` ->
+  `etiquetarEndereco` mora na mesma posicao, entao com o envio automatico desligado quem recebe o
+  pedido de endereco nao e marcado. Nao foi tocada porque ela faz a rodada **PULAR o contato para
+  sempre** e passa pela conferencia da IA — marcar a partir de texto que talvez nao tenha saido e o
+  que a decisao de 24/09 evitou. **Decisao dele.**
+
 - **`UNDEFINED` NAO E "O NUMERO CAIU", E O CAMPO DA CONEXAO E `healthStatus`** (01/10/2026, print
   dele: a rodada se recusou a comecar com *"status UNDEFINED · qualidade UNDEFINED"* num numero que
   estava NO AR). A barreira da v3.135 fazia `status !== 'CONNECTED'`, e **`undefined !== 'CONNECTED'`

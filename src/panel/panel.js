@@ -2519,10 +2519,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       setStatus(`Modelo enviado: ${modelo.name}${marcaMaterial}${marcaPalavra}`, 'ok');
       return true;
     } else {
+      // O mesmo buraco da resposta pronta (02/10/2026): com o diálogo ficando pronto para ELE
+      // apertar, o texto sai e o painel nunca viu envio nenhum para marcar.
+      const marcaPalavra = await etiquetarPorPalavra(alvo, modelo.text || '');
       setStatus(
-        send && !state.settings.autoSend
+        (send && !state.settings.autoSend
           ? 'Envio automático está desligado (aba Config): o diálogo ficou pronto, clique em "Enviar mensagem".'
-          : `Diálogo pronto com "${modelo.name}". Confira e clique em "Enviar mensagem".`,
+          : `Diálogo pronto com "${modelo.name}". Confira e clique em "Enviar mensagem".`) + marcaPalavra,
         'ok'
       );
     }
@@ -2761,10 +2764,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     if (!send || !state.settings.autoSend) {
       await page.setComposerText(text);
+      /**
+       * **A ETIQUETA POR PALAVRA VALE TAMBÉM AQUI — COLAR É ESCOLHER O TEXTO** (relato dele,
+       * 02/10/2026: *"estou colando uma mensagem pronta e não está botando a etiqueta por palavra;
+       * o texto tem a palavra colinha"*).
+       *
+       * **Medido: o defeito não era a etiqueta, era o CAMINHO.** A marca ficava depois do envio de
+       * verdade (`page.sendText`), e este ramo — "Inserir" na aba Respostas, e **toda** resposta
+       * pronta quando o "Enviar automático" está desligado — devolve `true` antes de chegar lá. Do
+       * lado dele a mensagem saiu igual; do lado do painel, nunca houve envio para marcar.
+       *
+       * **O preço, dito na tela:** colar e NÃO mandar deixa a etiqueta aplicada. É o lado barato —
+       * a etiqueta é organização interna, enquanto não marcar quem recebeu some com o caso da lista
+       * dele. A linha de status diz o que entrou, para ele tirar se desistir do envio.
+       */
+      const marcaPalavra = await etiquetarPorPalavra(alvo, text);
       setStatus(
-        send && !state.settings.autoSend
+        (send && !state.settings.autoSend
           ? 'Envio automático está desligado (aba Config): texto inserido, envie você.'
-          : 'Texto inserido no campo de mensagem.',
+          : 'Texto inserido no campo de mensagem.') + marcaPalavra,
         'ok'
       );
       return true;
@@ -13918,12 +13936,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Etiquetas por palavra no que EU mando'));
     body.append(
       h('p', { class: 'wf-hint' }, [
-        'Uma linha por regra, no formato "palavra = Etiqueta". Quando o texto que SAI (modelo ' +
-          'aprovado, resposta pronta, rascunho da IA ou legenda do envio em lote) contiver a ' +
+        'Uma linha por regra, no formato "palavra = Etiqueta". Quando o texto que SAI contiver a ' +
           'palavra, a etiqueta é aplicada no contato — ',
         h('b', {}, 'além'),
-        ' das outras. A tabela de cima é o contrário: ela casa no que o contato escreveu. A ' +
-          'etiqueta precisa existir no CRM, e a linha do Andamento diz qual palavra casou.',
+        ' das outras. Vale na resposta pronta e no modelo aprovado (inclusive quando o painel só ' +
+          'INSERE o texto para você mandar), na legenda do envio em lote, e no rascunho da IA ' +
+          'quando ela mesma envia — rascunho que fica no campo para você ajustar não marca nada, ' +
+          'porque o texto ainda vai mudar. A tabela de cima é o contrário: ela casa no que o ' +
+          'contato escreveu. A etiqueta precisa existir no CRM, e a linha de status diz qual ' +
+          'palavra casou.',
       ])
     );
 

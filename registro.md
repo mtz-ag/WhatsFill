@@ -1,3 +1,56 @@
+## 2026-10-02 — v3.137.0 — COLAR não é ENVIAR: a etiqueta por palavra morava depois do envio de verdade
+
+**Relato dele:** *"estou colando uma mensagem pronta e não está botando a etiqueta por palavra; o
+texto tem a palavra colinha e botei nas configurações colinha = COLINHA"*.
+
+### Medido, e o defeito não era a etiqueta
+
+Conferido antes de mexer: `regrasQueCasam([{padrao:'colinha'}], 'o texto com colinha')` casa,
+`etiquetasPorEnvio` grava e lê de volta (chave de topo fora da lista de mescla, então o valor salvo
+é devolvido intacto). **A regra dele estava certa e a tabela estava salva.**
+
+**O defeito era o CAMINHO.** `sendTemplate` aplica a marca **depois** do envio de verdade
+(`page.sendText`), e o ramo de cima devolve `true` antes de chegar lá:
+
+```js
+if (!send || !state.settings.autoSend) { await page.setComposerText(text); return true; }
+```
+
+Esse ramo é **duas coisas ao mesmo tempo**, e a segunda é a que importa:
+
+1. o botão **"Inserir"** da aba Respostas, e
+2. **TODA resposta pronta quando o "Enviar automático" está desligado** — inclusive as da caixa da
+   rodada.
+
+**Do lado dele a mensagem saiu igual.** Do lado do painel, nunca houve envio para marcar.
+
+### O conserto, e os dois pontos (de novo)
+
+A marca passou a valer também quando o painel só **insere** o texto — na resposta pronta e no
+**modelo aprovado**, que tinha o buraco idêntico (ali o diálogo fica pronto e ele aperta "Enviar
+mensagem"). **É a lição de 15/09 pela terceira vez:** *"ao pôr uma marca no ponto único por onde
+tudo sai, confira que são DOIS pontos"* — e agora os dois pontos têm, cada um, **dois ramos**.
+
+**O rascunho da IA ficou de fora, de propósito.** Quando ela mesma envia, já marcava e continua
+marcando; quando o texto fica no campo para ele ajustar, **o texto ainda vai mudar** — marcar ali
+seria etiquetar uma frase que não existe.
+
+**O preço, escrito na tela:** colar e NÃO mandar deixa a etiqueta aplicada. É o lado barato —
+etiqueta é organização interna, e não marcar quem recebeu some com o caso da lista dele. A linha de
+status diz qual palavra casou e qual etiqueta entrou, então desistir do envio é tirar a etiqueta.
+
+### O que a mesma medição revelou e NÃO foi mexido
+
+**A etiqueta de MATERIAL tem o buraco idêntico** (`abreCasoDeMaterial` → `etiquetarEndereco` mora
+na mesma posição, depois do envio): com o "Enviar automático" desligado, ou pelo "Inserir", quem
+recebe o pedido de endereço **não é marcado**. Não mexi porque aquela etiqueta é outra natureza —
+ela faz a rodada **PULAR o contato para sempre** e passa pela conferência da IA, que lê a conversa
+da tela. Marcar a partir de um texto que talvez não tenha saído é exatamente o que a decisão de
+24/09 evitou. **Dito a ele; a decisão é dele.**
+
+E a descrição da tabela na Config foi corrigida junto: ela listava os quatro caminhos sem dizer que
+só valiam no envio automático — **aviso que não envelhece com o que já foi feito** pela enésima vez.
+
 ## 2026-10-01 — v3.136.0 — a barreira do canal barrou um número que estava NO AR: `UNDEFINED` não é "caiu"
 
 **Print dele**, minutos depois da v3.135: a rodada se recusou a começar, com a tela dizendo
