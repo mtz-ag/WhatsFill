@@ -65,6 +65,8 @@
   .oculto { display: none !important; }
   .barra { height: 6px; background: var(--fundo); border-radius: 999px; overflow: hidden; margin-bottom: 12px; border: 1px solid var(--borda); }
   .barra > i { display: block; height: 100%; background: var(--ok); width: 0; }
+  .caixa { display: flex; align-items: center; gap: 10px; padding: 12px 2px; font-size: 14px; color: var(--texto); }
+  .caixa input { width: 22px; height: 22px; accent-color: var(--acento); flex: none; }
   .fim { text-align: center; padding: 10px 0; }
   .fim .grande { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
   .pequeno { font-size: 13px; color: var(--fraco); }
@@ -167,11 +169,16 @@
       O texto tambem vai copiado. Abrindo a conversa <strong>sem</strong> o texto escrito, e so
       segurar o dedo no campo de mensagem e colar.
     </p>
+    <label class="caixa" data-fica="1">
+      <input type="checkbox" id="chAuto" checked>
+      <span>Avancar sozinho quando eu voltar do WhatsApp</span>
+    </label>
     <button id="btProximo">Mandei &mdash; proximo</button>
     <div class="linha">
+      <button id="btVoltar">Voltar um</button>
       <button id="btPular">Pular este</button>
-      <button id="btCopiar">Copiar o texto</button>
     </div>
+    <button id="btCopiar">Copiar o texto</button>
   </div>
   <div id="acabou" class="fim oculto">
     <div class="grande" id="tituloFim"></div>
@@ -585,6 +592,64 @@ el('btCopiar').addEventListener('click', function () {
 el('btAbrir').addEventListener('click', function () {
   if (!plano[pos]) return;
   copiarTexto(plano[pos].texto);
+  saiuParaOWhatsApp = true;
+});
+
+/**
+ * **AVANCAR SOZINHO AO VOLTAR: um toque por contato em vez de dois.**
+ *
+ * Nao existe jeito honesto de um programa apertar "enviar" no WhatsApp — o que existe e o servico
+ * de acessibilidade dirigindo a tela, que e proibido nos termos e e o padrao que queima numero
+ * mais rapido. O que da para tirar do caminho e o SEGUNDO toque, o de "proximo": quando a aba
+ * volta a ficar visivel depois de ele ter saido para o WhatsApp, a pagina anda sozinha.
+ *
+ * **Ela assume que foi mandado, e isso e uma aposta de proposito.** O navegador nao tem como
+ * saber se ele apertou enviar ou so olhou e voltou. A aposta certa e a otimista, porque o caso
+ * comum e ter mandado — e o caso raro tem conserto a um toque, o "Voltar um". O contrario (pedir
+ * confirmacao) devolveria o segundo toque em 100% dos contatos para resolver 1%.
+ */
+var saiuParaOWhatsApp = false;
+
+/**
+ * A decisao, separada do evento de proposito: evento de visibilidade so acontece de verdade num
+ * navegador de verdade, e assim da para exercitar a regra sem depender disso.
+ */
+function avancarPorVoltar() {
+  if (!saiuParaOWhatsApp) return 'nao saiu para o WhatsApp';
+  if (!rodando) return 'a rodada nao esta andando';
+  if (!el('chAuto').checked) return 'ele desligou o avanco automatico';
+  saiuParaOWhatsApp = false;
+  feitos++;
+  pos++;
+  desenhar();
+  if (rodando) el('statusLaco').textContent = 'Avancei sozinho. Nao chegou a mandar? Toque em "Voltar um".';
+  return 'avancou';
+}
+
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState !== 'visible') return;
+  if (avancarPorVoltar() !== 'avancou') return;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+/**
+ * O desfazer do avanco automatico. Volta a posicao E a contagem — sem desfazer a contagem, o
+ * "parar em 30" fecharia a rodada antes de trinta terem saido.
+ */
+el('btVoltar').addEventListener('click', function () {
+  if (pos <= 0) return;
+  pos--;
+  if (feitos > 0) feitos--;
+  rodando = true;
+  saiuParaOWhatsApp = false;
+  mostrar('acabou', false);
+  mostrar('atual', true);
+  el('btParar').textContent = 'Parar e anotar onde parei';
+  // `terminar` troca o botao de parar por "recarregar"; voltando atras, ele volta a ser parar —
+  // senao o toque seguinte recarrega a pagina e perde a rodada.
+  el('btParar').onclick = null;
+  desenhar();
+  el('statusLaco').textContent = 'Voltei um. Este aqui ainda nao foi.';
 });
 
 el('btParar').addEventListener('click', function () {

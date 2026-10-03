@@ -239,6 +239,11 @@ entra quando o anterior acabar.
   sistema. Os que nomeiam o pacote (`intent://`) escolhem. **O erro que isto evita e mandar
   quinhentas mensagens pelo numero pessoal sem perceber**, e por isso o nome do aplicativo
   fica escrito no botao que ele toca, a cada contato, e nao num canto da tela.
+- **Evento de visibilidade nao se testa com evento FALSO.** Despachar
+  `new Event('visibilitychange')` num painel de previa deu leituras contraditorias (a marca
+  zerava e o contador nao andava, e o mesmo trecho passava quando rodado sozinho). A regra
+  saiu de dentro do ouvinte para `avancarPorVoltar()`, que **devolve o motivo** e da para
+  exercitar direto — o ouvinte virou uma linha que da para conferir lendo.
 - **"Pular" nao conta no alvo.** O alvo e "quantas eu mandei", nao "quantas eu olhei": sem isso uma
   lista com muito numero errado faria a rodada "chegar em 30" tendo mandado dez.
 - **Etiqueta pedida que nao existe no arquivo RECUSA a conversao.** O defeito dela e silencioso e
@@ -262,6 +267,9 @@ entra quando o anterior acabar.
 
 ## Log de decisoes
 
+- **03/10/2026** — Medido com ele: contatos importados aparecem offline e o Business
+  abre. **Um toque por contato**: a pagina avanca sozinha quando a aba volta a ficar visivel,
+  com "Voltar um" para desfazer. O app que aperta enviar continua **nao sendo feito**.
 - **03/10/2026** — O WhatsApp comum e o Business sao pacotes diferentes
   (`com.whatsapp` e `com.whatsapp.w4b`), e com os dois instalados quem nao nomeia o pacote
   cai no que o Android escolher — medido: abriu o comum. A pagina passou a escolher o
