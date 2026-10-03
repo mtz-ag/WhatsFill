@@ -190,8 +190,46 @@ export function jaRecebeu(pares, nossas = []) {
  * `tagDoLote` e `{ id, label }` ou nulo; `tagsDoContato` sao os ids que o contato JA tem no CRM —
  * `state.contact.tagsId`, nunca a lista da caixa da rodada, que e so o que a rodada sugere.
  */
-export function porqueNaoMandar({ pares = [], nossas = [], tagsDoContato = [], tagDoLote = null } = {}) {
+/**
+ * **AS ETIQUETAS QUE ELE MANDA PULAR** — pedido dele (02/10/2026): *"bote nos disparos uma caixa
+ * para inserir etiquetas que devem ser puladas"*.
+ *
+ * Lista separada por vírgula (ou por linha), **nome EXATO da etiqueta do CRM**. Exato, e não o
+ * casamento por trecho contido das outras listas (`etiquetaDaLista`), por duas razões: o filtro do
+ * servidor precisa do **id** da etiqueta (`exceptTagsId`), que só sai do nome exato; e numa lista de
+ * exclusão o trecho contido é perigoso ao contrário — digitar `a` tiraria meia base do disparo sem
+ * nada na tela explicando quem sumiu.
+ *
+ * Nome repetido entra uma vez; a comparação de repetido ignora a caixa, mas o que se guarda é o que
+ * ele escreveu, porque é esse texto que vai ser procurado no CRM.
+ */
+export function nomesPulados(texto) {
+  const vistos = new Set();
+  const nomes = [];
+  for (const bruto of String(texto || '').split(/[,;\n]/)) {
+    const nome = bruto.trim();
+    if (!nome) continue;
+    const chave = nome.toLowerCase();
+    if (vistos.has(chave)) continue;
+    vistos.add(chave);
+    nomes.push(nome);
+  }
+  return nomes;
+}
+
+export function porqueNaoMandar({ pares = [], nossas = [], tagsDoContato = [], tagDoLote = null, tagsPuladas = [] } = {}) {
   const ids = Array.isArray(tagsDoContato) ? tagsDoContato : [];
+  /**
+   * **A lista dele vem PRIMEIRO**: ela é a decisão mais explícita que existe aqui — ele escreveu o
+   * nome da etiqueta dizendo "não mande para estes". Ganhar do recibo e da conversa não muda
+   * desfecho nenhum (os três pulam), só o MOTIVO que aparece na linha do Andamento, e o motivo
+   * certo é o que ele vai reconhecer.
+   */
+  for (const tag of Array.isArray(tagsPuladas) ? tagsPuladas : []) {
+    if (tag && tag.id && ids.includes(tag.id)) {
+      return `tem a etiqueta "${tag.label || tag.id}", que voce mandou pular`;
+    }
+  }
   if (tagDoLote && tagDoLote.id && ids.includes(tagDoLote.id)) {
     return `ja tem a etiqueta "${tagDoLote.label || tagDoLote.id}" — ja recebeu este lote`;
   }

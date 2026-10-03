@@ -1,3 +1,49 @@
+## 2026-10-02 — v3.143.0 — a caixa das etiquetas que o disparo PULA
+
+**Pedido dele:** *"bote nos disparos uma caixa para inserir etiquetas que devem ser puladas"*.
+
+`auto.disparoEtiquetasPuladas`, no cartão "Para quem": nomes de etiqueta separados por vírgula.
+**Nasce vazia** — as exclusões que já existiam (a etiqueta de sem interesse e a do recibo) continuam
+valendo sozinhas, e inventar um nome aqui tiraria gente do disparo sem ninguém ter pedido.
+
+### Vale nos TRÊS botões da aba
+
+Os dois disparos (por etiqueta e pela fila) e o **"atender um por um"**. Ele disse "nos disparos", e
+a aba inteira é o disparo: abrir atendimento para quem ele mandou pular é pôr essa pessoa na frente
+dele para atender — o mesmo trabalho que a lista existe para evitar.
+
+E entra em **dois lugares por rodada**, pela mesma razão que a etiqueta do recibo já entrava:
+
+- no **filtro do servidor** (`exceptTagsId`), que é o que faz a lista nem trazer essa gente;
+- **por contato**, de novo, que é de graça (a lista de etiquetas é cacheada) e pega o que o filtro
+  não pega: a etiqueta aplicada entre o filtro e a vez daquele contato, numa lista longa.
+
+No caminho pela **fila** não existe `exceptTagsId` nenhum — ali a conferência por contato é a única,
+e ela mora em `lote.porqueNaoMandar`, junto das duas memórias que já decidiam isso.
+
+### Nome EXATO, e a rodada se recusa a começar se algum não existir
+
+**Exato, e não o casamento por trecho contido** das outras listas (`etiquetaDaLista`), por duas
+razões: o filtro do servidor precisa do **id**, que só sai do nome exato; e numa lista de exclusão o
+trecho contido é perigoso ao contrário — digitar `a` tiraria meia base do disparo sem nada na tela
+explicando quem sumiu.
+
+**Nome que não existe no CRM recusa a rodada**, com os nomes escritos e o caminho para corrigir. É a
+regra de 01/10 aplicada à lista nova: nome errado sairia do `exceptTagsId` **em silêncio** e quem ele
+mandou pular receberia — a falha mais cara possível numa lista de exclusão, e silenciosa.
+
+### O motivo que aparece no Andamento
+
+A lista dele é conferida **antes** do recibo e da conversa em `porqueNaoMandar`. Os três desfechos
+são o mesmo (pular), então a ordem não muda comportamento nenhum — muda o **motivo** escrito na
+linha, e o motivo certo é o que ele reconhece: *"tem a etiqueta X, que você mandou pular"*.
+
+### As guardas, nos testes
+
+Metade das asserções é falso positivo: etiqueta que está na LISTA e não no contato não pula ninguém,
+lista vazia não pula ninguém, o disparo sem o campo continua igual ao de ontem, e **etiqueta sem
+`id` não pula** — um id vazio casaria com qualquer coisa.
+
 ## 2026-10-02 — v3.142.0 — `teto is not defined`: eu usei o campo novo sem desestruturá-lo, e nenhum verificador pega isso
 
 **Print dele:** a aba Disparo aberta, o botão "Disparar para a etiqueta" apertado, e no rodapé

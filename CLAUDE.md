@@ -2233,6 +2233,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **LISTA DE EXCLUSAO CASA POR NOME EXATO, E NOME ERRADO RECUSA A RODADA** (02/10/2026: *"bote nos
+  disparos uma caixa para inserir etiquetas que devem ser puladas"*). `auto.disparoEtiquetasPuladas`
+  + `lote.nomesPulados` + `tagsPuladasDoDisparo`, valendo nos TRES botoes da aba Disparo.
+  **Exato, e nao o trecho contido de `etiquetaDaLista`:** o filtro do servidor precisa do **id**, que
+  so sai do nome exato; e numa lista de EXCLUSAO o trecho contido e perigoso ao contrario — digitar
+  `a` tiraria meia base do disparo sem nada na tela dizendo quem sumiu.
+  **Nome que nao existe no CRM RECUSA a rodada, com os nomes escritos.** E a regra de 01/10 na lista
+  nova, e aqui ela e mais cara: nome errado some do `exceptTagsId` **em silencio** e quem ele mandou
+  pular RECEBE. A conferencia e antes de comecar, nas tres rodadas — inclusive na da fila, onde nao
+  ha `exceptTagsId` nenhum segurando.
+  **A lista entra em DOIS lugares por rodada**, como a etiqueta do recibo: no `exceptTagsId` (o
+  servidor nem traz) e por CONTATO (de graca, porque a lista de etiquetas e cacheada), que pega a
+  etiqueta aplicada entre o filtro e a vez daquele contato.
+  **Ela decide ANTES do recibo e da conversa em `porqueNaoMandar`:** os tres desfechos sao iguais
+  (pular), entao a ordem nao muda comportamento — muda o MOTIVO da linha do Andamento, e o certo e o
+  que ele reconhece. **Etiqueta sem `id` nao pula ninguem:** id vazio casaria com qualquer coisa.
+
 - **CAMPO NOVO NO RETORNO: ELE TEM DE ENTRAR NA DESESTRUTURACAO DE QUEM O USA** (02/10/2026, print
   dele com **`teto is not defined`** ao apertar "Disparar para a etiqueta"). Na v3.140
   `saldoDosNumerosDoLote` passou a devolver `teto`, eu usei o campo nas contas e nas mensagens dos

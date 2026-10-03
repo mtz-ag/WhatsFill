@@ -474,4 +474,51 @@ grupo('quantas pecas: ele adiciona e remove, e o padrao continua sendo quatro');
   );
 }
 
+grupo('as etiquetas que ele manda PULAR: a lista que ele digita');
+{
+  check(lote.nomesPulados('A, B').join('|') === 'A|B', 'separa por virgula e tira o espaco');
+  check(lote.nomesPulados('A;B').join('|') === 'A|B', 'ponto e virgula tambem');
+  check(lote.nomesPulados('A,,  ,B').join('|') === 'A|B', 'campo vazio no meio nao vira etiqueta vazia');
+  check(lote.nomesPulados('A, a, A ').length === 1, 'repetido entra uma vez, sem olhar a caixa');
+  check(lote.nomesPulados('Sem Retorno 1').join('|') === 'Sem Retorno 1', 'nome com espaco dentro continua inteiro');
+  check(lote.nomesPulados('') .length === 0 && lote.nomesPulados().length === 0, 'vazio e nenhuma etiqueta');
+  check(lote.nomesPulados('  ,  ').length === 0, 'so separador tambem');
+  // O que ele escreveu e o que vai ser procurado no CRM: a caixa NAO e normalizada.
+  check(lote.nomesPulados('CoLiNhA')[0] === 'CoLiNhA', 'guarda a caixa que ele escreveu');
+}
+
+grupo('a lista de pular decide antes do recibo e da conversa');
+{
+  const vip = { id: 't-vip', label: 'VIP' };
+  const recibo = { id: 't-colinha', label: 'COLINHA' };
+
+  const r = lote.porqueNaoMandar({ tagsDoContato: ['t-vip'], tagsPuladas: [vip] });
+  check(/VIP/.test(r) && /pular/.test(r), 'diz QUAL etiqueta e que foi voce quem mandou pular');
+
+  check(
+    /VIP/.test(lote.porqueNaoMandar({ tagsDoContato: ['t-vip', 't-colinha'], tagsPuladas: [vip], tagDoLote: recibo })),
+    'tendo as duas, o motivo e o dela: os tres desfechos sao iguais e o motivo e o que ele reconhece'
+  );
+
+  // Falso positivo: a etiqueta esta na LISTA e nao no contato -- isso nao pula ninguem.
+  check(
+    lote.porqueNaoMandar({ tagsDoContato: ['t-outra'], tagsPuladas: [vip] }) === null,
+    'contato sem a etiqueta da lista recebe normalmente'
+  );
+  check(lote.porqueNaoMandar({ tagsDoContato: ['t-vip'], tagsPuladas: [] }) === null, 'lista vazia nao pula ninguem');
+  check(lote.porqueNaoMandar({ tagsDoContato: ['t-vip'] }) === null, 'sem o campo tambem -- o disparo antigo nao muda');
+  check(
+    lote.porqueNaoMandar({ tagsDoContato: [], tagsPuladas: [vip] }) === null,
+    'contato sem etiqueta nenhuma recebe'
+  );
+  check(
+    lote.porqueNaoMandar({ tagsDoContato: ['t-vip'], tagsPuladas: [{ label: 'sem id' }] }) === null,
+    'etiqueta sem id NAO pula: id vazio casaria com qualquer coisa'
+  );
+  check(
+    /COLINHA/.test(lote.porqueNaoMandar({ tagsDoContato: ['t-colinha'], tagsPuladas: [vip], tagDoLote: recibo })),
+    'e o recibo continua pulando quando e ele que casa'
+  );
+}
+
 fim();

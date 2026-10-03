@@ -4510,6 +4510,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       campoTexto('Etiqueta de quem JÁ RECEBEU (o recibo)', cfg.etiquetaLote, (v) =>
         salvarAuto({ etiquetaLote: v.trim() }).then(renderAll)
       ),
+      /**
+       * **A lista de PULAR** — pedido dele (02/10/2026): *"bote nos disparos uma caixa para inserir
+       * etiquetas que devem ser puladas"*. Nome EXATO, separado por vírgula; vale nos três botões
+       * desta aba (os dois disparos e o "atender um por um").
+       */
+      campoTexto('Etiquetas que devem ser PULADAS (separe por vírgula)', cfg.disparoEtiquetasPuladas, (v) =>
+        salvarAuto({ disparoEtiquetasPuladas: v.trim() }).then(renderAll)
+      ),
       h('div', { class: 'wf-origin' },
         'A segunda é marcada no CRM a cada envio e lida antes do próximo: é ela que impede mandar ' +
           'duas vezes para a mesma pessoa, inclusive quando ela volta dias depois (aí a conversa é ' +
@@ -4539,6 +4547,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       card.append(h('div', { class: 'wf-preview', 'data-fica': '1' },
         `Etiquetas do CRM (${state.etiquetasDoCrm.length}): ${state.etiquetasDoCrm.join(' · ')}`));
     }
+
+    const nomesPulados = loteLib.nomesPulados(cfg.disparoEtiquetasPuladas);
+    card.append(h('div', { class: 'wf-origin' },
+      nomesPulados.length
+        ? `Ninguém com ${nomesPulados.map((n) => `"${n}"`).join(', ')} entra em nenhum dos três ` +
+          'botões desta aba — os dois disparos e o "atender um por um". O nome tem de ser EXATO: a ' +
+          'rodada confere antes de começar e se recusa se algum não existir no CRM, porque nome ' +
+          'errado sairia da exclusão em silêncio e essa gente receberia.'
+        : 'A lista de PULAR está vazia. As exclusões que já existem continuam valendo sozinhas (a ' +
+          'etiqueta de sem interesse e a do recibo); esta é a sua, para tirar qualquer outro grupo ' +
+          'de um disparo — nome exato, separado por vírgula.'));
 
     if (!String(cfg.etiquetaLote || '').trim()) {
       card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
@@ -4834,8 +4853,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     card.append(h('div', { class: 'wf-origin' },
       'Este caminho usa os atendimentos que JÁ existem, do jeito que a fila está filtrada agora na ' +
         'plataforma. Não abre atendimento novo, não conclui nada e não grava campo no CRM — só a ' +
-        'etiqueta do recibo. Quem já recebeu qualquer peça é pulado, e quem tem etiqueta de sem ' +
-        'interesse ou de assessor também.'));
+        'etiqueta do recibo. Quem já recebeu qualquer peça é pulado; quem tem etiqueta de sem ' +
+        'interesse, de assessor ou da lista de PULAR também.'));
 
     return card;
   }
@@ -4879,9 +4898,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         salvarAuto({ atenderEtiqueta: v.trim() }).then(renderAll)
       ),
       h('div', { class: 'wf-origin' },
-        'Quem tem esta etiqueta entra na lista, MENOS quem está marcado como sem interesse (a ' +
-          'etiqueta da aba Etiquetas). Esta rodada não marca ninguém, então recomeçar amanhã começa ' +
-          'a lista do início: quem você já concluiu volta a ser aberto.')
+        'Quem tem esta etiqueta entra na lista, MENOS quem está marcado como sem interesse e quem ' +
+          'tem alguma das etiquetas da lista de PULAR (cartão "Para quem"). Esta rodada não marca ' +
+          'ninguém, então recomeçar amanhã começa a lista do início: quem você já concluiu volta a ' +
+          'ser aberto.')
     );
 
     const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Abrir e me entregar um por um');
@@ -6165,6 +6185,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (tagDoLote && (contato.tagsId || []).includes(tagDoLote.id)) {
         return { nome, resultado: 'pulado', motivo: `já tem a etiqueta "${tagDoLote.label}"` };
       }
+      /**
+       * **A lista de pular, conferida de novo aqui** — pelo mesmo motivo da linha acima: o filtro
+       * já excluiu no servidor, e esta segunda leitura é de graça (a lista de etiquetas é cacheada)
+       * e pega o que o filtro não pega — a etiqueta aplicada entre o filtro e a vez deste contato.
+       */
+      const puladaAqui = (await tagsPuladasDoDisparo()).tags.find((t) =>
+        (contato.tagsId || []).includes(t.id)
+      );
+      if (puladaAqui) {
+        return { nome, resultado: 'pulado', motivo: `tem a etiqueta "${puladaAqui.label}", que voce mandou pular` };
+      }
 
       const par = loteLib.parDaVez(pares, state.loteIndice);
 
@@ -6402,6 +6433,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (tagSemInteresse && (contato.tagsId || []).includes(tagSemInteresse.id)) {
         return { nome, resultado: 'pulado', motivo: `tem a etiqueta "${tagSemInteresse.label}"` };
       }
+      const puladaAqui = (await tagsPuladasDoDisparo()).tags.find((t) =>
+        (contato.tagsId || []).includes(t.id)
+      );
+      if (puladaAqui) {
+        return { nome, resultado: 'pulado', motivo: `tem a etiqueta "${puladaAqui.label}", que voce mandou pular` };
+      }
 
       const { fila, dia, teto } = await saldoDosNumerosDoLote();
       const envios = (await store.get('loteEnvios')) || {};
@@ -6597,12 +6634,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const tagFiltro = await tagsLib.resolveTag(nomeFiltro);
     if (!tagFiltro) return setStatus(`A etiqueta "${nomeFiltro}" nao existe no CRM. Confira o nome.`, 'err');
     const tagSemInteresse = await tagDeSemInteresse();
+    /**
+     * **A lista de pular vale aqui também**, e não só no disparo: abrir atendimento para quem ele
+     * mandou pular é pôr essa pessoa na frente dele para atender — o mesmo trabalho que a lista
+     * existe para evitar. É a aba inteira.
+     */
+    const puladas = await tagsPuladasDoDisparo();
+    if (puladas.faltando.length) return setStatus(recusaDasEtiquetasPuladas(puladas.faltando), 'err');
 
     let lista;
     try {
       lista = await api.filterContacts({
         tagsId: [tagFiltro.id],
-        exceptTagsId: [tagSemInteresse?.id].filter(Boolean),
+        exceptTagsId: [tagSemInteresse?.id, ...puladas.tags.map((t) => t.id)].filter(Boolean),
         pageSize: 200,
       });
     } catch (err) {
@@ -7101,6 +7145,42 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * "2 Sem Retorno"), e comparar com a lista da caixa da rodada seria a de 31/08: ela é só o que a
    * rodada sugere, nunca o que o contato tem.
    */
+  /**
+   * **As etiquetas que ELE mandou pular, resolvidas no CRM** — pedido de 02/10/2026.
+   *
+   * Devolve as achadas E as que faltam, porque as duas metades decidem coisas diferentes: as
+   * achadas viram `exceptTagsId` no filtro e conferência por contato; **as que faltam fazem a
+   * rodada se RECUSAR a começar**. Nome que não existe no CRM some do `exceptTagsId` em silêncio, e
+   * aí quem ele mandou pular recebe — a falha mais cara possível numa lista de exclusão, e a mesma
+   * regra que já vale para a etiqueta do recibo (01/10).
+   */
+  async function tagsPuladasDoDisparo() {
+    const nomes = loteLib.nomesPulados(state.auto.cfg.disparoEtiquetasPuladas);
+    const tags = [];
+    const faltando = [];
+    for (const nome of nomes) {
+      let tag = null;
+      try {
+        tag = await tagsLib.resolveTag(nome);
+      } catch (_) {
+        tag = null;
+      }
+      if (tag) tags.push(tag);
+      else faltando.push(nome);
+    }
+    return { nomes, tags, faltando };
+  }
+
+  /** O recado único da recusa, para as três rodadas não escreverem três textos diferentes. */
+  function recusaDasEtiquetasPuladas(faltando) {
+    return (
+      `A(s) etiqueta(s) ${faltando.map((n) => `"${n}"`).join(', ')} da lista de PULAR nao existe(m) ` +
+      'no CRM. Conferi antes de comecar de proposito: nome errado sairia do filtro em silencio e ' +
+      'quem voce mandou pular receberia. Corrija o nome no cartao "Para quem" (o botao "Ver as ' +
+      'etiquetas do CRM" lista os nomes de verdade).'
+    );
+  }
+
   async function tagDoEnvioEmLote() {
     const nome = String(state.auto.cfg.etiquetaLote || '').trim();
     if (!nome) return null;
@@ -7216,7 +7296,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const nomeSemInteresse = String(cfg.etiquetaSemInteresse || '').trim();
     const tagSemInteresse = nomeSemInteresse ? await tagsLib.resolveTag(nomeSemInteresse) : null;
 
-    const excluir = [tagDoLote?.id, tagSemInteresse?.id].filter(Boolean);
+    // A lista DELE de etiquetas a pular. Nome que não existe no CRM recusa a rodada (ver a função).
+    const puladas = await tagsPuladasDoDisparo();
+    if (puladas.faltando.length) return setStatus(recusaDasEtiquetasPuladas(puladas.faltando), 'err');
+
+    const excluir = [tagDoLote?.id, tagSemInteresse?.id, ...puladas.tags.map((t) => t.id)].filter(Boolean);
     const limite = clampInt(cfg.limite, 1, 200);
 
     let lista;
@@ -7309,7 +7393,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
                 .join(', ')}.\n`) +
           '\n' +
           (excluir.length
-            ? 'Fora da lista: quem ja tem a etiqueta do lote e quem esta marcado como sem interesse.\n'
+            ? 'Fora da lista: quem ja tem a etiqueta do lote, quem esta marcado como sem interesse' +
+              (puladas.tags.length ? `, e quem tem ${puladas.tags.map((t) => `"${t.label}"`).join(', ')}` : '') +
+              '.\n'
             : 'ATENCAO: sem etiqueta de lote nem de sem interesse configuradas, ninguem esta sendo excluido.\n') +
           (nomeEtiquetaLote ? `Cada um que receber e marcado com "${nomeEtiquetaLote}".\n` : '') +
           'O atendimento e CONCLUIDO depois de mandar.\n' +
@@ -7389,6 +7475,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * trabalho que não dá para refazer — e conferir antes custa zero requisição (a lista de
      * etiquetas é cacheada). As duas saídas estão escritas no aviso.
      */
+    /**
+     * **A lista de pular é conferida ANTES da fila**, como a etiqueta do recibo: nome errado sai da
+     * guarda em silêncio e quem ele mandou pular recebe — e aqui não há `exceptTagsId` nenhum
+     * segurando, porque o percurso é a fila da plataforma.
+     */
+    const puladas = await tagsPuladasDoDisparo();
+    if (puladas.faltando.length) return setStatus(recusaDasEtiquetasPuladas(puladas.faltando), 'err');
+
     const nomeDaEtiqueta = String(state.auto.cfg.etiquetaLote || '').trim();
     if (nomeDaEtiqueta) {
       const tag = await tagsLib.resolveTag(nomeDaEtiqueta);
@@ -7467,6 +7561,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         nossas: state.nossas,
         tagsDoContato: state.contact.tagsId || [],
         tagDoLote,
+        tagsPuladas: (await tagsPuladasDoDisparo()).tags,
       });
       if (naoMandar) return { nome, resultado: 'pulado', motivo: naoMandar };
 

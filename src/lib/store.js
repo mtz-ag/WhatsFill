@@ -906,6 +906,18 @@ const DEFAULTS = {
      * número para não sair a arte de um candidato pelo número do outro.
      */
     loteEtiquetaFiltro: '',
+    /**
+     * **As etiquetas que o disparo PULA** — pedido dele (02/10/2026: *"bote nos disparos uma caixa
+     * para inserir etiquetas que devem ser puladas"*). Nomes exatos do CRM, separados por vírgula.
+     *
+     * **Nasce VAZIA.** As exclusões que já existiam continuam valendo sozinhas (a etiqueta de sem
+     * interesse e a do recibo); esta é a lista DELE, e inventar um nome aqui tiraria gente do
+     * disparo sem ninguém ter pedido.
+     *
+     * Não é por candidato: é organização interna do CRM, como `etiquetaLote` (o critério de 25/09 é
+     * *"entra no perfil o que o eleitor recebe"*).
+     */
+    disparoEtiquetasPuladas: '',
     loteEquipeId: '',
     loteEquipeNome: '',
     loteCanalId: '',
