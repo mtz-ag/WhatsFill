@@ -2233,6 +2233,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **OS LIMITES DE RITMO SAIRAM (pausa >= 3s e <= 200 contatos), E O DE 200 ERA O `pageSize`**
+  (03/10/2026: *"o disparo esta com um limitador que nao deixa botar abaixo de 3 segundos e 200
+  contatos, tire esses limites e me explique porque existem"*).
+  **O que cada um protegia, para ninguem repor achando que e enfeite:** a **pausa de 3s** protegia a
+  API (cada contato do disparo por etiqueta custa ~8 requisicoes, e o limitador recusa o preflight
+  CORS — o `Failed to fetch`; a rodada que estourou em 24/09 fez 444) **e o numero** (o que pune e o
+  RITMO e a REPETICAO: menos de dez iguais em sequencia derrubaram um numero dele, 26/09). O **teto
+  de 200** era o **tamanho da PAGINA** do `contact/filter`: pedir 500 nao adiantava porque a lista
+  acabava em 200.
+  **Tirar o teto do CAMPO sem paginar seria mentira** — o numero subiria na tela e a rodada
+  continuaria parando em 200, dizendo que percorreu tudo. Hoje `contatosDoFiltro` pede mais paginas
+  ate encher o que ele pediu, uma requisicao a cada 200.
+  **Os dois viraram AVISO**, que so aparece quando ele passa do que era o limite. **O que continua
+  barrando e o que barra de verdade:** o teto por numero por dia, a barreira do canal, os tres
+  engasgos de rede que param a rodada e o botao Parar.
+  **E os clamps estavam em 17 pontos** (cartoes, confirms, `rodar`): viraram `limiteDaRodada()` e
+  `pausaDaRodada()`, num lugar so. Trocar o teto em 16 deixaria o 17o capando **em silencio** — a
+  classe do `teto is not defined` de 02/10 com o sinal trocado: la o campo faltava e estourava, aqui
+  ele existiria e mentiria. **Pausa: texto sem digito volta ao PADRAO de 8s, nunca a zero.**
+
 - **LISTA DE EXCLUSAO CASA POR NOME EXATO, E NOME ERRADO RECUSA A RODADA** (02/10/2026: *"bote nos
   disparos uma caixa para inserir etiquetas que devem ser puladas"*). `auto.disparoEtiquetasPuladas`
   + `lote.nomesPulados` + `tagsPuladasDoDisparo`, valendo nos TRES botoes da aba Disparo.

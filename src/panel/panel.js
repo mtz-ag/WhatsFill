@@ -4202,15 +4202,43 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const card = h('div', { class: 'wf-card' }, [h('h4', {}, 'Ritmo')]);
     card.append(
       campoNumero('Quantos envios nesta rodada', cfg.limite, (v) =>
-        salvarAuto({ limite: clampInt(v, 1, 200) }).then(renderAll)
+        salvarAuto({ limite: clampInt(v, 1, LIMITE_MAX) }).then(renderAll)
       ),
-      campoNumero('Pausa entre envios (segundos)', cfg.pausaSeg, (v) =>
-        salvarAuto({ pausaSeg: clampInt(v, 3, 300) }).then(renderAll)
-      ),
+      campoNumero('Pausa entre envios (segundos, 0 = sem pausa)', cfg.pausaSeg, (v) => {
+        /**
+         * **Texto sem dígito volta ao PADRÃO, nunca a zero** — a mesma guarda do teto por número:
+         * com o mínimo em 0, um campo apagado ou um "oito" digitado gravariam "sem pausa", que é a
+         * proteção desligada por um escorregão. Desligar exige digitar o zero.
+         */
+        const so = String(v).replace(/[^\d]/g, '');
+        const valor = so === '' ? PAUSA_PADRAO : Math.min(PAUSA_MAX, parseInt(so, 10));
+        salvarAuto({ pausaSeg: valor }).then(renderAll);
+      }),
       h('div', { class: 'wf-origin' },
         'Estes dois valem para TODAS as rodadas — as do fluxo e as do disparo. É o mesmo cartão nas ' +
           'duas abas, não duas configurações.')
     );
+
+    /**
+     * **Os limites viraram AVISO** (03/10/2026, pedido dele). Era trava: a pausa não descia de 3 s e
+     * o limite não passava de 200. O que eles protegiam continua verdadeiro, então o número some e o
+     * motivo fica — alarme que só aparece quando ele passa do que era o limite, e não a cada desenho.
+     */
+    const limiteAgora = limiteDaRodada(cfg);
+    const pausaAgora = pausaDaRodada(cfg);
+    if (pausaAgora < 3) {
+      card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+        `Pausa de ${pausaAgora}s: cada contato do disparo custa ~8 requisições, e quando a ` +
+          'plataforma recusa por excesso o erro chega como "Failed to fetch" — a rodada espera e, ' +
+          'em três seguidos, para. Do lado do WhatsApp o que pune é o ritmo: menos de dez mensagens ' +
+          'iguais em sequência já derrubaram um número seu. Foi você quem tirou o piso de 3s.'));
+    }
+    if (limiteAgora > 200) {
+      card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+        `${limiteAgora} contatos numa rodada: a lista do filtro vem de 200 em 200, então acima disso ` +
+          'eu peço mais páginas (uma requisição a cada 200). O freio que continua valendo é o teto ' +
+          'por número, por dia — confira que ele comporta o que você pediu aqui.'));
+    }
 
     const parar = h('button', { class: 'wf-btn wf-danger', type: 'button' }, 'Parar a rodada');
     parar.disabled = !state.auto.rodando;
@@ -4382,7 +4410,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const pares = loteLib.paresProntos({ cfg, imagens: state.imagens, chaveDeImagem: porPerfil });
     const faltas = loteLib.oQueFalta({ cfg, imagens: state.imagens, chaveDeImagem: porPerfil });
     const quantas = loteLib.quantasPecas(cfg);
-    const limite = clampInt(cfg.limite, 1, 200);
+    const limite = limiteDaRodada(cfg);
 
     const card = h('div', { class: 'wf-card' }, [
       h('h4', {}, 'O que vai sair'),
@@ -4792,8 +4820,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const porPerfil = (nome) => perfisLib.chaveDeImagem(nome, perfilAtivo());
     const pares = loteLib.paresProntos({ cfg, imagens: state.imagens, chaveDeImagem: porPerfil });
     const comArte = loteLib.temArte(pares);
-    const limite = clampInt(cfg.limite, 1, 200);
-    const pausaSeg = clampInt(cfg.pausaSeg, 3, 300);
+    const limite = limiteDaRodada(cfg);
+    const pausaSeg = pausaDaRodada(cfg);
 
     const card = h('div', { class: 'wf-card' }, [
       h('h4', {}, 'Disparar'),
@@ -4881,7 +4909,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    */
   function renderCartaoAtender(cfg) {
     const fila = loteLib.filaDeNumeros(cfg);
-    const limite = clampInt(cfg.limite, 1, 200);
+    const limite = limiteDaRodada(cfg);
     const card = h('div', { class: 'wf-card' }, [
       h('h4', {}, 'Atender um por um: só abre, nada sai'),
       h('div', { class: 'wf-preview' },
@@ -4987,7 +5015,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     card.append(
       h('p', { class: 'wf-hint' },
-        `Vai reabrir até ${clampInt(cfg.limite, 1, 200)} — o mesmo limite do cartão de ritmo, lá em cima.`)
+        `Vai reabrir até ${limiteDaRodada(cfg)} — o mesmo limite do cartão de ritmo, lá em cima.`)
     );
 
     // A segunda metade do fluxo mora no mesmo cartão de propósito: são um passo só, feitos em
@@ -6644,10 +6672,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     let lista;
     try {
-      lista = await api.filterContacts({
+      lista = await contatosDoFiltro({
         tagsId: [tagFiltro.id],
         exceptTagsId: [tagSemInteresse?.id, ...puladas.tags.map((t) => t.id)].filter(Boolean),
-        pageSize: 200,
+        quantos: limiteDaRodada(cfg),
       });
     } catch (err) {
       return setStatus(
@@ -6692,7 +6720,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
     }
 
-    const quantos = sonda ? 1 : Math.min(clampInt(cfg.limite, 1, 200), contatos.length, vagas);
+    const quantos = sonda ? 1 : Math.min(limiteDaRodada(cfg), contatos.length, vagas);
 
     if (
       !confirm(
@@ -6760,8 +6788,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * conserto"*, 03/09).
    */
   async function rodar({ aba, processar, automatico = false, percorrer = null, telaEDele = false }) {
-    const limite = clampInt(state.auto.cfg.limite, 1, 200);
-    const pausaMs = clampInt(state.auto.cfg.pausaSeg, 3, 300) * 1000;
+    const limite = limiteDaRodada();
+    const pausaMs = pausaDaRodada() * 1000;
 
     state.auto.automatico = !!automatico;
     // Quem troca de atendimento na tela é ele: o observador da página volta a carregar o contato.
@@ -7025,7 +7053,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
   /** Rodada 5: percorre os concluídos e só reabre. Ver `processarReabrir`. */
   async function runLoteReabrir() {
-    const limite = clampInt(state.auto.cfg.limite, 1, 200);
+    const limite = limiteDaRodada();
 
     if (
       !confirm(
@@ -7051,8 +7079,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
     }
 
-    const limite = clampInt(state.auto.cfg.limite, 1, 200);
-    const pausaSeg = clampInt(state.auto.cfg.pausaSeg, 3, 300);
+    const limite = limiteDaRodada();
+    const pausaSeg = pausaDaRodada();
 
     // Última porta antes de a mensagem sair para gente real, com os números na frente.
     if (
@@ -7154,6 +7182,37 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * aí quem ele mandou pular recebe — a falha mais cara possível numa lista de exclusão, e a mesma
    * regra que já vale para a etiqueta do recibo (01/10).
    */
+  /**
+   * **A lista de contatos do disparo, em quantas PÁGINAS forem precisas** (03/10/2026).
+   *
+   * O filtro traz 200 por requisição, e era daí que vinha o teto de 200 da rodada: pedir 500 não
+   * adiantava, porque a lista acabava em 200. Tirado o teto, quem pede mais páginas é isto —
+   * **uma requisição a cada 200 contatos**, e só até encher o que ele pediu.
+   *
+   * As duas saídas do laço são as duas formas de a lista acabar: página incompleta (não há mais) e
+   * o `countPages` da própria resposta. O corte em 50 páginas é o último freio contra um laço que
+   * não termina — 10.000 contatos é o teto do campo.
+   */
+  async function contatosDoFiltro({ tagsId, exceptTagsId, quantos }) {
+    const itens = [];
+    let total = null;
+    for (let pagina = 1; itens.length < quantos && pagina <= 50; pagina++) {
+      const r = await api.filterContacts({
+        tagsId,
+        exceptTagsId,
+        page: pagina,
+        pageSize: CONTATOS_POR_PAGINA,
+      });
+      total = r.total ?? total;
+      const novos = (r.itens || []).filter((c) => c?.id);
+      itens.push(...novos);
+      if (novos.length < CONTATOS_POR_PAGINA) break;
+      if (r.paginas && pagina >= r.paginas) break;
+      setStatus(`Montando a lista… ${itens.length} contato(s).`);
+    }
+    return { itens, total };
+  }
+
   async function tagsPuladasDoDisparo() {
     const nomes = loteLib.nomesPulados(state.auto.cfg.disparoEtiquetasPuladas);
     const tags = [];
@@ -7301,14 +7360,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (puladas.faltando.length) return setStatus(recusaDasEtiquetasPuladas(puladas.faltando), 'err');
 
     const excluir = [tagDoLote?.id, tagSemInteresse?.id, ...puladas.tags.map((t) => t.id)].filter(Boolean);
-    const limite = clampInt(cfg.limite, 1, 200);
+    const limite = limiteDaRodada(cfg);
 
     let lista;
     try {
-      lista = await api.filterContacts({
+      lista = await contatosDoFiltro({
         tagsId: [tagFiltro.id],
         exceptTagsId: excluir,
-        pageSize: 200,
+        quantos: limite,
       });
     } catch (err) {
       return setStatus(`Nao consegui montar a lista: ${traduzirErroDeRede(err.message, 'Tente de novo em instantes.')}`, 'err');
@@ -7359,7 +7418,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
 
     const quantos = sonda ? 1 : Math.min(limite, contatos.length, vagas);
-    const pausaSeg = clampInt(cfg.pausaSeg, 3, 300);
+    const pausaSeg = pausaDaRodada(cfg);
     const divisao = loteLib.comoVaiRevezar(pares.length, quantos);
 
     /**
@@ -7443,8 +7502,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return setStatus('Falta aprender o envio de imagem (aba Config) — sem isso a arte nao sai.', 'err');
     }
 
-    const limite = clampInt(state.auto.cfg.limite, 1, 200);
-    const pausaSeg = clampInt(state.auto.cfg.pausaSeg, 3, 300);
+    const limite = limiteDaRodada();
+    const pausaSeg = pausaDaRodada();
     const divisao = loteLib.comoVaiRevezar(pares.length, limite);
 
     if (
@@ -7670,8 +7729,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return setStatus('Nenhum modelo aprovado carregado. Abra um atendimento e clique em Recarregar.', 'err');
     }
 
-    const limite = clampInt(state.auto.cfg.limite, 1, 200);
-    const pausaSeg = clampInt(state.auto.cfg.pausaSeg, 3, 300);
+    const limite = limiteDaRodada();
+    const pausaSeg = pausaDaRodada();
 
     const sozinha = !!state.auto.cfg.automaticoNovos;
     if (
@@ -11729,11 +11788,44 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return h('label', { class: 'wf-field' }, [h('span', {}, rotulo), input]);
   }
 
+  /** O limite e a pausa, lidos num lugar só: clamp esquecido num canto continua capando calado. */
+  function limiteDaRodada(cfg) {
+    return clampInt((cfg || state.auto.cfg).limite, 1, LIMITE_MAX);
+  }
+  function pausaDaRodada(cfg) {
+    return clampInt((cfg || state.auto.cfg).pausaSeg, 0, PAUSA_MAX);
+  }
+
   function campoNumero(rotulo, valor, onChange) {
     const input = h('input', { type: 'text', inputmode: 'numeric', value: String(valor) });
     input.addEventListener('change', () => onChange(input.value));
     return h('label', { class: 'wf-field' }, [h('span', {}, rotulo), input]);
   }
+
+/**
+ * **OS LIMITES DO RITMO SAIRAM, A PEDIDO DELE** (03/10/2026: *"o disparo está com um limitador que
+ * não deixa botar abaixo de 3 segundos e 200 contatos, tire esses limites"*).
+ *
+ * **O que eles protegiam, medido, para ficar registrado o que ele passou a carregar:**
+ *
+ *  - **a pausa de 3 s** protegia a API da plataforma e o número. Cada contato do disparo por
+ *    etiqueta custa ~8 requisições (abrir + cinco do envio de imagem + etiqueta + concluir), e
+ *    `Failed to fetch` aqui **não é erro de HTTP: é o preflight CORS recusado pelo limitador de
+ *    taxa** — a rodada que estourou em 24/09 fez 444 requisições. Do lado do WhatsApp, o que pune é
+ *    o RITMO e a REPETIÇÃO: menos de dez mensagens iguais em sequência já derrubaram um número dele
+ *    (26/09).
+ *  - **o teto de 200 contatos** era o `pageSize` do filtro de contatos — acima disso a lista nem
+ *    vinha — e, de quebra, o teto de estrago de uma rodada só.
+ *
+ * **Os dois viraram AVISO em vez de trava**, e o que continua barrando é o que barra de verdade: o
+ * teto por número por dia (que ele também escolhe), a barreira do canal caído e o botão Parar. Os
+ * tetos abaixo existem só para um dedo escorregado não virar uma rodada de um milhão.
+ */
+const LIMITE_MAX = 10000;
+const PAUSA_MAX = 3600;
+const PAUSA_PADRAO = 8;
+/** Quantos contatos a lista do filtro traz por requisição. Paginar é o que tirou o teto de 200. */
+const CONTATOS_POR_PAGINA = 200;
 
   function clampInt(valor, min, max) {
     const n = parseInt(String(valor).replace(/[^\d]/g, ''), 10);

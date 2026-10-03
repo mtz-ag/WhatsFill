@@ -1,3 +1,57 @@
+## 2026-10-03 — v3.144.0 — os limites de 3s e de 200 contatos saíram, e viraram aviso
+
+**Pedido dele:** *"o disparo está com um limitador que não deixa botar abaixo de 3 segundos e 200
+contatos, tire esses limites e me explique porque existem"*.
+
+### Por que existiam
+
+**A pausa mínima de 3 s protegia duas coisas diferentes, e só uma delas é o WhatsApp.**
+
+1. **A API da plataforma.** Cada contato do disparo por etiqueta custa **~8 requisições** (abrir o
+   atendimento + cinco do envio de imagem + etiqueta + concluir). O limitador de taxa dela recusa o
+   **preflight CORS**, e isso chega ao painel como `Failed to fetch` — que não é erro de HTTP e por
+   isso parecia defeito nosso até 22/09. A rodada que estourou o limitador em 24/09 tinha feito
+   **444 requisições**; a janelinha do contador sozinha fazia 542.
+2. **O número.** O que o WhatsApp pune é o **ritmo** e a **repetição**, e a medida é dele mesmo
+   (26/09): *"já derrubei o número ao mandar a mesma mensagem em sequência para menos de 10 pessoas"*.
+   É por isso que o disparo reveza entre peças — variação de texto não é enfeite.
+
+**O teto de 200 contatos era outra coisa: era o tamanho da PÁGINA do filtro.** A lista sai de
+`POST /core/v1/contact/filter` com `pageSize: 200`, então pedir 500 não adiantava — a lista acabava
+em 200 e a rodada parava ali, dizendo que tinha percorrido tudo.
+
+### O que mudou
+
+- **A pausa aceita de 0 a 3600 s.** `0` é "sem pausa nenhuma", e é escolha explícita: **texto sem
+  dígito volta ao padrão de 8 s**, nunca a zero — a mesma guarda do teto por número, porque campo
+  apagado desligando a proteção em silêncio é o defeito oposto.
+- **O limite aceita até 10.000**, e **a lista agora pagina**: `contatosDoFiltro` pede mais páginas
+  até encher o que ele pediu, **uma requisição a cada 200 contatos**. Sem isso, tirar o teto do
+  campo seria mentira — o número subiria na tela e a rodada continuaria parando em 200.
+- **Os dois viraram AVISO**, e só aparecem quando ele passa do que era o limite: com pausa abaixo de
+  3 s, o aviso diz o custo em requisições e o que derruba o número; acima de 200 contatos, diz que a
+  lista vem de 200 em 200 e manda conferir o teto por número.
+
+Os tetos que sobraram (10.000 e 3600 s) não são proteção: são para um dedo escorregado não virar uma
+rodada de um milhão.
+
+### O que continua segurando
+
+A trava de verdade nunca foi o campo de ritmo:
+
+- **o teto por número, por dia** — que ele também escolhe, e que faz a fila trocar de número;
+- **a barreira do canal** — número fora do ar recusa a rodada e para no meio dela;
+- **o engasgo de rede** — `Failed to fetch` espera 30 s, 1 min e 2 min, e **três seguidos param a
+  rodada**;
+- **o botão Parar**, e a pausa fatiada que o faz valer em até 200 ms.
+
+### Um lugar só para ler os dois números
+
+`limiteDaRodada()` e `pausaDaRodada()`. Os clamps estavam espalhados em **17 pontos** (os cartões, os
+`confirm`, o `rodar`), e trocar o teto em 16 deixaria o 17º capando em silêncio — que é exatamente a
+classe de defeito do `teto is not defined` de ontem, com o sinal trocado: lá o campo faltava e
+estourava; aqui ele existiria e mentiria.
+
 ## 2026-10-02 — v3.143.0 — a caixa das etiquetas que o disparo PULA
 
 **Pedido dele:** *"bote nos disparos uma caixa para inserir etiquetas que devem ser puladas"*.
