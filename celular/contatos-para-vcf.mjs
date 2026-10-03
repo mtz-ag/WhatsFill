@@ -18,20 +18,25 @@
  * relatorio na tela conta LINHAS e MOTIVOS, nunca nome nem telefone.
  *
  * Uso:
- *   node celular/contatos-para-vcf.mjs <entrada.csv> [opcoes]
+ *   node celular/contatos-para-vcf.mjs <entrada.xlsx|.csv> [opcoes]
  *
- *   --saida=<caminho>        onde escrever (padrao: ao lado da entrada)
- *   --prefixo=<texto>        prefixo no nome, para achar e APAGAR em massa depois (padrao: ZDISPARO)
- *   --por-arquivo=<n>        quebra em varios .vcf de n cartoes (padrao: 500; 0 = um arquivo so)
- *   --mensagens=<arquivo>    variacoes de texto separadas por uma linha com ---, gera o plano
- *   --coluna-telefone=<nome> forca a coluna do telefone (quando o cabecalho nao for reconhecido)
- *   --coluna-nome=<nome>     forca a coluna do nome
- *   --incluir-fixo           inclui telefone fixo (fora por padrao: quase nenhum tem WhatsApp)
- *   --sem-prefixo            nao prefixa o nome (leia o aviso antes de usar)
+ *   --saida=<caminho>         onde escrever (padrao: ao lado da entrada)
+ *   --pular-etiqueta=<a,b>    tira quem tem essas etiquetas (nome EXATO, acento e caixa nao contam)
+ *   --mesmo-sem-a-etiqueta    segue mesmo que uma etiqueta pedida nao exista no arquivo
+ *   --prefixo=<texto>         prefixo no nome, para achar e APAGAR em massa depois (padrao: ZDISPARO)
+ *   --por-arquivo=<n>         quebra em varios .vcf de n cartoes (padrao: 500; 0 = um arquivo so)
+ *   --mensagens=<arquivo>     variacoes de texto separadas por uma linha com ---, gera o plano
+ *   --coluna-telefone=<nome>  forca a coluna do telefone (quando o cabecalho nao for reconhecido)
+ *   --coluna-nome=<nome>      forca a coluna do nome
+ *   --coluna-etiquetas=<nome> forca a coluna das etiquetas
+ *   --listar-etiquetas        so conta as etiquetas do arquivo e sai, sem escrever nada
+ *   --incluir-fixo            inclui telefone fixo (fora por padrao: quase nenhum tem WhatsApp)
+ *   --sem-prefixo             nao prefixa o nome (leia o aviso antes de usar)
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 
 /* ------------------------------------------------------------------ *
  * Telefone brasileiro
@@ -127,6 +132,147 @@ function lerTexto(caminho) {
   }
 }
 
+/* ------------------------------------------------------------------ *
+ * XLSX — sem dependencia nenhuma
+ * ------------------------------------------------------------------ */
+
+/**
+ * Um `.xlsx` e um ZIP com XML dentro, e o Node ja traz as duas pecas.
+ *
+ * **Por que nao uma biblioteca:** este projeto nao tem dependencia nenhuma, e a planilha carrega
+ * nome e telefone de milhares de eleitores — cada pacote a mais e mais codigo de terceiro com esse
+ * arquivo na mao.
+ */
+function lerZip(buf) {
+  const FIM_DO_INDICE = 0x06054b50;
+  const ENTRADA_DO_INDICE = 0x02014b50;
+
+  let fim = -1;
+  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) {
+    if (buf.readUInt32LE(i) === FIM_DO_INDICE) { fim = i; break; }
+  }
+  if (fim < 0) throw new Error('nao parece um .xlsx de verdade (nao achei o indice do zip)');
+
+  const quantos = buf.readUInt16LE(fim + 10);
+  let p = buf.readUInt32LE(fim + 16);
+  const entradas = new Map();
+  for (let n = 0; n < quantos && p + 46 <= buf.length; n++) {
+    if (buf.readUInt32LE(p) !== ENTRADA_DO_INDICE) break;
+    const metodo = buf.readUInt16LE(p + 10);
+    const tamanho = buf.readUInt32LE(p + 20);
+    const nomeLen = buf.readUInt16LE(p + 28);
+    const extraLen = buf.readUInt16LE(p + 30);
+    const comentarioLen = buf.readUInt16LE(p + 32);
+    const posicao = buf.readUInt32LE(p + 42);
+    entradas.set(buf.toString('utf8', p + 46, p + 46 + nomeLen), { metodo, tamanho, posicao });
+    p += 46 + nomeLen + extraLen + comentarioLen;
+  }
+
+  return {
+    nomes: () => [...entradas.keys()],
+    ler(nome) {
+      const e = entradas.get(nome);
+      if (!e) return null;
+      /**
+       * **O cabecalho local tem tamanhos PROPRIOS de nome e de extra**, diferentes dos do indice.
+       * Usar os do indice aqui comeca a ler os bytes alguns bytes adiante e o `inflate` estoura
+       * com "incorrect header check" — erro que parece arquivo corrompido e e conta errada.
+       */
+      const nomeLen = buf.readUInt16LE(e.posicao + 26);
+      const extraLen = buf.readUInt16LE(e.posicao + 28);
+      const inicio = e.posicao + 30 + nomeLen + extraLen;
+      const dados = buf.subarray(inicio, inicio + e.tamanho);
+      return e.metodo === 0 ? dados : zlib.inflateRawSync(dados);
+    },
+  };
+}
+
+const ENTIDADES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+
+/**
+ * **Medido na exportacao de verdade: o `&` chega escrito `&amp;`** — ha etiquetas como
+ * `AMIGOS-DO-CAPITAO-MARTIM-&amp;-COVATTI-FILHO`. Sem desfazer isso, o nome do eleitor entraria no
+ * celular dele com `&amp;` no meio, e a etiqueta a pular nunca casaria.
+ */
+export function desescaparXml(s) {
+  return String(s ?? '').replace(/&(#x[0-9a-fA-F]+|#[0-9]+|[a-zA-Z]+);/g, (todo, corpo) => {
+    if (corpo[0] === '#') {
+      const n = corpo[1] === 'x' || corpo[1] === 'X' ? parseInt(corpo.slice(2), 16) : Number(corpo.slice(1));
+      try {
+        return Number.isFinite(n) ? String.fromCodePoint(n) : todo;
+      } catch { return todo; }
+    }
+    return ENTIDADES[corpo] !== undefined ? ENTIDADES[corpo] : todo;
+  });
+}
+
+const colunaParaIndice = (letras) => {
+  let n = 0;
+  for (const c of letras) n = n * 26 + (c.charCodeAt(0) - 64);
+  return n - 1;
+};
+
+function textoDaCelula(corpo, compartilhadas, tipo) {
+  if (tipo === 's') {
+    const i = /<v>([\s\S]*?)<\/v>/.exec(corpo);
+    return i ? compartilhadas[Number(i[1])] ?? '' : '';
+  }
+  const textos = [...corpo.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map((m) => m[1]);
+  if (textos.length) return desescaparXml(textos.join(''));
+  const v = /<v>([\s\S]*?)<\/v>/.exec(corpo);
+  return v ? desescaparXml(v[1]) : '';
+}
+
+/**
+ * Le a primeira aba da planilha como uma matriz de texto.
+ *
+ * **As duas armadilhas:**
+ * - **Celula VAZIA some do XML.** `<c r="A1"/><c r="C1">` significa que a B esta vazia — por isso a
+ *   posicao sai da letra (`r="C1"`) e nao da ordem em que as celulas aparecem. Contando na ordem,
+ *   a planilha inteira escorrega uma coluna a partir da primeira celula em branco.
+ * - **Celula que se fecha sozinha** (`<c r="A1"/>`) precisa casar ANTES da que tem corpo, senao a
+ *   expressao emenda a abertura de uma com o fechamento da seguinte e rouba o valor da vizinha.
+ */
+export function lerXlsx(buf) {
+  const zip = lerZip(buf);
+
+  // As cadeias de texto podem estar numa tabela compartilhada ou embutidas na celula. Esta
+  // exportacao usa embutidas; o Excel, salvando por cima, costuma usar compartilhadas.
+  const compartilhadas = [];
+  const ss = zip.ler('xl/sharedStrings.xml');
+  if (ss) {
+    const texto = ss.toString('utf8');
+    for (const bloco of texto.split('<si>').slice(1)) {
+      const partes = [...bloco.split('</si>')[0].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map((m) => m[1]);
+      compartilhadas.push(desescaparXml(partes.join('')));
+    }
+  }
+
+  const abas = zip.nomes()
+    .filter((n) => /^xl\/worksheets\/sheet\d+\.xml$/.test(n))
+    .sort((a, b) => Number(a.match(/\d+/)[0]) - Number(b.match(/\d+/)[0]));
+  if (!abas.length) throw new Error('o .xlsx nao tem nenhuma aba');
+  const xml = zip.ler(abas[0]).toString('utf8');
+
+  const linhas = [];
+  for (const mLinha of xml.matchAll(/<row[^>]*\/>|<row[^>]*>([\s\S]*?)<\/row>/g)) {
+    const corpoDaLinha = mLinha[1];
+    if (corpoDaLinha === undefined) { linhas.push([]); continue; }
+    const linha = [];
+    for (const mc of corpoDaLinha.matchAll(/<c([^>]*?)\/>|<c([^>]*)>([\s\S]*?)<\/c>/g)) {
+      const atributos = mc[1] !== undefined ? mc[1] : mc[2];
+      const corpo = mc[3] !== undefined ? mc[3] : '';
+      const ref = /r="([A-Z]+)[0-9]+"/.exec(atributos);
+      const i = ref ? colunaParaIndice(ref[1]) : linha.length;
+      const tipo = /t="([^"]+)"/.exec(atributos);
+      while (linha.length < i) linha.push('');
+      linha[i] = corpo ? textoDaCelula(corpo, compartilhadas, tipo && tipo[1]) : '';
+    }
+    linhas.push(linha);
+  }
+  return linhas.filter((l) => l.some((v) => String(v).trim() !== ''));
+}
+
 /** Virgula, ponto e virgula ou tabulacao — o Excel em portugues exporta com ponto e virgula. */
 function detectarSeparador(primeiraLinha) {
   const conta = (c) => primeiraLinha.split(c).length - 1;
@@ -185,6 +331,37 @@ const CABECALHO_TELEFONE = [
   'phone', 'phonenumber', 'mobile', 'tel',
 ];
 const CABECALHO_NOME = ['nome', 'nomecompleto', 'contato', 'name', 'fullname', 'razaosocial', 'cliente'];
+const CABECALHO_ETIQUETAS = ['etiquetas', 'etiqueta', 'tags', 'tag', 'marcadores', 'labels'];
+
+/**
+ * As etiquetas vem todas numa celula so.
+ *
+ * **Medido na exportacao: o separador e a VIRGULA** — 17.769 delas contra 27 ponto e virgula, e os
+ * 27 eram `&amp;` dentro do nome da etiqueta, nao separador. O ponto e virgula fica na conta mesmo
+ * assim porque o perigo e assimetrico: separador que eu NAO conheco faz a celula inteira virar uma
+ * etiqueta so, a comparacao nao casa, e **quem ele mandou pular RECEBE**.
+ */
+export function etiquetasDaCelula(valor) {
+  return String(valor ?? '')
+    .split(/[,;]/)
+    .map((s) => s.trim())
+    .filter((s) => s !== '');
+}
+
+/**
+ * Diz qual etiqueta do contato bateu com a lista de pular, ou `null`.
+ *
+ * **Nome EXATO, e nao trecho contido.** Numa lista de EXCLUSAO o trecho contido e perigoso ao
+ * contrario: `col` tiraria `Noroeste Colonial` e `COLORADO` junto, sem nada na tela dizendo quem
+ * sumiu. **Caixa e acento nao contam** porque esta base tem `SERRA` e `Serra` como etiquetas
+ * diferentes — medido, 15 grupos assim na planilha dele.
+ */
+export function pularPorEtiqueta(etiquetasDoContato, chavesPuladas) {
+  for (const e of etiquetasDoContato) {
+    if (chavesPuladas.has(semAcentoNemCaixa(e))) return e;
+  }
+  return null;
+}
 
 function acharColunas(cabecalho, forcadas) {
   const chaves = cabecalho.map(semAcentoNemCaixa);
@@ -204,7 +381,8 @@ function acharColunas(cabecalho, forcadas) {
 
   const tel = forcadas.telefone ? forcada(forcadas.telefone) : porLista(CABECALHO_TELEFONE);
   const nome = forcadas.nome ? forcada(forcadas.nome) : porLista(CABECALHO_NOME);
-  return { tel, nome };
+  const etiquetas = forcadas.etiquetas ? forcada(forcadas.etiquetas) : porLista(CABECALHO_ETIQUETAS);
+  return { tel, nome, etiquetas };
 }
 
 /* ------------------------------------------------------------------ *
@@ -334,8 +512,9 @@ function principal(argv) {
   const o = opcoes(argv);
   const entrada = o._[0];
   if (!entrada) {
-    console.error('Uso: node celular/contatos-para-vcf.mjs <entrada.csv> [--saida=...] [--mensagens=...]');
-    console.error('     (planilha do Excel: "Salvar como" -> CSV UTF-8)');
+    console.error('Uso: node celular/contatos-para-vcf.mjs <entrada.xlsx|.csv> [--saida=...] [--mensagens=...]');
+    console.error('     --listar-etiquetas    mostra as etiquetas do arquivo e sai');
+    console.error('     --pular-etiqueta=a,b  tira quem tem essas etiquetas');
     process.exit(2);
   }
   if (!fs.existsSync(entrada)) {
@@ -362,15 +541,28 @@ function principal(argv) {
     process.exit(2);
   }
 
-  const { texto, codificacao } = lerTexto(entrada);
-  const { linhas, separador } = lerCsv(texto);
+  let linhas;
+  let descricao;
+  if (/\.xlsx?$|\.xlsm$/i.test(entrada)) {
+    linhas = lerXlsx(fs.readFileSync(entrada));
+    descricao = 'planilha do Excel';
+  } else {
+    const { texto, codificacao } = lerTexto(entrada);
+    const lido = lerCsv(texto);
+    linhas = lido.linhas;
+    descricao = `CSV ${codificacao}, separador "${lido.separador === '\t' ? 'TAB' : lido.separador}"`;
+  }
   if (!linhas.length) {
     console.error('O arquivo esta vazio.');
     process.exit(2);
   }
 
   const cabecalho = linhas[0];
-  const { tel, nome } = acharColunas(cabecalho, { telefone: o['coluna-telefone'], nome: o['coluna-nome'] });
+  const { tel, nome, etiquetas } = acharColunas(cabecalho, {
+    telefone: o['coluna-telefone'],
+    nome: o['coluna-nome'],
+    etiquetas: o['coluna-etiquetas'],
+  });
   if (tel < 0) {
     console.error('Nao reconheci a coluna do telefone. O cabecalho do arquivo e:');
     cabecalho.forEach((c, i) => console.error(`  [${i}] ${c}`));
@@ -378,13 +570,89 @@ function principal(argv) {
     process.exit(2);
   }
 
+  /**
+   * **Um passe so para contar as etiquetas, antes de qualquer coisa.** Ele serve a duas coisas: o
+   * `--listar-etiquetas`, e a conferencia de que as etiquetas que ele mandou pular EXISTEM — que e
+   * a parte que protege.
+   */
+  const censo = new Map(); // chave normalizada -> { rotulos: Set, quantos }
+  if (etiquetas >= 0) {
+    for (let i = 1; i < linhas.length; i++) {
+      for (const e of etiquetasDaCelula(linhas[i][etiquetas])) {
+        const k = semAcentoNemCaixa(e);
+        const atual = censo.get(k) || { rotulos: new Set(), quantos: 0 };
+        atual.rotulos.add(e);
+        atual.quantos++;
+        censo.set(k, atual);
+      }
+    }
+  }
+
+  if (o['listar-etiquetas']) {
+    if (etiquetas < 0) {
+      console.error('Nao reconheci a coluna das etiquetas. O cabecalho do arquivo e:');
+      cabecalho.forEach((c, i) => console.error(`  [${i}] ${c}`));
+      process.exit(2);
+    }
+    const ordenado = [...censo.values()].sort((a, b) => b.quantos - a.quantos);
+    console.log(`${ordenado.length} etiqueta(s) distinta(s) em ${linhas.length - 1} linha(s):\n`);
+    for (const t of ordenado) console.log(`  ${String(t.quantos).padStart(6)}  ${[...t.rotulos].join('  |  ')}`);
+    return;
+  }
+
+  const pedidas = String(o['pular-etiqueta'] ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s !== '');
+
+  /**
+   * **Etiqueta pedida que nao existe no arquivo RECUSA a rodada.** O defeito dela e silencioso e
+   * caro: um nome errado simplesmente nao casa com ninguem, nada aparece na tela, e **quem ele
+   * mandou pular recebe a mensagem**. A saida explicita e `--mesmo-sem-a-etiqueta`.
+   */
+  const faltando = pedidas.filter((p) => !censo.has(semAcentoNemCaixa(p)));
+  if (faltando.length && !o['mesmo-sem-a-etiqueta']) {
+    console.error(`Nao achei no arquivo: ${faltando.map((f) => `"${f}"`).join(', ')}`);
+    if (etiquetas < 0) {
+      console.error('(e eu nao reconheci a coluna das etiquetas — veja --coluna-etiquetas)');
+    } else {
+      const parecidas = [...censo.values()]
+        .filter((t) => faltando.some((f) => [...t.rotulos].some((r) => semAcentoNemCaixa(r).includes(semAcentoNemCaixa(f)))))
+        .slice(0, 8);
+      if (parecidas.length) {
+        console.error('Parecidas no arquivo:');
+        for (const t of parecidas) console.error(`  ${String(t.quantos).padStart(6)}  ${[...t.rotulos].join('  |  ')}`);
+      }
+      console.error('\nVeja a lista inteira com --listar-etiquetas');
+    }
+    console.error('Para seguir assim mesmo (sem pular ninguem por essa etiqueta): --mesmo-sem-a-etiqueta');
+    process.exit(2);
+  }
+
+  const chavesPuladas = new Set(pedidas.map(semAcentoNemCaixa));
+
   const vistos = new Map();
   const recusados = new Map();
   const porDdd = new Map();
   let repetidos = 0;
   let foraDoRS = 0;
 
+  const pulados = new Map();
+
   for (let i = 1; i < linhas.length; i++) {
+    /**
+     * **A etiqueta decide ANTES do telefone.** Os dois desfechos sao iguais (fica de fora), entao a
+     * ordem nao muda quem entra — muda o MOTIVO escrito no relatorio, e o certo e o que ele
+     * reconhece: "pulei porque voce mandou pular", nao "o telefone estava torto".
+     */
+    if (chavesPuladas.size && etiquetas >= 0) {
+      const casou = pularPorEtiqueta(etiquetasDaCelula(linhas[i][etiquetas]), chavesPuladas);
+      if (casou) {
+        pulados.set(casou, (pulados.get(casou) || 0) + 1);
+        continue;
+      }
+    }
+
     const r = normalizarTelefone(linhas[i][tel], { incluirFixo });
     if (!r.ok) {
       const lista = recusados.get(r.motivo) || [];
@@ -421,8 +689,17 @@ function principal(argv) {
     escritos.push({ caminho, quantos: pedaco.length });
   });
 
-  console.log(`Lido: ${entrada}  (${codificacao}, separador "${separador === '\t' ? 'TAB' : separador}")`);
+  console.log(`Lido: ${entrada}  (${descricao})`);
   console.log(`Linhas de dado: ${linhas.length - 1}`);
+  if (pulados.size) {
+    const total = [...pulados.values()].reduce((a, b) => a + b, 0);
+    console.log(`Pulados por etiqueta: ${total}`);
+    for (const [rotulo, q] of [...pulados].sort((a, b) => b[1] - a[1])) {
+      console.log(`  ${String(q).padStart(5)}  ${rotulo}`);
+    }
+  } else if (chavesPuladas.size) {
+    console.log(`Pulados por etiqueta: 0 — nenhum contato tem ${pedidas.map((p) => `"${p}"`).join(', ')}`);
+  }
   console.log(`Contatos no .vcf: ${contatos.length}`);
   if (repetidos) console.log(`  repetidos descartados: ${repetidos}`);
   if (recusados.size) {

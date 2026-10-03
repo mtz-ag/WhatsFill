@@ -10,6 +10,7 @@
  * dispara.
  */
 
+import zlib from 'node:zlib';
 import {
   normalizarTelefone,
   lerCsv,
@@ -18,6 +19,10 @@ import {
   lerVariacoes,
   montarPlano,
   planoParaCsv,
+  desescaparXml,
+  etiquetasDaCelula,
+  pularPorEtiqueta,
+  lerXlsx,
 } from './contatos-para-vcf.mjs';
 
 let passou = 0;
@@ -210,6 +215,171 @@ grupo('planoParaCsv');
 {
   const csv = planoParaCsv([{ numero: '+5551900000001', nome: 'T', variacao: 1, texto: 'linha 1\nlinha 2' }]);
   ok(csv.includes('"linha 1\nlinha 2"'), 'texto de varias linhas sai entre aspas');
+}
+
+/* ------------------------------------------------------------------ */
+grupo('desescaparXml — o & vem escrito &amp; na exportacao de verdade');
+
+igual(desescaparXml('MARTIM-&amp;-PEDRI'), 'MARTIM-&-PEDRI', 'e comercial');
+igual(desescaparXml('a &lt;b&gt; c'), 'a <b> c', 'menor e maior');
+igual(desescaparXml('diz &quot;oi&quot;'), 'diz "oi"', 'aspas');
+igual(desescaparXml('d&apos;Agua'), "d'Agua", 'apostrofo (Olho d\'Agua)');
+igual(desescaparXml('Jo&#227;o'), 'João', 'numerica decimal');
+igual(desescaparXml('Jo&#xE3;o'), 'João', 'numerica hexadecimal');
+igual(desescaparXml('100% &naoexiste; ok'), '100% &naoexiste; ok', 'entidade desconhecida fica como esta');
+igual(desescaparXml('a &amp;amp; b'), 'a &amp; b', 'desescapa uma vez so, nao em cascata');
+
+/* ------------------------------------------------------------------ */
+grupo('etiquetasDaCelula');
+
+igual(etiquetasDaCelula('ADS, SERRA, COLINHA'), ['ADS', 'SERRA', 'COLINHA'], 'separadas por virgula');
+igual(etiquetasDaCelula('ADS;SERRA'), ['ADS', 'SERRA'], 'ponto e virgula tambem separa');
+igual(etiquetasDaCelula('  ADS ,  SERRA  '), ['ADS', 'SERRA'], 'espacos em volta somem');
+igual(etiquetasDaCelula('ADS,,SERRA'), ['ADS', 'SERRA'], 'vazio no meio nao conta');
+igual(etiquetasDaCelula(''), [], 'celula vazia');
+igual(etiquetasDaCelula(null), [], 'celula nula');
+igual(etiquetasDaCelula('MARTIM-&-PEDRI'), ['MARTIM-&-PEDRI'], 'o & nao separa nada');
+
+/* ------------------------------------------------------------------ */
+grupo('pularPorEtiqueta — nome EXATO, acento e caixa nao contam');
+
+{
+  const pular = new Set(['colinha']);
+  igual(pularPorEtiqueta(['ADS', 'COLINHA'], pular), 'COLINHA', 'casa em caixa alta');
+  igual(pularPorEtiqueta(['colinha'], pular), 'colinha', 'casa em caixa baixa');
+  igual(pularPorEtiqueta(['Colinha'], pular), 'Colinha', 'casa em caixa mista');
+  igual(pularPorEtiqueta(['ADS', 'SERRA'], pular), null, 'quem nao tem, nao pula');
+  igual(pularPorEtiqueta([], pular), null, 'sem etiqueta nenhuma');
+}
+{
+  // Esta base tem SERRA e Serra como etiquetas diferentes — 15 grupos assim, medidos.
+  const pular = new Set(['serra']);
+  ok(pularPorEtiqueta(['SERRA'], pular) === 'SERRA', 'SERRA e Serra sao a mesma coisa aqui');
+  ok(pularPorEtiqueta(['Serra'], pular) === 'Serra', 'idem ao contrario');
+}
+{
+  // O perigo da lista de EXCLUSAO e o trecho contido: "col" nao pode levar meia base junto.
+  const pular = new Set(['col']);
+  igual(pularPorEtiqueta(['COLINHA'], pular), null, 'trecho contido NAO casa (COLINHA)');
+  igual(pularPorEtiqueta(['Noroeste Colonial'], pular), null, 'trecho contido NAO casa (Colonial)');
+  igual(pularPorEtiqueta(['COLORADO'], pular), null, 'trecho contido NAO casa (COLORADO)');
+}
+{
+  const pular = new Set(['naoperturbe']);
+  igual(pularPorEtiqueta(['Nao Perturbe'], pular), 'Nao Perturbe', 'espaco nao conta');
+  igual(pularPorEtiqueta(['NÃO-PERTURBE'], pular), 'NÃO-PERTURBE', 'acento e hifen nao contam');
+}
+
+/* ------------------------------------------------------------------ */
+grupo('lerXlsx — zip e XML sem dependencia nenhuma');
+
+/**
+ * Monta um .xlsx de mentira na memoria. O CRC vai zerado de proposito: o leitor nao o confere, e
+ * implementar CRC32 aqui so para o teste seria codigo que nada do programa exercita.
+ */
+function zipDeMentira(arquivos) {
+  const locais = [];
+  const indice = [];
+  let posicao = 0;
+  for (const [nome, conteudo] of arquivos) {
+    const cru = Buffer.from(conteudo, 'utf8');
+    const comprimido = zlib.deflateRawSync(cru);
+    const nomeBuf = Buffer.from(nome, 'utf8');
+
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(8, 8);
+    local.writeUInt32LE(comprimido.length, 18);
+    local.writeUInt32LE(cru.length, 22);
+    local.writeUInt16LE(nomeBuf.length, 26);
+    locais.push(local, nomeBuf, comprimido);
+
+    const entrada = Buffer.alloc(46);
+    entrada.writeUInt32LE(0x02014b50, 0);
+    entrada.writeUInt16LE(20, 4);
+    entrada.writeUInt16LE(20, 6);
+    entrada.writeUInt16LE(8, 10);
+    entrada.writeUInt32LE(comprimido.length, 20);
+    entrada.writeUInt32LE(cru.length, 24);
+    entrada.writeUInt16LE(nomeBuf.length, 28);
+    entrada.writeUInt32LE(posicao, 42);
+    indice.push(entrada, nomeBuf);
+
+    posicao += local.length + nomeBuf.length + comprimido.length;
+  }
+  const corpo = Buffer.concat(locais);
+  const dir = Buffer.concat(indice);
+  const fim = Buffer.alloc(22);
+  fim.writeUInt32LE(0x06054b50, 0);
+  fim.writeUInt16LE(arquivos.length, 8);
+  fim.writeUInt16LE(arquivos.length, 10);
+  fim.writeUInt32LE(dir.length, 12);
+  fim.writeUInt32LE(corpo.length, 16);
+  return Buffer.concat([corpo, dir, fim]);
+}
+
+const planilha = (linhasXml, extras = []) =>
+  zipDeMentira([
+    ['xl/worksheets/sheet1.xml', `<?xml version="1.0"?><worksheet><sheetData>${linhasXml}</sheetData></worksheet>`],
+    ...extras,
+  ]);
+
+const emLinha = (ref, valor) => `<c r="${ref}" t="inlineStr"><is><t>${valor}</t></is></c>`;
+
+{
+  const buf = planilha(
+    `<row r="1">${emLinha('A1', 'Nome')}${emLinha('B1', 'Telefone')}</row>` +
+      `<row r="2">${emLinha('A2', 'Maria Teste')}${emLinha('B2', '51900000001')}</row>`
+  );
+  igual(lerXlsx(buf), [['Nome', 'Telefone'], ['Maria Teste', '51900000001']], 'cabecalho e uma linha');
+}
+{
+  // Celula vazia SOME do XML: a posicao tem de sair da letra, nao da ordem de aparicao.
+  const buf = planilha(
+    `<row r="1">${emLinha('A1', 'Nome')}${emLinha('B1', 'Email')}${emLinha('C1', 'Telefone')}</row>` +
+      `<row r="2">${emLinha('A2', 'Maria Teste')}${emLinha('C2', '51900000001')}</row>`
+  );
+  igual(lerXlsx(buf)[1], ['Maria Teste', '', '51900000001'], 'coluna vazia nao escorrega as outras');
+}
+{
+  // Celula que se fecha sozinha nao pode roubar o valor da vizinha.
+  const buf = planilha(`<row r="1"><c r="A1"/>${emLinha('B1', 'valor de B')}</row>`);
+  igual(lerXlsx(buf)[0], ['', 'valor de B'], 'celula auto-fechada fica vazia e a seguinte mantem o valor');
+}
+{
+  const buf = planilha(
+    `<row r="1">${emLinha('A1', 'Etiquetas')}</row><row r="2">${emLinha('A2', 'MARTIM-&amp;-PEDRI')}</row>`
+  );
+  igual(lerXlsx(buf)[1][0], 'MARTIM-&-PEDRI', 'o &amp; e desfeito na leitura');
+}
+{
+  // Telefone guardado como NUMERO nao tem <t>, so <v>.
+  const buf = planilha(`<row r="1"><c r="A1"><v>51900000001</v></c></row>`);
+  igual(lerXlsx(buf)[0], ['51900000001'], 'celula numerica');
+}
+{
+  // O caminho da tabela compartilhada, que e como o Excel salva por cima.
+  const buf = planilha(
+    `<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row>`,
+    [['xl/sharedStrings.xml', '<?xml version="1.0"?><sst><si><t>Nome</t></si><si><t>Telefone</t></si></sst>']]
+  );
+  igual(lerXlsx(buf)[0], ['Nome', 'Telefone'], 'cadeias da tabela compartilhada');
+}
+{
+  const buf = planilha(
+    `<row r="1">${emLinha('A1', 'Nome')}</row><row r="2"/><row r="3">${emLinha('A3', 'Maria Teste')}</row>`
+  );
+  igual(lerXlsx(buf).length, 2, 'linha vazia nao vira contato');
+}
+{
+  const buf = planilha(`<row r="1"><c r="A1" t="inlineStr"><is><r><t>Ma</t></r><r><t>ria</t></r></is></c></row>`);
+  igual(lerXlsx(buf)[0], ['Maria'], 'texto rico (varios <t>) vira um valor so');
+}
+{
+  let estourou = false;
+  try { lerXlsx(Buffer.from('isto nao e um zip')); } catch { estourou = true; }
+  ok(estourou, 'arquivo que nao e .xlsx reclama em vez de devolver lixo');
 }
 
 /* ------------------------------------------------------------------ */

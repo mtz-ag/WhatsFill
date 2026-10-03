@@ -111,8 +111,11 @@ que o WhatsApp olha e reciprocidade: numero que so manda e nunca recebe cai ante
 **2. Gerar o .vcf e o plano** (fora do repositorio — a ferramenta recusa escrever aqui dentro):
 
 ```bash
-node celular/contatos-para-vcf.mjs "C:/Users/thiag/Desktop/contatos.csv" --saida="C:/Users/thiag/Desktop/disparo" --mensagens="C:/Users/thiag/Desktop/mensagens.txt"
+node celular/contatos-para-vcf.mjs "C:/Users/thiag/Downloads/planilha-contatos.xlsx" --saida="C:/Users/thiag/Downloads/disparo" --pular-etiqueta=COLINHA --mensagens="C:/Users/thiag/Downloads/mensagens.txt"
 ```
+
+O `.xlsx` e lido direto — nao precisa converter para CSV. Para ver o que ha no arquivo antes:
+`--listar-etiquetas`.
 
 O arquivo de mensagens e texto puro, com as variacoes separadas por uma linha com `---`:
 
@@ -149,6 +152,40 @@ inteiro.
 
 ---
 
+## O que a exportacao de verdade mostrou (03/10/2026, 9.457 linhas)
+
+Medido na planilha dele. **Nenhum dado de eleitor foi escrito em lugar nenhum** — o que segue e a
+FORMA do arquivo e nomes de etiqueta, que sao organizacao interna.
+
+- **Colunas:** ID, Data de cadastro, **Nome**, **Telefone**, Email, Instagram, **Etiquetas**, Notas
+  Internas, Data de conclusao do contato, Cidade, Tema de Interesse, Funcao, Responsavel, Partido,
+  Temas de Interesse. As tres que interessam sao reconhecidas pelo cabecalho, sem configurar nada.
+- **A etiqueta `COLINHA` NAO existe neste arquivo**, nem nada parecido — as 530 etiquetas distintas
+  foram varridas. As mais proximas sao `Material de campanha` (215) e `MATERIAL_IMPRESSO` (2), que
+  sao outra coisa. **A exportacao e de 02/10 as 16:10**, entao qualquer coisa etiquetada depois
+  disso nao esta aqui.
+- **NAO existe etiqueta de recusa** (sem interesse, nao perturbe, bloqueado, descadastrado). O
+  campo "Etiqueta de SEM INTERESSE" da Config e o que a alimentaria, e ele esta em aberto desde
+  04/09. **Isso importa mais que a colinha:** sem essa marca, quem ja pediu para sair nao tem como
+  ficar de fora de uma lista montada a partir deste arquivo.
+- **Existem etiquetas de assessor:** `CONTATO-ASSESSOR` (24), `Assessor Cap` (8), `ASSESSOR` (6).
+  Pela regra ja registrada, `CONTATO-ASSESSOR` e eleitor TRAZIDO por um assessor, nao equipe.
+- **15 grupos de etiqueta que so diferem por caixa/acento** (`SERRA` e `Serra`, `Vale do Rio dos
+  Sinos` e `VALE DO RIO DOS SINOS'`) — e a armadilha do rotulo repetido ja registrada, e e por isso
+  que o casamento do `--pular-etiqueta` e normalizado.
+- **O separador das etiquetas e a VIRGULA** (17.769 delas); os 27 ponto e virgula eram `&amp;`
+  dentro do nome da etiqueta.
+- **Resultado:** 9.436 contatos aproveitados. Fora: 9 sem telefone, **8 com DDD 59, que nao
+  existe**, 3 com digitos demais, 1 fixo. **Zero repetidos.** Por DDD: 51=4.708, 55=2.055,
+  54=1.749, 53=580 — e **344 de fora do RS**.
+
+### Nao importe mais contatos do que voce vai mandar
+
+Os 9.436 saem em 19 arquivos de 500. **Importe so o primeiro.** Importar nove mil contatos para
+mandar cinquenta mensagens e custo sem beneficio: polui a agenda dele, e a sincronizacao de nove
+mil numeros de uma vez e justamente a suspeita registrada aqui como nao medida. O proximo arquivo
+entra quando o anterior acabar.
+
 ## Armadilhas desta parte (custaram medicao — nao redescubra)
 
 - **O `55` do pais colide com o DDD 55** (Santa Rosa, Santo Angelo). `55999999999` com 11 digitos e
@@ -173,11 +210,30 @@ inteiro.
   leitura vai dentro de `try`, e a pagina funciona sem ela — o numero de onde parou esta na tela.
 - **"Pular" nao conta no alvo.** O alvo e "quantas eu mandei", nao "quantas eu olhei": sem isso uma
   lista com muito numero errado faria a rodada "chegar em 30" tendo mandado dez.
+- **Etiqueta pedida que nao existe no arquivo RECUSA a conversao.** O defeito dela e silencioso e
+  caro: o nome errado nao casa com ninguem, nada aparece na tela, e **quem ele mandou pular
+  recebe**. A saida explicita e `--mesmo-sem-a-etiqueta`, e a recusa ja lista as parecidas.
+- **Lista de EXCLUSAO casa por nome EXATO, nunca por trecho contido.** `col` tiraria `COLINHA`,
+  `Noroeste Colonial` e `COLORADO` de uma vez, sem nada dizendo quem sumiu. Caixa e acento nao
+  contam, porque a base tem `SERRA` e `Serra` como etiquetas diferentes.
+- **No XML da planilha o `&` chega escrito `&amp;`.** Sem desfazer, o nome entraria no celular com
+  `&amp;` no meio e a etiqueta a pular nunca casaria.
+- **Celula vazia SOME do XML do Excel**, entao a posicao da coluna sai da letra (`r="C2"`) e nunca
+  da ordem de aparicao — contando na ordem, a planilha escorrega uma coluna a partir do primeiro
+  branco. E a **celula que se fecha sozinha** (`<c r="A1"/>`) tem de ser reconhecida antes da que
+  tem corpo, senao a leitura emenda a abertura de uma com o fechamento da outra e **rouba o valor
+  da vizinha**.
+- **No ZIP, o cabecalho local tem tamanhos de nome e de extra PROPRIOS**, diferentes dos do indice
+  central. Usar os do indice comeca a ler alguns bytes adiante e o `inflate` estoura com
+  "incorrect header check" — que parece arquivo corrompido e e conta errada.
 
 ---
 
 ## Log de decisoes
 
+- **03/10/2026** — Le `.xlsx` direto e tira quem tem as etiquetas que ele mandar
+  (`--pular-etiqueta`, nome exato, acento e caixa nao contam). Medido na exportacao dele: a
+  etiqueta COLINHA nao existe nela, e nao ha etiqueta de recusa nenhuma. 105 asercoes.
 - **03/10/2026** — Branch criada. Medido que a metade dos contatos nao precisa de app (vCard), e
   entregues `contatos-para-vcf.mjs` (com 69 asercoes) e `disparador.html` (toque por contato, zero
   rede). O app que aperta enviar sozinho **nao foi feito**, e o motivo esta na secao (b).
