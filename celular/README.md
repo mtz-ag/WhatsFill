@@ -117,15 +117,21 @@ node celular/contatos-para-vcf.mjs "C:/Users/thiag/Downloads/planilha-contatos.x
 O `.xlsx` e lido direto — nao precisa converter para CSV. Para ver o que ha no arquivo antes:
 `--listar-etiquetas`.
 
-O arquivo de mensagens e texto puro, com as variacoes separadas por uma linha com `---`:
+O arquivo de mensagens e texto puro, com as variacoes separadas por **uma linha com `===`**:
 
 ```
 Primeira versao do texto.
----
+===
 Segunda versao, dizendo a mesma coisa de outro jeito.
----
+===
 Terceira versao.
 ```
+
+**O separador era `---` e mudou em 03/10/2026, antes da primeira rodada.** A colinha dele tem uma
+regua de tracos separando a abertura dos numeros — medido, o leitor partia a mensagem ali: a
+introducao viraria uma "variacao" e os numeros, outra, **e cada metade sairia para uma pessoa
+diferente**. Traco e pontuacao comum dentro de mensagem; linha de iguais nao e. Arquivo que ainda
+use `---` e **recusado** com o motivo escrito, em vez de virar uma mensagem so com tudo emendado.
 
 Opcoes: `--prefixo=` (o que vai na frente do nome, padrao `ZDISPARO`), `--por-arquivo=`
 (quantos cartoes por .vcf, padrao 500), `--incluir-fixo`, `--coluna-telefone=`, `--coluna-nome=`.
@@ -179,6 +185,18 @@ FORMA do arquivo e nomes de etiqueta, que sao organizacao interna.
   existe**, 3 com digitos demais, 1 fixo. **Zero repetidos.** Por DDD: 51=4.708, 55=2.055,
   54=1.749, 53=580 — e **344 de fora do RS**.
 
+### Variar a abertura rende MENOS do que parece (medido)
+
+Com as seis aberturas que ele aprovou e a colinha identica nas seis, as mensagens ficam **81,1%
+parecidas entre si** em media (pior par: 86,2%). A razao e aritmetica: **a colinha e ~60% do texto
+e vai byte a byte igual de proposito** — seis numeros redigitados seis vezes seriam trinta e seis
+chances de mandar um eleitor votar na pessoa errada, e isso nao se troca por variacao.
+
+Medido tambem o que o passo seguinte renderia: **revezando tres FORMATOS da colinha** (rotulo e
+marcador mudam; numero e nome, nunca), a semelhanca media cai para **59,0%**. Isso so e seguro se
+os formatos forem gerados a partir de **uma tabela unica da chapa**, e nao reescritos a mao — ai o
+numero nao tem como divergir entre as versoes. **Ainda nao foi feito**, e e a proxima alavanca.
+
 ### Nao importe mais contatos do que voce vai mandar
 
 Os 9.436 saem em 19 arquivos de 500. **Importe so o primeiro.** Importar nove mil contatos para
@@ -231,6 +249,10 @@ entra quando o anterior acabar.
 
 ## Log de decisoes
 
+- **03/10/2026** — Separador das variacoes passou de `---` para `===`: a regua de tracos da
+  colinha dele partia a mensagem no meio. Seis aberturas aprovadas por ele; medida a
+  semelhanca real entre elas (81,1%) e o que variar o formato da colinha renderia (59,0%).
+  114 asercoes.
 - **03/10/2026** — Le `.xlsx` direto e tira quem tem as etiquetas que ele mandar
   (`--pular-etiqueta`, nome exato, acento e caixa nao contam). Medido na exportacao dele: a
   etiqueta COLINHA nao existe nela, e nao ha etiqueta de recusa nenhuma. 105 asercoes.

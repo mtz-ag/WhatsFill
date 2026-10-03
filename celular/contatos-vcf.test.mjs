@@ -19,6 +19,7 @@ import {
   lerVariacoes,
   montarPlano,
   planoParaCsv,
+  separadorSuspeito,
   desescaparXml,
   etiquetasDaCelula,
   pularPorEtiqueta,
@@ -161,14 +162,34 @@ grupo('montarVcf');
 }
 
 /* ------------------------------------------------------------------ */
-grupo('lerVariacoes');
+grupo('lerVariacoes — o separador e a linha de IGUAIS');
 
-igual(lerVariacoes('um\n---\ndois\n---\ntres').length, 3, 'tres variacoes separadas por ---');
-igual(lerVariacoes('um\n---\ndois')[0], 'um', 'primeira variacao');
-igual(lerVariacoes('um\n-----\ndois').length, 2, 'mais de tres tracos tambem separa');
-igual(lerVariacoes('linha 1\nlinha 2\n---\noutra')[0], 'linha 1\nlinha 2', 'variacao de varias linhas');
+igual(lerVariacoes('um\n===\ndois\n===\ntres').length, 3, 'tres variacoes separadas por ===');
+igual(lerVariacoes('um\n===\ndois')[0], 'um', 'primeira variacao');
+igual(lerVariacoes('um\n=====\ndois').length, 2, 'mais de tres iguais tambem separa');
+igual(lerVariacoes('linha 1\nlinha 2\n===\noutra')[0], 'linha 1\nlinha 2', 'variacao de varias linhas');
 igual(lerVariacoes('').length, 0, 'arquivo vazio nao tem variacao');
-igual(lerVariacoes('um\n---\n\n---\ndois').length, 2, 'pedaco vazio no meio nao conta');
+igual(lerVariacoes('um\n===\n\n===\ndois').length, 2, 'pedaco vazio no meio nao conta');
+
+/**
+ * A colinha dele tem uma regua de tracos separando a abertura dos numeros. Ela NAO pode partir a
+ * mensagem: se partisse, a introducao sairia para uma pessoa e os numeros para a seguinte.
+ */
+{
+  const comRegua = 'Aqui e a equipe!\n\n-----------------------------------\n\nCOLINHA 2026\n2228 Fulano';
+  igual(lerVariacoes(comRegua).length, 1, 'linha de tracos NAO separa');
+  ok(lerVariacoes(comRegua)[0].includes('2228'), 'os numeros continuam na mesma mensagem');
+}
+igual(lerVariacoes('a\n===\nb\n---\nc').length, 2, 'traco dentro da variacao nao conta');
+igual(lerVariacoes('a\n  ===  \nb').length, 2, 'espaco em volta do separador nao atrapalha');
+igual(lerVariacoes('a\nb === c\nd').length, 1, 'iguais no MEIO da linha nao separa');
+
+grupo('separadorSuspeito — pega quem usou o separador velho');
+
+ok(separadorSuspeito('um\n---\ndois'), 'so tracos: suspeito');
+ok(!separadorSuspeito('um\n===\ndois'), 'so iguais: certo');
+ok(!separadorSuspeito('Aqui e a equipe\n-----\nCOLINHA\n===\noutra'), 'tendo iguais, o traco e so pontuacao');
+ok(!separadorSuspeito('uma mensagem so, sem separador nenhum'), 'sem separador nao e suspeito');
 
 /* ------------------------------------------------------------------ */
 grupo('montarPlano — reveza, e nunca dois iguais em sequencia');

@@ -444,17 +444,35 @@ export function montarVcf(contatos) {
  * ------------------------------------------------------------------ */
 
 /**
- * As variacoes vem de um arquivo de texto, separadas por uma linha com `---`.
+ * As variacoes vem de um arquivo de texto, separadas por uma linha com `===`.
  *
  * **Por que texto e nao JSON:** ele escreve e reescreve essas mensagens o tempo todo, e JSON quebra
  * com uma virgula fora de lugar — num arquivo cujo erro aparece como "nenhuma variacao encontrada"
  * em cima da janela de disparo.
+ *
+ * **O separador era `---` e MUDOU em 03/10/2026, antes de rodar.** A colinha que ele escreveu tem
+ * uma regua de tracos separando a abertura dos numeros — medido, o leitor partia a mensagem dele
+ * ali no meio, e cada metade virava uma "variacao": a introducao sairia para uma pessoa e os
+ * numeros para a seguinte. **Linha de tracos e pontuacao comum dentro de mensagem; linha de iguais
+ * nao e** — por isso a troca, e por isso `separadorSuspeito` avisa em vez de deixar passar.
  */
 export function lerVariacoes(texto) {
   return String(texto ?? '')
-    .split(/^\s*-{3,}\s*$/m)
+    .split(/^[ \t]*={3,}[ \t]*$/m)
     .map((t) => t.replace(/^\s*\n/, '').replace(/\s+$/, ''))
     .filter((t) => t.trim() !== '');
+}
+
+/**
+ * Diz se o arquivo parece estar usando o separador velho. Sem este aviso, quem escreveu `---`
+ * entre as variacoes receberia **uma variacao so** — a mensagem inteira, com todas emendadas —, e
+ * isso sai parecendo que funcionou.
+ */
+export function separadorSuspeito(texto) {
+  const s = String(texto ?? '');
+  const temIgual = /^[ \t]*={3,}[ \t]*$/m.test(s);
+  const temTraco = /^[ \t]*-{3,}[ \t]*$/m.test(s);
+  return !temIgual && temTraco;
 }
 
 /**
@@ -721,9 +739,16 @@ function principal(argv) {
       console.error(`\nNao achei o arquivo de mensagens: ${o.mensagens}`);
       process.exit(2);
     }
-    const variacoes = lerVariacoes(lerTexto(String(o.mensagens)).texto);
+    const textoDasMensagens = lerTexto(String(o.mensagens)).texto;
+    if (separadorSuspeito(textoDasMensagens)) {
+      console.error('\nO arquivo de mensagens tem linha de TRACOS e nenhuma linha de IGUAIS.');
+      console.error('O separador e uma linha com === (tracos ficaram livres para usar dentro do texto).');
+      console.error('Do jeito que esta, isto sairia como UMA mensagem so, com tudo emendado.');
+      process.exit(2);
+    }
+    const variacoes = lerVariacoes(textoDasMensagens);
     if (!variacoes.length) {
-      console.error('\nO arquivo de mensagens nao tem nenhuma variacao (separe cada uma com uma linha com ---).');
+      console.error('\nO arquivo de mensagens nao tem nenhuma variacao (separe cada uma com uma linha com ===).');
       process.exit(2);
     }
     const plano = montarPlano(contatos, variacoes);
