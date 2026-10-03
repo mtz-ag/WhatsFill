@@ -2233,6 +2233,40 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **DESLIGAR A INTERNET DO CELULAR NAO TIRA O NUMERO DO AR NEM ENFILEIRA NADA** (03/10/2026, teste
+  dele: *"eu achava que ao desligar a internet do celular as mensagens iriam sair somente quando eu
+  ligasse novamente; as mensagens foram iguais pela plataforma"*). O canal Z-API e um aparelho
+  **PAREADO** a conta — como o WhatsApp Web —, e desde o multi-aparelho ele tem **conexao propria**
+  com o servidor do WhatsApp: manda com o celular sem rede, desligado ou sem bateria; o celular so
+  precisa aparecer de tempos em tempos para a sessao nao expirar.
+  **Isto REFINA a entrada de 27/09** (*"a plataforma e um cliente pareado a conta dele — para o
+  WhatsApp e o mesmo aparelho da mao dele"*): e o mesmo aparelho para efeito de **REPUTACAO**, e
+  **nao** para efeito de conexao. O que tira o numero do ar e desconectar a SESSAO (Aparelhos
+  conectados, ou o painel da Z-API) — e voltar custa ler o QR.
+  **A tela ja responde se o numero caiu:** o cartao "Por qual numero" mostra o `healthStatus` de cada
+  canal. Sonda de 01/10 (a mensagem em fila sai na reconexao?) **continua em aberto** — o teste dele
+  nao a respondeu, porque o canal nunca caiu.
+
+- **AGENDAR E A RODADA, NUNCA AS MENSAGENS — e o agendamento vive na ABA** (03/10/2026, escolha dele
+  entre tres caminhos: *"montar agora e sair depois"*). Guardar mensagem para soltar tudo de uma vez
+  e o padrao que derrubou um numero dele com menos de dez envios (26/09); o que espera e a RODADA, e
+  na hora ela anda com a mesma pausa e os mesmos freios.
+  **Quatro decisoes que o tornam seguro, e nenhuma e opcional:**
+  **(1) o keepalive sobe no CLIQUE de agendar** e fica tocando a espera inteira — aba escondida e aba
+  CONGELADA, e audio exige gesto do usuario; **a conta de travas de energia e equilibrada** (a espera
+  solta a dela antes de a rodada pedir a sua, senao a trava fica presa para sempre).
+  **(2) horario que passou ha mais de 10 min NAO dispara** — aba congelada que acorda duas horas
+  depois comecaria um disparo em massa fora da janela que ele escolheu.
+  **(3) as ETIQUETAS sao conferidas ao agendar** (nome nao muda sozinho, e descobrir as 14:00 queima
+  a janela); **o canal no ar e o saldo do dia, na hora**, que e onde decidem.
+  **(4) o `confirm` e no AGENDAR e a rodada comeca sem perguntar** — dialogo esperando clique as
+  14:00 e rodada parada com ninguem na frente.
+  **So memoria, nunca armazenamento:** agendamento que sobrevive ao F5 dispara num dia em que ele nem
+  lembra de ter marcado. E **a espera fica fora do `withBusy`** (20/09): o interruptor e unico, e
+  segura-lo por horas mataria todo botao do painel.
+  **O caminho pela FILA nao e agendavel, de proposito:** la o percurso e a lista que ELE filtrou na
+  tela, e o que estiver filtrado daqui a cinco horas nao e o que ele viu ao agendar.
+
 - **OS LIMITES DE RITMO SAIRAM (pausa >= 3s e <= 200 contatos), E O DE 200 ERA O `pageSize`**
   (03/10/2026: *"o disparo esta com um limitador que nao deixa botar abaixo de 3 segundos e 200
   contatos, tire esses limites e me explique porque existem"*).

@@ -1,3 +1,74 @@
+## 2026-10-03 — v3.145.0 — agendar o disparo: montar agora, sair na hora marcada
+
+**Relato dele:** *"eu fiz um teste que deu errado, eu achava que ao desligar a internet do celular as
+mensagens iriam sair somente quando eu ligasse novamente; as mensagens foram iguais pela plataforma,
+tem a opção de fazer o que eu pretendia?"* — e, perguntado entre três caminhos, escolheu **"montar
+agora e sair depois"**.
+
+### Por que o teste dele não segurou nada
+
+**A plataforma não passa pelo celular dele.** O canal é Z-API, que é um **aparelho pareado** à conta
+— como o WhatsApp Web. Desde o multi-aparelho, cliente pareado tem **conexão própria** com o servidor
+do WhatsApp e manda com o celular sem rede, desligado ou sem bateria; o celular só precisa aparecer
+de tempos em tempos para a sessão não expirar.
+
+Então **cortar a internet do celular não tira o número do ar e não enfileira nada**: para o WhatsApp
+quem mandou foi o aparelho pareado, que esteve online o tempo todo. Isto refina o que já estava
+escrito em 27/09 (*"a plataforma é um cliente pareado à conta dele — para o WhatsApp é o mesmo
+aparelho da mão dele"*): é o mesmo aparelho para efeito de **reputação**, e **não** para efeito de
+conexão. E dá para conferir na tela: o cartão "Por qual número" mostra a conexão de cada canal
+(`healthStatus`) — se ela não mudou durante o teste, o número nunca saiu do ar.
+
+### O que foi feito
+
+Um campo de hora e um botão **Agendar** no cartão "Disparar", só no caminho **por etiqueta**.
+
+**No caminho pela FILA não há agendamento, de propósito:** ali o percurso é a lista que ELE filtrou
+na tela da plataforma, e o que estiver filtrado daqui a cinco horas não é o que ele viu ao agendar —
+seria prometer o que não dá para cumprir.
+
+**O que fica agendado é a RODADA, não as mensagens.** Guardar mensagens para soltar todas de uma vez
+é exatamente o padrão que derrubou um número dele com menos de dez envios (26/09). Na hora marcada
+começa a mesma rodada de sempre, com a mesma pausa, o mesmo teto por número e os mesmos freios.
+
+### As decisões que o tornam seguro
+
+- **O keepalive sobe no CLIQUE de agendar e fica tocando a espera inteira.** Aba escondida é aba
+  **congelada** (medido: zero disparos de um `setInterval` de 120 ms em mais de um minuto), e áudio
+  exige gesto do usuário — o gesto é esse clique. Junto vem a trava de modo de espera
+  (`chrome.power`), senão o computador dorme antes da hora. **A conta de travas é equilibrada:** a
+  espera solta a dela antes de a rodada pedir a sua, senão a trava ficaria presa para sempre (o
+  próprio `keepalive.js` avisa: *"trava de energia esquecida ligada é bateria consumida a noite
+  inteira"*).
+- **O horário que passou há mais de 10 minutos NÃO dispara.** Se a aba congelou e o relógio pulou
+  duas horas, começar um disparo em massa sozinho, fora da janela que ele escolheu, é a pior coisa
+  que esta tela pode fazer. Dez minutos cobrem um engasgo; acima disso, ele aperta.
+- **As ETIQUETAS são conferidas na hora de agendar; o número no ar e o saldo do dia, na hora de
+  disparar.** Nome de etiqueta não muda sozinho, e descobrir às 14:00 que ele está errado queima a
+  janela inteira; o canal e o saldo mudam até lá e são conferidos onde decidem.
+- **O `confirm` é na hora de AGENDAR, e a rodada começa sem perguntar** (`semPerguntar`). Um diálogo
+  esperando clique às 14:00 seria a rodada parada com ninguém na frente — e ele já confirmou, com
+  tudo escrito: quantas peças, qual etiqueta, quantos contatos, qual pausa.
+- **O agendamento vive NESTA ABA, e a tela diz isso em vermelho.** Não é a plataforma que agenda:
+  quem conta as horas é o painel, dentro da página. F5, fechar o navegador ou recarregar a extensão
+  cancelam, e nada sai. Guardar no armazenamento faria um agendamento esquecido disparar num dia em
+  que ele nem lembra de ter marcado — por isso é só memória.
+- **A espera fica FORA do `withBusy`** (a lição de 20/09): o interruptor é único, e segurá-lo por
+  horas mataria todo botão do painel — justamente enquanto ele trabalha.
+
+### E uma armadilha que eu criei e peguei antes de subir
+
+O botão novo lê a lista de travas do caminho por etiqueta, e eu o escrevi **acima** da linha que
+declara essa lista: `const` lido antes da própria declaração é `ReferenceError` na hora de desenhar —
+a aba inteira em branco. É a mesma classe do `teto is not defined` de ontem, desta vez pela minha
+mão e no mesmo arquivo. A lista subiu para antes dos três botões que a leem.
+
+### O que isto não resolve, e foi dito a ele
+
+Com o navegador fechado não sai nada. Quem agenda sem depender da aba é a **campanha da própria
+plataforma** (`chat/v1/campaign`, com `submit`/`pause`/`resume`/`cancel`) — mas ela exige modelo
+aprovado e pode nem existir em canal não oficial (`canSendCampaign`), e a rota nunca foi executada.
+
 ## 2026-10-03 — v3.144.0 — os limites de 3s e de 200 contatos saíram, e viraram aviso
 
 **Pedido dele:** *"o disparo está com um limitador que não deixa botar abaixo de 3 segundos e 200

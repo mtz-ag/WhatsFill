@@ -352,6 +352,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * cabeça. `null` = ainda não pedi; carrega no CLIQUE, nunca no desenho, e só em memória.
      */
     etiquetasDoCrm: null,
+    /**
+     * **O disparo agendado** — `{quando, rotulo}` ou `null`. Só em memória, e de propósito: um
+     * agendamento que sobrevivesse ao F5 poderia disparar sozinho num dia em que ele nem lembra de
+     * ter marcado. Enquanto ele vive, o keepalive está tocando (ver `agendarDisparo`).
+     */
+    agendado: null,
+    /** A hora que está no campo, antes de ele apertar Agendar. */
+    horaDoDisparo: '',
     /** O envio de imagem aprendido observando a plataforma — ver `recorder.aprenderEnvioDeImagem`. */
     contratoImagem: null,
     /** Esperas longas em curso, por tarefa — ver `semTravarOPainel`. NUNCA use `state.busy` para elas. */
@@ -4816,6 +4824,187 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * alcança quem não tem conversa nenhuma) e **conclui** depois de mandar. **Pela FILA** anda pelos
    * atendimentos que ele filtrou na esquerda e não conclui nada. Nenhum dos dois consulta o quadro.
    */
+  /**
+   * **AGENDAR O DISPARO: montar agora, sair na hora marcada** — pedido dele (03/10/2026), depois de
+   * um teste que não fez o que ele esperava: *"eu achava que ao desligar a internet do celular as
+   * mensagens iriam sair somente quando eu ligasse novamente; as mensagens foram iguais pela
+   * plataforma, tem a opção de fazer o que eu pretendia?"*.
+   *
+   * **Por que o teste dele não segurou nada:** o canal é Z-API, um aparelho PAREADO à conta — como o
+   * WhatsApp Web. Desde o multi-aparelho, cliente pareado tem conexão própria com o servidor do
+   * WhatsApp e manda com o celular sem rede; o celular só precisa aparecer de tempos em tempos para
+   * a sessão não expirar. Cortar a internet do celular não tira o número do ar e não enfileira nada.
+   *
+   * **O que isto NÃO é: uma fila de mensagens guardadas para soltar de uma vez.** Soltar quarenta
+   * mensagens iguais no instante da reconexão é exatamente o padrão que derrubou um número dele com
+   * menos de dez (26/09). O que fica agendado é a RODADA — ela começa na hora marcada e anda com a
+   * mesma pausa e os mesmos freios de sempre.
+   *
+   * **O agendamento vive NESTA ABA, e isso está escrito na tela.** Não é a plataforma que agenda:
+   * quem conta as horas é o painel, dentro da página do mobiliza. F5, fechar o navegador ou derrubar
+   * a extensão cancelam. Por isso o keepalive sobe no CLIQUE de agendar e fica tocando a espera
+   * inteira — aba escondida é aba CONGELADA (medido: zero disparos de um `setInterval` de 120 ms em
+   * mais de um minuto), e sem o áudio o horário passaria sem ninguém acordar.
+   */
+  const TOLERANCIA_DO_AGENDAMENTO_MS = 10 * 60 * 1000;
+
+  /** A que instante corresponde "14:30": hoje, ou amanhã se a hora já passou. */
+  function quandoSeria(hora) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(hora || '').trim());
+    if (!m) return null;
+    const h = Number(m[1]);
+    const min = Number(m[2]);
+    if (h > 23 || min > 59) return null;
+    const alvo = new Date();
+    alvo.setHours(h, min, 0, 0);
+    // Hora que já passou é amanhã — e o rótulo diz isso, senão "agendado para 08:00" às 09:00
+    // parecia um agendamento que nunca vai chegar.
+    const amanha = alvo.getTime() <= Date.now();
+    if (amanha) alvo.setDate(alvo.getDate() + 1);
+    return { quando: alvo.getTime(), rotulo: `${amanha ? 'amanhã' : 'hoje'} às ${m[1].padStart(2, '0')}:${m[2]}` };
+  }
+
+  /** Quanto falta, do jeito que se lê num relógio. */
+  function faltaPara(quando) {
+    const ms = Math.max(0, quando - Date.now());
+    const h = Math.floor(ms / 3600000);
+    const min = Math.round((ms % 3600000) / 60000);
+    return h ? `${h}h${String(min).padStart(2, '0')}` : `${min} min`;
+  }
+
+  function cancelarAgendamento(motivo) {
+    if (!state.agendado) return;
+    state.agendado = null;
+    keepalive.desligar();
+    setStatus(motivo || 'Agendamento cancelado.');
+    renderAll();
+  }
+
+  async function agendarDisparo() {
+    if (state.agendado) return cancelarAgendamento('Agendamento cancelado — nada vai sair sozinho.');
+    if (state.auto.rodando) return setStatus('Já há uma rodada andando. Espere ela terminar.', 'err');
+
+    const alvo = quandoSeria(state.horaDoDisparo);
+    if (!alvo) return setStatus('Escolha a hora do disparo (HH:MM).', 'err');
+
+    const cfg = state.auto.cfg;
+    const porPerfil = (nome) => perfisLib.chaveDeImagem(nome, perfilAtivo());
+    const pares = loteLib.paresProntos({ cfg, imagens: state.imagens, chaveDeImagem: porPerfil });
+    if (!pares.length) return setStatus('Escreva o texto de ao menos uma peca antes de agendar.', 'err');
+    if (!String(cfg.loteEtiquetaFiltro || '').trim()) {
+      return setStatus('Escolha a etiqueta de quem vai receber antes de agendar.', 'err');
+    }
+    if (!loteLib.filaDeNumeros(cfg).length) {
+      return setStatus('Marque ao menos um numero na fila antes de agendar.', 'err');
+    }
+
+    /**
+     * **As ETIQUETAS são conferidas agora, e o resto na hora.** Nome de etiqueta não muda sozinho, e
+     * descobrir às 14:00 que ele está errado queima a janela inteira; o número no ar e o saldo do dia
+     * mudam até lá e são conferidos quando a rodada começa, que é onde eles decidem.
+     */
+    setStatus('Conferindo as etiquetas…');
+    const tagFiltro = await tagsLib.resolveTag(String(cfg.loteEtiquetaFiltro || '').trim());
+    if (!tagFiltro) return setStatus(`A etiqueta "${cfg.loteEtiquetaFiltro}" nao existe no CRM.`, 'err');
+    const nomeEtiquetaLote = String(cfg.etiquetaLote || '').trim();
+    if (nomeEtiquetaLote && !(await tagDoEnvioEmLote())) {
+      return setStatus(`A etiqueta de recibo "${nomeEtiquetaLote}" nao existe no CRM.`, 'err');
+    }
+    const puladas = await tagsPuladasDoDisparo();
+    if (puladas.faltando.length) return setStatus(recusaDasEtiquetasPuladas(puladas.faltando), 'err');
+
+    if (
+      !confirm(
+        `Vou disparar ${alvo.rotulo}, sozinho, para os contatos da etiqueta "${tagFiltro.label}".\n\n` +
+          `Revezando entre ${pares.length} peca(s), ate ${limiteDaRodada(cfg)} contato(s), com ` +
+          `${pausaDaRodada(cfg)}s entre um e outro.\n\n` +
+          'NA HORA eu confiro de novo a lista, o numero no ar e o saldo do dia — e comeco sem ' +
+          'perguntar nada, porque voce esta confirmando agora.\n\n' +
+          'O AGENDAMENTO VIVE NESTA ABA: deixe o navegador aberto e esta aba do mobiliza viva. F5, ' +
+          'fechar o navegador ou recarregar a extensao cancelam, e nada sai.\n\n' +
+          'Confirma?'
+      )
+    ) {
+      return setStatus('Agendamento cancelado.');
+    }
+
+    /**
+     * **O keepalive sobe AQUI, no clique** — áudio exige gesto do usuário, e o gesto é este. Sem
+     * ele a aba congela assim que ele troca de janela e o horário passa sem nada acontecer. A trava
+     * de modo de espera vem junto (`chrome.power`), senão o computador dorme antes da hora.
+     */
+    const acordada = await keepalive.ligar();
+    if (!acordada.ok) {
+      return setStatus(`Nao consegui agendar: ${acordada.motivo}`, 'err');
+    }
+    if (acordada.energia && !acordada.energia.ok) {
+      registrarNaRodada(
+        'agendamento',
+        'pulado',
+        `Nao consegui impedir o computador de suspender (${acordada.energia.motivo}). ` +
+          'Deixe o modo de espera desligado ate a hora marcada.'
+      );
+    }
+
+    state.agendado = { quando: alvo.quando, rotulo: alvo.rotulo };
+    registrarNaRodada('agendamento', 'info', `disparo agendado para ${alvo.rotulo} (etiqueta "${tagFiltro.label}")`);
+    renderAll();
+    // Solta a espera FORA do `withBusy` do clique: `withBusy` é um interruptor único, e segurá-lo
+    // por horas mataria todo botão do painel (a lição de 20/09). O `catch` existe porque promessa
+    // solta que estoura some sem deixar linha nenhuma na tela.
+    esperarEDisparar().catch((err) => {
+      state.agendado = null;
+      keepalive.desligar();
+      setStatus(`O agendamento morreu: ${err?.message || err}`, 'err');
+      renderAll();
+    });
+  }
+
+  /**
+   * A espera. Fatiada em um segundo para o cancelar valer na hora, e **o atraso é medido no fim**:
+   * se a aba congelou mesmo com o áudio, o relógio salta e o salto aparece aqui.
+   */
+  async function esperarEDisparar() {
+    const alvo = state.agendado?.quando;
+    if (!alvo) return;
+    let ultimoAviso = 0;
+
+    while (state.agendado && Date.now() < alvo) {
+      await new Promise((r) => setTimeout(r, 1000));
+      if (Date.now() - ultimoAviso > 60000) {
+        ultimoAviso = Date.now();
+        setStatus(`Disparo agendado para ${state.agendado?.rotulo} — faltam ${faltaPara(alvo)}.`, 'ok');
+      }
+    }
+    if (!state.agendado) return; // ele cancelou
+
+    const atraso = Date.now() - alvo;
+    state.agendado = null;
+    // O `rodar` liga o keepalive por conta própria; soltar aqui é o que mantém a conta de travas
+    // de energia equilibrada — trava esquecida ligada é bateria consumida a noite inteira.
+    keepalive.desligar();
+    renderAll();
+
+    if (state.auto.rodando) {
+      return setStatus('Chegou a hora do disparo e havia uma rodada andando — nao comecei.', 'err');
+    }
+    /**
+     * **Horário que passou há muito tempo NÃO dispara.** Se a aba congelou e o relógio pulou duas
+     * horas, começar um disparo em massa sozinho, fora da janela que ele escolheu, é a pior coisa
+     * que esta tela pode fazer. Dez minutos de folga cobrem um engasgo; mais que isso, ele aperta.
+     */
+    if (atraso > TOLERANCIA_DO_AGENDAMENTO_MS) {
+      return setStatus(
+        `A hora do disparo passou ha ${faltaPara(Date.now() + atraso)} enquanto a aba estava ` +
+          'congelada ou parada — NAO comecei sozinho. Aperte "Disparar para a etiqueta" se ainda quiser.',
+        'err'
+      );
+    }
+
+    registrarNaRodada('agendamento', 'info', 'chegou a hora — comecando o disparo');
+    await runLoteContatos({ semPerguntar: true });
+  }
+
   function renderCartaoDisparar(cfg) {
     const porPerfil = (nome) => perfisLib.chaveDeImagem(nome, perfilAtivo());
     const pares = loteLib.paresProntos({ cfg, imagens: state.imagens, chaveDeImagem: porPerfil });
@@ -4846,13 +5035,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
 
     card.append(h('div', { class: 'wf-sub' }, h('b', {}, 'Pelos CONTATOS de uma etiqueta')));
-    const comecarPorEtiqueta = h('button', { class: 'wf-btn wf-primary', type: 'button' },
-      'Disparar para a etiqueta');
-    comecarPorEtiqueta.addEventListener('click', () => withBusy(() => runLoteContatos({})));
-    const sonda = h('button', { class: 'wf-btn', type: 'button' }, 'Testar em UM contato');
-    sonda.addEventListener('click', () => withBusy(() => runLoteContatos({ sonda: true })));
-    card.append(h('div', { class: 'wf-row' }, [comecarPorEtiqueta, sonda]));
-
+    /**
+     * **As travas do caminho por etiqueta são montadas ANTES dos botões**, porque três deles leem a
+     * lista (começar, testar e agendar). `const` lido antes da linha que o declara é
+     * `ReferenceError` na hora de desenhar — a armadilha de 02/10, e desta vez pela minha mão.
+     */
     const travaEtiqueta = [...comuns];
     if (!String(cfg.loteEtiquetaFiltro || '').trim()) {
       travaEtiqueta.push('Escolha a etiqueta de quem vai receber (cartão "Para quem").');
@@ -4860,6 +5047,42 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!loteLib.filaDeNumeros(cfg).length) {
       travaEtiqueta.push('Marque ao menos um número na fila: é por ele que o atendimento abre.');
     }
+
+    const comecarPorEtiqueta = h('button', { class: 'wf-btn wf-primary', type: 'button' },
+      'Disparar para a etiqueta');
+    comecarPorEtiqueta.addEventListener('click', () => withBusy(() => runLoteContatos({})));
+    const sonda = h('button', { class: 'wf-btn', type: 'button' }, 'Testar em UM contato');
+    sonda.addEventListener('click', () => withBusy(() => runLoteContatos({ sonda: true })));
+    card.append(h('div', { class: 'wf-row' }, [comecarPorEtiqueta, sonda]));
+
+    /**
+     * **Agendar: montar agora e sair na hora** (03/10/2026). Fica só neste caminho, e não no da
+     * fila: lá o percurso é a lista que ELE filtrou na tela da plataforma, e o que estiver filtrado
+     * daqui a cinco horas não é o que ele viu ao agendar — agendar uma rodada sobre uma lista que
+     * muda sozinha seria prometer o que não dá para cumprir.
+     */
+    const hora = h('input', { type: 'time', value: state.horaDoDisparo || '' });
+    hora.addEventListener('change', () => {
+      state.horaDoDisparo = hora.value;
+    });
+    const agendar = h('button', { class: 'wf-btn', type: 'button' },
+      state.agendado ? 'Cancelar o agendamento' : 'Agendar');
+    agendar.addEventListener('click', () => withBusy(agendarDisparo));
+    agendar.disabled = state.auto.rodando || (!state.agendado && travaEtiqueta.length > 0);
+    card.append(h('div', { class: 'wf-row' }, [hora, agendar]));
+
+    if (state.agendado) {
+      card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+        `DISPARO AGENDADO para ${state.agendado.rotulo} — faltam ${faltaPara(state.agendado.quando)}. ` +
+          'Deixe o navegador aberto e esta aba viva: F5, fechar o navegador ou recarregar a extensão ' +
+          'cancelam, e nada sai. O som que mantém a aba acordada está tocando até lá.'));
+    } else {
+      card.append(h('div', { class: 'wf-origin' },
+        'Agendar deixa a rodada pronta e ela começa sozinha na hora marcada, com a mesma pausa e os ' +
+          'mesmos freios. Não é guardar mensagem para soltar tudo de uma vez — rajada é o que derruba ' +
+          'número. Quem conta as horas é esta aba, não a plataforma: o navegador precisa ficar aberto.'));
+    }
+
     comecarPorEtiqueta.disabled = state.auto.rodando || travaEtiqueta.length > 0;
     sonda.disabled = comecarPorEtiqueta.disabled;
     for (const motivo of travaEtiqueta) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, motivo));
@@ -7288,7 +7511,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * executado** — a disciplina deste projeto para escrita nova é uma, conferida, antes das outras
    * (a aba Cidades cria uma etiqueta como sonda; o contrato de escrita observa um envio à mão).
    */
-  async function runLoteContatos({ sonda = false } = {}) {
+  async function runLoteContatos({ sonda = false, semPerguntar = false } = {}) {
     const cfg = state.auto.cfg;
     const porPerfil = (chave) => perfisLib.chaveDeImagem(chave, perfilAtivo());
     const pares = loteLib.paresProntos({ cfg, imagens: state.imagens, chaveDeImagem: porPerfil });
@@ -7426,7 +7649,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * massa, e o orçamento medido é pequeno (26/09). O que ele precisa ler antes: quantos, por qual
      * número, com que pausa, e o que acontece com quem não tem a etiqueta ainda.
      */
+    /**
+     * **`semPerguntar` é o caminho do AGENDAMENTO**, e só dele: ele confirmou tudo na hora de
+     * agendar, e um `confirm` esperando clique às 14:00 seria a rodada parada num diálogo com
+     * ninguém na frente. As conferências continuam todas — o que se pula é a pergunta.
+     */
     if (
+      !semPerguntar &&
       !confirm(
         (sonda
           ? 'TESTE: vou abrir atendimento e mandar para UM contato só — o primeiro da lista.\n\n'
