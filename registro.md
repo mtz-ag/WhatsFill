@@ -1,3 +1,100 @@
+## 2026-10-02 — v3.141.0 — aba DISPARO: peças de texto (com arte ou sem), quantas ele quiser, e a etiqueta à vista
+
+**Pedido dele:** *"separe toda essa criação nova para uma aba nova chamada disparo, e eu preciso que
+tenha a opção de só mandar texto sem imagem; a opção de mandar imagens não precisa ser 4, bote a
+opção de adicionar ou remover quantidades, e também as caixas de texto com a mesma opção; com
+relação à etiqueta deve ter a opção de mudar para outra etiqueta e trocar à vontade, creio que no
+momento só tem colinha"*.
+
+### A aba
+
+O disparo e o "atender um por um" eram **os dois últimos cartões da aba Automatizado**, abaixo das
+rodadas do fluxo — um cartão de 340 linhas empurrando o resto para o fim de duas telas de rolagem.
+São trabalhos diferentes: as rodadas do fluxo leem a conversa e consultam o quadro; estas duas
+percorrem uma LISTA, ele mandando a mesma coisa ou abrindo atendimento para atender à mão.
+
+A ordem da aba é a de montar um disparo: **o que sai → para quem → por qual número → ritmo →
+dispara**, com o modo de só abrir no fim, porque ele reusa a lista e os números dos cartões de cima.
+
+**O cartão de Ritmo aparece nas DUAS abas, e é o mesmo cartão:** o limite e a pausa são uma
+configuração só, que vale para todas as rodadas. Duas cópias divergiriam na primeira correção — o
+que faltava era a tela DIZER que o valor é comum, senão trocar o limite no disparo mudaria a rodada
+dos "Meus" sem ele perceber.
+
+### Texto sem imagem: a arte virou opcional
+
+A peça é um **TEXTO** e, se ele quiser, uma **ARTE** junto:
+
+- texto **e** arte → a imagem com o texto de legenda, a cadeia de sempre;
+- texto **sem** arte → mensagem de texto (`api.mandarTexto` no caminho por etiqueta, `page.sendText`
+  no caminho pela fila);
+- arte **sem** texto → fica FORA, e a tela diz. Imagem muda chegando em eleitor é o que a disciplina
+  da legenda (20/09) evita, e é **pelo texto** que a extensão reconhece na conversa quem já recebeu
+  (`jaRecebeu`).
+
+**E o contrato de envio de imagem deixou de ser pré-requisito quando nenhuma peça leva arte.** Era
+exigido sempre: o disparo de texto ficaria bloqueado por um passo de imagem que nada naquele disparo
+usaria — a família do pré-requisito que envelhece junto com o desenho que o criou (26/09).
+
+### Quantas peças ele quiser
+
+`auto.lotePecas`, com `−` e `+` no cartão. **Nasce com 4**, que é o que ele já tinha configurado
+(`auto` está na mescla do `get`, então nenhuma peça dele desaparece).
+
+- **Remover NÃO apaga nada:** baixar a conta só para de usar a última peça; o texto e a arte
+  continuam guardados e voltam se ele adicionar de novo. Apagar seria o gesto destrutivo escondido no
+  botão inofensivo (a lição do quadro, 01/09). Quem libera espaço é o "Tirar" da própria imagem.
+- **As CHAVES vão até o teto (8), não até `lotePecas`** — em `chavesNoAuto`, na lista do perfil e no
+  `AUTO_VAZIO`. A chave da peça 7 tem de existir ANTES de ele criar a peça 7, senão
+  `exigirChaveConhecida` recusa a gravação no dia em que ele a criar.
+- **O teto é 8 por causa do ARMAZENAMENTO, e isso é medido:** a extensão não pede
+  `unlimitedStorage`, então `chrome.storage.local` tem ~10 MB, e cada arte guardada pode ter 2 MB de
+  bytes — ~2,7 MB em base64. Oito cheias estouram. Por isso o cartão mostra **quanto as artes estão
+  ocupando** e avisa em vermelho acima de 7 MB: sem isso a escrita falharia no meio de uma edição.
+- **O `load()` lê só as peças em uso**, e não as 8: ler quatro artes a mais em todo contato aberto é
+  memória por nada. Adicionar peça não pede recarga — `campoDeImagem` escreve em `state.imagens` ao
+  subir a arte.
+
+### A etiqueta: medido antes de mexer
+
+**O campo sempre foi texto livre e aceita qualquer etiqueta** — `COLINHA` é só o valor de fábrica
+(`store.auto.etiquetaLote`). O que havia era **um campo enterrado no meio do cartão de 340 linhas,
+abaixo das quatro artes**: ele estava lá e não aparecia. É a família do campo que vive no cartão
+errado (04/09), com a diferença de que aqui nada estava escondido — estava longe.
+
+Hoje as duas etiquetas que decidem o disparo ficam **juntas, no cartão "Para quem"**: a de quem VAI
+RECEBER (a lista) e a de quem JÁ RECEBEU (o recibo, que é a trava do reenvio). E há o botão
+**"Ver as etiquetas do CRM"**, que carrega a lista **no clique, nunca no desenho** (rede disparada de
+dentro de um `render*` vira uma requisição por redesenho) — trocar de etiqueta passou a ser ler e
+copiar em vez de acertar a grafia de cabeça, que é o que faz a rodada recusar.
+
+### O defeito que a medição achou de brinde: variável no caminho por ETIQUETA
+
+**O caminho por etiqueta mandava `{{cidade}}` literalmente.** Ele não chama `load()` de propósito (a
+decisão vale para a lista inteira, e abrir contato é o que derruba a API), então não há contato
+carregado de onde tirar a variável — e `processarContatoDoLote` passava `par.legenda` **cru** para o
+envio, enquanto o cartão anunciava "Variáveis: {{saudacao}} {{cidade}} …".
+
+Pior do que a chave à mostra seria o conserto ingênuo: usar o `state.contact` que estiver aberto
+mandaria **o dado de outra pessoa**. Hoje a rodada **se recusa a começar** quando acha chaves no
+texto, dizendo qual peça e qual é a saída (tirar a variável, ou usar o caminho pela FILA, que resolve
+porque ali a conversa está carregada). E o hint do cartão passou a dizer **onde** a variável vale.
+
+### E a guarda do `QUEUED` precisou acompanhar
+
+`api.mandarTexto` devolvia só o `id`, e a guarda de 01/10 (*"concluir CANCELA mensagem em fila, e
+pela API não há diálogo nenhum avisando"*) lia o status da mensagem de IMAGEM. **No disparo de só
+texto não há mensagem de imagem**, então o status chegava vazio e o atendimento seria concluído em
+cima da própria mensagem em fila. Hoje a rota devolve o `status` junto, e quem manda só texto lê
+dele. Vazio continua sendo vazio — nunca `QUEUED` por acidente.
+
+### O que NÃO mudou
+
+O par continua par (a legenda N é da arte N — listas separadas cruzariam tudo com tudo), o
+revezamento continua andando só depois de a mensagem sair, as proteções continuam de pé (sem
+interesse, assessor, barreira do canal, quem já recebeu qualquer peça) e o caminho por etiqueta
+continua concluindo o atendimento depois de mandar.
+
 ## 2026-10-02 — v3.140.0 — o teto por número virou campo: 45 era constante, e a recusa não tinha saída na tela
 
 **Relato dele:** *"a restrição dos contatos deveria ser opcional, bote uma caixa para inserir o

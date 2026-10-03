@@ -1,5 +1,9 @@
 /**
- * lote.js — o ENVIO EM LOTE de **imagem + legenda**, revezando entre pares.
+ * lote.js — o DISPARO: peças de texto (com arte ou sem), revezando.
+ *
+ * **A peça é um TEXTO e, opcionalmente, uma ARTE junto** (02/10/2026: *"preciso que tenha a opção
+ * de só mandar texto sem imagem"*), e quantas peças existem é dele (`auto.lotePecas`, até
+ * `MAX_PECAS`). Até então eram quatro pares fixos, com os dois lados obrigatórios.
  *
  * Pedido dele (01/10/2026): *"preciso enviar uma imagem e um texto especifico fora do fluxo,
  * simplesmente vou mandar para os contatos; preciso que a automatizacao mande e va variando entre
@@ -22,8 +26,29 @@
  * rotação num envio que falhou faria o par seguinte pular sozinho.
  */
 
-/** Quantos pares a tela oferece. Quatro foi o número que ele pediu. */
-export const QUANTOS_PARES = 4;
+/**
+ * **QUANTAS PEÇAS, e a peça pode ser SÓ TEXTO** — pedido dele (02/10/2026): *"preciso que tenha a
+ * opção de só mandar texto sem imagem; a opção de mandar imagens não precisa ser 4, bote a opção de
+ * adicionar ou remover quantidades, e também as caixas de texto com a mesma opção"*.
+ *
+ * **`MAX_PECAS` é o TETO de chaves reservadas** (a lista do perfil, o `load()` das artes), e
+ * `auto.lotePecas` é quantas ele está usando. Quatro continua sendo o padrão: `auto` está na mescla
+ * do `get`, então quem já tem os quatro pares configurados não perde nada.
+ *
+ * **O teto é 8 por causa do ARMAZENAMENTO, e isso é medido:** a extensão não pede
+ * `unlimitedStorage`, então `chrome.storage.local` tem ~10 MB, e cada arte guardada pode ter 2 MB
+ * de bytes — que em base64 viram ~2,7 MB. Oito artes cheias já estouram; por isso o cartão mostra
+ * quanto as artes estão ocupando, em vez de a escrita falhar no meio.
+ */
+export const MAX_PECAS = 8;
+export const PECAS_PADRAO = 4;
+
+/** Quantas peças ele está usando agora. Fora da faixa volta para o padrão, nunca para zero. */
+export function quantasPecas(cfg = {}) {
+  const n = Math.floor(Number(cfg?.lotePecas));
+  if (!Number.isFinite(n)) return PECAS_PADRAO;
+  return Math.min(MAX_PECAS, Math.max(1, n));
+}
 
 /** O ponteiro de revezamento vive no mesmo lugar das variantes das respostas prontas. */
 export const ID_DA_ROTACAO = 'lote-imagem';
@@ -46,38 +71,52 @@ export function chaveDaLegenda(n) {
 /** Todas as chaves que este arquivo cria dentro do `auto`, para a lista do perfil não divergir. */
 export function chavesNoAuto() {
   const chaves = [];
-  for (let n = 1; n <= QUANTOS_PARES; n++) chaves.push(chaveDoLink(n), chaveDaLegenda(n));
+  // Até o TETO e não até `lotePecas`: a chave da peça 7 tem de estar na lista do perfil ANTES de
+  // ele criar a peça 7, senão `exigirChaveConhecida` recusa a gravação no dia em que ele a criar.
+  for (let n = 1; n <= MAX_PECAS; n++) chaves.push(chaveDoLink(n), chaveDaLegenda(n));
   return chaves;
 }
 
 /**
- * **Os pares que estão PRONTOS para sair** — e prontos quer dizer os dois lados preenchidos.
+ * **As peças PRONTAS para sair — o TEXTO é obrigatório e a ARTE é opcional** (02/10/2026).
  *
- * Par com arte e sem texto sairia como imagem muda; par com texto e sem arte seria a rodada
- * mandando mensagem solta numa rodada que existe para mandar imagem. Nos dois casos o par
- * simplesmente não entra no revezamento, e a tela diz quais faltam.
+ * Antes os dois lados eram obrigatórios, e por isso não havia como disparar texto sem imagem. Hoje:
+ *
+ *  - texto **e** arte → imagem com a legenda junto, a cadeia de sempre;
+ *  - texto **sem** arte → mensagem de texto (`api.mandarTexto` no percurso por etiqueta);
+ *  - arte **sem** texto → fica FORA, e a tela diz. Imagem muda chegando em eleitor é o defeito que
+ *    a disciplina da legenda (20/09) existe para evitar, e o `jaRecebeu` precisa do texto para
+ *    reconhecer na conversa quem já recebeu.
+ *
+ * **O par continua sendo par:** a legenda N é da arte N, os dois juntos. Cruzar listas separadas
+ * daria legenda falando de uma imagem que não é a que foi (a razão de 01/10).
  */
 export function paresProntos({ cfg = {}, imagens = {}, chaveDeImagem = (nome) => nome } = {}) {
   const pares = [];
-  for (let n = 1; n <= QUANTOS_PARES; n++) {
+  for (let n = 1; n <= quantasPecas(cfg); n++) {
     const chave = chaveDeImagem(chaveDaImagem(n));
     const arquivo = imagens[chave] || null;
     const legenda = String(cfg[chaveDaLegenda(n)] || '').trim();
-    if (!arquivo || !legenda) continue;
-    pares.push({ n, chave, arquivo, legenda });
+    if (!legenda) continue;
+    pares.push({ n, chave: arquivo ? chave : null, arquivo, legenda, temArte: !!arquivo });
   }
   return pares;
 }
 
-/** O que falta em cada par incompleto, para a tela dizer em vez de o botão só ficar morto. */
+/** Alguma peça pronta leva ARTE? É o que decide se o contrato de envio de imagem é exigido. */
+export function temArte(pares) {
+  return (Array.isArray(pares) ? pares : []).some((p) => p?.temArte);
+}
+
+/** O que falta em cada peça incompleta, para a tela dizer em vez de o botão só ficar morto. */
 export function oQueFalta({ cfg = {}, imagens = {}, chaveDeImagem = (nome) => nome } = {}) {
   const faltas = [];
-  for (let n = 1; n <= QUANTOS_PARES; n++) {
-    const temArte = !!imagens[chaveDeImagem(chaveDaImagem(n))];
+  for (let n = 1; n <= quantasPecas(cfg); n++) {
+    const temImagem = !!imagens[chaveDeImagem(chaveDaImagem(n))];
     const temTexto = !!String(cfg[chaveDaLegenda(n)] || '').trim();
-    if (temArte && temTexto) continue;
-    if (!temArte && !temTexto) continue; // par vazio não é falta: é par que ele não usou
-    faltas.push(temArte ? `o par ${n} tem a imagem e está sem a legenda` : `o par ${n} tem a legenda e está sem a imagem`);
+    // Peça vazia não é falta: é peça que ele não usou. Arte sem texto é, porque ela não sai.
+    if (temTexto || !temImagem) continue;
+    faltas.push(`a peça ${n} tem a imagem e está sem o texto — ela não vai sair`);
   }
   return faltas;
 }

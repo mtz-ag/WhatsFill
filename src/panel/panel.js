@@ -347,6 +347,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      */
     equipes: null,
     canais: null,
+    /**
+     * A lista de etiquetas do CRM, só para ele escolher a do disparo sem ter de acertar a grafia de
+     * cabeça. `null` = ainda não pedi; carrega no CLIQUE, nunca no desenho, e só em memória.
+     */
+    etiquetasDoCrm: null,
     /** O envio de imagem aprendido observando a plataforma — ver `recorder.aprenderEnvioDeImagem`. */
     contratoImagem: null,
     /** Esperas longas em curso, por tarefa — ver `semTravarOPainel`. NUNCA use `state.busy` para elas. */
@@ -440,6 +445,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   for (const [id, label] of [
     ['respostas', 'Respostas'],
     ['automatizado', 'Automatizado'],
+    ['disparo', 'Disparo'],
     ['dados', 'Dados'],
     ['cidades', 'Cidades'],
     ['config', 'Config'],
@@ -1632,13 +1638,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       imagemPedidoDadosArquivo: await store.get(perfisLib.chaveDeImagem('imagemPedidoDadosArquivo', perfilAtivo())),
     };
     /**
-     * **As quatro artes do envio em lote, no MESMO lugar que as outras duas.**
+     * **As artes do disparo, no MESMO lugar que as outras duas.**
      *
      * Chave nova de imagem lida noutro ponto é a armadilha registrada em 25/09 (*"ao pôr uma chave
      * nova em `CHAVES_DO_PERFIL`, procure os DOIS lugares que releem: o `load()` e a troca de
      * login"*) — esta função é chamada pelos dois, e é por isso que elas entram aqui.
+     *
+     * **Só as peças que ele está usando**, e não o teto de 8: cada arte guardada chega a ~2,7 MB em
+     * base64, e ler quatro a mais em todo contato aberto é memória por nada. Adicionar uma peça não
+     * precisa de recarga — `campoDeImagem` escreve em `state.imagens` ao subir a arte.
      */
-    for (let n = 1; n <= loteLib.QUANTOS_PARES; n++) {
+    for (let n = 1; n <= loteLib.quantasPecas(state.auto.cfg); n++) {
       const chave = perfisLib.chaveDeImagem(loteLib.chaveDaImagem(n), perfilAtivo());
       state.imagens[chave] = await store.get(chave);
     }
@@ -1840,6 +1850,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.replaceChildren();
     if (state.tab === 'respostas') renderRespostas();
     else if (state.tab === 'automatizado') renderAutomatizado();
+    else if (state.tab === 'disparo') renderDisparo();
     else if (state.tab === 'dados') renderDados();
     else if (state.tab === 'cidades') renderCidades();
     else renderConfig();
@@ -1880,7 +1891,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * do modelo, o campo do contato — e não pode ser encurtado.
      */
     recolherExplicacoes(body, detalhesAbertos, {
-      resumir: state.tab === 'automatizado' || state.tab === 'config',
+      resumir: state.tab === 'automatizado' || state.tab === 'disparo' || state.tab === 'config',
     });
     // Depois de recolher (que muda a altura) e a cada pedaço de conteúdo que chegar atrasado.
     rolagem.devolver();
@@ -3377,9 +3388,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     body.append(
       h('p', { class: 'wf-hint' },
-        'Uma rodada por vez. Duas andam pela FILA da esquerda, do jeito que ela está filtrada agora ' +
-          'na plataforma, de cima para baixo ("Meus" e "Novos"); as outras duas andam pelos ' +
-          'CONTATOS de uma etiqueta, abrindo um atendimento novo em cada um.')
+        'Rodadas que LEEM a conversa e decidem pelo quadro, andando pela fila da esquerda do jeito ' +
+          'que ela está filtrada agora na plataforma, de cima para baixo. Uma rodada por vez — e o ' +
+          'disparo, na aba Disparo, conta como uma delas.')
     );
 
     /**
@@ -3415,8 +3426,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(h('div', { class: 'wf-sub wf-secao' }, h('b', {}, 'As rodadas')));
     body.append(renderCartaoRespondidos());
     body.append(renderCartaoNovos(cfg));
-    body.append(renderCartaoLote(cfg));
-    body.append(renderCartaoAtender(cfg));
+    /**
+     * **O disparo e o "atender um por um" MUDARAM DE ABA** — pedido dele (02/10/2026): *"separe
+     * toda essa criação nova para uma aba nova chamada disparo"*. Eles não consultam o quadro e não
+     * respondem ninguém: são ele mandando (ou abrindo) para uma lista, e moravam no fim desta aba
+     * empurrando as rodadas do fluxo para cima. Ver `renderDisparo`.
+     */
 
     body.append(h('div', { class: 'wf-sub wf-secao' }, h('b', {}, 'O que as rodadas usam')));
     body.append(renderCartaoMeusAbertos());
@@ -4177,6 +4192,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return card;
   }
 
+  /**
+   * **O MESMO cartão aparece na aba Automatizado e na Disparo**, de propósito: o limite e a pausa
+   * são UMA configuração (`auto.limite`, `auto.pausaSeg`) que vale para todas as rodadas. Uma cópia
+   * por aba divergiria na primeira correção; o que a tela precisa é DIZER que o valor é comum,
+   * senão trocar o limite no disparo mudaria a rodada dos "Meus" sem ele perceber.
+   */
   function renderCartaoRitmo(cfg) {
     const card = h('div', { class: 'wf-card' }, [h('h4', {}, 'Ritmo')]);
     card.append(
@@ -4185,7 +4206,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       ),
       campoNumero('Pausa entre envios (segundos)', cfg.pausaSeg, (v) =>
         salvarAuto({ pausaSeg: clampInt(v, 3, 300) }).then(renderAll)
-      )
+      ),
+      h('div', { class: 'wf-origin' },
+        'Estes dois valem para TODAS as rodadas — as do fluxo e as do disparo. É o mesmo cartão nas ' +
+          'duas abas, não duas configurações.')
     );
 
     const parar = h('button', { class: 'wf-btn wf-danger', type: 'button' }, 'Parar a rodada');
@@ -4299,8 +4323,51 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return card;
   }
 
+  // ---- aba Disparo -------------------------------------------------------
+
   /**
-   * **O ENVIO EM LOTE: imagem + legenda, revezando entre quatro pares** (pedido dele, 01/10/2026).
+   * **A ABA DO DISPARO** — pedido dele (02/10/2026): *"separe toda essa criação nova para uma aba
+   * nova chamada disparo"*.
+   *
+   * **Por que ela é uma aba e não um cartão:** o que vive aqui não responde ninguém. As rodadas da
+   * aba Automatizado leem a conversa e consultam o quadro; estas duas percorrem uma LISTA — ele
+   * mandando a mesma coisa, ou abrindo atendimento para atender à mão. São trabalhos diferentes, em
+   * momentos diferentes do dia, e um deles estava empurrando o outro para o fim de duas telas de
+   * rolagem.
+   *
+   * A ordem é a de montar um disparo: **o que sai → para quem → por qual número → ritmo → dispara**,
+   * e o modo de só abrir no fim, porque reusa a lista e os números dos cartões de cima.
+   */
+  function renderDisparo() {
+    const cfg = state.auto.cfg;
+
+    body.append(
+      h('p', { class: 'wf-hint' },
+        'Mandar a mesma coisa para uma lista, fora do fluxo: nada aqui consulta o quadro nem lê a ' +
+          'conversa para decidir. As proteções continuam de pé — etiqueta de sem interesse, de ' +
+          'assessor, número fora do ar e quem já recebeu.')
+    );
+
+    body.append(renderCartaoPecas(cfg));
+    body.append(renderCartaoParaQuem(cfg));
+    body.append(renderCartaoNumeros(cfg));
+    body.append(renderCartaoRitmo(cfg));
+    body.append(renderCartaoDisparar(cfg));
+
+    body.append(h('div', { class: 'wf-sub wf-secao' }, h('b', {}, 'Sem enviar nada')));
+    body.append(renderCartaoAtender(cfg));
+  }
+
+  /**
+   * **O DISPARO: peças (texto, com arte ou sem), para quem, por qual número** — pedido dele
+   * (02/10/2026): *"separe toda essa criação nova para uma aba nova chamada disparo; preciso que
+   * tenha a opção de só mandar texto sem imagem; a opção de mandar imagens não precisa ser 4, bote
+   * a opção de adicionar ou remover quantidades, e também as caixas de texto com a mesma opção"*.
+   *
+   * Era UM cartão de 340 linhas no fim da aba Automatizado — peças, etiquetas, equipe, fila de
+   * números, teto e botões, tudo junto, abaixo das rodadas do fluxo. Hoje são quatro cartões na aba
+   * própria, na ordem em que ele monta um disparo: **o que sai → para quem → por qual número →
+   * dispara**.
    *
    * Esta rodada **não passa pelo quadro**: não há nada a responder, é ele mandando a mesma coisa
    * para uma lista. O que continua de pé são as PROTEÇÕES (etiqueta de sem interesse, de assessor,
@@ -4308,124 +4375,205 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *
    * **O revezamento é o ponto, não um enfeite.** A medição é dele (26/09): menos de dez mensagens
    * IGUAIS em sequência derrubaram um número, e o eixo que pune isso é o padrão de envio
-   * (`channel.status` FLAGGED), não a denúncia. Quatro pares de arte e texto é o que ele pediu e é
-   * o que esta tela existe para tornar fácil.
+   * (`channel.status` FLAGGED), não a denúncia.
    */
-  function renderCartaoLote(cfg) {
+  function renderCartaoPecas(cfg) {
     const porPerfil = (nome) => perfisLib.chaveDeImagem(nome, perfilAtivo());
     const pares = loteLib.paresProntos({ cfg, imagens: state.imagens, chaveDeImagem: porPerfil });
     const faltas = loteLib.oQueFalta({ cfg, imagens: state.imagens, chaveDeImagem: porPerfil });
+    const quantas = loteLib.quantasPecas(cfg);
     const limite = clampInt(cfg.limite, 1, 200);
-    const pausaSeg = clampInt(cfg.pausaSeg, 3, 300);
-    const teto = loteLib.tetoDoCfg(cfg);
 
     const card = h('div', { class: 'wf-card' }, [
-      h('h4', {}, 'Envio em lote: imagem + legenda'),
+      h('h4', {}, 'O que vai sair'),
       h('div', { class: 'wf-preview' },
-        'Dois caminhos, os dois revezando entre os pares abaixo: percorrer a FILA que você filtrou ' +
-          'na esquerda, ou percorrer os CONTATOS de uma etiqueta, abrindo um atendimento novo em ' +
-          'cada um. Nenhum dos dois consulta o fluxo.'),
+        'Cada peça é um TEXTO e, se você quiser, uma ARTE junto. Peça sem arte sai como mensagem de ' +
+          'texto; com arte, sai a imagem com o texto de legenda. O disparo reveza entre as peças ' +
+          'prontas, uma por contato.'),
       h('div', { class: 'wf-origin' },
-        'O par é a imagem COM o texto dela: a descrição de uma arte não serve para outra. Par ' +
-          'preenchido pela metade fica fora do revezamento, e quem já recebeu qualquer um dos ' +
-          'quatro é pulado — é o conjunto que conta, não o par da vez.'),
+        'A arte e o texto dela andam juntos na mesma peça, de propósito: listas separadas cruzariam ' +
+          'tudo com tudo e sairia legenda falando de uma imagem que não é a que foi. Peça com arte e ' +
+          'SEM texto fica de fora — imagem muda não sai daqui, e é pelo texto que a extensão ' +
+          'reconhece na conversa quem já recebeu.'),
     ]);
 
-    for (let n = 1; n <= loteLib.QUANTOS_PARES; n++) {
-      const bloco = h('div', {}, [h('div', { class: 'wf-sub' }, h('b', {}, `Par ${n}`))]);
-      bloco.append(...campoDeImagem({
-        rotulo: `Imagem do par ${n}`,
-        valor: cfg[loteLib.chaveDoLink(n)],
-        aoMudar: (v) => salvarAuto({ [loteLib.chaveDoLink(n)]: v }).then(renderAll),
-        chaveDoArquivo: porPerfil(loteLib.chaveDaImagem(n)),
-        semInterruptor: true,
-      }));
-      const area = h('textarea', { rows: '3', placeholder: `Legenda do par ${n}` });
+    /**
+     * **Adicionar e remover peça, e remover NÃO apaga nada.** Baixar a conta só para de usar a
+     * peça; o texto e a arte dela continuam guardados e voltam se ele adicionar de novo. Apagar
+     * seria o gesto destrutivo escondido no botão inofensivo (a lição do quadro, 01/09).
+     */
+    const menos = h('button', { class: 'wf-btn wf-mini', type: 'button' }, '−');
+    menos.disabled = quantas <= 1 || state.auto.rodando;
+    menos.addEventListener('click', () => salvarAuto({ lotePecas: quantas - 1 }).then(renderAll));
+    const mais = h('button', { class: 'wf-btn wf-mini', type: 'button' }, '+');
+    mais.disabled = quantas >= loteLib.MAX_PECAS || state.auto.rodando;
+    mais.addEventListener('click', () => salvarAuto({ lotePecas: quantas + 1 }).then(renderAll));
+    card.append(
+      h('div', { class: 'wf-row', 'data-fica': '1' }, [
+        h('div', { class: 'wf-preview', 'data-fica': '1' }, `${quantas} peça(s), até ${loteLib.MAX_PECAS}`),
+        menos,
+        mais,
+      ]),
+      h('div', { class: 'wf-origin' },
+        'Remover só para de usar a última peça: o texto e a arte dela ficam guardados e voltam se ' +
+          'você adicionar de novo. Para liberar espaço de verdade, use o "Tirar" da imagem.')
+    );
+
+    for (let n = 1; n <= quantas; n++) {
+      const bloco = h('div', {}, [h('div', { class: 'wf-sub' }, h('b', {}, `Peça ${n}`))]);
+      const area = h('textarea', { rows: '3', placeholder: `Texto da peça ${n}` });
       area.value = cfg[loteLib.chaveDaLegenda(n)] || '';
       area.addEventListener('change', () =>
         salvarAuto({ [loteLib.chaveDaLegenda(n)]: area.value }).then(renderAll)
       );
       bloco.append(area);
+      bloco.append(...campoDeImagem({
+        rotulo: `Arte da peça ${n} (opcional)`,
+        valor: cfg[loteLib.chaveDoLink(n)],
+        aoMudar: (v) => salvarAuto({ [loteLib.chaveDoLink(n)]: v }).then(renderAll),
+        chaveDoArquivo: porPerfil(loteLib.chaveDaImagem(n)),
+        semInterruptor: true,
+      }));
       card.append(bloco);
     }
 
-    if (pares.length) {
-      card.append(h('div', { class: 'wf-hint' }, 'Variáveis: ' + vars.KNOWN_VARS.map(([v]) => v).join(' ')));
-      const divisao = loteLib.comoVaiRevezar(pares.length, limite);
+    /**
+     * **Quanto as artes estão ocupando, medido** — a extensão não pede `unlimitedStorage`, então
+     * `chrome.storage.local` tem ~10 MB. Cada arte guardada pode ter 2 MB de bytes, que em base64
+     * viram ~2,7 MB: oito artes cheias estouram a cota, e a escrita falharia no meio de uma edição
+     * em vez de avisar antes. Com o número na tela ele vê chegando.
+     */
+    const bytesGuardados = Object.values(state.imagens || {}).reduce(
+      (soma, arq) => soma + (arq?.dados ? Math.round((arq.dados.length * 3) / 4) : 0),
+      0
+    );
+    const mb = (bytesGuardados / (1024 * 1024)).toFixed(1);
+    if (bytesGuardados) {
       card.append(h('div', { class: 'wf-preview', 'data-fica': '1' },
-        `${pares.length} par(es) pronto(s). Em ${limite} contatos: ` +
-          divisao.map((q, i) => `${q} com o par ${pares[i].n}`).join(', ') +
-          `. O próximo a sair é o par ${loteLib.parDaVez(pares, state.loteIndice).n}.`));
+        `Artes guardadas: ${mb} MB dos ~10 MB que o navegador permite.`));
+    }
+    if (bytesGuardados > 7 * 1024 * 1024) {
+      card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+        `As artes já ocupam ${mb} MB e o teto do navegador é ~10 MB: a próxima imagem grande pode ` +
+          'não ser gravada. Tire a arte de uma peça que você não está usando.'));
     }
 
-    // Par pela metade é o único estado que vale avisar: par vazio é par que ele não usou.
+    if (pares.length) {
+      /**
+       * **A variável só vale no caminho pela FILA.** Lá a conversa está carregada e `vars.render`
+       * resolve; no caminho por ETIQUETA não há contato nenhum aberto, e por isso ele se RECUSA a
+       * começar quando acha chaves no texto (ver `runLoteContatos`). Dizer "variáveis" sem dizer
+       * onde faria o texto sair com as chaves à mostra na metade dos disparos.
+       */
+      card.append(h('div', { class: 'wf-hint' },
+        'Variáveis (só no disparo pela FILA): ' + vars.KNOWN_VARS.map(([v]) => v).join(' ')));
+      const divisao = loteLib.comoVaiRevezar(pares.length, limite);
+      const comArte = pares.filter((p) => p.temArte).length;
+      card.append(h('div', { class: 'wf-preview', 'data-fica': '1' },
+        `${pares.length} peça(s) pronta(s)` +
+          (comArte === pares.length ? ' (todas com arte)' : comArte ? ` (${comArte} com arte)` : ' (todas só texto)') +
+          `. Em ${limite} contatos: ` +
+          divisao.map((q, i) => `${q} com a peça ${pares[i].n}`).join(', ') +
+          `. A próxima a sair é a peça ${loteLib.parDaVez(pares, state.loteIndice).n}.`));
+    }
+
+    // Arte sem texto é o único estado que vale avisar: peça vazia é peça que ele não usou.
     for (const falta of faltas) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, falta));
 
-    /**
-     * **A etiqueta do recibo, e a memória que impede o reenvio** (pedido dele, 01/10/2026).
-     *
-     * Fica NESTE cartão, ao lado do que ela marca — a lição de 04/09 é sobre campo que vive no
-     * cartão errado (os dois de etiqueta sumiram dentro de um cartão escondido e ficaram
-     * impossíveis de configurar), não sobre juntar todas as etiquetas num lugar só.
-     */
+    return card;
+  }
+
+  /**
+   * **Para QUEM, e a etiqueta que ele troca à vontade** — relato dele (02/10/2026): *"com relação à
+   * etiqueta deve ter a opção de mudar para outra etiqueta e trocar à vontade, creio que no momento
+   * só tem colinha"*.
+   *
+   * **Medido: o campo sempre foi texto livre e aceita qualquer etiqueta** — `COLINHA` é só o valor
+   * de fábrica. O que havia era um campo enterrado no meio de um cartão de 340 linhas, abaixo das
+   * quatro artes: ele estava lá e não aparecia. Hoje as duas etiquetas que decidem o disparo ficam
+   * juntas, no cartão que responde "para quem", e o botão carrega a lista do CRM para ele escolher
+   * em vez de digitar o nome exato.
+   */
+  function renderCartaoParaQuem(cfg) {
+    const card = h('div', { class: 'wf-card' }, [
+      h('h4', {}, 'Para quem'),
+      h('div', { class: 'wf-preview' },
+        'Quem tem a etiqueta da lista recebe, MENOS quem está marcado como sem interesse e quem já ' +
+          'tem a etiqueta do disparo. As duas exclusões são feitas pelo servidor, então rodar de ' +
+          'novo continua de onde parou, sem repetir ninguém.'),
+    ]);
+
     card.append(
-      campoTexto('Etiqueta de quem RECEBEU o lote', cfg.etiquetaLote, (v) =>
+      campoTexto('Etiqueta de quem VAI RECEBER', cfg.loteEtiquetaFiltro, (v) =>
+        salvarAuto({ loteEtiquetaFiltro: v.trim() }).then(renderAll)
+      ),
+      campoTexto('Etiqueta de quem JÁ RECEBEU (o recibo)', cfg.etiquetaLote, (v) =>
         salvarAuto({ etiquetaLote: v.trim() }).then(renderAll)
       ),
       h('div', { class: 'wf-origin' },
-        'Marcada no CRM a cada envio, e lida antes do próximo: é ela que impede mandar duas vezes ' +
-          'para a mesma pessoa, inclusive quando ela volta dias depois (aí a conversa é outra e só ' +
-          'a etiqueta lembra). A etiqueta precisa existir no CRM — a extensão não cria. Vazio = ' +
-          'manda sem marcar, e sem a trava que ela dá.')
+        'A segunda é marcada no CRM a cada envio e lida antes do próximo: é ela que impede mandar ' +
+          'duas vezes para a mesma pessoa, inclusive quando ela volta dias depois (aí a conversa é ' +
+          'outra e só a etiqueta lembra). Troque as duas quando quiser — são só nomes de etiqueta do ' +
+          'CRM, e cada disparo pode usar outras. A extensão nunca cria etiqueta: o nome tem de ' +
+          'existir lá. Recibo vazio = manda sem marcar, e sem a trava que ele dá.')
     );
+
+    /**
+     * **A lista do CRM carrega no CLIQUE, nunca no desenho** — rede disparada de dentro de um
+     * `render*` vira uma requisição por redesenho. Com ela na tela, trocar de etiqueta é ler e
+     * copiar em vez de acertar a grafia de cabeça, que é o que faz a rodada recusar.
+     */
+    const verEtiquetas = h('button', { class: 'wf-btn', type: 'button' },
+      state.etiquetasDoCrm ? 'Atualizar a lista do CRM' : 'Ver as etiquetas do CRM');
+    verEtiquetas.disabled = state.auto.rodando;
+    verEtiquetas.addEventListener('click', () =>
+      withBusy(async () => {
+        const todas = await tagsLib.allTags();
+        state.etiquetasDoCrm = (todas || []).map((t) => t.label || t.name || '').filter(Boolean).sort();
+        setStatus(`${state.etiquetasDoCrm.length} etiqueta(s) no CRM.`, 'ok');
+        renderAll();
+      })
+    );
+    card.append(h('div', { class: 'wf-row' }, [verEtiquetas]));
+    if (state.etiquetasDoCrm) {
+      card.append(h('div', { class: 'wf-preview', 'data-fica': '1' },
+        `Etiquetas do CRM (${state.etiquetasDoCrm.length}): ${state.etiquetasDoCrm.join(' · ')}`));
+    }
+
     if (!String(cfg.etiquetaLote || '').trim()) {
       card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
-        'Sem etiqueta: quem já recebeu só é reconhecido enquanto a conversa estiver aberta. Voltando ' +
-          'noutro dia, o contato recebe de novo.'));
+        'Sem etiqueta de recibo: quem já recebeu só é reconhecido enquanto a conversa estiver ' +
+          'aberta. Voltando noutro dia, o contato recebe de novo.'));
     }
+    const nomeSemInteresse = String(cfg.etiquetaSemInteresse || '').trim();
+    card.append(h('div', { class: 'wf-origin' },
+      nomeSemInteresse
+        ? `Fora da lista: quem tem "${nomeSemInteresse}" (a etiqueta de sem interesse, na aba Automatizado).`
+        : 'ATENÇÃO: sem a etiqueta de sem interesse configurada (aba Automatizado), ninguém está ' +
+          'sendo excluído por isso.'));
 
-    const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Começar o envio em lote');
-    comecar.addEventListener('click', () => withBusy(runLoteImagem));
-    card.append(h('div', { class: 'wf-row' }, [comecar]));
+    return card;
+  }
 
-    const trava = [];
-    if (!pares.length) trava.push('Preencha ao menos um par: a imagem E a legenda dele.');
-    if (!state.settings.autoSend) trava.push('Precisa do "Enviar automático" ligado (aba Config).');
-    if (!state.contratoImagem) {
-      trava.push(
-        'Falta aprender o envio de imagem: mande uma à mão com "Aprender de novo o envio de imagem" ' +
-          'ligado (aba Config). Sem isso a arte não sai.'
-      );
-    }
-    comecar.disabled = state.auto.rodando || trava.length > 0;
-    for (const motivo of trava) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, motivo));
-
+  /**
+   * **Por qual NÚMERO: a equipe, a fila e o teto do dia.**
+   *
+   * Um lugar só para escolher o número, e os dois percursos do disparo e o modo de só abrir leem
+   * daqui: dois lugares para escolher o mesmo número é como as duas cópias de qualquer coisa neste
+   * projeto divergem, e aqui a divergência seria mandar a arte de um candidato pelo número do outro.
+   */
+  function renderCartaoNumeros(cfg) {
+    const teto = loteLib.tetoDoCfg(cfg);
+    const card = h('div', { class: 'wf-card' }, [
+      h('h4', {}, 'Por qual número'),
+      h('div', { class: 'wf-preview' },
+        'A equipe e o número são o que a plataforma pede para ABRIR um atendimento. A fila manda ' +
+          'pelo primeiro número até ele chegar ao teto do dia, e então passa para o seguinte.'),
+    ]);
 
     /**
-     * **QUEM vai receber: a etiqueta, a equipe e o número** (pedido dele, 01/10/2026).
-     *
-     * **A etiqueta é escolhida AQUI e não filtrada na tela de Contatos** — e isso não é teimosia: é
-     * o que torna o *"com exceção dos sem interesse"* exato. O filtro sai por
-     * `POST /core/v1/contact/filter` com `exceptTagsId`, então quem tem a etiqueta de sem interesse
-     * **e quem já recebeu o lote** são excluídos pelo SERVIDOR, antes de a lista chegar. Ler a lista
-     * da tela daria o primeiro, nunca o segundo — e sem o segundo o lote não é repetível.
-     */
-    card.append(h('hr', { class: 'wf-sep' }));
-    card.append(h('div', { class: 'wf-sub' }, h('b', {}, 'Quem vai receber')));
-    card.append(
-      campoTexto('Etiqueta dos contatos que vão receber', cfg.loteEtiquetaFiltro, (v) =>
-        salvarAuto({ loteEtiquetaFiltro: v.trim() }).then(renderAll)
-      ),
-      h('div', { class: 'wf-origin' },
-        'Quem tem esta etiqueta recebe, MENOS quem tem a etiqueta de sem interesse (a da aba ' +
-          'Etiquetas) e quem já tem a do lote. As duas exclusões são feitas pelo servidor, então ' +
-          'rodar de novo continua de onde parou, sem repetir ninguém.')
-    );
-
-    /**
-     * **Abrir atendimento exige a EQUIPE e o NÚMERO** — é o que a plataforma pede no diálogo dela,
-     * e por isso os dois são escolhidos aqui. As listas carregam no CLIQUE, nunca no desenho: rede
-     * disparada de dentro de um `render*` vira uma requisição por redesenho.
+     * **As listas carregam no CLIQUE, nunca no desenho**: rede disparada de dentro de um `render*`
+     * vira uma requisição por redesenho.
      */
     if (!state.equipes || !state.canais) {
       const carregar = h('button', { class: 'wf-btn', type: 'button' }, 'Carregar equipes e números');
@@ -4445,215 +4593,253 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             'Carregue para conferir ou trocar.'
           : 'Preciso ler as equipes e os números da conta para você escolher — são duas leituras, ' +
             'feitas só quando você pede.'));
-    } else {
-      const selEquipe = h('select', {});
-      selEquipe.append(h('option', { value: '' }, 'sem equipe'));
-      for (const e of state.equipes) selEquipe.append(h('option', { value: e.id }, e.nome || e.id));
-      selEquipe.value = cfg.loteEquipeId || '';
-      selEquipe.addEventListener('change', () => {
-        const escolhida = state.equipes.find((e) => e.id === selEquipe.value);
-        salvarAuto({ loteEquipeId: selEquipe.value, loteEquipeNome: escolhida?.nome || '' }).then(renderAll);
-      });
-      card.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Equipe'), selEquipe]));
+      return card;
+    }
 
-      /**
-       * **A FILA DE NÚMEROS, na ordem dele** (pedido dele, 01/10/2026: *"limite de 45 por número;
-       * quando chegar em 45 é para trocar por um número seguinte da lista que eu especificar"*).
-       *
-       * **Era um `<select>` de um número só.** Agora é uma lista: marcar põe o número no fim da
-       * fila, e a POSIÇÃO está escrita em cada linha — ordem guardada sem aparecer na tela seria a
-       * armadilha de 01/09 do quadro, em que a rodada obedecia uma prioridade que ninguém via.
-       *
-       * O saldo do dia vem ao lado, porque é o número que decide quando a fila vira: `30/45` diz
-       * quanto ainda cabe HOJE naquele número.
-       */
-      const fila = loteLib.filaDeNumeros(cfg);
-      const dia = loteLib.diaLocal();
-      card.append(h('div', { class: 'wf-sub' }, h('b', {}, `Números do lote (${loteLib.textoDoTeto(teto)} por número, por dia)`)));
+    const selEquipe = h('select', {});
+    selEquipe.append(h('option', { value: '' }, 'sem equipe'));
+    for (const e of state.equipes) selEquipe.append(h('option', { value: e.id }, e.nome || e.id));
+    selEquipe.value = cfg.loteEquipeId || '';
+    selEquipe.addEventListener('change', () => {
+      const escolhida = state.equipes.find((e) => e.id === selEquipe.value);
+      salvarAuto({ loteEquipeId: selEquipe.value, loteEquipeNome: escolhida?.nome || '' }).then(renderAll);
+    });
+    card.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Equipe'), selEquipe]));
 
-      /**
-       * **O TETO É DELE** — relato de 02/10/2026: *"a restrição dos contatos deveria ser opcional,
-       * bote uma caixa para inserir o número desejado, acabou de me bloquear"*. O 45 era constante,
-       * então a recusa não tinha saída nenhuma na tela: o número que ele ditou num dia virou uma
-       * trava que ele não alcançava.
-       *
-       * **O campo vale para as DUAS rodadas** (a arte e o "só abrir"), porque o teto é do NÚMERO e
-       * não do que se manda por ele. Zero desliga, e o aviso do risco fica do lado.
-       */
-      card.append(
-        campoNumero('Máximo de conversas por número, por dia (0 = sem teto)', cfg.tetoPorNumero ?? loteLib.TETO_POR_NUMERO, (v) => {
-          /**
-           * **`clampInt` NÃO serve aqui, e com min 0 ela seria o defeito**: ela devolve o mínimo
-           * para texto sem dígito, então um campo apagado ou um "quarenta" digitado gravariam
-           * **0 = sem teto** — a proteção desligada por um escorregão, em silêncio. Texto sem
-           * dígito volta ao PADRÃO; desligar exige digitar o zero.
-           */
-          const so = String(v).replace(/[^\d]/g, '');
-          const valor = so === '' ? loteLib.TETO_POR_NUMERO : Math.min(5000, parseInt(so, 10));
-          salvarAuto({ tetoPorNumero: valor }).then(renderAll);
-        }),
-        h('div', { class: 'wf-origin' },
-          'Vale para as duas rodadas que abrem atendimento por este número — a da arte e a de só ' +
-            'abrir. Chegando no teto, a fila passa para o número seguinte; com 0 não há teto, e aí ' +
-            'quem cuida do número é você: o WhatsApp recusa (status RESTRICTED) quando um número ' +
-            'estoura o limite de conversas iniciadas em 24h, e menos de dez mensagens iguais em ' +
-            'sequência já derrubaram um número seu.')
-      );
-      if (!Number.isFinite(teto)) {
-        card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
-          'SEM TETO: a fila nunca troca de número por contagem, e nada aqui vai segurar o volume do ' +
-            'dia. Foi escolha sua — ponha um número no campo acima para voltar a ter o freio.'));
-      }
+    /**
+     * **A FILA DE NÚMEROS, na ordem dele** (pedido dele, 01/10/2026: *"limite de 45 por número;
+     * quando chegar em 45 é para trocar por um número seguinte da lista que eu especificar"*).
+     *
+     * **Era um `<select>` de um número só.** Agora é uma lista: marcar põe o número no fim da
+     * fila, e a POSIÇÃO está escrita em cada linha — ordem guardada sem aparecer na tela seria a
+     * armadilha de 01/09 do quadro, em que a rodada obedecia uma prioridade que ninguém via.
+     */
+    const fila = loteLib.filaDeNumeros(cfg);
+    const dia = loteLib.diaLocal();
+    card.append(h('div', { class: 'wf-sub' }, h('b', {}, `Números (${loteLib.textoDoTeto(teto)} por número, por dia)`)));
 
-      for (const c of state.canais) {
-        const pos = fila.indexOf(c.id);
-        const usados = loteLib.usadosNoDia(state.loteEnvios, c.id, dia);
-        const restam = Math.max(0, teto - usados);
+    /**
+     * **O TETO É DELE** — relato de 02/10/2026: *"a restrição dos contatos deveria ser opcional,
+     * bote uma caixa para inserir o número desejado, acabou de me bloquear"*. O 45 era constante,
+     * então a recusa não tinha saída nenhuma na tela.
+     */
+    card.append(
+      campoNumero('Máximo de conversas por número, por dia (0 = sem teto)', cfg.tetoPorNumero ?? loteLib.TETO_POR_NUMERO, (v) => {
         /**
-         * **Campo vazio NÃO vira texto na tela.** O print dele de 01/10 mostrava
-         * *"status UNDEFINED · qualidade UNDEFINED"*: aqueles dois são da Cloud API e não existem
-         * em canal Z-API, e escrever "UNDEFINED" é a tela afirmando que leu algo que não leu.
+         * **`clampInt` NÃO serve aqui, e com min 0 ela seria o defeito**: ela devolve o mínimo
+         * para texto sem dígito, então um campo apagado ou um "quarenta" digitado gravariam
+         * **0 = sem teto** — a proteção desligada por um escorregão, em silêncio.
          */
-        const veredito = loteLib.porqueNaoUsarONumero(c);
-        const rotulo =
-          `${pos >= 0 ? `${pos + 1}º · ` : ''}${c.numero || c.nome}` +
-          ` · ${usados}/${loteLib.textoDoTeto(teto)} hoje` +
-          (c.saude && c.saude !== 'OK' ? ` · conexão ${c.saude}` : '') +
-          (c.status && c.status !== 'CONNECTED' ? ` · ${c.status}` : '') +
-          (c.qualidade && c.qualidade !== 'HIGH' ? ` · qualidade ${c.qualidade}` : '') +
-          (veredito.barra ? ' · NÃO USO' : '') +
-          (pos >= 0 && !restam ? ' · CHEIO hoje' : '');
+        const so = String(v).replace(/[^\d]/g, '');
+        const valor = so === '' ? loteLib.TETO_POR_NUMERO : Math.min(5000, parseInt(so, 10));
+        salvarAuto({ tetoPorNumero: valor }).then(renderAll);
+      }),
+      h('div', { class: 'wf-origin' },
+        'Vale para os dois caminhos que abrem atendimento — o disparo e o "atender um por um". ' +
+          'Chegando no teto, a fila passa para o número seguinte; com 0 não há teto, e aí quem cuida ' +
+          'do número é você: o WhatsApp recusa (status RESTRICTED) quando um número estoura o limite ' +
+          'de conversas iniciadas em 24h, e menos de dez mensagens iguais em sequência já derrubaram ' +
+          'um número seu.')
+    );
+    if (!Number.isFinite(teto)) {
+      card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+        'SEM TETO: a fila nunca troca de número por contagem, e nada aqui vai segurar o volume do ' +
+          'dia. Foi escolha sua — ponha um número no campo acima para voltar a ter o freio.'));
+    }
 
-        const linha = h('div', { class: 'wf-row', 'data-fica': '1' }, [
-          checkbox(rotulo, pos >= 0, (marcado) => {
-            const nova = fila.filter((id) => id !== c.id);
-            if (marcado) nova.push(c.id);
-            salvarAuto({
-              loteCanais: nova,
-              // O campo antigo acompanha o PRIMEIRO da fila: ele é o que a tela guardada mostra
-              // quando os números ainda não foram carregados, e o fallback de quem não tem fila.
-              loteCanalId: nova[0] || '',
-              loteCanalNome: nova[0] ? nomeDoNumero(nova[0]) : '',
-            }).then(renderAll);
-          }),
-        ]);
-        /** Subir um número o faz ser usado AGORA: a vez é do primeiro da fila com saldo. */
-        if (pos > 0) {
-          const subir = h('button', { class: 'wf-btn wf-mini', type: 'button' }, '↑');
-          subir.addEventListener('click', () => {
-            const nova = [...fila];
-            [nova[pos - 1], nova[pos]] = [nova[pos], nova[pos - 1]];
-            salvarAuto({
-              loteCanais: nova,
-              loteCanalId: nova[0] || '',
-              loteCanalNome: nova[0] ? nomeDoNumero(nova[0]) : '',
-            }).then(renderAll);
-          });
-          linha.append(subir);
-        }
-        card.append(linha);
-      }
-      card.append(h('div', { class: 'wf-origin' },
-        'Marque os números na ordem em que quer usá-los: a rodada manda pelo primeiro da fila até ' +
-          `ele chegar a ${loteLib.textoDoTeto(teto)} envios no dia, e então passa para o seguinte. ` +
-          'A contagem zera na virada do dia, porque o teto que o WhatsApp cobra é o das últimas ' +
-          'horas — número queimado para sempre não voltaria a servir amanhã.'));
-
-      if (fila.length) {
-        const saldo = loteLib.saldoTotal({ fila, envios: state.loteEnvios, dia, teto });
-        card.append(h('div', { class: 'wf-preview', 'data-fica': '1' },
-          Number.isFinite(saldo)
-            ? `Cabem ${saldo} envio(s) hoje na fila de ${fila.length} numero(s).`
-            : `Fila de ${fila.length} numero(s), sem teto por numero.`));
-      }
-
-      if (!state.equipes.length || !state.canais.length) {
-        card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
-          'A conta respondeu sem ' + (!state.canais.length ? 'numero' : 'equipe') +
-            ' nenhum. Estas duas rotas nunca foram executadas antes de hoje — me diga o que ' +
-            'apareceu aqui para eu conferir o formato.'));
-      }
-
+    for (const c of state.canais) {
+      const pos = fila.indexOf(c.id);
+      const usados = loteLib.usadosNoDia(state.loteEnvios, c.id, dia);
+      const restam = Math.max(0, teto - usados);
       /**
-       * **A saúde do número, escrita ao lado da escolha** — é a medição que ele pagou em 26/09
-       * (menos de dez mensagens iguais derrubaram um número). `FLAGGED` é o WhatsApp punindo o
-       * PADRÃO de envio; `RESTRICTED` é o teto de conversas iniciadas em 24h, que é exatamente o
-       * que esta rodada faz, uma por contato.
+       * **Campo vazio NÃO vira texto na tela.** O print dele de 01/10 mostrava
+       * *"status UNDEFINED · qualidade UNDEFINED"*: aqueles dois são da Cloud API e não existem
+       * em canal Z-API, e escrever "UNDEFINED" é a tela afirmando que leu algo que não leu.
        */
-      for (const canalId of fila) {
-        const canal = state.canais.find((c) => c.id === canalId);
-        if (!canal) continue;
-        const d = canal.detalhes || {};
-        // Sem `typeDetails` o padrão é -1 (SEM janela), que é o que o próprio app faz.
-        const janela = loteLib.janelaEmMinutos(canal);
-        const quem = canal.numero || canal.nome || canalId;
-        const veredito = loteLib.porqueNaoUsarONumero(canal);
-        const linhas = [
-          // Campo que a plataforma não mandou não vira texto: escrever "?" ou "UNDEFINED" é a tela
-          // afirmando que leu algo que não leu.
-          [
-            `${quem}: ${canal.tipo || 'tipo nao informado'}`,
-            canal.saude ? `conexão ${canal.saude}` : '',
-            canal.status ? `status ${canal.status}` : '',
-            canal.qualidade ? `qualidade ${canal.qualidade}` : '',
-          ].filter(Boolean).join(' · '),
-          janela === -1 ? '' : `${quem}: canal COM janela de 24h — fora dela a plataforma exige modelo aprovado, e esta rodada não manda modelo.`,
-          d.canStartNewSession === false ? `${quem}: este canal NAO abre atendimento novo.` : '',
-        ].filter(Boolean);
-        for (const linha of linhas) card.append(h('div', { class: 'wf-preview', 'data-fica': '1' }, linha));
-        if (veredito.barra) {
-          card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
-            `${quem}: ${veredito.motivo} — a rodada se recusa a usar este número, porque nesses ` +
-              'casos a plataforma aceita o envio e a mensagem não chega.'));
-        } else if (veredito.aviso) {
-          card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
-            `${quem}: ${veredito.aviso}. A rodada NÃO barra por isto — a mensagem continua chegando, ` +
-              'e mandar em lote sabendo disso é decisão sua.'));
-        }
-        if (canal.qualidade === 'LOW' || canal.qualidade === 'MEDIUM') {
-          card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
-            `${quem}: qualidade ${canal.qualidade} pela Meta — a própria plataforma diz para evitar ` +
-              'disparo em massa neste número.'));
-        }
+      const veredito = loteLib.porqueNaoUsarONumero(c);
+      const rotulo =
+        `${pos >= 0 ? `${pos + 1}º · ` : ''}${c.numero || c.nome}` +
+        ` · ${usados}/${loteLib.textoDoTeto(teto)} hoje` +
+        (c.saude && c.saude !== 'OK' ? ` · conexão ${c.saude}` : '') +
+        (c.status && c.status !== 'CONNECTED' ? ` · ${c.status}` : '') +
+        (c.qualidade && c.qualidade !== 'HIGH' ? ` · qualidade ${c.qualidade}` : '') +
+        (veredito.barra ? ' · NÃO USO' : '') +
+        (pos >= 0 && !restam ? ' · CHEIO hoje' : '');
+
+      const linha = h('div', { class: 'wf-row', 'data-fica': '1' }, [
+        checkbox(rotulo, pos >= 0, (marcado) => {
+          const nova = fila.filter((id) => id !== c.id);
+          if (marcado) nova.push(c.id);
+          salvarAuto({
+            loteCanais: nova,
+            // O campo antigo acompanha o PRIMEIRO da fila: ele é o que a tela guardada mostra
+            // quando os números ainda não foram carregados, e o fallback de quem não tem fila.
+            loteCanalId: nova[0] || '',
+            loteCanalNome: nova[0] ? nomeDoNumero(nova[0]) : '',
+          }).then(renderAll);
+        }),
+      ]);
+      /** Subir um número o faz ser usado AGORA: a vez é do primeiro da fila com saldo. */
+      if (pos > 0) {
+        const subir = h('button', { class: 'wf-btn wf-mini', type: 'button' }, '↑');
+        subir.addEventListener('click', () => {
+          const nova = [...fila];
+          [nova[pos - 1], nova[pos]] = [nova[pos], nova[pos - 1]];
+          salvarAuto({
+            loteCanais: nova,
+            loteCanalId: nova[0] || '',
+            loteCanalNome: nova[0] ? nomeDoNumero(nova[0]) : '',
+          }).then(renderAll);
+        });
+        linha.append(subir);
+      }
+      card.append(linha);
+    }
+    card.append(h('div', { class: 'wf-origin' },
+      'Marque os números na ordem em que quer usá-los: a rodada manda pelo primeiro da fila até ' +
+        `ele chegar a ${loteLib.textoDoTeto(teto)} envios no dia, e então passa para o seguinte. ` +
+        'A contagem zera na virada do dia, porque o teto que o WhatsApp cobra é o das últimas ' +
+        'horas — número queimado para sempre não voltaria a servir amanhã.'));
+
+    if (fila.length) {
+      const saldo = loteLib.saldoTotal({ fila, envios: state.loteEnvios, dia, teto });
+      card.append(h('div', { class: 'wf-preview', 'data-fica': '1' },
+        Number.isFinite(saldo)
+          ? `Cabem ${saldo} envio(s) hoje na fila de ${fila.length} numero(s).`
+          : `Fila de ${fila.length} numero(s), sem teto por numero.`));
+    }
+
+    if (!state.equipes.length || !state.canais.length) {
+      card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+        'A conta respondeu sem ' + (!state.canais.length ? 'numero' : 'equipe') +
+          ' nenhum. Estas duas rotas nunca foram executadas antes de hoje — me diga o que ' +
+          'apareceu aqui para eu conferir o formato.'));
+    }
+
+    /**
+     * **A saúde do número, escrita ao lado da escolha** — é a medição que ele pagou em 26/09
+     * (menos de dez mensagens iguais derrubaram um número). `FLAGGED` é o WhatsApp punindo o
+     * PADRÃO de envio; `RESTRICTED` é o teto de conversas iniciadas em 24h, que é exatamente o
+     * que esta rodada faz, uma por contato.
+     */
+    for (const canalId of fila) {
+      const canal = state.canais.find((c) => c.id === canalId);
+      if (!canal) continue;
+      const d = canal.detalhes || {};
+      // Sem `typeDetails` o padrão é -1 (SEM janela), que é o que o próprio app faz.
+      const janela = loteLib.janelaEmMinutos(canal);
+      const quem = canal.numero || canal.nome || canalId;
+      const veredito = loteLib.porqueNaoUsarONumero(canal);
+      const linhas = [
+        // Campo que a plataforma não mandou não vira texto: escrever "?" ou "UNDEFINED" é a tela
+        // afirmando que leu algo que não leu.
+        [
+          `${quem}: ${canal.tipo || 'tipo nao informado'}`,
+          canal.saude ? `conexão ${canal.saude}` : '',
+          canal.status ? `status ${canal.status}` : '',
+          canal.qualidade ? `qualidade ${canal.qualidade}` : '',
+        ].filter(Boolean).join(' · '),
+        janela === -1 ? '' : `${quem}: canal COM janela de 24h — fora dela a plataforma exige modelo aprovado, e esta rodada não manda modelo.`,
+        d.canStartNewSession === false ? `${quem}: este canal NAO abre atendimento novo.` : '',
+      ].filter(Boolean);
+      for (const linha of linhas) card.append(h('div', { class: 'wf-preview', 'data-fica': '1' }, linha));
+      if (veredito.barra) {
+        card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+          `${quem}: ${veredito.motivo} — a rodada se recusa a usar este número, porque nesses ` +
+            'casos a plataforma aceita o envio e a mensagem não chega.'));
+      } else if (veredito.aviso) {
+        card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+          `${quem}: ${veredito.aviso}. A rodada NÃO barra por isto — a mensagem continua chegando, ` +
+            'e mandar em lote sabendo disso é decisão sua.'));
+      }
+      if (canal.qualidade === 'LOW' || canal.qualidade === 'MEDIUM') {
+        card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+          `${quem}: qualidade ${canal.qualidade} pela Meta — a própria plataforma diz para evitar ` +
+            'disparo em massa neste número.'));
       }
     }
 
+    return card;
+  }
+
+  /**
+   * **DISPARAR: os dois percursos, e o que falta em cada um.**
+   *
+   * **Por ETIQUETA** abre um atendimento novo em cada contato da lista (é o único caminho que
+   * alcança quem não tem conversa nenhuma) e **conclui** depois de mandar. **Pela FILA** anda pelos
+   * atendimentos que ele filtrou na esquerda e não conclui nada. Nenhum dos dois consulta o quadro.
+   */
+  function renderCartaoDisparar(cfg) {
+    const porPerfil = (nome) => perfisLib.chaveDeImagem(nome, perfilAtivo());
+    const pares = loteLib.paresProntos({ cfg, imagens: state.imagens, chaveDeImagem: porPerfil });
+    const comArte = loteLib.temArte(pares);
+    const limite = clampInt(cfg.limite, 1, 200);
+    const pausaSeg = clampInt(cfg.pausaSeg, 3, 300);
+
+    const card = h('div', { class: 'wf-card' }, [
+      h('h4', {}, 'Disparar'),
+      h('div', { class: 'wf-preview' },
+        `Vai até ${limite} contato(s), com ${pausaSeg}s entre um envio e outro — o limite e a pausa ` +
+          'são os do cartão de Ritmo acima, os MESMOS das rodadas do fluxo.'),
+    ]);
+
+    /**
+     * **As travas comuns aos dois caminhos, e a do contrato de imagem só vale com ARTE** — era
+     * exigida sempre, então "só mandar texto" ficava bloqueado por um passo de imagem que nada
+     * naquele disparo usaria.
+     */
+    const comuns = [];
+    if (!pares.length) comuns.push('Escreva o texto de ao menos uma peça.');
+    if (!state.settings.autoSend) comuns.push('Precisa do "Enviar automático" ligado (aba Config).');
+    if (comArte && !state.contratoImagem) {
+      comuns.push(
+        'Alguma peça leva ARTE e falta aprender o envio de imagem (aba Config) — sem isso a arte ' +
+          'não sai. Tirando as artes, o disparo de texto funciona sem esse passo.'
+      );
+    }
+
+    card.append(h('div', { class: 'wf-sub' }, h('b', {}, 'Pelos CONTATOS de uma etiqueta')));
     const comecarPorEtiqueta = h('button', { class: 'wf-btn wf-primary', type: 'button' },
-      'Mandar para os contatos da etiqueta');
+      'Disparar para a etiqueta');
     comecarPorEtiqueta.addEventListener('click', () => withBusy(() => runLoteContatos({})));
     const sonda = h('button', { class: 'wf-btn', type: 'button' }, 'Testar em UM contato');
     sonda.addEventListener('click', () => withBusy(() => runLoteContatos({ sonda: true })));
     card.append(h('div', { class: 'wf-row' }, [comecarPorEtiqueta, sonda]));
 
-    const travaEtiqueta = [];
-    if (!pares.length) travaEtiqueta.push('Preencha ao menos um par.');
+    const travaEtiqueta = [...comuns];
     if (!String(cfg.loteEtiquetaFiltro || '').trim()) {
-      travaEtiqueta.push('Escolha a etiqueta de quem vai receber.');
+      travaEtiqueta.push('Escolha a etiqueta de quem vai receber (cartão "Para quem").');
     }
     if (!loteLib.filaDeNumeros(cfg).length) {
       travaEtiqueta.push('Marque ao menos um número na fila: é por ele que o atendimento abre.');
     }
-    if (!state.settings.autoSend) travaEtiqueta.push('Precisa do "Enviar automático" ligado (aba Config).');
-    if (!state.contratoImagem) travaEtiqueta.push('Falta aprender o envio de imagem (aba Config).');
     comecarPorEtiqueta.disabled = state.auto.rodando || travaEtiqueta.length > 0;
     sonda.disabled = comecarPorEtiqueta.disabled;
     for (const motivo of travaEtiqueta) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, motivo));
 
     card.append(h('div', { class: 'wf-origin' },
-      'Cada contato recebe a arte, é marcado com a etiqueta do lote e o atendimento é CONCLUÍDO — ' +
-        'sem concluir, um lote de 200 deixa 200 atendimentos abertos em "Meus". Mensagem que ficar ' +
-        'em fila não é concluída: concluir cancelaria o próprio envio.'));
-
+      'Cada contato recebe a peça da vez, é marcado com a etiqueta do recibo e o atendimento é ' +
+        'CONCLUÍDO — sem concluir, um disparo de 200 deixa 200 atendimentos abertos em "Meus". ' +
+        'Mensagem que ficar em fila não é concluída: concluir cancelaria o próprio envio.'));
     card.append(h('div', { class: 'wf-origin' },
       '"Testar em UM contato" manda para o PRIMEIRO da lista e para — a rota que abre atendimento ' +
         'nunca foi executada antes de hoje, e é assim que se prova uma escrita nova neste projeto: ' +
         'uma, conferida, antes das outras.'));
-    card.append(h('p', { class: 'wf-hint' },
-      `Vai até ${limite} contato(s), com ${pausaSeg}s entre um envio e outro — o mesmo limite e a ` +
-        'mesma pausa do cartão de ritmo, lá em cima.'));
+
+    card.append(h('div', { class: 'wf-sub' }, h('b', {}, 'Pela FILA que você filtrou na esquerda')));
+    const comecarPelaFila = h('button', { class: 'wf-btn', type: 'button' }, 'Disparar para a fila');
+    comecarPelaFila.addEventListener('click', () => withBusy(runLoteImagem));
+    card.append(h('div', { class: 'wf-row' }, [comecarPelaFila]));
+    comecarPelaFila.disabled = state.auto.rodando || comuns.length > 0;
+    card.append(h('div', { class: 'wf-origin' },
+      'Este caminho usa os atendimentos que JÁ existem, do jeito que a fila está filtrada agora na ' +
+        'plataforma. Não abre atendimento novo, não conclui nada e não grava campo no CRM — só a ' +
+        'etiqueta do recibo. Quem já recebeu qualquer peça é pulado, e quem tem etiqueta de sem ' +
+        'interesse ou de assessor também.'));
 
     return card;
   }
+
 
   /**
    * Rodada 5: reabrir em lote, sem enviar nada. Ver `processarReabrir`.
@@ -4665,10 +4851,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * **O cartão do modo de SÓ ABRIR** — pedido dele (02/10/2026): *"faça um modo só para abrir o
    * contato e deixar nos meus sem enviar nada e quando concluir abrir o próximo contato"*.
    *
-   * **Ele fica embaixo do cartão do lote de propósito:** os dois andam pela mesma rota (a lista por
-   * etiqueta + abrir atendimento), e a EQUIPE e a FILA DE NÚMEROS são escolhidas uma vez, lá. Dois
-   * lugares para escolher o mesmo número é como as duas cópias de qualquer coisa neste projeto
-   * divergem — e aqui a divergência seria abrir conversa pelo número do outro candidato.
+   * **Ele fica no fim da aba Disparo de propósito:** anda pela mesma rota do disparo (a lista por
+   * etiqueta + abrir atendimento), e a EQUIPE e a FILA DE NÚMEROS são escolhidas uma vez, no cartão
+   * "Por qual número". Dois lugares para escolher o mesmo número é como as duas cópias de qualquer
+   * coisa neste projeto divergem — e aqui a divergência seria abrir conversa pelo número do outro
+   * candidato.
    *
    * A etiqueta é campo PRÓPRIO: a lista de quem recebe a arte não é a lista de quem ele vai atender
    * à mão, e um campo só obrigaria a redigitar a cada troca de modo.
@@ -4706,7 +4893,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const travas = [];
     if (!String(cfg.atenderEtiqueta || '').trim()) travas.push('Escolha a etiqueta dos contatos que você vai atender.');
     if (!fila.length) {
-      travas.push('Marque ao menos um número na fila do cartão de envio em lote, acima: é por ele que o atendimento abre.');
+      travas.push('Marque ao menos um número na fila do cartão "Por qual número", acima: é por ele que o atendimento abre.');
     }
     comecar.disabled = state.auto.rodando || !!state.esperando.atender || travas.length > 0;
     sonda.disabled = comecar.disabled;
@@ -5967,7 +6154,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         imagens: state.imagens,
         chaveDeImagem: porPerfil,
       });
-      if (!pares.length) return { nome, resultado: 'erro', motivo: 'nenhum par com imagem E legenda' };
+      if (!pares.length) return { nome, resultado: 'erro', motivo: 'nenhuma peca com texto — nada a mandar' };
 
       const tagDoLote = await tagDoEnvioEmLote();
       /**
@@ -6044,21 +6231,39 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         };
       }
 
-      const r = await page.enviarImagem({
-        sessionId: aberto.sessionId,
-        // Atendimento recém-criado não tem mensagem de onde copiar — e `senderId` é id de
-        // correlação por mensagem, não identidade (a correção de 01/10 em `api.js`).
-        senderId: api.novoSenderId(),
-        chave: par.chave,
-        legenda: par.legenda,
-      });
       /**
-       * A legenda só é dada por entregue quando a plataforma a devolve. Não voltando, o texto vai
-       * pela API na MESMA sessão — e não por `page.sendText`, que digita no campo da conversa
-       * ABERTA: aqui não há conversa aberta na tela.
+       * **PEÇA SEM ARTE SAI COMO TEXTO** (02/10/2026: *"preciso que tenha a opção de só mandar
+       * texto sem imagem"*). `api.mandarTexto` é a MESMA rota do envio de imagem com `type: 'TEXT'`
+       * — e `page.sendText` não serve aqui, porque digita no campo da conversa ABERTA e nesta
+       * rodada não há conversa na tela.
+       *
+       * **O texto vai como está escrito**: este caminho não carrega a conversa, então não há
+       * contexto de variável nenhum (ver a recusa em `runLoteContatos`).
        */
-      if (!r.legendaFoi) {
-        await api.mandarTexto({ sessionId: aberto.sessionId, senderId: api.novoSenderId(), texto: par.legenda });
+      let r = { legendaFoi: true, status: '' };
+      if (par.temArte) {
+        r = await page.enviarImagem({
+          sessionId: aberto.sessionId,
+          // Atendimento recém-criado não tem mensagem de onde copiar — e `senderId` é id de
+          // correlação por mensagem, não identidade (a correção de 01/10 em `api.js`).
+          senderId: api.novoSenderId(),
+          chave: par.chave,
+          legenda: par.legenda,
+        });
+      }
+      /**
+       * A legenda só é dada por entregue quando a plataforma a devolve. Não voltando — ou não
+       * havendo arte —, o texto vai pela API na MESMA sessão.
+       */
+      if (!r.legendaFoi || !par.temArte) {
+        const soTexto = await api.mandarTexto({
+          sessionId: aberto.sessionId,
+          senderId: api.novoSenderId(),
+          texto: par.legenda,
+        });
+        // Sem arte, o status da MENSAGEM DE TEXTO é o que decide se dá para concluir (o `QUEUED`
+        // abaixo): concluir em cima de mensagem em fila cancela o próprio envio.
+        if (!par.temArte) r = { legendaFoi: true, status: soTexto.status };
       }
 
       // O ponteiro só anda depois de a mensagem sair de verdade.
@@ -6143,10 +6348,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         nome,
         resultado: 'enviado',
         motivo:
-          `par ${par.n} ("${par.arquivo.nome}")` +
+          (par.temArte ? `peca ${par.n} ("${par.arquivo.nome}")` : `peca ${par.n} (so texto)`) +
           // O número e a contagem na linha: sem isso, "trocou de número" é invisível no Andamento.
           ` pelo ${nomeDoNumero(numero.canalId)} (${usados}/${loteLib.textoDoTeto(teto)} hoje)` +
-          (r.legendaFoi ? ' com a legenda junto' : ' — a legenda foi como mensagem separada') +
+          (!par.temArte ? '' : r.legendaFoi ? ' com a legenda junto' : ' — a legenda foi como mensagem separada') +
           marca +
           marcaPalavra +
           fecho,
@@ -6208,7 +6413,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           parar: true,
           motivo: fila.length
             ? `todos os ${fila.length} numero(s) da fila chegaram ao teto de ${loteLib.textoDoTeto(teto)} conversas hoje — o resto da lista fica para amanha`
-            : 'nenhum numero escolhido na fila do cartao de envio em lote',
+            : 'nenhum numero escolhido na fila do cartao "Por qual numero"',
         };
       }
 
@@ -6380,7 +6585,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!nomeFiltro) return setStatus('Escolha a etiqueta dos contatos que voce vai atender.', 'err');
     if (!loteLib.filaDeNumeros(cfg).length) {
       return setStatus(
-        'Marque ao menos um numero na fila (cartao de envio em lote): e por ele que o atendimento abre.',
+        'Marque ao menos um numero na fila (cartao "Por qual numero"): e por ele que o atendimento abre.',
         'err'
       );
     }
@@ -6949,12 +7154,36 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const porPerfil = (chave) => perfisLib.chaveDeImagem(chave, perfilAtivo());
     const pares = loteLib.paresProntos({ cfg, imagens: state.imagens, chaveDeImagem: porPerfil });
 
-    if (!pares.length) return setStatus('Preencha ao menos um par: a imagem E a legenda dele.', 'err');
+    if (!pares.length) return setStatus('Escreva o texto de ao menos uma peca (aba Disparo).', 'err');
     if (!state.settings.autoSend) {
       return setStatus('Ligue o "Enviar automatico" na aba Config antes de rodar.', 'err');
     }
-    if (!state.contratoImagem) {
+    /**
+     * **O contrato de imagem só é exigido se alguma peça LEVAR arte** (02/10/2026). Era exigido
+     * sempre, então o disparo de texto ficava bloqueado por um passo de imagem que nada naquele
+     * disparo usaria.
+     */
+    if (loteLib.temArte(pares) && !state.contratoImagem) {
       return setStatus('Falta aprender o envio de imagem (aba Config) — sem isso a arte nao sai.', 'err');
+    }
+    /**
+     * **NESTE CAMINHO A VARIÁVEL NÃO É RESOLVIDA, e por isso ele se recusa a começar.**
+     *
+     * O percurso por etiqueta **não chama `load()`** de propósito (a decisão vale para a lista
+     * inteira, e abrir contato é o que derruba a API) — então não há contato carregado de onde
+     * tirar a cidade ou o primeiro nome. Mandar o texto como está faria as chaves chegarem
+     * literalmente ao eleitor; pior, usar o `state.contact` que estiver aberto mandaria o dado de
+     * OUTRA pessoa. **O percurso pela FILA resolve as variáveis normalmente**, porque ali a conversa
+     * está carregada.
+     */
+    const comVariavel = pares.filter((p) => p.legenda.includes('{{')).map((p) => p.n);
+    if (comVariavel.length) {
+      return setStatus(
+        `A peca ${comVariavel.join(', ')} usa variavel entre chaves, e neste caminho nao ha conversa ` +
+          'carregada para resolver — o texto sairia com as chaves a mostra. Tire as variaveis, ou ' +
+          'use o "Disparar para a fila", que resolve.',
+        'err'
+      );
     }
     const nomeFiltro = String(cfg.loteEtiquetaFiltro || '').trim();
     if (!nomeFiltro) return setStatus('Escolha a etiqueta de quem vai receber.', 'err');
@@ -7058,7 +7287,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       !confirm(
         (sonda
           ? 'TESTE: vou abrir atendimento e mandar para UM contato só — o primeiro da lista.\n\n'
-          : `Vou abrir um atendimento NOVO e mandar IMAGEM + LEGENDA para ${quantos} contato(s), ` +
+          : `Vou abrir um atendimento NOVO e mandar para ${quantos} contato(s), ` +
             `com ${pausaSeg}s entre um e outro.\n\n`) +
           `Etiqueta: "${tagFiltro.label}" (${contatos.length} contato(s) na lista` +
           (lista.total && lista.total > contatos.length ? `, de ${lista.total} no total` : '') +
@@ -7073,7 +7302,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             ? `Hoje cabem ${vagas} envio(s) na fila, menos que os ${Math.min(limite, contatos.length)} ` +
               'que a lista e o limite permitiriam — o resto fica para amanha.\n'
             : '') +
-          (sonda ? '' : `Revezando: ${divisao.map((q, i) => `${q} com o par ${pares[i].n}`).join(', ')}.\n`) +
+          (sonda
+            ? ''
+            : `Revezando: ${divisao
+                .map((q, i) => `${q} com a peca ${pares[i].n}${pares[i].temArte ? ' (arte + texto)' : ' (so texto)'}`)
+                .join(', ')}.\n`) +
           '\n' +
           (excluir.length
             ? 'Fora da lista: quem ja tem a etiqueta do lote e quem esta marcado como sem interesse.\n'
@@ -7115,11 +7348,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       imagens: state.imagens,
       chaveDeImagem: porPerfil,
     });
-    if (!pares.length) return setStatus('Preencha ao menos um par: a imagem E a legenda dele.', 'err');
+    if (!pares.length) return setStatus('Escreva o texto de ao menos uma peca (aba Disparo).', 'err');
     if (!state.settings.autoSend) {
       return setStatus('Ligue o "Enviar automatico" na aba Config antes de rodar.', 'err');
     }
-    if (!state.contratoImagem) {
+    // O contrato de imagem só é exigido se alguma peça levar arte (02/10/2026).
+    if (loteLib.temArte(pares) && !state.contratoImagem) {
       return setStatus('Falta aprender o envio de imagem (aba Config) — sem isso a arte nao sai.', 'err');
     }
 
@@ -7129,10 +7363,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     if (
       !confirm(
-        `Vou mandar IMAGEM + LEGENDA para até ${limite} contato(s) da lista que você filtrou, com ` +
+        `Vou mandar para até ${limite} contato(s) da lista que você filtrou, com ` +
           `${pausaSeg}s entre um e outro.\n\n` +
-          `Revezando entre ${pares.length} par(es): ` +
-          divisao.map((q, i) => `${q} com o par ${pares[i].n}`).join(', ') +
+          `Revezando entre ${pares.length} peca(s): ` +
+          divisao
+            .map((q, i) => `${q} com a peca ${pares[i].n}${pares[i].temArte ? ' (arte + texto)' : ' (so texto)'}`)
+            .join(', ') +
           '.\n\n' +
           'Nao consulta o fluxo, nao conclui o atendimento e nao grava nada no CRM. Quem ja ' +
           'recebeu qualquer um dos pares é pulado, e quem tem etiqueta de sem interesse ou de ' +
@@ -7222,7 +7458,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         chaveDeImagem: porPerfil,
       });
       if (!pares.length) {
-        return { nome, resultado: 'erro', motivo: 'nenhum par com imagem E legenda — nada a mandar' };
+        return { nome, resultado: 'erro', motivo: 'nenhuma peca com texto — nada a mandar' };
       }
 
       const tagDoLote = await tagDoEnvioEmLote();
@@ -7240,19 +7476,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return {
           nome,
           resultado: 'pulado',
-          motivo: `a legenda do par ${par.n} usa ${rendido.missing.join(', ')} e este contato nao tem`,
+          motivo: `o texto da peca ${par.n} usa ${rendido.missing.join(', ')} e este contato nao tem`,
         };
       }
 
-      const r = await page.enviarImagem({
-        sessionId,
-        senderId: state.senderId,
-        chave: par.chave,
-        legenda: rendido.text,
-      });
-      // A legenda só é dada por entregue quando a plataforma a devolve. Nao voltando, o texto sai
-      // do jeito de sempre: o pior caso é o contato receber duas mensagens, nunca uma imagem muda.
-      if (!r.legendaFoi) await page.sendText(rendido.text);
+      /**
+       * **Peça sem arte sai como TEXTO** (02/10/2026). Aqui a conversa está na tela, então o texto
+       * vai por `page.sendText` — o mesmo caminho que a plataforma renderiza igual ao que uma
+       * pessoa faria.
+       */
+      let r = { legendaFoi: true };
+      if (par.temArte) {
+        r = await page.enviarImagem({
+          sessionId,
+          senderId: state.senderId,
+          chave: par.chave,
+          legenda: rendido.text,
+        });
+      }
+      // A legenda só é dada por entregue quando a plataforma a devolve. Nao voltando — ou nao
+      // havendo arte —, o texto sai do jeito de sempre: o pior caso é o contato receber duas
+      // mensagens, nunca uma imagem muda.
+      if (!r.legendaFoi || !par.temArte) await page.sendText(rendido.text);
       state.lastSendAt = Date.now();
 
       /**
@@ -7274,8 +7519,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       registrarNaRodada(
         nome,
         'enviado',
-        `par ${par.n} ("${par.arquivo.nome}")` +
-          (r.legendaFoi ? ' com a legenda junto' : ' — a legenda foi como mensagem separada') +
+        (par.temArte ? `peca ${par.n} ("${par.arquivo.nome}")` : `peca ${par.n} (so texto)`) +
+          (!par.temArte ? '' : r.legendaFoi ? ' com a legenda junto' : ' — a legenda foi como mensagem separada') +
           marca
       );
       return { nome, resultado: 'enviado', continuaNaFila: true };
@@ -11097,9 +11342,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const nome = rotulo.split(' (')[0];
     /**
      * **O interruptor existe onde a imagem ACOMPANHA um texto que sai de qualquer jeito** (a do
-     * momento, a do pedido de dados): ali "mandar junto" e uma escolha. No envio em lote a imagem
-     * E a mensagem — par sem arte nao e par —, entao o controle seria um botao que so desliga a
-     * propria linha, e caixa morta na tela e pior que caixa nenhuma.
+     * momento, a do pedido de dados): ali "mandar junto" e uma escolha. No DISPARO a arte e
+     * opcional desde 02/10, e quem a tira e o botao "Tirar" da propria imagem — uma caixa de
+     * "mandar junto" ao lado seria um segundo jeito de dizer a mesma coisa, e os dois divergiriam.
      */
     const linhas = semInterruptor ? [] : [checkbox(`${nome}: mandar junto`, !!ligada, aoLigar)];
 

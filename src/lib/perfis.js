@@ -109,8 +109,10 @@ export const CHAVES_DO_PERFIL_EM_AUTO = [
   'imagemPedidoDadosLigada',
   'templateId',
   'templateName',
-  // Os quatro pares do envio em lote: a legenda E o que o eleitor le, entao e de cada candidato.
-  // A lista vem de `lote.chavesNoAuto()` e esta escrita aqui para nao haver duas fontes.
+  // As pecas do disparo: a legenda E o que o eleitor le, entao e de cada candidato. A lista vem de
+  // `lote.chavesNoAuto()` e esta escrita aqui para nao haver duas fontes. Vai ate `lote.MAX_PECAS`
+  // e nao ate `lotePecas`: a chave da peca 7 tem de estar aqui ANTES de ele criar a peca 7, senao
+  // `exigirChaveConhecida` recusa a gravacao no dia em que ele a criar.
   'imagemLote1',
   'legendaLote1',
   'imagemLote2',
@@ -119,6 +121,14 @@ export const CHAVES_DO_PERFIL_EM_AUTO = [
   'legendaLote3',
   'imagemLote4',
   'legendaLote4',
+  'imagemLote5',
+  'legendaLote5',
+  'imagemLote6',
+  'legendaLote6',
+  'imagemLote7',
+  'legendaLote7',
+  'imagemLote8',
+  'legendaLote8',
 ];
 
 /**
@@ -146,6 +156,14 @@ const AUTO_VAZIO = {
   legendaLote3: '',
   imagemLote4: '',
   legendaLote4: '',
+  imagemLote5: '',
+  legendaLote5: '',
+  imagemLote6: '',
+  legendaLote6: '',
+  imagemLote7: '',
+  legendaLote7: '',
+  imagemLote8: '',
+  legendaLote8: '',
 };
 
 /**

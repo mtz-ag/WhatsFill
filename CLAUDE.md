@@ -82,7 +82,7 @@ src/lib/sugestao.js     tabela de regras da rodada, e os verbetes dela (puro, te
 src/lib/arvore.js       o fluxo como ARVORE: sinais, ramos dele, decisao (puro, testado)
 src/lib/anuncios.js     ANUNCIOS do momento: texto que reconhece + o que fazer (puro, testado)
 src/lib/perfis.js       os CANDIDATOS: quem atende cada canal e o que e dele (puro, testado)
-src/lib/lote.js         ENVIO EM LOTE: pares de imagem + legenda, revezando (puro, testado)
+src/lib/lote.js         DISPARO: pecas de texto (com arte ou sem), revezando (puro, testado)
 src/lib/observacoes.js  o caderno das sugestoes erradas, com o caso junto (puro, testado)
 src/fluxo.html/.css/.js JANELA do fluxo: o QUADRO (caixas soltas, fios, arrastar, editar)
 src/lib/fluxo-msg.js    a mensagem que pede ao service worker para abrir a janela
@@ -2232,6 +2232,64 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 
 ## Armadilhas do próprio painel
+
+- **O CAMINHO POR ETIQUETA NAO RESOLVE VARIAVEL, E MANDAVA AS CHAVES A MOSTRA** (achado medindo em
+  02/10/2026, ao por o texto sem imagem). `processarContatoDoLote` passava `par.legenda` **cru** para
+  o envio — o percurso por etiqueta **nao chama `load()`** de proposito (a decisao vale para a lista
+  inteira, e abrir contato e o que derruba a API), entao nao ha contato de onde tirar `{{cidade}}`.
+  E o cartao anunciava *"Variaveis: {{saudacao}} {{cidade}} ..."*, que e verdade so no percurso pela
+  FILA, onde a conversa esta carregada e `vars.render` roda.
+  **O conserto ingenuo seria pior que o defeito:** usar o `state.contact` que estiver aberto mandaria
+  **o dado de OUTRA pessoa**. Hoje a rodada **se recusa a comecar** quando acha chaves no texto,
+  dizendo qual peca e as duas saidas (tirar a variavel, ou usar o caminho pela fila).
+  **Ao escrever hint de recurso que vale em UM dos caminhos, diga em qual** — e ao criar caminho de
+  envio que nao carrega o contato, procure o que o outro caminho renderiza.
+
+- **`api.mandarTexto` DEVOLVE O `status`, E E ELE QUE DECIDE A CONCLUSAO NO DISPARO DE SO TEXTO**
+  (02/10/2026). A guarda de 01/10 (*"concluir CANCELA mensagem em fila"*) lia o status da mensagem de
+  IMAGEM; sem imagem nao havia status, e o atendimento seria concluido em cima da propria mensagem em
+  fila. **Ao criar caminho de envio novo, procure a guarda que lia o status do caminho antigo.**
+
+- **A ARTE DO DISPARO FICOU OPCIONAL, E O PRE-REQUISITO DA IMAGEM ACOMPANHOU** (02/10/2026: *"preciso
+  que tenha a opcao de so mandar texto sem imagem"*). A peca e um TEXTO com arte OPCIONAL: sem arte
+  sai `api.mandarTexto` (etiqueta) ou `page.sendText` (fila); com arte, a cadeia de cinco passos de
+  sempre. **Arte SEM texto continua fora** — imagem muda nao sai daqui (20/09), e e pelo TEXTO que
+  `jaRecebeu` reconhece na conversa quem ja recebeu.
+  **E o contrato de envio de imagem deixou de ser exigido quando nenhuma peca leva arte:** era
+  exigido sempre, entao o disparo de texto ficava bloqueado por um passo que nada naquele disparo
+  usaria — a familia do pre-requisito que envelhece junto com o desenho que o criou (26/09).
+
+- **QUANTAS PECAS E DELE, MAS AS CHAVES VAO ATE O TETO** (02/10/2026: *"a opcao de mandar imagens nao
+  precisa ser 4, bote a opcao de adicionar ou remover quantidades"*). `auto.lotePecas` (nasce com 4,
+  teto `lote.MAX_PECAS` = 8) decide quantas a tela mostra e quantas `paresProntos` varre; **as CHAVES
+  (`chavesNoAuto`, a lista do perfil, o `AUTO_VAZIO`) enumeram 1..MAX**, porque a chave da peca 7 tem
+  de existir ANTES de ele criar a peca 7 — senao `exigirChaveConhecida` recusa a gravacao no dia em
+  que ele a criar, e o defeito aparece so entao.
+  **REMOVER NAO APAGA:** baixar a conta para de USAR a ultima peca; o texto e a arte continuam
+  guardados e voltam se ele adicionar de novo. Apagar seria o gesto destrutivo escondido no botao
+  inofensivo (01/09) — quem libera espaco e o "Tirar" da propria imagem.
+  **O TETO E 8 POR CAUSA DO ARMAZENAMENTO, medido:** a extensao nao pede `unlimitedStorage`, entao
+  `chrome.storage.local` tem ~10 MB, e cada arte guardada pode ter 2 MB de bytes — **~2,7 MB em
+  base64**. Oito cheias estouram a cota e a escrita falharia no meio de uma edicao; por isso o cartao
+  mostra quanto as artes ocupam e avisa acima de 7 MB. **E o `load()` le so as pecas EM USO**, nao as
+  oito: ler quatro artes a mais em todo contato aberto e memoria por nada.
+
+- **CAMPO QUE EXISTE E NAO APARECE E CAMPO QUE NAO EXISTE** (02/10/2026: *"com relacao a etiqueta
+  deve ter a opcao de mudar para outra etiqueta e trocar a vontade, creio que no momento so tem
+  colinha"*). **Medido: o campo sempre foi texto livre e aceita qualquer etiqueta** — `COLINHA` e so
+  o valor de fabrica. O que havia era um campo **enterrado no meio de um cartao de 340 linhas, abaixo
+  das quatro artes**: a familia do campo no cartao errado (04/09), com a diferenca de que aqui nada
+  estava escondido — estava LONGE.
+  Hoje as duas etiquetas que decidem o disparo ficam juntas no cartao "Para quem", e o botao **"Ver
+  as etiquetas do CRM"** carrega a lista **no clique, nunca no desenho**: trocar de etiqueta passou a
+  ser ler e copiar, em vez de acertar a grafia de cabeca — que e o que faz a rodada recusar.
+  **Antes de criar controle novo porque ele disse que nao existe, procure o controle** — e se ele
+  existir, o conserto e de LUGAR.
+
+- **O MESMO CARTAO EM DUAS ABAS E UMA CONFIGURACAO SO, E A TELA TEM DE DIZER ISSO** (02/10/2026, a
+  aba Disparo). O Ritmo (`auto.limite`, `auto.pausaSeg`) vale para TODAS as rodadas, e aparece nas
+  duas abas: uma copia por aba divergiria na primeira correcao. O que faltava era a linha dizendo que
+  o valor e comum — sem ela, trocar o limite no disparo mudaria a rodada dos "Meus" sem ele perceber.
 
 - **NUMERO QUE ELE DITOU NUM DIA NAO PODE VIRAR CONSTANTE — ele volta como trava que ele nao
   alcanca** (02/10/2026: *"a restricao dos contatos deveria ser opcional, bote uma caixa para

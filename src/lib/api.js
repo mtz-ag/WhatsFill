@@ -816,7 +816,12 @@ export async function mandarTexto({ sessionId, senderId, texto }) {
   });
   // A armadilha mais antiga daqui: 2xx não prova nada. O texto tem que voltar.
   if (!String(msg?.text || '').trim()) throw new Error('a plataforma aceitou e não guardou o texto');
-  return { id: String(msg?.id || '') };
+  /**
+   * **O `status` volta junto porque `QUEUED` decide se o atendimento pode ser concluído** — a
+   * guarda de 01/10: concluir CANCELA mensagem em fila, e pela API não há diálogo nenhum avisando.
+   * Sem este campo, o disparo de SÓ TEXTO (02/10) concluiria em cima da própria mensagem.
+   */
+  return { id: String(msg?.id || ''), status: String(msg?.status || '') };
 }
 
 /**

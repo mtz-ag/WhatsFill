@@ -35,19 +35,38 @@ grupo('o par so entra quando os DOIS lados estao preenchidos');
   const soArte = lote.paresProntos({ cfg: { legendaLote1: LEGENDA_1 }, imagens: imagens() });
   check(soArte.length === 1, 'par com arte e sem legenda NAO entra (sairia imagem muda)');
 
+  /**
+   * **INVERTIDA em 02/10/2026, a pedido dele** (*"preciso que tenha a opcao de so mandar texto sem
+   * imagem"*): peca com texto e SEM arte agora sai como mensagem de texto. A outra metade da regra
+   * nao mudou -- arte sem texto continua fora, porque imagem muda nao sai e o `jaRecebeu` precisa
+   * do texto para reconhecer na conversa quem ja recebeu.
+   */
   const soTexto = lote.paresProntos({ cfg: cfg(), imagens: { imagemLoteArquivo1: arte('a.jpg') } });
-  check(soTexto.length === 1, 'par com legenda e sem arte NAO entra (nao e rodada de texto)');
+  check(soTexto.length === 2, 'peca com texto e sem arte ENTRA: e o disparo de texto');
+  check(soTexto[0].temArte === true && soTexto[1].temArte === false, 'e cada uma diz se leva arte');
+  check(soTexto[1].chave === null, 'sem arte, nao ha chave de imagem para o envio buscar');
+  check(lote.temArte(soTexto) === true, 'o lote leva arte se QUALQUER peca levar');
+  check(lote.temArte(soArte) === true && lote.temArte([]) === false, 'e nao leva quando nenhuma leva');
+  check(
+    lote.temArte(lote.paresProntos({ cfg: cfg(), imagens: {} })) === false,
+    'so texto em todas: o contrato de envio de imagem nao e exigido'
+  );
 
   check(lote.paresProntos({}).length === 0, 'sem nada configurado, nenhum par');
 }
 
 grupo('a tela diz o que falta, e par vazio nao e falta');
 {
-  const faltas = lote.oQueFalta({ cfg: cfg({ legendaLote3: 'oi' }), imagens: imagens() });
-  check(faltas.length === 1, 'so o par 3 esta pela metade');
-  check(faltas[0].includes('par 3') && faltas[0].includes('sem a imagem'), 'e diz qual metade falta');
-  check(lote.oQueFalta({ cfg: cfg(), imagens: imagens() }).length === 0, 'pares completos nao reclamam');
-  check(lote.oQueFalta({}).length === 0, 'os quatro vazios nao sao quatro avisos');
+  // Texto sem arte deixou de ser falta (ele dispara texto); arte sem texto continua sendo.
+  const faltas = lote.oQueFalta({ cfg: cfg(), imagens: { ...imagens(), imagemLoteArquivo3: arte('c.jpg') } });
+  check(faltas.length === 1, 'so a peca 3 nao vai sair');
+  check(/ 3 /.test(faltas[0]) && faltas[0].includes('sem o texto'), 'e diz o que falta nela');
+  check(
+    lote.oQueFalta({ cfg: cfg({ legendaLote3: 'oi' }), imagens: imagens() }).length === 0,
+    'texto sem arte NAO e falta: e o disparo de texto'
+  );
+  check(lote.oQueFalta({ cfg: cfg(), imagens: imagens() }).length === 0, 'pecas completas nao reclamam');
+  check(lote.oQueFalta({}).length === 0, 'as quatro vazias nao sao quatro avisos');
 }
 
 grupo('a chave da arte passa pelo candidato');
@@ -58,7 +77,8 @@ grupo('a chave da arte passa pelo candidato');
     imagens: { 'imagemLoteArquivo1:felipe': arte('do-felipe.jpg') },
     chaveDeImagem: porPerfil,
   });
-  check(pares.length === 1, 'le a arte do candidato logado');
+  // Sao DUAS pecas prontas (as duas legendas do `cfg`), e so a primeira leva arte.
+  check(pares.length === 2 && pares[0].temArte && !pares[1].temArte, 'le a arte do candidato logado');
   check(pares[0].chave === 'imagemLoteArquivo1:felipe', 'e carrega a chave que o worker vai subir');
 }
 
@@ -155,7 +175,11 @@ grupo('o confirm diz quantos cada par vai pegar');
 grupo('as chaves do auto sao as que o perfil tem de separar');
 {
   const chaves = lote.chavesNoAuto();
-  check(chaves.length === lote.QUANTOS_PARES * 2, 'duas por par: o link e a legenda');
+  check(chaves.length === lote.MAX_PECAS * 2, 'duas por peca: o link e a legenda');
+  check(
+    chaves.includes(lote.chaveDaLegenda(lote.MAX_PECAS)),
+    'e vai ate o TETO, nao ate lotePecas -- a chave da peca 8 tem de existir ANTES de ele cria-la'
+  );
   check(chaves.includes('legendaLote4') && chaves.includes('imagemLote4'), 'inclusive o ultimo par');
   check(!chaves.includes(lote.chaveDaImagem(1)), 'os BYTES nao moram no auto: a chave deles e separada');
 }
@@ -424,6 +448,30 @@ grupo('sem teto, a fila nunca se esgota -- e ela continua na ORDEM dele');
   const curto = { fila: ['ch-1'], envios, dia: '2026-10-02', teto: 45 };
   check(lote.numeroDaVez(curto) === null, 'fila de um numero cheio nao tem vez -- a recusa que o bloqueou');
   check(lote.numeroDaVez({ ...curto, teto: 1000 }).canalId === 'ch-1', 'e levantar o teto resolve, que e o que ele pediu');
+}
+
+grupo('quantas pecas: ele adiciona e remove, e o padrao continua sendo quatro');
+{
+  check(lote.quantasPecas({}) === lote.PECAS_PADRAO, 'sem valor gravado, as quatro de sempre');
+  check(lote.quantasPecas() === lote.PECAS_PADRAO, 'sem cfg nenhuma tambem');
+  check(lote.quantasPecas({ lotePecas: 1 }) === 1, 'uma peca so e valido: disparo de uma mensagem');
+  check(lote.quantasPecas({ lotePecas: 8 }) === 8, 'e o teto tambem');
+
+  // Fora da faixa NAO vira zero: zero pecas e nada a mandar, e o botao ficaria morto sem motivo.
+  check(lote.quantasPecas({ lotePecas: 0 }) === 1, 'zero sobe para uma');
+  check(lote.quantasPecas({ lotePecas: -3 }) === 1, 'negativo tambem');
+  check(lote.quantasPecas({ lotePecas: 99 }) === lote.MAX_PECAS, 'acima do teto para no teto');
+  check(lote.quantasPecas({ lotePecas: 'abc' }) === lote.PECAS_PADRAO, 'lixo volta ao padrao');
+  check(lote.quantasPecas({ lotePecas: '6' }) === 6, 'o campo da tela chega como texto');
+
+  // E a conta das pecas prontas RESPEITA o quanto ele pediu: a legenda da peca 3 existe no
+  // armazenamento e nao sai enquanto ele estiver usando duas -- remover nao apaga, so para de usar.
+  const tres = { lotePecas: 3, legendaLote1: LEGENDA_1, legendaLote2: LEGENDA_2, legendaLote3: LEGENDA_1 };
+  check(lote.paresProntos({ cfg: tres, imagens: {} }).length === 3, 'com tres pecas, as tres saem');
+  check(
+    lote.paresProntos({ cfg: { ...tres, lotePecas: 2 }, imagens: {} }).length === 2,
+    'baixando para duas, a terceira para de sair e o texto dela continua guardado'
+  );
 }
 
 fim();

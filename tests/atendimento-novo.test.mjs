@@ -102,6 +102,16 @@ grupo('mandar texto na sessao: mesma rota e envelope do envio de imagem');
   check(ultima.corpo.direction === 'TO_HUB', 'e a direcao de quem manda');
   check(ultima.corpo.senderId === 'uuid-1', 'usando o senderId que recebeu');
 
+  /**
+   * O `status` volta junto desde 02/10/2026: no disparo de SO TEXTO e ele que decide se da para
+   * concluir, porque concluir CANCELA mensagem em fila e pela API nao ha dialogo avisando.
+   */
+  resposta = { id: 'msg-9', text: 'Olha a colinha', status: 'QUEUED' };
+  const emFila = await api.mandarTexto({ sessionId: 'sess-7', texto: 'Olha a colinha' });
+  check(emFila.status === 'QUEUED', 'o status da mensagem volta para quem for concluir decidir');
+  resposta = { id: 'msg-10', text: 'oi' };
+  check((await api.mandarTexto({ sessionId: 'sess-7', texto: 'oi' })).status === '', 'sem status, string vazia -- nunca "QUEUED" por acidente');
+
   resposta = { id: 'msg-2' };
   let acusou = false;
   try {

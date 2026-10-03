@@ -858,6 +858,23 @@ const DEFAULTS = {
     legendaLote3: '',
     imagemLote4: '',
     legendaLote4: '',
+    imagemLote5: '',
+    legendaLote5: '',
+    imagemLote6: '',
+    legendaLote6: '',
+    imagemLote7: '',
+    legendaLote7: '',
+    imagemLote8: '',
+    legendaLote8: '',
+    /**
+     * **Quantas PEÇAS o disparo oferece** — pedido dele (02/10/2026: *"a opção de mandar imagens não
+     * precisa ser 4, bote a opção de adicionar ou remover quantidades, e também as caixas de texto
+     * com a mesma opção"*).
+     *
+     * Nasce com **4**, que é o que ele já tinha configurado: `auto` está na mescla do `get`, então a
+     * chave nova chega com o padrão e nenhuma peça dele desaparece. O teto é `lote.MAX_PECAS`.
+     */
+    lotePecas: 4,
     /**
      * **A etiqueta que marca quem RECEBEU o lote** (pedido dele, 01/10/2026: *"ao mandar essa
      * imagem bote a etiqueta COLINHA"*).
