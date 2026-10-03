@@ -156,6 +156,10 @@
     <div class="tel" id="telAtual"></div>
     <div class="texto" id="textoAtual"></div>
     <a class="botao primario" id="btAbrir" href="#">Abrir no WhatsApp</a>
+    <p class="pequeno" data-fica="1">
+      O texto tambem vai copiado. Abrindo a conversa <strong>sem</strong> o texto escrito, e so
+      segurar o dedo no campo de mensagem e colar.
+    </p>
     <button id="btProximo">Mandei &mdash; proximo</button>
     <div class="linha">
       <button id="btPular">Pular este</button>
@@ -488,16 +492,13 @@ el('btPular').addEventListener('click', function () {
  * transferencia moderna (`navigator.clipboard`) nao existe em `file://` em alguns navegadores,
  * entao ha o caminho velho atras dela.
  */
-el('btCopiar').addEventListener('click', function () {
-  var texto = plano[pos] ? plano[pos].texto : '';
-  var pronto = function () { el('statusLaco').textContent = 'Texto copiado.'; };
-  var falhou = function () { el('statusLaco').textContent = 'Nao consegui copiar. Toque e segure o texto para copiar a mao.'; };
-  try {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(texto).then(pronto, falhou);
-      return;
-    }
-  } catch (e) { /* cai para o caminho velho */ }
+/**
+ * Copia o texto. **O caminho velho (`execCommand`) vem PRIMEIRO de proposito**: ele e sincrono, e
+ * aqui a copia precisa terminar antes de a pagina sair para o WhatsApp — a versao moderna devolve
+ * uma promessa que pode nao chegar a resolver, e ai o texto nao estaria na area de transferencia
+ * justo quando ele fosse colar.
+ */
+function copiarTexto(texto) {
   try {
     var a = document.createElement('textarea');
     a.value = texto;
@@ -507,8 +508,36 @@ el('btCopiar').addEventListener('click', function () {
     a.select();
     var deu = document.execCommand('copy');
     document.body.removeChild(a);
-    deu ? pronto() : falhou();
-  } catch (e2) { falhou(); }
+    if (deu) return true;
+  } catch (e) { /* cai para a versao moderna */ }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto);
+      return true;
+    }
+  } catch (e2) { /* nenhuma das duas */ }
+  return false;
+}
+
+el('btCopiar').addEventListener('click', function () {
+  var deu = copiarTexto(plano[pos] ? plano[pos].texto : '');
+  el('statusLaco').textContent = deu
+    ? 'Texto copiado.'
+    : 'Nao consegui copiar. Toque e segure o texto acima para copiar a mao.';
+});
+
+/**
+ * **O texto vai para a area de transferencia ANTES de abrir a conversa, sempre.** Medido em
+ * 03/10/2026 que o mecanismo `smsto` abre a conversa; o que nao se sabe e se ele leva o texto
+ * junto, porque `sms_body` e um campo de SMS e o WhatsApp pode ignora-lo. Copiando antes, os dois
+ * casos ficam resolvidos sem ele precisar decidir nada: veio escrito, e so mandar; nao veio, e so
+ * segurar o dedo e colar.
+ *
+ * **Nao chama `preventDefault`** — a navegacao para o WhatsApp tem de acontecer normalmente.
+ */
+el('btAbrir').addEventListener('click', function () {
+  if (!plano[pos]) return;
+  copiarTexto(plano[pos].texto);
 });
 
 el('btParar').addEventListener('click', function () {

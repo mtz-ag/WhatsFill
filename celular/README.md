@@ -257,6 +257,10 @@ entra quando o anterior acabar.
 
 ## Log de decisoes
 
+- **03/10/2026** — **MEDIDO E RESOLVIDO: o mecanismo 3 (`intent://` com `scheme=smsto`)
+  abre a conversa em modo aviao**, com contato importado e sincronizado, a partir de uma
+  pagina aberta de arquivo local. A hipotese central do projeto esta de pe. Falta saber se
+  o texto vai junto: a pagina copia antes de abrir, entao os dois casos funcionam.
 - **03/10/2026** — Medido com ele: os tres mecanismos falharam, e o terceiro ofereceu
   *convidar por SMS* — o WhatsApp recebeu o pedido e nao reconheceu o numero como usuario.
   O teste usou o numero DELE, que nao esta salvo como contato: em modo aviao o WhatsApp nao
