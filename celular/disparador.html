@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Disparo pelo celular</title>
+<!--
+  **ESTA PAGINA NAO MANDA MENSAGEM.** Ela abre a conversa no WhatsApp com o texto ja escrito; quem
+  aperta enviar e ele. E de proposito: nao existe jeito honesto de um programa apertar o botao de
+  enviar do WhatsApp — o que existe e dirigir a tela pelo servico de acessibilidade, que e proibido
+  pelos termos do WhatsApp e e o padrao que queima numero mais rapido.
+
+  **ZERO REDE.** Nenhum script de fora, nenhuma fonte de fora, nenhuma requisicao. Tem que funcionar
+  com o celular em modo aviao — se ela pedisse qualquer coisa pela rede, o plano inteiro cairia.
+
+  **O DADO FICA NO CELULAR.** O plano (telefone, nome, texto) e escolhido no seletor de arquivo e
+  vive na memoria desta aba. Nada e enviado para lugar nenhum, e este arquivo nao guarda contato.
+-->
+<style>
+  :root {
+    --fundo: #0f1115; --papel: #171a21; --borda: #2a2f3a; --texto: #e8eaf0;
+    --fraco: #9aa3b2; --acento: #3b82f6; --ok: #22c55e; --alerta: #f59e0b; --erro: #ef4444;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --fundo: #f6f7f9; --papel: #fff; --borda: #d8dce3; --texto: #15181d;
+      --fraco: #5b6472; --acento: #1d4ed8;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; padding: 16px; background: var(--fundo); color: var(--texto);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  h1 { font-size: 19px; margin: 0 0 4px; }
+  .sub { color: var(--fraco); font-size: 13px; margin: 0 0 16px; }
+  .cartao { background: var(--papel); border: 1px solid var(--borda); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .cartao h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--fraco); margin: 0 0 10px; font-weight: 600; }
+  button, .botao {
+    display: block; width: 100%; padding: 15px; border-radius: 10px; border: 1px solid var(--borda);
+    background: var(--papel); color: var(--texto); font: inherit; font-weight: 600;
+    text-align: center; text-decoration: none; cursor: pointer; margin-bottom: 8px;
+  }
+  button:disabled { opacity: .45; }
+  .primario { background: var(--acento); border-color: var(--acento); color: #fff; font-size: 18px; padding: 18px; }
+  .linha { display: flex; gap: 8px; }
+  .linha > * { flex: 1; margin-bottom: 8px; }
+  input[type=number], input[type=tel] {
+    width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--borda);
+    background: var(--fundo); color: var(--texto); font: inherit;
+  }
+  label { display: block; font-size: 13px; color: var(--fraco); margin-bottom: 6px; }
+  .contador { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .contador small { font-size: 15px; font-weight: 400; color: var(--fraco); }
+  .nome { font-weight: 600; margin-bottom: 2px; word-break: break-word; }
+  .tel { color: var(--fraco); font-size: 14px; font-variant-numeric: tabular-nums; margin-bottom: 10px; }
+  .texto {
+    background: var(--fundo); border: 1px solid var(--borda); border-radius: 10px;
+    padding: 12px; white-space: pre-wrap; word-break: break-word; font-size: 15px; margin-bottom: 12px;
+  }
+  .marca { display: inline-block; font-size: 12px; color: var(--fraco); border: 1px solid var(--borda); border-radius: 999px; padding: 2px 9px; margin-bottom: 10px; }
+  .aviso { border-left: 3px solid var(--alerta); padding: 10px 12px; background: var(--papel); border-radius: 0 10px 10px 0; font-size: 14px; margin-bottom: 14px; }
+  .aviso.ruim { border-left-color: var(--erro); }
+  .aviso.bom { border-left-color: var(--ok); }
+  .oculto { display: none !important; }
+  .barra { height: 6px; background: var(--fundo); border-radius: 999px; overflow: hidden; margin-bottom: 12px; border: 1px solid var(--borda); }
+  .barra > i { display: block; height: 100%; background: var(--ok); width: 0; }
+  .fim { text-align: center; padding: 10px 0; }
+  .fim .grande { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .pequeno { font-size: 13px; color: var(--fraco); }
+</style>
+</head>
+<body>
+
+<h1>Disparo pelo celular</h1>
+<p class="sub">Abre a conversa com o texto pronto. <strong>Quem aperta enviar e voce.</strong></p>
+
+<!-- ================= 1. A SONDA ================= -->
+<!--
+  **Isto vem ANTES de tudo porque e a medicao que decide se o resto serve.** O caminho inteiro se
+  apoia numa hipotese que nunca foi observada neste projeto: que `whatsapp://send?phone=...&text=...`
+  abre a conversa COM O CELULAR EM MODO AVIAO. O endereco e do proprio aplicativo (nao e um link da
+  internet), entao deveria ser resolvido no aparelho — mas "deveria" nao e "foi medido", e o teste
+  custa dois toques.
+-->
+<div class="cartao" id="cartaoSonda">
+  <h2>1 &middot; Teste antes de tudo</h2>
+  <div class="aviso">
+    <strong>Ligue o modo aviao agora.</strong> Ponha o seu proprio numero abaixo e toque em testar.
+    Se a conversa abrir com o texto escrito, o caminho funciona. Se nao abrir, nada daqui serve e e
+    melhor voce me dizer.
+  </div>
+  <label for="telTeste">Seu numero, com DDD</label>
+  <input type="tel" id="telTeste" placeholder="51900000000" inputmode="numeric">
+  <a class="botao primario" id="btTeste" href="#">Testar com modo aviao ligado</a>
+  <div class="linha">
+    <button id="btSondaOk">Abriu com o texto</button>
+    <button id="btSondaFalhou">Nao abriu</button>
+  </div>
+  <p class="pequeno" id="resultadoSonda"></p>
+</div>
+
+<!-- ================= 2. O PLANO ================= -->
+<div class="cartao oculto" id="cartaoPlano">
+  <h2>2 &middot; O plano de mensagens</h2>
+  <p class="pequeno">O arquivo <code>-plano.csv</code> que a ferramenta gerou. Ele fica no celular: esta pagina nao manda nada para lugar nenhum.</p>
+  <label class="botao" for="arquivo">Escolher o plano.csv</label>
+  <input type="file" id="arquivo" accept=".csv,text/csv" class="oculto">
+  <p class="pequeno" id="resumoPlano"></p>
+  <div id="camposLimite" class="oculto">
+    <div class="linha">
+      <div>
+        <label for="limite">Parar depois de</label>
+        <input type="number" id="limite" min="1" step="1" placeholder="30">
+      </div>
+      <div>
+        <label for="comecarEm">Comecar do numero</label>
+        <input type="number" id="comecarEm" min="1" step="1" value="1">
+      </div>
+    </div>
+    <button class="primario" id="btComecar">Comecar</button>
+  </div>
+</div>
+
+<!-- ================= 3. O LACO ================= -->
+<div class="cartao oculto" id="cartaoLaco">
+  <h2>3 &middot; Mandando</h2>
+  <div class="barra"><i id="barra"></i></div>
+  <p class="contador"><span id="feitos">0</span><small> de <span id="alvo">0</span> &middot; contato <span id="posicao">1</span></small></p>
+  <div id="atual">
+    <span class="marca" id="marcaTexto">texto 1</span>
+    <div class="nome" id="nomeAtual"></div>
+    <div class="tel" id="telAtual"></div>
+    <div class="texto" id="textoAtual"></div>
+    <a class="botao primario" id="btAbrir" href="#">Abrir no WhatsApp</a>
+    <button id="btProximo">Mandei &mdash; proximo</button>
+    <div class="linha">
+      <button id="btPular">Pular este</button>
+      <button id="btCopiar">Copiar o texto</button>
+    </div>
+  </div>
+  <div id="acabou" class="fim oculto">
+    <div class="grande" id="tituloFim"></div>
+    <p class="pequeno" id="detalheFim"></p>
+  </div>
+  <button id="btParar">Parar e anotar onde parei</button>
+  <p class="pequeno" id="statusLaco"></p>
+</div>
+
+<div class="aviso ruim" id="avisoFinal">
+  <strong>O que esta pagina nao faz:</strong> ela nao aperta enviar, nao conta quantas mensagens
+  sairam de verdade e nao sabe se o numero foi bloqueado. O que ela conta sao os seus toques.
+</div>
+
+<script>
+'use strict';
+
+/* ------------------------------------------------------------------ *
+ * Estado — so em memoria, mais uma copia de onde parou
+ * ------------------------------------------------------------------ */
+
+var plano = [];
+var pos = 0;        // indice do contato da vez
+var feitos = 0;     // quantos ele disse que mandou
+var alvo = 0;       // onde parar
+var rodando = false;
+
+/**
+ * **O armazenamento do navegador pode nao existir aqui.** Pagina aberta de arquivo (`file://`) tem
+ * origem opaca, e em janela privada ou com dados de site bloqueados a leitura ESTOURA em vez de
+ * voltar vazia. Entao toda leitura e escrita vai dentro de try, e **a pagina funciona sem isso** —
+ * o numero de onde parou aparece na tela, que e o que ele anota.
+ */
+function guardar(chave, valor) {
+  try { localStorage.setItem(chave, String(valor)); } catch (e) { /* segue sem lembrar */ }
+}
+function lembrar(chave) {
+  try { return localStorage.getItem(chave); } catch (e) { return null; }
+}
+
+var el = function (id) { return document.getElementById(id); };
+var mostrar = function (id, sim) { el(id).classList.toggle('oculto', !sim); };
+
+/* ------------------------------------------------------------------ *
+ * 1. A sonda
+ * ------------------------------------------------------------------ */
+
+/**
+ * Monta o endereco do proprio aplicativo. **`whatsapp://` nao e link da internet** — o Android
+ * entrega direto para o WhatsApp, e e por isso que ele tem chance de funcionar em modo aviao.
+ * O `https://wa.me/...` NAO serve aqui: aquele passa por um servidor antes.
+ */
+function enderecoDoWhatsApp(telefone, texto) {
+  var numero = String(telefone || '').replace(/[^0-9]/g, '');
+  return 'whatsapp://send?phone=' + numero + '&text=' + encodeURIComponent(texto || '');
+}
+
+el('telTeste').addEventListener('input', function () {
+  var n = el('telTeste').value.replace(/[^0-9]/g, '');
+  if (n && n.length < 12) n = '55' + n;
+  el('btTeste').href = enderecoDoWhatsApp(n, 'Teste do disparo. Se voce esta lendo isto com o modo aviao ligado, o caminho funciona.');
+});
+
+el('btSondaOk').addEventListener('click', function () {
+  el('resultadoSonda').textContent = 'Medido: abre em modo aviao. O resto da pagina serve.';
+  guardar('sonda', 'ok');
+  mostrar('cartaoPlano', true);
+  el('cartaoPlano').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+el('btSondaFalhou').addEventListener('click', function () {
+  el('resultadoSonda').textContent =
+    'Entao este caminho nao serve: me diga o que apareceu (nada, "nenhum aplicativo", ou abriu sem o texto).';
+  guardar('sonda', 'falhou');
+  mostrar('cartaoPlano', false);
+});
+
+// Quem ja mediu uma vez nao precisa medir de novo.
+if (lembrar('sonda') === 'ok') {
+  el('resultadoSonda').textContent = 'Voce ja testou isto antes e funcionou.';
+  mostrar('cartaoPlano', true);
+}
+
+/* ------------------------------------------------------------------ *
+ * 2. O plano
+ * ------------------------------------------------------------------ */
+
+/** Leitor de CSV com aspas — o texto das mensagens tem ponto e virgula e quebra de linha dentro. */
+function lerCsv(texto) {
+  var linhas = [], campo = '', linha = [], aspas = false;
+  for (var i = 0; i < texto.length; i++) {
+    var c = texto.charAt(i);
+    if (aspas) {
+      if (c === '"') { if (texto.charAt(i + 1) === '"') { campo += '"'; i++; } else { aspas = false; } }
+      else { campo += c; }
+      continue;
+    }
+    if (c === '"') { aspas = true; continue; }
+    if (c === ';') { linha.push(campo); campo = ''; continue; }
+    if (c === '\r') { continue; }
+    if (c === '\n') { linha.push(campo); linhas.push(linha); linha = []; campo = ''; continue; }
+    campo += c;
+  }
+  if (campo !== '' || linha.length) { linha.push(campo); linhas.push(linha); }
+  return linhas;
+}
+
+el('arquivo').addEventListener('change', function (ev) {
+  var arq = ev.target.files && ev.target.files[0];
+  if (!arq) return;
+  var leitor = new FileReader();
+  leitor.onload = function () {
+    var linhas = lerCsv(String(leitor.result).replace(/^﻿/, ''));
+    if (!linhas.length) { el('resumoPlano').textContent = 'Arquivo vazio.'; return; }
+
+    var cab = linhas[0].map(function (s) { return String(s).trim().toLowerCase(); });
+    var iTel = cab.indexOf('telefone'), iNome = cab.indexOf('nome'), iTexto = cab.indexOf('texto');
+    var iVar = cab.indexOf('variacao');
+    if (iTel < 0 || iTexto < 0) {
+      el('resumoPlano').textContent = 'Nao achei as colunas "telefone" e "texto". Este nao e o plano.csv.';
+      return;
+    }
+
+    plano = [];
+    for (var i = 1; i < linhas.length; i++) {
+      var l = linhas[i];
+      if (!l[iTel]) continue;
+      plano.push({
+        telefone: String(l[iTel]).trim(),
+        nome: iNome >= 0 ? String(l[iNome] || '').trim() : '',
+        texto: String(l[iTexto] || ''),
+        variacao: iVar >= 0 ? String(l[iVar] || '') : ''
+      });
+    }
+    if (!plano.length) { el('resumoPlano').textContent = 'O plano nao tem nenhuma linha com telefone.'; return; }
+
+    var variacoes = {};
+    for (var j = 0; j < plano.length; j++) variacoes[plano[j].variacao] = 1;
+    el('resumoPlano').textContent =
+      plano.length + ' contato(s), revezando entre ' + Object.keys(variacoes).length + ' texto(s).';
+
+    el('limite').value = Math.min(30, plano.length);
+    el('limite').max = plano.length;
+    el('comecarEm').max = plano.length;
+
+    var onde = lembrar('posicao');
+    if (onde && Number(onde) > 1 && Number(onde) <= plano.length) {
+      el('comecarEm').value = onde;
+      el('resumoPlano').textContent += ' Da ultima vez voce parou no contato ' + onde + '.';
+    }
+    mostrar('camposLimite', true);
+  };
+  leitor.readAsText(arq, 'utf-8');
+});
+
+el('btComecar').addEventListener('click', function () {
+  var inicio = Math.max(1, Math.min(plano.length, Number(el('comecarEm').value) || 1));
+  alvo = Math.max(1, Math.min(plano.length - inicio + 1, Number(el('limite').value) || plano.length));
+  pos = inicio - 1;
+  feitos = 0;
+  rodando = true;
+  mostrar('cartaoSonda', false);
+  mostrar('cartaoPlano', false);
+  mostrar('cartaoLaco', true);
+  desenhar();
+  el('cartaoLaco').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+/* ------------------------------------------------------------------ *
+ * 3. O laco
+ * ------------------------------------------------------------------ */
+
+function desenhar() {
+  el('feitos').textContent = String(feitos);
+  el('alvo').textContent = String(alvo);
+  el('posicao').textContent = String(pos + 1);
+  el('barra').style.width = Math.round((feitos / Math.max(1, alvo)) * 100) + '%';
+
+  var acabouLista = pos >= plano.length;
+  var bateuAlvo = feitos >= alvo;
+  if (acabouLista || bateuAlvo) return terminar(bateuAlvo && !acabouLista);
+
+  var c = plano[pos];
+  el('marcaTexto').textContent = c.variacao ? 'texto ' + c.variacao : 'texto';
+  el('nomeAtual').textContent = c.nome || '(sem nome)';
+  el('telAtual').textContent = c.telefone;
+  el('textoAtual').textContent = c.texto;
+  el('btAbrir').href = enderecoDoWhatsApp(c.telefone, c.texto);
+  guardar('posicao', pos + 1);
+}
+
+/**
+ * **Chegar no numero que ele pediu nao e "acabou": e a hora de RELIGAR a internet.** Era isso o que
+ * ele descreveu — mandar com o aparelho fora do ar e religar ao atingir a conta —, entao a tela diz
+ * o passo seguinte em vez de so parar.
+ */
+function terminar(bateuAlvo) {
+  rodando = false;
+  mostrar('atual', false);
+  mostrar('acabou', true);
+  el('tituloFim').textContent = bateuAlvo
+    ? 'Chegou em ' + feitos + '. Pode religar a internet.'
+    : 'A lista acabou. ' + feitos + ' mensagem(ns) preparada(s).';
+  el('detalheFim').textContent =
+    'Voce parou no contato ' + Math.min(pos + 1, plano.length) + ' de ' + plano.length +
+    '. Anote este numero: e dele que voce continua na proxima vez.';
+  el('btParar').textContent = 'Comecar outra rodada';
+  el('btParar').onclick = function () { location.reload(); };
+}
+
+el('btProximo').addEventListener('click', function () {
+  if (!rodando) return;
+  feitos++;
+  pos++;
+  desenhar();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+/**
+ * Pular anda na lista e **nao conta** — o alvo e "quantas eu mandei", nao "quantas eu olhei". Sem
+ * isso, uma lista com muito numero errado faria a rodada "chegar em 30" tendo mandado dez.
+ */
+el('btPular').addEventListener('click', function () {
+  if (!rodando) return;
+  pos++;
+  desenhar();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+/**
+ * A saida para o caso de o endereco abrir a conversa SEM o texto — ai ele cola. A area de
+ * transferencia moderna (`navigator.clipboard`) nao existe em `file://` em alguns navegadores,
+ * entao ha o caminho velho atras dela.
+ */
+el('btCopiar').addEventListener('click', function () {
+  var texto = plano[pos] ? plano[pos].texto : '';
+  var pronto = function () { el('statusLaco').textContent = 'Texto copiado.'; };
+  var falhou = function () { el('statusLaco').textContent = 'Nao consegui copiar. Toque e segure o texto para copiar a mao.'; };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(pronto, falhou);
+      return;
+    }
+  } catch (e) { /* cai para o caminho velho */ }
+  try {
+    var a = document.createElement('textarea');
+    a.value = texto;
+    a.style.position = 'fixed';
+    a.style.opacity = '0';
+    document.body.appendChild(a);
+    a.select();
+    var deu = document.execCommand('copy');
+    document.body.removeChild(a);
+    deu ? pronto() : falhou();
+  } catch (e2) { falhou(); }
+});
+
+el('btParar').addEventListener('click', function () {
+  if (!rodando) { location.reload(); return; }
+  terminar(false);
+});
+</script>
+</body>
+</html>
