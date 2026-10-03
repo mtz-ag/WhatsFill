@@ -101,9 +101,16 @@
     Tem de ser toque num botao, <strong>nunca digitar na barra de endereco</strong>: digitado, o
     Chrome trata como endereco de site e mostra o dinossauro.
   </div>
+  <label>Por qual aplicativo</label>
+  <div class="linha">
+    <button data-pac="com.whatsapp.w4b">WhatsApp Business</button>
+    <button data-pac="com.whatsapp">WhatsApp comum</button>
+  </div>
+  <p class="pequeno" data-fica="1" id="appEscolhido"></p>
+
   <label for="telTeste">O numero de um contato ja importado, com DDD</label>
   <input type="tel" id="telTeste" placeholder="51900000000" inputmode="numeric">
-  <a class="botao primario" id="bt1" href="#">1 &middot; Abrir a conversa</a>
+  <a class="botao" id="bt1" href="#">1 &middot; Abrir a conversa (sem escolher o aplicativo)</a>
   <a class="botao" id="bt2" href="#">2 &middot; Se o 1 falhou</a>
   <a class="botao" id="bt3" href="#">3 &middot; Se o 2 falhou</a>
   <a class="botao" id="bt4" href="#">4 &middot; Escolher o contato na lista do WhatsApp</a>
@@ -225,16 +232,28 @@ var mostrar = function (id, sim) { el(id).classList.toggle('oculto', !sim); };
  *
  * **Nenhum e `https://wa.me/...`**, que passa por um servidor antes e morre em modo aviao.
  */
+/**
+ * **O WhatsApp comum e o Business sao dois aplicativos diferentes para o Android**, com nomes de
+ * pacote proprios — e com os dois instalados, quem nao nomeia o pacote cai no que o sistema
+ * escolher (medido em 03/10/2026: abriu o comum).
+ */
+var PACOTES = { normal: 'com.whatsapp', business: 'com.whatsapp.w4b' };
+var NOME_DO_PACOTE = { 'com.whatsapp': 'WhatsApp', 'com.whatsapp.w4b': 'WhatsApp Business' };
+
 var MECANISMOS = {
+  /**
+   * **Este e o unico que NAO escolhe o aplicativo.** O endereco `whatsapp://` e atendido pelos
+   * dois, e quem decide e o Android — por isso ele fica marcado na tela como "sem escolher".
+   */
   whatsapp: function (n, t) {
     return 'whatsapp://send?phone=' + n + '&text=' + encodeURIComponent(t);
   },
-  intent: function (n, t) {
+  intent: function (n, t, p) {
     return 'intent://send?phone=' + n + '&text=' + encodeURIComponent(t) +
-      '#Intent;scheme=whatsapp;package=com.whatsapp;end';
+      '#Intent;scheme=whatsapp;package=' + p + ';end';
   },
-  smsto: function (n, t) {
-    return 'intent://' + n + '#Intent;scheme=smsto;package=com.whatsapp;S.sms_body=' +
+  smsto: function (n, t, p) {
+    return 'intent://' + n + '#Intent;scheme=smsto;package=' + p + ';S.sms_body=' +
       encodeURIComponent(t) + ';end';
   },
   /**
@@ -247,18 +266,21 @@ var MECANISMOS = {
    * O preco e um toque a mais por contato, e o risco de escolher a pessoa errada na lista — por
    * isso o nome do contato fica grande na tela, com o prefixo ZDISPARO para buscar.
    */
-  compartilhar: function (n, t) {
+  compartilhar: function (n, t, p) {
     return 'intent:#Intent;action=android.intent.action.SEND;type=text/plain;' +
-      'package=com.whatsapp;S.android.intent.extra.TEXT=' + encodeURIComponent(t) + ';end';
+      'package=' + p + ';S.android.intent.extra.TEXT=' + encodeURIComponent(t) + ';end';
   },
 };
 
 var mecanismo = lembrar('mecanismo') || 'whatsapp';
+// Business por padrao: e o aplicativo do mandato. Com os dois instalados, nao escolher significa
+// mandar pelo numero pessoal dele sem perceber.
+var pacote = lembrar('pacote') || PACOTES.business;
 
 function enderecoDoWhatsApp(telefone, texto) {
   var numero = String(telefone || '').replace(/[^0-9]/g, '');
   var montar = MECANISMOS[mecanismo] || MECANISMOS.whatsapp;
-  return montar(numero, texto || '');
+  return montar(numero, texto || '', pacote);
 }
 
 var TEXTO_DO_TESTE = 'Teste do disparo. Se isto chegou escrito com o modo aviao ligado, o caminho funciona.';
@@ -267,11 +289,25 @@ function atualizarBotoesDoTeste() {
   var n = el('telTeste').value.replace(/[^0-9]/g, '');
   if (n && n.length < 12) n = '55' + n;
   el('bt1').href = MECANISMOS.whatsapp(n, TEXTO_DO_TESTE);
-  el('bt2').href = MECANISMOS.intent(n, TEXTO_DO_TESTE);
-  el('bt3').href = MECANISMOS.smsto(n, TEXTO_DO_TESTE);
-  el('bt4').href = MECANISMOS.compartilhar(n, TEXTO_DO_TESTE);
+  el('bt2').href = MECANISMOS.intent(n, TEXTO_DO_TESTE, pacote);
+  el('bt3').href = MECANISMOS.smsto(n, TEXTO_DO_TESTE, pacote);
+  el('bt4').href = MECANISMOS.compartilhar(n, TEXTO_DO_TESTE, pacote);
+  var botoes = document.querySelectorAll('[data-pac]');
+  for (var i = 0; i < botoes.length; i++) {
+    botoes[i].classList.toggle('primario', botoes[i].getAttribute('data-pac') === pacote);
+  }
+  el('appEscolhido').textContent = 'Vai abrir no ' + NOME_DO_PACOTE[pacote] + '.';
 }
 el('telTeste').addEventListener('input', atualizarBotoesDoTeste);
+
+var botoesDePacote = document.querySelectorAll('[data-pac]');
+for (var p = 0; p < botoesDePacote.length; p++) {
+  botoesDePacote[p].addEventListener('click', function () {
+    pacote = this.getAttribute('data-pac');
+    guardar('pacote', pacote);
+    atualizarBotoesDoTeste();
+  });
+}
 atualizarBotoesDoTeste();
 
 var NOME_DO_MECANISMO = {
@@ -285,8 +321,11 @@ function escolherMecanismo(qual) {
   mecanismo = qual;
   guardar('mecanismo', qual);
   guardar('sonda', 'ok');
-  el('resultadoSonda').textContent =
-    'Medido: ' + NOME_DO_MECANISMO[qual] + ' abre em modo aviao. A pagina vai usar este daqui.';
+  el('resultadoSonda').textContent = qual === 'whatsapp'
+    ? 'Atencao: este e o unico que NAO escolhe o aplicativo — com os dois instalados, quem decide ' +
+      'e o Android. Se voce precisa do Business, prefira o 2, o 3 ou o 4.'
+    : 'Medido: ' + NOME_DO_MECANISMO[qual] + ' abre o ' + NOME_DO_PACOTE[pacote] +
+      ' em modo aviao. A pagina vai usar este daqui.';
   mostrar('cartaoPlano', true);
   el('cartaoPlano').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -438,6 +477,14 @@ function desenhar() {
     el('statusLaco').textContent = 'Copie, abra o WhatsApp e ache o contato pelo "ZDISPARO".';
   } else {
     el('btAbrir').href = enderecoDoWhatsApp(c.telefone, c.texto);
+    /**
+     * **O nome do aplicativo fica no BOTAO, e nao num canto da tela.** Com os dois instalados, o
+     * erro possivel e mandar quinhentas pelo numero pessoal sem perceber — e o lugar de dizer isso
+     * e onde ele toca, a cada contato.
+     */
+    el('btAbrir').textContent = mecanismo === 'whatsapp'
+      ? 'Abrir (o sistema escolhe o aplicativo)'
+      : 'Abrir no ' + NOME_DO_PACOTE[pacote];
     /**
      * No modo "escolher na lista" o endereco NAO leva o numero, entao o unico jeito de a mensagem
      * chegar na pessoa certa e ele acertar o nome. O aviso fica colado no botao, e nao no rodape.

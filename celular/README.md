@@ -234,6 +234,11 @@ entra quando o anterior acabar.
 - **O armazenamento do navegador pode estourar em `file://`.** Pagina aberta de arquivo tem origem
   opaca; em janela privada ou com dados bloqueados a leitura **lanca** em vez de voltar vazia. Toda
   leitura vai dentro de `try`, e a pagina funciona sem ela — o numero de onde parou esta na tela.
+- **O WhatsApp comum e o Business sao DOIS aplicativos para o Android**, e so o mecanismo
+  `whatsapp://` nao sabe escolher entre eles: ele e atendido pelos dois e quem decide e o
+  sistema. Os que nomeiam o pacote (`intent://`) escolhem. **O erro que isto evita e mandar
+  quinhentas mensagens pelo numero pessoal sem perceber**, e por isso o nome do aplicativo
+  fica escrito no botao que ele toca, a cada contato, e nao num canto da tela.
 - **"Pular" nao conta no alvo.** O alvo e "quantas eu mandei", nao "quantas eu olhei": sem isso uma
   lista com muito numero errado faria a rodada "chegar em 30" tendo mandado dez.
 - **Etiqueta pedida que nao existe no arquivo RECUSA a conversao.** O defeito dela e silencioso e
@@ -257,6 +262,10 @@ entra quando o anterior acabar.
 
 ## Log de decisoes
 
+- **03/10/2026** — O WhatsApp comum e o Business sao pacotes diferentes
+  (`com.whatsapp` e `com.whatsapp.w4b`), e com os dois instalados quem nao nomeia o pacote
+  cai no que o Android escolher — medido: abriu o comum. A pagina passou a escolher o
+  aplicativo, com **Business por padrao**, e o nome dele vai escrito no proprio botao.
 - **03/10/2026** — **MEDIDO E RESOLVIDO: o mecanismo 3 (`intent://` com `scheme=smsto`)
   abre a conversa em modo aviao**, com contato importado e sincronizado, a partir de uma
   pagina aberta de arquivo local. A hipotese central do projeto esta de pe. Falta saber se
