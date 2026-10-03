@@ -257,6 +257,11 @@ entra quando o anterior acabar.
 
 ## Log de decisoes
 
+- **03/10/2026** — Medido com ele: os tres mecanismos falharam, e o terceiro ofereceu
+  *convidar por SMS* — o WhatsApp recebeu o pedido e nao reconheceu o numero como usuario.
+  O teste usou o numero DELE, que nao esta salvo como contato: em modo aviao o WhatsApp nao
+  tem como verificar e assume que nao tem conta. Entrou o mecanismo 4 (lista de contatos do
+  WhatsApp, sem mandar numero), que nao depende dessa verificacao.
 - **03/10/2026** — A sonda passou a testar TRES mecanismos por toque, com modo COPIA
   quando nenhum abre. Medido: digitar `whatsapp://` na barra de endereco nunca funciona
   — esquema de aplicativo so vale tocando num link.

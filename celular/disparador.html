@@ -85,24 +85,40 @@
 -->
 <div class="cartao" id="cartaoSonda">
   <h2>1 &middot; Teste antes de tudo</h2>
-  <div class="aviso">
-    <strong>Ligue o modo aviao agora</strong>, ponha um numero abaixo e <strong>TOQUE</strong> nos
-    botoes, de cima para baixo, ate um abrir a conversa com o texto escrito.
+  <div class="aviso ruim">
+    <strong>Use um contato que voce JA IMPORTOU e que o WhatsApp ja sincronizou</strong> — nunca o
+    seu proprio numero.
     <br><br>
-    <strong>Tem de ser toque num botao, nunca digitar na barra de endereco</strong> — medido em
-    03/10/2026: digitado, o Chrome trata como endereco de site, nao acha, e mostra o dinossauro.
+    Medido em 03/10/2026: com um numero que o WhatsApp nao conhece como usuario, ele oferece
+    <em>"convidar por SMS"</em> em vez de abrir a conversa. Em modo aviao ele nao tem como
+    descobrir, entao assume que nao tem conta. <strong>O numero tem de estar salvo e sincronizado
+    ANTES de desligar a internet.</strong>
   </div>
-  <label for="telTeste">Um numero com DDD (o seu serve para o primeiro teste)</label>
+  <div class="aviso">
+    <strong>Ligue o modo aviao</strong> e <strong>TOQUE</strong> nos botoes, de cima para baixo,
+    ate um abrir a conversa com o texto escrito.
+    <br><br>
+    Tem de ser toque num botao, <strong>nunca digitar na barra de endereco</strong>: digitado, o
+    Chrome trata como endereco de site e mostra o dinossauro.
+  </div>
+  <label for="telTeste">O numero de um contato ja importado, com DDD</label>
   <input type="tel" id="telTeste" placeholder="51900000000" inputmode="numeric">
-  <a class="botao primario" id="bt1" href="#">1 &middot; Abrir no WhatsApp</a>
-  <a class="botao" id="bt2" href="#">2 &middot; Se o 1 falhou, tente este</a>
-  <a class="botao" id="bt3" href="#">3 &middot; Se o 2 falhou, tente este</a>
+  <a class="botao primario" id="bt1" href="#">1 &middot; Abrir a conversa</a>
+  <a class="botao" id="bt2" href="#">2 &middot; Se o 1 falhou</a>
+  <a class="botao" id="bt3" href="#">3 &middot; Se o 2 falhou</a>
+  <a class="botao" id="bt4" href="#">4 &middot; Escolher o contato na lista do WhatsApp</a>
+  <p class="pequeno">
+    O 4 e diferente dos outros: ele nao manda o numero: abre o WhatsApp com o texto pronto e
+    <strong>voce escolhe a pessoa na lista</strong> (ache pelo "ZDISPARO"). E o que tem mais chance
+    de funcionar, e custa um toque a mais.
+  </p>
   <p class="pequeno">Qual deles abriu a conversa COM o texto ja escrito?</p>
   <div class="linha">
     <button data-mec="whatsapp">Foi o 1</button>
     <button data-mec="intent">Foi o 2</button>
     <button data-mec="smsto">Foi o 3</button>
   </div>
+  <button data-mec="compartilhar">Foi o 4 (escolhendo na lista)</button>
   <button id="btNenhum">Nenhum abriu</button>
   <p class="pequeno" id="resultadoSonda"></p>
 </div>
@@ -217,6 +233,20 @@ var MECANISMOS = {
     return 'intent://' + n + '#Intent;scheme=smsto;package=com.whatsapp;S.sms_body=' +
       encodeURIComponent(t) + ';end';
   },
+  /**
+   * **O quarto nao manda o numero, e e por isso que ele tem mais chance.** Os tres de cima pedem
+   * ao WhatsApp "abra a conversa com ESTE numero", e aí ele precisa saber que o numero tem conta —
+   * em modo aviao, nao sabendo, ele oferece convidar por SMS (medido em 03/10/2026). Este abre a
+   * lista de contatos DO WHATSAPP com o texto ja anexado, e quem escolhe a pessoa e ele: a lista
+   * ja esta no aparelho, entao nao ha nada a verificar.
+   *
+   * O preco e um toque a mais por contato, e o risco de escolher a pessoa errada na lista — por
+   * isso o nome do contato fica grande na tela, com o prefixo ZDISPARO para buscar.
+   */
+  compartilhar: function (n, t) {
+    return 'intent:#Intent;action=android.intent.action.SEND;type=text/plain;' +
+      'package=com.whatsapp;S.android.intent.extra.TEXT=' + encodeURIComponent(t) + ';end';
+  },
 };
 
 var mecanismo = lembrar('mecanismo') || 'whatsapp';
@@ -235,11 +265,17 @@ function atualizarBotoesDoTeste() {
   el('bt1').href = MECANISMOS.whatsapp(n, TEXTO_DO_TESTE);
   el('bt2').href = MECANISMOS.intent(n, TEXTO_DO_TESTE);
   el('bt3').href = MECANISMOS.smsto(n, TEXTO_DO_TESTE);
+  el('bt4').href = MECANISMOS.compartilhar(n, TEXTO_DO_TESTE);
 }
 el('telTeste').addEventListener('input', atualizarBotoesDoTeste);
 atualizarBotoesDoTeste();
 
-var NOME_DO_MECANISMO = { whatsapp: 'whatsapp://', intent: 'intent:// (scheme whatsapp)', smsto: 'intent:// (scheme smsto)' };
+var NOME_DO_MECANISMO = {
+  whatsapp: 'whatsapp://',
+  intent: 'intent:// (scheme whatsapp)',
+  smsto: 'intent:// (scheme smsto)',
+  compartilhar: 'a lista de contatos do WhatsApp',
+};
 
 function escolherMecanismo(qual) {
   mecanismo = qual;
@@ -398,6 +434,14 @@ function desenhar() {
     el('statusLaco').textContent = 'Copie, abra o WhatsApp e ache o contato pelo "ZDISPARO".';
   } else {
     el('btAbrir').href = enderecoDoWhatsApp(c.telefone, c.texto);
+    /**
+     * No modo "escolher na lista" o endereco NAO leva o numero, entao o unico jeito de a mensagem
+     * chegar na pessoa certa e ele acertar o nome. O aviso fica colado no botao, e nao no rodape.
+     */
+    if (mecanismo === 'compartilhar') {
+      el('btAbrir').textContent = 'Abrir e escolher na lista';
+      el('statusLaco').textContent = 'Na lista do WhatsApp, procure por: ' + (c.nome || c.telefone);
+    }
   }
 }
 
