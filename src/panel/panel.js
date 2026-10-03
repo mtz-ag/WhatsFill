@@ -4693,8 +4693,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         'Vale para os dois caminhos que abrem atendimento — o disparo e o "atender um por um". ' +
           'Chegando no teto, a fila passa para o número seguinte; com 0 não há teto, e aí quem cuida ' +
           'do número é você: o WhatsApp recusa (status RESTRICTED) quando um número estoura o limite ' +
-          'de conversas iniciadas em 24h, e menos de dez mensagens iguais em sequência já derrubaram ' +
-          'um número seu.')
+          'de conversas iniciadas em 24h.'),
+      /**
+       * **O NÚMERO MEDIDO, escrito ao lado do campo que o define** (03/10/2026): *"acabei de mandar
+       * 30 mensagens em outro número e foi banido"*. É a medição mais dura que este projeto tem, e
+       * ela é sobre o número SECUNDÁRIO — o que menos aguenta, e não o que mais aguenta.
+       *
+       * Fica aqui, e não só no registro, porque é exatamente aqui que ele escolhe quantas conversas
+       * um número vai iniciar hoje. O padrão de 45 foi o número que ELE ditou em 01/10, e passou a
+       * estar ACIMA do que derrubou um número de verdade: quem precisa saber disso é quem digita.
+       */
+      h('div', { class: 'wf-block', 'data-fica': '1' },
+        'MEDIDO em 03/10/2026: 30 conversas iniciadas por um número SECUNDÁRIO baniram esse número. ' +
+          'Número sem histórico — que só manda e nunca recebe — cai muito antes do que um número com ' +
+          'conversa de verdade. Para iniciar conversa com quem nunca falou com você, o caminho que a ' +
+          'plataforma fez é a Campanha, com modelo aprovado pela Meta.')
     );
     if (!Number.isFinite(teto)) {
       card.append(h('div', { class: 'wf-block', 'data-fica': '1' },

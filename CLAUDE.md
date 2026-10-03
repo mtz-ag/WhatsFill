@@ -2233,6 +2233,24 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **30 CONVERSAS INICIADAS BANIRAM UM NUMERO SECUNDARIO — e o secundario e o que MENOS aguenta**
+  (03/10/2026: *"nao usarei o numero principal pra isso, acabei de mandar 30 mensagens em outro
+  numero e foi banido"*). E a medicao mais dura deste projeto, e ela **corrige o conselho que eu
+  tinha acabado de dar** (*"se o plano e queimar, ponha o secundario na frente da fila"*).
+  **O que o WhatsApp olha e a RECIPROCIDADE.** O numero principal tem historico — gente que escreveu
+  primeiro (o anuncio traz inbound real), conversa de verdade, resposta. Um numero que **so manda e
+  nunca recebe**, abrindo trinta conversas com desconhecidos numa tarde, e a assinatura de spam mais
+  limpa que existe: dura MENOS, nao mais. **Numero novo nao nasce pronto** — precisa de conversa de
+  verdade antes de qualquer volume, e isso e tempo, nao configuracao.
+  **E derruba a aritmetica do "mando o maximo e sou banido"** (proposta dele na mesma conversa): o
+  ban nao espera a lista acabar, corta no meio. O teste dele entregou **30** e perdeu o numero.
+  **O teto de 45/dia (numero DELE, 01/10) esta ACIMA do que derrubou um numero de verdade.** O padrao
+  **nao foi mudado** — valor dele nao se mexe em silencio —, mas o campo carrega a medicao ao lado,
+  em vermelho, onde ele digita.
+  **A regra que fica:** para quem JA conversou, texto livre e conversa e nao queima nada; para quem
+  NUNCA falou, o caminho sancionado e modelo aprovado, e para volume e a **Campanha** da plataforma
+  — que existe porque a Meta precisa saber de antemao o que vai ser disparado.
+
 - **"GUARDAR PARA SOLTAR TUDO DE UMA VEZ" NAO TEM FILA PARA ENCHER — por este caminho, e PAUSA 0**
   (03/10/2026, correcao dele: *"guardar mensagem para soltar tudo de uma vez e exatamente o que eu
   queria, liberar em determinado horario era so um bonus"*). Cada mensagem e **uma chamada de API no

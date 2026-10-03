@@ -1,3 +1,52 @@
+## 2026-10-03 — v3.147.0 — 30 conversas iniciadas baniram um número SECUNDÁRIO, e isso inverte a estratégia que eu tinha sugerido
+
+**Medição dele, hoje:** *"não usarei o número principal pra isso, acabei de mandar 30 mensagens em
+outro número e foi banido no teste que mencionei"*.
+
+É o número mais duro que este projeto tem, e ele corrige duas coisas minhas de uma vez.
+
+### A primeira correção é do meu conselho
+
+Uma hora antes eu havia escrito *"se o plano é queimar, escolha QUAL número queima: ponha o
+secundário na frente"*. **Errado, e o dado dele é exatamente sobre isso.** O secundário não é o que
+mais aguenta: é o que **menos** aguenta.
+
+A razão não estava escrita em lugar nenhum do projeto e passa a estar: **o que o WhatsApp olha é a
+reciprocidade.** O número principal tem histórico — gente que escreveu primeiro (o anúncio traz
+inbound real), conversa de verdade, taxa de resposta. Um número secundário que **só manda e nunca
+recebe**, abrindo trinta conversas com desconhecidos numa tarde, é a assinatura de spam mais limpa
+que existe. Ele não dura mais; dura menos.
+
+### A segunda correção é do número de referência
+
+O teto de **45 por número, por dia** veio dele em 01/10 e virou o padrão do campo. Hoje está
+**acima** do que derrubou um número de verdade (30). O padrão **não foi mudado** — é escolha dele, e
+mexer no valor dele em silêncio é o que este projeto não faz —, mas o campo passou a carregar a
+medição ao lado, em vermelho, onde ele digita: *"MEDIDO em 03/10: 30 conversas iniciadas por um
+número SECUNDÁRIO baniram esse número"*.
+
+### E ela derruba a aritmética do "mando o máximo e sou banido"
+
+A conta que ele propôs era: se vai banir de qualquer jeito, melhor entregar 200 antes. **O teste
+dele próprio mostra o resultado real: entregou 30 e perdeu o número.** O ban não espera a lista
+acabar — ele corta no meio, e o que sobra da lista não sai.
+
+### O que fica de verdade
+
+- **Para quem JÁ conversou** (janela aberta, inbound recente): texto livre é conversa, não disparo —
+  é o que a rodada do fluxo faz o dia inteiro, e não é isso que queima número.
+- **Para quem NUNCA falou com ele**: o caminho sancionado é o **modelo aprovado** — e, para volume,
+  a **Campanha** da plataforma, que existe exatamente porque a Meta precisa saber de antemão o que
+  vai ser disparado. É por isso que a linha do `canSendCampaign` (v3.146) virou a pergunta que
+  decide o próximo passo.
+- **Número novo não nasce pronto.** Ele precisa de conversa de verdade antes de qualquer volume, e
+  isso não é configuração: é tempo.
+
+### O que NÃO foi feito, e por quê
+
+Não mudei o padrão de 45 nem pus trava nova. A medição vai para a tela e para o registro; a decisão
+continua dele, agora com o número na frente — que é a diferença entre uma escolha e um acidente.
+
 ## 2026-10-03 — v3.146.0 — "guardar para soltar tudo de uma vez": não há fila para encher, e a tela passou a dizer se a Campanha existe no número dele
 
 **Correção dele:** *"guardar mensagem para soltar tudo de uma vez é exatamente o que eu queria,
