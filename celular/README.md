@@ -45,11 +45,19 @@ antes**, porque sem o numero salvo nao da para abrir a conversa com um desconhec
 
 ### 4. O que continua sendo hipotese, e nao vou afirmar
 
-- **`whatsapp://send?phone=...&text=...` abre a conversa em modo aviao?** O endereco e do proprio
-  aplicativo (nao e `wa.me`, que passa por um servidor), entao deveria ser resolvido no aparelho.
-  **Nunca foi observado neste projeto.** E o primeiro cartao do `disparador.html`, e o teste honesto
-  e com **um contato que ele acabou de importar e nunca conversou**, nao com um numero que ja tem
-  conversa aberta — a conversa que ja existe pode abrir por estar em cache e dizer que funcionou.
+- **Abrir a conversa com o texto pronto, em modo aviao, funciona?** Continua em aberto — mas uma
+  metade ja foi medida e **foi um erro meu**: em 03/10/2026 eu mandei ele DIGITAR
+  `whatsapp://send?...` na barra de endereco do Chrome, e deu o **dinossauro**. Digitado, o Chrome
+  trata o texto como endereco de site; esquema de aplicativo so e entregue ao Android quando se
+  **toca num link**. O que foi medido e *"digitar nao funciona"*, nao *"o link nao funciona"*.
+  Hoje a sonda testa **tres mecanismos** por toque, porque qual deles vale depende da versao do
+  Chrome e de a pagina vir de `file://`: `whatsapp://`, `intent://` com `scheme=whatsapp`, e
+  `intent://` com `scheme=smsto` (a porta de "mandar mensagem para este numero", que o WhatsApp
+  tambem atende). **Nenhum funcionando, a pagina cai no modo COPIA** e continua servindo — mais
+  lento, e com o texto certo para a pessoa certa.
+  O teste honesto e com **um contato que ele acabou de importar e nunca conversou**, nao com um
+  numero que ja tem conversa aberta: a conversa que ja existe pode abrir por estar em cache e
+  dizer que funcionou.
 - **Importar milhares de contatos e deixar o WhatsApp sincronizar e, por si, um sinal?** E o tipo de
   coisa que se comenta e que eu nao tenho medicao. Fica escrito como suspeita.
 - **Quantas mensagens cabem na fila offline, e com que ritmo elas saem na reconexao?** Desconhecido.
@@ -249,6 +257,9 @@ entra quando o anterior acabar.
 
 ## Log de decisoes
 
+- **03/10/2026** — A sonda passou a testar TRES mecanismos por toque, com modo COPIA
+  quando nenhum abre. Medido: digitar `whatsapp://` na barra de endereco nunca funciona
+  — esquema de aplicativo so vale tocando num link.
 - **03/10/2026** — Separador das variacoes passou de `---` para `===`: a regua de tracos da
   colinha dele partia a mensagem no meio. Seis aberturas aprovadas por ele; medida a
   semelhanca real entre elas (81,1%) e o que variar o formato da colinha renderia (59,0%).

@@ -86,17 +86,24 @@
 <div class="cartao" id="cartaoSonda">
   <h2>1 &middot; Teste antes de tudo</h2>
   <div class="aviso">
-    <strong>Ligue o modo aviao agora.</strong> Ponha o seu proprio numero abaixo e toque em testar.
-    Se a conversa abrir com o texto escrito, o caminho funciona. Se nao abrir, nada daqui serve e e
-    melhor voce me dizer.
+    <strong>Ligue o modo aviao agora</strong>, ponha um numero abaixo e <strong>TOQUE</strong> nos
+    botoes, de cima para baixo, ate um abrir a conversa com o texto escrito.
+    <br><br>
+    <strong>Tem de ser toque num botao, nunca digitar na barra de endereco</strong> — medido em
+    03/10/2026: digitado, o Chrome trata como endereco de site, nao acha, e mostra o dinossauro.
   </div>
-  <label for="telTeste">Seu numero, com DDD</label>
+  <label for="telTeste">Um numero com DDD (o seu serve para o primeiro teste)</label>
   <input type="tel" id="telTeste" placeholder="51900000000" inputmode="numeric">
-  <a class="botao primario" id="btTeste" href="#">Testar com modo aviao ligado</a>
+  <a class="botao primario" id="bt1" href="#">1 &middot; Abrir no WhatsApp</a>
+  <a class="botao" id="bt2" href="#">2 &middot; Se o 1 falhou, tente este</a>
+  <a class="botao" id="bt3" href="#">3 &middot; Se o 2 falhou, tente este</a>
+  <p class="pequeno">Qual deles abriu a conversa COM o texto ja escrito?</p>
   <div class="linha">
-    <button id="btSondaOk">Abriu com o texto</button>
-    <button id="btSondaFalhou">Nao abriu</button>
+    <button data-mec="whatsapp">Foi o 1</button>
+    <button data-mec="intent">Foi o 2</button>
+    <button data-mec="smsto">Foi o 3</button>
   </div>
+  <button id="btNenhum">Nenhum abriu</button>
   <p class="pequeno" id="resultadoSonda"></p>
 </div>
 
@@ -186,38 +193,93 @@ var mostrar = function (id, sim) { el(id).classList.toggle('oculto', !sim); };
  * ------------------------------------------------------------------ */
 
 /**
- * Monta o endereco do proprio aplicativo. **`whatsapp://` nao e link da internet** — o Android
- * entrega direto para o WhatsApp, e e por isso que ele tem chance de funcionar em modo aviao.
- * O `https://wa.me/...` NAO serve aqui: aquele passa por um servidor antes.
+ * **Sao TRES jeitos de pedir ao Android que abra a conversa, e nenhum deles e a internet.** Qual
+ * funciona depende da versao do Chrome e de a pagina estar sendo lida de um arquivo — por isso a
+ * sonda testa os tres em vez de eu apostar num.
+ *
+ * - `whatsapp://` e o endereco do proprio aplicativo. O mais simples, e o que mais costuma ser
+ *   recusado quando a pagina vem de `file://`.
+ * - `intent://` e a forma que o Chrome do Android documenta para abrir aplicativo a partir de uma
+ *   pagina; ela diz o pacote (`com.whatsapp`), entao nao depende de adivinhacao.
+ * - `smsto:` e a porta de "mandar mensagem para este numero", que o WhatsApp tambem atende.
+ *
+ * **Nenhum e `https://wa.me/...`**, que passa por um servidor antes e morre em modo aviao.
  */
+var MECANISMOS = {
+  whatsapp: function (n, t) {
+    return 'whatsapp://send?phone=' + n + '&text=' + encodeURIComponent(t);
+  },
+  intent: function (n, t) {
+    return 'intent://send?phone=' + n + '&text=' + encodeURIComponent(t) +
+      '#Intent;scheme=whatsapp;package=com.whatsapp;end';
+  },
+  smsto: function (n, t) {
+    return 'intent://' + n + '#Intent;scheme=smsto;package=com.whatsapp;S.sms_body=' +
+      encodeURIComponent(t) + ';end';
+  },
+};
+
+var mecanismo = lembrar('mecanismo') || 'whatsapp';
+
 function enderecoDoWhatsApp(telefone, texto) {
   var numero = String(telefone || '').replace(/[^0-9]/g, '');
-  return 'whatsapp://send?phone=' + numero + '&text=' + encodeURIComponent(texto || '');
+  var montar = MECANISMOS[mecanismo] || MECANISMOS.whatsapp;
+  return montar(numero, texto || '');
 }
 
-el('telTeste').addEventListener('input', function () {
+var TEXTO_DO_TESTE = 'Teste do disparo. Se isto chegou escrito com o modo aviao ligado, o caminho funciona.';
+
+function atualizarBotoesDoTeste() {
   var n = el('telTeste').value.replace(/[^0-9]/g, '');
   if (n && n.length < 12) n = '55' + n;
-  el('btTeste').href = enderecoDoWhatsApp(n, 'Teste do disparo. Se voce esta lendo isto com o modo aviao ligado, o caminho funciona.');
-});
+  el('bt1').href = MECANISMOS.whatsapp(n, TEXTO_DO_TESTE);
+  el('bt2').href = MECANISMOS.intent(n, TEXTO_DO_TESTE);
+  el('bt3').href = MECANISMOS.smsto(n, TEXTO_DO_TESTE);
+}
+el('telTeste').addEventListener('input', atualizarBotoesDoTeste);
+atualizarBotoesDoTeste();
 
-el('btSondaOk').addEventListener('click', function () {
-  el('resultadoSonda').textContent = 'Medido: abre em modo aviao. O resto da pagina serve.';
+var NOME_DO_MECANISMO = { whatsapp: 'whatsapp://', intent: 'intent:// (scheme whatsapp)', smsto: 'intent:// (scheme smsto)' };
+
+function escolherMecanismo(qual) {
+  mecanismo = qual;
+  guardar('mecanismo', qual);
   guardar('sonda', 'ok');
+  el('resultadoSonda').textContent =
+    'Medido: ' + NOME_DO_MECANISMO[qual] + ' abre em modo aviao. A pagina vai usar este daqui.';
+  mostrar('cartaoPlano', true);
+  el('cartaoPlano').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+var botoesDeMecanismo = document.querySelectorAll('[data-mec]');
+for (var i = 0; i < botoesDeMecanismo.length; i++) {
+  botoesDeMecanismo[i].addEventListener('click', function () {
+    escolherMecanismo(this.getAttribute('data-mec'));
+  });
+}
+
+/**
+ * **Nenhum funcionou nao e o fim: a pagina troca de modo.** No modo COPIA ela nao tenta abrir
+ * nada — mostra o texto da vez com o botao de copiar e o nome do contato, e ele acha a pessoa no
+ * WhatsApp pelo prefixo ZDISPARO e cola. E mais lento, e continua sendo o texto certo para a
+ * pessoa certa, offline.
+ */
+el('btNenhum').addEventListener('click', function () {
+  mecanismo = 'copiar';
+  guardar('mecanismo', 'copiar');
+  guardar('sonda', 'copiar');
+  el('resultadoSonda').textContent =
+    'Entao vamos pelo modo copia: a pagina mostra o texto, voce copia, abre o WhatsApp e acha o ' +
+    'contato pelo "ZDISPARO". Me avise, porque isto muda o custo por contato.';
   mostrar('cartaoPlano', true);
   el('cartaoPlano').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
-el('btSondaFalhou').addEventListener('click', function () {
-  el('resultadoSonda').textContent =
-    'Entao este caminho nao serve: me diga o que apareceu (nada, "nenhum aplicativo", ou abriu sem o texto).';
-  guardar('sonda', 'falhou');
-  mostrar('cartaoPlano', false);
-});
-
 // Quem ja mediu uma vez nao precisa medir de novo.
-if (lembrar('sonda') === 'ok') {
-  el('resultadoSonda').textContent = 'Voce ja testou isto antes e funcionou.';
+if (lembrar('sonda')) {
+  el('resultadoSonda').textContent = mecanismo === 'copiar'
+    ? 'Voce ja testou antes: nenhum abriu, e a pagina esta no modo copia.'
+    : 'Voce ja testou antes e funcionou por ' + NOME_DO_MECANISMO[mecanismo] + '.';
   mostrar('cartaoPlano', true);
 }
 
@@ -325,8 +387,18 @@ function desenhar() {
   el('nomeAtual').textContent = c.nome || '(sem nome)';
   el('telAtual').textContent = c.telefone;
   el('textoAtual').textContent = c.texto;
-  el('btAbrir').href = enderecoDoWhatsApp(c.telefone, c.texto);
   guardar('posicao', pos + 1);
+
+  // No modo copia nao ha o que abrir: o botao de copiar vira o principal, e o de abrir some em
+  // vez de ficar na tela prometendo algo que ja foi medido como nao funcionando.
+  if (mecanismo === 'copiar') {
+    mostrar('btAbrir', false);
+    el('btCopiar').classList.add('primario');
+    el('btCopiar').textContent = 'Copiar o texto';
+    el('statusLaco').textContent = 'Copie, abra o WhatsApp e ache o contato pelo "ZDISPARO".';
+  } else {
+    el('btAbrir').href = enderecoDoWhatsApp(c.telefone, c.texto);
+  }
 }
 
 /**
