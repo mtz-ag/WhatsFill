@@ -1,3 +1,56 @@
+## 2026-10-02 — v3.142.0 — `teto is not defined`: eu usei o campo novo sem desestruturá-lo, e nenhum verificador pega isso
+
+**Print dele:** a aba Disparo aberta, o botão "Disparar para a etiqueta" apertado, e no rodapé
+**`teto is not defined`**.
+
+### A causa, medida
+
+Defeito meu da **v3.140**, não da aba nova. Naquela versão o teto por número virou campo
+(`auto.tetoPorNumero`) e `saldoDosNumerosDoLote` passou a devolver um campo a mais:
+
+```js
+return { fila, envios, dia, teto, saldo: … };
+```
+
+Eu usei o `teto` nas mensagens e na conta dos dois abridores de rodada — e **esqueci de acrescentá-lo
+à desestruturação deles**:
+
+```js
+const { fila, envios, dia, saldo } = await saldoDosNumerosDoLote();   // sem `teto`
+…
+const vagas = loteLib.saldoTotal({ fila, envios, dia, teto });         // ReferenceError
+```
+
+**Os dois caminhos que abrem atendimento estavam parados desde a v3.140:** "Disparar para a
+etiqueta" e "Abrir e me entregar um por um". O erro estoura **depois** de montar a lista e conferir
+os números e **antes** do `confirm` — então **nada foi enviado e nada foi marcado** nas vezes em que
+ele apertou. As duas peças do `processar*` de cada contato já desestruturavam o `teto` certo, por
+isso o resto do mecanismo estava íntegro.
+
+### Por que nada acusou, e por que vai continuar assim
+
+- **`checar-modulos`** só vê `SyntaxError`, e isto é sintaxe válida.
+- **`checar-referencias`** tem a passada de escopo de 25/09, e ela compara **CHAMADAS** (`nome(`) de
+  funções de módulo contra nomes da closure. `teto` é um VALOR, e as duas funções estão no mesmo
+  nível — fora do alcance dela por construção.
+- **Nenhum teste importa `panel.js`** (ele precisa de `window`), então a linha só roda no clique
+  dele.
+
+**Tentei estender o verificador e MEDI antes de ficar com ele:** um passe que compara, por função da
+closure, os nomes usados contra os declarados nela e no escopo de fora deu **41.048 falsos
+positivos** — o mesmo desfecho da tentativa larga de 03/09, que está registrada justamente para
+ninguém refazer. Fica registrado de novo, com o número: **o que protege aqui é a disciplina de
+procurar os chamadores, não a ferramenta.**
+
+### A regra que fica
+
+A lição de 04/09 era sobre mudar a FORMA do retorno quebrando quem recebe
+(`mensagensParaIA` devolvendo objeto onde havia string). **Esta é a inversa e é mais fácil de
+cometer:** acrescentar campo ao retorno não quebra ninguém — quebra quem passa a USAR o campo sem o
+ter desestruturado. **Ao acrescentar campo ao retorno de uma função, o campo entra na
+desestruturação de CADA chamador que vai usá-lo, e a conferência é `grep` pelo nome do campo contra
+a lista de chamadores** — duas linhas aqui, e as duas estavam erradas.
+
 ## 2026-10-02 — v3.141.0 — aba DISPARO: peças de texto (com arte ou sem), quantas ele quiser, e a etiqueta à vista
 
 **Pedido dele:** *"separe toda essa criação nova para uma aba nova chamada disparo, e eu preciso que

@@ -6620,7 +6620,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
     }
 
-    const { fila, envios, dia, saldo } = await saldoDosNumerosDoLote();
+    const { fila, envios, dia, teto, saldo } = await saldoDosNumerosDoLote();
     setStatus('Conferindo os numeros…');
     const fora = await numerosForaDoAr(fila);
     if (fora.length) {
@@ -7248,7 +7248,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * **A conferência do canal é por API e acontece aqui** porque a tarja mora no CABEÇALHO, que é
      * a tela que ele esconde durante a rodada — aviso de tela não protege rodada (a lição de 25/09).
      */
-    const { fila, envios, dia, saldo } = await saldoDosNumerosDoLote();
+    const { fila, envios, dia, teto, saldo } = await saldoDosNumerosDoLote();
     if (!fila.length) return setStatus('Escolha ao menos um numero para o lote.', 'err');
 
     setStatus('Conferindo os numeros…');

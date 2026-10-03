@@ -2233,6 +2233,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **CAMPO NOVO NO RETORNO: ELE TEM DE ENTRAR NA DESESTRUTURACAO DE QUEM O USA** (02/10/2026, print
+  dele com **`teto is not defined`** ao apertar "Disparar para a etiqueta"). Na v3.140
+  `saldoDosNumerosDoLote` passou a devolver `teto`, eu usei o campo nas contas e nas mensagens dos
+  dois abridores de rodada e **nao o acrescentei ao `const { fila, envios, dia, saldo } = ...`** —
+  `ReferenceError` nos DOIS caminhos que abrem atendimento, parados desde entao. O erro estoura
+  depois de montar a lista e antes do `confirm`: nada foi enviado nem marcado.
+  **E a licao de 04/09 ao contrario, e e mais facil de cometer:** mudar a FORMA do retorno quebra
+  quem recebe, e isso se procura; **acrescentar campo nao quebra ninguem** — quebra so quem passa a
+  USAR o campo sem te-lo desestruturado, e o defeito fica dormindo ate aquela linha rodar.
+  **NENHUM verificador pega, e isto foi MEDIDO de novo:** `checar-modulos` so ve `SyntaxError`; a
+  passada de escopo de 25/09 compara CHAMADAS de funcao de MODULO contra nomes da closure, e aqui e
+  um VALOR entre duas funcoes do mesmo nivel; nenhum teste importa `panel.js`. Um passe novo que
+  comparasse, por funcao da closure, os nomes usados contra os declarados deu **41.048 falsos
+  positivos** — mesmo desfecho da tentativa larga de 03/09. **Nao refaca:** o que protege e o `grep`
+  pelo nome do campo contra a lista de chamadores, no mesmo commit em que o campo nasce.
+
 - **O CAMINHO POR ETIQUETA NAO RESOLVE VARIAVEL, E MANDAVA AS CHAVES A MOSTRA** (achado medindo em
   02/10/2026, ao por o texto sem imagem). `processarContatoDoLote` passava `par.legenda` **cru** para
   o envio — o percurso por etiqueta **nao chama `load()`** de proposito (a decisao vale para a lista
