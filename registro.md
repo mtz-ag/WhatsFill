@@ -1,3 +1,54 @@
+## 2026-10-03 — v3.146.0 — "guardar para soltar tudo de uma vez": não há fila para encher, e a tela passou a dizer se a Campanha existe no número dele
+
+**Correção dele:** *"guardar mensagem para soltar tudo de uma vez é exatamente o que eu queria,
+liberar em determinado horário era só um bônus"*.
+
+### Medido: por este caminho não existe fila para encher
+
+Cada mensagem é **uma chamada de API no instante do envio** — não há nada a preparar antes. No
+disparo por etiqueta são ~8 requisições por contato (abrir o atendimento + cinco do envio de imagem
++ etiqueta + concluir), e as oito acontecem **naquele contato, naquele momento**.
+
+Então **"guardar e soltar tudo de uma vez" por aqui é exatamente "rodar com pausa 0"** — que existe
+desde ontem (v3.144), quando o piso de 3 s saiu a pedido dele. Com o agendamento de hoje, a frase
+dele inteira já está servida: **monta agora, e às 14:00 sai tudo, o mais rápido que a plataforma
+deixar.**
+
+**O que não existe é o instantâneo.** O limitador de taxa da plataforma recusa rajada — é o
+`Failed to fetch` —, a rodada espera 30 s, 1 min e 2 min, e três seguidos param. Mandar em paralelo
+(vários contatos ao mesmo tempo) seria a forma de forçar, e é justamente *"rajada de requisições
+derruba a API — e a plataforma junto"*, com o agravante de os erros deixarem de ter dono.
+
+O `confirm` das duas rodadas agora diz isso quando a pausa é 0, em vez de só escrever "0s".
+
+### O que FAZ o que ele descreveu é a Campanha da plataforma — e a tela passou a dizer se ele a tem
+
+`chat/v1/campaign` (lido no bundle em 26/09) é literalmente guardar o disparo inteiro e soltar: ela
+tem `submit`, `pause`, `resume`, `cancel`, público por `PHONE_LIST` ou por `FILTER`, teto de 50.000,
+e **roda no servidor** — não depende desta aba nem do navegador aberto.
+
+Os dois blocos conhecidos: ela exige **modelo aprovado** (o status `WAITING_TEMPLATE` é a espera pela
+Meta) e **pode não existir no canal não oficial**, o que vem em `typeDetails.canSendCampaign`.
+
+**Esse campo já chegava junto com os números e ninguém o mostrava.** Agora o cartão "Por qual número"
+escreve, por número: *"disparo em massa da plataforma (Campanha) — ACEITA / NÃO aceita neste canal"*,
+e **"a plataforma não informou"** quando o campo não vier (a lição de 01/10: campo ausente não vira
+texto afirmativo). Custo: zero requisição — o dado já estava carregado.
+
+É a medição que decide o próximo passo, e ele a faz olhando: clicar em "Carregar equipes e números"
+e ler a linha.
+
+### O que fica em aberto, com o preço de cada um
+
+1. **Campanha da plataforma** — o único caminho que guarda e solta sem depender da aba. Depende de
+   `canSendCampaign` ser verdadeiro e de existir um modelo aprovado do tipo Campanha. Rota nunca
+   executada.
+2. **Reaproveitar o `fileId` entre contatos** — a sonda registrada em 01/10. Hoje a arte sobe uma vez
+   **por contato** (cinco das oito requisições). Se a plataforma aceitar o mesmo `fileId` em duas
+   mensagens, o disparo cai de ~8 para ~4 requisições por contato: o dobro de velocidade no mesmo
+   limitador, sem mudar nada do que o eleitor recebe. A sonda é mandar duas no contato de teste com
+   o mesmo id e reler a resposta.
+
 ## 2026-10-03 — v3.145.0 — agendar o disparo: montar agora, sair na hora marcada
 
 **Relato dele:** *"eu fiz um teste que deu errado, eu achava que ao desligar a internet do celular as

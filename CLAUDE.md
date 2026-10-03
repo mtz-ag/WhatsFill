@@ -2233,6 +2233,23 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **"GUARDAR PARA SOLTAR TUDO DE UMA VEZ" NAO TEM FILA PARA ENCHER — por este caminho, e PAUSA 0**
+  (03/10/2026, correcao dele: *"guardar mensagem para soltar tudo de uma vez e exatamente o que eu
+  queria, liberar em determinado horario era so um bonus"*). Cada mensagem e **uma chamada de API no
+  instante do envio**: no disparo por etiqueta sao ~8 requisicoes por contato, e as oito acontecem
+  naquele contato, naquele momento. Nao ha nada a preparar antes — entao guardar localmente e soltar
+  depois e, byte a byte, a mesma coisa que rodar com a pausa em 0 (que existe desde a v3.144) na hora
+  que ele escolher (o agendamento da v3.145).
+  **O que nao existe e o INSTANTANEO:** o limitador recusa rajada (o `Failed to fetch`), a rodada
+  espera 30s/1min/2min e tres seguidos param. Mandar em PARALELO seria a forma de forcar, e e
+  exatamente *"rajada de requisicoes derruba a API — e a plataforma junto"*, com o agravante de o
+  erro deixar de ter dono. **Nao implemente paralelismo sem ele pedir sabendo disto.**
+  **Quem guarda e solta de verdade e a CAMPANHA da plataforma** (`chat/v1/campaign`): roda no
+  servidor, nao depende da aba, e os dois blocos sao **modelo aprovado** e **`canSendCampaign`** do
+  `typeDetails`. Esse campo **ja vinha junto com os numeros e ninguem o mostrava** — hoje o cartao
+  "Por qual numero" escreve se o canal ACEITA, NAO aceita, ou se a plataforma nao informou (campo
+  ausente nao vira texto afirmativo, a licao de 01/10). Custo: zero requisicao.
+
 - **DESLIGAR A INTERNET DO CELULAR NAO TIRA O NUMERO DO AR NEM ENFILEIRA NADA** (03/10/2026, teste
   dele: *"eu achava que ao desligar a internet do celular as mensagens iriam sair somente quando eu
   ligasse novamente; as mensagens foram iguais pela plataforma"*). O canal Z-API e um aparelho

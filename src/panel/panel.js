@@ -4796,6 +4796,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         ].filter(Boolean).join(' · '),
         janela === -1 ? '' : `${quem}: canal COM janela de 24h — fora dela a plataforma exige modelo aprovado, e esta rodada não manda modelo.`,
         d.canStartNewSession === false ? `${quem}: este canal NAO abre atendimento novo.` : '',
+        /**
+         * **O que este número aceita de DISPARO EM MASSA, lido do `typeDetails`** — pedido indireto
+         * dele (03/10/2026: *"guardar mensagem para soltar tudo de uma vez é exatamente o que eu
+         * queria"*). Quem faz isso de verdade, guardando tudo e soltando sem depender desta aba, é
+         * a **Campanha da própria plataforma** (`chat/v1/campaign`), e `canSendCampaign` diz se ela
+         * existe neste canal. Custa ZERO requisição: o campo já veio junto com os números.
+         *
+         * **Campo que a plataforma não mandou não vira texto** (a lição de 01/10): sem o campo, a
+         * linha diz que ela não informou, e não "não aceita".
+         */
+        typeof d.canSendCampaign === 'boolean'
+          ? `${quem}: disparo em massa da plataforma (Campanha) — ${d.canSendCampaign ? 'ACEITA' : 'NAO aceita'} neste canal.`
+          : `${quem}: a plataforma nao informou se este canal aceita Campanha.`,
+        d.mustUseTemplate === true ? `${quem}: fora da janela, so passa modelo aprovado.` : '',
       ].filter(Boolean);
       for (const linha of linhas) card.append(h('div', { class: 'wf-preview', 'data-fica': '1' }, linha));
       if (veredito.barra) {
@@ -7660,7 +7674,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         (sonda
           ? 'TESTE: vou abrir atendimento e mandar para UM contato só — o primeiro da lista.\n\n'
           : `Vou abrir um atendimento NOVO e mandar para ${quantos} contato(s), ` +
-            `com ${pausaSeg}s entre um e outro.\n\n`) +
+            `com ${pausaSeg}s entre um e outro.${pausaSeg === 0 ? ' SEM PAUSA: vai o mais rapido que a plataforma deixar — e quando ela recusar por excesso, a rodada espera 30s, 1min e 2min, e tres seguidos param.' : ''}\n\n`) +
           `Etiqueta: "${tagFiltro.label}" (${contatos.length} contato(s) na lista` +
           (lista.total && lista.total > contatos.length ? `, de ${lista.total} no total` : '') +
           ').\n' +
@@ -7738,7 +7752,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (
       !confirm(
         `Vou mandar para até ${limite} contato(s) da lista que você filtrou, com ` +
-          `${pausaSeg}s entre um e outro.\n\n` +
+          `${pausaSeg}s entre um e outro.${pausaSeg === 0 ? ' SEM PAUSA: vai o mais rapido que a plataforma deixar — e quando ela recusar por excesso, a rodada espera 30s, 1min e 2min, e tres seguidos param.' : ''}\n\n` +
           `Revezando entre ${pares.length} peca(s): ` +
           divisao
             .map((q, i) => `${q} com a peca ${pares[i].n}${pares[i].temArte ? ' (arte + texto)' : ' (so texto)'}`)
