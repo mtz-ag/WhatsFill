@@ -2233,6 +2233,34 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **A "DATA DE CONCLUSAO DO CONTATO" GUARDA O PRIMEIRO CONTATO DESDE 07/10/2026, E SO ANDA PARA
+  TRAS** (pedido dele: *"preciso que a data de conclusao permaneca a data da primeira vez que a
+  pessoa entrou em contato, e se possivel arrumar todas as datas ao atender"*).
+  **Foi barato porque a data NAO e mais sinal da rodada:** ela alimentava `jaRespondemosAntes` e
+  **saiu em 05/09** (a print da Neiva). Conferir isso antes de escrever linha e o que tornou a
+  mudanca segura — mexer no significado dela hoje nao muda decisao nenhuma do fluxo.
+  **A fonte saiu de medicao, nao de escolha:** na exportacao de 02/10 (9.457 contatos) a **Data de
+  cadastro esta em 100%** deles e **so 145 (2%) nasceram de importacao em massa** (mesmo minuto),
+  entao nos outros 98% a criacao do contato E a chegada da pessoa. `fields.primeiroContato` pega o
+  menor dia entre o cadastro, as mensagens desta sessao e as da anterior **quando ela ja estiver
+  carregada** — ela nao e buscada por isto, porque custa duas requisicoes em todo contato aberto.
+  **O invariante que substitui a trava velha e "so anda para tras".** A regra antiga era *"so
+  preenche buraco, nunca reescreve"*, escrita para um valor que significava CONCLUSAO; guardando a
+  CHEGADA, a mesma preocupacao pede o contrario. Nunca empurrar para frente da tudo o que a trava
+  velha dava: nenhuma passada estraga valor certo, nao ha oscilacao, e reabrir a conversa continua
+  inofensivo. **Ancora so para o campo VAZIO** — corrigir nao precisa, a data ja esta la e ja se
+  sabe errada.
+  **E o estrago media 18%:** 1.702 contatos com a data 31+ dias depois do cadastro, ate 404 dias.
+  **O campo continua se chamando "conclusao"** (o nome e do CRM), e **a correcao aparece no
+  cabecalho e no Andamento**: e a UNICA escrita do painel que reescreve dado que ja estava no CRM.
+
+- **`AAAA-MM-DD` NAO PODE PASSAR POR `new Date()`** (07/10/2026, pego antes de ir ao ar). A string
+  sem hora e lida como **UTC**, e em UTC−3 ela volta um dia: `2026-08-13` vira 12/08. Num campo que
+  se regrava a cada atendimento isso e a data andando para tras sozinha, em dado de eleitor, toda
+  passada. `fields.diaLocalDe` devolve intacta a forma que ja e dia local e so converte o que tem
+  hora de verdade. **Vale para toda comparacao de dia neste projeto** — `hojeLocal` sempre foi
+  local justamente por isto.
+
 - **30 CONVERSAS INICIADAS BANIRAM UM NUMERO SECUNDARIO — e o secundario e o que MENOS aguenta**
   (03/10/2026: *"nao usarei o numero principal pra isso, acabei de mandar 30 mensagens em outro
   numero e foi banido"*). E a medicao mais dura deste projeto, e ela **corrige o conselho que eu

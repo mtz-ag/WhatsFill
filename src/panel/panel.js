@@ -2037,6 +2037,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
     }
 
+    /**
+     * **A data do primeiro contato também aparece, pelo mesmo motivo da limpeza da cidade.** Esta
+     * é a única escrita do painel que REESCREVE um dado que já estava no CRM — as outras só
+     * preenchem buraco —, e ela acontece ao concluir, quando ele já não está olhando. A linha
+     * nomeia a FONTE porque é ela que diz se a data faz sentido: cadastro do contato é uma coisa,
+     * mensagem mais antiga que a extensão enxergou é outra.
+     */
+    (() => {
+      const primeiro = primeiroContatoDoContato();
+      if (!primeiro) return;
+      const atual = fieldsLib.diaLocalDe(dataDeConclusaoAtual());
+      if (atual === primeiro) return;
+      const comoSeLe = (d) => d.split('-').reverse().join('/');
+      header.append(
+        h('div', { class: 'wf-origin', 'data-fica': '1' },
+          atual
+            ? `Primeiro contato: está ${comoSeLe(atual)} no CRM — vai corrigir para ` +
+              `${comoSeLe(primeiro)} (${origemDoPrimeiroContato()}).`
+            : `Primeiro contato: vai gravar ${comoSeLe(primeiro)} (${origemDoPrimeiroContato()}).`)
+      );
+    })();
+
     const grafia = state.grafiaDaCidade;
     if (grafia && !grafia.ok) {
       const aviso = h('div', { class: 'wf-block' }, `Cidade escrita fora do padrão: ${grafia.motivo}`);
@@ -12440,9 +12462,10 @@ const CONTATOS_POR_PAGINA = 200;
     const temEtiqueta = state.tagSuggestions.some((s) => s.marcada && s.tag && etiquetaConfiavel(s));
 
     // A data de conclusão entra junto com o resto, e não só no Salvar manual. A regra está em
-    // fields.deveCarimbarData, separada para poder ser testada.
-    const faltaData = fieldsLib.deveCarimbarData({
-      dataVazia: dataDeConclusaoVazia(),
+    // fields.deveGravarPrimeiroContato, separada para poder ser testada.
+    const faltaData = fieldsLib.deveGravarPrimeiroContato({
+      dataAtual: dataDeConclusaoAtual(),
+      primeiroContato: primeiroContatoDoContato(),
       temExato,
       temEtiqueta,
       temCidade: !!valueNamed('Cidade'),
@@ -12458,11 +12481,47 @@ const CONTATOS_POR_PAGINA = 200;
     });
   }
 
-  function dataDeConclusaoVazia() {
+  /** O que está gravado hoje no campo da data, do jeito que veio. Vazio devolve `''`. */
+  function dataDeConclusaoAtual() {
     const campo = state.schema.find((f) => f.name === fieldsLib.COMPLETION_FIELD);
-    if (!campo) return false;
+    if (!campo) return '';
     const entry = state.draft[campo.id];
-    return !entry || entry.value == null || entry.value === '';
+    return entry && entry.value != null ? String(entry.value) : '';
+  }
+
+  /**
+   * **A primeira vez que esta pessoa entrou em contato.**
+   *
+   * Três fontes, e a mais antiga ganha: a criação do contato no CRM (preenchida em 100% da base
+   * medida, e em 98% dela é a própria chegada da pessoa), as mensagens desta sessão, e as da
+   * sessão anterior **quando ela já estiver carregada**.
+   *
+   * **A anterior não é buscada por causa disto, de propósito:** ela custa duas requisições e só é
+   * lida quando falta cidade (a regra de 07/09). Pedi-la aqui poria duas requisições a mais em
+   * todo contato aberto, e é número de requisição que derruba esta API. Quando ela estiver na
+   * mão, entra de graça.
+   *
+   * **O campo `createdAt` do contato nunca foi lido ao vivo neste projeto** — ele aparece na
+   * exportação como "Data de cadastro". Não vindo, as mensagens resolvem sozinhas, e o cabeçalho
+   * diz de onde a data saiu.
+   */
+  function primeiroContatoDoContato() {
+    const momentos = [];
+    for (const m of state.entrantes || []) if (m?.at) momentos.push(m.at);
+    for (const m of state.conversaAnterior?.entrantes || []) if (m?.at) momentos.push(m.at);
+    return fieldsLib.primeiroContato({
+      criadoEm: state.contact?.createdAt || state.contact?.createdat || null,
+      momentos,
+    });
+  }
+
+  /** De onde a data saiu — para o cabeçalho dizer, em vez de o número aparecer do nada. */
+  function origemDoPrimeiroContato() {
+    const dia = primeiroContatoDoContato();
+    if (!dia) return null;
+    const doCadastro = fieldsLib.diaLocalDe(state.contact?.createdAt || state.contact?.createdat);
+    if (doCadastro && doCadastro === dia) return 'cadastro do contato';
+    return state.conversaAnterior ? 'mensagem mais antiga (com a conversa anterior)' : 'mensagem mais antiga desta conversa';
   }
 
   /**
@@ -12614,11 +12673,44 @@ const CONTATOS_POR_PAGINA = 200;
       );
     }
 
-    // Data de conclusão só preenche buraco, nunca reescreve: um contato concluído em 05/08 não
-    // pode virar 06/08 porque você reabriu a conversa para conferir.
-    if (withCompletionDate && dataDeConclusaoVazia()) {
+    /**
+     * O campo guarda o PRIMEIRO CONTATO desde 07/10/2026, e **só anda para trás** — reabrir a
+     * conversa não empurra nada para frente, e uma data mais antiga que apareça corrige a que
+     * está lá. A regra inteira mora em `fields.deveGravarPrimeiroContato`, e é a MESMA que a
+     * gravação automática consulta antes de decidir chamar isto aqui: duas cópias divergiriam na
+     * primeira correção.
+     */
+    if (withCompletionDate) {
       const completion = state.schema.find((f) => f.name === fieldsLib.COMPLETION_FIELD);
-      if (completion) changes[completion.id] = fieldsLib.hojeLocal();
+      const primeiro = primeiroContatoDoContato();
+      const corrigindo = fieldsLib.diaLocalDe(dataDeConclusaoAtual());
+      /**
+       * **As âncoras vão satisfeitas aqui de propósito, e isso não é desligar a guarda.** Ela
+       * existe para a gravação AUTOMÁTICA, que abre contato sozinha: `faltaData` a consulta de
+       * verdade antes de chamar. Quem chega até aqui passou `withCompletionDate: true` — é o
+       * Salvar dele, ou uma conclusão —, e nesses casos a decisão já foi tomada por gente. Era
+       * assim antes também: o código velho carimbava direto quando o campo estava vazio.
+       */
+      const pedidoExplicito = { temExato: true, temEtiqueta: true, temCidade: true };
+      if (
+        completion &&
+        fieldsLib.deveGravarPrimeiroContato({
+          dataAtual: dataDeConclusaoAtual(),
+          primeiroContato: primeiro,
+          ...pedidoExplicito,
+        })
+      ) {
+        changes[completion.id] = primeiro;
+        // Corrigir é diferente de preencher, e quem olha o Andamento precisa ver a diferença:
+        // uma data que MUDOU é a única escrita aqui que reescreve dado que já estava no CRM.
+        if (corrigindo && state.auto?.rodando) {
+          registrarNaRodada(
+            state.contact?.name || 'contato',
+            'aviso',
+            `corrigindo a data: ${corrigindo} → ${primeiro} (${origemDoPrimeiroContato()})`
+          );
+        }
+      }
     }
 
     const aplicaveis = state.tagSuggestions.filter(

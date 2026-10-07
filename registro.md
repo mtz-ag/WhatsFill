@@ -1,3 +1,80 @@
+## 2026-10-07 — v3.148.0 — a "Data de conclusão" passou a guardar o PRIMEIRO CONTATO, e ela se corrige ao atender
+
+**Pedido dele:** *"preciso que a data de conclusão permaneça a data da primeira vez que a pessoa
+entrou em contato, e se possível arrumar todas as datas ao atender para botar a data do início do
+atendimento"*.
+
+### O que custava barato, e por quê
+
+**A data não é mais um sinal da rodada.** Ela alimentava `jaRespondemosAntes` e **saiu em
+05/09/2026**, depois da print da Neiva — *"a data prova que já CONCLUÍMOS um atendimento, não que já
+ENTREGAMOS alguma coisa"*. Então mudar o significado dela não mexe em decisão nenhuma do fluxo: o
+que ela toca é o CRM e os filtros dele. Era esta a conferência que precisava ser feita antes de
+qualquer linha, e ela saiu a favor.
+
+### O tamanho do estrago, medido na exportação dele (9.457 contatos, 02/10)
+
+- **Data de conclusão preenchida em 9.380 (99%)**, e em **1.702 (18%) ela está 31 dias ou mais
+  depois do cadastro** — máximo de **404 dias**. Mediana de 1 dia; 31% no mesmo dia.
+- **Data de cadastro preenchida em 100%**, e **nunca** posterior à conclusão (0 casos).
+
+### De onde sai "a primeira vez que a pessoa entrou em contato"
+
+A resposta não era óbvia, e a medição decidiu: **apenas 145 contatos (2%) têm cara de importação em
+massa** — todos criados no mesmo minuto (12/11/2025 12:51). Os outros 98% entraram espalhados por
+202 dias, a maioria com etiqueta ADS, ou seja **o contato foi criado pela chegada da pessoa**.
+
+Então `fields.primeiroContato` pega o **menor dia** entre:
+
+1. a **criação do contato no CRM** (a "Data de cadastro" — 100% de cobertura);
+2. as mensagens **desta** sessão;
+3. as da **sessão anterior**, quando ela já estiver carregada.
+
+**A anterior não é buscada por causa disto, de propósito:** ela custa duas requisições e só é lida
+quando falta cidade (regra de 07/09). Pedi-la aqui poria duas requisições a mais em todo contato
+aberto, e é número de requisição que derruba esta API. Estando na mão, entra de graça.
+
+**`state.contact.createdAt` nunca foi lido ao vivo neste projeto** — ele aparece na exportação como
+"Data de cadastro". Por isso a leitura é defensiva e **o cabeçalho diz a FONTE** da data: não
+vindo o campo, as mensagens resolvem sozinhas e a linha na tela avisa qual foi.
+
+### O invariante que substitui a trava antiga: a data só anda PARA TRÁS
+
+A regra velha era *"só preenche buraco, nunca reescreve"*, e ela existia para proteger um valor que
+significava CONCLUSÃO: reabrir a conversa não podia empurrar 05/08 para 06/08. Guardando o primeiro
+contato, **a mesma preocupação pede o contrário** — a data tem de poder ser corrigida para trás.
+
+`fields.deveGravarPrimeiroContato` nunca empurra a data para frente. Com isso: nenhuma passada
+estraga um valor certo, não há oscilação entre duas passadas, e reabrir a conversa continua
+inofensivo — que era tudo o que a regra velha protegia. Depois de corrigida, a passada seguinte não
+grava de novo, e há teste para isso.
+
+**Âncora só para o campo VAZIO.** Carimbar quem nunca respondeu continua errado. **Corrigir não
+precisa de âncora**: a data já está lá e já se sabe que está errada.
+
+### A armadilha que a medição pegou antes de ir ao ar
+
+**`AAAA-MM-DD` não pode passar por `new Date()`.** A string sem hora é lida como UTC, e em UTC−3 ela
+volta um dia: `2026-08-13` viraria 12/08 — a data andando para trás sozinha, em dado de eleitor, a
+cada passada. `fields.diaLocalDe` devolve intacta a forma que já é um dia local e só converte o que
+tem hora de verdade.
+
+### Aparece na tela, porque é a única escrita que REESCREVE
+
+Todas as outras gravações do painel preenchem buraco; esta troca um valor que já estava no CRM, e
+acontece ao concluir, quando ele não está mais olhando. Duas linhas novas:
+
+- no **cabeçalho**, antes: *"Primeiro contato: está 20/09/2026 no CRM — vai corrigir para
+  13/08/2026 (cadastro do contato)"*;
+- no **Andamento**, quando corrige dentro de uma rodada.
+
+### O que ficou por fora, e foi dito a ele
+
+- **O campo continua se chamando "Data de conclusão do contato"** — o nome é do CRM e a extensão não
+  renomeia campo. Quem olhar o CRM vai ler "conclusão" num valor que é de chegada.
+- **Não há varredura em massa.** A correção acontece **ao atender**, um contato por vez, como ele
+  pediu — então ela é gradual e observável, e não um rewrite de 9.436 registros de uma vez.
+
 ## 2026-10-03 — v3.147.0 — 30 conversas iniciadas baniram um número SECUNDÁRIO, e isso inverte a estratégia que eu tinha sugerido
 
 **Medição dele, hoje:** *"não usarei o número principal pra isso, acabei de mandar 30 mensagens em

@@ -42,25 +42,86 @@ export function hojeLocal(date = new Date()) {
 }
 
 /**
- * A data de conclusão entra na gravação automática?
+ * Um instante qualquer vira o DIA local, no formato que o campo guarda (`AAAA-MM-DD`).
  *
- * Regra em duas partes, e as duas importam em oito mil registros:
+ * **`AAAA-MM-DD` não pode passar por `new Date()`** — a string sem hora é lida como UTC, e em
+ * UTC−3 ela volta um dia: `2026-08-13` viraria 12/08. Por isso a forma que já é um dia local sai
+ * como está, e só o que tem hora de verdade é convertido.
+ */
+export function diaLocalDe(valor) {
+  if (!valor) return null;
+  if (valor instanceof Date) return Number.isNaN(valor.getTime()) ? null : hojeLocal(valor);
+
+  const s = String(valor).trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  const br = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(s);
+  if (br) return `${br[3]}-${br[2]}-${br[1]}`;
+
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : hojeLocal(d);
+}
+
+/**
+ * **A primeira vez que a pessoa entrou em contato** — o menor dia entre a criação do contato no
+ * CRM e o que se enxerga de mensagem dela.
  *
- * 1. **Só preenche buraco.** Data já gravada nunca é reescrita — um contato concluído em 05/08
- *    não pode virar 06/08 porque a conversa foi reaberta para conferir.
- * 2. **Só em contato classificado.** Abrir a conversa de alguém que ainda não respondeu não
- *    pode carimbar conclusão. Serve de âncora o que acabou de ser reconhecido (campo exato ou
- *    etiqueta confiável) ou a cidade que já estava no CRM.
+ * Decisão dele (07/10/2026): *"preciso que a data de conclusão permaneça a data da primeira vez
+ * que a pessoa entrou em contato"*. O campo continua se chamando "Data de conclusão do contato"
+ * porque o nome é do CRM; o que mudou é o que ele guarda.
+ *
+ * **Por que a criação do contato entra, e em primeiro lugar:** medido na exportação de 02/10/2026
+ * (9.457 contatos) — ela está preenchida em **100%** deles, nunca é posterior à conclusão, e
+ * apenas **145 (2%)** nasceram de importação em massa (todos no mesmo minuto). Nos outros 98% o
+ * contato foi criado pela chegada da pessoa, então criação **é** o primeiro contato. As mensagens
+ * entram porque a extensão às vezes enxerga conversa mais antiga que isso.
+ *
+ * Ordenar texto `AAAA-MM-DD` dá a ordem cronológica, e é de propósito: comparar como data criaria
+ * um `Date` por item só para desempatar dia.
+ */
+export function primeiroContato({ criadoEm, momentos = [] } = {}) {
+  const dias = [criadoEm, ...(momentos || [])].map(diaLocalDe).filter(Boolean).sort();
+  return dias[0] || null;
+}
+
+/**
+ * O campo da data entra nesta gravação?
+ *
+ * **A regra virou do avesso em 07/10/2026, a pedido dele** (*"se possível arrumar todas as datas
+ * ao atender"*). Antes ela era *"só preenche buraco, nunca reescreve"*, e isso existia para um
+ * valor que significava CONCLUSÃO: reabrir a conversa não podia empurrar 05/08 para 06/08.
+ * Guardando o PRIMEIRO CONTATO, a mesma preocupação pede o contrário — a data tem de poder ser
+ * corrigida para trás quando aparece uma anterior.
+ *
+ * **O invariante que substitui a trava antiga: a data só anda PARA TRÁS.** Nunca é empurrada para
+ * frente, então nenhuma passada pode estragar um valor certo, não há como oscilar entre duas
+ * passadas, e reabrir a conversa continua sendo inofensivo — que era tudo o que a regra velha
+ * protegia.
+ *
+ * **Âncora só para o campo VAZIO.** Carimbar alguém que nunca respondeu continua errado, e a
+ * âncora é o que acabou de ser reconhecido (campo exato ou etiqueta confiável) ou a cidade que já
+ * estava no CRM. **Corrigir não precisa de âncora**: a data já está lá e já se sabe que está
+ * errada.
  *
  * @param {object} ctx
- * @param {boolean} ctx.dataVazia   campo de conclusão está sem valor
- * @param {boolean} ctx.temExato    algum campo casou exato agora
- * @param {boolean} ctx.temEtiqueta alguma etiqueta confiável será aplicada agora
- * @param {boolean} ctx.temCidade   o contato tem cidade (recém-reconhecida ou já no CRM)
+ * @param {string}  ctx.dataAtual       o que está gravado hoje (qualquer formato)
+ * @param {string}  ctx.primeiroContato o dia calculado, `AAAA-MM-DD`
+ * @param {boolean} ctx.temExato        algum campo casou exato agora
+ * @param {boolean} ctx.temEtiqueta     alguma etiqueta confiável será aplicada agora
+ * @param {boolean} ctx.temCidade       o contato tem cidade (recém-reconhecida ou já no CRM)
  */
-export function deveCarimbarData({ dataVazia, temExato, temEtiqueta, temCidade }) {
-  if (!dataVazia) return false;
-  return !!(temExato || temEtiqueta || temCidade);
+export function deveGravarPrimeiroContato({
+  dataAtual,
+  primeiroContato: primeiro,
+  temExato,
+  temEtiqueta,
+  temCidade,
+}) {
+  if (!primeiro) return false;
+  const atual = diaLocalDe(dataAtual);
+  if (!atual) return !!(temExato || temEtiqueta || temCidade);
+  return primeiro < atual;
 }
 
 /**

@@ -147,34 +147,123 @@ grupo('data: formato aprendido em vez de chutado');
   check(formatosDeData('', { type: 'DATE' })[0] === '', 'valor vazio passa direto, sem inventar data');
 }
 
-grupo('data de conclusão na gravação automática');
+grupo('o dia local de um instante');
 {
-  const { deveCarimbarData } = await lib('fields.js');
+  const { diaLocalDe } = await lib('fields.js');
 
-  // Bug relatado: etiqueta e cidade entravam sozinhas ao abrir o contato, a data não — ela só
-  // era gravada no Salvar manual, porque aplicarAutomatico não pedia withCompletionDate.
+  // O que já é dia local NÃO pode passar por `new Date()`: a string sem hora é lida como UTC e
+  // em UTC−3 volta um dia. Era assim que 13/08 viraria 12/08 sozinho.
+  check(diaLocalDe('2026-08-13') === '2026-08-13', 'AAAA-MM-DD sai intacto, sem passar por fuso');
+  check(diaLocalDe('13/08/2026') === '2026-08-13', 'DD/MM/AAAA vira AAAA-MM-DD');
+  check(diaLocalDe('13/08/2026 09:41') === '2026-08-13', 'DD/MM/AAAA com hora');
+  check(diaLocalDe(new Date(2026, 7, 13, 23, 30)) === '2026-08-13', 'Date local tarde da noite');
+  check(diaLocalDe('') === null, 'vazio');
+  check(diaLocalDe(null) === null, 'nulo');
+  check(diaLocalDe('nao e data') === null, 'texto qualquer');
+  check(diaLocalDe(new Date('x')) === null, 'Date inválido');
+}
+
+grupo('a primeira vez que a pessoa entrou em contato');
+{
+  const { primeiroContato } = await lib('fields.js');
+
   check(
-    deveCarimbarData({ dataVazia: true, temExato: true, temEtiqueta: false, temCidade: true }),
-    'cidade reconhecida agora → carimba'
+    primeiroContato({ criadoEm: '2026-08-13', momentos: ['2026-09-02T12:00:00', '2026-08-20T08:00:00'] }) ===
+      '2026-08-13',
+    'o cadastro é mais antigo que as mensagens → ganha'
   );
   check(
-    deveCarimbarData({ dataVazia: true, temExato: false, temEtiqueta: true, temCidade: false }),
-    'só etiqueta de conteúdo → carimba'
+    primeiroContato({ criadoEm: '2026-09-10', momentos: ['2026-08-01T12:00:00'] }) === '2026-08-01',
+    'mensagem mais antiga que o cadastro → ela ganha'
   );
   check(
-    deveCarimbarData({ dataVazia: true, temExato: false, temEtiqueta: false, temCidade: true }),
-    'reabertura de contato já classificado, data em branco → carimba'
+    primeiroContato({ criadoEm: null, momentos: ['2026-09-02T12:00:00', '2026-08-20T08:00:00'] }) === '2026-08-20',
+    'sem cadastro, decide a mensagem mais antiga'
+  );
+  check(primeiroContato({ criadoEm: '2026-08-13' }) === '2026-08-13', 'só o cadastro');
+  check(primeiroContato({ criadoEm: null, momentos: [] }) === null, 'sem fonte nenhuma → nulo');
+  check(primeiroContato({}) === null, 'sem argumento nenhum → nulo');
+  check(
+    primeiroContato({ criadoEm: '2026-08-13', momentos: [null, '', undefined] }) === '2026-08-13',
+    'momento vazio no meio não atrapalha'
+  );
+  // Ordena como TEXTO, e por isso a virada de ano tem de bater.
+  check(
+    primeiroContato({ criadoEm: '2026-01-05', momentos: ['2025-12-31T23:00:00'] }) === '2025-12-31',
+    'dezembro do ano anterior é mais antigo que janeiro'
+  );
+}
+
+grupo('a data só anda para trás');
+{
+  const { deveGravarPrimeiroContato } = await lib('fields.js');
+  const ancorado = { temExato: false, temEtiqueta: true, temCidade: false };
+
+  // Campo vazio: continua precisando de âncora, porque carimbar quem nunca respondeu é errado.
+  check(
+    deveGravarPrimeiroContato({ dataAtual: '', primeiroContato: '2026-08-13', ...ancorado }),
+    'campo vazio e contato classificado → grava'
+  );
+  check(
+    !deveGravarPrimeiroContato({
+      dataAtual: '',
+      primeiroContato: '2026-08-13',
+      temExato: false,
+      temEtiqueta: false,
+      temCidade: false,
+    }),
+    'campo vazio e contato SEM classificação → não grava'
   );
 
-  // Os dois guarda-corpos.
+  // A correção: é para isto que a regra virou do avesso.
   check(
-    !deveCarimbarData({ dataVazia: false, temExato: true, temEtiqueta: true, temCidade: true }),
-    'data já gravada nunca é reescrita'
+    deveGravarPrimeiroContato({ dataAtual: '2026-09-20', primeiroContato: '2026-08-13', ...ancorado }),
+    'data gravada é POSTERIOR ao primeiro contato → corrige'
   );
   check(
-    !deveCarimbarData({ dataVazia: true, temExato: false, temEtiqueta: false, temCidade: false }),
-    'contato sem classificação não recebe data de conclusão'
+    deveGravarPrimeiroContato({
+      dataAtual: '20/09/2026',
+      primeiroContato: '2026-08-13',
+      temExato: false,
+      temEtiqueta: false,
+      temCidade: false,
+    }),
+    'corrigir NÃO precisa de âncora: a data já está lá e já se sabe errada'
   );
+
+  // O invariante, e é onde mora o risco: nada pode empurrar a data para frente.
+  check(
+    !deveGravarPrimeiroContato({ dataAtual: '2026-08-13', primeiroContato: '2026-09-20', ...ancorado }),
+    'primeiro contato POSTERIOR ao gravado → não mexe (nunca anda para frente)'
+  );
+  check(
+    !deveGravarPrimeiroContato({ dataAtual: '2026-08-13', primeiroContato: '2026-08-13', ...ancorado }),
+    'data já correta → não reescreve'
+  );
+  check(
+    !deveGravarPrimeiroContato({ dataAtual: '13/08/2026', primeiroContato: '2026-08-13', ...ancorado }),
+    'mesma data em outro formato → não reescreve'
+  );
+  check(
+    !deveGravarPrimeiroContato({ dataAtual: '2026-09-20', primeiroContato: null, ...ancorado }),
+    'sem primeiro contato calculado → não mexe em nada'
+  );
+  check(
+    !deveGravarPrimeiroContato({ dataAtual: '', primeiroContato: null, ...ancorado }),
+    'sem primeiro contato e campo vazio → não inventa data'
+  );
+
+  // Duas passadas seguidas não podem oscilar: a segunda não tem o que fazer.
+  {
+    const primeiro = '2026-08-13';
+    const depoisDaPrimeira = deveGravarPrimeiroContato({ dataAtual: '2026-09-20', primeiroContato: primeiro, ...ancorado })
+      ? primeiro
+      : '2026-09-20';
+    check(
+      !deveGravarPrimeiroContato({ dataAtual: depoisDaPrimeira, primeiroContato: primeiro, ...ancorado }),
+      'depois de corrigida, a passada seguinte não grava de novo'
+    );
+  }
 }
 
 grupo('palpite PENDENTE nunca vai para o CRM');
