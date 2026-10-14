@@ -2233,6 +2233,30 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **O VERBETE PROMETE UMA POSICAO, E E POR ELE QUE ELE DECIDE ONDE POR A CAIXA NO QUADRO**
+  (14/10/2026, print: *"nao foi aplicada o limite de 48 horas, e o fluxo que faltou atualizar?"* —
+  clique do anuncio em 03/10, resposta da IA em 14/10, onze dias depois).
+  **Medido primeiro, porque as duas causas dao a mesma print:** `contextoPerdido` = true, o campo
+  `horasContextoPerdido` chega nele (`auto` esta na mescla e nao e por candidato), **a tabela e o
+  quadro PADRAO concordam em `contexto-de-outro-dia` -> tecla 5**, e o texto que saiu e **byte a
+  byte** `ia.PEDIDO_DE_DADOS_NO_RASCUNHO`. Motores concordando no desfecho CERTO = o codigo decide
+  bem; quem decidiu foi o QUADRO dele, com a caixa na posicao antiga.
+  **O defeito meu:** `SOBRE['contexto-de-outro-dia']` ainda dizia que as excecoes estavam na
+  condicao (sairam na v3.153) e que a caixa ficava *"ABAIXO de tudo o que precisa de voce"* (a
+  posicao de antes da v3.152). **E este texto que ele le na janela para decidir a ordem do quadro:
+  prosa velha aqui vira ordem errada la.** A regra *"desfecho que envelhece vira mapa mentiroso"*
+  vale para o `quando`, nao so para os `ramos`.
+  **Trave a AFIRMACAO, nao a frase:** o teste percorre as regras ACIMA da caixa do tempo e exige que
+  nenhuma tecla alcancavel ali ENVIE conteudo. Ele falhou na primeira vez e estava certo —
+  `etiqueta-dispensa-da-fila` e `depende` (o engajado recebe a do momento uma vez por dia, 03/09):
+  as teclas acima sao `s`,`2`,`3`,`6` ou a propria `5`, **nunca `1`, `4` ou `a`**.
+  **E O CARTAO "O PADRAO MUDOU?" NAO ACUSA CAIXA QUE SO MUDOU DE LUGAR:** `diferencaDoPadrao`
+  compara PRESENCA (`faltando`/`sobrando`) por chave de conteudo, e no quadro **a posicao E a
+  prioridade** — entao mudanca que e so de ordem (a v3.152 inteira) e invisivel para ele. Nao foi
+  consertado de proposito: listar toda inversao entre o padrao e o quadro seria o alarme que toca
+  sempre, porque aquele arranjo e dele. **Mexeu na ORDEM do `fluxoPadrao`? Diga a ele em texto —
+  o cartao nao vai dizer.**
+
 - **A RODADA REMOVE AS ETIQUETAS QUE ELE LISTAR, E A POSICAO E TUDO** (14/10/2026: *"crie um espaco
   no automatizado para remover etiquetas, as etiquetas que eu listar nesse espaco devem ser
   removidas"*; de QUEM elas saem foi escolha dele: **"de quem a rodada atender"**).

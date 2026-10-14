@@ -1,83 +1,63 @@
-## 2026-10-14 - v3.154.0 - a rodada REMOVE as etiquetas que ele listar
+## 2026-10-14 - v3.155.0 - o limite nao foi aplicado: o quadro dele, e o verbete que o mandou para la
 
-**Pedido dele:** *"crie um espaco no automatizado para remover etiquetas, as etiquetas que eu listar
-nesse espaco devem ser removidas"*. Perguntado de QUEM elas saem, ele escolheu **"de quem a rodada
-atender"** - e nao uma varredura da base. Cartao novo na aba Automatizado, **"Etiquetas que a rodada
-REMOVE"**, logo abaixo do que ela aplica: as duas listas se leem juntas, e e olhando as duas que ele
-ve a etiqueta que esta nos dois lados.
+**Print dele:** o contato clicou no anuncio em **03/10 as 17:14** (*"Ola! Eu quero receber o Material
+da Direita"*) e em **14/10 as 15:15** - onze dias depois - recebeu *"Qual material da Direita voce
+gostaria de receber? E, se puder, me diga seu: Nome , Cidade"*, que ele apagou. Pergunta dele:
+*"nao foi aplicada o limite de 48 horas, e o fluxo que faltou atualizar?"*. **Estava certo**, e a
+medicao mostrou que metade da culpa e minha.
 
-### O caminho ja existia, e isso decidiu o custo
+### Medido antes de mexer, porque as duas causas dao a mesma print
 
-`tags.applyTags(contato, [], { remover: ids })` existe desde o COREDE divergente e o botao de tirar a
-etiqueta de fluxo o usa em producao - nao e rota nova nem contrato novo. E ele **devolve `skipped`
-sem requisicao nenhuma quando nada muda**, entao `lote.etiquetasQueSaem` pergunta ANTES de chamar:
-**contato que nao carrega nenhuma das listadas custa ZERO**, e a linha do Andamento so aparece quando
-houve remocao de verdade.
+A licao de 06/09 (*meca o SINAL antes de mexer na ORDEM*) aplicada aos dois motores:
 
-### A POSICAO e a coisa mais importante daqui
+- **O sinal esta certo:** `contextoPerdido` = `true` (11 dias contra o limite de 48h).
+- **O campo chega nele:** `auto` esta na mescla do `store.get`, `horasContextoPerdido` esta nos
+  DEFAULTS e nao e por candidato, entao `lerAuto` o devolve. Nao e a armadilha da chave que nao
+  alcanca quem ja usava.
+- **Os dois motores do CODIGO concordam:** a tabela da `contexto-de-outro-dia` -> tecla 5, e o
+  quadro PADRAO da a mesma coisa. **Motores concordando no desfecho certo = o codigo decide bem.**
+- **O texto que saiu e da IA:** *"E, se puder, me diga seu: / Nome , Cidade / (exemplo: Pedro Silva ,
+  Porto Alegre)"* e **byte a byte** `ia.PEDIDO_DE_DADOS_NO_RASCUNHO`. Com o sinal verdadeiro, o
+  codigo de hoje nunca deixaria o caso chegar na IA - a caixa do tempo vence em 7o lugar.
 
-A remocao entra **logo depois do `load()`, antes de TODA saida antecipada** de `processarRespondido`
-(sao quatro: canal removido, barreira do candidato, contato ja tratado, erro de ambiente). O motivo:
-**a etiqueta mais provavel de ele listar e justo uma das que fazem a rodada PULAR** - a de material
-pula para sempre. Posta depois da decisao, a lista nao funcionaria exatamente nos casos para os quais
-ele a criou. **E o defeito de ontem com outro nome**, e a licao pela quinta vez: **meca a ORDEM, nao
-so o sinal.**
+Sobra uma explicacao: **o QUADRO dele decidiu**, com a caixa na posicao antiga (20a). Quadro e
+COPIA, e a v3.152 mudou justamente a POSICAO - que e a prioridade.
 
-### Nada volta na mesma passada, senao o log mentiria
+### O defeito que e meu: o verbete envelheceu duas vezes no mesmo dia
 
-`saveClassification` grava no fim o que estiver marcado em `state.tagSuggestions`, e cidade, COREDE e
-conteudo nascem lá marcadas: sem desmarcar o que acabou de sair, a mesma passada removeria e
-regravaria a mesma etiqueta - duas escritas, nada mudado e **o Andamento dizendo que removeu**. Na
-passada SEGUINTE elas voltam de verdade, porque sao derivadas do cadastro, e e isso que o cartao diz:
-listar etiqueta de cidade e guerra perdida; o que resolve ali e corrigir o campo Cidade.
+`SOBRE['contexto-de-outro-dia']` ainda dizia que as duas excecoes dele *"estao na CONDICAO"* (sairam
+na v3.153) e que a caixa *"fica ABAIXO de tudo o que precisa de voce e do anuncio reconhecido"* - a
+posicao de ANTES da v3.152. O rotulo ainda falava em "outro dia", e a regua virou HORAS.
 
-### A sonda: uma releitura por RODADA, tres estados
+**E o pior lugar possivel para texto velho:** e este texto que ele le na janela do fluxo para decidir
+onde por a caixa no quadro dele. Prosa errada aqui vira ordem errada la. A regra ja estava escrita
+neste projeto (*"a janela do fluxo desenha o DESFECHO, e desfecho que envelhece vira mapa
+mentiroso"*); o que faltava era ela valer para o `quando`, e nao so para os `ramos`.
 
-*A API responde 200 e IGNORA o valor* e a armadilha mais antiga daqui, e numa remocao em laco o preco
-de acreditar no 2xx e a rodada inteira escrevendo no vazio. **O primeiro contato de cada rodada em
-que algo sai e RELIDO** - uma requisicao por rodada, nao por contato (a disciplina da aba Cidades:
-pegar formato errado exige UM exemplo, nao auditoria). `lote.etiquetaSaiuMesmo` devolve `removido`
-(segue), `ainda-la` (**PARA no primeiro contato**: e defeito, nao engasgo) e `nao-da-para-saber`
-(segue com aviso - **"nao consegui reler" NAO e "nao removeu"**). Lista vazia depois e `removido`:
-contato cuja unica etiqueta era a removida fica legitimamente sem nenhuma.
+### O teste que trava isso corrigiu a minha descricao
 
-**O veredito e DEVOLVIDO, nunca escrito em `state.auto.parar`** - aquela bandeira e a do botao
-"Parar a rodada" dele, e mexer nela faria a linha culpar a remocao quando ele mesmo apertasse.
+Travar a frase seria teste de string. O que se trava e a AFIRMACAO de posicao: percorre as regras
+acima da caixa do tempo e exige que nenhuma tecla alcancavel ali ENVIE CONTEUDO.
 
-### Nome errado AVISA e segue - ao contrario da lista de pular
+E ele **falhou na primeira vez, com razao**: eu escrevi *"acima dela so esta o que nao manda nada"* e
+`etiqueta-dispensa-da-fila` e `depende` - o engajado recebe a mensagem do momento uma vez por dia
+(decisao dele, 03/09). A frase certa e mais forte: as teclas acima sao `s`, `2`, `3`, `6` (nao mandam
+nada) ou `5` (a propria mensagem do momento). **Nunca a `1`, a `4` ou a `a`**, que sao as que
+respondem o que esfriou. O verbete foi corrigido para dizer isso.
 
-A lista de PULAR recusa a rodada; esta nao. A diferenca e o que o erro causa: la o nome errado sai do
-`exceptTagsId` em silencio e **alguem RECEBE** um disparo, ato para fora e sem volta; aqui ele so
-deixa a etiqueta onde estava - nada enviado, nada apagado. Travar a fila por isso seria parar o
-atendimento por causa de uma faxina. Uma vez por rodada, senao vira alarme em todo contato.
+### O buraco que esta print expoe, e ele e dele para decidir
 
-### O preco, e esta na tela
+**O cartao "O padrao mudou?" NAO acusa caixa que so MUDOU DE LUGAR.** `arvore.diferencaDoPadrao`
+compara presenca (`faltando` / `sobrando`) por chave de conteudo: uma caixa que existe nos dois, em
+posicoes diferentes, e invisivel para ele. E neste projeto **a posicao E a prioridade**, entao a
+v3.152 - cuja mudanca inteira foi a ordem - nao tinha como ser vista.
 
-A etiqueta sai **antes de a rodada decidir**: listando a de SEM INTERESSE ou a de assessor, **ela
-deixa de proteger nessa mesma passada** e o contato passa a receber o que ela impedia; listando a do
-DISPARO, a pessoa volta a entrar nos lotes. **O disparo por etiqueta NAO remove**, de proposito: la o
-contato nao e carregado e e a etiqueta do proprio disparo que impede o reenvio - tira-la seria apagar
-a memoria que torna o lote repetivel.
-
-`lote.colisaoDeRemocao` acusa na tela a etiqueta que esta nesta lista E num dos cinco campos que a
-rodada aplica: ela **sai e volta em toda passada**, uma escrita por contato sem nada mudar - a
-familia do `repeteSozinha`. Avisa e nao recusa: apagar o campo que aplica e listar a etiqueta aqui,
-para limpar o que ja foi marcado, e caso legitimo.
-
-### Medido
-
-- 21 suites e os dois verificadores verdes. 40 assercoes novas, **metade sobre o que NAO pode ser
-  removido**: contato que nao tem a etiqueta, `tagsId` ausente (nao e "tem todas"), etiqueta sem id,
-  e o **rotulo REPETIDO** - o CRM tem duas "Serra" com ids diferentes, e comparar rotulo removeria a
-  homonima errada. A comparacao e por `id` contra `state.contact.tagsId`.
-- `nomesPulados` virou `lote.nomesDaLista` e a antiga chama a nova: duas copias divergiriam no
-  primeiro separador novo, e a mesma linha valeria num campo e nao no outro.
-- `auto.etiquetasParaRemover` **nasce VAZIA**, e tem de nascer: e a unica configuracao do painel que
-  APAGA dado que ja esta no CRM de eleitor real. Nao e por candidato (etiqueta e organizacao interna,
-  o critario de 25/09).
+Nao mexi nisso: ordem no quadro e preferencia DELE, e listar toda inversao entre o padrao e o quadro
+seria o alarme que toca sempre (ele arrumou aquele quadro a mao). Esta dito a ele como decisao.
 
 ### O que fica para ele
 
-- **A varredura da base nao existe:** limpar etiqueta de quem ele nao vai atender ainda pede o filtro
-  de Contatos na mao. O filtro do servidor aceita `tagsId`, entao e um botao - e um botao sem volta.
-- **A lista nao e lista negra:** etiqueta listada que a rodada aplica continua sendo aplicada.
+- **Mover a caixa "A ultima dela passou do limite de horas"** no quadro para logo abaixo das seis do
+  topo. O verbete agora diz exatamente isso.
+- **Ou importar `tools/fluxo-padrao.json`**, que ja esta com a ordem nova (regerado na v3.152) - mas
+  isso substitui o quadro inteiro, e ele perde o arranjo feito a mao.

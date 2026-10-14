@@ -1519,21 +1519,37 @@ export const SOBRE = {
       'Nenhuma resposta pronta responde, e o modelo em cima da pergunta dela vira material de ' +
       'campanha.',
   },
+  /**
+   * **O verbete envelheceu DUAS vezes no mesmo dia e eu não o reescrevi — 14/10/2026.** A v3.152
+   * subiu a caixa de 20º para 7º lugar e trocou a régua do DIA para HORAS; a v3.153 tirou as duas
+   * exceções dele. O texto aqui continuou dizendo que as exceções existem e que a caixa *"fica
+   * ABAIXO de tudo o que precisa de você e do anúncio reconhecido"* — a posição anterior.
+   *
+   * **É o pior lugar possível para um texto velho:** é ESTE texto que ele lê na janela do fluxo
+   * para decidir onde pôr a caixa no quadro dele, e o quadro é cópia — então a prosa errada aqui
+   * vira ordem errada lá, que é o que a print do dia mostrou. A regra já estava escrita
+   * (*"a janela do fluxo desenha o DESFECHO, e desfecho que envelhece vira mapa mentiroso"*); o que
+   * faltava era ela valer também para o `quando`, e não só para os `ramos`.
+   */
   'contexto-de-outro-dia': {
-    rotulo: 'A última dela é de outro dia',
+    rotulo: 'A última dela passou do limite de horas',
     efeito: 'depende',
     ramos: [
       { tecla: '5', se: 'há mensagem do momento e ela ainda não saiu para essa pessoa' },
       { tecla: '3', se: 'não há mensagem do momento, ou ela já saiu' },
     ],
     quando:
-      'O contexto passou: responder o conteúdo de ontem soa a quem não estava lá. Manda a mensagem ' +
-      'do momento, que é o que há de novo hoje, e conclui. Decisão sua (03/09, generalizada em ' +
-      '04/09 com quatro casos). Duas exceções, e as duas estão na CONDIÇÃO: pergunta pendente e ' +
-      'material pedido que ainda não saiu — pedido não vence com o dia (05/09). Só casa se houver ' +
-      'mensagem do momento configurada e ela ainda não tiver saído para essa pessoa — e fica ' +
-      'ABAIXO de tudo o que precisa de você (pedido, pergunta, áudio) e do anúncio reconhecido, ' +
-      'que é escolha explícita dela.',
+      'Passou do limite de horas desde a última mensagem dela (campo "Horas até o contexto se ' +
+      'perder", nasce em 48; 0 desliga): o contexto passou, e responder o que ela escreveu há dias ' +
+      'soa a quem não estava lá. Manda a mensagem do momento, que é o que há de novo hoje, e ' +
+      'conclui. Decisão sua (03/09, generalizada em 04/09, e virou HORAS em 14/10). **Passado o ' +
+      'limite, o fluxo não decide mais nada:** as suas duas exceções — pergunta pendente e material ' +
+      'pedido — saíram em 14/10, porque a eleição acabou. Sobra uma guarda, e ela é minha: quem só ' +
+      'se DESPEDIU não recebe a mensagem do momento. **O lugar dela é logo abaixo das seis caixas ' +
+      'do topo (sem interesse, assessor, última é nossa, presença confirmada, endereço informado, ' +
+      'etiqueta que dispensa) e ACIMA de todo o resto** — inclusive do pedido, da pergunta, do ' +
+      'áudio e do anúncio reconhecido, que ficavam acima dela até 14/10. Acima dela nenhuma caixa ' +
+      'responde o que esfriou: ou não manda nada, ou manda a própria mensagem do momento.',
   },
   'so-expressa-apoio': {
     rotulo: 'Só apoio, sem pergunta e sem pedido',

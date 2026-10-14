@@ -839,6 +839,43 @@ grupo('apoio: o TEMPO escolhe entre agradecer e a mensagem do momento (03/09/202
   for (const antes of ['pergunta-aberta', 'pediu-algo-sem-dizer-o-que']) {
     check(ids.indexOf(antes) < ids.indexOf('so-expressa-apoio'), `"${antes}" esta acima do apoio na tabela`);
   }
+
+  /**
+   * **O VERBETE PROMETE UMA POSICAO, E E POR ELE QUE ELE DECIDE ONDE POR A CAIXA NO QUADRO.**
+   *
+   * Print dele de 14/10/2026 (*"nao foi aplicado o limite de 48 horas, e o fluxo que faltou
+   * atualizar?"*): o quadro e uma COPIA, entao mover a caixa no padrao nao move nada no quadro
+   * dele — e o texto que ele le na janela para decidir onde por a caixa ainda dizia que ela *"fica
+   * ABAIXO de tudo o que precisa de voce e do anuncio reconhecido"*, que era a posicao ANTIGA, e
+   * que as duas excecoes dele continuavam na condicao, o que deixou de ser verdade na v3.153.
+   *
+   * Travar a frase seria teste de string. O que se trava aqui e a AFIRMACAO: acima da caixa so
+   * esta o que NAO manda nada. Mexeu na posicao? Este teste cai, e o verbete entra no mesmo commit.
+   */
+  const pos = ids.indexOf('contexto-de-outro-dia');
+  check(pos >= 0, 'a caixa do tempo existe na tabela');
+  /**
+   * **A conta exata, e ela corrigiu a MINHA descricao.** Eu escrevi "acima dela so esta o que nao
+   * manda nada" e o teste acusou `etiqueta-dispensa-da-fila`, que e `depende`: o engajado recebe a
+   * mensagem do momento uma vez por dia (decisao dele, 03/09). A frase certa e outra e e mais
+   * forte: **nenhuma tecla alcancavel acima dela ENVIA CONTEUDO** — sao as que nao mandam nada
+   * (`s`, `2`, `3`, `6`) ou a propria mensagem do momento (`5`), que e o desfecho desta caixa.
+   * Nunca a `1` (modelo), a `4` (pedir dados) ou a `a`, que sao as que respondem o que esfriou.
+   */
+  const NAO_RESPONDE_O_QUE_ESFRIOU = new Set(['s', '2', '3', '6', '5']);
+  for (const acima of ids.slice(0, pos)) {
+    const r = REGRAS.find((x) => x.id === acima);
+    const teclas = typeof r.tecla === 'function' ? sugestaoLib.ramosDaRegra(acima).map((x) => x.tecla) : [r.tecla];
+    const fora = teclas.filter((t) => !NAO_RESPONDE_O_QUE_ESFRIOU.has(t));
+    check(
+      fora.length === 0,
+      `acima da caixa do tempo nenhuma tecla envia conteudo — "${acima}" alcanca ${JSON.stringify(fora)}`
+    );
+  }
+  check(
+    sugestaoLib.SOBRE['contexto-de-outro-dia'].quando.includes('DESPEDIU'),
+    'o verbete nomeia a unica guarda que sobrou (a despedida), que e minha e ele pode cortar'
+  );
 }
 
 grupo('a tecla 8 e da IA, e NENHUMA regra a recomenda (03/09/2026)');
