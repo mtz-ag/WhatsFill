@@ -4327,27 +4327,38 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
 
     /**
-     * **Etiqueta que ele manda remover e a rodada APLICA sai e volta em toda passada.** As duas
-     * configurações estão certas cada uma por si; juntas são uma escrita por passada em dado de
-     * eleitor sem nada mudar no fim. Avisa, não recusa: apagar o campo que aplica e listar a
-     * etiqueta aqui, para limpar o que já foi marcado, é caso legítimo.
+     * **Etiqueta que ele manda remover e alguma rodada APLICA — e a consequência depende de QUEM.**
+     *
+     * A primeira versão deste aviso dizia "sai e volta em toda passada" para os cinco campos, e
+     * print dele mostrou a frase errada em cima de *"1 TESTE DISPARO"*: aquele é o campo do
+     * DISPARO, aplicado em `processarLote`, que é outra rodada e nem remove etiqueta. Duas
+     * consequências diferentes, dois textos — e o campo é NOMEADO, em vez de mandar procurar
+     * entre cinco.
      */
     const colidem = loteLib.colisaoDeRemocao({
       remover: loteLib.nomesDaLista(cfg.etiquetasParaRemover),
       aplicadas: [
-        cfg.etiquetaSemInteresse,
-        cfg.etiquetaPedidoAjuda,
-        cfg.etiquetaEndereco,
-        cfg.etiquetaForaDoRS,
-        cfg.etiquetaLote,
+        { nome: cfg.etiquetaSemInteresse, rotulo: 'Etiqueta de SEM INTERESSE', onde: 'rodada' },
+        { nome: cfg.etiquetaPedidoAjuda, rotulo: 'Etiqueta de quem PEDIU DINHEIRO OU EMPREGO', onde: 'rodada' },
+        { nome: cfg.etiquetaEndereco, rotulo: 'Etiqueta de quem MANDOU ENDEREÇO', onde: 'rodada' },
+        { nome: cfg.etiquetaForaDoRS, rotulo: 'Etiqueta de quem mora FORA DO RS', onde: 'rodada' },
+        { nome: cfg.etiquetaLote, rotulo: 'Etiqueta de quem JÁ RECEBEU (o recibo), na aba Disparo', onde: 'disparo' },
       ],
     });
-    if (colidem.length) {
-      card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
-        `${colidem.map((n) => `"${n}"`).join(', ')} está nesta lista E num dos campos que a rodada ` +
-          'APLICA — ela vai sair e voltar em toda passada, uma escrita por contato sem nada mudar ' +
-          'no fim. Apague o nome de um dos dois lados.'));
+    for (const c of colidem) {
+      const texto = c.onde === 'disparo'
+        ? `"${c.nome}" está nesta lista E é a "${c.rotulo}". Não é a cada passada: o disparo só a ` +
+          'aplica quando você dispara. O preço é outro — essa etiqueta é a memória que impede o ' +
+          'reenvio, então tirá-la devolve essas pessoas para os próximos lotes.'
+        : `"${c.nome}" está nesta lista E é a "${c.rotulo}", que a rodada do fluxo aplica — ela vai ` +
+          'sair e voltar em toda passada, uma escrita por contato sem nada mudar no fim. Apague o ' +
+          'nome de um dos dois lados.';
+      card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, texto));
     }
+    card.append(h('div', { class: 'wf-origin' },
+      'Esta conferência olha os cinco campos de etiqueta das abas Automatizado e Disparo. Ela NÃO ' +
+        'enxerga a tabela "Etiqueta por palavra do que saiu" (aba Config): se a etiqueta que você ' +
+        'listou aqui estiver lá, ela também volta sozinha.'));
     return card;
   }
 

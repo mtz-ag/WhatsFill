@@ -2300,7 +2300,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   **O preco esta na tela:** listando a etiqueta de SEM INTERESSE ou de assessor, ela deixa de
   proteger na mesma passada. **O disparo NAO remove** (nao carrega o contato, e a etiqueta dele e o
   que impede o reenvio). `colisaoDeRemocao` acusa etiqueta que esta nesta lista E num campo que a
-  rodada aplica — ela sai e volta em toda passada.
+  rodada aplica. **E a CONSEQUENCIA depende de QUEM aplica — a primeira versao do aviso errou
+  isso** (print dele, 14/10, com *"1 TESTE DISPARO"*): so as QUATRO da rodada do fluxo saem e voltam
+  "em toda passada"; a do DISPARO (`auto.etiquetaLote`) e aplicada em `processarLote`, outra rodada,
+  e o preco dela e o oposto — **ela e a memoria que impede o reenvio**, entao tira-la devolve a
+  pessoa para os proximos lotes. O aviso NOMEIA o campo, em vez de mandar procurar entre cinco.
+  A conferencia **nao enxerga** a tabela "Etiqueta por palavra do que saiu" (chave propria, fora de
+  `auto`), e a tela diz isso.
 
 - **AS DUAS EXCECOES DO LIMITE CAIRAM NO MESMO DIA, POR DECISAO DELE** (14/10/2026: *"pedido de
   material e so para periodo eleitoral e ja acabou, e pergunta pendente apos 12 dias e melhor

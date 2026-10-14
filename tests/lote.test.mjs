@@ -699,26 +699,55 @@ grupo('canal removido da conta: tres estados, nunca dois');
   );
   check(lote.etiquetaSaiuMesmo().estado === 'nao-da-para-saber', 'sem argumento nenhum: nao da para saber');
 
-  // --- a colisao com as que a rodada APLICA (sai e volta em toda passada) ---
+  /**
+   * **A colisao com as que alguma rodada APLICA — e a CONSEQUENCIA depende de QUEM aplica.**
+   *
+   * Print dele (14/10/2026) com o aviso dizendo que *"1 TESTE DISPARO"* sairia e voltaria *"em toda
+   * passada"*: falso. Aquele nome e a etiqueta do DISPARO, aplicada em `processarLote` — outra
+   * rodada, que nem remove etiqueta. Quem sai e volta a cada passada sao so as da rodada do FLUXO.
+   */
+  const DO_FLUXO = { nome: 'COLINHA', rotulo: 'Etiqueta de SEM INTERESSE', onde: 'rodada' };
+  const DO_DISPARO = { nome: '1 TESTE DISPARO', rotulo: 'Etiqueta de quem JA RECEBEU', onde: 'disparo' };
+
   check(
-    lote.colisaoDeRemocao({ remover: ['COLINHA'], aplicadas: ['COLINHA'] }).join('|') === 'COLINHA',
+    lote.colisaoDeRemocao({ remover: ['COLINHA'], aplicadas: [DO_FLUXO] })[0]?.nome === 'COLINHA',
     'etiqueta nos dois lados e acusada'
   );
   check(
-    lote.colisaoDeRemocao({ remover: ['colinha'], aplicadas: ['COLINHA'] }).join('|') === 'colinha',
+    lote.colisaoDeRemocao({ remover: ['COLINHA'], aplicadas: [DO_FLUXO] })[0]?.onde === 'rodada',
+    'e diz que quem aplica e a rodada do fluxo (sai e volta a cada passada)'
+  );
+  check(
+    lote.colisaoDeRemocao({ remover: ['1 TESTE DISPARO'], aplicadas: [DO_DISPARO] })[0]?.onde === 'disparo',
+    'a do DISPARO e marcada como disparo — a frase "em toda passada" seria mentira nela'
+  );
+  check(
+    lote.colisaoDeRemocao({ remover: ['1 TESTE DISPARO'], aplicadas: [DO_DISPARO] })[0]?.rotulo.includes('JA RECEBEU'),
+    'e o CAMPO e nomeado, em vez de mandar procurar entre cinco'
+  );
+  check(
+    lote.colisaoDeRemocao({ remover: ['colinha'], aplicadas: [DO_FLUXO] })[0]?.nome === 'colinha',
     'a caixa nao importa para achar, e o texto devolvido e o que ELE escreveu na lista de remover'
   );
   check(
-    lote.colisaoDeRemocao({ remover: ['ADS'], aplicadas: ['COLINHA'] }).length === 0,
+    lote.colisaoDeRemocao({ remover: ['ADS'], aplicadas: [DO_FLUXO] }).length === 0,
     'etiqueta que so esta na lista de remover nao e colisao'
   );
   check(
-    lote.colisaoDeRemocao({ remover: ['COLINHA'], aplicadas: ['', null, 'COLINHA'] }).length === 1,
+    lote.colisaoDeRemocao({ remover: ['COLINHA'], aplicadas: [{ nome: '' }, { nome: null }, DO_FLUXO] }).length === 1,
     'campo de aplicar vazio nao atrapalha a conta'
   );
   check(
-    lote.colisaoDeRemocao({ remover: ['COLINHA'], aplicadas: ['', null, undefined] }).length === 0,
+    lote.colisaoDeRemocao({ remover: ['COLINHA'], aplicadas: [{ nome: '' }, { nome: null }, {}] }).length === 0,
     'nenhum campo de aplicar preenchido: colisao nenhuma — o caso de quem so quer limpar'
+  );
+  check(
+    lote.colisaoDeRemocao({ remover: ['COLINHA', 'colinha'], aplicadas: [DO_FLUXO] }).length === 1,
+    'o mesmo nome repetido na lista de remover acusa uma vez'
+  );
+  check(
+    lote.colisaoDeRemocao({ remover: ['X'], aplicadas: [{ nome: 'X' }] })[0]?.onde === 'rodada',
+    'campo sem "onde" cai no caso da rodada, que e o mais comum e o mais barato de errar para'
   );
   check(lote.colisaoDeRemocao({}).length === 0, 'sem nada: sem colisao');
   check(lote.colisaoDeRemocao().length === 0, 'sem argumento nenhum: sem colisao');

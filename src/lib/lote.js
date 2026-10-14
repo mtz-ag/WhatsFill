@@ -293,30 +293,46 @@ export function etiquetaSaiuMesmo({ ids = [], tagsDepois = null } = {}) {
 }
 
 /**
- * **Etiqueta que ele manda REMOVER e a rodada APLICA sai e volta, em toda passada, para sempre.**
+ * **Etiqueta que ele manda REMOVER e alguma rodada APLICA.**
  *
  * É a família do `repeteSozinha` do quadro: as duas configurações estão certas cada uma por si, e
- * juntas viram uma escrita por passada em dado de eleitor sem nada mudar no fim. A tela avisa em
- * vez de recusar — recusar mataria o caso legítimo de ele apagar o campo que aplica e listar a
- * etiqueta aqui para limpar o que já foi marcado.
+ * juntas desfazem uma à outra. A tela avisa em vez de recusar — recusar mataria o caso legítimo de
+ * ele apagar o campo que aplica e listar a etiqueta aqui para limpar o que já foi marcado.
  *
- * Compara por RÓTULO porque é o que ele digita nos dois campos, e ignora a caixa; devolve o texto
- * como ele escreveu na lista de remover, que é o que ele vai procurar na tela.
+ * **E a CONSEQUÊNCIA depende de QUEM aplica — foi o que a primeira versão errou.** Print dele
+ * (14/10/2026) com o aviso dizendo que *"1 TESTE DISPARO"* sairia e voltaria *"em toda passada"*:
+ * falso, porque aquele nome é a etiqueta do DISPARO (`auto.etiquetaLote`), aplicada em
+ * `processarLote` — outra rodada, que nem remove etiqueta. Quem sai e volta a cada passada são só
+ * as quatro que a rodada do FLUXO aplica; a do disparo tem outro preço, e ele é o oposto de
+ * inofensivo: **ela é a memória que impede o reenvio**, então tirá-la devolve o contato para os
+ * próximos lotes.
+ *
+ * Por isso `aplicadas` traz `{ nome, rotulo, onde }` e o retorno carrega os três: a tela escreve a
+ * frase certa para cada caso e NOMEIA o campo, em vez de mandar procurar entre cinco.
+ *
+ * Compara por RÓTULO (é o que ele digita nos dois lugares), ignorando a caixa, e devolve o texto
+ * como ele escreveu na lista de remover — que é o que ele vai procurar na tela.
  */
 export function colisaoDeRemocao({ remover = [], aplicadas = [] } = {}) {
-  const alvo = new Set(
-    (Array.isArray(aplicadas) ? aplicadas : [])
-      .map((n) => String(n || '').trim().toLowerCase())
-      .filter(Boolean)
-  );
+  const porNome = new Map();
+  for (const campo of Array.isArray(aplicadas) ? aplicadas : []) {
+    const nome = String(campo?.nome || '').trim().toLowerCase();
+    if (!nome || porNome.has(nome)) continue;
+    porNome.set(nome, campo);
+  }
   const vistos = new Set();
   const colidem = [];
   for (const nome of Array.isArray(remover) ? remover : []) {
     const limpo = String(nome || '').trim();
     const chave = limpo.toLowerCase();
-    if (!limpo || vistos.has(chave) || !alvo.has(chave)) continue;
+    if (!limpo || vistos.has(chave) || !porNome.has(chave)) continue;
     vistos.add(chave);
-    colidem.push(limpo);
+    const campo = porNome.get(chave);
+    colidem.push({
+      nome: limpo,
+      rotulo: String(campo?.rotulo || '').trim(),
+      onde: campo?.onde === 'disparo' ? 'disparo' : 'rodada',
+    });
   }
   return colidem;
 }
