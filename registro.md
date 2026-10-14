@@ -1,63 +1,79 @@
-## 2026-10-14 - v3.155.0 - o limite nao foi aplicado: o quadro dele, e o verbete que o mandou para la
+## 2026-10-14 - v3.156.0 - o limite de 48h nunca rodou: eu movi a regra na TABELA e nao na ARVORE
 
-**Print dele:** o contato clicou no anuncio em **03/10 as 17:14** (*"Ola! Eu quero receber o Material
-da Direita"*) e em **14/10 as 15:15** - onze dias depois - recebeu *"Qual material da Direita voce
-gostaria de receber? E, se puder, me diga seu: Nome , Cidade"*, que ele apagou. Pergunta dele:
-*"nao foi aplicada o limite de 48 horas, e o fluxo que faltou atualizar?"*. **Estava certo**, e a
-medicao mostrou que metade da culpa e minha.
+**Duas prints dele**, as duas com onze dias entre a fala dela e a nossa, as duas respondidas pela IA
+e apagadas: o clique no anuncio de 03/10 e *"Nao, so fiquei com pe atras com essa filmagem"* de
+03/10, as duas respondidas em 14/10. E a terceira print: o rodape da janela do fluxo dizendo
+**"Quadro: de um arquivo 3.151.0 · extensao 3.155.0 · em dia com o padrao"**.
 
-### Medido antes de mexer, porque as duas causas dao a mesma print
+### Eu estava errado ontem, e o rodape dele estava certo
 
-A licao de 06/09 (*meca o SINAL antes de mexer na ORDEM*) aplicada aos dois motores:
+Ontem eu disse que o quadro dele estava atrasado na posicao. **Nao estava.** A arvore do padrao de
+hoje e o arquivo 3.151.0 sao IDENTICOS - `contexto-de-outro-dia` em 17o lugar nos dois.
 
-- **O sinal esta certo:** `contextoPerdido` = `true` (11 dias contra o limite de 48h).
-- **O campo chega nele:** `auto` esta na mescla do `store.get`, `horasContextoPerdido` esta nos
-  DEFAULTS e nao e por candidato, entao `lerAuto` o devolve. Nao e a armadilha da chave que nao
-  alcanca quem ja usava.
-- **Os dois motores do CODIGO concordam:** a tabela da `contexto-de-outro-dia` -> tecla 5, e o
-  quadro PADRAO da a mesma coisa. **Motores concordando no desfecho certo = o codigo decide bem.**
-- **O texto que saiu e da IA:** *"E, se puder, me diga seu: / Nome , Cidade / (exemplo: Pedro Silva ,
-  Porto Alegre)"* e **byte a byte** `ia.PEDIDO_DE_DADOS_NO_RASCUNHO`. Com o sinal verdadeiro, o
-  codigo de hoje nunca deixaria o caso chegar na IA - a caixa do tempo vence em 7o lugar.
+O defeito e meu e e outro: na **v3.152 eu movi a regra de 20o para 7o na LISTA (`sugestao.js`) e nao
+movi a caixa na ARVORE (`fluxoPadrao`)**. A lista so decide quando nao existe quadro; **a arvore e o
+motor sempre que existe**, e ele tem quadro. Entao a regra que ele pediu nunca rodou uma vez.
 
-Sobra uma explicacao: **o QUADRO dele decidiu**, com a caixa na posicao antiga (20a). Quadro e
-COPIA, e a v3.152 mudou justamente a POSICAO - que e a prioridade.
+**E a minha medicao de ontem confirmou o erro em vez de pega-lo:** eu montei o contexto a mao com
+`pedeRespostaPessoal: null`, quando o painel compoe esse sinal como
+`conversaPedeRespostaPessoal || pedeRoupa || pedeMaterialEscrito || falouAlgoProprio` - e e o
+`falouAlgoProprio` que casa nas duas prints. Medi a minha suposicao, nao o caso. **Reconstrucao de
+contexto copia a composicao do painel, nunca uma funcao parecida com o nome certo.**
 
-### O defeito que e meu: o verbete envelheceu duas vezes no mesmo dia
+Com a composicao certa: **TABELA -> `contexto-de-outro-dia`, tecla 5. ARVORE ->
+`ultima-pede-resposta-pessoal`, tecla 6 (a IA).** Dois motores discordando e problema de POSICAO, e
+a posicao errada era a da arvore.
 
-`SOBRE['contexto-de-outro-dia']` ainda dizia que as duas excecoes dele *"estao na CONDICAO"* (sairam
-na v3.153) e que a caixa *"fica ABAIXO de tudo o que precisa de voce e do anuncio reconhecido"* - a
-posicao de ANTES da v3.152. O rotulo ainda falava em "outro dia", e a regua virou HORAS.
+### A caixa subiu nos tres lugares
 
-**E o pior lugar possivel para texto velho:** e este texto que ele le na janela do fluxo para decidir
-onde por a caixa no quadro dele. Prosa errada aqui vira ordem errada la. A regra ja estava escrita
-neste projeto (*"a janela do fluxo desenha o DESFECHO, e desfecho que envelhece vira mapa
-mentiroso"*); o que faltava era ela valer para o `quando`, e nao so para os `ramos`.
+Chegada, retorno sem cidade e retorno com cidade. Ela fica agora logo abaixo dos quatro pedidos que
+o mandato **nao pode atender** (dinheiro, trabalho, ligacao, falar com o deputado), que continuam em
+cima **de proposito**: mandar a mensagem do momento em cima de um pedido de socorro de onze dias
+atras e propaganda sobre um pedido de ajuda - o dano de 03/09, que nao fica menor com o tempo.
 
-### O teste que trava isso corrigiu a minha descricao
+**Passaram a perder para o tempo:** o audio e o texto longo (tecla 6), o pedido sem objeto, a
+despedida, a rajada de anuncios, o modelo por etiqueta de conteudo - e, **na CHEGADA, o recibo do
+anuncio**.
 
-Travar a frase seria teste de string. O que se trava e a AFIRMACAO de posicao: percorre as regras
-acima da caixa do tempo e exige que nenhuma tecla alcancavel ali ENVIE CONTEUDO.
+**A despedida continua protegida pela CONDICAO e nao pela posicao** (`!c.ultimaEhDespedida`), que e
+o que a faz valer tambem no quadro que ele ja exportou.
 
-E ele **falhou na primeira vez, com razao**: eu escrevi *"acima dela so esta o que nao manda nada"* e
-`etiqueta-dispensa-da-fila` e `depende` - o engajado recebe a mensagem do momento uma vez por dia
-(decisao dele, 03/09). A frase certa e mais forte: as teclas acima sao `s`, `2`, `3`, `6` (nao mandam
-nada) ou `5` (a propria mensagem do momento). **Nunca a `1`, a `4` ou a `a`**, que sao as que
-respondem o que esfriou. O verbete foi corrigido para dizer isso.
+### O recibo na chegada: eu desfiz isto de manha e refiz a tarde
 
-### O buraco que esta print expoe, e ele e dele para decidir
+De manha movi a caixa acima do recibo e **desfiz**, com o argumento de que a posicao e do quadro
+dele (04/09). O argumento vale para mudanca por conta propria - e esta deixou de ser: ele pediu
+*"passado o limite, o fluxo nao decide mais nada"*, a lista ja punha o tempo acima do recibo desde a
+v3.152, e **deixar a lista e o quadro discordando e o defeito que este projeto mais paga**.
 
-**O cartao "O padrao mudou?" NAO acusa caixa que so MUDOU DE LUGAR.** `arvore.diferencaDoPadrao`
-compara presenca (`faltando` / `sobrando`) por chave de conteudo: uma caixa que existe nos dois, em
-posicoes diferentes, e invisivel para ele. E neste projeto **a posicao E a prioridade**, entao a
-v3.152 - cuja mudanca inteira foi a ordem - nao tinha como ser vista.
+**Consequencia, dita a ele:** quem clicou no anuncio ha onze dias e nunca recebeu nada passa a
+receber a mensagem do momento, nao o recibo - que e material de campanha de uma eleicao encerrada em
+04/10. Quatro assercoes invertidas, com o motivo e a data escritos nelas.
 
-Nao mexi nisso: ordem no quadro e preferencia DELE, e listar toda inversao entre o padrao e o quadro
-seria o alarme que toca sempre (ele arrumou aquele quadro a mao). Esta dito a ele como decisao.
+### "Em dia com o padrao" era uma afirmacao FALSA
 
-### O que fica para ele
+`diferencaDoPadrao` so comparava PRESENCA (`faltando` / `sobrando`). O quadro dele tinha exatamente
+as caixas do padrao, em outra ordem - e **no quadro a ordem E a prioridade**. Entao mudanca que e so
+de ordem (a v3.152 inteira) era invisivel, **com a tela afirmando que estava tudo em dia**. Mapa que
+mente no momento em que ele olha e pior que mapa nenhum.
 
-- **Mover a caixa "A ultima dela passou do limite de horas"** no quadro para logo abaixo das seis do
-  topo. O verbete agora diz exatamente isso.
-- **Ou importar `tools/fluxo-padrao.json`**, que ja esta com a ordem nova (regerado na v3.152) - mas
-  isso substitui o quadro inteiro, e ele perde o arranjo feito a mao.
+Agora ela devolve `foraDeOrdem`, e o rodape diz *"mesmas caixas do padrao, N em outra ordem: ..."*.
+**E o conjunto MINIMO** (o que sobra da maior subsequencia comum), nao todo par invertido: num
+quadro de sessenta caixas, listar pares acusaria dezenas de posicoes que ele escolheu a dedo, e
+alarme que toca sempre se aprende a ignorar. **Nao e erro** - ordem diferente do padrao e o normal;
+o que mudou e a tela parar de afirmar o contrario.
+
+**Medido contra o quadro de verdade dele** (o arquivo 3.151.0): `faltando` 0, `sobrando` 0,
+**`foraDeOrdem` 1 - "passou do limite de horas desde a ultima dela"**. Exatamente a caixa do caso.
+
+### O que ele precisa fazer, e sem isto nada muda
+
+**Importar `tools/fluxo-padrao.json`** (regerado, carimbo 3.156.0). Mexer no padrao **nao mexe no
+quadro dele**, e o cartao "O padrao mudou?" nao acusa caixa que so mudou de lugar - o rodape passou
+a acusar, mas quem move a caixa e ele ou a importacao.
+
+### Medido
+
+- 21 suites e os dois verificadores verdes. As duas prints, com a composicao real do painel, agora
+  dao tecla 5 nos DOIS motores.
+- Cinco assercoes mexidas: quatro invertidas pela posicao nova (com a razao escrita) e a do arquivo
+  exportado, que o teste exige em dia.

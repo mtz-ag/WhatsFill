@@ -1,9 +1,9 @@
 {
   "formato": "whatsfill-fluxo",
   "versao": 1,
-  "extensao": "3.151.0",
-  "nome": "fluxo padrão 3.151.0",
-  "salvoEm": "2026-10-14T17:40:19.835Z",
+  "extensao": "3.156.0",
+  "nome": "fluxo padrão 3.156.0",
+  "salvoEm": "2026-10-14T18:39:32.091Z",
   "teclas": {},
   "arvore": [
     {
@@ -187,6 +187,18 @@
           "y": 1162
         },
         {
+          "id": "r:contexto-de-outro-dia:chegada-antes",
+          "rotulo": "passou do limite de horas desde a última dela",
+          "regra": "contexto-de-outro-dia",
+          "condicao": null,
+          "acao": null,
+          "nota": "",
+          "desligado": false,
+          "filhos": [],
+          "x": 350,
+          "y": 1328
+        },
+        {
           "id": "r:pediu-algo-sem-dizer-o-que:chegada-antes",
           "rotulo": "você responde: pedido sem objeto, ou pergunta",
           "regra": "pediu-algo-sem-dizer-o-que",
@@ -199,7 +211,7 @@
             "pergunta-aberta"
           ],
           "x": 350,
-          "y": 1328
+          "y": 1494
         },
         {
           "id": "r:ultima-pede-resposta-pessoal:chegada-antes",
@@ -216,7 +228,7 @@
             "reclama-sem-resposta"
           ],
           "x": 350,
-          "y": 1494
+          "y": 1660
         },
         {
           "id": "chegada-boas-vindas",
@@ -250,7 +262,7 @@
             }
           ],
           "x": 350,
-          "y": 1660
+          "y": 1826
         },
         {
           "id": "r:rajada-de-anuncios:chegada",
@@ -262,7 +274,7 @@
           "desligado": false,
           "filhos": [],
           "x": 350,
-          "y": 1826
+          "y": 1992
         },
         {
           "id": "r:anuncio-modelo-e-dados:chegada",
@@ -274,7 +286,7 @@
           "desligado": false,
           "filhos": [],
           "x": 350,
-          "y": 1992
+          "y": 2158
         },
         {
           "id": "r:ultima-e-so-reacao:chegada",
@@ -286,24 +298,12 @@
           "desligado": false,
           "filhos": [],
           "x": 350,
-          "y": 2158
+          "y": 2324
         },
         {
           "id": "r:ultima-e-despedida:chegada",
           "rotulo": "Só se despediu",
           "regra": "ultima-e-despedida",
-          "condicao": null,
-          "acao": null,
-          "nota": "",
-          "desligado": false,
-          "filhos": [],
-          "x": 350,
-          "y": 2324
-        },
-        {
-          "id": "r:contexto-de-outro-dia:chegada",
-          "rotulo": "a última dela é de outro dia",
-          "regra": "contexto-de-outro-dia",
           "condicao": null,
           "acao": null,
           "nota": "",
@@ -601,6 +601,18 @@
               "y": 4980
             },
             {
+              "id": "r:contexto-de-outro-dia:sem-cidade",
+              "rotulo": "passou do limite de horas desde a última dela",
+              "regra": "contexto-de-outro-dia",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 5146
+            },
+            {
               "id": "r:ultima-pede-resposta-pessoal:sem-cidade",
               "rotulo": "você responde: áudio, texto longo, ou ela está passando mal",
               "regra": "ultima-pede-resposta-pessoal",
@@ -614,7 +626,7 @@
                 "reclama-sem-resposta"
               ],
               "x": 700,
-              "y": 5146
+              "y": 5312
             },
             {
               "id": "r:ultima-e-so-reacao:sem-cidade",
@@ -626,7 +638,7 @@
               "desligado": false,
               "filhos": [],
               "x": 700,
-              "y": 5312
+              "y": 5478
             },
             {
               "id": "g:so-cumprimentou-e-nada-mais",
@@ -652,7 +664,7 @@
               "desligado": false,
               "filhos": [],
               "x": 700,
-              "y": 5478
+              "y": 5644
             },
             {
               "id": "r:pediu-algo-sem-dizer-o-que:sem-cidade",
@@ -667,7 +679,7 @@
                 "pergunta-aberta"
               ],
               "x": 700,
-              "y": 5644
+              "y": 5810
             },
             {
               "id": "r:ultima-e-despedida:sem-cidade",
@@ -679,7 +691,7 @@
               "desligado": false,
               "filhos": [],
               "x": 700,
-              "y": 5810
+              "y": 5976
             },
             {
               "id": "r:respondeu-nossa-pergunta:sem-cidade",
@@ -691,24 +703,12 @@
               "desligado": false,
               "filhos": [],
               "x": 700,
-              "y": 5976
+              "y": 6142
             },
             {
               "id": "r:rajada-de-anuncios:sem-cidade",
               "rotulo": "só clicou em vários anúncios: mensagem do momento",
               "regra": "rajada-de-anuncios",
-              "condicao": null,
-              "acao": null,
-              "nota": "",
-              "desligado": false,
-              "filhos": [],
-              "x": 700,
-              "y": 6142
-            },
-            {
-              "id": "r:contexto-de-outro-dia:sem-cidade",
-              "rotulo": "a última dela é de outro dia",
-              "regra": "contexto-de-outro-dia",
               "condicao": null,
               "acao": null,
               "nota": "",
@@ -959,6 +959,18 @@
               "y": 7802
             },
             {
+              "id": "r:contexto-de-outro-dia:com-cidade",
+              "rotulo": "passou do limite de horas desde a última dela",
+              "regra": "contexto-de-outro-dia",
+              "condicao": null,
+              "acao": null,
+              "nota": "",
+              "desligado": false,
+              "filhos": [],
+              "x": 700,
+              "y": 7968
+            },
+            {
               "id": "r:ultima-pede-resposta-pessoal:com-cidade",
               "rotulo": "você responde: áudio, texto longo, ou ela está passando mal",
               "regra": "ultima-pede-resposta-pessoal",
@@ -972,7 +984,7 @@
                 "reclama-sem-resposta"
               ],
               "x": 700,
-              "y": 7968
+              "y": 8134
             },
             {
               "id": "r:ultima-e-so-reacao:com-cidade",
@@ -984,7 +996,7 @@
               "desligado": false,
               "filhos": [],
               "x": 700,
-              "y": 8134
+              "y": 8300
             },
             {
               "id": "g:so-cumprimentou-e-nada-mais-2",
@@ -1010,7 +1022,7 @@
               "desligado": false,
               "filhos": [],
               "x": 700,
-              "y": 8300
+              "y": 8466
             },
             {
               "id": "r:pediu-algo-sem-dizer-o-que:com-cidade",
@@ -1025,7 +1037,7 @@
                 "pergunta-aberta"
               ],
               "x": 700,
-              "y": 8466
+              "y": 8632
             },
             {
               "id": "r:ultima-e-despedida:com-cidade",
@@ -1037,7 +1049,7 @@
               "desligado": false,
               "filhos": [],
               "x": 700,
-              "y": 8632
+              "y": 8798
             },
             {
               "id": "r:respondeu-nossa-pergunta:com-cidade",
@@ -1049,24 +1061,12 @@
               "desligado": false,
               "filhos": [],
               "x": 700,
-              "y": 8798
+              "y": 8964
             },
             {
               "id": "r:rajada-de-anuncios:com-cidade",
               "rotulo": "só clicou em vários anúncios: mensagem do momento",
               "regra": "rajada-de-anuncios",
-              "condicao": null,
-              "acao": null,
-              "nota": "",
-              "desligado": false,
-              "filhos": [],
-              "x": 700,
-              "y": 8964
-            },
-            {
-              "id": "r:contexto-de-outro-dia:com-cidade",
-              "rotulo": "a última dela é de outro dia",
-              "regra": "contexto-de-outro-dia",
               "condicao": null,
               "acao": null,
               "nota": "",

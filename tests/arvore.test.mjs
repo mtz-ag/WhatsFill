@@ -877,6 +877,38 @@ grupo('a comparacao com o padrao (02/09/2026)');
   const padrao = arv.arrumar(arv.fluxoPadrao());
   check(arv.diferencaDoPadrao(padrao).faltando.length === 0, 'o proprio padrao nao tem nada faltando');
   check(arv.diferencaDoPadrao(padrao).sobrando.length === 0, 'nem nada sobrando');
+  check(arv.diferencaDoPadrao(padrao).foraDeOrdem.length === 0, 'nem nada fora de ordem');
+
+  /**
+   * **A COMPARACAO PASSOU A OLHAR A ORDEM EM 14/10/2026** — e isso nasceu de uma print dele.
+   *
+   * O limite de 48h nao decidia nada e o rodape da janela dizia **"em dia com o padrao"**. As duas
+   * coisas eram verdade: o quadro tinha exatamente as caixas do padrao, em OUTRA ORDEM, e a
+   * comparacao so olhava presenca. **No quadro a ordem e a prioridade**, entao mudanca que e so de
+   * ordem -- a v3.152 inteira -- era invisivel para ele, com a tela AFIRMANDO o contrario.
+   *
+   * O que se exige aqui e o conjunto MINIMO. Alarme que lista dezenas de pares invertidos num
+   * quadro de sessenta caixas e alarme que se aprende a ignorar, e o arranjo e dele.
+   */
+  const trocado = arv.arrumar(arv.fluxoPadrao());
+  const alvo = trocado[0]?.filhos || [];
+  const iTempo = alvo.findIndex((n) => n.regra === 'contexto-de-outro-dia');
+  check(iTempo > 0, 'a caixa do tempo esta no ramo da chegada');
+  // Desce a caixa do tempo para o fim do ramo: e exatamente o que o quadro dele tinha.
+  const [caixaDoTempo] = alvo.splice(iTempo, 1);
+  alvo.push(caixaDoTempo);
+  const dOrdem = arv.diferencaDoPadrao(trocado);
+  check(dOrdem.faltando.length === 0, 'mover uma caixa nao a faz sumir da conta de presenca');
+  check(dOrdem.sobrando.length === 0, 'nem aparecer como caixa so dele');
+  check(dOrdem.foraDeOrdem.length > 0, 'mas ela aparece FORA DE ORDEM — era isto que a tela nao via');
+  check(
+    dOrdem.foraDeOrdem.length <= 2,
+    `e o conjunto e MINIMO: so a caixa que saiu do lugar (${dOrdem.foraDeOrdem.length})`
+  );
+  check(
+    dOrdem.foraDeOrdem.some((n) => n.regra === 'contexto-de-outro-dia'),
+    'e ela e nomeada, para ele saber qual mover'
+  );
 
   // O quadro de quem semeou antes da regra nova: ela tem que aparecer como faltando.
   const antigo = arv.arvorePadrao({}).filter((n) => n.regra !== 'anuncio-modelo-e-dados');
@@ -1134,13 +1166,26 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
    * medido, quem chegava e so se despedia caia na caixa do TEMPO e recebia a mensagem do momento
    * por cima de um "amem", ou o modelo generico quando havia um.
    */
+  /**
+   * **INVERTIDO EM 14/10/2026: a caixa do TEMPO subiu para cima das duas, e do recibo.**
+   *
+   * Duas prints dele no mesmo dia (*"nao foi aplicado o limite de 48 horas"*): a lista de
+   * `sugestao.js` punha o tempo em 7o lugar desde a v3.152 e a ARVORE nao tinha sido mexida --
+   * e e a arvore que decide quando existe quadro. Medido: a tabela dava tecla 5 e o quadro dava
+   * tecla 6 (a IA). **Dois motores discordando e problema de POSICAO.**
+   *
+   * O que a decisao de 04/09 pedia continua atendido, e e o oposto do que esta linha dizia: ela
+   * pedia que a reacao e a despedida EXISTISSEM na chegada (elas existem), nao que vencessem o
+   * tempo. **E a despedida continua protegida -- pela CONDICAO e nao pela posicao**, que e o que
+   * a torna valida tambem no quadro que ele ja exportou.
+   */
   const PENDENCIAS = ['ultima-e-so-reacao', 'ultima-e-despedida'];
   for (const p of PENDENCIAS) {
     check(naChegada.includes(p), `"${p}" existe na chegada`);
     check(naChegada.indexOf('anuncio-modelo-e-dados') < naChegada.indexOf(p),
       `e o recibo do anuncio decide ANTES de "${p}"`);
-    check(naChegada.indexOf(p) < naChegada.indexOf('contexto-de-outro-dia'),
-      `mas "${p}" vence a caixa do tempo`);
+    check(naChegada.indexOf('contexto-de-outro-dia') < naChegada.indexOf(p),
+      `e a caixa do tempo vence "${p}" (invertido em 14/10)`);
   }
 
   /**
@@ -2040,13 +2085,20 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
 
   const chegada = arv.decidir({ ...base, podeEnviar: true }, fluxo, {});
   /**
-   * **NA CHEGADA o recibo continua vencendo o tempo**, e isto NAO mudou em 14/10: a posicao e do
-   * QUADRO (04/09, *"quem chega pelo anuncio e ainda nao recebeu nada tem direito ao recibo"*), e
-   * reordenar o quadro dele por conta propria e o que este projeto nao faz. **Dito a ele:** com a
-   * eleicao encerrada, esse recibo e material de campanha de uma eleicao que acabou, e mover a
-   * caixa e decisao dele.
+   * **INVERTIDO EM 14/10/2026, no mesmo dia em que esta linha foi escrita dizendo o contrario.**
+   *
+   * De manha eu tentei mover a caixa e DESFIZ, com o argumento de que a posicao e do quadro dele
+   * (04/09, *"quem chega pelo anuncio e ainda nao recebeu nada tem direito ao recibo"*). O
+   * argumento vale para mudanca feita por conta propria -- e deixou de ser por conta propria: ele
+   * pediu *"passado o limite, o fluxo nao decide mais nada"*, a lista de `sugestao.js` ja punha o
+   * tempo acima do recibo desde a v3.152, e **a lista e o quadro discordando e o defeito que este
+   * projeto mais paga**. Duas prints dele no mesmo dia mostraram a regra nao rodando.
+   *
+   * **A consequencia, dita a ele:** quem clicou no anuncio ha onze dias e nunca recebeu nada passa
+   * a receber a mensagem do momento, e nao o recibo -- que e material de campanha de uma eleicao
+   * encerrada em 04/10.
    */
-  check(chegada?.tecla === 'a', `na chegada, o recibo ainda vence o tempo (tecla ${chegada?.tecla})`);
+  check(chegada?.tecla === '5', `na chegada, o tempo agora vence o recibo (tecla ${chegada?.tecla})`);
 
   const volta = arv.decidir({ ...base, jaRespondemosAntes: true, temEtiquetaDeCidade: true, podeEnviar: true }, fluxo, {});
   check(volta?.tecla === '5', `passado o limite, na volta sai a do momento (tecla ${volta?.tecla})`);
@@ -2503,12 +2555,13 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   const material = arv.decidir({ ...leonilda, materialPendente: true, podeMandarMomento: true, momentoJaEnviado: false }, arvore, {});
   check(material?.tecla === '5', `material pedido NAO vence mais o tempo (tecla ${material?.tecla})`);
 
-  // FALSO POSITIVO 3 — a CHEGADA (04/09): quem nunca recebeu nada tem direito ao recibo mesmo que
-  // a rodada so a alcance no dia seguinte. La o tempo continua ABAIXO do recibo.
+  // A CHEGADA DEIXOU DE SER EXCECAO em 14/10/2026: o tempo subiu para cima do recibo tambem la.
+  // Era o ultimo lugar em que a lista de `sugestao.js` e o quadro discordavam sobre esta caixa, e
+  // as duas prints daquele dia foram disto. Quem clicou ha onze dias recebe a mensagem do momento.
   const chegada = arv.decidir(
     { ...leonilda, jaRespondemosAntes: false, temEtiquetaDeCidade: false, podeMandarMomento: true, momentoJaEnviado: false },
     arvore, {});
-  check(chegada?.tecla === '1' || chegada?.tecla === 'a', `pessoa NOVA de ontem: recebe o recibo (tecla ${chegada?.tecla})`);
+  check(chegada?.tecla === '5', `pessoa NOVA de ontem: a mensagem do momento, nao o recibo (tecla ${chegada?.tecla})`);
 }
 
 {

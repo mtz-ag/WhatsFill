@@ -2233,6 +2233,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **A TABELA E A ARVORE SAO DOIS MOTORES, E MOVER A REGRA NUMA NAO MOVE NA OUTRA** (14/10/2026, duas
+  prints: o limite de 48h nao decidia nada). **A v3.152 moveu `contexto-de-outro-dia` de 20o para 7o
+  em `sugestao.js` (a LISTA) e nao moveu a caixa em `arvore.fluxoPadrao()` (a ARVORE).** A lista so
+  decide quando NAO ha quadro; **a arvore e o motor sempre que ha** — e ele tem quadro desde
+  02/09. A regra que ele pediu nunca rodou uma vez.
+  **Mexeu na ORDEM de `REGRAS`? Mexa no `fluxoPadrao` no mesmo commit** (sao TRES lugares: chegada,
+  retorno sem cidade, retorno com cidade), regere `tools/fluxo-padrao.json` e **diga a ele que
+  precisa IMPORTAR** — padrao novo nao entra no quadro dele sozinho.
+  **E A MINHA MEDICAO CONFIRMOU O ERRO EM VEZ DE PEGA-LO:** montei o ctx a mao com
+  `pedeRespostaPessoal: null`, e o painel compoe esse sinal como `conversaPedeRespostaPessoal ||
+  pedeRoupa || pedeMaterialEscrito || falouAlgoProprio` (panel.js:9538) — era o `falouAlgoProprio`
+  que casava. **Reconstrucao de contexto COPIA a composicao do painel, nunca a funcao de nome
+  parecido**, senao se mede a propria suposicao. Com a composicao certa os dois motores
+  DISCORDARAM, que e a assinatura de problema de posicao.
+  **"EM DIA COM O PADRAO" ERA AFIRMACAO FALSA:** `diferencaDoPadrao` so comparava PRESENCA, e no
+  quadro **a ordem E a prioridade** — mudanca so de ordem era invisivel com a tela dizendo que
+  estava tudo em dia. Hoje ela devolve `foraDeOrdem`, o **conjunto MINIMO** (o que sobra da maior
+  subsequencia comum): listar todo par invertido num quadro de 60 caixas seria o alarme que toca
+  sempre, porque o arranjo e dele. Nao e erro, e informacao.
+
 - **O VERBETE PROMETE UMA POSICAO, E E POR ELE QUE ELE DECIDE ONDE POR A CAIXA NO QUADRO**
   (14/10/2026, print: *"nao foi aplicada o limite de 48 horas, e o fluxo que faltou atualizar?"* —
   clique do anuncio em 03/10, resposta da IA em 14/10, onze dias depois).

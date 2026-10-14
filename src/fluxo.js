@@ -433,10 +433,27 @@ function desenharVersao() {
   );
 
   // O que a comparação diz vale mais que o carimbo: ela é de agora.
-  const { faltando } = arvoreLib.diferencaDoPadrao(fluxo.arvore || []);
+  const { faltando, foraDeOrdem } = arvoreLib.diferencaDoPadrao(fluxo.arvore || []);
   if (faltando.length) {
     const alerta = span('v-atras', `${faltando.length} caixa(s) do padrão de hoje não estão aqui`);
     alerta.title = 'Veja em "O padrão mudou?", no lado direito — ou importe o fluxo de hoje.';
+    caixa.append(alerta);
+  } else if (foraDeOrdem.length) {
+    /**
+     * **"Em dia com o padrão" era uma afirmação FALSA quando só a ordem mudava** — e no quadro a
+     * ordem é a prioridade. Print dele de 14/10/2026: o limite de 48h não decidia nada e o rodapé
+     * dizia que o quadro estava em dia, porque a comparação só olhava presença.
+     *
+     * Não é alarme: a ordem ser diferente da do padrão é o normal (o arranjo é dele). O que a linha
+     * faz é parar de AFIRMAR o contrário, e nomear as caixas que saíram do lugar.
+     */
+    const nomes = foraDeOrdem.slice(0, 3).map((no) => no.rotulo || no.regra || 'sem nome');
+    const alerta = span('v-atras',
+      `mesmas caixas do padrão, ${foraDeOrdem.length} em outra ordem: ${nomes.join(', ')}` +
+        (foraDeOrdem.length > nomes.length ? '…' : ''));
+    alerta.title =
+      'No quadro a ordem é a prioridade, então isto muda o que a rodada faz. Pode ser escolha sua — ' +
+      'se não for, mova a caixa, ou importe o fluxo de hoje.';
     caixa.append(alerta);
   } else {
     caixa.append(span('v-emdia', 'em dia com o padrão'));

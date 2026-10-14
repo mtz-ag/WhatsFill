@@ -764,6 +764,29 @@ export function fluxoPadrao() {
       acao: { tecla: null, resposta: 'falar-com-deputado' } },
 
     /**
+     * **O LIMITE DE HORAS SOBE PARA CÁ — e ele devia ter subido na v3.152, junto com a tabela.**
+     *
+     * Duas prints dele em 14/10/2026 (*"não foi aplicado o limite de 48 horas"*), as duas com onze
+     * dias entre a fala dela e a nossa, e as duas respondidas pela IA. Medido: a TABELA dava
+     * `contexto-de-outro-dia` → tecla 5, e a ÁRVORE dava `ultima-pede-resposta-pessoal` → tecla 6.
+     * **Dois motores discordando é problema de POSIÇÃO**, e a posição errada era a daqui: na v3.152
+     * eu movi a regra de 20º para 7º na lista de `sugestao.js` e **não movi a caixa no quadro**.
+     * A lista só decide quando não há quadro — e ele tem quadro, então a regra que ele pediu nunca
+     * chegou a rodar.
+     *
+     * **Acima do tempo ficam só as caixas que NÃO respondem o que esfriou:** as proteções, e os
+     * quatro pedidos que o mandato não pode atender (dinheiro, trabalho, ligação, falar com o
+     * deputado). Esses quatro continuam em cima **de propósito**: mandar a mensagem do momento em
+     * cima de um pedido de socorro de onze dias atrás é propaganda sobre um pedido de ajuda — o
+     * dano de 03/09, que não vira menor com o tempo.
+     *
+     * **O que passou a perder para o tempo:** o áudio e o texto longo (tecla 6), o pedido sem
+     * objeto, a despedida, a rajada de anúncios e o modelo por etiqueta de conteúdo. É o que ele
+     * pediu com todas as letras: *"passado o limite, o fluxo não decide mais nada"*.
+     */
+    r('contexto-de-outro-dia', 'passou do limite de horas desde a última dela', onde),
+
+    /**
      * **Texto longo vem ANTES das caixas de palavra** — print da Cris (02/09/2026).
      *
      * Ela escreveu 437 caracteres de desabafo: sem esperança nas eleições, urnas, *"tudo tempo
@@ -952,20 +975,14 @@ export function fluxoPadrao() {
      * volta, e o assunto esfriou de um dia para o outro. Aí o modelo do anúncio responde a uma
      * conversa que acabou.
      *
-     * **Na CHEGADA nada muda**: lá o tempo continua abaixo de `anuncio-modelo-e-dados`, porque
-     * quem nunca recebeu nada tem direito ao recibo mesmo que a rodada só a alcance no dia
-     * seguinte (decisão dele de 04/09, e a rodada quase sempre roda depois).
+     * **A CAIXA DO TEMPO SUBIU EM 14/10/2026** e hoje fica lá em cima, logo abaixo dos quatro
+     * pedidos que o mandato não pode atender — ver o comentário dela. O que este bloco explicava
+     * continua valendo e virou consequência da posição nova: na volta o tempo vence o anúncio
+     * reconhecido, porque o clique dela já foi respondido e o assunto esfriou.
      *
-     * **A exceção do material continua valendo, e é na CONDIÇÃO**: `contexto-de-outro-dia` exige
-     * `!materialPendente`, então quem pediu material ontem e não recebeu segue caindo aqui embaixo
-     * e ganhando o modelo — a regra dele de 05/09 não depende desta posição.
-     *
-     * Daqui para baixo o tempo manda: o agradecimento pelo cadastro, o agradecimento pelo apoio e o
-     * modelo por etiqueta de conteúdo foram os quatro casos de 04/09, e nos quatro ele pediu a
-     * mensagem do momento.
+     * **A exceção do material NÃO existe mais**: ela saiu da condição em 14/10, por decisão dele
+     * (*"pedido de material é só para período eleitoral e já acabou"*).
      */
-    r('contexto-de-outro-dia', 'a última dela é de outro dia', onde),
-
     grupo('veio de um anúncio que eu reconheço', { sinal: 'anuncioReconhecido', negar: false, palavras: [], onde: 'ultima' }, [
       r('conteudo-pedido', 'manda o modelo daquele anúncio', `${onde}-anuncio`),
     ]),
@@ -1083,6 +1100,26 @@ export function fluxoPadrao() {
     { ...noVazio('quer falar com o deputado'), id: 'chegada-falar-deputado',
       condicao: { sinal: 'pedeFalarComDeputado', negar: false, palavras: [], onde: 'ultima' },
       acao: { tecla: null, resposta: 'falar-com-deputado' } },
+
+    /**
+     * **O LIMITE DE HORAS TAMBÉM NA CHEGADA, e aqui ele passa na frente do RECIBO DO ANÚNCIO.**
+     *
+     * Esta é a consequência que ele precisa ver, porque **inverte uma decisão dele de 04/09**:
+     * *"quem nunca recebeu nada tem direito ao recibo mesmo que a rodada só a alcance no dia
+     * seguinte"*. Com o limite em 48h, quem clicou no anúncio há onze dias **não recebe mais o
+     * recibo**: recebe a mensagem do momento.
+     *
+     * Eu tentei esta mesma mudança em 13/10 e **desfiz**, com o argumento de que a posição é do
+     * quadro dele. O argumento continua certo para uma mudança feita por conta própria; o que
+     * mudou é que ela deixou de ser por conta própria: ele pediu *"passado o limite, o fluxo não
+     * decide mais nada"*, a lista de `sugestao.js` já põe o tempo acima de `anuncio-modelo-e-dados`
+     * desde a v3.152, e **deixar a lista e o quadro discordando é o defeito que este projeto mais
+     * paga**. Ou as duas mandam o recibo, ou nenhuma manda — e quem escolhe é ele.
+     *
+     * O que sustenta a escolha: o recibo é material de campanha de uma eleição **encerrada em
+     * 04/10**, e onze dias depois ele responde a um clique que ninguém lembra de ter dado.
+     */
+    r('contexto-de-outro-dia', 'passou do limite de horas desde a última dela', 'chegada-antes'),
 
     { ...r('pediu-algo-sem-dizer-o-que', 'você responde: pedido sem objeto, ou pergunta', 'chegada-antes'),
       tambemQuando: ['pergunta-aberta'] },
@@ -1205,19 +1242,11 @@ export function fluxoPadrao() {
     r('ultima-e-so-reacao', 'mandou figura, emoji, sticker ou link', 'chegada'),
     r('ultima-e-despedida', null, 'chegada'),
     /**
-     * **Na chegada o tempo entra ABAIXO do recibo** — anotação do Giovani (04/09/2026): ele mandou
-     * um texto político longo e um link ontem à noite, e a caixa oferecia o modelo. *"Modelo fora
-     * de contexto, aqui vou mandar mensagem do momento."*
-     *
-     * A posição é diferente da que ela tem na volta, e de propósito: `anuncio-modelo-e-dados` fica
-     * **acima**. Quem chega pelo anúncio e ainda não recebeu nada tem direito ao recibo, mesmo que
-     * a rodada só a alcance no dia seguinte — trocar isso pela mensagem do momento tiraria o recibo
-     * de quase todo mundo, porque a rodada quase sempre roda depois.
-     *
-     * O que o tempo alcança aqui é o outro caso: quem **já tem cidade** e por isso receberia só o
-     * modelo. Aí o conteúdo dela é de ontem, e o modelo responde a um assunto que esfriou.
+     * **A caixa do tempo saiu daqui em 14/10/2026 e subiu** para acima do recibo do anúncio — ver o
+     * comentário dela, lá em cima. A anotação do Giovani (04/09), que a trouxe para este ponto,
+     * continua atendida: ela estava abaixo do recibo e hoje está acima, então o texto político de
+     * ontem continua recebendo a mensagem do momento, e agora o clique de onze dias atrás também.
      */
-    r('contexto-de-outro-dia', 'a última dela é de outro dia', 'chegada'),
     /**
      * **Ela respondeu o nome e a cidade — agradece, não manda modelo.** Decisão dele de 02/09
      * (*"agora só precisa agradecer a atenção e encerrar sem mandar modelo"*), que também só
@@ -2460,5 +2489,71 @@ export function diferencaDoPadrao(arvore) {
     return saida;
   };
 
-  return { faltando: junta(doPadrao, chavesDele), sobrando: junta(dele, chavesDoPadrao) };
+  return {
+    faltando: junta(doPadrao, chavesDele),
+    sobrando: junta(dele, chavesDoPadrao),
+    foraDeOrdem: foraDeOrdem(doPadrao, dele),
+  };
+}
+
+/**
+ * **AS CAIXAS QUE MUDARAM DE LUGAR** — e, no quadro, lugar é prioridade.
+ *
+ * Nasceu de duas prints dele em 14/10/2026: o limite de 48h não decidia nada, e o rodapé da janela
+ * dizia **"em dia com o padrão"**. As duas coisas eram verdade ao mesmo tempo, porque esta
+ * comparação só olhava PRESENÇA (`faltando`/`sobrando`): o quadro tinha exatamente as caixas do
+ * padrão, em outra ordem, e **mudança que é só de ordem era invisível** — justamente a classe de
+ * mudança que a v3.152 inteira foi.
+ *
+ * A tela não estava calada: estava AFIRMANDO que o quadro estava em dia. Mapa que mente no momento
+ * em que ele olha é pior que mapa nenhum.
+ *
+ * **Devolve o conjunto MÍNIMO**, não todo par invertido. A diferença decide se isto é útil ou se é
+ * o alarme que toca sempre: num quadro de sessenta caixas, listar pares invertidos acusaria dezenas
+ * de posições que ele escolheu a dedo. O mínimo sai da maior subsequência comum — o que sobra dela
+ * são as caixas que de fato saíram do lugar, e costumam ser uma ou duas.
+ *
+ * Compara só o que existe nos DOIS (o resto já é `faltando`/`sobrando`) e por chave de CONTEÚDO,
+ * nunca por id: os ids do quadro dele nasceram em outro momento.
+ */
+function foraDeOrdem(doPadrao, dele) {
+  const chave = ({ no }) => chaveDeComparacao(no);
+  const soComuns = (lista, outras) => {
+    const vistos = new Set();
+    const saida = [];
+    for (const item of lista) {
+      const k = chave(item);
+      if (!k || vistos.has(k) || !outras.has(k)) continue;
+      vistos.add(k);
+      saida.push({ k, no: item.no });
+    }
+    return saida;
+  };
+  const noPadrao = new Set(doPadrao.map(chave).filter(Boolean));
+  const noDele = new Set(dele.map(chave).filter(Boolean));
+  const a = soComuns(doPadrao, noDele);
+  const b = soComuns(dele, noPadrao);
+  if (!a.length || !b.length) return [];
+
+  // Maior subsequência comum: o que fica DE FORA dela é o que mudou de lugar.
+  const m = a.length;
+  const n = b.length;
+  const tab = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = m - 1; i >= 0; i -= 1) {
+    for (let j = n - 1; j >= 0; j -= 1) {
+      tab[i][j] = a[i].k === b[j].k ? tab[i + 1][j + 1] + 1 : Math.max(tab[i + 1][j], tab[i][j + 1]);
+    }
+  }
+  const mantidas = new Set();
+  let i = 0;
+  let j = 0;
+  while (i < m && j < n) {
+    if (a[i].k === b[j].k) {
+      mantidas.add(a[i].k);
+      i += 1;
+      j += 1;
+    } else if (tab[i + 1][j] >= tab[i][j + 1]) i += 1;
+    else j += 1;
+  }
+  return a.filter(({ k }) => !mantidas.has(k)).map(({ no }) => no);
 }
