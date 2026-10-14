@@ -1,36 +1,83 @@
-## 2026-10-14 - v3.153.0 - as duas excecoes do limite cairam, por decisao dele
+## 2026-10-14 - v3.154.0 - a rodada REMOVE as etiquetas que ele listar
 
-**Pedido dele:** *"pedido de material e so para periodo eleitoral e ja acabou, e pergunta pendente
-apos 12 dias e melhor ignorar"*.
+**Pedido dele:** *"crie um espaco no automatizado para remover etiquetas, as etiquetas que eu listar
+nesse espaco devem ser removidas"*. Perguntado de QUEM elas saem, ele escolheu **"de quem a rodada
+atender"** - e nao uma varredura da base. Cartao novo na aba Automatizado, **"Etiquetas que a rodada
+REMOVE"**, logo abaixo do que ela aplica: as duas listas se leem juntas, e e olhando as duas que ele
+ve a etiqueta que esta nos dois lados.
 
-As duas excecoes eram DELE e viveram cinco semanas: **o material** (05/09, *"o modelo de material e
-uma excecao, ele sempre tem que ser mandado quando requisitado"*) e **a pergunta** (04/09, *"unico
-pretexto que exclui a necessidade de hora e pergunta pendente"*). Caem pelo mesmo motivo, e o motivo
-e do mundo e nao do codigo: **a eleicao acabou em 04/10**, o material de campanha deixou de existir
-como entrega, e conversa parada ha doze dias nao tem pergunta viva para responder.
+### O caminho ja existia, e isso decidiu o custo
 
-Com isso a regra virou o que ele pediu desde a primeira frase: **passado o limite, o fluxo nao
-decide mais nada** - sai a mensagem do momento, ou conclui se nao houver uma.
+`tags.applyTags(contato, [], { remover: ids })` existe desde o COREDE divergente e o botao de tirar a
+etiqueta de fluxo o usa em producao - nao e rota nova nem contrato novo. E ele **devolve `skipped`
+sem requisicao nenhuma quando nada muda**, entao `lote.etiquetasQueSaem` pergunta ANTES de chamar:
+**contato que nao carrega nenhuma das listadas custa ZERO**, e a linha do Andamento so aparece quando
+houve remocao de verdade.
 
-### A unica guarda que fica e minha, e esta dita
+### A POSICAO e a coisa mais importante daqui
 
-Quem so se **DESPEDIU** nao recebe a mensagem do momento. Sem ela, um *"obrigado, era so isso"* de
-doze dias atras receberia propaganda, e a despedida sempre concluiu em silencio neste projeto.
-Cortando esta tambem, a regra passa a valer para todo mundo que nao esta nas seis protecoes acima.
+A remocao entra **logo depois do `load()`, antes de TODA saida antecipada** de `processarRespondido`
+(sao quatro: canal removido, barreira do candidato, contato ja tratado, erro de ambiente). O motivo:
+**a etiqueta mais provavel de ele listar e justo uma das que fazem a rodada PULAR** - a de material
+pula para sempre. Posta depois da decisao, a lista nao funcionaria exatamente nos casos para os quais
+ele a criou. **E o defeito de ontem com outro nome**, e a licao pela quinta vez: **meca a ORDEM, nao
+so o sinal.**
 
-### O que eu fiz e DESFIZ, e vale registrar
+### Nada volta na mesma passada, senao o log mentiria
 
-Eu tinha movido a caixa do tempo para **acima do recibo do anuncio na CHEGADA**, com o argumento de
-que o recibo hoje e material de campanha de uma eleicao encerrada. O argumento continua de pe **e a
-edicao estava errada**: aquela posicao e do QUADRO (04/09, *"quem chega pelo anuncio e ainda nao
-recebeu nada tem direito ao recibo"*), e **reordenar o quadro dele por conta propria e o que este
-projeto nao faz**. Revertido, e o teste passou a gravar o porque.
+`saveClassification` grava no fim o que estiver marcado em `state.tagSuggestions`, e cidade, COREDE e
+conteudo nascem lá marcadas: sem desmarcar o que acabou de sair, a mesma passada removeria e
+regravaria a mesma etiqueta - duas escritas, nada mudado e **o Andamento dizendo que removeu**. Na
+passada SEGUINTE elas voltam de verdade, porque sao derivadas do cadastro, e e isso que o cartao diz:
+listar etiqueta de cidade e guerra perdida; o que resolve ali e corrigir o campo Cidade.
 
-**Dito a ele, para ser decisao dele:** quem chegou pelo anuncio ha doze dias e nunca recebeu nada
-continua recebendo o recibo.
+### A sonda: uma releitura por RODADA, tres estados
 
-### Tres assercoes invertidas, com o motivo escrito
+*A API responde 200 e IGNORA o valor* e a armadilha mais antiga daqui, e numa remocao em laco o preco
+de acreditar no 2xx e a rodada inteira escrevendo no vazio. **O primeiro contato de cada rodada em
+que algo sai e RELIDO** - uma requisicao por rodada, nao por contato (a disciplina da aba Cidades:
+pegar formato errado exige UM exemplo, nao auditoria). `lote.etiquetaSaiuMesmo` devolve `removido`
+(segue), `ainda-la` (**PARA no primeiro contato**: e defeito, nao engasgo) e `nao-da-para-saber`
+(segue com aviso - **"nao consegui reler" NAO e "nao removeu"**). Lista vazia depois e `removido`:
+contato cuja unica etiqueta era a removida fica legitimamente sem nenhuma.
 
-*"pergunta de razao vence o tempo"*, *"material pedido e nao entregue: o modelo vence o dia"* e a da
-volta. As tres gravavam as excecoes dele; agora gravam a decisao nova e a data dela.
+**O veredito e DEVOLVIDO, nunca escrito em `state.auto.parar`** - aquela bandeira e a do botao
+"Parar a rodada" dele, e mexer nela faria a linha culpar a remocao quando ele mesmo apertasse.
 
+### Nome errado AVISA e segue - ao contrario da lista de pular
+
+A lista de PULAR recusa a rodada; esta nao. A diferenca e o que o erro causa: la o nome errado sai do
+`exceptTagsId` em silencio e **alguem RECEBE** um disparo, ato para fora e sem volta; aqui ele so
+deixa a etiqueta onde estava - nada enviado, nada apagado. Travar a fila por isso seria parar o
+atendimento por causa de uma faxina. Uma vez por rodada, senao vira alarme em todo contato.
+
+### O preco, e esta na tela
+
+A etiqueta sai **antes de a rodada decidir**: listando a de SEM INTERESSE ou a de assessor, **ela
+deixa de proteger nessa mesma passada** e o contato passa a receber o que ela impedia; listando a do
+DISPARO, a pessoa volta a entrar nos lotes. **O disparo por etiqueta NAO remove**, de proposito: la o
+contato nao e carregado e e a etiqueta do proprio disparo que impede o reenvio - tira-la seria apagar
+a memoria que torna o lote repetivel.
+
+`lote.colisaoDeRemocao` acusa na tela a etiqueta que esta nesta lista E num dos cinco campos que a
+rodada aplica: ela **sai e volta em toda passada**, uma escrita por contato sem nada mudar - a
+familia do `repeteSozinha`. Avisa e nao recusa: apagar o campo que aplica e listar a etiqueta aqui,
+para limpar o que ja foi marcado, e caso legitimo.
+
+### Medido
+
+- 21 suites e os dois verificadores verdes. 40 assercoes novas, **metade sobre o que NAO pode ser
+  removido**: contato que nao tem a etiqueta, `tagsId` ausente (nao e "tem todas"), etiqueta sem id,
+  e o **rotulo REPETIDO** - o CRM tem duas "Serra" com ids diferentes, e comparar rotulo removeria a
+  homonima errada. A comparacao e por `id` contra `state.contact.tagsId`.
+- `nomesPulados` virou `lote.nomesDaLista` e a antiga chama a nova: duas copias divergiriam no
+  primeiro separador novo, e a mesma linha valeria num campo e nao no outro.
+- `auto.etiquetasParaRemover` **nasce VAZIA**, e tem de nascer: e a unica configuracao do painel que
+  APAGA dado que ja esta no CRM de eleitor real. Nao e por candidato (etiqueta e organizacao interna,
+  o critario de 25/09).
+
+### O que fica para ele
+
+- **A varredura da base nao existe:** limpar etiqueta de quem ele nao vai atender ainda pede o filtro
+  de Contatos na mao. O filtro do servidor aceita `tagsId`, entao e um botao - e um botao sem volta.
+- **A lista nao e lista negra:** etiqueta listada que a rodada aplica continua sendo aplicada.

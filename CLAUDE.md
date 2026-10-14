@@ -2233,6 +2233,31 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **A RODADA REMOVE AS ETIQUETAS QUE ELE LISTAR, E A POSICAO E TUDO** (14/10/2026: *"crie um espaco
+  no automatizado para remover etiquetas, as etiquetas que eu listar nesse espaco devem ser
+  removidas"*; de QUEM elas saem foi escolha dele: **"de quem a rodada atender"**).
+  **A remocao vem logo depois do `load()`, antes de TODA saida antecipada** de `processarRespondido`
+  (canal removido, barreira do candidato, contato ja tratado, erro de ambiente): **a etiqueta mais
+  provavel de ele listar e justo uma das que fazem a rodada PULAR** — a de material pula para sempre.
+  Depois da decisao, a lista nao funcionaria nos casos para os quais ele a criou. **E o defeito do
+  canal removido (14/10) com outro nome — meca a ORDEM, nao so o sinal (quinta vez).**
+  **Custa ZERO em quem nao tem nenhuma delas:** `applyTags` devolve `skipped` sem requisicao quando a
+  uniao nao muda, e `lote.etiquetasQueSaem` pergunta antes de chamar.
+  **DESMARQUE o que saiu em `state.tagSuggestions`:** `saveClassification` grava no fim da passada o
+  que esta marcado la, e cidade/COREDE/conteudo nascem marcadas — sem isso a mesma passada remove e
+  regrava, com **o Andamento dizendo que removeu**. Elas voltam na passada SEGUINTE porque sao
+  DERIVADAS do cadastro, e o cartao diz isso: listar etiqueta de cidade e guerra perdida.
+  **SONDA de uma releitura por RODADA** (`lote.etiquetaSaiuMesmo`), tres estados: `ainda-la` PARA a
+  rodada (o 200 mentiu), `nao-da-para-saber` segue com aviso, lista vazia depois e `removido`. **O
+  veredito e DEVOLVIDO, nunca escrito em `state.auto.parar`** — aquela bandeira e a do botao "Parar"
+  dele, e o log culparia a remocao quando ele mesmo apertasse.
+  **Nome fora do CRM aqui AVISA e segue**, ao contrario da lista de PULAR, que recusa a rodada: la o
+  nome errado faz **alguem RECEBER** um disparo; aqui so deixa a etiqueta onde estava.
+  **O preco esta na tela:** listando a etiqueta de SEM INTERESSE ou de assessor, ela deixa de
+  proteger na mesma passada. **O disparo NAO remove** (nao carrega o contato, e a etiqueta dele e o
+  que impede o reenvio). `colisaoDeRemocao` acusa etiqueta que esta nesta lista E num campo que a
+  rodada aplica — ela sai e volta em toda passada.
+
 - **AS DUAS EXCECOES DO LIMITE CAIRAM NO MESMO DIA, POR DECISAO DELE** (14/10/2026: *"pedido de
   material e so para periodo eleitoral e ja acabou, e pergunta pendente apos 12 dias e melhor
   ignorar"*). Eram DELE e viveram cinco semanas — o material (05/09) e a pergunta (04/09) —, e caem

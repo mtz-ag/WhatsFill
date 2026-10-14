@@ -581,4 +581,147 @@ grupo('canal removido da conta: tres estados, nunca dois');
   );
 }
 
+/**
+ * **AS ETIQUETAS QUE A RODADA REMOVE** (pedido dele, 14/10/2026).
+ *
+ * Metade das assercoes e sobre o que NAO pode ser removido: esta e a unica configuracao do painel
+ * que APAGA dado que ja esta no CRM de eleitor real, e remover a etiqueta errada nao tem volta.
+ */
+{
+  grupo('etiquetas que a rodada remove');
+
+  const COLINHA = { id: 't-colinha', label: 'COLINHA' };
+  const ADS = { id: 't-ads', label: 'ADS' };
+  // O CRM tem etiqueta de ROTULO REPETIDO: duas "Serra" com ids diferentes (armadilha de 20/08).
+  const SERRA_A = { id: 't-serra-a', label: 'Serra' };
+  const SERRA_B = { id: 't-serra-b', label: 'Serra' };
+
+  // --- o parser da lista, que agora e o MESMO das duas listas de etiqueta ---
+  check(
+    lote.nomesDaLista('COLINHA, ADS').join('|') === 'COLINHA|ADS',
+    'virgula separa'
+  );
+  check(
+    lote.nomesDaLista('COLINHA\nADS;Fora do RS').join('|') === 'COLINHA|ADS|Fora do RS',
+    'linha e ponto e virgula tambem separam, e o nome com espaco fica inteiro'
+  );
+  check(lote.nomesDaLista('  COLINHA  ').join('|') === 'COLINHA', 'espaco em volta sai');
+  check(lote.nomesDaLista('COLINHA, colinha').length === 1, 'repetido entra uma vez (ignora a caixa)');
+  check(lote.nomesDaLista('COLINHA, colinha')[0] === 'COLINHA', 'guarda o que ELE escreveu, que e o texto procurado no CRM');
+  check(lote.nomesDaLista('').length === 0, 'vazio e lista vazia');
+  check(lote.nomesDaLista(null).length === 0, 'nulo e lista vazia — campo que nunca foi preenchido');
+  check(lote.nomesDaLista(',,; ,').length === 0, 'so separadores nao viram nome nenhum');
+  check(
+    lote.nomesPulados('COLINHA, ADS').join('|') === lote.nomesDaLista('COLINHA, ADS').join('|'),
+    'a lista do DISPARO continua chamando a mesma implementacao — uma copia divergiria no primeiro separador novo'
+  );
+
+  // --- quem SAI deste contato ---
+  check(
+    lote.etiquetasQueSaem({ tags: [COLINHA], tagsDoContato: ['t-colinha', 't-outra'] }).length === 1,
+    'etiqueta listada que o contato TEM sai'
+  );
+  check(
+    lote.etiquetasQueSaem({ tags: [COLINHA, ADS], tagsDoContato: ['t-colinha'] }).map((t) => t.id).join('|') === 't-colinha',
+    'das duas listadas sai so a que ele tem'
+  );
+  check(
+    lote.etiquetasQueSaem({ tags: [COLINHA], tagsDoContato: ['t-outra'] }).length === 0,
+    'contato que NAO tem a etiqueta nao gera remocao — e o que faz a lista custar zero requisicao'
+  );
+  check(
+    lote.etiquetasQueSaem({ tags: [], tagsDoContato: ['t-colinha'] }).length === 0,
+    'lista vazia nao tira nada de ninguem'
+  );
+  check(
+    lote.etiquetasQueSaem({ tags: [COLINHA], tagsDoContato: [] }).length === 0,
+    'contato sem etiqueta nenhuma: nada a tirar'
+  );
+  check(lote.etiquetasQueSaem({}).length === 0, 'sem nada: nada sai');
+  check(lote.etiquetasQueSaem().length === 0, 'sem argumento nenhum: nada sai');
+  check(
+    lote.etiquetasQueSaem({ tags: [COLINHA], tagsDoContato: null }).length === 0,
+    'tagsId ausente NAO e "tem todas" — contato que nao deu para ler nao perde etiqueta'
+  );
+  check(
+    lote.etiquetasQueSaem({ tags: [{ label: 'sem id' }], tagsDoContato: ['t-colinha'] }).length === 0,
+    'etiqueta sem id nao tira nada: id vazio casaria com qualquer coisa'
+  );
+  check(
+    lote.etiquetasQueSaem({ tags: [COLINHA, COLINHA], tagsDoContato: ['t-colinha'] }).length === 1,
+    'a mesma etiqueta duas vezes na lista sai uma vez'
+  );
+  check(
+    lote.etiquetasQueSaem({ tags: [SERRA_A], tagsDoContato: ['t-serra-b'] }).length === 0,
+    'ROTULO REPETIDO: o contato tem a OUTRA "Serra" — comparar rotulo removeria a homonima errada'
+  );
+  check(
+    lote.etiquetasQueSaem({ tags: [SERRA_B], tagsDoContato: ['t-serra-b'] })[0].id === 't-serra-b',
+    'e a "Serra" certa, pelo id, sai'
+  );
+  check(
+    lote.etiquetasQueSaem({ tags: [{ id: 7, label: 'sete' }], tagsDoContato: ['7'] }).length === 1,
+    'id numero contra id texto continua achando'
+  );
+
+  // --- a sonda: TRES estados, nunca dois ---
+  check(
+    lote.etiquetaSaiuMesmo({ ids: ['t-colinha'], tagsDepois: ['t-outra'] }).estado === 'removido',
+    'saiu da lista relida: removido'
+  );
+  check(
+    lote.etiquetaSaiuMesmo({ ids: ['t-colinha'], tagsDepois: [] }).estado === 'removido',
+    'contato que ficou SEM etiqueta nenhuma e remocao legitima, nao erro'
+  );
+  check(
+    lote.etiquetaSaiuMesmo({ ids: ['t-colinha'], tagsDepois: ['t-colinha'] }).estado === 'ainda-la',
+    'continua la: a API aceitou e ignorou — a armadilha mais antiga deste projeto'
+  );
+  check(
+    lote.etiquetaSaiuMesmo({ ids: ['t-colinha', 't-ads'], tagsDepois: ['t-ads'] }).estado === 'ainda-la',
+    'UMA das duas ficou: ainda-la, e e ela que aparece em ficaram'
+  );
+  check(
+    lote.etiquetaSaiuMesmo({ ids: ['t-colinha', 't-ads'], tagsDepois: ['t-ads'] }).ficaram.join('|') === 't-ads',
+    'ficaram diz QUAL continua no contato'
+  );
+  check(
+    lote.etiquetaSaiuMesmo({ ids: ['t-colinha'], tagsDepois: null }).estado === 'nao-da-para-saber',
+    'nao consegui reler NAO e "nao removeu" — parar a rodada por engasgo de rede e a automacao desligada'
+  );
+  check(
+    lote.etiquetaSaiuMesmo({ ids: ['t-colinha'] }).estado === 'nao-da-para-saber',
+    'releitura ausente: nao da para saber'
+  );
+  check(
+    lote.etiquetaSaiuMesmo({ ids: [], tagsDepois: ['t-colinha'] }).estado === 'nao-da-para-saber',
+    'sem id pedido nao ha o que conferir'
+  );
+  check(lote.etiquetaSaiuMesmo().estado === 'nao-da-para-saber', 'sem argumento nenhum: nao da para saber');
+
+  // --- a colisao com as que a rodada APLICA (sai e volta em toda passada) ---
+  check(
+    lote.colisaoDeRemocao({ remover: ['COLINHA'], aplicadas: ['COLINHA'] }).join('|') === 'COLINHA',
+    'etiqueta nos dois lados e acusada'
+  );
+  check(
+    lote.colisaoDeRemocao({ remover: ['colinha'], aplicadas: ['COLINHA'] }).join('|') === 'colinha',
+    'a caixa nao importa para achar, e o texto devolvido e o que ELE escreveu na lista de remover'
+  );
+  check(
+    lote.colisaoDeRemocao({ remover: ['ADS'], aplicadas: ['COLINHA'] }).length === 0,
+    'etiqueta que so esta na lista de remover nao e colisao'
+  );
+  check(
+    lote.colisaoDeRemocao({ remover: ['COLINHA'], aplicadas: ['', null, 'COLINHA'] }).length === 1,
+    'campo de aplicar vazio nao atrapalha a conta'
+  );
+  check(
+    lote.colisaoDeRemocao({ remover: ['COLINHA'], aplicadas: ['', null, undefined] }).length === 0,
+    'nenhum campo de aplicar preenchido: colisao nenhuma — o caso de quem so quer limpar'
+  );
+  check(lote.colisaoDeRemocao({}).length === 0, 'sem nada: sem colisao');
+  check(lote.colisaoDeRemocao().length === 0, 'sem argumento nenhum: sem colisao');
+}
+
 fim();

@@ -203,7 +203,7 @@ export function jaRecebeu(pares, nossas = []) {
  * Nome repetido entra uma vez; a comparação de repetido ignora a caixa, mas o que se guarda é o que
  * ele escreveu, porque é esse texto que vai ser procurado no CRM.
  */
-export function nomesPulados(texto) {
+export function nomesDaLista(texto) {
   const vistos = new Set();
   const nomes = [];
   for (const bruto of String(texto || '').split(/[,;\n]/)) {
@@ -215,6 +215,110 @@ export function nomesPulados(texto) {
     nomes.push(nome);
   }
   return nomes;
+}
+
+/**
+ * A lista do DISPARO, pelo nome com que ela nasceu.
+ *
+ * O parser virou `nomesDaLista` quando a SEGUNDA lista de etiquetas apareceu — a de REMOVER
+ * (14/10/2026). **Uma implementação só, de propósito:** duas cópias divergiriam no primeiro
+ * separador novo, e aí a mesma linha digitada valeria num campo e não no outro — a armadilha das
+ * duas listas que este projeto já pagou quatro vezes.
+ */
+export function nomesPulados(texto) {
+  return nomesDaLista(texto);
+}
+
+/**
+ * **AS ETIQUETAS QUE SAEM DESTE CONTATO** — pedido dele (14/10/2026): *"crie um espaço no
+ * automatizado para remover etiquetas, as etiquetas que eu listar nesse espaço devem ser
+ * removidas"*.
+ *
+ * Devolve só as que o contato TEM de verdade, e é isso que torna a lista barata: `applyTags`
+ * compara a união com o que já está lá e devolve `skipped` **sem requisição nenhuma** quando nada
+ * muda — então contato que não carrega nenhuma delas custa ZERO. Perguntar aqui, antes de chamar,
+ * é também o que faz a linha do Andamento aparecer só quando houve remoção de verdade.
+ *
+ * **Compara por `id`, nunca por rótulo.** O CRM tem etiqueta de rótulo REPETIDO ("1 Sem Retorno" e
+ * "2 Sem Retorno", e "Serra" apareceu duas vezes com ids diferentes): comparar rótulo removeria a
+ * homônima errada, e remover é destrutivo.
+ */
+export function etiquetasQueSaem({ tags = [], tagsDoContato = [] } = {}) {
+  const ids = (Array.isArray(tagsDoContato) ? tagsDoContato : []).map((id) => String(id));
+  const vistos = new Set();
+  const saem = [];
+  for (const tag of Array.isArray(tags) ? tags : []) {
+    const id = tag && tag.id ? String(tag.id) : '';
+    if (!id || vistos.has(id)) continue;
+    if (!ids.includes(id)) continue;
+    vistos.add(id);
+    saem.push(tag);
+  }
+  return saem;
+}
+
+/**
+ * **A SONDA DA REMOÇÃO: a etiqueta saiu mesmo?** Relê o contato e compara.
+ *
+ * **TRÊS estados, nunca dois** — a lição do `donoDoCanal` (25/09), do `undefined !== 'CONNECTED'`
+ * (01/10) e do `canalSumiuDaConta` (14/10). Aqui o estado do meio é o que importa: **"não consegui
+ * reler" não é "não removeu"**, e tratá-lo como falha pararia a rodada por causa de um engasgo de
+ * rede, que nesta API é o erro mais comum que existe.
+ *
+ * O contrário também vale: `ainda-la` é a única prova de que o 2xx mentiu — *a API responde 200 e
+ * IGNORA o valor* é a armadilha mais antiga deste projeto, e numa remoção em laço o preço de não
+ * conferir é a rodada inteira escrevendo no vazio com o Andamento dizendo que removeu.
+ *
+ * Lista vazia depois é `removido` de propósito: contato cuja única etiqueta era a removida fica
+ * legitimamente sem nenhuma.
+ */
+export function etiquetaSaiuMesmo({ ids = [], tagsDepois = null } = {}) {
+  const pedidos = (Array.isArray(ids) ? ids : []).map((id) => String(id || '')).filter(Boolean);
+  if (!pedidos.length) {
+    return { estado: 'nao-da-para-saber', motivo: 'nao pedi remocao de etiqueta nenhuma', ficaram: [] };
+  }
+  if (!Array.isArray(tagsDepois)) {
+    return { estado: 'nao-da-para-saber', motivo: 'nao consegui reler o contato para conferir', ficaram: [] };
+  }
+  const depois = tagsDepois.map((id) => String(id));
+  const ficaram = pedidos.filter((id) => depois.includes(id));
+  if (ficaram.length) {
+    return {
+      estado: 'ainda-la',
+      motivo: 'a API aceitou a remocao e a etiqueta continua no contato',
+      ficaram,
+    };
+  }
+  return { estado: 'removido', motivo: '', ficaram: [] };
+}
+
+/**
+ * **Etiqueta que ele manda REMOVER e a rodada APLICA sai e volta, em toda passada, para sempre.**
+ *
+ * É a família do `repeteSozinha` do quadro: as duas configurações estão certas cada uma por si, e
+ * juntas viram uma escrita por passada em dado de eleitor sem nada mudar no fim. A tela avisa em
+ * vez de recusar — recusar mataria o caso legítimo de ele apagar o campo que aplica e listar a
+ * etiqueta aqui para limpar o que já foi marcado.
+ *
+ * Compara por RÓTULO porque é o que ele digita nos dois campos, e ignora a caixa; devolve o texto
+ * como ele escreveu na lista de remover, que é o que ele vai procurar na tela.
+ */
+export function colisaoDeRemocao({ remover = [], aplicadas = [] } = {}) {
+  const alvo = new Set(
+    (Array.isArray(aplicadas) ? aplicadas : [])
+      .map((n) => String(n || '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+  const vistos = new Set();
+  const colidem = [];
+  for (const nome of Array.isArray(remover) ? remover : []) {
+    const limpo = String(nome || '').trim();
+    const chave = limpo.toLowerCase();
+    if (!limpo || vistos.has(chave) || !alvo.has(chave)) continue;
+    vistos.add(chave);
+    colidem.push(limpo);
+  }
+  return colidem;
 }
 
 export function porqueNaoMandar({ pares = [], nossas = [], tagsDoContato = [], tagDoLote = null, tagsPuladas = [] } = {}) {

@@ -184,6 +184,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       semRegra: new Map(),
       /** Já avisei nesta rodada que confirmei o diálogo de conclusão? (uma vez basta) */
       avisouConfirmacao: false,
+      /**
+       * O que a lista de REMOVER etiquetas já fez nesta rodada: se a sonda que relê o contato já
+       * rodou (uma por rodada, não por contato) e se o nome que não existe no CRM já foi avisado
+       * (uma vez, senão vira alarme em todo contato).
+       */
+      remocao: { sonda: false, avisou: false },
     },
     incoming: [],
     /** O que o contato mandou, com o tipo junto — é o que enxerga figura e figurinha. */
@@ -3467,6 +3473,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(renderCartaoMeusAbertos());
     body.append(renderCartaoMomento(cfg));
     body.append(renderCartaoEtiquetas(cfg));
+    // Logo abaixo do que a rodada APLICA, de propósito: as duas listas se leem juntas, e é olhando
+    // as duas que ele vê a etiqueta que está nos dois lados (sai e volta em toda passada).
+    body.append(renderCartaoRemoverEtiquetas(cfg));
     // "Sem retorno" (reabrir em lote + trabalhar em Meus) escondida por decisão do Thiago
     // (15/08): risco de derrubar o número é grande demais para o uso que ela teria — reabrir
     // gente fria em sequência é o padrão que mais se parece com disparo em massa para o
@@ -4268,6 +4277,76 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     if (!cfg.etiquetaSemInteresse && !cfg.etiquetaPedidoAjuda && !cfg.etiquetaEndereco) {
       card.append(h('div', { class: 'wf-block' }, 'Nenhuma das três primeiras está preenchida — nesses casos a rodada não marca ninguém.'));
+    }
+    return card;
+  }
+
+  /**
+   * **O cartão das etiquetas que a rodada TIRA** — pedido dele (14/10/2026): *"crie um espaço no
+   * automatizado para remover etiquetas, as etiquetas que eu listar nesse espaço devem ser
+   * removidas"*, e, perguntado de quem elas saem, **"de quem a rodada atender"**.
+   *
+   * É o irmão do cartão de cima, e o único lugar do painel que APAGA etiqueta de eleitor em laço —
+   * por isso a tela diz as três coisas que não se descobrem usando: que a etiqueta sai ANTES de a
+   * rodada decidir (então protege menos), que cidade/COREDE/conteúdo voltam na passada seguinte
+   * porque são derivadas do cadastro, e que remover a etiqueta do disparo devolve a pessoa para a
+   * lista dele.
+   */
+  function renderCartaoRemoverEtiquetas(cfg) {
+    const card = h('div', { class: 'wf-card' }, [
+      h('h4', {}, 'Etiquetas que a rodada REMOVE'),
+      h('div', { class: 'wf-preview' },
+        'A lista das etiquetas que devem SAIR de cada contato que a rodada atender. Nome EXATO do ' +
+          'CRM, separado por vírgula ou uma por linha. Vazio = não remove nada de ninguém.'),
+    ]);
+
+    card.append(
+      campoTexto('Etiquetas a remover (separe por vírgula)', cfg.etiquetasParaRemover, (v) =>
+        salvarAuto({ etiquetasParaRemover: v.trim() }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Sai de quem a rodada do fluxo atender (Meus, Novos e Outros), logo depois de carregar o ' +
+          'contato — antes de qualquer barreira que o pularia, senão a lista não funcionaria ' +
+          'justamente para as etiquetas que fazem a rodada pular. Quem não tem nenhuma delas não ' +
+          'custa requisição nenhuma. O disparo por etiqueta NÃO remove: lá o contato não é ' +
+          'carregado, e é a etiqueta do próprio disparo que impede o reenvio.'),
+      h('div', { class: 'wf-origin' },
+        'A etiqueta sai ANTES de a rodada decidir o que fazer, e isso tem preço: listando a ' +
+          'etiqueta de SEM INTERESSE ou a de assessor, ela deixa de proteger nessa mesma passada — ' +
+          'o contato passa a receber o que ela impedia. Listando a etiqueta do DISPARO, a pessoa ' +
+          'volta a entrar nos lotes seguintes.'),
+      h('div', { class: 'wf-origin' },
+        'Etiqueta de CIDADE, de COREDE e de conteúdo são DERIVADAS do cadastro: a rodada as ' +
+          'reaplica na passada seguinte, então listar uma delas é guerra perdida — o que resolve ' +
+          'ali é corrigir o campo Cidade ou a regra que as gera.'),
+      h('div', { class: 'wf-origin' },
+        'Nome que não existe no CRM só gera aviso no Andamento e a rodada segue: ao contrário da ' +
+          'lista de PULAR do disparo, aqui o nome errado não manda nada para ninguém — ele apenas ' +
+          'deixa a etiqueta onde estava. O primeiro contato de cada rodada em que algo sai é relido ' +
+          'para conferir que a plataforma removeu de verdade; se não removeu, a rodada para ali.')
+    );
+
+    /**
+     * **Etiqueta que ele manda remover e a rodada APLICA sai e volta em toda passada.** As duas
+     * configurações estão certas cada uma por si; juntas são uma escrita por passada em dado de
+     * eleitor sem nada mudar no fim. Avisa, não recusa: apagar o campo que aplica e listar a
+     * etiqueta aqui, para limpar o que já foi marcado, é caso legítimo.
+     */
+    const colidem = loteLib.colisaoDeRemocao({
+      remover: loteLib.nomesDaLista(cfg.etiquetasParaRemover),
+      aplicadas: [
+        cfg.etiquetaSemInteresse,
+        cfg.etiquetaPedidoAjuda,
+        cfg.etiquetaEndereco,
+        cfg.etiquetaForaDoRS,
+        cfg.etiquetaLote,
+      ],
+    });
+    if (colidem.length) {
+      card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
+        `${colidem.map((n) => `"${n}"`).join(', ')} está nesta lista E num dos campos que a rodada ` +
+          'APLICA — ela vai sair e voltar em toda passada, uma escrita por contato sem nada mudar ' +
+          'no fim. Apague o nome de um dos dois lados.'));
     }
     return card;
   }
@@ -7121,6 +7200,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.auto.log = [];
     state.auto.semRegra = new Map();
     state.auto.avisouConfirmacao = false;
+    // A sonda da remoção é UMA por rodada, e o aviso de nome que não existe também.
+    state.auto.remocao = { sonda: false, avisou: false };
     // Pedido dele: aparece SEMPRE que a automação começa, em qualquer uma das rodadas.
     abrirControleDaRodada();
     renderAll();
@@ -7550,6 +7631,148 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       else faltando.push(nome);
     }
     return { nomes, tags, faltando };
+  }
+
+  /**
+   * **As etiquetas da lista de REMOVER, resolvidas no CRM** — pedido dele (14/10/2026): *"crie um
+   * espaço no automatizado para remover etiquetas, as etiquetas que eu listar nesse espaço devem
+   * ser removidas"*.
+   *
+   * Mesma forma de `tagsPuladasDoDisparo`, e de propósito: nome EXATO, e o que não existe volta em
+   * `faltando` em vez de sumir. A lista de etiquetas é cacheada, então resolver nome por nome não
+   * custa requisição depois da primeira.
+   */
+  async function tagsParaRemover() {
+    const nomes = loteLib.nomesDaLista(state.auto.cfg.etiquetasParaRemover);
+    const tags = [];
+    const faltando = [];
+    for (const nome of nomes) {
+      let tag = null;
+      try {
+        tag = await tagsLib.resolveTag(nome);
+      } catch (_) {
+        tag = null;
+      }
+      if (tag) tags.push(tag);
+      else faltando.push(nome);
+    }
+    return { nomes, tags, faltando };
+  }
+
+  /**
+   * **TIRA DO CONTATO ABERTO as etiquetas que ele listou.** Roda uma vez por contato, dentro da
+   * rodada, e escreve a própria linha no Andamento.
+   *
+   * **Vem logo depois do `load()`, antes de TODA saída antecipada** — e essa posição é a coisa mais
+   * importante daqui. `processarRespondido` devolve cedo em pelo menos quatro lugares (número
+   * removido da conta, a barreira do candidato, contato já tratado nesta rodada, erro de ambiente),
+   * e a etiqueta mais provável de ele listar é justamente uma das que fazem a rodada PULAR — a de
+   * material pula para sempre. Posta depois da decisão, a lista não funcionaria exatamente nos
+   * casos para os quais ele a criou: é o defeito de ontem (*a barreira do candidato pulava o canal
+   * removido antes de a opção existir*) com outro nome, e a lição pela quinta vez — **meça a ORDEM,
+   * não só o sinal.**
+   *
+   * **Custa ZERO em quem não tem nenhuma delas:** `lote.etiquetasQueSaem` pergunta antes, e sem
+   * nada a tirar nem `applyTags` é chamado.
+   *
+   * **Nada é reaplicado na mesma passada.** As sugestões (`state.tagSuggestions`) são a lista que
+   * `saveClassification` grava no fim; a etiqueta de CIDADE, de COREDE e de conteúdo nascem lá
+   * marcadas, então sem desmarcá-las aqui a mesma passada removeria e regravaria a mesma etiqueta —
+   * duas escritas, nada mudado e **o Andamento dizendo que removeu**. Log que mente é o defeito que
+   * este projeto mais paga para não ter.
+   *
+   * **Não para a rodada** (a regra de sempre: falha de etiqueta nunca interrompe o que o contato
+   * recebe) — com UMA exceção, a sonda abaixo, que é defeito e não engasgo.
+   */
+  async function removerEtiquetasListadas(nome) {
+    const cru = String(state.auto.cfg.etiquetasParaRemover || '').trim();
+    if (!cru || !state.contact) return null;
+
+    try {
+      const { tags, faltando } = await tagsParaRemover();
+
+      /**
+       * **Avisa e SEGUE, ao contrário da lista de PULAR, que recusa a rodada.** Lá o nome errado
+       * sai do `exceptTagsId` em silêncio e **alguém RECEBE** um disparo — ato para fora, sem
+       * volta. Aqui o nome errado só deixa uma etiqueta onde ela estava: nada é enviado, nada é
+       * apagado, e travar a fila inteira por isso seria parar o atendimento por causa de uma
+       * faxina. Uma vez por rodada, senão vira alarme que toca em todo contato.
+       */
+      if (faltando.length && !state.auto.remocao.avisou) {
+        state.auto.remocao.avisou = true;
+        registrarNaRodada(
+          'remover etiquetas',
+          'aviso',
+          `${faltando.map((n) => `"${n}"`).join(', ')} nao existe(m) no CRM — nao removi nada com ` +
+            'esse(s) nome(s). Confira a grafia no cartao "Etiquetas que a rodada REMOVE".'
+        );
+      }
+
+      const saem = loteLib.etiquetasQueSaem({ tags, tagsDoContato: state.contact.tagsId });
+      if (!saem.length) return null;
+
+      const ids = saem.map((t) => t.id);
+      const r = await tagsLib.applyTags(state.contact, [], { remover: ids });
+      if (!r?.ok) {
+        registrarNaRodada(nome, 'aviso', `nao consegui tirar ${saem.map((t) => `"${t.label}"`).join(', ')}: ${r?.error}`);
+        return null;
+      }
+
+      // O contato em memória e as sugestões param de carregar o que acabou de sair. Sem isto a
+      // decisão desta passada ainda veria a etiqueta, e `saveClassification` a regravaria.
+      state.contact.tagsId = (state.contact.tagsId || []).filter((id) => !ids.includes(id));
+      for (const s of state.tagSuggestions || []) {
+        if (s?.tag && ids.includes(s.tag.id)) s.marcada = false;
+      }
+
+      /**
+       * **A SONDA: o primeiro contato da rodada em que algo saiu é RELIDO.** *A API responde 200 e
+       * IGNORA o valor* é a armadilha mais antiga deste projeto, e numa remoção em laço o preço de
+       * acreditar no 2xx é a rodada inteira escrevendo no vazio com o log dizendo que removeu.
+       *
+       * **Uma leitura por rodada, não por contato:** pegar formato que não funciona exige UM
+       * exemplo, não auditoria — é a mesma disciplina da aba Cidades, que relê o primeiro gravado
+       * de cada lote. O custo é uma requisição por rodada.
+       *
+       * `ainda-la` PARA a rodada: é defeito, e seguir removeria nada em mais duzentos contatos.
+       * `nao-da-para-saber` segue com aviso — não consegui reler NÃO é não removeu.
+       */
+      if (!state.auto.remocao.sonda) {
+        state.auto.remocao.sonda = true;
+        let depois = null;
+        try {
+          const relido = await api.getContact(state.contact.id);
+          depois = Array.isArray(relido?.tagsId) ? relido.tagsId : null;
+        } catch (err) {
+          console.warn('[WhatsFill] nao consegui reler o contato para conferir a remocao:', err.message);
+        }
+        const veredito = loteLib.etiquetaSaiuMesmo({ ids, tagsDepois: depois });
+        /**
+         * **O veredito é DEVOLVIDO, nunca escrito em `state.auto.parar`** — aquela bandeira é a do
+         * botão "Parar a rodada" dele. Mexer nela aqui faria a linha do Andamento culpar a remoção
+         * no instante em que ele mesmo apertasse o botão: log que mente por causa de um sinal
+         * compartilhado, e quem decide parar é quem conhece o contato.
+         */
+        if (veredito.estado === 'ainda-la') {
+          return {
+            parar: true,
+            motivo:
+              `${veredito.motivo} ("${saem.map((t) => t.label).join('", "')}") — parei no primeiro ` +
+              'contato de proposito, em vez de percorrer a fila inteira escrevendo no vazio',
+          };
+        }
+        if (veredito.estado === 'nao-da-para-saber') {
+          registrarNaRodada(nome, 'aviso', `removi ${saem.map((t) => `"${t.label}"`).join(', ')}, mas ${veredito.motivo}`);
+          return null;
+        }
+      }
+
+      registrarNaRodada(nome, 'info', `tirei ${saem.map((t) => `"${t.label}"`).join(', ')} (lista de remover)`);
+      return null;
+    } catch (err) {
+      registrarNaRodada(nome, 'aviso', `nao consegui tirar as etiquetas da lista: ${err?.message || err}`);
+      return null;
+    }
   }
 
   /** O recado único da recusa, para as três rodadas não escreverem três textos diferentes. */
@@ -8162,6 +8385,22 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       await load(sessionId);
       if (!state.contact) return { nome, resultado: 'erro', motivo: 'não consegui carregar o contato' };
       nome = state.contact.name || state.contact.nameWhatsapp || 'sem nome';
+
+      /**
+       * **AS ETIQUETAS QUE ELE MANDOU REMOVER SAEM AQUI, antes de qualquer outra coisa.**
+       *
+       * A posição é a regra: abaixo deste ponto a função devolve cedo em quatro lugares, e a
+       * etiqueta mais provável de estar na lista dele é justo uma das que fazem a rodada pular.
+       * Ver o comentário de `removerEtiquetasListadas`.
+       *
+       * **E a etiqueta sai antes de a rodada DECIDIR, de propósito e com um preço:** listando a
+       * etiqueta de sem interesse ou a de assessor, ela deixa de proteger nesta mesma passada — o
+       * contato passa a receber o que a etiqueta impedia. Está escrito no cartão.
+       */
+      const falhouARemocao = await removerEtiquetasListadas(nome);
+      if (falhouARemocao) {
+        return { nome, resultado: 'pulado', parar: true, motivo: falhouARemocao.motivo };
+      }
 
       /**
        * **O NÚMERO DESTE ATENDIMENTO FOI REMOVIDO DA CONTA** — pedido dele (14/10/2026):

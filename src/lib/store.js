@@ -918,6 +918,19 @@ const DEFAULTS = {
      * *"entra no perfil o que o eleitor recebe"*).
      */
     disparoEtiquetasPuladas: '',
+    /**
+     * **As etiquetas que a rodada REMOVE de quem ela atende** — pedido dele (14/10/2026: *"crie um
+     * espaço no automatizado para remover etiquetas, as etiquetas que eu listar nesse espaço devem
+     * ser removidas"*). Nomes exatos do CRM, separados por vírgula.
+     *
+     * **Nasce VAZIA, e tem de nascer:** esta é a única configuração do painel que APAGA dado que já
+     * está no CRM de eleitor real. Qualquer nome de fábrica aqui tiraria etiqueta da base de quem
+     * atualizar a extensão, sem ninguém ter pedido.
+     *
+     * Não é por candidato: é organização interna do CRM, como `etiquetaLote` e a lista de pular (o
+     * critério de 25/09 é *"entra no perfil o que o eleitor recebe"*).
+     */
+    etiquetasParaRemover: '',
     loteEquipeId: '',
     loteEquipeNome: '',
     loteCanalId: '',
