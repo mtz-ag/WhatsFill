@@ -2233,6 +2233,33 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **"CANAL REMOVIDO" E "CANAL FORA DO AR" SAO ESTADOS DIFERENTES, COM DESFECHOS OPOSTOS**
+  (14/10/2026: *"adicione a opcao de concluir no automatizado quando o canal estiver removido"*).
+  **Fora do ar volta**, entao o certo e PULAR e esperar — concluir ali apagaria da fila quem nunca
+  recebeu nada, e e o que a trava de 01/10 faz. **Removido NAO volta**: o numero saiu da conta, nao
+  ha por onde mandar, e pular deixa o atendimento aberto na fila **para sempre**.
+  **E a conferencia tem de ser pela API, nao pela tela:** a trava velha le a TARJA
+  (*"desconectado da Z-API"*), que fala do outro caso — e **numero removido pode nao gerar tarja
+  nenhuma**, entao a rodada seguiria e tentaria enviar por um canal que nao existe. Quem responde e
+  `GET /chat/v4/channel/my` contra o `channelId` da sessao, e por isso o bloco novo vem **ANTES** do
+  da tarja em `processarRespondido`.
+  **TRES ESTADOS, NUNCA DOIS:** `lote.canalSumiuDaConta` devolve `removido`, `esta-la` e
+  **`nao-da-para-saber`** — a licao do `donoDoCanal` (25/09) e do `undefined !== 'CONNECTED'`
+  (01/10). Este veredito manda **CONCLUIR**, que escreve no CRM e tira a pessoa da fila: colapsar
+  *"nao consegui ler"* em *"removido"* concluiria contato por causa de erro de rede, em silencio.
+  **Lista VAZIA tambem nao e "todos removidos"** — conta sem canal e possivel, resposta vazia por
+  erro e muito mais provavel, e o preco de errar e concluir a fila inteira. Metade das doze
+  assercoes e sobre o que NAO pode virar "removido".
+  **Uma requisicao por RODADA, nunca por contato** (`canaisFrescos`, 5 min de frescor, atualizando
+  `state.canais` de graca) — e **lista velha nao decide conclusao**: canal criado no meio-tempo
+  pareceria removido.
+  **`primaria` e so realce de tecla** — conferido antes de por "Concluir" em destaque:
+  `perguntarNaRodada` so desenha e espera, quem decide sem perguntar e o chamador. A caixa
+  `auto.concluirCanalRemovido` nasce **desligada** e **depende de "Automatizar"**, e o rotulo diz
+  "na rodada automatica" em vez de prometer efeito que ela sozinha nao tem.
+  **So entrou em `processarRespondido`** — as tres filas usam esse motor, entao chega nas tres de
+  graca; as duas rodadas de "sem retorno" ficaram como estavam, escondidas desde 15/08.
+
 - **A "DATA DE CONCLUSAO DO CONTATO" GUARDA O PRIMEIRO CONTATO DESDE 07/10/2026, E SO ANDA PARA
   TRAS** (pedido dele: *"preciso que a data de conclusao permaneca a data da primeira vez que a
   pessoa entrou em contato, e se possivel arrumar todas as datas ao atender"*).

@@ -414,6 +414,44 @@ export function porqueNaoUsarONumero(canal) {
 }
 
 /**
+ * **O canal deste atendimento ainda existe na conta?** — pedido dele (14/10/2026): *"adicione a
+ * opção de concluir no automatizado quando o canal estiver removido"*.
+ *
+ * **"Removido" é diferente de "desconectado", e a diferença é o desfecho.** Desconectado é
+ * passageiro: o número volta e a mensagem sai, então o certo é PULAR e esperar — é o que a rodada
+ * já faz lendo a tarja da tela. **Removido é permanente**: o número saiu da conta, não há por onde
+ * mandar nunca mais, e o atendimento fica aberto na fila para sempre. Aí concluir é a única saída
+ * que limpa a fila.
+ *
+ * **SÃO TRÊS ESTADOS, E NUNCA DOIS.** É a lição do `donoDoCanal` (25/09), que devolvia `null` para
+ * duas situações opostas, e a do `undefined !== 'CONNECTED'` (01/10): **ausência de informação não
+ * é evidência**. A leitura da lista falha com frequência (o limitador recusa requisição), e
+ * colapsar "não consegui ler" em "removido" **concluiria contato por causa de um erro de rede** —
+ * escrita no CRM que tira a pessoa da fila, por engano, em silêncio.
+ *
+ * @param {object} ctx
+ * @param {string} ctx.canalId  o `channelId` da sessão aberta
+ * @param {Array|null} ctx.canais  a lista de `api.canaisDaConta()`, ou `null` se não deu para ler
+ * @returns {{estado: 'removido'|'esta-la'|'nao-da-para-saber', motivo: string}}
+ */
+export function canalSumiuDaConta({ canalId, canais } = {}) {
+  const id = String(canalId || '').trim();
+  if (!id) return { estado: 'nao-da-para-saber', motivo: 'este atendimento nao diz por qual numero veio' };
+  if (!Array.isArray(canais)) return { estado: 'nao-da-para-saber', motivo: 'nao consegui ler os numeros da conta' };
+  /**
+   * **Lista VAZIA não é "todos removidos".** A conta sem canal nenhum é possível, mas é muito mais
+   * provável que a resposta tenha vindo vazia por erro — e o preço de errar aqui é concluir a fila
+   * inteira.
+   */
+  if (!canais.length) return { estado: 'nao-da-para-saber', motivo: 'a conta respondeu sem numero nenhum' };
+
+  const achado = canais.some((c) => String(c?.id || '') === id);
+  return achado
+    ? { estado: 'esta-la', motivo: '' }
+    : { estado: 'removido', motivo: 'o numero deste atendimento nao esta mais na lista de numeros da conta' };
+}
+
+/**
  * A janela de 24h do canal. **Sem `typeDetails` o padrão é `-1` (SEM janela)**, que é o que o
  * próprio app faz (`typeDetails?.sessionDurationInMinutes ?? -1`) — e é o certo para canal não
  * oficial, onde `typeDetails` não vem. Ler `NaN` fazia a tela prometer a janela que não existe.

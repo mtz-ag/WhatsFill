@@ -1020,6 +1020,20 @@ const DEFAULTS = {
     automatizarComIA: false,
 
     /**
+     * **Concluir sozinho o atendimento cujo NÚMERO foi REMOVIDO da conta** — pedido dele
+     * (14/10/2026): *"adicione a opção de concluir no automatizado quando o canal estiver
+     * removido"*.
+     *
+     * Desligado por padrão, como todo o resto desta lista e pelo mesmo motivo: **concluir é escrita
+     * no CRM e tira a pessoa da fila**, e nada sai da fila sem decisão dele. Desmarcado, a rodada
+     * continua perguntando — a opção de concluir aparece na caixa, ao lado de pular e parar.
+     *
+     * **Vale só para REMOVIDO, nunca para desconectado:** número fora do ar volta, e aí pular é o
+     * certo. Removido não volta, e o atendimento ficaria aberto para sempre.
+     */
+    concluirCanalRemovido: false,
+
+    /**
      * **A rodada dos NOVOS anda sozinha** — pedido dele (03/09/2026): *"nos novos as mensagens
      * raramente saem do contexto, faça um botão para mandar mensagem automática nos novos, um box
      * de marcar automático ligado"*.

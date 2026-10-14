@@ -1,81 +1,74 @@
-## 2026-10-14 — v3.149.0 — a eleição já aconteceu, e o dossiê estava escrito no futuro
+## 2026-10-14 — v3.150.0 — concluir o atendimento cujo NÚMERO foi removido da conta
 
-**Pedido dele:** *"pesquise e atualize o dossiê"*.
+**Pedido dele:** *"adicione a opção de concluir no automatizado quando o canal estiver removido"*.
 
-A pesquisa achou uma coisa que muda o arquivo inteiro antes de qualquer linha de detalhe: **o
-primeiro turno foi em 04/10/2026, dez dias atrás**, e o dossiê estava todo no futuro — *"candidato à
-reeleição"*, *"concorre ao Senado"*, uma colinha pedindo voto em seis cargos.
+### "Removido" e "fora do ar" são estados diferentes, com desfechos opostos
 
-### O que foi apurado (pesquisa de 14/10/2026)
+Era isto que faltava, e é a razão de a opção não existir até hoje. A rodada já tratava **canal fora
+do ar** desde 01/10, e o desfecho dela é **pular e esperar** — o número volta e a mensagem sai, e
+concluir ali apagaria da fila alguém que nunca recebeu nada.
 
-| cargo | nome | resultado |
-|---|---|---|
-| Presidente | Flávio Bolsonaro (22) | **2º TURNO em 25/10** — 47,03% × 45,16% do Lula |
-| Governador | Zucco (22) | **ELEITO** no 1º turno, 58,05% |
-| Senador | Sanderson (222) | **ELEITO** — 3.453.316 votos |
-| Senador | Marcel Van Hattem (300) | **ELEITO** — 3.449.053 votos |
-| Deputado Federal | Felipe Pedri (2228) | **NÃO ELEITO** — 12.810 votos, 65º |
-| Deputado Estadual | **Capitão Martim (10122)** | **REELEITO** — 37.589 votos, 41º de 55 |
+**Removido é o oposto: não volta.** O número saiu da conta, não há por onde mandar nada, e pular
+deixa o atendimento aberto na fila **para sempre**. Aí concluir é a única saída que limpa.
 
-**Ele cresceu 29%**: 29.040 em 2022 para 37.589 agora.
+### E a conferência tinha de ser pela API, não pela tela
 
-**Cinco dos seis cargos estão decididos.** O único que ainda pede voto é a Presidência, e só até
-**25/10**.
+A trava que já existia lê a **tarja do cabeçalho** (*"foi desconectado da Z-API"*). Ela não serve
+aqui por dois motivos: a tarja fala de desconexão, que é o outro caso, e **número removido pode não
+gerar tarja nenhuma** — a rodada seguiria em frente e tentaria enviar por um canal que não existe.
 
-### A consequência, que é maior que o dossiê
+Quem responde é `GET /chat/v4/channel/my` contra o `channelId` da sessão. Por isso o bloco novo vem
+**ANTES** do da tarja.
 
-**Pedir voto para deputado, senador ou governador hoje é pedir voto numa eleição que acabou** — e
-quem recebe isso entende, corretamente, que do outro lado não há ninguém acompanhando. Isso entrou
-em **três lugares que CHEGAM ao prompt**, e não num só: a regra 5 do *"como a IA deve usar este
-arquivo"*, o primeiro item do *"o que a IA NUNCA deve afirmar"*, e um parágrafo colado na própria
-**regra da colinha** — porque regra longe do pedido não é cumprida, que é lição registrada deste
-projeto desde 07/09.
+### Três estados, nunca dois — e é aqui que mora o risco
 
-**A regra da colinha NÃO foi mudada por mim.** Ela é decisão dele de 09/09 e a lista completa
-continua escrita como ele a definiu; o que entrou foi o fato de o mundo ter mudado, para ninguém
-mandar a lista de ontem sem ter escolhido mandá-la.
+`lote.canalSumiuDaConta` devolve `removido`, `esta-la` ou **`nao-da-para-saber`**. É a lição do
+`donoDoCanal` (25/09, que devolvia `null` para duas situações opostas) e a do
+`undefined !== 'CONNECTED'` (01/10): **ausência de informação não é evidência.**
 
-### Duas armadilhas pegas ao escrever, e as duas eram silenciosas
+O limitador recusa requisição com frequência, e este veredito manda **CONCLUIR** — escrita no CRM
+que tira a pessoa da fila. Colapsar *"não consegui ler"* em *"removido"* concluiria contato por
+causa de um erro de rede, em silêncio. Então **não dá para saber** se comporta exatamente como
+antes: cai no caminho da tarja, como se o bloco novo não existisse.
 
-**1. A tabela da chapa é LIDA POR CÓDIGO, por POSIÇÃO.** `gabinete.chapaDoDossie` pega `cargo`,
-`nome` e `número` das três primeiras colunas, e isso alimenta `ia.conferirChapa` — a trava que
-impede o rascunho de colar o número de um no nome de outro. Eu pus o partido **dentro da célula do
-nome** (*"Flávio Bolsonaro (PL)"*), e `conferirChapa` procura o **nome literal** no rascunho: ela
-deixaria de achar a pessoa e **pararia de barrar em silêncio**, sem teste nenhum caindo. O partido
-virou coluna própria, depois do número, e **há teste novo** exigindo as 6 linhas, nome sem
-parênteses e número só de dígitos.
+**Lista VAZIA também não é "todos removidos".** Conta sem canal nenhum é possível; resposta vazia
+por erro é muito mais provável, e o preço de errar é concluir a fila inteira. **Metade das doze
+asserções é sobre o que NÃO pode virar "removido".**
 
-**2. Linha `> ` NÃO chega à IA.** `semBlocoDeRevisao` corta as linhas de citação — está registrado
-desde 07/09 e eu caí nela assim mesmo: escrevi os dois avisos mais importantes do dia dentro de
-blocos `>`, e a medição mostrou **CORTADO** nos dois. Pior que não escrever: a regra da colinha
-chegava à IA **sem** o aviso de que tinha envelhecido. Hoje o que o modelo precisa ler é prosa
-normal, e o que é para humano continua em `>`.
+### Uma requisição por RODADA, nunca por contato
 
-### Um falso alarme meu, registrado porque quase virou conserto
+`canaisFrescos()` guarda a lista com a hora da leitura e a reusa por 5 minutos — e, relendo, atualiza
+`state.canais`, então a tela ganha o estado novo de graça. Uma leitura por contato seria uma
+requisição a mais em cada um, e é número de requisição que derruba esta API.
 
-Medi `chapaDoDossie()` e veio **0 entradas** — eu já ia consertar o leitor. A função recebe o TEXTO
-por argumento e eu a chamei vazia; e `chapa()`, que lê o arquivo, usa `fetch`, que **no Node puro
-não abre `file://`** (armadilha registrada). Passando o texto do disco, ela devolve as 6 certas. **A
-medição que parecia defeito era a minha chamada.**
+**Lista velha não decide conclusão:** decidir com uma leitura de uma hora atrás faria um canal
+criado nesse meio-tempo parecer removido.
 
-### O que ficou em aberto, e é decisão dele
+### O que ele vê
 
-- **O disparo da colinha continua configurado** (`mensagens.txt` da branch `claude/disparo-celular`,
-  com os seis números e *"deixa salva para consultar na hora de votar"*). Como está, ele pede voto
-  em cinco eleições decididas.
-- **Felipe Pedri tem perfil próprio na extensão** (o login de candidato, de 24/09) e não foi eleito.
-  O dossiê registra o fato e **proíbe a IA de anunciar a derrota de alguém** — o que fazer com o
-  perfil é dele.
-- **A posse da 57ª legislatura** ficou `[CONFERIR]`: fevereiro de 2027 não foi conferido em fonte
-  oficial.
+Na caixa da rodada, três opções em vez de duas: **Concluir sem enviar nada** (em destaque), **Pular
+(deixa aberto)** e **Parar a rodada**.
 
-### Fontes e disciplina
+E uma caixa nova na aba Automatizado — **"Concluir sozinho quando o NÚMERO do atendimento foi
+REMOVIDO da conta (na rodada automática)"**, `auto.concluirCanalRemovido`, **nascendo desligada**:
+concluir escreve no CRM e tira a pessoa da fila, e nada sai da fila sem decisão dele. Ela fica ao
+lado de "Automatizar" porque **depende dela** — desmarcada a de cima, a rodada pergunta contato a
+contato de qualquer jeito, e o texto diz "na rodada automática" em vez de prometer um efeito que ela
+sozinha não tem.
 
-O **portal do TSE recusou leitura automática (HTTP 403)**, então a apuração veio de veículos que a
-publicaram, com mais de um onde deu. A **data do 2º turno foi conferida à parte** porque duas fontes
-discordaram (uma dizia 30/10): é **25/10**. Está escrito no arquivo que, divergindo do TSE, **o TSE
-vence**.
+**`primaria` é só realce de tecla**, e isso foi conferido antes de pôr "Concluir" em destaque:
+`perguntarNaRodada` só desenha a caixa e espera — quem decide sem perguntar é o chamador, antes.
+Então o destaque não conclui nada sem a caixa marcada.
 
-**Custo medido:** o trecho do dossiê que entra no prompt foi de 22.211 para 25.497 caracteres
-(~6.346 → ~7.285 tokens), **+14,8%**, e só quando a conversa puxa o dossiê.
+### Onde entrou, e onde não entrou
+
+Só em **`processarRespondido`**, que é o automatizado — as três filas (Meus, Novos e Outros) usam
+esse mesmo motor, então a opção chega nas três de graça. As duas rodadas de *"sem retorno"*
+(`processarSemRetornoEmMeus` e `processarSemRetorno`) ficaram como estavam: estão escondidas desde
+15/08, e mexer nelas seria mudar o que ele não pediu.
+
+A chave nova mora em `auto`, que **está na lista de mescla do `store.get`** — conferido, porque
+chave nova dentro de objeto já salvo que não esteja nessa lista nunca chega a quem já usa (a
+armadilha de 04/09). E ela fica **fora de `CHAVES_DO_PERFIL_EM_AUTO`**: é configuração do operador,
+não conteúdo do candidato, e separar aquilo faria o interruptor mudar de estado ao trocar de login.
 

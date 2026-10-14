@@ -521,4 +521,64 @@ grupo('a lista de pular decide antes do recibo e da conversa');
   );
 }
 
+/**
+ * **O NUMERO DO ATENDIMENTO FOI REMOVIDO DA CONTA** — pedido dele (14/10/2026): *"adicione a opcao
+ * de concluir no automatizado quando o canal estiver removido"*.
+ *
+ * **Metade destas assercoes e sobre o que NAO pode virar "removido"**, e e onde mora o risco: este
+ * veredito manda a rodada CONCLUIR, que escreve no CRM e tira a pessoa da fila. Colapsar "nao
+ * consegui ler" em "removido" concluiria contato por causa de um erro de rede.
+ */
+grupo('canal removido da conta: tres estados, nunca dois');
+{
+  const naConta = [{ id: 'c1' }, { id: 'c2' }];
+
+  check(
+    lote.canalSumiuDaConta({ canalId: 'c9', canais: naConta }).estado === 'removido',
+    'o canal nao esta na lista: REMOVIDO'
+  );
+  check(
+    lote.canalSumiuDaConta({ canalId: 'c1', canais: naConta }).estado === 'esta-la',
+    'o canal esta na lista: esta-la'
+  );
+  check(
+    /nao esta mais na lista/.test(lote.canalSumiuDaConta({ canalId: 'c9', canais: naConta }).motivo),
+    'o motivo do removido diz o que aconteceu'
+  );
+
+  // O que NAO pode concluir ninguem.
+  check(
+    lote.canalSumiuDaConta({ canalId: 'c1', canais: null }).estado === 'nao-da-para-saber',
+    'leitura que falhou NAO e removido'
+  );
+  check(
+    lote.canalSumiuDaConta({ canalId: 'c1', canais: undefined }).estado === 'nao-da-para-saber',
+    'lista ausente NAO e removido'
+  );
+  check(
+    lote.canalSumiuDaConta({ canalId: 'c1', canais: [] }).estado === 'nao-da-para-saber',
+    'lista VAZIA nao e "todos removidos" — e muito mais provavel ser resposta vazia por erro'
+  );
+  check(
+    lote.canalSumiuDaConta({ canalId: '', canais: naConta }).estado === 'nao-da-para-saber',
+    'atendimento sem channelId NAO e removido'
+  );
+  check(
+    lote.canalSumiuDaConta({ canalId: null, canais: naConta }).estado === 'nao-da-para-saber',
+    'channelId nulo NAO e removido'
+  );
+  check(lote.canalSumiuDaConta({}).estado === 'nao-da-para-saber', 'sem nada: nao da para saber');
+  check(lote.canalSumiuDaConta().estado === 'nao-da-para-saber', 'sem argumento nenhum: nao da para saber');
+
+  // O id vem como texto da sessao e como texto da API, mas numero solto nao pode escapar.
+  check(
+    lote.canalSumiuDaConta({ canalId: 7, canais: [{ id: '7' }] }).estado === 'esta-la',
+    'id numero contra id texto continua achando'
+  );
+  check(
+    lote.canalSumiuDaConta({ canalId: 'c1', canais: [{ nome: 'sem id' }] }).estado === 'removido',
+    'canal sem id na lista nao esconde o removido'
+  );
+}
+
 fim();

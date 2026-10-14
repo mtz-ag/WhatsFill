@@ -3889,6 +3889,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         (v) => salvarAuto({ automatizarComIA: v }).then(renderAll)
       )
     );
+    /**
+     * **Concluir sozinho quem está num número REMOVIDO** — pedido dele (14/10/2026).
+     *
+     * Fica ao lado de "Automatizar" porque **depende dela**: desmarcada a de cima, a rodada
+     * pergunta contato a contato de qualquer jeito, e esta não muda nada. É por isso que o texto
+     * diz "na rodada automática" em vez de prometer um efeito que ela sozinha não tem.
+     */
+    card.append(
+      checkbox(
+        'Concluir sozinho quando o NÚMERO do atendimento foi REMOVIDO da conta (na rodada automática)',
+        state.auto.cfg.concluirCanalRemovido,
+        (v) => salvarAuto({ concluirCanalRemovido: v }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Número REMOVIDO é diferente de número fora do ar. Fora do ar volta, e aí a rodada pula e ' +
+          'espera. Removido não volta: não há por onde mandar nada, e o atendimento ficaria aberto ' +
+          'na fila para sempre. Desmarcado, a rodada continua perguntando — a opção de concluir ' +
+          'aparece na caixa, ao lado de pular e parar.'),
+      h('div', { class: 'wf-origin' },
+        'A conferência é pela API (a lista de números da conta), e não pela tarja da tela: número ' +
+          'removido pode não gerar tarja nenhuma. A leitura é uma por rodada, e falhando ela a ' +
+          'rodada se comporta como antes — não consegui ler NÃO é "foi removido", e concluir por ' +
+          'causa de um erro de rede tiraria a pessoa da fila por engano.')
+    );
     card.append(
       h('div', { class: 'wf-origin' },
         'Marcado, quando a IA escolhe uma das SUAS respostas prontas com confiança suficiente, a ' +
@@ -8790,6 +8814,70 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         .filter((s) => s.tag && (s.marcada || s.jaTem))
         .map((s) => s.tag.label);
 
+      /**
+       * **O NÚMERO DESTE ATENDIMENTO FOI REMOVIDO DA CONTA** — pedido dele (14/10/2026):
+       * *"adicione a opção de concluir no automatizado quando o canal estiver removido"*.
+       *
+       * **Vem ANTES da tarja de propósito.** A tarja diz *"desconectado"*, e número removido pode
+       * não gerar tarja nenhuma — a rodada seguiria em frente e tentaria enviar por um canal que
+       * não existe. Quem responde isto é a API, não a tela.
+       *
+       * **E é outro desfecho, não outra mensagem.** Desconectado volta, então pular e esperar é o
+       * certo; removido não volta, e pular deixa o atendimento aberto na fila **para sempre**.
+       *
+       * **Concluir é a sugestão em destaque, e mesmo assim não acontece sozinho** sem a caixa
+       * "Concluir sozinho…" marcada: `primaria` aqui é só realce de tecla — quem decide sem
+       * perguntar é o `concluirSozinho` abaixo, e ele nasce desligado porque concluir escreve no
+       * CRM e tira a pessoa da fila.
+       */
+      const canalRemovido = await canalDesteAtendimentoRemovido();
+      if (canalRemovido) {
+        const concluirSozinho = !!state.auto.cfg.concluirCanalRemovido && rodadaAutomatica();
+        const escolhaRemovido = concluirSozinho
+          ? 'concluir'
+          : await perguntarNaRodada({
+              titulo: nome,
+              linhas: [
+                '⚠ O NÚMERO DESTE ATENDIMENTO FOI REMOVIDO DA CONTA. Não é queda passageira: não ' +
+                  'há por onde mandar nada, e pular deixa este atendimento aberto na fila para sempre.',
+              ],
+              pergunta: 'O número deste atendimento não existe mais. O que fazer?',
+              opcoes: [
+                { tecla: '1', valor: 'concluir', rotulo: 'Concluir sem enviar nada', primaria: true },
+                { tecla: '2', valor: 'pular', rotulo: 'Pular (deixa aberto)' },
+                { tecla: '3', valor: 'parar', rotulo: 'Parar a rodada' },
+              ],
+            });
+
+        if (escolhaRemovido === 'concluir') {
+          await saveClassification({ withCompletionDate: true, quiet: true });
+          const fechouRemovido = await concluirPeloPainel();
+          if (!fechouRemovido.ok) {
+            return { nome, resultado: 'pulado', motivo: `número removido, mas ${fechouRemovido.reason}` };
+          }
+          if (fechouRemovido.dialogOpen) {
+            return {
+              nome,
+              resultado: 'concluido',
+              parar: true,
+              motivo: 'número removido; a plataforma pediu um motivo de conclusão — responda o diálogo',
+            };
+          }
+          return {
+            nome,
+            resultado: 'concluido',
+            motivo: `concluí sem enviar nada: ${canalRemovido.motivo}`,
+          };
+        }
+
+        return {
+          nome,
+          resultado: 'pulado',
+          parar: escolhaRemovido !== 'pular',
+          motivo: `${canalRemovido.motivo} — nada enviado, atendimento continua aberto`,
+        };
+      }
+
       // Canal fora do ar: some TODA saída que envia, e sobra pular. Ver `canalDesteContatoFora`.
       const canalFora = await canalDesteContatoFora();
       if (canalFora) {
@@ -12194,6 +12282,46 @@ const CONTATOS_POR_PAGINA = 200;
       console.warn('[WhatsFill] não consegui ler o aviso de canal desconectado:', err.message);
       return null;
     }
+  }
+
+  /**
+   * **O número deste atendimento ainda existe na conta?** A resposta vem da API, e não da tela: a
+   * tarja do cabeçalho diz *"desconectado"*, que é outra coisa — **número removido pode não gerar
+   * tarja nenhuma**, e aí a rodada seguiria tentando enviar por um canal que não existe.
+   *
+   * **Uma requisição por RODADA, nunca por contato.** A lista é guardada com a hora da leitura e
+   * vale por `FRESCOR_DOS_CANAIS_MS`; relida, ela também atualiza `state.canais`, então a tela
+   * ganha o estado novo de graça. Uma leitura por contato seria uma requisição a mais em cada um,
+   * e é número de requisição que derruba esta API.
+   *
+   * **Lista velha não decide conclusão.** Concluir tira a pessoa da fila; decidir isso com uma
+   * leitura de uma hora atrás faria um canal criado nesse meio-tempo parecer removido.
+   */
+  const FRESCOR_DOS_CANAIS_MS = 5 * 60 * 1000;
+  let canaisLidosEm = 0;
+
+  async function canaisFrescos() {
+    if (state.canais?.length && Date.now() - canaisLidosEm < FRESCOR_DOS_CANAIS_MS) return state.canais;
+    try {
+      const canais = await api.canaisDaConta();
+      if (Array.isArray(canais)) {
+        state.canais = canais;
+        canaisLidosEm = Date.now();
+        return canais;
+      }
+    } catch (err) {
+      console.warn('[WhatsFill] não consegui ler os números da conta:', err.message);
+    }
+    return null; // não é "a conta está vazia": é "não deu para ler"
+  }
+
+  /** `{motivo}` quando o número deste atendimento sumiu da conta; `null` nos outros dois estados. */
+  async function canalDesteAtendimentoRemovido() {
+    const veredito = loteLib.canalSumiuDaConta({
+      canalId: state.session?.channelId,
+      canais: await canaisFrescos(),
+    });
+    return veredito.estado === 'removido' ? veredito : null;
   }
 
   /** A linha que explica a trava, na caixa da rodada. */
