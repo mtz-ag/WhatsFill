@@ -156,4 +156,58 @@ grupo('acento não pode furar o gatilho');
   check(!/PL 424\/2023\*\* \| \*\*Programa Defesa Civil/.test(md), 'a tabela antiga, toda [CONFERIR], saiu');
 }
 
+/**
+ * A TABELA DA CHAPA É LIDA POR CÓDIGO, e quebrá-la não faz barulho nenhum.
+ *
+ * `gabinete.chapaDoDossie` pega `cargo`, `nome` e `número` **por posição**, e o resultado alimenta
+ * `ia.conferirChapa` — a trava que impede o rascunho de colar o número de um no nome de outro.
+ * Mexer na tabela e desarmar a trava é a MESMA edição: em 14/10/2026 o partido foi parar dentro da
+ * célula do nome (*"Flávio Bolsonaro (PL)"*) e a trava, que procura o nome literal no texto,
+ * deixaria de achar a pessoa — **parando de barrar em silêncio**, sem teste nenhum caindo.
+ */
+grupo('a tabela da chapa continua legível pelo código');
+{
+  const { chapaDoDossie } = await lib('gabinete.js');
+  const { readFileSync } = await import('node:fs');
+  const md = readFileSync(new URL('../src/data/gabinete.md', import.meta.url), 'utf8');
+  const chapa = chapaDoDossie(md);
+
+  check(chapa.length === 6, `a chapa tem as 6 linhas (veio ${chapa.length})`);
+
+  // Nome LIMPO: é ele que `conferirChapa` procura no rascunho, literal.
+  for (const p of chapa) {
+    check(!/[()]/.test(p.nome), `"${p.nome}" sem parenteses no nome`);
+    check(/^\d+$/.test(p.numero), `"${p.nome}" com numero so de digitos ("${p.numero}")`);
+  }
+
+  const porCargo = Object.fromEntries(chapa.map((p) => [p.nome, `${p.cargo}|${p.numero}`]));
+  check(porCargo['Capitão Martim'] === 'Deputado Estadual|10122', 'Capitao Martim: estadual, 10122');
+  check(porCargo['Felipe Pedri'] === 'Deputado Federal|2228', 'Felipe Pedri: federal, 2228');
+  check(porCargo['Marcel Van Hattem'] === 'Senador|300', 'Van Hattem: senador, 300');
+  check(porCargo['Sanderson'] === 'Senador|222', 'Sanderson: senador, 222');
+  check(porCargo['Zucco'] === 'Governador|22', 'Zucco: governador, 22');
+  check(porCargo['Flávio Bolsonaro'] === 'Presidente|22', 'Flavio Bolsonaro: presidente, 22');
+}
+
+/**
+ * A ELEIÇÃO DE 04/10/2026 JÁ ACONTECEU, e o arquivo tem de dizer isso antes de qualquer número.
+ * Sem estas linhas o dossiê volta a pedir voto em eleição decidida — o defeito que a pesquisa de
+ * 14/10 veio consertar.
+ */
+grupo('o dossie sabe que a eleicao acabou');
+{
+  const { readFileSync } = await import('node:fs');
+  const md = readFileSync(new URL('../src/data/gabinete.md', import.meta.url), 'utf8');
+
+  check(/A ELEIÇÃO JÁ ACONTECEU/.test(md), 'o aviso esta no topo, antes dos numeros');
+  check(/NÃO PEÇA VOTO para deputado, senador ou governador/.test(md), 'a proibicao de pedir voto');
+  check(/25\/10\/2026/.test(md), 'a data do segundo turno');
+  check(/REELEITO/.test(md) && /37\.589/.test(md), 'o resultado dele');
+  check(/NÃO ELEITO/.test(md) && /12\.810/.test(md), 'o resultado do Pedri');
+  check(
+    !/\*\*Candidato à reeleição como deputado estadual\*\*/.test(md),
+    'a frase no futuro ("candidato a reeleicao") saiu'
+  );
+}
+
 fim();

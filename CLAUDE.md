@@ -3395,6 +3395,39 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **A ELEICAO FOI EM 04/10/2026, E O DOSSIE ESTAVA ESCRITO NO FUTURO** (14/10/2026, *"pesquise e
+  atualize o dossie"*). **Capitao Martim REELEITO** com 37.589 votos (41º de 55, +29% sobre 2022);
+  Zucco governador eleito no 1º turno (58,05%); Sanderson e Van Hattem senadores eleitos; **Felipe
+  Pedri NAO eleito** (12.810 votos, 65º). **Cinco dos seis cargos da colinha estao decididos** — o
+  unico que ainda pede voto e a Presidencia, no **2º turno de 25/10/2026**.
+  **Consequencia que vale mais que o dossie: pedir voto para deputado, senador ou governador hoje e
+  pedir voto em eleicao que acabou**, e quem recebe entende que do outro lado nao ha ninguem
+  acompanhando. Entrou em TRES lugares que chegam ao prompt (a regra 5 do cabecalho, o primeiro item
+  dos "NUNCA afirmar" e um paragrafo colado na propria regra da colinha) — **regra longe do pedido
+  nao e cumprida**, licao de 07/09.
+  **A regra da colinha NAO foi mudada**: e decisao dele de 09/09 e continua escrita como ele a
+  definiu; o que entrou foi o fato. **Ficam em aberto, e sao dele:** o disparo da colinha continua
+  configurado pedindo voto, e o perfil do Felipe Pedri na extensao.
+
+- **A TABELA DA CHAPA E LIDA POR CODIGO, POR POSICAO — e mexer nela desarma a trava em silencio**
+  (14/10/2026). `gabinete.chapaDoDossie` pega `cargo`, `nome` e `numero` das **tres primeiras
+  colunas**, e alimenta `ia.conferirChapa`, que procura o **nome literal** no rascunho. Eu pus o
+  partido dentro da celula do nome (*"Flavio Bolsonaro (PL)"*): a trava deixaria de achar a pessoa e
+  **pararia de barrar**, sem teste nenhum caindo. **Coluna nova entra DEPOIS do numero, e o nome
+  fica sozinho na celula.** Ha teste exigindo as 6 linhas, nome sem parenteses e numero so de
+  digitos.
+  **E linha `> ` NAO CHEGA A IA** — `semBlocoDeRevisao` corta as citacoes. Esta registrado desde
+  07/09 e eu cai nela assim mesmo: escrevi os dois avisos mais importantes do dia dentro de blocos
+  `>` e a medicao mostrou CORTADO nos dois, deixando a regra da colinha chegar ao modelo **sem** o
+  aviso de que envelheceu. **O que o modelo precisa ler e prosa normal; `>` e so para humano** — e a
+  conferencia e aplicar a peneira (`filter(l => !l.startsWith('> '))`) e procurar o trecho.
+
+- **`chapa()` USA `fetch`, QUE NO NODE PURO NAO ABRE `file://`** (14/10/2026). Medi
+  `chapaDoDossie()` e veio **0 entradas**; eu ja ia consertar o leitor. Duas causas minhas, nenhuma
+  do codigo: a funcao recebe o TEXTO por argumento e eu a chamei vazia, e `chapa()` le o arquivo
+  pela ponte que so existe no harness. **Passando o texto do disco ela devolve as 6 certas.** Antes
+  de consertar um leitor que devolve vazio fora dos testes, confira se o vazio nao e a sua chamada.
+
 - **GIRIA GAUCHA: "TEMOS JUNTO GALO VEIO?" NAO ERA APOIO, E A IA PEDIU PARA ELE EXPLICAR**
   (26/09/2026, print de quem chegou pelo anuncio e recebeu *"Voce pode me explicar um pouco melhor o
   que quis dizer com 'galo veio'?"* — *"nao reconheceu girias gauchescas"*). **Duas causas somadas:**

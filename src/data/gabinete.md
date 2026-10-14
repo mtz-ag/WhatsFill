@@ -4,8 +4,21 @@
 > a chapa, os números de urna e as pautas — para ela não decidir sobre nomes que não conhece.
 >
 > **Status: LIGADO** (`ia.dossieAtivo`), revisado por ele. Pesquisa de 01/09/2026, mais o material
-> oficial da campanha que ele mandou em 07/09/2026 e o material do mandato (emendas, leis, projetos e
-> menções) de 10/09/2026 — as fontes de cada bloco estão em `## Fontes`.
+> oficial da campanha que ele mandou em 07/09/2026, o material do mandato (emendas, leis, projetos e
+> menções) de 10/09/2026 e **os resultados da eleição, pesquisados em 14/10/2026** — as fontes de
+> cada bloco estão em `## Fontes`.
+>
+> ## ⚠ A ELEIÇÃO JÁ ACONTECEU — leia isto antes de qualquer coisa
+>
+> **O primeiro turno foi em 04/10/2026 e cinco dos seis cargos da colinha estão DECIDIDOS.** Até
+> 14/10/2026 este arquivo inteiro estava escrito no futuro (*"candidato à reeleição"*, *"concorre
+> ao Senado"*), porque foi escrito antes.
+>
+> **Só um cargo continua em disputa: a PRESIDÊNCIA, no segundo turno de 25/10/2026.**
+>
+> Consequência direta, e ela vale mais que qualquer linha abaixo: **pedir voto para deputado,
+> senador ou governador hoje é pedir voto numa eleição que acabou.** Quem receber isso entende,
+> corretamente, que do outro lado não há ninguém acompanhando.
 >
 > **A fonte mais forte deste arquivo é o material da campanha**, e não a internet: quem está na
 > chapa e com que número é decisão dele, não fato público a pesquisar.
@@ -30,6 +43,10 @@
 3. **Nunca prometa** agenda, visita, cargo, emprego, benefício ou resposta do parlamentar.
 4. Confiança marcada linha a linha: `[CONFIRMADO]` tem fonte; `[CONFERIR]` não tem fonte
    independente e **não deve ser afirmado ao contato**.
+5. **A ELEIÇÃO DE 04/10/2026 JÁ ACONTECEU.** Deputado, senador e governador estão decididos — os
+   resultados estão na tabela da colinha. **Nunca peça voto para esses cargos.** A única disputa em
+   curso é a **Presidência, no segundo turno de 25/10/2026**, e passado esse dia não há nenhuma.
+   Número de urna daqui em diante responde *"em quem eu votei"*, nunca *"em quem votar"*.
 
 ---
 
@@ -52,15 +69,21 @@
 - Pautas centrais: **segurança pública, educação, saúde e meio ambiente** `[CONFIRMADO]`
 - Em 2020 foi candidato a prefeito de **Viamão** (14.670 votos, 4º lugar) `[CONFIRMADO]`
 
-### Eleição de 2026
+### Eleição de 2026 — REELEITO
 
-- **Candidato à reeleição como deputado estadual**, pelo Republicanos, confirmado na convenção do
-  partido no RS em 26/07/2026 `[CONFIRMADO]`
+- **REELEITO deputado estadual** pelo Republicanos, no primeiro turno de **04/10/2026**, com
+  **37.589 votos** (0,62%), **41º entre os 55 eleitos** `[CONFIRMADO]` — apuração encerrada
+  (CNN Brasil e Olhar Direto, consultados em 14/10/2026)
+- Cresceu em relação a 2022: de **29.040** para **37.589** votos — **+29%** `[CONFIRMADO]`
+- O mandato novo é a **57ª legislatura (2027–2031)**, com posse em fevereiro de 2027
+  `[CONFERIR]` — a data exata da posse não foi conferida em fonte oficial
 - **Número de urna: 10122** `[CONFIRMADO]` — pela **arte oficial da campanha** ("Candidatos do
-  Bolsonaro no Rio Grande do Sul"), mandada por ele em 07/09/2026, e pelo Headline do anúncio
-  *CONVERSE CONOSCO* no Instagram (*"Vote Capitão Martim, deputado estadual. 10122"*).
-  Ficou seis dias como `[CONFERIR]` porque nenhuma fonte independente de 2026 o trazia — e a fonte
-  que resolveu não era a internet, era o material dele.
+  Bolsonaro no Rio Grande do Sul"), mandada por ele em 07/09/2026, pelo Headline do anúncio
+  *CONVERSE CONOSCO* no Instagram (*"Vote Capitão Martim, deputado estadual. 10122"*) e agora pelas
+  listas de apuração. Ficou seis dias como `[CONFERIR]` porque nenhuma fonte independente de 2026 o
+  trazia — e a fonte que resolveu não era a internet, era o material dele.
+- **O número de urna é passado.** Ele serve para responder *"em quem eu votei?"*, nunca para pedir
+  voto: a eleição de deputado estadual acabou.
 
 ---
 
@@ -90,7 +113,9 @@ respondeu, corretamente, que não passaria informação da qual não tem certeza
 
 ## A chapa — governo do estado
 
-**Zucco** — candidato a **governador do RS** em 2026.
+**Zucco** — **GOVERNADOR ELEITO do RS**, no primeiro turno de 04/10/2026, com **58,05% dos votos
+válidos** (mais de 3,5 milhões) `[CONFIRMADO]`. Juliana Brizola (PDT) ficou em segundo com 31,65% e
+Gabriel Souza (MDB) em terceiro com 8,43% `[CONFIRMADO]`. **Não houve segundo turno no RS.**
 
 - Nome civil: **Luciano Lorenzini Zucco** `[CONFIRMADO]`
 - Partido: **PL** (desde 2023) `[CONFIRMADO]`
@@ -116,37 +141,72 @@ respondeu, corretamente, que não passaria informação da qual não tem certeza
 ## A CHAPA COMPLETA de 2026 — a "colinha"
 
 Da **arte oficial da campanha** *"Candidatos do Bolsonaro no Rio Grande do Sul"*, que ele mandou em
-07/09/2026. Todos `[CONFIRMADO]` por ela.
+07/09/2026. Os números são `[CONFIRMADO]` por ela; **os resultados foram pesquisados em
+14/10/2026**, com a apuração do primeiro turno encerrada.
 
-| cargo | nome | número |
-|---|---|---|
-| Presidente | **Flávio Bolsonaro** | **22** |
-| Governador | **Zucco** | **22** |
-| Senador | **Sanderson** | **222** |
-| Senador | **Marcel Van Hattem** | **300** |
-| Deputado Federal | **Felipe Pedri** | **2228** |
-| Deputado Estadual | **Capitão Martim** | **10122** |
+> **As três primeiras colunas são LIDAS POR CÓDIGO** (`gabinete.chapaDoDossie`, que alimenta a trava
+> `ia.conferirChapa`), e o leitor pega `cargo`, `nome` e `número` **por posição**. Coluna nova só
+> entra DEPOIS delas, e **o nome fica sozinho na sua célula**: o partido chegou a ficar ali
+> (*"Flávio Bolsonaro (PL)"*) e a trava, que procura o nome literal no rascunho, deixaria de achar a
+> pessoa — **parando de barrar em silêncio**, que é o pior defeito possível neste arquivo.
 
-**Quatro coisas que o eleitor pergunta e que estão nesta tabela:**
+| cargo | nome | número | partido | resultado |
+|---|---|---|---|---|
+| Presidente | **Flávio Bolsonaro** | **22** | PL | **2º TURNO em 25/10** — 47,03% (56,1 mi) contra 45,16% do Lula |
+| Governador | **Zucco** | **22** | PL | **ELEITO** no 1º turno, 58,05% |
+| Senador | **Sanderson** | **222** | PL | **ELEITO** — 3.453.316 votos (30,11%) |
+| Senador | **Marcel Van Hattem** | **300** | Novo | **ELEITO** — 3.449.053 votos (30,08%) |
+| Deputado Federal | **Felipe Pedri** | **2228** | PL | **NÃO ELEITO** — 12.810 votos (0,21%), 65º |
+| Deputado Estadual | **Capitão Martim** | **10122** | Republicanos | **ELEITO** — 37.589 votos (0,62%), 41º de 55 |
 
-1. **São DOIS senadores nesta eleição**, e a chapa pede voto para os dois: Sanderson (222) e Van
-   Hattem (300). Quem pergunta *"qual o senador?"* recebe os dois nomes, não um.
-2. **Presidente e Governador têm o MESMO número, 22.** Isso é normal — nas eleições majoritárias o
-   número é o do partido —, e é a dúvida que mais aparece. Não é erro de digitação.
-3. **Quem pergunta de um CARGO recebe só quem disputa AQUELE cargo.** Print da Nara (08/09/2026):
+**A única linha desta tabela que ainda pede voto é a primeira.** As outras cinco são história: dizer
+o número delas hoje responde *"em quem eu votei"*, e nunca *"em quem votar"*.
+
+**Cinco coisas que o eleitor pergunta e que estão nesta tabela:**
+
+1. **O Felipe Pedri NÃO foi eleito** `[CONFIRMADO]`. É o dado mais delicado daqui, por dois
+   motivos: ele tem **perfil próprio na extensão** (o login de candidato, criado em 24/09), e
+   perguntar por ele é o caso em que a IA mais erraria sozinha. **A IA não diz que ele perdeu nem
+   especula sobre o futuro dele** — isso é fala do mandato, não de um atendimento. Perguntaram?
+   **Escalar.**
+2. **São DOIS senadores nesta eleição, e os dois foram eleitos**: Sanderson (222) e Van Hattem
+   (300). Quem pergunta *"qual o senador?"* recebe os dois nomes, não um.
+3. **Presidente e Governador têm o MESMO número, 22.** Isso é normal — nas eleições majoritárias o
+   número é o do partido —, e é a dúvida que mais aparece. Não é erro de digitação. **Para o
+   segundo turno só o 22 da Presidência continua valendo.**
+4. **Quem pergunta de um CARGO recebe só quem disputa AQUELE cargo.** Print da Nara (08/09/2026):
    ela perguntou pelos candidatos a **deputado federal** e a resposta veio com *"o Felipe Pedri
    (número 2228) e o Marcel Van Hattem (número 300)"* — e Van Hattem é **senador** nesta chapa.
-   Cuidado especial com ele: **Van Hattem é hoje deputado federal** `[CONFERIR]` e nesta eleição
-   concorre ao **Senado**, então o que se sabe dele por fora contradiz a tabela. **A tabela é que
-   vale**, e há trava de código conferindo (`ia.conferirChapa`).
-4. **Partido:** derivado do número, não afirmado pela arte — 22 é o PL e 30 é o Novo, então
-   Sanderson e Pedri são do PL e Van Hattem é do Novo `[CONFERIR]`. **A IA não afirma partido de
-   ninguém desta tabela**: o número é o que o eleitor precisa, e o partido é dedução.
+   O `[CONFERIR]` dele **ficou resolvido pela eleição**: ele **era** deputado federal e **foi eleito
+   senador** `[CONFIRMADO]`. A armadilha continua de pé, porque o que o modelo sabe por fora é a
+   legislatura antiga — **a tabela é que vale**, e há trava de código conferindo
+   (`ia.conferirChapa`).
+5. **Partido: deixou de ser dedução.** Era derivado do número (22 = PL, 30 = Novo) e estava
+   `[CONFERIR]`; a cobertura da apuração nomeia os partidos, e eles estão na tabela acima
+   `[CONFIRMADO]`. **A regra de não afirmar partido continua valendo até ele decidir o contrário** —
+   o que mudou foi a fonte, não a decisão dele.
 
 ### A regra da colinha
 
+> **⚠ ESTA REGRA ENVELHECEU COM A ELEIÇÃO, e quem decide o que fazer com ela é ELE.**
+>
+> Ela foi escrita em 09/09/2026, quando os seis cargos estavam em disputa. Hoje **cinco estão
+> decididos** e mandar a lista inteira pede voto em cinco eleições que acabaram.
+>
+> O que os FATOS dizem, e só isso: até **25/10** existe uma eleição acontecendo, e nela o que cabe é
+> **um número só — 22, para Presidente**. Depois de 25/10 não há número nenhum a pedir.
+>
+> **Não mudei a regra por conta própria** — ela é decisão dele, e a lista completa continua escrita
+> abaixo como ele a definiu. O que mudou foi o mundo, e isso está dito aqui para ninguém mandar a
+> lista de ontem sem ter escolhido mandá-la.
+
 **Quem pede a colinha recebe A LISTA, com o cargo, o nome e o número de cada um** — decisão dele de
 **09/09/2026**: *"quando pedir a colinha só passe a lista com os números e o que cada um é"*.
+
+**Esta regra é de 09/09/2026 e a eleição foi em 04/10.** Cinco dos seis cargos estão decididos, e a
+lista como ela está pede voto neles. **Até 25/10 o único número que ainda se pede é o 22, da
+Presidência; depois de 25/10, nenhum.** Quem pedir a colinha agora recebe a lista como registro do
+que foi votado — e, havendo pergunta sobre o segundo turno, só a linha da Presidência vale.
 
 **A lista é COPIADA da tabela acima, nunca escrita de memória.** É a tabela que vale, e a IA não
 sabe estes números por fora — o print da Nara (08/09) provou o contrário: o que ela sabe da internet
@@ -353,6 +413,12 @@ adjetivo e sem atacar ninguém — nem adversário, nem governo, nem imprensa.
 
 ## O que a IA NUNCA deve afirmar
 
+- **NÃO PEÇA VOTO para deputado, senador ou governador.** Essas eleições **acabaram em 04/10/2026**
+  e os resultados estão na tabela da colinha. Pedir voto ali não é só inútil: diz a quem lê que
+  ninguém do outro lado está acompanhando. **A única eleição em curso é a Presidência, no segundo
+  turno de 25/10/2026** — e, passado esse dia, nenhuma.
+- **Não diga que alguém da chapa PERDEU.** Felipe Pedri não foi eleito, e isso está aqui para a IA
+  não afirmar o contrário — **não para ela anunciar a derrota de ninguém**. Perguntaram? Escalar.
 - **Nenhum número de urna marcado `[CONFERIR]`.** Número errado é o pior erro possível: manda o
   eleitor votar em outra pessoa. (Hoje todos os seis estão `[CONFIRMADO]` pela arte da campanha.)
 - **Projeto apresentado como se fosse lei aprovada.** Só o que está em "Leis aprovadas" foi aprovado;
@@ -392,7 +458,31 @@ inteira, que agora tem seção própria acima. As duas linhas saíram daqui.
 
 ## Fontes
 
-Pesquisa de 01/09/2026, mais o material da campanha e a pesquisa de projetos de 07/09/2026.
+Pesquisa de 01/09/2026, mais o material da campanha e a pesquisa de projetos de 07/09/2026, mais a
+**pesquisa dos resultados de 14/10/2026**.
+
+### Resultados da eleição de 04/10/2026 (pesquisa de 14/10/2026)
+
+Nenhum destes números veio do material dele: são apuração pública, e por isso cada um tem a fonte
+nomeada. **O portal do TSE recusou a leitura automática (HTTP 403)**, então a apuração foi tomada de
+veículos que a publicaram e, onde possível, de mais de um.
+
+- Capitão Martim reeleito, 37.589 votos (0,62%), 41º de 55 — CNN Brasil e Olhar Direto:
+  https://www.cnnbrasil.com.br/eleicoes/conheca-os-55-deputados-estaduais-eleitos-pelo-rio-grande-do-sul-em-2026/
+  e https://www.olhardireto.com.br/eleicoes/2026/resultados/deputado-estadual/rs
+- Zucco governador eleito no 1º turno, 58,05% — Wikipédia (eleições estaduais no RS em 2026) e
+  Terra: https://pt.wikipedia.org/wiki/Elei%C3%A7%C3%B5es_estaduais_no_Rio_Grande_do_Sul_em_2026
+- Sanderson (3.453.316) e Van Hattem (3.449.053) eleitos senadores — Poder360, Exame e NSC Total:
+  https://www.poder360.com.br/poder-eleicoes-2026/sanderson-e-van-hattem-sao-eleitos-senadores-pelo-rio-grande-do-sul/
+- Felipe Pedri **não eleito**, 12.810 votos (0,21%), 65º — Olhar Direto:
+  https://www.olhardireto.com.br/eleicoes/2026/resultados/deputado-federal/rs
+- Segundo turno presidencial em **25/10/2026**, Flávio Bolsonaro 47,03% × Lula 45,16% — Wikipédia
+  (eleição presidencial no Brasil em 2026), conferida por ser a data que decide o que ainda se pode
+  pedir: https://pt.wikipedia.org/wiki/Elei%C3%A7%C3%A3o_presidencial_no_Brasil_em_2026
+
+> **Duas fontes discordaram da data do 2º turno** (uma dizia 30/10), e foi por isso que ela foi
+> conferida à parte. A data **25/10** é a que a Wikipédia e o TSE trazem. Se o número de alguma
+> linha acima divergir do TSE, **o TSE vence** — estes vieram de imprensa.
 
 **A fonte mais forte é o material dele**, e ela não é da lista abaixo:
 
