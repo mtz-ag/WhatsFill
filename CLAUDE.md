@@ -2233,6 +2233,21 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **A BARREIRA DO CANDIDATO PULAVA O CANAL REMOVIDO ANTES DE A OPCAO DE CONCLUIR EXISTIR PARA ELE**
+  (14/10/2026, print dele: *"nao esta concluindo"*, com a plataforma marcando **"Canal removido"** e
+  o atendimento dizendo *"no canal null"*). **Numero removido da conta nao esta em candidato nenhum
+  POR DEFINICAO**, entao `situacaoDoCanal` devolvia `desconhecido` e a barreira de 25/09 — que roda
+  no comeco de `processarRespondido` — **pulava o contato antes de o bloco do canal removido rodar**.
+  A opcao estava escrita, a caixa marcada, e o codigo nunca era alcancado. **E a tela mandava "some o
+  numero ao candidato certo na aba Config": arrumar um cadastro que nao tem conserto.**
+  **O conserto e de ORDEM:** o bloco do removido subiu para antes da barreira, logo depois do
+  `load()`. A barreira continua certa para o que foi escrita — numero que EXISTE e e de outro
+  candidato, ou que ainda nao foi cadastrado. **Removido nao e cadastro faltando.**
+  **A licao, pela quarta vez: guarda nova so vale onde ela e ALCANCADA** — familia do *"excecao so
+  vale onde aquela regra alcanca"* (09/09) e do *"a caixa pode casar e mesmo assim perder"* (06/09).
+  **Medir o SINAL nao basta: meca a ORDEM.** O veredito estava certo; quem decidia era outra coisa,
+  tres mil linhas acima.
+
 - **"CANAL REMOVIDO" E "CANAL FORA DO AR" SAO ESTADOS DIFERENTES, COM DESFECHOS OPOSTOS**
   (14/10/2026: *"adicione a opcao de concluir no automatizado quando o canal estiver removido"*).
   **Fora do ar volta**, entao o certo e PULAR e esperar — concluir ali apagaria da fila quem nunca

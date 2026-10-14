@@ -8138,6 +8138,80 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       nome = state.contact.name || state.contact.nameWhatsapp || 'sem nome';
 
       /**
+       * **O NÚMERO DESTE ATENDIMENTO FOI REMOVIDO DA CONTA** — pedido dele (14/10/2026):
+       * *"adicione a opção de concluir no automatizado quando o canal estiver removido"*.
+       *
+       * **Vem ANTES da tarja de propósito.** A tarja diz *"desconectado"*, e número removido pode
+       * não gerar tarja nenhuma — a rodada seguiria em frente e tentaria enviar por um canal que
+       * não existe. Quem responde isto é a API, não a tela.
+       *
+       * **E vem ANTES DA BARREIRA DO CANDIDATO, que é o que fazia a opção não funcionar** (print
+       * dele, 14/10/2026: *"não está concluindo"*, com a plataforma marcando **"Canal removido"** e
+       * dizendo *"no canal null"*). Número removido da conta **não está em candidato nenhum por
+       * definição** — então a barreira de 25/09 o classificava como `desconhecido` e **pulava antes
+       * de este bloco rodar**. A opção existia e nunca era alcançada.
+       *
+       * A barreira continua certa para o que ela foi escrita: número que existe e é de OUTRO
+       * candidato, ou que ele ainda não cadastrou. **Removido não é cadastro faltando — é número
+       * que não existe mais**, e mandá-lo para o cadastro é mandar arrumar o que não tem conserto.
+       *
+       * **E é outro desfecho, não outra mensagem.** Desconectado volta, então pular e esperar é o
+       * certo; removido não volta, e pular deixa o atendimento aberto na fila **para sempre**.
+       *
+       * **Concluir é a sugestão em destaque, e mesmo assim não acontece sozinho** sem a caixa
+       * "Concluir sozinho…" marcada: `primaria` aqui é só realce de tecla — quem decide sem
+       * perguntar é o `concluirSozinho` abaixo, e ele nasce desligado porque concluir escreve no
+       * CRM e tira a pessoa da fila.
+       */
+      const canalRemovido = await canalDesteAtendimentoRemovido();
+      if (canalRemovido) {
+        const concluirSozinho = !!state.auto.cfg.concluirCanalRemovido && rodadaAutomatica();
+        const escolhaRemovido = concluirSozinho
+          ? 'concluir'
+          : await perguntarNaRodada({
+              titulo: nome,
+              linhas: [
+                '⚠ O NÚMERO DESTE ATENDIMENTO FOI REMOVIDO DA CONTA. Não é queda passageira: não ' +
+                  'há por onde mandar nada, e pular deixa este atendimento aberto na fila para sempre.',
+              ],
+              pergunta: 'O número deste atendimento não existe mais. O que fazer?',
+              opcoes: [
+                { tecla: '1', valor: 'concluir', rotulo: 'Concluir sem enviar nada', primaria: true },
+                { tecla: '2', valor: 'pular', rotulo: 'Pular (deixa aberto)' },
+                { tecla: '3', valor: 'parar', rotulo: 'Parar a rodada' },
+              ],
+            });
+
+        if (escolhaRemovido === 'concluir') {
+          await saveClassification({ withCompletionDate: true, quiet: true });
+          const fechouRemovido = await concluirPeloPainel();
+          if (!fechouRemovido.ok) {
+            return { nome, resultado: 'pulado', motivo: `número removido, mas ${fechouRemovido.reason}` };
+          }
+          if (fechouRemovido.dialogOpen) {
+            return {
+              nome,
+              resultado: 'concluido',
+              parar: true,
+              motivo: 'número removido; a plataforma pediu um motivo de conclusão — responda o diálogo',
+            };
+          }
+          return {
+            nome,
+            resultado: 'concluido',
+            motivo: `concluí sem enviar nada: ${canalRemovido.motivo}`,
+          };
+        }
+
+        return {
+          nome,
+          resultado: 'pulado',
+          parar: escolhaRemovido !== 'pular',
+          motivo: `${canalRemovido.motivo} — nada enviado, atendimento continua aberto`,
+        };
+      }
+
+      /**
        * **A BARREIRA DO CANAL** — relato dele (25/09/2026): *"eu só adicionei os dois números do
        * Martim, não adicionei o número do Felipe Pedri ainda na extensão; não devia ter uma
        * barreira caso o número não esteja na extensão?"*.
@@ -8163,6 +8237,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             `${state.perfil?.nome || 'o candidato de sempre'} — não tratei para não mandar o texto do candidato errado`,
         };
       }
+      /**
+       * **Número REMOVIDO da conta não chega aqui** — o bloco acima o resolve antes, porque ele
+       * cai neste `desconhecido` por definição (não está em candidato nenhum porque não existe
+       * mais) e seria pulado para sempre, com a tela mandando arrumar um cadastro que não tem
+       * conserto. Aqui ficam só os dois casos de CADASTRO: número que existe e ainda não foi
+       * somado ao candidato, e número que não deu para ler.
+       */
       if (canal.estado === 'desconhecido') {
         return {
           nome,
@@ -8813,70 +8894,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const etiquetas = state.tagSuggestions
         .filter((s) => s.tag && (s.marcada || s.jaTem))
         .map((s) => s.tag.label);
-
-      /**
-       * **O NÚMERO DESTE ATENDIMENTO FOI REMOVIDO DA CONTA** — pedido dele (14/10/2026):
-       * *"adicione a opção de concluir no automatizado quando o canal estiver removido"*.
-       *
-       * **Vem ANTES da tarja de propósito.** A tarja diz *"desconectado"*, e número removido pode
-       * não gerar tarja nenhuma — a rodada seguiria em frente e tentaria enviar por um canal que
-       * não existe. Quem responde isto é a API, não a tela.
-       *
-       * **E é outro desfecho, não outra mensagem.** Desconectado volta, então pular e esperar é o
-       * certo; removido não volta, e pular deixa o atendimento aberto na fila **para sempre**.
-       *
-       * **Concluir é a sugestão em destaque, e mesmo assim não acontece sozinho** sem a caixa
-       * "Concluir sozinho…" marcada: `primaria` aqui é só realce de tecla — quem decide sem
-       * perguntar é o `concluirSozinho` abaixo, e ele nasce desligado porque concluir escreve no
-       * CRM e tira a pessoa da fila.
-       */
-      const canalRemovido = await canalDesteAtendimentoRemovido();
-      if (canalRemovido) {
-        const concluirSozinho = !!state.auto.cfg.concluirCanalRemovido && rodadaAutomatica();
-        const escolhaRemovido = concluirSozinho
-          ? 'concluir'
-          : await perguntarNaRodada({
-              titulo: nome,
-              linhas: [
-                '⚠ O NÚMERO DESTE ATENDIMENTO FOI REMOVIDO DA CONTA. Não é queda passageira: não ' +
-                  'há por onde mandar nada, e pular deixa este atendimento aberto na fila para sempre.',
-              ],
-              pergunta: 'O número deste atendimento não existe mais. O que fazer?',
-              opcoes: [
-                { tecla: '1', valor: 'concluir', rotulo: 'Concluir sem enviar nada', primaria: true },
-                { tecla: '2', valor: 'pular', rotulo: 'Pular (deixa aberto)' },
-                { tecla: '3', valor: 'parar', rotulo: 'Parar a rodada' },
-              ],
-            });
-
-        if (escolhaRemovido === 'concluir') {
-          await saveClassification({ withCompletionDate: true, quiet: true });
-          const fechouRemovido = await concluirPeloPainel();
-          if (!fechouRemovido.ok) {
-            return { nome, resultado: 'pulado', motivo: `número removido, mas ${fechouRemovido.reason}` };
-          }
-          if (fechouRemovido.dialogOpen) {
-            return {
-              nome,
-              resultado: 'concluido',
-              parar: true,
-              motivo: 'número removido; a plataforma pediu um motivo de conclusão — responda o diálogo',
-            };
-          }
-          return {
-            nome,
-            resultado: 'concluido',
-            motivo: `concluí sem enviar nada: ${canalRemovido.motivo}`,
-          };
-        }
-
-        return {
-          nome,
-          resultado: 'pulado',
-          parar: escolhaRemovido !== 'pular',
-          motivo: `${canalRemovido.motivo} — nada enviado, atendimento continua aberto`,
-        };
-      }
 
       // Canal fora do ar: some TODA saída que envia, e sobra pular. Ver `canalDesteContatoFora`.
       const canalFora = await canalDesteContatoFora();
