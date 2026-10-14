@@ -1034,6 +1034,17 @@ const DEFAULTS = {
     concluirCanalRemovido: false,
 
     /**
+     * **Quantas horas a conversa pode ter antes de o contexto ser dado como perdido** — pedido dele
+     * (14/10/2026): *"bote um limite de 48 horas para seguir o fluxo normalmente, senão mandar
+     * mensagem do momento"*.
+     *
+     * **É campo e não constante** pela lição do teto de 45 por número (02/10): número que ele ditou
+     * num dia vira trava que ele não alcança. `0` desliga a regra do tempo — e aí o fluxo volta a
+     * decidir sozinho, como antes de 04/09.
+     */
+    horasContextoPerdido: 48,
+
+    /**
      * **A rodada dos NOVOS anda sozinha** — pedido dele (03/09/2026): *"nos novos as mensagens
      * raramente saem do contexto, faça um botão para mandar mensagem automática nos novos, um box
      * de marcar automático ligado"*.

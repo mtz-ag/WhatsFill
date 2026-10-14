@@ -339,6 +339,116 @@ export const REGRAS = [
           : `tem a etiqueta "${c.etiquetaQueDispensa}" — já está engajado: mande a mensagem do momento e conclua.`,
   },
   {
+    id: 'contexto-de-outro-dia',
+    /**
+     * **A tecla virou FUNÇÃO em 06/09/2026, e isso conserta o buraco que a print da Noeli mostrou.**
+     *
+     * Ela escreveu *"Eu já estou com vocês.....bom dia"* no dia 05, e no dia 06 recebeu **o modelo
+     * da campanha**. Ele: *"ignorou a regra da perda de contexto e mandou modelo"*.
+     *
+     * A regra não foi ignorada: ela **não casou**. As duas guardas do momento moravam na
+     * `quando` (*"só casa se houver mensagem do momento e ela ainda não tiver saído"*), e o
+     * comentário antigo dizia, com todas as letras, que sem elas *"o quadro decide como antes"*.
+     * **Decidir como antes, aqui, é mandar o modelo** — exatamente o que esta caixa existe para
+     * impedir. Medido: com o momento já enviado OU sem momento configurado, o caso caía em
+     * `conteudo-pedido`, tecla 1.
+     *
+     * O desenho certo já estava em `ultima-e-so-reacao` e em `ja-respondemos-antes`: **a guarda
+     * decide o DESFECHO, não se a caixa casa.** Sem momento para mandar, o certo é concluir sem
+     * enviar nada — nunca cair para quem envia.
+     */
+    tecla: (c) => (c.podeMandarMomento && !c.momentoJaEnviado ? '5' : '3'),
+    /**
+     * **A última coisa que ela escreveu é de outro dia: o contexto passou.**
+     *
+     * Quatro anotações do mesmo lote (04/09/2026), todas com desfechos diferentes e a mesma
+     * correção dele:
+     *
+     *  - **Bia** e **Noeli** responderam nome e cidade ONTEM, e a caixa oferecia o agradecimento —
+     *    *"como foi ontem, mandar mensagem do momento; se fosse no dia, mandava agradecer e
+     *    encerrar"*;
+     *  - **Giovani** mandou um texto político e um link ontem à noite, e a caixa oferecia o modelo —
+     *    *"modelo fora de contexto, aqui vou mandar mensagem do momento"*;
+     *  - **Beatriz Pansaia**, o mesmo, com o agradecimento — *"erro de mandar apoio se repetindo"*.
+     *
+     * **O critério de tempo não era do apoio, era geral.** Ele o definiu em 03/09 dentro de
+     * `so-expressa-apoio` (*"se foi no dia anterior, é mensagem do momento; se foi recente,
+     * mensagem de apoio"*) e o que os quatro casos mostram é que a razão não tinha nada a ver com
+     * apoio: **responder o conteúdo de ontem soa a quem não estava lá.** A mensagem do momento é o
+     * que há de novo hoje, e é a resposta certa para qualquer assunto que esfriou.
+     *
+     * Por isso esta regra substituiu a bifurcação de tempo que vivia lá dentro: um conceito, um
+     * lugar. `so-expressa-apoio` voltou a ser só "agradece".
+     *
+     * **As guardas do momento decidem o DESFECHO e não se a caixa casa** (06/09/2026, acima): sem
+     * mensagem do momento configurada, ou já tendo saído para essa pessoa, a regra continua
+     * vencendo e conclui — o que ela nunca pode fazer é deixar o caso escorregar para quem envia.
+     *
+     * **A exceção da pergunta está na CONDIÇÃO, e não só na posição** — print da Ieda (04/09/2026).
+     * Ele nomeou a exceção no dia em que criou a regra: *"único pretexto que exclui a necessidade
+     * de hora é pergunta pendente, que deve ser respondida"*. Eu a implementei como ORDEM (esta
+     * regra fica abaixo de `pergunta-aberta`), e ordem só cobre as perguntas da lista curta. A Ieda
+     * perguntou *"Você é candidato daqui do RS?"* — que não está em lista nenhuma — e a rodada
+     * ofereceu a mensagem do momento. Ele: *"certamente é um problema de ramo"*.
+     *
+     * Estava certo sobre o sintoma, e o conserto é mais fundo que mover a caixa: com a exceção na
+     * condição, ela vale **onde quer que a caixa esteja no quadro dele** — inclusive nos quadros já
+     * exportados. Posição é preferência dele; esta exceção é regra dele.
+     *
+     * **A segunda exceção é o MATERIAL PEDIDO**, e ele nomeou-a em 05/09/2026: *"o modelo de
+     * material é uma exceção, ele sempre tem que ser mandado quando requisitado"*. A print: ela
+     * chegou pelo anúncio escrevendo *"Olá! Eu quero receber o Material da Direita"* às 13:23, a
+     * rodada só a alcançou no dia seguinte, e mandou a mensagem do momento — concluindo. Medido no
+     * quadro padrão, esta caixa fica acima da entrega do modelo nos três ramos, então **o pedido de
+     * material vencia o dia**. Não vence: pedido não entregue continua de pé na semana que vem, e é
+     * a razão pela qual a pessoa apareceu.
+     *
+     * O sinal já vem com a guarda de repetição — quem calcula soma "e o modelo ainda não saiu" —,
+     * então ele se apaga sozinho no instante da entrega e a caixa volta a valer.
+     *
+     * Ela também continua **abaixo de tudo o que precisa de gente** — pedido de ajuda, pergunta,
+     * áudio, denúncia respondida.
+     *
+     * E abaixo do anúncio reconhecido: clicar num anúncio é pedir uma coisa específica, e escolha
+     * explícita dela não se substitui por dedução nossa.
+     */
+    /**
+     * **A RÉGUA VIROU HORAS, E A CAIXA SUBIU** — pedido dele (14/10/2026): *"estou respondendo
+     * mensagens de 12 dias atrás, preciso que mande só mensagem do momento; bote um limite de 48
+     * horas para seguir o fluxo normalmente, senão mandar mensagem do momento"*.
+     *
+     * **Mudar só a régua não resolveria nada, e é a parte que importa.** Esta caixa era a 20ª da
+     * lista: tudo o que vem acima vencia, e por isso uma mensagem de **doze dias** ainda caía em
+     * `nunca-pediram-dados` (pede o cadastro), `anuncio-modelo-e-dados` (manda o recibo),
+     * `pergunta-aberta` e `ultima-pede-resposta-pessoal` (tecla 6, a IA escreve). O sinal estava
+     * certo e quem decidia era outra coisa — **medir o sinal não basta, tem de medir a ordem**, que
+     * é a lição que este arquivo pagou de novo ontem.
+     *
+     * Hoje ela fica **logo abaixo das protecoes que significam "não mande nada"** (sem interesse,
+     * assessor, última é nossa, presença confirmada, endereço informado, etiqueta que dispensa) e
+     * **acima de todo o resto**. Acima dela só está o que não envia.
+     *
+     * **As duas exceções dele continuam na CONDIÇÃO** — pergunta pendente (04/09) e material
+     * pedido (05/09) —, então valem onde quer que a caixa esteja no quadro dele, inclusive nos
+     * quadros já exportados.
+     *
+     * **A terceira exceção é minha e está dita para ele poder cortá-la:** quem se DESPEDIU não
+     * recebe a mensagem do momento. Subindo acima de `ultima-e-despedida`, sem esta guarda a caixa
+     * passaria a mandar propaganda por cima de um *"obrigado, era só isso"* de doze dias atrás —
+     * e a despedida sempre concluiu em silêncio neste projeto.
+     */
+    quando: (c) =>
+      !!c.contextoPerdido &&
+      !c.perguntaPendente &&
+      !c.perguntaAberta &&
+      !c.materialPendente &&
+      !c.ultimaEhDespedida,
+    motivo: (c) =>
+      c.podeMandarMomento && !c.momentoJaEnviado
+        ? 'faz mais tempo que o limite desde a última mensagem dela — o contexto passou; a mensagem do momento é o que há de novo.'
+        : 'faz mais tempo que o limite desde a última mensagem dela e não há mensagem do momento para mandar — conclua sem responder o que esfriou.',
+  },
+  {
     id: 'nao-pode-falar-agora',
     tecla: '6',
     /**
@@ -774,86 +884,6 @@ export const REGRAS = [
      */
     quando: (c) => !!c.perguntaAberta,
     motivo: () => 'fez uma pergunta que nenhuma resposta pronta responde — escreva você.',
-  },
-  {
-    id: 'contexto-de-outro-dia',
-    /**
-     * **A tecla virou FUNÇÃO em 06/09/2026, e isso conserta o buraco que a print da Noeli mostrou.**
-     *
-     * Ela escreveu *"Eu já estou com vocês.....bom dia"* no dia 05, e no dia 06 recebeu **o modelo
-     * da campanha**. Ele: *"ignorou a regra da perda de contexto e mandou modelo"*.
-     *
-     * A regra não foi ignorada: ela **não casou**. As duas guardas do momento moravam na
-     * `quando` (*"só casa se houver mensagem do momento e ela ainda não tiver saído"*), e o
-     * comentário antigo dizia, com todas as letras, que sem elas *"o quadro decide como antes"*.
-     * **Decidir como antes, aqui, é mandar o modelo** — exatamente o que esta caixa existe para
-     * impedir. Medido: com o momento já enviado OU sem momento configurado, o caso caía em
-     * `conteudo-pedido`, tecla 1.
-     *
-     * O desenho certo já estava em `ultima-e-so-reacao` e em `ja-respondemos-antes`: **a guarda
-     * decide o DESFECHO, não se a caixa casa.** Sem momento para mandar, o certo é concluir sem
-     * enviar nada — nunca cair para quem envia.
-     */
-    tecla: (c) => (c.podeMandarMomento && !c.momentoJaEnviado ? '5' : '3'),
-    /**
-     * **A última coisa que ela escreveu é de outro dia: o contexto passou.**
-     *
-     * Quatro anotações do mesmo lote (04/09/2026), todas com desfechos diferentes e a mesma
-     * correção dele:
-     *
-     *  - **Bia** e **Noeli** responderam nome e cidade ONTEM, e a caixa oferecia o agradecimento —
-     *    *"como foi ontem, mandar mensagem do momento; se fosse no dia, mandava agradecer e
-     *    encerrar"*;
-     *  - **Giovani** mandou um texto político e um link ontem à noite, e a caixa oferecia o modelo —
-     *    *"modelo fora de contexto, aqui vou mandar mensagem do momento"*;
-     *  - **Beatriz Pansaia**, o mesmo, com o agradecimento — *"erro de mandar apoio se repetindo"*.
-     *
-     * **O critério de tempo não era do apoio, era geral.** Ele o definiu em 03/09 dentro de
-     * `so-expressa-apoio` (*"se foi no dia anterior, é mensagem do momento; se foi recente,
-     * mensagem de apoio"*) e o que os quatro casos mostram é que a razão não tinha nada a ver com
-     * apoio: **responder o conteúdo de ontem soa a quem não estava lá.** A mensagem do momento é o
-     * que há de novo hoje, e é a resposta certa para qualquer assunto que esfriou.
-     *
-     * Por isso esta regra substituiu a bifurcação de tempo que vivia lá dentro: um conceito, um
-     * lugar. `so-expressa-apoio` voltou a ser só "agradece".
-     *
-     * **As guardas do momento decidem o DESFECHO e não se a caixa casa** (06/09/2026, acima): sem
-     * mensagem do momento configurada, ou já tendo saído para essa pessoa, a regra continua
-     * vencendo e conclui — o que ela nunca pode fazer é deixar o caso escorregar para quem envia.
-     *
-     * **A exceção da pergunta está na CONDIÇÃO, e não só na posição** — print da Ieda (04/09/2026).
-     * Ele nomeou a exceção no dia em que criou a regra: *"único pretexto que exclui a necessidade
-     * de hora é pergunta pendente, que deve ser respondida"*. Eu a implementei como ORDEM (esta
-     * regra fica abaixo de `pergunta-aberta`), e ordem só cobre as perguntas da lista curta. A Ieda
-     * perguntou *"Você é candidato daqui do RS?"* — que não está em lista nenhuma — e a rodada
-     * ofereceu a mensagem do momento. Ele: *"certamente é um problema de ramo"*.
-     *
-     * Estava certo sobre o sintoma, e o conserto é mais fundo que mover a caixa: com a exceção na
-     * condição, ela vale **onde quer que a caixa esteja no quadro dele** — inclusive nos quadros já
-     * exportados. Posição é preferência dele; esta exceção é regra dele.
-     *
-     * **A segunda exceção é o MATERIAL PEDIDO**, e ele nomeou-a em 05/09/2026: *"o modelo de
-     * material é uma exceção, ele sempre tem que ser mandado quando requisitado"*. A print: ela
-     * chegou pelo anúncio escrevendo *"Olá! Eu quero receber o Material da Direita"* às 13:23, a
-     * rodada só a alcançou no dia seguinte, e mandou a mensagem do momento — concluindo. Medido no
-     * quadro padrão, esta caixa fica acima da entrega do modelo nos três ramos, então **o pedido de
-     * material vencia o dia**. Não vence: pedido não entregue continua de pé na semana que vem, e é
-     * a razão pela qual a pessoa apareceu.
-     *
-     * O sinal já vem com a guarda de repetição — quem calcula soma "e o modelo ainda não saiu" —,
-     * então ele se apaga sozinho no instante da entrega e a caixa volta a valer.
-     *
-     * Ela também continua **abaixo de tudo o que precisa de gente** — pedido de ajuda, pergunta,
-     * áudio, denúncia respondida.
-     *
-     * E abaixo do anúncio reconhecido: clicar num anúncio é pedir uma coisa específica, e escolha
-     * explícita dela não se substitui por dedução nossa.
-     */
-    quando: (c) => !!c.deOutroDia && !c.perguntaPendente && !c.materialPendente,
-    motivo: (c) =>
-      c.podeMandarMomento && !c.momentoJaEnviado
-        ? 'a última mensagem dela é de outro dia — o contexto passou; a mensagem do momento é o que há de novo.'
-        : 'a última mensagem dela é de outro dia e não há mensagem do momento para mandar — conclua sem responder o de ontem.',
   },
   {
     id: 'so-expressa-apoio',

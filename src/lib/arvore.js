@@ -77,6 +77,13 @@ export const SINAIS = [
   { id: 'nomeSemSentido', rotulo: 'O nome do cadastro não serve', nao: 'O nome do cadastro serve' },
   { id: 'respondidoHoje', rotulo: 'Você já respondeu hoje', nao: 'Você ainda não respondeu hoje' },
   { id: 'deOutroDia', rotulo: 'A última mensagem dela é de outro dia', nao: 'Ela escreveu hoje' },
+  /**
+   * **A regua do tempo em HORAS** (14/10/2026), com o limite na Config (`auto.horasContextoPerdido`,
+   * nasce em 48). `deOutroDia` fica ao lado e NAO sai: ele e a regua antiga (dia local) e pode
+   * estar em caixa que ele ja montou — sinal que some do codigo e descartado de quadro ja
+   * exportado, e o ramo dele sumiria sem ninguem pedir.
+   */
+  { id: 'contextoPerdido', rotulo: 'Faz mais horas que o limite desde a ultima mensagem dela', nao: 'Ela escreveu dentro do limite' },
   {
     id: 'materialPendente',
     rotulo: 'Pediu material e ainda não recebeu',

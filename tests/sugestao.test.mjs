@@ -782,8 +782,8 @@ grupo('apoio: o TEMPO escolhe entre agradecer e a mensagem do momento (03/09/202
    * teve a ver com apoio -- responder o conteudo de ontem soa a quem nao estava la, seja ele apoio,
    * cadastro ou piada politica. Quem decide agora e `contexto-de-outro-dia`, uma caixa acima.
    */
-  check(com({ ...apoio, deOutroDia: true })?.id === 'contexto-de-outro-dia', 'de outro dia, quem decide e a caixa do tempo');
-  check(com({ ...apoio, deOutroDia: true })?.tecla === '5', 'e ela manda a mensagem do momento');
+  check(com({ ...apoio, contextoPerdido: true })?.id === 'contexto-de-outro-dia', 'de outro dia, quem decide e a caixa do tempo');
+  check(com({ ...apoio, contextoPerdido: true })?.tecla === '5', 'e ela manda a mensagem do momento');
 
   /**
    * **As duas guardas do momento sairam da CONDICAO e viraram DESFECHO em 06/09/2026** — print da
@@ -798,11 +798,11 @@ grupo('apoio: o TEMPO escolhe entre agradecer e a mensagem do momento (03/09/202
    * Estas duas assercoes diziam "volta a agradecer" e agora dizem "conclui": agradecer o apoio de
    * ONTEM e responder o conteudo de ontem, que e o que a caixa existe para impedir.
    */
-  check(com({ ...apoio, deOutroDia: true, momentoJaEnviado: true })?.tecla === '3',
+  check(com({ ...apoio, contextoPerdido: true, momentoJaEnviado: true })?.tecla === '3',
     'ja recebeu a do momento: conclui sem responder o de ontem');
-  check(com({ ...apoio, deOutroDia: true, podeMandarMomento: false })?.tecla === '3',
+  check(com({ ...apoio, contextoPerdido: true, podeMandarMomento: false })?.tecla === '3',
     'sem mensagem do momento configurada: conclui, e nao cai para quem envia');
-  check(com({ ...apoio, deOutroDia: true, momentoJaEnviado: true })?.id === 'contexto-de-outro-dia',
+  check(com({ ...apoio, contextoPerdido: true, momentoJaEnviado: true })?.id === 'contexto-de-outro-dia',
     'e quem decide continua sendo a caixa do tempo');
 
   // As duas saidas ENVIAM, entao o cartao da janela e verde nos dois casos.
@@ -814,10 +814,20 @@ grupo('apoio: o TEMPO escolhe entre agradecer e a mensagem do momento (03/09/202
    * respondida"*. Vale por ORDEM: as duas caixas de pergunta ficam acima desta.
    */
   const P = { termo: 'por que' };
-  check(com({ ...apoio, deOutroDia: true, perguntaAberta: P })?.id === 'pergunta-aberta',
+  check(com({ ...apoio, contextoPerdido: true, perguntaAberta: P })?.id === 'pergunta-aberta',
     'pergunta de razao vence o tempo');
-  check(com({ ...apoio, deOutroDia: true, pedeAlgoIndefinido: { motivo: 'x' } })?.id === 'pediu-algo-sem-dizer-o-que',
-    'pediu algo sem dizer o que tambem vence');
+  /**
+   * **ISTO INVERTEU EM 14/10/2026, por escolha dele** — *"bote um limite de 48 horas para seguir o
+   * fluxo normalmente, senao mandar mensagem do momento"*. Ate entao "pediu algo sem dizer o que"
+   * vencia o tempo e o caso ia para a tecla 6 (gente olha). Com a caixa do tempo subindo para a 7a
+   * posicao, quem pediu algo ha mais de 48h passa a receber a MENSAGEM DO MOMENTO.
+   *
+   * **As excecoes que ELE nomeou continuam vencendo** (pergunta pendente, pergunta aberta e
+   * material pedido) e as protecoes que nao enviam nada seguem acima. Esta aqui nao e excecao
+   * dele: e o fluxo normal, e o fluxo normal e justamente o que o limite de horas desliga.
+   */
+  check(com({ ...apoio, contextoPerdido: true, pedeAlgoIndefinido: { motivo: 'x' } })?.id === 'contexto-de-outro-dia',
+    'pediu algo sem dizer o que, mas ha mais de 48h: vence o TEMPO (invertido em 14/10)');
 
   const ids = REGRAS.map((r) => r.id);
   for (const antes of ['pergunta-aberta', 'pediu-algo-sem-dizer-o-que']) {
@@ -1138,7 +1148,7 @@ grupo('sem modelo aprovado a rodada AINDA decide (25/09/2026)');
   const bit = (p) => rnd() < p;
   const CHAVES = [
     'respondidoHoje', 'momentoJaEnviado', 'podeMandarMomento', 'perguntaPendente', 'perguntaAberta',
-    'materialPendente', 'temEtiquetaDeCidade', 'jaRespondemosAntes', 'deOutroDia', 'ultimaEhNossa',
+    'materialPendente', 'temEtiquetaDeCidade', 'jaRespondemosAntes', 'deOutroDia', 'contextoPerdido', 'ultimaEhNossa',
     'ultimaEhDespedida', 'ultimaEhSoReacao', 'confirmouPresenca', 'informouEndereco',
     'pedeRespostaPessoal', 'naoPodeFalarAgora', 'reclamaSemResposta', 'respondeuComoAjudar',
     'pedeAlgoIndefinido', 'voltouPorOutroAnuncio', 'modeloJaNaConversa', 'rajadaDeAnuncios',

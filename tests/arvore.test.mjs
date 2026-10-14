@@ -1254,7 +1254,7 @@ grupo('a chegada nao repete o que a volta ja resolve (02/09/2026)');
      * **O TEMPO saiu do apoio em 04/09** e virou caixa propria, uma acima: quatro anotacoes no
      * mesmo lote mostraram que a razao nunca teve a ver com apoio. O desfecho e o mesmo.
      */
-    const ontem = arv.decidir({ ...apoiando, temEtiquetaDeCidade: temCidade, deOutroDia: true }, q);
+    const ontem = arv.decidir({ ...apoiando, temEtiquetaDeCidade: temCidade, contextoPerdido: true }, q);
     check(ontem?.tecla === '5', `${lado}: de outro dia manda a do momento`);
     check(ontem?.id?.includes('contexto-de-outro-dia'), `${lado}: e quem decide e a caixa do tempo`);
   }
@@ -1369,7 +1369,7 @@ grupo('a chegada decide como a volta no que nao e recibo (04/09/2026)');
     ['respondeu o nome e a cidade', { respondeuOsDados: true }],
     ['so se despediu', { ultimaEhDespedida: true }],
     ['so figura, sem modelo', { ultimaEhSoReacao: true, podeEnviar: false }],
-    ['despediu-se ONTEM, sem modelo', { ultimaEhDespedida: true, deOutroDia: true, podeEnviar: false }],
+    ['despediu-se ONTEM, sem modelo', { ultimaEhDespedida: true, contextoPerdido: true, podeEnviar: false }],
   ];
   for (const [rotulo, extra] of casos) {
     const naChegada = desfecho({ ...base, jaRespondemosAntes: false, ...extra });
@@ -1916,20 +1916,20 @@ grupo('o lado SEM cidade tambem fecha, e o modelo vem antes do obrigado (03/09/2
    * proprio e nunca saiu; a Elaine so disse que esta junto, e o "modelo" dela vem da etiqueta de
    * conteudo -- o caminho que o criterio de tempo do apoio deve decidir.
    */
-  const elaine = { ...rosa, anuncioReconhecido: false, deOutroDia: true, podeMandarMomento: true };
+  const elaine = { ...rosa, anuncioReconhecido: false, contextoPerdido: true, podeMandarMomento: true };
   check(d(elaine)?.tecla === '5', `sem anuncio reconhecido, o tempo decide (${d(elaine)?.id})`);
   check(d(elaine)?.id?.includes('contexto-de-outro-dia'), 'pela caixa do tempo');
   // E no mesmo dia, quem decide volta a ser o apoio.
-  check(d({ ...elaine, deOutroDia: false })?.tecla === 'i', 'no mesmo dia, o apoio decide');
+  check(d({ ...elaine, contextoPerdido: false })?.tecla === 'i', 'no mesmo dia, o apoio decide');
 
   /**
    * Quem nao expressou apoio nenhum continua recebendo o modelo pela caixa de baixo -- **desde que
    * tenha escrito hoje**. De outro dia, o tempo decide antes, que e o caso do Giovani.
    */
-  const semApoio = { ...elaine, soExpressaApoio: null, deOutroDia: false };
+  const semApoio = { ...elaine, soExpressaApoio: null, contextoPerdido: false };
   check(d(semApoio)?.tecla === '1', 'sem apoio e no mesmo dia, o modelo sai como antes');
   check(d(semApoio)?.id === 'r:conteudo-pedido:com-cidade', 'pela copia de baixo');
-  check(d({ ...semApoio, deOutroDia: true })?.tecla === '5', 'de outro dia, a do momento (o caso do Giovani)');
+  check(d({ ...semApoio, contextoPerdido: true })?.tecla === '5', 'passado o limite, a do momento (o caso do Giovani)');
 
   // E as guardas da regra sao o que impede virar repeticao.
   check(d({ ...rosa, modeloJaNaConversa: true })?.tecla === 'i', 'modelo ja na conversa: volta a agradecer');
@@ -1994,7 +1994,7 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
     { soExpressaApoio: { motivo: 'x' } }, { respondeuComoAjudar: true }, { respondeuOsDados: true },
     { soRuidoDaPlataforma: true, podePerguntarInteresse: true },
     // O tempo: sem ele na lista, as tres caixas de "a ultima dela e de outro dia" ficam sem gatilho.
-    { deOutroDia: true, podeMandarMomento: true },
+    { contextoPerdido: true, podeMandarMomento: true },
     { podeEnviar: true }, { podePedirDados: true }, { voltouPorOutroAnuncio: true, modeloJaNaConversa: true },
     // A rajada de cliques (a Irene, 05/09): sem ela aqui, as tres caixas de
     // "so clicou em varios anuncios" aparecem como mortas.
@@ -2035,7 +2035,7 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
 
   const base = {
     veioDeAnuncio: true, podeMandarMomento: true, podePedirDados: true,
-    textos: [pedido], ultimoTexto: pedido, deOutroDia: true, materialPendente,
+    textos: [pedido], ultimoTexto: pedido, contextoPerdido: true, materialPendente,
   };
 
   const chegada = arv.decidir({ ...base, podeEnviar: true }, fluxo, {});
@@ -2062,12 +2062,12 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
    * cadastrado, ela recebe so o formulario, responde "Maria, Canoas" e era concluida sem material.
    */
   const respondeu = arv.decidir(
-    { ...base, deOutroDia: false, respondeuOsDados: true, jaPediramDados: true, podeEnviar: true }, fluxo, {}
+    { ...base, contextoPerdido: false, respondeuOsDados: true, jaPediramDados: true, podeEnviar: true }, fluxo, {}
   );
   check(respondeu?.tecla === '1', `quem respondeu os dados sem ter recebido o material recebe o modelo (tecla ${respondeu?.tecla})`);
 
   const respondeuComRecibo = arv.decidir(
-    { ...base, deOutroDia: false, respondeuOsDados: true, jaPediramDados: true, podeEnviar: true, materialPendente: false, modeloJaNaConversa: true },
+    { ...base, contextoPerdido: false, respondeuOsDados: true, jaPediramDados: true, podeEnviar: true, materialPendente: false, modeloJaNaConversa: true },
     fluxo, {}
   );
   check(respondeuComRecibo?.tecla === 'i', 'tendo recebido, o agradecimento continua sendo o desfecho');
@@ -2429,7 +2429,7 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
    */
   const fluxo = arv.fluxoPadrao();
   const base = {
-    deOutroDia: true,
+    contextoPerdido: true,
     jaRespondemosAntes: true,
     temEtiquetaDeCidade: true,
     podeEnviar: true,
@@ -2473,7 +2473,7 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
     soExpressaApoio: true,
     podeEnviar: true,
     podePedirDados: true,
-    deOutroDia: true,
+    contextoPerdido: true,
     textos: ['Bom dia capitao Martins', 'Pode contar com meu voto para deputado estadual'],
     ultimoTexto: 'Pode contar com meu voto para deputado estadual',
   };
@@ -2487,7 +2487,7 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
 
   // FALSO POSITIVO 1 — a Rosa (03/09): ela voltou clicando num anuncio HOJE, e o modelo daquele
   // anuncio e a resposta. O tempo nao alcanca quem escreveu hoje.
-  const hoje = arv.decidir({ ...leonilda, deOutroDia: false, podeMandarMomento: true, momentoJaEnviado: false }, arvore, {});
+  const hoje = arv.decidir({ ...leonilda, contextoPerdido: false, podeMandarMomento: true, momentoJaEnviado: false }, arvore, {});
   check(hoje?.tecla === '1', `clicou HOJE: o modelo do anuncio sai igual (tecla ${hoje?.tecla})`);
 
   // FALSO POSITIVO 2 — o material (05/09): *"o modelo de material e uma excecao, ele sempre tem

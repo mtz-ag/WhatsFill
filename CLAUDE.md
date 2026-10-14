@@ -2233,6 +2233,28 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **48 HORAS: PASSADO O LIMITE, SO A MENSAGEM DO MOMENTO — E MUDAR A REGUA NAO BASTAVA**
+  (14/10/2026: *"estou respondendo mensagens de 12 dias atras (...) bote um limite de 48 horas para
+  seguir o fluxo normalmente, senao mandar mensagem do momento"*). A regra do tempo JA existia
+  (`contexto-de-outro-dia`, 04/09) e ja mandava a do momento; o que ela nao fazia era **vencer** —
+  era a **20a** da lista, entao doze dias ainda caiam em `nunca-pediram-dados`,
+  `anuncio-modelo-e-dados`, `pergunta-aberta` e `ultima-pede-resposta-pessoal`. **Medir o sinal nao
+  basta: meca a ORDEM** (segunda vez em dois dias).
+  **A regua virou HORAS** (`cortesia.contextoPerdido`) e o limite e campo (`auto.horasContextoPerdido`,
+  nasce em 48, `0` desliga) — numero que ele ditou nao vira constante (licao do teto de 45, 02/10).
+  **`deOutroDia` NAO foi removida:** ela e sinal do QUADRO, e sinal que some do codigo e descartado
+  de quadro ja exportado — o ramo dele sumiria sem ninguem pedir.
+  **A caixa subiu para a 7a posicao**, logo abaixo das seis protecoes que nao enviam nada.
+  **Tres excecoes vencem o limite:** pergunta pendente e material pedido (dele, 04 e 05/09) e quem
+  so se DESPEDIU (minha, dita a ele). **`perguntaAberta` teve de entrar junto de `perguntaPendente`:**
+  sao chaves diferentes, e subindo acima de `pergunta-aberta` a excecao dele valeria pela metade.
+  **Inversao que e escolha dele:** *"pediu algo sem dizer o que"* passou a PERDER para o tempo.
+  **Duas armadilhas na mesma edicao:** escrevi `!c.ehDespedida` e a chave do painel e
+  `ultimaEhDespedida` (regra que le chave que o painel nao escreve esta MORTA e o teste nao ve —
+  18/09); e o verificador de **caixa morta** acusou as tres caixas do padrao assim que o sinal mudou
+  de nome, porque **o amostrador de contextos do teste tambem lista os sinais** — sinal novo entra
+  la tambem, senao as caixas que so ele aciona aparecem como mortas.
+
 - **A BARREIRA DO CANDIDATO PULAVA O CANAL REMOVIDO ANTES DE A OPCAO DE CONCLUIR EXISTIR PARA ELE**
   (14/10/2026, print dele: *"nao esta concluindo"*, com a plataforma marcando **"Canal removido"** e
   o atendimento dizendo *"no canal null"*). **Numero removido da conta nao esta em candidato nenhum

@@ -9,6 +9,8 @@
  * Rode: node tests/cortesia.test.mjs
  */
 import { check, grupo, fim, lib } from './_harness.mjs';
+// Namespace para as funcoes novas, sem reescrever a lista nomeada gigante abaixo.
+import * as cortesia from '../src/lib/cortesia.js';
 import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, ehPedidoDeRoupa, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos, falouDeSaude, ofereceEventoPelaCampanha, falouAlgoProprio, trouxeDenuncia, semInterrogacaoColada, disseQueEDeOutroEstado } from '../src/lib/cortesia.js';
 
 const templates = await lib('templates.js');
@@ -3590,6 +3592,48 @@ grupo('giria gaucha: "Temos junto galo veio?" e apoio (26/09/2026)');
   check(!apoio('temos uma reuniao junto com a prefeitura amanha'), '"temos ... junto com" e o verbo ter');
   check(!apoio('nao temos junto nenhum documento aqui'), 'negado tambem nao');
   check(!apoio('temos que ir juntos no evento?'), 'e "ir juntos" e presenca, nao apoio');
+}
+
+/**
+ * **O LIMITE DE HORAS DO CONTEXTO** — pedido dele (14/10/2026): *"estou respondendo mensagens de 12
+ * dias atras, preciso que mande so mensagem do momento; bote um limite de 48 horas para seguir o
+ * fluxo normalmente, senao mandar mensagem do momento"*.
+ *
+ * Metade das assercoes e sobre o que NAO pode dar "contexto perdido": este sinal faz a rodada parar
+ * de seguir o fluxo e mandar a mensagem do momento, entao um falso positivo manda propaganda por
+ * cima de uma conversa de agora.
+ */
+grupo('contexto perdido: a regua em HORAS');
+{
+  const hAtras = (n) => new Date(Date.now() - n * 3600000).toISOString();
+
+  check(cortesia.contextoPerdido([{ at: hAtras(288) }], 48) === true, '12 dias com limite 48: passou');
+  check(cortesia.contextoPerdido([{ at: hAtras(49) }], 48) === true, '49 horas: passou');
+  check(cortesia.contextoPerdido([{ at: hAtras(47) }], 48) === false, '47 horas: ainda no prazo');
+  check(cortesia.contextoPerdido([{ at: hAtras(0.1) }], 48) === false, 'mensagem de agora');
+
+  // Decide pela ULTIMA que tem horario, nao pela primeira.
+  check(
+    cortesia.contextoPerdido([{ at: hAtras(300) }, { at: hAtras(1) }], 48) === false,
+    'conversa velha com mensagem nova: vale a ULTIMA'
+  );
+  check(
+    cortesia.contextoPerdido([{ at: hAtras(300) }, { texto: 'sem horario' }], 48) === true,
+    'mensagem sem horario no fim nao apaga a ultima que tem'
+  );
+
+  // O que NAO pode dar "passou".
+  check(cortesia.contextoPerdido([{ at: hAtras(288) }], 0) === false, 'limite 0 DESLIGA a regra');
+  check(cortesia.contextoPerdido([{ at: hAtras(288) }], -5) === false, 'limite negativo nao liga nada');
+  check(cortesia.contextoPerdido([{ at: hAtras(288) }], null) === false, 'limite nulo nao decide');
+  check(cortesia.contextoPerdido([{ at: hAtras(288) }], 'oito') === false, 'limite que nao e numero nao decide');
+  check(cortesia.contextoPerdido([{ texto: 'oi' }], 48) === false, 'mensagem sem horario NAO e contexto perdido');
+  check(cortesia.contextoPerdido([{ at: 'nao e data' }], 48) === false, 'horario ilegivel NAO e contexto perdido');
+  check(cortesia.contextoPerdido([], 48) === false, 'conversa vazia');
+  check(cortesia.contextoPerdido(null, 48) === false, 'lista nula');
+
+  // A regua ANTIGA continua existindo: o quadro dele pode ter caixa com ela.
+  check(typeof cortesia.deOutroDia === 'function', 'deOutroDia continua exportada (sinal do quadro)');
 }
 
 fim();

@@ -471,6 +471,39 @@ const INTERVALO_DA_RAJADA_MS = 30 * 60 * 1000;
  *
  * Mensagem sem `at` não decide nada: devolve `false`, que é o lado que **não** manda material.
  */
+/**
+ * **Faz mais de X horas que ela escreveu — o contexto passou.** Pedido dele (14/10/2026):
+ * *"estou respondendo mensagens de 12 dias atrás, preciso que mande só mensagem do momento; bote um
+ * limite de 48 horas para seguir o fluxo normalmente, senão mandar mensagem do momento"*.
+ *
+ * **É o mesmo conceito de `deOutroDia`, com outra régua, e a régua é dele.** Em 04/09 ele definiu o
+ * corte como o **DIA LOCAL** — *"se foi no dia anterior, é mensagem do momento"* —, e a razão
+ * escrita era que é o que ele LÊ: a plataforma separa a conversa por data. Em HORAS a conta é
+ * outra: 23h de ontem contra 1h de hoje são "ontem e hoje" para quem olha e **duas horas** para
+ * quem conta. As duas coisas são verdade, e **ele escolheu horas** — então a régua mudou e o motivo
+ * de a antiga existir fica escrito aqui, não apagado.
+ *
+ * **O limite é DELE e vive na Config** (`auto.horasContextoPerdido`, nasce em 48): número que ele
+ * ditou num dia não pode virar constante no código, senão volta como trava que ele não alcança —
+ * foi o que custou o teto de 45 por número em 02/10.
+ *
+ * **Sem horário não é "passou".** Mensagem sem `at` devolve `false`: inventar que o contexto
+ * esfriou mandaria a mensagem do momento por cima de uma conversa de agora.
+ */
+export function contextoPerdido(entrantes, horas, agora = new Date()) {
+  const limite = Number(horas);
+  if (!Number.isFinite(limite) || limite <= 0) return false;
+
+  const lista = Array.isArray(entrantes) ? entrantes : [];
+  for (let i = lista.length - 1; i >= 0; i -= 1) {
+    const t = lista[i]?.at ? new Date(lista[i].at) : null;
+    if (t && !Number.isNaN(t.getTime())) {
+      return (new Date(agora).getTime() - t.getTime()) / 3600000 > limite;
+    }
+  }
+  return false;
+}
+
 export function deOutroDia(entrantes, agora = new Date()) {
   const lista = Array.isArray(entrantes) ? entrantes : [];
   for (let i = lista.length - 1; i >= 0; i -= 1) {

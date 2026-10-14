@@ -34,7 +34,7 @@ import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
 import { criarGuardaDeRolagem, TECLAS_QUE_ROLAM } from './rolagem.js';
-import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado } from '../lib/cortesia.js';
+import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -3912,6 +3912,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'removido pode não gerar tarja nenhuma. A leitura é uma por rodada, e falhando ela a ' +
           'rodada se comporta como antes — não consegui ler NÃO é "foi removido", e concluir por ' +
           'causa de um erro de rede tiraria a pessoa da fila por engano.')
+    );
+
+    /**
+     * **O limite de tempo do contexto** — pedido dele (14/10/2026): *"bote um limite de 48 horas
+     * para seguir o fluxo normalmente, senão mandar mensagem do momento"*. Campo e não constante,
+     * pela lição do teto de 45 por número (02/10).
+     */
+    card.append(
+      campoNumero(
+        'Contexto passou depois de quantas HORAS sem ela escrever (0 desliga)',
+        state.auto.cfg.horasContextoPerdido,
+        (v) => salvarAuto({ horasContextoPerdido: v }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Passado o limite, a rodada para de seguir o fluxo e manda a MENSAGEM DO MOMENTO — ou ' +
+          'conclui sem enviar, se não houver mensagem do momento para mandar. Responder o assunto ' +
+          'de doze dias atrás soa a quem não estava lá.'),
+      h('div', { class: 'wf-origin' },
+        'Três coisas continuam passando por cima do limite: PERGUNTA pendente e MATERIAL pedido ' +
+          '(decisões suas, de 04 e 05/09) e quem só se DESPEDIU, que segue sendo concluído em ' +
+          'silêncio. E as protecões que não enviam nada continuam acima: sem interesse, assessor, ' +
+          'presença confirmada, endereço informado e a etiqueta que dispensa da fila.')
     );
     card.append(
       h('div', { class: 'wf-origin' },
@@ -9308,6 +9330,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * ontem soa a quem não estava lá, seja ele apoio, cadastro ou piada política.
          */
         deOutroDia: deOutroDia(state.entrantes),
+        /**
+         * **Faz mais de X horas que ela escreveu** — a régua de `contexto-de-outro-dia` desde
+         * 14/10/2026, com o limite em `auto.horasContextoPerdido` (nasce em 48, `0` desliga).
+         *
+         * `deOutroDia` continua calculado ao lado: ele é a régua antiga (dia local) e ainda é lido
+         * pelo QUADRO dele como sinal. Tirá-lo daqui apagaria a condição das caixas que ele já
+         * montou com esse sinal — quadro é cópia, e sinal que some de lá não casa mais nunca.
+         */
+        contextoPerdido: contextoPerdido(state.entrantes, state.auto.cfg.horasContextoPerdido),
         /**
          * **Ela pediu material e ainda não recebeu.**
          *

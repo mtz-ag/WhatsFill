@@ -1,43 +1,58 @@
-## 2026-10-14 - v3.151.0 - a opcao de concluir existia e nunca era alcancada
+## 2026-10-14 - v3.152.0 - 48 horas: passado o limite, so a mensagem do momento
 
-**Relato dele, com print:** *"nao esta concluindo"* - a plataforma marcando **"Canal removido"** em
-vermelho, o atendimento dizendo *"iniciado em 01/10/2026 as 19:59 no canal null"*, e as duas caixas
-da v3.150.0 marcadas.
+**Pedido dele:** *"estou respondendo mensagens de 12 dias atras, preciso que mande so mensagem do
+momento; bote um limite de 48 horas para seguir o fluxo normalmente, senao mandar mensagem do
+momento"*.
 
-### A causa e de ORDEM, e estava visivel no proprio print
+### Mudar so a regua nao resolveria nada
 
-O painel mostrava a tarja vermelha certa: *"o numero deste atendimento nao esta em nenhum candidato
-(...) **A rodada nao vai tratar este contato**"*.
+A regra do tempo **ja existia** (`contexto-de-outro-dia`, de 04/09) e ja mandava a mensagem do
+momento. O que ela nao fazia era **vencer**: era a **20a** da lista, e tudo acima dela decidia antes
+-- por isso uma mensagem de doze dias ainda caia em `nunca-pediram-dados` (pede o cadastro),
+`anuncio-modelo-e-dados` (manda o recibo), `pergunta-aberta` e `ultima-pede-resposta-pessoal`
+(tecla 6, a IA escreve).
 
-Essa e a **barreira do candidato**, de 25/09, e ela roda **antes** do bloco do canal removido. Como
-**numero removido da conta nao esta em candidato nenhum por definicao**, ele caia em `desconhecido`
-e era **pulado antes de o bloco novo existir para ele**. A opcao de concluir estava escrita, a caixa
-estava marcada, e o codigo nunca chegava la.
+**O sinal estava certo e quem decidia era outra coisa.** E a licao que este arquivo pagou ontem, de
+novo: **medir o sinal nao basta, tem de medir a ORDEM.**
 
-**E o pior da forma:** a mensagem mandava *"some o numero ao candidato certo na aba Config"* - ou
-seja, mandava arrumar um cadastro que **nao tem conserto**, porque o numero nao existe mais.
+### O que mudou
 
-### O conserto
+**A regua virou HORAS.** `cortesia.contextoPerdido` mede horas desde a ultima mensagem dela;
+`deOutroDia` (dia local) continua existindo porque e **sinal do QUADRO** dele -- tirar sinal do
+codigo descarta a caixa de quadro ja exportado, e o ramo sumiria sem ninguem pedir.
 
-O bloco do canal removido subiu para **antes da barreira do candidato**, logo depois do `load()`. A
-barreira continua certa para o que ela foi escrita: numero que existe e e de OUTRO candidato, ou que
-ele ainda nao cadastrou. **Removido nao e cadastro faltando.**
+**O limite e DELE e vive na Config** (`auto.horasContextoPerdido`, nasce em **48**, `0` desliga).
+Campo e nao constante pela licao do teto de 45 por numero (02/10): numero que ele ditou num dia volta
+como trava que ele nao alcanca.
 
-Os dois lados ficaram escritos: o bloco diz por que vem antes, e a barreira diz que o removido nao
-chega ate ela.
+**A caixa subiu da 20a para a 7a posicao** -- logo abaixo das seis protecoes que significam "nao
+mande nada" (sem interesse, assessor, ultima e nossa, presenca confirmada, endereco informado,
+etiqueta que dispensa) e **acima de todo o resto**. Acima dela so esta o que nao envia.
 
-### A licao, que este projeto ja pagou tres vezes
+### Tres excecoes vencem o limite, e uma delas e minha
 
-**Guarda nova so vale onde ela e ALCANCADA.** E a mesma familia do *"excecao escrita dentro de uma
-regra so vale onde aquela regra alcanca"* (09/09) e do *"a caixa pode CASAR e mesmo assim perder"*
-(06/09): **medir o SINAL nao basta - tem de medir a ORDEM**. O veredito estava certo; quem decidia
-era outra coisa, tres mil linhas acima.
+As duas primeiras sao DELE e ja viviam na CONDICAO, entao valem onde quer que a caixa esteja no
+quadro: **pergunta pendente** (04/09) e **material pedido** (05/09). Fechei tambem `perguntaAberta`,
+que e chave diferente de `perguntaPendente` e ficaria de fora agora que a caixa subiu acima de
+`pergunta-aberta` -- a excecao dele teria passado a valer pela metade.
 
-### O que continua sendo ponto unico de falha, e foi dito a ele
+**A terceira e minha e esta dita para ele poder cortar:** quem so se **DESPEDIU** nao recebe a
+mensagem do momento. Sem ela, subindo a caixa acima de `ultima-e-despedida`, um *"obrigado, era so
+isso"* de doze dias atras receberia propaganda.
 
-A conferencia depende de ler a lista de numeros da conta pela API. Falhando a leitura, o veredito e
-`nao-da-para-saber` e a rodada se comporta como antes - **de proposito**, porque concluir por erro de
-rede tiraria a pessoa da fila por engano. **A plataforma mostra um selo "Canal removido" na propria
-tela**, que serviria de segundo sinal sem depender da API; nao entrou porque **nao da para conferir
-o seletor sem a pagina aberta**, e chutar seletor e o que este projeto nao faz.
+### E uma inversao que e escolha dele
+
+**"Pediu algo sem dizer o que" passou a PERDER para o tempo.** Ate hoje ia para a tecla 6 (gente
+olha); passadas 48h, passa a receber a mensagem do momento. E o que a frase dele pede, e e o caso
+mais sensivel da mudanca -- esta escrito no teste, com o motivo, para poder ser revertido.
+
+### Armadilha pega ao escrever
+
+Escrevi a guarda da despedida como `!c.ehDespedida` e **a chave do painel e `ultimaEhDespedida`**.
+Regra que le chave que o painel nao escreve esta **morta** e o teste nao ve (18/09, a Rita) -- peguei
+conferindo a regra vizinha, nao por teste. E o verificador de **caixa morta** do quadro acusou as
+tres caixas do padrao assim que o sinal mudou de nome: o amostrador de contextos tambem precisava
+conhecer `contextoPerdido`.
+
+`tools/fluxo-padrao.json` regerado junto, como manda a regra de 03/09.
 
