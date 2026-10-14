@@ -1,58 +1,36 @@
-## 2026-10-14 - v3.152.0 - 48 horas: passado o limite, so a mensagem do momento
+## 2026-10-14 - v3.153.0 - as duas excecoes do limite cairam, por decisao dele
 
-**Pedido dele:** *"estou respondendo mensagens de 12 dias atras, preciso que mande so mensagem do
-momento; bote um limite de 48 horas para seguir o fluxo normalmente, senao mandar mensagem do
-momento"*.
+**Pedido dele:** *"pedido de material e so para periodo eleitoral e ja acabou, e pergunta pendente
+apos 12 dias e melhor ignorar"*.
 
-### Mudar so a regua nao resolveria nada
+As duas excecoes eram DELE e viveram cinco semanas: **o material** (05/09, *"o modelo de material e
+uma excecao, ele sempre tem que ser mandado quando requisitado"*) e **a pergunta** (04/09, *"unico
+pretexto que exclui a necessidade de hora e pergunta pendente"*). Caem pelo mesmo motivo, e o motivo
+e do mundo e nao do codigo: **a eleicao acabou em 04/10**, o material de campanha deixou de existir
+como entrega, e conversa parada ha doze dias nao tem pergunta viva para responder.
 
-A regra do tempo **ja existia** (`contexto-de-outro-dia`, de 04/09) e ja mandava a mensagem do
-momento. O que ela nao fazia era **vencer**: era a **20a** da lista, e tudo acima dela decidia antes
--- por isso uma mensagem de doze dias ainda caia em `nunca-pediram-dados` (pede o cadastro),
-`anuncio-modelo-e-dados` (manda o recibo), `pergunta-aberta` e `ultima-pede-resposta-pessoal`
-(tecla 6, a IA escreve).
+Com isso a regra virou o que ele pediu desde a primeira frase: **passado o limite, o fluxo nao
+decide mais nada** - sai a mensagem do momento, ou conclui se nao houver uma.
 
-**O sinal estava certo e quem decidia era outra coisa.** E a licao que este arquivo pagou ontem, de
-novo: **medir o sinal nao basta, tem de medir a ORDEM.**
+### A unica guarda que fica e minha, e esta dita
 
-### O que mudou
+Quem so se **DESPEDIU** nao recebe a mensagem do momento. Sem ela, um *"obrigado, era so isso"* de
+doze dias atras receberia propaganda, e a despedida sempre concluiu em silencio neste projeto.
+Cortando esta tambem, a regra passa a valer para todo mundo que nao esta nas seis protecoes acima.
 
-**A regua virou HORAS.** `cortesia.contextoPerdido` mede horas desde a ultima mensagem dela;
-`deOutroDia` (dia local) continua existindo porque e **sinal do QUADRO** dele -- tirar sinal do
-codigo descarta a caixa de quadro ja exportado, e o ramo sumiria sem ninguem pedir.
+### O que eu fiz e DESFIZ, e vale registrar
 
-**O limite e DELE e vive na Config** (`auto.horasContextoPerdido`, nasce em **48**, `0` desliga).
-Campo e nao constante pela licao do teto de 45 por numero (02/10): numero que ele ditou num dia volta
-como trava que ele nao alcanca.
+Eu tinha movido a caixa do tempo para **acima do recibo do anuncio na CHEGADA**, com o argumento de
+que o recibo hoje e material de campanha de uma eleicao encerrada. O argumento continua de pe **e a
+edicao estava errada**: aquela posicao e do QUADRO (04/09, *"quem chega pelo anuncio e ainda nao
+recebeu nada tem direito ao recibo"*), e **reordenar o quadro dele por conta propria e o que este
+projeto nao faz**. Revertido, e o teste passou a gravar o porque.
 
-**A caixa subiu da 20a para a 7a posicao** -- logo abaixo das seis protecoes que significam "nao
-mande nada" (sem interesse, assessor, ultima e nossa, presenca confirmada, endereco informado,
-etiqueta que dispensa) e **acima de todo o resto**. Acima dela so esta o que nao envia.
+**Dito a ele, para ser decisao dele:** quem chegou pelo anuncio ha doze dias e nunca recebeu nada
+continua recebendo o recibo.
 
-### Tres excecoes vencem o limite, e uma delas e minha
+### Tres assercoes invertidas, com o motivo escrito
 
-As duas primeiras sao DELE e ja viviam na CONDICAO, entao valem onde quer que a caixa esteja no
-quadro: **pergunta pendente** (04/09) e **material pedido** (05/09). Fechei tambem `perguntaAberta`,
-que e chave diferente de `perguntaPendente` e ficaria de fora agora que a caixa subiu acima de
-`pergunta-aberta` -- a excecao dele teria passado a valer pela metade.
-
-**A terceira e minha e esta dita para ele poder cortar:** quem so se **DESPEDIU** nao recebe a
-mensagem do momento. Sem ela, subindo a caixa acima de `ultima-e-despedida`, um *"obrigado, era so
-isso"* de doze dias atras receberia propaganda.
-
-### E uma inversao que e escolha dele
-
-**"Pediu algo sem dizer o que" passou a PERDER para o tempo.** Ate hoje ia para a tecla 6 (gente
-olha); passadas 48h, passa a receber a mensagem do momento. E o que a frase dele pede, e e o caso
-mais sensivel da mudanca -- esta escrito no teste, com o motivo, para poder ser revertido.
-
-### Armadilha pega ao escrever
-
-Escrevi a guarda da despedida como `!c.ehDespedida` e **a chave do painel e `ultimaEhDespedida`**.
-Regra que le chave que o painel nao escreve esta **morta** e o teste nao ve (18/09, a Rita) -- peguei
-conferindo a regra vizinha, nao por teste. E o verificador de **caixa morta** do quadro acusou as
-tres caixas do padrao assim que o sinal mudou de nome: o amostrador de contextos tambem precisava
-conhecer `contextoPerdido`.
-
-`tools/fluxo-padrao.json` regerado junto, como manda a regra de 03/09.
+*"pergunta de razao vence o tempo"*, *"material pedido e nao entregue: o modelo vence o dia"* e a da
+volta. As tres gravavam as excecoes dele; agora gravam a decisao nova e a data dela.
 

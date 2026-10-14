@@ -437,12 +437,27 @@ export const REGRAS = [
      * passaria a mandar propaganda por cima de um *"obrigado, era só isso"* de doze dias atrás —
      * e a despedida sempre concluiu em silêncio neste projeto.
      */
-    quando: (c) =>
-      !!c.contextoPerdido &&
-      !c.perguntaPendente &&
-      !c.perguntaAberta &&
-      !c.materialPendente &&
-      !c.ultimaEhDespedida,
+    /**
+     * **AS DUAS EXCEÇÕES DELE SAÍRAM EM 14/10/2026, por decisão dele, no mesmo dia em que o limite
+     * de horas entrou:** *"pedido de material é só para período eleitoral e já acabou, e pergunta
+     * pendente após 12 dias é melhor ignorar"*.
+     *
+     * Elas eram dele e viveram cinco semanas — **a do material** (05/09: *"o modelo de material é
+     * uma exceção, ele sempre tem que ser mandado quando requisitado"*) e **a da pergunta** (04/09:
+     * *"único pretexto que exclui a necessidade de hora é pergunta pendente"*). As duas caem pelo
+     * mesmo motivo, e o motivo é do mundo e não do código: **a eleição acabou em 04/10**, o
+     * material de campanha deixou de existir como entrega, e conversa parada há doze dias não tem
+     * pergunta viva para responder.
+     *
+     * Com isso a regra virou o que ele pediu desde a primeira frase: **passado o limite, o fluxo
+     * não decide mais nada** — sai a mensagem do momento, ou conclui se não houver uma.
+     *
+     * **A única guarda que fica é a da DESPEDIDA, e ela é minha** — dita a ele nas duas vezes.
+     * Quem escreveu *"obrigado, era só isso"* não recebe propaganda doze dias depois, e a despedida
+     * sempre concluiu em silêncio neste projeto. Se ele cortar esta também, a regra passa a valer
+     * para todo mundo que não está nas seis protecões acima.
+     */
+    quando: (c) => !!c.contextoPerdido && !c.ultimaEhDespedida,
     motivo: (c) =>
       c.podeMandarMomento && !c.momentoJaEnviado
         ? 'faz mais tempo que o limite desde a última mensagem dela — o contexto passou; a mensagem do momento é o que há de novo.'

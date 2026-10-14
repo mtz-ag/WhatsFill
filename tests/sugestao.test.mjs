@@ -814,8 +814,14 @@ grupo('apoio: o TEMPO escolhe entre agradecer e a mensagem do momento (03/09/202
    * respondida"*. Vale por ORDEM: as duas caixas de pergunta ficam acima desta.
    */
   const P = { termo: 'por que' };
-  check(com({ ...apoio, contextoPerdido: true, perguntaAberta: P })?.id === 'pergunta-aberta',
-    'pergunta de razao vence o tempo');
+  /**
+   * **A EXCECAO DA PERGUNTA SAIU EM 14/10/2026, por decisao dele:** *"pergunta pendente apos 12
+   * dias e melhor ignorar"*. Ela era dele (04/09, *"unico pretexto que exclui a necessidade de
+   * hora e pergunta pendente"*) e viveu cinco semanas. Conversa parada ha doze dias nao tem
+   * pergunta viva para responder -- passado o limite, o tempo decide.
+   */
+  check(com({ ...apoio, contextoPerdido: true, perguntaAberta: P })?.id === 'contexto-de-outro-dia',
+    'pergunta de razao NAO vence mais o tempo (invertido em 14/10)');
   /**
    * **ISTO INVERTEU EM 14/10/2026, por escolha dele** — *"bote um limite de 48 horas para seguir o
    * fluxo normalmente, senao mandar mensagem do momento"*. Ate entao "pediu algo sem dizer o que"

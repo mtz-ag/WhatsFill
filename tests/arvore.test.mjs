@@ -2039,10 +2039,17 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   };
 
   const chegada = arv.decidir({ ...base, podeEnviar: true }, fluxo, {});
-  check(chegada?.tecla === 'a', `de ontem, na chegada, o modelo sai igual (tecla ${chegada?.tecla})`);
+  /**
+   * **NA CHEGADA o recibo continua vencendo o tempo**, e isto NAO mudou em 14/10: a posicao e do
+   * QUADRO (04/09, *"quem chega pelo anuncio e ainda nao recebeu nada tem direito ao recibo"*), e
+   * reordenar o quadro dele por conta propria e o que este projeto nao faz. **Dito a ele:** com a
+   * eleicao encerrada, esse recibo e material de campanha de uma eleicao que acabou, e mover a
+   * caixa e decisao dele.
+   */
+  check(chegada?.tecla === 'a', `na chegada, o recibo ainda vence o tempo (tecla ${chegada?.tecla})`);
 
   const volta = arv.decidir({ ...base, jaRespondemosAntes: true, temEtiquetaDeCidade: true, podeEnviar: true }, fluxo, {});
-  check(volta?.tecla === '1', `de ontem, na volta, o modelo sai igual (tecla ${volta?.tecla})`);
+  check(volta?.tecla === '5', `passado o limite, na volta sai a do momento (tecla ${volta?.tecla})`);
 
   /**
    * **A guarda contra a repeticao e a ENTREGA, e nao o tempo.** Saindo o modelo, o sinal se apaga
@@ -2490,11 +2497,11 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   const hoje = arv.decidir({ ...leonilda, contextoPerdido: false, podeMandarMomento: true, momentoJaEnviado: false }, arvore, {});
   check(hoje?.tecla === '1', `clicou HOJE: o modelo do anuncio sai igual (tecla ${hoje?.tecla})`);
 
-  // FALSO POSITIVO 2 — o material (05/09): *"o modelo de material e uma excecao, ele sempre tem
-  // que ser mandado quando requisitado"*. A guarda esta na CONDICAO da regra, entao nao depende
-  // desta posicao.
+  // O MATERIAL DEIXOU DE VENCER O TEMPO em 14/10/2026, por decisao dele: *"pedido de material e
+  // so para periodo eleitoral e ja acabou"*. A excecao era dele (05/09) e caiu com a eleicao --
+  // material de campanha deixou de existir como entrega.
   const material = arv.decidir({ ...leonilda, materialPendente: true, podeMandarMomento: true, momentoJaEnviado: false }, arvore, {});
-  check(material?.tecla === '1', `material pedido e nao entregue: o modelo vence o dia (tecla ${material?.tecla})`);
+  check(material?.tecla === '5', `material pedido NAO vence mais o tempo (tecla ${material?.tecla})`);
 
   // FALSO POSITIVO 3 — a CHEGADA (04/09): quem nunca recebeu nada tem direito ao recibo mesmo que
   // a rodada so a alcance no dia seguinte. La o tempo continua ABAIXO do recibo.

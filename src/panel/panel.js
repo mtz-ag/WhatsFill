@@ -3930,10 +3930,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'conclui sem enviar, se não houver mensagem do momento para mandar. Responder o assunto ' +
           'de doze dias atrás soa a quem não estava lá.'),
       h('div', { class: 'wf-origin' },
-        'Três coisas continuam passando por cima do limite: PERGUNTA pendente e MATERIAL pedido ' +
-          '(decisões suas, de 04 e 05/09) e quem só se DESPEDIU, que segue sendo concluído em ' +
-          'silêncio. E as protecões que não enviam nada continuam acima: sem interesse, assessor, ' +
-          'presença confirmada, endereço informado e a etiqueta que dispensa da fila.')
+        'Passado o limite, o fluxo não decide mais nada — nem pergunta pendente nem pedido de ' +
+          'material seguram (as duas exceções saíram em 14/10, por decisão sua: o material era do ' +
+          'período eleitoral, e pergunta de doze dias atrás não tem o que responder).'),
+      h('div', { class: 'wf-origin' },
+        'Só duas coisas continuam passando por cima: quem só se DESPEDIU, que segue sendo ' +
+          'concluído em silêncio, e as protecões que não enviam nada — sem interesse, assessor, ' +
+          'presença confirmada, endereço informado e a etiqueta que dispensa da fila. Na CHEGADA ' +
+          'pelo anúncio, o recibo ainda vence o tempo: essa posição é do seu quadro.')
     );
     card.append(
       h('div', { class: 'wf-origin' },

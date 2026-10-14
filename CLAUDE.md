@@ -2233,6 +2233,19 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **AS DUAS EXCECOES DO LIMITE CAIRAM NO MESMO DIA, POR DECISAO DELE** (14/10/2026: *"pedido de
+  material e so para periodo eleitoral e ja acabou, e pergunta pendente apos 12 dias e melhor
+  ignorar"*). Eram DELE e viveram cinco semanas — o material (05/09) e a pergunta (04/09) —, e caem
+  pelo mesmo motivo, que e do mundo e nao do codigo: **a eleicao acabou em 04/10**. A regra virou o
+  que ele pediu desde a primeira frase: **passado o limite, o fluxo nao decide mais nada.**
+  **A unica guarda que fica e MINHA e esta dita a ele:** quem so se DESPEDIU nao recebe a mensagem
+  do momento.
+  **E eu movi a caixa na CHEGADA e DESFIZ:** o recibo do anuncio hoje e material de campanha de uma
+  eleicao encerrada, entao o argumento de por o tempo acima dele estava certo — **e a edicao estava
+  errada**, porque aquela posicao e do QUADRO (04/09) e **reordenar o quadro dele por conta propria
+  e o que este projeto nao faz**. Revertido, com o porque gravado no teste. Quem chegou pelo anuncio
+  ha doze dias e nunca recebeu nada continua recebendo o recibo, e mudar isso e decisao dele.
+
 - **48 HORAS: PASSADO O LIMITE, SO A MENSAGEM DO MOMENTO — E MUDAR A REGUA NAO BASTAVA**
   (14/10/2026: *"estou respondendo mensagens de 12 dias atras (...) bote um limite de 48 horas para
   seguir o fluxo normalmente, senao mandar mensagem do momento"*). A regra do tempo JA existia
