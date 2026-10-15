@@ -200,6 +200,61 @@ grupo('despedida: o que NAO pode virar concluir');
 }
 
 
+/**
+ * **"TUDO CERTO OBRIGADO" NAO FECHAVA, E "TUDO BEM OBRIGADO" FECHAVA** — print dele (15/10/2026).
+ *
+ * Ela escreveu *"Tudo certo obrigado"* as 16:03 e recebeu `agradecer-info`; ele apagou:
+ * *"terceira vez seguida que manda a mensagem rapida, me de a lista de frases que entram como
+ * finalizacao de conversa"*.
+ *
+ * **Medido: o vocabulario de despedida VIA o "obrigado".** O que falhou foi a segunda metade da
+ * regra — tirada a despedida, sobrava *"tudo certo"*, e `certo` contava como conteudo. A palavra
+ * **ja estava registrada como vazia em `PALAVRAS_SEM_CONTEUDO`**, a outra lista do mesmo arquivo:
+ * duas listas respondendo a mesma pergunta e discordando.
+ *
+ * **E o desfecho muda:** medido nos dois motores, em sessao nova (ela reabriu depois de concluido)
+ * o caso ia para `ja-respondemos-antes` -> **tecla 5**, que ENVIA; com a despedida reconhecida vai
+ * para `ultima-e-despedida` -> **tecla 3**, que conclui sem enviar nada.
+ */
+grupo('encerramento com confirmacao: "Tudo certo obrigado" (15/10)');
+{
+  const t = (x) => ({ texto: x, tipo: 'TEXT' });
+
+  check(ehDespedida(t('Tudo certo obrigado')), 'a frase da print fecha a conversa');
+  check(ehDespedida(t('Tudo certo, obrigado!')), 'com virgula e exclamacao');
+  check(ehDespedida(t('Ok obrigado')), '"ok obrigado"');
+  check(ehDespedida(t('Ta bom obrigado')), '"ta bom obrigado"');
+  check(ehDespedida(t('Blz valeu')), '"blz valeu"');
+  check(ehDespedida(t('Sim, obrigado')), '"sim, obrigado"');
+  check(ehDespedida(t('Valeu, beleza')), '"valeu, beleza"');
+  check(ehDespedida(t('Tudo bem obrigado')), 'e a forma que ja fechava continua fechando');
+
+  /**
+   * **A metade cara: sobrando assunto, nao fecha.** Concluir aqui e fechar a porta na cara de quem
+   * pediu alguma coisa — a disciplina de 31/08, que esta separacao nao pode afrouxar.
+   */
+  check(!ehDespedida(t('Obrigado, mas preciso do material')), 'pedido junto nao fecha');
+  check(!ehDespedida(t('Valeu, me manda o link do grupo')), 'pedido de link nao fecha');
+  check(!ehDespedida(t('Tudo certo, quando e o evento?')), 'pergunta junto nao fecha');
+  check(!ehDespedida(t('Obrigado, voces tem adesivo?')), 'pergunta de material nao fecha');
+  check(!ehDespedida(t('Obrigado, me liga por favor')), 'pedido de ligacao nao fecha');
+  check(!ehDespedida(t('Tudo certo com a entrega?')), 'sem despedida nenhuma nao fecha');
+  check(!ehDespedida(t('Ok, vou ver isso')), 'confirmacao sem despedida nao fecha');
+  check(!ehDespedida(t('Amem, mas o Lula vai ganhar')), 'o que sobra politico nao fecha');
+
+  /**
+   * **As duas listas tem de concordar sobre a palavra.** Esta assercao e a que pega a proxima
+   * palavra posta numa so delas.
+   */
+  const fs = await import('node:fs');
+  const arq = fs.readFileSync(new URL('../src/lib/cortesia.js', import.meta.url), 'utf8');
+  const naPeneira = arq.slice(arq.indexOf('function restoDaMensagem'), arq.indexOf('function mensagemDeCortesia'));
+  for (const palavra of ['certo', 'ok', 'beleza', 'blz', 'sim', 'claro', 'bom', 'boa']) {
+    check(new RegExp(`\|${palavra}\|`).test(naPeneira), `"${palavra}" e palavra sem conteudo nas DUAS listas`);
+  }
+}
+
+
 grupo('despedida com vocativo: "Amem mestre"');
 {
   const t = (x) => ({ texto: x, tipo: 'TEXT' });

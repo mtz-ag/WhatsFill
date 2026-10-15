@@ -1,71 +1,69 @@
-## 2026-10-15 - v3.163.0 - a campanha acabou, e a regra continuava oferecendo vaga nela
+## 2026-10-15 - v3.164.0 - "Tudo certo obrigado" nao fechava a conversa, e a mensagem saia
 
-**Print dele:** o contato mandou uma foto e escreveu so *"Quanto paga?"*. As 16:10 saiu *"Boa
-tarde! Infelizmente nao estamos contratando, so estamos trabalhando com voluntarios, sem
-remuneracao. Se tiver interesse nesse formato, me avise."*; ele apagou e digitou, a mao, *"boa tarde
-somos da equipe do capitao martim em que podemos ajudar?"*. Relato: *"resposta ainda se tratando de
-campanha, a campanha acabou do martim e a conversa era um provavel engano de remetente"*.
+**Print dele:** ela mandou um audio (*"Fala, meu lindo, tudo bem?"*) as 10:55, nos respondemos as
+11:46 e o atendimento foi concluido. As **16:03** ela escreveu *"Tudo certo obrigado"* e as **16:16**
+saiu `agradecer-info` (*"Obrigado pela mensagem e pelas informacoes! Seguimos juntos. Que Deus
+abencoe voce e sua familia"*) — ele apagou. *"terceira vez seguida que manda a mensagem rapida, me
+de a lista de frases que entram como finalizacao de conversa"*.
 
-### Quem escreveu aquilo foi a REGRA 12, e a medicao disse isso antes de eu mexer
+### A lista que ele pediu
 
-O texto e **byte a byte** o modelo que estava escrito nela: a frase dele de 25/09 (*"infelizmente
-nao estamos contratando, so estamos trabalhando com voluntarios, sem remuneracao"*) mais o convite
-do fim (*"se tiver interesse nesse formato, me avise"*).
+**Vocabulario de despedida** (`cortesia.DESPEDIDA`), onze formas:
 
-**Nao foi resposta pronta e nao foi o detector.** Medido: `pedeEmprego` **nao chega a IA** — nao
-esta em nenhum argumento de `rascunhar` —, e quem mandou o caso para la foi `pergunta-aberta`
-(tecla 6). A regra 12 esta em TODA chamada e foi puxada pela proximidade com a palavra "paga".
+> e nos / e nois · abraco, abracos, forte abraco · valeu · vlw · obrigado, obrigada · brigado,
+> brigada · amem · boa sorte · Deus (te) abencoe · fica com Deus · sucesso
 
-**E o fato que a desmentia nao chegava junto:** medido, *"Quanto paga?"* nao aciona
-`precisaDoDossie`, entao as linhas do dossie que dizem que a eleicao foi em **04/10** e que cinco
-dos seis cargos estao decididos **nunca entram nessa conversa**. E a licao de 07/09 outra vez —
-regra longe do pedido nao e cumprida —, e por isso o fato passou a ser escrito DENTRO da regra.
+**Despedida amarga** (`DESPEDIDA_AMARGA`), cinco, e estas fecham sem mais conferencia:
 
-### O que mudou na regra 12
+> obrigado por nada · valeu por nada · deixa pra la · deixa quieto · esquece entao
 
-- **o modelo a copiar virou uma frase so:** *"infelizmente nao estamos contratando"*, e PARE;
-- **o convite ao voluntariado saiu do modelo e virou frase PROIBIDA**, com as palavras escritas
-  (proibicao que nao nomeia a frase nao diz ao modelo qual evitar). A campanha acabou: oferecer
-  vaga de voluntario nela e a **porta que nao abre** da regra 7, com quem aceitar esperando um
-  chamado que nao vem;
-- **"a campanha acabou" entrou na lista do que NAO se diz ao eleitor**, junto da equipe paga e dos
-  contratos da pre-campanha: e motivo interno, e dito vira *"e quando abre a proxima?"*;
-- **escopo**: *"Quanto paga?"*, *"quanto voces pagam?"* e *"qual o valor?"* soltos nao sao pedido de
-  vaga — sao engano de destinatario, e a resposta e a da **regra 9**, que e exatamente a frase que
-  ele digitou a mao. E a licao registrada tres vezes em 10/09: ao escrever regra sobre um assunto,
-  escreva tambem o que ela NAO cobre.
+**E ha uma SEGUNDA metade na regra, que e metade dos casos que falham:** tirada a despedida, nao
+pode sobrar nada. *"Valeu, me manda o material"* nao fecha, de proposito.
 
-### E o detector decidia sozinho dizendo que nao decidia
+### Medido: 29 das 41 formas mais comuns de encerrar NAO eram reconhecidas
 
-`MENCIONA_REMUNERACAO` era um dos itens de `QUER_TRABALHAR`, entao *"Quanto paga?"* sozinho devolvia
-`{tipo: 'campanha'}` — **com o comentario logo acima dela afirmando o contrario** (*"sozinha ela nao
-decide nada: so e lida depois de `QUER_TRABALHAR` ja ter casado"*). O "comentario que descreve a
-ordem nao e a ordem" (01/09) numa lista.
+E a da print falhava **na segunda metade, nao no vocabulario**: `ehDespedida` VIA o *"obrigado"*; o
+que sobrava era *"tudo certo"*, e `certo` contava como conteudo. **"Tudo bem obrigado" fechava e
+"Tudo certo obrigado" nao — a diferenca era uma palavra.**
 
-Hoje sao duas: **`REMUNERACAO_DO_TRABALHO`** decide sozinha (quanto VOU GANHAR, salario, remunerado,
-ser pago — ninguem pergunta isso sobre outra coisa) e **`PRECO_SOLTO`** nao (quanto paga, qual o
-valor — o que se pergunta a qualquer anuncio de venda). Juntas continuam decidindo o TIPO depois que
-outra forma ja casou, entao o caso do Luciano (09/09) segue `campanha`, e a guarda literal de 05/09
-(*"e remunerado ou voluntario?"*) segue sendo pedido.
+### E essa palavra ja estava registrada como vazia no mesmo arquivo
 
-### Medido
+Sao **duas listas de palavra-sem-conteudo** em `cortesia.js`: a de `restoDaMensagem` (que
+`ehDespedida` usa) e `PALAVRAS_SEM_CONTEUDO` (a de `falouAlgoProprio`, tres mil linhas abaixo). A
+segunda ja conhecia `certo`, `ok`, `beleza`, `blz`, `sim`, `claro`, `ta`, `bom`, `boa`, `grato` e
+`grata`; a primeira nao. **Duas listas respondendo a mesma pergunta e discordando** — o defeito
+registrado quatro vezes neste projeto. As que faltavam entraram.
 
-- *"Quanto paga?"*, *"qual o valor?"* e *"qual o valor do bone?"* -> **null** (antes: `campanha`);
-- *"e remunerado ou voluntario?"*, *"quanto vou ganhar?"*, *"qual o salario?"* -> **continuam**;
-- Luciano (*"trabalhar aqui para o Capitao Martim"* + *"combinarmos quanto vou ganhar"*) ->
-  `campanha`; vaga + preco na mesma rajada -> `campanha`;
+**Nao foram fundidas numa so de proposito:** uma roda no texto CRU (com acento) e a outra no texto
+ja sem acento, palavra a palavra; fundir mexe em `soCortesia` e `ehSoReacao`, que sao outras duas
+decisoes. O que fica e a regra: **ao por palavra numa, procure a outra.**
+
+### Medido depois
+
+- **13 de 14** formas de encerrar fecham (*"Tudo certo obrigado"*, *"Ok obrigado"*, *"Ta bom
+  obrigado"*, *"Blz valeu"*, *"Sim, obrigado"*, *"Valeu, beleza"*);
+- **11 de 11** falsos positivos continuam barrados: *"Obrigado, mas preciso do material"*, *"Valeu,
+  me manda o link"*, *"Tudo certo, quando e o evento?"*, *"Obrigado, me liga por favor"*;
+- **o desfecho vira silencio, nos DOIS motores.** Em sessao nova (ela reabriu depois de concluido) o
+  caso ia para `ja-respondemos-antes` -> **tecla 5, que ENVIA**; com a despedida reconhecida vai
+  para `ultima-e-despedida` -> **tecla 3, conclui sem enviar nada**. A guarda nao empurra o caso
+  para nenhuma caixa que envie (a licao da Noeli, 06/09);
 - 21 suites e os dois verificadores verdes.
 
-### O que NAO entrou, e e decisao dele
+### O que fica para ele decidir
 
-- **Se continua havendo trabalho voluntario para o MANDATO** (ele foi reeleito), a frase que convida
-  e uma linha e as palavras sao dele. Enquanto ele nao disser, a regra fecha a porta sem oferecer
-  nada: prometer o que nao se sabe que existe e o *"procure a coordenacao"* pela outra porta.
-- **A resposta pronta `trabalhar-na-campanha` continua com o texto antigo** (*"aqui a gente trabalha
-  so com voluntarios"* + pedido de endereco). Medido: as tres caixas do quadro exportado mandam o
-  caso para a IA (`ia: true`), entao ela **nao sai pelo fluxo** — mas sai pelo botao da aba
-  Respostas. Texto que vai para eleitor e dele.
-- **`"voces estao contratando?"` nao e reconhecido** (medido, e ja era assim antes desta versao): o
-  padrao exige um objeto depois do verbo (*"contratando gente"*). O comentario do codigo diz que
-  essa forma e coberta — e a mesma classe do comentario que eu acabei de consertar. Nao mexi junto
-  porque alarga o detector no commit que o estreita, e aqui se muda uma coisa por vez.
+**1. O vocabulario que FALTA, e e so dele.** Nao estao na lista, e nenhuma delas e reconhecida hoje:
+
+> tchau · ate mais · ate logo · ate breve · falou · grato · grata · agradecido · beleza (sozinho) ·
+> ok (sozinho) · combinado · tranquilo · perfeito · entao ta
+
+Nao acrescentei: e lista de vocabulario, e ela decide se um eleitor recebe mensagem ou silencio.
+Dito pela sexta vez que esse tipo de lista nao fecha — mas **"tchau" nao ser despedida e o tipo de
+buraco que so aparece quando ele aponta**. Ele diz quais entram e eu ponho.
+
+**2. No QUADRO, "so cumprimentou" esta ACIMA de "so se despediu" — e a tabela faz o contrario.**
+Medido: com os dois sinais verdadeiros (e *"Bom dia, obrigado"* liga os dois), a tabela da
+`ultima-e-despedida` -> tecla 3 e **o quadro da a caixa do cumprimento -> tecla 5, que ENVIA**. Os
+dois motores discordando e a assinatura de problema de POSICAO (14/10), e posicao no quadro e dele:
+nao movi. Mover a caixa *"So se despediu"* para cima de *"so cumprimentou"* nos dois ramos do
+retorno resolve, e ele precisa IMPORTAR o quadro depois.

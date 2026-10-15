@@ -150,13 +150,37 @@ const TEM_EMOJI = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u;
 /**
  * O que sobra depois de tirar saudação, link, pontuação, emoji e o vocabulário de cortesia.
  * Não sobrou nada? Então a mensagem era só cortesia.
+ *
+ * **ESTE ARQUIVO TEM DUAS LISTAS DE PALAVRA-SEM-CONTEÚDO, E ELAS DISCORDAVAM** — print dele
+ * (15/10/2026). Ela escreveu *"Tudo certo obrigado"* e recebeu `agradecer-info`; ele apagou:
+ * *"terceira vez seguida que manda a mensagem rápida"*.
+ *
+ * **Medido: `ehDespedida` VIA o "obrigado"** — o que falhou foi esta peneira. Tirada a despedida,
+ * sobrava *"tudo certo"*, e `certo` contava como conteúdo. *"Tudo **bem** obrigado"* fechava e
+ * *"Tudo **certo** obrigado"* não: a diferença era uma palavra.
+ *
+ * **E essa palavra já estava registrada como vazia três mil linhas abaixo**, em
+ * `PALAVRAS_SEM_CONTEUDO` (a lista de `falouAlgoProprio`), junto de `ok`, `beleza`, `blz`, `sim`,
+ * `claro`, `ta`, `bom`, `boa`, `grato` e `grata`. Duas listas respondendo à mesma pergunta —
+ * *"esta palavra carrega assunto?"* — e divergindo, que é o defeito registrado quatro vezes neste
+ * projeto. As que faltavam entraram aqui.
+ *
+ * **Não foram FUNDIDAS numa só de propósito:** esta roda no texto CRU (com acento, e por isso o
+ * padrão tem `abenç?oe` e `ótim[oa]`) e a outra roda no texto já sem acento, palavra a palavra.
+ * Fundir exige normalizar antes, e isso mexe em `soCortesia` e `ehSoReacao`, que são outras duas
+ * decisões. O que vale é: **ao pôr palavra numa, procure a outra.**
+ *
+ * **Medido depois:** 13 de 14 formas de encerrar passaram a fechar e os 11 falsos positivos da
+ * bateria continuam barrados (*"Obrigado, mas preciso do material"*, *"Valeu, me manda o link"*,
+ * *"Tudo certo, quando é o evento?"*). No caso da print o desfecho vira **tecla 3 — conclui sem
+ * enviar nada**, nos DOIS motores.
  */
 function restoDaMensagem(texto) {
   return String(texto || '')
     .replace(LINK, ' ')
     .replace(SAUDACAO, ' ')
     .replace(
-      /\b(a|as|o|os|que|para|pra|pro|todos|todas|voce|vocês|voces|amigos?|amigas?|amado|amada|deputado|mestre|chefe|guerreir[oa]|campe(ã|a)o|parceir[oa]|irm(ã|ao|a|as|aos)|meu|minha|nobre|querid[oa]|obrigad[oa]|abraç?o|abracos?|abraços?|tudo|bem|tenha[m]?|um|uma|otim[oa]|ótim[oa]|excelente|feliz|semana|final|fds|deus|abenç?oe|abencoe)\b/gi,
+      /\b(a|as|o|os|que|para|pra|pro|todos|todas|voce|vocês|voces|amigos?|amigas?|amado|amada|deputado|mestre|chefe|guerreir[oa]|campe(ã|a)o|parceir[oa]|irm(ã|ao|a|as|aos)|meu|minha|nobre|querid[oa]|obrigad[oa]|abraç?o|abracos?|abraços?|tudo|bem|certo|ok|okay|beleza|blz|sim|claro|ta|bom|boa|isso|grato|grata|tenha[m]?|um|uma|otim[oa]|ótim[oa]|excelente|feliz|semana|final|fds|deus|abenç?oe|abencoe)\b/gi,
       ' '
     )
     .replace(/[\p{P}\p{S}\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, ' ')

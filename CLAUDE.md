@@ -2249,6 +2249,30 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Armadilhas do próprio painel
 
+- **DUAS LISTAS DE PALAVRA-SEM-CONTEUDO EM `cortesia.js`, E ELAS DISCORDAVAM** (15/10/2026, *"Tudo
+  certo obrigado"* recebeu `agradecer-info` — *"terceira vez seguida que manda a mensagem rapida, me
+  de a lista de frases que entram como finalizacao de conversa"*).
+  **Medido: o vocabulario de despedida VIA o "obrigado"** — falhou a SEGUNDA metade da regra, a que
+  exige que nao sobre nada: sobrava *"tudo certo"*, e `certo` contava como conteudo. **"Tudo BEM
+  obrigado" fechava e "Tudo CERTO obrigado" nao, e a diferenca era uma palavra** — que ja estava
+  registrada como vazia em `PALAVRAS_SEM_CONTEUDO`, tres mil linhas abaixo, junto de `ok`,
+  `beleza`, `blz`, `sim`, `claro`, `ta`, `bom`, `boa`, `grato`, `grata`.
+  `restoDaMensagem` (usada por `ehDespedida`, `soCortesia` e `ehSoReacao`) roda no texto CRU, com
+  acento; `PALAVRAS_SEM_CONTEUDO` roda no texto ja sem acento, palavra a palavra. **Nao foram
+  fundidas** — fundir exige normalizar antes e mexe em tres decisoes. **Ao por palavra numa,
+  procure a outra**; ha teste exigindo que as duas concordem sobre as oito palavras do caso.
+  **Medido depois:** 13/14 formas de encerrar fecham, 11/11 falsos positivos barrados, e o desfecho
+  vira **tecla 3** (silencio) nos dois motores, contra a **tecla 5** (envia) de antes.
+  **A LISTA DE VOCABULARIO continua sendo dele e continua CURTA:** sao onze formas (e nos, abraco,
+  valeu, vlw, obrigado/a, brigado/a, amem, boa sorte, Deus abencoe, fica com Deus, sucesso) mais
+  cinco amargas. **`tchau`, `ate mais`, `ate logo`, `falou`, `grato` e `combinado` NAO estao** —
+  medido, 29 de 41 formas comuns nao sao reconhecidas. Nao acrescente por conta propria: decide se
+  o eleitor recebe mensagem ou silencio.
+  **E NO QUADRO "so cumprimentou" (tecla 5, ENVIA) esta ACIMA de "So se despediu" (tecla 3), nos
+  dois ramos do retorno — a tabela faz o contrario.** Medido com os dois sinais verdadeiros (e
+  *"Bom dia, obrigado"* liga os dois): tabela da 3, quadro da 5. Os dois motores discordando e
+  problema de POSICAO, e posicao e dele — **dito a ele, nao movido.**
+
 - **A TABELA E A ARVORE SAO DOIS MOTORES, E MOVER A REGRA NUMA NAO MOVE NA OUTRA** (14/10/2026, duas
   prints: o limite de 48h nao decidia nada). **A v3.152 moveu `contexto-de-outro-dia` de 20o para 7o
   em `sugestao.js` (a LISTA) e nao moveu a caixa em `arvore.fluxoPadrao()` (a ARVORE).** A lista so
