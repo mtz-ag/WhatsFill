@@ -7,6 +7,7 @@
  * A resposta tem que ser não em todos os casos — inclusive nos que ninguém previu, porque o
  * padrão de segurança é `incerto`, que significa "o painel se comporta como antes da IA existir".
  */
+import { readFileSync } from 'node:fs';
 import { check, grupo, fim } from './_harness.mjs';
 import { PADRAO_DE_ATENDIMENTO } from '../src/lib/atendimento.js';
 import { PROVEDORES, pedirAoWorker } from '../src/lib/ia-cliente.js';
@@ -3427,6 +3428,58 @@ grupo('xingar o adversario e apoio, e apoio nao se corrige (25/09/2026)');
   check(/NÃO é licença para você xingar junto/.test(p), 'e diz que nao e licenca para xingar junto');
   check(/quando a ofensa é contra NÓS/.test(p), 'e que ofensa contra nos tem outro caminho');
   check(/denúncia com alvo e fato/.test(p), 'e que denuncia continua sendo a regra 15');
+
+  /**
+   * **COMEMORAR TAMBEM E APOIO — print dele de 15/10/2026**, e o defeito foi MEU, da vespera.
+   *
+   * Ela escreveu *"Gracas tudo dando certo! Todos meus candidatos se Elegerao so Flavio Mas vai ser
+   * Presidente com certeza"* e recebeu *"A Presidencia ainda sera decidida no segundo turno, em 25
+   * de outubro"*. Ele apagou: *"cortou o apoio da pessoa em vez de torcer junto"*.
+   *
+   * **Medido:** `soExpressaApoio` = null (comemoracao nao e forma de apoio que a lista conhece),
+   * `perguntaPendente` = false, e `precisaDoDossie` = **true** — o dossie FOI puxado, com nove
+   * linhas sobre o 2o turno que eu acrescentei em 14/10 para impedir pedido de voto em eleicao
+   * encerrada. **Regra sem escopo e cumprida ate onde ela nao devia ir** (a licao de 08/09): o fato
+   * existia para NAO pedir voto, e virou correcao em cima de quem veio comemorar.
+   *
+   * **Nenhum detector novo, de proposito:** forma de expressar apoio nao fecha em lista — e a
+   * SEXTA vez que este projeto registra isso. O conserto e o que a IA le.
+   */
+  check(/COMEMORAR E TORCER TAMBÉM SÃO APOIO/.test(p), 'comemorar entrou na regra 17');
+  check(/Nunca corrija o placar, a data, o calendário nem a previsão dela/.test(p), 'e proibe corrigir a previsao dela');
+  check(/ainda será decidida no segundo turno/.test(p), 'com a frase do caso real escrita como o que NAO dizer');
+  /**
+   * **A guarda que mantem a regra util:** quem PERGUNTA de verdade continua sendo respondida, e o
+   * dia 25 continua podendo entrar — como convite, que e o que serve a campanha, nunca como reparo.
+   */
+  check(/como CONVITE/.test(p), 'e o segundo turno continua entrando como convite');
+  check(/Perguntando de verdade/.test(p), 'e quem pergunta de verdade continua recebendo a resposta');
+}
+
+grupo('o escopo dos numeros da eleicao mora no DOSSIE, colado neles (15/10/2026)');
+{
+  /**
+   * A regra 17 cobre o que a IA ESCREVE; o impulso de corrigir nasce do FATO, e o fato mora no
+   * dossie. **Escreva onde a regra PARA, ao lado dela** (08/09) — e em prosa, nunca em linha `> `,
+   * que `semBlocoDeRevisao` corta antes de chegar ao modelo (a armadilha de 14/10).
+   */
+  const md = readFileSync(new URL('../src/data/gabinete.md', import.meta.url), 'utf8');
+  // Espaco normalizado: o dossie e texto quebrado em 100 colunas, e procurar frase inteira contra
+  // o arquivo cru faz o teste cair quando alguem so reflui o paragrafo.
+  const noPrompt = md
+    .split('\n')
+    .filter((l) => !l.startsWith('> ') && l.trim() !== '>')
+    .join(' ')
+    .replace(/\s+/g, ' ');
+  check(
+    /NUNCA\*\* são usados para corrigir o que ela disse sobre o resultado/.test(noPrompt),
+    'o escopo dos numeros CHEGA a IA (nao esta num bloco de citacao)'
+  );
+  check(/comemore junto/.test(noPrompt), 'e manda comemorar junto');
+  check(
+    /Nunca peça voto para esses cargos/.test(noPrompt),
+    'sem desfazer o que o item 5 existe para fazer: nao pedir voto em eleicao encerrada'
+  );
 }
 
 fim();

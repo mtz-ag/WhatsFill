@@ -1008,11 +1008,30 @@ grupo('texto da PLATAFORMA nao e fala da pessoa (02/09/2026)');
   }
 
   /**
+   * **O aviso de 15/10/2026, e e o que mais incomoda da familia: ele da uma ORDEM.**
+   *
+   * *"O contato respondeu a uma mensagem que nao foi encontrada na base de dados, solicite mais
+   * informacoes ao contato."* — texto da plataforma sentado no fluxo DELA, mandando fazer alguma
+   * coisa. Lido como fala dela, vira insumo de resposta vindo de quem nao escreveu nada.
+   */
+  check(
+    ehMensagemDaPlataforma('O contato respondeu a uma mensagem que não foi encontrada na base de dados, solicite mais informações ao contato.'),
+    'o aviso da mensagem nao encontrada na base de dados e ruido da plataforma'
+  );
+
+  /**
    * **O falso positivo e o risco.** Apagar o texto de quem falou de verdade e pior que ler o ruido:
    * o contato fica mudo para todas as regras. O asterisco no "*Atencao:*" e obrigatorio porque a
    * plataforma escreve em negrito e gente escreve sem.
    */
-  for (const t of ['Não foi possível ir ao evento', 'atenção para o que eu vou dizer', 'Atenção: preciso muito de ajuda', 'não tenho interesse', 'Boa tarde', 'nao consegui transcrever o que ele falou']) {
+  for (const t of [
+    'Não foi possível ir ao evento', 'atenção para o que eu vou dizer', 'Atenção: preciso muito de ajuda',
+    'não tenho interesse', 'Boa tarde', 'nao consegui transcrever o que ele falou',
+    // O recorte novo e "nao foi encontrada NA BASE DE DADOS": estas tres sao gente falando.
+    'minha cidade não foi encontrada na lista de vocês',
+    'o meu nome não foi encontrado no cadastro do CRAS',
+    'a mensagem que mandei não foi respondida',
+  ]) {
     check(!ehMensagemDaPlataforma(t), `"${t.slice(0, 40)}" e fala de gente`);
   }
 

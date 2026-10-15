@@ -1809,6 +1809,13 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    xingamento e sem acrescentar adjetivo nenhum sobre o adversário.',
     '    **E não vale quando a ofensa é contra NÓS** (aí é a seção 14 do padrão) nem quando ela traz',
     '    uma denúncia com alvo e fato (aí é a regra 15).',
+    '    **COMEMORAR E TORCER TAMBÉM SÃO APOIO, e também não se corrigem.** "Todos os meus',
+    '    candidatos se elegeram", "o Flávio vai ser Presidente com certeza", "ganhamos": COMEMORE',
+    '    JUNTO. **Nunca corrija o placar, a data, o calendário nem a previsão dela** — nada de "na',
+    '    verdade a Presidência ainda será decidida no segundo turno, em 25 de outubro". Ela não',
+    '    perguntou nada; ela veio dividir a alegria, e a correção responde uma pergunta que ninguém',
+    '    fez. O segundo turno só entra como CONVITE ("agora é levar todo mundo no dia 25"), nunca',
+    '    como reparo. Perguntando de verdade ("quando é o segundo turno?"), aí sim você responde.',
     // O item 22 INTEIRO, e não só a primeira faixa: citar só "mensagem simples: 1 a 3 frases" fez o
     // desabafo de 58 s do Adair (18/09/2026) receber três respostas de uma frase por parágrafo, contra
     // os dois parágrafos que o ChatGPT escreveu dentro da regra dele.

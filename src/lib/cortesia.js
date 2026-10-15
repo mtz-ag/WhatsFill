@@ -1817,6 +1817,20 @@ const MENSAGENS_DA_PLATAFORMA = [
   /mensagem\s+(nao\s+suportada|apagada|removida)/,
   /esta\s+mensagem\s+foi\s+apagada/,
   /**
+   * **"O contato respondeu a uma mensagem que não foi encontrada na base de dados, solicite mais
+   * informações ao contato."** — print dele (15/10/2026). Quarta da mesma família (o Carlos e a
+   * Vera em 02/09, o FAQ do WhatsApp em 05/09): a plataforma escreve no fluxo do CONTATO e nós
+   * lemos como fala dela.
+   *
+   * **Esta é a pior de ler como fala dela, porque ela dá uma ORDEM** — *"solicite mais informações
+   * ao contato"* — sentada no meio da conversa. Texto que manda fazer alguma coisa, chegando pelo
+   * lado de quem escreve, é exatamente o que não pode virar insumo de resposta.
+   *
+   * O recorte é a frase do meio (*"não foi encontrada na base de dados"*), que é da plataforma e
+   * ninguém escreve conversando; a abertura e o fecho mudam de redação.
+   */
+  /nao\s+foi\s+encontrada\s+na\s+base\s+de\s+dados/,
+  /**
    * O asterisco e OBRIGATORIO: a plataforma escreve em negrito (`*Atencao:*`), e gente escreve
    * "Atencao para o que eu vou dizer" sem ele. Sem exigir a marca, a frase mais comum de quem vai
    * desabafar virava ruido de sistema e o texto dela era apagado.

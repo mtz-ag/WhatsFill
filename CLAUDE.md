@@ -3547,6 +3547,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **COMEMORAR TAMBEM E APOIO, E APOIO NAO SE CORRIGE — e quem corrigiu foi um FATO que eu escrevi**
+  (15/10/2026, print: ela comemorou *"todos meus candidatos se elegerao, so Flavio mas vai ser
+  Presidente com certeza"* e recebeu *"a Presidencia ainda sera decidida no segundo turno, em 25 de
+  outubro"*; ele apagou: *"cortou o apoio da pessoa em vez de torcer junto"*).
+  **Medido: o dossie FOI puxado** (`precisaDoDossie` true) e dele chegam a IA **nove linhas sobre o
+  2o turno**, que eu acrescentei na vespera para impedir pedido de voto em eleicao encerrada. **O
+  fato existia para NAO pedir voto e virou correcao em cima de quem veio comemorar** — a licao de
+  08/09 (*regra sem escopo e cumprida ate onde ela nao devia ir*) **com o agravante de que era um
+  FATO, e fato nao parece regra: parece informacao inofensiva.**
+  **Ao por numero, data ou placar no dossie, escreva COLADO nele para que serve e onde ele PARA** —
+  e em PROSA, nunca em linha `> `, que `semBlocoDeRevisao` corta antes do modelo.
+  **A regra 17 cobria so o xingamento** e hoje cobre comemoracao e previsao. **A guarda que a mantem
+  util:** quem PERGUNTA de verdade continua sendo respondida, e o 2o turno entra como CONVITE
+  (*"agora e levar todo mundo no dia 25"*), nunca como reparo.
+  **Nenhum detector novo:** `soExpressaApoio` devolve null para a comemoracao e NAO foi alargado —
+  **forma de expressar apoio nao fecha em lista (SEXTA vez)**, e o conserto e o que a IA le.
+  **E a QUARTA mensagem da plataforma lida como fala dela:** *"...nao foi encontrada na base de
+  dados, solicite mais informacoes ao contato"* — a pior da familia, porque **da uma ORDEM** sentada
+  no fluxo de quem escreve. Recorte pela frase do meio; a abertura e o fecho mudam de redacao.
+
 - **A ELEICAO FOI EM 04/10/2026, E O DOSSIE ESTAVA ESCRITO NO FUTURO** (14/10/2026, *"pesquise e
   atualize o dossie"*). **Capitao Martim REELEITO** com 37.589 votos (41º de 55, +29% sobre 2022);
   Zucco governador eleito no 1º turno (58,05%); Sanderson e Van Hattem senadores eleitos; **Felipe
