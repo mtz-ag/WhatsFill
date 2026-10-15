@@ -1747,6 +1747,10 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    ela) e o atendimento manda a mensagem do dia no seu lugar. Isto NÃO vale quando ela pergunta',
     '    ou pede alguma coisa e falta o dado — aí é a regra 14 —, nem quando o assunto é difícil,',
     '    **nem quando o que você não entendeu é uma GÍRIA — aí vale a regra 18.**',
+    '    **E vale também no caso oposto, em que você entendeu bem demais:** ela só REFORÇA o que nós',
+    '    já respondemos e não há nada novo na fala dela. Aí a segunda mensagem só pode ser outro',
+    '    agradecimento com outras palavras — e é essa a repetição que denuncia a máquina. Marque o',
+    '    campo em vez de escrevê-la.',
     /**
      * **A REGRA 18 É DELE, DE 26/09/2026** — print de quem chegou pelo anúncio e escreveu
      * *"Temos junto galo veio?"*, e recebeu *"Não quero te passar uma informação errada sobre
@@ -2738,11 +2742,35 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * escreve não é cumprida. O conserto determinístico do caso da print é a guarda da negativa
      * (`negativaJaSaiu` pelo invariante); esta linha é o que cobre a classe inteira.
      */
+    /**
+     * **O FIM DESTA REGRA MANDAVA FAZER O QUE ELA EXISTE PARA IMPEDIR** — print dele (15/10/2026,
+     * *"repetição ocorrendo"*). Ela dizia: *"se não houver nada novo, escreva uma linha curta que
+     * reconheça o que ela disse, sem repetir o conteúdo"*.
+     *
+     * Às 10:59 saiu *"Agradeço por compartilhar essa informação. Estamos atentos e acompanhando
+     * situações como essa."*; ela reforçou às 11:00; às 11:51 saiu *"Agradeço por reforçar essa
+     * preocupação. Estamos atentos e acompanhando as informações com responsabilidade."* — e ele
+     * apagou. **O modelo OBEDECEU:** a primeira mensagem já era um reconhecimento, então a única
+     * forma de "reconhecer sem repetir o conteúdo" era reconhecer de novo com outras palavras.
+     *
+     * É a lição de 17/09 aplicada à própria regra anti-repetição: **toda regra que obriga um
+     * CONTEÚDO é uma hipótese de repetição.**
+     *
+     * **`semRepetirONosso` não pega e não é para baixar a régua** (a decisão de 23/09, medida de
+     * novo aqui): a comparação é por palavra de conteúdo, e as duas frases compartilham **60%** e
+     * **50%** — isto é paráfrase, não a mesma frase com outra roupa. Descer a 50% passaria a apagar
+     * frase legítima, porque duas frases sobre o mesmo assunto compartilham metade das palavras.
+     *
+     * O desfecho novo **não é mecanismo novo**: é o `naoHaOQueResponder` de 24/09, que já abstém,
+     * já manda a mensagem do dia no lugar e já tem a guarda da pergunta pendente.
+     */
     'NÃO REPITA o que já dissemos: leia as falas marcadas NÓS acima e nunca reescreva uma mensagem ' +
       'que já saiu, nem com outras palavras. Dizer a mesma coisa duas vezes é o que denuncia uma ' +
       'máquina, e a segunda vez não acrescenta nada. Se a resposta certa já foi dada e ela insiste, ' +
-      'responda o que há de NOVO na fala dela — e se não houver nada novo, escreva uma linha curta ' +
-      'que reconheça o que ela disse, sem repetir o conteúdo.',
+      'responda o que há de NOVO na fala dela. **Não havendo nada novo, NÃO escreva outro ' +
+      'agradecimento nem outro "estamos acompanhando" com outras palavras** — isso é a repetição, ' +
+      'só que disfarçada. Marque o campo naoHaOQueResponder e o atendimento manda a mensagem do dia ' +
+      'no seu lugar.',
     /**
      * **A regra do anúncio, colada no pedido, e só quando há clique na conversa** — print da Leonir
      * (12/09/2026): o rascunho agradeceu *"o seu apoio ao Flávio, ao Zucco e ao Capitão Martim"* a

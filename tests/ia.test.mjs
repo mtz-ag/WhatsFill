@@ -2759,6 +2759,31 @@ grupo('a IA nao repete o que acabamos de dizer (15/09/2026)');
   check(soRepeteONosso('Obrigado pelo apoio e pela confianca.', nossa), 'a repeticao inteira e reconhecida');
   check(!soRepeteONosso('Qual o seu endereco?', nossa), 'pergunta nao conta como repeticao');
 
+  /**
+   * **A PARAFRASE PASSA PELA GUARDA, E E ASSIM QUE TEM DE SER** — print dele de 15/10/2026
+   * (*"repeticao ocorrendo"*).
+   *
+   * Medido nas duas frases reais: *"Estamos atentos e acompanhando situacoes como essa"* contra
+   * *"Estamos atentos e acompanhando as informacoes com responsabilidade"* compartilham **60%** das
+   * palavras de conteudo, e os dois agradecimentos **50%** — longe dos 80%.
+   *
+   * **Baixar a regua NAO e o conserto** (decisao de 23/09, medida outra vez aqui): a 50% esta
+   * guarda passaria a apagar frase legitima, porque duas frases sobre o mesmo assunto compartilham
+   * metade das palavras. Esta assercao existe para alguem nao "consertar" a repeticao por aqui — o
+   * conserto e o fim da regra anti-repeticao do prompt, que MANDAVA escrever o segundo
+   * reconhecimento.
+   */
+  const nossaDenuncia = 'Agradeco por compartilhar essa informacao. Estamos atentos e acompanhando situacoes como essa.';
+  const parafrase = 'Agradeco por reforcar essa preocupacao. Estamos atentos e acompanhando as informacoes com responsabilidade.';
+  check(
+    semRepetirONosso(parafrase, nossaDenuncia) === null,
+    'a parafrase NAO e apagada pela guarda de palavras — ela mede roupa, nao sentido'
+  );
+  check(
+    !soRepeteONosso(parafrase, nossaDenuncia),
+    'e nem conta como repeticao inteira'
+  );
+
   /** **O prompt tambem deixa de convidar a saudacao** — a linha e a SEGUNDA do bloco. */
   const h = (t) => new Date(`2026-09-15T${t}-03:00`).getTime();
   const bloco = montarContatoRascunho({
@@ -3454,6 +3479,59 @@ grupo('xingar o adversario e apoio, e apoio nao se corrige (25/09/2026)');
    */
   check(/como CONVITE/.test(p), 'e o segundo turno continua entrando como convite');
   check(/Perguntando de verdade/.test(p), 'e quem pergunta de verdade continua recebendo a resposta');
+}
+
+grupo('a regra anti-repeticao mandava escrever a repeticao (15/10/2026)');
+{
+  /**
+   * Print dele: as 10:59 saiu *"Agradeco por compartilhar essa informacao. Estamos atentos e
+   * acompanhando situacoes como essa."*; ela reforcou as 11:00; as 11:51 saiu *"Agradeco por
+   * reforcar essa preocupacao. Estamos atentos e acompanhando as informacoes com
+   * responsabilidade."* — *"repeticao ocorrendo"*.
+   *
+   * **O modelo OBEDECEU.** O fim da regra dizia *"se nao houver nada novo, escreva uma linha curta
+   * que reconheca o que ela disse, sem repetir o conteudo"* — e, sendo a primeira mensagem ja um
+   * reconhecimento, a unica forma de cumprir era reconhecer outra vez com outras palavras.
+   * **Toda regra que obriga um CONTEUDO e uma hipotese de repeticao** (a licao de 17/09), e desta
+   * vez a regra obrigada era a propria anti-repeticao.
+   */
+  const contato = montarContatoRascunho({
+    mensagens: [{ de: 'ela', texto: 'alguem precisa agir, eles estao espalhando mentiras' }],
+    agora: new Date('2026-10-15T11:51:00-03:00'),
+  });
+  const p = String(contato || '');
+  check(/NÃO REPITA o que já dissemos/.test(p), 'a regra anti-repeticao continua colada no pedido');
+  check(
+    !/escreva uma linha curta que reconheça o que ela disse/.test(p),
+    'e NAO manda mais escrever outro reconhecimento quando nao ha nada novo'
+  );
+  check(
+    /Marque o campo naoHaOQueResponder/.test(p),
+    'o desfecho de "nada novo" e a abstencao, que ja manda a mensagem do dia'
+  );
+  check(
+    /NÃO escreva outro agradecimento nem outro "estamos acompanhando" com outras palavras/.test(p),
+    'com as duas formas do caso real escritas como o que NAO fazer'
+  );
+  /**
+   * **A guarda que mantem a regra util:** havendo algo NOVO na fala dela, continua sendo para
+   * responder — senao "nada novo" vira a saida facil para toda insistencia.
+   */
+  check(/responda o que há de NOVO na fala dela/.test(p), 'e o que e novo continua sendo respondido');
+
+  /**
+   * **A definicao do campo tambem foi alargada**, senao a regra colada no pedido mandaria marcar um
+   * campo que o sistema define so para "nao entendi" — e as duas descricoes discordando e como o
+   * modelo escolhe a que preferir.
+   */
+  const sis = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/16. NÃO SE RESPONDE O QUE NÃO SE ENTENDEU/.test(sis), 'a regra 16 continua no sistema');
+  // Espaco normalizado: a regra e escrita em varias linhas e reflui quando alguem a reescreve.
+  const sisPlano = sis.replace(/\s+/g, ' ');
+  check(
+    /só REFORÇA o que nós já respondemos e não há nada novo/.test(sisPlano),
+    'e a abstencao passou a cobrir o caso oposto: entendeu bem demais e nao ha nada novo'
+  );
 }
 
 grupo('o escopo dos numeros da eleicao mora no DOSSIE, colado neles (15/10/2026)');

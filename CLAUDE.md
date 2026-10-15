@@ -3563,6 +3563,24 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **A REGRA ANTI-REPETICAO MANDAVA ESCREVER A REPETICAO** (15/10/2026, *"repeticao ocorrendo"*:
+  10:59 *"Agradeco por compartilhar essa informacao. Estamos atentos e acompanhando situacoes como
+  essa."*; ela reforca as 11:00; 11:51 *"Agradeco por reforcar essa preocupacao. Estamos atentos e
+  acompanhando as informacoes com responsabilidade."*).
+  **O modelo OBEDECEU:** o fim da regra dizia *"se nao houver nada novo, escreva uma linha curta que
+  reconheca o que ela disse"* — e, sendo a primeira mensagem ja um reconhecimento, a unica forma de
+  cumprir era reconhecer de novo com outras palavras. **Toda regra que obriga um CONTEUDO e uma
+  hipotese de repeticao** (17/09), e desta vez a obrigada era a propria anti-repeticao.
+  **`semRepetirONosso` nao pega e NAO e para baixar a regua:** medido, as frases compartilham **60%**
+  e **50%** das palavras de conteudo contra os 80% da regua — **isto e PARAFRASE**, e a 50% a guarda
+  passaria a apagar frase legitima (duas frases sobre o mesmo assunto compartilham metade das
+  palavras). Ha assercao travando isso. **A guarda estava bem alimentada** — conferi `nossaUltima`
+  antes de mexer na regua.
+  **O desfecho e `naoHaOQueResponder`** (24/09), que ja abstem e ja manda a mensagem do dia; a
+  **regra 16 foi alargada junto**, senao a regra colada no pedido mandaria marcar um campo que o
+  sistema define so para "nao entendi" — **duas descricoes do mesmo campo discordando e como o
+  modelo escolhe a que preferir.**
+
 - **COMEMORAR TAMBEM E APOIO, E APOIO NAO SE CORRIGE — e quem corrigiu foi um FATO que eu escrevi**
   (15/10/2026, print: ela comemorou *"todos meus candidatos se elegerao, so Flavio mas vai ser
   Presidente com certeza"* e recebeu *"a Presidencia ainda sera decidida no segundo turno, em 25 de
