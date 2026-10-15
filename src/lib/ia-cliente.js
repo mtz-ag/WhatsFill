@@ -34,6 +34,9 @@ import {
   montarSistemaEtiqueta,
   montarRequisicaoEtiqueta,
   validarEtiqueta,
+  montarSistemaEncerramento,
+  montarRequisicaoEncerramento,
+  validarEncerramento,
   TIPOS_DE_ETIQUETA,
   MODELO_PADRAO,
   PROVEDOR_OPENAI,
@@ -449,6 +452,32 @@ export async function conferirEtiqueta({ tipo, regras, mensagens, gatilho, model
   }
 }
 
+/**
+ * **Ela está encerrando a conversa?** — decisão dele (15/10/2026): *"determinístico para encerrar
+ * tem dado errado demais, a IA terá que assumir o encerramento"*.
+ *
+ * Só é chamada quando NÓS já respondemos, ela escreveu algo depois e o vocabulário de despedida
+ * **não** reconheceu nada — ou seja, exatamente nos casos em que hoje sairia mensagem. Falha, JSON
+ * ilegível e certeza baixa viram `incerto`, que se comporta como antes de a IA existir: manda.
+ *
+ * @returns {Promise<{acao:'sim'|'nao'|'incerto', motivo:string, confianca:number, aviso:string, custoUsd?:number}>}
+ */
+export async function conferirEncerramento({ regras, mensagens, gatilho, modelo }) {
+  try {
+    const r = await pedirAoWorker({
+      type: MSG_IA,
+      modo: 'encerramento',
+      sistema: montarSistemaEncerramento({ regras }),
+      contato: montarContatoMaterial({ mensagens, gatilho }),
+      modelo: modelo || MODELO_PADRAO,
+    });
+    if (!r?.ok) return { acao: 'incerto', motivo: '', confianca: 0, aviso: r?.motivo || 'a IA não respondeu' };
+    return { ...validarEncerramento(r.decisao), custoUsd: r.custoUsd };
+  } catch (err) {
+    return { acao: 'incerto', motivo: '', confianca: 0, aviso: err?.message || String(err) };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Lado do service worker
 // ---------------------------------------------------------------------------
@@ -485,6 +514,11 @@ export async function atender(pedido, chave) {
       ? montarRequisicaoMaterial({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
       : pedido.modo === 'etiqueta'
       ? montarRequisicaoEtiqueta({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
+      // **Modo novo precisa de ramo AQUI, no mesmo commit.** Sem ele o pedido cai no `montarRequisicao`
+      // do fim, que é o esquema da DECISÃO — a chamada sairia paga e voltaria num formato que o
+      // `validarEncerramento` não lê, virando `incerto` em silêncio. É a lição da tecla 0 (31/08).
+      : pedido.modo === 'encerramento'
+      ? montarRequisicaoEncerramento({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
       : montarRequisicao({
           sistema: pedido.sistema,
           contato: pedido.contato,

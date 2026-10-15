@@ -34,7 +34,7 @@ import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
 import { criarGuardaDeRolagem, TECLAS_QUE_ROLAM } from './rolagem.js';
-import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado } from '../lib/cortesia.js';
+import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -3116,6 +3116,73 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (c.acao === 'sim') return '';
     if (c.acao === 'nao') return ` (a IA conferiu e NÃO é o caso: ${c.motivo || 'sem motivo dado'} — não marquei)`;
     return ` (a IA não confirmou${c.aviso ? `: ${c.aviso}` : ''} — não marquei)`;
+  }
+
+  const conferenciasDeEncerramento = new Map();
+
+  /**
+   * **ELA ESTÁ ENCERRANDO A CONVERSA?** — decisão dele (15/10/2026): *"determinístico para encerrar
+   * tem dado errado demais, a IA terá que assumir o encerramento"*.
+   *
+   * **O que falhava era o GATILHO, não o desfecho.** `ehDespedida` é um vocabulário de onze formas,
+   * e as falhas medidas foram todas falso NEGATIVO: *"Amém firme dia 25 é 22"*, *"Tudo certo
+   * obrigado"*, e 29 de 41 formas comuns de encerrar. Trocar a tecla da caixa não resolveria —
+   * **a caixa nunca casava.**
+   *
+   * **O vocabulário fica como SIM BARATO.** Ele erra para o lado de não ver (11 de 11 falsos
+   * positivos barrados na medição de hoje), então quando ele reconhece não há o que conferir e a
+   * chamada não acontece. Tirá-lo e perguntar sempre custaria uma chamada em todo contato sem
+   * mudar desfecho nenhum — e, se ele quiser isso assim mesmo, é apagar esta primeira linha.
+   *
+   * **A PORTA é estrutural, não é outra lista:** só se pergunta quando nós JÁ respondemos (há
+   * conversa para encerrar) e ela escreveu alguma coisa depois. Fora disso não existe encerramento
+   * a reconhecer.
+   *
+   * **Três guardas mecânicas, e cada uma tem dono:**
+   *  - **pergunta pendente nunca é encerramento** — a mesma guarda do `naoHaOQueResponder`
+   *    (24/09), e a regra dele de 03/09: tem pergunta, não conclui;
+   *  - **a IA desligada ou sem chave decide como antes** — ele pediu que a IA assuma, não que o
+   *    encerramento deixe de existir sem ela;
+   *  - **falha, resposta ilegível e certeza baixa viram "não"**, que é o comportamento de hoje:
+   *    manda. Concluir em silêncio por erro de rede seria o lado caro.
+   *
+   * **Nunca acrescenta mensagem: só silencia.** O pior caso deste caminho é o caso de hoje.
+   */
+  async function encerrouAConversa(jaRespondemosAntes) {
+    const peloVocabulario = ultimaEhDespedida(state.entrantes);
+    if (peloVocabulario) return true;
+    if (!(state.ia?.ligada && state.iaTemChave)) return false;
+    if (!jaRespondemosAntes) return false;
+
+    const dela = desdeNossaUltima(state.entrantes, state.nossaUltimaAt);
+    const escreveu = dela.filter((m) => String(m?.texto || '').trim());
+    if (!escreveu.length) return false;
+    if (perguntaPendente(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio)) return false;
+
+    const alvo = state.contact?.id;
+    const chave = `${alvo}|${escreveu.map((m) => m?.at || '').join(',')}`;
+    let c = conferenciasDeEncerramento.get(chave);
+    if (!c) {
+      try {
+        c = await iaCliente.conferirEncerramento({
+          regras: state.ia.regras,
+          mensagens: conversaParaIA(),
+          gatilho: 'a rodada ia responder; o vocabulário de despedida não reconheceu nada',
+          modelo: state.ia.modelo,
+        });
+      } catch (err) {
+        c = { acao: 'incerto', motivo: '', confianca: 0, aviso: err?.message || String(err) };
+      }
+      if (c.acao !== 'incerto') conferenciasDeEncerramento.set(chave, c);
+      registrarNaRodada(
+        'IA',
+        'pulado',
+        `encerramento · ${c.acao}${c.custoUsd ? ` · US$ ${c.custoUsd.toFixed(4)}` : ''}${c.motivo ? ` · ${c.motivo}` : ''}${c.aviso ? ` · ${c.aviso}` : ''}`
+      );
+    }
+    /** O atendimento trocou no meio da chamada: a decisão era de outro contato. */
+    if (state.contact?.id !== alvo) return false;
+    return c.acao === 'sim';
   }
 
   async function etiquetarEndereco(alvo, { gatilho = '', acabamosDeMandar = '' } = {}) {
@@ -9413,6 +9480,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return { trecho: String(ultima.texto || '').replace(/\s+/g, ' ').trim().slice(0, 90) };
       })();
 
+      /**
+       * **Ela encerrou a conversa?** — calculada aqui, antes do contexto, porque DOIS sinais
+       * dependem dela: `ultimaEhDespedida` e `soCortesia`. Ver `encerrouAConversa`.
+       */
+      const encerrou = await encerrouAConversa(jaRespondemosAntes);
+
       // Lida aqui, antes das opções e da regra, porque as duas usam.
       const etiquetaSemInteresse = String(state.auto.cfg.etiquetaSemInteresse || '').trim();
 
@@ -9539,7 +9612,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         informouEndereco: !!(await enderecoParaMaterial()),
         modeloJaNaConversa,
         jaRespondemosAntes,
-        ultimaEhDespedida: ultimaEhDespedida(state.entrantes),
+        /**
+         * **A IA ASSUME O ENCERRAMENTO** — decisão dele (15/10/2026): *"determinístico para
+         * encerrar tem dado errado demais, a IA terá que assumir o encerramento"*.
+         *
+         * **No SINAL, e não numa caixa nova**, porque é aqui que vale no quadro DELE sem ele
+         * importar nada — o mesmo desenho da trava da negativa (06/09) e da do agradecimento
+         * (15/10). Quem decide continua sendo a caixa "Só se despediu", na posição em que ela já
+         * está; o que mudou é quem responde à pergunta.
+         */
+        ultimaEhDespedida: encerrou,
         // "Já foi respondida": nossa última mensagem saiu hoje. Serve para a reação (figura,
         // emoji, link) virar "concluir" em vez de "mais uma mensagem".
         respondidoHoje: !!state.nossaUltimaAt && ehHoje(state.nossaUltimaAt),
@@ -9715,7 +9797,23 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // A RAJADA, e nao as tres ultimas da conversa: `soCortesia` olha as ultimas mensagens sem
         // saber onde a nossa entrou, entao sem este recorte o sinal continuaria verdadeiro depois
         // de respondermos — e a caixa mandaria a mensagem do momento em toda passada.
-        soCortesia: soCortesia(rajadaFinal(state.entrantes, state.nossaUltimaAt)),
+        /**
+         * **QUEM ENCERROU NÃO "SÓ CUMPRIMENTOU"** — medido em 15/10/2026, e é a peça sem a qual o
+         * encerramento não chega ao desfecho no quadro DELE.
+         *
+         * *"Bom dia, tudo certo obrigado"* liga os dois sinais, e no quadro a caixa **"só
+         * cumprimentou" (tecla 5, ENVIA) está acima de "Só se despediu" (tecla 3)** nos dois ramos
+         * do retorno — medido: tabela dá 3, quadro dá 5. Reordenar o quadro dele é o que este
+         * projeto não faz; **calar o sinal é CONDIÇÃO, e condição vale hoje, sem ele importar nada**
+         * (a trava da negativa, 06/09, e a do agradecimento, 15/10).
+         *
+         * E não é um contorno: quem escreveu *"bom dia, tudo certo obrigado"* **não** só
+         * cumprimentou — ela fechou a conversa. O sinal estava afirmando a coisa errada.
+         *
+         * **Só silencia, nunca acrescenta:** o efeito é tirar uma tecla 5 da frente e deixar a
+         * caixa da despedida decidir, que conclui sem enviar.
+         */
+        soCortesia: encerrou ? null : soCortesia(rajadaFinal(state.entrantes, state.nossaUltimaAt)),
         podePerguntarAjuda: !perguntarAjudaTrava,
         podeMandarMomento: !momentoTrava,
         temEtiquetaDeCidade,

@@ -38,6 +38,11 @@ import {
   montarSistemaEtiqueta,
   montarRequisicaoEtiqueta,
   validarEtiqueta,
+  montarSistemaEncerramento,
+  montarRequisicaoEncerramento,
+  validarEncerramento,
+  CONFIANCA_ENCERRAMENTO,
+  ENCERRAMENTO,
   TIPOS_DE_ETIQUETA,
   CONFIANCA_ETIQUETA,
   montarSistemaMaterial,
@@ -3050,6 +3055,63 @@ grupo('a IA confere as etiquetas de PEDIDO e SEM INTERESSE antes de marcar (17/0
   check(validarEtiqueta('isto nao e json').acao === 'incerto', 'ilegivel nao marca');
   check(validarEtiqueta(j({ acao: 'talvez' })).acao === 'incerto', 'resposta fora das opcoes nao marca');
   check(validarEtiqueta(null).acao === 'incerto', 'vazio nao marca');
+}
+
+/**
+ * **A IA ASSUME O ENCERRAMENTO** - decisao dele (15/10/2026): *"deterministico para encerrar tem
+ * dado errado demais, a IA tera que assumir o encerramento"*.
+ *
+ * **O que falhava era o GATILHO e nao o desfecho:** as falhas medidas foram todas falso NEGATIVO
+ * (*"Amem firme dia 25 e 22"*, *"Tudo certo obrigado"*, 29 de 41 formas comuns), entao trocar a
+ * tecla da caixa nao resolveria -- a caixa nunca casava. Mesma saida de `naoHaOQueResponder`
+ * (24/09): e julgamento, e julgamento e da IA.
+ */
+grupo('a IA assume o encerramento (15/10/2026)');
+{
+  const p = montarSistemaEncerramento({ regras: '' });
+
+  check(/ela est(á|a) ENCERRANDO a conversa/i.test(p), 'a pergunta e uma so, e esta escrita');
+  check(/conclu(í|i)do em SIL(Ê|E)NCIO/i.test(p), 'e o prompt diz o que o "sim" causa');
+  check(/N(Ó|O)S j(á|a) respondemos/i.test(p), 'e o enquadramento: nos ja falamos, ela escreveu depois');
+
+  /**
+   * **A guarda que sustenta a regra e o "na duvida, nao".** Um "sim" errado conclui em silencio
+   * quem esperava resposta, e disso nao ha rastro na tela; um "nao" errado custa a mensagem que ja
+   * sairia hoje.
+   */
+  check(/[Nn]a d(ú|u)vida, "nao"/.test(p), 'na duvida, nao');
+  check(ENCERRAMENTO.nao.some((l) => /pergunta alguma coisa/.test(l)), 'pergunta nunca e encerramento');
+  check(ENCERRAMENTO.nao.some((l) => /pede alguma coisa/.test(l)), 'pedido nunca e encerramento');
+  check(ENCERRAMENTO.nao.some((l) => /esperando algo que n(ó|o)s/.test(l)), 'quem espera entrega nao esta encerrando');
+  check(ENCERRAMENTO.sim.some((l) => /tchau/.test(l)), 'e as formas que o vocabulario nao tinha entram como exemplo');
+
+  /** Linha do anuncio: a fala da campanha nao e dela — vale aqui como vale nas outras conferencias. */
+  check(/texto do AN(Ú|U)NCIO/.test(p), 'o texto do anuncio nao e fala dela');
+
+  const req = montarRequisicaoEncerramento({ sistema: 's', contato: 'c' });
+  check(req.output_config.format.schema.properties.acao.enum.join() === 'sim,nao', 'o esquema e o mesmo sim/nao');
+
+  /**
+   * **O CORTE e mais alto que o da etiqueta**, e e a diferenca que justifica a funcao propria:
+   * etiqueta errada ele desfaz, encerramento errado some sem deixar rastro.
+   */
+  const j = (o) => JSON.stringify(o);
+  check(CONFIANCA_ENCERRAMENTO > CONFIANCA_ETIQUETA, 'o corte do encerramento e mais alto que o da etiqueta');
+  check(validarEncerramento(j({ acao: 'sim', motivo: 'se despediu', confianca: 0.9 })).acao === 'sim', 'sim com certeza encerra');
+  check(validarEncerramento(j({ acao: 'sim', motivo: 'talvez', confianca: CONFIANCA_ENCERRAMENTO - 0.01 })).acao === 'incerto',
+    'sim com pouca certeza NAO encerra');
+  check(validarEncerramento(j({ acao: 'nao', motivo: 'ela perguntou', confianca: 0.2 })).acao === 'nao', 'nao vale com qualquer certeza');
+  check(validarEncerramento('isto nao e json').acao === 'incerto', 'ilegivel nao encerra');
+  check(validarEncerramento(null).acao === 'incerto', 'vazio nao encerra');
+
+  /**
+   * **O corte da etiqueta nao mudou ao a funcao virar generica** — `validarSimOuNao` recebe o
+   * minimo por argumento, e esta assercao e a que pega os dois corpos se um dia divergirem.
+   */
+  check(validarEtiqueta(j({ acao: 'sim', motivo: 'x', confianca: CONFIANCA_ETIQUETA })).acao === 'sim',
+    'a etiqueta continua marcando no proprio corte');
+  check(validarEncerramento(j({ acao: 'sim', motivo: 'x', confianca: CONFIANCA_ETIQUETA })).acao === 'incerto',
+    'e o corte da etiqueta NAO basta para encerrar');
 }
 
 grupo('saude nao se despacha: a excecao da regra 11 (17/09/2026)');

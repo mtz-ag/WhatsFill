@@ -962,6 +962,19 @@ export function montarRequisicaoEtiqueta({ sistema, contato, modelo = MODELO_PAD
 
 /** `{acao: 'sim'|'nao'|'incerto', motivo, confianca, aviso}` — só `sim` com a confiança mínima marca. */
 export function validarEtiqueta(bruto) {
+  return validarSimOuNao(bruto, CONFIANCA_ETIQUETA);
+}
+
+/**
+ * **A leitura de um "sim / nao / incerto" com confiança — uma só, para as duas conferências que a
+ * usam** (a etiqueta e o encerramento). O que muda entre elas é só o CORTE, e ele vem por
+ * argumento: duas cópias desta função divergiriam na primeira borda nova (JSON ilegível, campo
+ * fora do enum, confiança ausente), e é justamente nas bordas que ela existe.
+ *
+ * `nao` vale com qualquer confiança — é o lado seguro das duas. `sim` abaixo do corte vira
+ * `incerto`, que se comporta como antes de a IA existir.
+ */
+export function validarSimOuNao(bruto, minimo) {
   const vazio = { acao: 'incerto', motivo: '', confianca: 0, aviso: '' };
   let d = bruto;
   if (typeof d === 'string') {
@@ -975,9 +988,91 @@ export function validarEtiqueta(bruto) {
   const motivo = String(d.motivo || '').trim().slice(0, 300);
   const confianca = Number.isFinite(d.confianca) ? Math.min(1, Math.max(0, d.confianca)) : 0;
   if (d.acao === 'nao') return { acao: 'nao', motivo, confianca, aviso: '' };
-  if (d.acao === 'sim' && confianca >= CONFIANCA_ETIQUETA) return { acao: 'sim', motivo, confianca, aviso: '' };
+  if (d.acao === 'sim' && confianca >= minimo) return { acao: 'sim', motivo, confianca, aviso: '' };
   if (d.acao === 'sim') return { ...vazio, motivo, confianca, aviso: `a IA achou que sim, mas com ${Math.round(confianca * 100)}% de certeza` };
   return { ...vazio, aviso: 'a IA devolveu uma resposta fora das opções' };
+}
+
+/**
+ * **A IA ASSUME O ENCERRAMENTO** — decisão dele (15/10/2026): *"determinístico para encerrar tem
+ * dado errado demais, a IA terá que assumir o encerramento"*.
+ *
+ * **O que falhava não era o desfecho: era o GATILHO.** `ehDespedida` é um vocabulário de onze
+ * formas mais a conferência de "não sobrou nada", e as falhas medidas foram todas FALSO NEGATIVO —
+ * *"Amém firme dia 25 é 22"*, *"Tudo certo obrigado"*, e **29 de 41** formas comuns de encerrar.
+ * Trocar a tecla da caixa não resolveria nada, porque a caixa nunca casava. É a sexta vez que este
+ * projeto aprende que **lista de vocabulário não fecha** — e a saída que ele escolheu é a mesma de
+ * `naoHaOQueResponder` (24/09) e de `naoCabePedirOCadastro` (24/09): **é julgamento, e julgamento
+ * é da IA.**
+ *
+ * **A pergunta é estreita de propósito, e o enquadramento faz metade do trabalho:** só se pergunta
+ * quando NÓS já respondemos e ela escreveu alguma coisa depois. Não é *"isto é uma despedida?"* (o
+ * que convidaria a classificar vocabulário de novo), é *"ela está encerrando a conversa?"*.
+ *
+ * **Na dúvida, "nao".** Um "sim" errado conclui em silêncio quem estava esperando resposta; um
+ * "nao" errado custa a mensagem que já sairia hoje. O lado barato do erro é o de hoje.
+ */
+export const ENCERRAMENTO = {
+  sim: [
+    'ela agradece e não pede mais nada ("tudo certo obrigado", "valeu", "obrigado pela atenção");',
+    'ela se despede ("tchau", "até mais", "falou", "abraço", "fica com Deus", "amém", "é nós");',
+    'ela diz que já resolveu, que está tudo certo ou que depois volta a falar;',
+    'ela responde a nossa última mensagem só confirmando que leu ("ok", "entendi", "beleza",',
+    '  "combinado") e não há nada pendente do nosso lado.',
+  ],
+  nao: [
+    'ela pergunta alguma coisa, mesmo curta, mesmo sem "?";',
+    'ela pede alguma coisa — material, ajuda, dinheiro, ligação, contato, informação;',
+    'ela conta um problema, uma dificuldade ou uma denúncia;',
+    'ela está esperando algo que nós dissemos que íamos fazer (mandar material, verificar, repassar);',
+    'ela ainda não disse o nome ou a cidade e nós acabamos de pedir;',
+    'ela escreve várias mensagens seguidas, ou um texto longo: quem escreve assim está conversando;',
+    'ela reclama de não ter sido atendida — agradecer e encerrar em cima disso confirma a queixa;',
+    'você não entendeu o que ela quis dizer.',
+  ],
+};
+
+export function montarSistemaEncerramento({ regras = '' } = {}) {
+  return [
+    'Você lê o fim de uma conversa no WhatsApp do atendimento de um mandato parlamentar no Rio',
+    'Grande do Sul. Você não escreve mensagem e não fala com ninguém: responde uma pergunta só.',
+    '',
+    'NÓS já respondemos esta pessoa, e ela escreveu alguma coisa depois disso.',
+    'A pergunta é: **ela está ENCERRANDO a conversa?**',
+    '',
+    'Respondendo "sim", o atendimento é concluído em SILÊNCIO — nenhuma mensagem é enviada.',
+    'Respondendo "nao", a rodada manda o que ia mandar.',
+    '',
+    'É "sim" quando:',
+    ...ENCERRAMENTO.sim.map((l) => (l.startsWith('  ') ? l : `- ${l}`)),
+    '',
+    'É "nao" quando:',
+    ...ENCERRAMENTO.nao.map((l) => (l.startsWith('  ') ? l : `- ${l}`)),
+    '',
+    'Linhas marcadas "(texto do ANÚNCIO…)" foram escritas pela campanha, não por ela.',
+    'Julgue o que ELA escreveu depois da nossa última mensagem, não o que nós escrevemos.',
+    '',
+    '**Na dúvida, "nao".** Concluir em silêncio quem esperava resposta é o erro caro; mandar uma',
+    'mensagem a mais é o erro de hoje, e é o barato.',
+    '',
+    regras ? `Instruções adicionais do Thiago:\n${regras}\n` : '',
+  ].join('\n');
+}
+
+export function montarRequisicaoEncerramento({ sistema, contato, modelo = MODELO_PADRAO }) {
+  return corpo({ sistema, contato, modelo, esquema: esquemaDaEtiqueta(), nome: 'encerramento', esforco: 'low', maxTokens: 512 });
+}
+
+/**
+ * **Mais alto que o da etiqueta (0,7), e de propósito.** A etiqueta errada é organização interna e
+ * ele desfaz; o encerramento errado é uma pessoa que perguntou alguma coisa e não recebeu nada, e
+ * disso não há rastro na tela — o atendimento só fica concluído.
+ */
+export const CONFIANCA_ENCERRAMENTO = 0.8;
+
+/** `{acao:'sim'|'nao'|'incerto', ...}` — só `sim` com `CONFIANCA_ENCERRAMENTO` conclui em silêncio. */
+export function validarEncerramento(bruto) {
+  return validarSimOuNao(bruto, CONFIANCA_ENCERRAMENTO);
 }
 
 export function montarRequisicaoCidade({ sistema, contato, modelo = MODELO_PADRAO }) {

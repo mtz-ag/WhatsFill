@@ -1272,4 +1272,59 @@ grupo('anuncio DESLIGADO e sem recibo: sai a mensagem do dia, nao o formulario s
     'e quem NAO veio de anuncio nenhum continua pedindo o cadastro');
 }
 
+/**
+ * **A IA ASSUME O ENCERRAMENTO** - decisao dele (15/10/2026): *"deterministico para encerrar tem
+ * dado errado demais, a IA tera que assumir o encerramento"*.
+ *
+ * **O contexto aqui COPIA a composicao do painel**, que e a unica forma de medir isto: `encerrou`
+ * decide DOIS sinais, e e a segunda metade que faz o desfecho chegar no quadro dele.
+ *
+ * Sem calar `soCortesia`, *"Bom dia, tudo certo obrigado"* liga os dois sinais e no QUADRO a caixa
+ * "so cumprimentou" (tecla 5, ENVIA) esta acima de "So se despediu" (tecla 3) -- medido: tabela da
+ * 3 e quadro da 5. Reordenar o quadro dele e o que este projeto nao faz; calar o sinal e CONDICAO,
+ * e vale hoje sem ele importar nada.
+ */
+grupo('quem encerrou nao "so cumprimentou" (15/10/2026)');
+{
+  const cortesia = await import('../src/lib/cortesia.js');
+  const arv = await import('../src/lib/arvore.js');
+  const quadro = arv.arrumar(arv.fluxoPadrao());
+
+  /** A MESMA composicao do painel: um `encerrou` so, alimentando os dois sinais. */
+  const doPainel = (texto, { encerrouPelaIA = false } = {}) => {
+    const ent = [{ texto, tipo: 'TEXT', at: '2026-10-15T19:03:00Z' }];
+    const nossa = '2026-10-15T14:46:00Z';
+    const encerrou = cortesia.ultimaEhDespedida(ent) || encerrouPelaIA;
+    return {
+      veioDeAnuncio: false, temEtiquetaDeCidade: true, jaRespondemosAntes: true, respondidoHoje: false,
+      momentoJaEnviado: false, podeMandarMomento: true, podeEnviar: false, enviadoHoje: false,
+      modeloJaNaConversa: false, contextoPerdido: false,
+      ultimaEhDespedida: encerrou,
+      soCortesia: encerrou ? null : cortesia.soCortesia(cortesia.rajadaFinal(ent, nossa)),
+      textos: [texto], ultimoTexto: texto,
+    };
+  };
+  const nosDois = (texto, op) => {
+    const ctx = doPainel(texto, op);
+    return { tabela: sugerirAcao(ctx)?.tecla ?? null, quadro: arv.decidir(ctx, quadro)?.tecla ?? null };
+  };
+
+  /** Com a IA dizendo que encerrou, os DOIS motores concluem sem enviar. */
+  for (const t of ['Tchau', 'Ate logo', 'Bom dia, tudo certo obrigado', 'Tudo certo obrigado']) {
+    const r = nosDois(t, { encerrouPelaIA: true });
+    check(r.tabela === '3' && r.quadro === '3', `"${t}": conclui sem enviar nos dois motores (tabela ${r.tabela}, quadro ${r.quadro})`);
+  }
+
+  /**
+   * **O vocabulario sozinho ainda nao alcanca "tchau"** — e por isso a IA assumiu. Esta assercao e
+   * a medida do buraco: se um dia alguem puser "tchau" na lista, ela cai e e so apagar.
+   */
+  const semIA = nosDois('Tchau');
+  check(semIA.tabela === '5' && semIA.quadro === '5', 'sem a IA, "Tchau" continua caindo na mensagem do momento');
+
+  /** E o que NAO e encerramento continua sendo respondido: a IA dizendo "nao" e o caso de hoje. */
+  const pergunta = nosDois('Tudo certo, quando e o evento?');
+  check(pergunta.tabela !== '3' || pergunta.quadro !== '3', 'pergunta junto nao vira conclusao silenciosa');
+}
+
 fim();

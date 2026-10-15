@@ -3587,6 +3587,34 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **A IA ASSUME O ENCERRAMENTO** (15/10/2026: *"deterministico para encerrar tem dado errado demais,
+  a IA tera que assumir o encerramento"*).
+  **O que falhava era o GATILHO, nao o desfecho:** as falhas medidas foram TODAS falso negativo
+  (*"Amem firme dia 25 e 22"*, *"Tudo certo obrigado"*, 29 de 41 formas comuns), entao trocar a
+  tecla da caixa nao resolveria — **a caixa nunca casava**. Sexta vez da licao de que lista de forma
+  nao fecha; a saida e a de `naoHaOQueResponder` (24/09): **julgamento e da IA**.
+  **MORA NO SINAL** (`ultimaEhDespedida`), nao numa caixa nova — e assim vale no quadro dele sem
+  importar nada, e quem decide continua sendo a caixa "So se despediu" onde ela ja esta.
+  **A PORTA E ESTRUTURAL, nao outra lista:** so pergunta quando NOS ja respondemos e ela escreveu
+  depois — exatamente onde hoje sairia mensagem. **O vocabulario ficou como SIM BARATO** (erra para
+  o lado de nao ver: 11/11 falsos positivos barrados), entao quando ele reconhece nao ha chamada.
+  **Tres guardas:** pergunta pendente nunca e encerramento; IA desligada decide como antes; falha /
+  ilegivel / certeza baixa viram "nao", que e o comportamento de hoje (manda). **Corte 0,8, acima do
+  0,7 da etiqueta:** etiqueta errada ele desfaz, encerramento errado nao deixa rastro na tela.
+  **E a SEGUNDA METADE e o que faz chegar ao desfecho no quadro dele:** *"Bom dia, tudo certo
+  obrigado"* liga `ultimaEhDespedida` E `soCortesia`, e no quadro **"so cumprimentou" (tecla 5,
+  ENVIA) esta ACIMA de "So se despediu" (tecla 3)** — medido: tabela da 3, quadro da 5. Reordenar o
+  quadro dele nao se faz; **calar `soCortesia` quando ela encerrou e CONDICAO**, vale hoje, e nao e
+  contorno (quem escreveu aquilo nao "so cumprimentou").
+  **Medido:** *"Tchau"* e *"Ate logo"* iam para a tecla 5 (envia) e vao para a **3** nos dois
+  motores. **Custo ~741 tokens de entrada / 512 de teto:** US$ 0,0013 (Haiku), US$ 0,0021 (gpt-5),
+  US$ 0,0004 (gpt-5-mini, Qwen) por conferencia, com linha no Andamento.
+  **MODO NOVO DE PEDIDO PRECISA DE RAMO EM `atender`**, no mesmo commit: sem ele o pedido cai no
+  `montarRequisicao` do fim (o esquema da DECISAO), a chamada sai paga e volta num formato que o
+  validador nao le — `incerto` em silencio. Licao da tecla 0 (31/08).
+  **Quanto isso acontece por rodada NAO foi medido** — o amostrador sintetico dos testes nao serve
+  (39 sinais a 35% faz as protecoes do topo vencerem quase sempre). O numero real esta no Andamento.
+
 - **A CAMPANHA ACABOU, E A REGRA 12 CONTINUAVA OFERECENDO VAGA NELA** (15/10/2026, *"Quanto paga?"*
   recebeu *"nao estamos contratando, so estamos trabalhando com voluntarios... se tiver interesse
   nesse formato, me avise"* — *"resposta ainda se tratando de campanha, a campanha acabou do martim
