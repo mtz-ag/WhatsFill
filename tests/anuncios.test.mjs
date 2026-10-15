@@ -513,8 +513,19 @@ grupo('o texto CADASTRADO reconhece o clique em qualquer posicao (23/09/2026)');
     'fala dela que so cita o assunto nao e clique');
   check(!anuncios.ehOTextoDoAnuncio('', lista) && !anuncios.ehOTextoDoAnuncio(texto, []), 'vazio e lista vazia devolvem falso');
 
-  /** Anuncio desligado nao marca nada — a mesma regra do `reconhecer`. */
-  check(!anuncios.ehOTextoDoAnuncio(texto, [{ ...lista[0], ligado: false }]), 'anuncio desligado nao reconhece');
+  /**
+   * **INVERTIDO EM 15/10/2026 — esta linha gravava o defeito.**
+   *
+   * Eu escrevi *"a mesma regra do `reconhecer`"* e as duas regras NAO sao a mesma: `reconhecer`
+   * responde *"o que mandar?"* e tem de parar quando a campanha acaba; `ehOTextoDoAnuncio` responde
+   * *"de quem e esta frase?"*, e a resposta nao muda porque ele desligou o anuncio — o texto
+   * pre-preenchido continua na conversa para sempre.
+   *
+   * Medido: com o anuncio desligado, `soExpressaApoio` passava a dizer *"escreveu apoio em mensagem
+   * propria"* em cima de uma frase que a CAMPANHA escreveu.
+   */
+  check(anuncios.ehOTextoDoAnuncio(texto, [{ ...lista[0], ligado: false }]),
+    'anuncio DESLIGADO continua dizendo que a frase e dele (invertido em 15/10)');
 }
 
 grupo('o texto cadastrado vence a heuristica do "Ola" (25/09/2026)');
@@ -549,6 +560,52 @@ grupo('o texto cadastrado vence a heuristica do "Ola" (25/09/2026)');
   check(!anuncios.ehOTextoDoAnuncio(
     TEXTO + ' e tambem preciso saber se voces tem alguma vaga de trabalho na campanha agora', lista),
     'com muito texto proprio emendado, deixa de ser so o clique');
+}
+
+grupo('desligar o anuncio NAO transforma o texto dele em fala dela (15/10/2026)');
+{
+  /**
+   * Print dele: *"essa pra ser a mensagem de um anuncio antigo, ja e pra estar desativado e
+   * desativei na extensao tambem a resposta"*.
+   *
+   * **Medido com o anuncio do apoio:** com ele LIGADO, `ehOTextoDoAnuncio` da true e os detectores
+   * se calam; **DESLIGADO, dava false** e `soExpressaApoio` passava a dizer *"escreveu apoio em
+   * mensagem propria"* — em cima de uma frase que a CAMPANHA escreveu.
+   *
+   * **Sao duas perguntas diferentes e so uma depende do desligado:** *"o que mandar?"* (acao,
+   * modelo, `anuncioReconhecido`) respeita a campanha encerrada; *"de quem e esta frase?"* nao, e o
+   * texto pre-preenchido fica na conversa para sempre.
+   */
+  const TEXTO_DO_ANUNCIO = 'Ola! Eu apoio o Flavio, Zucco e Capitao Martim';
+  const ligado = [{ id: 'a1', nome: 'Apoio', trechos: [TEXTO_DO_ANUNCIO], acao: 'fluxo', valor: '', etiquetas: [], ligado: true }];
+  const desligado = [{ ...ligado[0], ligado: false }];
+
+  check(anuncios.ehOTextoDoAnuncio(TEXTO_DO_ANUNCIO, ligado), 'com o anuncio ligado, o texto e dele');
+  check(
+    anuncios.ehOTextoDoAnuncio(TEXTO_DO_ANUNCIO, desligado),
+    'e DESLIGADO continua sendo dele — a campanha acabou, a frase nao deixou de ser da campanha'
+  );
+
+  /**
+   * **A outra metade, e e ela que da sentido ao desligado:** o que MANDA alguma coisa continua
+   * parando. Sem isto, desligar um anuncio nao desligaria nada.
+   */
+  check(!anuncios.reconhecer([TEXTO_DO_ANUNCIO], desligado), 'mas ele nao e mais RECONHECIDO para decidir o que mandar');
+  check(!!anuncios.reconhecer([TEXTO_DO_ANUNCIO], ligado), 'e ligado continua sendo');
+  check(
+    !anuncios.decidirComAnuncio(desligado[0], null, null, {}),
+    'e a acao do anuncio desligado nao acontece'
+  );
+
+  // A porta e explicita: sem pedir, `reconhecer` continua so com os ligados.
+  check(
+    !!anuncios.reconhecer([TEXTO_DO_ANUNCIO], desligado, { incluirDesligados: true }),
+    'so quem pede os desligados os enxerga'
+  );
+  check(
+    !anuncios.ehOTextoDoAnuncio('Bom dia, tudo bem com voces?', desligado),
+    'e texto que nao e de anuncio nenhum continua sendo fala dela'
+  );
 }
 
 fim();

@@ -997,6 +997,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   boa na medida em que a minha descricao e verdadeira; descricao errada nao produz escolha errada
   dele, produz escolha errada minha assinada por ele. Foi o que aconteceu com o modelo padrao acima.
 
+- **DESLIGAR O ANUNCIO NAO PODE TRANSFORMAR O TEXTO DELE EM FALA DELA** (15/10/2026, print: *"essa
+  pra ser a mensagem de um anuncio antigo, ja e pra estar desativado"*). `ehOTextoDoAnuncio` chamava
+  `reconhecer`, que **filtra os ligados** — medido: ligado da true e os detectores se calam;
+  **desligado dava false**, e `soExpressaApoio` dizia *"escreveu apoio em mensagem propria"* em cima
+  de uma frase que a CAMPANHA escreveu. **Sao DUAS perguntas e so uma depende do desligado:** *"o
+  que mandar?"* (acao, modelo, `anuncioReconhecido`) respeita a campanha encerrada; *"de quem e esta
+  frase?"* nao — o texto pre-preenchido fica na conversa PARA SEMPRE. Hoje `reconhecer` tem
+  `incluirDesligados` e **so `ehOTextoDoAnuncio` a usa**. Nesta print nao mordeu por acidente (o
+  texto abre com *"Ola! Eu..."* e a heuristica o marcou assim mesmo); anuncio sem essa forma morde.
+  **E a assercao do teste gravava o defeito**, com um comentario meu dizendo *"a mesma regra do
+  `reconhecer`"* — invertida. **Ao escrever "e a mesma regra de X", escreva a PERGUNTA que cada uma
+  responde; se forem perguntas diferentes, nao e a mesma regra.**
+  **E o que a print mostrava nao era isso:** o desligado funcionou (nenhum modelo, nenhuma acao), e
+  quem decidiu foi `nunca-pediram-dados` -> tecla 4, com o `pedir-dados` DELE (o de fabrica nao tem
+  Instagram nem grupo). **Desligar anuncio nao alcanca texto de resposta pronta** — dito a ele.
+
 - **O TEXTO do anuncio fica na conversa PARA SEMPRE, e isso torna "reconheceu o anuncio" perigoso
   como gatilho.** Os anuncios do momento (`store.anuncios`, aba Config) casam por trecho contido na
   conversa INTEIRA — tem que ser, porque a mensagem do anuncio nem sempre e a primeira (a print da

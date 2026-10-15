@@ -1,62 +1,61 @@
-## 2026-10-15 - v3.158.0 - comemorar tambem e apoio, e apoio nao se corrige
+## 2026-10-15 - v3.159.0 - desligar o anuncio fazia o texto dele virar fala dela
 
-**Print dele:** ela escreveu *"Gracas tudo dando certo! Todos meus candidatos se Elegerao so Flavio
-Mas vai ser Presidente com certeza"* e recebeu *"A Presidencia ainda sera decidida no segundo turno,
-em 25 de outubro"*. Ele apagou: **"cortou o apoio da pessoa em vez de torcer junto"**.
+**Print dele:** ela chegou com *"Ola! Eu apoio o Flavio, Zucco e Capitao Martim"* as 19:09 e no dia
+seguinte, as 11:37, recebeu o **formulario** (*"IMPORTANTE! Para eu poder salvar seu numero me diga
+seu Nome , Cidade"* + o post do Instagram + o link do grupo), que ele apagou. *"essa pra ser a
+mensagem de um anuncio antigo, ja e pra estar desativado e desativei na extensao tambem a resposta,
+no caso era pra mandar mensagem do dia"*.
 
-### O defeito e meu, e e da vespera
+### O que a medicao diz, e ela contraria a hipotese natural
 
-**Medido:** `precisaDoDossie` = **true** — o dossie foi puxado, e dentro dele chegam a IA **nove
-linhas sobre o 2o turno** que eu acrescentei em 14/10 para impedir pedido de voto em eleicao
-encerrada, inclusive a linha da tabela com o placar (47,03% x 45,16%).
+**O anuncio desligado FUNCIONOU.** Medido no contexto dela: `anuncioReconhecido` falso, nenhum
+modelo, nenhuma acao de anuncio. O que decidiu foi o FLUXO, e os dois motores concordam —
+`nunca-pediram-dados` -> **tecla 4**, o pedido de cadastro de quem chega sem nome e sem cidade.
 
-**O fato existia para NAO pedir voto, e virou correcao em cima de quem veio comemorar.** E a licao
-de 08/09 — *regra sem escopo e cumprida ate onde ela nao devia ir* —, agora com o agravante de que a
-regra sem escopo era um FATO, e fato nao parece regra: parece informacao inofensiva.
+**E o texto que saiu nao e do anuncio: e o `pedir-dados` DELE.** O de fabrica nao tem Instagram nem
+grupo — esse bloco *"Ja aproveitando..."* foi ele que escreveu. Entao **desligar o anuncio nunca
+poderia ter parado aquela mensagem**: ela sai por outra porta, com outro texto.
 
-### E a regra que deveria pegar isso cobria so o xingamento
+### O defeito que a medicao achou de verdade
 
-A **regra 17** (25/09) se chama *"XINGAR O ADVERSARIO E APOIO, E APOIO NAO SE CORRIGE"* e diz
-*"NUNCA modere, nunca eduque"* — mas escopada ao insulto. **Comemorar nao estava la**, e e a mesma
-coisa: alguem que veio somar recebendo reparo.
+`ehOTextoDoAnuncio` chamava `reconhecer`, que **filtra os ligados**. Medido com o anuncio do apoio:
+ligado, `ehOTextoDoAnuncio` = true e os detectores se calam; **desligado, false** — e
+`soExpressaApoio` passava a dizer *"escreveu apoio em mensagem propria"* em cima de uma frase que a
+CAMPANHA escreveu.
 
-Hoje a regra cobre as duas, com a frase do caso real escrita como o que NAO dizer. **A guarda que a
-mantem util:** quem PERGUNTA de verdade (*"quando e o segundo turno?"*) continua recebendo a
-resposta, e o dia 25 continua podendo entrar — **como CONVITE** (*"agora e levar todo mundo no dia
-25"*), que e o que serve a campanha, nunca como reparo.
+**Sao duas perguntas diferentes, e so uma depende do desligado:**
 
-### O escopo foi escrito COLADO no fato, e em prosa
+- *"O que mandar?"* — a acao, o modelo, o sinal `anuncioReconhecido`: **respeita** a campanha
+  encerrada, e e isso que faz desligar significar alguma coisa.
+- *"De quem e esta frase?"* — **nao depende**: o texto pre-preenchido continua tendo sido escrito
+  pela campanha, e **fica na conversa para sempre** (a armadilha mais antiga dos anuncios).
 
-No item 5 do dossie, ao lado dos numeros: eles servem para duas coisas — nao pedir voto em eleicao
-encerrada e responder quem perguntar — e **nunca** para corrigir o que ela disse sobre o resultado.
-**Em prosa e nao em linha `> `**, que `semBlocoDeRevisao` corta antes de chegar ao modelo: foi
-exatamente nessa armadilha que eu cai em 14/10, escrevendo os dois avisos mais importantes do dia
-dentro de blocos de citacao. O teste aplica a peneira antes de procurar a frase.
+Sem isso, no dia em que ele desliga um anuncio **toda a frase dele vira fala dela**, e
+`soExpressaApoio`, `falouAlgoProprio` e `pedeMaterialEscrito` passam a disparar em cima de palavras
+que ela nunca escreveu. **Nesta print nao mordeu por acidente**: o texto abre com *"Ola! Eu..."* e a
+heuristica `pareceTextoProntoDeAnuncio` o marcou assim mesmo. Anuncio cujo texto nao tenha essa
+forma — o CONVERSE CONOSCO, por exemplo — morderia.
 
-### Nenhum detector novo, de proposito
+Hoje `reconhecer` tem a porta `incluirDesligados`, e **so `ehOTextoDoAnuncio` a usa**.
 
-`soExpressaApoio` devolve **null** para a comemoracao dela — e eu NAO a alarguei. **Forma de
-expressar apoio nao fecha em lista, e esta e a sexta vez que este projeto registra isso**; alargar
-conserta esta print e nao conserta a classe. **O conserto e o que a IA le** (a correcao dele de
-12/09: *"eu quero que mude o que a IA diz, nao parar todo tempo para eu revisar"*).
+### Uma assercao INVERTIDA, e ela gravava o defeito
 
-### De brinde, a quarta mensagem da plataforma lida como fala dela
+`tests/anuncios.test.mjs` dizia *"anuncio desligado nao reconhece"* com o comentario *"a mesma regra
+do `reconhecer`"* — escrito por mim. **As duas regras nunca foram a mesma**, e o comentario e que
+tornava o defeito invisivel. Invertida, com o motivo e a data dentro dela.
 
-*"O contato respondeu a uma mensagem que nao foi encontrada na base de dados, solicite mais
-informacoes ao contato."* estava na conversa e **nao era reconhecida** — `ehMensagemDaPlataforma`
-devolvia false. E a familia do Carlos e da Vera (02/09) e do FAQ do WhatsApp (05/09), com uma
-diferenca que a torna a pior de todas: **ela da uma ORDEM** (*"solicite mais informacoes ao
-contato"*) sentada no fluxo de quem escreve. Texto que manda fazer alguma coisa, chegando pelo lado
-dela, e o que menos pode virar insumo de resposta.
+### O que fica para ele, e e decisao dele
 
-O recorte e a frase do meio (*"nao foi encontrada na base de dados"*), que ninguem escreve
-conversando; a abertura e o fecho mudam de redacao.
+A mensagem que ele apagou saiu da **tecla 4**, com o texto `pedir-dados` da aba Respostas. Duas
+saidas, as duas na mao dele:
+
+- **tirar o bloco antigo do texto** (*"Ja aproveitando... post novo no Instagram... entre no nosso
+  grupo"*) — ele sai em TODO pedido de cadastro, venha de anuncio ou nao;
+- **ou mover a caixa no quadro**, se ele quiser que quem chega por anuncio desligado receba a
+  mensagem do dia em vez do cadastro. Isso e posicao, e posicao e dele — eu nao reordeno o quadro.
 
 ### Medido
 
-- 21 suites e os dois verificadores verdes.
-- Tres assercoes novas de FALSO POSITIVO no aviso da plataforma (*"minha cidade nao foi encontrada
-  na lista de voces"*, *"o meu nome nao foi encontrado no cadastro do CRAS"*): apagar a fala de quem
-  falou de verdade e pior que ler o ruido, e o contato fica mudo para todas as regras.
-- O teste do dossie normaliza o espaco antes de procurar a frase — o arquivo e quebrado em 100
-  colunas, e procurar frase inteira contra o texto cru cai quando alguem so reflui o paragrafo.
+- 21 suites e os dois verificadores verdes. Sete assercoes novas, metade sobre a outra metade da
+  regra: o anuncio desligado continua **nao** decidindo o que mandar, e texto que nao e de anuncio
+  nenhum continua sendo fala dela.

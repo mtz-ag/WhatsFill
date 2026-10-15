@@ -173,12 +173,20 @@ export function normalizar(bruto) {
  * antigo, que é o certo: é o dado da plataforma sobre esta visita.
  *
  * Anúncio desligado não participa: é como ele guarda a campanha que acabou sem perder o texto.
+ *
+ * **`incluirDesligados` existe para UMA pergunta, e ela é outra: "quem escreveu este texto?"**
+ * (15/10/2026). Quem decide o que MANDAR — a ação, o modelo, o sinal `anuncioReconhecido` — tem de
+ * respeitar o desligado, porque a campanha acabou. Quem decide **de quem é a frase** não: o texto
+ * pré-preenchido continua tendo sido escrito pela campanha depois de ele desligar o anúncio, e o
+ * texto fica na conversa para sempre. Sem esta porta, no dia em que ele desliga um anúncio toda a
+ * frase dele vira **fala dela** e `soExpressaApoio`, `falouAlgoProprio` e `pedeMaterialEscrito`
+ * passam a disparar em cima de palavras que ela nunca escreveu — medido com o anúncio do apoio.
  */
-export function reconhecer(textos, anuncios) {
+export function reconhecer(textos, anuncios, { incluirDesligados = false } = {}) {
   const lista = (Array.isArray(textos) ? textos : []).map((t) => semAcento(t)).filter(Boolean);
   if (!lista.length) return null;
 
-  const ligados = normalizar(anuncios).filter((a) => a.ligado);
+  const ligados = normalizar(anuncios).filter((a) => incluirDesligados || a.ligado);
 
   for (let i = lista.length - 1; i >= 0; i -= 1) {
     let melhor = null;
@@ -230,7 +238,16 @@ export function reconhecer(textos, anuncios) {
 export function ehOTextoDoAnuncio(texto, anuncios) {
   const t = String(texto || '').trim();
   if (!t) return false;
-  const achado = reconhecer([t], anuncios || []);
+  /**
+   * **DESLIGADO CONTA AQUI, e só aqui** (15/10/2026). Esta função responde *"quem escreveu esta
+   * frase?"*, e a resposta não muda quando ele desliga a campanha: o texto pré-preenchido continua
+   * sendo da campanha, e continua na conversa para sempre. Antes disto, desligar um anúncio fazia a
+   * frase dele virar fala dela da noite para o dia.
+   *
+   * O que continua respeitando o desligado é tudo o que MANDA alguma coisa — `decidirComAnuncio`,
+   * `modeloDoAnuncio` e o sinal `anuncioReconhecido` chamam `reconhecer` sem esta porta.
+   */
+  const achado = reconhecer([t], anuncios || [], { incluirDesligados: true });
   return !!achado && String(achado.trecho || '').trim().length >= t.length * 0.6;
 }
 
