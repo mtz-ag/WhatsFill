@@ -634,7 +634,9 @@ grupo('o mapa RAMIFICADO da janela: cada regra tem os dois galhos (01/09/2026)')
      * foi o que aconteceu com o tempo em 03/09. Campo novo numa tecla-funcao entra aqui.
      */
     const daFuncao = new Set();
-    for (let m = 0; m < 64; m++) {
+    // `veioDeAnuncio` e `anuncioReconhecido` entraram em 15/10 com a decisao dele de mandar a
+    // mensagem do dia a quem chega por anuncio DESLIGADO (nao ha recibo para mandar).
+    for (let m = 0; m < 256; m++) {
       daFuncao.add(r.tecla({
         respondidoHoje: !!(m & 1),
         momentoJaEnviado: !!(m & 2),
@@ -642,6 +644,8 @@ grupo('o mapa RAMIFICADO da janela: cada regra tem os dois galhos (01/09/2026)')
         deOutroDia: !!(m & 8),
         perguntaPendente: !!(m & 16),
         materialPendente: !!(m & 32),
+        veioDeAnuncio: !!(m & 64),
+        anuncioReconhecido: !!(m & 128),
       }));
     }
     const noMapa = new Set(ramosDaRegra(r.id).map((x) => x.tecla));
@@ -1215,6 +1219,57 @@ grupo('sem modelo aprovado a rodada AINDA decide (25/09/2026)');
 
   check(decidiram > TOTAL * 0.99, `sem modelo nenhum, a rodada decide em ${decidiram} de ${TOTAL}`);
   check(usaramOModelo === 0, `e a tecla 1 nunca aparece sem modelo (${usaramOModelo})`);
+}
+
+grupo('anuncio DESLIGADO e sem recibo: sai a mensagem do dia, nao o formulario seco (15/10/2026)');
+{
+  /**
+   * **Pedido dele, dito duas vezes.** 14/10: *"ja e pra estar desativado e desativei na extensao
+   * tambem a resposta, no caso era pra mandar mensagem do dia"*. 15/10, com outra print igual:
+   * *"mesmo caso novamente"*.
+   *
+   * Nas duas ela chega pelo anuncio, escreve so o texto pre-preenchido, e recebe o **formulario
+   * sozinho** — que no texto DELE carrega o bloco de uma campanha encerrada ("Ja aproveitando...
+   * post novo no Instagram... entre no nosso grupo").
+   */
+  const chegada = {
+    ...base,
+    veioDeAnuncio: true,
+    anuncioReconhecido: false,
+    jaRespondemosAntes: false,
+    temEtiquetaDeCidade: false,
+    jaPediramDados: false,
+    podeEnviar: false,
+    podeMandarMomento: true,
+    momentoJaEnviado: false,
+  };
+  check(com(chegada)?.id === 'nunca-pediram-dados', 'quem decide continua sendo a mesma caixa');
+  check(com(chegada)?.tecla === '5', 'e o desfecho virou a mensagem do dia (era o formulario seco)');
+
+  /**
+   * **A guarda que mantem o cadastro:** saida a mensagem do momento, a passada seguinte volta a
+   * pedir nome e cidade. Mesma mecanica de `contexto-de-outro-dia` — o cadastro atrasa, nao some.
+   */
+  check(
+    com({ ...chegada, momentoJaEnviado: true })?.tecla === '4',
+    'com a do momento ja enviada, a passada seguinte pede o cadastro'
+  );
+  check(
+    com({ ...chegada, podeMandarMomento: false })?.tecla === '4',
+    'sem mensagem do momento configurada, o formulario continua sendo o desfecho'
+  );
+
+  /**
+   * **O escopo e estreito de proposito, e sao estas duas assercoes que o provam:** havendo RECIBO
+   * para mandar, quem decide e a caixa de cima (`anuncio-modelo-e-dados`), e anuncio RECONHECIDO
+   * nao muda nada — a pessoa clicou pedindo aquilo.
+   */
+  check(com({ ...chegada, podeEnviar: true })?.id === 'anuncio-modelo-e-dados',
+    'havendo modelo, o recibo continua vencendo esta caixa');
+  check(com({ ...chegada, anuncioReconhecido: true })?.tecla === '4',
+    'anuncio RECONHECIDO sem modelo continua pedindo o cadastro');
+  check(com({ ...chegada, veioDeAnuncio: false })?.tecla === '4',
+    'e quem NAO veio de anuncio nenhum continua pedindo o cadastro');
 }
 
 fim();

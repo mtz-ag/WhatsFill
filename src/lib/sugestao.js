@@ -774,7 +774,28 @@ export const REGRAS = [
   },
   {
     id: 'nunca-pediram-dados',
-    tecla: '4',
+    /**
+     * **SEM RECIBO PARA MANDAR, O FORMULÁRIO SECO VIRA A MENSAGEM DO DIA** — pedido dele, dito duas
+     * vezes (14 e 15/10/2026): *"já é pra estar desativado e desativei na extensão também a
+     * resposta, no caso era pra mandar mensagem do dia"*, e depois *"mesmo caso novamente"*.
+     *
+     * **Medido nas duas prints:** ela chega pelo anúncio, escreve só o texto pré-preenchido, e o
+     * desfecho é tecla **4** — o formulário sozinho, que no texto DELE carrega o bloco de uma
+     * campanha que acabou. Com um modelo disponível ela receberia tecla `a` (recibo + dados), e
+     * `anuncio-modelo-e-dados` decide ACIMA desta: **esta função só morde quando não há recibo
+     * nenhum para mandar**, que é o caso do anúncio que ele desligou ou nunca cadastrou.
+     *
+     * **A guarda decide o DESFECHO e não se a caixa casa** (a lição da Noeli, 06/09): barrar a
+     * condição deixaria o caso escorregar para quem envia outra coisa. E a escolha mora na `tecla`,
+     * não na posição, porque **posição é preferência dele e isto é regra dele** — assim vale onde
+     * quer que a caixa esteja no quadro, inclusive nos quadros já exportados (04/09).
+     *
+     * **O cadastro não se perde: ele fica para a passada seguinte.** Saída a mensagem do momento,
+     * `momentoJaEnviado` passa a valer e a caixa volta a pedir nome e cidade — que é a mesma
+     * mecânica de `contexto-de-outro-dia`.
+     */
+    tecla: (c) =>
+      c.veioDeAnuncio && !c.anuncioReconhecido && c.podeMandarMomento && !c.momentoJaEnviado ? '5' : '4',
     /**
      * Veio do anúncio, não tem cidade, e **o formulário nunca saiu para ele**.
      *
@@ -1496,10 +1517,19 @@ export const SOBRE = {
   },
   'nunca-pediram-dados': {
     rotulo: 'Veio do anúncio e nunca pedimos os dados dela',
+    // **`envia` e não `depende`**: as duas saídas MANDAM mensagem (a do momento ou o formulário), e
+    // o selo é sobre o efeito, não sobre haver escolha. A regra está escrita desde 03/09.
     efeito: 'envia',
+    ramos: [
+      { tecla: '5', se: 'o anúncio dela não é reconhecido e há mensagem do momento ainda não enviada' },
+      { tecla: '4', se: 'o anúncio é reconhecido, ou a do momento já saiu, ou não há uma' },
+    ],
     quando:
       'Pede nome e cidade e conclui. Quem respondeu que não vai ao evento cai aqui: sai "não tem ' +
-      'problema" junto com o pedido.',
+      'problema" junto com o pedido. **Decisão dele de 15/10:** chegando por um anúncio que você ' +
+      'DESLIGOU ou nunca cadastrou, não há recibo para mandar — e o formulário sozinho é a pior ' +
+      'primeira mensagem que existe. Aí sai a mensagem do dia, e o cadastro fica para a passada ' +
+      'seguinte. Havendo modelo, quem decide é a caixa do recibo, que fica acima desta.',
   },
   'ultima-e-so-reacao': {
     rotulo: 'Só figura, emoji ou link',

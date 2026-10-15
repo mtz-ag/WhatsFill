@@ -3563,6 +3563,22 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **ANUNCIO DESLIGADO E SEM RECIBO: SAI A MENSAGEM DO DIA, NAO O FORMULARIO SECO** (pedido dele,
+  dito DUAS vezes — 14/10 *"no caso era pra mandar mensagem do dia"* e 15/10 *"mesmo caso
+  novamente"*. Na primeira eu medi, expliquei e devolvi a decisao a ele; **ele repetir E a
+  decisao**).
+  **Medido, e o escopo e estreito:** o formulario sozinho so aparece quando **nao ha recibo nenhum**
+  — com modelo, `anuncio-modelo-e-dados` decide acima e manda recibo + dados (tecla `a`). Entao a
+  mudanca so morde no anuncio que ele desligou ou nunca cadastrou.
+  **A mudanca mora no DESFECHO** (tecla-funcao de `nunca-pediram-dados`), nao na posicao: a guarda
+  decide o desfecho e nao se a caixa casa (06/09), e excecao que ele nomeia vai no codigo e nao no
+  quadro (04/09). **Medido: vale no quadro dele SEM importar nada** — o arquivo 3.151.0 ja da tecla 5.
+  **O cadastro atrasa, nao some:** saida a do momento, `momentoJaEnviado` vale e a passada seguinte
+  pede nome e cidade. Sem momento configurado, o formulario continua.
+  **O selo continua `envia` e nao `depende`** — as duas saidas MANDAM —, e **a matriz do teste de
+  tecla-funcao ganhou `veioDeAnuncio` e `anuncioReconhecido`**: campo novo lido por tecla-funcao
+  entra la, senao o teste acusa o verbete de inventar um desfecho que existe.
+
 - **A REGRA ANTI-REPETICAO MANDAVA ESCREVER A REPETICAO** (15/10/2026, *"repeticao ocorrendo"*:
   10:59 *"Agradeco por compartilhar essa informacao. Estamos atentos e acompanhando situacoes como
   essa."*; ela reforca as 11:00; 11:51 *"Agradeco por reforcar essa preocupacao. Estamos atentos e

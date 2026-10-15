@@ -1,55 +1,61 @@
-## 2026-10-15 - v3.160.0 - a regra anti-repeticao mandava escrever a repeticao
+## 2026-10-15 - v3.161.0 - anuncio desligado e sem recibo: sai a mensagem do dia, nao o formulario seco
 
-**Print dele:** as **10:59** saiu *"Agradeco por compartilhar essa informacao. Estamos atentos e
-acompanhando situacoes como essa."*; ela reforcou as **11:00**; as **11:51** saiu *"Agradeco por
-reforcar essa preocupacao. Estamos atentos e acompanhando as informacoes com responsabilidade."* —
-e ele apagou. **"repeticao ocorrendo"**.
+**Pedido dele, dito duas vezes.** 14/10: *"ja e pra estar desativado e desativei na extensao tambem
+a resposta, no caso era pra mandar mensagem do dia"*. 15/10, com outra print igual: **"mesmo caso
+novamente"**. Na primeira eu medi, expliquei e **devolvi a decisao a ele**; ele repetiu, e repetir e
+a decisao. Feito.
 
-### O modelo OBEDECEU, e a ordem era minha
+### O que a medicao mostrou, e ela e estreita
 
-O fim da regra anti-repeticao dizia, palavra por palavra: *"se nao houver nada novo, escreva uma
-linha curta que reconheca o que ela disse, sem repetir o conteudo"*.
+Nas duas prints ela chega pelo anuncio, escreve so o texto pre-preenchido e recebe o **formulario
+sozinho** — que no texto DELE carrega o bloco de uma campanha encerrada (*"Ja aproveitando... post
+novo no Instagram... entre no nosso grupo"*).
 
-**A primeira mensagem ja era um reconhecimento.** Entao a unica forma de cumprir aquilo era
-reconhecer outra vez com outras palavras — que e exatamente o que saiu. **A regra que existe para
-impedir a repeticao e que a produziu.**
+Medido nos tres cenarios da chegada:
 
-E a licao de 17/09 (*toda regra que obriga um CONTEUDO e uma hipotese de repeticao*) aplicada desta
-vez a propria regra anti-repeticao.
+- anuncio **nao reconhecido, SEM modelo** -> `nunca-pediram-dados`, tecla **4** (o formulario seco);
+- anuncio **nao reconhecido, COM modelo** -> `anuncio-modelo-e-dados`, tecla **a** (recibo + dados);
+- anuncio **reconhecido, COM modelo** -> a mesma tecla `a`.
 
-### A guarda mecanica nao pega, e NAO e para baixar a regua
+Ou seja: **o formulario sozinho so aparece quando nao ha recibo nenhum para mandar**, que e o caso
+do anuncio que ele desligou ou nunca cadastrou. E e exatamente ai que a frase dele se aplica.
 
-`semRepetirONosso` devolveu **null**. Medido nas duas frases reais: *"Estamos atentos e acompanhando
-situacoes como essa"* contra *"...as informacoes com responsabilidade"* compartilham **60%** das
-palavras de conteudo, e os dois agradecimentos **50%** — contra os 80% da regua.
+### A mudanca mora no DESFECHO, e nao na posicao
 
-**Isto e PARAFRASE, nao a mesma frase com outra roupa**, que e o que aquela funcao mede. Descer a
-50% a faria apagar frase legitima, porque duas frases sobre o mesmo assunto compartilham metade das
-palavras. A decisao de 23/09 ja dizia isso e foi medida outra vez; ha assercao nova travando, para
-ninguem "consertar" a repeticao por ali.
+`nunca-pediram-dados` ganhou tecla-FUNCAO: chegando por anuncio **nao reconhecido**, havendo
+mensagem do momento **ainda nao enviada**, o desfecho e a **tecla 5**; no resto, continua sendo a 4.
 
-**E a guarda estava bem alimentada:** `nossaUltima` chega certo de `ia-cliente`. Conferi antes de
-mexer na regua — e a familia do *"funcao pura testada nao garante nada se quem chama filtrar os
-campos"* ja mordeu aqui varias vezes.
+Duas razoes, e as duas sao regra escrita deste projeto:
 
-### O desfecho novo nao e mecanismo novo
+- **a guarda decide o DESFECHO, nao se a caixa casa** (a Noeli, 06/09) — barrar a condicao deixaria
+  o caso escorregar para outra caixa que envia;
+- **posicao e preferencia dele; excecao que ele nomeia vai na CONDICAO/desfecho** (04/09) — e e isso
+  que faz valer **no quadro dele sem importar nada**. Medido: o arquivo 3.151.0 que ele importou da
+  **tecla 5** com a mudanca, sem uma linha de alteracao no quadro.
 
-Nao havendo nada novo, a regra manda **marcar `naoHaOQueResponder`** — a abstencao de 24/09, que
-**ja existe, ja abstem, ja manda a mensagem do dia no lugar e ja tem a guarda da pergunta
-pendente**. Medido na conversa dela: `perguntaPendente` falso, entao a guarda nao barra.
+### O cadastro nao se perde: atrasa uma passada
 
-A **regra 16** foi alargada junto, senao a regra colada no pedido mandaria marcar um campo que o
-sistema define so para *"nao entendi"* — **duas descricoes discordando e como o modelo escolhe a
-que preferir**. Hoje ela cobre os dois lados: nao entendi, e **entendi bem demais e nao ha nada
-novo**.
+Saida a mensagem do momento, `momentoJaEnviado` passa a valer e a caixa **volta a pedir nome e
+cidade** na passada seguinte — a mesma mecanica de `contexto-de-outro-dia`. Sem mensagem do momento
+configurada, o formulario continua sendo o desfecho: nada fica mudo.
 
-**A guarda que mantem a regra util:** havendo algo NOVO na fala dela, continua sendo para responder
-— senao *"nada novo"* vira a saida facil para toda insistencia, que e o defeito que a regra 14
-nasceu para consertar.
+### O escopo e estreito, e tem assercao provando cada borda
+
+- **havendo modelo**, quem decide continua sendo o recibo (`anuncio-modelo-e-dados`, acima desta);
+- **anuncio RECONHECIDO** sem modelo continua pedindo o cadastro — ela clicou pedindo aquilo;
+- **quem nao veio de anuncio** nenhum continua pedindo o cadastro.
+
+### O verbete entrou no mesmo commit, e o teste corrigiu o selo
+
+A janela promete o desfecho, e desfecho que envelhece vira mapa mentiroso — os `ramos` foram
+escritos junto. **O selo continua `envia` e nao `depende`:** as duas saidas MANDAM mensagem, e o
+checador acusou na hora que eu troquei (a regra esta escrita desde 03/09).
+
+**E a matriz do teste ganhou os dois campos novos** (`veioDeAnuncio`, `anuncioReconhecido`): sem
+eles a tecla 5 nunca apareceria e o teste acusaria o verbete de inventar um desfecho que existe de
+verdade — o que ja aconteceu com o tempo em 03/09.
 
 ### Medido
 
-- 21 suites e os dois verificadores verdes.
-- `trouxeDenuncia` devolve **null** para a fala dela: o registro de 23/09 (*denuncia nao se
-  discute*) nao foi acionado por detector nenhum aqui — o tom de "agradecemos e desconversamos"
-  veio do que ja estava na conversa, acima do que a print mostra.
+- 21 suites e os dois verificadores verdes. O `fluxoPadrao` **nao mudou** (a mudanca e de desfecho,
+  nao de arvore), entao `tools/fluxo-padrao.json` continua em dia e **ele nao precisa importar nada**.
