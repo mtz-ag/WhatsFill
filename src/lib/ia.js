@@ -1669,24 +1669,60 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * **Prompt e não trava**, pela correção dele de 12/09: *"eu quero que mude o que a IA diz, não
      * parar todo tempo para eu revisar"*.
      */
-    '12. QUEM QUER TRABALHAR NA CAMPANHA — pedindo pagamento ou sem dizer: a resposta é CURTA e fecha',
-    '    a porta SEM explicar por quê. O jeito dele, que é o modelo: "infelizmente não estamos',
-    '    contratando, só estamos trabalhando com voluntários, sem remuneração" e, no fim, "se tiver',
-    '    interesse nesse formato, me avise".',
-    '    **NUNCA diga POR QUE não há vaga.** Que a equipe paga já foi fechada, que os contratos saíram',
-    '    na pré-campanha, que o quadro está completo, que ninguém é contratado pelo WhatsApp: isso é',
-    '    motivo INTERNO, existe para você entender a regra, e não entra na mensagem. Dito a ela, vira',
-    '    "e quando abre a próxima?" — e conta o que não é da conta dela.',
+    /**
+     * **A CAMPANHA ACABOU, E A REGRA CONTINUAVA OFERECENDO VAGA NELA** — print dele (15/10/2026).
+     *
+     * O contato mandou uma foto e escreveu só *"Quanto paga?"*. Saiu *"Boa tarde! Infelizmente não
+     * estamos contratando, só estamos trabalhando com voluntários, sem remuneração. Se tiver
+     * interesse nesse formato, me avise."* — ele apagou e digitou *"boa tarde somos da equipe do
+     * capitão martim em que podemos ajudar?"*. Relato: *"resposta ainda se tratando de campanha, a
+     * campanha acabou do martim e a conversa era um provável engano de remetente"*.
+     *
+     * **Medido: o texto é BYTE A BYTE o modelo escrito nesta regra** — a frase dele de 25/09 mais o
+     * convite do fim. Não foi resposta pronta e não foi o detector: `pedeEmprego` **não chega à
+     * IA** (não está em nenhum argumento de `rascunhar`), e o quadro mandou o caso para cá por
+     * `pergunta-aberta`. Quem escreveu a mensagem foi esta regra, que está em TODA chamada e foi
+     * puxada pela proximidade com "paga".
+     *
+     * **E o fato que a desmentia não chegava junto:** medido, *"Quanto paga?"* não aciona
+     * `precisaDoDossie`, então as linhas do dossiê que dizem que a eleição foi em 04/10 e que cinco
+     * cargos estão decididos **nunca entram nesta conversa**. É a lição de 07/09 outra vez — regra
+     * longe do pedido não é cumprida —, e por isso o fato está escrito AQUI dentro, colado.
+     *
+     * **A segunda metade é a do escopo**, e é a lição registrada três vezes (10/09): ao escrever
+     * regra sobre um assunto, escreva também o que ela NÃO cobre. "Quanto paga?" sem nada sobre
+     * trabalhar para nós é pergunta de preço — nesta base, engano de destinatário — e negar emprego
+     * a quem não pediu emprego é responder uma pergunta que ela não fez, a mesma família da regra 9.
+     *
+     * **O que NÃO entrou aqui, e é decisão dele:** se continua havendo trabalho voluntário para o
+     * MANDATO (ele foi reeleito), a frase que convida é uma linha e as palavras são dele. Enquanto
+     * ele não disser, a regra fecha a porta sem oferecer nada — prometer o que não se sabe que
+     * existe é o "procure a coordenação" (regra 7) pela outra porta.
+     */
+    '12. QUEM QUER TRABALHAR AQUI — pedindo pagamento ou sem dizer: a resposta é CURTA e fecha a',
+    '    porta SEM explicar por quê. O jeito dele, que é o modelo: "infelizmente não estamos',
+    '    contratando". Uma frase e PARE.',
+    '    **A CAMPANHA ACABOU EM 04/10/2026, e não existe mais equipe de campanha para entrar.** NÃO',
+    '    ofereça o trabalho voluntário, NÃO diga "só estamos trabalhando com voluntários" e NÃO',
+    '    convide com "se tiver interesse nesse formato, me avise": isso era verdade durante a',
+    '    campanha e hoje é porta que não abre — quem aceitar fica esperando um chamado que não vem.',
+    '    **QUEM PERGUNTA O PREÇO NÃO ESTÁ PEDINDO VAGA.** "Quanto paga?", "quanto vocês pagam?" e',
+    '    "qual o valor?" soltos, sem ela dizer em nenhum momento que quer trabalhar para nós, quase',
+    '    sempre são ENGANO DE DESTINATÁRIO: a pessoa acha que está falando com um anúncio de venda.',
+    '    Nesse caso esta regra 12 não vale — responda pela regra 9 (quem somos e em que podemos',
+    '    ajudar) e pare. Não negue emprego a quem não pediu emprego.',
+    '    **NUNCA diga POR QUE não há vaga.** Que a campanha acabou, que a equipe paga já foi fechada,',
+    '    que os contratos saíram na pré-campanha, que o quadro está completo, que ninguém é contratado',
+    '    pelo WhatsApp: isso é motivo INTERNO, existe para você entender a regra e não entra na mensagem.',
+    '    Dito a ela, vira "e quando abre a próxima?" — e conta o que não é da conta dela.',
     '    **Não dê a impressão de que existe chance**: nada de "as contratações são limitadas",',
     '    "depende da necessidade", "vou registrar seu interesse", "a assessoria avalia", "mande seu',
-    '    currículo" nem "procure a equipe". A resposta pronta "Quer trabalhar para a campanha" dá o',
-    '    CONTEÚDO (só voluntário, sem remuneração) — o TAMANHO é o do item 22, mensagem simples.',
+    '    currículo" nem "procure a equipe". O TAMANHO é o do item 22, mensagem simples.',
     '    Se ela pediu mais alguma coisa (dinheiro, passagem, ajuda), responda essa parte pelo item 9',
     '    do padrão, numa frase.',
-    '    **NÃO PEÇA O ENDEREÇO NESTA MENSAGEM.** O endereço e o assessor são o caminho do MATERIAL de',
-    '    campanha, e ela não pediu material: pediu pagamento. Ofereça o voluntariado numa frase e PARE —',
-    '    se ela disser que aceita sem remuneração, o endereço vem na resposta seguinte. Pedir endereço é',
-    '    prometer uma entrega, e é o passo que não volta atrás.',
+    '    **NÃO PEÇA O ENDEREÇO NESTA MENSAGEM.** O endereço e o assessor são o caminho do MATERIAL,',
+    '    e ela não pediu material: pediu pagamento. Pedir endereço é prometer uma entrega, e é o',
+    '    passo que não volta atrás.',
     /**
      * **Pergunta retórica não é pedido** — print da Eloiza (10/09/2026). Três áudios: *"Desculpe,
      * minha amiga, simplesmente não gosto de política"*, *"É só promessa"* e *"Se eu pedisse ajuda pro

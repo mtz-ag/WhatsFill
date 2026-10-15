@@ -2228,6 +2228,44 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   const i11 = p.indexOf('11. NÃO SOMOS UM CANAL');
   const i12 = p.indexOf('12. QUEM QUER TRABALHAR');
   check(i11 >= 0 && i12 > i11 && i12 < p.indexOf('TAMANHO:'), 'a regra 12 vem logo depois da 11, antes do TAMANHO');
+
+  /**
+   * **A CAMPANHA ACABOU, E A REGRA CONTINUAVA OFERECENDO VAGA NELA** — print dele (15/10/2026).
+   *
+   * *"Quanto paga?"* recebeu *"infelizmente nao estamos contratando, so estamos trabalhando com
+   * voluntarios, sem remuneracao. Se tiver interesse nesse formato, me avise."* — **byte a byte o
+   * modelo escrito nesta regra**. Ele: *"resposta ainda se tratando de campanha, a campanha acabou
+   * do martim"*.
+   *
+   * **O fato nao chegava por outro caminho:** medido, *"Quanto paga?"* nao aciona
+   * `precisaDoDossie`, entao as linhas do dossie sobre a eleicao de 04/10 nao entram nesta
+   * conversa. Por isso o fato esta escrito DENTRO da regra — a licao de 07/09.
+   *
+   * **A assercao trava a AUSENCIA do convite**, que e o que ia para o eleitor: prometer uma vaga
+   * de voluntario numa campanha encerrada e a porta que nao abre (a regra 7).
+   */
+  const regra12 = p.slice(i12, p.indexOf('13. ', i12));
+  check(/CAMPANHA ACABOU EM 04\/10\/2026/.test(regra12), 'a regra 12 diz que a campanha acabou');
+  /**
+   * **A frase continua escrita, e agora como PROIBICAO** — a mesma disciplina da regra 12 desde
+   * 25/09: proibicao nomeia a frase, senao o modelo nao sabe qual evitar. O que a assercao trava e
+   * que ela so aparece DEPOIS de "NAO convide com".
+   */
+  check(/NÃO\s+convide com "se tiver\s+interesse nesse formato/i.test(regra12),
+    'o convite ao voluntariado virou frase proibida, com as palavras escritas');
+  check(/NÃO\s+ofereça o trabalho voluntário/i.test(regra12), 'e oferecer o voluntariado esta proibido');
+  const modelo = regra12.slice(0, regra12.indexOf('A CAMPANHA ACABOU'));
+  check(!/voluntári/i.test(modelo), 'o MODELO a copiar nao fala mais em voluntario');
+  check(/infelizmente não estamos\s+contratando/.test(regra12), 'o jeito dele continua sendo o modelo');
+
+  /**
+   * **O ESCOPO: pergunta de preco nao e pedido de vaga.** A regra foi puxada pela proximidade com
+   * "paga" — a licao registrada tres vezes (10/09): ao escrever regra sobre um assunto, escreva
+   * tambem o que ela NAO cobre.
+   */
+  check(/PERGUNTA O PREÇO NÃO ESTÁ PEDINDO VAGA/.test(regra12), 'a regra diz onde ela nao vale');
+  check(/engano de destinat/i.test(regra12) && /regra 9/.test(regra12),
+    'e manda responder pela regra 9, que e a frase que ele digitou a mao');
 }
 
 /**

@@ -2650,6 +2650,31 @@ grupo('"Me liga": o pedido de ligacao (04/09/2026)');
   check(tipo('E combinarmos quanto vou ganhar') === 'campanha', 'falar em quanto vai ganhar e a mesma conversa');
   check(tipo('quero trabalhar na campanha') === 'campanha', 'a forma que ja casava continua casando');
 
+  /**
+   * **PERGUNTA DE PRECO NAO E PEDIDO DE VAGA** — print dele (15/10/2026). O contato mandou uma foto
+   * e escreveu so *"Quanto paga?"*; saiu a negativa de contratacao, ele apagou e digitou *"boa
+   * tarde somos da equipe do capitao martim em que podemos ajudar?"*. Relato: *"a conversa era um
+   * provavel engano de remetente"*.
+   *
+   * **Medido: devolvia `{tipo:'campanha'}`.** `MENCIONA_REMUNERACAO` era um dos itens de
+   * `QUER_TRABALHAR` e decidia sozinha — enquanto o comentario em cima dela dizia o contrario
+   * (*"sozinha ela nao decide nada"*). Hoje sao duas constantes: a do ARRANJO de trabalho decide,
+   * a do PRECO nao.
+   */
+  check(tipo('Quanto paga?') === null, 'a print: "Quanto paga?" solto nao e pedido de vaga');
+  check(tipo('qual o valor?') === null, 'perguntar o valor tambem nao');
+  check(tipo('qual o valor do bone?') === null, 'nem o preco de uma coisa');
+
+  /**
+   * **O outro lado, que e o que torna a separacao segura:** quem fala do ARRANJO continua sendo
+   * pedido, e *"e remunerado ou voluntario?"* e guarda literal desde 05/09.
+   */
+  check(tipo('e remunerado ou voluntario?') === 'campanha', 'perguntar se e remunerado continua sendo pedido');
+  check(tipo('quanto vou ganhar?') === 'campanha', 'perguntar quanto VAI GANHAR continua');
+  check(tipo('qual o salario?') === 'campanha', 'perguntar o salario continua');
+  check(pedeEmprego([{ texto: 'tem vaga para trabalhar?', tipo: 'TEXT', at: 1 }, { texto: 'quanto paga?', tipo: 'TEXT', at: 2 }], null)?.tipo === 'campanha',
+    'preco DEPOIS da vaga continua sendo a mesma conversa, e remunerada');
+
   /** Procurar TRABALHO e o outro caso, e a resposta dele e o SINE. */
   check(tipo('preciso de emprego') === 'emprego', 'quem procura emprego continua sendo "emprego"');
   check(tipo('tem alguma vaga ai') === 'emprego', 'a pergunta pela vaga tambem');

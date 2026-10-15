@@ -1671,12 +1671,44 @@ const TRABALHAR_PARA_NOS =
 
 /**
  * **"E combinarmos quanto vou ganhar"** — a metade que torna a oferta remunerada, e a que a regra
- * dele responde: *"trabalhamos somente com voluntários sem remuneração"*.
+ * dele responde.
  *
- * Sozinha ela não decide nada: só é lida depois de `QUER_TRABALHAR` já ter casado.
+ * **O comentário que estava aqui dizia *"sozinha ela não decide nada: só é lida depois de
+ * `QUER_TRABALHAR` já ter casado"* — e era FALSO**: a constante era um dos itens de
+ * `QUER_TRABALHAR`, então decidia sozinha. É o "comentário que descreve a ordem não é a ordem"
+ * (01/09/2026) numa lista. Hoje são duas: `REMUNERACAO_DO_TRABALHO` decide, `PRECO_SOLTO` não, e
+ * a promessa do comentário virou código.
  */
-const MENCIONA_REMUNERACAO =
-  /(^|[^\p{L}])(quanto\s+(vou|vamos|eu)\s+(ganh|receb)|quanto\s+(voces\s+)?(paga|pagam)|qual\s+(o\s+)?(salario|valor|pagamento)|combinar\w*\s+(o\s+)?(valor|quanto|pagamento)|remunera|ser\s+pago|sou\s+pago)/u;
+/**
+ * **Falar do ARRANJO de trabalho.** Estas formas dizem sozinhas que o assunto é trabalhar: ninguém
+ * pergunta o próprio salário, se é remunerado ou quanto VAI GANHAR sobre outra coisa. São as que
+ * continuam valendo como gatilho em `QUER_TRABALHAR`, e é por elas que *"é remunerado ou
+ * voluntário?"* continua sendo pedido — guarda literal, registrada em 05/09/2026.
+ */
+const REMUNERACAO_DO_TRABALHO =
+  /(^|[^\p{L}])(quanto\s+(vou|vamos|eu)\s+(ganh|receb)|qual\s+(o\s+)?(salario|pagamento)|combinar\w*\s+(o\s+)?(valor|quanto|pagamento)|remunera|ser\s+pago|sou\s+pago)/u;
+
+/**
+ * **PERGUNTA DE PREÇO, que é outra coisa** — print dele (15/10/2026). O contato mandou uma foto e
+ * escreveu só *"Quanto paga?"*; o detector leu *"quer trabalhar para a campanha"* e a IA respondeu
+ * negando contratação. Ele: *"a conversa era um provável engano de remetente"*.
+ *
+ * *"Quanto paga?"*, *"quanto vocês pagam?"* e *"qual o valor?"* são o que se pergunta a QUALQUER
+ * anúncio de venda — não dizem nada sobre trabalhar para nós. **Por isso elas saíram de
+ * `QUER_TRABALHAR` e só contam depois que outra forma já casou**, que é exatamente o que o
+ * comentário abaixo sempre prometeu e não era verdade: `MENCIONA_REMUNERACAO` era um dos itens da
+ * lista e decidia sozinha.
+ *
+ * Medido: sem esta separação, *"Quanto paga?"* solto devolvia `{tipo: 'campanha'}` — e a linha do
+ * Andamento dizia *"quer trabalhar para a campanha"* sobre quem nunca escreveu isso.
+ */
+const PRECO_SOLTO = /(^|[^\p{L}])(quanto\s+(voces\s+)?(paga|pagam)|qual\s+(o\s+)?valor)/u;
+
+/**
+ * As duas juntas, e só para decidir o TIPO depois que `QUER_TRABALHAR` já casou: aí *"e combinamos
+ * quanto vou ganhar"* e *"quanto vocês pagam"* significam a mesma coisa — ela espera ser paga.
+ */
+const MENCIONA_REMUNERACAO = new RegExp(`${REMUNERACAO_DO_TRABALHO.source}|${PRECO_SOLTO.source}`, 'u');
 
 const QUER_TRABALHAR = [
   /(^|[^\p{L}])(como|onde)\s+(faz|faco|fazer|posso|consigo)\s+.{0,20}?trabalhar/u,
@@ -1686,7 +1718,7 @@ const QUER_TRABALHAR = [
    */
   TRABALHAR_PARA_NOS,
   /** Falar de quanto vai ganhar, depois de falar em trabalhar, é a mesma conversa. */
-  MENCIONA_REMUNERACAO,
+  REMUNERACAO_DO_TRABALHO,
   /**
    * **O ARTIGO estava colado no substantivo, e isso apagava as tres formas mais naturais.**
    *

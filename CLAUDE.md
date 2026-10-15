@@ -3563,6 +3563,30 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **A CAMPANHA ACABOU, E A REGRA 12 CONTINUAVA OFERECENDO VAGA NELA** (15/10/2026, *"Quanto paga?"*
+  recebeu *"nao estamos contratando, so estamos trabalhando com voluntarios... se tiver interesse
+  nesse formato, me avise"* — *"resposta ainda se tratando de campanha, a campanha acabou do martim
+  e a conversa era um provavel engano de remetente"*).
+  **Medido: o texto e BYTE A BYTE o modelo escrito na regra 12.** Nao foi resposta pronta e nao foi
+  o detector — **`pedeEmprego` NAO CHEGA A IA** (nao esta em nenhum argumento de `rascunhar`), e
+  quem mandou o caso para la foi `pergunta-aberta`. A regra 12 esta em TODA chamada e foi puxada
+  pela proximidade com "paga". **Antes de culpar o detector por um texto da IA, confira se ele
+  chega ao prompt.**
+  **E O DOSSIE NAO CHEGA NESTE CASO:** medido, *"Quanto paga?"* nao aciona `precisaDoDossie`, entao
+  as linhas sobre a eleicao de 04/10 **nunca entram**. Fato que desmente uma regra tem de morar
+  DENTRO dela (07/09) — no dossie ele e condicional, e a regra e incondicional.
+  **O convite ao voluntariado virou frase PROIBIDA, escrita**: proibicao que nao nomeia a frase nao
+  diz ao modelo qual evitar. E *"a campanha acabou"* entrou na lista do que NAO se diz ao eleitor.
+  **ESCOPO:** *"Quanto paga?"* / *"qual o valor?"* soltos sao pergunta de PRECO — engano de
+  destinatario —, e a resposta e a da regra 9, que e a frase que ELE digitou a mao. Terceira vez da
+  licao de 10/09: **ao escrever regra sobre um assunto, escreva tambem o que ela NAO cobre.**
+  **E o detector decidia sozinho dizendo que nao decidia:** `MENCIONA_REMUNERACAO` era item de
+  `QUER_TRABALHAR` e o comentario em cima dizia *"sozinha ela nao decide nada"*. Hoje sao duas —
+  `REMUNERACAO_DO_TRABALHO` (salario, remunerado, quanto vou ganhar) decide; `PRECO_SOLTO` nao.
+  **Fica em aberto:** `"voces estao contratando?"` nao casa (o padrao exige objeto depois do verbo)
+  e o comentario do codigo diz que casa — mesma classe, nao consertado junto porque alarga no
+  commit que estreita.
+
 - **RESPOSTA PRONTA COM VARIANTES SAIA DUAS VEZES, E A SEGUNDA PARECIA OUTRA MENSAGEM** (15/10/2026,
   *"novamente repeticao, a pessoa finalizou a conversa"*). `agradecer-apoio` saiu as 13:11 na
   **variante 2** e as 13:48 no **texto base** — byte a byte a mesma resposta pronta.
