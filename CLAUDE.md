@@ -3563,6 +3563,25 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **RESPOSTA PRONTA COM VARIANTES SAIA DUAS VEZES, E A SEGUNDA PARECIA OUTRA MENSAGEM** (15/10/2026,
+  *"novamente repeticao, a pessoa finalizou a conversa"*). `agradecer-apoio` saiu as 13:11 na
+  **variante 2** e as 13:48 no **texto base** — byte a byte a mesma resposta pronta.
+  **NAO foi a IA, e a medicao disse isso ANTES de eu mexer:** `semRepetirONosso` TIRARIA a frase
+  identica (*"Que Deus abencoe voce e sua familia"*), e ela saiu inteira — logo o texto nunca passou
+  pela revisao, porque **resposta pronta nao passa por la**. Eu ia consertar o prompt pela terceira
+  vez e teria consertado o lugar errado. **Antes de culpar a IA por repeticao, rode a guarda nos
+  dois textos: se ela TIRARIA algo, o texto nao veio da IA.**
+  **E a armadilha de 02/09 numa porta nova** — *a conferencia de duplicata tem de cobrir todo o
+  conjunto que pode sair, nao o item sorteado*: aquele dia a licao foi aplicada ao MODELO PADRAO com
+  rodizio, e as RESPOSTAS PRONTAS com variantes ficaram de fora.
+  Hoje `templates.ehAgradecimentoDeApoio` reconhece pelo INVARIANTE e o painel cala
+  `soExpressaApoio` quando ele ja saiu. **No SINAL e nao em excecao da caixa** (a trava da Cleonice,
+  06/09), entao vale no quadro dele sem importar. **O ajudante foi GENERALIZADO em vez de
+  duplicado:** `negativaJaSaiu` -> `respostaJaSaiu`.
+  **Medido:** calado o sinal decide `ja-respondemos-antes` -> tecla 3 (conclui sem enviar nada), que
+  e silencioso — a guarda nao empurra para caixa que envia. **E a COBERTURA e a prova:** 3/3 das
+  formas e ZERO falso positivo contra todas as respostas de fabrica.
+
 - **ANUNCIO DESLIGADO E SEM RECIBO: SAI A MENSAGEM DO DIA, NAO O FORMULARIO SECO** (pedido dele,
   dito DUAS vezes — 14/10 *"no caso era pra mandar mensagem do dia"* e 15/10 *"mesmo caso
   novamente"*. Na primeira eu medi, expliquei e devolvi a decisao a ele; **ele repetir E a

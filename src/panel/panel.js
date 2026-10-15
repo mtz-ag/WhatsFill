@@ -9332,18 +9332,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * **Terceira vez da mesma classe:** marca amarrada a QUAL texto saiu morre quando o caminho
        * de resposta muda (a etiqueta de material na 3.40, a de pedido de dinheiro na 3.46).
        */
-      const INVARIANTE_DA_NEGATIVA = {
+      const INVARIANTE_DA_RESPOSTA = {
         'pedido-ajuda': templatesLib.ehNegativaDeAjuda,
         'pedido-emprego': templatesLib.ehNegativaDeTrabalho,
         'trabalhar-na-campanha': templatesLib.ehNegativaDeTrabalho,
+        /**
+         * **O agradecimento pelo apoio entrou em 15/10/2026** — print dele: `agradecer-apoio`
+         * saiu as 13:11 na variante 2 e as 13:48 no texto base, e ele apagou (*"novamente
+         * repeticao"*). **O revezamento entre as tres formas fez a mesma resposta parecer
+         * outra**, que e a armadilha de 02/09 (*a conferencia tem de cobrir todo o conjunto que
+         * pode sair, nao o item sorteado*) numa porta nova: la o rodizio era do modelo padrao,
+         * aqui e das variantes de uma resposta pronta.
+         *
+         * **O texto se chama "Agradecer o apoio e ENCERRAR"**: ele fecha a conversa, e fechar
+         * duas vezes e o sinal de maquina. Uma vez por conversa.
+         */
+        'agradecer-apoio': templatesLib.ehAgradecimentoDeApoio,
       };
 
-      const negativaJaSaiu = (id) => {
+      const respostaJaSaiu = (id) => {
         const pronta = state.templates.find((t) => t.id === id);
         if (pronta && [pronta.text, ...(pronta.variantes || [])].some((texto) => jaSaiuNaConversa(texto))) {
           return true;
         }
-        const invariante = INVARIANTE_DA_NEGATIVA[id];
+        const invariante = INVARIANTE_DA_RESPOSTA[id];
         if (!invariante) return false;
         return (state.nossas || []).some((m) => invariante(m?.texto || ''));
       };
@@ -9565,9 +9577,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // ("Olá! Eu apoio as Escolas Cívico-Militares") deixa de contar como apoio escrito por
         // ela. Por TEXTO e não por posição — a figura que a Erenita mandou antes derrubou a
         // versão posicional (01/09).
-        soExpressaApoio: apoioTrava
-          ? null
-          : soExpressaApoio(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
+        /**
+         * **O AGRADECIMENTO SAI UMA VEZ POR CONVERSA** — print dele (15/10/2026): ela escreveu
+         * apoio, recebeu `agradecer-apoio` as 13:11, respondeu *"Amem firme dia 25 e 22"* e
+         * recebeu a MESMA resposta pronta as 13:48, noutra variante. *"novamente repeticao, a
+         * pessoa finalizou a conversa"*.
+         *
+         * **O detector nao estava errado:** `soExpressaApoio` le a RAJADA desde a nossa ultima
+         * fala, ela apoiou de novo, o sinal ficou verdadeiro de novo. O que faltava e que
+         * **agradecer duas vezes nao e responder, e repetir** — a mesma forma da trava da
+         * negativa (a Cleonice, 06/09), e por isso ela mora no SINAL e nao numa excecao da
+         * caixa: excecao so chegaria depois de ele importar o quadro, e esta precisa valer hoje.
+         *
+         * **Medido:** calado o sinal, quem decide e `ja-respondemos-antes` -> **tecla 3**, que
+         * conclui sem enviar nada. E uma das duas saidas que ele pediu (*"ou nem mandar"*), e e
+         * SILENCIOSA — a guarda nao empurra o caso para nenhuma caixa que envie (a licao da
+         * Noeli, 06/09).
+         */
+        soExpressaApoio:
+          apoioTrava || respostaJaSaiu('agradecer-apoio')
+            ? null
+            : soExpressaApoio(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),
         /**
          * **O apoio foi escrito em outro dia?** — é o que escolhe entre agradecer e mandar a
          * mensagem do momento (critério dele, 03/09/2026: *"se foi no dia anterior, é mensagem do
@@ -9645,27 +9675,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         pedeAlgoIndefinido: pedeAlgoIndefinido(state.entrantes, state.nossaUltimaAt),
         // Pediu DINHEIRO: vem antes do "pediu algo sem dizer o quê" no quadro, porque aqui já se
         // sabe o que ela quer — perguntar seria fingir que não (print da Marli, 02/09).
-        pedeAjudaFinanceira: negativaJaSaiu('pedido-ajuda') ? null : pedeAjudaFinanceira(state.entrantes, state.nossaUltimaAt),
+        pedeAjudaFinanceira: respostaJaSaiu('pedido-ajuda') ? null : pedeAjudaFinanceira(state.entrantes, state.nossaUltimaAt),
         /**
          * **Perguntou como trabalhar no mandato.** Anotação do Kelvem (02/09/2026): a pergunta veio
          * numa mensagem e o *"No caso vcs não pagam"* na seguinte, e a rodada agradeceu e concluiu.
          * O texto que explica e nega já existia sem ninguém acioná-lo.
          */
-        pedeEmprego: negativaJaSaiu('pedido-emprego') ? null : pedeEmprego(state.entrantes, state.nossaUltimaAt),
+        pedeEmprego: respostaJaSaiu('pedido-emprego') ? null : pedeEmprego(state.entrantes, state.nossaUltimaAt),
         /**
          * **Pediu que a gente ligasse.** Anotação da Jucileia (04/09/2026): *"Oi"*, três mensagens
          * que a plataforma não leu e *"Me liga"* — e a rodada ofereceu concluir, deixando a pessoa
          * esperando o telefone tocar.
          */
-        pedeLigacao: negativaJaSaiu('pedido-ligacao') ? null : pedeLigacao(state.entrantes, state.nossaUltimaAt),
+        pedeLigacao: respostaJaSaiu('pedido-ligacao') ? null : pedeLigacao(state.entrantes, state.nossaUltimaAt),
         /**
          * **"Gostaria de falar com o deputado"** — pedido dele (08/09/2026), print do pastor.
          *
-         * Entra com a mesma trava das outras negativas (`negativaJaSaiu`): dizer *"o WhatsApp
+         * Entra com a mesma trava das outras negativas (`respostaJaSaiu`): dizer *"o WhatsApp
          * pessoal não é repassado"* duas vezes não é responder, é repetir — a regra da Cleonice
          * (06/09). Barrada a repetição, o caso desce para quem o alcançar, que é o desfecho certo.
          */
-        pedeFalarComDeputado: negativaJaSaiu('falar-com-deputado')
+        pedeFalarComDeputado: respostaJaSaiu('falar-com-deputado')
           ? null
           : pedeFalarComDeputado(state.entrantes, state.nossaUltimaAt),
         naoPodeFalarAgora: naoPodeFalarAgora(state.entrantes, state.nossaUltimaAt),

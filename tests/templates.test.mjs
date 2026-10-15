@@ -727,4 +727,65 @@ grupo('o pedido de endereco do VOLUNTARIADO nao abre caso de material (24/09/202
     `so o voluntariado deixa de marcar (hoje: ${calados.join(', ') || 'nenhum'})`);
 }
 
+grupo('o agradecimento pelo apoio sai UMA vez por conversa (15/10/2026)');
+{
+  /**
+   * Print dele: `agradecer-apoio` saiu as **13:11** na variante 2 (*"Que bom ler isso, obrigado
+   * pelo apoio e pelo carinho de sempre..."*) e as **13:48** no texto BASE (*"Muito obrigado pelo
+   * apoio e pelo carinho — palavra como a sua da forca para seguir..."*). *"novamente repeticao"*.
+   *
+   * **Medido byte a byte: nao foi a IA** — sao duas formas da MESMA resposta pronta. O revezamento
+   * fez a mesma mensagem parecer outra, e e a armadilha de 02/09 (*a conferencia de duplicata tem
+   * de cobrir todo o conjunto que pode sair, nao o item sorteado*) numa porta nova: la o rodizio
+   * era do modelo padrao, aqui e das variantes de uma resposta pronta.
+   *
+   * **A prova de que `semRepetirONosso` nao era o caminho:** ela TIRARIA a frase identica (*"Que
+   * Deus abencoe voce e sua familia"*), e a frase saiu inteira — sinal de que o texto nunca passou
+   * pela revisao, porque resposta pronta nao passa.
+   */
+  const formas = (id) => {
+    const m = store.DEFAULT_TEMPLATES.find((x) => x.id === id);
+    return [m.text, ...(m.variantes || [])].filter(Boolean);
+  };
+
+  for (const [i, f] of formas('agradecer-apoio').entries()) {
+    check(templates.ehAgradecimentoDeApoio(f), `a forma ${i} do agradecer-apoio e reconhecida`);
+  }
+  check(
+    templates.ehAgradecimentoDeApoio('Que bom ler isso, obrigado pelo apoio e pelo carinho de sempre. Seguimos lado a lado.'),
+    'o texto das 13:11 da print e reconhecido'
+  );
+  check(
+    templates.ehAgradecimentoDeApoio('Muito obrigado pelo apoio e pelo carinho — palavra como a sua da forca para seguir.'),
+    'e o das 13:48 tambem'
+  );
+
+  /**
+   * **A COBERTURA e o que torna o invariante seguro** (a disciplina de 24/09): ele cala o
+   * agradecimento, entao casar numa resposta vizinha deixaria a rodada muda onde ela deve falar.
+   * A prova e contra TODAS as respostas de fabrica, uma a uma.
+   */
+  const casamFora = store.DEFAULT_TEMPLATES
+    .filter((m) => m.id !== 'agradecer-apoio')
+    .filter((m) => [m.text, ...(m.variantes || [])].filter(Boolean).some((f) => templates.ehAgradecimentoDeApoio(f)))
+    .map((m) => m.id);
+  check(casamFora.length === 0, `nenhuma outra resposta de fabrica casa (${casamFora.join(', ') || 'nenhuma'})`);
+
+  /** As duas guardas que a medicao obrigou, cada uma com o caso que a criou. */
+  check(
+    !templates.ehAgradecimentoDeApoio('Obrigado pela mensagem e pela confianca. Me explica um pouco melhor em que voce precisa de ajuda?'),
+    'agradecer a MENSAGEM e a confianca nao e agradecer o apoio (o perguntar-como-ajudar)'
+  );
+  check(
+    !templates.ehAgradecimentoDeApoio(`Sem problema! Muito obrigado pelo carinho e pelo apoio!
+
+Para eu poder salvar seu contato me diga seu:
+
+Nome , Cidade`),
+    'e mensagem que tambem PEDE O CADASTRO nao e o agradecimento (o pedir-dados-evento-nao)'
+  );
+  check(!templates.ehAgradecimentoDeApoio(''), 'vazio nao e');
+  check(!templates.ehAgradecimentoDeApoio('Bom dia! Em que podemos ajudar?'), 'e texto sem agradecimento nenhum nao e');
+}
+
 fim();

@@ -1,61 +1,71 @@
-## 2026-10-15 - v3.161.0 - anuncio desligado e sem recibo: sai a mensagem do dia, nao o formulario seco
+## 2026-10-15 - v3.162.0 - o agradecimento pelo apoio saia duas vezes, em variantes diferentes
 
-**Pedido dele, dito duas vezes.** 14/10: *"ja e pra estar desativado e desativei na extensao tambem
-a resposta, no caso era pra mandar mensagem do dia"*. 15/10, com outra print igual: **"mesmo caso
-novamente"**. Na primeira eu medi, expliquei e **devolvi a decisao a ele**; ele repetiu, e repetir e
-a decisao. Feito.
+**Print dele:** as **13:11** saiu *"Que bom ler isso, obrigado pelo apoio e pelo carinho de sempre.
+Seguimos lado a lado. Que Deus abencoe voce e sua familia!"*; ela respondeu *"Amem firme dia 25 e
+22"*; as **13:48** saiu *"Muito obrigado pelo apoio e pelo carinho — palavra como a sua da forca
+para seguir. Seguimos juntos nessa caminhada. Que Deus abencoe voce e sua familia!"* — e ele apagou.
+*"novamente repeticao, a pessoa finalizou a conversa, o certo seria mandar algo finalizando tambem
+(uma mensagem curta, tipo abraco e encerrar) ou nem mandar"*.
 
-### O que a medicao mostrou, e ela e estreita
+### NAO foi a IA, e a medicao disse isso antes de eu mexer em qualquer coisa
 
-Nas duas prints ela chega pelo anuncio, escreve so o texto pre-preenchido e recebe o **formulario
-sozinho** — que no texto DELE carrega o bloco de uma campanha encerrada (*"Ja aproveitando... post
-novo no Instagram... entre no nosso grupo"*).
+Os dois textos sao `agradecer-apoio` **byte a byte**: o de 13:11 e a **variante 2** e o de 13:48 e o
+**texto base**. **O revezamento entre as tres formas fez a mesma resposta parecer outra.**
 
-Medido nos tres cenarios da chegada:
+**A prova de que o caminho nao era a IA:** `semRepetirONosso` TIRARIA a frase identica (*"Que Deus
+abencoe voce e sua familia"*) — medi, ela devolve o texto sem ela. A frase saiu inteira, entao o
+texto nunca passou pela revisao: resposta pronta nao passa por la. Eu ia consertar o prompt pela
+terceira vez e teria consertado o lugar errado.
 
-- anuncio **nao reconhecido, SEM modelo** -> `nunca-pediram-dados`, tecla **4** (o formulario seco);
-- anuncio **nao reconhecido, COM modelo** -> `anuncio-modelo-e-dados`, tecla **a** (recibo + dados);
-- anuncio **reconhecido, COM modelo** -> a mesma tecla `a`.
+### E a armadilha de 02/09 numa porta nova
 
-Ou seja: **o formulario sozinho so aparece quando nao ha recibo nenhum para mandar**, que e o caso
-do anuncio que ele desligou ou nunca cadastrou. E e exatamente ai que a frase dele se aplica.
+*"Conferencia de duplicata tem que cobrir todo o conjunto que pode sair, nao o item sorteado."*
+Naquele dia a licao foi aplicada ao **modelo padrao** com rodizio; **as respostas prontas com
+variantes ficaram de fora**, e `agradecer-apoio` tem tres formas.
 
-### A mudanca mora no DESFECHO, e nao na posicao
+### A trava mora no SINAL, como a da negativa
 
-`nunca-pediram-dados` ganhou tecla-FUNCAO: chegando por anuncio **nao reconhecido**, havendo
-mensagem do momento **ainda nao enviada**, o desfecho e a **tecla 5**; no resto, continua sendo a 4.
+`templates.ehAgradecimentoDeApoio` reconhece o agradecimento pelo INVARIANTE (agradecer + apoio ou
+carinho), nunca por id de template nem por fatia de texto — as duas licoes que ja custaram caro. O
+painel cala `soExpressaApoio` quando ele ja saiu nesta conversa.
 
-Duas razoes, e as duas sao regra escrita deste projeto:
+**No SINAL e nao numa excecao da caixa**, pela mesma razao da trava da Cleonice (06/09): excecao so
+chegaria depois de ele importar o quadro, e esta precisa valer hoje. **Medido: vale no quadro dele
+sem importar nada.**
 
-- **a guarda decide o DESFECHO, nao se a caixa casa** (a Noeli, 06/09) — barrar a condicao deixaria
-  o caso escorregar para outra caixa que envia;
-- **posicao e preferencia dele; excecao que ele nomeia vai na CONDICAO/desfecho** (04/09) — e e isso
-  que faz valer **no quadro dele sem importar nada**. Medido: o arquivo 3.151.0 que ele importou da
-  **tecla 5** com a mudanca, sem uma linha de alteracao no quadro.
+**E o ajudante nao foi duplicado:** `negativaJaSaiu` virou `respostaJaSaiu` e o mapa virou
+`INVARIANTE_DA_RESPOSTA` — ele ja respondia exatamente *"esta resposta pronta ja saiu nesta
+conversa?"*, por id E por invariante. Duas copias da mesma pergunta divergiriam na primeira
+correcao.
 
-### O cadastro nao se perde: atrasa uma passada
+### O desfecho e uma das duas saidas que ele pediu
 
-Saida a mensagem do momento, `momentoJaEnviado` passa a valer e a caixa **volta a pedir nome e
-cidade** na passada seguinte — a mesma mecanica de `contexto-de-outro-dia`. Sem mensagem do momento
-configurada, o formulario continua sendo o desfecho: nada fica mudo.
+**Medido:** calado o sinal, quem decide e `ja-respondemos-antes` -> **tecla 3**, que **conclui sem
+enviar nada** — o *"ou nem mandar"* dele. E e um desfecho SILENCIOSO, entao a guarda nao empurra o
+caso para nenhuma caixa que envie (a licao da Noeli, 06/09).
 
-### O escopo e estreito, e tem assercao provando cada borda
+**A outra saida que ele ofereceu — *"uma mensagem curta, tipo abraco e encerrar"* — nao foi feita**,
+e esta dita a ele: e um texto novo, e texto que sai para eleitor e dele.
 
-- **havendo modelo**, quem decide continua sendo o recibo (`anuncio-modelo-e-dados`, acima desta);
-- **anuncio RECONHECIDO** sem modelo continua pedindo o cadastro — ela clicou pedindo aquilo;
-- **quem nao veio de anuncio** nenhum continua pedindo o cadastro.
+### A COBERTURA e o que torna o invariante seguro
 
-### O verbete entrou no mesmo commit, e o teste corrigiu o selo
+Ele CALA o agradecimento, entao casar numa resposta vizinha deixaria a rodada muda onde ela deve
+falar. Medido contra **todas** as respostas de fabrica, uma a uma: **3/3 das formas de
+`agradecer-apoio` e ZERO falsos positivos**. As duas guardas sairam dessa medicao:
 
-A janela promete o desfecho, e desfecho que envelhece vira mapa mentiroso — os `ramos` foram
-escritos junto. **O selo continua `envia` e nao `depende`:** as duas saidas MANDAM mensagem, e o
-checador acusou na hora que eu troquei (a regra esta escrita desde 03/09).
+- **a confianca sozinha nao conta** — `perguntar-como-ajudar` diz *"obrigado pela mensagem e pela
+  confianca"*, que agradece a MENSAGEM;
+- **mensagem que tambem PEDE O CADASTRO nao e o agradecimento** — `pedir-dados-evento-nao` abre
+  agradecendo o apoio e existe para outra coisa.
 
-**E a matriz do teste ganhou os dois campos novos** (`veioDeAnuncio`, `anuncioReconhecido`): sem
-eles a tecla 5 nunca apareceria e o teste acusaria o verbete de inventar um desfecho que existe de
-verdade — o que ja aconteceu com o tempo em 03/09.
+### O que fica em aberto, e e dele
+
+**"Amem firme dia 25 e 22" nao e reconhecido como despedida** (`ehDespedida` = false, medido). Hoje
+o caso se resolve pela trava do agradecimento; se ele quiser que encerramento assim seja reconhecido
+como tal, e lista de vocabulario — e este projeto ja aprendeu cinco vezes que essa lista nao fecha.
 
 ### Medido
 
-- 21 suites e os dois verificadores verdes. O `fluxoPadrao` **nao mudou** (a mudanca e de desfecho,
-  nao de arvore), entao `tools/fluxo-padrao.json` continua em dia e **ele nao precisa importar nada**.
+- 21 suites e os dois verificadores verdes.
+- A trava e **uma vez por CONVERSA**, como as negativas. Conversa longa (a sessao pode durar
+  semanas) so recebe o agradecimento uma vez — dito a ele, e afrouxar e uma linha.

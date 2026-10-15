@@ -840,3 +840,53 @@ export function ehPerguntaComoAjudar(texto) {
     .toLowerCase();
   return /em que voce precisa de ajuda/.test(plano);
 }
+
+/**
+ * **Esta mensagem NOSSA é o AGRADECIMENTO PELO APOIO?**
+ *
+ * Print dele (15/10/2026): às 13:11 saiu *"Que bom ler isso, obrigado pelo apoio e pelo carinho de
+ * sempre. Seguimos lado a lado. Que Deus abençoe você e sua família!"*; ela respondeu *"Amém firme
+ * dia 25 é 22"*; às 13:48 saiu *"Muito obrigado pelo apoio e pelo carinho — palavra como a sua dá
+ * força para seguir. Seguimos juntos nessa caminhada. Que Deus abençoe você e sua família!"*.
+ * *"novamente repetição"*.
+ *
+ * **Medido: não foi a IA.** Os dois textos são `agradecer-apoio` byte a byte — o de 13:11 é a
+ * variante 2 e o de 13:48 é o texto base. **O revezamento entre as formas fez a mesma resposta
+ * parecer outra**, e é por isso que ninguém barrou.
+ *
+ * **É a armadilha de 02/09 numa porta nova:** *"conferência de duplicata tem que cobrir todo o
+ * conjunto que pode sair, não o item sorteado"*. Aquele dia a lição foi aplicada ao modelo padrão
+ * com rodízio; as respostas prontas com variantes ficaram de fora, e são três formas da mesma
+ * frase.
+ *
+ * **O invariante é AGRADECER + o APOIO na mesma mensagem**, que é o que as três formas dizem e o
+ * que sobrevive a ele reescrevê-las. Não por id de template (o painel manda por caminhos que não
+ * carregam id) e nunca por fatia de texto (a lição que custou três anotações).
+ *
+ * **DUAS guardas contra o falso positivo, e as duas saíram da medição contra as respostas de
+ * fábrica, uma a uma:**
+ *
+ * - **o objeto é o APOIO ou o CARINHO, nunca a confiança sozinha** — `perguntar-como-ajudar` diz
+ *   *"obrigado pela mensagem e pela confiança"*, que agradece a MENSAGEM. A variante do apoio que
+ *   fala em confiança diz *"pelo apoio e pela confiança"* e continua casando pelo apoio;
+ * - **mensagem que também PEDE O CADASTRO não é o agradecimento** — `pedir-dados-evento-nao` abre
+ *   com *"muito obrigado pelo carinho e pelo apoio"* e existe para outra coisa. Calar o
+ *   agradecimento por causa dela deixaria mudo quem respondeu ao convite e depois só apoiou.
+ *
+ * Medido depois das duas: casa nas TRÊS formas de `agradecer-apoio` e em nenhuma outra resposta.
+ *
+ * @param {string} texto uma mensagem que NÓS mandamos
+ * @returns {boolean}
+ */
+export function ehAgradecimentoDeApoio(texto) {
+  const bruto = String(texto || '');
+  const plano = bruto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!/\b(obrigad\w+|agradec\w+|grato|grata)\b/.test(plano)) return false;
+  if (ehPedidoDeDados(bruto)) return false;
+  return /\b(obrigad\w+|agradec\w+|grato|grata)\b[^.!?]{0,60}\b(apoio|carinho)\b/.test(plano);
+}
