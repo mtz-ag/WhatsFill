@@ -3587,6 +3587,37 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **`repeteSozinha` NÃO ENXERGAVA `maisCondicoes` NEM `maisExcecoes`** (16/10/2026, achado ao soltar a
+  boas-vindas da chegada). Ela nasceu em **02/09**, quando a caixa tinha UMA condição e UMA exceção;
+  as listas chegaram em **04/09** (*"o fluxo trabalha com prioridade quando devia estar trabalhando
+  com condições e exceções"*) e ninguém voltou lá. **Guarda posta na segunda condição protegia de
+  verdade e o verificador continuava acusando** — alarme falso na faixa vermelha da janela, que é
+  onde ele olha, e alarme que toca sempre é alarme que se aprende a ignorar. Hoje basta **UMA** das
+  condições (ou das exceções) apagar sozinha depois do envio. **Ao criar campo novo de caixa, procure
+  quem LÊ a caixa para verificar alguma coisa** — e a mesma classe do campo acrescentado ao retorno
+  que ninguém desestruturou (02/10).
+  **E o amostrador do teste de CAIXA MORTA precisou de `veioDeAnuncio`** (lição de 14/10, segunda
+  vez): **sinal que decide QUEM vence tem de estar nos `bits`**, senão as caixas que só ele aciona
+  aparecem como mortas — aqui, o recibo do anúncio e o formulário. O laço também estava preso em
+  `m < 16` com a lista de bits ao lado: virou `1 << bits.length`.
+
+- **A BOAS-VINDAS DA CHEGADA EXIGIA `soCortesia`, E POR ISSO QUASE NUNCA SAIA** (16/10/2026, pedido
+  dele: *"já temos uma mensagem de boas vindas pra quem não veio de anúncio onde deve pedir os
+  dados, e se não tem nenhum anúncio ativo nas configurações deveria ser utilizada mas não está
+  sendo"*). A caixa nasceu em 04/09 para *"chegou cumprimentando"*, então quem escrevia **qualquer
+  outra coisa** na primeira vinda passava por ela e caia em `anuncio-modelo-e-dados` — a caixa do
+  RECIBO, que não confere anúncio nenhum. Medido: declaração de voto, figura, despedida e texto comum
+  iam todos para a tecla `a`; sem modelo, para o formulário seco.
+  **A guarda contra repetir é obrigatória e o verificador a cobrou:** `!veioDeAnuncio` é estado do
+  contato e continua verdadeiro depois do envio — sozinha, a caixa mandaria as boas-vindas em toda
+  passada, para sempre. A guarda é **`!jaPediramDados`**, que o próprio envio liga, porque o texto
+  carrega o bloco `Nome , Cidade`. **`jaRespondemosAntes` NÃO serve:** ele é
+  `nossas.some(m => !ehPergunta(m))`, e o pedido de dados **conta como pergunta** — mandar a
+  boas-vindas não o liga.
+  **Consequência a dizer a ele:** na chegada SEM anúncio a boas-vindas passa a responder TUDO, e as
+  caixas abaixo (despedida, apoio, figura, modelo, formulário) só decidem para quem veio de anúncio.
+  **E ele precisa IMPORTAR** — a caixa não tem regra do código por trás, só existe no `fluxoPadrao`.
+
 - **A CAIXA DO ANUNCIO NÃO CONFERE ANÚNCIO, E O RAMO "ANÚNCIO — PESSOA NOVA" É `!jaRespondemosAntes`**
   (16/10/2026, pergunta dele: *"o fluxo do anúncio está sobrepondo o fluxo dos sem anúncio, no
   momento todos os anúncios estão desativados, ou estou errado?"*). **Ele está certo, e é pior que

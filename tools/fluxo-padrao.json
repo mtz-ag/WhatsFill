@@ -1,9 +1,9 @@
 {
   "formato": "whatsfill-fluxo",
   "versao": 1,
-  "extensao": "3.156.0",
-  "nome": "fluxo padrão 3.156.0",
-  "salvoEm": "2026-10-14T18:39:32.091Z",
+  "extensao": "3.168.0",
+  "nome": "fluxo padrão 3.168.0",
+  "salvoEm": "2026-10-16T13:36:42.339Z",
   "teclas": {},
   "arvore": [
     {
@@ -232,11 +232,11 @@
         },
         {
           "id": "chegada-boas-vindas",
-          "rotulo": "chegou sem anúncio e só cumprimentou",
+          "rotulo": "chegou sem anúncio: boas-vindas",
           "regra": null,
           "condicao": {
-            "sinal": "soCortesia",
-            "negar": false,
+            "sinal": "veioDeAnuncio",
+            "negar": true,
             "palavras": [],
             "onde": "ultima"
           },
@@ -255,7 +255,7 @@
           "filhos": [],
           "maisCondicoes": [
             {
-              "sinal": "veioDeAnuncio",
+              "sinal": "jaPediramDados",
               "negar": true,
               "palavras": [],
               "onde": "ultima"

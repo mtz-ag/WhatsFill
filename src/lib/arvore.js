@@ -1166,25 +1166,42 @@ export function fluxoPadrao() {
 
 
     /**
-     * **Chegou SEM anúncio e só cumprimentou → boas-vindas do gabinete, e conclui.**
+     * **Chegou SEM anúncio → boas-vindas, que já pede o cadastro, e conclui.**
      *
      * Decisão dele (04/09/2026), na revisão caixa a caixa da chegada: *"se ela chegou
-     * cumprimentando, podemos mandar uma mensagem: bem-vindo, você está falando com o gabinete do
+     * cumprimentando, podemos mandar uma mensagem: bem-vindo, você está falando com a equipe do
      * Capitão Martim, em quê podemos ajudar? E se puder nos forneça seu nome e cidade para melhor
      * atendê-lo — e então concluir até o contato responder"*.
      *
-     * **Duas condições, e é o primeiro uso do que ele pediu hoje**: só cumprimentou **E** não veio
-     * de anúncio. Quem chega por anúncio tem recibo a receber, e o recibo já pede os dados — as
-     * duas caixas nunca disputam o mesmo contato, e é a condição que garante isso, não a posição.
+     * **`soCortesia` SAIU da condição em 16/10/2026, a pedido dele:** *"já temos uma mensagem de
+     * boas vindas pra quem não veio de anúncio onde deve pedir os dados, e se não tem nenhum
+     * anúncio ativo nas configurações deveria ser utilizada mas não está sendo"*.
+     *
+     * **Ele estava certo, e o que a bloqueava era `soCortesia`:** a caixa nasceu para *"chegou
+     * cumprimentando"*, então quem escrevia qualquer outra coisa na primeira vinda passava por ela
+     * e caia em `anuncio-modelo-e-dados` — a caixa do RECIBO, que não confere anúncio nenhum
+     * (medido em 16/10). Resultado: o recibo do anúncio saindo para quem nunca clicou em anúncio.
+     *
+     * **Medido, primeira vinda sem anúncio, caso a caso:** declaração de voto, figura, despedida,
+     * nada legível e texto comum iam todos para a tecla `a`; sem modelo, para o formulário seco.
+     * Agora todos recebem as boas-vindas, e **quem escolhe o TEXTO é o painel** — `boas-vindas`
+     * com o cadastro, `boas-vindas-tem-dados` sem ele, pela conta `pedirDadosNaoCabe` (05/09).
+     *
+     * **Tentei guardar a despedida com uma exceção e a medição derrubou a ideia:** "Só se despediu"
+     * está ABAIXO do recibo na chegada, então a exceção não devolvia o silêncio — devolvia a tecla
+     * `a`. Boas-vindas para quem chega se despedindo é melhor do que o modelo mais o formulário.
+     *
+     * A separação de quem vem por anúncio continua sendo a CONDIÇÃO e não a posição: quem chega
+     * por anúncio tem recibo a receber, e o recibo já pede os dados.
      *
      * Fica ABAIXO do bloco que precisa de gente: pergunta logo de cara continua sendo sua ou da IA,
      * e hostilidade continua sendo pega pela proteção lá em cima — as duas exceções que ele nomeou
      * no mesmo recado.
      */
-    { ...noVazio('chegou sem anúncio e só cumprimentou'),
+    { ...noVazio('chegou sem anúncio: boas-vindas'),
       id: 'chegada-boas-vindas',
-      condicao: { sinal: 'soCortesia', negar: false, palavras: [], onde: 'ultima' },
-      maisCondicoes: [{ sinal: 'veioDeAnuncio', negar: true, palavras: [], onde: 'ultima' }],
+      condicao: { sinal: 'veioDeAnuncio', negar: true, palavras: [], onde: 'ultima' },
+      maisCondicoes: [{ sinal: 'jaPediramDados', negar: true, palavras: [], onde: 'ultima' }],
       acao: { tecla: null, resposta: 'boas-vindas' } },
 
     /**
@@ -2277,15 +2294,35 @@ function repeteSozinha(no) {
    * regra do código carrega, escrita do lado de fora. A polaridade é invertida em relação à
    * condição: aqui o envio tem que tornar a exceção VERDADEIRA, e aí a caixa deixa de casar.
    */
-  const exc = no.excecao || {};
-  if (exc.sinal && SINAIS_QUE_O_ENVIO_APAGA.has(exc.sinal) && !exc.negar) return false;
-  if (exc.sinal && SINAIS_QUE_A_RESPOSTA_APAGA.has(exc.sinal) && exc.negar) return false;
-  // Palavra na ÚLTIMA mensagem também: a última muda quando ela escreve de novo.
-  if ((exc.palavras || []).length && exc.onde !== 'qualquer') return false;
+  /**
+   * **`maisCondicoes` e `maisExcecoes` CONTAM como guarda — e não contavam** (16/10/2026).
+   *
+   * Esta função nasceu em 02/09, quando a caixa tinha UMA condição e UMA exceção. As listas
+   * chegaram em 04/09 (*"o fluxo trabalha com prioridade quando devia estar trabalhando com
+   * condições e exceções"*) e ninguém voltou aqui: uma guarda posta na segunda condição protegia
+   * de verdade e o verificador continuava acusando. **Alarme falso é alarme que se aprende a
+   * ignorar** — e este acende na faixa vermelha da janela, que é onde ele olha.
+   *
+   * A regra não muda, só passa a valer para a lista inteira: basta UMA das condições (ou UMA das
+   * exceções) apagar sozinha depois do envio para a caixa estar protegida.
+   */
+  const excecoes = [no.excecao, ...(no.maisExcecoes || [])].filter(Boolean);
+  for (const exc of excecoes) {
+    if (exc.sinal && SINAIS_QUE_O_ENVIO_APAGA.has(exc.sinal) && !exc.negar) return false;
+    if (exc.sinal && SINAIS_QUE_A_RESPOSTA_APAGA.has(exc.sinal) && exc.negar) return false;
+    // Palavra na ÚLTIMA mensagem também: a última muda quando ela escreve de novo.
+    if ((exc.palavras || []).length && exc.onde !== 'qualquer') return false;
+  }
+
+  const condicoes = [no.condicao, ...(no.maisCondicoes || [])].filter(Boolean);
+  for (const c of condicoes) {
+    if ((c.palavras || []).length && c.onde !== 'qualquer') return false;
+    if (!c.sinal) continue;
+    if (SINAIS_QUE_A_RESPOSTA_APAGA.has(c.sinal)) { if (!c.negar) return false; continue; }
+    if (SINAIS_QUE_O_ENVIO_APAGA.has(c.sinal) && c.negar) return false;
+  }
 
   const cond = no.condicao || {};
-  if ((cond.palavras || []).length && cond.onde !== 'qualquer') return false;
-
   if (!cond.sinal) return true;
 
   /**

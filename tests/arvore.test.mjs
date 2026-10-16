@@ -295,7 +295,14 @@ grupo('o desenho do QUADRO dele: as protecoes ficam acima da bifurcacao');
    * condicao `jaRespondemosAntes` negada, entao o "bom dia" de dentro do outro ramo nao o alcanca.
    */
   const novaComBomDia = arv.decidir({ jaRespondemosAntes: false, jaPediramDados: false, podePedirDados: true, ultimoTexto: 'Bom dia!' }, quadro);
-  check(novaComBomDia?.tecla === '4', `pessoa nova com "bom dia" recebe o formulario (${novaComBomDia?.tecla})`);
+  /**
+   * **Era a tecla 4 (o formulario seco) ate 16/10/2026**, quando `chegada-boas-vindas` deixou de
+   * exigir `soCortesia`, a pedido dele: *"ja temos uma mensagem de boas vindas pra quem nao veio de
+   * anuncio onde deve pedir os dados... deveria ser utilizada mas nao esta sendo"*. O que esta
+   * assercao sempre protegeu continua de pe: quem CHEGA nao e decidido pelo ramo de quem volta.
+   */
+  check(novaComBomDia?.resposta === 'boas-vindas', `pessoa nova sem anuncio recebe as boas-vindas (${novaComBomDia?.resposta || novaComBomDia?.tecla})`);
+  check(novaComBomDia?.tecla !== '5', 'e nao a mensagem do momento, que e do ramo de quem volta');
 }
 
 grupo('o motivo nomeia a palavra que a pessoa ESCREVEU');
@@ -706,7 +713,9 @@ grupo('a regra posta de volta decide de verdade');
    * quem decide. Se `noDeRegraLivre` devolvesse uma caixa sem a marca `regra`, isto daria nada.
    */
   const ctx = {
-    jaRespondemosAntes: false, temEtiquetaDeCidade: true, nomeSemSentido: true,
+    // `veioDeAnuncio` entrou em 16/10: sem ele a boas-vindas da chegada passou a pegar este
+    // contexto, e o controle deixaria de ser um controle.
+    jaRespondemosAntes: false, veioDeAnuncio: true, temEtiquetaDeCidade: true, nomeSemSentido: true,
     podePedirDados: true, podeEnviar: false, textos: ['oi'], ultimoTexto: 'oi',
   };
   check(arv.decidir(ctx, arv.arrumar(arv.fluxoPadrao())) === null, 'no padrao este caso sai da rodada sem nada');
@@ -2023,7 +2032,10 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   const q2 = arv.arrumar(arv.fluxoPadrao());
   const comDesfecho = arv.todosOsNos(q2).filter(({ no }) => no.acao || no.regra);
   const decidiram = new Set();
-  const bits = ['temEtiquetaDeCidade', 'jaRespondemosAntes', 'respondidoHoje', 'jaPediramDados'];
+  // `veioDeAnuncio` entrou em 16/10: a boas-vindas da chegada passou a depender dele, entao sem
+  // ele aqui as caixas do recibo e do formulario aparecem como mortas. E a licao de 14/10 -- sinal
+  // que decide QUEM vence tem de estar no amostrador.
+  const bits = ['temEtiquetaDeCidade', 'jaRespondemosAntes', 'respondidoHoje', 'jaPediramDados', 'veioDeAnuncio'];
   const gatilhos = [
     { semInteresse: { motivo: 'x' } }, { etiquetaSoConclui: 'assessor' }, { ultimaEhNossa: 'nossa' },
     { confirmouPresenca: true }, { etiquetaQueDispensa: 'Sem Retorno', podeMandarMomento: true },
@@ -2049,7 +2061,7 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
     { anuncioReconhecido: true, podeEnviar: false, podePedirDados: true }, {},
   ];
   for (const g of gatilhos) {
-    for (let m = 0; m < 16; m++) {
+    for (let m = 0; m < 1 << bits.length; m++) {
       const c = { podeMandarMomento: true, podePedirDados: true, ...g };
       bits.forEach((b, i) => { if (!(b in g)) c[b] = !!(m & (1 << i)); });
       const r = arv.decidir(c, q2);
