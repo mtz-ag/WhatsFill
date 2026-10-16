@@ -3587,6 +3587,29 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **SÓ REPASSE CONCLUI, E A CONFERÊNCIA DE ENCERRAMENTO ERA PAGA EM TODA PASSADA** (16/10/2026, com o
+  Andamento aberto: *"o fluxo era pra finalizar essas pessoas que mandam links em sequencia, estou
+  gastando tokens"*). **Duas coisas, as duas medidas:** a porta da IA (15/10) tinha três guardas
+  mecânicas e nenhuma sobre repasse, então quem mandava link pagava US$ 0,0006 por passada para
+  ouvir sempre a mesma coisa — o próprio log dele: *"Ela continuou vendo links/compartilhamentos —
+  não é despedida"*; e `ultima-e-so-reacao` dava **tecla 5** (mensagem do momento) sempre que não
+  tínhamos respondido no dia. **O argumento daquela caixa é "a mensagem do momento responde ao
+  GESTO", e repasse não é gesto** — `ehRepasse` já dizia que link e vídeo de outra pessoa *"não
+  dizem nada sobre este contato"*, e a rajada se renova sozinha, então a mensagem saía TODO DIA.
+  A guarda foi para o **desfecho** e não para a condição (lição da Noeli, 06/09). **Emoji e figura
+  continuam recebendo a mensagem do momento** (o caso da Marta, 31/08), e link **com texto dela**
+  também. **O sinal já existia** (`rajadaEhSoRepasse`, o Odone) e servia a UMA regra só: ao procurar
+  guarda para um caso novo, veja se o sinal já está no ctx antes de escrever detector.
+
+- **ESCREVER ARQUIVO POR PYTHON COM PAR DE SURROGATES DE EMOJI TRUNCA O ARQUIVO NO MEIO**
+  (16/10/2026). O `write` estoura `UnicodeEncodeError: surrogates not allowed` **depois** de já ter
+  gravado parte: o `sugestao.js` ficou **1717 linhas mais curto** e `import()` continuava dizendo
+  *"importa ok"*, porque o que sobrou era sintaticamente válido — `checar-modulos` também passaria.
+  **Quem acusou foi `git diff --stat`.** É a família da armadilha do heredoc (20/09) com um agravante:
+  lá o arquivo quebrava, aqui ele fica válido e incompleto. **Emoji em comentário vai pela ferramenta
+  de edição, nunca por escape numérico em script Python** — e depois de qualquer escrita por script,
+  `git diff --stat` antes de rodar os testes.
+
 - **`repeteSozinha` NÃO ENXERGAVA `maisCondicoes` NEM `maisExcecoes`** (16/10/2026, achado ao soltar a
   boas-vindas da chegada). Ela nasceu em **02/09**, quando a caixa tinha UMA condição e UMA exceção;
   as listas chegaram em **04/09** (*"o fluxo trabalha com prioridade quando devia estar trabalhando
