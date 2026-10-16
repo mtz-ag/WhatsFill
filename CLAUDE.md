@@ -84,6 +84,8 @@ src/lib/anuncios.js     ANUNCIOS do momento: texto que reconhece + o que fazer (
 src/lib/perfis.js       os CANDIDATOS: quem atende cada canal e o que e dele (puro, testado)
 src/lib/lote.js         DISPARO: pecas de texto (com arte ou sem), revezando (puro, testado)
 src/lib/observacoes.js  o caderno das sugestoes erradas, com o caso junto (puro, testado)
+src/lib/facebook.js     COMENTARIOS da pagina: rotas, leitura e guardas (puro, testado)
+src/lib/facebook-cliente.js  ponte painel <-> worker; o token NUNCA volta para a pagina
 src/fluxo.html/.css/.js JANELA do fluxo: o QUADRO (caixas soltas, fios, arrastar, editar)
 src/lib/fluxo-msg.js    a mensagem que pede ao service worker para abrir a janela
 src/data/coredes-rs.json  município -> COREDE (planilha oficial da SPGG-RS)
@@ -3587,6 +3589,29 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **O FACEBOOK ENTROU PELA GRAPH API, E O TOKEN DE PÁGINA NÃO VOLTA PARA O PAINEL** (16/10/2026,
+  *"preciso que responda os comentários nas postagens do facebook, crie uma nova aba para isso"*;
+  escolhas dele: **Graph API com token de página** e **listar + ele responder, com rascunho da IA**).
+  **A regra da chave da IA vale aqui e vai um passo além:** o token nasce dentro da resposta de
+  `/me/accounts`, então quem lê aquela resposta tem de ser o **service worker** — ele guarda os
+  tokens em `fbPageTokens` e devolve ao painel só id, nome e se a página aceita moderar. Devolver a
+  lista crua seria publicar o token pelo caminho mais discreto que existe: dentro de um JSON que
+  ninguém olha. Os dois (`fbToken`, `fbPageTokens`) saem do `exportJson` — **é a credencial mais
+  perigosa desta extensão, porque o estrago dela é público e com o nome dele em cima.**
+  **As rotas foram LIDAS, não executadas** (a situação de `listContacts`/`createTag`, 20/08): a
+  primeira chamada é a SONDA `/me/accounts`, e falhando ela nada mais é tentado.
+  **Quatro coisas que a medição do formato obrigou:** `filter=toplevel` (sem ele a NOSSA resposta
+  volta na lista como comentário a responder, e a aba pede para ele responder a si mesmo); o
+  `respondido` sai de `from.id === pageId`, e **sem o id da página nada é marcado** — erra para
+  MOSTRAR demais, que é o lado barato; **`tasks` ausente não é "não pode" responder** (a lição do
+  `undefined !== 'CONNECTED'`, 01/10); e **o `from` pode vir VAZIO sem ser defeito** — desde 2018 o
+  Facebook não entrega a identidade de quem comenta de um perfil pessoal, e a tela escreve "sem
+  nome" em vez de inventar um. **O POST de resposta tem de devolver `id`**: 200 sem id é a armadilha
+  mais antiga deste projeto numa API nova.
+  **A versão vai EXPLÍCITA na URL** (`v23.0`): caminho sem versão cai na mais ANTIGA disponível, que
+  é a primeira a ser desligada — o sintoma seria a aba parar num dia qualquer sem ninguém ter mexido
+  em nada.
+
 - **MOVER UMA ABA PARA DENTRO DE OUTRA QUEBRA QUEM LÊ `state.tab`, E CALADO** (16/10/2026, *"a aba de
   dados e cidades podem ficar dentro das configurações pois são pouca utilizadas"*). Três leitores, e
   os três com sintoma invisível: **`resumir`** (o comentário dele desde 10/09 diz que em **Dados** o
@@ -5417,10 +5442,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
 > `src/` e reclama só de `SyntaxError`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e uma suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e duas suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

@@ -15,6 +15,7 @@ import { MSG_ENERGIA } from './lib/keepalive.js';
 import { MSG_FLUXO } from './lib/fluxo-msg.js';
 import { MSG_PADRAO } from './lib/padrao-msg.js';
 import { MSG_IA, atender } from './lib/ia-cliente.js';
+import { MSG_FB, atenderFacebook } from './lib/facebook-cliente.js';
 import { MSG_UPLOAD } from './lib/imagem.js';
 import {
   podeGastar,
@@ -183,6 +184,25 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       sendResponse({ ok: true, bytes: bytes.length });
     } catch (err) {
       sendResponse({ ok: false, erro: err?.message || String(err) });
+    }
+  })();
+
+  return true; // resposta assíncrona
+});
+
+/**
+ * **A Graph API do Facebook sai daqui pela mesma razão que a da IA** (16/10/2026): o token nunca
+ * pode entrar na página. E vai um passo além — o token de PÁGINA é guardado aqui e **não volta
+ * para o painel**, que recebe só o id e o nome de cada página. Ver `facebook-cliente.js`.
+ */
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (!msg || msg.type !== MSG_FB) return undefined;
+
+  (async () => {
+    try {
+      sendResponse(await atenderFacebook(msg));
+    } catch (err) {
+      sendResponse({ ok: false, motivo: err?.message || String(err) });
     }
   })();
 

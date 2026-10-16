@@ -23,6 +23,8 @@ import * as anunciosLib from '../lib/anuncios.js';
 import * as perfisLib from '../lib/perfis.js';
 import * as observacoesLib from '../lib/observacoes.js';
 import * as imagemLib from '../lib/imagem.js';
+import * as facebook from '../lib/facebook.js';
+import * as fbCliente from '../lib/facebook-cliente.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
 import { soCortesia } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
@@ -126,6 +128,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * olhando AGORA — como `state.tab`, que também nasce em 'respostas' a cada carregamento.
      */
     abaConfig: 'config',
+    /**
+     * **O estado da aba do Facebook**, em memória e nunca no armazenamento: é a tela de agora, e
+     * lista de comentários guardada envelhece em minutos. O que persiste são as credenciais, e
+     * elas ficam no `chrome.storage.local` — lidas só pelo service worker.
+     */
+    fb: fbVazio(),
     pageState: { sessionId: null, isPending: false, hasComposer: false, dark: false, conversation: '' },
     session: null,
     contact: null,
@@ -473,6 +481,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     ['respostas', 'Respostas'],
     ['automatizado', 'Automatizado'],
     ['disparo', 'Disparo'],
+    ['facebook', 'Facebook'],
     ['config', 'Config'],
   ]) {
     const btn = h('button', { type: 'button' }, label);
@@ -1882,6 +1891,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (state.tab === 'respostas') renderRespostas();
     else if (state.tab === 'automatizado') renderAutomatizado();
     else if (state.tab === 'disparo') renderDisparo();
+    else if (state.tab === 'facebook') renderFacebook();
     else renderConfigComSubAbas();
     encolherExplicacoes();
   }
@@ -12687,6 +12697,262 @@ const CONTATOS_POR_PAGINA = 200;
     const n = parseInt(String(valor).replace(/[^\d]/g, ''), 10);
     if (!Number.isFinite(n)) return min;
     return Math.min(max, Math.max(min, n));
+  }
+
+  // ---- aba Facebook ------------------------------------------------------
+
+  /**
+   * O estado zerado da aba. Existe como função porque "Esquecer o token" precisa do mesmo objeto
+   * limpo que o boot — duas cópias divergiriam no primeiro campo novo.
+   */
+  function fbVazio() {
+    return {
+      temToken: false,
+      paginas: [],
+      pageId: '',
+      posts: [],
+      postId: '',
+      comentarios: [],
+      rascunhos: {},
+      erro: '',
+      erroPosts: '',
+      erroComentarios: '',
+    };
+  }
+
+  /**
+   * **Os comentários das postagens da página, e a resposta a eles** — pedido dele (16/10/2026):
+   * *"preciso que responda os comentários nas postagens do facebook, crie uma nova aba para
+   * isso"*. Perguntado por onde a extensão chega lá, escolheu a **Graph API com token de página**;
+   * perguntado o que a aba faz, escolheu **listar e ele responder, com o rascunho da IA**.
+   *
+   * **Nada sai sozinho daqui, e isso é mais forte do que no WhatsApp.** Comentário é PÚBLICO: o
+   * erro fica à vista de todo mundo, com o nome do mandato em cima, e apagar deixa rastro. A aba
+   * lista, escreve o rascunho e espera o clique.
+   *
+   * **A rede nasce do CLIQUE, nunca do desenho** — armadilha de 31/08: `render*` roda a cada
+   * `setStatus`, e uma chamada ali vira uma requisição por redesenho. Falha vira botão de tentar
+   * de novo, nunca nova tentativa automática.
+   */
+  function renderFacebook() {
+    const fb = state.fb;
+
+    // -- a conta ------------------------------------------------------------
+    const conta = h('div', { class: 'wf-card' }, [h('h4', {}, 'A página')]);
+    const tokenInput = h('input', {
+      type: 'password',
+      placeholder: 'cole aqui o token de usuário do Facebook',
+      autocomplete: 'off',
+    });
+    const salvarToken = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Salvar o token');
+    salvarToken.addEventListener('click', async () => {
+      const v = tokenInput.value.trim();
+      if (!v) return setStatus('cole o token antes de salvar.', 'err');
+      /**
+       * **Gravação direta no storage, e nunca por `store`**: credencial não passa pela mescla de
+       * defaults nem pelo backup exportado — a mesma regra das chaves da IA. O `exportJson` apaga
+       * `fbToken` e `fbPageTokens`.
+       */
+      await chrome.storage.local.set({ [fbCliente.CHAVE_TOKEN_USUARIO]: v });
+      tokenInput.value = '';
+      fb.temToken = true;
+      setStatus('token salvo. Agora clique em "Carregar as páginas".', 'ok');
+      renderAll();
+    });
+
+    const carregarPaginas = h('button', { class: 'wf-btn', type: 'button' }, 'Carregar as páginas');
+    carregarPaginas.addEventListener('click', () =>
+      semTravarOPainel('fbPaginas', async () => {
+        const r = await fbCliente.pedirAoFacebook({ type: fbCliente.MSG_FB, acao: 'paginas' });
+        if (!r?.ok) {
+          fb.erro = r?.motivo || 'não consegui falar com o Facebook.';
+          return;
+        }
+        fb.erro = '';
+        fb.paginas = r.paginas || [];
+        if (fb.paginas.length === 1) fb.pageId = fb.paginas[0].id;
+        setStatus(`${fb.paginas.length} página(s) encontrada(s).`, 'ok');
+      })
+    );
+
+    const esquecer = h('button', { class: 'wf-btn', type: 'button' }, 'Esquecer o token');
+    esquecer.addEventListener('click', async () => {
+      if (!confirm('Apagar o token do Facebook e os tokens de página guardados?')) return;
+      await fbCliente.pedirAoFacebook({ type: fbCliente.MSG_FB, acao: 'esquecer' });
+      state.fb = fbVazio();
+      setStatus('token apagado.', 'ok');
+      renderAll();
+    });
+
+    conta.append(
+      h('p', { class: 'wf-hint' },
+        'O token sai de um app do Facebook com as permissões ' + facebook.PERMISSOES.join(', ') +
+        ', e você precisa ser administrador da página. Ele é guardado fora do backup e NUNCA entra ' +
+        'na página do mobiliza: quem fala com o Facebook é o serviço da extensão.'),
+      tokenInput,
+      h('div', { class: 'wf-row' }, [salvarToken, carregarPaginas, esquecer])
+    );
+
+    if (state.esperando.fbPaginas) conta.append(h('p', { class: 'wf-hint' }, 'Carregando as páginas…'));
+    if (fb.erro) conta.append(h('p', { class: 'wf-block' }, fb.erro));
+
+    if (fb.paginas.length) {
+      const sel = h('select');
+      sel.append(h('option', { value: '' }, '— escolha a página —'));
+      for (const p of fb.paginas) {
+        const o = h('option', { value: p.id }, `${p.nome}${p.podeResponder === false ? ' (só leitura)' : ''}`);
+        if (p.id === fb.pageId) o.selected = true;
+        sel.append(o);
+      }
+      sel.addEventListener('change', () => {
+        fb.pageId = sel.value;
+        fb.posts = [];
+        fb.postId = '';
+        fb.comentarios = [];
+        renderAll();
+      });
+      conta.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Página'), sel]));
+
+      const escolhida = fb.paginas.find((p) => p.id === fb.pageId);
+      /**
+       * **`tasks` diz se o token pode MODERAR naquela página.** Sem isso o erro só apareceria na
+       * hora de enviar a resposta, que é tarde — ele já teria escrito o texto.
+       */
+      if (escolhida && escolhida.podeResponder === false) {
+        conta.append(h('p', { class: 'wf-block' },
+          'Este token lê esta página mas não pode responder. Falta a permissão de moderação — ' +
+          'confira se você é administrador dela.'));
+      }
+    }
+    body.append(conta);
+
+    if (!fb.pageId) return;
+
+    // -- as postagens -------------------------------------------------------
+    const posts = h('div', { class: 'wf-card' }, [h('h4', {}, 'Postagens')]);
+    const carregarPosts = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Carregar as postagens');
+    carregarPosts.addEventListener('click', () =>
+      semTravarOPainel('fbPosts', async () => {
+        const pedido = facebook.pedidoDePosts(fb.pageId);
+        const r = await fbCliente.pedirAoFacebook({ type: fbCliente.MSG_FB, acao: 'chamada', pageId: fb.pageId, pedido });
+        if (!r?.ok) {
+          fb.erroPosts = r?.motivo || 'não consegui carregar as postagens.';
+          return;
+        }
+        const lido = facebook.lerPosts(r.json);
+        if (!lido.ok) {
+          fb.erroPosts = lido.erro;
+          return;
+        }
+        fb.erroPosts = '';
+        fb.posts = lido.posts;
+        setStatus(`${fb.posts.length} postagem(ns).`, 'ok');
+      })
+    );
+    posts.append(carregarPosts);
+    if (state.esperando.fbPosts) posts.append(h('p', { class: 'wf-hint' }, 'Carregando as postagens…'));
+    if (fb.erroPosts) posts.append(h('p', { class: 'wf-block' }, fb.erroPosts));
+
+    for (const p of fb.posts) {
+      const resumo = (p.texto || '(sem texto)').replace(/\s+/g, ' ').slice(0, 90);
+      const b = h('button', { class: `wf-btn${p.id === fb.postId ? ' wf-primary' : ''}`, type: 'button' },
+        `${p.comentarios} 💬 · ${resumo}`);
+      b.addEventListener('click', () => {
+        fb.postId = p.id;
+        fb.comentarios = [];
+        fb.erroComentarios = '';
+        carregarComentarios();
+      });
+      posts.append(b);
+    }
+    body.append(posts);
+
+    if (!fb.postId) return;
+
+    // -- os comentários -----------------------------------------------------
+    const lista = h('div', { class: 'wf-card' }, [h('h4', {}, 'Comentários sem resposta')]);
+    const recarregar = h('button', { class: 'wf-btn', type: 'button' }, 'Recarregar');
+    recarregar.addEventListener('click', carregarComentarios);
+    lista.append(recarregar);
+    if (state.esperando.fbComentarios) lista.append(h('p', { class: 'wf-hint' }, 'Carregando os comentários…'));
+    if (fb.erroComentarios) lista.append(h('p', { class: 'wf-block' }, fb.erroComentarios));
+
+    const abertos = facebook.semResposta(fb.comentarios);
+    if (!state.esperando.fbComentarios && !fb.erroComentarios && !abertos.length && fb.comentarios.length) {
+      lista.append(h('p', { class: 'wf-hint' }, 'Nenhum comentário esperando resposta nesta postagem.'));
+    }
+
+    for (const c of abertos) {
+      const item = h('div', { class: 'wf-card' });
+      item.append(
+        h('p', { class: 'wf-preview', 'data-fica': '1' },
+          `${c.deQuem || 'sem nome'} · ${quandoDoFacebook(c.quando)}${c.curtidas ? ` · ${c.curtidas} 👍` : ''}`),
+        h('p', { class: 'wf-preview', 'data-fica': '1' }, c.texto)
+      );
+      if (c.respostas.length) {
+        item.append(h('p', { class: 'wf-hint', 'data-fica': '1' },
+          `${c.respostas.length} resposta(s) de outras pessoas — nenhuma nossa.`));
+      }
+
+      const area = h('textarea', { rows: '3', placeholder: 'sua resposta' });
+      area.value = fb.rascunhos[c.id] || '';
+      area.addEventListener('input', () => {
+        fb.rascunhos[c.id] = area.value;
+      });
+
+      const enviar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Responder');
+      enviar.addEventListener('click', () =>
+        semTravarOPainel(`fbEnvio:${c.id}`, async () => {
+          const texto = (fb.rascunhos[c.id] || '').trim();
+          if (!texto) return setStatus('escreva a resposta antes de enviar.', 'err');
+          const pedido = facebook.pedidoDeResposta(c.id, texto);
+          const r = await fbCliente.pedirAoFacebook({ type: fbCliente.MSG_FB, acao: 'chamada', pageId: fb.pageId, pedido });
+          if (!r?.ok) return setStatus(r?.motivo || 'não consegui enviar a resposta.', 'err');
+          /**
+           * **O 200 não prova que gravou** — a armadilha mais antiga deste projeto, agora numa API
+           * nova. O `POST` tem de devolver o `id` da resposta criada.
+           */
+          if (!facebook.respostaEntrou(r.json)) {
+            return setStatus('o Facebook aceitou o pedido e não devolveu o id da resposta — confira na postagem antes de mandar de novo.', 'err');
+          }
+          delete fb.rascunhos[c.id];
+          c.respondido = true;
+          setStatus('resposta publicada.', 'ok');
+        })
+      );
+
+      item.append(area, h('div', { class: 'wf-row' }, [enviar]));
+      lista.append(item);
+    }
+    body.append(lista);
+  }
+
+  /** A data que o Graph manda (`2026-10-16T12:00:00+0000`), na forma que ele lê. */
+  function quandoDoFacebook(iso) {
+    const d = new Date(String(iso || '').replace(/([+-]\d{2})(\d{2})$/, '$1:$2'));
+    if (Number.isNaN(d.getTime())) return String(iso || '');
+    return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function carregarComentarios() {
+    const fb = state.fb;
+    return semTravarOPainel('fbComentarios', async () => {
+      const pedido = facebook.pedidoDeComentarios(fb.postId);
+      const r = await fbCliente.pedirAoFacebook({ type: fbCliente.MSG_FB, acao: 'chamada', pageId: fb.pageId, pedido });
+      if (!r?.ok) {
+        fb.erroComentarios = r?.motivo || 'não consegui carregar os comentários.';
+        return;
+      }
+      const lido = facebook.lerComentarios(r.json, fb.pageId);
+      if (!lido.ok) {
+        fb.erroComentarios = lido.erro;
+        return;
+      }
+      fb.erroComentarios = '';
+      fb.comentarios = lido.comentarios;
+      const abertos = facebook.semResposta(fb.comentarios);
+      setStatus(`${abertos.length} de ${fb.comentarios.length} comentário(s) sem resposta.`, 'ok');
+    });
   }
 
   // ---- aba Dados ---------------------------------------------------------

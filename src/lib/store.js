@@ -1693,6 +1693,13 @@ export async function exportJson() {
   delete data.iaChave; // credencial: backup é arquivo que circula
   delete data.iaChaveOpenai; // idem — são duas chaves desde 07/09/2026
   delete data.iaChaveOpenrouter; // e três desde 18/09/2026
+  /**
+   * **Os tokens do Facebook saem pelo mesmo motivo** (16/10/2026). Um token de página dá a quem o
+   * tiver o direito de PUBLICAR em nome do mandato — é a credencial mais perigosa que esta
+   * extensão guarda, porque o estrago dela é público e com o nome dele em cima.
+   */
+  delete data.fbToken;
+  delete data.fbPageTokens;
   // As imagens saem do backup por TAMANHO, não por segredo: uma arte em base64 tem centenas de
   // milhares de caracteres, e o backup existe para ele mandar as configurações, não os arquivos.
   delete data.imagemMomentoArquivo;
