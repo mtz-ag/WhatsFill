@@ -1,62 +1,41 @@
-## 2026-10-16 - v3.170.0 - ESTADO DE AGORA - so repasse conclui, e nao gasta token
+## 2026-10-16 - v3.171.0 - ESTADO DE AGORA - Dados e Cidades viraram sub-abas da Config
 
-**Relato dele**, com o Andamento aberto: *"o fluxo era pra finalizar essas pessoas que mandam links
-em sequencia, estou gastando tokens"*.
+**Pedido dele:** *"a aba de dados e cidades podem ficar dentro das configuracoes pois sao pouca
+utilizadas"* — primeira metade do pedido da aba de comentarios do Facebook, que vem a seguir.
 
-### Duas coisas aconteciam, e as duas estao medidas
+A barra passou de **seis** para **quatro** abas (Respostas · Automatizado · Disparo · Config), e a
+Config ganhou uma linha de sub-abas: **Ajustes · Dados · Cidades**. Sub-aba e nao cartao empilhado
+porque a Config ja e a aba mais longa do painel, e a queixa de 08/09 foi justamente poluicao.
 
-**1. A conferencia de encerramento era paga em TODA passada**, e a resposta era sempre a mesma — o
-proprio log dele mostra: *"IA — encerramento · nao · US$ 0.0006 · Ela continuou vendo
-links/compartilhamentos — nao e despedida nem agradecimento final"*. A porta de 15/10 tem tres
-guardas mecanicas e nenhuma delas e sobre repasse.
+### Tres coisas que liam `state.tab` e teriam quebrado calado
 
-**Agora sao quatro, e a nova e a mais barata:** link e video de outra pessoa **nao carregam
-despedida nenhuma**, entao nao ha julgamento a pedir. Mensagem que tem link **e** texto dela
-continua passando — `ehRepasse` so vale quando, tirando o link, nao sobra nada escrito.
+- **`resumir`**, que decide se o texto pode ser encurtado. O comentario dele diz, desde 10/09, que
+  em **Dados** o texto e CONTEUDO — o campo do contato — e nao pode ser resumido. Lendo
+  `state.tab === 'config'`, o campo do eleitor passaria a ser cortado no meio.
+- **A memoria de rolagem**, que e por aba: as tres sub-abas dividiriam a mesma posicao.
+- **O redesenho da Cidades quando a lista de etiquetas chega** (`if (state.tab === 'cidades')`), que
+  nunca mais seria verdadeiro — a tela ficaria em *"Carregando..."* para sempre.
 
-**2. E o desfecho era MANDAR.** `ultima-e-so-reacao` dava tecla **5** (mensagem do momento) sempre
-que nao tinhamos respondido no dia. O argumento dela e *"a mensagem do momento responde ao gesto"* —
-e vale para o GESTO: um emoji de maos e dirigido a nos. **Repasse nao e gesto**, e o proprio
-`ehRepasse` ja diz por que: link e video de outra pessoa *"nao dizem nada sobre este contato"*. Quem
-repassa nao esta conversando, e a rajada se renova sozinha — entao a mensagem do momento saia **todo
-dia**.
+As tres passaram a ler `abaAtual()`, **uma funcao so**.
 
-A guarda foi para o DESFECHO e nao para a condicao (licao da Noeli, 06/09): a caixa continua
-casando, e agora conclui.
+**O carregamento da Cidades continua nascendo do CLIQUE** na sub-aba, nunca do desenho: e a
+armadilha de 31/08 (rede dentro de um `render*` vira uma requisicao por redesenho, e a guarda "so se
+ainda nao carregou" so segura depois do SUCESSO).
 
-### Medido, nos dois motores
+- 21 suites e os dois verificadores verdes. Nada de comportamento mudou: as duas telas sao as mesmas.
 
-| o que chegou | antes | agora | pergunta a IA? |
-|---|---|---|---|
-| 3 links em sequencia | **tecla 5** (envia) | **tecla 3** (conclui) | **nao** |
-| 1 link sozinho | **tecla 5** | **tecla 3** | **nao** |
-| emoji de maos | tecla 5 | tecla 5 | sim |
-| link **com texto dela** | tecla 5 | tecla 5 | sim |
-| link e depois "obrigada" | tecla 5 | tecla 5 | sim |
+### A aba do Facebook: falta UMA decisao dele
 
-**Emoji e figura continuam recebendo a mensagem do momento** — o caso da Marta (31/08), que
-respondeu o anuncio com um emoji, nao mudou.
+Pedido dele: *"preciso que responda os comentarios nas postagens do facebook, crie uma nova aba para
+isso"*. **Nao comecei, e o motivo e que os dois caminhos possiveis sao trabalhos diferentes:**
 
-**O sinal ja existia** (`rajadaEhSoRepasse`, o caso do Odone: 76 mensagens em semanas, todas link de
-video) e servia a UMA regra so, como guarda do formulario. Agora decide tambem o desfecho da reacao.
+**(a) Graph API** (`graph.facebook.com`) — le os comentarios e responde sem depender de aba aberta,
+e encaixa na arquitetura que ja existe: o token vai para o service worker, como a chave da IA (nunca
+na pagina, fora do `exportJson`), mais `host_permissions`. **Precisa de um token de PAGINA**, que sai
+de um app do Facebook com `pages_read_engagement` + `pages_manage_engagement`.
 
-- 21 suites e os dois verificadores verdes. **Vale hoje, sem importar nada:** a mudanca e na funcao
-  `tecla` do codigo e na porta da IA, nao no quadro.
+**(b) Ler a tela do facebook.com** — sem token, mas exige content script no facebook.com, seletores
+que quebram a cada mudanca de layout e ele trabalhando noutra aba. E o oposto do que `dom.js` faz
+hoje, com uma plataforma que muda muito mais.
 
-### Armadilha nova, e quase custou caro
-
-**Escrever arquivo por Python com `\uD83D\uDE4F` (par de surrogates de emoji) TRUNCA o arquivo no
-meio da escrita.** O `write` falha com `UnicodeEncodeError` **depois** de ja ter gravado parte, e o
-`sugestao.js` ficou **1717 linhas mais curto** — e ainda assim `import()` dizia *"importa ok"*,
-porque o que sobrou era sintaticamente valido. Foi `git diff --stat` que acusou. Restaurado com
-`git checkout --` e refeito com a ferramenta de edicao.
-
-### O que fica para ele
-
-- **A etiqueta que dispensa da fila continua mandando a mensagem do momento uma vez por dia**,
-  inclusive para quem so repassa (e a linha "Santa Cruz" do print). E decisao dele de 03/09 — *"engajado
-  recebe mensagem do momento uma vez por dia"* — e nao foi tocada. Querendo que o repasse cale essa
-  caixa tambem, e uma linha.
-- **O emoji sozinho continua custando uma conferencia** por conjunto de mensagens novas: um emoji de
-  maos depois de um agradecimento PODE ser despedida, entao ali o julgamento ainda vale o preco.
-- **Importar o padrao da v3.169 continua pendente** (a boas-vindas da chegada).
+**A pergunta: ele tem (ou pode criar) uma pagina do Facebook com token?** Sendo sim, e o caminho (a).

@@ -716,3 +716,26 @@
   background: transparent;
   border-color: var(--wf-err);
 }
+
+/*
+  Sub-abas da Config (16/10/2026) — "a aba de dados e cidades podem ficar dentro das configuracoes
+  pois sao pouca utilizadas". Linha propria, discreta: a barra de cima continua sendo a navegacao
+  do painel, e esta diz apenas em que parte da Config ele esta.
+*/
+.wf-root .wf-subnav { display: flex; gap: 4px; margin: 0 0 10px; }
+.wf-root .wf-subnav button {
+  flex: 1 1 0;
+  padding: 5px 6px;
+  border: 1px solid var(--wf-border);
+  border-radius: 6px;
+  background: none;
+  color: var(--wf-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.wf-root .wf-subnav button.wf-active { color: var(--wf-accent); border-color: var(--wf-accent); }

@@ -3587,6 +3587,16 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **MOVER UMA ABA PARA DENTRO DE OUTRA QUEBRA QUEM LÊ `state.tab`, E CALADO** (16/10/2026, *"a aba de
+  dados e cidades podem ficar dentro das configurações pois são pouca utilizadas"*). Três leitores, e
+  os três com sintoma invisível: **`resumir`** (o comentário dele desde 10/09 diz que em **Dados** o
+  texto é CONTEÚDO — o campo do contato — e não pode ser encurtado; lendo `state.tab === 'config'`, o
+  dado do eleitor passaria a ser cortado no meio), a **memória de rolagem** (que é por aba: as três
+  sub-abas dividiriam a mesma posição) e o **redesenho da Cidades quando a lista de etiquetas chega**
+  (`if (state.tab === 'cidades')`, que nunca mais seria verdadeiro — a tela ficaria em *"Carregando…"*
+  para sempre). Hoje os três leem `abaAtual()`, **uma função só**. E o carregamento da Cidades
+  continua nascendo do **CLIQUE** na sub-aba, nunca do desenho (armadilha de 31/08).
+
 - **SÓ REPASSE CONCLUI, E A CONFERÊNCIA DE ENCERRAMENTO ERA PAGA EM TODA PASSADA** (16/10/2026, com o
   Andamento aberto: *"o fluxo era pra finalizar essas pessoas que mandam links em sequencia, estou
   gastando tokens"*). **Duas coisas, as duas medidas:** a porta da IA (15/10) tinha três guardas

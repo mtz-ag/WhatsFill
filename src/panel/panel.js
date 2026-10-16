@@ -117,6 +117,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
   const state = {
     tab: 'respostas',
+    /**
+     * **Dados e Cidades viraram sub-abas da Config** — pedido dele (16/10/2026): *"a aba de dados e
+     * cidades podem ficar dentro das configurações pois são pouca utilizadas"*.
+     *
+     * Sub-aba e não cartão empilhado: a Config já é a aba mais longa do painel, e ele reclamou de
+     * poluição em 08/09. O estado fica aqui, e não no armazenamento, porque é onde ele está
+     * olhando AGORA — como `state.tab`, que também nasce em 'respostas' a cada carregamento.
+     */
+    abaConfig: 'config',
     pageState: { sessionId: null, isPending: false, hasComposer: false, dark: false, conversation: '' },
     session: null,
     contact: null,
@@ -456,21 +465,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return !escondido;
   }
 
+  /**
+   * **Dados e Cidades saíram da barra** (16/10/2026): viraram sub-abas da Config, pelo pedido dele
+   * — *"são pouca utilizadas"*. A barra tem 380px de largura; cada aba a mais encolhe todas.
+   */
   for (const [id, label] of [
     ['respostas', 'Respostas'],
     ['automatizado', 'Automatizado'],
     ['disparo', 'Disparo'],
-    ['dados', 'Dados'],
-    ['cidades', 'Cidades'],
     ['config', 'Config'],
   ]) {
     const btn = h('button', { type: 'button' }, label);
     btn.dataset.tab = id;
     btn.addEventListener('click', () => {
       state.tab = id;
-      // A Cidades é a única aba que precisa de rede só para se desenhar, e o carregamento nasce
-      // AQUI, do clique — não do desenho. Ver `prepararCidades`.
-      if (id === 'cidades') prepararCidades();
       renderAll();
     });
     nav.append(btn);
@@ -1857,18 +1865,53 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   // ---- render -------------------------------------------------------------
+  /**
+   * **Onde estamos, contando a sub-aba da Config.** É a chave da memória de rolagem e quem decide
+   * se o texto pode ser resumido — duas perguntas que, desde que Dados virou sub-aba, não se
+   * respondem mais só com `state.tab`.
+   */
+  function abaAtual() {
+    return state.tab === 'config' ? state.abaConfig || 'config' : state.tab;
+  }
+
   function renderAll() {
     for (const btn of nav.children) btn.classList.toggle('wf-active', btn.dataset.tab === state.tab);
     renderHeader();
-    rolagem.antesDeDesenhar(state.tab);
+    rolagem.antesDeDesenhar(abaAtual());
     body.replaceChildren();
     if (state.tab === 'respostas') renderRespostas();
     else if (state.tab === 'automatizado') renderAutomatizado();
     else if (state.tab === 'disparo') renderDisparo();
-    else if (state.tab === 'dados') renderDados();
-    else if (state.tab === 'cidades') renderCidades();
-    else renderConfig();
+    else renderConfigComSubAbas();
     encolherExplicacoes();
+  }
+
+  /**
+   * A barra de sub-abas da Config, e o despacho.
+   *
+   * **O carregamento da Cidades continua nascendo do CLIQUE** — armadilha registrada desde 31/08:
+   * rede disparada de dentro de um `render*` vira uma requisição por redesenho, e a guarda "só se
+   * ainda não carregou" só segura depois do SUCESSO.
+   */
+  function renderConfigComSubAbas() {
+    const sub = h('div', { class: 'wf-subnav' });
+    for (const [id, label] of [
+      ['config', 'Ajustes'],
+      ['dados', 'Dados'],
+      ['cidades', 'Cidades'],
+    ]) {
+      const b = h('button', { type: 'button', class: state.abaConfig === id ? 'wf-active' : '' }, label);
+      b.addEventListener('click', () => {
+        state.abaConfig = id;
+        if (id === 'cidades') prepararCidades();
+        renderAll();
+      });
+      sub.append(b);
+    }
+    body.append(sub);
+    if (state.abaConfig === 'dados') renderDados();
+    else if (state.abaConfig === 'cidades') renderCidades();
+    else renderConfig();
   }
 
   /**
@@ -1904,8 +1947,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * detalhes"*): lá o texto é rótulo e explicação; em Respostas e Dados ele é conteúdo — o texto
      * do modelo, o campo do contato — e não pode ser encurtado.
      */
+    /**
+     * **Pela sub-aba, e não por `state.tab`** (16/10/2026): com Dados dentro da Config, ler
+     * `state.tab === 'config'` passaria a resumir o campo do contato — exatamente o que o
+     * comentário acima proíbe. `abaAtual()` devolve 'dados' e 'cidades' quando é o caso.
+     */
+    const onde = abaAtual();
     recolherExplicacoes(body, detalhesAbertos, {
-      resumir: state.tab === 'automatizado' || state.tab === 'disparo' || state.tab === 'config',
+      resumir: onde === 'automatizado' || onde === 'disparo' || onde === 'config',
     });
     // Depois de recolher (que muda a altura) e a cada pedaço de conteúdo que chegar atrasado.
     rolagem.devolver();
@@ -13510,7 +13559,8 @@ const CONTATOS_POR_PAGINA = 200;
       console.warn('[WhatsFill] não consegui listar as etiquetas:', err.message);
     } finally {
       cidadesPreparando = false;
-      if (state.tab === 'cidades') renderAll();
+      // Sub-aba desde 16/10: `state.tab` agora é 'config' enquanto a Cidades está na tela.
+      if (abaAtual() === 'cidades') renderAll();
     }
   }
 
