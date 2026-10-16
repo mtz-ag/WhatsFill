@@ -1,64 +1,74 @@
-## 2026-10-16 - v3.166.0 - ESTADO DE AGORA - a eleicao nao acabou: o 2o turno e nosso
+## 2026-10-16 - v3.167.0 - ESTADO DE AGORA - por que o formulario seco continua saindo
 
-**Relato dele**, com a print do rascunho que dizia *"Como a eleicao ja passou, nao vou conseguir
-combinar um evento de campanha agora. Um abraco!"*: *"ele deve estar se referindo ao segundo turno
-do flavio bolsonaro que estamos apoiando"*.
+**Pergunta dele**, com a print do Vanderlei: *"veja porque essa mensagem continua sendo mandada e me
+mostre o motivo"*. Ele escreveu **"Flavio bolsonaro 22"**, so isso, e recebeu o `pedir-dados` seco
+(ATENCAO! Nome , Cidade + o Instagram e o grupo). Ele apagou a mensagem.
 
-### Medido antes de mexer, e o dossie estava CERTO
+### O motivo, medido, e tem DOIS andares
 
-`precisaDoDossie` = **true** (a palavra "eleicao" aciona), e as linhas do dossie sobre o **2o turno
-de 25/10** e sobre o **Flavio** estavam **presentes no prompt**, escritas certas. O modelo nao
-ignorou o dossie: ele copiou os **TITULOS EM MAIUSCULAS**, que eram os dois mais curtos e os mais
-afirmativos — o item 5 (*"A ELEICAO DE 04/10/2026 JA ACONTECEU"*) e a regra 12 (*"A CAMPANHA ACABOU
-EM 04/10/2026"*), **esta ultima escrita por mim na vespera**, para o caso da vaga de emprego.
+**1. Nenhum detector enxergou nada.** Rodei os doze sobre o texto dele: **todos nulos**, inclusive
+`soExpressaApoio` — uma declaracao de voto no nosso candidato do 2o turno chegou ao quadro como
+**silencio**.
 
-**Terceira vez em dois dias que um fato meu e cumprido onde ele nao devia ir** — e a pior das tres,
-porque **fato nao parece regra: parece informacao inofensiva**. A licao de 08/09 (*regra sem escopo
-e cumprida ate onde nao devia*) vale para numero, data e placar do mesmo jeito.
+**Por que:** os padroes de apoio **com nome** exigem um VERBO (*"vou votar no Flavio"*, *"eu apoio
+o Flavio"*), e os **com numero** exigem posicao ou companhia (*"22"* abrindo a mensagem, ou colado
+num verbo). **Nome e numero juntos, sem verbo, nao eram nada.**
 
-### Os tres lugares, porque a metade de um fato e lida como o fato inteiro
+Medido, e o resultado e o avesso do esperado:
 
-- **regra 12** (a vaga): o titulo contundente saiu. O motivo continua escrito, agora como **motivo
-  INTERNO que nao se diz ao contato**, apontando para a regra 19.
-- **regra 19, nova:** *a eleicao nao acabou, e a campanha em curso e NOSSA.* Em 04/10 ficaram
-  decididos deputado, senador e governador; a Presidencia vai a **2o turno em 25/10/2026** e o nosso
-  candidato e o **Flavio Bolsonaro, o 22**. As frases proibidas estao **escritas** (*"a eleicao ja
-  passou"*, *"a campanha acabou"*, *"o periodo eleitoral terminou"*) — proibicao que nao nomeia a
-  frase nao diz ao modelo qual evitar. E o que de fato acabou **tem NOME**: so se diz com o cargo
-  escrito, e so para nao pedir voto em quem ja foi eleito.
-- **dossie, item 5:** o titulo passou a carregar as DUAS metades — o 1o turno acabou **e** a
-  campanha do 2o esta em curso —, sem desfazer o que o item existe para fazer.
+| o que ela escreve | antes | agora |
+|---|---|---|
+| `22` | **apoio** | apoio |
+| `E 22!` | **apoio** | apoio |
+| **`Flavio bolsonaro 22`** | **nada** | **apoio** |
+| **`Capitao Martim 10122`** | **nada** | **apoio** |
 
-**O NOME de quem ganhou NAO entra na regra 19**, e isto foi pego pelo teste: o prompt de sistema e
-dos dois candidatos, e `perfis.test.mjs` exige que nada de um sobre no do outro. **Quem foi eleito e
-fato do DOSSIE**, que ja e por candidato; a regra 19 fala da eleicao, nao de quem ganhou.
+**Por o nome ao lado do numero APAGAVA o apoio** — e essa e a forma que a propria colinha imprime
+(`Capitao Martim - 10122`) e a mais curta de declarar o voto. E a licao do *"queria uma reuniao"*
+(09/09): **a lista era toda de verbos, e ele escreveu a coisa.**
 
-### A trava, porque prompt e pedido
+**2. E mesmo reconhecido, o desfecho da print NAO muda.** Medido nos dois motores, com a composicao
+do painel: **tabela 4 e quadro 4**, `nunca-pediram-dados`, nas duas versoes. Os dois motores
+concordando no desfecho e problema de CONDICAO, nao de posicao — e a condicao e esta: **a guarda de
+14/10 (*"sem recibo para mandar, o formulario seco vira a mensagem do dia"*) so vale para quem veio
+de ANUNCIO.** O Vanderlei escreveu sozinho, entao a guarda nao o alcanca.
 
-`AVISOS_QUE_IMPEDEM_ENVIO.eleicaoEncerrada` barra o envio automatico quando o rascunho diz que a
-eleicao, a campanha ou o periodo eleitoral acabou. **E mecanica de verdade** — e uma afirmacao sobre
-uma data, nao julgamento.
+**Medir o sinal nao basta: tem de medir a ORDEM** — quinta vez.
 
-**As duas guardas que a mantem util:** a frase que **NOMEIA o cargo** passa (*"a eleicao de deputado
-estadual ja acabou"* e verdade e e o que impede pedir voto em eleito), e a frase que fala do **2o
-turno, do dia 25 ou do Flavio** passa — quem diz isso nao esta dizendo que acabou tudo.
+### O que entrou
 
-**Medido na funcao exportada:** o rascunho da print vem barrado e `rascunhoPodeSairSozinho` da
-**false**; **7 de 7** formas de dizer que acabou barradas, **14 de 14** frases legitimas passando.
+`NOME_DA_COLINHA` + `NUMERO_DA_COLINHA` colados valem como apoio, nas duas ordens e com o traco da
+colinha. **A guarda e o proprio par:** o numero sozinho e endereco, hora e idade — ao lado do nome
+de um dos nossos, nao e mais nada disso.
 
-### Varredura das minhas proprias asercoes
+Fora de proposito: **numero com unidade** (*"tem 22 anos"*, *"as 22 horas"*), **ordinal**
+(*"ficou em 222o"*), **numero que nao e da chapa** e — o que a medicao pegou e eu nao tinha previsto
+— **nome de RUA com numero** (*"rua Martim 22, bairro centro"*), que e o que mais chega depois que
+pedimos o endereco para o material: marcar apoio ali faria a rodada agradecer em vez de etiquetar.
 
-Tres asercoes minhas gravavam a redacao que vazou, e a de 15/10 exigia literalmente
-`/CAMPANHA ACABOU EM/`. **Trave a AFIRMACAO, nao a frase** — as tres foram reapontadas, com a data e
-o motivo da inversao escritos no teste.
+**9 de 9** formas reconhecidas, **11 de 11** falsos positivos barrados. Metade das assercoes do
+teste novo e falso positivo.
+
+**O efeito pratico:** quem **ja tem etiqueta de cidade** e escreve so o nome e o numero passa a ser
+**agradecido** (tecla `i`) em vez de receber a mensagem do momento. Quem **nao tem cidade** continua
+recebendo o formulario — e e o segundo andar, abaixo.
 
 - 21 suites e os dois verificadores verdes.
 
-### O que fica para ele
+### A decisao que e dele, e e UMA linha
 
-- **Passado 25/10 nao ha mais eleicao nenhuma**, e a regra 19 diz isso. Nesse dia ela e o item 5 do
-  dossie precisam ser reescritos — e o unico pedaco deste conserto com prazo.
-- **A regra da colinha continua pedindo voto nos seis cargos**, e cinco estao decididos: e decisao
-  dele de 09/09 e nao foi tocada.
-- **O disparo da colinha continua configurado pedindo voto**, e o `pedir-dados` dele continua com o
-  Instagram e o grupo da campanha encerrada.
+O formulario seco continuar saindo para quem **nunca foi perguntado e nao veio de anuncio** e o
+escopo que EU escolhi em 14/10, a partir das duas prints daquele dia, que eram as duas de anuncio.
+Tirando `veioDeAnuncio` da conta, **todo contato novo sem cadastro passa a receber a mensagem do dia
+primeiro**, e o formulario vem na passada seguinte (`momentoJaEnviado` garante que nao repete).
+
+**O preco:** o cadastro atrasa uma passada para a base inteira, e e por ele que a cidade e o COREDE
+entram no CRM. **Nao mexi: diga e eu troco.**
+
+### O que continua para ele
+
+- **O TEXTO do `pedir-dados` ainda e o da campanha encerrada** — o Instagram e o link do grupo que
+  aparecem na print sao dele e nenhum conserto meu os alcanca.
+- **"tenho 22 anos e apoio quem trabalha"** ja contava como apoio ANTES desta versao (medido contra
+  o commit anterior): vem do padrao do verbo *"apoio"*, nao do que entrou agora.
+- **Passado 25/10 a regra 19 e o item 5 do dossie tem de ser reescritos** (v3.166).

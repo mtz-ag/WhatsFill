@@ -3735,4 +3735,50 @@ grupo('contexto perdido: a regua em HORAS');
   check(typeof cortesia.deOutroDia === 'function', 'deOutroDia continua exportada (sinal do quadro)');
 }
 
+/**
+ * **O NOME COLADO NO NUMERO** - print do Vanderlei (16/10/2026): ele escreveu *"Flavio bolsonaro
+ * 22"*, so isso, e recebeu o formulario seco de pedido de cadastro; ele apagou a mensagem.
+ *
+ * **Medido antes de mexer: `"22"` sozinho contava como apoio e `"Flavio bolsonaro 22"` nao** - por
+ * o nome ao lado do numero APAGAVA o apoio, porque os padroes com nome pedem um VERBO e os com
+ * numero pedem posicao ou companhia. E a forma que a propria colinha imprime.
+ *
+ * **Metade das assercoes e falso positivo**, que e onde mora o risco: apoio marcado em cima de um
+ * endereco faria a rodada agradecer em vez de etiquetar o caso do material.
+ */
+grupo('nome da chapa colado no numero de urna e apoio (16/10/2026)');
+{
+  const P = [];
+  const so = (t) => soExpressaApoio([{ texto: t, tipo: 'TEXT', at: '2026-10-15T21:51:00Z' }], null, P);
+
+  /** O caso da print, nas tres grafias que chegam. */
+  check(!!so('Flavio bolsonaro 22'), 'o caso da print e apoio');
+  check(!!so('Flávio Bolsonaro 22'), 'com acento e caixa alta no sobrenome tambem');
+  check(!!so('FLAVIO BOLSONARO 22'), 'tudo em maiusculas tambem');
+
+  /** Vale para a chapa inteira, e nas duas ordens. */
+  check(!!so('Capitão Martim 10122'), 'o nome do candidato com o numero dele');
+  check(!!so('10122 Capitao Martim'), 'e na ordem inversa');
+  check(!!so('Capitao Martim - 10122'), 'com o traco, que e como a colinha imprime');
+  check(!!so('Sanderson 222'), 'Sanderson');
+  check(!!so('Van Hattem 300'), 'Van Hattem');
+  check(!!so('Felipe Pedri 2228'), 'Felipe Pedri');
+  check(!!so('Martim é o 10122'), 'com "e o" no meio');
+
+  /** O numero com UNIDADE nao e voto - a guarda que o numero sozinho sempre teve. */
+  check(!so('o Flávio Bolsonaro tem 22 anos'), '"tem 22 anos" nao e declaracao de voto');
+  check(!so('vi o Bolsonaro às 22 horas'), '"as 22 horas" tambem nao');
+  check(!so('o Martim ficou em 222º lugar'), 'o ordinal nao conta');
+  check(!so('Bolsonaro 2222222'), 'numero maior que o da urna nao conta');
+  check(!so('o Martim 1012'), 'numero que nao e o da chapa nao conta');
+
+  /** ENDERECO e o que mais chega depois que pedimos o endereco para o material. */
+  check(!so('meu endereço é rua Martim 22, bairro centro'), 'rua com numero nao e apoio');
+  check(!so('Av. Martim 300, apto 2'), 'avenida tambem nao');
+
+  /** E o numero do ADVERSARIO continua fora: a lista e de PERMISSAO. */
+  check(!so('Lula 13'), 'o adversario com o numero dele nao e apoio nosso');
+  check(!so('o Zucco falou ontem'), 'o nome sozinho continua nao bastando');
+}
+
 fim();

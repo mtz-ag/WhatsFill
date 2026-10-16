@@ -3587,6 +3587,28 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **O NOME AO LADO DO NÚMERO APAGAVA O APOIO — e "22" sozinho sempre contou** (16/10/2026, print do
+  Vanderlei: ele escreveu *"Flávio bolsonaro 22"*, só isso, recebeu o `pedir-dados` seco e apagou a
+  mensagem; ele: *"veja porque essa mensagem continua sendo mandada e me mostre o motivo"*).
+  **Medido: os DOZE detectores nulos**, `soExpressaApoio` inclusive — uma declaração de voto no nosso
+  candidato do 2º turno chegou ao quadro como silêncio. **Os padrões com NOME exigem um VERBO**
+  (*"vou votar no"*, *"eu apoio o"*, regra dele de 10/09) **e os com NÚMERO exigem posição ou
+  companhia** (*"22"* abrindo a mensagem, ou colado num verbo, 03/09) — então **pôr o nome ao lado do
+  número APAGAVA o apoio**, e essa é a forma que a própria colinha imprime (`Capitão Martim - 10122`)
+  e a mais curta de declarar o voto. **Lição do "queria uma reunião" (09/09): a lista era toda de
+  verbos, e ele escreveu a coisa.**
+  **A guarda é o próprio par** — o número sozinho é endereço, hora e idade; ao lado do nome de um
+  dos nossos, não é mais nada disso. Ficam de fora o número com UNIDADE, o ordinal (`º` é `\p{L}`),
+  o número que não é da chapa e — **o que a medição pegou e eu não previ** — **nome de RUA com
+  número** (*"rua Martim 22, bairro centro"*), que é o que mais chega depois que pedimos o endereço
+  para o material: apoio ali faria a rodada agradecer em vez de etiquetar o caso.
+  **E RECONHECER O SINAL NÃO MUDOU A PRINT:** os dois motores continuam dando **tecla 4**
+  (`nunca-pediram-dados`), porque a guarda de 14/10 (*sem recibo, o formulário seco vira a mensagem
+  do dia*) só vale para quem veio de **ANÚNCIO**, e ele escreveu sozinho. **Dois motores concordando
+  no desfecho errado é CONDIÇÃO, nunca posição — e medir o sinal não basta: meça a ORDEM (quinta
+  vez).** Tirar `veioDeAnuncio` da conta é uma linha e atrasa o cadastro da base inteira em uma
+  passada: **decisão dele, dita e não tomada.**
+
 - **"A ELEIÇÃO JÁ PASSOU" SAIU PARA QUEM FALAVA DO 2º TURNO — e o culpado era um FATO meu, não uma
   regra** (16/10/2026, print do rascunho *"Como a eleição já passou, não vou conseguir combinar um
   evento de campanha agora"*; ele: *"ele deve estar se referindo ao segundo turno do flávio

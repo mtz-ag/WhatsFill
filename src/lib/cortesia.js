@@ -978,6 +978,24 @@ const DESPEDIDA_AMARGA =
  */
 const NOS_OS_DA_COLINHA = String.raw`(o\s+|a\s+)?(senhor|senhora|capit[aã]o|martim|voc[eê]s?|vcs?|chapa|campanha|mandato|fl[aá]vio|bolsonaro|zucco|sanderson|van\s+hattem|hattem|marcel|felipe|pedri|10122|2228|300|222|22)([^\p{L}\d]|$)`;
 
+/**
+ * **Os NOMES da chapa, sem os pronomes e sem os números** — `NOS_OS_DA_COLINHA` junta os três
+ * porque lá a pergunta é *"o voto é em NÓS?"*; aqui a pergunta é outra: **nome e número colados**
+ * valem sozinhos, sem verbo nenhum, e para isso as duas metades precisam ser conferidas separadas.
+ */
+const NOME_DA_COLINHA = String.raw`(capit[aã]o\s+)?(martim|fl[aá]vio|bolsonaro|zucco|sanderson|(marcel\s+)?van\s+hattem|hattem|marcel|(felipe\s+)?pedri)`;
+/** Os números de urna da chapa — a mesma lista de `NOS_OS_DA_COLINHA`. */
+const NUMERO_DA_COLINHA = String.raw`(10122|2228|300|222|22)`;
+/** O que a colinha põe entre o nome e o número: espaço, traço, dois-pontos, vírgula ou "é o". */
+const LIGA_NOME_E_NUMERO = String.raw`\s*[-–—:,]?\s*(n[ºo°]\s*|[ée]\s+(o\s+)?)?`;
+/**
+ * **Nome de rua com numero NAO e declaracao de voto** — pego medindo: *"meu endereco e rua
+ * Martim 22, bairro centro"* virava apoio. Endereco e o que mais chega nesta base depois que
+ * pedimos o endereco para o material, e marcar apoio ali faria a rodada agradecer em vez de
+ * etiquetar o caso.
+ */
+const NAO_E_LOGRADOURO = String.raw`(?<!(^|[^\p{L}])(rua|r|av|avenida|travessa|trav|estrada|rodovia|rod|beco|pra[çc]a|alameda|linha|vila|jardim|parque|bairro)\.?\s)`;
+
 const EXPRESSOES_DE_APOIO = [
   /** "eu apoio" sozinho é apoio; "eu apoio o Lula" não — com objeto, o objeto tem de ser eles. */
   new RegExp(String.raw`(^|[^\p{L}])(eu\s+)?apoio(?!\s+(o|a|os|as|ao|aos|à|às)\s+(?!${NOS_OS_DA_COLINHA}))(\s|$|,|!|\.)`, 'iu')
@@ -1092,6 +1110,31 @@ const EXPRESSOES_DE_APOIO = [
   new RegExp(String.raw`(^|[^\p{L}])(meu|nosso|meus|nossos)\s+votos?(?!\s+(é\s+|e\s+|vai\s+(ser\s+)?|ser[aá]\s+|est[aá]\s+)?(do|da|dos|pro|pra|no|na|para|em)\s+(?!${NOS_OS_DA_COLINHA}))(\s|$|!|,|\.)`, 'iu'),
   /(^|[^\p{L}])(vot(o|a|ar|am|em|amos)|somos|sou|[eé])\s*(no\s+)?22(\s|$|!|,|\.)/iu,
   /^\s*22(\s|$|!|,|\.)/u,
+
+  /**
+   * **O NOME COLADO NO NÚMERO** — print do Vanderlei (16/10/2026): ele escreveu *"Flávio bolsonaro
+   * 22"*, só isso, e recebeu o **formulário seco** de pedido de cadastro; ele apagou a mensagem.
+   *
+   * **Medido: `"22"` sozinho conta como apoio e `"Flávio bolsonaro 22"` não contava** — pôr o nome
+   * ao lado do número APAGAVA o apoio. Os dois padrões acima pedem o número abrindo a mensagem ou
+   * colado num verbo, e os padrões com nome pedem um VERBO (*"vou votar no"*, *"eu apoio o"*).
+   * Nome e número juntos, sem verbo, não eram nada — e **essa é a forma que a própria colinha
+   * imprime** (`Capitão Martim - 10122`) e a mais curta de declarar o voto.
+   *
+   * É a lição do *"queria uma reunião"* (09/09) outra vez: **a lista era toda de verbos, e ele
+   * escreveu a coisa.**
+   *
+   * **A guarda que torna isto seguro é o próprio par.** O número sozinho é endereço, hora e idade,
+   * e por isso os padrões acima exigem posição ou companhia; ao lado do nome de um dos nossos ele
+   * não é mais nada disso. O que fica de fora é o número com UNIDADE (*"tem 22 anos"*, *"às 22
+   * horas"*) e o ordinal (*"ficou em 222º"*), que `\p{L}` pega porque `º` é letra.
+   */
+  new RegExp(
+    String.raw`(^|[^\p{L}\d])${NAO_E_LOGRADOURO}(${NOME_DA_COLINHA}${LIGA_NOME_E_NUMERO}${NUMERO_DA_COLINHA}` +
+      String.raw`|${NUMERO_DA_COLINHA}\s+${NOME_DA_COLINHA})(?![\p{L}\d])` +
+      String.raw`(?!\s*(anos?|horas?|hrs?|minutos?|reais?|mil|graus|km|kg|%))`,
+    'iu'
+  ),
 ];
 
 /** "não", "nunca", "jamais", "nem" no fim do trecho — com no máximo uma palavra depois. */
