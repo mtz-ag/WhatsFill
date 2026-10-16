@@ -1,83 +1,64 @@
-## 2026-10-15 - v3.165.0 - a IA assume o encerramento
+## 2026-10-16 - v3.166.0 - ESTADO DE AGORA - a eleicao nao acabou: o 2o turno e nosso
 
-**Decisao dele:** *"deterministico para encerrar tem dado errado demais, a IA tera que assumir o
-encerramento"*.
+**Relato dele**, com a print do rascunho que dizia *"Como a eleicao ja passou, nao vou conseguir
+combinar um evento de campanha agora. Um abraco!"*: *"ele deve estar se referindo ao segundo turno
+do flavio bolsonaro que estamos apoiando"*.
 
-### O que falhava era o GATILHO, nao o desfecho
+### Medido antes de mexer, e o dossie estava CERTO
 
-Todas as falhas medidas foram **falso NEGATIVO**: *"Amem firme dia 25 e 22"*, *"Tudo certo
-obrigado"*, e **29 de 41** formas comuns de encerrar. Entao trocar a tecla da caixa nao resolveria
-nada — **a caixa nunca casava**. O que precisava mudar era quem responde a pergunta.
+`precisaDoDossie` = **true** (a palavra "eleicao" aciona), e as linhas do dossie sobre o **2o turno
+de 25/10** e sobre o **Flavio** estavam **presentes no prompt**, escritas certas. O modelo nao
+ignorou o dossie: ele copiou os **TITULOS EM MAIUSCULAS**, que eram os dois mais curtos e os mais
+afirmativos — o item 5 (*"A ELEICAO DE 04/10/2026 JA ACONTECEU"*) e a regra 12 (*"A CAMPANHA ACABOU
+EM 04/10/2026"*), **esta ultima escrita por mim na vespera**, para o caso da vaga de emprego.
 
-E a pergunta *"ela esta encerrando?"* e **julgamento**, nao vocabulario: e a sexta vez que este
-projeto aprende que lista de forma nao fecha. A saida e a mesma de `naoHaOQueResponder` (24/09) e
-de `naoCabePedirOCadastro` (24/09).
+**Terceira vez em dois dias que um fato meu e cumprido onde ele nao devia ir** — e a pior das tres,
+porque **fato nao parece regra: parece informacao inofensiva**. A licao de 08/09 (*regra sem escopo
+e cumprida ate onde nao devia*) vale para numero, data e placar do mesmo jeito.
 
-### Onde mora: no SINAL, nao numa caixa nova
+### Os tres lugares, porque a metade de um fato e lida como o fato inteiro
 
-`ultimaEhDespedida` deixou de ser so a expressao regular. Quem decide continua sendo a caixa **"So
-se despediu"**, na posicao em que ela ja esta — **vale no quadro dele sem importar nada**, que e a
-razao de a trava morar no sinal (a da negativa, 06/09; a do agradecimento, 15/10).
+- **regra 12** (a vaga): o titulo contundente saiu. O motivo continua escrito, agora como **motivo
+  INTERNO que nao se diz ao contato**, apontando para a regra 19.
+- **regra 19, nova:** *a eleicao nao acabou, e a campanha em curso e NOSSA.* Em 04/10 ficaram
+  decididos deputado, senador e governador; a Presidencia vai a **2o turno em 25/10/2026** e o nosso
+  candidato e o **Flavio Bolsonaro, o 22**. As frases proibidas estao **escritas** (*"a eleicao ja
+  passou"*, *"a campanha acabou"*, *"o periodo eleitoral terminou"*) — proibicao que nao nomeia a
+  frase nao diz ao modelo qual evitar. E o que de fato acabou **tem NOME**: so se diz com o cargo
+  escrito, e so para nao pedir voto em quem ja foi eleito.
+- **dossie, item 5:** o titulo passou a carregar as DUAS metades — o 1o turno acabou **e** a
+  campanha do 2o esta em curso —, sem desfazer o que o item existe para fazer.
 
-### A porta e estrutural, e nao outra lista
+**O NOME de quem ganhou NAO entra na regra 19**, e isto foi pego pelo teste: o prompt de sistema e
+dos dois candidatos, e `perfis.test.mjs` exige que nada de um sobre no do outro. **Quem foi eleito e
+fato do DOSSIE**, que ja e por candidato; a regra 19 fala da eleicao, nao de quem ganhou.
 
-So se pergunta a IA quando **NOS ja respondemos** (ha conversa para encerrar) **e ela escreveu
-alguma coisa depois** — ou seja, exatamente nos casos em que hoje sairia mensagem.
+### A trava, porque prompt e pedido
 
-**O vocabulario ficou como SIM BARATO.** Ele erra para o lado de nao ver (medido: 11 de 11 falsos
-positivos barrados), entao quando ele reconhece nao ha o que conferir e a chamada nao acontece.
-**Querendo que a IA decida sempre, e apagar uma linha** — custaria uma chamada em todo contato sem
-mudar desfecho nenhum.
+`AVISOS_QUE_IMPEDEM_ENVIO.eleicaoEncerrada` barra o envio automatico quando o rascunho diz que a
+eleicao, a campanha ou o periodo eleitoral acabou. **E mecanica de verdade** — e uma afirmacao sobre
+uma data, nao julgamento.
 
-### Tres guardas mecanicas, cada uma com dono
+**As duas guardas que a mantem util:** a frase que **NOMEIA o cargo** passa (*"a eleicao de deputado
+estadual ja acabou"* e verdade e e o que impede pedir voto em eleito), e a frase que fala do **2o
+turno, do dia 25 ou do Flavio** passa — quem diz isso nao esta dizendo que acabou tudo.
 
-- **pergunta pendente nunca e encerramento** — a guarda do `naoHaOQueResponder` e a regra dele de
-  03/09 (*"tem pergunta nao conclui"*);
-- **IA desligada ou sem chave decide como antes** — ele pediu que a IA assuma, nao que o
-  encerramento deixe de existir sem ela;
-- **falha, JSON ilegivel e certeza baixa viram "nao"**, que e o comportamento de hoje: manda.
-  Concluir em silencio por erro de rede seria o lado caro.
+**Medido na funcao exportada:** o rascunho da print vem barrado e `rascunhoPodeSairSozinho` da
+**false**; **7 de 7** formas de dizer que acabou barradas, **14 de 14** frases legitimas passando.
 
-**O corte e 0,8, acima do 0,7 da etiqueta, e de proposito:** etiqueta errada e organizacao interna
-e ele desfaz; encerramento errado e uma pessoa que perguntou e nao recebeu nada, e disso nao fica
-rastro na tela. **E este caminho nunca ACRESCENTA mensagem: so silencia.**
+### Varredura das minhas proprias asercoes
 
-### A segunda metade, sem a qual nada chegava ao desfecho no quadro dele
-
-*"Bom dia, tudo certo obrigado"* liga `ultimaEhDespedida` **e** `soCortesia`, e no quadro a caixa
-**"so cumprimentou" (tecla 5, ENVIA) esta acima de "So se despediu" (tecla 3)** nos dois ramos do
-retorno — medido: tabela da 3, quadro da 5. Reordenar o quadro dele e o que este projeto nao faz,
-entao **o sinal e calado**: quem encerrou nao "so cumprimentou". E condicao, e condicao vale hoje.
-
-### Medido, copiando a composicao do painel
-
-| o que ela escreveu | hoje (so vocabulario) | com a IA |
-|---|---|---|
-| "Tudo certo obrigado" | 3 / 3 | 3 / 3 |
-| "Bom dia, tudo certo obrigado" | 3 / 3 | 3 / 3 |
-| **"Tchau"** | **5 / 5 (envia)** | **3 / 3 (conclui)** |
-| **"Ate logo"** | **5 / 5 (envia)** | **3 / 3 (conclui)** |
-
-*(tabela / quadro; 3 = conclui sem enviar nada.)* E *"Tudo certo, quando e o evento?"* continua
-sendo respondida — ha teste exigindo isso.
-
-**Custo, medido:** ~741 tokens de entrada, teto de 512 na saida, esforco baixo. Por conferencia:
-**US$ 0,0013** no Haiku, **US$ 0,0021** no gpt-5, **US$ 0,0004** no gpt-5-mini e no Qwen. **So
-acontece onde hoje sairia mensagem**, e cada chamada escreve uma linha no Andamento com o veredito,
-o motivo e o custo.
-
-**O que NAO foi medido, e esta dito:** quantas vezes por rodada isso acontece de verdade. O
-amostrador sintetico dos testes nao serve — com 39 sinais a 35% as protecoes do topo vencem quase
-sempre, e o numero que sai dali nao diz nada sobre a fila dele. **O numero real aparece no
-Andamento, a partir da primeira rodada.**
+Tres asercoes minhas gravavam a redacao que vazou, e a de 15/10 exigia literalmente
+`/CAMPANHA ACABOU EM/`. **Trave a AFIRMACAO, nao a frase** — as tres foram reapontadas, com a data e
+o motivo da inversao escritos no teste.
 
 - 21 suites e os dois verificadores verdes.
 
 ### O que fica para ele
 
-- **A lista de vocabulario continua sendo dele**, e continua curta (onze formas + cinco amargas).
-  Agora ela importa menos — e o atalho barato, nao mais a decisao. Querendo que a IA decida
-  **sempre**, e uma linha.
-- **No quadro, "so cumprimentou" continua acima de "So se despediu"**, e a tabela continua fazendo o
-  contrario. Hoje isso nao morde mais (o sinal e calado), mas as duas ordens discordando e a
-  assinatura de problema de posicao — e posicao e dele.
+- **Passado 25/10 nao ha mais eleicao nenhuma**, e a regra 19 diz isso. Nesse dia ela e o item 5 do
+  dossie precisam ser reescritos — e o unico pedaco deste conserto com prazo.
+- **A regra da colinha continua pedindo voto nos seis cargos**, e cinco estao decididos: e decisao
+  dele de 09/09 e nao foi tocada.
+- **O disparo da colinha continua configurado pedindo voto**, e o `pedir-dados` dele continua com o
+  Instagram e o grupo da campanha encerrada.

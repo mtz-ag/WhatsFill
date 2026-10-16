@@ -2250,7 +2250,20 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
    * de voluntario numa campanha encerrada e a porta que nao abre (a regra 7).
    */
   const regra12 = p.slice(i12, p.indexOf('13. ', i12));
-  check(/CAMPANHA ACABOU EM 04\/10\/2026/.test(regra12), 'a regra 12 diz que a campanha acabou');
+  /**
+   * **ESTA ASSERCAO GRAVAVA O DEFEITO, e foi INVERTIDA em 15/10/2026.** Ela exigia o titulo em
+   * caixa alta *"A CAMPANHA ACABOU EM 04/10/2026"*, que eu escrevi na vespera para o caso de quem
+   * quer VAGA — e no dia seguinte o modelo o copiou para responder a quem oferecia um EVENTO:
+   * *"Como a eleicao ja passou, nao vou conseguir combinar um evento de campanha agora"*. Ele:
+   * *"ele deve estar se referindo ao segundo turno do Flavio Bolsonaro que estamos apoiando"*.
+   *
+   * Hoje a regra 12 diz a mesma coisa com as duas metades e com o escopo: a campanha DELE
+   * terminou, e isso e motivo INTERNO que nao se diz. O fato geral vive na regra 19.
+   */
+  check(!/CAMPANHA ACABOU EM/.test(regra12), 'a regra 12 NAO tem mais o titulo que vazou');
+  check(/campanha DELE terminou em 04\/10\/2026/.test(regra12), 'ela diz o que acabou, com o dono');
+  check(/motivo INTERNO/.test(regra12) && /regra\s+19/.test(regra12),
+    'dito como motivo interno, apontando para a regra 19');
   /**
    * **A frase continua escrita, e agora como PROIBICAO** — a mesma disciplina da regra 12 desde
    * 25/09: proibicao nomeia a frase, senao o modelo nao sabe qual evitar. O que a assercao trava e
@@ -2259,7 +2272,7 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   check(/NÃO\s+convide com "se tiver\s+interesse nesse formato/i.test(regra12),
     'o convite ao voluntariado virou frase proibida, com as palavras escritas');
   check(/NÃO\s+ofereça o trabalho voluntário/i.test(regra12), 'e oferecer o voluntariado esta proibido');
-  const modelo = regra12.slice(0, regra12.indexOf('A CAMPANHA ACABOU'));
+  const modelo = regra12.slice(0, regra12.indexOf('A campanha DELE terminou'));
   check(!/voluntári/i.test(modelo), 'o MODELO a copiar nao fala mais em voluntario');
   check(/infelizmente não estamos\s+contratando/.test(regra12), 'o jeito dele continua sendo o modelo');
 
@@ -3066,6 +3079,68 @@ grupo('a IA confere as etiquetas de PEDIDO e SEM INTERESSE antes de marcar (17/0
  * tecla da caixa nao resolveria -- a caixa nunca casava. Mesma saida de `naoHaOQueResponder`
  * (24/09): e julgamento, e julgamento e da IA.
  */
+/**
+ * **A ELEICAO NAO ACABOU, E A CAMPANHA EM CURSO E NOSSA** - print dele (15/10/2026).
+ *
+ * O contato ofereceu o predio dele para um evento *"caso tenha disponibilidade antes da
+ * eleicao"* e o rascunho respondeu *"Como a eleicao ja passou, nao vou conseguir combinar um
+ * evento de campanha agora"*. Ele: *"ele deve estar se referindo ao segundo turno do Flavio
+ * Bolsonaro que estamos apoiando"*.
+ *
+ * **Medido: o dossie FOI puxado e dizia a coisa certa.** O que o modelo copiou foram os TITULOS
+ * em caixa alta - o do dossie e o da regra 12, este escrito por mim na vespera para outro caso.
+ */
+grupo('a eleicao nao acabou: o 2o turno e nosso (15/10/2026)');
+{
+  const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  const i19 = p.indexOf('19. A ELEI');
+  check(i19 > 0, 'a regra 19 existe');
+  const r19 = p.slice(i19, i19 + 1400);
+
+  /** As DUAS metades na mesma regra: metade de um fato e lida como o fato inteiro. */
+  check(
+    r19.includes('04/10/2026') && /deputado, senador e governador/.test(r19),
+    'diz o que acabou em 04/10, pelo CARGO'
+  );
+  /**
+   * O NOME de quem ganhou NAO entra: este prompt e dos dois candidatos, e quem foi eleito e fato
+   * do DOSSIE, que ja e por candidato. `perfis.test.mjs` pega o vazamento; aqui fica o PORQUE.
+   */
+  check(!/Martim|Pedri/.test(r19), 'e nao nomeia candidato nenhum');
+  check(r19.includes('25/10/2026') && /Fl[áa]vio Bolsonaro/.test(r19), 'e diz o que continua, com o nosso candidato');
+  check(/campanha acontecendo, e ela [ée] nossa/.test(r19), 'e que a campanha em curso e NOSSA');
+
+  /** A frase que vazou vira frase PROIBIDA, escrita - proibicao que nao a nomeia nao a evita. */
+  check(/NUNCA diga ao contato que "a elei[çc][ãa]o j[áa] passou"/.test(r19), 'proibe a frase que saiu, com as palavras');
+  check(/tem NOME/.test(r19) && /cargo escrito/.test(r19), 'e diz como se fala do que de fato acabou');
+
+  /** O que fazer com quem oferece evento: nem marcar nem recusar sozinha. */
+  check(/nunca marque nada e nunca recuse por conta pr[óo]pria/.test(r19), 'oferta de evento nao se marca nem se recusa');
+
+  /**
+   * **A TRAVA, e por que ela BARRA:** e da familia do `afirmouAcao` - afirmacao falsa sobre o
+   * mundo dita a um eleitor. A guarda e NOMEAR o cargo decidido, que e a frase verdadeira.
+   */
+  const agora = new Date('2026-10-15T16:00:00');
+  const aviso = AVISOS_QUE_IMPEDEM_ENVIO.eleicaoEncerrada;
+  const barra = (t) => (revisarRascunho(t, agora).avisos || []).includes(aviso);
+
+  check(barra('Como a eleição já passou, não vou conseguir combinar um evento de campanha agora.'), 'a frase da print e barrada');
+  check(barra('Infelizmente a campanha acabou.'), 'e "a campanha acabou"');
+  check(barra('As eleições já passaram.'), 'e o plural');
+  check(barra('O período eleitoral acabou.'), 'e o periodo eleitoral');
+
+  check(!barra('A eleição de deputado estadual já acabou, mas seguimos trabalhando.'), 'com o CARGO escrito e verdade, e passa');
+  check(!barra('A eleição para governador já passou e o Zucco foi eleito.'), 'o governador tambem');
+  check(!barra('Agora é levar todo mundo no dia 25, no segundo turno!'), 'o convite do dia 25 passa');
+  check(!barra('A campanha do Flávio segue até o dia 25.'), 'falar da campanha do Flavio passa');
+  check(!barra('Obrigado pelo apoio! Vamos com tudo.'), 'agradecimento comum passa');
+  check(!barra('Infelizmente não estamos contratando.'), 'a negativa de vaga passa');
+
+  check(!rascunhoPodeSairSozinho(revisarRascunho('Como a eleição já passou, não vou conseguir combinar um evento.', agora).avisos),
+    'e o rascunho da print nao sai mais sozinho');
+}
+
 grupo('a IA assume o encerramento (15/10/2026)');
 {
   const p = montarSistemaEncerramento({ regras: '' });
@@ -3654,8 +3729,13 @@ grupo('o escopo dos numeros da eleicao mora no DOSSIE, colado neles (15/10/2026)
     'o escopo dos numeros CHEGA a IA (nao esta num bloco de citacao)'
   );
   check(/comemore junto/.test(noPrompt), 'e manda comemorar junto');
+  /**
+   * **Sem caixa:** o item 5 foi reescrito em 15/10/2026 com as duas metades (o que acabou e o 2o
+   * turno em curso), e a frase passou a vir no meio de um periodo, em minuscula. O que esta
+   * assercao protege e a PROIBICAO continuar escrita, nao a inicial maiuscula.
+   */
   check(
-    /Nunca peça voto para esses cargos/.test(noPrompt),
+    /nunca peça voto para esses cargos/i.test(noPrompt),
     'sem desfazer o que o item 5 existe para fazer: nao pedir voto em eleicao encerrada'
   );
 }

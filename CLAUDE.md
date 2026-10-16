@@ -3587,6 +3587,27 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **"A ELEIÇÃO JÁ PASSOU" SAIU PARA QUEM FALAVA DO 2º TURNO — e o culpado era um FATO meu, não uma
+  regra** (16/10/2026, print do rascunho *"Como a eleição já passou, não vou conseguir combinar um
+  evento de campanha agora"*; ele: *"ele deve estar se referindo ao segundo turno do flávio
+  bolsonaro que estamos apoiando"*).
+  **Medido, e o dossiê estava CERTO:** `precisaDoDossie` = true e as linhas do 2º turno e do Flávio
+  estavam **no prompt**. O modelo copiou os **TÍTULOS EM MAIÚSCULAS** — o item 5 do dossiê (*"A
+  ELEIÇÃO DE 04/10/2026 JÁ ACONTECEU"*) e a regra 12 (*"A CAMPANHA ACABOU EM 04/10/2026"*), **esta
+  escrita por mim na véspera** para o caso da vaga. **Terceira vez em dois dias que um fato meu é
+  cumprido fora do escopo, e a pior: fato não parece regra, parece informação inofensiva.**
+  **Ao pôr número, data ou placar no dossiê ou numa regra, escreva COLADO nele para que serve e onde
+  ele PARA** — e em prosa, nunca em linha `> `, que `semBlocoDeRevisao` corta antes do modelo. **Meia
+  verdade em caixa alta vence a verdade inteira três parágrafos abaixo** (a lição do item 22, 07/09).
+  **A regra 19 é a metade que faltava** (a eleição não acabou; o 2º turno é nosso, Flávio, o 22, até
+  25/10), com as frases proibidas **escritas**, e **o que de fato acabou só se diz com o CARGO
+  escrito**. **O NOME de quem ganhou NÃO entra ali** — o prompt de sistema é dos dois candidatos e
+  `perfis.test.mjs` pega o vazamento; quem foi eleito é fato do DOSSIÊ, que já é por candidato.
+  **E a trava é mecânica porque é afirmação sobre uma DATA:** `AVISOS_QUE_IMPEDEM_ENVIO.
+  eleicaoEncerrada` barra o envio automático, e as duas guardas que a mantêm útil são o **cargo
+  nomeado** e a **menção ao 2º turno / dia 25 / Flávio**. Medido: 7/7 barradas, 14/14 legítimas
+  passando. **Com prazo: passado 25/10 a regra 19 e o item 5 do dossiê têm de ser reescritos.**
+
 - **A IA ASSUME O ENCERRAMENTO** (15/10/2026: *"deterministico para encerrar tem dado errado demais,
   a IA tera que assumir o encerramento"*).
   **O que falhava era o GATILHO, nao o desfecho:** as falhas medidas foram TODAS falso negativo

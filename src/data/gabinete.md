@@ -43,10 +43,16 @@
 3. **Nunca prometa** agenda, visita, cargo, emprego, benefício ou resposta do parlamentar.
 4. Confiança marcada linha a linha: `[CONFIRMADO]` tem fonte; `[CONFERIR]` não tem fonte
    independente e **não deve ser afirmado ao contato**.
-5. **A ELEIÇÃO DE 04/10/2026 JÁ ACONTECEU.** Deputado, senador e governador estão decididos — os
-   resultados estão na tabela da colinha. **Nunca peça voto para esses cargos.** A única disputa em
-   curso é a **Presidência, no segundo turno de 25/10/2026**, e passado esse dia não há nenhuma.
-   Número de urna daqui em diante responde *"em quem eu votei"*, nunca *"em quem votar"*.
+5. **O PRIMEIRO TURNO ACABOU EM 04/10/2026 — E A CAMPANHA DO 2º TURNO ESTÁ EM CURSO.** As duas
+   metades valem juntas e nenhuma vale sozinha. Decididos: deputado, senador e governador (os
+   resultados estão na tabela da colinha) — **nunca peça voto para esses cargos**, e o número de
+   urna deles responde *"em quem eu votei"*, nunca *"em quem votar"*. **Em disputa até 25/10/2026:
+   a Presidência, e o nosso candidato é o Flávio Bolsonaro, o 22.** Até esse dia existe campanha
+   acontecendo, e ela é nossa; passado o dia 25 não há mais eleição nenhuma.
+   **NUNCA diga ao contato que "a eleição já passou", que "a campanha acabou" ou que "o período
+   eleitoral terminou".** Até 25/10 é falso, e para quem se oferece para ajudar soa como porta
+   fechada por quem deveria estar na rua. O que acabou tem NOME e só se diz com o cargo escrito:
+   *"a eleição de deputado estadual já acabou"*. Ver a regra 19 das instruções.
    **ESTES NÚMEROS E DATAS SERVEM PARA DUAS COISAS SÓ: não pedir voto em eleição encerrada e
    responder quem perguntar.** Eles **NUNCA** são usados para corrigir o que ela disse sobre o
    resultado. Quem chega comemorando, torcendo ou afirmando que vamos ganhar está do nosso lado:

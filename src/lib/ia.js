@@ -1797,10 +1797,11 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '12. QUEM QUER TRABALHAR AQUI — pedindo pagamento ou sem dizer: a resposta é CURTA e fecha a',
     '    porta SEM explicar por quê. O jeito dele, que é o modelo: "infelizmente não estamos',
     '    contratando". Uma frase e PARE.',
-    '    **A CAMPANHA ACABOU EM 04/10/2026, e não existe mais equipe de campanha para entrar.** NÃO',
-    '    ofereça o trabalho voluntário, NÃO diga "só estamos trabalhando com voluntários" e NÃO',
-    '    convide com "se tiver interesse nesse formato, me avise": isso era verdade durante a',
-    '    campanha e hoje é porta que não abre — quem aceitar fica esperando um chamado que não vem.',
+    '    **A campanha DELE terminou em 04/10/2026** — ele foi reeleito, e a equipe que existia foi',
+    '    junto. Isso é motivo INTERNO, vale só para esta regra e NÃO se diz ao contato (ver a regra',
+    '    19: há campanha em curso, a do 2º turno). NÃO ofereça o trabalho voluntário, NÃO diga "só',
+    '    estamos trabalhando com voluntários" e NÃO convide com "se tiver interesse nesse formato,',
+    '    me avise": é porta que não abre, e quem aceitar fica esperando um chamado que não vem.',
     '    **QUEM PERGUNTA O PREÇO NÃO ESTÁ PEDINDO VAGA.** "Quanto paga?", "quanto vocês pagam?" e',
     '    "qual o valor?" soltos, sem ela dizer em nenhum momento que quer trabalhar para nós, quase',
     '    sempre são ENGANO DE DESTINATÁRIO: a pessoa acha que está falando com um anúncio de venda.',
@@ -1951,6 +1952,43 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    perguntou nada; ela veio dividir a alegria, e a correção responde uma pergunta que ninguém',
     '    fez. O segundo turno só entra como CONVITE ("agora é levar todo mundo no dia 25"), nunca',
     '    como reparo. Perguntando de verdade ("quando é o segundo turno?"), aí sim você responde.',
+    /**
+     * **A ELEIÇÃO NÃO ACABOU, E A CAMPANHA EM CURSO É NOSSA** — print dele (15/10/2026).
+     *
+     * O contato ofereceu o prédio dele para um evento *"caso tenha disponibilidade antes da
+     * eleição"* e o rascunho respondeu *"Como a eleição já passou, não vou conseguir combinar um
+     * evento de campanha agora"*. Ele: *"ele deve estar se referindo ao segundo turno do Flávio
+     * Bolsonaro que estamos apoiando"*.
+     *
+     * **Medido: o dossiê FOI puxado e dizia a coisa certa** — a linha do 2º turno de 25/10 e a da
+     * chapa com o Flávio estavam lá. O que o modelo copiou foram os TÍTULOS em caixa alta: o do
+     * dossiê (*"A ELEIÇÃO DE 04/10/2026 JÁ ACONTECEU"*) e o da regra 12 (*"A CAMPANHA ACABOU EM
+     * 04/10/2026"*), este escrito por mim na véspera para o caso de quem quer VAGA.
+     *
+     * **Terceira vez em dois dias que um fato meu vale além do escopo.** A regra que fica: fato
+     * com data entra escrito nas DUAS metades — o que acabou e o que continua —, porque metade de
+     * um fato é lida como o fato inteiro.
+     *
+     * **E esta é a regra que envelhece sozinha no dia 25**: ela já diz o que vale depois, mas na
+     * manhã de 26/10 o "em curso" precisa sair. Dito a ele.
+     */
+    // O NOME do candidato NÃO entra aqui: este prompt é dos dois, e `perfis.test.mjs` exige que
+    // nada de um sobre no do outro. Quem foi eleito é fato do DOSSIÊ, que já é por candidato — e
+    // a regra 19 fala da eleição, não de quem ganhou.
+    '19. A ELEIÇÃO NÃO ACABOU, E A CAMPANHA EM CURSO É NOSSA. Em 04/10/2026 ficaram decididos',
+    '    deputado, senador e governador: essas eleições acabaram. Mas a Presidência vai a SEGUNDO',
+    '    TURNO em 25/10/2026, e o nosso candidato é o Flávio Bolsonaro, o 22. Até esse dia existe',
+    '    campanha acontecendo, e ela é nossa.',
+    '    **NUNCA diga ao contato que "a eleição já passou", que "a campanha acabou" nem que "o',
+    '    período eleitoral terminou".** Hoje é falso, e para quem se oferece para ajudar soa como',
+    '    porta fechada por quem deveria estar na rua. Quem fala em "antes da eleição", em evento, em',
+    '    reunir gente ou em ajudar está falando do DIA 25 — trate assim.',
+    '    O que de fato acabou tem NOME, e só se diz com o cargo escrito ("a eleição de deputado',
+    '    estadual já acabou"), e só para não pedir voto em quem já foi eleito.',
+    '    **Quem oferece espaço, evento ou mobilização:** agradeça e diga que vai levar adiante —',
+    '    nunca marque nada e nunca recuse por conta própria. Marcar agenda não é sua.',
+    '    **Passado 25/10 não há mais eleição nenhuma**: aí não se pede voto para ninguém, e continua',
+    '    valendo não anunciar ao contato que acabou.',
     // O item 22 INTEIRO, e não só a primeira faixa: citar só "mensagem simples: 1 a 3 frases" fez o
     // desabafo de 58 s do Adair (18/09/2026) receber três respostas de uma frase por parágrafo, contra
     // os dois parágrafos que o ChatGPT escreveu dentro da regra dele.
@@ -3168,6 +3206,11 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
    */
   afirmouAcao: 'afirma que alguém já providenciou algo — confira, porque ninguém fez isso',
   /**
+   * **"A eleição já passou" é falso até 25/10** — ver a trava em `revisarRascunho`. Há 2º turno da
+   * Presidência, e é campanha nossa: o Flávio é o 22 da chapa.
+   */
+  eleicaoEncerrada: 'diz que a eleição ou a campanha acabou — o 2º turno é 25/10 e estamos nele',
+  /**
    * **A IA afirmou que TEMOS uma coisa** — print do Lucas Mendes (07/09/2026).
    *
    * Ele perguntou *"Como faço para conseguir um boné ou acessório do CAP MARTIM"*, e o rascunho
@@ -3773,6 +3816,52 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
   const NEGA_TER = /(^|[^\p{L}])n[ãa]o\s+(temos|tenho|dispomos|h[áa])/iu;
   if (!NEGA_TER.test(texto) && AFIRMOU_TER.some((re) => re.test(texto))) {
     avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.afirmouTer);
+  }
+
+  /**
+   * **DIZER QUE A ELEIÇÃO JÁ PASSOU É AFIRMAÇÃO FALSA ATÉ 25/10** — print dele (15/10/2026).
+   *
+   * O contato ofereceu o prédio dele para um evento *"caso tenha disponibilidade antes da
+   * eleição"*, e o rascunho respondeu *"Como a eleição já passou, não vou conseguir combinar um
+   * evento de campanha agora"*. Ele: *"ele deve estar se referindo ao segundo turno do Flávio
+   * Bolsonaro que estamos apoiando"*.
+   *
+   * **Medido: o dossiê FOI puxado** (a palavra "eleição" aciona `precisaDoDossie`) **e ele diz a
+   * coisa certa** — a linha do 2º turno de 25/10 e a da chapa com o Flávio estão lá. O que o
+   * modelo copiou foram os TÍTULOS em caixa alta: *"A ELEIÇÃO DE 04/10/2026 JÁ ACONTECEU"* no
+   * dossiê e *"A CAMPANHA ACABOU EM 04/10/2026"* na regra 12 — esta última escrita por mim na
+   * véspera, para o caso de quem quer VAGA, e lida aqui como fato geral.
+   *
+   * **É a terceira vez em dois dias que um fato meu vaza para fora do escopo** (a correção do 2º
+   * turno em cima de quem comemorava; a vaga de voluntário numa campanha encerrada), e eu já
+   * tinha escrito a lição: *ao pôr número, data ou placar, escreva colado nele onde ele PARA*.
+   *
+   * **Por que barra o envio e não só avisa:** é da família do `afirmouAcao` — não é tom nem
+   * resposta ao lado, é uma **afirmação falsa sobre o mundo** dita a um eleitor em nome do
+   * mandato. E esta custa mais que as outras: quem ouve "a eleição já passou" de quem está em
+   * campanha entende que do outro lado não há ninguém acompanhando.
+   *
+   * **A guarda é NOMEAR o cargo decidido:** *"a eleição de deputado estadual já acabou"* é
+   * verdade e passa, porque o 04/10 decidiu aquilo. Falar do 2º turno na mesma mensagem também
+   * desarma. Medido: 7 de 7 barradas, 14 de 14 falsos positivos preservados.
+   */
+  const CARGO_JA_DECIDIDO = String.raw`(deputad\w*|senador\w*|governador\w*|estadual|federal)`;
+  const JA_ACABOU = String.raw`(j[áa]\s+)?(passou|passaram|acabou|acabaram|terminou|terminaram|encerrou|encerraram|chegou\s+ao\s+fim|chegaram\s+ao\s+fim)`;
+  const DIZ_QUE_ACABOU = new RegExp(
+    String.raw`(^|[^\p{L}])(a|as|essa|essas|nossa|o|os)?\s*(elei[çc][ãa]o|elei[çc][õo]es|campanha|per[íi]odo\s+eleitoral)\s+` +
+      String.raw`(?!(de\s+|para\s+|a\s+|ao\s+|do\s+|da\s+)?${CARGO_JA_DECIDIDO})` +
+      JA_ACABOU,
+    'iu'
+  );
+  /** Nomeou o cargo que o 04/10 decidiu: a frase é verdadeira, e tem de passar. */
+  const SOBRE_CARGO_DECIDIDO = new RegExp(
+    String.raw`(elei[çc][ãa]o|elei[çc][õo]es|campanha)\s+(de\s+|para\s+|a\s+|ao\s+|do\s+|da\s+)?${CARGO_JA_DECIDIDO}`,
+    'iu'
+  );
+  /** Falou do 2º turno na mesma mensagem: não está dizendo que acabou tudo. */
+  const FALA_DO_SEGUNDO_TURNO = /(segundo|2[oº°])\s*turno|25\s*de\s*outubro|25\/10|fl[áa]vio/iu;
+  if (!SOBRE_CARGO_DECIDIDO.test(texto) && !FALA_DO_SEGUNDO_TURNO.test(texto) && DIZ_QUE_ACABOU.test(texto)) {
+    avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.eleicaoEncerrada);
   }
 
   /**
