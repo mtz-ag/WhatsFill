@@ -3587,6 +3587,24 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **A CAIXA DO ANUNCIO NÃO CONFERE ANÚNCIO, E O RAMO "ANÚNCIO — PESSOA NOVA" É `!jaRespondemosAntes`**
+  (16/10/2026, pergunta dele: *"o fluxo do anúncio está sobrepondo o fluxo dos sem anúncio, no
+  momento todos os anúncios estão desativados, ou estou errado?"*). **Ele está certo, e é pior que
+  sobrepor: na CHEGADA não existe um fluxo dos sem anúncio.** O ramo de cima do quadro tem o nome do
+  anúncio e a condição **"nunca respondemos a esta pessoa"** — todo primeiro contato desce por ele.
+  **E `anuncio-modelo-e-dados` também não lê anúncio nenhum:** a condição é *há modelo + primeira
+  vinda + sem cidade + cadastro não pedido*. Medido, primeira vinda com modelo: **tecla `a` com
+  `veioDeAnuncio` verdadeiro OU falso**, e o `motivo` impresso dizia *"chegou pelo anúncio"* nos dois.
+  Quem não veio de anúncio chega lá com modelo pela tabela **"Modelo por conteúdo"**, que não tem
+  guarda — o modelo PADRÃO tem (regra dele, 04/09), e foi por isso que isto nunca apareceu.
+  **DESLIGAR TODOS OS ANÚNCIOS NÃO APAGA `veioDeAnuncio`** (a armadilha de 02/09 por outra porta):
+  `reconhecer` filtra os ligados, então `anuncioReconhecido` fica falso para todos e as três caixas
+  *"veio de um anúncio que eu reconheço"* do ramo do retorno viram **caixas mortas**; mas
+  `veioDeAnuncio` lê o `utm` da plataforma e a etiqueta de origem do CRM, e a Config não o alcança.
+  **No quadro inteiro só UMA caixa lê `!veioDeAnuncio`.**
+  **Ao ler o quadro para diagnosticar, leia a CONDIÇÃO e nunca o nome da caixa nem o motivo** — os
+  dois são prosa, e prosa velha aqui vira ordem errada lá (14/10).
+
 - **O NOME AO LADO DO NÚMERO APAGAVA O APOIO — e "22" sozinho sempre contou** (16/10/2026, print do
   Vanderlei: ele escreveu *"Flávio bolsonaro 22"*, só isso, recebeu o `pedir-dados` seco e apagou a
   mensagem; ele: *"veja porque essa mensagem continua sendo mandada e me mostre o motivo"*).

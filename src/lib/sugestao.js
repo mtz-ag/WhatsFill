@@ -734,8 +734,24 @@ export const REGRAS = [
       // guarda tem que morar aqui, senão o recibo do anúncio sai para quem já foi atendido.
       // É a mesma lição da exceção do tempo: exceção que ele nomeia vai na CONDIÇÃO.
       !c.jaRespondemosAntes,
-    motivo: () =>
-      'chegou pelo anúncio: sai o modelo como recibo e, em seguida, o pedido de nome e cidade.',
+    /**
+     * **O motivo dizia "chegou pelo anúncio" e esta regra NÃO confere anúncio nenhum** — pergunta
+     * dele (16/10/2026): *"o fluxo do anúncio está sobrepondo o fluxo dos sem anúncio"*. Ele estava
+     * certo: medido, o desfecho é o MESMO com `veioDeAnuncio` verdadeiro ou falso, porque a
+     * condição acima nunca o lê — o que ela pede é **modelo disponível e primeira vinda**.
+     *
+     * Quem não veio de anúncio chega aqui com modelo pela tabela *"Modelo por conteúdo"*, que não
+     * tem guarda de anúncio (o modelo PADRÃO tem, pela regra dele de 04/09).
+     *
+     * **A linha do motivo é o que ele lê na caixa e no Andamento para saber por que a mensagem
+     * saiu** — afirmar ali uma condição que ninguém conferiu manda procurar no lugar errado, que é
+     * a família do log que dizia *"não gravada"* e gravava (07/09).
+     */
+    motivo: (c) =>
+      c.anuncioReconhecido
+        ? 'chegou pelo anúncio: sai o modelo como recibo e, em seguida, o pedido de nome e cidade.'
+        : 'é a primeira vez que falamos com ela e há modelo para mandar: sai o modelo como recibo ' +
+          'e, em seguida, o pedido de nome e cidade.',
   },
   {
     id: 'nada-legivel-dela',
@@ -1490,10 +1506,12 @@ export const SOBRE = {
     ],
   },
   'anuncio-modelo-e-dados': {
-    rotulo: 'Chegou pelo anúncio: modelo + pedir os dados',
+    rotulo: 'Primeira vinda: modelo + pedir os dados',
     efeito: 'envia',
     quando:
-      'Manda o modelo deste anúncio (ou o padrão, quando o texto não foi reconhecido) e, na mesma ' +
+      'NÃO confere anúncio: o que ela pede é ser a PRIMEIRA vez que falamos com a pessoa e haver ' +
+      'modelo para mandar — quem não veio de anúncio chega aqui pela tabela "Modelo por conteúdo". ' +
+      'Manda o modelo (o do anúncio, o padrão ou o do conteúdo) e, na mesma ' +
       'passada, o pedido de nome e cidade — depois conclui. São DUAS mensagens, e é a única tecla ' +
       'do projeto que faz isso. Só casa quando as duas metades cabem: há modelo mapeado que ainda ' +
       'não saiu, ela não tem etiqueta de cidade e o pedido nunca foi feito.',
