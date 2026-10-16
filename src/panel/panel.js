@@ -34,7 +34,7 @@ import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
 import { criarGuardaDeRolagem, TECLAS_QUE_ROLAM } from './rolagem.js';
-import { ehSoReacao, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado } from '../lib/cortesia.js';
+import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 
@@ -3158,6 +3158,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const escreveu = dela.filter((m) => String(m?.texto || '').trim());
     if (!escreveu.length) return false;
     if (perguntaPendente(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio)) return false;
+    /**
+     * **Repasse não é despedida, e perguntar custava dinheiro em toda passada** — relato dele
+     * (16/10/2026), com o Andamento aberto: *"estou gastando tokens"*. No log, quem mandava links
+     * em sequência gerava uma conferência por passada, e a resposta era sempre a mesma: *"Ela
+     * continuou vendo links/compartilhamentos — não é despedida nem agradecimento final"*.
+     *
+     * É a quarta guarda mecânica desta porta, e a mais barata: link e vídeo de outra pessoa não
+     * carregam despedida nenhuma, então não há julgamento a pedir. Mensagem que tem link **e**
+     * texto dela continua passando — `ehRepasse` só vale quando, tirando o link, não sobra nada.
+     */
+    if (escreveu.every((m) => ehRepasse(m))) return false;
 
     const alvo = state.contact?.id;
     const chave = `${alvo}|${escreveu.map((m) => m?.at || '').join(',')}`;

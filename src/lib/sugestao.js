@@ -884,7 +884,22 @@ export const REGRAS = [
      * pessoa mandou um link do TikTok às 14:43. Mandar a mensagem do momento ali é empilhar uma
      * segunda mensagem nossa em cima da que ela ainda nem comentou.
      */
-    tecla: (c) => (c.respondidoHoje || !c.podeMandarMomento ? '3' : '5'),
+    /**
+     * **RAJADA SÓ DE REPASSE CONCLUI, SEM MANDAR NADA** — pedido dele (16/10/2026), com o
+     * Andamento aberto: *"o fluxo era pra finalizar essas pessoas que mandam links em sequencia,
+     * estou gastando tokens"*.
+     *
+     * O argumento desta caixa é *"a mensagem do momento responde ao gesto"* — e vale para o gesto:
+     * um emoji de mãos é dirigido a nós. **Repasse não é gesto**, e o próprio `ehRepasse` já diz
+     * por quê: link e vídeo de outra pessoa *"não dizem nada sobre este contato"*. Quem repassa não
+     * está conversando, e mandar a mensagem do momento em cima disso é responder a coisa errada —
+     * todo dia, porque a rajada se renova sozinha.
+     *
+     * O sinal já existia e servia a UMA regra só (`nunca-pediram-dados`, o caso do Odone: 76
+     * mensagens em semanas, todas link de vídeo). **Emoji e figura continuam recebendo a mensagem
+     * do momento**: `ehRepasse` pede link, vídeo ou áudio encaminhado.
+     */
+    tecla: (c) => (c.rajadaEhSoRepasse || c.respondidoHoje || !c.podeMandarMomento ? '3' : '5'),
     /**
      * **Uma figura ou um link no fim NÃO apaga a pergunta que ficou para trás** — print da Maria
      * Antonia (06/09/2026).
@@ -1554,11 +1569,13 @@ export const SOBRE = {
     efeito: 'depende',
     ramos: [
       { tecla: '5', se: 'você ainda não respondeu hoje' },
-      { tecla: '3', se: 'você já respondeu hoje, ou não há mensagem do momento' },
+      { tecla: '3', se: 'ela só repassou link ou vídeo, ou você já respondeu hoje, ou não há mensagem do momento' },
     ],
     quando:
       'Não há conteúdo para responder, e ignorar também não serve. Mensagem do momento, ou conclui ' +
-      'se já respondemos hoje.',
+      'se já respondemos hoje. **Só REPASSE conclui sem mandar nada**: link e vídeo de outra pessoa ' +
+      'não dizem nada sobre este contato, e a rajada se renova sozinha — emoji e figura continuam ' +
+      'recebendo a mensagem do momento.',
   },
   'pergunta-aberta': {
     rotulo: 'Fez uma pergunta de razão ou de posição',

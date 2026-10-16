@@ -636,7 +636,8 @@ grupo('o mapa RAMIFICADO da janela: cada regra tem os dois galhos (01/09/2026)')
     const daFuncao = new Set();
     // `veioDeAnuncio` e `anuncioReconhecido` entraram em 15/10 com a decisao dele de mandar a
     // mensagem do dia a quem chega por anuncio DESLIGADO (nao ha recibo para mandar).
-    for (let m = 0; m < 256; m++) {
+    // `rajadaEhSoRepasse` entrou em 16/10: so repasse conclui sem mandar nada.
+    for (let m = 0; m < 512; m++) {
       daFuncao.add(r.tecla({
         respondidoHoje: !!(m & 1),
         momentoJaEnviado: !!(m & 2),
@@ -646,6 +647,7 @@ grupo('o mapa RAMIFICADO da janela: cada regra tem os dois galhos (01/09/2026)')
         materialPendente: !!(m & 32),
         veioDeAnuncio: !!(m & 64),
         anuncioReconhecido: !!(m & 128),
+        rajadaEhSoRepasse: !!(m & 256),
       }));
     }
     const noMapa = new Set(ramosDaRegra(r.id).map((x) => x.tecla));
