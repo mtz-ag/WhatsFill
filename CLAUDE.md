@@ -3589,6 +3589,27 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **NÃO DISTRIBUÍMOS MATERIAL — e o caminho inteiro virou do avesso** (19/10/2026, regra dele: *"não
+  estamos distribuindo material, a distribuição é feita pelo PL dos materiais do Flávio, corrija
+  isso onde for necessário"*; perguntado, escolheu *"diga para entrar em contato com a equipe do
+  zucco que é do PL"* e **a etiqueta sai — volta a ser atendido normal**).
+  **O estoque sempre viveu em mais de um lugar, e desta vez eram QUATRO:** a seção 25 do padrão
+  dele, a regra 12 do prompt, a trava `afirmouTer` e **a resposta pronta do voluntariado**, cujo
+  fecho pedia o endereço e prometia o repasse. A regra de 25/09 (*os três lugares têm de concordar*)
+  continua valendo e ganhou um quarto morador.
+  **`ITEM_FISICO` ganhou folheto, santinho, panfleto, adesivo e bandeira:** a frase que em 25/09 era
+  a CERTA (*"o que temos são folhetos, adesivos e bandeiras"*) **hoje é barrada**. **A colinha ficou
+  de fora de propósito** — ela vai DIGITADA na mensagem, não tem entrega, e dizer que a temos é
+  verdade.
+  **O PULO acabou:** `enderecoParaMaterial` devolve `null`. Ela existia por um motivo só (04/09): a
+  etiqueta carregava o caso até ele transferir a conversa a quem fazia o envio. **Sem envio não há
+  lista**, e o pulo é permanente — continuaria escondendo gente da fila para sempre sem nada em
+  troca. Medido: quem tinha a etiqueta ia para a **tecla 2** e passou para a **tecla 5**. A etiqueta
+  continua sendo APLICADA (virou rótulo de CRM); para parar de marcar, é esvaziar o campo na Config.
+  **O furo que fica e que só ele resolve: o MODELO APROVADO de material é da plataforma** — nenhum
+  código daqui o alcança, e enquanto ele for disparado vai pedir endereço e prometer entrega.
+  **Dez asserções foram invertidas**, com a data e o motivo: elas travavam a doutrina de 22 e 25/09.
+
 - **A RESPOSTA PRONTA DIZIA QUE ELE AINDA ESTÁ EM CAMPANHA, E A CLÁUSULA DE TEMPO SAIU INTEIRA**
   (19/10/2026, print com a mensagem apagada: *"resposta como se o martim ainda estivesse em
   campanha, ele já se elegeu, estamos apoiando o flávio bolsonaro até dia 25"*).

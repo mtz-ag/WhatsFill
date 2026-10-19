@@ -386,16 +386,16 @@ export const DEFAULT_TEMPLATES = [
       'Preciso ser sincero antes de qualquer coisa: aqui a gente trabalha *só com voluntários*. ' +
       'Não há remuneração, contratação nem ajuda de custo — vale para todo mundo, inclusive para ' +
       'quem já ajudou em outras campanhas.\n\n' +
-      'Se mesmo assim você quiser somar, é muito bem-vindo. Me manda o seu *endereço completo* ' +
-      '(rua, número, bairro, cidade e CEP) que eu encaminho para a equipe responsável pelos ' +
-      'materiais — é ela que confirma o que há disponível e combina a entrega com você.',
+      'Se mesmo assim você quiser somar, é muito bem-vindo — a sua ajuda vale muito do jeito que ' +
+      'você puder dar.\n\n' +
+      'Sobre material de campanha: a gente não faz a distribuição. Quem cuida disso é o PL — ' +
+      'procure a equipe do Capitão Zucco, que é por lá que o material anda.',
     variantes: [
       '{{saudacao}}! Obrigado por querer somar com a gente, de coração.\n\n' +
         'Vou ser sincero com você desde já: o trabalho aqui é *voluntário*, sem remuneração, sem ' +
         'contratação e sem ajuda de custo. É assim para todo mundo.\n\n' +
-        'Se ainda assim fizer sentido para você, será muito bem-vindo. Me passa o seu *endereço ' +
-        'completo* (rua, número, bairro, cidade e CEP) que eu encaminho para a equipe dos ' +
-        'materiais, e é ela quem confirma o que tem e combina a entrega.',
+        'Se ainda assim fizer sentido para você, será muito bem-vindo. E sobre material: a ' +
+        'distribuição não é nossa, é do PL — quem procura é a equipe do Capitão Zucco.',
     ],
   },
   {

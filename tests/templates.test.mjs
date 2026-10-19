@@ -711,6 +711,57 @@ grupo('o link do grupo entra uma vez, e nunca por cima do dele (07/09/2026)');
   check(!voluntario || voluntario.text === antesDoVoluntario, 'e nao toca na resposta do voluntariado');
 }
 
+/**
+ * **O voluntariado parou de pedir o ENDERECO** (19/10/2026) — regra dele: *"nao estamos
+ * distribuindo material, a distribuicao e feita pelo PL dos materiais do Flavio"*.
+ *
+ * O texto de 09/09 fechava pedindo o endereco completo e prometendo o repasse **a equipe
+ * responsavel pelos materiais**. Sem envio, isso e promessa de entrega que nao acontece.
+ */
+{
+  grupo('o voluntariado nao pede mais o endereco (19/10/2026)');
+
+  const defaults = store.DEFAULT_TEMPLATES.find((t) => t.id === 'trabalhar-na-campanha');
+  check(!!defaults, 'a resposta existe de fabrica');
+  for (const t of [defaults.text, ...(defaults.variantes || [])]) {
+    check(!templates.ehPedidoDeEndereco(t), 'o texto de fabrica nao pede endereco');
+    check(!/equipe (responsável pelos|dos) materiais/i.test(t), 'e nao fala em equipe dos materiais');
+    /** A metade que FICA: a regra dele de 09/09 sobre voluntario sem remuneracao. */
+    check(/volunt/i.test(t) && /remunera/i.test(t), 'e continua dizendo que e voluntario sem remuneracao');
+    check(/Zucco/.test(t), 'e aponta para a equipe do Zucco, do PL');
+  }
+
+  /**
+   * **O gatilho da migracao e o COMPORTAMENTO, nao o texto:** so troca se o que esta gravado ainda
+   * PEDE o endereco. Texto que ele reescreveu sem o pedido passa intacto — comparar byte a byte
+   * seria fragil demais, porque ele edita as respostas.
+   */
+  mem.migracoes = {};
+  const antigo =
+    '{{saudacao}}! Que bom que você quer somar.\n\n' +
+    'Aqui a gente trabalha só com voluntários, sem remuneração.\n\n' +
+    'Me manda o seu endereço completo (rua, número, bairro, cidade e CEP) que eu encaminho para a ' +
+    'equipe responsável pelos materiais — é ela que combina a entrega com você.';
+  check(templates.ehPedidoDeEndereco(antigo), 'o texto antigo pedia o endereco mesmo');
+  mem.templates = store.DEFAULT_TEMPLATES.map((t) =>
+    t.id === 'trabalhar-na-campanha' ? { ...t, text: antigo, variantes: [] } : { ...t }
+  );
+  const mexeu = await templates.migrarVoluntarioSemEndereco();
+  check(mexeu.length === 1, `a migracao troca a resposta do voluntariado (${mexeu.length})`);
+  const agora = mem.templates.find((t) => t.id === 'trabalhar-na-campanha');
+  check(!templates.ehPedidoDeEndereco(agora.text), 'e o texto DELE deixa de pedir o endereco');
+  check((await templates.migrarVoluntarioSemEndereco()).length === 0, 'e nao roda duas vezes');
+
+  /** Texto que ele ja reescreveu sem o pedido NAO e tocado. */
+  mem.migracoes = {};
+  const dele = '{{saudacao}}! Trabalhamos só com voluntários, sem remuneração. Obrigado!';
+  mem.templates = store.DEFAULT_TEMPLATES.map((t) =>
+    t.id === 'trabalhar-na-campanha' ? { ...t, text: dele, variantes: [] } : { ...t }
+  );
+  check((await templates.migrarVoluntarioSemEndereco()).length === 0, 'texto sem o pedido passa intacto');
+  check(mem.templates.find((t) => t.id === 'trabalhar-na-campanha').text === dele, 'e a edicao dele fica');
+}
+
 grupo('a NEGATIVA e reconhecida no texto livre da IA (12/09/2026)');
 {
   /**
@@ -787,12 +838,21 @@ grupo('o pedido de endereco do VOLUNTARIADO nao abre caso de material (24/09/202
    * Se uma reescrita futura puser a negativa de trabalho dentro da resposta do material, a etiqueta
    * some e ninguem percebe — e o caso de material sai da lista que ele transfere no fim do dia.
    */
+  /**
+   * **INVERTIDA EM 19/10/2026**, e o motivo e do mundo e nao do codigo: *"nao estamos distribuindo
+   * material, a distribuicao e feita pelo PL dos materiais do Flavio"*.
+   *
+   * Ate aqui a guarda exigia que HOUVESSE resposta pronta pedindo o endereco (a do material) e que
+   * so a do voluntariado ficasse calada. Hoje **nenhuma pede**: sem envio, pedir endereco e
+   * promessa de entrega que nao acontece. A assercao passou a travar a AUSENCIA.
+   *
+   * `abreCasoDeMaterial` e `ehPedidoDeEndereco` continuam existindo e testados acima: o MODELO
+   * APROVADO dele, que e da plataforma e nao deste repositorio, ainda pode pedir o endereco — e e
+   * por eles que a etiqueta e aplicada quando isso acontece.
+   */
   const lista = await templates.list();
-  const pedem = lista.filter((t) => templates.ehPedidoDeEndereco(t.text));
-  const calados = pedem.filter((t) => !templates.abreCasoDeMaterial(t.text)).map((t) => t.id);
-  check(pedem.length > 0, 'ha resposta pronta que pede o endereco');
-  check(calados.length === 1 && calados[0] === 'trabalhar-na-campanha',
-    `so o voluntariado deixa de marcar (hoje: ${calados.join(', ') || 'nenhum'})`);
+  const pedem = lista.filter((t) => templates.ehPedidoDeEndereco(t.text)).map((t) => t.id);
+  check(pedem.length === 0, `nenhuma resposta pronta pede o endereco (hoje: ${pedem.join(', ') || 'nenhuma'})`);
 }
 
 grupo('o agradecimento pelo apoio sai UMA vez por conversa (15/10/2026)');

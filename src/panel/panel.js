@@ -3080,22 +3080,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * tira quando a conversa for transferida, devolvendo o contato ao fluxo normal.
    */
   async function enderecoParaMaterial() {
-    const marcada = await etiquetaDeEndereco();
-    if (marcada) return { motivo: `tem a etiqueta "${marcada}" — é material a enviar`, jaMarcada: true };
     /**
-     * **A nossa ÚLTIMA mensagem ter sido o pedido de endereço abre a janela do detector** — print
-     * de 23/09/2026, em que o endereço veio em três mensagens (cidade, rua com número, bairro) e
-     * nada foi etiquetado. Ver `cortesia.informouEndereco`.
+     * **O PULO ACABOU EM 19/10/2026** — regra dele: *"não estamos distribuindo material, a
+     * distribuição é feita pelo PL dos materiais do Flávio"*, e, perguntado o que fazer com a
+     * etiqueta, **"sai: volta a ser atendido normal"**.
      *
-     * **Pela última e não por "já pedimos alguma vez"**: o pedido some da nossa fala assim que
-     * respondemos, e sem isso qualquer rajada futura com um "bairro" dentro viraria endereço — a
-     * etiqueta é permanente e manda PULAR o contato para sempre. Quem carrega o caso adiante depois
-     * de marcado é a etiqueta, como a regra dele (04/09) manda.
+     * Esta função existia por um motivo só, escrito em 04/09: a etiqueta carregava o caso até ele
+     * transferir a conversa a quem fazia o envio no fim do dia. **Sem envio não há lista** — e o
+     * pulo, que é permanente, passaria a esconder gente da fila para sempre sem nada em troca.
+     *
+     * **Devolver `null` é o conserto inteiro:** o sinal `informouEndereco` fica falso, então nem a
+     * etiqueta já gravada nem um endereço que ela mande por conta própria tiram o contato da
+     * rodada. Quem já estava marcado volta à fila na próxima passada.
+     *
+     * **A etiqueta em si continua existindo e sendo aplicada** — ela virou rótulo de organização no
+     * CRM, e rótulo não faz mal a ninguém. Para parar de marcar também, é esvaziar o campo
+     * *"Etiqueta de quem MANDOU ENDEREÇO"* na aba Automatizado: a decisão é dele, e apagar as seis
+     * chamadas por conta própria seria remover função que ele não pediu para remover.
      */
-    const nossaUltima = [...(state.nossas || [])].reverse().find((m) => String(m?.texto || '').trim());
-    const respondendoNossoPedido = templatesLib.ehPedidoDeEndereco(nossaUltima?.texto || '');
-    const dela = informouEndereco(state.entrantes, state.nossaUltimaAt, { respondendoNossoPedido });
-    return dela ? { ...dela, jaMarcada: false } : null;
+    return null;
   }
 
   /** A etiqueta de endereço que o contato JÁ tem no CRM — `null` sem o campo preenchido. */

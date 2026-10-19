@@ -38,6 +38,7 @@ export async function list({ perfil } = {}) {
     // DEPOIS da de cima: aquela acrescenta a resposta para quem não a tem, e esta limpa a
     // cláusula de campanha de quem já a tinha gravada (19/10/2026).
     await migrarFalarComDeputadoSemCampanha();
+    await migrarVoluntarioSemEndereco();
     // Por ÚLTIMO de propósito: as de cima acrescentam respostas novas, e o texto de fábrica delas
     // já vem sem "gabinete" — mas as antigas, que ele editou, só são alcançadas por esta.
     await migrarGabineteParaEquipe();
@@ -263,6 +264,41 @@ export function semTempoDeCampanha(texto) {
     saida = saida.replace(re, (_todo, abre, letra) => (abre || '') + letra.toUpperCase());
   }
   return saida;
+}
+
+/**
+ * **O voluntariado pedia o ENDEREÇO para mandar material** — regra dele (19/10/2026): *"não estamos
+ * distribuindo material, a distribuição é feita pelo PL dos materiais do Flávio"*.
+ *
+ * A resposta de 09/09 fechava com *"me manda o seu endereço completo que eu encaminho para a equipe
+ * responsável pelos materiais"*. Sem envio, isso é **promessa de entrega que não acontece** — a
+ * expectativa que a Lei 9.504/97 trata, e o oposto do que a regra 5 do prompt proíbe.
+ *
+ * **O gatilho é a BEHAVIOR e não o texto:** a troca só acontece se o texto gravado ainda PEDE o
+ * endereço (`ehPedidoDeEndereco`). Texto que ele reescreveu sem o pedido passa intacto, e byte a
+ * byte seria frágil demais — ele edita as respostas.
+ *
+ * **Substitui pelo texto de fábrica inteiro**, e não por recorte: o parágrafo que sai é o fecho, e
+ * costurar um fecho novo por expressão regular produziria frase quebrada saindo para eleitor.
+ */
+export async function migrarVoluntarioSemEndereco() {
+  const migracoes = await store.get('migracoes');
+  if (migracoes.voluntarioSemEndereco) return [];
+
+  const defaults = store.DEFAULT_TEMPLATES.find((t) => t.id === 'trabalhar-na-campanha');
+  const templates = await store.get('templates');
+  const mudadas = [];
+  const novos = templates.map((t) => {
+    if (t.id !== 'trabalhar-na-campanha' || !defaults) return t;
+    const pedeEndereco = [t.text, ...(t.variantes || [])].some((x) => ehPedidoDeEndereco(x));
+    if (!pedeEndereco) return t;
+    mudadas.push(t.name || t.id);
+    return { ...t, text: defaults.text, variantes: [...(defaults.variantes || [])] };
+  });
+
+  if (mudadas.length) await store.set('templates', novos);
+  await store.set('migracoes', { ...migracoes, voluntarioSemEndereco: true });
+  return mudadas;
 }
 
 export async function migrarFalarComDeputadoSemCampanha() {

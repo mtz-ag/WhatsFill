@@ -1457,20 +1457,21 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * e a IA repassava tudo à equipe dos materiais para ela decidir: agora o estoque é conhecido, e
      * repassar um adesivo que não existe cria a expectativa que a lei trata.
      */
-    '   **O QUE TEMOS PARA ENVIAR É POUCO, E ESTÁ ESCRITO AQUI: FOLHETO (santinho, panfleto — o mesmo',
-    '   papel), ADESIVO, BANDEIRA e a COLINHA com os números.** Nada além disso.',
-    '   Qualquer outro item de campanha — placa, banner, faixa, cartaz, bottom,',
-    '   chaveiro — NÃO temos: diga isso em UMA frase gentil e que o que TEMOS são folhetos, adesivos',
-    '   e bandeiras.',
-    '   (Escreva "o que temos são folhetos, adesivos e bandeiras", e não "consigo te mandar": isso é',
-    '   prometer entrega.)',
-    '   Sem "vou verificar", sem repassar o item que não existe e sem sugerir onde comprar.',
-    '   **ROUPA NÃO É MATERIAL, E NÃO FORNECEMOS NENHUMA:** camiseta, camisa, boné, colete, blusa,',
-    '   uniforme ou qualquer peça de vestir, com ou sem a marca da campanha. A lei eleitoral proíbe a',
-    '   campanha de distribuir camiseta, boné e brinde (Lei 9.504/97, art. 39, § 6º). Diga em UMA',
-    '   frase gentil que não temos roupa nem boné para enviar e PARE: sem pedir endereço, sem repassar',
-    '   à equipe, sem "vou verificar" e sem sugerir onde comprar. Se ela pediu folheto junto, siga a',
-    '   regra do folheto só para ESSE item.',
+    '   **NÓS NÃO DISTRIBUÍMOS MATERIAL — nenhum item, nenhuma exceção.** Nem folheto, santinho ou',
+    '   panfleto, nem adesivo, nem bandeira, nem camiseta, boné, placa, banner, faixa, cartaz, bottom',
+    '   ou chaveiro. **A distribuição do material do Flávio é feita pelo PL.**',
+    '   Quem pedir qualquer um deles ouve isso em UMA frase gentil e é orientado a procurar a',
+    '   **equipe do Capitão Zucco, que é do PL** — é por lá que o material anda.',
+    '   **NÃO peça endereço, NÃO fale em "equipe de materiais" nossa, NÃO prometa entrega nem',
+    '   repasse e NÃO diga "vou verificar".** Não há envio nosso para prometer, e pedir endereço cria',
+    '   a expectativa que a Lei 9.504/97 trata.',
+    '   **NUNCA escreva que TEMOS algum item** ("temos folhetos", "temos adesivos disponíveis"): hoje',
+    '   é falso, e afirmar estoque é o erro que a trava barra.',
+    '   E não sugira onde comprar — isso é serviço fora da nossa alçada (regra 11).',
+    '   **ROUPA, BONÉ E BRINDE nem a campanha pode distribuir:** camiseta, camisa, boné, colete,',
+    '   blusa, uniforme, chaveiro, caneta — a Lei 9.504/97, art. 39, § 6º proíbe. Diga em UMA frase',
+    '   gentil que não há e PARE: sem endereço, sem repasse, sem "vou verificar" e sem mandar',
+    '   procurar o PL para isso, porque para estes itens não existe lugar nenhum que distribua.',
     '   **O que fica FORA desta regra é o bem de uso PESSOAL, que teria de ser comprado** e não leva a',
     '   marca da campanha: cadeira de rodas, órtese, muleta, remédio, óculos, colchão, eletrodoméstico,',
     '   móvel, cesta básica, passagem, exame, consulta, calçado e roupa comum. Aí sim é PEDIDO DE',
@@ -1485,12 +1486,12 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * responsável, e ela entra em contato. O que mudou em 22/09 é QUAL item percorre esse caminho — só
      * o folheto e a colinha impressa.
      */
-    '   (a) ela pediu FOLHETO, santinho, panfleto, ADESIVO, BANDEIRA ou a colinha IMPRESSA: não pergunte de novo o que',
-    '       ela quer. PEÇA O ENDEREÇO COMPLETO e diga que, com ele, o pedido vai para a',
-    '       EQUIPE RESPONSÁVEL PELOS MATERIAIS, que entra em contato sobre a entrega.',
-    '       **A única promessa que você pode fazer é a de REPASSAR.** Nunca diga que ela vai receber,',
-    '       nem quando, nem que "dá para providenciar".',
-    '       E não mande ela PROCURAR a equipe (regra 7) — quem repassa somos nós.',
+    '   (a) ela pediu FOLHETO, santinho, panfleto, ADESIVO, BANDEIRA, a colinha IMPRESSA ou qualquer',
+    '       outro item: **não pergunte de novo o que ela quer** — ela já disse. Diga em UMA frase',
+    '       gentil que a gente não faz a distribuição, e oriente a procurar a EQUIPE DO CAPITÃO',
+    '       ZUCCO, que é do PL. **Sem endereço, sem repasse nosso e sem dizer que ela vai receber.**',
+    '       (Esta é a ÚNICA exceção à regra 7: aqui mandar procurar não é devolvê-la para onde ela já',
+    '       está — é outro lugar, e é onde o material de fato anda.)',
     '   (b) ela pediu a colinha para VOTAR: é a lista digitada da regra 10, não material.',
     '   (c) ela falou em "material" sem dizer qual: pergunte o que ela precisa. Se o anúncio era de',
     '       conteúdo digital, é o conteúdo digital.',
@@ -3811,7 +3812,20 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
    * `p{L}`, e a primeira expressão era `temoss+...` — nunca casou desde que nasceu (07/09). Quem
    * barrava o caso do Lucas era só a segunda, a do "disponível".
    */
-  const ITEM_FISICO = 'camiseta|bon[ée]|chaveiro|brinde|cartaz|faixa|colete|caneta|placa|banner|bottom';
+  /**
+   * **FOLHETO, ADESIVO e BANDEIRA entraram em 19/10/2026** — regra dele: *"não estamos distribuindo
+   * material, a distribuição é feita pelo PL dos materiais do Flávio"*.
+   *
+   * Eles eram justamente o que a regra 12 mandava a IA dizer que TEMOS (*"escreva 'o que temos são
+   * folhetos, adesivos e bandeiras'"*, 22/09), e por isso ficavam de fora desta trava. Hoje é o
+   * contrário: **afirmar que temos qualquer um deles é falso**, e a trava barra.
+   *
+   * **A COLINHA continua fora da lista, de propósito:** ela vai DIGITADA na própria mensagem
+   * (decisão dele, 09/09), não tem entrega, e dizer que a temos é verdade.
+   */
+  const ITEM_FISICO =
+    'camiseta|bon[ée]|chaveiro|brinde|cartaz|faixa|colete|caneta|placa|banner|bottom' +
+    '|folheto|santinho|panfleto|adesivo|bandeira';
   const AFIRMOU_TER = [
     new RegExp(String.raw`(^|[^\p{L}])(temos|tenho|dispomos\s+de|disponibilizamos)\s+[^.!?]{0,40}?(${ITEM_FISICO})`, 'iu'),
     new RegExp(String.raw`(${ITEM_FISICO})[^.!?]{0,30}(dispon[íi]ve(l|is)|em\s+estoque)`, 'iu'),

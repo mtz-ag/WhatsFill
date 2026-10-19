@@ -926,7 +926,14 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
    * fechar um caminho sem escrever a saida troca o defeito por uma resposta muda.
    */
   const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
-  check(prompt.includes('Nunca diga que ela vai receber'), 'o prompt diz que a entrega nao se confirma');
+  /**
+   * **A frase mudou em 19/10/2026 e a AFIRMACAO ficou.** A regra dele: *"nao estamos distribuindo
+   * material, a distribuicao e feita pelo PL dos materiais do Flavio"* — nao ha mais entrega nossa
+   * nem para prometer nem para "nao confirmar". O prompt passou a proibir a promessa inteira.
+   */
+  check(/sem dizer que ela vai receber/i.test(prompt), 'o prompt diz que a entrega nao se confirma');
+  check(/N[ÃA]O prometa entrega nem\s*\n?\s*repasse/i.test(prompt.replace(/\s+/g, ' ')),
+    'e proibe prometer entrega ou repasse');
 
   /**
    * **O ESCOPO da regra, que faltava — print da Cleo (08/09/2026).** Ela pediu que comprassemos um
@@ -1180,21 +1187,31 @@ grupo('a IA nao pode afirmar acao nem prometer entrega (06/09/2026)');
     check(rascunhoPodeSairSozinho(rev(t).avisos) === false, `barra tambem: "${t}"`);
   }
 
-  /** **O caminho CERTO tem que continuar passando** — e e o que ele ditou. */
+  /**
+   * **ESTE CAMINHO DEIXOU DE SER O CERTO EM 19/10/2026** — regra dele: *"nao estamos distribuindo
+   * material, a distribuicao e feita pelo PL dos materiais do Flavio"*. Pedir endereco e prometer o
+   * repasse a "equipe dos materiais" virou promessa de entrega que nao acontece.
+   *
+   * **A TRAVA nao foi mexida, de proposito** (a correcao dele de 12/09: *"eu quero que mude o que a
+   * IA diz, nao parar todo tempo para eu revisar"*): quem muda o comportamento e o PROMPT, e trava
+   * nova so entra se o caso voltar. Entao estes textos continuam PASSANDO na revisao — o que mudou
+   * e que a regra 12 nao manda mais escreve-los.
+   */
   for (const t of [
     'Me passe seu endereço completo que eu repasso para a equipe responsável pelos materiais. Eles entram em contato sobre o que há disponível e sobre a entrega.',
     'Me diga seu endereço completo que iremos repassar para a equipe responsável pelos materiais.',
-    'A equipe responsável pelo material entra em contato com você sobre disponibilidade e entrega.',
-    'Me passe rua, número, bairro e cidade que a equipe dos materiais retorna sobre o que é possível.',
   ]) {
-    check(rascunhoPodeSairSozinho(rev(t).avisos), `o caminho certo passa: "${t.slice(0, 60)}…"`);
+    check(rascunhoPodeSairSozinho(rev(t).avisos), `a trava nao barra (so o prompt mudou): "${t.slice(0, 50)}…"`);
   }
 
   /** E o prompt diz o que fazer, e nao so o que nao dizer. */
   const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
-  check(p.includes('EQUIPE RESPONSÁVEL PELOS MATERIAIS'), 'o prompt nomeia a equipe dos materiais');
-  check(p.includes('PEÇA O ENDEREÇO COMPLETO'), 'e manda pedir o endereco completo');
-  check(p.includes('promessa que você pode fazer é a de REPASSAR'), 'e diz qual e a unica promessa que cabe');
+  const plano = p.replace(/\s+/g, ' ');
+  check(/EQUIPE DO CAPIT[ÃA]O\s*ZUCCO/.test(plano), 'o prompt manda procurar a equipe do Zucco');
+  check(/do PL/.test(plano), 'e diz que ela e do PL');
+  check(/N[ÃA]O pe[çc]a endere[çc]o/i.test(plano), 'e manda NAO pedir o endereco');
+  check(!/PE[ÇC]A O ENDERE[ÇC]O COMPLETO/.test(plano), 'e o pedido de endereco saiu do prompt');
+  check(!/promessa que voc[êe] pode fazer [ée] a de REPASSAR/.test(plano), 'e a promessa de repasse tambem');
 }
 
 grupo('as duas casas: o provedor sai do NOME DO MODELO');
@@ -1995,34 +2012,49 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
    * estoque era desconhecido e tudo ia para a equipe dos materiais decidir; agora o que existe esta
    * escrito, e o resto se nega numa frase — repassar um adesivo que nao existe cria a expectativa.
    */
-  check(prompt.includes('FOLHETO (santinho, panfleto'), 'o que temos e o folheto');
-  check(prompt.includes('e a COLINHA com os números'), 'e a colinha');
-  check(prompt.includes('chaveiro — NÃO temos'), 'o resto nao temos, dito em uma frase');
+  /**
+   * **O ESTOQUE ACABOU EM 19/10/2026** — regra dele: *"nao estamos distribuindo material, a
+   * distribuicao e feita pelo PL dos materiais do Flavio"*. Ate aqui estas assercoes travavam a
+   * LISTA do que tinhamos (folheto, adesivo, bandeira); hoje travam a AUSENCIA dela.
+   *
+   * **A COLINHA e a unica que fica**, e por um motivo que nao e estoque: ela vai DIGITADA na
+   * mensagem (decisao dele, 09/09), nao tem entrega, e por isso nao e material.
+   */
+  const semEspaco = prompt.replace(/\s+/g, ' ');
+  check(/N[ÓO]S N[ÃA]O DISTRIBU[ÍI]MOS MATERIAL/.test(semEspaco), 'o prompt diz que nao distribuimos material');
+  check(/distribui[çc][ãa]o do material do Fl[áa]vio [ée] feita pelo PL/i.test(semEspaco), 'e diz de quem e a distribuicao');
+  check(!/O QUE TEMOS PARA ENVIAR/.test(semEspaco), 'e a lista do que "temos" saiu do prompt');
+  check(/NUNCA escreva que TEMOS algum item/.test(semEspaco), 'e proibe afirmar estoque com todas as letras');
+
   /**
    * **O ESTOQUE e uma lista so, e ela vive em TRES lugares que tem de concordar**: a secao 25 do
-   * padrao dele, a regra 12 do prompt e a trava `afirmouTer`. "Inclua adesivo" foi 22/09; "inclua
-   * bandeiras na lista que de material que temos" foi 25/09.
+   * padrao dele, a regra 12 do prompt e a trava `afirmouTer`. Hoje os tres dizem a mesma coisa — que
+   * nao ha estoque — e a trava e a que prova: ver o grupo do "temos folhetos", logo abaixo.
    */
-  check(prompt.includes('ADESIVO, BANDEIRA e a COLINHA com os números'), 'adesivo e bandeira estao entre o que temos');
-  const naoTemos = prompt.split('\n').find((l) => l.includes('Qualquer outro item de campanha')) || '';
-  check(!!naoTemos && !/adesivo/i.test(naoTemos), 'adesivo saiu da lista do que NAO temos');
-  check(!!naoTemos && !/bandeira/i.test(naoTemos), 'e a bandeira saiu junto');
+  check(/n[ãa]o distribu[íi]mos/i.test(PADRAO_DE_ATENDIMENTO), 'e a secao 25 do padrao dele concorda');
   const semTrava = (t) => rascunhoPodeSairSozinho(revisarRascunho(t, {}).avisos);
 
   /**
-   * **A trava tem de deixar passar a frase que a regra NOVA produz.** Medido em 25/09, antes de
-   * mexer: *"o que temos sao folhetos, adesivos e bandeiras"* era BARRADA -- mudar o prompt sem
-   * mudar `ITEM_FISICO` transformaria a regra nova em rodada parada, que e a correcao dele de 12/09
-   * ao contrario.
+   * **INVERTIDAS EM 19/10/2026.** Em 25/09 estas tres provavam que a trava deixava passar *"o que
+   * temos sao folhetos, adesivos e bandeiras"* — a frase que a regra daquele dia mandava escrever.
+   * Hoje a regra dele e outra (*"nao estamos distribuindo material"*), entao a MESMA frase virou
+   * afirmacao falsa de estoque e a trava tem de barrar.
+   *
+   * **`ITEM_FISICO` ganhou folheto, santinho, panfleto, adesivo e bandeira no mesmo commit:** sem
+   * isso a trava continuaria aprovando um estoque que nao existe mais.
    */
-  check(semTrava('O que temos são folhetos, adesivos e bandeiras.'), 'a frase certa de hoje passa na trava');
-  check(semTrava('Temos adesivos sim, me passa seu endereço completo.'), '"temos adesivos" e verdade');
-  check(semTrava('Temos bandeiras, me passa seu endereço completo.'), '"temos bandeiras" passou a ser verdade');
+  check(!semTrava('O que temos são folhetos, adesivos e bandeiras.'), 'a frase de 25/09 passou a ser BARRADA');
+  check(!semTrava('Temos adesivos sim, me passa seu endereço completo.'), '"temos adesivos" virou falso');
+  check(!semTrava('Temos bandeiras, me passa seu endereço completo.'), '"temos bandeiras" tambem');
+  check(!semTrava('Temos folhetos para enviar.'), 'e o folheto, que era o ultimo que sobrava');
+
+  /** **A NEGATIVA continua passando — e e ela que o texto certo de hoje usa.** */
+  check(semTrava('Não temos folhetos nem adesivos para enviar — a distribuição é do PL.'),
+    'dizer que NAO temos passa');
 
   /**
    * **E a metade que sustenta a trava: ela continua barrando o que a LEI proibe.** Camiseta e bone
-   * estao no art. 39, § 6o da Lei 9.504/97 -- tirar a bandeira nao pode esvaziar a lista, senao a
-   * trava vira decorativa e nada acusa.
+   * estao no art. 39, § 6o da Lei 9.504/97.
    */
   check(!semTrava('Temos bonés disponíveis.'), 'bone continua barrado');
   check(!semTrava('Temos camisetas sim.'), 'camiseta tambem');
@@ -2739,13 +2771,17 @@ grupo('a regra do "NAO REPITA" esta colada no pedido (12/09/2026)');
   grupo('roupa nao e material: a IA diz que nao temos, sem endereco (12/09/2026)');
 
   const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
-  const linhaDoMaterial = prompt.split('\n').find((l) => /O QUE TEMOS PARA ENVIAR/.test(l)) || '';
-  const listaDoMaterial = prompt.slice(prompt.indexOf(linhaDoMaterial), prompt.indexOf('Nada além disso'));
-  check(!!linhaDoMaterial, 'a regra do material continua no prompt');
-  check(!/camiseta|boné|colete/.test(listaDoMaterial), 'e camiseta, bone e colete nao estao no que temos');
-  check(/ROUPA NÃO É MATERIAL, E NÃO FORNECEMOS NENHUMA/.test(prompt), 'a regra da roupa esta no sistema');
+  /**
+   * **REESCRITO EM 19/10/2026:** a regra dele passou a ser *"nao estamos distribuindo material"*,
+   * entao nao ha mais "lista do que TEMOS" de onde a roupa pudesse estar dentro ou fora. O que esta
+   * assercao protege continua existindo e ficou mais forte — a roupa nao sai, e a LEI continua
+   * nomeada, porque ela e a razao de camiseta e bone nao existirem em lugar nenhum.
+   */
+  check(/N[ÓO]S N[ÃA]O DISTRIBU[ÍI]MOS MATERIAL/.test(prompt), 'a regra do material continua no prompt');
+  check(!/O QUE TEMOS PARA ENVIAR/.test(prompt), 'e nao ha mais lista do que "temos"');
+  check(/ROUPA, BONÉ E BRINDE nem a campanha pode distribuir/.test(prompt), 'a regra da roupa esta no sistema');
   check(/art\. 39, § 6º/.test(prompt), 'com a lei nomeada');
-  check(/sem pedir endereço, sem repassar/.test(prompt), 'e sem endereco nem repasse');
+  check(/sem endereço, sem repasse/.test(prompt.replace(/\s+/g, ' ')), 'e sem endereco nem repasse');
   check(!/qual item quer \([^)]*(camiseta|boné)/.test(prompt), 'o exemplo do "ela disse qual item" nao cita roupa');
 
   /** **Colada no pedido**, so quando ela pediu roupa e ainda nao respondemos. */
@@ -3316,30 +3352,35 @@ grupo('as quatro instrucoes dele entraram no padrao (19/09/2026)');
     'e a linha em branco e citada tambem perto do pedido');
 }
 
-grupo('a bandeira entrou no estoque, e os TRES lugares concordam (25/09/2026)');
+grupo('o ESTOQUE acabou, e os TRES lugares concordam (19/10/2026)');
 {
   /**
-   * Pedido dele: *"inclua bandeiras na lista que de material que temos"*.
+   * Regra dele: *"nao estamos distribuindo material, a distribuicao e feita pelo PL dos materiais
+   * do Flavio"* — e, perguntado o que dizer, *"diga para entrar em contato com a equipe do zucco
+   * que e do PL e devem ter o material"*.
    *
-   * O estoque vive em tres lugares que tem de dizer a mesma coisa -- a secao 25 do padrao DELE, a
-   * regra 12 do prompt e a trava `afirmouTer`. Divergindo, o prompt manda dizer uma coisa e a trava
-   * barra o envio dela: foi o que a medicao pegou antes de mexer.
+   * **Este grupo era o inverso ate hoje** (25/09: *"inclua bandeiras na lista que de material que
+   * temos"*). O que ele prova nao mudou: o estoque vive em TRES lugares que tem de dizer a mesma
+   * coisa — a secao 25 do padrao DELE, a regra 12 do prompt e a trava `afirmouTer`. Divergindo, o
+   * prompt manda dizer uma coisa e a trava barra o envio dela.
    */
   const pad = PADRAO_DE_ATENDIMENTO;
-  check(/## 25\. Material: folheto, adesivo, bandeira e colinha/.test(pad), 'a secao 25 do padrao dele lista a bandeira');
-  check(/ADESIVO, BANDEIRA e a/.test(pad.replace(/\s+/g, ' ')), 'e o corpo da secao tambem');
-  check(!/nem bandeira/i.test(pad), 'e a bandeira saiu do "nada alem disso"');
-  /** Roupa e placa continuam fora: a lei, e a decisao dele de 12/09. */
-  check(/nem placa, nem roupa/.test(pad.replace(/\s+/g, ' ')), 'placa e roupa continuam fora do estoque');
+  check(/## 25\. Material: n[óo]s N[ÃA]O distribu[íi]mos/.test(pad), 'a secao 25 do padrao dele diz que nao distribuimos');
+  check(/distribui[çc][ãa]o do material do Fl[áa]vio [ée] feita pelo PL/.test(pad.replace(/\s+/g, ' ')),
+    'e de quem e a distribuicao');
+  check(/equipe do\s*\n?\s*Capit[ãa]o Zucco/.test(pad) || /equipe do Capit[ãa]o Zucco/.test(pad.replace(/\s+/g, ' ')),
+    'e para onde mandar a pessoa');
+  /** **A COLINHA e a unica excecao, e pelo motivo certo: ela nao tem entrega.** */
+  check(/COLINHA [ée] a exce[çc][ãa]o/.test(pad.replace(/\s+/g, ' ')), 'e a colinha continua, porque nao e material');
 
   const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
   const semTrava = (t) => rascunhoPodeSairSozinho(revisarRascunho(t, {}).avisos);
-  check(/ADESIVO, BANDEIRA e a COLINHA/.test(p), 'a regra 12 do prompt diz o mesmo');
-  check(semTrava('O que temos são folhetos, adesivos e bandeiras.'), 'e a trava deixa a frase passar');
+  check(/N[ÓO]S N[ÃA]O DISTRIBU[ÍI]MOS MATERIAL/.test(p), 'a regra 12 do prompt diz o mesmo');
+  check(!semTrava('O que temos são folhetos, adesivos e bandeiras.'), 'e a trava barra a frase de antes');
 
-  /** Quem pede bandeira entra no caminho (a): endereco e repasse, como o folheto. */
+  /** Quem pede qualquer item entra no caminho (a): a orientacao do PL, sem endereco. */
   check(/\(a\) ela pediu FOLHETO, santinho, panfleto, ADESIVO, BANDEIRA/.test(p),
-    'e ela percorre o caminho do folheto: endereco e repasse');
+    'e ela percorre o caminho (a): a orientacao do PL, sem endereco');
 }
 
 grupo('a regra 18: giria gaucha nao se pergunta (26/09/2026)');
