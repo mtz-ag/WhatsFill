@@ -1,77 +1,105 @@
-## 2026-10-19 - v3.174.0 - ESTADO DE AGORA - nao distribuimos material
+## 2026-10-19 - v3.175.0 - ESTADO DE AGORA - o Facebook pelo DOM: a base, medida na pagina de verdade
 
-**Regra dele:** *"nao estamos distribuindo material, a distribuicao e feita pelo pl dos materiais do
-flavio, corrija isso onde for necessario"*. Perguntado o que a mensagem diz e o que fazer com a
-etiqueta, ele escolheu: *"diga para entrar em contato com a equipe do zucco que e do PL e devem ter
-o material"* e **a etiqueta sai — volta a ser atendido normal**.
+**Pergunta dele:** *"vamos continuar com o facebook, qual o proximo passo?"*
 
-### O caminho inteiro do material virou do avesso
+O caminho do DOM estava parado em duas medicoes que eu dizia que so ele podia dar. **Fiz as duas
+sozinho**, no Chrome dele, que continua logado como a propria pagina do Capitao Martim — e a
+segunda, a que eu tinha pedido permissao para fazer, era o unico bloqueio de verdade.
 
-| ate ontem | agora |
-|---|---|
-| *"o que temos sao folhetos, adesivos e bandeiras"* | **nao distribuimos nada** |
-| pede o **endereco completo** | **nao pede endereco** |
-| promete o repasse **a equipe dos materiais** | **nenhuma promessa**: a distribuicao e do PL |
-| etiqueta de material **PULA o contato para sempre** | **o pulo acabou**; quem tinha volta a fila |
-| — | orienta a procurar a **equipe do Capitao Zucco, que e do PL** |
+### O que entrou
 
-**A COLINHA e a unica excecao, e pelo motivo certo:** ela vai DIGITADA na propria mensagem (decisao
-dele, 09/09), nao tem entrega, e por isso nunca foi material.
+- **`src/lib/dom-facebook.js`** — o irmao do `dom.js`: o UNICO arquivo que sabe como a pagina do
+  Facebook e montada por dentro. Cabecalho com os doze fatos medidos, cada um com o que ele impede.
+- **`tests/dom-facebook.test.mjs`** — 45 assercoes, a suite **23**. Protege quem FICA SEM RESPOSTA.
 
-### Os quatro lugares, porque o estoque sempre viveu em mais de um
+**Nada chama a lib ainda** — e de proposito, e esta escrito aqui para nao virar codigo orfao: o
+chamador e o content script no `facebook.com`, que ainda nao existe. Ver *O que falta* no fim.
 
-- **A secao 25 do padrao DELE** (`atendimento.js`) — reescrita, porque ele pediu.
-- **A regra 12 do prompt** — a lista do que temos saiu; entrou a orientacao do PL, a proibicao de
-  pedir endereco e a de afirmar estoque.
-- **A trava `afirmouTer`** — `ITEM_FISICO` ganhou **folheto, santinho, panfleto, adesivo e
-  bandeira**. Medido: *"o que temos sao folhetos, adesivos e bandeiras"*, que em 25/09 era a frase
-  CERTA e a trava deixava passar, **hoje e barrada**. A negativa continua passando.
-- **A resposta pronta do voluntariado** — o fecho pedia o endereco e prometia o repasse. Saiu.
+### As medicoes, todas na pagina dele
 
-**A colinha ficou de fora de `ITEM_FISICO` de proposito:** dizer que a temos e verdade.
+**O `aria-label` e a camada estavel, e ele da o sinal que eu nao sabia como ler.** Comentario e
+resposta sao os dois `[role="article"][aria-label]`, em duas formas:
 
-### O pulo, que era o mais caro
+```
+Comentario de <AUTOR> ha <TEMPO>
+Resposta de <AUTOR> ao comentario de <PAI> ha <TEMPO>
+```
 
-`enderecoParaMaterial` devolve `null`. Ela existia por um motivo so, escrito em 04/09 — a etiqueta
-carregava o caso ate ele transferir a conversa a quem fazia o envio no fim do dia. **Sem envio nao
-ha lista**, e o pulo e permanente: continuaria escondendo gente da fila para sempre sem nada em
-troca.
+A forma da resposta **nomeia o comentario-pai** — e dai sai *"este comentario ja foi respondido"*,
+o equivalente ao `from.id === pageId` da Graph API.
 
-**Medido, no contato que tinha a etiqueta:** era **tecla 2** (pula, deixa aberto) e passou a ser
-**tecla 5** — o fluxo normal. Quem pede material hoje, sem modelo, vai para a **tecla 6**, e a IA
-escreve com a regra nova.
+**RESPOSTA DE TERCEIRO NAO CONTA, e isso apareceu medido:** ha *"Resposta de \<um eleitor\> ao
+comentario de \<outro eleitor\>"* na pagina. Tratar como nossa deixaria o eleitor sem resposta
+**parecendo atendido** — o defeito que nao se ve. O que separa e o NOME DA PAGINA, e ele se le do
+proprio DOM, sem token nenhum: o composer e `aria-label="Comente como <NOME DA PAGINA>"`.
 
-**A etiqueta continua sendo aplicada**, so nao pula mais: virou rotulo de organizacao no CRM. Para
-parar de marcar tambem, e esvaziar o campo *"Etiqueta de quem MANDOU ENDERECO"* na aba Automatizado
-— apagar as seis chamadas por conta propria seria remover funcao que ele nao pediu para remover.
+**INSERIR FUNCIONA, APAGAR NAO.** Era o bloqueio. `document.execCommand('insertText')` com o cursor
+colapsado no fim **entra e preserva a mencao** — medido com texto neutro, sem nunca disparar Enter,
+e conferido depois que nada foi publicado. No mesmo teste: `selectAll` + `delete` **nao apagou
+nada**, e `delete` colapsado comeu **um caractere de CADA ponta**. Por isso a lib **nao limpa
+caixa**: ela so acrescenta, e quem desfaz e ele. Para limpar de verdade o unico caminho medido e
+recarregar a pagina.
 
-### A migracao, que e o que faz o conserto chegar nele
+**A CAIXA JA VEM COM A MENCAO DENTRO.** Clicar em "Responder" abre
+`[contenteditable][data-lexical-editor][aria-label="Responder a <AUTOR>"]`, ja focada e **ja
+contendo o nome da pessoa**. Escrever ali e ACRESCENTAR: atribuir apagaria a mencao e a resposta
+sairia sem marcar ninguem.
 
-`migrarVoluntarioSemEndereco` troca a resposta do voluntariado **so se o texto gravado ainda PEDIR o
-endereco** (`ehPedidoDeEndereco`). Texto que ele reescreveu passa intacto — comparar byte a byte
-seria fragil, porque ele edita as respostas. Sem ela o conserto valeria para instalacao nova e para
-mais ninguem (a armadilha do `-contato-assessor`, 04/09).
+**HA VARIAS CAIXAS NA TELA.** Medidas tres ao mesmo tempo (a da resposta e dois composters de posts
+diferentes). `querySelector('[contenteditable]')` pega a errada — **a caixa certa se acha pelo NOME
+no `aria-label`**, e e por isso que `caixaDeResposta` recebe o autor.
 
-### Dez assercoes dos testes foram INVERTIDAS, com a data e o motivo
+**O DOM E VIRTUALIZADO, e isso mata o desenho que eu tinha em mente.** No feed da pagina **nunca
+mais de QUATRO** comentarios existem na arvore ao mesmo tempo (12 acumulados em 14 rolagens), e dos
+30 posts com `aria-posinset` quase todos estao **vazios**. Nao ha como montar "todos os comentarios
+sem resposta" pelo feed. **A rodada trabalha no POST ABERTO** — que e exatamente o que ele descreveu
+em 16/10 (*"eu abro o post e mando a extensao inserir o texto na caixa de resposta"*).
 
-Elas travavam a doutrina de 22/09 e 25/09 (*"inclua bandeiras na lista que de material que temos"*).
-Travam agora a ausencia dela — e a prova de que os tres lugares concordam continua sendo a mesma:
-**o prompt manda dizer X e a trava tem de aceitar X**. Hoje os tres dizem que nao ha estoque.
+**"MAIS RELEVANTES" E O PADRAO E ESCONDE GENTE.** No post aberto o botao de comentar dizia **5** e o
+DOM tinha **4**. Por isso `contagemDoPost` e `ordenacaoEsconde` existem: a lista nunca e afirmada
+como completa.
 
-- 22 suites e os dois verificadores verdes.
+**A IDENTIDADE e o `comment_id`, e ele e BASE64**, nao numero — `comment:<post>_<comentario>`
+codificado. Serve para comparar e nunca para fazer conta. O `aria-label` **nao** e identidade: ele
+carrega o tempo, que muda sozinho (*"Ha 4 minutos"* vira *"ha uma hora"*).
 
-### O furo que fica, e so ele resolve
+### Dois erros meus, os dois registrados no codigo
 
-**O MODELO APROVADO de material e dele, na plataforma** — a redacao e da Meta/mobiliza e **nenhum
-codigo meu alcanca**. Enquanto ele continuar sendo disparado, vai pedir o endereco e prometer a
-entrega, e a etiqueta vai continuar sendo aplicada por ele. **Aposentar ou reescrever esse modelo e
-o passo dele.**
+**Peguei o primeiro href com `comment_id` para abrir o post e cai no perfil de uma eleitora.** O
+`comment_id` esta nos **TRES** links do article — a foto, o nome e o carimbo de hora —, e **so o
+carimbo** tem o post no pathname. O link do nome serve para identificar e nunca para abrir.
 
-### O resto, para ele decidir
+**E o carimbo com o caminho do post SO EXISTE NO FEED:** nos quatro comentarios do post aberto
+`linkDoPost` devolveu null, porque ali os links sao so de perfil e o permalink do post e a propria
+URL. Dai `postDaPagina()` e `postDoComentario()`, numa funcao so.
 
-- **A regra 12 (quem pede VAGA) continua mandando NAO oferecer voluntariado**, e isso nao conflita
-  com a resposta pronta: la e quem pede emprego PAGO (nao se oferece voluntariado como consolo),
-  aqui e quem se oferece para ajudar. Querendo recrutar voluntario para o 2o turno, e decisao dele.
-- **O texto do voluntariado e dele** — reescrevi o fecho porque o antigo prometia entrega; a redacao
-  pode ser outra.
-- **Com prazo:** passado 25/10, a regra 19 e o item 5 do dossie tem de ser reescritos.
+### O que o TESTE pegou e a medicao nao
+
+Eu medi um **reel**, que mora na raiz (`/reel/<id>`), e escrevi o padrao exigindo a raiz. **O post
+comum de foto e texto da pagina mora embaixo dela** (`/capitaomartim/posts/<id>`) e ficaria de fora
+— a forma mais comum de todas. Hoje o padrao casa as duas, e o segmento tem de ser inteiro, senao
+um perfil chamado `/joana.videos.123` passaria por post.
+
+### Validado contra o DOM real, nao so no teste
+
+As consultas foram rodadas na pagina: `nomeDaPagina` deu **"Capitao Martim"**, `somosAdmin` **true**
+(o menu *"Excluir, ocultar ou denunciar"* so existe para quem administra), `contagemDoPost` **5**,
+`ordenacaoEsconde` **true**, e o id e o botao "Responder" foram achados nos **quatro de quatro**
+comentarios. O unico que falhou foi `linkDoPost`, pelo motivo acima, que virou funcao nova.
+
+### O que falta, e e tudo meu menos uma linha
+
+1. **O manifesto.** A extensao so roda em `mobiliza.app` — content script, recursos, tudo. O
+   Facebook precisa de `content_scripts` e `web_accessible_resources` proprios, e **o Chrome vai
+   pedir a permissao do host novo a ele** quando recarregar a extensao.
+2. **O painel na aba do Facebook.** O painel de hoje vive na aba do mobiliza e depende da API dele;
+   o do Facebook e outro, enxuto, encaixado na aba do Facebook. E a unica forma coerente: ler o DOM
+   do Facebook exige estar nele.
+3. **A rodada:** proximo comentario sem resposta nossa -> rascunho da IA pelo worker -> inserir ->
+   esperar ELE enviar -> proximo. A espera reusa `esperarVoceConcluir`, que ja trata "a tela e
+   dele".
+4. **A aba Facebook da Graph API (v3.172) continua no ar** e sai quando o caminho do DOM funcionar.
+   Enquanto as duas existirem, a de cima e a que ele escolheu.
+
+**O que ele precisa fazer na mao:** nada agora. Quando o item 1 entrar, recarregar a extensao e
+aceitar a permissao do `facebook.com`.

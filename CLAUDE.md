@@ -86,6 +86,7 @@ src/lib/lote.js         DISPARO: pecas de texto (com arte ou sem), revezando (pu
 src/lib/observacoes.js  o caderno das sugestoes erradas, com o caso junto (puro, testado)
 src/lib/facebook.js     COMENTARIOS da pagina: rotas, leitura e guardas (puro, testado)
 src/lib/facebook-cliente.js  ponte painel <-> worker; o token NUNCA volta para a pagina
+src/lib/dom-facebook.js UNICO arquivo com seletores da PAGINA DO FACEBOOK (irmao do dom.js)
 src/fluxo.html/.css/.js JANELA do fluxo: o QUADRO (caixas soltas, fios, arrastar, editar)
 src/lib/fluxo-msg.js    a mensagem que pede ao service worker para abrir a janela
 src/data/coredes-rs.json  município -> COREDE (planilha oficial da SPGG-RS)
@@ -3589,6 +3590,41 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **O FACEBOOK PELO DOM: o `aria-label` é a camada estável, e o DOM é VIRTUALIZADO** (19/10/2026,
+  medido na página dele, logado como a própria página). Comentário e resposta são os dois
+  `[role="article"][aria-label]`, em duas formas: `Comentário de <AUTOR> ha <TEMPO>` e
+  **`Resposta de <AUTOR> ao comentário de <PAI> ha <TEMPO>`**, que nomeia o pai — e dali sai *"já
+  foi respondido"*, o equivalente ao `from.id === pageId` da Graph API.
+  **RESPOSTA DE TERCEIRO NÃO CONTA, e ela existe:** medi eleitor respondendo eleitor. Tratá-la como
+  nossa deixaria a pessoa sem resposta **parecendo atendida**. O que separa é o NOME DA PÁGINA, lido
+  do próprio DOM sem token: o composer é `aria-label="Comente como <NOME DA PÁGINA>"`.
+  **INSERIR FUNCIONA, APAGAR NÃO.** `execCommand('insertText')` com o cursor colapsado no fim entra
+  e **preserva a menção**; no mesmo teste `selectAll`+`delete` não apagou nada e `delete` colapsado
+  comeu **um caractere de CADA ponta**. Por isso `dom-facebook.js` **nunca limpa caixa** — só
+  acrescenta, e para limpar de verdade o único caminho medido é recarregar a página.
+  **A CAIXA JÁ VEM COM A MENÇÃO DENTRO**, então escrever é ACRESCENTAR: atribuir manda a resposta
+  sem marcar ninguém. **E HÁ VÁRIAS CAIXAS NA TELA** (medidas 3) —
+  `querySelector('[contenteditable]')` pega a errada, e a certa se acha pelo NOME no `aria-label`.
+  **VIRTUALIZAÇÃO: nunca mais de QUATRO comentários na árvore ao mesmo tempo** no feed (12
+  acumulados em 14 rolagens, e dos 30 posts com `aria-posinset` quase todos VAZIOS). **Não há como
+  montar a lista pelo feed** — a rodada trabalha no POST ABERTO, que é o que ele pediu em 16/10.
+  **"Mais relevantes" é o padrão e esconde gente:** a contagem dizia 5 e o DOM tinha 4; daí
+  `contagemDoPost` e `ordenacaoEsconde`, e a lista nunca é afirmada como completa.
+  **O `comment_id` está nos TRÊS links** (foto, nome, carimbo) e **só o carimbo tem o post no
+  pathname** — peguei o primeiro e caí no PERFIL de uma eleitora em vez do post. Ele é **base64**
+  (`comment:<post>_<id>`), opaco: serve para comparar, nunca para `parseInt`. E o **`aria-label` não
+  é identidade**, porque carrega o tempo, que muda sozinho.
+  **O carimbo com o caminho do post SÓ EXISTE NO FEED:** no post aberto `linkDoPost` deu null nos
+  quatro, porque ali o permalink é a própria URL — daí `postDaPagina`/`postDoComentario`.
+  **E o TESTE pegou o que a medição não:** medi um **reel**, que mora na raiz, e escrevi o padrão
+  exigindo raiz — o post comum da página é `/<pagina>/posts/<id>` e ficaria de fora, que é a forma
+  mais comum. O segmento tem de ser inteiro, senão `/joana.videos.123` passa por post.
+  **A extensão só roda em `mobiliza.app`:** o caminho do DOM exige content script no `facebook.com`
+  e painel próprio na aba do Facebook — não dá para ler o DOM do Facebook de dentro do mobiliza.
+  **Ao medir isso de novo:** o `Runtime.evaluate` do CDP corta em **45s**, então laço de rolagem
+  longo estoura no meio; e o feed da página às vezes não carrega post nenhum (altura travada), o que
+  parece defeito de seletor e não é.
+
 - **NÃO DISTRIBUÍMOS MATERIAL — e o caminho inteiro virou do avesso** (19/10/2026, regra dele: *"não
   estamos distribuindo material, a distribuição é feita pelo PL dos materiais do Flávio, corrija
   isso onde for necessário"*; perguntado, escolheu *"diga para entrar em contato com a equipe do
@@ -5484,10 +5520,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
 > `src/` e reclama só de `SyntaxError`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e duas suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e três suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,
