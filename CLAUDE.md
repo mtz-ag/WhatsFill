@@ -3592,6 +3592,28 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **O POST ABRE NUM MODAL E A TIMELINE CONTINUA VIVA ATRÁS — ler o `document` mistura os dois**
+  (19/10/2026, relato dele: *"ele inseriu na página na timeline, eu queria dentro do post, ao entrar
+  nos comentários da postagem"*). **Medido: 9 comentários no `document` e 7 dentro do modal** — os
+  dois extras eram de outros posts da linha do tempo, e apareciam na lista dele com nome e tudo.
+  **E a inserção ia para a caixa errada pelo mesmo motivo:** há **4 caixas de resposta no documento
+  e 2 ficam fora do post**, então `caixaDeResposta` sem raiz pegava uma de trás.
+  **São DOIS `[role="dialog"]` aninhados** (medidos 1351x633 e 700x569), os dois com os mesmos
+  comentários; `raizDoPost` pega o **mais interno**, que é o mais específico. Sem modal vale o
+  documento, mas só quando a URL é de post — na linha do tempo a raiz é **null** de propósito, que
+  é exatamente onde ler tudo misturaria.
+  **Toda leitura do painel passa pela raiz**, e a inserção **relê a raiz na hora do clique** e exige
+  que o comentário ainda esteja dentro dela: entre listar e clicar ele pode ter fechado o post.
+  **Ao escrever qualquer leitura nova do Facebook, receba a raiz** — `document` ali é sempre mais do
+  que o post aberto.
+
+- **A CONTAGEM DE REAÇÕES ENTRAVA NO TEXTO DO COMENTÁRIO** (19/10/2026, visto na tela dele: o texto certo e um `1` solto embaixo). O `innerText` do article põe as reações
+  **depois** da fileira de botões, junto com "Ver tradução" e "Editado". A primeira versão peneirava
+  linha a linha e por isso o número escapava; hoje `limparTextoDoComentario` **PARA no primeiro
+  marcador** — o texto sempre mora ENTRE o nome e o tempo, e o que vem dali para baixo não é do
+  comentário. **O corte continua sendo da linha INTEIRA:** medido na página, `"22"` com `"22 min"`
+  embaixo sai certo, e `"1 h de fila no posto"` não é tempo.
+
 - **O PAINEL DO FACEBOOK É OUTRO PAINEL, E FLUTUA EM VEZ DE ENCAIXAR** (19/10/2026). O painel de
   sempre vive na aba do mobiliza e depende da API de lá (o Bearer, a ponte RPC, o contrato de
   escrita) — **nada disso existe no Facebook**, então `facebook-main.js` é um painel próprio e

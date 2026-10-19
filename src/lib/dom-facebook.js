@@ -173,8 +173,15 @@ const LINHA_DE_TEMPO =
 /**
  * O que a pessoa ESCREVEU, tirado do `innerText` do article.
  *
- * Fica separado do DOM de proposito: e a funcao que decide o que vai para a IA
- * e para a tela, e tem teste.
+ * **PARA no primeiro marcador em vez de peneirar linha a linha**, e isso e um
+ * conserto de 19/10: peneirando, a CONTAGEM DE REACOES entrava no texto (ele
+ * viu um comentario com o texto certo e um `1` solto embaixo).
+ * Ela vem DEPOIS da fileira de botoes, junto com "Ver traducao" e "Editado" —
+ * tudo o que vier dali para baixo nao e do comentario.
+ *
+ * O texto sempre mora ENTRE o nome e o tempo, e e so isso que se coleta.
+ * Medido: `"22"` com `"22 min"` embaixo sai certo, porque o corte e da linha
+ * INTEIRA — `"22"` nao e tempo, `"22 min"` e.
  */
 export function limparTextoDoComentario(innerText, autor = '') {
   const linhas = String(innerText || '')
@@ -185,11 +192,23 @@ export function limparTextoDoComentario(innerText, autor = '') {
   const uteis = [];
   for (const linha of linhas) {
     if (autor && mesmoNome(linha, autor)) continue; // o nome de quem comentou
-    if (LINHA_DE_BOTAO.test(linha)) continue;
-    if (LINHA_DE_TEMPO.test(linha)) continue;
+    if (LINHA_DE_TEMPO.test(linha) || LINHA_DE_BOTAO.test(linha)) break; // acabou o texto
     uteis.push(linha);
   }
   return uteis.join('\n').trim();
+}
+
+/**
+ * Entre varios candidatos aninhados, o MAIS INTERNO — o que nao contem nenhum
+ * outro. Puro para ter teste: e ele que decide de qual caixa o painel le.
+ */
+export function maisInterno(candidatos) {
+  const lista = (candidatos || []).filter(Boolean);
+  if (!lista.length) return null;
+  return (
+    lista.find((d) => !lista.some((o) => o !== d && d.contains && d.contains(o))) ||
+    lista[lista.length - 1]
+  );
 }
 
 /* ------------------------------------------------------------------ *
@@ -213,6 +232,40 @@ const CAMINHO_DE_POST =
 
 export function articles(raiz = document) {
   return [...raiz.querySelectorAll('[role="article"][aria-label]')];
+}
+
+/** Tem composer de pagina aqui dentro? E o que marca o bloco de um post. */
+function temComposer(no) {
+  return [...no.querySelectorAll('[aria-label]')].some((e) =>
+    /^comente como\s+/i.test(e.getAttribute('aria-label') || '')
+  );
+}
+
+/**
+ * A RAIZ de onde ler: o post aberto, e nada alem dele.
+ *
+ * **Esta funcao existe por causa de um defeito que foi ao ar** (19/10/2026):
+ * *"ele inseriu na pagina na timeline, eu queria dentro do post"*. Clicando na
+ * contagem de comentarios, o Facebook abre o post num **modal**, e a timeline
+ * continua viva ATRAS dele. Medido: **9 articles no `document` e 7 no modal** —
+ * os outros dois eram comentarios de posts da linha do tempo, que apareciam na
+ * lista e faziam a resposta ser inserida na caixa errada.
+ *
+ * Sao DOIS `[role="dialog"]` aninhados (medidos 1351x633 e 700x569), os dois
+ * com os mesmos comentarios dentro; pega-se o **mais interno**, que e o mais
+ * especifico.
+ *
+ * Sem modal, vale a pagina inteira quando a URL e de um post. E `null` na linha
+ * do tempo: ali nao ha post aberto, e e justamente onde ler o `document`
+ * misturaria tudo.
+ */
+export function raizDoPost(doc = document) {
+  const candidatos = [...doc.querySelectorAll('[role="dialog"]')].filter(
+    (d) => d.querySelector('[role="article"][aria-label]') || temComposer(d)
+  );
+  const modal = maisInterno(candidatos);
+  if (modal) return modal;
+  return postDaPagina() ? doc : null;
 }
 
 /** O nome da pagina, lido do composer. Sem ele nao ha sinal de "ja respondi". */

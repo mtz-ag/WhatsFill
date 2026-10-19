@@ -160,9 +160,9 @@ grupo('limparTextoDoComentario: o innerText vem com nome, tempo e botoes juntos'
    * fileira de botoes, tudo em linhas. O que vai para a tela e para a IA e so
    * o que a pessoa escreveu.
    */
-  const bruto = ['Marta Fictinha', 'Gastando o dinheiro dos velhinhos', '7 min', 'Curtir', 'Responder', 'Enviar mensagem', 'Ocultar'].join('\n');
+  const bruto = ['Marta Fictinha', 'Critica politica do eleitor', '7 min', 'Curtir', 'Responder', 'Enviar mensagem', 'Ocultar'].join('\n');
   check(
-    fbdom.limparTextoDoComentario(bruto, 'Marta Fictinha') === 'Gastando o dinheiro dos velhinhos',
+    fbdom.limparTextoDoComentario(bruto, 'Marta Fictinha') === 'Critica politica do eleitor',
     'sobra so o que a pessoa escreveu'
   );
 
@@ -207,6 +207,56 @@ grupo('limparTextoDoComentario: o innerText vem com nome, tempo e botoes juntos'
     fbdom.limparTextoDoComentario(['Ana Exemplo', 'Curtir', 'Responder'].join('\n'), 'Ana Exemplo') === '',
     'comentario que era so foto vira vazio — e a rodada o descarta'
   );
+
+  /**
+   * O CONSERTO DE 19/10: a CONTAGEM DE REACOES vinha junto. Ele viu na tela
+   * "Critica politica do eleitor" com um "1" solto embaixo. Ela mora
+   * DEPOIS da fileira de botoes, entao o que conserta e PARAR no primeiro
+   * marcador em vez de peneirar linha a linha.
+   */
+  const comReacoes = ['Marta Fictinha', 'Critica politica do eleitor', '27 min', 'Curtir', 'Responder', 'Enviar mensagem', 'Ocultar', '1'].join('\n');
+  check(
+    fbdom.limparTextoDoComentario(comReacoes, 'Marta Fictinha') === 'Critica politica do eleitor',
+    'a contagem de reacoes depois dos botoes NAO entra no texto'
+  );
+  check(
+    fbdom.limparTextoDoComentario(['Ana Exemplo', 'texto', '1 h', 'Curtir', 'Ver traducao', '12'].join('\n'), 'Ana Exemplo') === 'texto',
+    '"Ver traducao" e a contagem, que vem depois, ficam de fora'
+  );
+
+  /**
+   * A forma medida na pagina em que o texto E um numero e o tempo tambem:
+   * "22" com "22 min" embaixo. O corte e da linha INTEIRA, entao "22" fica.
+   */
+  check(
+    fbdom.limparTextoDoComentario(['Ana Exemplo', '22', '22 min', 'Curtir'].join('\n'), 'Ana Exemplo') === '22',
+    '"22" com "22 min" embaixo sai certo — medido na pagina'
+  );
+}
+
+grupo('maisInterno: o modal do post vem aninhado');
+{
+  /**
+   * Medido: o post aberto traz DOIS `[role="dialog"]`, um dentro do outro
+   * (1351x633 e 700x569), os dois com os mesmos comentarios. Pegar o de fora
+   * funcionaria hoje, mas o de dentro e o mais especifico — e se um dia o
+   * externo passar a envolver mais coisa, ele traria a timeline junto, que e o
+   * defeito que isto existe para evitar.
+   */
+  const no = (filhos = []) => ({ filhos, contains(o) { return this.filhos.includes(o) || this.filhos.some((f) => f.contains && f.contains(o)); } });
+  const interno = no();
+  const externo = no([interno]);
+
+  check(fbdom.maisInterno([externo, interno]) === interno, 'escolhe o mais interno');
+  check(fbdom.maisInterno([interno, externo]) === interno, 'a ordem da lista nao importa');
+  check(fbdom.maisInterno([interno]) === interno, 'um so devolve ele mesmo');
+  check(fbdom.maisInterno([]) === null, 'nenhum devolve nulo');
+  check(fbdom.maisInterno(null) === null, 'nulo devolve nulo');
+
+  // Dois irmaos (nenhum contem o outro): devolve um, nunca nulo — ficar sem
+  // raiz seria o painel dizer "abra um post" com o post aberto na frente.
+  const irmaoA = no(); const irmaoB = no();
+  check(fbdom.maisInterno([irmaoA, irmaoB]) !== null, 'dois irmaos ainda devolvem uma raiz');
 }
 
 grupo('mesmoNome');

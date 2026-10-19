@@ -86,28 +86,36 @@ function css() {
 
 /* ------------------------------------------------------------------ */
 
+/**
+ * **Tudo e lido da RAIZ do post aberto, nunca do `document`.** Abrindo o post
+ * pela contagem de comentarios, o Facebook usa um modal e a timeline continua
+ * viva atras — medido, 9 comentarios no documento contra 7 no post. Ler o
+ * documento misturava comentarios de outros posts na lista e fazia a resposta
+ * ser inserida na caixa errada, que foi o que ele viu em 19/10.
+ */
 function relerComentarios() {
-  const post = fb.postDaPagina();
-  if (!post) {
+  const raiz = fb.raizDoPost();
+  if (!raiz) {
     estado.comentarios = [];
-    estado.aviso = 'Abra um post para comecar. Na linha do tempo o Facebook mantem so uns poucos comentarios na tela, entao a lista nao fecha.';
+    estado.aviso =
+      'Abra um post para comecar — pela contagem de comentarios dele. Na linha do tempo o Facebook mantem so uns poucos comentarios na tela, entao a lista nao fecha.';
     return;
   }
 
-  estado.comentarios = fb.comentariosSemResposta();
+  estado.comentarios = fb.comentariosSemResposta(raiz);
 
   const partes = [];
-  const total = fb.contagemDoPost();
+  const total = fb.contagemDoPost(raiz);
   if (total != null && total > estado.comentarios.length) {
     // Nao e defeito: e virtualizacao mais "Mais relevantes". Dizer o numero e o
     // que impede o painel de afirmar que a fila acabou.
-    partes.push(`O post diz ter ${total}. Role a pagina e releia para ver o resto.`);
+    partes.push(`O post diz ter ${total}. Role dentro do post e releia para ver o resto.`);
   }
-  if (fb.ordenacaoEsconde()) {
+  if (fb.ordenacaoEsconde(raiz)) {
     partes.push('A ordenacao esta em "Mais relevantes", que esconde comentarios. Troque para "Todos os comentarios".');
   }
-  if (!fb.nomeDaPagina()) {
-    partes.push('Nao achei o nome da pagina nesta tela, entao nao da para saber o que ja foi respondido: a lista pode trazer quem ja tem resposta.');
+  if (!fb.nomeDaPagina(raiz)) {
+    partes.push('Nao achei o nome da pagina neste post, entao nao da para saber o que ja foi respondido: a lista pode trazer quem ja tem resposta.');
   }
   estado.aviso = partes.join(' ');
 }
@@ -120,18 +128,30 @@ function relerComentarios() {
  * confiar num prazo fixo.
  */
 async function inserir(comentario, texto, aviso) {
+  /**
+   * A raiz e relida AGORA, e nao a do desenho: entre listar e clicar ele pode
+   * ter fechado o post. E o comentario tem de continuar DENTRO dela — senao
+   * estariamos abrindo a caixa de um comentario da timeline, que e o defeito
+   * que esta funcao existe para nao repetir.
+   */
+  const raiz = fb.raizDoPost();
+  if (!raiz || !raiz.contains(comentario.no)) {
+    aviso('Este comentario nao esta mais no post aberto. Clique em "Reler a pagina".');
+    return;
+  }
+
   const botao = fb.botaoResponder(comentario.no);
   if (!botao) {
     aviso('Nao achei o botao "Responder" deste comentario. Role ate ele aparecer na tela e releia.');
     return;
   }
 
-  let caixa = fb.caixaDeResposta(comentario.autor);
+  let caixa = fb.caixaDeResposta(comentario.autor, raiz);
   if (!caixa) {
     botao.click();
     for (let i = 0; i < 20 && !caixa; i++) {
       await new Promise((r) => setTimeout(r, 100));
-      caixa = fb.caixaDeResposta(comentario.autor);
+      caixa = fb.caixaDeResposta(comentario.autor, raiz);
     }
   }
 
@@ -210,7 +230,7 @@ function desenhar(shadow) {
   if (!estado.comentarios.length) {
     const vazio = document.createElement('div');
     vazio.className = 'vazio';
-    vazio.textContent = fb.postDaPagina()
+    vazio.textContent = fb.raizDoPost()
       ? 'Nenhum comentario sem resposta nesta tela.'
       : '';
     corpo.append(vazio);
