@@ -41,6 +41,10 @@
 
 import * as fb from './lib/dom-facebook.js';
 import * as dock from './lib/dock.js';
+import * as store from './lib/store.js';
+import * as perfis from './lib/perfis.js';
+import * as gabinete from './lib/gabinete.js';
+import { rascunharComentario } from './lib/ia-cliente.js';
 
 const HOST_ID = 'whatsfill-facebook-host';
 const VERSAO = chrome.runtime.getManifest().version;
@@ -51,6 +55,7 @@ const estado = {
   comentarios: [],
   aviso: '',
   texto: '',
+  status: '',
 };
 
 /* ------------------------------------------------------------------ */
@@ -191,6 +196,71 @@ async function inserir(comentario, texto, aviso) {
   );
 }
 
+/**
+ * **Pede o rascunho a IA e poe no CAMPO, nunca na caixa do Facebook.**
+ *
+ * A fronteira e a mesma do projeto inteiro: a IA escreve, ele le, e so entao
+ * ele manda inserir. Pular o campo e escrever direto na caixa transformaria um
+ * texto nao lido em algo a um Enter de ser publicado — e aqui e publico.
+ */
+async function pedirRascunho(comentario, dizer, redesenhar) {
+  const cfg = await store.get('ia');
+  if (!cfg?.ligada) {
+    dizer('A avaliacao por IA esta desligada. Ligue no painel do mobiliza, na aba Automatizado.');
+    return;
+  }
+
+  dizer('Pedindo o rascunho a IA...');
+
+  const lista = await store.get('perfis');
+  const candidato = perfis.porId(lista, await store.get('perfilAtivo'));
+
+  /**
+   * O dossie so vai quando o comentario pede — a mesma conta do WhatsApp, e e
+   * ela que impede o arquivo inteiro de entrar em todo "22" que chega.
+   * A CHAPA vai sempre: a trava dela nao depende de o dossie ter ido, porque o
+   * modelo escreve os nomes de cabeca (a licao de 08/09).
+   */
+  const [dossie, chapa] = await Promise.all([
+    gabinete.paraOPrompt([comentario.texto], { perfil: candidato }),
+    gabinete.chapa(),
+  ]);
+
+  const r = await rascunharComentario({
+    autor: comentario.autor,
+    texto: comentario.texto,
+    regras: cfg.regras || '',
+    gabinete: dossie,
+    candidato,
+    chapa,
+    modelo: cfg.modeloRascunho || cfg.modelo,
+    agora: new Date(),
+  });
+
+  if (r.naoResponder) {
+    estado.texto = '';
+    redesenhar();
+    dizer(`A IA achou que este comentario nao pede resposta${r.motivo ? ` (${r.motivo})` : ''}. Se discordar, escreva a sua.`);
+    return;
+  }
+
+  if (!r.texto) {
+    dizer(r.avisos[0] || 'a IA nao devolveu rascunho');
+    return;
+  }
+
+  estado.texto = r.texto;
+  redesenhar();
+
+  const partes = [];
+  if (r.motivo) partes.push(r.motivo);
+  if (r.confianca) partes.push(`confianca ${Math.round(r.confianca * 100)}%`);
+  // Os avisos aparecem SEMPRE e nunca escondem o texto: esconder tiraria a
+  // decisao dele, que e a regra de `revisarRascunho` desde o comeco.
+  const alerta = r.avisos.length ? ` ATENCAO: ${r.avisos.join(' | ')}` : '';
+  dizer(`Rascunho no campo${partes.length ? ` (${partes.join(', ')})` : ''}. Leia antes de inserir.${alerta}`);
+}
+
 /* ------------------------------------------------------------------ */
 
 function desenhar(shadow) {
@@ -254,8 +324,17 @@ function desenhar(shadow) {
 
   const status = document.createElement('div');
   status.className = 'status';
+  status.textContent = estado.status;
+  /**
+   * O status mora no ESTADO e e procurado no shadow a cada escrita, nunca
+   * guardado numa variavel: quem pede o rascunho redesenha o painel no meio do
+   * caminho, e o elemento capturado antes disso ja saiu da arvore — a mensagem
+   * iria para um no orfao e a tela ficaria muda justo depois da chamada paga.
+   */
   const dizer = (t) => {
-    status.textContent = t;
+    estado.status = t;
+    const atual = shadow.querySelector('.status');
+    if (atual) atual.textContent = t;
   };
 
   if (!estado.comentarios.length) {
@@ -298,13 +377,28 @@ function desenhar(shadow) {
       }
     });
 
+    const btIa = document.createElement('button');
+    btIa.textContent = 'IA';
+    btIa.title = 'Pede o rascunho a IA e poe no campo, para voce ler antes de inserir';
+    btIa.addEventListener('click', async () => {
+      btIa.disabled = true;
+      try {
+        await pedirRascunho(c, dizer, () => desenhar(shadow));
+      } catch (err) {
+        // Falha de IA nunca pode derrubar o painel: a regra do projeto desde 03/09.
+        dizer(`a IA falhou: ${err?.message || err}`);
+      } finally {
+        btIa.disabled = false;
+      }
+    });
+
     const btIr = document.createElement('button');
     btIr.textContent = 'Ver na pagina';
     btIr.addEventListener('click', () => {
       c.no.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 
-    linha.append(btInserir, btIr);
+    linha.append(btInserir, btIa, btIr);
     item.append(quem, txt, linha);
     corpo.append(item);
   }

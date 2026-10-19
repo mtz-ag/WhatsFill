@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WhatsFill+IA",
-  "version": "3.178.0",
+  "version": "3.179.0",
   "description": "WhatsFill com IA: o fluxo decide 94% dos contatos, e a IA escreve o rascunho do resto e confere a cidade.",
   "permissions": [
     "storage",
@@ -77,7 +77,8 @@
       "resources": [
         "src/facebook-main.js",
         "src/lib/*",
-        "src/panel/*"
+        "src/panel/*",
+        "src/data/*"
       ],
       "matches": [
         "https://www.facebook.com/*",

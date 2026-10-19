@@ -1,47 +1,64 @@
-## 2026-10-19 - v3.178.0 - ESTADO DE AGORA - o painel ENCAIXA, empurrando a pagina
+## 2026-10-19 - v3.179.0 - ESTADO DE AGORA - a IA responde o comentario do Facebook
 
-**Pedido dele:** *"preciso que empurre pro lado pra que caiba a extensao da mesma forma do
-mobiliza"*.
+**Pedido dele:** *"inseriu corretamente, agora falta a ia identificar conteudo e responder de
+acordo"*.
 
-Feito, e **quem empurra e o proprio `dock.js`** — o mesmo do mobiliza, sem copia. A primeira versao
-flutuava por cima com o argumento de que empurrar o Facebook quebraria a tela dele; **medido, o
-argumento nao se sustentou.**
+Cada comentario da lista ganhou o botao **IA**: ele pede o rascunho, poe **no campo de texto**, e
+ele le antes de clicar em "Abrir e inserir". **A IA nunca escreve direto na caixa do Facebook** --
+pular o campo transformaria um texto nao lido em algo a um Enter de ser publicado, e aqui e
+publico.
 
-### O que a medicao mostrou, com 380px encaixados
+### Canal NOVO, e nao o rascunho do WhatsApp com outro nome
 
-| | antes | depois |
-|---|---|---|
-| `body` e cabecalho | 1351 | **971** |
-| `[role="main"]` | 991 | **611** |
-| barra de rolagem horizontal | — | **nenhuma** |
-| elementos `fixed` vazando | — | **nenhum** |
+O prompt e proprio (`ia.regrasDoComentario`, ~550 tokens contra os ~10 mil do WhatsApp), e **o
+padrao de atendimento dele NAO entra**: sao 37 secoes escritas para conversa de um para um, e boa
+parte delas diz o oposto do que vale num comentario. Cada diferenca do canal virou regra:
 
-O cabecalho do Facebook e `position: static`, entao ele acompanha sozinho.
+- **E PUBLICO.** O erro do WhatsApp chega a uma pessoa; o daqui vira print e fica na pagina.
+- **NUNCA pedir nome e cidade.** O formulario e a marca do WhatsApp; aqui e pedir dado de eleitor
+  onde todo mundo ve. Esta escrito como PROIBICAO e repetido COLADO no pedido, porque o resto do
+  projeto manda o contrario em varios lugares e **a regra perto do pedido vence** (licao do item
+  22, 07/09).
+- **PEDIDO PESSOAL vai para o privado.** Quem pede dinheiro, emprego ou remedio num comentario nao
+  pode ser negado na frente de todo mundo. A negativa existe e e no WhatsApp.
+- **Quem xinga o adversario esta do nosso lado:** agradece ou nao responde, **nunca modera** -- a
+  regra 17 do WhatsApp (25/09) vale igual aqui.
+- **UMA ou DUAS frases**, porque comentario longo nao e lido e parece robo.
 
-**E o que mais importava: o modal do post se recentra na area encolhida** — ficou em 136..836, com
-o painel comecando em 971. **O post aberto nao fica escondido atras do painel.** A camada que
-escurece o fundo continua cobrindo a tela inteira, e isso e so cosmetico: o painel e opaco e fica
-por cima dela.
+### As travas sao as MESMAS, de proposito
 
-### Detalhes do encaixe
+`rascunharComentario` chama a **propria `revisarRascunho`**: promessa, afirmar que ja fizemos,
+afirmar que temos e dizer que a eleicao acabou sao os mesmos riscos. Duplicar faria as duas listas
+divergirem na primeira correcao. O que e do WhatsApp (saudacao repetida, apresentacao, formulario)
+**simplesmente nao e passado no contexto**, entao nao dispara.
 
-O painel agora e a faixa inteira da direita (altura cheia, colado na borda, sem cantos
-arredondados), como no mobiliza. **Escondido, ele solta o empurrao** e a pagina volta ao tamanho
-dela — vira so a pestana na borda. O `applyDock`/`removeDock` fica num lugar so, dentro do
-`desenhar`, porque sao tres caminhos que mudam o estado e tres chamadas separadas divergiriam.
+**A chapa e conferida sempre**, mesmo sem o dossie no prompt: o modelo escreve os nomes de cabeca,
+que foi a licao de 08/09 (ele disse que o Van Hattem era deputado federal porque hoje ele e).
+
+### `naoResponder`: a IA pode se abster
+
+Irmao do `naoHaOQueResponder` do WhatsApp (24/09). Comentario que so marca um amigo, so emoji ou
+spam nao recebe resposta inventada -- e quem decide se concorda e ele, que continua podendo
+escrever a sua.
+
+### Dois consertos durante o trabalho
+
+- **Faltava `src/data/*` nos recursos do Facebook**, entao o dossie nao seria lido ali.
+- **`redesenhar()` destruia o elemento de status** e a mensagem iria para um no orfao: a tela
+  ficaria muda **justo depois da chamada paga**. Hoje o status mora no estado e e procurado no
+  shadow a cada escrita.
 
 ### O que ele precisa fazer
 
-**Recarregar a extensao** (`chrome://extensions`) e reabrir o post.
+**Recarregar a extensao** e abrir um post. A IA precisa estar **ligada** no painel do mobiliza
+(aba Automatizado) -- desligada, o botao diz isso em vez de falhar calado.
 
-### O que falta
+### O que falta, e e decisao dele
 
-- **O rascunho da IA.** Hoje o texto e dele. Falta o prompt proprio de comentario (o de hoje e todo
-  de conversa de WhatsApp), o ramo em `atender` do worker — **modo novo de pedido precisa de ramo
-  la, no mesmo commit** — e o botao. `facebook.pedeRascunho` ja decide quando vale gastar:
-  comentario de uma palavra (**"22"**, que e metade desta base) nao vai a IA, e para esses o certo
-  e uma resposta pronta — decisao dele.
+- **Comentario de uma palavra** (**"22"**, que e boa parte desta pagina): hoje o botao chama a IA
+  de qualquer jeito, porque quem pediu foi ele, naquele comentario. `facebook.pedeRascunho` existe
+  e diz quando nao vale gastar; **ligar isso a uma resposta pronta em vez da IA e escolha dele.**
+- **Nao ha rodada automatica**, de proposito: um comentario por vez, pelo botao.
 - **A aba Facebook da Graph API (v3.172) continua no ar** e sai quando este caminho estiver pronto.
-- **Rolar sozinho dentro do post** nao foi feito: quem rola e ele e o painel acompanha a cada 2s.
-  A lista nunca e afirmada como completa — a contagem do post aparece do lado, e o aviso de
-  "Mais relevantes" manda trocar para "Todos os comentarios".
+- **O custo por rascunho nao foi medido ao vivo** -- o prompt e ~10x menor que o do WhatsApp, entao
+  deve ficar bem abaixo dos US$ 0,0029 de la, mas o numero real so aparece no painel depois do uso.

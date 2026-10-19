@@ -76,6 +76,11 @@ import {
   validarDecisao,
   esquemaDaDecisao,
   esquemaDaCidade,
+  esquemaDoComentario,
+  regrasDoComentario,
+  validarComentario,
+  montarSistemaComentario,
+  montarComentario,
   RESTRITOS,
   CONFIANCA_MINIMA,
   MODELO_PADRAO,
@@ -2937,6 +2942,7 @@ grupo('nenhum esquema manda palavra-chave que a API recusa com 400 (16/09/2026)'
     rascunhoAntigo: esquemaDoRascunho(1),
     material: esquemaDoMaterial(),
     etiqueta: esquemaDaEtiqueta(),
+    comentario: esquemaDoComentario(),
   };
   for (const [nome, esq] of Object.entries(esquemas)) {
     const fora = acusar(esq, nome, []);
@@ -3794,6 +3800,43 @@ grupo('o escopo dos numeros da eleicao mora no DOSSIE, colado neles (15/10/2026)
     /nunca peça voto para esses cargos/i.test(noPrompt),
     'sem desfazer o que o item 5 existe para fazer: nao pedir voto em eleicao encerrada'
   );
+}
+
+
+grupo('comentario do Facebook: o canal e PUBLICO, e as regras mudam por isso');
+{
+  const r = regrasDoComentario({ nome: 'Capitao Martim', tratamento: 'o Capitao Martim' });
+  check(/NUNCA peca nome, cidade/i.test(r), 'proibe pedir o cadastro -- num comentario publico isso expoe o eleitor');
+  check(/NUNCA prometa/i.test(r), 'proibe prometer, como no WhatsApp');
+  check(/mensagem privada/i.test(r), 'pedido pessoal vai para o privado, em vez de ser negado em publico');
+  check(/nunca modere/i.test(r), 'quem xinga o adversario esta do nosso lado -- a regra 17 do WhatsApp vale aqui');
+  check(/2o turno e 25\/10/i.test(r), 'a eleicao nao acabou');
+  check(/UMA ou DUAS frases/i.test(r), 'o tamanho e regra, porque comentario longo parece robo');
+
+  /** O padrao de atendimento DELE nao entra: foi escrito para conversa de um para um. */
+  const sis = montarSistemaComentario({ candidato: null });
+  check(!/PADRAO DE ATENDIMENTO/i.test(sis), 'o padrao do WhatsApp fica de fora do comentario');
+  check(sis.length < 4000, 'o prompt e curto -- cada chamada e dinheiro e o canal e simples');
+
+  const comDossie = montarSistemaComentario({ gabinete: 'DOSSIE AQUI', regras: 'REGRA DELE' });
+  check(/DOSSIE AQUI/.test(comDossie) && /REGRA DELE/.test(comDossie), 'dossie e instrucoes extras entram quando existem');
+
+  /** So o comentario da vez: mandar os vizinhos convida o modelo a responder o conjunto. */
+  const bloco = montarComentario({ autor: 'Fulana Ficticia', texto: '22 com certeza' });
+  check(/Fulana Ficticia/.test(bloco) && /22 com certeza/.test(bloco), 'leva o autor e o texto');
+  check(/Nao peca dados/i.test(bloco), 'a proibicao do cadastro fica COLADA no pedido, nao so la em cima');
+}
+
+grupo('validarComentario: formato errado nunca vira texto na pagina');
+{
+  check(validarComentario(null) === null, 'nulo nao vira rascunho');
+  check(validarComentario({ texto: '', confianca: 0.9, naoResponder: false }) === null, 'texto vazio sem naoResponder e recusado');
+  const ok = validarComentario({ texto: 'Obrigado!', confianca: 0.8, naoResponder: false });
+  check(ok.texto === 'Obrigado!' && ok.confianca === 0.8, 'o caminho normal passa');
+  const nao = validarComentario({ texto: 'seja la o que for', confianca: 0.4, naoResponder: true });
+  check(nao.naoResponder === true && nao.texto === '', 'marcando naoResponder, o texto e descartado -- nao se publica o que ela mandou ignorar');
+  check(validarComentario({ texto: 'x', confianca: 9, naoResponder: false }).confianca === 1, 'confianca fora da faixa e aparada');
+  check(validarComentario({ texto: 'x', naoResponder: false }).confianca === 0, 'sem confianca, zero -- nunca se assume alta');
 }
 
 fim();

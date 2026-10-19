@@ -3592,6 +3592,25 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **O COMENTÁRIO DO FACEBOOK É CANAL NOVO, E O PADRÃO DE ATENDIMENTO DELE NÃO ENTRA NELE**
+  (19/10/2026, *"agora falta a ia identificar conteúdo e responder de acordo"*). O prompt é próprio
+  (`ia.regrasDoComentario`, ~550 tokens contra os ~10 mil do WhatsApp): as 37 seções do padrão dele
+  foram escritas para conversa de um para um e **boa parte diz o oposto** do que vale num
+  comentário. **O canal é PÚBLICO**, e cada diferença virou regra — **nunca pedir nome e cidade**
+  (o formulário é a marca do WhatsApp; aqui é pedir dado de eleitor onde todo mundo vê, e está
+  escrito como proibição **e repetido colado no pedido**, porque o resto do projeto manda o
+  contrário em vários lugares), **pedido pessoal vai para o privado** em vez de ser negado na frente
+  de todos, **nunca moderar quem xinga o adversário** (a regra 17 vale igual), e **uma ou duas
+  frases**.
+  **As travas são as MESMAS e isso é deliberado:** `rascunharComentario` chama a própria
+  `revisarRascunho` — promessa, afirmar que já fizemos, afirmar que temos, dizer que a eleição
+  acabou. Duplicar faria as duas listas divergirem na primeira correção; **o que é do WhatsApp
+  (saudação, apresentação, formulário) simplesmente não é passado no contexto**, então não dispara.
+  **A chapa é conferida mesmo sem o dossiê no prompt**, porque o modelo escreve os nomes de cabeça.
+  **A IA põe o texto NO CAMPO, nunca na caixa do Facebook** — pular o campo deixaria um texto não
+  lido a um Enter de virar público. E **modo novo precisou de ramo em `atender`**, como o arquivo já
+  avisava.
+
 - **O POST ABRE NUM MODAL E A TIMELINE CONTINUA VIVA ATRÁS — ler o `document` mistura os dois**
   (19/10/2026, relato dele: *"ele inseriu na página na timeline, eu queria dentro do post, ao entrar
   nos comentários da postagem"*). **Medido: 9 comentários no `document` e 7 dentro do modal** — os

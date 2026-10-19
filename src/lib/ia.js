@@ -4339,3 +4339,185 @@ export function podeGastar({ gasto, tetoUsd = 0, ts = Date.now() } = {}) {
   }
   return { pode: true, motivo: '', usado, teto, fracao };
 }
+
+/* ==================================================================== *
+ * COMENTARIO DO FACEBOOK                                               *
+ *                                                                      *
+ * Canal NOVO desde 19/10/2026, a pedido dele: "agora falta a ia        *
+ * identificar conteudo e responder de acordo".                         *
+ *                                                                      *
+ * NAO e o rascunho do WhatsApp com outro nome. O que muda e a natureza *
+ * do canal, e cada diferenca abaixo virou regra:                       *
+ *                                                                      *
+ *  - E PUBLICO. Todo mundo le, inclusive o adversario, e fica na       *
+ *    pagina. O erro do WhatsApp chega a uma pessoa; o daqui vira       *
+ *    print. Dai: nada de dado pessoal, nada de negar pedido em         *
+ *    publico, nada de discutir.                                        *
+ *  - E CURTO. Comentario de tres paragrafos nao e lido e parece robo.  *
+ *  - NAO SE PEDE NOME E CIDADE. O formulario e a marca do atendimento  *
+ *    no WhatsApp; aqui nao cabe, e pedir cadastro num comentario e     *
+ *    pedir dado de eleitor onde todo mundo ve. Esta escrito como       *
+ *    PROIBICAO porque o resto do prompt deste projeto manda o          *
+ *    contrario em varios lugares, e a regra perto do pedido vence.     *
+ *  - PEDIDO PESSOAL VAI PARA O PRIVADO. Quem pede dinheiro, emprego,   *
+ *    remedio ou ajuda num comentario nao pode ser negado na frente de  *
+ *    todo mundo. A negativa existe e e no WhatsApp.                    *
+ *  - A MAIORIA E APOIO. Nesta pagina, boa parte dos comentarios e so   *
+ *    "22" ou o nome de um candidato. Isso se agradece em uma linha.    *
+ *                                                                      *
+ * O padrao de atendimento DELE nao entra aqui de proposito: sao 37     *
+ * secoes escritas para conversa de um para um, e boa parte delas diz o *
+ * oposto do que vale num comentario publico.                           *
+ * ==================================================================== */
+
+export function regrasDoComentario(candidato = null) {
+  const ELE_E = quemE(candidato);
+  return [
+    'Voce escreve a RESPOSTA a um comentario na pagina do Facebook de ' + ELE_E.tratamento + '.',
+    '',
+    'O QUE ESTE CANAL E:',
+    '1. E PUBLICO. Todo mundo le, inclusive quem nao gosta da gente, e fica na pagina para sempre.',
+    '   Nunca escreva nada que voce nao queira ver numa print.',
+    '2. E CURTO: UMA ou DUAS frases. Comentario longo ninguem le e parece automatico.',
+    '3. Responda como a equipe da pagina, no plural ("obrigado", "contamos com voce").',
+    '   Nao se apresente nem diga que e a equipe, a menos que perguntem.',
+    '',
+    'NUNCA:',
+    '4. NUNCA peca nome, cidade, telefone, endereco nem qualquer dado. Aqui e publico.',
+    '5. NUNCA prometa entregar, enviar, providenciar ou resolver nada. Nao distribuimos material.',
+    '6. NUNCA afirme que ja fizemos alguma coisa, nem que temos alguma coisa.',
+    '7. NUNCA discuta, corrija nem de licao de moral em quem apoia. Quem xinga o adversario esta do',
+    '   nosso lado: agradeca ou nao responda, mas nunca modere.',
+    '8. NUNCA diga que a eleicao ou a campanha acabou. O 2o turno e 25/10 e estamos nele.',
+    '9. NUNCA use travessao eme, excesso de emoji, nem marcador como [nome].',
+    '',
+    'COMO RESPONDER CADA CASO:',
+    '10. APOIO (a maior parte: "22", o nome de um candidato, "vamos vencer", elogio): agradeca em',
+    '    UMA linha, variando as palavras. Nao repita a mesma frase em todos.',
+    '11. PERGUNTA que da para responder com o que esta neste prompt: responda, curto.',
+    '12. PERGUNTA que voce NAO sabe: chame para a mensagem privada, sem inventar.',
+    '13. PEDIDO PESSOAL (dinheiro, emprego, remedio, cesta, material, ajuda): chame para a mensagem',
+    '    privada e NAO negue aqui, nao explique a lei e nao prometa. Negar na frente de todo mundo',
+    '    expoe a pessoa.',
+    '14. CRITICA ou HOSTILIDADE contra nos: nao discuta. Ou uma linha cordial, ou naoResponder.',
+    '15. DESABAFO sobre a vida, doenca ou dificuldade: uma linha de acolhimento e o convite para a',
+    '    mensagem privada. Sem diagnostico, sem conselho, sem promessa.',
+    '16. Comentario que NAO pede resposta (marcou um amigo, so emoji, spam, corrente): marque',
+    '    naoResponder em vez de inventar uma resposta.',
+  ].join('\n');
+}
+
+/**
+ * O prompt de sistema do comentario. As instrucoes extras DELE entram, porque
+ * sao dele e ele espera que valham em todo canal; o dossie entra so quando o
+ * comentario pede, pela mesma conta do WhatsApp — cada token e dinheiro.
+ */
+export function montarSistemaComentario({ regras = '', gabinete = '', candidato = null } = {}) {
+  const partes = [regrasDoComentario(candidato)];
+
+  if (String(gabinete || '').trim()) {
+    partes.push('', 'O QUE SE SABE SOBRE O MANDATO E A CHAPA:', String(gabinete).trim());
+  }
+  if (String(regras || '').trim()) {
+    partes.push(
+      '',
+      'INSTRUCOES DO THIAGO (valem sobre o resto, menos sobre as proibicoes acima):',
+      String(regras).trim()
+    );
+  }
+  return partes.join('\n');
+}
+
+/**
+ * O bloco do comentario a responder.
+ *
+ * Vai SO o comentario, nunca a lista do post: o que se responde e aquele, e
+ * mandar os vizinhos convida o modelo a responder o conjunto — o defeito do
+ * EIXO que custou a print da Maria Geny (03/09) no WhatsApp.
+ */
+export function montarComentario({ autor = '', texto = '', post = '' } = {}) {
+  const linhas = [];
+  if (String(post || '').trim()) {
+    linhas.push(
+      'O POST em que o comentario foi feito (so para contexto):',
+      cortar(String(post).trim(), 600),
+      ''
+    );
+  }
+  linhas.push(
+    'COMENTARIO de ' + (String(autor || 'alguem').trim() || 'alguem') + ':',
+    cortar(String(texto || '').trim(), 1500),
+    '',
+    'Escreva a resposta a ESTE comentario. Uma ou duas frases. Nao peca dados.'
+  );
+  return linhas.join('\n');
+}
+
+export function esquemaDoComentario() {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['texto', 'confianca', 'naoResponder'],
+    properties: {
+      texto: {
+        type: 'string',
+        description:
+          'A resposta ao comentario, pronta para colar. Uma ou duas frases. ' +
+          'Vazia quando naoResponder for true.',
+      },
+      confianca: {
+        type: 'number',
+        description:
+          'De 0 a 1. Quao seguro voce esta de que este texto pode ser publicado sem alguem ' +
+          'reescrever. Na duvida, baixe.',
+      },
+      naoResponder: {
+        type: 'boolean',
+        description:
+          'true quando o comentario nao pede resposta (so emoji, marcou um amigo, spam) ou ' +
+          'quando responder em publico seria pior que o silencio.',
+      },
+      motivo: {
+        type: 'string',
+        description: 'Em ate 5 palavras, o que voce entendeu do comentario. Aparece na tela.',
+      },
+    },
+  };
+}
+
+export function montarRequisicaoComentario({ sistema, contato, modelo = MODELO_PADRAO }) {
+  return corpo({
+    sistema,
+    contato,
+    modelo,
+    esquema: esquemaDoComentario(),
+    nome: 'comentario',
+    // Resposta de uma a duas frases nao precisa de raciocinio longo, e aqui o
+    // raciocinio cabe DENTRO do teto: esforco alto com teto baixo trunca.
+    esforco: 'low',
+    maxTokens: 2048,
+  });
+}
+
+/**
+ * Peneira o que voltou. Mesma disciplina de `validarRascunho`: formato errado
+ * vira `null`, que o chamador trata como "a IA nao respondeu" — nunca um texto
+ * meio lido indo para a pagina publica.
+ */
+export function validarComentario(json) {
+  if (!json || typeof json !== 'object') return null;
+
+  const naoResponder = json.naoResponder === true;
+  const texto = String(json.texto || '').trim();
+  if (!naoResponder && !texto) return null;
+
+  const bruto = Number(json.confianca);
+  const confianca = Number.isFinite(bruto) ? Math.min(1, Math.max(0, bruto)) : 0;
+
+  return {
+    texto: naoResponder ? '' : texto,
+    confianca,
+    naoResponder,
+    motivo: String(json.motivo || '').trim().slice(0, 80),
+  };
+}

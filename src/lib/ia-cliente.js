@@ -37,6 +37,13 @@ import {
   montarSistemaEncerramento,
   montarRequisicaoEncerramento,
   validarEncerramento,
+  montarSistemaComentario,
+  montarComentario,
+  montarRequisicaoComentario,
+  validarComentario,
+  revisarRascunho,
+  conferirChapa,
+  AVISOS_QUE_IMPEDEM_ENVIO,
   TIPOS_DE_ETIQUETA,
   MODELO_PADRAO,
   PROVEDOR_OPENAI,
@@ -519,6 +526,8 @@ export async function atender(pedido, chave) {
       // `validarEncerramento` não lê, virando `incerto` em silêncio. É a lição da tecla 0 (31/08).
       : pedido.modo === 'encerramento'
       ? montarRequisicaoEncerramento({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
+      : pedido.modo === 'comentario'
+      ? montarRequisicaoComentario({ sistema: pedido.sistema, contato: pedido.contato, modelo: pedido.modelo })
       : montarRequisicao({
           sistema: pedido.sistema,
           contato: pedido.contato,
@@ -617,4 +626,98 @@ function traduzirErro(status, texto) {
     detalhe = texto.slice(0, 200);
   }
   return `a API recusou (${status})${detalhe ? `: ${detalhe}` : ''}`;
+}
+
+/**
+ * **O rascunho da resposta a um COMENTARIO do Facebook** (19/10/2026).
+ *
+ * Diferenca de fundo para `rascunhar`: la o prompt carrega o padrao de
+ * atendimento dele e a conversa inteira; aqui vai um prompt curto (~550 tokens)
+ * e UM comentario. O canal e publico, e as regras estao em
+ * `ia.regrasDoComentario`.
+ *
+ * **A revisao e a MESMA `revisarRascunho`, de proposito.** As travas que
+ * importam aqui — promessa, afirmar que ja fizemos, afirmar que temos, dizer
+ * que a eleicao acabou — sao as mesmas, e duplica-las faria as duas listas
+ * divergirem na primeira correcao. O que nao se aplica simplesmente nao e
+ * passado no contexto: sem `jaFalamos`, `jaNosConhece` nem `nossaUltima`, os
+ * avisos do WhatsApp nao disparam.
+ *
+ * **O que esta funcao NAO faz: publicar.** Ela devolve texto; quem poe na caixa
+ * e o painel, e quem envia e ele.
+ */
+export async function rascunharComentario({
+  autor,
+  texto,
+  post = '',
+  regras = '',
+  gabinete = '',
+  candidato = null,
+  chapa = [],
+  modelo,
+  agora = new Date(),
+}) {
+  const sistema = montarSistemaComentario({ regras, gabinete, candidato });
+  const contato = montarComentario({ autor, texto, post });
+
+  const lidoPelaIA = {
+    contato,
+    sistemaTokens: tokensAproximados(sistema),
+    contatoTokens: tokensAproximados(contato),
+    instrucoesExtras: !!String(regras || '').trim(),
+    dossie: !!String(gabinete || '').trim(),
+  };
+
+  const r = await pedirAoWorker({
+    type: MSG_IA,
+    modo: 'comentario',
+    sistema,
+    contato,
+    modelo: modelo || MODELO_PADRAO,
+  });
+
+  if (!r?.ok) {
+    return { texto: '', avisos: [r?.motivo || 'a IA não respondeu'], custo: null, lidoPelaIA };
+  }
+
+  const lido = validarComentario(r.decisao);
+  if (!lido) {
+    return { texto: '', avisos: ['a IA não devolveu um rascunho legível'], custo: r.custo || null, lidoPelaIA };
+  }
+
+  // A IA decidiu que este comentário não pede resposta. Não é falha: é o irmão
+  // do `naoHaOQueResponder` do WhatsApp, e quem decide se concorda é ele.
+  if (lido.naoResponder) {
+    return {
+      texto: '',
+      naoResponder: true,
+      confianca: lido.confianca,
+      motivo: lido.motivo,
+      avisos: [],
+      custo: r.custo || null,
+      lidoPelaIA,
+    };
+  }
+
+  const revisto = revisarRascunho(lido.texto, agora, {});
+  const avisos = [...revisto.avisos];
+
+  /**
+   * **A chapa é conferida aqui também**, e é a trava mais cara de não ter: num
+   * comentário o erro é público. Ela não depende de o dossiê ter ido no prompt
+   * — o modelo escreve os nomes de cabeça (a lição de 08/09, em que ele disse
+   * que o Van Hattem era deputado federal porque hoje ele é).
+   */
+  const chapaErrada = conferirChapa(revisto.texto, chapa);
+  if (chapaErrada) avisos.push(chapaErrada);
+
+  return {
+    texto: revisto.texto,
+    naoResponder: false,
+    confianca: lido.confianca,
+    motivo: lido.motivo,
+    avisos,
+    custo: r.custo || null,
+    lidoPelaIA,
+  };
 }
