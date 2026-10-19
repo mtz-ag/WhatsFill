@@ -259,21 +259,39 @@ export const DEFAULT_TEMPLATES = [
      */
     id: 'falar-com-deputado',
     name: 'Quer falar com o deputado (encontro na agenda, sem WhatsApp pessoal)',
+    /**
+     * **O "em campanha" SAIU em 19/10/2026** — print dele, com a mensagem apagada: *"resposta como
+     * se o martim ainda estivesse em campanha, ele já se elegeu, estamos apoiando o Flávio
+     * Bolsonaro até dia 25"*.
+     *
+     * **Medido: o que saiu é byte a byte a terceira variante daqui** — não foi a IA. Os três
+     * textos justificavam o encontro na agenda com o período (*"Neste período de eleições"*, *"Em
+     * período eleitoral"*, *"Agora, em campanha"*), e quem lê entende que é a campanha DELE. Ele
+     * foi eleito em 04/10; a campanha em curso é a do 2º turno, até 25/10, e não é dele.
+     *
+     * **A cláusula de tempo saiu inteira, e isso é de propósito:** a resposta é verdadeira em
+     * qualquer período — ele é encontrado nos eventos da agenda —, e texto com data dentro
+     * envelhece sozinho. Foi o que custou a regra 19 e o item 5 do dossiê, que já nascem com
+     * prazo marcado para 25/10.
+     *
+     * **O que NÃO mudou é a decisão dele de 08/09**, e o teste trava as três ausências: sem
+     * Assembleia, sem promessa de levar recado, sem `{{link_grupo}}`.
+     */
     text:
       '{{saudacao}}! Obrigado por querer falar com ele.\n\n' +
-      'Neste período de eleições, o jeito de encontrá-lo pessoalmente é nos *eventos da agenda* — ' +
+      'O jeito de encontrá-lo pessoalmente é nos *eventos da agenda* — ' +
       'é onde ele está com as pessoas, e todo mundo é bem-vindo.\n\n' +
       'Sobre o WhatsApp pessoal do Capitão, peço desculpas: ele não é repassado, por motivos de ' +
       'segurança. O que você precisar tratar, pode escrever por aqui — eu leio tudo e respondo ' +
       'por este canal.',
     variantes: [
       '{{saudacao}}! Fico contente que queira falar com ele.\n\n' +
-        'Em período eleitoral, o encontro pessoal acontece nos *eventos da agenda* — é lá que ele ' +
+        'O encontro pessoal acontece nos *eventos da agenda* — é lá que ele ' +
         'está com o pessoal, e você pode chegar junto.\n\n' +
         'Já o WhatsApp pessoal do Capitão a gente não repassa, por segurança. Desculpe. Pode me ' +
         'contar por aqui o que você precisa, que eu leio e respondo por este canal.',
       '{{saudacao}}! Obrigado pelo contato.\n\n' +
-        'Agora, em campanha, quem quer falar com ele pessoalmente encontra nos *eventos da ' +
+        'Quem quer falar com ele pessoalmente encontra nos *eventos da ' +
         'agenda*.\n\n' +
         'O número pessoal do Capitão não é repassado, por motivos de segurança — peço desculpas. ' +
         'Aqui por este canal eu leio tudo o que você escrever e respondo.',

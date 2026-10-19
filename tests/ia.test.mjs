@@ -1777,6 +1777,21 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   check(/^8\. QUEM QUER FALAR COM O DEPUTADO EM PESSOA/m.test(prompt), 'a regra 8 continua existindo');
 
   /**
+   * **E ela nao justifica a agenda pelo PERIODO** — print dele (19/10/2026): *"resposta como se o
+   * martim ainda estivesse em campanha, ele ja se elegeu"*. A resposta pronta dizia *"Agora, em
+   * campanha"* e a regra 8 dizia *"em periodo eleitoral"*: as duas faziam parecer que ele ainda
+   * esta se candidatando. Ele foi ELEITO em 04/10; a campanha em curso e a do 2o turno.
+   *
+   * **A assercao trava a AFIRMACAO e nao a frase:** dentro do bloco da regra 8, a proibicao tem de
+   * estar escrita, e o motivo junto.
+   */
+  const regra8 = prompt.slice(prompt.indexOf('8. QUEM QUER FALAR COM O DEPUTADO'));
+  const bloco8 = regra8.slice(0, regra8.indexOf('\n9. '));
+  check(/N[AÃ]O diga "em per[ií]odo eleitoral" nem "em campanha"/.test(bloco8),
+    'a regra 8 proibe justificar a agenda pelo periodo');
+  check(/ELEITO em 04\/10/.test(bloco8), 'e diz por que: ele ja foi eleito');
+
+  /**
    * **A POSICAO importa, e e a licao de 07/09** (o item 22 do tamanho): regra que vive longe do
    * ponto em que o modelo comeca a escrever nao e cumprida. A 9 tem que ficar ao lado da 8, no fim.
    */

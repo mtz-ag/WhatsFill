@@ -640,7 +640,75 @@ grupo('o link do grupo entra uma vez, e nunca por cima do dele (07/09/2026)');
       'e nao promete levar o recado ate ele');
     /** Texto que FUNDE duas coisas nao se usa pela metade: o link do grupo mora em `agenda-grupo`. */
     check(!/\{\{link_grupo\}\}/.test(t), 'e nao carrega o link do grupo (que bloquearia o envio)');
+    /**
+     * **Nao diz que ele esta em campanha** — print dele (19/10/2026): *"resposta como se o martim
+     * ainda estivesse em campanha, ele ja se elegeu"*. Ele foi eleito em 04/10; a campanha em
+     * curso e a do 2o turno, ate 25/10, e nao e dele.
+     *
+     * **E nao e so a palavra "campanha": a clausula de TEMPO inteira saiu**, porque texto com data
+     * dentro envelhece sozinho — a licao que a regra 19 e o item 5 do dossie ja pagaram.
+     */
+    check(!/em campanha|per[ií]odo (de elei|eleitoral)/i.test(t),
+      'e NAO justifica a agenda pelo periodo (ele ja se elegeu)');
   }
+}
+
+/**
+ * **A clausula de campanha sai do que ELE ja tem gravado** (19/10/2026).
+ *
+ * Trocar o texto de fabrica nao alcanca ninguem: a lista dele esta no armazenamento, e `store.get`
+ * so mescla default em chave que FALTA. Sem esta passada o conserto valeria para uma instalacao
+ * nova e para mais ninguem — a armadilha do `-contato-assessor` (04/09).
+ */
+{
+  grupo('tira o "em campanha" do texto gravado (19/10/2026)');
+
+  /** O que saiu na print, byte a byte: a terceira variante de fabrica da epoca. */
+  const daPrint =
+    '{{saudacao}}! Obrigado pelo contato.\n\n' +
+    'Agora, em campanha, quem quer falar com ele pessoalmente encontra nos *eventos da agenda*.\n\n' +
+    'O número pessoal do Capitão não é repassado, por motivos de segurança — peço desculpas.';
+  const limpo = templates.semTempoDeCampanha(daPrint);
+  check(!/em campanha/i.test(limpo), 'a clausula sai');
+  check(/\n\nQuem quer falar com ele/.test(limpo), 'e a palavra que sobrou abre a frase com maiuscula');
+  check(/eventos da agenda/.test(limpo) && /seguran/.test(limpo), 'e o resto do texto fica intacto');
+
+  for (const antes of [
+    'Oi!\n\nNeste período de eleições, o jeito de encontrá-lo é na agenda.',
+    'Oi!\n\nEm período eleitoral, o encontro acontece na agenda.',
+    'Oi!\n\nNo período eleitoral, o encontro acontece na agenda.',
+  ]) {
+    const depois = templates.semTempoDeCampanha(antes);
+    check(!/per[ií]odo (de elei|eleitoral)/i.test(depois), `tira tambem: ${antes.slice(10, 40)}…`);
+    check(/\n\n[A-ZÀ-Ý]/.test(depois), 'com a maiuscula de volta');
+  }
+
+  /**
+   * **NAO escreve que a eleicao acabou** — seria o erro de 16/10 outra vez: ela NAO acabou, o 2o
+   * turno e dia 25. Tirar a clausula nao afirma nada sobre o periodo.
+   */
+  check(!/acab|passou|encerr/i.test(limpo), 'e nao afirma que a eleicao acabou');
+
+  /** Texto sem a clausula nao e tocado — quem editou o seu nao perde a edicao. */
+  const proprio = 'Oi!\n\nEle é encontrado nos eventos da agenda. O WhatsApp pessoal não é repassado.';
+  check(templates.semTempoDeCampanha(proprio) === proprio, 'texto sem a clausula passa intacto');
+
+  mem.migracoes = {};
+  mem.templates = store.DEFAULT_TEMPLATES.map((t) =>
+    t.id === 'falar-com-deputado' ? { ...t, text: daPrint, variantes: [] } : { ...t }
+  );
+  const mudadas = await templates.migrarFalarComDeputadoSemCampanha();
+  check(mudadas.length === 1, `a migracao mexe em uma resposta so (${mudadas.length})`);
+  const salvo = mem.templates.find((t) => t.id === 'falar-com-deputado');
+  check(!/em campanha/i.test(salvo.text), 'e o texto DELE fica sem a clausula');
+  check((await templates.migrarFalarComDeputadoSemCampanha()).length === 0, 'e nao roda duas vezes');
+
+  /** So esta resposta: "campanha" e palavra legitima nas outras. */
+  mem.migracoes = {};
+  const voluntario = mem.templates.find((t) => t.id === 'trabalhar-na-campanha');
+  const antesDoVoluntario = voluntario && voluntario.text;
+  await templates.migrarFalarComDeputadoSemCampanha();
+  check(!voluntario || voluntario.text === antesDoVoluntario, 'e nao toca na resposta do voluntariado');
 }
 
 grupo('a NEGATIVA e reconhecida no texto livre da IA (12/09/2026)');

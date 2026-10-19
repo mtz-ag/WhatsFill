@@ -1593,11 +1593,14 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * A resposta pronta `falar-com-deputado` cobre o caso quando a rodada o reconhece; isto aqui é
      * para quando o pedido vem embrulhado em outra coisa e o caso chega à IA.
      */
-    '8. QUEM QUER FALAR COM O DEPUTADO EM PESSOA: em período eleitoral, o único caminho é encontrá-lo',
+    '8. QUEM QUER FALAR COM O DEPUTADO EM PESSOA: o caminho é encontrá-lo',
     '   nos EVENTOS DA AGENDA. O WhatsApp e o telefone pessoais dele NÃO são repassados, por motivo',
     '   de segurança — diga isso com desculpas e sem rodeio, é uma frase.',
-    '   NÃO ofereça a Assembleia, o gabinete parlamentar nem "marcar uma reunião": fora de eleição',
-    '   isso existe, agora está fora de questão, e prometer é abrir porta que não abre.',
+    '   **NÃO diga "em período eleitoral" nem "em campanha" aqui.** Ele foi ELEITO em 04/10; a',
+    '   campanha em curso é a do 2º turno e não é dele, e justificar a agenda com o período faz',
+    '   parecer que ele ainda está se candidatando (ver a regra 19).',
+    '   NÃO ofereça a Assembleia, o gabinete parlamentar nem "marcar uma reunião": está fora de',
+    '   questão por decisão dele, e prometer é abrir porta que não abre.',
     '   E não diga que vai passar o recado para ele. O que você pode dizer com verdade é que a',
     '   mensagem chegou e é lida por aqui.',
     /**

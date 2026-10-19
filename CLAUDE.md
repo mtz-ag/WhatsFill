@@ -3589,6 +3589,27 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **A RESPOSTA PRONTA DIZIA QUE ELE AINDA ESTÁ EM CAMPANHA, E A CLÁUSULA DE TEMPO SAIU INTEIRA**
+  (19/10/2026, print com a mensagem apagada: *"resposta como se o martim ainda estivesse em
+  campanha, ele já se elegeu, estamos apoiando o flávio bolsonaro até dia 25"*).
+  **Medido: NÃO foi a IA** — o que saiu é byte a byte a 3ª variante de `falar-com-deputado`, e o
+  defeito estava nas **três**, cada uma com a sua redação da mesma coisa (*"Neste período de
+  eleições"*, *"Em período eleitoral"*, *"Agora, em campanha"*). **E a mesma cláusula estava na
+  regra 8 do prompt**, então a IA escreveria igual pelo outro caminho — ao consertar texto pronto,
+  procure a regra do prompt que diz a mesma coisa.
+  **O conserto não é trocar a palavra: é TIRAR a justificativa pelo período.** A resposta é
+  verdadeira em qualquer época — ele é encontrado nos eventos da agenda —, e **texto com data
+  dentro envelhece sozinho** (a regra 19 e o item 5 do dossiê já nascem com prazo para 25/10).
+  **E não se escreve "a eleição acabou" no lugar**: seria o erro de 16/10 de novo — a eleição não
+  acabou, o 2º turno é 25/10; o que acabou foi a **candidatura dele**. Tirar não afirma nada.
+  **A metade que faz chegar nele é a MIGRAÇÃO** (`migrarFalarComDeputadoSemCampanha`): a lista de
+  respostas está gravada e `store.get` só mescla default em chave que FALTA — a armadilha do
+  `-contato-assessor` (04/09). Ela roda uma vez, com flag própria, **só em `falar-com-deputado`**
+  ("campanha" é palavra legítima nas outras) e não toca em texto que ele editou.
+  **A proibição da Assembleia perdeu o "agora":** ela era justificada por *"fora de eleições isso
+  existe"*, o que a faria expirar. Virou decisão dele sem prazo — e o teste continua travando as
+  três ausências.
+
 - **O FACEBOOK ENTROU PELA GRAPH API, E O TOKEN DE PÁGINA NÃO VOLTA PARA O PAINEL** (16/10/2026,
   *"preciso que responda os comentários nas postagens do facebook, crie uma nova aba para isso"*;
   escolhas dele: **Graph API com token de página** e **listar + ele responder, com rascunho da IA**).

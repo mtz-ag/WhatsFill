@@ -1,70 +1,65 @@
-## 2026-10-16 - v3.172.0 - ESTADO DE AGORA - aba do Facebook: comentarios das postagens
+## 2026-10-19 - v3.173.0 - ESTADO DE AGORA - o texto dizia que ele ainda esta em campanha
 
-**Pedido dele:** *"preciso que responda os comentarios nas postagens do facebook, crie uma nova aba
-para isso"*. Perguntado por onde a extensao chega la, escolheu a **Graph API com token de pagina**;
-perguntado o que a aba faz, escolheu **listar e ele responder, com o rascunho da IA**.
+**Print dele**, com a mensagem apagada na plataforma: *"resposta como se o martim ainda estivesse em
+campanha, ele ja se elegeu, estamos apoiando o flavio bolsonaro ate dia 25, pesquise"*.
 
-**Esta versao entrega a aba, a leitura e a resposta.** O rascunho da IA fica para a proxima: ele
-precisa de prompt proprio (comentario e PUBLICO — nao se pede cadastro, nao se chama pela cidade, e
-o texto e curto), e **modo novo de pedido precisa de ramo em `atender` no mesmo commit** — a licao
-da tecla 0, de 31/08.
+### Medido antes de mexer: NAO foi a IA
 
-### Onde o token mora, e por que nao e no painel
+O que saiu e **byte a byte a terceira variante** da resposta pronta `falar-com-deputado` —
+*"Agora, em campanha, quem quer falar com ele pessoalmente encontra nos eventos da agenda"*. E o
+defeito estava nas **tres**, cada uma com a sua redacao da mesma clausula:
 
-**A regra da chave da IA vale aqui e vai um passo alem.** O painel roda dentro da pagina do
-mobiliza: token ali e token publicado. Mas o token de PAGINA nasce dentro da resposta de
-`/me/accounts` — entao **quem le aquela resposta tem de ser o service worker**. Ele guarda os
-tokens e devolve ao painel so **id, nome e se a pagina aceita moderar**. Devolver a lista crua seria
-publicar o token pelo caminho mais discreto que existe: dentro de um JSON que ninguem olha.
+| | abertura do 2o paragrafo |
+|---|---|
+| texto base | *"Neste periodo de eleicoes, o jeito de encontra-lo..."* |
+| variante 1 | *"Em periodo eleitoral, o encontro pessoal acontece..."* |
+| variante 2 | *"Agora, em campanha, quem quer falar com ele..."* |
 
-Os dois (`fbToken`, `fbPageTokens`) saem do `exportJson`. **E a credencial mais perigosa desta
-extensao**, porque o estrago dela e publico e com o nome dele em cima.
+**E a mesma clausula estava na regra 8 do prompt** (*"em periodo eleitoral, o unico caminho e
+encontra-lo nos EVENTOS DA AGENDA"*), entao a IA escreveria igual pelo outro caminho.
 
-### As rotas foram LIDAS, nao executadas
+### A pesquisa que ele pediu, confirmada
 
-E a situacao de `listContacts` e `createTag` em 20/08, com a mesma disciplina: **a primeira chamada
-e uma SONDA** (`/me/accounts`), e falhando ela nenhuma outra e tentada. Toda leitura confere o
-formato em vez de confiar nele, e **o `POST` da resposta so conta como enviada quando devolve o
-`id`** — 200 sem id e a armadilha mais antiga deste projeto, agora numa API nova.
+**2o turno em 25/10/2026, Flavio Bolsonaro x Lula** — no 1o turno de 04/10 Flavio fez **47,05%** e
+Lula **45,14%**, e ninguem alcancou a maioria. O que o dossie ja dizia desde 14/10 continua valendo:
+o Capitao Martim foi **reeleito** e **cinco dos seis cargos da colinha estao decididos**.
 
-### Quatro decisoes que a leitura do formato obrigou
+### O conserto: a clausula de TEMPO saiu inteira
 
-- **`filter=toplevel`**: sem ele a NOSSA resposta volta na lista como um comentario a responder, e a
-  aba pede para ele responder a si mesmo, todo dia.
-- **`respondido` sai de `from.id === pageId`**, e **sem o id da pagina nada e marcado** — erra para
-  MOSTRAR demais, que e o lado barato: o oposto esconderia quem esta esperando.
-- **`tasks` ausente NAO e "nao pode responder"** (a licao do `undefined !== 'CONNECTED'`, 01/10). E
-  a pagina que o token so le e avisada ANTES de ele escrever o texto, nao na hora de enviar.
-- **O `from` pode vir VAZIO sem ser defeito**: desde 2018 o Facebook nao entrega a identidade de
-  quem comenta de um perfil pessoal sem autorizacao do app. A tela escreve *"sem nome"*.
+**Nao e so a palavra "campanha".** A resposta e verdadeira em qualquer periodo — ele e encontrado
+nos eventos da agenda —, e a clausula so existia para justificar. **Texto com data dentro envelhece
+sozinho**, e esta semana ja pagou isso duas vezes (a regra 19 e o item 5 do dossie nascem com prazo
+marcado para 25/10). Sem clausula, o texto continua certo depois do dia 25.
 
-**A versao vai EXPLICITA na URL** (`v23.0`): caminho sem versao cai na mais ANTIGA disponivel, que e
-a primeira a ser desligada — a aba pararia num dia qualquer sem ninguem ter mexido em nada.
+**E ela NAO escreve "a eleicao acabou" no lugar** — seria o erro de 16/10 outra vez: a eleicao nao
+acabou, o 2o turno e dia 25. O que acabou foi a **candidatura dele**. Tirar nao afirma nada sobre o
+periodo.
 
-### O que a aba faz
+### A metade que faz o conserto chegar nele
 
-Token → **Carregar as paginas** (a sonda) → escolher a pagina → **Carregar as postagens** (com a
-contagem de comentarios de cada uma) → clicar numa → **os comentarios sem resposta**, cada um com
-uma caixa de texto e o botao Responder.
+Trocar o texto de FABRICA nao alcanca ninguem: a lista dele esta gravada, e `store.get` so mescla
+default em chave que **FALTA** — a armadilha do `-contato-assessor` (04/09) e a razao de
+`migrarGabineteParaEquipe` existir (07/09). Hoje ha
+`templates.migrarFalarComDeputadoSemCampanha`: roda **uma vez**, com flag propria, e **so mexe em
+`falar-com-deputado`** — "campanha" e palavra legitima nas outras respostas, e passada larga
+reescreveria texto que esta certo.
 
-**Nada sai sozinho**, e aqui isso e mais forte que no WhatsApp: comentario e PUBLICO, o erro fica a
-vista de todo mundo e apagar deixa rastro. **A rede nasce do CLIQUE**, nunca do desenho (armadilha
-de 31/08), e falha vira botao de tentar de novo.
+**Texto que ele tenha editado passa intacto**: a clausula e casada no comeco do paragrafo, e nao
+achando, nada e tocado.
 
-- 22 suites (a nova tem **70 asercoes**) e os dois verificadores verdes.
+- 22 suites e os dois verificadores verdes. **Vale no proximo carregamento do painel**, sem ele
+  importar nem configurar nada.
 
-### O que ele precisa fazer uma vez
+### O que fica para ele
 
-1. Um app no Facebook para Desenvolvedores, com as permissoes **pages_show_list**,
-   **pages_read_engagement** e **pages_manage_engagement**.
-2. Gerar um token de USUARIO com essas permissoes e colar no campo da aba.
-3. Clicar em **Carregar as paginas** — e e so.
-
-**Sobre o prazo do token:** o de usuario curto vence em ~1h; trocando-o por um de longa duracao
-(60 dias), os tokens de pagina derivados dele **nao expiram**. Se a aba comecar a dizer que o token
-expirou, e esse o caminho.
-
-### Junto, o que ele pediu na mesma frase
-
-**Dados e Cidades viraram sub-abas da Config** (v3.171). A barra agora e **Respostas · Automatizado
-· Disparo · Facebook · Config**, e dentro da Config: **Ajustes · Dados · Cidades**.
+- **A Assembleia continua fora** — decisao dele de 08/09, e o teste trava as tres ausencias (sem
+  Assembleia, sem promessa de levar recado, sem `{{link_grupo}}`). O que mudou foi so a
+  justificativa: a proibicao deixou de ser *"agora esta fora de questao"* e virou decisao dele, sem
+  prazo. **Passado o dia 25, se a Assembleia voltar a ser uma opcao, e ele quem diz.**
+- **A resposta do voluntariado (`trabalhar-na-campanha`) nao foi tocada.** O texto nao afirma que a
+  campanha e dele e continua verdadeiro para o 2o turno — mas a **regra 12** do prompt manda NAO
+  oferecer voluntariado (escrita em 15/10, quando a campanha dele tinha acabado). Apoiando o Flavio
+  ate o dia 25, isso pode ter virado o contrario: **e decisao dele.**
+- **O disparo da colinha continua configurado pedindo voto** nos cargos ja decididos, e o
+  `pedir-dados` dele continua com o Instagram e o grupo da campanha encerrada.
+- **Com prazo:** passado 25/10, a regra 19 e o item 5 do dossie tem de ser reescritos.

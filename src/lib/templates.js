@@ -35,6 +35,9 @@ export async function list({ perfil } = {}) {
     await migrarRespostaAgendaGrupo();
     await migrarLinkDoGrupoAtual();
     await migrarRespostaFalarComDeputado();
+    // DEPOIS da de cima: aquela acrescenta a resposta para quem não a tem, e esta limpa a
+    // cláusula de campanha de quem já a tinha gravada (19/10/2026).
+    await migrarFalarComDeputadoSemCampanha();
     // Por ÚLTIMO de propósito: as de cima acrescentam respostas novas, e o texto de fábrica delas
     // já vem sem "gabinete" — mas as antigas, que ele editou, só são alcançadas por esta.
     await migrarGabineteParaEquipe();
@@ -226,6 +229,61 @@ export const migrarRespostaAgendaGrupo = () =>
  */
 export const migrarRespostaFalarComDeputado = () =>
   garantirRespostas(['falar-com-deputado'], 'respostaFalarComDeputado');
+
+/**
+ * **A cláusula de tempo que fazia o texto dizer que ele ainda está em campanha** — print dele
+ * (19/10/2026), com a mensagem apagada: *"resposta como se o martim ainda estivesse em campanha,
+ * ele já se elegeu, estamos apoiando o Flávio Bolsonaro até dia 25"*.
+ *
+ * As três abriam o segundo parágrafo justificando a agenda pelo período (*"Neste período de
+ * eleições"*, *"Em período eleitoral"*, *"Agora, em campanha"*). Trocar o texto de FÁBRICA não
+ * alcança ninguém — a lista dele está gravada, e `store.get` só mescla default em chave que
+ * FALTA. É a armadilha do `-contato-assessor` (04/09), e o motivo de esta passada existir.
+ *
+ * **Ela TIRA a cláusula e não escreve nada no lugar.** Dizer "a eleição acabou" seria o erro de
+ * 16/10 outra vez: a eleição NÃO acabou, o 2º turno é dia 25 — o que acabou foi a candidatura
+ * dele. Tirar não afirma nada sobre o período, e o texto passa a valer depois do dia 25 também.
+ *
+ * **Só mexe em `falar-com-deputado`.** "Campanha" é palavra legítima em outras respostas (a do
+ * voluntariado fala de campanhas e continua verdadeira), e passada larga aqui reescreveria texto
+ * que está certo.
+ */
+const CLAUSULAS_DE_CAMPANHA = [
+  /(^|\n)[ \t]*neste per[íi]odo de elei[çc][õo]es,\s*(\p{L})/giu,
+  /(^|\n)[ \t]*n[eo] per[íi]odo eleitoral,\s*(\p{L})/giu,
+  /(^|\n)[ \t]*em per[íi]odo eleitoral,\s*(\p{L})/giu,
+  /(^|\n)[ \t]*agora,\s*em campanha,\s*(\p{L})/giu,
+  /(^|\n)[ \t]*(?:neste per[íi]odo de campanha|durante a campanha),\s*(\p{L})/giu,
+];
+
+/** Tira a cláusula e devolve a maiúscula para a palavra que passou a abrir a frase. */
+export function semTempoDeCampanha(texto) {
+  let saida = String(texto || '');
+  for (const re of CLAUSULAS_DE_CAMPANHA) {
+    saida = saida.replace(re, (_todo, abre, letra) => (abre || '') + letra.toUpperCase());
+  }
+  return saida;
+}
+
+export async function migrarFalarComDeputadoSemCampanha() {
+  const migracoes = await store.get('migracoes');
+  if (migracoes.falarComDeputadoSemCampanha) return [];
+
+  const templates = await store.get('templates');
+  const mudadas = [];
+  const novos = templates.map((t) => {
+    if (t.id !== 'falar-com-deputado') return t;
+    const text = semTempoDeCampanha(t.text);
+    const variantes = (t.variantes || []).map((v) => semTempoDeCampanha(v));
+    const mudou = text !== t.text || variantes.some((v, i) => v !== (t.variantes || [])[i]);
+    if (mudou) mudadas.push(t.name || t.id);
+    return mudou ? { ...t, text, variantes } : t;
+  });
+
+  if (mudadas.length) await store.set('templates', novos);
+  await store.set('migracoes', { ...migracoes, falarComDeputadoSemCampanha: true });
+  return mudadas;
+}
 
 /**
  * **O link do grupo de hoje, uma vez só e nunca por cima do dele.**
