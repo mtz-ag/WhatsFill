@@ -3614,12 +3614,21 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   comentário. **O corte continua sendo da linha INTEIRA:** medido na página, `"22"` com `"22 min"`
   embaixo sai certo, e `"1 h de fila no posto"` não é tempo.
 
-- **O PAINEL DO FACEBOOK É OUTRO PAINEL, E FLUTUA EM VEZ DE ENCAIXAR** (19/10/2026). O painel de
+- **O PAINEL DO FACEBOOK É OUTRO PAINEL, E ENCAIXA EMPURRANDO A PÁGINA** (19/10/2026). O painel de
   sempre vive na aba do mobiliza e depende da API de lá (o Bearer, a ponte RPC, o contrato de
   escrita) — **nada disso existe no Facebook**, então `facebook-main.js` é um painel próprio e
   enxuto, e `facebook-content.js` é o gêmeo do `content.js` só porque content script clássico não
-  aceita `import`. **Não encaixa:** `dock.js` empurra a página com padding no `html`, o que no
-  mobiliza é seguro porque o layout é conhecido, e no Facebook é pedir para quebrar a tela dele.
+  aceita `import`.
+  **A primeira versão FLUTUAVA, e isto está invertido desde o mesmo dia**, a pedido dele
+  (*"preciso que empurre pro lado pra que caiba a extensão da mesma forma do mobiliza"*). O
+  argumento de flutuar era que empurrar o Facebook quebraria a tela dele — **medido, não se
+  sustenta**, e quem empurra é o próprio `dock.js`, porque duas cópias do mesmo empurrão divergem
+  na primeira semana. Com 380px: `body` e cabeçalho de **1351 para 971** (o cabeçalho do Facebook é
+  `position: static`, então acompanha sozinho), `[role="main"]` de 991 para 611, **sem barra
+  horizontal e sem nenhum `fixed` largo vazando**. **E o que mais importava: o modal do post se
+  recentra na área encolhida** (136..836, com o painel começando em 971), então o post aberto não
+  fica escondido atrás do painel — a camada que escurece o fundo continua cobrindo a tela inteira,
+  e isso é cosmético porque o painel é opaco e fica por cima.
   **Shadow DOM resolve duas coisas de uma vez:** o CSS do Facebook não entra, e `document
   .querySelectorAll` **não atravessa shadow** — então o painel nunca se lê como se fosse um
   comentário (medido: continuou 5 com o painel montado).
@@ -5563,6 +5572,13 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > de carregar — sem erro visível na aba, porque o content script morre antes de desenhar.
 > Antes de dar tarefa por concluída: `node tools/checar-modulos.mjs`, que importa todo arquivo de
 > `src/` e reclama só de `SyntaxError`.
+>
+> **CRASE DENTRO DE TEMPLATE LITERAL O FECHA NO MEIO — e o `--check` não viu** (19/10/2026). Escrevi
+> um comentário CSS dentro do `` ` `` do `facebook-main.js` citando `` `dock.js` `` com crase: a
+> string fechou ali, `dock` virou identificador solto e o módulo quebrou com *"Unexpected
+> identifier"*. **`node --check` passou** (ele analisa como CommonJS) e quem pegou foi o
+> `checar-modulos`. Comentário dentro de template literal não leva crase — e é mais uma razão para
+> o checador ser rodado, e não só o `--check`.
 
 Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e três suítes passando:
 

@@ -14,10 +14,23 @@
  *   3. para ai. **Quem envia e ele** — nada aqui aperta Enter nem clica em
  *      "Comentar", que e a fronteira do projeto inteiro.
  *
- * E FLUTUANTE, nao encaixado. O `dock.js` empurra a pagina com padding no
- * `html`, o que no mobiliza e seguro porque o layout e nosso conhecido; no
- * Facebook mexer no layout e pedir para quebrar a tela dele numa pagina que a
- * gente nao controla. Flutuar e reversivel.
+ * E ENCAIXADO, empurrando a pagina — **a mesma coisa que no mobiliza**, e por
+ * pedido dele em 19/10 (*"preciso que empurre pro lado pra que caiba a extensao
+ * da mesma forma do mobiliza"*). A primeira versao flutuava por cima, com o
+ * argumento de que mexer no layout do Facebook era arriscado; **medido, o
+ * argumento nao se sustentou** e quem reusa e o proprio `dock.js`, porque duas
+ * copias do mesmo empurrao divergem na primeira semana.
+ *
+ * O QUE A MEDICAO MOSTROU, com 380px encaixados (19/10/2026):
+ *  - `body` e o cabecalho foram de **1351 para 971** — o cabecalho do Facebook
+ *    e `position: static`, entao ele acompanha sozinho;
+ *  - `[role="main"]` de 991 para 611, **sem barra de rolagem horizontal**;
+ *  - **nenhum elemento `fixed` largo vazou** para baixo do painel;
+ *  - e o que mais importava: **o modal do post se recentra na area encolhida**
+ *    (ficou em 136..836, com a borda do painel em 971), entao o post aberto nao
+ *    fica escondido atras do painel. A camada que escurece o fundo continua
+ *    cobrindo a tela inteira, e isso e so cosmetico: o painel e opaco e fica
+ *    por cima dela.
  *
  * A LISTA NUNCA E AFIRMADA COMO COMPLETA. O DOM do Facebook e virtualizado e
  * "Mais relevantes" esconde gente (medido: a contagem dizia 5 e a arvore tinha
@@ -27,9 +40,11 @@
  */
 
 import * as fb from './lib/dom-facebook.js';
+import * as dock from './lib/dock.js';
 
 const HOST_ID = 'whatsfill-facebook-host';
 const VERSAO = chrome.runtime.getManifest().version;
+const LARGURA = dock.DEFAULT_WIDTH;
 
 const estado = {
   aberto: true,
@@ -43,12 +58,16 @@ const estado = {
 function css() {
   return `
     :host { all: initial; }
+    /* Encaixado na faixa que o dock abriu: altura inteira, colado na direita,
+       sem cantos arredondados -- e a borda da tela, como no mobiliza.
+       (Sem crase aqui dentro: isto vive num template literal, e a crase o
+       fecharia no meio -- foi o que quebrou o modulo na primeira versao.) */
     .caixa {
-      position: fixed; top: 72px; right: 12px; width: 320px; z-index: 2147483000;
+      position: fixed; top: 0; right: 0; bottom: 0; width: ${LARGURA}px; z-index: 2147483000;
       font: 13px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif;
-      color: #111; background: #fff; border: 1px solid #ccd0d5; border-radius: 10px;
-      box-shadow: 0 6px 20px rgba(0,0,0,.18); overflow: hidden;
-      max-height: calc(100vh - 96px); display: flex; flex-direction: column;
+      color: #111; background: #fff; border-left: 1px solid #ccd0d5;
+      box-sizing: border-box; overflow: hidden;
+      display: flex; flex-direction: column;
     }
     .topo {
       display: flex; align-items: center; gap: 8px; padding: 8px 10px;
@@ -62,7 +81,9 @@ function css() {
     }
     button.primario { background: #1877f2; border-color: #1877f2; color: #fff; font-weight: 600; }
     button:disabled { opacity: .5; cursor: default; }
-    .corpo { padding: 10px; overflow-y: auto; }
+    /* flex:1 para o corpo tomar a altura que sobra e o rodape ficar colado
+       embaixo; sem isso a lista para no meio e sobra tela vazia. */
+    .corpo { padding: 10px; overflow-y: auto; flex: 1; }
     .aviso { background: #fff3cd; border: 1px solid #ffe69c; border-radius: 6px; padding: 7px 9px; margin-bottom: 9px; }
     .vazio { color: #65676b; }
     .item { border: 1px solid #e4e6eb; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
@@ -75,11 +96,12 @@ function css() {
     .rodape { padding: 9px 10px; border-top: 1px solid #e4e6eb; background: #fafbfc; }
     .linha { display: flex; gap: 6px; align-items: center; margin-top: 7px; }
     .status { color: #65676b; margin-top: 6px; min-height: 16px; }
+    /* Escondido, o painel solta o empurrao e vira so a pestana. */
     .pestana {
-      position: fixed; top: 72px; right: 12px; z-index: 2147483000;
+      position: fixed; top: 96px; right: 0; z-index: 2147483000;
       font: 600 12px -apple-system, "Segoe UI", Roboto, sans-serif;
-      background: #1877f2; color: #fff; border: 0; border-radius: 8px;
-      padding: 7px 11px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.2);
+      background: #1877f2; color: #fff; border: 0; border-radius: 8px 0 0 8px;
+      padding: 9px 11px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.2);
     }
   `;
 }
@@ -173,6 +195,15 @@ async function inserir(comentario, texto, aviso) {
 
 function desenhar(shadow) {
   shadow.replaceChildren();
+
+  /**
+   * O empurrao acompanha o painel: escondido, a pagina volta ao tamanho dela.
+   * Fica aqui e nao nos botoes porque sao tres caminhos que mudam `aberto` (os
+   * dois botoes e a montagem), e tres chamadas separadas divergiriam — a
+   * mesma razao do `gravar` carimbar a versao do quadro num lugar so.
+   */
+  if (estado.aberto) dock.applyDock(LARGURA);
+  else dock.removeDock();
 
   const style = document.createElement('style');
   style.textContent = css();
