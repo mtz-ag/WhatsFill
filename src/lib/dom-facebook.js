@@ -155,6 +155,43 @@ export function semRespostaNossa(rotulos, nomeDaPagina = '') {
   return comentarios.filter((c) => !respondidos.some((pai) => mesmoNome(pai, c.autor)));
 }
 
+/**
+ * As linhas que o `innerText` do article traz junto do texto e que NAO sao do
+ * comentario. Medido na pagina: o article rende
+ *   "<AUTOR> | <TEXTO> | 7 min | Curtir | Responder | Enviar mensagem | Ocultar"
+ * Lista de PERMISSAO ao contrario: o que esta aqui sai, e o resto FICA — porque
+ * errar para o lado de deixar sobra e barato (ele le na tela), e errar para o
+ * lado de apagar comeria a fala do eleitor.
+ */
+const LINHA_DE_BOTAO =
+  /^(curtir|responder|enviar mensagem|ocultar|editado|ver tradu[cç][aã]o|traduzir|ver mais|top f[aã]|autor|segue|seguir|denunciar|excluir|responder·)$/i;
+
+/** "7 min", "1 h", "2 d", "3 sem", "Ha 4 minutos", "12 de outubro". */
+const LINHA_DE_TEMPO =
+  /^(h[aá]\s+.+|\d+\s*(s|seg|segundos?|m|min|minutos?|h|horas?|d|dias?|sem|semanas?|a|anos?)|\d{1,2} de [a-zà-ú]+( de \d{4})?)$/i;
+
+/**
+ * O que a pessoa ESCREVEU, tirado do `innerText` do article.
+ *
+ * Fica separado do DOM de proposito: e a funcao que decide o que vai para a IA
+ * e para a tela, e tem teste.
+ */
+export function limparTextoDoComentario(innerText, autor = '') {
+  const linhas = String(innerText || '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const uteis = [];
+  for (const linha of linhas) {
+    if (autor && mesmoNome(linha, autor)) continue; // o nome de quem comentou
+    if (LINHA_DE_BOTAO.test(linha)) continue;
+    if (LINHA_DE_TEMPO.test(linha)) continue;
+    uteis.push(linha);
+  }
+  return uteis.join('\n').trim();
+}
+
 /* ------------------------------------------------------------------ *
  * A partir daqui e DOM: roda na aba do Facebook.                      *
  * ------------------------------------------------------------------ */
@@ -262,6 +299,45 @@ export function contagemDoPost(raiz = document) {
 export function ordenacaoEsconde(raiz = document) {
   return [...raiz.querySelectorAll('[role="button"]')].some((b) =>
     /^mais relevantes$/i.test(String(b.innerText || '').trim())
+  );
+}
+
+/** O comentario inteiro, pronto para a tela e para a IA. */
+export function lerComentario(art) {
+  const dados = lerRotulo(art.getAttribute('aria-label'));
+  if (!dados) return null;
+  return {
+    id: idDoComentario(art),
+    tipo: dados.tipo,
+    autor: dados.autor,
+    respondeA: dados.respondeA,
+    texto: limparTextoDoComentario(art.innerText, dados.autor),
+    no: art,
+  };
+}
+
+/**
+ * Os comentarios de primeiro nivel ainda sem resposta NOSSA, nesta tela.
+ *
+ * "Nesta tela" e literal e nao e descuido: o DOM e virtualizado, entao esta
+ * lista e o que existe AGORA — compare sempre com `contagemDoPost()` antes de
+ * dizer a ele que acabou.
+ */
+export function comentariosSemResposta(raiz = document) {
+  const arts = articles(raiz);
+  const pagina = nomeDaPagina(raiz);
+  const lidos = arts.map(lerComentario).filter(Boolean);
+
+  const respondidos = lidos
+    .filter((c) => c.tipo === 'resposta' && pagina && mesmoNome(c.autor, pagina))
+    .map((c) => c.respondeA);
+
+  return lidos.filter(
+    (c) =>
+      c.tipo === 'comentario' &&
+      c.texto &&
+      !(pagina && mesmoNome(c.autor, pagina)) && // o que NOS comentamos nao e fila
+      !respondidos.some((pai) => mesmoNome(pai, c.autor))
   );
 }
 

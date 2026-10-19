@@ -1,105 +1,84 @@
-## 2026-10-19 - v3.175.0 - ESTADO DE AGORA - o Facebook pelo DOM: a base, medida na pagina de verdade
+## 2026-10-19 - v3.176.0 - ESTADO DE AGORA - o painel de comentarios na aba do Facebook
 
-**Pergunta dele:** *"vamos continuar com o facebook, qual o proximo passo?"*
+**Print dele:** o painel em janela separada dizendo *"aba sem resposta — de F5 nela"* e
+*"Nao consegui falar com a aba do mobiliza.app"*, com a aba Facebook pedindo o token.
 
-O caminho do DOM estava parado em duas medicoes que eu dizia que so ele podia dar. **Fiz as duas
-sozinho**, no Chrome dele, que continua logado como a propria pagina do Capitao Martim — e a
-segunda, a que eu tinha pedido permissao para fazer, era o unico bloqueio de verdade.
+**O aviso nao era defeito novo:** e a armadilha ja registrada — **recarregar a extensao orfa as
+abas abertas**, e o `rpc.js` tenta falar com um content script que nao existe mais. F5 na aba do
+mobiliza resolve, e o painel ja dizia isso certo.
 
-### O que entrou
+**O que a print mostrou de verdade** foi a aba da Graph API pedindo token. Essa e a que sai. Pelo
+DOM **nao ha token nenhum**: ele abre o post e a extensao le a pagina.
 
-- **`src/lib/dom-facebook.js`** — o irmao do `dom.js`: o UNICO arquivo que sabe como a pagina do
-  Facebook e montada por dentro. Cabecalho com os doze fatos medidos, cada um com o que ele impede.
-- **`tests/dom-facebook.test.mjs`** — 45 assercoes, a suite **23**. Protege quem FICA SEM RESPOSTA.
+### O que entrou agora
 
-**Nada chama a lib ainda** — e de proposito, e esta escrito aqui para nao virar codigo orfao: o
-chamador e o content script no `facebook.com`, que ainda nao existe. Ver *O que falta* no fim.
+- **`manifest.json`** — content script e recursos em `www.facebook.com` e `web.facebook.com`. **E
+  isto que exige a permissao nova do Chrome.**
+- **`src/facebook-content.js`** — o carregador, gemeo do `content.js` (content script classico nao
+  aceita `import`).
+- **`src/facebook-main.js`** — o painel de comentarios, flutuante, na aba do Facebook.
+- **`src/lib/dom-facebook.js`** ganhou `limparTextoDoComentario`, `lerComentario` e
+  `comentariosSemResposta`; o teste foi a **45 assercoes**.
 
-### As medicoes, todas na pagina dele
+### Como funciona, e e o fluxo que ele pediu em 16/10
 
-**O `aria-label` e a camada estavel, e ele da o sinal que eu nao sabia como ler.** Comentario e
-resposta sao os dois `[role="article"][aria-label]`, em duas formas:
+Ele abre o post. O painel lista **quem ainda nao foi respondido por nos**, ele escreve o texto
+embaixo e clica em **"Abrir e inserir"**: a extensao clica no "Responder" daquele comentario, espera
+a caixa nascer e **ACRESCENTA** o texto depois da mencao.
 
-```
-Comentario de <AUTOR> ha <TEMPO>
-Resposta de <AUTOR> ao comentario de <PAI> ha <TEMPO>
-```
+**E para ai.** Nada aperta Enter nem clica em "Comentar" — **quem envia e ele**, que e a fronteira
+do projeto inteiro.
 
-A forma da resposta **nomeia o comentario-pai** — e dai sai *"este comentario ja foi respondido"*,
-o equivalente ao `from.id === pageId` da Graph API.
+### Por que e um painel OUTRO, e nao o de sempre
 
-**RESPOSTA DE TERCEIRO NAO CONTA, e isso apareceu medido:** ha *"Resposta de \<um eleitor\> ao
-comentario de \<outro eleitor\>"* na pagina. Tratar como nossa deixaria o eleitor sem resposta
-**parecendo atendido** — o defeito que nao se ve. O que separa e o NOME DA PAGINA, e ele se le do
-proprio DOM, sem token nenhum: o composer e `aria-label="Comente como <NOME DA PAGINA>"`.
+O painel de sempre vive na aba do mobiliza e depende da API de la: o Bearer capturado, a ponte RPC,
+o contrato de escrita. **Nada disso existe no Facebook.** E ele **flutua em vez de encaixar**: o
+`dock.js` empurra a pagina com padding no `html`, o que no mobiliza e seguro porque o layout e
+conhecido, e no Facebook e pedir para quebrar a tela dele.
 
-**INSERIR FUNCIONA, APAGAR NAO.** Era o bloqueio. `document.execCommand('insertText')` com o cursor
-colapsado no fim **entra e preserva a mencao** — medido com texto neutro, sem nunca disparar Enter,
-e conferido depois que nada foi publicado. No mesmo teste: `selectAll` + `delete` **nao apagou
-nada**, e `delete` colapsado comeu **um caractere de CADA ponta**. Por isso a lib **nao limpa
-caixa**: ela so acrescenta, e quem desfaz e ele. Para limpar de verdade o unico caminho medido e
-recarregar a pagina.
+**Shadow DOM resolve duas coisas de uma vez:** o CSS do Facebook nao entra, e `document
+.querySelectorAll` nao atravessa shadow — entao **o painel nunca se le como se fosse um
+comentario**. Medido com ele montado: continuou 5.
 
-**A CAIXA JA VEM COM A MENCAO DENTRO.** Clicar em "Responder" abre
-`[contenteditable][data-lexical-editor][aria-label="Responder a <AUTOR>"]`, ja focada e **ja
-contendo o nome da pessoa**. Escrever ali e ACRESCENTAR: atribuir apagaria a mencao e a resposta
-sairia sem marcar ninguem.
+### O defeito que eu ia entregar, e o conserto
 
-**HA VARIAS CAIXAS NA TELA.** Medidas tres ao mesmo tempo (a da resposta e dois composters de posts
-diferentes). `querySelector('[contenteditable]')` pega a errada — **a caixa certa se acha pelo NOME
-no `aria-label`**, e e por isso que `caixaDeResposta` recebe o autor.
+O painel monta em `document_idle`, que e **antes de os comentarios existirem**: a lista nasceria
+vazia e pareceria defeito. E como o DOM e virtualizado, ela muda enquanto ele **rola**, sem clique
+nenhum. Hoje o painel **rele sozinho a cada 2s**, com duas guardas que sao sobre nao atrapalhar:
+so redesenha quando a lista de ids **mudou**, e **nunca com o campo de texto em foco** — senao a
+resposta que ele esta digitando perde o cursor no meio da frase.
 
-**O DOM E VIRTUALIZADO, e isso mata o desenho que eu tinha em mente.** No feed da pagina **nunca
-mais de QUATRO** comentarios existem na arvore ao mesmo tempo (12 acumulados em 14 rolagens), e dos
-30 posts com `aria-posinset` quase todos estao **vazios**. Nao ha como montar "todos os comentarios
-sem resposta" pelo feed. **A rodada trabalha no POST ABERTO** — que e exatamente o que ele descreveu
-em 16/10 (*"eu abro o post e mando a extensao inserir o texto na caixa de resposta"*).
+### Medido na pagina de verdade, nao so no teste
 
-**"MAIS RELEVANTES" E O PADRAO E ESCONDE GENTE.** No post aberto o botao de comentar dizia **5** e o
-DOM tinha **4**. Por isso `contagemDoPost` e `ordenacaoEsconde` existem: a lista nunca e afirmada
-como completa.
+Rodei as funcoes contra o reel aberto: **5 comentarios achados, todos com id**, o nome da pagina
+lido do composer (*"Capitao Martim"*), e o texto limpo saiu inteiro nos cinco — inclusive
+**"22 com certeza"**, que COMECA com o que parece tempo, e um comentario de **duas linhas**. O
+layout: 322x483, dentro da tela, com o corpo rolando.
 
-**A IDENTIDADE e o `comment_id`, e ele e BASE64**, nao numero — `comment:<post>_<comentario>`
-codificado. Serve para comparar e nunca para fazer conta. O `aria-label` **nao** e identidade: ele
-carrega o tempo, que muda sozinho (*"Ha 4 minutos"* vira *"ha uma hora"*).
+**O corte e da LINHA INTEIRA e nunca do trecho** — *"1 h de fila no posto"* e *"Curtir muito o
+trabalho"* comecam com o que parece tempo e botao, e cortar por prefixo comeria a fala do eleitor.
 
-### Dois erros meus, os dois registrados no codigo
+### A lista NUNCA e afirmada como completa
 
-**Peguei o primeiro href com `comment_id` para abrir o post e cai no perfil de uma eleitora.** O
-`comment_id` esta nos **TRES** links do article — a foto, o nome e o carimbo de hora —, e **so o
-carimbo** tem o post no pathname. O link do nome serve para identificar e nunca para abrir.
+O DOM e virtualizado e **"Mais relevantes" esconde gente** (medido: a contagem dizia 5 e a arvore
+tinha 4). Entao a tela mostra **a contagem do post** ao lado do que achou, avisa quando a ordenacao
+esta filtrando e manda trocar para "Todos os comentarios", e tem o botao de reler.
 
-**E o carimbo com o caminho do post SO EXISTE NO FEED:** nos quatro comentarios do post aberto
-`linkDoPost` devolveu null, porque ali os links sao so de perfil e o permalink do post e a propria
-URL. Dai `postDaPagina()` e `postDoComentario()`, numa funcao so.
+### O que ELE precisa fazer, e e a unica coisa
 
-### O que o TESTE pegou e a medicao nao
+1. **Recarregar a extensao** em `chrome://extensions`.
+2. **Aceitar a permissao do `facebook.com`** que o Chrome vai pedir — ela e nova.
+3. **F5 na aba do mobiliza**, pelo motivo do topo desta entrada.
 
-Eu medi um **reel**, que mora na raiz (`/reel/<id>`), e escrevi o padrao exigindo a raiz. **O post
-comum de foto e texto da pagina mora embaixo dela** (`/capitaomartim/posts/<id>`) e ficaria de fora
-— a forma mais comum de todas. Hoje o padrao casa as duas, e o segmento tem de ser inteiro, senao
-um perfil chamado `/joana.videos.123` passaria por post.
+Depois: abrir um post da pagina e o painel aparece na direita.
 
-### Validado contra o DOM real, nao so no teste
+### O que falta
 
-As consultas foram rodadas na pagina: `nomeDaPagina` deu **"Capitao Martim"**, `somosAdmin` **true**
-(o menu *"Excluir, ocultar ou denunciar"* so existe para quem administra), `contagemDoPost` **5**,
-`ordenacaoEsconde` **true**, e o id e o botao "Responder" foram achados nos **quatro de quatro**
-comentarios. O unico que falhou foi `linkDoPost`, pelo motivo acima, que virou funcao nova.
-
-### O que falta, e e tudo meu menos uma linha
-
-1. **O manifesto.** A extensao so roda em `mobiliza.app` — content script, recursos, tudo. O
-   Facebook precisa de `content_scripts` e `web_accessible_resources` proprios, e **o Chrome vai
-   pedir a permissao do host novo a ele** quando recarregar a extensao.
-2. **O painel na aba do Facebook.** O painel de hoje vive na aba do mobiliza e depende da API dele;
-   o do Facebook e outro, enxuto, encaixado na aba do Facebook. E a unica forma coerente: ler o DOM
-   do Facebook exige estar nele.
-3. **A rodada:** proximo comentario sem resposta nossa -> rascunho da IA pelo worker -> inserir ->
-   esperar ELE enviar -> proximo. A espera reusa `esperarVoceConcluir`, que ja trata "a tela e
-   dele".
-4. **A aba Facebook da Graph API (v3.172) continua no ar** e sai quando o caminho do DOM funcionar.
-   Enquanto as duas existirem, a de cima e a que ele escolheu.
-
-**O que ele precisa fazer na mao:** nada agora. Quando o item 1 entrar, recarregar a extensao e
-aceitar a permissao do `facebook.com`.
+- **O rascunho da IA.** Hoje o texto e dele. Falta o prompt proprio de comentario (o de hoje e todo
+  de conversa de WhatsApp), o ramo em `atender` do worker — **modo novo de pedido precisa de ramo
+  la, no mesmo commit** — e o botao. `facebook.pedeRascunho` ja existe e decide quando vale gastar:
+  comentario de uma palavra (*"22"*, *"amem"*) nao vai a IA.
+- **A aba Facebook da Graph API (v3.172) continua no ar** e sai quando este caminho estiver pronto.
+  Enquanto as duas existirem, a de cima e a que ele escolheu.
+- **Rolar sozinho ate o fim dos comentarios** nao foi feito de proposito: quem rola e ele, e o
+  painel acompanha. Rolar a pagina por conta propria mexeria na tela enquanto ele le.

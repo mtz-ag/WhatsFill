@@ -87,6 +87,8 @@ src/lib/observacoes.js  o caderno das sugestoes erradas, com o caso junto (puro,
 src/lib/facebook.js     COMENTARIOS da pagina: rotas, leitura e guardas (puro, testado)
 src/lib/facebook-cliente.js  ponte painel <-> worker; o token NUNCA volta para a pagina
 src/lib/dom-facebook.js UNICO arquivo com seletores da PAGINA DO FACEBOOK (irmao do dom.js)
+src/facebook-content.js    carregador na aba do facebook.com (gemeo do content.js)
+src/facebook-main.js       o painel de COMENTARIOS, flutuante, montado na aba do Facebook
 src/fluxo.html/.css/.js JANELA do fluxo: o QUADRO (caixas soltas, fios, arrastar, editar)
 src/lib/fluxo-msg.js    a mensagem que pede ao service worker para abrir a janela
 src/data/coredes-rs.json  município -> COREDE (planilha oficial da SPGG-RS)
@@ -3589,6 +3591,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   mundo, porque a rodada quase sempre roda depois.
 
 ## Avaliação por IA (só neste branch)
+
+- **O PAINEL DO FACEBOOK É OUTRO PAINEL, E FLUTUA EM VEZ DE ENCAIXAR** (19/10/2026). O painel de
+  sempre vive na aba do mobiliza e depende da API de lá (o Bearer, a ponte RPC, o contrato de
+  escrita) — **nada disso existe no Facebook**, então `facebook-main.js` é um painel próprio e
+  enxuto, e `facebook-content.js` é o gêmeo do `content.js` só porque content script clássico não
+  aceita `import`. **Não encaixa:** `dock.js` empurra a página com padding no `html`, o que no
+  mobiliza é seguro porque o layout é conhecido, e no Facebook é pedir para quebrar a tela dele.
+  **Shadow DOM resolve duas coisas de uma vez:** o CSS do Facebook não entra, e `document
+  .querySelectorAll` **não atravessa shadow** — então o painel nunca se lê como se fosse um
+  comentário (medido: continuou 5 com o painel montado).
+  **O painel monta em `document_idle`, que é ANTES de os comentários existirem** — a lista nasceria
+  vazia e pareceria defeito. E como o DOM é virtualizado, ela muda enquanto ele ROLA, sem clique
+  nenhum: por isso ele relê sozinho a cada 2s. **As duas guardas são obrigatórias** — só redesenha
+  quando a lista de ids MUDOU (senão refaz o DOM à toa a cada 2s), e **nunca com o textarea em
+  foco**, senão a resposta que ele está digitando perde o cursor no meio da frase.
+  **O `innerText` do article traz nome, texto, tempo e botões em linhas** (medido:
+  `"<AUTOR> | <TEXTO> | 33 min | Curtir | Responder | Enviar mensagem | Ocultar"`). O corte é da
+  LINHA INTEIRA e nunca do trecho: `"22 com certeza"` e `"1 h de fila no posto"` **começam** com o
+  que parece tempo, e `"Curtir muito o trabalho"` com o que parece botão — cortar por prefixo
+  comeria a fala do eleitor. Medido na página: os cinco comentários saíram inteiros.
 
 - **O FACEBOOK PELO DOM: o `aria-label` é a camada estável, e o DOM é VIRTUALIZADO** (19/10/2026,
   medido na página dele, logado como a própria página). Comentário e resposta são os dois

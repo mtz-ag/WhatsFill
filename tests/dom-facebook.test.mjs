@@ -153,6 +153,62 @@ grupo('postDaPagina: o feed nao e um post');
   check(fbdom.postDaPagina('/capitaomartim/followers/') === null, 'seguidores nao e post');
 }
 
+grupo('limparTextoDoComentario: o innerText vem com nome, tempo e botoes juntos');
+{
+  /**
+   * A forma medida na pagina: o article rende o nome, o texto, o tempo e a
+   * fileira de botoes, tudo em linhas. O que vai para a tela e para a IA e so
+   * o que a pessoa escreveu.
+   */
+  const bruto = ['Marta Fictinha', 'Gastando o dinheiro dos velhinhos', '7 min', 'Curtir', 'Responder', 'Enviar mensagem', 'Ocultar'].join('\n');
+  check(
+    fbdom.limparTextoDoComentario(bruto, 'Marta Fictinha') === 'Gastando o dinheiro dos velhinhos',
+    'sobra so o que a pessoa escreveu'
+  );
+
+  const comHa = ['Ana Exemplo', 'Parabens pelo trabalho', 'Ha 4 minutos', 'Curtir', 'Responder'].join('\n');
+  check(fbdom.limparTextoDoComentario(comHa, 'Ana Exemplo') === 'Parabens pelo trabalho', 'o tempo por extenso tambem sai');
+
+  // Varias linhas de texto continuam inteiras.
+  const duasLinhas = ['Ana Exemplo', 'Primeira linha', 'Segunda linha', '1 h', 'Curtir', 'Responder'].join('\n');
+  check(
+    fbdom.limparTextoDoComentario(duasLinhas, 'Ana Exemplo') === 'Primeira linha\nSegunda linha',
+    'comentario de duas linhas nao e cortado'
+  );
+
+  /**
+   * O que NAO pode ser comido. Errar aqui apaga a fala do eleitor, que e o
+   * lado caro — por isso a lista de corte e curta e literal.
+   */
+  check(
+    fbdom.limparTextoDoComentario(['Ana Exemplo', 'Voces vao responder?', '2 d', 'Curtir'].join('\n'), 'Ana Exemplo') === 'Voces vao responder?',
+    'pergunta curta sobrevive'
+  );
+  check(
+    fbdom.limparTextoDoComentario(['Ana Exemplo', 'Curtir muito o trabalho de voces', '1 h'].join('\n'), 'Ana Exemplo') === 'Curtir muito o trabalho de voces',
+    'frase que COMECA com a palavra de um botao nao e cortada — o corte e da linha INTEIRA'
+  );
+  check(
+    fbdom.limparTextoDoComentario(['Ana Exemplo', 'Responder isso e dificil', '1 h'].join('\n'), 'Ana Exemplo') === 'Responder isso e dificil',
+    '"Responder" dentro de uma frase nao e o botao'
+  );
+  check(
+    fbdom.limparTextoDoComentario(['Ana Exemplo', '22', '1 h', 'Curtir'].join('\n'), 'Ana Exemplo') === '22',
+    'o numero da chapa sozinho NAO e tempo — "22" sem unidade sobrevive'
+  );
+  check(
+    fbdom.limparTextoDoComentario(['Ana Exemplo', '1 h de fila no posto', '1 h', 'Curtir'].join('\n'), 'Ana Exemplo') === '1 h de fila no posto',
+    'frase que comeca com tempo nao e cortada — o corte e da linha inteira'
+  );
+
+  check(fbdom.limparTextoDoComentario('', 'Ana') === '', 'vazio devolve vazio');
+  check(fbdom.limparTextoDoComentario(null, 'Ana') === '', 'nulo devolve vazio');
+  check(
+    fbdom.limparTextoDoComentario(['Ana Exemplo', 'Curtir', 'Responder'].join('\n'), 'Ana Exemplo') === '',
+    'comentario que era so foto vira vazio — e a rodada o descarta'
+  );
+}
+
 grupo('mesmoNome');
 {
   check(fbdom.mesmoNome('Capitao Martim', 'CAPITÃO MARTIM'), 'acento e caixa nao importam');

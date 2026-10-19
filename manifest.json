@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WhatsFill+IA",
-  "version": "3.175.0",
+  "version": "3.176.0",
   "description": "WhatsFill com IA: o fluxo decide 94% dos contatos, e a IA escreve o rascunho do resto e confere a cidade.",
   "permissions": [
     "storage",
@@ -41,6 +41,17 @@
       ],
       "run_at": "document_idle",
       "all_frames": false
+    },
+    {
+      "matches": [
+        "https://www.facebook.com/*",
+        "https://web.facebook.com/*"
+      ],
+      "js": [
+        "src/facebook-content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
     }
   ],
   "options_page": "options.html",
@@ -60,6 +71,17 @@
       ],
       "matches": [
         "https://mobiliza.app/*"
+      ]
+    },
+    {
+      "resources": [
+        "src/facebook-main.js",
+        "src/lib/*",
+        "src/panel/*"
+      ],
+      "matches": [
+        "https://www.facebook.com/*",
+        "https://web.facebook.com/*"
       ]
     }
   ],
