@@ -268,4 +268,84 @@ grupo('mesmoNome');
   check(!fbdom.mesmoNome('Joana Exemplo', 'Pedro Terceiro'), 'nomes diferentes nao casam');
 }
 
+grupo('comentariosDoPost: a lista traz TODOS, dizendo quem ja tem resposta nossa');
+{
+  /**
+   * Pedido dele em 20/10/2026: *"troque a cor dos que receberam resposta na lista para amarelo"*.
+   * Ate entao os respondidos eram DESCARTADOS aqui — devolver a marca nao custa leitura nenhuma,
+   * porque a conta ja existia para poder filtrar.
+   *
+   * O DOM falso e o minimo que `articles` + `nomeDaPagina` leem: `querySelectorAll` por seletor,
+   * `getAttribute('aria-label')` e `innerText`.
+   */
+  const art = (rotulo, texto) => ({
+    seletor: '[role="article"][aria-label]',
+    getAttribute: (k) => (k === 'aria-label' ? rotulo : null),
+    innerText: texto,
+    querySelectorAll: () => [],
+  });
+  const composer = (pagina) => ({
+    seletor: '[aria-label]',
+    getAttribute: () => `Comente como ${pagina}`,
+    querySelectorAll: () => [],
+  });
+  const raizCom = (nos) => ({
+    querySelectorAll: (sel) => nos.filter((n) => n.seletor === sel || sel === '[aria-label]'),
+  });
+
+  const raiz = raizCom([
+    composer(PAGINA),
+    art('Comentario de Marta Fictinha ha 2 horas', 'Marta Fictinha\nApoio voces!\n2 h\nCurtir'),
+    art('Comentario de Joana Exemplo ha 1 hora', 'Joana Exemplo\n22 com certeza\n1 h\nCurtir'),
+    art(`Resposta de ${PAGINA} ao comentario de Marta Fictinha ha 1 hora`, `${PAGINA}\nObrigado!\n1 h\nCurtir`),
+  ]);
+
+  const todos = fbdom.comentariosDoPost(raiz);
+  check(todos.length === 2, 'os dois comentarios de primeiro nivel vem na lista');
+
+  const marta = todos.find((c) => c.autor === 'Marta Fictinha');
+  const joana = todos.find((c) => c.autor === 'Joana Exemplo');
+  check(marta?.respondido === true, 'quem NOS respondemos vem marcado — e o que fica amarelo');
+  check(joana?.respondido === false, 'quem ainda espera vem sem a marca');
+
+  /**
+   * **Uma fonte de verdade:** `comentariosSemResposta` e esta lista peneirada. Duas varreduras
+   * separadas divergiriam, e a divergencia seria a tela mostrar como pendente quem o painel
+   * considera respondido.
+   */
+  const faltam = fbdom.comentariosSemResposta(raiz);
+  check(faltam.length === 1 && faltam[0].autor === 'Joana Exemplo', 'a peneira continua dando so quem espera');
+  check(
+    faltam.every((c) => !c.respondido),
+    'e nada que esteja marcado passa por ela'
+  );
+}
+
+grupo('comentariosDoPost: sem o nome da pagina, NADA e marcado como respondido');
+{
+  /**
+   * **Marcar de amarelo por chute esconderia da fila quem nunca foi atendido.** Sem o composer
+   * nao da para saber quem respondeu — e o painel ja avisa em amarelo quando isso acontece.
+   */
+  const art = (rotulo, texto) => ({
+    seletor: '[role="article"][aria-label]',
+    getAttribute: (k) => (k === 'aria-label' ? rotulo : null),
+    innerText: texto,
+    querySelectorAll: () => [],
+  });
+  const raiz = {
+    querySelectorAll: (sel) =>
+      sel === '[aria-label]'
+        ? []
+        : [
+            art('Comentario de Marta Fictinha ha 2 horas', 'Marta Fictinha\nApoio!\n2 h\nCurtir'),
+            art('Resposta de Capitao Martim ao comentario de Marta Fictinha ha 1 hora', 'Capitao Martim\nObrigado!\n1 h\nCurtir'),
+          ],
+  };
+
+  const todos = fbdom.comentariosDoPost(raiz);
+  check(todos.length === 1, 'so o comentario de primeiro nivel entra');
+  check(todos[0].respondido === false, 'sem o nome da pagina, erra MOSTRANDO como pendente');
+}
+
 fim();

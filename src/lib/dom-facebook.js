@@ -377,13 +377,21 @@ export function lerComentario(art) {
 }
 
 /**
- * Os comentarios de primeiro nivel ainda sem resposta NOSSA, nesta tela.
+ * **Todos os comentarios de primeiro nivel desta tela, cada um dizendo se JA TEM resposta
+ * nossa** (`respondido`).
  *
- * "Nesta tela" e literal e nao e descuido: o DOM e virtualizado, entao esta
- * lista e o que existe AGORA — compare sempre com `contagemDoPost()` antes de
- * dizer a ele que acabou.
+ * Ate 20/10/2026 esta conta existia so para DESCARTAR os respondidos. Ele pediu para ve-los —
+ * *"troque a cor dos que receberam resposta na lista para amarelo"* —, e devolver a marca em vez
+ * de jogar fora nao custa leitura nenhuma: `respondidos` ja era calculado aqui.
+ *
+ * **"Nesta tela" e literal e nao e descuido:** o DOM e virtualizado, entao esta lista e o que
+ * existe AGORA — compare sempre com `contagemDoPost()` antes de dizer a ele que acabou.
+ *
+ * **Sem o nome da pagina, `respondido` e sempre falso** — e nao e engano: nao da para saber quem
+ * respondeu, e marcar de amarelo por chute esconderia da fila quem nunca foi atendido. O painel
+ * avisa em amarelo quando isso acontece.
  */
-export function comentariosSemResposta(raiz = document) {
+export function comentariosDoPost(raiz = document) {
   const arts = articles(raiz);
   const pagina = nomeDaPagina(raiz);
   const lidos = arts.map(lerComentario).filter(Boolean);
@@ -392,13 +400,24 @@ export function comentariosSemResposta(raiz = document) {
     .filter((c) => c.tipo === 'resposta' && pagina && mesmoNome(c.autor, pagina))
     .map((c) => c.respondeA);
 
-  return lidos.filter(
-    (c) =>
-      c.tipo === 'comentario' &&
-      c.texto &&
-      !(pagina && mesmoNome(c.autor, pagina)) && // o que NOS comentamos nao e fila
-      !respondidos.some((pai) => mesmoNome(pai, c.autor))
-  );
+  return lidos
+    .filter(
+      (c) =>
+        c.tipo === 'comentario' &&
+        c.texto &&
+        !(pagina && mesmoNome(c.autor, pagina)) // o que NOS comentamos nao e fila
+    )
+    .map((c) => ({ ...c, respondido: respondidos.some((pai) => mesmoNome(pai, c.autor)) }));
+}
+
+/**
+ * Os que ainda esperam resposta — a mesma leitura, peneirada.
+ *
+ * **Uma fonte de verdade:** duas varreduras separadas divergiriam na primeira correcao, e a
+ * divergencia aqui seria a lista mostrando como pendente quem o painel considera respondido.
+ */
+export function comentariosSemResposta(raiz = document) {
+  return comentariosDoPost(raiz).filter((c) => !c.respondido);
 }
 
 /** O botao "Responder" DESTE comentario. */

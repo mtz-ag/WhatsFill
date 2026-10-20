@@ -16,7 +16,7 @@
  *
  * Rode: node tools/checar-modulos.mjs
  */
-import { readdirSync, statSync } from 'node:fs';
+import { readdirSync, statSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -51,5 +51,51 @@ for (const arquivo of arquivos) {
   }
 }
 
-console.log(`\n=== ${arquivos.length} arquivo(s), ${quebrados} com erro de sintaxe ===`);
-process.exit(quebrados ? 1 : 0);
+/**
+ * **CRASE DENTRO DE TEMPLATE LITERAL, a variante que este conferidor NAO pegava** (20/10/2026).
+ *
+ * Com UMA crase a mais a string fecha e sobra identificador solto: `SyntaxError`, pego acima —
+ * foi o que quebrou o modulo em 19/10. **Com DUAS elas nao se cancelam:** a primeira fecha a
+ * string, o que vem no meio vira acesso a propriedade e a segunda abre um TAGGED TEMPLATE. Isso
+ * e sintaticamente VALIDO, passa por aqui, e estoura em runtime com *"... is not a function"* —
+ * no instante em que o painel desenha, ou seja, na tela dele.
+ *
+ * Medido: `` `a ${x} `.davez` b` `` devolve `TypeError: "...".davez is not a function`.
+ *
+ * A varredura e deliberadamente ESTREITA: so acusa crase dentro de um **comentario de bloco CSS**
+ * (`/* ... *\/`), que e onde o caso real aconteceu duas vezes e onde crase nunca tem uso legitimo.
+ * Larga demais, ela acusaria todo template com crase escapada e viraria alarme que se ignora.
+ */
+let comCrase = 0;
+
+/**
+ * **A varredura e ESTREITA de proposito, e a primeira versao provou por que.**
+ *
+ * Varrendo todo comentario de bloco ela acusou **1277** ocorrencias — os JSDoc deste projeto citam
+ * nomes entre crase o tempo todo. Alarme que toca sempre e alarme que se aprende a ignorar.
+ *
+ * O que ela olha e so o padrao em que o caso real aconteceu duas vezes: uma funcao que **devolve
+ * um template literal** (os `css()` dos paineis). Ali dentro so devem existir DUAS crases — a que
+ * abre e a que fecha. Qualquer outra fechou a string no meio.
+ */
+const devolveTemplate = /\n(?:export )?function (\w+)\(\)\s*\{\n(\s*)return `([\s\S]*?)\n\s*`;/g;
+
+for (const arquivo of arquivos) {
+  const relativo = arquivo.slice(raiz.length + 1).replace(/\\/g, '/');
+  const texto = readFileSync(arquivo, 'utf8');
+  for (const m of texto.matchAll(devolveTemplate)) {
+    const dentro = (m[3].match(/`/g) || []).length;
+    if (!dentro) continue;
+    comCrase++;
+    const linha = texto.slice(0, m.index).split('\n').length;
+    console.log(
+      ` CRASE  ${relativo}:${linha} → ${m[1]}() tem ${dentro} crase(s) dentro do template; ` +
+        'uma fecha a string (SyntaxError), duas viram tagged template e estouram na TELA'
+    );
+  }
+}
+
+console.log(
+  `\n=== ${arquivos.length} arquivo(s), ${quebrados} com erro de sintaxe, ${comCrase} com crase em comentario CSS ===`
+);
+process.exit(quebrados || comCrase ? 1 : 0);

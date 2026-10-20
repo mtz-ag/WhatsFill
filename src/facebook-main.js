@@ -149,7 +149,15 @@ function falar(shadow, t) {
  */
 function comentarioDaVez() {
   if (!estado.comentarios.length) return null;
-  return estado.comentarios.find((c) => c.id === estado.daVezId) || estado.comentarios[0];
+  const escolhido = estado.comentarios.find((c) => c.id === estado.daVezId);
+  if (escolhido) return escolhido;
+  /**
+   * **Sem escolha dele, a vez e do primeiro que AINDA ESPERA.** Desde que os respondidos entraram
+   * na lista (20/10), cair no `[0]` cru poria o teclado em cima de quem ja foi atendido — e a
+   * tecla 1 escreve na pagina. Ele continua podendo escolher um respondido pelo clique ou pelas
+   * setas; o que nao pode e isso acontecer por padrao.
+   */
+  return estado.comentarios.find((c) => !c.respondido) || estado.comentarios[0];
 }
 
 /** Grava a lista no candidato logado. Devolve o que deu errado, ou vazio. */
@@ -205,6 +213,16 @@ function css() {
     .item.davez {
       border-color: #1877f2; background: #f0f6ff;
       border-left: 4px solid #1877f2; padding-left: 10px;
+    }
+    /* AMARELO = ja recebeu resposta nossa (pedido dele, 20/10). Fica DEPOIS da regra .davez para o
+       fundo amarelo vencer o azul no comentario respondido que ele escolher — mas a barra azul
+       da esquerda continua, porque ela responde outra pergunta: onde a tecla bate. */
+    .item.respondido { border-color: #ffe69c; background: #fff8e1; }
+    /* A border-color acima pinta as QUATRO bordas: sem esta linha a barra azul da vez sumiria
+       justo no caso em que as duas marcas se encontram. */
+    .item.respondido.davez { border-left-color: #1877f2; }
+    .item.respondido .quem::after {
+      content: ' · respondido'; color: #8a6d3b; font-weight: 400; font-size: 11px;
     }
     .item .quem { font-weight: 600; margin-bottom: 2px; }
     .item .txt { color: #333; white-space: pre-wrap; word-break: break-word; margin-bottom: 7px; }
@@ -267,7 +285,15 @@ function relerComentarios() {
     return;
   }
 
-  estado.comentarios = fb.comentariosSemResposta(raiz);
+  /**
+   * **A lista traz TODOS, com os respondidos marcados** — pedido dele em 20/10/2026: *"troque a
+   * cor dos que receberam resposta na lista para amarelo"*.
+   *
+   * Antes eles eram descartados, e o efeito era o comentario SUMIR da lista dois segundos depois
+   * de ele responder — bom como fila, desorientador como tela: ele perdia a referencia de onde
+   * estava. Em amarelo, a lista passa a mostrar o progresso dentro do post.
+   */
+  estado.comentarios = fb.comentariosDoPost(raiz);
 
   /**
    * **O AMARELO E SO PARA PROBLEMA DE VERDADE** — decisao dele em 20/10/2026, vendo o painel no
@@ -295,11 +321,27 @@ function relerComentarios() {
    * verdade pela virtualizacao.
    */
   const total = fb.contagemDoPost(raiz);
-  estado.dicaDaLista = fb.ordenacaoEsconde(raiz)
-    ? 'Mostrando os mais relevantes. Role dentro do post e releia para carregar mais.'
-    : total != null && total > estado.comentarios.length
-    ? `O post tem ${total}. Role dentro do post e releia para carregar o resto.`
+  const esperando = estado.comentarios.filter((c) => !c.respondido).length;
+  const feitos = estado.comentarios.length - esperando;
+
+  /**
+   * **A conta vem primeiro: e ela que torna o amarelo util de relance.** Sem o numero ele teria de
+   * contar os cartoes para saber quanto falta nesta tela.
+   */
+  const conta = estado.comentarios.length
+    ? feitos
+      ? `${esperando} esperando, ${feitos} em amarelo ja respondido. `
+      : `${esperando} esperando. `
     : '';
+
+  estado.dicaDaLista =
+    conta +
+    (fb.ordenacaoEsconde(raiz)
+      ? 'Mostrando os mais relevantes — role dentro do post e releia para carregar mais.'
+      : total != null && total > estado.comentarios.length
+      ? `O post tem ${total} — role dentro do post e releia para carregar o resto.`
+      : '');
+  estado.dicaDaLista = estado.dicaDaLista.trim();
 }
 
 /**
@@ -620,9 +662,9 @@ function desenhar(shadow) {
   if (!estado.comentarios.length) {
     const vazio = document.createElement('div');
     vazio.className = 'vazio';
-    vazio.textContent = fb.raizDoPost()
-      ? 'Nenhum comentario sem resposta nesta tela.'
-      : '';
+    // **"Nenhum comentario" e "todos respondidos" eram a MESMA frase ate 20/10**, porque a lista
+    // so trazia os pendentes. Com os respondidos nela, lista vazia significa so uma coisa.
+    vazio.textContent = fb.raizDoPost() ? 'Nenhum comentario nesta tela.' : '';
     corpo.append(vazio);
   }
 
@@ -644,7 +686,9 @@ function desenhar(shadow) {
      * esta aceso e o que a tecla atinge.
      */
     const ehDaVez = !!daVez && daVez.id === c.id;
-    item.className = 'item' + (ehDaVez ? ' davez' : '');
+    // Amarelo = ja tem resposta nossa. O realce da VEZ continua por cima dele: a pergunta "onde a
+    // tecla bate" vale mesmo num comentario ja respondido, se ele escolher um.
+    item.className = 'item' + (c.respondido ? ' respondido' : '') + (ehDaVez ? ' davez' : '');
     // Clicar no comentario tambem o torna o da vez: quem usa o mouse nao deve ter de usar as
     // setas para o teclado concordar com o que ele esta olhando.
     item.addEventListener('click', () => {

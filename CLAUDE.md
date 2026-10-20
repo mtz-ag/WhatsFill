@@ -3593,6 +3593,24 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **A LISTA DO FACEBOOK TRAZ OS RESPONDIDOS, EM AMARELO** (20/10/2026, pedido dele: *"troque a cor
+  dos que receberam resposta na lista para amarelo"*). Até então eles eram **descartados**, e o
+  efeito era o comentário **sumir da lista dois segundos depois de ele responder** — bom como
+  fila, desorientador como tela.
+  **Devolver a marca não custou leitura nenhuma:** `comentariosSemResposta` já calculava
+  `respondidos` para poder filtrar. Hoje `comentariosDoPost` devolve todos com `respondido`, e
+  `comentariosSemResposta` é ele peneirado — **uma fonte de verdade**, senão a tela mostraria como
+  pendente quem o painel considera respondido.
+  **Sem o nome da página, `respondido` é sempre falso**, e não é engano: não dá para saber quem
+  respondeu, e marcar de amarelo por chute **esconderia da fila quem nunca foi atendido**. Erra
+  mostrando demais, que é o lado barato.
+  **O comentário DA VEZ passou a pular os respondidos.** Com eles na lista, cair no `[0]` cru poria
+  o teclado em cima de quem já foi atendido — e a tecla 1 **escreve na página**. Ele ainda pode
+  escolher um respondido pelo clique ou pelas setas; o que não pode é isso acontecer por padrão.
+  **O CSS tem uma linha que parece supérflua e não é:** `.item.respondido` define `border-color`,
+  que pinta as **quatro** bordas — sem `.item.respondido.davez { border-left-color }`, a barra azul
+  da vez sumiria justo onde as duas marcas se encontram.
+
 - **ALARME SOBRE UMA ESCOLHA DELE NÃO É ALARME: É RUÍDO** (20/10/2026, print do painel no ar:
   *"nao tem problema estar nos relevantes pois quero responder eles e nao todos"*). O aviso
   amarelo tomava **um quarto da tela** mandando trocar a ordenação para "Todos os comentários" —
@@ -5722,6 +5740,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > identifier"*. **`node --check` passou** (ele analisa como CommonJS) e quem pegou foi o
 > `checar-modulos`. Comentário dentro de template literal não leva crase — e é mais uma razão para
 > o checador ser rodado, e não só o `--check`.
+>
+> **E COM DUAS CRASES É PIOR: o `checar-modulos` TAMBÉM passava** (20/10/2026, cometido de novo no
+> mesmo arquivo). Elas **não se cancelam** — a primeira fecha a string, o que vem no meio vira
+> acesso a propriedade e a segunda abre um **tagged template**. Isso é sintaticamente **válido**,
+> então nenhum checador de sintaxe acusa, e estoura em **runtime** com *"… is not a function"* —
+> no instante em que o painel desenha, ou seja, **na tela dele**. Medido:
+> `` `a `.davez` b` `` devolve `TypeError: "a".davez is not a function`.
+> Hoje `checar-modulos` tem uma passada para isso: toda função que **devolve um template literal**
+> (os `css()` dos painéis) só pode ter as **duas** crases, a que abre e a que fecha.
+> **A varredura é estreita de propósito** — a primeira versão olhava todo comentário de bloco e
+> acusou **1277** ocorrências, porque os JSDoc daqui citam nomes entre crase o tempo todo.
 
 Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e seis suítes passando:
 

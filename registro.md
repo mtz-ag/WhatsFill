@@ -1,6 +1,6 @@
-## 2026-10-20 - v3.184.0 - ESTADO DE AGORA - o painel do Facebook: IA consertada, respostas com variacoes, teclado e menos alarme
+## 2026-10-20 - v3.185.0 - ESTADO DE AGORA - o painel do Facebook: IA consertada, respostas com variacoes, teclado, menos alarme e o amarelo dos respondidos
 
-Cinco coisas foram ao ar hoje, nesta ordem — cada uma depende da anterior.
+Seis coisas foram ao ar hoje, nesta ordem — cada uma depende da anterior.
 
 ---
 
@@ -247,10 +247,54 @@ pagina**, "nao da para distinguir" ja e defeito.
 
 ---
 
+## 6. Os respondidos ficam na lista, em amarelo (v3.185.0)
+
+**Pedido dele:** *"troque a cor dos que receberam resposta na lista para amarelo"*.
+
+Ate entao eles eram **descartados**, entao nao havia o que colorir: o comentario **sumia da lista
+dois segundos depois de ele responder**. Bom como fila, desorientador como tela — ele perdia a
+referencia de onde estava no post.
+
+**Devolver a marca nao custou leitura nenhuma:** `comentariosSemResposta` ja calculava
+`respondidos` para poder filtrar. Hoje:
+
+- **`comentariosDoPost`** devolve todos, cada um com `respondido`;
+- **`comentariosSemResposta`** e ele peneirado — **uma fonte de verdade**, senao a tela mostraria
+  como pendente quem o painel considera respondido.
+
+### Tres decisoes que o amarelo obrigou
+
+- **O comentario DA VEZ pula os respondidos.** Com eles na lista, cair no primeiro cru poria o
+  teclado em cima de quem ja foi atendido — e a tecla 1 **escreve na pagina**. Clicando ou com as
+  setas ele ainda alcanca um respondido; o que nao pode e isso por padrao.
+- **Sem o nome da pagina, NADA fica amarelo.** Nao da para saber quem respondeu, e marcar por
+  chute **esconderia da fila quem nunca foi atendido**. Erra mostrando demais, que e o lado
+  barato — e esse caso continua com aviso amarelo proprio.
+- **A conta entrou na linha cinza:** *"2 esperando, 3 em amarelo ja respondido"*. Sem o numero ele
+  teria de contar os cartoes.
+
+### E um defeito meu que quase foi para a sua tela
+
+Escrevi um comentario CSS citando **`.davez` entre crases**, dentro do template literal do CSS. **O
+`checar-modulos` passou** — e o painel **nao teria aparecido**.
+
+**Duas crases nao se cancelam:** a primeira fecha a string, o meio vira acesso a propriedade e a
+segunda abre um **tagged template**. E sintaticamente valido, entao nenhum checador de sintaxe
+acusa; estoura em **runtime**, no instante em que o painel desenha. Medido:
+`TypeError: "...".davez is not a function`.
+
+**Com UMA crase** (o caso de 19/10) da `SyntaxError` e o checador pega. **Com duas, nao pegava.**
+Agora pega: toda funcao que devolve um template literal so pode ter as duas crases, a que abre e a
+que fecha. **A varredura e estreita de proposito** — a primeira versao olhava todo comentario de
+bloco e acusou **1277** ocorrencias, porque os comentarios daqui citam nomes entre crase o tempo
+todo.
+
+---
+
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.184.0** — e assim que se sabe que chegou.
+dizer **v3.185.0** — e assim que se sabe que chegou.
 
 ## O que falta, e e decisao dele
 
