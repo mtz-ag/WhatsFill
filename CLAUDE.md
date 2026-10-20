@@ -3593,6 +3593,25 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **ALARME SOBRE UMA ESCOLHA DELE NÃO É ALARME: É RUÍDO** (20/10/2026, print do painel no ar:
+  *"nao tem problema estar nos relevantes pois quero responder eles e nao todos"*). O aviso
+  amarelo tomava **um quarto da tela** mandando trocar a ordenação para "Todos os comentários" —
+  **mandando fazer o contrário do que ele quer**. É a regra já registrada aqui (*alarme que toca
+  sempre é alarme que se aprende a ignorar*) aplicada a uma preferência: a ordenação é escolha
+  dele, não defeito.
+  **O amarelo ficou só para o que ele NÃO escolheu e custa caro:** o nome da página não lido, sem
+  o qual a lista traz quem já tem resposta nossa. A contagem virou **linha cinza**.
+  **E `ordenacaoEsconde` não virou função morta** (a armadilha do `pedido-emprego`): ela passou a
+  decidir **se o total é citado**. Com "Mais relevantes" ligado, dizer *"o post tem 42"* compara a
+  lista com um conjunto que ele não quer percorrer — soa como se faltassem quarenta. O total só é
+  meta quando a ordenação não esconde ninguém.
+  **O realce do comentário da vez ganhou barra de 4px à esquerda:** na print o fundo azul claro
+  com borda de 1px **não dava para distinguir**, e "não dá para distinguir" já é defeito numa marca
+  que decide onde o texto vai ser escrito na página.
+  **Ao tirar um aviso, procure a prosa que o descreve** — o cabeçalho do `facebook-main.js` e o de
+  `ordenacaoEsconde` diziam que o painel "avisa quando a ordenação está filtrando", e prosa velha
+  aqui vira decisão errada depois (14/10).
+
 - **CADA BOTÃO DO FACEBOOK É UMA CATEGORIA COM ATÉ DEZ VARIAÇÕES, QUE REVEZAM** (20/10/2026,
   pedido dele: *"numero 1 = apoio e dentro dele quero 10 variacoes (...) ao apertar o numero 1 ira
   seguir na sequencia (...) e nao se repetir ate ter ido as 10"*).

@@ -348,7 +348,14 @@ export function contagemDoPost(raiz = document) {
   return Number.isFinite(n) ? n : null;
 }
 
-/** A ordenacao esta escondendo comentario? "Mais relevantes" e o padrao. */
+/**
+ * A ordenacao esta escondendo comentario? "Mais relevantes" e o padrao do Facebook.
+ *
+ * **Isto NAO e mais um aviso** (20/10/2026): ele decidiu trabalhar nos relevantes — *"nao tem
+ * problema estar nos relevantes pois quero responder eles e nao todos"*. O painel usa esta funcao
+ * para decidir **se cita o total do post**: com a ordenacao filtrando, dizer "o post tem 42"
+ * compara a lista com um conjunto que ele nao quer percorrer.
+ */
 export function ordenacaoEsconde(raiz = document) {
   return [...raiz.querySelectorAll('[role="button"]')].some((b) =>
     /^mais relevantes$/i.test(String(b.innerText || '').trim())

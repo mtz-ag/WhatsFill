@@ -1,6 +1,6 @@
-## 2026-10-20 - v3.183.0 - ESTADO DE AGORA - o painel do Facebook: IA consertada, respostas rapidas com variacoes e teclado
+## 2026-10-20 - v3.184.0 - ESTADO DE AGORA - o painel do Facebook: IA consertada, respostas com variacoes, teclado e menos alarme
 
-Quatro coisas foram ao ar hoje, nesta ordem — cada uma depende da anterior.
+Cinco coisas foram ao ar hoje, nesta ordem — cada uma depende da anterior.
 
 ---
 
@@ -219,18 +219,46 @@ respostas que voce guardou de manha continuam la.
 
 ---
 
+## 5. O alarme da ordenacao saiu (v3.184.0)
+
+**Decisao dele**, vendo o painel no ar: *"nao tem problema estar nos relevantes pois quero
+responder eles e nao todos"*.
+
+O aviso amarelo tomava **um quarto da tela** mandando trocar a ordenacao para "Todos os
+comentarios" — ou seja, **mandando fazer o contrario do que ele quer**. E a regra que este arquivo
+ja tinha (*alarme que toca sempre e alarme que se aprende a ignorar*) aplicada a uma
+**preferencia**: a ordenacao e escolha dele, nao defeito.
+
+| antes | agora |
+|---|---|
+| amarelo: "o post diz ter 42… troque para Todos os comentarios" | **linha cinza**: "Mostrando os mais relevantes. Role dentro do post e releia para carregar mais." |
+| amarelo: nome da pagina nao lido | **continua amarelo** — este ele nao escolheu |
+
+**`ordenacaoEsconde` nao virou funcao morta:** ela passou a decidir **se o total e citado**. Com
+"Mais relevantes" ligado, dizer *"o post tem 42"* compara a lista com um conjunto que ele nao quer
+percorrer — soa como se faltassem quarenta. **O total so e meta quando a ordenacao nao esconde
+ninguem**, e ai a frase volta a ser "O post tem 42. Role… para carregar o resto."
+
+### E o realce ganhou uma barra azul de 4px
+
+Na print **nao dava para distinguir qual comentario estava aceso** — o fundo azul claro com borda
+de 1px some numa tela cheia. Para a marca que diz **onde o Enter e as teclas 1..9 escrevem na
+pagina**, "nao da para distinguir" ja e defeito.
+
+---
+
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.183.0** — e assim que se sabe que chegou.
+dizer **v3.184.0** — e assim que se sabe que chegou.
 
 ## O que falta, e e decisao dele
 
 - **Comentario de uma palavra** (**"22"**, boa parte desta pagina): agora ha o botao rapido, que era
   o que faltava. `facebook.pedeRascunho` continua existindo e sabendo quando nao vale pagar;
   **ligar isso para a IA nem ser oferecida nesses casos e escolha dele.**
-- **A ordenacao "Mais relevantes" esconde comentarios** — o aviso amarelo diz isso, e o post da
-  print declara 17. Trocar para "Todos os comentarios" e rolar dentro do post.
+- ~~Trocar a ordenacao para "Todos os comentarios"~~ — **decidido em 20/10: nao.** Ele trabalha
+  nos relevantes de proposito, e o alarme saiu (secao 5).
 - **805 KB em toda aba do Facebook.** Da para cortar para ~38 KB movendo a IA para `import()` sob
   demanda. Agora que ha caminho sem IA, o corte vale ainda mais — mas so depois de ele confirmar
   que o botao IA funciona de verdade.

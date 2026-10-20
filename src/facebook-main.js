@@ -34,9 +34,15 @@
  *
  * A LISTA NUNCA E AFIRMADA COMO COMPLETA. O DOM do Facebook e virtualizado e
  * "Mais relevantes" esconde gente (medido: a contagem dizia 5 e a arvore tinha
- * 4). Por isso a tela mostra a contagem do post ao lado do que achou, e avisa
- * quando a ordenacao esta filtrando — e o painel tem botao de reler, porque o
- * que esta na arvore muda quando ele rola.
+ * 4). Por isso ha botao de reler: o que esta na arvore muda quando ele rola.
+ *
+ * **MAS ISSO NAO E ALARME, e deixou de ser em 20/10/2026** — decisao dele, vendo o painel no ar:
+ * *"nao tem problema estar nos relevantes pois quero responder eles e nao todos"*. O amarelo
+ * mandava trocar a ordenacao para "Todos os comentarios", ou seja, mandava fazer o contrario do
+ * que ele quer, ocupando um quarto da tela. **Alarme sobre uma escolha dele e ruido**, e alarme
+ * que toca sempre e o que se aprende a ignorar — inclusive no dia em que e de verdade.
+ * Hoje a contagem e uma linha CINZA e o amarelo fica so para o que ele nao escolheu: o nome da
+ * pagina nao lido, sem o qual a lista traz quem ja tem resposta nossa.
  */
 
 import * as fb from './lib/dom-facebook.js';
@@ -55,6 +61,8 @@ const estado = {
   aberto: true,
   comentarios: [],
   aviso: '',
+  /** A linha cinza sobre a lista (contagem / "role para carregar mais"), separada do amarelo. */
+  dicaDaLista: '',
   texto: '',
   status: '',
   /**
@@ -189,9 +197,15 @@ function css() {
     .aviso { background: #fff3cd; border: 1px solid #ffe69c; border-radius: 6px; padding: 7px 9px; margin-bottom: 9px; }
     .vazio { color: #65676b; }
     .item { border: 1px solid #e4e6eb; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
-    /* O comentario DA VEZ: e nele que o Enter e as teclas 1..9 batem. O realce e o contrato —
-       sem ele, inserir por teclado seria no escuro. */
-    .item.davez { border-color: #1877f2; background: #f0f6ff; box-shadow: 0 0 0 1px #1877f2; }
+    /* O comentario DA VEZ: e nele que o Enter e as teclas 1..9 batem. O realce e o CONTRATO —
+       sem ele, inserir por teclado e no escuro.
+       A barra grossa a esquerda entrou em 20/10: na print dele o fundo azul claro e a borda de
+       1px nao davam para distinguir qual estava aceso, e "nao da para distinguir" ja e defeito
+       numa marca que decide onde o texto vai ser escrito na pagina. */
+    .item.davez {
+      border-color: #1877f2; background: #f0f6ff;
+      border-left: 4px solid #1877f2; padding-left: 10px;
+    }
     .item .quem { font-weight: 600; margin-bottom: 2px; }
     .item .txt { color: #333; white-space: pre-wrap; word-break: break-word; margin-bottom: 7px; }
     textarea {
@@ -255,20 +269,37 @@ function relerComentarios() {
 
   estado.comentarios = fb.comentariosSemResposta(raiz);
 
-  const partes = [];
+  /**
+   * **O AMARELO E SO PARA PROBLEMA DE VERDADE** — decisao dele em 20/10/2026, vendo o painel no
+   * ar: *"nao tem problema estar nos relevantes pois quero responder eles e nao todos"*.
+   *
+   * O aviso tomava um quarto da tela mandando trocar a ordenacao para "Todos os comentarios", ou
+   * seja, mandando fazer o contrario do que ele quer. **Alarme sobre uma escolha dele nao e
+   * alarme: e ruido** — e alarme que toca sempre e o que se aprende a ignorar, inclusive no dia em
+   * que e de verdade.
+   *
+   * O que sobra em amarelo e o que ele nao escolheu e pode custar caro: **o nome da pagina nao
+   * lido**, porque sem ele nao da para saber o que ja foi respondido e a lista traz gente que ja
+   * tem resposta nossa.
+   */
+  estado.aviso = fb.nomeDaPagina(raiz)
+    ? ''
+    : 'Nao achei o nome da pagina neste post, entao nao da para saber o que ja foi respondido: a lista pode trazer quem ja tem resposta.';
+
+  /**
+   * **A contagem virou DICA cinza, e a ordenacao decide se ela e citada.**
+   *
+   * Com "Mais relevantes" ligado, dizer *"o post tem 42"* compara a lista com um conjunto que ele
+   * NAO quer percorrer — soa como se faltassem quarenta. O total so e meta quando a ordenacao nao
+   * esconde ninguem; nos outros casos o que importa e que **rolar carrega mais**, que continua
+   * verdade pela virtualizacao.
+   */
   const total = fb.contagemDoPost(raiz);
-  if (total != null && total > estado.comentarios.length) {
-    // Nao e defeito: e virtualizacao mais "Mais relevantes". Dizer o numero e o
-    // que impede o painel de afirmar que a fila acabou.
-    partes.push(`O post diz ter ${total}. Role dentro do post e releia para ver o resto.`);
-  }
-  if (fb.ordenacaoEsconde(raiz)) {
-    partes.push('A ordenacao esta em "Mais relevantes", que esconde comentarios. Troque para "Todos os comentarios".');
-  }
-  if (!fb.nomeDaPagina(raiz)) {
-    partes.push('Nao achei o nome da pagina neste post, entao nao da para saber o que ja foi respondido: a lista pode trazer quem ja tem resposta.');
-  }
-  estado.aviso = partes.join(' ');
+  estado.dicaDaLista = fb.ordenacaoEsconde(raiz)
+    ? 'Mostrando os mais relevantes. Role dentro do post e releia para carregar mais.'
+    : total != null && total > estado.comentarios.length
+    ? `O post tem ${total}. Role dentro do post e releia para carregar o resto.`
+    : '';
 }
 
 /**
@@ -593,6 +624,14 @@ function desenhar(shadow) {
       ? 'Nenhum comentario sem resposta nesta tela.'
       : '';
     corpo.append(vazio);
+  }
+
+  // Cinza e pequena, acima da lista: ela fala DA LISTA, e nao de um problema.
+  if (estado.dicaDaLista) {
+    const d = document.createElement('div');
+    d.className = 'dica';
+    d.textContent = estado.dicaDaLista;
+    corpo.append(d);
   }
 
   const daVez = comentarioDaVez();
