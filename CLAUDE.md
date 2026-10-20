@@ -3794,6 +3794,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   lá o arquivo quebrava, aqui ele fica válido e incompleto. **Emoji em comentário vai pela ferramenta
   de edição, nunca por escape numérico em script Python** — e depois de qualquer escrita por script,
   `git diff --stat` antes de rodar os testes.
+  **E `\b` NUMA STRING PYTHON NORMAL É UM BACKSPACE, não as duas letras** (20/10/2026): escrevi
+  `` `\\b` `` num texto sobre fronteira de palavra e o arquivo ficou com o byte `0x08` dentro, que
+  o editor mostra como `^H` e o Markdown renderiza como nada. **Nada acusa** — o arquivo é válido,
+  o `git diff` mostra a linha "certa" e só `cat -A` revela. Para escrever barra invertida por
+  script, use string **raw** (`r'...'`) ou a ferramenta de edição; e o heredoc do Git Bash aqui
+  **falha com conteúdo longo**, então arquivo grande vai pela ferramenta, nunca por `cat <<EOF`.
 
 - **`repeteSozinha` NÃO ENXERGAVA `maisCondicoes` NEM `maisExcecoes`** (16/10/2026, achado ao soltar a
   boas-vindas da chegada). Ela nasceu em **02/09**, quando a caixa tinha UMA condição e UMA exceção;
@@ -5599,10 +5605,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > `checar-modulos`. Comentário dentro de template literal não leva crase — e é mais uma razão para
 > o checador ser rodado, e não só o `--check`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e três suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e quatro suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

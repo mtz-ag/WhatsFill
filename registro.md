@@ -53,6 +53,53 @@ escrever a sua.
 **Recarregar a extensao** e abrir um post. A IA precisa estar **ligada** no painel do mobiliza
 (aba Automatizado) -- desligada, o botao diz isso em vez de falhar calado.
 
+### A cadeia foi PROVADA por teste, sem gastar uma chamada
+
+`tests/facebook-ia.test.mjs` (a suite **24**) troca o worker por um que devolve o
+que o teste mandar e exercita `rascunharComentario` ponta a ponta. E o que
+nenhum teste puro ve: o que acontece ENTRE as pecas.
+
+**O que ele trava:**
+
+- **o pedido sai com `modo: 'comentario'`** — sem isso ele cairia no esquema da
+  DECISAO, a chamada sairia PAGA e voltaria num formato que o validador nao le,
+  virando *"a IA nao respondeu"* em silencio;
+- o prompt do canal vai junto e **o padrao do WhatsApp fica fora**;
+- `naoResponder` chega ao painel **e o texto e descartado** — nao se publica o
+  que ela mandou ignorar;
+- falha do worker **leva o motivo inteiro** (o teto de gasto chega legivel a
+  tela, que e a licao de 07/09), e o *"o que a IA leu"* volta **tambem na
+  falha**;
+- **as travas do WhatsApp valem aqui**: afirmar que ja fizemos, prometer
+  entregar e dizer que a eleicao acabou sao barrados, e o travessao eme e
+  trocado. Se alguem trocar `revisarRascunho` por uma copia, estas assercoes
+  caem — que e o ponto delas;
+- **a chapa e conferida sem o dossie no prompt**, porque o modelo escreve os
+  nomes de cabeca (08/09).
+
+**Uma falha apareceu e era do TESTE:** o aviso e escrito *"legivel"* com acento e
+eu procurei sem. A mesma familia do limite de palavra antes de letra acentuada.
+
+### Dois riscos conferidos antes de ele testar
+
+- **A arvore de imports do painel do Facebook sao 13 modulos, todos em
+  `src/lib/*`** (exposto no manifesto) e **nenhum depende do mobiliza** — sem
+  `api.js`, `page.js` nem `dom.js`. E **nenhum faz trabalho no carregamento**:
+  todos sao inertes ate alguem chamar.
+- **`src/data/*` esta nos recursos do Facebook**, entao `gabinete.lerArquivo` le
+  o dossie ali.
+
+### O peso: 805 KB em TODA aba do Facebook
+
+Medido. `ia.js` (259 KB) e `cortesia.js` (229 KB) entram pela carona, e
+`atendimento.js` **nao e usado** no comentario — o padrao dele fica de fora do
+prompt de proposito.
+
+**Da para cortar para ~38 KB** movendo a IA para `import()` sob demanda, dentro
+do clique do botao. **Nao foi feito de proposito:** e exatamente o caminho que
+ele vai testar, e se o import dinamico falhar ali ele conclui que *"a IA nao
+funciona"*. Fica para depois do teste dele.
+
 ### O que falta, e e decisao dele
 
 - **Comentario de uma palavra** (**"22"**, que e boa parte desta pagina): hoje o botao chama a IA
