@@ -77,8 +77,12 @@ const estado = {
   renomeando: '',
   /** O modo de organizar a tira (renomear/apagar). Fora dele a tira e so os rotulos. */
   gerindo: false,
-  /** O id do comentario DA VEZ — o que o teclado atinge. Vazio = o primeiro da lista. */
+  /** O id do comentario DA VEZ — o que o teclado atinge. Vazio = o primeiro que ainda espera. */
   daVezId: '',
+  /** A leitura do post inteiro esta rodando? O botao vira "Parar" enquanto estiver. */
+  lendo: false,
+  /** Ele pediu para parar no meio da leitura. */
+  pararLeitura: false,
   /** Uma insercao por vez: a caixa do Facebook ACRESCENTA, entao duas duplicariam o texto. */
   inserindo: false,
   /**
@@ -160,6 +164,59 @@ function comentarioDaVez() {
   return estado.comentarios.find((c) => !c.respondido) || estado.comentarios[0];
 }
 
+/** Quantos comentarios o painel guarda de um post. Acima disso ele para de acumular. */
+const MAX_ACUMULADO = 300;
+
+/**
+ * **A LISTA ACUMULA, EM VEZ DE SER A FOTO DA ARVORE** (20/10/2026).
+ *
+ * O DOM do Facebook e virtualizado: rolando para carregar os de baixo, **os de cima saem da
+ * arvore**. Com a lista sendo a foto de agora, "ler o post inteiro" nao produziria lista nenhuma —
+ * ela so trocaria de conteudo. Era por isso que ele estava rolando a mao e anotando.
+ *
+ * Acumular tem um preco, e ele e tratado em `inserir`: o `no` de um comentario que saiu da arvore
+ * fica obsoleto. Por isso o painel **reacha pelo id** na hora de inserir, e so desiste se nem
+ * assim achar.
+ *
+ * O que CHEGA ganha prioridade sobre o que estava guardado: `respondido` muda quando ele responde,
+ * e o `no` novo e o que ainda esta vivo.
+ */
+function acumular(antigos, novos, raiz) {
+  const porId = new Map();
+  for (const c of antigos) porId.set(c.id, c);
+  for (const c of novos) porId.set(c.id, c);
+
+  const vivos = [...porId.values()];
+  if (vivos.length <= MAX_ACUMULADO) return ordenarComoNaTela(vivos, raiz);
+  // Teto: o que esta na arvore AGORA fica; o excedente sai do fim do acumulado.
+  const naTela = new Set(novos.map((c) => c.id));
+  const fica = vivos.filter((c) => naTela.has(c.id));
+  for (const c of vivos) {
+    if (fica.length >= MAX_ACUMULADO) break;
+    if (!naTela.has(c.id)) fica.push(c);
+  }
+  return ordenarComoNaTela(fica, raiz);
+}
+
+/**
+ * A ordem da LISTA e a da TELA — quem esta na arvore vem na ordem em que aparece no post, e quem
+ * ja saiu dela vai para o fim.
+ *
+ * Sem isto, a ordem seria a de descoberta: o comentario que ele rolou ate achar apareceria no
+ * meio de gente que esta no topo do post, e a lista deixaria de corresponder ao que ele ve.
+ */
+function ordenarComoNaTela(lista, raiz) {
+  const ordem = new Map();
+  fb.articles(raiz || document).forEach((art, i) => {
+    const id = fb.idDoComentario(art);
+    if (id) ordem.set(id, i);
+  });
+  return lista
+    .map((c, i) => ({ c, pos: ordem.has(c.id) ? ordem.get(c.id) : 1e6 + i }))
+    .sort((a, b) => a.pos - b.pos)
+    .map((x) => x.c);
+}
+
 /** Grava a lista no candidato logado. Devolve o que deu errado, ou vazio. */
 async function salvarRespostas(lista) {
   estado.respostas = rapidas.sanitizar(lista);
@@ -231,7 +288,7 @@ function css() {
       border: 1px solid #ccd0d5; border-radius: 6px; padding: 6px; resize: vertical;
     }
     .rodape { padding: 9px 10px; border-top: 1px solid #e4e6eb; background: #fafbfc; }
-    .linha { display: flex; gap: 6px; align-items: center; margin-top: 7px; }
+    .linha { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 7px; }
     /* A tira das respostas rapidas. Quebra em varias linhas de proposito: com
        rolagem lateral ele nao veria que existe uma quinta resposta.
        No uso normal sao SO os rotulos -- o renomear e o apagar vivem atras do
@@ -293,7 +350,7 @@ function relerComentarios() {
    * de ele responder — bom como fila, desorientador como tela: ele perdia a referencia de onde
    * estava. Em amarelo, a lista passa a mostrar o progresso dentro do post.
    */
-  estado.comentarios = fb.comentariosDoPost(raiz);
+  estado.comentarios = acumular(estado.comentarios, fb.comentariosDoPost(raiz), raiz);
 
   /**
    * **O AMARELO E SO PARA PROBLEMA DE VERDADE** — decisao dele em 20/10/2026, vendo o painel no
@@ -345,6 +402,116 @@ function relerComentarios() {
 }
 
 /**
+ * **LER O POST INTEIRO: expande as respostas, rola, e acumula** — pedido dele em 20/10/2026:
+ * *"preciso que faca uma leitura do post pegando todos os comentarios, estou tendo que fazer isso
+ * manualmente; a leitura ira servir pra ver quais foram respondidos tambem"*.
+ *
+ * **Expandir e o que faz o amarelo funcionar**, e nao so um atalho de rolagem: enquanto a resposta
+ * esta colapsada em "<pagina> respondeu · 1 resposta", o `[role="article"]` dela **nao existe**, e
+ * `respondido` e falso para todo mundo.
+ *
+ * **A PROVA E O EFEITO, nunca o rotulo do botao.** A volta clica no que parece revelar, rola, e
+ * mede quantos articles apareceram. Acertar o texto exato de cada botao do Facebook e adivinhacao
+ * que envelhece na primeira traducao; contar o que surgiu, nao. Ela so para quando **duas voltas
+ * seguidas** nao trazem nada novo — uma so erraria no instante em que o Facebook esta carregando.
+ *
+ * **Nada aqui envia, responde nem curte:** os unicos cliques sao em botoes que REVELAM, e a lista
+ * de padroes e de permissao, com teto de 40 caracteres para nao clicar num comentario.
+ */
+async function lerPostInteiro(shadow) {
+  const raiz = fb.raizDoPost();
+  if (!raiz) {
+    falar(shadow, 'Abra um post primeiro — pela contagem de comentarios dele.');
+    return;
+  }
+  if (estado.lendo) {
+    estado.pararLeitura = true;
+    falar(shadow, 'Parando a leitura...');
+    return;
+  }
+
+  estado.lendo = true;
+  estado.pararLeitura = false;
+  desenhar(shadow);
+
+  let semNovidade = 0;
+  try {
+    for (let volta = 1; volta <= MAX_VOLTAS_DA_LEITURA && !estado.pararLeitura; volta++) {
+      const antes = fb.articles(raiz).length;
+
+      const botoes = fb.botoesDeExpandir(raiz);
+      for (const b of botoes.slice(0, 8)) {
+        if (estado.pararLeitura) break;
+        try {
+          b.click();
+        } catch (_) {
+          // Botao que sumiu entre a leitura e o clique: a volta seguinte o pega de novo.
+        }
+        await espera(220);
+      }
+
+      // Rolar o CONTAINER do post, nao a janela: o post vive num modal com rolagem propria.
+      rolarOPost(raiz);
+      await espera(700);
+
+      relerComentarios(); // acumula
+      const depois = fb.articles(raiz).length;
+      falar(
+        shadow,
+        `Lendo o post... ${estado.comentarios.length} comentario(s) ja vistos` +
+          (botoes.length ? `, ${botoes.length} bloco(s) abertos` : '') +
+          ` (volta ${volta}). Clique de novo para parar.`
+      );
+      desenhar(shadow);
+
+      // Duas voltas secas: o Facebook as vezes demora uma para trazer o lote seguinte.
+      semNovidade = !botoes.length && depois <= antes ? semNovidade + 1 : 0;
+      if (semNovidade >= 2) break;
+    }
+  } finally {
+    estado.lendo = false;
+    estado.pararLeitura = false;
+    relerComentarios();
+    desenhar(shadow);
+  }
+
+  const feitos = estado.comentarios.filter((c) => c.respondido).length;
+  const total = fb.contagemDoPost(raiz);
+  falar(
+    shadow,
+    `Leitura terminada: ${estado.comentarios.length} comentario(s), ${feitos} ja respondido(s)` +
+      (total != null ? ` — o post declara ${total}.` : '.')
+  );
+}
+
+const MAX_VOLTAS_DA_LEITURA = 40;
+
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Rola o post para o fim.
+ *
+ * **O post aberto e um modal com rolagem PROPRIA**, entao rolar a janela nao carrega nada. O
+ * container e procurado subindo do primeiro comentario ate achar quem tem o que rolar; falhando,
+ * a janela e a ultima tentativa, que e o caso do post aberto em pagina inteira.
+ */
+/** O article daquele comentario, AGORA. O id e estavel; o elemento nao. */
+function acharPorId(raiz, id) {
+  return fb.articles(raiz).find((art) => fb.idDoComentario(art) === id) || null;
+}
+
+function rolarOPost(raiz) {
+  const art = fb.articles(raiz)[0];
+  for (let n = art || raiz; n && n !== document.body; n = n.parentElement) {
+    if (n.scrollHeight > n.clientHeight + 40) {
+      n.scrollTop = n.scrollHeight;
+      return;
+    }
+  }
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+/**
  * Abre a caixa daquele comentario e acrescenta o texto. NAO envia.
  *
  * O clique e necessario: a caixa so nasce depois dele. E entre o clique e a
@@ -383,12 +550,25 @@ async function inserirDeVerdade(comentario, texto, aviso) {
    * que esta funcao existe para nao repetir.
    */
   const raiz = fb.raizDoPost();
-  if (!raiz || !raiz.contains(comentario.no)) {
-    aviso('Este comentario nao esta mais no post aberto. Clique em "Reler a pagina".');
+  if (!raiz) {
+    aviso('O post fechou. Abra ele de novo e clique em "Reler a pagina".');
     return false;
   }
 
-  const botao = fb.botaoResponder(comentario.no);
+  /**
+   * **O `no` guardado pode estar obsoleto, e desde que a lista ACUMULA isso e o caso comum.**
+   *
+   * O DOM e virtualizado: rolando para ler o post inteiro, os de cima saem da arvore e o nosso
+   * `no` vira um elemento solto. Por isso o article e REACHADO pelo id antes de desistir — o id
+   * (`comment_id`) e estavel, o elemento nao.
+   */
+  const no = raiz.contains(comentario.no) ? comentario.no : acharPorId(raiz, comentario.id);
+  if (!no) {
+    aviso('Este comentario saiu da tela. Role ate ele dentro do post e clique em "Reler a pagina".');
+    return false;
+  }
+
+  const botao = fb.botaoResponder(no);
   if (!botao) {
     aviso('Nao achei o botao "Responder" deste comentario. Role ate ele aparecer na tela e releia.');
     return false;
@@ -747,7 +927,15 @@ function desenhar(shadow) {
     const btIr = document.createElement('button');
     btIr.textContent = 'Ver na pagina';
     btIr.addEventListener('click', () => {
-      c.no.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Mesma razao do `inserir`: com a lista acumulando, o `no` guardado pode ja ter saido da
+      // arvore, e `scrollIntoView` num elemento solto nao leva a lugar nenhum — em silencio.
+      const raiz = fb.raizDoPost();
+      const no = raiz && raiz.contains(c.no) ? c.no : raiz && acharPorId(raiz, c.id);
+      if (!no) {
+        dizer('Este comentario saiu da tela. Clique em "Ler o post inteiro" ou role ate ele.');
+        return;
+      }
+      no.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 
     linha.append(btInserir, btIa, btIr);
@@ -873,7 +1061,8 @@ function desenhar(shadow) {
   const linhaR = document.createElement('div');
   linhaR.className = 'linha';
   const btReler = document.createElement('button');
-  btReler.textContent = 'R  Reler a pagina';
+  btReler.textContent = 'R  Reler';
+  btReler.title = 'Rele o que esta na tela agora, e recarrega as respostas rapidas do candidato';
   btReler.addEventListener('click', async () => {
     relerComentarios();
     // Reler atualiza as DUAS coisas: este painel nao sabe quando ele troca de candidato no
@@ -883,12 +1072,18 @@ function desenhar(shadow) {
   });
 
   const btGuardar = document.createElement('button');
-  btGuardar.textContent = 'G  Guardar como rapida';
+  btGuardar.textContent = 'G  Guardar';
+  btGuardar.title = 'Guarda o que esta no campo como resposta rapida';
   btGuardar.disabled = !estado.texto.trim();
   // O botao e a tecla chamam a MESMA funcao: duas copias divergem na primeira correcao.
   btGuardar.addEventListener('click', () => guardarDoCampo(shadow));
 
-  linhaR.append(btReler, btGuardar);
+  const btLer = document.createElement('button');
+  btLer.textContent = estado.lendo ? 'Parar' : 'L  Ler tudo';
+  btLer.title = 'Expande as respostas e rola o post, acumulando tudo o que achar';
+  btLer.addEventListener('click', () => lerPostInteiro(shadow));
+
+  linhaR.append(btLer, btReler, btGuardar);
 
   /**
    * **A dica ensina SO o que nao esta escrito num botao.** As outras teclas vivem no proprio
@@ -898,7 +1093,7 @@ function desenhar(shadow) {
   if (estado.comentarios.length > 1) {
     const dica = document.createElement('div');
     dica.className = 'dica';
-    dica.textContent = '↑ ↓ trocam o comentario da vez (o realcado)';
+    dica.textContent = '↑ ↓ trocam o comentario da vez (o realcado) · amarelo = ja respondido';
     rodape.append(dica);
   }
 
@@ -976,6 +1171,12 @@ function ligarTeclado(shadow) {
         estado.daVezId = estado.comentarios[prox].id;
         feito();
         desenhar(shadow);
+        return;
+      }
+
+      if (k === 'l') {
+        feito();
+        lerPostInteiro(shadow);
         return;
       }
 

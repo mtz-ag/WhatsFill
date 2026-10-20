@@ -348,4 +348,73 @@ grupo('comentariosDoPost: sem o nome da pagina, NADA e marcado como respondido')
   check(todos[0].respondido === false, 'sem o nome da pagina, erra MOSTRANDO como pendente');
 }
 
+grupo('respostaNossaColapsada: o Facebook diz "X respondeu" ANTES de criar o article');
+{
+  /**
+   * **A causa do amarelo nao aparecer** (print dele, 20/10/2026). Abaixo do comentario da
+   * eleitora estava *"Capitao Martim respondeu · 1 resposta"*, COLAPSADO — e o Facebook so cria o
+   * `[role="article"]` da resposta depois do clique. Sem esta leitura, `respondido` era falso para
+   * todo mundo.
+   */
+  const art = (texto) => ({ innerText: texto });
+
+  check(
+    fbdom.respostaNossaColapsada(art(`Rita Jesus\nBora de 22\n1 h\nCurtir\nResponder\n${PAGINA} respondeu · 1 resposta`), PAGINA),
+    'o resumo colapsado conta como respondido'
+  );
+  check(
+    fbdom.respostaNossaColapsada(art(`Rita Jesus\nBora de 22\n1 h\nCurtir\n${PAGINA} respondeu`), PAGINA),
+    'sem o "· 1 resposta" tambem'
+  );
+  check(
+    fbdom.respostaNossaColapsada(art('Rita Jesus\nBora\n1 h\nCurtir\nCAPITÃO MARTIM respondeu'), 'Capitao Martim'),
+    'acento e caixa do nome da pagina nao decidem isso'
+  );
+
+  /**
+   * **A guarda e a POSICAO.** Antes do primeiro marcador de tempo/botao ainda e o texto do
+   * comentario — e "o Capitao Martim respondeu meu pedido" e o eleitor falando de nos, nao o
+   * Facebook resumindo.
+   */
+  check(
+    !fbdom.respostaNossaColapsada(art(`Rita Jesus\n${PAGINA} respondeu meu pedido, obrigada!\n1 h\nCurtir`), PAGINA),
+    'no TEXTO do comentario nao conta — e o eleitor falando de nos'
+  );
+  check(
+    !fbdom.respostaNossaColapsada(art('Rita Jesus\nBora\n1 h\nCurtir\nPedro Terceiro respondeu · 1 resposta'), PAGINA),
+    'resposta de TERCEIRO colapsada nao conta'
+  );
+  check(!fbdom.respostaNossaColapsada(art('Rita\nBora\n1 h\nCurtir'), PAGINA), 'sem resumo nenhum, falso');
+  check(!fbdom.respostaNossaColapsada(art(`x\n1 h\n${PAGINA} respondeu`), ''), 'sem o nome da pagina nunca marca');
+  check(!fbdom.respostaNossaColapsada(null, PAGINA), 'entrada torta nao derruba');
+}
+
+grupo('botoesDeExpandir: lista de PERMISSAO, com teto de tamanho');
+{
+  const btn = (texto) => ({ seletor: '[role="button"]', innerText: texto });
+  const raiz = (nos) => ({ querySelectorAll: () => nos });
+
+  const achados = (lista) => fbdom.botoesDeExpandir(raiz(lista.map(btn))).map((b) => b.innerText);
+
+  check(achados(['1 resposta']).length === 1, '"1 resposta" revela');
+  check(achados(['12 respostas']).length === 1, '"12 respostas" revela');
+  check(achados(['Ver mais comentarios']).length === 1, '"Ver mais comentarios" revela');
+  check(achados(['Ver mais 3 respostas']).length === 1, '"Ver mais 3 respostas" revela');
+  check(achados(['Ver respostas anteriores']).length === 1, '"Ver respostas anteriores" revela');
+
+  // O que NAO pode ser clicado — e e aqui que mora o risco, porque clicar e agir na pagina dele.
+  check(achados(['Curtir']).length === 0, 'Curtir nao e botao de revelar');
+  check(achados(['Responder']).length === 0, 'Responder nao e botao de revelar');
+  check(achados(['Enviar mensagem']).length === 0, 'Enviar mensagem nao e botao de revelar');
+  check(achados(['Ocultar']).length === 0, 'Ocultar nao e botao de revelar');
+  check(achados(['']).length === 0, 'botao sem texto nao entra');
+
+  /**
+   * **O teto de 40 caracteres e a guarda que importa:** um comentario que por acaso seja um
+   * `role="button"` entraria na lista, e o painel clicaria no que o eleitor escreveu.
+   */
+  const comentarioLongo = 'Ver mais respostas sobre isso porque eu acho que voces precisam saber de uma coisa';
+  check(achados([comentarioLongo]).length === 0, 'texto longo nao e botao, mesmo casando o padrao');
+}
+
 fim();

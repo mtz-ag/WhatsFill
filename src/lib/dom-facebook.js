@@ -407,7 +407,17 @@ export function comentariosDoPost(raiz = document) {
         c.texto &&
         !(pagina && mesmoNome(c.autor, pagina)) // o que NOS comentamos nao e fila
     )
-    .map((c) => ({ ...c, respondido: respondidos.some((pai) => mesmoNome(pai, c.autor)) }));
+    .map((c) => ({
+      ...c,
+      /**
+       * **Duas fontes, e a segunda e a que a print de 20/10 obrigou.** A resposta de verdade
+       * (`respondidos`) so existe depois de alguem EXPANDIR; enquanto isso, o Facebook ja diz
+       * "<pagina> respondeu · 1 resposta" em texto colapsado. Sem a segunda, o amarelo so
+       * apareceria depois de ler o post inteiro.
+       */
+      respondido:
+        respondidos.some((pai) => mesmoNome(pai, c.autor)) || respostaNossaColapsada(c.no, pagina),
+    }));
 }
 
 /**
@@ -418,6 +428,64 @@ export function comentariosDoPost(raiz = document) {
  */
 export function comentariosSemResposta(raiz = document) {
   return comentariosDoPost(raiz).filter((c) => !c.respondido);
+}
+
+/**
+ * **OS BOTOES QUE REVELAM MAIS: "Ver mais comentarios", "1 resposta", "Ver mais respostas".**
+ *
+ * Nasceu da print dele de 20/10/2026, que mostrou a causa do amarelo nao aparecer: embaixo do
+ * comentario da eleitora estava **"Capitao Martim respondeu · 1 resposta"**, COLAPSADO. O Facebook
+ * so cria o `[role="article"]` da resposta depois do clique — entao, sem expandir, `respondido` e
+ * falso para todo mundo e **nada fica amarelo**. E a mesma razao de ele estar rolando a mao.
+ *
+ * **O rotulo nao e medido, e por isso a lista e larga e a PROVA e o efeito:** quem chama clica e
+ * mede se apareceram mais articles. Acertar o texto exato de cada botao do Facebook e adivinhacao
+ * que envelhece na primeira traducao; contar o que apareceu, nao.
+ *
+ * **O teto de 40 caracteres e a guarda** — sem ele, um comentario que por acaso seja um
+ * `role="button"` entraria na lista e o painel clicaria no que o eleitor escreveu.
+ */
+const REVELAM = [
+  /ver (mais|todos os|todas as)\s+\w*\s*coment/i,
+  /^\d+\s+respostas?$/i,
+  /ver\s+(mais|as|todas as)?\s*\d*\s*respostas?/i,
+  /respostas? anterior/i,
+  /^ver mais$/i,
+  /^ver anteriores$/i,
+];
+
+export function botoesDeExpandir(raiz = document) {
+  return [...raiz.querySelectorAll('[role="button"]')].filter((b) => {
+    const t = String(b.innerText || '').trim();
+    return !!t && t.length <= 40 && REVELAM.some((p) => p.test(t));
+  });
+}
+
+/**
+ * **O comentario cuja resposta esta COLAPSADA ja diz isso em texto** — "<pagina> respondeu".
+ *
+ * Rede de seguranca do expandir: pegando este texto, o amarelo aparece **antes** de ele mandar ler
+ * o post inteiro. Nao substitui o expandir, porque sem os articles nao da para saber QUEM mais
+ * respondeu nem reusar a caixa.
+ *
+ * **A guarda e a POSICAO:** so conta depois do primeiro marcador de tempo/botao, que e onde o
+ * texto do comentario acaba (ver `limparTextoDoComentario`). No meio do texto, "o Capitao Martim
+ * respondeu" e o eleitor falando de nos.
+ */
+export function respostaNossaColapsada(art, pagina) {
+  if (!pagina) return false;
+  const linhas = String(art?.innerText || '').split('\n');
+  let passouOsBotoes = false;
+  for (const linha of linhas) {
+    const l = linha.trim();
+    if (!passouOsBotoes) {
+      if (LINHA_DE_TEMPO.test(l) || LINHA_DE_BOTAO.test(l)) passouOsBotoes = true;
+      continue;
+    }
+    // "Capitao Martim respondeu", "Capitao Martim respondeu · 1 resposta".
+    if (/\brespondeu\b/i.test(l) && mesmoNome(l.split(/\brespondeu\b/i)[0], pagina)) return true;
+  }
+  return false;
 }
 
 /** O botao "Responder" DESTE comentario. */

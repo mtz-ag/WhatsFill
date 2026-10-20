@@ -1,6 +1,6 @@
-## 2026-10-20 - v3.185.0 - ESTADO DE AGORA - o painel do Facebook: IA consertada, respostas com variacoes, teclado, menos alarme e o amarelo dos respondidos
+## 2026-10-20 - v3.186.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e o amarelo passou a funcionar
 
-Seis coisas foram ao ar hoje, nesta ordem — cada uma depende da anterior.
+Sete coisas foram ao ar hoje, nesta ordem — cada uma depende da anterior.
 
 ---
 
@@ -291,10 +291,64 @@ todo.
 
 ---
 
+## 7. "Ler tudo": o amarelo nao funcionava pela MESMA razao de ele rolar a mao (v3.186.0)
+
+**Print dele:** *"nao alterou a cor e preciso que faca uma leitura do post pegando todos os
+comentarios, estou tendo que fazer isso manualmente; a leitura ira servir pra ver quais foram
+respondidos tambem"*.
+
+### A causa estava na propria print
+
+```
+Rita Jesus
+Essa matematica na fecha · Dito isso bora de 22
+1h · Curtir · Responder · Enviar mensagem · Ocultar
+    Capitao Martim respondeu · 1 resposta        44 min
+```
+
+**A nossa resposta esta COLAPSADA.** O Facebook so cria o `[role="article"]` dela depois que
+alguem clica em "1 resposta" — entao o painel nao via resposta nossa nenhuma e `respondido` era
+falso para todo mundo. **Era a mesma razao de ele estar rolando a mao:** o que nao foi expandido
+nao existe na arvore. **Os dois pedidos tinham uma solucao so.**
+
+### O botao "L Ler tudo"
+
+Expande as respostas, rola o post e **acumula** o que achar, em voltas. Clicar de novo para.
+
+- **A PROVA E O EFEITO, nunca o rotulo do botao.** Cada volta clica no que parece revelar, rola, e
+  **conta quantos articles apareceram**. Acertar o texto exato de cada botao do Facebook e
+  adivinhacao que envelhece na primeira traducao; contar o que surgiu, nao.
+- **Para com DUAS voltas secas**, porque uma so erraria no instante em que o Facebook esta
+  carregando o lote seguinte.
+- **Nada ali envia, responde nem curte.** Os unicos cliques sao em botoes que REVELAM, por lista
+  de permissao com **teto de 40 caracteres** — sem o teto, um comentario que por acaso seja um
+  `role="button"` entraria na lista e o painel clicaria no que o eleitor escreveu.
+
+### A lista passou a ACUMULAR, e isso nao era opcional
+
+O DOM e virtualizado: rolando para carregar os de baixo, **os de cima saem da arvore**. Com a
+lista sendo a foto de agora, "ler o post inteiro" nao produziria lista nenhuma — ela so trocaria
+de conteudo. **Era exatamente por isso que ele estava anotando a mao.**
+
+**O preco e o `no` obsoleto**, tratado nos dois lugares que o usam: **"Abrir e inserir" e "Ver na
+pagina" reacham o article pelo id** antes de desistir. O `comment_id` e estavel; o elemento nao.
+Sem isso, "Ver na pagina" rolaria para um elemento solto **em silencio**.
+
+### E o amarelo funciona ANTES de ler tudo
+
+`respostaNossaColapsada` le o resumo *"<pagina> respondeu"*. **A guarda e a POSICAO:** so conta
+depois do primeiro marcador de tempo/botao — no meio do texto, *"o Capitao Martim respondeu meu
+pedido"* e o eleitor falando de nos.
+
+**Tecla nova: L.** E o rodape ficou com `L Ler tudo · R Reler · G Guardar`, encurtados porque tres
+botoes nao cabiam numa linha de 380px.
+
+---
+
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.185.0** — e assim que se sabe que chegou.
+dizer **v3.186.0** — e assim que se sabe que chegou.
 
 ## O que falta, e e decisao dele
 

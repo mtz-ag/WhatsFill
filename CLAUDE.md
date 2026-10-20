@@ -3593,6 +3593,29 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **A RESPOSTA NOSSA FICA COLAPSADA, E POR ISSO O AMARELO NÃO APARECIA** (20/10/2026, print dele:
+  *"não alterou a cor"*). Debaixo do comentário da eleitora o Facebook escreve **"Capitão Martim
+  respondeu · 1 resposta"** — e **só cria o `[role="article"]` da resposta depois do clique.**
+  Então `comentariosDoPost` não via resposta nossa nenhuma e `respondido` era falso para todos.
+  **É a mesma causa de ele estar rolando o post à mão:** o que não foi expandido não existe na
+  árvore. Os dois pedidos tinham uma solução só.
+  **Duas fontes agora:** o article de verdade (quando expandido) e `respostaNossaColapsada`, que lê
+  o resumo. **A guarda da segunda é a POSIÇÃO** — só conta depois do primeiro marcador de
+  tempo/botão, porque no meio do texto *"o Capitão Martim respondeu meu pedido"* é o eleitor
+  falando de nós.
+  **`botoesDeExpandir` é lista de PERMISSÃO com teto de 40 caracteres**, e o teto é a guarda que
+  importa: clicar é agir na página dele, e um comentário que por acaso seja `role="button"` entraria
+  na lista. **O rótulo não é medido de propósito — a PROVA é o efeito:** a volta clica, rola e conta
+  quantos articles apareceram. Acertar o texto de cada botão do Facebook envelhece na primeira
+  tradução; contar o que surgiu, não. Ela só para com **duas voltas secas**, porque uma só erraria
+  no instante em que o Facebook está carregando.
+  **A LISTA PASSOU A ACUMULAR, e isso não era opcional:** o DOM é virtualizado, então rolar para
+  carregar os de baixo **tira os de cima da árvore** — com a lista sendo a foto de agora, "ler o
+  post inteiro" não produziria lista nenhuma, só trocaria de conteúdo.
+  **O preço do acumular é o `no` obsoleto**, e ele é tratado nos DOIS lugares que o usam: `inserir`
+  e "Ver na página" **reacham o article pelo id** antes de desistir — o `comment_id` é estável, o
+  elemento não. Sem isso, "Ver na página" rolaria para um elemento solto **em silêncio**.
+
 - **A LISTA DO FACEBOOK TRAZ OS RESPONDIDOS, EM AMARELO** (20/10/2026, pedido dele: *"troque a cor
   dos que receberam resposta na lista para amarelo"*). Até então eles eram **descartados**, e o
   efeito era o comentário **sumir da lista dois segundos depois de ele responder** — bom como
