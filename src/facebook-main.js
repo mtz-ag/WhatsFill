@@ -45,6 +45,7 @@ import * as store from './lib/store.js';
 import * as perfis from './lib/perfis.js';
 import * as gabinete from './lib/gabinete.js';
 import { rascunharComentario } from './lib/ia-cliente.js';
+import * as rapidas from './lib/respostas-comentario.js';
 
 const HOST_ID = 'whatsfill-facebook-host';
 const VERSAO = chrome.runtime.getManifest().version;
@@ -56,7 +57,51 @@ const estado = {
   aviso: '',
   texto: '',
   status: '',
+  /**
+   * **As respostas rapidas DESTE candidato** (20/10/2026) — pedido dele: *"preciso de respostas
+   * rapidas para o facebook, a ia nao e necessaria para tudo"*.
+   *
+   * Lidas na montagem e no "Reler a pagina": este painel nao fica sabendo quando ele troca de
+   * candidato no mobiliza, entao reler e o gesto que atualiza as duas coisas de uma vez.
+   */
+  respostas: [],
+  /** O id da resposta sendo renomeada — vazio quando nenhuma esta. */
+  renomeando: '',
+  /** O modo de organizar a tira (renomear/apagar). Fora dele a tira e so os rotulos. */
+  gerindo: false,
 };
+
+/**
+ * **Le as respostas rapidas do candidato logado.**
+ *
+ * As de fabrica entram como `vazio` de proposito: `perfis.ler` devolveria `[]` para o candidato
+ * que nunca guardou nada, e tira vazia faria o painel parecer quebrado. Elas podem servir a
+ * qualquer um porque **nenhuma cita candidato pelo nome** — ver `RESPOSTAS_DE_FABRICA`.
+ */
+async function carregarRespostas() {
+  try {
+    const lista = await perfis.ler(
+      'respostasComentario',
+      await store.get('perfilAtivo'),
+      rapidas.RESPOSTAS_DE_FABRICA
+    );
+    estado.respostas = rapidas.sanitizar(lista);
+  } catch (_) {
+    // Falha de armazenamento nao pode derrubar o painel: sem a tira ele ainda le e insere.
+    estado.respostas = [];
+  }
+}
+
+/** Grava a lista no candidato logado. Devolve o que deu errado, ou vazio. */
+async function salvarRespostas(lista) {
+  estado.respostas = rapidas.sanitizar(lista);
+  try {
+    await perfis.gravar('respostasComentario', await store.get('perfilAtivo'), estado.respostas);
+    return '';
+  } catch (err) {
+    return `nao consegui guardar: ${err?.message || err}`;
+  }
+}
 
 /* ------------------------------------------------------------------ */
 
@@ -100,6 +145,27 @@ function css() {
     }
     .rodape { padding: 9px 10px; border-top: 1px solid #e4e6eb; background: #fafbfc; }
     .linha { display: flex; gap: 6px; align-items: center; margin-top: 7px; }
+    /* A tira das respostas rapidas. Quebra em varias linhas de proposito: com
+       rolagem lateral ele nao veria que existe uma quinta resposta.
+       No uso normal sao SO os rotulos -- o renomear e o apagar vivem atras do
+       botao de gerir, senao seis pares de [rotulo][x][v] empilham seis linhas
+       no rodape e enterram a lista de comentarios, que e o que ele veio ler. */
+    .rapidas { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+    .rapidas .par { display: flex; align-items: stretch; }
+    .rapidas .usar {
+      max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      padding: 4px 8px;
+    }
+    /* Gerindo, o rotulo encosta nos controles e vira a ponta esquerda do par. */
+    .rapidas .par.edit .usar { border-radius: 6px 0 0 6px; border-right: 0; }
+    .rapidas .mini { padding: 4px 6px; border-radius: 0; border-right: 0; color: #65676b; }
+    .rapidas .fim { border-radius: 0 6px 6px 0; border-right: 1px solid #ccd0d5; }
+    .rapidas .engrenagem { padding: 4px 7px; color: #65676b; }
+    .rapidas .engrenagem.ligado { background: #e7f0fd; border-color: #1877f2; color: #1877f2; }
+    .rapidas input {
+      font: inherit; padding: 4px 6px; border: 1px solid #1877f2; border-radius: 6px;
+      max-width: 150px;
+    }
     .status { color: #65676b; margin-top: 6px; min-height: 16px; }
     /* Escondido, o painel solta o empurrao e vira so a pestana. */
     .pestana {
@@ -407,6 +473,121 @@ function desenhar(shadow) {
   const rodape = document.createElement('div');
   rodape.className = 'rodape';
 
+  /**
+   * **A TIRA DAS RESPOSTAS RAPIDAS, e ela fica ANTES do campo.**
+   *
+   * A ordem e a do gesto: escolhe, le no campo, insere. E a tira e UMA, junto do campo, e nao uma
+   * por comentario — a lista tem N comentarios, e repetir seis botoes em cada um encheria a tela
+   * com o que ele veio ler. O campo ja e compartilhado: quem escolhe o comentario e o
+   * "Abrir e inserir".
+   *
+   * **Clicar NUNCA insere na pagina**, so enche o campo. E a mesma fronteira da IA: ele le antes.
+   */
+  if (estado.respostas.length) {
+    const tira = document.createElement('div');
+    tira.className = 'rapidas';
+
+    for (const r of estado.respostas) {
+      const par = document.createElement('div');
+      par.className = 'par';
+
+      if (estado.renomeando === r.id) {
+        // Renomear troca o botao por um campo no lugar dele — sem dialogo, que num content
+        // script e feio e pode ser bloqueado pela pagina.
+        const nome = document.createElement('input');
+        nome.value = r.nome;
+        nome.maxLength = rapidas.MAX_NOME;
+        const fechar = async (gravar) => {
+          estado.renomeando = '';
+          if (gravar) {
+            const erro = await salvarRespostas(rapidas.renomear(estado.respostas, r.id, nome.value));
+            if (erro) estado.status = erro;
+          }
+          desenhar(shadow);
+        };
+        nome.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter') fechar(true);
+          // Esc so fecha. `isTrusted` porque a extensao dispara Escape no document (07/09) —
+          // aqui o evento e do shadow, mas a disciplina e a mesma.
+          if (ev.key === 'Escape' && ev.isTrusted) fechar(false);
+        });
+        const ok = document.createElement('button');
+        ok.className = 'mini fim';
+        ok.textContent = '✓';
+        ok.title = 'Guardar o nome';
+        ok.addEventListener('click', () => fechar(true));
+        par.append(nome, ok);
+        tira.append(par);
+        continue;
+      }
+
+      const usar = document.createElement('button');
+      usar.className = 'usar';
+      usar.textContent = r.nome;
+      usar.title = r.texto;
+      usar.addEventListener('click', () => {
+        estado.texto = r.texto;
+        desenhar(shadow);
+        dizer('Resposta no campo. Leia e clique em "Abrir e inserir" no comentario.');
+      });
+      par.append(usar);
+
+      /**
+       * **✎ e ✕ so existem no modo de gerir**, e sao duas coisas de uma vez: a tira fica com uma
+       * linha de botoes em vez de tres (o rodape nao pode comer a lista de comentarios), e o
+       * apagar deixa de ficar a um dedo de distancia de quem so queria usar a resposta.
+       */
+      if (estado.gerindo) {
+        par.className = 'par edit';
+
+        const editar = document.createElement('button');
+        editar.className = 'mini';
+        editar.textContent = '✎';
+        editar.title = 'Renomear';
+        editar.addEventListener('click', () => {
+          estado.renomeando = r.id;
+          desenhar(shadow);
+        });
+
+        const tirar = document.createElement('button');
+        tirar.className = 'mini fim';
+        tirar.textContent = '✕';
+        tirar.title = 'Apagar (o texto vai para o campo, da para guardar de novo)';
+        tirar.addEventListener('click', async () => {
+          /**
+           * **Apagar devolve o texto ao CAMPO** — e o desfazer barato: um clique em "Guardar como
+           * rapida" traz de volta. Sem isso, um ✕ errado apagaria um texto que ele escreveu e nao
+           * tem copia em lugar nenhum (a licao de 01/09, *"acabei de perder todo meu trabalho"*).
+           */
+          const { lista, texto } = rapidas.apagar(estado.respostas, r.id);
+          estado.texto = texto;
+          const erro = await salvarRespostas(lista);
+          desenhar(shadow);
+          dizer(erro || 'Apagada. O texto esta no campo — "Guardar como rapida" desfaz.');
+        });
+
+        par.append(editar, tirar);
+      }
+
+      tira.append(par);
+    }
+
+    const engrenagem = document.createElement('button');
+    engrenagem.className = 'engrenagem' + (estado.gerindo ? ' ligado' : '');
+    engrenagem.textContent = '⚙';
+    engrenagem.title = estado.gerindo ? 'Terminar de organizar' : 'Renomear ou apagar respostas';
+    engrenagem.addEventListener('click', () => {
+      estado.gerindo = !estado.gerindo;
+      // Sair do modo fecha qualquer renomeacao aberta: campo de edicao orfao numa tira que
+      // voltou ao normal e tela suja.
+      if (!estado.gerindo) estado.renomeando = '';
+      desenhar(shadow);
+    });
+    tira.append(engrenagem);
+
+    rodape.append(tira);
+  }
+
   const campo = document.createElement('textarea');
   campo.placeholder = 'O texto da resposta. Ele e ACRESCENTADO depois da mencao, e quem envia e voce.';
   campo.value = estado.texto;
@@ -418,15 +599,51 @@ function desenhar(shadow) {
   linhaR.className = 'linha';
   const btReler = document.createElement('button');
   btReler.textContent = 'Reler a pagina';
-  btReler.addEventListener('click', () => {
+  btReler.addEventListener('click', async () => {
     relerComentarios();
+    // Reler atualiza as DUAS coisas: este painel nao sabe quando ele troca de candidato no
+    // mobiliza, entao e aqui que a tira do candidato certo chega.
+    await carregarRespostas();
     desenhar(shadow);
   });
-  linhaR.append(btReler);
+
+  const btGuardar = document.createElement('button');
+  btGuardar.textContent = 'Guardar como rapida';
+  btGuardar.disabled = !estado.texto.trim();
+  btGuardar.addEventListener('click', async () => {
+    const { lista, jaExistia, cheia } = rapidas.guardar(estado.respostas, estado.texto);
+    if (cheia) {
+      dizer(`A tira ja tem ${rapidas.MAX_RESPOSTAS} respostas — apague uma antes de guardar outra.`);
+      return;
+    }
+    if (jaExistia) {
+      dizer('Esta resposta ja esta guardada.');
+      return;
+    }
+    const erro = await salvarRespostas(lista);
+    desenhar(shadow);
+    dizer(erro || 'Guardada. Use o ✎ para dar um nome mais curto.');
+  });
+
+  linhaR.append(btReler, btGuardar);
 
   rodape.append(campo, linhaR, status);
   caixa.append(topo, corpo, rodape);
   shadow.append(caixa);
+
+  /**
+   * **O foco vai para o campo de renomear DEPOIS do append** — antes dele o elemento nem esta no
+   * documento e `focus()` nao faz nada. Sem isto o ✎ abre um campo que ele precisa clicar de novo.
+   *
+   * `select()` junto: o nome ja existe, e quem renomeia quase sempre quer escrever por cima.
+   */
+  if (estado.renomeando) {
+    const campoNome = shadow.querySelector('.rapidas input');
+    if (campoNome) {
+      campoNome.focus();
+      campoNome.select();
+    }
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -444,6 +661,13 @@ function montar() {
 
   relerComentarios();
   desenhar(shadow);
+
+  /**
+   * **A tira chega DEPOIS, e o painel ja esta na tela.** Ler o armazenamento e assincrono, e
+   * esperar por ele atrasaria a lista de comentarios, que e o que ele veio ver. Falhando, o painel
+   * fica sem a tira e continua servindo para ler e inserir.
+   */
+  carregarRespostas().then(() => desenhar(shadow));
 
   /**
    * O painel monta em `document_idle`, que e ANTES de o Facebook ter carregado
@@ -466,8 +690,14 @@ function montar() {
     const mudouDePost = location.href !== ondeEstava;
     ondeEstava = location.href;
 
-    const digitando = shadow.activeElement && shadow.activeElement.tagName === 'TEXTAREA';
-    if (digitando && !mudouDePost) return;
+    /**
+     * **`INPUT` entrou junto do `TEXTAREA` em 20/10**: o campo de renomear a resposta rapida e um
+     * `input`, e sem ele o nome que ele estivesse digitando perdia o cursor a cada 2s. A guarda e
+     * sobre quem esta ESCREVENDO, nao sobre qual elemento e.
+     */
+    const escrevendo =
+      shadow.activeElement && ['TEXTAREA', 'INPUT'].includes(shadow.activeElement.tagName);
+    if (escrevendo && !mudouDePost) return;
 
     relerComentarios();
     const agora = estado.comentarios.map((c) => c.id).join('|');

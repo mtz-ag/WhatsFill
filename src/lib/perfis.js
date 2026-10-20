@@ -60,6 +60,16 @@ export const CHAVES_DO_PERFIL = [
   'contentTemplates',
   'modelosPadraoAnuncio',
   'modeloPadraoAnuncio',
+  /**
+   * **As respostas rápidas do comentário** (20/10/2026). Pelo mesmo critério da linha de cima:
+   * saem para o eleitor, na página DAQUELE candidato, com a cara dele.
+   *
+   * **Diferente das outras, o candidato novo não começa vazio:** `facebook-main` passa as de
+   * fábrica como `vazio`, e elas podem servir a qualquer um porque nenhuma cita candidato pelo
+   * nome. Lista vazia ali faria o painel parecer quebrado — a armadilha que tirou
+   * `padroesDeAnuncio` desta lista.
+   */
+  'respostasComentario',
 ];
 
 /**

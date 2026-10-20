@@ -3,6 +3,7 @@
  *
  * O token NÃO fica aqui de propósito (só em memória, ver bus.js).
  */
+import { RESPOSTAS_DE_FABRICA } from './respostas-comentario.js';
 
 /**
  * Pergunta sobre grupos que a pessoa já participa, acrescentada ao pedido de dados.
@@ -724,6 +725,17 @@ export const DEFAULT_TEMPLATES = [
 
 const DEFAULTS = {
   templates: DEFAULT_TEMPLATES,
+  /**
+   * **As respostas rápidas do painel de COMENTÁRIOS** — lista própria, nunca as do WhatsApp.
+   *
+   * Medido em 20/10/2026: das 21 respostas prontas, **3 serviriam** num comentário público. Cinco
+   * pedem o cadastro (proibição escrita do canal), dezesseis têm `{{saudacao}}` — e no Facebook
+   * não há contato carregado, então a variável não resolve.
+   *
+   * Array: o `get` **não mescla** (mesclar lista daria resultado errado, como em `fluxosSalvos`),
+   * então o default vale enquanto a chave faltar e some assim que ele guardar a primeira.
+   */
+  respostasComentario: RESPOSTAS_DE_FABRICA,
   /**
    * Etiqueta de quem chegou por anúncio. Vazio = não etiqueta ninguém por essa via.
    *

@@ -87,6 +87,7 @@ src/lib/observacoes.js  o caderno das sugestoes erradas, com o caso junto (puro,
 src/lib/facebook.js     COMENTARIOS da pagina: rotas, leitura e guardas (puro, testado)
 src/lib/facebook-cliente.js  ponte painel <-> worker; o token NUNCA volta para a pagina
 src/lib/dom-facebook.js UNICO arquivo com seletores da PAGINA DO FACEBOOK (irmao do dom.js)
+src/lib/respostas-comentario.js  RESPOSTAS RAPIDAS do comentario: lista propria, nunca as do WhatsApp (puro, testado)
 src/facebook-content.js    carregador na aba do facebook.com (gemeo do content.js)
 src/facebook-main.js       o painel de COMENTARIOS, flutuante, montado na aba do Facebook
 src/fluxo.html/.css/.js JANELA do fluxo: o QUADRO (caixas soltas, fios, arrastar, editar)
@@ -3592,6 +3593,30 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **AS RESPOSTAS RÁPIDAS DO COMENTÁRIO SÃO LISTA PRÓPRIA, E ISSO É REGRA E NÃO PREFERÊNCIA**
+  (20/10/2026, pedido dele: *"preciso de respostas rapidas para o facebook, a ia nao e necessaria
+  para tudo"*). **Medido contra as 21 respostas prontas: 3 serviriam.** Cinco **pedem o cadastro**
+  (`Nome , Cidade`) — proibição escrita do canal público, então reusá-las mandaria o formulário
+  para a página onde todo mundo vê; **dezesseis têm `{{saudacao}}`** e no Facebook **não há contato
+  carregado**, então a variável não resolve; e várias passam de 260 caracteres.
+  `src/lib/respostas-comentario.js` + a chave `respostasComentario`, **por candidato** (sai para o
+  eleitor, na página dele).
+  **As de fábrica NÃO citam candidato pelo nome, e isso não é estilo:** é o que as deixa servir de
+  `vazio` no `perfis.ler`, para o candidato novo não abrir o painel com tira vazia — a armadilha
+  que tirou `padroesDeAnuncio` daquela lista. **Há teste exigindo isso** e exigindo que elas passem
+  pela **própria `revisarRascunho`**: promessa, afirmar que já fizemos e afirmar que temos são os
+  mesmos riscos, venha o texto do modelo ou da minha mão.
+  **A tira é UMA, junto do campo, nunca uma por comentário** — a lista tem N comentários, e seis
+  botões em cada um enterrariam o que ele veio ler. **Clicar enche o CAMPO, nunca insere**: a mesma
+  fronteira da IA.
+  **Apagar devolve o texto ao campo** — é o desfazer barato que a lição de 01/09 pede sem pilha
+  nenhuma: um clique em "Guardar como rápida" traz de volta.
+  **`INPUT` entrou na guarda de foco do laço de 2s** junto do `TEXTAREA`: o campo de renomear é um
+  `input`, e sem isso o nome perdia o cursor a cada releitura. **A guarda é sobre quem está
+  ESCREVENDO, não sobre qual elemento é.**
+  **O texto "Dia 25 — 2º turno" tem PRAZO e a data está no NOME do botão**, porque texto com data
+  dentro envelhece sozinho (19/10) — passado 25/10 ele tem de sair ou ser reescrito.
+
 - **A API DEVOLVE O JSON COMO TEXTO, E O SIMULADO DO TESTE DEVOLVIA OBJETO** (20/10/2026, print do
   painel do Facebook: *"a IA não devolveu um rascunho legível"*). **Medido: `validarComentario`
   devolvia `null` em 100% das chamadas** — `PROVEDORES[*].texto()` entrega `message.content`
@@ -5625,10 +5650,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > `checar-modulos`. Comentário dentro de template literal não leva crase — e é mais uma razão para
 > o checador ser rodado, e não só o `--check`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e cinco suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e seis suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs && node tests/ia-validadores.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs && node tests/ia-validadores.test.mjs && node tests/respostas-comentario.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

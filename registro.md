@@ -1,12 +1,15 @@
-## 2026-10-20 - v3.180.0 - ESTADO DE AGORA - o botao IA do comentario nunca funcionou, e agora funciona
+## 2026-10-20 - v3.181.0 - ESTADO DE AGORA - respostas rapidas no painel do Facebook (e o conserto da IA)
 
-**Print dele:** o painel de comentarios no ar, tres comentarios lidos certos, e embaixo
-**"a IA nao devolveu um rascunho legivel"**.
+Duas coisas foram ao ar hoje. A segunda depende da primeira ter sido consertada.
 
-### A causa: a API devolve TEXTO, e o validador exigia objeto
+---
 
-**Medido antes de mexer:** `validarComentario` devolvia `null` para a forma que a API entrega de
-verdade — e `null` ali vira exatamente aquela frase.
+## 1. O botao IA do comentario nunca funcionou (v3.180.0)
+
+**Print dele:** o painel no ar, os comentarios lidos certos, e embaixo **"a IA nao devolveu um
+rascunho legivel"**.
+
+**Medido antes de mexer:** `validarComentario` devolvia `null` para a forma que a API entrega.
 
 ```
 validarComentario(string) -> null
@@ -14,66 +17,104 @@ validarComentario(objeto) -> { texto: "Obrigado pelo apoio!", ... }
 ```
 
 `PROVEDORES[*].texto()` entrega `message.content` (OpenAI) ou o bloco `text` (Anthropic): **o JSON
-do modelo como STRING**, nas tres casas. Os **sete** validadores vizinhos fazem o `JSON.parse`;
-este, escrito ontem, nasceu sem ele.
+do modelo como STRING**. Os **sete** validadores vizinhos fazem o `JSON.parse`; este nasceu sem ele.
+**Entao o botao falhava em 100% das chamadas, e cada uma saiu paga.**
 
-**Entao o botao IA nunca funcionou — 100% das chamadas**, e cada uma saiu **paga**. A tela mostrava
-o sintoma, como ja aconteceu antes neste projeto.
+**Por que o teste de ontem ficou verde:** o simulado do worker devolvia `decisao` como **objeto ja
+pronto** — a forma que eu supus, nao a que o worker entrega. Corrigido o simulado e reintroduzido o
+defeito, **11 assercoes caem**.
 
-### Por que o teste de ontem ficou verde: ele provava a minha suposicao
+**O que impede a nona vez:** `tests/ia-validadores.test.mjs` varre os oito e trava a propriedade que
+nao depende de conhecer os campos — **ler a string da o mesmo resultado que ler o objeto**.
 
-O simulado do worker devolvia `decisao` como **objeto ja pronto** — a forma que eu supus, nao a que
-o worker entrega. Corrigido o simulado para a forma real e reintroduzido o defeito, **11 assercoes
-caem**: o teste teria pego de cara.
+A varredura achou que `validarRascunho` **aceita prosa solta**, e isso e deliberado (texto puro com
+`confianca: 0`, nunca sai sozinho). **No comentario a escolha e a oposta e tambem de proposito:** o
+canal e publico, e prosa e recusada com o motivo na tela.
 
-E a mesma licao de 14/10 (*reconstrucao de contexto copia a composicao do painel, nunca a funcao de
-nome parecido*), agora na ponte com o worker: **simulado copia a FORMA REAL do que se troca.**
+---
 
-### O que impede a nona vez
+## 2. Respostas rapidas, sem IA (v3.181.0)
 
-O bloco de `JSON.parse` estava **copiado em sete lugares**, e foi a repeticao que deixou o oitavo
-escapar. **Nao centralizei:** mexer nos sete tocaria caminhos que atendem eleitor hoje.
+**Pedido dele:** *"preciso de respostas rapidas para o facebook, a ia nao e necessaria para tudo"*.
+Escolhas dele: **eu proponho os textos e ele corrige**, e **tudo se gerencia no painel do Facebook**.
 
-Quem segura e **`tests/ia-validadores.test.mjs`** (suite **25**), que varre os oito e trava a
-propriedade que nao depende de conhecer os campos de cada esquema:
+### A lista e PROPRIA, e isso e regra e nao preferencia
 
-> **ler a string tem de dar o mesmo resultado que ler o objeto.**
+**Medido contra as 21 respostas prontas do WhatsApp: 3 serviriam.**
 
-Ele exige tambem que o exemplo plausivel de cada um seja **aceito** — senao duas recusas iguais
-passariam e o teste nao provaria nada.
+| problema | quantas |
+|---|---|
+| **pedem o cadastro** (`Nome , Cidade`) | 5 |
+| tem `{{saudacao}}` / `{{cidade}}` / `{{link_grupo}}` | 16 |
+| passam de 260 caracteres | 6 |
 
-### Uma diferenca achada pela varredura, e ela e deliberada dos dois lados
+Pedir nome e cidade e **proibicao escrita do canal publico** — reusa-las mandaria o formulario para
+a pagina onde todo mundo ve. E no Facebook **nao ha contato carregado**: a variavel nao resolve,
+sairia `{{saudacao}}` cru para o eleitor.
 
-`validarRascunho` **aceita prosa solta**: vira texto puro com `confianca: 0`, que e a forma anterior
-ao esquema. Assim um modelo que ignore o esquema ainda produz rascunho, e **sem confianca ele nunca
-passa do limiar do envio automatico** — o texto so chega ao campo, para ele ler.
+### Como funciona
 
-**No comentario a escolha e a oposta:** o canal e **publico**, nao ha forma antiga a acomodar, e
-prosa e recusada com o motivo na tela. As duas estao escritas no teste com o porque.
+- A **tira de botoes** fica junto do campo, no rodape. **Uma so, nunca uma por comentario** — a
+  lista tem N comentarios, e seis botoes em cada um enterrariam o que ele veio ler.
+- **Clicar enche o CAMPO, nunca insere na pagina.** Mesma fronteira da IA: ele le, depois clica em
+  "Abrir e inserir" no comentario que quiser.
+- **"Guardar como rapida"** pega o que esta no campo. O rotulo sai do proprio texto, entao guardar
+  nao exige digitar nome nenhum.
+- **O ⚙ abre o modo de organizar**, e so nele aparecem o ✎ (renomear) e o ✕ (apagar). **Duas razoes,
+  e a primeira foi medida na conta de altura:** seis pares de `[rotulo][✎][✕]` empilham seis linhas
+  no rodape e enterram a lista de comentarios — a poluicao de que ele ja reclamou em 10/09. A
+  segunda e que o apagar deixa de ficar a um dedo de quem so queria usar a resposta.
+- **✕ apaga — e devolve o texto ao campo.** E o desfazer barato: um clique em guardar traz de
+  volta, sem pilha de desfazer.
+- **"Reler a pagina" atualiza as duas coisas:** os comentarios e a tira. E por ali que a tira do
+  candidato certo chega depois de ele trocar de candidato no mobiliza.
 
-### Para usar
+### Os seis textos de fabrica — **confira e corrija o que nao gostar**
 
-**Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho do
-painel tem de dizer **v3.180.0** — e assim que se sabe que o conserto chegou.
+| botao | texto |
+|---|---|
+| Agradecer o apoio | Muito obrigado pelo apoio! Seguimos juntos. 🙏 |
+| **Dia 25 — 2o turno** | Dia 25 é 22! Leva a família e os amigos para votar. 💪 |
+| Pro privado | Me chama na mensagem da página que a gente vê isso com calma por lá. |
+| Obrigado pela info | Obrigado por trazer, vamos acompanhar. 🙏 |
+| Está junto | É isso aí! Obrigado por estar junto nessa. 💪 |
+| Seguir a página | Obrigado! Segue a página para não perder nada. 👊 |
 
-### O que esta medido e o que nao esta
+Cada um sai de uma regra que ja existe: **pedido pessoal vai para o privado** (nao se nega em
+publico), **denuncia se agradece e nao se discute** (23/09), e **quem xinga o adversario esta do
+nosso lado — agradece, nunca modera** (regra 17, 25/09).
 
-- **Medido:** o validador, a cadeia painel -> cliente -> worker, as travas (promessa, afirmar que ja
-  fizemos, chapa trocada, eleicao encerrada) e a leitura do post. 25 suites verdes.
-- **CALCULADO, nao medido ao vivo:** o prompt do comentario e **572 tokens de sistema + ~37 do
-  comentario**, contra os ~10 mil do WhatsApp. Com ~60 tokens de saida da **~US$ 0,0014 por
-  rascunho no gpt-5** e ~US$ 0,0009 no Haiku, a frio. **O numero de verdade aparece no painel
-  depois do uso** — este e o tamanho do prompt, nao a fatura.
+**Os seis passam pela propria `revisarRascunho`**, com teste: nenhum promete entrega, nenhum afirma
+que ja fizemos, nenhum afirma que temos, nenhum pede cadastro, nenhum tem variavel, e nenhum passa
+de 140 caracteres.
 
-### O que falta, e e decisao dele
+### Duas coisas para ele saber
 
-- **Comentario de uma palavra** (**"22"**, boa parte desta pagina): hoje o botao chama a IA de
-  qualquer jeito, porque quem pediu foi ele, naquele comentario. `facebook.pedeRascunho` ja sabe
-  quando nao vale gastar; **ligar isso a uma resposta pronta em vez da IA e escolha dele.**
-- **A ordenacao "Mais relevantes" esconde comentarios** — o aviso amarelo do painel diz isso, e o
-  post da print declara 17. Trocar para "Todos os comentarios" e rolar dentro do post.
+- **"Dia 25 — 2o turno" EXPIRA.** Texto com data dentro envelhece sozinho (19/10), e por isso a
+  data esta no NOME do botao: passado **25/10** ele tem de sair ou ser reescrito.
+- **A tira e POR CANDIDATO**, como tudo o que sai para o eleitor. O candidato novo **nao comeca
+  vazio**: as de fabrica servem de ponto de partida, porque **nenhuma cita candidato pelo nome** —
+  ha teste exigindo isso.
+
+---
+
+## Para usar
+
+**Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
+dizer **v3.181.0** — e assim que se sabe que chegou.
+
+## O que falta, e e decisao dele
+
+- **Comentario de uma palavra** (**"22"**, boa parte desta pagina): agora ha o botao rapido, que era
+  o que faltava. `facebook.pedeRascunho` continua existindo e sabendo quando nao vale pagar;
+  **ligar isso para a IA nem ser oferecida nesses casos e escolha dele.**
+- **A ordenacao "Mais relevantes" esconde comentarios** — o aviso amarelo diz isso, e o post da
+  print declara 17. Trocar para "Todos os comentarios" e rolar dentro do post.
 - **805 KB em toda aba do Facebook.** Da para cortar para ~38 KB movendo a IA para `import()` sob
-  demanda. Segurei ate ele confirmar que o caminho funciona — agora da para fazer.
+  demanda. Agora que ha caminho sem IA, o corte vale ainda mais — mas so depois de ele confirmar
+  que o botao IA funciona de verdade.
 - **A aba Facebook da Graph API (v3.172) continua no ar** e sai quando ele confirmar que este
   caminho substitui.
-- **Nao ha rodada automatica**, de proposito: um comentario por vez, pelo botao.
+- **O custo por rascunho nao foi medido ao vivo.** Calculado: **572 tokens de sistema + ~37 do
+  comentario**, o que da ~**US$ 0,0014 por rascunho** no gpt-5, a frio. O numero real aparece no
+  painel depois do uso.
