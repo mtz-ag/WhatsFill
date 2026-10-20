@@ -1,6 +1,6 @@
-## 2026-10-20 - v3.181.0 - ESTADO DE AGORA - respostas rapidas no painel do Facebook (e o conserto da IA)
+## 2026-10-20 - v3.182.0 - ESTADO DE AGORA - o painel do Facebook ganhou teclado, respostas rapidas e o conserto da IA
 
-Duas coisas foram ao ar hoje. A segunda depende da primeira ter sido consertada.
+Tres coisas foram ao ar hoje, nesta ordem — cada uma depende da anterior.
 
 ---
 
@@ -98,10 +98,60 @@ de 140 caracteres.
 
 ---
 
+## 3. O teclado do mobiliza, no painel do Facebook (v3.182.0)
+
+**Pedido dele:** *"faca o mesmo esquema de teclado que existe no mobiliza"*. O mapa e **a escolha
+dele**, perguntada antes de escrever linha — tecla e musculo, e este projeto ja registrou que
+trocar o significado de uma tecla que ele tem no dedo e defeito.
+
+| tecla | faz |
+|---|---|
+| **1..9** | a enesima resposta rapida: poe no campo **e insere** no comentario da vez |
+| **⏎** | inserir no comentario da vez |
+| **↑ ↓** | trocar o comentario da vez |
+| **I** | pedir o rascunho a IA |
+| **R** | reler a pagina |
+| **G** | guardar o campo como resposta rapida |
+| **Esc** | sair do modo de organizar |
+
+**A tecla EXECUTA, como no mobiliza** (escolha dele: *"escolhe e ja insere"*). **Continua sem
+enviar nada** — quem aperta Enter no Facebook e ele.
+
+### As tres guardas sao COPIADAS do `panel.js`, e cada uma custou caro
+
+1. **`composedPath()[0]`, nunca `ev.target`.** Dentro de shadow DOM o `target` e o HOST, entao a
+   checagem de campo de texto olharia a div de fora: o "2" digitado no campo do painel inseriria a
+   segunda resposta.
+2. **Campo de texto sai da frente — e aqui isso e MAIOR que no mobiliza.** A caixa de resposta do
+   Facebook e `contenteditable`, e ele digita nela o tempo todo. Sem `isContentEditable`, **cada
+   "2" que ele escrevesse disparava uma insercao.**
+3. **`isTrusted` no Escape**, porque a extensao dispara `Escape` no document para fechar overlay
+   (07/09) — atalho sem isso e atalho que ela aperta sozinha.
+
+### Tres decisoes que o teclado obrigou
+
+- **O comentario da vez e guardado por ID, nunca por indice.** O painel rele a cada 2s e a lista
+  encurta quando um comentario e respondido: com indice, o foco pularia para outra pessoa sem
+  ninguem mexer. Ele fica **realcado** — inserir escreve na pagina, entao o que esta aceso tem de
+  dizer onde a tecla bate. Clicar num comentario tambem o torna o da vez.
+- **A tecla so aparece onde e verdade:** `⏎ Abrir e inserir` e `I IA` so no comentario da vez.
+  Escrever a tecla nos seis botoes prometeria que o Enter atinge qualquer um deles.
+- **UMA insercao por vez, com a trava dentro de `inserir`.** `fb.inserirNaCaixa` **ACRESCENTA** —
+  apagar na caixa do Facebook nao funciona (medido em 19/10) —, entao duas chamadas deixam o texto
+  **duplicado numa caixa publica**. O botao se protegia desabilitando; **a tecla nao tem como**, e
+  apertar "1" duas vezes e o gesto mais natural quando a primeira parece nao ter respondido.
+
+### O custo, e ele e seu para decidir
+
+**Com o painel aberto e o foco fora de campo de texto, as setas deixam de rolar a pagina.** Foi o
+preco de ↑↓ trocarem o comentario. Trocar por `j`/`k` ou Alt+setas e **uma linha** — e so dizer.
+
+---
+
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.181.0** — e assim que se sabe que chegou.
+dizer **v3.182.0** — e assim que se sabe que chegou.
 
 ## O que falta, e e decisao dele
 

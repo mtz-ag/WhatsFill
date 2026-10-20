@@ -3593,6 +3593,34 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **O TECLADO DO PAINEL DO FACEBOOK É O DO MOBILIZA, E AS TRÊS GUARDAS SÃO COPIADAS DE LÁ**
+  (20/10/2026, pedido dele: *"faça o mesmo esquema de teclado que existe no mobiliza"*). Mapa
+  escolhido por ele: **1..9** resposta rápida, **Enter** inserir, **↑↓** trocar o comentário da
+  vez, **I** a IA, **R** reler, **G** guardar, **Esc** sair do modo de organizar. **A tecla
+  EXECUTA, como lá:** 1..9 põe o texto no campo **e insere** no comentário da vez (continua sem
+  enviar — o Enter no Facebook é dele).
+  **As guardas, e cada uma custou caro no `panel.js`:** (1) **`composedPath()[0]`, nunca
+  `ev.target`** — dentro de shadow DOM o `target` é o HOST, então a checagem de campo de texto
+  olharia a div de fora e o "2" digitado no painel inseriria a segunda resposta; (2) **campo de
+  texto sai da frente, e aqui isso é MAIOR que no mobiliza** — a caixa do Facebook é
+  `contenteditable` e ele digita nela o tempo todo, então sem `isContentEditable` cada "2" que ele
+  escrevesse dispararia uma inserção; (3) **`isTrusted` no Escape**, porque a extensão dispara
+  `Escape` no document (07/09).
+  **O listener é ligado UMA vez, no `montar`** — no `desenhar` ele se acumularia a cada redesenho,
+  e o painel redesenha sozinho a cada 2s.
+  **O comentário DA VEZ é guardado por ID, nunca por índice:** o painel relê a cada 2s e a lista
+  encurta quando um comentário é respondido — com índice o foco pularia para outra pessoa sem
+  ninguém mexer. E ele é **realçado**: inserir escreve na página, então o que está aceso tem de
+  dizer onde a tecla bate.
+  **A tecla que ensina só aparece onde é verdade:** `⏎ Abrir e inserir` e `I IA` só no comentário
+  da vez. Escrever a tecla nos seis botões prometeria que o Enter atinge qualquer um.
+  **UMA INSERÇÃO POR VEZ, e a trava mora dentro de `inserir`:** `fb.inserirNaCaixa` **ACRESCENTA**
+  (apagar na caixa do Facebook não funciona, medido em 19/10), então duas chamadas deixam o texto
+  **duplicado numa caixa pública**. O botão se protegia desabilitando; **a tecla não tem como**, e
+  apertar "1" duas vezes é o gesto natural quando a primeira parece não ter respondido.
+  **Custo dito a ele:** com o painel aberto e o foco fora de campo de texto, **as setas deixam de
+  rolar a página**. Trocar por `j`/`k` ou Alt+setas é uma linha.
+
 - **AS RESPOSTAS RÁPIDAS DO COMENTÁRIO SÃO LISTA PRÓPRIA, E ISSO É REGRA E NÃO PREFERÊNCIA**
   (20/10/2026, pedido dele: *"preciso de respostas rapidas para o facebook, a ia nao e necessaria
   para tudo"*). **Medido contra as 21 respostas prontas: 3 serviriam.** Cinco **pedem o cadastro**

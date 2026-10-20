@@ -69,6 +69,10 @@ const estado = {
   renomeando: '',
   /** O modo de organizar a tira (renomear/apagar). Fora dele a tira e so os rotulos. */
   gerindo: false,
+  /** O id do comentario DA VEZ — o que o teclado atinge. Vazio = o primeiro da lista. */
+  daVezId: '',
+  /** Uma insercao por vez: a caixa do Facebook ACRESCENTA, entao duas duplicariam o texto. */
+  inserindo: false,
 };
 
 /**
@@ -90,6 +94,34 @@ async function carregarRespostas() {
     // Falha de armazenamento nao pode derrubar o painel: sem a tira ele ainda le e insere.
     estado.respostas = [];
   }
+}
+
+/**
+ * **Escreve na linha de status.**
+ *
+ * O status mora no ESTADO e o elemento e procurado no shadow a cada escrita, nunca guardado numa
+ * variavel: quem pede o rascunho redesenha o painel no meio do caminho, e o elemento capturado
+ * antes disso ja saiu da arvore — a mensagem iria para um no orfao e a tela ficaria muda justo
+ * depois da chamada paga.
+ *
+ * **E funcao de MODULO** desde 20/10, porque o teclado tambem fala e ele vive fora do `desenhar`.
+ */
+function falar(shadow, t) {
+  estado.status = t;
+  const atual = shadow.querySelector('.status');
+  if (atual) atual.textContent = t;
+}
+
+/**
+ * **O comentario DA VEZ** — o que o Enter e as teclas de resposta atingem.
+ *
+ * Guardado por ID e nao por indice: o painel rele sozinho a cada 2s e a lista encurta quando um
+ * comentario e respondido. Com indice, o foco pularia para outra pessoa sem ninguem mexer.
+ * Sumindo o id (foi respondido, ou o post fechou), volta para o primeiro.
+ */
+function comentarioDaVez() {
+  if (!estado.comentarios.length) return null;
+  return estado.comentarios.find((c) => c.id === estado.daVezId) || estado.comentarios[0];
 }
 
 /** Grava a lista no candidato logado. Devolve o que deu errado, ou vazio. */
@@ -137,6 +169,9 @@ function css() {
     .aviso { background: #fff3cd; border: 1px solid #ffe69c; border-radius: 6px; padding: 7px 9px; margin-bottom: 9px; }
     .vazio { color: #65676b; }
     .item { border: 1px solid #e4e6eb; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+    /* O comentario DA VEZ: e nele que o Enter e as teclas 1..9 batem. O realce e o contrato —
+       sem ele, inserir por teclado seria no escuro. */
+    .item.davez { border-color: #1877f2; background: #f0f6ff; box-shadow: 0 0 0 1px #1877f2; }
     .item .quem { font-weight: 600; margin-bottom: 2px; }
     .item .txt { color: #333; white-space: pre-wrap; word-break: break-word; margin-bottom: 7px; }
     textarea {
@@ -167,6 +202,7 @@ function css() {
       max-width: 150px;
     }
     .status { color: #65676b; margin-top: 6px; min-height: 16px; }
+    .dica { color: #8a8d91; font-size: 11px; margin-bottom: 5px; }
     /* Escondido, o painel solta o empurrao e vira so a pestana. */
     .pestana {
       position: fixed; top: 96px; right: 0; z-index: 2147483000;
@@ -221,6 +257,30 @@ function relerComentarios() {
  * confiar num prazo fixo.
  */
 async function inserir(comentario, texto, aviso) {
+  /**
+   * **UMA insercao por vez, e a trava mora AQUI** (20/10/2026, junto com o teclado).
+   *
+   * `fb.inserirNaCaixa` **ACRESCENTA** — ela nunca limpa, porque apagar na caixa do Facebook nao
+   * funciona (medido em 19/10). Entao duas chamadas em cima da outra deixam o texto DUPLICADO
+   * numa caixa publica, a um Enter de ser publicado assim.
+   *
+   * O botao se protegia sozinho desabilitando; **a tecla nao tem como**, e apertar "1" duas vezes
+   * e o gesto mais natural do mundo quando a primeira parece nao ter respondido. Por isso a trava
+   * fica no ponto unico por onde as duas passam.
+   */
+  if (estado.inserindo) {
+    aviso('Espere a insercao anterior terminar.');
+    return;
+  }
+  estado.inserindo = true;
+  try {
+    return await inserirDeVerdade(comentario, texto, aviso);
+  } finally {
+    estado.inserindo = false;
+  }
+}
+
+async function inserirDeVerdade(comentario, texto, aviso) {
   /**
    * A raiz e relida AGORA, e nao a do desenho: entre listar e clicar ele pode
    * ter fechado o post. E o comentario tem de continuar DENTRO dela — senao
@@ -397,11 +457,7 @@ function desenhar(shadow) {
    * caminho, e o elemento capturado antes disso ja saiu da arvore — a mensagem
    * iria para um no orfao e a tela ficaria muda justo depois da chamada paga.
    */
-  const dizer = (t) => {
-    estado.status = t;
-    const atual = shadow.querySelector('.status');
-    if (atual) atual.textContent = t;
-  };
+  const dizer = (t) => falar(shadow, t);
 
   if (!estado.comentarios.length) {
     const vazio = document.createElement('div');
@@ -412,9 +468,24 @@ function desenhar(shadow) {
     corpo.append(vazio);
   }
 
+  const daVez = comentarioDaVez();
+
   for (const c of estado.comentarios) {
     const item = document.createElement('div');
-    item.className = 'item';
+    /**
+     * **O realce diz onde o teclado vai bater.** Sem ele, Enter e as teclas 1..9 inseririam num
+     * comentario que ele nao escolheu — e inserir escreve na pagina. A marca e o contrato: o que
+     * esta aceso e o que a tecla atinge.
+     */
+    const ehDaVez = !!daVez && daVez.id === c.id;
+    item.className = 'item' + (ehDaVez ? ' davez' : '');
+    // Clicar no comentario tambem o torna o da vez: quem usa o mouse nao deve ter de usar as
+    // setas para o teclado concordar com o que ele esta olhando.
+    item.addEventListener('click', () => {
+      if (estado.daVezId === c.id) return;
+      estado.daVezId = c.id;
+      desenhar(shadow);
+    });
 
     const quem = document.createElement('div');
     quem.className = 'quem';
@@ -429,7 +500,12 @@ function desenhar(shadow) {
 
     const btInserir = document.createElement('button');
     btInserir.className = 'primario';
-    btInserir.textContent = 'Abrir e inserir';
+    /**
+     * **A tecla so aparece no comentario DA VEZ**, e isso e honestidade: escrever "⏎" nos seis
+     * botoes prometeria que o Enter atinge qualquer um deles. A regra do mobiliza — a caixa
+     * ensina a tecla que funciona — so vale se o que ela ensina for verdade.
+     */
+    btInserir.textContent = ehDaVez ? '⏎  Abrir e inserir' : 'Abrir e inserir';
     btInserir.addEventListener('click', async () => {
       if (!estado.texto.trim()) {
         dizer('Escreva embaixo o que deve entrar na caixa.');
@@ -444,7 +520,7 @@ function desenhar(shadow) {
     });
 
     const btIa = document.createElement('button');
-    btIa.textContent = 'IA';
+    btIa.textContent = ehDaVez ? 'I  IA' : 'IA';
     btIa.title = 'Pede o rascunho a IA e poe no campo, para voce ler antes de inserir';
     btIa.addEventListener('click', async () => {
       btIa.disabled = true;
@@ -487,7 +563,10 @@ function desenhar(shadow) {
     const tira = document.createElement('div');
     tira.className = 'rapidas';
 
-    for (const r of estado.respostas) {
+    estado.respostas.forEach((r, i) => {
+      // Da DECIMA em diante nao ha tecla: o mapa e 1..9, e numerar ate 12 ensinaria teclas que
+      // nao existem. Essas so respondem ao clique.
+      const tecla = i < 9 ? String(i + 1) : '';
       const par = document.createElement('div');
       par.className = 'par';
 
@@ -518,17 +597,17 @@ function desenhar(shadow) {
         ok.addEventListener('click', () => fechar(true));
         par.append(nome, ok);
         tira.append(par);
-        continue;
+        return;
       }
 
       const usar = document.createElement('button');
       usar.className = 'usar';
-      usar.textContent = r.nome;
+      usar.textContent = tecla ? `${tecla}  ${r.nome}` : r.nome;
       usar.title = r.texto;
       usar.addEventListener('click', () => {
-        estado.texto = r.texto;
-        desenhar(shadow);
-        dizer('Resposta no campo. Leia e clique em "Abrir e inserir" no comentario.');
+        // O clique faz o MESMO que a tecla: duas formas de usar a mesma resposta divergem na
+        // primeira correcao, e aqui a diferenca seria "uma insere e a outra nao".
+        usarResposta(shadow, r);
       });
       par.append(usar);
 
@@ -570,7 +649,7 @@ function desenhar(shadow) {
       }
 
       tira.append(par);
-    }
+    });
 
     const engrenagem = document.createElement('button');
     engrenagem.className = 'engrenagem' + (estado.gerindo ? ' ligado' : '');
@@ -598,7 +677,7 @@ function desenhar(shadow) {
   const linhaR = document.createElement('div');
   linhaR.className = 'linha';
   const btReler = document.createElement('button');
-  btReler.textContent = 'Reler a pagina';
+  btReler.textContent = 'R  Reler a pagina';
   btReler.addEventListener('click', async () => {
     relerComentarios();
     // Reler atualiza as DUAS coisas: este painel nao sabe quando ele troca de candidato no
@@ -608,24 +687,24 @@ function desenhar(shadow) {
   });
 
   const btGuardar = document.createElement('button');
-  btGuardar.textContent = 'Guardar como rapida';
+  btGuardar.textContent = 'G  Guardar como rapida';
   btGuardar.disabled = !estado.texto.trim();
-  btGuardar.addEventListener('click', async () => {
-    const { lista, jaExistia, cheia } = rapidas.guardar(estado.respostas, estado.texto);
-    if (cheia) {
-      dizer(`A tira ja tem ${rapidas.MAX_RESPOSTAS} respostas — apague uma antes de guardar outra.`);
-      return;
-    }
-    if (jaExistia) {
-      dizer('Esta resposta ja esta guardada.');
-      return;
-    }
-    const erro = await salvarRespostas(lista);
-    desenhar(shadow);
-    dizer(erro || 'Guardada. Use o ✎ para dar um nome mais curto.');
-  });
+  // O botao e a tecla chamam a MESMA funcao: duas copias divergem na primeira correcao.
+  btGuardar.addEventListener('click', () => guardarDoCampo(shadow));
 
   linhaR.append(btReler, btGuardar);
+
+  /**
+   * **A dica ensina SO o que nao esta escrito num botao.** As outras teclas vivem no proprio
+   * botao (`1  Agradecer o apoio`, `⏎  Abrir e inserir`), que e o jeito do mobiliza; as setas nao
+   * tem botao nenhum, entao sem esta linha elas seriam invisiveis.
+   */
+  if (estado.comentarios.length > 1) {
+    const dica = document.createElement('div');
+    dica.className = 'dica';
+    dica.textContent = '↑ ↓ trocam o comentario da vez (o realcado)';
+    rodape.append(dica);
+  }
 
   rodape.append(campo, linhaR, status);
   caixa.append(topo, corpo, rodape);
@@ -648,6 +727,161 @@ function desenhar(shadow) {
 
 /* ------------------------------------------------------------------ */
 
+/**
+ * **O MESMO ESQUEMA DE TECLADO DO MOBILIZA** — pedido dele (20/10/2026).
+ *
+ * O mapa (escolha dele): **1..9** a resposta rapida, **Enter** inserir, **setas** trocar o
+ * comentario da vez, **I** a IA, **R** reler, **G** guardar o campo como rapida, **Esc** sair do
+ * modo de organizar.
+ *
+ * **A tecla EXECUTA, como la:** 1..9 poe o texto no campo E insere no comentario da vez. Continua
+ * sem enviar nada — quem aperta Enter no Facebook e ele, que e a fronteira do projeto inteiro.
+ *
+ * ---
+ *
+ * **AS TRES GUARDAS SAO COPIADAS DO `panel.js`, e cada uma custou caro:**
+ *
+ *  1. **`composedPath()[0]`, nunca `ev.target`.** Dentro de shadow DOM o `target` e o HOST, entao
+ *     `ehCampoDeTexto` olharia a div de fora e deixaria passar. Sem isto, o "2" digitado no campo
+ *     do painel inseriria a segunda resposta.
+ *  2. **Campo de texto sai da frente — e aqui isso e maior que no mobiliza.** A caixa de resposta
+ *     do Facebook e `contenteditable`, e ele digita nela o tempo todo: sem a guarda, cada "2" que
+ *     ele escrevesse dispararia uma insercao. `isContentEditable` e o que a pega.
+ *  3. **`isTrusted` no Escape.** A extensao dispara `Escape` no document para fechar overlay
+ *     (07/09) — atalho que nao confere isso e atalho que ela aperta sozinha.
+ *
+ * E o listener e ligado UMA vez, no `montar`: ligado no `desenhar` ele se acumularia a cada
+ * redesenho, e o painel redesenha a cada 2s.
+ */
+function ligarTeclado(shadow) {
+  const ehCampoDeTexto = (el) => {
+    if (!el || el.nodeType !== 1) return false;
+    const tag = String(el.tagName || '').toLowerCase();
+    return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable === true;
+  };
+
+  document.addEventListener(
+    'keydown',
+    (ev) => {
+      if (!estado.aberto) return;
+      if (ehCampoDeTexto(ev.composedPath?.()[0] || ev.target)) return;
+      if (ev.key === 'Escape' && !ev.isTrusted) return;
+      if (ev.ctrlKey || ev.altKey || ev.metaKey) return;
+
+      // Shift junto vale: os botoes mostram a tecla em MAIUSCULA, e caixa que ensina uma tecla e
+      // recusa o jeito obvio de aperta-la e pior que caixa sem atalho.
+      const k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+      const alvo = comentarioDaVez();
+      const feito = () => {
+        ev.preventDefault();
+        ev.stopPropagation();
+      };
+
+      if (k === 'Escape') {
+        if (!estado.gerindo && !estado.renomeando) return;
+        estado.gerindo = false;
+        estado.renomeando = '';
+        feito();
+        desenhar(shadow);
+        return;
+      }
+
+      if (k === 'ArrowDown' || k === 'ArrowUp') {
+        if (estado.comentarios.length < 2) return;
+        const i = estado.comentarios.findIndex((c) => c.id === (alvo && alvo.id));
+        const passo = k === 'ArrowDown' ? 1 : -1;
+        const prox = (i + passo + estado.comentarios.length) % estado.comentarios.length;
+        estado.daVezId = estado.comentarios[prox].id;
+        feito();
+        desenhar(shadow);
+        return;
+      }
+
+      if (k === 'r') {
+        feito();
+        relerComentarios();
+        carregarRespostas().then(() => {
+          desenhar(shadow);
+          falar(shadow, 'Reli a pagina.');
+        });
+        return;
+      }
+
+      if (k === 'g') {
+        if (!estado.texto.trim()) return;
+        feito();
+        guardarDoCampo(shadow);
+        return;
+      }
+
+      if (k === 'i') {
+        if (!alvo) return;
+        feito();
+        estado.daVezId = alvo.id;
+        desenhar(shadow);
+        pedirRascunho(alvo, (t) => falar(shadow, t), () => desenhar(shadow));
+        return;
+      }
+
+      if (k === 'Enter') {
+        if (!alvo || !estado.texto.trim()) return;
+        feito();
+        inserir(alvo, estado.texto.trim(), (t) => falar(shadow, t));
+        return;
+      }
+
+      // 1..9: a enesima resposta rapida. Escolhe E insere, que e o esquema do mobiliza.
+      if (/^[1-9]$/.test(k)) {
+        const r = estado.respostas[Number(k) - 1];
+        if (!r) return;
+        feito();
+        usarResposta(shadow, r);
+      }
+    },
+    // Captura no documento: o shadow root nao recebe tecla quando o foco esta na pagina.
+    true
+  );
+}
+
+/**
+ * **Usar uma resposta rapida: poe no campo E insere no comentario da vez.**
+ *
+ * Escolha dele em 20/10, ao pedir o esquema do mobiliza: *"escolhe e ja insere"*. La a tecla
+ * EXECUTA o desfecho, e aqui o equivalente e deixar o texto na caixa daquele comentario.
+ *
+ * **Inserir nao e enviar.** A caixa fica escrita e para ai — quem aperta Enter no Facebook e ele,
+ * que e a fronteira do projeto inteiro.
+ *
+ * Ponto UNICO do clique e da tecla: duas copias divergiriam em "uma insere e a outra nao".
+ */
+function usarResposta(shadow, r) {
+  estado.texto = r.texto;
+  const alvo = comentarioDaVez();
+  desenhar(shadow);
+  if (!alvo) {
+    falar(shadow, 'Resposta no campo — nao ha comentario na lista para inserir.');
+    return;
+  }
+  estado.daVezId = alvo.id;
+  inserir(alvo, r.texto, (t) => falar(shadow, t));
+}
+
+/** Guarda o que esta no campo como resposta rapida. Um lugar so: o botao G e a tecla G. */
+async function guardarDoCampo(shadow) {
+  const { lista, jaExistia, cheia } = rapidas.guardar(estado.respostas, estado.texto);
+  if (cheia) {
+    falar(shadow, `A tira ja tem ${rapidas.MAX_RESPOSTAS} respostas — apague uma antes de guardar outra.`);
+    return;
+  }
+  if (jaExistia) {
+    falar(shadow, 'Esta resposta ja esta guardada.');
+    return;
+  }
+  const erro = await salvarRespostas(lista);
+  desenhar(shadow);
+  falar(shadow, erro || 'Guardada. Use o ⚙ e o ✎ para dar um nome mais curto.');
+}
+
 function montar() {
   if (document.getElementById(HOST_ID)) return;
 
@@ -668,6 +902,10 @@ function montar() {
    * fica sem a tira e continua servindo para ler e inserir.
    */
   carregarRespostas().then(() => desenhar(shadow));
+
+  // UMA vez, e nao no `desenhar`: ali ele se acumularia a cada redesenho, e o painel redesenha
+  // sozinho a cada 2s.
+  ligarTeclado(shadow);
 
   /**
    * O painel monta em `document_idle`, que e ANTES de o Facebook ter carregado
