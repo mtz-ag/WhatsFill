@@ -3593,6 +3593,32 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **CADA BOTÃO DO FACEBOOK É UMA CATEGORIA COM ATÉ DEZ VARIAÇÕES, QUE REVEZAM** (20/10/2026,
+  pedido dele: *"numero 1 = apoio e dentro dele quero 10 variacoes (...) ao apertar o numero 1 ira
+  seguir na sequencia (...) e nao se repetir ate ter ido as 10"*).
+  **É o mecanismo que já existe para a mensagem do momento** (`templates.varianteAtual` /
+  `avancarVariante`), reusado com as duas disciplinas de lá: **o ponteiro mora em `varianteIndex`**
+  (chave própria que o `exportJson` descarta — é medição desta máquina, não configuração dele,
+  e reusar a chave mantém isso verdadeiro de graça, com id prefixado `fb:`), e **só anda depois
+  que o texto SAIU** — aqui, depois que `inserir` devolve `true`. Avançar numa falha faria a volta
+  de dez virar uma volta de nove, em silêncio.
+  **A volta é CIRCULAR, e é isso que cumpre o "não repetir até ter ido as 10"** sem sortear nada:
+  0,1,…,9,0. Sorteio repetiria antes de fechar a volta. E **ponteiro maior que a lista é modulado**
+  — ele usa a oitava e depois edita deixando três; sem o módulo, quebraria.
+  **Por que variar importa MAIS aqui que no WhatsApp:** os comentários ficam na mesma página, um
+  embaixo do outro. Seis "Muito obrigado pelo apoio!" idênticos em sequência é o que denuncia robô.
+  **Quantas variações cada uma tem segue o USO, não um número redondo:** o apoio leva dez porque é
+  o que mais chega; "Pro privado" leva três, porque inventar dez formas da mesma frase produz texto
+  ruim. O teto é dez e o editor está no painel.
+  **`sanitizar` aceita a forma ANTIGA (`texto` solto) e converte** — ele guardou respostas antes de
+  as variações existirem, no mesmo dia, e perder aquilo seria apagar texto dele sem avisar.
+  **O editor TOMA O CORPO do painel**, não a tira: dez variações não cabem em 380px, e um diálogo
+  num content script é feio e a página pode bloquear. Formato **uma variação por linha**, o mesmo
+  das tabelas da Config. **Esvaziar o editor APAGA a resposta** — é o gesto natural de quem quer
+  tirar um botão, e sem isso sobraria um botão que não escreve nada.
+  **O contador ("3 de 10") vai no `title` e na linha de status, nunca no botão:** escrevê-lo em
+  seis botões é ruído numa tira de 380px, e o número só interessa no instante da dúvida.
+
 - **O TECLADO DO PAINEL DO FACEBOOK É O DO MOBILIZA, E AS TRÊS GUARDAS SÃO COPIADAS DE LÁ**
   (20/10/2026, pedido dele: *"faça o mesmo esquema de teclado que existe no mobiliza"*). Mapa
   escolhido por ele: **1..9** resposta rápida, **Enter** inserir, **↑↓** trocar o comentário da

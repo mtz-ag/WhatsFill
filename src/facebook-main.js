@@ -73,6 +73,24 @@ const estado = {
   daVezId: '',
   /** Uma insercao por vez: a caixa do Facebook ACRESCENTA, entao duas duplicariam o texto. */
   inserindo: false,
+  /**
+   * **O ponteiro de cada rodizio de variacoes** (`varianteIndex`, a chave compartilhada que o
+   * `exportJson` descarta por ser medicao e nao configuracao). Carregado junto das respostas.
+   */
+  indices: {},
+  /** O id da resposta aberta no EDITOR — vazio quando nenhuma esta. */
+  editando: '',
+  /**
+   * **O rascunho do editor mora no ESTADO, como o campo principal.**
+   *
+   * O painel redesenha sozinho a cada 2s. A guarda de foco so segura enquanto o cursor esta no
+   * campo — bastava ele clicar fora para o redesenho restaurar o valor GRAVADO e comer as
+   * variacoes que ele acabou de digitar.
+   */
+  edNome: '',
+  edVariacoes: '',
+  /** Verdadeiro so no instante em que o editor abre — ver o foco no desenho. */
+  edFocar: false,
 };
 
 /**
@@ -90,9 +108,11 @@ async function carregarRespostas() {
       rapidas.RESPOSTAS_DE_FABRICA
     );
     estado.respostas = rapidas.sanitizar(lista);
+    estado.indices = (await store.get('varianteIndex')) || {};
   } catch (_) {
     // Falha de armazenamento nao pode derrubar o painel: sem a tira ele ainda le e insere.
     estado.respostas = [];
+    estado.indices = {};
   }
 }
 
@@ -197,10 +217,12 @@ function css() {
     .rapidas .fim { border-radius: 0 6px 6px 0; border-right: 1px solid #ccd0d5; }
     .rapidas .engrenagem { padding: 4px 7px; color: #65676b; }
     .rapidas .engrenagem.ligado { background: #e7f0fd; border-color: #1877f2; color: #1877f2; }
-    .rapidas input {
-      font: inherit; padding: 4px 6px; border: 1px solid #1877f2; border-radius: 6px;
-      max-width: 150px;
+    /* O editor toma o corpo: dez variacoes nao cabem numa tira de 380px. */
+    .editor input {
+      font: inherit; width: 100%; box-sizing: border-box; padding: 6px;
+      border: 1px solid #ccd0d5; border-radius: 6px; margin: 6px 0;
     }
+    .editor textarea.variacoes { min-height: 190px; }
     .status { color: #65676b; margin-top: 6px; min-height: 16px; }
     .dica { color: #8a8d91; font-size: 11px; margin-bottom: 5px; }
     /* Escondido, o painel solta o empurrao e vira so a pestana. */
@@ -270,7 +292,7 @@ async function inserir(comentario, texto, aviso) {
    */
   if (estado.inserindo) {
     aviso('Espere a insercao anterior terminar.');
-    return;
+    return false;
   }
   estado.inserindo = true;
   try {
@@ -290,13 +312,13 @@ async function inserirDeVerdade(comentario, texto, aviso) {
   const raiz = fb.raizDoPost();
   if (!raiz || !raiz.contains(comentario.no)) {
     aviso('Este comentario nao esta mais no post aberto. Clique em "Reler a pagina".');
-    return;
+    return false;
   }
 
   const botao = fb.botaoResponder(comentario.no);
   if (!botao) {
     aviso('Nao achei o botao "Responder" deste comentario. Role ate ele aparecer na tela e releia.');
-    return;
+    return false;
   }
 
   let caixa = fb.caixaDeResposta(comentario.autor, raiz);
@@ -310,7 +332,7 @@ async function inserirDeVerdade(comentario, texto, aviso) {
 
   if (!caixa) {
     aviso('A caixa de resposta nao abriu. Clique em "Responder" na pagina e tente de novo.');
-    return;
+    return false;
   }
 
   // A caixa ja vem com a mencao: isto ACRESCENTA, nunca substitui.
@@ -320,6 +342,12 @@ async function inserirDeVerdade(comentario, texto, aviso) {
       ? `Texto posto na caixa de ${comentario.autor}. Revise e envie — o envio e seu.`
       : 'O texto nao entrou na caixa. Clique dentro dela na pagina e tente de novo.'
   );
+  /**
+   * **O booleano existe para o ponteiro das variacoes** (20/10): ele so anda quando o texto
+   * ENTROU na caixa. Avancar numa falha faria a variacao seguinte pular sozinha, e a volta de dez
+   * viraria uma volta de nove sem ninguem perceber — a disciplina de `templates.avancarVariante`.
+   */
+  return ok;
 }
 
 /**
@@ -459,6 +487,105 @@ function desenhar(shadow) {
    */
   const dizer = (t) => falar(shadow, t);
 
+  /**
+   * **O EDITOR TOMA O CORPO INTEIRO, e por isso ele e aqui e nao na tira.**
+   *
+   * Dez variacoes nao cabem numa linha de 380px: editar ali seria dez campos minusculos, ou um
+   * dialogo, que num content script e feio e a pagina pode bloquear. Tomando o corpo, o textarea
+   * ganha a altura da lista de comentarios — que e exatamente o espaco que sobra quando ele parou
+   * de responder para organizar.
+   *
+   * **Uma variacao POR LINHA**, o mesmo formato das tabelas da Config. Comentario e de uma ou duas
+   * frases, entao quebra de linha dentro de uma variacao nao existe na pratica — e a regra esta
+   * escrita na tela, em vez de ficar para ele adivinhar.
+   */
+  if (estado.editando) {
+    const alvo = estado.respostas.find((r) => r.id === estado.editando);
+    if (!alvo) {
+      estado.editando = '';
+    } else {
+      const ed = document.createElement('div');
+      ed.className = 'editor';
+
+      const tit = document.createElement('div');
+      tit.className = 'quem';
+      tit.textContent = 'Editando a resposta rapida';
+
+      const campoNome = document.createElement('input');
+      campoNome.value = estado.edNome;
+      campoNome.maxLength = rapidas.MAX_NOME;
+      campoNome.placeholder = 'Nome do botao (curto)';
+      campoNome.addEventListener('input', () => {
+        estado.edNome = campoNome.value;
+      });
+
+      const legenda = document.createElement('div');
+      legenda.className = 'dica';
+      legenda.textContent = `Uma variacao POR LINHA, ate ${rapidas.MAX_VARIACOES}. Elas revezam: cada uso pega a seguinte e so repete depois de passar por todas.`;
+
+      const campoVar = document.createElement('textarea');
+      campoVar.className = 'variacoes';
+      campoVar.value = estado.edVariacoes;
+
+      const conta = document.createElement('div');
+      conta.className = 'dica';
+      const recontar = () => {
+        const n = rapidas.deTexto(campoVar.value).length;
+        conta.textContent = n
+          ? `${n} variacao(oes) — a volta fecha em ${n} uso(s).`
+          : 'Sem nenhuma variacao: guardar assim APAGA esta resposta.';
+      };
+      recontar();
+      campoVar.addEventListener('input', () => {
+        estado.edVariacoes = campoVar.value;
+        recontar();
+      });
+
+      const linhaEd = document.createElement('div');
+      linhaEd.className = 'linha';
+
+      const btOk = document.createElement('button');
+      btOk.className = 'primario';
+      btOk.textContent = 'Guardar';
+      btOk.addEventListener('click', async () => {
+        const { lista, texto } = rapidas.editar(
+          estado.respostas,
+          alvo.id,
+          estado.edNome,
+          rapidas.deTexto(estado.edVariacoes)
+        );
+        if (texto) estado.texto = texto; // apagou: o texto volta para o campo
+        estado.editando = '';
+        const erro = await salvarRespostas(lista);
+        desenhar(shadow);
+        falar(shadow, erro || 'Guardado.');
+      });
+
+      const btNao = document.createElement('button');
+      btNao.textContent = 'Cancelar';
+      btNao.addEventListener('click', () => {
+        estado.editando = '';
+        desenhar(shadow);
+      });
+
+      linhaEd.append(btOk, btNao);
+      ed.append(tit, campoNome, legenda, campoVar, conta, linhaEd);
+      corpo.append(ed);
+      caixa.append(topo, corpo, rodapeSoStatus(status));
+      shadow.append(caixa);
+      /**
+       * **O foco so na ABERTURA.** `desenhar` roda de novo por varios motivos; focar sempre
+       * arrancaria o cursor do textarea das variacoes para o campo do nome no meio da digitacao.
+       */
+      if (estado.edFocar) {
+        estado.edFocar = false;
+        campoNome.focus();
+        campoNome.select();
+      }
+      return;
+    }
+  }
+
   if (!estado.comentarios.length) {
     const vazio = document.createElement('div');
     vazio.className = 'vazio';
@@ -570,40 +697,20 @@ function desenhar(shadow) {
       const par = document.createElement('div');
       par.className = 'par';
 
-      if (estado.renomeando === r.id) {
-        // Renomear troca o botao por um campo no lugar dele — sem dialogo, que num content
-        // script e feio e pode ser bloqueado pela pagina.
-        const nome = document.createElement('input');
-        nome.value = r.nome;
-        nome.maxLength = rapidas.MAX_NOME;
-        const fechar = async (gravar) => {
-          estado.renomeando = '';
-          if (gravar) {
-            const erro = await salvarRespostas(rapidas.renomear(estado.respostas, r.id, nome.value));
-            if (erro) estado.status = erro;
-          }
-          desenhar(shadow);
-        };
-        nome.addEventListener('keydown', (ev) => {
-          if (ev.key === 'Enter') fechar(true);
-          // Esc so fecha. `isTrusted` porque a extensao dispara Escape no document (07/09) —
-          // aqui o evento e do shadow, mas a disciplina e a mesma.
-          if (ev.key === 'Escape' && ev.isTrusted) fechar(false);
-        });
-        const ok = document.createElement('button');
-        ok.className = 'mini fim';
-        ok.textContent = '✓';
-        ok.title = 'Guardar o nome';
-        ok.addEventListener('click', () => fechar(true));
-        par.append(nome, ok);
-        tira.append(par);
-        return;
-      }
+      const vez = rapidas.variacaoDaVez(r, estado.indices);
 
       const usar = document.createElement('button');
       usar.className = 'usar';
       usar.textContent = tecla ? `${tecla}  ${r.nome}` : r.nome;
-      usar.title = r.texto;
+      /**
+       * **O contador vai no `title`, nao no botao.** Escrever "3/10" em seis botoes e ruido numa
+       * tira de 380px, e o numero so interessa num instante: o da duvida. Quem diz em voz alta e
+       * a linha de status, depois de usar.
+       */
+      usar.title =
+        vez.total > 1
+          ? `Variacao ${vez.posicao} de ${vez.total} (reveza a cada uso):\n${vez.texto}`
+          : vez.texto;
       usar.addEventListener('click', () => {
         // O clique faz o MESMO que a tecla: duas formas de usar a mesma resposta divergem na
         // primeira correcao, e aqui a diferenca seria "uma insere e a outra nao".
@@ -622,22 +729,28 @@ function desenhar(shadow) {
         const editar = document.createElement('button');
         editar.className = 'mini';
         editar.textContent = '✎';
-        editar.title = 'Renomear';
+        editar.title = `Editar o nome e as ${vez.total} variacao(oes)`;
         editar.addEventListener('click', () => {
-          estado.renomeando = r.id;
+          // O rascunho e carregado AQUI, uma vez. No desenho ele seria recarregado a cada
+          // redesenho e comeria o que ele digitou.
+          estado.editando = r.id;
+          estado.edNome = r.nome;
+          estado.edVariacoes = rapidas.paraTexto(r);
+          estado.edFocar = true;
           desenhar(shadow);
         });
 
         const tirar = document.createElement('button');
         tirar.className = 'mini fim';
         tirar.textContent = '✕';
-        tirar.title = 'Apagar (o texto vai para o campo, da para guardar de novo)';
+        tirar.title = 'Apagar a resposta INTEIRA, com todas as variacoes';
         tirar.addEventListener('click', async () => {
           /**
            * **Apagar devolve o texto ao CAMPO** — e o desfazer barato: um clique em "Guardar como
            * rapida" traz de volta. Sem isso, um ✕ errado apagaria um texto que ele escreveu e nao
            * tem copia em lugar nenhum (a licao de 01/09, *"acabei de perder todo meu trabalho"*).
            */
+          if (r.variacoes.length > 1 && !confirm(`Apagar "${r.nome}" e as ${r.variacoes.length} variacoes?`)) return;
           const { lista, texto } = rapidas.apagar(estado.respostas, r.id);
           estado.texto = texto;
           const erro = await salvarRespostas(lista);
@@ -659,7 +772,7 @@ function desenhar(shadow) {
       estado.gerindo = !estado.gerindo;
       // Sair do modo fecha qualquer renomeacao aberta: campo de edicao orfao numa tira que
       // voltou ao normal e tela suja.
-      if (!estado.gerindo) estado.renomeando = '';
+      if (!estado.gerindo) estado.editando = '';
       desenhar(shadow);
     });
     tira.append(engrenagem);
@@ -709,20 +822,6 @@ function desenhar(shadow) {
   rodape.append(campo, linhaR, status);
   caixa.append(topo, corpo, rodape);
   shadow.append(caixa);
-
-  /**
-   * **O foco vai para o campo de renomear DEPOIS do append** — antes dele o elemento nem esta no
-   * documento e `focus()` nao faz nada. Sem isto o ✎ abre um campo que ele precisa clicar de novo.
-   *
-   * `select()` junto: o nome ja existe, e quem renomeia quase sempre quer escrever por cima.
-   */
-  if (estado.renomeando) {
-    const campoNome = shadow.querySelector('.rapidas input');
-    if (campoNome) {
-      campoNome.focus();
-      campoNome.select();
-    }
-  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -778,9 +877,9 @@ function ligarTeclado(shadow) {
       };
 
       if (k === 'Escape') {
-        if (!estado.gerindo && !estado.renomeando) return;
+        if (!estado.gerindo && !estado.editando) return;
         estado.gerindo = false;
-        estado.renomeando = '';
+        estado.editando = '';
         feito();
         desenhar(shadow);
         return;
@@ -854,16 +953,50 @@ function ligarTeclado(shadow) {
  *
  * Ponto UNICO do clique e da tecla: duas copias divergiriam em "uma insere e a outra nao".
  */
-function usarResposta(shadow, r) {
-  estado.texto = r.texto;
+async function usarResposta(shadow, r) {
+  const { texto, posicao, total } = rapidas.variacaoDaVez(r, estado.indices);
+  if (!texto) return;
+
+  estado.texto = texto;
   const alvo = comentarioDaVez();
   desenhar(shadow);
+
+  const onde = total > 1 ? ` (${r.nome}, variacao ${posicao} de ${total})` : ` (${r.nome})`;
   if (!alvo) {
-    falar(shadow, 'Resposta no campo — nao ha comentario na lista para inserir.');
+    falar(shadow, `Resposta no campo${onde} — nao ha comentario na lista para inserir.`);
     return;
   }
+
   estado.daVezId = alvo.id;
-  inserir(alvo, r.texto, (t) => falar(shadow, t));
+  const entrou = await inserir(alvo, texto, (t) => falar(shadow, t + onde));
+  if (!entrou) return;
+
+  /**
+   * **O ponteiro so anda com o texto na caixa** — a disciplina de `templates.avancarVariante`. Se
+   * a insercao falhou, a proxima tentativa tem de oferecer a MESMA variacao: avancar aqui faria a
+   * volta de dez virar uma volta de nove, em silencio.
+   */
+  estado.indices = rapidas.proximoPonteiro(r, estado.indices);
+  try {
+    await store.set('varianteIndex', estado.indices);
+  } catch (_) {
+    // Ponteiro e medicao, nao conteudo: falhar em gravar nao pode derrubar nada. O pior caso e
+    // a volta recomecar do mesmo ponto no proximo F5.
+  }
+  desenhar(shadow);
+}
+
+/**
+ * O rodape do EDITOR: so a linha de status.
+ *
+ * A tira e o campo ficam de fora de proposito — no editor eles nao tem uso, e a tira ainda teria o
+ * botao da resposta que ele esta editando, que inseriria na pagina no meio da edicao.
+ */
+function rodapeSoStatus(status) {
+  const rodape = document.createElement('div');
+  rodape.className = 'rodape';
+  rodape.append(status);
+  return rodape;
 }
 
 /** Guarda o que esta no campo como resposta rapida. Um lugar so: o botao G e a tecla G. */

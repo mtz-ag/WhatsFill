@@ -1,6 +1,6 @@
-## 2026-10-20 - v3.182.0 - ESTADO DE AGORA - o painel do Facebook ganhou teclado, respostas rapidas e o conserto da IA
+## 2026-10-20 - v3.183.0 - ESTADO DE AGORA - o painel do Facebook: IA consertada, respostas rapidas com variacoes e teclado
 
-Tres coisas foram ao ar hoje, nesta ordem — cada uma depende da anterior.
+Quatro coisas foram ao ar hoje, nesta ordem — cada uma depende da anterior.
 
 ---
 
@@ -60,7 +60,7 @@ sairia `{{saudacao}}` cru para o eleitor.
   "Abrir e inserir" no comentario que quiser.
 - **"Guardar como rapida"** pega o que esta no campo. O rotulo sai do proprio texto, entao guardar
   nao exige digitar nome nenhum.
-- **O ⚙ abre o modo de organizar**, e so nele aparecem o ✎ (renomear) e o ✕ (apagar). **Duas razoes,
+- **O ⚙ abre o modo de organizar**, e so nele aparecem o ✎ (editar) e o ✕ (apagar). **Duas razoes,
   e a primeira foi medida na conta de altura:** seis pares de `[rotulo][✎][✕]` empilham seis linhas
   no rodape e enterram a lista de comentarios — a poluicao de que ele ja reclamou em 10/09. A
   segunda e que o apagar deixa de ficar a um dedo de quem so queria usar a resposta.
@@ -69,11 +69,13 @@ sairia `{{saudacao}}` cru para o eleitor.
 - **"Reler a pagina" atualiza as duas coisas:** os comentarios e a tira. E por ali que a tira do
   candidato certo chega depois de ele trocar de candidato no mobiliza.
 
-### Os seis textos de fabrica — **confira e corrija o que nao gostar**
+### Os seis botoes de fabrica — **a primeira variacao de cada um**
 
-| botao | texto |
+**As outras 25 estao na secao 4**, e todas sao suas para corrigir.
+
+| botao | primeira variacao |
 |---|---|
-| Agradecer o apoio | Muito obrigado pelo apoio! Seguimos juntos. 🙏 |
+| Apoio | Muito obrigado pelo apoio! Seguimos juntos. 🙏 |
 | **Dia 25 — 2o turno** | Dia 25 é 22! Leva a família e os amigos para votar. 💪 |
 | Pro privado | Me chama na mensagem da página que a gente vê isso com calma por lá. |
 | Obrigado pela info | Obrigado por trazer, vamos acompanhar. 🙏 |
@@ -148,10 +150,79 @@ preco de ↑↓ trocarem o comentario. Trocar por `j`/`k` ou Alt+setas e **uma l
 
 ---
 
+## 4. Cada botao virou uma CATEGORIA com variacoes que revezam (v3.183.0)
+
+**Pedido dele:** *"numero 1 = apoio e dentro dele quero 10 variacoes e a opcao de editar elas que
+ao apertar o numero 1 ira seguir na sequencia das variacoes para cada resposta e nao se repetir
+ate ter ido as 10"*.
+
+**Nao foi mecanismo novo:** e o rodizio que a mensagem do momento ja usa desde 02/09
+(`templates.varianteAtual` / `avancarVariante`), com as duas disciplinas de la.
+
+- **O ponteiro mora em `varianteIndex`** — a mesma chave compartilhada, com id prefixado `fb:`.
+  Ela **sai do backup** por ser *"ponteiro de rotacao, nao configuracao"*, e reusa-la mantem isso
+  verdadeiro de graca.
+- **Ele so anda depois que o texto ENTROU na caixa.** `inserir` passou a devolver booleano so por
+  isso: avancar numa falha faria a volta de dez virar uma volta de nove, em silencio.
+- **A volta e CIRCULAR** (0,1,…,9,0), e e ela que cumpre o *"nao repetir ate ter ido as 10"* sem
+  sortear nada — sorteio repetiria antes de fechar a volta. Medido: dez usos, dez textos
+  distintos, e so o decimo primeiro volta ao comeco.
+- **Ponteiro maior que a lista e modulado:** ele usa a oitava variacao e depois edita deixando
+  tres — sem isso, quebraria.
+
+### Por que variar importa MAIS aqui que no WhatsApp
+
+Os comentarios ficam na **mesma pagina**, um embaixo do outro. Seis *"Muito obrigado pelo apoio!"*
+identicos em sequencia e o que denuncia robo — a mesma razao do rodizio da mensagem do momento.
+
+### Quantas variacoes cada botao tem — e por que nao sao dez em todos
+
+| botao | variacoes | por que |
+|---|---|---|
+| **Apoio** | **10** | e o que mais chega, e onde a repeticao aparece |
+| Esta junto | 6 | tambem sai muito |
+| Dia 25 — 2o turno | 5 | **expira em 25/10** |
+| Obrigado pela info | 4 | |
+| Pro privado | 3 | sai pouco; dez formas da mesma frase viram texto ruim |
+| Seguir a pagina | 3 | |
+
+**O teto e dez e o editor esta no painel** — completar e seu. **Os 31 textos passam pela propria
+`revisarRascunho`**, com teste.
+
+### O editor
+
+O **⚙** abre o modo de organizar; o **✎** abre o editor, que **toma o corpo do painel** — dez
+variacoes nao cabem numa tira de 380px, e dialogo num content script e feio e a pagina pode
+bloquear.
+
+- **Uma variacao POR LINHA**, o mesmo formato das tabelas da Config. O editor conta enquanto voce
+  digita: *"7 variacao(oes) — a volta fecha em 7 uso(s)"*.
+- **Esvaziar o editor APAGA a resposta** — e o gesto natural de quem quer tirar um botao, e a tela
+  avisa antes.
+- **O que voce digita mora no ESTADO, como o campo principal.** O painel redesenha sozinho a cada
+  2s, e a guarda de foco so segura enquanto o cursor esta no campo: bastava clicar fora para o
+  redesenho restaurar o valor GRAVADO e comer as variacoes recem-digitadas.
+- O **✕** apaga a resposta inteira e **pergunta** quando ha mais de uma variacao; a primeira volta
+  para o campo, entao "Guardar como rapida" ainda desfaz em parte.
+
+### Onde voce ve em que variacao esta
+
+**No `title` do botao** (passando o mouse) e **na linha de status depois de usar**:
+*"Texto posto na caixa de Fulana (Apoio, variacao 3 de 10)"*. **Nao vai escrito no botao** de
+proposito: "3/10" em seis botoes e ruido numa tira de 380px, e o numero so interessa no instante
+da duvida.
+
+### O que voce ja tinha guardado nao se perde
+
+`sanitizar` **aceita a forma antiga** (`texto` solto) e a converte em primeira variacao. As
+respostas que voce guardou de manha continuam la.
+
+---
+
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.182.0** — e assim que se sabe que chegou.
+dizer **v3.183.0** — e assim que se sabe que chegou.
 
 ## O que falta, e e decisao dele
 
