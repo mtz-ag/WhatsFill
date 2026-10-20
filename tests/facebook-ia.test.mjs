@@ -31,10 +31,21 @@ function worker(resposta) {
   };
 }
 
-/** A resposta feliz, no formato que o worker devolve de verdade. */
+/**
+ * A resposta feliz, **na forma que o worker devolve de verdade**.
+ *
+ * **`decisao` é STRING, e isto não é detalhe:** `casa.texto()` entrega
+ * `message.content` (OpenAI) ou o bloco `text` (Anthropic) — o JSON do modelo
+ * como TEXTO. A primeira versão deste arquivo passava um OBJETO já pronto, e
+ * com isso o teste ficou verde enquanto `validarComentario` devolvia `null` em
+ * **toda** chamada de verdade (20/10/2026).
+ *
+ * **Simulado copia a forma REAL, nunca a que parece certa** — senão o que se
+ * prova é a própria suposição.
+ */
 const devolve = (decisao, custo = { entrada: 500, saida: 40 }) => ({
   ok: true,
-  decisao,
+  decisao: decisao === null ? null : JSON.stringify(decisao),
   custo,
 });
 
@@ -111,6 +122,24 @@ grupo('resposta ilegivel: o painel nao recebe meio rascunho');
   worker(devolve(null));
   const nulo = await rascunharComentario(PEDIDO);
   check(nulo.texto === '' && nulo.avisos.length > 0, 'decisao nula tambem e recusada');
+
+  /**
+   * **A forma REAL, escrita a mao, sem o atalho do `devolve`.** E esta assercao
+   * que teria pego o defeito de 20/10: com o simulado devolvendo objeto, o
+   * teste ficava verde e o botao IA nunca funcionava.
+   */
+  ultimoPedido = null;
+  globalThis.chrome.runtime.sendMessage = async () => ({
+    ok: true,
+    decisao: '{"texto":"Obrigado pelo apoio!","confianca":0.9,"naoResponder":false}',
+    custo: { entrada: 500, saida: 40 },
+  });
+  const comoVemDaApi = await rascunharComentario(PEDIDO);
+  check(comoVemDaApi.texto === 'Obrigado pelo apoio!', 'o JSON como TEXTO e lido — e assim que a API devolve');
+
+  globalThis.chrome.runtime.sendMessage = async () => ({ ok: true, decisao: 'desculpe, nao posso ajudar', custo: null });
+  const prosa = await rascunharComentario(PEDIDO);
+  check(prosa.texto === '' && prosa.avisos.length > 0, 'texto que nao e JSON e recusado, nao vira resposta publica');
 }
 
 grupo('as travas do WhatsApp valem aqui — e e por isso que nao foram duplicadas');

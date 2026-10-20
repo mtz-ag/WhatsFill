@@ -4504,15 +4504,34 @@ export function montarRequisicaoComentario({ sistema, contato, modelo = MODELO_P
  * vira `null`, que o chamador trata como "a IA nao respondeu" — nunca um texto
  * meio lido indo para a pagina publica.
  */
-export function validarComentario(json) {
+export function validarComentario(bruto) {
+  /**
+   * **A API devolve o JSON como TEXTO, nunca como objeto** — `casa.texto()` entrega
+   * `message.content` (OpenAI) ou o bloco `text` (Anthropic), que são string. Os sete
+   * validadores vizinhos fazem este `JSON.parse`; este nasceu sem ele e por isso devolvia
+   * `null` em **100%** das chamadas: a chamada saía paga e a tela dizia *"a IA não devolveu
+   * um rascunho legível"*, que é o sintoma e não a causa.
+   *
+   * **O teste não pegou porque o simulado devolvia OBJETO** — a forma que eu supus, não a
+   * que o worker entrega. `tests/ia-validadores.test.mjs` varre os oito contra a forma real,
+   * para o nono modo não repetir isto.
+   */
+  let json = bruto;
+  if (typeof json === 'string') {
+    try {
+      json = JSON.parse(json);
+    } catch (_) {
+      return null;
+    }
+  }
   if (!json || typeof json !== 'object') return null;
 
   const naoResponder = json.naoResponder === true;
   const texto = String(json.texto || '').trim();
   if (!naoResponder && !texto) return null;
 
-  const bruto = Number(json.confianca);
-  const confianca = Number.isFinite(bruto) ? Math.min(1, Math.max(0, bruto)) : 0;
+  const confiancaCrua = Number(json.confianca);
+  const confianca = Number.isFinite(confiancaCrua) ? Math.min(1, Math.max(0, confiancaCrua)) : 0;
 
   return {
     texto: naoResponder ? '' : texto,

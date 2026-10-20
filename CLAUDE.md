@@ -3592,6 +3592,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **A API DEVOLVE O JSON COMO TEXTO, E O SIMULADO DO TESTE DEVOLVIA OBJETO** (20/10/2026, print do
+  painel do Facebook: *"a IA não devolveu um rascunho legível"*). **Medido: `validarComentario`
+  devolvia `null` em 100% das chamadas** — `PROVEDORES[*].texto()` entrega `message.content`
+  (OpenAI) ou o bloco `text` (Anthropic), que é **string**, e aquele validador foi o único dos oito
+  que nasceu sem o `JSON.parse`. A chamada saía **paga** e a tela dizia o sintoma.
+  **O TESTE FICOU VERDE PORQUE EU ESCREVI A SUPOSIÇÃO:** o stub do worker devolvia `decisao` como
+  objeto já pronto. Corrigido o stub para a forma real, **11 asserções caem** com o defeito —
+  ou seja, o teste teria pego de cara. **Simulado copia a FORMA REAL do que se troca, nunca a que
+  parece certa** — a mesma lição de 14/10 (*reconstrução de contexto copia a composição do painel*)
+  aplicada à ponte com o worker, e a prova de regressão é reintroduzir o defeito e ver cair.
+  **O bloco de `JSON.parse` estava copiado em sete lugares, e foi a repetição que deixou o oitavo
+  escapar.** Não foi centralizado: mexer nos sete tocaria caminhos que atendem eleitor hoje. Quem
+  impede o nono é **`tests/ia-validadores.test.mjs`**, que varre TODOS e exige a propriedade que
+  não depende de conhecer os campos: **ler a string dá o mesmo resultado que ler o objeto**.
+  **`validarRascunho` é a ÚNICA exceção e é deliberada** — prosa solta vira texto puro com
+  `confianca: 0` (a forma anterior ao esquema), então chega ao campo e nunca sai sozinha. **No
+  comentário a escolha é a oposta e também de propósito: o canal é PÚBLICO**, não há forma antiga a
+  acomodar, e prosa é recusada com o motivo na tela. Ao criar validador novo, decida qual dos dois
+  ele é — e escreva a razão.
+
 - **O COMENTÁRIO DO FACEBOOK É CANAL NOVO, E O PADRÃO DE ATENDIMENTO DELE NÃO ENTRA NELE**
   (19/10/2026, *"agora falta a ia identificar conteúdo e responder de acordo"*). O prompt é próprio
   (`ia.regrasDoComentario`, ~550 tokens contra os ~10 mil do WhatsApp): as 37 seções do padrão dele
@@ -5605,10 +5625,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > `checar-modulos`. Comentário dentro de template literal não leva crase — e é mais uma razão para
 > o checador ser rodado, e não só o `--check`.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e quatro suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e cinco suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs && node tests/ia-validadores.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

@@ -1,111 +1,79 @@
-## 2026-10-19 - v3.179.0 - ESTADO DE AGORA - a IA responde o comentario do Facebook
+## 2026-10-20 - v3.180.0 - ESTADO DE AGORA - o botao IA do comentario nunca funcionou, e agora funciona
 
-**Pedido dele:** *"inseriu corretamente, agora falta a ia identificar conteudo e responder de
-acordo"*.
+**Print dele:** o painel de comentarios no ar, tres comentarios lidos certos, e embaixo
+**"a IA nao devolveu um rascunho legivel"**.
 
-Cada comentario da lista ganhou o botao **IA**: ele pede o rascunho, poe **no campo de texto**, e
-ele le antes de clicar em "Abrir e inserir". **A IA nunca escreve direto na caixa do Facebook** --
-pular o campo transformaria um texto nao lido em algo a um Enter de ser publicado, e aqui e
-publico.
+### A causa: a API devolve TEXTO, e o validador exigia objeto
 
-### Canal NOVO, e nao o rascunho do WhatsApp com outro nome
+**Medido antes de mexer:** `validarComentario` devolvia `null` para a forma que a API entrega de
+verdade — e `null` ali vira exatamente aquela frase.
 
-O prompt e proprio (`ia.regrasDoComentario`, ~550 tokens contra os ~10 mil do WhatsApp), e **o
-padrao de atendimento dele NAO entra**: sao 37 secoes escritas para conversa de um para um, e boa
-parte delas diz o oposto do que vale num comentario. Cada diferenca do canal virou regra:
+```
+validarComentario(string) -> null
+validarComentario(objeto) -> { texto: "Obrigado pelo apoio!", ... }
+```
 
-- **E PUBLICO.** O erro do WhatsApp chega a uma pessoa; o daqui vira print e fica na pagina.
-- **NUNCA pedir nome e cidade.** O formulario e a marca do WhatsApp; aqui e pedir dado de eleitor
-  onde todo mundo ve. Esta escrito como PROIBICAO e repetido COLADO no pedido, porque o resto do
-  projeto manda o contrario em varios lugares e **a regra perto do pedido vence** (licao do item
-  22, 07/09).
-- **PEDIDO PESSOAL vai para o privado.** Quem pede dinheiro, emprego ou remedio num comentario nao
-  pode ser negado na frente de todo mundo. A negativa existe e e no WhatsApp.
-- **Quem xinga o adversario esta do nosso lado:** agradece ou nao responde, **nunca modera** -- a
-  regra 17 do WhatsApp (25/09) vale igual aqui.
-- **UMA ou DUAS frases**, porque comentario longo nao e lido e parece robo.
+`PROVEDORES[*].texto()` entrega `message.content` (OpenAI) ou o bloco `text` (Anthropic): **o JSON
+do modelo como STRING**, nas tres casas. Os **sete** validadores vizinhos fazem o `JSON.parse`;
+este, escrito ontem, nasceu sem ele.
 
-### As travas sao as MESMAS, de proposito
+**Entao o botao IA nunca funcionou — 100% das chamadas**, e cada uma saiu **paga**. A tela mostrava
+o sintoma, como ja aconteceu antes neste projeto.
 
-`rascunharComentario` chama a **propria `revisarRascunho`**: promessa, afirmar que ja fizemos,
-afirmar que temos e dizer que a eleicao acabou sao os mesmos riscos. Duplicar faria as duas listas
-divergirem na primeira correcao. O que e do WhatsApp (saudacao repetida, apresentacao, formulario)
-**simplesmente nao e passado no contexto**, entao nao dispara.
+### Por que o teste de ontem ficou verde: ele provava a minha suposicao
 
-**A chapa e conferida sempre**, mesmo sem o dossie no prompt: o modelo escreve os nomes de cabeca,
-que foi a licao de 08/09 (ele disse que o Van Hattem era deputado federal porque hoje ele e).
+O simulado do worker devolvia `decisao` como **objeto ja pronto** — a forma que eu supus, nao a que
+o worker entrega. Corrigido o simulado para a forma real e reintroduzido o defeito, **11 assercoes
+caem**: o teste teria pego de cara.
 
-### `naoResponder`: a IA pode se abster
+E a mesma licao de 14/10 (*reconstrucao de contexto copia a composicao do painel, nunca a funcao de
+nome parecido*), agora na ponte com o worker: **simulado copia a FORMA REAL do que se troca.**
 
-Irmao do `naoHaOQueResponder` do WhatsApp (24/09). Comentario que so marca um amigo, so emoji ou
-spam nao recebe resposta inventada -- e quem decide se concorda e ele, que continua podendo
-escrever a sua.
+### O que impede a nona vez
 
-### Dois consertos durante o trabalho
+O bloco de `JSON.parse` estava **copiado em sete lugares**, e foi a repeticao que deixou o oitavo
+escapar. **Nao centralizei:** mexer nos sete tocaria caminhos que atendem eleitor hoje.
 
-- **Faltava `src/data/*` nos recursos do Facebook**, entao o dossie nao seria lido ali.
-- **`redesenhar()` destruia o elemento de status** e a mensagem iria para um no orfao: a tela
-  ficaria muda **justo depois da chamada paga**. Hoje o status mora no estado e e procurado no
-  shadow a cada escrita.
+Quem segura e **`tests/ia-validadores.test.mjs`** (suite **25**), que varre os oito e trava a
+propriedade que nao depende de conhecer os campos de cada esquema:
 
-### O que ele precisa fazer
+> **ler a string tem de dar o mesmo resultado que ler o objeto.**
 
-**Recarregar a extensao** e abrir um post. A IA precisa estar **ligada** no painel do mobiliza
-(aba Automatizado) -- desligada, o botao diz isso em vez de falhar calado.
+Ele exige tambem que o exemplo plausivel de cada um seja **aceito** — senao duas recusas iguais
+passariam e o teste nao provaria nada.
 
-### A cadeia foi PROVADA por teste, sem gastar uma chamada
+### Uma diferenca achada pela varredura, e ela e deliberada dos dois lados
 
-`tests/facebook-ia.test.mjs` (a suite **24**) troca o worker por um que devolve o
-que o teste mandar e exercita `rascunharComentario` ponta a ponta. E o que
-nenhum teste puro ve: o que acontece ENTRE as pecas.
+`validarRascunho` **aceita prosa solta**: vira texto puro com `confianca: 0`, que e a forma anterior
+ao esquema. Assim um modelo que ignore o esquema ainda produz rascunho, e **sem confianca ele nunca
+passa do limiar do envio automatico** — o texto so chega ao campo, para ele ler.
 
-**O que ele trava:**
+**No comentario a escolha e a oposta:** o canal e **publico**, nao ha forma antiga a acomodar, e
+prosa e recusada com o motivo na tela. As duas estao escritas no teste com o porque.
 
-- **o pedido sai com `modo: 'comentario'`** — sem isso ele cairia no esquema da
-  DECISAO, a chamada sairia PAGA e voltaria num formato que o validador nao le,
-  virando *"a IA nao respondeu"* em silencio;
-- o prompt do canal vai junto e **o padrao do WhatsApp fica fora**;
-- `naoResponder` chega ao painel **e o texto e descartado** — nao se publica o
-  que ela mandou ignorar;
-- falha do worker **leva o motivo inteiro** (o teto de gasto chega legivel a
-  tela, que e a licao de 07/09), e o *"o que a IA leu"* volta **tambem na
-  falha**;
-- **as travas do WhatsApp valem aqui**: afirmar que ja fizemos, prometer
-  entregar e dizer que a eleicao acabou sao barrados, e o travessao eme e
-  trocado. Se alguem trocar `revisarRascunho` por uma copia, estas assercoes
-  caem — que e o ponto delas;
-- **a chapa e conferida sem o dossie no prompt**, porque o modelo escreve os
-  nomes de cabeca (08/09).
+### Para usar
 
-**Uma falha apareceu e era do TESTE:** o aviso e escrito *"legivel"* com acento e
-eu procurei sem. A mesma familia do limite de palavra antes de letra acentuada.
+**Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho do
+painel tem de dizer **v3.180.0** — e assim que se sabe que o conserto chegou.
 
-### Dois riscos conferidos antes de ele testar
+### O que esta medido e o que nao esta
 
-- **A arvore de imports do painel do Facebook sao 13 modulos, todos em
-  `src/lib/*`** (exposto no manifesto) e **nenhum depende do mobiliza** — sem
-  `api.js`, `page.js` nem `dom.js`. E **nenhum faz trabalho no carregamento**:
-  todos sao inertes ate alguem chamar.
-- **`src/data/*` esta nos recursos do Facebook**, entao `gabinete.lerArquivo` le
-  o dossie ali.
-
-### O peso: 805 KB em TODA aba do Facebook
-
-Medido. `ia.js` (259 KB) e `cortesia.js` (229 KB) entram pela carona, e
-`atendimento.js` **nao e usado** no comentario — o padrao dele fica de fora do
-prompt de proposito.
-
-**Da para cortar para ~38 KB** movendo a IA para `import()` sob demanda, dentro
-do clique do botao. **Nao foi feito de proposito:** e exatamente o caminho que
-ele vai testar, e se o import dinamico falhar ali ele conclui que *"a IA nao
-funciona"*. Fica para depois do teste dele.
+- **Medido:** o validador, a cadeia painel -> cliente -> worker, as travas (promessa, afirmar que ja
+  fizemos, chapa trocada, eleicao encerrada) e a leitura do post. 25 suites verdes.
+- **CALCULADO, nao medido ao vivo:** o prompt do comentario e **572 tokens de sistema + ~37 do
+  comentario**, contra os ~10 mil do WhatsApp. Com ~60 tokens de saida da **~US$ 0,0014 por
+  rascunho no gpt-5** e ~US$ 0,0009 no Haiku, a frio. **O numero de verdade aparece no painel
+  depois do uso** — este e o tamanho do prompt, nao a fatura.
 
 ### O que falta, e e decisao dele
 
-- **Comentario de uma palavra** (**"22"**, que e boa parte desta pagina): hoje o botao chama a IA
-  de qualquer jeito, porque quem pediu foi ele, naquele comentario. `facebook.pedeRascunho` existe
-  e diz quando nao vale gastar; **ligar isso a uma resposta pronta em vez da IA e escolha dele.**
+- **Comentario de uma palavra** (**"22"**, boa parte desta pagina): hoje o botao chama a IA de
+  qualquer jeito, porque quem pediu foi ele, naquele comentario. `facebook.pedeRascunho` ja sabe
+  quando nao vale gastar; **ligar isso a uma resposta pronta em vez da IA e escolha dele.**
+- **A ordenacao "Mais relevantes" esconde comentarios** — o aviso amarelo do painel diz isso, e o
+  post da print declara 17. Trocar para "Todos os comentarios" e rolar dentro do post.
+- **805 KB em toda aba do Facebook.** Da para cortar para ~38 KB movendo a IA para `import()` sob
+  demanda. Segurei ate ele confirmar que o caminho funciona — agora da para fazer.
+- **A aba Facebook da Graph API (v3.172) continua no ar** e sai quando ele confirmar que este
+  caminho substitui.
 - **Nao ha rodada automatica**, de proposito: um comentario por vez, pelo botao.
-- **A aba Facebook da Graph API (v3.172) continua no ar** e sai quando este caminho estiver pronto.
-- **O custo por rascunho nao foi medido ao vivo** -- o prompt e ~10x menor que o do WhatsApp, entao
-  deve ficar bem abaixo dos US$ 0,0029 de la, mas o numero real so aparece no painel depois do uso.
