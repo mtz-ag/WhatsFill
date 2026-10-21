@@ -125,16 +125,20 @@ const estado = {
   /** O relogio do modo de responder. Zerado ao sair — senao ele continua lendo o DOM para sempre. */
   vigia: 0,
   /**
-   * **O QUE ELE RESOLVEU SEM RESPONDER** — `id -> 'curtido' | 'ocultado'` (21/10/2026).
+   * **O QUE ELE FEZ SEM RESPONDER** — `id -> 'curtido' | 'ocultado'` (21/10/2026).
    *
    * **Nao vira `respondido`**: amarelo significa "ja tem resposta nossa", e curtir nao e responder
-   * — marcar assim mentiria na lista e no contador. Mas para a FILA os dois sao trabalho feito,
-   * entao `proximoPendente` pula os dois.
+   * — marcar assim mentiria na lista e no contador.
+   *
+   * **E so o OCULTADO sai da fila** (correcao dele no mesmo dia: *"ao curtir nao precisa pular a
+   * mensagem, somente ao responder"*). Curtir e um complemento: ele pode querer responder a mesma
+   * pessoa depois, entao o comentario continua esperando e o realce fica onde esta. Ocultado nao
+   * tem o que responder — deixar o cursor nele seria um beco sem saida.
    *
    * **So memoria, e isso e de proposito:** gravar faria o painel esconder gente numa sessao
    * futura por causa de um clique que ninguem lembra. No F5 eles voltam, e o que decide e a pagina.
    */
-  tratados: new Map(),
+  marcados: new Map(),
 };
 
 /**
@@ -193,9 +197,9 @@ function comentarioDaVez() {
    * tecla 1 escreve na pagina. Ele continua podendo escolher um respondido pelo clique ou pelas
    * setas; o que nao pode e isso acontecer por padrao.
    */
-  // Pula tambem o que ele acabou de curtir ou ocultar: e trabalho feito, ainda que nao seja
-  // resposta — ver `estado.tratados`.
-  return estado.comentarios.find((c) => !c.respondido && !c.tratado) || estado.comentarios[0];
+  // Pula o que ele OCULTOU — nao ha o que responder ali. O curtido continua na fila: curtir e
+  // complemento, nao resposta (correcao dele, 21/10). Ver `estado.marcados`.
+  return estado.comentarios.find((c) => !c.respondido && !c.foraDaFila) || estado.comentarios[0];
 }
 
 /** Quantos comentarios o painel guarda de um post. Acima disso ele para de acumular. */
@@ -317,9 +321,9 @@ function css() {
     }
     /* Curtido ou ocultado por ele nesta rodada: cinza, porque NAO e resposta nossa — a palavra
        vem do proprio dado, para a tela nunca dizer "curtido" sobre um ocultado. */
-    .item.tratado { border-color: #ccd0d5; background: #f7f8fa; }
-    .item.tratado .quem::after {
-      content: ' · ' attr(data-tratado); color: #65676b; font-weight: 400; font-size: 11px;
+    .item.marcado { border-color: #ccd0d5; background: #f7f8fa; }
+    .item.marcado .quem::after {
+      content: ' · ' attr(data-marca); color: #65676b; font-weight: 400; font-size: 11px;
     }
     .item .quem { font-weight: 600; margin-bottom: 2px; }
     .item .txt { color: #333; white-space: pre-wrap; word-break: break-word; margin-bottom: 7px; }
@@ -435,8 +439,14 @@ function relerComentarios() {
   /**
    * **A marca do que ele curtiu ou ocultou e colada DEPOIS da leitura**, porque `acumular` deixa a
    * leitura nova ganhar: posta dentro do objeto, ela sumiria no tique seguinte.
+   *
+   * `foraDaFila` e separado da MARCA porque sao duas perguntas: o que ele fez (a tela) e se ainda
+   * espera (a fila). Curtir responde a primeira e nao a segunda.
    */
-  for (const c of estado.comentarios) c.tratado = estado.tratados.get(c.id) || '';
+  for (const c of estado.comentarios) {
+    c.marca = estado.marcados.get(c.id) || '';
+    c.foraDaFila = c.marca === 'ocultado';
+  }
 
   /**
    * **O AMARELO E SO PARA PROBLEMA DE VERDADE** — decisao dele em 20/10/2026, vendo o painel no
@@ -464,7 +474,7 @@ function relerComentarios() {
    * verdade pela virtualizacao.
    */
   const total = fb.contagemDoPost(raiz);
-  const esperando = estado.comentarios.filter((c) => !c.respondido && !c.tratado).length;
+  const esperando = estado.comentarios.filter((c) => !c.respondido && !c.foraDaFila).length;
   const feitos = estado.comentarios.length - esperando;
 
   /**
@@ -1042,7 +1052,9 @@ const ACOES_DA_TIRA = [
   {
     tecla: '2',
     nome: 'Curtir',
-    titulo: 'Curte este comentario. Ja curtido, nao mexe — o botao do Facebook e o mesmo nos dois sentidos.',
+    titulo:
+      'Curte este comentario e FICA nele — curtir nao e responder. Ja curtido, nao mexe: o botao ' +
+      'do Facebook e o mesmo nos dois sentidos.',
     roda: (shadow) => curtirDaVez(shadow),
   },
   {
@@ -1095,17 +1107,18 @@ function botaoDeAcao(shadow, acao) {
   return par;
 }
 
-/** Marca o que ele resolveu sem responder, e devolve a frase para a linha de status. */
-function marcarTratado(c, como) {
-  estado.tratados.set(c.id, como);
-  c.tratado = como;
+/** Marca o que ele fez sem responder. So o ocultado sai da fila — ver `estado.marcados`. */
+function marcar(c, como) {
+  estado.marcados.set(c.id, como);
+  c.marca = como;
+  c.foraDaFila = como === 'ocultado';
 }
 
 /**
- * **Depois de uma acao, o modo anda; o painel so redesenha.**
+ * **Depois de OCULTAR, o modo anda; o painel so redesenha.**
  *
- * No painel a lista esta na tela e quem escolhe o proximo e o dedo dele — avancar ali moveria o
- * realce sem ele pedir.
+ * So o ocultar passa por aqui: curtir nao pula (correcao dele, 21/10). E no painel a lista esta na
+ * tela e quem escolhe o proximo e o dedo dele — avancar ali moveria o realce sem ele pedir.
  */
 function seguirDepoisDaAcao(shadow, dito) {
   if (estado.respondendo) {
@@ -1144,8 +1157,14 @@ async function curtirDaVez(shadow) {
 
   await espera(400);
   const confirmado = fb.jaCurtido(no) === true;
-  marcarTratado(alvo, 'curtido');
-  seguirDepoisDaAcao(
+  marcar(alvo, 'curtido');
+  /**
+   * **CURTIR NAO PULA** (correcao dele, 21/10: *"ao curtir nao precisa pular a mensagem, somente
+   * ao responder"*). O realce fica onde esta e o comentario continua na fila: curtir e um
+   * complemento, e a resposta pode vir logo depois, para a mesma pessoa.
+   */
+  desenhar(shadow);
+  falar(
     shadow,
     confirmado ? `Curtido: ${alvo.autor}.` : `Cliquei em Curtir (${alvo.autor}) — confira na pagina.`
   );
@@ -1169,7 +1188,7 @@ async function ocultarDaVez(shadow) {
     falar(shadow, `Nao achei o "Ocultar" no comentario de ${alvo.autor}. Role ate ele aparecer e releia.`);
     return;
   }
-  marcarTratado(alvo, 'ocultado');
+  marcar(alvo, 'ocultado');
   seguirDepoisDaAcao(shadow, `Ocultei o comentario de ${alvo.autor} (confira na pagina).`);
 }
 
@@ -1349,7 +1368,7 @@ function desenhar(shadow) {
     barra.className = 'barra';
 
     const alvo = comentarioDaVez();
-    const esperando = estado.comentarios.filter((c) => !c.respondido && !c.tratado).length;
+    const esperando = estado.comentarios.filter((c) => !c.respondido && !c.foraDaFila).length;
 
     /**
      * **O aviso do nome da pagina e MAIS grave aqui que no painel:** sem ele nada fica
@@ -1652,16 +1671,16 @@ function desenhar(shadow) {
     // Amarelo = ja tem resposta nossa. O realce da VEZ continua por cima dele: a pergunta "onde a
     // tecla bate" vale mesmo num comentario ja respondido, se ele escolher um.
     /**
-     * **`tratado` e marca SEPARADA do amarelo**, e nao pode virar amarelo: amarelo diz "ja tem
-     * resposta nossa", e curtir nao e responder. A palavra vai num `data-` para a CSS escrever
-     * qual foi (curtido / ocultado) sem o painel montar dois seletores.
+     * **A MARCA e separada do amarelo**, e nao pode virar amarelo: amarelo diz "ja tem resposta
+     * nossa", e curtir nao e responder. A palavra vai num `data-` para a CSS escrever qual foi
+     * (curtido / ocultado) sem o painel montar dois seletores.
      */
     item.className =
       'item' +
       (c.respondido ? ' respondido' : '') +
-      (c.tratado ? ' tratado' : '') +
+      (c.marca ? ' marcado' : '') +
       (ehDaVez ? ' davez' : '');
-    if (c.tratado) item.dataset.tratado = c.tratado;
+    if (c.marca) item.dataset.marca = c.marca;
     // Clicar no comentario tambem o torna o da vez: quem usa o mouse nao deve ter de usar as
     // setas para o teclado concordar com o que ele esta olhando.
     item.addEventListener('click', () => {

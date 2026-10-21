@@ -659,19 +659,26 @@ grupo('curtir e ocultar: a fileira do comentario, por texto EXATO');
   check(fbdom.ocultarComentario(art([bt('Curtir')])) === false, 'sem o Ocultar, devolve falso');
 }
 
-grupo('proximoPendente: o que ele CURTIU ou OCULTOU tambem sai da fila');
+grupo('proximoPendente: o OCULTADO sai da fila; o curtido NAO');
 {
   const c = (id, extra = {}) => ({ id, autor: `Fict ${id}`, respondido: false, ...extra });
-  const fila = [c('a'), c('b', { tratado: 'curtido' }), c('c', { tratado: 'ocultado' }), c('d')];
 
-  check(fbdom.proximoPendente(fila, 'a')?.id === 'd', 'pula o curtido e o ocultado');
+  /**
+   * **Correcao dele (21/10): *"ao curtir nao precisa pular a mensagem, somente ao responder"*.**
+   * Curtir e um complemento — ele pode querer responder a mesma pessoa depois —, entao o
+   * comentario continua esperando. Ocultado nao tem o que responder.
+   */
+  const fila = [c('a'), c('b', { marca: 'curtido' }), c('c', { marca: 'ocultado', foraDaFila: true }), c('d')];
+
+  check(fbdom.proximoPendente(fila, 'a')?.id === 'b', 'o CURTIDO continua na fila');
+  check(fbdom.proximoPendente(fila, 'b')?.id === 'd', 'e o ocultado e pulado');
   check(
-    fbdom.proximoPendente([c('a'), c('b', { tratado: 'curtido' })], 'a') === null,
-    'so sobrando tratado, a fila acabou'
+    fbdom.proximoPendente([c('a'), c('b', { marca: 'ocultado', foraDaFila: true })], 'a') === null,
+    'so sobrando ocultado, a fila acabou'
   );
   /**
-   * **`tratado` nao e `respondido`, e nao pode virar:** amarelo significa "ja tem resposta nossa",
-   * e curtir nao e responder. Para a FILA os dois sao trabalho feito; para a TELA, nao.
+   * A marca nao e `respondido`, e nao pode virar: amarelo significa "ja tem resposta nossa", e
+   * curtir nao e responder.
    */
   check(fila[1].respondido === false, 'curtir nao marca como respondido');
 }

@@ -3613,11 +3613,17 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   **Ocultar CLICA E PARA AI.** Abrindo dialogo ou menu, quem confirma e ele: clicar em botao de
   dialogo que ninguem mediu e onde o estrago acontece — aqui, moderar a pagina dele por conta
   propria.
-  **`tratado` NAO e `respondido`, e nao pode virar.** Amarelo significa *"ja tem resposta nossa"*, e
-  curtir nao e responder: marcar assim mentiria na lista e no contador. Para a FILA os dois sao
-  trabalho feito, entao `proximoPendente` pula os dois e a lista mostra `· curtido` / `· ocultado`
-  em cinza. **`estado.tratados` e so MEMORIA**: gravar faria o painel esconder gente numa sessao
-  futura por causa de um clique que ninguem lembra.
+  **A MARCA NAO e `respondido`, e nao pode virar.** Amarelo significa *"ja tem resposta nossa"*, e
+  curtir nao e responder: marcar assim mentiria na lista e no contador. A lista mostra
+  `· curtido` / `· ocultado` em cinza.
+  **E SO O OCULTADO SAI DA FILA** (correcao dele no mesmo dia: *"ao curtir nao precisa pular a
+  mensagem, somente ao responder"*). **Curtir e complemento, nao resposta** — ele pode querer
+  responder a mesma pessoa logo depois, entao o realce FICA onde esta e o comentario continua
+  esperando. Ocultado nao tem o que responder: deixar o cursor nele seria beco sem saida. Sao DUAS
+  perguntas e por isso dois campos: `marca` (o que ele fez — a tela) e `foraDaFila` (se ainda
+  espera — a fila); `proximoPendente` so le o segundo, e quem decide o porque e o painel.
+  **`estado.marcados` e so MEMORIA**: gravar faria o painel esconder gente numa sessao futura por
+  causa de um clique que ninguem lembra.
   **A marca e colada DEPOIS da leitura** (`relerComentarios`), porque `acumular` deixa a leitura
   nova ganhar — posta dentro do objeto, ela sumiria no tique seguinte da vigia.
 

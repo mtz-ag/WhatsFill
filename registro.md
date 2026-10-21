@@ -1,4 +1,4 @@
-## 2026-10-21 - v3.190.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
+## 2026-10-21 - v3.191.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
 
 Onze coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em 20/10;
 a oitava e o conserto do que a secao 7 nao alcancou, a nona e o **modo de responder**, a decima
@@ -611,11 +611,21 @@ em "nao curtido" faria o painel desfazer o que ele fez.
 Abrindo dialogo ou menu, **quem confirma e ele**: clicar em botao de dialogo que ninguem mediu e
 onde o estrago de verdade acontece — aqui, moderar a pagina dele por conta propria.
 
-### Curtido e ocultado NAO viram amarelo
+### Curtido e ocultado NAO viram amarelo — e so o ocultado sai da fila
 
 Amarelo significa *"ja tem resposta nossa"*, e curtir nao e responder. Eles ganham marca propria,
-em cinza (`· curtido`, `· ocultado`), **e para a FILA contam como trabalho feito**: o avanco
-automatico pula os dois e o contador desconta.
+em cinza (`· curtido`, `· ocultado`).
+
+**Correcao dele, no mesmo dia:** *"ao curtir nao precisa pular a mensagem, somente ao responder"*.
+Entao:
+
+- **Curtir FICA no comentario.** E um complemento, e a resposta pode vir logo depois para a mesma
+  pessoa — o realce nao se move e ele continua na fila.
+- **Ocultar PULA.** Nao ha o que responder num comentario oculto: deixar o cursor nele seria beco
+  sem saida.
+
+Sao **duas perguntas, e por isso dois campos**: `marca` (o que ele fez — a tela) e `foraDaFila` (se
+ainda espera — a fila). `proximoPendente` so le o segundo; quem decide o porque e o painel.
 
 **So memoria, nunca armazenamento:** gravar faria o painel esconder gente numa sessao futura por
 causa de um clique que ninguem lembra. No F5 eles voltam, e quem decide e a pagina.
@@ -625,7 +635,8 @@ causa de um clique que ninguem lembra. No F5 eles voltam, e quem decide e a pagi
 - 26 suites verdes, com teste novo para os tres botoes (17 assercoes, metade sobre o que **nao**
   pode ser clicado).
 - O smoke do painel num DOM falso prova que **o clique cai no comentario DA VEZ e nao no vizinho**,
-  que a tira numera `1, 2, 3, 4, 5...` na ordem certa, e que a linha de status conta o que fez.
+  que a tira numera `1, 2, 3, 4, 5...` na ordem certa, que a linha de status conta o que fez e que
+  **depois de curtir o realce NAO se move**.
 
 **O que fica em aberto:** o rotulo do botao de curtir ja curtido (*"Descurtir"*?) e o que acontece
 ao clicar em **Ocultar** (dialogo? menu?) **nao foram vistos na pagina dele** — as duas coisas
@@ -636,7 +647,7 @@ aparecem no primeiro uso, e a tela diz "confira na pagina" em vez de afirmar.
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.190.0** — e assim que se sabe que chegou.
+dizer **v3.191.0** — e assim que se sabe que chegou.
 
 ## O que falta, e e decisao dele
 

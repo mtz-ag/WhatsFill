@@ -728,11 +728,13 @@ export function proximoPendente(lista, idAtual) {
   const i = todos.findIndex((c) => c && c.id === idAtual);
   const ordem = i < 0 ? todos : [...todos.slice(i + 1), ...todos.slice(0, i)];
   /**
-   * **`tratado` e o que ele resolveu SEM responder** — curtiu ou ocultou (21/10). Nao e
-   * `respondido`, e nao pode virar: amarelo significa "ja tem resposta nossa", e curtir nao e
-   * responder. Mas para a FILA os dois sao a mesma coisa: trabalho feito.
+   * **`foraDaFila` e quem o PAINEL decidiu que nao espera mais**, e hoje e so o ocultado.
+   *
+   * **CURTIR NAO TIRA DA FILA** (correcao dele, 21/10: *"ao curtir nao precisa pular a mensagem,
+   * somente ao responder"*) — curtir e um complemento, e ele pode querer responder a mesma pessoa
+   * depois. Quem decide o porque e o painel; aqui so se pergunta se ainda espera.
    */
-  return ordem.find((c) => c && !c.respondido && !c.tratado) || null;
+  return ordem.find((c) => c && !c.respondido && !c.foraDaFila) || null;
 }
 
 /**
