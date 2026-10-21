@@ -1,9 +1,9 @@
-## 2026-10-21 - v3.192.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
+## 2026-10-21 - v3.193.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
 
 Doze coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em 20/10;
 a oitava e o conserto do que a secao 7 nao alcancou, a nona e o **modo de responder**, a decima
 veio da primeira print do modo no ar, a decima primeira troca o que os digitos 2, 3 e 4 fazem e a
-decima segunda poe o realce **na pagina**.
+decima segunda poe o realce **na pagina** e a decima terceira conserta o avanco depois do Enter.
 
 ---
 
@@ -685,10 +685,68 @@ sujeira no Facebook dele.
 
 ---
 
+## 13. O Enter nao pulava para o proximo (v3.193.0)
+
+**Relato dele:** *"ao mandar o enter nao esta pulando para o proximo comentario"*.
+
+### A causa: a prova do envio era UMA so, e ela depende de um rotulo
+
+O avanco acontece quando a **resposta aparece no post** — o mesmo sinal do amarelo. Ler isso exige
+o `aria-label` da resposta, e `lerRotulo` **so aceita rotulo com o marcador de tempo**:
+
+```
+RE_RESPOSTA = ^resposta de (.+?) ao comentario de (.+?)\s+h[aá]\s
+```
+
+A resposta **recem-criada pode nao ter o "ha ..." ainda** — item fresco no Facebook aparece como
+*"Agora"*. Sem rotulo lido, a resposta existe na tela e **o painel nao a ve**: nada fica
+respondido, e o avanco nunca acontece. Um minuto depois ela viraria *"ha 1 minuto"* e passaria a
+ser lida — tarde demais para quem esta percorrendo a fila.
+
+**Nao afrouxei o `lerRotulo`.** Qual e o rotulo de uma resposta recem-enviada **nao foi medido**, e
+relaxar a guarda por hipotese marcaria como respondido quem nunca foi — o erro caro deste painel.
+**O conserto nao depende de rotulo nenhum.**
+
+### A segunda prova e o TEXTO, com duas condicoes
+
+O painel guarda o trecho que `inserirNaCaixa` **confirmou** ter entrado (os mesmos 20 caracteres
+que ela usa para conferir, e so quando a insercao devolveu `true`). Dai:
+
+```
+saiu da caixa   E   continua na pagina   ->  foi enviado, segue para o proximo
+saiu da caixa   e   sumiu da pagina      ->  ele so FECHOU a caixa: nao anda
+continua na caixa                        ->  nada aconteceu ainda
+```
+
+**As duas metades importam.** So a primeira acusaria envio quando ele fecha a caixa sem mandar — e
+**avancar sem envio esconde da fila quem nunca foi atendido**. A caixa *sumir* tambem conta: quem
+decide e o texto estar na pagina.
+
+### A linha de status diz por qual prova andou
+
+```
+Resposta a Marta apareceu no post.                      <- prova forte
+O texto saiu da caixa de Marta — segui sem ver a        <- prova fraca
+resposta no post. (rotulo que nao entendi: "...")
+```
+
+**O rotulo citado e a medicao que falta.** Vendo essa segunda linha, e so me dizer o que esta entre
+aspas: e ele que diz por que a prova forte falhou, e com ele a prova forte volta a funcionar sem
+hipotese nenhuma.
+
+### Medido
+
+- O smoke do painel, num DOM falso, prova as tres situacoes: **inserir sozinho nao pula**, **caixa
+  limpa sem o texto na pagina nao pula** (ele so fechou a caixa) e **caixa limpa com o texto
+  publicado PULA**, com a linha dizendo por qual prova.
+- 26 suites verdes, `checar-modulos` e `checar-referencias` limpos.
+
+---
+
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.192.0** — e assim que se sabe que chegou.
+dizer **v3.193.0** — e assim que se sabe que chegou.
 
 ## O que falta, e e decisao dele
 

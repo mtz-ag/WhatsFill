@@ -3593,6 +3593,30 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **O AVANCO TINHA UMA PROVA SO, E ELA DEPENDIA DE UM ROTULO QUE NINGUEM MEDIU** (21/10/2026,
+  relato dele: *"ao mandar o enter nao esta pulando para o proximo comentario"*).
+  A prova do envio era **a resposta aparecer no post**, lida de `comentariosDoPost`. Ela exige o
+  `aria-label` da resposta, e **`lerRotulo` so aceita rotulo com o marcador de tempo** (`HA = \s+h[aá]\s`)
+  — a resposta recem-criada pode nao te-lo ainda (o Facebook mostra *"Agora"* em item fresco). Sem
+  rotulo lido, a resposta existe na tela e **o painel nao a ve**: nada fica respondido, e o avanco
+  nunca acontece.
+  **Nao relaxei o `lerRotulo`:** qual e o rotulo de uma resposta recem-enviada **nao foi medido**, e
+  afrouxar a guarda por hipotese e como marcar comentario de quem nunca foi respondido — o erro
+  caro deste painel. **O conserto nao depende de rotulo nenhum.**
+  **A SEGUNDA PROVA E O TEXTO, e ela tem DUAS condicoes:** o trecho que `inserirNaCaixa` confirmou
+  ter entrado **saiu da caixa** E **continua na pagina**. Enviado, ele sai da caixa e aparece como
+  resposta; **fechada a caixa sem enviar, ele some dos dois lugares** e nada acontece. So a
+  primeira metade acusaria envio quando ele apenas fecha a caixa — e a caixa SUMIR tambem conta,
+  porque quem decide e o texto estar na pagina.
+  **O trecho sao os mesmos 20 caracteres que `inserirNaCaixa` usa para conferir**, e so e armado
+  quando a insercao devolveu `true`: assim o que se procura e o que a propria funcao ja provou
+  estar la — nao a suposicao de que o Lexical aceitou o texto inteiro.
+  **A linha de status diz por QUAL prova andou**, e quando foi pela fraca mostra **o primeiro
+  rotulo que a leitura nao entendeu** (`rotulosNaoLidos`). E medicao na tela dele, sem console: e
+  esse texto que diz o que falta para a prova forte voltar a funcionar.
+  **`raiz.innerText` so e lido enquanto ha trecho armado** — ou seja, entre inserir e avancar.
+  Fora dessa janela a vigia nao paga o layout.
+
 - **O REALCE AMARELO VAI NA PAGINA, E O DEFEITO DELE E O RASTRO** (21/10/2026, pedido dele: *"faca
   uma marcacao amarela na volta do comentario selecionado"*).
   No modo de responder o painel esta guardado e ele le a **pagina**: a barra diz o NOME de quem

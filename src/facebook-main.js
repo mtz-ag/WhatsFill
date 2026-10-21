@@ -947,7 +947,37 @@ function soltarOFoco() {
  * comentario e o painel sairia de cima dele sem nada ter sido enviado.
  */
 function armar(c) {
-  estado.aguardando = c && !c.respondido ? { id: c.id, autor: c.autor } : null;
+  estado.aguardando = c && !c.respondido ? { id: c.id, autor: c.autor, trecho: '' } : null;
+}
+
+/**
+ * **O PEDACO DO TEXTO QUE FOI PARA A CAIXA — a segunda prova do envio** (21/10/2026, relato dele:
+ * *"ao mandar o enter nao esta pulando para o proximo comentario"*).
+ *
+ * A prova forte continua sendo a RESPOSTA APARECER no post. Ela depende de ler o `aria-label` da
+ * resposta recem-criada, e **essa forma nunca foi medida**: o rotulo exige o marcador de tempo
+ * (`ha ...`), e um "Agora" no lugar dele faria a leitura devolver nulo — a resposta existiria na
+ * tela e o painel nao a veria.
+ *
+ * Por isso guarda-se o trecho que `inserirNaCaixa` CONFIRMOU ter entrado (os mesmos 20 caracteres
+ * que ela usa para conferir). Sumindo da caixa, o texto saiu.
+ */
+function aguardarSaida(c, texto) {
+  armar(c);
+  if (estado.aguardando) estado.aguardando.trecho = String(texto || '').slice(0, 20);
+}
+
+/**
+ * **Os rotulos que a leitura NAO entendeu.** Existe para UMA coisa: quando o avanco acontece pela
+ * prova fraca, a linha de status mostra o primeiro deles — e e esse texto que diz o que falta para
+ * a prova forte voltar a funcionar. Medicao na tela dele, sem console.
+ */
+function rotulosNaoLidos(raiz) {
+  if (!raiz) return [];
+  return fb
+    .articles(raiz)
+    .map((a) => a.getAttribute('aria-label') || '')
+    .filter((l) => l && !fb.lerRotulo(l));
 }
 
 /**
@@ -973,9 +1003,43 @@ function vigiarEnvio(shadow) {
   const esperado = estado.aguardando;
   const atual = esperado && estado.comentarios.find((c) => c.id === esperado.id);
 
+  // PROVA FORTE: a resposta apareceu no post.
   if (esperado && atual && atual.respondido) {
     avancar(shadow, `Resposta a ${esperado.autor} apareceu no post.`);
     return;
+  }
+
+  /**
+   * **PROVA FRACA: o texto SAIU DA CAIXA e esta NA PAGINA.**
+   *
+   * **Sao DUAS condicoes, e a segunda e o que a torna segura:** o texto saiu da caixa **E**
+   * continua na PAGINA. Enviado, ele sai da caixa e aparece como resposta; **fechada a caixa sem
+   * enviar, ele some dos dois lugares** e nada acontece. So a primeira metade acusaria envio
+   * quando ele apenas fecha a caixa — e **avancar sem envio esconde da fila quem nunca foi
+   * atendido**, que e o erro caro deste painel.
+   *
+   * A caixa SUMIR tambem conta (o Facebook a fecha depois de enviar em alguns layouts): quem
+   * decide e o texto estar na pagina.
+   *
+   * O pior caso dela e nao disparar, que e o comportamento de antes: dai ele anda com o ↓.
+   *
+   * **E a linha diz que foi pela prova fraca**, com o rotulo que a leitura nao entendeu quando
+   * houver: e assim que se descobre por que a prova forte falhou, sem console nenhum.
+   */
+  if (esperado && esperado.trecho) {
+    const raiz = fb.raizDoPost();
+    const caixa = raiz && fb.caixaDeResposta(esperado.autor, raiz);
+    const naCaixa = !!caixa && String(caixa.innerText || '').includes(esperado.trecho);
+    const naPagina = !!raiz && String(raiz.innerText || '').includes(esperado.trecho);
+    if (raiz && !naCaixa && naPagina) {
+      const naoLido = rotulosNaoLidos(raiz)[0];
+      avancar(
+        shadow,
+        `O texto saiu da caixa de ${esperado.autor} — segui sem ver a resposta no post.` +
+          (naoLido ? ` (rotulo que nao entendi: "${naoLido.slice(0, 70)}")` : '')
+      );
+      return;
+    }
   }
 
   // Redesenha so quando a fila mudou: refazer a barra a cada 700ms seria DOM novo embaixo do dedo
@@ -1062,6 +1126,7 @@ async function pedirRascunhoNoModo(shadow, alvo) {
   const texto = estado.texto.trim();
   if (!texto) return;
   const entrou = await inserir(alvo, texto, () => {});
+  if (entrou && estado.respondendo) aguardarSaida(alvo, texto);
   falar(
     shadow,
     entrou
@@ -2086,6 +2151,9 @@ async function usarResposta(shadow, r) {
   estado.daVezId = alvo.id;
   const entrou = await inserir(alvo, texto, (t) => falar(shadow, t + onde));
   if (!entrou) return;
+
+  // O texto ENTROU: dai em diante, ele sumir da caixa e sinal de que foi enviado.
+  if (estado.respondendo) aguardarSaida(alvo, texto);
 
   /**
    * **O ponteiro so anda com o texto na caixa** — a disciplina de `templates.avancarVariante`. Se
