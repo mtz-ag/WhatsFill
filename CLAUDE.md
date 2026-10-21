@@ -3593,6 +3593,34 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **O ROTULO DA RESPOSTA NOMEIA O AUTOR DO PAI, NAO O COMENTARIO — e com isso quem escreve DUAS
+  vezes some da fila** (21/10/2026, print dele: *"a marta ja foi respondida, ela tem duas
+  mensagens"*).
+  A mesma eleitora tinha dois comentarios no post: um ja com *"Capitao Martim respondeu"* e outro
+  sem nada. **`comentariosDoPost` casava por NOME** (`respondidos.some((pai) => mesmoNome(pai,
+  c.autor))`), porque e so isso que o `aria-label` da resposta carrega — *"Resposta de X ao
+  comentario de Marta"*. Entao responder UM marcava **todos** os comentarios dela, e o que nunca
+  foi respondido ficava amarelo e saia da fila **em silencio**.
+  **O defeito so nasce depois do "Ler tudo".** Com as respostas colapsadas quem decide e
+  `respostaNossaColapsada`, que le o resumo NA POSICAO de cada comentario e acerta; expandir traz
+  os rotulos e o nome passa a decidir. Foi por isso que ele viu a lista certa na print e o risco
+  estava a um clique de distancia.
+  **O id do pai estava a um `searchParams` de distancia:** o permalink da resposta leva os DOIS
+  (`comment_id` = o pai, `reply_comment_id` = ela mesma), e `idDoComentario` ja lia os dois campos
+  desde 19/10 — faltava usar o primeiro. Hoje `paiDoComentario` devolve o id do pai e o casamento e
+  por **id**.
+  **A reserva por NOME fica, e isso nao e indecisao:** a forma do permalink foi lida do CODIGO, nao
+  medida na pagina dele, e sem reserva um formato diferente deixaria TUDO como pendente — ele
+  responderia a base inteira duas vezes. Por id quando o id veio; por nome so nas respostas que nao
+  trouxeram id. **Errar mostrando demais e barato; esconder quem nunca foi respondido nao e.**
+  **E a barra passou a dizer quando a pessoa escreveu mais de uma vez** (`comentariosDoMesmoAutor`):
+  *"2º de 2 desta pessoa · 1 ja respondido"*, em ambar. Numa barra que mostra UMA pessoa por vez,
+  sem isso ele repete a mesma frase para a mesma pessoa — **e repeticao e o maior sinal de maquina
+  respondendo** (12/09). O da vez nao entra na propria conta, e quem escreveu uma vez so nao ganha
+  marca (alarme que toca sempre se aprende a ignorar).
+  **A prova de regressao e o defeito reintroduzido:** voltando a casar por nome, a assercao *"o
+  OUTRO continua esperando"* cai sozinha.
+
 - **O MODO DE RESPONDER: O ENTER E O DO FACEBOOK, E O AVANCO SO ACONTECE COM PROVA**
   (21/10/2026, pedido dele: *"criei um botao de comecar a responder onde vai esconder a extensao e
   ter as opcoes de resposta, subir e descer comentarios nas setas e enter para mandar a mensagem;

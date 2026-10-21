@@ -363,6 +363,34 @@ export function ordenacaoEsconde(raiz = document) {
 }
 
 /** O comentario inteiro, pronto para a tela e para a IA. */
+/**
+ * **DE QUAL COMENTARIO esta resposta e filha — o dado que o `aria-label` NAO tem.**
+ *
+ * O rotulo da resposta nomeia o AUTOR do pai (*"Resposta de X ao comentario de Marta"*), e nada
+ * mais. Com isso, duas pessoas de mesmo nome — ou **a mesma pessoa com dois comentarios**, que e o
+ * caso comum — ficam indistinguiveis: responder um marcaria os dois.
+ *
+ * O permalink da resposta carrega os DOIS ids (`comment_id` e o pai, `reply_comment_id` e ela
+ * mesma), e e dai que sai a precisao. `idDoComentario` ja lia os dois campos desde 19/10 — o que
+ * faltava era usar o primeiro.
+ *
+ * **Devolve `null` quando a forma nao e essa**, e quem chama volta a casar por nome: errar
+ * mostrando como pendente e barato, esconder quem nunca foi respondido nao e.
+ */
+export function paiDoComentario(art) {
+  for (const a of art.querySelectorAll('a[href]')) {
+    try {
+      const u = new URL(a.getAttribute('href'), location.origin);
+      if (!u.searchParams.get('reply_comment_id')) continue;
+      const pai = u.searchParams.get('comment_id');
+      if (pai) return pai;
+    } catch (e) {
+      /* href relativo esquisito: segue para o proximo */
+    }
+  }
+  return null;
+}
+
 export function lerComentario(art) {
   const dados = lerRotulo(art.getAttribute('aria-label'));
   if (!dados) return null;
@@ -371,6 +399,8 @@ export function lerComentario(art) {
     tipo: dados.tipo,
     autor: dados.autor,
     respondeA: dados.respondeA,
+    /** So a RESPOSTA tem: o id do comentario de quem ela responde. Ver `paiDoComentario`. */
+    paiId: dados.tipo === 'resposta' ? paiDoComentario(art) : null,
     texto: limparTextoDoComentario(art.innerText, dados.autor),
     no: art,
   };
@@ -396,9 +426,25 @@ export function comentariosDoPost(raiz = document) {
   const pagina = nomeDaPagina(raiz);
   const lidos = arts.map(lerComentario).filter(Boolean);
 
-  const respondidos = lidos
-    .filter((c) => c.tipo === 'resposta' && pagina && mesmoNome(c.autor, pagina))
-    .map((c) => c.respondeA);
+  const nossasRespostas = lidos.filter(
+    (c) => c.tipo === 'resposta' && pagina && mesmoNome(c.autor, pagina)
+  );
+
+  /**
+   * **POR ID primeiro, e o NOME so onde o id nao veio** (21/10/2026, print dele: *"a marta ja foi
+   * respondida, ela tem duas mensagens"*).
+   *
+   * O rotulo da resposta so diz o NOME do pai, entao casar por nome marca TODOS os comentarios
+   * daquela pessoa quando um deles e respondido — e quem tem dois comentarios some da fila com um
+   * deles sem resposta. Com os dois comentarios dela colapsados o defeito nao aparece (cada resumo
+   * mora no seu lugar, e `respostaNossaColapsada` acerta); **ele nasce depois do "Ler tudo"**, que
+   * expande as respostas e traz os rotulos.
+   *
+   * A reserva por nome e o comportamento de ate hoje: a forma do permalink foi lida do codigo, nao
+   * medida na pagina dele, e sem reserva um formato diferente deixaria TUDO como pendente.
+   */
+  const idsRespondidos = new Set(nossasRespostas.map((c) => c.paiId).filter(Boolean));
+  const nomesSemId = nossasRespostas.filter((c) => !c.paiId).map((c) => c.respondeA);
 
   return lidos
     .filter(
@@ -416,7 +462,9 @@ export function comentariosDoPost(raiz = document) {
        * apareceria depois de ler o post inteiro.
        */
       respondido:
-        respondidos.some((pai) => mesmoNome(pai, c.autor)) || respostaNossaColapsada(c.no, pagina),
+        idsRespondidos.has(c.id) ||
+        nomesSemId.some((pai) => mesmoNome(pai, c.autor)) ||
+        respostaNossaColapsada(c.no, pagina),
     }));
 }
 
@@ -609,6 +657,28 @@ export function proximoPendente(lista, idAtual) {
   const i = todos.findIndex((c) => c && c.id === idAtual);
   const ordem = i < 0 ? todos : [...todos.slice(i + 1), ...todos.slice(0, i)];
   return ordem.find((c) => c && !c.respondido) || null;
+}
+
+/**
+ * **OS OUTROS COMENTARIOS DA MESMA PESSOA** (21/10/2026, pedido dele: *"a marta ja foi respondida,
+ * ela tem duas mensagens, mostre quando for o caso"*).
+ *
+ * Numa barra que mostra uma pessoa por vez, "ja respondemos outro comentario dela" e o que muda o
+ * que ele escreve — sem isso ele repete a mesma frase para a mesma pessoa duas vezes, que e o
+ * maior sinal de maquina respondendo (12/09).
+ *
+ * `respondidos` conta so os OUTROS: o da vez nao entra na propria conta.
+ */
+export function comentariosDoMesmoAutor(lista, c) {
+  const todos = (Array.isArray(lista) ? lista : []).filter(
+    (o) => o && c && c.autor && mesmoNome(o.autor, c.autor)
+  );
+  const outros = todos.filter((o) => o.id !== c.id);
+  return {
+    total: todos.length,
+    posicao: todos.findIndex((o) => o.id === c.id) + 1,
+    respondidos: outros.filter((o) => o.respondido).length,
+  };
 }
 
 /**

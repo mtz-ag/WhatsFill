@@ -365,6 +365,12 @@ function css() {
       color: #444; flex: 1; min-width: 0;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
+    .barra .alvo .marca { font-size: 11px; color: #65676b; white-space: nowrap; }
+    /* Ambar: a mesma linguagem do amarelo da lista ("ja tem resposta nossa"). */
+    .barra .alvo .marca.ja {
+      color: #8a6d3b; background: #fff8e1; border: 1px solid #ffe69c;
+      border-radius: 10px; padding: 1px 7px;
+    }
     .barra .alvo .conta { color: #65676b; font-size: 11px; white-space: nowrap; }
     .barra .alvo .parar { margin-left: auto; }
     .barra .rapidas { margin-bottom: 7px; }
@@ -1146,6 +1152,30 @@ function desenhar(shadow) {
       const quem = document.createElement('span');
       quem.className = 'quem';
       quem.textContent = alvo.autor;
+
+      /**
+       * **"ESTA PESSOA ESCREVEU MAIS DE UMA VEZ"** (21/10/2026, print dele: *"a marta ja foi
+       * respondida, ela tem duas mensagens, mostre quando for o caso"*).
+       *
+       * A barra mostra UMA pessoa por vez — e sem isto ele nao tem como saber que ja respondeu a
+       * mesma pessoa noutro comentario, e repete a mesma frase para ela. **Repeticao e o maior
+       * sinal de maquina respondendo** (12/09).
+       *
+       * Em AMBAR quando ja respondemos outro dela, cinza quando ela so escreveu duas vezes: a cor
+       * e a mesma linguagem do amarelo da lista, e o cinza nao e alarme — e informacao.
+       */
+      const outros = fb.comentariosDoMesmoAutor(estado.comentarios, alvo);
+      const marca = document.createElement('span');
+      marca.className = outros.respondidos ? 'marca ja' : 'marca';
+      marca.textContent =
+        `${outros.posicao}º de ${outros.total} desta pessoa` +
+        (outros.respondidos
+          ? ` · ${outros.respondidos} ja respondido${outros.respondidos > 1 ? 's' : ''}`
+          : '');
+      marca.title = outros.respondidos
+        ? 'Ja respondemos outro comentario desta pessoa — nao repita a mesma frase.'
+        : 'Esta pessoa escreveu mais de uma vez neste post.';
+
       const txt = document.createElement('span');
       txt.className = 'txt';
       // Uma linha so, cortada por CSS: o comentario inteiro esta na pagina atras da barra, e a
@@ -1154,7 +1184,10 @@ function desenhar(shadow) {
       const conta = document.createElement('span');
       conta.className = 'conta';
       conta.textContent = `${i + 1} de ${estado.comentarios.length} · ${esperando} esperando`;
-      linhaAlvo.append(quem, txt, conta);
+      // A marca so entra quando e verdade: numa pessoa com UM comentario ela seria ruido.
+      linhaAlvo.append(quem);
+      if (outros.total > 1) linhaAlvo.append(marca);
+      linhaAlvo.append(txt, conta);
     } else {
       const vazio = document.createElement('span');
       vazio.className = 'txt';

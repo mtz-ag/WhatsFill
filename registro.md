@@ -1,7 +1,8 @@
-## 2026-10-21 - v3.188.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
+## 2026-10-21 - v3.189.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
 
-Nove coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em
-20/10; a oitava e o conserto do que a secao 7 nao alcancou, e a nona e o **modo de responder**.
+Dez coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em 20/10;
+a oitava e o conserto do que a secao 7 nao alcancou, a nona e o **modo de responder** e a decima
+veio da primeira print do modo no ar.
 
 ---
 
@@ -504,10 +505,71 @@ a um dedo de quem responde em sequencia e o gesto destrutivo escondido no inofen
 
 ---
 
+## 10. Quem escreve DUAS vezes sumia da fila (v3.189.0)
+
+**Print dele**, com a barra no ar sobre o segundo comentario da mesma eleitora: *"a marta ja foi
+respondida, ela tem duas mensagens, mostre quando for o caso"*.
+
+Na pagina estavam, em ordem:
+
+```
+Marta Fictinha — "Estou em oracao..."        Capitao Martim respondeu · 1 resposta   <- atendida
+James Machado  — "..."
+Marta Fictinha — "Estou com o Flavio 22"     (nada embaixo)                          <- esperando
+```
+
+### A causa, e ela e maior que a print
+
+**O painel escolheu certo** (ele estava no comentario que ainda esperava). O que faltava era ele
+saber que ja havia respondido a mesma pessoa noutro lugar.
+
+**Mas medindo, apareceu o defeito de verdade:** o `aria-label` da resposta so diz o **nome** do pai
+— *"Resposta de X ao comentario de Marta"* —, e era por nome que `comentariosDoPost` marcava. Entao
+responder UM comentario dela marcava **os dois**, e o que nunca foi respondido ficava amarelo e
+**saia da fila em silencio**.
+
+**Por que a print ainda mostrava a lista certa:** com as respostas COLAPSADAS quem decide e
+`respostaNossaColapsada`, que le o resumo na POSICAO de cada comentario e acerta. O defeito nasce
+depois do **"Ler tudo"**, que expande as respostas e traz os rotulos — ou seja, estava a um clique
+de distancia.
+
+### O id do pai estava a um parametro de distancia
+
+O permalink da resposta leva os **dois** ids:
+
+```
+/post?comment_id=<O PAI>&reply_comment_id=<A RESPOSTA>
+```
+
+`idDoComentario` ja lia os dois campos desde 19/10; faltava usar o primeiro. Hoje
+`paiDoComentario` devolve o id do pai e o casamento e por **id**.
+
+**A reserva por nome fica**, e nao e indecisao: a forma do permalink foi lida do CODIGO, nao medida
+na pagina dele. Sem reserva, um formato diferente deixaria **tudo** como pendente e ele responderia
+a base inteira duas vezes. Por id quando o id veio; por nome so nas respostas que nao trouxeram id.
+**Errar mostrando demais e barato; esconder quem nunca foi respondido nao e.**
+
+### E a barra passou a dizer quando a pessoa escreveu mais de uma vez
+
+Em ambar, ao lado do nome:
+
+```
+Marta Fictinha   2º de 2 desta pessoa · 1 ja respondido   Estou com o Flavio 22
+```
+
+Numa barra que mostra **uma pessoa por vez**, sem isso ele repete a mesma frase para a mesma pessoa
+— e repeticao e o maior sinal de maquina respondendo (12/09). O da vez nao entra na propria conta,
+e quem escreveu uma vez so **nao ganha marca**: alarme que toca sempre se aprende a ignorar.
+
+**A prova de regressao e o defeito reintroduzido:** voltando a casar por nome, a assercao *"o OUTRO
+continua esperando"* cai sozinha. Medido.
+
+---
+
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.188.0** — e assim que se sabe que chegou.
+dizer **v3.189.0** — e assim que se sabe que chegou.
 
 ## O que falta, e e decisao dele
 

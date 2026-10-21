@@ -480,6 +480,95 @@ grupo('respostaNossaColapsada: o resumo mora FORA do article');
   );
 }
 
+grupo('a MESMA pessoa com dois comentarios: responder um NAO marca o outro');
+{
+  /**
+   * **A print dele de 21/10/2026:** *"a marta ja foi respondida, ela tem duas mensagens"*. Ela
+   * escreveu duas vezes no post, uma ja tinha resposta nossa e a outra nao.
+   *
+   * O rotulo da resposta so diz o NOME do pai (*"Resposta de X ao comentario de Marta"*), entao
+   * casar por nome marcava **as duas** — e a que nunca foi respondida sumia da fila, em silencio.
+   * O permalink da resposta carrega os dois ids, e e dele que sai a precisao.
+   */
+  const antes = globalThis.location;
+  globalThis.location = { origin: 'https://www.facebook.com' };
+
+  const link = (href) => ({ seletor: 'a[href]', getAttribute: () => href });
+  const art = (rotulo, texto, hrefs = []) => ({
+    seletor: '[role="article"][aria-label]',
+    getAttribute: (k) => (k === 'aria-label' ? rotulo : null),
+    innerText: texto,
+    querySelectorAll: (sel) => (sel === 'a[href]' ? hrefs.map(link) : []),
+  });
+
+  const umaDela = (id) => `/post?comment_id=${id}`;
+  const nossa = (pai, resp) => `/post?comment_id=${pai}&reply_comment_id=${resp}`;
+
+  const nos = [
+    art('Comentario de Marta Fictinha ha 2 horas', 'Marta Fictinha\nEstou em oracao\n2 h\nCurtir', [umaDela('A1')]),
+    art('Resposta de Capitao Martim ao comentario de Marta Fictinha ha 32 minutos', 'Capitao Martim\nAmem!\n32 min\nCurtir', [nossa('A1', 'R1')]),
+    art('Comentario de Marta Fictinha ha 2 horas', 'Marta Fictinha\nEstou com o 22\n2 h\nCurtir', [umaDela('A2')]),
+  ];
+  const raiz = {
+    querySelectorAll: (sel) =>
+      sel === '[aria-label]' ? [{ getAttribute: () => `Comente como ${PAGINA}` }] : nos,
+  };
+
+  check(fbdom.paiDoComentario(nos[1]) === 'A1', 'o permalink da resposta diz de QUAL comentario ela e filha');
+  check(fbdom.paiDoComentario(nos[0]) === null, 'comentario de primeiro nivel nao tem pai');
+
+  const lista = fbdom.comentariosDoPost(raiz);
+  check(lista.length === 2, 'os dois comentarios dela entram na lista');
+  check(lista[0].respondido === true, 'o que recebeu a resposta fica respondido');
+  check(
+    lista[1].respondido === false,
+    'o OUTRO continua esperando — era ele que sumia da fila'
+  );
+
+  /**
+   * **A reserva por NOME e o comportamento de ate hoje**, e fica porque a forma do permalink foi
+   * lida do codigo e nao medida na pagina dele: um formato diferente, sem reserva, deixaria TUDO
+   * como pendente e ele responderia todo mundo duas vezes.
+   */
+  const semId = [
+    art('Comentario de Marta Fictinha ha 2 horas', 'Marta Fictinha\nEstou em oracao\n2 h\nCurtir'),
+    art('Resposta de Capitao Martim ao comentario de Marta Fictinha ha 32 minutos', 'Capitao Martim\nAmem!\n32 min\nCurtir'),
+  ];
+  const semIdRaiz = {
+    querySelectorAll: (sel) =>
+      sel === '[aria-label]' ? [{ getAttribute: () => `Comente como ${PAGINA}` }] : semId,
+  };
+  check(
+    fbdom.comentariosDoPost(semIdRaiz)[0].respondido === true,
+    'sem id no permalink, casa pelo nome como antes'
+  );
+
+  globalThis.location = antes;
+}
+
+grupo('comentariosDoMesmoAutor: o que a barra mostra');
+{
+  const c = (id, autor, respondido = false) => ({ id, autor, respondido });
+  const lista = [c('1', 'Marta Fictinha', true), c('2', 'Jose Exemplo'), c('3', 'Marta Fictinha')];
+
+  const dela = fbdom.comentariosDoMesmoAutor(lista, lista[2]);
+  check(dela.total === 2, 'conta os dois comentarios da mesma pessoa');
+  check(dela.posicao === 2, 'diz qual deles e o da vez');
+  check(dela.respondidos === 1, 'e quantos dos OUTROS ja tem resposta nossa');
+
+  // O da vez nao entra na propria conta: senao a barra diria "1 ja respondido" sobre ele mesmo.
+  check(fbdom.comentariosDoMesmoAutor(lista, lista[0]).respondidos === 0, 'o da vez nao conta como respondido dele mesmo');
+
+  const sozinho = fbdom.comentariosDoMesmoAutor(lista, lista[1]);
+  check(sozinho.total === 1 && sozinho.respondidos === 0, 'quem escreveu uma vez so nao ganha marca');
+
+  // Acento e caixa do nome nao podem separar a mesma pessoa em duas.
+  const acento = [c('1', 'MARTA FICTINHA', true), c('2', 'Marta Fictínha')];
+  check(fbdom.comentariosDoMesmoAutor(acento, acento[1]).respondidos === 1, 'acento e caixa nao separam a pessoa');
+
+  check(fbdom.comentariosDoMesmoAutor(null, c('1', 'x')).total === 0, 'lista nula nao derruba');
+}
+
 grupo('proximoPendente: o avanco do modo de responder');
 {
   const c = (id, respondido = false) => ({ id, autor: `Fict ${id}`, respondido });
