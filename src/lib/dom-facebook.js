@@ -446,19 +446,39 @@ export function comentariosSemResposta(raiz = document) {
  * `role="button"` entraria na lista e o painel clicaria no que o eleitor escreveu.
  */
 const REVELAM = [
-  /ver (mais|todos os|todas as)\s+\w*\s*coment/i,
-  /^\d+\s+respostas?$/i,
-  /ver\s+(mais|as|todas as)?\s*\d*\s*respostas?/i,
+  // Largo porque a redacao varia: "Ver mais comentarios", "Ver 30 comentarios anteriores",
+  // "Ver todos os comentarios". O que todas tem e "ver … coment".
+  /\bver\s+[\w\s]{0,14}coment/i,
   /respostas? anterior/i,
   /^ver mais$/i,
   /^ver anteriores$/i,
+  /^ver\s+\d*\s*respostas?/i,
+  /**
+   * **TERMINA em "N resposta(s)" — e foi a print de 20/10 que obrigou isto.**
+   *
+   * O padrao anterior exigia que o texto FOSSE "1 resposta", e na pagina dele o botao diz
+   * **"Capitao Martim respondeu · 1 resposta"** — tudo num clicavel so. Medido: nao pegava, e por
+   * isso "Ler tudo" terminou com *"19 comentarios, 0 ja respondido"* com tres resumos a vista.
+   *
+   * Cobre tambem o de terceiro (*"Fulana respondeu · 2 respostas"*), e isso e de proposito:
+   * expandir traz mais articles, que e o objetivo da leitura.
+   */
+  /\b\d+\s+respostas?$/i,
 ];
 
 export function botoesDeExpandir(raiz = document) {
   return [...raiz.querySelectorAll('[role="button"]')].filter((b) => {
     const t = String(b.innerText || '').trim();
-    return !!t && t.length <= 40 && REVELAM.some((p) => p.test(t));
+    // O teto subiu de 40 para 80: "<nome comprido> respondeu · 12 respostas" passa de 40, e era
+    // isso que escapava. Ele continua existindo para o painel nunca clicar num texto grande.
+    return !!t && t.length <= 80 && !t.includes('\n') && REVELAM.some((p) => p.test(t));
   });
+}
+
+/** "<alguem> respondeu…" — o resumo que o Facebook poe no lugar da resposta colapsada. */
+function ehResumoDeRespostaDe(texto, pagina) {
+  const m = String(texto || '').trim().match(/^(.{1,60}?)\s+respondeu\b/i);
+  return !!m && mesmoNome(m[1], pagina);
 }
 
 /**
@@ -473,19 +493,48 @@ export function botoesDeExpandir(raiz = document) {
  * respondeu" e o eleitor falando de nos.
  */
 export function respostaNossaColapsada(art, pagina) {
-  if (!pagina) return false;
-  const linhas = String(art?.innerText || '').split('\n');
+  if (!pagina || !art) return false;
+
+  /**
+   * **Caminho 1: dentro do proprio `innerText`.** Funciona quando o Facebook poe o resumo dentro
+   * do article. **Medido em 20/10: na pagina dele NAO esta** — a leitura deu 0 respondidos em 19
+   * com tres resumos a vista. Fica porque e barato e cobre o layout em que ele esta dentro.
+   */
+  const linhas = String(art.innerText || '').split('\n');
   let passouOsBotoes = false;
   for (const linha of linhas) {
     const l = linha.trim();
     if (!passouOsBotoes) {
+      // A guarda e a POSICAO: no meio do texto, "o Capitao Martim respondeu meu pedido" e o
+      // eleitor falando de nos.
       if (LINHA_DE_TEMPO.test(l) || LINHA_DE_BOTAO.test(l)) passouOsBotoes = true;
       continue;
     }
-    // "Capitao Martim respondeu", "Capitao Martim respondeu · 1 resposta".
-    if (/\brespondeu\b/i.test(l) && mesmoNome(l.split(/\brespondeu\b/i)[0], pagina)) return true;
+    if (ehResumoDeRespostaDe(l, pagina)) return true;
+  }
+
+  /**
+   * **Caminho 2: o BOTAO do resumo, que mora fora do article.**
+   *
+   * Procurar o `[role="button"]` e mais preciso que varrer o `innerText` do ancestral: o botao e
+   * exatamente o resumo, enquanto o texto do ancestral traz junto o comentario inteiro.
+   *
+   * **A guarda e parar no ancestral que ja mistura DOIS comentarios** — dali para cima o
+   * "respondeu" encontrado poderia ser do vizinho, e marcar de amarelo quem nunca foi atendido o
+   * esconde da fila. Por isso o laco sobe no maximo quatro niveis e conta antes de olhar.
+   */
+  for (let n = art.parentElement, i = 0; n && i < 4; n = n.parentElement, i++) {
+    if (quantosComentarios(n) > 1) break;
+    const botoes = [...n.querySelectorAll('[role="button"]')];
+    if (botoes.some((b) => ehResumoDeRespostaDe(b.innerText, pagina))) return true;
   }
   return false;
+}
+
+/** Quantos comentarios de PRIMEIRO NIVEL existem dentro deste no. Resposta nao conta. */
+function quantosComentarios(no) {
+  return articles(no).filter((a) => lerRotulo(a.getAttribute('aria-label'))?.tipo === 'comentario')
+    .length;
 }
 
 /** O botao "Responder" DESTE comentario. */

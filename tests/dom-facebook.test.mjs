@@ -396,6 +396,18 @@ grupo('botoesDeExpandir: lista de PERMISSAO, com teto de tamanho');
 
   const achados = (lista) => fbdom.botoesDeExpandir(raiz(lista.map(btn))).map((b) => b.innerText);
 
+  /**
+   * **O TEXTO REAL DA PAGINA DELE** (print de 20/10/2026): o resumo e o botao sao a MESMA coisa —
+   * "Capitao Martim respondeu · 1 resposta", tudo num clicavel so.
+   *
+   * O padrao antigo exigia que o texto FOSSE "1 resposta" e por isso nao pegava: a leitura
+   * terminou com *"19 comentarios, 0 ja respondido"* com tres resumos a vista na tela.
+   */
+  check(achados(['Capitao Martim respondeu · 1 resposta']).length === 1, 'o resumo+botao junto revela');
+  check(achados(['Rita Jesus respondeu · 2 respostas']).length === 1, 'o de terceiro tambem — expandir traz mais articles');
+  check(achados(['Ver 30 comentarios anteriores']).length === 1, '"Ver 30 comentarios anteriores" revela');
+  check(achados(['Ver todos os comentarios']).length === 1, '"Ver todos os comentarios" revela');
+
   check(achados(['1 resposta']).length === 1, '"1 resposta" revela');
   check(achados(['12 respostas']).length === 1, '"12 respostas" revela');
   check(achados(['Ver mais comentarios']).length === 1, '"Ver mais comentarios" revela');
@@ -413,8 +425,59 @@ grupo('botoesDeExpandir: lista de PERMISSAO, com teto de tamanho');
    * **O teto de 40 caracteres e a guarda que importa:** um comentario que por acaso seja um
    * `role="button"` entraria na lista, e o painel clicaria no que o eleitor escreveu.
    */
-  const comentarioLongo = 'Ver mais respostas sobre isso porque eu acho que voces precisam saber de uma coisa';
+  const comentarioLongo =
+    'Ver mais respostas sobre isso porque eu acho que voces precisam saber de uma coisa importante';
   check(achados([comentarioLongo]).length === 0, 'texto longo nao e botao, mesmo casando o padrao');
+  check(achados(['linha um\n2 respostas']).length === 0, 'texto com quebra de linha nao e botao');
+}
+
+grupo('respostaNossaColapsada: o resumo mora FORA do article');
+{
+  /**
+   * **Medido em 20/10/2026 e esta e a causa de "0 ja respondido" em 19.** O caminho pelo
+   * `innerText` do article funciona quando o Facebook poe o resumo dentro dele — na pagina dele
+   * NAO poe: o resumo e um `[role="button"]` irmao.
+   */
+  const article = (rotulo, texto) => ({
+    innerText: texto,
+    getAttribute: () => rotulo,
+    querySelectorAll: () => [],
+  });
+  const botao = (texto) => ({ innerText: texto, ehBotao: true });
+  const caixa = (filhos) => ({
+    filhos,
+    querySelectorAll(sel) {
+      return sel === '[role="button"]'
+        ? this.filhos.filter((f) => f.ehBotao)
+        : this.filhos.filter((f) => f.getAttribute);
+    },
+  });
+
+  const monta = ({ resumoNoBloco, resumoSoNaLista }) => {
+    const art = article('Comentario de Luciane Souza ha 2 horas', 'Luciane Souza\nBoa\n2h\nCurtir\nOcultar');
+    const resumo = botao(`${PAGINA} respondeu · 1 resposta`);
+    const outro = article('Comentario de Outra Pessoa ha 1 hora', 'Outra Pessoa\nTexto\n1h\nCurtir');
+
+    const bloco = caixa(resumoNoBloco ? [art, resumo] : [art]);
+    const lista = caixa(resumoSoNaLista ? [art, outro, resumo] : [art, outro]);
+    bloco.parentElement = lista;
+    lista.parentElement = null;
+    art.parentElement = bloco;
+    return art;
+  };
+
+  check(fbdom.respostaNossaColapsada(monta({ resumoNoBloco: true }), PAGINA), 'o resumo irmao do article marca');
+  check(!fbdom.respostaNossaColapsada(monta({}), PAGINA), 'sem resumo nenhum, nao marca');
+
+  /**
+   * **A guarda que importa:** parar no ancestral que ja mistura DOIS comentarios. Acima dali o
+   * "respondeu" encontrado pode ser do vizinho — e marcar de amarelo quem nunca foi atendido o
+   * ESCONDE da fila, que e o defeito caro.
+   */
+  check(
+    !fbdom.respostaNossaColapsada(monta({ resumoSoNaLista: true }), PAGINA),
+    'resumo que so aparece onde ha dois comentarios NAO marca'
+  );
 }
 
 fim();

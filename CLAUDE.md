@@ -3593,6 +3593,45 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **O RESUMO DA RESPOSTA COLAPSADA MORA FORA DO ARTICLE, E O BOTAO DELE PASSA DE 40 CARACTERES**
+  (20/10/2026, print depois do conserto da v3.186: *"Leitura terminada: 19 comentario(s), 0 ja
+  respondido(s) — o post declara 51"*, com tres **"Capitao Martim respondeu · 1 resposta"** ainda
+  colapsados na tela).
+  **Medido primeiro, e eram DUAS causas independentes — cada uma sozinha produz a mesma print:**
+  ```
+  "Capitao Martim respondeu · 1 resposta" -> botoesDeExpandir NAO pega
+  respostaNossaColapsada (linha no innerText) -> true   (logo: na pagina dele a linha esta FORA)
+  mesmoNome('Capitao Martim ', 'Capitao Martim') -> true (descartado como causa)
+  ```
+  **(1) A LISTA DE PERMISSAO exigia que o texto FOSSE "1 resposta".** O botao real diz
+  *"<pagina> respondeu · 1 resposta"* — resumo e contagem no MESMO clicavel —, e com 15 caracteres
+  de nome ele ja passa do teto de 40. Hoje o padrao e `/\b\d+\s+respostas?$/i` (TERMINA em "N
+  resposta(s)"), o teto subiu para **80** e entrou `!t.includes('\n')`: o teto existe para o painel
+  nunca clicar no que o eleitor escreveu, e **uma linha so** faz esse trabalho melhor que um numero
+  de caracteres. Entrou junto `/\bver\s+[\w\s]{0,14}coment/i`, porque *"Ver 30 comentarios
+  anteriores"* nao casava com nenhuma das tres formas escritas a mao.
+  **(2) `respostaNossaColapsada` lia o `innerText` do ARTICLE, e o resumo nao esta la.** Medido: o
+  caminho pelo innerText funciona num layout de teste e deu **0 de 19** na pagina dele. Hoje ha o
+  **caminho 2** — sobe no maximo quatro ancestrais procurando um `[role="button"]` cujo texto seja
+  *"<pagina> respondeu…"*. **O botao e mais preciso que o innerText do ancestral**, que traz o
+  comentario inteiro junto.
+  **A guarda do caminho 2 e PARAR no ancestral que ja mistura dois comentarios**
+  (`quantosComentarios(n) > 1`): dali para cima o "respondeu" pode ser do vizinho, e pintar de
+  amarelo quem nunca foi atendido **o esconde da fila**. O teste prova os tres estados — resumo como
+  IRMAO do article marca, sem resumo nao marca, resumo que so aparece onde ha dois comentarios nao
+  marca.
+  **(3) `rolarOPost` saltava para o FIM e o miolo nunca entrava na arvore.** Com `scrollTop =
+  scrollHeight` a virtualizacao pula o meio: a lista acumulada ficaria com o comeco e o fim do post.
+  Hoje o passo e **80% da altura visivel** (sobreposicao garantida) e a funcao **devolve se andou**.
+  **E a "volta seca" contava a coisa errada:** era `articles(raiz).length` antes/depois, e sob
+  virtualizacao esse numero **nao cresce** — os de cima saem quando os de baixo entram. Hoje a volta
+  so e seca com nenhum botao, nenhuma rolagem e **nenhum nome novo no ACUMULADO**. Contar a tela
+  mede o que o Facebook mantem na arvore; contar o acumulado mede o trabalho feito.
+  **Ao escrever leitura que percorre DOM virtualizado, meca o progresso no que voce guardou, nunca
+  no que esta na tela.**
+  **E o que fica em aberto, dito a ele:** os padroes de `REVELAM` vieram da print, nao de medir o
+  DOM dele — restando botao que "Ler tudo" nao abre, o que resolve e o TEXTO exato dele.
+
 - **A RESPOSTA NOSSA FICA COLAPSADA, E POR ISSO O AMARELO NÃO APARECIA** (20/10/2026, print dele:
   *"não alterou a cor"*). Debaixo do comentário da eleitora o Facebook escreve **"Capitão Martim
   respondeu · 1 resposta"** — e **só cria o `[role="article"]` da resposta depois do clique.**
@@ -3603,10 +3642,12 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
   o resumo. **A guarda da segunda é a POSIÇÃO** — só conta depois do primeiro marcador de
   tempo/botão, porque no meio do texto *"o Capitão Martim respondeu meu pedido"* é o eleitor
   falando de nós.
-  **`botoesDeExpandir` é lista de PERMISSÃO com teto de 40 caracteres**, e o teto é a guarda que
+  **`botoesDeExpandir` é lista de PERMISSÃO**, e o teto de caracteres é a guarda que
   importa: clicar é agir na página dele, e um comentário que por acaso seja `role="button"` entraria
-  na lista. **O rótulo não é medido de propósito — a PROVA é o efeito:** a volta clica, rola e conta
-  quantos articles apareceram. Acertar o texto de cada botão do Facebook envelhece na primeira
+  na lista. (Nasceu em 40 e **hoje é 80 + uma linha só** — ver a entrada acima: o botão real do
+  resumo passa de 40.) **O rótulo não é medido de propósito — a PROVA é o efeito:** a volta clica,
+  rola e conta quem entrou na lista ACUMULADA (contar os articles da tela não serve sob
+  virtualização — ver a entrada acima). Acertar o texto de cada botão do Facebook envelhece na primeira
   tradução; contar o que surgiu, não. Ela só para com **duas voltas secas**, porque uma só erraria
   no instante em que o Facebook está carregando.
   **A LISTA PASSOU A ACUMULAR, e isso não era opcional:** o DOM é virtualizado, então rolar para

@@ -437,7 +437,6 @@ async function lerPostInteiro(shadow) {
   let semNovidade = 0;
   try {
     for (let volta = 1; volta <= MAX_VOLTAS_DA_LEITURA && !estado.pararLeitura; volta++) {
-      const antes = fb.articles(raiz).length;
 
       const botoes = fb.botoesDeExpandir(raiz);
       for (const b of botoes.slice(0, 8)) {
@@ -451,11 +450,13 @@ async function lerPostInteiro(shadow) {
       }
 
       // Rolar o CONTAINER do post, nao a janela: o post vive num modal com rolagem propria.
-      rolarOPost(raiz);
+      const andou = rolarOPost(raiz);
       await espera(700);
 
+      const quantosAntes = estado.comentarios.length;
       relerComentarios(); // acumula
-      const depois = fb.articles(raiz).length;
+      const achouGente = estado.comentarios.length > quantosAntes;
+
       falar(
         shadow,
         `Lendo o post... ${estado.comentarios.length} comentario(s) ja vistos` +
@@ -464,8 +465,15 @@ async function lerPostInteiro(shadow) {
       );
       desenhar(shadow);
 
-      // Duas voltas secas: o Facebook as vezes demora uma para trazer o lote seguinte.
-      semNovidade = !botoes.length && depois <= antes ? semNovidade + 1 : 0;
+      /**
+       * **A volta so e "seca" quando NADA aconteceu:** nenhum bloco aberto, a rolagem nao andou e
+       * ninguem novo entrou na lista. Contar so os articles da tela nao serve, porque a
+       * virtualizacao os troca sem aumentar o numero — o que cresce e o ACUMULADO.
+       *
+       * Duas secas seguidas, porque o Facebook as vezes leva uma volta para trazer o lote
+       * seguinte.
+       */
+      semNovidade = !botoes.length && !andou && !achouGente ? semNovidade + 1 : 0;
       if (semNovidade >= 2) break;
     }
   } finally {
@@ -504,11 +512,20 @@ function rolarOPost(raiz) {
   const art = fb.articles(raiz)[0];
   for (let n = art || raiz; n && n !== document.body; n = n.parentElement) {
     if (n.scrollHeight > n.clientHeight + 40) {
-      n.scrollTop = n.scrollHeight;
-      return;
+      /**
+       * **Em PASSOS, nunca direto ao fim.** O DOM e virtualizado: saltando para o fim, o que esta
+       * no meio nunca entra na arvore — e a lista acumulada ficaria com o comeco e o fim do post,
+       * sem o miolo. Um passo de 80% da altura visivel garante sobreposicao entre as fotos.
+       */
+      const passo = Math.max(200, Math.floor(n.clientHeight * 0.8));
+      const antes = n.scrollTop;
+      n.scrollTop = Math.min(n.scrollTop + passo, n.scrollHeight);
+      return n.scrollTop > antes;
     }
   }
-  window.scrollTo(0, document.body.scrollHeight);
+  const antes = window.scrollY;
+  window.scrollBy(0, Math.max(200, Math.floor(window.innerHeight * 0.8)));
+  return window.scrollY > antes;
 }
 
 /**

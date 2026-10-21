@@ -1,6 +1,7 @@
-## 2026-10-20 - v3.186.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e o amarelo passou a funcionar
+## 2026-10-21 - v3.187.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e o amarelo passou a funcionar
 
-Sete coisas foram ao ar hoje, nesta ordem — cada uma depende da anterior.
+Oito coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em
+20/10; a oitava (secao 8) e o conserto do que a secao 7 nao alcancou.
 
 ---
 
@@ -316,13 +317,15 @@ nao existe na arvore. **Os dois pedidos tinham uma solucao so.**
 Expande as respostas, rola o post e **acumula** o que achar, em voltas. Clicar de novo para.
 
 - **A PROVA E O EFEITO, nunca o rotulo do botao.** Cada volta clica no que parece revelar, rola, e
-  **conta quantos articles apareceram**. Acertar o texto exato de cada botao do Facebook e
-  adivinhacao que envelhece na primeira traducao; contar o que surgiu, nao.
+  conta **quem entrou na lista acumulada** (na v3.186 ela contava os articles DA TELA, e a secao 8
+  mostra por que isso nao mede nada sob virtualizacao). Acertar o texto exato de cada botao do
+  Facebook e adivinhacao que envelhece na primeira traducao; contar o que surgiu, nao.
 - **Para com DUAS voltas secas**, porque uma so erraria no instante em que o Facebook esta
   carregando o lote seguinte.
 - **Nada ali envia, responde nem curte.** Os unicos cliques sao em botoes que REVELAM, por lista
-  de permissao com **teto de 40 caracteres** — sem o teto, um comentario que por acaso seja um
-  `role="button"` entraria na lista e o painel clicaria no que o eleitor escreveu.
+  de permissao com **teto de caracteres e uma linha so** (nasceu em 40 e virou 80 na secao 8) —
+  sem o teto, um comentario que por acaso seja um `role="button"` entraria na lista e o painel
+  clicaria no que o eleitor escreveu.
 
 ### A lista passou a ACUMULAR, e isso nao era opcional
 
@@ -345,10 +348,79 @@ botoes nao cabiam numa linha de 380px.
 
 ---
 
+## 8. A leitura terminava em "0 ja respondido" com tres resumos a vista (v3.187.0)
+
+**Print dele**, logo depois da secao 7:
+
+```
+Leitura terminada: 19 comentario(s), 0 ja respondido(s) — o post declara 51.
+```
+
+E na pagina, abaixo de tres comentarios diferentes, ainda colapsado:
+**"Capitao Martim respondeu · 1 resposta"**.
+
+### Medido primeiro, porque as causas dao a MESMA print
+
+```
+"Capitao Martim respondeu · 1 resposta" -> botoesDeExpandir NAO pega
+respostaNossaColapsada (linha no innerText)  -> true   (logo: na pagina dele a linha esta FORA)
+mesmoNome('Capitao Martim ', 'Capitao Martim') -> true (descartado como causa)
+```
+
+**Eram tres defeitos independentes.** Consertar um so teria devolvido a mesma print.
+
+### (1) A lista de permissao exigia que o texto FOSSE "1 resposta"
+
+O botao real diz *"<pagina> respondeu · 1 resposta"* — resumo e contagem no **mesmo clicavel** —, e
+com 15 caracteres de nome ele ja passa do teto de 40. Hoje o padrao **TERMINA** em "N resposta(s)",
+o teto subiu para **80** e entrou **"uma linha so"**: o teto existe para o painel nunca clicar no
+que o eleitor escreveu, e uma linha faz esse trabalho melhor que um numero de caracteres.
+
+Entrou junto `ver … coment` largo, porque *"Ver 30 comentarios anteriores"* nao casava com nenhuma
+das tres formas que eu havia escrito a mao.
+
+### (2) O resumo nao esta DENTRO do article
+
+O caminho pelo `innerText` funciona num layout de teste e deu **0 de 19** na pagina dele. Hoje ha o
+**caminho 2**: sobe no maximo **quatro ancestrais** procurando um `[role="button"]` cujo texto seja
+*"<pagina> respondeu…"* — mais preciso que varrer o texto do ancestral, que traz o comentario
+inteiro junto.
+
+**A guarda e parar no ancestral que ja mistura DOIS comentarios.** Dali para cima o "respondeu"
+encontrado pode ser do vizinho, e **pintar de amarelo quem nunca foi atendido o esconde da fila**.
+O teste prova os tres estados:
+
+```
+resumo como IRMAO do article                      : true
+sem resumo nenhum                                 : false
+resumo so no pai, onde ha 2 comentarios (nao pode): false
+```
+
+### (3) A rolagem saltava para o fim, e a "volta seca" contava a tela
+
+`scrollTop = scrollHeight` pula o miolo: sob virtualizacao o meio do post **nunca entra na arvore**,
+e a lista acumulada ficaria com o comeco e o fim. Hoje o passo e **80% da altura visivel** (garante
+sobreposicao entre as fotos) e a funcao **devolve se andou**.
+
+E a volta "seca" comparava `articles(raiz).length` antes e depois — numero que **nao cresce** sob
+virtualizacao, porque os de cima saem quando os de baixo entram. Hoje ela so e seca com **nenhum
+botao aberto, nenhuma rolagem e nenhum nome novo no ACUMULADO**.
+
+> **A regra que fica:** leitura que percorre DOM virtualizado mede o progresso no que ela GUARDOU,
+> nunca no que esta na tela.
+
+### O que continua em aberto
+
+Os padroes de `REVELAM` vieram da **print**, nao de medir o DOM dele. Se "Ler tudo" ainda parar
+antes do fim, o que resolve e o **texto exato** do botao que sobrou — quantos ele trouxe e o que o
+botao diz.
+
+---
+
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.186.0** — e assim que se sabe que chegou.
+dizer **v3.187.0** — e assim que se sabe que chegou.
 
 ## O que falta, e e decisao dele
 
@@ -362,6 +434,11 @@ dizer **v3.186.0** — e assim que se sabe que chegou.
   que o botao IA funciona de verdade.
 - **A aba Facebook da Graph API (v3.172) continua no ar** e sai quando ele confirmar que este
   caminho substitui.
+- **"Ler tudo" trouxe 19 de 51 na ultima medicao DELE**, com a v3.186. Os tres consertos da secao
+  8 miram exatamente isso, e **a conferencia e ele rodar de novo**: quantos vem agora, e, parando
+  antes do fim, qual o texto do botao que sobrou.
+- **O texto rapido "Dia 25 — 2o turno" EXPIRA em 25/10.** Passada a data ele sai do painel ou e
+  reescrito — texto com data dentro envelhece sozinho.
 - **O custo por rascunho nao foi medido ao vivo.** Calculado: **572 tokens de sistema + ~37 do
   comentario**, o que da ~**US$ 0,0014 por rascunho** no gpt-5, a frio. O numero real aparece no
   painel depois do uso.
