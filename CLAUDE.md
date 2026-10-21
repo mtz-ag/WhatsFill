@@ -3593,6 +3593,34 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **OS DIGITOS 2, 3 E 4 VIRARAM ACOES: CURTIR, OCULTAR E RESPONDER A MAO** (21/10/2026, pedido
+  dele: *"troque a funcao do botao dois para curtir a mensagem, botao 3 para ocultar a mensagem,
+  botao 4 responder a mao"*). As respostas rapidas ficam com o **1** e seguem do **5** em diante.
+  **O MAPA E UM SO (`ACOES_DA_TIRA` + `doDigito`), e e dele que saem o ROTULO e o que a tecla
+  FAZ.** Duas listas divergiriam na primeira correcao, e a divergencia aqui seria o botao dizer
+  *"3 Ocultar"* e a tecla 3 mandar uma resposta pronta na pagina dele.
+  **`botaoDoComentario` casa por texto EXATO e DENTRO do article.** A fileira medida e
+  `Curtir | Responder | Enviar mensagem | Ocultar`; "contem" faria "Ocultar" casar com *"Ocultar
+  todos os comentarios desta pessoa"*, e buscar no `document` pegaria a fileira do VIZINHO — curtir
+  ou ocultar a pessoa errada. **Clicar e agir na pagina dele: a lista e de permissao.**
+  **`jaCurtido` tem TRES estados** (`true`, `false`, **`null` = nao da para saber**), a licao do
+  `donoDoCanal` (25/09): **o botao do Facebook e o mesmo nos dois sentidos**, entao colapsar "nao
+  sei" em "nao curtido" faria o painel DESCURTIR o que ele curtiu. Sabendo que ja esta curtido,
+  `curtirComentario` **nao clica** e devolve `ja-estava`; na duvida **clica**, porque a assimetria
+  que importa e nao desfazer. Os dois sinais sao o rotulo virar *"Descurtir"* e o `aria-pressed` —
+  **o estado "curtido" nao foi medido na pagina dele**, e por isso a tela diz *"cliquei — confira"*
+  quando nao da para confirmar.
+  **Ocultar CLICA E PARA AI.** Abrindo dialogo ou menu, quem confirma e ele: clicar em botao de
+  dialogo que ninguem mediu e onde o estrago acontece — aqui, moderar a pagina dele por conta
+  propria.
+  **`tratado` NAO e `respondido`, e nao pode virar.** Amarelo significa *"ja tem resposta nossa"*, e
+  curtir nao e responder: marcar assim mentiria na lista e no contador. Para a FILA os dois sao
+  trabalho feito, entao `proximoPendente` pula os dois e a lista mostra `· curtido` / `· ocultado`
+  em cinza. **`estado.tratados` e so MEMORIA**: gravar faria o painel esconder gente numa sessao
+  futura por causa de um clique que ninguem lembra.
+  **A marca e colada DEPOIS da leitura** (`relerComentarios`), porque `acumular` deixa a leitura
+  nova ganhar — posta dentro do objeto, ela sumiria no tique seguinte da vigia.
+
 - **O ROTULO DA RESPOSTA NOMEIA O AUTOR DO PAI, NAO O COMENTARIO — e com isso quem escreve DUAS
   vezes some da fila** (21/10/2026, print dele: *"a marta ja foi respondida, ela tem duas
   mensagens"*).

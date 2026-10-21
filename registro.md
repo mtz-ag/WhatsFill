@@ -1,8 +1,8 @@
-## 2026-10-21 - v3.189.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
+## 2026-10-21 - v3.190.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
 
-Dez coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em 20/10;
-a oitava e o conserto do que a secao 7 nao alcancou, a nona e o **modo de responder** e a decima
-veio da primeira print do modo no ar.
+Onze coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em 20/10;
+a oitava e o conserto do que a secao 7 nao alcancou, a nona e o **modo de responder**, a decima
+veio da primeira print do modo no ar e a decima primeira troca o que os digitos 2, 3 e 4 fazem.
 
 ---
 
@@ -566,10 +566,77 @@ continua esperando"* cai sozinha. Medido.
 
 ---
 
+## 11. Os digitos 2, 3 e 4 viraram acoes (v3.190.0)
+
+**Pedido dele:** *"troque a funcao do botao dois para curtir a mensagem, botao 3 para ocultar a
+mensagem, botao 4 responder a mao"*.
+
+A tira ficou assim, no painel e na barra:
+
+```
+1 Apoio   [2 Curtir] [3 Ocultar] [4 Responder a mao]   5 Dia 25   6 Pro privado   7 ...
+```
+
+As respostas rapidas ficam com o **1** e seguem do **5** em diante — nenhuma se perdeu.
+
+### Um mapa so, senao o botao promete uma coisa e a tecla faz outra
+
+`ACOES_DA_TIRA` + `doDigito` sao a fonte unica: o rotulo do botao e o que a tecla executa saem do
+MESMO lugar. Duas listas divergiriam na primeira correcao, e aqui a divergencia seria o botao
+dizendo *"3 Ocultar"* e a tecla 3 mandando uma resposta pronta na pagina dele.
+
+### Clicar e agir na pagina dele, entao o casamento e justo
+
+`botaoDoComentario` procura por **texto exato** e **dentro do article**. A fileira medida em 19/10
+e `Curtir | Responder | Enviar mensagem | Ocultar`:
+
+- **"contem"** faria "Ocultar" casar com *"Ocultar todos os comentarios desta pessoa"*;
+- **buscar no `document`** pegaria a fileira do comentario VIZINHO — curtir ou ocultar a pessoa
+  errada.
+
+### Curtir nunca DESCURTE
+
+O botao do Facebook e o mesmo nos dois sentidos. `jaCurtido` tem **tres** estados — `true`, `false`
+e **`null` para "nao da para saber"** —, e e a licao do `donoDoCanal` (25/09): colapsar "nao sei"
+em "nao curtido" faria o painel desfazer o que ele fez.
+
+- Ja curtido: **nao clica**, e a linha diz *"JA estava curtido — nao mexi"*.
+- Na duvida: **clica**, porque a assimetria que importa e nao desfazer.
+- Depois do clique **relê o botao**: so diz *"Curtido"* com a pagina confirmando; sem confirmacao,
+  *"cliquei — confira na pagina"*. **O estado "curtido" do comentario nunca foi medido na pagina
+  dele**, e a tela nao afirma o que nao leu.
+
+### Ocultar clica e para ai
+
+Abrindo dialogo ou menu, **quem confirma e ele**: clicar em botao de dialogo que ninguem mediu e
+onde o estrago de verdade acontece — aqui, moderar a pagina dele por conta propria.
+
+### Curtido e ocultado NAO viram amarelo
+
+Amarelo significa *"ja tem resposta nossa"*, e curtir nao e responder. Eles ganham marca propria,
+em cinza (`· curtido`, `· ocultado`), **e para a FILA contam como trabalho feito**: o avanco
+automatico pula os dois e o contador desconta.
+
+**So memoria, nunca armazenamento:** gravar faria o painel esconder gente numa sessao futura por
+causa de um clique que ninguem lembra. No F5 eles voltam, e quem decide e a pagina.
+
+### Medido
+
+- 26 suites verdes, com teste novo para os tres botoes (17 assercoes, metade sobre o que **nao**
+  pode ser clicado).
+- O smoke do painel num DOM falso prova que **o clique cai no comentario DA VEZ e nao no vizinho**,
+  que a tira numera `1, 2, 3, 4, 5...` na ordem certa, e que a linha de status conta o que fez.
+
+**O que fica em aberto:** o rotulo do botao de curtir ja curtido (*"Descurtir"*?) e o que acontece
+ao clicar em **Ocultar** (dialogo? menu?) **nao foram vistos na pagina dele** — as duas coisas
+aparecem no primeiro uso, e a tela diz "confira na pagina" em vez de afirmar.
+
+---
+
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.189.0** — e assim que se sabe que chegou.
+dizer **v3.190.0** — e assim que se sabe que chegou.
 
 ## O que falta, e e decisao dele
 

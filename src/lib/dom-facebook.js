@@ -585,13 +585,84 @@ function quantosComentarios(no) {
     .length;
 }
 
-/** O botao "Responder" DESTE comentario. */
-export function botaoResponder(art) {
+/**
+ * **O botao de uma acao DESTE comentario, por texto EXATO.**
+ *
+ * Exato e nao "contem": a fileira medida em 19/10 e
+ * `Curtir | Responder | Enviar mensagem | Ocultar`, e um "contem" faria "Responder" casar com
+ * "Responder a Marta" e "Ocultar" com "Ocultar todos os comentarios desta pessoa" — clicar e agir
+ * na pagina dele, entao a lista e de PERMISSAO e o casamento e justo.
+ *
+ * E a busca e DENTRO do article: o `document` tem a mesma fileira em todos os comentarios, e
+ * pegar a do vizinho e curtir ou ocultar a pessoa errada.
+ */
+export function botaoDoComentario(art, nomes) {
+  if (!art) return null;
+  const lista = (Array.isArray(nomes) ? nomes : [nomes]).map((n) => n.toLowerCase());
   return (
-    [...art.querySelectorAll('[role="button"]')].find(
-      (b) => String(b.innerText || '').trim().toLowerCase() === 'responder'
+    [...art.querySelectorAll('[role="button"]')].find((b) =>
+      lista.includes(String(b.innerText || '').trim().toLowerCase())
     ) || null
   );
+}
+
+/** O botao "Responder" DESTE comentario. */
+export function botaoResponder(art) {
+  return botaoDoComentario(art, 'responder');
+}
+
+/**
+ * **JA CURTIMOS ESTE COMENTARIO?** `true`, `false` ou **`null` para "nao da para saber"**.
+ *
+ * Tres estados e nao dois, pela licao do `donoDoCanal` (25/09) e do `undefined !== 'CONNECTED'`
+ * (01/10): colapsar "nao sei" em "nao curtido" faria o painel DESCURTIR o que ele curtiu, e o
+ * botao e o mesmo para os dois sentidos.
+ *
+ * Dois sinais, nesta ordem: o **rotulo virar "Descurtir"** e o **`aria-pressed`**. O estado
+ * "curtido" do comentario nao foi medido na pagina dele — por isso o terceiro estado existe, e
+ * por isso quem chama diz "cliquei" em vez de "curti" quando nao da para confirmar.
+ */
+export function jaCurtido(art) {
+  const b = botaoDoComentario(art, ['curtir', 'descurtir']);
+  if (!b) return null;
+  if (String(b.innerText || '').trim().toLowerCase() === 'descurtir') return true;
+  const pressed = b.getAttribute ? b.getAttribute('aria-pressed') : null;
+  if (pressed === 'true') return true;
+  if (pressed === 'false') return false;
+  return null;
+}
+
+/**
+ * **CURTIR o comentario** (pedido dele, 21/10/2026: *"troque a funcao do botao dois para curtir a
+ * mensagem"*).
+ *
+ * **Nunca DESCURTE:** sabendo que ja esta curtido, devolve `ja-estava` sem clicar. O botao e o
+ * mesmo nos dois sentidos, entao clicar sem olhar desfaria o que ele fez.
+ *
+ * Na duvida (`null`) **clica**, e quem chama confere o efeito depois: a assimetria que importa e
+ * nao desfazer; nao conseguir curtir seria o painel se recusando a trabalhar por falta de um
+ * atributo que talvez nem exista.
+ */
+export function curtirComentario(art) {
+  if (jaCurtido(art) === true) return 'ja-estava';
+  const b = botaoDoComentario(art, 'curtir');
+  if (!b) return 'sem-botao';
+  b.click();
+  return 'cliquei';
+}
+
+/**
+ * **OCULTAR o comentario** (pedido dele, 21/10/2026: *"botao 3 para ocultar a mensagem"*).
+ *
+ * **Clica e para ai.** Abrindo dialogo ou menu, quem decide e ele na pagina: clicar em botao de
+ * dialogo que ninguem mediu e onde o estrago de verdade acontece — e aqui o estrago seria moderar
+ * a pagina dele por conta propria.
+ */
+export function ocultarComentario(art) {
+  const b = botaoDoComentario(art, 'ocultar');
+  if (!b) return false;
+  b.click();
+  return true;
 }
 
 /**
@@ -656,7 +727,12 @@ export function proximoPendente(lista, idAtual) {
   const todos = Array.isArray(lista) ? lista : [];
   const i = todos.findIndex((c) => c && c.id === idAtual);
   const ordem = i < 0 ? todos : [...todos.slice(i + 1), ...todos.slice(0, i)];
-  return ordem.find((c) => c && !c.respondido) || null;
+  /**
+   * **`tratado` e o que ele resolveu SEM responder** — curtiu ou ocultou (21/10). Nao e
+   * `respondido`, e nao pode virar: amarelo significa "ja tem resposta nossa", e curtir nao e
+   * responder. Mas para a FILA os dois sao a mesma coisa: trabalho feito.
+   */
+  return ordem.find((c) => c && !c.respondido && !c.tratado) || null;
 }
 
 /**

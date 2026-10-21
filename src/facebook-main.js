@@ -124,6 +124,17 @@ const estado = {
   aguardando: null,
   /** O relogio do modo de responder. Zerado ao sair — senao ele continua lendo o DOM para sempre. */
   vigia: 0,
+  /**
+   * **O QUE ELE RESOLVEU SEM RESPONDER** — `id -> 'curtido' | 'ocultado'` (21/10/2026).
+   *
+   * **Nao vira `respondido`**: amarelo significa "ja tem resposta nossa", e curtir nao e responder
+   * — marcar assim mentiria na lista e no contador. Mas para a FILA os dois sao trabalho feito,
+   * entao `proximoPendente` pula os dois.
+   *
+   * **So memoria, e isso e de proposito:** gravar faria o painel esconder gente numa sessao
+   * futura por causa de um clique que ninguem lembra. No F5 eles voltam, e o que decide e a pagina.
+   */
+  tratados: new Map(),
 };
 
 /**
@@ -182,7 +193,9 @@ function comentarioDaVez() {
    * tecla 1 escreve na pagina. Ele continua podendo escolher um respondido pelo clique ou pelas
    * setas; o que nao pode e isso acontecer por padrao.
    */
-  return estado.comentarios.find((c) => !c.respondido) || estado.comentarios[0];
+  // Pula tambem o que ele acabou de curtir ou ocultar: e trabalho feito, ainda que nao seja
+  // resposta — ver `estado.tratados`.
+  return estado.comentarios.find((c) => !c.respondido && !c.tratado) || estado.comentarios[0];
 }
 
 /** Quantos comentarios o painel guarda de um post. Acima disso ele para de acumular. */
@@ -302,6 +315,12 @@ function css() {
     .item.respondido .quem::after {
       content: ' · respondido'; color: #8a6d3b; font-weight: 400; font-size: 11px;
     }
+    /* Curtido ou ocultado por ele nesta rodada: cinza, porque NAO e resposta nossa — a palavra
+       vem do proprio dado, para a tela nunca dizer "curtido" sobre um ocultado. */
+    .item.tratado { border-color: #ccd0d5; background: #f7f8fa; }
+    .item.tratado .quem::after {
+      content: ' · ' attr(data-tratado); color: #65676b; font-weight: 400; font-size: 11px;
+    }
     .item .quem { font-weight: 600; margin-bottom: 2px; }
     .item .txt { color: #333; white-space: pre-wrap; word-break: break-word; margin-bottom: 7px; }
     textarea {
@@ -325,6 +344,10 @@ function css() {
     .rapidas .par.edit .usar { border-radius: 6px 0 0 6px; border-right: 0; }
     .rapidas .mini { padding: 4px 6px; border-radius: 0; border-right: 0; color: #65676b; }
     .rapidas .fim { border-radius: 0 6px 6px 0; border-right: 1px solid #ccd0d5; }
+    /* As acoes fixas (Curtir, Ocultar, Responder a mao) moram na mesma fileira das respostas
+       rapidas, com a borda marcada: o numero e a ordem sao os mesmos, o que muda e o que o
+       numero FAZ — e isso tem de dar para ver sem ler. */
+    .rapidas .usar.acao { border-color: #8a8d91; color: #050505; background: #f0f2f5; }
     .rapidas .engrenagem { padding: 4px 7px; color: #65676b; }
     .rapidas .engrenagem.ligado { background: #e7f0fd; border-color: #1877f2; color: #1877f2; }
     /* O editor toma o corpo: dez variacoes nao cabem numa tira de 380px. */
@@ -410,6 +433,12 @@ function relerComentarios() {
   estado.comentarios = acumular(estado.comentarios, fb.comentariosDoPost(raiz), raiz);
 
   /**
+   * **A marca do que ele curtiu ou ocultou e colada DEPOIS da leitura**, porque `acumular` deixa a
+   * leitura nova ganhar: posta dentro do objeto, ela sumiria no tique seguinte.
+   */
+  for (const c of estado.comentarios) c.tratado = estado.tratados.get(c.id) || '';
+
+  /**
    * **O AMARELO E SO PARA PROBLEMA DE VERDADE** — decisao dele em 20/10/2026, vendo o painel no
    * ar: *"nao tem problema estar nos relevantes pois quero responder eles e nao todos"*.
    *
@@ -435,7 +464,7 @@ function relerComentarios() {
    * verdade pela virtualizacao.
    */
   const total = fb.contagemDoPost(raiz);
-  const esperando = estado.comentarios.filter((c) => !c.respondido).length;
+  const esperando = estado.comentarios.filter((c) => !c.respondido && !c.tratado).length;
   const feitos = estado.comentarios.length - esperando;
 
   /**
@@ -616,36 +645,35 @@ async function inserir(comentario, texto, aviso) {
   }
 }
 
-async function inserirDeVerdade(comentario, texto, aviso) {
+/**
+ * **Abre a caixa de resposta daquele comentario e devolve ela** — ponto unico do caminho que
+ * `inserir` e o "Responder a mao" (tecla 4) percorrem.
+ *
+ * O clique e necessario: a caixa so nasce depois dele. E entre o clique e a caixa existir passa um
+ * instante — dai a espera curta, relendo em vez de confiar num prazo fixo.
+ */
+async function abrirCaixa(comentario, aviso) {
   /**
-   * A raiz e relida AGORA, e nao a do desenho: entre listar e clicar ele pode
-   * ter fechado o post. E o comentario tem de continuar DENTRO dela — senao
-   * estariamos abrindo a caixa de um comentario da timeline, que e o defeito
-   * que esta funcao existe para nao repetir.
+   * A raiz e relida AGORA, e nao a do desenho: entre listar e clicar ele pode ter fechado o post.
+   * E o comentario tem de continuar DENTRO dela — senao estariamos abrindo a caixa de um
+   * comentario da timeline, que e o defeito que isto existe para nao repetir.
    */
   const raiz = fb.raizDoPost();
   if (!raiz) {
     aviso('O post fechou. Abra ele de novo e clique em "Reler a pagina".');
-    return false;
+    return null;
   }
 
-  /**
-   * **O `no` guardado pode estar obsoleto, e desde que a lista ACUMULA isso e o caso comum.**
-   *
-   * O DOM e virtualizado: rolando para ler o post inteiro, os de cima saem da arvore e o nosso
-   * `no` vira um elemento solto. Por isso o article e REACHADO pelo id antes de desistir — o id
-   * (`comment_id`) e estavel, o elemento nao.
-   */
-  const no = raiz.contains(comentario.no) ? comentario.no : acharPorId(raiz, comentario.id);
+  const no = noDoComentario(raiz, comentario);
   if (!no) {
     aviso('Este comentario saiu da tela. Role ate ele dentro do post e clique em "Reler a pagina".');
-    return false;
+    return null;
   }
 
   const botao = fb.botaoResponder(no);
   if (!botao) {
     aviso('Nao achei o botao "Responder" deste comentario. Role ate ele aparecer na tela e releia.');
-    return false;
+    return null;
   }
 
   let caixa = fb.caixaDeResposta(comentario.autor, raiz);
@@ -659,8 +687,26 @@ async function inserirDeVerdade(comentario, texto, aviso) {
 
   if (!caixa) {
     aviso('A caixa de resposta nao abriu. Clique em "Responder" na pagina e tente de novo.');
-    return false;
+    return null;
   }
+  return caixa;
+}
+
+/**
+ * **O article deste comentario, AGORA.**
+ *
+ * O `no` guardado pode estar obsoleto, e com a lista acumulando isso e o caso comum: o DOM e
+ * virtualizado, entao rolando para ler o post inteiro os de cima saem da arvore e o nosso `no`
+ * vira um elemento solto. O id (`comment_id`) e estavel; o elemento nao.
+ */
+function noDoComentario(raiz, c) {
+  if (!raiz || !c) return null;
+  return raiz.contains(c.no) ? c.no : acharPorId(raiz, c.id);
+}
+
+async function inserirDeVerdade(comentario, texto, aviso) {
+  const caixa = await abrirCaixa(comentario, aviso);
+  if (!caixa) return false;
 
   // A caixa ja vem com a mencao: isto ACRESCENTA, nunca substitui.
   const ok = fb.inserirNaCaixa(caixa, texto);
@@ -769,8 +815,7 @@ async function pedirRascunho(comentario, dizer, redesenhar) {
  * nenhum — e nao avisa.
  */
 function verNaPagina(c, dizer) {
-  const raiz = fb.raizDoPost();
-  const no = raiz && raiz.contains(c.no) ? c.no : raiz && acharPorId(raiz, c.id);
+  const no = noDoComentario(fb.raizDoPost(), c);
   if (!no) {
     dizer('Este comentario saiu da tela. Clique em "Ler o post inteiro" ou role ate ele.');
     return false;
@@ -888,7 +933,7 @@ function vigiarEnvio(shadow) {
   const atual = esperado && estado.comentarios.find((c) => c.id === esperado.id);
 
   if (esperado && atual && atual.respondido) {
-    avancar(shadow);
+    avancar(shadow, `Resposta a ${esperado.autor} apareceu no post.`);
     return;
   }
 
@@ -903,10 +948,9 @@ function vigiarEnvio(shadow) {
  * `fb.proximoPendente` devolve `null` quando mais ninguem espera, e ai o modo FICA no lugar: sair
  * sozinho tiraria a barra da tela no instante em que ele ainda pode querer ler o que escreveu.
  */
-function avancar(shadow) {
-  const anterior = estado.aguardando;
+function avancar(shadow, dito = '') {
   const prox = fb.proximoPendente(estado.comentarios, estado.daVezId);
-  const enviado = anterior ? `Resposta a ${anterior.autor} apareceu no post.` : '';
+  const enviado = dito;
 
   if (!prox) {
     estado.aguardando = null;
@@ -985,15 +1029,171 @@ async function pedirRascunhoNoModo(shadow, alvo) {
   );
 }
 
+/**
+ * **AS TRES ACOES DE TECLA FIXA** (21/10/2026, pedido dele: *"troque a funcao do botao dois para
+ * curtir a mensagem, botao 3 para ocultar a mensagem, botao 4 responder a mao"*).
+ *
+ * Elas tomam os digitos **2, 3 e 4**; as respostas rapidas ficam com o **1** e seguem do **5** em
+ * diante. O mapa vive AQUI, num lugar so, e e dele que saem o rotulo do botao e o que a tecla faz
+ * — duas listas divergiriam, e a divergencia seria o botao dizer "3 Ocultar" e a tecla 3 mandar
+ * uma resposta pronta na pagina dele.
+ */
+const ACOES_DA_TIRA = [
+  {
+    tecla: '2',
+    nome: 'Curtir',
+    titulo: 'Curte este comentario. Ja curtido, nao mexe — o botao do Facebook e o mesmo nos dois sentidos.',
+    roda: (shadow) => curtirDaVez(shadow),
+  },
+  {
+    tecla: '3',
+    nome: 'Ocultar',
+    titulo: 'Clica em "Ocultar" neste comentario. Abrindo dialogo, quem confirma e voce, na pagina.',
+    roda: (shadow) => ocultarDaVez(shadow),
+  },
+  {
+    tecla: '4',
+    nome: 'Responder a mao',
+    titulo: 'Abre a caixa deste comentario e poe o cursor nela, sem escrever nada.',
+    roda: (shadow) => maoNaCaixa(shadow),
+  },
+];
+
+/** Os nove digitos, na ordem em que a tira os desenha. */
+const DIGITOS_E_ACOES = [...'123456789'];
+
+/** Os digitos que sobram para as respostas rapidas, na ordem. */
+const DIGITOS_DE_RESPOSTA = [...'123456789'].filter(
+  (d) => !ACOES_DA_TIRA.some((a) => a.tecla === d)
+);
+
+/**
+ * **O que este digito faz.** Fonte unica do teclado E da tira: o rotulo que o botao mostra sai
+ * daqui, entao nao ha como a tecla fazer uma coisa e o botao prometer outra.
+ */
+function doDigito(k) {
+  const acao = ACOES_DA_TIRA.find((a) => a.tecla === k);
+  if (acao) return { acao };
+  const i = DIGITOS_DE_RESPOSTA.indexOf(k);
+  return i < 0 ? {} : { resposta: estado.respostas[i] };
+}
+
+/**
+ * **O botao de uma acao fixa.** Mesmo visual das respostas rapidas de proposito: para o dedo dele
+ * a tira e uma fileira numerada so, e o que muda e o que cada numero FAZ.
+ */
+function botaoDeAcao(shadow, acao) {
+  const par = document.createElement('div');
+  par.className = 'par';
+  const bt = document.createElement('button');
+  bt.className = 'usar acao';
+  bt.textContent = `${acao.tecla}  ${acao.nome}`;
+  bt.title = acao.titulo;
+  // O clique faz o MESMO que a tecla: ver `doDigito`.
+  bt.addEventListener('click', () => acao.roda(shadow));
+  par.append(bt);
+  return par;
+}
+
+/** Marca o que ele resolveu sem responder, e devolve a frase para a linha de status. */
+function marcarTratado(c, como) {
+  estado.tratados.set(c.id, como);
+  c.tratado = como;
+}
+
+/**
+ * **Depois de uma acao, o modo anda; o painel so redesenha.**
+ *
+ * No painel a lista esta na tela e quem escolhe o proximo e o dedo dele — avancar ali moveria o
+ * realce sem ele pedir.
+ */
+function seguirDepoisDaAcao(shadow, dito) {
+  if (estado.respondendo) {
+    avancar(shadow, dito);
+    return;
+  }
+  desenhar(shadow);
+  falar(shadow, dito);
+}
+
+/**
+ * **CURTIR o comentario da vez.**
+ *
+ * **A PROVA E O EFEITO:** depois do clique a funcao relê o botao, e so diz "curtido" quando a
+ * pagina confirma. Nao dando para confirmar, ela diz *"cliquei — confira"*, que e a verdade: o
+ * estado "curtido" do comentario nunca foi medido na pagina dele.
+ */
+async function curtirDaVez(shadow) {
+  const alvo = comentarioDaVez();
+  if (!alvo) return;
+  const no = noDoComentario(fb.raizDoPost(), alvo);
+  if (!no) {
+    falar(shadow, 'Este comentario saiu da tela. Role ate ele e aperte R para reler.');
+    return;
+  }
+
+  const r = fb.curtirComentario(no);
+  if (r === 'ja-estava') {
+    falar(shadow, `O comentario de ${alvo.autor} JA estava curtido — nao mexi (o botao descurtiria).`);
+    return;
+  }
+  if (r === 'sem-botao') {
+    falar(shadow, `Nao achei o "Curtir" no comentario de ${alvo.autor}. Role ate ele aparecer e releia.`);
+    return;
+  }
+
+  await espera(400);
+  const confirmado = fb.jaCurtido(no) === true;
+  marcarTratado(alvo, 'curtido');
+  seguirDepoisDaAcao(
+    shadow,
+    confirmado ? `Curtido: ${alvo.autor}.` : `Cliquei em Curtir (${alvo.autor}) — confira na pagina.`
+  );
+}
+
+/**
+ * **OCULTAR o comentario da vez.**
+ *
+ * Clica e para ai: abrindo dialogo, quem confirma e ele. **Nao e desfazer de graca** — por isso a
+ * linha de status diz o que foi feito e em quem, com nome.
+ */
+async function ocultarDaVez(shadow) {
+  const alvo = comentarioDaVez();
+  if (!alvo) return;
+  const no = noDoComentario(fb.raizDoPost(), alvo);
+  if (!no) {
+    falar(shadow, 'Este comentario saiu da tela. Role ate ele e aperte R para reler.');
+    return;
+  }
+  if (!fb.ocultarComentario(no)) {
+    falar(shadow, `Nao achei o "Ocultar" no comentario de ${alvo.autor}. Role ate ele aparecer e releia.`);
+    return;
+  }
+  marcarTratado(alvo, 'ocultado');
+  seguirDepoisDaAcao(shadow, `Ocultei o comentario de ${alvo.autor} (confira na pagina).`);
+}
+
+/**
+ * **RESPONDER A MAO: abre a caixa e poe o cursor nela, sem escrever nada.**
+ *
+ * E a unica das tres que nao marca nada: ele ainda vai escrever, e quem decide que o caso foi
+ * resolvido e a resposta aparecer no post — a mesma prova do resto do modo.
+ */
+async function maoNaCaixa(shadow) {
+  const alvo = comentarioDaVez();
+  if (!alvo) return;
+  const caixa = await abrirCaixa(alvo, (m) => falar(shadow, m));
+  if (!caixa) return;
+  caixa.focus();
+  armar(alvo);
+  falar(shadow, `Caixa de ${alvo.autor} aberta. Escreva e aperte Enter.`);
+}
+
 function montarTira(shadow, dizer, comGerir) {
-  if (!estado.respostas.length) return null;
   const tira = document.createElement('div');
   tira.className = 'rapidas';
 
-  estado.respostas.forEach((r, i) => {
-    // Da DECIMA em diante nao ha tecla: o mapa e 1..9, e numerar ate 12 ensinaria teclas que
-    // nao existem. Essas so respondem ao clique.
-    const tecla = i < 9 ? String(i + 1) : '';
+  const parDaResposta = (r, tecla) => {
     const par = document.createElement('div');
     par.className = 'par';
 
@@ -1062,7 +1262,28 @@ function montarTira(shadow, dizer, comGerir) {
     }
 
     tira.append(par);
-  });
+  };
+
+  /**
+   * **A ORDEM DA TIRA E A ORDEM DOS DIGITOS**, e os digitos 2, 3 e 4 sao ACOES desde 21/10
+   * (pedido dele). As respostas rapidas ficam com o 1 e seguem do 5 em diante.
+   *
+   * O laco percorre 1..9 perguntando a `ACOES_DA_TIRA` — a MESMA fonte que o teclado consulta —,
+   * entao nao ha como o botao dizer "3 Ocultar" e a tecla 3 mandar uma resposta pronta.
+   */
+  const fila = [...estado.respostas];
+  for (const d of DIGITOS_E_ACOES) {
+    const acao = ACOES_DA_TIRA.find((a) => a.tecla === d);
+    if (acao) {
+      tira.append(botaoDeAcao(shadow, acao));
+      continue;
+    }
+    const r = fila.shift();
+    if (r) parDaResposta(r, d);
+  }
+  // Da decima em diante nao ha tecla: o mapa e 1..9, e numerar alem disso ensinaria teclas que
+  // nao existem. Essas so respondem ao clique.
+  for (const r of fila) parDaResposta(r, '');
 
   const engrenagem = document.createElement('button');
   engrenagem.className = 'engrenagem' + (estado.gerindo ? ' ligado' : '');
@@ -1128,7 +1349,7 @@ function desenhar(shadow) {
     barra.className = 'barra';
 
     const alvo = comentarioDaVez();
-    const esperando = estado.comentarios.filter((c) => !c.respondido).length;
+    const esperando = estado.comentarios.filter((c) => !c.respondido && !c.tratado).length;
 
     /**
      * **O aviso do nome da pagina e MAIS grave aqui que no painel:** sem ele nada fica
@@ -1208,8 +1429,7 @@ function desenhar(shadow) {
      * painel aberto, e o ✕ a um dedo de quem responde em sequencia e o gesto destrutivo escondido
      * no inofensivo.
      */
-    const tiraBarra = montarTira(shadow, dizer, false);
-    if (tiraBarra) barra.append(tiraBarra);
+    barra.append(montarTira(shadow, dizer, false));
 
     const linhaB = document.createElement('div');
     linhaB.className = 'linha';
@@ -1431,7 +1651,17 @@ function desenhar(shadow) {
     const ehDaVez = !!daVez && daVez.id === c.id;
     // Amarelo = ja tem resposta nossa. O realce da VEZ continua por cima dele: a pergunta "onde a
     // tecla bate" vale mesmo num comentario ja respondido, se ele escolher um.
-    item.className = 'item' + (c.respondido ? ' respondido' : '') + (ehDaVez ? ' davez' : '');
+    /**
+     * **`tratado` e marca SEPARADA do amarelo**, e nao pode virar amarelo: amarelo diz "ja tem
+     * resposta nossa", e curtir nao e responder. A palavra vai num `data-` para a CSS escrever
+     * qual foi (curtido / ocultado) sem o painel montar dois seletores.
+     */
+    item.className =
+      'item' +
+      (c.respondido ? ' respondido' : '') +
+      (c.tratado ? ' tratado' : '') +
+      (ehDaVez ? ' davez' : '');
+    if (c.tratado) item.dataset.tratado = c.tratado;
     // Clicar no comentario tambem o torna o da vez: quem usa o mouse nao deve ter de usar as
     // setas para o teclado concordar com o que ele esta olhando.
     item.addEventListener('click', () => {
@@ -1512,8 +1742,8 @@ function desenhar(shadow) {
    * **Clicar poe no campo E insere na caixa daquele comentario** (escolha dele em 20/10). Inserir
    * nao e enviar: a caixa fica escrita e para ai.
    */
-  const tira = montarTira(shadow, dizer, true);
-  if (tira) rodape.append(tira);
+  // A tira existe sempre: mesmo sem resposta rapida nenhuma, as acoes fixas (2, 3 e 4) estao la.
+  rodape.append(montarTira(shadow, dizer, true));
 
   const campo = document.createElement('textarea');
   campo.placeholder = 'O texto da resposta. Ele e ACRESCENTADO depois da mencao, e quem envia e voce.';
@@ -1756,12 +1986,20 @@ function ligarTeclado(shadow) {
         return;
       }
 
-      // 1..9: a enesima resposta rapida. Escolhe E insere, que e o esquema do mobiliza.
+      /**
+       * **1..9 pela MESMA fonte que desenha a tira** (`doDigito`): 2, 3 e 4 sao as acoes fixas, o
+       * resto e resposta rapida — escolhe E insere, que e o esquema do mobiliza.
+       */
       if (/^[1-9]$/.test(k)) {
-        const r = estado.respostas[Number(k) - 1];
-        if (!r) return;
+        const { acao, resposta } = doDigito(k);
+        if (acao) {
+          feito();
+          acao.roda(shadow);
+          return;
+        }
+        if (!resposta) return;
         feito();
-        usarResposta(shadow, r);
+        usarResposta(shadow, resposta);
       }
     },
     // Captura no documento: o shadow root nao recebe tecla quando o foco esta na pagina.

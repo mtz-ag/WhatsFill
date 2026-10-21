@@ -600,6 +600,82 @@ grupo('proximoPendente: o avanco do modo de responder');
   check(fbdom.proximoPendente(fila, 'zzz')?.id === 'b', 'id desconhecido comeca do primeiro que espera');
 }
 
+grupo('curtir e ocultar: a fileira do comentario, por texto EXATO');
+{
+  /**
+   * A fileira medida em 19/10 e `Curtir | Responder | Enviar mensagem | Ocultar`. **Clicar e agir
+   * na pagina dele**, entao a lista e de PERMISSAO e o casamento e justo: "contem" faria
+   * "Ocultar" casar com "Ocultar todos os comentarios desta pessoa".
+   */
+  const bt = (texto, pressed) => ({
+    seletor: '[role="button"]',
+    innerText: texto,
+    cliques: 0,
+    getAttribute: (k) => (k === 'aria-pressed' ? pressed ?? null : null),
+    click() {
+      this.cliques++;
+    },
+  });
+  const art = (botoes) => ({ querySelectorAll: () => botoes });
+
+  const curtir = bt('Curtir');
+  const ocultar = bt('Ocultar');
+  const comum = art([curtir, bt('Responder'), bt('Enviar mensagem'), ocultar]);
+
+  check(fbdom.botaoDoComentario(comum, 'curtir') === curtir, 'acha o Curtir deste comentario');
+  check(fbdom.botaoDoComentario(comum, 'ocultar') === ocultar, 'acha o Ocultar deste comentario');
+  check(fbdom.botaoDoComentario(comum, 'descurtir') === null, 'o que nao esta la devolve nulo');
+  check(fbdom.botaoDoComentario(null, 'curtir') === null, 'sem article nao derruba');
+
+  check(
+    fbdom.botaoDoComentario(art([bt('Ocultar todos os comentarios desta pessoa')]), 'ocultar') === null,
+    'texto PARECIDO nao conta — o casamento e exato'
+  );
+
+  /**
+   * **TRES estados em `jaCurtido`, nunca dois** (a licao do `donoDoCanal`, 25/09): colapsar "nao
+   * sei" em "nao curtido" faria o painel DESCURTIR o que ele curtiu, porque o botao e o mesmo nos
+   * dois sentidos.
+   */
+  check(fbdom.jaCurtido(art([bt('Descurtir')])) === true, 'o rotulo "Descurtir" diz que ja esta curtido');
+  check(fbdom.jaCurtido(art([bt('Curtir', 'true')])) === true, 'aria-pressed="true" tambem');
+  check(fbdom.jaCurtido(art([bt('Curtir', 'false')])) === false, 'aria-pressed="false" diz que nao');
+  check(fbdom.jaCurtido(art([bt('Curtir')])) === null, 'sem nenhum dos dois sinais: NAO DA PARA SABER');
+  check(fbdom.jaCurtido(art([bt('Responder')])) === null, 'sem o botao, nao da para saber');
+
+  // Na duvida CLICA: a assimetria que importa e nao desfazer o que ele fez.
+  const semSinal = bt('Curtir');
+  check(fbdom.curtirComentario(art([semSinal])) === 'cliquei', 'na duvida, curte');
+  check(semSinal.cliques === 1, 'e clicou uma vez so');
+
+  const jaEstava = bt('Descurtir');
+  check(fbdom.curtirComentario(art([jaEstava])) === 'ja-estava', 'ja curtido NAO e clicado de novo');
+  check(jaEstava.cliques === 0, 'e o botao nem foi tocado — clicar ali DESCURTIRIA');
+
+  check(fbdom.curtirComentario(art([bt('Responder')])) === 'sem-botao', 'sem o Curtir, diz que nao achou');
+
+  const paraOcultar = bt('Ocultar');
+  check(fbdom.ocultarComentario(art([paraOcultar])) === true && paraOcultar.cliques === 1, 'ocultar clica uma vez');
+  check(fbdom.ocultarComentario(art([bt('Curtir')])) === false, 'sem o Ocultar, devolve falso');
+}
+
+grupo('proximoPendente: o que ele CURTIU ou OCULTOU tambem sai da fila');
+{
+  const c = (id, extra = {}) => ({ id, autor: `Fict ${id}`, respondido: false, ...extra });
+  const fila = [c('a'), c('b', { tratado: 'curtido' }), c('c', { tratado: 'ocultado' }), c('d')];
+
+  check(fbdom.proximoPendente(fila, 'a')?.id === 'd', 'pula o curtido e o ocultado');
+  check(
+    fbdom.proximoPendente([c('a'), c('b', { tratado: 'curtido' })], 'a') === null,
+    'so sobrando tratado, a fila acabou'
+  );
+  /**
+   * **`tratado` nao e `respondido`, e nao pode virar:** amarelo significa "ja tem resposta nossa",
+   * e curtir nao e responder. Para a FILA os dois sao trabalho feito; para a TELA, nao.
+   */
+  check(fila[1].respondido === false, 'curtir nao marca como respondido');
+}
+
 grupo('enviarDaCaixa: o despacho do Enter — e o que ele NAO prova');
 {
   /**
