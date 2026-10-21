@@ -3593,6 +3593,20 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **O QUE A PRINT DELE MEDIU DO ENVIO: "Postando..." E UMA CAIXA NOVA E VAZIA** (21/10/2026, print
+  com a resposta ja na tela e o painel parado: *"ao apertar enter abre outra caixa de resposta
+  abaixo entao continua nao indo pro proximo comentario"*).
+  **Isto confirmou a causa da entrada acima, e nao por deducao:** a resposta recem-enviada aparece
+  com **"Postando..."** no lugar do carimbo de tempo — e `lerRotulo` **exige** o `ha ...`. Enquanto
+  o Facebook nao confirma, a resposta esta na tela e o painel nao a ve.
+  **E a caixa NAO some: o Facebook abre uma nova, VAZIA, com o mesmo `aria-label`**
+  (*"Responder a <autor>"*). A prova fraca funciona nos dois desenhos por causa disso — ela
+  pergunta se o TEXTO saiu da caixa, nao se a caixa existe.
+  **A VERSAO PASSOU A APARECER NA BARRA** (`N de M · K esperando · v3.194.0`). No modo o painel
+  esta guardado, e e justamente no modo que ele relata defeito: **sem a versao na tela, "o fix nao
+  funcionou" e "o fix nao chegou" produzem a MESMA print** — e este projeto ja perdeu uma tarde
+  consertando codigo que nunca tinha rodado (a armadilha do topo deste arquivo).
+
 - **O AVANCO TINHA UMA PROVA SO, E ELA DEPENDIA DE UM ROTULO QUE NINGUEM MEDIU** (21/10/2026,
   relato dele: *"ao mandar o enter nao esta pulando para o proximo comentario"*).
   A prova do envio era **a resposta aparecer no post**, lida de `comentariosDoPost`. Ela exige o

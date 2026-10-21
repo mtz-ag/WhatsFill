@@ -1520,7 +1520,14 @@ function desenhar(shadow) {
       txt.textContent = alvo.texto;
       const conta = document.createElement('span');
       conta.className = 'conta';
-      conta.textContent = `${i + 1} de ${estado.comentarios.length} · ${esperando} esperando`;
+      /**
+       * **A VERSAO vai na barra** (21/10/2026). No modo o painel esta guardado, e e justamente no
+       * modo que ele relata defeito — sem a versao na tela, "o fix nao funcionou" e "o fix nao
+       * chegou" produzem a MESMA print, e este projeto ja perdeu uma tarde consertando codigo que
+       * nunca tinha rodado.
+       */
+      conta.textContent =
+        `${i + 1} de ${estado.comentarios.length} · ${esperando} esperando · v${VERSAO}`;
       // A marca so entra quando e verdade: numa pessoa com UM comentario ela seria ruido.
       linhaAlvo.append(quem);
       if (outros.total > 1) linhaAlvo.append(marca);

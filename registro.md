@@ -1,9 +1,10 @@
-## 2026-10-21 - v3.193.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
+## 2026-10-21 - v3.194.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
 
 Doze coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em 20/10;
 a oitava e o conserto do que a secao 7 nao alcancou, a nona e o **modo de responder**, a decima
 veio da primeira print do modo no ar, a decima primeira troca o que os digitos 2, 3 e 4 fazem e a
-decima segunda poe o realce **na pagina** e a decima terceira conserta o avanco depois do Enter.
+decima segunda poe o realce **na pagina** e a decima terceira conserta o avanco depois do Enter —
+com a print dele confirmando a causa na secao 13.
 
 ---
 
@@ -734,6 +735,35 @@ resposta no post. (rotulo que nao entendi: "...")
 aspas: e ele que diz por que a prova forte falhou, e com ele a prova forte volta a funcionar sem
 hipotese nenhuma.
 
+### A print dele confirmou a causa, e nao por deducao
+
+Depois da v3.193 ele mandou a tela com a resposta **ja enviada** e o painel parado:
+
+```
+Capitao Martim
+Leandro Reus Seguimos juntos, Flavio 22!
+Postando...                                 <- no lugar do carimbo de tempo
+
+[Responder a Leandro Reus]                  <- uma caixa NOVA, vazia
+```
+
+**"Postando..." e exatamente o que faltava:** `lerRotulo` exige o `ha ...`, e enquanto o Facebook
+nao confirma a resposta esta na tela e o painel nao a ve. **A prova forte so volta quando o carimbo
+chega** — a fraca e quem cobre essa janela.
+
+**E a caixa nao some: o Facebook abre uma nova, vazia, com o mesmo rotulo.** A prova fraca funciona
+nos dois desenhos porque pergunta se o TEXTO saiu da caixa, nao se a caixa existe.
+
+### A versao foi para a BARRA
+
+```
+6 de 23 · 17 esperando · v3.194.0
+```
+
+No modo o painel esta guardado, e e no modo que ele relata defeito. **Sem a versao na tela, "o fix
+nao funcionou" e "o fix nao chegou" produzem a MESMA print** — e este projeto ja perdeu uma tarde
+consertando codigo que nunca tinha rodado.
+
 ### Medido
 
 - O smoke do painel, num DOM falso, prova as tres situacoes: **inserir sozinho nao pula**, **caixa
@@ -746,7 +776,8 @@ hipotese nenhuma.
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.193.0** — e assim que se sabe que chegou.
+dizer **v3.194.0** — e assim que se sabe que chegou. **No modo de responder a versao fica na
+barra**, ao lado da contagem.
 
 ## O que falta, e e decisao dele
 
