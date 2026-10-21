@@ -122,6 +122,14 @@ const estado = {
    * precisa provar nada por conta propria.
    */
   aguardando: null,
+  /**
+   * **O no que esta com o realce amarelo NA PAGINA** (21/10/2026).
+   *
+   * Guardado para ser LIMPO: sem a referencia do anterior, trocar de comentario deixaria um rastro
+   * amarelo em todo mundo por quem ele passou — e ai o realce deixa de dizer onde a tecla bate,
+   * que e a unica coisa que ele existe para dizer.
+   */
+  realcado: null,
   /** O relogio do modo de responder. Zerado ao sair — senao ele continua lendo o DOM para sempre. */
   vigia: 0,
   /**
@@ -816,6 +824,23 @@ async function pedirRascunho(comentario, dizer, redesenhar) {
 /* ------------------------------------------------------------------ */
 
 /**
+ * **Poe o realce amarelo no comentario da vez, na PAGINA — e tira do anterior.**
+ *
+ * Mora no `desenhar` porque e o unico lugar por onde as duas telas passam (o painel e a barra), e
+ * porque o DOM e virtualizado: o article do comentario e TROCADO quando ele rola, e o realce
+ * precisa ser reposto no no de agora. Reachar pelo id e o que faz isso funcionar — o
+ * `comment_id` e estavel, o elemento nao.
+ *
+ * **Painel escondido tira o realce:** marca na pagina sem nada na tela explicando o que ela
+ * significa e sujeira no Facebook dele.
+ */
+function realcarNaPagina() {
+  const alvo = estado.aberto || estado.respondendo ? comentarioDaVez() : null;
+  const no = alvo ? noDoComentario(fb.raizDoPost(), alvo) : null;
+  estado.realcado = fb.realcarComentario(no, estado.realcado);
+}
+
+/**
  * **Rola a pagina ate aquele comentario.** Ponto unico: o botao "Ver na pagina" da lista e o
  * avanco do modo de responder — sem isso, "vai pro proximo sozinho" deixaria o proximo fora da
  * vista e ele teria de procurar na pagina quem o painel escolheu.
@@ -938,6 +963,12 @@ function vigiarEnvio(shadow) {
 
   const antes = assinaturaDaFila();
   relerComentarios();
+  /**
+   * **O realce e reposto a cada tique, e nao so no desenho.** O DOM e virtualizado: rolando, o
+   * Facebook TROCA o article do comentario, e o amarelo iria embora com o no antigo — justo
+   * enquanto ele rola para ler o que vai responder.
+   */
+  realcarNaPagina();
 
   const esperado = estado.aguardando;
   const atual = esperado && estado.comentarios.find((c) => c.id === esperado.id);
@@ -1321,6 +1352,7 @@ function montarTira(shadow, dizer, comGerir) {
 
 function desenhar(shadow) {
   shadow.replaceChildren();
+  realcarNaPagina();
 
   /**
    * **O status e o `dizer` nascem ANTES de qualquer tela**, porque as duas (o painel e a barra do
@@ -2157,6 +2189,8 @@ function montar() {
     if (escrevendo && !mudouDePost) return;
 
     relerComentarios();
+    // Mesma razao da vigia: o article e trocado quando ele rola, e o realce acompanha.
+    realcarNaPagina();
     const agora = estado.comentarios.map((c) => c.id).join('|');
     if (!mudouDePost && agora === assinatura) return;
 

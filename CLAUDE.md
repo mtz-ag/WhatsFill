@@ -3593,6 +3593,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **O REALCE AMARELO VAI NA PAGINA, E O DEFEITO DELE E O RASTRO** (21/10/2026, pedido dele: *"faca
+  uma marcacao amarela na volta do comentario selecionado"*).
+  No modo de responder o painel esta guardado e ele le a **pagina**: a barra diz o NOME de quem
+  esta na vez e nada mostrava ONDE. E o mesmo contrato do realce da lista — **o que esta aceso diz
+  onde a tecla bate** —, so que aqui a tecla escreve num comentario publico.
+  **`outline`, nunca `border`:** borda muda o tamanho do elemento e empurra o layout do Facebook;
+  outline desenha por cima sem ocupar espaco. E o **offset e NEGATIVO** (`-1px`): com offset
+  positivo o traco some quando o container do comentario corta o que transborda.
+  **Quem chama GUARDA o no realcado para limpar depois.** Sem isso, andar pela fila com as setas
+  deixa meia pagina amarela — e o realce para de dizer onde a tecla bate, que e a unica coisa que
+  ele existe para dizer. `realcarComentario(no, antigo)` devolve o novo; `estado.realcado` e quem
+  lembra.
+  **O valor que estava la VOLTA** (`__wfAntes`): o comentario e elemento da pagina dele, e limpar
+  para `''` apagaria um inline-style do Facebook se um dia existir.
+  **E ele e REPOSTO a cada tique, nao so no desenho** — o DOM e virtualizado, entao rolando o
+  Facebook TROCA o article e o amarelo iria embora com o no antigo, justo enquanto ele rola para
+  ler o que vai responder. Reachar pelo id e o que faz isso funcionar.
+  **Painel escondido tira o realce:** amarelo na pagina sem nada na tela explicando o que ele
+  significa e sujeira no Facebook dele.
+
 - **OS DIGITOS 2, 3 E 4 VIRARAM ACOES: CURTIR, OCULTAR E RESPONDER A MAO** (21/10/2026, pedido
   dele: *"troque a funcao do botao dois para curtir a mensagem, botao 3 para ocultar a mensagem,
   botao 4 responder a mao"*). As respostas rapidas ficam com o **1** e seguem do **5** em diante.

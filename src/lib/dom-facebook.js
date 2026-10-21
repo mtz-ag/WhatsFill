@@ -738,6 +738,38 @@ export function proximoPendente(lista, idAtual) {
 }
 
 /**
+ * **O REALCE AMARELO NA VOLTA DO COMENTARIO SELECIONADO, NA PAGINA** (21/10/2026, pedido dele:
+ * *"faca uma marcacao amarela na volta do comentario selecionado"*).
+ *
+ * No modo de responder o painel esta guardado e ele esta lendo a PAGINA — a barra diz o nome de
+ * quem esta na vez, e nada na tela mostra ONDE. Com as setas andando pela fila, isso e o mesmo
+ * problema do realce da lista: **o que esta aceso tem de dizer onde a tecla bate**, e aqui a tecla
+ * escreve num comentario publico.
+ *
+ * **`outline` e nao `border`:** borda muda o tamanho do elemento e empurra o layout do Facebook;
+ * outline desenha por cima, sem ocupar espaco. E o **offset NEGATIVO** mantem o traco DENTRO da
+ * caixa — com offset positivo ele some quando o container do comentario corta o que transborda.
+ *
+ * **Guarda o valor que estava la e devolve na hora de tirar.** O comentario e elemento da pagina
+ * dele, nao nosso: limpar para `''` apagaria um inline-style do Facebook se um dia existir.
+ */
+const REALCE = { outline: '3px solid #ffc107', outlineOffset: '-1px' };
+
+export function realcarComentario(no, antigo) {
+  if (antigo && antigo !== no && antigo.style) {
+    for (const k of Object.keys(REALCE)) antigo.style[k] = antigo.__wfAntes?.[k] ?? '';
+    delete antigo.__wfAntes;
+  }
+  if (!no || !no.style) return null;
+  if (!no.__wfAntes) {
+    no.__wfAntes = {};
+    for (const k of Object.keys(REALCE)) no.__wfAntes[k] = no.style[k] || '';
+  }
+  Object.assign(no.style, REALCE);
+  return no;
+}
+
+/**
  * **OS OUTROS COMENTARIOS DA MESMA PESSOA** (21/10/2026, pedido dele: *"a marta ja foi respondida,
  * ela tem duas mensagens, mostre quando for o caso"*).
  *

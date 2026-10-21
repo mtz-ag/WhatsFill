@@ -546,6 +546,58 @@ grupo('a MESMA pessoa com dois comentarios: responder um NAO marca o outro');
   globalThis.location = antes;
 }
 
+grupo('realcarComentario: o amarelo na volta do selecionado, e o rastro que ele NAO deixa');
+{
+  /**
+   * **Pedido dele (21/10):** *"faca uma marcacao amarela na volta do comentario selecionado"*. No
+   * modo de responder o painel esta guardado e ele le a PAGINA — sem isto, a barra diz o nome e
+   * nada mostra ONDE.
+   */
+  const no = () => ({ style: {} });
+
+  const a = no();
+  const devolveu = fbdom.realcarComentario(a, null);
+  check(devolveu === a, 'devolve o no realcado, para quem chama guardar e limpar depois');
+  check(/#ffc107/.test(a.style.outline), 'poe o amarelo em volta');
+  check(
+    a.style.outlineOffset === '-1px',
+    'com offset NEGATIVO: positivo some quando o container corta o que transborda'
+  );
+
+  /**
+   * **O rastro e o defeito que isto evita:** sem limpar o anterior, passar pela fila com as setas
+   * deixaria meia pagina amarela — e o realce para de dizer onde a tecla bate, que e a unica coisa
+   * que ele existe para dizer.
+   */
+  const b = no();
+  fbdom.realcarComentario(b, a);
+  check(!a.style.outline, 'o anterior perde o realce');
+  check(/#ffc107/.test(b.style.outline), 'e o novo ganha');
+
+  // Sem alvo (painel escondido, post fechado): limpa e devolve nulo.
+  check(fbdom.realcarComentario(null, b) === null, 'sem alvo devolve nulo');
+  check(!b.style.outline, 'e tira o realce de quem estava marcado');
+
+  /**
+   * **O que estava la ANTES volta.** O comentario e elemento da pagina dele: limpar para vazio
+   * apagaria um inline-style do Facebook se um dia existir.
+   */
+  const c = { style: { outline: '1px dotted red', outlineOffset: '4px' } };
+  fbdom.realcarComentario(c, null);
+  check(/#ffc107/.test(c.style.outline), 'o realce entra por cima');
+  fbdom.realcarComentario(null, c);
+  check(c.style.outline === '1px dotted red' && c.style.outlineOffset === '4px', 'e devolve o que estava la');
+
+  // Realcar o MESMO no de novo nao pode perder o valor original.
+  const d = { style: { outline: 'none' } };
+  fbdom.realcarComentario(d, null);
+  fbdom.realcarComentario(d, d);
+  fbdom.realcarComentario(null, d);
+  check(d.style.outline === 'none', 'repor no mesmo no nao estraga o valor guardado');
+
+  check(fbdom.realcarComentario(undefined, undefined) === null, 'entrada torta nao derruba');
+}
+
 grupo('comentariosDoMesmoAutor: o que a barra mostra');
 {
   const c = (id, autor, respondido = false) => ({ id, autor, respondido });

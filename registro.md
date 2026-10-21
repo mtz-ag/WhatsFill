@@ -1,8 +1,9 @@
-## 2026-10-21 - v3.191.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
+## 2026-10-21 - v3.192.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
 
-Onze coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em 20/10;
+Doze coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em 20/10;
 a oitava e o conserto do que a secao 7 nao alcancou, a nona e o **modo de responder**, a decima
-veio da primeira print do modo no ar e a decima primeira troca o que os digitos 2, 3 e 4 fazem.
+veio da primeira print do modo no ar, a decima primeira troca o que os digitos 2, 3 e 4 fazem e a
+decima segunda poe o realce **na pagina**.
 
 ---
 
@@ -644,10 +645,50 @@ aparecem no primeiro uso, e a tela diz "confira na pagina" em vez de afirmar.
 
 ---
 
+## 12. O amarelo na volta do comentario selecionado, NA PAGINA (v3.192.0)
+
+**Pedido dele:** *"faca uma marcacao amarela na volta do comentario selecionado"*.
+
+No modo de responder o painel esta guardado e ele le a **pagina**. A barra diz o NOME de quem esta
+na vez — e nada mostrava ONDE. E o mesmo contrato do realce da lista (**o que esta aceso diz onde a
+tecla bate**), so que aqui a tecla escreve num comentario publico.
+
+### `outline`, nunca `border`
+
+Borda muda o tamanho do elemento e **empurra o layout do Facebook**; outline desenha por cima, sem
+ocupar espaco. E o **offset e negativo** (`-1px`): com offset positivo o traco some quando o
+container do comentario corta o que transborda.
+
+### O defeito desta funcao e o RASTRO
+
+Sem limpar o anterior, andar pela fila com as setas deixa **meia pagina amarela** — e o realce para
+de dizer onde a tecla bate, que e a unica coisa que ele existe para dizer. Por isso
+`realcarComentario(no, antigo)` recebe os dois e `estado.realcado` e quem lembra.
+
+**E o valor que estava la volta.** O comentario e elemento da pagina DELE: limpar para vazio
+apagaria um inline-style do Facebook se um dia existir.
+
+### Reposto a cada tique, e nao so no desenho
+
+O DOM e virtualizado: rolando, o Facebook **troca** o article do comentario, e o amarelo iria
+embora com o no antigo — justo enquanto ele rola para ler o que vai responder. O realce e reposto
+na vigia (700ms) e no laco de 2s, reachando o article **pelo id**.
+
+**Painel escondido tira o realce:** amarelo na pagina sem nada na tela explicando o que significa e
+sujeira no Facebook dele.
+
+### Medido
+
+- 11 assercoes novas, e metade e sobre o rastro e sobre devolver o que estava la.
+- O smoke do painel prova, num DOM falso, que **o da vez fica amarelo e o ja respondido nao**, que
+  **a seta leva o amarelo junto sem deixar rastro**, e que **esconder o painel limpa a pagina**.
+
+---
+
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.191.0** — e assim que se sabe que chegou.
+dizer **v3.192.0** — e assim que se sabe que chegou.
 
 ## O que falta, e e decisao dele
 
