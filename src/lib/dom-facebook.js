@@ -590,3 +590,62 @@ export function inserirNaCaixa(caixa, texto) {
   // ter aceitado. A verdade e a caixa relida.
   return entrou && depois !== antes && depois.includes(texto.slice(0, 20));
 }
+
+
+/**
+ * **O PROXIMO QUE AINDA ESPERA, para o modo de responder andar sozinho** (21/10/2026, pedido dele:
+ * *"ao apertar enter vai pro proximo comentario sozinho"*).
+ *
+ * **Olha para a FRENTE primeiro e so depois volta ao comeco**, excluindo o atual. Duas razoes:
+ * comecando no meio do post, so-para-frente deixaria para tras todo mundo que esta acima e a fila
+ * terminaria cedo; e andar para baixo e a ordem em que ele le a pagina.
+ *
+ * **Devolve `null` quando mais ninguem espera** — de proposito, e e a diferenca desta funcao para
+ * as setas, que CIRCULAM. Avanco automatico que da a volta reofereceria quem acabou de ser
+ * respondido, e o painel diria "proximo" apontando para trabalho feito.
+ */
+export function proximoPendente(lista, idAtual) {
+  const todos = Array.isArray(lista) ? lista : [];
+  const i = todos.findIndex((c) => c && c.id === idAtual);
+  const ordem = i < 0 ? todos : [...todos.slice(i + 1), ...todos.slice(0, i)];
+  return ordem.find((c) => c && !c.respondido) || null;
+}
+
+/**
+ * **O ENTER NA CAIXA DO FACEBOOK — e o que esta funcao NAO prova** (21/10/2026).
+ *
+ * Ela existe para o caso em que o foco esta FORA da caixa (ele clicou num botao do painel e
+ * apertou Enter). Com o foco DENTRO da caixa o Enter dele e nativo, e **esse e o caminho provado**:
+ * e assim que ele envia hoje, sem extensao nenhuma. Por isso o painel nao intercepta Enter quando
+ * o foco esta na caixa — interceptar trocaria um envio que funciona por um despacho sintetico que
+ * **nunca foi medido**, e o preco do erro e ele achar que respondeu sem ter respondido.
+ *
+ * O editor e o **Lexical**, que escuta `keydown`: o despacho leva `key`, `code`, `keyCode` e
+ * `which`, porque bibliotecas de editor olham campos diferentes e faltar um e a forma silenciosa
+ * de nao enviar nada.
+ *
+ * **O retorno NAO e "enviou": e "despachei".** Quem prova o envio e a RESPOSTA aparecer no post —
+ * `comentariosDoPost` ja le isso, e e nela que o modo de responder se apoia para andar. A mesma
+ * disciplina do `inserirNaCaixa` (o `execCommand` devolve true sem o Lexical aceitar) e do 200 da
+ * API do mobiliza.
+ */
+export function enviarDaCaixa(caixa) {
+  if (!caixa) return false;
+  if (typeof KeyboardEvent !== 'function') return false;
+
+  caixa.focus();
+
+  for (const tipo of ['keydown', 'keypress', 'keyup']) {
+    caixa.dispatchEvent(
+      new KeyboardEvent(tipo, {
+        key: 'Enter',
+        code: 'Enter',
+        keyCode: 13,
+        which: 13,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+  }
+  return true;
+}

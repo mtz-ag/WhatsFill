@@ -3593,6 +3593,54 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **O MODO DE RESPONDER: O ENTER E O DO FACEBOOK, E O AVANCO SO ACONTECE COM PROVA**
+  (21/10/2026, pedido dele: *"criei um botao de comecar a responder onde vai esconder a extensao e
+  ter as opcoes de resposta, subir e descer comentarios nas setas e enter para mandar a mensagem;
+  crie o botao de parar tambem e ao apertar enter vai pro proximo comentario sozinho"*).
+  **A DECISAO QUE SUSTENTA TUDO: o painel NAO intercepta o Enter quando o foco esta na caixa.**
+  Com o foco dentro dela o Enter dele e **nativo**, e esse e o caminho PROVADO — e assim que ele
+  envia hoje, sem extensao nenhuma. Interceptar trocaria um envio que funciona por um `dispatchEvent`
+  sintetico que **nunca foi medido**, e o preco do erro e ele achar que respondeu sem ter respondido.
+  `fb.enviarDaCaixa` existe so para o outro caso (ele clicou num botao da barra e o foco saiu da
+  caixa), **devolve "despachei" e nunca "enviou"**, e leva os quatro campos juntos (`key`, `code`,
+  `keyCode`, `which`) porque editor olha campos diferentes e faltar um e a forma silenciosa de nao
+  enviar nada.
+  **QUEM PROVA O ENVIO E A RESPOSTA APARECER NO POST** (`comentariosDoPost`, ja medido), nunca a
+  tecla. Com isso os TRES jeitos de enviar — o Enter dele, o nosso despacho e o botao do proprio
+  Facebook — andam pelo mesmo mecanismo, e **nao existe avanco sem prova**: pular sem resposta
+  esconderia da fila quem nunca foi atendido. A vigia e de 700ms (o laco normal e de 2s, e esperar
+  2s depois de cada envio faz o "sozinho" parecer travado) e so avanca na **TRANSICAO** para
+  respondido — armar em cima de quem ja esta respondido faria o painel sair de cima dele no
+  primeiro tique, sem nada ter sido enviado.
+  **AS DUAS GUARDAS DO TECLADO BRIGAM COM O MODO, e a excecao e cirurgica.** A guarda de campo de
+  texto e medida e continua valendo (a caixa e `contenteditable`; sem ela cada "2" digitado
+  inseriria a segunda resposta). Mas no modo o foco VIVE na caixa, entao manter a guarda inteira
+  mataria as setas que ele pediu. **Passam so as setas e o Escape; os DIGITOS continuam barrados**
+  — "22" e o numero do candidato e ele digita isso na resposta.
+  **E `soltarOFoco()` e o que mantem o teclado vivo:** `inserirNaCaixa` deixa o foco DENTRO da
+  caixa, entao sem soltar ele nao conseguiria apertar 1..9 depois do primeiro envio; e trocar de
+  comentario com a caixa do ANTERIOR em foco faria um Enter mandar a resposta **para a pessoa
+  errada**, com a barra dizendo um nome e o Facebook enviando para outro.
+  **`isTrusted` passou a valer para TODA tecla** (era so o Escape): o painel agora despacha um
+  Enter que borbulha ate o document, onde este mesmo escutador esta em captura — sem a guarda ele
+  atenderia o proprio despacho.
+  **`fb.proximoPendente` olha para a FRENTE e so depois volta ao comeco**, e devolve `null` no fim —
+  ao contrario das SETAS, que circulam. Avanco que da a volta reofereceria quem acabou de ser
+  respondido, dizendo "proximo" para trabalho feito.
+  **A barra nao tem campo de texto de proposito:** a caixa do Facebook esta na tela, mostra
+  exatamente o que vai sair (com a mencao) e e ela o campo. Duplicar criaria "qual dos dois vai?".
+  Por isso **a IA no modo escreve NA CAIXA** (`pedirRascunhoNoModo`) — manter o rascunho no campo
+  invisivel seria texto pago que ninguem ve. **A leitura antes de publicar nao se perde; muda de
+  lugar**, e o Enter continua sendo o segundo ato deliberado. Os AVISOS da revisao sao repetidos
+  depois da insercao, porque `inserir` escreve a propria linha de status e apagaria
+  *"ATENCAO: promessa de entrega"* justo no texto que vai para a pagina.
+  **Sem o nome da pagina o modo nao avanca NUNCA** (nada fica respondido) — a barra escreve a
+  consequencia e a saida (o ↓ anda a mao), em vez de parecer travada.
+  **O que fica em aberto, dito a ele:** que a resposta apareca no post logo depois do envio e o que
+  o avanco pressupoe, e **nao foi medido ao vivo**; e trocar a resposta escolhida continua sem
+  conserto, porque apagar na caixa do Facebook nao funciona (19/10) — o texto errado se arruma na
+  pagina, a mao.
+
 - **O RESUMO DA RESPOSTA COLAPSADA MORA FORA DO ARTICLE, E O BOTAO DELE PASSA DE 40 CARACTERES**
   (20/10/2026, print depois do conserto da v3.186: *"Leitura terminada: 19 comentario(s), 0 ja
   respondido(s) — o post declara 51"*, com tres **"Capitao Martim respondeu · 1 resposta"** ainda

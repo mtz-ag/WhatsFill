@@ -480,4 +480,93 @@ grupo('respostaNossaColapsada: o resumo mora FORA do article');
   );
 }
 
+grupo('proximoPendente: o avanco do modo de responder');
+{
+  const c = (id, respondido = false) => ({ id, autor: `Fict ${id}`, respondido });
+
+  const fila = [c('a', true), c('b'), c('c', true), c('d'), c('e')];
+
+  check(fbdom.proximoPendente(fila, 'b')?.id === 'd', 'pula os respondidos e vai para o proximo que espera');
+  check(fbdom.proximoPendente(fila, 'd')?.id === 'e', 'anda para a frente');
+
+  /**
+   * **Da a volta ao comeco, e isso nao e enfeite:** comecando no meio do post, so-para-frente
+   * deixaria todo mundo que esta acima sem resposta e a fila terminaria cedo.
+   */
+  check(fbdom.proximoPendente(fila, 'e')?.id === 'b', 'no fim, volta ao comeco e acha quem ficou para tras');
+
+  // Nunca devolve o atual: o painel sairia de cima dele apontando para ele mesmo.
+  check(fbdom.proximoPendente([c('a', true), c('b')], 'b') === null, 'sozinho na fila, nao devolve ele mesmo');
+
+  /**
+   * **`null` quando mais ninguem espera** — e a diferenca desta funcao para as SETAS, que
+   * circulam. Avanco automatico que da a volta reofereceria quem acabou de ser respondido, e o
+   * painel diria "proximo" apontando para trabalho feito.
+   */
+  check(fbdom.proximoPendente([c('a', true), c('b', true)], 'a') === null, 'todos respondidos devolve nulo');
+  check(fbdom.proximoPendente([], 'a') === null, 'fila vazia devolve nulo');
+  check(fbdom.proximoPendente(null, 'a') === null, 'lista nula devolve nulo');
+
+  // Id que nao esta na lista (o comentario saiu da tela): comeca do topo em vez de travar.
+  check(fbdom.proximoPendente(fila, 'zzz')?.id === 'b', 'id desconhecido comeca do primeiro que espera');
+}
+
+grupo('enviarDaCaixa: o despacho do Enter — e o que ele NAO prova');
+{
+  /**
+   * **O KeyboardEvent e simulado com a FORMA que o navegador entrega**, e nao com a que parece
+   * certa: o construtor recebe o `init` e os campos ficam no evento. Foi um simulado com forma
+   * inventada que deixou `validarComentario` passar verde por um dia (20/10).
+   */
+  const antes = globalThis.KeyboardEvent;
+  globalThis.KeyboardEvent = class {
+    constructor(tipo, init) {
+      this.type = tipo;
+      Object.assign(this, init || {});
+    }
+  };
+
+  const eventos = [];
+  let focou = 0;
+  const caixa = {
+    focus() {
+      focou++;
+      eventos.push('focus');
+    },
+    dispatchEvent(ev) {
+      eventos.push(ev);
+      return true;
+    },
+  };
+
+  const devolveu = fbdom.enviarDaCaixa(caixa);
+
+  check(devolveu === true, 'devolve true — e isso significa "despachei", NUNCA "enviou"');
+  check(focou === 1, 'foca a caixa antes de despachar: editor sem foco ignora a tecla');
+  check(eventos[0] === 'focus', 'o foco vem ANTES do primeiro evento, nao depois');
+
+  const tipos = eventos.filter((e) => e !== 'focus').map((e) => e.type);
+  check(
+    tipos.join(',') === 'keydown,keypress,keyup',
+    'despacha os tres na ordem do teclado de verdade'
+  );
+
+  /**
+   * **Os quatro campos vao juntos de proposito.** Bibliotecas de editor olham campos diferentes
+   * (`key`, `code`, `keyCode`, `which`), e faltar um e a forma silenciosa de nao enviar nada —
+   * sem erro, sem aviso, com ele achando que respondeu.
+   */
+  const d = eventos.find((e) => e.type === 'keydown');
+  check(d.key === 'Enter' && d.code === 'Enter', 'leva key e code');
+  check(d.keyCode === 13 && d.which === 13, 'leva keyCode e which, que e o que editor antigo le');
+  check(d.bubbles === true && d.cancelable === true, 'borbulha e e cancelavel, como o de verdade');
+
+  check(fbdom.enviarDaCaixa(null) === false, 'sem caixa nao despacha nada');
+
+  globalThis.KeyboardEvent = antes;
+  // Sem `KeyboardEvent` (o Node puro) ela desiste em vez de estourar: o modulo e importado nos
+  // testes, e funcao que lanca no import derruba a suite inteira.
+  check(fbdom.enviarDaCaixa(caixa) === false, 'sem KeyboardEvent no ambiente, devolve falso');
+}
+
 fim();

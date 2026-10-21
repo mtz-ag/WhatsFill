@@ -1,7 +1,7 @@
-## 2026-10-21 - v3.187.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e o amarelo passou a funcionar
+## 2026-10-21 - v3.188.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
 
-Oito coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em
-20/10; a oitava (secao 8) e o conserto do que a secao 7 nao alcancou.
+Nove coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em
+20/10; a oitava e o conserto do que a secao 7 nao alcancou, e a nona e o **modo de responder**.
 
 ---
 
@@ -417,10 +417,97 @@ botao diz.
 
 ---
 
+## 9. O modo de responder: barra embaixo, setas, Enter, e o proximo sozinho (v3.188.0)
+
+**Pedido dele:** *"criei um botao de comecar a responder onde vai esconder a extensao e ter as
+opcoes de resposta, subir e descer comentarios nas setas e enter para mandar a mensagem; crie o
+botao de parar tambem e ao apertar enter vai pro proximo comentario sozinho"*.
+
+**"Comecar a responder"** fica no rodape do painel, em azul. Ao clicar: o painel **solta o
+empurrao** (a pagina volta ao tamanho inteiro) e sobra uma **barra fina embaixo** com a quem ele
+esta respondendo, as respostas rapidas, a IA, o "Ver na pagina", o **Parar** e a linha de status.
+
+### O Enter e o do FACEBOOK, e essa e a decisao que sustenta o resto
+
+Com o foco dentro da caixa de resposta o Enter dele e **nativo** — e assim que ele envia hoje, sem
+extensao nenhuma. **O painel nao intercepta.** Interceptar trocaria um envio que funciona por um
+despacho sintetico que **nunca foi medido**, e o preco de errar e ele achar que respondeu sem ter
+respondido.
+
+Depois de apertar `1`, o foco **ja esta na caixa** (`inserirNaCaixa` o poe la). Entao o gesto e:
+
+```
+1   -> a resposta entra na caixa, com a mencao
+⏎   -> o Facebook envia
+        o painel ve a resposta aparecer -> proximo comentario, na vista
+```
+
+`fb.enviarDaCaixa` existe so para o outro caso: ele clicou num botao da barra e o foco saiu da
+caixa. Ela **devolve "despachei", nunca "enviou"**, e leva os quatro campos juntos (`key`, `code`,
+`keyCode`, `which`) porque editor olha campos diferentes e faltar um e a forma silenciosa de nao
+enviar nada.
+
+### O avanco so acontece COM PROVA
+
+Quem prova o envio e **a resposta aparecer no post** — o mesmo sinal que o amarelo da lista ja usa.
+Nunca a tecla. Com isso os **tres** jeitos de enviar andam pelo mesmo mecanismo (o Enter dele, o
+nosso despacho e o botao do proprio Facebook), e **nao existe avanco sem prova**: pular sem
+resposta esconderia da fila quem nunca foi atendido.
+
+A vigia pergunta de **700ms em 700ms** (o laco normal do painel e de 2s, e esperar 2s depois de
+cada envio faz o "sozinho" parecer travado) e so avanca na **transicao** para respondido — armar em
+cima de quem ja esta respondido faria o painel sair de cima dele no primeiro tique, sem nada ter
+sido enviado.
+
+**O proximo e o proximo que ESPERA**, olhando para a frente e depois voltando ao comeco (quem
+comeca no meio do post nao deixa ninguem para tras), e **no fim ele FICA no lugar** em vez de dar a
+volta. As **setas circulam** — ali ele esta navegando a mao.
+
+### As duas guardas do teclado brigavam com o modo
+
+A guarda de campo de texto e medida e continua valendo: a caixa do Facebook e `contenteditable`, e
+sem ela cada "2" que ele digitasse inseriria a segunda resposta. **Mas no modo o foco VIVE na
+caixa**, e manter a guarda inteira mataria justamente as setas que ele pediu.
+
+- **Passam so as setas e o Escape.** Os **digitos continuam barrados**: "22" e o numero do
+  candidato, e ele digita isso na resposta.
+- **`soltarOFoco()`** e o que mantem o teclado vivo: sem soltar a caixa depois de cada avanco, ele
+  nao conseguiria apertar 1..9 de novo; e trocar de comentario com a caixa do ANTERIOR em foco faria
+  um Enter mandar a resposta **para a pessoa errada**, com a barra dizendo um nome e o Facebook
+  enviando para outro.
+- **`isTrusted` passou a valer para TODA tecla** (era so o Escape): o despacho do Enter borbulha ate
+  o document, onde o escutador esta em captura — sem a guarda ele atenderia o proprio despacho.
+
+### A barra nao tem campo de texto, e a IA escreve na caixa
+
+A caixa do Facebook esta na tela e mostra exatamente o que vai sair, com a mencao: **ela e o
+campo**. Um segundo campo criaria a pergunta "qual dos dois vai?".
+
+Por isso a **IA no modo escreve direto na caixa** — manter o rascunho num campo invisivel seria
+texto pago que ninguem ve. **A leitura antes de publicar nao se perde; muda de lugar**, e o Enter
+continua sendo o segundo ato deliberado. Os avisos da revisao sao repetidos depois da insercao,
+porque `inserir` escreve a propria linha de status e apagaria *"ATENCAO: promessa de entrega"* justo
+no texto que vai para a pagina.
+
+**Escape tambem para o modo**, e o Parar volta o painel. A tira da barra nao tem o engrenagem: o ✕
+a um dedo de quem responde em sequencia e o gesto destrutivo escondido no inofensivo.
+
+### O que fica em aberto, e e medicao que so o uso dele da
+
+- **Que a resposta apareca no post logo depois do envio e o que o avanco pressupoe** — e isso nao
+  foi medido ao vivo. Se ele enviar e o painel nao andar, o ↓ anda a mao e **a medicao e me dizer
+  se o comentario ficou amarelo** depois de alguns segundos.
+- **Sem o nome da pagina nada fica respondido**, entao o modo nao avanca nunca. A barra escreve a
+  consequencia e a saida, em vez de parecer travada.
+- **Trocar a resposta escolhida continua sem conserto:** apagar na caixa do Facebook nao funciona
+  (medido em 19/10), entao o texto errado se arruma na pagina, a mao.
+
+---
+
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.187.0** — e assim que se sabe que chegou.
+dizer **v3.188.0** — e assim que se sabe que chegou.
 
 ## O que falta, e e decisao dele
 

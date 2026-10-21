@@ -103,6 +103,27 @@ const estado = {
   edVariacoes: '',
   /** Verdadeiro so no instante em que o editor abre — ver o foco no desenho. */
   edFocar: false,
+  /**
+   * **O MODO DE RESPONDER** (21/10/2026, pedido dele: *"criei um botao de comecar a responder onde
+   * vai esconder a extensao e ter as opcoes de resposta, subir e descer comentarios nas setas e
+   * enter para mandar a mensagem; crie o botao de parar tambem"*).
+   *
+   * Nele o painel **solta o empurrao** e vira uma barra fina embaixo: a tela inteira e do post,
+   * que e o que ele veio ler. As respostas rapidas vem na barra, as setas andam na fila e o Enter
+   * envia.
+   */
+  respondendo: false,
+  /**
+   * **O que a barra esta esperando virar "respondido"** — `{ id, autor }`.
+   *
+   * O avanco automatico **nao confia no Enter**: ele espera a RESPOSTA aparecer no post, que e o
+   * sinal que `comentariosDoPost` ja le. Assim o mesmo mecanismo cobre os tres jeitos de enviar
+   * (o Enter dele na caixa, o nosso despacho e o botao de enviar do Facebook), e nenhum deles
+   * precisa provar nada por conta propria.
+   */
+  aguardando: null,
+  /** O relogio do modo de responder. Zerado ao sair — senao ele continua lendo o DOM para sempre. */
+  vigia: 0,
 };
 
 /**
@@ -321,6 +342,36 @@ function css() {
       background: #1877f2; color: #fff; border: 0; border-radius: 8px 0 0 8px;
       padding: 9px 11px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.2);
     }
+    /* ------------------------------------------------------------------
+       O MODO DE RESPONDER: barra fina embaixo, e a tela inteira e do post.
+       Ela NAO empurra a pagina (o dock e soltado) de proposito -- esconder a
+       extensao foi metade do pedido dele. Embaixo e nao em cima porque o
+       cabecalho do Facebook e a barra de comentarios do post vivem no topo.
+       Largura limitada e centralizada: numa tela larga, uma barra de ponta a
+       ponta joga os botoes para longe de onde ele esta lendo. ------------ */
+    .barra {
+      position: fixed; left: 50%; transform: translateX(-50%); bottom: 12px;
+      width: min(880px, calc(100vw - 24px)); z-index: 2147483000;
+      font: 13px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif; color: #111;
+      background: #fff; border: 1px solid #ccd0d5; border-radius: 10px;
+      box-sizing: border-box; padding: 9px 11px;
+      box-shadow: 0 6px 22px rgba(0,0,0,.22);
+    }
+    .barra .alvo { display: flex; align-items: baseline; gap: 7px; margin-bottom: 7px; }
+    .barra .alvo .quem { font-weight: 600; }
+    /* O texto do comentario encolhe numa linha: a barra nao pode crescer e
+       cobrir o post, e o comentario inteiro esta na pagina, atras dela. */
+    .barra .alvo .txt {
+      color: #444; flex: 1; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .barra .alvo .conta { color: #65676b; font-size: 11px; white-space: nowrap; }
+    .barra .alvo .parar { margin-left: auto; }
+    .barra .rapidas { margin-bottom: 7px; }
+    .barra .status { margin-top: 0; }
+    .barra .aviso { margin-bottom: 7px; }
+    .barra .dica { margin: 0; }
+    .barra button.parar { background: #fff; border-color: #f02849; color: #f02849; font-weight: 600; }
   `;
 }
 
@@ -687,21 +738,493 @@ async function pedirRascunho(comentario, dizer, redesenhar) {
 
 /* ------------------------------------------------------------------ */
 
+/**
+ * **A TIRA DAS RESPOSTAS RAPIDAS, montada num lugar so.**
+ *
+ * Dois donos: o rodape do painel e a **barra do modo de responder**. Duas copias divergiriam na
+ * primeira correcao — e a divergencia aqui seria "numa tira o botao insere e na outra nao".
+ *
+ * `comGerir` e falso na barra de proposito: organizar (renomear, apagar) e trabalho de painel
+ * aberto, e o ✕ a um dedo de distancia de quem esta respondendo em sequencia e o gesto destrutivo
+ * escondido no inofensivo (a licao de 01/09).
+ *
+ * **Clicar faz o MESMO que a tecla:** poe no campo E insere no comentario da vez (escolha dele em
+ * 20/10, *"escolhe e ja insere"*). Inserir nao e enviar.
+ */
+/* ------------------------------------------------------------------ */
+
+/**
+ * **Rola a pagina ate aquele comentario.** Ponto unico: o botao "Ver na pagina" da lista e o
+ * avanco do modo de responder — sem isso, "vai pro proximo sozinho" deixaria o proximo fora da
+ * vista e ele teria de procurar na pagina quem o painel escolheu.
+ *
+ * **O `no` guardado pode estar obsoleto**, e com a lista acumulando isso e o caso comum: o article
+ * e reachado pelo id antes de desistir. `scrollIntoView` num elemento solto nao leva a lugar
+ * nenhum — e nao avisa.
+ */
+function verNaPagina(c, dizer) {
+  const raiz = fb.raizDoPost();
+  const no = raiz && raiz.contains(c.no) ? c.no : raiz && acharPorId(raiz, c.id);
+  if (!no) {
+    dizer('Este comentario saiu da tela. Clique em "Ler o post inteiro" ou role ate ele.');
+    return false;
+  }
+  no.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  return true;
+}
+
+/**
+ * **De quanto em quanto o modo de responder pergunta "ja apareceu?".**
+ *
+ * 700ms e o compromisso: o laco normal do painel e de 2s, e esperar 2s depois de cada envio faz o
+ * "sozinho" parecer travado numa fila que ele percorre rapido. A leitura e do DOM e barata — e a
+ * mesma que o laco de 2s ja faz.
+ */
+const INTERVALO_DA_VIGIA_MS = 700;
+
+/** A assinatura da fila para o modo: muda quando alguem entra, sai ou passa a ser respondido. */
+function assinaturaDaFila() {
+  return (
+    estado.comentarios.map((c) => `${c.id}${c.respondido ? '!' : ''}`).join('|') +
+    `>${estado.daVezId}`
+  );
+}
+
+/**
+ * **COMECAR A RESPONDER** (pedido dele, 21/10/2026).
+ *
+ * Solta o empurrao, troca o painel pela barra e arma a vigia. **Sai do modo de organizar** antes:
+ * a barra nao tem o engrenagem, e voltar ao painel com a tira em modo de apagar seria tela suja.
+ */
+function comecarResponder(shadow) {
+  estado.respondendo = true;
+  estado.gerindo = false;
+  estado.editando = '';
+
+  relerComentarios();
+  const alvo = comentarioDaVez();
+  estado.daVezId = alvo ? alvo.id : '';
+  armar(alvo);
+
+  if (estado.vigia) clearInterval(estado.vigia);
+  estado.vigia = setInterval(() => vigiarEnvio(shadow), INTERVALO_DA_VIGIA_MS);
+
+  desenhar(shadow);
+  if (!alvo) {
+    falar(shadow, 'Nao ha comentario na lista. Role o post, ou use o "L Ler tudo" no painel.');
+    return;
+  }
+  falar(shadow, `Respondendo ${alvo.autor}. Escolha uma resposta e aperte Enter na caixa.`);
+  verNaPagina(alvo, (m) => falar(shadow, m));
+}
+
+/**
+ * **PARAR** — o botao que ele pediu junto. Devolve o painel e para a vigia.
+ *
+ * Zerar o `vigia` nao e detalhe: sem isso o relogio continua lendo o DOM para sempre, e um segundo
+ * "Comecar" criaria um relogio a mais a cada clique.
+ */
+function pararResponder(shadow) {
+  estado.respondendo = false;
+  estado.aguardando = null;
+  if (estado.vigia) clearInterval(estado.vigia);
+  estado.vigia = 0;
+  relerComentarios();
+  desenhar(shadow);
+  falar(shadow, 'Parei o modo de responder.');
+}
+
+/**
+ * **SOLTA O FOCO DA CAIXA DO FACEBOOK, e isto e o que mantem o teclado vivo no modo.**
+ *
+ * Duas razoes, as duas medidas no proprio codigo:
+ *
+ *  1. **Os DIGITOS continuam barrados dentro de campo de texto** (e tem de continuar: "22" e o
+ *     numero do candidato, e ele digita isso na resposta). `inserirNaCaixa` deixa o foco DENTRO da
+ *     caixa — entao, sem soltar, depois do primeiro envio ele nao conseguiria mais apertar 1..9.
+ *  2. **O Enter e o da caixa em foco.** Trocando de comentario com a caixa do ANTERIOR ainda em
+ *     foco (e com texto que ele nao enviou), um Enter mandaria a resposta para a pessoa errada —
+ *     a barra diria um nome e o Facebook enviaria para outro.
+ *
+ * So solta campo de texto: o foco num botao do painel nao incomoda ninguem.
+ */
+function soltarOFoco() {
+  const el = document.activeElement;
+  if (el && el !== document.body && el.isContentEditable) el.blur();
+}
+
+/**
+ * **ARMAR a espera, e so em quem AINDA espera.**
+ *
+ * O avanco acontece na TRANSICAO para respondido. Armando em cima de alguem que ja esta
+ * respondido, a vigia veria "respondido" no primeiro tique e pularia sozinha — ele escolheria um
+ * comentario e o painel sairia de cima dele sem nada ter sido enviado.
+ */
+function armar(c) {
+  estado.aguardando = c && !c.respondido ? { id: c.id, autor: c.autor } : null;
+}
+
+/**
+ * **A VIGIA: quem prova o envio e a RESPOSTA APARECER, nunca o Enter.**
+ *
+ * Com isso os tres jeitos de enviar andam pelo mesmo mecanismo — o Enter dele na caixa (que e o
+ * caminho provado, o que ele usa hoje), o nosso despacho e o botao do proprio Facebook. Nenhum
+ * precisa provar nada por conta propria, e **nao existe avanco sem prova**: pular sem resposta
+ * esconderia da fila quem nunca foi atendido.
+ */
+function vigiarEnvio(shadow) {
+  if (!estado.respondendo) return;
+
+  const antes = assinaturaDaFila();
+  relerComentarios();
+
+  const esperado = estado.aguardando;
+  const atual = esperado && estado.comentarios.find((c) => c.id === esperado.id);
+
+  if (esperado && atual && atual.respondido) {
+    avancar(shadow);
+    return;
+  }
+
+  // Redesenha so quando a fila mudou: refazer a barra a cada 700ms seria DOM novo embaixo do dedo
+  // dele, e a barra tem botoes que ele esta clicando.
+  if (assinaturaDaFila() !== antes) desenhar(shadow);
+}
+
+/**
+ * **O AVANCO: o proximo que ainda espera, na vista.**
+ *
+ * `fb.proximoPendente` devolve `null` quando mais ninguem espera, e ai o modo FICA no lugar: sair
+ * sozinho tiraria a barra da tela no instante em que ele ainda pode querer ler o que escreveu.
+ */
+function avancar(shadow) {
+  const anterior = estado.aguardando;
+  const prox = fb.proximoPendente(estado.comentarios, estado.daVezId);
+  const enviado = anterior ? `Resposta a ${anterior.autor} apareceu no post.` : '';
+
+  if (!prox) {
+    estado.aguardando = null;
+    desenhar(shadow);
+    falar(
+      shadow,
+      `${enviado} Nao ha mais ninguem esperando NESTA lista — o "L Ler tudo" do painel traz o resto do post.`
+    );
+    return;
+  }
+
+  estado.daVezId = prox.id;
+  armar(prox);
+  soltarOFoco();
+  desenhar(shadow);
+  falar(shadow, `${enviado} Agora: ${prox.autor}.`);
+  verNaPagina(prox, (m) => falar(shadow, m));
+}
+
+/**
+ * **O ENTER DO PAINEL — e por que ele NAO intercepta o Enter da caixa.**
+ *
+ * Com o foco DENTRO da caixa do Facebook o Enter dele e nativo, e esse e o caminho PROVADO: e
+ * assim que ele envia hoje. Interceptar trocaria um envio que funciona por um despacho sintetico
+ * que nunca foi medido, e o preco do erro e ele achar que respondeu sem ter respondido.
+ *
+ * Esta funcao cobre o outro caso: ele clicou num botao da barra (o foco saiu da caixa) e apertou
+ * Enter. Ela despacha o Enter na caixa e **nao afirma que enviou** — quem diz isso e a vigia.
+ */
+function enviarDaVez(shadow) {
+  const alvo = comentarioDaVez();
+  if (!alvo) return;
+
+  const raiz = fb.raizDoPost();
+  const caixa = raiz && fb.caixaDeResposta(alvo.autor, raiz);
+  if (!caixa) {
+    falar(
+      shadow,
+      `A caixa de ${alvo.autor} nao esta aberta. Escolha uma resposta (1 a 9) — ela abre a caixa e escreve.`
+    );
+    return;
+  }
+
+  estado.daVezId = alvo.id;
+  armar(alvo);
+  fb.enviarDaCaixa(caixa);
+  falar(shadow, `Enter despachado na caixa de ${alvo.autor}. Confirmo quando a resposta aparecer.`);
+}
+
+/**
+ * **A IA no modo de responder poe o rascunho NA CAIXA, porque a barra nao tem campo.**
+ *
+ * No painel o rascunho fica no campo e ele le antes de inserir. Na barra nao existe campo — manter
+ * o rascunho ali seria texto pago que ninguem ve. A caixa do Facebook passa a ser o campo: ela
+ * esta na tela, mostra exatamente o que vai sair (com a mencao) e o Enter continua sendo um
+ * segundo ato deliberado. **A leitura antes de publicar nao se perde; muda de lugar.**
+ *
+ * Os AVISOS da revisao sao repetidos depois da insercao de proposito: `inserir` escreve a propria
+ * linha de status e apagaria "ATENCAO: promessa de entrega" justo no texto que vai para a pagina.
+ */
+async function pedirRascunhoNoModo(shadow, alvo) {
+  let ultima = '';
+  const dizer = (m) => {
+    ultima = m;
+    falar(shadow, m);
+  };
+  await pedirRascunho(alvo, dizer, () => {});
+  const texto = estado.texto.trim();
+  if (!texto) return;
+  const entrou = await inserir(alvo, texto, () => {});
+  falar(
+    shadow,
+    entrou
+      ? `${ultima} O texto esta na caixa de ${alvo.autor}.`
+      : `${ultima} MAS nao entrou na caixa — clique dentro dela na pagina.`
+  );
+}
+
+function montarTira(shadow, dizer, comGerir) {
+  if (!estado.respostas.length) return null;
+  const tira = document.createElement('div');
+  tira.className = 'rapidas';
+
+  estado.respostas.forEach((r, i) => {
+    // Da DECIMA em diante nao ha tecla: o mapa e 1..9, e numerar ate 12 ensinaria teclas que
+    // nao existem. Essas so respondem ao clique.
+    const tecla = i < 9 ? String(i + 1) : '';
+    const par = document.createElement('div');
+    par.className = 'par';
+
+    const vez = rapidas.variacaoDaVez(r, estado.indices);
+
+    const usar = document.createElement('button');
+    usar.className = 'usar';
+    usar.textContent = tecla ? `${tecla}  ${r.nome}` : r.nome;
+    /**
+     * **O contador vai no `title`, nao no botao.** Escrever "3/10" em seis botoes e ruido numa
+     * tira de 380px, e o numero so interessa num instante: o da duvida. Quem diz em voz alta e
+     * a linha de status, depois de usar.
+     */
+    usar.title =
+      vez.total > 1
+        ? `Variacao ${vez.posicao} de ${vez.total} (reveza a cada uso):\n${vez.texto}`
+        : vez.texto;
+    usar.addEventListener('click', () => {
+      // O clique faz o MESMO que a tecla: duas formas de usar a mesma resposta divergem na
+      // primeira correcao, e aqui a diferenca seria "uma insere e a outra nao".
+      usarResposta(shadow, r);
+    });
+    par.append(usar);
+
+    /**
+     * **✎ e ✕ so existem no modo de gerir**, e sao duas coisas de uma vez: a tira fica com uma
+     * linha de botoes em vez de tres (o rodape nao pode comer a lista de comentarios), e o
+     * apagar deixa de ficar a um dedo de distancia de quem so queria usar a resposta.
+     */
+    if (comGerir && estado.gerindo) {
+      par.className = 'par edit';
+
+      const editar = document.createElement('button');
+      editar.className = 'mini';
+      editar.textContent = '✎';
+      editar.title = `Editar o nome e as ${vez.total} variacao(oes)`;
+      editar.addEventListener('click', () => {
+        // O rascunho e carregado AQUI, uma vez. No desenho ele seria recarregado a cada
+        // redesenho e comeria o que ele digitou.
+        estado.editando = r.id;
+        estado.edNome = r.nome;
+        estado.edVariacoes = rapidas.paraTexto(r);
+        estado.edFocar = true;
+        desenhar(shadow);
+      });
+
+      const tirar = document.createElement('button');
+      tirar.className = 'mini fim';
+      tirar.textContent = '✕';
+      tirar.title = 'Apagar a resposta INTEIRA, com todas as variacoes';
+      tirar.addEventListener('click', async () => {
+        /**
+         * **Apagar devolve o texto ao CAMPO** — e o desfazer barato: um clique em "Guardar como
+         * rapida" traz de volta. Sem isso, um ✕ errado apagaria um texto que ele escreveu e nao
+         * tem copia em lugar nenhum (a licao de 01/09, *"acabei de perder todo meu trabalho"*).
+         */
+        if (r.variacoes.length > 1 && !confirm(`Apagar "${r.nome}" e as ${r.variacoes.length} variacoes?`)) return;
+        const { lista, texto } = rapidas.apagar(estado.respostas, r.id);
+        estado.texto = texto;
+        const erro = await salvarRespostas(lista);
+        desenhar(shadow);
+        dizer(erro || 'Apagada. O texto esta no campo — "Guardar como rapida" desfaz.');
+      });
+
+      par.append(editar, tirar);
+    }
+
+    tira.append(par);
+  });
+
+  const engrenagem = document.createElement('button');
+  engrenagem.className = 'engrenagem' + (estado.gerindo ? ' ligado' : '');
+  engrenagem.textContent = '⚙';
+  engrenagem.title = estado.gerindo ? 'Terminar de organizar' : 'Renomear ou apagar respostas';
+  engrenagem.addEventListener('click', () => {
+    estado.gerindo = !estado.gerindo;
+    // Sair do modo fecha qualquer renomeacao aberta: campo de edicao orfao numa tira que
+    // voltou ao normal e tela suja.
+    if (!estado.gerindo) estado.editando = '';
+    desenhar(shadow);
+  });
+  if (comGerir) tira.append(engrenagem);
+  return tira;
+}
+
 function desenhar(shadow) {
   shadow.replaceChildren();
+
+  /**
+   * **O status e o `dizer` nascem ANTES de qualquer tela**, porque as duas (o painel e a barra do
+   * modo de responder) terminam na mesma linha de status.
+   *
+   * Ele mora no ESTADO e e procurado no shadow a cada escrita, nunca guardado numa variavel: quem
+   * pede o rascunho redesenha no meio do caminho, e o elemento capturado antes disso ja saiu da
+   * arvore — a mensagem iria para um no orfao e a tela ficaria muda justo depois da chamada paga.
+   */
+  const status = document.createElement('div');
+  status.className = 'status';
+  status.textContent = estado.status;
+  const dizer = (t) => falar(shadow, t);
 
   /**
    * O empurrao acompanha o painel: escondido, a pagina volta ao tamanho dela.
    * Fica aqui e nao nos botoes porque sao tres caminhos que mudam `aberto` (os
    * dois botoes e a montagem), e tres chamadas separadas divergiriam — a
    * mesma razao do `gravar` carimbar a versao do quadro num lugar so.
+   *
+   * **No modo de responder ele SOLTA o empurrao:** esconder a extensao foi metade do pedido dele,
+   * e a barra flutua sem tirar largura do post.
    */
-  if (estado.aberto) dock.applyDock(LARGURA);
+  if (estado.aberto && !estado.respondendo) dock.applyDock(LARGURA);
   else dock.removeDock();
 
   const style = document.createElement('style');
   style.textContent = css();
   shadow.append(style);
+
+  /**
+   * **O MODO DE RESPONDER: a barra, e nada mais na tela** (21/10/2026).
+   *
+   * Ela vem ANTES da pestana de proposito: no modo, "escondido" e "aberto" deixam de decidir a
+   * tela — o painel esta guardado e o que existe e a barra. Duas telas disputando o mesmo estado
+   * dariam pestana e barra ao mesmo tempo.
+   *
+   * O que ela tem e o minimo do gesto: **a quem** estou respondendo, **as respostas rapidas**, e
+   * o **Parar**. Nao ha campo de texto: a caixa do Facebook esta na tela, logo acima, e e ela que
+   * mostra exatamente o que vai sair — com a mencao. Duplicar num campo criaria a pergunta "qual
+   * dos dois vai?".
+   */
+  if (estado.respondendo) {
+    const barra = document.createElement('div');
+    barra.className = 'barra';
+
+    const alvo = comentarioDaVez();
+    const esperando = estado.comentarios.filter((c) => !c.respondido).length;
+
+    /**
+     * **O aviso do nome da pagina e MAIS grave aqui que no painel:** sem ele nada fica
+     * "respondido", e sem isso **o avanco automatico nunca acontece** — a consequencia vai escrita,
+     * com a saida (o ↓ anda a mao).
+     */
+    if (estado.aviso) {
+      const aviso = document.createElement('div');
+      aviso.className = 'aviso';
+      aviso.textContent = estado.comentarios.length
+        ? `${estado.aviso} Enquanto isso o avanco automatico nao acontece: use o ↓ para andar.`
+        : estado.aviso;
+      barra.append(aviso);
+    }
+
+    const linhaAlvo = document.createElement('div');
+    linhaAlvo.className = 'alvo';
+
+    if (alvo) {
+      const i = estado.comentarios.findIndex((c) => c.id === alvo.id);
+      const quem = document.createElement('span');
+      quem.className = 'quem';
+      quem.textContent = alvo.autor;
+      const txt = document.createElement('span');
+      txt.className = 'txt';
+      // Uma linha so, cortada por CSS: o comentario inteiro esta na pagina atras da barra, e a
+      // barra que cresce cobre justamente o que ele veio ler.
+      txt.textContent = alvo.texto;
+      const conta = document.createElement('span');
+      conta.className = 'conta';
+      conta.textContent = `${i + 1} de ${estado.comentarios.length} · ${esperando} esperando`;
+      linhaAlvo.append(quem, txt, conta);
+    } else {
+      const vazio = document.createElement('span');
+      vazio.className = 'txt';
+      vazio.textContent = 'Nenhum comentario na lista. Role o post e aperte R para reler.';
+      linhaAlvo.append(vazio);
+    }
+
+    const btParar = document.createElement('button');
+    btParar.className = 'parar';
+    btParar.textContent = 'Parar';
+    btParar.title = 'Volta o painel e para o modo de responder';
+    btParar.addEventListener('click', () => pararResponder(shadow));
+    linhaAlvo.append(btParar);
+    barra.append(linhaAlvo);
+
+    /**
+     * **A tira e a MESMA do painel** (`montarTira`), sem o engrenagem: organizar e trabalho de
+     * painel aberto, e o ✕ a um dedo de quem responde em sequencia e o gesto destrutivo escondido
+     * no inofensivo.
+     */
+    const tiraBarra = montarTira(shadow, dizer, false);
+    if (tiraBarra) barra.append(tiraBarra);
+
+    const linhaB = document.createElement('div');
+    linhaB.className = 'linha';
+
+    const btIaB = document.createElement('button');
+    btIaB.textContent = 'I  IA';
+    btIaB.title = 'Pede o rascunho a IA e poe NA CAIXA, para voce ler antes do Enter';
+    btIaB.disabled = !alvo;
+    btIaB.addEventListener('click', async () => {
+      if (!alvo) return;
+      btIaB.disabled = true;
+      try {
+        await pedirRascunhoNoModo(shadow, alvo);
+      } catch (err) {
+        // Falha de IA nunca derruba nada: a regra do projeto desde 03/09.
+        dizer(`a IA falhou: ${err?.message || err}`);
+      } finally {
+        btIaB.disabled = false;
+      }
+    });
+
+    const btVer = document.createElement('button');
+    btVer.textContent = 'Ver na pagina';
+    btVer.disabled = !alvo;
+    btVer.addEventListener('click', () => alvo && verNaPagina(alvo, dizer));
+
+    const btRelerB = document.createElement('button');
+    btRelerB.textContent = 'R  Reler';
+    btRelerB.addEventListener('click', async () => {
+      relerComentarios();
+      await carregarRespostas();
+      desenhar(shadow);
+    });
+
+    const dicaB = document.createElement('span');
+    dicaB.className = 'dica';
+    /**
+     * **A dica diz a verdade sobre o Enter:** quem envia e o Enter do Facebook, com o foco na
+     * caixa — e o caminho provado. Prometer "o painel envia" seria prometer um despacho sintetico
+     * que nunca foi medido.
+     */
+    dicaB.textContent = '↑ ↓ trocam · ⏎ na caixa envia · o proximo vem sozinho quando a resposta aparece';
+
+    linhaB.append(btIaB, btVer, btRelerB, dicaB);
+    barra.append(linhaB, status);
+    shadow.append(barra);
+    return;
+  }
 
   if (!estado.aberto) {
     const pestana = document.createElement('button');
@@ -746,16 +1269,6 @@ function desenhar(shadow) {
     corpo.append(aviso);
   }
 
-  const status = document.createElement('div');
-  status.className = 'status';
-  status.textContent = estado.status;
-  /**
-   * O status mora no ESTADO e e procurado no shadow a cada escrita, nunca
-   * guardado numa variavel: quem pede o rascunho redesenha o painel no meio do
-   * caminho, e o elemento capturado antes disso ja saiu da arvore — a mensagem
-   * iria para um no orfao e a tela ficaria muda justo depois da chamada paga.
-   */
-  const dizer = (t) => falar(shadow, t);
 
   /**
    * **O EDITOR TOMA O CORPO INTEIRO, e por isso ele e aqui e nao na tira.**
@@ -943,17 +1456,8 @@ function desenhar(shadow) {
 
     const btIr = document.createElement('button');
     btIr.textContent = 'Ver na pagina';
-    btIr.addEventListener('click', () => {
-      // Mesma razao do `inserir`: com a lista acumulando, o `no` guardado pode ja ter saido da
-      // arvore, e `scrollIntoView` num elemento solto nao leva a lugar nenhum — em silencio.
-      const raiz = fb.raizDoPost();
-      const no = raiz && raiz.contains(c.no) ? c.no : raiz && acharPorId(raiz, c.id);
-      if (!no) {
-        dizer('Este comentario saiu da tela. Clique em "Ler o post inteiro" ou role ate ele.');
-        return;
-      }
-      no.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
+    // Ponto unico com o avanco do modo de responder: ver `verNaPagina`.
+    btIr.addEventListener('click', () => verNaPagina(c, dizer));
 
     linha.append(btInserir, btIa, btIr);
     item.append(quem, txt, linha);
@@ -972,101 +1476,11 @@ function desenhar(shadow) {
    * com o que ele veio ler. O campo ja e compartilhado: quem escolhe o comentario e o
    * "Abrir e inserir".
    *
-   * **Clicar NUNCA insere na pagina**, so enche o campo. E a mesma fronteira da IA: ele le antes.
+   * **Clicar poe no campo E insere na caixa daquele comentario** (escolha dele em 20/10). Inserir
+   * nao e enviar: a caixa fica escrita e para ai.
    */
-  if (estado.respostas.length) {
-    const tira = document.createElement('div');
-    tira.className = 'rapidas';
-
-    estado.respostas.forEach((r, i) => {
-      // Da DECIMA em diante nao ha tecla: o mapa e 1..9, e numerar ate 12 ensinaria teclas que
-      // nao existem. Essas so respondem ao clique.
-      const tecla = i < 9 ? String(i + 1) : '';
-      const par = document.createElement('div');
-      par.className = 'par';
-
-      const vez = rapidas.variacaoDaVez(r, estado.indices);
-
-      const usar = document.createElement('button');
-      usar.className = 'usar';
-      usar.textContent = tecla ? `${tecla}  ${r.nome}` : r.nome;
-      /**
-       * **O contador vai no `title`, nao no botao.** Escrever "3/10" em seis botoes e ruido numa
-       * tira de 380px, e o numero so interessa num instante: o da duvida. Quem diz em voz alta e
-       * a linha de status, depois de usar.
-       */
-      usar.title =
-        vez.total > 1
-          ? `Variacao ${vez.posicao} de ${vez.total} (reveza a cada uso):\n${vez.texto}`
-          : vez.texto;
-      usar.addEventListener('click', () => {
-        // O clique faz o MESMO que a tecla: duas formas de usar a mesma resposta divergem na
-        // primeira correcao, e aqui a diferenca seria "uma insere e a outra nao".
-        usarResposta(shadow, r);
-      });
-      par.append(usar);
-
-      /**
-       * **✎ e ✕ so existem no modo de gerir**, e sao duas coisas de uma vez: a tira fica com uma
-       * linha de botoes em vez de tres (o rodape nao pode comer a lista de comentarios), e o
-       * apagar deixa de ficar a um dedo de distancia de quem so queria usar a resposta.
-       */
-      if (estado.gerindo) {
-        par.className = 'par edit';
-
-        const editar = document.createElement('button');
-        editar.className = 'mini';
-        editar.textContent = '✎';
-        editar.title = `Editar o nome e as ${vez.total} variacao(oes)`;
-        editar.addEventListener('click', () => {
-          // O rascunho e carregado AQUI, uma vez. No desenho ele seria recarregado a cada
-          // redesenho e comeria o que ele digitou.
-          estado.editando = r.id;
-          estado.edNome = r.nome;
-          estado.edVariacoes = rapidas.paraTexto(r);
-          estado.edFocar = true;
-          desenhar(shadow);
-        });
-
-        const tirar = document.createElement('button');
-        tirar.className = 'mini fim';
-        tirar.textContent = '✕';
-        tirar.title = 'Apagar a resposta INTEIRA, com todas as variacoes';
-        tirar.addEventListener('click', async () => {
-          /**
-           * **Apagar devolve o texto ao CAMPO** — e o desfazer barato: um clique em "Guardar como
-           * rapida" traz de volta. Sem isso, um ✕ errado apagaria um texto que ele escreveu e nao
-           * tem copia em lugar nenhum (a licao de 01/09, *"acabei de perder todo meu trabalho"*).
-           */
-          if (r.variacoes.length > 1 && !confirm(`Apagar "${r.nome}" e as ${r.variacoes.length} variacoes?`)) return;
-          const { lista, texto } = rapidas.apagar(estado.respostas, r.id);
-          estado.texto = texto;
-          const erro = await salvarRespostas(lista);
-          desenhar(shadow);
-          dizer(erro || 'Apagada. O texto esta no campo — "Guardar como rapida" desfaz.');
-        });
-
-        par.append(editar, tirar);
-      }
-
-      tira.append(par);
-    });
-
-    const engrenagem = document.createElement('button');
-    engrenagem.className = 'engrenagem' + (estado.gerindo ? ' ligado' : '');
-    engrenagem.textContent = '⚙';
-    engrenagem.title = estado.gerindo ? 'Terminar de organizar' : 'Renomear ou apagar respostas';
-    engrenagem.addEventListener('click', () => {
-      estado.gerindo = !estado.gerindo;
-      // Sair do modo fecha qualquer renomeacao aberta: campo de edicao orfao numa tira que
-      // voltou ao normal e tela suja.
-      if (!estado.gerindo) estado.editando = '';
-      desenhar(shadow);
-    });
-    tira.append(engrenagem);
-
-    rodape.append(tira);
-  }
+  const tira = montarTira(shadow, dizer, true);
+  if (tira) rodape.append(tira);
 
   const campo = document.createElement('textarea');
   campo.placeholder = 'O texto da resposta. Ele e ACRESCENTADO depois da mencao, e quem envia e voce.';
@@ -1100,7 +1514,19 @@ function desenhar(shadow) {
   btLer.title = 'Expande as respostas e rola o post, acumulando tudo o que achar';
   btLer.addEventListener('click', () => lerPostInteiro(shadow));
 
-  linhaR.append(btLer, btReler, btGuardar);
+  /**
+   * **COMECAR A RESPONDER** (pedido dele, 21/10/2026). Primeiro e em azul: e o botao com que o
+   * trabalho comeca, e os outros tres sao preparo (ler, reler, guardar).
+   */
+  const btResponder = document.createElement('button');
+  btResponder.className = 'primario';
+  btResponder.textContent = 'Comecar a responder';
+  btResponder.title =
+    'Esconde o painel e deixa uma barra embaixo: setas trocam o comentario, as respostas rapidas ' +
+    'escrevem na caixa, e o Enter na caixa envia. O proximo vem sozinho.';
+  btResponder.addEventListener('click', () => comecarResponder(shadow));
+
+  linhaR.append(btResponder, btLer, btReler, btGuardar);
 
   /**
    * **A dica ensina SO o que nao esta escrito num botao.** As outras teclas vivem no proprio
@@ -1157,14 +1583,43 @@ function ligarTeclado(shadow) {
   document.addEventListener(
     'keydown',
     (ev) => {
-      if (!estado.aberto) return;
-      if (ehCampoDeTexto(ev.composedPath?.()[0] || ev.target)) return;
-      if (ev.key === 'Escape' && !ev.isTrusted) return;
+      // No modo de responder o painel esta guardado e as teclas continuam sendo o trabalho dele.
+      if (!estado.aberto && !estado.respondendo) return;
+
+      /**
+       * **`isTrusted` passou a valer para TODA tecla** (21/10/2026), e nao so para o Escape.
+       *
+       * O painel agora DESPACHA um Enter na caixa (`fb.enviarDaCaixa`), e o despacho borbulha ate
+       * o document — onde este mesmo escutador esta, em captura. Sem esta linha ele atenderia o
+       * proprio Enter e reentraria no envio. A razao antiga continua de pe: a extensao dispara
+       * `Escape` no document para fechar overlay (07/09).
+       *
+       * Teclado de verdade vem sempre `true`, entao a guarda nao custa nada ao uso normal.
+       */
+      if (!ev.isTrusted) return;
       if (ev.ctrlKey || ev.altKey || ev.metaKey) return;
 
       // Shift junto vale: os botoes mostram a tecla em MAIUSCULA, e caixa que ensina uma tecla e
       // recusa o jeito obvio de aperta-la e pior que caixa sem atalho.
       const k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+
+      /**
+       * **A guarda de campo de texto ganhou UMA excecao: o modo de responder.**
+       *
+       * A guarda e medida e continua valendo (a caixa do Facebook e `contenteditable`, e sem ela
+       * cada "2" que ele digitasse inseriria a segunda resposta). Mas no modo de responder o foco
+       * VIVE dentro da caixa — `inserirNaCaixa` o poe la —, e manter a guarda inteira mataria
+       * justamente as setas que ele pediu.
+       *
+       * **Passam so as setas e o Escape**, que nao sao texto. Os DIGITOS continuam barrados: ele
+       * digita numero na resposta. E o **Enter nao passa de proposito** — dentro da caixa ele e o
+       * envio nativo do Facebook, o unico caminho provado; intercepta-lo trocaria um envio que
+       * funciona por um despacho que nunca foi medido.
+       */
+      const noCampo = ehCampoDeTexto(ev.composedPath?.()[0] || ev.target);
+      const passamNoCampo = k === 'ArrowDown' || k === 'ArrowUp' || k === 'Escape';
+      if (noCampo && !(estado.respondendo && passamNoCampo)) return;
+
       const alvo = comentarioDaVez();
       const feito = () => {
         ev.preventDefault();
@@ -1172,6 +1627,12 @@ function ligarTeclado(shadow) {
       };
 
       if (k === 'Escape') {
+        // No modo, Escape e o "Parar": a mesma tecla que fecha o que esta por cima.
+        if (estado.respondendo) {
+          feito();
+          pararResponder(shadow);
+          return;
+        }
         if (!estado.gerindo && !estado.editando) return;
         estado.gerindo = false;
         estado.editando = '';
@@ -1185,8 +1646,24 @@ function ligarTeclado(shadow) {
         const i = estado.comentarios.findIndex((c) => c.id === (alvo && alvo.id));
         const passo = k === 'ArrowDown' ? 1 : -1;
         const prox = (i + passo + estado.comentarios.length) % estado.comentarios.length;
-        estado.daVezId = estado.comentarios[prox].id;
+        const escolhido = estado.comentarios[prox];
+        estado.daVezId = escolhido.id;
         feito();
+        /**
+         * **As setas CIRCULAM** (o avanco automatico nao — ver `fb.proximoPendente`): aqui ele
+         * esta navegando a mao, e parar na ponta esconderia o comeco da lista.
+         *
+         * No modo de responder a seta tambem **arma a espera e leva a vista**: sem armar, o envio
+         * para quem ele acabou de escolher nao avancaria; sem rolar, "o proximo" ficaria fora da
+         * tela e ele teria de procura-lo.
+         */
+        if (estado.respondendo) {
+          armar(escolhido);
+          soltarOFoco();
+          desenhar(shadow);
+          verNaPagina(escolhido, (m) => falar(shadow, m));
+          return;
+        }
         desenhar(shadow);
         return;
       }
@@ -1219,13 +1696,29 @@ function ligarTeclado(shadow) {
         feito();
         estado.daVezId = alvo.id;
         desenhar(shadow);
+        // Na barra nao existe campo: o rascunho vai PARA A CAIXA, que passa a ser o lugar onde ele
+        // le antes do Enter. Ver `pedirRascunhoNoModo`.
+        if (estado.respondendo) {
+          pedirRascunhoNoModo(shadow, alvo);
+          return;
+        }
         pedirRascunho(alvo, (t) => falar(shadow, t), () => desenhar(shadow));
         return;
       }
 
       if (k === 'Enter') {
-        if (!alvo || !estado.texto.trim()) return;
+        if (!alvo) return;
         feito();
+        /**
+         * **No modo, Enter ENVIA; no painel, insere.** Aqui o foco esta FORA da caixa (dentro dela
+         * a guarda acima deixou o Enter nativo passar), entao este caminho e o do dedo que acabou
+         * de clicar num botao da barra.
+         */
+        if (estado.respondendo) {
+          enviarDaVez(shadow);
+          return;
+        }
+        if (!estado.texto.trim()) return;
         inserir(alvo, estado.texto.trim(), (t) => falar(shadow, t));
         return;
       }
@@ -1357,7 +1850,9 @@ function montar() {
   let assinatura = estado.comentarios.map((c) => c.id).join('|');
 
   setInterval(() => {
-    if (!estado.aberto) return;
+    // No modo de responder a vigia (700ms) e quem le; este laco continua valendo porque ele cobre
+    // a TROCA DE POST, que a vigia nao olha.
+    if (!estado.aberto && !estado.respondendo) return;
 
     const mudouDePost = location.href !== ondeEstava;
     ondeEstava = location.href;
