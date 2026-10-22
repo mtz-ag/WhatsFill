@@ -793,4 +793,133 @@ grupo('enviarDaCaixa: o despacho do Enter — e o que ele NAO prova');
   check(fbdom.enviarDaCaixa(caixa) === false, 'sem KeyboardEvent no ambiente, devolve falso');
 }
 
+grupo('marcacao: o nome que vai para o menu');
+{
+  /**
+   * **O nome que o Facebook mostra carrega emoji e pontuacao, e o menu nao casa isso** — digitar o
+   * nome inteiro devolveria lista vazia e a marcacao falharia sem ninguem entender por que.
+   */
+  check(fbdom.nomeParaMarcar('Marta Fictinha') === 'Marta Fictinha', 'nome de duas palavras vai inteiro');
+  check(
+    fbdom.nomeParaMarcar('Marta Fictinha Exemplo de Souza') === 'Marta Fictinha',
+    'duas palavras: e o que se digita a mao, e estreita sem arriscar'
+  );
+  check(fbdom.nomeParaMarcar('Marta Fictinha \u{1F1E7}\u{1F1F7}') === 'Marta Fictinha', 'emoji sai');
+  check(fbdom.nomeParaMarcar('Jose  dos   Santos') === 'Jose dos', 'espaco repetido nao vira palavra');
+  check(fbdom.nomeParaMarcar("Sant'Ana Exemplo") === "Sant'Ana Exemplo", 'apostrofo FICA: e nome de gente');
+  check(fbdom.nomeParaMarcar('Ana-Clara Exemplo') === 'Ana-Clara Exemplo', 'hifen FICA pelo mesmo motivo');
+  check(fbdom.nomeParaMarcar('Joana Exemplo | Consultora') === 'Joana Exemplo', 'o que vem depois do pipe sai');
+
+  // Sem nome legivel nao se marca nada: um "@" solto na caixa publica nao serve a ninguem.
+  check(fbdom.nomeParaMarcar('\u{1F1E7}\u{1F1F7}') === '', 'nome que e so emoji devolve vazio');
+  check(fbdom.nomeParaMarcar('') === '', 'vazio devolve vazio');
+  check(fbdom.nomeParaMarcar(null) === '', 'nulo devolve vazio');
+}
+
+grupo('marcacao: o menu esta aberto? (ARIA)');
+{
+  const caixa = (attrs) => ({ nodeType: 1, getAttribute: (k) => attrs[k] ?? null });
+
+  check(fbdom.menuDeMarcacaoAberto(caixa({ 'aria-activedescendant': 'opcao-2' })) === true, 'activedescendant com valor: o menu esta destacando uma opcao');
+  check(fbdom.menuDeMarcacaoAberto(caixa({ 'aria-activedescendant': '  ' })) === false, 'activedescendant vazio nao conta');
+  check(fbdom.menuDeMarcacaoAberto(caixa({ 'aria-expanded': 'true' })) === true, 'expanded=true conta');
+  check(fbdom.menuDeMarcacaoAberto(caixa({ 'aria-expanded': 'false' })) === false, 'expanded=false e o estado normal da caixa');
+  check(fbdom.menuDeMarcacaoAberto(caixa({})) === false, 'caixa sem nada: as setas continuam do painel');
+  check(fbdom.menuDeMarcacaoAberto(null) === false, 'sem caixa, false');
+
+  /**
+   * O terceiro sinal: `aria-controls` aponta para um popup que EXISTE e tem opcao dentro. Id que
+   * nao resolve nao conta — ele fica no atributo mesmo com o menu fechado.
+   */
+  const comPop = { nodeType: 1, getAttribute: (k) => (k === 'aria-controls' ? 'pop-1' : null) };
+  comPop.ownerDocument = { getElementById: (id) => (id === 'pop-1' ? { querySelector: () => ({}) } : null) };
+  check(fbdom.menuDeMarcacaoAberto(comPop) === true, 'aria-controls com popup que tem [role=option] conta');
+
+  const popVazio = { nodeType: 1, getAttribute: (k) => (k === 'aria-controls' ? 'pop-1' : null) };
+  popVazio.ownerDocument = { getElementById: () => ({ querySelector: () => null }) };
+  check(fbdom.menuDeMarcacaoAberto(popVazio) === false, 'popup SEM opcao nao conta: o menu nao esta oferecendo nada');
+
+  const semPop = { nodeType: 1, getAttribute: (k) => (k === 'aria-controls' ? 'pop-1' : null) };
+  semPop.ownerDocument = { getElementById: () => null };
+  check(fbdom.menuDeMarcacaoAberto(semPop) === false, 'id que nao resolve nao conta');
+}
+
+grupo('marcacao: a reserva que le so o TEXTO');
+{
+  /**
+   * **O espaco no fim e o que diz que a marcacao acabou.** Escolhido o nome, quem continua
+   * escrevendo digita um espaco antes da frase — entao `"@Mar"` segura a seta e
+   * `"@Marta Fictinha "` nao.
+   */
+  check(fbdom.mencaoInacabada('@Mar') === true, 'a caixa termina num @ meio digitado');
+  check(fbdom.mencaoInacabada('Obrigado @Marta') === true, 'no fim de uma frase tambem');
+  check(fbdom.mencaoInacabada('@Marta Fictinha ') === false, 'com espaco no fim, acabou');
+
+  /**
+   * **O nome tem espaco DENTRO, e isto custou uma medicao:** a primeira versao exigia uma palavra
+   * so e nao reconhecia `"@Marta Fictinha"` — que e exatamente o que a tecla M escreve. Com ela, o
+   * smoke acusou a seta sendo roubada no meio da marcacao.
+   */
+  check(fbdom.mencaoInacabada('@Marta Fictinha') === true, 'nome de DUAS palavras ainda e marcacao em curso');
+  check(
+    fbdom.mencaoInacabada('@Marta Fictinha obrigado pelo apoio') === false,
+    'com frase depois, acabou: o teto de tres palavras impede a leitura de valer para sempre'
+  );
+  // O custo conhecido, escrito: uma palavra depois do nome ainda cabe no teto.
+  check(fbdom.mencaoInacabada('@Marta Fictinha obrigado') === true, 'a janela estreita que fica — a status avisa');
+  check(fbdom.mencaoInacabada('') === false, 'caixa vazia nao e marcacao');
+  check(fbdom.mencaoInacabada('Obrigado pelo apoio!') === false, 'texto sem @ nao e marcacao');
+
+  // O "@" tem de abrir palavra: senao e-mail e a forma mais comum de travar a seta sem motivo.
+  check(fbdom.mencaoInacabada('meu email e a@b') === false, 'arroba no meio de palavra nao conta');
+  check(fbdom.mencaoInacabada('@') === false, 'arroba sozinho nao conta: o menu nem tem o que filtrar');
+  check(fbdom.mencaoInacabada(' @Mar') === true, 'espaco duro conta como espaco — e o que o editor usa');
+}
+
+grupo('marcacao: comecarMencao escreve e PARA');
+{
+  const chamadas = [];
+  const docAntes = globalThis.document;
+  const winAntes = globalThis.window;
+
+  const caixa = { innerText: '@Marta Fictinha ', focus: () => chamadas.push('focus') };
+  globalThis.document = {
+    createRange: () => ({ selectNodeContents() {}, collapse() {} }),
+    execCommand: (cmd, _ui, texto) => {
+      chamadas.push(`${cmd}:${texto}`);
+      caixa.innerText += texto;
+      return true;
+    },
+  };
+  globalThis.window = { getSelection: () => ({ removeAllRanges() {}, addRange() {} }) };
+
+  const ok = fbdom.comecarMencao(caixa, 'Joana Exemplo da Silva');
+  check(ok === true, 'devolve true quando o texto entrou na caixa');
+  check(caixa.innerText === '@Marta Fictinha @Joana Exemplo', 'ACRESCENTA no fim: a mencao que ja estava la fica');
+
+  /**
+   * **Letra por letra, e nao a string inteira:** o menu do Facebook reage a cada `input`, e se ele
+   * abre com uma insercao unica de quinze caracteres NAO foi medido. Teclar e o caminho provado.
+   */
+  const inseridos = chamadas.filter((c) => c.startsWith('insertText:'));
+  check(inseridos.length === '@Joana Exemplo'.length, 'uma chamada por caractere, como o dedo dele');
+  check(chamadas[0] === 'focus', 'foca antes de escrever');
+  check(inseridos[0] === 'insertText:@', 'o primeiro caractere e o @, que e o que abre o menu');
+
+  // Nenhum clique, nenhum Enter: quem escolhe o nome e ele. Marcar o estranho errado num
+  // comentario publico e o estrago que esta ausencia impede.
+  check(!chamadas.some((c) => c === 'click' || c.includes('Enter')), 'nao clica em opcao nenhuma');
+
+  check(fbdom.comecarMencao(null, 'Joana') === false, 'sem caixa nao escreve nada');
+  check(fbdom.comecarMencao(caixa, '\u{1F1E7}\u{1F1F7}') === false, 'sem nome legivel nao escreve o @ sozinho');
+
+  // O `execCommand` que devolve true sem o Lexical aceitar: a verdade e a caixa relida.
+  const mentiroso = { innerText: 'nada muda', focus() {} };
+  globalThis.document.execCommand = () => true;
+  check(fbdom.comecarMencao(mentiroso, 'Joana Exemplo') === false, 'caixa que nao mudou devolve false, mesmo com o execCommand dizendo true');
+
+  globalThis.document = docAntes;
+  globalThis.window = winAntes;
+}
+
 fim();

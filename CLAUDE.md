@@ -3593,6 +3593,45 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **MARCACAO NAO E TEXTO: E UMA ESCOLHA NUM MENU, E AS SETAS DO MODO A TORNAVAM IMPOSSIVEL**
+  (22/10/2026, pedido dele: *"preciso que ao comentar tambem consiga fazer marcacao"*).
+  **Medido no codigo, nao na pagina:** no modo de responder a guarda de campo de texto tem UMA
+  excecao — **as setas e o Escape passam** (21/10, para ele andar na fila com o foco dentro da
+  caixa). E o menu de marcacao do Facebook anda com **↑ ↓** e confirma com **Enter**: as mesmas
+  teclas. Entao, digitando `@Mar`, a seta dele **trocava de comentario**, `soltarOFoco` fechava o
+  menu e o nome meio digitado ia junto. **A marcacao nunca podia ser concluida** — e nada na tela
+  dizia por que.
+  **O conserto e devolver a seta a pagina no instante exato** (`fb.menuDeMarcacaoAberto`), sem
+  `preventDefault`, com a linha de status dizendo para onde ela foi: **seta que nao faz nada vira
+  defeito aos olhos dele.**
+  **ARIA e a camada estavel, e os tres sinais NAO foram medidos** (`aria-activedescendant`,
+  `aria-expanded`, `aria-controls` -> popup com `[role="option"]`) — o menu nunca foi aberto com o
+  CDP ligado. Por isso ha a **segunda porta, que nao depende do Facebook**: o texto da caixa
+  terminar numa marcacao inacabada (`fb.mencaoInacabada`). **O espaco no fim e o que diz que ela
+  acabou.**
+  **E ela so e consultada quando o PAINEL comecou a marcacao** (`estado.marcando`, a tecla M): a
+  caixa de resposta **ja nasce com a mencao dentro**, e vindo sem espaco no fim a regra travaria as
+  setas no instante em que a caixa abre — que e a navegacao inteira do modo.
+  **O NOME TEM ESPACO DENTRO, e isto custou uma medicao:** a primeira versao exigia uma palavra so
+  (`[^\s@]+$`) e **nao reconhecia `"@Marta Fictinha"`** — exatamente o que a tecla M escreve. O
+  smoke acusou a seta sendo roubada no meio da marcacao. Hoje o teto e **tres palavras**, e o custo
+  conhecido esta escrito: com UMA palavra depois do nome a seta continua indo para a pagina.
+  **A TECLA M escreve `@Nome` e PARA AI** (`fb.comecarMencao`): **quem escolhe no menu e ele.**
+  Clicar numa opcao que ninguem conferiu **marcaria um estranho num comentario publico**, com o
+  nome dele em cima — a mesma fronteira do `ocultarComentario`, que clica e para. **Letra por
+  letra**, porque o menu reage a cada `input` e se ele abre com uma insercao unica **nao foi
+  medido**; teclar e o caminho provado. E o nome vai **sem emoji e com duas palavras**
+  (`nomeParaMarcar`): o nome que o Facebook mostra carrega emoji, e digitado inteiro devolveria
+  lista vazia.
+  **Ela NAO solta o foco, ao contrario de todo o resto do modo** — o menu morre com o blur. O
+  preco: enquanto a marcacao esta aberta os digitos 1..9 estao barrados (campo de texto), e voltam
+  quando ele escolhe e digita um espaco.
+  **E o Esc passou a ter camada:** com a marcacao aberta ele fecha o MENU (e vai para a pagina);
+  sem ela, para o modo. A doutrina ja estava escrita no codigo — *"a mesma tecla que fecha o que
+  esta por cima"*.
+  **O que sobra quando o menu nao abre e texto comum** (`"@Marta Fictinha"` numa resposta para a
+  Marta), visivel antes do Enter — e **nao da para apagar** (19/10).
+
 - **O QUE A PRINT DELE MEDIU DO ENVIO: "Postando..." E UMA CAIXA NOVA E VAZIA** (21/10/2026, print
   com a resposta ja na tela e o painel parado: *"ao apertar enter abre outra caixa de resposta
   abaixo entao continua nao indo pro proximo comentario"*).

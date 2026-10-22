@@ -682,6 +682,23 @@ export function caixaDeResposta(autor, raiz = document) {
 }
 
 /**
+ * Poe o cursor no FIM da caixa — **depois da mencao que o Facebook ja deixou la**.
+ *
+ * Ponto unico das duas escritas (a resposta e o comeco da marcacao): duas copias deste bloco
+ * divergiriam, e divergir aqui significa escrever antes da mencao, mandando a resposta sem marcar
+ * ninguem.
+ */
+function cursorNoFim(caixa) {
+  caixa.focus();
+  const sel = window.getSelection();
+  const r = document.createRange();
+  r.selectNodeContents(caixa);
+  r.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(r);
+}
+
+/**
  * ACRESCENTA texto no fim da caixa. Nunca substitui, porque a mencao da pessoa
  * ja esta la. Nao aperta Enter e nao clica em nada: quem envia e ele.
  *
@@ -692,14 +709,7 @@ export function caixaDeResposta(autor, raiz = document) {
 export function inserirNaCaixa(caixa, texto) {
   if (!caixa || !texto) return false;
 
-  caixa.focus();
-
-  const sel = window.getSelection();
-  const r = document.createRange();
-  r.selectNodeContents(caixa);
-  r.collapse(false); // o FIM: depois da mencao
-  sel.removeAllRanges();
-  sel.addRange(r);
+  cursorNoFim(caixa);
 
   const antes = String(caixa.innerText || '');
   const entrou = document.execCommand('insertText', false, texto);
@@ -710,6 +720,118 @@ export function inserirNaCaixa(caixa, texto) {
   return entrou && depois !== antes && depois.includes(texto.slice(0, 20));
 }
 
+
+/**
+ * **O MENU DE MARCACAO DO FACEBOOK ESTA ABERTO NESTA CAIXA?** (22/10/2026, pedido dele:
+ * *"preciso que ao comentar tambem consiga fazer marcacao"*).
+ *
+ * **Marcacao no Facebook nao e texto: e uma ESCOLHA.** Digitar `@` abre um menu, e a marcacao so
+ * existe depois de ele escolher um nome ali — com **as setas e o Enter**. E as setas, no modo de
+ * responder, sao do painel: ele trocava de comentario em cima do menu aberto, e a marcacao nunca
+ * podia ser concluida.
+ *
+ * Esta funcao existe para o painel **devolver a seta a pagina** no instante exato. Ela le ARIA,
+ * que e a camada estavel (a mesma licao do `aria-label`), por tres sinais:
+ *
+ *  - `aria-activedescendant` com valor: o editor esta apontando para a opcao destacada de um
+ *    popup, que e o jeito padrao de um combobox dizer isso;
+ *  - `aria-expanded="true"`;
+ *  - `aria-controls` apontando para um elemento que EXISTE e tem `[role="option"]` dentro.
+ *
+ * **Nenhum dos tres foi medido na pagina dele** — o menu de marcacao nunca foi aberto com o CDP
+ * ligado. Por isso a funcao erra para o lado BARATO: achando que o menu esta aberto, a seta vai
+ * para o Facebook e no maximo ele aperta de novo; achando que nao esta, volta o defeito que ele
+ * relatou. E e por isso que ha a segunda porta, `mencaoInacabada`.
+ */
+export function menuDeMarcacaoAberto(caixa) {
+  if (!caixa || caixa.nodeType !== 1) return false;
+  if (String(caixa.getAttribute('aria-activedescendant') || '').trim()) return true;
+  if (caixa.getAttribute('aria-expanded') === 'true') return true;
+
+  const controla = String(caixa.getAttribute('aria-controls') || '').trim();
+  if (!controla) return false;
+  const pop = (caixa.ownerDocument || document).getElementById(controla);
+  return !!(pop && pop.querySelector('[role="option"]'));
+}
+
+/**
+ * **O texto termina numa marcacao que ainda NAO foi escolhida** (`"...obrigado @Mar"`).
+ *
+ * E a porta que nao depende de nada do Facebook: so do texto que esta na caixa. Serve de reserva
+ * para o `menuDeMarcacaoAberto`, cujos sinais nao foram medidos.
+ *
+ * **O espaco no fim e o que diz que ela acabou.** Escolhido o nome, o Facebook poe a marcacao e
+ * segue — e quem continua escrevendo digita um espaco antes da frase. Entao `"@Mar"` segura a seta
+ * e `"@Marta Fictinha "` nao.
+ *
+ * **O nome pode ter espaco DENTRO, e isto custou uma medicao:** a primeira versao exigia uma
+ * palavra so (`[^\s@]+$`) e nao reconhecia `"@Marta Fictinha"` — que e exatamente o que a tecla M
+ * escreve, porque `nomeParaMarcar` manda duas palavras. O menu do Facebook continua aberto por
+ * cima do espaco; o que o fecha e a ESCOLHA.
+ *
+ * O teto de **tres palavras** e o que impede a leitura de valer para sempre: `"@Marta obrigado
+ * pelo apoio"` ja e frase, nao nome. O custo conhecido e uma janela estreita — com UMA palavra
+ * escrita depois da marcacao, a seta continua indo para a pagina ate ele digitar a seguinte ou um
+ * espaco; a linha de status diz isso na hora.
+ *
+ * **O painel so consulta esta funcao quando ELE mesmo comecou a marcacao** (a tecla M): a caixa de
+ * resposta ja nasce com a mencao dentro, e se ela vier sem o espaco no fim esta regra travaria as
+ * setas no instante em que a caixa abre — que e a navegacao inteira do modo.
+ */
+export function mencaoInacabada(texto) {
+  const t = String(texto || '').replace(/ /g, ' ');
+  return /(^|\s)@[^\s@\n]{1,40}(\s[^\s@\n]{1,40}){0,2}$/.test(t);
+}
+
+/**
+ * **O nome como ele digitaria para marcar: duas palavras, so letras.**
+ *
+ * Duas razoes, e as duas sao do nome que o Facebook mostra: ele carrega emoji e pontuacao
+ * (`"Marta Fictinha 🇧🇷"`), e o menu nao casa isso — digitar o nome inteiro devolveria lista
+ * vazia e a marcacao falharia sem ninguem entender por que. **Duas palavras e o que estreita sem
+ * arriscar:** e o que se digita a mao, e um "Marta" sozinho traz meia agenda.
+ */
+export function nomeParaMarcar(autor) {
+  const limpo = String(autor || '')
+    .replace(/[^\p{L}\s'-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!limpo) return '';
+  return limpo.split(' ').slice(0, 2).join(' ');
+}
+
+/**
+ * **COMECA a marcacao: escreve `@Nome` na caixa e PARA AI.**
+ *
+ * **Quem escolhe o nome no menu e ele, nunca o painel.** E a mesma fronteira do resto do projeto
+ * (a IA escolhe e nao escreve; o Enter e dele), e aqui ela e mais dura: clicar numa opcao que
+ * ninguem conferiu **marcaria um estranho num comentario publico**, com o nome dele em cima. O
+ * painel digita o `@` e o nome; a escolha e dois toques de tecla dele.
+ *
+ * **Letra por letra, e nao a string inteira:** o menu do Facebook reage a cada `input`, e se ele
+ * abre com uma insercao unica de quinze caracteres **nao foi medido**. Teclar e o caminho provado,
+ * entao a funcao o imita; o custo e quinze chamadas sincronas.
+ *
+ * **O que sobra quando o menu nao abre e texto comum** (`"@Marta Fictinha"` numa resposta para a
+ * Marta), que le natural e esta na tela dele antes do Enter. Nao da para apagar — apagar na caixa
+ * do Facebook nao funciona (medido em 19/10) —, e e por isso que a funcao nunca escreve mais que o
+ * nome.
+ */
+export function comecarMencao(caixa, autor) {
+  const nome = nomeParaMarcar(autor);
+  if (!caixa || !nome) return false;
+
+  cursorNoFim(caixa);
+  const antes = String(caixa.innerText || '');
+  for (const ch of `@${nome}`) {
+    if (!document.execCommand('insertText', false, ch)) break;
+  }
+  const depois = String(caixa.innerText || '');
+
+  // A mesma disciplina do `inserirNaCaixa`: o `execCommand` devolve true sem o Lexical ter
+  // aceitado, e a verdade e a caixa relida.
+  return depois !== antes && depois.includes('@');
+}
 
 /**
  * **O PROXIMO QUE AINDA ESPERA, para o modo de responder andar sozinho** (21/10/2026, pedido dele:

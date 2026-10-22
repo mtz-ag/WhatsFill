@@ -147,6 +147,18 @@ const estado = {
    * futura por causa de um clique que ninguem lembra. No F5 eles voltam, e o que decide e a pagina.
    */
   marcados: new Map(),
+  /**
+   * **ELE COMECOU UMA MARCACAO PELA TECLA M** (22/10/2026, pedido dele: *"preciso que ao comentar
+   * tambem consiga fazer marcacao"*).
+   *
+   * Serve a UMA coisa: liberar a leitura de `fb.mencaoInacabada`, que olha so o texto da caixa.
+   * Sem esta marca aquela leitura valeria sempre — e a caixa de resposta ja nasce com a mencao
+   * dentro, entao bastaria ela vir sem espaco no fim para as setas travarem no instante em que a
+   * caixa abre, que e a navegacao inteira do modo.
+   *
+   * Zerada em `armar`, que e o ponto unico de "o alvo mudou ou recomecou", e no Esc.
+   */
+  marcando: false,
 };
 
 /**
@@ -948,6 +960,13 @@ function soltarOFoco() {
  */
 function armar(c) {
   estado.aguardando = c && !c.respondido ? { id: c.id, autor: c.autor, trecho: '' } : null;
+  /**
+   * **A marcacao em curso morre aqui, e e de proposito que seja NESTE ponto.** `armar` e chamada
+   * sempre que o alvo muda ou o modo recomeca (as setas, o avanco, o "a mao", a insercao de uma
+   * resposta), entao uma linha cobre os seis caminhos — seis consertos separados divergiriam, e
+   * divergir aqui deixaria as setas mortas depois de ele ter acabado de marcar.
+   */
+  estado.marcando = false;
 }
 
 /**
@@ -1304,6 +1323,52 @@ async function maoNaCaixa(shadow) {
   falar(shadow, `Caixa de ${alvo.autor} aberta. Escreva e aperte Enter.`);
 }
 
+/**
+ * **MARCAR a pessoa do comentario da vez** (22/10/2026, pedido dele: *"preciso que ao comentar
+ * tambem consiga fazer marcacao"*).
+ *
+ * Abre a caixa, escreve `@Nome` e **para**: quem escolhe no menu do Facebook e ele, com ↑ ↓ e
+ * Enter — ver `fb.comecarMencao`, que explica por que o painel nunca clica numa opcao.
+ *
+ * **NAO solta o foco, ao contrario de todo o resto do modo.** `soltarOFoco` existe para os
+ * digitos 1..9 voltarem a funcionar; aqui o foco tem de FICAR na caixa, porque o menu de marcacao
+ * morre com o blur e levaria junto o nome meio digitado. O preco e conhecido e esta na linha de
+ * status: enquanto a marcacao esta aberta, as teclas de resposta estao barradas (campo de texto),
+ * e elas voltam quando ele escolhe o nome e digita um espaco.
+ */
+async function marcarDaVez(shadow) {
+  const alvo = comentarioDaVez();
+  if (!alvo) return;
+
+  // A mesma trava do `inserir`: a caixa ACRESCENTA, e duas escritas em cima da outra deixariam
+  // "@Nome@Nome" numa caixa publica, sem jeito de apagar.
+  if (estado.inserindo) {
+    falar(shadow, 'Espere a insercao anterior terminar.');
+    return;
+  }
+  estado.inserindo = true;
+  try {
+    const caixa = await abrirCaixa(alvo, (m) => falar(shadow, m));
+    if (!caixa) return;
+
+    // `armar` ANTES: ele zera `estado.marcando` (ponto unico de "o alvo mudou"), e a ordem
+    // invertida apagaria a marca que acabamos de ligar.
+    armar(alvo);
+    const ok = fb.comecarMencao(caixa, alvo.autor);
+    estado.marcando = ok;
+    falar(
+      shadow,
+      ok
+        ? `Escrevi "@${fb.nomeParaMarcar(alvo.autor)}" na caixa de ${alvo.autor}. Escolha o nome no ` +
+            'menu do Facebook com ↑ ↓ e Enter, e depois escreva a resposta. Nao abrindo o menu, ' +
+            'aquilo fica como texto comum.'
+        : 'Nao consegui escrever na caixa. Clique dentro dela na pagina e digite o "@" voce mesmo.'
+    );
+  } finally {
+    estado.inserindo = false;
+  }
+}
+
 function montarTira(shadow, dizer, comGerir) {
   const tira = document.createElement('div');
   tira.className = 'rapidas';
@@ -1557,6 +1622,18 @@ function desenhar(shadow) {
     const linhaB = document.createElement('div');
     linhaB.className = 'linha';
 
+    /**
+     * **O botao vem ANTES do "IA" porque a marcacao vem antes do texto.** `inserirNaCaixa` so
+     * ACRESCENTA, entao a ordem dos cliques e a ordem em que a resposta sai — marcar depois
+     * deixaria o `@Nome` pendurado no fim da frase.
+     */
+    const btMarcarB = document.createElement('button');
+    btMarcarB.textContent = 'M  Marcar';
+    btMarcarB.title =
+      'Abre a caixa e escreve "@Nome". Quem escolhe no menu do Facebook e voce, com ↑ ↓ e Enter.';
+    btMarcarB.disabled = !alvo;
+    btMarcarB.addEventListener('click', () => marcarDaVez(shadow));
+
     const btIaB = document.createElement('button');
     btIaB.textContent = 'I  IA';
     btIaB.title = 'Pede o rascunho a IA e poe NA CAIXA, para voce ler antes do Enter';
@@ -1594,9 +1671,10 @@ function desenhar(shadow) {
      * caixa — e o caminho provado. Prometer "o painel envia" seria prometer um despacho sintetico
      * que nunca foi medido.
      */
-    dicaB.textContent = '↑ ↓ trocam · ⏎ na caixa envia · o proximo vem sozinho quando a resposta aparece';
+    dicaB.textContent =
+      '↑ ↓ trocam · M marca · ⏎ na caixa envia · o proximo vem sozinho quando a resposta aparece';
 
-    linhaB.append(btIaB, btVer, btRelerB, dicaB);
+    linhaB.append(btMarcarB, btIaB, btVer, btRelerB, dicaB);
     barra.append(linhaB, status);
     shadow.append(barra);
     return;
@@ -1840,12 +1918,26 @@ function desenhar(shadow) {
       }
     });
 
+    const btMarcar = document.createElement('button');
+    btMarcar.textContent = ehDaVez ? 'M  Marcar' : 'Marcar';
+    btMarcar.title =
+      'Abre a caixa e escreve "@Nome". Quem escolhe no menu do Facebook e voce, com ↑ ↓ e Enter.';
+    btMarcar.addEventListener('click', async () => {
+      estado.daVezId = c.id;
+      btMarcar.disabled = true;
+      try {
+        await marcarDaVez(shadow);
+      } finally {
+        btMarcar.disabled = false;
+      }
+    });
+
     const btIr = document.createElement('button');
     btIr.textContent = 'Ver na pagina';
     // Ponto unico com o avanco do modo de responder: ver `verNaPagina`.
     btIr.addEventListener('click', () => verNaPagina(c, dizer));
 
-    linha.append(btInserir, btIa, btIr);
+    linha.append(btInserir, btMarcar, btIa, btIr);
     item.append(quem, txt, linha);
     corpo.append(item);
   }
@@ -2006,6 +2098,34 @@ function ligarTeclado(shadow) {
       const passamNoCampo = k === 'ArrowDown' || k === 'ArrowUp' || k === 'Escape';
       if (noCampo && !(estado.respondendo && passamNoCampo)) return;
 
+      /**
+       * **A MARCACAO TOMA AS SETAS DE VOLTA** (22/10/2026, pedido dele: *"preciso que ao comentar
+       * tambem consiga fazer marcacao"*).
+       *
+       * **Marcacao no Facebook nao e texto: e uma escolha num menu**, e esse menu anda com ↑ ↓ e
+       * confirma com Enter — as MESMAS teclas que a excecao acima deu ao painel. Entao, enquanto o
+       * menu esta aberto, a seta dele trocava de comentario, o `soltarOFoco` fechava o menu e o
+       * nome meio digitado ia junto: **a marcacao nunca podia ser concluida**.
+       *
+       * Aqui a seta volta a ser do Facebook — sem `preventDefault`, que e o que a deixa chegar la.
+       * E a linha de status diz isso na hora, senao uma seta que nao faz nada vira defeito aos
+       * olhos dele.
+       */
+      if (noCampo && estado.respondendo && (k === 'ArrowDown' || k === 'ArrowUp')) {
+        const caixa = ev.composedPath?.()[0] || ev.target;
+        const escolhendo =
+          fb.menuDeMarcacaoAberto(caixa) ||
+          (estado.marcando && fb.mencaoInacabada(caixa.innerText));
+        if (escolhendo) {
+          falar(
+            shadow,
+            'A seta foi para o menu de marcacao do Facebook. Escolha o nome com ↑ ↓ e Enter; ' +
+              'depois de um espaco as setas voltam a trocar de comentario.'
+          );
+          return;
+        }
+      }
+
       const alvo = comentarioDaVez();
       const feito = () => {
         ev.preventDefault();
@@ -2013,6 +2133,15 @@ function ligarTeclado(shadow) {
       };
 
       if (k === 'Escape') {
+        /**
+         * **O Esc fecha o que esta POR CIMA, e com a marcacao aberta o que esta por cima e o menu
+         * do Facebook.** Sem isto, fechar o menu custaria sair do modo de responder inteiro.
+         */
+        if (estado.marcando) {
+          estado.marcando = false;
+          falar(shadow, 'Fechei a marcacao. Aperte Esc de novo para sair do modo de responder.');
+          return; // sem preventDefault: o Esc e do menu
+        }
         // No modo, Escape e o "Parar": a mesma tecla que fecha o que esta por cima.
         if (estado.respondendo) {
           feito();
@@ -2051,6 +2180,12 @@ function ligarTeclado(shadow) {
           return;
         }
         desenhar(shadow);
+        return;
+      }
+
+      if (k === 'm') {
+        feito();
+        marcarDaVez(shadow);
         return;
       }
 

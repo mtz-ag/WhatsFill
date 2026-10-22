@@ -1,10 +1,10 @@
-## 2026-10-21 - v3.194.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
+## 2026-10-22 - v3.195.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
 
 Doze coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em 20/10;
 a oitava e o conserto do que a secao 7 nao alcancou, a nona e o **modo de responder**, a decima
 veio da primeira print do modo no ar, a decima primeira troca o que os digitos 2, 3 e 4 fazem e a
-decima segunda poe o realce **na pagina** e a decima terceira conserta o avanco depois do Enter —
-com a print dele confirmando a causa na secao 13.
+decima segunda poe o realce **na pagina**, a decima terceira conserta o avanco depois do Enter —
+com a print dele confirmando a causa — e a decima quarta destrava a **marcacao**.
 
 ---
 
@@ -773,10 +773,91 @@ consertando codigo que nunca tinha rodado.
 
 ---
 
+## 14. Marcacao: o painel estava no caminho dela (v3.195.0)
+
+**Pedido dele:** *"preciso que ao comentar tambem consiga fazer marcacao"*.
+
+### A causa: as setas do modo sao as teclas do menu de marcacao
+
+**Marcacao no Facebook nao e texto: e uma ESCOLHA.** Digitar `@` abre um menu, e a marcacao so
+existe depois de escolher um nome ali — com **↑ ↓ e Enter**.
+
+E no modo de responder, desde 21/10, a guarda de campo de texto tem **uma excecao justamente para
+as setas** (foi o que permitiu andar na fila com o foco dentro da caixa). Entao:
+
+```
+ele digita "@Mar"   -> o menu do Facebook abre
+ele aperta ↓        -> o PAINEL troca de comentario
+                       soltarOFoco() fecha o menu
+                       o nome meio digitado vai junto
+```
+
+**A marcacao nunca podia ser concluida**, e nada na tela dizia por que. Medido no codigo
+(`facebook-main.js`, a excecao `passamNoCampo`), nao na pagina.
+
+### O conserto: a seta volta a ser do Facebook no instante exato
+
+Sem `preventDefault` — e isso que a deixa chegar ao menu — e **com a linha de status dizendo para
+onde ela foi**, senao uma seta que nao faz nada e um defeito novo aos olhos dele.
+
+Quem responde "o menu esta aberto?" tem **duas portas**:
+
+| porta | le | medido? |
+|---|---|---|
+| `menuDeMarcacaoAberto` | ARIA da caixa (`aria-activedescendant`, `aria-expanded`, `aria-controls`) | **nao** — o menu nunca foi aberto com o CDP ligado |
+| `mencaoInacabada` | so o TEXTO da caixa: termina em `@...` sem espaco | sim, no proprio texto |
+
+A segunda existe porque a primeira e hipotese. E ela **so e consultada quando o painel comecou a
+marcacao** (a tecla M): a caixa de resposta **ja nasce com a mencao dentro**, e vindo sem espaco no
+fim essa leitura travaria as setas no instante em que a caixa abre — a navegacao inteira do modo.
+
+**O espaco no fim e o que diz que a marcacao acabou.** Escolhido o nome, quem continua escrevendo
+digita um espaco antes da frase.
+
+### A tecla M escreve "@Nome" e PARA AI
+
+```
+M  ->  abre a caixa, escreve "@Marta Fictinha", letra por letra
+       e nao clica em nada
+```
+
+**Quem escolhe no menu e ele.** Clicar numa opcao que ninguem conferiu **marcaria um estranho num
+comentario publico**, com o nome dele em cima — a mesma fronteira do "Ocultar", que clica e para.
+
+Tres decisoes que vao junto:
+
+- **Letra por letra**, porque o menu reage a cada `input` e **se ele abre com uma insercao unica de
+  quinze caracteres nao foi medido**. Teclar e o caminho provado; a funcao o imita.
+- **Duas palavras, sem emoji** (`nomeParaMarcar`): o nome que o Facebook mostra carrega emoji
+  (`"Marta Fictinha 🇧🇷"`), e digitado inteiro devolveria lista vazia — a marcacao falharia sem
+  ninguem entender por que.
+- **NAO solta o foco**, ao contrario de todo o resto do modo: o menu morre com o blur. O preco esta
+  na status — enquanto a marcacao esta aberta os digitos 1..9 estao barrados, e voltam quando ele
+  escolhe o nome e digita um espaco.
+
+**O Esc ganhou camada:** com a marcacao aberta ele fecha o MENU; sem ela, para o modo.
+
+### O que a medicao pegou e eu nao previ
+
+A primeira versao de `mencaoInacabada` exigia **uma palavra so** (`@[^\s@]+$`) — e **nao
+reconhecia `"@Marta Fictinha"`**, que e exatamente o que a tecla M escreve. O smoke acusou a seta
+sendo roubada no meio da marcacao. Hoje o teto e **tres palavras**, com o custo escrito: uma
+palavra depois do nome e a seta continua indo para a pagina.
+
+### Medido
+
+- `tests/dom-facebook.test.mjs`: 39 assercoes novas nos quatro pontos (o nome, os tres sinais de
+  ARIA, o texto, e o `comecarMencao` que **nao clica em opcao nenhuma**).
+- O smoke do painel, num DOM falso: o **M acrescenta** `@Nome` na caixa, a seta com a marcacao
+  aberta **nao e impedida e nao troca de comentario**, e depois do espaco ela volta a andar na fila.
+- 26 suites verdes, `checar-modulos` e `checar-referencias` limpos.
+
+---
+
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.194.0** — e assim que se sabe que chegou. **No modo de responder a versao fica na
+dizer **v3.195.0** — e assim que se sabe que chegou. **No modo de responder a versao fica na
 barra**, ao lado da contagem.
 
 ## O que falta, e e decisao dele
@@ -796,6 +877,11 @@ barra**, ao lado da contagem.
   antes do fim, qual o texto do botao que sobrou.
 - **O texto rapido "Dia 25 — 2o turno" EXPIRA em 25/10.** Passada a data ele sai do painel ou e
   reescrito — texto com data dentro envelhece sozinho.
+- **Os tres sinais de ARIA do menu de marcacao nao foram medidos na pagina dele.** Se o `M
+  Marcar` escrever o `@Nome` e a seta **continuar** trocando de comentario, a porta que faltou e
+  a do ARIA — e a reserva (`estado.marcando` + o texto) e que esta decidindo. **Nao abrindo o menu
+  nenhuma vez**, o que resolve e medir com o CDP: abrir a caixa, digitar `@` a mao e ler os
+  atributos da caixa.
 - **O custo por rascunho nao foi medido ao vivo.** Calculado: **572 tokens de sistema + ~37 do
   comentario**, o que da ~**US$ 0,0014 por rascunho** no gpt-5, a frio. O numero real aparece no
   painel depois do uso.
