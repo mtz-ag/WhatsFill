@@ -1,10 +1,11 @@
-## 2026-10-22 - v3.195.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
+## 2026-10-22 - v3.196.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
 
 Doze coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em 20/10;
 a oitava e o conserto do que a secao 7 nao alcancou, a nona e o **modo de responder**, a decima
 veio da primeira print do modo no ar, a decima primeira troca o que os digitos 2, 3 e 4 fazem e a
 decima segunda poe o realce **na pagina**, a decima terceira conserta o avanco depois do Enter —
-com a print dele confirmando a causa — e a decima quarta destrava a **marcacao**.
+com a print dele confirmando a causa —, a decima quarta destrava a **marcacao** e a decima
+quinta poe a barra do modo **na lateral**.
 
 ---
 
@@ -854,11 +855,58 @@ palavra depois do nome e a seta continua indo para a pagina.
 
 ---
 
+## 15. A barra do modo cobria o post; hoje ela empurra (v3.196.0)
+
+**Print dele:** o painel no ar, a barra ocupando a faixa de baixo do post — *"bote pro lado, em
+baixo esta atrapalhando a visualizacao"*.
+
+### A causa era um argumento meu, e ele estava escrito no CSS
+
+```
+/* O MODO DE RESPONDER: barra fina embaixo, e a tela inteira e do post.
+   Ela NAO empurra a pagina (o dock e soltado) de proposito -- esconder a
+   extensao foi metade do pedido dele. */
+```
+
+**O que flutua cobre.** A barra nao tirava largura do post, entao ficava POR CIMA — e justamente
+sobre o fim da lista de comentarios, que e onde esta quem ainda nao foi respondido. Na print, o
+comentario da Sueli esta metade atras dela.
+
+### O conserto ja estava medido, de 19/10
+
+O painel **empurra** a pagina (`dock.js`), e o **modal do post se recentra na area encolhida**.
+Entao coluna na lateral **nao cobre nada**:
+
+```
+antes:  [ ---------- post ---------- ]      barra flutuando por cima do rodape
+agora:  [ ------ post ------ ][ coluna ]    o modal se recentra sozinho
+```
+
+A coluna reusa **a largura e o `applyDock` do painel**. Largura propria ou empurrao proprio
+divergiriam do painel na primeira semana — a mesma razao pela qual o painel do Facebook reusa o
+`dock.js` em vez de ter o seu.
+
+**"Esconder a extensao" continua valendo onde ele pediu:** o painel de LISTA sai da tela; o que
+fica e a tira de teclas, agora ao lado.
+
+**O texto do comentario ganhou tres linhas** na coluna: numa faixa de 380px uma linha so mostraria
+duas palavras.
+
+### Medido
+
+- O smoke confere o **EMPURRAO**, nao o CSS: no modo, o `<html>` continua com a classe do dock.
+  **Reintroduzindo a condicao antiga, a assercao cai** — conferido nos dois sentidos.
+- `checar-modulos` acusou uma crase que eu pus num comentario DENTRO do `css()` (a terceira vez
+  neste arquivo). Corrigida antes de qualquer teste rodar.
+- 26 suites verdes, `checar-modulos` e `checar-referencias` limpos.
+
+---
+
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.195.0** — e assim que se sabe que chegou. **No modo de responder a versao fica na
-barra**, ao lado da contagem.
+dizer **v3.196.0** — e assim que se sabe que chegou. **No modo de responder a versao fica na
+coluna**, ao lado da contagem.
 
 ## O que falta, e e decisao dele
 

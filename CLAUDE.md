@@ -3593,6 +3593,26 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **A BARRA DO MODO FLUTUAVA E COBRIA OS COMENTARIOS DE BAIXO — HOJE ELA EMPURRA**
+  (22/10/2026, print do painel no ar: *"bote pro lado, em baixo esta atrapalhando a
+  visualizacao"*).
+  **O argumento que a pos embaixo era meu e estava escrito no CSS:** *"esconder a extensao foi
+  metade do pedido dele"* (21/10), entao o modo **soltava** o empurrao e a barra flutuava. O que
+  flutua **cobre** — e ela cobria justamente o fim da lista de comentarios, que e onde esta quem
+  ainda nao foi respondido.
+  **O conserto e a medicao de 19/10 que ja estava no projeto:** o painel **empurra** a pagina
+  (`dock.js`), e o modal do post **se recentra na area encolhida** — entao coluna na lateral nao
+  cobre nada. A barra virou coluna na direita, com a MESMA largura e o MESMO `applyDock` do
+  painel: largura ou empurrao proprios divergiriam do painel na primeira semana.
+  **"Esconder a extensao" continua valendo onde ele pediu** — o painel de LISTA sai da tela; o que
+  fica e a tira de teclas, agora ao lado.
+  **A PROVA E O EMPURRAO, nao o CSS:** o smoke confere que o `<html>` continua com a classe do
+  dock no modo. Reintroduzindo a condicao antiga (`aberto && !respondendo`), a assercao cai —
+  medido nos dois sentidos.
+  **E o verificador pegou o que a pressa escreveria de novo:** eu pus `` `dock` `` com crase dentro
+  do comentario CSS, que vive num template literal — a terceira vez neste arquivo (19 e 20/10).
+  `checar-modulos` acusou na hora: **comentario dentro de `css()` nao leva crase.**
+
 - **MARCACAO NAO E TEXTO: E UMA ESCOLHA NUM MENU, E AS SETAS DO MODO A TORNAVAM IMPOSSIVEL**
   (22/10/2026, pedido dele: *"preciso que ao comentar tambem consiga fazer marcacao"*).
   **Medido no codigo, nao na pagina:** no modo de responder a guarda de campo de texto tem UMA

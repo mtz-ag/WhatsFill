@@ -390,27 +390,34 @@ function css() {
       padding: 9px 11px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.2);
     }
     /* ------------------------------------------------------------------
-       O MODO DE RESPONDER: barra fina embaixo, e a tela inteira e do post.
-       Ela NAO empurra a pagina (o dock e soltado) de proposito -- esconder a
-       extensao foi metade do pedido dele. Embaixo e nao em cima porque o
-       cabecalho do Facebook e a barra de comentarios do post vivem no topo.
-       Largura limitada e centralizada: numa tela larga, uma barra de ponta a
-       ponta joga os botoes para longe de onde ele esta lendo. ------------ */
+       O MODO DE RESPONDER: COLUNA NA LATERAL, e ela EMPURRA a pagina.
+
+       Nasceu como barra flutuante embaixo, com o argumento de que esconder a
+       extensao era metade do pedido dele. **Ele corrigiu em 22/10/2026, com a
+       print:** *"bote pro lado, em baixo esta atrapalhando a visualizacao"* --
+       flutuando, ela cobria justamente os comentarios de baixo, que sao os que
+       ele esta lendo para responder.
+
+       Empurrar nao cobre NADA: e a medicao de 19/10 (o modal do post se
+       recentra na area encolhida), e e por isso que a coluna reusa a largura e
+       o empurrao do painel em vez de flutuar numa borda. -------------------- */
     .barra {
-      position: fixed; left: 50%; transform: translateX(-50%); bottom: 12px;
-      width: min(880px, calc(100vw - 24px)); z-index: 2147483000;
+      position: fixed; top: 0; right: 0; bottom: 0; width: ${LARGURA}px;
+      z-index: 2147483000;
       font: 13px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif; color: #111;
-      background: #fff; border: 1px solid #ccd0d5; border-radius: 10px;
-      box-sizing: border-box; padding: 9px 11px;
-      box-shadow: 0 6px 22px rgba(0,0,0,.22);
+      background: #fff; border-left: 1px solid #ccd0d5;
+      box-sizing: border-box; padding: 10px 11px;
+      overflow-y: auto; overflow-x: hidden;
     }
-    .barra .alvo { display: flex; align-items: baseline; gap: 7px; margin-bottom: 7px; }
+    .barra .alvo { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px; margin-bottom: 7px; }
     .barra .alvo .quem { font-weight: 600; }
-    /* O texto do comentario encolhe numa linha: a barra nao pode crescer e
-       cobrir o post, e o comentario inteiro esta na pagina, atras dela. */
+    /* Na coluna o texto ganha a linha inteira e ate tres linhas: numa faixa de
+       380px uma linha so mostraria duas palavras. O comentario inteiro continua
+       na pagina, agora ao lado e nunca atras. */
     .barra .alvo .txt {
-      color: #444; flex: 1; min-width: 0;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      color: #444; flex-basis: 100%; min-width: 0; white-space: normal;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+      overflow: hidden;
     }
     .barra .alvo .marca { font-size: 11px; color: #65676b; white-space: nowrap; }
     /* Ambar: a mesma linguagem do amarelo da lista ("ja tem resposta nossa"). */
@@ -1503,10 +1510,12 @@ function desenhar(shadow) {
    * dois botoes e a montagem), e tres chamadas separadas divergiriam — a
    * mesma razao do `gravar` carimbar a versao do quadro num lugar so.
    *
-   * **No modo de responder ele SOLTA o empurrao:** esconder a extensao foi metade do pedido dele,
-   * e a barra flutua sem tirar largura do post.
+   * **O modo de responder EMPURRA tambem** (22/10/2026, correcao dele: *"bote pro lado, em baixo
+   * esta atrapalhando a visualizacao"*). A barra flutuante nao tirava largura do post e por isso
+   * **cobria** os comentarios de baixo — os que ele esta lendo. Empurrando, o modal se recentra na
+   * area encolhida (medido em 19/10) e nada fica atras da coluna.
    */
-  if (estado.aberto && !estado.respondendo) dock.applyDock(LARGURA);
+  if (estado.aberto || estado.respondendo) dock.applyDock(LARGURA);
   else dock.removeDock();
 
   const style = document.createElement('style');
