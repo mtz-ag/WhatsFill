@@ -199,6 +199,30 @@ export function limparTextoDoComentario(innerText, autor = '') {
 }
 
 /**
+ * **COMENTARIO SO COM EMOJI NAO TEM TEXTO NENHUM NO `innerText`** (23/10/2026, print dele:
+ * *"comentarios que so contem emoticons estao sendo pulados"*).
+ *
+ * Medido nos dois formatos: emoji que chega como TEXTO sai inteiro de `limparTextoDoComentario`
+ * (`"\u{1F44F}\u{1F44F}\u{1F1E7}\u{1F1F7}"`); como `<img>`, o `innerText` nao traz linha de corpo
+ * nenhuma e o texto sai VAZIO. Era isso na pagina dele.
+ *
+ * Aqui se le o `alt` das imagens, e a peneira e por FORMA: **alt com LETRA nao entra**. "Foto de
+ * perfil de Maria" e "Pode ser uma imagem de duas pessoas" sao descricao da PLATAFORMA, nao o que
+ * a pessoa escreveu — enfiar isso no texto do comentario poria legenda do Facebook dentro do
+ * prompt da IA como se fosse fala dela. E exige um caractere fora do ASCII, senao um icone com
+ * `alt="-"` entraria como se fosse emoji.
+ *
+ * Teto de 8 por alt e 40 no total: o que se quer e um rotulo para a linha da lista, nunca uma
+ * parede de figurinhas.
+ */
+export function emojiDasImagens(alts) {
+  const limpos = (alts || [])
+    .map((a) => String(a || '').trim())
+    .filter((a) => a && a.length <= 8 && !/\p{L}/u.test(a) && /[^\x00-\x7F]/.test(a));
+  return limpos.join('').slice(0, 40);
+}
+
+/**
  * Entre varios candidatos aninhados, o MAIS INTERNO — o que nao contem nenhum
  * outro. Puro para ter teste: e ele que decide de qual caixa o painel le.
  */
@@ -391,9 +415,26 @@ export function paiDoComentario(art) {
   return null;
 }
 
+/**
+ * Os `alt` das imagens de dentro do comentario — a materia-prima de `emojiDasImagens`.
+ *
+ * `[role="img"][aria-label]` entra junto porque o Facebook tambem desenha emoji assim; nao foi
+ * medido na pagina dele, e e barato errar aqui porque **quem protege e a peneira**, que descarta
+ * tudo o que tem letra.
+ */
+function alts(art) {
+  if (!art || typeof art.querySelectorAll !== 'function') return [];
+  const img = [...art.querySelectorAll('img[alt]')].map((n) => n.getAttribute('alt'));
+  const span = [...art.querySelectorAll('[role="img"][aria-label]')].map((n) =>
+    n.getAttribute('aria-label')
+  );
+  return img.concat(span);
+}
+
 export function lerComentario(art) {
   const dados = lerRotulo(art.getAttribute('aria-label'));
   if (!dados) return null;
+  const escrito = limparTextoDoComentario(art.innerText, dados.autor);
   return {
     id: idDoComentario(art),
     tipo: dados.tipo,
@@ -401,7 +442,13 @@ export function lerComentario(art) {
     respondeA: dados.respondeA,
     /** So a RESPOSTA tem: o id do comentario de quem ela responde. Ver `paiDoComentario`. */
     paiId: dados.tipo === 'resposta' ? paiDoComentario(art) : null,
-    texto: limparTextoDoComentario(art.innerText, dados.autor),
+    /**
+     * O que ela escreveu — e, **nao havendo nada escrito, os emoji que vieram como imagem**
+     * (23/10/2026). Continua VAZIO quando nem isso da para ler (figura, GIF, figurinha): `texto` e
+     * "o que a pessoa escreveu" e nao pode carregar rotulo nosso, senao ele vai para o prompt da
+     * IA e para a caixa de resposta como se fosse fala dela. Quem poe rotulo e a TELA.
+     */
+    texto: escrito || emojiDasImagens(alts(art)),
     no: art,
   };
 }
@@ -450,7 +497,16 @@ export function comentariosDoPost(raiz = document) {
     .filter(
       (c) =>
         c.tipo === 'comentario' &&
-        c.texto &&
+        /**
+         * **SEM TEXTO continua sendo comentario** (23/10/2026). Ate aqui havia um `c.texto &&`
+         * nesta linha, escrito no dia em que o painel nasceu e nunca medido: ele descartava quem
+         * comentou **so com emoji, figurinha, GIF ou foto** — gente de verdade esperando, que
+         * sumia da fila em silencio. O rotulo ja provou que e um comentario com autor; nao haver
+         * corpo legivel nao desfaz isso.
+         *
+         * Errar MOSTRANDO demais e o lado barato — a mesma escolha do `respondido` sem o nome da
+         * pagina; esconder quem nunca foi respondido nao e.
+         */
         !(pagina && mesmoNome(c.autor, pagina)) // o que NOS comentamos nao e fila
     )
     .map((c) => ({

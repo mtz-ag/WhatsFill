@@ -922,4 +922,72 @@ grupo('marcacao: comecarMencao escreve e PARA');
   globalThis.window = winAntes;
 }
 
+grupo('so emoji: o comentario continua na fila');
+{
+  /**
+   * **Print dele (23/10/2026):** *"comentarios que so contem emoticons estao sendo pulados"*.
+   *
+   * Medido antes de mexer, nos dois formatos em que o emoji chega:
+   *   - como TEXTO, `limparTextoDoComentario` devolve ele inteiro;
+   *   - como `<img>`, o `innerText` nao traz linha de corpo e o texto sai VAZIO.
+   * Era o segundo, e quem descartava era um `c.texto &&` no filtro de `comentariosDoPost`.
+   */
+  const soTexto = 'Alfredo Exemplo\n\u{1F44F}\u{1F1E7}\u{1F1F7}\n3 h\nCurtir';
+  check(
+    fbdom.limparTextoDoComentario(soTexto, 'Alfredo Exemplo') === '\u{1F44F}\u{1F1E7}\u{1F1F7}',
+    'emoji que vem como TEXTO sempre saiu inteiro'
+  );
+  check(
+    fbdom.limparTextoDoComentario('Alfredo Exemplo\n3 h\nCurtir\nOcultar', 'Alfredo Exemplo') === '',
+    'emoji que vem como IMAGEM deixa o texto vazio — a causa da print'
+  );
+
+  /** A peneira do `alt` e por FORMA: o que tem LETRA e legenda da plataforma, nao fala dela. */
+  check(fbdom.emojiDasImagens(['\u{1F44F}', '\u{1F1E7}\u{1F1F7}']) === '\u{1F44F}\u{1F1E7}\u{1F1F7}', 'junta os emoji das imagens');
+  check(fbdom.emojiDasImagens(['2\uFE0F\u20E3']) === '2\uFE0F\u20E3', 'o teclado numerico (o 22 da campanha) entra');
+  check(fbdom.emojiDasImagens(['Foto de perfil de Maria']) === '', 'descricao de foto NAO entra: iria para o prompt da IA como fala dela');
+  check(fbdom.emojiDasImagens(['Pode ser uma imagem de duas pessoas']) === '', 'legenda automatica do Facebook tambem nao');
+  check(fbdom.emojiDasImagens(['-']) === '', 'simbolo ASCII de icone nao e emoji');
+  check(fbdom.emojiDasImagens(['']) === '', 'alt vazio nao vira nada');
+  check(fbdom.emojiDasImagens(null) === '', 'sem imagem nenhuma, vazio');
+
+  // O DOM falso: um comentario SEM corpo, com os emoji dentro de <img alt>.
+  const img = (alt) => ({ seletor: 'img[alt]', getAttribute: () => alt });
+  const art = (rotulo, texto, imagens = []) => ({
+    seletor: '[role="article"][aria-label]',
+    getAttribute: (k) => (k === 'aria-label' ? rotulo : null),
+    innerText: texto,
+    querySelectorAll: (sel) => (sel === 'img[alt]' ? imagens : []),
+  });
+  const raiz = (nos) => ({
+    querySelectorAll: (sel) => nos.filter((n) => n.seletor === sel || sel === '[aria-label]'),
+  });
+
+  const soEmoji = art('Comentario de Alfredo Exemplo ha 3 horas', 'Alfredo Exemplo\n3 h\nCurtir', [
+    img('\u{1F44F}'),
+    img('\u{1F1E7}\u{1F1F7}'),
+  ]);
+  const comTexto = art('Comentario de Jeverson Exemplo ha 3 horas', 'Jeverson Exemplo\nagora ele disse\n3 h\nCurtir');
+
+  const lista = fbdom.comentariosDoPost(raiz([soEmoji, comTexto]));
+  check(lista.length === 2, 'quem so mandou emoji CONTINUA na lista — e a regressao da print');
+  const alfredo = lista.find((c) => c.autor === 'Alfredo Exemplo');
+  check(
+    alfredo?.texto === '\u{1F44F}\u{1F1E7}\u{1F1F7}',
+    `o alt das imagens vira o corpo da linha: ${JSON.stringify(alfredo?.texto)}`
+  );
+
+  /**
+   * **Figura, GIF e figurinha continuam com texto VAZIO, e e de proposito:** a legenda tem letra e
+   * nao passa na peneira. O comentario fica na fila (e disso que ele precisa) e quem escreve
+   * "(sem texto)" na tela e o PAINEL — nunca o dado, que vai para o prompt da IA.
+   */
+  const soFoto = art('Comentario de Maria Exemplo ha 1 hora', 'Maria Exemplo\n1 h\nCurtir', [
+    img('Pode ser uma imagem de uma pessoa'),
+  ]);
+  const comFoto = fbdom.comentariosDoPost(raiz([soFoto]));
+  check(comFoto.length === 1, 'quem comentou so com FIGURA tambem continua na fila');
+  check(comFoto[0].texto === '', 'e o texto dela fica vazio: legenda do Facebook nao e fala da pessoa');
+}
+
 fim();

@@ -3593,6 +3593,34 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ## Avaliação por IA (só neste branch)
 
+- **COMENTARIO SO COM EMOJI SUMIA DA FILA, E O CULPADO ERA UM `c.texto &&` QUE NINGUEM MEDIU**
+  (23/10/2026, print dele: *"comentarios que so contem emoticons estao sendo pulados"*).
+  **Medido nos DOIS formatos em que o emoji chega**, antes de mexer:
+  ```
+  emoji como TEXTO no innerText -> limparTextoDoComentario devolve "\u{1F44F}\u{1F1E7}\u{1F1F7}"
+  emoji como <img>              -> innerText NAO tem linha de corpo -> texto ""
+  ```
+  Era o segundo na pagina dele — e `comentariosDoPost` tinha um **`c.texto &&`** no filtro,
+  escrito no dia em que o painel nasceu (19/10) e **nunca medido**: quem comentou so com emoji,
+  figurinha, GIF ou foto era **descartado em silencio**, e a tecla so alcanca quem esta na lista.
+  **Sao DUAS metades, e a prova de regressao mostra qual cobre o que:** o `alt` das imagens vira o
+  corpo da linha (`emojiDasImagens`), e **tirar o `c.texto &&`** e o que devolve a FILA a quem nao
+  tem corpo legivel nenhum. Reintroduzindo so o filtro, o teste do **so figura** cai; reintroduzindo
+  as duas, caem tambem os do emoji. **O filtro e a metade que nao depende de como o emoji chega.**
+  **A peneira do `alt` e por FORMA e e lista de permissao: alt com LETRA nao entra.** *"Foto de
+  perfil de Maria"* e *"Pode ser uma imagem de duas pessoas"* sao legenda da PLATAFORMA — enfiar
+  isso em `texto` poria descricao do Facebook dentro do prompt da IA como se fosse fala dela. Exige
+  tambem um caractere fora do ASCII, senao um icone com `alt="-"` passaria por emoji.
+  **`texto` vazio CONTINUA vazio quando nem o alt da para ler** (figura, GIF): quem escreve
+  *"(sem texto — emoji, figura ou GIF)"* e a **TELA**. Rotulo nosso dentro do dado iria para o
+  prompt e para a caixa de resposta como se a pessoa tivesse escrito aquilo.
+  **E a IA nao e chamada sem texto:** a chamada nem sai, com o motivo na barra. Pagar para o modelo
+  inventar o que um aplauso quis dizer e a familia do `naoHaOQueResponder` (24/09) — um
+  "\u{1F44F}" pede uma resposta rapida ou o Curtir, nao um texto.
+  **A licao geral, pela enesima vez neste arquivo:** guarda escrita "por via das duvidas" no dia em
+  que o arquivo nasceu **decide em producao** — e esta decidia esconder gente da fila. Ao escrever
+  `x &&` num filtro de lista, pergunte o que ele APAGA quando o campo vier vazio.
+
 - **A BARRA DO MODO FLUTUAVA E COBRIA OS COMENTARIOS DE BAIXO — HOJE ELA EMPURRA**
   (22/10/2026, print do painel no ar: *"bote pro lado, em baixo esta atrapalhando a
   visualizacao"*).

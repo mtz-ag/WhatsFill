@@ -347,6 +347,9 @@ function css() {
     }
     .item .quem { font-weight: 600; margin-bottom: 2px; }
     .item .txt { color: #333; white-space: pre-wrap; word-break: break-word; margin-bottom: 7px; }
+    /* Quem comentou so com emoji/figura: o rotulo e da TELA, e tem de PARECER rotulo e nao fala
+       dela -- senao a lista afirma que a pessoa escreveu "(sem texto)". */
+    .txt.vazio { color: #8a8d91; font-style: italic; }
     textarea {
       font: inherit; width: 100%; box-sizing: border-box; min-height: 64px;
       border: 1px solid #ccd0d5; border-radius: 6px; padding: 6px; resize: vertical;
@@ -767,10 +770,40 @@ async function inserirDeVerdade(comentario, texto, aviso) {
  * ele manda inserir. Pular o campo e escrever direto na caixa transformaria um
  * texto nao lido em algo a um Enter de ser publicado — e aqui e publico.
  */
+/**
+ * **O corpo do comentario COMO A TELA o mostra** (23/10/2026, print dele: *"comentarios que so
+ * contem emoticons estao sendo pulados"*).
+ *
+ * Desde que eles voltaram para a fila, `texto` pode vir VAZIO — emoji que o Facebook desenha como
+ * figura, GIF, figurinha, foto. O vazio e honesto e fica como esta no dado: **quem poe rotulo e a
+ * TELA**, porque "sem texto" dentro de `texto` iria para o prompt da IA e para a caixa de resposta
+ * como se a pessoa tivesse escrito isso.
+ */
+const SEM_CORPO = '(sem texto \u2014 emoji, figura ou GIF)';
+
+function corpoNaTela(texto, limite) {
+  const t = String(texto || '').trim();
+  if (!t) return SEM_CORPO;
+  return t.length > limite ? `${t.slice(0, limite)}...` : t;
+}
+
 async function pedirRascunho(comentario, dizer, redesenhar) {
   const cfg = await store.get('ia');
   if (!cfg?.ligada) {
     dizer('A avaliacao por IA esta desligada. Ligue no painel do mobiliza, na aba Automatizado.');
+    return;
+  }
+
+  /**
+   * **Sem texto nao se pede rascunho, e a chamada nem sai** (23/10/2026). Com o comentario so de
+   * emoji de volta na fila, `texto` pode ser vazio — e mandar isso para a IA e PAGAR para ela
+   * inventar o que a pessoa quis dizer, que e a familia do `naoHaOQueResponder` (24/09).
+   * Um aplauso nao pede texto: pede uma resposta rapida, ou o Curtir.
+   */
+  if (!String(comentario.texto || '').trim()) {
+    dizer(
+      'Este comentario nao tem texto (so emoji ou figura) — a IA inventaria o assunto. Use uma resposta rapida ou o Curtir.'
+    );
     return;
   }
 
@@ -1591,7 +1624,8 @@ function desenhar(shadow) {
       txt.className = 'txt';
       // Uma linha so, cortada por CSS: o comentario inteiro esta na pagina atras da barra, e a
       // barra que cresce cobre justamente o que ele veio ler.
-      txt.textContent = alvo.texto;
+      txt.textContent = corpoNaTela(alvo.texto, 400);
+      if (!alvo.texto.trim()) txt.className = 'txt vazio';
       const conta = document.createElement('span');
       conta.className = 'conta';
       /**
@@ -1885,8 +1919,8 @@ function desenhar(shadow) {
     quem.textContent = c.autor;
 
     const txt = document.createElement('div');
-    txt.className = 'txt';
-    txt.textContent = c.texto.length > 220 ? `${c.texto.slice(0, 220)}...` : c.texto;
+    txt.className = c.texto.trim() ? 'txt' : 'txt vazio';
+    txt.textContent = corpoNaTela(c.texto, 220);
 
     const linha = document.createElement('div');
     linha.className = 'linha';

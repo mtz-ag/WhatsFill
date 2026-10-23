@@ -1,11 +1,12 @@
-## 2026-10-22 - v3.196.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
+## 2026-10-23 - v3.197.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
 
 Doze coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em 20/10;
 a oitava e o conserto do que a secao 7 nao alcancou, a nona e o **modo de responder**, a decima
 veio da primeira print do modo no ar, a decima primeira troca o que os digitos 2, 3 e 4 fazem e a
 decima segunda poe o realce **na pagina**, a decima terceira conserta o avanco depois do Enter —
 com a print dele confirmando a causa —, a decima quarta destrava a **marcacao** e a decima
-quinta poe a barra do modo **na lateral**.
+quinta poe a barra do modo **na lateral** e a decima sexta devolve a fila a quem comentou **so
+com emoji**.
 
 ---
 
@@ -902,10 +903,63 @@ duas palavras.
 
 ---
 
+## 16. So emoji: a pessoa sumia da fila (v3.197.0)
+
+**Print dele:** tres comentarios no post, dois deles so com emoji (as palmas, a bandeira, o 22) —
+e o painel so enxergava o do meio, o unico com texto escrito.
+
+### Medido antes de mexer, nos dois formatos em que o emoji chega
+
+```
+emoji como TEXTO no innerText -> limparTextoDoComentario devolve os emoji inteiros
+emoji como <img>              -> innerText nao traz linha de corpo -> texto ""
+```
+
+Era o segundo. E `comentariosDoPost` tinha, no filtro, um **`c.texto &&`** escrito no dia em que o
+painel nasceu (19/10) e **nunca medido**: sem corpo legivel, a pessoa era **descartada em
+silencio** — e a tecla so alcanca quem esta na lista.
+
+### Duas metades, e a regressao mostra qual cobre o que
+
+| metade | o que resolve |
+|---|---|
+| ler o `alt` das imagens (`emojiDasImagens`) | o **corpo** da linha: a lista mostra os emoji |
+| tirar o `c.texto &&` | a **fila**: quem nao tem corpo legivel nenhum volta a ser atendido |
+
+Reintroduzindo **so o filtro**, cai o teste do *so figura*; reintroduzindo **as duas**, caem
+tambem os do emoji — conferido nos dois sentidos. **O filtro e a metade que nao depende de como o
+emoji chega na pagina dele.**
+
+### A peneira do `alt` e lista de permissao, por FORMA
+
+Alt com **letra** nao entra: *"Foto de perfil de Maria"* e *"Pode ser uma imagem de duas pessoas"*
+sao legenda da plataforma, nao fala da pessoa — e entrariam no prompt da IA como se fossem. Exige
+tambem um caractere fora do ASCII, senao um icone com `alt="-"` passaria por emoji.
+
+**Comentario so com FIGURA ou GIF continua com `texto` vazio, de proposito.** Quem escreve
+*"(sem texto — emoji, figura ou GIF)"* e a **tela**, em cinza e italico. Rotulo nosso dentro do
+dado iria para o prompt da IA e para a caixa de resposta como fala dela.
+
+### E a IA nao e chamada sem texto
+
+A chamada **nem sai**, com o motivo na barra: pagar para o modelo inventar o que um aplauso quis
+dizer e a familia do `naoHaOQueResponder` (24/09). Um emoji pede uma resposta rapida (1, 5..9) ou
+o **Curtir** (2).
+
+### Medido
+
+- `tests/dom-facebook.test.mjs`: os dois formatos de emoji, a peneira do `alt` item a item, e a
+  lista trazendo o so-emoji **e** o so-figura.
+- O smoke do painel ganhou um comentario so com emoji: ele **aparece na lista** e a linha mostra os
+  emoji. Com o codigo antigo, as duas assercoes caem.
+- 26 suites verdes, `checar-modulos` e `checar-referencias` limpos.
+
+---
+
 ## Para usar
 
 **Recarregue a extensao** (`chrome://extensions` -> recarregar) e abra um post. O cabecalho tem de
-dizer **v3.196.0** — e assim que se sabe que chegou. **No modo de responder a versao fica na
+dizer **v3.197.0** — e assim que se sabe que chegou. **No modo de responder a versao fica na
 coluna**, ao lado da contagem.
 
 ## O que falta, e e decisao dele
