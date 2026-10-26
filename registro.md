@@ -1,4 +1,4 @@
-## 2026-10-26 - v3.198.0 - ESTADO DE AGORA - a plataforma mudou, e a migracao comecou pelo chao
+## 2026-10-26 - v3.199.0 - ESTADO DE AGORA - a plataforma mudou, e a migracao comecou pelo chao
 
 **A coisa mais importante deste registro:** o **mobiliza.app acabou**. A plataforma nova e o
 **mobiliza.me**, e ela nao foi atualizada — foi **reescrita**. Medi a dele por dentro em 26/10 e a
@@ -89,10 +89,57 @@ pior que um painel que nao abre.
    `gerar-templates-whatsapp-ia`). Vale olhar o que ela faz antes de reconstruir o mesmo caminho —
    pode ser que parte do que pagamos ja venha incluso.
 
-### A escolha que falta, e e sua
+### As duas escolhas que voce fez, e o que elas mudam
 
-O proximo passo depende do que voce faz primeiro na plataforma nova. **Nao escolhi por voce**
-porque a ordem muda semanas de trabalho.
+**"Ja migrei de vez".** O painel passa a ser so do mobiliza.me. `dom.js`, `api.js`, `contract.js` e
+`recorder.js` deixam de ser destino de conserto — **nao apaguei nada**: enquanto a plataforma nova
+nao envia uma mensagem sequer, jogar fora o que funcionou seria trocar certeza por aposta.
+
+**"Mostrar ANTES, com a tela junto".** Voce nao escolheu entre as opcoes: deu a condicao —
+*"na antiga eu ainda tinha que ver o que estava acontecendo, pois 90% das vezes o fluxo e a IA
+respondiam correto, mas faltava os 10% que eu tinha que apagar e responder novamente manualmente"*.
+
+Fui medir, e **a plataforma nova nao apaga mensagem**: nos 33 pacotes dela (~2,9 MB) as funcoes sao
+`enviar-mensagem-atendimento`, `transcrever-audio-whatsapp`, `sugerir-resposta-whatsapp`,
+`classificar-conversa-whatsapp`, `enviar-reacao-whatsapp`, `gerar-audio-tts` — **nenhuma apaga**.
+Apagar continua existindo no seu celular, nao na tela. **Entao o seu laco inverteu:** era *deixa
+sair, eu leio, e apago os 10%*; passa a ser **ver antes**. Com esse custo na mesa voce escolheu
+parar a rodada, e e assim que ela vai ser construida.
+
+### 0.1 Abrir a conversa CERTA na tela (v3.199.0)
+
+A linha da fila e um `<button>` com **so `class`** — sem id, sem `data-*`. Casar por nome seria
+adivinhacao, e aqui adivinhar e voce conferir a mensagem de uma pessoa e apertar a tecla que
+responde a outra.
+
+**O React guarda a linha do banco no proprio no**, e e dali que sai a identidade:
+
+```
+no -> __reactFiber$<hash> -> ate 8 niveis de .return -> memoizedProps.conversa -> { id, ... }
+```
+
+Medido ao vivo na sua fila, com o codigo que foi ao ar:
+
+```
+clicaveis na tela ......... 104
+reconhecidos como linha ...  78
+ids distintos .............  78
+achar o alvo pelo id ...... achou, por identidade, mesmo registro, no clicavel
+```
+
+Tres coisas que ficam escritas: **so funciona no mundo MAIN** (as chaves do React sao expando, e
+expando nao atravessa mundo isolado no Chrome); **"nao esta na tela" e o caso comum e nao e erro**
+(78 linhas no DOM para uma fila de centenas — ai a conversa se le dentro do painel); e **o nome e so
+reserva, que avisa**, com empate devolvendo nada.
+
+**Abrir clica e para ai** — nao marca lida, nao assume, nao digita. A mesma fronteira do `Ocultar`
+no painel do Facebook.
+
+### O que vem agora
+
+O painel proprio da plataforma nova (`mob-main.js`), no molde do `facebook-main.js`: plataforma
+diferente ganha painel proprio, e nao o painel de 17 mil linhas remendado. Primeiro ele mostra a
+fila e abre a conversa; depois recebe a rodada, que decide pelo quadro e **para para voce**.
 
 ---
 

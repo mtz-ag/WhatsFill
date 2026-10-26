@@ -205,6 +205,43 @@ mudaram as maos, nao a cabeca.
   token vive no `localStorage` da pagina. Que o Supabase aceite a origem `chrome-extension://` nao
   foi medido, e hipotese aqui e rodada que para no primeiro contato.
 
+- **DUAS DECISOES DELE EM 26/10/2026, e as duas mudam o desenho.**
+
+  **(1) "Ja migrei de vez"** — o mobiliza.app acabou. O painel passa a ser so do mobiliza.me, e
+  `dom.js`, `api.js`, `contract.js` e `recorder.js` deixam de ser destino de conserto. **Nao foram
+  apagados**: eles sao o historico de como aquela plataforma funcionava, e apagar isso no mesmo dia
+  em que a nova ainda nao envia nada seria trocar o que funcionou por uma aposta.
+
+  **(2) "Mostrar ANTES, com a tela junto"** — a rodada decide, **abre a conversa na tela pelo id e
+  PARA**, mostrando o que vai enviar; ele aperta a tecla para confirmar ou troca ali mesmo.
+  **Nao foi preferencia: foi consequencia de uma medicao.** Ele deu a condicao antes de escolher —
+  *"na antiga eu ainda tinha que ver o que estava acontecendo, pois 90% das vezes o fluxo e a IA
+  respondiam correto, mas faltava os 10% que eu tinha que apagar e responder novamente
+  manualmente"* — e **a plataforma nova nao apaga mensagem**: varri os 33 pacotes dela (~2,9 MB) e
+  as funcoes de borda sao `enviar-mensagem-atendimento`, `transcrever-audio-whatsapp`,
+  `sugerir-resposta-whatsapp`, `classificar-conversa-whatsapp`, `enviar-reacao-whatsapp`,
+  `gerar-audio-tts` — **nenhuma apaga**. Apagar continua existindo no celular dele, nao na tela.
+  **O laco dele inverteu:** era *deixa sair, eu leio, e apago os 10%*; virou **ver antes**. Com esse
+  custo na mesa, ele escolheu parar a rodada. **Nao religue o envio automatico sem ele pedir
+  sabendo disto.**
+
+- **A LINHA DA FILA NAO TEM GANCHO, E MESMO ASSIM NAO SE CASA POR NOME.** Ela e um `<button>` com
+  **so `class`** (Tailwind). **Mas o React guarda a linha do banco no proprio no**, e e dali que sai
+  a identidade:
+  ```
+  no -> __reactFiber$<hash> -> (ate 8 niveis de .return) -> memoizedProps.conversa -> { id, ... }
+  medido ao vivo: 104 clicaveis na tela, 78 reconhecidos como linha, 78 ids distintos,
+                  achar o alvo pelo id -> mesmo registro, no clicavel
+  ```
+  **Casar por NOME seria o erro:** nome repetido e comum nesta base, vem do WhatsApp e muda sozinho,
+  e abrir a conversa errada e ele conferir a mensagem de uma pessoa e apertar a tecla que responde a
+  outra. O nome fica so de RESERVA (para o dia em que o React mudar as chaves internas) e **a
+  reserva AVISA**, porque dali em diante o painel esta adivinhando; **empate de nome devolve nada**.
+  **Isto so funciona no mundo MAIN:** `__reactFiber$*` e expando, e expando nao atravessa mundo
+  isolado no Chrome — um content script comum ve o mesmo `<button>` e nao ve a chave.
+  **E "nao esta na tela" e o caso COMUM, nao erro:** medido, 78 linhas no DOM para uma fila de
+  centenas. Ai a conversa continua legivel dentro do painel, que e o caminho que sempre funciona.
+
 - **NADA ESCREVE AINDA, de proposito.** `mob.js` so LE. Assumir, responder, resolver e gravar
   cidade exigem medir o corpo de cada funcao com uma sonda no contato de teste — a disciplina de
   *"uma sonda antes das outras"*, que aqui vale ainda mais: `enviar-mensagem-atendimento` foi LIDA
@@ -6175,10 +6212,10 @@ mudaram as maos, nao a cabeca.
 > **A varredura é estreita de propósito** — a primeira versão olhava todo comentário de bloco e
 > acusou **1277** ocorrências, porque os JSDoc daqui citam nomes entre crase o tempo todo.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e sete suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e oito suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs && node tests/ia-validadores.test.mjs && node tests/respostas-comentario.test.mjs && node tests/mob.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs && node tests/ia-validadores.test.mjs && node tests/respostas-comentario.test.mjs && node tests/mob.test.mjs && node tests/dom-mob.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,
