@@ -186,18 +186,92 @@ export function abrirConversa(id, { nome = '', raiz = document } = {}) {
 }
 
 /**
- * A conversa que esta aberta AGORA, lida da tela — ou `null`.
+ * A cadeia de `memoizedProps` deste no, do proprio para cima. Pura, para ter teste.
+ *
+ * `niveis` e parametro porque os dois sinais da conversa aberta moram em alturas diferentes: na
+ * LINHA da fila a prop esta a ate 8 niveis; no PAINEL da direita, a 3. Varrer 8 em todos os `div`
+ * da pagina seria pagar caro por nada.
+ */
+export function propsDoFiber(no, niveis = NIVEIS) {
+  if (!no || typeof no !== 'object') return [];
+  const chave = Object.keys(no).find((k) => k.startsWith('__reactFiber$'));
+  if (!chave) return [];
+
+  const saida = [];
+  let fiber = no[chave];
+  for (let i = 0; i < niveis && fiber; i++) {
+    if (fiber.memoizedProps) saida.push(fiber.memoizedProps);
+    fiber = fiber.return;
+  }
+  return saida;
+}
+
+/**
+ * **Sinal 1 — a linha que o React marcou como ativa.** A prop se chama `ativa`, e e a propria
+ * plataforma dizendo qual conversa esta selecionada.
+ *
+ * **Mais de uma ativa devolve `null`**: duas verdades ao mesmo tempo nao sao verdade nenhuma, e o
+ * desfecho de afirmar a errada e o painel classificar uma pessoa e responder outra.
+ */
+export function linhaAtiva(nos) {
+  const achadas = [];
+  for (const no of nos || []) {
+    for (const p of propsDoFiber(no, NIVEIS)) {
+      if (p && p.conversa && typeof p.conversa.id === 'string') {
+        if (p.ativa === true) achadas.push(p.conversa);
+        break;
+      }
+    }
+  }
+  return achadas.length === 1 ? achadas[0] : null;
+}
+
+/**
+ * **Sinal 2 — o painel da direita**, que e o componente que mostra a conversa aberta.
+ *
+ * Reconhecido pela ASSINATURA das props (`conversa` + `onStatusChange` + `onClose`), e nao por
+ * classe: as classes sao Tailwind geradas e mudam com o tema e com a publicacao. Medido na pagina
+ * dele, as props do painel sao
+ * `{conversa, analise, onStatusChange, onClose, onDeleteConfirmed, onTogglePainel, …}`.
+ */
+export function painelDaConversa(nos) {
+  for (const no of nos || []) {
+    for (const p of propsDoFiber(no, 3)) {
+      if (p && p.conversa && typeof p.conversa.id === 'string' && typeof p.onStatusChange === 'function' && typeof p.onClose === 'function') {
+        return p.conversa;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * **A conversa que esta aberta AGORA na tela dele** — ou `null`.
  *
  * Existe porque a plataforma nova **nao poe a conversa aberta na URL** (conferido nas 424 rotas do
- * pacote: `/admin/interacoes/conversas`, sem `/:id`). Entao, para o painel dizer *"e esta que voce
- * esta olhando"*, o unico caminho e perguntar a tela.
+ * pacote: `/admin/interacoes/conversas`, sem `/:id`). Na plataforma velha quem respondia isso era o
+ * `dom.js` lendo o cabecalho do atendimento; aqui o unico lugar onde a resposta existe e o estado
+ * do React.
  *
- * A linha aberta e a que o proprio React marca como selecionada. **Nao ha classe estavel para
- * isso** — e Tailwind, e muda com o tema —, entao o que se procura e a conversa cujo no esta
- * dentro do painel da direita, e nao na lista. Enquanto isso nao for medido, devolve `null`:
- * **afirmar qual conversa esta aberta sem saber e pior que nao afirmar nada**, porque e sobre essa
- * afirmacao que ele aperta a tecla.
+ * **SAO DOIS SINAIS E ELES TEM DE CONCORDAR.** Medido na pagina dele: a linha ativa e o painel da
+ * direita apontaram para o mesmo id, e **juntos custam menos de 1 ms** (0,19 + 0,75 — o precedente
+ * do projeto e o `pageStateLocal`, medido em 2,9 ms e considerado barato). Entao nao ha porque
+ * escolher um: discordando, **nao se afirma nada**.
+ *
+ * O `por` sobe junto porque o painel escreve na tela de onde tirou a resposta — e porque
+ * `'so-um-sinal'` e o aviso de que a plataforma mudou por baixo e alguem precisa medir de novo.
  */
-export function conversaAberta() {
+export function conversaAberta({ raiz = document } = {}) {
+  const clicaveis = [...raiz.querySelectorAll('button, [role="button"]')];
+  const daLista = linhaAtiva(clicaveis);
+  const doPainel = painelDaConversa([...raiz.querySelectorAll('div')]);
+
+  if (daLista && doPainel) {
+    // Discordaram: a tela esta num estado que ninguem mediu. Calar e o desfecho certo.
+    if (daLista.id !== doPainel.id) return null;
+    return { conversa: daLista, por: 'os-dois' };
+  }
+  if (doPainel) return { conversa: doPainel, por: 'so-um-sinal' };
+  if (daLista) return { conversa: daLista, por: 'so-um-sinal' };
   return null;
 }

@@ -23,6 +23,10 @@ import {
   linhaParece,
   acharLinha,
   abrirConversa,
+  conversaAberta,
+  linhaAtiva,
+  painelDaConversa,
+  propsDoFiber,
 } from '../src/lib/dom-mob.js';
 
 /**
@@ -134,6 +138,72 @@ grupo('abrir: clica e PARA AI');
 
   const vazio = abrirConversa('c-404', { raiz });
   check(vazio.ok === false && vazio.motivo === 'nao-esta-na-tela', 'nao estando na tela, diz o motivo em vez de estourar');
+}
+
+grupo('QUAL conversa esta aberta: dois sinais que tem de concordar');
+{
+  /**
+   * Na plataforma velha quem respondia isso era o `dom.js`, lendo o cabecalho do atendimento. Aqui
+   * **a conversa aberta nao esta na URL** (424 rotas conferidas: `/admin/interacoes/conversas`, sem
+   * `/:id`), e o unico lugar onde a resposta existe e o estado do React.
+   *
+   * Medido na pagina dele: a LINHA marcada `ativa` e o PAINEL da direita apontaram para o mesmo id,
+   * e juntos custam **menos de 1 ms** (0,19 + 0,75). Por isso usamos os dois.
+   */
+  const linha = (conversa, ativa) => {
+    const no = { tagName: 'BUTTON', textContent: conversa.nome || '' };
+    no['__reactFiber$k'] = { memoizedProps: { conversa, ativa }, return: null };
+    return no;
+  };
+  const painel = (conversa) => {
+    const no = { tagName: 'DIV' };
+    no['__reactFiber$k'] = {
+      memoizedProps: { conversa, onStatusChange() {}, onClose() {}, analise: null },
+      return: null,
+    };
+    return no;
+  };
+  const tela = (botoes, divs) => ({
+    querySelectorAll: (sel) => (sel === 'div' ? divs : botoes),
+  });
+
+  const a = { id: 'c-1', nome: 'Marta Fictinha', numero: '5551999990000' };
+  const b = { id: 'c-2', nome: 'Jose Exemplo' };
+
+  const osDois = conversaAberta({ raiz: tela([linha(a, true), linha(b, false)], [painel(a)]) });
+  check(osDois?.conversa?.id === 'c-1', 'os dois sinais concordando: e esta');
+  check(osDois?.por === 'os-dois', 'e o painel sabe que foi por dois sinais');
+
+  /**
+   * **Discordando, nao se afirma nada.** A tela esta num estado que ninguem mediu, e afirmar a
+   * errada e ele conferir a mensagem de uma pessoa e apertar a tecla que responde a outra.
+   */
+  check(conversaAberta({ raiz: tela([linha(a, true)], [painel(b)]) }) === null, 'sinais discordando: devolve NADA');
+
+  const soPainel = conversaAberta({ raiz: tela([linha(a, false)], [painel(a)]) });
+  check(soPainel?.por === 'so-um-sinal', 'so o painel: responde, mas avisa que foi um sinal so');
+
+  const soLista = conversaAberta({ raiz: tela([linha(a, true)], []) });
+  check(soLista?.por === 'so-um-sinal', 'so a lista: idem');
+
+  check(conversaAberta({ raiz: tela([linha(a, false)], []) }) === null, 'nada aberto devolve null');
+
+  /** Duas ativas ao mesmo tempo nao sao verdade nenhuma. */
+  check(linhaAtiva([linha(a, true), linha(b, true)]) === null, 'duas linhas ativas: nenhuma vale');
+  check(linhaAtiva([linha(a, true)])?.id === 'c-1', 'uma ativa vale');
+  check(linhaAtiva([]) === null, 'lista vazia, null');
+
+  /**
+   * O painel da direita e reconhecido pela ASSINATURA das props, nao por classe: as classes sao
+   * Tailwind geradas e mudam com o tema e com cada publicacao.
+   */
+  check(painelDaConversa([painel(a)])?.id === 'c-1', 'acha o painel pela assinatura das props');
+  const quaseo = { tagName: 'DIV' };
+  quaseo['__reactFiber$k'] = { memoizedProps: { conversa: a, onClose() {} }, return: null };
+  check(painelDaConversa([quaseo]) === null, 'no que tem conversa mas nao a assinatura inteira nao conta');
+
+  check(propsDoFiber(linha(a, true)).length === 1, 'a cadeia de props e lida do no para cima');
+  check(propsDoFiber({ tagName: 'DIV' }).length === 0, 'no sem fiber devolve cadeia vazia');
 }
 
 fim();

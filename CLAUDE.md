@@ -242,6 +242,69 @@ mudaram as maos, nao a cabeca.
   **E "nao esta na tela" e o caso COMUM, nao erro:** medido, 78 linhas no DOM para uma fila de
   centenas. Ai a conversa continua legivel dentro do painel, que e o caminho que sempre funciona.
 
+- **O PAINEL DA PLATAFORMA NOVA E O `panel.js` — NAO SE ESCREVE UM PAINEL NOVO.** Correcao dele em
+  26/10/2026, e e a correcao mais importante desta migracao: *"voce misturou tudo, a aba facebook
+  era pra plataforma do facebook, todo o resto era mobiliza e era isso pra ser trazido e deixar
+  intocada a aba do facebook"*.
+  **Eu tinha comecado um painel novo (`mob-main.js`) citando o `facebook-main.js` como precedente, e
+  o precedente nao vale aqui.** O painel do Facebook e pequeno porque o TRABALHO dele e pequeno
+  (listar comentario e responder). O trabalho do mobiliza e a operacao inteira — a rodada, o quadro,
+  a Config, as respostas, a IA, as abas —, e ela **ja existe**, com dois meses de decisoes dele
+  dentro. Escrever outro painel seria reimplementar tudo isso do zero: a duplicacao que este arquivo
+  registra como defeito desde o primeiro dia, na maior escala possivel. **O `mob-main.js` foi
+  apagado antes de ser commitado.**
+  **O desenho certo e um painel so, com um ADAPTADOR por plataforma** — que e literalmente o que o
+  cabecalho do `page.js` ja descreve ("dois modos, mesma interface"):
+  ```
+  panel.js  (a rodada, o quadro, a Config, a IA)   <- intocado
+     |
+  page.js -> mobiliza.app (DOM + REST antiga)  |  mobiliza.me (mob.js: Supabase)
+  ```
+  **A costura foi medida: 24 metodos de `page.*` e 22 de `api.*`.** E boa parte deles **morre** na
+  plataforma nova — `getCustomFields`, `createTag`/`updateTag`, o gravador, o contrato aprendido e
+  os cliques do Angular nao tem mais o que fazer, porque cidade e coluna e etiqueta e texto.
+  **E a aba do Facebook nao e tocada por nada disto.**
+
+- **O GANCHO DO MUNDO MAIN REPETE 15 LINHAS DO `dom-mob.js`, E A REPETICAO E TRAVADA POR TESTE.**
+  Script de mundo MAIN registrado no manifesto e **classico**: nao aceita `import`, e no mundo da
+  pagina nao existe `chrome.runtime` para descobrir a URL do modulo. As saidas (injetar
+  `<script type=module>`, `import()` de URL da extensao a partir do MAIN) esbarram na CSP da pagina
+  e **nao foram medidas** — hipotese ali e painel que nao abre. Entao a logica vive duas vezes, e
+  `tests/mob-hook.test.mjs` **carrega `src/mob-hook.js` como TEXTO**, roda num `window` falso e
+  exige que ele responda o mesmo que `dom-mob.js` nas mesmas fixtures. Mexeu num e nao no outro,
+  cai. **Nao "simplifique" tirando o teste: e ele que faz a copia ser segura.**
+
+- **QUAL CONVERSA ESTA ABERTA: SAO DOIS SINAIS, E ELES TEM DE CONCORDAR.** A plataforma nova **nao
+  poe a conversa aberta na URL** (424 rotas conferidas: `/admin/interacoes/conversas`, sem `/:id`),
+  e na velha quem respondia isso era o `dom.js` lendo o cabecalho do atendimento. Aqui a resposta so
+  existe no estado do React, e ha duas leituras independentes:
+  ```
+  (1) a LINHA da fila com props.ativa === true        0,19 ms
+  (2) o PAINEL da direita, reconhecido pela ASSINATURA 0,75 ms
+      das props: conversa + onStatusChange + onClose
+  medido na pagina dele: os dois apontaram para o mesmo id -> por: "os-dois"
+  ```
+  **Juntos custam menos de 1 ms** — o precedente e o `pageStateLocal`, medido em 2,9 ms e
+  considerado barato (31/08). Entao nao ha porque escolher um: **discordando, nao se afirma nada**,
+  porque afirmar a errada e o painel classificar uma pessoa e responder outra. Duas linhas `ativa`
+  ao mesmo tempo tambem devolvem nada: duas verdades nao sao verdade.
+  **O painel e reconhecido pela assinatura das props e nunca por classe** — as classes sao Tailwind
+  geradas e mudam com o tema e com cada publicacao.
+
+- **GANCHO QUE ESTOURA TEM DE RESPONDER — e o teste pegou isso antes de ir ao ar.** Na primeira
+  versao o `try` cobria so a acao, e `quantasLinhas()` ficava fora dele, dentro da propria chamada
+  de resposta: bastava a contagem lancar (um no cuja leitura falha, que e o que acontece quando o
+  React muda as entranhas) para o ouvinte morrer **sem responder**, e o painel esperaria para sempre
+  por uma abertura que nunca volta. Hoje o `try` cobre a resposta inteira. **"Nao abriu" se mostra
+  na tela; silencio, nao** — a mesma licao do timeout da IA (08/09), que valia para a ponte com o
+  service worker e vale igual para a ponte entre mundos.
+
+- **A CHAMADA AO SUPABASE SAI DA ABA, e e por isso que o CORS nao incomoda.** Em MV3 o `fetch` de
+  content script carrega a origem da PAGINA — entao ele chega ao Supabase como
+  `Origin: https://mobiliza.me`, exatamente como a requisicao que a propria plataforma faz. Tirar a
+  chamada da aba (painel em janela, service worker) **troca uma origem que o servidor ja aceita por
+  uma que ninguem mediu**.
+
 - **NADA ESCREVE AINDA, de proposito.** `mob.js` so LE. Assumir, responder, resolver e gravar
   cidade exigem medir o corpo de cada funcao com uma sonda no contato de teste — a disciplina de
   *"uma sonda antes das outras"*, que aqui vale ainda mais: `enviar-mensagem-atendimento` foi LIDA
@@ -6212,10 +6275,10 @@ mudaram as maos, nao a cabeca.
 > **A varredura é estreita de propósito** — a primeira versão olhava todo comentário de bloco e
 > acusou **1277** ocorrências, porque os JSDoc daqui citam nomes entre crase o tempo todo.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e oito suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e nove suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs && node tests/ia-validadores.test.mjs && node tests/respostas-comentario.test.mjs && node tests/mob.test.mjs && node tests/dom-mob.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs && node tests/ia-validadores.test.mjs && node tests/respostas-comentario.test.mjs && node tests/mob.test.mjs && node tests/dom-mob.test.mjs && node tests/mob-hook.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

@@ -1,4 +1,4 @@
-## 2026-10-26 - v3.199.0 - ESTADO DE AGORA - a plataforma mudou, e a migracao comecou pelo chao
+## 2026-10-26 - v3.200.0 - ESTADO DE AGORA - a plataforma mudou, e a migracao comecou pelo chao
 
 **A coisa mais importante deste registro:** o **mobiliza.app acabou**. A plataforma nova e o
 **mobiliza.me**, e ela nao foi atualizada — foi **reescrita**. Medi a dele por dentro em 26/10 e a
@@ -137,12 +137,71 @@ no painel do Facebook.
 
 ### O que vem agora
 
-O painel proprio da plataforma nova (`mob-main.js`), no molde do `facebook-main.js`: plataforma
-diferente ganha painel proprio, e nao o painel de 17 mil linhas remendado. Primeiro ele mostra a
-fila e abre a conversa; depois recebe a rodada, que decide pelo quadro e **para para voce**.
+A rodada: decidir pelo quadro, **parar para voce** e so entao enviar. O envio tem sonda no
+**Thiago Tim** antes de qualquer fila — `enviar-mensagem-atendimento` foi lida no pacote e nunca
+executada.
 
 ---
 
+## 0.2 Eu comecei errado, voce corrigiu, e a correcao esta no codigo (v3.200.0)
+
+**Voce disse:** *"voce misturou tudo, a aba facebook era pra plataforma do facebook, todo o resto
+era mobiliza e era isso pra ser trazido e deixar intocada a aba do facebook"*.
+
+**Esta certo.** Eu tinha comecado um painel NOVO para o mobiliza.me (`mob-main.js`), citando o
+painel do Facebook como molde. O molde nao vale: **o painel do Facebook e pequeno porque o trabalho
+dele e pequeno** — listar comentario e responder. O trabalho do mobiliza e a operacao inteira, e ela
+ja existe, com dois meses de decisoes suas dentro. **O painel novo foi apagado antes de ser
+commitado.**
+
+### O desenho certo
+
+```
+panel.js  (a rodada, o quadro, a Config, as respostas, a IA)   <- intocado
+   |
+page.js ->  mobiliza.app (DOM + REST antiga)  |  mobiliza.me (mob.js: Supabase)
+```
+
+Um painel so, com um **adaptador por plataforma** — que e exatamente o que o cabecalho do `page.js`
+ja descreve desde sempre ("dois modos, mesma interface"). **A aba do Facebook nao e tocada.**
+
+### A costura, medida
+
+| | quantos | o que acontece com eles |
+|---|---|---|
+| `page.*` | 24 | parte vira consulta, parte **morre** (os cliques do Angular, o gravador) |
+| `api.*` | 22 | parte vira Supabase, parte **morre** (`getCustomFields`, `createTag`, `updateTag`) |
+
+**Boa parte simplesmente deixa de existir**, porque na base nova cidade e uma coluna e etiqueta e
+texto — o contrato de escrita aprendido nao tem mais o que aprender.
+
+### O que ficou pronto nesta versao
+
+**Qual conversa esta aberta na SUA tela** — a peca de que o `getState` depende, e que eu tinha
+deixado devolvendo `null` por nao ter medido. Agora esta medido, e sao **dois sinais**:
+
+```
+(1) a LINHA da fila com props.ativa === true          0,19 ms
+(2) o PAINEL da direita, pela ASSINATURA das props    0,75 ms
+    (conversa + onStatusChange + onClose)
+
+na sua tela, com uma conversa aberta: os dois apontaram para o mesmo id -> "os-dois"
+```
+
+Juntos custam **menos de 1 ms**, entao uso os dois. **Discordando, nao afirmo nada** — afirmar a
+conversa aberta errada e o painel classificar uma pessoa e responder outra. Duas linhas marcadas
+ativas ao mesmo tempo tambem devolvem nada.
+
+O painel da direita e reconhecido pela **assinatura das props**, nunca por classe: as classes sao
+Tailwind geradas e mudam com o tema e com cada publicacao da plataforma.
+
+### O que NAO foi ao ar
+
+**O painel ainda nao monta no mobiliza.me**, e o manifesto nao o registra la. Montar agora seria um
+painel que sobe e trava: o boot espera o Bearer do `page-hook`, que naquela plataforma nao existe.
+Ele monta quando o adaptador fechar a costura — e o envio, quando a sonda sair no **Thiago Tim**.
+
+---
 
 ## 1. O botao IA do comentario nunca funcionou (v3.180.0)
 
