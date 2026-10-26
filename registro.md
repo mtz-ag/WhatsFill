@@ -1,14 +1,101 @@
-## 2026-10-23 - v3.197.0 - ESTADO DE AGORA - o painel do Facebook le o post inteiro, e ha um modo de responder em sequencia
+## 2026-10-26 - v3.198.0 - ESTADO DE AGORA - a plataforma mudou, e a migracao comecou pelo chao
 
-Doze coisas foram ao ar, nesta ordem — cada uma depende da anterior. As sete primeiras em 20/10;
-a oitava e o conserto do que a secao 7 nao alcancou, a nona e o **modo de responder**, a decima
-veio da primeira print do modo no ar, a decima primeira troca o que os digitos 2, 3 e 4 fazem e a
-decima segunda poe o realce **na pagina**, a decima terceira conserta o avanco depois do Enter —
-com a print dele confirmando a causa —, a decima quarta destrava a **marcacao** e a decima
-quinta poe a barra do modo **na lateral** e a decima sexta devolve a fila a quem comentou **so
-com emoji**.
+**A coisa mais importante deste registro:** o **mobiliza.app acabou**. A plataforma nova e o
+**mobiliza.me**, e ela nao foi atualizada — foi **reescrita**. Medi a dele por dentro em 26/10 e a
+secao 0 conta o que se sabe. **Nada do painel atual funciona la ainda**, e a extensao que esta no
+ar continua sendo a do mobiliza.app, intacta.
+
+O que foi ao ar hoje e **o chao da migracao**: o modulo que fala com a plataforma nova
+(`src/lib/mob.js`), so de LEITURA, com teste e com a leitura provada ao vivo na base dele. **Ele
+ainda nao tem gatilho nenhum** — nenhum botao do painel o chama, de proposito: o que vem depois
+depende de uma escolha sua, e ela esta no fim da secao 0.
+
+Abaixo da secao 0, as dezesseis secoes do **painel do Facebook**, que continua sendo a parte viva
+da extensao e nao depende do mobiliza em nada.
 
 ---
+
+## 0. A plataforma nova: o que foi medido, o que ja esta pronto e a escolha que falta (v3.198.0)
+
+**Pedido dele:** *"atualize para utilizar na nova plataforma,
+https://mobiliza.me/admin/interacoes/conversas, entre pela extensao claude se necessario"*.
+
+### O tamanho da coisa, em uma tabela
+
+| | mobiliza.app | mobiliza.me |
+|---|---|---|
+| frente | Angular + Material | **React + Vite** |
+| dados | `api.mobiliza.app` | **Supabase / PostgREST**, direto do navegador |
+| login | Bearer interceptado no mundo MAIN | **`localStorage`** (`sb-<ref>-auth-token`) |
+| ganchos de tela | `data-cy` em tudo | **nenhum** |
+| contato | campos com contrato APRENDIDO | `base_dados`, colunas de verdade |
+| etiquetas | ids, rotulo repetido | coluna de texto |
+| clientes | um | **varios (multi-tenant)** |
+| canal | Z-API | Z-API (nao mudou) |
+
+### A boa noticia, e ela e grande
+
+**A cabeca da extensao sobrevive inteira.** O quadro, a tabela de regras, os detectores, o parser,
+as cidades e COREDEs, os anuncios, os perfis, a IA e as suas respostas **decidem O QUE sai para o
+eleitor, nao COMO** — mudaram as maos, nao a cabeca. Dois meses de decisoes suas continuam valendo.
+
+**E metade das armadilhas mais caras do projeto some:** o contrato de escrita aprendido, o
+*"a API responde 200 e ignora"*, as keys desalinhadas, o rotulo repetido das etiquetas, o
+`Origin not allowed` e a interceptacao do token. Na base nova, cidade e uma coluna e etiqueta e
+texto.
+
+### O erro que a medicao impediu antes de existir
+
+Escrevi a guarda obvia de "isto e grupo?" como `!!linha.grupo_id`. Medido na sua base:
+
+```
+conversas com external_chat_id terminando em @g.us ....... 109
+dessas, com grupo_id preenchido ...........................   0
+conversas com grupo_id preenchido na base inteira .........   0
+```
+
+**A coluna e nula sempre.** As 109 teriam entrado na fila como contato comum, e a rodada publicaria
+resposta de atendimento dentro de grupos de dezenas de pessoas. Quem responde e o endereco do chat
+(`@g.us`), que e o que a propria plataforma filtra. **Na duvida, e grupo.**
+
+### O que esta no ar hoje
+
+`src/lib/mob.js` — o unico arquivo que sabe como a plataforma nova e montada por dentro:
+
+- le a sessao do `localStorage` e sabe dizer quando ela venceu;
+- monta consulta com o **`tenant_id` obrigatorio** (sem ele a consulta e recusada aqui, antes de
+  sair — consulta sem tenant le a base de outra campanha);
+- traduz a linha do banco para a forma que a rodada, os detectores e a IA **ja leem**;
+- le a fila, a conversa, o contato, os numeros e as respostas rapidas da plataforma.
+
+**Provado ao vivo na sua base** (so leitura): a fila voltou 200 com 100 conversas, e as mensagens
+de uma conversa vieram com os dois lados separados. **27 suites verdes**, e a guarda do grupo cai
+em 8 assercoes se alguem reintroduzir o `grupo_id`.
+
+### O que NAO esta, e por que
+
+**Nada escreve.** Assumir, responder, resolver e gravar cidade passam por
+`enviar-mensagem-atendimento` e pelas funcoes `assumir_conversa` / `resolver_conversa`, que foram
+**lidas no pacote e nunca executadas** — e a regra deste projeto e sonda no contato de teste antes
+da fila. **E o painel ainda nao monta no mobiliza.me**: um painel que abre e falha em silencio e
+pior que um painel que nao abre.
+
+### Duas perdas conhecidas, para voce decidir se doem
+
+1. **Audio ENCAMINHADO deixa de ser reconhecido.** O banco novo nao tem o relogio do WhatsApp
+   separado do da plataforma nem o tamanho do arquivo — os dois campos de que a conta da Irene
+   (07/09) vive. Nao ha contorno sem um campo que o banco nao tem.
+2. **A plataforma ja tem IA propria** (`sugerir-resposta-whatsapp`, `transcrever-audio-whatsapp`,
+   `gerar-templates-whatsapp-ia`). Vale olhar o que ela faz antes de reconstruir o mesmo caminho —
+   pode ser que parte do que pagamos ja venha incluso.
+
+### A escolha que falta, e e sua
+
+O proximo passo depende do que voce faz primeiro na plataforma nova. **Nao escolhi por voce**
+porque a ordem muda semanas de trabalho.
+
+---
+
 
 ## 1. O botao IA do comentario nunca funcionou (v3.180.0)
 

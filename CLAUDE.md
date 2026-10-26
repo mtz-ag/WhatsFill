@@ -106,6 +106,110 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 
 ---
 
+## A PLATAFORMA MUDOU: mobiliza.app -> mobiliza.me (medido em 26/10/2026)
+
+> **Tudo o que vem DEPOIS desta secao, ate "Armadilhas do proprio painel", descreve o mobiliza.app
+> — a plataforma ANTIGA.** Continua valendo enquanto ela estiver no ar; **nada daquilo se aplica ao
+> mobiliza.me.** A plataforma nao foi atualizada: foi **reescrita**.
+
+**Pedido dele:** *"atualize para utilizar na nova plataforma, https://mobiliza.me/admin/interacoes/
+conversas"*. Medido na pagina dele, logado, com a extensao do Claude no Chrome:
+
+| | mobiliza.app (velho) | mobiliza.me (novo) |
+|---|---|---|
+| frente | Angular + Material | **React + Vite**, um pacote (`/assets/index-*.js`) |
+| dados | `api.mobiliza.app` (REST propria) | **Supabase / PostgREST**, direto do navegador |
+| login | Bearer interceptado pelo `page-hook` no mundo MAIN | **`localStorage`**, chave `sb-<ref>-auth-token` |
+| ganchos de tela | `data-cy` em tudo | **NENHUM** — o unico `data-*` da tela e o `data-state` do Radix |
+| contato | campos personalizados com contrato APRENDIDO | tabela `base_dados`, **colunas de verdade** |
+| etiquetas | ids numa tabela a parte, rotulo repetido | **coluna de texto** em `base_dados` e na conversa |
+| clientes | um so | **multi-tenant** (dois tenants na sessao dele) |
+| canal | Z-API | **Z-API** (`provider: "zapi"` — nao mudou) |
+
+**O QUE ISSO APAGA DO PROJETO.** Metade das armadilhas mais caras deste arquivo deixa de existir:
+o contrato de escrita aprendido (`contract.js`, `recorder.js`, `fields.js`), o *"a API responde 200
+e IGNORA o valor"*, o `isToIncludeCustomFields`, as keys desalinhadas, o rotulo repetido, o
+`createTag`, o `Origin not allowed` e a interceptacao do Bearer. **Nao apague esses arquivos
+enquanto o mobiliza.app estiver no ar** — eles sao a extensao que funciona hoje.
+
+**O QUE SOBREVIVE INTEIRO, e e a maior parte do valor:** o quadro (`arvore.js`), a tabela de regras
+(`sugestao.js`), os detectores (`cortesia.js`), o parser, as cidades e COREDEs, os anuncios, os
+perfis, a IA inteira e as respostas dele. **Eles decidem O QUE sai para o eleitor, nao COMO** —
+mudaram as maos, nao a cabeca.
+
+**AS TABELAS E FUNCOES** (lidas do pacote, nos modulos `useWhatsAppAtendimento`, `Atendimento`,
+`useCRMContatos`, `useExistingTags`): `whatsapp_conversas`, `whatsapp_mensagens`,
+`whatsapp_instances`, `whatsapp_templates`, `base_dados`, `crm_atendimentos`, `crm_followups`,
+`grupos_whatsapp`, `eventos`, `mocoes`, `profiles`, `user_tenants`, `campaign_settings`. RPCs:
+`assumir_conversa`, `liberar_conversa`, `transferir_conversa`, `resolver_conversa`,
+`reabrir_conversa`, `fn_marcar_conversa_lida`, `whatsapp_inbox_contagens`. Funcoes de borda:
+**`enviar-mensagem-atendimento`** (e por ela que a mensagem sai), `transcrever-audio-whatsapp`,
+`sugerir-resposta-whatsapp`, `gerar-templates-whatsapp-ia`. **A plataforma ja tem IA propria.**
+
+- **A CONVERSA ABERTA NAO ESTA NA URL, e isso nao e obstaculo: e a direcao.** Das 424 rotas do
+  pacote, a de conversas e `/admin/interacoes/conversas` **sem `/:id`** — quem esta aberto vive no
+  estado do React. Entao nao da para "ler a conversa aberta" como o `dom.js` fazia. **E nao
+  precisa:** a fila e uma tabela, a conversa e uma tabela, concluir e uma funcao. A rodada aqui
+  anda pela API e nao pela tela — que e o caminho que `percorrerContatos` (o disparo, 01/10) ja
+  usava, sem abrir conversa nenhuma.
+
+- **`grupo_id` E SEMPRE NULO: quem diz se e grupo e o `external_chat_id`** (medido antes de a
+  guarda ir ao ar — e teria sido o erro mais caro desta migracao). Eu escrevi a guarda obvia,
+  `!!linha.grupo_id`, e medi na base dele:
+  ```
+  conversas com external_chat_id terminando em @g.us ....... 109
+  dessas, com grupo_id preenchido ...........................   0
+  conversas com grupo_id preenchido na base inteira .........   0
+  ```
+  **As 109 teriam entrado na fila como contato comum**, e a rodada publicaria resposta de
+  atendimento dentro de grupos de dezenas de pessoas, com o nome dele em cima. O endereco do chat e
+  que responde (`@g.us` grupo, `@newsletter` canal, `@broadcast` lista) — e e exatamente o que a
+  propria plataforma filtra nas requisicoes dela: **a resposta estava na tela o tempo todo.**
+  **Na duvida, e grupo**: `external_chat_id` ilegivel fica de fora da fila, porque deixar de
+  atender alguem custa uma passada e mandar para um grupo nao tem volta.
+
+- **MULTI-TENANT e a coisa nova mais facil de errar.** Toda consulta do app carrega
+  `tenant_id=eq.<id>`, e na sessao dele apareceram DOIS tenants. **Consulta sem `tenant_id` le a
+  base de outra campanha; escrita sem ele a contamina.** E o irmao da separacao por CANDIDATO do
+  `perfis.js` (25/09), com a diferenca de que la o estrago era texto errado e aqui e dado de
+  eleitor de outro cliente. Em `mob.url()` o tenant e argumento proprio e **a consulta e RECUSADA
+  sem ele** — falta de dado nunca vira "pega tudo".
+
+- **O TOKEN E MAIS FACIL DE LER E MAIS PERIGOSO DE VAZAR.** Acabou a interceptacao do `page-hook`:
+  a sessao esta no `localStorage` da pagina (`access_token`, `refresh_token`, `expires_at`, `user`
+  — 2.076 caracteres). **O `refresh_token` renova a sessao sozinho**, entao quem o tiver entra na
+  conta dele quando quiser — a mesma regra do token de pagina do Facebook e da chave da IA: **o que
+  atravessa a ponte e o RESULTADO da consulta, nunca a credencial**, e ele fica fora do
+  `exportJson`.
+
+- **A TRANSCRICAO VIROU COLUNA; O RELOGIO DO WHATSAPP E O TAMANHO DO ARQUIVO SUMIRAM.** Em
+  `whatsapp_mensagens` ha `transcricao`, `transcricao_status` e `is_sistema` — o audio traz o texto
+  de graca e o ruido da plataforma ja vem MARCADO (o caso do Carlos e da Vera, 02/09, deixa de
+  depender de reconhecer texto). **Mas nao ha `timestamp` do WhatsApp separado do `created_at`, nem
+  `file.size`** — os dois campos de que `cortesia.marcarLoteEncaminhado` vive (a Irene, 07/09).
+  **Audio ENCAMINHADO deixa de ser reconhecido na plataforma nova**, e nao ha como contornar sem um
+  campo que o banco nao tem. Dito a ele.
+
+- **O `tipo` da mensagem vem em MINUSCULA** (`"text"`, medido), e todo o projeto compara em
+  maiuscula (`TEXT`, `AUDIO`, `IMAGE`). `mob.mensagemDoBanco` normaliza — nao compare o campo cru.
+
+- **A chave `anon` do Supabase NAO e escrita no codigo.** Ela e publica por desenho (vai em toda
+  requisicao do navegador e nao autoriza nada sozinha), mas **valor copiado para ca envelhece
+  calado**: o sintoma seria a extensao parar inteira sem ninguem ter mexido nela. `mob.anon()` a le
+  do pacote da propria plataforma, achando o `<script>` pela tag — o nome do arquivo carrega um
+  hash que muda a cada publicacao.
+
+- **O `Origin` deixou de ser o carcereiro — e isso continua sendo HIPOTESE.** A API velha recusava
+  qualquer origem fora da aba, e era por isso que TUDO saia de dentro dela. O PostgREST autentica
+  por header. **Mesmo assim as chamadas continuam saindo da aba**, por uma razao que nao mudou: o
+  token vive no `localStorage` da pagina. Que o Supabase aceite a origem `chrome-extension://` nao
+  foi medido, e hipotese aqui e rodada que para no primeiro contato.
+
+- **NADA ESCREVE AINDA, de proposito.** `mob.js` so LE. Assumir, responder, resolver e gravar
+  cidade exigem medir o corpo de cada funcao com uma sonda no contato de teste — a disciplina de
+  *"uma sonda antes das outras"*, que aqui vale ainda mais: `enviar-mensagem-atendimento` foi LIDA
+  no pacote, nunca executada.
+
 ## Armadilhas desta API (custaram horas — não redescubra)
 
 - **`GET /core/v1/contact/{id}` precisa de `isToIncludeCustomFields=true`.** Sem isso devolve
@@ -6071,10 +6175,10 @@ JavaScript puro, ES modules, **sem build step**. Node 18+ só para os testes.
 > **A varredura é estreita de propósito** — a primeira versão olhava todo comentário de bloco e
 > acusou **1277** ocorrências, porque os JSDoc daqui citam nomes entre crase o tempo todo.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e seis suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e sete suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs && node tests/ia-validadores.test.mjs && node tests/respostas-comentario.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs && node tests/ia-validadores.test.mjs && node tests/respostas-comentario.test.mjs && node tests/mob.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,
