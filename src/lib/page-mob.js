@@ -334,3 +334,246 @@ async function pedir(alvo, chave) {
   if (!r.ok) return null;
   return r.json().catch(() => null);
 }
+
+// ---------------------------------------------------------------------------
+// A ponte ate o gancho do mundo MAIN
+// ---------------------------------------------------------------------------
+
+/**
+ * **Por que existe ponte:** `__reactFiber$<hash>` e um expando, e expando **nao atravessa mundo
+ * isolado no Chrome**. Um content script comum ve o mesmo `<button>` da fila e nao ve a chave —
+ * entao quem le o estado do React e o `mob-hook.js`, que roda no mundo da pagina, e o que volta
+ * por aqui e so o RESULTADO.
+ *
+ * **Toda pergunta tem relogio.** A licao do timeout da IA (08/09) vale igual entre mundos: o
+ * gancho pode nao ter subido (a pagina e React, e o painel monta antes dela terminar), e sem
+ * prazo o painel esperaria para sempre por uma resposta que nunca vem — que e o pior dos dois
+ * casos, porque *"nao abriu" se mostra na tela; silencio, nao*.
+ */
+const ORIGEM = 'https://' + mob.HOST;
+export const PRAZO_DA_PONTE_MS = 4000;
+
+let contador = 0;
+
+export function perguntarAoGancho(
+  type,
+  payload = {},
+  { prazoMs = PRAZO_DA_PONTE_MS, janela = typeof window === 'undefined' ? null : window } = {},
+) {
+  if (!janela) return Promise.resolve(null);
+  const pedido = `p-${++contador}-${Date.now()}`;
+
+  return new Promise((resolve) => {
+    let vivo = true;
+    const fim = (r) => {
+      if (!vivo) return;
+      vivo = false;
+      clearTimeout(relogio);
+      janela.removeEventListener('message', ouvir);
+      resolve(r);
+    };
+    const relogio = setTimeout(() => fim(null), prazoMs);
+
+    function ouvir(ev) {
+      // As tres guardas da ponte, iguais as do gancho: quem mandou, de onde, e o que.
+      if (ev.source !== janela || ev.origin !== ORIGEM) return;
+      const d = ev.data;
+      if (!d || d.__whatsfill !== 'mob-page') return;
+      // Resposta de outra pergunta nao serve: duas perguntas no ar ao mesmo tempo sao o normal
+      // (o laco de 500ms e um clique dele), e casar a errada responderia sobre outra conversa.
+      if (d.payload && d.payload.pedido && d.payload.pedido !== pedido) return;
+      fim(d);
+    }
+
+    janela.addEventListener('message', ouvir);
+    janela.postMessage({ __whatsfill: 'mob-cs', type, payload: { ...payload, pedido } }, ORIGEM);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// A superficie que o `panel.js` chama: os mesmos nomes do `page.js`
+// ---------------------------------------------------------------------------
+
+/**
+ * **O que AINDA nao foi medido RECUSA com o motivo na tela, e nunca finge que fez.**
+ *
+ * `enviar-mensagem-atendimento`, `assumir_conversa`, `resolver_conversa` e `reabrir_conversa`
+ * foram **lidas no pacote da plataforma e nunca executadas** — e a disciplina deste projeto para
+ * isso tem nome: *uma sonda antes das outras*, no contato de teste, antes de qualquer fila.
+ *
+ * Um no-op silencioso aqui seria pior que o erro: a rodada marcaria como enviado o que nao saiu,
+ * e concluiria atendimento que ninguem respondeu. E a armadilha mais antiga do projeto — *"a API
+ * responde 200 e IGNORA"* — na forma em que nos mesmos a criariamos.
+ */
+export const AINDA_NAO_MEDIDO =
+  'ainda nao foi medido na plataforma nova: a funcao foi LIDA no pacote e nunca executada. ' +
+  'A sonda sai no contato de teste, uma mensagem, antes de qualquer fila.';
+
+function recusar(oque) {
+  return Promise.reject(new Error(`${oque} ${AINDA_NAO_MEDIDO}`));
+}
+
+/** O estado da tela, por dois sinais que tem de concordar — e sem tocar na rede. */
+export async function getState(opcoes = {}) {
+  const r = await perguntarAoGancho('aberta', {}, opcoes);
+  if (!r) {
+    /**
+     * **Gancho mudo e DIFERENTE de "nenhuma conversa aberta"**, e o painel precisa distinguir:
+     * "nenhuma" o faz pedir que ele abra uma; "nao sei" tem de faze-lo calar. Quem nao sabe nao
+     * afirma — a mesma regra do `nao-da-para-saber` do canal removido (14/10).
+     */
+    return { ...estadoDaConversa(null), ganchoRespondeu: false };
+  }
+  const p = r.payload || {};
+  return {
+    ...estadoDaConversa(
+      { conversa: p.conversa, por: p.por },
+      { dark: !!p.dark, hasDialog: !!p.hasDialog, hasComposer: p.hasComposer },
+    ),
+    ganchoRespondeu: true,
+  };
+}
+
+/** Abre a conversa na tela DELE, pelo id. Clica e para ai: nao marca lida, nao assume. */
+export async function abrirNaTela(id, nome = '', opcoes = {}) {
+  const r = await perguntarAoGancho('abrir', { id, nome }, opcoes);
+  if (!r) return { ok: false, motivo: 'gancho-mudo' };
+  return r.payload || { ok: false, motivo: 'sem-resposta' };
+}
+
+/**
+ * A fila agora e uma TABELA — nao se rola a tela nem se clica em "Ver mais".
+ *
+ * Na plataforma velha a fila carregava 50 por vez e o resto so vinha num botao sem `data-cy`:
+ * sem clicar nele, a rodada enxergava uma fatia e achava que tinha acabado. Aqui o limite e
+ * argumento da consulta.
+ *
+ * **Grupo fica de fora, e e `mob.ehGrupo` quem decide** — nunca o `grupo_id`, que e nulo na base
+ * inteira. Publicar resposta de atendimento dentro de um grupo de dezenas de pessoas, com o nome
+ * dele em cima, nao tem volta.
+ */
+export async function queuePreview(max = 50) {
+  const linhas = await mob.fila({ limite: Math.max(1, Number(max) || 50) });
+  return (linhas || []).map(mob.conversaDoBanco).filter((c) => !c.grupo);
+}
+
+/**
+ * Abre o item da fila naquela posicao — e e aqui que a escolha dele de 26/10 vive:
+ * *"Mostrar ANTES, com a tela junto"*. A rodada decide, abre a conversa pelo id e **para**.
+ */
+export async function openQueueSession(index = 0) {
+  const n = Math.max(0, Number(index) || 0);
+  const fila = await queuePreview(n + 1);
+  const alvo = fila[n];
+  if (!alvo) return { ok: false, motivo: 'fila-acabou' };
+  return abrirNaTela(alvo.id, alvo.nome);
+}
+
+export async function openNextSession() {
+  return openQueueSession(0);
+}
+
+/** Nao existe "carregar mais": a consulta ja pede o limite que se quer. */
+export async function carregarMaisDaFila() {
+  return { ok: true, jaVemTudo: true };
+}
+
+/** So o que impede a mensagem de CHEGAR conta como caido (a disciplina de 01/10). */
+export const CONEXAO_CAIDA = new Set(['disconnected', 'desconectado', 'critical', 'banned', 'banido']);
+
+/**
+ * **O numero caiu?** — pela API, nunca pela tarja.
+ *
+ * Na plataforma velha isto era lido do TEXTO de um aviso no cabecalho, e a tarja mora justamente
+ * na tela que ele esconde durante a rodada (25/09). Aqui e coluna: `status_conexao`.
+ *
+ * **Campo que a plataforma nao mandou nao vira afirmacao** (a licao do `undefined !==
+ * 'CONNECTED'`, 01/10): sem leitura nenhuma devolve `null`, que nao e "caiu" nem "esta no ar" —
+ * e quem chama tem de tratar os TRES estados.
+ */
+export async function canalForaDoAr(canalId = '', { canais: dados = null } = {}) {
+  const canais = dados || (await canaisDaConta());
+  const alvo = canalId ? canais.find((c) => c.id === canalId) : null;
+  const olhar = alvo ? [alvo] : canais;
+  if (!olhar.length) return null;
+  const caidos = olhar.filter((c) => c.conexao && CONEXAO_CAIDA.has(c.conexao));
+  if (caidos.length) return { caiu: true, numero: caidos[0].numero, conexao: caidos[0].conexao };
+  return olhar.some((c) => c.conexao) ? false : null;
+}
+
+export async function numeroDoCanal(opcoes = {}) {
+  const r = await perguntarAoGancho('aberta', {}, opcoes);
+  return String(r?.payload?.conversa?.numero || '') || null;
+}
+
+/**
+ * **Nao existe "conversa anterior" aqui, e isso nao e perda: e o conceito que sumiu.**
+ *
+ * No mobiliza.app a conversa era partida em SESSOES, e quem voltava depois de concluido abria
+ * uma nova — dai o botao "Ver conversa anterior", a rota `/previous` e toda a armadilha da Rosa
+ * (05/09), em que sessao nova parecia pessoa nova e ela se apresentava duas vezes. Aqui a
+ * conversa e UMA linha com o historico inteiro, e a pergunta deixa de existir.
+ */
+export async function temConversaAnterior() {
+  return false;
+}
+
+// --- o que MORRE na plataforma nova -----------------------------------------
+
+/**
+ * **O contrato de escrita aprendido e o gravador nao tem mais o que fazer**: campo personalizado
+ * virou COLUNA.
+ *
+ * Eles respondem "desnecessario" e **nao erro**, de proposito: falhar faria a tela pedir que ele
+ * aprenda um contrato que nao existe mais — o pre-requisito que envelhece junto com o desenho
+ * que o criou (26/09), que ja barrou a fila inteira uma vez.
+ */
+export async function learnStart() {
+  return { ok: true, desnecessario: true, motivo: 'Campo personalizado virou coluna: nao ha contrato a aprender.' };
+}
+export async function learnStatus() {
+  return { estado: 'desnecessario', motivo: 'Campo personalizado virou coluna.' };
+}
+export async function recorderBuffer() {
+  return [];
+}
+export async function recorderStop() {
+  return { ok: true, desnecessario: true };
+}
+/** Nao ha overlay do Material para fechar: a plataforma nova nao e Angular Material. */
+export async function closeOverlay() {
+  return true;
+}
+export async function diagnosticarAbas() {
+  return { plataforma: mob.HOST, naPagina: mob.naPagina() };
+}
+
+// --- o que ainda PRECISA de sonda -------------------------------------------
+
+export function sendText() {
+  return recusar('Enviar mensagem');
+}
+export function setComposerText() {
+  return recusar('Escrever no campo de mensagem da plataforma');
+}
+export function clickIniciar() {
+  return recusar('Assumir o atendimento');
+}
+export function clickConcluir() {
+  return recusar('Resolver o atendimento');
+}
+export function clickReiniciar() {
+  return recusar('Reabrir o atendimento');
+}
+export function sendMessageTemplate() {
+  return recusar('Enviar modelo aprovado');
+}
+export function enviarImagem() {
+  return recusar('Enviar imagem');
+}
+export function aprenderImagemStart() {
+  return recusar('Aprender o envio de imagem');
+}
+export async function aprenderImagemStatus() {
+  return { estado: 'nao-medido', motivo: AINDA_NAO_MEDIDO };
+}

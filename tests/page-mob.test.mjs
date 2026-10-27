@@ -4,7 +4,9 @@
  *
  * Rode: node tests/page-mob.test.mjs
  */
+import { readFileSync } from 'node:fs';
 import { check, grupo, fim } from './_harness.mjs';
+import * as adaptador from '../src/lib/page-mob.js';
 import {
   chaveDaEtiqueta,
   etiquetasDoContato,
@@ -14,6 +16,21 @@ import {
   ABERTO,
   EM_ATENDIMENTO,
   RESOLVIDO,
+  perguntarAoGancho,
+  getState,
+  canalForaDoAr,
+  sendText,
+  setComposerText,
+  clickIniciar,
+  clickConcluir,
+  clickReiniciar,
+  sendMessageTemplate,
+  enviarImagem,
+  learnStart,
+  learnStatus,
+  closeOverlay,
+  temConversaAnterior,
+  carregarMaisDaFila,
 } from '../src/lib/page-mob.js';
 
 grupo('a armadilha do rotulo repetido VOLTOU, com outra cara');
@@ -157,6 +174,206 @@ grupo('o estado da tela: tres status, e quem responde "acabou?" e o status');
   /** Dando para ler a tela, a tela ganha: se da para digitar sem assumir NAO foi medido. */
   check(estadoDaConversa(aberta(ABERTO), { hasComposer: true }).hasComposer === true, 'a leitura da tela vence o palpite pelo status');
   check(estadoDaConversa(aberta(ABERTO)).hasComposer === false, 'sem leitura, cai no status');
+}
+
+grupo('a ponte ate o gancho: toda pergunta tem relogio');
+{
+  const ORIGEM = 'https://mobiliza.me';
+
+  /** Um `window` falso que responde como o gancho responderia. */
+  function janelaFalsa({ responde = true, origem = ORIGEM, fonteCerta = true, atrasaMs = 0, pedidoDaResposta = null } = {}) {
+    const ouvintes = [];
+    const j = {
+      addEventListener: (t, fn) => { if (t === 'message') ouvintes.push(fn); },
+      removeEventListener: (t, fn) => { const i = ouvintes.indexOf(fn); if (i >= 0) ouvintes.splice(i, 1); },
+      postMessage(msg) {
+        if (!responde) return;
+        const entregar = () => {
+          const ev = {
+            source: fonteCerta ? j : { outro: true },
+            origin: origem,
+            data: {
+              __whatsfill: 'mob-page',
+              type: 'aberta',
+              payload: { pedido: pedidoDaResposta ?? msg.payload.pedido, por: 'os-dois', conversa: { id: 'c-1', status: 'aberto', numero: '5551999990000' }, dark: true },
+            },
+          };
+          for (const fn of [...ouvintes]) fn(ev);
+        };
+        if (atrasaMs) setTimeout(entregar, atrasaMs); else entregar();
+      },
+    };
+    return j;
+  }
+
+  const r1 = await perguntarAoGancho('aberta', {}, { janela: janelaFalsa() });
+  check(r1?.payload?.conversa?.id === 'c-1', 'pergunta e resposta se encontram');
+
+  /** As tres guardas da ponte, iguais as do gancho. */
+  check(await perguntarAoGancho('aberta', {}, { janela: janelaFalsa({ origem: 'https://evil.example' }), prazoMs: 30 }) === null,
+    'resposta de outra ORIGEM nao e resposta');
+  check(await perguntarAoGancho('aberta', {}, { janela: janelaFalsa({ fonteCerta: false }), prazoMs: 30 }) === null,
+    'resposta de outra JANELA nao e resposta');
+  check(await perguntarAoGancho('aberta', {}, { janela: janelaFalsa({ pedidoDaResposta: 'p-de-outra' }), prazoMs: 30 }) === null,
+    'resposta de OUTRA PERGUNTA nao serve — duas no ar ao mesmo tempo e o normal');
+
+  /**
+   * **Sem relogio o painel espera para sempre.** O gancho pode nao ter subido (a pagina e React,
+   * e o painel monta antes dela terminar), e e a licao do timeout da IA entre mundos: *"nao
+   * abriu" se mostra na tela; silencio, nao*.
+   */
+  check(await perguntarAoGancho('aberta', {}, { janela: janelaFalsa({ responde: false }), prazoMs: 30 }) === null,
+    'gancho mudo desiste no prazo, em vez de pendurar');
+  check(await perguntarAoGancho('aberta', {}, { janela: janelaFalsa({ atrasaMs: 200 }), prazoMs: 30 }) === null,
+    'resposta que chega tarde demais nao conta');
+  check(await perguntarAoGancho('aberta', {}, { janela: null }) === null, 'sem janela nenhuma, nao estoura');
+
+  /** A ponte solta o ouvinte: o laco do painel pergunta a cada 500ms, e vazar aqui e acumular. */
+  const j = janelaFalsa();
+  let presos = 0;
+  const addOrig = j.addEventListener;
+  j.addEventListener = (t, fn) => { presos++; addOrig(t, fn); };
+  const rmOrig = j.removeEventListener;
+  j.removeEventListener = (t, fn) => { presos--; rmOrig(t, fn); };
+  await perguntarAoGancho('aberta', {}, { janela: j });
+  check(presos === 0, 'o ouvinte sai quando a resposta chega');
+}
+
+grupo('getState: gancho mudo NAO e "nenhuma conversa aberta"');
+{
+  const ORIGEM = 'https://mobiliza.me';
+  const janelaQueResponde = (conversa, extra = {}) => {
+    const ouvintes = [];
+    const j = {
+      addEventListener: (t, fn) => { if (t === 'message') ouvintes.push(fn); },
+      removeEventListener: (t, fn) => { const i = ouvintes.indexOf(fn); if (i >= 0) ouvintes.splice(i, 1); },
+      postMessage(msg) {
+        const ev = { source: j, origin: ORIGEM, data: { __whatsfill: 'mob-page', type: 'aberta',
+          payload: { pedido: msg.payload.pedido, por: conversa ? 'os-dois' : '', conversa, ...extra } } };
+        for (const fn of [...ouvintes]) fn(ev);
+      },
+    };
+    return j;
+  };
+
+  const comConversa = await getState({ janela: janelaQueResponde({ id: 'c-1', status: 'aberto', total_mensagens: 3 }) });
+  check(comConversa.sessionId === 'c-1' && comConversa.isPending === true, 'a conversa aberta chega inteira');
+  check(comConversa.ganchoRespondeu === true, 'e o painel sabe que o gancho falou');
+
+  const semNada = await getState({ janela: janelaQueResponde(null) });
+  check(semNada.sessionId === null && semNada.ganchoRespondeu === true, 'nenhuma conversa aberta: o gancho falou e disse que nao ha');
+
+  /**
+   * **Os dois casos nao podem se confundir:** "nenhuma" faz o painel pedir que ele abra uma;
+   * "nao sei" tem de faze-lo calar. E a mesma regra do `nao-da-para-saber` do canal removido.
+   */
+  const mudo = await getState({ janela: null });
+  check(mudo.sessionId === null && mudo.ganchoRespondeu === false, 'gancho mudo chega marcado como mudo, e nao como "nao ha nada"');
+
+  /** As leituras de tela atravessam. */
+  const escuro = await getState({ janela: janelaQueResponde({ id: 'c-1', status: 'em_atendimento' }, { dark: true, hasComposer: true }) });
+  check(escuro.dark === true && escuro.hasComposer === true, 'tema e campo de mensagem vem do gancho');
+}
+
+grupo('o numero caiu? — e os TRES estados, nunca dois');
+{
+  const canal = (conexao, numero = '5551999990000') => ({ id: 'i-1', nome: 'Martim', numero, provedor: 'zapi', conexao, ativo: true });
+
+  const caiu = await canalForaDoAr('', { canais: [canal('disconnected')] });
+  check(caiu && caiu.caiu === true, 'desconectado e caiu');
+  check(await canalForaDoAr('', { canais: [canal('ok')] }) === false, 'conectado nao caiu');
+
+  /**
+   * **Ausencia de informacao nao e evidencia** — a licao do `undefined !== 'CONNECTED'` (01/10),
+   * que travou a rodada dele num numero que estava no ar. `null` nao e "caiu" nem "esta no ar",
+   * e quem chama tem de tratar os tres.
+   */
+  check(await canalForaDoAr('', { canais: [canal(null)] }) === null, 'campo que a plataforma nao mandou devolve NAO SEI');
+  check(await canalForaDoAr('', { canais: [] }) === null, 'sem canal nenhum, tambem nao sei');
+
+  /** `FLAGGED` nao impede a mensagem de CHEGAR: avisa, nao barra. */
+  check(await canalForaDoAr('', { canais: [canal('flagged')] }) === false, 'sinalizado como spam ainda entrega — isso e aviso, nao barreira');
+}
+
+grupo('o que ainda nao foi medido RECUSA, e nunca finge que fez');
+{
+  const naoMedidos = [
+    ['sendText', sendText],
+    ['setComposerText', setComposerText],
+    ['clickIniciar', clickIniciar],
+    ['clickConcluir', clickConcluir],
+    ['clickReiniciar', clickReiniciar],
+    ['sendMessageTemplate', sendMessageTemplate],
+    ['enviarImagem', enviarImagem],
+  ];
+
+  for (const [nome, fn] of naoMedidos) {
+    let recusou = false;
+    let msg = '';
+    try { await fn(); } catch (e) { recusou = true; msg = String(e.message); }
+    check(recusou, `${nome} recusa em vez de fingir`);
+    check(msg.includes('sonda'), `${nome} diz o que destrava: a sonda no contato de teste`);
+  }
+
+  /**
+   * **O que MORRE responde "desnecessario", e nao erro.** Falhar faria a tela pedir que ele
+   * aprenda um contrato que nao existe mais — o pre-requisito que envelhece junto com o desenho
+   * que o criou (26/09), e que ja barrou a fila inteira uma vez.
+   */
+  check((await learnStart()).desnecessario === true, 'o contrato de escrita nao tem mais o que aprender');
+  check((await learnStatus()).estado === 'desnecessario', 'e a tela sabe disso');
+  check((await closeOverlay()) === true, 'nao ha overlay do Material para fechar');
+  check((await temConversaAnterior()) === false, 'nao existe conversa anterior: a conversa e UMA linha com o historico inteiro');
+  check((await carregarMaisDaFila()).jaVemTudo === true, 'nao ha "ver mais": a consulta ja pede o limite');
+}
+
+grupo('A COSTURA: todo nome que o page.js desvia tem de existir aqui');
+{
+  /**
+   * **O buraco que este teste existe para impedir.**
+   *
+   * `page.js` desvia com `NA_PLATAFORMA_NOVA ? mobPage.X : ...`. Acrescentar um `export const Y`
+   * la e esquecer o `Y` aqui nao quebra nada na hora: `mobPage.Y` e `undefined`, e o painel so
+   * estoura **quando aquela linha rodar** — no meio de uma rodada, na tela dele, com a mensagem
+   * `mobPage.Y is not a function`.
+   *
+   * E a mesma classe do `perfilAtivo is not defined` (25/09) e do campo acrescentado ao retorno
+   * que ninguem desestruturou (02/10): **nenhum verificador pega**, porque sintaticamente esta
+   * tudo certo. O que pega e comparar as duas listas, e e isso que esta escrito aqui.
+   *
+   * O arquivo e lido como TEXTO de proposito — o mesmo idioma do teste do gancho do mundo MAIN:
+   * importar `page.js` exigiria `location` e `chrome`, que nao existem no Node.
+   */
+  const fonte = readFileSync(new URL('../src/lib/page.js', import.meta.url), 'utf8');
+  /**
+   * **A LINHA INTEIRA, e nao o trecho** — a primeira versao deste teste casava
+   * `? mobPage.<nome>` em qualquer lugar e leu a PROSA do cabecalho do `page.js`, onde o desvio
+   * esta escrito como exemplo. Acusou um nome `X` que nao existe e nunca existiu. E a armadilha
+   * do `soCodigo` por outra porta: comentario nao e codigo, e casar trecho le os dois.
+   */
+  const desviados = [...fonte.matchAll(/^\s*\? mobPage\.([a-zA-Z]+)$/gm)].map((m) => m[1]);
+
+  check(desviados.length >= 20, `o page.js desvia ${desviados.length} nomes para o adaptador`);
+
+  const faltando = desviados.filter((n) => typeof adaptador[n] !== 'function');
+  check(faltando.length === 0, `todo nome desviado existe no adaptador${faltando.length ? ' — FALTA: ' + faltando.join(', ') : ''}`);
+
+  /**
+   * **E o contrario tambem conta:** `page.js` nao pode continuar mandando para o mobiliza.app um
+   * nome que o adaptador ja sabe fazer — seria o painel falando com a plataforma errada.
+   */
+  const aindaNaoDesviados = ['getState', 'queuePreview', 'openQueueSession', 'canalForaDoAr', 'temConversaAnterior']
+    .filter((n) => !desviados.includes(n));
+  check(aindaNaoDesviados.length === 0, `os nomes que o adaptador ja resolve estao desviados${aindaNaoDesviados.length ? ' — FALTA desviar: ' + aindaNaoDesviados.join(', ') : ''}`);
+
+  /**
+   * **A rota da API velha nao pode passar.** `/core/v1/...` e `/chat/v1/...` sao do mobiliza.app;
+   * deixar passar faria o painel pedir ao Supabase um caminho que ele nao conhece e ler o 404
+   * como "o contato esta vazio" — a armadilha do `isToIncludeCustomFields`, em que a API
+   * respondia 200 e a extensao concluia que todo contato nao tinha nada.
+   */
+  check(/export const api = NA_PLATAFORMA_NOVA/.test(fonte), 'o transporte da API antiga tambem e desviado');
+  check(fonte.includes('nao existe no ${mob.HOST}'), 'e ele RECUSA dizendo por que, em vez de chamar');
 }
 
 fim();

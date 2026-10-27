@@ -14,11 +14,37 @@ import { setTransport, createFetchTransport } from './lib/api.js';
 import { waitForToken } from './lib/bus.js';
 import * as store from './lib/store.js';
 import * as dock from './lib/dock.js';
+import * as mob from './lib/mob.js';
 
 const HOST_ID = 'whatsfill-host';
 
-// A aba é o único contexto de onde a API aceita requisições.
-setTransport(createFetchTransport(waitForToken));
+/**
+ * **O TRANSPORTE DEPENDE DA PLATAFORMA, e na nova ele RECUSA em vez de pendurar.**
+ *
+ * No mobiliza.app a aba e o unico contexto de onde a API aceita requisicao (`Origin`), e o token
+ * vem do `page-hook` pelo `waitForToken`.
+ *
+ * **No mobiliza.me esse token nao existe** — a plataforma e outra, e a sessao mora no
+ * `localStorage`. Deixar o transporte antigo aqui faria toda chamada de `api.js` ficar esperando
+ * para sempre por um Bearer que ninguem vai interceptar: o painel subiria e travaria, sem erro
+ * nenhum na tela. **Pendurar e pior que falhar** (08/09) — e a licao do timeout da IA, que custou
+ * duas rodadas paradas em "Andando...".
+ *
+ * Entao, na plataforma nova, o transporte diz o que aconteceu. Quem le a base nova e o `mob.js`.
+ */
+const NA_PLATAFORMA_NOVA = location.hostname === mob.HOST;
+
+setTransport(
+  NA_PLATAFORMA_NOVA
+    ? (path) =>
+        Promise.reject(
+          new Error(
+            `A rota ${path} e da plataforma antiga e nao existe no ${mob.HOST}. ` +
+              'Quem le a base nova e o mob.js, pelo adaptador (page-mob.js).',
+          ),
+        )
+    : createFetchTransport(waitForToken),
+);
 
 async function boot() {
   if (document.getElementById(HOST_ID)) return;

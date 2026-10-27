@@ -18,9 +18,24 @@ import * as hsm from './hsm.js';
 import { apiFetch } from './api.js';
 import * as imagem from './imagem.js';
 import * as store from './store.js';
+import * as mob from './mob.js';
+import * as mobPage from './page-mob.js';
 
 /** Estamos rodando dentro da aba do mobiliza? */
 export const IS_IN_PAGE = location.hostname === 'mobiliza.app';
+
+/**
+ * **E a plataforma NOVA?** — a terceira mao deste arquivo, e a razao de ele existir assim.
+ *
+ * O cabecalho acima sempre descreveu "dois modos, mesma interface". A plataforma nova nao
+ * acrescenta um terceiro MODO: acrescenta um **adaptador**, que e outra implementacao da mesma
+ * interface. Por isso cada linha abaixo e `NA_PLATAFORMA_NOVA ? mobPage.X : <o que ja existia>`
+ * — **o caminho do mobiliza.app fica intocado**, byte a byte, embaixo do desvio.
+ *
+ * E a correcao dele de 26/10/2026, em codigo: *"todo o resto era mobiliza e era isso pra ser
+ * trazido"*. Um painel so (`panel.js`), um adaptador por plataforma.
+ */
+export const NA_PLATAFORMA_NOVA = location.hostname === mob.HOST;
 
 // ---------------------------------------------------------------------------
 // Resolução da aba (só no modo janela separada)
@@ -71,27 +86,45 @@ function local(fn) {
   return fn;
 }
 
-export const api = IS_IN_PAGE
-  ? local((path, opts) => apiFetch(path, opts))
-  : (path, opts) => call('api', [path, opts]);
+/**
+ * **Na plataforma nova as rotas do mobiliza.app nao existem, e chamar uma e pior que falhar.**
+ *
+ * `/core/v1/...` e `/chat/v1/...` sao da API antiga. Deixar isto passar faria o painel pedir ao
+ * Supabase um caminho que ele nao conhece e tratar o 404 como "o contato esta vazio" — que e
+ * exatamente a armadilha do `isToIncludeCustomFields`, em que a API respondia 200 e a extensao
+ * concluia que todo contato nao tinha nada.
+ */
+export const api = NA_PLATAFORMA_NOVA
+  ? (path) => Promise.reject(new Error(`Rota da plataforma antiga (${path}) nao existe no ${mob.HOST}. Quem le a base nova e o mob.js.`))
+  : IS_IN_PAGE
+    ? local((path, opts) => apiFetch(path, opts))
+    : (path, opts) => call('api', [path, opts]);
 
-export const getState = IS_IN_PAGE ? local(() => pageStateLocal()) : () => call('pageState');
+export const getState = NA_PLATAFORMA_NOVA
+  ? mobPage.getState
+  : IS_IN_PAGE ? local(() => pageStateLocal()) : () => call('pageState');
 
-export const setComposerText = IS_IN_PAGE
+export const setComposerText = NA_PLATAFORMA_NOVA
+  ? mobPage.setComposerText
+  : IS_IN_PAGE
   ? local((text) => {
       composer.setComposerText(text);
       return true;
     })
   : (text) => call('setComposerText', [text]);
 
-export const sendText = IS_IN_PAGE
+export const sendText = NA_PLATAFORMA_NOVA
+  ? mobPage.sendText
+  : IS_IN_PAGE
   ? local(async (text) => {
       await composer.sendText(text);
       return true;
     })
   : (text) => call('sendText', [text]);
 
-export const clickIniciar = IS_IN_PAGE
+export const clickIniciar = NA_PLATAFORMA_NOVA
+  ? mobPage.clickIniciar
+  : IS_IN_PAGE
   ? local(async () => {
       const btn = dom.getIniciarButton();
       if (!btn) throw new Error('O botão Iniciar não está na tela.');
@@ -119,7 +152,9 @@ export const clickIniciar = IS_IN_PAGE
  * Reabrir joga o atendimento para "Meus" (a plataforma troca de aba sozinha) — quem chama
  * precisa voltar para a lista de concluídos antes do próximo.
  */
-export const clickReiniciar = IS_IN_PAGE
+export const clickReiniciar = NA_PLATAFORMA_NOVA
+  ? mobPage.clickReiniciar
+  : IS_IN_PAGE
   ? local(async () => {
       const btn = dom.getReiniciarButton();
       if (!btn) return { ok: false, reason: 'o botão Reiniciar não está na tela' };
@@ -137,11 +172,15 @@ export const clickReiniciar = IS_IN_PAGE
   : () => call('clickReiniciar');
 
 /** Diagnóstico da barra da fila, para achar o gancho da lista de concluídos. */
-export const diagnosticarAbas = IS_IN_PAGE
+export const diagnosticarAbas = NA_PLATAFORMA_NOVA
+  ? mobPage.diagnosticarAbas
+  : IS_IN_PAGE
   ? local(async () => dom.diagnosticarAbasDaFila())
   : () => call('diagnosticarAbas');
 
-export const clickConcluir = IS_IN_PAGE
+export const clickConcluir = NA_PLATAFORMA_NOVA
+  ? mobPage.clickConcluir
+  : IS_IN_PAGE
   ? local(async () => {
       const btn = dom.getConcluirButton();
       if (!btn) throw new Error('O botão Concluir não está na tela.');
@@ -217,22 +256,30 @@ export const clickConcluir = IS_IN_PAGE
     })
   : () => call('clickConcluir');
 
-export const openNextSession = IS_IN_PAGE
+export const openNextSession = NA_PLATAFORMA_NOVA
+  ? mobPage.openNextSession
+  : IS_IN_PAGE
   ? local((opts) => dom.openNextSession(opts))
   : (opts) => call('openNextSession', [opts]);
 
 /** Fila da esquerda, do jeito que o filtro da plataforma deixou. Só conferência visual. */
-export const queuePreview = IS_IN_PAGE
+export const queuePreview = NA_PLATAFORMA_NOVA
+  ? mobPage.queuePreview
+  : IS_IN_PAGE
   ? local((max) => dom.getQueuePreview(max))
   : (max) => call('queuePreview', [max]);
 
 /** Abre o item da fila naquela posição (usado pela rodada automatizada). */
-export const openQueueSession = IS_IN_PAGE
+export const openQueueSession = NA_PLATAFORMA_NOVA
+  ? mobPage.openQueueSession
+  : IS_IN_PAGE
   ? local((index, opts) => dom.openQueueSession(index, opts))
   : (index, opts) => call('openQueueSession', [index, opts]);
 
 /** `async` de propósito: quem chama usa `.catch()`, e valor cru não tem `.catch`. */
-export const carregarMaisDaFila = IS_IN_PAGE
+export const carregarMaisDaFila = NA_PLATAFORMA_NOVA
+  ? mobPage.carregarMaisDaFila
+  : IS_IN_PAGE
   ? local(async (opts) => dom.carregarMaisDaFila(opts))
   : (opts) => call('carregarMaisDaFila', [opts]);
 
@@ -241,7 +288,9 @@ export const carregarMaisDaFila = IS_IN_PAGE
  * `async` de propósito: quem chama usa `.catch(...)`, e no modo encaixado um retorno cru
  * (não-promessa) faria o `.catch` estourar TypeError.
  */
-export const closeOverlay = IS_IN_PAGE
+export const closeOverlay = NA_PLATAFORMA_NOVA
+  ? mobPage.closeOverlay
+  : IS_IN_PAGE
   ? local(async () => dom.closeOverlay())
   : () => call('closeOverlay');
 
@@ -249,15 +298,21 @@ export const closeOverlay = IS_IN_PAGE
  * Modelo de mensagem salvo: dirige o diálogo da plataforma. `template` tem que ser objeto
  * simples ({ id, name, text, params }) porque atravessa a ponte de mensagens.
  */
-export const sendMessageTemplate = IS_IN_PAGE
+export const sendMessageTemplate = NA_PLATAFORMA_NOVA
+  ? mobPage.sendMessageTemplate
+  : IS_IN_PAGE
   ? local((template, opts) => hsm.sendTemplate(template, opts))
   : (template, opts) => call('sendMessageTemplate', [template, opts]);
 
-export const recorderBuffer = IS_IN_PAGE ? local(() => recorder.getBuffer()) : () => call('recorderBuffer');
+export const recorderBuffer = NA_PLATAFORMA_NOVA
+  ? mobPage.recorderBuffer
+  : IS_IN_PAGE ? local(() => recorder.getBuffer()) : () => call('recorderBuffer');
 
 // `async` porque o painel chama `page.recorderStop().catch(...)`: no modo encaixado, devolver
 // `true` cru fazia o `.catch` estourar "não é função" e derrubar o fim do aprendizado.
-export const recorderStop = IS_IN_PAGE
+export const recorderStop = NA_PLATAFORMA_NOVA
+  ? mobPage.recorderStop
+  : IS_IN_PAGE
   ? local(async () => {
       recorder.setEnabled(false);
       return true;
@@ -271,7 +326,9 @@ export const recorderStop = IS_IN_PAGE
  */
 let learnLocal = { status: 'idle' };
 
-export const learnStart = IS_IN_PAGE
+export const learnStart = NA_PLATAFORMA_NOVA
+  ? mobPage.learnStart
+  : IS_IN_PAGE
   ? local((args) => {
       learnLocal = { status: 'waiting' };
       recorder
@@ -287,7 +344,9 @@ export const learnStart = IS_IN_PAGE
     })
   : (args) => call('learnStart', [args]);
 
-export const learnStatus = IS_IN_PAGE ? local(() => learnLocal) : () => call('learnStatus');
+export const learnStatus = NA_PLATAFORMA_NOVA
+  ? mobPage.learnStatus
+  : IS_IN_PAGE ? local(() => learnLocal) : () => call('learnStatus');
 
 /**
  * **Aprender o envio de IMAGEM** — em duas etapas pela mesma razão do contrato de escrita: entre
@@ -296,7 +355,9 @@ export const learnStatus = IS_IN_PAGE ? local(() => learnLocal) : () => call('le
  */
 let imagemLocal = { status: 'idle' };
 
-export const aprenderImagemStart = IS_IN_PAGE
+export const aprenderImagemStart = NA_PLATAFORMA_NOVA
+  ? mobPage.aprenderImagemStart
+  : IS_IN_PAGE
   ? local(() => {
       imagemLocal = { status: 'waiting' };
       recorder
@@ -312,7 +373,9 @@ export const aprenderImagemStart = IS_IN_PAGE
     })
   : () => call('aprenderImagemStart');
 
-export const aprenderImagemStatus = IS_IN_PAGE ? local(() => imagemLocal) : () => call('aprenderImagemStatus');
+export const aprenderImagemStatus = NA_PLATAFORMA_NOVA
+  ? mobPage.aprenderImagemStatus
+  : IS_IN_PAGE ? local(() => imagemLocal) : () => call('aprenderImagemStatus');
 
 /**
  * **Manda a imagem guardada, com a legenda** — a cadeia inteira está em `imagem.js`, gravada
@@ -323,7 +386,9 @@ export const aprenderImagemStatus = IS_IN_PAGE ? local(() => imagemLocal) : () =
  * armazenamento, e quem lê a imagem é quem vai usá-la (a aba, para o nome e o tipo; o service
  * worker, para subir).
  */
-export const enviarImagem = IS_IN_PAGE
+export const enviarImagem = NA_PLATAFORMA_NOVA
+  ? mobPage.enviarImagem
+  : IS_IN_PAGE
   ? local(async ({ sessionId, senderId, chave, legenda }) => {
       const arquivo = await store.get(chave);
       return imagem.enviarImagem({
@@ -352,7 +417,9 @@ async function subirBytesPeloWorker({ url, mime, chave }) {
  * Fora da `pageStateLocal` de propósito: aquilo é lido a cada 400 ms, e isto varre os nós de
  * texto da página. Uma vez por contato é barato; quatro vezes por segundo, não.
  */
-export const canalForaDoAr = IS_IN_PAGE
+export const canalForaDoAr = NA_PLATAFORMA_NOVA
+  ? mobPage.canalForaDoAr
+  : IS_IN_PAGE
   ? local(() => {
       const aviso = dom.canalDesconectado();
       if (!aviso.desconectado) return { fora: false, texto: '', numero: '' };
@@ -376,7 +443,9 @@ export const canalForaDoAr = IS_IN_PAGE
  * contato. Fora da `pageStateLocal` pela mesma razão das duas vizinhas: varre nós de texto, e uma
  * vez por contato é barato.
  */
-export const numeroDoCanal = IS_IN_PAGE ? local(() => dom.numeroDaConversa()) : () => call('numeroDoCanal');
+export const numeroDoCanal = NA_PLATAFORMA_NOVA
+  ? mobPage.numeroDoCanal
+  : IS_IN_PAGE ? local(() => dom.numeroDaConversa()) : () => call('numeroDoCanal');
 
 /**
  * O contato tem atendimento ANTERIOR? (o botão "Ver conversa anterior" no topo da conversa)
@@ -384,7 +453,9 @@ export const numeroDoCanal = IS_IN_PAGE ? local(() => dom.numeroDaConversa()) : 
  * Fora da `pageStateLocal` pelo mesmo motivo do canal caído: aquilo é lido a cada 400 ms e isto
  * varre os nós de texto da página. Uma vez por contato é barato.
  */
-export const temConversaAnterior = IS_IN_PAGE
+export const temConversaAnterior = NA_PLATAFORMA_NOVA
+  ? mobPage.temConversaAnterior
+  : IS_IN_PAGE
   ? local(() => dom.temConversaAnterior())
   : () => call('temConversaAnterior');
 

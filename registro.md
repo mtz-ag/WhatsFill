@@ -1,4 +1,4 @@
-## 2026-10-27 - v3.201.0 - ESTADO DE AGORA - o adaptador comecou, e a medicao desmentiu duas coisas que eu tinha escrito
+## 2026-10-27 - v3.202.0 - ESTADO DE AGORA - a costura do page.js fechou, e a do api.js e o que falta
 
 ### O que esta no ar
 
@@ -7,10 +7,24 @@
 | `mob.js` | os dados do mobiliza.me (fila, conversa, contato, numeros, respostas), **so leitura** |
 | `dom-mob.js` + `mob-hook.js` | abrir **a conversa certa** pelo id, e dizer **qual esta aberta** |
 | `page-mob.js` | **o adaptador** — faz a plataforma nova parecer com o que o `panel.js` ja le |
+| `page.js` | **desvia 23 nomes** para o adaptador quando a aba e o mobiliza.me |
 
-**O painel ainda NAO monta no mobiliza.me**, e o manifesto nao o registra la. Montar agora seria
-um painel que sobe e trava: o boot espera o Bearer do `page-hook`, que naquela plataforma nao
-existe. Ele monta quando a costura fechar.
+### A costura: metade fechada
+
+```
+panel.js
+   |
+page.js   -> 23 de 24 nomes desviados      [FECHADO]
+api.js    -> 22 nomes, nenhum desviado     [E O QUE FALTA]
+```
+
+`page.js` e a tela e a fila; `api.js` e o contato, a conversa e as etiquetas — e e ele que o
+`load()` chama em todo contato aberto. **Por isso o painel ainda nao monta la:** subiria e erraria
+em todo contato. O manifesto continua sem registra-lo no mobiliza.me, de proposito.
+
+**O que ainda nao foi medido RECUSA com o motivo na tela, e nunca finge que fez** — enviar,
+assumir, resolver, reabrir, modelo e imagem. Um no-op silencioso seria pior que o erro: a rodada
+marcaria como enviado o que nao saiu e concluiria atendimento que ninguem respondeu.
 
 ### O que eu medi hoje na sua base — e o que cada numero mudou
 
