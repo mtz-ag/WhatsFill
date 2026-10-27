@@ -460,6 +460,35 @@ mudaram as maos, nao a cabeca.
   chamada da aba (painel em janela, service worker) **troca uma origem que o servidor ja aceita por
   uma que ninguem mediu**.
 
+- **O PAINEL MONTA NO MOBILIZA.ME DESDE A v3.208.0, e sao DOIS content scripts.** O gancho
+  (`mob-hook.js`) no mundo **MAIN** e em `document_start`; o carregador (`content.js`) no isolado,
+  em `document_idle`. **Um so nao da conta dos dois lados:** `__reactFiber$<hash>` e expando e nao
+  atravessa mundo isolado, e `chrome.runtime` nao existe no mundo da pagina. O gancho vem ANTES
+  porque o painel pergunta a ele desde o primeiro tique do laco de 500ms.
+  **A aba do Facebook e a do mobiliza.app nao foram tocadas**, e ha teste exigindo isso.
+
+- **`page.getState()` PODE SER ASSINCRONO, E `watchPageState` LIA O RETORNO DIRETO** (achado lendo,
+  antes de montar). No mobiliza.app ele devolve objeto cru; no mobiliza.me e **promessa**, porque a
+  resposta vem pela ponte com o gancho. Lendo `state.sessionId` de uma promessa tudo vira
+  `undefined`: a chave do laco fica constante, nenhum assinante e avisado depois da primeira volta,
+  e **o painel sobe e nunca mais reage a troca de conversa** — parecendo travado, sem erro nenhum.
+  Hoje ele faz `await` (inofensivo no valor cru da plataforma velha) **com guarda de `rodando`**:
+  a ponte espera ate 4s, e sem ela um gancho lento acumularia uma pergunta a cada 500ms.
+
+- **O ADAPTADOR SO VALE PELOS NOMES QUE QUEM CHAMA LE — e eu errei isso TRES vezes.** As tres
+  falhariam **em silencio**, porque `undefined` nao estoura: ele vira "nao tem".
+  ```
+  Bearer ${sessao.access_token}   -> lerSessao normaliza para `token`     -> 401 em TUDO
+  getTags sem `message`           -> tags.loadTags filtra por ele          -> lista VAZIA
+  contarMeuDia -> `concluidos`    -> o painel desestrutura `concluidosHoje`-> contador vazio
+  ```
+  A segunda e a pior: sem etiqueta nenhuma reconhecida, cidade e COREDE nao sao aplicadas,
+  `temEtiquetaDeCidade` fica sempre falso e a protecao de "sem interesse" nunca dispara — **com a
+  tela mostrando um painel que parece funcionar**. **Nenhum verificador pega**: sintaticamente
+  esta tudo certo. O que pega e comparar os DOIS lados, e `tests/page-mob.test.mjs` compara: le o
+  `panel.js` para extrair o que ele desestrutura e exige que o adaptador devolva aquilo.
+  **Ao escrever adaptador, leia o CONSUMIDOR, nunca so o produtor.**
+
 - **A FUNCAO QUE ENVIA FOI MEDIDA AO VIVO (27/10/2026), e nao adivinhada.** Ele autorizou o
   teste no contato dele (*"faca os testes mandando para esse perfil"*). **Ler o pacote NAO deu os
   nomes** — o corpo e de propriedades abreviadas e minificadas —, entao o caminho foi o que o

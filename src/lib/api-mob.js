@@ -126,6 +126,24 @@ export async function getCustomFields() {
 }
 
 /**
+ * **Uma etiqueta no formato que o `tags.loadTags` sabe ler — e `message` e o campo que decide.**
+ *
+ * Ele faz `arr.filter((t) => t.active !== false && t.message)`, porque a API velha devolvia
+ * `{id, message, bgColor, textColor}`. A primeira versao disto devolvia so `name`, e o filtro
+ * jogaria **tudo** fora: nenhuma etiqueta reconhecida, cidade e COREDE sem aplicar,
+ * `temEtiquetaDeCidade` sempre falso, a protecao de "sem interesse" nunca disparando — **em
+ * silencio**, porque lista vazia nao e erro.
+ *
+ * E a terceira vez que o adaptador erra assim (depois do `access_token` e do nome da tabela):
+ * **ele so vale pelos nomes que QUEM CHAMA realmente le**, e isso se confere lendo o consumidor.
+ *
+ * `grafias` e o extra desta plataforma: as formas que o mesmo rotulo tem no banco.
+ */
+export function entradaDeEtiqueta(id, rotulo) {
+  return { id, message: rotulo, name: rotulo, grafias: [] };
+}
+
+/**
  * **As etiquetas que EXISTEM na base — e aqui nao ha tabela de etiquetas para listar.**
  *
  * Na plataforma velha era `GET /core/v1/tag`. Aqui etiqueta e texto dentro de um array, entao a
@@ -149,7 +167,7 @@ export async function getTags({ limite = 1000 } = {}) {
       if (!name) continue;
       const id = chaveDaEtiqueta(name);
       if (!id) continue;
-      if (!por.has(id)) por.set(id, { id, name, grafias: [] });
+      if (!por.has(id)) por.set(id, entradaDeEtiqueta(id, name));
       const e = por.get(id);
       if (!e.grafias.includes(name)) e.grafias.push(name);
     }
@@ -211,10 +229,19 @@ export async function contarConversas({ filtros = {} } = {}) {
   return Number.isFinite(total) ? total : null;
 }
 
+/**
+ * **Devolve `{ total, userId }`, e NAO um numero — porque e assim que o painel le.**
+ *
+ * `panel.js` faz `const { total } = await api.contarMeusAbertos()`. A primeira versao disto
+ * devolvia o numero cru, e `total` sairia `undefined`: o contador mostraria vazio **sem erro
+ * nenhum**. Mesma classe do `message` das etiquetas — o adaptador so vale pelos nomes que quem
+ * chama le.
+ */
 export async function contarMeusAbertos() {
   const eu = await getAgente();
-  if (!eu?.userId) return null;
-  return contarConversas({ filtros: { atendente_id: 'eq.' + eu.userId, status: 'eq.em_atendimento' } });
+  if (!eu?.userId) return { total: 0, userId: null };
+  const total = await contarConversas({ filtros: { atendente_id: 'eq.' + eu.userId, status: 'eq.em_atendimento' } });
+  return { total: Number(total) || 0, userId: eu.userId };
 }
 
 /**
@@ -226,18 +253,28 @@ export async function contarMeusAbertos() {
  * conta e o que FOI RESOLVIDO, da meia-noite LOCAL para ca.
  */
 export async function contarMeuDia() {
-  const meiaNoite = new Date();
-  meiaNoite.setHours(0, 0, 0, 0);
-  const resolvidasHoje = await contarConversas({
-    filtros: { status: 'eq.resolvido', updated_at: 'gte.' + meiaNoite.toISOString() },
-  });
-  return { concluidos: resolvidasHoje, abertos: await contarMeusAbertos() };
+  const abertos = await contarMeusAbertos();
+  // **`{ abertos, concluidosHoje }` e o que o painel desestrutura** — nomear diferente aqui
+  // deixaria o contador do dia vazio, calado.
+  return { abertos: abertos.total, concluidosHoje: await contarConcluidosHoje() };
 }
 
 /** Quantas foram resolvidas hoje — a metade do "progresso do dia" que conta de verdade. */
 export async function contarConcluidosHoje() {
-  const d = await contarMeuDia();
-  return d.concluidos;
+  /**
+   * **O corte e a MEIA-NOITE LOCAL**, como em todo o projeto: a plataforma separa a conversa por
+   * data, e 23h contra 1h sao "ontem e hoje" para quem olha (03/09).
+   *
+   * **E o que conta e o RESOLVIDO, nunca a queda dos abertos:** medido na plataforma velha, o
+   * total de abertos SOBE num dia de trabalho bom, porque chega gente nova (353 -> 359 enquanto
+   * se conversava, 30/08).
+   */
+  const meiaNoite = new Date();
+  meiaNoite.setHours(0, 0, 0, 0);
+  const n = await contarConversas({
+    filtros: { status: 'eq.resolvido', updated_at: 'gte.' + meiaNoite.toISOString() },
+  });
+  return Number(n) || 0;
 }
 
 /**

@@ -86,10 +86,35 @@ export function onPageState(fn) {
   subscribers.push(fn);
 }
 
+/**
+ * **`page.getState()` PODE SER ASSINCRONO, e ler o retorno direto mata o laco em silencio.**
+ *
+ * No mobiliza.app ele devolve um objeto cru (o `pageStateLocal`, que le o DOM). No mobiliza.me
+ * ele e uma **promessa** — a resposta mora no estado do React e vem pela ponte com o gancho do
+ * mundo MAIN. Lendo `state.sessionId` de uma promessa, tudo vira `undefined`: a chave fica
+ * constante, nenhum assinante e avisado depois da primeira volta, e **o painel sobe e nunca mais
+ * reage a troca de conversa** — parecendo travado, sem erro nenhum na tela.
+ *
+ * `await` num valor que nao e promessa e inofensivo, entao o caminho da plataforma velha nao
+ * muda. **A guarda do `rodando` e que nao e opcional:** a ponte espera ate 4s pelo gancho, e sem
+ * ela um gancho lento acumularia uma pergunta a cada 500ms.
+ */
 export function watchPageState(intervalMs = 500) {
   let last = '';
-  setInterval(() => {
-    const state = page.getState();
+  let rodando = false;
+  setInterval(async () => {
+    if (rodando) return;
+    rodando = true;
+    let state;
+    try {
+      state = await page.getState();
+    } catch (err) {
+      console.warn('[WhatsFill] nao consegui ler o estado da pagina:', err);
+      rodando = false;
+      return;
+    }
+    rodando = false;
+    if (!state) return;
     const key = `${state.sessionId}|${state.isPending}|${state.hasComposer}|${state.dark}|${state.conversation}`;
     if (key === last) return;
     last = key;

@@ -1,4 +1,32 @@
-## 2026-10-27 - v3.207.0 - ESTADO DE AGORA - enviar, assumir, resolver e reabrir: os quatro medidos
+## 2026-10-27 - v3.208.0 - ESTADO DE AGORA - o painel monta no mobiliza.me
+
+### O PAINEL MONTA NO MOBILIZA.ME — o que voce precisa fazer
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+
+O painel aparece encaixado na direita, como no mobiliza.app.
+
+**Suba com "Automatizar" DESLIGADO na primeira vez.** Com ele ligado a rodada executa a tecla que
+a regra recomenda, e **a maioria das regras ENVIA** — e hoje eu nao tenho como provar que o fluxo
+inteiro se comporta igual na plataforma nova. Desligado, ele decide e PARA, mostrando o que faria,
+que e exatamente o que voce pediu em 26/10: *"mostrar antes, com a tela junto"*.
+
+### Tres defeitos meus que eu achei ANTES de montar
+
+Todos os tres falhariam **em silencio** — nenhum deles estoura, porque "campo que nao existe" vira
+`undefined`, e `undefined` vira "nao tem":
+
+| o que eu escrevi | o que acontecia |
+|---|---|
+| li o estado da pagina sem esperar a resposta | o painel subiria e **nunca reagiria** a troca de conversa |
+| devolvi a etiqueta com o nome errado de campo | **nenhuma etiqueta reconhecida** — cidade, COREDE e as protecoes todas caladas |
+| devolvi o contador com o nome errado | o numero do dia ficaria vazio |
+
+O segundo e o pior: o painel pareceria funcionar.
+
+**O que os achou foi ler quem CHAMA, e nao quem devolve** — e agora ha um teste que compara os
+dois lados automaticamente.
 
 ### O que esta no ar
 

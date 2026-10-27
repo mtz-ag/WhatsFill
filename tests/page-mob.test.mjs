@@ -4,13 +4,14 @@
  *
  * Rode: node tests/page-mob.test.mjs
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { check, grupo, fim } from './_harness.mjs';
 import * as adaptador from '../src/lib/page-mob.js';
 import { lerSessao } from '../src/lib/mob.js';
 import * as adaptadorApi from '../src/lib/api-mob.js';
 import { grafiasDaEtiqueta, filtroDeEtiqueta, getMessageTemplates } from '../src/lib/api-mob.js';
 import { podeMandar, entregou } from '../src/lib/api-mob.js';
+import { entradaDeEtiqueta } from '../src/lib/api-mob.js';
 import {
   chaveDaEtiqueta,
   etiquetasDoContato,
@@ -706,6 +707,144 @@ grupo('AS RPCs DE ESTADO — gravadas, e o estado original devolvido no fim');
   let m = '';
   try { await adaptadorApi.abrirAtendimento(); } catch (e) { m = e.message; }
   check(m.includes('nunca escreveu'), 'abrir atendimento para quem nunca escreveu recusa, dizendo o que falta');
+}
+
+grupo('O MANIFESTO: o painel monta no mobiliza.me, e o resto nao e tocado');
+{
+  const manifesto = JSON.parse(readFileSync(new URL('../manifest.json', import.meta.url), 'utf8'));
+  const scripts = manifesto.content_scripts;
+  const paraMe = scripts.filter((c) => c.matches.some((m) => m.includes('mobiliza.me')));
+
+  /**
+   * **O gancho do mundo MAIN e o painel sao DOIS scripts, e tem de ser.**
+   *
+   * `__reactFiber$<hash>` e expando, e expando **nao atravessa mundo isolado no Chrome**: um
+   * content script comum ve o mesmo `<button>` da fila e nao ve a chave. Entao quem le o estado
+   * do React roda no mundo da PAGINA, e o painel — que precisa de `chrome.runtime` — roda no
+   * isolado. Um so nao da conta dos dois lados.
+   */
+  const gancho = paraMe.find((c) => c.js[0].includes('mob-hook'));
+  const painel = paraMe.find((c) => c.js[0].includes('content.js'));
+  check(!!gancho, 'o gancho do React esta registrado no mobiliza.me');
+  check(gancho?.world === 'MAIN', 'e ele roda no mundo MAIN — sem isso nao enxerga o fiber');
+  check(!!painel, 'e o carregador do painel tambem');
+  check(painel?.world !== 'MAIN', 'o painel fica no mundo ISOLADO, que e onde `chrome.runtime` existe');
+
+  /**
+   * **O gancho sobe ANTES do painel.** O painel pergunta a ele desde o primeiro tique do laco de
+   * 500ms; subindo depois, as primeiras perguntas voltariam vazias e o painel diria "nao sei
+   * qual conversa esta aberta" numa tela que tem uma aberta.
+   */
+  check(gancho?.run_at === 'document_start', 'o gancho sobe em document_start');
+  check(scripts.indexOf(gancho) < scripts.indexOf(painel), 'e antes do painel na lista');
+
+  /** Sem isto o `import()` do `main.js` falha, e o painel nao abre. */
+  const recursos = manifesto.web_accessible_resources.find((w) => w.matches.some((m) => m.includes('mobiliza.me')));
+  check(!!recursos && recursos.resources.includes('src/main.js'), 'os arquivos do painel sao alcancaveis a partir do mobiliza.me');
+
+  /**
+   * **A ABA DO FACEBOOK NAO E TOCADA** — a correcao dele de 26/10, travada aqui: *"a aba facebook
+   * era pra plataforma do facebook... e deixar intocada a aba do facebook"*. E o mobiliza.app
+   * tambem continua inteiro, porque aquela plataforma ainda esta no ar.
+   */
+  const doFacebook = scripts.filter((c) => c.matches.some((m) => m.includes('facebook.com')));
+  check(doFacebook.length === 1 && doFacebook[0].js[0] === 'src/facebook-content.js', 'o Facebook continua com UM script, o dele');
+  const doApp = scripts.filter((c) => c.matches.some((m) => m.includes('mobiliza.app')));
+  check(doApp.length === 2, 'o mobiliza.app continua com os dois (gancho do Bearer + painel)');
+  check(doApp.some((c) => c.js[0] === 'src/page-hook.js' && c.world === 'MAIN'), 'inclusive o page-hook, que intercepta o Bearer');
+
+  /**
+   * **Arquivo que o manifesto cita e nao existe DERRUBA A EXTENSAO INTEIRA**, e o erro aponta
+   * para o manifesto e nao para o codigo — parece que o manifesto quebrou. Ja aconteceu neste
+   * projeto (01/09), com um `_s.cjs` esquecido na raiz.
+   */
+  const faltando = scripts.flatMap((c) => c.js).filter((f) => !existsSync(new URL('../' + f, import.meta.url)));
+  check(faltando.length === 0, `todo script citado existe no disco${faltando.length ? ' — FALTA: ' + faltando.join(', ') : ''}`);
+}
+
+grupo('A etiqueta tem de passar pelo filtro de QUEM A LE');
+{
+  /**
+   * **O defeito que este teste existe para impedir, e que eu cometi:** `tags.loadTags` faz
+   *
+   * ```js
+   * arr.filter((t) => t.active !== false && t.message)
+   * ```
+   *
+   * porque a API velha devolvia `{id, message, bgColor, textColor}`. Minha primeira versao
+   * devolvia so `name` — e o filtro jogaria **tudo** fora. Nenhuma etiqueta reconhecida, cidade
+   * e COREDE sem aplicar, `temEtiquetaDeCidade` sempre falso, a protecao de "sem interesse"
+   * nunca disparando. **Em silencio, porque lista vazia nao e erro.**
+   *
+   * Terceira vez que o adaptador erra assim (depois do `access_token` e do nome da tabela): ele
+   * so vale pelos nomes que QUEM CHAMA realmente le.
+   */
+  const e = entradaDeEtiqueta('serra', 'SERRA ');
+
+  // o filtro REAL, lido do `tags.js` e copiado aqui
+  const passaNoFiltroDoTags = (t) => t.active !== false && t.message;
+  check(!!passaNoFiltroDoTags(e), 'a entrada sobrevive ao filtro do tags.loadTags');
+  check(e.message === 'SERRA ', 'e `message` carrega a grafia do banco, com o espaco e tudo');
+  check(e.id === 'serra', 'o id continua sendo a chave normalizada, que e como o painel compara');
+
+  /**
+   * E o filtro esta COPIADO deste teste de proposito: se alguem mexer no `tags.js` e o filtro
+   * mudar, esta assercao continua passando e mente. Por isso ela e conferida contra a fonte.
+   */
+  const fonteTags = readFileSync(new URL('../src/lib/tags.js', import.meta.url), 'utf8');
+  check(fonteTags.includes('t.active !== false && t.message'), 'o filtro do tags.js continua sendo este — se mudar, esta copia tem de mudar junto');
+}
+
+grupo('O ADAPTADOR SO VALE PELOS NOMES QUE QUEM CHAMA LE');
+{
+  /**
+   * **Errei isto TRES vezes escrevendo este adaptador**, e as tres falhariam em silencio:
+   *
+   * 1. `Bearer ${sessao.access_token}` — `lerSessao` normaliza para `token`: **401 em tudo**;
+   * 2. `getTags` sem `message` — `tags.loadTags` filtra por ele: **lista vazia**, e com ela a
+   *    classificacao inteira degradando sem erro;
+   * 3. `contarMeuDia` devolvendo `concluidos` — o painel desestrutura `concluidosHoje`:
+   *    **contador vazio**.
+   *
+   * Nenhum verificador pega: sintaticamente esta tudo certo, e `undefined` nao estoura — ele
+   * vira "nao tem". O que pega e **comparar os dois lados**, e e isso que esta escrito aqui.
+   */
+  const fontePanel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const fonteApiMob = readFileSync(new URL('../src/lib/api-mob.js', import.meta.url), 'utf8');
+
+  // o que o painel DESESTRUTURA de cada chamada, copiado da fonte dele
+  const contratos = [
+    ['contarMeusAbertos', ['total']],
+    ['contarMeuDia', ['abertos', 'concluidosHoje']],
+  ];
+
+  for (const [nome, campos] of contratos) {
+    // lado do PAINEL: ele ainda desestrutura exatamente isto?
+    // sem regex de proposito: o escape de barra ja se perdeu uma vez na edicao por script
+    const marca = 'await api.' + nome + '(';
+    const pos = fontePanel.indexOf(marca);
+    const antes = pos < 0 ? '' : fontePanel.slice(Math.max(0, pos - 120), pos);
+    const ini = antes.lastIndexOf('{');
+    const fim = antes.lastIndexOf('}');
+    const m = pos >= 0 && ini >= 0 && fim > ini ? [null, antes.slice(ini + 1, fim)] : null;
+    check(!!m, `o painel continua desestruturando api.${nome}()`);
+    if (m) {
+      const lidos = m[1].split(',').map((x) => x.trim()).filter(Boolean);
+      for (const c of campos) check(lidos.includes(c), `o painel le \`${c}\` de ${nome}`);
+      for (const c of lidos) check(campos.includes(c), `e nao le nada alem de ${campos.join(', ')} (achei \`${c}\`)`);
+    }
+    // lado do ADAPTADOR: ele devolve esses nomes?
+    for (const c of campos) {
+      check(fonteApiMob.includes(c + ':'), `o adaptador devolve \`${c}\``);
+    }
+  }
+
+  /** O contato: `fields.readValues` le `customFieldId` e `valueString`, e nada mais. */
+  const fonteFields = readFileSync(new URL('../src/lib/fields.js', import.meta.url), 'utf8');
+  check(fonteFields.includes('item.customFieldId'), 'fields.readValues le `customFieldId`');
+  check(fonteFields.includes('item.valueString'), 'e `valueString`');
+  const fontePageMob = readFileSync(new URL('../src/lib/page-mob.js', import.meta.url), 'utf8');
+  check(fontePageMob.includes('customFieldId: campo') && fontePageMob.includes('valueString:'), 'e o adaptador monta o contato com os dois');
 }
 
 fim();
