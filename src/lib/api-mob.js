@@ -44,7 +44,7 @@
  */
 
 import * as mob from './mob.js';
-import { contatoDoBanco, chaveDaEtiqueta, COLUNA_DO_CAMPO, canaisDaConta } from './page-mob.js';
+import { contatoDoBanco, chaveDaEtiqueta, COLUNA_DO_CAMPO, canaisDaConta, ABERTO, EM_ATENDIMENTO, RESOLVIDO } from './page-mob.js';
 
 export { canaisDaConta };
 
@@ -406,12 +406,6 @@ export async function getConversaAnterior() {
 // O que ainda precisa de SONDA
 // ---------------------------------------------------------------------------
 
-export function abrirAtendimento() {
-  return recusar('Abrir atendimento (assumir_conversa)');
-}
-export function concluirAtendimento() {
-  return recusar('Resolver atendimento (resolver_conversa)');
-}
 export function listarEquipes() {
   return recusar('Listar equipes');
 }
@@ -547,4 +541,150 @@ export async function entregou(mensagemId) {
   if (m.envio_erro) return 'erro';
   if (String(m.envio_status || '').toLowerCase() === 'enviado') return 'enviado';
   return 'nao-da-para-saber';
+}
+
+// ---------------------------------------------------------------------------
+// AS RPCs DE ESTADO — medidas ao vivo em 27/10/2026, e devolvidas ao original
+// ---------------------------------------------------------------------------
+
+/**
+ * **As quatro funcoes que mexem no atendimento, gravadas observando a plataforma.**
+ *
+ * Ele abriu uma conversa e autorizou (*"deixei um perfil aberto para isso faça o teste"*). O
+ * estado original foi guardado ANTES do primeiro clique, e **devolvido no fim** — a conversa
+ * voltou a `aberto`, sem atendente, com `assumido_em` e `resolvido_em` nulos, exatamente como
+ * estava.
+ *
+ * **A assinatura nao dava para descobrir sem executar:** chamadas com corpo vazio devolvem
+ * `404 PGRST202` e o PostgREST **nao sugere os parametros**; e no pacote os nomes estao
+ * minificados. Entao foi o caminho do `recorder.js`: clicar uma vez e copiar.
+ *
+ * ```
+ * POST /rest/v1/rpc/assumir_conversa    { p_conversa_id } -> { ok }   status -> em_atendimento
+ * POST /rest/v1/rpc/resolver_conversa   { p_conversa_id } -> { ok }   status -> resolvido
+ * POST /rest/v1/rpc/reabrir_conversa    { p_conversa_id } -> { ok }   status -> em_atendimento
+ * POST /rest/v1/rpc/liberar_conversa    { p_conversa_id } -> { ok }   status -> aberto, sem atendente
+ * ```
+ *
+ * **TODAS tem a MESMA assinatura**, e e so o id da conversa — nao ha motivo, nem classificacao,
+ * nem equipe. Na plataforma velha concluir era `POST /chat/v1/session/{id}/complete` com corpo
+ * vazio, e a outra opcao do menu ("Classificar e concluir") levava `statusReasonId`: **aqui essa
+ * segunda opcao nao existe**.
+ *
+ * **E RESOLVER NAO ABRE DIALOGO.** Na plataforma velha concluir eram DOIS cliques (o botao do
+ * rodape abria um menu, e quem fechava era o item), mais um dialogo avisando que *"mensagens
+ * pendentes serao canceladas"* — e essa confirmacao custou uma rodada parada em todo contato
+ * (01/09). Aqui e um clique so, sem dialogo nenhum: medido, `[role="dialog"]` nao aparece.
+ *
+ * **O que NAO foi medido e o que acontece com mensagem em FILA ao resolver.** La o proprio
+ * dialogo dizia que elas seriam canceladas, e dai saiu a guarda de nao concluir com `QUEUED`
+ * pendente (01/10). Aqui nao ha dialogo para dizer — entao a guarda de `entregou()` fica ANTES
+ * de resolver, e nao depois.
+ */
+async function rpc(nome, corpo) {
+  const sessao = mob.sessaoDaPagina();
+  if (!sessao || mob.sessaoExpirada(sessao)) throw new Error(`${nome}: sessao da plataforma vencida — recarregue a aba`);
+  const chave = await mob.anon();
+
+  const r = await fetch(mob.REST + 'rpc/' + nome, {
+    method: 'POST',
+    headers: { apikey: chave, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(corpo),
+  });
+  const j = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(`${nome}: a plataforma recusou (${r.status}${j?.message ? ' — ' + j.message : ''})`);
+  return j;
+}
+
+/**
+ * **Assumir, e a releitura que prova.** `{ ok: true }` nao prova que o banco mudou — a licao de
+ * sempre. Quem responde e o `status`.
+ */
+export async function assumirConversa(conversaId) {
+  if (!conversaId) throw new Error('assumir: sem conversa');
+  await rpc(mob.RPCS.assumir, { p_conversa_id: conversaId });
+  return conferirStatus(conversaId, EM_ATENDIMENTO);
+}
+
+/**
+ * **Resolver — e o unico ponto deste adaptador que TIRA alguem da fila.**
+ *
+ * Por isso a releitura importa mais aqui que nas outras: um `ok` que nao virou `resolvido` faria
+ * a rodada contar como concluido o que continua aberto, e o contato voltaria em toda passada.
+ */
+export async function resolverConversa(conversaId) {
+  if (!conversaId) throw new Error('resolver: sem conversa');
+  await rpc(mob.RPCS.resolver, { p_conversa_id: conversaId });
+  return conferirStatus(conversaId, RESOLVIDO);
+}
+
+export async function reabrirConversa(conversaId) {
+  if (!conversaId) throw new Error('reabrir: sem conversa');
+  await rpc(mob.RPCS.reabrir, { p_conversa_id: conversaId });
+  return conferirStatus(conversaId, EM_ATENDIMENTO);
+}
+
+/** Devolve a conversa a fila: sem atendente, `aberto`. E o desfazer do `assumir`. */
+export async function liberarConversa(conversaId) {
+  if (!conversaId) throw new Error('liberar: sem conversa');
+  await rpc(mob.RPCS.liberar, { p_conversa_id: conversaId });
+  return conferirStatus(conversaId, ABERTO);
+}
+
+/**
+ * **A SONDA QUE RELE, com TRES estados.** `virou` quando o banco esta no estado esperado; `erro`
+ * quando esta noutro; **`nao-da-para-saber`** quando a releitura nao voltou.
+ *
+ * Nao saber nao e falhar: rede recusada pelo limitador e comum, e tratar isso como "nao mudou"
+ * faria a rodada tentar de novo em cima de uma conversa que ja mudou.
+ */
+async function conferirStatus(conversaId, esperado) {
+  let linhas = null;
+  try {
+    linhas = await mob.buscar('conversas', { select: 'id,status,atendente_id', filtros: { id: 'eq.' + conversaId }, limite: 1 });
+  } catch (_) {
+    return { ok: null, estado: 'nao-da-para-saber' };
+  }
+  const c = linhas?.[0];
+  if (!c) return { ok: null, estado: 'nao-da-para-saber' };
+  const agora = String(c.status || '').toLowerCase();
+  return { ok: agora === esperado, estado: agora, temAtendente: !!c.atendente_id };
+}
+
+/**
+ * **As contagens da fila, numa chamada so** — gravada junto com as outras:
+ * `whatsapp_inbox_contagens { p_tenant_id, p_instance_ids } -> { grupos, pessoas }`.
+ *
+ * A plataforma a chama depois de CADA assumir/resolver. Na velha, saber o numero de verdade era
+ * a consulta mais cara do painel (`skipCount=false`), e foi ela que estourou o limitador numa
+ * rodada de 222 conclusoes (24/09).
+ */
+export async function contagensDaFila(canalIds = []) {
+  const tenantId = mob.tenantAtivo();
+  if (!tenantId) return null;
+  return rpc(mob.RPCS.contagens, { p_tenant_id: tenantId, p_instance_ids: canalIds.length ? canalIds : null });
+}
+
+// --- os nomes que o `api.js` desvia, mapeados para as RPCs medidas ----------
+
+/** Concluir o atendimento e `resolver_conversa` — mesmo ato, outro nome. */
+export async function concluirAtendimento(conversaId) {
+  return resolverConversa(conversaId);
+}
+
+/**
+ * **"Abrir atendimento" NAO existe nesta plataforma, e isto nao e detalhe: e um buraco no
+ * DISPARO.**
+ *
+ * No mobiliza.app `PUT /chat/v1/session` CRIAVA a sessao, e era assim que a rodada de disparo
+ * (01/10) alcancava quem **nunca escreveu** — ela montava a lista por etiqueta e abria o
+ * atendimento do zero. Aqui a conversa nasce da mensagem que a pessoa manda: nao ha linha em
+ * `whatsapp_conversas` para quem nunca falou, e a funcao de envio exige `conversa_id`.
+ *
+ * **Como iniciar conversa com quem nunca escreveu nao foi medido** — talvez a propria funcao de
+ * borda aceite so `numero` e crie a conversa, talvez haja outra. Devolver qualquer coisa aqui
+ * faria o disparo percorrer uma lista inteira sem mandar nada e contar como enviado.
+ */
+export function abrirAtendimento() {
+  return recusar('Abrir atendimento para quem nunca escreveu');
 }

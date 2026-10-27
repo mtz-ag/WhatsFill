@@ -1,4 +1,4 @@
-## 2026-10-27 - v3.206.0 - ESTADO DE AGORA - o envio foi medido no seu numero, e funciona
+## 2026-10-27 - v3.207.0 - ESTADO DE AGORA - enviar, assumir, resolver e reabrir: os quatro medidos
 
 ### O que esta no ar
 
@@ -65,12 +65,37 @@ responde: { ok, conversa_id, mensagem_id, provider: "zapi" }
 - **a guarda do grupo fica tambem no ponto de envio**, e nao so em quem monta a lista. Sao 134
   conversas de grupo, e nenhuma delas tem a coluna que *pareceria* dizer que e grupo.
 
-### O que ainda nao da para fazer, e por que
+### Assumir, resolver e reabrir: medidos na conversa que voce deixou aberta
 
-**Resolver e assumir** continuam sem medida. Perguntei ao banco a assinatura das funcoes e ele
-nao conta; ler o pacote tambem nao, porque os nomes estao minificados. **So observando a
-plataforma clicar em "Resolver"** — e isso fecha um atendimento seu, entao nao fiz por conta
-propria.
+Voce abriu a **Thiago Mazzarello – Pelotas** e mandou testar. Antes do primeiro clique eu guardei
+o estado original; cliquei **Assumir**, **Resolver** e **Reabrir**, gravando cada um; e no fim
+**devolvi a conversa ao que ela era**: `aberto`, sem atendente, sem nada preenchido.
+
+```
+assumir   { p_conversa_id } -> { ok }    vira "em atendimento", com voce como atendente
+resolver  { p_conversa_id } -> { ok }    vira "resolvido"
+reabrir   { p_conversa_id } -> { ok }    volta para "em atendimento"
+liberar   { p_conversa_id } -> { ok }    volta para "aberto", sem atendente
+```
+
+**As quatro pedem so o id** — nao ha motivo nem classificacao. Na plataforma velha havia um
+segundo caminho ("Classificar e concluir") que mandava o motivo junto; **aqui ele nao existe**.
+
+**E resolver nao abre caixa de confirmacao.** Na antiga eram dois cliques e um aviso dizendo que
+mensagens pendentes seriam canceladas — e aquela confirmacao chegou a parar a rodada em todo
+contato. Aqui e um clique so.
+
+**O que isso deixa em aberto:** como a antiga avisava sobre mensagem em fila e esta nao avisa,
+a conferencia de "a mensagem saiu mesmo?" passa a vir **antes** de resolver, e nao depois.
+
+### Um buraco no disparo, que eu nao vou tapar adivinhando
+
+Na plataforma velha dava para **abrir atendimento com quem nunca escreveu** — era assim que o
+disparo por etiqueta alcancava a lista inteira. Aqui a conversa so existe depois que a pessoa
+manda a primeira mensagem, e a funcao de envio exige o id dela.
+
+Como fazer isso **nao foi medido**, entao esse caminho recusa. Devolver qualquer coisa ali faria
+o disparo percorrer a lista inteira sem mandar nada **e contar como enviado**.
 
 ### O mais importante de hoje: um disparo filtrado por "SERRA" alcancaria NINGUEM
 

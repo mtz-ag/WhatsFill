@@ -91,7 +91,7 @@
  */
 
 import * as mob from './mob.js';
-import { mandarTexto } from './api-mob.js';
+import { mandarTexto, assumirConversa, resolverConversa, reabrirConversa } from './api-mob.js';
 
 // ---------------------------------------------------------------------------
 // Etiquetas: a identidade e o rotulo NORMALIZADO
@@ -571,14 +571,38 @@ export async function sendText(texto, { exigirDoisSinais = true, ...opcoes } = {
 export function setComposerText() {
   return recusar('Escrever no campo de mensagem da plataforma');
 }
-export function clickIniciar() {
-  return recusar('Assumir o atendimento');
+/**
+ * **As tres teclas que mexem no atendimento ABERTO NA TELA DELE.**
+ *
+ * No mobiliza.app elas eram CLIQUES — e cada uma carregava uma armadilha de tela: o "Concluir"
+ * eram dois cliques (menu mais item, e o sumico do botao nao servia de confirmacao), o
+ * "Iniciar" exigia esperar o CAMPO aparecer e nao o botao sumir, e "Concluido" tinha dois
+ * retratos diferentes. **Aqui as tres sao uma funcao do banco, com releitura.**
+ *
+ * O que NAO mudou e de qual conversa elas falam: a que esta aberta na tela, por dois sinais.
+ * Para LER um sinal basta; para MEXER no atendimento, nao — assumir ou resolver a conversa
+ * errada mexe no atendimento de outra pessoa.
+ */
+async function conversaDaTela(oque, opcoes = {}) {
+  const st = await getState(opcoes);
+  if (!st.ganchoRespondeu) throw new Error(`${oque}: nao consegui ler qual conversa esta aberta — recuso mexer as cegas.`);
+  if (!st.sessionId) throw new Error(`${oque}: Nenhuma conversa aberta na tela — abra a conversa antes.`);
+  if (st.porQuantosSinais !== 'os-dois') {
+    throw new Error(`${oque}: sei qual conversa esta aberta por UM sinal so (${st.porQuantosSinais}) — recuso, porque errar aqui mexe no atendimento de outra pessoa.`);
+  }
+  return st.sessionId;
 }
-export function clickConcluir() {
-  return recusar('Resolver o atendimento');
+
+export async function clickIniciar(opcoes = {}) {
+  return assumirConversa(await conversaDaTela('Assumir', opcoes));
 }
-export function clickReiniciar() {
-  return recusar('Reabrir o atendimento');
+
+export async function clickConcluir(opcoes = {}) {
+  return resolverConversa(await conversaDaTela('Resolver', opcoes));
+}
+
+export async function clickReiniciar(opcoes = {}) {
+  return reabrirConversa(await conversaDaTela('Reabrir', opcoes));
 }
 export function sendMessageTemplate() {
   return recusar('Enviar modelo aprovado');

@@ -490,12 +490,45 @@ mudaram as maos, nao a cabeca.
   monta a fila: sao 134 conversas de grupo com `grupo_id` nulo em todas, e uma lista montada
   certo que passe por um caminho novo continua barrada ali.
 
-- **AS RPCs DE ESTADO CONTINUAM SEM MEDIR, e a assinatura NAO da para descobrir sem executar.**
-  `resolver_conversa`, `assumir_conversa` e `reabrir_conversa` devolvem **404 PGRST202** quando
-  chamadas com corpo vazio — o PostgREST diz *"could not find the function without parameters"*
-  e **nao sugere a assinatura**. Ler o pacote tambem nao resolve (os nomes estao minificados).
-  **So observando a plataforma clicar em "Resolver"**, como foi feito com o envio. Nao foi feito
-  porque isso FECHA um atendimento dele.
+- **AS QUATRO RPCs DE ESTADO FORAM GRAVADAS (27/10/2026), E O ESTADO ORIGINAL FOI DEVOLVIDO.**
+  Ele abriu uma conversa e autorizou (*"deixei um perfil aberto para isso faca o teste"*). A
+  assinatura **nao dava para descobrir sem executar**: corpo vazio devolve `404 PGRST202` e o
+  PostgREST **nao sugere os parametros**, e no pacote os nomes estao minificados. Entao foi o
+  caminho do `recorder.js`: clicar uma vez e copiar.
+  ```
+  POST rpc/assumir_conversa    { p_conversa_id } -> { ok }   -> em_atendimento, assumido_em
+  POST rpc/resolver_conversa   { p_conversa_id } -> { ok }   -> resolvido, resolvido_em
+  POST rpc/reabrir_conversa    { p_conversa_id } -> { ok }   -> em_atendimento
+  POST rpc/liberar_conversa    { p_conversa_id } -> { ok }   -> aberto, SEM atendente
+  POST rpc/whatsapp_inbox_contagens { p_tenant_id, p_instance_ids } -> { grupos, pessoas }
+  ```
+  **TODAS tem a mesma assinatura, e e so o id** — nao ha motivo, classificacao nem equipe. Na
+  plataforma velha a outra opcao do menu (*"Classificar e concluir"*) levava `statusReasonId`:
+  **aqui ela nao existe**.
+  **E RESOLVER NAO ABRE DIALOGO** (medido: `[role="dialog"]` nao aparece). Na velha concluir eram
+  **dois cliques** — o botao do rodape abria um menu e quem fechava era o item — mais um dialogo
+  avisando que *"mensagens pendentes serao canceladas"*, confirmacao que custou uma rodada parada
+  em todo contato (01/09). Aqui e um clique so.
+  **O que NAO foi medido e o que acontece com mensagem em FILA ao resolver.** La o proprio
+  dialogo dizia que elas seriam canceladas, e dai saiu a guarda de nao concluir com `QUEUED`
+  pendente (01/10). Aqui nao ha dialogo para dizer — entao a conferencia de `entregou()` fica
+  ANTES de resolver, e nao depois.
+  **E o estado original foi guardado antes do primeiro clique e devolvido no fim** (`liberar`), o
+  que deixou a conversa dele exatamente como estava: `aberto`, sem atendente.
+
+- **MEXER NO ATENDIMENTO EXIGE DOIS SINAIS; LER basta com um.** `sendText`, `clickIniciar`,
+  `clickConcluir` e `clickReiniciar` recusam quando `conversaAberta` respondeu `so-um-sinal`.
+  Enviar na conversa errada manda a mensagem de uma pessoa para OUTRA; assumir ou resolver a
+  errada tira da fila quem ninguem atendeu, ou toma o caso de outro operador. **A mesma leitura
+  que serve para o painel classificar nao serve para escrever.**
+
+- **"ABRIR ATENDIMENTO" PARA QUEM NUNCA ESCREVEU NAO EXISTE AQUI — e isso e um buraco no
+  DISPARO.** No mobiliza.app `PUT /chat/v1/session` **criava** a sessao, e era assim que a rodada
+  de 01/10 alcancava quem nunca falou: montava a lista por etiqueta e abria o atendimento do
+  zero. Aqui a conversa nasce da mensagem da pessoa — nao ha linha em `whatsapp_conversas` para
+  quem nunca escreveu, e a funcao de envio exige `conversa_id`. **Como fazer isso nao foi
+  medido**, e `api-mob.abrirAtendimento` RECUSA: devolver qualquer coisa faria o disparo percorrer
+  a lista inteira sem mandar nada e contar como enviado.
 
 - **NADA MAIS ESCREVE, de proposito.** `mob.js` so LE. Assumir, responder, resolver e gravar
   cidade exigem medir o corpo de cada funcao com uma sonda no contato de teste — a disciplina de

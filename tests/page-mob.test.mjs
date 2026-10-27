@@ -309,9 +309,6 @@ grupo('o que ainda nao foi medido RECUSA, e nunca finge que fez');
    */
   const naoMedidos = [
     ['setComposerText', setComposerText],
-    ['clickIniciar', clickIniciar],
-    ['clickConcluir', clickConcluir],
-    ['clickReiniciar', clickReiniciar],
     ['sendMessageTemplate', sendMessageTemplate],
     ['enviarImagem', enviarImagem],
   ];
@@ -329,7 +326,18 @@ grupo('o que ainda nao foi medido RECUSA, e nunca finge que fez');
    * aprenda um contrato que nao existe mais — o pre-requisito que envelhece junto com o desenho
    * que o criou (26/09), e que ja barrou a fila inteira uma vez.
    */
-  check(typeof sendText === 'function', 'sendText existe — e NAO esta na lista acima, porque foi medido');
+  /**
+   * **Quatro nomes sairam desta lista em 27/10/2026**, e nenhum saiu porque alguem achou que ja
+   * dava: `sendText` pela sonda no contato de teste dele, e `clickIniciar`/`clickConcluir`/
+   * `clickReiniciar` porque ele abriu uma conversa e autorizou os cliques — assumir, resolver e
+   * reabrir foram GRAVADOS, e o estado original foi devolvido no fim.
+   */
+  for (const [nome, fn] of [['sendText', sendText], ['clickIniciar', clickIniciar], ['clickConcluir', clickConcluir], ['clickReiniciar', clickReiniciar]]) {
+    check(typeof fn === 'function', `${nome} existe e NAO esta na lista acima: foi medido`);
+    let msg = '';
+    try { await fn({ janela: null }); } catch (e) { msg = String(e.message); }
+    check(!msg.includes('sonda'), `${nome} nao recusa mais por falta de sonda`);
+  }
 
   check((await learnStart()).desnecessario === true, 'o contrato de escrita nao tem mais o que aprender');
   check((await learnStatus()).estado === 'desnecessario', 'e a tela sabe disso');
@@ -451,7 +459,7 @@ grupo('o nome do campo da sessao tem UM dono — e eu ja errei este');
    * outro lugar que pode divergir do `mob.js` sobre como se autentica.
    */
   const deMao = (codigo.match(/await fetch\(/g) || []).length;
-  check(deMao === 2, `duas requisicoes de mao e o esperado (achei ${deMao}): a CONTAGEM, que precisa do cabecalho Prefer, e o ENVIO, que e POST numa funcao de borda. Toda LEITURA passa pelo mob.buscar`);
+  check(deMao === 3, `tres requisicoes de mao, e so estas (achei ${deMao}): a CONTAGEM (precisa do cabecalho Prefer), o ENVIO (POST na funcao de borda) e o rpc() (POST nas funcoes do banco). Toda LEITURA passa pelo mob.buscar, que e quem sabe o nome do campo da sessao`);
 }
 
 grupo('GRAFIAS: um disparo filtrado por "SERRA" alcancaria NINGUEM');
@@ -631,6 +639,73 @@ grupo('ENVIAR exige saber a conversa por DOIS sinais');
 
   const semConversa = await erro(() => sendText('oi', { janela: janelaQue(null, '') }));
   check(semConversa && semConversa.includes('Nenhuma conversa aberta'), 'sem conversa aberta, pede que ele abra');
+}
+
+grupo('AS RPCs DE ESTADO — gravadas, e o estado original devolvido no fim');
+{
+  /**
+   * **As quatro, medidas em 27/10/2026 observando a plataforma**, porque a assinatura nao dava
+   * para descobrir: corpo vazio devolve 404 PGRST202 e o PostgREST **nao sugere os parametros**,
+   * e no pacote os nomes estao minificados.
+   *
+   * ```
+   * assumir_conversa  { p_conversa_id } -> { ok }   status -> em_atendimento
+   * resolver_conversa { p_conversa_id } -> { ok }   status -> resolvido
+   * reabrir_conversa  { p_conversa_id } -> { ok }   status -> em_atendimento
+   * liberar_conversa  { p_conversa_id } -> { ok }   status -> aberto, sem atendente
+   * ```
+   *
+   * **TODAS tem a mesma assinatura, e e so o id** — nao ha motivo nem classificacao. Na
+   * plataforma velha a outra opcao do menu ("Classificar e concluir") levava `statusReasonId`;
+   * **aqui ela nao existe**. E RESOLVER NAO ABRE DIALOGO: medido, `[role="dialog"]` nao aparece
+   * — contra os dois cliques mais o aviso de "mensagens pendentes serao canceladas" da antiga,
+   * que custou uma rodada parada em todo contato (01/09).
+   */
+  const fonte = readFileSync(new URL('../src/lib/api-mob.js', import.meta.url), 'utf8');
+  for (const nome of ['assumir', 'resolver', 'reabrir', 'liberar']) {
+    check(fonte.includes(`mob.RPCS.${nome}, { p_conversa_id`), `${nome} manda { p_conversa_id }, como foi gravado`);
+  }
+
+  /**
+   * **MEXER NO ATENDIMENTO EXIGE DOIS SINAIS, como enviar.** Assumir ou resolver a conversa
+   * errada mexe no atendimento de OUTRA pessoa — tira da fila quem ninguem atendeu, ou toma o
+   * caso de outro operador. A leitura que basta para o painel classificar nao basta aqui.
+   */
+  const ORIGEM = 'https://mobiliza.me';
+  const janelaQue = (conversa, por) => {
+    const ouvintes = [];
+    const j = {
+      addEventListener: (t, fn) => { if (t === 'message') ouvintes.push(fn); },
+      removeEventListener: (t, fn) => { const i = ouvintes.indexOf(fn); if (i >= 0) ouvintes.splice(i, 1); },
+      postMessage(msg) {
+        const ev = { source: j, origin: ORIGEM, data: { __whatsfill: 'mob-page', type: 'aberta',
+          payload: { pedido: msg.payload.pedido, por, conversa } } };
+        for (const fn of [...ouvintes]) fn(ev);
+      },
+    };
+    return j;
+  };
+  const erro = async (fn) => { try { await fn(); return ''; } catch (e) { return e.message; } };
+
+  for (const [nome, fn] of [['Assumir', clickIniciar], ['Resolver', clickConcluir], ['Reabrir', clickReiniciar]]) {
+    const um = await erro(() => fn({ janela: janelaQue({ id: 'c-1', status: 'aberto' }, 'so-um-sinal') }));
+    check(um.includes('UM sinal'), `${nome} recusa com um sinal so`);
+    const mudo = await erro(() => fn({ janela: null }));
+    check(mudo.includes('as cegas'), `${nome} recusa quando o gancho nao responde`);
+    const vazio = await erro(() => fn({ janela: janelaQue(null, '') }));
+    check(vazio.includes('Nenhuma conversa aberta'), `${nome} recusa sem conversa aberta`);
+  }
+
+  /**
+   * **"Abrir atendimento" para quem NUNCA escreveu continua recusando — e isso e um buraco no
+   * DISPARO, nao um detalhe.** La `PUT /chat/v1/session` CRIAVA a sessao, e era assim que a
+   * rodada alcancava quem nunca falou. Aqui a conversa nasce da mensagem da pessoa, e a funcao
+   * de envio exige `conversa_id`. Devolver qualquer coisa faria o disparo percorrer a lista
+   * inteira sem mandar nada e contar como enviado.
+   */
+  let m = '';
+  try { await adaptadorApi.abrirAtendimento(); } catch (e) { m = e.message; }
+  check(m.includes('nunca escreveu'), 'abrir atendimento para quem nunca escreveu recusa, dizendo o que falta');
 }
 
 fim();
