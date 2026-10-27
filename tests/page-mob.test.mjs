@@ -7,7 +7,8 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { check, grupo, fim } from './_harness.mjs';
 import * as adaptador from '../src/lib/page-mob.js';
-import { lerSessao } from '../src/lib/mob.js';
+import { lerSessao, HOST } from '../src/lib/mob.js';
+import { regraDeEncaixe, MIN_WIDTH, MAX_WIDTH } from '../src/lib/dock.js';
 import * as adaptadorApi from '../src/lib/api-mob.js';
 import { grafiasDaEtiqueta, filtroDeEtiqueta, getMessageTemplates } from '../src/lib/api-mob.js';
 import { podeMandar, entregou } from '../src/lib/api-mob.js';
@@ -845,6 +846,58 @@ grupo('O ADAPTADOR SO VALE PELOS NOMES QUE QUEM CHAMA LE');
   check(fonteFields.includes('item.valueString'), 'e `valueString`');
   const fontePageMob = readFileSync(new URL('../src/lib/page-mob.js', import.meta.url), 'utf8');
   check(fontePageMob.includes('customFieldId: campo') && fontePageMob.includes('valueString:'), 'e o adaptador monta o contato com os dois');
+}
+
+grupo('O EMPURRAO — por que o padding no html nao alcanca a plataforma nova');
+{
+  /**
+   * Relato dele: *"sobrepos em vez de empurrar"*. **Medido ao vivo em 27/10/2026: o padding
+   * estava sendo aplicado certo e nao alcancava nada** — a tela de conversas e
+   * `position: fixed; inset: 0`, e elemento `fixed` resolve contra a VIEWPORT, nunca contra a
+   * caixa do `html`. Com 380px de padding, a tela continuava com os 1708px da janela inteira.
+   */
+  const regra = regraDeEncaixe('mobiliza.me', 380);
+
+  check(regra.includes('#root'), 'na plataforma nova o alvo e o #root');
+  check(regra.includes('position: fixed'), 'ele vira fixed');
+  check(regra.includes('right: 380px'), 'com right na largura do painel');
+
+  /**
+   * **`contain: layout` e a peca que faz o resto funcionar:** sem ela, os `fixed` de dentro
+   * continuam resolvendo contra a viewport e o encolhimento do #root nao os alcanca. Medido:
+   * #root 1328x791, a tela 1328x791 em x=0, zero elementos transbordando, sem barra horizontal.
+   */
+  check(regra.includes('contain: layout'), 'e ganha contain: layout — e ela que prende os fixed de dentro');
+
+  /**
+   * **A ASSERCAO QUE IMPORTA: o alvo NUNCA pode ser o `body`.**
+   *
+   * E a "simplificacao" obvia para quem mexer aqui depois, e ela encolheria O PAINEL junto: ele
+   * e pendurado em `document.body` (`main.js`), entao `contain` no body o tornaria filho do
+   * bloco contenedor e ele iria parar 380px a esquerda de onde deveria. O `#root` e IRMAO do
+   * `#whatsfill-host` — e por isso que da para prender um sem prender o outro.
+   */
+  check(!/html\.\S+\s+body\s*\{/.test(regra), 'e NUNCA o body — o painel e filho dele e encolheria junto');
+  const fonteMain = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+  check(fonteMain.includes('document.body.append(host)'), 'o painel continua pendurado no body (o que torna a regra acima obrigatoria)');
+
+  /** **Tabela de PERMISSAO:** quem nao esta nela recebe so o padding, que e o que sempre funcionou. */
+  check(regraDeEncaixe('mobiliza.app', 380) === '', 'a plataforma velha nao recebe regra extra');
+  check(regraDeEncaixe('facebook.com', 380) === '', 'o Facebook tambem nao — la o cabecalho e static e o padding basta');
+  check(regraDeEncaixe('', 380) === '' && regraDeEncaixe(null, 380) === '', 'hostname ilegivel nao inventa regra');
+
+  check(regraDeEncaixe('www.mobiliza.me', 380).includes('#root'), 'o www nao esconde a plataforma');
+
+  /** A largura passa pelo mesmo `clamp` do padding — senao os dois discordariam na borda. */
+  check(regraDeEncaixe('mobiliza.me', 99999).includes('right: ' + MAX_WIDTH + 'px'), 'largura absurda e limitada igual ao padding');
+  check(regraDeEncaixe('mobiliza.me', 10).includes('right: ' + MIN_WIDTH + 'px'), 'e a largura minima tambem');
+
+  /**
+   * **Dois lugares escrevendo o mesmo hostname divergem na primeira troca.** Se o `HOST` do
+   * `mob.js` mudar e a tabela daqui nao, o painel volta a sobrepor — e o defeito aparece so
+   * quando ele abre a plataforma.
+   */
+  check(regraDeEncaixe(HOST, 380).includes('#root'), 'a tabela do dock e o HOST do mob.js falam da MESMA plataforma');
 }
 
 fim();

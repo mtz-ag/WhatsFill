@@ -454,6 +454,40 @@ mudaram as maos, nao a cabeca.
   na tela; silencio, nao** — a mesma licao do timeout da IA (08/09), que valia para a ponte com o
   service worker e vale igual para a ponte entre mundos.
 
+- **O PAINEL SOBREPOS EM VEZ DE EMPURRAR, E O PADDING ESTAVA CERTO — ELE E QUE NAO ALCANCA NADA**
+  (27/10/2026, relato dele na primeira vez que o painel subiu no mobiliza.me: *"sobrepos em vez de
+  empurrar"*). **Medido antes de mexer, e o diagnostico natural era o errado:** o `dock.js` aplicava
+  os 380px de `padding-right` no `html` normalmente — o que ele nao alcanca e a tela, porque ela e
+  **`position: fixed; inset: 0`**, e elemento `fixed` resolve contra a **VIEWPORT**, nunca contra a
+  caixa do `html`. Com o padding aplicado, a tela continuava com **1708px**, a janela inteira.
+  ```
+  antes:  html padding-right 380px aplicado  ->  div.fixed.inset-0 = 1708 (a janela toda)
+  depois: #root fixed inset-0 right:380 + contain:layout  ->  #root 1328x791, tela 1328x791 em x=0
+          toast x=908 (era w-full), transbordou 0, barra horizontal nao, faixa livre 379,5
+  ```
+  **O que resolve e PRENDER o app:** `contain: layout` faz do `#root` o **bloco contenedor** dos
+  `fixed` de dentro — e so isso alcanca o que o padding nao alcancava.
+  **`contain: layout` faz `fixed` virar `absolute` na pratica** (passa a rolar com a pagina), e isso
+  foi medido ANTES de escolher: `scrollHeight` 791 === `clientHeight` 791, **a pagina nao rola**
+  (quem rola sao os conteineres internos). Numa plataforma que rolasse, a mesma regra grudaria o
+  cabecalho no lugar errado.
+  **O ALVO E `#root` E NUNCA O `body`, e essa e a assercao que o teste trava:** o painel e pendurado
+  em `document.body` (`main.js`), entao `contain` no body encolheria **o proprio painel** junto, e
+  ele iria parar 380px a esquerda. `#root` e **IRMAO** do `#whatsfill-host`, e os **tres** elementos
+  `fixed` da plataforma vivem dentro dele — conferidos um a um. Reintroduzindo o `body` como alvo,
+  caem 4 assercoes.
+  **E `#root` nao e chute nem classe utilitaria:** e o ponto de montagem escrito no `index.html` do
+  Vite. Mudando de nome, o empurrao **para de empurrar** e ele ve a sobreposicao — falha visivel, que
+  e a unica forma aceitavel de um seletor envelhecer aqui.
+  **A tabela e de PERMISSAO** (`PRESOS_NA_VIEWPORT`): plataforma que nao esta nela recebe so o
+  padding, que e o que sempre funcionou no mobiliza.app e no Facebook. **E o hostname e conferido
+  contra `mob.HOST`** — dois lugares escrevendo o mesmo dominio divergem na primeira troca, e o
+  defeito so apareceria quando ele abrisse a plataforma.
+  **Hipotese declarada, nao medida:** popup do Radix que se pendure no `body` em vez do `#root`
+  escaparia do encolhimento e abriria sob o painel. Nenhum dos tres `fixed` faz isso e nada foi para
+  o body ao tentar, mas **nao consegui abrir um menu por script** (o Radix escuta `pointerdown`).
+  Aparecendo, o sintoma e visivel e o conserto e um seletor a mais no `dock.js`.
+
 - **A CHAMADA AO SUPABASE SAI DA ABA, e e por isso que o CORS nao incomoda.** Em MV3 o `fetch` de
   content script carrega a origem da PAGINA — entao ele chega ao Supabase como
   `Origin: https://mobiliza.me`, exatamente como a requisicao que a propria plataforma faz. Tirar a

@@ -1,11 +1,46 @@
-## 2026-10-27 - v3.208.0 - ESTADO DE AGORA - o painel monta no mobiliza.me
+## 2026-10-27 - v3.209.0 - ESTADO DE AGORA - o painel monta E empurra no mobiliza.me
 
 ### O PAINEL MONTA NO MOBILIZA.ME — o que voce precisa fazer
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
 
-O painel aparece encaixado na direita, como no mobiliza.app.
+O painel aparece encaixado na direita **empurrando a pagina**, como no mobiliza.app. Confira
+**3.209.0** no cabecalho do painel — e o que separa *"o conserto nao funcionou"* de *"o conserto
+nao chegou"*.
+
+### O EMPURRAO — voce viu *"sobrepos em vez de empurrar"*, e o padding estava certo
+
+**Medido antes de mexer, e o diagnostico natural era o errado:** o `dock.js` aplicava os 380px no
+`html` normalmente. **O que ele nao alcanca e a tela** — ela e `position: fixed; inset: 0`, e
+elemento `fixed` resolve contra a **janela**, nunca contra a caixa do `html`. Com o padding
+aplicado, a tela continuava com **1708px**: a janela inteira, por baixo do painel.
+
+| | tela de conversas | barra horizontal | transbordou |
+|---|---|---|---|
+| antes | **1708** (a janela toda) | nao | — |
+| depois | **1328** em x=0 | nao | **0 elementos** |
+
+Faixa livre a direita: **379,5px** para um painel de 380. O toast da plataforma, que era `w-full`,
+passou a caber na area do app em vez de abrir sob o painel.
+
+**O conserto e prender o app**, nao empurrar mais forte: o `#root` ganha `contain: layout`, que faz
+dele o bloco contenedor dos `fixed` de dentro.
+
+**Duas coisas que eu medi ANTES de escolher, e que seriam o erro caro:**
+
+1. **A pagina nao rola** (`scrollHeight` 791 === `clientHeight` 791). Isso importa porque
+   `contain: layout` faz `fixed` virar `absolute` na pratica — numa plataforma que rolasse, esta
+   mesma regra grudaria o cabecalho no lugar errado.
+2. **O alvo nao pode ser o `body`**, que e a simplificacao obvia: o painel e pendurado nele, entao
+   encolheria junto e iria parar 380px a esquerda. O `#root` e **irmao** do painel, e os tres
+   elementos `fixed` da plataforma vivem dentro dele — conferidos um a um. Reintroduzindo o `body`
+   como alvo, **caem 4 assercoes**.
+
+**Uma ponta que eu NAO medi e nao vou fingir que medi:** popup do Radix que se pendure no `body` em
+vez do `#root` escaparia e abriria sob o painel. Nada foi para o `body` nas minhas medicoes, mas
+**nao consegui abrir um menu por script**. Se voce vir um menu cortado pelo painel, me diga — o
+conserto e um seletor.
 
 **Suba com "Automatizar" DESLIGADO na primeira vez.** Com ele ligado a rodada executa a tecla que
 a regra recomenda, e **a maioria das regras ENVIA** — e hoje eu nao tenho como provar que o fluxo
