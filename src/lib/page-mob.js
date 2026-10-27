@@ -91,6 +91,7 @@
  */
 
 import * as mob from './mob.js';
+import { mandarTexto } from './api-mob.js';
 
 // ---------------------------------------------------------------------------
 // Etiquetas: a identidade e o rotulo NORMALIZADO
@@ -547,8 +548,25 @@ export async function diagnosticarAbas() {
 
 // --- o que ainda PRECISA de sonda -------------------------------------------
 
-export function sendText() {
-  return recusar('Enviar mensagem');
+/**
+ * **MANDA A MENSAGEM NA CONVERSA QUE ESTA ABERTA NA TELA DELE.**
+ *
+ * O `page.sendText` do mobiliza.app digitava no campo e apertava enviar; aqui quem manda e a
+ * funcao de borda, e o que amarra as duas metades e **qual conversa esta aberta** — por dois
+ * sinais que tem de concordar.
+ *
+ * **Discordando, nao manda.** Afirmar a conversa errada aqui nao e mostrar a pessoa errada na
+ * tela: e **mandar a mensagem de uma pessoa para outra**, e isso nao tem volta. Por isso o
+ * `so-um-sinal` tambem nao serve para enviar — ele basta para o painel LER, nunca para escrever.
+ */
+export async function sendText(texto, { exigirDoisSinais = true, ...opcoes } = {}) {
+  const st = await getState(opcoes);
+  if (!st.ganchoRespondeu) throw new Error('Nao consegui ler qual conversa esta aberta (o gancho da pagina nao respondeu) — recuso mandar as cegas.');
+  if (!st.sessionId) throw new Error('Nenhuma conversa aberta na tela — abra a conversa antes de enviar.');
+  if (exigirDoisSinais && st.porQuantosSinais !== 'os-dois') {
+    throw new Error(`Sei qual conversa esta aberta por UM sinal so (${st.porQuantosSinais}) — recuso enviar, porque errar aqui e mandar a mensagem de uma pessoa para outra.`);
+  }
+  return mandarTexto({ conversaId: st.sessionId, texto });
 }
 export function setComposerText() {
   return recusar('Escrever no campo de mensagem da plataforma');

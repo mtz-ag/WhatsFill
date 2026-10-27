@@ -1,4 +1,4 @@
-## 2026-10-27 - v3.205.0 - ESTADO DE AGORA - um disparo por "SERRA" alcancaria ninguem, e eu achei isso antes de montar
+## 2026-10-27 - v3.206.0 - ESTADO DE AGORA - o envio foi medido no seu numero, e funciona
 
 ### O que esta no ar
 
@@ -34,6 +34,43 @@ ela estava boa.
 
 **O conserto nao foi trocar o nome nos dois lugares: foi deixar de ter dois.** Toda leitura passa
 pelo `mob.buscar`, que e quem sabe o nome do campo.
+
+### O envio funciona — medido no seu contato de teste
+
+Voce autorizou, e eu mandei **duas mensagens** para o Thiago Kellermann:
+
+1. **pela tela da plataforma**, com um gravador ligado, para copiar o formato exato;
+2. **pelo corpo que o adaptador monta**, para provar que o caminho dele funciona.
+
+**As duas chegaram**, e eu confirmei relendo o banco: `envio_status: "enviado"`, com o id do
+WhatsApp preenchido e nenhum erro.
+
+**Por que gravar em vez de ler o codigo:** o formato esta minificado no pacote da plataforma — os
+nomes dos campos nao aparecem. Entao foi o mesmo caminho que esta extensao sempre usou no
+mobiliza.app: observar a plataforma fazendo uma vez e copiar.
+
+```
+enviar:   { instance_id, numero, conversa_id, tipo, conteudo }
+responde: { ok, conversa_id, mensagem_id, provider: "zapi" }
+```
+
+**O `zapi` confirma o que ja estava escrito:** o seu numero e nao oficial, entao nao ha janela de
+24h nem modelo aprovado — o que pune e o ritmo e a repeticao.
+
+**Duas guardas que ficaram no envio:**
+
+- **mandar exige saber a conversa por DOIS sinais.** Ler basta com um; escrever nao. Errar a
+  conversa aqui nao e mostrar a pessoa errada na tela — e mandar a mensagem de uma pessoa para
+  outra.
+- **a guarda do grupo fica tambem no ponto de envio**, e nao so em quem monta a lista. Sao 134
+  conversas de grupo, e nenhuma delas tem a coluna que *pareceria* dizer que e grupo.
+
+### O que ainda nao da para fazer, e por que
+
+**Resolver e assumir** continuam sem medida. Perguntei ao banco a assinatura das funcoes e ele
+nao conta; ler o pacote tambem nao, porque os nomes estao minificados. **So observando a
+plataforma clicar em "Resolver"** — e isso fecha um atendimento seu, entao nao fiz por conta
+propria.
 
 ### O mais importante de hoje: um disparo filtrado por "SERRA" alcancaria NINGUEM
 

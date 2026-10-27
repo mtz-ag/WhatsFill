@@ -10,6 +10,7 @@ import * as adaptador from '../src/lib/page-mob.js';
 import { lerSessao } from '../src/lib/mob.js';
 import * as adaptadorApi from '../src/lib/api-mob.js';
 import { grafiasDaEtiqueta, filtroDeEtiqueta, getMessageTemplates } from '../src/lib/api-mob.js';
+import { podeMandar, entregou } from '../src/lib/api-mob.js';
 import {
   chaveDaEtiqueta,
   etiquetasDoContato,
@@ -300,8 +301,13 @@ grupo('o numero caiu? — e os TRES estados, nunca dois');
 
 grupo('o que ainda nao foi medido RECUSA, e nunca finge que fez');
 {
+  /**
+   * **`sendText` SAIU desta lista em 27/10/2026, e e a unica que saiu.** Ela deixou de recusar
+   * porque a funcao de borda foi **medida ao vivo** no contato de teste dele: duas mensagens,
+   * com releitura confirmando `envio_status: "enviado"`. O que destrava uma recusa aqui nunca e
+   * alguem achar que ja da — e a sonda.
+   */
   const naoMedidos = [
-    ['sendText', sendText],
     ['setComposerText', setComposerText],
     ['clickIniciar', clickIniciar],
     ['clickConcluir', clickConcluir],
@@ -323,6 +329,8 @@ grupo('o que ainda nao foi medido RECUSA, e nunca finge que fez');
    * aprenda um contrato que nao existe mais — o pre-requisito que envelhece junto com o desenho
    * que o criou (26/09), e que ja barrou a fila inteira uma vez.
    */
+  check(typeof sendText === 'function', 'sendText existe — e NAO esta na lista acima, porque foi medido');
+
   check((await learnStart()).desnecessario === true, 'o contrato de escrita nao tem mais o que aprender');
   check((await learnStatus()).estado === 'desnecessario', 'e a tela sabe disso');
   check((await closeOverlay()) === true, 'nao ha overlay do Material para fechar');
@@ -443,7 +451,7 @@ grupo('o nome do campo da sessao tem UM dono — e eu ja errei este');
    * outro lugar que pode divergir do `mob.js` sobre como se autentica.
    */
   const deMao = (codigo.match(/await fetch\(/g) || []).length;
-  check(deMao === 1, `so a contagem monta requisicao de mao (achei ${deMao}) — o resto passa pelo mob.buscar`);
+  check(deMao === 2, `duas requisicoes de mao e o esperado (achei ${deMao}): a CONTAGEM, que precisa do cabecalho Prefer, e o ENVIO, que e POST numa funcao de borda. Toda LEITURA passa pelo mob.buscar`);
 }
 
 grupo('GRAFIAS: um disparo filtrado por "SERRA" alcancaria NINGUEM');
@@ -527,7 +535,102 @@ grupo('nao existe modelo aprovado aqui — e devolver vazio e a resposta CERTA')
     .split(String.fromCharCode(10))
     .filter((l) => !/^\s*(\*|\/\/|\/\*)/.test(l))
     .join(String.fromCharCode(10));
-  check(!soCodigo.includes('instance_id'), 'nenhuma consulta filtra por `instance_id`: a coluna nao existe em whatsapp_templates');
+  /**
+   * **O invariante e estreito de proposito:** `instance_id` E um campo legitimo do CORPO do
+   * envio (medido: `{instance_id, numero, conversa_id, tipo, conteudo}`). O que nao pode existir
+   * e um FILTRO por ele — `instance_id: 'eq.'` —, porque a coluna nao existe em
+   * `whatsapp_templates` e daria 400. A primeira versao desta assercao proibia a palavra inteira
+   * e passou a acusar o envio; afrouxa-la seria perder a guarda, entao ela foi ESTREITADA.
+   */
+  check(!soCodigo.includes("instance_id: 'eq."), 'nenhuma consulta FILTRA por `instance_id`: a coluna nao existe em whatsapp_templates');
+  check(soCodigo.includes('instance_id: c.instance_id'), 'e o envio continua mandando `instance_id` no corpo, que e onde ele e exigido');
+}
+
+grupo('O ENVIO — medido ao vivo em 27/10/2026, no contato de teste dele');
+{
+  /**
+   * **Ate hoje este caminho recusava**, porque a funcao de borda estava *"lida no pacote, nunca
+   * executada"*. Ela **nao foi adivinhada**: o corpo e de propriedades abreviadas e minificadas
+   * no pacote, entao ler nao dava os nomes — o que deu foi **gravar a propria plataforma
+   * enviando uma vez e copiar**, que e o que o `recorder.js` sempre fez no mobiliza.app.
+   *
+   * ```
+   * POST /functions/v1/enviar-mensagem-atendimento
+   *   corpo:    { instance_id, numero, conversa_id, tipo, conteudo }
+   *   resposta: { ok, conversa_id, mensagem_id, provider }  -> 200, provider "zapi"
+   *   releitura: envio_status "enviado", external_message_id preenchido
+   * ```
+   */
+  const pessoa = { id: 'c-1', numero: '5551999990000', instance_id: 'i-1', external_chat_id: '5551999990000@s.whatsapp.net' };
+
+  check(podeMandar(pessoa, 'oi').ok === true, 'conversa de pessoa, com canal e numero: pode');
+
+  /**
+   * **A GUARDA DO GRUPO NO PONTO DE ENVIO.** Sao 134 conversas de grupo na base dele, e
+   * `grupo_id` e NULO em todas — quem responde e o `external_chat_id`. Uma lista montada certo
+   * que passe por um caminho novo continua barrada aqui, e e de proposito: deixar de atender
+   * alguem custa uma passada; publicar resposta de atendimento dentro de um grupo de dezenas de
+   * pessoas, com o nome dele em cima, nao tem volta.
+   */
+  const grupo = { ...pessoa, external_chat_id: '120363000000000000@g.us' };
+  check(podeMandar(grupo, 'oi').ok === false, 'GRUPO nao recebe, mesmo com tudo o mais certo');
+  check(podeMandar(grupo, 'oi').motivo.includes('GRUPO'), 'e o motivo diz qual foi');
+  check(podeMandar({ ...pessoa, external_chat_id: '123@newsletter' }, 'oi').ok === false, 'canal (@newsletter) tambem nao');
+  check(podeMandar({ ...pessoa, external_chat_id: '123@broadcast' }, 'oi').ok === false, 'lista de transmissao tambem nao');
+
+  /** **Na duvida e grupo:** `external_chat_id` ilegivel fica de fora. */
+  check(podeMandar({ ...pessoa, external_chat_id: '' }, 'oi').ok === false, 'endereco de chat ilegivel nao recebe — na duvida, e grupo');
+
+  /** Mensagem vazia CHEGA como mensagem — o WhatsApp nao filtra espaco em branco por nos. */
+  check(podeMandar(pessoa, '   ').ok === false, 'texto so de espaco nao sai');
+  check(podeMandar(pessoa, '').ok === false, 'nem texto vazio');
+  check(podeMandar(pessoa, null).ok === false, 'nem texto nenhum');
+
+  /** O corpo medido EXIGE o canal e o numero: faltando, a funcao de borda nao tem para onde mandar. */
+  check(podeMandar({ ...pessoa, instance_id: null }, 'oi').ok === false, 'sem canal nao manda');
+  check(podeMandar({ ...pessoa, numero: '' }, 'oi').ok === false, 'sem numero nao manda');
+  check(podeMandar(null, 'oi').ok === false && podeMandar({}, 'oi').ok === false, 'sem conversa nao manda');
+
+  /**
+   * **TRES ESTADOS NA CONFERENCIA, nunca dois.** Medido: a mensagem que acabou de sair volta com
+   * `envio_status: "enviado"`; **mensagem antiga volta com `null`**, porque a coluna so passou a
+   * ser preenchida depois. Colapsar "nao sei" em "saiu" faria a rodada marcar como entregue o
+   * que ficou pelo caminho; em "falhou", faria mandar duas vezes.
+   */
+  check(await entregou(null) === 'nao-da-para-saber', 'sem id de mensagem, nao da para saber');
+}
+
+grupo('ENVIAR exige saber a conversa por DOIS sinais');
+{
+  const ORIGEM = 'https://mobiliza.me';
+  const janelaQue = (conversa, por) => {
+    const ouvintes = [];
+    const j = {
+      addEventListener: (t, fn) => { if (t === 'message') ouvintes.push(fn); },
+      removeEventListener: (t, fn) => { const i = ouvintes.indexOf(fn); if (i >= 0) ouvintes.splice(i, 1); },
+      postMessage(msg) {
+        const ev = { source: j, origin: ORIGEM, data: { __whatsfill: 'mob-page', type: 'aberta',
+          payload: { pedido: msg.payload.pedido, por, conversa } } };
+        for (const fn of [...ouvintes]) fn(ev);
+      },
+    };
+    return j;
+  };
+  const erro = async (fn) => { try { await fn(); return null; } catch (e) { return e.message; } };
+
+  /**
+   * **Errar a conversa aqui nao e mostrar a pessoa errada na tela: e mandar a mensagem de uma
+   * pessoa para OUTRA**, e isso nao tem volta. Por isso `so-um-sinal`, que basta para o painel
+   * LER, nao basta para escrever.
+   */
+  const umSinal = await erro(() => sendText('oi', { janela: janelaQue({ id: 'c-1', status: 'em_atendimento' }, 'so-um-sinal') }));
+  check(umSinal && umSinal.includes('UM sinal'), 'um sinal so NAO envia, e diz por que');
+
+  const mudo = await erro(() => sendText('oi', { janela: null }));
+  check(mudo && mudo.includes('as cegas'), 'gancho mudo nao envia as cegas');
+
+  const semConversa = await erro(() => sendText('oi', { janela: janelaQue(null, '') }));
+  check(semConversa && semConversa.includes('Nenhuma conversa aberta'), 'sem conversa aberta, pede que ele abra');
 }
 
 fim();

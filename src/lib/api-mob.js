@@ -409,9 +409,6 @@ export async function getConversaAnterior() {
 export function abrirAtendimento() {
   return recusar('Abrir atendimento (assumir_conversa)');
 }
-export function mandarTexto() {
-  return recusar('Enviar mensagem (enviar-mensagem-atendimento)');
-}
 export function concluirAtendimento() {
   return recusar('Resolver atendimento (resolver_conversa)');
 }
@@ -426,4 +423,128 @@ export function listarEquipes() {
  */
 export function novoSenderId() {
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// ESCRITA — e o unico caminho deste projeto que manda mensagem para eleitor
+// ---------------------------------------------------------------------------
+
+/**
+ * **A FUNCAO QUE ENVIA — medida ao vivo em 27/10/2026, no contato de teste dele.**
+ *
+ * Ate hoje ela estava escrita neste projeto como *"lida no pacote, nunca executada"*, e a regra
+ * era recusar. **Nao foi adivinhada: foi OBSERVADA.** O formato do corpo e de propriedades
+ * abreviadas e minificadas no pacote da plataforma, entao ler nao dava os nomes — o que deu foi
+ * gravar a propria plataforma enviando uma vez e copiar, que e o que o `recorder.js` sempre fez
+ * no mobiliza.app.
+ *
+ * ```
+ * POST /functions/v1/enviar-mensagem-atendimento
+ *   corpo:    { instance_id, numero, conversa_id, tipo, conteudo }
+ *   resposta: { ok, conversa_id, mensagem_id, provider }   -> 200, provider "zapi"
+ * ```
+ *
+ * **`provider: "zapi"` confirma a doutrina do canal:** nao ha janela de 24h nem modelo aprovado,
+ * e o que pune e o RITMO e a REPETICAO (27/09). Texto livre sai a qualquer hora.
+ */
+/**
+ * **A decisao de mandar ou nao, separada da rede — porque e ela que precisa de teste.**
+ *
+ * Enterrada no meio do `fetch`, a guarda do grupo so seria exercitada mandando mensagem de
+ * verdade. Aqui ela e pura: as 134 conversas de grupo da base dele passam por este `if` num
+ * teste, de graca.
+ */
+export function podeMandar(conversa, texto) {
+  const c = conversa || {};
+  if (!c.id) return { ok: false, motivo: 'conversa nao encontrada' };
+  if (!c.instance_id) return { ok: false, motivo: 'conversa sem canal (instance_id) — a funcao de borda exige' };
+  if (!String(c.numero || '').trim()) return { ok: false, motivo: 'conversa sem numero' };
+  if (!String(texto ?? '').trim()) return { ok: false, motivo: 'sem texto — mensagem vazia chega como mensagem' };
+
+  /**
+   * **A guarda do GRUPO vem aqui TAMBEM, e nao so em quem monta a fila.**
+   *
+   * Sao 134 conversas de grupo na base dele, e `grupo_id` e NULO em todas — quem responde e o
+   * `external_chat_id`. Deixar de atender alguem custa uma passada; publicar resposta de
+   * atendimento dentro de um grupo de dezenas de pessoas, com o nome dele em cima, **nao tem
+   * volta**. Por isso a ultima conferencia fica no ponto de ENVIO: uma lista montada certo que
+   * passe por um caminho novo continua barrada aqui.
+   */
+  if (mob.ehGrupo(c)) return { ok: false, motivo: 'isto e um GRUPO' };
+
+  return { ok: true };
+}
+
+export async function mandarTexto({ conversaId, texto, tipo = 'text' } = {}) {
+  const conteudo = String(texto ?? '').trim();
+  if (!conversaId) throw new Error('mandarTexto: sem conversa');
+  if (!conteudo) throw new Error('mandarTexto: sem texto — recuso, mensagem vazia chega como mensagem');
+
+  const linhas = await mob.buscar('conversas', {
+    select: 'id,numero,instance_id,external_chat_id,grupo_id',
+    filtros: { id: 'eq.' + conversaId },
+    limite: 1,
+  });
+  const c = linhas?.[0];
+  if (!c) throw new Error('mandarTexto: conversa nao encontrada');
+
+  const veredito = podeMandar(c, conteudo);
+  if (!veredito.ok) throw new Error('mandarTexto: ' + veredito.motivo);
+
+  const sessao = mob.sessaoDaPagina();
+  if (!sessao || mob.sessaoExpirada(sessao)) throw new Error('mandarTexto: sessao da plataforma vencida — recarregue a aba');
+  const chave = await mob.anon();
+
+  const r = await fetch(mob.FUNCOES + mob.FUNCAO_ENVIAR, {
+    method: 'POST',
+    headers: { apikey: chave, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      instance_id: c.instance_id,
+      numero: c.numero,
+      conversa_id: c.id,
+      tipo,
+      conteudo,
+    }),
+  });
+
+  const resposta = await r.json().catch(() => null);
+  if (!r.ok || resposta?.ok !== true) {
+    throw new Error(`mandarTexto: a plataforma recusou (${r.status}${resposta?.error ? ' — ' + resposta.error : ''})`);
+  }
+
+  return {
+    ok: true,
+    mensagemId: resposta.mensagem_id || null,
+    provider: resposta.provider || null,
+    conferir: () => entregou(resposta.mensagem_id),
+  };
+}
+
+/**
+ * **A SONDA QUE RELE — "200 e ignora" e a armadilha mais antiga deste projeto.**
+ *
+ * Medido nas duas mensagens de teste: `envio_status` virou **`enviado`** e
+ * `external_message_id` veio preenchido. Mas **mensagem antiga tem `envio_status` NULO** (a
+ * coluna so passou a ser preenchida depois), entao:
+ *
+ * - `enviado`               -> saiu
+ * - `envio_erro` preenchido -> nao saiu, e o motivo esta ali
+ * - qualquer outra coisa    -> **nao da para saber**
+ *
+ * Tres estados, nunca dois: colapsar "nao sei" em "saiu" faria a rodada marcar como entregue o
+ * que ficou pelo caminho, e em "falhou" faria mandar duas vezes. E a licao do `donoDoCanal`
+ * (25/09) e do `undefined !== 'CONNECTED'` (01/10).
+ */
+export async function entregou(mensagemId) {
+  if (!mensagemId) return 'nao-da-para-saber';
+  const linhas = await mob.buscar('mensagens', {
+    select: 'id,envio_status,envio_erro,external_message_id',
+    filtros: { id: 'eq.' + mensagemId },
+    limite: 1,
+  });
+  const m = linhas?.[0];
+  if (!m) return 'nao-da-para-saber';
+  if (m.envio_erro) return 'erro';
+  if (String(m.envio_status || '').toLowerCase() === 'enviado') return 'enviado';
+  return 'nao-da-para-saber';
 }

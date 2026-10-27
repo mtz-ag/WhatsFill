@@ -460,7 +460,44 @@ mudaram as maos, nao a cabeca.
   chamada da aba (painel em janela, service worker) **troca uma origem que o servidor ja aceita por
   uma que ninguem mediu**.
 
-- **NADA ESCREVE AINDA, de proposito.** `mob.js` so LE. Assumir, responder, resolver e gravar
+- **A FUNCAO QUE ENVIA FOI MEDIDA AO VIVO (27/10/2026), e nao adivinhada.** Ele autorizou o
+  teste no contato dele (*"faca os testes mandando para esse perfil"*). **Ler o pacote NAO deu os
+  nomes** — o corpo e de propriedades abreviadas e minificadas —, entao o caminho foi o que o
+  `recorder.js` sempre fez no mobiliza.app: **gravar a propria plataforma enviando uma vez e
+  copiar**.
+  ```
+  POST /functions/v1/enviar-mensagem-atendimento
+    corpo:    { instance_id, numero, conversa_id, tipo, conteudo }
+    resposta: { ok, conversa_id, mensagem_id, provider }   -> 200, provider "zapi"
+  releitura:  envio_status "enviado", external_message_id preenchido, envio_erro null
+  ```
+  **Duas mensagens sairam** (uma pela tela da plataforma, para gravar; outra pelo corpo que o
+  adaptador monta, para provar o caminho) e **as duas foram conferidas relendo o banco** — *"a
+  API responde 200 e IGNORA"* e a armadilha mais antiga daqui, e 200 continua nao provando
+  entrega. `api-mob.entregou` devolve **tres estados**: `enviado`, `erro` e
+  **`nao-da-para-saber`** — mensagem antiga tem `envio_status` NULO, e colapsar isso em "saiu"
+  faria a rodada marcar como entregue o que ficou pelo caminho.
+  **`provider: "zapi"` confirma a doutrina do canal** (27/09): nao ha janela de 24h nem modelo
+  aprovado, e o que pune e o RITMO e a REPETICAO.
+  **E o ENTER SINTETICO FUNCIONA nesta plataforma** (medido: o campo esvaziou e o POST saiu) —
+  ao contrario da duvida que ficou registrada no painel do Facebook.
+
+- **ENVIAR EXIGE SABER A CONVERSA POR DOIS SINAIS; LER basta com um.** `page-mob.sendText` recusa
+  quando `conversaAberta` respondeu `so-um-sinal`. **Errar a conversa aqui nao e mostrar a pessoa
+  errada na tela: e mandar a mensagem de uma pessoa para OUTRA**, e isso nao tem volta — entao a
+  mesma leitura que serve para o painel classificar nao serve para escrever.
+  **E a guarda do GRUPO fica TAMBEM no ponto de envio** (`api-mob.podeMandar`), e nao so em quem
+  monta a fila: sao 134 conversas de grupo com `grupo_id` nulo em todas, e uma lista montada
+  certo que passe por um caminho novo continua barrada ali.
+
+- **AS RPCs DE ESTADO CONTINUAM SEM MEDIR, e a assinatura NAO da para descobrir sem executar.**
+  `resolver_conversa`, `assumir_conversa` e `reabrir_conversa` devolvem **404 PGRST202** quando
+  chamadas com corpo vazio — o PostgREST diz *"could not find the function without parameters"*
+  e **nao sugere a assinatura**. Ler o pacote tambem nao resolve (os nomes estao minificados).
+  **So observando a plataforma clicar em "Resolver"**, como foi feito com o envio. Nao foi feito
+  porque isso FECHA um atendimento dele.
+
+- **NADA MAIS ESCREVE, de proposito.** `mob.js` so LE. Assumir, responder, resolver e gravar
   cidade exigem medir o corpo de cada funcao com uma sonda no contato de teste — a disciplina de
   *"uma sonda antes das outras"*, que aqui vale ainda mais: `enviar-mensagem-atendimento` foi LIDA
   no pacote, nunca executada.
