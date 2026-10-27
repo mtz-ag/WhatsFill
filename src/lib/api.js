@@ -13,12 +13,29 @@
  * nunca precisa sair da aba.
  */
 
+import * as mob from './mob.js';
+import * as mobApi from './api-mob.js';
+
 const BASE = 'https://api.mobiliza.app';
 
 /** Direção das mensagens: FROM_HUB é o que chega do canal (o contato falando). */
 export const DIRECTION_IN = 'FROM_HUB';
 
 let transport = null;
+
+/**
+ * **A plataforma nova nao usa NADA deste arquivo abaixo da linha do desvio.**
+ *
+ * Cada funcao daqui comeca com `if (NA_PLATAFORMA_NOVA) return mobApi.<a mesma>(...)`, e o corpo
+ * do mobiliza.app fica **intocado** embaixo — e o mesmo desenho do `page.js`: um painel so, um
+ * adaptador por plataforma.
+ *
+ * O que este arquivo guarda e o historico de como a API antiga funcionava, com as armadilhas que
+ * custaram dias (o contrato aprendido, o `isToIncludeCustomFields`, as keys desalinhadas, o
+ * `Origin not allowed`). Enquanto o mobiliza.app estiver no ar, ele e a extensao que funciona.
+ */
+export const NA_PLATAFORMA_NOVA =
+  typeof location !== 'undefined' && location.hostname === mob.HOST;
 
 export function setTransport(fn) {
   transport = fn;
@@ -98,6 +115,7 @@ export function createFetchTransport(tokenProvider) {
 }
 
 export function getSession(sessionId) {
+  if (NA_PLATAFORMA_NOVA) return mobApi.getSession(sessionId);
   return apiFetch(`/chat/v1/session/${sessionId}`);
 }
 
@@ -110,6 +128,7 @@ export function getSession(sessionId) {
  * mesmos campos a cada Salvar. Os parâmetros são os mesmos que a própria plataforma usa.
  */
 export function getContact(contactId) {
+  if (NA_PLATAFORMA_NOVA) return mobApi.getContact(contactId);
   const q = new URLSearchParams({
     isToIncludeCustomFields: 'true',
     isToIncludeTags: 'true',
@@ -120,6 +139,7 @@ export function getContact(contactId) {
 
 /** Schema dos campos personalizados. Devolve um array puro (não é paginado num envelope). */
 export function getCustomFields() {
+  if (NA_PLATAFORMA_NOVA) return mobApi.getCustomFields();
   return apiFetch('/core/v1/custom-field?page=1&pageSize=100');
 }
 
@@ -148,6 +168,7 @@ export function getCustomFields() {
  * @returns {Promise<{itens: Array, total: number|null, paginas: number|null}>}
  */
 export async function listContacts({ page = 1, pageSize = 100, status = 'ACTIVE' } = {}) {
+  if (NA_PLATAFORMA_NOVA) return mobApi.listContacts({ limite: pageSize });
   const q = new URLSearchParams({
     page: String(page),
     pageSize: String(pageSize),
@@ -208,6 +229,7 @@ export async function filterContacts({
   pageSize = 100,
   status = 'ACTIVE',
 } = {}) {
+  if (NA_PLATAFORMA_NOVA) return mobApi.filterContacts({ limite: pageSize });
   const body = {
     isToIncludeCustomFieldValues: true,
     page,
@@ -250,6 +272,7 @@ export async function filterContacts({
  * que é vermelha.
  */
 export function createTag(nome, { bgColor = '#EFEFEF', textColor = '#4F4F4F' } = {}) {
+  if (NA_PLATAFORMA_NOVA) return mobApi.createTag(nome);
   return apiFetch('/core/v1/tag', {
     method: 'PUT',
     body: { message: String(nome).trim(), textColor, bgColor },
@@ -270,6 +293,7 @@ export function createTag(nome, { bgColor = '#EFEFEF', textColor = '#4F4F4F' } =
  * renomear reseta a cor da etiqueta sem querer.
  */
 export function updateTag(id, nome, { bgColor = '#EFEFEF', textColor = '#4F4F4F' } = {}) {
+  if (NA_PLATAFORMA_NOVA) return mobApi.updateTag();
   return apiFetch(`/core/v1/tag/${id}`, {
     method: 'POST',
     body: { id, message: String(nome).trim(), textColor, bgColor },
@@ -281,6 +305,7 @@ export function updateTag(id, nome, { bgColor = '#EFEFEF', textColor = '#4F4F4F'
  * resposta é um array puro.
  */
 export function getTags() {
+  if (NA_PLATAFORMA_NOVA) return mobApi.getTags();
   return apiFetch('/core/v1/tag?page=1&pageSize=500');
 }
 
@@ -295,6 +320,7 @@ export function getTags() {
  * empresa toda.
  */
 export async function getMessageTemplates({ channelId, search = '', pageSize = 100 } = {}) {
+  if (NA_PLATAFORMA_NOVA) return mobApi.getMessageTemplates({ canalId: channelId });
   const q = new URLSearchParams({
     page: '1',
     pageSize: String(pageSize),
@@ -368,6 +394,7 @@ const MAX_PAGINAS_DE_MENSAGEM = 2;
  * `suppressError: true`. Aqui, qualquer falha vira `''` — quem chama decide como decidia.
  */
 export async function getPreviousSessionId(sessionId) {
+  if (NA_PLATAFORMA_NOVA) return mobApi.getPreviousSessionId();
   if (!sessionId) return '';
   let resposta;
   try {
@@ -392,6 +419,7 @@ export async function getPreviousSessionId(sessionId) {
  * hoje é "falta a cidade e o botão está na tela".
  */
 export async function getConversaAnterior(sessionId, pageSize = MENSAGENS_POR_PAGINA) {
+  if (NA_PLATAFORMA_NOVA) return mobApi.getConversaAnterior();
   const anteriorId = await getPreviousSessionId(sessionId);
   if (!anteriorId || anteriorId === String(sessionId)) return null;
 
@@ -405,6 +433,10 @@ export async function getConversaAnterior(sessionId, pageSize = MENSAGENS_POR_PA
 }
 
 export async function getMessages(sessionId, pageSize = MENSAGENS_POR_PAGINA) {
+  if (NA_PLATAFORMA_NOVA) {
+    // Nao ha paginacao por sessao aqui: a conversa e UMA linha com o historico inteiro.
+    throw new Error('getMessages e da plataforma antiga — no mobiliza.me use getConversation.');
+  }
   const todas = [];
 
   for (let pagina = 1; pagina <= MAX_PAGINAS_DE_MENSAGEM; pagina++) {
@@ -442,6 +474,7 @@ function doContato(m) {
  * @returns {Promise<{incoming:string[], ultima:{doContato:boolean, at:string, texto:string}|null}>}
  */
 export async function getConversation(sessionId, pageSize = 50) {
+  if (NA_PLATAFORMA_NOVA) return mobApi.getConversation(sessionId, pageSize);
   const items = await getMessages(sessionId, pageSize);
   const ordenadas = [...items].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   const ultima = ordenadas[ordenadas.length - 1] || null;
@@ -555,6 +588,7 @@ export async function getConversation(sessionId, pageSize = 50) {
 let agenteCache = null;
 
 export async function getAgente() {
+  if (NA_PLATAFORMA_NOVA) return mobApi.getAgente();
   // Guardado por carregamento: quem está logado não muda no meio da sessão, e o contador passou
   // a atualizar a cada atendimento — sem isto, cada atualização custaria DUAS requisições numa
   // API onde rajada já derrubou a plataforma.
@@ -581,6 +615,7 @@ export const STATUS_EM_ANDAMENTO = 'IN_PROGRESS';
  * @returns {Promise<{total:number, userId:string}>}
  */
 export async function contarMeusAbertos() {
+  if (NA_PLATAFORMA_NOVA) return mobApi.contarMeusAbertos();
   const agente = await getAgente();
   const userId = agente?.userId;
   if (!userId) throw new Error('não consegui descobrir o seu usuário em /core/v1/agent/me');
@@ -620,6 +655,7 @@ export const STATUS_CONCLUIDO = 'COMPLETED';
  * @returns {Promise<number>}
  */
 export async function contarConcluidosHoje() {
+  if (NA_PLATAFORMA_NOVA) return mobApi.contarConcluidosHoje();
   const agente = await getAgente();
   const userId = agente?.userId;
   if (!userId) throw new Error('não consegui descobrir o seu usuário em /core/v1/agent/me');
@@ -655,6 +691,7 @@ export async function contarConcluidosHoje() {
  * Serializar não custa nada aqui: é um número na tela, não o caminho de uma mensagem.
  */
 export async function contarMeuDia() {
+  if (NA_PLATAFORMA_NOVA) return mobApi.contarMeuDia();
   const abertos = await contarMeusAbertos();
   const concluidosHoje = await contarConcluidosHoje();
   return { abertos: abertos.total, concluidosHoje };
@@ -666,6 +703,7 @@ export async function contarMeuDia() {
  * Existe para o atendimento que acabou de ser criado: ele não tem mensagem nenhuma de onde copiar.
  */
 export function novoSenderId() {
+  if (NA_PLATAFORMA_NOVA) return mobApi.novoSenderId();
   try {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   } catch (_) {
@@ -687,6 +725,7 @@ export function novoSenderId() {
  * (20/08): ler o código do app não é ter chamado a rota.
  */
 export async function listarEquipes() {
+  if (NA_PLATAFORMA_NOVA) return mobApi.listarEquipes();
   const corpo = await apiFetch('/core/v1/department');
   const itens = Array.isArray(corpo) ? corpo : corpo?.items || [];
   return itens
@@ -706,6 +745,7 @@ export async function listarEquipes() {
  * `type` separa os dois mundos: `CloudApi`/`Dialog360` são oficiais; `ZAPI`/`EvolutionAPI` não.
  */
 export async function canaisDaConta() {
+  if (NA_PLATAFORMA_NOVA) return mobApi.canaisDaConta();
   const corpo = await apiFetch('/chat/v4/channel/my');
   const itens = Array.isArray(corpo) ? corpo : corpo?.items || [];
   return itens
@@ -762,6 +802,7 @@ export const JA_EXISTE_ATENDIMENTO = 'ja-existe-atendimento';
  * *"Já existe um atendimento"* não é defeito — é o contato já ter conversa aberta naquele número.
  */
 export async function abrirAtendimento({ contactId, departmentId = null, channelId }) {
+  if (NA_PLATAFORMA_NOVA) return mobApi.abrirAtendimento();
   if (!contactId) throw new Error('sem contato para abrir o atendimento');
   if (!channelId) throw new Error('escolha o número (canal) antes de abrir o atendimento');
   try {
@@ -798,6 +839,7 @@ export async function abrirAtendimento({ contactId, departmentId = null, channel
  * caminho da tela, que é o que a plataforma renderiza igual ao que uma pessoa faria.
  */
 export async function mandarTexto({ sessionId, senderId, texto }) {
+  if (NA_PLATAFORMA_NOVA) return mobApi.mandarTexto();
   if (!sessionId) throw new Error('sem atendimento para mandar o texto');
   const agora = new Date().toISOString();
   const msg = await apiFetch(`/chat/v1/session/${sessionId}/message`, {
@@ -840,6 +882,7 @@ export async function mandarTexto({ sessionId, senderId, texto }) {
  * automático não grava campo nenhum. Aqui só o atendimento é fechado, na plataforma.
  */
 export async function concluirAtendimento(sessionId) {
+  if (NA_PLATAFORMA_NOVA) return mobApi.concluirAtendimento(sessionId);
   if (!sessionId) throw new Error('sem atendimento para concluir');
   const sessao = await apiFetch(`/chat/v1/session/${sessionId}/complete`, { method: 'POST', body: {} });
   // O 2xx não prova nada: o status tem de voltar concluído.
@@ -852,5 +895,6 @@ export async function concluirAtendimento(sessionId) {
 
 /** Só o que o contato escreveu, do mais antigo para o mais novo. Base do parser. */
 export async function getIncomingText(sessionId, pageSize = 50) {
+  if (NA_PLATAFORMA_NOVA) return mobApi.getIncomingText(sessionId, pageSize);
   return (await getConversation(sessionId, pageSize)).incoming;
 }

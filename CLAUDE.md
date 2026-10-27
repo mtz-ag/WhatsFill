@@ -96,7 +96,8 @@ src/data/coredes-rs.json  município -> COREDE (planilha oficial da SPGG-RS)
 tools/make-icons.mjs    desenha os ícones
 src/lib/mob.js          UNICO arquivo que sabe como o mobiliza.me e montado (Supabase), so LE
 src/lib/dom-mob.js      UNICO arquivo com seletores da tela NOVA (irmao do dom.js)
-src/lib/page-mob.js     o ADAPTADOR: faz o mobiliza.me parecer com o que o panel.js espera
+src/lib/page-mob.js     o ADAPTADOR, lado TELA: a superficie do page.js no mobiliza.me
+src/lib/api-mob.js      o ADAPTADOR, lado DADOS: a superficie do api.js no mobiliza.me
 src/mob-hook.js         mundo MAIN do mobiliza.me: le a conversa aberta do estado do React
 tests/*.test.mjs        Node puro, sem dependência
 ```
@@ -335,9 +336,18 @@ mudaram as maos, nao a cabeca.
   **A costura foi medida: 24 metodos de `page.*` e 22 de `api.*`.** E boa parte deles **morre** na
   plataforma nova — `getCustomFields`, `createTag`/`updateTag`, o gravador, o contrato aprendido e
   os cliques do Angular nao tem mais o que fazer, porque cidade e coluna e etiqueta e texto.
+  **46 nomes estao desviados** (23 no `page.js`, por ternario na frente; 23 no `api.js`, por
+  `if (NA_PLATAFORMA_NOVA) return ...` dentro de cada funcao), e **o corpo do mobiliza.app ficou
+  intocado embaixo dos dois** — ha teste exigindo isso, porque desviar nao e apagar: aquela
+  plataforma ainda esta no ar.
+  **E o teste que importa compara as DUAS LISTAS**: um `mobApi.X` que nao existe e `undefined`, e
+  so estoura **quando aquela linha rodar** — no meio de uma rodada, na tela dele. Nenhum
+  verificador pega, porque sintaticamente esta tudo certo (a classe do `perfilAtivo is not
+  defined`, 25/09).
   **E a aba do Facebook nao e tocada por nada disto.**
-  **O adaptador e `src/lib/page-mob.js`**, e o trabalho dele e um so: fazer a plataforma nova
-  **parecer com o que o `panel.js` ja sabe ler** — a linha de `base_dados` sai de la no formato
+  **O adaptador e um PAR, espelhando o par que ja existia** — `dom.js`+`api.js` viram
+  `page-mob.js`+`api-mob.js`, com `mob.js` embaixo dos dois —, e o trabalho dele e um so: fazer a
+  plataforma nova **parecer com o que o `panel.js` ja sabe ler** — a linha de `base_dados` sai de la no formato
   `{id, name, tagsId, customFieldValues}` que `fields.readValues` espera, com as COLUNAS vestidas
   de campo personalizado. Assim o `contract.js` (o contrato de escrita aprendido, que custou dias)
   nao precisa de substituto: nao ha formato a adivinhar, so nome de coluna.

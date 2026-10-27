@@ -287,14 +287,11 @@ export function estadoDaConversa(aberta, { dark = false, hasDialog = false, hasC
  */
 export async function conversaComContato(conversaId) {
   if (!conversaId) return null;
-  const tenantId = mob.tenantAtivo();
-  const alvo = mob.url('conversas', {
-    tenantId,
+  const linhas = await mob.buscar('conversas', {
     select: '*,base_dados(*)',
     filtros: { id: 'eq.' + conversaId },
     limite: 1,
   });
-  const linhas = await mob.anon().then((chave) => pedir(alvo, chave));
   const linha = linhas?.[0];
   if (!linha) return null;
 
@@ -324,16 +321,16 @@ export async function canaisDaConta() {
   }));
 }
 
-/** Leitura crua, sem escrever nada: e o unico caminho deste arquivo ate a rede. */
-async function pedir(alvo, chave) {
-  const sessao = mob.sessaoDaPagina();
-  if (!sessao || mob.sessaoExpirada(sessao)) return null;
-  const r = await fetch(alvo, {
-    headers: { apikey: chave, Authorization: `Bearer ${sessao.access_token}` },
-  });
-  if (!r.ok) return null;
-  return r.json().catch(() => null);
-}
+/**
+ * **TODA leitura deste arquivo passa pelo `mob.buscar`, e isso nao e preguica: e a unica forma
+ * de o nome do campo da sessao viver num lugar so.**
+ *
+ * A primeira versao tinha um `fetch` proprio aqui montando `Bearer ${sessao.access_token}` — e
+ * `mob.lerSessao` **normaliza para `token`**, de proposito, descartando o que nao faz falta. O
+ * cabecalho sairia `Bearer undefined` e **toda** chamada voltaria 401, com a tela dizendo que a
+ * sessao venceu quando ela estava boa. Duas copias do mesmo cabecalho divergem na primeira
+ * mudanca; uma nao tem como divergir.
+ */
 
 // ---------------------------------------------------------------------------
 // A ponte ate o gancho do mundo MAIN

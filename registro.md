@@ -1,4 +1,4 @@
-## 2026-10-27 - v3.202.0 - ESTADO DE AGORA - a costura do page.js fechou, e a do api.js e o que falta
+## 2026-10-27 - v3.203.0 - ESTADO DE AGORA - a costura fechou; falta medir o envio e de qual anuncio a pessoa veio
 
 ### O que esta no ar
 
@@ -9,18 +9,45 @@
 | `page-mob.js` | **o adaptador** — faz a plataforma nova parecer com o que o `panel.js` ja le |
 | `page.js` | **desvia 23 nomes** para o adaptador quando a aba e o mobiliza.me |
 
-### A costura: metade fechada
+### A costura: fechada, 46 nomes
 
 ```
-panel.js
-   |
-page.js   -> 23 de 24 nomes desviados      [FECHADO]
-api.js    -> 22 nomes, nenhum desviado     [E O QUE FALTA]
+mobiliza.app:   dom.js      + api.js      -> page.js
+mobiliza.me:    page-mob.js + api-mob.js  -> page.js      (mesma interface)
 ```
 
-`page.js` e a tela e a fila; `api.js` e o contato, a conversa e as etiquetas — e e ele que o
-`load()` chama em todo contato aberto. **Por isso o painel ainda nao monta la:** subiria e erraria
-em todo contato. O manifesto continua sem registra-lo no mobiliza.me, de proposito.
+| | desviados | como |
+|---|---|---|
+| `page.js` | 23 | ternario na frente de cada export |
+| `api.js` | 23 | `if (NA_PLATAFORMA_NOVA) return ...` dentro de cada funcao |
+
+**O codigo do mobiliza.app ficou intocado embaixo dos dois**, e ha teste exigindo isso: aquela
+plataforma ainda esta no ar, e o que aqueles arquivos guardam e o historico das armadilhas que
+custaram dias.
+
+### O erro que eu cometi no meio, e que virou teste
+
+`mob.lerSessao` **normaliza** a sessao: o que entra tem `access_token`, o que sai tem `token`.
+Eu escrevi `Bearer ${sessao.access_token}` em dois lugares — o cabecalho sairia **`Bearer
+undefined`** e **toda** chamada voltaria 401, com a tela dizendo que a sua sessao venceu quando
+ela estava boa.
+
+**O conserto nao foi trocar o nome nos dois lugares: foi deixar de ter dois.** Toda leitura passa
+pelo `mob.buscar`, que e quem sabe o nome do campo.
+
+### O que ainda nao foi medido — e por que eu nao chutei
+
+**De qual anuncio a pessoa veio.** Na plataforma velha isso vinha pronto (`session.utm`), e dele
+saem *"veio de anuncio"*, *"reconheci QUAL anuncio"* e o recibo da chegada. Aqui existem as
+colunas `origem` e `origem_detalhe` — **os nomes eu medi, os valores nao**.
+
+Eu poderia ter devolvido vazio e seguir. Seria pior que nao entregar: **"veio de anuncio" ficaria
+falso para todo mundo**, e a chegada pelo anuncio — que e por onde a maior parte da sua base
+entra — passaria a ser decidida como se ninguem tivesse clicado em nada, **em silencio**. E a
+proxima medicao.
+
+**O painel ainda nao monta no mobiliza.me**, e o manifesto continua sem registra-lo la: falta
+medir o envio.
 
 **O que ainda nao foi medido RECUSA com o motivo na tela, e nunca finge que fez** — enviar,
 assumir, resolver, reabrir, modelo e imagem. Um no-op silencioso seria pior que o erro: a rodada

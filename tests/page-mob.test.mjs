@@ -7,6 +7,8 @@
 import { readFileSync } from 'node:fs';
 import { check, grupo, fim } from './_harness.mjs';
 import * as adaptador from '../src/lib/page-mob.js';
+import { lerSessao } from '../src/lib/mob.js';
+import * as adaptadorApi from '../src/lib/api-mob.js';
 import {
   chaveDaEtiqueta,
   etiquetasDoContato,
@@ -373,7 +375,74 @@ grupo('A COSTURA: todo nome que o page.js desvia tem de existir aqui');
    * respondia 200 e a extensao concluia que todo contato nao tinha nada.
    */
   check(/export const api = NA_PLATAFORMA_NOVA/.test(fonte), 'o transporte da API antiga tambem e desviado');
+
+  /**
+   * **A OUTRA METADE DA COSTURA: o `api.js`.** E ele que o `load()` chama em todo contato
+   * aberto, e o buraco e identico — um `mobApi.Y` que nao existe e `undefined`, e so estoura
+   * quando aquela linha rodar. Aqui o desvio e por EARLY RETURN dentro de cada funcao, com o
+   * corpo do mobiliza.app intocado embaixo.
+   */
+  const fonteApi = readFileSync(new URL('../src/lib/api.js', import.meta.url), 'utf8');
+  const desviadosApi = [...fonteApi.matchAll(/^\s*if \(NA_PLATAFORMA_NOVA\) return mobApi\.([a-zA-Z]+)\(/gm)].map((m) => m[1]);
+
+  check(desviadosApi.length >= 20, `o api.js desvia ${desviadosApi.length} nomes para o adaptador`);
+  const faltamApi = desviadosApi.filter((n) => typeof adaptadorApi[n] !== 'function');
+  check(faltamApi.length === 0, `todo nome desviado do api.js existe no api-mob${faltamApi.length ? ' — FALTA: ' + faltamApi.join(', ') : ''}`);
+
+  /**
+   * **Os que o `load()` chama em todo contato tem de estar desviados**, senao o painel montaria
+   * no mobiliza.me e pediria ao Supabase uma rota do mobiliza.app — lendo o 404 como "o contato
+   * esta vazio", que e a armadilha do `isToIncludeCustomFields` de volta.
+   */
+  const doLoad = ['getContact', 'getConversation', 'getSession', 'getCustomFields', 'getTags'];
+  const esquecidos = doLoad.filter((n) => !desviadosApi.includes(n));
+  check(esquecidos.length === 0, `o que o load() chama esta desviado${esquecidos.length ? ' — FALTA: ' + esquecidos.join(', ') : ''}`);
+
+  /** E o corpo antigo continua la: desviar nao e apagar o mobiliza.app, que ainda esta no ar. */
+  check(fonteApi.includes("const BASE = 'https://api.mobiliza.app'"), 'o caminho do mobiliza.app continua inteiro embaixo do desvio');
   check(fonte.includes('nao existe no ${mob.HOST}'), 'e ele RECUSA dizendo por que, em vez de chamar');
+}
+
+grupo('o nome do campo da sessao tem UM dono — e eu ja errei este');
+{
+  /**
+   * **O erro que este teste existe para impedir, e que eu cometi escrevendo o adaptador.**
+   *
+   * `mob.lerSessao` NORMALIZA a sessao do Supabase: o que entra tem `access_token` e `user`, e o
+   * que sai tem **`token`** e **`usuarioId`** — ela descarta nome e e-mail de proposito. Eu
+   * montei `Bearer ${sessao.access_token}` em dois lugares, e o cabecalho sairia
+   * **`Bearer undefined`**: TODA chamada voltaria 401, com a tela dizendo que a sessao venceu
+   * quando ela estava boa.
+   *
+   * **O conserto nao foi trocar o nome nos dois lugares: foi deixar de ter dois.** Toda leitura
+   * passa pelo `mob.buscar`, que e quem sabe o nome do campo. Sobra uma unica excecao, a
+   * contagem — ela precisa do cabecalho `Prefer: count=exact`, que o `buscar` nao tem.
+   */
+  const semComentario = (s) =>
+    s
+      .split('\n')
+      .filter((l) => !/^\s*(\*|\/\/|\/\*)/.test(l))
+      .join('\n');
+
+  const codigo = ['page-mob.js', 'api-mob.js']
+    .map((f) => semComentario(readFileSync(new URL('../src/lib/' + f, import.meta.url), 'utf8')))
+    .join('\n');
+
+  check(!codigo.includes('access_token'), 'nenhum arquivo do adaptador monta cabecalho com `access_token` — quem normaliza e o mob.lerSessao');
+  check(!codigo.includes('.user?.') && !codigo.includes('sessao.user'), 'nem le `user` da sessao: o que sobrevive a normalizacao e o `usuarioId`');
+
+  /** E a forma que `lerSessao` devolve, travada aqui, porque e dela que o adaptador depende. */
+  const sessao = lerSessao(JSON.stringify({ access_token: 'tok', expires_at: 2000000000, user: { id: 'u-1', email: 'x@y.z' } }));
+  check(sessao.token === 'tok', 'lerSessao devolve `token`');
+  check(sessao.usuarioId === 'u-1', 'e `usuarioId`');
+  check(!('access_token' in sessao) && !('user' in sessao), 'e NAO devolve os nomes crus — por isso o adaptador nao pode usa-los');
+
+  /**
+   * **Quantos `fetch` de mao existem no adaptador?** Um, e com motivo escrito. Cada um a mais e
+   * outro lugar que pode divergir do `mob.js` sobre como se autentica.
+   */
+  const deMao = (codigo.match(/await fetch\(/g) || []).length;
+  check(deMao === 1, `so a contagem monta requisicao de mao (achei ${deMao}) — o resto passa pelo mob.buscar`);
 }
 
 fim();
