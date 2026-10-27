@@ -1,4 +1,4 @@
-## 2026-10-27 - v3.204.0 - ESTADO DE AGORA - a costura fechou, e o anuncio tem uma resposta que e decisao sua
+## 2026-10-27 - v3.205.0 - ESTADO DE AGORA - um disparo por "SERRA" alcancaria ninguem, e eu achei isso antes de montar
 
 ### O que esta no ar
 
@@ -34,6 +34,44 @@ ela estava boa.
 
 **O conserto nao foi trocar o nome nos dois lugares: foi deixar de ter dois.** Toda leitura passa
 pelo `mob.buscar`, que e quem sabe o nome do campo.
+
+### O mais importante de hoje: um disparo filtrado por "SERRA" alcancaria NINGUEM
+
+Antes de montar o painel, fui conferir se as consultas que escrevi funcionam de verdade na sua
+base. Uma delas nao funcionava — e o jeito como ela falha e o problema:
+
+```
+etiqueta "SERRA"   ->     0 contatos     <- a grafia obvia, a que voce digitaria
+etiqueta "SERRA "  ->   504 contatos     <- com um espaco no fim
+etiqueta "Serra"   ->   423 contatos
+PRODUCAO 213  +  Producao 151            sua base: 107.988 contatos
+```
+
+**Um disparo por "SERRA" diria "0 contatos"** — e isso se le como *"ninguem tem essa etiqueta"*,
+nao como *"voce escreveu de um jeito que o banco nao tem"*. Enquanto isso, 927 pessoas estao ali
+sob duas outras grafias.
+
+Na plataforma velha essa armadilha dava contagem ERRADA (1293 contatos marcados errado, em
+agosto). **Aqui ela da ZERO, calado — e e pior:** numero errado alguem estranha; zero parece
+resposta.
+
+**Consertado:** nenhuma consulta por etiqueta usa a grafia que voce digitou sozinha. O rotulo e
+normalizado, as grafias que existem no banco sao recuperadas, e a consulta vai com todas juntas —
+medido, devolve as 504.
+
+**E o meu proprio conserto quase recriou o defeito:** eu pus um "apare os espacos" para descartar
+grafias vazias, e ele transformaria `"SERRA "` (504) em `"SERRA"` (zero). O teste pegou.
+
+### Mais duas coisas que a conferencia mudou
+
+**Nao existe modelo aprovado nesta plataforma.** A tabela que eu achei que fosse a dos modelos e,
+na verdade, a das **suas respostas rapidas** — nao tem canal nenhum ligado. E faz sentido: o seu
+numero e nao oficial, e para esses nao ha janela de 24h nem modelo aprovado. Minha primeira versao
+teria dado erro no primeiro contato aberto.
+
+**A contagem ficou barata.** Na plataforma velha saber quantos atendimentos voce tinha era a
+consulta mais cara do painel — a mesma que estourou o limitador numa rodada sua de 222
+conclusoes. Aqui o total vem num cabecalho, sem trazer nenhuma linha.
 
 ### O anuncio: medi, e a resposta e sua
 

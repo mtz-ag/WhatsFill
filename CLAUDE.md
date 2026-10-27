@@ -195,6 +195,43 @@ mudaram as maos, nao a cabeca.
   **Audio ENCAMINHADO deixa de ser reconhecido na plataforma nova**, e nao ha como contornar sem um
   campo que o banco nao tem. Dito a ele.
 
+- **UM DISPARO FILTRADO POR "SERRA" ALCANCARIA NINGUEM — e a tela diria "0 contatos"**
+  (27/10/2026, contagem exata do servidor):
+  ```
+  tags cs {"SERRA"}  ->      0     <- a grafia OBVIA, a que ele digitaria
+  tags cs {"SERRA "} ->    504     <- com espaco no fim
+  tags cs {"Serra"}  ->    423
+  PRODUCAO 213  +  Producao 151            base inteira: 107.988 contatos
+  ```
+  Na plataforma velha a armadilha do rotulo repetido produzia contagem ERRADA (1293 contatos
+  marcados errado, 20/08). **Aqui ela produz ZERO, em silencio — e isso e pior**: numero errado
+  alguem estranha; zero parece resposta, e se le como *"ninguem tem essa etiqueta"* em vez de
+  *"voce escreveu de um jeito que o banco nao tem"*.
+  **Por isso nenhuma consulta por etiqueta usa a grafia digitada SOZINHA.** `api-mob
+  .grafiasDaEtiqueta` normaliza o rotulo, recupera do catalogo as grafias que existem no banco e
+  `filtroDeEtiqueta` monta um `or=` com todas — medido: **504, a soma das duas**. A grafia
+  digitada vai junto, porque o catalogo e AMOSTRA.
+  **E APARAR A GRAFIA RECRIA O DEFEITO:** eu pus um `.trim()` para descartar as vazias, e ele
+  transformaria `"SERRA "` (504) em `"SERRA"` (0) — o conserto desfazendo o que existe para
+  evitar. Quem sai e a grafia que e SO espaco; o que sobra vai **intacto**. Tem teste.
+  **A SINTAXE e `cs.{"X"}` e nao `cs.["X"]`** — array do PostgreSQL usa chaves, e a forma JSON
+  devolve **400** (`22P02: "[" must introduce explicitly-specified array dimensions`). Os dois
+  funcionam com a URL inteiramente percent-codificada, que e como `mob.url()` monta.
+
+- **NAO EXISTE MODELO APROVADO NESTA PLATAFORMA, e isso e coerente.** `whatsapp_templates` tem
+  `name`, `content`, `atalho`, `categoria`, `ordem`, `uso_count` — e **nao tem `instance_id`**:
+  ela e a tabela das **respostas rapidas dele**, nao a dos modelos ligados a um canal. Bate com o
+  que o CLAUDE.md ja dizia: canal **zapi** e *"WhatsApp (nao oficial)"*, e para esses nao ha
+  janela de 24h nem modelo aprovado (27/09). `getMessageTemplates` devolve **lista vazia**, que e
+  a resposta CERTA — a primeira versao filtrava por `instance_id` e daria **400 no primeiro
+  contato aberto**. **Consequencia: `hsm.js` inteiro nao tem o que fazer aqui.**
+
+- **A CONTAGEM VEM NUM CABECALHO** (`Prefer: count=exact` + `Range: 0-0` -> `Content-Range:
+  0-0/825`, status **206**). Na plataforma velha o badge MENTIA (`skipCount=true` devolvia
+  `totalItems: 0` — badge 76 contra 353 reais, 30/08) e o numero de verdade custava a consulta
+  mais cara do painel, a que estourou o limitador numa rodada de 222 conclusoes (24/09).
+  **`206` e sucesso:** quem conferir com `r.status === 200` vai achar que falhou.
+
 - **DE QUAL ANUNCIO A PESSOA VEIO NAO EXISTE NAS DUAS TABELAS QUE A RODADA LE** (27/10/2026).
   No mobiliza.app isso vinha pronto em `session.utm` (`source`, `campaign`, `headline`,
   `referralUrl`), e dele saem `veioDeAnuncio`, `anuncioReconhecido`, a etiqueta de origem, a

@@ -155,7 +155,14 @@ export async function getTags({ limite = 1000 } = {}) {
     }
   }
   const lista = [...por.values()];
+  /**
+   * **`completa` quase sempre sera falso, e e importante que seja.** Medido: a base tem
+   * **107.988 contatos**, entao mil linhas sao 0,9% dela. Afirmar que uma etiqueta "nao existe"
+   * olhando essa fatia faria o painel propor criar o que ja existe — e aqui criar nem e uma
+   * operacao. A fatia serve para RECONHECER grafia, nunca para negar existencia.
+   */
   lista.completa = (linhas || []).length < limite;
+  lista.lidos = (linhas || []).length;
   return lista;
 }
 
@@ -245,17 +252,108 @@ export async function getIncomingText(conversaId, limite = 200) {
   return c?.incoming || [];
 }
 
-/** Os modelos aprovados do canal. */
-export async function getMessageTemplates({ canalId = '' } = {}) {
-  const filtros = canalId ? { instance_id: 'eq.' + canalId } : {};
-  return mob.buscar('templates', { filtros, limite: 200 });
+/**
+ * **NAO EXISTE MODELO APROVADO NESTA PLATAFORMA — e isso e coerente, nao e falta.**
+ *
+ * Medido: `whatsapp_templates` tem `name`, `content`, `atalho`, `categoria`, `ordem`,
+ * `uso_count` — e **nao tem `instance_id`**. Ou seja, ela e a tabela das **respostas rapidas
+ * dele**, nao a dos modelos aprovados pela Meta ligados a um canal.
+ *
+ * E faz sentido: o canal e **zapi**, que o proprio app classifica como *"WhatsApp (nao
+ * oficial)"*, e para esses `sessionDurationInMinutes` e `-1` — **sem janela de 24h e sem modelo
+ * aprovado** (27/09). Texto livre sai a qualquer hora; o que pune e o RITMO e a REPETICAO.
+ *
+ * Devolver lista vazia e a resposta CERTA, e nao um buraco: quem pergunta "qual modelo aprovado
+ * mandar?" tem de ouvir "nenhum, mande o texto". A primeira versao disto filtrava por
+ * `instance_id` — uma coluna que nao existe —, o que daria **400 no primeiro contato aberto**.
+ */
+export async function getMessageTemplates() {
+  return [];
 }
 
-/** Contatos por etiqueta — o `contact/filter` da plataforma velha, com `cs` (contains). */
-export async function filterContacts({ etiqueta = '', limite = 200 } = {}) {
-  const filtros = etiqueta ? { tags: `cs.{"${String(etiqueta).replace(/"/g, '')}"}` } : {};
+/** As respostas rapidas DELE, que agora moram na plataforma (`name`, `content`, `atalho`). */
+export async function respostasDaPlataforma() {
+  return mob.buscar('respostas', { ordem: 'ordem.asc', limite: 200 });
+}
+
+/**
+ * **As GRAFIAS de uma etiqueta — e esta e a medicao mais cara que esta migracao produziu.**
+ *
+ * Medido na base dele em 27/10/2026, com a contagem exata do servidor:
+ *
+ * ```
+ * tags cs {"SERRA"}  ->      0          <- a grafia OBVIA, a que ele digitaria
+ * tags cs {"SERRA "} ->    504          <- com espaco no fim
+ * tags cs {"Serra"}  ->    423
+ * PRODUCAO 213  +  Producao 151
+ * ```
+ *
+ * **Um disparo filtrado por "SERRA" alcancaria NINGUEM**, enquanto 927 pessoas estao ali sob
+ * duas outras grafias — e a tela diria "0 contatos", que se le como *"ninguem tem essa
+ * etiqueta"* e nao como *"voce escreveu de um jeito que o banco nao tem"*.
+ *
+ * Na plataforma velha a armadilha do rotulo repetido produzia contagem ERRADA (dois ids com o
+ * mesmo nome, 1293 contatos marcados errado). **Aqui ela produz ZERO, em silencio**, que e pior:
+ * numero errado alguem estranha; zero parece resposta.
+ *
+ * Por isso nenhuma consulta por etiqueta usa a grafia que ele digitou SOZINHA. O rotulo e
+ * normalizado, as grafias que existem no banco sao recuperadas do catalogo, e a consulta vai
+ * com todas num `or=` — **medido: 504, igual a soma das duas**.
+ */
+export function grafiasDaEtiqueta(rotulo, catalogo = []) {
+  const chave = chaveDaEtiqueta(rotulo);
+  if (!chave) return [];
+  const achado = (catalogo || []).find((t) => t.id === chave);
+  const doBanco = achado?.grafias?.length ? achado.grafias : [];
+  const digitada = String(rotulo ?? '').trim();
+  // A digitada entra junto quando o catalogo nao a conhece: catalogo e AMOSTRA, nao a base.
+  return doBanco.includes(digitada) || !digitada ? doBanco : [...doBanco, digitada];
+}
+
+/** O filtro do PostgREST para um conjunto de grafias. Uma so vai direto; varias vao por `or`. */
+export function filtroDeEtiqueta(grafias) {
+  /**
+   * **DESCARTA o que e so espaco, mas NAO apara o que sobrou** — e a diferenca e a consulta
+   * inteira.
+   *
+   * A primeira versao fazia `.trim()` em cada grafia, e isso destroi justamente o que faz o
+   * filtro casar: a grafia que existe no banco e `"SERRA "`, COM o espaco no fim (504 contatos).
+   * Aparada, ela vira `"SERRA"` — que o servidor mediu como **0**. O conserto teria recriado o
+   * defeito que ele existe para evitar.
+   *
+   * O que precisa sair e a grafia que e SO espaco, porque `'  '` e verdadeiro e viraria uma
+   * consulta que nao casa com nada e parece ter casado com nada.
+   */
+  const limpas = (grafias || [])
+    .map((g) => String(g).replace(/"/g, ''))
+    .filter((g) => g.trim() !== '');
+  if (!limpas.length) return null;
+  if (limpas.length === 1) return { tags: `cs.{"${limpas[0]}"}` };
+  return { or: `(${limpas.map((g) => `tags.cs.{"${g}"}`).join(',')})` };
+}
+
+/**
+ * Contatos por etiqueta — o `contact/filter` da plataforma velha.
+ *
+ * **Recusa a etiqueta que o catalogo nao conhece**, em vez de devolver lista vazia: vazio aqui
+ * se le como "ninguem tem", e e assim que um disparo sai para zero pessoa achando que a lista
+ * acabou. E a mesma disciplina de 01/10 — *nome fora do CRM RECUSA a rodada*.
+ */
+export async function filterContacts({ etiqueta = '', limite = 200, catalogo = null } = {}) {
+  if (!etiqueta) {
+    const linhas = await mob.buscar('contatos', { limite });
+    return (linhas || []).map(contatoDoBanco);
+  }
+
+  const cat = catalogo || (await getTags());
+  const grafias = grafiasDaEtiqueta(etiqueta, cat);
+  const filtros = filtroDeEtiqueta(grafias);
+  if (!filtros) throw new Error(`Etiqueta "${etiqueta}" nao existe no catalogo lido — recuso, para nao devolver lista vazia como se ninguem a tivesse.`);
+
   const linhas = await mob.buscar('contatos', { filtros, limite });
-  return (linhas || []).map(contatoDoBanco);
+  const contatos = (linhas || []).map(contatoDoBanco);
+  contatos.grafiasUsadas = grafias;
+  return contatos;
 }
 
 export async function listContacts({ limite = 200 } = {}) {

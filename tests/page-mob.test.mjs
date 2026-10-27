@@ -9,6 +9,7 @@ import { check, grupo, fim } from './_harness.mjs';
 import * as adaptador from '../src/lib/page-mob.js';
 import { lerSessao } from '../src/lib/mob.js';
 import * as adaptadorApi from '../src/lib/api-mob.js';
+import { grafiasDaEtiqueta, filtroDeEtiqueta, getMessageTemplates } from '../src/lib/api-mob.js';
 import {
   chaveDaEtiqueta,
   etiquetasDoContato,
@@ -443,6 +444,90 @@ grupo('o nome do campo da sessao tem UM dono — e eu ja errei este');
    */
   const deMao = (codigo.match(/await fetch\(/g) || []).length;
   check(deMao === 1, `so a contagem monta requisicao de mao (achei ${deMao}) — o resto passa pelo mob.buscar`);
+}
+
+grupo('GRAFIAS: um disparo filtrado por "SERRA" alcancaria NINGUEM');
+{
+  /**
+   * **A medicao, com a contagem exata do servidor (27/10/2026):**
+   *
+   * ```
+   * tags cs {"SERRA"}  ->     0     <- a grafia OBVIA, a que ele digitaria
+   * tags cs {"SERRA "} ->   504     <- com espaco no fim
+   * tags cs {"Serra"}  ->   423
+   * ```
+   *
+   * Na plataforma velha a armadilha do rotulo repetido produzia contagem ERRADA (1293 contatos
+   * marcados errado). **Aqui ela produz ZERO, em silencio** — e isso e pior, porque numero
+   * errado alguem estranha e zero parece resposta.
+   */
+  const catalogo = [
+    { id: 'serra', name: 'SERRA ', grafias: ['SERRA ', 'Serra'] },
+    { id: 'producao', name: 'PRODUÇÃO', grafias: ['PRODUÇÃO', 'Produção'] },
+    { id: 'conteudo flavio', name: 'CONTEÚDO FLÁVIO', grafias: ['CONTEÚDO FLÁVIO'] },
+  ];
+
+  const g = grafiasDaEtiqueta('SERRA', catalogo);
+  check(g.includes('SERRA ') && g.includes('Serra'), 'digitando "SERRA" ele alcanca as duas grafias que existem no banco');
+  check(g.includes('SERRA'), 'e a que ele digitou vai junto — o catalogo e AMOSTRA, nao a base inteira');
+
+  const f = filtroDeEtiqueta(g);
+  check(typeof f.or === 'string' && f.or.includes('SERRA ') && f.or.includes('Serra'), 'varias grafias viram um `or=` so — medido: 504, a soma das duas');
+  check(!('tags' in f), 'e nao sobra um filtro de grafia unica junto, que anularia o `or`');
+
+  /** Uma grafia so nao precisa de `or`: a consulta mais simples e a que menos tem como errar. */
+  const uma = filtroDeEtiqueta(grafiasDaEtiqueta('CONTEÚDO FLÁVIO', catalogo));
+  check(uma.tags === 'cs.{"CONTEÚDO FLÁVIO"}', 'grafia unica vai direto no `cs`');
+
+  /** Acento e caixa tambem reencontram: `Produção` e `PRODUÇÃO` sao a mesma etiqueta. */
+  check(grafiasDaEtiqueta('producao', catalogo).includes('PRODUÇÃO'), 'sem acento e sem caixa reencontra a grafia do banco');
+
+  /**
+   * **Aspas no rotulo quebrariam o filtro** — `cs.{"a"b"}` e sintaxe invalida, e o PostgREST
+   * devolve 400. Etiqueta e campo LIVRE: ninguem impede uma aspa ali.
+   */
+  check(filtroDeEtiqueta(['di"to']).tags === 'cs.{"dito"}', 'aspas saem do valor antes de montar o filtro');
+  /**
+   * **O ESPACO DO FIM E SIGNIFICATIVO, e aparar e recriar o defeito.** Eu escrevi `.trim()` em
+   * cada grafia para descartar as vazias, e isso transformaria `"SERRA "` (504 contatos) em
+   * `"SERRA"` (ZERO) — o conserto desfazendo exatamente o que ele existe para evitar. Quem tem
+   * de sair e a grafia que e SO espaco.
+   */
+  check(filtroDeEtiqueta(['SERRA ']).tags === 'cs.{"SERRA "}', 'o espaco do fim sobrevive: e ele que casa no banco');
+  check(filtroDeEtiqueta([]) === null && filtroDeEtiqueta(null) === null, 'sem grafia nenhuma nao se monta filtro');
+  check(filtroDeEtiqueta(['', '  ']) === null, 'nem com grafias vazias');
+
+  /** Etiqueta que o catalogo nao conhece devolve so a digitada — nunca lista vazia disfarcada. */
+  const desconhecida = grafiasDaEtiqueta('NOVA ETIQUETA', catalogo);
+  check(desconhecida.length === 1 && desconhecida[0] === 'NOVA ETIQUETA', 'etiqueta fora do catalogo consulta a propria grafia');
+  check(grafiasDaEtiqueta('', catalogo).length === 0, 'rotulo vazio nao consulta nada');
+}
+
+grupo('nao existe modelo aprovado aqui — e devolver vazio e a resposta CERTA');
+{
+  /**
+   * Medido: `whatsapp_templates` tem `name`, `content`, `atalho`, `categoria`, `ordem` — e **nao
+   * tem `instance_id`**. E a tabela das respostas rapidas DELE, nao a dos modelos aprovados
+   * ligados a um canal.
+   *
+   * E faz sentido: o canal e **zapi**, que o proprio app chama de *"WhatsApp (nao oficial)"*, e
+   * para esses nao ha janela de 24h nem modelo aprovado (27/09). A primeira versao disto
+   * filtrava por `instance_id` — coluna que nao existe —, o que daria **400 no primeiro contato
+   * aberto**.
+   */
+  const modelos = await getMessageTemplates({ canalId: 'i-1' });
+  check(Array.isArray(modelos) && modelos.length === 0, 'nenhum modelo aprovado, e sem estourar');
+
+  /**
+   * **Codigo, nunca a prosa — terceira vez desta armadilha hoje.** O comentario logo acima
+   * explica que `instance_id` NAO existe, entao casar o arquivo cru acusaria a explicacao do
+   * proprio conserto. E a mesma licao do `soCodigo`.
+   */
+  const soCodigo = readFileSync(new URL('../src/lib/api-mob.js', import.meta.url), 'utf8')
+    .split(String.fromCharCode(10))
+    .filter((l) => !/^\s*(\*|\/\/|\/\*)/.test(l))
+    .join(String.fromCharCode(10));
+  check(!soCodigo.includes('instance_id'), 'nenhuma consulta filtra por `instance_id`: a coluna nao existe em whatsapp_templates');
 }
 
 fim();
