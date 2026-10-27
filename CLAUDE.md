@@ -94,6 +94,10 @@ src/fluxo.html/.css/.js JANELA do fluxo: o QUADRO (caixas soltas, fios, arrastar
 src/lib/fluxo-msg.js    a mensagem que pede ao service worker para abrir a janela
 src/data/coredes-rs.json  município -> COREDE (planilha oficial da SPGG-RS)
 tools/make-icons.mjs    desenha os ícones
+src/lib/mob.js          UNICO arquivo que sabe como o mobiliza.me e montado (Supabase), so LE
+src/lib/dom-mob.js      UNICO arquivo com seletores da tela NOVA (irmao do dom.js)
+src/lib/page-mob.js     o ADAPTADOR: faz o mobiliza.me parecer com o que o panel.js espera
+src/mob-hook.js         mundo MAIN do mobiliza.me: le a conversa aberta do estado do React
 tests/*.test.mjs        Node puro, sem dependência
 ```
 
@@ -190,6 +194,74 @@ mudaram as maos, nao a cabeca.
   **Audio ENCAMINHADO deixa de ser reconhecido na plataforma nova**, e nao ha como contornar sem um
   campo que o banco nao tem. Dito a ele.
 
+- **AS COLUNAS SAO DUAS DE CADA, EM INGLES E EM PORTUGUES — e um par delas JA DIVERGE.**
+  `base_dados` carrega os dois vocabularios, resto de migracao. Medido em 600 contatos:
+  ```
+  name = nome ...... 600/600 iguais      phone = telefone .. 600/600
+  city = cidade .... 600/600             state = estado .... 600/600
+  notes (0 cheios)  !=  observacoes (30 cheios)      address / endereco: os DOIS vazios
+  ```
+  Para LER tanto faz, e `page-mob` le as portuguesas (o vocabulario do proprio app). **Para
+  ESCREVER nao foi medido**, e o par `notes`/`observacoes` ja mostra que a hipotese do espelho
+  nao vale para todos: gravar na coluna errada e *"a API responde 200 e IGNORA o valor"* voltando
+  com outro nome. A sonda no Thiago Tim decide, antes de qualquer fila.
+
+- **`status` TEM TRES VALORES, E `resolvido_em` NAO DIZ SE ACABOU.** Medido: `aberto` (586),
+  `em_atendimento` (3), `resolvido` (11) — e **das 11 resolvidas, UMA tinha `resolvido_em`
+  preenchido**. E a armadilha do `grupo_id` por outra porta: a coluna que PARECE responder nao
+  responde, e quem a lesse veria dez atendimentos fechados como abertos, com a rodada voltando a
+  mexer neles. Em toda pergunta de "ja acabou?", quem manda e o `status`. `atendente_id`
+  acompanha `em_atendimento` e serve para "de quem e", nunca para "em que pe esta".
+
+- **A ARMADILHA DO ROTULO REPETIDO VOLTOU, COM OUTRA CARA — e eu tinha escrito que ela sumia.**
+  No `mob.js` eu escrevi que *"some com elas a armadilha do rotulo repetido"*, porque etiqueta
+  deixou de ser id numa tabela a parte. **Medido em 27/10/2026: falso.** `tags` e um **ARRAY DE
+  TEXTO** (nao uma coluna de texto, como eu tambem escrevi), com 87 rotulos distintos em 439
+  contatos, e entre eles:
+  ```
+  "⛔ 1 SEM RETORNO"              e  "⛔ 1 Sem Retorno"
+  "METROPOLITANO DELTA DO JACUI"  e  "Metropolitano Delta do Jacui"
+  "PRODUCAO" e "Producao"            "SERRA " <- com espaco no fim
+  "🔴PROCURA EMPREGO OU DINHEIRO" e  "1. PROCURA EMPREGO OU DINHEIRO"
+  ```
+  La eram dois ids com o mesmo rotulo; aqui e o mesmo conceito escrito de jeitos diferentes num
+  campo livre — **pior, porque campo livre nao tem lista para conferir**. O conserto e o mesmo
+  que o projeto ja usava: **comparar ROTULO NORMALIZADO** (`page-mob.chaveDaEtiqueta`, que tira
+  acento, caixa, espaco sobrando e o emoji/numero de ordenacao). O `name` guarda a grafia do
+  banco, porque e ela que tem de voltar numa escrita: gravar a forma normalizada criaria o 88o
+  rotulo. **E na CONVERSA a coluna `tags` existe e esta VAZIA** (0 de 300 com itens) — as
+  etiquetas vivem no contato.
+
+- **`nao_perturbe` E PROTECAO, E A PLATAFORMA VELHA NAO TINHA ISSO.** Coluna booleana em
+  `base_dados` (5 marcados na amostra de 600), com `nao_perturbe_em` e `nao_perturbe_motivo` do
+  lado. **Quem esta marcado nao recebe nada**, e isso vem antes do quadro — e decisao que alguem
+  ja tomou sobre aquela pessoa, e decisao tomada nao se redescobre (a licao da susana, 03/09).
+  Junto vieram `alinhamento` (`apoiador`/`persuasivel`, 3 de 600 — praticamente nao usada) e
+  `dono_user_id`.
+
+- **`estado` JA RESPONDE "E DE FORA DO RS?", SEM PARSER.** Medido: 556 RS, 41 de outros doze
+  estados, 3 vazios. Na plataforma velha isso custou `cities.js` inteiro mais uma lista de 4.828
+  municipios (08/09); aqui e uma coluna. **Vazio e desconhecido e nao "de fora"** — tratar os 3
+  como de fora os tiraria do filtro estadual sem ninguem ter decidido.
+
+- **O POSTGREST FAZ A JUNCAO NUMA REQUISICAO SO.** `select=*,base_dados(*)` devolveu 200 com a
+  linha do contato dentro da conversa. Na plataforma velha abrir um contato custava a sessao
+  mais tres chamadas nossas, e o que derrubava a API era o NUMERO de requisicoes. **E metade das
+  conversas nao tem contato nenhum** (320 de 600 com `contato_id`): contato vazio e o caso
+  NORMAL, nao erro, e o painel tem de continuar andando.
+
+- **A CHAVE DA SESSAO CARREGA O HOST, NAO O REF** — `sb-<ref>.supabase.co-auth-token`. Perdi uma
+  medicao montando a URL com o que achei que fosse o ref e pedindo a
+  `hmwplthwqbscprkjxrbe.supabase.co.supabase.co`, que nao existe; as quatro consultas voltaram
+  vazias **sem erro nenhum na tela**, parecendo "a base nao tem essas tabelas". `mob.CHAVE_SESSAO`
+  ja estava certa — quem errou foi a sonda. **Ao recortar um nome de uma chave, imprima o que
+  sobrou antes de usar.**
+
+- **O TOKEN NAO CHEGA A MIM, E ISSO E O DESENHO FUNCIONANDO.** Ao listar as chaves do
+  `localStorage` pela extensao do Claude, a do Supabase volta como `[BLOCKED: JWT token]`. Entao
+  a medicao se faz **dentro da pagina**, devolvendo so a FORMA (nomes de coluna, contagens,
+  valores de enum) — nunca o conteudo. E a disciplina de 07/09 com uma trava a mais do lado de ca.
+
 - **O `tipo` da mensagem vem em MINUSCULA** (`"text"`, medido), e todo o projeto compara em
   maiuscula (`TEXT`, `AUDIO`, `IMAGE`). `mob.mensagemDoBanco` normaliza — nao compare o campo cru.
 
@@ -264,6 +336,11 @@ mudaram as maos, nao a cabeca.
   plataforma nova — `getCustomFields`, `createTag`/`updateTag`, o gravador, o contrato aprendido e
   os cliques do Angular nao tem mais o que fazer, porque cidade e coluna e etiqueta e texto.
   **E a aba do Facebook nao e tocada por nada disto.**
+  **O adaptador e `src/lib/page-mob.js`**, e o trabalho dele e um so: fazer a plataforma nova
+  **parecer com o que o `panel.js` ja sabe ler** — a linha de `base_dados` sai de la no formato
+  `{id, name, tagsId, customFieldValues}` que `fields.readValues` espera, com as COLUNAS vestidas
+  de campo personalizado. Assim o `contract.js` (o contrato de escrita aprendido, que custou dias)
+  nao precisa de substituto: nao ha formato a adivinhar, so nome de coluna.
 
 - **O GANCHO DO MUNDO MAIN REPETE 15 LINHAS DO `dom-mob.js`, E A REPETICAO E TRAVADA POR TESTE.**
   Script de mundo MAIN registrado no manifesto e **classico**: nao aceita `import`, e no mundo da
@@ -4459,6 +4536,15 @@ mudaram as maos, nao a cabeca.
   o `git diff` mostra a linha "certa" e só `cat -A` revela. Para escrever barra invertida por
   script, use string **raw** (`r'...'`) ou a ferramenta de edição; e o heredoc do Git Bash aqui
   **falha com conteúdo longo**, então arquivo grande vai pela ferramenta, nunca por `cat <<EOF`.
+  **E INSERIR FUNCAO POR `t.index('function nome')` CAI NO MEIO DO JSDOC E NA COLUNA ERRADA**
+  (27/10/2026). O indice casa a forma INDENTADA (`  function nome`) **depois** dos espacos, entao
+  o que eu escrevi entrou **entre o comentario e a funcao que ele documenta** — o JSDoc do
+  `quantasLinhas` passou a documentar outra coisa — e as duas funcoes novas ficaram em **coluna 0
+  dentro de uma IIFE**. Roda igual, e **o `checar-referencias` acusou 14 problemas**: o modelo
+  dele e *coluna 0 = escopo de modulo* (25/09), entao as tres viraram funcoes de modulo que nao
+  enxergam `responder`, com o alcance indo ate o fim do arquivo. **Ancore na linha inteira que
+  vem ANTES, com a indentacao dentro do texto procurado** — nunca no nome da funcao — e rode o
+  verificador depois de toda insercao por script.
 
 - **`repeteSozinha` NÃO ENXERGAVA `maisCondicoes` NEM `maisExcecoes`** (16/10/2026, achado ao soltar a
   boas-vindas da chegada). Ela nasceu em **02/09**, quando a caixa tinha UMA condição e UMA exceção;
@@ -6275,10 +6361,10 @@ mudaram as maos, nao a cabeca.
 > **A varredura é estreita de propósito** — a primeira versão olhava todo comentário de bloco e
 > acusou **1277** ocorrências, porque os JSDoc daqui citam nomes entre crase o tempo todo.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as vinte e nove suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, as trinta suítes passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs && node tests/ia-validadores.test.mjs && node tests/respostas-comentario.test.mjs && node tests/mob.test.mjs && node tests/dom-mob.test.mjs && node tests/mob-hook.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs && node tests/ia-validadores.test.mjs && node tests/respostas-comentario.test.mjs && node tests/mob.test.mjs && node tests/dom-mob.test.mjs && node tests/mob-hook.test.mjs && node tests/page-mob.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

@@ -121,6 +121,32 @@
     return n;
   }
 
+  /** Leitura de tela que nunca derruba a resposta: falhou, devolve o padrao. */
+  function leitura(fn, padrao) {
+    try { return fn(); } catch (_) { return padrao; }
+  }
+
+  /**
+   * **Da para digitar agora?** — lido da TELA, porque se o campo de mensagem aparece antes de
+   * assumir o atendimento **nao foi medido**, e decidir pelo `status` sozinho seria palpite.
+   *
+   * Vale a mesma regra do resto do gancho: degrada, nunca estoura. Nao dando para ler, devolve
+   * `null`, e quem chama cai no status em vez de afirmar o que nao viu.
+   */
+  function temCampoDeMensagem() {
+    try {
+      const campos = document.querySelectorAll('textarea, [contenteditable="true"]');
+      for (const c of campos) {
+        if (c.disabled) continue;
+        const r = c.getBoundingClientRect ? c.getBoundingClientRect() : null;
+        if (!r || (r.width > 0 && r.height > 0)) return true;
+      }
+      return false;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /** A cadeia de props deste no. Copia de `dom-mob.propsDoFiber`. */
   function propsDoFiber(no, niveis) {
     if (!no || typeof no !== 'object') return [];
@@ -206,16 +232,38 @@
          * plataforma velha: la a conversa aberta se lia do cabecalho do atendimento; aqui o unico
          * lugar onde a resposta existe e o estado do React.
          *
-         * Vai so o que o painel precisa — id, nome, numero e o chat. **A linha inteira do banco
-         * carrega dado de eleitor que nao faz falta do outro lado da ponte.**
+         * Vai so o que o painel precisa, e **a linha inteira do banco NAO vai**: ela carrega dado
+         * de eleitor que nao faz falta do outro lado da ponte.
+         *
+         * **O ESTADO vai junto de proposito, e isso nao e comodidade.** `pageStateLocal` roda a
+         * cada 500ms; se o painel tivesse de consultar o banco para saber se a conversa esta
+         * aberta, em atendimento ou resolvida, seria uma requisicao por tique — rajada contra o
+         * PostgREST o dia inteiro, que e exatamente o que ja derrubou a plataforma velha. Estes
+         * campos o React ja tem na mao, entao custam zero.
          */
         const r = conversaAberta();
         responder('aberta', {
           pedido: msg.payload?.pedido || '',
           por: r ? r.por : '',
           conversa: r
-            ? { id: r.conversa.id, nome: r.conversa.nome, numero: r.conversa.numero, external_chat_id: r.conversa.external_chat_id }
+            ? {
+                id: r.conversa.id,
+                nome: r.conversa.nome,
+                numero: r.conversa.numero,
+                external_chat_id: r.conversa.external_chat_id,
+                contato_id: r.conversa.contato_id,
+                status: r.conversa.status,
+                atendente_id: r.conversa.atendente_id,
+                total_mensagens: r.conversa.total_mensagens,
+                ultima_mensagem_em: r.conversa.ultima_mensagem_em,
+              }
             : null,
+          // Leituras de TELA, que so existem aqui dentro e tambem custam zero. Cada uma degrada
+          // por conta propria: uma leitura que estoura nao pode levar junto a resposta inteira,
+          // que e o caso em que o painel ficaria esperando para sempre.
+          dark: leitura(() => !!document.documentElement.classList.contains('dark'), false),
+          hasDialog: leitura(() => !!document.querySelector('[role="dialog"]'), false),
+          hasComposer: temCampoDeMensagem(),
         });
       } else if (msg.type === 'ping') {
         responder('pong', { linhas: quantasLinhas() });

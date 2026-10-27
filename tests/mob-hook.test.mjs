@@ -56,7 +56,11 @@ function subirGancho(linhas, divs = []) {
     postMessage(msg) { enviadas.push(msg); },
   };
   // O seletor importa: a linha da fila e `button`, e o painel da direita e `div`.
-  const documento = { querySelectorAll: (sel) => (sel === 'div' ? divs : linhas) };
+  const documento = {
+    querySelectorAll: (sel) => (sel === 'div' ? divs : linhas),
+    querySelector: () => null,
+    documentElement: { classList: { contains: () => false } },
+  };
 
   new Function('window', 'document', fonte)(janela, documento);
 
@@ -167,9 +171,18 @@ grupo('QUAL esta aberta: as duas copias tambem tem de concordar');
    * de eleitor que nao fazem falta do outro lado — campo que ninguem usa e campo que vaza no
    * primeiro log.
    */
+  const PODE_ATRAVESSAR = [
+    // quem e
+    'id', 'nome', 'numero', 'external_chat_id', 'contato_id',
+    // em que pe esta — e o que o getState le a cada 500ms SEM tocar na rede
+    'status', 'atendente_id', 'total_mensagens', 'ultima_mensagem_em',
+  ].sort();
   const [resp] = subirGancho([linhaAtiva(a, true)], [painel(a)]).pedir('aberta', {});
-  check(Object.keys(resp.payload.conversa).sort().join(',') === 'external_chat_id,id,nome,numero',
-    'e atravessa a ponte so id, nome, numero e o chat');
+  const atravessou = Object.keys(resp.payload.conversa).sort();
+  check(atravessou.join(',') === PODE_ATRAVESSAR.join(','),
+    'atravessa a ponte so quem e a pessoa e em que pe esta o atendimento — e nada mais');
+  check(!atravessou.includes('ultima_mensagem'),
+    'o TEXTO da ultima mensagem nao atravessa: e fala de eleitor, e o painel le a conversa por conta propria');
 }
 
 grupo('abrir CLICA E PARA AI');

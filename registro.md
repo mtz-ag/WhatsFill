@@ -1,3 +1,94 @@
+## 2026-10-27 - v3.201.0 - ESTADO DE AGORA - o adaptador comecou, e a medicao desmentiu duas coisas que eu tinha escrito
+
+### O que esta no ar
+
+| | |
+|---|---|
+| `mob.js` | os dados do mobiliza.me (fila, conversa, contato, numeros, respostas), **so leitura** |
+| `dom-mob.js` + `mob-hook.js` | abrir **a conversa certa** pelo id, e dizer **qual esta aberta** |
+| `page-mob.js` | **o adaptador** — faz a plataforma nova parecer com o que o `panel.js` ja le |
+
+**O painel ainda NAO monta no mobiliza.me**, e o manifesto nao o registra la. Montar agora seria
+um painel que sobe e trava: o boot espera o Bearer do `page-hook`, que naquela plataforma nao
+existe. Ele monta quando a costura fechar.
+
+### O que eu medi hoje na sua base — e o que cada numero mudou
+
+Tudo **so leitura**, pela sua aba, e nenhum dado de eleitor saiu de la: o que eu trouxe foram
+nomes de coluna, contagens e valores de enum.
+
+**1. `status` tem tres valores, e a coluna que PARECE dizer "acabou" nao diz.**
+
+```
+aberto .......... 586        em_atendimento ..... 3        resolvido ..... 11
+das 11 resolvidas, com `resolvido_em` preenchido ...........  1
+```
+
+Quem lesse `resolvido_em` veria **dez atendimentos fechados como se estivessem abertos**, e a
+rodada voltaria a mexer neles. E a armadilha do `grupo_id` outra vez, com outro nome.
+
+**2. A armadilha do rotulo repetido VOLTOU — e eu tinha escrito que ela tinha sumido.**
+
+Quando vi que etiqueta deixou de ser id numa tabela a parte, escrevi no codigo que *"some com
+elas a armadilha do rotulo repetido"*. Medi: **falso**. Sao 87 rotulos distintos em 439 contatos,
+e entre eles o mesmo conceito escrito de jeitos diferentes:
+
+```
+"⛔ 1 SEM RETORNO"  e  "⛔ 1 Sem Retorno"          "PRODUCAO"  e  "Producao"
+"SERRA " (com espaco no fim)                        "🔴PROCURA EMPREGO"  e  "1. PROCURA EMPREGO"
+```
+
+Antes eram dois ids com o mesmo rotulo; agora e campo livre, que nao tem lista para conferir.
+O conserto e o que o projeto ja usava: **comparar rotulo normalizado**.
+
+**3. `nao_perturbe` existe, e e protecao que a plataforma velha nao tinha.**
+
+Coluna booleana no contato (5 marcados na amostra de 600), com data e motivo do lado. **Quem
+esta marcado nao recebe nada** — isso vem antes do quadro, como a etiqueta de sem interesse: e
+decisao que alguem ja tomou sobre aquela pessoa.
+
+**4. As colunas sao duas de cada, em ingles e em portugues — e um par ja diverge.**
+
+```
+name = nome ... 600/600 iguais     city = cidade ... 600/600     state = estado ... 600/600
+phone = telefone ... 600/600       notes (0 cheios) != observacoes (30 cheios)
+```
+
+Para LER tanto faz. **Para ESCREVER nao foi medido**, e o par `notes`/`observacoes` ja mostra que
+nem todos sao espelho: gravar na errada e *"a API aceita e ignora"* voltando com outro nome. A
+sonda no **Thiago Tim** decide.
+
+**5. `estado` ja responde "e de fora do RS?"** — 556 RS, 41 de outros doze estados, 3 vazios. Na
+plataforma velha isso custou um arquivo inteiro e uma lista de 4.828 municipios.
+
+**6. Metade das conversas nao tem contato no CRM** (320 de 600). Contato vazio e o caso NORMAL,
+nao erro.
+
+**7. O banco faz a juncao numa requisicao so** — conversa e contato juntos. Na plataforma velha
+eram tres chamadas por contato aberto, e era isso que derrubava a API.
+
+### Duas coisas minhas que a medicao pegou
+
+**Perdi uma medicao inteira** montando a URL com o que eu achei que fosse o identificador do
+banco: a chave da sessao carrega o **endereco** e nao o identificador, entao eu pedi para um
+endereco que nao existe. As quatro consultas voltaram **vazias, sem erro nenhum** — parecendo
+"a base nao tem essas tabelas". O codigo ja estava certo; quem errou foi a sonda.
+
+**E o seu token nao chega ate mim:** ao listar as chaves, a do banco volta tapada. Entao a
+medicao e feita **dentro da pagina** e so a forma atravessa. E o desenho funcionando.
+
+### O que falta, na ordem
+
+1. **Fechar a costura** — 24 metodos de `page.*` e 22 de `api.*`. Boa parte **morre**: campo
+   personalizado virou coluna, etiqueta virou texto, e o contrato de escrita aprendido nao tem
+   mais o que aprender.
+2. **Medir o envio** — `enviar-mensagem-atendimento` e `resolver_conversa` foram **lidas no
+   pacote, nunca executadas**. A sonda sai no **Thiago Tim**, uma mensagem, antes de qualquer
+   fila. Eu paro e aviso antes.
+3. **Montar o painel** no mobiliza.me, quando a costura fechar.
+
+---
+
 ## 2026-10-26 - v3.200.0 - ESTADO DE AGORA - a plataforma mudou, e a migracao comecou pelo chao
 
 **A coisa mais importante deste registro:** o **mobiliza.app acabou**. A plataforma nova e o

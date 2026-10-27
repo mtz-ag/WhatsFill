@@ -251,8 +251,14 @@ export function conversaDoBanco(linha) {
     ultimaEm: c.ultima_mensagem_em || null,
     ultimaDirecao: String(c.ultima_direcao || '').toLowerCase(),
     aguardandoDesde: c.aguardando_desde || null,
-    // As etiquetas agora sao uma COLUNA de texto, e nao mais ids numa tabela a parte. Some com
-    // elas a armadilha do rotulo repetido (dois ids com o mesmo nome) e a criacao de etiqueta.
+    // As etiquetas agora sao um ARRAY DE TEXTO, e nao mais ids numa tabela a parte: some a
+    // criacao de etiqueta. **A armadilha do rotulo repetido NAO some — ela troca de cara**, e eu
+    // tinha escrito aqui que sumia. Medido em 27/10/2026, 87 rotulos distintos em 439 contatos:
+    // "⛔ 1 SEM RETORNO" e "⛔ 1 Sem Retorno", "PRODUCAO" e "Producao", "SERRA " com espaco no
+    // fim. La eram dois ids com o mesmo rotulo; aqui e o mesmo conceito escrito de jeitos
+    // diferentes num campo livre. Quem compara etiqueta usa `page-mob.chaveDaEtiqueta`.
+    // **E na CONVERSA a coluna existe e esta vazia** (medido: 0 de 300 com itens) — as etiquetas
+    // vivem no contato.
     tags: Array.isArray(c.tags) ? c.tags.map((t) => String(t)) : [],
     grupo: ehGrupo(c),
   };
