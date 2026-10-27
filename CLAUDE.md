@@ -195,6 +195,37 @@ mudaram as maos, nao a cabeca.
   **Audio ENCAMINHADO deixa de ser reconhecido na plataforma nova**, e nao ha como contornar sem um
   campo que o banco nao tem. Dito a ele.
 
+- **DE QUAL ANUNCIO A PESSOA VEIO NAO EXISTE NAS DUAS TABELAS QUE A RODADA LE** (27/10/2026).
+  No mobiliza.app isso vinha pronto em `session.utm` (`source`, `campaign`, `headline`,
+  `referralUrl`), e dele saem `veioDeAnuncio`, `anuncioReconhecido`, a etiqueta de origem, a
+  `rajadaDeAnuncios` e o recibo da chegada. Medido aqui:
+  ```
+  whatsapp_conversas .... 27 colunas, nenhuma de utm/origem/referral
+  base_dados.origem ..... helena 513 | mocao 188 | importacao 132 | evento 48 | manual 10
+                          app_mobile 7 | formulario 2     <- NENHUMA e anuncio
+  base_dados.origem_detalhe (808 preenchidos): 0 com link, 0 com "fb", 0 com "utm"
+  ```
+  **Nao afirmo que nao existe no banco inteiro:** a introspecção do PostgREST volta **401**,
+  entao nao da para enumerar as tabelas. O que esta medido e que **nao esta onde a rodada olha**.
+  **O que sobra e o TEXTO pre-preenchido**, que `anuncios.reconhecer` ja le — mas la ele era
+  REFORCO para o segundo clique, e aqui viraria a unica fonte. Isso rebaixa o reconhecimento de
+  DADO para LISTA DE TEXTO, e este arquivo registra seis vezes que lista de texto nao fecha (a
+  redacao do anuncio muda e a lista nao, 04/09). **Anuncio sem texto pre-preenchido — o CONVERSE
+  CONOSCO — deixa de ser reconhecivel.** Decisao dele; nao religue nada disso por conta propria.
+  **E hoje isso quase nao morde:** em **1.500 mensagens entrantes de 12 horas**, UMA tinha a forma
+  do texto de anuncio — a campanha acabou em 04/10 e o 2o turno em 25/10.
+
+- **`is_sistema` EXISTE E ESTA ZERADO: ele NAO substitui o detector de texto** (27/10/2026) — e
+  eu tinha escrito que *"o ruido da plataforma ja vem MARCADO"*. Medido: **0 de 1.500** entrantes
+  marcadas. Entao `cortesia.ehMensagemDaPlataforma` continua sendo quem reconhece *"Nao foi
+  possivel transcrever este audio"* e *"*Atencao:* o tipo da mensagem nao e suportado"* — os
+  textos que fizeram o Carlos ser etiquetado como sem interesse e concluido em silencio (02/09).
+  **Ter a coluna nao e a coluna estar preenchida.**
+
+- **O VOLUME, medido:** 1.500 mensagens entrantes em 12 horas — 1.189 texto, 138 imagem, 90
+  audio, 81 video, 2 documento. Os tipos vem em **minuscula**, e os 90 audios sao a medida do que
+  a coluna `transcricao` passa a dar de graca.
+
 - **AS COLUNAS SAO DUAS DE CADA, EM INGLES E EM PORTUGUES — e um par delas JA DIVERGE.**
   `base_dados` carrega os dois vocabularios, resto de migracao. Medido em 600 contatos:
   ```

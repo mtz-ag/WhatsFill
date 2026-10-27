@@ -1,4 +1,4 @@
-## 2026-10-27 - v3.203.0 - ESTADO DE AGORA - a costura fechou; falta medir o envio e de qual anuncio a pessoa veio
+## 2026-10-27 - v3.204.0 - ESTADO DE AGORA - a costura fechou, e o anuncio tem uma resposta que e decisao sua
 
 ### O que esta no ar
 
@@ -35,16 +35,38 @@ ela estava boa.
 **O conserto nao foi trocar o nome nos dois lugares: foi deixar de ter dois.** Toda leitura passa
 pelo `mob.buscar`, que e quem sabe o nome do campo.
 
-### O que ainda nao foi medido — e por que eu nao chutei
+### O anuncio: medi, e a resposta e sua
 
-**De qual anuncio a pessoa veio.** Na plataforma velha isso vinha pronto (`session.utm`), e dele
-saem *"veio de anuncio"*, *"reconheci QUAL anuncio"* e o recibo da chegada. Aqui existem as
-colunas `origem` e `origem_detalhe` — **os nomes eu medi, os valores nao**.
+Na plataforma velha, de qual anuncio a pessoa veio **vinha pronto** (`session.utm`), e dele saem
+*"veio de anuncio"*, *"reconheci QUAL anuncio"*, a etiqueta de origem e o recibo da chegada.
 
-Eu poderia ter devolvido vazio e seguir. Seria pior que nao entregar: **"veio de anuncio" ficaria
-falso para todo mundo**, e a chegada pelo anuncio — que e por onde a maior parte da sua base
-entra — passaria a ser decidida como se ninguem tivesse clicado em nada, **em silencio**. E a
-proxima medicao.
+**Medido hoje:**
+
+```
+whatsapp_conversas ... 27 colunas, nenhuma de utm / origem / referral
+base_dados.origem .... helena 513 | mocao 188 | importacao 132 | evento 48 | manual 10
+                       app_mobile 7 | formulario 2        <- NENHUMA e anuncio
+origem_detalhe (808 preenchidos): 0 com link, 0 com "fb", 0 com "utm"
+```
+
+**Nao afirmo que nao existe no banco inteiro** — a introspecção volta 401 e nao da para listar as
+tabelas. O que esta medido e que **nao esta onde a rodada olha**.
+
+**O que sobra e o texto pre-preenchido** que a pessoa manda, que o reconhecimento ja le. So que
+la ele era REFORCO e aqui viraria a unica fonte — e isso rebaixa o reconhecimento de **dado**
+para **lista de texto**, que e a coisa que este projeto ja viu falhar seis vezes (a redacao do
+anuncio muda e a lista nao). **Anuncio sem texto pre-preenchido deixa de ser reconhecivel.**
+
+**Hoje isso quase nao morde:** em **1.500 mensagens entrantes de 12 horas, UMA** tinha a forma do
+texto de anuncio. A campanha acabou em 04/10 e o 2o turno em 25/10. Entao a pergunta nao e
+urgente — mas e sua, e eu nao vou religar nada disso por conta propria.
+
+### E outra coisa que eu tinha escrito e estava errada
+
+Eu anotei que *"o ruido da plataforma ja vem MARCADO"*, porque a coluna `is_sistema` existe.
+**Medido: 0 de 1.500.** Ter a coluna nao e a coluna estar preenchida — entao o detector de texto
+continua sendo quem reconhece *"Nao foi possivel transcrever este audio"*, que e o que fez o
+Carlos ser etiquetado como sem interesse e concluido em silencio.
 
 **O painel ainda nao monta no mobiliza.me**, e o manifesto continua sem registra-lo la: falta
 medir o envio.
