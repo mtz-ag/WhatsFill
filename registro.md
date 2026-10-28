@@ -1,38 +1,41 @@
-## 2026-10-28 - v3.227.0 - ESTADO DE AGORA - o modo "Eu mando" destravado de verdade
+## 2026-10-28 - v3.228.0 - ESTADO DE AGORA - botoes redundantes fora
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.227.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.228.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Confira **3.227.0** na linha pequena do topo do painel
+3. Confira **3.228.0** na linha pequena do topo do painel
 
-### "BLOQUEANDO O MODO NOVO" — eu destravei pela metade
+### OS BOTOES QUE SAIRAM — e dois deles eu tinha criado nos dias anteriores
 
-Na v3.224 eu tirei a exigencia do envio automatico das **funcoes** das rodadas e **nao olhei os
-cartoes**. No cartao das nao atendidas a trava nao so avisa: ela **desabilita o botao**. O modo
-que voce acabou de pedir ficava inalcancavel justamente na fila que voce mais usa.
+**1. "Parar a rodada", no cartao de Ritmo.** Ele so servia com a rodada andando — e nesse exato
+momento o **controle flutuante** ja esta na tela com o mesmo botao, e o **Esc** faz o mesmo. Fora
+da rodada ficava apagado, ocupando uma linha o tempo todo. Botao que so funciona quando outro
+igual esta na tela e botao a menos.
 
-**A licao, que ficou escrita:** trava que nao deixa apertar e mais forte que a que recusa depois
-do clique — e e a que escapa quando se procura pelo texto do erro, porque ela nunca chega a
-produzir erro nenhum.
+**2. "Enviar" + "So inserir", em CADA resposta pronta.** No modo "Eu mando" os dois fazem a mesma
+coisa — o texto vai para o campo venha por qual botao vier. Eram dois botoes identicos lado a
+lado, repetidos em todas as respostas. Sobra **um**, com o nome do que ele de fato faz: **"Inserir
+no campo"**. Voltando ao modo automatico, os dois voltam, porque ai sao mesmo duas coisas.
 
-### E a tarja laranja do Ritmo mandava voce DESFAZER
+O mesmo valeu para o cartao de modelo aprovado ("Enviar" + "So preparar").
 
-Ela dizia *"sem ele nada e enviado de verdade, e concluir depois disso fecharia o atendimento sem
-a mensagem ter saido"*. Era exato — **ate a v3.224**, quando a espera passou a segurar a conclusao
-ate o campo esvaziar. Hoje a mensagem sai (quem manda e voce) e a conclusao vem depois.
+### E UM TERCEIRO, que eu NAO tirei — mas estava divergindo
 
-No lugar dela ficou o que continua sendo verdade e importa saber: **neste modo a rodada espera**,
-entao a pausa do Ritmo so vale entre um contato e o seguinte — quem da o ritmo e voce.
+Ha dois caminhos para somar o canal ao candidato: o botao da aba **Config** e o do **aviso
+vermelho** no cabecalho. **Eles faziam coisas diferentes:** o da Config somava so o id interno do
+canal; o do aviso soma o id **e o telefone**.
 
-### O DISPARO CONTINUA EXIGINDO O MODO AUTOMATICO, e agora diz por que
+Isso importa porque os dois envelhecem diferente — se a instancia for recriada na plataforma, o id
+muda e o telefone continua valendo.
 
-La a peca sai **pela API**, que nao passa pelo campo de mensagem — **nao ha onde voce dar Enter**.
-A mensagem da tela deixou de so exigir e passou a explicar.
+**Os dois ficam**, e nao e redundancia: o da Config e alcancavel sempre, e o do aviso so aparece
+quando a conferencia barra (com ela desligada, como voce deixou, o da Config e o unico). O que
+mudou e que agora **os dois somam as mesmas duas chaves**, pela mesma funcao.
 
 ### O QUE ESTA NO AR
 
@@ -104,6 +107,7 @@ defeito** — e porque o ultimo so apareceu depois de os anteriores sairem da fr
 | 3.225.0 | (pedido) o box do modo | o interruptor existia e nao dizia o modo, e vivia longe do "Comecar" |
 | 3.226.0 | o box ficou pela metade | eu o pus DENTRO de um cartao — a doutrina do proprio codigo diz o contrario |
 | 3.227.0 | "bloqueando o modo novo" | destravei as funcoes e esqueci as travas da TELA, que desabilitam o botao |
+| 3.228.0 | botoes redundantes | dois iguais lado a lado no modo novo, e um Parar que duplicava o flutuante |
 
 **A licao que eu escrevi no CLAUDE.md para nao repetir:** eu consertei o sintoma duas vezes antes
 de achar a causa. As duas correcoes eram reais e ficaram, mas se eu tivesse medido a fila na

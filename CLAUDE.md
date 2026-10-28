@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.227.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.228.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -591,7 +591,29 @@ mudaram as maos, nao a cabeca.
   menos que se olhe, e os verificadores passam.
   **Texto com crase vai pela ferramenta de edicao ou por arquivo de script**, nunca por
   `python -c` inline. E a familia do heredoc que falha com conteudo longo e do `\b` que vira
-  backspace em string Python normal.
+  backspace em string Python normal. **Cometido TRES vezes no mesmo dia** — na terceira, depois de
+  ja estar escrito aqui.
+
+- **DOIS BOTOES COM O MESMO EFEITO NAO SAO ESCOLHA: SAO RUIDO** (28/10/2026, pedido dele: *"tem
+  botoes redundantes sobrando, revise todo o painel"*). Tres acharam-se, **e dois eu tinha criado
+  nos dias anteriores**:
+  **(1) "Parar a rodada" no cartao de Ritmo.** So servia com a rodada andando — e nesse exato
+  momento o **controle flutuante** esta na tela com o mesmo botao, e o **Esc** faz o mesmo. Fora
+  da rodada ficava apagado, ocupando uma linha o tempo todo. **Botao que so funciona quando outro
+  igual esta na tela e botao a menos.**
+  **(2) "Enviar" + "So inserir" sao o MESMO clique no modo "Eu mando".** `sendTemplate` cai no
+  ramo de inserir **venha por qual botao vier**, entao os dois ficavam identicos lado a lado em
+  CADA cartao de resposta pronta. Sobra um, **com o nome do que ele de fato faz** ("Inserir no
+  campo"); no modo automatico os dois voltam, porque ai sao mesmo duas coisas.
+  **Ao criar um MODO que muda o que um botao faz, olhe os botoes VIZINHOS** — dois deles podem ter
+  virado o mesmo.
+  **(3) Os dois botoes que somam o canal DIVERGIAM.** O da Config somava so o id; o do aviso
+  vermelho soma o id **e o telefone**, que envelhecem diferente. **Os dois FICAM** — um e
+  alcancavel sempre (a tela do cadastro), o outro so aparece quando a conferencia barra, e com ela
+  desligada o da Config e o unico —, mas agora pela **mesma funcao**. Isto e o oposto de (1) e
+  (2): mesmo ato em momentos diferentes nao e redundancia; **divergir, sim**.
+  **E a regra que eu violei ao criar o (3):** *"antes de criar controle novo porque ele disse que
+  nao existe, procure o controle"* (02/10) — o da Config ja estava la.
 
 - **GANCHO QUE ESTOURA TEM DE RESPONDER — e o teste pegou isso antes de ir ao ar.** Na primeira
   versao o `try` cobria so a acao, e `quantasLinhas()` ficava fora dele, dentro da propria chamada

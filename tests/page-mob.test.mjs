@@ -1610,4 +1610,42 @@ grupo('O MODO "EU MANDO" NAO PODE SER IMPEDIMENTO DE TELA');
   check(/quem dá o ritmo é você/.test(painel), 'e no lugar dela ficou o que continua sendo verdade');
 }
 
+grupo('BOTOES REDUNDANTES — dois botoes com o mesmo efeito nao sao escolha');
+{
+  /**
+   * **Pedido dele (28/10/2026): *"tem botoes redundantes sobrando, revise todo o painel"*.**
+   *
+   * Tres acharam-se, e dois deles eu mesmo tinha criado nos dias anteriores.
+   */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+
+  /**
+   * **1. "Parar a rodada" do cartao de Ritmo.** Ele so servia com a rodada andando — e nesse
+   * exato momento o controle FLUTUANTE esta na tela com o mesmo botao, e o Esc faz o mesmo. Fora
+   * da rodada ficava apagado, ocupando uma linha o tempo todo.
+   */
+  check(!/'Parar a rodada'\);/.test(painel), 'o Parar duplicado do cartao saiu');
+  check(/title: 'Parar a rodada \(Esc\)'/.test(painel), 'e o do controle flutuante ficou — ele aparece sozinho');
+
+  /**
+   * **2. "Enviar" e "So inserir" sao o MESMO clique no modo "Eu mando".** `sendTemplate` cai no
+   * ramo de inserir venha por qual botao vier, entao os dois ficavam identicos lado a lado em
+   * CADA cartao de resposta pronta. Dois botoes iguais nao sao escolha: sao ruido.
+   */
+  check(/euMando \? \[sendBtn\] : \[sendBtn, insertBtn\]/.test(painel), 'no modo Eu mando sobra UM botao na resposta pronta');
+  check(/euMandoM \? \[enviar\] : \[enviar, preparar\]/.test(painel), 'e o mesmo no cartao do modelo aprovado');
+  check(/euMando \? 'Inserir no campo' : 'Enviar'/.test(painel), 'e o que sobra tem o nome do que ele FAZ');
+
+  /**
+   * **3. Os dois botoes que somam o canal DIVERGIAM.** O da Config somava so o id; o do aviso
+   * vermelho soma o id E o telefone, que envelhecem diferente — o id morre se a instancia for
+   * recriada, o telefone nao. Os dois ficam (um e alcancavel sempre, o outro so quando a
+   * conferencia barra), mas **pela mesma funcao**.
+   */
+  const somas = (painel.match(/perfisLib\.somarCanal\(/g) || []).length;
+  check(somas === 2, 'os dois caminhos somam pela MESMA funcao (achei ' + somas + ')');
+  check(!/canais: \[\.\.\.new Set\(\[\.\.\.perfil\.canais, canalAgora\]\)\]/.test(painel),
+    'e o que somava so o id do canal saiu');
+}
+
 fim();

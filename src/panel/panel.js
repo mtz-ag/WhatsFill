@@ -2720,9 +2720,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       h('div', { class: 'wf-preview', 'data-fica': '1' }, modelo.text || '(modelo sem texto)')
     );
 
-    const enviar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Enviar');
+    // Mesma razao do cartao de resposta pronta: no modo "Eu mando" os dois sao o mesmo clique.
+    const euMandoM = !state.settings.autoSend;
+    const enviar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, euMandoM ? 'Preparar no campo' : 'Enviar');
     const preparar = h('button', { class: 'wf-btn', type: 'button' }, 'Só preparar');
-    card.append(h('div', { class: 'wf-row' }, [enviar, preparar]));
+    card.append(h('div', { class: 'wf-row' }, euMandoM ? [enviar] : [enviar, preparar]));
 
     const pendente = state.pageState.isPending;
     const comParams = modelo.params?.length > 0;
@@ -2969,10 +2971,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   function renderTemplateCard(template) {
     const card = h('div', { class: 'wf-card' });
     const preview = h('div', { class: 'wf-preview', 'data-fica': '1' }, '…');
-    const sendBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Enviar');
+    /**
+     * **NO MODO "EU MANDO" OS DOIS BOTOES FAZEM A MESMA COISA** (28/10/2026, pedido dele: *"tem
+     * botoes redundantes sobrando"*).
+     *
+     * Com o envio automatico desligado, `sendTemplate` cai no ramo de inserir **venha por qual
+     * botao vier** — entao "Enviar" e "So inserir" viram o mesmo clique, repetido em CADA cartao
+     * de resposta pronta. Dois botoes identicos lado a lado nao sao escolha: sao ruido, e ruido
+     * ensina a nao ler o que esta na tela.
+     *
+     * Sobra **um**, com o nome do que ele de fato faz. Voltando ao modo automatico, os dois
+     * voltam — porque ai eles sao mesmo duas coisas.
+     */
+    const euMando = !state.settings.autoSend;
+    const sendBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, euMando ? 'Inserir no campo' : 'Enviar');
     const insertBtn = h('button', { class: 'wf-btn', type: 'button' }, 'Só inserir');
 
-    card.append(h('h4', {}, template.name), preview, h('div', { class: 'wf-row' }, [sendBtn, insertBtn]));
+    card.append(h('h4', {}, template.name), preview,
+      h('div', { class: 'wf-row' }, euMando ? [sendBtn] : [sendBtn, insertBtn]));
 
     async function renderPreview() {
       const ctx = await currentVarContext();
@@ -4779,13 +4795,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'por número, por dia — confira que ele comporta o que você pediu aqui.'));
     }
 
-    const parar = h('button', { class: 'wf-btn wf-danger', type: 'button' }, 'Parar a rodada');
-    parar.disabled = !state.auto.rodando;
-    parar.addEventListener('click', () => {
-      state.auto.parar = true;
-      setStatus('Vou parar assim que o contato atual terminar.');
-    });
-    card.append(h('div', { class: 'wf-row' }, [parar]));
+    /**
+     * **O "Parar a rodada" daqui SAIU em 28/10/2026** (pedido dele: *"tem botoes redundantes
+     * sobrando"*). Ele só servia com a rodada andando — e nesse exato momento o **controle
+     * flutuante** está na tela com o mesmo botão, e o **Esc** faz a mesma coisa. Fora da rodada
+     * ele ficava apagado, ocupando uma linha do cartão o tempo todo.
+     *
+     * **Botão que só funciona quando outro igual está na tela é botão a menos.** O flutuante é
+     * melhor nos dois sentidos: aparece sozinho quando a rodada começa, e não depende de ele
+     * estar nesta aba.
+     */
 
     /**
      * **A TARJA DIZIA O QUE DEIXOU DE SER VERDADE** (28/10/2026). Ela avisava que *"sem ele nada
@@ -16418,8 +16437,22 @@ const CONTATOS_POR_PAGINA = 200;
 
     const canalAgora = String(state.session?.channelId || '').trim();
     if (canalAgora) {
+      /**
+       * **O MESMO ato do botao do aviso vermelho, e agora pela MESMA funcao** (28/10/2026). Os
+       * dois existiam e **divergiam**: este somava so o id do canal; o do aviso soma o id **e o
+       * telefone**, que envelhecem diferente — o id morre se a instancia for recriada, o telefone
+       * nao.
+       *
+       * **Os dois ficam, e nao e redundancia:** este e alcancavel SEMPRE (e a tela do cadastro),
+       * e o do aviso so aparece com a conferencia ligada, no momento em que ela barra. Com a
+       * conferencia desligada — como ele deixou — este e o unico.
+       */
       const usar = h('button', { class: 'wf-btn wf-mini', type: 'button' }, 'Somar o canal deste atendimento a este candidato');
-      usar.addEventListener('click', () => salvar({ canais: [...new Set([...perfil.canais, canalAgora])] }));
+      usar.addEventListener('click', () => {
+        const chaves = [canalAgora, String(state.numeroDoCanal || '').trim()].filter(Boolean);
+        const limpa = perfisLib.somarCanal(state.perfis, perfil.id, ...chaves);
+        salvar({ canais: perfisLib.porId(limpa, perfil.id).canais });
+      });
       /**
        * **Diz o que a conta comparou, e não só o id do canal.** Sem o número lido, "não está
        * cadastrado" e "não consegui ler a tela" parecem a mesma coisa — e foi exatamente isso que
