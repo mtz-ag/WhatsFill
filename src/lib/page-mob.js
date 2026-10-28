@@ -254,6 +254,7 @@ export function estadoDaConversa(aberta, { dark = false, hasDialog = false, hasC
       hasDialog,
       semControles: false,
       porQuantosSinais: aberta?.por || 'nenhum',
+      plataforma: mob.HOST,
     };
   }
 
@@ -279,6 +280,14 @@ export function estadoDaConversa(aberta, { dark = false, hasDialog = false, hasC
     hasDialog,
     semControles: false,
     porQuantosSinais: aberta?.por || 'nenhum',
+    /**
+     * **Qual plataforma esta atendendo**, para a tela nao dar conselho que nao funciona aqui (o
+     * *"clique em Recarregar"* do modelo aprovado, que no mobiliza.me nunca carregaria nada).
+     *
+     * Vai no ESTADO porque ele ja atravessa a ponte e ja e lido a cada tique: no modo janela
+     * `location.hostname` e o da extensao e nao diz nada sobre onde a conversa esta. Custa zero.
+     */
+    plataforma: mob.HOST,
   };
 }
 
@@ -506,9 +515,51 @@ export async function canalForaDoAr(canalId = '', { canais: dados = null } = {})
   return olhar.some((c) => c.conexao) ? false : null;
 }
 
+/**
+ * **O NUMERO DA INSTANCIA QUE ATENDE ESTA CONVERSA — e nao o numero do CONTATO** (achado em
+ * 28/10/2026, olhando a barreira do candidato acusar em todo atendimento).
+ *
+ * A primeira versao devolvia `conversa.numero`, que e **o telefone da pessoa do outro lado**. Na
+ * plataforma velha a funcao irma (`dom.numeroDaConversa`) lia *"o numero da instancia que atende a
+ * conversa aberta"* do cabecalho — coisa completamente diferente.
+ *
+ * **Quem consome isso e `perfis.situacaoDoCanal`**, a barreira que impede a rodada de responder
+ * com o nome do candidato errado (25/09). Com o numero do CONTATO no lugar do numero do CANAL ela
+ * comparava a coisa errada nos dois sentidos: nunca reconhecia o canal dele (e pulava todo
+ * contato), e **podia dizer `meu` por acidente** se o telefone de um eleitor coincidisse com um
+ * numero cadastrado — que e a direcao perigosa, porque ai a mensagem sai.
+ *
+ * O canal e o `instance_id` da conversa (um uuid), e o telefone dele mora em `whatsapp_instances`.
+ * **O cache existe porque isto roda a cada contato aberto** — uma requisicao por `load()` e
+ * exatamente o que derruba esta API (e a licao de `contarMeuDia`, 24/09). Cinco minutos e o mesmo
+ * frescor que a rodada ja usa para a saude do canal.
+ *
+ * **Falhar devolve `null` e nunca um palpite:** sem numero a barreira cai no uuid do canal, que e
+ * identidade de verdade; com numero errado ela afirmaria.
+ */
+const FRESCOR_DOS_CANAIS_MS = 5 * 60 * 1000;
+let canaisEmCache = { quando: 0, lista: null };
+
+export async function canaisFrescos({ agora = Date.now(), canais = null } = {}) {
+  // Lista ja conhecida (a rodada le a saude do canal uma vez por rodada) nao vira requisicao nova.
+  if (canais) return canais;
+  if (canaisEmCache.lista && agora - canaisEmCache.quando < FRESCOR_DOS_CANAIS_MS) return canaisEmCache.lista;
+  const lista = await canaisDaConta();
+  canaisEmCache = { quando: agora, lista };
+  return lista;
+}
+
 export async function numeroDoCanal(opcoes = {}) {
   const r = await perguntarAoGancho('aberta', {}, opcoes);
-  return String(r?.payload?.conversa?.numero || '') || null;
+  const canalId = String(r?.payload?.conversa?.instance_id || '').trim();
+  if (!canalId) return null;
+  try {
+    const canal = (await canaisFrescos(opcoes)).find((c) => c.id === canalId);
+    return canal?.numero || null;
+  } catch (_) {
+    // Leitura que nao voltou nao e "o canal nao tem numero": a barreira decide pelo uuid.
+    return null;
+  }
 }
 
 /**

@@ -1,13 +1,59 @@
-## 2026-10-28 - v3.210.0 - ESTADO DE AGORA - o painel monta, empurra e ESCREVE no campo
+## 2026-10-28 - v3.211.0 - ESTADO DE AGORA - a rodada destravou, e achei um defeito pior
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
+3. **Na aba Config, confira qual numero esta cadastrado no Capitao Martim** — ver *"a barreira
+   vermelha"* abaixo
 
-O painel aparece encaixado na direita **empurrando a pagina**, como no mobiliza.app. Confira
-**3.210.0** no cabecalho do painel — e o que separa *"o conserto nao funcionou"* de *"o conserto
-nao chegou"*.
+O painel aparece encaixado na direita **empurrando a pagina**. Confira **3.211.0** no cabecalho —
+e o que separa *"o conserto nao funcionou"* de *"o conserto nao chegou"*.
+
+### INSERIR TEXTO FUNCIONOU
+
+Sua print mostrou **"Texto inserido no campo de mensagem."** em verde. E a confirmacao ao vivo que
+faltava: o caminho da escrita esta medido, e nao so no papel.
+
+### "EXIGINDO MODELO APROVADO" — a trava saiu, e ela nunca deveria valer aqui
+
+**Nesta plataforma NAO EXISTE modelo aprovado, e isso esta certo.** O canal e Z-API, que o proprio
+app chama de *"WhatsApp (nao oficial)"*, e para esses nao ha janela de 24h nem modelo da Meta —
+texto livre sai a qualquer hora. A lista vem vazia porque a resposta certa e vazia.
+
+**Duas travas ainda exigiam esse modelo**, e a segunda era pior:
+
+| onde | o que acontecia |
+|---|---|
+| rodada dos **Meus** | devolvia erro e nao comecava |
+| botao **"Comecar pelos Novos"** | ficava **desabilitado**, com um conselho que nao funciona aqui |
+
+As duas sairam. **A rodada nao precisa de modelo aprovado**: medido em 20.000 contextos, sem
+modelo NENHUM ela decide em **100%** deles — conclui, pula, pede o cadastro, manda a mensagem do
+momento e chama a IA. O que sai vem das suas respostas prontas e do anuncio.
+
+E o aviso agora diz a verdade da plataforma em que voce esta, em vez de mandar clicar em
+"Recarregar" num lugar onde isso nunca vai carregar nada.
+
+### A BARREIRA VERMELHA — eu estava comparando o numero ERRADO
+
+Voce nao perguntou sobre ela, mas ela diz *"a rodada nao vai tratar este contato"*, entao eu fui
+olhar. **O defeito era meu, e e mais serio que o outro.**
+
+O painel perguntava *"por qual numero esta conversa e atendida?"* e eu estava devolvendo **o
+telefone da pessoa do outro lado** — o numero do CONTATO, nao o do seu canal. Entao a barreira
+comparava a coisa errada nos dois sentidos:
+
+- **nunca reconhecia o seu numero** -> pulava todo contato (o que voce viu);
+- e, pior, **poderia dizer "e meu" por acidente**, se o telefone de um eleitor coincidisse com um
+  numero cadastrado — e ai a mensagem SAI, com o nome do candidato errado.
+
+Agora o numero vem da instancia que atende a conversa, que e o que o cadastro da Config espera.
+
+**O que eu preciso de voce:** abra uma conversa e olhe a linha cinza embaixo da tarja vermelha.
+Ela mostra **"numero do canal: ..."**. Se esse numero nao estiver no Capitao Martim na aba Config,
+**some ele la** — a barreira vai continuar acusando (e corretamente) ate isso ser feito. Se a
+linha disser *"NAO consegui descobrir o numero deste canal"*, me avise: ai e defeito meu de novo.
 
 ### O "ERRO AO INSERIR TEXTO" — eram DOIS defeitos, e o segundo e o que me assustou
 

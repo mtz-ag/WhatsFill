@@ -27,6 +27,8 @@ import {
   canalForaDoAr,
   sendText,
   setComposerText,
+  numeroDoCanal,
+  canaisFrescos,
   clickIniciar,
   clickConcluir,
   clickReiniciar,
@@ -966,6 +968,63 @@ grupo('POR O TEXTO NO CAMPO — e por que isto nao esta na lista das recusas');
   check(/me avise|defeito do adaptador/i.test(sumiu), 'e a mensagem diz que o defeito e nosso, nao dele');
 
   globalThis.Event = jaFoi;
+}
+
+grupo('O NUMERO DO CANAL — e nao o numero do CONTATO');
+{
+  /**
+   * **A primeira versao devolvia `conversa.numero`, que e o telefone da PESSOA do outro lado.**
+   * Quem consome isso e `perfis.situacaoDoCanal`, a barreira que impede a rodada de responder com
+   * o nome do candidato errado (25/09) — entao ela comparava a coisa errada nos dois sentidos:
+   * nunca reconhecia o canal dele (e pulava todo contato), e **podia dizer `meu` por acidente** se
+   * o telefone de um eleitor coincidisse com um numero cadastrado. Essa e a direcao perigosa:
+   * ai a mensagem SAI com o nome do candidato errado.
+   *
+   * Na plataforma velha a funcao irma lia *"o numero da INSTANCIA que atende a conversa aberta"*
+   * — coisa completamente diferente do numero do contato.
+   */
+  const ORIGEM = 'https://mobiliza.me';
+  const CANAL = '11c6063d-0000-0000-0000-000000000001';
+  const DO_CANAL = '5551990000001';
+  const DO_CONTATO = '5551990000002';
+  const canais = [{ id: CANAL, nome: 'Instancia 1', numero: DO_CANAL }];
+
+  const janelaQue = (conversa) => {
+    const ouvintes = [];
+    const j = {
+      addEventListener: (ti, fn) => { if (ti === 'message') ouvintes.push(fn); },
+      removeEventListener: (ti, fn) => { const i = ouvintes.indexOf(fn); if (i >= 0) ouvintes.splice(i, 1); },
+      postMessage(msg) {
+        const ev = { source: j, origin: ORIGEM, data: { __whatsfill: 'mob-page', type: 'aberta',
+          payload: { pedido: msg.payload.pedido, por: 'os-dois', conversa } } };
+        for (const fn of [...ouvintes]) fn(ev);
+      },
+    };
+    return j;
+  };
+
+  const n = await numeroDoCanal({ janela: janelaQue({ id: 'c-1', numero: DO_CONTATO, instance_id: CANAL }), canais });
+  check(n === DO_CANAL, 'devolve o numero da INSTANCIA');
+  check(n !== DO_CONTATO, 'e nunca o numero do contato — e esse o defeito que isto trava');
+
+  /** Conversa sem canal nao vira palpite: a barreira cai no uuid, que e identidade de verdade. */
+  const semCanal = await numeroDoCanal({ janela: janelaQue({ id: 'c-1', numero: DO_CONTATO }), canais });
+  check(semCanal === null, 'conversa sem `instance_id` devolve NAO SEI, nunca o numero do contato');
+
+  const outro = await numeroDoCanal({ janela: janelaQue({ id: 'c-1', instance_id: 'uuid-que-nao-esta-na-conta' }), canais });
+  check(outro === null, 'canal que nao esta na conta tambem e "nao sei"');
+
+  const mudo = await numeroDoCanal({ janela: null, canais });
+  check(mudo === null, 'gancho mudo nao vira numero nenhum');
+
+  /**
+   * **O cache existe porque isto roda a cada contato aberto**, e uma requisicao por `load()` e o
+   * que derruba esta API (a licao do `contarMeuDia`, 24/09). Lista ja conhecida nao vira pedido.
+   */
+  let pedidos = 0;
+  const contando = { get length() { pedidos++; return canais.length; }, find: (f) => canais.find(f) };
+  await canaisFrescos({ canais: contando });
+  check(pedidos === 0, 'lista injetada nao vira requisicao');
 }
 
 fim();

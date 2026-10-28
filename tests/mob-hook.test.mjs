@@ -182,6 +182,14 @@ grupo('QUAL esta aberta: as duas copias tambem tem de concordar');
     'id', 'nome', 'numero', 'external_chat_id', 'contato_id',
     // em que pe esta — e o que o getState le a cada 500ms SEM tocar na rede
     'status', 'atendente_id', 'total_mensagens', 'ultima_mensagem_em',
+    /**
+     * **POR QUAL NUMERO esta conversa e atendida.** Entrou em 28/10/2026 porque a barreira do
+     * candidato (25/09) comparava o numero do CONTATO no lugar do numero do CANAL — e dizer
+     * `meu` por acidente e a direcao em que a mensagem SAI com o nome errado.
+     *
+     * Nao e dado de eleitor: e o id de uma instancia da conta dele.
+     */
+    'instance_id',
   ].sort();
   const [resp] = subirGancho([linhaAtiva(a, true)], [painel(a)]).pedir('aberta', {});
   const atravessou = Object.keys(resp.payload.conversa).sort();

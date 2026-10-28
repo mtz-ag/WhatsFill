@@ -1728,12 +1728,39 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * mudar o layout — e aí a tarja acusa "número não cadastrado" sobre um número que está lá. Sem
    * esta linha, o próximo diagnóstico desse caso é outra sessão inteira.
    */
+  /**
+   * **O AVISO DE "nenhum modelo aprovado" TEM DE DIZER A VERDADE NA PLATAFORMA EM QUE ELE ESTÁ.**
+   *
+   * *"Abra um atendimento e clique em Recarregar"* é um conselho bom no mobiliza.app e **uma
+   * instrução que nunca funciona** no mobiliza.me, onde não existe modelo aprovado — e aviso que
+   * não envelhece com o que já foi feito é aviso que mente (20/09).
+   *
+   * **A plataforma vem no próprio estado da conversa**, que o painel já lê a cada tique: zero
+   * requisição a mais, e funciona também no modo janela, onde `location.hostname` é o da extensão
+   * e não diz nada sobre onde a conversa está.
+   */
+  function naPlataformaNova() {
+    return !!state.pageState?.plataforma;
+  }
+
+  function avisoSemModeloAprovado() {
+    return h('div', { class: 'wf-block', 'data-fica': '1' },
+      naPlataformaNova()
+        ? 'Esta plataforma não tem modelo aprovado — o canal é não oficial (Z-API), e para esses ' +
+            'não há janela de 24h nem modelo da Meta. Isso NÃO impede a rodada: o que sai vem das ' +
+            'suas respostas prontas e do anúncio.'
+        : 'Nenhum modelo aprovado carregado. Abra um atendimento e clique em Recarregar.');
+  }
+
   function oQueComparei() {
     const canal = String(state.session?.channelId || '').trim();
     const numero = String(state.numeroDoCanal || '').trim();
     return [
       canal ? `canal ${canal}` : 'sem canal na sessão',
-      numero ? `número lido da tela: ${numero}` : 'NÃO consegui ler o número na tela desta conversa',
+      // **"lido da tela" deixou de ser verdade**: no mobiliza.me o número vem da tabela das
+      // instâncias, e não do cabeçalho do atendimento. O rótulo diz o que ele precisa saber — QUAL
+      // número comparar — sem afirmar de onde foi lido.
+      numero ? `número do canal: ${numero}` : 'NÃO consegui descobrir o número deste canal',
     ].join(' · ');
   }
 
@@ -4179,9 +4206,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'sai da fila sem você decidir.')
     );
 
-    if (!state.hsmTemplates.length) {
-      card.append(h('div', { class: 'wf-block' }, 'Nenhum modelo aprovado carregado. Abra um atendimento e clique em Recarregar.'));
-    }
+    if (!state.hsmTemplates.length) card.append(avisoSemModeloAprovado());
     return card;
   }
 
@@ -4650,11 +4675,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     comecar.addEventListener('click', () => withBusy(runLoteNovos));
     card.append(h('div', { class: 'wf-row' }, [comecar]));
 
+    /**
+     * **Modelo aprovado NÃO é impedimento** — ver `runLoteRespondidos`, onde o mesmo resquício
+     * barrava a outra fila. Aqui ele era pior: desabilitava o botão, então a rodada dos Novos
+     * ficava morta no mobiliza.me **sem nada explicando o porquê além de um conselho que não
+     * funciona ali** ("clique em Recarregar" nunca carregaria nada).
+     */
     const impedimentos = [];
     if (!state.settings.autoSend) impedimentos.push('Precisa do "Enviar automático" ligado (acima).');
-    if (!state.hsmTemplates.length) {
-      impedimentos.push('Nenhum modelo aprovado carregado — abra um atendimento e clique em Recarregar.');
-    }
+    if (!state.hsmTemplates.length) card.append(avisoSemModeloAprovado());
 
     comecar.disabled = state.auto.rodando || impedimentos.length > 0;
     for (const motivo of impedimentos) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, motivo));
@@ -7696,10 +7725,28 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * **A informação não se perde: ela desceu para o CONTATO**, onde já existia e é melhor. Sem
      * conteúdo reconhecido a caixa diz o que fazer agora e o que fazer para não repetir (cadastrar
      * o anúncio, ou preencher o modelo padrão) — aviso por contato, em vez de rodada travada.
+     *
+     * ---
+     *
+     * **E O MODELO APROVADO DEIXOU DE SER PRÉ-REQUISITO EM 28/10/2026, PELO MESMO ARGUMENTO** —
+     * relato dele, com a print da rodada travada no mobiliza.me: *"exigindo modelo aprovado"*.
+     *
+     * **O comentário acima estava em cima da trava ERRADA.** Em 25/09 saiu a exigência da tabela
+     * *"Modelo por conteúdo"*; o `if` que ficou logo abaixo falava de outra coisa — os modelos
+     * APROVADOS do canal (`state.hsmTemplates`) — e sobreviveu porque na plataforma velha eles
+     * quase sempre carregavam, então a trava dormia.
+     *
+     * **No mobiliza.me ela nunca mais dorme: não existe modelo aprovado nesta plataforma.** O
+     * canal é `zapi`, que o próprio app chama de *"WhatsApp (não oficial)"*, e para esses não há
+     * janela de 24h nem modelo aprovado (27/09) — `whatsapp_templates` não tem `instance_id`
+     * porque é a tabela das respostas rápidas dele. `getMessageTemplates` devolve **lista vazia**,
+     * que é a resposta CERTA, e a trava transformava a resposta certa em rodada morta.
+     *
+     * A medição de 25/09 vale igual aqui, e é mais forte: **sem modelo NENHUM a rodada decide em
+     * 100% dos contextos** — ela conclui, pula, pede o cadastro, manda a mensagem do momento e
+     * chama a IA sem tocar em modelo aprovado. A assimetria também era a prova, de novo: "Outros"
+     * nunca teve esta trava, e as três rodadas usam o mesmo motor.
      */
-    if (!state.hsmTemplates.length) {
-      return setStatus('Nenhum modelo aprovado carregado. Abra um atendimento e clique em Recarregar.', 'err');
-    }
 
     // O ▶ do controle flutuante recomeça POR AQUI, e não por `rodar` direto: os confirms
     // desta rodada moram nesta função, e pular um deles seria decidir no lugar dele.

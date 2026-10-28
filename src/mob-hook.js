@@ -278,6 +278,9 @@
                 numero: r.conversa.numero,
                 external_chat_id: r.conversa.external_chat_id,
                 contato_id: r.conversa.contato_id,
+                // O CANAL da conversa. Sem ele o painel nao tem como descobrir POR QUAL NUMERO
+                // esta conversa e atendida — e a barreira do candidato compararia outra coisa.
+                instance_id: r.conversa.instance_id,
                 status: r.conversa.status,
                 atendente_id: r.conversa.atendente_id,
                 total_mensagens: r.conversa.total_mensagens,

@@ -533,6 +533,47 @@ mudaram as maos, nao a cabeca.
   primeiro clique em "So inserir" reporta honestamente —, mas hipotese aqui continua sendo
   hipotese.
 
+- **MODELO APROVADO NAO EXISTE NESTA PLATAFORMA, E DUAS TRAVAS AINDA O EXIGIAM** (28/10/2026,
+  print dele com a rodada travada: *"exigindo modelo aprovado"*). O CLAUDE.md ja registrava em
+  27/09 que canal **zapi** nao tem janela de 24h nem modelo aprovado, e `getMessageTemplates`
+  devolve **lista vazia** de proposito — **a trava transformava a resposta CERTA em rodada
+  morta**.
+  **E o comentario estava em cima da trava ERRADA.** Em 25/09 saiu o pre-requisito da tabela
+  *"Modelo por conteudo"*, e o `if` que ficou logo abaixo falava de **outra coisa** — os modelos
+  aprovados do canal (`state.hsmTemplates`) — e sobreviveu porque na plataforma velha eles quase
+  sempre carregavam: a trava **dormia**. No mobiliza.me ela nunca mais dorme. **Ao apagar um
+  pre-requisito, confira se o `if` logo abaixo e o mesmo assunto do comentario.**
+  Eram DOIS lugares, e o segundo era pior: `runLoteRespondidos` devolvia erro, e o botao
+  **"Comecar pelos Novos" ficava DESABILITADO** — rodada morta sem nada explicando, alem de um
+  conselho que nao funciona ali (*"clique em Recarregar"* nunca carregaria nada).
+  A medicao de 25/09 vale igual e e mais forte: **sem modelo NENHUM a rodada decide em 100% dos
+  contextos**. E o aviso virou `avisoSemModeloAprovado()`, que **diz a verdade da plataforma em
+  que ele esta** — `state.pageState.plataforma`, que viaja no estado da conversa e por isso custa
+  zero e **funciona no modo janela**, onde `location.hostname` e o da extensao e nao diz nada
+  sobre onde a conversa esta.
+
+- **`numeroDoCanal` DEVOLVIA O NUMERO DO CONTATO, E A BARREIRA DO CANDIDATO COMPARAVA ISSO**
+  (28/10/2026, achado olhando a barreira acusar em todo atendimento da print). A funcao devolvia
+  `conversa.numero` — **o telefone da pessoa do outro lado**. A irma da plataforma velha
+  (`dom.numeroDaConversa`) le *"o numero da INSTANCIA que atende a conversa aberta"*, que e coisa
+  completamente diferente.
+  **Quem consome e `perfis.situacaoDoCanal`** (25/09), a barreira que impede a rodada de responder
+  com o nome do candidato errado — entao ela comparava a coisa errada **nos dois sentidos**: nunca
+  reconhecia o canal dele (e pulava todo contato, que foi o sintoma visivel), e **podia dizer
+  `meu` por acidente** se o telefone de um eleitor coincidisse com um numero cadastrado. **Essa e
+  a direcao perigosa: ai a mensagem SAI com o nome errado.**
+  O canal e o **`instance_id`** da conversa (um uuid) e o telefone dele mora em
+  `whatsapp_instances`, que `canaisDaConta` ja lia. **O gancho passou a mandar o `instance_id`** —
+  e a lista de permissao da ponte o exigiu por decisao, nao de carona: `mob-hook.test.mjs` caiu
+  sozinho ate ele ser acrescentado com a razao escrita.
+  **Cache de 5 min porque isto roda a cada contato aberto** — uma requisicao por `load()` e o que
+  derruba esta API (a licao do `contarMeuDia`, 24/09) —, e lista ja conhecida nao vira pedido
+  nenhum. **Falhar devolve `null` e nunca um palpite:** sem numero a barreira cai no uuid, que e
+  identidade de verdade; com numero errado ela AFIRMA.
+  **E o rotulo da tela mentia junto:** *"numero lido da tela"* deixou de ser verdade (aqui o
+  numero vem da tabela das instancias), entao ele virou **"numero do canal"** — o que ele precisa
+  saber e QUAL numero cadastrar, nao de onde eu li.
+
 - **A CHAMADA AO SUPABASE SAI DA ABA, e e por isso que o CORS nao incomoda.** Em MV3 o `fetch` de
   content script carrega a origem da PAGINA — entao ele chega ao Supabase como
   `Origin: https://mobiliza.me`, exatamente como a requisicao que a propria plataforma faz. Tirar a
