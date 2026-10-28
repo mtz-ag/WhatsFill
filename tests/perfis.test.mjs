@@ -12,6 +12,7 @@
  * Rode: node tests/perfis.test.mjs
  */
 
+import { readFileSync } from 'node:fs';
 import { check, grupo, fim, lib, mem } from './_harness.mjs';
 
 const perfis = await lib('perfis.js');
@@ -366,6 +367,52 @@ grupo('SOMAR O CANAL AO CANDIDATO — a saida que a barreira nao tinha');
   const inventado = perfis.somarCanal(lista, 'nao-existe', CANAL);
   check(inventado.length === lista.length, 'candidato inexistente nao vira candidato novo');
   check(!inventado.some((p) => p.canais.includes(CANAL)), 'e o canal nao entra em ninguem');
+}
+
+grupo('DESLIGAR a conferencia do numero: UM ponto, e e isso que a torna completa');
+{
+  /**
+   * **Pedido dele (28/10/2026): *"desabilite a funcao de checar o numero por enquanto, esta
+   * atrapalhando nessa nova plataforma"*.** A barreira esta certa e virou trava: na plataforma
+   * nova o canal e um `instance_id` novo, nada esta cadastrado, e ela pulava a fila inteira. E a
+   * licao do teto de 45 (02/10) — **protecao que ele nao alcanca volta como trava**.
+   *
+   * O interruptor desliga num lugar so: `recalcularCanalDoAtendimento` passa a escrever
+   * `estado: 'quieto'`, que **os tres pontos que leem a conta ja tratam como "siga em frente"**.
+   *
+   * **E e por isso que este teste conta CHAMADAS:** havendo um segundo ponto chamando
+   * `situacaoDoCanal` direto, ele escaparia do interruptor — a caixa ficaria desmarcada na tela e
+   * a rodada continuaria pulando, que e o pior desfecho possivel (o controle mentindo).
+   */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+
+  const chamadas = (painel.match(/perfisLib\.situacaoDoCanal\(/g) || []).length;
+  check(chamadas === 1, `situacaoDoCanal e chamada de UM lugar so no painel (achei ${chamadas})`);
+
+  const leituras = (painel.match(/state\.auto\.cfg\.conferirCanal\b/g) || []).length;
+  check(leituras === 1, `a chave \`conferirCanal\` e lida de UM lugar so (achei ${leituras})`);
+
+  check(/function conferirCanalLigado\(\)/.test(painel), 'e esse lugar e `conferirCanalLigado`');
+
+  /**
+   * **`quieto` tem de continuar significando "siga em frente"** nos tres pontos — e e o que o
+   * desligamento usa. Aqui isso se prova pela funcao de verdade, nao pelo texto do painel.
+   */
+  const semCadastro = perfis.situacaoDoCanal([{ id: 'martim', nome: 'Capitao Martim', canais: [] }], 'uuid', '5551000000000', 'martim');
+  check(semCadastro.estado === 'quieto', 'ninguem reivindicou canal nenhum: `quieto`');
+
+  const comCadastro = perfis.situacaoDoCanal(
+    [{ id: 'martim', nome: 'Capitao Martim', canais: ['outro-uuid'] }],
+    'uuid-deste-canal', '', 'martim'
+  );
+  check(comCadastro.estado === 'desconhecido', 'com cadastro e o canal fora dele: `desconhecido` — e o caso que pulava a fila');
+
+  /**
+   * **O padrao depende da PLATAFORMA, e o teste trava a razao** (nao o valor, que vive no
+   * painel): a plataforma nova nasce desligada porque ha UMA instancia na conta — com um canal so
+   * a barreira nao tem o que separar.
+   */
+  check(/return !naPlataformaNova\(\);/.test(painel), 'sem escolha gravada, quem decide o padrao e a plataforma');
 }
 
 fim();

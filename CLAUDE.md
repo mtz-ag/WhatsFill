@@ -661,6 +661,26 @@ mudaram as maos, nao a cabeca.
   painel sabe o numero; quem sabe de quem ele e, e ele.
   **E o `motivo` da linha do Andamento aponta para o BOTAO**, nao para a aba: motivo que manda
   procurar o lugar errado custa a mesma sessao de diagnostico que o aviso que nao envelhece.
+  **E NO MESMO DIA ELE MANDOU DESLIGAR A CONFERENCIA INTEIRA** — *"desabilite a funcao de checar o
+  numero por enquanto, esta atrapalhando nessa nova plataforma"*. **O botao nao bastou**: ele
+  resolve UM atendimento por vez, e a barreira seguia sendo a primeira coisa na frente de tudo.
+  **E a licao do teto de 45 (02/10) pela segunda vez: protecao que ele nao alcanca volta como
+  trava** — so que aqui a trava era minha, nao um numero que ele ditou.
+  `auto.conferirCanal`, lido por **`conferirCanalLigado()`, um lugar so** (como `rodadaAutomatica`),
+  e a caixa mora na aba em que ele aperta "Comecar" (06/09).
+  **DESLIGAR acontece num PONTO SO:** `recalcularCanalDoAtendimento` passa a escrever
+  `estado: 'quieto'`, que os **tres** consumidores (a tarja, a rodada e o disparo) ja tratam como
+  *"siga em frente"*. Ponto novo nasce desligado de graca, e `tests/perfis.test.mjs` **conta as
+  chamadas**: um segundo `situacaoDoCanal` direto escaparia do interruptor, e ai a caixa ficaria
+  desmarcada na tela com a rodada pulando assim mesmo — **o controle mentindo**, que e o pior
+  desfecho.
+  **O padrao depende da PLATAFORMA e nao vai no `DEFAULT_STORE`:** chave nova dentro de `auto`
+  chega como `undefined` para quem ja usava, entao escrever `true` la **ligaria a trava de volta
+  para ele**. Sem escolha gravada: LIGADA no mobiliza.app (onde o cadastro existe e a barreira
+  protege de verdade) e DESLIGADA no mobiliza.me, onde medi **uma** instancia na conta — com um
+  canal so, a barreira nao tem o que separar.
+  **O custo esta ESCRITO na tela, e e real:** desligada, no dia em que houver um segundo numero na
+  conta o texto de um candidato pode sair pelo numero do outro **sem nada avisar**.
 
 - **A CHAMADA AO SUPABASE SAI DA ABA, e e por isso que o CORS nao incomoda.** Em MV3 o `fetch` de
   content script carrega a origem da PAGINA — entao ele chega ao Supabase como

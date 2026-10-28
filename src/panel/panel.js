@@ -1712,7 +1712,44 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *
    * Agora é uma função só, chamada no `load()`, ao trocar de candidato e ao salvar o cadastro.
    */
+/**
+   * **A CONFERÊNCIA DO NÚMERO PODE SER DESLIGADA, E QUEM DECIDE É ELE** (28/10/2026, pedido dele:
+   * *"desabilite a função de checar o número por enquanto, está atrapalhando nessa nova
+   * plataforma"*).
+   *
+   * **É a lição do teto de 45 (02/10) de novo:** uma proteção que ele não alcança volta como
+   * trava. Aqui ela virou isso literalmente — na plataforma nova o canal é um `instance_id` novo,
+   * nada está cadastrado, e a barreira pulava **a fila inteira**.
+   *
+   * **Um leitor só**, como `rodadaAutomatica()`: a conta é lida por três pontos (a tarja, a rodada
+   * e o disparo em lote), e três leituras separadas divergem na primeira caixa nova.
+   *
+   * **O padrão depende da PLATAFORMA, e não é comodidade:**
+   *  - no **mobiliza.app** ela nasce LIGADA, porque lá o cadastro já existe e a barreira já
+   *    protege de verdade — mudar isso silenciosamente tiraria uma proteção que funciona;
+   *  - no **mobiliza.me** nasce DESLIGADA, porque medi a conta dele e há **uma** instância: com um
+   *    canal só, a barreira não tem o que separar — ela só sabe dizer *"não conheço este número"*.
+   *
+   * **O custo está dito na tela e é real:** com ela desligada, o dia em que houver um segundo
+   * número na conta, o texto de um candidato pode sair pelo número do outro sem nada avisar. Por
+   * isso a caixa existe em vez de um `if` escondido: escolha dele, visível e reversível.
+   */
+  function conferirCanalLigado() {
+    const escolha = state.auto.cfg.conferirCanal;
+    if (escolha === true || escolha === false) return escolha;
+    return !naPlataformaNova();
+  }
+
   function recalcularCanalDoAtendimento() {
+    if (!conferirCanalLigado()) {
+      /**
+       * **`quieto` é o estado que já significa "ninguém reivindicou nada"**, e os três pontos que
+       * leem a conta já o tratam como "siga em frente". Desligar aqui, num lugar só, é o que evita
+       * espalhar um `if` por eles — e um ponto novo nasce desligado de graça.
+       */
+      state.canalDoAtendimento = { estado: 'quieto', dono: null, desligado: true };
+      return;
+    }
     state.canalDoAtendimento = perfisLib.situacaoDoCanal(
       state.perfis,
       state.session?.channelId,
@@ -4276,6 +4313,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
               'que está em atendimento com outra pessoa. Nas duas nada sai da fila sem você decidir.'
           : '"Meus" é quem respondeu os dados; "Outros" é a aba de vídeo e "bom dia". Nas duas nada ' +
               'sai da fila sem você decidir.')
+    );
+
+    /**
+     * **O interruptor fica AQUI, e não na Config** — a mesma razão pela qual a caixa da IA desceu
+     * para cá em 06/09: controle longe do botão que ele aperta é controle que ninguém encontra.
+     * Ele é quem faz a rodada pular ou não, então mora ao lado de "Começar".
+     */
+    card.append(
+      checkbox('Conferir de quem é o número do atendimento', conferirCanalLigado(), (v) =>
+        salvarAuto({ conferirCanal: v }).then(() => {
+          recalcularCanalDoAtendimento();
+          renderAll();
+        })
+      )
+    );
+    card.append(
+      h('div', { class: 'wf-origin' },
+        conferirCanalLigado()
+          ? 'Marcado, a rodada PULA o contato cujo número não está no candidato em que você está — ' +
+              'é o que impede o texto de um candidato de sair pelo número do outro. O preço é que, ' +
+              'sem o número cadastrado, ela pula todo mundo.'
+          : 'DESMARCADO: a rodada trata qualquer número, e eu não aviso mais de quem ele é. Com um ' +
+              'número só na conta isso não muda nada; no dia em que houver um segundo, o texto de ' +
+              'um candidato pode sair pelo número do outro sem nada na tela avisando.')
     );
 
     if (!state.hsmTemplates.length) card.append(avisoSemModeloAprovado());

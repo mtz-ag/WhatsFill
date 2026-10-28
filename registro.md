@@ -1,38 +1,38 @@
-## 2026-10-28 - v3.214.0 - ESTADO DE AGORA - a fila anda; falta UM clique seu
+## 2026-10-28 - v3.215.0 - ESTADO DE AGORA - a conferencia do numero esta DESLIGADA aqui
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. **Abra um contato e clique em "Somar este numero ao Capitao Martim"**, no aviso vermelho do
-   cabecalho. **E isso que destrava a rodada.**
 
-Confira **3.214.0** no cabecalho do painel.
+**Nada mais.** A tarja vermelha some e a rodada passa a tratar os contatos. Confira **3.215.0** no
+cabecalho do painel.
 
-### "SO PULANDO DE CONTATO EM CONTATO" — agora a fila anda, e quem pula e a barreira
+### DESLIGUEI, como voce pediu — e o interruptor esta na tela
 
-**Isto e progresso, e a barreira esta certa.** Com a fila consertada (3.213) a rodada passou a
-percorrer de verdade — e ai apareceu a protecao que existe desde 25/09: *"o numero deste
-atendimento nao esta em nenhum candidato"*. O canal do mobiliza.me e novo, voce nunca o cadastrou,
-e a barreira se recusa a responder sem saber de quem ele e. **Ela esta impedindo o texto de um
-candidato de sair pelo numero do outro.**
+Na aba **Automatizado**, junto dos botoes de comecar, ha agora:
 
-**O defeito meu nao era a barreira: era ela nao ter saida.** Ela mandava *"some o numero ao
-candidato certo na aba Config"* — achar o numero, abrir a Config, achar o campo, digitar — enquanto
-a rodada pulava tudo. Agora ha um botao na propria tarja:
+> ☐ **Conferir de quem e o numero do atendimento**
 
-> **Somar este numero ao Capitao Martim**
+**No mobiliza.me ela nasce DESMARCADA**; no mobiliza.app continua marcada, porque la o cadastro
+existe e a barreira protege de verdade. Voce pode marcar e desmarcar quando quiser — nao e um `if`
+escondido no codigo.
 
-Um clique, e a rodada passa a tratar os contatos desse canal.
+### POR QUE ELA ESTAVA ATRAPALHANDO, E POR QUE DESLIGAR AQUI E DEFENSAVEL
 
-### POR QUE EU NAO FACO ISSO SOZINHO
+Medi a sua conta: ha **uma** instancia. Com um canal so, a barreira **nao tem o que separar** —
+ela so sabe dizer *"nao conheco este numero"*, que e exatamente o que ela estava repetindo em todo
+contato.
 
-Porque dizer de QUEM e um numero e exatamente a decisao que essa barreira protege. Eu sei qual e o
-numero; **quem sabe de quem ele e, e voce**. Errar isso manda a mensagem do Capitao Martim pelo
-numero de outro candidato, com o nome errado em cima — e isso nao tem volta.
+**O custo, dito com todas as letras:** no dia em que houver um SEGUNDO numero na conta, com ela
+desmarcada o texto de um candidato pode sair pelo numero do outro **sem nada na tela avisando**. A
+caixa fica la para voce remarcar nesse dia.
 
-O botao soma **duas chaves**: o id interno do canal e o telefone. Os dois porque envelhecem
-diferente — se a instancia for recriada na plataforma, o id muda e o telefone continua valendo.
+### E eu errei o remedio na versao anterior
+
+Na 3.214 eu dei um botao ("Somar este numero ao Capitao Martim") achando que resolvia. Nao
+resolvia: ele conserta **um atendimento por vez**, e a barreira continuava sendo a primeira coisa
+na frente de tudo. O botao continua la e e util; o que faltava era o interruptor.
 
 ## 2026-10-26 - v3.200.0 - ESTADO DE AGORA - a plataforma mudou, e a migracao comecou pelo chao
 
