@@ -1,45 +1,36 @@
-## 2026-10-28 - v3.224.0 - ESTADO DE AGORA - a rodada escreve, voce da Enter, ela conclui
+## 2026-10-28 - v3.225.0 - ESTADO DE AGORA - o box do modo de envio
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.224.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.225.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Na aba **Config**, **DESMARQUE** "Enviar automatico (um clique manda a mensagem)"
-4. Confira **3.224.0** na linha pequena do topo do painel
+3. Na aba **Automatizado**, no box **"Quem manda a mensagem"**, escolha o modo
+4. Confira **3.225.0** na linha pequena do topo do painel
 
-### "SO ESCREVER SEM ENVIAR" — a opcao existia e nao servia para a rodada
+### O BOX
 
-Voce estava certo nas duas metades: a opcao existe (*"Enviar automatico"*, na Config) **e nao
-funcionava** onde voce precisava. Nos cliques a mao ela sempre funcionou — o texto entra no campo
-e voce manda. **Nas rodadas, nao: cinco delas se recusavam a comecar com ela desligada.**
+Ele fica **junto dos botoes de comecar**, e tem duas opcoes:
 
-O motivo estava escrito na propria trava, e era real: a rodada era *enviar -> concluir -> proximo*.
-Sem o envio no meio, ela **fecharia o atendimento com o texto parado no campo**.
+> ( ) **Eu mando:** a rodada escreve e espera o meu Enter
+> ( ) **A extensao manda sozinha**
 
-**Agora e assim, que foi o que voce pediu:**
+Escolhendo *"Eu mando"*, a rodada escreve no campo e PARA. Voce revisa, da Enter, e ai ela conclui
+e abre o proximo.
 
-1. a rodada decide e **escreve** no campo
-2. a barra diz *"Escrevi no campo. Revise e de Enter — eu concluo e abro o proximo"*
-3. voce revisa, edita se quiser, e **da Enter**
-4. ela ve o campo esvaziar, **conclui** e abre o proximo
+**O aviso embaixo muda com o que voce escolher** — ele mostra o preco do modo escolhido, nao os
+dois ao mesmo tempo. No modo Enter o preco e: **apagar o texto sem enviar tambem esvazia o campo**,
+e ela entende que saiu. Para pular um contato, use o botao **Parar**.
 
-**Como ela sabe que voce mandou:** o campo esvaziou. E o sinal mais barato que existe — o
-contador de mensagens da plataforma nao foi medido, e perguntar ao banco a cada segundo seria
-rajada contra a API.
+**E a mesma escolha da aba Config** (secao "Envio"), mostrada nos dois lugares — **uma
+configuracao so**. A caixa antiga saiu: duas telas para a mesma chave divergem na primeira
+correcao, e aqui a divergencia seria muda (a tela dizendo um modo e a rodada fazendo outro).
 
-**O risco, dito com todas as letras:** se voce APAGAR o texto sem enviar, ela entende que saiu e
-conclui o atendimento **sem mensagem**. Querendo pular um contato, use o botao **Parar** em vez de
-limpar o campo. Passando 10 minutos sem Enter, ela desiste daquele contato e nao conclui.
-
-### O DISPARO CONTINUA EXIGINDO O ENVIO AUTOMATICO
-
-As duas rodadas da aba **Disparo** mantem a trava, de proposito: la a peca sai **pela API**, que
-nao olha essa caixa. Deixa-las rodar com ela desligada mandaria tudo assim mesmo, com a tela
-dizendo que nao manda.
+**O Disparo nao entra nesta escolha** e continua exigindo o modo automatico: la a peca sai pela
+API, que nao olha essa caixa.
 
 ### O QUE ESTA NO AR
 
@@ -108,6 +99,7 @@ defeito** — e porque o ultimo so apareceu depois de os anteriores sairem da fr
 | 3.222 | erro nas nao atendidas | **a pressa**: assumia no mesmo quadro do clique, antes de a tela se decidir |
 | 3.223.0 | "a aba trocou de atendimento" | a MESMA pressa, num ponto acima do conserto anterior |
 | 3.224.0 | "so escrever" nao funcionava | a opcao existia; as rodadas e que se recusavam a rodar sem envio |
+| 3.225.0 | (pedido) o box do modo | o interruptor existia e nao dizia o modo, e vivia longe do "Comecar" |
 
 **A licao que eu escrevi no CLAUDE.md para nao repetir:** eu consertei o sintoma duas vezes antes
 de achar a causa. As duas correcoes eram reais e ficaram, mas se eu tivesse medido a fila na

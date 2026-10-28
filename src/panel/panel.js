@@ -4175,6 +4175,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'sem a opção de modelo, e você resolve com concluir, agradecer ou responder à mão.'),
     ]);
 
+    card.append(boxDoModoDeEnvio({ sufixo: 'rodadas' }));
+
     const btn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, botaoDaFila('Meus'));
     btn.disabled = state.auto.rodando;
     btn.addEventListener('click', runLoteRespondidos);
@@ -16454,10 +16456,10 @@ const CONTATOS_POR_PAGINA = 200;
     renderCartaoCandidatos();
     renderConfigIA();
     body.append(h('h3', { class: 'wf-h' }, 'Envio'));
+    // O MESMO box da aba Automatizado — uma configuracao so, mostrada nos dois lugares, e a tela
+    // diz isso. Duas caixas para a mesma chave divergem na primeira correcao.
+    body.append(boxDoModoDeEnvio({ sufixo: 'config' }));
     body.append(
-      checkbox('Enviar automático (um clique manda a mensagem)', state.settings.autoSend, (v) =>
-        salvarAjuste({ autoSend: v })
-      ),
       checkbox('Avisar quando o template já foi enviado ao contato', state.settings.antiDup, (v) =>
         salvarAjuste({ antiDup: v })
       ),
@@ -17552,6 +17554,67 @@ const CONTATOS_POR_PAGINA = 200;
   }
 
   // ---- utilidades --------------------------------------------------------
+/**
+   * **UMA ESCOLHA ENTRE DUAS, e nao duas caixas.** Duas caixas deixam marcar as duas (ou nenhuma),
+   * e aqui isso nao existe: ou ele manda com Enter, ou a extensao manda. `radio` com o mesmo
+   * `name` e o que o navegador ja faz certo — e a tecla de seta anda entre elas de graca.
+   *
+   * O `name` leva um sufixo porque o painel REDESENHA a cada `setStatus`: dois grupos com o mesmo
+   * nome na mesma pagina (a aba Config e a Automatizado mostram a mesma escolha) brigariam pela
+   * marcacao.
+   */
+  function escolha(nome, opcoes, valor, onChange) {
+    // `wf-radios`, e nao `wf-escolha`: aquela ja e da janela de escolha da IA, e duas coisas com
+    // o mesmo nome de classe colidem no dia em que uma delas ganhar estilo novo.
+    const caixa = h('div', { class: 'wf-radios' });
+    for (const op of opcoes) {
+      const input = h('input', { type: 'radio', name: nome });
+      input.checked = op.valor === valor;
+      input.addEventListener('change', () => { if (input.checked) onChange(op.valor); });
+      caixa.append(h('label', { class: 'wf-switch' }, [input, h('span', {}, op.rotulo)]));
+    }
+    return caixa;
+  }
+
+  /**
+   * **O BOX DO MODO DE ENVIO** — pedido dele (28/10/2026): *"crie o box que para mandar com enter
+   * ou automatico"*.
+   *
+   * **E a MESMA chave de sempre (`settings.autoSend`), nunca uma segunda.** Dois controles para a
+   * mesma coisa divergem, e a divergencia aqui seria muda: a tela dizendo um modo e a rodada
+   * fazendo outro. O que mudou e o NOME e o LUGAR — *"Enviar automatico (um clique manda a
+   * mensagem)"* nao diz o que acontece numa rodada, e vivia na Config, longe do botao "Comecar"
+   * (a licao de 06/09: controle longe do botao que o usa e controle que ninguem encontra).
+   *
+   * **O rotulo diz o que cada modo FAZ, e o aviso diz o preco do escolhido** — nao os dois precos
+   * ao mesmo tempo, que e ruido.
+   */
+  function boxDoModoDeEnvio({ sufixo = '' } = {}) {
+    const caixa = h('div', { class: 'wf-card' }, [h('h4', {}, 'Quem manda a mensagem')]);
+    caixa.append(
+      escolha(`wf-modo-envio-${sufixo}`, [
+        { valor: false, rotulo: 'Eu mando: a rodada escreve e espera o meu Enter' },
+        { valor: true, rotulo: 'A extensão manda sozinha' },
+      ], !!state.settings.autoSend, (v) => salvarAjuste({ autoSend: v }).then(renderAll))
+    );
+    caixa.append(
+      h('div', { class: 'wf-origin', 'data-fica': '1' },
+        state.settings.autoSend
+          ? 'A rodada envia e conclui sem perguntar o envio. Você continua decidindo a tecla, a ' +
+              'menos que "Automatizar" também esteja marcado.'
+          : 'A rodada escreve no campo e PARA. Você revisa, dá Enter, e aí ela conclui e abre o ' +
+              'próximo. Cuidado: APAGAR o texto sem enviar também esvazia o campo, e ela entende ' +
+              'que saiu — para pular um contato, use o botão Parar. Sem Enter por 10 minutos ela ' +
+              'desiste daquele e não conclui.')
+    );
+    caixa.append(
+      h('div', { class: 'wf-origin', 'data-fica': '1' },
+        'É a mesma escolha da aba Config ("Envio") — um lugar só, mostrado nos dois. O Disparo ' +
+          'não entra nela: lá a peça sai pela API, e ele exige o modo automático.')
+    );
+    return caixa;
+  }
+
   function checkbox(label, checked, onChange) {
     const input = h('input', { type: 'checkbox' });
     input.checked = !!checked;

@@ -520,6 +520,12 @@
 .wf-switch { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
 .wf-switch input { width: auto; }
 
+/* ---- escolha ou/ou (radio) ---------------------------------------------- */
+/* O box do modo de envio. `wf-radios` e NAO `wf-escolha`: aquela e da janela de escolha da IA. */
+.wf-radios { margin: 2px 0 6px; }
+.wf-radios .wf-switch { margin-bottom: 4px; align-items: flex-start; }
+.wf-radios .wf-switch input { margin-top: 3px; flex: 0 0 auto; }
+
 /* ---- botao que abre a janela do fluxo ----------------------------------- */
 /* Fica logo abaixo do Recarregar, no cabecalho: o fluxo vale para todas as abas. */
 .wf-fluxo-abrir {

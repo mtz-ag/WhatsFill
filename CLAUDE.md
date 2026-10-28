@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.224.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.225.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -527,6 +527,19 @@ mudaram as maos, nao a cabeca.
   junto com a que protegia de outra coisa. Na primeira edicao as duas sobreviveram **por
   coincidencia** (a mensagem delas escreve *"automatico"* sem acento, e o replace casava so as
   acentuadas); a razao foi escrita no codigo para nao depender disso.
+  **E O BOX VEIO NO DIA SEGUINTE DO PEDIDO, na mesma conversa** — *"crie o box que para mandar com
+  enter ou automatico"*. O interruptor existia e **nao dizia o modo**: chamava-se *"Enviar
+  automatico (um clique manda a mensagem)"*, o que nao descreve o que acontece numa RODADA, e
+  vivia na Config.
+  **A CHAVE E A MESMA (`settings.autoSend`), e ha teste contando que so UM lugar a grava.** Uma
+  segunda chave divergiria **em silencio**: a tela dizendo um modo e a rodada fazendo outro.
+  **`radio` e nao duas caixas:** duas caixas deixam marcar as duas (ou nenhuma), e aqui nao ha
+  meio-termo. **O `name` leva sufixo** porque o MESMO box aparece na aba Automatizado e na Config
+  — dois grupos com o mesmo nome brigariam pela marcacao, e o painel redesenha a cada `setStatus`.
+  **E `wf-radios`, NUNCA `wf-escolha`:** aquela classe ja e da janela de escolha da IA, e duas
+  coisas com o mesmo nome colidem no dia em que uma ganhar estilo novo.
+  **O aviso mostra o preco do modo ESCOLHIDO**, nao os dois ao mesmo tempo — dois precos na tela
+  ao mesmo tempo e ruido, e ruido se aprende a ignorar.
 
 - **GANCHO QUE ESTOURA TEM DE RESPONDER — e o teste pegou isso antes de ir ao ar.** Na primeira
   versao o `try` cobria so a acao, e `quantasLinhas()` ficava fora dele, dentro da propria chamada

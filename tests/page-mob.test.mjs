@@ -1464,4 +1464,61 @@ grupo('"SO ESCREVER": o campo esvaziar e o sinal de que ELE mandou');
   check(/o disparo manda pela API, nao pelo campo/.test(painel), 'o disparo continua exigindo o envio automatico, e diz por que');
 }
 
+grupo('O BOX DO MODO DE ENVIO — uma chave so, mostrada em dois lugares');
+{
+  /**
+   * **Pedido dele (28/10/2026): *"crie o box que para mandar com enter ou automatico"*.**
+   *
+   * O interruptor ja existia (`settings.autoSend`) e nao dizia o modo: chamava-se *"Enviar
+   * automatico (um clique manda a mensagem)"*, o que nao descreve o que acontece numa RODADA, e
+   * vivia na Config — longe do botao "Comecar" (a licao de 06/09: controle longe do botao que o
+   * usa e controle que ninguem encontra).
+   *
+   * **A chave e a MESMA, e e isso que este teste trava.** Uma segunda chave divergiria em
+   * silencio: a tela dizendo um modo e a rodada fazendo outro.
+   */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+
+  const gravacoes = (painel.match(/salvarAjuste\(\{ autoSend:/g) || []).length;
+  check(gravacoes === 1, `so UM lugar grava o modo de envio (achei ${gravacoes})`);
+  check(/function boxDoModoDeEnvio\(/.test(painel), 'e ele e o box');
+
+  // `sufixo:` com dois-pontos: sem isso a DECLARACAO (`{ sufixo = '' }`) entra na conta.
+  const usos = (painel.match(/boxDoModoDeEnvio\(\{ sufixo: /g) || []).length;
+  check(usos === 2, `o MESMO box aparece nos dois lugares — rodadas e Config (achei ${usos})`);
+
+  /**
+   * **`radio` e nao duas caixas:** duas caixas deixam marcar as duas (ou nenhuma), e aqui nao
+   * existe meio-termo — ou ele manda com Enter, ou a extensao manda.
+   */
+  const i = painel.indexOf('function escolha(');
+  const corpo = painel.slice(i, i + 900);
+  check(/type: 'radio'/.test(corpo), 'a escolha e por radio');
+  check(/name: nome/.test(corpo), 'com `name` compartilhado, que e o que faz o navegador cuidar do ou/ou');
+
+  /**
+   * **O `name` leva sufixo porque o painel redesenha e os DOIS lugares podem estar na pagina.**
+   * Dois grupos com o mesmo nome brigariam pela marcacao.
+   */
+  check(/sufixo/.test(painel.slice(painel.indexOf('function boxDoModoDeEnvio'), painel.indexOf('function boxDoModoDeEnvio') + 500)),
+    'e o grupo recebe sufixo, para os dois lugares nao brigarem');
+
+  /** A caixa antiga saiu: duas telas para a mesma chave divergem na primeira correcao. */
+  check(!/Enviar automático \(um clique manda a mensagem\)/.test(painel),
+    'a caixa antiga da Config saiu — nao ha dois controles para a mesma chave');
+
+  /** O aviso mostra o preco do modo ESCOLHIDO, nao os dois ao mesmo tempo. */
+  const box = painel.slice(painel.indexOf('function boxDoModoDeEnvio'), painel.indexOf('function boxDoModoDeEnvio') + 2600);
+  check(/state\.settings\.autoSend\s*\n?\s*\?/.test(box) || box.includes('state.settings.autoSend'),
+    'o aviso depende do modo escolhido');
+  check(/APAGAR o texto sem enviar/.test(box), 'e no modo Enter ele diz o risco de apagar sem mandar');
+  check(/Disparo/.test(box), 'e avisa que o Disparo nao entra nesta escolha');
+
+  /** A classe nova nao pode colidir com a janela de escolha da IA. */
+  const css = readFileSync(new URL('../src/panel/panel.css', import.meta.url), 'utf8');
+  check(/\.wf-radios/.test(css), 'a classe nova tem estilo proprio');
+  check(/wf-radios/.test(painel) && !/class: 'wf-escolha' \}\);\n\s*for \(const op/.test(painel),
+    'e nao reusa `wf-escolha`, que ja e da janela da IA');
+}
+
 fim();
