@@ -1,40 +1,84 @@
-## 2026-10-28 - v3.215.0 - ESTADO DE AGORA - a conferencia do numero esta DESLIGADA aqui
+## 2026-10-28 - v3.215.0 - ESTADO DE AGORA - a migracao para o mobiliza.me esta DE PE
+
+> **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
+> **3.215.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
+3. Confira **3.215.0** no cabecalho do painel — e o que separa *"o conserto nao funcionou"* de
+   *"o conserto nao chegou"*
 
-**Nada mais.** A tarja vermelha some e a rodada passa a tratar os contatos. Confira **3.215.0** no
-cabecalho do painel.
+**Nada mais esta pendente do seu lado para a rodada andar.** O que espera voce sao as DECISOES
+listadas em *"o que nao funciona aqui"*, abaixo — nenhuma delas impede o trabalho de hoje.
 
-### DESLIGUEI, como voce pediu — e o interruptor esta na tela
+### EM QUE PE ESTA
 
-Na aba **Automatizado**, junto dos botoes de comecar, ha agora:
+O painel **monta, encaixa e trabalha** no mobiliza.me. O que foi medido ao vivo na sua conta, com
+a sua autorizacao, esta marcado como medido — o resto diz que nao foi.
 
-> ☐ **Conferir de quem e o numero do atendimento**
+| peca | estado |
+|---|---|
+| painel encaixa **empurrando** a pagina | no ar |
+| ler a fila, por aba (Todas / Minhas) | no ar — o filtro bate com a contagem da propria tela |
+| abrir a conversa na tela pelo id | no ar |
+| ler a conversa e o contato | no ar, numa requisicao so |
+| **escrever no campo de mensagem** | no ar — voce confirmou: *"Texto inserido no campo"* |
+| enviar, assumir, resolver, reabrir | **medidos ao vivo**, com releitura conferindo |
+| etiquetas, cidade, COREDE, o quadro, a IA | intocados: eles decidem **o que** sai, nao **como** |
 
-**No mobiliza.me ela nasce DESMARCADA**; no mobiliza.app continua marcada, porque la o cadastro
-existe e a barreira protege de verdade. Voce pode marcar e desmarcar quando quiser — nao e um `if`
-escondido no codigo.
+### O QUE NAO FUNCIONA AQUI, E POR QUE
 
-### POR QUE ELA ESTAVA ATRAPALHANDO, E POR QUE DESLIGAR AQUI E DEFENSAVEL
+- **Modelo aprovado nao existe nesta plataforma.** O canal e Z-API ("WhatsApp nao oficial"): sem
+  janela de 24h e sem modelo da Meta. A lista vem vazia porque **a resposta certa e vazia** — e
+  isso nao impede a rodada, que decide em 100% dos casos sem modelo nenhum.
+- **Disparo para quem NUNCA escreveu: nao da.** Na plataforma velha a extensao criava a sessao;
+  aqui a conversa so existe depois que a pessoa manda mensagem, e a funcao de envio exige o id da
+  conversa. Eu **recuso** em vez de percorrer a lista sem mandar nada e contar como enviado.
+- **Audio ENCAMINHADO deixou de ser reconhecido.** A deteccao dependia do relogio do WhatsApp e do
+  tamanho do arquivo, e o banco novo nao tem nem um nem outro.
+- **De qual anuncio a pessoa veio nao existe nas tabelas que a rodada le.** Sobra o TEXTO
+  pre-preenchido, que ja e reconhecido — mas anuncio sem texto (o CONVERSE CONOSCO) deixa de ser
+  reconhecivel. **Hoje isso quase nao morde:** em 1.500 mensagens de 12 horas, UMA tinha a forma
+  de texto de anuncio. **Decisao sua; nao religo nada disso por conta propria.**
+- **A conferencia de "de quem e o numero" esta DESLIGADA aqui**, a seu pedido. A caixa esta na aba
+  Automatizado, junto dos botoes de comecar. Com uma instancia so na conta ela nao tem o que
+  separar; havendo um segundo numero um dia, remarque — senao o texto de um candidato pode sair
+  pelo numero do outro sem aviso.
 
-Medi a sua conta: ha **uma** instancia. Com um canal so, a barreira **nao tem o que separar** —
-ela so sabe dizer *"nao conheco este numero"*, que e exatamente o que ela estava repetindo em todo
-contato.
+### A SEQUENCIA DE HOJE, e o que ela ensinou
 
-**O custo, dito com todas as letras:** no dia em que houver um SEGUNDO numero na conta, com ela
-desmarcada o texto de um candidato pode sair pelo numero do outro **sem nada na tela avisando**. A
-caixa fica la para voce remarcar nesse dia.
+Voce reportou cinco vezes, e vale registrar porque **tres relatos eram o mesmo defeito**:
 
-### E eu errei o remedio na versao anterior
+| versao | o que voce viu | o que era |
+|---|---|---|
+| 3.209 | sobrepos em vez de empurrar | `fixed` nao obedece padding: o app e que precisava ser preso |
+| 3.210 | erro ao inserir texto | a funcao era uma recusa escrita — e achei um defeito maior junto |
+| 3.211 | exigindo modelo aprovado | duas travas de uma plataforma que nao tem modelo aprovado |
+| 3.212 | travou e ficou parado | o "ver mais" mentia `ok: true` e o laco girava 20 vezes |
+| 3.213 | abre e fecha sozinho | **a causa**: converter a linha duas vezes esvaziava a fila |
+| 3.214/.215 | so pulando de contato | a barreira do candidato, certa e sem saida |
 
-Na 3.214 eu dei um botao ("Somar este numero ao Capitao Martim") achando que resolvia. Nao
-resolvia: ele conserta **um atendimento por vez**, e a barreira continuava sendo a primeira coisa
-na frente de tudo. O botao continua la e e util; o que faltava era o interruptor.
+**A licao que eu escrevi no CLAUDE.md para nao repetir:** eu consertei o sintoma duas vezes antes
+de achar a causa. As duas correcoes eram reais e ficaram, mas se eu tivesse medido a fila na
+primeira vez, voce nao teria reportado tres.
 
-## 2026-10-26 - v3.200.0 - ESTADO DE AGORA - a plataforma mudou, e a migracao comecou pelo chao
+### SE VOCE ABRIR UMA SESSAO NOVA
+
+Leia, nesta ordem: `REGRAS.md`, esta entrada, o `CLAUDE.md` (a secao **"A PLATAFORMA MUDOU:
+mobiliza.app -> mobiliza.me"**, que tem a tabela de em que pe esta a migracao) e o `README.md`.
+
+**Tudo o que esta no CLAUDE.md ANTES daquela secao descreve a plataforma ANTIGA.** Continua
+valendo enquanto ela estiver no ar, e **nada daquilo se aplica ao mobiliza.me** — a plataforma nao
+foi atualizada, foi reescrita.
+
+## 2026-10-26 - v3.200.0 - a plataforma mudou, e a migracao comecou pelo chao
+
+> **Esta entrada ERA a de passagem de contexto e hoje e historia** (rotulo retirado em 28/10/2026).
+> A de agora e a do topo. Duas entradas dizendo "ESTADO DE AGORA" fazem uma sessao nova ler a
+> errada — e a errada aqui descreve uma migracao que ainda nao tinha nada no ar.
 
 **A coisa mais importante deste registro:** o **mobiliza.app acabou**. A plataforma nova e o
 **mobiliza.me**, e ela nao foi atualizada — foi **reescrita**. Medi a dele por dentro em 26/10 e a

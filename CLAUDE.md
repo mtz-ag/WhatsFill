@@ -8,8 +8,8 @@
 > `panel.js` (6.000+ linhas) é como as duas versões divergem em uma semana.
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
-> for `0.x`.** Conferido em 07/09/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **2.87.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
+> `WhatsFill+IA` **3.215.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -136,6 +136,22 @@ o contrato de escrita aprendido (`contract.js`, `recorder.js`, `fields.js`), o *
 e IGNORA o valor"*, o `isToIncludeCustomFields`, as keys desalinhadas, o rotulo repetido, o
 `createTag`, o `Origin not allowed` e a interceptacao do Bearer. **Nao apague esses arquivos
 enquanto o mobiliza.app estiver no ar** — eles sao a extensao que funciona hoje.
+
+**EM QUE PE ESTA A MIGRACAO (28/10/2026)** — para quem abrir isto numa sessao nova:
+
+| peca | estado |
+|---|---|
+| painel monta e **empurra** a pagina | **no ar** (`#root` + `contain: layout`) |
+| ler a fila, por aba (Todas/Minhas) | **no ar**, filtro medido contra a contagem da tela |
+| abrir a conversa na tela pelo id | **no ar** (pelo fiber do React, mundo MAIN) |
+| ler conversa + contato | **no ar**, numa requisicao so |
+| escrever no campo de mensagem | **no ar**, confirmado por ele ao vivo |
+| enviar, assumir, resolver, reabrir | **medidos ao vivo**, com releitura |
+| etiquetas, cidade, COREDE, quadro, IA | **intocados** — decidem o QUE sai, nao o COMO |
+| modelo aprovado (`hsm.js`) | **nao existe aqui**: canal zapi, lista vazia e a resposta certa |
+| `sendMessageTemplate`, `enviarImagem` | **recusam**: sem sonda |
+| `abrirAtendimento` (disparo para quem nunca escreveu) | **recusa**: buraco conhecido |
+| barreira do candidato | **desligada por ele** aqui (`auto.conferirCanal`) |
 
 **O QUE SOBREVIVE INTEIRO, e e a maior parte do valor:** o quadro (`arvore.js`), a tabela de regras
 (`sugestao.js`), os detectores (`cortesia.js`), o parser, as cidades e COREDEs, os anuncios, os
@@ -787,10 +803,19 @@ mudaram as maos, nao a cabeca.
   medido**, e `api-mob.abrirAtendimento` RECUSA: devolver qualquer coisa faria o disparo percorrer
   a lista inteira sem mandar nada e contar como enviado.
 
-- **NADA MAIS ESCREVE, de proposito.** `mob.js` so LE. Assumir, responder, resolver e gravar
-  cidade exigem medir o corpo de cada funcao com uma sonda no contato de teste — a disciplina de
-  *"uma sonda antes das outras"*, que aqui vale ainda mais: `enviar-mensagem-atendimento` foi LIDA
-  no pacote, nunca executada.
+- **`mob.js` SO LE, e isso continua verdade — quem escreve e o `api-mob`.** A divisao e
+  deliberada: a leitura toda passa por um arquivo que nao tem como causar estrago, e cada escrita
+  nova entra em `api-mob` **depois de medida**, uma sonda por vez.
+  **O QUE JA FOI MEDIDO AO VIVO (27 e 28/10/2026), com autorizacao dele:** enviar
+  (`enviar-mensagem-atendimento`, duas mensagens, releitura confirmando `envio_status`), as quatro
+  RPCs de estado (`assumir`, `resolver`, `reabrir`, `liberar` — com o estado original devolvido no
+  fim) e **escrever no campo de mensagem da tela** (confirmado por ele: *"Texto inserido no campo
+  de mensagem."*).
+  **O QUE CONTINUA SEM SONDA, e por isso RECUSA:** `sendMessageTemplate` e `enviarImagem` —
+  `api-mob` responde com a frase da sonda, nunca finge. **`abrirAtendimento` tambem recusa**, e
+  esse e um buraco de verdade no DISPARO: a conversa aqui nasce da mensagem da pessoa, entao nao
+  ha linha em `whatsapp_conversas` para quem nunca escreveu, e a funcao de envio exige
+  `conversa_id`. **Como fazer isso nao foi medido.**
 
 ## Armadilhas desta API (custaram horas — não redescubra)
 
