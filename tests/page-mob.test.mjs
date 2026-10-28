@@ -1563,4 +1563,51 @@ grupo('A ABA AUTOMATIZADO: um interruptor, um lugar, e a ordem do trabalho');
   check(/Minhas: conferir e responder/.test(painel), 'e o da outra fila tambem');
 }
 
+grupo('O MODO "EU MANDO" NAO PODE SER IMPEDIMENTO DE TELA');
+{
+  /**
+   * **Print dele (28/10/2026): *"bloqueando o modo novo"*, com o botao das nao atendidas apagado
+   * e a tarja *"Precisa do Enviar automatico ligado (acima)"*.**
+   *
+   * As travas sairam das FUNCOES na v3.224 e **ficaram nos CARTOES** — e no cartao dos Novos a
+   * trava nao so avisa: ela **desabilita o botao**. O modo que ele acabou de pedir ficava
+   * inalcancavel justamente na fila que ele mais usa.
+   *
+   * **A licao: ao destravar um caminho, procure as travas da TELA tambem.** Uma trava que nao
+   * deixa apertar e mais forte que a que recusa depois do clique — e e a que nao aparece quando
+   * se procura pelo texto do erro.
+   */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+
+  const corte = (nome) => {
+    const i = painel.indexOf('function ' + nome);
+    return i < 0 ? '' : painel.slice(i, painel.indexOf(chr10 + '  function ', i + 10));
+  };
+  const chr10 = String.fromCharCode(10);
+
+  for (const cartao of ['renderCartaoNovos', 'renderCartaoRespondidos']) {
+    const corpo = corte(cartao);
+    check(corpo.length > 100, cartao + ': achei o cartao');
+    check(!/impedimentos\.push\('Precisa do "Enviar automático"/.test(corpo),
+      cartao + ' nao trava mais pelo modo de envio');
+  }
+
+  /** E o botao continua desabilitando pelo que DEVE desabilitar: a rodada ja andando. */
+  check(/comecar\.disabled = state\.auto\.rodando/.test(painel), 'o botao so desabilita com a rodada andando');
+
+  /**
+   * **O DISPARO continua travado, e agora diz por que.** La a peca sai pela API, que nao passa
+   * pelo campo — nao ha onde ele dar Enter.
+   */
+  check(/O disparo manda pela API, nao pelo campo/.test(painel), 'o disparo explica, em vez de so exigir');
+
+  /**
+   * **E a tarja do Ritmo parou de mandar desfazer.** Ela dizia *"sem ele nada e enviado de
+   * verdade"*, exato ate a v3.224 — hoje a mensagem SAI (quem manda e ele) e a conclusao vem
+   * depois. Mantida, ela mandaria desligar o modo que ele pediu.
+   */
+  check(!/sem ele nada é enviado de verdade/.test(painel), 'a tarja que mandava desfazer saiu');
+  check(/quem dá o ritmo é você/.test(painel), 'e no lugar dela ficou o que continua sendo verdade');
+}
+
 fim();

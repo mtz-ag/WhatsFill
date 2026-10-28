@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.226.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.227.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -563,6 +563,35 @@ mudaram as maos, nao a cabeca.
   mesma fila e ele traduzindo na cabeca a cada leitura** — eu tinha trocado so o rotulo do BOTAO.
   **Ao trocar o nome de uma coisa na tela, grep pelo nome ANTIGO**: ele vive tambem nos titulos,
   nas descricoes e nos avisos.
+
+- **DESTRAVEI AS FUNCOES E ESQUECI AS TRAVAS DA TELA — e a da tela e MAIS FORTE** (28/10/2026,
+  print dele: *"bloqueando o modo novo"*, com o botao das nao atendidas apagado e a tarja
+  *"Precisa do 'Enviar automatico' ligado (acima)"*).
+  Na v3.224 eu tirei o `return setStatus(...)` das CINCO funcoes de rodada e **nao olhei os
+  CARTOES**. No cartao dos Novos a trava nao so avisa: ela faz
+  `comecar.disabled = ... || impedimentos.length > 0` — **desabilita o botao**. O modo que ele
+  acabou de pedir ficava inalcancavel justamente na fila que ele mais usa.
+  **A licao: trava que nao deixa APERTAR e mais forte que a que recusa depois do clique** — e e a
+  que escapa quando se procura pelo texto do erro, porque ela nunca chega a produzir erro. Ao
+  destravar um caminho, procure `disabled`, `impedimentos`, `trava` e `comuns`, nao so o `return`.
+  **E A TARJA DO RITMO MANDAVA DESFAZER:** *"sem ele nada e enviado de verdade, e concluir depois
+  disso fecharia o atendimento sem a mensagem ter saido"* — exato **ate a v3.224**, quando
+  `esperarVoceEnviar` passou a segurar a conclusao. Hoje a mensagem SAI (quem manda e ele) e a
+  conclusao vem depois; mantida, ela mandava desligar o modo recem-pedido. **E o aviso que nao
+  envelhece (20/09) na forma mais cara: dizendo para desfazer.**
+  **As duas travas que FICAM sao as do Disparo**, e agora elas dizem por que: la a peca sai pela
+  API, que **nao passa pelo campo** — nao ha onde ele dar Enter.
+  **As de `renderCartaoReabrir` e `renderCartaoSemRetorno` continuam la e nao incomodam:** os dois
+  cartoes estao escondidos desde 15/08. Reativando-os, confira as travas junto.
+
+- **CRASE DENTRO DE `python -c` NO GIT BASH E EXECUTADA PELO BASH** (28/10/2026, duas vezes no
+  mesmo dia). O conteudo entre crases vira comando: a primeira comeu `settings.autoSend` de um
+  comentario de teste, a segunda trocou `mandarTexto`/`enviarImagem` por `\/\` num comentario do
+  painel. **Nada estoura** — o arquivo continua valido, o `git diff` mostra a linha "certa" a
+  menos que se olhe, e os verificadores passam.
+  **Texto com crase vai pela ferramenta de edicao ou por arquivo de script**, nunca por
+  `python -c` inline. E a familia do heredoc que falha com conteudo longo e do `\b` que vira
+  backspace em string Python normal.
 
 - **GANCHO QUE ESTOURA TEM DE RESPONDER — e o teste pegou isso antes de ir ao ar.** Na primeira
   versao o `try` cobria so a acao, e `quantasLinhas()` ficava fora dele, dentro da propria chamada

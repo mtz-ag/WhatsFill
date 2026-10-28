@@ -4787,11 +4787,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     });
     card.append(h('div', { class: 'wf-row' }, [parar]));
 
+    /**
+     * **A TARJA DIZIA O QUE DEIXOU DE SER VERDADE** (28/10/2026). Ela avisava que *"sem ele nada
+     * e enviado de verdade, e concluir depois disso fecharia o atendimento sem a mensagem ter
+     * saido"* — e era exato ate a v3.224, quando `esperarVoceEnviar` passou a segurar a conclusao
+     * ate o campo esvaziar.
+     *
+     * Hoje a mensagem SAI (quem manda e ele) e a conclusao vem DEPOIS. Mantida, ela mandaria
+     * desligar o modo que ele acabou de pedir — e e o aviso que nao envelhece com o que ja foi
+     * feito (20/09), na forma mais cara: dizendo para desfazer.
+     *
+     * O que fica e o que continua verdade e e DELE saber: neste modo a rodada **espera**, entao
+     * ela anda no ritmo em que ele revisa, e nao no do Ritmo configurado aqui.
+     */
     if (!state.settings.autoSend) {
       card.append(
-        h('div', { class: 'wf-block' },
-          'Ligue o "Enviar automático" na aba Config: sem ele nada é enviado de verdade, e ' +
-            'concluir depois disso fecharia o atendimento sem a mensagem ter saído.')
+        h('div', { class: 'wf-block', 'data-fica': '1' },
+          'Modo "Eu mando" ligado: a rodada escreve, para e espera o seu Enter em cada contato. ' +
+            'A pausa abaixo só vale entre um contato e o seguinte — quem dá o ritmo é você.')
       );
     }
     return card;
@@ -4897,8 +4910,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * ficava morta no mobiliza.me **sem nada explicando o porquê além de um conselho que não
      * funciona ali** ("clique em Recarregar" nunca carregaria nada).
      */
+    /**
+     * **O MODO "EU MANDO" NAO E IMPEDIMENTO** (28/10/2026, print dele: *"bloqueando o modo
+     * novo"*, com o botao apagado e a tarja *"Precisa do 'Enviar automatico' ligado (acima)"*).
+     *
+     * **As travas sairam das FUNCOES na v3.224 e ficaram nos CARTOES** — e aqui a trava nao so
+     * avisa: ela **desabilita o botao**, entao o modo que ele acabou de pedir ficava inalcancavel
+     * justamente na fila que ele mais usa.
+     *
+     * **A licao: ao destravar um caminho, procure as travas da TELA tambem.** Uma trava que nao
+     * deixa apertar e mais forte que a que recusa depois do clique, e e a que nao aparece quando
+     * se procura pelo texto do erro no console.
+     */
     const impedimentos = [];
-    if (!state.settings.autoSend) impedimentos.push('Precisa do "Enviar automático" ligado (acima).');
     if (modelosAprovadosLigados() && !state.hsmTemplates.length) card.append(avisoSemModeloAprovado());
 
     comecar.disabled = state.auto.rodando || impedimentos.length > 0;
@@ -5600,7 +5624,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      */
     const comuns = [];
     if (!pares.length) comuns.push('Escreva o texto de ao menos uma peça.');
-    if (!state.settings.autoSend) comuns.push('Precisa do "Enviar automático" ligado (aba Config).');
+    // **O disparo NAO entra no modo "Eu mando"**, e isso e deliberado: a peca sai pela API
+    // (`mandarTexto`/`enviarImagem`), que nao passa pelo campo de mensagem — nao ha onde ele dar
+    // Enter. Rodar com o modo trocado mandaria tudo assim mesmo, com a tela dizendo que nao manda.
+    if (!state.settings.autoSend) comuns.push('O disparo manda pela API, nao pelo campo: escolha "A extensão manda sozinha" no box de envio.');
     if (comArte && !state.contratoImagem) {
       comuns.push(
         'Alguma peça leva ARTE e falta aprender o envio de imagem (aba Config) — sem isso a arte ' +
