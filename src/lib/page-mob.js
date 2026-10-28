@@ -92,7 +92,7 @@
 
 import * as mob from './mob.js';
 import { mandarTexto, assumirConversa, resolverConversa, reabrirConversa } from './api-mob.js';
-import { escreverNoCampo, campoDeMensagem, camposEditaveis } from './dom-mob.js';
+import { escreverNoCampo, campoDeMensagem, camposEditaveis, lerCampo } from './dom-mob.js';
 
 // ---------------------------------------------------------------------------
 // Etiquetas: a identidade e o rotulo NORMALIZADO
@@ -838,6 +838,22 @@ export async function setComposerText(texto, opcoes = {}) {
 /** O campo de mensagem da tela, para quem precisa do elemento (foco, cursor). */
 export function getComposer(opcoes = {}) {
   return campoDeMensagem(opcoes);
+}
+
+/**
+ * **O QUE ESTA ESCRITO NO CAMPO AGORA** — e o sinal de que ele mandou.
+ *
+ * No modo *"so escrever"* a rodada poe o texto e **espera**; quem envia e ele, com Enter. O
+ * invariante que diz que a mensagem saiu e o campo ter ESVAZIADO: a plataforma limpa a caixa ao
+ * enviar. Nao ha outro sinal barato — o contador de mensagens do React nao foi medido, e perguntar
+ * ao banco a cada tique e rajada contra a API.
+ *
+ * Sem campo na tela devolve `''`, que e o mesmo que vazio: quem espera trata os dois igual, porque
+ * conversa trocada tambem significa *"nao e mais este texto que esta la"*.
+ */
+export function textoDoComposer(opcoes = {}) {
+  const campo = campoDeMensagem(opcoes);
+  return campo ? lerCampo(campo) : '';
 }
 /**
  * **As tres teclas que mexem no atendimento ABERTO NA TELA DELE.**

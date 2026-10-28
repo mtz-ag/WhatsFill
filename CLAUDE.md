@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.223.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.224.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -502,6 +502,31 @@ mudaram as maos, nao a cabeca.
   **Cuidado ao escrever o teste:** o comentario do conserto CITA a frase do erro, entao
   `indexOf('a aba trocou...')` cai na prosa e nao no ramo. Ancore no codigo
   (`resultado: 'erro', motivo: 'a aba trocou`).
+
+- **"SO ESCREVER": A RODADA POE O TEXTO, ELE DA ENTER, E SO ENTAO ELA CONCLUI** (28/10/2026,
+  pedido dele: *"a extensao devia ter uma opcao de so escrever sem enviar e eu mandava no final
+  mas parece nao estar funcionando"*; perguntado o que fazer depois: *"quero que escreva na caixa,
+  eu reviso e quando eu der enter ela conclui e vai pro proximo contato"*).
+  **A opcao JA EXISTIA e nao servia para a rodada, e o motivo estava escrito nas proprias
+  travas:** *"sem ele o texto so e inserido, e concluir fecharia o atendimento sem a pergunta ter
+  saido"*. Com `autoSend` desligado, **CINCO rodadas se recusavam a comecar** — era isso o *"nao
+  esta funcionando"*. Nos cliques a mao o modo sempre funcionou (`sendTemplate` insere e avisa).
+  **`esperarVoceEnviar` desfaz o no:** a conclusao passa a acontecer **depois** de a mensagem
+  sair. Ela mora no ramo de inserir do `sendTemplate` e **so espera com a rodada andando** — fora
+  dela ele clicou em "Inserir", o texto esta la e esperar travaria o botao.
+  **O SINAL DE QUE ELE MANDOU E O CAMPO ESVAZIAR**, e nao ha mais barato: o contador de mensagens
+  do React **nao foi medido**, e perguntar ao banco a cada tique e rajada contra a API. **O risco
+  esta dito na tela:** apagando o texto sem enviar, a rodada entende que saiu e conclui um
+  atendimento sem mensagem.
+  **Fica FORA do `withBusy`** (a licao de 20/09): quem termina isto e ELE, na outra metade da
+  tela, e segurar o interruptor mataria todo botao do painel enquanto ele revisa. O botao Parar
+  corta a espera, e ha teto de 10 minutos.
+  **O DISPARO MANTEM A TRAVA, e isso e deliberado:** la a peca sai pela **API**
+  (`mandarTexto`/`enviarImagem`), que nao olha essa caixa — rodar com ela desligada mandaria tudo
+  assim mesmo, **com a tela dizendo que nao manda**. Trava que protege de uma contradicao nao sai
+  junto com a que protegia de outra coisa. Na primeira edicao as duas sobreviveram **por
+  coincidencia** (a mensagem delas escreve *"automatico"* sem acento, e o replace casava so as
+  acentuadas); a razao foi escrita no codigo para nao depender disso.
 
 - **GANCHO QUE ESTOURA TEM DE RESPONDER — e o teste pegou isso antes de ir ao ar.** Na primeira
   versao o `try` cobria so a acao, e `quantasLinhas()` ficava fora dele, dentro da propria chamada

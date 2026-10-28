@@ -3056,6 +3056,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * dele. A linha de status diz o que entrou, para ele tirar se desistir do envio.
        */
       const marcaPalavra = await etiquetarPorPalavra(alvo, text);
+
+      /**
+       * **DENTRO DA RODADA, inserir não é o fim: é o começo da espera.** Ela escreve, ele revisa,
+       * dá Enter, e só então a rodada conclui e abre o próximo — o desenho que ele pediu em
+       * 28/10/2026.
+       *
+       * **Devolver `true` aqui sem esperar é o que as travas antigas impediam:** quem chama
+       * conclui logo em seguida, e o atendimento fecharia com o texto parado no campo. Devolver
+       * `false` sem esperar seria o oposto — a rodada trataria como "não consegui mandar".
+       *
+       * Fora da rodada nada muda: ele clicou em "Inserir", o texto está lá, e não há o que
+       * esperar.
+       */
+      if (send && !state.settings.autoSend && state.auto.rodando) {
+        const mandou = await esperarVoceEnviar(text);
+        if (!mandou.ok) {
+          setStatus(`Não concluí: ${mandou.motivo}.`, 'err');
+          return false;
+        }
+        setStatus('Você enviou — sigo daqui.' + marcaPalavra, 'ok');
+        return true;
+      }
+
       setStatus(
         (send && !state.settings.autoSend
           ? 'Envio automático está desligado (aba Config): texto inserido, envie você.'
@@ -6524,6 +6547,54 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Não fecha nada por conta própria: o diálogo aberto no meio de uma rodada costuma ser o seu
    * (anexo de figura, preview de mídia), e fechar seria descartar o que você estava mandando.
    */
+  /**
+   * **"SÓ ESCREVER": a rodada põe o texto, VOCÊ dá Enter, e só então ela conclui** — pedido dele
+   * (28/10/2026): *"a extensão devia ter uma opção de só escrever sem enviar e eu mandava no
+   * final"*, e, perguntado o que fazer depois: *"quero que escreva na caixa, eu reviso e quando
+   * eu der enter ela conclui e vai pro próximo contato"*.
+   *
+   * **A opção já existia e não servia para a rodada**, e o motivo estava escrito nas próprias
+   * travas: *"sem ele o texto só é inserido, e concluir fecharia o atendimento sem a pergunta ter
+   * saído"*. Esta espera é o que desfaz esse nó — a conclusão passa a acontecer **depois** de a
+   * mensagem sair, e não antes.
+   *
+   * **O sinal de que ele mandou é o campo ESVAZIAR**, que é o que a plataforma faz ao enviar. Não
+   * há sinal mais barato: o contador de mensagens do React não foi medido, e perguntar ao banco a
+   * cada tique é rajada contra a API. **O risco está dito na tela**: apagando o texto sem enviar,
+   * a rodada entende que saiu — e aí ela conclui um atendimento sem mensagem. Por isso a caixa
+   * oferece "pular" ao lado.
+   *
+   * **Fica FORA do `withBusy`** (a lição de 20/09): quem termina isto é ELE, na outra metade da
+   * tela, e segurar o interruptor do painel mataria todo botão enquanto ele revisa.
+   */
+  const ESPERA_DO_ENTER_MS = 10 * 60 * 1000;
+
+  async function esperarVoceEnviar(texto, { timeoutMs = ESPERA_DO_ENTER_MS } = {}) {
+    const alvo = String(texto || '').trim();
+    if (!alvo) return { ok: true, motivo: 'sem texto para esperar' };
+
+    const fim = Date.now() + timeoutMs;
+    setStatus('Escrevi no campo. Revise e dê Enter — eu concluo e abro o próximo.');
+
+    while (Date.now() < fim) {
+      if (state.auto.parar) return { ok: false, motivo: 'você parou a rodada', parar: true };
+
+      let agora = '';
+      try {
+        agora = String((await page.textoDoComposer()) || '');
+      } catch (err) {
+        // Não dá para ler o campo: não afirmo que saiu nem que não saiu. Quem chama pula.
+        return { ok: false, motivo: `não consegui ler o campo de mensagem (${err.message})` };
+      }
+
+      // Esvaziou, ou já é outro texto: nos dois casos o que escrevemos não está mais lá.
+      if (!agora.trim() || !agora.includes(alvo.slice(0, 20))) return { ok: true };
+
+      await new Promise((r) => setTimeout(r, 700));
+    }
+    return { ok: false, motivo: 'passaram 10 minutos e a mensagem continuava no campo, sem ser enviada' };
+  }
+
   async function esperarTelaLivre(timeoutMs = 3 * 60 * 1000) {
     const limite = Date.now() + timeoutMs;
     let avisou = false;
@@ -7783,9 +7854,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   async function runLoteEmMeus() {
     const modelo = modeloDaRodada();
     if (!modelo) return setStatus('Escolha o modelo aprovado da rodada (cartão abaixo).', 'err');
-    if (!state.settings.autoSend) {
-      return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
-    }
+    /**
+     * **Com o "Enviar automático" desligado a rodada RODA, e escreve em vez de mandar** — o modo
+     * que ele pediu em 28/10/2026. A recusa que morava aqui existia por um motivo real, escrito
+     * nela: *"sem ele o texto só é inserido, e concluir fecharia o atendimento sem a pergunta ter
+     * saído"*. **`esperarVoceEnviar` desfez esse nó**: a conclusão acontece depois de o campo
+     * esvaziar, e não antes.
+     */
     // O ▶ do controle flutuante recomeça POR AQUI, e não por `rodar` direto: os confirms
     // desta rodada moram nesta função, e pular um deles seria decidir no lugar dele.
     recomecarRodada = runLoteEmMeus;
@@ -7816,9 +7891,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   async function runLote() {
     const modelo = modeloDaRodada();
     if (!modelo) return setStatus('Escolha o modelo aprovado da rodada.', 'err');
-    if (!state.settings.autoSend) {
-      return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
-    }
+    /**
+     * **Com o "Enviar automático" desligado a rodada RODA, e escreve em vez de mandar** — o modo
+     * que ele pediu em 28/10/2026. A recusa que morava aqui existia por um motivo real, escrito
+     * nela: *"sem ele o texto só é inserido, e concluir fecharia o atendimento sem a pergunta ter
+     * saído"*. **`esperarVoceEnviar` desfez esse nó**: a conclusão acontece depois de o campo
+     * esvaziar, e não antes.
+     */
 
     const limite = limiteDaRodada();
     const pausaSeg = pausaDaRodada();
@@ -7857,9 +7936,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * que já é a trava. O limite continua valendo como teto de envios.
    */
   async function runLoteRespondidos() {
-    if (!state.settings.autoSend) {
-      return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
-    }
+    /**
+     * **Com o "Enviar automático" desligado a rodada RODA, e escreve em vez de mandar** — o modo
+     * que ele pediu em 28/10/2026. A recusa que morava aqui existia por um motivo real, escrito
+     * nela: *"sem ele o texto só é inserido, e concluir fecharia o atendimento sem a pergunta ter
+     * saído"*. **`esperarVoceEnviar` desfez esse nó**: a conclusão acontece depois de o campo
+     * esvaziar, e não antes.
+     */
     /**
      * **A tabela "Modelo por conteúdo" DEIXOU DE SER pré-requisito** — 25/09/2026, pergunta dele:
      * *"em Meus está dando esse erro, isso não é um resquício do padrão anterior? agora temos os
@@ -8195,8 +8278,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const pares = loteLib.paresProntos({ cfg, imagens: state.imagens, chaveDeImagem: porPerfil });
 
     if (!pares.length) return setStatus('Escreva o texto de ao menos uma peca (aba Disparo).', 'err');
+    /**
+     * **O DISPARO MANTEM a trava, e isso e deliberado** (28/10/2026, quando as rodadas do fluxo
+     * passaram a rodar com o envio automatico desligado). La o modo *"so escrever"* funciona
+     * porque o texto vai para o CAMPO e ele da Enter; aqui a peca sai pela **API**
+     * (`mandarTexto`/`enviarImagem`), que nao olha essa caixa — rodar com ela desligada mandaria
+     * tudo assim mesmo, com a tela dizendo que nao manda. Trava que protege de uma contradicao
+     * nao sai junto com a que protegia de outra coisa.
+     */
     if (!state.settings.autoSend) {
-      return setStatus('Ligue o "Enviar automatico" na aba Config antes de rodar.', 'err');
+      return setStatus('Ligue o "Enviar automatico" na aba Config antes de rodar: o disparo manda pela API, nao pelo campo.', 'err');
     }
     /**
      * **O contrato de imagem só é exigido se alguma peça LEVAR arte** (02/10/2026). Era exigido
@@ -8401,8 +8492,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       chaveDeImagem: porPerfil,
     });
     if (!pares.length) return setStatus('Escreva o texto de ao menos uma peca (aba Disparo).', 'err');
+    /**
+     * **O DISPARO MANTEM a trava, e isso e deliberado** (28/10/2026, quando as rodadas do fluxo
+     * passaram a rodar com o envio automatico desligado). La o modo *"so escrever"* funciona
+     * porque o texto vai para o CAMPO e ele da Enter; aqui a peca sai pela **API**
+     * (`mandarTexto`/`enviarImagem`), que nao olha essa caixa — rodar com ela desligada mandaria
+     * tudo assim mesmo, com a tela dizendo que nao manda. Trava que protege de uma contradicao
+     * nao sai junto com a que protegia de outra coisa.
+     */
     if (!state.settings.autoSend) {
-      return setStatus('Ligue o "Enviar automatico" na aba Config antes de rodar.', 'err');
+      return setStatus('Ligue o "Enviar automatico" na aba Config antes de rodar: o disparo manda pela API, nao pelo campo.', 'err');
     }
     // O contrato de imagem só é exigido se alguma peça levar arte (02/10/2026).
     if (loteLib.temArte(pares) && !state.contratoImagem) {
@@ -8591,9 +8690,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   async function runLoteOutros() {
-    if (!state.settings.autoSend) {
-      return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
-    }
+    /**
+     * **Com o "Enviar automático" desligado a rodada RODA, e escreve em vez de mandar** — o modo
+     * que ele pediu em 28/10/2026. A recusa que morava aqui existia por um motivo real, escrito
+     * nela: *"sem ele o texto só é inserido, e concluir fecharia o atendimento sem a pergunta ter
+     * saído"*. **`esperarVoceEnviar` desfez esse nó**: a conclusão acontece depois de o campo
+     * esvaziar, e não antes.
+     */
     /**
      * **A caixa "Automatizar a rodada" vale AQUI TAMBÉM, e o aviso não dizia.**
      *
@@ -8629,9 +8732,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   async function runLoteNovos() {
-    if (!state.settings.autoSend) {
-      return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
-    }
+    /**
+     * **Com o "Enviar automático" desligado a rodada RODA, e escreve em vez de mandar** — o modo
+     * que ele pediu em 28/10/2026. A recusa que morava aqui existia por um motivo real, escrito
+     * nela: *"sem ele o texto só é inserido, e concluir fecharia o atendimento sem a pergunta ter
+     * saído"*. **`esperarVoceEnviar` desfez esse nó**: a conclusão acontece depois de o campo
+     * esvaziar, e não antes.
+     */
     if (modelosAprovadosLigados() && !state.hsmTemplates.length) {
       return setStatus('Nenhum modelo aprovado carregado. Abra um atendimento e clique em Recarregar.', 'err');
     }

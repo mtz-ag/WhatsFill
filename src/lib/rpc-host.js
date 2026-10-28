@@ -29,6 +29,7 @@ const methods = {
 
   pageState: () => page.getState(),
   setComposerText: (text) => page.setComposerText(text),
+  textoDoComposer: () => page.textoDoComposer(),
   sendText: (text) => page.sendText(text),
   clickIniciar: () => page.clickIniciar(),
   clickReiniciar: () => page.clickReiniciar(),

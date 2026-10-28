@@ -32,6 +32,7 @@ import {
   ehRecusaPorSinalFraco,
   MARCA_SINAL_FRACO,
   queuePreview,
+  textoDoComposer,
   openQueueSession,
   canaisFrescos,
   clickIniciar,
@@ -1384,6 +1385,83 @@ grupo('A TELA DESENHA DEPOIS DO CLIQUE — e quem le antes conclui que a aba tro
   check(antes.includes('firmou === false'), 'o painel olha `firmou` antes de chamar de "a aba trocou"');
   check(antes.includes("resultado: 'pulado'"), 'e nesse caso o desfecho e PULAR');
   check(/processar\(aberto\.sessionId, \{ contatosTratados, aberto \}\)/.test(painel), 'e o `aberto` chega em quem processa');
+}
+
+grupo('"SO ESCREVER": o campo esvaziar e o sinal de que ELE mandou');
+{
+  /**
+   * **Pedido dele (28/10/2026): *"a extensao devia ter uma opcao de so escrever sem enviar e eu
+   * mandava no final"*** — e, perguntado o que a rodada faz depois: *"quero que escreva na caixa,
+   * eu reviso e quando eu der enter ela conclui e vai pro proximo contato"*.
+   *
+   * **A opcao ja existia e nao servia para a rodada**, e o motivo estava escrito nas proprias
+   * travas: *"sem ele o texto so e inserido, e concluir fecharia o atendimento sem a pergunta ter
+   * saido"*. O no se desfaz esperando: a conclusao passa a vir DEPOIS de o campo esvaziar.
+   *
+   * **O sinal e o campo, e nao ha mais barato.** O contador de mensagens do React nao foi medido,
+   * e perguntar ao banco a cada tique e rajada contra a API.
+   */
+  function campoCom(valor, { editavel = false } = {}) {
+    const el = Object.create({ get value() { return this._v; }, set value(v) { this._v = String(v); } });
+    Object.assign(el, {
+      _v: valor,
+      placeholder: 'Digite uma mensagem...',
+      isContentEditable: editavel,
+      textContent: valor,
+      getAttribute: () => null,
+      getBoundingClientRect: () => ({ width: 300, height: 40 }),
+    });
+    return el;
+  }
+  const tela = (campos) => ({ querySelectorAll: () => campos });
+
+  check(textoDoComposer({ raiz: tela([campoCom('bom dia')]) }) === 'bom dia', 'le o que esta escrito no campo');
+  check(textoDoComposer({ raiz: tela([campoCom('')]) }) === '', 'campo vazio le vazio — e o sinal de que saiu');
+
+  /**
+   * **Sem campo na tela tambem e vazio, e isso e deliberado:** conversa trocada significa, para
+   * quem espera, a mesma coisa que *"o texto que eu escrevi nao esta mais la"*.
+   */
+  check(textoDoComposer({ raiz: tela([]) }) === '', 'sem campo na tela devolve vazio, nao estoura');
+
+  /** A nota NAO e o campo de mensagem — ler dela faria a rodada esperar para sempre. */
+  const soNota = tela([campoCom('rascunho da equipe')]);
+  soNota.querySelectorAll = () => {
+    const n = campoCom('rascunho da equipe');
+    n.placeholder = 'Nota interna da conversa (só a equipe vê)...';
+    return [n];
+  };
+  check(textoDoComposer({ raiz: soNota }) === '', 'o texto da ANOTACAO nao conta como campo de mensagem');
+
+  /**
+   * **E a ponte do painel:** quem espera chama `page.textoDoComposer`, e ele tem de existir nos
+   * dois modos — encaixado e janela. Sem a linha na ponte, o modo janela chamaria um nome que o
+   * outro lado nao atende, e a espera morreria com "nao consegui ler o campo".
+   */
+  const ponte = readFileSync(new URL('../src/lib/rpc-host.js', import.meta.url), 'utf8');
+  check(/textoDoComposer:/.test(ponte), 'a ponte do modo janela atende `textoDoComposer`');
+
+  const fachada = readFileSync(new URL('../src/lib/page.js', import.meta.url), 'utf8');
+  check(/export const textoDoComposer/.test(fachada), 'e o `page.js` o expoe nas duas plataformas');
+
+  /**
+   * **O painel so espera DENTRO da rodada.** Fora dela ele clicou em "Inserir", o texto esta la e
+   * nao ha o que esperar — esperar ali travaria o botao.
+   */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  check(/if \(send && !state\.settings\.autoSend && state\.auto\.rodando\) \{/.test(painel),
+    'a espera e condicionada a rodada estar andando');
+  const i = painel.indexOf('async function esperarVoceEnviar');
+  check(i > 0, '`esperarVoceEnviar` existe');
+  const corpo = painel.slice(i, i + 1800);
+  check(corpo.includes('state.auto.parar'), 'e o botao Parar da rodada corta a espera');
+
+  /**
+   * **O DISPARO mantem a trava**, e isso e deliberado: la a peca sai pela API, que nao olha a
+   * caixa do envio automatico — rodar com ela desligada mandaria tudo assim mesmo, com a tela
+   * dizendo que nao manda.
+   */
+  check(/o disparo manda pela API, nao pelo campo/.test(painel), 'o disparo continua exigindo o envio automatico, e diz por que');
 }
 
 fim();

@@ -123,6 +123,19 @@ export const setComposerText = NA_PLATAFORMA_NOVA
     })
   : (text) => call('setComposerText', [text]);
 
+/**
+ * **O texto que esta no campo agora.** Serve ao modo *"so escrever"*: a rodada poe o texto e
+ * espera o campo esvaziar, que e o invariante de *"ele mandou"*.
+ *
+ * Na plataforma velha o campo e o `textarea` que o `composer` ja acha; aqui nao ha `getComposer`
+ * exportado, entao a leitura e a mesma do `dom.js`.
+ */
+export const textoDoComposer = NA_PLATAFORMA_NOVA
+  ? mobPage.textoDoComposer
+  : IS_IN_PAGE
+  ? local(() => String(dom.getComposer()?.value || ''))
+  : () => call('textoDoComposer');
+
 export const sendText = NA_PLATAFORMA_NOVA
   ? mobPage.sendText
   : IS_IN_PAGE

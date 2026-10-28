@@ -1,35 +1,45 @@
-## 2026-10-28 - v3.223.0 - ESTADO DE AGORA - a rodada espera a tela desenhar
+## 2026-10-28 - v3.224.0 - ESTADO DE AGORA - a rodada escreve, voce da Enter, ela conclui
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.223.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.224.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Confira **3.223.0** na linha pequena do topo do painel, ao lado de Recarregar
+3. Na aba **Config**, **DESMARQUE** "Enviar automatico (um clique manda a mensagem)"
+4. Confira **3.224.0** na linha pequena do topo do painel
 
-### "A ABA TROCOU DE ATENDIMENTO NO MEIO DO CAMINHO" — consertado
+### "SO ESCREVER SEM ENVIAR" — a opcao existia e nao servia para a rodada
 
-**Era a mesma causa da versao anterior, num ponto mais acima — e o conserto de la nao alcancava.**
+Voce estava certo nas duas metades: a opcao existe (*"Enviar automatico"*, na Config) **e nao
+funcionava** onde voce precisava. Nos cliques a mao ela sempre funcionou — o texto entra no campo
+e voce manda. **Nas rodadas, nao: cinco delas se recusavam a comecar com ela desligada.**
 
-O clique na linha volta na hora; a plataforma desenha depois. A rodada lia a tela logo em seguida
-e via a conversa ANTERIOR ainda la. Dai ela concluia que **voce** tinha aberto outra conversa, o
-que e motivo legitimo para parar — a tela e sua, e seguir abriria contato atras de contato por
-baixo das suas maos. So que nao era voce: era a plataforma ainda desenhando.
+O motivo estava escrito na propria trava, e era real: a rodada era *enviar -> concluir -> proximo*.
+Sem o envio no meio, ela **fecharia o atendimento com o texto parado no campo**.
 
-Na v3.222 eu pus a espera no lugar errado: ela so rodava **depois** dessa checagem. Agora ela
-subiu para onde a conversa e aberta, que e o unico ponto que sabe **qual** conversa deveria estar
-na tela.
+**Agora e assim, que foi o que voce pediu:**
 
-| antes | agora |
-|---|---|
-| devolvia assim que o clique voltava | **espera** a tela mostrar quem foi clicado |
-| "a aba trocou" era sempre `erro` e **parava** | so para se foi **voce**; desenho atrasado vira **pulado** |
+1. a rodada decide e **escreve** no campo
+2. a barra diz *"Escrevi no campo. Revise e de Enter — eu concluo e abro o proximo"*
+3. voce revisa, edita se quiser, e **da Enter**
+4. ela ve o campo esvaziar, **conclui** e abre o proximo
 
-**A licao, que ficou escrita:** consertar o sintoma onde ele aparece nao conserta quem le a tela
-antes. Foi a segunda vez hoje que o mesmo defeito apareceu por outra porta.
+**Como ela sabe que voce mandou:** o campo esvaziou. E o sinal mais barato que existe — o
+contador de mensagens da plataforma nao foi medido, e perguntar ao banco a cada segundo seria
+rajada contra a API.
+
+**O risco, dito com todas as letras:** se voce APAGAR o texto sem enviar, ela entende que saiu e
+conclui o atendimento **sem mensagem**. Querendo pular um contato, use o botao **Parar** em vez de
+limpar o campo. Passando 10 minutos sem Enter, ela desiste daquele contato e nao conclui.
+
+### O DISPARO CONTINUA EXIGINDO O ENVIO AUTOMATICO
+
+As duas rodadas da aba **Disparo** mantem a trava, de proposito: la a peca sai **pela API**, que
+nao olha essa caixa. Deixa-las rodar com ela desligada mandaria tudo assim mesmo, com a tela
+dizendo que nao manda.
 
 ### O QUE ESTA NO AR
 
@@ -97,6 +107,7 @@ defeito** — e porque o ultimo so apareceu depois de os anteriores sairem da fr
 | 3.216 a .221 | varios | Dulce, modelo aprovado, folga na fila, campo depois de assumir, a aba certa, o botao Assumir |
 | 3.222 | erro nas nao atendidas | **a pressa**: assumia no mesmo quadro do clique, antes de a tela se decidir |
 | 3.223.0 | "a aba trocou de atendimento" | a MESMA pressa, num ponto acima do conserto anterior |
+| 3.224.0 | "so escrever" nao funcionava | a opcao existia; as rodadas e que se recusavam a rodar sem envio |
 
 **A licao que eu escrevi no CLAUDE.md para nao repetir:** eu consertei o sintoma duas vezes antes
 de achar a causa. As duas correcoes eram reais e ficaram, mas se eu tivesse medido a fila na
