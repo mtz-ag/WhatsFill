@@ -1724,9 +1724,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   /**
    * **O que a conta do canal COMPAROU** — para a tela dizer, em vez de ele adivinhar.
    *
-   * O `channelId` é um id opaco e o número vem de LER A TELA, que pode falhar quando a plataforma
-   * mudar o layout — e aí a tarja acusa "número não cadastrado" sobre um número que está lá. Sem
-   * esta linha, o próximo diagnóstico desse caso é outra sessão inteira.
+   * O `channelId` é um id opaco, e o número depende da plataforma: no mobiliza.app vem de LER A
+   * TELA (e pode falhar quando o layout mudar); no mobiliza.me vem da tabela das instâncias. Nos
+   * dois casos a tarja pode acusar "número não cadastrado" sobre um número que está lá — sem esta
+   * linha, o próximo diagnóstico desse caso é outra sessão inteira.
    */
   /**
    * **O AVISO DE "nenhum modelo aprovado" TEM DE DIZER A VERDADE NA PLATAFORMA EM QUE ELE ESTÁ.**
@@ -1850,15 +1851,56 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * quem é a conversa.
      */
     if (canal.estado === 'desconhecido') {
-      onde.append(
-        h('div', { class: 'wf-block wf-err-block', 'data-fica': '1' }, [
-          h('div', {},
-            'Atenção: o número deste atendimento não está em nenhum candidato, e você está como ' +
-              `${state.perfil.nome}. A rodada não vai tratar este contato — some o número ao ` +
-              'candidato certo na aba Config.'),
-          h('div', { class: 'wf-origin', 'data-fica': '1' }, oQueComparei()),
-        ])
-      );
+      /**
+       * **A barreira estava certa e não tinha SAÍDA** (28/10/2026, relato dele: *"agora está só
+       * pulando de contato em contato sem dar nenhuma opção ou mandar mensagem"*).
+       *
+       * Ela mandava *"some o número ao candidato certo na aba Config"* — e para isso ele tinha de
+       * achar o número, abrir a Config, achar o campo e digitar, **enquanto a rodada pulava a fila
+       * inteira**. A lição de 25/09 já dizia que a recusa tem de dizer ONDE se mexe, senão é um
+       * muro; o botão é o que cumpre isso.
+       *
+       * **O clique é dele, e isso não é formalidade:** dizer de QUEM é um número é exatamente a
+       * decisão que esta barreira protege — errá-la manda o texto de um candidato pelo número do
+       * outro. O painel sabe o número; quem sabe de quem ele é, é ele.
+       */
+      const chaves = [
+        String(state.session?.channelId || '').trim(),
+        String(state.numeroDoCanal || '').trim(),
+      ].filter(Boolean);
+
+      const bloco = h('div', { class: 'wf-block wf-err-block', 'data-fica': '1' }, [
+        h('div', {},
+          'Atenção: o número deste atendimento não está em nenhum candidato, e você está como ' +
+            `${state.perfil.nome}. A rodada não vai tratar este contato.`),
+        h('div', { class: 'wf-origin', 'data-fica': '1' }, oQueComparei()),
+      ]);
+
+      if (chaves.length) {
+        const somar = h('button', { class: 'wf-btn wf-mini', type: 'button' }, `Somar este número ao ${state.perfil.nome}`);
+        somar.addEventListener('click', () =>
+          withBusy(async () => {
+            const limpa = perfisLib.somarCanal(state.perfis, state.perfil.id, ...chaves);
+            await store.set('perfis', limpa);
+            state.perfis = limpa;
+            state.perfil = perfisLib.porId(limpa, state.perfil.id);
+            // A mesma correção de 25/09: salvar o cadastro sem refazer a conta deixaria a tarja
+            // na tela JUSTO depois de ele fazer o que ela mandava.
+            recalcularCanalDoAtendimento();
+            setStatus(`Número somado a ${state.perfil.nome}. A rodada passa a tratar este canal.`, 'ok');
+            renderAll();
+          })
+        );
+        bloco.append(somar);
+      } else {
+        bloco.append(
+          h('div', { class: 'wf-origin', 'data-fica': '1' },
+            'Não consegui ler nem o canal nem o número deste atendimento, então não há o que somar — ' +
+              'cadastre à mão na aba Config.')
+        );
+      }
+
+      onde.append(bloco);
     }
   }
 
@@ -8742,7 +8784,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           nome,
           resultado: 'pulado',
           motivo:
-            'o número deste atendimento não está em candidato nenhum — some o número ao candidato certo na aba Config',
+            'o número deste atendimento não está em candidato nenhum — abra um contato e clique em ' +
+            '"Somar este número ao <candidato>" no aviso vermelho do cabeçalho',
         };
       }
 

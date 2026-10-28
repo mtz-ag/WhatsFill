@@ -275,6 +275,31 @@ export function donoDoCanal(perfis, canal, numero = '') {
 }
 
 /**
+ * **SOMA ESTE CANAL AO CANDIDATO, e devolve a lista nova** (28/10/2026).
+ *
+ * A barreira do canal estava certa e **não tinha saída**: ela mandava *"some o número ao candidato
+ * certo na aba Config"*, e para isso ele precisava achar o número, abrir a Config, achar o campo e
+ * digitar — tudo isso enquanto a rodada pulava a fila inteira. A própria lição de 25/09 já dizia
+ * que **a recusa tem de dizer ONDE se mexe, senão ela é um muro**; dar o clique é cumprir isso.
+ *
+ * **NÃO soma sozinho, e isso não é excesso de zelo:** dizer de QUEM é um número é a decisão que a
+ * barreira existe para proteger — errá-la manda o texto de um candidato pelo número do outro. O
+ * painel sabe o número; quem sabe de quem ele é, é ele.
+ *
+ * Soma as duas chaves (o id opaco do canal e o telefone), porque `donoDoCanal` casa por qualquer
+ * uma e elas envelhecem diferente: o id morre se a instância for recriada, o telefone não.
+ */
+export function somarCanal(perfis, perfilId, ...chaves) {
+  const lista = sanitizar(perfis);
+  const alvo = String(perfilId || '');
+  const novas = chaves.map((c) => String(c || '').trim()).filter(Boolean);
+  if (!novas.length) return lista;
+  return sanitizar(
+    lista.map((p) => (p.id === alvo ? { ...p, canais: [...p.canais, ...novas] } : p))
+  );
+}
+
+/**
  * **DE QUEM É O NÚMERO DESTE ATENDIMENTO** — e as quatro respostas possíveis são quatro, não duas.
  *
  * Relato dele (25/09/2026), com a print de um atendimento no número do Felipe Pedri: *"eu só

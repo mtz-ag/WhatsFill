@@ -643,6 +643,25 @@ mudaram as maos, nao a cabeca.
   **Quem filtra grupo e `mob.fila`, num lugar so**, e `queuePreview` ganhou `fila` como argumento
   para o teste exercitar ESTE caminho com linhas de mentira, em vez de conferir o texto do codigo.
 
+- **BARREIRA CERTA SEM SAIDA E UM MURO — e a do canal pulava a fila inteira** (28/10/2026, relato
+  dele: *"agora esta so pulando de contato em contato sem dar nenhuma opcao ou mandar mensagem"*).
+  Com a fila finalmente andando, o que apareceu foi a barreira do candidato (25/09) fazendo
+  **exatamente o que foi escrita para fazer**: o canal da plataforma nova e um `instance_id` novo,
+  que nao esta em candidato nenhum, entao todo contato era `desconhecido` e pulado.
+  **O defeito nao era a barreira: era ela nao ter saida.** O texto mandava *"some o numero ao
+  candidato certo na aba Config"* — achar o numero, abrir a Config, achar o campo, digitar —
+  **enquanto a rodada pulava a fila inteira**. A propria licao de 25/09 ja dizia que *"a recusa tem
+  de dizer a CONTA de cada numero e ONDE se mexe, senao ela e um muro"*, e o caso `outro` ja tinha
+  botao (*"Entrar como X"*); o `desconhecido` nao tinha.
+  Hoje a tarja traz **"Somar este numero ao `<candidato logado>`"**, e `perfis.somarCanal` soma as
+  DUAS chaves (o id opaco do canal e o telefone) porque elas **envelhecem diferente**: o id morre
+  se a instancia for recriada, o telefone nao.
+  **NAO soma sozinho, e isso nao e excesso de zelo:** dizer de QUEM e um numero e a decisao que a
+  barreira existe para proteger — errando, o texto de um candidato sai pelo numero do outro. O
+  painel sabe o numero; quem sabe de quem ele e, e ele.
+  **E o `motivo` da linha do Andamento aponta para o BOTAO**, nao para a aba: motivo que manda
+  procurar o lugar errado custa a mesma sessao de diagnostico que o aviso que nao envelhece.
+
 - **A CHAMADA AO SUPABASE SAI DA ABA, e e por isso que o CORS nao incomoda.** Em MV3 o `fetch` de
   content script carrega a origem da PAGINA — entao ele chega ao Supabase como
   `Origin: https://mobiliza.me`, exatamente como a requisicao que a propria plataforma faz. Tirar a

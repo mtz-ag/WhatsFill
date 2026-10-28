@@ -1,50 +1,38 @@
-## 2026-10-28 - v3.213.0 - ESTADO DE AGORA - achei a causa: a fila vinha VAZIA, sempre
+## 2026-10-28 - v3.214.0 - ESTADO DE AGORA - a fila anda; falta UM clique seu
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. **Na aba Config, ponha o numero do seu canal no Capitao Martim** — o painel mostra qual e, na
-   linha cinza embaixo da tarja vermelha ("numero do canal: ...")
+3. **Abra um contato e clique em "Somar este numero ao Capitao Martim"**, no aviso vermelho do
+   cabecalho. **E isso que destrava a rodada.**
 
-Confira **3.213.0** no cabecalho do painel.
+Confira **3.214.0** no cabecalho do painel.
 
-### "ABRE E FECHA SOZINHO" — e eu tinha consertado o SINTOMA duas vezes
+### "SO PULANDO DE CONTATO EM CONTATO" — agora a fila anda, e quem pula e a barreira
 
-Voce reportou tres vezes, e **era sempre o mesmo defeito**. Eu consertei duas coisas de verdade no
-caminho, mas nenhuma delas era a causa — e por isso a queixa so mudava de forma:
+**Isto e progresso, e a barreira esta certa.** Com a fila consertada (3.213) a rodada passou a
+percorrer de verdade — e ai apareceu a protecao que existe desde 25/09: *"o numero deste
+atendimento nao esta em nenhum candidato"*. O canal do mobiliza.me e novo, voce nunca o cadastrou,
+e a barreira se recusa a responder sem saber de quem ele e. **Ela esta impedindo o texto de um
+candidato de sair pelo numero do outro.**
 
-| versao | o que voce viu | o que eu consertei |
-|---|---|---|
-| 3.211 | travou e ficou parado | o "ver mais" que mentia (20 voltas do laco) |
-| 3.212 | abre e fecha sozinho | a aba ignorada, o motivo no campo errado |
-| **3.213** | — | **a causa: a fila vinha vazia** |
+**O defeito meu nao era a barreira: era ela nao ter saida.** Ela mandava *"some o numero ao
+candidato certo na aba Config"* — achar o numero, abrir a Config, achar o campo, digitar — enquanto
+a rodada pulava tudo. Agora ha um botao na propria tarja:
 
-**A causa:** eu convertia a linha do banco **duas vezes**. A segunda conversao perde o endereco do
-chat, e sem ele a extensao conclui *"isto e um grupo"* — de proposito, porque mandar resposta de
-atendimento para dentro de um grupo nao tem volta. Entao **toda conversa virava grupo e era
-descartada**, e a fila chegava vazia na rodada.
+> **Somar este numero ao Capitao Martim**
 
-```
-uma conversao   -> pessoa
-duas conversoes -> "grupo"      <- a mesma conversa
-sobra na fila: 0 de 1
-```
+Um clique, e a rodada passa a tratar os contatos desse canal.
 
-Medi na sua tela antes de mexer: a consulta dos seus atendimentos devolve **6**, a primeira delas
-**esta renderizada na lista**, e o gancho da extensao enxerga **100 linhas**. Ou seja, tudo o que
-vem antes funcionava — o que estava quebrado era o ultimo passo, e ele falhava **em silencio**.
+### POR QUE EU NAO FACO ISSO SOZINHO
 
-### O QUE ISSO ENSINA, E EU VOU LEMBRAR
+Porque dizer de QUEM e um numero e exatamente a decisao que essa barreira protege. Eu sei qual e o
+numero; **quem sabe de quem ele e, e voce**. Errar isso manda a mensagem do Capitao Martim pelo
+numero de outro candidato, com o nome errado em cima — e isso nao tem volta.
 
-A guarda que diz *"na duvida, e grupo"* esta certa e eu nao vou mexer nela. O erro foi **alimentar
-ela com o dado errado**: guarda que erra para o lado seguro, recebendo lixo, vira um apagador que
-nao estoura, nao avisa e nao aparece em log nenhum — devolve lista vazia, que e igualzinho a "a
-fila acabou".
-
-**E a licao maior: eu consertei o sintoma duas vezes sem achar a causa.** As duas correcoes eram
-reais e ficam; mas se eu tivesse medido a fila na primeira vez, voce nao teria reportado tres
-vezes.
+O botao soma **duas chaves**: o id interno do canal e o telefone. Os dois porque envelhecem
+diferente — se a instancia for recriada na plataforma, o id muda e o telefone continua valendo.
 
 ## 2026-10-26 - v3.200.0 - ESTADO DE AGORA - a plataforma mudou, e a migracao comecou pelo chao
 

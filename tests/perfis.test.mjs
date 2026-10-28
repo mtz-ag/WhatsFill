@@ -321,4 +321,51 @@ grupo('o modelo do anuncio SOBREVIVE a troca de perfil (25/09/2026)');
     'normalizar preserva o modelo escolhido');
 }
 
+grupo('SOMAR O CANAL AO CANDIDATO — a saida que a barreira nao tinha');
+{
+  /**
+   * **A barreira estava certa e era um MURO** (28/10/2026, relato dele: *"agora esta so pulando de
+   * contato em contato sem dar nenhuma opcao ou mandar mensagem"*). Ela mandava somar o numero na
+   * aba Config, e enquanto ele nao fizesse isso a rodada pulava a fila inteira — corretamente, e
+   * sem saida a um clique.
+   *
+   * **A funcao NAO soma sozinha**, e e isso que a mantem segura: dizer de QUEM e um numero e a
+   * decisao que a barreira existe para proteger. Quem clica e ele.
+   */
+  const lista = [
+    { id: 'martim', nome: 'Capitao Martim', canais: [] },
+    { id: 'outro', nome: 'Outro Candidato', canais: ['999'] },
+  ];
+  const CANAL = 'uuid-do-canal';
+  const NUMERO = '5551000000000';
+
+  const depois = perfis.somarCanal(lista, 'martim', CANAL, NUMERO);
+  const martim = depois.find((p) => p.id === 'martim');
+  check(martim.canais.includes(CANAL), 'soma o id do canal');
+  check(martim.canais.includes(NUMERO), 'e o numero junto');
+
+  /**
+   * **As DUAS chaves, porque elas envelhecem diferente:** o id morre se a instancia for recriada,
+   * o telefone nao. `donoDoCanal` casa por qualquer uma.
+   */
+  check(perfis.donoDoCanal(depois, CANAL, '')?.id === 'martim', 'e o dono passa a ser reconhecido pelo id');
+  check(perfis.donoDoCanal(depois, '', NUMERO)?.id === 'martim', 'e pelo numero tambem');
+
+  const intocado = depois.find((p) => p.id === 'outro');
+  check(intocado.canais.length === 1 && intocado.canais[0] === '999', 'o outro candidato nao e tocado');
+
+  /** Somar duas vezes nao duplica — `sanitizar` ja deduplica, e a tela repete o clique. */
+  const denovo = perfis.somarCanal(depois, 'martim', CANAL, NUMERO);
+  check(denovo.find((p) => p.id === 'martim').canais.length === 2, 'somar de novo nao duplica');
+
+  /** Sem chave nenhuma nao mexe em nada: nao ha o que somar, e lista vazia nao vira canal vazio. */
+  const semNada = perfis.somarCanal(lista, 'martim', '', '   ');
+  check(semNada.find((p) => p.id === 'martim').canais.length === 0, 'sem chave, nao soma nada');
+
+  /** Id de candidato que nao existe nao cria candidato nenhum. */
+  const inventado = perfis.somarCanal(lista, 'nao-existe', CANAL);
+  check(inventado.length === lista.length, 'candidato inexistente nao vira candidato novo');
+  check(!inventado.some((p) => p.canais.includes(CANAL)), 'e o canal nao entra em ninguem');
+}
+
 fim();
