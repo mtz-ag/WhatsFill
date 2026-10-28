@@ -23,6 +23,8 @@ import {
   linhaParece,
   acharLinha,
   abrirConversa,
+  clicarAbaDaFila,
+  clicarAssumir,
   conversaAberta,
   linhaAtiva,
   painelDaConversa,
@@ -144,6 +146,39 @@ grupo('abrir: clica e PARA AI');
 
   const vazio = abrirConversa('c-404', { raiz });
   check(vazio.ok === false && vazio.motivo === 'nao-esta-na-tela', 'nao estando na tela, diz o motivo em vez de estourar');
+}
+
+grupo('a aba da lista: Todas e Minhas, e a linha de conversa nao e aba');
+{
+  const botao = (texto) => ({ textContent: texto, cliques: 0, click() { this.cliques++; } });
+  const todas = botao('Todas 728');
+  const minhas = botao('Minhas 1');
+  const pessoa = botao('Caxias do Sul - Kika 13:28 Sem mensagens');
+  const raiz = raizCom([todas, minhas, pessoa]);
+
+  const r = clicarAbaDaFila('Todas', raiz);
+  check(r.ok === true && todas.cliques === 1, 'clica em Todas, que e onde os nao atendidos estao');
+  check(minhas.cliques === 0 && pessoa.cliques === 0, 'e nao clica na outra aba nem numa conversa');
+
+  const outra = clicarAbaDaFila('Minhas', raiz);
+  check(outra.ok === true && minhas.cliques === 1, 'Minhas e a aba dos que ele ja assumiu');
+
+  const sumiu = clicarAbaDaFila('Todas', raizCom([pessoa]));
+  check(sumiu.ok === false && sumiu.motivo === 'aba-ausente', 'sem a aba na tela, diz que nao achou em vez de clicar numa conversa');
+}
+
+grupo('Assumir e o botao, e o aviso "Assuma para responder" nao e');
+{
+  const botao = (texto) => ({ textContent: texto, cliques: 0, click() { this.cliques++; } });
+  const doCabecalho = botao('Assumir');
+  const doRodape = botao('Assumir');
+  const aviso = botao('Assuma para responder');
+  const resolver = botao('Resolver');
+  const r = clicarAssumir(raizCom([doCabecalho, doRodape, aviso, resolver]));
+  check(r.ok === true && doCabecalho.cliques === 1, 'clica no Assumir da tela');
+  check(doRodape.cliques === 0 && aviso.cliques === 0 && resolver.cliques === 0, 'um so, e nem o aviso nem o Resolver');
+  const sem = clicarAssumir(raizCom([aviso]));
+  check(sem.ok === false && sem.motivo === 'sem-botao', 'sem o botao, nao clica no aviso');
 }
 
 grupo('QUAL conversa esta aberta: dois sinais que tem de concordar');

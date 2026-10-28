@@ -885,21 +885,22 @@ export const REGRAS = [
      * segunda mensagem nossa em cima da que ela ainda nem comentou.
      */
     /**
-     * **RAJADA SÓ DE REPASSE CONCLUI, SEM MANDAR NADA** — pedido dele (16/10/2026), com o
-     * Andamento aberto: *"o fluxo era pra finalizar essas pessoas que mandam links em sequencia,
-     * estou gastando tokens"*.
+     * **RAJADA SÓ DE REPASSE TAMBÉM RECEBE A MENSAGEM** — correção dele (28/10/2026), a Dulce
+     * Helena. A conversa era só link do Kwai desde a saudação de ontem, e a rodada concluiu sem
+     * mandar nada. Ele: *"was concluded without receiving any messages, this was not supposed to
+     * happen"*.
      *
-     * O argumento desta caixa é *"a mensagem do momento responde ao gesto"* — e vale para o gesto:
-     * um emoji de mãos é dirigido a nós. **Repasse não é gesto**, e o próprio `ehRepasse` já diz
-     * por quê: link e vídeo de outra pessoa *"não dizem nada sobre este contato"*. Quem repassa não
-     * está conversando, e mandar a mensagem do momento em cima disso é responder a coisa errada —
-     * todo dia, porque a rajada se renova sozinha.
+     * Em 16/10 o pedido era finalizar quem manda link em sequência, para a IA parar de gastar
+     * token. A finalização continua: a tecla 5 manda a mensagem do momento **e conclui**, e a IA
+     * não entra. O que saiu foi o silêncio. Repasse segue sem pedir o formulário (o Odone, em
+     * `nunca-pediram-dados`) — o que não pode é fechar a conversa sem ela ter recebido a mensagem
+     * de hoje.
      *
-     * O sinal já existia e servia a UMA regra só (`nunca-pediram-dados`, o caso do Odone: 76
-     * mensagens em semanas, todas link de vídeo). **Emoji e figura continuam recebendo a mensagem
-     * do momento**: `ehRepasse` pede link, vídeo ou áudio encaminhado.
+     * **Já respondida hoje continua concluindo sem segunda mensagem** (o Paulo Quevedo, 14:43, o
+     * link do TikTok em cima da resposta das 09:29). Sem mensagem do momento configurada, também
+     * não há o que mandar: conclui.
      */
-    tecla: (c) => (c.rajadaEhSoRepasse || c.respondidoHoje || !c.podeMandarMomento ? '3' : '5'),
+    tecla: (c) => (c.respondidoHoje || !c.podeMandarMomento ? '3' : '5'),
     /**
      * **Uma figura ou um link no fim NÃO apaga a pergunta que ficou para trás** — print da Maria
      * Antonia (06/09/2026).
@@ -1568,14 +1569,14 @@ export const SOBRE = {
     rotulo: 'Só figura, emoji ou link',
     efeito: 'depende',
     ramos: [
-      { tecla: '5', se: 'você ainda não respondeu hoje' },
-      { tecla: '3', se: 'ela só repassou link ou vídeo, ou você já respondeu hoje, ou não há mensagem do momento' },
+      { tecla: '5', se: 'você ainda não respondeu hoje e há mensagem do momento' },
+      { tecla: '3', se: 'você já respondeu hoje, ou não há mensagem do momento' },
     ],
     quando:
-      'Não há conteúdo para responder, e ignorar também não serve. Mensagem do momento, ou conclui ' +
-      'se já respondemos hoje. **Só REPASSE conclui sem mandar nada**: link e vídeo de outra pessoa ' +
-      'não dizem nada sobre este contato, e a rajada se renova sozinha — emoji e figura continuam ' +
-      'recebendo a mensagem do momento.',
+      'Não há conteúdo para responder, e ignorar também não serve. Sai a mensagem do momento — ' +
+      'inclusive quando a rajada é só link ou vídeo — e conclui. **Conclui sem mandar nada só se ' +
+      'já respondemos hoje, ou se não há mensagem do momento.** A Dulce Helena (28/10) foi fechada ' +
+      'em silêncio por uma rajada de links do Kwai, e isso não era para acontecer.',
   },
   'pergunta-aberta': {
     rotulo: 'Fez uma pergunta de razão ou de posição',

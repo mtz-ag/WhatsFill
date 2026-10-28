@@ -1944,6 +1944,12 @@ grupo('o lado SEM cidade tambem fecha, e o modelo vem antes do obrigado (03/09/2
   check(d({ ...semCidade, respondidoHoje: false, momentoJaEnviado: false })?.id === 'r:ultima-e-so-reacao:sem-cidade',
     'ainda nao respondido hoje: a pendencia decide, como antes');
 
+  // Dulce Helena (28/10): rajada so de link, sem resposta de hoje. A caixa e a mesma; o desfecho
+  // passou a ser a mensagem do momento, nao o silencio.
+  const dulce = d({ ...semCidade, respondidoHoje: false, momentoJaEnviado: false, rajadaEhSoRepasse: true });
+  check(dulce?.id === 'r:ultima-e-so-reacao:sem-cidade' && dulce?.tecla === '5',
+    'rajada de links sem resposta de hoje recebe a mensagem do momento: ' + JSON.stringify(dulce));
+
   /**
    * **O modelo vem ANTES do agradecimento** -- anotacao da Rosa: ela ja tinha cidade, voltou
    * clicando num anuncio novo e escreveu so apoio, e a caixa recomendou agradecer. Ele: *"ela veio

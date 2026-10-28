@@ -1782,6 +1782,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /**
+   * **MODELO APROVADO FICA DESLIGADO NO MOBILIZA.ME** — pedido dele (28/10/2026), com o aviso
+   * amarelo na frente da rodada: *"the approved models will be implemented later, right now
+   * disable this feature"*.
+   *
+   * No mobiliza.app a lista existe e a rodada pode mandar. Aqui `getMessageTemplates` devolve
+   * vazio de propósito, e o aviso, a seção "Modelos de mensagem" e a trava dos Novos tratavam
+   * essa resposta certa como falta. A feature volta quando o envio de modelo for medido; até
+   * lá a rodada não pede, não avisa e não tenta.
+   */
+  function modelosAprovadosLigados() {
+    return !naPlataformaNova();
+  }
+
+  /**
    * **AS FILAS MUDARAM DE NOME, E O BOTAO TEM DE DIZER O NOME QUE ELE VE NA TELA** (28/10/2026,
    * pedido dele: *"agora mudou o nome, tem que trocar para o atual (todas, minhas etc)"*).
    *
@@ -2636,6 +2650,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * janela de 24h expirada.
    */
   function renderModelos() {
+    if (!modelosAprovadosLigados()) return;
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Modelos de mensagem'));
 
     if (!state.hsmTemplates.length) {
@@ -4339,7 +4354,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
               'um candidato pode sair pelo número do outro sem nada na tela avisando.')
     );
 
-    if (!state.hsmTemplates.length) card.append(avisoSemModeloAprovado());
+    if (modelosAprovadosLigados() && !state.hsmTemplates.length) card.append(avisoSemModeloAprovado());
     return card;
   }
 
@@ -4816,7 +4831,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      */
     const impedimentos = [];
     if (!state.settings.autoSend) impedimentos.push('Precisa do "Enviar automático" ligado (acima).');
-    if (!state.hsmTemplates.length) card.append(avisoSemModeloAprovado());
+    if (modelosAprovadosLigados() && !state.hsmTemplates.length) card.append(avisoSemModeloAprovado());
 
     comecar.disabled = state.auto.rodando || impedimentos.length > 0;
     for (const motivo of impedimentos) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, motivo));
@@ -7556,7 +7571,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const faltando = [];
       if (!String(state.auto.cfg.mensagemMomento || '').trim()) faltando.push('a mensagem do momento');
       if (!state.templates.length) faltando.push('as respostas prontas');
-      if (!String(state.auto.cfg.templateId || '').trim()) faltando.push('o modelo aprovado da rodada');
+      if (modelosAprovadosLigados() && !String(state.auto.cfg.templateId || '').trim()) faltando.push('o modelo aprovado da rodada');
       if (faltando.length) {
         registrarNaRodada(
           'rodada',
@@ -7580,8 +7595,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * medido em 20.000 contextos.
      */
     // O envio em lote não manda modelo aprovado nenhum: avisar que não há seria alarme falso.
+    // No mobiliza.me a feature inteira está desligada: avisar também seria alarme falso.
     try {
-      if (percorrer) throw { pular: true };
+      if (percorrer || !modelosAprovadosLigados()) throw { pular: true };
       const temAnuncioComModelo = (await carregarAnuncios(perfilAtivo())).some(
         (a) => a.ligado && a.acao === 'modelo' && String(a.valor || '').trim()
       );
@@ -7734,6 +7750,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // A rodada trocou de atendimento várias vezes com o observador desligado: resincroniza o
     // painel com o que ficou aberto na tela.
     await refresh();
+    // `refresh` → `load` escreve "Contato carregado" por cima do veredito. Sem esta linha a
+    // rodada que nao abriu ninguem parece botao que nao fez nada.
+    setStatus(
+      `${resumo}${motivoDominante}${sobra} ${motivo}`,
+      resultado.interrompida || sobra || motivoDominante ? 'err' : 'ok'
+    );
   }
 
   /**
@@ -8607,7 +8629,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!state.settings.autoSend) {
       return setStatus('Ligue o "Enviar automático" na aba Config antes de rodar.', 'err');
     }
-    if (!state.hsmTemplates.length) {
+    if (modelosAprovadosLigados() && !state.hsmTemplates.length) {
       return setStatus('Nenhum modelo aprovado carregado. Abra um atendimento e clique em Recarregar.', 'err');
     }
 
@@ -8683,12 +8705,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           nome: 'contato',
           resultado: 'erro',
           motivo: estado.isPending
-            ? 'a plataforma não assumiu o atendimento (o botão Iniciar continua na tela)'
+            ? 'a plataforma não assumiu o atendimento (a conversa continua aguardando atendente)'
             : 'o campo de mensagem não apareceu depois de assumir o atendimento',
         };
       }
     } catch (err) {
       await page.closeOverlay().catch(() => {});
+      /**
+       * **A tela que nao se decidiu sobre ESTE contato nao para a rodada** (28/10/2026, relato
+       * dele: *"começar pelas não atendidas tem dado erro"*).
+       *
+       * `erro` é para o que não adianta tentar no próximo — a aba trocou, o campo de mensagem
+       * sumiu. A recusa por UM sinal só é o contrário: ela fala de um contato, e o seguinte pode
+       * estar perfeitamente legível. `page-mob` já espera os dois sinais concordarem; quando nem
+       * assim firma, o certo é **pular e seguir**.
+       *
+       * **A guarda não afrouxou:** `os-dois` continua obrigatório para assumir, resolver, reabrir
+       * e enviar. O que mudou é o que a rodada faz quando ela não é atendida.
+       */
+      if (page.ehRecusaPorSinalFraco(err.message)) {
+        return {
+          nome: 'contato',
+          resultado: 'pulado',
+          motivo: 'a tela não se decidiu sobre qual conversa está aberta (os dois sinais não ' +
+            'concordaram a tempo) — pulei para não assumir o atendimento de outra pessoa',
+        };
+      }
       return { nome: 'contato', resultado: 'erro', motivo: traduzirErroDeRede(err.message), rede: ehErroDeRede(err.message) };
     }
 
@@ -16556,7 +16598,12 @@ const CONTATOS_POR_PAGINA = 200;
       );
       padraoLinha.append(h('div', { class: 'wf-row' }, [somar]));
 
-      if (!state.hsmTemplates.length) {
+      if (!modelosAprovadosLigados()) {
+        padraoLinha.append(
+          h('div', { class: 'wf-hint' },
+            'Modelo aprovado está desligado nesta plataforma. Os nomes ficam guardados para quando o envio existir.')
+        );
+      } else if (!state.hsmTemplates.length) {
         padraoLinha.append(
           h('div', { class: 'wf-hint' },
             'A lista de modelos aprovados não está carregada, então digite os nomes exatos. Abra um ' +
@@ -16731,8 +16778,10 @@ const CONTATOS_POR_PAGINA = 200;
             card.append(
               alvo,
               h('div', { class: 'wf-hint' },
-                'A lista de modelos aprovados não está carregada, então digite o nome exato. Abra um ' +
-                  'atendimento e volte aqui para eu conferir se ele existe.')
+                modelosAprovadosLigados()
+                  ? 'A lista de modelos aprovados não está carregada, então digite o nome exato. Abra um ' +
+                      'atendimento e volte aqui para eu conferir se ele existe.'
+                  : 'Modelo aprovado está desligado nesta plataforma. O nome fica guardado para quando o envio existir.')
             );
           }
         }

@@ -1,18 +1,52 @@
-## 2026-10-28 - v3.215.0 - ESTADO DE AGORA - a migracao para o mobiliza.me esta DE PE
+## 2026-10-28 - v3.222.0 - ESTADO DE AGORA - a rodada das nao atendidas anda
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.215.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.222.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Confira **3.215.0** no cabecalho do painel — e o que separa *"o conserto nao funcionou"* de
-   *"o conserto nao chegou"*
+3. Confira **3.222.0** na linha pequena do topo do painel, ao lado de Recarregar
 
-**Nada mais esta pendente do seu lado para a rodada andar.** O que espera voce sao as DECISOES
-listadas em *"o que nao funciona aqui"*, abaixo — nenhuma delas impede o trabalho de hoje.
+### "COMECAR PELAS NAO ATENDIDAS TEM DADO ERRO" — consertado
+
+A rodada clicava a linha e, **no mesmo instante**, mandava assumir. Nesse instante so um dos dois
+sinais da tela tinha redesenhado: a linha da fila ja estava marcada como ativa, o painel da
+direita ainda nao. A extensao le os dois de proposito — **ela so mexe no atendimento quando os
+dois concordam**, porque assumir a conversa errada mexe no atendimento de outra pessoa.
+
+Entao ela recusava. **A recusa estava certa; a pressa e que estava errada.**
+
+Duas coisas mudaram:
+
+| antes | agora |
+|---|---|
+| lia os sinais UMA vez, logo apos o clique | **espera** ate 4s, perguntando a cada 150ms |
+| a recusa virava `erro` e **parava a rodada** | vira **pulado**: ela segue para o proximo |
+
+**A guarda nao foi afrouxada, e nao deve ser.** Os dois sinais continuam obrigatorios para
+assumir, resolver, reabrir e enviar. O que mudou foi dar tempo de a tela se decidir — e, quando
+nem assim ela se decide, pular aquele contato em vez de parar tudo.
+
+Custo: quase nada. A pergunta vai para o gancho da propria pagina e **nao toca na rede**.
+
+### O QUE ESTA NO AR
+
+Painel no mobiliza.me, logado como Capitao Martim. Fila **Todas** (Pessoas). Modelo aprovado
+desligado nesta plataforma. Conferencia do numero do candidato desligada (`auto.conferirCanal`).
+Repasse de link nao pede o formulario; se ainda nao respondemos hoje, sai a mensagem do momento.
+
+**Nao refazer, ja esta feito:** v3.216 Dulce (tecla 5 quando ainda nao respondemos hoje); v3.217
+modelo aprovado desligado aqui; v3.218 a fila pede folga e nao morre na primeira linha de grupo;
+v3.219 `clickIniciar` devolve o estado da TELA, nao a sonda do banco; v3.220 se ninguem da janela
+esta desenhado, a rodada clica **Todas** (Novos) ou **Minhas** (Meus); v3.221 o assumir clica o
+botao **Assumir** da tela — a funcao do banco sozinha deixava "Aguardando atendente".
+
+**Nao faca:** nao afrouxe os dois sinais; nao religue `conferirCanal`; nao apare a grafia de
+etiqueta; nao invente disparo para quem nunca escreveu; nao aperte Enter no campo de mensagem;
+nao rode uma rodada de centenas na conta dele so para diagnosticar.
 
 ### EM QUE PE ESTA
 
@@ -50,7 +84,8 @@ a sua autorizacao, esta marcado como medido — o resto diz que nao foi.
 
 ### A SEQUENCIA DE HOJE, e o que ela ensinou
 
-Voce reportou cinco vezes, e vale registrar porque **tres relatos eram o mesmo defeito**:
+Voce reportou varias vezes no mesmo dia, e vale registrar porque **tres relatos foram o mesmo
+defeito** — e porque o ultimo so apareceu depois de os anteriores sairem da frente:
 
 | versao | o que voce viu | o que era |
 |---|---|---|
@@ -60,6 +95,8 @@ Voce reportou cinco vezes, e vale registrar porque **tres relatos eram o mesmo d
 | 3.212 | travou e ficou parado | o "ver mais" mentia `ok: true` e o laco girava 20 vezes |
 | 3.213 | abre e fecha sozinho | **a causa**: converter a linha duas vezes esvaziava a fila |
 | 3.214/.215 | so pulando de contato | a barreira do candidato, certa e sem saida |
+| 3.216 a .221 | varios | Dulce, modelo aprovado, folga na fila, campo depois de assumir, a aba certa, o botao Assumir |
+| 3.222 | erro nas nao atendidas | **a pressa**: assumia no mesmo quadro do clique, antes de a tela se decidir |
 
 **A licao que eu escrevi no CLAUDE.md para nao repetir:** eu consertei o sintoma duas vezes antes
 de achar a causa. As duas correcoes eram reais e ficaram, mas se eu tivesse medido a fila na

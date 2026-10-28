@@ -19,7 +19,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { check, grupo, fim } from './_harness.mjs';
-import { conversaDoNo, acharLinha, abrirConversa, conversaAberta, temCampoDeMensagem } from '../src/lib/dom-mob.js';
+import { conversaDoNo, acharLinha, abrirConversa, conversaAberta, temCampoDeMensagem, clicarAbaDaFila, clicarAssumir } from '../src/lib/dom-mob.js';
 
 const ORIGEM = 'https://mobiliza.me';
 
@@ -208,6 +208,23 @@ grupo('abrir CLICA E PARA AI');
   check(r.type === 'abriu' && r.payload.ok === true, 'respondeu que abriu');
   check(r.payload.por === 'id', 'por identidade');
   check(no.cliques === 1 && no.rolou === 1, 'um clique, e rolou ate a linha antes');
+
+  const todas = { textContent: 'Todas 728', cliques: 0, click() { this.cliques++; } };
+  const minhas = { textContent: 'Minhas 1', cliques: 0, click() { this.cliques++; } };
+  const pessoa = linhaFalsa({ id: 'c-9', nome: 'Todas' }, 'Todas 13:28 Sem mensagens');
+  const gAba = subirGancho([todas, minhas, pessoa]);
+  const [aba] = gAba.pedir('aba', { rotulo: 'Todas', pedido: 'p-aba' });
+  const peloModulo = clicarAbaDaFila('Todas', { querySelectorAll: () => [todas, minhas, pessoa] });
+  check(aba.payload.ok === true && peloModulo.ok === true, 'gancho e dom-mob concordam: clica na aba Todas');
+  check(todas.cliques === 2 && minhas.cliques === 0 && pessoa.cliques === 0, 'so a aba Todas, nem a conversa cujo nome comeca igual');
+
+  const assumir = { textContent: 'Assumir', cliques: 0, click() { this.cliques++; } };
+  const aviso = { textContent: 'Assuma para responder', cliques: 0, click() { this.cliques++; } };
+  const gAssumir = subirGancho([assumir, aviso]);
+  const [respAssumir] = gAssumir.pedir('assumir', { pedido: 'p-assumir' });
+  const peloModuloAssumir = clicarAssumir({ querySelectorAll: () => [assumir, aviso] });
+  check(respAssumir.payload.ok === true && peloModuloAssumir.ok === true, 'gancho e dom-mob concordam: clica em Assumir');
+  check(assumir.cliques === 2 && aviso.cliques === 0, 'o aviso "Assuma para responder" nao e o botao');
 
   /**
    * **O `pedido` volta junto.** Sem ele, duas aberturas em sequencia (ele clicando rapido na lista

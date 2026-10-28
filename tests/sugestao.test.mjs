@@ -414,6 +414,30 @@ grupo('repasse nao pede formulario, mas reacao continua pedindo');
   check(odone?.id !== 'nunca-pediram-dados', 'repasse NAO pede o formulario: ' + JSON.stringify(odone));
 
   /**
+   * Dulce Helena (28/10/2026): a rajada desde a saudacao de ontem era so link do Kwai, e a rodada
+   * concluiu sem mandar nada. Ele: ela foi fechada sem receber mensagem, e isso nao era para
+   * acontecer. O formulario continua de fora (o Odone). O que volta e a mensagem do momento,
+   * quando ainda nao respondemos hoje.
+   */
+  const dulce = com({
+    rajadaEhSoRepasse: true,
+    ultimaEhSoReacao: true,
+    temEtiquetaDeCidade: false,
+    jaPediramDados: true,
+    jaRespondemosAntes: true,
+    respondidoHoje: false,
+    podeMandarMomento: true,
+  });
+  check(dulce?.id === 'ultima-e-so-reacao' && dulce?.tecla === '5',
+    'links sem resposta de hoje recebem a mensagem do momento: ' + JSON.stringify(dulce));
+  check(com({
+    rajadaEhSoRepasse: true,
+    ultimaEhSoReacao: true,
+    respondidoHoje: true,
+    podeMandarMomento: true,
+  })?.tecla === '3', 'ja respondida hoje, o link nao empilha outra mensagem');
+
+  /**
    * O contra-teste, e e ele que impede a mudanca de ir longe demais: a Marta respondeu o anuncio
    * com um emoji, sem cidade e sem formulario — e ali pedir os dados continua sendo o certo.
    */
@@ -636,7 +660,8 @@ grupo('o mapa RAMIFICADO da janela: cada regra tem os dois galhos (01/09/2026)')
     const daFuncao = new Set();
     // `veioDeAnuncio` e `anuncioReconhecido` entraram em 15/10 com a decisao dele de mandar a
     // mensagem do dia a quem chega por anuncio DESLIGADO (nao ha recibo para mandar).
-    // `rajadaEhSoRepasse` entrou em 16/10: so repasse conclui sem mandar nada.
+    // `rajadaEhSoRepasse` entrou em 16/10. Em 28/10 deixou de forcar o silencio em
+    // `ultima-e-so-reacao` (a Dulce Helena): o bit continua na matriz porque outras teclas o leem.
     for (let m = 0; m < 512; m++) {
       daFuncao.add(r.tecla({
         respondidoHoje: !!(m & 1),

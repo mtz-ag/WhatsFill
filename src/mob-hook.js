@@ -109,6 +109,55 @@
   }
 
   /**
+   * Clica a aba da lista (`Todas 728`, `Minhas 1`). Copia de `dom-mob.clicarAbaDaFila`.
+   * O texto tem de ser o rotulo e so o numero — linha de conversa nao casa, empate nao clica.
+   */
+  function clicarAbaDaFila(rotulo) {
+    const alvo = textoDaLinha({ textContent: rotulo });
+    if (!alvo) return { ok: false, motivo: 'sem-rotulo' };
+    const forma = new RegExp('^' + alvo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' \\d+$');
+    const achados = [...document.querySelectorAll('button, [role="tab"], [role="button"]')].filter((no) => forma.test(textoDaLinha(no)));
+    if (achados.length !== 1) return { ok: false, motivo: achados.length ? 'aba-ambigua' : 'aba-ausente' };
+    achados[0].click();
+    return { ok: true };
+  }
+
+  /** Copia de `dom-mob.clicarAssumir`. O texto tem de ser exatamente "Assumir". */
+  function clicarAssumir() {
+    const achados = [...document.querySelectorAll('button, [role="button"]')].filter((no) => textoDaLinha(no) === 'assumir');
+    const visivel = achados.find((no) => {
+      const r = no.getBoundingClientRect ? no.getBoundingClientRect() : null;
+      return !r || (r.width > 0 && r.height > 0);
+    });
+    if (!visivel) return { ok: false, motivo: 'sem-botao' };
+    visivel.click();
+    return { ok: true };
+  }
+
+  /** Sobe a lista para o topo, para a conversa mais nova — a primeira da consulta — estar desenhada. */
+  function rolarFilaParaOTopo() {
+    let estilo = null;
+    try { estilo = window.getComputedStyle ? window.getComputedStyle.bind(window) : null; } catch (_) { estilo = null; }
+    if (!estilo) return { ok: false, motivo: 'sem-rolagem' };
+    for (const no of document.querySelectorAll('button, [role="button"]')) {
+      if (!conversaDoNo(no)) continue;
+      let el = no.parentElement;
+      while (el && el !== document.documentElement) {
+        let st = null;
+        try { st = estilo(el); } catch (_) { st = null; }
+        const overflow = st && (st.overflowY || st.overflow);
+        if ((overflow === 'auto' || overflow === 'scroll') && el.scrollHeight > el.clientHeight + 8) {
+          el.scrollTop = 0;
+          return { ok: true };
+        }
+        el = el.parentElement;
+      }
+      return { ok: false, motivo: 'sem-rolagem' };
+    }
+    return { ok: false, motivo: 'sem-linha' };
+  }
+
+  /**
    * **Quantas linhas da fila este gancho esta enxergando.**
    *
    * Serve para o painel dizer a verdade quando a conversa nao esta na tela: *"a fila tem 270 e a
@@ -155,7 +204,7 @@
     if (r && (r.width <= 0 || r.height <= 0)) return false;
     if (el.isContentEditable) return true;
     const t = rotuloDoCampo(el);
-    return /mensagem/.test(t) && !/notas?|anotac/.test(t);
+    return /mensagem/.test(t) && !/\bnotas?\b|anotac/.test(t);
   }
 
   function campoDeMensagem(raiz) {
@@ -296,6 +345,15 @@
         });
       } else if (msg.type === 'ping') {
         responder('pong', { linhas: quantasLinhas() });
+      } else if (msg.type === 'aba') {
+        const r = clicarAbaDaFila((msg.payload && msg.payload.rotulo) || '');
+        responder('aba', { pedido: msg.payload?.pedido || '', ...r });
+      } else if (msg.type === 'assumir') {
+        const r = clicarAssumir();
+        responder('assumir', { pedido: msg.payload?.pedido || '', ...r });
+      } else if (msg.type === 'topo') {
+        const r = rolarFilaParaOTopo();
+        responder('topo', { pedido: msg.payload?.pedido || '', ...r });
       }
     } catch (err) {
       const detalhe = String((err && err.message) || err);
@@ -307,6 +365,8 @@
         responder('aberta', { pedido: msg.payload?.pedido || '', por: '', conversa: null, erro: detalhe });
       } else if (msg.type === 'ping') {
         responder('pong', { linhas: 0, erro: detalhe });
+      } else if (msg.type === 'aba' || msg.type === 'topo' || msg.type === 'assumir') {
+        responder(msg.type, { pedido: msg.payload?.pedido || '', ok: false, motivo: 'erro', detalhe });
       }
     }
   });

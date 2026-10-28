@@ -28,6 +28,9 @@ import {
   sendText,
   setComposerText,
   numeroDoCanal,
+  esperarOsDoisSinais,
+  ehRecusaPorSinalFraco,
+  MARCA_SINAL_FRACO,
   queuePreview,
   openQueueSession,
   canaisFrescos,
@@ -636,7 +639,9 @@ grupo('ENVIAR exige saber a conversa por DOIS sinais');
    * pessoa para OUTRA**, e isso nao tem volta. Por isso `so-um-sinal`, que basta para o painel
    * LER, nao basta para escrever.
    */
-  const umSinal = await erro(() => sendText('oi', { janela: janelaQue({ id: 'c-1', status: 'em_atendimento' }, 'so-um-sinal') }));
+  // `prazoMs: 0` porque aqui o assunto e a RECUSA, nao a espera — ela tem grupo proprio, com
+  // relogio injetado. Sem isto cada assercao destas paga os 4s de verdade.
+  const umSinal = await erro(() => sendText('oi', { prazoMs: 0, janela: janelaQue({ id: 'c-1', status: 'em_atendimento' }, 'so-um-sinal') }));
   check(umSinal && umSinal.includes('UM sinal'), 'um sinal so NAO envia, e diz por que');
 
   const mudo = await erro(() => sendText('oi', { janela: null }));
@@ -693,13 +698,26 @@ grupo('AS RPCs DE ESTADO — gravadas, e o estado original devolvido no fim');
   const erro = async (fn) => { try { await fn(); return ''; } catch (e) { return e.message; } };
 
   for (const [nome, fn] of [['Assumir', clickIniciar], ['Resolver', clickConcluir], ['Reabrir', clickReiniciar]]) {
-    const um = await erro(() => fn({ janela: janelaQue({ id: 'c-1', status: 'aberto' }, 'so-um-sinal') }));
+    const um = await erro(() => fn({ prazoMs: 0, janela: janelaQue({ id: 'c-1', status: 'aberto' }, 'so-um-sinal') }));
     check(um.includes('UM sinal'), `${nome} recusa com um sinal so`);
     const mudo = await erro(() => fn({ janela: null }));
     check(mudo.includes('as cegas'), `${nome} recusa quando o gancho nao responde`);
     const vazio = await erro(() => fn({ janela: janelaQue(null, '') }));
     check(vazio.includes('Nenhuma conversa aberta'), `${nome} recusa sem conversa aberta`);
   }
+
+  /**
+   * **Assumir devolve o estado da TELA, nao a sonda do banco** (28/10/2026). A sonda e
+   * `{ ok, estado, temAtendente }` — sem `hasComposer`. A rodada dos Novos lia a ausencia
+   * como "o campo nao apareceu" e parava no primeiro contato, depois de ja ter assumido.
+   */
+  const fonteIniciar = readFileSync(new URL('../src/lib/page-mob.js', import.meta.url), 'utf8');
+  const corpoIniciar = fonteIniciar.slice(fonteIniciar.indexOf('export async function clickIniciar'));
+  const ateProxima = corpoIniciar.slice(0, corpoIniciar.indexOf('\nexport async function clickConcluir'));
+  check(ateProxima.includes('hasComposer'), 'clickIniciar espera o campo de mensagem');
+  check(ateProxima.includes("'assumir'"), 'clickIniciar aperta o botao Assumir da tela');
+  check(ateProxima.includes('getState'), 'clickIniciar devolve o estado da tela');
+  check(!/return assumirConversa\(/.test(ateProxima), 'clickIniciar nao devolve mais a sonda do banco');
 
   /**
    * **"Abrir atendimento" para quem NUNCA escreveu continua recusando — e isso e um buraco no
@@ -1077,10 +1095,15 @@ grupo('A FILA CHEGA INTEIRA — o `.map` a mais a esvaziava em TODA rodada');
     { id: 'c-1', nome: 'Primeira', grupo: false },
     { id: 'c-2', nome: 'Segunda', grupo: false },
   ];
-  const fila = async () => linhas;
+  let limitePedido = 0;
+  const fila = async (opcoes) => {
+    limitePedido = opcoes.limite;
+    return linhas;
+  };
 
   const vista = await queuePreview(5, { fila });
   check(vista.length === 2, 'as duas conversas chegam — nenhuma some no caminho');
+  check(limitePedido > 5, 'a consulta pede folga alem do que a rodada vai usar — a primeira linha pode ser grupo');
   check(vista[0].id === 'c-1', 'e na ordem em que a consulta devolveu');
 
   /** Quem filtra grupo e a consulta, UMA vez: filtrar de novo aqui foi o defeito. */
@@ -1107,6 +1130,50 @@ grupo('A FILA CHEGA INTEIRA — o `.map` a mais a esvaziava em TODA rodada');
     return j;
   })();
 
+  const janelaQuePulaAPrimeira = (() => {
+    const ouvintes = [];
+    const j = {
+      addEventListener: (ti, fn) => { if (ti === 'message') ouvintes.push(fn); },
+      removeEventListener: (ti, fn) => { const i = ouvintes.indexOf(fn); if (i >= 0) ouvintes.splice(i, 1); },
+      postMessage(msg) {
+        const ok = msg.payload.id !== 'c-1';
+        const ev = { source: j, origin: ORIGEM, data: { __whatsfill: 'mob-page', type: 'abriu',
+          payload: { pedido: msg.payload.pedido, ok, motivo: ok ? '' : 'nao-esta-na-tela', por: 'id' } } };
+        for (const fn of [...ouvintes]) fn(ev);
+      },
+    };
+    return j;
+  })();
+  const pulou = await openQueueSession(0, { fila, janela: janelaQuePulaAPrimeira });
+  check(pulou.ok === true && pulou.sessionId === 'c-2', 'a primeira fora da tela nao encerra a rodada: abre a seguinte');
+
+  /**
+   * **Minhas so desenha quem ja foi assumido** (28/10/2026). A rodada dos Novos pede aberto,
+   * ninguem da janela esta na tela, e parar mandando "role a fila" nao resolve: o filtro tirou
+   * essa gente. Trocar para Todas e tentar de novo.
+   */
+  const tipos = [];
+  let trocou = false;
+  const janelaNaAbaErrada = (() => {
+    const ouvintes = [];
+    const j = {
+      addEventListener: (ti, fn) => { if (ti === 'message') ouvintes.push(fn); },
+      removeEventListener: (ti, fn) => { const i = ouvintes.indexOf(fn); if (i >= 0) ouvintes.splice(i, 1); },
+      postMessage(msg) {
+        tipos.push(msg.type);
+        if (msg.type === 'aba') trocou = true;
+        const ok = msg.type === 'aba' || msg.type === 'topo' || (msg.type === 'abrir' && trocou && msg.payload.id === 'c-1');
+        const ev = { source: j, origin: ORIGEM, data: { __whatsfill: 'mob-page', type: msg.type === 'abrir' ? 'abriu' : msg.type,
+          payload: { pedido: msg.payload.pedido, ok, motivo: ok ? '' : 'nao-esta-na-tela', por: 'id' } } };
+        for (const fn of [...ouvintes]) fn(ev);
+      },
+    };
+    return j;
+  })();
+  const depoisDaAba = await openQueueSession(0, { aba: 'Novos', fila, janela: janelaNaAbaErrada });
+  check(depoisDaAba.ok === true && depoisDaAba.sessionId === 'c-1', 'lista na aba errada: troca para Todas e abre a primeira');
+  check(tipos.includes('aba'), 'e pediu a aba da tela ao gancho');
+
   const r = await openQueueSession(1, { fila, janela });
   check(r.ok === true && r.sessionId === 'c-2', 'a posicao 1 abre a SEGUNDA conversa');
   check(cliques[0] === 'c-2', 'e foi ela que o gancho recebeu para abrir');
@@ -1114,6 +1181,101 @@ grupo('A FILA CHEGA INTEIRA — o `.map` a mais a esvaziava em TODA rodada');
 
   const acabou = await openQueueSession(9, { fila, janela });
   check(acabou.ok === false && /acabou/.test(acabou.reason), 'posicao alem do fim diz que a fila acabou, com a contagem');
+}
+
+grupo('ESPERAR OS DOIS SINAIS — a recusa estava certa, a pressa e que estava errada');
+{
+  /**
+   * **Relato dele (28/10/2026): *"comecar pelas nao atendidas tem dado erro"*.** A rodada clicava
+   * a linha e chamava `clickIniciar` **na hora**; nesse instante so um dos dois sinais tinha
+   * redesenhado (a linha da fila ja `ativa`, o painel da direita ainda nao), `conversaDaTela` lia
+   * UMA vez, via `so-um-sinal` e recusava. O painel traduzia a excecao em `erro`, e `erro` PARA a
+   * rodada inteira.
+   *
+   * **A guarda NAO afrouxou:** `os-dois` continua obrigatorio. O que mudou e dar tempo de os dois
+   * concordarem, em vez de decidir no primeiro quadro.
+   */
+  const ORIGEM = 'https://mobiliza.me';
+
+  /** Uma janela que responde `so-um-sinal` nas N primeiras perguntas e `os-dois` depois. */
+  function janelaQueFirmaApos(n) {
+    let perguntas = 0;
+    const ouvintes = [];
+    const j = {
+      perguntas: () => perguntas,
+      addEventListener: (ti, fn) => { if (ti === 'message') ouvintes.push(fn); },
+      removeEventListener: (ti, fn) => { const i = ouvintes.indexOf(fn); if (i >= 0) ouvintes.splice(i, 1); },
+      postMessage(msg) {
+        perguntas++;
+        const por = perguntas > n ? 'os-dois' : 'so-um-sinal';
+        const ev = { source: j, origin: ORIGEM, data: { __whatsfill: 'mob-page', type: 'aberta',
+          payload: { pedido: msg.payload.pedido, por, conversa: { id: 'c-1', status: 'aberto' } } } };
+        for (const fn of [...ouvintes]) fn(ev);
+      },
+    };
+    return j;
+  }
+
+  /** Relogio e sono injetados: o teste nao pode pagar 4 segundos de verdade. */
+  const semDormir = { espera: async () => {}, agora: (() => { let n = 0; return () => (n += 50); })() };
+
+  const firmou = janelaQueFirmaApos(2);
+  const st = await esperarOsDoisSinais({ janela: firmou, ...semDormir, agora: (() => { let n = 0; return () => (n += 50); })() });
+  check(st.porQuantosSinais === 'os-dois', 'espera ate os dois concordarem');
+  check(firmou.perguntas() === 3, 'e perguntou tres vezes — a primeira e as duas ate firmar');
+
+  /**
+   * **Nao esperar para sempre:** o prazo e curto de proposito, e quem estoura devolve o que viu
+   * para quem chama recusar com o nome certo.
+   */
+  const nuncaFirma = janelaQueFirmaApos(999);
+  let voltas = 0;
+  const desistiu = await esperarOsDoisSinais({
+    janela: nuncaFirma,
+    espera: async () => { voltas++; },
+    agora: (() => { let n = 0; return () => (n += 1500); })(),
+  });
+  check(desistiu.porQuantosSinais === 'so-um-sinal', 'estourando o prazo, devolve o que viu');
+  check(voltas > 0 && voltas < 10, `e nao fica preso no laco (${voltas} voltas)`);
+
+  /** Gancho mudo nao vira espera: nao ha o que firmar, e quem chama tem outra mensagem para ele. */
+  const mudo = await esperarOsDoisSinais({ janela: null, prazoMs: 0 });
+  check(mudo.ganchoRespondeu === false, 'gancho mudo sai na hora');
+
+  /**
+   * **A MARCA e o texto porque e so o texto que atravessa a ponte:** no modo janela a excecao
+   * viaja por `rpc` e vira mensagem, perdendo qualquer propriedade pendurada nela.
+   */
+  const recusa = await (async (f) => { try { await f(); return ''; } catch (e) { return String(e.message); } })(() => clickIniciar({ prazoMs: 0, janela: janelaQueFirmaApos(999) }));
+  check(recusa.includes(MARCA_SINAL_FRACO), 'a recusa carrega a marca que o painel reconhece');
+  check(ehRecusaPorSinalFraco(recusa) === true, 'e o detector a reconhece');
+
+  check(ehRecusaPorSinalFraco('Nenhuma conversa aberta na tela — abra a conversa antes.') === false,
+    'conversa nenhuma aberta NAO e sinal fraco — e outro caso, com outro desfecho');
+  check(ehRecusaPorSinalFraco('Failed to fetch') === false, 'nem erro de rede');
+  check(ehRecusaPorSinalFraco('') === false && ehRecusaPorSinalFraco(null) === false, 'e vazio nao vira nada');
+
+  /**
+   * **E a prova que importa: `conversaDaTela` USA a espera.** Testar `esperarOsDoisSinais`
+   * sozinha nao pega o defeito — ele era a funcao ser chamada UMA vez. Aqui a janela firma na
+   * terceira pergunta, e o que se exige e que o guarda tenha sido ATRAVESSADO: o erro que sobra e
+   * o do passo seguinte (a rede, que nao existe no teste), nunca a recusa por sinal fraco.
+   */
+  const firmaNaTerceira = janelaQueFirmaApos(2);
+  const depois = await (async (f) => { try { await f(); return ''; } catch (e) { return String(e.message); } })(
+    () => clickIniciar({ janela: firmaNaTerceira, espera: async () => {}, agora: (() => { let n = 0; return () => (n += 50); })() })
+  );
+  check(firmaNaTerceira.perguntas() >= 3, `perguntou ate firmar (${firmaNaTerceira.perguntas()} vezes)`);
+  check(!ehRecusaPorSinalFraco(depois), 'e o guarda foi ATRAVESSADO — nao recusou por sinal fraco');
+
+  /**
+   * **O painel tem de separar os dois**, senao a recusa de um contato para a rodada inteira. Aqui
+   * isso se prova no texto do painel: e o unico lugar em que ele decide `pulado` em vez de `erro`.
+   */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  check(/page\.ehRecusaPorSinalFraco\(err\.message\)/.test(painel), 'o painel consulta o detector antes de chamar de erro');
+  const trecho = painel.slice(painel.indexOf('page.ehRecusaPorSinalFraco'));
+  check(trecho.slice(0, 400).includes("resultado: 'pulado'"), 'e o desfecho e PULAR, nao parar a rodada');
 }
 
 fim();

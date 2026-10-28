@@ -497,8 +497,18 @@ export async function abrirNaTela(id, nome = '', opcoes = {}) {
  * conferir o texto do codigo.
  */
 export async function queuePreview(max = 50, { aba = '', fila = mob.fila } = {}) {
-  const linhas = await fila({ limite: Math.max(1, Number(max) || 50), aba });
-  return linhas || [];
+  const pedido = Math.max(1, Number(max) || 50);
+  /**
+   * **Pedir SÓ as linhas que a rodada vai usar esvazia a fila** (28/10/2026, "Começar pelas
+   * não atendidas" confirmava e terminava sem abrir ninguém).
+   *
+   * A posição 0 pede UMA linha. `mob.fila` joga grupo fora DEPOIS da leitura. Se essa única
+   * linha é um grupo — e grupo recebe mensagem o tempo todo, então é comum ser a mais nova —
+   * o que volta é lista vazia, e a rodada encerra como se não houvesse ninguém esperando.
+   * A folga é lida e descartada aqui; quem chama continua recebendo no máximo `pedido`.
+   */
+  const linhas = await fila({ limite: Math.min(200, pedido + 40), aba });
+  return (linhas || []).slice(0, pedido);
 }
 
 /**
@@ -528,7 +538,15 @@ export async function openQueueSession(index = 0, opcoes = {}) {
 
   let fila;
   try {
-    fila = await queuePreview(n + 1, deOnde ? { aba, fila: deOnde } : { aba });
+    // Uma janela, nao so a posicao pedida: a linha exata pode nao estar desenhada, e a
+    // seguinte que ja esta na tela abre no lugar. Parar na primeira que falta era a rodada
+    // inteira terminando sem abrir ninguem.
+    // Um a mais do que a janela: se ele voltar, a lista e maior que estas linhas e o
+    // `total` NAO pode ser o tamanho da janela. Dizer "1 de 8" com 731 na fila era
+    // a janela de busca vestida de fila inteira (28/10).
+    const lidas = await queuePreview(n + 9, deOnde ? { aba, fila: deOnde } : { aba });
+    fila = lidas.slice(0, n + 8);
+    fila.temMais = lidas.length > n + 8;
   } catch (err) {
     // Aba que esta plataforma nao conhece para a rodada com o nome dela na frente — seguir seria
     // percorrer a fila errada, que e o que o `avisoAba` da plataforma velha impede.
@@ -536,28 +554,64 @@ export async function openQueueSession(index = 0, opcoes = {}) {
     return { ok: false, avisoAba: texto, reason: texto, total: 0 };
   }
 
-  const alvo = fila[n];
-  if (!alvo) {
-    return {
+  // Janela cheia nao e a fila inteira. Sem `total`, o veredito nao inventa "7 nao chegaram a ser abertos".
+  const comTotal = (obj) => (fila.temMais ? obj : { ...obj, total: fila.length });
+
+  if (!fila[n]) {
+    return comTotal({
       ok: false,
-      total: fila.length,
       reason: fila.length
         ? `A fila${aba ? ` de "${aba}"` : ''} acabou (${fila.length} item(ns)).`
         : `A fila${aba ? ` de "${aba}"` : ''} veio VAZIA — confira o filtro da fila na plataforma.`,
-    };
+    });
   }
 
-  const r = await abrirNaTela(alvo.id, alvo.nome, resto);
-  if (!r.ok) {
-    const porque = {
-      'nao-esta-na-tela': 'Esta conversa nao esta renderizada na lista da plataforma — role a fila ate ela aparecer e recomece.',
-      'gancho-mudo': 'O gancho da pagina nao respondeu — recarregue a aba do mobiliza.me.',
-      erro: `A pagina estourou ao abrir a conversa${r.detalhe ? ` (${r.detalhe})` : ''}.`,
-    }[r.motivo] || `Nao consegui abrir a conversa (${r.motivo || 'sem motivo'}).`;
-    return { ok: false, total: fila.length, reason: porque };
-  }
+  const porqueDe = (r) => ({
+    'nao-esta-na-tela': 'Esta conversa nao esta renderizada na lista da plataforma — role a fila ate ela aparecer e recomece.',
+    'gancho-mudo': 'O gancho da pagina nao respondeu — recarregue a aba do mobiliza.me.',
+    erro: `A pagina estourou ao abrir a conversa${r.detalhe ? ` (${r.detalhe})` : ''}.`,
+  }[r.motivo] || `Nao consegui abrir a conversa (${r.motivo || 'sem motivo'}).`);
 
-  return { ok: true, sessionId: alvo.id, total: fila.length, por: r.por };
+  /**
+   * **O rotulo da TELA, nao o nome interno da rodada.** Novos e `status=aberto`, e essa gente
+   * esta em **Todas**. Com **Minhas** selecionada a lista so desenha quem ja foi assumido
+   * (28/10/2026: a rodada parou em "nao esta renderizada" com Minhas 1 na tela e 728 em Todas).
+   * Rolar a Minhas nao as faz aparecer: o filtro as tirou.
+   */
+  const ABA_NA_TELA = { Novos: 'Todas', Meus: 'Minhas', Outros: 'Todas' };
+
+  const abrirAlguma = async () => {
+    let ultima = null;
+    const fim = Math.min(fila.length, n + 8);
+    for (let i = n; i < fim; i++) {
+      const alvo = fila[i];
+      const r = await abrirNaTela(alvo.id, alvo.nome, resto);
+      if (r.ok) return comTotal({ ok: true, sessionId: alvo.id, por: r.por });
+      ultima = r;
+      if (r.motivo !== 'nao-esta-na-tela') {
+        return comTotal({ ok: false, reason: porqueDe(r) });
+      }
+    }
+    return comTotal({ ok: false, foraDaTela: true, reason: porqueDe(ultima || { motivo: 'nao-esta-na-tela' }) });
+  };
+
+  let aberto = await abrirAlguma();
+  const rotulo = ABA_NA_TELA[aba];
+  if (!aberto.ok && aberto.foraDaTela && rotulo) {
+    const troca = await perguntarAoGancho('aba', { rotulo }, resto);
+    if (troca?.payload?.ok) {
+      // O React so desenha a lista nova no quadro seguinte. Sem a espera a segunda
+      // procura acontece na lista velha e a rodada desiste do mesmo jeito.
+      await new Promise((r) => setTimeout(r, 400));
+      await perguntarAoGancho('topo', {}, resto);
+      await new Promise((r) => setTimeout(r, 250));
+      const segunda = await abrirAlguma();
+      aberto = segunda.ok || !segunda.foraDaTela
+        ? segunda
+        : { ...segunda, reason: `Troquei a lista da plataforma para ${rotulo} e a conversa continua sem estar desenhada. ${segunda.reason}` };
+    }
+  }
+  return aberto;
 }
 
 export async function openNextSession(opcoes = {}) {
@@ -771,18 +825,87 @@ export function getComposer(opcoes = {}) {
  * Para LER um sinal basta; para MEXER no atendimento, nao — assumir ou resolver a conversa
  * errada mexe no atendimento de outra pessoa.
  */
+/**
+ * **A RECUSA POR UM SINAL SO NAO E ERRO DE AMBIENTE — e era isso que parava a rodada inteira**
+ * (28/10/2026, relato dele: *"comecar pelas nao atendidas tem dado erro"*).
+ *
+ * O painel traduz toda excecao de `clickIniciar` em `resultado: 'erro'`, e `erro` PARA a rodada
+ * de proposito (aba trocou, campo de mensagem sumiu — coisas que nao adianta tentar no proximo).
+ * **Esta nao e uma delas:** ela diz *"a tela ainda nao se decidiu sobre ESTE contato"*, e o
+ * proximo pode estar perfeitamente legivel.
+ *
+ * O marcador e o TEXTO porque e so o texto que atravessa a ponte: no modo janela a excecao
+ * viaja por `rpc` e vira mensagem, perdendo qualquer propriedade que se pendure nela.
+ */
+export const MARCA_SINAL_FRACO = 'UM sinal so';
+
+export function ehRecusaPorSinalFraco(mensagem) {
+  return String(mensagem || '').includes(MARCA_SINAL_FRACO);
+}
+
+/**
+ * **ESPERA os dois sinais concordarem — a recusa estava certa e a PRESSA e que estava errada.**
+ *
+ * `openQueueSession` devolve assim que o clique na linha volta, e nesse instante so um dos dois
+ * sinais costuma ter redesenhado: a linha da fila ja esta `ativa`, o painel da direita ainda nao
+ * (ou o contrario). `conversaDaTela` lia UMA vez, via `so-um-sinal` e recusava — a rodada parava
+ * no segundo contato.
+ *
+ * **Nao afrouxa a guarda, e isso e o ponto:** `os-dois` continua obrigatorio para assumir,
+ * resolver, reabrir e enviar. Assumir com um sinal so mexe no atendimento de outra pessoa. O que
+ * muda e **dar tempo** de os dois concordarem, em vez de decidir no primeiro quadro.
+ *
+ * Custa quase nada: `getState` pergunta ao gancho e **nao toca na rede** (medido: os dois sinais
+ * juntos custam menos de 1 ms). A espera so acontece quando a tela ainda nao se decidiu.
+ */
+const PRAZO_DOS_SINAIS_MS = 4000;
+const INTERVALO_DOS_SINAIS_MS = 150;
+
+export async function esperarOsDoisSinais({ prazoMs = PRAZO_DOS_SINAIS_MS, intervaloMs = INTERVALO_DOS_SINAIS_MS, agora = () => Date.now(), espera = null, ...opcoes } = {}) {
+  const dormir = espera || ((ms) => new Promise((r) => setTimeout(r, ms)));
+  const ate = agora() + prazoMs;
+  let st = await getState(opcoes);
+  while (st.ganchoRespondeu && st.sessionId && st.porQuantosSinais !== 'os-dois' && agora() < ate) {
+    await dormir(intervaloMs);
+    st = await getState(opcoes);
+  }
+  return st;
+}
+
 async function conversaDaTela(oque, opcoes = {}) {
-  const st = await getState(opcoes);
+  const st = await esperarOsDoisSinais(opcoes);
   if (!st.ganchoRespondeu) throw new Error(`${oque}: nao consegui ler qual conversa esta aberta — recuso mexer as cegas.`);
   if (!st.sessionId) throw new Error(`${oque}: Nenhuma conversa aberta na tela — abra a conversa antes.`);
   if (st.porQuantosSinais !== 'os-dois') {
-    throw new Error(`${oque}: sei qual conversa esta aberta por UM sinal so (${st.porQuantosSinais}) — recuso, porque errar aqui mexe no atendimento de outra pessoa.`);
+    throw new Error(`${oque}: sei qual conversa esta aberta por ${MARCA_SINAL_FRACO} (${st.porQuantosSinais}) — recuso, porque errar aqui mexe no atendimento de outra pessoa.`);
   }
   return st.sessionId;
 }
 
 export async function clickIniciar(opcoes = {}) {
-  return assumirConversa(await conversaDaTela('Assumir', opcoes));
+  const id = await conversaDaTela('Assumir', opcoes);
+  /**
+   * **Primeiro o botao da TELA.** A funcao do banco muda o status e o React nao fica sabendo
+   * (28/10/2026, Marileide: "Aguardando atendente" e o botao Assumir continuavam na tela, e a
+   * rodada parava com "a plataforma nao assumiu"). O clique e o que a propria plataforma faz,
+   * e e ele que cria o campo de mensagem.
+   *
+   * Sem o botao na tela, cai na funcao do banco — a conversa pode ja ter sido assumida por uma
+   * rodada anterior que nao atualizou a tela.
+   */
+  const clique = await perguntarAoGancho('assumir', {}, opcoes);
+  if (!clique?.payload?.ok) {
+    const prova = await assumirConversa(id);
+    if (prova.ok === false) {
+      throw new Error('Assumir: a plataforma nao mudou esta conversa para em atendimento.');
+    }
+  }
+  let estado = await getState(opcoes);
+  for (let i = 0; i < 40 && estado.sessionId === id && (estado.isPending || !estado.hasComposer); i++) {
+    await new Promise((r) => setTimeout(r, 200));
+    estado = await getState(opcoes);
+  }
+  return estado;
 }
 
 export async function clickConcluir(opcoes = {}) {

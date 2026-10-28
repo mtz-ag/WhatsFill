@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.215.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.222.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -461,6 +461,21 @@ mudaram as maos, nao a cabeca.
   ao mesmo tempo tambem devolvem nada: duas verdades nao sao verdade.
   **O painel e reconhecido pela assinatura das props e nunca por classe** — as classes sao Tailwind
   geradas e mudam com o tema e com cada publicacao.
+  **A PRESSA ERA O DEFEITO, E FOI CONSERTADO NA v3.222.0** (28/10/2026, relato dele: *"comecar
+  pelas nao atendidas tem dado erro"*). A rodada clicava a linha e chamava `clickIniciar` **na
+  hora**; nesse instante so um dos dois sinais tinha redesenhado — a linha da fila ja `ativa`, o
+  painel da direita ainda nao. `conversaDaTela` lia UMA vez, via `so-um-sinal` e recusava.
+  **Um sinal sozinho logo depois do clique e o desenho acontecendo, nao uma conversa
+  desconhecida.** Hoje `esperarOsDoisSinais` pergunta de novo a cada 150ms, por ate 4s — e custa
+  quase nada, porque `getState` fala com o gancho e **nao toca na rede** (os dois sinais juntos
+  custam menos de 1 ms).
+  **A GUARDA NAO AFROUXOU, e nao se afrouxa:** `os-dois` continua obrigatorio para assumir,
+  resolver, reabrir e enviar — assumir com um sinal so mexe no atendimento de outra pessoa. O que
+  mudou e **dar tempo**, em vez de decidir no primeiro quadro.
+  **E o teste da FUNCAO nao pegava o defeito**, porque ele era ela ser chamada uma vez so: a
+  assercao que trava isso exercita `clickIniciar` com uma janela que firma na terceira pergunta e
+  exige que o guarda tenha sido ATRAVESSADO. Reintroduzindo a leitura unica, caem 2 assercoes.
+  **Ao consertar "a funcao decide cedo demais", teste o USO e nao so a funcao.**
 
 - **GANCHO QUE ESTOURA TEM DE RESPONDER — e o teste pegou isso antes de ir ao ar.** Na primeira
   versao o `try` cobria so a acao, e `quantasLinhas()` ficava fora dele, dentro da propria chamada
@@ -794,6 +809,18 @@ mudaram as maos, nao a cabeca.
   Enviar na conversa errada manda a mensagem de uma pessoa para OUTRA; assumir ou resolver a
   errada tira da fila quem ninguem atendeu, ou toma o caso de outro operador. **A mesma leitura
   que serve para o painel classificar nao serve para escrever.**
+  **A recusa esta certa e a pressa e que estava errada** (28/10/2026, consertado na v3.222.0).
+  `openQueueSession` devolve assim que o clique na linha volta, e o painel da direita ainda nao
+  concordou com ela — `conversaDaTela` agora **espera** os dois, em vez de aceitar um. Nunca
+  transforme `so-um-sinal` em permissao de assumir.
+  **E a segunda metade do conserto e do PAINEL: a recusa deixou de PARAR A RODADA.** Toda excecao
+  de `clickIniciar` virava `resultado: 'erro'`, e `erro` para a rodada inteira de proposito — e
+  para o que nao adianta tentar no proximo (a aba trocou, o campo sumiu). **Esta nao e uma
+  delas:** ela fala de UM contato, e o seguinte pode estar perfeitamente legivel. Nao firmando nem
+  com a espera, o desfecho e **`pulado`** e a rodada segue.
+  **O marcador e o TEXTO** (`MARCA_SINAL_FRACO` + `ehRecusaPorSinalFraco`, re-exportado por
+  `page.js`), porque so o texto atravessa a ponte: no modo janela a excecao viaja por `rpc` e vira
+  mensagem, perdendo qualquer propriedade pendurada nela.
 
 - **"ABRIR ATENDIMENTO" PARA QUEM NUNCA ESCREVEU NAO EXISTE AQUI — e isso e um buraco no
   DISPARO.** No mobiliza.app `PUT /chat/v1/session` **criava** a sessao, e era assim que a rodada
@@ -4951,6 +4978,12 @@ mudaram as maos, nao a cabeca.
   continuam recebendo a mensagem do momento** (o caso da Marta, 31/08), e link **com texto dela**
   também. **O sinal já existia** (`rajadaEhSoRepasse`, o Odone) e servia a UMA regra só: ao procurar
   guarda para um caso novo, veja se o sinal já está no ctx antes de escrever detector.
+  **O SILÊNCIO SAIU EM 28/10/2026, a Dulce Helena.** A rajada desde a saudação de ontem era só link
+  do Kwai, e a rodada concluiu sem ela receber mensagem. Ele: isso não era para acontecer. Repasse
+  continua **sem o formulário** (o Odone). A tecla 5 manda a mensagem do momento e conclui — a IA
+  continua de fora, que era o gasto de token. **Concluir sem mandar nada ficou só para quem já foi
+  respondida hoje, ou para quando não há mensagem do momento.** Não reponha o `rajadaEhSoRepasse`
+  na tecla 3.
 
 - **ESCREVER ARQUIVO POR PYTHON COM PAR DE SURROGATES DE EMOJI TRUNCA O ARQUIVO NO MEIO**
   (16/10/2026). O `write` estoura `UnicodeEncodeError: surrogates not allowed` **depois** de já ter

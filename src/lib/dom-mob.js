@@ -186,6 +186,48 @@ export function abrirConversa(id, { nome = '', raiz = document } = {}) {
 }
 
 /**
+ * **A aba da lista, pelo rotulo que a TELA escreve** (`Todas 728`, `Minhas 1`).
+ *
+ * A rodada dos Novos pede `status=aberto`. Essas pessoas estao em **Todas**. Com **Minhas**
+ * selecionada a lista so desenha quem ele ja assumiu, e a rodada para dizendo que a conversa
+ * nao esta renderizada — rolar nao as faz aparecer, porque o filtro as tirou.
+ *
+ * O texto tem de ser o rotulo e SO o numero. Uma linha de conversa carrega nome, hora e previa,
+ * entao nao casa nesta forma, e um empate nao clica.
+ */
+export function clicarAbaDaFila(rotulo, raiz = document) {
+  const alvo = textoDaLinha({ textContent: rotulo });
+  if (!alvo) return { ok: false, motivo: 'sem-rotulo' };
+  const forma = new RegExp('^' + alvo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' \\d+$');
+  const achados = [...raiz.querySelectorAll('button, [role="tab"], [role="button"]')].filter((no) => forma.test(textoDaLinha(no)));
+  if (achados.length !== 1) return { ok: false, motivo: achados.length ? 'aba-ambigua' : 'aba-ausente' };
+  achados[0].click();
+  return { ok: true };
+}
+
+/**
+ * **O botao Assumir da conversa aberta.**
+ *
+ * A funcao do banco muda o status e a TELA nao fica sabendo (28/10/2026, Marileide: a rodada
+ * parou com "nao assumiu" e os dois botoes Assumir continuavam na tela, um no cabecalho e outro
+ * ao lado de "Assuma para responder"). Quem cria o campo de mensagem e o clique, que e o que a
+ * propria plataforma faz.
+ *
+ * O texto tem de ser exatamente "Assumir". "Assuma para responder" e o aviso, nao o botao.
+ * Os dois botoes dizem a mesma coisa; o primeiro visivel basta.
+ */
+export function clicarAssumir(raiz = document) {
+  const achados = [...raiz.querySelectorAll('button, [role="button"]')].filter((no) => textoDaLinha(no) === 'assumir');
+  const visivel = achados.find((no) => {
+    const r = no.getBoundingClientRect ? no.getBoundingClientRect() : null;
+    return !r || (r.width > 0 && r.height > 0);
+  });
+  if (!visivel) return { ok: false, motivo: 'sem-botao' };
+  visivel.click();
+  return { ok: true };
+}
+
+/**
  * A cadeia de `memoizedProps` deste no, do proprio para cima. Pura, para ter teste.
  *
  * `niveis` e parametro porque os dois sinais da conversa aberta moram em alturas diferentes: na

@@ -104,6 +104,16 @@ export const getState = NA_PLATAFORMA_NOVA
   ? mobPage.getState
   : IS_IN_PAGE ? local(() => pageStateLocal()) : () => call('pageState');
 
+/**
+ * **"A tela ainda nao se decidiu" NAO e erro de ambiente** — o painel precisa separar os dois,
+ * porque `erro` PARA a rodada e este caso so pede o proximo contato.
+ *
+ * Fica aqui, no adaptador, e nao no painel: e `page-mob` quem escreve a frase, e duas copias do
+ * mesmo texto divergem na primeira reescrita. Na plataforma velha nenhuma mensagem carrega a
+ * marca, entao ela responde `false` e nada muda.
+ */
+export const ehRecusaPorSinalFraco = mobPage.ehRecusaPorSinalFraco;
+
 export const setComposerText = NA_PLATAFORMA_NOVA
   ? mobPage.setComposerText
   : IS_IN_PAGE
