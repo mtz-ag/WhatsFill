@@ -634,6 +634,142 @@ async function rpc(nome, corpo) {
 }
 
 /**
+ * **GRAVAR NA LINHA DO CONTATO — e a releitura e a PROVA, nao o 200.**
+ *
+ * Relato dele (28/10/2026), com a print: *"Gravado: nada — PROBLEMA: etiquetas: A rota
+ * api.mobiliza.app/core/v1/contact/.../partial e da plataforma antiga e nao existe"*.
+ *
+ * **O que apareceu nao foi so a etiqueta: NENHUMA escrita tinha caminho aqui.** `tags.applyTags`
+ * e `fields.writeValues` montam a URL a partir do **contrato aprendido** e chamam `api.apiFetch`
+ * direto — os dois sao da plataforma velha, e o transporte do `main.js` os recusa (a guarda fez o
+ * trabalho dela: **recusou em vez de pendurar**).
+ *
+ * **O QUE ESTA MEDIDO E O QUE NAO ESTA, sem mistura:**
+ *  - **medido (leitura):** `base_dados.tags` e um **array de texto** (87 rotulos distintos em 439
+ *    contatos), e as colunas dos campos sao as de `COLUNA_DO_CAMPO`;
+ *  - **NAO medido:** o PATCH em si. A sonda de escrita foi **barrada** — e barrar escrita no banco
+ *    de producao dele sem ele mandar e o certo.
+ *
+ * **Por isso a releitura nao e enfeite, e a unica coisa que separa isto de um palpite:** o PATCH
+ * pede `Prefer: return=representation` e **compara o que voltou com o que foi mandado**. Errando a
+ * coluna ou faltando permissao, isto **ESTOURA com o nome do campo** — em vez de o painel dizer
+ * "gravado" sobre um banco que ignorou. E a armadilha mais antiga deste projeto (*"a API responde
+ * 200 e IGNORA o valor"*) numa plataforma nova.
+ *
+ * **A PRIMEIRA escrita de verdade e a sonda.** Falhando, nada mais e tentado naquela passada.
+ */
+async function gravarNaLinha(contatoId, campos, { conferir = null } = {}) {
+  if (!contatoId) throw new Error('gravar: sem contato');
+  const sessao = mob.sessaoDaPagina();
+  if (!sessao || mob.sessaoExpirada(sessao)) throw new Error('gravar: sessao da plataforma vencida — recarregue a aba');
+  const chave = await mob.anon();
+
+  const tenant = mob.tenantAtivo();
+  if (!tenant) throw new Error('gravar: sem tenant — recuso escrever sem saber de qual campanha e o contato');
+
+  const endereco = `${mob.REST}base_dados?id=eq.${encodeURIComponent(contatoId)}&tenant_id=eq.${encodeURIComponent(tenant)}`;
+  let r;
+  try {
+    r = await fetch(endereco, {
+      method: 'PATCH',
+      headers: {
+        apikey: chave,
+        Authorization: `Bearer ${sessao.token}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation',
+      },
+      body: JSON.stringify(campos),
+    });
+  } catch (err) {
+    throw new Error(`gravar: ${err?.message || 'Failed to fetch'}`);
+  }
+
+  const corpo = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(`gravar: a plataforma recusou (${r.status}${corpo?.message ? ' — ' + corpo.message : ''})`);
+
+  /**
+   * **Linha nenhuma de volta e o caso em que o 200 mais mente:** o filtro nao alcancou ninguem
+   * (id de outro tenant, ou RLS escondendo a linha) e nada foi gravado.
+   */
+  const linha = Array.isArray(corpo) ? corpo[0] : corpo;
+  if (!linha) throw new Error('gravar: a plataforma respondeu OK e NAO devolveu a linha — nada foi gravado');
+
+  const conferencia = conferir || ((escrito, volta) =>
+    Object.keys(escrito).filter((k) => String(volta?.[k] ?? '') !== String(escrito[k] ?? '')));
+  const divergiram = conferencia(campos, linha);
+  if (divergiram.length) {
+    throw new Error(`gravar: a plataforma aceitou e NAO gravou ${divergiram.join(', ')} — releitura nao bate`);
+  }
+  return linha;
+}
+
+/**
+ * **AS ETIQUETAS, que aqui sao um ARRAY DE TEXTO na propria linha do contato.**
+ *
+ * Nao ha mais tabela a parte nem id numerico: quem compara usa o **rotulo normalizado**
+ * (`chaveDaEtiqueta`), e o que vai gravado e a **grafia do banco** — gravar a forma normalizada
+ * criaria um rotulo novo, que e a armadilha do rotulo repetido voltando pela porta da escrita.
+ *
+ * **UNIAO, nunca substituicao** (a mesma regra do `applyTags` de sempre): a rodada soma etiqueta,
+ * e trocar o conjunto apagaria o que outra pessoa marcou.
+ */
+export async function aplicarEtiquetas(contatoId, nomes = [], { remover = [] } = {}) {
+  const linhas = await mob.buscar('contatos', { select: 'id,tags', filtros: { id: 'eq.' + contatoId }, limite: 1 });
+  const atual = Array.isArray(linhas?.[0]?.tags) ? linhas[0].tags.map((x) => String(x)) : [];
+
+  const saem = new Set(remover.map(chaveDaEtiqueta).filter(Boolean));
+  const entram = nomes.map((n) => String(n ?? '').trim()).filter(Boolean);
+  const porChave = new Map();
+  for (const n of [...atual, ...entram]) {
+    const k = chaveDaEtiqueta(n);
+    if (!k || saem.has(k)) continue;
+    // A grafia que JA estava no banco ganha: ela e a que o resto da base usa.
+    if (!porChave.has(k)) porChave.set(k, n);
+  }
+  const novas = [...porChave.values()];
+
+  const igual = novas.length === atual.length && novas.every((n, i) => n === atual[i]);
+  if (igual) return { ok: true, skipped: true, tags: atual };
+
+  /**
+   * **A conferencia do array e por CONJUNTO, e nao por string**: o PostgREST devolve o array na
+   * ordem dele, e comparar texto a texto acusaria divergencia onde so houve reordenacao.
+   */
+  const linha = await gravarNaLinha(contatoId, { tags: novas }, (escrito, volta) => {
+    const vieram = new Set((Array.isArray(volta?.tags) ? volta.tags : []).map(chaveDaEtiqueta));
+    const faltou = escrito.tags.some((n) => !vieram.has(chaveDaEtiqueta(n)));
+    return faltou ? ['tags'] : [];
+  });
+  return { ok: true, tags: Array.isArray(linha.tags) ? linha.tags : novas };
+}
+
+/**
+ * **OS CAMPOS, que aqui sao COLUNAS de verdade** — some o contrato de escrita aprendido, e com
+ * ele o `valueString`/`valuesDateTime`/`valuesId` que custaram dias na plataforma velha.
+ *
+ * **Campo que nao esta em `COLUNA_DO_CAMPO` RECUSA**, e nao e preciosismo: inventar nome de
+ * coluna e pedir ao PostgREST para gravar onde ninguem mediu, e `notes`/`observacoes` ja mostrou
+ * que o espelho ingles/portugues **nao vale para todos** — gravar na coluna errada e *"a API
+ * responde 200 e IGNORA"* com outro nome.
+ */
+export async function gravarCampos(contatoId, valores = {}) {
+  const campos = {};
+  const desconhecidos = [];
+  for (const [nome, valor] of Object.entries(valores)) {
+    const coluna = COLUNA_DO_CAMPO[nome];
+    if (!coluna) { desconhecidos.push(nome); continue; }
+    campos[coluna] = valor === '' ? null : valor;
+  }
+  if (desconhecidos.length) {
+    throw new Error(`gravar: nao sei em qual coluna mora ${desconhecidos.join(', ')} nesta plataforma — recuso adivinhar`);
+  }
+  if (!Object.keys(campos).length) return { ok: true, skipped: true };
+
+  const linha = await gravarNaLinha(contatoId, campos);
+  return { ok: true, linha };
+}
+
+/**
  * **Assumir, e a releitura que prova.** `{ ok: true }` nao prova que o banco mudou — a licao de
  * sempre. Quem responde e o `status`.
  */

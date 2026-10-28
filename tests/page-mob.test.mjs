@@ -468,7 +468,15 @@ grupo('o nome do campo da sessao tem UM dono — e eu ja errei este');
    * outro lugar que pode divergir do `mob.js` sobre como se autentica.
    */
   const deMao = (codigo.match(/await fetch\(/g) || []).length;
-  check(deMao === 3, `tres requisicoes de mao, e so estas (achei ${deMao}): a CONTAGEM (precisa do cabecalho Prefer), o ENVIO (POST na funcao de borda) e o rpc() (POST nas funcoes do banco). Toda LEITURA passa pelo mob.buscar, que e quem sabe o nome do campo da sessao`);
+  check(deMao === 4, `quatro requisicoes de mao, e so estas (achei ${deMao}): a CONTAGEM (precisa do cabecalho Prefer), o ENVIO (POST na funcao de borda), o rpc() (POST nas funcoes do banco) e o gravarNaLinha() (PATCH, com Prefer: return=representation). Toda LEITURA passa pelo mob.buscar, que e quem sabe o nome do campo da sessao`);
+
+  /**
+   * **A QUARTA entrou em 28/10/2026, por decisao e nao de carona** — a escrita no contato
+   * (*"Gravado: nada"*). `mob.buscar` so LE, de proposito, entao o PATCH precisa de `fetch`
+   * proprio; o que ele NAO pode e inventar o jeito de autenticar.
+   */
+  check(/Prefer: 'return=representation'/.test(codigo), 'e o PATCH pede a linha de volta — e a releitura que prova, nao o 200');
+  check(/tenant_id=eq\./.test(codigo), 'e ele filtra por tenant: escrever sem isso contamina a base de outra campanha');
 }
 
 grupo('GRAFIAS: um disparo filtrado por "SERRA" alcancaria NINGUEM');
@@ -1646,6 +1654,68 @@ grupo('BOTOES REDUNDANTES — dois botoes com o mesmo efeito nao sao escolha');
   check(somas === 2, 'os dois caminhos somam pela MESMA funcao (achei ' + somas + ')');
   check(!/canais: \[\.\.\.new Set\(\[\.\.\.perfil\.canais, canalAgora\]\)\]/.test(painel),
     'e o que somava so o id do canal saiu');
+}
+
+grupo('GRAVAR NO CONTATO — e a releitura, nao o 200, que diz se gravou');
+{
+  /**
+   * **Print dele (28/10/2026): *"Gravado: nada — PROBLEMA: etiquetas: a rota
+   * .../contact/.../partial e da plataforma antiga e nao existe"*.**
+   *
+   * E era maior que a etiqueta: **NENHUMA escrita tinha caminho aqui**. `tags.applyTags` e
+   * `fields.writeValues` montam a URL a partir do **contrato aprendido** e chamam `apiFetch` —
+   * os dois sao da plataforma velha, e o transporte do `main.js` os recusou. **A guarda fez o
+   * trabalho dela:** recusar e melhor que pendurar.
+   *
+   * **O que esta MEDIDO e o que NAO esta, sem mistura:** a leitura (`base_dados.tags` e array de
+   * texto; as colunas sao as de `COLUNA_DO_CAMPO`) esta medida; **o PATCH nao** — a sonda de
+   * escrita foi BARRADA, e barrar escrita no banco de producao dele sem ele mandar e o certo.
+   * Por isso a releitura e obrigatoria: ela faz um palpite errado APARECER.
+   */
+  const fonte = readFileSync(new URL('../src/lib/api-mob.js', import.meta.url), 'utf8');
+
+  /** O 200 nao prova nada — a armadilha mais antiga deste projeto, numa plataforma nova. */
+  check(/a plataforma aceitou e NAO gravou/.test(fonte), 'divergindo a releitura, ESTOURA — nao devolve sucesso');
+  check(/respondeu OK e NAO devolveu a linha/.test(fonte), 'e linha nenhuma de volta tambem e falha: o filtro nao alcancou ninguem');
+
+  /** Sem tenant nao se escreve: contaminaria a base de outra campanha. */
+  check(/recuso escrever sem saber de qual campanha/.test(fonte), 'sem tenant, recusa');
+
+  /**
+   * **Campo fora do mapa RECUSA.** Inventar nome de coluna e pedir ao PostgREST para gravar onde
+   * ninguem mediu — e `notes`/`observacoes` ja mostrou que o espelho ingles/portugues nao vale
+   * para todos.
+   */
+  check(/nao sei em qual coluna mora/.test(fonte), 'campo que nao esta no mapa recusa, em vez de adivinhar a coluna');
+
+  /**
+   * **A etiqueta e UNIAO e a grafia do BANCO ganha.** Gravar a forma normalizada criaria um
+   * rotulo novo — a armadilha do rotulo repetido voltando pela porta da escrita.
+   */
+  const i = fonte.indexOf('export async function aplicarEtiquetas');
+  const corpo = fonte.slice(i, i + 2000);
+  check(/porChave\.has\(k\)/.test(corpo), 'a grafia que ja estava no banco ganha');
+  check(/skipped: true/.test(corpo), 'e nada a mudar nao vira requisicao');
+  check(/chaveDaEtiqueta/.test(corpo), 'a comparacao e por rotulo NORMALIZADO, nunca pelo texto cru');
+
+  /** O array volta na ordem do banco: comparar texto a texto acusaria divergencia onde so houve reordenacao. */
+  check(/vieram\.has\(chaveDaEtiqueta\(n\)\)/.test(corpo), 'a conferencia do array e por CONJUNTO, nao por ordem');
+
+  /**
+   * **Uma chamada para TODOS os campos**, e nao uma por campo: sao colunas da mesma linha, e o
+   * que derruba esta plataforma e o NUMERO de requisicoes.
+   */
+  const fields = readFileSync(new URL('../src/lib/fields.js', import.meta.url), 'utf8');
+  check(/api\.gravarCampos\(contactId, porNome\)/.test(fields), 'os campos vao numa requisicao so');
+  check(/api\.NA_PLATAFORMA_NOVA/.test(fields), 'e o desvio fica no comeco, nao em quem chama');
+
+  const tags = readFileSync(new URL('../src/lib/tags.js', import.meta.url), 'utf8');
+  check(/api\.NA_PLATAFORMA_NOVA/.test(tags), 'o mesmo em `applyTags` — sao dez chamadores no painel');
+  check(/api\.aplicarEtiquetas\(contact\.id/.test(tags), 'e ele chama a escrita nova pelo id do contato');
+
+  /** Na plataforma velha nada mudou: o contrato aprendido continua sendo quem grava la. */
+  const velho = tags.slice(tags.indexOf("const contract = await store.get('writeContract')"));
+  check(velho.includes('buildRequest(entry'), 'o corpo da plataforma antiga ficou intocado embaixo do desvio');
 }
 
 fim();

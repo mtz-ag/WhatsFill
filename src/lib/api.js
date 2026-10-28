@@ -137,6 +137,21 @@ export function getContact(contactId) {
   return apiFetch(`/core/v1/contact/${contactId}?${q}`);
 }
 
+/**
+ * **AS DUAS ESCRITAS DA PLATAFORMA NOVA.** Na velha elas nao existem: la quem grava e o contrato
+ * aprendido, dentro de `tags.js` e `fields.js`. Chamadas fora do mobiliza.me RECUSAM, em vez de
+ * cair num caminho que ninguem mediu.
+ */
+export async function aplicarEtiquetas(contatoId, nomes, opcoes) {
+  if (!NA_PLATAFORMA_NOVA) throw new Error("aplicarEtiquetas so existe no mobiliza.me — na plataforma antiga quem grava e o contrato aprendido.");
+  return mobApi.aplicarEtiquetas(contatoId, nomes, opcoes);
+}
+
+export async function gravarCampos(contatoId, valores) {
+  if (!NA_PLATAFORMA_NOVA) throw new Error("gravarCampos so existe no mobiliza.me — na plataforma antiga quem grava e o contrato aprendido.");
+  return mobApi.gravarCampos(contatoId, valores);
+}
+
 /** Schema dos campos personalizados. Devolve um array puro (não é paginado num envelope). */
 export function getCustomFields() {
   if (NA_PLATAFORMA_NOVA) return mobApi.getCustomFields();

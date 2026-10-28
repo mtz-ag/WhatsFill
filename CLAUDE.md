@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.228.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.229.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -614,6 +614,39 @@ mudaram as maos, nao a cabeca.
   (2): mesmo ato em momentos diferentes nao e redundancia; **divergir, sim**.
   **E a regra que eu violei ao criar o (3):** *"antes de criar controle novo porque ele disse que
   nao existe, procure o controle"* (02/10) — o da Config ja estava la.
+
+- **NENHUMA ESCRITA NO CONTATO TINHA CAMINHO NA PLATAFORMA NOVA** (28/10/2026, print dele:
+  *"Gravado: nada — PROBLEMA: etiquetas: a rota api.mobiliza.app/core/v1/contact/.../partial e da
+  plataforma antiga e nao existe"*).
+  **Nao era so a etiqueta.** `tags.applyTags` e `fields.writeValues` montam a URL a partir do
+  **contrato aprendido** e chamam `apiFetch` **direto** — os dois sao da plataforma velha. E
+  **isso nao aparecia em nenhuma lista de pendencias**, porque `api-mob` cobre as funcoes que o
+  painel chama por `api.X`, e estas duas nunca passaram por la.
+  **A guarda do `main.js` fez o trabalho dela:** recusou com o nome da rota, em vez de pendurar.
+  **O DESVIO FICA NO COMECO DE `applyTags`/`writeValues`, NUNCA em quem chama** — sao dez
+  chamadores de `applyTags` no painel, e desviar em cada um e a duplicacao que este projeto paga
+  caro desde o primeiro dia. O corpo da plataforma antiga fica intocado embaixo, e ha teste.
+  **O QUE ESTA MEDIDO E O QUE NAO ESTA, e a diferenca importa:** a LEITURA esta medida
+  (`base_dados.tags` e array de texto, 87 rotulos em 439 contatos; as colunas sao
+  `COLUNA_DO_CAMPO`); **o PATCH NAO** — a sonda de escrita foi **BARRADA**, e barrar escrita no
+  banco de producao dele sem ele mandar e o certo.
+  **Por isso a releitura nao e enfeite: e a unica coisa que separa isto de um palpite.** O PATCH
+  pede `Prefer: return=representation` e **compara o que voltou com o que foi mandado**; errando a
+  coluna ou faltando permissao, ESTOURA com o nome do campo. **E a armadilha mais antiga daqui
+  (*"a API responde 200 e IGNORA o valor"*) numa plataforma nova** — e la nao havia como conferir,
+  aqui ha.
+  **Linha nenhuma de volta tambem e falha**, e e o caso em que o 200 mais mente: o filtro nao
+  alcancou ninguem (id de outro tenant, RLS escondendo a linha) e nada foi gravado.
+  **O `tenant_id` vai no FILTRO do PATCH**, nao so no da leitura: escrever sem ele contamina a
+  base de outra campanha — a regra de 26/10 aplicada a escrita.
+  **A etiqueta e UNIAO e a grafia do BANCO ganha**, porque gravar a forma normalizada criaria o
+  88o rotulo — **a armadilha do rotulo repetido voltando pela porta da escrita**. E a conferencia
+  do array e por CONJUNTO: o PostgREST devolve na ordem dele, e comparar posicao a posicao
+  acusaria divergencia onde so houve reordenacao.
+  **Campo fora de `COLUNA_DO_CAMPO` RECUSA.** `notes`/`observacoes` ja mostrou que o espelho
+  ingles/portugues nao vale para todos.
+  **Uma requisicao para TODOS os campos**, e nao uma por campo: sao colunas da mesma linha, e o
+  que derruba esta plataforma e o NUMERO de requisicoes.
 
 - **GANCHO QUE ESTOURA TEM DE RESPONDER — e o teste pegou isso antes de ir ao ar.** Na primeira
   versao o `try` cobria so a acao, e `quantasLinhas()` ficava fora dele, dentro da propria chamada

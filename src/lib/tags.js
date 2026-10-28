@@ -687,10 +687,43 @@ export async function regionTagIds() {
  * muda, o COREDE antigo passa a ser informação errada sobre o contato. Quem chama decide o
  * que sai — aqui nada é removido por conta própria.
  */
+/** Os NOMES das etiquetas a remover — la a identidade e o rotulo, nao o id. */
+function* saem_nomes(porId, remover) {
+  for (const id of remover || []) {
+    const nome = porId.get(id) || id;
+    if (nome) yield nome;
+  }
+}
+
 export async function applyTags(contact, tagIds, { remover = [] } = {}) {
   const novas = tagIds.filter(Boolean);
   const saem = new Set((remover || []).filter(Boolean));
   if (!novas.length && !saem.size) return { ok: true, applied: [], skipped: true };
+
+  /**
+   * **NA PLATAFORMA NOVA NAO HA CONTRATO A APRENDER** — relato dele (28/10/2026): *"Gravado: nada
+   * — PROBLEMA: etiquetas: a rota .../partial e da plataforma antiga e nao existe"*.
+   *
+   * Este caminho monta a URL a partir do contrato aprendido e chama `api.apiFetch`, que no
+   * mobiliza.me cai no transporte que **recusa** (e fez certo: recusar e melhor que pendurar).
+   * La a etiqueta e um **array de texto na propria linha do contato**, entao quem grava e
+   * `api.aplicarEtiquetas`, com releitura conferindo.
+   *
+   * **O desvio fica aqui, no comeco, e nao em quem chama:** sao dez lugares no painel chamando
+   * `applyTags`, e desviar em cada um e a duplicacao que este projeto paga caro desde o primeiro
+   * dia.
+   */
+  if (api.NA_PLATAFORMA_NOVA) {
+    const porId = new Map((await loadTags()).map((t) => [t.id, t.name]));
+    const nomes = novas.map((id) => porId.get(id) || id);
+    const saem = [...saem_nomes(porId, remover)];
+    try {
+      const r = await api.aplicarEtiquetas(contact.id, nomes, { remover: saem });
+      return { ok: true, applied: r.skipped ? [] : novas, skipped: !!r.skipped };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  }
 
   const contract = await store.get('writeContract');
   const entry = contract?.entries?.find((e) => e.type === 'TAGS');

@@ -1,41 +1,51 @@
-## 2026-10-28 - v3.228.0 - ESTADO DE AGORA - botoes redundantes fora
+## 2026-10-28 - v3.229.0 - ESTADO DE AGORA - a escrita no contato ganhou caminho
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.228.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.229.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Confira **3.228.0** na linha pequena do topo do painel
+3. Confira **3.229.0** na linha pequena do topo do painel
+4. **Classifique UM contato e me diga o que a tela disse** — ver *"a primeira gravacao e a
+   sonda"*, abaixo
 
-### OS BOTOES QUE SAIRAM — e dois deles eu tinha criado nos dias anteriores
+### "GRAVADO: NADA" — e nao era so a etiqueta
 
-**1. "Parar a rodada", no cartao de Ritmo.** Ele so servia com a rodada andando — e nesse exato
-momento o **controle flutuante** ja esta na tela com o mesmo botao, e o **Esc** faz o mesmo. Fora
-da rodada ficava apagado, ocupando uma linha o tempo todo. Botao que so funciona quando outro
-igual esta na tela e botao a menos.
+A rota que apareceu no erro e da plataforma velha, e a guarda recusou em vez de pendurar — isso
+funcionou como devia. **Mas o buraco era maior: NENHUMA escrita no contato tinha caminho aqui.**
+Nem etiqueta, nem cidade, nem nenhum campo.
 
-**2. "Enviar" + "So inserir", em CADA resposta pronta.** No modo "Eu mando" os dois fazem a mesma
-coisa — o texto vai para o campo venha por qual botao vier. Eram dois botoes identicos lado a
-lado, repetidos em todas as respostas. Sobra **um**, com o nome do que ele de fato faz: **"Inserir
-no campo"**. Voltando ao modo automatico, os dois voltam, porque ai sao mesmo duas coisas.
+O motivo: esses dois caminhos nao passam pelo adaptador. Eles montam o endereco a partir do
+**contrato de escrita aprendido** — aquele mecanismo que observava a plataforma velha gravando uma
+vez e copiava o formato — e vao direto. Como esse contrato nao existe aqui (campo virou **coluna**,
+etiqueta virou **lista de texto**), eles caiam fora.
 
-O mesmo valeu para o cartao de modelo aprovado ("Enviar" + "So preparar").
+Agora existe: `PATCH` na linha do contato, com o `tenant_id` no filtro.
 
-### E UM TERCEIRO, que eu NAO tirei — mas estava divergindo
+### A PRIMEIRA GRAVACAO E A SONDA — e eu preciso que voce me diga o que ela disse
 
-Ha dois caminhos para somar o canal ao candidato: o botao da aba **Config** e o do **aviso
-vermelho** no cabecalho. **Eles faziam coisas diferentes:** o da Config somava so o id interno do
-canal; o do aviso soma o id **e o telefone**.
+**Eu tentei medir e fui barrado**, e foi o certo: era uma escrita no seu banco de producao. Entao
+o que esta no ar **nao e um palpite silencioso** — e um palpite que **se denuncia**:
 
-Isso importa porque os dois envelhecem diferente — se a instancia for recriada na plataforma, o id
-muda e o telefone continua valendo.
+- a gravacao pede a linha **de volta** e compara com o que mandou;
+- nao batendo, ela **estoura com o nome do campo** em vez de dizer "Gravado";
+- a plataforma respondendo OK **sem devolver a linha** tambem conta como falha.
 
-**Os dois ficam**, e nao e redundancia: o da Config e alcancavel sempre, e o do aviso so aparece
-quando a conferencia barra (com ela desligada, como voce deixou, o da Config e o unico). O que
-mudou e que agora **os dois somam as mesmas duas chaves**, pela mesma funcao.
+**Classifique um contato e olhe a barra.** Dizendo "Gravado: ..." com os campos, funcionou.
+Dizendo *"a plataforma aceitou e NAO gravou X"*, me avise: ai eu errei o nome da coluna, e a
+mensagem ja diz qual.
+
+### Tres coisas que levei da plataforma velha
+
+- **Etiqueta e UNIAO**, nunca substituicao: a rodada soma, e trocar o conjunto apagaria o que
+  outra pessoa marcou.
+- **A grafia que ja esta no banco GANHA.** Gravar a forma normalizada criaria um rotulo novo — a
+  armadilha do rotulo repetido voltando pela porta da escrita.
+- **Campo que eu nao sei em qual coluna mora RECUSA**, em vez de adivinhar. Ja medimos que o par
+  `notes`/`observacoes` nao e espelho um do outro.
 
 ### O QUE ESTA NO AR
 
@@ -108,6 +118,7 @@ defeito** — e porque o ultimo so apareceu depois de os anteriores sairem da fr
 | 3.226.0 | o box ficou pela metade | eu o pus DENTRO de um cartao — a doutrina do proprio codigo diz o contrario |
 | 3.227.0 | "bloqueando o modo novo" | destravei as funcoes e esqueci as travas da TELA, que desabilitam o botao |
 | 3.228.0 | botoes redundantes | dois iguais lado a lado no modo novo, e um Parar que duplicava o flutuante |
+| 3.229.0 | "Gravado: nada" | NENHUMA escrita no contato tinha caminho: elas nao passam pelo adaptador |
 
 **A licao que eu escrevi no CLAUDE.md para nao repetir:** eu consertei o sintoma duas vezes antes
 de achar a causa. As duas correcoes eram reais e ficaram, mas se eu tivesse medido a fila na

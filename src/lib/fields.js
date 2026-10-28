@@ -10,6 +10,7 @@
  * contrato, `writeValues` recusa em vez de tentar adivinhar o body e sujar dados reais.
  */
 
+import * as api from './api.js';
 import { getCustomFields, apiFetch } from './api.js';
 import * as store from './store.js';
 import { buildRequest } from './contract.js';
@@ -312,6 +313,43 @@ export async function contractFor(type) {
 export async function writeValues(contactId, changes) {
   const schema = await loadSchema();
   const results = [];
+
+  /**
+   * **NA PLATAFORMA NOVA O CAMPO E UMA COLUNA, e nao ha contrato a aprender** — relato dele
+   * (28/10/2026): *"Gravado: nada"*. O caminho de baixo monta a URL a partir do contrato e chama
+   * `apiFetch`, que no mobiliza.me cai no transporte que **recusa** (e fez certo: recusar e
+   * melhor que pendurar).
+   *
+   * **Some com isso a armadilha mais cara daqui:** o `valueString` num campo que guarda em
+   * `valuesDateTime`, o 200 que ignora o valor, o formato de DATE adivinhado. La e `PATCH` na
+   * coluna, com a **releitura conferindo** — e e a releitura, nao o 200, que diz se gravou.
+   *
+   * **Uma chamada para TODOS os campos**, e nao uma por campo: sao colunas da mesma linha, e uma
+   * requisicao por campo seria rajada contra a API a cada contato classificado — o que derruba
+   * esta plataforma e o NUMERO de requisicoes.
+   *
+   * **O resultado continua sendo por campo**, porque quem chama mostra campo a campo na tela:
+   * falhando, TODOS falham com o mesmo motivo, que e a verdade — a linha e uma so.
+   */
+  if (api.NA_PLATAFORMA_NOVA) {
+    const porNome = {};
+    for (const [fieldId, value] of Object.entries(changes)) {
+      const field = schema.find((f) => f.id === fieldId);
+      if (!field) { results.push({ fieldId, ok: false, error: 'Campo não existe no schema.' }); continue; }
+      if (field.readonly) { results.push({ fieldId, name: field.name, ok: false, error: 'Campo é somente leitura.' }); continue; }
+      porNome[field.name] = value;
+    }
+    const nomes = Object.keys(porNome);
+    if (nomes.length) {
+      try {
+        await api.gravarCampos(contactId, porNome);
+        for (const nome of nomes) results.push({ fieldId: nome, name: nome, ok: true });
+      } catch (err) {
+        for (const nome of nomes) results.push({ fieldId: nome, name: nome, ok: false, error: err.message });
+      }
+    }
+    return results;
+  }
 
   for (const [fieldId, value] of Object.entries(changes)) {
     const field = schema.find((f) => f.id === fieldId);
