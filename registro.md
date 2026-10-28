@@ -1,13 +1,72 @@
-## 2026-10-27 - v3.209.0 - ESTADO DE AGORA - o painel monta E empurra no mobiliza.me
+## 2026-10-28 - v3.210.0 - ESTADO DE AGORA - o painel monta, empurra e ESCREVE no campo
 
-### O PAINEL MONTA NO MOBILIZA.ME — o que voce precisa fazer
+### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
 
 O painel aparece encaixado na direita **empurrando a pagina**, como no mobiliza.app. Confira
-**3.209.0** no cabecalho do painel — e o que separa *"o conserto nao funcionou"* de *"o conserto
+**3.210.0** no cabecalho do painel — e o que separa *"o conserto nao funcionou"* de *"o conserto
 nao chegou"*.
+
+### O "ERRO AO INSERIR TEXTO" — eram DOIS defeitos, e o segundo e o que me assustou
+
+Voce mandou a print com o texto vermelho: *"Escrever no campo de mensagem da plataforma ainda nao
+foi medido na plataforma nova"*. Isso era literal — `setComposerText` era uma **recusa escrita**,
+porque eu nao tinha medido como se escreve no campo da plataforma nova. **Agora escreve.**
+
+**Mas medindo isso eu achei um defeito maior, que ninguem tinha relatado.** A tela de uma conversa
+**nao assumida** ja tem DOIS campos de texto, e nenhum deles e o campo de mensagem:
+
+```
+textarea "Nota interna da conversa (so a equipe ve)..."
+textarea "Anotacoes sobre este contato... (salva automaticamente 1s apos parar de digitar)"
+campo de mensagem de verdade: NENHUM   <- a plataforma so o cria depois de ASSUMIR
+```
+
+O gancho pegava **o primeiro visivel** e dizia *"da para digitar"*. Como essa leitura de tela
+**vence o status da conversa** no painel, ele afirmava campo de mensagem em **toda conversa
+aberta** — e o painel acreditaria que da para responder quem ainda nao foi assumido.
+
+**O que mudou:** a resposta agora tem **tres estados**, nunca dois.
+
+| o que esta na tela | resposta |
+|---|---|
+| reconheci o campo de mensagem | **sim** |
+| nao ha nada editavel | **nao** |
+| ha campo e nenhum e o de mensagem | **nao sei** -> quem decide e o status |
+
+O terceiro estado e o que faz isto envelhecer sem mentir: mudando a redacao do placeholder, a tela
+**para de afirmar** em vez de dizer *"nao da para digitar"* numa conversa que voce acabou de
+assumir.
+
+### COMO O TEXTO ENTRA NO CAMPO — e por que eu confio nisso sem ter visto ao vivo
+
+**A mecanica nao e hipotese nova: e a receita que este projeto ja mediu** no campo do mobiliza.app
+(`composer.js`). Atribuir `campo.value = texto` direto **nao funciona** — o framework guarda o
+ultimo valor que conhece e trata o evento como ruido. O caminho e o setter nativo do prototipo mais
+o evento `input`, e a razao vale igual para o Angular de la e o React de ca.
+
+**E a conferencia e o que torna isto honesto.** Campo controlado por React que nao reconheceu a
+escrita **devolve o valor antigo no proximo desenho**: o texto aparece e some. Entao o painel
+**rele o campo depois de dois quadros** e compara. Nao ficando, ele **estoura com o motivo** em vez
+de dizer "escrevi" sobre um campo vazio — a mesma disciplina de *"200 nao prova entrega"*, que e a
+armadilha mais antiga daqui.
+
+**O que o Chrome nao me deixou fazer, e eu nao vou fingir que fiz:** a extensao do Claude caiu no
+meio da medicao, entao **nao vi o texto entrar numa conversa assumida de verdade**. O desenho
+assume isso: seu primeiro clique em **"So inserir"** vai dizer a verdade — ou o texto aparece no
+campo, ou o painel escreve exatamente o que deu errado. **Me avise se aparecer "a plataforma apagou
+o texto"**: esse recado significa que o defeito e do adaptador, nao seu.
+
+### As mensagens que voce pode ver, e o que cada uma quer de voce
+
+| o que aparece | o que fazer |
+|---|---|
+| *"a plataforma so cria o campo depois de ASSUMIR. Aperte Iniciar primeiro"* | assumir a conversa — um clique |
+| *"Campo de mensagem nao encontrado. Abra uma conversa antes"* | abrir uma conversa |
+| *"a plataforma apagou o texto... me avise"* | **e defeito meu**: me mande a print |
+| *"o que ficou la nao e o que eu mandei"* | confira o campo antes de enviar |
 
 ### O EMPURRAO — voce viu *"sobrepos em vez de empurrar"*, e o padding estava certo
 

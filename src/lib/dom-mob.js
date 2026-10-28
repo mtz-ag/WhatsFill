@@ -275,3 +275,154 @@ export function conversaAberta({ raiz = document } = {}) {
   if (daLista) return { conversa: daLista, por: 'so-um-sinal' };
   return null;
 }
+
+
+// ---------------------------------------------------------------------------
+// O CAMPO DE MENSAGEM — e por que ele NAO e "o primeiro textarea da tela"
+// ---------------------------------------------------------------------------
+
+/**
+ * **MEDIDO EM 27/10/2026, e o defeito apareceu por acidente.** Abrindo uma conversa `aberto`
+ * (nao assumida) na pagina dele, a tela ja tem DOIS `textarea` VISIVEIS e nenhum deles e o campo
+ * de mensagem:
+ *
+ * ```
+ * textarea "Nota interna da conversa (so a equipe ve)..."
+ * textarea "Anotacoes sobre este contato... (salva automaticamente 1s apos parar de digitar)"
+ * campo de mensagem: NENHUM   <- a plataforma so o cria depois de ASSUMIR
+ * ```
+ *
+ * O gancho perguntava `querySelectorAll('textarea, [contenteditable="true"]')` e devolvia `true`
+ * no primeiro visivel: ele **afirmava campo de mensagem em TODA conversa aberta**. E essa leitura
+ * de tela **vence o `status`** em `page-mob.estadoDaConversa` (`hasComposer === null ? status ===
+ * EM_ATENDIMENTO : !!hasComposer`), entao o palpite errado substituia a resposta certa.
+ *
+ * **O proprio comentario do gancho dizia que isto nao tinha sido medido** — *"se o campo aparece
+ * antes de assumir o atendimento nao foi medido"*. Agora esta: **nao aparece**.
+ *
+ * **TRES ESTADOS, NUNCA DOIS** (a licao do `donoDoCanal`, 25/09, e do `undefined !== 'CONNECTED'`,
+ * 01/10):
+ *
+ * - reconheci o campo de mensagem      -> `true`
+ * - nao ha NADA editavel na tela       -> `false`  (nao ha o que digitar, ponto)
+ * - ha editavel e nenhum e o campo     -> `null`   (nao sei: quem chama cai no `status`)
+ *
+ * **O terceiro estado e o que faz isto envelhecer bem.** Mudando a redacao do placeholder, a tela
+ * para de AFIRMAR e o `status` decide — em vez de dizer *"nao da para digitar"* numa conversa que
+ * ele acabou de assumir. Errar para o lado de nao saber e barato; errar afirmando nao e.
+ *
+ * **A caixa de busca fica de fora por construcao:** ela e um `<input>`, e esta lista so olha
+ * `textarea` e `contenteditable`. Incluir `input` faria `camposEditaveis` nunca vir vazia (a busca
+ * esta sempre na tela) e o estado `false` deixaria de existir.
+ */
+const DIZ_MENSAGEM = /mensagem/;
+const DIZ_ANOTACAO = /\bnotas?\b|anotac/;
+
+/** O texto que a tela da ao campo: placeholder, `aria-label` ou `data-placeholder`. */
+function rotuloDoCampo(el) {
+  const bruto = (el && (el.placeholder
+    || (el.getAttribute && (el.getAttribute('aria-label') || el.getAttribute('data-placeholder'))))) || '';
+  return String(bruto).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+/** So o que PODE ser o campo de mensagem — ver a nota acima sobre o `<input>` da busca. */
+export function camposEditaveis(raiz = document) {
+  const sel = 'textarea, [contenteditable=""], [contenteditable="true"], [contenteditable="plaintext-only"]';
+  return [...raiz.querySelectorAll(sel)];
+}
+
+export function ehCampoDeMensagem(el) {
+  if (!el) return false;
+  if (el.disabled || el.readOnly) return false;
+  const r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+  if (r && (r.width <= 0 || r.height <= 0)) return false;
+  // As duas anotacoes medidas sao `textarea`; contenteditable na conversa e o campo de mensagem.
+  if (el.isContentEditable) return true;
+  const t = rotuloDoCampo(el);
+  return DIZ_MENSAGEM.test(t) && !DIZ_ANOTACAO.test(t);
+}
+
+export function campoDeMensagem({ raiz = document } = {}) {
+  for (const el of camposEditaveis(raiz)) if (ehCampoDeMensagem(el)) return el;
+  return null;
+}
+
+export function temCampoDeMensagem({ raiz = document } = {}) {
+  try {
+    const todos = camposEditaveis(raiz);
+    for (const el of todos) if (ehCampoDeMensagem(el)) return true;
+    return todos.length === 0 ? false : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/** O que esta escrito no campo agora — `value` no textarea, `textContent` no contenteditable. */
+export function lerCampo(el) {
+  if (!el) return '';
+  return el.isContentEditable ? String(el.textContent || '') : String(el.value || '');
+}
+
+/**
+ * **O SETTER NATIVO, e ele e a receita MEDIDA deste projeto — nao uma hipotese minha.**
+ *
+ * `composer.js` (o campo do mobiliza.app) ja dizia: *"atribuir `textarea.value = x` direto nao
+ * notifica o Angular; com o setter do prototipo + evento `input`, o app reconhece o texto"*.
+ * **React tem o mesmo rastreador de valor** e pela mesma razao: ele guarda o ultimo valor que
+ * conhece e, vendo o campo com esse valor, trata o evento como ruido e nao chama o `onChange`.
+ * O setter do prototipo escreve por baixo do rastreador.
+ */
+function setterNativo(el) {
+  // Pelo PROTOTIPO e nao por `instanceof`: e exatamente o que faz a volta por cima do rastreador
+  // (o React patcha a INSTANCIA, nunca o prototipo), e nao depende do realm — content script e
+  // pagina sao mundos diferentes, e `instanceof` atravessando mundo e armadilha de graca.
+  const proto = el && Object.getPrototypeOf(el);
+  const d = proto && Object.getOwnPropertyDescriptor(proto, 'value');
+  return d && typeof d.set === 'function' ? d.set : null;
+}
+
+/** Dois quadros: um para o React processar o evento, outro para ele REDESENHAR. */
+function doisQuadros() {
+  return new Promise((r) => {
+    if (typeof requestAnimationFrame !== 'function') return setTimeout(r, 60);
+    requestAnimationFrame(() => requestAnimationFrame(() => r()));
+  });
+}
+
+/**
+ * **ESCREVE NO CAMPO E CONFERE RELENDO — a releitura E a medicao.**
+ *
+ * Campo controlado por React que nao reconhece a escrita **devolve o valor antigo no proximo
+ * desenho**: o texto aparece e some. Por isso a conferencia espera DOIS quadros antes de reler —
+ * ler na hora pegaria o texto que o React ainda vai apagar, e o painel diria que escreveu.
+ *
+ * E a mesma disciplina do `imagem.legendaEntrou` e do `inserirNaCaixa` do Facebook: **200 nao
+ * prova entrega, e `el.value = x` nao prova que o app viu**. Falhando, quem chama diz na tela o
+ * que aconteceu — nunca "escrevi" em cima de um campo vazio.
+ */
+export async function escreverNoCampo(texto, { raiz = document, esperar = doisQuadros } = {}) {
+  const campo = campoDeMensagem({ raiz });
+  if (!campo) return { ok: false, motivo: 'sem-campo' };
+
+  const valor = String(texto ?? '');
+  try { campo.focus(); } catch (_) { /* campo que nao aceita foco ainda pode receber o texto */ }
+
+  if (campo.isContentEditable) {
+    try {
+      document.execCommand('selectAll', false, null);
+      document.execCommand('insertText', false, valor);
+    } catch (_) {
+      return { ok: false, motivo: 'nao-aceitou', campo };
+    }
+  } else {
+    const set = setterNativo(campo);
+    if (!set) return { ok: false, motivo: 'campo-desconhecido', campo };
+    set.call(campo, valor);
+    campo.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  await esperar();
+  const ficou = lerCampo(campo);
+  if (ficou === valor) return { ok: true, campo, ficou };
+  return { ok: false, motivo: ficou === '' ? 'apagou' : 'ficou-diferente', campo, ficou };
+}

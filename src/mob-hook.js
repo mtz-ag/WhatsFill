@@ -127,21 +127,47 @@
   }
 
   /**
-   * **Da para digitar agora?** — lido da TELA, porque se o campo de mensagem aparece antes de
-   * assumir o atendimento **nao foi medido**, e decidir pelo `status` sozinho seria palpite.
+   * **Da para digitar agora?** — lido da TELA, em TRES estados. Copia de
+   * `dom-mob.temCampoDeMensagem`; ver o cabecalho de la e o teste que trava a repeticao.
    *
-   * Vale a mesma regra do resto do gancho: degrada, nunca estoura. Nao dando para ler, devolve
-   * `null`, e quem chama cai no status em vez de afirmar o que nao viu.
+   * **A primeira versao AFIRMAVA campo de mensagem em toda conversa aberta**, porque pegava o
+   * primeiro `textarea` visivel e a tela tem DOIS de anotacao (medido: *"Nota interna da
+   * conversa"* e *"Anotacoes sobre este contato"*). Como esta leitura VENCE o `status` em
+   * `page-mob.estadoDaConversa`, o palpite errado substituia a resposta certa.
+   *
+   * Vale a mesma regra do resto do gancho: degrada, nunca estoura.
    */
+  function rotuloDoCampo(el) {
+    const bruto = (el && (el.placeholder
+      || (el.getAttribute && (el.getAttribute('aria-label') || el.getAttribute('data-placeholder'))))) || '';
+    return String(bruto).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  }
+
+  function camposEditaveis(raiz) {
+    const sel = 'textarea, [contenteditable=""], [contenteditable="true"], [contenteditable="plaintext-only"]';
+    return [...(raiz || document).querySelectorAll(sel)];
+  }
+
+  function ehCampoDeMensagem(el) {
+    if (!el) return false;
+    if (el.disabled || el.readOnly) return false;
+    const r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+    if (r && (r.width <= 0 || r.height <= 0)) return false;
+    if (el.isContentEditable) return true;
+    const t = rotuloDoCampo(el);
+    return /mensagem/.test(t) && !/notas?|anotac/.test(t);
+  }
+
+  function campoDeMensagem(raiz) {
+    for (const el of camposEditaveis(raiz)) if (ehCampoDeMensagem(el)) return el;
+    return null;
+  }
+
   function temCampoDeMensagem() {
     try {
-      const campos = document.querySelectorAll('textarea, [contenteditable="true"]');
-      for (const c of campos) {
-        if (c.disabled) continue;
-        const r = c.getBoundingClientRect ? c.getBoundingClientRect() : null;
-        if (!r || (r.width > 0 && r.height > 0)) return true;
-      }
-      return false;
+      const todos = camposEditaveis(document);
+      for (const el of todos) if (ehCampoDeMensagem(el)) return true;
+      return todos.length === 0 ? false : null;
     } catch (_) {
       return null;
     }

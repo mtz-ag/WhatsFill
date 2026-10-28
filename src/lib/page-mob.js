@@ -92,6 +92,7 @@
 
 import * as mob from './mob.js';
 import { mandarTexto, assumirConversa, resolverConversa, reabrirConversa } from './api-mob.js';
+import { escreverNoCampo, campoDeMensagem, camposEditaveis } from './dom-mob.js';
 
 // ---------------------------------------------------------------------------
 // Etiquetas: a identidade e o rotulo NORMALIZADO
@@ -261,8 +262,14 @@ export function estadoDaConversa(aberta, { dark = false, hasDialog = false, hasC
     sessionId: c.id || null,
     isPending: status === ABERTO,
     /**
-     * Quem responde e a TELA, nao o status: se da para digitar sem assumir **nao foi medido**, e
-     * o gancho ve o campo de mensagem de graca. Sem leitura, cai no status.
+     * **A TELA vence o status, e agora ela sabe do que esta falando.** Medido em 27/10/2026: numa
+     * conversa `aberto` **nao ha campo de mensagem** — a plataforma so o cria depois de ASSUMIR, e
+     * os unicos `textarea` da tela sao os dois de ANOTACAO. A primeira versao do gancho pegava o
+     * primeiro visivel e **afirmava campo em toda conversa aberta**, e como esta linha deixa a
+     * leitura de tela SUBSTITUIR o status, o palpite errado ganhava.
+     *
+     * Hoje o gancho responde em tres estados, e `null` (ha editavel e nenhum e o campo) cai no
+     * status — que e o que faz isto envelhecer sem afirmar bobagem.
      */
     hasComposer: hasComposer === null ? status === EM_ATENDIMENTO : !!hasComposer,
     dark,
@@ -568,8 +575,53 @@ export async function sendText(texto, { exigirDoisSinais = true, ...opcoes } = {
   }
   return mandarTexto({ conversaId: st.sessionId, texto });
 }
-export function setComposerText() {
-  return recusar('Escrever no campo de mensagem da plataforma');
+/**
+ * **PÕE O TEXTO NO CAMPO DA CONVERSA ABERTA — e NÃO envia.**
+ *
+ * É a metade do desenho que ele escolheu em 26/10 (*"mostrar ANTES, com a tela junto"*): a rodada
+ * decide, o texto aparece no campo dele, e quem aperta enviar é ele. Por isso ela **não exige os
+ * dois sinais** da conversa aberta, ao contrário de `sendText`: aqui o texto não sai de lugar
+ * nenhum, e o que estiver escrito está na tela dele, na conversa que ele está vendo.
+ *
+ * **A mecânica é a receita MEDIDA do `composer.js`** (o campo do mobiliza.app) aplicada ao React:
+ * setter nativo do protótipo + evento `input`. A razão é a mesma dos dois lados — o framework
+ * guarda o último valor que conhece e, atribuindo `campo.value` direto, ele trata o evento como
+ * ruído e não atualiza o estado.
+ *
+ * **E a CONFERÊNCIA é o que torna isto honesto:** campo controlado por React que não reconheceu a
+ * escrita devolve o valor antigo no próximo desenho — o texto aparece e some. `escreverNoCampo`
+ * relê depois de dois quadros; não ficando, isto ESTOURA com o motivo, em vez de o painel dizer
+ * "escrevi" sobre um campo vazio. É a mesma disciplina de `imagem.legendaEntrou`: 200 não prova
+ * entrega, e `campo.value = x` não prova que o app viu.
+ *
+ * **Sem campo na tela a mensagem diz o que fazer**, porque a causa é conhecida e tem conserto de
+ * um clique: medido em 27/10, a plataforma só cria o campo de mensagem **depois de assumir** a
+ * conversa — numa conversa `aberto` os únicos `textarea` da tela são os dois de ANOTAÇÃO.
+ */
+export async function setComposerText(texto, opcoes = {}) {
+  const r = await escreverNoCampo(texto, opcoes);
+  if (r.ok) return true;
+
+  if (r.motivo === 'sem-campo') {
+    const editaveis = camposEditaveis(opcoes.raiz || document).length;
+    throw new Error(
+      editaveis === 0
+        ? 'Campo de mensagem nao encontrado. Abra uma conversa antes.'
+        : 'Esta conversa ainda nao tem campo de mensagem — a plataforma so o cria depois de ASSUMIR. Aperte Iniciar primeiro.'
+    );
+  }
+  if (r.motivo === 'apagou') {
+    throw new Error('Escrevi no campo e a plataforma apagou o texto — ela nao reconheceu a escrita. Me avise: isto e defeito do adaptador, nao seu.');
+  }
+  if (r.motivo === 'ficou-diferente') {
+    throw new Error('Escrevi no campo e o que ficou la nao e o que eu mandei — nao confie no que esta escrito, confira antes de enviar.');
+  }
+  throw new Error(`Nao consegui escrever no campo de mensagem (${r.motivo}).`);
+}
+
+/** O campo de mensagem da tela, para quem precisa do elemento (foco, cursor). */
+export function getComposer(opcoes = {}) {
+  return campoDeMensagem(opcoes);
 }
 /**
  * **As tres teclas que mexem no atendimento ABERTO NA TELA DELE.**

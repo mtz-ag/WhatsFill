@@ -310,7 +310,6 @@ grupo('o que ainda nao foi medido RECUSA, e nunca finge que fez');
    * alguem achar que ja da — e a sonda.
    */
   const naoMedidos = [
-    ['setComposerText', setComposerText],
     ['sendMessageTemplate', sendMessageTemplate],
     ['enviarImagem', enviarImagem],
   ];
@@ -898,6 +897,75 @@ grupo('O EMPURRAO — por que o padding no html nao alcanca a plataforma nova');
    * quando ele abre a plataforma.
    */
   check(regraDeEncaixe(HOST, 380).includes('#root'), 'a tabela do dock e o HOST do mob.js falam da MESMA plataforma');
+}
+
+grupo('POR O TEXTO NO CAMPO — e por que isto nao esta na lista das recusas');
+{
+  /**
+   * **`setComposerText` saiu da lista das recusas em 28/10/2026, e nao por alguem achar que ja
+   * dava.** Recusa ali significa *"eu estaria adivinhando e a adivinhacao seria INVISIVEL"* — e o
+   * que entrega o texto aqui nao e hipotese nova: e a receita MEDIDA do `composer.js` (setter
+   * nativo do prototipo + evento `input`), com a releitura DEPOIS de dois quadros como prova.
+   *
+   * Nao escrevendo, isto ESTOURA com o motivo na tela dele. Nenhuma das duas funcoes que ficaram
+   * na lista tem isso: `sendMessageTemplate` e `enviarImagem` mandariam para o eleitor sem volta.
+   */
+  const jaFoi = globalThis.Event;
+  globalThis.Event = class { constructor(ti, o = {}) { this.type = ti; Object.assign(this, o); } };
+
+  function campo(placeholder) {
+    const el = Object.create({ get value() { return this._v; }, set value(v) { this._v = String(v); } });
+    Object.assign(el, {
+      _v: '',
+      placeholder,
+      isContentEditable: false,
+      eventos: [],
+      getAttribute: () => null,
+      getBoundingClientRect: () => ({ width: 300, height: 40 }),
+      focus() {},
+      dispatchEvent(ev) { this.eventos.push(ev?.type); return true; },
+    });
+    return el;
+  }
+  const tela = (campos) => ({ querySelectorAll: () => campos });
+
+  const alvo = campo('Digite uma mensagem...');
+  check(await setComposerText('bom dia', { raiz: tela([alvo]) }) === true, 'devolve `true`, como o caminho do mobiliza.app');
+  check(alvo.value === 'bom dia', 'e o texto esta no campo');
+
+  /**
+   * **A conversa aberta NAO e exigida por dois sinais aqui, ao contrario do `sendText`** — e e
+   * deliberado: este texto nao sai de lugar nenhum. O que estiver escrito esta na tela dele, na
+   * conversa que ele esta vendo, e quem aperta enviar e ele (a escolha de 26/10).
+   */
+  const semGancho = campo('Digite uma mensagem...');
+  check(await setComposerText('ok', { raiz: tela([semGancho]), janela: null }) === true, 'sem o gancho responder, ainda escreve: nada sai da tela');
+
+  /** Conversa `aberto` (a tela medida): a mensagem diz O QUE FAZER, porque o conserto e um clique. */
+  const soAnotacoes = tela([campo('Nota interna da conversa (só a equipe vê)...'), campo('Anotações sobre este contato...')]);
+  let msg = '';
+  try { await setComposerText('bom dia', { raiz: soAnotacoes }); } catch (e) { msg = String(e.message); }
+  check(/ASSUMIR|Iniciar/.test(msg), 'conversa nao assumida: manda assumir, em vez de dizer so que falhou');
+  check(!/anota|Nota/i.test(msg), 'e nao oferece escrever na anotacao');
+
+  let vazia = '';
+  try { await setComposerText('bom dia', { raiz: tela([]) }); } catch (e) { vazia = String(e.message); }
+  check(/Abra uma conversa/.test(vazia), 'tela sem nada editavel: manda abrir uma conversa');
+
+  /**
+   * **O React que apaga o texto nao pode virar "escrevi".** Sem isto o painel diria que pos a
+   * mensagem no campo e ele veria o campo vazio — a armadilha mais antiga daqui (*a API responde
+   * 200 e IGNORA*) na forma de DOM.
+   */
+  const apaga = campo('Digite uma mensagem...');
+  const proto = Object.getPrototypeOf(apaga);
+  Object.defineProperty(proto, 'value', { get() { return ''; }, set() {}, configurable: true });
+  let sumiu = '';
+  try { await setComposerText('bom dia', { raiz: tela([apaga]) }); } catch (e) { sumiu = String(e.message); }
+  check(/apagou/.test(sumiu), 'texto que a plataforma apagou estoura, e nao devolve `true`');
+  check(/me avise|defeito do adaptador/i.test(sumiu), 'e a mensagem diz que o defeito e nosso, nao dele');
+
+  globalThis.Event = jaFoi;
 }
 
 fim();

@@ -488,6 +488,51 @@ mudaram as maos, nao a cabeca.
   o body ao tentar, mas **nao consegui abrir um menu por script** (o Radix escuta `pointerdown`).
   Aparecendo, o sintoma e visivel e o conserto e um seletor a mais no `dock.js`.
 
+- **O CAMPO DE MENSAGEM NAO E "O PRIMEIRO TEXTAREA DA TELA" — E A CONVERSA ABERTA JA TEM DOIS**
+  (28/10/2026, print dele: *"erro ao inserir texto"*). O relato era literal — `setComposerText`
+  era uma RECUSA escrita, porque escrever no campo da plataforma nova nunca tinha sido medido.
+  **Medindo, apareceu um defeito maior que ninguem relatou**, numa conversa `aberto`:
+  ```
+  campos encontrados: 2
+    textarea "Nota interna da conversa (so a equipe ve)..."
+    textarea "Anotacoes sobre este contato... (salva automaticamente 1s apos parar de digitar)"
+  campo de mensagem de verdade: NENHUM   <- a plataforma so o cria depois de ASSUMIR
+  temCampoDeMensagem() -> true
+  ```
+  O gancho pegava o primeiro `textarea` VISIVEL, e **o proprio JSDoc dele admitia** que *"se o
+  campo aparece antes de assumir nao foi medido"*. Agora esta medido: **nao aparece.** E como essa
+  leitura de tela **VENCE o `status`** em `page-mob.estadoDaConversa` (`hasComposer === null ?
+  status === EM_ATENDIMENTO : !!hasComposer`), o palpite errado **substituia a resposta certa em
+  toda conversa aberta**.
+  **TRES ESTADOS, NUNCA DOIS** (a licao do `donoDoCanal`, 25/09): campo reconhecido -> `true`;
+  nada editavel na tela -> `false`; ha editavel e nenhum e o campo -> **`null`**, e quem chama cai
+  no status. **O terceiro e o que faz isto envelhecer bem** — mudando a redacao do placeholder, a
+  tela para de AFIRMAR em vez de dizer *"nao da para digitar"* numa conversa recem-assumida.
+  **A caixa de busca fica de fora por CONSTRUCAO, e e isso que mantem o `false` vivo:** ela e um
+  `<input>`, e a lista so olha `textarea` e `contenteditable`. Incluindo `input`, `camposEditaveis`
+  nunca viria vazia (a busca esta sempre na tela) e o estado *"nao ha o que digitar"* deixaria de
+  existir. Ha teste exigindo que o seletor nao peca `input`.
+  **A ESCRITA E A RECEITA MEDIDA DO `composer.js`, aplicada ao React** — setter nativo do
+  PROTOTIPO + evento `input`. Pelo prototipo e nao por `instanceof`: e exatamente o que da a volta
+  por cima do rastreador de valor (o framework patcha a INSTANCIA, nunca o prototipo) e **nao
+  depende do realm**, que importa porque content script e pagina sao mundos diferentes.
+  **E A RELEITURA E A PROVA, nao o `return true`:** campo controlado por React que nao reconheceu
+  a escrita devolve o valor antigo **no proximo desenho** — o texto aparece e some. `escreverNoCampo`
+  rele depois de DOIS quadros (um para o React processar o evento, outro para redesenhar) e devolve
+  `apagou` / `ficou-diferente`; `page-mob.setComposerText` ESTOURA com o motivo. E *"200 nao prova
+  entrega"* na forma de DOM, a irma do `imagem.legendaEntrou` e do `inserirNaCaixa` do Facebook.
+  **NAO exige os dois sinais da conversa aberta, ao contrario do `sendText`** — e deliberado: este
+  texto nao sai de lugar nenhum, o que esta escrito esta na tela dele, na conversa que ele esta
+  vendo, e quem aperta enviar e ele (a escolha de 26/10).
+  **A repeticao no gancho e travada pelo teste**, como o resto: `mob-hook.test.mjs` exige que ele
+  responda o MESMO que `dom-mob` nas seis fixtures, e exige que elas cubram os tres estados —
+  comparacao sem os tres seria comparacao vazia. Reintroduzindo a regra antiga, **caem 7
+  assercoes** em `dom-mob.test.mjs`.
+  **O que NAO foi medido ao vivo, e esta dito a ele:** o texto entrando numa conversa ASSUMIDA de
+  verdade. A extensao do Claude caiu no meio da medicao. **O desenho nao depende disso** — o
+  primeiro clique em "So inserir" reporta honestamente —, mas hipotese aqui continua sendo
+  hipotese.
+
 - **A CHAMADA AO SUPABASE SAI DA ABA, e e por isso que o CORS nao incomoda.** Em MV3 o `fetch` de
   content script carrega a origem da PAGINA — entao ele chega ao Supabase como
   `Origin: https://mobiliza.me`, exatamente como a requisicao que a propria plataforma faz. Tirar a

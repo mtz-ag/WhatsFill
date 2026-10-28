@@ -19,7 +19,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { check, grupo, fim } from './_harness.mjs';
-import { conversaDoNo, acharLinha, abrirConversa, conversaAberta } from '../src/lib/dom-mob.js';
+import { conversaDoNo, acharLinha, abrirConversa, conversaAberta, temCampoDeMensagem } from '../src/lib/dom-mob.js';
 
 const ORIGEM = 'https://mobiliza.me';
 
@@ -45,7 +45,7 @@ function linhaFalsa(conversa, texto, { nivel = 1 } = {}) {
  * `new Function` com o TEXTO do arquivo e o que torna este teste honesto: ele exercita o codigo que
  * vai para o navegador dele, nao uma copia escrita aqui.
  */
-function subirGancho(linhas, divs = []) {
+function subirGancho(linhas, divs = [], campos = []) {
   const fonte = readFileSync(new URL('../src/mob-hook.js', import.meta.url), 'utf8');
   const enviadas = [];
   let ouvinte = null;
@@ -57,7 +57,13 @@ function subirGancho(linhas, divs = []) {
   };
   // O seletor importa: a linha da fila e `button`, e o painel da direita e `div`.
   const documento = {
-    querySelectorAll: (sel) => (sel === 'div' ? divs : linhas),
+    querySelectorAll: (sel) => {
+      if (sel === 'div') return divs;
+      // O seletor dos campos editaveis e longo e proprio; roteado aqui para o teste do campo de
+      // mensagem exercitar o MESMO caminho que o navegador.
+      if (sel.includes('textarea')) return campos;
+      return linhas;
+    },
     querySelector: () => null,
     documentElement: { classList: { contains: () => false } },
   };
@@ -248,6 +254,54 @@ grupo('gancho que estoura RESPONDE, em vez de deixar o painel esperando');
 
   check(!!r, 'respondeu alguma coisa');
   check(r.payload.ok === false, 'e a resposta e que nao abriu');
+}
+
+grupo('o campo de mensagem: o gancho responde o MESMO que o dom-mob');
+{
+  /** O `value` no prototipo, como no teste do `dom-mob`. */
+  function campoFalso({ placeholder = '', editavel = false, w = 300, h = 40 } = {}) {
+    const el = Object.create({ get value() { return this._v; }, set value(v) { this._v = String(v); } });
+    Object.assign(el, {
+      _v: '',
+      placeholder,
+      isContentEditable: editavel,
+      getAttribute: () => null,
+      getBoundingClientRect: () => ({ width: w, height: h }),
+    });
+    return el;
+  }
+
+  const NOTA = 'Nota interna da conversa (só a equipe vê)...';
+  const ANOTACAO = 'Anotações sobre este contato... (salva automaticamente 1s após parar de digitar)';
+
+  /**
+   * **A fixture MEDIDA na pagina dele (27/10/2026) e o primeiro caso, porque foi ela que pegou o
+   * defeito:** numa conversa `aberto` a tela ja tem dois `textarea` de anotacao e nenhum campo de
+   * mensagem — a plataforma so o cria depois de ASSUMIR. O gancho devolvia `true` ali, e essa
+   * leitura VENCE o `status` em `page-mob.estadoDaConversa`.
+   */
+  const casos = [
+    { nome: 'so as duas anotacoes (a tela medida)', campos: () => [campoFalso({ placeholder: NOTA }), campoFalso({ placeholder: ANOTACAO })] },
+    { nome: 'com o campo de mensagem na tela', campos: () => [campoFalso({ placeholder: NOTA }), campoFalso({ placeholder: 'Digite uma mensagem...' })] },
+    { nome: 'nada editavel', campos: () => [] },
+    { nome: 'contenteditable', campos: () => [campoFalso({ editavel: true })] },
+    { nome: 'campo escondido', campos: () => [campoFalso({ placeholder: 'Digite uma mensagem...', w: 0, h: 0 })] },
+    { nome: 'redacao do placeholder que mudou', campos: () => [campoFalso({ placeholder: 'Escreva aqui...' })] },
+  ];
+
+  for (const caso of casos) {
+    const daBiblioteca = temCampoDeMensagem({ raiz: { querySelectorAll: () => caso.campos() } });
+    const [resp] = subirGancho([], [], caso.campos()).pedir('aberta', {});
+    const doGancho = resp.payload.hasComposer;
+    check(
+      doGancho === daBiblioteca,
+      `${caso.nome}: gancho e dom-mob respondem igual (${JSON.stringify(doGancho)})`
+    );
+  }
+
+  /** E os tres estados aparecem de verdade nesta lista — senao a comparacao acima seria vazia. */
+  const vistos = new Set(casos.map((c) => temCampoDeMensagem({ raiz: { querySelectorAll: () => c.campos() } })));
+  check(vistos.has(true) && vistos.has(false) && vistos.has(null), 'as fixtures cobrem os TRES estados');
 }
 
 fim();

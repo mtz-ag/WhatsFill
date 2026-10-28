@@ -27,6 +27,12 @@ import {
   linhaAtiva,
   painelDaConversa,
   propsDoFiber,
+  ehCampoDeMensagem,
+  camposEditaveis,
+  campoDeMensagem,
+  temCampoDeMensagem,
+  lerCampo,
+  escreverNoCampo,
 } from '../src/lib/dom-mob.js';
 
 /**
@@ -204,6 +210,168 @@ grupo('QUAL conversa esta aberta: dois sinais que tem de concordar');
 
   check(propsDoFiber(linha(a, true)).length === 1, 'a cadeia de props e lida do no para cima');
   check(propsDoFiber({ tagName: 'DIV' }).length === 0, 'no sem fiber devolve cadeia vazia');
+}
+
+// ---------------------------------------------------------------------------
+// O CAMPO DE MENSAGEM
+// ---------------------------------------------------------------------------
+
+/**
+ * Um campo como os da tela. O `value` vive no PROTOTIPO, que e onde o setter nativo mora de
+ * verdade — e por isso `setterNativo` o acha por `getPrototypeOf` e nao por `instanceof`.
+ */
+function campoFalso({ placeholder = '', aria = '', editavel = false, w = 300, h = 40, disabled = false, readOnly = false } = {}) {
+  const proto = {
+    get value() { return this._v; },
+    set value(v) { this._v = String(v); this._escritas = (this._escritas || 0) + 1; },
+  };
+  const el = Object.create(proto);
+  Object.assign(el, {
+    _v: '',
+    _escritas: 0,
+    eventos: [],
+    focos: 0,
+    placeholder,
+    disabled,
+    readOnly,
+    isContentEditable: editavel,
+    textContent: '',
+    getAttribute: (n) => (n === 'aria-label' ? aria : null),
+    getBoundingClientRect: () => ({ width: w, height: h }),
+    focus() { this.focos++; },
+    dispatchEvent(ev) { this.eventos.push(ev?.type || String(ev)); return true; },
+  });
+  return el;
+}
+
+function telaDeCampos(campos) {
+  return { querySelectorAll: () => campos };
+}
+
+/** A tela MEDIDA em 27/10/2026 numa conversa `aberto`: dois textarea de anotacao, nada mais. */
+function telaMedidaSemAssumir() {
+  return telaDeCampos([
+    campoFalso({ placeholder: 'Nota interna da conversa (só a equipe vê)...' }),
+    campoFalso({ placeholder: 'Anotações sobre este contato... (salva automaticamente 1s após parar de digitar)' }),
+  ]);
+}
+
+grupo('o campo de mensagem NAO e "o primeiro textarea da tela"');
+{
+  /**
+   * **A fixture e a medicao, e e ela que trava o defeito de verdade.** O gancho devolvia `true`
+   * aqui, e como esta leitura VENCE o `status` em `page-mob.estadoDaConversa`, ele afirmava campo
+   * de mensagem em TODA conversa aberta.
+   */
+  const semAssumir = telaMedidaSemAssumir();
+  check(campoDeMensagem({ raiz: semAssumir }) === null, 'os dois textarea de ANOTACAO nao sao o campo de mensagem');
+  check(temCampoDeMensagem({ raiz: semAssumir }) === null, 'e a resposta e "nao sei", para quem chama cair no status');
+
+  const comCampo = telaDeCampos([
+    campoFalso({ placeholder: 'Nota interna da conversa (só a equipe vê)...' }),
+    campoFalso({ placeholder: 'Digite uma mensagem...' }),
+  ]);
+  check(campoDeMensagem({ raiz: comCampo })?.placeholder === 'Digite uma mensagem...', 'com o campo na tela, acha ele e nao a nota');
+  check(temCampoDeMensagem({ raiz: comCampo }) === true, 'e ai afirma');
+
+  check(temCampoDeMensagem({ raiz: telaDeCampos([]) }) === false, 'tela sem nada editavel: false — nao ha o que digitar, ponto');
+
+  /**
+   * **TRES estados, nunca dois** (a licao do `donoDoCanal`, 25/09). O terceiro e o que faz isto
+   * envelhecer bem: mudando a redacao do placeholder, a tela para de AFIRMAR em vez de dizer "nao
+   * da para digitar" numa conversa que ele acabou de assumir.
+   */
+  const redacaoNova = telaDeCampos([campoFalso({ placeholder: 'Escreva aqui...' })]);
+  check(temCampoDeMensagem({ raiz: redacaoNova }) === null, 'placeholder que mudou de redacao devolve "nao sei", nunca false');
+
+  check(ehCampoDeMensagem(campoFalso({ aria: 'Caixa de mensagem' })) === true, 'o aria-label tambem responde');
+  check(ehCampoDeMensagem(campoFalso({ placeholder: 'MENSAGEM' })) === true, 'caixa nao importa');
+  check(ehCampoDeMensagem(campoFalso({ placeholder: 'Nota da mensagem interna' })) === false, 'texto que fala de NOTA fica fora mesmo citando mensagem');
+  check(ehCampoDeMensagem(campoFalso({ placeholder: 'Anotação da mensagem' })) === false, 'e "anotacao" tambem, com acento ou sem');
+
+  /** Contenteditable na conversa e o campo: as duas anotacoes medidas sao `textarea`. */
+  check(ehCampoDeMensagem(campoFalso({ editavel: true })) === true, 'contenteditable conta sem precisar de rotulo');
+
+  check(ehCampoDeMensagem(campoFalso({ placeholder: 'mensagem', disabled: true })) === false, 'campo desabilitado nao conta');
+  check(ehCampoDeMensagem(campoFalso({ placeholder: 'mensagem', readOnly: true })) === false, 'nem campo somente-leitura');
+  check(ehCampoDeMensagem(campoFalso({ placeholder: 'mensagem', w: 0, h: 0 })) === false, 'nem campo com tamanho zero');
+  check(ehCampoDeMensagem(null) === false, 'nada nao e campo');
+
+  /**
+   * **A caixa de busca fica de fora por CONSTRUCAO, e e isso que mantem o estado `false` vivo:**
+   * ela e um `<input>`, e a lista so olha textarea e contenteditable. Incluindo `input`,
+   * `camposEditaveis` nunca viria vazia (a busca esta sempre na tela) e "nao ha o que digitar"
+   * deixaria de existir.
+   */
+  const sel = [];
+  camposEditaveis({ querySelectorAll: (s) => { sel.push(s); return []; } });
+  check(sel.length === 1 && !/(^|[\s,])input/.test(sel[0]), 'o seletor NAO pede `input` — senao a busca da tela mataria o estado "false"');
+  check(/textarea/.test(sel[0]) && /contenteditable/.test(sel[0]), 'pede textarea e contenteditable');
+}
+
+grupo('escrever no campo: o setter nativo, e a RELEITURA como prova');
+{
+  const jaFoi = globalThis.Event;
+  globalThis.Event = class { constructor(t, o = {}) { this.type = t; Object.assign(this, o); } };
+
+  const campo = campoFalso({ placeholder: 'Digite uma mensagem...' });
+  const r = await escreverNoCampo('bom dia', { raiz: telaDeCampos([campo]), esperar: async () => {} });
+  check(r.ok === true, 'escreveu');
+  check(lerCampo(campo) === 'bom dia', 'e o texto ficou la');
+  check(campo.focos === 1, 'focou o campo antes');
+  check(campo.eventos.includes('input'), 'e disparou `input` — sem ele o React nao atualiza o estado e o botao de enviar fica morto');
+
+  /**
+   * **A RELEITURA E A MEDICAO.** Campo controlado por React que nao reconheceu a escrita devolve o
+   * valor antigo no proximo desenho: o texto aparece e some. Simulado aqui pelo `esperar`, que e
+   * exatamente a janela em que o React redesenha.
+   */
+  const apagado = campoFalso({ placeholder: 'Digite uma mensagem...' });
+  const rApagou = await escreverNoCampo('bom dia', {
+    raiz: telaDeCampos([apagado]),
+    esperar: async () => { apagado._v = ''; },
+  });
+  check(rApagou.ok === false && rApagou.motivo === 'apagou', 'React que apaga o texto NAO conta como escrito');
+
+  const trocado = campoFalso({ placeholder: 'Digite uma mensagem...' });
+  const rTrocou = await escreverNoCampo('bom dia', {
+    raiz: telaDeCampos([trocado]),
+    esperar: async () => { trocado._v = 'outra coisa'; },
+  });
+  check(rTrocou.ok === false && rTrocou.motivo === 'ficou-diferente', 'e texto que ficou diferente tambem nao');
+
+  const semCampo = await escreverNoCampo('bom dia', { raiz: telaMedidaSemAssumir(), esperar: async () => {} });
+  check(semCampo.ok === false && semCampo.motivo === 'sem-campo', 'sem campo de mensagem, nao escreve em anotacao nenhuma');
+
+  /** Texto vazio e pedido legitimo: e assim que o painel LIMPA o campo. */
+  const limpar = campoFalso({ placeholder: 'Digite uma mensagem...' });
+  limpar._v = 'sobra';
+  const rLimpou = await escreverNoCampo('', { raiz: telaDeCampos([limpar]), esperar: async () => {} });
+  check(rLimpou.ok === true && lerCampo(limpar) === '', 'texto vazio limpa o campo, e isso conta como sucesso');
+
+  globalThis.Event = jaFoi;
+}
+
+grupo('contenteditable: insertText, e a releitura vale igual');
+{
+  const docAntes = globalThis.document;
+  const chamadas = [];
+  const caixa = campoFalso({ editavel: true });
+  globalThis.document = {
+    execCommand(cmd, _ui, valor) {
+      chamadas.push(cmd);
+      if (cmd === 'selectAll') caixa.textContent = '';
+      if (cmd === 'insertText') caixa.textContent = String(valor);
+      return true;
+    },
+  };
+
+  const r = await escreverNoCampo('bom dia', { raiz: telaDeCampos([caixa]), esperar: async () => {} });
+  check(r.ok === true, 'escreveu no contenteditable');
+  check(chamadas[0] === 'selectAll' && chamadas[1] === 'insertText', 'limpa a selecao antes — escrever ACRESCENTA, senao o texto velho fica junto');
+  check(lerCampo(caixa) === 'bom dia', 'e o que ficou la e o textContent');
+
+  globalThis.document = docAntes;
 }
 
 fim();
