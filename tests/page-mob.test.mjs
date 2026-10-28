@@ -1521,4 +1521,46 @@ grupo('O BOX DO MODO DE ENVIO — uma chave so, mostrada em dois lugares');
     'e nao reusa `wf-escolha`, que ja e da janela da IA');
 }
 
+grupo('A ABA AUTOMATIZADO: um interruptor, um lugar, e a ordem do trabalho');
+{
+  /**
+   * **Relato dele (28/10/2026): *"ficou pela metade, comecar pelas nao atendidas ficou sem a
+   * opcao (...) devia estar primeiro os novos e em seguida as minhas, revise o painel"*.**
+   *
+   * Eu tinha posto o box DENTRO do cartao dos Meus — e a doutrina ja estava escrita no proprio
+   * arquivo, sobre a caixa da IA: *"um interruptor, um lugar, acima dos dois botoes de comecar"*.
+   * `settings.autoSend` vale para as DUAS filas; dentro de um cartao ela parece ser daquela fila,
+   * que e o defeito de 06/09 repetido.
+   */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  // Ate o proximo `function render` de modulo: a aba cresceu com os comentarios, e um numero
+  // fixo de caracteres cortava antes das chamadas que este grupo compara.
+  const inicio = painel.indexOf('function renderAutomatizado');
+  const aba = painel.slice(inicio, painel.indexOf('\n  function render', inicio + 10));
+
+  const iBox = aba.indexOf('boxDoModoDeEnvio(');
+  const iNovos = aba.indexOf('renderCartaoNovos(');
+  const iMeus = aba.indexOf('renderCartaoRespondidos(');
+
+  check(iBox > 0 && iNovos > 0 && iMeus > 0, 'os tres estao na aba');
+  check(iBox < iNovos && iBox < iMeus, 'o box fica ACIMA dos dois botoes de comecar, como a caixa da IA');
+  check(iNovos < iMeus, 'e as nao atendidas vem ANTES das minhas — a ordem do trabalho, pedido dele');
+
+  /** E ele NAO pode estar dentro de nenhum dos dois cartoes: tres copias na tela convidam a "consertar" uma. */
+  const cartaoMeus = painel.slice(painel.indexOf('function renderCartaoRespondidos'), painel.indexOf('function renderCartaoRespondidos') + 2500);
+  check(!cartaoMeus.includes('boxDoModoDeEnvio'), 'o box NAO mora dentro do cartao das minhas');
+  const cartaoNovos = painel.slice(painel.indexOf('function renderCartaoNovos'), painel.indexOf('function renderCartaoNovos') + 2500);
+  check(!cartaoNovos.includes('boxDoModoDeEnvio'), 'nem dentro do cartao das nao atendidas');
+
+  /**
+   * **A prosa da aba tambem envelheceu com a plataforma:** no mobiliza.app a rodada andava pela
+   * lista da esquerda do jeito que ele a filtrasse; aqui ela CONSULTA por aba. Dizer o contrario
+   * mandaria ele filtrar a tela para mudar a rodada — e nada mudaria.
+   */
+  check(/A fila vem da consulta, não do filtro/.test(painel), 'a tela diz de onde a fila vem nesta plataforma');
+  check(/A fila sai da consulta à plataforma, por aba/.test(painel), 'e o cartao da fila tambem');
+  check(/Não atendidas: começar a conversa/.test(painel), 'o TITULO do cartao fala a lingua da plataforma');
+  check(/Minhas: conferir e responder/.test(painel), 'e o da outra fila tambem');
+}
+
 fim();

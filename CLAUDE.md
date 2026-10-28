@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.225.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.226.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -540,6 +540,29 @@ mudaram as maos, nao a cabeca.
   coisas com o mesmo nome colidem no dia em que uma ganhar estilo novo.
   **O aviso mostra o preco do modo ESCOLHIDO**, nao os dois ao mesmo tempo — dois precos na tela
   ao mesmo tempo e ruido, e ruido se aprende a ignorar.
+  **E EU PUS O BOX DENTRO DE UM DOS CARTOES, QUE E O DEFEITO DE 06/09 REPETIDO** (relato dele no
+  mesmo dia: *"ficou pela metade, comecar pelas nao atendidas ficou sem a opcao"*). **A doutrina
+  ja estava escrita tres paragrafos acima, no comentario da caixa da IA:** *"um interruptor, um
+  lugar, acima dos dois botoes de comecar"*. `settings.autoSend` vale para as DUAS filas; dentro
+  de um cartao ela parece ser daquela fila.
+  **A saida NAO e copiar o box nos dois cartoes** — seriam tres copias na tela (com a da Config),
+  e tres copias da mesma chave sao o convite para alguem "consertar" uma delas. Ele subiu para o
+  topo da aba, ao lado da IA, e `tests/page-mob.test.mjs` trava a POSICAO: o box acima dos dois
+  botoes, e fora de dentro deles.
+  **E a ORDEM dos dois cartoes inverteu, a pedido dele:** *"devia estar primeiro os novos e em
+  seguida as minhas"* — a fila que enche sozinha vem antes da que sobrou para dar continuidade.
+  Estava invertida desde que os dois foram juntados (02/10), **por nenhuma razao escrita**.
+
+- **A PROSA DA TELA ENVELHECEU COM A PLATAFORMA, E ELA MANDAVA FAZER O QUE NAO FUNCIONA MAIS**
+  (28/10/2026, *"revise o painel"*). Tres textos diziam coisas da plataforma velha:
+  o topo da aba (*"andando pela fila da esquerda do jeito que ela esta filtrada agora na
+  plataforma"*), o cartao da fila (*"quem manda e o filtro que voce aplicou"*) e os TITULOS dos
+  dois cartoes (*"Novos"*, *"Meus"* — abas que **nao existem** no mobiliza.me).
+  **No mobiliza.me a rodada CONSULTA a fila por aba e abre cada conversa pelo id**, entao mandar
+  filtrar a tela e mandar fazer algo que nao muda nada. **E rotulo e titulo discordando sobre a
+  mesma fila e ele traduzindo na cabeca a cada leitura** — eu tinha trocado so o rotulo do BOTAO.
+  **Ao trocar o nome de uma coisa na tela, grep pelo nome ANTIGO**: ele vive tambem nos titulos,
+  nas descricoes e nos avisos.
 
 - **GANCHO QUE ESTOURA TEM DE RESPONDER — e o teste pegou isso antes de ir ao ar.** Na primeira
   versao o `try` cobria so a acao, e `quantasLinhas()` ficava fora dele, dentro da propria chamada

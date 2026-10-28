@@ -1,36 +1,41 @@
-## 2026-10-28 - v3.225.0 - ESTADO DE AGORA - o box do modo de envio
+## 2026-10-28 - v3.226.0 - ESTADO DE AGORA - o box no lugar certo, e a aba na ordem do trabalho
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.225.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.226.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Na aba **Automatizado**, no box **"Quem manda a mensagem"**, escolha o modo
-4. Confira **3.225.0** na linha pequena do topo do painel
+3. Confira **3.226.0** na linha pequena do topo do painel
 
-### O BOX
+### VOCE ESTAVA CERTO NAS DUAS COISAS
 
-Ele fica **junto dos botoes de comecar**, e tem duas opcoes:
+**O box ficou pela metade porque eu o pus DENTRO de um cartao.** A regra ja estava escrita no
+proprio codigo, sobre a caixa da IA: *"um interruptor, um lugar, acima dos dois botoes de
+comecar"* — e eu repeti o defeito que aquela linha existe para lembrar. Como a escolha vale para
+as duas filas, dentro de um cartao ela parece ser daquela fila.
 
-> ( ) **Eu mando:** a rodada escreve e espera o meu Enter
-> ( ) **A extensao manda sozinha**
+**Nao copiei o box nos dois cartoes**: seriam tres copias na tela (com a da Config), e tres copias
+da mesma configuracao sao o convite para alguem consertar uma delas e esquecer as outras. Ele
+subiu para o **topo da aba**, ao lado da IA, acima dos dois botoes.
 
-Escolhendo *"Eu mando"*, a rodada escreve no campo e PARA. Voce revisa, da Enter, e ai ela conclui
-e abre o proximo.
+**E a ordem inverteu, como voce pediu:** primeiro **Nao atendidas**, depois **Minhas**. A fila que
+enche sozinha vem antes da que sobrou para dar continuidade. Estava invertida desde 02/10, por
+nenhuma razao escrita.
 
-**O aviso embaixo muda com o que voce escolher** — ele mostra o preco do modo escolhido, nao os
-dois ao mesmo tempo. No modo Enter o preco e: **apagar o texto sem enviar tambem esvazia o campo**,
-e ela entende que saiu. Para pular um contato, use o botao **Parar**.
+### A REVISAO DA ABA — tres textos mandavam fazer o que nao funciona mais
 
-**E a mesma escolha da aba Config** (secao "Envio"), mostrada nos dois lugares — **uma
-configuracao so**. A caixa antiga saiu: duas telas para a mesma chave divergem na primeira
-correcao, e aqui a divergencia seria muda (a tela dizendo um modo e a rodada fazendo outro).
+| onde | dizia | agora |
+|---|---|---|
+| topo da aba | *"andando pela fila da esquerda do jeito que ela esta filtrada"* | a fila vem da **consulta**, nao do filtro da tela |
+| cartao "Quem vai receber" | *"quem manda e o filtro que voce aplicou"* | sai da consulta, por aba; grupos ficam de fora |
+| titulos dos cartoes | *"Novos"*, *"Meus"* | **"Nao atendidas"**, **"Minhas"** |
 
-**O Disparo nao entra nesta escolha** e continua exigindo o modo automatico: la a peca sai pela
-API, que nao olha essa caixa.
+Os dois primeiros mandavam voce filtrar a tela para mudar a rodada — e **nada mudaria**. O
+terceiro era meu: eu tinha trocado so o rotulo do BOTAO, e o titulo do cartao continuava com o
+nome da aba velha, obrigando voce a traduzir na cabeca a cada leitura.
 
 ### O QUE ESTA NO AR
 
@@ -100,6 +105,7 @@ defeito** — e porque o ultimo so apareceu depois de os anteriores sairem da fr
 | 3.223.0 | "a aba trocou de atendimento" | a MESMA pressa, num ponto acima do conserto anterior |
 | 3.224.0 | "so escrever" nao funcionava | a opcao existia; as rodadas e que se recusavam a rodar sem envio |
 | 3.225.0 | (pedido) o box do modo | o interruptor existia e nao dizia o modo, e vivia longe do "Comecar" |
+| 3.226.0 | o box ficou pela metade | eu o pus DENTRO de um cartao — a doutrina do proprio codigo diz o contrario |
 
 **A licao que eu escrevi no CLAUDE.md para nao repetir:** eu consertei o sintoma duas vezes antes
 de achar a causa. As duas correcoes eram reais e ficaram, mas se eu tivesse medido a fila na

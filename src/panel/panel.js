@@ -3735,9 +3735,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     body.append(
       h('p', { class: 'wf-hint' },
-        'Rodadas que LEEM a conversa e decidem pelo quadro, andando pela fila da esquerda do jeito ' +
-          'que ela está filtrada agora na plataforma, de cima para baixo. Uma rodada por vez — e o ' +
-          'disparo, na aba Disparo, conta como uma delas.')
+        'Rodadas que LEEM a conversa e decidem pelo quadro, uma de cada vez — e o disparo, na aba ' +
+          'Disparo, conta como uma delas. ' +
+          /**
+           * **De onde vem a fila mudou com a plataforma, e a prosa nao podia ficar.** No
+           * mobiliza.app a rodada andava pela lista da esquerda **do jeito que ele a tivesse
+           * filtrado**; no mobiliza.me ela CONSULTA a fila por aba (Todas/Minhas) e abre cada
+           * conversa pelo id. Dizer o contrario mandaria ele filtrar a tela para mudar a rodada —
+           * e nada mudaria.
+           */
+          (naPlataformaNova()
+            ? 'A fila vem da consulta, não do filtro que estiver na tela: "não atendidas" são as ' +
+                'abertas que ninguém assumiu, e "Minhas" são as que você assumiu.'
+            : 'Elas andam pela fila da esquerda do jeito que ela está filtrada agora na ' +
+                'plataforma, de cima para baixo.'))
     );
 
     /**
@@ -3755,6 +3766,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(renderCartaoIA());
 
     /**
+     * **O BOX DO MODO DE ENVIO FICA AQUI, E NAO DENTRO DE UM DOS CARTOES** — relato dele
+     * (28/10/2026): *"ficou pela metade, comecar pelas nao atendidas ficou sem a opcao"*.
+     *
+     * Ele estava certo, e **a doutrina ja estava escrita tres paragrafos acima**, sobre a caixa da
+     * IA: *"um interruptor, um lugar, acima dos dois botoes de comecar"*. `settings.autoSend` e
+     * uma chave SO e vale para as DUAS filas; dentro de um dos cartoes ela parecia ser daquela
+     * fila — exatamente o defeito de 06/09, que eu acabei de repetir.
+     *
+     * **Nao e copiar o box nos dois cartoes:** isso seriam tres copias na tela (com a da Config),
+     * e tres copias da mesma chave e o convite para alguem "consertar" uma delas.
+     */
+    body.append(boxDoModoDeEnvio({ sufixo: 'rodadas' }));
+
+    /**
      * **OS BOTÕES DE COMEÇAR FICAM JUNTOS** — relato dele (02/10/2026): *"organize também o
      * frontend, o automatizado dos meus e novos ficou longe um do outro"*.
      *
@@ -3770,9 +3795,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     body.append(renderCartaoRitmo(cfg));
     body.append(renderCartaoFila());
 
+    /**
+     * **A ORDEM E A DO TRABALHO: primeiro quem CHEGOU, depois quem e seu** — pedido dele
+     * (28/10/2026): *"devia estar primeiro os novos e em seguida as minhas"*.
+     *
+     * Faz sentido e e dele: a fila das nao atendidas e a que enche sozinha e a que ele percorre
+     * primeiro; "Minhas" e o que sobrou para dar continuidade. Estava invertido desde que os dois
+     * cartoes foram juntados (02/10), por nenhuma razao escrita.
+     */
     body.append(h('div', { class: 'wf-sub wf-secao' }, h('b', {}, 'As rodadas')));
-    body.append(renderCartaoRespondidos());
     body.append(renderCartaoNovos(cfg));
+    body.append(renderCartaoRespondidos());
     /**
      * **O disparo e o "atender um por um" MUDARAM DE ABA** — pedido dele (02/10/2026): *"separe
      * toda essa criação nova para uma aba nova chamada disparo"*. Eles não consultam o quadro e não
@@ -4168,14 +4201,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
   function renderCartaoRespondidos() {
     const card = h('div', { class: 'wf-card' }, [
-      h('h4', {}, 'Conferir e responder a fila'),
+      h('h4', {}, naPlataformaNova() ? 'Minhas: conferir e responder' : 'Conferir e responder a fila'),
       h('div', { class: 'wf-preview' },
         'Percorre a fila classificando (nome, cidade, etiquetas, data) e pergunta, contato a ' +
           'contato, o que fazer. A pergunta aparece sempre — sem conteúdo identificado ela vem ' +
           'sem a opção de modelo, e você resolve com concluir, agradecer ou responder à mão.'),
     ]);
-
-    card.append(boxDoModoDeEnvio({ sufixo: 'rodadas' }));
 
     const btn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, botaoDaFila('Meus'));
     btn.disabled = state.auto.rodando;
@@ -4786,12 +4817,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    */
   function renderCartaoNovos(cfg) {
     const card = h('div', { class: 'wf-card' }, [
-      h('h4', {}, 'Novos: começar a conversa'),
+      /**
+       * **O titulo tambem fala a lingua da plataforma** (28/10/2026, *"revise o painel"*). Eu
+       * tinha trocado so o rotulo do BOTAO: o cartao continuava dizendo "Novos" e "Meus", que
+       * sao abas que nao existem no mobiliza.me. Rotulo e titulo discordando sobre a mesma fila e
+       * ele traduzindo na cabeca a cada leitura.
+       */
+      h('h4', {}, naPlataformaNova() ? 'Não atendidas: começar a conversa' : 'Novos: começar a conversa'),
       h('div', { class: 'wf-preview' },
-        'Percorre a aba "Novos", assume o atendimento (é o que libera o campo de mensagem) e ' +
-          'decide pelo MESMO fluxo dos "Meus": reconhece o anúncio, manda o modelo dele, pede o ' +
+        (naPlataformaNova()
+          ? 'Percorre as conversas abertas que ninguém assumiu, assume o atendimento (é o que '
+          : 'Percorre a aba "Novos", assume o atendimento (é o que ') +
+          'libera o campo de mensagem) e ' +
+          (naPlataformaNova()
+            ? 'decide pelo MESMO fluxo das "Minhas": reconhece o anúncio, manda o modelo dele, pede o '
+            : 'decide pelo MESMO fluxo dos "Meus": reconhece o anúncio, manda o modelo dele, pede o ') +
           'nome e a cidade, responde o que ficou pendente. Assumido, o contato sai da fila mesmo ' +
-          'quando o fluxo resolve não mandar nada — ele fica em "Meus" para você ver depois.'),
+          'quando o fluxo resolve não mandar nada — ele fica em ' +
+          (naPlataformaNova() ? '"Minhas"' : '"Meus"') + ' para você ver depois.'),
       h('div', { class: 'wf-origin' },
         'Até a versão 1.77 esta rodada tinha regras próprias, de antes do fluxo: só mandava o ' +
           'pedido de nome e cidade, e só para quem repetisse uma frase exata. Quem chega pelo ' +
@@ -6328,8 +6371,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     card.append(
       h('div', { class: 'wf-preview' },
-        'O WhatsFill não escolhe quem entra: quem manda é o filtro que você aplicou na ' +
-          'plataforma (ex.: a etiqueta "1 SEM RETORNO"). Confira a lista antes de disparar.'),
+        naPlataformaNova()
+          ? 'A fila sai da consulta à plataforma, por aba — não do filtro que estiver na tela. ' +
+              'Grupos e listas de transmissão ficam de fora. Confira antes de disparar.'
+          : 'O WhatsFill não escolhe quem entra: quem manda é o filtro que você aplicou na ' +
+              'plataforma (ex.: a etiqueta "1 SEM RETORNO"). Confira a lista antes de disparar.'),
       ver
     );
 
