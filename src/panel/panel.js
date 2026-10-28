@@ -10118,6 +10118,26 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           !!state.cidadeInformada?.value &&
           state.cidadeInformada.confidence !== 'nao-reconhecida',
         /**
+         * **A cidade que JA ESTA no cadastro** — e ela precisa ser um MUNICIPIO, nao qualquer
+         * texto.
+         *
+         * O campo Cidade é livre, e este projeto já gravou nele `faq.whatsapp.com`,
+         * `vt.tiktok.com` e `mais Apoiadores com patrocinio`. Aceitar qualquer coisa faria o
+         * formulário parar de sair para quem tem lixo gravado — que é exatamente quem mais
+         * precisa dele.
+         *
+         * **Quem já responde isso é `state.grafiaDaCidade`**, que o painel calcula em TODOS os
+         * pontos em que a cidade muda — carregar o contato, responder o popup, digitar na aba
+         * Dados. Confiança **exata** significa que o valor É o nome de um município; qualquer
+         * outra coisa (lixo, abreviação, erro de digitação, cidade de fora) não conta, e cidade de
+         * outro estado tem conta própria (`deOutroEstado`), logo acima.
+         *
+         * **Reusar em vez de chamar de novo não é economia: `matchCity` é ASSÍNCRONA**, e este
+         * objeto é montado de forma síncrona — uma chamada aqui devolveria uma Promise, que é
+         * sempre verdadeira, e o formulário deixaria de sair para TODO MUNDO, em silêncio.
+         */
+        cidadeNoCadastro: state.grafiaDaCidade?.confianca === 'exata',
+        /**
          * **Disse que VAI ao evento.** `presenca` já era calculado aqui para escolher o texto da
          * tecla 4; agora também é sinal, porque faltava um desfecho para "confirmou e não falta
          * dado nenhum" — o caso do Deoclecio, que recebeu o pedido de cadastro duas vezes tendo

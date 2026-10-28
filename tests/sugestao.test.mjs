@@ -1354,4 +1354,51 @@ grupo('quem encerrou nao "so cumprimentou" (15/10/2026)');
   check(pergunta.tabela !== '3' || pergunta.quadro !== '3', 'pergunta junto nao vira conclusao silenciosa');
 }
 
+grupo('A CIDADE QUE JA ESTA NO CADASTRO tambem dispensa o formulario');
+{
+  /**
+   * **Print dele (28/10/2026): uma contato com o campo Cidade dizendo NOVO HAMBURGO recebeu *"me
+   * diga seu Nome, Cidade"*.** *"Nao esta reconhecendo que a pessoa tem cidade."*
+   *
+   * **Ele esta certo, e o buraco era antigo:** as quatro contas de `pedirDadosNaoCabe`
+   * perguntavam pela ETIQUETA de cidade, nunca pelo CAMPO. Na plataforma velha isso quase nao
+   * mordia, porque a rodada aplicava a etiqueta assim que reconhecia a cidade; aqui a base dele
+   * tem **132 contatos vindos de importacao** com o campo preenchido e etiqueta nenhuma.
+   */
+  check(sugestaoLib.pedirDadosNaoCabe({ cidadeNoCadastro: true }) === true,
+    'cidade no cadastro dispensa o formulario');
+  check(sugestaoLib.pedirDadosNaoCabe({ cidadeNoCadastro: false }) === false,
+    'e sem ela o formulario continua saindo');
+
+  /** As quatro contas antigas continuam valendo — esta SOMA, nao substitui. */
+  check(sugestaoLib.pedirDadosNaoCabe({ temEtiquetaDeCidade: true }) === true, 'a etiqueta de cidade continua contando');
+  check(sugestaoLib.pedirDadosNaoCabe({ jaPediramDados: true }) === true, 'e ja ter pedido tambem');
+  check(sugestaoLib.pedirDadosNaoCabe({ jaDeuNomeECidade: true }) === true, 'e ela ter respondido');
+  check(sugestaoLib.pedirDadosNaoCabe({ deOutroEstado: true }) === true, 'e ser de fora do RS');
+  check(sugestaoLib.pedirDadosNaoCabe({}) === false, 'sem nada, pede');
+
+  /**
+   * **E e DELIBERADAMENTE so o formulario.** `temEtiquetaDeCidade` responde outras DUAS
+   * perguntas — *"ja recebeu o modelo?"* (decisao dele de 02/09) e, por `cidadeJaNoCrm`, *"ela ja
+   * veio antes?"* (a Rosa, 05/09). **Cidade de IMPORTACAO nao responde nenhuma das duas:**
+   * ninguem conversou com ela, e ninguem lhe mandou nada.
+   */
+  const fs = await import('node:fs');
+  const painel = fs.readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const i = painel.indexOf('const temEtiquetaDeCidade =');
+  check(i > 0, 'achei o sinal da etiqueta');
+  check(!painel.slice(i, i + 300).includes('cidadeNoCadastro'),
+    'o sinal da ETIQUETA nao foi contaminado — senao a importacao viraria "ja veio antes" e "ja recebeu modelo"');
+
+  /**
+   * **`matchCity` e ASSINCRONA, e este objeto e montado de forma SINCRONA.** Chamar aqui
+   * devolveria uma Promise — sempre verdadeira — e o formulario deixaria de sair para TODO
+   * MUNDO, em silencio. Por isso o sinal reusa a conferencia que o painel ja fez.
+   */
+  check(/cidadeNoCadastro: state\.grafiaDaCidade\?\.confianca === 'exata'/.test(painel),
+    'o sinal reusa `grafiaDaCidade`, em vez de chamar a funcao assincrona');
+  check(/export async function matchCity/.test(fs.readFileSync(new URL('../src/lib/cities.js', import.meta.url), 'utf8')),
+    'e `matchCity` e mesmo assincrona — e por isso que reusar importa');
+}
+
 fim();

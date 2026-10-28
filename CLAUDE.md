@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.229.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.230.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -647,6 +647,28 @@ mudaram as maos, nao a cabeca.
   ingles/portugues nao vale para todos.
   **Uma requisicao para TODOS os campos**, e nao uma por campo: sao colunas da mesma linha, e o
   que derruba esta plataforma e o NUMERO de requisicoes.
+
+- **O FORMULARIO PERGUNTAVA PELA ETIQUETA DE CIDADE E NUNCA PELO CAMPO** (28/10/2026, print dele:
+  uma contato com o campo Cidade dizendo NOVO HAMBURGO recebeu *"me diga seu Nome, Cidade"* —
+  *"nao esta reconhecendo que a pessoa tem cidade"*).
+  As quatro contas de `sugestao.pedirDadosNaoCabe` olhavam `temEtiquetaDeCidade`, que sai de
+  `tagSuggestions` e de `contact.tagsId`. **Na plataforma velha isso quase nao mordia**, porque a
+  rodada aplicava a etiqueta assim que reconhecia a cidade; **aqui a base dele tem 132 contatos
+  vindos de IMPORTACAO** com o campo preenchido e etiqueta nenhuma — e para todos eles o
+  formulario pedia o que ja estava no cadastro.
+  **O sinal novo e `cidadeNoCadastro`, e entra SO no formulario.** `temEtiquetaDeCidade` responde
+  outras DUAS perguntas — *"ja recebeu o modelo?"* (decisao dele, 02/09) e, por `cidadeJaNoCrm`,
+  *"ela ja veio antes?"* (a Rosa, 05/09) —, e **cidade de importacao nao responde nenhuma das
+  duas**: ninguem conversou com ela e ninguem lhe mandou nada. Ha teste exigindo que aquele sinal
+  **nao** seja contaminado.
+  **E O SINAL REUSA `state.grafiaDaCidade` EM VEZ DE CHAMAR `matchCity`, e isso nao e economia:**
+  `matchCity` e **assincrona**, e o objeto de sinais e montado de forma SINCRONA — uma chamada ali
+  devolve uma **Promise, que e sempre verdadeira**, e o formulario deixaria de sair para **todo
+  mundo**, em silencio. **Ao por sinal novo naquele objeto, confira se a funcao que o calcula e
+  sincrona.**
+  **Confianca `exata` e o corte**, porque o campo Cidade e livre e este projeto ja gravou nele
+  `faq.whatsapp.com`, `vt.tiktok.com` e `mais Apoiadores com patrocinio`. Aceitar qualquer texto
+  faria o formulario parar de sair justamente para quem tem lixo gravado.
 
 - **GANCHO QUE ESTOURA TEM DE RESPONDER — e o teste pegou isso antes de ir ao ar.** Na primeira
   versao o `try` cobria so a acao, e `quantasLinhas()` ficava fora dele, dentro da propria chamada

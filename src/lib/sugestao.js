@@ -69,7 +69,24 @@ export function motivoDaEtiquetaDePedido(c) {
  * rascunho da IA leem esta mesma conta, e é isso que impede as duas metades de divergirem.
  */
 export const pedirDadosNaoCabe = (c) =>
-  !!(c?.jaDeuNomeECidade || c?.jaPediramDados || c?.temEtiquetaDeCidade || c?.deOutroEstado);
+  !!(c?.jaDeuNomeECidade || c?.jaPediramDados || c?.temEtiquetaDeCidade || c?.deOutroEstado
+    /**
+     * **A CIDADE QUE JA ESTA NO CADASTRO conta** — relato dele (28/10/2026), com a print de uma
+     * contato cujo campo Cidade dizia NOVO HAMBURGO e que mesmo assim recebeu *"me diga seu Nome,
+     * Cidade"*: *"nao esta reconhecendo que a pessoa tem cidade"*.
+     *
+     * **Ele esta certo, e o buraco era antigo:** as quatro contas acima perguntam pela ETIQUETA de
+     * cidade, nunca pelo CAMPO. Na plataforma velha isso quase nao mordia, porque a rodada
+     * aplicava a etiqueta assim que reconhecia a cidade; aqui a base dele tem **132 contatos
+     * vindos de importacao** com o campo preenchido e etiqueta nenhuma — e para todos eles o
+     * formulario pedia o que ja estava no cadastro.
+     *
+     * **E deliberadamente SO o formulario, e nao o `temEtiquetaDeCidade`:** aquele sinal responde
+     * outras duas perguntas — *"ja recebeu o modelo?"* (decisao dele de 02/09) e, por
+     * `cidadeJaNoCrm`, *"ela ja veio antes?"* (a Rosa, 05/09). **Cidade de IMPORTACAO nao responde
+     * nenhuma das duas**: ninguem conversou com ela, e ninguem lhe mandou nada.
+     */
+    || c?.cidadeNoCadastro);
 
 /**
  * **Este caso é uma NEGATIVA?** — o que impede o rascunho de fechar pedindo o cadastro.

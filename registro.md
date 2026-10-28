@@ -1,51 +1,40 @@
-## 2026-10-28 - v3.229.0 - ESTADO DE AGORA - a escrita no contato ganhou caminho
+## 2026-10-28 - v3.230.0 - ESTADO DE AGORA - a cidade do cadastro conta
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.229.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.230.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Confira **3.229.0** na linha pequena do topo do painel
-4. **Classifique UM contato e me diga o que a tela disse** — ver *"a primeira gravacao e a
-   sonda"*, abaixo
+3. Confira **3.230.0** na linha pequena do topo do painel
+4. **Ainda preciso da conferencia da gravacao** (v3.229): classifique um contato e me diga o que
+   a barra escreveu
 
-### "GRAVADO: NADA" — e nao era so a etiqueta
+### "NAO ESTA RECONHECENDO QUE A PESSOA TEM CIDADE"
 
-A rota que apareceu no erro e da plataforma velha, e a guarda recusou em vez de pendurar — isso
-funcionou como devia. **Mas o buraco era maior: NENHUMA escrita no contato tinha caminho aqui.**
-Nem etiqueta, nem cidade, nem nenhum campo.
+Voce estava certo, e o painel LIA a cidade — ela aparece no cabecalho. O que ele nao fazia era
+**usar isso** para decidir se pede o cadastro.
 
-O motivo: esses dois caminhos nao passam pelo adaptador. Eles montam o endereco a partir do
-**contrato de escrita aprendido** — aquele mecanismo que observava a plataforma velha gravando uma
-vez e copiava o formato — e vao direto. Como esse contrato nao existe aqui (campo virou **coluna**,
-etiqueta virou **lista de texto**), eles caiam fora.
+As quatro contas que seguram o formulario perguntavam pela **etiqueta** de cidade, nunca pelo
+**campo**. Na plataforma velha isso quase nao mordia, porque a rodada aplicava a etiqueta assim
+que reconhecia a cidade. **Aqui a sua base tem 132 contatos vindos de importacao** com o campo
+preenchido e etiqueta nenhuma — e para todos eles o formulario pedia o que ja estava no cadastro.
 
-Agora existe: `PATCH` na linha do contato, com o `tenant_id` no filtro.
+### O que eu NAO mudei junto, de proposito
 
-### A PRIMEIRA GRAVACAO E A SONDA — e eu preciso que voce me diga o que ela disse
+A etiqueta de cidade responde outras duas perguntas: *"ela ja recebeu o modelo?"* (sua decisao de
+02/09) e *"ela ja veio antes?"*. **Cidade de importacao nao responde nenhuma das duas** — ninguem
+conversou com ela e ninguem lhe mandou nada. Entao o sinal novo entra **so** no formulario, e ha
+teste exigindo que o outro nao seja contaminado.
 
-**Eu tentei medir e fui barrado**, e foi o certo: era uma escrita no seu banco de producao. Entao
-o que esta no ar **nao e um palpite silencioso** — e um palpite que **se denuncia**:
+### E o campo precisa ser um MUNICIPIO, nao qualquer texto
 
-- a gravacao pede a linha **de volta** e compara com o que mandou;
-- nao batendo, ela **estoura com o nome do campo** em vez de dizer "Gravado";
-- a plataforma respondendo OK **sem devolver a linha** tambem conta como falha.
-
-**Classifique um contato e olhe a barra.** Dizendo "Gravado: ..." com os campos, funcionou.
-Dizendo *"a plataforma aceitou e NAO gravou X"*, me avise: ai eu errei o nome da coluna, e a
-mensagem ja diz qual.
-
-### Tres coisas que levei da plataforma velha
-
-- **Etiqueta e UNIAO**, nunca substituicao: a rodada soma, e trocar o conjunto apagaria o que
-  outra pessoa marcou.
-- **A grafia que ja esta no banco GANHA.** Gravar a forma normalizada criaria um rotulo novo — a
-  armadilha do rotulo repetido voltando pela porta da escrita.
-- **Campo que eu nao sei em qual coluna mora RECUSA**, em vez de adivinhar. Ja medimos que o par
-  `notes`/`observacoes` nao e espelho um do outro.
+O campo Cidade e livre, e esta extensao ja gravou nele `faq.whatsapp.com`, `vt.tiktok.com` e um
+pedaco de mensagem. Aceitar qualquer coisa faria o formulario parar de sair justamente para quem
+tem lixo gravado — que e quem mais precisa dele. So conta quando o valor **e** o nome de um
+municipio.
 
 ### O QUE ESTA NO AR
 
@@ -119,6 +108,7 @@ defeito** — e porque o ultimo so apareceu depois de os anteriores sairem da fr
 | 3.227.0 | "bloqueando o modo novo" | destravei as funcoes e esqueci as travas da TELA, que desabilitam o botao |
 | 3.228.0 | botoes redundantes | dois iguais lado a lado no modo novo, e um Parar que duplicava o flutuante |
 | 3.229.0 | "Gravado: nada" | NENHUMA escrita no contato tinha caminho: elas nao passam pelo adaptador |
+| 3.230.0 | pediu cidade de quem ja tem | o formulario olhava a ETIQUETA de cidade, nunca o CAMPO |
 
 **A licao que eu escrevi no CLAUDE.md para nao repetir:** eu consertei o sintoma duas vezes antes
 de achar a causa. As duas correcoes eram reais e ficaram, mas se eu tivesse medido a fila na
