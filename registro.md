@@ -1,36 +1,35 @@
-## 2026-10-28 - v3.222.0 - ESTADO DE AGORA - a rodada das nao atendidas anda
+## 2026-10-28 - v3.223.0 - ESTADO DE AGORA - a rodada espera a tela desenhar
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.222.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.223.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Confira **3.222.0** na linha pequena do topo do painel, ao lado de Recarregar
+3. Confira **3.223.0** na linha pequena do topo do painel, ao lado de Recarregar
 
-### "COMECAR PELAS NAO ATENDIDAS TEM DADO ERRO" — consertado
+### "A ABA TROCOU DE ATENDIMENTO NO MEIO DO CAMINHO" — consertado
 
-A rodada clicava a linha e, **no mesmo instante**, mandava assumir. Nesse instante so um dos dois
-sinais da tela tinha redesenhado: a linha da fila ja estava marcada como ativa, o painel da
-direita ainda nao. A extensao le os dois de proposito — **ela so mexe no atendimento quando os
-dois concordam**, porque assumir a conversa errada mexe no atendimento de outra pessoa.
+**Era a mesma causa da versao anterior, num ponto mais acima — e o conserto de la nao alcancava.**
 
-Entao ela recusava. **A recusa estava certa; a pressa e que estava errada.**
+O clique na linha volta na hora; a plataforma desenha depois. A rodada lia a tela logo em seguida
+e via a conversa ANTERIOR ainda la. Dai ela concluia que **voce** tinha aberto outra conversa, o
+que e motivo legitimo para parar — a tela e sua, e seguir abriria contato atras de contato por
+baixo das suas maos. So que nao era voce: era a plataforma ainda desenhando.
 
-Duas coisas mudaram:
+Na v3.222 eu pus a espera no lugar errado: ela so rodava **depois** dessa checagem. Agora ela
+subiu para onde a conversa e aberta, que e o unico ponto que sabe **qual** conversa deveria estar
+na tela.
 
 | antes | agora |
 |---|---|
-| lia os sinais UMA vez, logo apos o clique | **espera** ate 4s, perguntando a cada 150ms |
-| a recusa virava `erro` e **parava a rodada** | vira **pulado**: ela segue para o proximo |
+| devolvia assim que o clique voltava | **espera** a tela mostrar quem foi clicado |
+| "a aba trocou" era sempre `erro` e **parava** | so para se foi **voce**; desenho atrasado vira **pulado** |
 
-**A guarda nao foi afrouxada, e nao deve ser.** Os dois sinais continuam obrigatorios para
-assumir, resolver, reabrir e enviar. O que mudou foi dar tempo de a tela se decidir — e, quando
-nem assim ela se decide, pular aquele contato em vez de parar tudo.
-
-Custo: quase nada. A pergunta vai para o gancho da propria pagina e **nao toca na rede**.
+**A licao, que ficou escrita:** consertar o sintoma onde ele aparece nao conserta quem le a tela
+antes. Foi a segunda vez hoje que o mesmo defeito apareceu por outra porta.
 
 ### O QUE ESTA NO AR
 
@@ -97,6 +96,7 @@ defeito** — e porque o ultimo so apareceu depois de os anteriores sairem da fr
 | 3.214/.215 | so pulando de contato | a barreira do candidato, certa e sem saida |
 | 3.216 a .221 | varios | Dulce, modelo aprovado, folga na fila, campo depois de assumir, a aba certa, o botao Assumir |
 | 3.222 | erro nas nao atendidas | **a pressa**: assumia no mesmo quadro do clique, antes de a tela se decidir |
+| 3.223.0 | "a aba trocou de atendimento" | a MESMA pressa, num ponto acima do conserto anterior |
 
 **A licao que eu escrevi no CLAUDE.md para nao repetir:** eu consertei o sintoma duas vezes antes
 de achar a causa. As duas correcoes eram reais e ficaram, mas se eu tivesse medido a fila na

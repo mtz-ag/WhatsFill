@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.222.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.223.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -476,6 +476,32 @@ mudaram as maos, nao a cabeca.
   assercao que trava isso exercita `clickIniciar` com uma janela que firma na terceira pergunta e
   exige que o guarda tenha sido ATRAVESSADO. Reintroduzindo a leitura unica, caem 2 assercoes.
   **Ao consertar "a funcao decide cedo demais", teste o USO e nao so a funcao.**
+
+- **E O CONSERTO DA v3.222 NAO BASTOU, PORQUE ELE FICAVA ABAIXO DE QUEM LE A TELA PRIMEIRO**
+  (28/10/2026, print dele no mesmo dia: *"Parei em contato: a aba trocou de atendimento no meio do
+  caminho"*). **Mesma causa, ponto mais acima.** A espera da v3.222 mora em `conversaDaTela`, que
+  so roda quando o painel ja decidiu mexer no atendimento — e `processarNovo` compara
+  `getState().sessionId` com o id que a rodada abriu **antes disso**. O clique na linha volta na
+  hora; o React desenha depois; naquele instante a tela ainda mostra a conversa ANTERIOR, e o
+  painel concluia que **a aba trocou de atendimento** — que e `erro`, e `erro` para a rodada
+  inteira.
+  **A licao: consertar o sintoma onde ele aparece nao conserta quem le a tela antes.** A espera
+  subiu para `openQueueSession`, que e **o unico lugar que sabe QUAL conversa deveria estar na
+  tela** — e dali ela serve todo mundo a jusante de uma vez. `esperarOsDoisSinais` ganhou `id`.
+  **"Nenhuma conversa aberta" muda de significado com o `id`**, e isso e a peca que faz a espera
+  funcionar: sem `id` e resposta FINAL (quem chama nao clicou em nada); com `id` e o estado NORMAL
+  logo depois do clique, enquanto o React nao desenhou. Esperar nos dois casos travaria quem so
+  queria saber se ha conversa aberta.
+  **`openQueueSession` continua devolvendo `ok` quando a tela nao firma**, e diz `firmou: false`:
+  devolver `!ok` ali **PARARIA a rodada** (`percorrerFila` faz `interrompida = reason; break`), e
+  uma conversa que demorou demais e um contato a pular, nao uma rodada a encerrar.
+  **E "a aba trocou" passou a ter DUAS causas com desfechos opostos:** se foi ELE que abriu outra
+  conversa, parar continua sendo o certo (a tela e dele, e seguir abriria contato atras de contato
+  por baixo das maos dele); se a tela so nao desenhou a tempo, e **`pulado`**. Quem separa os dois
+  e o `firmou`, que viaja no `ctx` do `processar`.
+  **Cuidado ao escrever o teste:** o comentario do conserto CITA a frase do erro, entao
+  `indexOf('a aba trocou...')` cai na prosa e nao no ramo. Ancore no codigo
+  (`resultado: 'erro', motivo: 'a aba trocou`).
 
 - **GANCHO QUE ESTOURA TEM DE RESPONDER — e o teste pegou isso antes de ir ao ar.** Na primeira
   versao o `try` cobria so a acao, e `quantasLinhas()` ficava fora dele, dentro da propria chamada

@@ -1278,4 +1278,112 @@ grupo('ESPERAR OS DOIS SINAIS — a recusa estava certa, a pressa e que estava e
   check(trecho.slice(0, 400).includes("resultado: 'pulado'"), 'e o desfecho e PULAR, nao parar a rodada');
 }
 
+grupo('A TELA DESENHA DEPOIS DO CLIQUE — e quem le antes conclui que a aba trocou');
+{
+  /**
+   * **Print dele (28/10/2026): *"Parei em contato: a aba trocou de atendimento no meio do
+   * caminho"*.** O clique na linha volta na hora; o React desenha depois. `processarNovo` compara
+   * `getState().sessionId` com o id que a rodada abriu, e nesse instante a tela ainda mostra a
+   * conversa ANTERIOR — o painel concluia que a aba tinha trocado, que e `erro`, e `erro` para a
+   * rodada inteira.
+   *
+   * **E a mesma causa do `so-um-sinal` (v3.222) num ponto mais ACIMA**, e por isso aquele
+   * conserto nao bastou: ele vive em `conversaDaTela`, que roda DEPOIS desta checagem.
+   * **Consertar o sintoma onde ele aparece nao conserta quem le a tela antes.**
+   */
+  const ORIGEM = 'https://mobiliza.me';
+
+  /**
+   * Uma janela que responde a conversa ANTIGA nas N primeiras perguntas e a nova depois — que e
+   * exatamente o que a plataforma faz entre o clique e o desenho.
+   */
+  function janelaQueDesenhaApos(n, { antigo = 'c-velha', novo = 'c-nova' } = {}) {
+    let perguntas = 0;
+    const ouvintes = [];
+    const j = {
+      perguntas: () => perguntas,
+      addEventListener: (ti, fn) => { if (ti === 'message') ouvintes.push(fn); },
+      removeEventListener: (ti, fn) => { const i = ouvintes.indexOf(fn); if (i >= 0) ouvintes.splice(i, 1); },
+      postMessage(msg) {
+        const tipo = msg.payload && 'id' in msg.payload ? 'abriu' : 'aberta';
+        if (tipo === 'abriu') {
+          const ev = { source: j, origin: ORIGEM, data: { __whatsfill: 'mob-page', type: 'abriu',
+            payload: { pedido: msg.payload.pedido, ok: true, por: 'id' } } };
+          for (const fn of [...ouvintes]) fn(ev);
+          return;
+        }
+        perguntas++;
+        const qual = perguntas > n ? novo : antigo;
+        const ev = { source: j, origin: ORIGEM, data: { __whatsfill: 'mob-page', type: 'aberta',
+          payload: { pedido: msg.payload.pedido, por: 'os-dois', conversa: { id: qual, status: 'aberto' } } } };
+        for (const fn of [...ouvintes]) fn(ev);
+      },
+    };
+    return j;
+  }
+
+  const relogio = () => { let n = 0; return () => (n += 50); };
+  const fila = async () => [{ id: 'c-nova', nome: 'Fulana', grupo: false }];
+
+  const janela = janelaQueDesenhaApos(2);
+  const r = await openQueueSession(0, { fila, janela, espera: async () => {}, agora: relogio() });
+  check(r.ok === true, 'a conversa abriu');
+  check(r.firmou === true, 'e a TELA confirmou — e isso que faz `processarNovo` nao gritar "a aba trocou"');
+  check(r.naTela === 'c-nova', 'a tela mostra quem a rodada clicou');
+  check(janela.perguntas() >= 3, `esperou a tela desenhar (${janela.perguntas()} leituras)`);
+
+  /**
+   * **Nao firmando, `openQueueSession` continua devolvendo `ok` — e diz que nao firmou.**
+   * Devolver `!ok` aqui PARARIA a rodada (`percorrerFila` faz `interrompida = reason; break`), e
+   * uma conversa que demorou demais e um contato a pular, nao uma rodada a encerrar.
+   */
+  const lerda = janelaQueDesenhaApos(999);
+  const r2 = await openQueueSession(0, { fila, janela: lerda, espera: async () => {}, agora: (() => { let n = 0; return () => (n += 1500); })() });
+  check(r2.ok === true, 'tela que nao desenhou a tempo NAO derruba a abertura');
+  check(r2.firmou === false, 'mas `firmou` diz a verdade');
+  check(r2.naTela === 'c-velha', 'e diz quem estava na tela — o painel usa isso no motivo');
+
+  /**
+   * **Esperar "nenhuma conversa aberta" so faz sentido quando se espera ALGUEM.** Sem `id`, essa
+   * e a resposta final (e o caso de quem chama sem ter clicado em nada); com `id`, e o estado
+   * normal logo depois do clique, enquanto o React nao desenhou.
+   */
+  function janelaVaziaDepoisCheia(n, qual) {
+    let perguntas = 0;
+    const ouvintes = [];
+    const j = {
+      perguntas: () => perguntas,
+      addEventListener: (ti, fn) => { if (ti === 'message') ouvintes.push(fn); },
+      removeEventListener: (ti, fn) => { const i = ouvintes.indexOf(fn); if (i >= 0) ouvintes.splice(i, 1); },
+      postMessage(msg) {
+        perguntas++;
+        const conversa = perguntas > n ? { id: qual, status: 'aberto' } : null;
+        const ev = { source: j, origin: ORIGEM, data: { __whatsfill: 'mob-page', type: 'aberta',
+          payload: { pedido: msg.payload.pedido, por: conversa ? 'os-dois' : '', conversa } } };
+        for (const fn of [...ouvintes]) fn(ev);
+      },
+    };
+    return j;
+  }
+
+  const vazia = janelaVaziaDepoisCheia(2, 'c-nova');
+  const comId = await esperarOsDoisSinais({ id: 'c-nova', janela: vazia, espera: async () => {}, agora: relogio() });
+  check(comId.sessionId === 'c-nova', 'com `id`, espera a conversa aparecer');
+
+  const vazia2 = janelaVaziaDepoisCheia(2, 'c-nova');
+  const semId = await esperarOsDoisSinais({ janela: vazia2, espera: async () => {}, agora: relogio() });
+  check(semId.sessionId === null && vazia2.perguntas() === 1, 'sem `id`, "nenhuma aberta" e resposta final — nao espera');
+
+  /** O painel tem de separar as duas causas, senao a rodada morre no primeiro desenho atrasado. */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  // Ancora no CODIGO e nao no texto: o comentario logo acima cita a mesma frase, e o
+  // `indexOf` caia nele — o teste falhava apontando para a prosa, nao para o ramo.
+  const i = painel.indexOf("resultado: 'erro', motivo: 'a aba trocou");
+  check(i > 0, 'o ramo de erro continua existindo — a aba que VOCE trocou ainda para a rodada');
+  const antes = painel.slice(Math.max(0, i - 1500), i);
+  check(antes.includes('firmou === false'), 'o painel olha `firmou` antes de chamar de "a aba trocou"');
+  check(antes.includes("resultado: 'pulado'"), 'e nesse caso o desfecho e PULAR');
+  check(/processar\(aberto\.sessionId, \{ contatosTratados, aberto \}\)/.test(painel), 'e o `aberto` chega em quem processa');
+}
+
 fim();

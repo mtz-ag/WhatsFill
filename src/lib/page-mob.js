@@ -586,7 +586,33 @@ export async function openQueueSession(index = 0, opcoes = {}) {
     for (let i = n; i < fim; i++) {
       const alvo = fila[i];
       const r = await abrirNaTela(alvo.id, alvo.nome, resto);
-      if (r.ok) return comTotal({ ok: true, sessionId: alvo.id, por: r.por });
+      if (r.ok) {
+        /**
+         * **ESPERA A TELA MOSTRAR QUEM ACABAMOS DE CLICAR** (28/10/2026, print dele: *"Parei em
+         * contato: a aba trocou de atendimento no meio do caminho"*).
+         *
+         * O clique volta na hora; o React desenha depois. Quem chama le a tela logo em seguida —
+         * `processarNovo` compara `getState().sessionId` com o id que a rodada abriu — e nesse
+         * instante a tela ainda mostra a conversa ANTERIOR. O painel concluia que **a aba trocou
+         * de atendimento**, que e `erro`, e `erro` para a rodada inteira.
+         *
+         * **E a mesma causa do `so-um-sinal` da v3.222 num ponto mais acima**, e por isso o
+         * conserto de la nao bastou: aquele guarda e o de `conversaDaTela`, que roda DEPOIS desta
+         * checagem. **Consertar o sintoma onde ele aparece nao conserta quem le a tela antes.**
+         *
+         * Esperar aqui serve todo mundo a jusante de uma vez, porque este e o unico lugar que
+         * sabe **qual** conversa deveria estar na tela.
+         */
+        const firme = await esperarOsDoisSinais({ id: alvo.id, ...resto });
+        return comTotal({
+          ok: true,
+          sessionId: alvo.id,
+          por: firme.porQuantosSinais || r.por,
+          /** A tela confirmou? Quem chama usa para dizer o motivo certo, em vez de adivinhar. */
+          firmou: firme.sessionId === alvo.id && firme.porQuantosSinais === 'os-dois',
+          naTela: firme.sessionId || '',
+        });
+      }
       ultima = r;
       if (r.motivo !== 'nao-esta-na-tela') {
         return comTotal({ ok: false, reason: porqueDe(r) });
@@ -861,11 +887,22 @@ export function ehRecusaPorSinalFraco(mensagem) {
 const PRAZO_DOS_SINAIS_MS = 4000;
 const INTERVALO_DOS_SINAIS_MS = 150;
 
-export async function esperarOsDoisSinais({ prazoMs = PRAZO_DOS_SINAIS_MS, intervaloMs = INTERVALO_DOS_SINAIS_MS, agora = () => Date.now(), espera = null, ...opcoes } = {}) {
+export async function esperarOsDoisSinais({ id = '', prazoMs = PRAZO_DOS_SINAIS_MS, intervaloMs = INTERVALO_DOS_SINAIS_MS, agora = () => Date.now(), espera = null, ...opcoes } = {}) {
   const dormir = espera || ((ms) => new Promise((r) => setTimeout(r, ms)));
+  const alvo = String(id || '');
   const ate = agora() + prazoMs;
+
+  const pronto = (s) => s.ganchoRespondeu && s.porQuantosSinais === 'os-dois' && (!alvo || s.sessionId === alvo);
+  /**
+   * **Quando parar de esperar por falta de esperanca.** Gancho mudo nunca vira resposta.
+   * *"Nenhuma conversa aberta"* e resposta FINAL quando nao se espera ninguem em particular — mas
+   * e o estado NORMAL logo depois de um clique, enquanto o React ainda nao desenhou. Por isso ela
+   * so conta como final sem `id`.
+   */
+  const semEsperanca = (s) => !s.ganchoRespondeu || (!alvo && !s.sessionId);
+
   let st = await getState(opcoes);
-  while (st.ganchoRespondeu && st.sessionId && st.porQuantosSinais !== 'os-dois' && agora() < ate) {
+  while (!pronto(st) && !semEsperanca(st) && agora() < ate) {
     await dormir(intervaloMs);
     st = await getState(opcoes);
   }

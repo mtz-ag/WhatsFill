@@ -6634,7 +6634,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
       visitados.add(aberto.sessionId);
 
-      const r = await processar(aberto.sessionId, { contatosTratados });
+      // `aberto` vai junto porque ele carrega se a TELA confirmou a abertura — sem isso
+      // `processarNovo` nao tem como distinguir "voce trocou de conversa" de "a plataforma
+      // ainda nao desenhou", e as duas pedem desfechos opostos.
+      const r = await processar(aberto.sessionId, { contatosTratados, aberto });
       registrarNaRodada(r.nome, r.resultado, r.motivo);
 
       /**
@@ -8686,6 +8689,26 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     try {
       let estado = await page.getState();
       if (estado.sessionId !== sessionId) {
+        /**
+         * **"A aba trocou" tem DUAS causas, e elas pedem desfechos opostos** (28/10/2026, print
+         * dele: *"Parei em contato: a aba trocou de atendimento no meio do caminho"*).
+         *
+         * Se foi ELE que abriu outra conversa, parar é o certo: a tela é dele, e seguir abriria
+         * contato atrás de contato por baixo das mãos dele. Mas a mesma linha disparava quando a
+         * plataforma **ainda não tinha desenhado** o que a rodada acabou de clicar — e aí parar a
+         * rodada inteira é o defeito.
+         *
+         * `openQueueSession` agora ESPERA a tela confirmar, e diz se confirmou. Não tendo
+         * confirmado, isto é um contato que não abriu: **pula e segue**. Confirmado e mesmo assim
+         * diferente, a tela é dele de verdade — aí para, como sempre parou.
+         */
+        if (ctx?.aberto && ctx.aberto.firmou === false) {
+          return {
+            nome: 'contato',
+            resultado: 'pulado',
+            motivo: `a plataforma não terminou de abrir esta conversa a tempo${ctx.aberto.naTela ? ' (a tela ainda mostrava outra)' : ''} — pulei e segui`,
+          };
+        }
         return { nome: 'contato', resultado: 'erro', motivo: 'a aba trocou de atendimento no meio do caminho' };
       }
 
