@@ -1,424 +1,58 @@
-## 2026-10-28 - v3.211.0 - ESTADO DE AGORA - a rodada destravou, e achei um defeito pior
+## 2026-10-28 - v3.212.0 - ESTADO DE AGORA - a rodada anda, e na fila CERTA
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. **Na aba Config, confira qual numero esta cadastrado no Capitao Martim** — ver *"a barreira
-   vermelha"* abaixo
+3. **Na aba Config, ponha o numero do seu canal no Capitao Martim** — o painel mostra qual e
+   (ver abaixo)
 
-O painel aparece encaixado na direita **empurrando a pagina**. Confira **3.211.0** no cabecalho —
-e o que separa *"o conserto nao funcionou"* de *"o conserto nao chegou"*.
+Confira **3.212.0** no cabecalho do painel.
 
-### INSERIR TEXTO FUNCIONOU
+### "TRAVOU E FICOU PARADO SEM FAZER NENHUMA ACAO" — eram tres defeitos meus somados
 
-Sua print mostrou **"Texto inserido no campo de mensagem."** em verde. E a confirmacao ao vivo que
-faltava: o caminho da escrita esta medido, e nao so no papel.
+**O que voce viu era isto:** a rodada tentava abrir o primeiro contato, nao conseguia, e eu
+respondia a ela *"pedi mais fila, tenta de novo"* — so que nao havia mais fila para pedir. Ela
+repetia a mesma tentativa **vinte vezes, com pausa entre cada uma**, sem abrir nada e sem escrever
+nada util. Depois parava sem dizer por que, porque eu devolvia o motivo num campo que ela nao le.
 
-### "EXIGINDO MODELO APROVADO" — a trava saiu, e ela nunca deveria valer aqui
-
-**Nesta plataforma NAO EXISTE modelo aprovado, e isso esta certo.** O canal e Z-API, que o proprio
-app chama de *"WhatsApp (nao oficial)"*, e para esses nao ha janela de 24h nem modelo da Meta —
-texto livre sai a qualquer hora. A lista vem vazia porque a resposta certa e vazia.
-
-**Duas travas ainda exigiam esse modelo**, e a segunda era pior:
-
-| onde | o que acontecia |
+| defeito | o que fazia |
 |---|---|
-| rodada dos **Meus** | devolvia erro e nao comecava |
-| botao **"Comecar pelos Novos"** | ficava **desabilitado**, com um conselho que nao funciona aqui |
+| `carregar mais` respondia "deu certo" | o laco girava 20 vezes sem acao — **o que voce viu** |
+| o motivo ia no campo errado | a rodada parava dizendo **nada** |
+| a aba era ignorada | percorria a fila INTEIRA, nao a sua |
 
-As duas sairam. **A rodada nao precisa de modelo aprovado**: medido em 20.000 contextos, sem
-modelo NENHUM ela decide em **100%** deles — conclui, pula, pede o cadastro, manda a mensagem do
-momento e chama a IA. O que sai vem das suas respostas prontas e do anuncio.
+Agora, quando nao der para abrir, a rodada diz **o que houve e o que fazer** ("role a fila ate ela
+aparecer e recomece").
 
-E o aviso agora diz a verdade da plataforma em que voce esta, em vez de mandar clicar em
-"Recarregar" num lugar onde isso nunca vai carregar nada.
+### AS ABAS: voce estava certo, e o estrago era maior do que o nome
 
-### A BARREIRA VERMELHA — eu estava comparando o numero ERRADO
+Medi na sua tela. A plataforma nova tem **Todas 753 | Minhas 6 | Nao lidas 592**, com
+**Pessoas 753 | Grupos 135** embaixo — nada de "Novos", "Meus" e "Outros".
 
-Voce nao perguntou sobre ela, mas ela diz *"a rodada nao vai tratar este contato"*, entao eu fui
-olhar. **O defeito era meu, e e mais serio que o outro.**
+**Mas o pior nao era o nome: eu nao estava filtrando por aba nenhuma.** "Comecar pelos Meus"
+percorria **1.091 conversas** em vez dos seus **6** atendimentos.
 
-O painel perguntava *"por qual numero esta conversa e atendida?"* e eu estava devolvendo **o
-telefone da pessoa do outro lado** — o numero do CONTATO, nao o do seu canal. Entao a barreira
-comparava a coisa errada nos dois sentidos:
+Conferi o mapeamento contra o numero que a propria tela escreve no botao:
 
-- **nunca reconhecia o seu numero** -> pulava todo contato (o que voce viu);
-- e, pior, **poderia dizer "e meu" por acidente**, se o telefone de um eleitor coincidisse com um
-  numero cadastrado — e ai a mensagem SAI, com o nome do candidato errado.
-
-Agora o numero vem da instancia que atende a conversa, que e o que o cadastro da Config espera.
-
-**O que eu preciso de voce:** abra uma conversa e olhe a linha cinza embaixo da tarja vermelha.
-Ela mostra **"numero do canal: ..."**. Se esse numero nao estiver no Capitao Martim na aba Config,
-**some ele la** — a barreira vai continuar acusando (e corretamente) ate isso ser feito. Se a
-linha disser *"NAO consegui descobrir o numero deste canal"*, me avise: ai e defeito meu de novo.
-
-### O "ERRO AO INSERIR TEXTO" — eram DOIS defeitos, e o segundo e o que me assustou
-
-Voce mandou a print com o texto vermelho: *"Escrever no campo de mensagem da plataforma ainda nao
-foi medido na plataforma nova"*. Isso era literal — `setComposerText` era uma **recusa escrita**,
-porque eu nao tinha medido como se escreve no campo da plataforma nova. **Agora escreve.**
-
-**Mas medindo isso eu achei um defeito maior, que ninguem tinha relatado.** A tela de uma conversa
-**nao assumida** ja tem DOIS campos de texto, e nenhum deles e o campo de mensagem:
-
-```
-textarea "Nota interna da conversa (so a equipe ve)..."
-textarea "Anotacoes sobre este contato... (salva automaticamente 1s apos parar de digitar)"
-campo de mensagem de verdade: NENHUM   <- a plataforma so o cria depois de ASSUMIR
-```
-
-O gancho pegava **o primeiro visivel** e dizia *"da para digitar"*. Como essa leitura de tela
-**vence o status da conversa** no painel, ele afirmava campo de mensagem em **toda conversa
-aberta** — e o painel acreditaria que da para responder quem ainda nao foi assumido.
-
-**O que mudou:** a resposta agora tem **tres estados**, nunca dois.
-
-| o que esta na tela | resposta |
-|---|---|
-| reconheci o campo de mensagem | **sim** |
-| nao ha nada editavel | **nao** |
-| ha campo e nenhum e o de mensagem | **nao sei** -> quem decide e o status |
-
-O terceiro estado e o que faz isto envelhecer sem mentir: mudando a redacao do placeholder, a tela
-**para de afirmar** em vez de dizer *"nao da para digitar"* numa conversa que voce acabou de
-assumir.
-
-### COMO O TEXTO ENTRA NO CAMPO — e por que eu confio nisso sem ter visto ao vivo
-
-**A mecanica nao e hipotese nova: e a receita que este projeto ja mediu** no campo do mobiliza.app
-(`composer.js`). Atribuir `campo.value = texto` direto **nao funciona** — o framework guarda o
-ultimo valor que conhece e trata o evento como ruido. O caminho e o setter nativo do prototipo mais
-o evento `input`, e a razao vale igual para o Angular de la e o React de ca.
-
-**E a conferencia e o que torna isto honesto.** Campo controlado por React que nao reconheceu a
-escrita **devolve o valor antigo no proximo desenho**: o texto aparece e some. Entao o painel
-**rele o campo depois de dois quadros** e compara. Nao ficando, ele **estoura com o motivo** em vez
-de dizer "escrevi" sobre um campo vazio — a mesma disciplina de *"200 nao prova entrega"*, que e a
-armadilha mais antiga daqui.
-
-**O que o Chrome nao me deixou fazer, e eu nao vou fingir que fiz:** a extensao do Claude caiu no
-meio da medicao, entao **nao vi o texto entrar numa conversa assumida de verdade**. O desenho
-assume isso: seu primeiro clique em **"So inserir"** vai dizer a verdade — ou o texto aparece no
-campo, ou o painel escreve exatamente o que deu errado. **Me avise se aparecer "a plataforma apagou
-o texto"**: esse recado significa que o defeito e do adaptador, nao seu.
-
-### As mensagens que voce pode ver, e o que cada uma quer de voce
-
-| o que aparece | o que fazer |
-|---|---|
-| *"a plataforma so cria o campo depois de ASSUMIR. Aperte Iniciar primeiro"* | assumir a conversa — um clique |
-| *"Campo de mensagem nao encontrado. Abra uma conversa antes"* | abrir uma conversa |
-| *"a plataforma apagou o texto... me avise"* | **e defeito meu**: me mande a print |
-| *"o que ficou la nao e o que eu mandei"* | confira o campo antes de enviar |
-
-### O EMPURRAO — voce viu *"sobrepos em vez de empurrar"*, e o padding estava certo
-
-**Medido antes de mexer, e o diagnostico natural era o errado:** o `dock.js` aplicava os 380px no
-`html` normalmente. **O que ele nao alcanca e a tela** — ela e `position: fixed; inset: 0`, e
-elemento `fixed` resolve contra a **janela**, nunca contra a caixa do `html`. Com o padding
-aplicado, a tela continuava com **1708px**: a janela inteira, por baixo do painel.
-
-| | tela de conversas | barra horizontal | transbordou |
-|---|---|---|---|
-| antes | **1708** (a janela toda) | nao | — |
-| depois | **1328** em x=0 | nao | **0 elementos** |
-
-Faixa livre a direita: **379,5px** para um painel de 380. O toast da plataforma, que era `w-full`,
-passou a caber na area do app em vez de abrir sob o painel.
-
-**O conserto e prender o app**, nao empurrar mais forte: o `#root` ganha `contain: layout`, que faz
-dele o bloco contenedor dos `fixed` de dentro.
-
-**Duas coisas que eu medi ANTES de escolher, e que seriam o erro caro:**
-
-1. **A pagina nao rola** (`scrollHeight` 791 === `clientHeight` 791). Isso importa porque
-   `contain: layout` faz `fixed` virar `absolute` na pratica — numa plataforma que rolasse, esta
-   mesma regra grudaria o cabecalho no lugar errado.
-2. **O alvo nao pode ser o `body`**, que e a simplificacao obvia: o painel e pendurado nele, entao
-   encolheria junto e iria parar 380px a esquerda. O `#root` e **irmao** do painel, e os tres
-   elementos `fixed` da plataforma vivem dentro dele — conferidos um a um. Reintroduzindo o `body`
-   como alvo, **caem 4 assercoes**.
-
-**Uma ponta que eu NAO medi e nao vou fingir que medi:** popup do Radix que se pendure no `body` em
-vez do `#root` escaparia e abriria sob o painel. Nada foi para o `body` nas minhas medicoes, mas
-**nao consegui abrir um menu por script**. Se voce vir um menu cortado pelo painel, me diga — o
-conserto e um seletor.
-
-**Suba com "Automatizar" DESLIGADO na primeira vez.** Com ele ligado a rodada executa a tecla que
-a regra recomenda, e **a maioria das regras ENVIA** — e hoje eu nao tenho como provar que o fluxo
-inteiro se comporta igual na plataforma nova. Desligado, ele decide e PARA, mostrando o que faria,
-que e exatamente o que voce pediu em 26/10: *"mostrar antes, com a tela junto"*.
-
-### Tres defeitos meus que eu achei ANTES de montar
-
-Todos os tres falhariam **em silencio** — nenhum deles estoura, porque "campo que nao existe" vira
-`undefined`, e `undefined` vira "nao tem":
-
-| o que eu escrevi | o que acontecia |
-|---|---|
-| li o estado da pagina sem esperar a resposta | o painel subiria e **nunca reagiria** a troca de conversa |
-| devolvi a etiqueta com o nome errado de campo | **nenhuma etiqueta reconhecida** — cidade, COREDE e as protecoes todas caladas |
-| devolvi o contador com o nome errado | o numero do dia ficaria vazio |
-
-O segundo e o pior: o painel pareceria funcionar.
-
-**O que os achou foi ler quem CHAMA, e nao quem devolve** — e agora ha um teste que compara os
-dois lados automaticamente.
-
-### O que esta no ar
-
-| | |
-|---|---|
-| `mob.js` | os dados do mobiliza.me (fila, conversa, contato, numeros, respostas), **so leitura** |
-| `dom-mob.js` + `mob-hook.js` | abrir **a conversa certa** pelo id, e dizer **qual esta aberta** |
-| `page-mob.js` | **o adaptador** — faz a plataforma nova parecer com o que o `panel.js` ja le |
-| `page.js` | **desvia 23 nomes** para o adaptador quando a aba e o mobiliza.me |
-
-### A costura: fechada, 46 nomes
-
-```
-mobiliza.app:   dom.js      + api.js      -> page.js
-mobiliza.me:    page-mob.js + api-mob.js  -> page.js      (mesma interface)
-```
-
-| | desviados | como |
+| botao da plataforma | o que e no banco | contagem |
 |---|---|---|
-| `page.js` | 23 | ternario na frente de cada export |
-| `api.js` | 23 | `if (NA_PLATAFORMA_NOVA) return ...` dentro de cada funcao |
+| **Minhas 6** | em atendimento, com voce como atendente | **6** — bate exato |
+| (dentro de Todas) | abertas, ninguem assumiu | 1.080 |
+| **Grupos 135** | o endereco do chat termina em `@g.us` | **135** — bate exato |
 
-**O codigo do mobiliza.app ficou intocado embaixo dos dois**, e ha teste exigindo isso: aquela
-plataforma ainda esta no ar, e o que aqueles arquivos guardam e o historico das armadilhas que
-custaram dias.
+Os botoes agora se chamam **"Comecar pelas Minhas"**, **"Comecar pelas nao atendidas"** e
+**"Comecar pelas de outro atendente"**.
 
-### O erro que eu cometi no meio, e que virou teste
+### O NUMERO DO SEU CANAL
 
-`mob.lerSessao` **normaliza** a sessao: o que entra tem `access_token`, o que sai tem `token`.
-Eu escrevi `Bearer ${sessao.access_token}` em dois lugares — o cabecalho sairia **`Bearer
-undefined`** e **toda** chamada voltaria 401, com a tela dizendo que a sua sessao venceu quando
-ela estava boa.
+Medido: voce tem **uma** instancia, `Martim Atendimento CRM`, com a conexao `conectado`. A tarja
+vermelha estava mostrando **o telefone do contato** no lugar do numero dela — o defeito que
+consertei na 3.211.
 
-**O conserto nao foi trocar o nome nos dois lugares: foi deixar de ter dois.** Toda leitura passa
-pelo `mob.buscar`, que e quem sabe o nome do campo.
-
-### O envio funciona — medido no seu contato de teste
-
-Voce autorizou, e eu mandei **duas mensagens** para o Thiago Kellermann:
-
-1. **pela tela da plataforma**, com um gravador ligado, para copiar o formato exato;
-2. **pelo corpo que o adaptador monta**, para provar que o caminho dele funciona.
-
-**As duas chegaram**, e eu confirmei relendo o banco: `envio_status: "enviado"`, com o id do
-WhatsApp preenchido e nenhum erro.
-
-**Por que gravar em vez de ler o codigo:** o formato esta minificado no pacote da plataforma — os
-nomes dos campos nao aparecem. Entao foi o mesmo caminho que esta extensao sempre usou no
-mobiliza.app: observar a plataforma fazendo uma vez e copiar.
-
-```
-enviar:   { instance_id, numero, conversa_id, tipo, conteudo }
-responde: { ok, conversa_id, mensagem_id, provider: "zapi" }
-```
-
-**O `zapi` confirma o que ja estava escrito:** o seu numero e nao oficial, entao nao ha janela de
-24h nem modelo aprovado — o que pune e o ritmo e a repeticao.
-
-**Duas guardas que ficaram no envio:**
-
-- **mandar exige saber a conversa por DOIS sinais.** Ler basta com um; escrever nao. Errar a
-  conversa aqui nao e mostrar a pessoa errada na tela — e mandar a mensagem de uma pessoa para
-  outra.
-- **a guarda do grupo fica tambem no ponto de envio**, e nao so em quem monta a lista. Sao 134
-  conversas de grupo, e nenhuma delas tem a coluna que *pareceria* dizer que e grupo.
-
-### Assumir, resolver e reabrir: medidos na conversa que voce deixou aberta
-
-Voce abriu a **Thiago Mazzarello – Pelotas** e mandou testar. Antes do primeiro clique eu guardei
-o estado original; cliquei **Assumir**, **Resolver** e **Reabrir**, gravando cada um; e no fim
-**devolvi a conversa ao que ela era**: `aberto`, sem atendente, sem nada preenchido.
-
-```
-assumir   { p_conversa_id } -> { ok }    vira "em atendimento", com voce como atendente
-resolver  { p_conversa_id } -> { ok }    vira "resolvido"
-reabrir   { p_conversa_id } -> { ok }    volta para "em atendimento"
-liberar   { p_conversa_id } -> { ok }    volta para "aberto", sem atendente
-```
-
-**As quatro pedem so o id** — nao ha motivo nem classificacao. Na plataforma velha havia um
-segundo caminho ("Classificar e concluir") que mandava o motivo junto; **aqui ele nao existe**.
-
-**E resolver nao abre caixa de confirmacao.** Na antiga eram dois cliques e um aviso dizendo que
-mensagens pendentes seriam canceladas — e aquela confirmacao chegou a parar a rodada em todo
-contato. Aqui e um clique so.
-
-**O que isso deixa em aberto:** como a antiga avisava sobre mensagem em fila e esta nao avisa,
-a conferencia de "a mensagem saiu mesmo?" passa a vir **antes** de resolver, e nao depois.
-
-### Um buraco no disparo, que eu nao vou tapar adivinhando
-
-Na plataforma velha dava para **abrir atendimento com quem nunca escreveu** — era assim que o
-disparo por etiqueta alcancava a lista inteira. Aqui a conversa so existe depois que a pessoa
-manda a primeira mensagem, e a funcao de envio exige o id dela.
-
-Como fazer isso **nao foi medido**, entao esse caminho recusa. Devolver qualquer coisa ali faria
-o disparo percorrer a lista inteira sem mandar nada **e contar como enviado**.
-
-### O mais importante de hoje: um disparo filtrado por "SERRA" alcancaria NINGUEM
-
-Antes de montar o painel, fui conferir se as consultas que escrevi funcionam de verdade na sua
-base. Uma delas nao funcionava — e o jeito como ela falha e o problema:
-
-```
-etiqueta "SERRA"   ->     0 contatos     <- a grafia obvia, a que voce digitaria
-etiqueta "SERRA "  ->   504 contatos     <- com um espaco no fim
-etiqueta "Serra"   ->   423 contatos
-PRODUCAO 213  +  Producao 151            sua base: 107.988 contatos
-```
-
-**Um disparo por "SERRA" diria "0 contatos"** — e isso se le como *"ninguem tem essa etiqueta"*,
-nao como *"voce escreveu de um jeito que o banco nao tem"*. Enquanto isso, 927 pessoas estao ali
-sob duas outras grafias.
-
-Na plataforma velha essa armadilha dava contagem ERRADA (1293 contatos marcados errado, em
-agosto). **Aqui ela da ZERO, calado — e e pior:** numero errado alguem estranha; zero parece
-resposta.
-
-**Consertado:** nenhuma consulta por etiqueta usa a grafia que voce digitou sozinha. O rotulo e
-normalizado, as grafias que existem no banco sao recuperadas, e a consulta vai com todas juntas —
-medido, devolve as 504.
-
-**E o meu proprio conserto quase recriou o defeito:** eu pus um "apare os espacos" para descartar
-grafias vazias, e ele transformaria `"SERRA "` (504) em `"SERRA"` (zero). O teste pegou.
-
-### Mais duas coisas que a conferencia mudou
-
-**Nao existe modelo aprovado nesta plataforma.** A tabela que eu achei que fosse a dos modelos e,
-na verdade, a das **suas respostas rapidas** — nao tem canal nenhum ligado. E faz sentido: o seu
-numero e nao oficial, e para esses nao ha janela de 24h nem modelo aprovado. Minha primeira versao
-teria dado erro no primeiro contato aberto.
-
-**A contagem ficou barata.** Na plataforma velha saber quantos atendimentos voce tinha era a
-consulta mais cara do painel — a mesma que estourou o limitador numa rodada sua de 222
-conclusoes. Aqui o total vem num cabecalho, sem trazer nenhuma linha.
-
-### O anuncio: medi, e a resposta e sua
-
-Na plataforma velha, de qual anuncio a pessoa veio **vinha pronto** (`session.utm`), e dele saem
-*"veio de anuncio"*, *"reconheci QUAL anuncio"*, a etiqueta de origem e o recibo da chegada.
-
-**Medido hoje:**
-
-```
-whatsapp_conversas ... 27 colunas, nenhuma de utm / origem / referral
-base_dados.origem .... helena 513 | mocao 188 | importacao 132 | evento 48 | manual 10
-                       app_mobile 7 | formulario 2        <- NENHUMA e anuncio
-origem_detalhe (808 preenchidos): 0 com link, 0 com "fb", 0 com "utm"
-```
-
-**Nao afirmo que nao existe no banco inteiro** — a introspecção volta 401 e nao da para listar as
-tabelas. O que esta medido e que **nao esta onde a rodada olha**.
-
-**O que sobra e o texto pre-preenchido** que a pessoa manda, que o reconhecimento ja le. So que
-la ele era REFORCO e aqui viraria a unica fonte — e isso rebaixa o reconhecimento de **dado**
-para **lista de texto**, que e a coisa que este projeto ja viu falhar seis vezes (a redacao do
-anuncio muda e a lista nao). **Anuncio sem texto pre-preenchido deixa de ser reconhecivel.**
-
-**Hoje isso quase nao morde:** em **1.500 mensagens entrantes de 12 horas, UMA** tinha a forma do
-texto de anuncio. A campanha acabou em 04/10 e o 2o turno em 25/10. Entao a pergunta nao e
-urgente — mas e sua, e eu nao vou religar nada disso por conta propria.
-
-### E outra coisa que eu tinha escrito e estava errada
-
-Eu anotei que *"o ruido da plataforma ja vem MARCADO"*, porque a coluna `is_sistema` existe.
-**Medido: 0 de 1.500.** Ter a coluna nao e a coluna estar preenchida — entao o detector de texto
-continua sendo quem reconhece *"Nao foi possivel transcrever este audio"*, que e o que fez o
-Carlos ser etiquetado como sem interesse e concluido em silencio.
-
-**O painel ainda nao monta no mobiliza.me**, e o manifesto continua sem registra-lo la: falta
-medir o envio.
-
-**O que ainda nao foi medido RECUSA com o motivo na tela, e nunca finge que fez** — enviar,
-assumir, resolver, reabrir, modelo e imagem. Um no-op silencioso seria pior que o erro: a rodada
-marcaria como enviado o que nao saiu e concluiria atendimento que ninguem respondeu.
-
-### O que eu medi hoje na sua base — e o que cada numero mudou
-
-Tudo **so leitura**, pela sua aba, e nenhum dado de eleitor saiu de la: o que eu trouxe foram
-nomes de coluna, contagens e valores de enum.
-
-**1. `status` tem tres valores, e a coluna que PARECE dizer "acabou" nao diz.**
-
-```
-aberto .......... 586        em_atendimento ..... 3        resolvido ..... 11
-das 11 resolvidas, com `resolvido_em` preenchido ...........  1
-```
-
-Quem lesse `resolvido_em` veria **dez atendimentos fechados como se estivessem abertos**, e a
-rodada voltaria a mexer neles. E a armadilha do `grupo_id` outra vez, com outro nome.
-
-**2. A armadilha do rotulo repetido VOLTOU — e eu tinha escrito que ela tinha sumido.**
-
-Quando vi que etiqueta deixou de ser id numa tabela a parte, escrevi no codigo que *"some com
-elas a armadilha do rotulo repetido"*. Medi: **falso**. Sao 87 rotulos distintos em 439 contatos,
-e entre eles o mesmo conceito escrito de jeitos diferentes:
-
-```
-"⛔ 1 SEM RETORNO"  e  "⛔ 1 Sem Retorno"          "PRODUCAO"  e  "Producao"
-"SERRA " (com espaco no fim)                        "🔴PROCURA EMPREGO"  e  "1. PROCURA EMPREGO"
-```
-
-Antes eram dois ids com o mesmo rotulo; agora e campo livre, que nao tem lista para conferir.
-O conserto e o que o projeto ja usava: **comparar rotulo normalizado**.
-
-**3. `nao_perturbe` existe, e e protecao que a plataforma velha nao tinha.**
-
-Coluna booleana no contato (5 marcados na amostra de 600), com data e motivo do lado. **Quem
-esta marcado nao recebe nada** — isso vem antes do quadro, como a etiqueta de sem interesse: e
-decisao que alguem ja tomou sobre aquela pessoa.
-
-**4. As colunas sao duas de cada, em ingles e em portugues — e um par ja diverge.**
-
-```
-name = nome ... 600/600 iguais     city = cidade ... 600/600     state = estado ... 600/600
-phone = telefone ... 600/600       notes (0 cheios) != observacoes (30 cheios)
-```
-
-Para LER tanto faz. **Para ESCREVER nao foi medido**, e o par `notes`/`observacoes` ja mostra que
-nem todos sao espelho: gravar na errada e *"a API aceita e ignora"* voltando com outro nome. A
-sonda no **Thiago Tim** decide.
-
-**5. `estado` ja responde "e de fora do RS?"** — 556 RS, 41 de outros doze estados, 3 vazios. Na
-plataforma velha isso custou um arquivo inteiro e uma lista de 4.828 municipios.
-
-**6. Metade das conversas nao tem contato no CRM** (320 de 600). Contato vazio e o caso NORMAL,
-nao erro.
-
-**7. O banco faz a juncao numa requisicao so** — conversa e contato juntos. Na plataforma velha
-eram tres chamadas por contato aberto, e era isso que derrubava a API.
-
-### Duas coisas minhas que a medicao pegou
-
-**Perdi uma medicao inteira** montando a URL com o que eu achei que fosse o identificador do
-banco: a chave da sessao carrega o **endereco** e nao o identificador, entao eu pedi para um
-endereco que nao existe. As quatro consultas voltaram **vazias, sem erro nenhum** — parecendo
-"a base nao tem essas tabelas". O codigo ja estava certo; quem errou foi a sonda.
-
-**E o seu token nao chega ate mim:** ao listar as chaves, a do banco volta tapada. Entao a
-medicao e feita **dentro da pagina** e so a forma atravessa. E o desenho funcionando.
-
-### O que falta, na ordem
-
-1. **Fechar a costura** — 24 metodos de `page.*` e 22 de `api.*`. Boa parte **morre**: campo
-   personalizado virou coluna, etiqueta virou texto, e o contrato de escrita aprendido nao tem
-   mais o que aprender.
-2. **Medir o envio** — `enviar-mensagem-atendimento` e `resolver_conversa` foram **lidas no
-   pacote, nunca executadas**. A sonda sai no **Thiago Tim**, uma mensagem, antes de qualquer
-   fila. Eu paro e aviso antes.
-3. **Montar o painel** no mobiliza.me, quando a costura fechar.
-
----
+**Abra uma conversa e leia a linha cinza embaixo da tarja: "numero do canal: ...".** Esse numero
+vai para o Capitao Martim na aba Config, e a tarja some. (Nao escrevo o numero aqui de proposito:
+telefone nao entra em arquivo do repositorio.)
 
 ## 2026-10-26 - v3.200.0 - ESTADO DE AGORA - a plataforma mudou, e a migracao comecou pelo chao
 

@@ -22,6 +22,7 @@ import {
   mensagemDoBanco,
   conversaDoBanco,
   ehGrupo,
+  filtroDaAba,
 } from '../src/lib/mob.js';
 
 grupo('a sessao do Supabase: so o que da para trabalhar');
@@ -198,6 +199,45 @@ grupo('GRUPO ou pessoa: a coluna que parece responder nao responde');
   check(ehGrupo(null) === true, 'linha nenhuma, idem');
 
   check(conversaDoBanco({ external_chat_id: '120363@g.us' }).grupo === true, 'e a conversa da fila herda a guarda');
+}
+
+grupo('AS ABAS DA FILA — e aba desconhecida RECUSA');
+{
+  /**
+   * **O mapeamento saiu de CONTAGEM na tela dele (28/10/2026), nao de deducao.** O botao da
+   * plataforma dizia **"Minhas 6"**, e `status=em_atendimento & atendente_id=<eu>` devolveu
+   * **6** — bate exato. As outras contagens da mesma medicao: `aberto` 1080, `em_atendimento` 11,
+   * `resolvido` 47.
+   *
+   * Isto importa porque a fila **ignorava a aba por inteiro** antes: *"Comecar pelos Meus"*
+   * percorria as 1.091 conversas ativas em vez dos seis atendimentos dele.
+   */
+  const EU = 'uid-do-thiago';
+
+  check(filtroDaAba('Meus', EU).filtros.status === 'eq.em_atendimento', '"Meus" e o que esta EM ATENDIMENTO');
+  check(filtroDaAba('Meus', EU).filtros.atendente_id === 'eq.' + EU, 'e com ele como atendente — o numero que a tela escreve no botao');
+
+  check(filtroDaAba('Outros', EU).filtros.atendente_id === 'neq.' + EU, '"Outros" e a MESMA consulta com o sinal trocado');
+  check(filtroDaAba('Novos', EU).filtros.status === 'eq.aberto', '"Novos" e quem ninguem assumiu');
+  check(filtroDaAba('Concluídos', EU).filtros.status === 'eq.resolvido', 'e os concluidos sao os resolvidos');
+  check(filtroDaAba('', EU).filtros.status === 'in.(aberto,em_atendimento)', 'sem aba pedida, a fila e tudo o que ainda nao foi resolvido');
+
+  /**
+   * **Aba desconhecida RECUSA, e nao cai no "todas".** Cair faria a rodada percorrer a fila
+   * errada **em silencio** — o que o `avisoAba` da plataforma velha existe para impedir. E a
+   * mensagem diz os nomes que existem na tela, em vez de so acusar.
+   */
+  const inventada = filtroDaAba('Arquivados', EU);
+  check(!!inventada.erro && !inventada.filtros, 'aba que nao existe nao vira consulta nenhuma');
+  check(/Minhas/.test(inventada.erro), 'e o erro diz como as abas se chamam nesta plataforma');
+
+  /**
+   * **Sem saber quem e ele, "Meus" e "Outros" sao indistinguiveis** — sao a mesma consulta com o
+   * sinal trocado, e errar o sinal entrega a fila de OUTRO operador.
+   */
+  check(!!filtroDaAba('Meus', null).erro, 'sem usuario, "Meus" recusa');
+  check(!!filtroDaAba('Outros', '').erro, 'e "Outros" tambem');
+  check(!filtroDaAba('Novos', null).erro, 'mas "Novos" nao depende de quem esta logado');
 }
 
 fim();

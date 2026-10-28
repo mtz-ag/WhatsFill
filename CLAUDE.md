@@ -573,6 +573,52 @@ mudaram as maos, nao a cabeca.
   **E o rotulo da tela mentia junto:** *"numero lido da tela"* deixou de ser verdade (aqui o
   numero vem da tabela das instancias), entao ele virou **"numero do canal"** — o que ele precisa
   saber e QUAL numero cadastrar, nao de onde eu li.
+  **MEDIDO NA CONTA DELE:** ha **uma** instancia, com `numero_whatsapp` preenchido e
+  `status_conexao` `conectado` — e o numero que o painel mostrava era o do CONTATO, outro.
+  **O numero em si nao entra em arquivo nenhum daqui:** quem o mostra e a linha "numero do canal"
+  do painel, ao vivo.
+
+- **AS ABAS DA FILA SAO OUTRAS, E A RODADA IGNORAVA A ABA POR INTEIRO** (28/10/2026: *"mandei
+  comecar os meus que agora mudou o nome, tem que trocar para o atual (todas, minhas etc) e travou
+  e ficou parado sem fazer nenhuma acao"*). **Medido na tela dele:**
+  ```
+  linha 1:  Todas 753   |  Minhas 6   |  Nao lidas 592
+  linha 2:  Pessoas 753 |  Grupos 135          + um filtro "Ativas"
+  ```
+  Nada de `Novos / Meus / Outros`. **E `mob.fila` nao olhava a aba:** `status in (aberto,
+  em_atendimento)` para todo mundo, entao *"Comecar pelos Meus"* percorria **1.091 conversas** em
+  vez dos **6** atendimentos dele.
+  **O mapeamento saiu de CONTAGEM contra o numero que a propria tela escreve no botao:**
+  ```
+  tela "Minhas 6"  ==  status=em_atendimento & atendente_id=<eu>  ->  6   <- bate exato
+  aberto 1080  |  em_atendimento 11  |  resolvido 47
+  grupos (DB) 135  ==  "Grupos 135" da tela           <- bate exato
+  ```
+  `Novos` = `aberto`; `Meus` = `em_atendimento` + eu; `Outros` = a MESMA consulta com `neq`.
+  **ABA DESCONHECIDA RECUSA** (`mob.filtroDaAba`), e cair no "todas" seria percorrer a fila errada
+  **em silencio** — o que o `avisoAba` da plataforma velha existe para impedir. **E sem saber quem
+  e ele, `Meus` e `Outros` sao indistinguiveis**, entao os dois recusam: errar o sinal entrega a
+  fila de outro operador.
+  **Os nomes INTERNOS nao mudaram** (`'Meus'`, `'Novos'`, `'Outros'`): eles sao a chave que o
+  filtro traduz, e renomea-los espalharia a troca por trinta lugares sem mudar nada do que ele ve.
+  **O que mudou foi o ROTULO do botao, e o rotulo INTEIRO vai no mapa** — "pelos Meus" vira "pelas
+  Minhas", e trocar so o substantivo deixaria *"Comecar pelos Minhas"* na tela (a licao da
+  concordancia, 07/09).
+
+- **"VER MAIS" QUE RESPONDE `ok: true` FAZ A RODADA GIRAR VINTE VEZES SEM FAZER NADA** (mesmo
+  relato, e e a causa exata do *"travou e ficou parado"*). Eram TRES defeitos somados em
+  `openQueueSession`:
+  **(1)** ignorava a `aba` (acima);
+  **(2)** devolvia **`motivo`** onde `percorrerFila` le **`reason`** — entao a rodada parava com
+  `interrompida = undefined` e o veredito nao dizia nada. **Ao escrever adaptador, leia o
+  CONSUMIDOR** (a terceira vez: `getTags` sem `message`, `contarMeuDia` com `concluidos`);
+  **(3)** `carregarMaisDaFila` respondia **`{ ok: true }`**. O laco chama isso quando nao
+  conseguiu abrir o item, e `ok: true` significa *"pedi mais fila, tente a MESMA posicao de novo"*
+  — com nada a carregar, ele repetia a mesma falha **vinte vezes (`MAX_CARREGAMENTOS`), com pausa
+  entre cada uma**. Na tela: rodada parada sem acao nenhuma.
+  **"Nao esta na tela" e o caso COMUM e nao erro** (78 linhas no DOM para uma fila de centenas),
+  entao hoje ele vira uma razao em PALAVRAS que diz o que fazer (rolar a fila), nunca um codigo
+  seco que a rodada nao sabe ler.
 
 - **A CHAMADA AO SUPABASE SAI DA ABA, e e por isso que o CORS nao incomoda.** Em MV3 o `fetch` de
   content script carrega a origem da PAGINA — entao ele chega ao Supabase como

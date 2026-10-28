@@ -395,9 +395,60 @@ export async function buscar(tabela, opcoes = {}) {
  * dito:** pedindo 100 e descartando os grupos, a fila util vem menor que o limite — quem chama
  * conta o que sobrou, nunca o que pediu.
  */
-export async function fila({ canalId = '', limite = 100 } = {}) {
+/**
+ * **AS ABAS DA FILA, MEDIDAS NA TELA DELE (28/10/2026)** — relato: *"mandei comecar os meus que
+ * agora mudou o nome, tem que trocar para o atual (todas, minhas etc) e travou e ficou parado sem
+ * fazer nenhuma acao"*.
+ *
+ * A plataforma nova mostra **Todas / Minhas / Nao lidas**, com **Pessoas / Grupos** embaixo — nada
+ * a ver com os `Novos / Meus / Outros` da velha. E a fila daqui **ignorava a aba por inteiro**:
+ * `status in (aberto, em_atendimento)` para todo mundo, entao *"Comecar pelos Meus"* percorria a
+ * fila INTEIRA, e nao os seis atendimentos dele.
+ *
+ * **O mapeamento saiu de contagem, nao de deducao.** Medido contra o numero que a propria tela
+ * escreve no botao:
+ * ```
+ * tela "Minhas 6"  ==  status=em_atendimento & atendente_id=<eu>  ->  6    <- bate exato
+ * status=aberto ......... 1080     em_atendimento ..... 11     resolvido ..... 47
+ * ```
+ *
+ * **ABA DESCONHECIDA RECUSA, e isso nao e preciosismo:** cair no "todas" faria a rodada percorrer
+ * a fila errada **em silencio**, que e exatamente o que o `avisoAba` da plataforma velha existe
+ * para impedir (*"falhou a troca, a lista na tela e OUTRA"*). O mesmo vale sem saber quem e ele:
+ * `Meus` e `Outros` sao a MESMA consulta com o sinal trocado, e errar o sinal entrega a fila de
+ * outro operador.
+ */
+export const FILTRO_DA_ABA = {
+  Novos: () => ({ status: 'eq.aberto' }),
+  Meus: (uid) => ({ status: 'eq.em_atendimento', atendente_id: 'eq.' + uid }),
+  Outros: (uid) => ({ status: 'eq.em_atendimento', atendente_id: 'neq.' + uid }),
+  'Concluídos': () => ({ status: 'eq.resolvido' }),
+  // Sem aba pedida, a fila e a da tela: tudo o que ainda nao foi resolvido.
+  '': () => ({ status: 'in.(aberto,em_atendimento)' }),
+};
+
+/** Quem esta logado na plataforma — so o id, que e o que a fila de "Meus" precisa. */
+export function meuUsuarioId() {
+  return sessaoDaPagina()?.usuarioId || null;
+}
+
+export function filtroDaAba(aba, usuarioId) {
+  const nome = String(aba || '');
+  const monta = FILTRO_DA_ABA[nome];
+  if (!monta) return { erro: `Nao sei qual fila e "${nome}" nesta plataforma (as abas sao Todas, Minhas e Nao lidas).` };
+  if ((nome === 'Meus' || nome === 'Outros') && !usuarioId) {
+    return { erro: `Para percorrer "${nome}" eu preciso saber quem esta logado na plataforma, e nao consegui ler isso da sessao.` };
+  }
+  return { filtros: monta(usuarioId) };
+}
+
+export async function fila({ canalId = '', limite = 100, aba = '', usuarioId = undefined } = {}) {
+  const quem = usuarioId === undefined ? meuUsuarioId() : usuarioId;
+  const daAba = filtroDaAba(aba, quem);
+  if (daAba.erro) throw new Error(daAba.erro);
+
   const linhas = await buscar('conversas', {
-    filtros: { status: 'in.(aberto,em_atendimento)', instance_id: canalId ? 'eq.' + canalId : '' },
+    filtros: { ...daAba.filtros, instance_id: canalId ? 'eq.' + canalId : '' },
     ordem: 'ultima_mensagem_em.desc.nullslast',
     limite,
   });

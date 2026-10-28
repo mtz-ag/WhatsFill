@@ -466,30 +466,84 @@ export async function abrirNaTela(id, nome = '', opcoes = {}) {
  * inteira. Publicar resposta de atendimento dentro de um grupo de dezenas de pessoas, com o nome
  * dele em cima, nao tem volta.
  */
-export async function queuePreview(max = 50) {
-  const linhas = await mob.fila({ limite: Math.max(1, Number(max) || 50) });
+export async function queuePreview(max = 50, { aba = '' } = {}) {
+  const linhas = await mob.fila({ limite: Math.max(1, Number(max) || 50), aba });
   return (linhas || []).map(mob.conversaDoBanco).filter((c) => !c.grupo);
 }
 
 /**
- * Abre o item da fila naquela posicao — e e aqui que a escolha dele de 26/10 vive:
- * *"Mostrar ANTES, com a tela junto"*. A rodada decide, abre a conversa pelo id e **para**.
+ * **Abre o item da fila naquela posicao, e devolve o CONTRATO que `percorrerFila` le.**
+ *
+ * E aqui que a escolha dele de 26/10 vive — *"mostrar ANTES, com a tela junto"*: a rodada decide,
+ * abre a conversa pelo id e para.
+ *
+ * **A primeira versao travava a rodada, e de tres jeitos somados** (28/10/2026, relato dele:
+ * *"travou e ficou parado sem fazer nenhuma acao"*):
+ *
+ *  1. **ignorava a `aba`** — *"Comecar pelos Meus"* percorria a fila inteira (1.091) em vez dos
+ *     seis atendimentos dele;
+ *  2. **devolvia `motivo` onde quem chama le `reason`** — entao a rodada parava com
+ *     `interrompida = undefined` e o veredito nao dizia nada;
+ *  3. e `carregarMaisDaFila` **respondia `ok: true`**, o que fazia o laco tentar a MESMA posicao
+ *     vinte vezes, com pausa entre cada uma, sem abrir nada. **Era isso que ele via como "parado
+ *     sem fazer nenhuma acao".**
+ *
+ * **"Nao esta na tela" e o caso COMUM e nao erro** (medido: 78 linhas no DOM para uma fila de
+ * centenas), entao ele vira uma razao em palavras que diz o que fazer — nunca um codigo seco.
  */
-export async function openQueueSession(index = 0) {
+export async function openQueueSession(index = 0, opcoes = {}) {
+  const { aba = '', ...resto } = opcoes || {};
   const n = Math.max(0, Number(index) || 0);
-  const fila = await queuePreview(n + 1);
+
+  let fila;
+  try {
+    fila = await queuePreview(n + 1, { aba });
+  } catch (err) {
+    // Aba que esta plataforma nao conhece para a rodada com o nome dela na frente — seguir seria
+    // percorrer a fila errada, que e o que o `avisoAba` da plataforma velha impede.
+    const texto = String(err?.message || err);
+    return { ok: false, avisoAba: texto, reason: texto, total: 0 };
+  }
+
   const alvo = fila[n];
-  if (!alvo) return { ok: false, motivo: 'fila-acabou' };
-  return abrirNaTela(alvo.id, alvo.nome);
+  if (!alvo) {
+    return {
+      ok: false,
+      total: fila.length,
+      reason: fila.length
+        ? `A fila${aba ? ` de "${aba}"` : ''} acabou (${fila.length} item(ns)).`
+        : `A fila${aba ? ` de "${aba}"` : ''} veio VAZIA — confira o filtro da fila na plataforma.`,
+    };
+  }
+
+  const r = await abrirNaTela(alvo.id, alvo.nome, resto);
+  if (!r.ok) {
+    const porque = {
+      'nao-esta-na-tela': 'Esta conversa nao esta renderizada na lista da plataforma — role a fila ate ela aparecer e recomece.',
+      'gancho-mudo': 'O gancho da pagina nao respondeu — recarregue a aba do mobiliza.me.',
+      erro: `A pagina estourou ao abrir a conversa${r.detalhe ? ` (${r.detalhe})` : ''}.`,
+    }[r.motivo] || `Nao consegui abrir a conversa (${r.motivo || 'sem motivo'}).`;
+    return { ok: false, total: fila.length, reason: porque };
+  }
+
+  return { ok: true, sessionId: alvo.id, total: fila.length, por: r.por };
 }
 
-export async function openNextSession() {
-  return openQueueSession(0);
+export async function openNextSession(opcoes = {}) {
+  return openQueueSession(0, opcoes);
 }
 
-/** Nao existe "carregar mais": a consulta ja pede o limite que se quer. */
+/**
+ * **Nao existe "carregar mais" aqui, e responder `ok: true` TRAVAVA A RODADA.**
+ *
+ * `percorrerFila` chama isto quando nao conseguiu abrir o item, e um `ok: true` significa *"pedi
+ * mais fila, tente a mesma posicao de novo"* — com nada tendo mudado, o laco repetia a mesma
+ * falha **vinte vezes com pausa entre elas**, e na tela isso e uma rodada parada sem fazer nada.
+ *
+ * A consulta ja pede o limite que se quer, entao o certo e dizer que nao ha mais o que carregar.
+ */
 export async function carregarMaisDaFila() {
-  return { ok: true, jaVemTudo: true };
+  return { ok: false, jaVemTudo: true, reason: 'A fila aqui ja vem inteira da consulta — nao ha "ver mais" para clicar.' };
 }
 
 /** So o que impede a mensagem de CHEGAR conta como caido (a disciplina de 01/10). */

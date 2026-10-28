@@ -1743,6 +1743,33 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return !!state.pageState?.plataforma;
   }
 
+  /**
+   * **AS FILAS MUDARAM DE NOME, E O BOTAO TEM DE DIZER O NOME QUE ELE VE NA TELA** (28/10/2026,
+   * pedido dele: *"agora mudou o nome, tem que trocar para o atual (todas, minhas etc)"*).
+   *
+   * Medido na pagina dele: a plataforma nova mostra **Todas / Minhas / Nao lidas**, com
+   * **Pessoas / Grupos** embaixo — nada de "Novos", "Meus" ou "Outros". Botao que chama a fila
+   * por um nome que nao existe na tela e botao que ele tem de traduzir toda vez.
+   *
+   * **O rotulo inteiro vai no mapa, e nao so a palavra:** "pelos Meus" vira "pelas Minhas", e
+   * trocar so o substantivo deixaria *"Comecar pelos Minhas"* na tela dele. Concordancia e metade
+   * do trabalho — a licao de quando "gabinete" virou "equipe" (07/09).
+   *
+   * **Os nomes INTERNOS (`'Meus'`, `'Novos'`, `'Outros'`) nao mudam**, de proposito: eles sao a
+   * chave que `mob.filtroDaAba` traduz para a consulta, e renomea-los espalharia a troca por
+   * trinta lugares para nao mudar nada do que ele ve.
+   */
+  const BOTAO_DA_FILA = {
+    Novos: 'Começar pelas não atendidas',
+    Meus: 'Começar pelas Minhas',
+    Outros: 'Começar pelas de outro atendente',
+  };
+
+  function botaoDaFila(aba) {
+    if (naPlataformaNova() && BOTAO_DA_FILA[aba]) return BOTAO_DA_FILA[aba];
+    return `Começar pelos ${aba}`;
+  }
+
   function avisoSemModeloAprovado() {
     return h('div', { class: 'wf-block', 'data-fica': '1' },
       naPlataformaNova()
@@ -4031,11 +4058,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'sem a opção de modelo, e você resolve com concluir, agradecer ou responder à mão.'),
     ]);
 
-    const btn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Começar pelos Meus');
+    const btn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, botaoDaFila('Meus'));
     btn.disabled = state.auto.rodando;
     btn.addEventListener('click', runLoteRespondidos);
 
-    const btnOutros = h('button', { class: 'wf-btn', type: 'button' }, 'Começar pelos Outros');
+    const btnOutros = h('button', { class: 'wf-btn', type: 'button' }, botaoDaFila('Outros'));
     btnOutros.disabled = state.auto.rodando;
     btnOutros.addEventListener('click', runLoteOutros);
     card.append(h('div', { class: 'wf-row' }, [btn, btnOutros]));
@@ -4202,8 +4229,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     card.append(
       h('div', { class: 'wf-origin' },
-        '"Meus" é quem respondeu os dados; "Outros" é a aba de vídeo e "bom dia". Nas duas nada ' +
-          'sai da fila sem você decidir.')
+        naPlataformaNova()
+          ? '"Minhas" é o que você assumiu (a mesma aba da plataforma); "de outro atendente" é o ' +
+              'que está em atendimento com outra pessoa. Nas duas nada sai da fila sem você decidir.'
+          : '"Meus" é quem respondeu os dados; "Outros" é a aba de vídeo e "bom dia". Nas duas nada ' +
+              'sai da fila sem você decidir.')
     );
 
     if (!state.hsmTemplates.length) card.append(avisoSemModeloAprovado());
@@ -4671,7 +4701,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
     card.append(auto);
 
-    const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Começar pelos Novos');
+    const comecar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, botaoDaFila('Novos'));
     comecar.addEventListener('click', () => withBusy(runLoteNovos));
     card.append(h('div', { class: 'wf-row' }, [comecar]));
 

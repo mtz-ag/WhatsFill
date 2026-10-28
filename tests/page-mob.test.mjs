@@ -1027,4 +1027,36 @@ grupo('O NUMERO DO CANAL — e nao o numero do CONTATO');
   check(pedidos === 0, 'lista injetada nao vira requisicao');
 }
 
+grupo('A RODADA TRAVADA — "ver mais" que mente faz o laco girar vinte vezes');
+{
+  /**
+   * **Relato dele (28/10/2026): *"travou e ficou parado sem fazer nenhuma acao"*.** Eram tres
+   * defeitos somados, e este e o que produzia o sintoma exato.
+   *
+   * `percorrerFila`, quando nao consegue abrir o item, chama `carregarMaisDaFila` — e `ok: true`
+   * significa *"pedi mais fila, tente a MESMA posicao de novo"*. Como aqui nao ha nada a
+   * carregar, o laco repetia a mesma falha **vinte vezes (`MAX_CARREGAMENTOS`), com pausa entre
+   * cada uma**, sem abrir nada e sem escrever nada util. Na tela: uma rodada parada.
+   */
+  const r = await carregarMaisDaFila();
+  check(r.ok === false, 'nao ha "ver mais" aqui, e isso NAO e sucesso');
+  check(typeof r.reason === 'string' && r.reason.length > 10, 'e diz por que, para o veredito nao ficar mudo');
+
+  /**
+   * **O contrato e o que `percorrerFila` LE, e a primeira versao devolvia outra coisa.** Ela
+   * respondia `{ ok: false, motivo: 'fila-acabou' }`, e quem chama faz `interrompida =
+   * aberto.reason` — ou seja, a rodada parava com `undefined` e o veredito nao dizia nada.
+   *
+   * **Ao escrever adaptador, leia o CONSUMIDOR** — a mesma licao que custou `getTags` sem
+   * `message` e `contarMeuDia` com `concluidos`.
+   */
+  const fonte = readFileSync(new URL('../src/lib/page-mob.js', import.meta.url), 'utf8');
+  const corpo = fonte.slice(fonte.indexOf('export async function openQueueSession'));
+  const ate = corpo.slice(0, corpo.indexOf('\nexport async function openNextSession'));
+  for (const campo of ['reason', 'total', 'sessionId', 'avisoAba']) {
+    check(ate.includes(campo + ':'), `openQueueSession devolve \`${campo}\`, que e o que percorrerFila le`);
+  }
+  check(!/motivo:\s*'fila-acabou'/.test(ate), 'e NAO devolve mais o codigo seco que a rodada nao sabia ler');
+}
+
 fim();
