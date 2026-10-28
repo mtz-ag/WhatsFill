@@ -28,6 +28,8 @@ import {
   sendText,
   setComposerText,
   numeroDoCanal,
+  queuePreview,
+  openQueueSession,
   canaisFrescos,
   clickIniciar,
   clickConcluir,
@@ -1057,6 +1059,61 @@ grupo('A RODADA TRAVADA — "ver mais" que mente faz o laco girar vinte vezes');
     check(ate.includes(campo + ':'), `openQueueSession devolve \`${campo}\`, que e o que percorrerFila le`);
   }
   check(!/motivo:\s*'fila-acabou'/.test(ate), 'e NAO devolve mais o codigo seco que a rodada nao sabia ler');
+}
+
+grupo('A FILA CHEGA INTEIRA — o `.map` a mais a esvaziava em TODA rodada');
+{
+  /**
+   * **O defeito que produziu os dois relatos dele.** `mob.fila` ja devolve as linhas convertidas
+   * e sem grupo; `queuePreview` convertia **de novo**, e a segunda passada perde o
+   * `external_chat_id` — entao `ehGrupo` respondia `true` para TODO MUNDO e o filtro esvaziava a
+   * lista.
+   *
+   * Com a fila vazia, `openQueueSession` nao tinha o que abrir. Antes isso virava vinte voltas do
+   * laco (`carregarMaisDaFila` mentindo `ok: true`); consertado aquilo, virou **"abre e fecha
+   * sozinho"**.
+   */
+  const linhas = [
+    { id: 'c-1', nome: 'Primeira', grupo: false },
+    { id: 'c-2', nome: 'Segunda', grupo: false },
+  ];
+  const fila = async () => linhas;
+
+  const vista = await queuePreview(5, { fila });
+  check(vista.length === 2, 'as duas conversas chegam — nenhuma some no caminho');
+  check(vista[0].id === 'c-1', 'e na ordem em que a consulta devolveu');
+
+  /** Quem filtra grupo e a consulta, UMA vez: filtrar de novo aqui foi o defeito. */
+  const comGrupo = await queuePreview(5, { fila: async () => [{ id: 'g', grupo: true }] });
+  check(comGrupo.length === 1, 'queuePreview nao refiltra: quem decide grupo e `mob.fila`, num lugar so');
+
+  /**
+   * E a ponta de cima: `openQueueSession` abre a conversa da posicao pedida, com a fila injetada.
+   */
+  const ORIGEM = 'https://mobiliza.me';
+  const cliques = [];
+  const janela = (() => {
+    const ouvintes = [];
+    const j = {
+      addEventListener: (ti, fn) => { if (ti === 'message') ouvintes.push(fn); },
+      removeEventListener: (ti, fn) => { const i = ouvintes.indexOf(fn); if (i >= 0) ouvintes.splice(i, 1); },
+      postMessage(msg) {
+        cliques.push(msg.payload.id);
+        const ev = { source: j, origin: ORIGEM, data: { __whatsfill: 'mob-page', type: 'abriu',
+          payload: { pedido: msg.payload.pedido, ok: true, por: 'id' } } };
+        for (const fn of [...ouvintes]) fn(ev);
+      },
+    };
+    return j;
+  })();
+
+  const r = await openQueueSession(1, { fila, janela });
+  check(r.ok === true && r.sessionId === 'c-2', 'a posicao 1 abre a SEGUNDA conversa');
+  check(cliques[0] === 'c-2', 'e foi ela que o gancho recebeu para abrir');
+  check(r.total === 2, 'o total da fila volta junto — e o que o veredito usa para dizer quantas restaram');
+
+  const acabou = await openQueueSession(9, { fila, janela });
+  check(acabou.ok === false && /acabou/.test(acabou.reason), 'posicao alem do fim diz que a fila acabou, com a contagem');
 }
 
 fim();

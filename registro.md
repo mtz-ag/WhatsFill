@@ -1,58 +1,50 @@
-## 2026-10-28 - v3.212.0 - ESTADO DE AGORA - a rodada anda, e na fila CERTA
+## 2026-10-28 - v3.213.0 - ESTADO DE AGORA - achei a causa: a fila vinha VAZIA, sempre
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. **Na aba Config, ponha o numero do seu canal no Capitao Martim** — o painel mostra qual e
-   (ver abaixo)
+3. **Na aba Config, ponha o numero do seu canal no Capitao Martim** — o painel mostra qual e, na
+   linha cinza embaixo da tarja vermelha ("numero do canal: ...")
 
-Confira **3.212.0** no cabecalho do painel.
+Confira **3.213.0** no cabecalho do painel.
 
-### "TRAVOU E FICOU PARADO SEM FAZER NENHUMA ACAO" — eram tres defeitos meus somados
+### "ABRE E FECHA SOZINHO" — e eu tinha consertado o SINTOMA duas vezes
 
-**O que voce viu era isto:** a rodada tentava abrir o primeiro contato, nao conseguia, e eu
-respondia a ela *"pedi mais fila, tenta de novo"* — so que nao havia mais fila para pedir. Ela
-repetia a mesma tentativa **vinte vezes, com pausa entre cada uma**, sem abrir nada e sem escrever
-nada util. Depois parava sem dizer por que, porque eu devolvia o motivo num campo que ela nao le.
+Voce reportou tres vezes, e **era sempre o mesmo defeito**. Eu consertei duas coisas de verdade no
+caminho, mas nenhuma delas era a causa — e por isso a queixa so mudava de forma:
 
-| defeito | o que fazia |
-|---|---|
-| `carregar mais` respondia "deu certo" | o laco girava 20 vezes sem acao — **o que voce viu** |
-| o motivo ia no campo errado | a rodada parava dizendo **nada** |
-| a aba era ignorada | percorria a fila INTEIRA, nao a sua |
-
-Agora, quando nao der para abrir, a rodada diz **o que houve e o que fazer** ("role a fila ate ela
-aparecer e recomece").
-
-### AS ABAS: voce estava certo, e o estrago era maior do que o nome
-
-Medi na sua tela. A plataforma nova tem **Todas 753 | Minhas 6 | Nao lidas 592**, com
-**Pessoas 753 | Grupos 135** embaixo — nada de "Novos", "Meus" e "Outros".
-
-**Mas o pior nao era o nome: eu nao estava filtrando por aba nenhuma.** "Comecar pelos Meus"
-percorria **1.091 conversas** em vez dos seus **6** atendimentos.
-
-Conferi o mapeamento contra o numero que a propria tela escreve no botao:
-
-| botao da plataforma | o que e no banco | contagem |
+| versao | o que voce viu | o que eu consertei |
 |---|---|---|
-| **Minhas 6** | em atendimento, com voce como atendente | **6** — bate exato |
-| (dentro de Todas) | abertas, ninguem assumiu | 1.080 |
-| **Grupos 135** | o endereco do chat termina em `@g.us` | **135** — bate exato |
+| 3.211 | travou e ficou parado | o "ver mais" que mentia (20 voltas do laco) |
+| 3.212 | abre e fecha sozinho | a aba ignorada, o motivo no campo errado |
+| **3.213** | — | **a causa: a fila vinha vazia** |
 
-Os botoes agora se chamam **"Comecar pelas Minhas"**, **"Comecar pelas nao atendidas"** e
-**"Comecar pelas de outro atendente"**.
+**A causa:** eu convertia a linha do banco **duas vezes**. A segunda conversao perde o endereco do
+chat, e sem ele a extensao conclui *"isto e um grupo"* — de proposito, porque mandar resposta de
+atendimento para dentro de um grupo nao tem volta. Entao **toda conversa virava grupo e era
+descartada**, e a fila chegava vazia na rodada.
 
-### O NUMERO DO SEU CANAL
+```
+uma conversao   -> pessoa
+duas conversoes -> "grupo"      <- a mesma conversa
+sobra na fila: 0 de 1
+```
 
-Medido: voce tem **uma** instancia, `Martim Atendimento CRM`, com a conexao `conectado`. A tarja
-vermelha estava mostrando **o telefone do contato** no lugar do numero dela — o defeito que
-consertei na 3.211.
+Medi na sua tela antes de mexer: a consulta dos seus atendimentos devolve **6**, a primeira delas
+**esta renderizada na lista**, e o gancho da extensao enxerga **100 linhas**. Ou seja, tudo o que
+vem antes funcionava — o que estava quebrado era o ultimo passo, e ele falhava **em silencio**.
 
-**Abra uma conversa e leia a linha cinza embaixo da tarja: "numero do canal: ...".** Esse numero
-vai para o Capitao Martim na aba Config, e a tarja some. (Nao escrevo o numero aqui de proposito:
-telefone nao entra em arquivo do repositorio.)
+### O QUE ISSO ENSINA, E EU VOU LEMBRAR
+
+A guarda que diz *"na duvida, e grupo"* esta certa e eu nao vou mexer nela. O erro foi **alimentar
+ela com o dado errado**: guarda que erra para o lado seguro, recebendo lixo, vira um apagador que
+nao estoura, nao avisa e nao aparece em log nenhum — devolve lista vazia, que e igualzinho a "a
+fila acabou".
+
+**E a licao maior: eu consertei o sintoma duas vezes sem achar a causa.** As duas correcoes eram
+reais e ficam; mas se eu tivesse medido a fila na primeira vez, voce nao teria reportado tres
+vezes.
 
 ## 2026-10-26 - v3.200.0 - ESTADO DE AGORA - a plataforma mudou, e a migracao comecou pelo chao
 

@@ -466,9 +466,39 @@ export async function abrirNaTela(id, nome = '', opcoes = {}) {
  * inteira. Publicar resposta de atendimento dentro de um grupo de dezenas de pessoas, com o nome
  * dele em cima, nao tem volta.
  */
-export async function queuePreview(max = 50, { aba = '' } = {}) {
-  const linhas = await mob.fila({ limite: Math.max(1, Number(max) || 50), aba });
-  return (linhas || []).map(mob.conversaDoBanco).filter((c) => !c.grupo);
+/**
+ * **A FILA — e o `.map(conversaDoBanco)` A MAIS que a esvaziava INTEIRA** (28/10/2026, relato
+ * dele: *"comecar pelos meus na aba automatizado abre e fecha sozinho sem executar nenhuma
+ * acao"*).
+ *
+ * `mob.fila` **ja devolve as linhas convertidas e sem grupo**. Esta funcao convertia **de novo**,
+ * e a segunda passada e destrutiva: `conversaDoBanco` le `external_chat_id` da linha CRUA, que o
+ * objeto convertido nao tem mais. Sem o endereco do chat, `ehGrupo` responde **`true`** — de
+ * proposito, porque *"na duvida, e grupo"* (deixar de atender alguem custa uma passada; mandar
+ * resposta de atendimento para dentro de um grupo nao tem volta).
+ *
+ * Resultado medido:
+ * ```
+ * uma passada   -> grupo: false     <- a conversa de uma pessoa
+ * duas passadas -> grupo: true      <- a MESMA conversa, agora "grupo"
+ * depois do .filter(c => !c.grupo): 0 de 1
+ * ```
+ *
+ * **Entao a fila vinha VAZIA em toda rodada, sempre** — e os dois relatos dele sao o mesmo
+ * defeito visto por portas diferentes: antes a rodada girava vinte vezes (porque
+ * `carregarMaisDaFila` mentia `ok: true`); consertado aquilo, ela passou a terminar na hora.
+ * *"Abre e fecha sozinho"* e a janelinha da rodada aparecendo e sumindo.
+ *
+ * **A licao: guarda defensiva que erra para o lado seguro vira apagador silencioso quando recebe
+ * o dado errado.** `ehGrupo({})` devolvendo `true` esta certo; o que estava errado era chama-lo
+ * com um objeto que nunca teve `external_chat_id`.
+ *
+ * `fila` e argumento para o teste poder exercitar ESTE caminho com linhas de mentira, em vez de
+ * conferir o texto do codigo.
+ */
+export async function queuePreview(max = 50, { aba = '', fila = mob.fila } = {}) {
+  const linhas = await fila({ limite: Math.max(1, Number(max) || 50), aba });
+  return linhas || [];
 }
 
 /**
@@ -492,12 +522,13 @@ export async function queuePreview(max = 50, { aba = '' } = {}) {
  * centenas), entao ele vira uma razao em palavras que diz o que fazer — nunca um codigo seco.
  */
 export async function openQueueSession(index = 0, opcoes = {}) {
-  const { aba = '', ...resto } = opcoes || {};
+  // `fila` sai do `resto`: ele vai para `abrirNaTela`, que nao tem nada a ver com a consulta.
+  const { aba = '', fila: deOnde = null, ...resto } = opcoes || {};
   const n = Math.max(0, Number(index) || 0);
 
   let fila;
   try {
-    fila = await queuePreview(n + 1, { aba });
+    fila = await queuePreview(n + 1, deOnde ? { aba, fila: deOnde } : { aba });
   } catch (err) {
     // Aba que esta plataforma nao conhece para a rodada com o nome dela na frente — seguir seria
     // percorrer a fila errada, que e o que o `avisoAba` da plataforma velha impede.

@@ -240,4 +240,33 @@ grupo('AS ABAS DA FILA — e aba desconhecida RECUSA');
   check(!filtroDaAba('Novos', null).erro, 'mas "Novos" nao depende de quem esta logado');
 }
 
+grupo('converter DUAS vezes APAGA a conversa — e a guarda que faz isso esta certa');
+{
+  /**
+   * **Foi isto que esvaziou a fila em toda rodada** (28/10/2026, *"abre e fecha sozinho sem
+   * executar nenhuma acao"*): `page-mob.queuePreview` chamava `conversaDoBanco` numa lista que
+   * `mob.fila` ja tinha convertido.
+   *
+   * A segunda passada le `external_chat_id` da linha CRUA, que o objeto convertido nao tem mais.
+   * Sem o endereco do chat, `ehGrupo` responde **`true`** — e esta certo: *"na duvida, e grupo"*,
+   * porque deixar de atender alguem custa uma passada e mandar resposta de atendimento para
+   * dentro de um grupo nao tem volta.
+   *
+   * **A licao e sobre a guarda, nao sobre a conversao:** guarda defensiva que erra para o lado
+   * seguro vira **apagador silencioso** quando recebe o dado errado.
+   */
+  const crua = { id: 'c-1', nome: 'Fulana de Exemplo', numero: '5551900000000', status: 'em_atendimento', external_chat_id: '5551900000000@s.whatsapp.net' };
+
+  const uma = conversaDoBanco(crua);
+  check(uma.grupo === false, 'uma passada: a conversa de uma pessoa NAO e grupo');
+
+  const duas = conversaDoBanco(uma);
+  check(duas.grupo === true, 'duas passadas: a MESMA conversa vira "grupo"');
+  check([duas].filter((c) => !c.grupo).length === 0, 'e o filtro da fila a descarta — zero de um');
+
+  check(ehGrupo({}) === true, 'endereco de chat ilegivel conta como grupo, de proposito');
+  check(ehGrupo({ external_chat_id: '123@g.us' }) === true, 'e @g.us e grupo de verdade');
+  check(ehGrupo({ external_chat_id: '123@s.whatsapp.net' }) === false, 'pessoa nao e');
+}
+
 fim();

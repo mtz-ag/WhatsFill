@@ -620,6 +620,29 @@ mudaram as maos, nao a cabeca.
   entao hoje ele vira uma razao em PALAVRAS que diz o que fazer (rolar a fila), nunca um codigo
   seco que a rodada nao sabe ler.
 
+- **CONVERTER A LINHA DUAS VEZES APAGA A CONVERSA — e a fila vinha VAZIA em TODA rodada**
+  (28/10/2026, *"comecar pelos meus na aba automatizado abre e fecha sozinho sem executar nenhuma
+  acao"*). `mob.fila` **ja devolve** as linhas convertidas e sem grupo, e `queuePreview` convertia
+  **de novo**. A segunda passada le `external_chat_id` da linha CRUA, que o objeto convertido nao
+  tem mais — e sem o endereco do chat, `ehGrupo` responde **`true`**:
+  ```
+  uma passada   -> grupo: false      <- a conversa de uma pessoa
+  duas passadas -> grupo: true       <- a MESMA conversa, agora "grupo"
+  depois do .filter(c => !c.grupo):  0 de 1
+  ```
+  **A guarda esta CERTA** — *"na duvida, e grupo"*, porque deixar de atender alguem custa uma
+  passada e mandar resposta de atendimento para dentro de um grupo nao tem volta. **O que estava
+  errado era chama-la com um objeto que nunca teve `external_chat_id`.**
+  **A licao: guarda defensiva que erra para o lado seguro vira APAGADOR SILENCIOSO quando recebe o
+  dado errado.** Ela nao estoura, nao avisa e nao aparece em log nenhum — devolve lista vazia, que
+  e indistinguivel de *"a fila acabou"*.
+  **E os TRES relatos dele sao o MESMO defeito visto por portas diferentes:** primeiro a rodada
+  girava vinte voltas (porque `carregarMaisDaFila` mentia `ok: true`); consertado aquilo, ela
+  passou a terminar na hora — *"abre e fecha sozinho"* e a janelinha da rodada aparecendo e
+  sumindo. **Conserto que muda o SINTOMA sem achar a causa so troca a forma da queixa.**
+  **Quem filtra grupo e `mob.fila`, num lugar so**, e `queuePreview` ganhou `fila` como argumento
+  para o teste exercitar ESTE caminho com linhas de mentira, em vez de conferir o texto do codigo.
+
 - **A CHAMADA AO SUPABASE SAI DA ABA, e e por isso que o CORS nao incomoda.** Em MV3 o `fetch` de
   content script carrega a origem da PAGINA — entao ele chega ao Supabase como
   `Origin: https://mobiliza.me`, exatamente como a requisicao que a propria plataforma faz. Tirar a
