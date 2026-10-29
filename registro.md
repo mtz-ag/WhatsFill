@@ -1,4 +1,4 @@
-## 2026-10-28 - v3.230.0 - ESTADO DE AGORA - a cidade do cadastro conta
+## 2026-10-28 - v3.230.0 - ESTADO DE AGORA - a migracao anda, e falta UMA confirmacao sua
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
 > **3.230.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
@@ -9,63 +9,79 @@
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
 3. Confira **3.230.0** na linha pequena do topo do painel
-4. **Ainda preciso da conferencia da gravacao** (v3.229): classifique um contato e me diga o que
-   a barra escreveu
+4. **Classifique UM contato e me diga o que a barra escreveu** — e a unica coisa que falta medir
 
-### "NAO ESTA RECONHECENDO QUE A PESSOA TEM CIDADE"
+### A UNICA PENDENCIA: a gravacao no contato
 
-Voce estava certo, e o painel LIA a cidade — ela aparece no cabecalho. O que ele nao fazia era
-**usar isso** para decidir se pede o cadastro.
+A escrita de etiqueta e de campo entrou na **v3.229** e **nao foi confirmada**. Eu tentei medir e
+fui **barrado** — era uma escrita no seu banco de producao, sem voce ter mandado, e barrar foi o
+certo.
 
-As quatro contas que seguram o formulario perguntavam pela **etiqueta** de cidade, nunca pelo
-**campo**. Na plataforma velha isso quase nao mordia, porque a rodada aplicava a etiqueta assim
-que reconhecia a cidade. **Aqui a sua base tem 132 contatos vindos de importacao** com o campo
-preenchido e etiqueta nenhuma — e para todos eles o formulario pedia o que ja estava no cadastro.
+Entao o que esta no ar **nao e um palpite silencioso: e um palpite que se denuncia.** A gravacao
+pede a linha de volta e compara; nao batendo, **estoura com o nome do campo** em vez de dizer
+"Gravado".
 
-### O que eu NAO mudei junto, de proposito
+| o que a barra disser | o que significa |
+|---|---|
+| *"Gravado: ..."* com os campos | funcionou |
+| *"a plataforma aceitou e NAO gravou X"* | **errei o nome da coluna** — a mensagem diz qual |
+| *"respondeu OK e NAO devolveu a linha"* | o filtro nao alcancou ninguem (tenant ou permissao) |
 
-A etiqueta de cidade responde outras duas perguntas: *"ela ja recebeu o modelo?"* (sua decisao de
-02/09) e *"ela ja veio antes?"*. **Cidade de importacao nao responde nenhuma das duas** — ninguem
-conversou com ela e ninguem lhe mandou nada. Entao o sinal novo entra **so** no formulario, e ha
-teste exigindo que o outro nao seja contaminado.
+### O ARCO DE HOJE, em uma tabela
 
-### E o campo precisa ser um MUNICIPIO, nao qualquer texto
+Dez relatos seus, e vale registrar porque **tres deles eram o mesmo defeito** e **quatro eram
+coisa que eu mesmo tinha acabado de quebrar**:
 
-O campo Cidade e livre, e esta extensao ja gravou nele `faq.whatsapp.com`, `vt.tiktok.com` e um
-pedaco de mensagem. Aceitar qualquer coisa faria o formulario parar de sair justamente para quem
-tem lixo gravado — que e quem mais precisa dele. So conta quando o valor **e** o nome de um
-municipio.
+| versao | o que voce viu | o que era |
+|---|---|---|
+| 3.209 | sobrepos em vez de empurrar | `fixed` nao obedece padding: o app e que precisava ser preso |
+| 3.210 | erro ao inserir texto | era uma recusa escrita — e achei um defeito maior junto |
+| 3.211 | exigindo modelo aprovado | duas travas de uma plataforma que nao tem modelo aprovado |
+| 3.212 | travou e ficou parado | o "ver mais" mentia `ok: true` e o laco girava 20 vezes |
+| 3.213 | abre e fecha sozinho | **a causa**: converter a linha duas vezes esvaziava a fila |
+| 3.214/.215 | so pulando de contato | a barreira do candidato, certa e sem saida |
+| 3.216 a .221 | varios | Dulce, modelo aprovado, folga na fila, o campo, a aba, o botao Assumir |
+| 3.222 | erro nas nao atendidas | a **pressa**: assumia no mesmo quadro do clique |
+| 3.223 | "a aba trocou de atendimento" | a MESMA pressa, num ponto acima do conserto anterior |
+| 3.224/.225 | so escrever nao funcionava | a opcao existia; as rodadas e que recusavam rodar sem envio |
+| 3.226/.227 | box pela metade, modo bloqueado | eu destravei as funcoes e esqueci as travas da TELA |
+| 3.228 | botoes redundantes | dois iguais lado a lado, e um Parar que duplicava o flutuante |
+| 3.229 | "Gravado: nada" | **nenhuma** escrita no contato tinha caminho |
+| 3.230 | pediu cidade de quem ja tem | o formulario olhava a ETIQUETA, nunca o CAMPO |
+
+**As tres licoes que eu escrevi para nao repetir:**
+
+1. **Consertar o sintoma onde ele aparece nao conserta quem le a tela antes.** Eu pus a espera em
+   `conversaDaTela`, e quem lia a tela primeiro era `processarNovo` — por isso voce reportou duas
+   vezes a mesma coisa com nomes diferentes.
+2. **Trava que nao deixa APERTAR e mais forte que a que recusa depois do clique** — e e a que
+   escapa quando se procura pelo texto do erro, porque nunca chega a produzir erro.
+3. **Ao criar um MODO que muda o que um botao faz, olhe os botoes VIZINHOS.** Dois deles podem ter
+   virado o mesmo.
 
 ### O QUE ESTA NO AR
 
 Painel no mobiliza.me, logado como Capitao Martim. Fila **Todas** (Pessoas). Modelo aprovado
 desligado nesta plataforma. Conferencia do numero do candidato desligada (`auto.conferirCanal`).
 Repasse de link nao pede o formulario; se ainda nao respondemos hoje, sai a mensagem do momento.
+Modo de envio no box **"Quem manda a mensagem"**, na aba Automatizado.
 
-**Nao refazer, ja esta feito:** v3.216 Dulce (tecla 5 quando ainda nao respondemos hoje); v3.217
-modelo aprovado desligado aqui; v3.218 a fila pede folga e nao morre na primeira linha de grupo;
-v3.219 `clickIniciar` devolve o estado da TELA, nao a sonda do banco; v3.220 se ninguem da janela
-esta desenhado, a rodada clica **Todas** (Novos) ou **Minhas** (Meus); v3.221 o assumir clica o
-botao **Assumir** da tela — a funcao do banco sozinha deixava "Aguardando atendente".
+**A tabela peca a peca mora no `CLAUDE.md`**, na secao da plataforma nova — uma so, porque duas
+tabelas da mesma coisa divergem na primeira semana.
 
-**Nao faca:** nao afrouxe os dois sinais; nao religue `conferirCanal`; nao apare a grafia de
-etiqueta; nao invente disparo para quem nunca escreveu; nao aperte Enter no campo de mensagem;
-nao rode uma rodada de centenas na conta dele so para diagnosticar.
+**NAO FACA, e cada uma destas custou uma print:**
 
-### EM QUE PE ESTA
-
-O painel **monta, encaixa e trabalha** no mobiliza.me. O que foi medido ao vivo na sua conta, com
-a sua autorizacao, esta marcado como medido — o resto diz que nao foi.
-
-| peca | estado |
-|---|---|
-| painel encaixa **empurrando** a pagina | no ar |
-| ler a fila, por aba (Todas / Minhas) | no ar — o filtro bate com a contagem da propria tela |
-| abrir a conversa na tela pelo id | no ar |
-| ler a conversa e o contato | no ar, numa requisicao so |
-| **escrever no campo de mensagem** | no ar — voce confirmou: *"Texto inserido no campo"* |
-| enviar, assumir, resolver, reabrir | **medidos ao vivo**, com releitura conferindo |
-| etiquetas, cidade, COREDE, o quadro, a IA | intocados: eles decidem **o que** sai, nao **como** |
+- **nao afrouxe os dois sinais** da conversa aberta: assumir com um sinal so mexe no atendimento
+  de outra pessoa;
+- **nao religue `conferirCanal`** — ele desligou, e com uma instancia so na conta ela nao tem o
+  que separar;
+- **nao apare a grafia de etiqueta** com `.trim()`: `"SERRA "` tem 504 contatos e `"SERRA"` tem
+  zero;
+- **nao invente disparo para quem nunca escreveu**: aqui a conversa nasce da mensagem da pessoa;
+- **nao aperte Enter no campo pela extensao** no modo "Eu mando" — o Enter e dele, e e ele que
+  prova que a mensagem saiu;
+- **nao rode uma rodada de centenas na conta dele so para diagnosticar**;
+- **nao escreva no banco dele sem ele mandar** — a sonda de escrita foi barrada, e estava certo.
 
 ### O QUE NAO FUNCIONA AQUI, E POR QUE
 
@@ -85,34 +101,6 @@ a sua autorizacao, esta marcado como medido — o resto diz que nao foi.
   Automatizado, junto dos botoes de comecar. Com uma instancia so na conta ela nao tem o que
   separar; havendo um segundo numero um dia, remarque — senao o texto de um candidato pode sair
   pelo numero do outro sem aviso.
-
-### A SEQUENCIA DE HOJE, e o que ela ensinou
-
-Voce reportou varias vezes no mesmo dia, e vale registrar porque **tres relatos foram o mesmo
-defeito** — e porque o ultimo so apareceu depois de os anteriores sairem da frente:
-
-| versao | o que voce viu | o que era |
-|---|---|---|
-| 3.209 | sobrepos em vez de empurrar | `fixed` nao obedece padding: o app e que precisava ser preso |
-| 3.210 | erro ao inserir texto | a funcao era uma recusa escrita — e achei um defeito maior junto |
-| 3.211 | exigindo modelo aprovado | duas travas de uma plataforma que nao tem modelo aprovado |
-| 3.212 | travou e ficou parado | o "ver mais" mentia `ok: true` e o laco girava 20 vezes |
-| 3.213 | abre e fecha sozinho | **a causa**: converter a linha duas vezes esvaziava a fila |
-| 3.214/.215 | so pulando de contato | a barreira do candidato, certa e sem saida |
-| 3.216 a .221 | varios | Dulce, modelo aprovado, folga na fila, campo depois de assumir, a aba certa, o botao Assumir |
-| 3.222 | erro nas nao atendidas | **a pressa**: assumia no mesmo quadro do clique, antes de a tela se decidir |
-| 3.223.0 | "a aba trocou de atendimento" | a MESMA pressa, num ponto acima do conserto anterior |
-| 3.224.0 | "so escrever" nao funcionava | a opcao existia; as rodadas e que se recusavam a rodar sem envio |
-| 3.225.0 | (pedido) o box do modo | o interruptor existia e nao dizia o modo, e vivia longe do "Comecar" |
-| 3.226.0 | o box ficou pela metade | eu o pus DENTRO de um cartao — a doutrina do proprio codigo diz o contrario |
-| 3.227.0 | "bloqueando o modo novo" | destravei as funcoes e esqueci as travas da TELA, que desabilitam o botao |
-| 3.228.0 | botoes redundantes | dois iguais lado a lado no modo novo, e um Parar que duplicava o flutuante |
-| 3.229.0 | "Gravado: nada" | NENHUMA escrita no contato tinha caminho: elas nao passam pelo adaptador |
-| 3.230.0 | pediu cidade de quem ja tem | o formulario olhava a ETIQUETA de cidade, nunca o CAMPO |
-
-**A licao que eu escrevi no CLAUDE.md para nao repetir:** eu consertei o sintoma duas vezes antes
-de achar a causa. As duas correcoes eram reais e ficaram, mas se eu tivesse medido a fila na
-primeira vez, voce nao teria reportado tres.
 
 ### SE VOCE ABRIR UMA SESSAO NOVA
 

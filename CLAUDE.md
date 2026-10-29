@@ -137,21 +137,32 @@ e IGNORA o valor"*, o `isToIncludeCustomFields`, as keys desalinhadas, o rotulo 
 `createTag`, o `Origin not allowed` e a interceptacao do Bearer. **Nao apague esses arquivos
 enquanto o mobiliza.app estiver no ar** — eles sao a extensao que funciona hoje.
 
-**EM QUE PE ESTA A MIGRACAO (28/10/2026)** — para quem abrir isto numa sessao nova:
+**EM QUE PE ESTA A MIGRACAO** (28/10/2026, v3.230.0) — para quem abrir isto numa sessao nova.
+**Confira a versao do `manifest.json` contra esta linha antes de confiar na tabela.**
 
 | peca | estado |
 |---|---|
 | painel monta e **empurra** a pagina | **no ar** (`#root` + `contain: layout`) |
-| ler a fila, por aba (Todas/Minhas) | **no ar**, filtro medido contra a contagem da tela |
-| abrir a conversa na tela pelo id | **no ar** (pelo fiber do React, mundo MAIN) |
+| ler a fila, **por aba** (Todas/Minhas) | **no ar**; o filtro bate com a contagem que a tela escreve |
+| abrir a conversa na tela pelo id | **no ar** (fiber do React, mundo MAIN) + **espera a tela desenhar** |
 | ler conversa + contato | **no ar**, numa requisicao so |
 | escrever no campo de mensagem | **no ar**, confirmado por ele ao vivo |
 | enviar, assumir, resolver, reabrir | **medidos ao vivo**, com releitura |
+| **gravar etiqueta e campo no contato** | **no ar desde a v3.229 e NAO confirmado** — ver abaixo |
+| a rodada andar sem parar no 2o contato | **no ar** (v3.222/3.223: a tela desenha DEPOIS do clique) |
+| modo **"Eu mando"** (escreve, ele da Enter, ela conclui) | **no ar** (v3.224), com o box na aba Automatizado |
 | etiquetas, cidade, COREDE, quadro, IA | **intocados** — decidem o QUE sai, nao o COMO |
 | modelo aprovado (`hsm.js`) | **nao existe aqui**: canal zapi, lista vazia e a resposta certa |
 | `sendMessageTemplate`, `enviarImagem` | **recusam**: sem sonda |
 | `abrirAtendimento` (disparo para quem nunca escreveu) | **recusa**: buraco conhecido |
 | barreira do candidato | **desligada por ele** aqui (`auto.conferirCanal`) |
+| audio ENCAMINHADO, de qual anuncio veio | **perdidos**: o banco nao tem os campos — decisao dele |
+
+**A UNICA PECA NO AR SEM CONFIRMACAO E A GRAVACAO NO CONTATO.** A leitura esta medida; o `PATCH`
+nao — a sonda de escrita foi **barrada**, e barrar escrita no banco de producao dele sem ele mandar
+e o certo. **Por isso ela se denuncia:** pede a linha de volta, compara, e **estoura com o nome do
+campo** em vez de dizer "Gravado". A primeira classificacao real e a sonda. **Se a proxima sessao
+nao achar a resposta dele sobre isso no registro, PERGUNTE antes de construir em cima.**
 
 **O QUE SOBREVIVE INTEIRO, e e a maior parte do valor:** o quadro (`arvore.js`), a tabela de regras
 (`sugestao.js`), os detectores (`cortesia.js`), o parser, as cidades e COREDEs, os anuncios, os
