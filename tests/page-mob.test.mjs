@@ -1496,6 +1496,30 @@ grupo('"SO ESCREVER": o campo esvaziar e o sinal de que ELE mandou');
   check(corpo.includes('if (!observando) return { ok: true };'),
     'campo vazio SOZINHO so conclui onde nao ha vigia — com vigia, passa pelo ato');
 
+  /**
+   * **A LEITURA DO ATO NAO PODE CHAMAR `.catch` NO RETORNO** (29/10/2026, relato dele: *"eu
+   * mandei a mensagem e encerrou era para continuar pro proximo contato"*).
+   *
+   * Na aba encaixada `ultimoAtoDeEnvio` devolve `{em, como}` na hora. `.catch` nesse objeto
+   * estoura `catch is not a function`, o `erro` para a rodada inteira, e o texto dele ja
+   * esta no WhatsApp. O comentario do conserto CITA a frase do erro — a assercao olha so
+   * a linha executavel.
+   */
+  const executavel = corpo
+    .split('\n')
+    .filter((l) => {
+      const t = l.trim();
+      return t && !t.startsWith('*') && !t.startsWith('//') && !t.startsWith('/*');
+    })
+    .join('\n');
+  check(!/ultimoAtoDeEnvio\(\)\s*\.catch/.test(executavel),
+    'a leitura do ato nao chama .catch no retorno — na aba encaixada isso encerra a rodada depois do envio');
+  const leituras = executavel.match(/await page\.ultimoAtoDeEnvio\(\)/g) || [];
+  check(leituras.length === 2,
+    `as duas leituras do ato sao await, que aceita objeto e promessa (achei ${leituras.length})`);
+  check(executavel.includes('if (!viuOTexto)'),
+    'campo vazio antes de o texto aparecer nao conta como apagado');
+
   const fachadaEnvio = readFileSync(new URL('../src/lib/page.js', import.meta.url), 'utf8');
   check(/export const vigiarEnvio = NA_PLATAFORMA_NOVA/.test(fachadaEnvio), '`page.js` desvia a vigia por plataforma');
   check(/\? mobPage\.vigiarEnvio\s*\n\s*: IS_IN_PAGE\s*\n\s*\? local\(\(\) => false\)/.test(fachadaEnvio),
@@ -1509,6 +1533,47 @@ grupo('"SO ESCREVER": o campo esvaziar e o sinal de que ELE mandou');
    * dizendo que nao manda.
    */
   check(/o disparo manda pela API, nao pelo campo/.test(painel), 'o disparo continua exigindo o envio automatico, e diz por que');
+
+  /**
+   * **UM ENVIO QUE NAO SAIU NAO ENCERRA A RODADA** (29/10/2026, relato dele: *"rodada foi
+   * encerrada prematuramente novamente"*). A barra dizia que o ramo do fluxo nao saiu, e
+   * `erro` parava a fila. O rascunho da IA ja pulava. Os cinco retornos de "nao saiu" da
+   * rodada passam pela mesma funcao.
+   */
+  const pulos = (painel.match(/return pulouPorqueNaoSaiu\(/g) || []).length;
+  check(pulos === 5, `os cinco "nao saiu" da rodada pulam e seguem (achei ${pulos})`);
+  const ramo = painel.slice(painel.indexOf("escolha.startsWith('arvore:')"), painel.indexOf("escolha.startsWith('arvore:')") + 1800);
+  const ramoExec = ramo.split('\n').filter((l) => {
+    const t = l.trim();
+    return t && !t.startsWith('*') && !t.startsWith('//');
+  }).join('\n');
+  check(ramoExec.includes('pulouPorqueNaoSaiu(nome,'), 'o ramo do fluxo que nao sai pula este contato');
+  check(!ramoExec.includes('(ramo do fluxo) não saiu'),
+    'o ramo do fluxo nao devolve mais o erro que encerrava a fila');
+
+  /**
+   * **APAGAR A MENSAGEM NAO E PARAR A RODADA** (29/10/2026, relato dele: *"eu deletei a mensagem
+   * errada e no mesmo momento deu erro"*). O log "voce parou a rodada." com ponto final so o
+   * quadrado vermelho escreve. Clique de teclado (detail 0) nao vale. Sem posicao gravada a
+   * janelinha nao nasce no centro da conversa. E parar durante a geracao nao despeja o rascunho.
+   */
+  const logDoQuadrado = painel.indexOf("'você parou a rodada.'");
+  const cliqueParar = painel.slice(logDoQuadrado - 700, logDoQuadrado);
+  check(/ev\.detail === 0/.test(cliqueParar), 'Enter ou Delete com o botao focado nao param a rodada');
+  check(/if \(!state\.settings\.controlePos\)/.test(painel), 'sem posicao gravada o quadrado nao fica no centro da conversa');
+  /**
+   * **O canto e calculado com a largura do CSS escrita a mao**, porque neste instante a caixa ainda
+   * nao e `solta` e `offsetWidth` responderia a largura do dialogo centrado. Entao os dois numeros
+   * tem de concordar: mexeu num, mexa no outro — divergindo, o quadrado volta a cobrir a conversa.
+   */
+  const css = readFileSync(new URL('../src/panel/panel.css', import.meta.url), 'utf8');
+  const larguraNoCss = /\.wf-controle\.wf-pergunta-solta\s*\{\s*width:\s*min\((\d+)px/.exec(css);
+  check(!!larguraNoCss, 'o CSS diz a largura da janelinha da rodada quando ela esta solta');
+  check(!!larguraNoCss && painel.includes(`- painel - ${larguraNoCss[1]} - 18`),
+    `o canto usa a largura do CSS (${larguraNoCss ? larguraNoCss[1] : '?'}px) e nao um numero proprio`);
+  const marcaDoRascunho = painel.indexOf('setComposerText`, NUNCA');
+  const antesDeEscrever = painel.slice(marcaDoRascunho, painel.indexOf('await page.setComposerText(texto)', marcaDoRascunho));
+  check(/state\.auto\.parar/.test(antesDeEscrever), 'parar durante a geracao nao poe o rascunho no campo');
 }
 
 grupo('O BOX DO MODO DE ENVIO — uma chave so, mostrada em dois lugares');

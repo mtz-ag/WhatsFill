@@ -1,15 +1,72 @@
-## 2026-10-29 - v3.232.0 - ESTADO DE AGORA - o gatilho virou o seu ato, e a etiqueta voltou
+## 2026-10-29 - v3.234.0 - ESTADO DE AGORA - um envio que nao saiu nao encerra a fila
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.232.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.234.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Confira **3.232.0** na linha pequena do topo do painel
-4. **Classifique UM contato e me diga o que a barra escreveu** — e a unica coisa que falta medir
+3. Confira **3.234.0** na linha pequena do topo do painel (`encaixado na aba`). A tela ainda esta na **3.233.0**
+4. Rode de novo. Se uma resposta nao sair, a barra diz o motivo e **abre o proximo**
+5. O contato em que parou estava **Aguardando atendente**, com o botao Assumir na tela. A rodada nao concluiu esse
+6. **Classifique UM contato e me diga o que a barra escreveu** — a gravacao no contato continua sem confirmacao
+
+### SOBROU UMA PASTA SO — e a frase do CLAUDE.md sobre o OneDrive morreu
+
+Voce escreveu: *"exclui as copias ficou so o atualizado"*.
+
+Medido depois de voce apagar:
+
+```
+Documents\GitHub\WhatsFill+IA ......... manifest WhatsFill+IA 3.234.0, .git, .cursor/  <- a unica
+Documents\GitHub\WhatsFill ............ nao existe mais
+OneDrive\Documents\GitHub\WhatsFill ... so um .git, nada dentro (git ali recusa: "not a git repository")
+```
+
+**O risco das tres pastas acabou** — era a armadilha do *"o fix nao funcionou pode ser o fix nao
+chegou"*. E o CLAUDE.md dizia *"o Chrome carrega de OneDrive/Documents/GitHub/WhatsFill"*: aquela
+pasta esta vazia, entao a frase deixou de ser verdade e foi corrigida la. **Quem responde de onde
+o Chrome carrega hoje e o "Carregado de" do `chrome://extensions`, e so voce le isso.**
+
+As regras do Cursor (`.cursor/rules/`) estao na pasta certa: as duas de `alwaysApply: true` entram
+em toda conversa sozinhas; `@medir`, `@consertar`, `@provar` e `@fechar` voce chama digitando.
+
+### "ENCERRADA PREMATURAMENTE NOVAMENTE" — um contato virou erro da fila
+
+Voce escreveu: *"rodada foi encerrada prematuramente novamente"*.
+
+**Medido na barra, com a extensao ja na 3.233.0:** `1 enviado, 5 pulados, percorri 2 de 7.
+Parei em <contato>: "Boas-vindas (ja temos o cadastro)" (ramo do fluxo) nao saiu`.
+
+`sendTemplate` devolveu `false` (a mensagem daquele contato nao saiu) e o ramo do fluxo
+transformou isso em `erro`. **`erro` encerra a rodada inteira** — os outros cinco nem abriram.
+O rascunho da IA, no mesmo caso, ja pulava e seguia. Este caminho nao.
+
+Agora os cinco retornos de "nao saiu" da rodada pulam o contato, escrevem o motivo de verdade
+(variavel faltando, texto que nao apareceu, voce apagou) e abrem o proximo. So o botao Parar
+encerra. Campo vazio **antes** de o texto ter aparecido nao conta mais como "voce apagou".
+
+### "EU MANDEI A MENSAGEM E ENCERROU" — a leitura do ato estourava
+
+Voce escreveu: *"rodada encerrando sem eu pedir, eu mandei a mensagem e encerrou era para
+continuar pro proximo contato"*.
+
+**Medido na barra, com a mensagem ja na conversa as 10:38 e o atendimento ainda aberto:**
+`Parei em <contato>: page.ultimoAtoDeEnvio(...).catch is not a function`.
+0 enviados, 2 pulados, 1 de 4 abertos. O prefixo "Parei em" so nasce quando o contato volta
+`erro` — por isso a rodada parou em vez de seguir.
+
+**A causa:** no modo "Eu mando", quando o campo esvazia, o painel pergunta se houve Enter ou
+clique. Na aba encaixada essa funcao devolve o objeto na hora (`{em, como}`). O codigo chamava
+`.catch` nesse objeto. Objeto nao tem `.catch`: TypeError, que sobe como erro e **encerra a
+rodada inteira** — com o texto ja no WhatsApp. No modo janela a mesma funcao devolve promessa;
+`await` dentro de `try` cobre os dois, e uma leitura que falha vira "sem ato" em vez de parar
+a fila.
+
+Aquele atendimento ficou **em atendimento**: a rodada quebrou antes de concluir. Conclua esse
+na mao, ou deixe a proxima rodada pegar de novo.
 
 ### APAGAR NAO E ENVIAR — o gatilho agora e o SEU ato
 
@@ -33,6 +90,21 @@ proximo contato.
 nesta plataforma), entao o clique e reconhecido por estar **perto do campo**. Se um dia ele deixar
 de ser reconhecido, o custo e a rodada esperar os dez minutos e **pular** — nunca concluir errado.
 Pelo Enter nao ha essa duvida.
+
+### O QUADRADO VERMELHO SAIU DE CIMA DA CONVERSA — e ele estava desligado no codigo
+
+Voce escreveu: *"eu deletei a mensagem errada e no mesmo momento deu erro"*.
+
+A janelinha da rodada (⏹ / ▶) nascia **no centro da tela**, em cima das mensagens. O clique para
+apagar a mensagem errada caia nela — e o log *"voce parou a rodada."*, com ponto final, **so esse
+quadrado escreve**. Agora, sem posicao gravada, ela nasce no **canto de cima**, ao lado do painel;
+arrastada uma vez, a sua posicao continua valendo. E o ⏹ passou a exigir clique de mouse de
+verdade: Enter ou Delete com o botao em foco nao param mais a rodada.
+
+**O conserto estava escrito e DESLIGADO:** a linha era `if (false && !state.settings.controlePos)`,
+ou seja, codigo morto com um comentario em cima explicando por que ele precisava existir. **Quem
+pegou foi o teste** — a assercao exigia a forma viva e acusou. Reintroduzindo o `false &&`, cai de
+novo (medido: 2 assercoes caem, com o numero da largura junto).
 
 ### O CURSOR PASSOU A TRABALHAR DO MESMO JEITO
 
@@ -87,9 +159,9 @@ muda — la quem envia e o painel, e nao ha Enter para esperar.
 **O que o Andamento passa a dizer:** *"IA escreveu e voce mandou"*. Escrever *"a IA mandou"* num
 envio que foi seu esconde o unico ato humano daquela passada.
 
-**O sinal continua sendo o campo esvaziar** — e por isso o risco que ja estava na tela continua:
-apagando o texto sem enviar, a rodada entende que saiu. Detectar o clique no botao de enviar do
-mobiliza.me **nao foi medido**; se voce quiser isso, eu meco antes de construir.
+**O sinal deixou de ser o campo esvaziar na v3.232** — apagar esvazia igual. O que conta e o
+Enter ou o clique no botao, e o campo vazio junto. O paragrafo antigo desta entrada dizia o
+contrario e envelheceu; a secao do topo desta versao e a que vale.
 
 ### E a rodada parava onde devia so pular
 
@@ -137,6 +209,9 @@ coisa que eu mesmo tinha acabado de quebrar**:
 | 3.230 | pediu cidade de quem ja tem | o formulario olhava a ETIQUETA, nunca o CAMPO |
 | 3.231 | o rascunho da IA parado no campo | o modo "Eu mando" valia so para a resposta pronta |
 | 3.232 | apaguei o texto e ele concluiu | o gatilho era o campo esvaziar, e apagar esvazia igual |
+| 3.233 | mandei e a rodada encerrou | `.catch` no objeto do ato de envio estourava e virava erro |
+| 3.234 | encerrou de novo, "nao saiu" | `false` do envio virava `erro`, e erro para a fila inteira |
+| 3.234 | deletei a mensagem e deu erro | o quadrado vermelho nascia em cima da conversa — e estava desligado |
 | 3.232 | a etiqueta de assessor parou | o rotulo saia de um catalogo que aqui e uma amostra de 0,9% |
 
 **As tres licoes que eu escrevi para nao repetir:**

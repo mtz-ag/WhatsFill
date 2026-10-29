@@ -2767,7 +2767,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         )
       ) {
         setStatus('Envio cancelado.');
-        return false;
+        return anotarEnvioQueNaoSaiu('Envio cancelado.');
       }
     }
 
@@ -2809,7 +2809,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
     }
     // Quem pediu envio de verdade precisa saber se saiu — o fluxo de fecho depende disso.
-    return !vaiEnviar;
+    if (!vaiEnviar) return true;
+    return anotarEnvioQueNaoSaiu(`a plataforma não confirmou o envio de "${modelo.name}"`);
   }
 
   /**
@@ -3036,6 +3037,37 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     });
   }
 
+  /**
+   * **Um envio que nao saiu e deste contato, nao da rodada** (29/10/2026, relato dele:
+   * *"rodada foi encerrada prematuramente novamente"*).
+   *
+   * A barra dizia `Parei em <contato>: "Boas-vindas (ja temos o cadastro)" (ramo do fluxo)
+   * nao saiu`. `sendTemplate` devolveu `false` e quem chamava transformou isso em `erro`.
+   * `erro` encerra a fila inteira — os outros contatos nem abrem.
+   *
+   * O rascunho da IA, no mesmo caso, ja devolvia `pulado` e seguia. O ramo do fluxo nao.
+   * A razao de verdade (variavel faltando, texto que nao apareceu, ele ter apagado) ia para
+   * o `setStatus` e o veredito apagava. Aqui ela fica, e so o botao Parar encerra.
+   */
+  let porqueNaoSaiu = '';
+
+  function anotarEnvioQueNaoSaiu(motivo) {
+    porqueNaoSaiu = String(motivo || '');
+    return false;
+  }
+
+  function pulouPorqueNaoSaiu(nome, rotulo) {
+    const detalhe = porqueNaoSaiu;
+    if (state.auto.parar) {
+      return { nome, resultado: 'pulado', parar: true, motivo: detalhe || 'você parou a rodada' };
+    }
+    return {
+      nome,
+      resultado: 'pulado',
+      motivo: `${rotulo} não saiu${detalhe ? ` — ${detalhe}` : ''} — pulei este contato e sigo`,
+    };
+  }
+
   async function sendTemplate(template, { send, jaConfirmado = false }) {
     /**
      * Contato capturado ANTES de qualquer await.
@@ -3051,8 +3083,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const { text, missing, reasons } = vars.render(textoVariante, await currentVarContext());
 
     if (missing.length) {
-      setStatus('Bloqueado: ' + vars.explainMissing(missing, reasons), 'err');
-      return false;
+      const bloqueio = 'Bloqueado: ' + vars.explainMissing(missing, reasons);
+      setStatus(bloqueio, 'err');
+      return anotarEnvioQueNaoSaiu(bloqueio);
     }
 
     if (!send || !state.settings.autoSend) {
@@ -3089,7 +3122,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         const mandou = await esperarVoceEnviar(text);
         if (!mandou.ok) {
           setStatus(`Não concluí: ${mandou.motivo}.`, 'err');
-          return false;
+          return anotarEnvioQueNaoSaiu(mandou.motivo);
         }
         setStatus('Você enviou — sigo daqui.' + marcaPalavra, 'ok');
         return true;
@@ -3106,8 +3139,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     if (state.session?.expired) {
       await page.setComposerText(text);
-      setStatus('Janela expirada: inseri o texto, mas não enviei.', 'err');
-      return false;
+      const janela = 'Janela expirada: inseri o texto, mas não enviei.';
+      setStatus(janela, 'err');
+      return anotarEnvioQueNaoSaiu(janela);
     }
 
     if (state.settings.antiDup && !jaConfirmado) {
@@ -3119,7 +3153,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         )
       ) {
         setStatus('Envio cancelado.');
-        return false;
+        return anotarEnvioQueNaoSaiu('Envio cancelado.');
       }
     }
 
@@ -6230,8 +6264,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * do zero — é o que "parar totalmente" significa —, e o contato já tratado não recebe duas
      * vezes: quem impede é `hsm.decidirReenvio`, que pergunta à CONVERSA e vale entre rodadas.
      */
-    parar.addEventListener('click', () => {
+    parar.addEventListener('click', (ev) => {
       if (!state.auto.rodando) return;
+      /**
+       * **Enter e Delete nao param a rodada** (29/10/2026, relato dele: *"eu deletei a mensagem
+       * errada e no mesmo momento deu erro"*, e o gatilho que ele repetiu: clique em enviar ou
+       * Enter). Clique disparado pelo teclado chega com `detail === 0`. So o ponteiro no
+       * quadrado vermelho para — o Esc continua sendo o atalho, e o log dele diz "pelo Esc".
+       */
+      if (!ev.isTrusted || ev.detail === 0) return;
       state.auto.parar = true;
       pintar();
       registrarNaRodada('rodada', 'pulado', 'você parou a rodada.');
@@ -6283,6 +6324,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     destinoDaCaixa().append(fundo);
     tornarArrastavel(caixa, barra, 'controlePos');
+    /**
+     * **Sem posicao gravada, a janelinha nascia no CENTRO da conversa** (29/10/2026). O quadrado
+     * vermelho ficava em cima da mensagem. O clique para apagar a mensagem errada caia nele, e o
+     * log dizia "voce parou a rodada" — que so este botao escreve, com ponto final. O canto e ao
+     * lado do painel, fora das bolhas.
+     *
+     * **O `150` e a largura da janelinha no CSS** (`.wf-controle.wf-pergunta-solta`) e os `18` sao a
+     * folga ate o painel. **Nao da para ler `caixa.offsetWidth` aqui:** `tornarArrastavel` acabou de
+     * chamar `aplicarPosicao(caixa, null)`, que TIRA a classe `wf-pergunta-solta` — neste instante a
+     * caixa ainda tem a largura do dialogo centrado, que e outra. Ha teste exigindo que o numero
+     * daqui e o do CSS concordem: divergindo, o canto volta a cobrir a conversa.
+     */
+    if (!state.settings.controlePos) {
+      const painel = parseInt(root.style.getPropertyValue('--wf-width'), 10) || 380;
+      aplicarPosicao(caixa, {
+        left: Math.max(8, window.innerWidth - painel - 150 - 18),
+        top: 8,
+      });
+    }
     pintar();
 
     controleDaRodada = {
@@ -6771,6 +6831,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
 
     const fim = Date.now() + timeoutMs;
+    const inicio = Date.now();
+    let viuOTexto = false;
     setStatus(
       observando
         ? 'Escrevi no campo. Revise e envie (Enter ou o botão) — eu concluo e abro o próximo.'
@@ -6789,10 +6851,47 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       // Esvaziou, ou já é outro texto: nos dois casos o que escrevemos não está mais lá.
-      if (!agora.trim() || !agora.includes(alvo.slice(0, 20))) {
+      const presente = !!agora.trim() && agora.includes(alvo.slice(0, 20));
+      if (presente) viuOTexto = true;
+      if (!presente) {
         if (!observando) return { ok: true };
 
-        const ato = (await page.ultimoAtoDeEnvio().catch(() => null)) || { em: 0, como: '' };
+        /**
+         * **Campo vazio ANTES de o texto aparecer nao e "ele apagou"** (29/10/2026).
+         * `textoDoComposer` devolve `''` tambem quando nao ha campo. Tratar isso como
+         * apagado no primeiro tique devolvia `false`, e quem chamava fazia disso `erro` —
+         * a rodada encerrava sem ele ter apagado nada. So conta como apagado depois de
+         * o texto ter sido visto no campo.
+         */
+        if (!viuOTexto) {
+          if (Date.now() - inicio < 3000) {
+            await new Promise((r) => setTimeout(r, 700));
+            continue;
+          }
+          return {
+            ok: false,
+            motivo: 'o texto não apareceu no campo de mensagem — não concluí este atendimento',
+          };
+        }
+
+        /**
+         * **`.catch` no RETORNO estoura, e a rodada morre com a mensagem ja na tela**
+         * (29/10/2026, relato dele: *"eu mandei a mensagem e encerrou era para continuar pro
+         * proximo contato"*). A barra dizia `page.ultimoAtoDeEnvio(...).catch is not a function`.
+         *
+         * Na aba encaixada `ultimoAtoDeEnvio` devolve o objeto na hora (`{em, como}`). Chamar
+         * `.catch` nele nao e "se a leitura falhar": e TypeError, que sobe como `erro` e
+         * **para a rodada inteira** — o texto dele ja no WhatsApp, o atendimento ainda aberto,
+         * zero enviados. No modo janela a mesma funcao devolve PROMESSA. `await` cobre os dois:
+         * objeto cru volta igual; promessa recusada cai no `catch` e vira "sem ato", que nao
+         * conclui e nao encerra a rodada por excecao.
+         */
+        let ato = { em: 0, como: '' };
+        try {
+          ato = (await page.ultimoAtoDeEnvio()) || ato;
+        } catch (_) {
+          ato = { em: 0, como: '' };
+        }
         if (ato.em > atoAntes.em) return { ok: true, como: ato.como };
         return {
           ok: false,
@@ -10778,6 +10877,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         } catch (err) {
           rascunho = { ok: false, motivo: `falhou: ${err?.message || err}` };
         }
+        if (state.auto.parar) {
+          return { nome, resultado: 'pulado', parar: true, motivo: 'você parou a rodada' };
+        }
 
         const porQue = sugestao
           ? `o fluxo mandou para você ("${sugestao.id}")`
@@ -10856,7 +10958,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             } catch (err) {
               const fraco = pularPorSinalFraco(nome, err, 'mandar a mensagem de uma pessoa para outra');
               if (fraco) return fraco;
-              return { nome, resultado: 'erro', motivo: `o rascunho da IA não saiu: ${err?.message || err}` };
+              return {
+                nome,
+                resultado: 'pulado',
+                motivo: `o rascunho da IA não saiu: ${err?.message || err} — pulei este contato e sigo`,
+              };
             }
           }
           state.lastSendAt = Date.now();
@@ -11476,7 +11582,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (escolha === 'perguntarajuda') {
         await saveClassification({ withCompletionDate: true, quiet: true });
         if (!(await sendTemplate(perguntarAjuda, { send: true, jaConfirmado: true }))) {
-          return { nome, resultado: 'erro', motivo: 'a pergunta não saiu' };
+          return pulouPorqueNaoSaiu(nome, 'a pergunta');
         }
         return {
           nome,
@@ -11497,7 +11603,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           return { nome, resultado: 'erro', motivo: 'a classificação não gravou; não enviei nada' };
         }
         if (!(await sendTemplate(doFluxo, { send: true, jaConfirmado: true }))) {
-          return { nome, resultado: 'erro', motivo: `"${doFluxo.name}" (ramo do fluxo) não saiu` };
+          return pulouPorqueNaoSaiu(nome, `"${doFluxo.name}" (ramo do fluxo)`);
         }
         // Pedido de endereço não conclui: o caso vai para a lista de material, aberto.
         if (await vaiPedirEndereco(doFluxo)) {
@@ -11538,7 +11644,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
         await saveClassification({ withCompletionDate: true, quiet: true });
         if (!(await sendTemplate(texto, { send: true, jaConfirmado: true }))) {
-          return { nome, resultado: 'erro', motivo: `${texto.name} não saiu` };
+          return pulouPorqueNaoSaiu(nome, texto.name);
         }
         const fechouTexto = await concluirPeloPainel();
         if (!fechouTexto.ok) {
@@ -11635,7 +11741,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       if (!(await enviarModelo(modelo, { send: true, jaConfirmado: true }))) {
-        return { nome, resultado: 'erro', motivo: `o modelo "${modelo.name}" não saiu` };
+        return pulouPorqueNaoSaiu(nome, `o modelo "${modelo.name}"`);
       }
 
       /**
@@ -12678,7 +12784,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const enviou = texto
         ? await sendTemplate(texto, { send: true, jaConfirmado: true })
         : await enviarModelo(modelo, { send: true, jaConfirmado: true });
-      if (!enviou) return { nome, resultado: 'erro', motivo: `${rotulo} não saiu` };
+      if (!enviou) return pulouPorqueNaoSaiu(nome, rotulo);
 
       return await fecharSemRetorno(nome, `mandei ${rotulo}, tirei a etiqueta e concluí`, 'enviado');
     } catch (err) {
@@ -15872,6 +15978,15 @@ const CONTATOS_POR_PAGINA = 200;
     }
 
     // `setComposerText`, NUNCA `sendText`: a diferença entre as duas é a decisão dele.
+    /**
+     * **Parar durante a geracao nao despeja o rascunho e morre em seguida** (29/10/2026). O
+     * clique no quadrado acontecia enquanto a IA ainda respondia; o texto entrava no campo
+     * mesmo assim e a espera via o parar no mesmo instante. Ele via a mensagem errada aparecer
+     * e o erro junto.
+     */
+    if (state.auto.parar) {
+      return { ok: false, enviado: false, motivo: 'você parou a rodada' };
+    }
     try {
       await page.setComposerText(texto);
     } catch (err) {

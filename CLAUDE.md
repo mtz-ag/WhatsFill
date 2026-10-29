@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.232.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.234.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -753,6 +753,18 @@ mudaram as maos, nao a cabeca.
   texto entra no campo.
   **E no MODO JANELA quem ve o teclado dele e a ABA**, nunca o painel — as duas funcoes passam
   pela ponte do `rpc-host`.
+  **`.catch` NO RETORNO ENCERRA A RODADA COM A MENSAGEM JA NA TELA** (29/10/2026, relato dele:
+  *"eu mandei a mensagem e encerrou era para continuar pro proximo contato"*). A barra dizia
+  `page.ultimoAtoDeEnvio(...).catch is not a function`. Na aba encaixada a funcao devolve o
+  objeto na hora; `.catch` nele e TypeError, sobe como `erro` e **para a rodada inteira** — 0
+  enviados, atendimento ainda aberto, texto ja no WhatsApp. No modo janela a mesma funcao
+  devolve promessa. Quem le faz `await` dentro de `try`: objeto cru volta igual, promessa
+  recusada vira "sem ato". **Nao chame `.catch` no retorno cru.**
+  **`false` DE `sendTemplate` VIRAVA `erro`, E `erro` ENCERRA A FILA** (29/10/2026, relato dele:
+  *"rodada foi encerrada prematuramente novamente"*). Na 3.233.0 a barra dizia que o ramo do
+  fluxo nao saiu. O rascunho da IA ja devolvia `pulado`. O ramo do fluxo devolvia `erro` e os
+  outros contatos nem abriam. Um envio que nao saiu e deste contato: o motivo fica e a rodada
+  abre o proximo. So o botao Parar encerra.
 
 - **O ROTULO DA ETIQUETA VINHA DO CATALOGO, E AQUI O CATALOGO E UMA AMOSTRA DE 0,9%**
   (29/10/2026, relato dele: *"tinha a opcao de concluir contatos com a etiqueta de assessor, parou
@@ -1179,6 +1191,13 @@ mudaram as maos, nao a cabeca.
   branch**: apagar o órfão à mão é o conserto errado (ele volta no checkout, e um commit
   descuidado apaga o trabalho do outro branch). O certo é `git restore .` + checkout do branch
   certo. Para usar as duas ao mesmo tempo, `git worktree` em pasta separada.
+  **E EM 29/10/2026 ELE APAGOU AS COPIAS: sobrou UMA pasta de verdade** (*"exclui as copias
+  ficou so o atualizado"*). Medido: `Documents\GitHub\WhatsFill+IA` e a unica com `manifest.json`,
+  com `.git` e com `.cursor/`; `OneDrive\Documents\GitHub\WhatsFill` tem **so um `.git` e nada
+  dentro** (`git rev-parse` ali recusa, *"not a git repository"*), e `Documents\GitHub\WhatsFill`
+  nao existe mais. **Entao a frase acima — "o Chrome carrega de `OneDrive/...`" — deixou de ser
+  verdade**, e quem responde onde ele carrega hoje e o "Carregado de" do `chrome://extensions`,
+  que so ELE le. O risco das tres pastas acabou; o de carregar da pasta errada so se confere ali.
 - **"O fix não funcionou" pode ser "o fix não chegou".** A pasta que o Chrome carrega não é
   necessariamente a que o GitHub Desktop atualiza — cópia da extensão DENTRO da pasta da
   extensão (zip descompactado, `dist/`, que é gitignorado) fica congelada para sempre. Custou uma
