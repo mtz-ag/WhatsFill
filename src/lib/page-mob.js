@@ -181,6 +181,19 @@ export function contatoDoBanco(linha) {
     phonenumberFormatted: String(linha.telefone ?? linha.phone ?? '').trim(),
     createdAt: linha.created_at || null,
     createdat: linha.created_at || null,
+    /**
+     * **DE ONDE ESTE CADASTRO VEIO — e serve para UMA coisa: nao chamar de retorno quem foi
+     * IMPORTADO** (29/10/2026). Medido na base dele: `origem` vem preenchida —
+     * `helena 513 | mocao 188 | importacao 132 | evento 48 | manual 10 | app_mobile 7 |
+     * formulario 2` numa amostra de 600.
+     *
+     * **Os 132 de `importacao` entraram em lote, com a cidade preenchida, e ninguem falou com
+     * eles.** Sem este campo, o campo Cidade os faria passar por gente ja atendida — e a
+     * consequencia e nao receberem a apresentacao, que e justamente o que eles precisam.
+     *
+     * **Vazio e desconhecido, nunca "importado"**: cadastro sem origem segue a regra geral.
+     */
+    origem: String(linha.origem ?? '').trim().toLowerCase() || null,
 
     tags: etiquetas,
     tagsId: etiquetas.map((t) => t.id),

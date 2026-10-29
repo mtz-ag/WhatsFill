@@ -1968,4 +1968,59 @@ grupo('A RECUSA POR UM SINAL SO PULA O CONTATO — nas TRES filas, nao so nos No
     'e ele pula por sinal fraco antes de chamar de erro');
 }
 
+/**
+ * **QUEM E CONTATO NOVO — o sinal tinha TRES pernas e duas estavam cegas** (29/10/2026, relato
+ * dele: *"o fluxo nao esta reconhecendo quem e contato novo e quem nao e"*).
+ *
+ * **Medido lendo o codigo, perna por perna:**
+ * ```
+ * temConversaAnterior  botao da tela velha      MORTA: page-mob devolve false fixo (e correto)
+ * cidadeJaNoCrm        etiqueta pelo catalogo   CEGA: o catalogo aqui e 1.000 de 107.988 (0,93%)
+ * state.nossas         mensagens nossas         deixou de provar: o historico se perdeu na migracao
+ * ```
+ * **As duas correcoes dele:** *"nao existe conversa anterior mais porque e plataforma nova e
+ * historico de conversas se perdeu"* e *"mas cidades ainda existem na descricao do contato"*.
+ */
+grupo('quem e contato novo: as tres pernas, e as duas que estavam cegas');
+{
+  /** **A perna da ETIQUETA volta pelo contato, nao pelo catalogo** — o conserto do ASSESSOR aqui. */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const i = painel.indexOf('const cidadeJaNoCrm =');
+  check(i > 0, '`cidadeJaNoCrm` existe');
+  const corpo = painel.slice(i, i + 400);
+  check(corpo.includes('etiquetaDeCidadeNoContato'), 'tem a perna que le o que o CONTATO traz');
+  check(corpo.includes('idsDeCidade.has(id)') && corpo.includes("sug.origem === 'cidade'"),
+    'e ela e ADITIVA: as duas pernas antigas ficam, entao o mobiliza.app nao muda');
+  const antes = painel.slice(painel.indexOf('const municipiosDoRS'), i);
+  check(antes.includes('rotulosDoContato()'),
+    'o rotulo sai de `rotulosDoContato` — catalogo primeiro, contato para o que ele nao alcancou');
+  check(antes.includes('loadCoredes'), 'e a pergunta e se o rotulo e um dos 497 municipios');
+
+  /**
+   * **A perna do CAMPO Cidade, com a guarda da IMPORTACAO.** Sem a guarda, os 132 contatos que
+   * entraram em lote com cidade preenchida passariam por gente ja atendida — e perderiam a
+   * apresentacao, que e o que eles precisam (CLAUDE.md, 28/10).
+   */
+  const j = painel.indexOf('const cidadeDoCadastroConta =');
+  check(j > 0, 'a perna do campo Cidade existe');
+  const campo = painel.slice(j, j + 220);
+  check(campo.includes("confianca === 'exata'"),
+    'exige confianca exata: o campo e livre, e este projeto ja gravou link nele');
+  check(campo.includes("state.contact?.origem !== 'importacao'"),
+    'e NAO conta para quem veio de importacao — 132 contatos com cidade e nenhuma conversa');
+  check(painel.includes('cidadeJaNoCrm || cidadeDoCadastroConta'),
+    'e ela entra no `jaRespondemosAntes`, que e quem decide "e a primeira vez?"');
+
+  /** **E o `origem` precisava atravessar o adaptador** — sem isso a guarda acima nao existe. */
+  const linha = { id: 'c1', nome: 'Thiago Tim', telefone: '5151999', cidade: 'Canoas' };
+  check(contatoDoBanco({ ...linha, origem: 'importacao' }).origem === 'importacao',
+    '`origem` chega ao painel');
+  check(contatoDoBanco({ ...linha, origem: 'IMPORTACAO' }).origem === 'importacao',
+    'em minuscula, porque a comparacao e literal');
+  check(contatoDoBanco(linha).origem === null,
+    'coluna vazia devolve NULO — vazio e desconhecido, nunca "importado"');
+  check(contatoDoBanco({ ...linha, origem: 'helena' }).origem === 'helena',
+    'e as outras origens passam intactas: so `importacao` e tratada');
+}
+
 fim();

@@ -1,20 +1,75 @@
-## 2026-10-29 - v3.236.0 - ESTADO DE AGORA - o dossie sabe do cargo na Defesa Civil
+## 2026-10-29 - v3.237.0 - ESTADO DE AGORA - quem e contato novo: duas pernas estavam cegas
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.236.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.237.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Confira **3.236.0** na linha pequena do topo do painel (`encaixado na aba`)
-4. **Leia a secao nova do dossie e me diga o que esta errado** — o que saiu de jornal eu marquei
-   `[CONFIRMADO]`; o que tem uma fonte so ficou `[CONFERIR]`, e `[CONFERIR]` a IA nao afirma
-5. **Duas coisas so voce resolve:** a mecanica da sua vaga na Assembleia (licenca ou renuncia) e o
-   que de fato vai para a pasta
-6. **Classifique UM contato e me diga o que a barra escreveu** — a gravacao no contato continua
+3. Confira **3.237.0** na linha pequena do topo do painel (`encaixado na aba`)
+4. **Abra dois contatos e me diga se o painel acertou:** um que voce ja atendeu no mobiliza.app
+   (tem cidade no cadastro) e um que chegou agora. O primeiro tem de cair como RETORNO, o segundo
+   como primeira vez
+5. **Classifique UM contato e me diga o que a barra escreveu** — a gravacao no contato continua
    sem confirmacao
+
+### "NAO ESTA RECONHECENDO QUEM E CONTATO NOVO" — eram tres pernas, e duas estavam cegas
+
+Voce escreveu: *"o fluxo nao esta reconhecendo quem e contato novo e quem nao e, veja o que esta
+classificando como contato novo para ajustarmos"*.
+
+Quem responde isso e **um sinal so** (`jaRespondemosAntes`), e e ele que escolhe o ramo da
+**chegada** no quadro — a apresentacao e o recibo do anuncio. **Medido, perna por perna:**
+
+```
+temConversaAnterior   botao da tela velha      MORTA: o adaptador devolve false fixo — e esta certo
+cidadeJaNoCrm         etiqueta pelo catalogo   CEGA: o catalogo aqui e 1.000 de 107.988 (0,93%)
+state.nossas          mensagens nossas         deixou de provar: o historico se perdeu na migracao
+```
+
+**A perna da etiqueta era a armadilha do ASSESSOR na pior posicao possivel.** As duas metades dela
+passam pelo catalogo, e aqui o catalogo e uma **amostra de 0,93%**: a etiqueta de cidade que nao
+caiu nessa fatia nao entra, e o sinal fica falso **em silencio**. A pessoa se apresenta de novo —
+e a print da Rosa (05/09) voltando por outra porta. O teste que trava aquela armadilha nao pegava
+esta, porque ele procura a FORMA do defeito dentro do `panel.js`, e esta mora no `tags.js`.
+
+### AS SUAS DUAS CORRECOES MUDARAM A CONTA
+
+*"Nao existe conversa anterior mais porque e plataforma nova e historico de conversas se perdeu,
+mas cidades ainda existem na descricao do contato."*
+
+A primeira metade **mata a terceira perna como prova**: a conversa aqui comeca na troca de
+plataforma, entao quem voce atendeu por meses no mobiliza.app chega com a conversa vazia e passa
+por contato novo. A segunda metade diz o que sobreviveu: **o cadastro**.
+
+**Agora sao duas pernas novas:**
+
+- **a ETIQUETA de cidade lida do CONTATO**, nao do catalogo — e **aditiva**, as duas antigas
+  ficaram, entao o mobiliza.app nao muda em nada
+- **o CAMPO Cidade do cadastro**, que e a sua decisao. Exige confianca **exata** (o mesmo corte do
+  formulario, de ontem): o campo e livre, e esta extensao ja gravou `vt.tiktok.com` nele
+
+### A GUARDA DA IMPORTACAO, E POR QUE ELA NAO ERA OPCIONAL
+
+Ontem eu medi e escrevi no CLAUDE.md que **cidade de importacao nao responde "ela ja veio
+antes?"**: sao **132 contatos** que entraram em lote com o campo preenchido e com quem ninguem
+falou. Sem guarda, eles passariam por gente ja atendida e **perderiam a apresentacao**, que e
+justamente o que eles precisam.
+
+Entao `origem` passou a atravessar o adaptador (medido na base: `helena 513 | mocao 188 |
+importacao 132 | evento 48 | manual 10 | app_mobile 7 | formulario 2`, em 600 contatos), e a
+perna do campo **nao conta para `importacao`**. **Vazio e desconhecido, nunca "importado".**
+
+**O custo e o de 05/09 e e real:** contato com cidade no cadastro, conversando pela primeira vez,
+recebe a mensagem do momento em vez das boas-vindas.
+
+**O que eu NAO medi:** quantos contatos da sua base viram de lado. Isso exige consultar a base na
+sua aba — se deixar a plataforma aberta, eu meco.
+
+**A prova:** reintroduzindo os tres defeitos (a perna da etiqueta, a guarda da importacao e o
+`origem` no adaptador), **caem 6 assercoes**.
 
 ### O ANUNCIO DE HOJE DO ZUCCO ENTROU NO DOSSIE
 
@@ -306,6 +361,7 @@ coisa que eu mesmo tinha acabado de quebrar**:
 | 3.234 | deletei a mensagem e deu erro | o quadrado vermelho nascia em cima da conversa — e estava desligado |
 | 3.235 | backspace parava a rodada | o CAMPO era o gatilho, e cada tecla dele mudava o campo |
 | 3.236 | — | o dossie ganhou o cargo na Defesa Civil, com o gatilho que faltava |
+| 3.237 | nao reconhece contato novo | 2 das 3 pernas cegas: catalogo de 0,93% e historico perdido |
 | 3.232 | a etiqueta de assessor parou | o rotulo saia de um catalogo que aqui e uma amostra de 0,9% |
 
 **As tres licoes que eu escrevi para nao repetir:**

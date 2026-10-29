@@ -813,6 +813,47 @@ mudaram as maos, nao a cabeca.
   **A licao geral: AMOSTRA serve para reconhecer grafia, nunca para negar existencia** — e
   `api-mob.getTags` ja escrevia isso no proprio `completa`. **Era este o campo que ninguem lia.**
 
+- **"QUEM E CONTATO NOVO" TINHA TRES PERNAS, E DUAS ESTAVAM CEGAS** (29/10/2026, relato dele: *"o
+  fluxo nao esta reconhecendo quem e contato novo e quem nao e, veja o que esta classificando como
+  contato novo"*). Quem responde isso e **um sinal so**, `jaRespondemosAntes`, e e ele que escolhe
+  o ramo da CHEGADA no quadro (`anuncio — pessoa nova`, com a apresentacao e o recibo). **Medido,
+  perna por perna:**
+  ```
+  temConversaAnterior   botao da tela velha     MORTA: page-mob devolve false fixo — e esta certo
+  cidadeJaNoCrm         etiqueta pelo catalogo  CEGA: o catalogo aqui e 1.000 de 107.988 (0,93%)
+  state.nossas          mensagens nossas        deixou de provar: o historico se perdeu na migracao
+  ```
+  **A perna 2 era a armadilha do ASSESSOR na pior posicao possivel.** As DUAS metades de
+  `cidadeJaNoCrm` passam pelo catalogo: `tags.cityTagIds()` monta o conjunto varrendo `loadTags()`,
+  e **`resolveTag` devolve `null`** para rotulo que nao esta nele. Entao a etiqueta de cidade que
+  nao caiu na fatia de 0,93% **nao entra**, e o sinal fica falso **em silencio** — a pessoa se
+  apresenta de novo, que e a print da Rosa (05/09) voltando por outra porta.
+  **E o teste da v3.232 nao pegava:** ele procura o padrao `filter((t) => doCrm.has(t.id))` **dentro
+  do `panel.js`**, e `cityTagIds` mora no `tags.js` com outra forma. **Guarda que casa uma FORMA so
+  cobre os leitores que tem aquela forma** — ao escrever guarda contra "resolver pelo catalogo",
+  procure tambem quem monta CONJUNTO DE IDS a partir dele.
+  **DUAS CORRECOES DELE, e as duas mudam a conta:** *"nao existe conversa anterior mais porque e
+  plataforma nova e historico de conversas se perdeu"* e *"mas cidades ainda existem na descricao
+  do contato"*. A primeira **mata a perna 3 como prova**: a conversa aqui comeca na troca de
+  plataforma, entao quem foi atendido por meses no mobiliza.app chega com `nossas` vazio e passa
+  por novo. **O que sobreviveu a migracao foi o CADASTRO.**
+  **O conserto sao duas pernas novas.** A da ETIQUETA le o que o CONTATO traz (`rotulosDoContato` +
+  os 497 municipios) e e **ADITIVA**: as duas antigas ficam, entao o mobiliza.app nao muda. A do
+  CAMPO e a decisao dele — `grafiaDaCidade.confianca === 'exata'`, o mesmo corte do formulario
+  (28/10), porque o campo e livre e este projeto ja gravou `vt.tiktok.com` nele.
+  **E A GUARDA DA IMPORTACAO E OBRIGATORIA, porque o CLAUDE.md ja dizia o contrario:** em 28/10
+  esta escrito que cidade de importacao **nao** responde *"ela ja veio antes?"* — sao **132
+  contatos** que entraram em lote com o campo preenchido e com quem ninguem falou. Por isso
+  `origem` passou a atravessar o adaptador (medido na base: `helena 513 | mocao 188 |
+  importacao 132 | evento 48 | manual 10 | app_mobile 7 | formulario 2` em 600), e
+  `origem !== 'importacao'` e o que faz a instrucao dele conviver com a medicao de ontem.
+  **Vazio e desconhecido e nunca "importado".**
+  **O custo esta dito a ele e e o de 05/09:** contato com cidade no cadastro, conversando pela
+  primeira vez, recebe a mensagem do momento em vez das boas-vindas. **Reintroduzindo os tres
+  defeitos, caem 6 assercoes.**
+  **O que NAO foi medido:** quantos contatos da base dele viram de lado — isso exige consultar a
+  base na aba dele.
+
 - **GANCHO QUE ESTOURA TEM DE RESPONDER — e o teste pegou isso antes de ir ao ar.** Na primeira
   versao o `try` cobria so a acao, e `quantasLinhas()` ficava fora dele, dentro da propria chamada
   de resposta: bastava a contagem lancar (um no cuja leitura falha, que e o que acontece quando o

@@ -9399,9 +9399,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * vamos gravar agora é desta conversa: contá-la ali faria quem acabou de responder o cadastro
        * na primeira vinda ser tratada como retorno.
        */
+      /**
+       * **A TERCEIRA PERNA EXISTE PORQUE O CATÁLOGO AQUI É UMA AMOSTRA DE 0,93%** (29/10/2026,
+       * relato dele: *"o fluxo não está reconhecendo quem é contato novo e quem não é"*).
+       *
+       * As duas primeiras pernas passam pelo catálogo — `cityTagIds()` monta o conjunto varrendo
+       * `loadTags()`, e `resolveTag` devolve **null** para rótulo que não está nele. No
+       * mobiliza.me o catálogo é `getTags({limite: 1000})`, **1.000 contatos de 107.988**: a
+       * etiqueta de cidade que não caiu nessa fatia **não entra**, e `cidadeJaNoCrm` fica falso
+       * **em silêncio**. É a armadilha do ASSESSOR (29/10) na perna que decide "esta pessoa já
+       * foi atendida" — e o teste que trava aquela só procura o padrão dentro do `panel.js`.
+       *
+       * **O conserto é o mesmo de lá: olhar o que o CONTATO já traz.** `rotulosDoContato()` junta
+       * o catálogo com `contact.tags`, e aqui basta perguntar se algum desses rótulos é um dos 497
+       * municípios. **É ADITIVO de propósito** — as duas pernas antigas ficam intactas, então o
+       * caminho do mobiliza.app continua byte a byte como era.
+       */
+      const municipiosDoRS = await tagsLib.loadCoredes().catch(() => ({}));
+      const rotulosNoCrm = await rotulosDoContato();
+      const etiquetaDeCidadeNoContato = rotulosNoCrm.some((r) => !!municipiosDoRS[cities.normalize(r)]);
+
       const cidadeJaNoCrm =
         (state.contact?.tagsId || []).some((id) => idsDeCidade.has(id)) ||
-        state.tagSuggestions.some((sug) => sug.origem === 'cidade' && sug.tag && sug.jaTem);
+        state.tagSuggestions.some((sug) => sug.origem === 'cidade' && sug.tag && sug.jaTem) ||
+        etiquetaDeCidadeNoContato;
 
       const temEtiquetaDeCidade =
         cidadeJaNoCrm ||
@@ -9515,8 +9536,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * É a lição da Ivone (31/08) uma linha acima, na forma que eu não reconheci: **pergunta não é
        * entrega — e conclusão também não é.**
        */
+      /**
+       * **O CAMPO Cidade conta como "já foi trabalhada", e isso é decisão dele de 29/10/2026**
+       * (correção dele, depois de eu medir as três pernas): *"não existe conversa anterior mais
+       * porque é plataforma nova e histórico de conversas se perdeu, mas cidades ainda existem na
+       * descrição do contato"*.
+       *
+       * **As duas metades da frase dele importam.** Com o histórico perdido na migração,
+       * `state.nossas` deixou de provar que alguém já atendeu esta pessoa: a conversa começa na
+       * troca de plataforma, então quem foi atendido por meses no mobiliza.app chega aqui com a
+       * conversa vazia e passa por nova. O que **sobreviveu** foi o cadastro — e a cidade está
+       * nele.
+       *
+       * **A guarda é `origem`, e ela é obrigatória.** O CLAUDE.md registra em 28/10 que cidade de
+       * importação **não** responde *"ela já veio antes?"*: são **132 contatos** que entraram em
+       * lote com o campo preenchido e com quem ninguém falou. Sem a guarda, eles perderiam a
+       * apresentação — que é justamente o que eles precisam receber.
+       *
+       * **Confiança `exata` é o corte**, pela mesma razão do formulário (28/10): o campo é livre, e
+       * este projeto já gravou nele `faq.whatsapp.com`, `vt.tiktok.com` e
+       * `mais Apoiadores com patrocinio`. Lixo gravado não prova atendimento nenhum.
+       */
+      const cidadeDoCadastroConta =
+        state.grafiaDaCidade?.confianca === 'exata' && state.contact?.origem !== 'importacao';
+
       const jaRespondemosAntes = (() => {
-        if (state.temConversaAnterior || cidadeJaNoCrm) return true;
+        if (state.temConversaAnterior || cidadeJaNoCrm || cidadeDoCadastroConta) return true;
         if (!state.nossas.length) return false;
 
         const perguntas = ['pedir-dados', 'interesse-conteudo', 'perguntar-como-ajudar']
