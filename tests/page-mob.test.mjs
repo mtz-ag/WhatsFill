@@ -1282,7 +1282,13 @@ grupo('ESPERAR OS DOIS SINAIS — a recusa estava certa, a pressa e que estava e
    * isso se prova no texto do painel: e o unico lugar em que ele decide `pulado` em vez de `erro`.
    */
   const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
-  check(/page\.ehRecusaPorSinalFraco\(err\.message\)/.test(painel), 'o painel consulta o detector antes de chamar de erro');
+  check(/page\.ehRecusaPorSinalFraco\(err\?\.message\)/.test(painel), 'o painel consulta o detector antes de chamar de erro');
+  /**
+   * **A decisao saiu de dentro do `catch` e virou funcao** (29/10/2026): ela vivia so em
+   * `processarNovo`, e `processarRespondido` — o motor das tres filas — transformava a mesma
+   * recusa em `erro`, que PARA a rodada. Ver o grupo no fim deste arquivo.
+   */
+  check(/function pularPorSinalFraco\(/.test(painel), 'e a decisao mora numa funcao, para valer em todos os caminhos');
   const trecho = painel.slice(painel.indexOf('page.ehRecusaPorSinalFraco'));
   check(trecho.slice(0, 400).includes("resultado: 'pulado'"), 'e o desfecho e PULAR, nao parar a rodada');
 }
@@ -1716,6 +1722,82 @@ grupo('GRAVAR NO CONTATO — e a releitura, nao o 200, que diz se gravou');
   /** Na plataforma velha nada mudou: o contrato aprendido continua sendo quem grava la. */
   const velho = tags.slice(tags.indexOf("const contract = await store.get('writeContract')"));
   check(velho.includes('buildRequest(entry'), 'o corpo da plataforma antiga ficou intocado embaixo do desvio');
+}
+
+grupo('O MODO "EU MANDO" VALE TAMBEM PARA O RASCUNHO DA IA');
+{
+  /**
+   * **Print dele (29/10/2026): o rascunho da IA parado no campo e a rodada encerrada** —
+   * *"o gatilho esta errado, eu pedi para o gatilho ser quando eu envio a mensagem clicando no
+   * enviar ou apertando enter e ficou algo relacionado a preencher o box de conversa"*.
+   *
+   * **O buraco era de ALCANCE:** `esperarVoceEnviar` nasceu dentro de `sendTemplate`, que e o
+   * caminho da RESPOSTA PRONTA. O rascunho da IA e texto livre e sai por `page.sendText` direto —
+   * o segundo ponto de saida do painel —, entao o modo que ele acabou de pedir funcionava na tecla
+   * e era ignorado pela IA, que seguia tentando mandar sozinha.
+   */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+
+  const i = painel.indexOf('if (rascunho.ok && rodadaAutomatica() && iaLib.rascunhoPodeSairSozinho(rascunho.avisos)) {');
+  check(i > 0, 'achei o ramo do envio automatico do rascunho');
+  const corpo = painel.slice(i, i + 3600);
+
+  check(corpo.includes('const euMando = !state.settings.autoSend;'),
+    'o ramo do rascunho consulta o modo de envio');
+  check(corpo.includes('await esperarVoceEnviar(rascunho.texto)'),
+    'e no modo "Eu mando" ele ESPERA o Enter dele, em vez de mandar sozinho');
+
+  /**
+   * **A ORDEM e a parte que se erra sozinha:** a espera vem ANTES da gravacao. Gravar a
+   * classificacao primeiro escreveria a data de conclusao num contato que pode ficar dez minutos
+   * no campo sem ninguem apertar nada.
+   */
+  check(corpo.indexOf('esperarVoceEnviar') < corpo.indexOf('saveClassification'),
+    'a espera vem ANTES de gravar a classificacao');
+  check(corpo.indexOf('saveClassification') < corpo.indexOf('await page.sendText'),
+    'e no automatico a gravacao continua vindo antes do envio, como sempre veio');
+
+  /** Com o automatico LIGADO nada muda: quem manda e o painel, e nao ha Enter para esperar. */
+  check(/if \(!euMando\) \{\s*\n\s*await throttle\(\);/.test(corpo),
+    'o envio pela extensao ficou atras do `!euMando` — com ela ligada, o caminho e o de sempre');
+
+  /**
+   * **A linha do Andamento diz QUEM mandou.** Escrever "a IA mandou" num envio que foi dele
+   * esconde o unico ato humano daquela passada.
+   */
+  check(/IA escreveu e \$\{euMando \? 'voce mandou' : 'mandou'\}/.test(
+    painel.normalize('NFD').replace(/[̀-ͯ]/g, '')), 'o log distingue quem mandou');
+}
+
+grupo('A RECUSA POR UM SINAL SO PULA O CONTATO — nas TRES filas, nao so nos Novos');
+{
+  /**
+   * **A guarda da v3.223 vivia num ramo so.** Ela nasceu em `processarNovo` e
+   * `processarRespondido` — que e o motor das tres filas — continuava transformando a mesma recusa
+   * em `erro`, que PARA a rodada: foi o *"Parei em contato"* da print de 29/10/2026.
+   *
+   * **Tres copias da mesma decisao divergem na primeira semana**, entao ela mora numa funcao so e
+   * quem chama diz apenas o estrago que a recusa evitou.
+   */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+
+  check(/function pularPorSinalFraco\(nome, err, oQuePoderiaDarErrado\)/.test(painel),
+    'a decisao mora num lugar so');
+
+  const decide = (painel.match(/page\.ehRecusaPorSinalFraco\(/g) || []).length;
+  check(decide === 1, `so UM lugar le a marca do sinal fraco (achei ${decide})`);
+
+  const usos = (painel.match(/pularPorSinalFraco\(/g) || []).length;
+  check(usos >= 4, `e ela e usada em todos os caminhos: a declaracao mais tres (achei ${usos})`);
+
+  /**
+   * **O catch de FORA de `processarRespondido` e o que cobre `sendTemplate`, `clickConcluir` e
+   * `clickReiniciar`** — sem ele a guarda continuaria valendo so no caminho dos Novos.
+   */
+  const j = painel.indexOf("return { nome, resultado: 'enviado' };\n    } catch (err) {");
+  check(j > 0, 'achei o catch de fora de `processarRespondido`');
+  check(painel.slice(j, j + 700).includes('pularPorSinalFraco'),
+    'e ele pula por sinal fraco antes de chamar de erro');
 }
 
 fim();

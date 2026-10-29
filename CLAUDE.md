@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.230.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.231.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -680,6 +680,46 @@ mudaram as maos, nao a cabeca.
   **Confianca `exata` e o corte**, porque o campo Cidade e livre e este projeto ja gravou nele
   `faq.whatsapp.com`, `vt.tiktok.com` e `mais Apoiadores com patrocinio`. Aceitar qualquer texto
   faria o formulario parar de sair justamente para quem tem lixo gravado.
+
+- **O MODO "EU MANDO" VALIA SO PARA A RESPOSTA PRONTA — A IA O IGNORAVA** (29/10/2026, print dele
+  com o rascunho parado no campo e a rodada encerrada: *"o gatilho esta errado, eu pedi para o
+  gatilho ser quando eu envio a mensagem clicando no enviar ou apertando enter e ficou algo
+  relacionado a preencher o box de conversa"*).
+  **Ele leu o sintoma certo:** do lado dele a extensao encheu a caixa e parou ali. **O buraco e de
+  ALCANCE:** `esperarVoceEnviar` nasceu DENTRO de `sendTemplate` (v3.224), que e o caminho da
+  RESPOSTA PRONTA; o rascunho da IA e **texto livre** e sai por `page.sendText` direto — o
+  **segundo ponto de saida** que este arquivo registra desde 06/09 — e nunca passou por la. Entao
+  a IA seguia tentando mandar sozinha, com a caixa dizendo que quem manda e ele.
+  **Ao criar um MODO de envio, procure os pontos de saida: sao DOIS**, e o segundo nao tem
+  template nem id.
+  **A ORDEM dentro do ramo e a parte que se erra sozinha: espera, grava, conclui.** O texto JA
+  esta no campo (`rascunharParaEle` o poe com `setComposerText`), entao nao ha o que enviar — o
+  que falta e o Enter dele. Gravar a classificacao ANTES da espera escreveria a data de conclusao
+  num contato que pode ficar dez minutos sem ninguem apertar nada. **No automatico a ordem antiga
+  fica**: grava e so entao envia, que e o *"a classificacao nao gravou; nao enviei"*.
+  **E nao espera com o automatico LIGADO**, de proposito: la quem manda e o painel, e esperar o
+  campo esvaziar seria esperar um Enter que ninguem vai dar.
+  **O log passou a dizer QUEM mandou** — *"IA escreveu e voce mandou"*: escrever *"a IA mandou"*
+  num envio que foi dele esconde o unico ato humano daquela passada.
+  **E o sinal continua sendo o campo ESVAZIAR**, como na v3.224 — detectar o clique no botao de
+  enviar do mobiliza.me **nao foi medido**, e hipotese aqui e rodada que conclui sem mensagem.
+
+- **A GUARDA DO SINAL FRACO VIVIA NUM RAMO SO, E ERA ELA QUE PARAVA A RODADA** (mesma print:
+  *"Rodada encerrada: 0 enviado(s), 2 pulado(s). Parei em contato"*, com o motivo
+  *"recuso enviar, porque errar aqui e mandar a mensagem de uma pessoa para outra"*).
+  A v3.223 escreveu *"a recusa fala de UM contato, entao o desfecho e `pulado`"* — e a escreveu
+  **dentro de `processarNovo`**. `processarRespondido` e o motor das **TRES** filas (`processarNovo`
+  delega para ele) e continuava transformando a MESMA recusa em `erro`, que para a rodada inteira.
+  **Quinta vez neste arquivo: guarda nova so vale onde ela e ALCANCADA** (a familia do canal
+  removido, 14/10, e do *"excecao so vale onde aquela regra alcanca"*, 09/09).
+  **Hoje a decisao mora numa funcao so** (`pularPorSinalFraco`), e quem chama diz apenas o estrago
+  que a recusa evitou — tres copias da mesma decisao divergem na primeira semana. Ha teste
+  contando que **UM** lugar le `page.ehRecusaPorSinalFraco`.
+  **O ponto que cobre o resto e o `catch` de FORA de `processarRespondido`**: e por ele que sobem
+  `sendTemplate`, `clickConcluir` e `clickReiniciar`. Sem ele, consertar so o ramo do rascunho
+  deixaria a resposta pronta parando a rodada pela mesma razao.
+  **A guarda que ela protege nao afrouxou:** `os-dois` continua obrigatorio para assumir,
+  resolver, reabrir e enviar. O que mudou e o que a RODADA faz com a recusa.
 
 - **GANCHO QUE ESTOURA TEM DE RESPONDER — e o teste pegou isso antes de ir ao ar.** Na primeira
   versao o `try` cobria so a acao, e `quantasLinhas()` ficava fora dele, dentro da propria chamada

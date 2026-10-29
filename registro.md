@@ -1,15 +1,43 @@
-## 2026-10-28 - v3.230.0 - ESTADO DE AGORA - a migracao anda, e falta UMA confirmacao sua
+## 2026-10-29 - v3.231.0 - ESTADO DE AGORA - o Enter passou a valer tambem para a IA
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.230.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.231.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Confira **3.230.0** na linha pequena do topo do painel
+3. Confira **3.231.0** na linha pequena do topo do painel
 4. **Classifique UM contato e me diga o que a barra escreveu** — e a unica coisa que falta medir
+
+### "O GATILHO ESTA ERRADO" — voce estava certo, e o buraco era de ALCANCE
+
+Voce pediu que o gatilho fosse **voce enviar**, e o que aconteceu na print foi a extensao encher a
+caixa e parar ali.
+
+**A espera pelo seu Enter existia desde a v3.224 e morava dentro do caminho da RESPOSTA PRONTA.**
+O rascunho da IA nao passa por la: ele e texto livre e sai por outro caminho, o segundo ponto de
+saida do painel. Entao o modo que voce acabou de pedir funcionava na tecla e era **ignorado pela
+IA**, que seguia tentando mandar sozinha — e, nao conseguindo, encerrava a rodada.
+
+Agora, com **"Eu mando"** marcado, a IA faz o que a resposta pronta ja fazia: escreve no campo,
+**espera voce dar Enter**, e so entao conclui e abre o proximo. Com **"A extensao manda"** nada
+muda — la quem envia e o painel, e nao ha Enter para esperar.
+
+**O que o Andamento passa a dizer:** *"IA escreveu e voce mandou"*. Escrever *"a IA mandou"* num
+envio que foi seu esconde o unico ato humano daquela passada.
+
+**O sinal continua sendo o campo esvaziar** — e por isso o risco que ja estava na tela continua:
+apagando o texto sem enviar, a rodada entende que saiu. Detectar o clique no botao de enviar do
+mobiliza.me **nao foi medido**; se voce quiser isso, eu meco antes de construir.
+
+### E a rodada parava onde devia so pular
+
+A outra metade da print: *"Parei em contato"*. A recusa por **um sinal so** (a protecao que impede
+mandar a mensagem de uma pessoa para outra) estava escrita para **pular e seguir** — e so no
+caminho dos **Novos**. O motor que atende as **tres** filas continuava chamando aquilo de erro, e
+erro para a rodada inteira. Agora a decisao mora num lugar so e vale em todos os caminhos.
 
 ### A UNICA PENDENCIA: a gravacao no contato
 
@@ -48,6 +76,7 @@ coisa que eu mesmo tinha acabado de quebrar**:
 | 3.228 | botoes redundantes | dois iguais lado a lado, e um Parar que duplicava o flutuante |
 | 3.229 | "Gravado: nada" | **nenhuma** escrita no contato tinha caminho |
 | 3.230 | pediu cidade de quem ja tem | o formulario olhava a ETIQUETA, nunca o CAMPO |
+| 3.231 | o rascunho da IA parado no campo | o modo "Eu mando" valia so para a resposta pronta |
 
 **As tres licoes que eu escrevi para nao repetir:**
 

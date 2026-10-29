@@ -6636,6 +6636,38 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   const ESPERAS_DE_REDE_MS = [30000, 60000, 120000];
 
   /**
+   * **A recusa por UM sinal só fala de UM contato: pula e segue, nunca para a rodada** (v3.223).
+   *
+   * `erro` é para o que não adianta tentar no próximo — a aba trocou, o campo de mensagem sumiu.
+   * A tela que não se decidiu sobre QUAL conversa está aberta é o contrário: ela fala deste
+   * contato, e o seguinte pode estar perfeitamente legível.
+   *
+   * **Mora num lugar só porque já custou duas versões vivendo num ramo só.** A guarda nasceu
+   * dentro de `processarNovo` (28/10/2026), e `processarRespondido` — que é o motor das **três**
+   * filas — continuou transformando a mesma recusa em `erro`, que PARA tudo: foi o *"Parei em
+   * contato"* da print de 29/10. **É a quinta vez neste arquivo que uma guarda nova só vale onde
+   * ela é ALCANÇADA**, e três cópias da mesma decisão divergem na primeira semana.
+   *
+   * **A guarda que ela protege não afrouxou:** `os-dois` continua obrigatório para assumir,
+   * resolver, reabrir e enviar. O que isto decide é só o que a RODADA faz com a recusa.
+   *
+   * @param {string} nome quem está na vez, para a linha do Andamento
+   * @param {Error|{message?: string}} err o erro que subiu
+   * @param {string} oQuePoderiaDarErrado o estrago que a recusa evitou, em uma oração
+   * @returns {object|null} o desfecho `pulado`, ou `null` quando o erro é outro
+   */
+  function pularPorSinalFraco(nome, err, oQuePoderiaDarErrado) {
+    if (!page.ehRecusaPorSinalFraco(err?.message)) return null;
+    return {
+      nome,
+      resultado: 'pulado',
+      motivo:
+        'a tela não se decidiu sobre qual conversa está aberta (os dois sinais não concordaram ' +
+        `a tempo) — pulei para não ${oQuePoderiaDarErrado}`,
+    };
+  }
+
+  /**
    * Espera a tela ficar sem diálogo aberto, para o próximo clique na fila valer.
    *
    * Não fecha nada por conta própria: o diálogo aberto no meio de uma rodada costuma ser o seu
@@ -8947,14 +8979,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * **A guarda não afrouxou:** `os-dois` continua obrigatório para assumir, resolver, reabrir
        * e enviar. O que mudou é o que a rodada faz quando ela não é atendida.
        */
-      if (page.ehRecusaPorSinalFraco(err.message)) {
-        return {
-          nome: 'contato',
-          resultado: 'pulado',
-          motivo: 'a tela não se decidiu sobre qual conversa está aberta (os dois sinais não ' +
-            'concordaram a tempo) — pulei para não assumir o atendimento de outra pessoa',
-        };
-      }
+      const fraco = pularPorSinalFraco('contato', err, 'assumir o atendimento de outra pessoa');
+      if (fraco) return fraco;
       return { nome: 'contato', resultado: 'erro', motivo: traduzirErroDeRede(err.message), rede: ehErroDeRede(err.message) };
     }
 
@@ -10695,14 +10721,56 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * uma mensagem que era do determinístico. Ver `rascunhoPodeSairSozinho`.
          */
         if (rascunho.ok && rodadaAutomatica() && iaLib.rascunhoPodeSairSozinho(rascunho.avisos)) {
-          if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) {
-            return { nome, resultado: 'erro', motivo: 'a classificação não gravou; não enviei o rascunho' };
+          /**
+           * **O MODO "EU MANDO" VALE AQUI TAMBÉM** (29/10/2026, print dele com o rascunho parado no
+           * campo e a rodada encerrada: *"o gatilho está errado, eu pedi para o gatilho ser quando
+           * eu envio a mensagem clicando no enviar ou apertando enter e ficou algo relacionado a
+           * preencher o box de conversa"*).
+           *
+           * **Ele está certo, e o buraco é de ALCANCE:** `esperarVoceEnviar` nasceu dentro de
+           * `sendTemplate` (v3.224), que é o caminho da RESPOSTA PRONTA. O rascunho da IA **não
+           * passa por lá** — ele é texto livre e sai por `page.sendText` direto, o segundo ponto de
+           * saída que este arquivo já registra desde 06/09. Resultado: o modo que ele acabou de
+           * pedir funcionava na tecla e era ignorado pela IA, que seguia tentando mandar sozinha.
+           * **É a quinta vez aqui que uma guarda nova só vale onde ela é ALCANÇADA.**
+           *
+           * **A ordem é deliberada: esperar, gravar, e só então concluir.** O texto JÁ está no
+           * campo (`rascunharParaEle` o pôs com `setComposerText`), então não há o que enviar — o
+           * que falta é o Enter dele. Gravar a classificação antes da espera escreveria a data de
+           * conclusão num contato que pode ficar dez minutos sem resposta.
+           *
+           * **E não espera com o automático LIGADO**, de propósito: lá quem manda é o painel, e
+           * esperar o campo esvaziar seria esperar um Enter que ninguém vai dar.
+           */
+          const euMando = !state.settings.autoSend;
+
+          if (euMando) {
+            const mandou = await esperarVoceEnviar(rascunho.texto);
+            if (!mandou.ok) {
+              return {
+                nome,
+                resultado: 'pulado',
+                parar: !!mandou.parar,
+                motivo: `o rascunho da IA ficou no campo: ${mandou.motivo}`,
+              };
+            }
           }
-          await throttle();
-          try {
-            await page.sendText(rascunho.texto);
-          } catch (err) {
-            return { nome, resultado: 'erro', motivo: `o rascunho da IA não saiu: ${err?.message || err}` };
+
+          if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) {
+            return euMando
+              ? { nome, resultado: 'enviado', parar: true, motivo: 'você mandou o rascunho da IA, mas a classificação não gravou' }
+              : { nome, resultado: 'erro', motivo: 'a classificação não gravou; não enviei o rascunho' };
+          }
+
+          if (!euMando) {
+            await throttle();
+            try {
+              await page.sendText(rascunho.texto);
+            } catch (err) {
+              const fraco = pularPorSinalFraco(nome, err, 'mandar a mensagem de uma pessoa para outra');
+              if (fraco) return fraco;
+              return { nome, resultado: 'erro', motivo: `o rascunho da IA não saiu: ${err?.message || err}` };
+            }
           }
           state.lastSendAt = Date.now();
 
@@ -10728,7 +10796,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           // A palavra-chave vale no texto que SAIU, e aqui quem escreveu foi a IA: a regra é dele,
           // o texto é o que o eleitor recebeu, e é por isso que ela casa no mesmo lugar.
           const marcaPalavra = await etiquetarPorPalavra(state.contact, rascunho.texto);
-          const comoFoi = `IA escreveu e mandou${marcaEndereco}${marcaPalavra} (${porQue})`;
+          // Quem mandou muda a linha do Andamento: dizer "a IA mandou" num envio que foi DELE
+          // esconde o único ato humano daquela passada.
+          const comoFoi = `IA escreveu e ${euMando ? 'você mandou' : 'mandou'}${marcaEndereco}${marcaPalavra} (${porQue})`;
           const fechou = await concluirPeloPainel();
           if (!fechou.ok) return { nome, resultado: 'enviado', parar: true, motivo: `${comoFoi}, mas ${fechou.reason}` };
           return { nome, resultado: 'enviado', motivo: `${comoFoi} — e concluí` };
@@ -11576,6 +11646,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return { nome, resultado: 'enviado' };
     } catch (err) {
       await page.closeOverlay().catch(() => {});
+      /**
+       * **A rede de baixo de TUDO o que esta função faz** — e é por aqui que `sendTemplate`,
+       * `clickConcluir` e `clickReiniciar` sobem a recusa por sinal fraco. Sem esta linha, a
+       * guarda da v3.223 continuaria valendo só no caminho dos Novos.
+       */
+      const fraco = pularPorSinalFraco(nome, err, 'mexer no atendimento de outra pessoa');
+      if (fraco) return fraco;
       return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message), rede: ehErroDeRede(err.message) };
     }
   }
