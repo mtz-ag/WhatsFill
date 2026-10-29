@@ -1,18 +1,73 @@
-## 2026-10-29 - v3.235.0 - ESTADO DE AGORA - o gatilho e o SEU ato, e nada mais
+## 2026-10-29 - v3.236.0 - ESTADO DE AGORA - o dossie sabe do cargo na Defesa Civil
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.235.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.236.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Confira **3.235.0** na linha pequena do topo do painel (`encaixado na aba`)
-4. Rode de novo. **Agora voce pode apagar, corrigir e reescrever o rascunho o quanto quiser** — so
-   o Enter ou o clique em enviar encerram a espera
-5. **Classifique UM contato e me diga o que a barra escreveu** — a gravacao no contato continua
+3. Confira **3.236.0** na linha pequena do topo do painel (`encaixado na aba`)
+4. **Leia a secao nova do dossie e me diga o que esta errado** — o que saiu de jornal eu marquei
+   `[CONFIRMADO]`; o que tem uma fonte so ficou `[CONFERIR]`, e `[CONFERIR]` a IA nao afirma
+5. **Duas coisas so voce resolve:** a mecanica da sua vaga na Assembleia (licenca ou renuncia) e o
+   que de fato vai para a pasta
+6. **Classifique UM contato e me diga o que a barra escreveu** — a gravacao no contato continua
    sem confirmacao
+
+### O ANUNCIO DE HOJE DO ZUCCO ENTROU NO DOSSIE
+
+Pedido seu: *"atualize o dossie com o anuncio de hoje do zucco"*.
+
+**O que eu achei e confirmei:** Zucco anunciou em **29/10/2026** o **Capitao Martim para a
+Secretaria de Protecao e Defesa Civil**, e o governo toma posse em **06/01/2027**. Isso esta
+`[CONFIRMADO]` porque veio de **cinco veiculos independentes** — Jornal do Comercio, Brasil de
+Fato, SBNews RS, AgoraRS e Grupo A Hora. No mesmo dia sairam General Rogerio Siqueira (Obras),
+Rafael Orozco (PGE) e Luis Carlos Heinze (projetos estrategicos); os cinco primeiros nomes foram
+em 27/10.
+
+**O que ficou `[CONFERIR]`, porque apareceu em UMA fonte so:** a prioridade que voce declarou
+(ampliar a estrutura da defesa civil), a permanencia do **Cel. Boeira** na coordenacao e **a sua
+vaga na Assembleia ir para a primeira suplente, Eliana Bayer**. Nesta ultima o que falta nao e a
+fonte: e a **mecanica** — licenciar-se do mandato e renunciar sao coisas diferentes, com
+consequencias diferentes para quem assume. A IA nao afirma nenhuma das tres.
+
+### A COISA QUE MAIS IMPORTA: HOJE VOCE E DEPUTADO
+
+O cargo foi **ANUNCIADO** e comeca em **janeiro**. Entao a IA diz *"foi anunciado"*, *"foi
+indicado"* ou *"vai assumir em janeiro"* — e **nunca** *"ele e secretario"* nem *"ele esta na
+Defesa Civil"*. E a familia do *"ja encaminhei seu pedido"* (06/09): afirmar como feito o que
+ainda nao aconteceu, **num fato que o eleitor confere no jornal**. A secao do dossie se chama
+ANUNCIADO de proposito, e ha teste travando isso.
+
+**E a pasta cria uma classe de pedido NOVA.** A partir de hoje vai chegar gente pedindo emprego na
+Defesa Civil, obra, vistoria, prioridade e socorro em enchente. O dossie escreveu as regras:
+
+- **nenhuma promessa** de vaga, contratacao, estagio, indicacao, obra, verba, vistoria ou
+  atendimento — a regra 12 e a Lei 9.504/97 nao mudaram, e o governo nem tomou posse
+- **quem esta em emergencia AGORA** vai para a **Defesa Civil do municipio** e para **193** e
+  **199**: a defesa civil estadual ainda e do governo atual, nao sua
+- **quem parabeniza recebe agradecimento, e nada mais** — nao e gancho para falar de plano nem de
+  estrutura, que nao estao decididos
+- pergunta sobre o que voce vai fazer na pasta: **vou verificar**, sem inventar
+
+### O GATILHO ERA OBRIGATORIO — TRES PERGUNTAS NAO PUXAVAM O DOSSIE
+
+Fato novo no dossie sem gatilho e fato que a IA nunca le (a licao de 10/09). **Medido antes de
+escrever**, de oito perguntas que este anuncio gera:
+
+```
+nao puxava:  "ele vai assumir a Defesa Civil?"
+nao puxava:  "parabens pela secretaria!"
+nao puxava:  "vi no jornal que ele foi nomeado, procede?"
+```
+
+Sem o arquivo no prompt a IA escreveria de cabeca sobre um cargo que voce ainda nao ocupa — o erro
+do Van Hattem (08/09) num assunto novo. Depois do gatilho: **8 de 8 puxam**, e o ruido desta base
+(*"Deus abencoe"*, *"quero o material"*, *"preciso de remedio"*) **continua nao puxando**.
+
+**A prova:** tirando o gatilho, **caem 3 assercoes** — exatamente as tres perguntas acima.
 
 ### "SEMPRE QUE APERTO BACKSPACE A RODADA PARA" — o campo era o gatilho, e cada tecla sua o mudava
 
@@ -250,6 +305,7 @@ coisa que eu mesmo tinha acabado de quebrar**:
 | 3.234 | encerrou de novo, "nao saiu" | `false` do envio virava `erro`, e erro para a fila inteira |
 | 3.234 | deletei a mensagem e deu erro | o quadrado vermelho nascia em cima da conversa — e estava desligado |
 | 3.235 | backspace parava a rodada | o CAMPO era o gatilho, e cada tecla dele mudava o campo |
+| 3.236 | — | o dossie ganhou o cargo na Defesa Civil, com o gatilho que faltava |
 | 3.232 | a etiqueta de assessor parou | o rotulo saia de um catalogo que aqui e uma amostra de 0,9% |
 
 **As tres licoes que eu escrevi para nao repetir:**

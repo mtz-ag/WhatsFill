@@ -210,4 +210,46 @@ grupo('o dossie sabe que a eleicao acabou');
   );
 }
 
+/**
+ * **O CARGO NA DEFESA CIVIL — anúncio de 29/10/2026** (pedido dele: *"atualize o dossiê com o
+ * anúncio de hoje do zucco"*). Zucco indicou o Capitão Martim para a Secretaria de Proteção e
+ * Defesa Civil, e o governo toma posse em 06/01/2027.
+ *
+ * **O risco que estas asserções travam é de TEMPO VERBAL:** hoje ele é deputado, e o cargo começa
+ * em janeiro. A IA dizendo *"ele é secretário"* é a família do *"já encaminhei seu pedido"*
+ * (06/09) — afirmar como feito o que ainda não aconteceu, num fato que o eleitor confere no
+ * jornal.
+ */
+grupo('o dossie sabe do cargo na Defesa Civil, e sabe que ele ainda nao o ocupa');
+{
+  const { readFileSync } = await import('node:fs');
+  const md = readFileSync(new URL('../src/data/gabinete.md', import.meta.url), 'utf8');
+
+  check(/Defesa Civil/.test(md) && /29\/10\/2026/.test(md), 'o anuncio e a data estao no dossie');
+  check(/ANUNCIADO em 29\/10\/2026/.test(md), 'o titulo da secao diz ANUNCIADO, nao "e secretario"');
+  check(/06\/01\/2027/.test(md), 'e a posse do governo esta escrita');
+  check(/Que ele JÁ É secretário/.test(md),
+    'esta na lista do que a IA NUNCA afirma — hoje ele e deputado');
+  check(/Eliana Bayer\*\* `\[CONFERIR\]`/.test(md),
+    'a vaga da suplente ficou CONFERIR: uma fonte so, e licenciar nao e renunciar');
+  check(/Boeira[\s\S]{0,120}`\[CONFERIR\]`/.test(md), 'a permanencia do Cel. Boeira tambem');
+  check(/nunca prometer vaga, contratação, estágio nem indicação/.test(md),
+    'a pasta nao e balcao: nenhuma promessa de vaga');
+  check(/193/.test(md) && /199/.test(md),
+    'quem esta em emergencia AGORA vai para os canais de emergencia, nao para o mandato');
+
+  /**
+   * **Conteúdo novo no dossiê precisa de GATILHO** (a lição de 10/09). Medido antes de escrever:
+   * de oito perguntas que este anúncio gera, TRÊS não puxavam o dossiê.
+   */
+  check(precisaDoDossie(['ele vai assumir a Defesa Civil?']), 'a pergunta sem o nome dele puxa');
+  check(precisaDoDossie(['parabéns pela secretaria!']), 'o parabens puxa');
+  check(precisaDoDossie(['vi no jornal que ele foi nomeado, procede?']), 'o "foi nomeado" puxa');
+  check(precisaDoDossie(['quem é o suplente dele?']), 'e a pergunta da vaga tambem');
+
+  /** E o ruído desta base continua NÃO puxando — o dossiê existe para entrar quando a conversa pede. */
+  check(!precisaDoDossie(['Bom dia, Deus abençoe']), 'saudacao com fe nao puxa');
+  check(!precisaDoDossie(['preciso de ajuda com remédio']), 'pedido de ajuda nao puxa');
+}
+
 fim();

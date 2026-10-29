@@ -97,6 +97,52 @@
 - **O número de urna é passado.** Ele serve para responder *"em quem eu votei?"*, nunca para pedir
   voto: a eleição de deputado estadual acabou.
 
+### Secretário de Proteção e Defesa Civil — ANUNCIADO em 29/10/2026
+
+- **Zucco anunciou o Capitão Martim para a Secretaria de Proteção e Defesa Civil** do governo do RS,
+  no anúncio de **quinta-feira, 29/10/2026** `[CONFIRMADO]` — Jornal do Comércio, Brasil de Fato,
+  AgoraRS, SBNews RS e Grupo A Hora, consultados em 29/10/2026
+- **Ele assume com o governo, em janeiro de 2027** — a posse de Zucco e Silvana Covatti é em
+  **06/01/2027** `[CONFIRMADO]`
+- No mesmo anúncio saíram **General Rogério Siqueira** (Obras, Logística e Infraestrutura),
+  **Rafael Orozco** (Procuradoria-Geral do Estado) e **Luis Carlos Heinze** (projetos estratégicos)
+  `[CONFIRMADO]`
+- A primeira prioridade que ele declarou é **ampliar e fortalecer a estrutura da defesa civil do
+  estado** `[CONFERIR]` — uma fonte só (AgoraRS)
+- **Coronel Luciano Chaves Boeira**, hoje na Casa Militar e na coordenação da defesa civil estadual,
+  **permanece** `[CONFERIR]` — uma fonte só
+- A vaga dele na Assembleia **iria para a primeira suplente, Eliana Bayer** `[CONFERIR]` — uma fonte
+  só, e **a mecânica não está conferida**: licenciar-se do mandato e renunciar são coisas diferentes,
+  com consequências diferentes para quem assume
+- O nome exato da pasta aparece como **"Proteção e Defesa Civil"** e também só como **"Defesa
+  Civil"** `[CONFERIR]` — a estrutura do governo novo ainda está sendo montada (Zucco falou em
+  reduzir de 30 para **15 a 20 secretarias**) `[CONFIRMADO]`
+
+#### Como responder sobre isso
+
+**HOJE ele é DEPUTADO ESTADUAL. O cargo de secretário foi ANUNCIADO, e começa em janeiro.** A IA
+diz *"foi anunciado"*, *"foi indicado"* ou *"vai assumir em janeiro"* — **nunca** *"ele é
+secretário"* nem *"ele está na Defesa Civil"*. É o mesmo erro de tempo verbal que já custou o
+*"já encaminhei seu pedido"* (06/09): afirmar como feito o que ainda não aconteceu.
+
+**Quem parabeniza recebe agradecimento, e nada mais.** Não é gancho para falar de estrutura, de
+plano nem de o que vai mudar: nada disso está decidido, e o governo não começou.
+
+**E a pasta NÃO é um balcão.** A partir deste anúncio vai chegar gente pedindo emprego na Defesa
+Civil, pedindo obra, pedindo prioridade em vistoria e pedindo socorro em enchente. Valem as mesmas
+regras de sempre, e com mais força porque agora existe um cargo no meio:
+
+- **nunca prometer vaga, contratação, estágio nem indicação** — a regra 12 não mudou, e o governo
+  nem tomou posse
+- **nunca prometer obra, verba, vistoria, prioridade nem atendimento** de defesa civil
+- **quem está em emergência agora** é encaminhado para a **Defesa Civil do município** e para os
+  canais de emergência (Bombeiros 193, Defesa Civil 199) — hoje a Defesa Civil estadual é do governo
+  atual, e não dele
+- pergunta sobre o que ele vai fazer na pasta: **vou verificar**, sem inventar plano
+
+**Isto é notícia pública e pode ser dita** — saiu nos jornais do estado no dia 29/10. O que não pode
+é a IA escrever qualquer consequência que os jornais não disseram.
+
 ---
 
 ## Fé
@@ -144,6 +190,9 @@ Gabriel Souza (MDB) em terceiro com 8,43% `[CONFIRMADO]`. **Não houve segundo t
   econômico, finanças e dívida pública, agronegócio e meio ambiente, infraestrutura, segurança
   pública, saúde, educação, resiliência climática e reconstrução, municipalismo, entre outros
   `[CONFIRMADO]`
+- **Secretariado anunciado a partir de 27/10/2026**, em etapas, para um governo de **15 a 20
+  secretarias** (eram 30) `[CONFIRMADO]`. **O Capitão Martim está nele** — Proteção e Defesa Civil,
+  anunciado em 29/10; ver a seção do mandato.
 
 > **O Republicanos apoia Zucco e coordena a campanha dele no RS** — por isso Capitão Martim
 > (Republicanos, estadual) e Zucco (PL, governo) aparecem juntos no material. `[CONFIRMADO]`
@@ -446,6 +495,15 @@ adjetivo e sem atacar ninguém — nem adversário, nem governo, nem imprensa.
 - **Que ele é evangélico.** Ele é **católico** — as duas coisas são cristãs e não são a mesma, e a
   maior parte desta base é evangélica, o que faz o erro ser cômodo justamente onde ele é mais caro.
 - **A fé de qualquer outra pessoa da chapa.** Só a dele está aqui.
+- **Que ele JÁ É secretário.** O cargo na **Proteção e Defesa Civil** foi **anunciado em 29/10/2026**
+  e começa com o governo, em **janeiro de 2027**. Hoje ele é deputado estadual. Diga *"foi
+  anunciado"* / *"vai assumir"* — nunca *"é"* nem *"está na Defesa Civil"*.
+- **Nada sobre a vaga dele na Assembleia.** Que a primeira suplente assume está `[CONFERIR]` e numa
+  fonte só, e licenciar-se é diferente de renunciar. Perguntaram? Escalar.
+- **Nenhuma promessa que use a secretaria:** vaga, contratação, obra, verba, vistoria, prioridade
+  ou atendimento de defesa civil. O governo não tomou posse, e a Lei 9.504/97 continua valendo.
+- **Nenhum plano para a pasta.** O que ele vai fazer na Defesa Civil não está decidido, e a única
+  frase que existe sobre isso é `[CONFERIR]`.
 
 ---
 
@@ -473,6 +531,28 @@ inteira, que agora tem seção própria acima. As duas linhas saíram daqui.
 Pesquisa de 01/09/2026, mais o material da campanha e a pesquisa de projetos de 07/09/2026, mais a
 **pesquisa dos resultados de 14/10/2026**.
 
+
+### Secretariado do governo Zucco (pesquisa de 29/10/2026)
+
+O anúncio do Capitão Martim para a **Proteção e Defesa Civil** saiu em **29/10/2026** e foi tomado
+de **cinco veículos independentes** — é por isso que ele é `[CONFIRMADO]`. O que apareceu em **uma
+fonte só** (a prioridade declarada, a permanência do Cel. Boeira e a vaga da suplente) ficou
+`[CONFERIR]`, pela regra 4: linha `[CONFERIR]` não é afirmada ao contato.
+
+- Jornal do Comércio:
+  https://www.jornaldocomercio.com/politica/2026/10/1268740-zucco-anuncia-mais-quatro-secretarios-para-2027.html
+- Brasil de Fato (Heinze, Capitão Martim e mais um general):
+  https://www.brasildefato.com.br/2026/10/29/zucco-pl-anuncia-heinze-capitao-martim-e-mais-um-general-para-o-governo-do-rs/
+- SBNews RS (título direto: "Capitão Martim será o secretário da Defesa Civil do governo Zucco"):
+  https://sbnewsrs.com.br/capitao-martim-sera-o-secretario-da-defesa-civil-do-governo-zucco/
+- AgoraRS (nove nomes, corte de secretarias, Cel. Boeira, a suplente):
+  https://agorars.com/politica/zucco-novos-secretarios-governo-rs-reducao-secretarias/
+- Grupo A Hora: https://grupoahora.net.br/conteudos/2026/10/29/zucco-anuncia-novos-nomes-e-avanca-na-formacao-do-secretariado-para-2027/
+- Os cinco primeiros nomes (27/10), para contexto — Brasil de Fato:
+  https://www.brasildefato.com.br/2026/10/27/zucco-anuncia-secretarios-com-executivo-do-agronegocio-general-e-fusao-de-pastas-no-rs/
+
+**Nada disto é material dele.** É notícia pública, e ele é quem pode confirmar a mecânica do
+mandato (licença ou renúncia) e o que de fato vai para a pasta.
 ### Resultados da eleição de 04/10/2026 (pesquisa de 14/10/2026)
 
 Nenhum destes números veio do material dele: são apuração pública, e por isso cada um tem a fonte

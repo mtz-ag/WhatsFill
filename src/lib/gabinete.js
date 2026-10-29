@@ -164,6 +164,22 @@ const GATILHOS = [
    */
   /\bbombeir|\bmarinha\b|\bexercito\b|\bfuzileir|\bsalva.?vidas\b|\bcmt\b|\bcomandante\b|\bprofiss|\bcarreira\b|\btrajetoria\b|\bformad[oa] em\b|antes de ser (deputad|politic)|o que ele (fazia|fez|era|foi)\b|(^|[^-a-z])militar\b/,
   /**
+   * **O cargo na Defesa Civil** — anúncio de 29/10/2026, em que Zucco indicou o Capitão Martim para
+   * a Secretaria de Proteção e Defesa Civil. **Medido antes de escrever o gatilho:** de oito
+   * perguntas que este anúncio gera, **três não puxavam o dossiê** — *"ele vai assumir a Defesa
+   * Civil?"*, *"parabéns pela secretaria!"* e *"vi no jornal que ele foi nomeado, procede?"*. Sem o
+   * arquivo no prompt a IA escreveria de cabeça sobre um cargo que ele ainda não ocupa, que é o
+   * erro do Van Hattem (08/09) num assunto novo.
+   *
+   * **`secretar` entra inteiro e erra para INCLUIR:** *"procure a Secretaria de Saúde"* vai puxar o
+   * dossiê à toa, e isso custa centavos — o precedente é o `lei` solto, logo abaixo. O que não se
+   * paga é a IA afirmar que ele já é secretário.
+   *
+   * **`posse` ficou de FORA:** nesta base ela é posse de terra e posse de documento com a mesma
+   * frequência, e quem pergunta da posse do governo escreve "governo", "secretário" ou um nome.
+   */
+  /\bsecretar|\bdefesa civil\b|\bnomead|\bnomeac|\bsuplente\b/,
+  /**
    * **O que o mandato FEZ** — o dossiê ganhou emendas por cidade, leis e projetos (material do mandato,
    * 10/09/2026). Sem gatilho, *"tem alguma emenda pra minha cidade?"* não puxaria nada, e a IA
    * escreveria sem os dados. "lei" solto entra de propósito (erra para incluir): *"lei eleitoral"* puxa

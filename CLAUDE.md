@@ -5583,6 +5583,29 @@ mudaram as maos, nao a cabeca.
   definiu; o que entrou foi o fato. **Ficam em aberto, e sao dele:** o disparo da colinha continua
   configurado pedindo voto, e o perfil do Felipe Pedri na extensao.
 
+- **O CAPITAO MARTIM FOI ANUNCIADO SECRETARIO DE PROTECAO E DEFESA CIVIL EM 29/10/2026** (pedido
+  dele: *"atualize o dossie com o anuncio de hoje do zucco"*). Zucco indicou cinco nomes em 27/10 e
+  mais quatro em 29/10, e ele esta nos de 29/10 — **confirmado em CINCO veiculos independentes**
+  (Jornal do Comercio, Brasil de Fato, SBNews RS, AgoraRS, Grupo A Hora). **O governo toma posse em
+  06/01/2027.**
+  **O que isso muda para a IA, e e a parte que se erra sozinha: HOJE ELE E DEPUTADO.** O cargo foi
+  ANUNCIADO e comeca em janeiro, entao *"ele e secretario"* e *"ele esta na Defesa Civil"* sao
+  **proibidos** — e a familia do *"ja encaminhei seu pedido"* (06/09): afirmar como feito o que nao
+  aconteceu, num fato que o eleitor confere no jornal. A secao do dossie se chama **ANUNCIADO** de
+  proposito, e ha teste travando isso.
+  **E a pasta cria uma classe de pedido NOVA:** emprego na Defesa Civil, obra, vistoria, prioridade
+  e socorro em enchente. Nada disso se promete (a regra 12 e a Lei 9.504/97 nao mudaram), e **quem
+  esta em emergencia AGORA vai para a Defesa Civil do municipio, 193 e 199** — a estadual ainda e do
+  governo atual.
+  **Uma fonte so = `[CONFERIR]`**, e aqui sao tres: a prioridade que ele declarou, a permanencia do
+  Cel. Boeira e **a vaga na Assembleia ir para a suplente** — nesta ultima a mecanica nao esta
+  conferida, e **licenciar-se nao e renunciar**.
+  **E o GATILHO era obrigatorio** (a licao de 10/09, de novo): medido antes de escrever, de OITO
+  perguntas que o anuncio gera **TRES nao puxavam o dossie** — *"ele vai assumir a Defesa Civil?"*,
+  *"parabens pela secretaria!"* e *"vi no jornal que ele foi nomeado, procede?"*. `\bsecretar` entra
+  inteiro e erra para INCLUIR (o precedente e o `lei` solto); `posse` ficou de fora, porque nesta
+  base ela e posse de terra. Tirando o gatilho, **caem 3 assercoes**.
+
 - **A TABELA DA CHAPA E LIDA POR CODIGO, POR POSICAO — e mexer nela desarma a trava em silencio**
   (14/10/2026). `gabinete.chapaDoDossie` pega `cargo`, `nome` e `numero` das **tres primeiras
   colunas**, e alimenta `ia.conferirChapa`, que procura o **nome literal** no rascunho. Eu pus o
